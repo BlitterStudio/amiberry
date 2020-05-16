@@ -144,13 +144,13 @@ else ifneq (,$(findstring AMLG,$(PLATFORM)))
 # Odroid Go Advance target (SDL2, 64-bit)
 else ifeq ($(PLATFORM),go-advance)
     CPUFLAGS += -mcpu=cortex-a35
-    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 -DSOFTWARE_CURSOR -DFASTERCYCLES
+    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 -DSOFTWARE_CURSOR
     AARCH64 = 1
 
 # Odroid Go Advance special target (libgo2, 64-bit)
 else ifeq ($(PLATFORM),go-advance-libgo2)
     CPUFLAGS += -mcpu=cortex-a35
-    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 -DSOFTWARE_CURSOR -DFASTERCYCLES ${LIBGO2_FLAGS}
+    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 -DSOFTWARE_CURSOR ${LIBGO2_FLAGS}
     LDFLAGS += ${LIBGO2_LDFLAGS}
     AARCH64 = 1
 
@@ -159,22 +159,24 @@ else ifeq ($(PLATFORM),go-advance-libgo2)
 # RK3399 e.g. PINE64 RockPro64 
 # RK3326 e.g. Odroid Go Advance - 32-bit userspace
 else ifneq (,$(findstring RK,$(PLATFORM)))
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DFASTERCYCLES -DSOFTWARE_CURSOR
+    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DSOFTWARE_CURSOR
     HAVE_NEON = 1
 
     ifneq (,$(findstring RK33,$(PLATFORM)))
       CPUFLAGS += -mfloat-abi=hard -mfpu=neon-fp-armv8
       ifneq (,$(findstring RK3399,$(PLATFORM)))
         CPUFLAGS += -mcpu=cortex-a72
+        CPPFLAGS += -DFASTERCYCLES
       else ifneq (,$(findstring RK3328,$(PLATFORM)))
         CPUFLAGS += -mcpu=cortex-a53
-        CPPFLAGS += -DUSE_RENDER_THREAD
+        CPPFLAGS += -DUSE_RENDER_THREAD -DFASTERCYCLES
       else ifneq (,$(findstring RK3326,$(PLATFORM)))
         CPUFLAGS += -mcpu=cortex-a35
+        CPPFLAGS += -DUSE_RENDER_THREAD
 	  endif
     else ifneq (,$(findstring RK3288,$(PLATFORM)))
       CPUFLAGS += -mcpu=cortex-a17 -mfloat-abi=hard -mfpu=neon-vfpv4
-      CPPFLAGS += -DUSE_RENDER_THREAD
+      CPPFLAGS += -DUSE_RENDER_THREAD -DFASTERCYCLES
     endif
 
 # sun8i Allwinner H2+ / H3 like Orange PI, Nano PI, Banana PI, Tritium, AlphaCore2, MPCORE-HUB
@@ -395,10 +397,6 @@ OBJS =	\
 	src/osdep/amiberry_whdbooter.o \
 	src/osdep/sigsegv_handler.o \
 	src/sounddep/sound.o \
-	src/osdep/gui/UaeRadioButton.o \
-	src/osdep/gui/UaeDropDown.o \
-	src/osdep/gui/UaeCheckBox.o \
-	src/osdep/gui/UaeListBox.o \
 	src/osdep/gui/InGameMessage.o \
 	src/osdep/gui/SelectorEntry.o \
 	src/osdep/gui/ShowHelp.o \

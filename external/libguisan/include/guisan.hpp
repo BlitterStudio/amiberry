@@ -108,21 +108,21 @@
 #include <guisan/widgets/tabbedarea.hpp>
 #include <guisan/widgets/textbox.hpp>
 #include <guisan/widgets/textfield.hpp>
+#include <guisan/widgets/togglebutton.hpp>
 #include <guisan/widgets/window.hpp>
 
 #include "guisan/platform.hpp"
 
 class Widget;
 
-extern "C"
-{
-    /**
-     * Gets the the version of Guisan. As it is a C function
-     * it can be used to check for Guichan with autotools.
-     *
-     * @return the version of Guisan.
-     */
-    GCN_CORE_DECLSPEC extern const char* gcnGuisanVersion();
+extern "C" {
+/**
+ * Gets the the version of Guisan. As it is a C function
+ * it can be used to check for Guichan with autotools.
+ *
+ * @return the version of Guisan.
+ */
+GCN_CORE_DECLSPEC extern const char* gcnGuisanVersion();
 }
 
 #endif // end GCN_GUISAN_HPP

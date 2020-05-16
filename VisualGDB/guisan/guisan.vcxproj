@@ -119,6 +119,7 @@
     <ClCompile Include="..\..\external\libguisan\src\widgets\tabbedarea.cpp" />
     <ClCompile Include="..\..\external\libguisan\src\widgets\textbox.cpp" />
     <ClCompile Include="..\..\external\libguisan\src\widgets\textfield.cpp" />
+    <ClCompile Include="..\..\external\libguisan\src\widgets\togglebutton.cpp" />
     <ClCompile Include="..\..\external\libguisan\src\widgets\window.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
@@ -196,6 +197,7 @@
     <ClInclude Include="..\..\external\libguisan\include\guisan\widgets\tabbedarea.hpp" />
     <ClInclude Include="..\..\external\libguisan\include\guisan\widgets\textbox.hpp" />
     <ClInclude Include="..\..\external\libguisan\include\guisan\widgets\textfield.hpp" />
+    <ClInclude Include="..\..\external\libguisan\include\guisan\widgets\togglebutton.hpp" />
     <ClInclude Include="..\..\external\libguisan\include\guisan\widgets\window.hpp" />
     <ClInclude Include="..\..\external\libguisan\include\guisan\x.hpp" />
   </ItemGroup>

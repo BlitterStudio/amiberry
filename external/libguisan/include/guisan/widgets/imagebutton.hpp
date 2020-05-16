@@ -62,66 +62,66 @@
 
 namespace gcn
 {
-    class Image;
+	class Image;
 
-    /**
-     * A simple button that displays an image instead of a caption.
-     */
-    class GCN_CORE_DECLSPEC ImageButton : public gcn::Button
-    {
-    public:
-        /**
-         * Constructor.
-         *
-         * @param filename The filename of the image to display.
-         */
-        ImageButton(const std::string& filename);
+	/**
+	 * A simple button that displays an image instead of a caption.
+	 */
+	class GCN_CORE_DECLSPEC ImageButton : public Button
+	{
+	public:
+		/**
+		 * Constructor.
+		 *
+		 * @param filename The filename of the image to display.
+		 */
+		ImageButton(const std::string& filename);
 
-        /**
-         * Constructor.
-         *
-         * @param image The image to display.
-         */
-        ImageButton(Image* image);
+		/**
+		 * Constructor.
+		 *
+		 * @param image The image to display.
+		 */
+		ImageButton(Image* image);
 
-        /**
-         * Destructor.
-         */
-        virtual ~ImageButton();
+		/**
+		 * Destructor.
+		 */
+		virtual ~ImageButton();
 
-        /**
-         * Adjusts the size of the image button to fit the image.
-         */
-        void adjustSize();
+		/**
+		 * Adjusts the size of the image button to fit the image.
+		 */
+		void adjustSize() override;
 
-        /**
-         * Sets the image to display.
-         *
-         * @param image The image to display.
-         */
-        void setImage(Image* image);
+		/**
+		 * Sets the image to display.
+		 *
+		 * @param image The image to display.
+		 */
+		virtual void setImage(Image* image);
 
-        /**
-         * Gets the image of the image button.
-         *
-         * @return The image of the image button.
-         */
-        Image* getImage();
+		/**
+		 * Gets the image of the image button.
+		 *
+		 * @return The image of the image button.
+		 */
+		virtual Image* getImage();
 
 
-        // Inherited from Widget
+		// Inherited from Widget
 
-        void draw(gcn::Graphics* graphics);
+		void draw(Graphics* graphics) override;
 
-    protected:
-        gcn::Image* mImage;
+	protected:
+		Image* mImage;
 
-        /**
-         * True if the image has been loaded internally, false otherwise.
-         * An image not loaded internally should not be deleted in the
-         * destructor.
-         */
-        bool mInternalImage;
-    };
+		/**
+		 * True if the image has been loaded internally, false otherwise.
+		 * An image not loaded internally should not be deleted in the
+		 * destructor.
+		 */
+		bool mInternalImage;
+	};
 }
 #endif

@@ -7,8 +7,6 @@
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
-#include "UaeDropDown.hpp"
-#include "UaeCheckBox.hpp"
 
 #include "sysdeps.h"
 #include "options.h"
@@ -17,24 +15,24 @@
 #include "gui_handling.h"
 
 static gcn::Label* lblModel;
-static gcn::UaeDropDown* cboModel;
+static gcn::DropDown* cboModel;
 static gcn::Label* lblConfig;
-static gcn::UaeDropDown* cboConfig;
-static gcn::UaeCheckBox* chkNTSC;
+static gcn::DropDown* cboConfig;
+static gcn::CheckBox* chkNTSC;
 
-static gcn::UaeCheckBox* chkDFx[2];
-static gcn::UaeCheckBox* chkDFxWriteProtect[2];
+static gcn::CheckBox* chkDFx[2];
+static gcn::CheckBox* chkDFxWriteProtect[2];
 static gcn::Button* cmdDFxInfo[2];
 static gcn::Button* cmdDFxEject[2];
 static gcn::Button* cmdDFxSelect[2];
-static gcn::UaeDropDown* cboDFxFile[2];
+static gcn::DropDown* cboDFxFile[2];
 
-static gcn::UaeCheckBox* chkCD;
+static gcn::CheckBox* chkCD;
 static gcn::Button* cmdCDEject;
 static gcn::Button* cmdCDSelect;
-static gcn::UaeDropDown* cboCDFile;
+static gcn::DropDown* cboCDFile;
 
-static gcn::UaeCheckBox* chkQuickstartMode;
+static gcn::CheckBox* chkQuickstartMode;
 static gcn::Button* cmdSetConfiguration;
 
 struct amigamodels
@@ -306,7 +304,7 @@ public:
 
 	std::string getElementAt(const int i) override
 	{
-		if (i < 0 || i >= lstMRUDiskList.size())
+		if (i < 0 || i >= static_cast<int>(lstMRUDiskList.size()))
 			return "---";
 		return lstMRUDiskList[i];
 	}
@@ -328,7 +326,7 @@ public:
 
 	std::string getElementAt(const int i) override
 	{
-		if (i < 0 || i >= lstMRUCDList.size())
+		if (i < 0 || i >= static_cast<int>(lstMRUCDList.size()))
 			return "---";
 		return lstMRUCDList[i];
 	}
@@ -517,6 +515,8 @@ public:
 				//---------------------------------------
 				// Write-protect changed
 				//---------------------------------------
+				if (strlen(changed_prefs.floppyslots[i].df) <= 0)
+					return;
 				disk_setwriteprotect(&changed_prefs, i, changed_prefs.floppyslots[i].df,
 				                     chkDFxWriteProtect[i]->isSelected());
 				if (disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df) != chkDFxWriteProtect[i]->
@@ -608,7 +608,7 @@ public:
 			if (actionEvent.getSource() == cboDFxFile[i])
 			{
 				//---------------------------------------
-				// Diskimage from list selected
+				// Disk image from list selected
 				//---------------------------------------
 				if (!bIgnoreListChange)
 				{
@@ -671,24 +671,24 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 
 	lblModel = new gcn::Label("Amiga model:");
 	lblModel->setAlignment(gcn::Graphics::RIGHT);
-	cboModel = new gcn::UaeDropDown(&amigaModelList);
+	cboModel = new gcn::DropDown(&amigaModelList);
 	cboModel->setSize(160, cboModel->getHeight());
 	cboModel->setBaseColor(gui_baseCol);
 	cboModel->setBackgroundColor(colTextboxBackground);
-	cboModel->setId("qscboAModel");
+	cboModel->setId("cboAModel");
 	cboModel->addActionListener(amigaModelActionListener);
 
 	lblConfig = new gcn::Label("Config:");
 	lblConfig->setAlignment(gcn::Graphics::RIGHT);
-	cboConfig = new gcn::UaeDropDown(&amigaConfigList);
+	cboConfig = new gcn::DropDown(&amigaConfigList);
 	cboConfig->setSize(category.panel->getWidth() - lblConfig->getWidth() - 8 - 2 * DISTANCE_BORDER,
 	                   cboConfig->getHeight());
 	cboConfig->setBaseColor(gui_baseCol);
 	cboConfig->setBackgroundColor(colTextboxBackground);
-	cboConfig->setId("qscboAConfig");
+	cboConfig->setId("cboAConfig");
 	cboConfig->addActionListener(amigaModelActionListener);
 
-	chkNTSC = new gcn::UaeCheckBox("NTSC");
+	chkNTSC = new gcn::CheckBox("NTSC");
 	chkNTSC->setId("qsNTSC");
 	chkNTSC->addActionListener(ntscButtonActionListener);
 
@@ -696,12 +696,13 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 	{
 		char tmp[20];
 		snprintf(tmp, 20, "DF%d:", i);
-		chkDFx[i] = new gcn::UaeCheckBox(tmp);
+		chkDFx[i] = new gcn::CheckBox(tmp);
+		chkDFx[i]->setId(tmp);
 		chkDFx[i]->addActionListener(dfxCheckActionListener);
 		snprintf(tmp, 20, "qsDF%d", i);
 		chkDFx[i]->setId(tmp);
 
-		chkDFxWriteProtect[i] = new gcn::UaeCheckBox("Write-protected");
+		chkDFxWriteProtect[i] = new gcn::CheckBox("Write-protected");
 		chkDFxWriteProtect[i]->addActionListener(dfxCheckActionListener);
 		snprintf(tmp, 20, "qsWP%d", i);
 		chkDFxWriteProtect[i]->setId(tmp);
@@ -727,16 +728,16 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 		cmdDFxSelect[i]->setId(tmp);
 		cmdDFxSelect[i]->addActionListener(dfxButtonActionListener);
 
-		cboDFxFile[i] = new gcn::UaeDropDown(&diskfileList);
+		cboDFxFile[i] = new gcn::DropDown(&diskfileList);
 		cboDFxFile[i]->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, cboDFxFile[i]->getHeight());
 		cboDFxFile[i]->setBaseColor(gui_baseCol);
 		cboDFxFile[i]->setBackgroundColor(colTextboxBackground);
-		snprintf(tmp, 20, "qscboDisk%d", i);
+		snprintf(tmp, 20, "cboDisk%d", i);
 		cboDFxFile[i]->setId(tmp);
 		cboDFxFile[i]->addActionListener(diskFileActionListener);
 	}
 
-	chkCD = new gcn::UaeCheckBox("CD drive");
+	chkCD = new gcn::CheckBox("CD drive");
 	chkCD->setId("qsCD drive");
 	chkCD->setEnabled(false);
 
@@ -752,14 +753,14 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 	cmdCDSelect->setId("qsCDSelect");
 	cmdCDSelect->addActionListener(cdButtonActionListener);
 
-	cboCDFile = new gcn::UaeDropDown(&cdfileList);
+	cboCDFile = new gcn::DropDown(&cdfileList);
 	cboCDFile->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, cboCDFile->getHeight());
 	cboCDFile->setBaseColor(gui_baseCol);
 	cboCDFile->setBackgroundColor(colTextboxBackground);
-	cboCDFile->setId("qscboCD");
+	cboCDFile->setId("cboCD");
 	cboCDFile->addActionListener(cdFileActionListener);
 
-	chkQuickstartMode = new gcn::UaeCheckBox("Start in Quickstart mode");
+	chkQuickstartMode = new gcn::CheckBox("Start in Quickstart mode");
 	chkQuickstartMode->setId("qsMode");
 	chkQuickstartMode->addActionListener(quickstartModeActionListener);
 
@@ -819,7 +820,7 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 	SetControlState(quickstart_model);
 
 	// Only change the current prefs if we're not already emulating
-	if (!emulating)
+	if (!emulating && !config_loaded)
 		AdjustPrefs();
 
 	RefreshPanelQuickstart();
@@ -870,7 +871,7 @@ static void AdjustDropDownControls(void)
 
 		if (changed_prefs.floppyslots[i].dfxtype != DRV_NONE && strlen(changed_prefs.floppyslots[i].df) > 0)
 		{
-			for (unsigned int j = 0; j < lstMRUDiskList.size(); ++j)
+			for (auto j = 0; j < static_cast<int>(lstMRUDiskList.size()); ++j)
 			{
 				if (strcmp(lstMRUDiskList[j].c_str(), changed_prefs.floppyslots[i].df) == 0)
 				{
@@ -884,7 +885,7 @@ static void AdjustDropDownControls(void)
 	cboCDFile->clearSelected();
 	if (changed_prefs.cdslots[0].inuse && strlen(changed_prefs.cdslots[0].name) > 0)
 	{
-		for (unsigned int i = 0; i < lstMRUCDList.size(); ++i)
+		for (auto i = 0; i < static_cast<int>(lstMRUCDList.size()); ++i)
 		{
 			if (lstMRUCDList[i].c_str() != changed_prefs.cdslots[0].name)
 			{

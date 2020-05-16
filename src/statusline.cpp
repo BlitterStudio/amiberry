@@ -4,6 +4,7 @@
 #include "sysdeps.h"
 
 #include "options.h"
+#include "uae.h"
 #include "xwin.h"
 #include "gui.h"
 #include "custom.h"
@@ -49,6 +50,19 @@ static void write_tdnumber(uae_u8 *buf, int bpp, int x, int y, int num, uae_u32 
 	}
 }
 
+static uae_u32 rgbmuldiv(uae_u32 rgb, int mul, int div)
+{
+	uae_u32 out = 0;
+	for (int i = 0; i < 3; i++) {
+		int v = (rgb >> (i * 8)) & 0xff;
+		v *= mul;
+		v /= div;
+		out |= v << (i * 8);
+	}
+	out |= rgb & 0xff000000;
+	return out;
+}
+
 void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u32 *rc, uae_u32 *gc, uae_u32 *bc, uae_u32 *alpha)
 {
 	struct amigadisplay *ad = &adisplays;
@@ -57,7 +71,6 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 
 	c1 = ledcolor(0x00ffffff, rc, gc, bc, alpha);
 	c2 = ledcolor(0x00000000, rc, gc, bc, alpha);
-	cb = ledcolor(TD_BORDER, rc, gc, bc, alpha);
 
 	if (td_pos & TD_RIGHT)
 		x_start = totalwidth - TD_PADX - VISIBLE_LEDS * TD_WIDTH;
@@ -69,7 +82,9 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 		int side, pos, num1 = -1, num2 = -1, num3 = -1, num4 = -1;
 		int x, c, on = 0, am = 2;
 		xcolnr on_rgb = 0, on_rgb2 = 0, off_rgb = 0, pen_rgb = 0;
-		int half = 0;
+		int half = 0, extraborder = 0;
+
+		cb = ledcolor(TD_BORDER, rc, gc, bc, alpha);
 
 		if (!(currprefs.leds_on_screen_mask[ad->picasso_on ? 1 : 0] & (1 << led)))
 			continue;
@@ -78,27 +93,33 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 		if (led >= LED_DF0 && led <= LED_DF3)
 		{
 			int pled = led - LED_DF0;
-			int track = gui_data.drive_track[pled];
+			struct floppyslot* fs = &currprefs.floppyslots[pled];
+			struct gui_info_drive* gid = &gui_data.drives[pled];
+			int track = gid->drive_track;
 			pos = 7 + pled;
 			on_rgb = 0x00cc00;
-			on_rgb2 = 0x006600;
-			off_rgb = 0x003300;
-			if (!gui_data.drive_disabled[pled])
+			if (!gid->drive_disabled)
 			{
 				num1 = -1;
 				num2 = track / 10;
 				num3 = track % 10;
-				on = gui_data.drive_motor[pled];
-				if (gui_data.drive_writing[pled])
+				on = gid->drive_motor;
+				if (gid->drive_writing)
 				{
 					on_rgb = bpp == 2 ? 0xcc0000 : 0x0000cc;
-					on_rgb2 = bpp == 2 ? 0x880000 : 0x000088;
 				}
 				half = gui_data.drive_side ? 1 : -1;
-				if (gui_data.df[pled][0] == 0)
+				if (gid->df[0] == 0) {
 					pen_rgb = ledcolor(0x00aaaaaa, rc, gc, bc, alpha);
+				} else if (gid->floppy_protected) {
+					cb = ledcolor(0x00cc00, rc, gc, bc, alpha);
+					extraborder = 1;
+				}
 			}
 			side = gui_data.drive_side;
+			on_rgb &= 0xffffff;
+			off_rgb = rgbmuldiv(on_rgb, 2, 4);
+			on_rgb2 = rgbmuldiv(on_rgb, 2, 3);
 		}
 		else if (led == LED_POWER)
 		{
@@ -235,7 +256,7 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 			off_rgb = 0x000000;
 			am = 3;
 		}
-		else if (led == LED_MD && gui_data.drive_disabled[3])
+		else if (led == LED_MD && gui_data.drives[3].drive_disabled)
 		{
 			// DF3 reused as internal non-volatile ram led (cd32/cdtv)
 			pos = 7 + 3;
@@ -274,17 +295,22 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 		on_rgb |= 0x33000000;
 		off_rgb |= 0x33000000;
 		if (half > 0) {
-			c = ledcolor(on ? (y >= TD_TOTAL_HEIGHT / 2 ? on_rgb2 : on_rgb) : off_rgb, rc, gc, bc, alpha);
-		}
-		else if (half < 0) {
-			c = ledcolor(on ? (y < TD_TOTAL_HEIGHT / 2 ? on_rgb2 : on_rgb) : off_rgb, rc, gc, bc, alpha);
-		}
-		else {
+			int halfon = y >= TD_TOTAL_HEIGHT / 2;
+			c = ledcolor(on ? (halfon ? on_rgb2 : on_rgb) : off_rgb, rc, gc, bc, alpha);
+			if (!halfon && on && extraborder)
+				cb = rgbmuldiv(cb, 2, 3);
+		} else if (half < 0) {
+			int halfon = y < TD_TOTAL_HEIGHT / 2;
+			c = ledcolor(on ? (halfon ? on_rgb2 : on_rgb) : off_rgb, rc, gc, bc, alpha);
+			if (!halfon && on && extraborder)
+				cb = rgbmuldiv(cb, 2, 3);
+		} else {
 			c = ledcolor(on ? on_rgb : off_rgb, rc, gc, bc, alpha);
 		}
+
 		border = 0;
 		if (y == 0 || y == TD_TOTAL_HEIGHT - 1) {
-			c = ledcolor(TD_BORDER, rc, gc, bc, alpha);
+			c = cb;
 			border = 1;
 		}
 
@@ -317,13 +343,11 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 }
 
 #define MAX_STATUSLINE_QUEUE 8
-
 struct statusline_struct
 {
 	TCHAR* text;
 	int type;
 };
-
 struct statusline_struct statusline_data[MAX_STATUSLINE_QUEUE];
 static TCHAR* statusline_text_active;
 static int statusline_delay;
@@ -356,6 +380,70 @@ void statusline_clear(void)
 const TCHAR* statusline_fetch(void)
 {
 	return statusline_text_active;
+}
+
+void statusline_add_message(int statustype, const TCHAR *format, ...)
+{
+	va_list parms;
+	TCHAR buffer[256];
+
+	if (isguiactive())
+		return;
+
+	va_start(parms, format);
+	buffer[0] = ' ';
+	_vsntprintf(buffer + 1, 256 - 2, format, parms);
+	_tcscat(buffer, _T(" "));
+
+	for (int i = 0; i < MAX_STATUSLINE_QUEUE; i++) {
+		if (statusline_data[i].text != NULL && statusline_data[i].type == statustype) {
+			xfree(statusline_data[i].text);
+			statusline_data[i].text = NULL;
+			for (int j = i + 1; j < MAX_STATUSLINE_QUEUE; j++) {
+				memcpy(&statusline_data[j - 1], &statusline_data[j], sizeof(struct statusline_struct));
+			}
+			statusline_data[MAX_STATUSLINE_QUEUE - 1].text = NULL;
+		}
+	}
+
+	if (statusline_data[1].text) {
+		for (int i = 0; i < MAX_STATUSLINE_QUEUE; i++) {
+			if (statusline_data[i].text && !_tcscmp(statusline_data[i].text, buffer)) {
+				xfree(statusline_data[i].text);
+				for (int j = i + 1; j < MAX_STATUSLINE_QUEUE; j++) {
+					memcpy(&statusline_data[j - 1], &statusline_data[j], sizeof(struct statusline_struct));
+				}
+				statusline_data[MAX_STATUSLINE_QUEUE - 1].text = NULL;
+				i = 0;
+			}
+		}
+	} else if (statusline_data[0].text) {
+		if (!_tcscmp(statusline_data[0].text, buffer))
+			return;
+	}
+
+	for (int i = 0; i < MAX_STATUSLINE_QUEUE; i++) {
+		if (statusline_data[i].text == NULL) {
+			statusline_data[i].text = my_strdup(buffer);
+			statusline_data[i].type = statustype;
+			if (i == 0)
+				statusline_delay = STATUSLINE_MS * vblank_hz / (1000 * 1);
+			statusline_text_active = statusline_data[0].text;
+			statusline_update_notification();
+			return;
+		}
+	}
+	statusline_text_active = NULL;
+	xfree(statusline_data[0].text);
+	for (int i = 1; i < MAX_STATUSLINE_QUEUE; i++) {
+		memcpy(&statusline_data[i - 1], &statusline_data[i], sizeof(struct statusline_struct));
+	}
+	statusline_data[MAX_STATUSLINE_QUEUE - 1].text = my_strdup(buffer);
+	statusline_data[MAX_STATUSLINE_QUEUE - 1].type = statustype;
+	statusline_text_active = statusline_data[0].text;
+	statusline_update_notification();
+
+	va_end(parms);
 }
 
 void statusline_vsync(void)

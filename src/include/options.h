@@ -1,11 +1,11 @@
- /*
-  * UAE - The Un*x Amiga Emulator
-  *
-  * Stuff
-  *
-  * Copyright 1995, 1996 Ed Hanway
-  * Copyright 1995-2001 Bernd Schmidt
-  */
+/*
+* UAE - The Un*x Amiga Emulator
+*
+* Stuff
+*
+* Copyright 1995, 1996 Ed Hanway
+* Copyright 1995-2001 Bernd Schmidt
+*/
 
 #ifndef UAE_OPTIONS_H
 #define UAE_OPTIONS_H
@@ -15,7 +15,7 @@
 #include "traps.h"
 
 #define UAEMAJOR 4
-#define UAEMINOR 3
+#define UAEMINOR 4
 #define UAESUBREV 0
 
 typedef enum { KBD_LANG_US, KBD_LANG_DK, KBD_LANG_DE, KBD_LANG_SE, KBD_LANG_FR, KBD_LANG_IT, KBD_LANG_ES } KbdLang;
@@ -116,6 +116,7 @@ struct inputdevconfig {
 struct jport {
 	int id{};
 	int mode{}; // 0=def,1=mouse,2=joy,3=anajoy,4=lightpen
+	int submode;
 	int autofire{};
 	struct inputdevconfig idc {};
 	bool nokeyboardoverride{};
@@ -402,6 +403,7 @@ struct romconfig
 	TCHAR romident[256];
 	uae_u32 board_ram_size;
 	bool autoboot_disabled;
+	bool inserted;
 	int device_id;
 	int device_settings;
 	int subtype;
@@ -494,6 +496,7 @@ struct uae_prefs {
 	TCHAR config_window_title[256];
 
 	bool illegal_mem;
+	bool debug_mem;
 	bool use_serial;
 	bool serial_demand;
 	bool serial_hwctsrts;
@@ -574,6 +577,7 @@ struct uae_prefs {
 	bool gfx_blackerthanblack;
 	int gfx_threebitcolors;
 	int gfx_api;
+	bool gfx_hdr;
 	int gfx_api_options;
 	int color_mode;
 	int gfx_extrawidth;
@@ -617,6 +621,7 @@ struct uae_prefs {
 	int fast_copper;
 #endif
 	int leds_on_screen_mask[2];
+	int leds_on_screen_multiplier[2];
 	int power_led_dim;
 	struct wh osd_pos;
 	int keyboard_leds[3];
@@ -821,7 +826,6 @@ struct uae_prefs {
 
 	int gfx_correct_aspect;
 	int scaling_method;
-	int hide_idle_led;
 
 	TCHAR open_gui[256];
 	TCHAR quit_amiberry[256];

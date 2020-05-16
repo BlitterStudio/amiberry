@@ -7,7 +7,7 @@
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
  * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
- *
+ * Copyright (c) 2020 Gwilherm Baudic
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
  * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
@@ -54,215 +54,85 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GCN_SLIDER_HPP
-#define GCN_SLIDER_HPP
+#ifndef GCN_TOGGLEBUTTON_HPP
+#define GCN_TOGGLEBUTTON_HPP
 
+#include <string>
+
+#include "guisan/focuslistener.hpp"
 #include "guisan/keylistener.hpp"
+#include "guisan/mouseevent.hpp"
 #include "guisan/mouselistener.hpp"
 #include "guisan/platform.hpp"
 #include "guisan/widget.hpp"
+#include "guisan/widgets/button.hpp"
 
 namespace gcn
 {
 	/**
-	 * A slider able to slide between different values. You can set the scale
-	 * of the slider yourself so that it ranges between, for example, -1.0 and
-	 * 2.0.
+	 * A toggle button, which can stay selected. Think of it as a checkbox,
+	 * but dressed as a regular button. Add an ActionListener to it to know when it
+	 * has been clicked.
+	 *
 	 */
-	class GCN_CORE_DECLSPEC Slider :
-		public Widget,
-		public MouseListener,
-		public KeyListener
+	class GCN_CORE_DECLSPEC ToggleButton : public Button
 	{
 	public:
-
 		/**
-		 * Constructor. Scale start is 0.
-		 *
-		 * @param scaleEnd the end of the slider scale.
+		 * Constructor.
 		 */
-		Slider(double scaleEnd = 1.0);
+		ToggleButton();
 
 		/**
 		 * Constructor.
 		 *
-		 * @param scaleStart the start of the scale.
-		 * @param scaleEnd the end of the scale.
+		 * @param caption the caption of the ToggleButton.
 		 */
-		Slider(double scaleStart, double scaleEnd);
+		ToggleButton(const std::string& caption);
 
 		/**
-		 * Destructor.
-		 */
-		virtual ~Slider()
-		= default;
-
-		/**
-		 * Sets the scale.
+		 * Checks if the button is selected.
 		 *
-		 * @param scaleStart the start of the scale.
-		 * @param scaleEnd the end of the scale.
+		 * @return True if the button is selected, false otherwise.
+		 * @see setSelected
 		 */
-		void setScale(double scaleStart, double scaleEnd);
+		[[nodiscard]] bool isSelected() const;
 
 		/**
-		 * Gets the scale start.
+		 * Sets the button to be selected.
 		 *
-		 * @return the scale start.
+		 * @param selected True if the button should be set as selected.
+		 * @see isSelected
 		 */
-		[[nodiscard]] double getScaleStart() const;
-
-		/**
-		 * Sets the scale start.
-		 *
-		 * @param scaleStart the start of the scale.
-		 */
-		void setScaleStart(double scaleStart);
-
-		/**
-		 * Gets the scale end.
-		 *
-		 * @return the scale end.
-		 */
-		[[nodiscard]] double getScaleEnd() const;
-
-		/**
-		 * Sets the scale end.
-		 *
-		 * @param scaleEnd the end of the scale.
-		 */
-		void setScaleEnd(double scaleEnd);
-
-		/**
-		 * Gets the current value.
-		 *
-		 * @return the current value.
-		 */
-		[[nodiscard]] double getValue() const;
-
-		/**
-		 * Sets the current value.
-		 *
-		 * @param value a scale value.
-		 */
-		void setValue(double value);
-
-		/**
-		 * Draws the marker.
-		 *
-		 * @param graphics a graphics object to draw with.
-		 */
-		virtual void drawMarker(Graphics* graphics);
-
-		/**
-		 * Sets the length of the marker.
-		 *
-		 * @param length new length for the marker.
-		 */
-		void setMarkerLength(int length);
-
-		/**
-		 * Gets the length of the marker.
-		 *
-		 * @return the length of the marker.
-		 */
-		[[nodiscard]] int getMarkerLength() const;
-
-		/**
-		 * Sets the orientation of the slider. A slider can be drawn verticaly
-		 * or horizontaly. For orientation, see the enum in this class.
-		 *
-		 * @param orientation the orientation.
-		 */
-		void setOrientation(unsigned int orientation);
-
-		/**
-		 * Gets the orientation of the slider. Se the enum in this class.
-		 *
-		 * @return the orientation of the slider.
-		 */
-		[[nodiscard]] unsigned int getOrientation() const;
-
-		/**
-		 * Sets the step length. Step length is used when the keys left and
-		 * right are pressed.
-		 *
-		 * @param length the step length.
-		 */
-		void setStepLength(double length);
-
-		/**
-		 * Gets the step length.
-		 *
-		 * @return the step length.
-		 */
-		[[nodiscard]] double getStepLength() const;
+		void setSelected(bool selected);
 
 
-		// Inherited from Widget
+		//Inherited from Widget
 
 		void draw(Graphics* graphics) override;
 
-		void drawBorder(Graphics* graphics) override;
 
+		// Inherited from MouseListener
 
-		// Inherited from MouseListener.
-
-		void mousePressed(MouseEvent& mouseEvent) override;
-
-		void mouseDragged(MouseEvent& mouseEvent) override;
-
-		void mouseWheelMovedUp(MouseEvent& mouseEvent) override;
-
-		void mouseWheelMovedDown(MouseEvent& mouseEvent) override;
+		void mouseReleased(MouseEvent& mouseEvent) override;
 
 
 		// Inherited from KeyListener
 
-		void keyPressed(KeyEvent& keyEvent) override;
-
-		/**
-		 * Draw orientations for the slider. It can be drawn vertically or
-		 * horizontally.
-		 */
-		enum
-		{
-			HORIZONTAL = 0,
-			VERTICAL
-		};
+		void keyReleased(KeyEvent& keyEvent) override;
 
 	protected:
 		/**
-		 * Converts a marker position to a value.
-		 *
-		 * @param v the position to convert.
-		 * @return the value corresponding to the position.
+		 * Toggles the button between being selected and
+		 * not being selected.
 		 */
-		[[nodiscard]] virtual double markerPositionToValue(int v) const;
+		virtual void toggleSelected();
 
 		/**
-		 * Converts a value to a marker position.
-		 *
-		 * @param value the value to convert.
-		 * @return the position corresponding to the value.
+		 * True if the button is selected, false otherwise. 
 		 */
-		[[nodiscard]] virtual int valueToMarkerPosition(double value) const;
-
-		/**
-		 * Gets the marker position for the current value.
-		 *
-		 * @return the marker position for the current value.
-		 */
-		[[nodiscard]] virtual int getMarkerPosition() const;
-
-		bool mMouseDrag;
-		double mValue{};
-		double mStepLength{};
-		int mMarkerLength{};
-		double mScaleStart;
-		double mScaleEnd;
-		unsigned int mOrientation{};
+		bool mSelected;
 	};
 }
 
-#endif // end GCN_SLIDER_HPP
+#endif // end GCN_TOGGLEBUTTON_HPP

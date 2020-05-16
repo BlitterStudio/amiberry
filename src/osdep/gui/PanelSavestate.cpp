@@ -8,7 +8,6 @@
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
-#include "UaeRadioButton.hpp"
 
 #include "sysdeps.h"
 #include "xwin.h"
@@ -20,10 +19,10 @@
 int currentStateNum = 0;
 
 static gcn::Window* grpNumber;
-static gcn::UaeRadioButton* optState0;
-static gcn::UaeRadioButton* optState1;
-static gcn::UaeRadioButton* optState2;
-static gcn::UaeRadioButton* optState3;
+static gcn::RadioButton* optState0;
+static gcn::RadioButton* optState1;
+static gcn::RadioButton* optState2;
+static gcn::RadioButton* optState3;
 static gcn::Window* wndScreenshot;
 static gcn::Icon* icoSavestate = nullptr;
 static gcn::Image* imgSavestate = nullptr;
@@ -54,7 +53,7 @@ public:
 			{
 				if (strlen(savestate_fname) > 0)
 				{
-					const auto f = fopen(savestate_fname, "rbe");
+					auto* const f = fopen(savestate_fname, "rbe");
 					if (f)
 					{
 						fclose(f);
@@ -101,19 +100,19 @@ void InitPanelSavestate(const struct _ConfigCategory& category)
 {
 	savestateActionListener = new SavestateActionListener();
 
-	optState0 = new gcn::UaeRadioButton("0", "radiostategroup");
+	optState0 = new gcn::RadioButton("0", "radiostategroup");
 	optState0->setId("State0");
 	optState0->addActionListener(savestateActionListener);
 
-	optState1 = new gcn::UaeRadioButton("1", "radiostategroup");
+	optState1 = new gcn::RadioButton("1", "radiostategroup");
 	optState1->setId("State1");
 	optState1->addActionListener(savestateActionListener);
 
-	optState2 = new gcn::UaeRadioButton("2", "radiostategroup");
+	optState2 = new gcn::RadioButton("2", "radiostategroup");
 	optState2->setId("State2");
 	optState2->addActionListener(savestateActionListener);
 
-	optState3 = new gcn::UaeRadioButton("3", "radiostategroup");
+	optState3 = new gcn::RadioButton("3", "radiostategroup");
 	optState3->setId("State3");
 	optState3->addActionListener(savestateActionListener);
 
@@ -123,12 +122,14 @@ void InitPanelSavestate(const struct _ConfigCategory& category)
 	grpNumber->add(optState2, 5, 70);
 	grpNumber->add(optState3, 5, 100);
 	grpNumber->setMovable(false);
-	grpNumber->setSize(BUTTON_WIDTH, 145);
+	grpNumber->setSize(BUTTON_WIDTH, 155);
+	grpNumber->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpNumber->setBaseColor(gui_baseCol);
 
 	wndScreenshot = new gcn::Window("State screen");
 	wndScreenshot->setMovable(false);
 	wndScreenshot->setSize(300, 300);
+	wndScreenshot->setTitleBarHeight(TITLEBAR_HEIGHT);
 	wndScreenshot->setBaseColor(gui_baseCol);
 
 	cmdLoadState = new gcn::Button("Load State");

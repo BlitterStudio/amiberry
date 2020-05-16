@@ -7,32 +7,30 @@
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
-#include "UaeDropDown.hpp"
-#include "UaeCheckBox.hpp"
 
 #include "sysdeps.h"
 #include "options.h"
 #include "disk.h"
 #include "gui_handling.h"
 
-static gcn::UaeCheckBox* chkDFx[4];
-static gcn::UaeDropDown* cboDFxType[4];
-static gcn::UaeCheckBox* chkDFxWriteProtect[4];
+static gcn::CheckBox* chkDFx[4];
+static gcn::DropDown* cboDFxType[4];
+static gcn::CheckBox* chkDFxWriteProtect[4];
 static gcn::Button* cmdDFxInfo[4];
 static gcn::Button* cmdDFxEject[4];
 static gcn::Button* cmdDFxSelect[4];
-static gcn::UaeDropDown* cboDFxFile[4];
+static gcn::DropDown* cboDFxFile[4];
 static gcn::Label* lblDriveSpeed;
 static gcn::Label* lblDriveSpeedInfo;
 static gcn::Slider* sldDriveSpeed;
-static gcn::UaeCheckBox* chkLoadConfig;
+static gcn::CheckBox* chkLoadConfig;
 static gcn::Button* cmdSaveForDisk;
 static gcn::Button* cmdCreateDDDisk;
 static gcn::Button* cmdCreateHDDisk;
 
 static const char* diskfile_filter[] = {".adf", ".adz", ".fdi", ".ipf", ".zip", ".dms", ".gz", ".xz", "\0"};
-static const char* drivespeedlist[] = {"100% (compatible)", "200%", "400%", "800%"};
-static const int drivespeedvalues[] = {100, 200, 400, 800};
+static const char* drive_speed_list[] = {"100% (compatible)", "200%", "400%", "800%"};
+static const int drive_speed_values[] = {100, 200, 400, 800};
 
 static void AdjustDropDownControls();
 static bool bLoadConfigForDisk = false;
@@ -60,7 +58,7 @@ public:
 
 	std::string getElementAt(int i) override
 	{
-		if (i < 0 || i >= types.size())
+		if (i < 0 || i >= static_cast<int>(types.size()))
 			return "---";
 		return types[i];
 	}
@@ -81,7 +79,7 @@ public:
 
 	std::string getElementAt(int i) override
 	{
-		if (i < 0 || i >= lstMRUDiskList.size())
+		if (i < 0 || i >= static_cast<int>(lstMRUDiskList.size()))
 			return "---";
 		return lstMRUDiskList[i];
 	}
@@ -234,7 +232,7 @@ public:
 			if (actionEvent.getSource() == cboDFxFile[i])
 			{
 				//---------------------------------------
-				// Diskimage from list selected
+				// Disk image from list selected
 				//---------------------------------------
 				if (!bIgnoreListChange)
 				{
@@ -285,7 +283,7 @@ class DriveSpeedSliderActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		changed_prefs.floppy_speed = drivespeedvalues[int(sldDriveSpeed->getValue())];
+		changed_prefs.floppy_speed = drive_speed_values[int(sldDriveSpeed->getValue())];
 		RefreshPanelFloppy();
 	}
 };
@@ -387,17 +385,18 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 	{
 		char tmp[20];
 		snprintf(tmp, 20, "DF%d:", i);
-		chkDFx[i] = new gcn::UaeCheckBox(tmp);
+		chkDFx[i] = new gcn::CheckBox(tmp);
+		chkDFx[i]->setId(tmp);
 		chkDFx[i]->addActionListener(dfxCheckActionListener);
 
-		cboDFxType[i] = new gcn::UaeDropDown(&driveTypeList);
+		cboDFxType[i] = new gcn::DropDown(&driveTypeList);
 		cboDFxType[i]->setBaseColor(gui_baseCol);
 		cboDFxType[i]->setBackgroundColor(colTextboxBackground);
 		snprintf(tmp, 20, "cboType%d", i);
 		cboDFxType[i]->setId(tmp);
 		cboDFxType[i]->addActionListener(driveTypeActionListener);
 
-		chkDFxWriteProtect[i] = new gcn::UaeCheckBox("Write-protected");
+		chkDFxWriteProtect[i] = new gcn::CheckBox("Write-protected");
 		chkDFxWriteProtect[i]->addActionListener(dfxCheckActionListener);
 		snprintf(tmp, 20, "chkWP%d", i);
 		chkDFxWriteProtect[i]->setId(tmp);
@@ -421,7 +420,7 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 		cmdDFxSelect[i]->setId(tmp);
 		cmdDFxSelect[i]->addActionListener(dfxButtonActionListener);
 
-		cboDFxFile[i] = new gcn::UaeDropDown(&diskfileList);
+		cboDFxFile[i] = new gcn::DropDown(&diskfileList);
 		cboDFxFile[i]->setSize(textFieldWidth, cboDFxFile[i]->getHeight());
 		cboDFxFile[i]->setBaseColor(gui_baseCol);
 		cboDFxFile[i]->setBackgroundColor(colTextboxBackground);
@@ -431,7 +430,7 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 
 		if (i == 0)
 		{
-			chkLoadConfig = new gcn::UaeCheckBox("Load config with same name as disk");
+			chkLoadConfig = new gcn::CheckBox("Load config with same name as disk");
 			chkLoadConfig->setId("LoadDiskCfg");
 			chkLoadConfig->addActionListener(dfxCheckActionListener);
 		}
@@ -445,7 +444,7 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 	sldDriveSpeed->setStepLength(1);
 	sldDriveSpeed->setId("DriveSpeed");
 	sldDriveSpeed->addActionListener(driveSpeedSliderActionListener);
-	lblDriveSpeedInfo = new gcn::Label(drivespeedlist[0]);
+	lblDriveSpeedInfo = new gcn::Label(drive_speed_list[0]);
 
 	cmdSaveForDisk = new gcn::Button("Save config for disk");
 	cmdSaveForDisk->setSize(cmdSaveForDisk->getWidth(), BUTTON_HEIGHT);
@@ -547,7 +546,7 @@ static void AdjustDropDownControls()
 
 		if (changed_prefs.floppyslots[i].dfxtype != DRV_NONE && strlen(changed_prefs.floppyslots[i].df) > 0)
 		{
-			for (unsigned int j = 0; j < lstMRUDiskList.size(); ++j)
+			for (auto j = 0; j < static_cast<int>(lstMRUDiskList.size()); ++j)
 			{
 				if (strcmp(lstMRUDiskList[j].c_str(), changed_prefs.floppyslots[i].df) == 0)
 				{
@@ -594,10 +593,10 @@ void RefreshPanelFloppy()
 
 	for (i = 0; i < 4; ++i)
 	{
-		if (changed_prefs.floppy_speed == drivespeedvalues[i])
+		if (changed_prefs.floppy_speed == drive_speed_values[i])
 		{
 			sldDriveSpeed->setValue(i);
-			lblDriveSpeedInfo->setCaption(drivespeedlist[i]);
+			lblDriveSpeedInfo->setCaption(drive_speed_list[i]);
 			break;
 		}
 	}
@@ -612,8 +611,8 @@ bool HelpPanelFloppy(std::vector<std::string>& helptext)
 	helptext.emplace_back("The option \"Write-protected\" indicates if the emulator can write to the ADF.");
 	helptext.emplace_back("Changing the write protection of the disk file may fail because of missing rights");
 	helptext.emplace_back("on the host filesystem.");
-	helptext.emplace_back("The button \"...\" opens a dialog to select the required");
-	helptext.emplace_back("disk file. With the dropdown control, you can select one of the disks you recently used.");
+	helptext.emplace_back("The button \"...\" opens a dialog to select the required disk file.");
+	helptext.emplace_back("With the dropdown control, you can select one of the disks you recently used.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("You can reduce the loading time for lot of games by increasing the floppy drive");
 	helptext.emplace_back("emulation speed. A few games will not load with higher drive speed and you have");

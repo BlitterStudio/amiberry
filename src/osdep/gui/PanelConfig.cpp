@@ -7,7 +7,6 @@
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
-#include "UaeListBox.hpp"
 
 #include "sysdeps.h"
 #include "options.h"
@@ -24,7 +23,7 @@ static gcn::Label* lblName;
 static gcn::TextField* txtName;
 static gcn::Label* lblDesc;
 static gcn::TextField* txtDesc;
-static gcn::UaeListBox* lstConfigs;
+static gcn::ListBox* lstConfigs;
 static gcn::ScrollArea* scrAreaConfigs;
 
 bool LoadConfigByName(const char* name)
@@ -71,7 +70,7 @@ public:
 
 	std::string getElementAt(int i) override
 	{
-		if (i >= int(configs.size()) || i < 0)
+		if (i >= static_cast<int>(configs.size()) || i < 0)
 			return "---";
 		return configs[i];
 	}
@@ -108,6 +107,8 @@ public:
 			// Load selected configuration
 			//-----------------------------------------------
 			i = lstConfigs->getSelected();
+			if (i == -1) return;
+			
 			if (emulating)
 			{
 				DisableResume();
@@ -208,6 +209,50 @@ void InitPanelConfig(const struct _ConfigCategory& category)
 {
 	configButtonActionListener = new ConfigButtonActionListener();
 
+	ReadConfigFileList();
+	configsList = new ConfigsListModel();
+	configsList->InitConfigsList();
+	configsListActionListener = new ConfigsListActionListener();
+
+	lstConfigs = new gcn::ListBox(configsList);
+	lstConfigs->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER - 22, 232);
+	lstConfigs->setBaseColor(colTextboxBackground);
+	lstConfigs->setBackgroundColor(colTextboxBackground);
+	lstConfigs->setSelectionColor(colSelectorActive);
+	lstConfigs->setWrappingEnabled(true);
+	lstConfigs->setId("ConfigList");
+	lstConfigs->addActionListener(configsListActionListener);
+
+	scrAreaConfigs = new gcn::ScrollArea(lstConfigs);
+	scrAreaConfigs->setBorderSize(1);
+	scrAreaConfigs->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
+	scrAreaConfigs->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER - 2, 252);
+	scrAreaConfigs->setScrollbarWidth(20);
+	scrAreaConfigs->setBackgroundColor(colTextboxBackground);
+
+	lblName = new gcn::Label("Name:");
+	lblName->setSize(lblName->getWidth(), lblName->getHeight());
+	lblName->setAlignment(gcn::Graphics::RIGHT);
+	txtName = new gcn::TextField();
+	txtName->setSize(300, TEXTFIELD_HEIGHT);
+	txtName->setBackgroundColor(colTextboxBackground);
+
+	lblDesc = new gcn::Label("Description:");
+	lblDesc->setSize(lblDesc->getWidth(), lblDesc->getHeight());
+	lblDesc->setAlignment(gcn::Graphics::RIGHT);
+	txtDesc = new gcn::TextField();
+	txtDesc->setSize(300, TEXTFIELD_HEIGHT);
+	txtDesc->setBackgroundColor(colTextboxBackground);
+	
+	category.panel->add(scrAreaConfigs);
+	category.panel->add(lblName, DISTANCE_BORDER,
+	                    scrAreaConfigs->getY() + scrAreaConfigs->getHeight() + DISTANCE_NEXT_Y);
+	category.panel->add(txtName, DISTANCE_BORDER + lblDesc->getWidth() + 8,
+	                    scrAreaConfigs->getY() + scrAreaConfigs->getHeight() + DISTANCE_NEXT_Y);
+	category.panel->add(lblDesc, DISTANCE_BORDER, txtName->getY() + txtName->getHeight() + DISTANCE_NEXT_Y);
+	category.panel->add(txtDesc, DISTANCE_BORDER + lblDesc->getWidth() + 8,
+	                    txtName->getY() + txtName->getHeight() + DISTANCE_NEXT_Y);
+
 	cmdLoad = new gcn::Button("Load");
 	cmdLoad->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
 	cmdLoad->setBaseColor(gui_baseCol);
@@ -235,52 +280,7 @@ void InitPanelConfig(const struct _ConfigCategory& category)
 	buttonX += BUTTON_WIDTH + DISTANCE_NEXT_X;
 	buttonX = category.panel->getWidth() - DISTANCE_BORDER - BUTTON_WIDTH;
 	category.panel->add(cmdDelete, buttonX, buttonY);
-
-	lblName = new gcn::Label("Name:");
-	lblName->setSize(lblName->getWidth(), lblName->getHeight());
-	lblName->setAlignment(gcn::Graphics::RIGHT);
-	txtName = new gcn::TextField();
-	txtName->setSize(300, TEXTFIELD_HEIGHT);
-	txtName->setId("ConfigName");
-	txtName->setBackgroundColor(colTextboxBackground);
-
-	lblDesc = new gcn::Label("Description:");
-	lblDesc->setSize(lblDesc->getWidth(), lblDesc->getHeight());
-	lblDesc->setAlignment(gcn::Graphics::RIGHT);
-	txtDesc = new gcn::TextField();
-	txtDesc->setSize(300, TEXTFIELD_HEIGHT);
-	txtDesc->setId("ConfigDesc");
-	txtDesc->setBackgroundColor(colTextboxBackground);
-
-	ReadConfigFileList();
-	configsList = new ConfigsListModel();
-	configsList->InitConfigsList();
-	configsListActionListener = new ConfigsListActionListener();
-
-	lstConfigs = new gcn::UaeListBox(configsList);
-	lstConfigs->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER - 22, 232);
-	lstConfigs->setBaseColor(colTextboxBackground);
-	lstConfigs->setBackgroundColor(colTextboxBackground);
-	lstConfigs->setWrappingEnabled(true);
-	lstConfigs->setId("ConfigList");
-	lstConfigs->addActionListener(configsListActionListener);
-
-	scrAreaConfigs = new gcn::ScrollArea(lstConfigs);
-	scrAreaConfigs->setBorderSize(1);
-	scrAreaConfigs->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
-	scrAreaConfigs->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER - 2, 252);
-	scrAreaConfigs->setScrollbarWidth(20);
-	scrAreaConfigs->setBackgroundColor(colTextboxBackground);
-	category.panel->add(scrAreaConfigs);
-
-	category.panel->add(lblName, DISTANCE_BORDER,
-	                    scrAreaConfigs->getY() + scrAreaConfigs->getHeight() + DISTANCE_NEXT_Y);
-	category.panel->add(txtName, DISTANCE_BORDER + lblDesc->getWidth() + 8,
-	                    scrAreaConfigs->getY() + scrAreaConfigs->getHeight() + DISTANCE_NEXT_Y);
-	category.panel->add(lblDesc, DISTANCE_BORDER, txtName->getY() + txtName->getHeight() + DISTANCE_NEXT_Y);
-	category.panel->add(txtDesc, DISTANCE_BORDER + lblDesc->getWidth() + 8,
-	                    txtName->getY() + txtName->getHeight() + DISTANCE_NEXT_Y);
-
+	
 	if (strlen(last_active_config) == 0)
 	{
 		if (strlen(last_loaded_config) == 0)
@@ -351,10 +351,10 @@ bool HelpPanelConfig(std::vector<std::string>& helptext)
 {
 	helptext.clear();
 	helptext.emplace_back("To load a configuration, select the entry in the list and then click on \"Load\".");
-	helptext.emplace_back("If you doubleclick on an entry in the list, the emulation starts with this configuration.");
+	helptext.emplace_back("If you double-click on an entry in the list, the emulation starts with this configuration.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("If you want to create a new configuration, setup all options, enter a new name in");
-	helptext.emplace_back(R"("Name", provide a short description and then click on "Save".)");
+	helptext.emplace_back("If you want to create a new configuration, set all options, enter a new name in");
+	helptext.emplace_back(R"("Name", optionally provide a short description and then click on "Save".)");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("\"Delete\" will delete the selected configuration.");
 	return true;

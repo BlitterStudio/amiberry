@@ -234,7 +234,8 @@ void InitPanelRAM(const struct _ConfigCategory& category)
 	posY += sldA3000Highmem->getHeight() + DISTANCE_NEXT_Y;
 
 	grpRAM->setMovable(false);
-	grpRAM->setSize(400, posY + DISTANCE_BORDER);
+	grpRAM->setSize(400, posY + DISTANCE_BORDER * 2);
+	grpRAM->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpRAM->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpRAM);
@@ -305,34 +306,54 @@ void RefreshPanelRAM()
 		}
 	}
 
-	auto counter = 11;
-	if (can_have_1gb())
-		counter = 12;
-	for (i = 0; i < counter; ++i)
+	if (changed_prefs.address_space_24 || emulating)
 	{
-		if (changed_prefs.z3fastmem[0].size == FastMem_values[i])
-		{
-			sldZ3mem->setValue(i);
-			lblZ3size->setCaption(FastMem_list[i]);
-			break;
-		}
-	}
-	sldZ3mem->setEnabled(!changed_prefs.address_space_24 && !emulating);
-	lblZ3mem->setEnabled(!changed_prefs.address_space_24 && !emulating);
-	lblZ3size->setEnabled(!changed_prefs.address_space_24 && !emulating);
+		// Disable Z3 and RTG memory
+		sldZ3mem->setEnabled(false);
+		lblZ3mem->setEnabled(false);
+		lblZ3size->setEnabled(false);
+		lblZ3size->setCaption("N/A");
 
-	for (i = 0; i < 9; ++i)
+		sldGfxmem->setEnabled(false);
+		lblGfxmem->setEnabled(false);
+		lblGfxsize->setEnabled(false);
+		lblGfxsize->setCaption("N/A");
+	}
+	else
 	{
-		if (changed_prefs.rtgboards[0].rtgmem_size == FastMem_values[i])
+		sldZ3mem->setEnabled(true);
+		lblZ3mem->setEnabled(true);
+		lblZ3size->setEnabled(true);
+		lblZ3size->setCaption("None");
+		
+		auto counter = 11;
+		if (can_have_1gb())
+			counter = 12;
+		for (i = 0; i < counter; ++i)
 		{
-			sldGfxmem->setValue(i);
-			lblGfxsize->setCaption(FastMem_list[i]);
-			break;
+			if (changed_prefs.z3fastmem[0].size == FastMem_values[i])
+			{
+				sldZ3mem->setValue(i);
+				lblZ3size->setCaption(FastMem_list[i]);
+				break;
+			}
+		}
+
+		sldGfxmem->setEnabled(true);
+		lblGfxmem->setEnabled(true);
+		lblGfxsize->setEnabled(true);
+		lblGfxsize->setCaption("None");
+		
+		for (i = 0; i < 9; ++i)
+		{
+			if (changed_prefs.rtgboards[0].rtgmem_size == FastMem_values[i])
+			{
+				sldGfxmem->setValue(i);
+				lblGfxsize->setCaption(FastMem_list[i]);
+				break;
+			}
 		}
 	}
-	sldGfxmem->setEnabled(!changed_prefs.address_space_24 && !emulating);
-	lblGfxmem->setEnabled(!changed_prefs.address_space_24 && !emulating);
-	lblGfxsize->setEnabled(!changed_prefs.address_space_24 && !emulating);
 
 	for (i = 0; i < 3; ++i)
 	{
@@ -369,7 +390,7 @@ bool HelpPanelRAM(std::vector<std::string>& helptext)
 	helptext.emplace_back("a 32 bit CPU is selected. If you select some memory for this type,");
 	helptext.emplace_back("the Z3 RTG board will be activated.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("A4000 motherboard and processor board memory is only detected by the Amiga if ");
+	helptext.emplace_back("A4000 motherboard and processor board memory is only detected by the Amiga if");
 	helptext.emplace_back("you choose the correct Kickstart ROM (A4000).");
 	return true;
 }

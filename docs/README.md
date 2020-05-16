@@ -1,20 +1,20 @@
+# Amiga emulator for ARM boards
+
 [![Gitter](https://badges.gitter.im/amiberry/Amiberry.svg)](https://gitter.im/amiberry/Amiberry?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 [![Backers on Open Collective](https://opencollective.com/amiberry/backers/badge.svg)](#backers) [![Sponsors on Open Collective](https://opencollective.com/amiberry/sponsors/badge.svg)](#sponsors)
 
 <img src="resources/icon.png" align="right" />
 
-# Amiga emulator for the Raspberry Pi and other ARM SoC
-
 Amiberry is an optimized Amiga emulator, for ARM-based boards (like the Raspberry Pi, ASUS Tinkerboard, Odroid XU4, etc). The core emulation comes from WinUAE, but stripped down somewhat in order to achieve good performance in underpowered boards. It includes JIT CPU and FPU support, to get high-performance results on CPU-intensive emulated environments. On top of that, we have some unique features developed only for Amiberry, such as the WHDLoad booter and support for RetroArch controller mapping.
 
 Amiberry requires the [SDL2 framework](https://libsdl.org) for graphics display, input handling and audio output. On the RPI platform specifically, we offer a special alternative version which uses Dispmanx directly for the emulation screen, for maximum performance.
 
-# Requirements
+## Requirements
 
 Amiberry has been tested on Debian/Raspbian Buster, and requires the following packages to run:
 
-      sudo apt-get install libsdl2 libsdl2-ttf libsdl2-image libxml2 flac mpg123 libmpeg2
+      sudo apt-get install libsdl2-2.0-0 libsdl2-ttf-2.0-0 libsdl2-image-2.0-0 libxml2 flac mpg123 libmpeg2-4
 
 If you want to compile Amiberry from source, you'll need the `-dev` version of the same packages instead:
 
@@ -24,7 +24,7 @@ On the Raspberry Pi, if you're not running Raspbian you'll also need this:
 
       sudo apt-get install libraspberrypi-dev
 
-# Getting Amiberry
+## Getting Amiberry
 
 The latest stable releases come with binaries, that you can download from the [Releases](https://github.com/midwan/amiberry/releases) area.
 Several popular distros (like RetroPie, DietPi, Amibian, and others) already include Amiberry either pre-installed, or through their package management systems.
@@ -113,12 +113,17 @@ You can check the Makefile for a full list of supported platforms!
 For more documentation subjects, please check the [Wiki page](https://github.com/midwan/amiberry/wiki)
 
 ## Contributors
+
 This project exists thanks to all the people who contribute. [[Contribute]](../.github/CONTRIBUTING.md).
 <a href="graphs/contributors"><img src="https://opencollective.com/amiberry/contributors.svg?width=890" /></a>
+
 ## Backers
+
 Thank you to all our backers! 🙏 [[Become a backer](https://opencollective.com/amiberry#backer)]
 <a href="https://opencollective.com/amiberry#backers" target="_blank"><img src="https://opencollective.com/amiberry/backers.svg?width=890"></a>
+
 ## Sponsors
+
 Support this project by becoming a sponsor. Your logo will show up here with a link to your website. [[Become a sponsor](https://opencollective.com/amiberry#sponsor)]
 <a href="https://opencollective.com/amiberry/sponsor/0/website" target="_blank"><img src="https://opencollective.com/amiberry/sponsor/0/avatar.svg"></a>
 <a href="https://opencollective.com/amiberry/sponsor/1/website" target="_blank"><img src="https://opencollective.com/amiberry/sponsor/1/avatar.svg"></a>

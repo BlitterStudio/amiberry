@@ -5,8 +5,6 @@
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
-#include "UaeRadioButton.hpp"
-#include "UaeCheckBox.hpp"
 
 #include "sysdeps.h"
 #include "options.h"
@@ -14,17 +12,17 @@
 #include "gui_handling.h"
 
 const int amigawidth_values[] = {320, 362, 384, 640, 704, 720};
-const int amigaheight_values[] = {200, 216, 240, 256, 262, 284};
+const int amigaheight_values[] = {200, 216, 240, 256, 262, 270, 284};
 
 static gcn::Window* grpScalingMethod;
-static gcn::UaeRadioButton* optAuto;
-static gcn::UaeRadioButton* optNearest;
-static gcn::UaeRadioButton* optLinear;
+static gcn::RadioButton* optAuto;
+static gcn::RadioButton* optNearest;
+static gcn::RadioButton* optLinear;
 
 static gcn::Window* grpLineMode;
-static gcn::UaeRadioButton* optSingle;
-static gcn::UaeRadioButton* optDouble;
-static gcn::UaeRadioButton* optScanlines;
+static gcn::RadioButton* optSingle;
+static gcn::RadioButton* optDouble;
+static gcn::RadioButton* optScanlines;
 
 static gcn::Window* grpAmigaScreen;
 static gcn::Label* lblAmigaWidth;
@@ -34,13 +32,13 @@ static gcn::Label* lblAmigaHeight;
 static gcn::Label* lblAmigaHeightInfo;
 static gcn::Slider* sldAmigaHeight;
 
-static gcn::UaeCheckBox* chkFrameskip;
-static gcn::UaeCheckBox* chkAspect;
-static gcn::UaeCheckBox* chkFullscreen;
+static gcn::CheckBox* chkFrameskip;
+static gcn::CheckBox* chkAspect;
+static gcn::CheckBox* chkFullscreen;
 
 static gcn::Window* grpCentering;
-static gcn::UaeCheckBox* chkHorizontal;
-static gcn::UaeCheckBox* chkVertical;
+static gcn::CheckBox* chkHorizontal;
+static gcn::CheckBox* chkVertical;
 
 class AmigaScreenActionListener : public gcn::ActionListener
 {
@@ -49,17 +47,17 @@ public:
 	{
 		if (actionEvent.getSource() == sldAmigaWidth)
 		{
-			if (changed_prefs.gfx_monitor.gfx_size.width != amigawidth_values[int(sldAmigaWidth->getValue())])
+			if (changed_prefs.gfx_monitor.gfx_size.width != amigawidth_values[static_cast<int>(sldAmigaWidth->getValue())])
 			{
-				changed_prefs.gfx_monitor.gfx_size.width = amigawidth_values[int(sldAmigaWidth->getValue())];
+				changed_prefs.gfx_monitor.gfx_size.width = amigawidth_values[static_cast<int>(sldAmigaWidth->getValue())];
 				RefreshPanelDisplay();
 			}
 		}
 		else if (actionEvent.getSource() == sldAmigaHeight)
 		{
-			if (changed_prefs.gfx_monitor.gfx_size.height != amigaheight_values[int(sldAmigaHeight->getValue())])
+			if (changed_prefs.gfx_monitor.gfx_size.height != amigaheight_values[static_cast<int>(sldAmigaHeight->getValue())])
 			{
-				changed_prefs.gfx_monitor.gfx_size.height = amigaheight_values[int(sldAmigaHeight->getValue())];
+				changed_prefs.gfx_monitor.gfx_size.height = amigaheight_values[static_cast<int>(sldAmigaHeight->getValue())];
 				RefreshPanelDisplay();
 			}
 		}
@@ -141,7 +139,7 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 
 	lblAmigaWidth = new gcn::Label("Width:");
 	lblAmigaWidth->setAlignment(gcn::Graphics::RIGHT);
-	sldAmigaWidth = new gcn::Slider(0, 5);
+	sldAmigaWidth = new gcn::Slider(0, AMIGAWIDTH_COUNT - 1);
 	sldAmigaWidth->setSize(160, SLIDER_HEIGHT);
 	sldAmigaWidth->setBaseColor(gui_baseCol);
 	sldAmigaWidth->setMarkerLength(20);
@@ -152,7 +150,7 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 
 	lblAmigaHeight = new gcn::Label("Height:");
 	lblAmigaHeight->setAlignment(gcn::Graphics::RIGHT);
-	sldAmigaHeight = new gcn::Slider(0, 5);
+	sldAmigaHeight = new gcn::Slider(0, AMIGAHEIGHT_COUNT - 1);
 	sldAmigaHeight->setSize(160, SLIDER_HEIGHT);
 	sldAmigaHeight->setBaseColor(gui_baseCol);
 	sldAmigaHeight->setMarkerLength(20);
@@ -161,19 +159,23 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	sldAmigaHeight->addActionListener(amigaScreenActionListener);
 	lblAmigaHeightInfo = new gcn::Label("200");
 
-	chkHorizontal = new gcn::UaeCheckBox("Horizontal");
+	chkHorizontal = new gcn::CheckBox("Horizontal");
+	chkHorizontal->setId("Horizontal");
 	chkHorizontal->addActionListener(amigaScreenActionListener);
-	chkVertical = new gcn::UaeCheckBox("Vertical");
+	chkVertical = new gcn::CheckBox("Vertical");
+	chkVertical->setId("Vertical");
 	chkVertical->addActionListener(amigaScreenActionListener);
 	
-	chkAspect = new gcn::UaeCheckBox("Correct Aspect Ratio");
+	chkAspect = new gcn::CheckBox("Correct Aspect Ratio");
 	chkAspect->setId("CorrectAR");
 	chkAspect->addActionListener(amigaScreenActionListener);
 
-	chkFrameskip = new gcn::UaeCheckBox("Frameskip");
+	chkFrameskip = new gcn::CheckBox("Frameskip");
+	chkFrameskip->setId("Frameskip");
 	chkFrameskip->addActionListener(amigaScreenActionListener);
 
-	chkFullscreen = new gcn::UaeCheckBox("Fullscreen");
+	chkFullscreen = new gcn::CheckBox("Fullscreen");
+	chkFullscreen->setId("Fullscreen");
 	chkFullscreen->addActionListener(amigaScreenActionListener);
 
 	grpAmigaScreen = new gcn::Window("Amiga Screen");
@@ -193,7 +195,8 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	grpAmigaScreen->setMovable(false);
 	grpAmigaScreen->setSize(
 		lblAmigaWidth->getX() + lblAmigaWidth->getWidth() + sldAmigaWidth->getWidth() + lblAmigaWidth->getWidth() + (
-			DISTANCE_BORDER * 2), posY + DISTANCE_BORDER);
+			DISTANCE_BORDER * 2), posY + DISTANCE_BORDER * 2);
+	grpAmigaScreen->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpAmigaScreen->setBaseColor(gui_baseCol);
 	category.panel->add(grpAmigaScreen);
 
@@ -202,7 +205,8 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	grpCentering->add(chkHorizontal, DISTANCE_BORDER, DISTANCE_BORDER);
 	grpCentering->add(chkVertical, DISTANCE_BORDER, chkHorizontal->getY() + chkHorizontal->getHeight() + DISTANCE_NEXT_Y);
 	grpCentering->setMovable(false);
-	grpCentering->setSize(chkHorizontal->getX() + chkHorizontal->getWidth() + DISTANCE_BORDER * 2, posY + DISTANCE_BORDER);
+	grpCentering->setSize(chkHorizontal->getX() + chkHorizontal->getWidth() + DISTANCE_BORDER * 2, posY + DISTANCE_BORDER * 2);
+	grpCentering->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpCentering->setBaseColor(gui_baseCol);
 	category.panel->add(grpCentering);
 	
@@ -210,13 +214,16 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 
 	scalingMethodActionListener = new ScalingMethodActionListener();
 
-	optAuto = new gcn::UaeRadioButton("Auto", "radioscalingmethodgroup");
+	optAuto = new gcn::RadioButton("Auto", "radioscalingmethodgroup");
+	optAuto->setId("Auto");
 	optAuto->addActionListener(scalingMethodActionListener);
 
-	optNearest = new gcn::UaeRadioButton("Nearest Neighbor (pixelated)", "radioscalingmethodgroup");
+	optNearest = new gcn::RadioButton("Nearest Neighbor (pixelated)", "radioscalingmethodgroup");
+	optNearest->setId("Nearest Neighbor (pixelated)");
 	optNearest->addActionListener(scalingMethodActionListener);
 
-	optLinear = new gcn::UaeRadioButton("Linear (smooth)", "radioscalingmethodgroup");
+	optLinear = new gcn::RadioButton("Linear (smooth)", "radioscalingmethodgroup");
+	optLinear->setId("Linear (smooth)");
 	optLinear->addActionListener(scalingMethodActionListener);
 
 	grpScalingMethod = new gcn::Window("Scaling method");
@@ -226,20 +233,24 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	grpScalingMethod->add(optLinear, 5, 70);
 	grpScalingMethod->setMovable(false);
 	grpScalingMethod->setSize(optNearest->getWidth() + DISTANCE_BORDER,
-	                          optLinear->getY() + optLinear->getHeight() + 30);
+	                          optLinear->getY() + optLinear->getHeight() + DISTANCE_BORDER * 3);
+	grpScalingMethod->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpScalingMethod->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpScalingMethod);
 	posY += DISTANCE_BORDER + grpScalingMethod->getHeight() + DISTANCE_NEXT_Y;
 
 	lineModeActionListener = new LineModeActionListener();
-	optSingle = new gcn::UaeRadioButton("Single", "linemodegroup");
+	optSingle = new gcn::RadioButton("Single", "linemodegroup");
+	optSingle->setId("Single");
 	optSingle->addActionListener(lineModeActionListener);
 
-	optDouble = new gcn::UaeRadioButton("Double", "linemodegroup");
+	optDouble = new gcn::RadioButton("Double", "linemodegroup");
+	optDouble->setId("Double");
 	optDouble->addActionListener(lineModeActionListener);
 
-	optScanlines = new gcn::UaeRadioButton("Scanlines", "linemodegroup");
+	optScanlines = new gcn::RadioButton("Scanlines", "linemodegroup");
+	optScanlines->setId("Scanlines");
 	optScanlines->addActionListener(lineModeActionListener);
 
 	grpLineMode = new gcn::Window("Line mode");
@@ -251,7 +262,8 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	grpLineMode->add(optScanlines, 5, 70);
 	grpLineMode->setMovable(false);
 	grpLineMode->setSize(optScanlines->getWidth() + DISTANCE_BORDER,
-	                     optScanlines->getY() + optScanlines->getHeight() + 30);
+	                     optScanlines->getY() + optScanlines->getHeight() + DISTANCE_BORDER * 3);
+	grpLineMode->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpLineMode->setBaseColor(gui_baseCol);
 	category.panel->add(grpLineMode);
 	category.panel->add(chkAspect, DISTANCE_BORDER, posY);
@@ -304,7 +316,7 @@ void RefreshPanelDisplay()
 	int i;
 	char tmp[32];
 
-	for (i = 0; i < 6; ++i)
+	for (i = 0; i < AMIGAWIDTH_COUNT; ++i)
 	{
 		if (changed_prefs.gfx_monitor.gfx_size.width == amigawidth_values[i])
 		{
@@ -313,13 +325,27 @@ void RefreshPanelDisplay()
 			lblAmigaWidthInfo->setCaption(tmp);
 			break;
 		}
+		// if we reached the end and didn't find anything, set the maximum value
+		if (i == AMIGAWIDTH_COUNT - 1)
+		{
+			snprintf(tmp, 32, "%d", changed_prefs.gfx_monitor.gfx_size.width);
+			lblAmigaWidthInfo->setCaption(tmp);
+			break;
+		}
 	}
 
-	for (i = 0; i < 6; ++i)
+	for (i = 0; i < AMIGAHEIGHT_COUNT; ++i)
 	{
 		if (changed_prefs.gfx_monitor.gfx_size.height == amigaheight_values[i])
 		{
 			sldAmigaHeight->setValue(i);
+			snprintf(tmp, 32, "%d", changed_prefs.gfx_monitor.gfx_size.height);
+			lblAmigaHeightInfo->setCaption(tmp);
+			break;
+		}
+		// if we reached the end and didn't find anything, set the maximum value
+		if (i == AMIGAHEIGHT_COUNT - 1)
+		{
 			snprintf(tmp, 32, "%d", changed_prefs.gfx_monitor.gfx_size.height);
 			lblAmigaHeightInfo->setCaption(tmp);
 			break;
@@ -354,6 +380,14 @@ bool HelpPanelDisplay(std::vector<std::string>& helptext)
 	helptext.emplace_back("in Chipset, a value greater than 240 for \"Height\" makes no sense. When the game,");
 	helptext.emplace_back("Demo or Workbench uses HiRes mode and you selected a value for \"Width\" lower than 640,");
 	helptext.emplace_back("you will only see half of the pixels.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("You can use the Horizontal/Vertical centering options to center the image automatically");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("The Aspect Ratio option allows you to choose if you want the correct Aspect Ratio");
+	helptext.emplace_back("to be kept always (default), or have the image stretched to fill the screen instead.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("The Full Screen option allows you to switch from Windowed to Full screen and back.");
+	helptext.emplace_back("This only works when running under X11 with SDL2, as KMSDRM is always Fullscreen.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("Select the scaling method for the Amiga screen. The default option \"Auto\", ");
 	helptext.emplace_back("will try to find the best looking scaling method depending on your monitor's resolution. ");

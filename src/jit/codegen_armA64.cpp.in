@@ -174,18 +174,6 @@ STATIC_INLINE void raw_pop_preserved_regs(void) {
   LDP_xxXpost(27, 28, RSP_INDEX, 16);
 }
 
-STATIC_INLINE void raw_flags_evicted(int r)
-{
-  live.state[FLAGTMP].status = INMEM;
-  live.state[FLAGTMP].realreg = -1;
-  /* We just "evicted" FLAGTMP. */
-  if (live.nat[r].nholds != 1) {
-    /* Huh? */
-    abort();
-  }
-  live.nat[r].nholds = 0;
-}
-
 STATIC_INLINE void raw_flags_to_reg(int r)
 {
   uintptr idx = (uintptr) &(regs.ccrflags.nzcv) - (uintptr) &regs;
@@ -196,7 +184,11 @@ STATIC_INLINE void raw_flags_to_reg(int r)
 	  flags_carry_inverted = false;
 	}
 	STR_wXi(r, R_REGSTRUCT, idx);
-	raw_flags_evicted(r);
+
+  live.state[FLAGTMP].status = INMEM;
+  live.state[FLAGTMP].realreg = -1;
+  /* We just "evicted" FLAGTMP. */
+  live.nat[r].nholds = 0;
 }
 
 STATIC_INLINE void raw_reg_to_flags(int r)
@@ -231,25 +223,6 @@ LOWFUNC(WRITE,READ,1,compemu_raw_cmp_pc,(IMPTR s))
 	CMP_xx(REG_WORK1, REG_WORK2);
 }
 LENDFUNC(WRITE,READ,1,compemu_raw_cmp_pc,(IMPTR s))
-
-LOWFUNC(NONE,WRITE,1,compemu_raw_set_pc_m,(MEMR s))
-{
-  uintptr idx;
-  if(s >= (uintptr) &regs && s < ((uintptr) &regs) + sizeof(struct regstruct)) {
-    idx = s - (uintptr) &regs;
-    if(s == (uintptr) &(regs.pc_p))
-      LDR_xXi(REG_WORK1, R_REGSTRUCT, idx);
-    else
-      LDR_wXi(REG_WORK1, R_REGSTRUCT, idx);
-  } else {
-    LOAD_U64(REG_WORK1, s);
-	  LDR_xXi(REG_WORK1, REG_WORK1, 0);
-  }
-
-  idx = (uintptr) &(regs.pc_p) - (uintptr) &regs;
-  STR_xXi(REG_WORK1, R_REGSTRUCT, idx);
-}
-LENDFUNC(NONE,WRITE,1,compemu_raw_set_pc_m,(MEMR s))
 
 LOWFUNC(NONE,WRITE,1,compemu_raw_set_pc_i,(IMPTR s))
 {
@@ -440,52 +413,84 @@ STATIC_INLINE void compemu_raw_handle_except(IM32 cycles)
 	branchadd = (uae_u32*)get_target();
   CBZ_wi(REG_WORK1, 0);  // no exception, jump to next instruction
 	
-  raw_pop_preserved_regs();
   LOAD_U32(REG_PAR1, cycles);
-  LDR_xPCi(REG_WORK1, 8); // <execute_exception>
-  BR_x(REG_WORK1);
-	emit_longlong((uintptr)execute_exception);
+  uae_u32* branchadd2 = (uae_u32*)get_target();
+  B_i(0); // <exec_nostats>
+  write_jmp_target(branchadd2, (uintptr)popall_execute_exception);
 	
 	// Write target of next instruction
 	write_jmp_target(branchadd, (uintptr)get_target());
 }
 
-STATIC_INLINE void compemu_raw_maybe_recompile(uintptr t)
+LOWFUNC(NONE,WRITE,1,compemu_raw_execute_normal,(MEMR s))
 {
-  BGE_i(NUM_POP_CMDS + 5);
-  raw_pop_preserved_regs();
-  LDR_xPCi(REG_WORK1, 8); 
-  BR_x(REG_WORK1);
-  emit_longlong(t);
+  LOAD_U64(REG_WORK1, s);
+  LDR_xXi(REG_WORK1, REG_WORK1, 0);
+  uae_u32* branchadd = (uae_u32*)get_target();
+  B_i(0); // <exec_nostats>
+  write_jmp_target(branchadd, (uintptr)popall_execute_normal_setpc);
+}
+LENDFUNC(NONE,WRITE,1,compemu_raw_execute_normal,(MEMR s))
+
+LOWFUNC(NONE,WRITE,1,compemu_raw_check_checksum,(MEMR s))
+{
+  LOAD_U64(REG_WORK1, s);
+  LDR_xXi(REG_WORK1, REG_WORK1, 0);
+  uae_u32* branchadd = (uae_u32*)get_target();
+  B_i(0); // <exec_nostats>
+  write_jmp_target(branchadd, (uintptr)popall_check_checksum_setpc);
+}
+LENDFUNC(NONE,WRITE,1,compemu_raw_check_checksum,(MEMR s))
+
+LOWFUNC(NONE,WRITE,1,compemu_raw_exec_nostats,(IMPTR s))
+{
+  LOAD_U64(REG_WORK1, s);
+  uae_u32* branchadd = (uae_u32*)get_target();
+  B_i(0); // <exec_nostats>
+  write_jmp_target(branchadd, (uintptr)popall_exec_nostats_setpc);
+}
+LENDFUNC(NONE,WRITE,1,compemu_raw_exec_nostats,(IMPTR s))
+
+STATIC_INLINE void compemu_raw_maybe_recompile(void)
+{
+  BGE_i(2);
+  uae_u32* branchadd = (uae_u32*)get_target();
+  B_i(0);
+  write_jmp_target(branchadd, (uintptr)popall_recompile_block);
 }
 
 STATIC_INLINE void compemu_raw_jmp(uintptr t)
 {
-  LDR_xPCi(REG_WORK1, 8);
-  BR_x(REG_WORK1);
-  emit_longlong(t);
+	uintptr loc = (uintptr)get_target();
+	if(t > loc - 127 * 1024 * 1024 && t < loc + 127 * 1024 * 1024) {
+		B_i(0);
+		write_jmp_target((uae_u32*)loc, t);
+	} else {
+    LDR_xPCi(REG_WORK1, 8);
+    BR_x(REG_WORK1);
+    emit_longlong(t);
+  }
 }
 
-STATIC_INLINE void compemu_raw_jmp_pc_tag(uintptr base)
+STATIC_INLINE void compemu_raw_jmp_pc_tag(void)
 {
   uintptr idx = (uintptr)&regs.pc_p - (uintptr)&regs;
   LDRH_wXi(REG_WORK1, R_REGSTRUCT, idx);
-  LDR_xPCi(REG_WORK2, 12);
+	idx = (uintptr)&regs.cache_tags - (uintptr)&regs;
+	LDR_xXi(REG_WORK2, R_REGSTRUCT, idx);
 	LDR_xXxLSLi(REG_WORK1, REG_WORK2, REG_WORK1, 1);
 	BR_x(REG_WORK1);
-	emit_longlong(base);
 }
 
-STATIC_INLINE void compemu_raw_maybe_cachemiss(uintptr t)
+STATIC_INLINE void compemu_raw_maybe_cachemiss(void)
 {
-  BEQ_i(NUM_POP_CMDS + 5);
-  raw_pop_preserved_regs();
-  LDR_xPCi(REG_WORK1, 8);
-  BR_x(REG_WORK1);
-  emit_longlong(t);
+  BEQ_i(2);
+  uae_u32* branchadd = (uae_u32*)get_target();
+  B_i(0);
+  write_jmp_target(branchadd, (uintptr)popall_cache_miss);
 }
 
-STATIC_INLINE void compemu_raw_maybe_do_nothing(IM32 cycles, uintptr adr)
+STATIC_INLINE void compemu_raw_maybe_do_nothing(IM32 cycles)
 {
   uintptr idx = (uintptr)&regs.spcflags - (uintptr) &regs;
   LDR_wXi(REG_WORK1, R_REGSTRUCT, idx);
@@ -502,10 +507,9 @@ STATIC_INLINE void compemu_raw_maybe_do_nothing(IM32 cycles, uintptr adr)
   }
   STR_wXi(REG_WORK2, R_REGSTRUCT, idx);
 
-  raw_pop_preserved_regs();
-  LDR_xPCi(REG_WORK1, 8);
-  BR_x(REG_WORK1);
-  emit_longlong(adr);
+  uae_u32* branchadd2 = (uae_u32*)get_target();
+  B_i(0);
+  write_jmp_target(branchadd2, (uintptr)popall_do_nothing);
 
   // <end>
   write_jmp_target((uae_u32 *)branchadd, (uintptr)get_target());
@@ -535,18 +539,16 @@ LOWFUNC(NONE,NONE,2,compemu_raw_endblock_pc_inreg,(RR4 rr_pc, IM32 cycles))
   }
 	STR_wXi(REG_WORK1, R_REGSTRUCT, offs);
 
-	TBNZ_xii(REG_WORK1, 31, 7); // test sign and branch if set (negative)
+	TBNZ_xii(REG_WORK1, 31, 5); // test sign and branch if set (negative)
   UBFIZ_xxii(rr_pc, rr_pc, 0, 16);  // apply TAGMASK
-  LDR_xPCi(REG_WORK1, 12); // <cache_tags>
+	offs = (uintptr)(&regs.cache_tags) - (uintptr)&regs;
+	LDR_xXi(REG_WORK1, R_REGSTRUCT, offs);
 	LDR_xXxLSLi(REG_WORK1, REG_WORK1, rr_pc, 3); // cacheline holds pointer -> multiply with 8
   BR_x(REG_WORK1);
-	emit_longlong((uintptr)cache_tags);
 
-  raw_pop_preserved_regs();
-  LDR_xPCi(REG_WORK1, 8); // <do_nothing>
-  BR_x(REG_WORK1);
-
-	emit_longlong((uintptr)do_nothing);
+  uae_u32* branchadd = (uae_u32*)get_target();
+  B_i(0);
+  write_jmp_target(branchadd, (uintptr)popall_do_nothing);
 }
 LENDFUNC(NONE,NONE,2,compemu_raw_endblock_pc_inreg,(RR4 rr_pc, IM32 cycles))
 
@@ -569,15 +571,14 @@ STATIC_INLINE uae_u32* compemu_raw_endblock_pc_isconst(IM32 cycles, IMPTR v)
 	tba = (uae_u32*)get_target();
   B_i(0); // <target set by caller>
   
-  LDR_xPCi(REG_WORK1, 16 + 4 * NUM_POP_CMDS); // <v>
+  LDR_xPCi(REG_WORK1, 12); // <v>
   offs = (uintptr)&regs.pc_p - (uintptr)&regs;
   STR_xXi(REG_WORK1, R_REGSTRUCT, offs);
-  raw_pop_preserved_regs();
-  LDR_xPCi(REG_WORK1, 16); // <do_nothing>
-  BR_x(REG_WORK1);
+  uae_u32* branchadd = (uae_u32*)get_target();
+  B_i(0);
+  write_jmp_target(branchadd, (uintptr)popall_do_nothing);
 
 	emit_longlong(v);
-	emit_longlong((uintptr)do_nothing);
 
 	return tba;  
 }

@@ -49,12 +49,18 @@ extern bool no_gui, quit_to_gui;
 #define LED_NET 11
 #define LED_MAX 12
 
+struct gui_info_drive {
+	bool drive_motor;        /* motor on off */
+	uae_u8 drive_track;        /* rw-head track */
+	bool drive_writing;        /* drive is writing */
+	bool drive_disabled;    /* drive is disabled */
+	TCHAR df[256];            /* inserted image */
+	uae_u32 crc32;            /* crc32 of image */
+	bool floppy_protected;    /* image is write protected */
+};
+
 struct gui_info
 {
-    bool drive_motor[4];		/* motor on off */
-    uae_u8 drive_track[4];		/* rw-head track */
-    bool drive_writing[4];		/* drive is writing */
-    bool drive_disabled[4];		/* drive is disabled */
     bool powerled;				/* state of power led */
     uae_u8 powerled_brightness;	/* 0 to 255 */
     uae_s8 drive_side;			/* floppy side */
@@ -67,8 +73,7 @@ struct gui_info
 	int fps_color;
     int sndbuf, sndbuf_status;
 	bool sndbuf_avail;
-    TCHAR df[4][256];			/* inserted image */
-    uae_u32 crc32[4];			/* crc32 of image */
+	struct gui_info_drive drives[4];
 };
 #define NUM_LEDS (LED_MAX)
 #define VISIBLE_LEDS (LED_MAX - 1)

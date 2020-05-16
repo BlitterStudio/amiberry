@@ -94,6 +94,11 @@ MENDFUNC(3,jnf_ADD_im8,(W4 d, RR4 s, IM8 v))
 
 MIDFUNC(2,jnf_ADD_b_imm,(RW1 d, IM8 v))
 {
+	if (isconst(d)) {
+	  live.state[d].val = (live.state[d].val & 0xffffff00) | ((live.state[d].val + v) & 0x000000ff);
+    return;
+  }
+
 	INIT_REG_b(d);
 	
 	if(targetIsReg) {
@@ -357,25 +362,31 @@ MENDFUNC(2,jff_ADD_l,(RW4 d, RR4 s))
  * Flags: Not affected.
  *
  */
-MIDFUNC(2,jnf_ADDA_w,(RW4 d, RR2 s))
+MIDFUNC(2,jnf_ADDA_w_imm,(RW4 d, IM16 v))
 {
-	if (isconst(d) && isconst(s)) {
-		live.state[d].val = live.state[d].val + (uae_s32)(uae_s16)(live.state[s].val & 0xffff);
+	if (isconst(d)) {
+		live.state[d].val = live.state[d].val + (uae_s32)(uae_s16)v;
 		return;
 	}
+
+  uae_s16 tmp = (uae_s16)v;
+	d = rmw(d);
+	if(CHECK32(tmp)) {
+	  ADD_rri(d, d, tmp);
+  } else if (CHECK32(-tmp)) {
+	  SUB_rri(d, d, -tmp);
+	} else {
+	  SIGNED16_IMM_2_REG(REG_WORK1, tmp);
+	  ADD_rrr(d, d, REG_WORK1);
+	}
+	unlock2(d);
+}
+MENDFUNC(2,jnf_ADDA_w_imm,(RW4 d, IM16 v))
+
+MIDFUNC(2,jnf_ADDA_w,(RW4 d, RR2 s))
+{
 	if (isconst(s)) {
-    // no need to put virt. register s into a real host register via readreg()
-    uae_s16 tmp = (uae_s16)live.state[s].val;
-		d = rmw(d);
-		if(CHECK32(tmp)) {
-		  ADD_rri(d, d, tmp);
-    } else if (CHECK32(-tmp)) {
-		  SUB_rri(d, d, -tmp);
-		} else {
-		  SIGNED16_IMM_2_REG(REG_WORK1, tmp);
-		  ADD_rrr(d, d, REG_WORK1);
-  	}
-		unlock2(d);
+		COMPCALL(jnf_ADDA_w_imm)(d, live.state[s].val & 0xffff);
 		return;
 	}
 
@@ -387,17 +398,30 @@ MIDFUNC(2,jnf_ADDA_w,(RW4 d, RR2 s))
 }
 MENDFUNC(2,jnf_ADDA_w,(RW4 d, RR2 s))
 
-MIDFUNC(2,jnf_ADDA_l,(RW4 d, RR4 s))
+MIDFUNC(2,jnf_ADDA_l_imm,(RW4 d, IM32 v))
 {
-	if (isconst(d) && isconst(s)) {
-		set_const(d, live.state[d].val + live.state[s].val);
+	if (isconst(d)) {
+		set_const(d, live.state[d].val + v);
 		return;
 	}
-	if (isconst(s) && CHECK32((uae_s32)live.state[s].val)) {
-	  uae_s32 tmp = (uae_s32)live.state[s].val;
-		d = rmw(d);
-    ADD_rri(d, d, tmp);
-		unlock2(d);
+
+	d = rmw(d);
+	
+	if (CHECK32((uae_s32)v)) {
+    ADD_rri(d, d, v);
+	} else {
+    LOAD_U32(REG_WORK1, v);
+  	ADD_rrr(d, d, REG_WORK1);
+	}
+
+	unlock2(d);
+}
+MENDFUNC(2,jnf_ADDA_l_imm,(RW4 d, IM32 v))
+
+MIDFUNC(2,jnf_ADDA_l,(RW4 d, RR4 s))
+{
+	if (isconst(s)) {
+		COMPCALL(jnf_ADDA_l_imm)(d, live.state[s].val);
 		return;
 	}
 
@@ -695,6 +719,11 @@ MENDFUNC(2,jnf_AND_b,(RW1 d, RR1 s))
 
 MIDFUNC(2,jnf_AND_w_imm,(RW2 d, IM16 v))
 {
+	if (isconst(d)) {
+    live.state[d].val = (live.state[d].val & 0xffff0000) | ((live.state[d].val & v) & 0x0000ffff);
+    return;
+  }
+
 	INIT_REG_w(d);
 
 	if(targetIsReg) {
@@ -738,8 +767,33 @@ MIDFUNC(2,jnf_AND_w,(RW2 d, RR2 s))
 }
 MENDFUNC(2,jnf_AND_w,(RW2 d, RR2 s))
 
+MIDFUNC(2,jnf_AND_l_imm,(RW4 d, IM32 v))
+{
+  if(isconst(d)) {
+    live.state[d].val = live.state[d].val & v;
+    return;
+  }
+  
+	d = rmw(d);
+
+  if(CHECK32(v)) {
+    AND_rri(d, d, v);
+  } else {
+    LOAD_U32(REG_WORK1, v);
+  	AND_rrr(d, d, REG_WORK1);
+  }
+
+	unlock2(d);
+}
+MENDFUNC(2,jnf_AND_l_imm,(RW4 d, IM32 v))
+
 MIDFUNC(2,jnf_AND_l,(RW4 d, RR4 s))
 {
+	if (isconst(s)) {
+		COMPCALL(jnf_AND_l_imm)(d, live.state[s].val);
+		return;
+	}
+
 	INIT_REGS_l(d, s);
 
 	AND_rrr(d, d, s);
@@ -846,8 +900,30 @@ MIDFUNC(2,jff_AND_w,(RW2 d, RR2 s))
 }
 MENDFUNC(2,jff_AND_w,(RW2 d, RR2 s))
 
+MIDFUNC(2,jff_AND_l_imm,(RW4 d, IM32 v))
+{
+	d = rmw(d);
+
+	MSR_CPSRf_i(0);
+	if(CHECK32(v)) {
+	  ANDS_rri(d, d, v);
+	} else {
+	  LOAD_U32(REG_WORK1, v);
+  	ANDS_rrr(d, d, REG_WORK1);
+  }
+
+  flags_carry_inverted = false;
+	unlock2(d);
+}
+MENDFUNC(2,jff_AND_l_imm,(RW4 d, IM32 v))
+
 MIDFUNC(2,jff_AND_l,(RW4 d, RR4 s))
 {
+	if (isconst(s)) {
+		COMPCALL(jff_AND_l_imm)(d, live.state[s].val);
+		return;
+	}
+
 	INIT_REGS_l(d, s);
 
 	MSR_CPSRf_i(0);
@@ -1161,6 +1237,8 @@ MIDFUNC(2,jnf_ASR_b_imm,(RW1 d, IM8 i))
 		d = rmw(d);
 
 		SIGNED8_REG_2_REG(REG_WORK1, d);
+    if(i > 31)
+      i = 31;
   	ASR_rri(REG_WORK1, REG_WORK1, i);
 #ifdef ARMV6T2
 	  BFI_rrii(d, REG_WORK1, 0, 7);
@@ -1181,6 +1259,8 @@ MIDFUNC(2,jnf_ASR_w_imm,(RW2 d, IM8 i))
 		d = rmw(d);
 
 		SIGNED16_REG_2_REG(REG_WORK1, d);
+    if(i > 31)
+      i = 31;
 	  PKHTB_rrrASRi(d, d, REG_WORK1, i);
 
 		unlock2(d);
@@ -1193,6 +1273,8 @@ MIDFUNC(2,jnf_ASR_l_imm,(RW4 d, IM8 i))
 	if(i) {
 		d = rmw(d);
 
+    if(i > 31)
+      i = 31;
   	ASR_rri(d, d, i);
 
 		unlock2(d);
@@ -1210,6 +1292,8 @@ MIDFUNC(2,jff_ASR_b_imm,(RW1 d, IM8 i))
 	SIGNED8_REG_2_REG(REG_WORK1, d);
 	MSR_CPSRf_i(0);
 	if (i) {
+    if(i > 31)
+      i = 31;
 		ASRS_rri(REG_WORK1, REG_WORK1, i);
 #ifdef ARMV6T2
 	  BFI_rrii(d, REG_WORK1, 0, 7);
@@ -1239,6 +1323,8 @@ MIDFUNC(2,jff_ASR_w_imm,(RW2 d, IM8 i))
 	SIGNED16_REG_2_REG(REG_WORK1, d);
 	MSR_CPSRf_i(0);
 	if (i) {
+    if(i > 31)
+      i = 31;
 		ASRS_rri(REG_WORK1, REG_WORK1, i);
 	  PKHTB_rrr(d, d, REG_WORK1);
     flags_carry_inverted = false;
@@ -1261,6 +1347,10 @@ MIDFUNC(2,jff_ASR_l_imm,(RW4 d, IM8 i))
 
 	MSR_CPSRf_i(0);
 	if (i) {
+    if (i > 31) {
+      ASR_rri(d, d, 1); // make sure, msb is shifted out at least once
+      i = 31;
+    }
 		ASRS_rri(d, d, i);
     flags_carry_inverted = false;
 		DUPLICACTE_CARRY
@@ -1497,7 +1587,7 @@ MENDFUNC(1,jff_ASRW,(RW2 d))
 MIDFUNC(2,jnf_BCHG_b_imm,(RW1 d, IM8 s))
 {
 	d = rmw(d);
-	EOR_rri(d, d, (1 << s));
+	EOR_rri(d, d, (1 << (s & 0x7)));
 	unlock2(d);
 }
 MENDFUNC(2,jnf_BCHG_b_imm,(RW1 d, IM8 s))
@@ -1505,7 +1595,7 @@ MENDFUNC(2,jnf_BCHG_b_imm,(RW1 d, IM8 s))
 MIDFUNC(2,jnf_BCHG_l_imm,(RW4 d, IM8 s))
 {
 	d = rmw(d);
-	EOR_rri(d, d, (1 << s));
+	EOR_rri(d, d, (1 << (s & 0x1f)));
 	unlock2(d);
 }
 MENDFUNC(2,jnf_BCHG_l_imm,(RW4 d, IM8 s))
@@ -1513,7 +1603,7 @@ MENDFUNC(2,jnf_BCHG_l_imm,(RW4 d, IM8 s))
 MIDFUNC(2,jnf_BCHG_b,(RW1 d, RR4 s))
 {
 	if (isconst(s)) {
-		COMPCALL(jnf_BCHG_b_imm)(d, live.state[s].val & 7);
+		COMPCALL(jnf_BCHG_b_imm)(d, live.state[s].val);
 		return;
 	}
 
@@ -1533,7 +1623,7 @@ MENDFUNC(2,jnf_BCHG_b,(RW1 d, RR4 s))
 MIDFUNC(2,jnf_BCHG_l,(RW4 d, RR4 s))
 {
 	if (isconst(s)) {
-		COMPCALL(jnf_BCHG_l_imm)(d, live.state[s].val & 31);
+		COMPCALL(jnf_BCHG_l_imm)(d, live.state[s].val);
 		return;
 	}
 
@@ -1552,11 +1642,11 @@ MIDFUNC(2,jff_BCHG_b_imm,(RW1 d, IM8 s))
 {
 	d = rmw(d);
 
-	uae_u32 v = (1 << s);
+	uae_u32 v = (1 << (s & 0x7));
 	MRS_CPSR(REG_WORK1);
 	EOR_rri(d, d, v);
 #ifdef ARMV6T2
-  UBFX_rrii(REG_WORK2, d, s, 1);
+  UBFX_rrii(REG_WORK2, d, s & 0x7, 1);
   BFI_rrii(REG_WORK1, REG_WORK2, 30, 30);
 #else
 	LSR_rri(REG_WORK2, d, 29);
@@ -1574,11 +1664,11 @@ MIDFUNC(2,jff_BCHG_l_imm,(RW4 d, IM8 s))
 {
 	d = rmw(d);
 
-	uae_u32 v = (1 << s);
+	uae_u32 v = (1 << (s & 0x1f));
 	MRS_CPSR(REG_WORK1);
 	EOR_rri(d, d, v);
 #ifdef ARMV6T2
-  UBFX_rrii(REG_WORK2, d, s, 1);
+  UBFX_rrii(REG_WORK2, d, s & 0x1f, 1);
   BFI_rrii(REG_WORK1, REG_WORK2, 30, 30);
 #else
 	LSR_rri(REG_WORK2, d, 29);
@@ -1595,7 +1685,7 @@ MENDFUNC(2,jff_BCHG_l_imm,(RW4 d, IM8 s))
 MIDFUNC(2,jff_BCHG_b,(RW1 d, RR4 s))
 {
 	if (isconst(s)) {
-		COMPCALL(jff_BCHG_b_imm)(d, live.state[s].val & 7);
+		COMPCALL(jff_BCHG_b_imm)(d, live.state[s].val);
 		return;
 	}
 
@@ -1621,7 +1711,7 @@ MENDFUNC(2,jff_BCHG_b,(RW1 d, RR4 s))
 MIDFUNC(2,jff_BCHG_l,(RW4 d, RR4 s))
 {
 	if (isconst(s)) {
-		COMPCALL(jff_BCHG_l_imm)(d, live.state[s].val & 31);
+		COMPCALL(jff_BCHG_l_imm)(d, live.state[s].val);
 		return;
 	}
 
@@ -1661,7 +1751,7 @@ MENDFUNC(2,jff_BCHG_l,(RW4 d, RR4 s))
 MIDFUNC(2,jnf_BCLR_b_imm,(RW1 d, IM8 s))
 {
 	d = rmw(d);
-	BIC_rri(d, d, (1 << s));
+	BIC_rri(d, d, (1 << (s & 0x7)));
 	unlock2(d);
 }
 MENDFUNC(2,jnf_BCLR_b_imm,(RW1 d, IM8 s))
@@ -1669,11 +1759,11 @@ MENDFUNC(2,jnf_BCLR_b_imm,(RW1 d, IM8 s))
 MIDFUNC(2,jnf_BCLR_l_imm,(RW4 d, IM8 s))
 {
 	if(isconst(d)) {
-		live.state[d].val = live.state[d].val & ~(1 << s);
+		live.state[d].val = live.state[d].val & ~(1 << (s & 0x1f));
 		return;
 	}
 	d = rmw(d);
-	BIC_rri(d, d, (1 << s));
+	BIC_rri(d, d, (1 << (s & 0x1f)));
 	unlock2(d);
 }
 MENDFUNC(2,jnf_BCLR_l_imm,(RW4 d, IM8 s))
@@ -1681,7 +1771,7 @@ MENDFUNC(2,jnf_BCLR_l_imm,(RW4 d, IM8 s))
 MIDFUNC(2,jnf_BCLR_b,(RW1 d, RR4 s))
 {
 	if (isconst(s)) {
-		COMPCALL(jnf_BCLR_b_imm)(d, live.state[s].val & 7);
+		COMPCALL(jnf_BCLR_b_imm)(d, live.state[s].val);
 		return;
 	}
 	s = readreg(s);
@@ -1700,7 +1790,7 @@ MENDFUNC(2,jnf_BCLR_b,(RW1 d, RR4 s))
 MIDFUNC(2,jnf_BCLR_l,(RW4 d, RR4 s))
 {
 	if (isconst(s)) {
-		COMPCALL(jnf_BCLR_l_imm)(d, live.state[s].val & 31);
+		COMPCALL(jnf_BCLR_l_imm)(d, live.state[s].val);
 		return;
 	}
 
@@ -1719,7 +1809,7 @@ MIDFUNC(2,jff_BCLR_b_imm,(RW1 d, IM8 s))
 {
 	d = rmw(d);
 
-	uae_u32 v = (1 << s);
+	uae_u32 v = (1 << (s & 0x7));
 	MRS_CPSR(REG_WORK1);
 	TST_ri(d, v);
 	BIC_rri(REG_WORK1, REG_WORK1, ARM_Z_FLAG);
@@ -1735,7 +1825,7 @@ MIDFUNC(2,jff_BCLR_l_imm,(RW4 d, IM8 s))
 {
 	d = rmw(d);
 
-	uae_u32 v = (1 << s);
+	uae_u32 v = (1 << (s & 0x1f));
 	MRS_CPSR(REG_WORK1);
 	TST_ri(d, v);
 	BIC_rri(REG_WORK1, REG_WORK1, ARM_Z_FLAG);
@@ -1750,7 +1840,7 @@ MENDFUNC(2,jff_BCLR_l_imm,(RW4 d, IM8 s))
 MIDFUNC(2,jff_BCLR_b,(RW1 d, RR4 s))
 {
 	if (isconst(s)) {
-		COMPCALL(jff_BCLR_b_imm)(d, live.state[s].val & 7);
+		COMPCALL(jff_BCLR_b_imm)(d, live.state[s].val);
 		return;
 	}
 
@@ -1776,7 +1866,7 @@ MENDFUNC(2,jff_BCLR_b,(RW1 d, RR4 s))
 MIDFUNC(2,jff_BCLR_l,(RW4 d, RR4 s))
 {
 	if (isconst(s)) {
-		COMPCALL(jff_BCLR_l_imm)(d, live.state[s].val & 31);
+		COMPCALL(jff_BCLR_l_imm)(d, live.state[s].val);
 		return;
 	}
 
@@ -1798,6 +1888,539 @@ MIDFUNC(2,jff_BCLR_l,(RW4 d, RR4 s))
 MENDFUNC(2,jff_BCLR_l,(RW4 d, RR4 s))
 
 /*
+ * BFINS
+ * Operand Syntax: 	#xxx.w,<ea>
+ *
+ * Operand Size: 32
+ *
+ * X Not affected.
+ * N Set if the most significant bit of the bitfield is set. Cleared otherwise.
+ * Z Set if the bitfield is zero. Cleared otherwise.
+ * V Always cleared.
+ * C Always cleared.
+ *
+ */
+MIDFUNC(4,jnf_BFINS_ii,(RW4 d, RR4 s, IM8 offs, IM8 width))
+{
+	INIT_REGS_l(d,s);
+
+  MOV_ri(REG_WORK3, offs);
+  
+  LSL_rri(REG_WORK1, s, 32 - width);
+
+  MVN_ri(REG_WORK2, 0);
+  LSR_rri(REG_WORK2, REG_WORK2, width);
+  AND_rrrRORr(d, d, REG_WORK2, REG_WORK3);
+  ORR_rrrRORr(d, d, REG_WORK1, REG_WORK3);
+  
+	EXIT_REGS(d,s);
+}
+MENDFUNC(4,jnf_BFINS_ii,(RW4 d, RR4 s, IM8 offs, IM8 width))
+
+MIDFUNC(4,jff_BFINS_ii,(RW4 d, RR4 s, IM8 offs, IM8 width))
+{
+	INIT_REGS_l(d,s);
+
+  MOV_ri(REG_WORK3, offs);
+  
+  LSL_rri(REG_WORK1, s, 32 - width);
+
+  MVN_ri(REG_WORK2, 0);
+  LSR_rri(REG_WORK2, REG_WORK2, width);
+  AND_rrrRORr(d, d, REG_WORK2, REG_WORK3);
+  ORR_rrrRORr(d, d, REG_WORK1, REG_WORK3);
+  
+  TST_rr(REG_WORK1, REG_WORK1);
+
+  flags_carry_inverted = false;
+	EXIT_REGS(d,s);
+}
+MENDFUNC(4,jff_BFINS_ii,(RW4 d, RR4 s, IM8 offs, IM8 width))
+
+MIDFUNC(5,jnf_BFINS2_ii,(RW4 d, RW4 d2, RR4 s, IM8 offs, IM8 width))
+{
+  d2 = rmw(d2);
+	INIT_REGS_l(d,s);
+
+  VMOV64_drr(SCRATCH_F64_1, d2, d);
+  VMOV64_drr(SCRATCH_F64_3, s, s);
+  
+  VMOV_I64_dimmI(SCRATCH_F64_2, 0xff);
+  VSHL64_ddi(SCRATCH_F64_2, SCRATCH_F64_2, 64 - width);
+  VSHR64_ddi(SCRATCH_F64_2, SCRATCH_F64_2, offs);
+  
+  VSHL64_ddi(SCRATCH_F64_3, SCRATCH_F64_3, 64 - width - offs);
+
+  VBIT64_ddd(SCRATCH_F64_1, SCRATCH_F64_3, SCRATCH_F64_2);
+  
+  VMOV64_rrd(d2, d, SCRATCH_F64_1);
+
+	EXIT_REGS(d,s);
+  unlock2(d2);
+}
+MENDFUNC(5,jnf_BFINS2_ii,(RW4 d, RW4 d2, RR4 s, IM8 offs, IM8 width))
+
+MIDFUNC(5,jff_BFINS2_ii,(RW4 d, RW4 d2, RR4 s, IM8 offs, IM8 width))
+{
+  d2 = rmw(d2);
+	INIT_REGS_l(d,s);
+  
+  VMOV64_drr(SCRATCH_F64_1, d2, d);
+  VMOV64_drr(SCRATCH_F64_3, s, s);
+  
+  VMOV_I64_dimmI(SCRATCH_F64_2, 0xff);
+  VSHL64_ddi(SCRATCH_F64_2, SCRATCH_F64_2, 64 - width);
+  VSHR64_ddi(SCRATCH_F64_2, SCRATCH_F64_2, offs);
+  
+  VSHL64_ddi(SCRATCH_F64_3, SCRATCH_F64_3, 64 - width - offs);
+
+  VBIT64_ddd(SCRATCH_F64_1, SCRATCH_F64_3, SCRATCH_F64_2);
+  
+  VMOV64_rrd(d2, d, SCRATCH_F64_1);
+  
+  LSL_rri(REG_WORK1, s, 32 - width);
+  TST_rr(REG_WORK1, REG_WORK1);
+  
+  flags_carry_inverted = false;
+	EXIT_REGS(d,s);
+  unlock2(d2);
+}
+MENDFUNC(5,jff_BFINS2_ii,(RW4 d, RW4 d2, RR4 s, IM8 offs, IM8 width))
+
+// Next only called when dest is D0-D7
+MIDFUNC(4,jnf_BFINS_di,(RW4 d, RR4 s, RR4 offs, IM8 width))
+{
+	INIT_REGS_l(d,s);
+  offs = readreg(offs);
+  
+  AND_rri(REG_WORK3, offs, 0x1f);
+
+  MVN_ri(REG_WORK2, 0);
+  LSR_rri(REG_WORK2, REG_WORK2, width);
+  ROR_rrr(REG_WORK2, REG_WORK2, REG_WORK3);
+  VMOV64_drr(SCRATCH_F64_2, REG_WORK2, REG_WORK2);
+
+  VMOV64_drr(SCRATCH_F64_1, d, d);
+  
+  ROR_rri(REG_WORK1, s, width);
+  ROR_rrr(REG_WORK1, REG_WORK1, REG_WORK3);
+  VMOV64_drr(SCRATCH_F64_3, REG_WORK1, REG_WORK1);
+
+  VBIF64_ddd(SCRATCH_F64_1, SCRATCH_F64_3, SCRATCH_F64_2);
+
+  VMOV64_rrd(d, REG_WORK2, SCRATCH_F64_1);
+
+  unlock2(offs);
+	EXIT_REGS(d,s);
+}
+MENDFUNC(4,jnf_BFINS_di,(RW4 d, RR4 s, RR4 offs, IM8 width))
+
+MIDFUNC(4,jff_BFINS_di,(RW4 d, RR4 s, RR4 offs, IM8 width))
+{
+	INIT_REGS_l(d,s);
+  offs = readreg(offs);
+  
+  AND_rri(REG_WORK3, offs, 0x1f);
+
+  MVN_ri(REG_WORK2, 0);
+  LSR_rri(REG_WORK2, REG_WORK2, width);
+  ROR_rrr(REG_WORK2, REG_WORK2, REG_WORK3);
+  VMOV64_drr(SCRATCH_F64_2, REG_WORK2, REG_WORK2);
+
+  VMOV64_drr(SCRATCH_F64_1, d, d);
+  
+  ROR_rri(REG_WORK1, s, width);
+  ROR_rrr(REG_WORK1, REG_WORK1, REG_WORK3);
+  VMOV64_drr(SCRATCH_F64_3, REG_WORK1, REG_WORK1);
+
+  VBIF64_ddd(SCRATCH_F64_1, SCRATCH_F64_3, SCRATCH_F64_2);
+
+  VMOV64_rrd(d, REG_WORK2, SCRATCH_F64_1);
+  
+  LSL_rri(REG_WORK1, s, 32 - width);
+  TST_rr(REG_WORK1, REG_WORK1);
+
+  flags_carry_inverted = false;
+  unlock2(offs);
+	EXIT_REGS(d,s);
+}
+MENDFUNC(4,jff_BFINS_di,(RW4 d, RR4 s, RR4 offs, IM8 width))
+
+MIDFUNC(4,jnf_BFINS_id,(RW4 d, RR4 s, IM8 offs, RR4 width))
+{
+  clobber_flags();
+
+	INIT_REGS_l(d,s);
+  width = readreg(width);
+  
+  ANDS_rri(REG_WORK1, width, 0x1f);
+  BNE_i(0);
+  MOV_ri(REG_WORK1, 0x20);
+
+  MVN_ri(REG_WORK2, 0);
+  LSR_rrr(REG_WORK2, REG_WORK2, REG_WORK1);
+  ROR_rri(REG_WORK2, REG_WORK2, offs);
+  VMOV64_drr(SCRATCH_F64_2, REG_WORK2, REG_WORK2);
+
+  VMOV64_drr(SCRATCH_F64_1, d, d);
+  
+  ROR_rrr(REG_WORK2, s, REG_WORK1);
+  ROR_rri(REG_WORK2, REG_WORK2, offs);
+  VMOV64_drr(SCRATCH_F64_3, REG_WORK2, REG_WORK2);
+
+  VBIF64_ddd(SCRATCH_F64_1, SCRATCH_F64_3, SCRATCH_F64_2);
+
+  VMOV64_rrd(d, REG_WORK2, SCRATCH_F64_1);
+
+  unlock2(width);
+	EXIT_REGS(d,s);
+}
+MENDFUNC(4,jnf_BFINS_id,(RW4 d, RR4 s, IM8 offs, RR4 width))
+
+MIDFUNC(4,jff_BFINS_id,(RW4 d, RR4 s, IM8 offs, RR4 width))
+{
+	INIT_REGS_l(d,s);
+  width = readreg(width);
+  
+  ANDS_rri(REG_WORK1, width, 0x1f);
+  BNE_i(0);
+  MOV_ri(REG_WORK1, 0x20);
+
+  MVN_ri(REG_WORK2, 0);
+  LSR_rrr(REG_WORK2, REG_WORK2, REG_WORK1);
+  ROR_rri(REG_WORK2, REG_WORK2, offs);
+  VMOV64_drr(SCRATCH_F64_2, REG_WORK2, REG_WORK2);
+
+  VMOV64_drr(SCRATCH_F64_1, d, d);
+  
+  ROR_rrr(REG_WORK2, s, REG_WORK1);
+  ROR_rri(REG_WORK2, REG_WORK2, offs);
+  VMOV64_drr(SCRATCH_F64_3, REG_WORK2, REG_WORK2);
+
+  VBIF64_ddd(SCRATCH_F64_1, SCRATCH_F64_3, SCRATCH_F64_2);
+
+  VMOV64_rrd(d, REG_WORK2, SCRATCH_F64_1);
+
+  RSB_rri(REG_WORK1, REG_WORK1, 32);
+  LSL_rrr(REG_WORK1, s, REG_WORK1);
+  TST_rr(REG_WORK1, REG_WORK1);
+
+  flags_carry_inverted = false;
+  unlock2(width);
+	EXIT_REGS(d,s);
+}
+MENDFUNC(4,jff_BFINS_id,(RW4 d, RR4 s, IM8 offs, RR4 width))
+
+MIDFUNC(4,jnf_BFINS_dd,(RW4 d, RR4 s, RR4 offs, RR4 width))
+{
+  clobber_flags();
+
+	INIT_REGS_l(d,s);
+  offs = readreg(offs);
+  width = readreg(width);
+
+  AND_rri(REG_WORK3, offs, 0x1f);
+  ANDS_rri(REG_WORK1, width, 0x1f);
+  BNE_i(0);
+  MOV_ri(REG_WORK1, 0x20);
+
+  MVN_ri(REG_WORK2, 0);
+  LSR_rrr(REG_WORK2, REG_WORK2, REG_WORK1);
+  ROR_rrr(REG_WORK2, REG_WORK2, REG_WORK3);
+  VMOV64_drr(SCRATCH_F64_2, REG_WORK2, REG_WORK2);
+
+  VMOV64_drr(SCRATCH_F64_1, d, d);
+  
+  ROR_rrr(REG_WORK2, s, REG_WORK1);
+  ROR_rrr(REG_WORK2, REG_WORK2, REG_WORK3);
+  VMOV64_drr(SCRATCH_F64_3, REG_WORK2, REG_WORK2);
+
+  VBIF64_ddd(SCRATCH_F64_1, SCRATCH_F64_3, SCRATCH_F64_2);
+
+  VMOV64_rrd(d, REG_WORK2, SCRATCH_F64_1);
+
+  unlock2(width);
+  unlock2(offs);
+	EXIT_REGS(d,s);
+}
+MENDFUNC(4,jnf_BFINS_dd,(RW4 d, RR4 s, RR4 offs, RR4 width))
+
+MIDFUNC(4,jff_BFINS_dd,(RW4 d, RR4 s, RR4 offs, RR4 width))
+{
+	INIT_REGS_l(d,s);
+  offs = readreg(offs);
+  width = readreg(width);
+
+  AND_rri(REG_WORK3, offs, 0x1f);
+  ANDS_rri(REG_WORK1, width, 0x1f);
+  BNE_i(0);
+  MOV_ri(REG_WORK1, 0x20);
+
+  MVN_ri(REG_WORK2, 0);
+  LSR_rrr(REG_WORK2, REG_WORK2, REG_WORK1);
+  ROR_rrr(REG_WORK2, REG_WORK2, REG_WORK3);
+  VMOV64_drr(SCRATCH_F64_2, REG_WORK2, REG_WORK2);
+
+  VMOV64_drr(SCRATCH_F64_1, d, d);
+  
+  ROR_rrr(REG_WORK2, s, REG_WORK1);
+  ROR_rrr(REG_WORK2, REG_WORK2, REG_WORK3);
+  VMOV64_drr(SCRATCH_F64_3, REG_WORK2, REG_WORK2);
+
+  VBIF64_ddd(SCRATCH_F64_1, SCRATCH_F64_3, SCRATCH_F64_2);
+
+  VMOV64_rrd(d, REG_WORK2, SCRATCH_F64_1);
+
+  RSB_rri(REG_WORK1, REG_WORK1, 32);
+  LSL_rrr(REG_WORK1, s, REG_WORK1);
+  TST_rr(REG_WORK1, REG_WORK1);
+
+  flags_carry_inverted = false;
+  unlock2(width);
+  unlock2(offs);
+	EXIT_REGS(d,s);
+}
+MENDFUNC(4,jff_BFINS_dd,(RW4 d, RR4 s, RR4 offs, RR4 width))
+
+
+// Next called when dest is <ea>
+MIDFUNC(5,jnf_BFINS2_di,(RW4 d, RW4 d2, RR4 s, RR4 offs, IM8 width))
+{
+  d2 = rmw(d2);
+	INIT_REGS_l(d,s);
+  offs = readreg(offs);
+
+  AND_rri(REG_WORK3, offs, 0x1f);
+  RSB_rri(REG_WORK3, REG_WORK3, 32);
+  VMOV_I64_dimmI(SCRATCH_F64_4, 0x00);
+  VMOVi_from_ARM_dr(SCRATCH_F64_4, REG_WORK3, 0);
+  
+  VMOV64_drr(SCRATCH_F64_1, d2, d);
+  VMOV64_drr(SCRATCH_F64_3, s, s);
+  
+  VMOV_I64_dimmI(SCRATCH_F64_2, 0xff);
+  VSHL64_ddi(SCRATCH_F64_2, SCRATCH_F64_2, 64 - width);
+  VSHR64_ddi(SCRATCH_F64_2, SCRATCH_F64_2, 32);
+  VSHL64_ddi(SCRATCH_F64_3, SCRATCH_F64_3, 32 - width);
+
+  VSHL64_ddd(SCRATCH_F64_2, SCRATCH_F64_2, SCRATCH_F64_4);
+  VSHL64_ddd(SCRATCH_F64_3, SCRATCH_F64_3, SCRATCH_F64_4);
+
+  VBIT64_ddd(SCRATCH_F64_1, SCRATCH_F64_3, SCRATCH_F64_2);
+  
+  VMOV64_rrd(d2, d, SCRATCH_F64_1);
+  
+  unlock2(offs);
+	EXIT_REGS(d,s);
+  unlock2(d2);
+}
+MENDFUNC(5,jnf_BFINS2_di,(RW4 d, RW4 d2, RR4 s, RR4 offs, IM8 width))
+
+MIDFUNC(5,jff_BFINS2_di,(RW4 d, RW4 d2, RR4 s, RR4 offs, IM8 width))
+{
+  d2 = rmw(d2);
+	INIT_REGS_l(d,s);
+  offs = readreg(offs);
+  
+  AND_rri(REG_WORK3, offs, 0x1f);
+  RSB_rri(REG_WORK3, REG_WORK3, 32);
+  VMOV_I64_dimmI(SCRATCH_F64_4, 0x00);
+  VMOVi_from_ARM_dr(SCRATCH_F64_4, REG_WORK3, 0);
+  
+  VMOV64_drr(SCRATCH_F64_1, d2, d);
+  VMOV64_drr(SCRATCH_F64_3, s, s);
+  
+  VMOV_I64_dimmI(SCRATCH_F64_2, 0xff);
+  VSHL64_ddi(SCRATCH_F64_2, SCRATCH_F64_2, 64 - width);
+  VSHR64_ddi(SCRATCH_F64_2, SCRATCH_F64_2, 32);
+  VSHL64_ddi(SCRATCH_F64_3, SCRATCH_F64_3, 32 - width);
+
+  VSHL64_ddd(SCRATCH_F64_2, SCRATCH_F64_2, SCRATCH_F64_4);
+  VSHL64_ddd(SCRATCH_F64_3, SCRATCH_F64_3, SCRATCH_F64_4);
+
+  VBIT64_ddd(SCRATCH_F64_1, SCRATCH_F64_3, SCRATCH_F64_2);
+  
+  VMOV64_rrd(d2, d, SCRATCH_F64_1);
+  
+  LSL_rri(REG_WORK1, s, 32 - width);
+  TST_rr(REG_WORK1, REG_WORK1);
+
+  flags_carry_inverted = false;
+  unlock2(offs);
+	EXIT_REGS(d,s);
+  unlock2(d2);
+}
+MENDFUNC(5,jff_BFINS2_di,(RW4 d, RW4 d2, RR4 s, RR4 offs, IM8 width))
+
+MIDFUNC(5,jnf_BFINS2_id,(RW4 d, RW4 d2, RR4 s, IM8 offs, RR4 width))
+{
+  clobber_flags();
+
+  d2 = rmw(d2);
+	INIT_REGS_l(d,s);
+  width = readreg(width);
+
+  ANDS_rri(REG_WORK2, width, 0x1f);
+  BNE_i(0);
+  MOV_ri(REG_WORK2, 0x20);
+  RSB_rri(REG_WORK2, REG_WORK2, 64);
+
+  VMOV_I64_dimmI(SCRATCH_F64_4, 0x00);
+  VMOVi_from_ARM_dr(SCRATCH_F64_4, REG_WORK2, 0);
+  
+  VMOV64_drr(SCRATCH_F64_1, d2, d);
+  VMOV64_drr(SCRATCH_F64_3, s, s);
+  
+  VMOV_I64_dimmI(SCRATCH_F64_2, 0xff);
+  VSHL64_ddd(SCRATCH_F64_2, SCRATCH_F64_2, SCRATCH_F64_4);
+  VSHL64_ddd(SCRATCH_F64_3, SCRATCH_F64_3, SCRATCH_F64_4);
+
+  VSHR64_ddi(SCRATCH_F64_2, SCRATCH_F64_2, offs);
+  VSHR64_ddi(SCRATCH_F64_3, SCRATCH_F64_3, offs);
+
+  VBIT64_ddd(SCRATCH_F64_1, SCRATCH_F64_3, SCRATCH_F64_2);
+  
+  VMOV64_rrd(d2, d, SCRATCH_F64_1);
+
+  unlock2(width);
+	EXIT_REGS(d,s);
+  unlock2(d2);
+}
+MENDFUNC(5,jnf_BFINS2_id,(RW4 d, RW4 d2, RR4 s, IM8 offs, RR4 width))
+
+MIDFUNC(5,jff_BFINS2_id,(RW4 d, RW4 d2, RR4 s, IM8 offs, RR4 width))
+{
+  d2 = rmw(d2);
+	INIT_REGS_l(d,s);
+  width = readreg(width);
+  
+  ANDS_rri(REG_WORK2, width, 0x1f);
+  BNE_i(0);
+  MOV_ri(REG_WORK2, 0x20);
+  RSB_rri(REG_WORK2, REG_WORK2, 64);
+
+  VMOV_I64_dimmI(SCRATCH_F64_4, 0x00);
+  VMOVi_from_ARM_dr(SCRATCH_F64_4, REG_WORK2, 0);
+  
+  VMOV64_drr(SCRATCH_F64_1, d2, d);
+  VMOV64_drr(SCRATCH_F64_3, s, s);
+  
+  VMOV_I64_dimmI(SCRATCH_F64_2, 0xff);
+  VSHL64_ddd(SCRATCH_F64_2, SCRATCH_F64_2, SCRATCH_F64_4);
+  VSHL64_ddd(SCRATCH_F64_3, SCRATCH_F64_3, SCRATCH_F64_4);
+
+  VSHR64_ddi(SCRATCH_F64_2, SCRATCH_F64_2, offs);
+  VSHR64_ddi(SCRATCH_F64_3, SCRATCH_F64_3, offs);
+
+  VBIT64_ddd(SCRATCH_F64_1, SCRATCH_F64_3, SCRATCH_F64_2);
+  
+  VMOV64_rrd(d2, d, SCRATCH_F64_1);
+  
+  SUB_rri(REG_WORK2, REG_WORK2, 32);
+  LSL_rrr(REG_WORK1, s, REG_WORK2);
+  TST_rr(REG_WORK1, REG_WORK1);
+
+  flags_carry_inverted = false;
+  unlock2(width);
+	EXIT_REGS(d,s);
+  unlock2(d2);
+}
+MENDFUNC(5,jff_BFINS2_id,(RW4 d, RW4 d2, RR4 s, IM8 offs, RR4 width))
+
+MIDFUNC(5,jnf_BFINS2_dd,(RW4 d, RW4 d2, RR4 s, RR4 offs, RR4 width))
+{
+  clobber_flags();
+
+  d2 = rmw(d2);
+	INIT_REGS_l(d,s);
+  offs = readreg(offs);
+  width = readreg(width);
+
+  ANDS_rri(REG_WORK2, width, 0x1f);
+  BNE_i(0);
+  MOV_ri(REG_WORK2, 0x20);
+  RSB_rri(REG_WORK2, REG_WORK2, 64);
+
+  VMOV_I64_dimmI(SCRATCH_F64_4, 0x00);
+  VMOVi_from_ARM_dr(SCRATCH_F64_4, REG_WORK2, 0);
+  
+  VMOV64_drr(SCRATCH_F64_1, d2, d);
+  VMOV64_drr(SCRATCH_F64_3, s, s);
+  
+  VMOV_I64_dimmI(SCRATCH_F64_2, 0xff);
+  VSHL64_ddd(SCRATCH_F64_2, SCRATCH_F64_2, SCRATCH_F64_4);
+  VSHL64_ddd(SCRATCH_F64_3, SCRATCH_F64_3, SCRATCH_F64_4);
+
+  AND_rri(REG_WORK3, offs, 0x1f);
+  RSB_rri(REG_WORK3, REG_WORK3, 32);
+  VMOV_I64_dimmI(SCRATCH_F64_4, 0x00);
+  VMOVi_from_ARM_dr(SCRATCH_F64_4, REG_WORK3, 0);
+
+  VSHR64_ddi(SCRATCH_F64_2, SCRATCH_F64_2, 32);
+  VSHR64_ddi(SCRATCH_F64_3, SCRATCH_F64_3, 32);
+  VSHL64_ddd(SCRATCH_F64_2, SCRATCH_F64_2, SCRATCH_F64_4);
+  VSHL64_ddd(SCRATCH_F64_3, SCRATCH_F64_3, SCRATCH_F64_4);
+
+  VBIT64_ddd(SCRATCH_F64_1, SCRATCH_F64_3, SCRATCH_F64_2);
+  
+  VMOV64_rrd(d2, d, SCRATCH_F64_1);
+
+  unlock2(width);
+  unlock2(offs);
+	EXIT_REGS(d,s);
+  unlock2(d2);
+}
+MENDFUNC(5,jnf_BFINS2_dd,(RW4 d, RW4 d2, RR4 s, RR4 offs, RR4 width))
+
+MIDFUNC(5,jff_BFINS2_dd,(RW4 d, RW4 d2, RR4 s, RR4 offs, RR4 width))
+{
+  d2 = rmw(d2);
+	INIT_REGS_l(d,s);
+  offs = readreg(offs);
+  width = readreg(width);
+  
+  ANDS_rri(REG_WORK2, width, 0x1f);
+  BNE_i(0);
+  MOV_ri(REG_WORK2, 0x20);
+  RSB_rri(REG_WORK2, REG_WORK2, 64);
+
+  VMOV_I64_dimmI(SCRATCH_F64_4, 0x00);
+  VMOVi_from_ARM_dr(SCRATCH_F64_4, REG_WORK2, 0);
+  
+  VMOV64_drr(SCRATCH_F64_1, d2, d);
+  VMOV64_drr(SCRATCH_F64_3, s, s);
+  
+  VMOV_I64_dimmI(SCRATCH_F64_2, 0xff);
+  VSHL64_ddd(SCRATCH_F64_2, SCRATCH_F64_2, SCRATCH_F64_4);
+  VSHL64_ddd(SCRATCH_F64_3, SCRATCH_F64_3, SCRATCH_F64_4);
+
+  AND_rri(REG_WORK3, offs, 0x1f);
+  RSB_rri(REG_WORK3, REG_WORK3, 32);
+  VMOV_I64_dimmI(SCRATCH_F64_4, 0x00);
+  VMOVi_from_ARM_dr(SCRATCH_F64_4, REG_WORK3, 0);
+
+  VSHR64_ddi(SCRATCH_F64_2, SCRATCH_F64_2, 32);
+  VSHR64_ddi(SCRATCH_F64_3, SCRATCH_F64_3, 32);
+  VSHL64_ddd(SCRATCH_F64_2, SCRATCH_F64_2, SCRATCH_F64_4);
+  VSHL64_ddd(SCRATCH_F64_3, SCRATCH_F64_3, SCRATCH_F64_4);
+
+  VBIT64_ddd(SCRATCH_F64_1, SCRATCH_F64_3, SCRATCH_F64_2);
+  
+  VMOV64_rrd(d2, d, SCRATCH_F64_1);
+  
+  SUB_rri(REG_WORK2, REG_WORK2, 32);
+  LSL_rrr(REG_WORK1, s, REG_WORK2);
+  TST_rr(REG_WORK1, REG_WORK1);
+
+  flags_carry_inverted = false;
+  unlock2(width);
+  unlock2(offs);
+	EXIT_REGS(d,s);
+  unlock2(d2);
+}
+MENDFUNC(5,jff_BFINS2_dd,(RW4 d, RW4 d2, RR4 s, RR4 offs, RR4 width))
+
+/*
  * BSET
  * Operand Syntax: 	Dn,<ea>
  *					#<data>,<ea>
@@ -1816,7 +2439,7 @@ MENDFUNC(2,jff_BCLR_l,(RW4 d, RR4 s))
 MIDFUNC(2,jnf_BSET_b_imm,(RW1 d, IM8 s))
 {
 	d = rmw(d);
-	ORR_rri(d, d, (1 << s));
+	ORR_rri(d, d, (1 << (s & 0x7)));
 	unlock2(d);
 }
 MENDFUNC(2,jnf_BSET_b_imm,(RW1 d, IM8 s))
@@ -1824,7 +2447,7 @@ MENDFUNC(2,jnf_BSET_b_imm,(RW1 d, IM8 s))
 MIDFUNC(2,jnf_BSET_l_imm,(RW4 d, IM8 s))
 {
 	d = rmw(d);
-	ORR_rri(d, d, (1 << s));
+	ORR_rri(d, d, (1 << (s & 0x1f)));
 	unlock2(d);
 }
 MENDFUNC(2,jnf_BSET_l_imm,(RW4 d, IM8 s))
@@ -1832,7 +2455,7 @@ MENDFUNC(2,jnf_BSET_l_imm,(RW4 d, IM8 s))
 MIDFUNC(2,jnf_BSET_b,(RW1 d, RR4 s))
 {
 	if (isconst(s)) {
-		COMPCALL(jnf_BSET_b_imm)(d, live.state[s].val & 7);
+		COMPCALL(jnf_BSET_b_imm)(d, live.state[s].val);
 		return;
 	}
 
@@ -1852,7 +2475,7 @@ MENDFUNC(2,jnf_BSET_b,(RW1 d, RR4 s))
 MIDFUNC(2,jnf_BSET_l,(RW4 d, RR4 s))
 {
 	if (isconst(s)) {
-		COMPCALL(jnf_BSET_l_imm)(d, live.state[s].val & 31);
+		COMPCALL(jnf_BSET_l_imm)(d, live.state[s].val);
 		return;
 	}
 
@@ -1871,7 +2494,7 @@ MIDFUNC(2,jff_BSET_b_imm,(RW1 d, IM8 s))
 {
 	d = rmw(d);
 
-	uae_u32 v = (1 << s);
+	uae_u32 v = (1 << (s & 0x7));
 	MRS_CPSR(REG_WORK1);
 	TST_ri(d, v);
 	BIC_rri(REG_WORK1, REG_WORK1, ARM_Z_FLAG);
@@ -1887,7 +2510,7 @@ MIDFUNC(2,jff_BSET_l_imm,(RW4 d, IM8 s))
 {
 	d = rmw(d);
 
-	uae_u32 v = (1 << s);
+	uae_u32 v = (1 << (s & 0x1f));
 	MRS_CPSR(REG_WORK1);
 	TST_ri(d, v);
 	BIC_rri(REG_WORK1, REG_WORK1, ARM_Z_FLAG);
@@ -1902,7 +2525,7 @@ MENDFUNC(2,jff_BSET_l_imm,(RW4 d, IM8 s))
 MIDFUNC(2,jff_BSET_b,(RW1 d, RR4 s))
 {
 	if (isconst(s)) {
-		COMPCALL(jff_BSET_b_imm)(d, live.state[s].val & 7);
+		COMPCALL(jff_BSET_b_imm)(d, live.state[s].val);
 		return;
 	}
 
@@ -1928,7 +2551,7 @@ MENDFUNC(2,jff_BSET_b,(RW1 d, RR4 s))
 MIDFUNC(2,jff_BSET_l,(RW4 d, RR4 s))
 {
 	if (isconst(s)) {
-		COMPCALL(jff_BSET_l_imm)(d, live.state[s].val & 31);
+		COMPCALL(jff_BSET_l_imm)(d, live.state[s].val);
 		return;
 	}
 
@@ -1970,7 +2593,7 @@ MIDFUNC(2,jff_BTST_b_imm,(RR1 d, IM8 s))
 	d = readreg(d);
 
 	MRS_CPSR(REG_WORK1);
-	TST_ri(d, (1 << s));
+	TST_ri(d, (1 << (s & 0x7)));
 	BIC_rri(REG_WORK1, REG_WORK1, ARM_Z_FLAG);
 	CC_ORR_rri(NATIVE_CC_EQ, REG_WORK1, REG_WORK1, ARM_Z_FLAG);
 	MSR_CPSRf_r(REG_WORK1);
@@ -1984,7 +2607,7 @@ MIDFUNC(2,jff_BTST_l_imm,(RR4 d, IM8 s))
 	d = readreg(d);
 
 	MRS_CPSR(REG_WORK1);
-	TST_ri(d, (1 << s));
+	TST_ri(d, (1 << (s & 0x1f)));
 	BIC_rri(REG_WORK1, REG_WORK1, ARM_Z_FLAG);
 	CC_ORR_rri(NATIVE_CC_EQ, REG_WORK1, REG_WORK1, ARM_Z_FLAG);
 	MSR_CPSRf_r(REG_WORK1);
@@ -1996,7 +2619,7 @@ MENDFUNC(2,jff_BTST_l_imm,(RR4 d, IM8 s))
 MIDFUNC(2,jff_BTST_b,(RR1 d, RR4 s))
 {
 	if (isconst(s)) {
-		COMPCALL(jff_BTST_b_imm)(d, live.state[s].val & 7);
+		COMPCALL(jff_BTST_b_imm)(d, live.state[s].val);
 		return;
 	}
 
@@ -2021,7 +2644,7 @@ MENDFUNC(2,jff_BTST_b,(RR1 d, RR4 s))
 MIDFUNC(2,jff_BTST_l,(RR4 d, RR4 s))
 {
 	if (isconst(s)) {
-		COMPCALL(jff_BTST_l_imm)(d, live.state[s].val & 31);
+		COMPCALL(jff_BTST_l_imm)(d, live.state[s].val);
 		return;
 	}
 
@@ -2142,8 +2765,27 @@ MENDFUNC(1,jff_CLR_l,(W4 d))
  * C Set if a borrow occurs. Cleared otherwise.
  *
  */
+MIDFUNC(2,jff_CMP_b_imm,(RR1 d, IM8 v))
+{
+  d = readreg(d);
+	
+  LSL_rri(REG_WORK1, d, 24);
+  MOV_ri(REG_WORK2, v & 0xff);
+  CMP_rrLSLi(REG_WORK1, REG_WORK2, 24);
+
+  unlock2(d);
+
+  flags_carry_inverted = true;
+}
+MENDFUNC(2,jff_CMP_b_imm,(RR1 d, IM8 v))
+
 MIDFUNC(2,jff_CMP_b,(RR1 d, RR1 s))
 {
+	if (isconst(s)) {
+		COMPCALL(jff_CMP_b_imm)(d, live.state[s].val);
+		return;
+	}
+
   INIT_RREGS_b(d, s);
 	  
   LSL_rri(REG_WORK1, d, 24);
@@ -2155,26 +2797,61 @@ MIDFUNC(2,jff_CMP_b,(RR1 d, RR1 s))
 }
 MENDFUNC(2,jff_CMP_b,(RR1 d, RR1 s))
 
-MIDFUNC(2,jff_CMP_w,(RR2 d, RR2 s))
+MIDFUNC(2,jff_CMP_w_imm,(RR2 d, IM16 v))
 {
-	if (isconst(d) && isconst(s)) {
-	  SIGNED16_IMM_2_REG(REG_WORK1, live.state[d].val & 0xff);
-	  SIGNED16_IMM_2_REG(REG_WORK2, live.state[s].val & 0xff);
+	if (isconst(d)) {
+	  SIGNED16_IMM_2_REG(REG_WORK1, live.state[d].val & 0xffff);
+	  SIGNED16_IMM_2_REG(REG_WORK2, v & 0xffff);
 	  CMP_rr(REG_WORK1, REG_WORK2);
 	} else {
-	  INIT_RREGS_w(d, s);
+	  d = readreg(d);
 
 	  LSL_rri(REG_WORK1, d, 16);
-	  CMP_rrLSLi(REG_WORK1, s, 16);
+	  LOAD_U16(REG_WORK2, v);
+	  CMP_rrLSLi(REG_WORK1, REG_WORK2, 16);
 
-	  EXIT_REGS(d,s);
+	  unlock2(d);
   }
+  flags_carry_inverted = true;
+}
+MENDFUNC(2,jff_CMP_w_imm,(RR2 d, IM16 v))
+
+MIDFUNC(2,jff_CMP_w,(RR2 d, RR2 s))
+{
+	if (isconst(s)) {
+		COMPCALL(jff_CMP_w_imm)(d, live.state[s].val);
+		return;
+	}
+
+  INIT_RREGS_w(d, s);
+
+  LSL_rri(REG_WORK1, d, 16);
+  CMP_rrLSLi(REG_WORK1, s, 16);
+
+  EXIT_REGS(d,s);
   flags_carry_inverted = true;
 }
 MENDFUNC(2,jff_CMP_w,(RR2 d, RR2 s))
 
+MIDFUNC(2,jff_CMP_l_imm,(RR4 d, IM32 v))
+{
+	d = readreg(d);
+
+  LOAD_U32(REG_WORK1, v);
+	CMP_rr(d, REG_WORK1);
+
+  flags_carry_inverted = true;
+	unlock2(d);
+}
+MENDFUNC(2,jff_CMP_l_imm,(RR4 d, IM32 v))
+
 MIDFUNC(2,jff_CMP_l,(RR4 d, RR4 s))
 {
+	if (isconst(s)) {
+		COMPCALL(jff_CMP_l_imm)(d, live.state[s].val);
+		return;
+	}
+
 	INIT_RREGS_l(d, s);
 
 	CMP_rr(d, s);
@@ -2197,27 +2874,53 @@ MENDFUNC(2,jff_CMP_l,(RR4 d, RR4 s))
  * C Set if a borrow occurs. Cleared otherwise.
  *
  */
+MIDFUNC(2,jff_CMPA_w_imm,(RR2 d, IM16 v))
+{
+  uae_u16 tmp = (uae_u16)(v & 0xffff);
+  d = readreg(d);
+  SIGNED16_IMM_2_REG(REG_WORK1, tmp);
+  CMP_rr(d, REG_WORK1);
+  unlock2(d);
+
+  flags_carry_inverted = true;
+}
+MENDFUNC(2,jff_CMPA_w_imm,(RR2 d, IM16 v))
+
 MIDFUNC(2,jff_CMPA_w,(RR2 d, RR2 s))
 {
   if (isconst(s)) {
-    uae_u16 tmp = (uae_u16)(live.state[s].val & 0xffff);
-    d = readreg(d);
-    SIGNED16_IMM_2_REG(REG_WORK1, tmp);
-    CMP_rr(d, REG_WORK1);
-    unlock2(d);
-  } else {
-  	INIT_RREGS_w(d, s);
-    SIGNED16_REG_2_REG(REG_WORK2, s);
-    CMP_rr(d, REG_WORK2);
-  	EXIT_REGS(d,s);
-  }
+		COMPCALL(jff_CMPA_w_imm)(d, live.state[s].val);
+		return;
+	}
+
+	INIT_RREGS_w(d, s);
+  SIGNED16_REG_2_REG(REG_WORK2, s);
+  CMP_rr(d, REG_WORK2);
+	EXIT_REGS(d,s);
 
   flags_carry_inverted = true;
 }
 MENDFUNC(2,jff_CMPA_w,(RR2 d, RR2 s))
 
+MIDFUNC(2,jff_CMPA_l_imm,(RR4 d, IM32 v))
+{
+  d = readreg(d);
+
+  LOAD_U32(REG_WORK1, v);
+	CMP_rr(d, REG_WORK1);
+
+  flags_carry_inverted = true;
+	unlock2(d);
+}
+MENDFUNC(2,jff_CMPA_l_imm,(RR4 d, IM32 v))
+
 MIDFUNC(2,jff_CMPA_l,(RR4 d, RR4 s))
 {
+	if (isconst(s)) {
+		COMPCALL(jff_CMPA_l_imm)(d, live.state[s].val);
+		return;
+	}
+
 	INIT_RREGS_l(d, s);
 
 	CMP_rr(d, s);
@@ -2787,8 +3490,33 @@ MIDFUNC(2,jnf_EOR_w,(RW2 d, RR2 s))
 }
 MENDFUNC(2,jnf_EOR_w,(RW2 d, RR2 s))
 
+MIDFUNC(2,jnf_EOR_l_imm,(RW4 d, IM32 v))
+{
+  if(isconst(d)) {
+    live.state[d].val = live.state[d].val ^ v;
+    return;
+  }
+  
+	d = rmw(d);
+
+  if(CHECK32(v)) {
+    EOR_rri(d, d, v);
+  } else {
+    LOAD_U32(REG_WORK1, v);
+  	EOR_rrr(d, d, REG_WORK1);
+  }
+
+	unlock2(d);
+}
+MENDFUNC(2,jnf_EOR_l_imm,(RW4 d, IM32 v))
+
 MIDFUNC(2,jnf_EOR_l,(RW4 d, RR4 s))
 {
+	if (isconst(s)) {
+		COMPCALL(jnf_EOR_l_imm)(d, live.state[s].val);
+		return;
+	}
+
 	INIT_REGS_l(d, s);
 
 	EOR_rrr(d, d, s);
@@ -2895,8 +3623,30 @@ MIDFUNC(2,jff_EOR_w,(RW2 d, RR2 s))
 }
 MENDFUNC(2,jff_EOR_w,(RW2 d, RR2 s))
 
+MIDFUNC(2,jff_EOR_l_imm,(RW4 d, IM32 v))
+{
+	d = rmw(d);
+
+	MSR_CPSRf_i(0);
+	if(CHECK32(v)) {
+	  EORS_rri(d, d, v);
+	} else {
+	  LOAD_U32(REG_WORK1, v);
+  	EORS_rrr(d, d, REG_WORK1);
+  }
+
+  flags_carry_inverted = false;
+	unlock2(d);
+}
+MENDFUNC(2,jff_EOR_l_imm,(RW4 d, IM32 v))
+
 MIDFUNC(2,jff_EOR_l,(RW4 d, RR4 s))
 {
+	if (isconst(s)) {
+		COMPCALL(jff_EOR_l_imm)(d, live.state[s].val);
+		return;
+	}
+
 	INIT_REGS_l(d, s);
 
 	MSR_CPSRf_i(0);
@@ -3079,6 +3829,8 @@ MIDFUNC(2,jnf_LSL_b_imm,(RW1 d, IM8 i))
 		
 		INIT_REG_b(d);
 	  
+    if(i > 31)
+      i = 31;
   	LSL_rri(REG_WORK1, d, i);
 #ifdef ARMV6T2
 	  BFI_rrii(d, REG_WORK1, 0, 7);
@@ -3103,6 +3855,8 @@ MIDFUNC(2,jnf_LSL_w_imm,(RW2 d, IM8 i))
 
 		INIT_REG_w(d);
 	  
+    if(i > 31)
+      i = 31;
   	LSL_rri(REG_WORK1, d, i);
 	  PKHTB_rrr(d, d, REG_WORK1);
 	
@@ -3438,6 +4192,8 @@ MIDFUNC(2,jnf_LSR_b_imm,(RW1 d, IM8 i))
 		INIT_REG_b(d);
 
 		UNSIGNED8_REG_2_REG(REG_WORK1, d);
+    if(i > 31)
+      i = 31;
   	LSR_rri(REG_WORK1, REG_WORK1, i);
 #ifdef ARMV6T2
 	  BFI_rrii(d, REG_WORK1, 0, 7);
@@ -3463,6 +4219,8 @@ MIDFUNC(2,jnf_LSR_w_imm,(RW2 d, IM8 i))
 		INIT_REG_w(d);
 
 		UNSIGNED16_REG_2_REG(REG_WORK1, d);
+    if(i > 31)
+      i = 31;
 	  PKHTB_rrrASRi(d, d, REG_WORK1, i);
 
 		unlock2(d);
@@ -4033,14 +4791,25 @@ MENDFUNC(3,jnf_MVMEL_w,(W4 d, RR4 s, IM8 offset))
 
 MIDFUNC(3,jnf_MVMEL_l,(W4 d, RR4 s, IM8 offset))
 {
-	s = readreg(s);
-	d = writereg(d);
+	if (s == d || isconst(d) || isinreg(d)) {
+	  s = readreg(s);
+	  d = writereg(d);
 
-	LDR_rRI(REG_WORK1, s, offset);
-  REV_rr(d, REG_WORK1);
+	  LDR_rRI(REG_WORK1, s, offset);
+    REV_rr(d, REG_WORK1);
 
-	unlock2(d);
-	unlock2(s);
+	  unlock2(d);
+	  unlock2(s);
+  } else {
+  	s = readreg(s);
+  
+  	LDR_rRI(REG_WORK1, s, offset);
+    REV_rr(REG_WORK2, REG_WORK1);
+    uintptr idx = (uintptr)(&regs.regs[d]) - (uintptr) &regs;
+    STR_rRI(REG_WORK2, R_REGSTRUCT, idx);
+  
+  	unlock2(s);
+  }
 }
 MENDFUNC(3,jnf_MVMEL_l,(W4 d, RR4 s, IM8 offset))
 
@@ -4068,17 +4837,31 @@ MENDFUNC(3,jnf_MVMLE_w,(RR4 d, RR4 s, IM8 offset))
 
 MIDFUNC(3,jnf_MVMLE_l,(RR4 d, RR4 s, IM8 offset))
 {
-	s = readreg(s);
-	d = readreg(d);
+	if (s == d || isconst(s) || isinreg(s)) {
+	  s = readreg(s);
+	  d = readreg(d);
 
-	REV_rr(REG_WORK1, s);
-	if (offset >= 0)
-		STR_rRI(REG_WORK1, d, offset);
-	else
-		STR_rRi(REG_WORK1, d, -offset);
+	  REV_rr(REG_WORK1, s);
+	  if (offset >= 0)
+		  STR_rRI(REG_WORK1, d, offset);
+	  else
+		  STR_rRi(REG_WORK1, d, -offset);
 
-	unlock2(d);
-	unlock2(s);
+	  unlock2(d);
+	  unlock2(s);
+  } else {
+  	d = readreg(d);
+
+    uintptr idx = (uintptr)(&regs.regs[s]) - (uintptr) &regs;
+    LDR_rRI(REG_WORK2, R_REGSTRUCT, idx);
+  	REV_rr(REG_WORK1, REG_WORK2);
+	  if (offset >= 0)
+		  STR_rRI(REG_WORK1, d, offset);
+	  else
+		  STR_rRi(REG_WORK1, d, -offset);
+
+  	unlock2(d);
+  }
 }
 MENDFUNC(3,jnf_MVMLE_l,(RR4 d, RR4 s, IM8 offset))
 
@@ -4135,10 +4918,16 @@ MENDFUNC(2,jnf_MOVE16,(RR4 d, RR4 s))
  * Flags: Not affected.
  *
  */
+MIDFUNC(2,jnf_MOVEA_w_imm,(W4 d, IM16 v))
+{
+  set_const(d, (uae_s32)(uae_s16)v);
+}
+MENDFUNC(2,jnf_MOVEA_w_imm,(W4 d, IM16 v))
+
 MIDFUNC(2,jnf_MOVEA_w,(W4 d, RR2 s))
 {
 	if (isconst(s)) {
-		set_const(d, (uae_s32)(uae_s16)live.state[s].val);
+		COMPCALL(jnf_MOVEA_w_imm)(d, live.state[s].val);
 		return;
 	}
 
@@ -4171,6 +4960,15 @@ MENDFUNC(2,jnf_MOVEA_l,(W4 d, RR4 s))
  */
 MIDFUNC(2,jnf_MULS,(RW4 d, RR4 s))
 {
+  if (isconst(s)) {
+    uae_s16 tmp = (uae_s16)live.state[s].val;
+    d = rmw(d);
+    SIGNED16_IMM_2_REG(REG_WORK1, tmp);
+    SMULxy_rrr(d, d, REG_WORK1, 0, 0);
+    unlock2(d);
+    return; 
+  }
+    
 	INIT_REGS_l(d, s);
 
   SMULxy_rrr(d, d, s, 0, 0);
@@ -4905,10 +5703,30 @@ MIDFUNC(2,jnf_OR_w,(RW2 d, RR2 s))
 }
 MENDFUNC(2,jnf_OR_w,(RW2 d, RR2 s))
 
+MIDFUNC(2,jnf_OR_l_imm,(RW4 d, IM32 v))
+{
+	if (isconst(d)) {
+		live.state[d].val = live.state[d].val | v;
+		return;
+	}
+
+	d = rmw(d);
+
+  if(CHECK32(v)) {
+    ORR_rri(d, d, v);
+  } else {
+    LOAD_U32(REG_WORK1, v);
+  	ORR_rrr(d, d, REG_WORK1);
+  }
+
+	unlock2(d);
+}
+MENDFUNC(2,jnf_OR_l_imm,(RW4 d, IM32 v))
+
 MIDFUNC(2,jnf_OR_l,(RW4 d, RR4 s))
 {
-	if (isconst(d) && isconst(s)) {
-		live.state[d].val = live.state[d].val | live.state[s].val;
+	if (isconst(s)) {
+		COMPCALL(jnf_OR_l_imm)(d, live.state[s].val);
 		return;
 	}
 
@@ -5018,8 +5836,30 @@ MIDFUNC(2,jff_OR_w,(RW2 d, RR2 s))
 }
 MENDFUNC(2,jff_OR_w,(RW2 d, RR2 s))
 
+MIDFUNC(2,jff_OR_l_imm,(RW4 d, IM32 v))
+{
+	d = rmw(d);
+
+	MSR_CPSRf_i(0);
+	if(CHECK32(v)) {
+	  ORRS_rri(d, d, v);
+	} else {
+	  LOAD_U32(REG_WORK1, v);
+  	ORRS_rrr(d, d, REG_WORK1);
+  }
+
+  flags_carry_inverted = false;
+	unlock2(d);
+}
+MENDFUNC(2,jff_OR_l_imm,(RW4 d, IM32 v))
+
 MIDFUNC(2,jff_OR_l,(RW4 d, RR4 s))
 {
+	if (isconst(s)) {
+		COMPCALL(jff_OR_l_imm)(d, live.state[s].val);
+		return;
+	}
+
 	INIT_REGS_l(d, s);
 
 	MSR_CPSRf_i(0);
@@ -6503,10 +7343,30 @@ MIDFUNC(2,jnf_SUB_w,(RW2 d, RR2 s))
 }
 MENDFUNC(2,jnf_SUB_w,(RW2 d, RR2 s))
 
+MIDFUNC(2,jnf_SUB_l_imm,(RW2 d, IM32 v))
+{
+	if (isconst(d)) {
+		live.state[d].val = live.state[d].val - v;
+		return;
+	}
+
+	d = rmw(d);
+
+  if(CHECK32(v)) {
+    SUB_rri(d, d, v);
+  } else {
+    LOAD_U32(REG_WORK1, v);
+		SUB_rrr(d, d, REG_WORK1);
+	}
+
+	unlock2(d);
+}
+MENDFUNC(2,jnf_SUB_l_imm,(RW2 d, IM32 v))
+
 MIDFUNC(2,jnf_SUB_l,(RW4 d, RR4 s))
 {
-	if (isconst(d) && isconst(s)) {
-		live.state[d].val = live.state[d].val - live.state[s].val;
+	if (isconst(s)) {
+		COMPCALL(jnf_SUB_l_imm)(d, live.state[s].val);
 		return;
 	}
 
@@ -6603,8 +7463,31 @@ MIDFUNC(2,jff_SUB_w,(RW2 d, RR2 s))
 }
 MENDFUNC(2,jff_SUB_w,(RW2 d, RR2 s))
 
+MIDFUNC(2,jff_SUB_l_imm,(RW4 d, IM32 v))
+{
+	d = rmw(d);
+
+  if(CHECK32(v)) {
+    SUBS_rri(d, d,v);
+  } else {
+    LOAD_U32(REG_WORK1, v);
+  	SUBS_rrr(d, d, REG_WORK1);
+  }
+
+  flags_carry_inverted = true;
+  DUPLICACTE_CARRY
+
+	unlock2(d);
+}
+MENDFUNC(2,jff_SUB_l_imm,(RW4 d, IM32 v))
+
 MIDFUNC(2,jff_SUB_l,(RW4 d, RR4 s))
 {
+	if (isconst(s)) {
+		COMPCALL(jff_SUB_l_imm)(d, live.state[s].val);
+		return;
+	}
+
 	INIT_REGS_l(d, s);
 
 	SUBS_rrr(d, d, s);
@@ -6626,8 +7509,31 @@ MENDFUNC(2,jff_SUB_l,(RW4 d, RR4 s))
  * Flags: Not affected.
  *
  */
+MIDFUNC(2,jnf_SUBA_w_imm,(RW4 d, IM16 v))
+{
+	if (isconst(d)) {
+		live.state[d].val = live.state[d].val - (uae_s32)(uae_s16)v;
+		return;
+	}
+
+	d = rmw(d);
+	if(CHECK32(v)) {
+	  SUB_rri(d, d, v);
+	} else {
+  	SIGNED16_IMM_2_REG(REG_WORK1, v);
+  	SUB_rrr(d, d, REG_WORK1);
+  }
+	unlock2(d);
+}
+MENDFUNC(2,jnf_SUBA_w_imm,(RW4 d, IM16 v))
+
 MIDFUNC(2,jnf_SUBA_w,(RW4 d, RR2 s))
 {
+	if (isconst(s)) {
+		COMPCALL(jnf_SUBA_w_imm)(d, live.state[s].val & 0xffff);
+		return;
+	}
+  
 	INIT_REGS_w(d, s);
 
 	SIGNED16_REG_2_REG(REG_WORK1, s);
@@ -6637,8 +7543,33 @@ MIDFUNC(2,jnf_SUBA_w,(RW4 d, RR2 s))
 }
 MENDFUNC(2,jnf_SUBA_w,(RW4 d, RR2 s))
 
+MIDFUNC(2,jnf_SUBA_l_imm,(RW4 d, IM32 v))
+{
+	if (isconst(d)) {
+		set_const(d, live.state[d].val - v);
+		return;
+	}
+
+	d = rmw(d);
+
+	if(CHECK32(v)) {
+	  SUB_rri(d, d, v);
+	} else {
+  	LOAD_U32(REG_WORK1, v);
+  	SUB_rrr(d, d, REG_WORK1);
+  }
+  
+	unlock2(d);
+}
+MENDFUNC(2,jnf_SUBA_l_imm,(RW4 d, IM32 v))
+
 MIDFUNC(2,jnf_SUBA_l,(RW4 d, RR4 s))
 {
+	if (isconst(s)) {
+		COMPCALL(jnf_SUBA_l_imm)(d, live.state[s].val);
+		return;
+	}
+
 	INIT_REGS_l(d, s);
 
 	SUB_rrr(d, d, s);
@@ -6874,38 +7805,74 @@ MENDFUNC(1,jff_SWAP,(RW4 d))
  * C Always cleared.
  *
  */
+MIDFUNC(1,jff_TST_b_imm,(IM8 v))
+{
+	SIGNED8_IMM_2_REG(REG_WORK1, (uae_u8)v);
+	MSR_CPSRf_i(0);
+	TST_rr(REG_WORK1, REG_WORK1);
+  flags_carry_inverted = false;
+}
+MENDFUNC(1,jff_TST_b_imm,(IM8 v))
+
 MIDFUNC(1,jff_TST_b,(RR1 s))
 {
 	if (isconst(s)) {
-		SIGNED8_IMM_2_REG(REG_WORK1, (uae_u8)live.state[s].val);
-	} else {
-		s = readreg(s);
-		SIGNED8_REG_2_REG(REG_WORK1, s);
-		unlock2(s);
+		COMPCALL(jff_TST_b_imm)(live.state[s].val);
+		return;
 	}
+
+	s = readreg(s);
+	SIGNED8_REG_2_REG(REG_WORK1, s);
+	unlock2(s);
+
 	MSR_CPSRf_i(0);
 	TST_rr(REG_WORK1, REG_WORK1);
   flags_carry_inverted = false;
 }
 MENDFUNC(1,jff_TST_b,(RR1 s))
 
+MIDFUNC(1,jff_TST_w_imm,(IM16 v))
+{
+	SIGNED16_IMM_2_REG(REG_WORK1, (uae_u16)v);
+	MSR_CPSRf_i(0);
+	TST_rr(REG_WORK1, REG_WORK1);
+  flags_carry_inverted = false;
+}
+MENDFUNC(1,jff_TST_w_imm,(IM16 v))
+
 MIDFUNC(1,jff_TST_w,(RR2 s))
 {
 	if (isconst(s)) {
-		SIGNED16_IMM_2_REG(REG_WORK1, (uae_u16)live.state[s].val);
-	} else {
-		s = readreg(s);
-		SIGNED16_REG_2_REG(REG_WORK1, s);
-		unlock2(s);
+		COMPCALL(jff_TST_w_imm)(live.state[s].val);
+		return;
 	}
+
+	s = readreg(s);
+	SIGNED16_REG_2_REG(REG_WORK1, s);
+	unlock2(s);
+
 	MSR_CPSRf_i(0);
 	TST_rr(REG_WORK1, REG_WORK1);
   flags_carry_inverted = false;
 }
 MENDFUNC(1,jff_TST_w,(RR2 s))
 
+MIDFUNC(1,jff_TST_l_imm,(IM32 v))
+{
+	MSR_CPSRf_i(0);
+  LOAD_U32(REG_WORK1, v);
+	TST_rr(REG_WORK1, REG_WORK1);
+  flags_carry_inverted = false;
+}
+MENDFUNC(1,jff_TST_l_imm,(IM32 v))
+
 MIDFUNC(1,jff_TST_l,(RR4 s))
 {
+	if (isconst(s)) {
+		COMPCALL(jff_TST_l_imm)(live.state[s].val);
+		return;
+	}
+
 	MSR_CPSRf_i(0);
 	s = readreg(s);
 	TST_rr(s, s);

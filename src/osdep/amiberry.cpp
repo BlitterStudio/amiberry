@@ -59,6 +59,9 @@ bool input_keyboard_as_joystick_stop_keypresses = false;
 static char default_open_gui_key[128];
 static char default_quit_key[128];
 int rotation_angle = 0;
+bool default_horizontal_centering = false;
+bool default_vertical_centering = false;
+int default_scaling_method = -1;
 
 // Default Enter GUI key is F12
 int enter_gui_key = 0;
@@ -187,7 +190,7 @@ void sleep_millis(int ms)
 
 int sleep_millis_main(int ms)
 {
-	unsigned long start = read_processor_time();
+	const auto start = read_processor_time();
 	usleep(ms * 1000);
 	idletime += read_processor_time() - start;
 	return 0;
@@ -305,7 +308,7 @@ bool samepath(const TCHAR* p1, const TCHAR* p2)
 void getpathpart(TCHAR* outpath, int size, const TCHAR* inpath)
 {
 	_tcscpy(outpath, inpath);
-	const auto p = _tcsrchr(outpath, '/');
+	auto* const p = _tcsrchr(outpath, '/');
 	if (p)
 		p[0] = 0;
 	fixtrailing(outpath);
@@ -314,7 +317,7 @@ void getpathpart(TCHAR* outpath, int size, const TCHAR* inpath)
 void getfilepart(TCHAR* out, int size, const TCHAR* path)
 {
 	out[0] = 0;
-	const auto p = _tcsrchr(path, '/');
+	const auto* const p = _tcsrchr(path, '/');
 	if (p)
 		_tcscpy(out, p + 1);
 	else
@@ -385,7 +388,7 @@ void target_fixup_options(struct uae_prefs* p)
 	if (p->gfx_monitor.gfx_size.width == 0)
 		p->gfx_monitor.gfx_size.width = 720;
 	if (p->gfx_monitor.gfx_size.height == 0)
-		p->gfx_monitor.gfx_size.height = 288;
+		p->gfx_monitor.gfx_size.height = 284;
 	p->gfx_resolution = p->gfx_monitor.gfx_size.width > 600 ? RES_HIRES : RES_LORES;
 
 	if (p->gfx_vresolution && !can_have_linedouble)
@@ -425,6 +428,19 @@ void target_default_options(struct uae_prefs* p, int type)
 		p->gfx_pscanlines = 0;
 	}
 
+	if (default_horizontal_centering)
+		p->gfx_xcenter = 2;
+	
+	if (default_vertical_centering)
+		p->gfx_ycenter = 2;
+
+	if (default_scaling_method != -1)
+	{
+		// only valid values are -1 (Auto), 0 (Nearest) and 1 (Linear)
+		if (default_scaling_method == 0 || default_scaling_method == 1)
+			p->scaling_method = default_scaling_method;
+	}
+	
 	_tcscpy(p->open_gui, default_open_gui_key);
 	_tcscpy(p->quit_amiberry, default_quit_key);
 	_tcscpy(p->action_replay, "Pause");
@@ -490,7 +506,6 @@ void target_default_options(struct uae_prefs* p, int type)
 
 void target_save_options(struct zfile* f, struct uae_prefs* p)
 {
-	cfgfile_write(f, "amiberry.hide_idle_led", "%d", p->hide_idle_led);
 	cfgfile_write(f, _T("amiberry.gfx_correct_aspect"), _T("%d"), p->gfx_correct_aspect);
 	cfgfile_write(f, _T("amiberry.kbd_led_num"), _T("%d"), p->kbd_led_num);
 	cfgfile_write(f, _T("amiberry.kbd_led_scr"), _T("%d"), p->kbd_led_scr);
@@ -600,8 +615,6 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 	if (cfgfile_intval(option, value, "kbd_led_num", &p->kbd_led_num, 1))
 		return 1;
 	if (cfgfile_intval(option, value, "kbd_led_scr", &p->kbd_led_scr, 1))
-		return 1;
-	if (cfgfile_intval(option, value, "hide_idle_led", &p->hide_idle_led, 1))
 		return 1;
 	if (cfgfile_intval(option, value, "gfx_correct_aspect", &p->gfx_correct_aspect, 1))
 		return 1;
@@ -744,7 +757,7 @@ int check_configfile(char* file)
 {
 	char tmp[MAX_DPATH];
 
-	auto f = fopen(file, "rte");
+	auto* f = fopen(file, "rte");
 	if (f)
 	{
 		fclose(f);
@@ -752,7 +765,7 @@ int check_configfile(char* file)
 	}
 
 	strncpy(tmp, file, MAX_DPATH - 1);
-	const auto ptr = strstr(tmp, ".uae");
+	auto* const ptr = strstr(tmp, ".uae");
 	if (ptr)
 	{
 		*(ptr + 1) = '\0';
@@ -769,7 +782,7 @@ int check_configfile(char* file)
 
 void extractFileName(const char* str, char* buffer)
 {
-	auto p = str + strlen(str) - 1;
+	const auto* p = str + strlen(str) - 1;
 	while (*p != '/' && p >= str)
 		p--;
 	p++;
@@ -779,7 +792,7 @@ void extractFileName(const char* str, char* buffer)
 void extractPath(char* str, char* buffer)
 {
 	strncpy(buffer, str, MAX_DPATH - 1);
-	auto p = buffer + strlen(buffer) - 1;
+	auto* p = buffer + strlen(buffer) - 1;
 	while (*p != '/' && p >= buffer)
 		p--;
 	p[1] = '\0';
@@ -787,7 +800,7 @@ void extractPath(char* str, char* buffer)
 
 void removeFileExtension(char* filename)
 {
-	auto p = filename + strlen(filename) - 1;
+	auto* p = filename + strlen(filename) - 1;
 	while (p >= filename && *p != '.')
 	{
 		*p = '\0';
@@ -805,7 +818,7 @@ void ReadDirectory(const char* path, std::vector<std::string>* dirs, std::vector
 	if (files != nullptr)
 		files->clear();
 
-	const auto dir = opendir(path);
+	auto* const dir = opendir(path);
 	if (dir != nullptr)
 	{
 		while ((dent = readdir(dir)) != nullptr)
@@ -814,6 +827,21 @@ void ReadDirectory(const char* path, std::vector<std::string>* dirs, std::vector
 			{
 				if (dirs != nullptr)
 					dirs->push_back(dent->d_name);
+			}
+			else if (dent->d_type == DT_LNK)
+			{
+				struct stat stbuf{};
+				stat(dent->d_name, &stbuf);
+				if (S_ISDIR(stbuf.st_mode))
+				{
+					if (dirs != nullptr)
+						dirs->push_back(dent->d_name);
+				}
+				else
+				{
+					if (files != nullptr)
+						files->push_back(dent->d_name);
+				}
 			}
 			else if (files != nullptr)
 				files->push_back(dent->d_name);
@@ -834,7 +862,7 @@ void save_amiberry_settings(void)
 	char path[MAX_DPATH];
 
 	snprintf(path, MAX_DPATH, "%s/conf/amiberry.conf", start_path_data);
-	const auto f = fopen(path, "we");
+	auto* const f = fopen(path, "we");
 	if (!f)
 		return;
 
@@ -885,6 +913,19 @@ void save_amiberry_settings(void)
 
 	// Rotation angle of the output display (useful for screens with portrait orientation, like the Go Advance)
 	snprintf(buffer, MAX_DPATH, "rotation_angle=%d\n", rotation_angle);
+	fputs(buffer, f);
+
+	// Enable Horizontal Centering by default?
+	snprintf(buffer, MAX_DPATH, "default_horizontal_centering=%s\n", default_horizontal_centering ? "yes" : "no");
+	fputs(buffer, f);
+
+	// Enable Vertical Centering by default?
+	snprintf(buffer, MAX_DPATH, "default_vertical_centering=%s\n", default_vertical_centering ? "yes" : "no");
+	fputs(buffer, f);
+
+	// Scaling method to use by default?
+	// Valid options are: -1 Auto, 0 Nearest Neighbor, 1 Linear
+	snprintf(buffer, MAX_DPATH, "default_scaling_method=%d\n", default_scaling_method);
 	fputs(buffer, f);
 	
 	// Timing settings
@@ -999,7 +1040,7 @@ void load_amiberry_settings(void)
 	snprintf(rp9_path, MAX_DPATH, "%s/rp9/", start_path_data);
 	snprintf(path, MAX_DPATH, "%s/conf/amiberry.conf", start_path_data);
 
-	const auto fh = zfile_fopen(path, _T("r"), ZFD_NORMAL);
+	auto* const fh = zfile_fopen(path, _T("r"), ZFD_NORMAL);
 	if (fh)
 	{
 		char linea[CONFIG_BLEN];
@@ -1024,7 +1065,7 @@ void load_amiberry_settings(void)
 				{
 					if (strlen(romName) > 0 && strlen(romPath) > 0 && romType != -1)
 					{
-						auto tmp = new AvailableROM();
+						auto* tmp = new AvailableROM();
 						strncpy(tmp->Name, romName, sizeof tmp->Name - 1);
 						strncpy(tmp->Path, romPath, sizeof tmp->Path - 1);
 						tmp->ROMType = romType;
@@ -1036,7 +1077,7 @@ void load_amiberry_settings(void)
 				}
 				else if (cfgfile_string(option, value, "Diskfile", tmpFile, sizeof tmpFile))
 				{
-					const auto f = fopen(tmpFile, "rbe");
+					auto* const f = fopen(tmpFile, "rbe");
 					if (f != nullptr)
 					{
 						fclose(f);
@@ -1045,7 +1086,7 @@ void load_amiberry_settings(void)
 				}
 				else if (cfgfile_string(option, value, "CDfile", tmpFile, sizeof tmpFile))
 				{
-					const auto f = fopen(tmpFile, "rbe");
+					auto* const f = fopen(tmpFile, "rbe");
 					if (f != nullptr)
 					{
 						fclose(f);
@@ -1074,6 +1115,9 @@ void load_amiberry_settings(void)
 					cfgfile_string(option, value, "default_open_gui_key", default_open_gui_key, sizeof default_open_gui_key);
 					cfgfile_string(option, value, "default_quit_key", default_quit_key, sizeof default_quit_key);
 					cfgfile_intval(option, value, "rotation_angle", &rotation_angle, 1);
+					cfgfile_yesno(option, value, "default_horizontal_centering", &default_horizontal_centering);
+					cfgfile_yesno(option, value, "default_vertical_centering", &default_vertical_centering);
+					cfgfile_intval(option, value, "default_scaling_method", &default_scaling_method, 1);
 					
 					cfgfile_intval(option, value, "speedup_cycles_jit_pal", &speedup_cycles_jit_pal, 1);
 					cfgfile_intval(option, value, "speedup_cycles_jit_ntsc", &speedup_cycles_jit_ntsc, 1);
@@ -1096,7 +1140,7 @@ void rename_old_adfdir()
 	snprintf(old_path, MAX_DPATH, "%s/conf/adfdir.conf", start_path_data);
 	snprintf(new_path, MAX_DPATH, "%s/conf/amiberry.conf", start_path_data);
 
-	auto result = rename(old_path, new_path);
+	const auto result = rename(old_path, new_path);
 	if (result == 0)
 		write_log("Old adfdir.conf file successfully renamed to amiberry.conf");
 	else
@@ -1136,7 +1180,7 @@ uae_u32 emulib_target_getcpurate(uae_u32 v, uae_u32* low)
 	{
 		struct timespec ts{};
 		clock_gettime(CLOCK_MONOTONIC, &ts);
-		const int64_t time = int64_t(ts.tv_sec) * 1000000000 + ts.tv_nsec;
+		const auto time = int64_t(ts.tv_sec) * 1000000000 + ts.tv_nsec;
 		*low = uae_u32(time & 0xffffffff);
 		return uae_u32(time >> 32);
 	}
@@ -1254,7 +1298,7 @@ int handle_msgpump()
 	while (SDL_PollEvent(&event))
 	{
 		gotEvent = 1;
-		const Uint8* keystate = SDL_GetKeyboardState(nullptr);
+		const auto* keystate = SDL_GetKeyboardState(nullptr);
 
 		switch (event.type)
 		{
@@ -1262,6 +1306,17 @@ int handle_msgpump()
 			uae_quit();
 			break;
 
+		case SDL_JOYDEVICEADDED:
+		case SDL_CONTROLLERDEVICEADDED:
+			write_log("SDL Controller/Joystick device added! Re-running import joysticks...\n");
+			import_joysticks();
+			break;
+
+		case SDL_JOYDEVICEREMOVED:
+		case SDL_CONTROLLERDEVICEREMOVED:
+			write_log("SDL Controller/Joystick device removed!\n");
+			break;
+			
 		case SDL_KEYDOWN:
 		{
 			// if the key belongs to a "retro arch joystick" ignore it
@@ -1269,7 +1324,7 @@ int handle_msgpump()
 			// if we want to use the KB
 			// i've added this so when using the joysticks it doesn't hit the 'r' key for some games
 			// which starts a replay!!!
-			auto ok_to_use = !key_used_by_retroarch_joy(event.key.keysym.scancode);
+			const auto ok_to_use = !key_used_by_retroarch_joy(event.key.keysym.scancode);
 			if (ok_to_use)
 			{
 				if (event.key.repeat == 0)
@@ -1356,7 +1411,7 @@ int handle_msgpump()
 		break;
 		case SDL_KEYUP:
 		{
-			auto ok_to_use = !key_used_by_retroarch_joy(event.key.keysym.scancode);
+			const auto ok_to_use = !key_used_by_retroarch_joy(event.key.keysym.scancode);
 			if (ok_to_use)
 			{
 				if (event.key.repeat == 0)
@@ -1482,7 +1537,7 @@ int handle_msgpump()
 
 bool handle_events()
 {
-	static int was_paused = 0;
+	static auto was_paused = 0;
 
 	if (pause_emulation)
 	{

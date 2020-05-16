@@ -235,7 +235,7 @@ static void parse_clip(struct uae_prefs* p, xmlNode* node)
 				else if (height <= 262)
 					p->gfx_monitor.gfx_size.height = 262;
 				else
-					p->gfx_monitor.gfx_size.height = 288;
+					p->gfx_monitor.gfx_size.height = 284;
 				xmlFree(attr);
 			}
 			break;

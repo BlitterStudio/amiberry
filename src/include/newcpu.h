@@ -133,13 +133,14 @@ struct regstruct
 
 #ifdef JIT
   /* store scratch regs also in this struct to avoid load of mem pointer */
-  uae_u32 scratchregs[VREGS - 16];
+  uae_u32 scratchregs[VREGS - S1];
   fpu_register scratchfregs[VFREGS - 8];
   uae_u32 jit_exception;
   
   /* pointer to real arrays/structs for easier access in JIT */
   uae_u32 *raw_cputbl_count;
   uintptr mem_banks;
+  uintptr cache_tags;
 #endif  
 };
 

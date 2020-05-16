@@ -29,6 +29,8 @@
 #endif
 
 int emulating = 0;
+bool config_loaded = false;
+int gui_active;
 
 struct gui_msg
 {
@@ -479,6 +481,7 @@ void gui_display(int shortcut)
 {
 	if (quit_program != 0)
 		return;
+	gui_active++;
 	emulating = 1;
 	pause_emulation = 1;
 	pause_sound();
@@ -510,6 +513,7 @@ void gui_display(int shortcut)
 	
 	fpscounter_reset();
 	pause_emulation = 0;
+	gui_active--;
 }
 
 static void gui_flicker_led2(int led, int unitnum, int status)
@@ -805,4 +809,9 @@ bool hardfile_testrdb(const TCHAR* filename)
 	}
 	zfile_fclose(f);
 	return isrdb;
+}
+
+bool isguiactive(void)
+{
+	return gui_active > 0;
 }

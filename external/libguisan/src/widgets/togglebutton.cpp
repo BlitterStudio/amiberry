@@ -7,7 +7,7 @@
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
  * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
- *
+ * Copyright (c) 2020 Gwilherm Baudic
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
  * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
@@ -54,87 +54,148 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GCN_SDLINPUT_HPP
-#define GCN_SDLINPUT_HPP
+/*
+ * For comments regarding functions please see the header file.
+ */
 
-#include <queue>
+#include "guisan/widgets/togglebutton.hpp"
 
-#include "SDL.h"
-
-#include "guisan/input.hpp"
-#include "guisan/keyinput.hpp"
+#include "guisan/exception.hpp"
+#include "guisan/font.hpp"
+#include "guisan/graphics.hpp"
+#include "guisan/key.hpp"
+#include "guisan/mouseevent.hpp"
 #include "guisan/mouseinput.hpp"
-#include "guisan/platform.hpp"
 
 namespace gcn
 {
-	class Key;
-
-	/**
-	 * SDL implementation of Input.
-	 */
-	class GCN_EXTENSION_DECLSPEC SDLInput : public Input
+	ToggleButton::ToggleButton()
+		: Button(), mSelected(false)
 	{
-	public:
+	}
 
-		/**
-		 * Constructor.
-		 */
-		SDLInput();
+	ToggleButton::ToggleButton(const std::string& caption)
+		: Button(caption), mSelected(false)
+	{
+	}
 
-		/**
-		 * Pushes an SDL event. It should be called at least once per frame to
-		 * update input with user input.
-		 *
-		 * @param event an event from SDL.
-		 */
-		virtual void pushInput(SDL_Event event);
+	void ToggleButton::draw(Graphics* graphics)
+	{
+		auto faceColor = getBaseColor();
+		Color highlightColor, shadowColor;
+		const auto alpha = getBaseColor().a;
 
-		/**
-		 * Polls all input. It exists for input driver compatibility. If you
-		 * only use SDL and plan sticking with SDL you can safely ignore this
-		 * function as it in the SDL case does nothing.
-		 */
-		void _pollInput() override
+		if (isPressed() || isSelected())
 		{
+			faceColor = faceColor - 0x303030;
+			faceColor.a = alpha;
+			highlightColor = faceColor - 0x303030;
+			highlightColor.a = alpha;
+			shadowColor = faceColor + 0x303030;
+			shadowColor.a = alpha;
+		}
+		else
+		{
+			highlightColor = faceColor + 0x303030;
+			highlightColor.a = alpha;
+			shadowColor = faceColor - 0x303030;
+			shadowColor.a = alpha;
 		}
 
+		graphics->setColor(faceColor);
+		graphics->fillRectangle(Rectangle(1, 1, getDimension().width - 1, getHeight() - 1));
 
-		// Inherited from Input
+		graphics->setColor(highlightColor);
+		graphics->drawLine(0, 0, getWidth() - 1, 0);
+		graphics->drawLine(0, 1, 0, getHeight() - 1);
 
-		bool isKeyQueueEmpty() override;
+		graphics->setColor(shadowColor);
+		graphics->drawLine(getWidth() - 1, 1, getWidth() - 1, getHeight() - 1);
+		graphics->drawLine(1, getHeight() - 1, getWidth() - 1, getHeight() - 1);
 
-		KeyInput dequeueKeyInput() override;
+		graphics->setColor(getForegroundColor());
 
-		bool isMouseQueueEmpty() override;
+		int text_x;
+		const auto text_y = getHeight() / 2 - getFont()->getHeight() / 2;
 
-		MouseInput dequeueMouseInput() override;
+		switch (getAlignment())
+		{
+		case Graphics::LEFT:
+			text_x = static_cast<int>(mSpacing);
+			break;
+		case Graphics::CENTER:
+			text_x = getWidth() / 2;
+			break;
+		case Graphics::RIGHT:
+			text_x = getWidth() - static_cast<int>(mSpacing);
+			break;
+		default:
+			throw GCN_EXCEPTION("Unknown alignment.");
+		}
 
-	protected:
-		/**
-		 * Converts a mouse button from SDL to a Guisan mouse button
-		 * representation.
-		 *
-		 * @param button an SDL mouse button.
-		 * @return a Guisan mouse button.
-		 */
-		static int convertMouseButton(int button);
+		graphics->setFont(getFont());
 
-		/**
-		 * Converts an SDL event key to a key value.
-		 *
-		 * @param event an SDL event with a key to convert.
-		 * @return a key value.
-		 * @see Key
-		 */
-		static int convertKeyCharacter(SDL_Event event);
+		if (isPressed() || isSelected())
+		{
+			graphics->drawText(getCaption(), text_x + 1, text_y + 1, getAlignment());
+		}
+		else
+		{
+			graphics->drawText(getCaption(), text_x, text_y, getAlignment());
 
-		std::queue<KeyInput> mKeyInputQueue;
-		std::queue<MouseInput> mMouseInputQueue;
+			if (isFocused())
+			{
+				graphics->drawRectangle(Rectangle(2, 2, getWidth() - 4,
+				                                  getHeight() - 4));
+			}
+		}
+	}
 
-		bool mMouseDown;
-		bool mMouseInWindow;
-	};
+	bool ToggleButton::isSelected() const
+	{
+		return mSelected;
+	}
+
+	void ToggleButton::setSelected(bool selected)
+	{
+		mSelected = selected;
+	}
+
+	void ToggleButton::mouseReleased(MouseEvent& mouseEvent)
+	{
+		if (mouseEvent.getButton() == MouseEvent::LEFT
+			&& mMousePressed
+			&& mHasMouse)
+		{
+			mMousePressed = false;
+			toggleSelected();
+			generateAction();
+			mouseEvent.consume();
+		}
+		else if (mouseEvent.getButton() == MouseEvent::LEFT)
+		{
+			mMousePressed = false;
+			mouseEvent.consume();
+		}
+	}
+
+	void ToggleButton::keyReleased(KeyEvent& keyEvent)
+	{
+		const auto key = keyEvent.getKey();
+
+		if ((key.getValue() == Key::ENTER
+				|| key.getValue() == Key::SPACE)
+			&& mKeyPressed)
+		{
+			mKeyPressed = false;
+			toggleSelected();
+			generateAction();
+			keyEvent.consume();
+		}
+	}
+
+	void ToggleButton::toggleSelected()
+	{
+		mSelected = !mSelected;
+	}
 }
-
-#endif // end GCN_SDLINPUT_HPP

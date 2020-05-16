@@ -283,10 +283,6 @@
     <ClCompile Include="..\..\src\osdep\gui\SelectorEntry.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\ShowHelp.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\ShowMessage.cpp" />
-    <ClCompile Include="..\..\src\osdep\gui\UaeCheckBox.cpp" />
-    <ClCompile Include="..\..\src\osdep\gui\UaeDropDown.cpp" />
-    <ClCompile Include="..\..\src\osdep\gui\UaeListBox.cpp" />
-    <ClCompile Include="..\..\src\osdep\gui\UaeRadioButton.cpp" />
     <ClCompile Include="..\..\src\osdep\keyboard.cpp" />
     <ClCompile Include="..\..\src\osdep\mp3decoder.cpp" />
     <ClCompile Include="..\..\src\osdep\neon_helper.s" />
@@ -438,10 +434,6 @@
     <ClInclude Include="..\..\src\osdep\config.h" />
     <ClInclude Include="..\..\src\osdep\gui\gui_handling.h" />
     <ClInclude Include="..\..\src\osdep\gui\SelectorEntry.hpp" />
-    <ClInclude Include="..\..\src\osdep\gui\UaeCheckBox.hpp" />
-    <ClInclude Include="..\..\src\osdep\gui\UaeDropDown.hpp" />
-    <ClInclude Include="..\..\src\osdep\gui\UaeListBox.hpp" />
-    <ClInclude Include="..\..\src\osdep\gui\UaeRadioButton.hpp" />
     <ClInclude Include="..\..\src\osdep\mp3decoder.h" />
     <ClInclude Include="..\..\src\osdep\picasso96.h" />
     <ClInclude Include="..\..\src\osdep\sysconfig.h" />

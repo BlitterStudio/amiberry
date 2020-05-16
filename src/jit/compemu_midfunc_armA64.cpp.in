@@ -491,6 +491,22 @@ MIDFUNC(2,arm_ADD_l,(RW4 d, RR4 s))
 }
 MENDFUNC(2,arm_ADD_l,(RW4 d, RR4 s))
 
+MIDFUNC(2,arm_ADD_ldiv8,(RW4 d, RR4 s))
+{
+	if (isconst(s)) {
+		COMPCALL(arm_ADD_l_ri)(d,(live.state[s].val & ~0x1f) >> 3);
+		return;
+	}
+
+	s = readreg(s);
+	d = rmw(d);
+	ASR_wwi(REG_WORK1, s, 5);
+	ADD_wwwLSLi(d, d, REG_WORK1, 2);
+	unlock2(d);
+	unlock2(s);
+}
+MENDFUNC(2,arm_ADD_ldiv8,(RW4 d, RR4 s))
+
 MIDFUNC(2,arm_ADD_l_ri,(RW4 d, IM32 i))
 {
 	if (!i) 

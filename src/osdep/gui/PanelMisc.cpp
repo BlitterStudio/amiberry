@@ -5,29 +5,26 @@
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
-#include "UaeDropDown.hpp"
-#include "UaeCheckBox.hpp"
 
 #include "sysdeps.h"
 #include "options.h"
 #include "gui_handling.h"
 
-static gcn::UaeCheckBox* chkRetroArchQuit;
-static gcn::UaeCheckBox* chkRetroArchMenu;
-static gcn::UaeCheckBox* chkRetroArchReset;
-//static gcn::UaeCheckBox* chkRetroArchSaveState;
+static gcn::CheckBox* chkRetroArchQuit;
+static gcn::CheckBox* chkRetroArchMenu;
+static gcn::CheckBox* chkRetroArchReset;
+//static gcn::CheckBox* chkRetroArchSaveState;
 
-static gcn::UaeCheckBox* chkStatusLine;
-static gcn::UaeCheckBox* chkHideIdleLed;
-static gcn::UaeCheckBox* chkShowGUI;
+static gcn::CheckBox* chkStatusLine;
+static gcn::CheckBox* chkShowGUI;
 
-static gcn::UaeCheckBox* chkBSDSocket;
-static gcn::UaeCheckBox* chkMasterWP;
+static gcn::CheckBox* chkBSDSocket;
+static gcn::CheckBox* chkMasterWP;
 
 static gcn::Label* lblNumLock;
-static gcn::UaeDropDown* cboKBDLed_num;
+static gcn::DropDown* cboKBDLed_num;
 static gcn::Label* lblScrLock;
-static gcn::UaeDropDown* cboKBDLed_scr;
+static gcn::DropDown* cboKBDLed_scr;
 
 static gcn::Label* lblOpenGUI;
 static gcn::TextField* txtOpenGUI;
@@ -68,8 +65,8 @@ public:
 	}
 };
 
-static const char* listValues[] = {"none", "POWER", "DF0", "DF1", "DF2", "DF3", "DF*", "HD", "CD"};
-static StringListModel KBDLedList(listValues, 9);
+static const char* listValues[] = {"none", "POWER", "DF0", "DF1", "DF2", "DF3", "HD", "CD"};
+static StringListModel KBDLedList(listValues, 8);
 
 class MiscActionListener : public gcn::ActionListener
 {
@@ -78,9 +75,6 @@ public:
 	{
 		if (actionEvent.getSource() == chkStatusLine)
 			changed_prefs.leds_on_screen = chkStatusLine->isSelected();
-
-		else if (actionEvent.getSource() == chkHideIdleLed)
-			changed_prefs.hide_idle_led = chkHideIdleLed->isSelected();
 
 		else if (actionEvent.getSource() == chkShowGUI)
 			changed_prefs.start_gui = chkShowGUI->isSelected();
@@ -103,8 +97,8 @@ public:
 			RefreshPanelCustom();
 		}
 
-			//      else if (actionEvent.getSource() == chkRetroArchSavestate)
-			//        changed_prefs.amiberry_use_retroarch_savestatebuttons = chkRetroArchSavestate->isSelected();
+		//else if (actionEvent.getSource() == chkRetroArchSavestate)
+		//   changed_prefs.amiberry_use_retroarch_savestatebuttons = chkRetroArchSavestate->isSelected();
 
 		else if (actionEvent.getSource() == chkBSDSocket)
 			changed_prefs.socket_emu = chkBSDSocket->isSelected();
@@ -117,14 +111,14 @@ public:
 		}
 
 		else if (actionEvent.getSource() == cboKBDLed_num)
-			changed_prefs.kbd_led_num = cboKBDLed_num->getSelected();
+			changed_prefs.kbd_led_num = cboKBDLed_num->getSelected() - 1;
 
 		else if (actionEvent.getSource() == cboKBDLed_scr)
-			changed_prefs.kbd_led_scr = cboKBDLed_scr->getSelected();
+			changed_prefs.kbd_led_scr = cboKBDLed_scr->getSelected() - 1;
 
 		else if (actionEvent.getSource() == cmdOpenGUI)
 		{
-			const auto key = ShowMessageForInput("Press a key", "Press a key to map to Open the GUI", "Cancel");
+			const auto* const key = ShowMessageForInput("Press a key", "Press a key to map to Open the GUI", "Cancel");
 			if (key != nullptr)
 			{
 				txtOpenGUI->setText(key);
@@ -134,7 +128,7 @@ public:
 
 		else if (actionEvent.getSource() == cmdKeyForQuit)
 		{
-			const auto key = ShowMessageForInput("Press a key", "Press a key to map to Quit the emulator", "Cancel");
+			const auto* const key = ShowMessageForInput("Press a key", "Press a key to map to Quit the emulator", "Cancel");
 			if (key != nullptr)
 			{
 				txtKeyForQuit->setText(key);
@@ -144,7 +138,7 @@ public:
 
 		else if (actionEvent.getSource() == cmdKeyActionReplay)
 		{
-			const auto key = ShowMessageForInput("Press a key", "Press a key to map to Action Replay", "Cancel");
+			const auto* const key = ShowMessageForInput("Press a key", "Press a key to map to Action Replay", "Cancel");
 			if (key != nullptr)
 			{
 				txtKeyActionReplay->setText(key);
@@ -154,7 +148,7 @@ public:
 
 		else if (actionEvent.getSource() == cmdKeyFullScreen)
 		{
-			const auto key = ShowMessageForInput("Press a key", "Press a key to map to toggle FullScreen", "Cancel");
+			const auto* const key = ShowMessageForInput("Press a key", "Press a key to map to toggle FullScreen", "Cancel");
 			if (key != nullptr)
 			{
 				txtKeyFullScreen->setText(key);
@@ -171,45 +165,41 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 {
 	miscActionListener = new MiscActionListener();
 
-	chkStatusLine = new gcn::UaeCheckBox("Status Line");
+	chkStatusLine = new gcn::CheckBox("Status Line");
 	chkStatusLine->setId("StatusLine");
 	chkStatusLine->addActionListener(miscActionListener);
 
-	chkHideIdleLed = new gcn::UaeCheckBox("Hide idle led");
-	chkHideIdleLed->setId("HideIdle");
-	chkHideIdleLed->addActionListener(miscActionListener);
-
-	chkShowGUI = new gcn::UaeCheckBox("Show GUI on startup");
+	chkShowGUI = new gcn::CheckBox("Show GUI on startup");
 	chkShowGUI->setId("ShowGUI");
 	chkShowGUI->addActionListener(miscActionListener);
 
-	chkRetroArchQuit = new gcn::UaeCheckBox("Use RetroArch Quit Button");
+	chkRetroArchQuit = new gcn::CheckBox("Use RetroArch Quit Button");
 	chkRetroArchQuit->setId("RetroArchQuit");
 	chkRetroArchQuit->addActionListener(miscActionListener);
 
-	chkRetroArchMenu = new gcn::UaeCheckBox("Use RetroArch Menu Button");
+	chkRetroArchMenu = new gcn::CheckBox("Use RetroArch Menu Button");
 	chkRetroArchMenu->setId("RetroArchMenu");
 	chkRetroArchMenu->addActionListener(miscActionListener);
 
-	chkRetroArchReset = new gcn::UaeCheckBox("Use RetroArch Reset Button");
+	chkRetroArchReset = new gcn::CheckBox("Use RetroArch Reset Button");
 	chkRetroArchReset->setId("RetroArchReset");
 	chkRetroArchReset->addActionListener(miscActionListener);
 
-	//chkRetroArchSavestate = new gcn::UaeCheckBox("Use RetroArch State Controls");
+	//chkRetroArchSavestate = new gcn::CheckBox("Use RetroArch State Controls");
 	//chkRetroArchSavestate->setId("RetroArchState");
 	//chkRetroArchSavestate->addActionListener(miscActionListener);
 
-	chkBSDSocket = new gcn::UaeCheckBox("bsdsocket.library");
+	chkBSDSocket = new gcn::CheckBox("bsdsocket.library");
 	chkBSDSocket->setId("BSDSocket");
 	chkBSDSocket->addActionListener(miscActionListener);
 
-	chkMasterWP = new gcn::UaeCheckBox("Master floppy write protection");
+	chkMasterWP = new gcn::CheckBox("Master floppy write protection");
 	chkMasterWP->setId("MasterWP");
 	chkMasterWP->addActionListener(miscActionListener);
 
 	lblNumLock = new gcn::Label("NumLock:");
 	lblNumLock->setAlignment(gcn::Graphics::RIGHT);
-	cboKBDLed_num = new gcn::UaeDropDown(&KBDLedList);
+	cboKBDLed_num = new gcn::DropDown(&KBDLedList);
 	cboKBDLed_num->setBaseColor(gui_baseCol);
 	cboKBDLed_num->setBackgroundColor(colTextboxBackground);
 	cboKBDLed_num->setId("cboNumlock");
@@ -217,7 +207,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 
 	lblScrLock = new gcn::Label("ScrollLock:");
 	lblScrLock->setAlignment(gcn::Graphics::RIGHT);
-	cboKBDLed_scr = new gcn::UaeDropDown(&KBDLedList);
+	cboKBDLed_scr = new gcn::DropDown(&KBDLedList);
 	cboKBDLed_scr->setBaseColor(gui_baseCol);
 	cboKBDLed_scr->setBackgroundColor(colTextboxBackground);
 	cboKBDLed_scr->setId("cboScrolllock");
@@ -274,8 +264,6 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	auto posY = DISTANCE_BORDER;
 	category.panel->add(chkStatusLine, DISTANCE_BORDER, posY);
 	posY += chkStatusLine->getHeight() + DISTANCE_NEXT_Y;
-	category.panel->add(chkHideIdleLed, DISTANCE_BORDER, posY);
-	posY += chkHideIdleLed->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(chkShowGUI, DISTANCE_BORDER, posY);
 	posY += chkShowGUI->getHeight() + DISTANCE_NEXT_Y;
 
@@ -290,7 +278,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	//category.panel->add(chkRetroArchSavestate, posX + DISTANCE_BORDER, posY);
 
 	category.panel->add(chkBSDSocket, DISTANCE_BORDER, posY);
-	posY += chkBSDSocket->getHeight() + DISTANCE_NEXT_Y * 2;
+	posY += chkBSDSocket->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(chkMasterWP, DISTANCE_BORDER, posY);
 	posY += chkMasterWP->getHeight() + DISTANCE_NEXT_Y * 2;
 
@@ -328,7 +316,6 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 void ExitPanelMisc()
 {
 	delete chkStatusLine;
-	delete chkHideIdleLed;
 	delete chkShowGUI;
 
 	delete chkRetroArchQuit;
@@ -366,7 +353,6 @@ void ExitPanelMisc()
 void RefreshPanelMisc()
 {
 	chkStatusLine->setSelected(changed_prefs.leds_on_screen);
-	chkHideIdleLed->setSelected(changed_prefs.hide_idle_led);
 	chkShowGUI->setSelected(changed_prefs.start_gui);
 
 	chkRetroArchQuit->setSelected(changed_prefs.use_retroarch_quit);
@@ -378,8 +364,8 @@ void RefreshPanelMisc()
 	chkBSDSocket->setSelected(changed_prefs.socket_emu);
 	chkMasterWP->setSelected(changed_prefs.floppy_read_only);
 
-	cboKBDLed_num->setSelected(changed_prefs.kbd_led_num);
-	cboKBDLed_scr->setSelected(changed_prefs.kbd_led_scr);
+	cboKBDLed_num->setSelected(changed_prefs.kbd_led_num + 1);
+	cboKBDLed_scr->setSelected(changed_prefs.kbd_led_scr + 1);
 
 	txtOpenGUI->setText(strncmp(changed_prefs.open_gui, "", 1) != 0 ? changed_prefs.open_gui : "Click to map");
 	txtKeyForQuit->setText(strncmp(changed_prefs.quit_amiberry, "", 1) != 0
@@ -403,12 +389,18 @@ bool HelpPanelMisc(std::vector<std::string>& helptext)
 	helptext.emplace_back("(red) access to the HDD. The next values are showing the track number for each disk drive");
 	helptext.emplace_back("and indicates disk access.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("When you deactivate the option \"Show GUI on startup\" and use this configuration ");
+	helptext.emplace_back("When you deactivate the option \"Show GUI on startup\" and use this configuration");
 	helptext.emplace_back("by specifying it with the command line parameter \"-config=<file>\", ");
 	helptext.emplace_back("the emulation starts directly without showing the GUI.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("\"bsdsocket.library\" enables network functions (i.e. for web browsers in OS3.9).");
+	helptext.emplace_back("You don't need to use a TCP stack (e.g. AmiTCP/Genesis/Roadshow) when this option is enabled.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("\"Master floppy drive protection\" will disable all write access to floppy disks.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("You can set some of the keyboard LEDs to react on drive activity, using the relevant options.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("Finally, you can assign the desired hotkeys to Open the GUI, Quit the emulator,");
+	helptext.emplace_back("open Action Replay/HRTMon or toggle Fullscreen mode ON/OFF.");
 	return true;
 }

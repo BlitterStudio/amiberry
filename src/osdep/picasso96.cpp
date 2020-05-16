@@ -68,6 +68,7 @@ static bool picasso_flushpixels(uae_u8 *src, int offset);
 
 int p96refresh_active;
 
+static int p96syncrate;
 static smp_comm_pipe* render_pipe;
 static volatile int render_thread_state;
 
@@ -99,6 +100,7 @@ uae_u32 p96rc[256], p96gc[256], p96bc[256];
 
 static uaecptr boardinfo, ABI_interrupt;
 static int interrupt_enabled;
+float p96vblank;
 
 static int uaegfx_old, uaegfx_active;
 static uae_u32 reserved_gfxmem;
@@ -300,6 +302,7 @@ static int CopyBitMapStructureA2U(TrapContext* ctx, uaecptr amigamemptr, struct 
 
 	for (i = 0; i < bm->Depth; i++) {
 		uaecptr plane = md[4 + i].params[0];
+		bm->APlanes[i] = plane;
 		switch (plane) {
 		case 0:
 			bm->Planes[i] = &all_zeros_bitmap;
@@ -371,9 +374,9 @@ static void do_fillrect_frame_buffer(struct RenderInfo *ri, int X, int Y, int Wi
 	{
 	case 1:
 		for (int lines = 0; lines < Height; lines++, dst += bpr) {
-			memset(dst, Pen, Width);
+			memset (dst, Pen, Width);
 		}
-		break;
+	break;
 	case 2:
 	{
 		Pen |= Pen << 16;
@@ -397,8 +400,8 @@ static void do_fillrect_frame_buffer(struct RenderInfo *ri, int X, int Y, int Wi
 				((uae_u16*)p)[0] = Pen;
 			}
 		}
-		}
-		break;
+	}
+	break;
 	case 3:
 	{
 		uae_u16 Pen1 = Pen & 0xffff;
@@ -432,13 +435,13 @@ static void do_fillrect_frame_buffer(struct RenderInfo *ri, int X, int Y, int Wi
 					cols++;
 				}
 			}
-			}
 		}
-		break;
+	}
+	break;
 	case 4:
 	{
 		for (int lines = 0; lines < Height; lines++, dst += bpr) {
-			uae_u32* p = (uae_u32*)dst;
+			uae_u32 *p = (uae_u32*)dst;
 			for (cols = 0; cols < (Width & ~7); cols += 8) {
 				*p++ = Pen;
 				*p++ = Pen;
@@ -448,14 +451,14 @@ static void do_fillrect_frame_buffer(struct RenderInfo *ri, int X, int Y, int Wi
 				*p++ = Pen;
 				*p++ = Pen;
 				*p++ = Pen;
-		}
+			}
 			while (cols < Width) {
 				*p++ = Pen;
 				cols++;
 			}
 		}
 	}
-		break;
+	break;
 	}
 }
 
@@ -697,6 +700,7 @@ void picasso_refresh()
 	}
 }
 
+static int p96hsync;
 bool picasso_rendered = false;
 void picasso_handle_vsync(void)
 {
@@ -707,7 +711,7 @@ void picasso_handle_vsync(void)
 		return;
 
 	if (!ad->picasso_on) {
-		picasso_trigger_vblank ();
+		picasso_trigger_vblank();
 		return;
 	}
 
@@ -750,8 +754,8 @@ void picasso_handle_vsync(void)
 
 	picasso_rendered = rtg_render();
 
-				picasso_trigger_vblank();
-			}
+	picasso_trigger_vblank();
+}
 
 #define BLT_SIZE 4
 #define BLT_MULT 1
@@ -2687,6 +2691,29 @@ static uae_u32 REGPARAM2 picasso_SetDisplay(TrapContext* ctx)
 	return !setstate;
 }
 
+void init_hz_p96(int monid)
+{
+	if (isvsync_rtg()) {
+		float rate = target_getcurrentvblankrate();
+		if (rate < 0)
+			p96vblank = vblank_hz;
+		else
+			p96vblank = target_getcurrentvblankrate();
+	}
+	//else if (currprefs.win32_rtgvblankrate == 0) {
+	//	p96vblank = vblank_hz;
+	//}
+	//else {
+	//	p96vblank = currprefs.win32_rtgvblankrate;
+	//}
+	if (p96vblank <= 0)
+		p96vblank = 60;
+	if (p96vblank >= 300)
+		p96vblank = 300;
+	p96syncrate = maxvpos_nom * vblank_hz / p96vblank;
+	write_log(_T("RTGFREQ: %d*%.4f = %.4f / %.1f = %d\n"), maxvpos_nom, vblank_hz, maxvpos_nom * vblank_hz, p96vblank, p96syncrate);
+}
+
 /* NOTE: Watch for those planeptrs of 0x00000000 and 0xFFFFFFFF for all zero / all one bitmaps !!!! */
 static void PlanarToChunky(TrapContext* ctx, struct RenderInfo* ri, struct BitMap* bm,
                            unsigned long srcx, unsigned long srcy,
@@ -4272,6 +4299,7 @@ void uaegfx_install_code(uaecptr start)
 	inituaegfxfuncs(nullptr, start, 0);
 
 	device_add_reset(picasso_reset);
+	//device_add_hsync(picasso_handle_hsync);
 	device_add_exit(picasso_free);
 }
 

@@ -67,161 +67,159 @@
 
 namespace gcn
 {
+	CheckBox::CheckBox()
+	{
+		setSelected(false);
 
-    CheckBox::CheckBox()
-    {
-        setSelected(false);
+		setFocusable(true);
+		addMouseListener(this);
+		addKeyListener(this);
+	}
 
-        setFocusable(true);
-        addMouseListener(this);
-        addKeyListener(this);
-    }
+	CheckBox::CheckBox(const std::string& caption, bool selected)
+	{
+		setCaption(caption);
+		setSelected(selected);
 
-    CheckBox::CheckBox(const std::string &caption, bool selected)
-    {
-        setCaption(caption);
-        setSelected(selected);
+		setFocusable(true);
+		addMouseListener(this);
+		addKeyListener(this);
 
-        setFocusable(true);
-        addMouseListener(this);
-        addKeyListener(this);
+		adjustSize();
+	}
 
-        adjustSize();
-    }
+	void CheckBox::draw(Graphics* graphics)
+	{
+		drawBox(graphics);
 
-    void CheckBox::draw(Graphics* graphics)
-    {
-        drawBox(graphics);
+		graphics->setFont(getFont());
+		graphics->setColor(getForegroundColor());
 
-        graphics->setFont(getFont());
-        graphics->setColor(getForegroundColor());
+		const auto h = getHeight() + getHeight() / 2;
 
-        int h = getHeight() + getHeight() / 2;
+		graphics->drawText(getCaption(), h - 2, 0);
+	}
 
-        graphics->drawText(getCaption(), h - 2, 0);
-    }
+	void CheckBox::drawBorder(Graphics* graphics)
+	{
+		const auto faceColor = getBaseColor();
+		const auto alpha = getBaseColor().a;
+		const auto width = getWidth() + static_cast<int>(getBorderSize()) * 2 - 1;
+		const auto height = getHeight() + static_cast<int>(getBorderSize()) * 2 - 1;
+		auto highlightColor = faceColor + 0x303030;
+		highlightColor.a = alpha;
+		auto shadowColor = faceColor - 0x303030;
+		shadowColor.a = alpha;
 
-    void CheckBox::drawBorder(Graphics* graphics)
-    {
-        Color faceColor = getBaseColor();
-        Color highlightColor, shadowColor;
-        int alpha = getBaseColor().a;
-        int width = getWidth() + getBorderSize() * 2 - 1;
-        int height = getHeight() + getBorderSize() * 2 - 1;
-        highlightColor = faceColor + 0x303030;
-        highlightColor.a = alpha;
-        shadowColor = faceColor - 0x303030;
-        shadowColor.a = alpha;
+		for (auto i = 0; i < static_cast<int>(getBorderSize()); ++i)
+		{
+			graphics->setColor(shadowColor);
+			graphics->drawLine(i, i, width - i, i);
+			graphics->drawLine(i, i + 1, i, height - i - 1);
+			graphics->setColor(highlightColor);
+			graphics->drawLine(width - i, i + 1, width - i, height - i);
+			graphics->drawLine(i, height - i, width - i - 1, height - i);
+		}
+	}
 
-        unsigned int i;
-        for (i = 0; i < getBorderSize(); ++i)
-        {
-            graphics->setColor(shadowColor);
-            graphics->drawLine(i,i, width - i, i);
-            graphics->drawLine(i,i + 1, i, height - i - 1);
-            graphics->setColor(highlightColor);
-            graphics->drawLine(width - i,i + 1, width - i, height - i);
-            graphics->drawLine(i,height - i, width - i - 1, height - i);
-        }
-    }
+	void CheckBox::drawBox(Graphics* graphics)
+	{
+		const auto h = getHeight() - 2;
+		const auto alpha = getBaseColor().a;
+		auto faceColor = getBaseColor();
+		faceColor.a = alpha;
+		auto highlightColor = faceColor + 0x303030;
+		highlightColor.a = alpha;
+		auto shadowColor = faceColor - 0x303030;
+		shadowColor.a = alpha;
 
-    void CheckBox::drawBox(Graphics *graphics)
-    {
-        int h = getHeight() - 2;
+		graphics->setColor(shadowColor);
+		graphics->drawLine(1, 1, h, 1);
+		graphics->drawLine(1, 1, 1, h);
 
-        int alpha = getBaseColor().a;
-        Color faceColor = getBaseColor();
-        faceColor.a = alpha;
-        Color highlightColor = faceColor + 0x303030;
-        highlightColor.a = alpha;
-        Color shadowColor = faceColor - 0x303030;
-        shadowColor.a = alpha;
+		graphics->setColor(highlightColor);
+		graphics->drawLine(h, 1, h, h);
+		graphics->drawLine(1, h, h - 1, h);
 
-        graphics->setColor(shadowColor);
-        graphics->drawLine(1, 1, h, 1);
-        graphics->drawLine(1, 1, 1, h);
+		auto backCol = getBackgroundColor();
+		if (!isEnabled())
+			backCol = backCol - 0x303030;
+		graphics->setColor(backCol);
+		graphics->fillRectangle(Rectangle(2, 2, h - 2, h - 2));
 
-        graphics->setColor(highlightColor);
-        graphics->drawLine(h, 1, h, h);
-        graphics->drawLine(1, h, h - 1, h);
+		graphics->setColor(getForegroundColor());
 
-        graphics->setColor(getBackgroundColor());
-        graphics->fillRectangle(Rectangle(2, 2, h - 2, h - 2));
+		if (isFocused())
+		{
+			graphics->drawRectangle(Rectangle(0, 0, getWidth(), getHeight()));
+		}
 
-        graphics->setColor(getForegroundColor());
+		if (mSelected)
+		{
+			graphics->drawLine(3, 5, 3, h - 2);
+			graphics->drawLine(4, 5, 4, h - 2);
 
-        if (isFocused())
-        {
-            graphics->drawRectangle(Rectangle(0, 0, h + 2, h + 2));
-        }        
-               
-        if (mSelected)
-        {
-            graphics->drawLine(3, 5, 3, h - 2);
-            graphics->drawLine(4, 5, 4, h - 2);
+			graphics->drawLine(5, h - 3, h - 2, 4);
+			graphics->drawLine(5, h - 4, h - 4, 5);
+		}
+	}
 
-            graphics->drawLine(5, h - 3, h - 2, 4);
-            graphics->drawLine(5, h - 4, h - 4, 5);
-        }
-    }
+	bool CheckBox::isSelected() const
+	{
+		return mSelected;
+	}
 
-    bool CheckBox::isSelected() const
-    {
-        return mSelected;
-    }
+	void CheckBox::setSelected(bool selected)
+	{
+		mSelected = selected;
+	}
 
-    void CheckBox::setSelected(bool selected)
-    {
-        mSelected = selected;
-    }
+	const std::string& CheckBox::getCaption() const
+	{
+		return mCaption;
+	}
 
-    const std::string &CheckBox::getCaption() const
-    {
-        return mCaption;
-    }
+	void CheckBox::setCaption(const std::string& caption)
+	{
+		mCaption = caption;
+	}
 
-    void CheckBox::setCaption(const std::string& caption)
-    {
-        mCaption = caption;
-    }
+	void CheckBox::keyPressed(KeyEvent& keyEvent)
+	{
+		const auto key = keyEvent.getKey();
 
-    void CheckBox::keyPressed(KeyEvent& keyEvent)
-    {
-        Key key = keyEvent.getKey();
+		if (key.getValue() == Key::ENTER ||
+			key.getValue() == Key::SPACE)
+		{
+			toggleSelected();
+			keyEvent.consume();
+		}
+	}
 
-        if (key.getValue() == Key::ENTER ||
-            key.getValue() == Key::SPACE)
-        {
-            toggleSelected();
-            keyEvent.consume();
-        }
-    }
+	void CheckBox::mouseClicked(MouseEvent& mouseEvent)
+	{
+		if (mouseEvent.getButton() == MouseEvent::LEFT)
+		{
+			toggleSelected();
+		}
+	}
 
-    void CheckBox::mouseClicked(MouseEvent& mouseEvent)
-    {
-        if (mouseEvent.getButton() == MouseEvent::LEFT)
-        {
-            toggleSelected();
-        }
-    }
+	void CheckBox::mouseDragged(MouseEvent& mouseEvent)
+	{
+		mouseEvent.consume();
+	}
 
-    void CheckBox::mouseDragged(MouseEvent& mouseEvent)
-    {
-        mouseEvent.consume();
-    }
+	void CheckBox::adjustSize()
+	{
+		const auto height = getFont()->getHeight();
 
-    void CheckBox::adjustSize()
-    {
-        int height = getFont()->getHeight();
+		setHeight(height);
+		setWidth(getFont()->getWidth(mCaption) + height + height / 2);
+	}
 
-        setHeight(height);
-        setWidth(getFont()->getWidth(mCaption) + height + height / 2);
-    }
-
-    void CheckBox::toggleSelected()
-    {
-        mSelected = !mSelected;
-        generateAction();
-    }
+	void CheckBox::toggleSelected()
+	{
+		mSelected = !mSelected;
+		generateAction();
+	}
 }
-
