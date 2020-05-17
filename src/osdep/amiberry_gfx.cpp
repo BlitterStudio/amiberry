@@ -447,7 +447,7 @@ static void wait_for_display_thread(void)
 void allocsoftbuffer(struct uae_prefs* p)
 {
 	/* Initialize structure for Amiga video modes */
-	auto ad = &adisplays;
+	auto* ad = &adisplays;
 	ad->gfxvidinfo.drawbuffer.pixbytes = screen->format->BytesPerPixel;
 	ad->gfxvidinfo.drawbuffer.width_allocated = screen->w;
 	ad->gfxvidinfo.drawbuffer.height_allocated = screen->h;
@@ -561,7 +561,7 @@ bool isModeAspectRatioExact(SDL_DisplayMode* mode, const int width, const int he
 
 static void open_screen(struct uae_prefs* p)
 {
-	struct vidbuf_description* avidinfo = &adisplays.gfxvidinfo;
+	auto* avidinfo = &adisplays.gfxvidinfo;
 	graphics_subshutdown();
 
 	if (max_uae_width == 0 || max_uae_height == 0)
@@ -718,7 +718,7 @@ static void open_screen(struct uae_prefs* p)
 
 void update_display(struct uae_prefs* p)
 {
-	struct amigadisplay *ad = &adisplays;
+	auto* ad = &adisplays;
 	open_screen(p);
 	SDL_SetRelativeMouseMode(SDL_TRUE);
 	SDL_ShowCursor(SDL_DISABLE);
@@ -1018,7 +1018,7 @@ static int init_colors()
 */
 static int get_display_depth()
 {
-	const int depth = screen->format->BytesPerPixel == 4 ? 32 : 16;
+	const auto depth = screen->format->BytesPerPixel == 4 ? 32 : 16;
 	return depth;
 }
 
@@ -1103,21 +1103,21 @@ static int save_png(SDL_Surface* surface, char* path)
 {
 	const auto w = surface->w;
 	const auto h = surface->h;
-	const auto pix = static_cast<unsigned char *>(surface->pixels);
+	auto* const pix = static_cast<unsigned char *>(surface->pixels);
 	unsigned char writeBuffer[1024 * 3];
-	const auto f = fopen(path, "wbe");
+	auto* const f = fopen(path, "wbe");
 	if (!f) return 0;
-	auto png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING,
-		nullptr,
-		nullptr,
-		nullptr);
+	auto* png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING,
+	                                        nullptr,
+	                                        nullptr,
+	                                        nullptr);
 	if (!png_ptr)
 	{
 		fclose(f);
 		return 0;
 	}
 
-	auto info_ptr = png_create_info_struct(png_ptr);
+	auto* info_ptr = png_create_info_struct(png_ptr);
 
 	if (!info_ptr)
 	{
@@ -1140,12 +1140,12 @@ static int save_png(SDL_Surface* surface, char* path)
 
 	png_write_info(png_ptr, info_ptr);
 
-	auto b = writeBuffer;
+	auto* b = writeBuffer;
 
 	const auto sizeX = w;
 	const auto sizeY = h;
 
-	auto p = reinterpret_cast<unsigned short *>(pix);
+	auto* p = reinterpret_cast<unsigned short *>(pix);
 	for (auto y = 0; y < sizeY; y++)
 	{
 		for (auto x = 0; x < sizeX; x++)
@@ -1266,13 +1266,13 @@ bool target_graphics_buffer_update()
 
 int picasso_palette(struct MyCLUTEntry *CLUT, uae_u32 *clut)
 {
-	int changed = 0;
+	auto changed = 0;
 
-	for (int i = 0; i < 256; i++) {
+	for (auto i = 0; i < 256; i++) {
 		int r = CLUT[i].Red;
 		int g = CLUT[i].Green;
 		int b = CLUT[i].Blue;
-		uae_u32 v = (doMask256 (r, red_bits, red_shift)
+		auto v = (doMask256 (r, red_bits, red_shift)
 			| doMask256 (g, green_bits, green_shift)
 			| doMask256 (b, blue_bits, blue_shift))
 			| doMask256 (0xff, alpha_bits, alpha_shift);
@@ -1287,8 +1287,8 @@ int picasso_palette(struct MyCLUTEntry *CLUT, uae_u32 *clut)
 
 static int resolution_compare(const void* a, const void* b)
 {
-	auto ma = (struct PicassoResolution *)a;
-	auto mb = (struct PicassoResolution *)b;
+	auto* ma = (struct PicassoResolution *)a;
+	auto* mb = (struct PicassoResolution *)b;
 	if (ma->res.width < mb->res.width)
 		return -1;
 	if (ma->res.width > mb->res.width)
@@ -1354,7 +1354,7 @@ void picasso_init_resolutions()
 	Displays[0].name = my_strdup(tmp);
 	Displays[0].name2 = my_strdup("Display");
 
-	const auto md1 = Displays;
+	auto* const md1 = Displays;
 	DisplayModes = md1->DisplayModes = xmalloc(struct PicassoResolution, MAX_PICASSO_MODES);
 	for (auto i = 0; i < MAX_SCREEN_MODES && count < MAX_PICASSO_MODES; i++)
 	{
@@ -1401,9 +1401,9 @@ void gfx_set_picasso_state(int on)
 void gfx_set_picasso_modeinfo(uae_u32 w, uae_u32 h, uae_u32 depth, RGBFTYPE rgbfmt)
 {
 	depth >>= 3;
-	if (unsigned(picasso_vidinfo.width) == w &&
-		unsigned(picasso_vidinfo.height) == h &&
-		unsigned(picasso_vidinfo.depth) == depth &&
+	if (static_cast<unsigned>(picasso_vidinfo.width) == w &&
+		static_cast<unsigned>(picasso_vidinfo.height) == h &&
+		static_cast<unsigned>(picasso_vidinfo.depth) == depth &&
 		picasso_vidinfo.selected_rgbformat == rgbfmt)
 		return;
 
