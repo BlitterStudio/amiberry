@@ -68,7 +68,7 @@ static int GetHDType(const int index)
 	auto type = get_filesys_unitconfig(&changed_prefs, index, &mi);
 	if (type < 0)
 	{
-		const auto uci = &changed_prefs.mountconfig[index];
+		auto* const uci = &changed_prefs.mountconfig[index];
 		type = uci->ci.type == UAEDEV_DIR ? FILESYS_VIRTUAL : FILESYS_HARDFILE;
 	}
 	return type;
@@ -86,9 +86,9 @@ public:
 		return lstMRUCDList.size();
 	}
 
-	string getElementAt(int i) override
+	string getElementAt(const int i) override
 	{
-		if (i < 0 || i >= lstMRUCDList.size())
+		if (i < 0 || i >= static_cast<int>(lstMRUCDList.size()))
 			return "---";
 		return lstMRUCDList[i];
 	}
@@ -281,7 +281,7 @@ public:
 	{
 		if (actionEvent.getSource() == sldCDVol)
 		{
-			const auto newvol = 100 - int(sldCDVol->getValue());
+			const auto newvol = 100 - static_cast<int>(sldCDVol->getValue());
 			if (changed_prefs.sound_volume_cd != newvol)
 			{
 				changed_prefs.sound_volume_cd = newvol;
@@ -568,8 +568,8 @@ void RefreshPanelHD()
 	{
 		if (row < changed_prefs.mountitems)
 		{
-			auto uci = &changed_prefs.mountconfig[row];
-			const auto ci = &uci->ci;
+			auto* uci = &changed_prefs.mountconfig[row];
+			auto* const ci = &uci->ci;
 			auto type = get_filesys_unitconfig(&changed_prefs, row, &mi);
 			if (type < 0)
 			{
@@ -631,6 +631,8 @@ void RefreshPanelHD()
 	cmdCDSelect->setEnabled(changed_prefs.cdslots[0].inuse);
 	cboCDFile->setEnabled(changed_prefs.cdslots[0].inuse);
 	sldCDVol->setEnabled(changed_prefs.cdslots[0].inuse);
+	lblCDVol->setEnabled(changed_prefs.cdslots[0].inuse);
+	lblCDVolInfo->setEnabled(changed_prefs.cdslots[0].inuse);
 
 	sldCDVol->setValue(100 - changed_prefs.sound_volume_cd);
 	snprintf(tmp, 32, "%d %%", 100 - changed_prefs.sound_volume_cd);

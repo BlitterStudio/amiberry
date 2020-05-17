@@ -69,7 +69,7 @@ public:
 
 	std::string getElementAt(int i) override
 	{
-		if (i < 0 || i >= values.size())
+		if (i < 0 || i >= static_cast<int>(values.size()))
 			return "---";
 		return values[i];
 	}
@@ -325,7 +325,7 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 
 		for (auto idx : RemapEventList)
 		{
-			const auto ie = inputdevice_get_eventinfo(idx);
+			const auto* const ie = inputdevice_get_eventinfo(idx);
 			snprintf(tmp, 255, "%s", ie->name);
 			CustomEventList.AddElement(tmp);
 		}
@@ -492,10 +492,10 @@ void ExitPanelCustom()
 	delete chkAnalogRemap;
 
 	for (auto& i : lblCustomAction)
-	{
 		delete i;
-		//delete cboCustomAction[i];                   
-	}
+
+	for (auto& i : cboCustomAction)
+		delete i;
 
 	delete lblPortInput;
 	delete txtPortInput;
@@ -516,7 +516,7 @@ void RefreshPanelCustom(void)
 	optMultiNone->setSelected(SelectedFunction == 0);
 	optMultiSelect->setSelected(SelectedFunction == 1);
 	// optMultiLeft->setSelected(SelectedFunction == 2);
-	//  optMultiRight->setSelected(SelectedFunction == 3);
+	// optMultiRight->setSelected(SelectedFunction == 3);
 
 	chkAnalogRemap->setSelected(changed_prefs.input_analog_remap);
 
@@ -630,41 +630,50 @@ void RefreshPanelCustom(void)
 			}
 
 			// disable unmapped buttons
-			cboCustomAction[n]->setEnabled((temp_button + 1) != 0);
+			cboCustomAction[n]->setEnabled(temp_button + 1 != 0);
+			lblCustomAction[n]->setEnabled(temp_button + 1 != 0);
 
 			// set hotkey/quit/reset/menu on NONE field (and disable hotkey)
-			if (temp_button == host_input_buttons[hostjoyid].hotkey_button && temp_button != -1)
+			if (temp_button == host_input_buttons[hostjoyid].hotkey_button 
+				&& temp_button != -1)
 			{
 				cboCustomAction[n]->setListModel(&CustomEventList_HotKey);
+				//cboCustomAction[n]->setSelected(0);
 				cboCustomAction[n]->setEnabled(false);
-				cboCustomAction[n]->setSelected(0);
+				lblCustomAction[n]->setEnabled(false);
 			}
 
-			else if (temp_button == host_input_buttons[hostjoyid].quit_button && temp_button != -1 && SelectedFunction
-				== 1 &&
-				changed_prefs.use_retroarch_quit)
+			else if (temp_button == host_input_buttons[hostjoyid].quit_button 
+				&& temp_button != -1 
+				&& SelectedFunction == 1 
+				&& changed_prefs.use_retroarch_quit)
 			{
 				cboCustomAction[n]->setListModel(&CustomEventList_Quit);
+				//cboCustomAction[n]->setSelected(0);
 				cboCustomAction[n]->setEnabled(false);
-				cboCustomAction[n]->setSelected(0);
+				lblCustomAction[n]->setEnabled(false);
 			}
 
-			else if (temp_button == host_input_buttons[hostjoyid].menu_button && temp_button != -1 && SelectedFunction
-				== 1 &&
-				changed_prefs.use_retroarch_menu)
+			else if (temp_button == host_input_buttons[hostjoyid].menu_button 
+				&& temp_button != -1 
+				&& SelectedFunction == 1 
+				&& changed_prefs.use_retroarch_menu)
 			{
 				cboCustomAction[n]->setListModel(&CustomEventList_Menu);
+				//cboCustomAction[n]->setSelected(0);
 				cboCustomAction[n]->setEnabled(false);
-				cboCustomAction[n]->setSelected(0);
+				lblCustomAction[n]->setEnabled(false);
 			}
 
-			else if (temp_button == host_input_buttons[hostjoyid].reset_button && temp_button != -1 && SelectedFunction
-				== 1 &&
-				changed_prefs.use_retroarch_reset)
+			else if (temp_button == host_input_buttons[hostjoyid].reset_button 
+				&& temp_button != -1 
+				&& SelectedFunction == 1 
+				&& changed_prefs.use_retroarch_reset)
 			{
 				cboCustomAction[n]->setListModel(&CustomEventList_Reset);
+				//cboCustomAction[n]->setSelected(0);
 				cboCustomAction[n]->setEnabled(false);
-				cboCustomAction[n]->setSelected(0);
+				lblCustomAction[n]->setEnabled(false);
 			}
 
 			else
@@ -679,6 +688,11 @@ void RefreshPanelCustom(void)
 			cboCustomAction[1]->setEnabled(true);
 			cboCustomAction[2]->setEnabled(true);
 			cboCustomAction[3]->setEnabled(true);
+
+			lblCustomAction[0]->setEnabled(true);
+			lblCustomAction[1]->setEnabled(true);
+			lblCustomAction[2]->setEnabled(true);
+			lblCustomAction[3]->setEnabled(true);
 		}
 
 		if (host_input_buttons[hostjoyid].is_retroarch)
@@ -693,6 +707,10 @@ void RefreshPanelCustom(void)
 		for (auto& n : cboCustomAction)
 		{
 			n->setListModel(&CustomEventList);
+			n->setEnabled(false);
+		}
+		for (auto& n : lblCustomAction)
+		{
 			n->setEnabled(false);
 		}
 

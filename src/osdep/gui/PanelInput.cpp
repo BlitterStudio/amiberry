@@ -53,7 +53,7 @@ private:
 public:
 	StringListModel(const char* entries[], const int count)
 	{
-		for (int i = 0; i < count; ++i)
+		for (auto i = 0; i < count; ++i)
 			values.emplace_back(entries[i]);
 	}
 
@@ -70,7 +70,7 @@ public:
 
 	std::string getElementAt(const int i) override
 	{
-		if (i < 0 || static_cast<unsigned int>(i) >= values.size())
+		if (i < 0 || i >= static_cast<int>(values.size()))
 			return "---";
 		return values[i];
 	}
@@ -232,7 +232,7 @@ public:
 
 		else if (actionEvent.getSource() == sldMouseSpeed)
 		{
-			changed_prefs.input_joymouse_multiplier = mousespeed_values[int(sldMouseSpeed->getValue())];
+			changed_prefs.input_joymouse_multiplier = mousespeed_values[static_cast<int>(sldMouseSpeed->getValue())];
 			RefreshPanelInput();
 		}
 
@@ -265,7 +265,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 		int i;
 		for (i = 0; i < inputdevice_get_device_total(IDTYPE_MOUSE); i++)
 		{
-			const auto device_name = inputdevice_get_device_name(IDTYPE_MOUSE, i);
+			const auto* const device_name = inputdevice_get_device_name(IDTYPE_MOUSE, i);
 			if (device_name && device_name[0])
 			{
 				ctrlPortList.AddElement(inputdevice_get_device_name(IDTYPE_MOUSE, i));
@@ -538,19 +538,23 @@ void RefreshPanelInput()
 	if (cboPort0mode->getSelected() == 0)
 	{
 		cboPort0mousemode->setEnabled(false);
+		lblPort0mousemode->setEnabled(false);
 	}
 	else
 	{
 		cboPort0mousemode->setEnabled(true);
+		lblPort0mousemode->setEnabled(true);
 	}
 
 	if (cboPort1mode->getSelected() == 0)
 	{
 		cboPort1mousemode->setEnabled(false);
+		lblPort1mousemode->setEnabled(false);
 	}
 	else
 	{
 		cboPort1mousemode->setEnabled(true);
+		lblPort1mousemode->setEnabled(true);
 	}
 
 	for (auto i = 0; i < 5; ++i)
