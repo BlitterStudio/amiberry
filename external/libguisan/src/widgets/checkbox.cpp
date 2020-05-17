@@ -93,7 +93,10 @@ namespace gcn
 		drawBox(graphics);
 
 		graphics->setFont(getFont());
-		graphics->setColor(getForegroundColor());
+		if (isEnabled())
+			graphics->setColor(getForegroundColor());
+		else
+			graphics->setColor(Color(128, 128, 128));
 
 		const auto h = getHeight() + getHeight() / 2;
 

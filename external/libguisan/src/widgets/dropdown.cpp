@@ -173,9 +173,10 @@ namespace gcn
 		}
 
 		if (mListBox->getListModel() && mListBox->getSelected() >= 0)
-		{
 			graphics->drawText(mListBox->getListModel()->getElementAt(mListBox->getSelected()), 2, 1);
-		}
+
+		if (!isEnabled())
+			graphics->drawText("N/A", 2, 1);
 
 		drawButton(graphics);
 
@@ -278,7 +279,11 @@ namespace gcn
 						   y + h - 1,
 						   x + h - 2,
 						   y + h - 1);
-		graphics->setColor(getForegroundColor());
+		
+		if (isEnabled())
+			graphics->setColor(getForegroundColor());
+		else
+			graphics->setColor(Color(128, 128, 128));
 
 		const auto hh = h / 3;
 		const auto hx = x + h / 2;

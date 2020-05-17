@@ -1187,11 +1187,6 @@ void DisableResume()
 	if (emulating)
 	{
 		cmdStart->setEnabled(false);
-		gcn::Color backCol;
-		backCol.r = 128;
-		backCol.g = 128;
-		backCol.b = 128;
-		cmdStart->setForegroundColor(backCol);
 	}
 }
 
