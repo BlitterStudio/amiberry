@@ -486,7 +486,7 @@ static void parse_cmdline_2(int argc, TCHAR** argv)
 	}
 }
 
-static TCHAR* parsetext(const TCHAR* s)
+static TCHAR* parse_text(const TCHAR* s)
 {
 	if (*s == '"' || *s == '\'')
 	{
@@ -505,9 +505,9 @@ static TCHAR* parsetext(const TCHAR* s)
 	return my_strdup(s);
 }
 
-static TCHAR* parsetextpath(const TCHAR* s)
+static TCHAR* parse_text_path(const TCHAR* s)
 {
-	auto* const s2 = parsetext(s);
+	auto* const s2 = parse_text(s);
 	auto* const s3 = target_expand_environment(s2, nullptr, 0);
 	xfree(s2);
 	return s3;
@@ -582,7 +582,7 @@ static void parse_cmdline(int argc, TCHAR** argv)
 		}
 		else if (_tcsncmp(argv[i], _T("-config="), 8) == 0)
 		{
-			auto* const txt = parsetextpath(argv[i] + 8);
+			auto* const txt = parse_text_path(argv[i] + 8);
 			currprefs.mountitems = 0;
 			target_cfgfile_load(&currprefs, txt,
 			                    firstconfig
@@ -594,7 +594,7 @@ static void parse_cmdline(int argc, TCHAR** argv)
 		}
 		else if (_tcsncmp(argv[i], _T("-model="), 7) == 0)
 		{
-			auto* const txt = parsetextpath(argv[i] + 7);
+			auto* const txt = parse_text_path(argv[i] + 7);
 			if (_tcsncmp(txt, _T("A500"), 4) == 0) {
 				bip_a500(&currprefs, -1);
 			}
@@ -613,7 +613,7 @@ static void parse_cmdline(int argc, TCHAR** argv)
 		}
 		else if (_tcsncmp(argv[i], _T("-statefile="), 11) == 0)
 		{
-			auto* const txt = parsetextpath(argv[i] + 11);
+			auto* const txt = parse_text_path(argv[i] + 11);
 			savestate_state = STATE_DORESTORE;
 			_tcscpy(savestate_fname, txt);
 			xfree(txt);
@@ -622,7 +622,7 @@ static void parse_cmdline(int argc, TCHAR** argv)
 			// for backwards compatibility only - WHDLoading
 		else if (_tcsncmp(argv[i], _T("-autowhdload="), 13) == 0)
 		{
-			auto* const txt = parsetextpath(argv[i] + 13);
+			auto* const txt = parse_text_path(argv[i] + 13);
 			whdload_auto_prefs(&currprefs, txt);
 			xfree(txt);
 			firstconfig = false;
@@ -631,7 +631,7 @@ static void parse_cmdline(int argc, TCHAR** argv)
 			// for backwards compatibility only - CDLoading
 		else if (_tcsncmp(argv[i], _T("-autocd="), 8) == 0)
 		{
-			auto* const txt = parsetextpath(argv[i] + 8);
+			auto* const txt = parse_text_path(argv[i] + 8);
 			cd_auto_prefs(&currprefs, txt);
 			xfree(txt);
 			firstconfig = false;
@@ -640,7 +640,7 @@ static void parse_cmdline(int argc, TCHAR** argv)
 			// autoload ....  .cue / .lha  
 		else if (_tcsncmp(argv[i], _T("-autoload="), 10) == 0)
 		{
-			auto* const txt = parsetextpath(argv[i] + 10);
+			auto* const txt = parse_text_path(argv[i] + 10);
 			const auto txt2 = get_filename_extension(txt); // Extract the extension from the string  (incl '.')
 			if (_tcsncmp(txt2.c_str(), ".lha", 4) == 0)
 			{
@@ -664,7 +664,7 @@ static void parse_cmdline(int argc, TCHAR** argv)
 				write_log(_T("Missing argument for '-f' option.\n"));
 			else
 			{
-				auto* const txt = parsetextpath(argv[++i]);
+				auto* const txt = parse_text_path(argv[++i]);
 				currprefs.mountitems = 0;
 				target_cfgfile_load(&currprefs, txt,
 				                    firstconfig
@@ -684,7 +684,7 @@ static void parse_cmdline(int argc, TCHAR** argv)
 		}
 		else if (_tcsncmp(argv[i], _T("-cdimage="), 9) == 0)
 		{
-			auto* const txt = parsetextpath(argv[i] + 9);
+			auto* const txt = parse_text_path(argv[i] + 9);
 			auto* const txt2 = xmalloc(TCHAR, _tcslen(txt) + 5);
 			_tcscpy(txt2, txt);
 			if (_tcsrchr(txt2, ',') == nullptr)
@@ -716,7 +716,7 @@ static void parse_cmdline(int argc, TCHAR** argv)
 			// check if it is config file or statefile
 			if (!loaded)
 			{
-				auto* const txt = parsetextpath(argv[i]);
+				auto* const txt = parse_text_path(argv[i]);
 				auto* const z = zfile_fopen(txt, _T("rb"), ZFD_NORMAL);
 				if (z)
 				{
