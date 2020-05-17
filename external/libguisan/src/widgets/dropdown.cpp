@@ -162,7 +162,11 @@ namespace gcn
 		graphics->setColor(backCol);
 		graphics->fillRectangle(Rectangle(0, 0, getWidth(), h));
 
-		graphics->setColor(getForegroundColor());
+		if (isEnabled())
+			graphics->setColor(getForegroundColor());
+		else 
+			graphics->setColor(Color(128, 128, 128));
+		
 		graphics->setFont(getFont());
 
 		if (isFocused())
@@ -174,9 +178,6 @@ namespace gcn
 
 		if (mListBox->getListModel() && mListBox->getSelected() >= 0)
 			graphics->drawText(mListBox->getListModel()->getElementAt(mListBox->getSelected()), 2, 1);
-
-		if (!isEnabled())
-			graphics->drawText("N/A", 2, 1);
 
 		drawButton(graphics);
 
