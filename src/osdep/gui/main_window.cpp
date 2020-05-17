@@ -303,7 +303,7 @@ void setup_cursor()
 		SDL_Log("Could not load cursor bitmap: %s\n", SDL_GetError());
 		return;
 	}
-	auto formattedSurface = SDL_ConvertSurfaceFormat(cursor_surface, SDL_PIXELFORMAT_RGBA8888, 0);
+	auto* formattedSurface = SDL_ConvertSurfaceFormat(cursor_surface, SDL_PIXELFORMAT_RGBA8888, 0);
 	if (formattedSurface != nullptr)
 	{
 		SDL_FreeSurface(cursor_surface);
@@ -411,6 +411,8 @@ void amiberry_gui_init()
 	{
 		if (rotation_angle != 0 && rotation_angle != 180)
 			SDL_SetWindowSize(sdl_window, GUI_HEIGHT, GUI_WIDTH);
+		else
+			SDL_SetWindowSize(sdl_window, GUI_WIDTH, GUI_HEIGHT);
 	}
 
 	// make the scaled rendering look smoother (linear scaling).
