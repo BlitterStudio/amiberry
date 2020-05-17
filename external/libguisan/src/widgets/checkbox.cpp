@@ -100,7 +100,7 @@ namespace gcn
 
 		const auto h = getHeight() + getHeight() / 2;
 
-		graphics->drawText(getCaption(), h - 2, 0);
+		graphics->drawText(getCaption(), h - 2, 1);
 	}
 
 	void CheckBox::drawBorder(Graphics* graphics)
@@ -214,7 +214,7 @@ namespace gcn
 
 	void CheckBox::adjustSize()
 	{
-		const auto height = getFont()->getHeight();
+		const auto height = getFont()->getHeight() + 2;
 
 		setHeight(height);
 		setWidth(getFont()->getWidth(mCaption) + height + height / 2);
