@@ -64,6 +64,7 @@ std::vector<ConfigFileInfo*> ConfigFilesList;
 std::vector<AvailableROM*> lstAvailableROMs;
 std::vector<std::string> lstMRUDiskList;
 std::vector<std::string> lstMRUCDList;
+std::vector<std::string> lstMRUWhdloadList;
 
 void AddFileToDiskList(const char *file, int moveToTop)
 {
@@ -111,6 +112,28 @@ void AddFileToCDList(const char *file, int moveToTop)
 		lstMRUCDList.pop_back();
 }
 
+void AddFileToWHDLoadList(const char* file, int moveToTop)
+{
+	unsigned int i;
+
+	for (i = 0; i < lstMRUWhdloadList.size(); ++i)
+	{
+		if (!stricmp(lstMRUWhdloadList[i].c_str(), file))
+		{
+			if (moveToTop)
+			{
+				lstMRUWhdloadList.erase(lstMRUWhdloadList.begin() + i);
+				lstMRUWhdloadList.insert(lstMRUWhdloadList.begin(), file);
+			}
+			break;
+		}
+	}
+	if (i >= lstMRUWhdloadList.size())
+		lstMRUWhdloadList.insert(lstMRUWhdloadList.begin(), file);
+
+	while (lstMRUWhdloadList.size() > MAX_MRU_WHDLOADLIST)
+		lstMRUWhdloadList.pop_back();
+}
 
 void ClearAvailableROMList()
 {

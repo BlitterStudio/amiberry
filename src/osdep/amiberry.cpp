@@ -1017,6 +1017,16 @@ void save_amiberry_settings(void)
 		fputs(buffer, f);
 	}
 
+	// Recent WHDLoad entries (these are used in the dropdown controls)
+	// lstMRUWhdloadList
+	snprintf(buffer, MAX_DPATH, "MRUWHDLoadList=%zu\n", lstMRUWhdloadList.size());
+	fputs(buffer, f);
+	for (auto& i : lstMRUWhdloadList)
+	{
+		snprintf(buffer, MAX_DPATH, "WHDLoadfile=%s\n", i.c_str());
+		fputs(buffer, f);
+	}
+	
 	fclose(f);
 }
 
@@ -1116,6 +1126,15 @@ void load_amiberry_settings(void)
 					{
 						fclose(f);
 						lstMRUCDList.emplace_back(tmpFile);
+					}
+				}
+				else if (cfgfile_string(option, value, "WHDLoadfile", tmpFile, sizeof tmpFile))
+				{
+					auto* const f = fopen(tmpFile, "rbe");
+					if (f != nullptr)
+					{
+						fclose(f);
+						lstMRUWhdloadList.emplace_back(tmpFile);
 					}
 				}
 				else
@@ -1306,6 +1325,7 @@ int main(int argc, char* argv[])
 	free_AmigaMem();
 	lstMRUDiskList.clear();
 	lstMRUCDList.clear();
+	lstMRUWhdloadList.clear();
 	rp9_cleanup();
 
 	logging_cleanup();
