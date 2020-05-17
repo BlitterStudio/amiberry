@@ -773,7 +773,7 @@ static int init_joystick()
 
 	// set up variables / paths etc.
 	char retroarch_file[MAX_DPATH];
-	fetch_retroarchfile(retroarch_file, MAX_DPATH);
+	get_retroarch_file(retroarch_file, MAX_DPATH);
 
 	if (my_existsfile(retroarch_file))
 	{
@@ -801,7 +801,7 @@ static int init_joystick()
 
 	// set up variables / paths etc.
 	char tmp[MAX_DPATH];
-	fetch_controllerspath(tmp, MAX_DPATH);
+	get_controllers_path(tmp, MAX_DPATH);
 
 	// do the loop
 	for (auto cpt = 0; cpt < nr_joysticks; cpt++)

@@ -926,7 +926,7 @@ public:
 			// Restart emulator
 			//-------------------------------------------------
 			char tmp[MAX_DPATH];
-			fetch_configurationpath(tmp, sizeof tmp);
+			get_configuration_path(tmp, sizeof tmp);
 			if (strlen(last_loaded_config) > 0)
 				strncat(tmp, last_loaded_config, MAX_DPATH - 1);
 			else

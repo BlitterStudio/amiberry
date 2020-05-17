@@ -350,7 +350,7 @@ void symlink_roms(struct uae_prefs *p)
 
 	// Symlink rom.key also
 	// source file
-	fetch_rompath(tmp2, MAX_DPATH);
+	get_rom_path(tmp2, MAX_DPATH);
 	snprintf(tmp, MAX_DPATH, "%s/rom.key", tmp2);
 
 	// destination file (symlink)
@@ -375,7 +375,7 @@ void cd_auto_prefs(struct uae_prefs *p, char *filepath)
 	char hardware_settings[4096];
 	//char custom_settings[4096];
 
-	fetch_configurationpath(config_path, MAX_DPATH);
+	get_configuration_path(config_path, MAX_DPATH);
 
 	//      *** GAME DETECTION ***
 	write_log("\nCD Autoload: %s  \n\n", filepath);
@@ -579,7 +579,7 @@ void whdload_auto_prefs(struct uae_prefs *p, char *filepath)
 	write_log("WHDBooter Launched");
 	strcpy(selected_slave, "");
 
-	fetch_configurationpath(config_path, MAX_DPATH);
+	get_configuration_path(config_path, MAX_DPATH);
 
 	//
 	//      *** KICKSTARTS ***

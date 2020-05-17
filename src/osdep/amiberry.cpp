@@ -175,6 +175,7 @@ static char rom_path[MAX_DPATH];
 static char rp9_path[MAX_DPATH];
 static char controllers_path[MAX_DPATH];
 static char retroarch_file[MAX_DPATH];
+static char logfile_path[MAX_DPATH];
 
 char last_loaded_config[MAX_DPATH] = {'\0'};
 
@@ -266,7 +267,7 @@ void logging_init(void)
 			debugfile = nullptr;
 		}
 
-		sprintf(debugfilename, "%s/amiberry_log.txt", start_path_data);
+		sprintf(debugfilename, "%s", logfile_path);
 		if (!debugfile)
 			debugfile = fopen(debugfilename, "wt");
 
@@ -631,74 +632,94 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 	return 0;
 }
 
-void fetch_datapath(char* out, int size)
+void get_data_path(char* out, int size)
 {
 	strncpy(out, start_path_data, size - 1);
 	strncat(out, "/", size - 1);
 }
 
-void fetch_saveimagepath(char* out, int size, int dir)
+void get_saveimage_path(char* out, int size, int dir)
 {
 	strncpy(out, start_path_data, size - 1);
 	strncat(out, "/savestates/", size - 1);
 }
 
-void fetch_configurationpath(char* out, int size)
+void get_configuration_path(char* out, int size)
 {
 	fixtrailing(config_path);
 	strncpy(out, config_path, size - 1);
 }
 
-void set_configurationpath(char* newpath)
+void set_configuration_path(char* newpath)
 {
 	strncpy(config_path, newpath, MAX_DPATH - 1);
 }
 
-void fetch_controllerspath(char* out, int size)
+void get_controllers_path(char* out, int size)
 {
 	fixtrailing(controllers_path);
 	strncpy(out, controllers_path, size - 1);
 }
 
-void set_controllerspath(char* newpath)
+void set_controllers_path(char* newpath)
 {
 	strncpy(controllers_path, newpath, MAX_DPATH - 1);
 }
 
-void fetch_retroarchfile(char* out, int size)
+void get_retroarch_file(char* out, int size)
 {
 	strncpy(out, retroarch_file, size - 1);
 }
 
-void set_retroarchfile(char* newpath)
+void set_retroarch_file(char* newpath)
 {
 	strncpy(retroarch_file, newpath, MAX_DPATH - 1);
 }
 
-void fetch_rompath(char* out, int size)
+bool get_logfile_enabled()
+{
+	return write_logfile;
+}
+
+void set_logfile_enabled(bool enabled)
+{
+	write_logfile = enabled;
+}
+
+void get_logfile_path(char* out, int size)
+{
+	strncpy(out, logfile_path, size - 1);
+}
+
+void set_logfile_path(char* newpath)
+{
+	strncpy(logfile_path, newpath, MAX_DPATH - 1);
+}
+
+void get_rom_path(char* out, int size)
 {
 	fixtrailing(rom_path);
 	strncpy(out, rom_path, size - 1);
 }
 
-void set_rompath(char* newpath)
+void set_rom_path(char* newpath)
 {
 	strncpy(rom_path, newpath, MAX_DPATH - 1);
 }
 
-void fetch_rp9path(char* out, int size)
+void get_rp9_path(char* out, int size)
 {
 	fixtrailing(rp9_path);
 	strncpy(out, rp9_path, size - 1);
 }
 
-void fetch_savestatepath(char* out, int size)
+void get_savestate_path(char* out, int size)
 {
 	strncpy(out, start_path_data, size - 1);
 	strncat(out, "/savestates/", size - 1);
 }
 
-void fetch_screenshotpath(char* out, int size)
+void get_screenshot_path(char* out, int size)
 {
 	strncpy(out, start_path_data, size - 1);
 	strncat(out, "/screenshots/", size - 1);
@@ -957,6 +978,9 @@ void save_amiberry_settings(void)
 	snprintf(buffer, MAX_DPATH, "retroarch_config=%s\n", retroarch_file);
 	fputs(buffer, f);
 
+	snprintf(buffer, MAX_DPATH, "logilfe_path=%s\n", logfile_path);
+	fputs(buffer, f);
+
 	snprintf(buffer, MAX_DPATH, "rom_path=%s\n", rom_path);
 	fputs(buffer, f);
 
@@ -1023,6 +1047,7 @@ void load_amiberry_settings(void)
 	snprintf(config_path, MAX_DPATH, "%s/conf/", start_path_data);
 	snprintf(controllers_path, MAX_DPATH, "%s/controllers/", start_path_data);
 	snprintf(retroarch_file, MAX_DPATH, "%s/conf/retroarch.cfg", start_path_data);
+	snprintf(logfile_path, MAX_DPATH, "%s/amiberry.log", start_path_data);
 
 #ifdef ANDROID
 	char afepath[MAX_DPATH];
@@ -1099,6 +1124,7 @@ void load_amiberry_settings(void)
 					cfgfile_string(option, value, "config_path", config_path, sizeof config_path);
 					cfgfile_string(option, value, "controllers_path", controllers_path, sizeof controllers_path);
 					cfgfile_string(option, value, "retroarch_config", retroarch_file, sizeof retroarch_file);
+					cfgfile_string(option, value, "logfile_path", logfile_path, sizeof logfile_path);
 					cfgfile_string(option, value, "rom_path", rom_path, sizeof rom_path);
 					cfgfile_intval(option, value, "ROMs", &numROMs, 1);
 					cfgfile_intval(option, value, "MRUDiskList", &numDisks, 1);

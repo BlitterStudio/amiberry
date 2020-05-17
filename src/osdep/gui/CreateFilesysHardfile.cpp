@@ -412,7 +412,7 @@ bool CreateFilesysHardfile()
 
 		const auto bp = tweakbootpri(atoi(txtBootPri->getText().c_str()), 1, 0);
 
-		const auto newFile = fopen(txtPath->getText().c_str(), "wbe");
+		auto* const newFile = fopen(txtPath->getText().c_str(), "wbe");
 		if (!newFile)
 		{
 			write_log("Unable to create new file.");
@@ -449,10 +449,10 @@ bool CreateFilesysHardfile()
 		ci.controller_media_type = 0;
 		ci.unit_feature_level = 1;
 		ci.readonly = false;
-		const auto uci = add_filesys_config(&changed_prefs, -1, &ci);
+		auto* const uci = add_filesys_config(&changed_prefs, -1, &ci);
 		if (uci)
 		{
-			const auto hfd = get_hardfile_data(uci->configoffset);
+			auto* const hfd = get_hardfile_data(uci->configoffset);
 			hardfile_media_change(hfd, &ci, true, false);
 		}
 	}

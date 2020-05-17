@@ -951,7 +951,7 @@ void real_main(int argc, TCHAR** argv)
 {
 	restart_program = 1;
 
-	fetch_configurationpath(restart_config, sizeof restart_config / sizeof(TCHAR));
+	get_configuration_path(restart_config, sizeof restart_config / sizeof(TCHAR));
 	_tcscat(restart_config, OPTIONSFILENAME);
 	_tcscat(restart_config, ".uae");
 	default_config = 1;

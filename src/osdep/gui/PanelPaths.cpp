@@ -31,6 +31,11 @@ static gcn::Label* lblRetroArchFile;
 static gcn::TextField* txtRetroArchFile;
 static gcn::Button* cmdRetroArchFile;
 
+static gcn::CheckBox* chkEnableLogging;
+static gcn::Label* lblLogfilePath;
+static gcn::TextField* txtLogfilePath;
+static gcn::Button* cmdLogfilePath;
+
 static gcn::Button* cmdRescanROMs;
 static gcn::Button* cmdDownloadXML;
 
@@ -44,10 +49,10 @@ public:
 
 		if (actionEvent.getSource() == cmdSystemROMs)
 		{
-			fetch_rompath(tmp, MAX_DPATH);
+			get_rom_path(tmp, MAX_DPATH);
 			if (SelectFolder("Folder for System ROMs", tmp))
 			{
-				set_rompath(tmp);
+				set_rom_path(tmp);
 				save_amiberry_settings();
 				RefreshPanelPaths();
 			}
@@ -55,10 +60,10 @@ public:
 		}
 		else if (actionEvent.getSource() == cmdConfigPath)
 		{
-			fetch_configurationpath(tmp, MAX_DPATH);
+			get_configuration_path(tmp, MAX_DPATH);
 			if (SelectFolder("Folder for configuration files", tmp))
 			{
-				set_configurationpath(tmp);
+				set_configuration_path(tmp);
 				save_amiberry_settings();
 				RefreshPanelPaths();
 				RefreshPanelConfig();
@@ -67,10 +72,10 @@ public:
 		}
 		else if (actionEvent.getSource() == cmdControllersPath)
 		{
-			fetch_controllerspath(tmp, MAX_DPATH);
+			get_controllers_path(tmp, MAX_DPATH);
 			if (SelectFolder("Folder for controller files", tmp))
 			{
-				set_controllerspath(tmp);
+				set_controllers_path(tmp);
 				save_amiberry_settings();
 				RefreshPanelPaths();
 			}
@@ -80,20 +85,44 @@ public:
 		else if (actionEvent.getSource() == cmdRetroArchFile)
 		{
 			const char* filter[] = {"retroarch.cfg", "\0"};
-			fetch_retroarchfile(tmp, MAX_DPATH);
+			get_retroarch_file(tmp, MAX_DPATH);
 			if (SelectFile("Select RetroArch Config File", tmp, filter))
 			{
-				set_retroarchfile(tmp);
+				set_retroarch_file(tmp);
 				save_amiberry_settings();
 				RefreshPanelPaths();
 			}
 			cmdRetroArchFile->requestFocus();
+		}
+
+		else if (actionEvent.getSource() == cmdLogfilePath)
+		{
+			const char* filter[] = { "amiberry.log", "\0" };
+			get_logfile_path(tmp, MAX_DPATH);
+			if (SelectFile("Select Amiberry Log file", tmp, filter, true))
+			{
+				set_logfile_path(tmp);
+				save_amiberry_settings();
+				RefreshPanelPaths();
+			}
+			cmdLogfilePath->requestFocus();
 		}
 	}
 };
 
 static FolderButtonActionListener* folderButtonActionListener;
 
+class EnableLoggingActionListener : public gcn::ActionListener
+{
+public:
+	void action(const gcn::ActionEvent& actionEvent) override
+	{
+		set_logfile_enabled(chkEnableLogging->isSelected());
+		RefreshPanelPaths();
+	}
+};
+
+static EnableLoggingActionListener* enableLoggingActionListener;
 
 class RescanROMsButtonActionListener : public gcn::ActionListener
 {
@@ -146,16 +175,6 @@ int date_cmp(const char* d1, const char* d2)
 	}
 
 	return strncmp(d1, d2, 2);
-}
-
-static xmlNode* get_node(xmlNode* node, const char* name)
-{
-	for (auto* curr_node = node; curr_node; curr_node = curr_node->next)
-	{
-		if (curr_node->type == XML_ELEMENT_NODE && strcmp(reinterpret_cast<const char*>(curr_node->name), name) == 0)
-			return curr_node->children;
-	}
-	return nullptr;
 }
 
 void copy_file(const char* srce_file, const char* dest_file)
@@ -327,31 +346,55 @@ void InitPanelPaths(const struct _ConfigCategory& category)
 	cmdRetroArchFile->setBaseColor(gui_baseCol);
 	cmdRetroArchFile->addActionListener(folderButtonActionListener);
 
+	enableLoggingActionListener = new EnableLoggingActionListener();
+	chkEnableLogging = new gcn::CheckBox("Enable logging", true);
+	chkEnableLogging->setId("chkEnableLogging");
+	chkEnableLogging->addActionListener(enableLoggingActionListener);
+	
+	lblLogfilePath = new gcn::Label("Amiberry logfile path:");
+	txtLogfilePath = new gcn::TextField();
+	txtLogfilePath->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
+	txtLogfilePath->setBackgroundColor(colTextboxBackground);
+
+	cmdLogfilePath = new gcn::Button("...");
+	cmdLogfilePath->setId("cmdLogfilePath");
+	cmdLogfilePath->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	cmdLogfilePath->setBaseColor(gui_baseCol);
+	cmdLogfilePath->addActionListener(folderButtonActionListener);
+	
 	category.panel->add(lblSystemROMs, DISTANCE_BORDER, yPos);
-	yPos += lblSystemROMs->getHeight() + DISTANCE_NEXT_Y;
+	yPos += lblSystemROMs->getHeight() + DISTANCE_NEXT_Y / 2;
 	category.panel->add(txtSystemROMs, DISTANCE_BORDER, yPos);
 	category.panel->add(cmdSystemROMs, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X, yPos);
 	yPos += txtSystemROMs->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(lblConfigPath, DISTANCE_BORDER, yPos);
-	yPos += lblConfigPath->getHeight() + DISTANCE_NEXT_Y;
+	yPos += lblConfigPath->getHeight() + DISTANCE_NEXT_Y / 2;
 	category.panel->add(txtConfigPath, DISTANCE_BORDER, yPos);
 	category.panel->add(cmdConfigPath, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X, yPos);
 	yPos += txtConfigPath->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(lblControllersPath, DISTANCE_BORDER, yPos);
-	yPos += lblControllersPath->getHeight() + DISTANCE_NEXT_Y;
+	yPos += lblControllersPath->getHeight() + DISTANCE_NEXT_Y / 2;
 	category.panel->add(txtControllersPath, DISTANCE_BORDER, yPos);
 	category.panel->add(cmdControllersPath, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X, yPos);
 	yPos += txtControllersPath->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(lblRetroArchFile, DISTANCE_BORDER, yPos);
-	yPos += lblRetroArchFile->getHeight() + DISTANCE_NEXT_Y;
+	yPos += lblRetroArchFile->getHeight() + DISTANCE_NEXT_Y / 2;
 	category.panel->add(txtRetroArchFile, DISTANCE_BORDER, yPos);
 	category.panel->add(cmdRetroArchFile, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X, yPos);
-	yPos += txtRetroArchFile->getHeight() + DISTANCE_NEXT_Y;
-	rescanROMsButtonActionListener = new RescanROMsButtonActionListener();
 
+	yPos += txtRetroArchFile->getHeight() + DISTANCE_NEXT_Y * 2;
+
+	category.panel->add(chkEnableLogging, DISTANCE_BORDER, yPos);
+	yPos += chkEnableLogging->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(lblLogfilePath, DISTANCE_BORDER, yPos);
+	yPos += lblLogfilePath->getHeight() + DISTANCE_NEXT_Y / 2;
+	category.panel->add(txtLogfilePath, DISTANCE_BORDER, yPos);
+	category.panel->add(cmdLogfilePath, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X, yPos);
+
+	rescanROMsButtonActionListener = new RescanROMsButtonActionListener();
 	cmdRescanROMs = new gcn::Button("Rescan Paths");
 	cmdRescanROMs->setSize(cmdRescanROMs->getWidth() + DISTANCE_BORDER, BUTTON_HEIGHT);
 	cmdRescanROMs->setBaseColor(gui_baseCol);
@@ -359,7 +402,7 @@ void InitPanelPaths(const struct _ConfigCategory& category)
 	cmdRescanROMs->addActionListener(rescanROMsButtonActionListener);
 
 	downloadXMLButtonActionListener = new DownloadXMLButtonActionListener();
-	cmdDownloadXML = new gcn::Button("Update WHDLoad Database/XML");
+	cmdDownloadXML = new gcn::Button("Update WHDLoad XML");
 	cmdDownloadXML->setSize(cmdDownloadXML->getWidth() + DISTANCE_BORDER, BUTTON_HEIGHT);
 	cmdDownloadXML->setBaseColor(gui_baseCol);
 	cmdDownloadXML->setId("DownloadXML");
@@ -389,12 +432,18 @@ void ExitPanelPaths()
 	delete lblRetroArchFile;
 	delete txtRetroArchFile;
 	delete cmdRetroArchFile;
-	delete folderButtonActionListener;
 
+	delete chkEnableLogging;
+	delete lblLogfilePath;
+	delete txtLogfilePath;
+	delete cmdLogfilePath;
+	
 	delete cmdRescanROMs;
 	delete cmdDownloadXML;
+	delete folderButtonActionListener;
 	delete rescanROMsButtonActionListener;
 	delete downloadXMLButtonActionListener;
+	delete enableLoggingActionListener;
 }
 
 
@@ -402,17 +451,25 @@ void RefreshPanelPaths()
 {
 	char tmp[MAX_DPATH];
 
-	fetch_rompath(tmp, MAX_DPATH);
+	get_rom_path(tmp, MAX_DPATH);
 	txtSystemROMs->setText(tmp);
 
-	fetch_configurationpath(tmp, MAX_DPATH);
+	get_configuration_path(tmp, MAX_DPATH);
 	txtConfigPath->setText(tmp);
 
-	fetch_controllerspath(tmp, MAX_DPATH);
+	get_controllers_path(tmp, MAX_DPATH);
 	txtControllersPath->setText(tmp);
 
-	fetch_retroarchfile(tmp, MAX_DPATH);
+	get_retroarch_file(tmp, MAX_DPATH);
 	txtRetroArchFile->setText(tmp);
+
+	chkEnableLogging->setSelected(get_logfile_enabled());
+	get_logfile_path(tmp, MAX_DPATH);
+	txtLogfilePath->setText(tmp);
+	
+	lblLogfilePath->setEnabled(chkEnableLogging->isSelected());
+	txtLogfilePath->setEnabled(chkEnableLogging->isSelected());
+	cmdLogfilePath->setEnabled(chkEnableLogging->isSelected());
 }
 
 bool HelpPanelPaths(std::vector<std::string>& helptext)

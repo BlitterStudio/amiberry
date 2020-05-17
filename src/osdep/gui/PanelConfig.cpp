@@ -131,7 +131,7 @@ public:
 			char filename[MAX_DPATH];
 			if (!txtName->getText().empty())
 			{
-				fetch_configurationpath(filename, MAX_DPATH);
+				get_configuration_path(filename, MAX_DPATH);
 				strncat(filename, txtName->getText().c_str(), MAX_DPATH - 1);
 				strncat(filename, ".uae", MAX_DPATH - 1);
 				strncpy(changed_prefs.description, txtDesc->getText().c_str(), 256);

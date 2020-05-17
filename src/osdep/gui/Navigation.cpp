@@ -56,9 +56,11 @@ static NavigationMap navMap[] =
 	{"SystemROMs", "Paths", "Paths", "RescanROMs", "ConfigPath"},
 	{"ConfigPath", "Paths", "Paths", "SystemROMs", "ControllersPath"},
 	{"ControllersPath", "Paths", "Paths", "ConfigPath", "RetroArchFile"},
-	{"RetroArchFile", "Paths", "Paths", "ControllersPath", "RescanROMs"},
-	{"RescanROMs", "Paths", "DownloadXML", "RetroArchFile", "SystemROMs"},
-	{"DownloadXML", "RescanROMs", "Paths", "RetroArchFile", "SystemROMs"},
+	{"RetroArchFile", "Paths", "Paths", "ControllersPath", "chkEnableLogging"},
+	{"chkEnableLogging", "Paths", "Paths", "RetroArchFile", "cmdLogfilePath"},
+	{"cmdLogfilePath", "Paths", "Paths", "chkEnableLogging", "RescanROMs"},
+	{"RescanROMs", "Paths", "DownloadXML", "cmdLogfilePath", "SystemROMs"},
+	{"DownloadXML", "RescanROMs", "Paths", "cmdLogfilePath", "SystemROMs"},
 
 	//  active            move left         move right        move up           move down
 	// PanelQuickstart
