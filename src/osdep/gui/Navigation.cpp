@@ -64,7 +64,7 @@ static NavigationMap navMap[] =
 
 	//  active            move left         move right        move up           move down
 	// PanelQuickstart
-	{"cboAModel", "Quickstart", "qsNTSC", "cmdSetConfig", "cboAConfig"},
+	{"cboAModel", "Quickstart", "qsNTSC", "cboWhdload", "cboAConfig"},
 	{"qsNTSC", "cboAModel", "Quickstart", "qsMode", "cboAConfig"},
 	{"cboAConfig", "Quickstart", "Quickstart", "cboAModel", "qscmdSel0"},
 	{"qsDF0", "Quickstart", "qsWP0", "cboAConfig", "cboDisk0"},
@@ -84,7 +84,10 @@ static NavigationMap navMap[] =
 	{"qsCDSelect", "qscdEject", "Quickstart", "cboDisk1", "cboCD"},
 	{"cboCD", "Quickstart", "Quickstart", "qsCDSelect", "qsMode"},
 	{"qsMode", "Quickstart", "Quickstart", "cboCD", "cmdSetConfig"},
-	{"cmdSetConfig", "Quickstart", "Quickstart", "qsMode", "cboAModel"},
+	{"cmdSetConfig", "Quickstart", "Quickstart", "qsMode", "cmdWhdloadEject"},
+	{"cmdWhdloadEject", "Quickstart", "cmdWhdloadSelect", "cmdSetConfig", "cboWhdload"},
+	{"cmdWhdloadSelect", "cmdWhdloadEject", "Quickstart", "cmdSetConfig", "cboWhdload"},
+	{"cboWhdload", "Quickstart", "Quickstart", "cmdWhdloadEject", "cboAModel"},
 
 	// PanelConfig
 	{"ConfigList", "Configurations", "ConfigLoad", "", ""},
