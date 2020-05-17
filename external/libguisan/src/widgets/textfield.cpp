@@ -116,7 +116,11 @@ namespace gcn
 			drawCaret(graphics, getFont()->getWidth(mText.substr(0, mCaretPosition)) - mXScroll);
 		}
 
-		graphics->setColor(getForegroundColor());
+		if (isEnabled())
+			graphics->setColor(getForegroundColor());
+		else
+			graphics->setColor(Color(128, 128, 128));
+		
 		graphics->setFont(getFont());
 		graphics->drawText(mText, 1 - mXScroll, 2);
 	}
