@@ -479,10 +479,15 @@ bool HelpPanelPaths(std::vector<std::string>& helptext)
 	helptext.emplace_back("and controller files should be stored. With the \"...\" button you can open a dialog");
 	helptext.emplace_back("to choose the folder.");
 	helptext.emplace_back(" ");
+	helptext.emplace_back("You can enable/disable logging and specify the location of the logfile with the relevant");
+	helptext.emplace_back("options.");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("After changing the location of the Kickstart ROMs, click on \"Rescan\" to refresh");
 	helptext.emplace_back("the list of the available ROMs.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("You can download the latest version of the WHDLoad Booter XML file, using the");
 	helptext.emplace_back("relevant button. You will need an internet connection for this to work.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("These settings are saved automatically when you click Rescan, or exit the emulator.");
 	return true;
 }
