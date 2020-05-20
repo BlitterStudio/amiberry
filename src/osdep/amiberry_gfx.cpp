@@ -580,11 +580,6 @@ static void open_screen(struct uae_prefs* p)
 	{
 		display_width = picasso_vidinfo.width ? picasso_vidinfo.width : 720;
 		display_height = picasso_vidinfo.height ? picasso_vidinfo.height : 284;
-#ifdef USE_DISPMANX
-	//TODO Check if we can implement this in DISPMANX
-#else
-		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear"); // we always use linear for Picasso96 modes
-#endif
 	}
 	else
 	{
@@ -595,21 +590,6 @@ static void open_screen(struct uae_prefs* p)
 		
 		display_width = p->gfx_monitor.gfx_size.width ? p->gfx_monitor.gfx_size.width : 720;
 		display_height = (p->gfx_monitor.gfx_size.height ? p->gfx_monitor.gfx_size.height : 284) << p->gfx_vresolution;
-
-#ifdef USE_DISPMANX
-#else
-		if (p->scaling_method == -1)
-		{
-			if (isModeAspectRatioExact(&sdlMode, display_width, display_height))
-				SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
-			else
-				SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
-		}
-		else if (p->scaling_method == 0)
-			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
-		else if (p->scaling_method == 1)
-			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
-#endif
 	}
 
 #ifdef USE_DISPMANX
@@ -622,6 +602,7 @@ static void open_screen(struct uae_prefs* p)
 	current_vsync_frame = 2;
 
 #else
+	
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0xFF);
 	SDL_RenderClear(renderer);
 
@@ -679,6 +660,8 @@ static void open_screen(struct uae_prefs* p)
 			SDL_RenderSetLogicalSize(renderer, display_height, display_width);
 			renderQuad = { -(display_width - display_height) / 2, (display_width - display_height) / 2, display_width, display_height };
 		}
+
+		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 	}
 	else
 	{
@@ -698,6 +681,18 @@ static void open_screen(struct uae_prefs* p)
 			SDL_RenderSetLogicalSize(renderer, height, width);
 			renderQuad = { -(width - height) / 2, (width - height) / 2, width, height };
 		}
+
+		if (p->scaling_method == -1)
+		{
+			if (isModeAspectRatioExact(&sdlMode, display_width, display_height))
+				SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
+			else
+				SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+		}
+		else if (p->scaling_method == 0)
+			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
+		else if (p->scaling_method == 1)
+			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 	}
 
 	screen = SDL_CreateRGBSurface(0, display_width, display_height, depth, 0, 0, 0, 0);
