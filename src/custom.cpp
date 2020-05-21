@@ -1855,18 +1855,18 @@ static void toscr_1 (int nbits, int fm)
 
 	out_nbits += nbits;
 	if (out_nbits == 32) {
-		if (out_offs < MAX_WORDS_PER_LINE / 4) {
-		uae_u8 *dataptr = line_data[next_lineno] + out_offs * 4;
-		for (int i = 0; i < thisline_decision.nr_planes; i++) {
-			uae_u32 *dataptr32 = (uae_u32 *)dataptr;
-			if (*dataptr32 != outword[i]) {
-				thisline_changed = 1;
-				*dataptr32 = outword[i];
+		if (out_offs < MAX_WORDS_PER_LINE * 2 / 4) {
+			uae_u8 *dataptr = line_data[next_lineno] + out_offs * 4;
+			for (int i = 0; i < thisline_decision.nr_planes; i++) {
+				uae_u32 *dataptr32 = (uae_u32 *)dataptr;
+				if (*dataptr32 != outword[i]) {
+					thisline_changed = 1;
+					*dataptr32 = outword[i];
+				}
+				outword[i] = 0;
+				dataptr += MAX_WORDS_PER_LINE * 2;
 			}
-			outword[i] = 0;
-			dataptr += MAX_WORDS_PER_LINE * 2;
-		}
-		out_offs++;
+			out_offs++;
 		}
 		out_nbits = 0;
 	}
@@ -1888,18 +1888,18 @@ static void toscr_1_hr(int nbits, int fm)
 	out_nbits += nbits;
 	if (out_nbits == 64) {
 		if (out_offs < MAX_WORDS_PER_LINE * 2 / 4 - 1) {
-		uae_u8 *dataptr = line_data[next_lineno] + out_offs * 4;
-		for (int i = 0; i < thisline_decision.nr_planes; i++) {
-			uae_u64 *dataptr64 = (uae_u64 *)dataptr;
-			uae_u64 v = (outword64[i] >> 32) | (outword64[i] << 32);
-			if (*dataptr64 != v) {
-				thisline_changed = 1;
-				*dataptr64 = v;
+			uae_u8 *dataptr = line_data[next_lineno] + out_offs * 4;
+			for (int i = 0; i < thisline_decision.nr_planes; i++) {
+				uae_u64 *dataptr64 = (uae_u64 *)dataptr;
+				uae_u64 v = (outword64[i] >> 32) | (outword64[i] << 32);
+				if (*dataptr64 != v) {
+					thisline_changed = 1;
+					*dataptr64 = v;
+				}
+				outword64[i] = 0;
+				dataptr += MAX_WORDS_PER_LINE * 2;
 			}
-			outword64[i] = 0;
-			dataptr += MAX_WORDS_PER_LINE * 2;
-		}
-		out_offs += 2;
+			out_offs += 2;
 		}
 		out_nbits = 0;
 	}
@@ -3436,7 +3436,7 @@ static void record_register_change (int hpos, int regno, uae_u16 value)
 		isbrdblank(hpos, bplcon0, value);
 		issprbrd(hpos, bplcon0, value);
 	}
-	record_color_change (hpos, regno + 0x1000, value);
+	record_color_change(hpos, regno + 0x1000, value);
 }
 
 typedef int sprbuf_res_t, cclockres_t, hwres_t,	bplres_t;
@@ -4328,7 +4328,7 @@ void compute_framesync(void)
 	while (cr) {
 		double v = -1;
 		if (!ad->picasso_on && !ad->picasso_requested_on) {
-			if (isvsync_chipset()) {
+			if (isvsync_chipset ()) {
 				if (cr->index == CHIPSET_REFRESH_PAL || cr->index == CHIPSET_REFRESH_NTSC) {
 					if ((fabs(vblank_hz - 50) < 1 || fabs(vblank_hz - 60) < 1 || fabs(vblank_hz - 100) < 1 || fabs(vblank_hz - 120) < 1)) {
 						vsync_switchmode(int(vblank_hz));
@@ -5349,25 +5349,22 @@ static void send_interrupt_do (uae_u32 v)
 void send_interrupt (int num, int delay)
 {
 	if (delay > 0 && (currprefs.cpu_cycle_exact || currprefs.cpu_compatible)) {
-		event2_newevent_xx (-1, delay, num, send_interrupt_do);
+		event2_newevent_xx(-1, delay, num, send_interrupt_do);
 	} else {
 		send_interrupt_do(num);
 	}
 }
 
-static void doint_delay_do (uae_u32 v)
+static void doint_delay_do(uae_u32 v)
 {
 	doint();
 }
 
 static void doint_delay ()
 {
-	if (currprefs.cpu_compatible)
-	{
+	if (currprefs.cpu_compatible) {
 		event2_newevent_xx(-1, CYCLE_UNIT + CYCLE_UNIT / 2, 0, doint_delay_do);
-	}
-	else
-	{
+	} else {
 		doint();
 	}
 }
@@ -5375,17 +5372,23 @@ static void doint_delay ()
 static void INTENA (uae_u16 v)
 {
 	uae_u16 old = intena;
-	setclr (&intena, v);
-	if ((v & 0x8000) && old != intena)
-	{
+	setclr(&intena, v);
+
+	if ((v & 0x8000) && old != intena) {
 		doint_delay();
 	}
+}
+
+static void INTREQ_nodelay (uae_u16 v)
+{
+	setclr(&intreq, v);
+	doint();
 }
 
 void INTREQ_f (uae_u16 v)
 {
 	uae_u16 old = intreq;
-	setclr(&intreq, v);
+	setclr (&intreq, v);
 	if ((old & 0x0800) && !(intreq & 0x0800)) {
 		//serial_rbf_clear();
 	}
@@ -5405,8 +5408,9 @@ bool INTREQ_0 (uae_u16 v)
 
 void INTREQ (uae_u16 data)
 {
-	if (INTREQ_0(data))
-		rethink_intreq ();
+	if (INTREQ_0(data)) {
+		rethink_intreq();
+	}
 }
 
 static void ADKCON (int hpos, uae_u16 v)
@@ -7027,7 +7031,7 @@ void do_copper (void)
 the reason why we want to update the copper.  This function is also
 used from hsync_handler to finish up the line; for this case, we check
 hpos against maxhpos.  */
-STATIC_INLINE void sync_copper_with_cpu(int hpos, int do_schedule, unsigned int addr)
+STATIC_INLINE void sync_copper_with_cpu (int hpos, int do_schedule, unsigned int addr)
 {
 #ifdef AMIBERRY
 	if (eventtab[ev_copper].active) {
