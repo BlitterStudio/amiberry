@@ -78,6 +78,8 @@ static uae_u64 fake_srp_030, fake_crp_030;
 static uae_u32 fake_tt0_030, fake_tt1_030, fake_tc_030;
 static uae_u16 fake_mmusr_030;
 
+int cpu_last_stop_vpos, cpu_stopped_lines;
+
 #if COUNT_INSTRS
 static uae_u32 instrcount[65536];
 static uae_u16 opcodenums[65536];
@@ -602,18 +604,30 @@ STATIC_INLINE uae_u32 adjust_cycles(uae_u32 cycles)
 	return res;
 }
 
+void m68k_cancel_idle(void)
+{
+	cpu_last_stop_vpos = -1;
+}
+
 static void m68k_set_stop(void)
 {
 	if (regs.stopped)
 		return;
 	regs.stopped = 1;
 	set_special(SPCFLAG_STOP);
+	if (cpu_last_stop_vpos >= 0) {
+		cpu_last_stop_vpos = vpos;
+	}
 }
 
 static void m68k_unset_stop(void)
 {
 	regs.stopped = 0;
 	unset_special(SPCFLAG_STOP);
+	if (cpu_last_stop_vpos >= 0) {
+		cpu_stopped_lines += vpos - cpu_last_stop_vpos;
+		cpu_last_stop_vpos = vpos;
+	}
 }
 
 static void activate_trace(void)
@@ -1558,9 +1572,10 @@ static void check_uae_int_request(void)
 	}
 }
 
-void cpu_sleep_millis(int ms)
+int cpu_sleep_millis(int ms)
 {
-	sleep_millis_main(ms);
+	const auto ret = sleep_millis_main(ms);
+	return ret;
 }
 
 static bool haltloop(void)
@@ -1597,8 +1612,6 @@ void doint(void)
 	else
 		set_special(SPCFLAG_DOINT);
 }
-
-static void m68k_resumestopped(void);
 
 static int do_specialties(int cycles)
 {
@@ -2463,7 +2476,7 @@ actually stopping.  */
 	}
 }
 
-static void m68k_resumestopped(void)
+void m68k_resumestopped(void)
 {
 	if (!regs.stopped)
 		return;

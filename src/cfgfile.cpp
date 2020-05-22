@@ -2097,7 +2097,7 @@ void cfgfile_save_options(struct zfile* f, struct uae_prefs* p, int type)
 	}
 	else
 	{
-		cfgfile_write_str(f, _T("cpu_speed"), (p->m68k_speed > -30 ? (p->m68k_speed < 0 ? _T("max") : _T("real")) : "turbo"));
+		cfgfile_write_str(f, _T("cpu_speed"), p->m68k_speed < 0 ? _T("max") : _T("real"));
 	}
 
 	/* do not reorder start */
@@ -4630,19 +4630,19 @@ static int cfgfile_parse_hardware(struct uae_prefs* p, const TCHAR* option, TCHA
 		return 1;
 	}
 
-	if (cfgfile_strval(option, value, _T("cpu_speed"), &p->m68k_speed, speedmode, 1))
-	{
-		if (_tcsicmp(value, _T("max")) == 0)
-			p->m68k_speed = -1;
-		else if (_tcsicmp(value, _T("turbo")) == 0)
-			p->m68k_speed = -30;
-		else
-			p->m68k_speed--;
+	if (cfgfile_strval(option, value, _T("cpu_speed"), &p->m68k_speed, speedmode, 1)) {
+		p->m68k_speed--;
 		return 1;
 	}
 	if (cfgfile_intval(option, value, _T("cpu_speed"), &p->m68k_speed, 1))
 	{
 		p->m68k_speed *= CYCLE_UNIT;
+		return 1;
+	}
+	if (cfgfile_doubleval(option, value, _T("cpu_throttle"), &p->m68k_speed_throttle)) {
+		return 1;
+	}
+	if (cfgfile_doubleval(option, value, _T("cpu_x86_throttle"), &p->x86_speed_throttle)) {
 		return 1;
 	}
 	if (cfgfile_intval(option, value, _T("finegrain_cpu_speed"), &p->m68k_speed, 1))
@@ -4654,8 +4654,9 @@ static int cfgfile_parse_hardware(struct uae_prefs* p, const TCHAR* option, TCHA
 		}
 		if (_tcsicmp(value, _T("max")) == 0)
 			p->m68k_speed = -1;
-		if (_tcsicmp(value, _T("turbo")) == 0)
-			p->m68k_speed = -30;
+		return 1;
+	}
+	if (cfgfile_doubleval(option, value, _T("blitter_throttle"), &p->blitter_speed_throttle)) {
 		return 1;
 	}
 

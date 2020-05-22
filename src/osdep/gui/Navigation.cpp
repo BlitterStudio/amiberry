@@ -111,11 +111,11 @@ static NavigationMap navMap[] =
 	{"CPU internal", "68030", "Fastest", "68882", "FPUstrict"},
 	{"FPUstrict", "68040", "Fastest", "CPU internal", "FPUJIT"},
 	{"FPUJIT", "CPU24Bit", "Fastest", "FPUstrict", "FPUnone"},
-	{"7 Mhz", "FPUnone", "CPU and FPU", "Turbo", "14 Mhz"},
+	{"7 Mhz", "FPUnone", "CPU and FPU", "sldCpuIdle", "14 Mhz"},
 	{"14 Mhz", "FPUnone", "CPU and FPU", "7 Mhz", "25 Mhz"},
 	{"25 Mhz", "FPUnone", "CPU and FPU", "14 Mhz", "Fastest"},
-	{"Fastest", "FPUnone", "CPU and FPU", "25 Mhz", "Turbo"},
-	{"Turbo", "FPUnone", "CPU and FPU", "Fastest", "7 Mhz"},
+	{"Fastest", "FPUnone", "CPU and FPU", "25 Mhz", "sldCpuIdle"},
+	{"sldCpuIdle", "", "", "Fastest", "7 Mhz"},
 
 	// PanelChipset
 	{"OCS", "Chipset", "ChipsetExtra", "CollFull", "ECS Agnus"},

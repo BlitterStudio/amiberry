@@ -31,9 +31,10 @@ static gcn::CheckBox* chkFPUJIT;
 static gcn::Window* grpCPUSpeed;
 static gcn::RadioButton* opt7Mhz;
 static gcn::RadioButton* opt14Mhz;
-static gcn::RadioButton* opt28Mhz;
+static gcn::RadioButton* opt25Mhz;
 static gcn::RadioButton* optFastest;
-static gcn::RadioButton* optTurbo;
+static gcn::Label* lblCpuIdle;
+static gcn::Slider* sldCpuIdle;
 
 class CPUButtonActionListener : public gcn::ActionListener
 {
@@ -127,12 +128,10 @@ public:
 			changed_prefs.m68k_speed = M68K_SPEED_7MHZ_CYCLES;
 		else if (actionEvent.getSource() == opt14Mhz)
 			changed_prefs.m68k_speed = M68K_SPEED_14MHZ_CYCLES;
-		else if (actionEvent.getSource() == opt28Mhz)
+		else if (actionEvent.getSource() == opt25Mhz)
 			changed_prefs.m68k_speed = M68K_SPEED_25MHZ_CYCLES;
 		else if (actionEvent.getSource() == optFastest)
 			changed_prefs.m68k_speed = -1;
-		else if (actionEvent.getSource() == optTurbo)
-			changed_prefs.m68k_speed = -30;
 	}
 };
 
@@ -217,6 +216,23 @@ public:
 
 static FPUActionListener* fpuActionListener;
 
+class CPUIdleSliderActionListener : public gcn::ActionListener
+{
+public:
+	void action(const gcn::ActionEvent& actionEvent) override
+	{
+		if (actionEvent.getSource() == sldCpuIdle)
+		{
+			changed_prefs.cpu_idle = static_cast<int>(sldCpuIdle->getValue());
+			if (changed_prefs.cpu_idle > 0)
+				changed_prefs.cpu_idle = (12 - changed_prefs.cpu_idle) * 15;
+		}
+		RefreshPanelCPU();
+	}
+};
+
+static CPUIdleSliderActionListener* cpuIdleActionListener;
+
 void InitPanelCPU(const struct _ConfigCategory& category)
 {
 	cpuButtonActionListener = new CPUButtonActionListener();
@@ -224,6 +240,7 @@ void InitPanelCPU(const struct _ConfigCategory& category)
 	cpuCompActionListener = new CPUCompActionListener();
 	jitActionListener = new JITActionListener();
 	fpuActionListener = new FPUActionListener();
+	cpuIdleActionListener = new CPUIdleSliderActionListener();
 
 	optCPU68000 = new gcn::RadioButton("68000", "radiocpugroup");
 	optCPU68000->setId("68000");
@@ -321,27 +338,33 @@ void InitPanelCPU(const struct _ConfigCategory& category)
 	opt14Mhz->setId("14 Mhz");
 	opt14Mhz->addActionListener(cpuSpeedButtonActionListener);
 
-	opt28Mhz = new gcn::RadioButton("25 Mhz", "radiocpuspeedgroup");
-	opt28Mhz->setId("25 Mhz");
-	opt28Mhz->addActionListener(cpuSpeedButtonActionListener);
+	opt25Mhz = new gcn::RadioButton("25 Mhz", "radiocpuspeedgroup");
+	opt25Mhz->setId("25 Mhz");
+	opt25Mhz->addActionListener(cpuSpeedButtonActionListener);
 
 	optFastest = new gcn::RadioButton("Fastest", "radiocpuspeedgroup");
 	optFastest->setId("Fastest");
 	optFastest->addActionListener(cpuSpeedButtonActionListener);
 
-	optTurbo = new gcn::RadioButton("Turbo", "radiocpuspeedgroup");
-	optTurbo->setId("Turbo");
-	optTurbo->addActionListener(cpuSpeedButtonActionListener);
+	lblCpuIdle = new gcn::Label("CPU Idle");
+	sldCpuIdle = new gcn::Slider(0, 10);
+	sldCpuIdle->setSize(70, SLIDER_HEIGHT);
+	sldCpuIdle->setBaseColor(gui_baseCol);
+	sldCpuIdle->setMarkerLength(20);
+	sldCpuIdle->setStepLength(1);
+	sldCpuIdle->setId("sldCpuIdle");
+	sldCpuIdle->addActionListener(cpuIdleActionListener);
 
 	grpCPUSpeed = new gcn::Window("CPU Speed");
 	grpCPUSpeed->setPosition(grpFPU->getX() + grpFPU->getWidth() + DISTANCE_NEXT_X, DISTANCE_BORDER);
 	grpCPUSpeed->add(opt7Mhz, 5, 10);
 	grpCPUSpeed->add(opt14Mhz, 5, 40);
-	grpCPUSpeed->add(opt28Mhz, 5, 70);
+	grpCPUSpeed->add(opt25Mhz, 5, 70);
 	grpCPUSpeed->add(optFastest, 5, 100);
-	grpCPUSpeed->add(optTurbo, 5, 130);
+	grpCPUSpeed->add(lblCpuIdle, 5, 170);
+	grpCPUSpeed->add(sldCpuIdle, lblCpuIdle->getWidth() + 10, 170);
 	grpCPUSpeed->setMovable(false);
-	grpCPUSpeed->setSize(100, 200);
+	grpCPUSpeed->setSize(180, 250);
 	grpCPUSpeed->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpCPUSpeed->setBaseColor(gui_baseCol);
 
@@ -379,9 +402,12 @@ void ExitPanelCPU()
 
 	delete opt7Mhz;
 	delete opt14Mhz;
-	delete opt28Mhz;
+	delete opt25Mhz;
 	delete optFastest;
-	delete optTurbo;
+	delete lblCpuIdle;
+	delete sldCpuIdle;
+	delete cpuIdleActionListener;
+	
 	delete grpCPUSpeed;
 	delete cpuSpeedButtonActionListener;
 }
@@ -441,11 +467,11 @@ void RefreshPanelCPU()
 	else if (changed_prefs.m68k_speed == M68K_SPEED_14MHZ_CYCLES)
 		opt14Mhz->setSelected(true);
 	else if (changed_prefs.m68k_speed == M68K_SPEED_25MHZ_CYCLES)
-		opt28Mhz->setSelected(true);
+		opt25Mhz->setSelected(true);
 	else if (changed_prefs.m68k_speed == -1)
 		optFastest->setSelected(true);
-	else if (changed_prefs.m68k_speed == -30)
-		optTurbo->setSelected(true);
+
+	sldCpuIdle->setValue(changed_prefs.cpu_idle == 0 ? 0 : 12 - changed_prefs.cpu_idle / 15);
 }
 
 bool HelpPanelCPU(std::vector<std::string>& helptext)
@@ -463,9 +489,12 @@ bool HelpPanelCPU(std::vector<std::string>& helptext)
 	helptext.emplace_back("The option \"More compatible\" activates more accurate rounding and compare of two floats.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("With \"CPU Speed\" you can choose the clock rate of the emulated Amiga.");
-	helptext.emplace_back("Use 7MHz for A500 or 14MHz for A1200 speed. Fastest uses more emulation time");
-	helptext.emplace_back("for the CPU, and Turbo will give only the minimum time to the Chipset, using as");
-	helptext.emplace_back("much as possible for the CPU, usually resulting in dropping frames also.");
+	helptext.emplace_back("Use 7MHz for A500 or 14MHz for A1200 speed. Fastest Possible will give only the minimum time");
+	helptext.emplace_back("to the Chipset, using as much as possible for the CPU, which might result in dropping");
+	helptext.emplace_back("frames also.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("You can use the CPU Idle slider to set how much the CPU emulation should sleep when idle.");
+	helptext.emplace_back("This is useful to keep the system temperature down.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("In current version, you will not see a difference in the performance for 68020,");
 	helptext.emplace_back("68030 and 68040 CPUs. The CPU cycles for the opcodes are based on 68020. The different");

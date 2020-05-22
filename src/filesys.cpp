@@ -45,6 +45,7 @@
 #include "bsdsocket.h"
 #include "uaeresource.h"
 #include "inputdevice.h"
+#include "newcpu.h"
 #include "picasso96.h"
 #include "rommgr.h"
 
@@ -5444,99 +5445,103 @@ end:
   return 0;
 }
 
-static int handle_packet(TrapContext *ctx, Unit *unit, dpacket *pck, uae_u32 msg, int isvolume)
+static int handle_packet(TrapContext* ctx, Unit* unit, dpacket* pck, uae_u32 msg, int isvolume)
 {
+	bool noidle = false;
 	int ret = 1;
-  uae_s32 type = GET_PCK_TYPE (pck);
-  PUT_PCK_RES2 (pck, 0);
+	uae_s32 type = GET_PCK_TYPE(pck);
+	PUT_PCK_RES2(pck, 0);
 
 	if (unit->inhibited && isvolume
-	&& type != ACTION_INHIBIT && type != ACTION_MORE_CACHE
-	&& type != ACTION_DISK_INFO) {
-  	PUT_PCK_RES1 (pck, DOS_FALSE);
-  	PUT_PCK_RES2 (pck, ERROR_NOT_A_DOS_DISK);
-  	return 1;
-  }
-  if (type != ACTION_INHIBIT && type != ACTION_CURRENT_VOLUME
-	&& type != ACTION_IS_FILESYSTEM && type != ACTION_MORE_CACHE
-	&& type != ACTION_WRITE_PROTECT && type != ACTION_DISK_INFO
+		&& type != ACTION_INHIBIT && type != ACTION_MORE_CACHE
+		&& type != ACTION_DISK_INFO) {
+		PUT_PCK_RES1(pck, DOS_FALSE);
+		PUT_PCK_RES2(pck, ERROR_NOT_A_DOS_DISK);
+		return 1;
+	}
+	if (type != ACTION_INHIBIT && type != ACTION_CURRENT_VOLUME
+		&& type != ACTION_IS_FILESYSTEM && type != ACTION_MORE_CACHE
+		&& type != ACTION_WRITE_PROTECT && type != ACTION_DISK_INFO
 		&& !isvolume) {
-  	PUT_PCK_RES1 (pck, DOS_FALSE);
-		PUT_PCK_RES2 (pck, unit->ui.unknown_media ? ERROR_NOT_A_DOS_DISK : ERROR_NO_DISK);
-  	return 1;
-  }
-    
-  switch (type) {
-	  case ACTION_LOCATE_OBJECT: action_lock (ctx, unit, pck); break;
-	  case ACTION_FREE_LOCK: action_free_lock (ctx, unit, pck); break;
-	  case ACTION_COPY_DIR: action_dup_lock (ctx, unit, pck); break;
-	  case ACTION_DISK_INFO: action_disk_info (ctx, unit, pck); break;
-	  case ACTION_INFO: action_info (ctx, unit, pck); break;
-	  case ACTION_EXAMINE_OBJECT: action_examine_object (ctx, unit, pck); break;
-	  case ACTION_EXAMINE_NEXT: action_examine_next (ctx, unit, pck, false); break;
-	  case ACTION_FIND_INPUT: action_find_input (ctx, unit, pck); break;
-	  case ACTION_FIND_WRITE: action_find_write (ctx, unit, pck); break;
-	  case ACTION_FIND_OUTPUT: action_find_output (ctx, unit, pck); break;
-	  case ACTION_END: action_end (ctx, unit, pck); break;
-	  case ACTION_READ: action_read(ctx, unit, pck); break;
-	  case ACTION_WRITE: action_write (ctx, unit, pck); break;
-	  case ACTION_SEEK: action_seek (ctx, unit, pck); break;
-	  case ACTION_SET_PROTECT: action_set_protect (ctx, unit, pck); break;
-	  case ACTION_SET_COMMENT: action_set_comment (ctx, unit, pck); break;
-	  case ACTION_SAME_LOCK: action_same_lock (ctx, unit, pck); break;
-	  case ACTION_PARENT: action_parent (ctx, unit, pck); break;
-	  case ACTION_CREATE_DIR: action_create_dir (ctx, unit, pck); break;
-	  case ACTION_DELETE_OBJECT: action_delete_object (ctx, unit, pck); break;
-	  case ACTION_RENAME_OBJECT: action_rename_object (ctx, unit, pck); break;
-	  case ACTION_SET_DATE: action_set_date (ctx, unit, pck); break;
-	  case ACTION_CURRENT_VOLUME: action_current_volume (ctx, unit, pck); break;
-	  case ACTION_RENAME_DISK: action_rename_disk (ctx, unit, pck); break;
-	  case ACTION_IS_FILESYSTEM: action_is_filesystem (ctx, unit, pck); break;
-	  case ACTION_FLUSH: action_flush (ctx, unit, pck); break;
-	  case ACTION_MORE_CACHE: action_more_cache (ctx, unit, pck); break;
-	  case ACTION_INHIBIT: action_inhibit (ctx, unit, pck); break;
-	  case ACTION_WRITE_PROTECT: action_write_protect (ctx, unit, pck); break;
-     
-    /* 2.0+ packet types */
-	  case ACTION_SET_FILE_SIZE: action_set_file_size (ctx, unit, pck); break;
-	  case ACTION_EXAMINE_FH: action_examine_fh (ctx, unit, pck, false); break;
-	  case ACTION_FH_FROM_LOCK: action_fh_from_lock (ctx, unit, pck); break;
-	  case ACTION_COPY_DIR_FH: action_lock_from_fh (ctx, unit, pck); break;
-	  case ACTION_CHANGE_MODE: action_change_mode (ctx, unit, pck); break;
-	  case ACTION_PARENT_FH: action_parent_fh (ctx, unit, pck); break;
-	  case ACTION_ADD_NOTIFY: action_add_notify (ctx, unit, pck); break;
-	  case ACTION_REMOVE_NOTIFY: action_remove_notify (ctx, unit, pck); break;
-	  case ACTION_EXAMINE_ALL: ret = action_examine_all(ctx, unit, pck); break;
-	  case ACTION_EXAMINE_ALL_END: ret = action_examine_all_end(ctx, unit, pck); break;
-	  case ACTION_LOCK_RECORD: ret = action_lock_record (ctx, unit, pck, msg); break;
-	  case ACTION_FREE_RECORD: action_free_record (ctx, unit, pck); break;
+		PUT_PCK_RES1(pck, DOS_FALSE);
+		PUT_PCK_RES2(pck, unit->ui.unknown_media ? ERROR_NOT_A_DOS_DISK : ERROR_NO_DISK);
+		return 1;
+	}
+
+	switch (type) {
+	case ACTION_LOCATE_OBJECT: action_lock(ctx, unit, pck); break;
+	case ACTION_FREE_LOCK: action_free_lock(ctx, unit, pck); break;
+	case ACTION_COPY_DIR: action_dup_lock(ctx, unit, pck); break;
+	case ACTION_DISK_INFO: action_disk_info(ctx, unit, pck); break;
+	case ACTION_INFO: action_info(ctx, unit, pck); break;
+	case ACTION_EXAMINE_OBJECT: action_examine_object(ctx, unit, pck); break;
+	case ACTION_EXAMINE_NEXT: noidle = true; action_examine_next(ctx, unit, pck, false); break;
+	case ACTION_FIND_INPUT: action_find_input(ctx, unit, pck); break;
+	case ACTION_FIND_WRITE: action_find_write(ctx, unit, pck); break;
+	case ACTION_FIND_OUTPUT: action_find_output(ctx, unit, pck); break;
+	case ACTION_END: action_end(ctx, unit, pck); break;
+	case ACTION_READ: noidle = true; action_read(ctx, unit, pck); break;
+	case ACTION_WRITE: noidle = true; action_write(ctx, unit, pck); break;
+	case ACTION_SEEK: action_seek(ctx, unit, pck); break;
+	case ACTION_SET_PROTECT: action_set_protect(ctx, unit, pck); break;
+	case ACTION_SET_COMMENT: action_set_comment(ctx, unit, pck); break;
+	case ACTION_SAME_LOCK: action_same_lock(ctx, unit, pck); break;
+	case ACTION_PARENT: action_parent(ctx, unit, pck); break;
+	case ACTION_CREATE_DIR: action_create_dir(ctx, unit, pck); break;
+	case ACTION_DELETE_OBJECT: action_delete_object(ctx, unit, pck); break;
+	case ACTION_RENAME_OBJECT: action_rename_object(ctx, unit, pck); break;
+	case ACTION_SET_DATE: action_set_date(ctx, unit, pck); break;
+	case ACTION_CURRENT_VOLUME: action_current_volume(ctx, unit, pck); break;
+	case ACTION_RENAME_DISK: action_rename_disk(ctx, unit, pck); break;
+	case ACTION_IS_FILESYSTEM: action_is_filesystem(ctx, unit, pck); break;
+	case ACTION_FLUSH: action_flush(ctx, unit, pck); break;
+	case ACTION_MORE_CACHE: action_more_cache(ctx, unit, pck); break;
+	case ACTION_INHIBIT: action_inhibit(ctx, unit, pck); break;
+	case ACTION_WRITE_PROTECT: action_write_protect(ctx, unit, pck); break;
+
+		/* 2.0+ packet types */
+	case ACTION_SET_FILE_SIZE: action_set_file_size(ctx, unit, pck); break;
+	case ACTION_EXAMINE_FH: action_examine_fh(ctx, unit, pck, false); break;
+	case ACTION_FH_FROM_LOCK: action_fh_from_lock(ctx, unit, pck); break;
+	case ACTION_COPY_DIR_FH: action_lock_from_fh(ctx, unit, pck); break;
+	case ACTION_CHANGE_MODE: action_change_mode(ctx, unit, pck); break;
+	case ACTION_PARENT_FH: action_parent_fh(ctx, unit, pck); break;
+	case ACTION_ADD_NOTIFY: action_add_notify(ctx, unit, pck); break;
+	case ACTION_REMOVE_NOTIFY: action_remove_notify(ctx, unit, pck); break;
+	case ACTION_EXAMINE_ALL: noidle = true; ret = action_examine_all(ctx, unit, pck); break;
+	case ACTION_EXAMINE_ALL_END: ret = action_examine_all_end(ctx, unit, pck); break;
+	case ACTION_LOCK_RECORD: ret = action_lock_record(ctx, unit, pck, msg); break;
+	case ACTION_FREE_RECORD: action_free_record(ctx, unit, pck); break;
 
 		/* OS4 packet types */
-	  case ACTION_FILESYSTEM_ATTR: action_filesystem_attr(ctx, unit, pck); break;
-	  case ACTION_CHANGE_FILE_POSITION64: action_change_file_position64 (ctx, unit, pck); break;
-	  case ACTION_GET_FILE_POSITION64: action_get_file_position64 (ctx, unit, pck); break;
-	  case ACTION_CHANGE_FILE_SIZE64: action_change_file_size64 (ctx, unit, pck); break;
-	  case ACTION_GET_FILE_SIZE64: action_get_file_size64 (ctx, unit, pck); break;
+	case ACTION_FILESYSTEM_ATTR: action_filesystem_attr(ctx, unit, pck); break;
+	case ACTION_CHANGE_FILE_POSITION64: action_change_file_position64(ctx, unit, pck); break;
+	case ACTION_GET_FILE_POSITION64: action_get_file_position64(ctx, unit, pck); break;
+	case ACTION_CHANGE_FILE_SIZE64: action_change_file_size64(ctx, unit, pck); break;
+	case ACTION_GET_FILE_SIZE64: action_get_file_size64(ctx, unit, pck); break;
 
 		/* MOS packet types */
-	  case ACTION_SEEK64: action_seek64(ctx, unit, pck); break;
-	  case ACTION_SET_FILE_SIZE64: action_set_file_size64(ctx, unit, pck); break;
-	  case ACTION_EXAMINE_OBJECT64: action_examine_object64(ctx, unit, pck); break;
-	  case ACTION_EXAMINE_NEXT64: action_examine_next(ctx, unit, pck, true); break;
-	  case ACTION_EXAMINE_FH64: action_examine_fh(ctx, unit, pck, true); break;
-	  case ACTION_LOCK_RECORD64: ret = action_lock_record64(ctx, unit, pck, msg); break;
-	  case ACTION_FREE_RECORD64: action_free_record64(ctx, unit, pck); break;
+	case ACTION_SEEK64: action_seek64(ctx, unit, pck); break;
+	case ACTION_SET_FILE_SIZE64: action_set_file_size64(ctx, unit, pck); break;
+	case ACTION_EXAMINE_OBJECT64: action_examine_object64(ctx, unit, pck); break;
+	case ACTION_EXAMINE_NEXT64: noidle = true; action_examine_next(ctx, unit, pck, true); break;
+	case ACTION_EXAMINE_FH64: action_examine_fh(ctx, unit, pck, true); break;
+	case ACTION_LOCK_RECORD64: ret = action_lock_record64(ctx, unit, pck, msg); break;
+	case ACTION_FREE_RECORD64: action_free_record64(ctx, unit, pck); break;
 
-    /* unsupported packets */
-    case ACTION_MAKE_LINK:
-    case ACTION_READ_LINK:
-    case ACTION_FORMAT:
-		  write_log (_T("FILESYS: UNSUPPORTED PACKET %x\n"), type);
-	    return 0;
-    default:
-		  write_log (_T("FILESYS: UNKNOWN PACKET %x\n"), type);
-		  return 0;
-  }
+		/* unsupported packets */
+	case ACTION_MAKE_LINK:
+	case ACTION_READ_LINK:
+	case ACTION_FORMAT:
+		write_log(_T("FILESYS: UNSUPPORTED PACKET %x\n"), type);
+		return 0;
+	default:
+		write_log(_T("FILESYS: UNKNOWN PACKET %x\n"), type);
+		return 0;
+	}
+	if (noidle) {
+		m68k_cancel_idle();
+	}
 	return ret;
 }
 

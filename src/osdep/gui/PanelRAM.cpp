@@ -56,46 +56,46 @@ public:
 	{
 		if (actionEvent.getSource() == sldChipmem)
 		{
-			changed_prefs.chipmem_size = ChipMem_values[int(sldChipmem->getValue())];
+			changed_prefs.chipmem_size = ChipMem_values[static_cast<int>(sldChipmem->getValue())];
 			if ((changed_prefs.chipmem_size > 0x200000) && (changed_prefs.fastmem[0].size > 0))
 				changed_prefs.fastmem[0].size = 0;
 		}
 
 		if (actionEvent.getSource() == sldSlowmem)
 		{
-			changed_prefs.bogomem_size = SlowMem_values[int(sldSlowmem->getValue())];
+			changed_prefs.bogomem_size = SlowMem_values[static_cast<int>(sldSlowmem->getValue())];
 		}
 
 		if (actionEvent.getSource() == sldFastmem)
 		{
-			changed_prefs.fastmem[0].size = FastMem_values[int(sldFastmem->getValue())];
+			changed_prefs.fastmem[0].size = FastMem_values[static_cast<int>(sldFastmem->getValue())];
 			if (changed_prefs.fastmem[0].size > 0 && changed_prefs.chipmem_size > 0x200000)
 				changed_prefs.chipmem_size = 0x200000;
 		}
 
 		if (actionEvent.getSource() == sldZ3mem)
 		{
-			changed_prefs.z3fastmem[0].size = FastMem_values[int(sldZ3mem->getValue())];
+			changed_prefs.z3fastmem[0].size = FastMem_values[static_cast<int>(sldZ3mem->getValue())];
 			if (changed_prefs.z3fastmem[0].size > max_z3fastmem)
 				changed_prefs.z3fastmem[0].size = max_z3fastmem;
 		}
 
 		if (actionEvent.getSource() == sldGfxmem)
 		{
-			changed_prefs.rtgboards[0].rtgmem_size = FastMem_values[int(sldGfxmem->getValue())];
+			changed_prefs.rtgboards[0].rtgmem_size = FastMem_values[static_cast<int>(sldGfxmem->getValue())];
 			changed_prefs.rtgboards[0].rtgmem_type = GFXBOARD_UAE_Z3;
 		}
 
 		if (actionEvent.getSource() == sldA3000Lowmem)
 		{
-			changed_prefs.mbresmem_low_size = A3000LowMem_values[int(sldA3000Lowmem->getValue())];
+			changed_prefs.mbresmem_low_size = A3000LowMem_values[static_cast<int>(sldA3000Lowmem->getValue())];
 			if (currprefs.mbresmem_low_size != changed_prefs.mbresmem_low_size)
 				DisableResume();
 		}
 
 		if (actionEvent.getSource() == sldA3000Highmem)
 		{
-			changed_prefs.mbresmem_high_size = A3000HighMem_values[int(sldA3000Highmem->getValue())];
+			changed_prefs.mbresmem_high_size = A3000HighMem_values[static_cast<int>(sldA3000Highmem->getValue())];
 			if (currprefs.mbresmem_high_size != changed_prefs.mbresmem_high_size)
 				DisableResume();
 		}

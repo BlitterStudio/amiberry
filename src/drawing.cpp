@@ -4204,13 +4204,13 @@ void drawing_init(void)
 	reset_drawing();
 }
 
-//int isvsync_chipset(void)
-//{
-//	struct amigadisplay *ad = &adisplays;
-//	if (ad->picasso_on)
-//		return 0;
-//	return 1;
-//}
+int isvsync_chipset(void)
+{
+	struct amigadisplay *ad = &adisplays;
+	if (ad->picasso_on)
+		return 0;
+	return 1;
+}
 
 int isvsync_rtg(void)
 {

@@ -127,33 +127,11 @@ void set_key_configs(struct uae_prefs* p)
 int speedup_cycles_jit_pal = 18000;
 int speedup_cycles_jit_ntsc = 15000;
 int speedup_cycles_nonjit = 1024;
-// These are set to give enough time to hit 60 fps
-// on the ASUS tinker board, and giving the rest of the
-// time to the CPU (minus the 10% reserve above).
-// As these numbers are decreased towards -(SPEEDUP_CYCLES),
-// more chipset time is given and the CPU gets slower.
-// For your platform its best to tune these to the point where
-// you hit 60FPS in NTSC and not higher.
-// Do not tune above -(SPEEDUP_CYCLES) or the emulation will
-// become unstable.
-int speedup_timelimit_jit = -10000;
-int speedup_timelimit_nonjit = -960;
-// These define the maximum CPU possible and work well with
-// frameskip on and operation at 30fps at full chipset speed
-// They give the minimum possible chipset time.  Do not make
-// these positive numbers.  Doing so may give you a 500mhz
-// 68040 but your emulation will not be able to reset at this
-// speed.
-int speedup_timelimit_jit_turbo = 0;
-int speedup_timelimit_nonjit_turbo = 0;
+
 #else
 int speedup_cycles_jit_pal = 10000;
 int speedup_cycles_jit_ntsc = 6667;
 int speedup_cycles_nonjit = 256;
-int speedup_timelimit_jit = -5000;
-int speedup_timelimit_nonjit = -5000;
-int speedup_timelimit_jit_turbo = 0;
-int speedup_timelimit_nonjit_turbo = 0;
 #endif
 
 extern void signal_segv(int signum, siginfo_t* info, void* ptr);
@@ -522,6 +500,7 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_write_bool(f, _T("amiberry.use_retroarch_menu"), p->use_retroarch_menu);
 	cfgfile_write_bool(f, _T("amiberry.use_retroarch_reset"), p->use_retroarch_reset);
 
+	cfgfile_target_dwrite(f, _T("cpu_idle"), _T("%d"), p->cpu_idle);
 #ifdef ANDROID
 	cfgfile_write(f, "amiberry.onscreen", "%d", p->onScreen);
 	cfgfile_write(f, "amiberry.onscreen_textinput", "%d", p->onScreen_textinput);
@@ -628,6 +607,8 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 	if (cfgfile_string(option, value, "action_replay", p->action_replay, sizeof p->action_replay))
 		return 1;
 	if (cfgfile_string(option, value, "fullscreen_toggle", p->fullscreen_toggle, sizeof p->fullscreen_toggle))
+		return 1;
+	if (cfgfile_intval(option, value, _T("cpu_idle"), &p->cpu_idle, 1))
 		return 1;
 	return 0;
 }
@@ -956,14 +937,6 @@ void save_amiberry_settings(void)
 	fputs(buffer, f);
 	snprintf(buffer, MAX_DPATH, "speedup_cycles_nonjit=%d\n", speedup_cycles_nonjit);
 	fputs(buffer, f);
-	snprintf(buffer, MAX_DPATH, "speedup_timelimit_jit=%d\n", speedup_timelimit_jit);
-	fputs(buffer, f);
-	snprintf(buffer, MAX_DPATH, "speedup_timelimit_nonjit=%d\n", speedup_timelimit_nonjit);
-	fputs(buffer, f);
-	snprintf(buffer, MAX_DPATH, "speedup_timelimit_jit_turbo=%d\n", speedup_timelimit_jit_turbo);
-	fputs(buffer, f);
-	snprintf(buffer, MAX_DPATH, "speedup_timelimit_nonjit_turbo=%d\n", speedup_timelimit_nonjit_turbo);
-	fputs(buffer, f);
 
 	// Paths
 	snprintf(buffer, MAX_DPATH, "path=%s\n", currentDir);
@@ -1167,10 +1140,6 @@ void load_amiberry_settings(void)
 					cfgfile_intval(option, value, "speedup_cycles_jit_pal", &speedup_cycles_jit_pal, 1);
 					cfgfile_intval(option, value, "speedup_cycles_jit_ntsc", &speedup_cycles_jit_ntsc, 1);
 					cfgfile_intval(option, value, "speedup_cycles_nonjit", &speedup_cycles_nonjit, 1);
-					cfgfile_intval(option, value, "speedup_timelimit_jit", &speedup_timelimit_jit, 1);
-					cfgfile_intval(option, value, "speedup_timelimit_nonjit", &speedup_timelimit_nonjit, 1);
-					cfgfile_intval(option, value, "speedup_timelimit_jit_turbo", &speedup_timelimit_jit_turbo, 1);
-					cfgfile_intval(option, value, "speedup_timelimit_nonjit_turbo", &speedup_timelimit_nonjit_turbo, 1);
 				}
 			}
 		}

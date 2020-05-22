@@ -355,9 +355,11 @@ static void check_channel_mods (int hpos, int ch)
 // (or cycle where last D write would have been if
 // ONEDOT was active)
 
-static void blitter_interrupt (void)
+static void blitter_interrupt (int done)
 {
 	if (blit_interrupt)
+		return;
+	if (!done && (!blitter_cycle_exact || immediate_blits || currprefs.cpu_model >= 68030 || currprefs.cachesize || currprefs.m68k_speed < 0))
 		return;
 	blit_interrupt = 1;
 	send_interrupt (6);
@@ -367,7 +369,7 @@ static void blitter_done (int hpos)
 {
 	ddat1use = ddat2use = 0;
 	bltstate = blit_startcycles == 0 || !blitter_cycle_exact || immediate_blits ? BLT_done : BLT_init;
-	blitter_interrupt ();
+	blitter_interrupt (1);
 	blitter_done_notify (hpos);
 	event2_remevent (ev2_blitter);
 	unset_special (SPCFLAG_BLTNASTY);
@@ -855,6 +857,15 @@ void decide_blitter (int hpos)
 			blitter_doit();
 		return;
 	}
+
+	if (bltstate == BLT_done)
+		return;
+
+	if (!blitter_cycle_exact)
+		return;
+
+	if (hpos < 0)
+		hpos = maxhpos;
 }
 
 static void blitter_force_finish(void)
