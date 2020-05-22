@@ -978,7 +978,7 @@ void save_amiberry_settings(void)
 	snprintf(buffer, MAX_DPATH, "retroarch_config=%s\n", retroarch_file);
 	fputs(buffer, f);
 
-	snprintf(buffer, MAX_DPATH, "logilfe_path=%s\n", logfile_path);
+	snprintf(buffer, MAX_DPATH, "logfile_path=%s\n", logfile_path);
 	fputs(buffer, f);
 
 	snprintf(buffer, MAX_DPATH, "rom_path=%s\n", rom_path);
