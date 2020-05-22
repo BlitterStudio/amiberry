@@ -1989,6 +1989,7 @@ void m68k_go(int may_quit)
 
 	reset_frame_rate_hack();
 	update_68k_cycles();
+	set_speedup_values();
 
 	cpu_prefs_changed_flag = 0;
 	in_m68k_go++;

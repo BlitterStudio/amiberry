@@ -75,7 +75,7 @@ static void uae_abort (const TCHAR *format,...)
 }
 
 #ifdef AMIBERRY
-int pissoff_value = speedup_cycles_jit_pal * CYCLE_UNIT;
+int pissoff_value = 0;
 #endif
 
 static unsigned int n_consecutive_skipped = 0;
