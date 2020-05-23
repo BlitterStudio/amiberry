@@ -1764,8 +1764,8 @@ void cfgfile_save_options(struct zfile* f, struct uae_prefs* p, int type)
 
 	for (i = 0; i < MAX_JPORTS; i++)
 	{
-		struct jport* jp = &p->jports[i];
-		int v = jp->id;
+		auto* jp = &p->jports[i];
+		auto v = jp->id;
 		TCHAR tmp1[MAX_DPATH], tmp2[MAX_DPATH];
 		if (v == JPORT_NONE)
 		{
@@ -1836,7 +1836,7 @@ void cfgfile_save_options(struct zfile* f, struct uae_prefs* p, int type)
 
 			// this allows us to go through the available function keys
 			// currently only 'none' and 'hotkey'
-			for (int m = 0; m < 2; ++m)
+			for (auto m = 0; m < 2; ++m)
 			{
 				switch (m)
 				{
@@ -1855,9 +1855,9 @@ void cfgfile_save_options(struct zfile* f, struct uae_prefs* p, int type)
 				}
 
 				// get all of the custom actions
-				for (int n = 0; n < 14; ++n) // loop through all buttons
+				for (auto n = 0; n < 14; ++n) // loop through all buttons
 				{
-					int b = 0;
+					auto b = 0;
 					switch (n)
 					{
 					case 0:
@@ -2319,23 +2319,23 @@ void cfgfile_save_options(struct zfile* f, struct uae_prefs* p, int type)
 	cfgfile_dwrite_str(f, _T("uaeboard"), uaeboard[p->uaeboard]);
         
 #ifdef AMIBERRY
-        cfg_write(_T("; "), f);
+	cfg_write(_T("; "), f);
 	cfg_write(_T("; *** WHDLoad Booter. Options"), f);
 	cfg_write(_T("; "), f);
-        
-        //cfgfile_dwrite_bool , cfgfile_dwrite  , cfgfile_dwrite_str
-        // i think these ^^ will only write if there is a variable to be written
-        // which we will want, after testing.
 
-        cfgfile_write_str (f, _T("whdload_slave"), p->whdbootprefs.slave);
-        cfgfile_write_bool (f, _T("whdload_showsplash"), p->whdbootprefs.showsplash);
-        cfgfile_write_bool (f, _T("whdload_buttonwait"), p->whdbootprefs.buttonwait);
-        cfgfile_write (f, _T("whdload_custom1"), _T("%d"), p->whdbootprefs.custom1);
-        cfgfile_write (f, _T("whdload_custom2"), _T("%d"), p->whdbootprefs.custom2);
-        cfgfile_write (f, _T("whdload_custom3"), _T("%d"), p->whdbootprefs.custom3);
-        cfgfile_write (f, _T("whdload_custom4"), _T("%d"), p->whdbootprefs.custom4);
-        cfgfile_write (f, _T("whdload_custom5"), _T("%d"), p->whdbootprefs.custom5);
-        cfgfile_write_str (f, _T("whdload_custom"), p->whdbootprefs.custom);       
+	//cfgfile_dwrite_bool , cfgfile_dwrite  , cfgfile_dwrite_str
+	// i think these ^^ will only write if there is a variable to be written
+	// which we will want, after testing.
+
+	cfgfile_write_str(f, _T("whdload_slave"), p->whdbootprefs.slave);
+	cfgfile_write_bool(f, _T("whdload_showsplash"), p->whdbootprefs.showsplash);
+	cfgfile_write_bool(f, _T("whdload_buttonwait"), p->whdbootprefs.buttonwait);
+	cfgfile_write(f, _T("whdload_custom1"), _T("%d"), p->whdbootprefs.custom1);
+	cfgfile_write(f, _T("whdload_custom2"), _T("%d"), p->whdbootprefs.custom2);
+	cfgfile_write(f, _T("whdload_custom3"), _T("%d"), p->whdbootprefs.custom3);
+	cfgfile_write(f, _T("whdload_custom4"), _T("%d"), p->whdbootprefs.custom4);
+	cfgfile_write(f, _T("whdload_custom5"), _T("%d"), p->whdbootprefs.custom5);
+	cfgfile_write_str(f, _T("whdload_custom"), p->whdbootprefs.custom);
 #endif
 }
 
@@ -2830,11 +2830,11 @@ static int cfgfile_parse_host(struct uae_prefs* p, TCHAR* option, TCHAR* value)
 
 #ifdef AMIBERRY
 	// custom options LOADING
-	for (int i = 0; i < 4; ++i) // Loop 1 ... all 4 joyports
+	for (auto i = 0; i < 4; ++i) // Loop 1 ... all 4 joyports
 	{
 		struct joypad_map_layout tempcustom = {};
 
-		for (int m = 0; m < 2; ++m) // Loop 2 ... none/hotkey function keys
+		for (auto m = 0; m < 2; ++m) // Loop 2 ... none/hotkey function keys
 		{
 			if (m == 0)
 			{
@@ -2847,14 +2847,14 @@ static int cfgfile_parse_host(struct uae_prefs* p, TCHAR* option, TCHAR* value)
 				tempcustom = p->jports[i].amiberry_custom_hotkey;
 			}
 
-			for (int n = 0; n < 14; ++n) // Loop 3 ... all 14 buttons
+			for (auto n = 0; n < 14; ++n) // Loop 3 ... all 14 buttons
 			{
 				_stprintf(tmpbuf, "joyport%d_amiberry_custom_%s_%s", i, tmp1, button_remap_name[n]);
 
 				// this is where we need to check if we have this particular option!!
 				if (!_tcsncmp(option, _T(tmpbuf), sizeof(tmpbuf) / sizeof(TCHAR)))
 				{
-					int b = 0;
+					auto b = 0;
 					if (find_inputevent(value) > -1) { b = RemapEventList[find_inputevent(value)]; }
 					//else {b=0;}
 
@@ -2889,15 +2889,15 @@ static int cfgfile_parse_host(struct uae_prefs* p, TCHAR* option, TCHAR* value)
 	} // close loop 1
         
 	/* Read in WHDLoad Options  */
-	if (cfgfile_string(option, value, _T("whdload_slave"),  p-> whdbootprefs.slave, sizeof p-> whdbootprefs.slave / sizeof (TCHAR))
-		|| cfgfile_string(option, value, _T("whdload_custom"),  p-> whdbootprefs.custom, sizeof p-> whdbootprefs.custom / sizeof (TCHAR))
+	if (cfgfile_string(option, value, _T("whdload_slave"), p->whdbootprefs.slave, sizeof p->whdbootprefs.slave / sizeof(TCHAR))
+		|| cfgfile_string(option, value, _T("whdload_custom"), p->whdbootprefs.custom, sizeof p->whdbootprefs.custom / sizeof(TCHAR))
 		|| cfgfile_intval(option, value, _T("whdload_custom1"), &p->whdbootprefs.custom1, 1)
 		|| cfgfile_intval(option, value, _T("whdload_custom2"), &p->whdbootprefs.custom2, 1)
 		|| cfgfile_intval(option, value, _T("whdload_custom3"), &p->whdbootprefs.custom3, 1)
 		|| cfgfile_intval(option, value, _T("whdload_custom4"), &p->whdbootprefs.custom4, 1)
 		|| cfgfile_intval(option, value, _T("whdload_custom5"), &p->whdbootprefs.custom5, 1)
-		|| cfgfile_yesno(option, value, _T("whdload_buttonwait"), &p-> whdbootprefs.buttonwait)
-		|| cfgfile_yesno(option, value, _T("whdload_showsplash"), &p-> whdbootprefs.showsplash)
+		|| cfgfile_yesno(option, value, _T("whdload_buttonwait"), &p->whdbootprefs.buttonwait)
+		|| cfgfile_yesno(option, value, _T("whdload_showsplash"), &p->whdbootprefs.showsplash)
 		)
 	{
 		return 1;
