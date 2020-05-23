@@ -480,6 +480,21 @@ struct monconfig
 	struct wh gfx_size_fs_xtra[6];
 };
 
+#ifdef AMIBERRY
+struct whdbooter
+{
+	int custom1 = 0;
+	int custom2 = 0;
+	int custom3 = 0;
+	int custom4 = 0;
+	int custom5 = 0;
+	TCHAR custom[256];
+	bool buttonwait;
+	TCHAR slave[4096];
+        bool showsplash;
+};
+#endif
+
 struct uae_prefs {
 
 	struct strlist *all_lines;
@@ -867,8 +882,12 @@ struct uae_prefs {
 	bool use_retroarch_reset;
 	bool use_retroarch_statebuttons;
 
+        // probably can be removed now? unless they are used by the new whd selector
 	TCHAR whdload_path[MAX_DPATH];
 	TCHAR whdload_file[MAX_DPATH];
+        
+        struct whdbooter whdbootprefs;
+
 #endif
 
 	/* ANDROID */

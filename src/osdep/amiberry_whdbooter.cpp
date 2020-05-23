@@ -545,7 +545,7 @@ void whdload_auto_prefs(struct uae_prefs *prefs, char *filepath)
 	char whd_path[MAX_DPATH];
 	char kick_path[MAX_DPATH];
 
-	// char GameTypePath[MAX_DPATH];
+	char uae_config[255];        
 	char whd_config[255];
 	char whd_startup[255];
 
@@ -590,23 +590,24 @@ void whdload_auto_prefs(struct uae_prefs *prefs, char *filepath)
 
 	// LOAD GAME SPECIFICS FOR EXISTING .UAE - USE SHA1 IF AVAILABLE
 	//  CONFIG LOAD IF .UAE IS IN CONFIG PATH
-	strcpy(whd_config, config_path);
-	strcat(whd_config, game_name);
-	strcat(whd_config, ".uae");
+	strcpy(uae_config, config_path);
+	strcat(uae_config, game_name);
+	strcat(uae_config, ".uae");
 
-	snprintf(whd_path, MAX_DPATH, "%s/whdboot/save-data/Autoboots/", start_path_data);
-	strcpy(whd_startup, whd_path);
-	strcat(whd_startup, game_name);
-	strcat(whd_startup, ".auto-startup");
-
+        // AUTOBOOT files depreciated
+//	snprintf(whd_path, MAX_DPATH, "%s/whdboot/save-data/Autoboots/", start_path_data);
+//	strcpy(whd_startup, whd_path);
+//	strcat(whd_startup, game_name);
+//	strcat(whd_startup, ".auto-startup");
+  
+        // setups for tmp folder.
 	my_mkdir("/tmp/s");
 	my_mkdir("/tmp/c");
-	my_mkdir("/tmp/devs");
+	my_mkdir("/tmp/devs");        
+        strcpy(whd_startup, "/tmp/s/startup-sequence");
+	remove(whd_startup);
 
-	remove("/tmp/s/startup-sequence");
-	my_unlink("/tmp/s/startup-sequence");
-
-	write_log("WHDBooter - Looking for %s \n", whd_startup);
+        //my_unlink("/tmp/s/startup-sequence"); // startup-sequence is no longer a symlink
 
 	// LOAD HOST OPTIONS
 	snprintf(whd_path, MAX_DPATH, "%s/whdboot/WHDLoad", start_path_data);
@@ -614,17 +615,15 @@ void whdload_auto_prefs(struct uae_prefs *prefs, char *filepath)
 	// are we using save-data/ ?
 	snprintf(kick_path, MAX_DPATH, "%s/whdboot/save-data/Kickstarts", start_path_data);
 
-	// boot with existing .UAE if possible, but for this the auto-startup must exist
-	if (zfile_exists(whd_config) && zfile_exists(whd_startup))
+        // if we have a config file, we will use it
+        // we will need it for the WHDLoad options too.
+	if (zfile_exists(uae_config))
 	{
-		write_log("WHDBooter -  %s and %s found. Fast Loading.\n", whd_startup, whd_config);
-		symlink(whd_startup, "/tmp/s/startup-sequence");
-		symlink(whd_path, "/tmp/c/WHDLoad");
-		symlink(kick_path, "/tmp/devs/Kickstarts");
-		target_cfgfile_load(prefs, whd_config, CONFIG_TYPE_ALL, 0);
-		return;
-	}
-
+            	write_log("WHDBooter -  %s found. Loading Config for WHDload options.\n", uae_config);
+		target_cfgfile_load(&currprefs, uae_config, CONFIG_TYPE_ALL, 0);   
+	}      
+            
+        
 	//  this should be made into it's own routine!! 1 (see repeat, above)
 	snprintf(whd_path, MAX_DPATH, "%s/whdboot/", start_path_data);
 
@@ -695,7 +694,14 @@ void whdload_auto_prefs(struct uae_prefs *prefs, char *filepath)
 					{
 						temp_node = game_node->xmlChildrenNode;
 						temp_node = get_node(temp_node, "slave_default");
-						if (xmlNodeGetContent(temp_node) != nullptr)
+                                                
+                                                // use a selected slave if we have one
+                                                if (strlen(currprefs.whdbootprefs.slave) != 0)
+                                                {        strcpy(selected_slave, currprefs.whdbootprefs.slave);
+                                                        write_log("WHDBooter - Config Selected Slave: %s \n", selected_slave);  
+                                                }
+                                                // otherwise use the XML default
+                                                else if (xmlNodeGetContent(temp_node) != nullptr)
 						{
 							_stprintf(selected_slave, "%s",
 									  reinterpret_cast<const char *>(xmlNodeGetContent(temp_node)));
@@ -736,9 +742,10 @@ void whdload_auto_prefs(struct uae_prefs *prefs, char *filepath)
 	else
 		write_log("WHDBooter -  Could not load whdload_db.xml - does not exist?\n");
 
-	// then here, we will write a startup-sequence file (formerly autoboot file)
+        
 	_stprintf(whd_bootscript, "\n");
-	if (strlen(selected_slave) != 0 && !zfile_exists(whd_startup))
+        // currently, we have selected a slave, so we create a startup-sequence
+	if (strlen(selected_slave) != 0)
 	{
 		_stprintf(whd_bootscript, " \n");
 
@@ -752,8 +759,32 @@ void whdload_auto_prefs(struct uae_prefs *prefs, char *filepath)
 		_stprintf(whd_bootscript, "%sENDIF\n", whd_bootscript);
 
 		_stprintf(whd_bootscript, "%sCD \"Games:%s\"\n", whd_bootscript, subpath);
-		_stprintf(whd_bootscript, "%sWHDLoad SLAVE=\"games:%s/%s\"", whd_bootscript, subpath, selected_slave);
-		_stprintf(whd_bootscript, "%s PRELOAD NOWRITECACHE NOREQ SPLASHDELAY=0", whd_bootscript);
+		_stprintf(whd_bootscript, "%sWHDLoad SLAVE=\"Games:%s/%s\"", whd_bootscript, subpath, selected_slave);
+		_stprintf(whd_bootscript, "%s PRELOAD NOWRITECACHE NOREQ", whd_bootscript);
+                
+                // CUSTOM options
+                if (currprefs.whdbootprefs.custom1 > 0)
+                {  _stprintf(whd_bootscript, "%s CUSTOM1=%d", whd_bootscript, currprefs.whdbootprefs.custom1 ); }
+                if (currprefs.whdbootprefs.custom2 > 0)
+                {  _stprintf(whd_bootscript, "%s CUSTOM2=%d", whd_bootscript, currprefs.whdbootprefs.custom2 ); }
+                if (currprefs.whdbootprefs.custom3 > 0)
+                {  _stprintf(whd_bootscript, "%s CUSTOM3=%d", whd_bootscript, currprefs.whdbootprefs.custom3 ); }
+                if (currprefs.whdbootprefs.custom4 > 0)
+                {  _stprintf(whd_bootscript, "%s CUSTOM4=%d", whd_bootscript, currprefs.whdbootprefs.custom4 ); }
+                if (currprefs.whdbootprefs.custom5 > 0)
+                {  _stprintf(whd_bootscript, "%s CUSTOM5=%d", whd_bootscript, currprefs.whdbootprefs.custom5 ); }
+                if (strlen(currprefs.whdbootprefs.custom) != 0)
+                {  _stprintf(whd_bootscript, "%s CUSTOM=\"%s\"", whd_bootscript, currprefs.whdbootprefs.custom ); }
+                
+                // BUTTONWAIT
+                if (currprefs.whdbootprefs.buttonwait == true)
+                {  _stprintf(whd_bootscript, "%s BUTTONWAIT", whd_bootscript); }
+                   
+                // SPLASH
+                if (currprefs.whdbootprefs.showsplash != true)
+ 		{_stprintf(whd_bootscript, "%s SPLASHDELAY=0", whd_bootscript);}
+                
+                // SPECIAL SAVE PATH
 		_stprintf(whd_bootscript, "%s SAVEPATH=Saves:Savegames/ SAVEDIR=\"%s\"", whd_bootscript, subpath);
 		_stprintf(whd_bootscript, "%s\n", whd_bootscript);
 
@@ -771,11 +802,11 @@ void whdload_auto_prefs(struct uae_prefs *prefs, char *filepath)
 	// now we should have a startup-file (if we don't, we are going to use the original booter)
 	if (zfile_exists(whd_startup))
 	{
-		write_log("WHDBooter - Found Auto-Startup to SymLink\n");
-
-		// create a symlink to this as startup-sequence in /tmp/
-		symlink(whd_startup, "/tmp/s/startup-sequence");
-
+	//      depreciated auto-startup bits
+        //	write_log("WHDBooter - Found Auto-Startup to SymLink\n");
+	//	// create a symlink to this as startup-sequence in /tmp/
+	//	symlink(whd_startup, "/tmp/s/startup-sequence");
+        //
 		// create a symlink to WHDLoad in /tmp/
 		snprintf(whd_path, MAX_DPATH, "%s/whdboot/WHDLoad", start_path_data);
 		symlink(whd_path, "/tmp/c/WHDLoad");
@@ -827,7 +858,14 @@ void whdload_auto_prefs(struct uae_prefs *prefs, char *filepath)
 	write_log("WHDBooter - Host: Fixed CD32 Height: %s  \n", host_detail.fixed_cd32_height);
 	write_log("WHDBooter - Host: Fixed CD32 Width : %s  \n", host_detail.fixed_cd32_width);
 #endif
-	
+   
+        // so remember, we already loaded a .uae config, so we dont need to do the below manual setup for hardware
+        if (zfile_exists(uae_config))
+	{
+		write_log("WHDBooter -  %s found; ignoring WHD Quickstart setup.\n", uae_config);
+		return;
+	}
+
 	//    *** EMULATED HARDWARE ***
 	//    SET UNIVERSAL DEFAULTS
 	prefs->start_gui = false;

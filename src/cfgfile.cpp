@@ -2317,6 +2317,26 @@ void cfgfile_save_options(struct zfile* f, struct uae_prefs* p, int type)
 	cfgfile_write_bool(f, _T("bsdsocket_emu"), p->socket_emu);
 	cfgfile_dwrite_str(f, _T("boot_rom_uae"), uaebootrom[p->boot_rom]);
 	cfgfile_dwrite_str(f, _T("uaeboard"), uaeboard[p->uaeboard]);
+        
+#ifdef AMIBERRY
+        cfg_write(_T("; "), f);
+	cfg_write(_T("; *** WHDLoad Booter. Options"), f);
+	cfg_write(_T("; "), f);
+        
+        //cfgfile_dwrite_bool , cfgfile_dwrite  , cfgfile_dwrite_str
+        // i think these ^^ will only write if there is a variable to be written
+        // which we will want, after testing.
+
+        cfgfile_write_str (f, _T("whdload_slave"), p->whdbootprefs.slave);
+        cfgfile_write_bool (f, _T("whdload_showsplash"), p->whdbootprefs.showsplash);
+        cfgfile_write_bool (f, _T("whdload_buttonwait"), p->whdbootprefs.buttonwait);
+        cfgfile_write (f, _T("whdload_custom1"), _T("%d"), p->whdbootprefs.custom1);
+        cfgfile_write (f, _T("whdload_custom2"), _T("%d"), p->whdbootprefs.custom2);
+        cfgfile_write (f, _T("whdload_custom3"), _T("%d"), p->whdbootprefs.custom3);
+        cfgfile_write (f, _T("whdload_custom4"), _T("%d"), p->whdbootprefs.custom4);
+        cfgfile_write (f, _T("whdload_custom5"), _T("%d"), p->whdbootprefs.custom5);
+        cfgfile_write_str (f, _T("whdload_custom"), p->whdbootprefs.custom);       
+#endif
 }
 
 static int cfgfile_coords(const TCHAR *option, const TCHAR *value, const TCHAR *name, int *x, int *y)
@@ -2867,6 +2887,21 @@ static int cfgfile_parse_host(struct uae_prefs* p, TCHAR* option, TCHAR* value)
 			} // close loop 3 
 		} // close loop 2
 	} // close loop 1
+        
+	/* Read in WHDLoad Options  */
+	if (cfgfile_string(option, value, _T("whdload_slave"),  p-> whdbootprefs.slave, sizeof p-> whdbootprefs.slave / sizeof (TCHAR))
+		|| cfgfile_string(option, value, _T("whdload_custom"),  p-> whdbootprefs.custom, sizeof p-> whdbootprefs.custom / sizeof (TCHAR))
+		|| cfgfile_intval(option, value, _T("whdload_custom1"), &p->whdbootprefs.custom1, 1)
+		|| cfgfile_intval(option, value, _T("whdload_custom2"), &p->whdbootprefs.custom2, 1)
+		|| cfgfile_intval(option, value, _T("whdload_custom3"), &p->whdbootprefs.custom3, 1)
+		|| cfgfile_intval(option, value, _T("whdload_custom4"), &p->whdbootprefs.custom4, 1)
+		|| cfgfile_intval(option, value, _T("whdload_custom5"), &p->whdbootprefs.custom5, 1)
+		|| cfgfile_yesno(option, value, _T("whdload_buttonwait"), &p-> whdbootprefs.buttonwait)
+		|| cfgfile_yesno(option, value, _T("whdload_showsplash"), &p-> whdbootprefs.showsplash)
+		)
+	{
+		return 1;
+	}
 #endif
 
 	for (tmpp = option; *tmpp != '\0'; tmpp++)
