@@ -14,6 +14,8 @@
 #include "newcpu.h"
 #include "xwin.h"
 
+static const int pissoff_nojit_value = 256 * CYCLE_UNIT;
+
 unsigned long int nextevent, currcycle;
 int is_syncline, is_syncline_end;
 
@@ -49,40 +51,18 @@ void events_schedule(void)
 static bool event_check_vsync(void)
 {
 	/* Keep only CPU emulation running while waiting for sync point. */
-	if (is_syncline == -1) {
+	if (is_syncline == -1
+		|| is_syncline == -2
+		|| is_syncline == -3
+		|| is_syncline > 0
+		|| is_syncline <= -100) {
 
 		if (!isvsync_chipset()) {
 			events_reset_syncline();
 			return false;
 		}
 	}
-	else if (is_syncline == -2) {
 
-		if (!isvsync_chipset()) {
-			events_reset_syncline();
-			return false;
-		}
-	}
-	else if (is_syncline == -3) {
-		if (!isvsync_chipset()) {
-			events_reset_syncline();
-			return false;
-		}
-	}
-	else if (is_syncline > 0)
-	{
-		if (!isvsync_chipset()) {
-			events_reset_syncline();
-			return false;
-		}
-	}
-	else if (is_syncline <= -100) {
-
-		if (!isvsync_chipset()) {
-			events_reset_syncline();
-			return false;
-		}
-	}
 	else if (is_syncline == -10) {
 
 		// wait is_syncline_end
@@ -91,7 +71,10 @@ static bool event_check_vsync(void)
 			int v = rpt - is_syncline_end;
 			if (v < 0)
 			{
-				regs.pissoff = pissoff_value;
+				if (currprefs.cachesize)
+					regs.pissoff = pissoff_value;
+				else
+					regs.pissoff = pissoff_nojit_value;
 				return true;
 			}
 		//}
@@ -108,7 +91,10 @@ static bool event_check_vsync(void)
 				v = 0;
 			}
 			if (v < 0 && v2 < 0) {
-				regs.pissoff = pissoff_value;
+				if (currprefs.cachesize)
+					regs.pissoff = pissoff_value;
+				else
+					regs.pissoff = pissoff_nojit_value;
 				return true;
 			}
 		//}

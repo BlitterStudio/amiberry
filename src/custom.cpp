@@ -74,10 +74,6 @@ static void uae_abort (const TCHAR *format,...)
 	nomore = 1;
 }
 
-#ifdef AMIBERRY
-int pissoff_value = 0;
-#endif
-
 static unsigned int n_consecutive_skipped = 0;
 static unsigned int total_skipped = 0;
 
@@ -473,23 +469,6 @@ static int doflickerfix (void)
 {
 	return currprefs.gfx_vresolution && doublescan < 0 && vpos < MAXVPOS;
 }
-
-#ifdef AMIBERRY
-void set_speedup_values(void)
-{
-	if (currprefs.m68k_speed < 0) {
-		if (currprefs.cachesize) {
-			pissoff_value = (vblank_hz > 55 ? speedup_cycles_jit_ntsc : speedup_cycles_jit_pal) * CYCLE_UNIT;
-		}
-		else {
-			pissoff_value = speedup_cycles_nonjit * CYCLE_UNIT;
-		}
-	}
-	else {
-		pissoff_value = 0;
-	}
-}
-#endif
 
 uae_u32 get_copper_address (int copno)
 {
