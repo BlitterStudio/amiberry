@@ -311,6 +311,8 @@ extern void check_t0_trace(void);
 #define x_do_cycles(c) do_cycles(c)
 
 extern void m68k_setstopped (void);
+extern void m68k_resumestopped(void);
+extern void m68k_cancel_idle(void);
 
 #define get_disp_ea_020(base,idx) _get_disp_ea_020(base)
 extern uae_u32 REGPARAM3 _get_disp_ea_020 (uae_u32 base) REGPARAM;
@@ -388,7 +390,7 @@ extern void exception3b (uae_u32 opcode, uaecptr addr, bool w, bool i, uaecptr p
 extern void exception2 (uaecptr addr, bool read, int size, uae_u32 fc);
 extern void cpureset (void);
 extern void cpu_halt (int id);
-extern void cpu_sleep_millis(int ms);
+extern int cpu_sleep_millis(int ms);
 
 extern void fill_prefetch (void);
 

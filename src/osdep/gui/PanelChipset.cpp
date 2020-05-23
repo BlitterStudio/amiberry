@@ -5,9 +5,6 @@
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
-#include "UaeRadioButton.hpp"
-#include "UaeCheckBox.hpp"
-#include "UaeDropDown.hpp"
 
 #include "sysdeps.h"
 #include "options.h"
@@ -15,24 +12,24 @@
 #include "gui_handling.h"
 
 static gcn::Window* grpChipset;
-static gcn::UaeRadioButton* optOCS;
-static gcn::UaeRadioButton* optECSAgnus;
-static gcn::UaeRadioButton* optECS;
-static gcn::UaeRadioButton* optAGA;
-static gcn::UaeCheckBox* chkNTSC;
+static gcn::RadioButton* optOCS;
+static gcn::RadioButton* optECSAgnus;
+static gcn::RadioButton* optECS;
+static gcn::RadioButton* optAGA;
+static gcn::CheckBox* chkNTSC;
 static gcn::Label* lblChipset;
-static gcn::UaeDropDown* cboChipset;
+static gcn::DropDown* cboChipset;
 static gcn::Window* grpBlitter;
-static gcn::UaeRadioButton* optBlitNormal;
-static gcn::UaeRadioButton* optBlitImmed;
-static gcn::UaeRadioButton* optBlitWait;
+static gcn::RadioButton* optBlitNormal;
+static gcn::RadioButton* optBlitImmed;
+static gcn::RadioButton* optBlitWait;
 static gcn::Window* grpCopper;
-static gcn::UaeCheckBox* chkFastCopper;
+static gcn::CheckBox* chkFastCopper;
 static gcn::Window* grpCollisionLevel;
-static gcn::UaeRadioButton* optCollNone;
-static gcn::UaeRadioButton* optCollSprites;
-static gcn::UaeRadioButton* optCollPlayfield;
-static gcn::UaeRadioButton* optCollFull;
+static gcn::RadioButton* optCollNone;
+static gcn::RadioButton* optCollSprites;
+static gcn::RadioButton* optCollPlayfield;
+static gcn::RadioButton* optCollFull;
 
 struct chipset
 {
@@ -203,24 +200,29 @@ void InitPanelChipset(const struct _ConfigCategory& category)
 	chipsetButtonActionListener = new ChipsetButtonActionListener();
 	ntscButtonActionListener = new NTSCButtonActionListener();
 
-	optOCS = new gcn::UaeRadioButton("OCS", "radiochipsetgroup");
+	optOCS = new gcn::RadioButton("OCS", "radiochipsetgroup");
+	optOCS->setId("OCS");
 	optOCS->addActionListener(chipsetButtonActionListener);
 
-	optECSAgnus = new gcn::UaeRadioButton("ECS Agnus", "radiochipsetgroup");
+	optECSAgnus = new gcn::RadioButton("ECS Agnus", "radiochipsetgroup");
+	optECSAgnus->setId("ECS Agnus");
 	optECSAgnus->addActionListener(chipsetButtonActionListener);
 
-	optECS = new gcn::UaeRadioButton("Full ECS", "radiochipsetgroup");
+	optECS = new gcn::RadioButton("Full ECS", "radiochipsetgroup");
+	optECS->setId("Full ECS");
 	optECS->addActionListener(chipsetButtonActionListener);
 
-	optAGA = new gcn::UaeRadioButton("AGA", "radiochipsetgroup");
+	optAGA = new gcn::RadioButton("AGA", "radiochipsetgroup");
+	optAGA->setId("AGA");
 	optAGA->addActionListener(chipsetButtonActionListener);
 
-	chkNTSC = new gcn::UaeCheckBox("NTSC");
+	chkNTSC = new gcn::CheckBox("NTSC");
+	chkNTSC->setId("NTSC");
 	chkNTSC->addActionListener(ntscButtonActionListener);
 
 	lblChipset = new gcn::Label("Extra:");
 	lblChipset->setAlignment(gcn::Graphics::RIGHT);
-	cboChipset = new gcn::UaeDropDown(&chipsetList);
+	cboChipset = new gcn::DropDown(&chipsetList);
 	cboChipset->setSize(75, cboChipset->getHeight());
 	cboChipset->setBaseColor(gui_baseCol);
 	cboChipset->setBackgroundColor(colTextboxBackground);
@@ -238,21 +240,23 @@ void InitPanelChipset(const struct _ConfigCategory& category)
 	grpChipset->add(cboChipset, 145 + lblChipset->getWidth() + 8, 10);
 
 	grpChipset->setMovable(false);
-	grpChipset->setSize(optOCS->getWidth() + 125 + lblChipset->getWidth() + cboChipset->getWidth(), 185);
+	grpChipset->setSize(optOCS->getWidth() + 125 + lblChipset->getWidth() + cboChipset->getWidth(), 195);
+	grpChipset->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpChipset->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpChipset);
 
 	blitterButtonActionListener = new BlitterButtonActionListener();
 
-	optBlitNormal = new gcn::UaeRadioButton("Normal", "radiocblittergroup");
+	optBlitNormal = new gcn::RadioButton("Normal", "radiocblittergroup");
 	optBlitNormal->setId("BlitNormal");
 	optBlitNormal->addActionListener(blitterButtonActionListener);
 
-	optBlitImmed = new gcn::UaeRadioButton("Immediate", "radiocblittergroup");
+	optBlitImmed = new gcn::RadioButton("Immediate", "radiocblittergroup");
+	optBlitImmed->setId("Immediate");
 	optBlitImmed->addActionListener(blitterButtonActionListener);
 
-	optBlitWait = new gcn::UaeRadioButton("Wait for blit.", "radiocblittergroup");
+	optBlitWait = new gcn::RadioButton("Wait for blit.", "radiocblittergroup");
 	optBlitWait->setId("BlitWait");
 	optBlitWait->addActionListener(blitterButtonActionListener);
 
@@ -262,14 +266,16 @@ void InitPanelChipset(const struct _ConfigCategory& category)
 	grpBlitter->add(optBlitImmed, 5, 40);
 	grpBlitter->add(optBlitWait, 5, 70);
 	grpBlitter->setMovable(false);
-	grpBlitter->setSize(optBlitWait->getWidth() + DISTANCE_BORDER, 115);
+	grpBlitter->setSize(optBlitWait->getWidth() + DISTANCE_BORDER, 125);
+	grpBlitter->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpBlitter->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpBlitter);
 
 	fastCopperActionListener = new FastCopperActionListener();
 
-	chkFastCopper = new gcn::UaeCheckBox("Fast copper");
+	chkFastCopper = new gcn::CheckBox("Fast copper");
+	chkFastCopper->setId("Fast copper");
 	chkFastCopper->addActionListener(fastCopperActionListener);
 
 	grpCopper = new gcn::Window("Copper");
@@ -277,25 +283,27 @@ void InitPanelChipset(const struct _ConfigCategory& category)
 	                       grpBlitter->getY() + grpBlitter->getHeight() + DISTANCE_NEXT_Y);
 	grpCopper->add(chkFastCopper, 5, 10);
 	grpCopper->setMovable(false);
-	grpCopper->setSize(chkFastCopper->getWidth() + DISTANCE_BORDER, 55);
+	grpCopper->setSize(chkFastCopper->getWidth() + DISTANCE_BORDER, 65);
+	grpCopper->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpCopper->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpCopper);
 
 	collisionButtonActionListener = new CollisionButtonActionListener();
 
-	optCollNone = new gcn::UaeRadioButton("None", "radioccollisiongroup");
+	optCollNone = new gcn::RadioButton("None", "radioccollisiongroup");
 	optCollNone->setId("CollNone");
 	optCollNone->addActionListener(collisionButtonActionListener);
 
-	optCollSprites = new gcn::UaeRadioButton("Sprites only", "radioccollisiongroup");
+	optCollSprites = new gcn::RadioButton("Sprites only", "radioccollisiongroup");
+	optCollSprites->setId("Sprites only");
 	optCollSprites->addActionListener(collisionButtonActionListener);
 
-	optCollPlayfield = new gcn::UaeRadioButton("Sprites and Sprites vs. Playfield", "radioccollisiongroup");
+	optCollPlayfield = new gcn::RadioButton("Sprites and Sprites vs. Playfield", "radioccollisiongroup");
 	optCollPlayfield->setId("CollPlay");
 	optCollPlayfield->addActionListener(collisionButtonActionListener);
 
-	optCollFull = new gcn::UaeRadioButton("Full (rarely needed)", "radioccollisiongroup");
+	optCollFull = new gcn::RadioButton("Full (rarely needed)", "radioccollisiongroup");
 	optCollFull->setId("CollFull");
 	optCollFull->addActionListener(collisionButtonActionListener);
 
@@ -306,7 +314,8 @@ void InitPanelChipset(const struct _ConfigCategory& category)
 	grpCollisionLevel->add(optCollPlayfield, 5, 70);
 	grpCollisionLevel->add(optCollFull, 5, 100);
 	grpCollisionLevel->setMovable(false);
-	grpCollisionLevel->setSize(optCollPlayfield->getWidth() + DISTANCE_BORDER, 145);
+	grpCollisionLevel->setSize(optCollPlayfield->getWidth() + DISTANCE_BORDER, 155);
+	grpCollisionLevel->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpCollisionLevel->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpCollisionLevel);

@@ -57,8 +57,6 @@
 #ifndef GCN_ACTIONLISTENER_HPP
 #define GCN_ACTIONLISTENER_HPP
 
-#include <string>
-
 #include "guisan/actionevent.hpp"
 #include "guisan/platform.hpp"
 
@@ -80,11 +78,11 @@ namespace gcn
         /**
          * Destructor.
          */
-        virtual ~ActionListener() { }
+        virtual ~ActionListener() = default;
 
         /**
-         * Called when an action is recieved from a Widget. It is used
-         * to be able to recieve a notification that an action has
+         * Called when an action is received from a Widget. It is used
+         * to be able to receive a notification that an action has
          * occured.
          *
          * @param actionEvent the event of the action.

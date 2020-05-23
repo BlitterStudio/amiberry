@@ -113,12 +113,12 @@ static bool get_value(xmlNode *node, const char *key, char *value, int max_size)
 	return result;
 }
 
-static TCHAR *parsetext(const TCHAR *s)
+static TCHAR *parse_text(const TCHAR *s)
 {
 	if (*s == '"' || *s == '\'')
 	{
 		const auto c = *s++;
-		const auto d = my_strdup(s);
+		auto* const d = my_strdup(s);
 		for (unsigned int i = 0; i < _tcslen(d); i++)
 		{
 			if (d[i] == c)
@@ -132,10 +132,10 @@ static TCHAR *parsetext(const TCHAR *s)
 	return my_strdup(s);
 }
 
-static TCHAR *parsetextpath(const TCHAR *s)
+static TCHAR *parse_text_path(const TCHAR *s)
 {
-	auto s2 = parsetext(s);
-	const auto s3 = target_expand_environment(s2, nullptr, 0);
+	auto* s2 = parse_text(s);
+	auto* const s3 = target_expand_environment(s2, nullptr, 0);
 	xfree(s2);
 	return s3;
 }
@@ -161,7 +161,7 @@ void parse_custom_settings(struct uae_prefs *p, char *InSettings)
 	char temp_options[4096];
 	strcpy(temp_options, InSettings);
 
-	auto full_line = strtok(temp_options, "\n");
+	auto* full_line = strtok(temp_options, "\n");
 
 	while (full_line != nullptr)
 	{
@@ -191,9 +191,9 @@ std::string find_whdload_game_option(const TCHAR *find_setting, char *whd_option
 	char temp_setting_tab[4096];
 
 	strcpy(temp_options, whd_options);
-	auto output = "nul";
+	const auto* output = "nul";
 
-	auto full_line = strtok(temp_options, "\n");
+	auto* full_line = strtok(temp_options, "\n");
 
 	while (full_line != nullptr)
 	{
@@ -304,7 +304,7 @@ void make_rom_symlink(const char *kick_short, char *kick_path, int kick_numb, st
 	}
 }
 
-void symlink_roms(struct uae_prefs *p)
+void symlink_roms(struct uae_prefs *prefs)
 {
 	//      *** KICKSTARTS ***
 	//
@@ -327,30 +327,30 @@ void symlink_roms(struct uae_prefs *p)
 	// These are all the kickstart rom files found in skick346.lha
 	//   http://aminet.net/package/util/boot/skick346
 
-	make_rom_symlink("kick33180.A500", kick_path, 5, p);
-	make_rom_symlink("kick34005.A500", kick_path, 6, p);
-	make_rom_symlink("kick37175.A500", kick_path, 7, p);
-	make_rom_symlink("kick39106.A1200", kick_path, 11, p);
-	make_rom_symlink("kick40063.A600", kick_path, 14, p);
-	make_rom_symlink("kick40068.A1200", kick_path, 15, p);
-	make_rom_symlink("kick40068.A4000", kick_path, 16, p);
+	make_rom_symlink("kick33180.A500", kick_path, 5, prefs);
+	make_rom_symlink("kick34005.A500", kick_path, 6, prefs);
+	make_rom_symlink("kick37175.A500", kick_path, 7, prefs);
+	make_rom_symlink("kick39106.A1200", kick_path, 11, prefs);
+	make_rom_symlink("kick40063.A600", kick_path, 14, prefs);
+	make_rom_symlink("kick40068.A1200", kick_path, 15, prefs);
+	make_rom_symlink("kick40068.A4000", kick_path, 16, prefs);
 
 	// these ones could not be located in 'rommgr.cpp' although all but one are BETA(?) anyway
-	//     make_rom_symlink("kick36143.A3000", kick_path, ?  ,p);
-	//     make_rom_symlink("kick39046.A500.BETA", kick_path, ?  ,p);
-	//     make_rom_symlink("kick39106.A500.BETA", kick_path, ?  ,p);
-	//     make_rom_symlink("kick39110.A500.BETA", kick_path, ?  ,p);
-	//     make_rom_symlink("kick39115.A3000.BETA", kick_path, ?  ,p);
-	//     make_rom_symlink("kick40003.A600.BETA", kick_path, ?  ,p);
-	//     make_rom_symlink("kick40003.A3000.BETA", kick_path, ?  ,p);
-	//     make_rom_symlink("kick40009.A600.BETA", kick_path, ?  ,p);
-	//     make_rom_symlink("kick40009.A4000.BETA", kick_path, ?  ,p);
-	//     make_rom_symlink("kick40038.A600.BETA", kick_path, ?  ,p);
-	//     make_rom_symlink("kick40038.A4000.BETA", kick_path, ?  ,p);
+	//     make_rom_symlink("kick36143.A3000", kick_path, ?  ,prefs);
+	//     make_rom_symlink("kick39046.A500.BETA", kick_path, ?  ,prefs);
+	//     make_rom_symlink("kick39106.A500.BETA", kick_path, ?  ,prefs);
+	//     make_rom_symlink("kick39110.A500.BETA", kick_path, ?  ,prefs);
+	//     make_rom_symlink("kick39115.A3000.BETA", kick_path, ?  ,prefs);
+	//     make_rom_symlink("kick40003.A600.BETA", kick_path, ?  ,prefs);
+	//     make_rom_symlink("kick40003.A3000.BETA", kick_path, ?  ,prefs);
+	//     make_rom_symlink("kick40009.A600.BETA", kick_path, ?  ,prefs);
+	//     make_rom_symlink("kick40009.A4000.BETA", kick_path, ?  ,prefs);
+	//     make_rom_symlink("kick40038.A600.BETA", kick_path, ?  ,prefs);
+	//     make_rom_symlink("kick40038.A4000.BETA", kick_path, ?  ,prefs);
 
 	// Symlink rom.key also
 	// source file
-	fetch_rompath(tmp2, MAX_DPATH);
+	get_rom_path(tmp2, MAX_DPATH);
 	snprintf(tmp, MAX_DPATH, "%s/rom.key", tmp2);
 
 	// destination file (symlink)
@@ -360,35 +360,23 @@ void symlink_roms(struct uae_prefs *p)
 		symlink(tmp, tmp2);
 }
 
-void cd_auto_prefs(struct uae_prefs *p, char *filepath)
+void cd_auto_prefs(struct uae_prefs *prefs, char *filepath)
 {
-	// setup variables etc
 	TCHAR game_name[MAX_DPATH];
 	TCHAR *txt2 = nullptr;
 	TCHAR tmp[MAX_DPATH];
-
-	char boot_path[MAX_DPATH];
-	char save_path[MAX_DPATH];
 	char config_path[MAX_DPATH];
 	char whd_config[255];
-
 	char hardware_settings[4096];
-	//char custom_settings[4096];
 
-	fetch_configurationpath(config_path, MAX_DPATH);
+	get_configuration_path(config_path, MAX_DPATH);
 
 	//      *** GAME DETECTION ***
 	write_log("\nCD Autoload: %s  \n\n", filepath);
 
-	// REMOVE THE FILE PATH AND EXTENSION
-	const auto filename = my_getfilepart(filepath);
-	// SOMEWHERE HERE WE NEED TO SET THE GAME 'NAME' FOR SAVESTATE ETC PURPOSES
 	extractFileName(filepath, last_loaded_config);
 	extractFileName(filepath, game_name);
 	removeFileExtension(game_name);
-
-	auto filesize = get_file_size(filepath);
-	// const TCHAR* filesha = get_sha1_txt (input, filesize); <<< ??! FIX ME
 
 	// LOAD GAME SPECIFICS FOR EXISTING .UAE - USE SHA1 IF AVAILABLE
 	//  CONFIG LOAD IF .UAE IS IN CONFIG PATH
@@ -398,7 +386,7 @@ void cd_auto_prefs(struct uae_prefs *p, char *filepath)
 
 	if (zfile_exists(whd_config))
 	{
-		target_cfgfile_load(&currprefs, whd_config, CONFIG_TYPE_ALL, 0);
+		target_cfgfile_load(prefs, whd_config, CONFIG_TYPE_ALL, 0);
 		return;
 	}
 
@@ -420,7 +408,6 @@ void cd_auto_prefs(struct uae_prefs *p, char *filepath)
 							 std::istreambuf_iterator<char>());
 
 		_stprintf(hardware_settings, "%s", contents.c_str());
-
 		host_detail = get_host_settings(hardware_settings);
 	}
 
@@ -437,7 +424,7 @@ void cd_auto_prefs(struct uae_prefs *p, char *filepath)
 	//      *** EMULATED HARDWARE ***
 	//
 
-	p->start_gui = false;
+	prefs->start_gui = false;
 
 	const int is_cdtv = strstr(filepath, "CDTV") != nullptr || strstr(filepath, "cdtv") != nullptr;
 	const int is_cd32 = strstr(filepath, "CD32") != nullptr || strstr(filepath, "cd32") != nullptr;
@@ -445,52 +432,50 @@ void cd_auto_prefs(struct uae_prefs *p, char *filepath)
 	// CD32
 	if (static_cast<bool>(is_cd32))
 	{
-		_tcscpy(p->description, _T("AutoBoot Configuration [CD32]"));
+		_tcscpy(prefs->description, _T("AutoBoot Configuration [CD32]"));
 		// SET THE BASE AMIGA (CD32)
-		built_in_prefs(&currprefs, 8, 0, 0, 0);
+		built_in_prefs(prefs, 8, 0, 0, 0);
 	}
 	else if (static_cast<bool>(is_cdtv))
 	{
-		_tcscpy(p->description, _T("AutoBoot Configuration [CDTV]"));
+		_tcscpy(prefs->description, _T("AutoBoot Configuration [CDTV]"));
 		// SET THE BASE AMIGA (CDTV)
-		built_in_prefs(&currprefs, 9, 0, 0, 0);
+		built_in_prefs(prefs, 9, 0, 0, 0);
 	}
 	else
 	{
-		_tcscpy(p->description, _T("AutoBoot Configuration [A1200CD]"));
+		_tcscpy(prefs->description, _T("AutoBoot Configuration [A1200CD]"));
 		// SET THE BASE AMIGA (Expanded A1200)
-		built_in_prefs(&currprefs, 4, 1, 0, 0);
+		built_in_prefs(prefs, 4, 1, 0, 0);
 	}
 
 	// enable CD
 	_stprintf(tmp, "cd32cd=1");
-	txt2 = parsetextpath(_T(tmp));
-	cfgfile_parse_line(p, txt2, 0);
+	txt2 = parse_text_path(_T(tmp));
+	cfgfile_parse_line(prefs, txt2, 0);
 
 	// mount the image
 	_stprintf(tmp, "cdimage0=%s,image", filepath);
-	txt2 = parsetextpath(_T(tmp));
-	cfgfile_parse_line(p, txt2, 0);
-
-	//cfgfile_parse_option(&currprefs, _T("cdimage0"), filepath, 0);
+	txt2 = parse_text_path(_T(tmp));
+	cfgfile_parse_line(prefs, txt2, 0);
 
 	//APPLY THE SETTINGS FOR MOUSE/JOYSTICK ETC
 	// CD32
 	if (static_cast<bool>(is_cd32))
 	{
-		p->jports[0].mode = 7;
-		p->jports[1].mode = 7;
+		prefs->jports[0].mode = 7;
+		prefs->jports[1].mode = 7;
 	}
 	else
 	{
 		// JOY
-		p->jports[1].mode = 3;
+		prefs->jports[1].mode = 3;
 		// MOUSE
-		p->jports[0].mode = 2;
+		prefs->jports[0].mode = 2;
 	}
 
 	// APPLY SPECIAL CONFIG E.G. MOUSE OR ALT. JOYSTICK SETTINGS
-	for (auto &jport : p->jports)
+	for (auto &jport : prefs->jports)
 	{
 		jport.id = JPORT_NONE;
 		jport.idc.configname[0] = 0;
@@ -503,59 +488,57 @@ void cd_auto_prefs(struct uae_prefs *p, char *filepath)
 	if (static_cast<bool>(is_cd32) && !(strcmpi(host_detail.controller2, "nul") == 0))
 	{
 		_stprintf(txt2, "%s=%s", _T("joyport0"), _T(host_detail.controller2));
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 	else if (!(strcmpi(host_detail.mouse1, "nul") == 0))
 	{
 		_stprintf(txt2, "%s=%s", _T("joyport0"), _T(host_detail.mouse1));
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 	else
 	{
 		_stprintf(txt2, "%s=mouse", _T("joyport0"));
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 
 	// PORT 1 - JOYSTICK
 	if (!(strcmpi(host_detail.controller1, "nul") == 0))
 	{
 		_stprintf(txt2, "%s=%s", _T("joyport1"), _T(host_detail.controller1));
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 	else
 	{
 		_stprintf(txt2, "%s=joy1", _T("joyport1"));
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 
 	if (strcmpi(host_detail.fixed_cd32_height, "nul") != 0)
 	{
 		_stprintf(txt2, "gfx_height=%s", host_detail.fixed_cd32_height);
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 		_stprintf(txt2, "gfx_height_windowed=%s", host_detail.fixed_cd32_height);
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 		_stprintf(txt2, "gfx_height_fullscreen=%s", host_detail.fixed_cd32_height);
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 
 	if (strcmpi(host_detail.fixed_cd32_width, "nul") != 0)
 	{
 		_stprintf(txt2, "gfx_width=%s", host_detail.fixed_cd32_width);
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 		_stprintf(txt2, "gfx_width_windowed=%s", host_detail.fixed_cd32_width);
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 		_stprintf(txt2, "gfx_width_fullscreen=%s", host_detail.fixed_cd32_width);
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 }
 
-void whdload_auto_prefs(struct uae_prefs *p, char *filepath)
+void whdload_auto_prefs(struct uae_prefs *prefs, char *filepath)
 {
-	// setup variables etc
 	TCHAR game_name[MAX_DPATH];
 	TCHAR *txt2 = nullptr;
 	TCHAR tmp[MAX_DPATH];
-
 	char boot_path[MAX_DPATH];
 	char save_path[MAX_DPATH];
 	char config_path[MAX_DPATH];
@@ -574,22 +557,21 @@ void whdload_auto_prefs(struct uae_prefs *p, char *filepath)
 	char selected_slave[4096]; // note!! this should be global later on, and only collected from the XML if set to 'nothing'
 	char subpath[4096];
 
-	bool use_slave_libs = false;
+	auto use_slave_libs = false;
 
 	write_log("WHDBooter Launched");
 	strcpy(selected_slave, "");
 
-	fetch_configurationpath(config_path, MAX_DPATH);
+	get_configuration_path(config_path, MAX_DPATH);
 
-	//
 	//      *** KICKSTARTS ***
 
-	symlink_roms(p);
+	symlink_roms(prefs);
 
 	// this allows A600HD to be used to slow games down
 	int roms[2];
 	roms[0] = 15;									 // kickstart 2.05 A600HD  ..  10
-	const auto rom_test = configure_rom(p, roms, 0); // returns 0 or 1 if found or not found
+	const auto rom_test = configure_rom(prefs, roms, 0); // returns 0 or 1 if found or not found
 	const auto a600_available = rom_test;
 
 	if (a600_available == true)
@@ -597,18 +579,14 @@ void whdload_auto_prefs(struct uae_prefs *p, char *filepath)
 		write_log("WHDBooter - Host: A600 ROM Available \n");
 	}
 
-	//
 	//      *** GAME DETECTION ***
 
 	// REMOVE THE FILE PATH AND EXTENSION
-	const auto filename = my_getfilepart(filepath);
+	const auto* const filename = my_getfilepart(filepath);
 	// SOMEWHERE HERE WE NEED TO SET THE GAME 'NAME' FOR SAVESTATE ETC PURPOSES
 	extractFileName(filepath, last_loaded_config);
 	extractFileName(filepath, game_name);
 	removeFileExtension(game_name);
-
-	auto filesize = get_file_size(filepath);
-	// const TCHAR* filesha = get_sha1_txt (input, filesize); <<< ??! FIX ME
 
 	// LOAD GAME SPECIFICS FOR EXISTING .UAE - USE SHA1 IF AVAILABLE
 	//  CONFIG LOAD IF .UAE IS IN CONFIG PATH
@@ -643,7 +621,7 @@ void whdload_auto_prefs(struct uae_prefs *p, char *filepath)
 		symlink(whd_startup, "/tmp/s/startup-sequence");
 		symlink(whd_path, "/tmp/c/WHDLoad");
 		symlink(kick_path, "/tmp/devs/Kickstarts");
-		target_cfgfile_load(&currprefs, whd_config, CONFIG_TYPE_ALL, 0);
+		target_cfgfile_load(prefs, whd_config, CONFIG_TYPE_ALL, 0);
 		return;
 	}
 
@@ -677,24 +655,23 @@ void whdload_auto_prefs(struct uae_prefs *p, char *filepath)
 
 	if (zfile_exists(whd_config)) // use XML database
 	{
-		//printf("XML exists %s\n",game_name);
 		write_log("WHDBooter - Loading whdload_db.xml\n");
 		write_log("WHDBooter - Searching whdload_db.xml for %s\n", game_name);
 
-		const auto doc = xmlParseFile(whd_config);
-		const auto root_element = xmlDocGetRootElement(doc);
-		auto game_node = get_node(root_element, "whdbooter");
+		auto* const doc = xmlParseFile(whd_config);
+		auto* const root_element = xmlDocGetRootElement(doc);
+		auto* game_node = get_node(root_element, "whdbooter");
 
 		while (game_node != nullptr)
 		{
-			const auto attr = xmlGetProp(game_node, reinterpret_cast<const xmlChar *>("filename"));
+			auto* const attr = xmlGetProp(game_node, reinterpret_cast<const xmlChar *>("filename"));
 			if (attr != nullptr)
 			{
 				if (strcmpi(reinterpret_cast<const char *>(attr), game_name) == 0)
 				{
 					// now get the <hardware> and <custom_controls> items
 					// get hardware
-					auto temp_node = game_node->xmlChildrenNode;
+					auto* temp_node = game_node->xmlChildrenNode;
 					temp_node = get_node(temp_node, "hardware");
 					if (xmlNodeGetContent(temp_node) != nullptr)
 					{
@@ -712,10 +689,7 @@ void whdload_auto_prefs(struct uae_prefs *p, char *filepath)
 					{
 						_stprintf(custom_settings, "%s",
 								  reinterpret_cast<const char *>(xmlNodeGetContent(temp_node)));
-						//  process these later
 					}
-
-					// if selected_slave = "" then use the default from the XML....
 
 					if (strlen(selected_slave) == 0)
 					{
@@ -725,7 +699,6 @@ void whdload_auto_prefs(struct uae_prefs *p, char *filepath)
 						{
 							_stprintf(selected_slave, "%s",
 									  reinterpret_cast<const char *>(xmlNodeGetContent(temp_node)));
-							//  process these later
 							write_log("WHDBooter - Default Slave: %s\n", selected_slave);
 						}
 
@@ -736,7 +709,6 @@ void whdload_auto_prefs(struct uae_prefs *p, char *filepath)
 						{
 							_stprintf(subpath, "%s",
 									  reinterpret_cast<const char *>(xmlNodeGetContent(temp_node)));
-							//  process these later
 							write_log("WHDBooter - SubPath:  %s\n", subpath);
 						}
 
@@ -748,14 +720,10 @@ void whdload_auto_prefs(struct uae_prefs *p, char *filepath)
 					temp_node = get_node(temp_node, "slave_libraries");
 					if (xmlNodeGetContent(temp_node) != nullptr)
 					{
-						// _stprintf(slave_libs, "%s",
-						//         reinterpret_cast<const char*>(xmlNodeGetContent(temp_node)));
-
 						if (strcmpi(reinterpret_cast<const char *>(xmlNodeGetContent(temp_node)), "true") == 0)
 							use_slave_libs = true;
 
 						write_log("WHDBooter - Libraries:  %s\n", subpath);
-						//  process these later
 					}
 					break;
 				}
@@ -768,13 +736,10 @@ void whdload_auto_prefs(struct uae_prefs *p, char *filepath)
 	else
 		write_log("WHDBooter -  Could not load whdload_db.xml - does not exist?\n");
 
-	//printf("selected_slave: %s\n",selected_slave);
-
 	// then here, we will write a startup-sequence file (formerly autoboot file)
 	_stprintf(whd_bootscript, "\n");
 	if (strlen(selected_slave) != 0 && !zfile_exists(whd_startup))
 	{
-		// _stprintf(whd_bootscript, "DH3:C/Assign C: DH3:C/ ADD\n");
 		_stprintf(whd_bootscript, " \n");
 
 		if (use_slave_libs)
@@ -793,9 +758,6 @@ void whdload_auto_prefs(struct uae_prefs *p, char *filepath)
 		_stprintf(whd_bootscript, "%s\n", whd_bootscript);
 
 		write_log("WHDBooter - Created Startup-Sequence  \n\n%s\n", whd_bootscript);
-
-		// create a file with save-data/Autoboots/ game name .auto-startup
-
 		write_log("WHDBooter - Saved Auto-Startup to %s\n", whd_startup);
 
 		ofstream myfile(whd_startup);
@@ -806,7 +768,7 @@ void whdload_auto_prefs(struct uae_prefs *p, char *filepath)
 		}
 	}
 
-	// now we should have a startup-file (if we dont, we are going to use the original booter)
+	// now we should have a startup-file (if we don't, we are going to use the original booter)
 	if (zfile_exists(whd_startup))
 	{
 		write_log("WHDBooter - Found Auto-Startup to SymLink\n");
@@ -821,7 +783,7 @@ void whdload_auto_prefs(struct uae_prefs *p, char *filepath)
 		// create a symlink for DEVS in /tmp/
 		symlink(kick_path, "/tmp/devs/Kickstarts");
 	}
-
+#if 0
 	// debugging code!
 	write_log("WHDBooter - Game: Port 0     : %s  \n", game_detail.port0);
 	write_log("WHDBooter - Game: Port 1     : %s  \n", game_detail.port1);
@@ -864,20 +826,19 @@ void whdload_auto_prefs(struct uae_prefs *p, char *filepath)
 	write_log("WHDBooter - Host: Fixed Width      : %s  \n", host_detail.fixed_width);
 	write_log("WHDBooter - Host: Fixed CD32 Height: %s  \n", host_detail.fixed_cd32_height);
 	write_log("WHDBooter - Host: Fixed CD32 Width : %s  \n", host_detail.fixed_cd32_width);
-
-	//
-	//      *** EMULATED HARDWARE ***
-	//
+#endif
+	
+	//    *** EMULATED HARDWARE ***
 	//    SET UNIVERSAL DEFAULTS
-	p->start_gui = false;
+	prefs->start_gui = false;
 
 	if ((strcmpi(game_detail.cpu, "68000") == 0 || strcmpi(game_detail.cpu, "68010") == 0) && a600_available != 0)
 		// SET THE BASE AMIGA (Expanded A600)
-		built_in_prefs(&currprefs, 2, 2, 0, 0);
+		built_in_prefs(prefs, 2, 2, 0, 0);
 	else
 	// SET THE BASE AMIGA (Expanded A1200)
 	{
-		built_in_prefs(&currprefs, 4, 1, 0, 0);
+		built_in_prefs(prefs, 4, 1, 0, 0);
 		if (strcmpi(game_detail.fast, "nul") != 0 && (strcmpi(game_detail.cpu, "nul") == 0))
 			strcpy(game_detail.cpu, _T("68020"));
 	}
@@ -889,16 +850,16 @@ void whdload_auto_prefs(struct uae_prefs *p, char *filepath)
 	// A1200 no AGA
 	if (!static_cast<bool>(is_aga) && !static_cast<bool>(is_cd32))
 	{
-		_tcscpy(p->description, _T("AutoBoot Configuration [WHDLoad]"));
+		_tcscpy(prefs->description, _T("AutoBoot Configuration [WHDLoad]"));
 
-		p->cs_compatible = CP_A600;
-		built_in_chipset_prefs(p);
-		p->chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
-		p->m68k_speed = 0;
+		prefs->cs_compatible = CP_A600;
+		built_in_chipset_prefs(prefs);
+		prefs->chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
+		prefs->m68k_speed = 0;
 	}
 	// A1200
 	else
-		_tcscpy(p->description, _T("AutoBoot Configuration [WHDLoad] [AGA]"));
+		_tcscpy(prefs->description, _T("AutoBoot Configuration [WHDLoad] [AGA]"));
 
 	//SET THE WHD BOOTER AND GAME DATA
 	if (strlen(selected_slave) != 0) // new booter solution
@@ -906,24 +867,24 @@ void whdload_auto_prefs(struct uae_prefs *p, char *filepath)
 		snprintf(boot_path, MAX_DPATH, "/tmp/");
 
 		_stprintf(tmp, _T("filesystem2=rw,DH0:DH0:%s,10"), boot_path);
-		txt2 = parsetextpath(_T(tmp));
-		cfgfile_parse_line(p, txt2, 0);
+		txt2 = parse_text_path(_T(tmp));
+		cfgfile_parse_line(prefs, txt2, 0);
 
 		_stprintf(tmp, _T("uaehf0=dir,rw,DH0:DH0::%s,10"), boot_path);
-		txt2 = parsetextpath(_T(tmp));
-		cfgfile_parse_line(p, txt2, 0);
+		txt2 = parse_text_path(_T(tmp));
+		cfgfile_parse_line(prefs, txt2, 0);
 
 		snprintf(boot_path, MAX_DPATH, "%s/whdboot/boot-data.zip", start_path_data);
 		if (!zfile_exists(boot_path))
 			snprintf(boot_path, MAX_DPATH, "%s/whdboot/boot-data/", start_path_data);
 
 		_stprintf(tmp, _T("filesystem2=rw,DH3:DH3:%s,-10"), boot_path);
-		txt2 = parsetextpath(_T(tmp));
-		cfgfile_parse_line(p, txt2, 0);
+		txt2 = parse_text_path(_T(tmp));
+		cfgfile_parse_line(prefs, txt2, 0);
 
 		_stprintf(tmp, _T("uaehf0=dir,rw,DH3:DH3::%s,-10"), boot_path);
-		txt2 = parsetextpath(_T(tmp));
-		cfgfile_parse_line(p, txt2, 0);
+		txt2 = parse_text_path(_T(tmp));
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 
 	else // revert to original booter is no slave was set
@@ -933,22 +894,22 @@ void whdload_auto_prefs(struct uae_prefs *p, char *filepath)
 			snprintf(boot_path, MAX_DPATH, "%s/whdboot/boot-data/", start_path_data);
 
 		_stprintf(tmp, _T("filesystem2=rw,DH0:DH0:%s,10"), boot_path);
-		txt2 = parsetextpath(_T(tmp));
-		cfgfile_parse_line(p, txt2, 0);
+		txt2 = parse_text_path(_T(tmp));
+		cfgfile_parse_line(prefs, txt2, 0);
 
 		_stprintf(tmp, _T("uaehf0=dir,rw,DH0:DH0::%s,10"), boot_path);
-		txt2 = parsetextpath(_T(tmp));
-		cfgfile_parse_line(p, txt2, 0);
+		txt2 = parse_text_path(_T(tmp));
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 
 	//set the Second (game data) drive
 	_stprintf(tmp, "filesystem2=rw,DH1:Games:%s,0", filepath);
-	txt2 = parsetextpath(_T(tmp));
-	cfgfile_parse_line(p, txt2, 0);
+	txt2 = parse_text_path(_T(tmp));
+	cfgfile_parse_line(prefs, txt2, 0);
 
 	_stprintf(tmp, "uaehf1=dir,rw,DH1:Games:%s,0", filepath);
-	txt2 = parsetextpath(_T(tmp));
-	cfgfile_parse_line(p, txt2, 0);
+	txt2 = parse_text_path(_T(tmp));
+	cfgfile_parse_line(prefs, txt2, 0);
 
 	//set the third (save data) drive
 	snprintf(save_path, MAX_DPATH, "%s/whdboot/save-data/", start_path_data);
@@ -956,36 +917,36 @@ void whdload_auto_prefs(struct uae_prefs *p, char *filepath)
 	if (my_existsdir(save_path))
 	{
 		_stprintf(tmp, "filesystem2=rw,DH2:Saves:%s,0", save_path);
-		txt2 = parsetextpath(_T(tmp));
-		cfgfile_parse_line(p, txt2, 0);
+		txt2 = parse_text_path(_T(tmp));
+		cfgfile_parse_line(prefs, txt2, 0);
 
 		_stprintf(tmp, "uaehf2=dir,rw,DH2:Saves:%s,0", save_path);
-		txt2 = parsetextpath(_T(tmp));
-		cfgfile_parse_line(p, txt2, 0);
+		txt2 = parse_text_path(_T(tmp));
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 
 	// APPLY THE SETTINGS FOR MOUSE/JOYSTICK ETC
 	//  CD32
 	if (static_cast<bool>(is_cd32) && (strcmpi(game_detail.port0, "nul") == 0 || strcmpi(game_detail.port0, "cd32") == 0))
-		p->jports[0].mode = 7;
+		prefs->jports[0].mode = 7;
 
 	if (static_cast<bool>(is_cd32) && (strcmpi(game_detail.port1, "nul") == 0 || strcmpi(game_detail.port1, "cd32") == 0))
-		p->jports[1].mode = 7;
+		prefs->jports[1].mode = 7;
 
 	// JOY
 	if (strcmpi(game_detail.port0, "joy") == 0)
-		p->jports[0].mode = 3;
+		prefs->jports[0].mode = 3;
 	if (strcmpi(game_detail.port1, "joy") == 0)
-		p->jports[1].mode = 3;
+		prefs->jports[1].mode = 3;
 
 	// MOUSE
 	if (strcmpi(game_detail.port0, "mouse") == 0)
-		p->jports[0].mode = 2;
+		prefs->jports[0].mode = 2;
 	if (strcmpi(game_detail.port1, "mouse") == 0)
-		p->jports[1].mode = 2;
+		prefs->jports[1].mode = 2;
 
 	// APPLY SPECIAL CONFIG E.G. MOUSE OR ALT. JOYSTICK SETTINGS
-	for (auto &jport : p->jports)
+	for (auto &jport : prefs->jports)
 	{
 		jport.id = JPORT_NONE;
 		jport.idc.configname[0] = 0;
@@ -998,7 +959,7 @@ void whdload_auto_prefs(struct uae_prefs *p, char *filepath)
 	if (strcmpi(game_detail.control, "mouse") == 0 && !(strcmpi(host_detail.mouse1, "nul") == 0))
 	{
 		_stprintf(txt2, "%s=%s", _T("joyport0"), _T(host_detail.mouse1));
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 		write_log("WHDBooter Option (Mouse Control): %s\n", txt2);
 	}
 
@@ -1006,13 +967,13 @@ void whdload_auto_prefs(struct uae_prefs *p, char *filepath)
 	else if (!(strcmpi(host_detail.controller2, "nul") == 0))
 	{
 		_stprintf(txt2, "%s=%s", _T("joyport0"), _T(host_detail.controller2));
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 		write_log("WHDBooter Option (Joystick Control): %s\n", txt2);
 	}
 	else
 	{
 		_stprintf(txt2, "%s=mouse", _T("joyport0"));
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 		write_log("WHDBooter Option (Default Mouse): %s\n", txt2);
 	}
 
@@ -1020,20 +981,20 @@ void whdload_auto_prefs(struct uae_prefs *p, char *filepath)
 	if (strcmpi(game_detail.control, "mouse") == 0 && !(strcmpi(host_detail.mouse2, "nul") == 0))
 	{
 		_stprintf(txt2, "%s=%s", _T("joyport1"), _T(host_detail.mouse2));
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 		write_log("WHDBooter Option (Mouse Control): %s\n", txt2);
 	}
 	// PORT 1 - JOYSTICK GAMES
 	else if (!(strcmpi(host_detail.controller1, "nul") == 0))
 	{
 		_stprintf(txt2, "%s=%s", _T("joyport1"), _T(host_detail.controller1));
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 		write_log("WHDBooter Option (Joystick Control): %s\n", txt2);
 	}
 	else
 	{
 		_stprintf(txt2, "%s=joy1", _T("joyport1"));
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 		write_log("WHDBooter Option (Default Joystick): %s\n", txt2);
 	}
 
@@ -1041,89 +1002,89 @@ void whdload_auto_prefs(struct uae_prefs *p, char *filepath)
 	if (strcmpi(host_detail.controller3, "nul") != 0)
 	{
 		_stprintf(txt2, "%s=%s", _T("joyport2"), _T(host_detail.controller3));
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 	if (strcmpi(host_detail.controller4, "nul") != 0)
 	{
 		_stprintf(txt2, "%s=%s", _T("joyport3"), _T(host_detail.controller4));
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 
 	// CUSTOM CONTROLS
 	if (strlen(custom_settings) > 0)
-		parse_custom_settings(p, custom_settings);
+		parse_custom_settings(prefs, custom_settings);
 
 	if (!(strcmpi(host_detail.deadzone, "nul") == 0))
 	{
 		_stprintf(txt2, "input.joymouse_deadzone=%s", _T(host_detail.deadzone));
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 		_stprintf(txt2, "input.joystick_deadzone=%s", _T(host_detail.deadzone));
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 
 	// RETROARCH CONTROLS
 	if (!(strcmpi(host_detail.ra_quit, "nul") == 0))
 	{
 		_stprintf(txt2, "amiberry.use_retroarch_quit=%s", _T(host_detail.ra_quit));
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 	if (!(strcmpi(host_detail.ra_menu, "nul") == 0))
 	{
 		_stprintf(txt2, "amiberry.use_retroarch_menu=%s", _T(host_detail.ra_menu));
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 	if (!(strcmpi(host_detail.ra_reset, "nul") == 0))
 	{
 		_stprintf(txt2, "amiberry.use_retroarch_reset=%s", _T(host_detail.ra_reset));
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 	// KEYBOARD CONTROLS
 
 	if (!(strcmpi(host_detail.key_quit, "nul") == 0))
 	{
 		_stprintf(txt2, "amiberry.quit_amiberry=%s", _T(host_detail.key_quit));
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 	if (!(strcmpi(host_detail.key_gui, "nul") == 0))
 	{
 		_stprintf(txt2, "amiberry.open_gui=%s", _T(host_detail.key_gui));
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 	// GRAPHICS OPTIONS
 
 	if (!(strcmpi(host_detail.aspect_ratio, "nul") == 0))
 	{
 		_stprintf(txt2, "amiberry.gfx_correct_aspect=%s", _T(host_detail.aspect_ratio));
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 
 	if (strcmpi(host_detail.line_double, "yes") == 0 || strcmpi(host_detail.line_double, "true") == 0)
 	{
 		_stprintf(txt2, "gfx_linemode=double");
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 	else if (strcmpi(host_detail.line_double, "no") == 0 || strcmpi(host_detail.line_double, "false") == 0)
 	{
 		_stprintf(txt2, "gfx_linemode=none");
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 
 	if (!(strcmpi(host_detail.frameskip, "nul") == 0))
 	{
 		_stprintf(txt2, "gfx_framerate=%s", _T(host_detail.frameskip));
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 	// SOUND OPTIONS
 
 	if (strcmpi(host_detail.sound_on, "false") == 0 || strcmpi(host_detail.sound_on, "off") == 0 || strcmpi(host_detail.sound_on, "none") == 0)
 	{
 		_stprintf(txt2, "sound_output=none");
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 	if (!(strcmpi(host_detail.stereo_split, "nul") == 0))
 	{
 		_stprintf(txt2, "sound_stereo_separation=%s", _T(host_detail.stereo_split));
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 
 	//      *** GAME-SPECIFICS ***
@@ -1135,206 +1096,200 @@ void whdload_auto_prefs(struct uae_prefs *p, char *filepath)
 	if (strcmpi(game_detail.cpu, "68020") == 0 || strcmpi(game_detail.cpu, "68040") == 0)
 	{
 		_stprintf(txt2, "cpu_type=%s", game_detail.cpu);
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 
 	// CPU 68000/010 [requires a600 rom)]
 	if ((strcmpi(game_detail.cpu, "68000") == 0 || strcmpi(game_detail.cpu, "68010") == 0) && a600_available != 0)
 	{
 		_stprintf(txt2, "cpu_type=%s", game_detail.cpu);
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 
 		_stprintf(txt2, "chipmem_size=4");
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 
 	// CPU SPEED
 	if (strcmpi(game_detail.clock, "7") == 0)
 	{
 		_stprintf(txt2, "cpu_speed=real");
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 	else if (strcmpi(game_detail.clock, "14") == 0)
 	{
 		_stprintf(txt2, "finegrain_cpu_speed=1024");
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 	else if (strcmpi(game_detail.clock, "28") == 0)
 	{
 		_stprintf(txt2, "finegrain_cpu_speed=128");
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 	else if (strcmpi(game_detail.clock, "max") == 0)
 	{
 		_stprintf(txt2, "cpu_speed=max");
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 	else if (strcmpi(game_detail.clock, "turbo") == 0)
 	{
 		_stprintf(txt2, "cpu_speed=turbo");
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 
         // COMPATIBLE CPU
 	if (strcmpi(game_detail.cpu_comp, "true") == 0)
 	{
 		_stprintf(txt2, "cpu_compatible=true");
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 	else if (strcmpi(game_detail.cpu_comp, "false") == 0)
 	{
 		_stprintf(txt2, "cpu_compatible=false");
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 
 	// COMPATIBLE CPU
 	if (strcmpi(game_detail.cpu_24bit, "false") == 0 || strcmpi(game_detail.z3, "nul") != 0)
 	{
 		_stprintf(txt2, "cpu_24bit_addressing=false");
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
         
 	//FAST / Z3 MEMORY REQUIREMENTS
-
 	int temp_ram;
 	if (strcmpi(game_detail.fast, "nul") != 0)
 	{
 		temp_ram = atol(game_detail.fast);
 		_stprintf(txt2, "fastmem_size=%d", temp_ram);
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 	if (strcmpi(game_detail.z3, "nul") != 0)
 	{
 		temp_ram = atol(game_detail.z3);
 		_stprintf(txt2, "z3mem_size=%d", temp_ram);
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 
 	// FAST COPPER
 	if (strcmpi(game_detail.fastcopper, "true") == 0)
 	{
 		_stprintf(txt2, "fast_copper=true");
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 
 	// BLITTER=IMMEDIATE/WAIT/NORMAL
 	if (strcmpi(game_detail.blitter, "immediate") == 0)
 	{
 		_stprintf(txt2, "immediate_blits=true");
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 	else if (strcmpi(game_detail.blitter, "normal") == 0)
 	{
 		_stprintf(txt2, "waiting_blits=disabled");
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 
 	// CHIPSET OVERWRITE
 	if (strcmpi(game_detail.chipset, "ocs") == 0)
 	{
-		p->cs_compatible = CP_A600;
-		built_in_chipset_prefs(p);
-		p->chipset_mask = 0;
+		prefs->cs_compatible = CP_A600;
+		built_in_chipset_prefs(prefs);
+		prefs->chipset_mask = 0;
 	}
 
 	else if (strcmpi(game_detail.chipset, "ecs") == 0)
 	{
-		p->cs_compatible = CP_A600;
-		built_in_chipset_prefs(p);
-		p->chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
+		prefs->cs_compatible = CP_A600;
+		built_in_chipset_prefs(prefs);
+		prefs->chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
 	}
 
 	else if (strcmpi(game_detail.chipset, "aga") == 0)
 	{
-		p->cs_compatible = CP_A1200;
-		built_in_chipset_prefs(p);
-		p->chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE | CSMASK_AGA;
+		prefs->cs_compatible = CP_A1200;
+		built_in_chipset_prefs(prefs);
+		prefs->chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE | CSMASK_AGA;
 	}
 
 	// JIT
 	if (strcmpi(game_detail.jit, "true") == 0)
 	{
 		_stprintf(txt2, "cachesize=16384");
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
-
 
 	// NTSC
 	if (strcmpi(game_detail.ntsc, "true") == 0)
 	{
 		_stprintf(txt2, "ntsc=true");
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 
 	// SCREEN CENTER/HEIGHT/WIDTH
 	if (strcmpi(game_detail.scr_centerh, "smart") == 0)
 	{
 		_stprintf(txt2, "gfx_center_horizontal=smart");
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 	else if (strcmpi(game_detail.scr_centerh, "none") == 0)
 	{
 		_stprintf(txt2, "gfx_center_horizontal=none");
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 
 	if (strcmpi(game_detail.scr_centerv, "smart") == 0)
 	{
 		_stprintf(txt2, "gfx_center_vertical=smart");
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 	else if (strcmpi(game_detail.scr_centerv, "none") == 0)
 	{
 		_stprintf(txt2, "gfx_center_vertical=none");
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 
 	if (strcmpi(host_detail.fixed_height, "nul") != 0)
 	{
 		_stprintf(txt2, "gfx_height=%s", host_detail.fixed_height);
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 		_stprintf(txt2, "gfx_height_windowed=%s", host_detail.fixed_height);
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 		_stprintf(txt2, "gfx_height_fullscreen=%s", host_detail.fixed_height);
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 	else if (strcmpi(game_detail.scr_height, "nul") != 0)
 	{
 		_stprintf(txt2, "gfx_height=%s", game_detail.scr_height);
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 		_stprintf(txt2, "gfx_height_windowed=%s", game_detail.scr_height);
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 		_stprintf(txt2, "gfx_height_fullscreen=%s", game_detail.scr_height);
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 
 	if (strcmpi(host_detail.fixed_width, "nul") != 0)
 	{
 		_stprintf(txt2, "gfx_width=%s", host_detail.fixed_width);
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 		_stprintf(txt2, "gfx_width_windowed=%s", host_detail.fixed_width);
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 		_stprintf(txt2, "gfx_width_fullscreen=%s", host_detail.fixed_width);
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 	else if (strcmpi(game_detail.scr_width, "nul") != 0)
 	{
 		_stprintf(txt2, "gfx_width=%s", game_detail.scr_width);
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 		_stprintf(txt2, "gfx_width_windowed=%s", game_detail.scr_width);
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 		_stprintf(txt2, "gfx_width_fullscreen=%s", game_detail.scr_width);
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 
 	// SPRITE COLLISION
 	if (strcmpi(game_detail.sprites, "nul") != 0)
 	{
 		_stprintf(txt2, "collision_level=%s", game_detail.sprites);
-		cfgfile_parse_line(p, txt2, 0);
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
-
-	//  CLEAN UP SETTINGS
-	//   fixup_prefs(&currprefs, true);
-	//   cfgfile_configuration_change(1);
 }

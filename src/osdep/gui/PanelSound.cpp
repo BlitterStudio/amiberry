@@ -5,8 +5,6 @@
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
-#include "UaeRadioButton.hpp"
-#include "UaeDropDown.hpp"
 
 #include "sysdeps.h"
 #include "options.h"
@@ -15,19 +13,19 @@
 
 
 static gcn::Window* grpSound;
-static gcn::UaeRadioButton* optSoundDisabled;
-static gcn::UaeRadioButton* optSoundDisabledEmu;
-static gcn::UaeRadioButton* optSoundEmulated;
-static gcn::UaeRadioButton* optSoundEmulatedBest;
+static gcn::RadioButton* optSoundDisabled;
+static gcn::RadioButton* optSoundDisabledEmu;
+static gcn::RadioButton* optSoundEmulated;
+static gcn::RadioButton* optSoundEmulatedBest;
 static gcn::Window* grpMode;
-static gcn::UaeRadioButton* optMono;
-static gcn::UaeRadioButton* optStereo;
+static gcn::RadioButton* optMono;
+static gcn::RadioButton* optStereo;
 static gcn::Label* lblFrequency;
-static gcn::UaeDropDown* cboFrequency;
+static gcn::DropDown* cboFrequency;
 static gcn::Label* lblInterpolation;
-static gcn::UaeDropDown* cboInterpolation;
+static gcn::DropDown* cboInterpolation;
 static gcn::Label* lblFilter;
-static gcn::UaeDropDown* cboFilter;
+static gcn::DropDown* cboFilter;
 static gcn::Label* lblSeparation;
 static gcn::Label* lblSeparationInfo;
 static gcn::Slider* sldSeparation;
@@ -92,7 +90,7 @@ public:
 
 	std::string getElementAt(const int i) override
 	{
-		if (i < 0 || i >= entry.size())
+		if (i < 0 || i >= static_cast<int>(entry.size()))
 			return "---";
 		return entry[i];
 	}
@@ -122,7 +120,7 @@ public:
 
 	std::string getElementAt(const int i) override
 	{
-		if (i < 0 || i >= entry.size())
+		if (i < 0 || i >= static_cast<int>(entry.size()))
 			return "---";
 		return entry[i];
 	}
@@ -204,20 +202,20 @@ public:
 
 		else if (actionEvent.getSource() == sldSeparation)
 		{
-			if (curr_separation_idx != int(sldSeparation->getValue())
+			if (curr_separation_idx != static_cast<int>(sldSeparation->getValue())
 				&& changed_prefs.sound_stereo > 0)
 			{
-				curr_separation_idx = int(sldSeparation->getValue());
+				curr_separation_idx = static_cast<int>(sldSeparation->getValue());
 				changed_prefs.sound_stereo_separation = 10 - curr_separation_idx;
 			}
 		}
 
 		else if (actionEvent.getSource() == sldStereoDelay)
 		{
-			if (curr_stereodelay_idx != int(sldStereoDelay->getValue())
+			if (curr_stereodelay_idx != static_cast<int>(sldStereoDelay->getValue())
 				&& changed_prefs.sound_stereo > 0)
 			{
-				curr_stereodelay_idx = int(sldStereoDelay->getValue());
+				curr_stereodelay_idx = static_cast<int>(sldStereoDelay->getValue());
 				if (curr_stereodelay_idx > 0)
 					changed_prefs.sound_mixed_stereo_delay = curr_stereodelay_idx;
 				else
@@ -226,7 +224,7 @@ public:
 		}
 		else if (actionEvent.getSource() == sldPaulaVol)
 		{
-			int newvol = 100 - int(sldPaulaVol->getValue());
+			const auto newvol = 100 - static_cast<int>(sldPaulaVol->getValue());
 			if (changed_prefs.sound_volume_paula != newvol)
 				changed_prefs.sound_volume_paula = newvol;
 		}
@@ -242,19 +240,19 @@ void InitPanelSound(const struct _ConfigCategory& category)
 {
 	soundActionListener = new SoundActionListener();
 
-	optSoundDisabled = new gcn::UaeRadioButton("Disabled", "radiosoundgroup");
+	optSoundDisabled = new gcn::RadioButton("Disabled", "radiosoundgroup");
 	optSoundDisabled->setId("sndDisable");
 	optSoundDisabled->addActionListener(soundActionListener);
 
-	optSoundDisabledEmu = new gcn::UaeRadioButton("Disabled, but emulated", "radiosoundgroup");
+	optSoundDisabledEmu = new gcn::RadioButton("Disabled, but emulated", "radiosoundgroup");
 	optSoundDisabledEmu->setId("sndDisEmu");
 	optSoundDisabledEmu->addActionListener(soundActionListener);
 
-	optSoundEmulated = new gcn::UaeRadioButton("Enabled", "radiosoundgroup");
+	optSoundEmulated = new gcn::RadioButton("Enabled", "radiosoundgroup");
 	optSoundEmulated->setId("sndEmulate");
 	optSoundEmulated->addActionListener(soundActionListener);
 
-	optSoundEmulatedBest = new gcn::UaeRadioButton("Enabled, most accurate", "radiosoundgroup");
+	optSoundEmulatedBest = new gcn::RadioButton("Enabled, most accurate", "radiosoundgroup");
 	optSoundEmulatedBest->setId("sndEmuBest");
 	optSoundEmulatedBest->addActionListener(soundActionListener);
 
@@ -265,21 +263,24 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	grpSound->add(optSoundEmulatedBest, 5, 100);
 	grpSound->setMovable(false);
 	grpSound->setSize(optSoundEmulatedBest->getWidth() + DISTANCE_BORDER, 150);
+	grpSound->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpSound->setBaseColor(gui_baseCol);
 
 	lblFrequency = new gcn::Label("Frequency:");
 	lblFrequency->setAlignment(gcn::Graphics::RIGHT);
-	cboFrequency = new gcn::UaeDropDown(&frequencyTypeList);
+	cboFrequency = new gcn::DropDown(&frequencyTypeList);
 	cboFrequency->setSize(160, cboFrequency->getHeight());
 	cboFrequency->setBaseColor(gui_baseCol);
 	cboFrequency->setBackgroundColor(colTextboxBackground);
 	cboFrequency->setId("cboFrequency");
 	cboFrequency->addActionListener(soundActionListener);
 
-	optMono = new gcn::UaeRadioButton("Mono", "radiosoundmodegroup");
+	optMono = new gcn::RadioButton("Mono", "radiosoundmodegroup");
+	optMono->setId("Mono");
 	optMono->addActionListener(soundActionListener);
 
-	optStereo = new gcn::UaeRadioButton("Stereo", "radiosoundmodegroup");
+	optStereo = new gcn::RadioButton("Stereo", "radiosoundmodegroup");
+	optStereo->setId("Stereo");
 	optStereo->addActionListener(soundActionListener);
 
 	grpMode = new gcn::Window("Mode");
@@ -287,11 +288,12 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	grpMode->add(optStereo, 5, 40);
 	grpMode->setMovable(false);
 	grpMode->setSize(90, 90);
+	grpMode->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpMode->setBaseColor(gui_baseCol);
 
 	lblInterpolation = new gcn::Label("Interpolation:");
 	lblInterpolation->setAlignment(gcn::Graphics::RIGHT);
-	cboInterpolation = new gcn::UaeDropDown(&interpolationTypeList);
+	cboInterpolation = new gcn::DropDown(&interpolationTypeList);
 	cboInterpolation->setSize(160, cboInterpolation->getHeight());
 	cboInterpolation->setBaseColor(gui_baseCol);
 	cboInterpolation->setBackgroundColor(colTextboxBackground);
@@ -300,7 +302,7 @@ void InitPanelSound(const struct _ConfigCategory& category)
 
 	lblFilter = new gcn::Label("Filter:");
 	lblFilter->setAlignment(gcn::Graphics::RIGHT);
-	cboFilter = new gcn::UaeDropDown(&filterTypeList);
+	cboFilter = new gcn::DropDown(&filterTypeList);
 	cboFilter->setSize(160, cboFilter->getHeight());
 	cboFilter->setBaseColor(gui_baseCol);
 	cboFilter->setBackgroundColor(colTextboxBackground);
@@ -486,8 +488,26 @@ void RefreshPanelSound()
 		lblStereoDelayInfo->setCaption(tmp);
 	}
 	sldPaulaVol->setValue(100 - changed_prefs.sound_volume_paula);
-	snprintf(tmp, sizeof(tmp) - 1, "%d %%", 100 - changed_prefs.sound_volume_paula);
+	snprintf(tmp, sizeof tmp - 1, "%d %%", 100 - changed_prefs.sound_volume_paula);
 	lblPaulaVolInfo->setCaption(tmp);
+
+	optMono->setEnabled(changed_prefs.produce_sound > 0);
+	optStereo->setEnabled(changed_prefs.produce_sound > 0);
+	lblFrequency->setEnabled(changed_prefs.produce_sound > 0);
+	cboFrequency->setEnabled(changed_prefs.produce_sound > 0);
+	lblInterpolation->setEnabled(changed_prefs.produce_sound > 0);
+	cboInterpolation->setEnabled(changed_prefs.produce_sound > 0);
+	lblFilter->setEnabled(changed_prefs.produce_sound > 0);
+	cboFilter->setEnabled(changed_prefs.produce_sound > 0);
+	lblSeparation->setEnabled(changed_prefs.produce_sound > 0);
+	lblSeparationInfo->setEnabled(changed_prefs.produce_sound > 0);
+	sldSeparation->setEnabled(changed_prefs.produce_sound > 0);
+	lblStereoDelay->setEnabled(changed_prefs.produce_sound > 0);
+	lblStereoDelayInfo->setEnabled(changed_prefs.produce_sound > 0);
+	sldStereoDelay->setEnabled(changed_prefs.produce_sound > 0);
+	lblPaulaVol->setEnabled(changed_prefs.produce_sound > 0);
+	lblPaulaVolInfo->setEnabled(changed_prefs.produce_sound > 0);
+	sldPaulaVol->setEnabled(changed_prefs.produce_sound > 0);
 }
 
 bool HelpPanelSound(std::vector<std::string>& helptext)

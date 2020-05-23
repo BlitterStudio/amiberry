@@ -58,6 +58,9 @@
  * For comments regarding functions please see the header file.
  */
 
+#include <utility>
+
+
 #include "guisan/widgets/button.hpp"
 
 #include "guisan/exception.hpp"
@@ -69,247 +72,250 @@
 
 namespace gcn
 {
-    Button::Button()
-        : mHasMouse(false),
-          mKeyPressed(false),
-          mMousePressed(false),
-          mAlignment(Graphics::CENTER),
-          mSpacing(4)
-    {
-        setFocusable(true);
-        adjustSize();
-        setBorderSize(1);
+	Button::Button()
+		: mHasMouse(false),
+		  mKeyPressed(false),
+		  mMousePressed(false),
+		  mAlignment(Graphics::CENTER),
+		  mSpacing(4)
+	{
+		setFocusable(true);
+		Button::adjustSize();
+		setBorderSize(1);
 
-        addMouseListener(this);
-        addKeyListener(this);
-        addFocusListener(this);
-    }
+		addMouseListener(this);
+		addKeyListener(this);
+		addFocusListener(this);
+	}
 
-    Button::Button(const std::string& caption)
-            : mCaption(caption),
-              mHasMouse(false),
-              mKeyPressed(false),
-              mMousePressed(false),
-              mAlignment(Graphics::CENTER),
-              mSpacing(4)
-    {
-        setFocusable(true);
-        adjustSize();
-        setBorderSize(1);
+	Button::Button(std::string caption)
+		: mCaption(std::move(caption)),
+		  mHasMouse(false),
+		  mKeyPressed(false),
+		  mMousePressed(false),
+		  mAlignment(Graphics::CENTER),
+		  mSpacing(4)
+	{
+		setFocusable(true);
+		Button::adjustSize();
+		setBorderSize(1);
 
-        addMouseListener(this);
-        addKeyListener(this);
-        addFocusListener(this);
-    }
+		addMouseListener(this);
+		addKeyListener(this);
+		addFocusListener(this);
+	}
 
-    void Button::setCaption(const std::string& caption)
-    {
-        mCaption = caption;
-    }
+	void Button::setCaption(const std::string& caption)
+	{
+		mCaption = caption;
+	}
 
-    const std::string& Button::getCaption() const
-    {
-        return mCaption;
-    }
+	const std::string& Button::getCaption() const
+	{
+		return mCaption;
+	}
 
-    void Button::setAlignment(unsigned int alignment)
-    {
-        mAlignment = alignment;
-    }
+	void Button::setAlignment(unsigned int alignment)
+	{
+		mAlignment = alignment;
+	}
 
-    unsigned int Button::getAlignment() const
-    {
-        return mAlignment;
-    }
+	unsigned int Button::getAlignment() const
+	{
+		return mAlignment;
+	}
 
-    void Button::setSpacing(unsigned int spacing)
-    {
-        mSpacing = spacing;
-    }
+	void Button::setSpacing(unsigned int spacing)
+	{
+		mSpacing = spacing;
+	}
 
-    unsigned int Button::getSpacing() const
-    {
-      return mSpacing;
-    }
+	unsigned int Button::getSpacing() const
+	{
+		return mSpacing;
+	}
 
-    void Button::draw(Graphics* graphics)
-    {
-	    auto faceColor = getBaseColor();
-        Color highlightColor, shadowColor;
-	    const auto alpha = getBaseColor().a;
+	void Button::draw(Graphics* graphics)
+	{
+		auto faceColor = getBaseColor();
+		Color highlightColor, shadowColor;
+		const auto alpha = getBaseColor().a;
 
-        if (isPressed())
-        {
-            faceColor = faceColor - 0x303030;
-            faceColor.a = alpha;
-            highlightColor = faceColor - 0x303030;
-            highlightColor.a = alpha;
-            shadowColor = faceColor + 0x303030;
-            shadowColor.a = alpha;
-        }
-        else
-        {
-            highlightColor = faceColor + 0x303030;
-            highlightColor.a = alpha;
-            shadowColor = faceColor - 0x303030;
-            shadowColor.a = alpha;
-        }
+		if (isPressed())
+		{
+			faceColor = faceColor - 0x303030;
+			faceColor.a = alpha;
+			highlightColor = faceColor - 0x303030;
+			highlightColor.a = alpha;
+			shadowColor = faceColor + 0x303030;
+			shadowColor.a = alpha;
+		}
+		else
+		{
+			highlightColor = faceColor + 0x303030;
+			highlightColor.a = alpha;
+			shadowColor = faceColor - 0x303030;
+			shadowColor.a = alpha;
+		}
 
-        graphics->setColor(faceColor);
-        graphics->fillRectangle(Rectangle(1, 1, getDimension().width-1, getHeight() - 1));
+		graphics->setColor(faceColor);
+		graphics->fillRectangle(Rectangle(1, 1, getDimension().width - 1, getHeight() - 1));
 
-        graphics->setColor(highlightColor);
-        graphics->drawLine(0, 0, getWidth() - 1, 0);
-        graphics->drawLine(0, 1, 0, getHeight() - 1);
+		graphics->setColor(highlightColor);
+		graphics->drawLine(0, 0, getWidth() - 1, 0);
+		graphics->drawLine(0, 1, 0, getHeight() - 1);
 
-        graphics->setColor(shadowColor);
-        graphics->drawLine(getWidth() - 1, 1, getWidth() - 1, getHeight() - 1);
-        graphics->drawLine(1, getHeight() - 1, getWidth() - 1, getHeight() - 1);
+		graphics->setColor(shadowColor);
+		graphics->drawLine(getWidth() - 1, 1, getWidth() - 1, getHeight() - 1);
+		graphics->drawLine(1, getHeight() - 1, getWidth() - 1, getHeight() - 1);
 
-        graphics->setColor(getForegroundColor());
+		if (isEnabled())
+			graphics->setColor(getForegroundColor());
+		else
+			graphics->setColor(Color(128, 128, 128));
 
-        int text_x;
-	    const auto text_y = getHeight() / 2 - getFont()->getHeight() / 2;
+		int text_x;
+		const auto text_y = getHeight() / 2 - getFont()->getHeight() / 2;
 
-        switch (getAlignment())
-        {
-          case Graphics::LEFT:
-              text_x = int(mSpacing);
-              break;
-          case Graphics::CENTER:
-              text_x = getWidth() / 2;
-              break;
-          case Graphics::RIGHT:
-              text_x = getWidth() - int(mSpacing);
-              break;
-          default:
-              throw GCN_EXCEPTION("Unknown alignment.");
-        }
+		switch (getAlignment())
+		{
+		case Graphics::LEFT:
+			text_x = static_cast<int>(mSpacing);
+			break;
+		case Graphics::CENTER:
+			text_x = getWidth() / 2;
+			break;
+		case Graphics::RIGHT:
+			text_x = getWidth() - static_cast<int>(mSpacing);
+			break;
+		default:
+			throw GCN_EXCEPTION("Unknown alignment.");
+		}
 
-        graphics->setFont(getFont());
+		graphics->setFont(getFont());
 
-        if (isPressed())
-        {
-            graphics->drawText(getCaption(), text_x + 1, text_y + 1, getAlignment());
-        }
-        else
-        {
-            graphics->drawText(getCaption(), text_x, text_y, getAlignment());
+		if (isPressed())
+		{
+			graphics->drawText(getCaption(), text_x + 1, text_y + 1, getAlignment());
+		}
+		else
+		{
+			graphics->drawText(getCaption(), text_x, text_y, getAlignment());
 
-            if (isFocused())
-            {
-                graphics->drawRectangle(Rectangle(2, 2, getWidth() - 4,
-                                                  getHeight() - 4));
-            }
-        }
-    }
+			if (isFocused())
+			{
+				graphics->drawRectangle(Rectangle(2, 2, getWidth() - 4,
+				                                  getHeight() - 4));
+			}
+		}
+	}
 
-    void Button::drawBorder(Graphics* graphics)
-    {
-	    const auto faceColor = getBaseColor();
-	    const auto alpha = getBaseColor().a;
-	    const auto width = getWidth() + int(getBorderSize()) * 2 - 1;
-	    const auto height = getHeight() + int(getBorderSize()) * 2 - 1;
-	    auto highlightColor = faceColor + 0x303030;
-        highlightColor.a = alpha;
-	    auto shadowColor = faceColor - 0x303030;
-        shadowColor.a = alpha;
+	void Button::drawBorder(Graphics* graphics)
+	{
+		const auto faceColor = getBaseColor();
+		const auto alpha = getBaseColor().a;
+		const auto width = getWidth() + static_cast<int>(getBorderSize()) * 2 - 1;
+		const auto height = getHeight() + static_cast<int>(getBorderSize()) * 2 - 1;
+		auto highlightColor = faceColor + 0x303030;
+		highlightColor.a = alpha;
+		auto shadowColor = faceColor - 0x303030;
+		shadowColor.a = alpha;
 
-	    for (auto i = 0; i < int(getBorderSize()); ++i)
-        {
-            graphics->setColor(shadowColor);
-            graphics->drawLine(i,i, width - i, i);
-            graphics->drawLine(i,i + 1, i, height - i - 1);
-            graphics->setColor(highlightColor);
-            graphics->drawLine(width - i,i + 1, width - i, height - i);
-            graphics->drawLine(i,height - i, width - i - 1, height - i);
-        }
-    }
+		for (auto i = 0; i < static_cast<int>(getBorderSize()); ++i)
+		{
+			graphics->setColor(shadowColor);
+			graphics->drawLine(i, i, width - i, i);
+			graphics->drawLine(i, i + 1, i, height - i - 1);
+			graphics->setColor(highlightColor);
+			graphics->drawLine(width - i, i + 1, width - i, height - i);
+			graphics->drawLine(i, height - i, width - i - 1, height - i);
+		}
+	}
 
-    void Button::adjustSize()
-    {
-        setWidth(getFont()->getWidth(mCaption) + 2* int(mSpacing));
-        setHeight(getFont()->getHeight() + 2* int(mSpacing));
-    }
+	void Button::adjustSize()
+	{
+		setWidth(getFont()->getWidth(mCaption) + 2 * static_cast<int>(mSpacing));
+		setHeight(getFont()->getHeight() + 2 * static_cast<int>(mSpacing));
+	}
 
-    bool Button::isPressed() const
-    {
-        if (mMousePressed)
-        {
-            return true;
-        }
-        return mKeyPressed;
-    }
+	bool Button::isPressed() const
+	{
+		if (mMousePressed)
+		{
+			return true;
+		}
+		return mKeyPressed;
+	}
 
-    void Button::mousePressed(MouseEvent& mouseEvent)
-    {
-        if (mouseEvent.getButton() == MouseEvent::LEFT)
-        {
-            mMousePressed = true;
-            mouseEvent.consume();
-        }
-    }
+	void Button::mousePressed(MouseEvent& mouseEvent)
+	{
+		if (mouseEvent.getButton() == MouseEvent::LEFT)
+		{
+			mMousePressed = true;
+			mouseEvent.consume();
+		}
+	}
 
-    void Button::mouseExited(MouseEvent& mouseEvent)
-    {
-        mHasMouse = false;
-    }
+	void Button::mouseExited(MouseEvent& mouseEvent)
+	{
+		mHasMouse = false;
+	}
 
-    void Button::mouseEntered(MouseEvent& mouseEvent)
-    {
-        mHasMouse = true;
-    }
+	void Button::mouseEntered(MouseEvent& mouseEvent)
+	{
+		mHasMouse = true;
+	}
 
-    void Button::mouseReleased(MouseEvent& mouseEvent)
-    {
-        if (mouseEvent.getButton() == MouseEvent::LEFT
-            && mMousePressed)
-        {
-            mMousePressed = false;
-            generateAction();
-            mouseEvent.consume();
-        }
-        else if (mouseEvent.getButton() == MouseEvent::LEFT)
-        {
-            mMousePressed = false;
-            mouseEvent.consume();
-        }
-    }
+	void Button::mouseReleased(MouseEvent& mouseEvent)
+	{
+		if (mouseEvent.getButton() == MouseEvent::LEFT
+			&& mMousePressed)
+		{
+			mMousePressed = false;
+			generateAction();
+			mouseEvent.consume();
+		}
+		else if (mouseEvent.getButton() == MouseEvent::LEFT)
+		{
+			mMousePressed = false;
+			mouseEvent.consume();
+		}
+	}
 
-    void Button::mouseDragged(MouseEvent& mouseEvent)
-    {
-        mouseEvent.consume();
-    }
+	void Button::mouseDragged(MouseEvent& mouseEvent)
+	{
+		mouseEvent.consume();
+	}
 
-    void Button::keyPressed(KeyEvent& keyEvent)
-    {
-	    const auto key = keyEvent.getKey();
+	void Button::keyPressed(KeyEvent& keyEvent)
+	{
+		const auto key = keyEvent.getKey();
 
-        if (key.getValue() == Key::ENTER
-            || key.getValue() == Key::SPACE)
-        {
-            mKeyPressed = true;
-            keyEvent.consume();
-        }
-    }
+		if (key.getValue() == Key::ENTER
+			|| key.getValue() == Key::SPACE)
+		{
+			mKeyPressed = true;
+			keyEvent.consume();
+		}
+	}
 
-    void Button::keyReleased(KeyEvent& keyEvent)
-    {
-	    const auto key = keyEvent.getKey();
+	void Button::keyReleased(KeyEvent& keyEvent)
+	{
+		const auto key = keyEvent.getKey();
 
-        if ((key.getValue() == Key::ENTER
-             || key.getValue() == Key::SPACE)
-            && mKeyPressed)
-        {
-            mKeyPressed = false;
-            generateAction();
-            keyEvent.consume();
-        }
-    }
+		if ((key.getValue() == Key::ENTER
+				|| key.getValue() == Key::SPACE)
+			&& mKeyPressed)
+		{
+			mKeyPressed = false;
+			generateAction();
+			keyEvent.consume();
+		}
+	}
 
-    void Button::focusLost(const Event& event)
-    {
-        mMousePressed = false;
-        mKeyPressed = false;
-    }
+	void Button::focusLost(const Event& event)
+	{
+		mMousePressed = false;
+		mKeyPressed = false;
+	}
 }

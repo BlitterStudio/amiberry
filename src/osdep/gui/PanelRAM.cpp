@@ -56,46 +56,46 @@ public:
 	{
 		if (actionEvent.getSource() == sldChipmem)
 		{
-			changed_prefs.chipmem_size = ChipMem_values[int(sldChipmem->getValue())];
+			changed_prefs.chipmem_size = ChipMem_values[static_cast<int>(sldChipmem->getValue())];
 			if ((changed_prefs.chipmem_size > 0x200000) && (changed_prefs.fastmem[0].size > 0))
 				changed_prefs.fastmem[0].size = 0;
 		}
 
 		if (actionEvent.getSource() == sldSlowmem)
 		{
-			changed_prefs.bogomem_size = SlowMem_values[int(sldSlowmem->getValue())];
+			changed_prefs.bogomem_size = SlowMem_values[static_cast<int>(sldSlowmem->getValue())];
 		}
 
 		if (actionEvent.getSource() == sldFastmem)
 		{
-			changed_prefs.fastmem[0].size = FastMem_values[int(sldFastmem->getValue())];
+			changed_prefs.fastmem[0].size = FastMem_values[static_cast<int>(sldFastmem->getValue())];
 			if (changed_prefs.fastmem[0].size > 0 && changed_prefs.chipmem_size > 0x200000)
 				changed_prefs.chipmem_size = 0x200000;
 		}
 
 		if (actionEvent.getSource() == sldZ3mem)
 		{
-			changed_prefs.z3fastmem[0].size = FastMem_values[int(sldZ3mem->getValue())];
+			changed_prefs.z3fastmem[0].size = FastMem_values[static_cast<int>(sldZ3mem->getValue())];
 			if (changed_prefs.z3fastmem[0].size > max_z3fastmem)
 				changed_prefs.z3fastmem[0].size = max_z3fastmem;
 		}
 
 		if (actionEvent.getSource() == sldGfxmem)
 		{
-			changed_prefs.rtgboards[0].rtgmem_size = FastMem_values[int(sldGfxmem->getValue())];
+			changed_prefs.rtgboards[0].rtgmem_size = FastMem_values[static_cast<int>(sldGfxmem->getValue())];
 			changed_prefs.rtgboards[0].rtgmem_type = GFXBOARD_UAE_Z3;
 		}
 
 		if (actionEvent.getSource() == sldA3000Lowmem)
 		{
-			changed_prefs.mbresmem_low_size = A3000LowMem_values[int(sldA3000Lowmem->getValue())];
+			changed_prefs.mbresmem_low_size = A3000LowMem_values[static_cast<int>(sldA3000Lowmem->getValue())];
 			if (currprefs.mbresmem_low_size != changed_prefs.mbresmem_low_size)
 				DisableResume();
 		}
 
 		if (actionEvent.getSource() == sldA3000Highmem)
 		{
-			changed_prefs.mbresmem_high_size = A3000HighMem_values[int(sldA3000Highmem->getValue())];
+			changed_prefs.mbresmem_high_size = A3000HighMem_values[static_cast<int>(sldA3000Highmem->getValue())];
 			if (currprefs.mbresmem_high_size != changed_prefs.mbresmem_high_size)
 				DisableResume();
 		}
@@ -234,7 +234,8 @@ void InitPanelRAM(const struct _ConfigCategory& category)
 	posY += sldA3000Highmem->getHeight() + DISTANCE_NEXT_Y;
 
 	grpRAM->setMovable(false);
-	grpRAM->setSize(400, posY + DISTANCE_BORDER);
+	grpRAM->setSize(400, posY + DISTANCE_BORDER * 2);
+	grpRAM->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpRAM->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpRAM);
@@ -305,34 +306,54 @@ void RefreshPanelRAM()
 		}
 	}
 
-	auto counter = 11;
-	if (can_have_1gb())
-		counter = 12;
-	for (i = 0; i < counter; ++i)
+	if (changed_prefs.address_space_24 || emulating)
 	{
-		if (changed_prefs.z3fastmem[0].size == FastMem_values[i])
-		{
-			sldZ3mem->setValue(i);
-			lblZ3size->setCaption(FastMem_list[i]);
-			break;
-		}
-	}
-	sldZ3mem->setEnabled(!changed_prefs.address_space_24 && !emulating);
-	lblZ3mem->setEnabled(!changed_prefs.address_space_24 && !emulating);
-	lblZ3size->setEnabled(!changed_prefs.address_space_24 && !emulating);
+		// Disable Z3 and RTG memory
+		sldZ3mem->setEnabled(false);
+		lblZ3mem->setEnabled(false);
+		lblZ3size->setEnabled(false);
+		lblZ3size->setCaption("N/A");
 
-	for (i = 0; i < 9; ++i)
+		sldGfxmem->setEnabled(false);
+		lblGfxmem->setEnabled(false);
+		lblGfxsize->setEnabled(false);
+		lblGfxsize->setCaption("N/A");
+	}
+	else
 	{
-		if (changed_prefs.rtgboards[0].rtgmem_size == FastMem_values[i])
+		sldZ3mem->setEnabled(true);
+		lblZ3mem->setEnabled(true);
+		lblZ3size->setEnabled(true);
+		lblZ3size->setCaption("None");
+		
+		auto counter = 11;
+		if (can_have_1gb())
+			counter = 12;
+		for (i = 0; i < counter; ++i)
 		{
-			sldGfxmem->setValue(i);
-			lblGfxsize->setCaption(FastMem_list[i]);
-			break;
+			if (changed_prefs.z3fastmem[0].size == FastMem_values[i])
+			{
+				sldZ3mem->setValue(i);
+				lblZ3size->setCaption(FastMem_list[i]);
+				break;
+			}
+		}
+
+		sldGfxmem->setEnabled(true);
+		lblGfxmem->setEnabled(true);
+		lblGfxsize->setEnabled(true);
+		lblGfxsize->setCaption("None");
+		
+		for (i = 0; i < 9; ++i)
+		{
+			if (changed_prefs.rtgboards[0].rtgmem_size == FastMem_values[i])
+			{
+				sldGfxmem->setValue(i);
+				lblGfxsize->setCaption(FastMem_list[i]);
+				break;
+			}
 		}
 	}
-	sldGfxmem->setEnabled(!changed_prefs.address_space_24 && !emulating);
-	lblGfxmem->setEnabled(!changed_prefs.address_space_24 && !emulating);
-	lblGfxsize->setEnabled(!changed_prefs.address_space_24 && !emulating);
 
 	for (i = 0; i < 3; ++i)
 	{

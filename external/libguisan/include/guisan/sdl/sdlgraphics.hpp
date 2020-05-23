@@ -65,105 +65,105 @@
 
 namespace gcn
 {
-    class Image;
-    class Rectangle;
+	class Image;
+	class Rectangle;
 
-    /**
-     * SDL implementation of the Graphics.
-     */
-    class GCN_EXTENSION_DECLSPEC SDLGraphics : public Graphics
-    {
-    public:
+	/**
+	 * SDL implementation of the Graphics.
+	 */
+	class GCN_EXTENSION_DECLSPEC SDLGraphics : public Graphics
+	{
+	public:
 
-        // Needed so that drawImage(gcn::Image *, int, int) is visible.
-        using Graphics::drawImage;
+		// Needed so that drawImage(gcn::Image *, int, int) is visible.
+		using Graphics::drawImage;
 
-        /**
-         * Constructor.
-         */
-        SDLGraphics();
-		
+		/**
+		 * Constructor.
+		 */
+		SDLGraphics();
+
 		/**
 		 * Destructor.
 		 */
 		~SDLGraphics();
-		
-        /**
-         * Sets the target SDL_Surface to draw to. The target can be any
-         * SDL_Surface. This function also pushes a clip areas corresponding to
-         * the dimension of the target.
-         *
-         * @param target the target to draw to.
-         */
-        virtual void setTarget(SDL_Surface* target);
 
-        /**
-         * Gets the target SDL_Surface.
-         *
-         * @return the target SDL_Surface.
-         */
-        virtual SDL_Surface* getTarget() const;
+		/**
+		 * Sets the target SDL_Surface to draw to. The target can be any
+		 * SDL_Surface. This function also pushes a clip areas corresponding to
+		 * the dimension of the target.
+		 *
+		 * @param target the target to draw to.
+		 */
+		virtual void setTarget(SDL_Surface* target);
 
-        /**
-         * Draws an SDL_Surface on the target surface. Normally you'll
-         * use drawImage, but if you want to write SDL specific code
-         * this function might come in handy.
-         *
-         * NOTE: The clip areas will be taken into account.
-         */
-        virtual void drawSDLSurface(SDL_Surface* surface, SDL_Rect source,
-                                    SDL_Rect destination);
+		/**
+		 * Gets the target SDL_Surface.
+		 *
+		 * @return the target SDL_Surface.
+		 */
+		[[nodiscard]] virtual SDL_Surface* getTarget() const;
+
+		/**
+		 * Draws an SDL_Surface on the target surface. Normally you'll
+		 * use drawImage, but if you want to write SDL specific code
+		 * this function might come in handy.
+		 *
+		 * NOTE: The clip areas will be taken into account.
+		 */
+		virtual void drawSDLSurface(SDL_Surface* surface, SDL_Rect source,
+		                            SDL_Rect destination);
 
 
-        // Inherited from Graphics
+		// Inherited from Graphics
 
-        virtual void _beginDraw();
+		void _beginDraw() override;
 
-        virtual void _endDraw();
+		void _endDraw() override;
 
-        virtual bool pushClipArea(Rectangle area);
+		bool pushClipArea(Rectangle area) override;
 
-        virtual void popClipArea();
+		void popClipArea() override;
 
-        virtual void drawImage(const Image* image, int srcX, int srcY,
-                               int dstX, int dstY, int width,
-                               int height);
+		void drawImage(const Image* image, int srcX, int srcY,
+		               int dstX, int dstY, int width,
+		               int height) override;
 
-        virtual void drawPoint(int x, int y);
+		void drawPoint(int x, int y) override;
 
-        virtual void drawLine(int x1, int y1, int x2, int y2);
+		void drawLine(int x1, int y1, int x2, int y2) override;
 
-        virtual void drawRectangle(const Rectangle& rectangle);
+		void drawRectangle(const Rectangle& rectangle) override;
 
-        virtual void fillRectangle(const Rectangle& rectangle);
+		void fillRectangle(const Rectangle& rectangle) override;
 
-        virtual void setColor(const Color& color);
+		void setColor(const Color& color) override;
 
-        virtual const Color& getColor();
+		const Color& getColor() override;
 
-    protected:
-        /**
-         * Draws a horizontal line.
-         *
-         * @param x1 the start coordinate of the line.
-         * @param y the y coordinate of the line.
-         * @param x2 the end coordinate of the line.
-         */
-        virtual void drawHLine(int x1, int y, int x2);
+	protected:
+		/**
+		 * Draws a horizontal line.
+		 *
+		 * @param x1 the start coordinate of the line.
+		 * @param y the y coordinate of the line.
+		 * @param x2 the end coordinate of the line.
+		 */
+		virtual void drawHLine(int x1, int y, int x2);
 
-        /**
-         * Draws a vertical line.
-         *
-         * @param x the x coordinate of the line.
-         * @param y1 the start coordinate of the line.
-         * @param y2 the end coordinate of the line.
-         */
-        virtual void drawVLine(int x, int y1, int y2);
+		/**
+		 * Draws a vertical line.
+		 *
+		 * @param x the x coordinate of the line.
+		 * @param y1 the start coordinate of the line.
+		 * @param y2 the end coordinate of the line.
+		 */
+		virtual void drawVLine(int x, int y1, int y2);
 
-        SDL_Surface* mTarget;
-        Color mColor;
-        bool mAlpha;
-    };
+		SDL_Surface* mTarget{};
+		Color mColor;
+		bool mAlpha;
+	};
 }
 
 #endif // end GCN_SDLGRAPHICS_HPP

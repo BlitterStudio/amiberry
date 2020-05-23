@@ -66,110 +66,110 @@
 
 namespace gcn
 {
-    /**
-     * A text field in which you can write or display a line of text.
-     */
-    class GCN_CORE_DECLSPEC TextField:
-        public Widget,
-        public MouseListener,
-        public KeyListener
-    {
-    public:
-        /**
-         * Default constructor.
-         */
-        TextField();
+	/**
+	 * A text field in which you can write or display a line of text.
+	 */
+	class GCN_CORE_DECLSPEC TextField :
+		public Widget,
+		public MouseListener,
+		public KeyListener
+	{
+	public:
+		/**
+		 * Default constructor.
+		 */
+		TextField();
 
-        /**
-         * Constructor. Initializes the textfield with a given string.
-         *
-         * @param text the initial text.
-         */
-        TextField(const std::string& text);
+		/**
+		 * Constructor. Initializes the textfield with a given string.
+		 *
+		 * @param text the initial text.
+		 */
+		TextField(const std::string& text);
 
-        /**
-         * Sets the text.
-         *
-         * @param text the new text in the TextField.
-         */
-        void setText(const std::string& text);
+		/**
+		 * Sets the text.
+		 *
+		 * @param text the new text in the TextField.
+		 */
+		void setText(const std::string& text);
 
-        /**
-         * Gets the text.
-         *
-         * @return the text of the TextField.
-         */
-        const std::string& getText() const;
+		/**
+		 * Gets the text.
+		 *
+		 * @return the text of the TextField.
+		 */
+		[[nodiscard]] const std::string& getText() const;
 
-        /**
-         * Draws the caret (the little marker in the text that shows where the
-         * letters you type will appear). Easily overloaded if you want to
-         * change the style of the caret.
-         *
-         * @param graphics the Graphics object to draw with.
-         * @param x the caret's x-position.
-         */
-        virtual void drawCaret(Graphics* graphics, int x);
+		/**
+		 * Draws the caret (the little marker in the text that shows where the
+		 * letters you type will appear). Easily overloaded if you want to
+		 * change the style of the caret.
+		 *
+		 * @param graphics the Graphics object to draw with.
+		 * @param x the caret's x-position.
+		 */
+		virtual void drawCaret(Graphics* graphics, int x);
 
-        /**
-         * Adjusts the size of the TextField to fit the font size. The
-         * constructor taking a string uses this function to initialize the
-         * size of the TextField.
-         */
-        void adjustSize();
+		/**
+		 * Adjusts the size of the TextField to fit the font size. The
+		 * constructor taking a string uses this function to initialize the
+		 * size of the TextField.
+		 */
+		void adjustSize();
 
-        /**
-         * Adjusts the height of the text field to fit the font size. The
-         * height of the TextField is initialized with this function by the
-         * constructors.
-         */
-        void adjustHeight();
+		/**
+		 * Adjusts the height of the text field to fit the font size. The
+		 * height of the TextField is initialized with this function by the
+		 * constructors.
+		 */
+		void adjustHeight();
 
-        /**
-         * Sets the caret position.
-         *
-         * @param position the caret position.
-         */
-        void setCaretPosition(unsigned int position);
+		/**
+		 * Sets the caret position.
+		 *
+		 * @param position the caret position.
+		 */
+		void setCaretPosition(unsigned int position);
 
-        /**
-         * Gets the caret position.
-         *
-         * @return the caret position.
-         */
-        unsigned int getCaretPosition() const;
-
-
-        // Inherited from Widget
-
-        virtual void fontChanged();
-
-        virtual void draw(Graphics* graphics);
-
-        virtual void drawBorder(Graphics* graphics);
+		/**
+		 * Gets the caret position.
+		 *
+		 * @return the caret position.
+		 */
+		[[nodiscard]] unsigned int getCaretPosition() const;
 
 
-        // Inherited from MouseListener
+		// Inherited from Widget
 
-        virtual void mousePressed(MouseEvent& mouseEvent);
+		void fontChanged() override;
 
-        virtual void mouseDragged(MouseEvent& mouseEvent);
-        
+		void draw(Graphics* graphics) override;
 
-        // Inherited from KeyListener
+		void drawBorder(Graphics* graphics) override;
 
-        virtual void keyPressed(KeyEvent& keyEvent);
 
-    protected:
-        /**
-         * Scrolls the text horizontally so that the caret shows if needed.
-         */
-        void fixScroll();
+		// Inherited from MouseListener
 
-        std::string mText;
-        unsigned int mCaretPosition;
-        int mXScroll;
-    };
+		void mousePressed(MouseEvent& mouseEvent) override;
+
+		void mouseDragged(MouseEvent& mouseEvent) override;
+
+
+		// Inherited from KeyListener
+
+		void keyPressed(KeyEvent& keyEvent) override;
+
+	protected:
+		/**
+		 * Scrolls the text horizontally so that the caret shows if needed.
+		 */
+		void fixScroll();
+
+		std::string mText;
+		unsigned int mCaretPosition;
+		int mXScroll;
+	};
 }
 
 #endif // end GCN_TEXTFIELD_HPP

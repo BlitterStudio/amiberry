@@ -2436,7 +2436,7 @@ struct zfile *flashromfile_open(const TCHAR *name)
 			rw = false;
 			f = zfile_fopen(name, _T("rb"), ZFD_NORMAL);
 			if (!f) {
-				fetch_rompath(path, sizeof path / sizeof(TCHAR));
+				get_rom_path(path, sizeof path / sizeof(TCHAR));
 				_tcscat(path, name);
 				rw = true;
 				f = zfile_fopen(path, _T("rb+"), ZFD_NONE);

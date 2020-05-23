@@ -4,7 +4,6 @@
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
-#include "UaeDropDown.hpp"
 #include "sysdeps.h"
 #include "gui_handling.h"
 
@@ -24,7 +23,7 @@ static NavigationMap navMap[] =
 	// main_window
 	{"About", "", "", "Shutdown", "Paths"},
 	{"Paths", "SystemROMs", "SystemROMs", "About", "Quickstart"},
-	{"Quickstart", "qsNTSC", "qscboAModel", "Paths", "Configurations"},
+	{"Quickstart", "qsNTSC", "cboAModel", "Paths", "Configurations"},
 	{"Configurations", "ConfigList", "ConfigList", "Quickstart", "CPU and FPU"},
 	{"CPU and FPU", "7 Mhz", "68000", "Configurations", "Chipset"},
 	{"Chipset", "Fast copper", "OCS", "CPU and FPU", "ROM"},
@@ -57,33 +56,38 @@ static NavigationMap navMap[] =
 	{"SystemROMs", "Paths", "Paths", "RescanROMs", "ConfigPath"},
 	{"ConfigPath", "Paths", "Paths", "SystemROMs", "ControllersPath"},
 	{"ControllersPath", "Paths", "Paths", "ConfigPath", "RetroArchFile"},
-	{"RetroArchFile", "Paths", "Paths", "ControllersPath", "RescanROMs"},
-	{"RescanROMs", "Paths", "DownloadXML", "RetroArchFile", "SystemROMs"},
-	{"DownloadXML", "RescanROMs", "Paths", "RetroArchFile", "SystemROMs"},
+	{"RetroArchFile", "Paths", "Paths", "ControllersPath", "chkEnableLogging"},
+	{"chkEnableLogging", "Paths", "Paths", "RetroArchFile", "cmdLogfilePath"},
+	{"cmdLogfilePath", "Paths", "Paths", "chkEnableLogging", "RescanROMs"},
+	{"RescanROMs", "Paths", "DownloadXML", "cmdLogfilePath", "SystemROMs"},
+	{"DownloadXML", "RescanROMs", "Paths", "cmdLogfilePath", "SystemROMs"},
 
 	//  active            move left         move right        move up           move down
 	// PanelQuickstart
-	{"qscboAModel", "Quickstart", "qsNTSC", "cmdSetConfig", "qscboAConfig"},
-	{"qsNTSC", "qscboAModel", "Quickstart", "qsMode", "qscboAConfig"},
-	{"qscboAConfig", "Quickstart", "Quickstart", "qscboAModel", "qscmdSel0"},
-	{"qsDF0", "Quickstart", "qsWP0", "qscboAConfig", "qscboDisk0"},
-	{"qsWP0", "qsDF0", "qscmdEject0", "qscboAConfig", "qscboDisk0"},
+	{"cboAModel", "Quickstart", "qsNTSC", "cboWhdload", "cboAConfig"},
+	{"qsNTSC", "cboAModel", "Quickstart", "qsMode", "cboAConfig"},
+	{"cboAConfig", "Quickstart", "Quickstart", "cboAModel", "qscmdSel0"},
+	{"qsDF0", "Quickstart", "qsWP0", "cboAConfig", "cboDisk0"},
+	{"qsWP0", "qsDF0", "qscmdEject0", "cboAConfig", "cboDisk0"},
 	//  { "qsInfo0",        "Quickstart",     "",     "",               "" },
-	{"qscmdEject0", "qsWP0", "qscmdSel0", "qscboAConfig", "qscboDisk0"},
-	{"qscmdSel0", "qscmdEject0", "Quickstart", "qscboAConfig", "qscboDisk0"},
-	{"qscboDisk0", "Quickstart", "Quickstart", "qscmdSel0", "qscmdSel1"},
-	{"qsDF1", "Quickstart", "qsWP1", "qscboDisk0", "qscboDisk1"},
-	{"qsWP1", "qsDF1", "qscmdEject1", "qscboDisk0", "qscboDisk1"},
+	{"qscmdEject0", "qsWP0", "qscmdSel0", "cboAConfig", "cboDisk0"},
+	{"qscmdSel0", "qscmdEject0", "Quickstart", "cboAConfig", "cboDisk0"},
+	{"cboDisk0", "Quickstart", "Quickstart", "qscmdSel0", "qscmdSel1"},
+	{"qsDF1", "Quickstart", "qsWP1", "cboDisk0", "cboDisk1"},
+	{"qsWP1", "qsDF1", "qscmdEject1", "cboDisk0", "cboDisk1"},
 	//  { "qsInfo1",        "Quickstart",     "",     "",               "" },
-	{"qscmdEject1", "qsWP1", "qscmdSel1", "qscboDisk0", "qscboDisk1"},
-	{"qscmdSel1", "qscmdEject1", "Quickstart", "qscboDisk0", "qscboDisk1"},
-	{"qscboDisk1", "Quickstart", "Quickstart", "qsDF1", "qsCDSelect"},
-	{"qsCD drive", "Quickstart", "qscdEject", "qscboDisk1", "qscboCD"},
-	{"qscdEject", "qsCD drive", "qsCDSelect", "qscboDisk1", "qscboCD"},
-	{"qsCDSelect", "qscdEject", "Quickstart", "qscboDisk1", "qscboCD"},
-	{"qscboCD", "Quickstart", "Quickstart", "qsCDSelect", "qsMode"},
-	{"qsMode", "Quickstart", "Quickstart", "qscboCD", "cmdSetConfig"},
-	{"cmdSetConfig", "Quickstart", "Quickstart", "qsMode", "qscboAModel"},
+	{"qscmdEject1", "qsWP1", "qscmdSel1", "cboDisk0", "cboDisk1"},
+	{"qscmdSel1", "qscmdEject1", "Quickstart", "cboDisk0", "cboDisk1"},
+	{"cboDisk1", "Quickstart", "Quickstart", "qsDF1", "qsCDSelect"},
+	{"qsCD drive", "Quickstart", "qscdEject", "cboDisk1", "cboCD"},
+	{"qscdEject", "qsCD drive", "qsCDSelect", "cboDisk1", "cboCD"},
+	{"qsCDSelect", "qscdEject", "Quickstart", "cboDisk1", "cboCD"},
+	{"cboCD", "Quickstart", "Quickstart", "qsCDSelect", "qsMode"},
+	{"qsMode", "Quickstart", "Quickstart", "cboCD", "cmdSetConfig"},
+	{"cmdSetConfig", "Quickstart", "Quickstart", "qsMode", "cmdWhdloadEject"},
+	{"cmdWhdloadEject", "Quickstart", "cmdWhdloadSelect", "cmdSetConfig", "cboWhdload"},
+	{"cmdWhdloadSelect", "cmdWhdloadEject", "Quickstart", "cmdSetConfig", "cboWhdload"},
+	{"cboWhdload", "Quickstart", "Quickstart", "cmdWhdloadEject", "cboAModel"},
 
 	// PanelConfig
 	{"ConfigList", "Configurations", "ConfigLoad", "", ""},
@@ -107,11 +111,11 @@ static NavigationMap navMap[] =
 	{"CPU internal", "68030", "Fastest", "68882", "FPUstrict"},
 	{"FPUstrict", "68040", "Fastest", "CPU internal", "FPUJIT"},
 	{"FPUJIT", "CPU24Bit", "Fastest", "FPUstrict", "FPUnone"},
-	{"7 Mhz", "FPUnone", "CPU and FPU", "Turbo", "14 Mhz"},
+	{"7 Mhz", "FPUnone", "CPU and FPU", "sldCpuIdle", "14 Mhz"},
 	{"14 Mhz", "FPUnone", "CPU and FPU", "7 Mhz", "25 Mhz"},
 	{"25 Mhz", "FPUnone", "CPU and FPU", "14 Mhz", "Fastest"},
-	{"Fastest", "FPUnone", "CPU and FPU", "25 Mhz", "Turbo"},
-	{"Turbo", "FPUnone", "CPU and FPU", "Fastest", "7 Mhz"},
+	{"Fastest", "FPUnone", "CPU and FPU", "25 Mhz", "sldCpuIdle"},
+	{"sldCpuIdle", "", "", "Fastest", "7 Mhz"},
 
 	// PanelChipset
 	{"OCS", "Chipset", "ChipsetExtra", "CollFull", "ECS Agnus"},
@@ -274,11 +278,10 @@ static NavigationMap navMap[] =
 	// PanelMisc
 	//  active            move left           move right          move up           move down
 
-	{"StatusLine", "Miscellaneous", "RetroArchQuit", "cboScrolllock", "HideIdle"},
-	{"HideIdle", "Miscellaneous", "RetroArchMenu", "StatusLine", "ShowGUI"},
-	{"ShowGUI", "Miscellaneous", "RetroArchReset", "HideIdle", "BSDSocket"},
+	{"StatusLine", "Miscellaneous", "RetroArchQuit", "cboScrolllock", "ShowGUI"},
+	{"ShowGUI", "Miscellaneous", "RetroArchMenu", "StatusLine", "BSDSocket"},
 	{"RetroArchQuit", "StatusLine", "Miscellaneous", "KeyForQuit", "RetroArchMenu"},
-	{"RetroArchMenu", "HideIdle", "Miscellaneous", "RetroArchQuit", "RetroArchReset"},
+	{"RetroArchMenu", "ShowGUI", "Miscellaneous", "RetroArchQuit", "RetroArchReset"},
 	{"RetroArchReset", "ShowGUI", "Miscellaneous", "RetroArchMenu", "BSDSocket"},
 
 	{"BSDSocket", "Miscellaneous", "Miscellaneous", "ShowGUI", "MasterWP"},
@@ -409,10 +412,9 @@ bool HandleNavigation(int direction)
 
 			if (focusTarget != nullptr)
 			{
-				if (activeWidget->getId().substr(0, 3) == "cbo" 
-					|| activeWidget->getId().substr(0, 5) == "qscbo")
+				if (activeWidget->getId().substr(0, 3) == "cbo")
 				{
-					auto dropdown = dynamic_cast<gcn::UaeDropDown*>(activeWidget);
+					auto* dropdown = dynamic_cast<gcn::DropDown*>(activeWidget);
 					if (dropdown->isDroppedDown() && (direction == DIRECTION_UP || direction == DIRECTION_DOWN))
 						focusTarget = nullptr; // Up/down navigates in list if dropped down
 				}

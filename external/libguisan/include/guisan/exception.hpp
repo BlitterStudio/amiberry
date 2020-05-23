@@ -75,91 +75,90 @@
  * the exception occured.
  */
 #define GCN_EXCEPTION(mess) gcn::Exception(mess,   \
-                            __FUNCTION__,          \
-                            __FILE__,              \
-                            __LINE__)
+							__FUNCTION__,          \
+							__FILE__,              \
+							__LINE__)
 
 namespace gcn
 {
+	/**
+	 * An exception containing a message, a file and a line number.
+	 * Guichan will only throw exceptions of this class. You can use
+	 * this class for your own exceptions. A nifty feature of the
+	 * excpetion class is that it can tell you from which line and
+	 * file it was thrown. To make things easier when throwing
+	 * exceptions there exists a macro for creating exceptions
+	 * which automatically sets the filename and line number.
+	 *
+	 * EXAMPLE: @code
+	 *          throw GCN_EXCEPTION("my error message");
+	 *          @endcode
+	 */
+	class GCN_CORE_DECLSPEC Exception
+	{
+	public:
 
-    /**
-     * An exception containing a message, a file and a line number.
-     * Guichan will only throw exceptions of this class. You can use
-     * this class for your own exceptions. A nifty feature of the
-     * excpetion class is that it can tell you from which line and
-     * file it was thrown. To make things easier when throwing
-     * exceptions there exists a macro for creating exceptions
-     * which automatically sets the filename and line number.
-     *
-     * EXAMPLE: @code
-     *          throw GCN_EXCEPTION("my error message");
-     *          @endcode
-     */
-    class GCN_CORE_DECLSPEC Exception
-    {
-    public:
+		/**
+		 * Constructor.
+		 */
+		Exception();
 
-        /**
-         * Constructor.
-         */
-        Exception();
+		/**
+		 * Constructor.
+		 *
+		 * @param message the error message.
+		 */
+		Exception(std::string message);
 
-        /**
-         * Constructor.
-         *
-         * @param message the error message.
-         */
-        Exception(const std::string& message);
+		/**
+		 * Constructor.
+		 *
+		 * NOTE: Don't use this constructor. Use the GCN_EXCEPTION macro instead.
+		 *
+		 * @param message the error message.
+		 * @param function the function name.
+		 * @param filename the name of the file.
+		 * @param line the line number.
+		 */
+		Exception(std::string message,
+				  std::string function,
+				  std::string filename,
+				  int line);
 
-        /**
-         * Constructor.
-         *
-         * NOTE: Don't use this constructor. Use the GCN_EXCEPTION macro instead.
-         *
-         * @param message the error message.
-         * @param function the function name.
-         * @param filename the name of the file.
-         * @param line the line number.
-         */
-        Exception(const std::string& message,
-                  const std::string& function,
-                  const std::string& filename,
-                  int line);
+		/**
+		 * Gets the function name in which the exception was thrown.
+		 *
+		 * @return the function name in which the exception was thrown.
+		 */
+		[[nodiscard]] const std::string& getFunction() const;
 
-        /**
-         * Gets the function name in which the exception was thrown.
-         *
-         * @return the function name in which the exception was thrown.
-         */
-        const std::string& getFunction() const;
+		/**
+		 * Gets the error message of the exception.
+		 *
+		 * @return the error message.
+		 */
+		[[nodiscard]] const std::string& getMessage() const;
 
-        /**
-         * Gets the error message of the exception.
-         *
-         * @return the error message.
-         */
-        const std::string& getMessage() const;
+		/**
+		 * Gets the filename in which the exceptions was thrown.
+		 *
+		 * @return the filename in which the exception was thrown.
+		 */
+		[[nodiscard]] const std::string& getFilename() const;
 
-        /**
-         * Gets the filename in which the exceptions was thrown.
-         *
-         * @return the filename in which the exception was thrown.
-         */
-        const std::string& getFilename() const;
+		/**
+		 * Gets the line number of the line where the exception was thrown.
+		 *
+		 * @return the line number of the line where the exception was thrown.
+		 */
+		[[nodiscard]] int getLine() const;
 
-        /**
-         * Gets the line number of the line where the exception was thrown.
-         *
-         * @return the line number of the line where the exception was thrown.
-         */
-        int getLine() const;
-
-    protected:
-        std::string mFunction;
-        std::string mMessage;
-        std::string mFilename;
-        int mLine;
-    };
+	protected:
+		std::string mFunction;
+		std::string mMessage;
+		std::string mFilename;
+		int mLine;
+	};
 }
 
 #endif // end GCN_EXCEPTION_HPP

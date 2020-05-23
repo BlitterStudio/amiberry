@@ -102,7 +102,7 @@ namespace gcn
          *
          * @return the target SDL_Renderer.
          */
-        virtual SDL_Renderer* getTarget() const;
+        [[nodiscard]] virtual SDL_Renderer* getTarget() const;
 
         /**
          * Draws an SDL_Surface on the target surface. Normally you'll
@@ -180,11 +180,11 @@ namespace gcn
          */
         virtual void restoreRenderColor();
 
-        SDL_Surface* mTarget;
-        SDL_Renderer* mRenderTarget;
-        SDL_Texture* mTexture;
+        SDL_Surface* mTarget{};
+        SDL_Renderer* mRenderTarget{};
+        SDL_Texture* mTexture{};
         Color mColor;
-        Uint8 r, g, b, a; //! to store previous color from renderer
+        Uint8 r{}, g{}, b{}, a{}; //! to store previous color from renderer
         bool mAlpha;
     };
 }

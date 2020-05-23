@@ -303,7 +303,7 @@ void setup_cursor()
 		SDL_Log("Could not load cursor bitmap: %s\n", SDL_GetError());
 		return;
 	}
-	auto formattedSurface = SDL_ConvertSurfaceFormat(cursor_surface, SDL_PIXELFORMAT_RGBA8888, 0);
+	auto* formattedSurface = SDL_ConvertSurfaceFormat(cursor_surface, SDL_PIXELFORMAT_RGBA8888, 0);
 	if (formattedSurface != nullptr)
 	{
 		SDL_FreeSurface(cursor_surface);
@@ -411,13 +411,15 @@ void amiberry_gui_init()
 	{
 		if (rotation_angle != 0 && rotation_angle != 180)
 			SDL_SetWindowSize(sdl_window, GUI_HEIGHT, GUI_WIDTH);
+		else
+			SDL_SetWindowSize(sdl_window, GUI_WIDTH, GUI_HEIGHT);
 	}
 
 	// make the scaled rendering look smoother (linear scaling).
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 
 	gui_texture = SDL_CreateTexture(renderer, gui_screen->format->format, SDL_TEXTUREACCESS_STREAMING, gui_screen->w,
-	                                gui_screen->h);
+									gui_screen->h);
 	check_error_sdl(gui_texture == nullptr, "Unable to create GUI texture:");
 #endif
 	
@@ -926,7 +928,7 @@ public:
 			// Restart emulator
 			//-------------------------------------------------
 			char tmp[MAX_DPATH];
-			fetch_configurationpath(tmp, sizeof tmp);
+			get_configuration_path(tmp, sizeof tmp);
 			if (strlen(last_loaded_config) > 0)
 				strncat(tmp, last_loaded_config, MAX_DPATH - 1);
 			else
@@ -1120,13 +1122,13 @@ void gui_widgets_init()
 	gui_top->add(cmdShutdown, DISTANCE_BORDER, GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
 #endif
 	gui_top->add(cmdQuit, DISTANCE_BORDER + BUTTON_WIDTH + DISTANCE_NEXT_X,
-	             GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
+				 GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
 	gui_top->add(cmdRestart, DISTANCE_BORDER + 2 * BUTTON_WIDTH + 2 * DISTANCE_NEXT_X,
-	             GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
+				 GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
 	gui_top->add(cmdHelp, DISTANCE_BORDER + 3 * BUTTON_WIDTH + 3 * DISTANCE_NEXT_X,
-	             GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
+				 GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
 	gui_top->add(cmdReset, DISTANCE_BORDER + 5 * BUTTON_WIDTH + 5 * DISTANCE_NEXT_X,
-	             GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
+				 GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
 	gui_top->add(cmdStart, GUI_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH, GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
 
 	gui_top->add(selectors, DISTANCE_BORDER + 1, DISTANCE_BORDER + 1);
@@ -1187,11 +1189,6 @@ void DisableResume()
 	if (emulating)
 	{
 		cmdStart->setEnabled(false);
-		gcn::Color backCol;
-		backCol.r = 128;
-		backCol.g = 128;
-		backCol.b = 128;
-		cmdStart->setForegroundColor(backCol);
 	}
 }
 

@@ -943,7 +943,7 @@ static TCHAR *DISK_get_default_saveimagepath (const TCHAR *name)
 	TCHAR path[MAX_DPATH];
 	_tcscpy(name1, name);
 	saveimagecutfilepart(name1);
-	fetch_saveimagepath (path, sizeof path / sizeof (TCHAR), 1);
+	get_saveimage_path (path, sizeof path / sizeof (TCHAR), 1);
 	saveimageaddfilename(path, name1, 0);
 	return my_strdup(path);
 }

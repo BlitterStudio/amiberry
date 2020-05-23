@@ -7,7 +7,6 @@
 #include <guisan/sdl/sdltruetypefont.hpp>
 
 #include "SelectorEntry.hpp"
-#include "UaeCheckBox.hpp"
 
 #include "sysdeps.h"
 #include "config.h"
@@ -35,7 +34,7 @@ static gcn::Button *cmdOK;
 static gcn::Button *cmdCancel;
 static gcn::Label *lblDevice;
 static gcn::TextField *txtDevice;
-static gcn::UaeCheckBox *chkAutoboot;
+static gcn::CheckBox *chkAutoboot;
 static gcn::Label *lblBootPri;
 static gcn::TextField *txtBootPri;
 static gcn::Label *lblPath;
@@ -117,7 +116,7 @@ static void InitCreateFilesysHardfile()
 	txtDevice = new gcn::TextField();
 	txtDevice->setSize(80, TEXTFIELD_HEIGHT);
 
-	chkAutoboot = new gcn::UaeCheckBox("Bootable", true);
+	chkAutoboot = new gcn::CheckBox("Bootable", true);
 	chkAutoboot->setId("createHdfAutoboot");
 
 	lblBootPri = new gcn::Label("Boot priority:");
@@ -413,7 +412,7 @@ bool CreateFilesysHardfile()
 
 		const auto bp = tweakbootpri(atoi(txtBootPri->getText().c_str()), 1, 0);
 
-		const auto newFile = fopen(txtPath->getText().c_str(), "wbe");
+		auto* const newFile = fopen(txtPath->getText().c_str(), "wbe");
 		if (!newFile)
 		{
 			write_log("Unable to create new file.");
@@ -450,10 +449,10 @@ bool CreateFilesysHardfile()
 		ci.controller_media_type = 0;
 		ci.unit_feature_level = 1;
 		ci.readonly = false;
-		const auto uci = add_filesys_config(&changed_prefs, -1, &ci);
+		auto* const uci = add_filesys_config(&changed_prefs, -1, &ci);
 		if (uci)
 		{
-			const auto hfd = get_hardfile_data(uci->configoffset);
+			auto* const hfd = get_hardfile_data(uci->configoffset);
 			hardfile_media_change(hfd, &ci, true, false);
 		}
 	}

@@ -41,7 +41,7 @@ extern int vsync_isdone(frame_time_t*);
 extern void doflashscreen (void);
 //extern int flashscreen;
 extern void updatedisplayarea();
-
+extern int isvsync_chipset(void);
 extern int isvsync_rtg (void);
 extern int isvsync (void);
 
@@ -172,13 +172,5 @@ struct amigadisplay
 };
 
 extern struct amigadisplay adisplays;
-
-STATIC_INLINE int isvsync_chipset (void)
-{
-	struct amigadisplay *ad = &adisplays;
-	if (ad->picasso_on)
-		return 0;
-	return 1;
-}
 
 #endif /* UAE_XWIN_H */

@@ -6,8 +6,6 @@
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include "SelectorEntry.hpp"
-#include "UaeDropDown.hpp"
-#include "UaeCheckBox.hpp"
 
 #include "sysdeps.h"
 #include "options.h"
@@ -54,9 +52,9 @@ static gcn::ImageButton* listCmdDelete[MAX_HD_DEVICES];
 static gcn::Button* cmdAddDirectory;
 static gcn::Button* cmdAddHardfile;
 static gcn::Button* cmdCreateHardfile;
-static gcn::UaeCheckBox* chkHDReadOnly;
-static gcn::UaeCheckBox* chkCD;
-static gcn::UaeDropDown* cboCDFile;
+static gcn::CheckBox* chkHDReadOnly;
+static gcn::CheckBox* chkCD;
+static gcn::DropDown* cboCDFile;
 static gcn::Button* cmdCDEject;
 static gcn::Button* cmdCDSelect;
 static gcn::Label* lblCDVol;
@@ -70,7 +68,7 @@ static int GetHDType(const int index)
 	auto type = get_filesys_unitconfig(&changed_prefs, index, &mi);
 	if (type < 0)
 	{
-		const auto uci = &changed_prefs.mountconfig[index];
+		auto* const uci = &changed_prefs.mountconfig[index];
 		type = uci->ci.type == UAEDEV_DIR ? FILESYS_VIRTUAL : FILESYS_HARDFILE;
 	}
 	return type;
@@ -88,9 +86,9 @@ public:
 		return lstMRUCDList.size();
 	}
 
-	string getElementAt(int i) override
+	string getElementAt(const int i) override
 	{
-		if (i < 0 || i >= lstMRUCDList.size())
+		if (i < 0 || i >= static_cast<int>(lstMRUCDList.size()))
 			return "---";
 		return lstMRUCDList[i];
 	}
@@ -283,7 +281,7 @@ public:
 	{
 		if (actionEvent.getSource() == sldCDVol)
 		{
-			const auto newvol = 100 - int(sldCDVol->getValue());
+			const auto newvol = 100 - static_cast<int>(sldCDVol->getValue());
 			if (changed_prefs.sound_volume_cd != newvol)
 			{
 				changed_prefs.sound_volume_cd = newvol;
@@ -410,11 +408,12 @@ void InitPanelHD(const struct _ConfigCategory& category)
 	cdFileActionListener = new CDFileActionListener();
 	genericActionListener = new GenericActionListener();
 
-	chkHDReadOnly = new gcn::UaeCheckBox("Master harddrive write protection");
+	chkHDReadOnly = new gcn::CheckBox("Master harddrive write protection");
 	chkHDReadOnly->setId("chkHDRO");
 	chkHDReadOnly->addActionListener(genericActionListener);
 
-	chkCD = new gcn::UaeCheckBox("CD drive");
+	chkCD = new gcn::CheckBox("CD drive");
+	chkCD->setId("CD drive");
 	chkCD->addActionListener(cdCheckActionListener);
 
 	cmdCDEject = new gcn::Button("Eject");
@@ -429,7 +428,7 @@ void InitPanelHD(const struct _ConfigCategory& category)
 	cmdCDSelect->setId("CDSelect");
 	cmdCDSelect->addActionListener(cdButtonActionListener);
 
-	cboCDFile = new gcn::UaeDropDown(&cdfileList);
+	cboCDFile = new gcn::DropDown(&cdfileList);
 	cboCDFile->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, cboCDFile->getHeight());
 	cboCDFile->setBaseColor(gui_baseCol);
 	cboCDFile->setBackgroundColor(colTextboxBackground);
@@ -569,8 +568,8 @@ void RefreshPanelHD()
 	{
 		if (row < changed_prefs.mountitems)
 		{
-			auto uci = &changed_prefs.mountconfig[row];
-			const auto ci = &uci->ci;
+			auto* uci = &changed_prefs.mountconfig[row];
+			auto* const ci = &uci->ci;
 			auto type = get_filesys_unitconfig(&changed_prefs, row, &mi);
 			if (type < 0)
 			{
@@ -632,6 +631,8 @@ void RefreshPanelHD()
 	cmdCDSelect->setEnabled(changed_prefs.cdslots[0].inuse);
 	cboCDFile->setEnabled(changed_prefs.cdslots[0].inuse);
 	sldCDVol->setEnabled(changed_prefs.cdslots[0].inuse);
+	lblCDVol->setEnabled(changed_prefs.cdslots[0].inuse);
+	lblCDVolInfo->setEnabled(changed_prefs.cdslots[0].inuse);
 
 	sldCDVol->setValue(100 - changed_prefs.sound_volume_cd);
 	snprintf(tmp, 32, "%d %%", 100 - changed_prefs.sound_volume_cd);

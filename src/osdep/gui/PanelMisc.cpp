@@ -5,28 +5,26 @@
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
-#include "UaeDropDown.hpp"
-#include "UaeCheckBox.hpp"
 
 #include "sysdeps.h"
 #include "options.h"
 #include "gui_handling.h"
 
-static gcn::UaeCheckBox* chkRetroArchQuit;
-static gcn::UaeCheckBox* chkRetroArchMenu;
-static gcn::UaeCheckBox* chkRetroArchReset;
-//static gcn::UaeCheckBox* chkRetroArchSaveState;
+static gcn::CheckBox* chkRetroArchQuit;
+static gcn::CheckBox* chkRetroArchMenu;
+static gcn::CheckBox* chkRetroArchReset;
+//static gcn::CheckBox* chkRetroArchSaveState;
 
-static gcn::UaeCheckBox* chkStatusLine;
-static gcn::UaeCheckBox* chkShowGUI;
+static gcn::CheckBox* chkStatusLine;
+static gcn::CheckBox* chkShowGUI;
 
-static gcn::UaeCheckBox* chkBSDSocket;
-static gcn::UaeCheckBox* chkMasterWP;
+static gcn::CheckBox* chkBSDSocket;
+static gcn::CheckBox* chkMasterWP;
 
 static gcn::Label* lblNumLock;
-static gcn::UaeDropDown* cboKBDLed_num;
+static gcn::DropDown* cboKBDLed_num;
 static gcn::Label* lblScrLock;
-static gcn::UaeDropDown* cboKBDLed_scr;
+static gcn::DropDown* cboKBDLed_scr;
 
 static gcn::Label* lblOpenGUI;
 static gcn::TextField* txtOpenGUI;
@@ -167,41 +165,41 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 {
 	miscActionListener = new MiscActionListener();
 
-	chkStatusLine = new gcn::UaeCheckBox("Status Line");
+	chkStatusLine = new gcn::CheckBox("Status Line");
 	chkStatusLine->setId("StatusLine");
 	chkStatusLine->addActionListener(miscActionListener);
 
-	chkShowGUI = new gcn::UaeCheckBox("Show GUI on startup");
+	chkShowGUI = new gcn::CheckBox("Show GUI on startup");
 	chkShowGUI->setId("ShowGUI");
 	chkShowGUI->addActionListener(miscActionListener);
 
-	chkRetroArchQuit = new gcn::UaeCheckBox("Use RetroArch Quit Button");
+	chkRetroArchQuit = new gcn::CheckBox("Use RetroArch Quit Button");
 	chkRetroArchQuit->setId("RetroArchQuit");
 	chkRetroArchQuit->addActionListener(miscActionListener);
 
-	chkRetroArchMenu = new gcn::UaeCheckBox("Use RetroArch Menu Button");
+	chkRetroArchMenu = new gcn::CheckBox("Use RetroArch Menu Button");
 	chkRetroArchMenu->setId("RetroArchMenu");
 	chkRetroArchMenu->addActionListener(miscActionListener);
 
-	chkRetroArchReset = new gcn::UaeCheckBox("Use RetroArch Reset Button");
+	chkRetroArchReset = new gcn::CheckBox("Use RetroArch Reset Button");
 	chkRetroArchReset->setId("RetroArchReset");
 	chkRetroArchReset->addActionListener(miscActionListener);
 
-	//chkRetroArchSavestate = new gcn::UaeCheckBox("Use RetroArch State Controls");
+	//chkRetroArchSavestate = new gcn::CheckBox("Use RetroArch State Controls");
 	//chkRetroArchSavestate->setId("RetroArchState");
 	//chkRetroArchSavestate->addActionListener(miscActionListener);
 
-	chkBSDSocket = new gcn::UaeCheckBox("bsdsocket.library");
+	chkBSDSocket = new gcn::CheckBox("bsdsocket.library");
 	chkBSDSocket->setId("BSDSocket");
 	chkBSDSocket->addActionListener(miscActionListener);
 
-	chkMasterWP = new gcn::UaeCheckBox("Master floppy write protection");
+	chkMasterWP = new gcn::CheckBox("Master floppy write protection");
 	chkMasterWP->setId("MasterWP");
 	chkMasterWP->addActionListener(miscActionListener);
 
 	lblNumLock = new gcn::Label("NumLock:");
 	lblNumLock->setAlignment(gcn::Graphics::RIGHT);
-	cboKBDLed_num = new gcn::UaeDropDown(&KBDLedList);
+	cboKBDLed_num = new gcn::DropDown(&KBDLedList);
 	cboKBDLed_num->setBaseColor(gui_baseCol);
 	cboKBDLed_num->setBackgroundColor(colTextboxBackground);
 	cboKBDLed_num->setId("cboNumlock");
@@ -209,7 +207,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 
 	lblScrLock = new gcn::Label("ScrollLock:");
 	lblScrLock->setAlignment(gcn::Graphics::RIGHT);
-	cboKBDLed_scr = new gcn::UaeDropDown(&KBDLedList);
+	cboKBDLed_scr = new gcn::DropDown(&KBDLedList);
 	cboKBDLed_scr->setBaseColor(gui_baseCol);
 	cboKBDLed_scr->setBackgroundColor(colTextboxBackground);
 	cboKBDLed_scr->setId("cboScrolllock");
@@ -219,7 +217,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	lblOpenGUI->setAlignment(gcn::Graphics::RIGHT);
 	txtOpenGUI = new gcn::TextField();
 	txtOpenGUI->setEnabled(false);
-	txtOpenGUI->setSize(85, TEXTFIELD_HEIGHT);
+	txtOpenGUI->setSize(105, TEXTFIELD_HEIGHT);
 	txtOpenGUI->setBackgroundColor(colTextboxBackground);
 	cmdOpenGUI = new gcn::Button("...");
 	cmdOpenGUI->setId("OpenGUI");
@@ -231,7 +229,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	lblKeyForQuit->setAlignment(gcn::Graphics::RIGHT);
 	txtKeyForQuit = new gcn::TextField();
 	txtKeyForQuit->setEnabled(false);
-	txtKeyForQuit->setSize(85, TEXTFIELD_HEIGHT);
+	txtKeyForQuit->setSize(105, TEXTFIELD_HEIGHT);
 	txtKeyForQuit->setBackgroundColor(colTextboxBackground);
 	cmdKeyForQuit = new gcn::Button("...");
 	cmdKeyForQuit->setId("KeyForQuit");
@@ -243,7 +241,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	lblKeyActionReplay->setAlignment(gcn::Graphics::RIGHT);
 	txtKeyActionReplay = new gcn::TextField();
 	txtKeyActionReplay->setEnabled(false);
-	txtKeyActionReplay->setSize(85, TEXTFIELD_HEIGHT);
+	txtKeyActionReplay->setSize(105, TEXTFIELD_HEIGHT);
 	txtKeyActionReplay->setBackgroundColor(colTextboxBackground);
 	cmdKeyActionReplay = new gcn::Button("...");
 	cmdKeyActionReplay->setId("KeyActionReplay");
@@ -255,7 +253,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	lblKeyFullScreen->setAlignment(gcn::Graphics::RIGHT);
 	txtKeyFullScreen = new gcn::TextField();
 	txtKeyFullScreen->setEnabled(false);
-	txtKeyFullScreen->setSize(85, TEXTFIELD_HEIGHT);
+	txtKeyFullScreen->setSize(105, TEXTFIELD_HEIGHT);
 	txtKeyFullScreen->setBackgroundColor(colTextboxBackground);
 	cmdKeyFullScreen = new gcn::Button("...");
 	cmdKeyFullScreen->setId("KeyFullScreen");

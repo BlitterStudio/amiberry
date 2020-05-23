@@ -7,7 +7,6 @@
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
-#include "UaeCheckBox.hpp"
 
 #include "sysdeps.h"
 #include "config.h"
@@ -41,8 +40,8 @@ static gcn::TextField* txtVolume;
 static gcn::Label* lblPath;
 static gcn::TextField* txtPath;
 static gcn::Button* cmdPath;
-static gcn::UaeCheckBox* chkReadWrite;
-static gcn::UaeCheckBox* chkAutoboot;
+static gcn::CheckBox* chkReadWrite;
+static gcn::CheckBox* chkAutoboot;
 static gcn::Label* lblBootPri;
 static gcn::TextField* txtBootPri;
 
@@ -137,10 +136,10 @@ static void InitEditFilesysVirtual()
 	cmdPath->setId("virtPath");
 	cmdPath->addActionListener(filesysVirtualActionListener);
 
-	chkReadWrite = new gcn::UaeCheckBox("Read/Write", true);
+	chkReadWrite = new gcn::CheckBox("Read/Write", true);
 	chkReadWrite->setId("virtRW");
 
-	chkAutoboot = new gcn::UaeCheckBox("Bootable", true);
+	chkAutoboot = new gcn::CheckBox("Bootable", true);
 	chkAutoboot->setId("virtAutoboot");
 
 	lblBootPri = new gcn::Label("Boot priority:");

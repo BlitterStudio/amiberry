@@ -7,7 +7,6 @@
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
-#include "UaeListBox.hpp"
 
 #include "sysdeps.h"
 #include "options.h"
@@ -24,7 +23,7 @@ static gcn::Label* lblName;
 static gcn::TextField* txtName;
 static gcn::Label* lblDesc;
 static gcn::TextField* txtDesc;
-static gcn::UaeListBox* lstConfigs;
+static gcn::ListBox* lstConfigs;
 static gcn::ScrollArea* scrAreaConfigs;
 
 bool LoadConfigByName(const char* name)
@@ -71,7 +70,7 @@ public:
 
 	std::string getElementAt(int i) override
 	{
-		if (i >= int(configs.size()) || i < 0)
+		if (i >= static_cast<int>(configs.size()) || i < 0)
 			return "---";
 		return configs[i];
 	}
@@ -132,7 +131,7 @@ public:
 			char filename[MAX_DPATH];
 			if (!txtName->getText().empty())
 			{
-				fetch_configurationpath(filename, MAX_DPATH);
+				get_configuration_path(filename, MAX_DPATH);
 				strncat(filename, txtName->getText().c_str(), MAX_DPATH - 1);
 				strncat(filename, ".uae", MAX_DPATH - 1);
 				strncpy(changed_prefs.description, txtDesc->getText().c_str(), 256);
@@ -215,10 +214,11 @@ void InitPanelConfig(const struct _ConfigCategory& category)
 	configsList->InitConfigsList();
 	configsListActionListener = new ConfigsListActionListener();
 
-	lstConfigs = new gcn::UaeListBox(configsList);
+	lstConfigs = new gcn::ListBox(configsList);
 	lstConfigs->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER - 22, 232);
 	lstConfigs->setBaseColor(colTextboxBackground);
 	lstConfigs->setBackgroundColor(colTextboxBackground);
+	lstConfigs->setSelectionColor(colSelectorActive);
 	lstConfigs->setWrappingEnabled(true);
 	lstConfigs->setId("ConfigList");
 	lstConfigs->addActionListener(configsListActionListener);

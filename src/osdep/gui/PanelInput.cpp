@@ -3,8 +3,6 @@
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
-#include "UaeDropDown.hpp"
-#include "UaeCheckBox.hpp"
 
 #include "sysdeps.h"
 #include "options.h"
@@ -21,32 +19,32 @@ static const char* mousespeed_list[] = {".25", ".5", "1x", "2x", "4x"};
 static const int mousespeed_values[] = {2, 5, 10, 20, 40};
 
 static gcn::Label* lblPort0;
-static gcn::UaeDropDown* cboPort0;
+static gcn::DropDown* cboPort0;
 static gcn::Label* lblPort1;
-static gcn::UaeDropDown* cboPort1;
+static gcn::DropDown* cboPort1;
 
-static gcn::UaeDropDown* cboPort0mode;
-static gcn::UaeDropDown* cboPort1mode;
+static gcn::DropDown* cboPort0mode;
+static gcn::DropDown* cboPort1mode;
 
 static gcn::Label* lblPort0mousemode;
-static gcn::UaeDropDown* cboPort0mousemode;
+static gcn::DropDown* cboPort0mousemode;
 static gcn::Label* lblPort1mousemode;
-static gcn::UaeDropDown* cboPort1mousemode;
+static gcn::DropDown* cboPort1mousemode;
 
 static gcn::Label* lblPort2;
-static gcn::UaeDropDown* cboPort2;
+static gcn::DropDown* cboPort2;
 static gcn::Label* lblPort3;
-static gcn::UaeDropDown* cboPort3;
+static gcn::DropDown* cboPort3;
 
-static gcn::UaeDropDown* cboPort2mode;
-static gcn::UaeDropDown* cboPort3mode;
+static gcn::DropDown* cboPort2mode;
+static gcn::DropDown* cboPort3mode;
 
 static gcn::Label* lblAutofire;
-static gcn::UaeDropDown* cboAutofire;
+static gcn::DropDown* cboAutofire;
 static gcn::Label* lblMouseSpeed;
 static gcn::Label* lblMouseSpeedInfo;
 static gcn::Slider* sldMouseSpeed;
-static gcn::UaeCheckBox* chkMouseHack;
+static gcn::CheckBox* chkMouseHack;
 
 class StringListModel : public gcn::ListModel
 {
@@ -55,7 +53,7 @@ private:
 public:
 	StringListModel(const char* entries[], const int count)
 	{
-		for (int i = 0; i < count; ++i)
+		for (auto i = 0; i < count; ++i)
 			values.emplace_back(entries[i]);
 	}
 
@@ -72,7 +70,7 @@ public:
 
 	std::string getElementAt(const int i) override
 	{
-		if (i < 0 || static_cast<unsigned int>(i) >= values.size())
+		if (i < 0 || i >= static_cast<int>(values.size()))
 			return "---";
 		return values[i];
 	}
@@ -234,7 +232,7 @@ public:
 
 		else if (actionEvent.getSource() == sldMouseSpeed)
 		{
-			changed_prefs.input_joymouse_multiplier = mousespeed_values[int(sldMouseSpeed->getValue())];
+			changed_prefs.input_joymouse_multiplier = mousespeed_values[static_cast<int>(sldMouseSpeed->getValue())];
 			RefreshPanelInput();
 		}
 
@@ -267,7 +265,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 		int i;
 		for (i = 0; i < inputdevice_get_device_total(IDTYPE_MOUSE); i++)
 		{
-			const auto device_name = inputdevice_get_device_name(IDTYPE_MOUSE, i);
+			const auto* const device_name = inputdevice_get_device_name(IDTYPE_MOUSE, i);
 			if (device_name && device_name[0])
 			{
 				ctrlPortList.AddElement(inputdevice_get_device_name(IDTYPE_MOUSE, i));
@@ -290,14 +288,14 @@ void InitPanelInput(const struct _ConfigCategory& category)
 
 	lblPort0 = new gcn::Label("Port 0 [Mouse]:");
 	lblPort0->setAlignment(gcn::Graphics::RIGHT);
-	cboPort0 = new gcn::UaeDropDown(&ctrlPortList);
+	cboPort0 = new gcn::DropDown(&ctrlPortList);
 	cboPort0->setSize(textFieldWidth / 2, cboPort0->getHeight());
 	cboPort0->setBaseColor(gui_baseCol);
 	cboPort0->setBackgroundColor(colTextboxBackground);
 	cboPort0->setId("cboPort0");
 	cboPort0->addActionListener(inputActionListener);
 
-	cboPort0mode = new gcn::UaeDropDown(&ctrlPortModeList);
+	cboPort0mode = new gcn::DropDown(&ctrlPortModeList);
 	cboPort0mode->setSize(cboPort0mode->getWidth(), cboPort0mode->getHeight());
 	cboPort0mode->setBaseColor(gui_baseCol);
 	cboPort0mode->setBackgroundColor(colTextboxBackground);
@@ -307,14 +305,14 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	lblPort1 = new gcn::Label("Port 1 [Joystick]:");
 	lblPort1->setAlignment(gcn::Graphics::RIGHT);
 	lblPort0->setSize(lblPort1->getWidth(), lblPort0->getHeight());
-	cboPort1 = new gcn::UaeDropDown(&ctrlPortList);
+	cboPort1 = new gcn::DropDown(&ctrlPortList);
 	cboPort1->setSize(textFieldWidth / 2, cboPort1->getHeight());
 	cboPort1->setBaseColor(gui_baseCol);
 	cboPort1->setBackgroundColor(colTextboxBackground);
 	cboPort1->setId("cboPort1");
 	cboPort1->addActionListener(inputActionListener);
 
-	cboPort1mode = new gcn::UaeDropDown(&ctrlPortModeList);
+	cboPort1mode = new gcn::DropDown(&ctrlPortModeList);
 	cboPort1mode->setSize(cboPort1mode->getWidth(), cboPort1mode->getHeight());
 	cboPort1mode->setBaseColor(gui_baseCol);
 	cboPort1mode->setBackgroundColor(colTextboxBackground);
@@ -323,7 +321,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 
 	lblPort2 = new gcn::Label("Port 2 [Parallel 1]:");
 	lblPort2->setAlignment(gcn::Graphics::LEFT);
-	cboPort2 = new gcn::UaeDropDown(&ctrlPortList);
+	cboPort2 = new gcn::DropDown(&ctrlPortList);
 	cboPort2->setSize(textFieldWidth / 2, cboPort2->getHeight());
 	cboPort2->setBaseColor(gui_baseCol);
 	cboPort2->setBackgroundColor(colTextboxBackground);
@@ -332,7 +330,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 
 	lblPort3 = new gcn::Label("Port 3 [Parallel 2]:");
 	lblPort3->setAlignment(gcn::Graphics::LEFT);
-	cboPort3 = new gcn::UaeDropDown(&ctrlPortList);
+	cboPort3 = new gcn::DropDown(&ctrlPortList);
 	cboPort3->setSize(textFieldWidth / 2, cboPort3->getHeight());
 	cboPort3->setBaseColor(gui_baseCol);
 	cboPort3->setBackgroundColor(colTextboxBackground);
@@ -341,7 +339,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 
 	lblPort0mousemode = new gcn::Label("Mouse Stick 0:");
 	lblPort0mousemode->setAlignment(gcn::Graphics::RIGHT);
-	cboPort0mousemode = new gcn::UaeDropDown(&ctrlPortMouseModeList);
+	cboPort0mousemode = new gcn::DropDown(&ctrlPortMouseModeList);
 	cboPort0mousemode->setSize(68, cboPort0mousemode->getHeight());
 	cboPort0mousemode->setBaseColor(gui_baseCol);
 	cboPort0mousemode->setBackgroundColor(colTextboxBackground);
@@ -350,7 +348,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 
 	lblPort1mousemode = new gcn::Label("Mouse Stick 1:");
 	lblPort1mousemode->setAlignment(gcn::Graphics::RIGHT);
-	cboPort1mousemode = new gcn::UaeDropDown(&ctrlPortMouseModeList);
+	cboPort1mousemode = new gcn::DropDown(&ctrlPortMouseModeList);
 	cboPort1mousemode->setSize(68, cboPort1mousemode->getHeight());
 	cboPort1mousemode->setBaseColor(gui_baseCol);
 	cboPort1mousemode->setBackgroundColor(colTextboxBackground);
@@ -359,7 +357,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 
 	lblAutofire = new gcn::Label("Autofire Rate:");
 	lblAutofire->setAlignment(gcn::Graphics::RIGHT);
-	cboAutofire = new gcn::UaeDropDown(&autofireList);
+	cboAutofire = new gcn::DropDown(&autofireList);
 	cboAutofire->setSize(80, cboAutofire->getHeight());
 	cboAutofire->setBaseColor(gui_baseCol);
 	cboAutofire->setBackgroundColor(colTextboxBackground);
@@ -377,7 +375,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	sldMouseSpeed->addActionListener(inputActionListener);
 	lblMouseSpeedInfo = new gcn::Label(".25");
 
-	chkMouseHack = new gcn::UaeCheckBox("Enable mousehack");
+	chkMouseHack = new gcn::CheckBox("Enable mousehack");
 	chkMouseHack->setId("MouseHack");
 	chkMouseHack->addActionListener(inputActionListener);
 
@@ -540,19 +538,23 @@ void RefreshPanelInput()
 	if (cboPort0mode->getSelected() == 0)
 	{
 		cboPort0mousemode->setEnabled(false);
+		lblPort0mousemode->setEnabled(false);
 	}
 	else
 	{
 		cboPort0mousemode->setEnabled(true);
+		lblPort0mousemode->setEnabled(true);
 	}
 
 	if (cboPort1mode->getSelected() == 0)
 	{
 		cboPort1mousemode->setEnabled(false);
+		lblPort1mousemode->setEnabled(false);
 	}
 	else
 	{
 		cboPort1mousemode->setEnabled(true);
+		lblPort1mousemode->setEnabled(true);
 	}
 
 	for (auto i = 0; i < 5; ++i)

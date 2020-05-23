@@ -61,42 +61,42 @@
 
 namespace gcn
 {
-    class Widget;
+	class Widget;
 
-    /**
-     * Base class for all events.
-     *
-     * @author Olof Naessén
-     * @since 0.6.0
-     */
-    class GCN_CORE_DECLSPEC Event
-    {
-    public:
+	/**
+	 * Base class for all events.
+	 *
+	 * @author Olof Naessén
+	 * @since 0.6.0
+	 */
+	class GCN_CORE_DECLSPEC Event
+	{
+	public:
 
-        /**
-         * Constructor.
-         *
-         * @param source the source widget of the event.
-         */
-        Event(Widget* source);
+		/**
+		 * Constructor.
+		 *
+		 * @param source the source widget of the event.
+		 */
+		Event(Widget* source);
 
-        /**
-         * Destructor.
-         */
-        virtual ~Event();
+		/**
+		 * Destructor.
+		 */
+		virtual ~Event();
 
-        /**
-         * Gets the source widget of the event.
-         *
-         * @return the source widget of the event.
-         */
-        Widget* getSource() const;
+		/**
+		 * Gets the source widget of the event.
+		 *
+		 * @return the source widget of the event.
+		 */
+		[[nodiscard]] Widget* getSource() const;
 
 
-    protected:
-        Widget* mSource;
-        unsigned int mType;
-    };
+	protected:
+		Widget* mSource;
+		unsigned int mType{};
+	};
 }
 
 #endif // end GCN_EVENT_HPP
