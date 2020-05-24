@@ -595,12 +595,6 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	strcat(uae_config, game_name);
 	strcat(uae_config, ".uae");
 
-	// AUTOBOOT files depreciated
-	//	snprintf(whd_path, MAX_DPATH, "%s/whdboot/save-data/Autoboots/", start_path_data);
-	//	strcpy(whd_startup, whd_path);
-	//	strcat(whd_startup, game_name);
-	//	strcat(whd_startup, ".auto-startup");
-
 	// setups for tmp folder.
 	my_mkdir("/tmp/s");
 	my_mkdir("/tmp/c");
@@ -608,7 +602,6 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	strcpy(whd_startup, "/tmp/s/startup-sequence");
 	remove(whd_startup);
 
-	//my_unlink("/tmp/s/startup-sequence"); // startup-sequence is no longer a symlink
 
 	// LOAD HOST OPTIONS
 	snprintf(whd_path, MAX_DPATH, "%s/whdboot/WHDLoad", start_path_data);
@@ -623,7 +616,6 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 		write_log("WHDBooter -  %s found. Loading Config for WHDload options.\n", uae_config);
 		target_cfgfile_load(&currprefs, uae_config, CONFIG_TYPE_ALL, 0);
 	}
-
 
 	//  this should be made into it's own routine!! 1 (see repeat, above)
 	snprintf(whd_path, MAX_DPATH, "%s/whdboot/", start_path_data);
@@ -820,11 +812,6 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	// now we should have a startup-file (if we don't, we are going to use the original booter)
 	if (zfile_exists(whd_startup))
 	{
-		//      depreciated auto-startup bits
-		//	write_log("WHDBooter - Found Auto-Startup to SymLink\n");
-		//	// create a symlink to this as startup-sequence in /tmp/
-		//	symlink(whd_startup, "/tmp/s/startup-sequence");
-		//
 		// create a symlink to WHDLoad in /tmp/
 		snprintf(whd_path, MAX_DPATH, "%s/whdboot/WHDLoad", start_path_data);
 		symlink(whd_path, "/tmp/c/WHDLoad");
@@ -1021,7 +1008,7 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 		write_log("WHDBooter Option (Mouse Control): %s\n", txt2);
 	}
 
-		// PORT 0 -  JOYSTICK GAMES
+	// PORT 0 -  JOYSTICK GAMES
 	else if (!(strcmpi(host_detail.controller2, "nul") == 0))
 	{
 		_stprintf(txt2, "%s=%s", _T("joyport0"), _T(host_detail.controller2));
@@ -1042,7 +1029,7 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 		cfgfile_parse_line(prefs, txt2, 0);
 		write_log("WHDBooter Option (Mouse Control): %s\n", txt2);
 	}
-		// PORT 1 - JOYSTICK GAMES
+	// PORT 1 - JOYSTICK GAMES
 	else if (!(strcmpi(host_detail.controller1, "nul") == 0))
 	{
 		_stprintf(txt2, "%s=%s", _T("joyport1"), _T(host_detail.controller1));
@@ -1096,8 +1083,8 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 		_stprintf(txt2, "amiberry.use_retroarch_reset=%s", _T(host_detail.ra_reset));
 		cfgfile_parse_line(prefs, txt2, 0);
 	}
+        
 	// KEYBOARD CONTROLS
-
 	if (!(strcmpi(host_detail.key_quit, "nul") == 0))
 	{
 		_stprintf(txt2, "amiberry.quit_amiberry=%s", _T(host_detail.key_quit));
@@ -1108,8 +1095,8 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 		_stprintf(txt2, "amiberry.open_gui=%s", _T(host_detail.key_gui));
 		cfgfile_parse_line(prefs, txt2, 0);
 	}
+        
 	// GRAPHICS OPTIONS
-
 	if (!(strcmpi(host_detail.aspect_ratio, "nul") == 0))
 	{
 		_stprintf(txt2, "amiberry.gfx_correct_aspect=%s", _T(host_detail.aspect_ratio));
@@ -1132,8 +1119,8 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 		_stprintf(txt2, "gfx_framerate=%s", _T(host_detail.frameskip));
 		cfgfile_parse_line(prefs, txt2, 0);
 	}
+        
 	// SOUND OPTIONS
-
 	if (strcmpi(host_detail.sound_on, "false") == 0 || strcmpi(host_detail.sound_on, "off") == 0 || strcmpi(
 		host_detail.sound_on, "none") == 0)
 	{
