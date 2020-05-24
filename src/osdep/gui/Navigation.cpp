@@ -204,8 +204,9 @@ static NavigationMap navMap[] =
 	//  active            move left           move right          move up           move down
 	// PanelDisplay
 	{"sldWidth", "", "", "Frameskip", "sldHeight"},
-	{"sldHeight", "", "", "sldWidth", "Auto"},
-	{"Auto", "Display", "Single", "sldHeight", "Nearest Neighbor (pixelated)"},
+	{"sldHeight", "", "", "sldWidth", "chkAutoHeight"},
+	{"chkAutoHeight", "Display", "Horizontal", "sldHeight", "Auto"},
+	{"Auto", "Display", "Single", "chkAutoHeight", "Nearest Neighbor (pixelated)"},
 	{"Nearest Neighbor (pixelated)", "Display", "Double", "Auto", "Linear (smooth)"},
 	{"Linear (smooth)", "Display", "Scanlines", "Nearest Neighbor (pixelated)", "CorrectAR"},
 	{"Single", "Auto", "Auto", "Vertical", "Double"},
@@ -215,7 +216,7 @@ static NavigationMap navMap[] =
 	{"Fullscreen", "CorrectAR", "CorrectAR", "Scanlines", "Frameskip"},
 	{"Frameskip", "Display", "Display", "CorrectAR", "sldWidth"},
 	{"Vertical", "", "", "Horizontal", "Single"},
-	{"Horizontal", "", "", "", "Vertical"},
+	{"Horizontal", "chkAutoHeight", "", "", "Vertical"},
 
 	//  active            move left           move right          move up           move down
 	//PanelSound

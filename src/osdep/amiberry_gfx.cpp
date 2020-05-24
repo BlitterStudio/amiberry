@@ -578,8 +578,8 @@ static void open_screen(struct uae_prefs* p)
 	
 	if (screen_is_picasso)
 	{
-		display_width = picasso_vidinfo.width ? picasso_vidinfo.width : 720;
-		display_height = picasso_vidinfo.height ? picasso_vidinfo.height : 284;
+		display_width = picasso_vidinfo.width ? picasso_vidinfo.width : 640;
+		display_height = picasso_vidinfo.height ? picasso_vidinfo.height : 270;
 	}
 	else
 	{
@@ -588,8 +588,8 @@ static void open_screen(struct uae_prefs* p)
 		if (currprefs.gfx_vresolution > avidinfo->gfx_vresolution_reserved)
 			avidinfo->gfx_vresolution_reserved = currprefs.gfx_vresolution;
 		
-		display_width = p->gfx_monitor.gfx_size.width ? p->gfx_monitor.gfx_size.width : 720;
-		display_height = (p->gfx_monitor.gfx_size.height ? p->gfx_monitor.gfx_size.height : 284) << p->gfx_vresolution;
+		display_width = p->gfx_monitor.gfx_size.width ? p->gfx_monitor.gfx_size.width : 640;
+		display_height = (p->gfx_monitor.gfx_size.height ? p->gfx_monitor.gfx_size.height : 270) << p->gfx_vresolution;
 	}
 
 #ifdef USE_DISPMANX
@@ -711,6 +711,46 @@ static void open_screen(struct uae_prefs* p)
 	}
 }
 
+extern int vstrt; // vertical start
+extern int vstop; // vertical stop
+void flush_screen(struct vidbuffer* vidbuffer, int ystart, int ystop)
+{
+	if (vidbuffer->bufmem == nullptr) return; // no buffer allocated return
+
+	static int last_g_autozoom;
+	if (currprefs.gfx_auto_height)
+	{
+		static int last_vstrt, last_vstop, new_height;
+		if (last_g_autozoom != currprefs.gfx_auto_height || last_vstrt != vstrt || last_vstop != vstop)
+		{
+			last_vstrt = vstrt;
+			last_vstop = vstop;
+
+			auto start_y = minfirstline;  // minfirstline = first line to be written to screen buffer
+			auto stop_y = 270 + minfirstline; // last line to be written to screen buffer
+			if (vstrt > minfirstline)
+				start_y = vstrt;		// if vstrt > minfirstline then there is a black border
+			if (start_y > 200)
+				start_y = minfirstline; // shouldn't happen but does for donkey kong
+			if (vstop < stop_y)
+				stop_y = vstop;			// if vstop < stop_y then there is a black border
+
+			new_height = stop_y - start_y;
+			if (new_height < 200)
+				new_height = 200;
+			if (new_height != currprefs.gfx_monitor.gfx_size.height)
+			{
+				display_height = new_height;
+				currprefs.gfx_monitor.gfx_size.height = new_height;
+				copy_prefs(&currprefs, &changed_prefs);
+				open_screen(&currprefs);
+			}
+		}
+	}
+
+	last_g_autozoom = currprefs.gfx_auto_height;
+}
+
 void update_display(struct uae_prefs* p)
 {
 	auto* ad = &adisplays;
@@ -732,6 +772,7 @@ int check_prefs_changed_gfx()
 		currprefs.gfx_vresolution != changed_prefs.gfx_vresolution ||
 		currprefs.gfx_iscanlines != changed_prefs.gfx_iscanlines ||
 		currprefs.gfx_pscanlines != changed_prefs.gfx_pscanlines ||
+		currprefs.gfx_auto_height != changed_prefs.gfx_auto_height ||
 		currprefs.gfx_correct_aspect != changed_prefs.gfx_correct_aspect ||
 		currprefs.gfx_lores_mode != changed_prefs.gfx_lores_mode ||
 		currprefs.gfx_scandoubler != changed_prefs.gfx_scandoubler)
@@ -744,6 +785,7 @@ int check_prefs_changed_gfx()
 		currprefs.gfx_vresolution = changed_prefs.gfx_vresolution;
 		currprefs.gfx_iscanlines = changed_prefs.gfx_iscanlines;
 		currprefs.gfx_pscanlines = changed_prefs.gfx_pscanlines;
+		currprefs.gfx_auto_height = changed_prefs.gfx_auto_height;
 		currprefs.gfx_correct_aspect = changed_prefs.gfx_correct_aspect;
 		currprefs.gfx_lores_mode = changed_prefs.gfx_lores_mode;
 		currprefs.gfx_scandoubler = changed_prefs.gfx_scandoubler;

@@ -4657,12 +4657,18 @@ void init_hz_normal (void)
 	init_hz (false);
 }
 
+// ric - for auto zoom
+int hstrt;
+int hstop;
+int vstrt;
+int vstop;
+//end ric
 static void calcdiw (void)
 {
-	int hstrt = (diwstrt & 0xFF) << 2;
-	int hstop = (diwstop & 0xFF) << 2;
-	int vstrt = diwstrt >> 8;
-	int vstop = diwstop >> 8;
+	hstrt = (diwstrt & 0xFF) << 2;
+	hstop = (diwstop & 0xFF) << 2;
+	vstrt = diwstrt >> 8;
+	vstop = diwstop >> 8;
 
 	// ECS Agnus/AGA: DIWHIGH vertical high bits.
 	if (diwhigh_written && (currprefs.chipset_mask & CSMASK_ECS_AGNUS)) {

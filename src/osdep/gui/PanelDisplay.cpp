@@ -31,6 +31,7 @@ static gcn::Slider* sldAmigaWidth;
 static gcn::Label* lblAmigaHeight;
 static gcn::Label* lblAmigaHeightInfo;
 static gcn::Slider* sldAmigaHeight;
+static gcn::CheckBox* chkAutoHeight;
 
 static gcn::CheckBox* chkFrameskip;
 static gcn::CheckBox* chkAspect;
@@ -61,6 +62,9 @@ public:
 				RefreshPanelDisplay();
 			}
 		}
+		else if (actionEvent.getSource() == chkAutoHeight)
+			changed_prefs.gfx_auto_height = chkAutoHeight->isSelected();
+		
 		else if (actionEvent.getSource() == chkFrameskip)
 			changed_prefs.gfx_framerate = chkFrameskip->isSelected() ? 2 : 1;
 
@@ -159,6 +163,10 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	sldAmigaHeight->addActionListener(amigaScreenActionListener);
 	lblAmigaHeightInfo = new gcn::Label("200");
 
+	chkAutoHeight = new gcn::CheckBox("Auto Height");
+	chkAutoHeight->setId("chkAutoHeight");
+	chkAutoHeight->addActionListener(amigaScreenActionListener);
+	
 	chkHorizontal = new gcn::CheckBox("Horizontal");
 	chkHorizontal->setId("Horizontal");
 	chkHorizontal->addActionListener(amigaScreenActionListener);
@@ -191,6 +199,8 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	grpAmigaScreen->add(lblAmigaHeightInfo, sldAmigaHeight->getX() + sldAmigaHeight->getWidth() + DISTANCE_NEXT_X,
 	                    posY);
 	posY += sldAmigaHeight->getHeight() + DISTANCE_NEXT_Y;
+	grpAmigaScreen->add(chkAutoHeight, DISTANCE_BORDER, posY);
+	posY += chkAutoHeight->getHeight() + DISTANCE_NEXT_Y;
 
 	grpAmigaScreen->setMovable(false);
 	grpAmigaScreen->setSize(
@@ -286,6 +296,7 @@ void ExitPanelDisplay()
 	delete lblAmigaHeight;
 	delete sldAmigaHeight;
 	delete lblAmigaHeightInfo;
+	delete chkAutoHeight;
 	delete grpAmigaScreen;
 
 	delete chkHorizontal;
@@ -351,7 +362,8 @@ void RefreshPanelDisplay()
 			break;
 		}
 	}
-
+	chkAutoHeight->setSelected(changed_prefs.gfx_auto_height);
+	
 	chkHorizontal->setSelected(changed_prefs.gfx_xcenter == 2);
 	chkVertical->setSelected(changed_prefs.gfx_ycenter == 2);
 	

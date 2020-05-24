@@ -380,6 +380,7 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->kbd_led_num = -1; // No status on numlock
 	p->kbd_led_scr = -1; // No status on scrollock
 
+	p->gfx_auto_height = false;
 	p->gfx_correct_aspect = 1; // Default is Enabled
 	p->scaling_method = -1; //Default is Auto
 	if (scanlines_by_default)
@@ -471,6 +472,7 @@ void target_default_options(struct uae_prefs* p, int type)
 
 void target_save_options(struct zfile* f, struct uae_prefs* p)
 {
+	cfgfile_write_bool(f, _T("amiberry.gfx_auto_height"), p->gfx_auto_height);
 	cfgfile_write(f, _T("amiberry.gfx_correct_aspect"), _T("%d"), p->gfx_correct_aspect);
 	cfgfile_write(f, _T("amiberry.kbd_led_num"), _T("%d"), p->kbd_led_num);
 	cfgfile_write(f, _T("amiberry.kbd_led_scr"), _T("%d"), p->kbd_led_scr);
@@ -581,6 +583,8 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 	if (cfgfile_intval(option, value, "kbd_led_num", &p->kbd_led_num, 1))
 		return 1;
 	if (cfgfile_intval(option, value, "kbd_led_scr", &p->kbd_led_scr, 1))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("gfx_auto_height"), &p->gfx_auto_height))
 		return 1;
 	if (cfgfile_intval(option, value, "gfx_correct_aspect", &p->gfx_correct_aspect, 1))
 		return 1;
