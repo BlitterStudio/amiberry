@@ -66,7 +66,6 @@ public:
 			changed_prefs.cpu_model = 68020;
 			if (changed_prefs.fpu_model == 68040)
 				changed_prefs.fpu_model = 68881;
-			changed_prefs.cpu_compatible = false;
 		}
 		else if (actionEvent.getSource() == optCPU68030)
 		{
@@ -74,14 +73,12 @@ public:
 			if (changed_prefs.fpu_model == 68040)
 				changed_prefs.fpu_model = 68881;
 			changed_prefs.address_space_24 = false;
-			changed_prefs.cpu_compatible = false;
 		}
 		else if (actionEvent.getSource() == optCPU68040)
 		{
 			changed_prefs.cpu_model = 68040;
 			changed_prefs.fpu_model = 68040;
 			changed_prefs.address_space_24 = false;
-			changed_prefs.cpu_compatible = false;
 		}
 		RefreshPanelCPU();
 		RefreshPanelRAM();
@@ -429,7 +426,6 @@ void RefreshPanelCPU()
 	chk24Bit->setSelected(changed_prefs.address_space_24);
 	chk24Bit->setEnabled(changed_prefs.cpu_model == 68020);
 	chkCPUCompatible->setSelected(changed_prefs.cpu_compatible > 0);
-	chkCPUCompatible->setEnabled(changed_prefs.cpu_model <= 68010);
 	chkJIT->setEnabled(changed_prefs.cpu_model > 68010);
 	chkJIT->setSelected(changed_prefs.cachesize > 0);
 
@@ -458,8 +454,8 @@ void RefreshPanelCPU()
 	chkFPUJIT->setEnabled(changed_prefs.cachesize > 0);
 	chkFPUJIT->setSelected(changed_prefs.compfpu);
 #else
-  chkFPUJIT->setSelected(false);
-  chkFPUJIT->setEnabled(false);
+	chkFPUJIT->setSelected(false);
+	chkFPUJIT->setEnabled(false);
 #endif
 
 	if (changed_prefs.m68k_speed == M68K_SPEED_7MHZ_CYCLES)

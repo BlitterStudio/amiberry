@@ -1068,7 +1068,6 @@ void RefreshPanelQuickstart(void)
 	chkQuickstartMode->setSelected(quickstart_start);
 }
 
-
 bool HelpPanelQuickstart(std::vector<std::string>& helptext)
 {
 	helptext.clear();

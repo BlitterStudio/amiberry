@@ -39,6 +39,7 @@
 #include <map>
 
 extern FILE* debugfile;
+
 int pause_emulation;
 int quickstart_start = 1;
 int quickstart_model = 0;
@@ -117,22 +118,7 @@ void set_key_configs(struct uae_prefs* p)
 	}
 }
 
-// Justifications for the numbers set here
-// Frametime is 20000 cycles in PAL
-//              16667 cycles in NTSC
-// The most we can give back is a frame's worth of
-// cycles, but we shouldn't give them ALL back for timing
-// coordination so I have picked 90% of the cycles.
-#ifdef FASTERCYCLES
-int speedup_cycles_jit_pal = 18000;
-int speedup_cycles_jit_ntsc = 15000;
-int speedup_cycles_nonjit = 1024;
-
-#else
-int speedup_cycles_jit_pal = 10000;
-int speedup_cycles_jit_ntsc = 6667;
-int speedup_cycles_nonjit = 256;
-#endif
+int pissoff_value = 15000 * CYCLE_UNIT;
 
 extern void signal_segv(int signum, siginfo_t* info, void* ptr);
 extern void signal_buserror(int signum, siginfo_t* info, void* ptr);
@@ -930,14 +916,6 @@ void save_amiberry_settings(void)
 	snprintf(buffer, MAX_DPATH, "default_scaling_method=%d\n", default_scaling_method);
 	fputs(buffer, f);
 	
-	// Timing settings
-	snprintf(buffer, MAX_DPATH, "speedup_cycles_jit_pal=%d\n", speedup_cycles_jit_pal);
-	fputs(buffer, f);
-	snprintf(buffer, MAX_DPATH, "speedup_cycles_jit_ntsc=%d\n", speedup_cycles_jit_ntsc);
-	fputs(buffer, f);
-	snprintf(buffer, MAX_DPATH, "speedup_cycles_nonjit=%d\n", speedup_cycles_nonjit);
-	fputs(buffer, f);
-
 	// Paths
 	snprintf(buffer, MAX_DPATH, "path=%s\n", currentDir);
 	fputs(buffer, f);
@@ -1136,10 +1114,6 @@ void load_amiberry_settings(void)
 					cfgfile_yesno(option, value, "default_horizontal_centering", &default_horizontal_centering);
 					cfgfile_yesno(option, value, "default_vertical_centering", &default_vertical_centering);
 					cfgfile_intval(option, value, "default_scaling_method", &default_scaling_method, 1);
-					
-					cfgfile_intval(option, value, "speedup_cycles_jit_pal", &speedup_cycles_jit_pal, 1);
-					cfgfile_intval(option, value, "speedup_cycles_jit_ntsc", &speedup_cycles_jit_ntsc, 1);
-					cfgfile_intval(option, value, "speedup_cycles_nonjit", &speedup_cycles_nonjit, 1);
 				}
 			}
 		}
