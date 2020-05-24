@@ -6318,7 +6318,7 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 	p->fpu_strict = false;
 	p->fpu_mode = -1;
 	p->m68k_speed = 0;
-	p->cpu_compatible = false;
+	p->cpu_compatible = true;
 	p->address_space_24 = true;
 	p->cpu_cycle_exact = 0;
 	p->cpu_memory_cycle_exact = 0;
@@ -6437,7 +6437,7 @@ static void buildin_default_prefs_68020(struct uae_prefs* p)
 {
 	p->cpu_model = 68020;
 	p->address_space_24 = true;
-	p->cpu_compatible = false;
+	p->cpu_compatible = true;
 	p->chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE | CSMASK_AGA;
 	p->chipmem_size = 0x200000;
 	p->bogomem_size = 0;
@@ -6483,21 +6483,21 @@ static void buildin_default_prefs(struct uae_prefs* p)
 
 	p->chipmem_size = 0x00080000;
 	p->bogomem_size = 0x00080000;
-	for (int i = 0; i < MAX_RAM_BOARDS; i++)
+	for (auto i = 0; i < MAX_RAM_BOARDS; i++)
 	{
 		memset(p->fastmem, 0, sizeof(struct ramboard));
 		memset(p->z3fastmem, 0, sizeof(struct ramboard));
 	}
 	p->mbresmem_low_size = 0x00000000;
 	p->mbresmem_high_size = 0x00000000;
-	for (int i = 0; i < MAX_RTG_BOARDS; i++)
+	for (auto& rtgboard : p->rtgboards)
 	{
-		p->rtgboards[i].rtgmem_size = 0x00000000;
-		p->rtgboards[i].rtgmem_type = GFXBOARD_UAE_Z3;
+		rtgboard.rtgmem_size = 0x00000000;
+		rtgboard.rtgmem_type = GFXBOARD_UAE_Z3;
 	}
-	for (int i = 0; i < MAX_EXPANSION_BOARDS; i++)
+	for (auto& i : p->expansionboard)
 	{
-		memset(&p->expansionboard[i], 0, sizeof(struct boardromconfig));
+		memset(&i, 0, sizeof(struct boardromconfig));
 	}
 
 	p->cs_rtc = 0;
@@ -6540,19 +6540,17 @@ static void set_68020_compa(struct uae_prefs* p, int compa, int cd32)
 	switch (compa)
 	{
 	case 0:
-		p->cpu_compatible = false;
 		p->m68k_speed = 0;
 		p->cachesize = 0;
 		p->compfpu = false;
 		break;
 	case 1:
-		p->cpu_compatible = false;
 		p->m68k_speed = 0;
 		p->cachesize = 0;
 		p->compfpu = false;
 		break;
 	case 2:
-		p->cpu_compatible = false;
+		p->cpu_compatible = true;
 		p->m68k_speed = -1;
 		p->cachesize = 0;
 		p->compfpu = false;
@@ -6560,9 +6558,15 @@ static void set_68020_compa(struct uae_prefs* p, int compa, int cd32)
 		break;
 	case 3:
 		p->cpu_compatible = false;
+		p->m68k_speed = -1;
 		p->address_space_24 = false;
 		p->cachesize = MAX_JIT_CACHE;
 		p->compfpu = true;
+		break;
+	case 4:
+		p->cpu_compatible = false;
+		p->address_space_24 = false;
+		p->cachesize = MAX_JIT_CACHE;
 		break;
 	}
 	if (p->cpu_model >= 68030)
@@ -6616,9 +6620,9 @@ static int bip_a3000 (struct uae_prefs *p, int config, int compa, int romcheck)
 	else
 		p->cachesize = MAX_JIT_CACHE;
 	p->chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
-	p->cpu_compatible = p->address_space_24 = 0;
+	p->cpu_compatible = p->address_space_24 = false;
 	p->m68k_speed = -1;
-	p->immediate_blits = 0;
+	p->immediate_blits = false;
 	p->produce_sound = 2;
 	p->floppyslots[0].dfxtype = DRV_35_HD;
 	p->floppy_speed = 0;
@@ -6688,9 +6692,9 @@ static int bip_a4000t (struct uae_prefs *p, int config, int compa, int romcheck)
 		p->fpu_model = 68040;
 	}
 	p->chipset_mask = CSMASK_AGA | CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
-	p->cpu_compatible = p->address_space_24 = 0;
+	p->cpu_compatible = p->address_space_24 = false;
 	p->m68k_speed = -1;
-	p->immediate_blits = 0;
+	p->immediate_blits = false;
 	p->produce_sound = 2;
 	p->cachesize = MAX_JIT_CACHE;
 	p->floppyslots[0].dfxtype = DRV_35_HD;
@@ -7009,9 +7013,9 @@ static int bip_super (struct uae_prefs *p, int config, int compa, int romcheck)
 	p->cpu_model = 68040;
 	p->fpu_model = 68040;
 	p->chipset_mask = CSMASK_AGA | CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
-	p->cpu_compatible = p->address_space_24 = 0;
+	p->cpu_compatible = p->address_space_24 = false;
 	p->m68k_speed = -1;
-	p->immediate_blits = 1;
+	p->immediate_blits = true;
 	p->produce_sound = 2;
 	p->cachesize = MAX_JIT_CACHE;
 	p->floppyslots[0].dfxtype = DRV_35_HD;
@@ -7095,9 +7099,9 @@ static int bip_casablanca(struct uae_prefs *p, int config, int compa, int romche
 		break;
 	}
 	p->chipset_mask = CSMASK_AGA | CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
-	p->cpu_compatible = p->address_space_24 = 0;
+	p->cpu_compatible = p->address_space_24 = false;
 	p->m68k_speed = -1;
-	p->immediate_blits = 0;
+	p->immediate_blits = false;
 	p->produce_sound = 2;
 	p->floppyslots[0].dfxtype = DRV_NONE;
 	p->floppyslots[1].dfxtype = DRV_NONE;
@@ -7206,8 +7210,8 @@ int built_in_chipset_prefs(struct uae_prefs* p)
 		else if (p->cpu_compatible)
 		{
 			// very A500-like
-			p->cs_df0idhw = 0;
-			p->cs_resetwarning = 0;
+			p->cs_df0idhw = false;
+			p->cs_resetwarning = false;
 			if (p->bogomem_size || p->chipmem_size > 0x80000 || p->fastmem[0].size)
 				p->cs_rtc = 1;
 			p->cs_ciatodbug = true;
