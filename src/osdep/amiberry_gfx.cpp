@@ -745,6 +745,7 @@ void flush_screen(struct vidbuffer* vidbuffer, int ystart, int ystop)
 				currprefs.gfx_monitor.gfx_size.height = new_height;
 				copy_prefs(&currprefs, &changed_prefs);
 				open_screen(&currprefs);
+				init_custom();
 			}
 		}
 	}
