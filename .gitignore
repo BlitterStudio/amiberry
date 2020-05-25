@@ -18,6 +18,7 @@ CodeDB
 *.sdf
 *.suo
 *.old
+*.vgdbsettings
 
 ### NetBeans ###
 nbproject*
@@ -214,5 +215,3 @@ Thumbs.db
 *.user
 *___jb_old___
 *.orig
-*.vgdbsettings
-*.vgdbsettings
