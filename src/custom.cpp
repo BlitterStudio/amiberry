@@ -4657,12 +4657,12 @@ void init_hz_normal (void)
 	init_hz (false);
 }
 
-// ric - for auto zoom
+// for auto zoom
 int hstrt;
 int hstop;
 int vstrt;
 int vstop;
-//end ric
+
 static void calcdiw (void)
 {
 	hstrt = (diwstrt & 0xFF) << 2;
@@ -7262,9 +7262,9 @@ static void do_sprites (int hpos)
 	if (minspr == maxspr)
 		return;
 
-	for (int i = minspr; i <= maxspr; i++) {
-		int cycle = -1;
-		int num = (i - SPR0_HPOS) / 4;
+	for (auto i = minspr; i <= maxspr; i++) {
+		auto cycle = -1;
+		const auto num = (i - SPR0_HPOS) / 4;
 		switch ((i - SPR0_HPOS) & 3)
 		{
 		case 0:
@@ -7286,8 +7286,9 @@ static void do_sprites (int hpos)
 
 static void init_sprites (void)
 {
-	for (int i = 0; i < MAX_SPRITES; i++) {
-		struct sprite *s = &spr[i];
+	for (auto& i : spr)
+	{
+		auto* const s = &i;
 		s->pos = 0;
 		s->ctl = 0;
 	}
@@ -7336,9 +7337,10 @@ static void init_hardware_frame (void)
 	first_bplcon0 = 0;
 	autoscale_bordercolors = 0;
 
-	for (int i = 0; i < MAX_SPRITES; i++) {
-		spr[i].ptxhpos = MAXHPOS;
-		spr[i].ptxvpos2 = -1;
+	for (auto& i : spr)
+	{
+		i.ptxhpos = MAXHPOS;
+		i.ptxvpos2 = -1;
 	}
 	plf_state = plf_end;
 }

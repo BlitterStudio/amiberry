@@ -3279,12 +3279,12 @@ static void pfield_draw_line (struct vidbuffer *vb, int lineno, int gfx_ypos, in
 
 static void center_image(void)
 {
-	struct amigadisplay* ad = &adisplays;
-	struct vidbuf_description* vidinfo = &ad->gfxvidinfo;
-	int prev_x_adjust = visible_left_border;
-	int prev_y_adjust = thisframe_y_adjust;
+	auto ad = &adisplays;
+	auto vidinfo = &ad->gfxvidinfo;
+	auto prev_x_adjust = visible_left_border;
+	auto prev_y_adjust = thisframe_y_adjust;
 
-	int w = vidinfo->drawbuffer.inwidth;
+	auto w = vidinfo->drawbuffer.inwidth;
 	if (currprefs.gfx_xcenter && !currprefs.gf[0].gfx_filter_autoscale && max_diwstop > 0) {
 
 		if (max_diwstop - min_diwstart < w && currprefs.gfx_xcenter == 2)
