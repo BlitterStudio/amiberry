@@ -132,8 +132,6 @@ static int display_thread(void *unused)
 				updateHandle = vc_dispmanx_update_start(0);
 				vc_dispmanx_element_remove(updateHandle, elementHandle);
 				elementHandle = 0;
-				vc_dispmanx_element_remove(updateHandle, blackscreen_element);
-				blackscreen_element = 0;
 				vc_dispmanx_update_submit_sync(updateHandle);
 			}
 
@@ -217,23 +215,23 @@ static int display_thread(void *unused)
 					height = display_height * 2 >> changed_prefs.gfx_vresolution;
 				}
 
-				const auto want_aspect = float(width) / float(height);
-				const auto real_aspect = float(modeInfo.width) / float(modeInfo.height);
+				const auto want_aspect = static_cast<float>(width) / static_cast<float>(height);
+				const auto real_aspect = static_cast<float>(modeInfo.width) / static_cast<float>(modeInfo.height);
 
 				if (want_aspect > real_aspect)
 				{
-					const auto scale = float(modeInfo.width) / float(width);
+					const auto scale = static_cast<float>(modeInfo.width) / static_cast<float>(width);
 					viewport.x = 0;
 					viewport.w = modeInfo.width;
-					viewport.h = int(std::ceil(height * scale));
+					viewport.h = static_cast<int>(std::ceil(height * scale));
 					viewport.y = (modeInfo.height - viewport.h) / 2;
 				}
 				else
 				{
-					const auto scale = float(modeInfo.height) / float(height);
+					const auto scale = static_cast<float>(modeInfo.height) / static_cast<float>(height);
 					viewport.y = 0;
 					viewport.h = modeInfo.height;
-					viewport.w = int(std::ceil(width * scale));
+					viewport.w = static_cast<int>(std::ceil(width * scale));
 					viewport.x = (modeInfo.width - viewport.w) / 2;
 				}
 
@@ -244,14 +242,14 @@ static int display_thread(void *unused)
 			{
 				DispManXElementpresent = 1;
 				updateHandle = vc_dispmanx_update_start(0);
-				blackscreen_element = vc_dispmanx_element_add(updateHandle, displayHandle, 0,
-					&black_rect, blackfb_resource, &src_rect, DISPMANX_PROTECTION_NONE, &alpha, 
-					nullptr, DISPMANX_NO_ROTATE);
-
-				elementHandle = vc_dispmanx_element_add(updateHandle, displayHandle, 2,               // layer
-					&dst_rect, amigafb_resource_1, &src_rect, DISPMANX_PROTECTION_NONE, &alpha,
-					nullptr,             // clamp
-					DISPMANX_NO_ROTATE);
+				if (!blackscreen_element)
+					blackscreen_element = vc_dispmanx_element_add(updateHandle, displayHandle, 0,
+						&black_rect, blackfb_resource, &src_rect, DISPMANX_PROTECTION_NONE, &alpha,
+						nullptr, DISPMANX_NO_ROTATE);
+				if (!elementHandle)
+					elementHandle = vc_dispmanx_element_add(updateHandle, displayHandle, 2,
+						&dst_rect, amigafb_resource_1, &src_rect, DISPMANX_PROTECTION_NONE, &alpha,
+						nullptr, DISPMANX_NO_ROTATE);
 
 				vc_dispmanx_update_submit(updateHandle, nullptr, nullptr);
 			}
@@ -285,6 +283,11 @@ static int display_thread(void *unused)
 			break;
 
 		case DISPLAY_SIGNAL_QUIT:
+			updateHandle = vc_dispmanx_update_start(0);
+			vc_dispmanx_element_remove(updateHandle, blackscreen_element);
+			blackscreen_element = 0;
+			vc_dispmanx_update_submit_sync(updateHandle);
+			
 			vc_dispmanx_vsync_callback(displayHandle, nullptr, nullptr);
 			vc_dispmanx_display_close(displayHandle);
 			display_tid = nullptr;
@@ -322,8 +325,8 @@ int graphics_setup(void)
 				HDMI_PROPERTY_PARAM_T property;
 				property.property = HDMI_PROPERTY_PIXEL_CLOCK_TYPE;
 				vc_tv_hdmi_get_property(&property);
-				const auto frame_rate = property.param1 == HDMI_PIXEL_CLOCK_TYPE_NTSC ? tvstate.display.hdmi.frame_rate * (1000.0f / 1001.0f) : tvstate.display.hdmi.frame_rate;
-				host_hz = int(frame_rate);
+				const auto frame_rate = property.param1 == HDMI_PIXEL_CLOCK_TYPE_NTSC ? static_cast<float>(tvstate.display.hdmi.frame_rate) * (1000.0f / 1001.0f) : static_cast<float>(tvstate.display.hdmi.frame_rate);
+				host_hz = static_cast<int>(frame_rate);
 			}
 			vc_vchi_tv_stop();
 			vchi_disconnect(vchi_instance);

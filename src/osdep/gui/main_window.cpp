@@ -354,24 +354,24 @@ void amiberry_gui_init()
 	//vc_dispmanx_rect_set(&dst_rect, 0, 0, modeInfo.width, modeInfo.height);
 
 	// Scaled display with correct Aspect Ratio
-	const auto want_aspect = float(GUI_WIDTH) / float(GUI_HEIGHT);
-	const auto real_aspect = float(modeInfo.width) / float(modeInfo.height);
+	const auto want_aspect = static_cast<float>(GUI_WIDTH) / static_cast<float>(GUI_HEIGHT);
+	const auto real_aspect = static_cast<float>(modeInfo.width) / static_cast<float>(modeInfo.height);
 
 	SDL_Rect viewport;
 	if (want_aspect > real_aspect)
 	{
-		const auto scale = float(modeInfo.width) / float(GUI_WIDTH);
+		const auto scale = static_cast<float>(modeInfo.width) / static_cast<float>(GUI_WIDTH);
 		viewport.x = 0;
 		viewport.w = modeInfo.width;
-		viewport.h = int(std::ceil(GUI_HEIGHT * scale));
+		viewport.h = static_cast<int>(std::ceil(GUI_HEIGHT * scale));
 		viewport.y = (modeInfo.height - viewport.h) / 2;
 	}
 	else
 	{
-		const auto scale = float(modeInfo.height) / float(GUI_HEIGHT);
+		const auto scale = static_cast<float>(modeInfo.height) / static_cast<float>(GUI_HEIGHT);
 		viewport.y = 0;
 		viewport.h = modeInfo.height;
-		viewport.w = int(std::ceil(GUI_WIDTH * scale));
+		viewport.w = static_cast<int>(std::ceil(GUI_WIDTH * scale));
 		viewport.x = (modeInfo.width - viewport.w) / 2;
 	}
 	vc_dispmanx_rect_set(&dst_rect, viewport.x, viewport.y, viewport.w, viewport.h);
@@ -386,14 +386,15 @@ void amiberry_gui_init()
 		alpha.opacity = 255;
 		alpha.mask = 0;
 
-		blackscreen_element = vc_dispmanx_element_add(updateHandle, displayHandle, 0,
-			&black_rect, black_gui_resource, &src_rect, DISPMANX_PROTECTION_NONE, &alpha,
-			nullptr, DISPMANX_NO_ROTATE);
+		if (!blackscreen_element)
+			blackscreen_element = vc_dispmanx_element_add(updateHandle, displayHandle, 0,
+				&black_rect, black_gui_resource, &src_rect, DISPMANX_PROTECTION_NONE, &alpha,
+				nullptr, DISPMANX_NO_ROTATE);
 
-		gui_element = vc_dispmanx_element_add(updateHandle, displayHandle, 1,
-			&dst_rect, gui_resource, &src_rect, DISPMANX_PROTECTION_NONE, &alpha,
-			nullptr,             // clamp
-			DISPMANX_NO_ROTATE);
+		if (!gui_element)
+			gui_element = vc_dispmanx_element_add(updateHandle, displayHandle, 1,
+				&dst_rect, gui_resource, &src_rect, DISPMANX_PROTECTION_NONE, &alpha,
+				nullptr, DISPMANX_NO_ROTATE);
 
 		vc_dispmanx_update_submit_sync(updateHandle);
 	}
