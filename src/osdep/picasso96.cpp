@@ -3977,7 +3977,7 @@ static int render_thread(void* v)
 		if (ad->picasso_on && ad->picasso_requested_on) {
 			if (ad->picasso_requested_on) {
 				struct picasso96_state_struct *state = &picasso96_state;
-				picasso_flushpixels(gfxmem_banks[idx]->start + regs.natmem_offset, state->XYOffset - gfxmem_banks[idx]->start);
+				picasso_flushpixels(gfxmem_banks[idx]->start + regs.natmem_offset, static_cast<int>(state->XYOffset - gfxmem_banks[idx]->start));
 				ad->pending_render = true;
 			}
 		}

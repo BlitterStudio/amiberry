@@ -90,7 +90,7 @@ public:
 
 	std::string getElementAt(const int i) override
 	{
-		if (i < 0 || i >= entry.size())
+		if (i < 0 || i >= static_cast<int>(entry.size()))
 			return "---";
 		return entry[i];
 	}
@@ -120,7 +120,7 @@ public:
 
 	std::string getElementAt(const int i) override
 	{
-		if (i < 0 || i >= entry.size())
+		if (i < 0 || i >= static_cast<int>(entry.size()))
 			return "---";
 		return entry[i];
 	}
@@ -488,8 +488,26 @@ void RefreshPanelSound()
 		lblStereoDelayInfo->setCaption(tmp);
 	}
 	sldPaulaVol->setValue(100 - changed_prefs.sound_volume_paula);
-	snprintf(tmp, sizeof(tmp) - 1, "%d %%", 100 - changed_prefs.sound_volume_paula);
+	snprintf(tmp, sizeof tmp - 1, "%d %%", 100 - changed_prefs.sound_volume_paula);
 	lblPaulaVolInfo->setCaption(tmp);
+
+	optMono->setEnabled(changed_prefs.produce_sound > 0);
+	optStereo->setEnabled(changed_prefs.produce_sound > 0);
+	lblFrequency->setEnabled(changed_prefs.produce_sound > 0);
+	cboFrequency->setEnabled(changed_prefs.produce_sound > 0);
+	lblInterpolation->setEnabled(changed_prefs.produce_sound > 0);
+	cboInterpolation->setEnabled(changed_prefs.produce_sound > 0);
+	lblFilter->setEnabled(changed_prefs.produce_sound > 0);
+	cboFilter->setEnabled(changed_prefs.produce_sound > 0);
+	lblSeparation->setEnabled(changed_prefs.produce_sound > 0);
+	lblSeparationInfo->setEnabled(changed_prefs.produce_sound > 0);
+	sldSeparation->setEnabled(changed_prefs.produce_sound > 0);
+	lblStereoDelay->setEnabled(changed_prefs.produce_sound > 0);
+	lblStereoDelayInfo->setEnabled(changed_prefs.produce_sound > 0);
+	sldStereoDelay->setEnabled(changed_prefs.produce_sound > 0);
+	lblPaulaVol->setEnabled(changed_prefs.produce_sound > 0);
+	lblPaulaVolInfo->setEnabled(changed_prefs.produce_sound > 0);
+	sldPaulaVol->setEnabled(changed_prefs.produce_sound > 0);
 }
 
 bool HelpPanelSound(std::vector<std::string>& helptext)

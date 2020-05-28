@@ -130,20 +130,17 @@ void fixup_prefs_dimensions(struct uae_prefs* prefs)
 
 void fixup_cpu(struct uae_prefs* p)
 {
+	if (p->cpu_frequency == 1000000)
+		p->cpu_frequency = 0;
+	
 	if (p->cpu_model >= 68040 && p->address_space_24)
 	{
 		error_log(_T("24-bit address space is not supported with 68040/060 configurations."));
 		p->address_space_24 = false;
 	}
-	if (p->cpu_model < 68020 && p->fpu_model && p->cpu_compatible)
-	{
+	if (p->cpu_model < 68020 && p->fpu_model && (p->cpu_compatible || p->cpu_memory_cycle_exact)) {
 		error_log(_T("FPU is not supported with 68000/010 configurations."));
 		p->fpu_model = 0;
-	}
-	if (p->cpu_model > 68010 && p->cpu_compatible)
-	{
-		error_log(_T("CPU Compatible is only supported with 68000/010 configurations."));
-		p->cpu_compatible = false;
 	}
 
 	switch (p->cpu_model)
@@ -164,31 +161,78 @@ void fixup_cpu(struct uae_prefs* p)
 		break;
 	}
 
+	if (p->cpu_thread && (p->cpu_compatible || p->ppc_mode || p->cpu_memory_cycle_exact || p->cpu_model < 68020)) {
+		p->cpu_thread = false;
+		error_log(_T("Threaded CPU mode is not compatible with PPC emulation, More compatible or Cycle Exact modes. CPU type must be 68020 or higher."));
+	}
+	
 	if (p->cpu_model < 68020 && p->cachesize)
 	{
 		p->cachesize = 0;
 		error_log(_T("JIT requires 68020 or better CPU."));
 	}
 
+	if (!p->cpu_memory_cycle_exact && p->cpu_cycle_exact)
+		p->cpu_memory_cycle_exact = true;
+	
 	if (p->cpu_model >= 68020 && p->cachesize && p->cpu_compatible)
 		p->cpu_compatible = false;
 
-	if (p->cachesize && (p->fpu_no_unimplemented))
-	{
-		error_log(_T("JIT is not compatible with unimplemented FPU instruction emulation."));
-		p->fpu_no_unimplemented = false;
+	if (p->cachesize && p->cpu_memory_cycle_exact) {
+		error_log(_T("JIT and cycle-exact can't be enabled simultaneously."));
+		p->cachesize = 0;
 	}
-
-	if (p->cachesize && p->compfpu && p->fpu_mode > 0)
-	{
+	
+	if (p->cachesize && (p->fpu_no_unimplemented || p->int_no_unimplemented)) {
+		error_log(_T("JIT is not compatible with unimplemented CPU/FPU instruction emulation."));
+		p->fpu_no_unimplemented = p->int_no_unimplemented = false;
+	}
+	if (p->cachesize && p->compfpu && p->fpu_mode > 0) {
 		error_log(_T("JIT FPU emulation is not compatible with softfloat FPU emulation."));
 		p->fpu_mode = 0;
+	}
+
+	if (p->comptrustbyte < 0 || p->comptrustbyte > 3) {
+		error_log(_T("Bad value for comptrustbyte parameter: value must be within 0..2."));
+		p->comptrustbyte = 1;
+	}
+	if (p->comptrustword < 0 || p->comptrustword > 3) {
+		error_log(_T("Bad value for comptrustword parameter: value must be within 0..2."));
+		p->comptrustword = 1;
+	}
+	if (p->comptrustlong < 0 || p->comptrustlong > 3) {
+		error_log(_T("Bad value for comptrustlong parameter: value must be within 0..2."));
+		p->comptrustlong = 1;
+	}
+	if (p->comptrustnaddr < 0 || p->comptrustnaddr > 3) {
+		error_log(_T("Bad value for comptrustnaddr parameter: value must be within 0..2."));
+		p->comptrustnaddr = 1;
+	}
+	if (p->cachesize < 0 || p->cachesize > MAX_JIT_CACHE || (p->cachesize > 0 && p->cachesize < MIN_JIT_CACHE)) {
+		error_log(_T("JIT Bad value for cachesize parameter: value must zero or within %d..%d."), MIN_JIT_CACHE, MAX_JIT_CACHE);
+		p->cachesize = 0;
 	}
 
 	if (p->immediate_blits && p->waiting_blits)
 	{
 		error_log(_T("Immediate blitter and waiting blits can't be enabled simultaneously.\n"));
 		p->waiting_blits = 0;
+	}
+	if (p->cpu_memory_cycle_exact)
+		p->cpu_compatible = true;
+
+	if (p->cpu_memory_cycle_exact && p->produce_sound == 0) {
+		p->produce_sound = 1;
+		error_log(_T("Cycle-exact mode requires at least Disabled but emulated sound setting."));
+	}
+
+	if (p->cpu_data_cache && (!p->cpu_compatible || p->cachesize || p->cpu_model < 68030)) {
+		p->cpu_data_cache = false;
+		error_log(_T("Data cache emulation requires More compatible, is not JIT compatible, 68030+ only."));
+	}
+	if (p->cpu_data_cache && (p->uaeboard != 3 && need_uae_boot_rom(p))) {
+		p->cpu_data_cache = false;
+		error_log(_T("Data cache emulation requires Indirect UAE Boot ROM."));
 	}
 }
 
@@ -486,7 +530,7 @@ static void parse_cmdline_2(int argc, TCHAR** argv)
 	}
 }
 
-static TCHAR* parsetext(const TCHAR* s)
+static TCHAR* parse_text(const TCHAR* s)
 {
 	if (*s == '"' || *s == '\'')
 	{
@@ -505,9 +549,9 @@ static TCHAR* parsetext(const TCHAR* s)
 	return my_strdup(s);
 }
 
-static TCHAR* parsetextpath(const TCHAR* s)
+static TCHAR* parse_text_path(const TCHAR* s)
 {
-	auto* const s2 = parsetext(s);
+	auto* const s2 = parse_text(s);
 	auto* const s3 = target_expand_environment(s2, nullptr, 0);
 	xfree(s2);
 	return s3;
@@ -582,7 +626,7 @@ static void parse_cmdline(int argc, TCHAR** argv)
 		}
 		else if (_tcsncmp(argv[i], _T("-config="), 8) == 0)
 		{
-			auto* const txt = parsetextpath(argv[i] + 8);
+			auto* const txt = parse_text_path(argv[i] + 8);
 			currprefs.mountitems = 0;
 			target_cfgfile_load(&currprefs, txt,
 			                    firstconfig
@@ -594,7 +638,7 @@ static void parse_cmdline(int argc, TCHAR** argv)
 		}
 		else if (_tcsncmp(argv[i], _T("-model="), 7) == 0)
 		{
-			auto* const txt = parsetextpath(argv[i] + 7);
+			auto* const txt = parse_text_path(argv[i] + 7);
 			if (_tcsncmp(txt, _T("A500"), 4) == 0) {
 				bip_a500(&currprefs, -1);
 			}
@@ -613,7 +657,7 @@ static void parse_cmdline(int argc, TCHAR** argv)
 		}
 		else if (_tcsncmp(argv[i], _T("-statefile="), 11) == 0)
 		{
-			auto* const txt = parsetextpath(argv[i] + 11);
+			auto* const txt = parse_text_path(argv[i] + 11);
 			savestate_state = STATE_DORESTORE;
 			_tcscpy(savestate_fname, txt);
 			xfree(txt);
@@ -622,7 +666,7 @@ static void parse_cmdline(int argc, TCHAR** argv)
 			// for backwards compatibility only - WHDLoading
 		else if (_tcsncmp(argv[i], _T("-autowhdload="), 13) == 0)
 		{
-			auto* const txt = parsetextpath(argv[i] + 13);
+			auto* const txt = parse_text_path(argv[i] + 13);
 			whdload_auto_prefs(&currprefs, txt);
 			xfree(txt);
 			firstconfig = false;
@@ -631,7 +675,7 @@ static void parse_cmdline(int argc, TCHAR** argv)
 			// for backwards compatibility only - CDLoading
 		else if (_tcsncmp(argv[i], _T("-autocd="), 8) == 0)
 		{
-			auto* const txt = parsetextpath(argv[i] + 8);
+			auto* const txt = parse_text_path(argv[i] + 8);
 			cd_auto_prefs(&currprefs, txt);
 			xfree(txt);
 			firstconfig = false;
@@ -640,7 +684,7 @@ static void parse_cmdline(int argc, TCHAR** argv)
 			// autoload ....  .cue / .lha  
 		else if (_tcsncmp(argv[i], _T("-autoload="), 10) == 0)
 		{
-			auto* const txt = parsetextpath(argv[i] + 10);
+			auto* const txt = parse_text_path(argv[i] + 10);
 			const auto txt2 = get_filename_extension(txt); // Extract the extension from the string  (incl '.')
 			if (_tcsncmp(txt2.c_str(), ".lha", 4) == 0)
 			{
@@ -664,7 +708,7 @@ static void parse_cmdline(int argc, TCHAR** argv)
 				write_log(_T("Missing argument for '-f' option.\n"));
 			else
 			{
-				auto* const txt = parsetextpath(argv[++i]);
+				auto* const txt = parse_text_path(argv[++i]);
 				currprefs.mountitems = 0;
 				target_cfgfile_load(&currprefs, txt,
 				                    firstconfig
@@ -684,7 +728,7 @@ static void parse_cmdline(int argc, TCHAR** argv)
 		}
 		else if (_tcsncmp(argv[i], _T("-cdimage="), 9) == 0)
 		{
-			auto* const txt = parsetextpath(argv[i] + 9);
+			auto* const txt = parse_text_path(argv[i] + 9);
 			auto* const txt2 = xmalloc(TCHAR, _tcslen(txt) + 5);
 			_tcscpy(txt2, txt);
 			if (_tcsrchr(txt2, ',') == nullptr)
@@ -716,7 +760,7 @@ static void parse_cmdline(int argc, TCHAR** argv)
 			// check if it is config file or statefile
 			if (!loaded)
 			{
-				auto* const txt = parsetextpath(argv[i]);
+				auto* const txt = parse_text_path(argv[i]);
 				auto* const z = zfile_fopen(txt, _T("rb"), ZFD_NORMAL);
 				if (z)
 				{
@@ -951,7 +995,7 @@ void real_main(int argc, TCHAR** argv)
 {
 	restart_program = 1;
 
-	fetch_configurationpath(restart_config, sizeof restart_config / sizeof(TCHAR));
+	get_configuration_path(restart_config, sizeof restart_config / sizeof(TCHAR));
 	_tcscat(restart_config, OPTIONSFILENAME);
 	_tcscat(restart_config, ".uae");
 	default_config = 1;

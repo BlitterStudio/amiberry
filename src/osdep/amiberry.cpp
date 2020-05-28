@@ -39,6 +39,7 @@
 #include <map>
 
 extern FILE* debugfile;
+
 int pause_emulation;
 int quickstart_start = 1;
 int quickstart_model = 0;
@@ -117,44 +118,7 @@ void set_key_configs(struct uae_prefs* p)
 	}
 }
 
-// Justifications for the numbers set here
-// Frametime is 20000 cycles in PAL
-//              16667 cycles in NTSC
-// The most we can give back is a frame's worth of
-// cycles, but we shouldn't give them ALL back for timing
-// coordination so I have picked 90% of the cycles.
-#ifdef FASTERCYCLES
-int speedup_cycles_jit_pal = 18000;
-int speedup_cycles_jit_ntsc = 15000;
-int speedup_cycles_nonjit = 1024;
-// These are set to give enough time to hit 60 fps
-// on the ASUS tinker board, and giving the rest of the
-// time to the CPU (minus the 10% reserve above).
-// As these numbers are decreased towards -(SPEEDUP_CYCLES),
-// more chipset time is given and the CPU gets slower.
-// For your platform its best to tune these to the point where
-// you hit 60FPS in NTSC and not higher.
-// Do not tune above -(SPEEDUP_CYCLES) or the emulation will
-// become unstable.
-int speedup_timelimit_jit = -10000;
-int speedup_timelimit_nonjit = -960;
-// These define the maximum CPU possible and work well with
-// frameskip on and operation at 30fps at full chipset speed
-// They give the minimum possible chipset time.  Do not make
-// these positive numbers.  Doing so may give you a 500mhz
-// 68040 but your emulation will not be able to reset at this
-// speed.
-int speedup_timelimit_jit_turbo = 0;
-int speedup_timelimit_nonjit_turbo = 0;
-#else
-int speedup_cycles_jit_pal = 10000;
-int speedup_cycles_jit_ntsc = 6667;
-int speedup_cycles_nonjit = 256;
-int speedup_timelimit_jit = -5000;
-int speedup_timelimit_nonjit = -5000;
-int speedup_timelimit_jit_turbo = 0;
-int speedup_timelimit_nonjit_turbo = 0;
-#endif
+int pissoff_value = 15000 * CYCLE_UNIT;
 
 extern void signal_segv(int signum, siginfo_t* info, void* ptr);
 extern void signal_buserror(int signum, siginfo_t* info, void* ptr);
@@ -175,6 +139,7 @@ static char rom_path[MAX_DPATH];
 static char rp9_path[MAX_DPATH];
 static char controllers_path[MAX_DPATH];
 static char retroarch_file[MAX_DPATH];
+static char logfile_path[MAX_DPATH];
 
 char last_loaded_config[MAX_DPATH] = {'\0'};
 
@@ -266,7 +231,7 @@ void logging_init(void)
 			debugfile = nullptr;
 		}
 
-		sprintf(debugfilename, "%s/amiberry_log.txt", start_path_data);
+		sprintf(debugfilename, "%s", logfile_path);
 		if (!debugfile)
 			debugfile = fopen(debugfilename, "wt");
 
@@ -415,6 +380,7 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->kbd_led_num = -1; // No status on numlock
 	p->kbd_led_scr = -1; // No status on scrollock
 
+	p->gfx_auto_height = false;
 	p->gfx_correct_aspect = 1; // Default is Enabled
 	p->scaling_method = -1; //Default is Auto
 	if (scanlines_by_default)
@@ -506,6 +472,7 @@ void target_default_options(struct uae_prefs* p, int type)
 
 void target_save_options(struct zfile* f, struct uae_prefs* p)
 {
+	cfgfile_write_bool(f, _T("amiberry.gfx_auto_height"), p->gfx_auto_height);
 	cfgfile_write(f, _T("amiberry.gfx_correct_aspect"), _T("%d"), p->gfx_correct_aspect);
 	cfgfile_write(f, _T("amiberry.kbd_led_num"), _T("%d"), p->kbd_led_num);
 	cfgfile_write(f, _T("amiberry.kbd_led_scr"), _T("%d"), p->kbd_led_scr);
@@ -521,6 +488,7 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_write_bool(f, _T("amiberry.use_retroarch_menu"), p->use_retroarch_menu);
 	cfgfile_write_bool(f, _T("amiberry.use_retroarch_reset"), p->use_retroarch_reset);
 
+	cfgfile_target_dwrite(f, _T("cpu_idle"), _T("%d"), p->cpu_idle);
 #ifdef ANDROID
 	cfgfile_write(f, "amiberry.onscreen", "%d", p->onScreen);
 	cfgfile_write(f, "amiberry.onscreen_textinput", "%d", p->onScreen_textinput);
@@ -616,6 +584,8 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 		return 1;
 	if (cfgfile_intval(option, value, "kbd_led_scr", &p->kbd_led_scr, 1))
 		return 1;
+	if (cfgfile_yesno(option, value, _T("gfx_auto_height"), &p->gfx_auto_height))
+		return 1;
 	if (cfgfile_intval(option, value, "gfx_correct_aspect", &p->gfx_correct_aspect, 1))
 		return 1;
 	if (cfgfile_intval(option, value, "scaling_method", &p->scaling_method, 1))
@@ -628,77 +598,99 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 		return 1;
 	if (cfgfile_string(option, value, "fullscreen_toggle", p->fullscreen_toggle, sizeof p->fullscreen_toggle))
 		return 1;
+	if (cfgfile_intval(option, value, _T("cpu_idle"), &p->cpu_idle, 1))
+		return 1;
 	return 0;
 }
 
-void fetch_datapath(char* out, int size)
+void get_data_path(char* out, int size)
 {
 	strncpy(out, start_path_data, size - 1);
 	strncat(out, "/", size - 1);
 }
 
-void fetch_saveimagepath(char* out, int size, int dir)
+void get_saveimage_path(char* out, int size, int dir)
 {
 	strncpy(out, start_path_data, size - 1);
 	strncat(out, "/savestates/", size - 1);
 }
 
-void fetch_configurationpath(char* out, int size)
+void get_configuration_path(char* out, int size)
 {
 	fixtrailing(config_path);
 	strncpy(out, config_path, size - 1);
 }
 
-void set_configurationpath(char* newpath)
+void set_configuration_path(char* newpath)
 {
 	strncpy(config_path, newpath, MAX_DPATH - 1);
 }
 
-void fetch_controllerspath(char* out, int size)
+void get_controllers_path(char* out, int size)
 {
 	fixtrailing(controllers_path);
 	strncpy(out, controllers_path, size - 1);
 }
 
-void set_controllerspath(char* newpath)
+void set_controllers_path(char* newpath)
 {
 	strncpy(controllers_path, newpath, MAX_DPATH - 1);
 }
 
-void fetch_retroarchfile(char* out, int size)
+void get_retroarch_file(char* out, int size)
 {
 	strncpy(out, retroarch_file, size - 1);
 }
 
-void set_retroarchfile(char* newpath)
+void set_retroarch_file(char* newpath)
 {
 	strncpy(retroarch_file, newpath, MAX_DPATH - 1);
 }
 
-void fetch_rompath(char* out, int size)
+bool get_logfile_enabled()
+{
+	return write_logfile;
+}
+
+void set_logfile_enabled(bool enabled)
+{
+	write_logfile = enabled;
+}
+
+void get_logfile_path(char* out, int size)
+{
+	strncpy(out, logfile_path, size - 1);
+}
+
+void set_logfile_path(char* newpath)
+{
+	strncpy(logfile_path, newpath, MAX_DPATH - 1);
+}
+
+void get_rom_path(char* out, int size)
 {
 	fixtrailing(rom_path);
 	strncpy(out, rom_path, size - 1);
 }
 
-void set_rompath(char* newpath)
+void set_rom_path(char* newpath)
 {
 	strncpy(rom_path, newpath, MAX_DPATH - 1);
 }
 
-void fetch_rp9path(char* out, int size)
+void get_rp9_path(char* out, int size)
 {
 	fixtrailing(rp9_path);
 	strncpy(out, rp9_path, size - 1);
 }
 
-void fetch_savestatepath(char* out, int size)
+void get_savestate_path(char* out, int size)
 {
 	strncpy(out, start_path_data, size - 1);
 	strncat(out, "/savestates/", size - 1);
 }
 
-void fetch_screenshotpath(char* out, int size)
+void get_screenshot_path(char* out, int size)
 {
 	strncpy(out, start_path_data, size - 1);
 	strncat(out, "/screenshots/", size - 1);
@@ -928,22 +920,6 @@ void save_amiberry_settings(void)
 	snprintf(buffer, MAX_DPATH, "default_scaling_method=%d\n", default_scaling_method);
 	fputs(buffer, f);
 	
-	// Timing settings
-	snprintf(buffer, MAX_DPATH, "speedup_cycles_jit_pal=%d\n", speedup_cycles_jit_pal);
-	fputs(buffer, f);
-	snprintf(buffer, MAX_DPATH, "speedup_cycles_jit_ntsc=%d\n", speedup_cycles_jit_ntsc);
-	fputs(buffer, f);
-	snprintf(buffer, MAX_DPATH, "speedup_cycles_nonjit=%d\n", speedup_cycles_nonjit);
-	fputs(buffer, f);
-	snprintf(buffer, MAX_DPATH, "speedup_timelimit_jit=%d\n", speedup_timelimit_jit);
-	fputs(buffer, f);
-	snprintf(buffer, MAX_DPATH, "speedup_timelimit_nonjit=%d\n", speedup_timelimit_nonjit);
-	fputs(buffer, f);
-	snprintf(buffer, MAX_DPATH, "speedup_timelimit_jit_turbo=%d\n", speedup_timelimit_jit_turbo);
-	fputs(buffer, f);
-	snprintf(buffer, MAX_DPATH, "speedup_timelimit_nonjit_turbo=%d\n", speedup_timelimit_nonjit_turbo);
-	fputs(buffer, f);
-
 	// Paths
 	snprintf(buffer, MAX_DPATH, "path=%s\n", currentDir);
 	fputs(buffer, f);
@@ -955,6 +931,9 @@ void save_amiberry_settings(void)
 	fputs(buffer, f);
 
 	snprintf(buffer, MAX_DPATH, "retroarch_config=%s\n", retroarch_file);
+	fputs(buffer, f);
+
+	snprintf(buffer, MAX_DPATH, "logfile_path=%s\n", logfile_path);
 	fputs(buffer, f);
 
 	snprintf(buffer, MAX_DPATH, "rom_path=%s\n", rom_path);
@@ -993,6 +972,16 @@ void save_amiberry_settings(void)
 		fputs(buffer, f);
 	}
 
+	// Recent WHDLoad entries (these are used in the dropdown controls)
+	// lstMRUWhdloadList
+	snprintf(buffer, MAX_DPATH, "MRUWHDLoadList=%zu\n", lstMRUWhdloadList.size());
+	fputs(buffer, f);
+	for (auto& i : lstMRUWhdloadList)
+	{
+		snprintf(buffer, MAX_DPATH, "WHDLoadfile=%s\n", i.c_str());
+		fputs(buffer, f);
+	}
+	
 	fclose(f);
 }
 
@@ -1023,6 +1012,7 @@ void load_amiberry_settings(void)
 	snprintf(config_path, MAX_DPATH, "%s/conf/", start_path_data);
 	snprintf(controllers_path, MAX_DPATH, "%s/controllers/", start_path_data);
 	snprintf(retroarch_file, MAX_DPATH, "%s/conf/retroarch.cfg", start_path_data);
+	snprintf(logfile_path, MAX_DPATH, "%s/amiberry.log", start_path_data);
 
 #ifdef ANDROID
 	char afepath[MAX_DPATH];
@@ -1093,12 +1083,22 @@ void load_amiberry_settings(void)
 						lstMRUCDList.emplace_back(tmpFile);
 					}
 				}
+				else if (cfgfile_string(option, value, "WHDLoadfile", tmpFile, sizeof tmpFile))
+				{
+					auto* const f = fopen(tmpFile, "rbe");
+					if (f != nullptr)
+					{
+						fclose(f);
+						lstMRUWhdloadList.emplace_back(tmpFile);
+					}
+				}
 				else
 				{
 					cfgfile_string(option, value, "path", currentDir, sizeof currentDir);
 					cfgfile_string(option, value, "config_path", config_path, sizeof config_path);
 					cfgfile_string(option, value, "controllers_path", controllers_path, sizeof controllers_path);
 					cfgfile_string(option, value, "retroarch_config", retroarch_file, sizeof retroarch_file);
+					cfgfile_string(option, value, "logfile_path", logfile_path, sizeof logfile_path);
 					cfgfile_string(option, value, "rom_path", rom_path, sizeof rom_path);
 					cfgfile_intval(option, value, "ROMs", &numROMs, 1);
 					cfgfile_intval(option, value, "MRUDiskList", &numDisks, 1);
@@ -1118,14 +1118,6 @@ void load_amiberry_settings(void)
 					cfgfile_yesno(option, value, "default_horizontal_centering", &default_horizontal_centering);
 					cfgfile_yesno(option, value, "default_vertical_centering", &default_vertical_centering);
 					cfgfile_intval(option, value, "default_scaling_method", &default_scaling_method, 1);
-					
-					cfgfile_intval(option, value, "speedup_cycles_jit_pal", &speedup_cycles_jit_pal, 1);
-					cfgfile_intval(option, value, "speedup_cycles_jit_ntsc", &speedup_cycles_jit_ntsc, 1);
-					cfgfile_intval(option, value, "speedup_cycles_nonjit", &speedup_cycles_nonjit, 1);
-					cfgfile_intval(option, value, "speedup_timelimit_jit", &speedup_timelimit_jit, 1);
-					cfgfile_intval(option, value, "speedup_timelimit_nonjit", &speedup_timelimit_nonjit, 1);
-					cfgfile_intval(option, value, "speedup_timelimit_jit_turbo", &speedup_timelimit_jit_turbo, 1);
-					cfgfile_intval(option, value, "speedup_timelimit_nonjit_turbo", &speedup_timelimit_nonjit_turbo, 1);
 				}
 			}
 		}
@@ -1280,6 +1272,7 @@ int main(int argc, char* argv[])
 	free_AmigaMem();
 	lstMRUDiskList.clear();
 	lstMRUCDList.clear();
+	lstMRUWhdloadList.clear();
 	rp9_cleanup();
 
 	logging_cleanup();

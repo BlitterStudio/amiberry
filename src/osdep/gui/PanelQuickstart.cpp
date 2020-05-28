@@ -35,6 +35,11 @@ static gcn::DropDown* cboCDFile;
 static gcn::CheckBox* chkQuickstartMode;
 static gcn::Button* cmdSetConfiguration;
 
+static gcn::Label* lblWhdload;
+static gcn::DropDown* cboWhdload;
+static gcn::Button* cmdWhdloadEject;
+static gcn::Button* cmdWhdloadSelect;
+
 struct amigamodels
 {
 	int compalevels;
@@ -139,10 +144,11 @@ static struct amigamodels amodels[] = {
 static const int numModels = 10;
 static int numModelConfigs = 0;
 static bool bIgnoreListChange = true;
-
+static char whdload_file[MAX_DPATH];
 
 static const char* diskfile_filter[] = {".adf", ".adz", ".fdi", ".ipf", ".zip", ".dms", ".gz", ".xz", "\0"};
 static const char* cdfile_filter[] = {".cue", ".ccd", ".iso", "\0"};
+static const char* whdload_filter[] = { ".lha", "\0" };
 
 static void AdjustDropDownControls(void);
 
@@ -159,7 +165,6 @@ static void CountModelConfigs(void)
 		}
 	}
 }
-
 
 static void SetControlState(const int model)
 {
@@ -209,7 +214,6 @@ static void SetControlState(const int model)
 	cboCDFile->setVisible(cdVisible);
 }
 
-
 static void AdjustPrefs(void)
 {
 	built_in_prefs(&changed_prefs, quickstart_model, quickstart_conf, 0, 0);
@@ -246,7 +250,6 @@ static void AdjustPrefs(void)
 	}
 }
 
-
 class AmigaModelListModel : public gcn::ListModel
 {
 public:
@@ -267,7 +270,6 @@ public:
 };
 
 static AmigaModelListModel amigaModelList;
-
 
 class AmigaConfigListModel : public gcn::ListModel
 {
@@ -290,7 +292,6 @@ public:
 
 static AmigaConfigListModel amigaConfigList;
 
-
 class QSDiskfileListModel : public gcn::ListModel
 {
 public:
@@ -311,7 +312,6 @@ public:
 };
 
 static QSDiskfileListModel diskfileList;
-
 
 class QSCDfileListModel : public gcn::ListModel
 {
@@ -334,6 +334,26 @@ public:
 
 static QSCDfileListModel cdfileList;
 
+class QSWhdloadListModel : public gcn::ListModel
+{
+public:
+	QSWhdloadListModel()
+		= default;
+
+	int getNumberOfElements() override
+	{
+		return lstMRUWhdloadList.size();
+	}
+
+	std::string getElementAt(const int i) override
+	{
+		if (i < 0 || i >= static_cast<int>(lstMRUWhdloadList.size()))
+			return "---";
+		return lstMRUWhdloadList[i];
+	}
+};
+
+static QSWhdloadListModel whdloadFileList;
 
 class QSCDButtonActionListener : public gcn::ActionListener
 {
@@ -351,7 +371,6 @@ public:
 		else if (actionEvent.getSource() == cmdCDSelect)
 		{
 			char tmp[MAX_DPATH];
-
 			if (strlen(changed_prefs.cdslots[0].name) > 0)
 				strncpy(tmp, changed_prefs.cdslots[0].name, MAX_DPATH);
 			else
@@ -379,7 +398,6 @@ public:
 };
 
 static QSCDButtonActionListener* cdButtonActionListener;
-
 
 class QSCDFileActionListener : public gcn::ActionListener
 {
@@ -423,6 +441,79 @@ public:
 
 static QSCDFileActionListener* cdFileActionListener;
 
+class QSWHDLoadActionListener : public gcn::ActionListener
+{
+public:
+	void action(const gcn::ActionEvent& actionEvent) override
+	{
+		//---------------------------------------
+		// WHDLoad file from list selected
+		//---------------------------------------
+		if (!bIgnoreListChange)
+		{
+			if (actionEvent.getSource() == cboWhdload)
+			{
+				const auto idx = cboWhdload->getSelected();
+
+				if (idx < 0)
+				{
+					strncpy(whdload_file, "", MAX_DPATH);
+				}
+				else
+				{
+					if (whdloadFileList.getElementAt(idx) != whdload_file)
+					{
+						strncpy(whdload_file, whdloadFileList.getElementAt(idx).c_str(), MAX_DPATH);
+						lstMRUWhdloadList.erase(lstMRUWhdloadList.begin() + idx);
+						lstMRUWhdloadList.insert(lstMRUWhdloadList.begin(), whdload_file);
+						bIgnoreListChange = true;
+						cboWhdload->setSelected(0);
+						bIgnoreListChange = false;
+					}
+					whdload_auto_prefs(&changed_prefs, whdload_file);
+				}
+				RefreshAllPanels();
+			}
+		}
+	}
+};
+
+static QSWHDLoadActionListener* whdloadActionListener;
+
+class QSWHDLoadButtonActionListener : public gcn::ActionListener
+{
+public:
+	void action(const gcn::ActionEvent& actionEvent) override
+	{
+		if (actionEvent.getSource() == cmdWhdloadEject)
+		{
+			//---------------------------------------
+			// Eject WHDLoad file
+			//---------------------------------------
+			strncpy(whdload_file, "", MAX_DPATH);
+			AdjustPrefs();
+		}
+		else if (actionEvent.getSource() == cmdWhdloadSelect)
+		{
+			char tmp[MAX_DPATH];
+			if (strlen(whdload_file) > 0)
+				strncpy(tmp, whdload_file, MAX_DPATH);
+			else
+				strncpy(tmp, currentDir, MAX_DPATH);
+
+			if (SelectFile("Select WHDLoad LHA file", tmp, whdload_filter))
+			{
+				strncpy(whdload_file, tmp, MAX_DPATH);
+				AddFileToWHDLoadList(whdload_file, 1);
+				whdload_auto_prefs(&changed_prefs, whdload_file);
+			}
+			cmdWhdloadSelect->requestFocus();
+		}
+		RefreshAllPanels();
+	}
+};
+
+static QSWHDLoadButtonActionListener* whdloadButtonActionListener;
 
 class AmigaModelActionListener : public gcn::ActionListener
 {
@@ -470,7 +561,6 @@ public:
 
 static AmigaModelActionListener* amigaModelActionListener;
 
-
 class QSNTSCButtonActionListener : public gcn::ActionListener
 {
 public:
@@ -491,7 +581,6 @@ public:
 };
 
 static QSNTSCButtonActionListener* ntscButtonActionListener;
-
 
 class QSDFxCheckActionListener : public gcn::ActionListener
 {
@@ -537,7 +626,6 @@ public:
 };
 
 static QSDFxCheckActionListener* dfxCheckActionListener;
-
 
 class QSDFxButtonActionListener : public gcn::ActionListener
 {
@@ -597,7 +685,6 @@ public:
 
 static QSDFxButtonActionListener* dfxButtonActionListener;
 
-
 class QSDiskFileActionListener : public gcn::ActionListener
 {
 public:
@@ -643,7 +730,6 @@ public:
 
 static QSDiskFileActionListener* diskFileActionListener;
 
-
 class QuickstartModeActionListener : public gcn::ActionListener
 {
 public:
@@ -654,7 +740,6 @@ public:
 };
 
 static QuickstartModeActionListener* quickstartModeActionListener;
-
 
 void InitPanelQuickstart(const struct _ConfigCategory& category)
 {
@@ -668,6 +753,8 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 	cdButtonActionListener = new QSCDButtonActionListener();
 	cdFileActionListener = new QSCDFileActionListener();
 	quickstartModeActionListener = new QuickstartModeActionListener();
+	whdloadActionListener = new QSWHDLoadActionListener();
+	whdloadButtonActionListener = new QSWHDLoadButtonActionListener();
 
 	lblModel = new gcn::Label("Amiga model:");
 	lblModel->setAlignment(gcn::Graphics::RIGHT);
@@ -770,6 +857,26 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 	cmdSetConfiguration->setId("cmdSetConfig");
 	cmdSetConfiguration->addActionListener(amigaModelActionListener);
 
+	lblWhdload = new gcn::Label("WHDLoad auto-config:");
+	cboWhdload = new gcn::DropDown(&whdloadFileList);
+	cboWhdload->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, cboWhdload->getHeight());
+	cboWhdload->setBaseColor(gui_baseCol);
+	cboWhdload->setBackgroundColor(colTextboxBackground);
+	cboWhdload->setId("cboWhdload");
+	cboWhdload->addActionListener(whdloadActionListener);
+
+	cmdWhdloadEject = new gcn::Button("Eject");
+	cmdWhdloadEject->setSize(SMALL_BUTTON_WIDTH * 2, SMALL_BUTTON_HEIGHT);
+	cmdWhdloadEject->setBaseColor(gui_baseCol);
+	cmdWhdloadEject->setId("cmdWhdloadEject");
+	cmdWhdloadEject->addActionListener(whdloadButtonActionListener);
+
+	cmdWhdloadSelect = new gcn::Button("Select file");
+	cmdWhdloadSelect->setSize(BUTTON_WIDTH + 10, SMALL_BUTTON_HEIGHT);
+	cmdWhdloadSelect->setBaseColor(gui_baseCol);
+	cmdWhdloadSelect->setId("cmdWhdloadSelect");
+	cmdWhdloadSelect->addActionListener(whdloadButtonActionListener);
+
 	category.panel->add(lblModel, DISTANCE_BORDER, posY);
 	category.panel->add(cboModel, DISTANCE_BORDER + lblModel->getWidth() + 8, posY);
 	category.panel->add(chkNTSC, cboModel->getX() + cboModel->getWidth() + 8, posY);
@@ -782,9 +889,9 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 	{
 		auto posX = DISTANCE_BORDER;
 		category.panel->add(chkDFx[i], posX, posY);
-		posX += 180;
+		posX += DISTANCE_NEXT_X * 12;
 		category.panel->add(chkDFxWriteProtect[i], posX, posY);
-		posX += chkDFxWriteProtect[i]->getWidth() + 4 * DISTANCE_NEXT_X;
+		posX += DISTANCE_NEXT_X * 13;
 		//	  category.panel->add(cmdDFxInfo[i], posX, posY);
 		//posX += cmdDFxInfo[i]->getWidth() + DISTANCE_NEXT_X;
 		category.panel->add(cmdDFxEject[i], posX, posY);
@@ -807,6 +914,13 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 
 	category.panel->add(cmdSetConfiguration, DISTANCE_BORDER, posY);
 
+	posY += cmdSetConfiguration->getHeight() + DISTANCE_NEXT_Y * 3;
+	category.panel->add(lblWhdload, DISTANCE_BORDER, posY);
+	category.panel->add(cmdWhdloadEject, lblWhdload->getX() + lblWhdload->getWidth() + DISTANCE_NEXT_X * 16, posY);
+	category.panel->add(cmdWhdloadSelect, cmdWhdloadEject->getX() + cmdWhdloadEject->getWidth() + DISTANCE_NEXT_X, posY);
+	posY += cmdWhdloadSelect->getHeight() + 8;
+	category.panel->add(cboWhdload, DISTANCE_BORDER, posY);
+	
 	chkCD->setVisible(false);
 	cmdCDEject->setVisible(false);
 	cmdCDSelect->setVisible(false);
@@ -825,7 +939,6 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 
 	RefreshPanelQuickstart();
 }
-
 
 void ExitPanelQuickstart(void)
 {
@@ -850,6 +963,11 @@ void ExitPanelQuickstart(void)
 	delete chkQuickstartMode;
 	delete cmdSetConfiguration;
 
+	delete lblWhdload;
+	delete cboWhdload;
+	delete cmdWhdloadEject;
+	delete cmdWhdloadSelect;
+
 	delete amigaModelActionListener;
 	delete ntscButtonActionListener;
 	delete dfxCheckActionListener;
@@ -859,7 +977,6 @@ void ExitPanelQuickstart(void)
 	delete cdFileActionListener;
 	delete quickstartModeActionListener;
 }
-
 
 static void AdjustDropDownControls(void)
 {
@@ -895,9 +1012,21 @@ static void AdjustDropDownControls(void)
 		}
 	}
 
+	cboWhdload->clearSelected();
+	if (strlen(whdload_file) > 0)
+	{
+		for (auto i = 0; i < static_cast<int>(lstMRUWhdloadList.size()); ++i)
+		{
+			if (lstMRUWhdloadList[i].c_str() != whdload_file)
+			{
+				cboWhdload->setSelected(i);
+				break;
+			}
+		}
+	}
+	
 	bIgnoreListChange = false;
 }
-
 
 void RefreshPanelQuickstart(void)
 {
@@ -939,7 +1068,6 @@ void RefreshPanelQuickstart(void)
 	chkQuickstartMode->setSelected(quickstart_start);
 }
 
-
 bool HelpPanelQuickstart(std::vector<std::string>& helptext)
 {
 	helptext.clear();
@@ -949,7 +1077,14 @@ bool HelpPanelQuickstart(std::vector<std::string>& helptext)
 	helptext.emplace_back("After selecting the Amiga model, you can choose from a small list of standard");
 	helptext.emplace_back("configurations for this model to start with.");
 	helptext.emplace_back(" ");
+	helptext.emplace_back("You can reset the current configuration to your selected model, by clicking the");
+	helptext.emplace_back("Set Configuration button.");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("When you activate \"Start in Quickstart mode\", the next time you run the emulator,");
-	helptext.emplace_back("it  will start with the QuickStart panel. Otherwise you start in configurations panel.");
+	helptext.emplace_back("it  will start with the QuickStart panel. Otherwise you start in the configurations panel.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("You can optionally select a WHDLoad LHA title, and have Amiberry auto-configure");
+	helptext.emplace_back("all settings, based on the WHDLoad XML (assuming the title is found there).");
+	helptext.emplace_back("Then you can just click on Start to begin!");
 	return true;
 }

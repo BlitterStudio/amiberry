@@ -80,7 +80,7 @@ namespace gcn
 		  mSpacing(4)
 	{
 		setFocusable(true);
-		adjustSize();
+		Button::adjustSize();
 		setBorderSize(1);
 
 		addMouseListener(this);
@@ -97,7 +97,7 @@ namespace gcn
 		  mSpacing(4)
 	{
 		setFocusable(true);
-		adjustSize();
+		Button::adjustSize();
 		setBorderSize(1);
 
 		addMouseListener(this);
@@ -169,7 +169,10 @@ namespace gcn
 		graphics->drawLine(getWidth() - 1, 1, getWidth() - 1, getHeight() - 1);
 		graphics->drawLine(1, getHeight() - 1, getWidth() - 1, getHeight() - 1);
 
-		graphics->setColor(getForegroundColor());
+		if (isEnabled())
+			graphics->setColor(getForegroundColor());
+		else
+			graphics->setColor(Color(128, 128, 128));
 
 		int text_x;
 		const auto text_y = getHeight() / 2 - getFont()->getHeight() / 2;

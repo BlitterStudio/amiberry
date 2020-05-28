@@ -481,17 +481,35 @@ int find_retroarch(const TCHAR* find_setting, char* retroarch_file, host_input_b
 	std::string line;
 	std::string delimiter = " = ";
 	auto tempbutton = -1;
-
+         
 	// read each line in
 	while (std::getline(readFile, line))
-	{
-		const auto option = line.substr(0, line.find(delimiter));
+	{	
+                if (strncmp(find_setting, "count_hats", 10) == 0)
+                {
+                    auto param = line.substr(line.find(delimiter) + delimiter.length(), line.length());
+                    // remove leading "
+                    if (param.at(0) == '"')
+				param.erase(0, 1);
+                     // remove trailing "
+                    if (param.at(param.length() - 1) == '"')
+				param.erase(param.length() - 1, 1);
+                    
+                    if (param.find("h") == 0)
+                    {                   
+			tempbutton = 1;
+			break;     
+                    }
 
-		if (option != line) // exit if we got no result from splitting the string
+                }
+
+                const auto option = line.substr(0, line.find(delimiter));
+                // exit if we got no result from splitting the string
+		if (option != line) 
 		{
 			if (option != find_setting)
 				continue;
-
+                        
 			// using the " = " to work out which is the option, and which is the parameter.
 			auto param = line.substr(line.find(delimiter) + delimiter.length(), line.length());
 
@@ -507,14 +525,7 @@ int find_retroarch(const TCHAR* find_setting, char* retroarch_file, host_input_b
 			if (param.find('h') != 0) // check it isn't some kind of hat starting 'h' (so if D-pad uses buttons)
 			{
 				tempbutton = abs(atol(param.c_str()));
-			}
-
-			// gets the parameter
-			if (strncmp(find_setting, "count_hats", 10) == 0 && param.find("h0") == 0)
-			{
-				tempbutton = 1;
-				break;
-			}
+                        }
 
 			if (option == find_setting)
 				break;
@@ -773,7 +784,7 @@ static int init_joystick()
 
 	// set up variables / paths etc.
 	char retroarch_file[MAX_DPATH];
-	fetch_retroarchfile(retroarch_file, MAX_DPATH);
+	get_retroarch_file(retroarch_file, MAX_DPATH);
 
 	if (my_existsfile(retroarch_file))
 	{
@@ -801,7 +812,7 @@ static int init_joystick()
 
 	// set up variables / paths etc.
 	char tmp[MAX_DPATH];
-	fetch_controllerspath(tmp, MAX_DPATH);
+	get_controllers_path(tmp, MAX_DPATH);
 
 	// do the loop
 	for (auto cpt = 0; cpt < nr_joysticks; cpt++)

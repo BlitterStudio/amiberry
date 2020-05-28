@@ -2827,6 +2827,18 @@ static void pfield_expand_dp_bplconx (int regno, int v)
 	set_res_shift();
 }
 
+STATIC_INLINE void do_flush_screen(int start, int stop)
+{
+	struct amigadisplay* ad = &adisplays;
+	struct vidbuf_description* vidinfo = &ad->gfxvidinfo;
+	struct vidbuffer* vb = &vidinfo->drawbuffer;
+	
+	if (start <= stop)
+		flush_screen(vb, start, stop);
+	else
+		flush_screen(vb, 0, 0); /* vsync mode */
+}
+
 static int drawing_color_matches;
 static enum { color_match_acolors, color_match_full } color_match_type;
 
@@ -3273,12 +3285,12 @@ static void pfield_draw_line (struct vidbuffer *vb, int lineno, int gfx_ypos, in
 
 static void center_image(void)
 {
-	struct amigadisplay* ad = &adisplays;
-	struct vidbuf_description* vidinfo = &ad->gfxvidinfo;
-	int prev_x_adjust = visible_left_border;
-	int prev_y_adjust = thisframe_y_adjust;
+	auto ad = &adisplays;
+	auto vidinfo = &ad->gfxvidinfo;
+	auto prev_x_adjust = visible_left_border;
+	auto prev_y_adjust = thisframe_y_adjust;
 
-	int w = vidinfo->drawbuffer.inwidth;
+	auto w = vidinfo->drawbuffer.inwidth;
 	if (currprefs.gfx_xcenter && !currprefs.gf[0].gfx_filter_autoscale && max_diwstop > 0) {
 
 		if (max_diwstop - min_diwstart < w && currprefs.gfx_xcenter == 2)
@@ -3819,6 +3831,7 @@ static void finish_drawing_frame(bool drawlines)
 #ifdef AMIBERRY
 	next_line_to_render = 0;
 #endif
+	do_flush_screen(first_drawn_line, last_drawn_line);
 }
 
 void check_prefs_picasso(void)
@@ -4210,13 +4223,13 @@ void drawing_init(void)
 	reset_drawing();
 }
 
-//int isvsync_chipset(void)
-//{
-//	struct amigadisplay *ad = &adisplays;
-//	if (ad->picasso_on)
-//		return 0;
-//	return 1;
-//}
+int isvsync_chipset(void)
+{
+	struct amigadisplay *ad = &adisplays;
+	if (ad->picasso_on)
+		return 0;
+	return 1;
+}
 
 int isvsync_rtg(void)
 {

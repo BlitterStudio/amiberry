@@ -17,10 +17,7 @@
 
 #include "options.h"
 #include "uae.h"
-//#include "gensound.h"
 #include "audio.h"
-#include "sounddep/sound.h"
-//#include "events.h"
 #include "memory.h"
 #include "custom.h"
 #include "newcpu.h"
@@ -30,31 +27,17 @@
 #include "blitter.h"
 #include "xwin.h"
 #include "inputdevice.h"
-//#include "serial.h"
 #include "autoconf.h"
-#include "traps.h"
 #include "gui.h"
 #include "picasso96.h"
 #include "drawing.h"
 #include "ar.h"
-//#include "debug.h"
 #include "akiko.h"
-#if defined(ENFORCER)
-#include "enforcer.h"
-#endif
-#include "threaddep/thread.h"
-//#include "luascript.h"
 #include "devices.h"
 #include "rommgr.h"
-//#include "specialmonitors.h"
 
-#define CUSTOM_DEBUG 0
-#define SPRITE_DEBUG 0
-#define SPRITE_DEBUG_MINY 0
-#define SPRITE_DEBUG_MAXY 0x30
 #define SPR0_HPOS 0x15
 #define MAX_SPRITES 8
-#define SPEEDUP 1
 #define AUTOSCALE_SPRITES 1
 #define ALL_SUBPIXEL 1
 
@@ -64,13 +47,7 @@
 extern int speedup_cycles_jit_pal;
 extern int speedup_cycles_jit_ntsc;
 extern int speedup_cycles_nonjit;
-extern int speedup_timelimit_jit;
-extern int speedup_timelimit_nonjit;
-extern int speedup_timelimit_jit_turbo;
-extern int speedup_timelimit_nonjit_turbo;
 #endif
-
-extern uae_u16 serper;
 
 STATIC_INLINE bool nocustom (void)
 {
@@ -96,11 +73,6 @@ static void uae_abort (const TCHAR *format,...)
 	gui_message (buffer);
 	nomore = 1;
 }
-
-#ifdef AMIBERRY
-int pissoff_value = speedup_cycles_jit_pal * CYCLE_UNIT;
-int speedup_timelimit = speedup_timelimit_jit;
-#endif
 
 static unsigned int n_consecutive_skipped = 0;
 static unsigned int total_skipped = 0;
@@ -497,32 +469,6 @@ static int doflickerfix (void)
 {
 	return currprefs.gfx_vresolution && doublescan < 0 && vpos < MAXVPOS;
 }
-
-#ifdef AMIBERRY
-void set_speedup_values(void)
-{
-	if (currprefs.m68k_speed < 0) {
-		if (currprefs.cachesize) {
-			pissoff_value = ((vblank_hz > 55) ? speedup_cycles_jit_ntsc : speedup_cycles_jit_pal) * CYCLE_UNIT;
-			if (currprefs.m68k_speed != -30)
-				speedup_timelimit = speedup_timelimit_jit;
-			else
-				speedup_timelimit = speedup_timelimit_jit_turbo;
-		}
-		else {
-			pissoff_value = speedup_cycles_nonjit * CYCLE_UNIT;
-			if (currprefs.m68k_speed != -30)
-				speedup_timelimit = speedup_timelimit_nonjit;
-			else
-				speedup_timelimit = speedup_timelimit_nonjit_turbo;
-		}
-	}
-	else {
-		pissoff_value = 0;
-		speedup_timelimit = 0;
-	}
-}
-#endif
 
 uae_u32 get_copper_address (int copno)
 {
@@ -1874,18 +1820,18 @@ static void toscr_1 (int nbits, int fm)
 
 	out_nbits += nbits;
 	if (out_nbits == 32) {
-		if (out_offs < MAX_WORDS_PER_LINE / 4) {
-		uae_u8 *dataptr = line_data[next_lineno] + out_offs * 4;
-		for (int i = 0; i < thisline_decision.nr_planes; i++) {
-			uae_u32 *dataptr32 = (uae_u32 *)dataptr;
-			if (*dataptr32 != outword[i]) {
-				thisline_changed = 1;
-				*dataptr32 = outword[i];
+		if (out_offs < MAX_WORDS_PER_LINE * 2 / 4) {
+			uae_u8 *dataptr = line_data[next_lineno] + out_offs * 4;
+			for (int i = 0; i < thisline_decision.nr_planes; i++) {
+				uae_u32 *dataptr32 = (uae_u32 *)dataptr;
+				if (*dataptr32 != outword[i]) {
+					thisline_changed = 1;
+					*dataptr32 = outword[i];
+				}
+				outword[i] = 0;
+				dataptr += MAX_WORDS_PER_LINE * 2;
 			}
-			outword[i] = 0;
-			dataptr += MAX_WORDS_PER_LINE * 2;
-		}
-		out_offs++;
+			out_offs++;
 		}
 		out_nbits = 0;
 	}
@@ -1907,18 +1853,18 @@ static void toscr_1_hr(int nbits, int fm)
 	out_nbits += nbits;
 	if (out_nbits == 64) {
 		if (out_offs < MAX_WORDS_PER_LINE * 2 / 4 - 1) {
-		uae_u8 *dataptr = line_data[next_lineno] + out_offs * 4;
-		for (int i = 0; i < thisline_decision.nr_planes; i++) {
-			uae_u64 *dataptr64 = (uae_u64 *)dataptr;
-			uae_u64 v = (outword64[i] >> 32) | (outword64[i] << 32);
-			if (*dataptr64 != v) {
-				thisline_changed = 1;
-				*dataptr64 = v;
+			uae_u8 *dataptr = line_data[next_lineno] + out_offs * 4;
+			for (int i = 0; i < thisline_decision.nr_planes; i++) {
+				uae_u64 *dataptr64 = (uae_u64 *)dataptr;
+				uae_u64 v = (outword64[i] >> 32) | (outword64[i] << 32);
+				if (*dataptr64 != v) {
+					thisline_changed = 1;
+					*dataptr64 = v;
+				}
+				outword64[i] = 0;
+				dataptr += MAX_WORDS_PER_LINE * 2;
 			}
-			outword64[i] = 0;
-			dataptr += MAX_WORDS_PER_LINE * 2;
-		}
-		out_offs += 2;
+			out_offs += 2;
 		}
 		out_nbits = 0;
 	}
@@ -3455,7 +3401,7 @@ static void record_register_change (int hpos, int regno, uae_u16 value)
 		isbrdblank(hpos, bplcon0, value);
 		issprbrd(hpos, bplcon0, value);
 	}
-	record_color_change (hpos, regno + 0x1000, value);
+	record_color_change(hpos, regno + 0x1000, value);
 }
 
 typedef int sprbuf_res_t, cclockres_t, hwres_t,	bplres_t;
@@ -4341,15 +4287,15 @@ void compute_framesync(void)
 		vblank_hz = vblank_hz_shf;
 	}
 
-	//vblank_hz = target_adjust_vblank_hz(vblank_hz);
+//	vblank_hz = target_adjust_vblank_hz(0, vblank_hz);
 
 	struct chipset_refresh *cr = get_chipset_refresh(&currprefs);
 	while (cr) {
 		double v = -1;
 		if (!ad->picasso_on && !ad->picasso_requested_on) {
-			if (isvsync_chipset()) {
+			if (isvsync_chipset ()) {
 				if (cr->index == CHIPSET_REFRESH_PAL || cr->index == CHIPSET_REFRESH_NTSC) {
-					if (fabs(vblank_hz - 50) < 1 || fabs(vblank_hz - 60) < 1 || fabs(vblank_hz - 100) < 1 || fabs(vblank_hz - 120) < 1) {
+					if ((fabs(vblank_hz - 50) < 1 || fabs(vblank_hz - 60) < 1 || fabs(vblank_hz - 100) < 1 || fabs(vblank_hz - 120) < 1)) {
 						vsync_switchmode(int(vblank_hz));
 					}
 				}
@@ -4369,16 +4315,15 @@ void compute_framesync(void)
 			}
 		}
 		else {
-			if (cr->locked == false)
-				v = vblank_hz;
-			else
-				v = cr->rate;
+			v = vblank_hz;
 			changed_prefs.chipset_refreshrate = currprefs.chipset_refreshrate = v;
+			vsync_switchmode(int(v));
 		}
 		found = true;
 		break;
 	}
 	if (!found) {
+		vsync_switchmode(int(vblank_hz));
 		changed_prefs.chipset_refreshrate = currprefs.chipset_refreshrate = vblank_hz;
 	}
 	stored_chipset_refresh = cr;
@@ -4712,12 +4657,18 @@ void init_hz_normal (void)
 	init_hz (false);
 }
 
+// for auto zoom
+int hstrt;
+int hstop;
+int vstrt;
+int vstop;
+
 static void calcdiw (void)
 {
-	int hstrt = (diwstrt & 0xFF) << 2;
-	int hstop = (diwstop & 0xFF) << 2;
-	int vstrt = diwstrt >> 8;
-	int vstop = diwstop >> 8;
+	hstrt = (diwstrt & 0xFF) << 2;
+	hstop = (diwstop & 0xFF) << 2;
+	vstrt = diwstrt >> 8;
+	vstop = diwstop >> 8;
 
 	// ECS Agnus/AGA: DIWHIGH vertical high bits.
 	if (diwhigh_written && (currprefs.chipset_mask & CSMASK_ECS_AGNUS)) {
@@ -5369,25 +5320,22 @@ static void send_interrupt_do (uae_u32 v)
 void send_interrupt (int num, int delay)
 {
 	if (delay > 0 && (currprefs.cpu_cycle_exact || currprefs.cpu_compatible)) {
-		event2_newevent_xx (-1, delay, num, send_interrupt_do);
+		event2_newevent_xx(-1, delay, num, send_interrupt_do);
 	} else {
 		send_interrupt_do(num);
 	}
 }
 
-static void doint_delay_do (uae_u32 v)
+static void doint_delay_do(uae_u32 v)
 {
 	doint();
 }
 
 static void doint_delay ()
 {
-	if (currprefs.cpu_compatible)
-	{
+	if (currprefs.cpu_compatible) {
 		event2_newevent_xx(-1, CYCLE_UNIT + CYCLE_UNIT / 2, 0, doint_delay_do);
-	}
-	else
-	{
+	} else {
 		doint();
 	}
 }
@@ -5395,17 +5343,23 @@ static void doint_delay ()
 static void INTENA (uae_u16 v)
 {
 	uae_u16 old = intena;
-	setclr (&intena, v);
-	if ((v & 0x8000) && old != intena)
-	{
+	setclr(&intena, v);
+
+	if ((v & 0x8000) && old != intena) {
 		doint_delay();
 	}
+}
+
+static void INTREQ_nodelay (uae_u16 v)
+{
+	setclr(&intreq, v);
+	doint();
 }
 
 void INTREQ_f (uae_u16 v)
 {
 	uae_u16 old = intreq;
-	setclr(&intreq, v);
+	setclr (&intreq, v);
 	if ((old & 0x0800) && !(intreq & 0x0800)) {
 		//serial_rbf_clear();
 	}
@@ -5425,8 +5379,9 @@ bool INTREQ_0 (uae_u16 v)
 
 void INTREQ (uae_u16 data)
 {
-	if (INTREQ_0(data))
-		rethink_intreq ();
+	if (INTREQ_0(data)) {
+		rethink_intreq();
+	}
 }
 
 static void ADKCON (int hpos, uae_u16 v)
@@ -7047,7 +7002,7 @@ void do_copper (void)
 the reason why we want to update the copper.  This function is also
 used from hsync_handler to finish up the line; for this case, we check
 hpos against maxhpos.  */
-STATIC_INLINE void sync_copper_with_cpu(int hpos, int do_schedule, unsigned int addr)
+STATIC_INLINE void sync_copper_with_cpu (int hpos, int do_schedule, unsigned int addr)
 {
 #ifdef AMIBERRY
 	if (eventtab[ev_copper].active) {
@@ -7307,9 +7262,9 @@ static void do_sprites (int hpos)
 	if (minspr == maxspr)
 		return;
 
-	for (int i = minspr; i <= maxspr; i++) {
-		int cycle = -1;
-		int num = (i - SPR0_HPOS) / 4;
+	for (auto i = minspr; i <= maxspr; i++) {
+		auto cycle = -1;
+		const auto num = (i - SPR0_HPOS) / 4;
 		switch ((i - SPR0_HPOS) & 3)
 		{
 		case 0:
@@ -7331,8 +7286,9 @@ static void do_sprites (int hpos)
 
 static void init_sprites (void)
 {
-	for (int i = 0; i < MAX_SPRITES; i++) {
-		struct sprite *s = &spr[i];
+	for (auto& i : spr)
+	{
+		auto* const s = &i;
 		s->pos = 0;
 		s->ctl = 0;
 	}
@@ -7381,9 +7337,10 @@ static void init_hardware_frame (void)
 	first_bplcon0 = 0;
 	autoscale_bordercolors = 0;
 
-	for (int i = 0; i < MAX_SPRITES; i++) {
-		spr[i].ptxhpos = MAXHPOS;
-		spr[i].ptxvpos2 = -1;
+	for (auto& i : spr)
+	{
+		i.ptxhpos = MAXHPOS;
+		i.ptxvpos2 = -1;
 	}
 	plf_state = plf_end;
 }
@@ -7425,9 +7382,9 @@ void init_hardware_for_drawing_frame (void)
 	next_sprite_forced = 1;
 }
 
-static int rpt_vsync(int adjust)
+static int rpt_vsync (int adjust)
 {
-	frame_time_t curr_time = read_processor_time();
+	frame_time_t curr_time = read_processor_time ();
 	int v = curr_time - vsyncwaittime + adjust;
 	if (v > syncbase || v < -syncbase) {
 		vsyncmintime = vsyncmaxtime = vsyncwaittime = curr_time;
@@ -7488,7 +7445,8 @@ static bool framewait(void)
 	struct amigadisplay *ad = &adisplays;
 	frame_time_t curr_time;
 	frame_time_t start;
-	int vs = isvsync_chipset ();
+	frame_time_t time_for_next_frame = vsynctimebase;
+	int vs = isvsync_chipset();
 	int status = 0;
 
 	events_reset_syncline();
@@ -7500,100 +7458,55 @@ static bool framewait(void)
 
 	if (vs > 0) {
 
-		static struct mavg_data ma_legacy;
-		static frame_time_t vsync_time;
-		int t;
+		if (!nodraw()) {
+			if (!frame_rendered && !ad->picasso_on)
+				frame_rendered = render_screen(false);
 
-		curr_time = read_processor_time ();
-		vsyncwaittime = vsyncmaxtime = curr_time + vsynctimebase;
-		if (!frame_rendered && !ad->picasso_on)
-			frame_rendered = render_screen(false);
+			if (!frame_shown) {
+				show_screen(1);
+			}
+			curr_time = target_lastsynctime();
+		}
+		else {
+			curr_time = target_lastsynctime() + vsynctimebase;
 
-		start = read_processor_time ();
-		t = 0;
-		if ((int)start - (int)vsync_time >= 0 && (int)start - (int)vsync_time < vsynctimebase)
-			t += (int)start - (int)vsync_time;
-
-		if (!frame_shown) {
-			show_screen(1);
-			if (currprefs.gfx_apmode[0].gfx_strobo)
-				show_screen(4);
+			if (read_processor_time() > curr_time)
+				time_for_next_frame = curr_time - read_processor_time();
 		}
 
-		//maybe_process_pull_audio();
-
-		int legacy_avg = mavg (&ma_legacy, t, MAVG_VSYNC_SIZE);
-		if (t > legacy_avg)
-			legacy_avg = t;
-		t = legacy_avg;
-
-		//if (debug_vsync_min_delay && t < debug_vsync_min_delay * vsynctimebase / 100)
-		//	t = debug_vsync_min_delay * vsynctimebase / 100;
-		//if (debug_vsync_forced_delay > 0)
-		//	t = debug_vsync_forced_delay * vsynctimebase / 100;
-
-		vsync_time = read_processor_time ();
-		if (t > vsynctimebase * 2 / 3)
-			t = vsynctimebase * 2 / 3;
+		vsyncwaittime = vsyncmaxtime = curr_time + vsynctimebase;
+		vsyncmintime = curr_time;
 
 		if (currprefs.m68k_speed < 0) {
-			vsynctimeperline = (vsynctimebase - t) / (maxvpos_display + 1);
-		} else {
-			vsynctimeperline = (vsynctimebase - t) / 3;
+			vsynctimeperline = (time_for_next_frame) / (maxvpos_display + 1);
+		}
+		else {
+			vsynctimeperline = (time_for_next_frame) / 3;
 		}
 
 		if (vsynctimeperline < 1)
 			vsynctimeperline = 1;
 
-		//if (0 || (log_vsync & 2)) {
-		//	write_log (_T("%06d %06d/%06d %03d%%\n"), t, vsynctimeperline, vsynctimebase, t * 100 / vsynctimebase);
-		//}
-
 		frame_shown = true;
 		return 1;
-
-	} else if (vs < 0) {
-
-		if (!vblank_hz_state)
-			return status != 0;
-
-		frame_shown = true;
-		status = 1;
-		return status != 0;
 	}
 
 	status = 1;
 
-	int clockadjust = 0;
 	int vstb = vsynctimebase;
 
-	if (currprefs.m68k_speed < 0 && !cpu_sleepmode && !currprefs.cpu_memory_cycle_exact) {
+	if (currprefs.m68k_speed < 0) {
 
 		if (!frame_rendered && !ad->picasso_on)
 			frame_rendered = render_screen(false);
 
-		if (currprefs.m68k_speed_throttle) {
-			// this delay can safely overshoot frame time by 1-2 ms, following code will compensate for it.
-			for (;;) {
-				curr_time = read_processor_time ();
-				if (int(vsyncwaittime)  - int(curr_time) <= 0 || int(vsyncwaittime)  - int(curr_time) > 2 * vsynctimebase)
-					break;
-				//rtg_vsynccheck ();
-				if (cpu_sleep_millis(1) < 0) {
-					curr_time = read_processor_time();
-					break;
-				}
-			}
-		} else {
-			curr_time = read_processor_time ();
-		}
+		curr_time = read_processor_time();
 
 		int max;
 		int adjust = 0;
 		if (int(curr_time) - int(vsyncwaittime) > 0 && int(curr_time) - int(vsyncwaittime) < vstb / 2)
 			adjust += curr_time - vsyncwaittime;
-		adjust += clockadjust;
-		max = int(vstb * (1000.0 + currprefs.m68k_speed_throttle) / 1000.0 - adjust);
+		max = int(vstb - adjust);
 		vsyncwaittime = curr_time + vstb - adjust;
 		vsyncmintime = curr_time;
 
@@ -7615,24 +7528,16 @@ static bool framewait(void)
 			frame_rendered = render_screen(false);
 			t = read_processor_time() - start;
 		}
-		if (!currprefs.cpu_thread) {
-			while (!currprefs.turbo_emulation) {
-				float v = rpt_vsync(clockadjust) / (syncbase / 1000.0);
+		while (true) {
+			auto v = rpt_vsync(0) / (syncbase / 1000.0);
 				if (v >= -2)
 					break;
-				//rtg_vsynccheck();
-				//maybe_process_pull_audio();
-				if (cpu_sleep_millis(1) < 0)
-					break;
-			}
-			while (rpt_vsync(clockadjust) < 0) {
-				//rtg_vsynccheck();
-				//if (audio_is_pull_event())
-				//	break;
-			}
+			cpu_sleep_millis(1);
+		}
+		while (rpt_vsync(0) < 0) {
 		}
 		idletime += read_processor_time() - start;
-		curr_time = read_processor_time ();
+		curr_time = read_processor_time();
 		vsyncmintime = curr_time;
 		vsyncmaxtime = vsyncwaittime = curr_time + vstb;
 		if (frame_rendered) {
@@ -7722,6 +7627,42 @@ static void fpscounter (bool frameok)
 static void vsync_handler_pre (void)
 {
 	struct amigadisplay *ad = &adisplays;
+
+	if (currprefs.m68k_speed < 0) {
+		if (regs.stopped) {
+			if (cpu_last_stop_vpos >= 0) {
+				cpu_stopped_lines += maxvpos - cpu_last_stop_vpos;
+			}
+			else {
+				cpu_stopped_lines = 0;
+			}
+		}
+		int mv = 12 - currprefs.cpu_idle / 15;
+		if (mv >= 1 && mv <= 11) {
+			mv = 11 - mv;
+			if (cpu_stopped_lines >= maxvpos * (mv * 10) / 100) {
+				cpu_sleepmode_cnt++;
+				if (cpu_sleepmode_cnt >= 50) {
+					cpu_sleepmode_cnt = 50;
+					if (!cpu_sleepmode) {
+						cpu_sleepmode = 1;
+						//write_log(_T("sleep\n"));
+					}
+				}
+			}
+			else {
+				reset_cpu_idle();
+			}
+		}
+		else {
+			reset_cpu_idle();
+		}
+	}
+	if (regs.halted < 0)
+		reset_cpu_idle();
+	cpu_last_stop_vpos = 0;
+	cpu_stopped_lines = 0;
+	
 	if (bogusframe > 0)
 		bogusframe--;
 
@@ -7730,7 +7671,8 @@ static void vsync_handler_pre (void)
 		timehack_alive--;
 
 #ifdef PICASSO96
-	rtg_vsync ();
+	if (isvsync_rtg() >= 0)
+		rtg_vsync ();
 #endif
 
 	if (!vsync_rendered) {
@@ -7797,11 +7739,6 @@ static void vsync_handler_pre (void)
 // emulated hardware vsync
 static void vsync_handler_post (void)
 {
-	static frame_time_t prevtime;
-
-	//write_log (_T("%d %d %d\n"), vsynctimebase, read_processor_time () - vsyncmintime, read_processor_time () - prevtime);
-	prevtime = read_processor_time ();
-
 	DISK_vsync ();
 
 	if (bplcon0 & 4) {
@@ -8213,29 +8150,6 @@ STATIC_INLINE bool is_last_line (void)
 	return vpos + 1 == maxvpos + lof_store;
 }
 
-// called when extra CPU wait is done
-void vsync_event_done(void)
-{
-	if (!isvsync_chipset()) {
-		events_reset_syncline();
-		return;
-	}
-	//if (currprefs.gfx_display_sections <= 1) {
-	//	if (vsync_vblank >= 85)
-	//		linesync_beam_single_dual();
-	//	else
-	//		linesync_beam_single_single();
-	//}
-	//else {
-	//	if (currprefs.gfx_variable_sync)
-	//		linesync_beam_vrr();
-	//	else if (vsync_vblank >= 85)
-	//		linesync_beam_multi_dual();
-	//	else
-	//		linesync_beam_multi_single();
-	//}
-}
-
 // this prepares for new line
 static void hsync_handler_post (bool onvsync)
 {
@@ -8253,12 +8167,12 @@ static void hsync_handler_post (bool onvsync)
 	bool ciahsyncs = !(bplcon0 & 2) || ((bplcon0 & 2) && currprefs.genlock && (!currprefs.ntscmode || genlockhtoggle));
 	bool ciavsyncs = !(bplcon0 & 2) || ((bplcon0 & 2) && currprefs.genlock && genlockvtoggle);
 
-	CIA_hsync_posthandler(false, false);
+	CIA_hsync_posthandler(false);
 	if (currprefs.cs_cd32cd) {
-		CIA_hsync_posthandler(true, true);
+		CIA_hsync_posthandler(true);
 		CIAB_tod_handler(18);
 	} else if (ciahsyncs) {
-		CIA_hsync_posthandler(true, ciahsyncs);
+		CIA_hsync_posthandler(true);
 		if (beamcon0 & (0x80 | 0x100)) {
 			if (hsstop < (maxhpos & ~1) && hsstrt < maxhpos)
 				CIAB_tod_handler(hsstop);
@@ -8358,7 +8272,7 @@ static void hsync_handler_post (bool onvsync)
 	if (currprefs.cpu_memory_cycle_exact || currprefs.blitter_cycle_exact) {
 		int hp = maxhpos - 1, i;
 		for (i = 0; i < 4; i++) {
-			alloc_cycle (hp, i == 0 ? CYCLE_STROBE : CYCLE_REFRESH); /* strobe */
+			alloc_cycle(hp, i == 0 ? CYCLE_STROBE : CYCLE_REFRESH); /* strobe */
 #ifdef DEBUGGER
 			if (debug_dma) {
 				uae_u16 strobe = 0x3c;
@@ -8370,7 +8284,7 @@ static void hsync_handler_post (bool onvsync)
 					strobe = 0x38;
 				else if ((currprefs.chipset_mask & CSMASK_ECS_AGNUS) && lol)
 					strobe = 0x3e;
-				record_dma (i == 0 ? strobe : 0x1fe, 0xffff, 0xffffffff, hp, vpos, DMARECORD_REFRESH, i);
+				record_dma(i == 0 ? strobe : 0x1fe, 0xffff, 0xffffffff, hp, vpos, DMARECORD_REFRESH, i);
 			}
 #endif
 			hp += 2;
@@ -8379,139 +8293,85 @@ static void hsync_handler_post (bool onvsync)
 		}
 	}
 #endif
-
+	
 	events_dmal_hsync ();
-#if 0
-	// AF testing stuff
-	static int cnt = 0;
-	cnt++;
-	if (cnt == 500) {
-		int port_insert_custom (int inputmap_port, int devicetype, DWORD flags, const TCHAR *custom);
-		//port_insert_custom (0, 2, 0, _T("Left=0xCB Right=0xCD Up=0xC8 Down=0xD0 Fire=0x39 Fire.autorepeat=0xD2"));
-		port_insert_custom (1, 2, 0, _T("Left=0x1E Right=0x20 Up=0x11 Down=0x1F Fire=0x38"));
-	} else if (0 && cnt == 1000) {
-		TCHAR out[256];
-		bool port_get_custom (int inputmap_port, TCHAR *out);
-		port_get_custom (0, out);
-		port_get_custom (1, out);
-	}
-#endif
-	bool input_read_done = false;
 
-	if (currprefs.cpu_thread) {
-
-		//maybe_process_pull_audio();
-
-	} else if (isvsync_chipset() < 0) {
-
-		//if (currprefs.gfx_display_sections <= 1) {
-		//	if (vsync_vblank >= 85)
-		//		input_read_done = linesync_beam_single_dual();
-		//	else
-		//		input_read_done = linesync_beam_single_single();
-		//} else {
-		//	if (currprefs.gfx_variable_sync)
-		//		input_read_done = linesync_beam_vrr();
-		//	else if (vsync_vblank >= 85)
-		//		input_read_done = linesync_beam_multi_dual();
-		//	else
-		//		input_read_done = linesync_beam_multi_single();
-		//}
-
-	} else if (!currprefs.cpu_thread && !cpu_sleepmode && currprefs.m68k_speed < 0 && !currprefs.cpu_memory_cycle_exact) {
+	if (!currprefs.cpu_thread && !cpu_sleepmode && currprefs.m68k_speed < 0 && !currprefs.cpu_memory_cycle_exact) {
 
 		static int sleeps_remaining;
-		if (is_last_line ()) {
+		if (is_last_line()) {
 			sleeps_remaining = (165 - currprefs.cpu_idle) / 6;
 			if (sleeps_remaining < 0)
 				sleeps_remaining = 0;
-			/* really last line, just run the cpu emulation until whole vsync time has been used */
 			if (regs.stopped && currprefs.cpu_idle) {
 				// CPU in STOP state: sleep if enough time left.
-				frame_time_t rpt = read_processor_time ();
-				while (vsync_isdone(NULL) <= 0 && (int)vsyncmintime - (int)(rpt + vsynctimebase / 10) > 0 && (int)vsyncmintime - (int)rpt < vsynctimebase) {
+				frame_time_t rpt = read_processor_time();
+				while ((int)vsyncmintime - (int)(rpt + vsynctimebase / 10) > 0 && (int)vsyncmintime - (int)rpt < vsynctimebase) {
 					//maybe_process_pull_audio();
-//					if (!execute_other_cpu(rpt + vsynctimebase / 10)) {
-						if (cpu_sleep_millis(1) < 0)
-							break;
-//					}
-					rpt = read_processor_time ();
+
+					if (cpu_sleep_millis(1) < 0)
+						break;
+					rpt = read_processor_time();
 				}
-			} else if (currprefs.m68k_speed_throttle) {
-				vsyncmintime = read_processor_time (); /* end of CPU emulation time */
+			}
+			else if (currprefs.m68k_speed_throttle) {
+				vsyncmintime = read_processor_time(); /* end of CPU emulation time */
 				events_reset_syncline();
 				//maybe_process_pull_audio();
-			} else {
-				vsyncmintime = vsyncmaxtime; /* emulate if still time left */
-				is_syncline_end = read_processor_time () + vsynctimebase; /* far enough in future, we never wait that long */
-				is_syncline = -12;
-				//maybe_process_pull_audio();
 			}
-		} else {
+			else {
+				/* really last line, just run the cpu emulation until whole vsync time has been used */
+				vsyncmintime = vsyncmaxtime; /* emulate if still time left */
+				is_syncline_end = read_processor_time() + vsynctimebase; /* far enough in future, we never wait that long */
+				is_syncline = -12;
+			}
+		}
+
+		else {
 			static int linecounter;
 			/* end of scanline, run cpu emulation as long as we still have time */
 			vsyncmintime += vsynctimeperline;
 			linecounter++;
 			events_reset_syncline();
-			if (vsync_isdone(NULL) <= 0 && !currprefs.turbo_emulation) {
-				if ((int)vsyncmaxtime - (int)vsyncmintime > 0) {
-					if ((int)vsyncwaittime - (int)vsyncmintime > 0) {
-						frame_time_t rpt = read_processor_time ();
-						/* Extra time left? Do some extra CPU emulation */
-						if ((int)vsyncmintime - (int)rpt > 0) {
-							if (regs.stopped && currprefs.cpu_idle && sleeps_remaining > 0) {
-								// STOP STATE: sleep.
-								cpu_sleep_millis(1);
-								sleeps_remaining--;
-								//maybe_process_pull_audio();
-							} else {
-								is_syncline = -11;
-								/* limit extra time */
-								is_syncline_end = rpt + vsynctimeperline;
-								linecounter = 0;
-							}
+			if (int(vsyncmaxtime) - int(vsyncmintime) > 0) {
+				if (int(vsyncwaittime) - int(vsyncmintime) > 0) {
+					frame_time_t rpt = read_processor_time();
+					/* Extra time left? Do some extra CPU emulation */
+					if (int(vsyncmintime) - int(rpt) > 0) {
+						if (regs.stopped && currprefs.cpu_idle && sleeps_remaining > 0) {
+							// STOP STATE: sleep.
+							cpu_sleep_millis(1);
+							sleeps_remaining--;
+							//maybe_process_pull_audio();
 						}
-					}
-					if (!isvsync ()) {
-						// extra cpu emulation time if previous 10 lines without extra time.
-						if (!is_syncline && linecounter >= 10 && (!regs.stopped || !currprefs.cpu_idle)) {
-							is_syncline = -10;
-							is_syncline_end = read_processor_time () + vsynctimeperline;
+						else {
+							is_syncline = -11;
+							/* limit extra time */
+							is_syncline_end = int(rpt) + vsynctimeperline;
 							linecounter = 0;
 						}
 					}
 				}
 			}
-			//maybe_process_pull_audio();
 		}
-
-	} else if (!currprefs.cpu_thread) {
+	}
+	else if (!currprefs.cpu_thread) {
 
 		// the rest
 		static int nextwaitvpos;
 		if (vpos == 0)
 			nextwaitvpos = maxvpos_display * 1 / 4;
-		//if (audio_is_pull() > 0 && !currprefs.turbo_emulation) {
-		//	maybe_process_pull_audio();
-		//	frame_time_t rpt = read_processor_time();
-		//	while (audio_pull_buffer() > 1 && (!isvsync() || (vsync_isdone(NULL) <= 0 && (int)vsyncmintime - (int)(rpt + vsynctimebase / 10) > 0 && (int)vsyncmintime - (int)rpt < vsynctimebase))) {
-		//		cpu_sleep_millis(1);
-		//		maybe_process_pull_audio();
-		//		rpt = read_processor_time();
-		//	}
-		//}
+		
 		if (vpos + 1 < maxvpos + lof_store && vpos >= nextwaitvpos && vpos < maxvpos - (maxvpos / 3)) {
 			nextwaitvpos += maxvpos_display * 1 / 3;
 			vsyncmintime += vsynctimeperline;
-			if (vsync_isdone(NULL) <= 0 && !currprefs.turbo_emulation) {
+			if (!currprefs.turbo_emulation) {
 				frame_time_t rpt = read_processor_time();
 				// sleep if more than 2ms "free" time
-				while (vsync_isdone(NULL) <= 0 && (int)vsyncmintime - (int)(rpt + vsynctimebase / 10) > 0 && (int)vsyncmintime - (int)rpt < vsynctimebase) {
+				while ((int)vsyncmintime - (int)(rpt + vsynctimebase / 10) > 0 && (int)vsyncmintime - (int)rpt < vsynctimebase) {
 					//maybe_process_pull_audio();
-//					if (!execute_other_cpu(rpt + vsynctimebase / 10)) {
-						if (cpu_sleep_millis(1) < 0)
-							break;
-//					}
+					if (cpu_sleep_millis(1) < 0)
+						break;
 					rpt = read_processor_time();
 				}
 			}
@@ -8707,7 +8567,6 @@ static void hsync_handler (void)
 	bool vs = is_custom_vsync ();
 	hsync_handler_pre (vs);
 	if (vs) {
-		vsyncmintimepre = read_processor_time();
 		vsync_handler_pre ();
 		if (savestate_check ()) {
 			uae_reset (0, 0);
@@ -8873,6 +8732,9 @@ void custom_reset (bool hardreset, bool keyboardreset)
 	diwstate = DIW_waiting_start;
 
 	dmal = 0;
+#ifdef USE_DISPMANX
+	time_per_frame = 1000 * 1000 / (currprefs.ntscmode ? 60 : 50);
+#endif
 	init_hz_normal();
 	// init_hz sets vpos_count
 	vpos_count = 0;
@@ -8884,7 +8746,6 @@ void custom_reset (bool hardreset, bool keyboardreset)
 	if (!isrestore ()) {
 		/* must be called after audio_reset */
 		adkcon = 0;
-//		serial_uartbreak (0);
 		audio_update_adkmasks ();
 	}
 
@@ -8937,9 +8798,6 @@ void custom_reset (bool hardreset, bool keyboardreset)
 		CLXCON (clxcon);
 		CLXCON2 (clxcon2);
 		calcdiw ();
-//		v = serper;
-//		serper = 0;
-//		SERPER(v);
 		for (int i = 0; i < 8; i++) {
 			SPRxCTLPOS (i);
 			nr_armed += spr[i].armed != 0;
@@ -9051,7 +8909,6 @@ int custom_init (void)
 static uae_u32 REGPARAM3 custom_lget (uaecptr) REGPARAM;
 static uae_u32 REGPARAM3 custom_wget (uaecptr) REGPARAM;
 static uae_u32 REGPARAM3 custom_bget (uaecptr) REGPARAM;
-static uae_u32 REGPARAM3 custom_lgeti (uaecptr) REGPARAM;
 static uae_u32 REGPARAM3 custom_wgeti (uaecptr) REGPARAM;
 static void REGPARAM3 custom_lput (uaecptr, uae_u32) REGPARAM;
 static void REGPARAM3 custom_wput (uaecptr, uae_u32) REGPARAM;
@@ -9061,7 +8918,7 @@ addrbank custom_bank = {
 	custom_lget, custom_wget, custom_bget,
 	custom_lput, custom_wput, custom_bput,
 	default_xlate, default_check, NULL, NULL, _T("Custom chipset"),
-	custom_lgeti, custom_wgeti,
+	custom_wgeti,
 	ABFLAG_IO, S_READ, S_WRITE, NULL, 0x1ff, 0xdff000
 };
 
@@ -9070,12 +8927,6 @@ static uae_u32 REGPARAM2 custom_wgeti (uaecptr addr)
 	if (currprefs.cpu_model >= 68020)
 		return dummy_wgeti (addr);
 	return custom_wget (addr);
-}
-static uae_u32 REGPARAM2 custom_lgeti (uaecptr addr)
-{
-	if (currprefs.cpu_model >= 68020)
-		return dummy_lgeti (addr);
-	return custom_lget (addr);
 }
 
 static uae_u32 REGPARAM2 custom_wget_1(int hpos, uaecptr addr, int noput)

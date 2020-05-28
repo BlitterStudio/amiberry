@@ -56,13 +56,15 @@ static NavigationMap navMap[] =
 	{"SystemROMs", "Paths", "Paths", "RescanROMs", "ConfigPath"},
 	{"ConfigPath", "Paths", "Paths", "SystemROMs", "ControllersPath"},
 	{"ControllersPath", "Paths", "Paths", "ConfigPath", "RetroArchFile"},
-	{"RetroArchFile", "Paths", "Paths", "ControllersPath", "RescanROMs"},
-	{"RescanROMs", "Paths", "DownloadXML", "RetroArchFile", "SystemROMs"},
-	{"DownloadXML", "RescanROMs", "Paths", "RetroArchFile", "SystemROMs"},
+	{"RetroArchFile", "Paths", "Paths", "ControllersPath", "chkEnableLogging"},
+	{"chkEnableLogging", "Paths", "Paths", "RetroArchFile", "cmdLogfilePath"},
+	{"cmdLogfilePath", "Paths", "Paths", "chkEnableLogging", "RescanROMs"},
+	{"RescanROMs", "Paths", "DownloadXML", "cmdLogfilePath", "SystemROMs"},
+	{"DownloadXML", "RescanROMs", "Paths", "cmdLogfilePath", "SystemROMs"},
 
 	//  active            move left         move right        move up           move down
 	// PanelQuickstart
-	{"cboAModel", "Quickstart", "qsNTSC", "cmdSetConfig", "cboAConfig"},
+	{"cboAModel", "Quickstart", "qsNTSC", "cboWhdload", "cboAConfig"},
 	{"qsNTSC", "cboAModel", "Quickstart", "qsMode", "cboAConfig"},
 	{"cboAConfig", "Quickstart", "Quickstart", "cboAModel", "qscmdSel0"},
 	{"qsDF0", "Quickstart", "qsWP0", "cboAConfig", "cboDisk0"},
@@ -82,7 +84,10 @@ static NavigationMap navMap[] =
 	{"qsCDSelect", "qscdEject", "Quickstart", "cboDisk1", "cboCD"},
 	{"cboCD", "Quickstart", "Quickstart", "qsCDSelect", "qsMode"},
 	{"qsMode", "Quickstart", "Quickstart", "cboCD", "cmdSetConfig"},
-	{"cmdSetConfig", "Quickstart", "Quickstart", "qsMode", "cboAModel"},
+	{"cmdSetConfig", "Quickstart", "Quickstart", "qsMode", "cmdWhdloadEject"},
+	{"cmdWhdloadEject", "Quickstart", "cmdWhdloadSelect", "cmdSetConfig", "cboWhdload"},
+	{"cmdWhdloadSelect", "cmdWhdloadEject", "Quickstart", "cmdSetConfig", "cboWhdload"},
+	{"cboWhdload", "Quickstart", "Quickstart", "cmdWhdloadEject", "cboAModel"},
 
 	// PanelConfig
 	{"ConfigList", "Configurations", "ConfigLoad", "", ""},
@@ -106,11 +111,11 @@ static NavigationMap navMap[] =
 	{"CPU internal", "68030", "Fastest", "68882", "FPUstrict"},
 	{"FPUstrict", "68040", "Fastest", "CPU internal", "FPUJIT"},
 	{"FPUJIT", "CPU24Bit", "Fastest", "FPUstrict", "FPUnone"},
-	{"7 Mhz", "FPUnone", "CPU and FPU", "Turbo", "14 Mhz"},
+	{"7 Mhz", "FPUnone", "CPU and FPU", "sldCpuIdle", "14 Mhz"},
 	{"14 Mhz", "FPUnone", "CPU and FPU", "7 Mhz", "25 Mhz"},
 	{"25 Mhz", "FPUnone", "CPU and FPU", "14 Mhz", "Fastest"},
-	{"Fastest", "FPUnone", "CPU and FPU", "25 Mhz", "Turbo"},
-	{"Turbo", "FPUnone", "CPU and FPU", "Fastest", "7 Mhz"},
+	{"Fastest", "FPUnone", "CPU and FPU", "25 Mhz", "sldCpuIdle"},
+	{"sldCpuIdle", "", "", "Fastest", "7 Mhz"},
 
 	// PanelChipset
 	{"OCS", "Chipset", "ChipsetExtra", "CollFull", "ECS Agnus"},
@@ -199,8 +204,9 @@ static NavigationMap navMap[] =
 	//  active            move left           move right          move up           move down
 	// PanelDisplay
 	{"sldWidth", "", "", "Frameskip", "sldHeight"},
-	{"sldHeight", "", "", "sldWidth", "Auto"},
-	{"Auto", "Display", "Single", "sldHeight", "Nearest Neighbor (pixelated)"},
+	{"sldHeight", "", "", "sldWidth", "chkAutoHeight"},
+	{"chkAutoHeight", "Display", "Horizontal", "sldHeight", "Auto"},
+	{"Auto", "Display", "Single", "chkAutoHeight", "Nearest Neighbor (pixelated)"},
 	{"Nearest Neighbor (pixelated)", "Display", "Double", "Auto", "Linear (smooth)"},
 	{"Linear (smooth)", "Display", "Scanlines", "Nearest Neighbor (pixelated)", "CorrectAR"},
 	{"Single", "Auto", "Auto", "Vertical", "Double"},
@@ -210,7 +216,7 @@ static NavigationMap navMap[] =
 	{"Fullscreen", "CorrectAR", "CorrectAR", "Scanlines", "Frameskip"},
 	{"Frameskip", "Display", "Display", "CorrectAR", "sldWidth"},
 	{"Vertical", "", "", "Horizontal", "Single"},
-	{"Horizontal", "", "", "", "Vertical"},
+	{"Horizontal", "chkAutoHeight", "", "", "Vertical"},
 
 	//  active            move left           move right          move up           move down
 	//PanelSound

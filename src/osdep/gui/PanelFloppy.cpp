@@ -307,7 +307,7 @@ public:
 			extractFileName(changed_prefs.floppyslots[0].df, diskname);
 			removeFileExtension(diskname);
 
-			fetch_configurationpath(filename, MAX_DPATH);
+			get_configuration_path(filename, MAX_DPATH);
 			strncat(filename, diskname, MAX_DPATH - 1);
 			strncat(filename, ".uae", MAX_DPATH - 1);
 

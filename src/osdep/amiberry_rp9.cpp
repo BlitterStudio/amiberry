@@ -32,7 +32,7 @@ static bool clip_no_hires = false;
 
 void rp9_init()
 {
-	fetch_rp9path(rp9tmp_path, MAX_DPATH);
+	get_rp9_path(rp9tmp_path, MAX_DPATH);
 	strncat(rp9tmp_path, _T("tmp/"), MAX_DPATH - 1);
 	lstTmpRP9Files.clear();
 	LIBXML_TEST_VERSION
@@ -354,7 +354,7 @@ static void parse_boot(struct uae_prefs* p, xmlNode* node)
 					if (content != nullptr)
 					{
 						char target_file[MAX_DPATH];
-						fetch_rp9path(target_file, MAX_DPATH);
+						get_rp9_path(target_file, MAX_DPATH);
 						strncat(target_file, "workbench-", MAX_DPATH - 1);
 						strncat(target_file, reinterpret_cast<const char *>(content), MAX_DPATH - 1);
 						strncat(target_file, ".hdf", MAX_DPATH - 1);

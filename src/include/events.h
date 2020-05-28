@@ -107,16 +107,16 @@ STATIC_INLINE void set_cycles (unsigned long int x)
 	eventtab[ev_hsync].oldcycles = x;
 }
 
-STATIC_INLINE int current_hpos (void)
+STATIC_INLINE int current_hpos(void)
 {
-  int hp = (get_cycles () - eventtab[ev_hsync].oldcycles) / CYCLE_UNIT;
-	return hp;
+	const int hp = (get_cycles() - eventtab[ev_hsync].oldcycles) / CYCLE_UNIT;
+    return hp;
 }
 
 STATIC_INLINE bool cycles_in_range (unsigned long endcycles)
 {
-	signed long c = get_cycles ();
-	return (signed long)endcycles - c > 0;
+	const signed long c = get_cycles ();
+	return static_cast<signed long>(endcycles) - c > 0;
 }
 
 extern void MISC_handler (void);
@@ -125,7 +125,7 @@ extern void event2_newevent_x_replace(evt t, uae_u32 data, evfunc2 func);
 
 STATIC_INLINE void event2_newevent_x (int no, evt t, uae_u32 data, evfunc2 func)
 {
-	if (((int)t) <= 0) {
+	if (static_cast<int>(t) <= 0) {
 		func (data);
 		return;
 	}
@@ -143,7 +143,7 @@ STATIC_INLINE void event2_newevent2 (evt t, uae_u32 data, evfunc2 func)
 
 STATIC_INLINE void event2_remevent (int no)
 {
-	eventtab2[no].active = 0;
+	eventtab2[no].active = false;
 }
 
 #endif /* UAE_EVENTS_H */

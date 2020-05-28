@@ -144,12 +144,12 @@ void InitPanelSavestate(const struct _ConfigCategory& category)
 	cmdSaveState->setId("SaveState");
 	cmdSaveState->addActionListener(savestateActionListener);
 
-	lblWarningHDDon = new gcn::Label("State saves do not support harddrive emulation.");
+	lblWarningHDDon = new gcn::Label("State saves do not support hard drive emulation.");
 
 	category.panel->add(grpNumber, DISTANCE_BORDER, DISTANCE_BORDER);
 	category.panel->add(wndScreenshot, grpNumber->getX() + grpNumber->getWidth() + DISTANCE_NEXT_X * 2,
 	                    DISTANCE_BORDER);
-	const int posY = category.panel->getHeight() - DISTANCE_BORDER - BUTTON_HEIGHT;
+	const auto posY = category.panel->getHeight() - DISTANCE_BORDER - BUTTON_HEIGHT;
 	category.panel->add(cmdLoadState, DISTANCE_BORDER, posY);
 	category.panel->add(cmdSaveState, DISTANCE_BORDER + BUTTON_WIDTH + DISTANCE_NEXT_X, posY);
 	category.panel->add(lblWarningHDDon, DISTANCE_BORDER + 100, DISTANCE_BORDER + 50);
@@ -215,20 +215,20 @@ void RefreshPanelSavestate()
 	gui_update();
 	if (strlen(screenshot_filename) > 0)
 	{
-		const auto f = fopen(screenshot_filename, "rbe");
+		auto* const f = fopen(screenshot_filename, "rbe");
 		if (f)
 		{
 			fclose(f);
 			const auto rect = wndScreenshot->getChildrenArea();
-			auto loadedImage = IMG_Load(screenshot_filename);
+			auto* loadedImage = IMG_Load(screenshot_filename);
 			if (loadedImage != nullptr)
 			{
 				SDL_Rect source = {0, 0, 0, 0};
 				SDL_Rect target = {0, 0, 0, 0};
-				SDL_Surface* scaled = SDL_CreateRGBSurface(loadedImage->flags, rect.width, rect.height,
-				                                           loadedImage->format->BitsPerPixel,
-				                                           loadedImage->format->Rmask, loadedImage->format->Gmask,
-				                                           loadedImage->format->Bmask, loadedImage->format->Amask);
+				auto* scaled = SDL_CreateRGBSurface(loadedImage->flags, rect.width, rect.height,
+				                                    loadedImage->format->BitsPerPixel,
+				                                    loadedImage->format->Rmask, loadedImage->format->Gmask,
+				                                    loadedImage->format->Bmask, loadedImage->format->Amask);
 				source.w = loadedImage->w;
 				source.h = loadedImage->h;
 				target.w = rect.width;

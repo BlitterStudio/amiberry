@@ -123,7 +123,7 @@ namespace gcn
 		graphics->setFont(getFont());
 		auto color = getForegroundColor();
 		if (!isEnabled())
-			color = getBaseColor() - 0x101010;
+			color = Color(128, 128, 128);
 		graphics->setColor(color);
 		graphics->drawText(getCaption(), text_x, text_y, getAlignment());
 	}

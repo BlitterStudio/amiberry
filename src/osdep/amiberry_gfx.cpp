@@ -132,8 +132,6 @@ static int display_thread(void *unused)
 				updateHandle = vc_dispmanx_update_start(0);
 				vc_dispmanx_element_remove(updateHandle, elementHandle);
 				elementHandle = 0;
-				vc_dispmanx_element_remove(updateHandle, blackscreen_element);
-				blackscreen_element = 0;
 				vc_dispmanx_update_submit_sync(updateHandle);
 			}
 
@@ -217,23 +215,23 @@ static int display_thread(void *unused)
 					height = display_height * 2 >> changed_prefs.gfx_vresolution;
 				}
 
-				const auto want_aspect = float(width) / float(height);
-				const auto real_aspect = float(modeInfo.width) / float(modeInfo.height);
+				const auto want_aspect = static_cast<float>(width) / static_cast<float>(height);
+				const auto real_aspect = static_cast<float>(modeInfo.width) / static_cast<float>(modeInfo.height);
 
 				if (want_aspect > real_aspect)
 				{
-					const auto scale = float(modeInfo.width) / float(width);
+					const auto scale = static_cast<float>(modeInfo.width) / static_cast<float>(width);
 					viewport.x = 0;
 					viewport.w = modeInfo.width;
-					viewport.h = int(std::ceil(height * scale));
+					viewport.h = static_cast<int>(std::ceil(height * scale));
 					viewport.y = (modeInfo.height - viewport.h) / 2;
 				}
 				else
 				{
-					const auto scale = float(modeInfo.height) / float(height);
+					const auto scale = static_cast<float>(modeInfo.height) / static_cast<float>(height);
 					viewport.y = 0;
 					viewport.h = modeInfo.height;
-					viewport.w = int(std::ceil(width * scale));
+					viewport.w = static_cast<int>(std::ceil(width * scale));
 					viewport.x = (modeInfo.width - viewport.w) / 2;
 				}
 
@@ -244,14 +242,14 @@ static int display_thread(void *unused)
 			{
 				DispManXElementpresent = 1;
 				updateHandle = vc_dispmanx_update_start(0);
-				blackscreen_element = vc_dispmanx_element_add(updateHandle, displayHandle, 0,
-					&black_rect, blackfb_resource, &src_rect, DISPMANX_PROTECTION_NONE, &alpha, 
-					nullptr, DISPMANX_NO_ROTATE);
-
-				elementHandle = vc_dispmanx_element_add(updateHandle, displayHandle, 2,               // layer
-					&dst_rect, amigafb_resource_1, &src_rect, DISPMANX_PROTECTION_NONE, &alpha,
-					nullptr,             // clamp
-					DISPMANX_NO_ROTATE);
+				if (!blackscreen_element)
+					blackscreen_element = vc_dispmanx_element_add(updateHandle, displayHandle, 0,
+						&black_rect, blackfb_resource, &src_rect, DISPMANX_PROTECTION_NONE, &alpha,
+						nullptr, DISPMANX_NO_ROTATE);
+				if (!elementHandle)
+					elementHandle = vc_dispmanx_element_add(updateHandle, displayHandle, 2,
+						&dst_rect, amigafb_resource_1, &src_rect, DISPMANX_PROTECTION_NONE, &alpha,
+						nullptr, DISPMANX_NO_ROTATE);
 
 				vc_dispmanx_update_submit(updateHandle, nullptr, nullptr);
 			}
@@ -285,6 +283,11 @@ static int display_thread(void *unused)
 			break;
 
 		case DISPLAY_SIGNAL_QUIT:
+			updateHandle = vc_dispmanx_update_start(0);
+			vc_dispmanx_element_remove(updateHandle, blackscreen_element);
+			blackscreen_element = 0;
+			vc_dispmanx_update_submit_sync(updateHandle);
+			
 			vc_dispmanx_vsync_callback(displayHandle, nullptr, nullptr);
 			vc_dispmanx_display_close(displayHandle);
 			display_tid = nullptr;
@@ -322,8 +325,8 @@ int graphics_setup(void)
 				HDMI_PROPERTY_PARAM_T property;
 				property.property = HDMI_PROPERTY_PIXEL_CLOCK_TYPE;
 				vc_tv_hdmi_get_property(&property);
-				const auto frame_rate = property.param1 == HDMI_PIXEL_CLOCK_TYPE_NTSC ? tvstate.display.hdmi.frame_rate * (1000.0f / 1001.0f) : tvstate.display.hdmi.frame_rate;
-				host_hz = int(frame_rate);
+				const auto frame_rate = property.param1 == HDMI_PIXEL_CLOCK_TYPE_NTSC ? static_cast<float>(tvstate.display.hdmi.frame_rate) * (1000.0f / 1001.0f) : static_cast<float>(tvstate.display.hdmi.frame_rate);
+				host_hz = static_cast<int>(frame_rate);
 			}
 			vc_vchi_tv_stop();
 			vchi_disconnect(vchi_instance);
@@ -447,7 +450,7 @@ static void wait_for_display_thread(void)
 void allocsoftbuffer(struct uae_prefs* p)
 {
 	/* Initialize structure for Amiga video modes */
-	auto ad = &adisplays;
+	auto* ad = &adisplays;
 	ad->gfxvidinfo.drawbuffer.pixbytes = screen->format->BytesPerPixel;
 	ad->gfxvidinfo.drawbuffer.width_allocated = screen->w;
 	ad->gfxvidinfo.drawbuffer.height_allocated = screen->h;
@@ -561,7 +564,7 @@ bool isModeAspectRatioExact(SDL_DisplayMode* mode, const int width, const int he
 
 static void open_screen(struct uae_prefs* p)
 {
-	struct vidbuf_description* avidinfo = &adisplays.gfxvidinfo;
+	auto* avidinfo = &adisplays.gfxvidinfo;
 	graphics_subshutdown();
 
 	if (max_uae_width == 0 || max_uae_height == 0)
@@ -578,13 +581,8 @@ static void open_screen(struct uae_prefs* p)
 	
 	if (screen_is_picasso)
 	{
-		display_width = picasso_vidinfo.width ? picasso_vidinfo.width : 720;
-		display_height = picasso_vidinfo.height ? picasso_vidinfo.height : 284;
-#ifdef USE_DISPMANX
-	//TODO Check if we can implement this in DISPMANX
-#else
-		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear"); // we always use linear for Picasso96 modes
-#endif
+		display_width = picasso_vidinfo.width ? picasso_vidinfo.width : 640;
+		display_height = picasso_vidinfo.height ? picasso_vidinfo.height : 270;
 	}
 	else
 	{
@@ -593,23 +591,8 @@ static void open_screen(struct uae_prefs* p)
 		if (currprefs.gfx_vresolution > avidinfo->gfx_vresolution_reserved)
 			avidinfo->gfx_vresolution_reserved = currprefs.gfx_vresolution;
 		
-		display_width = p->gfx_monitor.gfx_size.width ? p->gfx_monitor.gfx_size.width : 720;
-		display_height = (p->gfx_monitor.gfx_size.height ? p->gfx_monitor.gfx_size.height : 284) << p->gfx_vresolution;
-
-#ifdef USE_DISPMANX
-#else
-		if (p->scaling_method == -1)
-		{
-			if (isModeAspectRatioExact(&sdlMode, display_width, display_height))
-				SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
-			else
-				SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
-		}
-		else if (p->scaling_method == 0)
-			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
-		else if (p->scaling_method == 1)
-			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
-#endif
+		display_width = p->gfx_monitor.gfx_size.width ? p->gfx_monitor.gfx_size.width : 640;
+		display_height = (p->gfx_monitor.gfx_size.height ? p->gfx_monitor.gfx_size.height : 270) << p->gfx_vresolution;
 	}
 
 #ifdef USE_DISPMANX
@@ -622,6 +605,7 @@ static void open_screen(struct uae_prefs* p)
 	current_vsync_frame = 2;
 
 #else
+	
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0xFF);
 	SDL_RenderClear(renderer);
 
@@ -679,6 +663,8 @@ static void open_screen(struct uae_prefs* p)
 			SDL_RenderSetLogicalSize(renderer, display_height, display_width);
 			renderQuad = { -(display_width - display_height) / 2, (display_width - display_height) / 2, display_width, display_height };
 		}
+
+		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 	}
 	else
 	{
@@ -698,6 +684,18 @@ static void open_screen(struct uae_prefs* p)
 			SDL_RenderSetLogicalSize(renderer, height, width);
 			renderQuad = { -(width - height) / 2, (width - height) / 2, width, height };
 		}
+
+		if (p->scaling_method == -1)
+		{
+			if (isModeAspectRatioExact(&sdlMode, display_width, display_height))
+				SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
+			else
+				SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+		}
+		else if (p->scaling_method == 0)
+			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
+		else if (p->scaling_method == 1)
+			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 	}
 
 	screen = SDL_CreateRGBSurface(0, display_width, display_height, depth, 0, 0, 0, 0);
@@ -716,9 +714,51 @@ static void open_screen(struct uae_prefs* p)
 	}
 }
 
+extern int vstrt; // vertical start
+extern int vstop; // vertical stop
+void flush_screen(struct vidbuffer* vidbuffer, int ystart, int ystop)
+{
+	if (vidbuffer->bufmem == nullptr) return; // no buffer allocated return
+
+	static int last_autoheight;
+	if (currprefs.gfx_auto_height)
+	{
+		static int last_vstrt, last_vstop, new_height;
+		if (last_autoheight != currprefs.gfx_auto_height || last_vstrt != vstrt || last_vstop != vstop)
+		{
+			last_vstrt = vstrt;
+			last_vstop = vstop;
+
+			auto start_y = minfirstline;  // minfirstline = first line to be written to screen buffer
+			auto stop_y = 274 + minfirstline; // last line to be written to screen buffer
+			if (vstrt > minfirstline)
+				start_y = vstrt;		// if vstrt > minfirstline then there is a black border
+			if (start_y > 200)
+				start_y = minfirstline; // shouldn't happen but does for donkey kong
+			if (vstop < stop_y)
+				stop_y = vstop;			// if vstop < stop_y then there is a black border
+
+			new_height = stop_y - start_y;
+			
+			if (new_height < 200)
+				new_height = 200;
+			if (new_height != currprefs.gfx_monitor.gfx_size.height)
+			{
+				display_height = new_height;
+				currprefs.gfx_monitor.gfx_size.height = new_height;
+				copy_prefs(&currprefs, &changed_prefs);
+				open_screen(&currprefs);
+				init_custom();
+			}
+		}
+	}
+
+	last_autoheight = currprefs.gfx_auto_height;
+}
+
 void update_display(struct uae_prefs* p)
 {
-	struct amigadisplay *ad = &adisplays;
+	auto* ad = &adisplays;
 	open_screen(p);
 	SDL_SetRelativeMouseMode(SDL_TRUE);
 	SDL_ShowCursor(SDL_DISABLE);
@@ -736,6 +776,7 @@ int check_prefs_changed_gfx()
 		currprefs.gfx_vresolution != changed_prefs.gfx_vresolution ||
 		currprefs.gfx_iscanlines != changed_prefs.gfx_iscanlines ||
 		currprefs.gfx_pscanlines != changed_prefs.gfx_pscanlines ||
+		currprefs.gfx_auto_height != changed_prefs.gfx_auto_height ||
 		currprefs.gfx_correct_aspect != changed_prefs.gfx_correct_aspect ||
 		currprefs.gfx_lores_mode != changed_prefs.gfx_lores_mode ||
 		currprefs.gfx_scandoubler != changed_prefs.gfx_scandoubler)
@@ -748,6 +789,7 @@ int check_prefs_changed_gfx()
 		currprefs.gfx_vresolution = changed_prefs.gfx_vresolution;
 		currprefs.gfx_iscanlines = changed_prefs.gfx_iscanlines;
 		currprefs.gfx_pscanlines = changed_prefs.gfx_pscanlines;
+		currprefs.gfx_auto_height = changed_prefs.gfx_auto_height;
 		currprefs.gfx_correct_aspect = changed_prefs.gfx_correct_aspect;
 		currprefs.gfx_lores_mode = changed_prefs.gfx_lores_mode;
 		currprefs.gfx_scandoubler = changed_prefs.gfx_scandoubler;
@@ -1017,7 +1059,7 @@ static int init_colors()
 */
 static int get_display_depth()
 {
-	const int depth = screen->format->BytesPerPixel == 4 ? 32 : 16;
+	const auto depth = screen->format->BytesPerPixel == 4 ? 32 : 16;
 	return depth;
 }
 
@@ -1102,21 +1144,21 @@ static int save_png(SDL_Surface* surface, char* path)
 {
 	const auto w = surface->w;
 	const auto h = surface->h;
-	const auto pix = static_cast<unsigned char *>(surface->pixels);
+	auto* const pix = static_cast<unsigned char *>(surface->pixels);
 	unsigned char writeBuffer[1024 * 3];
-	const auto f = fopen(path, "wbe");
+	auto* const f = fopen(path, "wbe");
 	if (!f) return 0;
-	auto png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING,
-		nullptr,
-		nullptr,
-		nullptr);
+	auto* png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING,
+	                                        nullptr,
+	                                        nullptr,
+	                                        nullptr);
 	if (!png_ptr)
 	{
 		fclose(f);
 		return 0;
 	}
 
-	auto info_ptr = png_create_info_struct(png_ptr);
+	auto* info_ptr = png_create_info_struct(png_ptr);
 
 	if (!info_ptr)
 	{
@@ -1139,12 +1181,12 @@ static int save_png(SDL_Surface* surface, char* path)
 
 	png_write_info(png_ptr, info_ptr);
 
-	auto b = writeBuffer;
+	auto* b = writeBuffer;
 
 	const auto sizeX = w;
 	const auto sizeY = h;
 
-	auto p = reinterpret_cast<unsigned short *>(pix);
+	auto* p = reinterpret_cast<unsigned short *>(pix);
 	for (auto y = 0; y < sizeY; y++)
 	{
 		for (auto x = 0; x < sizeX; x++)
@@ -1277,13 +1319,13 @@ bool target_graphics_buffer_update()
 
 int picasso_palette(struct MyCLUTEntry *CLUT, uae_u32 *clut)
 {
-	int changed = 0;
+	auto changed = 0;
 
-	for (int i = 0; i < 256; i++) {
+	for (auto i = 0; i < 256; i++) {
 		int r = CLUT[i].Red;
 		int g = CLUT[i].Green;
 		int b = CLUT[i].Blue;
-		uae_u32 v = (doMask256 (r, red_bits, red_shift)
+		auto v = (doMask256 (r, red_bits, red_shift)
 			| doMask256 (g, green_bits, green_shift)
 			| doMask256 (b, blue_bits, blue_shift))
 			| doMask256 (0xff, alpha_bits, alpha_shift);
@@ -1298,8 +1340,8 @@ int picasso_palette(struct MyCLUTEntry *CLUT, uae_u32 *clut)
 
 static int resolution_compare(const void* a, const void* b)
 {
-	auto ma = (struct PicassoResolution *)a;
-	auto mb = (struct PicassoResolution *)b;
+	auto* ma = (struct PicassoResolution *)a;
+	auto* mb = (struct PicassoResolution *)b;
 	if (ma->res.width < mb->res.width)
 		return -1;
 	if (ma->res.width > mb->res.width)
@@ -1365,7 +1407,7 @@ void picasso_init_resolutions()
 	Displays[0].name = my_strdup(tmp);
 	Displays[0].name2 = my_strdup("Display");
 
-	const auto md1 = Displays;
+	auto* const md1 = Displays;
 	DisplayModes = md1->DisplayModes = xmalloc(struct PicassoResolution, MAX_PICASSO_MODES);
 	for (auto i = 0; i < MAX_SCREEN_MODES && count < MAX_PICASSO_MODES; i++)
 	{
@@ -1412,9 +1454,9 @@ void gfx_set_picasso_state(int on)
 void gfx_set_picasso_modeinfo(uae_u32 w, uae_u32 h, uae_u32 depth, RGBFTYPE rgbfmt)
 {
 	depth >>= 3;
-	if (unsigned(picasso_vidinfo.width) == w &&
-		unsigned(picasso_vidinfo.height) == h &&
-		unsigned(picasso_vidinfo.depth) == depth &&
+	if (static_cast<unsigned>(picasso_vidinfo.width) == w &&
+		static_cast<unsigned>(picasso_vidinfo.height) == h &&
+		static_cast<unsigned>(picasso_vidinfo.depth) == depth &&
 		picasso_vidinfo.selected_rgbformat == rgbfmt)
 		return;
 

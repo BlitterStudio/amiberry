@@ -217,7 +217,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	lblOpenGUI->setAlignment(gcn::Graphics::RIGHT);
 	txtOpenGUI = new gcn::TextField();
 	txtOpenGUI->setEnabled(false);
-	txtOpenGUI->setSize(85, TEXTFIELD_HEIGHT);
+	txtOpenGUI->setSize(105, TEXTFIELD_HEIGHT);
 	txtOpenGUI->setBackgroundColor(colTextboxBackground);
 	cmdOpenGUI = new gcn::Button("...");
 	cmdOpenGUI->setId("OpenGUI");
@@ -229,7 +229,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	lblKeyForQuit->setAlignment(gcn::Graphics::RIGHT);
 	txtKeyForQuit = new gcn::TextField();
 	txtKeyForQuit->setEnabled(false);
-	txtKeyForQuit->setSize(85, TEXTFIELD_HEIGHT);
+	txtKeyForQuit->setSize(105, TEXTFIELD_HEIGHT);
 	txtKeyForQuit->setBackgroundColor(colTextboxBackground);
 	cmdKeyForQuit = new gcn::Button("...");
 	cmdKeyForQuit->setId("KeyForQuit");
@@ -241,7 +241,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	lblKeyActionReplay->setAlignment(gcn::Graphics::RIGHT);
 	txtKeyActionReplay = new gcn::TextField();
 	txtKeyActionReplay->setEnabled(false);
-	txtKeyActionReplay->setSize(85, TEXTFIELD_HEIGHT);
+	txtKeyActionReplay->setSize(105, TEXTFIELD_HEIGHT);
 	txtKeyActionReplay->setBackgroundColor(colTextboxBackground);
 	cmdKeyActionReplay = new gcn::Button("...");
 	cmdKeyActionReplay->setId("KeyActionReplay");
@@ -253,7 +253,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	lblKeyFullScreen->setAlignment(gcn::Graphics::RIGHT);
 	txtKeyFullScreen = new gcn::TextField();
 	txtKeyFullScreen->setEnabled(false);
-	txtKeyFullScreen->setSize(85, TEXTFIELD_HEIGHT);
+	txtKeyFullScreen->setSize(105, TEXTFIELD_HEIGHT);
 	txtKeyFullScreen->setBackgroundColor(colTextboxBackground);
 	cmdKeyFullScreen = new gcn::Button("...");
 	cmdKeyFullScreen->setId("KeyFullScreen");

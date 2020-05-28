@@ -74,15 +74,15 @@ struct bstring {
 
 extern TCHAR *colormodes[];
 extern int saveimageoriginalpath;
-extern void fetch_saveimagepath (TCHAR*, int, int);
-extern void fetch_configurationpath (TCHAR *out, int size);
+extern void get_saveimage_path (TCHAR*, int, int);
+extern void get_configuration_path (TCHAR *out, int size);
 extern void fetch_luapath (TCHAR *out, int size);
-extern void fetch_screenshotpath (TCHAR *out, int size);
+extern void get_screenshot_path (TCHAR *out, int size);
 extern void fetch_ripperpath (TCHAR *out, int size);
 extern void fetch_statefilepath (TCHAR *out, int size);
 extern void fetch_inputfilepath (TCHAR *out, int size);
-extern void fetch_datapath (TCHAR *out, int size);
-extern void fetch_rompath (TCHAR *out, int size);
+extern void get_data_path (TCHAR *out, int size);
+extern void get_rom_path (TCHAR *out, int size);
 //extern uae_u32 uaerand (void);
 #define uaerand() ((uae_u32)rand())
 extern uae_u32 uaesrand (uae_u32 seed);

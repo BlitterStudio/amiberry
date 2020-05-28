@@ -64,6 +64,7 @@ std::vector<ConfigFileInfo*> ConfigFilesList;
 std::vector<AvailableROM*> lstAvailableROMs;
 std::vector<std::string> lstMRUDiskList;
 std::vector<std::string> lstMRUCDList;
+std::vector<std::string> lstMRUWhdloadList;
 
 void AddFileToDiskList(const char *file, int moveToTop)
 {
@@ -111,6 +112,28 @@ void AddFileToCDList(const char *file, int moveToTop)
 		lstMRUCDList.pop_back();
 }
 
+void AddFileToWHDLoadList(const char* file, int moveToTop)
+{
+	unsigned int i;
+
+	for (i = 0; i < lstMRUWhdloadList.size(); ++i)
+	{
+		if (!stricmp(lstMRUWhdloadList[i].c_str(), file))
+		{
+			if (moveToTop)
+			{
+				lstMRUWhdloadList.erase(lstMRUWhdloadList.begin() + i);
+				lstMRUWhdloadList.insert(lstMRUWhdloadList.begin(), file);
+			}
+			break;
+		}
+	}
+	if (i >= lstMRUWhdloadList.size())
+		lstMRUWhdloadList.insert(lstMRUWhdloadList.begin(), file);
+
+	while (lstMRUWhdloadList.size() > MAX_MRU_WHDLOADLIST)
+		lstMRUWhdloadList.pop_back();
+}
 
 void ClearAvailableROMList()
 {
@@ -249,7 +272,7 @@ void RescanROMs()
 	romlist_clear();
 
 	ClearAvailableROMList();
-	fetch_rompath(path, MAX_DPATH);
+	get_rom_path(path, MAX_DPATH);
 
 	load_keyring(&changed_prefs, path);
 	ReadDirectory(path, nullptr, &files);
@@ -296,7 +319,7 @@ void ReadConfigFileList(void)
 	ClearConfigFileList();
 
 	// Read rp9 files
-	fetch_rp9path(path, MAX_DPATH);
+	get_rp9_path(path, MAX_DPATH);
 	ReadDirectory(path, nullptr, &files);
 	FilterFiles(&files, filter_rp9);
 	for (auto & file : files)
@@ -311,7 +334,7 @@ void ReadConfigFileList(void)
 	}
 
 	// Read standard config files
-	fetch_configurationpath(path, MAX_DPATH);
+	get_configuration_path(path, MAX_DPATH);
 	ReadDirectory(path, nullptr, &files);
 	FilterFiles(&files, filter_uae);
 	for (auto & file : files)
@@ -442,8 +465,8 @@ int gui_update()
 {
 	char tmp[MAX_DPATH];
 
-	fetch_savestatepath(savestate_fname, MAX_DPATH - 1);
-	fetch_screenshotpath(screenshot_filename, MAX_DPATH - 1);
+	get_savestate_path(savestate_fname, MAX_DPATH - 1);
+	get_screenshot_path(screenshot_filename, MAX_DPATH - 1);
 
 	if (strlen(currprefs.floppyslots[0].df) > 0)
 		extractFileName(currprefs.floppyslots[0].df, tmp);

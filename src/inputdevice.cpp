@@ -1430,26 +1430,26 @@ void read_inputdevice_config (struct uae_prefs *pr, const TCHAR *option, TCHAR *
 		if (pr->input_selected_setting < 0 || pr->input_selected_setting > MAX_INPUT_SETTINGS)
 			pr->input_selected_setting = 0;
 	}
-  if (!_tcsicmp (p, _T("joymouse_speed_analog")))
-	  pr->input_joymouse_multiplier = _tstol (value);
-	if (!_tcsicmp (p, _T("joymouse_speed_digital")))
-		pr->input_joymouse_speed = _tstol (value);
-	if (!_tcsicmp (p, _T("joystick_deadzone")))
-		pr->input_joystick_deadzone = _tstol (value);
-	if (!_tcsicmp (p, _T("joymouse_deadzone")))
-		pr->input_joymouse_deadzone = _tstol (value);
-	if (!_tcsicmp (p, _T("mouse_speed")))
-		pr->input_mouse_speed = _tstol (value);
-	if (!_tcsicmp (p, _T("autofire")))
-	  pr->input_autofire_linecnt = _tstol (value) * 312;
-	if (!_tcsicmp (p, _T("autofire_speed")))
-		pr->input_autofire_linecnt = _tstol (value);
-	if (!_tcsicmp (p, _T("analog_joystick_multiplier")))
-		pr->input_analog_joystick_mult = _tstol (value);
-	if (!_tcsicmp (p, _T("analog_joystick_offset")))
-		pr->input_analog_joystick_offset = _tstol (value);
-	if (!_tcsicmp (p, _T("autoswitch")))
-		pr->input_autoswitch = _tstol (value);
+	if (!_tcsicmp(p, _T("joymouse_speed_analog")))
+		pr->input_joymouse_multiplier = _tstol(value);
+	if (!_tcsicmp(p, _T("joymouse_speed_digital")))
+		pr->input_joymouse_speed = _tstol(value);
+	if (!_tcsicmp(p, _T("joystick_deadzone")))
+		pr->input_joystick_deadzone = _tstol(value);
+	if (!_tcsicmp(p, _T("joymouse_deadzone")))
+		pr->input_joymouse_deadzone = _tstol(value);
+	if (!_tcsicmp(p, _T("mouse_speed")))
+		pr->input_mouse_speed = _tstol(value);
+	if (!_tcsicmp(p, _T("autofire")))
+		pr->input_autofire_linecnt = _tstol(value) * 312;
+	if (!_tcsicmp(p, _T("autofire_speed")))
+		pr->input_autofire_linecnt = _tstol(value);
+	if (!_tcsicmp(p, _T("analog_joystick_multiplier")))
+		pr->input_analog_joystick_mult = _tstol(value);
+	if (!_tcsicmp(p, _T("analog_joystick_offset")))
+		pr->input_analog_joystick_offset = _tstol(value);
+	if (!_tcsicmp(p, _T("autoswitch")))
+		pr->input_autoswitch = _tstol(value);
 	if (!_tcsicmp (p, _T("keyboard_type"))) {
 		cfgfile_strval (p, value, p, &pr->input_keyboard_type, kbtypes, 0);
 		keyboard_default = keyboard_default_table[pr->input_keyboard_type];
@@ -4056,6 +4056,15 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 	//case AKS_INHIBITSCREEN:
 	//	toggle_inhibit_frame(monid, IHF_SCROLLLOCK);
 	//	break;
+	//case AKS_STATEREWIND:
+	//	savestate_dorewind(-2);
+	//	break;
+	//case AKS_STATECURRENT:
+	//	savestate_dorewind(-1);
+	//	break;
+	//case AKS_STATECAPTURE:
+	//	savestate_capture(1);
+	//	break;
 	case AKS_VOLDOWN:
 		sound_volume (newstate <= 0 ? -1 : 1);
 		break;
@@ -4083,8 +4092,50 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 	case AKS_HARDRESET:
 		uae_reset(1, 1);
 		break;
+	//case AKS_STATESAVEQUICK:
+	//case AKS_STATESAVEQUICK1:
+	//case AKS_STATESAVEQUICK2:
+	//case AKS_STATESAVEQUICK3:
+	//case AKS_STATESAVEQUICK4:
+	//case AKS_STATESAVEQUICK5:
+	//case AKS_STATESAVEQUICK6:
+	//case AKS_STATESAVEQUICK7:
+	//case AKS_STATESAVEQUICK8:
+	//case AKS_STATESAVEQUICK9:
+	//	savestate_quick((code - AKS_STATESAVEQUICK) / 2, 1);
+	//	break;
+	//case AKS_STATERESTOREQUICK:
+	//case AKS_STATERESTOREQUICK1:
+	//case AKS_STATERESTOREQUICK2:
+	//case AKS_STATERESTOREQUICK3:
+	//case AKS_STATERESTOREQUICK4:
+	//case AKS_STATERESTOREQUICK5:
+	//case AKS_STATERESTOREQUICK6:
+	//case AKS_STATERESTOREQUICK7:
+	//case AKS_STATERESTOREQUICK8:
+	//case AKS_STATERESTOREQUICK9:
+	//	savestate_quick((code - AKS_STATERESTOREQUICK) / 2, 0);
+	//	break;
 	case AKS_TOGGLEWINDOWEDFULLSCREEN:
 		toggle_fullscreen();
+		break;
+	case AKS_STATESAVEDIALOG:
+		if (s) {
+			savestate_initsave(s);
+			save_state(savestate_fname, _T("Description!"));
+		}
+		else {
+			gui_display(5);
+		}
+		break;
+	case AKS_STATERESTOREDIALOG:
+		if (s) {
+			savestate_initsave(s);
+			savestate_state = STATE_DORESTORE;
+		}
+		else {
+			gui_display(4);
+		}
 		break;
 	case AKS_DECREASEREFRESHRATE:
 	case AKS_INCREASEREFRESHRATE:

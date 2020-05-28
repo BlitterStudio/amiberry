@@ -10,20 +10,16 @@
 #include "sysdeps.h"
 
 #include "options.h"
-#include "memory.h"
+#include "include/memory.h"
 #include "newcpu.h"
 #include "xwin.h"
-#include "audio.h"
 
 static const int pissoff_nojit_value = 256 * CYCLE_UNIT;
 
 unsigned long int nextevent, currcycle;
 int is_syncline, is_syncline_end;
-unsigned long start_cycles;
-bool event_wait;
 
-frame_time_t vsyncmintime, vsyncmintimepre;
-frame_time_t vsyncmaxtime, vsyncwaittime;
+frame_time_t vsyncmintime, vsyncmaxtime, vsyncwaittime;
 int vsynctimebase;
 
 static void events_fast(void)
@@ -55,19 +51,53 @@ void events_schedule(void)
 static bool event_check_vsync(void)
 {
 	/* Keep only CPU emulation running while waiting for sync point. */
-	if (is_syncline)
-	{
-		int rpt = read_processor_time();
-		int v = rpt - vsyncmintime;
-		if (v > vsynctimebase || v < -vsynctimebase)
-		{
-			v = 0;
+	if (is_syncline == -1
+		|| is_syncline == -2
+		|| is_syncline == -3
+		|| is_syncline > 0
+		|| is_syncline <= -100) {
+
+		if (!isvsync_chipset()) {
+			events_reset_syncline();
+			return false;
 		}
-		if (v < speedup_timelimit)
-		{
-			regs.pissoff = pissoff_value;
-			return true;
-		}
+	}
+
+	else if (is_syncline == -10) {
+
+		// wait is_syncline_end
+		//if (event_wait) {
+			int rpt = read_processor_time();
+			int v = rpt - is_syncline_end;
+			if (v < 0)
+			{
+				if (currprefs.cachesize)
+					regs.pissoff = pissoff_value;
+				else
+					regs.pissoff = pissoff_nojit_value;
+				return true;
+			}
+		//}
+		events_reset_syncline();
+	}
+	else if (is_syncline < -10) {
+
+		// wait is_syncline_end/vsyncmintime
+		//if (event_wait) {
+			int rpt = read_processor_time();
+			int v = rpt - vsyncmintime;
+			int v2 = rpt - is_syncline_end;
+			if (v > vsynctimebase || v < -vsynctimebase) {
+				v = 0;
+			}
+			if (v < 0 && v2 < 0) {
+				if (currprefs.cachesize)
+					regs.pissoff = pissoff_value;
+				else
+					regs.pissoff = pissoff_nojit_value;
+				return true;
+			}
+		//}
 		events_reset_syncline();
 	}
 	return false;
@@ -75,16 +105,11 @@ static bool event_check_vsync(void)
 
 void do_cycles_cpu_fastest(uae_u32 cycles_to_add)
 {
-	if (!currprefs.cpu_thread) {
-		if ((regs.pissoff -= cycles_to_add) > 0)
-			return;
+	if ((regs.pissoff -= cycles_to_add) > 0)
+		return;
 
-		cycles_to_add = -regs.pissoff;
-		regs.pissoff = 0;
-	}
-	else {
-		regs.pissoff = 0x40000000;
-	}
+	cycles_to_add = -regs.pissoff;
+	regs.pissoff = 0;
 
 	if (is_syncline)
 	{
