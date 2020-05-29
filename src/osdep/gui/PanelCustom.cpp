@@ -22,8 +22,8 @@ static gcn::RadioButton* optPort3;
 static gcn::Window* grpFunction;
 static gcn::RadioButton* optMultiNone;
 static gcn::RadioButton* optMultiSelect;
-static gcn::RadioButton* optMultiLeft;
-static gcn::RadioButton* optMultiRight;
+//static gcn::RadioButton* optMultiLeft;
+//static gcn::RadioButton* optMultiRight;
 
 static gcn::Label* lblCustomAction[14];
 static gcn::DropDown* cboCustomAction[14];
@@ -162,10 +162,10 @@ public:
 			SelectedFunction = 0;
 		else if (actionEvent.getSource() == optMultiSelect)
 			SelectedFunction = 1;
-		else if (actionEvent.getSource() == optMultiLeft)
-			SelectedFunction = 2;
-		else if (actionEvent.getSource() == optMultiRight)
-			SelectedFunction = 3;
+		//else if (actionEvent.getSource() == optMultiLeft)
+			//SelectedFunction = 2;
+		//else if (actionEvent.getSource() == optMultiRight)
+			//SelectedFunction = 3;
 
 		else if (actionEvent.getSource() == chkAnalogRemap)
 			changed_prefs.input_analog_remap = chkAnalogRemap->isSelected();
@@ -194,12 +194,12 @@ public:
 			case 1:
 				tempmap = changed_prefs.jports[SelectedPort].amiberry_custom_hotkey;
 				break;
-			case 2:
-				tempmap = changed_prefs.jports[SelectedPort].amiberry_custom_left_trigger;
-				break;
-			case 3:
-				tempmap = changed_prefs.jports[SelectedPort].amiberry_custom_right_trigger;
-				break;
+			//case 2:
+				//tempmap = changed_prefs.jports[SelectedPort].amiberry_custom_left_trigger;
+				//break;
+			//case 3:
+				//tempmap = changed_prefs.jports[SelectedPort].amiberry_custom_right_trigger;
+				//break;
 			default:
 				break;
 			}
@@ -283,7 +283,7 @@ public:
 			}
 
 
-			// push map back into changed_pre
+			// push map back into changed_prefs
 			switch (SelectedFunction)
 			{
 			case 0:
@@ -292,12 +292,12 @@ public:
 			case 1:
 				changed_prefs.jports[SelectedPort].amiberry_custom_hotkey = tempmap;
 				break;
-			case 2:
-				changed_prefs.jports[SelectedPort].amiberry_custom_left_trigger = tempmap;
-				break;
-			case 3:
-				changed_prefs.jports[SelectedPort].amiberry_custom_right_trigger = tempmap;
-				break;
+			//case 2:
+				//changed_prefs.jports[SelectedPort].amiberry_custom_left_trigger = tempmap;
+				//break;
+			//case 3:
+				//changed_prefs.jports[SelectedPort].amiberry_custom_right_trigger = tempmap;
+				//break;
 			default:
 				break;
 			}
@@ -486,8 +486,8 @@ void ExitPanelCustom()
 
 	delete optMultiNone;
 	delete optMultiSelect;
-	delete optMultiLeft;
-	delete optMultiRight;
+	//delete optMultiLeft;
+	//delete optMultiRight;
 	delete grpFunction;
 	delete chkAnalogRemap;
 
@@ -531,12 +531,12 @@ void RefreshPanelCustom(void)
 	case 1:
 		tempmap = changed_prefs.jports[SelectedPort].amiberry_custom_hotkey;
 		break;
-	case 2:
-		tempmap = changed_prefs.jports[SelectedPort].amiberry_custom_left_trigger;
-		break;
-	case 3:
-		tempmap = changed_prefs.jports[SelectedPort].amiberry_custom_right_trigger;
-		break;
+	//case 2:
+		//tempmap = changed_prefs.jports[SelectedPort].amiberry_custom_left_trigger;
+		//break;
+	//case 3:
+		//tempmap = changed_prefs.jports[SelectedPort].amiberry_custom_right_trigger;
+		//break;
 	default:
 		break;
 	}
@@ -545,7 +545,8 @@ void RefreshPanelCustom(void)
 	// update the joystick port  , and disable those which are not available
 	char tmp[255];
 
-	if (changed_prefs.jports[SelectedPort].id >= JSEM_JOYS + num_keys_as_joys && changed_prefs.jports[SelectedPort].id < JSEM_MICE - 1)
+	if (changed_prefs.jports[SelectedPort].id >= JSEM_JOYS + num_keys_as_joys && changed_prefs.jports[SelectedPort].id <
+		JSEM_MICE - 1)
 	{
 		const auto hostjoyid = changed_prefs.jports[SelectedPort].id - JSEM_JOYS - num_keys_as_joys;
 		strncpy(tmp, SDL_JoystickNameForIndex(hostjoyid), 255);
@@ -634,7 +635,7 @@ void RefreshPanelCustom(void)
 			lblCustomAction[n]->setEnabled(temp_button + 1 != 0);
 
 			// set hotkey/quit/reset/menu on NONE field (and disable hotkey)
-			if (temp_button == host_input_buttons[hostjoyid].hotkey_button 
+			if (temp_button == host_input_buttons[hostjoyid].hotkey_button
 				&& temp_button != -1)
 			{
 				cboCustomAction[n]->setListModel(&CustomEventList_HotKey);
@@ -643,9 +644,9 @@ void RefreshPanelCustom(void)
 				lblCustomAction[n]->setEnabled(false);
 			}
 
-			else if (temp_button == host_input_buttons[hostjoyid].quit_button 
-				&& temp_button != -1 
-				&& SelectedFunction == 1 
+			else if (temp_button == host_input_buttons[hostjoyid].quit_button
+				&& temp_button != -1
+				&& SelectedFunction == 1
 				&& changed_prefs.use_retroarch_quit)
 			{
 				cboCustomAction[n]->setListModel(&CustomEventList_Quit);
@@ -654,9 +655,9 @@ void RefreshPanelCustom(void)
 				lblCustomAction[n]->setEnabled(false);
 			}
 
-			else if (temp_button == host_input_buttons[hostjoyid].menu_button 
-				&& temp_button != -1 
-				&& SelectedFunction == 1 
+			else if (temp_button == host_input_buttons[hostjoyid].menu_button
+				&& temp_button != -1
+				&& SelectedFunction == 1
 				&& changed_prefs.use_retroarch_menu)
 			{
 				cboCustomAction[n]->setListModel(&CustomEventList_Menu);
@@ -665,9 +666,9 @@ void RefreshPanelCustom(void)
 				lblCustomAction[n]->setEnabled(false);
 			}
 
-			else if (temp_button == host_input_buttons[hostjoyid].reset_button 
-				&& temp_button != -1 
-				&& SelectedFunction == 1 
+			else if (temp_button == host_input_buttons[hostjoyid].reset_button
+				&& temp_button != -1
+				&& SelectedFunction == 1
 				&& changed_prefs.use_retroarch_reset)
 			{
 				cboCustomAction[n]->setListModel(&CustomEventList_Reset);
@@ -801,10 +802,7 @@ void RefreshPanelCustom(void)
 			break;
 		}
 		const auto x = find_in_array(RemapEventList, RemapEventListSize, eventnum);
-		if (cboCustomAction[z]->isEnabled())
-		{
-			cboCustomAction[z]->setSelected(x + 1);
-		}
+		cboCustomAction[z]->setSelected(x + 1);
 	}
 }
 
