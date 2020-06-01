@@ -545,8 +545,8 @@ void RefreshPanelCustom(void)
 	// update the joystick port  , and disable those which are not available
 	char tmp[255];
 
-	if (changed_prefs.jports[SelectedPort].id >= JSEM_JOYS + num_keys_as_joys && changed_prefs.jports[SelectedPort].id <
-		JSEM_MICE - 1)
+	if (changed_prefs.jports[SelectedPort].id >= JSEM_JOYS + num_keys_as_joys 
+		&& changed_prefs.jports[SelectedPort].id < JSEM_MICE - 1)
 	{
 		const auto hostjoyid = changed_prefs.jports[SelectedPort].id - JSEM_JOYS - num_keys_as_joys;
 		strncpy(tmp, SDL_JoystickNameForIndex(hostjoyid), 255);
