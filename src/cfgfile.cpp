@@ -6316,7 +6316,7 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 	p->fpu_no_unimplemented = false;
 	p->int_no_unimplemented = false;
 	p->fpu_strict = false;
-	p->fpu_mode = -1;
+	p->fpu_mode = 0;
 	p->m68k_speed = 0;
 	p->cpu_compatible = true;
 	p->address_space_24 = true;
