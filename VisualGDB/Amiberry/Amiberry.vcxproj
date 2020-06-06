@@ -211,6 +211,7 @@
     <ClCompile Include="..\..\src\cpustbl.cpp" />
     <ClCompile Include="..\..\src\crc32.cpp" />
     <ClCompile Include="..\..\src\custom.cpp" />
+    <ClCompile Include="..\..\src\def_icons.cpp" />
     <ClCompile Include="..\..\src\devices.cpp" />
     <ClCompile Include="..\..\src\disk.cpp" />
     <ClCompile Include="..\..\src\diskutil.cpp" />

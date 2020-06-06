@@ -390,6 +390,24 @@ static int device_func_init (int flags)
 	return 1;
 }
 
+bool blkdev_get_info(struct uae_prefs* p, int unitnum, struct device_info* di)
+{
+	bool open = true, opened = false, ok = false;
+	struct blkdevstate* st = &state[unitnum];
+	if (!st->isopen) {
+		blkdev_fix_prefs(p);
+		install_driver(0);
+		opened = true;
+		open = sys_command_open_internal(unitnum, p->cdslots[unitnum].name[0] ? p->cdslots[unitnum].name : NULL, CD_STANDARD_UNIT_DEFAULT) != 0;
+	}
+	if (open) {
+		ok = sys_command_info(unitnum, di, true) != 0;
+	}
+	if (open && opened)
+		sys_command_close_internal(unitnum);
+	return ok;
+}
+
 void blkdev_entergui (void)
 {
 	for (int i = 0; i < MAX_TOTAL_SCSI_DEVICES; i++) {

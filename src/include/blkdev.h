@@ -137,6 +137,7 @@ struct device_functions
 static int device_func_init(int flags);
 extern void device_func_free(void);
 extern void device_func_reset(void);
+extern int sys_command_open(int unitnum);
 extern void sys_command_close (int unitnum);
 extern struct device_info *sys_command_info (int unitnum, struct device_info *di, int);
 extern int sys_command_cd_pause (int unitnum, int paused);
@@ -147,6 +148,7 @@ extern int sys_command_cd_qcode (int unitnum, uae_u8*, int lsn, bool all);
 extern int sys_command_cd_toc (int unitnum, struct cd_toc_head*);
 extern int sys_command_cd_rawread (int unitnum, uae_u8 *data, int sector, int size, int sectorsize);
 extern int sys_command_ismedia (int unitnum, int quick);
+extern bool blkdev_get_info(struct uae_prefs* p, int unitnum, struct device_info* di);
 
 extern void blkdev_vsync(void);
 extern void restore_blkdev_start(void);

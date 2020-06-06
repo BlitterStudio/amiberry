@@ -301,6 +301,7 @@ OBJS =	\
 	src/cia.o \
 	src/crc32.o \
 	src/custom.o \
+	src/def_icons.o \
 	src/devices.o \
 	src/disk.o \
 	src/diskutil.o \

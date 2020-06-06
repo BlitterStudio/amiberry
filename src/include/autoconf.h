@@ -94,7 +94,7 @@ extern uaecptr ROM_hardfile_resname, ROM_hardfile_resid;
 extern uaecptr ROM_hardfile_init;
 extern uaecptr filesys_initcode, filesys_initcode_ptr, filesys_initcode_real;
 
-//extern int is_hardfile (int unit_no);
+extern int is_hardfile (int unit_no);
 extern int nr_units (void);
 extern int nr_directory_units (struct uae_prefs*);
 extern uaecptr need_uae_boot_rom(struct uae_prefs*);
@@ -116,7 +116,7 @@ extern TCHAR *validatedevicename (TCHAR *s, const TCHAR *def);
 extern TCHAR *validatevolumename (TCHAR *s, const TCHAR *def);
 
 int filesys_insert (int nr, const TCHAR *volume, const TCHAR *rootdir, bool readonly, int flags);
-//int filesys_eject (int nr);
+int filesys_eject(int nr);
 int filesys_media_change (const TCHAR *rootdir, int inserted, struct uaedev_config_data *uci);
 
 extern TCHAR *filesys_createvolname (const TCHAR *volname, const TCHAR *rootdir, struct zvolume *zv, const TCHAR *def);

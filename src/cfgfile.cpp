@@ -3689,17 +3689,11 @@ static void get_filesys_controller(const TCHAR* hdc, int* type, int* typenum, in
 		if (hdunit < 0 || hdunit >= 8 + 2)
 			hdunit = 0;
 	}
-	else if (_tcslen(hdc) >= 6 && !_tcsncmp(hdc, _T("scsram"), 6))
-	{
-		hdcv = HD_CONTROLLER_TYPE_PCMCIA;
-		hdunit = 0;
-		idx = 0;
-	}
-	else if (_tcslen(hdc) >= 5 && !_tcsncmp(hdc, _T("scide"), 5))
-	{
-		hdcv = HD_CONTROLLER_TYPE_PCMCIA;
-		hdunit = 0;
-		idx = 1;
+	else if (_tcslen(hdc) >= 7 && !_tcsncmp(hdc, _T("custom"), 6)) {
+		hdcv = HD_CONTROLLER_TYPE_CUSTOM_FIRST;
+		hdunit = hdc[6] - '0';
+		if (hdunit < 0 || hdunit >= 8)
+			hdunit = 0;
 	}
 	if (hdcv == HD_CONTROLLER_TYPE_UAE)
 	{
