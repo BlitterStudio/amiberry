@@ -4,16 +4,10 @@
 #include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
 
-#include <stdio.h>
-
-#include <libxml/tree.h>
-#include <fstream>
-
 #include "sysdeps.h"
 #include "options.h"
 #include "uae.h"
 #include "gui_handling.h"
-#include "zfile.h"
 
 static gcn::Label* lblSystemROMs;
 static gcn::TextField* txtSystemROMs;
@@ -177,119 +171,70 @@ int date_cmp(const char* d1, const char* d2)
 	return strncmp(d1, d2, 2);
 }
 
-void copy_file(const char* srce_file, const char* dest_file)
-{
-	std::ifstream srce(srce_file, std::ios::binary);
-	std::ofstream dest(dest_file, std::ios::binary);
-	dest << srce.rdbuf();
-}
-
-void download_rtb(const char* download_file)
-{
-	char download_command[MAX_DPATH];
-	char local_path[MAX_DPATH];
-
-	//  download .rtb
-	snprintf(local_path, MAX_DPATH, "%s/whdboot/save-data/Kickstarts/%s", start_path_data, download_file);
-	snprintf(download_command, MAX_DPATH,
-	         "wget -np -nv -O %s https://github.com/midwan/amiberry/blob/master/whdboot/save-data/Kickstarts/%s?raw=true",
-	         local_path, download_file);
-	if (!zfile_exists(local_path)) // ?? 
-	{
-		auto* afile = popen(download_command, "r");
-		write_log("Downloading %s ...\n", download_file);
-		pclose(afile);
-	}
-}
-
 class DownloadXMLButtonActionListener : public gcn::ActionListener
 {
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		if (!check_internet_connection())
-		{
-			ShowMessage("No Internet Connection", "No Internet Connection was found!",
-			            "Please connect to the Internet then try again.", "OK", "");
-			return;
-		}
-
-		char original_date[MAX_DPATH] = "2000-01-01 at 00:00:01\n";
-		char xml_path[MAX_DPATH];
-		char download_command[MAX_DPATH];
+		char destination[MAX_DPATH];
 
 		//  download WHDLOAD
-		snprintf(xml_path, MAX_DPATH, "%s/whdboot/WHDLoad", start_path_data);
-		snprintf(download_command, MAX_DPATH,
-		         "wget -np -nv -O %s https://github.com/midwan/amiberry/blob/master/whdboot/WHDLoad?raw=true",
-		         xml_path);
-		if (!zfile_exists(xml_path))
+		snprintf(destination, MAX_DPATH, "%s/whdboot/WHDLoad", start_path_data);
+		if (get_file_size(destination) <= 0)
 		{
-			system(download_command);
+			write_log("Downloading %s ...\n", destination);
+			download_file("https://github.com/midwan/amiberry/blob/master/whdboot/WHDLoad?raw=true", destination);
 		}
 
 		//  download boot-data.zip
-		snprintf(xml_path, MAX_DPATH, "%s/whdboot/boot-data.zip", start_path_data);
-		snprintf(download_command, MAX_DPATH,
-		         "wget -np -nv -O %s https://github.com/midwan/amiberry/blob/master/whdboot/boot-data.zip?raw=true",
-		         xml_path);
-		if (!zfile_exists(xml_path))
+		snprintf(destination, MAX_DPATH, "%s/whdboot/boot-data.zip", start_path_data);
+		if (get_file_size(destination) <= 0)
 		{
-			system(download_command);
+			write_log("Downloading %s ...\n", destination);
+			download_file("https://github.com/midwan/amiberry/blob/master/whdboot/boot-data.zip?raw=true", destination);
 		}
 
 		// download kickstart RTB files for maximum compatibility
-		snprintf(xml_path, MAX_DPATH, "kick33180.A500.RTB");
-		if (!zfile_exists(xml_path))
-			download_rtb(xml_path);
-		snprintf(xml_path, MAX_DPATH, "kick34005.A500.RTB");
-		if (!zfile_exists(xml_path))
-			download_rtb(xml_path);
-		snprintf(xml_path, MAX_DPATH, "kick40063.A600.RTB");
-		if (!zfile_exists(xml_path))
-			download_rtb(xml_path);
-		snprintf(xml_path, MAX_DPATH, "kick40068.A1200.RTB");
-		if (!zfile_exists(xml_path))
-			download_rtb(xml_path);
-		snprintf(xml_path, MAX_DPATH, "kick40068.A4000.RTB");
-		if (!zfile_exists(xml_path))
-			download_rtb(xml_path);
-
-		snprintf(xml_path, MAX_DPATH, "%s/whdboot/game-data/whdload_db.xml", start_path_data);
-
-		write_log("Checking original %s for date...\n", xml_path);
-		if (zfile_exists(xml_path))
+		snprintf(destination, MAX_DPATH, "%s/whdboot/save-data/Kickstarts/kick33180.A500.RTB", start_path_data);
+		if (get_file_size(destination) <= 0)
 		{
-			auto* const doc = xmlParseFile(xml_path);
-			auto* const root_element = xmlDocGetRootElement(doc);
-			_stprintf(original_date, "%s",
-			          reinterpret_cast<const char*>(xmlGetProp(root_element,
-			                                                   reinterpret_cast<const xmlChar*>("timestamp"))));
-			write_log("Date from original: %s\n", original_date);
+			write_log("Downloading %s ...\n", destination);
+			download_file("https://github.com/midwan/amiberry/blob/master/whdboot/save-data/Kickstarts/kick33180.A500.RTB?raw=true", destination);
 		}
-		else
-			write_log("No WHDLoad_db.xml found locally.\n");
-
-		// Download latest XML
-		snprintf(download_command, MAX_DPATH,
-			"wget -np -nv -O %s https://github.com/HoraceAndTheSpider/Amiberry-XML-Builder/blob/master/whdload_db.xml?raw=true",
-			xml_path);
-		system(download_command);
-
-		write_log("Checking downloaded %s for date...\n", xml_path);
-		if (zfile_exists(xml_path))
+		snprintf(destination, MAX_DPATH, "%s/whdboot/save-data/Kickstarts/kick34005.A500.RTB", start_path_data);
+		if (get_file_size(destination) <= 0)
 		{
-			auto* const doc = xmlParseFile(xml_path);
-			auto* const root_element = xmlDocGetRootElement(doc);
-			_stprintf(original_date, "%s",
-				reinterpret_cast<const char*>(xmlGetProp(root_element,
-					reinterpret_cast<const xmlChar*>("timestamp"))));
-			write_log("Date from newly downloaded: %s\n", original_date);
+			write_log("Downloading %s ...\n", destination);
+			download_file("https://github.com/midwan/amiberry/blob/master/whdboot/save-data/Kickstarts/kick34005.A500.RTB?raw=true", destination);
 		}
+		snprintf(destination, MAX_DPATH, "%s/whdboot/save-data/Kickstarts/kick40063.A600.RTB", start_path_data);
+		if (get_file_size(destination) <= 0)
+		{
+			write_log("Downloading %s ...\n", destination);
+			download_file("https://github.com/midwan/amiberry/blob/master/whdboot/save-data/Kickstarts/kick40063.A600.RTB?raw=true", destination);
+		}
+		snprintf(destination, MAX_DPATH, "%s/whdboot/save-data/Kickstarts/kick40068.A1200.RTB", start_path_data);
+		if (get_file_size(destination) <= 0)
+		{
+			write_log("Downloading %s ...\n", destination);
+			download_file("https://github.com/midwan/amiberry/blob/master/whdboot/save-data/Kickstarts/kick40068.A1200.RTB?raw=true", destination);
+		}
+		snprintf(destination, MAX_DPATH, "%s/whdboot/save-data/Kickstarts/kick40068.A4000.RTB", start_path_data);
+		if (get_file_size(destination) <= 0)
+		{
+			write_log("Downloading %s ...\n", destination);
+			download_file("https://github.com/midwan/amiberry/blob/master/whdboot/save-data/Kickstarts/kick40068.A4000.RTB?raw=true", destination);
+		}
+
+		snprintf(destination, MAX_DPATH, "%s/whdboot/game-data/whdload_db.xml", start_path_data);
+		write_log("Downloading %s ...\n", destination);
+		const auto result = download_file("https://github.com/HoraceAndTheSpider/Amiberry-XML-Builder/blob/master/whdload_db.xml?raw=true", destination);
+
+		if (result)
+			ShowMessage("XML Downloader", "Updated XML downloaded.", "", "Ok", "");
 		else
-			write_log("No WHDLoad_db.xml found locally.\n");
+			ShowMessage("XML Downloader", "Failed to download files!", "Please check the log for more details.", "Ok", "");
 		
-		ShowMessage("XML Downloader", "Updated XML downloaded.", "", "Ok", "");		
 		cmdDownloadXML->requestFocus();
 	}
 };

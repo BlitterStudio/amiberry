@@ -132,13 +132,14 @@ void fixup_cpu(struct uae_prefs* p)
 {
 	if (p->cpu_frequency == 1000000)
 		p->cpu_frequency = 0;
-	
+
 	if (p->cpu_model >= 68040 && p->address_space_24)
 	{
 		error_log(_T("24-bit address space is not supported with 68040/060 configurations."));
 		p->address_space_24 = false;
 	}
-	if (p->cpu_model < 68020 && p->fpu_model && (p->cpu_compatible || p->cpu_memory_cycle_exact)) {
+	if (p->cpu_model < 68020 && p->fpu_model && (p->cpu_compatible || p->cpu_memory_cycle_exact))
+	{
 		error_log(_T("FPU is not supported with 68000/010 configurations."));
 		p->fpu_model = 0;
 	}
@@ -161,11 +162,13 @@ void fixup_cpu(struct uae_prefs* p)
 		break;
 	}
 
-	if (p->cpu_thread && (p->cpu_compatible || p->ppc_mode || p->cpu_memory_cycle_exact || p->cpu_model < 68020)) {
+	if (p->cpu_thread && (p->cpu_compatible || p->ppc_mode || p->cpu_memory_cycle_exact || p->cpu_model < 68020))
+	{
 		p->cpu_thread = false;
-		error_log(_T("Threaded CPU mode is not compatible with PPC emulation, More compatible or Cycle Exact modes. CPU type must be 68020 or higher."));
+		error_log(_T(
+			"Threaded CPU mode is not compatible with PPC emulation, More compatible or Cycle Exact modes. CPU type must be 68020 or higher."));
 	}
-	
+
 	if (p->cpu_model < 68020 && p->cachesize)
 	{
 		p->cachesize = 0;
@@ -174,42 +177,51 @@ void fixup_cpu(struct uae_prefs* p)
 
 	if (!p->cpu_memory_cycle_exact && p->cpu_cycle_exact)
 		p->cpu_memory_cycle_exact = true;
-	
+
 	if (p->cpu_model >= 68020 && p->cachesize && p->cpu_compatible)
 		p->cpu_compatible = false;
 
-	if (p->cachesize && p->cpu_memory_cycle_exact) {
+	if (p->cachesize && p->cpu_memory_cycle_exact)
+	{
 		error_log(_T("JIT and cycle-exact can't be enabled simultaneously."));
 		p->cachesize = 0;
 	}
-	
-	if (p->cachesize && (p->fpu_no_unimplemented || p->int_no_unimplemented)) {
+
+	if (p->cachesize && (p->fpu_no_unimplemented || p->int_no_unimplemented))
+	{
 		error_log(_T("JIT is not compatible with unimplemented CPU/FPU instruction emulation."));
 		p->fpu_no_unimplemented = p->int_no_unimplemented = false;
 	}
-	if (p->cachesize && p->compfpu && p->fpu_mode > 0) {
+	if (p->cachesize && p->compfpu && p->fpu_mode > 0)
+	{
 		error_log(_T("JIT FPU emulation is not compatible with softfloat FPU emulation."));
 		p->fpu_mode = 0;
 	}
 
-	if (p->comptrustbyte < 0 || p->comptrustbyte > 3) {
+	if (p->comptrustbyte < 0 || p->comptrustbyte > 3)
+	{
 		error_log(_T("Bad value for comptrustbyte parameter: value must be within 0..2."));
 		p->comptrustbyte = 1;
 	}
-	if (p->comptrustword < 0 || p->comptrustword > 3) {
+	if (p->comptrustword < 0 || p->comptrustword > 3)
+	{
 		error_log(_T("Bad value for comptrustword parameter: value must be within 0..2."));
 		p->comptrustword = 1;
 	}
-	if (p->comptrustlong < 0 || p->comptrustlong > 3) {
+	if (p->comptrustlong < 0 || p->comptrustlong > 3)
+	{
 		error_log(_T("Bad value for comptrustlong parameter: value must be within 0..2."));
 		p->comptrustlong = 1;
 	}
-	if (p->comptrustnaddr < 0 || p->comptrustnaddr > 3) {
+	if (p->comptrustnaddr < 0 || p->comptrustnaddr > 3)
+	{
 		error_log(_T("Bad value for comptrustnaddr parameter: value must be within 0..2."));
 		p->comptrustnaddr = 1;
 	}
-	if (p->cachesize < 0 || p->cachesize > MAX_JIT_CACHE || (p->cachesize > 0 && p->cachesize < MIN_JIT_CACHE)) {
-		error_log(_T("JIT Bad value for cachesize parameter: value must zero or within %d..%d."), MIN_JIT_CACHE, MAX_JIT_CACHE);
+	if (p->cachesize < 0 || p->cachesize > MAX_JIT_CACHE || (p->cachesize > 0 && p->cachesize < MIN_JIT_CACHE))
+	{
+		error_log(_T("JIT Bad value for cachesize parameter: value must zero or within %d..%d."), MIN_JIT_CACHE,
+		          MAX_JIT_CACHE);
 		p->cachesize = 0;
 	}
 
@@ -221,16 +233,19 @@ void fixup_cpu(struct uae_prefs* p)
 	if (p->cpu_memory_cycle_exact)
 		p->cpu_compatible = true;
 
-	if (p->cpu_memory_cycle_exact && p->produce_sound == 0) {
+	if (p->cpu_memory_cycle_exact && p->produce_sound == 0)
+	{
 		p->produce_sound = 1;
 		error_log(_T("Cycle-exact mode requires at least Disabled but emulated sound setting."));
 	}
 
-	if (p->cpu_data_cache && (!p->cpu_compatible || p->cachesize || p->cpu_model < 68030)) {
+	if (p->cpu_data_cache && (!p->cpu_compatible || p->cachesize || p->cpu_model < 68030))
+	{
 		p->cpu_data_cache = false;
 		error_log(_T("Data cache emulation requires More compatible, is not JIT compatible, 68030+ only."));
 	}
-	if (p->cpu_data_cache && (p->uaeboard != 3 && need_uae_boot_rom(p))) {
+	if (p->cpu_data_cache && (p->uaeboard != 3 && need_uae_boot_rom(p)))
+	{
 		p->cpu_data_cache = false;
 		error_log(_T("Data cache emulation requires Indirect UAE Boot ROM."));
 	}
@@ -568,10 +583,12 @@ void usage()
 	std::cout << " -model=<Amiga Model>       Amiga model to emulate, from the QuickStart options." << std::endl;
 	std::cout << "                            Available options are: A500, A500P, A1200, A4000 and CD32." << std::endl;
 	std::cout << " -autoload=<file>           Load a WHDLoad game or .CUE CD32 image using the WHDBooter." << std::endl;
-	std::cout << " -cdimage=<file>            Load the CD image provided when starting emulation (for CD32)." << std::endl;
+	std::cout << " -cdimage=<file>            Load the CD image provided when starting emulation (for CD32)." <<
+		std::endl;
 	std::cout << " -statefile=<file>          Load a save state file." << std::endl;
 	std::cout << " -s <config param>=<value>  Set the configuration parameter with value." << std::endl;
-	std::cout << "                            Edit a configuration file in order to know valid parameters and settings." << std::endl;
+	std::cout << "                            Edit a configuration file in order to know valid parameters and settings."
+		<< std::endl;
 	std::cout << "\nAdditional options:" << std::endl;
 	std::cout << " -0 <filename>              Set adf for drive 0." << std::endl;
 	std::cout << " -1 <filename>              Set adf for drive 1." << std::endl;
@@ -582,7 +599,9 @@ void usage()
 	std::cout << " -c <value>                 Size of chip memory (in number of 512 KBytes chunks)." << std::endl;
 	std::cout << " -F <value>                 Size of fast memory (in number of 1024 KBytes chunks)." << std::endl;
 	std::cout << "\nNote:" << std::endl;
-	std::cout << "Parameters are parsed from the beginning of command line, so in case of ambiguity for parameters, last one will be used." << std::endl;
+	std::cout <<
+		"Parameters are parsed from the beginning of command line, so in case of ambiguity for parameters, last one will be used."
+		<< std::endl;
 	std::cout << "File names should be with absolute path." << std::endl;
 	std::cout << "\nExample:" << std::endl;
 	std::cout << "amiberry -model=A1200 -G" << std::endl;
@@ -639,19 +658,24 @@ static void parse_cmdline(int argc, TCHAR** argv)
 		else if (_tcsncmp(argv[i], _T("-model="), 7) == 0)
 		{
 			auto* const txt = parse_text_path(argv[i] + 7);
-			if (_tcsncmp(txt, _T("A500"), 4) == 0) {
+			if (_tcsncmp(txt, _T("A500"), 4) == 0)
+			{
 				bip_a500(&currprefs, -1);
 			}
-			else if (_tcsncmp(txt, _T("A500P"), 5) == 0) {
+			else if (_tcsncmp(txt, _T("A500P"), 5) == 0)
+			{
 				bip_a500plus(&currprefs, -1);
 			}
-			else if (_tcsncmp(txt, _T("A1200"), 5) == 0) {
+			else if (_tcsncmp(txt, _T("A1200"), 5) == 0)
+			{
 				bip_a1200(&currprefs, -1);
 			}
-			else if (_tcsncmp(txt, _T("A4000"), 5) == 0) {
+			else if (_tcsncmp(txt, _T("A4000"), 5) == 0)
+			{
 				bip_a4000(&currprefs, -1);
 			}
-			else if (_tcsncmp(txt, _T("CD32"), 4) == 0) {
+			else if (_tcsncmp(txt, _T("CD32"), 4) == 0)
+			{
 				bip_cd32(&currprefs, -1);
 			}
 		}
@@ -843,11 +867,68 @@ static void leave_program(void)
 	do_leave_program();
 }
 
-bool check_internet_connection()
+long get_file_size(const std::string& filename)
 {
-	if (system("ping -c1 -s1 www.google.com"))
+	struct stat stat_buf{};
+	const auto rc = stat(filename.c_str(), &stat_buf);
+	return rc == 0 ? static_cast<long>(stat_buf.st_size) : -1;
+}
+
+bool download_file(const std::string& source, std::string destination)
+{
+	std::string download_command = "wget -np -nv -O ";
+	const auto tmp = destination.append(".tmp");
+
+	download_command.append(tmp);
+	download_command.append(" ");
+	download_command.append(source);
+	download_command.append(" 2>&1");
+
+	// Cleanup if the tmp destination already exists
+	if (get_file_size(tmp) > 0)
+	{
+		if (std::remove(tmp.data()) < 0)
+		{
+			write_log(strerror(errno) + '\n');
+		}
+	}
+
+	try
+	{
+		char buffer[1035];
+		const auto output = popen(download_command.data(), "r");
+		if (!output)
+		{
+			write_log("Failed while trying to run wget! Make sure it exists in your system...\n");
+			return false;
+		}
+
+		while (fgets(buffer, sizeof buffer, output))
+		{
+			write_log(buffer);
+		}
+		pclose(output);
+	}
+	catch (...)
+	{
+		write_log("An exception was thrown while trying to execute wget!\n");
 		return false;
-	return true;
+	}
+
+	if (get_file_size(tmp) > 0)
+	{
+		if (std::rename(tmp.data(), destination.data()) < 0)
+		{
+			write_log(strerror(errno) + '\n');
+		}
+		return true;
+	}
+
+	if (std::remove(tmp.data()) < 0)
+	{
+		write_log(strerror(errno) + '\n');
+	}
+	return false;
 }
 
 // In case of error, print the error code and close the application
@@ -891,7 +972,7 @@ static int real_main2(int argc, TCHAR** argv)
 	{
 		abort();
 	}
-	
+
 	if (restart_config[0])
 	{
 		parse_cmdline_and_init_file(argc, argv);

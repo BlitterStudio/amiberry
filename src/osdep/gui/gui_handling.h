@@ -190,6 +190,7 @@ extern int delay_savestate_frame;
 
 extern void UpdateGuiScreen();
 extern void cap_fps(Uint64 start, int fps);
-extern bool check_internet_connection();
+extern long get_file_size(const std::string& filename);
+extern bool download_file(const std::string& source, std::string destination);
 
 #endif // GUI_HANDLING_H

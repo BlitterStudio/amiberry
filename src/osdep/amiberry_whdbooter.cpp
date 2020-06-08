@@ -140,15 +140,6 @@ static TCHAR* parse_text_path(const TCHAR* s)
 	return s3;
 }
 
-long get_file_size(const std::string& filename)
-{
-	struct stat stat_buf
-	{
-	};
-	const auto rc = stat(filename.c_str(), &stat_buf);
-	return rc == 0 ? stat_buf.st_size : -1;
-}
-
 void remove_char(char* array, int len, int index)
 {
 	for (auto i = index; i < len - 1; ++i)
