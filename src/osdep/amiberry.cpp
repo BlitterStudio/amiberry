@@ -361,6 +361,17 @@ void target_default_options(struct uae_prefs* p, int type)
 	
 	p->gfx_auto_height = amiberry_options.default_auto_height;
 	p->gfx_correct_aspect = amiberry_options.default_correct_aspect_ratio;
+
+	if (amiberry_options.default_fullscreen)
+	{
+		p->gfx_apmode[0].gfx_fullscreen = GFX_FULLSCREEN;
+		p->gfx_apmode[1].gfx_fullscreen = GFX_FULLSCREEN;
+	}
+	else
+	{
+		p->gfx_apmode[0].gfx_fullscreen = GFX_WINDOW;
+		p->gfx_apmode[1].gfx_fullscreen = GFX_WINDOW;
+	}
 	
 	p->scaling_method = -1; //Default is Auto
 	if (amiberry_options.default_scaling_method != -1)
@@ -963,6 +974,10 @@ void save_amiberry_settings(void)
 	snprintf(buffer, MAX_DPATH, "default_height=%d\n", amiberry_options.default_height);
 	fputs(buffer, f);
 
+	// Full screen by default?
+	snprintf(buffer, MAX_DPATH, "default_fullscreen=%s\n", amiberry_options.default_fullscreen ? "yes" : "no");
+	fputs(buffer, f);
+	
 	// Default Stereo Separation
 	snprintf(buffer, MAX_DPATH, "default_stereo_separation=%d\n", amiberry_options.default_stereo_separation);
 	fputs(buffer, f);
@@ -1212,6 +1227,7 @@ void load_amiberry_settings(void)
 					cfgfile_yesno(option, value, "default_auto_height", &amiberry_options.default_auto_height);
 					cfgfile_intval(option, value, "default_width", &amiberry_options.default_width, 1);
 					cfgfile_intval(option, value, "default_height", &amiberry_options.default_height, 1);
+					cfgfile_yesno(option, value, "default_fullscreen", &amiberry_options.default_fullscreen);
 					cfgfile_intval(option, value, "default_stereo_separation", &amiberry_options.default_stereo_separation, 1);
 					cfgfile_intval(option, value, "default_joystick_deadzone", &amiberry_options.default_joystick_deadzone, 1);
 					cfgfile_yesno(option, value, "default_retroarch_quit", &amiberry_options.default_retroarch_quit);
