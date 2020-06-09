@@ -53,27 +53,6 @@ struct game_options
 	TCHAR z3[256] = "nul\0";
 };
 
-struct host_options
-{
-	TCHAR controller1[256] = "nul\0";
-	TCHAR controller2[256] = "nul\0";
-	TCHAR controller3[256] = "nul\0";
-	TCHAR controller4[256] = "nul\0";
-	TCHAR mouse1[256] = "nul\0";
-	TCHAR mouse2[256] = "nul\0";
-	TCHAR ra_quit[256] = "nul\0";
-	TCHAR ra_menu[256] = "nul\0";
-	TCHAR ra_reset[256] = "nul\0";
-	TCHAR deadzone[256] = "nul\0";
-	TCHAR stereo_split[256] = "nul\0";
-	TCHAR sound_on[256] = "nul\0";
-	TCHAR sound_mode[256] = "nul\0";
-	TCHAR fixed_height[256] = "nul\0";
-	TCHAR fixed_width[256] = "nul\0";
-	TCHAR fixed_cd32_height[256] = "nul\0";
-	TCHAR fixed_cd32_width[256] = "nul\0";
-};
-
 static xmlNode* get_node(xmlNode* node, const char* name)
 {
 	for (auto* curr_node = node; curr_node; curr_node = curr_node->next)
@@ -236,30 +215,6 @@ struct game_options get_game_settings(char* HW)
 	return output_detail;
 }
 
-struct host_options get_host_settings(char* HW)
-{
-	struct host_options output_detail;
-	strcpy(output_detail.controller1, find_whdload_game_option("CONTROLLER_1", HW).c_str());
-	strcpy(output_detail.controller2, find_whdload_game_option("CONTROLLER_2", HW).c_str());
-	strcpy(output_detail.controller3, find_whdload_game_option("CONTROLLER_3", HW).c_str());
-	strcpy(output_detail.controller4, find_whdload_game_option("CONTROLLER_4", HW).c_str());
-	strcpy(output_detail.mouse1, find_whdload_game_option("CONTROLLER_MOUSE_1", HW).c_str());
-	strcpy(output_detail.mouse2, find_whdload_game_option("CONTROLLER_MOUSE_2", HW).c_str());
-	strcpy(output_detail.ra_quit, find_whdload_game_option("RETROARCH_QUIT", HW).c_str());
-	strcpy(output_detail.ra_menu, find_whdload_game_option("RETROARCH_MENU", HW).c_str());
-	strcpy(output_detail.ra_reset, find_whdload_game_option("RETROARCH_RESET", HW).c_str());
-	strcpy(output_detail.deadzone, find_whdload_game_option("DEADZONE", HW).c_str());
-	strcpy(output_detail.stereo_split, find_whdload_game_option("STEREO_SPLIT", HW).c_str());
-	strcpy(output_detail.sound_on, find_whdload_game_option("SOUND_ON", HW).c_str());
-	strcpy(output_detail.sound_mode, find_whdload_game_option("SOUND_MODE", HW).c_str());
-	strcpy(output_detail.fixed_height, find_whdload_game_option("FIXED_HEIGHT", HW).c_str());
-	strcpy(output_detail.fixed_width, find_whdload_game_option("FIXED_WIDTH", HW).c_str());
-	strcpy(output_detail.fixed_cd32_height, find_whdload_game_option("FIXED_CD32_HEIGHT", HW).c_str());
-	strcpy(output_detail.fixed_cd32_width, find_whdload_game_option("FIXED_CD32_WIDTH", HW).c_str());
-
-	return output_detail;
-}
-
 void make_rom_symlink(const char* kick_short, char* kick_path, int kick_numb, struct uae_prefs* p)
 {
 	char kick_long[MAX_DPATH];
@@ -314,19 +269,6 @@ void symlink_roms(struct uae_prefs* prefs)
 	make_rom_symlink("kick40068.A1200", kick_path, 15, prefs);
 	make_rom_symlink("kick40068.A4000", kick_path, 16, prefs);
 
-	// these ones could not be located in 'rommgr.cpp' although all but one are BETA(?) anyway
-	//     make_rom_symlink("kick36143.A3000", kick_path, ?  ,prefs);
-	//     make_rom_symlink("kick39046.A500.BETA", kick_path, ?  ,prefs);
-	//     make_rom_symlink("kick39106.A500.BETA", kick_path, ?  ,prefs);
-	//     make_rom_symlink("kick39110.A500.BETA", kick_path, ?  ,prefs);
-	//     make_rom_symlink("kick39115.A3000.BETA", kick_path, ?  ,prefs);
-	//     make_rom_symlink("kick40003.A600.BETA", kick_path, ?  ,prefs);
-	//     make_rom_symlink("kick40003.A3000.BETA", kick_path, ?  ,prefs);
-	//     make_rom_symlink("kick40009.A600.BETA", kick_path, ?  ,prefs);
-	//     make_rom_symlink("kick40009.A4000.BETA", kick_path, ?  ,prefs);
-	//     make_rom_symlink("kick40038.A600.BETA", kick_path, ?  ,prefs);
-	//     make_rom_symlink("kick40038.A4000.BETA", kick_path, ?  ,prefs);
-
 	// Symlink rom.key also
 	// source file
 	get_rom_path(tmp2, MAX_DPATH);
@@ -373,49 +315,19 @@ void cd_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	char whd_path[MAX_DPATH];
 	snprintf(whd_path, MAX_DPATH, "%s/whdboot/", start_path_data);
 
-	//  this should be made into it's own routine!! 1 (see repeat, below)
-
-	struct host_options host_detail;
-	strcpy(whd_config, whd_path);
-	strcat(whd_config, "hostprefs.conf");
-
-	if (zfile_exists(whd_config)) // use direct .whd file
-	{
-		ifstream read_file(whd_config);
-		std::ifstream in(whd_config);
-		std::string contents((std::istreambuf_iterator<char>(in)),
-		                     std::istreambuf_iterator<char>());
-
-		_stprintf(hardware_settings, "%s", contents.c_str());
-		host_detail = get_host_settings(hardware_settings);
-	}
-
-	write_log("AutoBooter - Host: Controller 1     : %s  \n", host_detail.controller1);
-	write_log("AutoBooter - Host: Controller 2     : %s  \n", host_detail.controller2);
-	write_log("AutoBooter - Host: Controller 3     : %s  \n", host_detail.controller3);
-	write_log("AutoBooter - Host: Controller 4     : %s  \n", host_detail.controller4);
-	write_log("AutoBooter - Host: Mouse 1          : %s  \n", host_detail.mouse1);
-	write_log("AutoBooter - Host: Mouse 2          : %s  \n", host_detail.mouse2);
-	write_log("AutoBooter - Host: Fixed CD32 Height: %s  \n", host_detail.fixed_cd32_height);
-	write_log("AutoBooter - Host: Fixed CD32 Width : %s  \n", host_detail.fixed_cd32_width);
-
-	//
-	//      *** EMULATED HARDWARE ***
-	//
-
 	prefs->start_gui = false;
 
-	const int is_cdtv = strstr(filepath, "CDTV") != nullptr || strstr(filepath, "cdtv") != nullptr;
-	const int is_cd32 = strstr(filepath, "CD32") != nullptr || strstr(filepath, "cd32") != nullptr;
+	const auto is_cdtv = strstr(filepath, "CDTV") != nullptr || strstr(filepath, "cdtv") != nullptr;
+	const auto is_cd32 = strstr(filepath, "CD32") != nullptr || strstr(filepath, "cd32") != nullptr;
 
 	// CD32
-	if (static_cast<bool>(is_cd32))
+	if (is_cd32)
 	{
 		_tcscpy(prefs->description, _T("AutoBoot Configuration [CD32]"));
 		// SET THE BASE AMIGA (CD32)
 		built_in_prefs(prefs, 8, 0, 0, 0);
 	}
-	else if (static_cast<bool>(is_cdtv))
+	else if (is_cdtv)
 	{
 		_tcscpy(prefs->description, _T("AutoBoot Configuration [CDTV]"));
 		// SET THE BASE AMIGA (CDTV)
@@ -440,7 +352,7 @@ void cd_auto_prefs(struct uae_prefs* prefs, char* filepath)
 
 	//APPLY THE SETTINGS FOR MOUSE/JOYSTICK ETC
 	// CD32
-	if (static_cast<bool>(is_cd32))
+	if (is_cd32)
 	{
 		prefs->jports[0].mode = 7;
 		prefs->jports[1].mode = 7;
@@ -464,14 +376,14 @@ void cd_auto_prefs(struct uae_prefs* prefs, char* filepath)
 
 	// WHAT IS THE MAIN CONTROL?
 	// PORT 0 - MOUSE
-	if (static_cast<bool>(is_cd32) && !(strcmpi(host_detail.controller2, "nul") == 0))
+	if (is_cd32 && strcmpi(amiberry_options.default_controller2, "") != 0)
 	{
-		_stprintf(txt2, "%s=%s", _T("joyport0"), _T(host_detail.controller2));
+		_stprintf(txt2, "%s=%s", _T("joyport0"), _T(amiberry_options.default_controller2));
 		cfgfile_parse_line(prefs, txt2, 0);
 	}
-	else if (!(strcmpi(host_detail.mouse1, "nul") == 0))
+	else if (strcmpi(amiberry_options.default_mouse1, "") != 0)
 	{
-		_stprintf(txt2, "%s=%s", _T("joyport0"), _T(host_detail.mouse1));
+		_stprintf(txt2, "%s=%s", _T("joyport0"), _T(amiberry_options.default_mouse1));
 		cfgfile_parse_line(prefs, txt2, 0);
 	}
 	else
@@ -481,34 +393,14 @@ void cd_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	}
 
 	// PORT 1 - JOYSTICK
-	if (!(strcmpi(host_detail.controller1, "nul") == 0))
+	if (strcmpi(amiberry_options.default_controller1, "") != 0)
 	{
-		_stprintf(txt2, "%s=%s", _T("joyport1"), _T(host_detail.controller1));
+		_stprintf(txt2, "%s=%s", _T("joyport1"), _T(amiberry_options.default_controller1));
 		cfgfile_parse_line(prefs, txt2, 0);
 	}
 	else
 	{
 		_stprintf(txt2, "%s=joy1", _T("joyport1"));
-		cfgfile_parse_line(prefs, txt2, 0);
-	}
-
-	if (strcmpi(host_detail.fixed_cd32_height, "nul") != 0)
-	{
-		_stprintf(txt2, "gfx_height=%s", host_detail.fixed_cd32_height);
-		cfgfile_parse_line(prefs, txt2, 0);
-		_stprintf(txt2, "gfx_height_windowed=%s", host_detail.fixed_cd32_height);
-		cfgfile_parse_line(prefs, txt2, 0);
-		_stprintf(txt2, "gfx_height_fullscreen=%s", host_detail.fixed_cd32_height);
-		cfgfile_parse_line(prefs, txt2, 0);
-	}
-
-	if (strcmpi(host_detail.fixed_cd32_width, "nul") != 0)
-	{
-		_stprintf(txt2, "gfx_width=%s", host_detail.fixed_cd32_width);
-		cfgfile_parse_line(prefs, txt2, 0);
-		_stprintf(txt2, "gfx_width_windowed=%s", host_detail.fixed_cd32_width);
-		cfgfile_parse_line(prefs, txt2, 0);
-		_stprintf(txt2, "gfx_width_fullscreen=%s", host_detail.fixed_cd32_width);
 		cfgfile_parse_line(prefs, txt2, 0);
 	}
 }
@@ -598,22 +490,6 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 
 	//  this should be made into it's own routine!! 1 (see repeat, above)
 	snprintf(whd_path, MAX_DPATH, "%s/whdboot/", start_path_data);
-
-	struct host_options host_detail;
-	strcpy(whd_config, whd_path);
-	strcat(whd_config, "hostprefs.conf");
-
-	if (zfile_exists(whd_config)) // use hostprefs
-	{
-		ifstream read_file(whd_config);
-		std::ifstream in(whd_config);
-		std::string contents((std::istreambuf_iterator<char>(in)),
-		                     std::istreambuf_iterator<char>());
-
-		_stprintf(hardware_settings, "%s", contents.c_str());
-		write_log("WHDBooter -  Loading hostprefs.conf.\n");
-		host_detail = get_host_settings(hardware_settings);
-	}
 
 	// LOAD GAME SPECIFICS - USE SHA1 IF AVAILABLE
 	snprintf(whd_path, MAX_DPATH, "%s/whdboot/game-data/", start_path_data);
@@ -820,27 +696,12 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	write_log("WHDBooter - Game: Z3 Ram     : %s  \n", game_detail.z3);
 
 	// debugging code!
-	write_log("WHDBooter - Host: Controller 1   : %s  \n", host_detail.controller1);
-	write_log("WHDBooter - Host: Controller 2   : %s  \n", host_detail.controller2);
-	write_log("WHDBooter - Host: Controller 3   : %s  \n", host_detail.controller3);
-	write_log("WHDBooter - Host: Controller 4   : %s  \n", host_detail.controller4);
-	write_log("WHDBooter - Host: Mouse 1        : %s  \n", host_detail.mouse1);
-	write_log("WHDBooter - Host: Mouse 2        : %s  \n", host_detail.mouse2);
-	//printf("ra_qui: %s  \n", host_detail.ra_quit);
-	//printf("ra_men: %s  \n", host_detail.ra_menu);
-	//printf("ra_rst: %s  \n", host_detail.ra_reset);
-	//printf("ky_qut: %s  \n", host_detail.key_quit);
-	//printf("ky_gui: %s  \n", host_detail.key_gui);
-	//printf("deadzn: %s  \n", host_detail.stereo_split);
-	write_log("WHDBooter - Host: Sound On        : %s  \n", host_detail.sound_on);
-	write_log("WHDBooter - Host: Sound Mode      : %s  \n", host_detail.sound_mode);
-	write_log("WHDBooter - Host: Stereo Split    : %s  \n", host_detail.stereo_split);
-	//printf("aspect: %s  \n", host_detail.aspect_ratio);
-	//printf("frames: %s  \n", host_detail.frameskip);
-	write_log("WHDBooter - Host: Fixed Height     : %s  \n", host_detail.fixed_height);
-	write_log("WHDBooter - Host: Fixed Width      : %s  \n", host_detail.fixed_width);
-	write_log("WHDBooter - Host: Fixed CD32 Height: %s  \n", host_detail.fixed_cd32_height);
-	write_log("WHDBooter - Host: Fixed CD32 Width : %s  \n", host_detail.fixed_cd32_width);
+	write_log("WHDBooter - Host: Controller 1   : %s  \n", amiberry_options.default_controller1);
+	write_log("WHDBooter - Host: Controller 2   : %s  \n", amiberry_options.default_controller2);
+	write_log("WHDBooter - Host: Controller 3   : %s  \n", amiberry_options.default_controller3);
+	write_log("WHDBooter - Host: Controller 4   : %s  \n", amiberry_options.default_controller4);
+	write_log("WHDBooter - Host: Mouse 1        : %s  \n", amiberry_options.default_mouse1);
+	write_log("WHDBooter - Host: Mouse 2        : %s  \n", amiberry_options.default_mouse2);
 #endif
 
 	// so remember, we already loaded a .uae config, so we dont need to do the below manual setup for hardware
@@ -980,17 +841,17 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 
 	// WHAT IS THE MAIN CONTROL?
 	// PORT 0 - MOUSE GAMES
-	if (strcmpi(game_detail.control, "mouse") == 0 && !(strcmpi(host_detail.mouse1, "nul") == 0))
+	if (strcmpi(game_detail.control, "mouse") == 0 && strcmpi(amiberry_options.default_mouse1, "") != 0)
 	{
-		_stprintf(txt2, "%s=%s", _T("joyport0"), _T(host_detail.mouse1));
+		_stprintf(txt2, "%s=%s", _T("joyport0"), _T(amiberry_options.default_mouse1));
 		cfgfile_parse_line(prefs, txt2, 0);
 		write_log("WHDBooter Option (Mouse Control): %s\n", txt2);
 	}
 
-		// PORT 0 -  JOYSTICK GAMES
-	else if (!(strcmpi(host_detail.controller2, "nul") == 0))
+	// PORT 0 -  JOYSTICK GAMES
+	else if (strcmpi(amiberry_options.default_controller2, "") != 0)
 	{
-		_stprintf(txt2, "%s=%s", _T("joyport0"), _T(host_detail.controller2));
+		_stprintf(txt2, "%s=%s", _T("joyport0"), _T(amiberry_options.default_controller2));
 		cfgfile_parse_line(prefs, txt2, 0);
 		write_log("WHDBooter Option (Joystick Control): %s\n", txt2);
 	}
@@ -1002,16 +863,16 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	}
 
 	// PORT 1 - MOUSE GAMES
-	if (strcmpi(game_detail.control, "mouse") == 0 && !(strcmpi(host_detail.mouse2, "nul") == 0))
+	if (strcmpi(game_detail.control, "mouse") == 0 && strcmpi(amiberry_options.default_mouse2, "") != 0)
 	{
-		_stprintf(txt2, "%s=%s", _T("joyport1"), _T(host_detail.mouse2));
+		_stprintf(txt2, "%s=%s", _T("joyport1"), _T(amiberry_options.default_mouse2));
 		cfgfile_parse_line(prefs, txt2, 0);
 		write_log("WHDBooter Option (Mouse Control): %s\n", txt2);
 	}
-		// PORT 1 - JOYSTICK GAMES
-	else if (!(strcmpi(host_detail.controller1, "nul") == 0))
+	// PORT 1 - JOYSTICK GAMES
+	else if (strcmpi(amiberry_options.default_controller1, "") != 0)
 	{
-		_stprintf(txt2, "%s=%s", _T("joyport1"), _T(host_detail.controller1));
+		_stprintf(txt2, "%s=%s", _T("joyport1"), _T(amiberry_options.default_controller1));
 		cfgfile_parse_line(prefs, txt2, 0);
 		write_log("WHDBooter Option (Joystick Control): %s\n", txt2);
 	}
@@ -1023,58 +884,20 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	}
 
 	// PARALLEL PORT GAMES
-	if (strcmpi(host_detail.controller3, "nul") != 0)
+	if (strcmpi(amiberry_options.default_controller3, "") != 0)
 	{
-		_stprintf(txt2, "%s=%s", _T("joyport2"), _T(host_detail.controller3));
+		_stprintf(txt2, "%s=%s", _T("joyport2"), _T(amiberry_options.default_controller3));
 		cfgfile_parse_line(prefs, txt2, 0);
 	}
-	if (strcmpi(host_detail.controller4, "nul") != 0)
+	if (strcmpi(amiberry_options.default_controller4, "") != 0)
 	{
-		_stprintf(txt2, "%s=%s", _T("joyport3"), _T(host_detail.controller4));
+		_stprintf(txt2, "%s=%s", _T("joyport3"), _T(amiberry_options.default_controller4));
 		cfgfile_parse_line(prefs, txt2, 0);
 	}
 
 	// CUSTOM CONTROLS
 	if (strlen(custom_settings) > 0)
 		parse_custom_settings(prefs, custom_settings);
-
-	if (!(strcmpi(host_detail.deadzone, "nul") == 0))
-	{
-		_stprintf(txt2, "input.joymouse_deadzone=%s", _T(host_detail.deadzone));
-		cfgfile_parse_line(prefs, txt2, 0);
-		_stprintf(txt2, "input.joystick_deadzone=%s", _T(host_detail.deadzone));
-		cfgfile_parse_line(prefs, txt2, 0);
-	}
-
-	// RETROARCH CONTROLS
-	if (!(strcmpi(host_detail.ra_quit, "nul") == 0))
-	{
-		_stprintf(txt2, "amiberry.use_retroarch_quit=%s", _T(host_detail.ra_quit));
-		cfgfile_parse_line(prefs, txt2, 0);
-	}
-	if (!(strcmpi(host_detail.ra_menu, "nul") == 0))
-	{
-		_stprintf(txt2, "amiberry.use_retroarch_menu=%s", _T(host_detail.ra_menu));
-		cfgfile_parse_line(prefs, txt2, 0);
-	}
-	if (!(strcmpi(host_detail.ra_reset, "nul") == 0))
-	{
-		_stprintf(txt2, "amiberry.use_retroarch_reset=%s", _T(host_detail.ra_reset));
-		cfgfile_parse_line(prefs, txt2, 0);
-	}
-
-	// SOUND OPTIONS
-	if (strcmpi(host_detail.sound_on, "false") == 0 || strcmpi(host_detail.sound_on, "off") == 0 || strcmpi(
-		host_detail.sound_on, "none") == 0)
-	{
-		_stprintf(txt2, "sound_output=none");
-		cfgfile_parse_line(prefs, txt2, 0);
-	}
-	if (!(strcmpi(host_detail.stereo_split, "nul") == 0))
-	{
-		_stprintf(txt2, "sound_stereo_separation=%s", _T(host_detail.stereo_split));
-		cfgfile_parse_line(prefs, txt2, 0);
-	}
 
 	//      *** GAME-SPECIFICS ***
 	//  SET THE GAME COMPATIBILITY SETTINGS
@@ -1232,16 +1055,7 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 		cfgfile_parse_line(prefs, txt2, 0);
 	}
 
-	if (strcmpi(host_detail.fixed_height, "nul") != 0)
-	{
-		_stprintf(txt2, "gfx_height=%s", host_detail.fixed_height);
-		cfgfile_parse_line(prefs, txt2, 0);
-		_stprintf(txt2, "gfx_height_windowed=%s", host_detail.fixed_height);
-		cfgfile_parse_line(prefs, txt2, 0);
-		_stprintf(txt2, "gfx_height_fullscreen=%s", host_detail.fixed_height);
-		cfgfile_parse_line(prefs, txt2, 0);
-	}
-	else if (strcmpi(game_detail.scr_height, "nul") != 0)
+	if (strcmpi(game_detail.scr_height, "nul") != 0)
 	{
 		_stprintf(txt2, "gfx_height=%s", game_detail.scr_height);
 		cfgfile_parse_line(prefs, txt2, 0);
@@ -1251,16 +1065,7 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 		cfgfile_parse_line(prefs, txt2, 0);
 	}
 
-	if (strcmpi(host_detail.fixed_width, "nul") != 0)
-	{
-		_stprintf(txt2, "gfx_width=%s", host_detail.fixed_width);
-		cfgfile_parse_line(prefs, txt2, 0);
-		_stprintf(txt2, "gfx_width_windowed=%s", host_detail.fixed_width);
-		cfgfile_parse_line(prefs, txt2, 0);
-		_stprintf(txt2, "gfx_width_fullscreen=%s", host_detail.fixed_width);
-		cfgfile_parse_line(prefs, txt2, 0);
-	}
-	else if (strcmpi(game_detail.scr_width, "nul") != 0)
+	if (strcmpi(game_detail.scr_width, "nul") != 0)
 	{
 		_stprintf(txt2, "gfx_width=%s", game_detail.scr_width);
 		cfgfile_parse_line(prefs, txt2, 0);

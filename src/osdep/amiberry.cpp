@@ -52,7 +52,7 @@ int enter_gui_key = 0;
 // We don't set a default value for Quitting
 int quit_key = 0;
 // The default value for Action Replay is Pause/Break
-int action_replay_button = SDLK_PAUSE;
+int action_replay_button = 0;
 // No default value for Full Screen toggle
 int fullscreen_key = 0;
 
@@ -67,38 +67,31 @@ std::string get_version_string()
 void set_key_configs(struct uae_prefs* p)
 {
 	if (strncmp(p->open_gui, "", 1) != 0)
-	{
 		// If we have a value in the config, we use that instead
 		enter_gui_key = SDL_GetKeyFromName(p->open_gui);
-	}
 	else
-	{
 		// Otherwise we go for the default found in amiberry.conf
 		enter_gui_key = SDL_GetKeyFromName(amiberry_options.default_open_gui_key);
-	}
-	// if nothing was found in amiberry.conf either, let's default back to F12
+	// if nothing was found in amiberry.conf either, we default back to F12
 	if (enter_gui_key == 0)
 		enter_gui_key = SDLK_F12;
 
 	if (strncmp(p->quit_amiberry, "", 1) != 0)
-	{
-		// If we have a value in the config, we use that instead
 		quit_key = SDL_GetKeyFromName(p->quit_amiberry);
-	}
 	else
-	{
 		quit_key = SDL_GetKeyFromName(amiberry_options.default_quit_key);
-	}
 
 	if (strncmp(p->action_replay, "", 1) != 0)
-	{
 		action_replay_button = SDL_GetKeyFromName(p->action_replay);
-	}
+	else
+		action_replay_button = SDL_GetKeyFromName(amiberry_options.default_ar_key);
+	if (action_replay_button == 0)
+		action_replay_button = SDLK_PAUSE;
 
 	if (strncmp(p->fullscreen_toggle, "", 1) != 0)
-	{
 		fullscreen_key = SDL_GetKeyFromName(p->fullscreen_toggle);
-	}
+	else
+		fullscreen_key = SDL_GetKeyFromName(amiberry_options.default_fullscreen_toggle_key);
 }
 
 int pissoff_value = 15000 * CYCLE_UNIT;
@@ -363,6 +356,9 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->kbd_led_num = -1; // No status on numlock
 	p->kbd_led_scr = -1; // No status on scrollock
 
+	p->gfx_monitor.gfx_size.width = amiberry_options.default_width;
+	p->gfx_monitor.gfx_size.height = amiberry_options.default_height;
+	
 	p->gfx_auto_height = amiberry_options.default_auto_height;
 	p->gfx_correct_aspect = amiberry_options.default_correct_aspect_ratio;
 	
@@ -407,17 +403,28 @@ void target_default_options(struct uae_prefs* p, int type)
 #else
 	amiberry_options.use_sdl2_render_thread = false;
 #endif
+
+	if (amiberry_options.default_stereo_separation >= 0 && amiberry_options.default_stereo_separation <= 10)
+		p->sound_stereo_separation = amiberry_options.default_stereo_separation;
+
+	if (amiberry_options.default_joystick_deadzone >= 0
+		&& amiberry_options.default_joystick_deadzone <= 100
+		&& amiberry_options.default_joystick_deadzone != 33)
+	{
+		p->input_joymouse_deadzone = amiberry_options.default_joystick_deadzone;
+		p->input_joystick_deadzone = amiberry_options.default_joystick_deadzone;
+	}
 	
 	_tcscpy(p->open_gui, amiberry_options.default_open_gui_key);
 	_tcscpy(p->quit_amiberry, amiberry_options.default_quit_key);
-	_tcscpy(p->action_replay, "Pause");
-	_tcscpy(p->fullscreen_toggle, "");
+	_tcscpy(p->action_replay, amiberry_options.default_ar_key);
+	_tcscpy(p->fullscreen_toggle, amiberry_options.default_fullscreen_toggle_key);
 
 	p->input_analog_remap = false;
 
-	p->use_retroarch_quit = true;
-	p->use_retroarch_menu = true;
-	p->use_retroarch_reset = false;
+	p->use_retroarch_quit = amiberry_options.default_retroarch_quit;
+	p->use_retroarch_menu = amiberry_options.default_retroarch_menu;
+	p->use_retroarch_reset = amiberry_options.default_retroarch_reset;
 
 #ifdef ANDROID
 	p->onScreen = 1;
@@ -911,6 +918,14 @@ void save_amiberry_settings(void)
 	snprintf(buffer, MAX_DPATH, "default_quit_key=%s\n", amiberry_options.default_quit_key);
 	fputs(buffer, f);
 
+	// Default key for opening Action Replay
+	snprintf(buffer, MAX_DPATH, "default_ar_key=%s\n", amiberry_options.default_ar_key);
+	fputs(buffer, f);
+
+	// Default key for Fullscreen Toggle
+	snprintf(buffer, MAX_DPATH, "default_fullscreen_toggle_key=%s\n", amiberry_options.default_fullscreen_toggle_key);
+	fputs(buffer, f);
+
 	// Rotation angle of the output display (useful for screens with portrait orientation, like the Go Advance)
 	snprintf(buffer, MAX_DPATH, "rotation_angle=%d\n", amiberry_options.rotation_angle);
 	fputs(buffer, f);
@@ -940,6 +955,58 @@ void save_amiberry_settings(void)
 	snprintf(buffer, MAX_DPATH, "default_auto_height=%s\n", amiberry_options.default_auto_height ? "yes" : "no");
 	fputs(buffer, f);
 
+	// Default Screen Width
+	snprintf(buffer, MAX_DPATH, "default_width=%d\n", amiberry_options.default_width);
+	fputs(buffer, f);
+	
+	// Default Screen Height
+	snprintf(buffer, MAX_DPATH, "default_height=%d\n", amiberry_options.default_height);
+	fputs(buffer, f);
+
+	// Default Stereo Separation
+	snprintf(buffer, MAX_DPATH, "default_stereo_separation=%d\n", amiberry_options.default_stereo_separation);
+	fputs(buffer, f);
+
+	// Default Joystick Deadzone
+	snprintf(buffer, MAX_DPATH, "default_joystick_deadzone=%d\n", amiberry_options.default_joystick_deadzone);
+	fputs(buffer, f);
+
+	// Enable RetroArch Quit by default?
+	snprintf(buffer, MAX_DPATH, "default_retroarch_quit=%s\n", amiberry_options.default_retroarch_quit ? "yes" : "no");
+	fputs(buffer, f);
+
+	// Enable RetroArch Menu by default?
+	snprintf(buffer, MAX_DPATH, "default_retroarch_menu=%s\n", amiberry_options.default_retroarch_menu ? "yes" : "no");
+	fputs(buffer, f);
+
+	// Enable RetroArch Reset by default?
+	snprintf(buffer, MAX_DPATH, "default_retroarch_reset=%s\n", amiberry_options.default_retroarch_reset ? "yes" : "no");
+	fputs(buffer, f);
+
+	// Controller1
+	snprintf(buffer, MAX_DPATH, "default_controller1=%s\n", amiberry_options.default_controller1);
+	fputs(buffer, f);
+
+	// Controller2
+	snprintf(buffer, MAX_DPATH, "default_controller2=%s\n", amiberry_options.default_controller2);
+	fputs(buffer, f);
+
+	// Controller3
+	snprintf(buffer, MAX_DPATH, "default_controller3=%s\n", amiberry_options.default_controller3);
+	fputs(buffer, f);
+
+	// Controller4
+	snprintf(buffer, MAX_DPATH, "default_controller4=%s\n", amiberry_options.default_controller4);
+	fputs(buffer, f);
+
+	// Mouse1
+	snprintf(buffer, MAX_DPATH, "default_mouse1=%s\n", amiberry_options.default_mouse1);
+	fputs(buffer, f);
+
+	// Mouse2
+	snprintf(buffer, MAX_DPATH, "default_mouse2=%s\n", amiberry_options.default_mouse2);
+	fputs(buffer, f);
+	
 	// Paths
 	snprintf(buffer, MAX_DPATH, "path=%s\n", currentDir);
 	fputs(buffer, f);
@@ -1134,6 +1201,8 @@ void load_amiberry_settings(void)
 					cfgfile_yesno(option, value, "input_keyboard_as_joystick_stop_keypresses", &amiberry_options.input_keyboard_as_joystick_stop_keypresses);
 					cfgfile_string(option, value, "default_open_gui_key", amiberry_options.default_open_gui_key, sizeof amiberry_options.default_open_gui_key);
 					cfgfile_string(option, value, "default_quit_key", amiberry_options.default_quit_key, sizeof amiberry_options.default_quit_key);
+					cfgfile_string(option, value, "default_ar_key", amiberry_options.default_ar_key, sizeof amiberry_options.default_ar_key);
+					cfgfile_string(option, value, "default_fullscreen_toggle_key", amiberry_options.default_fullscreen_toggle_key, sizeof amiberry_options.default_fullscreen_toggle_key);
 					cfgfile_intval(option, value, "rotation_angle", &amiberry_options.rotation_angle, 1);
 					cfgfile_yesno(option, value, "default_horizontal_centering", &amiberry_options.default_horizontal_centering);
 					cfgfile_yesno(option, value, "default_vertical_centering", &amiberry_options.default_vertical_centering);
@@ -1141,6 +1210,19 @@ void load_amiberry_settings(void)
 					cfgfile_yesno(option, value, "default_frameskip", &amiberry_options.default_frameskip);
 					cfgfile_yesno(option, value, "default_correct_aspect_ratio", &amiberry_options.default_correct_aspect_ratio);
 					cfgfile_yesno(option, value, "default_auto_height", &amiberry_options.default_auto_height);
+					cfgfile_intval(option, value, "default_width", &amiberry_options.default_width, 1);
+					cfgfile_intval(option, value, "default_height", &amiberry_options.default_height, 1);
+					cfgfile_intval(option, value, "default_stereo_separation", &amiberry_options.default_stereo_separation, 1);
+					cfgfile_intval(option, value, "default_joystick_deadzone", &amiberry_options.default_joystick_deadzone, 1);
+					cfgfile_yesno(option, value, "default_retroarch_quit", &amiberry_options.default_retroarch_quit);
+					cfgfile_yesno(option, value, "default_retroarch_menu", &amiberry_options.default_retroarch_menu);
+					cfgfile_yesno(option, value, "default_retroarch_reset", &amiberry_options.default_retroarch_reset);
+					cfgfile_string(option, value, "default_controller1", amiberry_options.default_controller1, sizeof amiberry_options.default_controller1);
+					cfgfile_string(option, value, "default_controller2", amiberry_options.default_controller2, sizeof amiberry_options.default_controller2);
+					cfgfile_string(option, value, "default_controller3", amiberry_options.default_controller3, sizeof amiberry_options.default_controller3);
+					cfgfile_string(option, value, "default_controller4", amiberry_options.default_controller4, sizeof amiberry_options.default_controller4);
+					cfgfile_string(option, value, "default_mouse1", amiberry_options.default_mouse1, sizeof amiberry_options.default_mouse1);
+					cfgfile_string(option, value, "default_mouse2", amiberry_options.default_mouse2, sizeof amiberry_options.default_mouse2);
 				}
 			}
 		}

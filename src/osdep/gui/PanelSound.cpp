@@ -60,7 +60,7 @@ public:
 
 	std::string getElementAt(const int i) override
 	{
-		if (i < 0 || i >= freq.size())
+		if (i < 0 || i >= static_cast<int>(freq.size()))
 			return "---";
 		return freq[i];
 	}
