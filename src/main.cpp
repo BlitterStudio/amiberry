@@ -931,6 +931,20 @@ bool download_file(const std::string& source, std::string destination)
 	return false;
 }
 
+void download_rtb(std::string filename)
+{
+	char destination[MAX_DPATH];
+	char url[MAX_DPATH];
+	
+	snprintf(destination, MAX_DPATH, "%s/whdboot/save-data/Kickstarts/%s", start_path_data, filename);
+	if (get_file_size(destination) <= 0)
+	{
+		write_log("Downloading %s ...\n", destination);
+		snprintf(url, MAX_DPATH, "https://github.com/midwan/amiberry/blob/master/whdboot/save-data/Kickstarts/%s?raw=true", filename);
+		download_file(url,  destination);
+	}
+}
+
 // In case of error, print the error code and close the application
 void check_error_sdl(const bool check, const char* message)
 {

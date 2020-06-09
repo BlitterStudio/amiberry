@@ -189,36 +189,11 @@ public:
 		download_file("https://github.com/midwan/amiberry/blob/master/whdboot/boot-data.zip?raw=true", destination);
 
 		// download kickstart RTB files for maximum compatibility
-		snprintf(destination, MAX_DPATH, "%s/whdboot/save-data/Kickstarts/kick33180.A500.RTB", start_path_data);
-		if (get_file_size(destination) <= 0)
-		{
-			write_log("Downloading %s ...\n", destination);
-			download_file("https://github.com/midwan/amiberry/blob/master/whdboot/save-data/Kickstarts/kick33180.A500.RTB?raw=true", destination);
-		}
-		snprintf(destination, MAX_DPATH, "%s/whdboot/save-data/Kickstarts/kick34005.A500.RTB", start_path_data);
-		if (get_file_size(destination) <= 0)
-		{
-			write_log("Downloading %s ...\n", destination);
-			download_file("https://github.com/midwan/amiberry/blob/master/whdboot/save-data/Kickstarts/kick34005.A500.RTB?raw=true", destination);
-		}
-		snprintf(destination, MAX_DPATH, "%s/whdboot/save-data/Kickstarts/kick40063.A600.RTB", start_path_data);
-		if (get_file_size(destination) <= 0)
-		{
-			write_log("Downloading %s ...\n", destination);
-			download_file("https://github.com/midwan/amiberry/blob/master/whdboot/save-data/Kickstarts/kick40063.A600.RTB?raw=true", destination);
-		}
-		snprintf(destination, MAX_DPATH, "%s/whdboot/save-data/Kickstarts/kick40068.A1200.RTB", start_path_data);
-		if (get_file_size(destination) <= 0)
-		{
-			write_log("Downloading %s ...\n", destination);
-			download_file("https://github.com/midwan/amiberry/blob/master/whdboot/save-data/Kickstarts/kick40068.A1200.RTB?raw=true", destination);
-		}
-		snprintf(destination, MAX_DPATH, "%s/whdboot/save-data/Kickstarts/kick40068.A4000.RTB", start_path_data);
-		if (get_file_size(destination) <= 0)
-		{
-			write_log("Downloading %s ...\n", destination);
-			download_file("https://github.com/midwan/amiberry/blob/master/whdboot/save-data/Kickstarts/kick40068.A4000.RTB?raw=true", destination);
-		}
+		download_rtb("kick33180.A500.RTB");
+		download_rtb("kick34005.A500.RTB");
+		download_rtb("kick40063.A600.RTB");
+		download_rtb("kick40068.A1200.RTB");
+		download_rtb("kick40068.A4000.RTB");
 
 		snprintf(destination, MAX_DPATH, "%s/whdboot/game-data/whdload_db.xml", start_path_data);
 		write_log("Downloading %s ...\n", destination);

@@ -189,5 +189,6 @@ extern void UpdateGuiScreen();
 extern void cap_fps(Uint64 start, int fps);
 extern long get_file_size(const std::string& filename);
 extern bool download_file(const std::string& source, std::string destination);
+extern void download_rtb(std::string filename);
 
 #endif // GUI_HANDLING_H
