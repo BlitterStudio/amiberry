@@ -29,8 +29,8 @@ static gcn::Button* cmdCreateDDDisk;
 static gcn::Button* cmdCreateHDDisk;
 
 static const char* diskfile_filter[] = {".adf", ".adz", ".fdi", ".ipf", ".zip", ".dms", ".gz", ".xz", "\0"};
-static const char* drive_speed_list[] = {"100% (compatible)", "200%", "400%", "800%"};
-static const int drive_speed_values[] = {100, 200, 400, 800};
+static const char* drive_speed_list[] = {"Turbo", "100% (compatible)", "200%", "400%", "800%"};
+static const int drive_speed_values[] = {0, 100, 200, 400, 800};
 
 static void AdjustDropDownControls();
 static bool bLoadConfigForDisk = false;
@@ -283,7 +283,7 @@ class DriveSpeedSliderActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		changed_prefs.floppy_speed = drive_speed_values[int(sldDriveSpeed->getValue())];
+		changed_prefs.floppy_speed = drive_speed_values[static_cast<int>(sldDriveSpeed->getValue())];
 		RefreshPanelFloppy();
 	}
 };
@@ -437,14 +437,14 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 	}
 
 	lblDriveSpeed = new gcn::Label("Floppy Drive Emulation Speed:");
-	sldDriveSpeed = new gcn::Slider(0, 3);
+	sldDriveSpeed = new gcn::Slider(0, 4);
 	sldDriveSpeed->setSize(110, SLIDER_HEIGHT);
 	sldDriveSpeed->setBaseColor(gui_baseCol);
 	sldDriveSpeed->setMarkerLength(20);
 	sldDriveSpeed->setStepLength(1);
 	sldDriveSpeed->setId("DriveSpeed");
 	sldDriveSpeed->addActionListener(driveSpeedSliderActionListener);
-	lblDriveSpeedInfo = new gcn::Label(drive_speed_list[0]);
+	lblDriveSpeedInfo = new gcn::Label(drive_speed_list[1]);
 
 	cmdSaveForDisk = new gcn::Button("Save config for disk");
 	cmdSaveForDisk->setSize(cmdSaveForDisk->getWidth(), BUTTON_HEIGHT);
@@ -591,7 +591,7 @@ void RefreshPanelFloppy()
 
 	chkLoadConfig->setSelected(bLoadConfigForDisk);
 
-	for (i = 0; i < 4; ++i)
+	for (i = 0; i <= 4; ++i)
 	{
 		if (changed_prefs.floppy_speed == drive_speed_values[i])
 		{
