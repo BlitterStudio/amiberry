@@ -178,21 +178,15 @@ public:
 	{
 		char destination[MAX_DPATH];
 
-		//  download WHDLOAD
+		//  download WHDLoad executable
 		snprintf(destination, MAX_DPATH, "%s/whdboot/WHDLoad", start_path_data);
-		if (get_file_size(destination) <= 0)
-		{
-			write_log("Downloading %s ...\n", destination);
-			download_file("https://github.com/midwan/amiberry/blob/master/whdboot/WHDLoad?raw=true", destination);
-		}
+		write_log("Downloading %s ...\n", destination);
+		download_file("https://github.com/midwan/amiberry/blob/master/whdboot/WHDLoad?raw=true", destination);
 
 		//  download boot-data.zip
 		snprintf(destination, MAX_DPATH, "%s/whdboot/boot-data.zip", start_path_data);
-		if (get_file_size(destination) <= 0)
-		{
-			write_log("Downloading %s ...\n", destination);
-			download_file("https://github.com/midwan/amiberry/blob/master/whdboot/boot-data.zip?raw=true", destination);
-		}
+		write_log("Downloading %s ...\n", destination);
+		download_file("https://github.com/midwan/amiberry/blob/master/whdboot/boot-data.zip?raw=true", destination);
 
 		// download kickstart RTB files for maximum compatibility
 		snprintf(destination, MAX_DPATH, "%s/whdboot/save-data/Kickstarts/kick33180.A500.RTB", start_path_data);
