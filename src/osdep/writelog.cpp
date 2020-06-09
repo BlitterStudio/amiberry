@@ -11,10 +11,10 @@
 
 #include "sysdeps.h"
 #include "uae.h"
+#include "options.h"
 
 #define WRITE_LOG_BUF_SIZE 4096
 FILE *debugfile = NULL;
-extern bool write_logfile;
 
 void console_out (const TCHAR *format,...)
 {
@@ -29,7 +29,7 @@ void console_out (const TCHAR *format,...)
 
 void write_log(const char* format, ...)
 {
-    if (write_logfile)
+    if (amiberry_options.write_logfile)
     {
         // Redirect logging to Android's logcat
 #ifdef ANDROID

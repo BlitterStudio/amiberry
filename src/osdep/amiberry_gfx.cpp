@@ -374,7 +374,7 @@ int graphics_setup(void)
 
 	if (sdl_window == nullptr)
 	{
-		if (rotation_angle != 0 && rotation_angle != 180)
+		if (amiberry_options.rotation_angle != 0 && amiberry_options.rotation_angle != 180)
 		{
 			sdl_window = SDL_CreateWindow("Amiberry",
 				SDL_WINDOWPOS_CENTERED,
@@ -653,7 +653,7 @@ static void open_screen(struct uae_prefs* p)
 			pixel_format = SDL_PIXELFORMAT_RGBA32;
 		}
 
-		if (rotation_angle == 0 || rotation_angle == 180)
+		if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
 		{
 			SDL_RenderSetLogicalSize(renderer, display_width, display_height);
 			renderQuad = { 0, 0, display_width, display_height };
@@ -673,7 +673,7 @@ static void open_screen(struct uae_prefs* p)
 		const auto width = display_width * 2 >> p->gfx_resolution;
 		const auto height = display_height * 2 >> p->gfx_vresolution;
 
-		if (rotation_angle == 0 || rotation_angle == 180)
+		if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
 		{
 			SDL_RenderSetLogicalSize(renderer, width, height);
 			renderQuad = { 0, 0, width, height };
@@ -894,7 +894,7 @@ int sdl2_render_thread(void *ptr) {
 
 	SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
 	SDL_RenderClear(renderer);
-	SDL_RenderCopyEx(renderer, texture, nullptr, &renderQuad, rotation_angle, nullptr, SDL_FLIP_NONE);
+	SDL_RenderCopyEx(renderer, texture, nullptr, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
 	return 0;
 }
 
@@ -960,7 +960,7 @@ void show_screen(int mode)
 	wait_for_display_thread();
 	write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SHOW, 1);
 #else
-	if (use_sdl2_render_thread)
+	if (amiberry_options.use_sdl2_render_thread)
 	{
 		// Wait for the last thread to finish before rendering it.
 		SDL_WaitThread(renderthread, NULL);
@@ -974,7 +974,7 @@ void show_screen(int mode)
 	{
 		SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
 		SDL_RenderClear(renderer);
-		SDL_RenderCopyEx(renderer, texture, nullptr, &renderQuad, rotation_angle, nullptr, SDL_FLIP_NONE);
+		SDL_RenderCopyEx(renderer, texture, nullptr, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
 		SDL_RenderPresent(renderer);
 	}
 #endif

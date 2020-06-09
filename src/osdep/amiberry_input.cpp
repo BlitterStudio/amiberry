@@ -1744,7 +1744,7 @@ int input_get_default_joystick_analog(struct uae_input_device* uid, int i, int p
 bool key_used_by_retroarch_joy(int scancode)
 {
 	auto key_used = false;
-	if (input_keyboard_as_joystick_stop_keypresses)
+	if (amiberry_options.input_keyboard_as_joystick_stop_keypresses)
 	{
 		//currprefs.jports[port]
 		for (auto joyid = 0; joyid < MAX_JPORTS && !key_used; joyid++)

@@ -269,12 +269,12 @@ void UpdateGuiScreen()
 	vc_dispmanx_update_submit_sync(updateHandle);
 #else
 	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
-	if (rotation_angle == 0 || rotation_angle == 180)
+	if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
 		renderQuad = { 0, 0, gui_screen->w, gui_screen->h };
 	else
 		renderQuad = { -(GUI_WIDTH - GUI_HEIGHT) / 2, (GUI_WIDTH - GUI_HEIGHT) / 2, gui_screen->w, gui_screen->h };
 	
-	SDL_RenderCopyEx(renderer, gui_texture, nullptr, &renderQuad, rotation_angle, nullptr, SDL_FLIP_NONE);
+	SDL_RenderCopyEx(renderer, gui_texture, nullptr, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
 #ifdef SOFTWARE_CURSOR
 	swcursor(true);
 #endif
@@ -410,7 +410,7 @@ void amiberry_gui_init()
 
 	if (sdl_window)
 	{
-		if (rotation_angle != 0 && rotation_angle != 180)
+		if (amiberry_options.rotation_angle != 0 && amiberry_options.rotation_angle != 180)
 			SDL_SetWindowSize(sdl_window, GUI_HEIGHT, GUI_WIDTH);
 		else
 			SDL_SetWindowSize(sdl_window, GUI_WIDTH, GUI_HEIGHT);
@@ -424,7 +424,7 @@ void amiberry_gui_init()
 	check_error_sdl(gui_texture == nullptr, "Unable to create GUI texture:");
 #endif
 	
-	if (rotation_angle == 0 || rotation_angle == 180)
+	if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
 		SDL_RenderSetLogicalSize(renderer, GUI_WIDTH, GUI_HEIGHT);
 	else
 		SDL_RenderSetLogicalSize(renderer, GUI_HEIGHT, GUI_WIDTH);
@@ -837,7 +837,7 @@ void checkInput()
 
 void amiberry_gui_run()
 {
-	if (gui_joystick_control)
+	if (amiberry_options.gui_joystick_control)
 	{
 		const auto available_joysticks = SDL_NumJoysticks();
 		if (available_joysticks > 0)
@@ -1142,7 +1142,7 @@ void gui_widgets_init()
 	//--------------------------------------------------
 	// Activate last active panel
 	//--------------------------------------------------
-	if (!emulating && quickstart_start)
+	if (!emulating && amiberry_options.quickstart_start)
 		last_active_panel = 2;
 	categories[last_active_panel].selector->requestFocus();
 	cmdHelp->setVisible(categories[last_active_panel].HelpFunc != nullptr);

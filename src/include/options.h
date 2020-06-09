@@ -1095,6 +1095,27 @@ struct amiberry_customised_layout
 	struct joypad_map_layout left_trigger;
 	struct joypad_map_layout right_trigger;
 };
+
+struct amiberry_options
+{
+	bool quickstart_start = true;
+	bool read_config_descriptions = true;
+	bool write_logfile = false;
+	bool swap_win_alt_keys = false;
+	bool gui_joystick_control = true;
+	bool use_sdl2_render_thread = false;
+	int default_line_mode = 0;
+	int input_default_mouse_speed = 100;
+	bool input_keyboard_as_joystick_stop_keypresses = false;
+	char default_open_gui_key[128]{};
+	char default_quit_key[128]{};
+	int rotation_angle = 0;
+	bool default_horizontal_centering = false;
+	bool default_vertical_centering = false;
+	int default_scaling_method = -1;
+	
+};
+extern struct amiberry_options amiberry_options;
 #endif
 
 extern const int RemapEventList[];

@@ -345,7 +345,7 @@ void ReadConfigFileList(void)
 		strncpy(tmp->Name, file.c_str(), MAX_DPATH - 1);
 		removeFileExtension(tmp->Name);
 		// If the user has many (thousands) of configs, this will take a long time
-		if (read_config_descriptions)
+		if (amiberry_options.read_config_descriptions)
 		{
 			struct uae_prefs *p = cfgfile_open(tmp->FullPath, NULL);
 			if (p) {

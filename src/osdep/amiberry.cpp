@@ -41,28 +41,11 @@
 extern FILE* debugfile;
 
 int pause_emulation;
-int quickstart_start = 1;
 int quickstart_model = 0;
 int quickstart_conf = 0;
 bool host_poweroff = false;
-bool read_config_descriptions = true;
-bool write_logfile = false;
-bool scanlines_by_default = false;
-bool swap_win_alt_keys = false;
-bool gui_joystick_control = true;
-#ifdef USE_RENDER_THREAD
-bool use_sdl2_render_thread = true;
-#else
-bool use_sdl2_render_thread = false;
-#endif
-int input_default_mouse_speed = 100;
-bool input_keyboard_as_joystick_stop_keypresses = false;
-static char default_open_gui_key[128];
-static char default_quit_key[128];
-int rotation_angle = 0;
-bool default_horizontal_centering = false;
-bool default_vertical_centering = false;
-int default_scaling_method = -1;
+
+struct amiberry_options amiberry_options = {};
 
 // Default Enter GUI key is F12
 int enter_gui_key = 0;
@@ -91,7 +74,7 @@ void set_key_configs(struct uae_prefs* p)
 	else
 	{
 		// Otherwise we go for the default found in amiberry.conf
-		enter_gui_key = SDL_GetKeyFromName(default_open_gui_key);
+		enter_gui_key = SDL_GetKeyFromName(amiberry_options.default_open_gui_key);
 	}
 	// if nothing was found in amiberry.conf either, let's default back to F12
 	if (enter_gui_key == 0)
@@ -104,7 +87,7 @@ void set_key_configs(struct uae_prefs* p)
 	}
 	else
 	{
-		quit_key = SDL_GetKeyFromName(default_quit_key);
+		quit_key = SDL_GetKeyFromName(amiberry_options.default_quit_key);
 	}
 
 	if (strncmp(p->action_replay, "", 1) != 0)
@@ -213,7 +196,7 @@ bool setpaused(int priority)
 
 void logging_init(void)
 {
-	if (write_logfile)
+	if (amiberry_options.write_logfile)
 	{
 		static int started;
 		static int first;
@@ -383,32 +366,46 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->gfx_auto_height = false;
 	p->gfx_correct_aspect = 1; // Default is Enabled
 	p->scaling_method = -1; //Default is Auto
-	if (scanlines_by_default)
+	if (amiberry_options.default_line_mode == 1)
 	{
+		// Double line mode
+		p->gfx_vresolution = VRES_DOUBLE;
+		p->gfx_pscanlines = 0;
+	}
+	else if (amiberry_options.default_line_mode == 2)
+	{
+		// Scanlines line mode
 		p->gfx_vresolution = VRES_DOUBLE;
 		p->gfx_pscanlines = 1;
 	}
 	else
 	{
-		p->gfx_vresolution = VRES_NONDOUBLE; // Disabled by default due to performance hit
+		// Single line mode (default)
+		p->gfx_vresolution = VRES_NONDOUBLE;
 		p->gfx_pscanlines = 0;
 	}
 
-	if (default_horizontal_centering)
+	if (amiberry_options.default_horizontal_centering)
 		p->gfx_xcenter = 2;
 	
-	if (default_vertical_centering)
+	if (amiberry_options.default_vertical_centering)
 		p->gfx_ycenter = 2;
 
-	if (default_scaling_method != -1)
+	if (amiberry_options.default_scaling_method != -1)
 	{
 		// only valid values are -1 (Auto), 0 (Nearest) and 1 (Linear)
-		if (default_scaling_method == 0 || default_scaling_method == 1)
-			p->scaling_method = default_scaling_method;
+		if (amiberry_options.default_scaling_method == 0 || amiberry_options.default_scaling_method == 1)
+			p->scaling_method = amiberry_options.default_scaling_method;
 	}
+
+#ifdef USE_RENDER_THREAD
+	amiberry_options.use_sdl2_render_thread = true;
+#else
+	amiberry_options.use_sdl2_render_thread = false;
+#endif
 	
-	_tcscpy(p->open_gui, default_open_gui_key);
-	_tcscpy(p->quit_amiberry, default_quit_key);
+	_tcscpy(p->open_gui, amiberry_options.default_open_gui_key);
+	_tcscpy(p->quit_amiberry, amiberry_options.default_quit_key);
 	_tcscpy(p->action_replay, "Pause");
 	_tcscpy(p->fullscreen_toggle, "");
 
@@ -649,12 +646,12 @@ void set_retroarch_file(char* newpath)
 
 bool get_logfile_enabled()
 {
-	return write_logfile;
+	return amiberry_options.write_logfile;
 }
 
 void set_logfile_enabled(bool enabled)
 {
-	write_logfile = enabled;
+	amiberry_options.write_logfile = enabled;
 }
 
 void get_logfile_path(char* out, int size)
@@ -861,63 +858,70 @@ void save_amiberry_settings(void)
 	char buffer[MAX_DPATH];
 
 	// Should the Quickstart Panel be the default when opening the GUI?
-	snprintf(buffer, MAX_DPATH, "Quickstart=%d\n", quickstart_start);
+	snprintf(buffer, MAX_DPATH, "Quickstart=%d\n", amiberry_options.quickstart_start);
 	fputs(buffer, f);
 
 	// Open each config file and read the Description field? 
 	// This will slow down scanning the config list if it's very large
-	snprintf(buffer, MAX_DPATH, "read_config_descriptions=%s\n", read_config_descriptions ? "yes" : "no");
+	snprintf(buffer, MAX_DPATH, "read_config_descriptions=%s\n", amiberry_options.read_config_descriptions ? "yes" : "no");
 	fputs(buffer, f);
 
 	// Write to logfile? 
 	// If enabled, a file named "amiberry_log.txt" will be generated in the startup folder
-	snprintf(buffer, MAX_DPATH, "write_logfile=%s\n", write_logfile ? "yes" : "no");
+	snprintf(buffer, MAX_DPATH, "write_logfile=%s\n", amiberry_options.write_logfile ? "yes" : "no");
 	fputs(buffer, f);
 
 	// Scanlines ON by default?
 	// This will only be enabled if the vertical height is enough, as we need Line Doubling set to ON also
 	// Beware this comes with a performance hit, as double the amount of lines need to be drawn on-screen
-	snprintf(buffer, MAX_DPATH, "scanlines_by_default=%s\n", scanlines_by_default ? "yes" : "no");
+	snprintf(buffer, MAX_DPATH, "default_line_mode=%d\n", amiberry_options.default_line_mode);
 	fputs(buffer, f);
 
 	// Swap Win keys with Alt keys?
 	// This helps with keyboards that may not have 2 Win keys and no Menu key either
-	snprintf(buffer, MAX_DPATH, "swap_win_alt_keys=%s\n", swap_win_alt_keys ? "yes" : "no");
+	snprintf(buffer, MAX_DPATH, "swap_win_alt_keys=%s\n", amiberry_options.swap_win_alt_keys ? "yes" : "no");
 	fputs(buffer, f);
 
 	// Disable controller in the GUI?
 	// If you want to disable the default behavior for some reason
-	snprintf(buffer, MAX_DPATH, "gui_joystick_control=%s\n", gui_joystick_control ? "yes" : "no");
+	snprintf(buffer, MAX_DPATH, "gui_joystick_control=%s\n", amiberry_options.gui_joystick_control ? "yes" : "no");
 	fputs(buffer, f);
 
 	// Use a separate render thread under SDL2?
 	// This might give a performance boost, but it's not supported on all SDL2 back-ends
-	snprintf(buffer, MAX_DPATH, "use_sdl2_render_thread=%s\n", use_sdl2_render_thread ? "yes" : "no");
+	snprintf(buffer, MAX_DPATH, "use_sdl2_render_thread=%s\n", amiberry_options.use_sdl2_render_thread ? "yes" : "no");
 	fputs(buffer, f);
 
+	// Default mouse input speed
+	snprintf(buffer, MAX_DPATH, "input_default_mouse_speed=%d\n", amiberry_options.input_default_mouse_speed);
+	fputs(buffer, f);
+
+	// When using Keyboard as Joystick, stop any double keypresses
+	snprintf(buffer, MAX_DPATH, "input_keyboard_as_joystick_stop_keypresses=%s\n", amiberry_options.input_keyboard_as_joystick_stop_keypresses ? "yes" : "no");
+	
 	// Default key for opening the GUI (e.g. "F12")
-	snprintf(buffer, MAX_DPATH, "default_open_gui_key=%s\n", default_open_gui_key);
+	snprintf(buffer, MAX_DPATH, "default_open_gui_key=%s\n", amiberry_options.default_open_gui_key);
 	fputs(buffer, f);
 
 	// Default key for Quitting the emulator
-	snprintf(buffer, MAX_DPATH, "default_quit_key=%s\n", default_quit_key);
+	snprintf(buffer, MAX_DPATH, "default_quit_key=%s\n", amiberry_options.default_quit_key);
 	fputs(buffer, f);
 
 	// Rotation angle of the output display (useful for screens with portrait orientation, like the Go Advance)
-	snprintf(buffer, MAX_DPATH, "rotation_angle=%d\n", rotation_angle);
+	snprintf(buffer, MAX_DPATH, "rotation_angle=%d\n", amiberry_options.rotation_angle);
 	fputs(buffer, f);
 
 	// Enable Horizontal Centering by default?
-	snprintf(buffer, MAX_DPATH, "default_horizontal_centering=%s\n", default_horizontal_centering ? "yes" : "no");
+	snprintf(buffer, MAX_DPATH, "default_horizontal_centering=%s\n", amiberry_options.default_horizontal_centering ? "yes" : "no");
 	fputs(buffer, f);
 
 	// Enable Vertical Centering by default?
-	snprintf(buffer, MAX_DPATH, "default_vertical_centering=%s\n", default_vertical_centering ? "yes" : "no");
+	snprintf(buffer, MAX_DPATH, "default_vertical_centering=%s\n", amiberry_options.default_vertical_centering ? "yes" : "no");
 	fputs(buffer, f);
 
 	// Scaling method to use by default?
 	// Valid options are: -1 Auto, 0 Nearest Neighbor, 1 Linear
-	snprintf(buffer, MAX_DPATH, "default_scaling_method=%d\n", default_scaling_method);
+	snprintf(buffer, MAX_DPATH, "default_scaling_method=%d\n", amiberry_options.default_scaling_method);
 	fputs(buffer, f);
 	
 	// Paths
@@ -1103,21 +1107,21 @@ void load_amiberry_settings(void)
 					cfgfile_intval(option, value, "ROMs", &numROMs, 1);
 					cfgfile_intval(option, value, "MRUDiskList", &numDisks, 1);
 					cfgfile_intval(option, value, "MRUCDList", &numCDs, 1);
-					cfgfile_intval(option, value, "Quickstart", &quickstart_start, 1);
-					cfgfile_yesno(option, value, "read_config_descriptions", &read_config_descriptions);
-					cfgfile_yesno(option, value, "write_logfile", &write_logfile);
-					cfgfile_yesno(option, value, "scanlines_by_default", &scanlines_by_default);
-					cfgfile_yesno(option, value, "swap_win_alt_keys", &swap_win_alt_keys);
-					cfgfile_yesno(option, value, "gui_joystick_control", &gui_joystick_control);
-					cfgfile_yesno(option, value, "use_sdl2_render_thread", &use_sdl2_render_thread);
-					cfgfile_intval(option, value, "input_default_mouse_speed", &input_default_mouse_speed, 1);
-					cfgfile_yesno(option, value, "input_keyboard_as_joystick_stop_keypresses", &input_keyboard_as_joystick_stop_keypresses);
-					cfgfile_string(option, value, "default_open_gui_key", default_open_gui_key, sizeof default_open_gui_key);
-					cfgfile_string(option, value, "default_quit_key", default_quit_key, sizeof default_quit_key);
-					cfgfile_intval(option, value, "rotation_angle", &rotation_angle, 1);
-					cfgfile_yesno(option, value, "default_horizontal_centering", &default_horizontal_centering);
-					cfgfile_yesno(option, value, "default_vertical_centering", &default_vertical_centering);
-					cfgfile_intval(option, value, "default_scaling_method", &default_scaling_method, 1);
+					cfgfile_yesno(option, value, "Quickstart", &amiberry_options.quickstart_start);
+					cfgfile_yesno(option, value, "read_config_descriptions", &amiberry_options.read_config_descriptions);
+					cfgfile_yesno(option, value, "write_logfile", &amiberry_options.write_logfile);
+					cfgfile_intval(option, value, "default_line_mode", &amiberry_options.default_line_mode, 1);
+					cfgfile_yesno(option, value, "swap_win_alt_keys", &amiberry_options.swap_win_alt_keys);
+					cfgfile_yesno(option, value, "gui_joystick_control", &amiberry_options.gui_joystick_control);
+					cfgfile_yesno(option, value, "use_sdl2_render_thread", &amiberry_options.use_sdl2_render_thread);
+					cfgfile_intval(option, value, "input_default_mouse_speed", &amiberry_options.input_default_mouse_speed, 1);
+					cfgfile_yesno(option, value, "input_keyboard_as_joystick_stop_keypresses", &amiberry_options.input_keyboard_as_joystick_stop_keypresses);
+					cfgfile_string(option, value, "default_open_gui_key", amiberry_options.default_open_gui_key, sizeof amiberry_options.default_open_gui_key);
+					cfgfile_string(option, value, "default_quit_key", amiberry_options.default_quit_key, sizeof amiberry_options.default_quit_key);
+					cfgfile_intval(option, value, "rotation_angle", &amiberry_options.rotation_angle, 1);
+					cfgfile_yesno(option, value, "default_horizontal_centering", &amiberry_options.default_horizontal_centering);
+					cfgfile_yesno(option, value, "default_vertical_centering", &amiberry_options.default_vertical_centering);
+					cfgfile_intval(option, value, "default_scaling_method", &amiberry_options.default_scaling_method, 1);
 				}
 			}
 		}
@@ -1349,7 +1353,7 @@ int handle_msgpump()
 					}
 				}
 				// If the reset combination was pressed, handle it
-				if (swap_win_alt_keys)
+				if (amiberry_options.swap_win_alt_keys)
 				{
 					if (keystate[SDL_SCANCODE_LCTRL] && keystate[SDL_SCANCODE_LALT] && (keystate[SDL_SCANCODE_RALT] || keystate[SDL_SCANCODE_APPLICATION]))
 					{
@@ -1390,7 +1394,7 @@ int handle_msgpump()
 					}
 
 					// Handle all other keys
-					if (swap_win_alt_keys)
+					if (amiberry_options.swap_win_alt_keys)
 					{
 						if (event.key.keysym.scancode == SDL_SCANCODE_LALT)
 							event.key.keysym.scancode = SDL_SCANCODE_LGUI;
@@ -1409,7 +1413,7 @@ int handle_msgpump()
 			{
 				if (event.key.repeat == 0)
 				{
-					if (swap_win_alt_keys)
+					if (amiberry_options.swap_win_alt_keys)
 					{
 						if (event.key.keysym.scancode == SDL_SCANCODE_LALT)
 							event.key.keysym.scancode = SDL_SCANCODE_LGUI;

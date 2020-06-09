@@ -735,7 +735,7 @@ class QuickstartModeActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		quickstart_start = chkQuickstartMode->isSelected();
+		amiberry_options.quickstart_start = chkQuickstartMode->isSelected();
 	}
 };
 
@@ -1065,7 +1065,7 @@ void RefreshPanelQuickstart(void)
 	cmdCDSelect->setEnabled(changed_prefs.cdslots[0].inuse);
 	cboCDFile->setEnabled(changed_prefs.cdslots[0].inuse);
 
-	chkQuickstartMode->setSelected(quickstart_start);
+	chkQuickstartMode->setSelected(amiberry_options.quickstart_start);
 }
 
 bool HelpPanelQuickstart(std::vector<std::string>& helptext)

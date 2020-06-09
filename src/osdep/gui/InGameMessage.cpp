@@ -122,7 +122,7 @@ void message_UpdateScreen()
 	vc_dispmanx_update_submit_sync(updateHandle);
 #else
 	SDL_UpdateTexture(msg_texture, nullptr, msg_screen->pixels, msg_screen->pitch);
-	SDL_RenderCopyEx(renderer, msg_texture, nullptr, nullptr, rotation_angle, nullptr, SDL_FLIP_NONE);
+	SDL_RenderCopyEx(renderer, msg_texture, nullptr, nullptr, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
 	SDL_RenderPresent(renderer);
 #endif
 }

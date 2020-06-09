@@ -40,12 +40,10 @@ extern gcn::SDLInput* gui_input;
 extern SDL_Surface* gui_screen;
 extern SDL_Joystick* gui_joystick;
 extern gcn::SDLGraphics* gui_graphics;
-extern bool gui_joystick_control;
 
 extern char currentDir[MAX_DPATH];
 extern char last_loaded_config[MAX_DPATH];
 
-extern int quickstart_start;
 extern int quickstart_model;
 extern int quickstart_conf;
 
@@ -58,7 +56,6 @@ typedef struct
 } ConfigFileInfo;
 
 extern vector<ConfigFileInfo*> ConfigFilesList;
-extern bool read_config_descriptions;
 
 void InitPanelAbout(const struct _ConfigCategory& category);
 void ExitPanelAbout();
