@@ -363,9 +363,17 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->kbd_led_num = -1; // No status on numlock
 	p->kbd_led_scr = -1; // No status on scrollock
 
-	p->gfx_auto_height = false;
-	p->gfx_correct_aspect = 1; // Default is Enabled
+	p->gfx_auto_height = amiberry_options.default_auto_height;
+	p->gfx_correct_aspect = amiberry_options.default_correct_aspect_ratio;
+	
 	p->scaling_method = -1; //Default is Auto
+	if (amiberry_options.default_scaling_method != -1)
+	{
+		// only valid values are -1 (Auto), 0 (Nearest) and 1 (Linear)
+		if (amiberry_options.default_scaling_method == 0 || amiberry_options.default_scaling_method == 1)
+			p->scaling_method = amiberry_options.default_scaling_method;
+	}
+	
 	if (amiberry_options.default_line_mode == 1)
 	{
 		// Double line mode
@@ -391,13 +399,9 @@ void target_default_options(struct uae_prefs* p, int type)
 	if (amiberry_options.default_vertical_centering)
 		p->gfx_ycenter = 2;
 
-	if (amiberry_options.default_scaling_method != -1)
-	{
-		// only valid values are -1 (Auto), 0 (Nearest) and 1 (Linear)
-		if (amiberry_options.default_scaling_method == 0 || amiberry_options.default_scaling_method == 1)
-			p->scaling_method = amiberry_options.default_scaling_method;
-	}
-
+	if (amiberry_options.default_frameskip)
+		p->gfx_framerate = 2;
+	
 #ifdef USE_RENDER_THREAD
 	amiberry_options.use_sdl2_render_thread = true;
 #else
@@ -923,7 +927,19 @@ void save_amiberry_settings(void)
 	// Valid options are: -1 Auto, 0 Nearest Neighbor, 1 Linear
 	snprintf(buffer, MAX_DPATH, "default_scaling_method=%d\n", amiberry_options.default_scaling_method);
 	fputs(buffer, f);
-	
+
+	// Enable frameskip by default?
+	snprintf(buffer, MAX_DPATH, "default_frameskip=%s\n", amiberry_options.default_frameskip ? "yes" : "no");
+	fputs(buffer, f);
+
+	// Correct Aspect Ratio by default?
+	snprintf(buffer, MAX_DPATH, "default_correct_aspect_ratio=%s\n", amiberry_options.default_correct_aspect_ratio ? "yes" : "no");
+	fputs(buffer, f);
+
+	// Enable Auto-Height by default?
+	snprintf(buffer, MAX_DPATH, "default_auto_height=%s\n", amiberry_options.default_auto_height ? "yes" : "no");
+	fputs(buffer, f);
+
 	// Paths
 	snprintf(buffer, MAX_DPATH, "path=%s\n", currentDir);
 	fputs(buffer, f);
@@ -1122,6 +1138,9 @@ void load_amiberry_settings(void)
 					cfgfile_yesno(option, value, "default_horizontal_centering", &amiberry_options.default_horizontal_centering);
 					cfgfile_yesno(option, value, "default_vertical_centering", &amiberry_options.default_vertical_centering);
 					cfgfile_intval(option, value, "default_scaling_method", &amiberry_options.default_scaling_method, 1);
+					cfgfile_yesno(option, value, "default_frameskip", &amiberry_options.default_frameskip);
+					cfgfile_yesno(option, value, "default_correct_aspect_ratio", &amiberry_options.default_correct_aspect_ratio);
+					cfgfile_yesno(option, value, "default_auto_height", &amiberry_options.default_auto_height);
 				}
 			}
 		}

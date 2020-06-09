@@ -64,15 +64,10 @@ struct host_options
 	TCHAR ra_quit[256] = "nul\0";
 	TCHAR ra_menu[256] = "nul\0";
 	TCHAR ra_reset[256] = "nul\0";
-	TCHAR key_quit[256] = "nul\0";
-	TCHAR key_gui[256] = "nul\0";
 	TCHAR deadzone[256] = "nul\0";
 	TCHAR stereo_split[256] = "nul\0";
 	TCHAR sound_on[256] = "nul\0";
 	TCHAR sound_mode[256] = "nul\0";
-	TCHAR frameskip[256] = "nul\0";
-	TCHAR aspect_ratio[256] = "nul\0";
-	TCHAR line_double[256] = "nul\0";
 	TCHAR fixed_height[256] = "nul\0";
 	TCHAR fixed_width[256] = "nul\0";
 	TCHAR fixed_cd32_height[256] = "nul\0";
@@ -253,15 +248,10 @@ struct host_options get_host_settings(char* HW)
 	strcpy(output_detail.ra_quit, find_whdload_game_option("RETROARCH_QUIT", HW).c_str());
 	strcpy(output_detail.ra_menu, find_whdload_game_option("RETROARCH_MENU", HW).c_str());
 	strcpy(output_detail.ra_reset, find_whdload_game_option("RETROARCH_RESET", HW).c_str());
-	strcpy(output_detail.key_quit, find_whdload_game_option("KEY_FOR_QUIT", HW).c_str());
-	strcpy(output_detail.key_gui, find_whdload_game_option("KEY_FOR_MENU", HW).c_str());
 	strcpy(output_detail.deadzone, find_whdload_game_option("DEADZONE", HW).c_str());
 	strcpy(output_detail.stereo_split, find_whdload_game_option("STEREO_SPLIT", HW).c_str());
 	strcpy(output_detail.sound_on, find_whdload_game_option("SOUND_ON", HW).c_str());
 	strcpy(output_detail.sound_mode, find_whdload_game_option("SOUND_MODE", HW).c_str());
-	strcpy(output_detail.aspect_ratio, find_whdload_game_option("ASPECT_RATIO_FIX", HW).c_str());
-	strcpy(output_detail.frameskip, find_whdload_game_option("FRAMESKIP", HW).c_str());
-	strcpy(output_detail.line_double, find_whdload_game_option("LINE_DOUBLING", HW).c_str());
 	strcpy(output_detail.fixed_height, find_whdload_game_option("FIXED_HEIGHT", HW).c_str());
 	strcpy(output_detail.fixed_width, find_whdload_game_option("FIXED_WIDTH", HW).c_str());
 	strcpy(output_detail.fixed_cd32_height, find_whdload_game_option("FIXED_CD32_HEIGHT", HW).c_str());
@@ -997,7 +987,7 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 		write_log("WHDBooter Option (Mouse Control): %s\n", txt2);
 	}
 
-	// PORT 0 -  JOYSTICK GAMES
+		// PORT 0 -  JOYSTICK GAMES
 	else if (!(strcmpi(host_detail.controller2, "nul") == 0))
 	{
 		_stprintf(txt2, "%s=%s", _T("joyport0"), _T(host_detail.controller2));
@@ -1018,7 +1008,7 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 		cfgfile_parse_line(prefs, txt2, 0);
 		write_log("WHDBooter Option (Mouse Control): %s\n", txt2);
 	}
-	// PORT 1 - JOYSTICK GAMES
+		// PORT 1 - JOYSTICK GAMES
 	else if (!(strcmpi(host_detail.controller1, "nul") == 0))
 	{
 		_stprintf(txt2, "%s=%s", _T("joyport1"), _T(host_detail.controller1));
@@ -1072,43 +1062,7 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 		_stprintf(txt2, "amiberry.use_retroarch_reset=%s", _T(host_detail.ra_reset));
 		cfgfile_parse_line(prefs, txt2, 0);
 	}
-        
-	// KEYBOARD CONTROLS
-	if (!(strcmpi(host_detail.key_quit, "nul") == 0))
-	{
-		_stprintf(txt2, "amiberry.quit_amiberry=%s", _T(host_detail.key_quit));
-		cfgfile_parse_line(prefs, txt2, 0);
-	}
-	if (!(strcmpi(host_detail.key_gui, "nul") == 0))
-	{
-		_stprintf(txt2, "amiberry.open_gui=%s", _T(host_detail.key_gui));
-		cfgfile_parse_line(prefs, txt2, 0);
-	}
-        
-	// GRAPHICS OPTIONS
-	if (!(strcmpi(host_detail.aspect_ratio, "nul") == 0))
-	{
-		_stprintf(txt2, "amiberry.gfx_correct_aspect=%s", _T(host_detail.aspect_ratio));
-		cfgfile_parse_line(prefs, txt2, 0);
-	}
 
-	if (strcmpi(host_detail.line_double, "yes") == 0 || strcmpi(host_detail.line_double, "true") == 0)
-	{
-		_stprintf(txt2, "gfx_linemode=double");
-		cfgfile_parse_line(prefs, txt2, 0);
-	}
-	else if (strcmpi(host_detail.line_double, "no") == 0 || strcmpi(host_detail.line_double, "false") == 0)
-	{
-		_stprintf(txt2, "gfx_linemode=none");
-		cfgfile_parse_line(prefs, txt2, 0);
-	}
-
-	if (!(strcmpi(host_detail.frameskip, "nul") == 0))
-	{
-		_stprintf(txt2, "gfx_framerate=%s", _T(host_detail.frameskip));
-		cfgfile_parse_line(prefs, txt2, 0);
-	}
-        
 	// SOUND OPTIONS
 	if (strcmpi(host_detail.sound_on, "false") == 0 || strcmpi(host_detail.sound_on, "off") == 0 || strcmpi(
 		host_detail.sound_on, "none") == 0)
