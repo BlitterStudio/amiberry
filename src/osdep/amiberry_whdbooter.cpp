@@ -10,8 +10,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#ifndef ANDROID
-#endif
 #include "sysdeps.h"
 #include "uae.h"
 #include "options.h"
@@ -1165,11 +1163,6 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	else if (strcmpi(game_detail.clock, "max") == 0)
 	{
 		_stprintf(txt2, "cpu_speed=max");
-		cfgfile_parse_line(prefs, txt2, 0);
-	}
-	else if (strcmpi(game_detail.clock, "turbo") == 0)
-	{
-		_stprintf(txt2, "cpu_speed=turbo");
 		cfgfile_parse_line(prefs, txt2, 0);
 	}
 
