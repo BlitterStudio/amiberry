@@ -887,7 +887,7 @@ bool download_file(const std::string& source, std::string destination)
 	// Cleanup if the tmp destination already exists
 	if (get_file_size(tmp) > 0)
 	{
-		if (std::remove(tmp.data()) < 0)
+		if (std::remove(tmp.c_str()) < 0)
 		{
 			write_log(strerror(errno) + '\n');
 		}
@@ -896,7 +896,7 @@ bool download_file(const std::string& source, std::string destination)
 	try
 	{
 		char buffer[1035];
-		const auto output = popen(download_command.data(), "r");
+		const auto output = popen(download_command.c_str(), "r");
 		if (!output)
 		{
 			write_log("Failed while trying to run wget! Make sure it exists in your system...\n");
@@ -917,14 +917,14 @@ bool download_file(const std::string& source, std::string destination)
 
 	if (get_file_size(tmp) > 0)
 	{
-		if (std::rename(tmp.data(), destination.data()) < 0)
+		if (std::rename(tmp.c_str(), destination.c_str()) < 0)
 		{
 			write_log(strerror(errno) + '\n');
 		}
 		return true;
 	}
 
-	if (std::remove(tmp.data()) < 0)
+	if (std::remove(tmp.c_str()) < 0)
 	{
 		write_log(strerror(errno) + '\n');
 	}
@@ -936,11 +936,11 @@ void download_rtb(std::string filename)
 	char destination[MAX_DPATH];
 	char url[MAX_DPATH];
 	
-	snprintf(destination, MAX_DPATH, "%s/whdboot/save-data/Kickstarts/%s", start_path_data, filename);
+	snprintf(destination, MAX_DPATH, "%s/whdboot/save-data/Kickstarts/%s", start_path_data, filename.c_str());
 	if (get_file_size(destination) <= 0)
 	{
 		write_log("Downloading %s ...\n", destination);
-		snprintf(url, MAX_DPATH, "https://github.com/midwan/amiberry/blob/master/whdboot/save-data/Kickstarts/%s?raw=true", filename);
+		snprintf(url, MAX_DPATH, "https://github.com/midwan/amiberry/blob/master/whdboot/save-data/Kickstarts/%s?raw=true", filename.c_str());
 		download_file(url,  destination);
 	}
 }
