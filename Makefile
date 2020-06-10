@@ -78,7 +78,7 @@ else ifeq ($(PLATFORM),orangepi-pc)
 # Odroid XU4 (SDL2)
 else ifeq ($(PLATFORM),xu4)
     CPUFLAGS += -mcpu=cortex-a15 -mfpu=neon-vfpv4
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DSOFTWARE_CURSOR -DUSE_RENDER_THREAD -DFASTERCYCLES
+    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DSOFTWARE_CURSOR -DUSE_RENDER_THREAD
     HAVE_NEON = 1
     ifdef DEBUG
 	    # Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
@@ -89,7 +89,7 @@ else ifeq ($(PLATFORM),xu4)
 # Odroid C1 (SDL2)
 else ifeq ($(PLATFORM),c1)
     CPUFLAGS += -mcpu=cortex-a5 -mfpu=neon-vfpv4
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DSOFTWARE_CURSOR -DUSE_RENDER_THREAD -DFASTERCYCLES
+    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DSOFTWARE_CURSOR -DUSE_RENDER_THREAD
     HAVE_NEON = 1
     ifdef DEBUG
 	    # Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
@@ -100,19 +100,19 @@ else ifeq ($(PLATFORM),c1)
 # Odroid N1/N2, RockPro64 (SDL2 64-bit)
 else ifeq ($(PLATFORM),n2)
     CPUFLAGS += -mcpu=cortex-a72
-    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 -DSOFTWARE_CURSOR -DFASTERCYCLES
+    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 -DSOFTWARE_CURSOR
     AARCH64 = 1
 
 # Raspberry Pi 3/4 (SDL2 64-bit)
 else ifeq ($(PLATFORM),pi64)
     CPUFLAGS += -mcpu=cortex-a72
-    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 -DFASTERCYCLES
+    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64
     AARCH64 = 1
 
 # Raspberry Pi 3/4 (SDL2 64-bit with DispmanX)
 else ifeq ($(PLATFORM),pi64-dispmanx)
     CPUFLAGS += -mcpu=cortex-a72
-    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 ${DISPMANX_FLAGS} -DFASTERCYCLES
+    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 ${DISPMANX_FLAGS}
     LDFLAGS += ${DISPMANX_LDFLAGS}
     AARCH64 = 1
 
@@ -120,14 +120,14 @@ else ifeq ($(PLATFORM),pi64-dispmanx)
 else ifeq ($(PLATFORM),vero4k)
     CPUFLAGS = -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
     CFLAGS += -ftree-vectorize -funsafe-math-optimizations
-    CPPFLAGS += -I/opt/vero3/include -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DSOFTWARE_CURSOR -DUSE_RENDER_THREAD -DFASTERCYCLES
+    CPPFLAGS += -I/opt/vero3/include -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DSOFTWARE_CURSOR -DUSE_RENDER_THREAD
     LDFLAGS += -L/opt/vero3/lib
     HAVE_NEON = 1
 
 # Amlogic S905/S905X/S912 (AMLGXBB/AMLGXL/AMLGXM) e.g. Khadas VIM1/2 / S905X2 (AMLG12A) & S922X/A311D (AMLG12B) e.g. Khadas VIM3 - 32-bit userspace
 else ifneq (,$(findstring AMLG,$(PLATFORM)))
     CPUFLAGS += -mfloat-abi=hard -mfpu=neon-fp-armv8
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DSOFTWARE_CURSOR -DFASTERCYCLES
+    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DSOFTWARE_CURSOR
     HAVE_NEON = 1
 
     ifneq (,$(findstring AMLG12,$(PLATFORM)))
@@ -166,17 +166,16 @@ else ifneq (,$(findstring RK,$(PLATFORM)))
       CPUFLAGS += -mfloat-abi=hard -mfpu=neon-fp-armv8
       ifneq (,$(findstring RK3399,$(PLATFORM)))
         CPUFLAGS += -mcpu=cortex-a72
-        CPPFLAGS += -DFASTERCYCLES
       else ifneq (,$(findstring RK3328,$(PLATFORM)))
         CPUFLAGS += -mcpu=cortex-a53
-        CPPFLAGS += -DUSE_RENDER_THREAD -DFASTERCYCLES
+        CPPFLAGS += -DUSE_RENDER_THREAD
       else ifneq (,$(findstring RK3326,$(PLATFORM)))
         CPUFLAGS += -mcpu=cortex-a35
         CPPFLAGS += -DUSE_RENDER_THREAD
 	  endif
     else ifneq (,$(findstring RK3288,$(PLATFORM)))
       CPUFLAGS += -mcpu=cortex-a17 -mfloat-abi=hard -mfpu=neon-vfpv4
-      CPPFLAGS += -DUSE_RENDER_THREAD -DFASTERCYCLES
+      CPPFLAGS += -DUSE_RENDER_THREAD
     endif
 
 # sun8i Allwinner H2+ / H3 like Orange PI, Nano PI, Banana PI, Tritium, AlphaCore2, MPCORE-HUB
@@ -193,13 +192,13 @@ else ifeq ($(PLATFORM),sun8i)
 # LePotato Libre Computer
 else ifeq ($(PLATFORM),lePotato)
    CPUFLAGS += -mcpu=cortex-a53 -mabi=lp64
-   CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 -DSOFTWARE_CURSOR -DFASTERCYCLES
+   CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 -DSOFTWARE_CURSOR
    AARCH64 = 1
 
 # Nvidia Jetson Nano (SDL2 64-bit)
 else ifeq ($(PLATFORM),jetson-nano)
     CPUFLAGS += -mcpu=cortex-a57
-    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 -DSOFTWARE_CURSOR -DFASTERCYCLES
+    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 -DSOFTWARE_CURSOR
     AARCH64 = 1
 
 else
