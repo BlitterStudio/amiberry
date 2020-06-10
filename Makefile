@@ -100,7 +100,7 @@ else ifeq ($(PLATFORM),c1)
 # Odroid N1/N2, RockPro64 (SDL2 64-bit)
 else ifeq ($(PLATFORM),n2)
     CPUFLAGS += -mcpu=cortex-a72
-    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 -DSOFTWARE_CURSOR
+    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64
     AARCH64 = 1
 
 # Raspberry Pi 3/4 (SDL2 64-bit)
