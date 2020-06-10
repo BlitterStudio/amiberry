@@ -245,7 +245,7 @@ void swcursor(bool op) {
 		SDL_GetMouseState(&dst.x, &dst.y);
 		dst.x *= mscalex * 1.03;
 		dst.y *= mscaley * 1.005;
-		SDL_RenderCopyEx(renderer, swcursor_texture, nullptr, &dst, rotation_angle, nullptr, SDL_FLIP_NONE);
+		SDL_RenderCopyEx(renderer, swcursor_texture, nullptr, &dst, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
 	}
 }
 #endif
