@@ -319,7 +319,7 @@ namespace gcn
 
 		case 3:
 			{
-				if constexpr (SDL_BYTEORDER == SDL_BIG_ENDIAN)
+				if (SDL_BYTEORDER == SDL_BIG_ENDIAN)
 				{
 					for (; x1 <= x2; ++x1)
 					{
