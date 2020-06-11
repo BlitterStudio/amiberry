@@ -1103,7 +1103,11 @@ struct amiberry_options
 	bool write_logfile = false;
 	bool swap_win_alt_keys = false;
 	bool gui_joystick_control = true;
+#ifdef USE_RENDER_THREAD
+	bool use_sdl2_render_thread = true;
+#else
 	bool use_sdl2_render_thread = false;
+#endif
 	int default_line_mode = 0;
 	int input_default_mouse_speed = 100;
 	bool input_keyboard_as_joystick_stop_keypresses = false;
