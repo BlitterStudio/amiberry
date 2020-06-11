@@ -481,35 +481,35 @@ int find_retroarch(const TCHAR* find_setting, char* retroarch_file, host_input_b
 	std::string line;
 	std::string delimiter = " = ";
 	auto tempbutton = -1;
-         
+
 	// read each line in
-	while (std::getline(readFile, line))
-	{	
-                if (strncmp(find_setting, "count_hats", 10) == 0)
-                {
-                    auto param = line.substr(line.find(delimiter) + delimiter.length(), line.length());
-                    // remove leading "
-                    if (param.at(0) == '"')
+	while (std::getline(readFile, line) && line.length() > 1)
+	{
+		if (strncmp(find_setting, "count_hats", 10) == 0)
+		{
+			auto param = line.substr(line.find(delimiter) + delimiter.length(), line.length());
+			// remove leading "
+			if (param.at(0) == '"')
 				param.erase(0, 1);
-                     // remove trailing "
-                    if (param.at(param.length() - 1) == '"')
+			// remove trailing "
+			if (param.at(param.length() - 1) == '"')
 				param.erase(param.length() - 1, 1);
-                    
-                    if (param.find("h") == 0)
-                    {                   
-			tempbutton = 1;
-			break;     
-                    }
 
-                }
+			if (param.find('h') == 0)
+			{
+				tempbutton = 1;
+				break;
+			}
 
-                const auto option = line.substr(0, line.find(delimiter));
-                // exit if we got no result from splitting the string
-		if (option != line) 
+		}
+
+		const auto option = line.substr(0, line.find(delimiter));
+		// exit if we got no result from splitting the string
+		if (option != line)
 		{
 			if (option != find_setting)
 				continue;
-                        
+
 			// using the " = " to work out which is the option, and which is the parameter.
 			auto param = line.substr(line.find(delimiter) + delimiter.length(), line.length());
 
@@ -525,7 +525,7 @@ int find_retroarch(const TCHAR* find_setting, char* retroarch_file, host_input_b
 			if (param.find('h') != 0) // check it isn't some kind of hat starting 'h' (so if D-pad uses buttons)
 			{
 				tempbutton = abs(atol(param.c_str()));
-                        }
+			}
 
 			if (option == find_setting)
 				break;
@@ -545,7 +545,7 @@ bool find_retroarch_polarity(const TCHAR* find_setting, char* retroarch_file)
 	auto tempbutton = false;
 
 	// read each line in
-	while (std::getline(readFile, line))
+	while (std::getline(readFile, line) && line.length() > 1)
 	{
 		const auto option = line.substr(0, line.find(delimiter));
 
@@ -597,7 +597,7 @@ const TCHAR* find_retroarch_key(const TCHAR* find_setting_prefix, int player, co
 	}
 
 	// read each line in
-	while (std::getline(read_file, line))
+	while (std::getline(read_file, line) && line.length() > 1)
 	{
 		const auto option = line.substr(0, line.find(delimiter));
 
