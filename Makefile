@@ -78,7 +78,7 @@ else ifeq ($(PLATFORM),orangepi-pc)
 # Odroid XU4 (SDL2)
 else ifeq ($(PLATFORM),xu4)
     CPUFLAGS += -mcpu=cortex-a15 -mfpu=neon-vfpv4
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DSOFTWARE_CURSOR -DUSE_RENDER_THREAD
+    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_RENDER_THREAD
     HAVE_NEON = 1
     ifdef DEBUG
 	    # Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
@@ -89,7 +89,7 @@ else ifeq ($(PLATFORM),xu4)
 # Odroid C1 (SDL2)
 else ifeq ($(PLATFORM),c1)
     CPUFLAGS += -mcpu=cortex-a5 -mfpu=neon-vfpv4
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DSOFTWARE_CURSOR -DUSE_RENDER_THREAD
+    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_RENDER_THREAD
     HAVE_NEON = 1
     ifdef DEBUG
 	    # Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
