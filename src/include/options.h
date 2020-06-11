@@ -1116,7 +1116,7 @@ struct amiberry_options
 	char default_ar_key[128] = "Pause";
 	char default_fullscreen_toggle_key[128]{};
 	int rotation_angle = 0;
-	bool default_horizontal_centering = false;
+	bool default_horizontal_centering = true;
 	bool default_vertical_centering = false;
 	int default_scaling_method = -1;
 	bool default_frameskip = false;
