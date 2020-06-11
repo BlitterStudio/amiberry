@@ -78,7 +78,7 @@ For the Raspberry Pi 4
 
 For the Raspberry Pi 4 64-bit
 
-      make -j2 PLATFORM=rpi64
+      make -j2 PLATFORM=pi64
 
 For the Raspberry Pi 3(B+)
 
