@@ -159,7 +159,7 @@ else ifeq ($(PLATFORM),go-advance-libgo2)
 # RK3399 e.g. PINE64 RockPro64 
 # RK3326 e.g. Odroid Go Advance - 32-bit userspace
 else ifneq (,$(findstring RK,$(PLATFORM)))
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DSOFTWARE_CURSOR
+    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV
     HAVE_NEON = 1
 
     ifneq (,$(findstring RK33,$(PLATFORM)))
