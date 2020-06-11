@@ -24,6 +24,10 @@ On the Raspberry Pi, if you're not running Raspbian you'll also need this:
 
       sudo apt-get install libraspberrypi-dev
 
+Or if you're using an Arch-based distro (e.g. Manjaro), you can use these instead:
+
+      sudo pacman -S base-devel sdl2 sdl2_ttf sdl2_image libxml2 flac mpg123 libmpeg2
+
 ## Getting Amiberry
 
 The latest stable releases come with binaries, that you can download from the [Releases](https://github.com/midwan/amiberry/releases) area.
