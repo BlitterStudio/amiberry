@@ -76,6 +76,10 @@ For the Raspberry Pi 4
 
       make -j2 PLATFORM=rpi4-sdl2
 
+For the Raspberry Pi 4 64-bit
+
+      make -j2 PLATFORM=rpi64
+
 For the Raspberry Pi 3(B+)
 
       make -j2 PLATFORM=rpi3-sdl2
@@ -92,7 +96,7 @@ For the Odroid XU4
 
       make -j6 PLATFORM=xu4
 
-For the ASUS Tinker board
+For the ASUS Tinker board (Supported distro: Armbian)
 
       make -j6 PLATFORM=RK3288
 
@@ -107,6 +111,10 @@ For the Vero 4k
 For the OrangePi PC
 
       make -j2 PLATFORM=orangepi-pc
+
+For the Odroid N2/RockPro64
+
+      make -j2 PLATFORM=n2
 
 You can check the Makefile for a full list of supported platforms!
 
