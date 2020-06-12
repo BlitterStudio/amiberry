@@ -67,7 +67,7 @@ else ifeq ($(PLATFORM),$(filter $(PLATFORM),rpi1-sdl2 rpi2-sdl2 rpi3-sdl2 rpi4-s
 # OrangePi (SDL2)
 else ifeq ($(PLATFORM),orangepi-pc)
     CPUFLAGS = -mcpu=cortex-a7 -mfpu=neon-vfpv4
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DSOFTWARE_CURSOR -DUSE_RENDER_THREAD
+    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_RENDER_THREAD
     HAVE_NEON = 1
     ifdef DEBUG
 	    # Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
@@ -120,14 +120,14 @@ else ifeq ($(PLATFORM),pi64-dispmanx)
 else ifeq ($(PLATFORM),vero4k)
     CPUFLAGS = -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
     CFLAGS += -ftree-vectorize -funsafe-math-optimizations
-    CPPFLAGS += -I/opt/vero3/include -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DSOFTWARE_CURSOR -DUSE_RENDER_THREAD
+    CPPFLAGS += -I/opt/vero3/include -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_RENDER_THREAD
     LDFLAGS += -L/opt/vero3/lib
     HAVE_NEON = 1
 
 # Amlogic S905/S905X/S912 (AMLGXBB/AMLGXL/AMLGXM) e.g. Khadas VIM1/2 / S905X2 (AMLG12A) & S922X/A311D (AMLG12B) e.g. Khadas VIM3 - 32-bit userspace
 else ifneq (,$(findstring AMLG,$(PLATFORM)))
     CPUFLAGS += -mfloat-abi=hard -mfpu=neon-fp-armv8
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DSOFTWARE_CURSOR
+    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV
     HAVE_NEON = 1
 
     ifneq (,$(findstring AMLG12,$(PLATFORM)))
@@ -144,13 +144,13 @@ else ifneq (,$(findstring AMLG,$(PLATFORM)))
 # Odroid Go Advance target (SDL2, 64-bit)
 else ifeq ($(PLATFORM),go-advance)
     CPUFLAGS += -mcpu=cortex-a35
-    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 -DSOFTWARE_CURSOR
+    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64
     AARCH64 = 1
 
 # Odroid Go Advance special target (libgo2, 64-bit)
 else ifeq ($(PLATFORM),go-advance-libgo2)
     CPUFLAGS += -mcpu=cortex-a35
-    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 -DSOFTWARE_CURSOR ${LIBGO2_FLAGS}
+    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 ${LIBGO2_FLAGS}
     LDFLAGS += ${LIBGO2_LDFLAGS}
     AARCH64 = 1
 
@@ -181,7 +181,7 @@ else ifneq (,$(findstring RK,$(PLATFORM)))
 # sun8i Allwinner H2+ / H3 like Orange PI, Nano PI, Banana PI, Tritium, AlphaCore2, MPCORE-HUB
 else ifeq ($(PLATFORM),sun8i)
     CPUFLAGS += -mcpu=cortex-a7 -mfpu=neon-vfpv4
-    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DSOFTWARE_CURSOR -DUSE_RENDER_THREAD
+    CPPFLAGS += -DARMV6_ASSEMBLY -D_FILE_OFFSET_BITS=64 -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV -DUSE_RENDER_THREAD
     HAVE_NEON = 1
     ifdef DEBUG
 	    # Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
@@ -192,13 +192,13 @@ else ifeq ($(PLATFORM),sun8i)
 # LePotato Libre Computer
 else ifeq ($(PLATFORM),lePotato)
    CPUFLAGS += -mcpu=cortex-a53 -mabi=lp64
-   CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 -DSOFTWARE_CURSOR
+   CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64
    AARCH64 = 1
 
 # Nvidia Jetson Nano (SDL2 64-bit)
 else ifeq ($(PLATFORM),jetson-nano)
     CPUFLAGS += -mcpu=cortex-a57
-    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 -DSOFTWARE_CURSOR
+    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64
     AARCH64 = 1
 
 else

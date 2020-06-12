@@ -133,11 +133,6 @@ int element_present = 0;
 SDL_Texture* gui_texture;
 SDL_Cursor* cursor;
 SDL_Surface* cursor_surface;
-#ifdef SOFTWARE_CURSOR
-SDL_Texture* swcursor_texture = NULL;
-static SDL_DisplayMode physmode;
-static double mscalex, mscaley;
-#endif // SOFTWARE_CURSOR
 #endif
 
 /*
@@ -226,34 +221,10 @@ static void ShowHelpRequested()
 	}
 }
 
-#ifdef SOFTWARE_CURSOR
-static SDL_Rect dst;
-void swcursor(bool op) {
-	if (!op) {
-		cursor_surface = SDL_LoadBMP("data/cursor.bmp");
-		swcursor_texture = SDL_CreateTextureFromSurface(renderer, cursor_surface);
-		// Hide real cursor
-		SDL_SetCursor(SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW));
-		SDL_ShowCursor(0);
-		// Set cursor width,height to that of loaded bmp
-		dst.w = cursor_surface->w;
-		dst.h = cursor_surface->h;
-		SDL_FreeSurface(cursor_surface);
-
-	}
-	else {
-		SDL_GetMouseState(&dst.x, &dst.y);
-		dst.x *= mscalex * 1.03;
-		dst.y *= mscaley * 1.005;
-		SDL_RenderCopyEx(renderer, swcursor_texture, nullptr, &dst, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
-	}
-}
-#endif
-
 void cap_fps(Uint64 start, int fps)
 {
 	const auto end = SDL_GetPerformanceCounter();
-	const auto elapsed_ms = float(end - start) / float(SDL_GetPerformanceFrequency()) * 1000.0f;
+	const auto elapsed_ms = static_cast<float>(end - start) / static_cast<float>(SDL_GetPerformanceFrequency()) * 1000.0f;
 	if (fps == 60)
 		SDL_Delay(floor(16.666f - elapsed_ms));
 	else if (fps == 50)
@@ -276,16 +247,12 @@ void UpdateGuiScreen()
 		renderQuad = { -(GUI_WIDTH - GUI_HEIGHT) / 2, (GUI_WIDTH - GUI_HEIGHT) / 2, gui_screen->w, gui_screen->h };
 	
 	SDL_RenderCopyEx(renderer, gui_texture, nullptr, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
-#ifdef SOFTWARE_CURSOR
-	swcursor(true);
-#endif
 	SDL_RenderPresent(renderer);
 #endif
 }
 
 #ifdef USE_DISPMANX
 #else
-// Sets the cursor image up
 void setup_cursor()
 {
 	// Detect resolution and load appropriate cursor image
@@ -301,13 +268,15 @@ void setup_cursor()
 	if (!cursor_surface)
 	{
 		// Load failed. Log error.
-		SDL_Log("Could not load cursor bitmap: %s\n", SDL_GetError());
+		write_log("Could not load cursor bitmap: %s\n", SDL_GetError());
 		return;
 	}
+	
 	auto* formattedSurface = SDL_ConvertSurfaceFormat(cursor_surface, SDL_PIXELFORMAT_RGBA8888, 0);
 	if (formattedSurface != nullptr)
 	{
 		SDL_FreeSurface(cursor_surface);
+
 		// Create new cursor with surface
 		cursor = SDL_CreateColorCursor(formattedSurface, 0, 0);
 		SDL_FreeSurface(formattedSurface);
@@ -316,13 +285,14 @@ void setup_cursor()
 	if (!cursor)
 	{
 		// Cursor creation failed. Log error and free surface
-		SDL_Log("Could not create color cursor: %s\n", SDL_GetError());
-		SDL_FreeSurface(cursor_surface);
+		write_log("Could not create color cursor: %s\n", SDL_GetError());
 		cursor_surface = nullptr;
+		formattedSurface = nullptr;
+		SDL_SetCursor(SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW));
 		return;
 	}
-	if (cursor)
-		SDL_SetCursor(cursor);
+
+	SDL_SetCursor(cursor);	
 }
 #endif
 
@@ -400,14 +370,7 @@ void amiberry_gui_init()
 		vc_dispmanx_update_submit_sync(updateHandle);
 	}
 #else
-#ifdef SOFTWARE_CURSOR
-	swcursor(false);
-	SDL_GetCurrentDisplayMode(0, &physmode);
-	mscalex = (double(GUI_WIDTH) / double(physmode.w));
-	mscaley = (double(GUI_HEIGHT) / double(physmode.h));
-#else
 	setup_cursor();
-#endif
 
 	if (sdl_window)
 	{
@@ -502,13 +465,6 @@ void amiberry_gui_halt()
 		cursor = nullptr;
 	}
 
-#ifdef SOFTWARE_CURSOR
-	if (swcursor_texture != nullptr)
-	{
-		SDL_DestroyTexture(swcursor_texture);
-		swcursor_texture = nullptr;
-	}
-#endif
 	// Clear the screen
 	SDL_RenderClear(renderer);
 	SDL_RenderPresent(renderer);
