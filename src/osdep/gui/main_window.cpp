@@ -268,6 +268,7 @@ void UpdateGuiScreen()
 	vc_dispmanx_element_change_source(updateHandle, gui_element, gui_resource);
 	vc_dispmanx_update_submit_sync(updateHandle);
 #else
+	SDL_RenderClear(renderer);
 	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 	if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
 		renderQuad = { 0, 0, gui_screen->w, gui_screen->h };
