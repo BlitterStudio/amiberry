@@ -28,14 +28,14 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
     <GNUConfigurationType>Debug</GNUConfigurationType>
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
-    <ToolchainVersion>8.3.0/8.2.1/r1</ToolchainVersion>
+    <ToolchainVersion>8.3.0/8.2.1/r2</ToolchainVersion>
     <GNUTargetType>StaticLibrary</GNUTargetType>
     <OutDir>$(SolutionDir)..\..\external\libguisan\lib\</OutDir>
     <TargetName>lib$(ProjectName)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
-    <ToolchainVersion>8.3.0/8.2.1/r1</ToolchainVersion>
+    <ToolchainVersion>8.3.0/8.2.1/r2</ToolchainVersion>
     <GNUTargetType>StaticLibrary</GNUTargetType>
     <OutDir>$(SolutionDir)..\..\external\libguisan\lib\</OutDir>
     <TargetName>lib$(ProjectName)</TargetName>
