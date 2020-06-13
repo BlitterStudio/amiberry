@@ -1060,7 +1060,7 @@ static int init_colors()
 */
 static int get_display_depth()
 {
-	const auto depth = screen->format->BytesPerPixel == 4 ? 32 : 16;
+	const auto depth = screen->format->BytesPerPixel * 8;
 	return depth;
 }
 
