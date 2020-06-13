@@ -394,7 +394,7 @@ int graphics_setup(void)
 		}
 		check_error_sdl(sdl_window == nullptr, "Unable to create window:");		
 	}
-	SDL_ShowCursor(SDL_DISABLE);
+
 #endif
 	
 	if (renderer == nullptr)
