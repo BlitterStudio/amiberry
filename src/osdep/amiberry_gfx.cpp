@@ -1024,7 +1024,7 @@ static void graphics_subinit()
 	{
 		open_screen(&currprefs);
 		if (screen == nullptr)
-			fprintf(stderr, "Unable to set video mode: %s\n", SDL_GetError());
+			write_log("Unable to set video mode: %s\n", SDL_GetError());
 	}
 	else
 	{
