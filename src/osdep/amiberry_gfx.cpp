@@ -581,7 +581,7 @@ static void open_screen(struct uae_prefs* p)
 	
 	if (screen_is_picasso)
 	{
-		display_width = picasso_vidinfo.width ? picasso_vidinfo.width : 640;
+		display_width = picasso_vidinfo.width ? picasso_vidinfo.width : 720;
 		display_height = picasso_vidinfo.height ? picasso_vidinfo.height : 270;
 	}
 	else
@@ -591,7 +591,7 @@ static void open_screen(struct uae_prefs* p)
 		if (currprefs.gfx_vresolution > avidinfo->gfx_vresolution_reserved)
 			avidinfo->gfx_vresolution_reserved = currprefs.gfx_vresolution;
 		
-		display_width = p->gfx_monitor.gfx_size.width ? p->gfx_monitor.gfx_size.width : 640;
+		display_width = p->gfx_monitor.gfx_size.width ? p->gfx_monitor.gfx_size.width : 720;
 		display_height = (p->gfx_monitor.gfx_size.height ? p->gfx_monitor.gfx_size.height : 270) << p->gfx_vresolution;
 	}
 
