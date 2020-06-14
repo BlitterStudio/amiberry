@@ -43,12 +43,6 @@
 
 #define SPRBORDER 0
 
-#ifdef AMIBERRY
-extern int speedup_cycles_jit_pal;
-extern int speedup_cycles_jit_ntsc;
-extern int speedup_cycles_nonjit;
-#endif
-
 STATIC_INLINE bool nocustom (void)
 {
 	struct amigadisplay *ad = &adisplays;
@@ -5151,7 +5145,7 @@ static void COPJMP (int num, int vblank)
 	cop_state.last_strobe = num;
 
 #ifdef AMIBERRY
-	eventtab[ev_copper].active = 0;
+	eventtab[ev_copper].active = false;
 #endif
 
 	if (nocustom ()) {
@@ -5219,7 +5213,7 @@ static void DMACON (int hpos, uae_u16 v)
 
 	if (oldcop != newcop) {
 #ifdef AMIBERRY
-		eventtab[ev_copper].active = 0;
+		eventtab[ev_copper].active = false;
 #endif
 		if (newcop && !oldcop) {
 			compute_spcflag_copper (hpos);
@@ -6371,149 +6365,150 @@ STATIC_INLINE int copper_cant_read(int hpos)
    it subtly wrong; and it would also be more expensive - we want this code
    to be fast.  */
 
-static void predict_copper (void)
+static void predict_copper(void)
 {
 	uaecptr ip = cop_state.ip;
 	unsigned int c_hpos = cop_state.hpos;
 	enum copper_states state = cop_state.state;
 	unsigned int w1, w2, cycle_count;
 	unsigned int modified = REGTYPE_FORCE;
-  unsigned int vcmp;
-  int vp;
+	unsigned int vcmp;
+	int vp;
 
-  if (cop_state.ignore_next || cop_state.movedelay)
-    return;
+	if (cop_state.ignore_next || cop_state.movedelay)
+		return;
 
-  int until_hpos = maxhpos - 3;
-  int force_exit = 0;
+	int until_hpos = maxhpos - 3;
+	int force_exit = 0;
 
-  w1 = cop_state.saved_i1;
-  w2 = cop_state.saved_i2;
+	w1 = cop_state.saved_i1;
+	w2 = cop_state.saved_i2;
 
 	switch (state) {
-		case COP_stop:
-    case COP_waitforever:
-		case COP_bltwait:
+	case COP_stop:
+	case COP_waitforever:
+	case COP_bltwait:
+	case COP_skip_in2:
+	case COP_skip1:
+		return;
+
+	case COP_wait:
+		vcmp = (w1 & (w2 | 0x8000)) >> 8;
+		vp = vpos & (((w2 >> 8) & 0x7F) | 0x80);
+		if (vp < cop_state.vcmp)
+			c_hpos = until_hpos; // run till end of line
+		break;
+	}
+
+	while (c_hpos < until_hpos && !force_exit) {
+		c_hpos += 2;
+
+		switch (state) {
+		case COP_wait_in2:
+			state = COP_wait1;
+			break;
+
 		case COP_skip_in2:
-    case COP_skip1:
-			return;
-
-    case COP_wait:
-      vcmp = (w1 & (w2 | 0x8000)) >> 8;
-      vp = vpos & (((w2 >> 8) & 0x7F) | 0x80);
-      if (vp < cop_state.vcmp)
-        c_hpos = until_hpos; // run till end of line
-		  break;
-  }
-		  
-  while(c_hpos < until_hpos && !force_exit) {
-  			c_hpos += 2;
-    
-    switch(state) {
-      case COP_wait_in2:
-        state = COP_wait1;
-			break;
-			
-      case COP_skip_in2:
-        state = COP_skip1;
-			break;
-			
-    case COP_strobe_extra:
-        state = COP_strobe_delay1;
+			state = COP_skip1;
 			break;
 
-    case COP_strobe_delay1:
-        state = COP_strobe_delay2;
-        break;
-      
-    case COP_strobe_delay1x:
-        state = COP_strobe_delay2x;
+		case COP_strobe_extra:
+			state = COP_strobe_delay1;
 			break;
 
-      case COP_strobe_delay2:
-      case COP_strobe_delay2x:
-        state = COP_read1;
-        if(cop_state.strobe == 1)
-          ip = cop1lc;
-        else
-          ip = cop2lc;
-			break;
-			
-      case COP_start_delay:
-        state = COP_read1;
-        ip = cop1lc;
+		case COP_strobe_delay1:
+			state = COP_strobe_delay2;
 			break;
 
-      case COP_read1:
-        w1 = chipmem_wget_indirect (ip);
-        ip += 2;
-        state = COP_read2;
-        break;
-	
-      case COP_read2:
-        w2 = chipmem_wget_indirect (ip);
-        ip += 2;
-        if (w1 & 1) { // WAIT or SKIP
+		case COP_strobe_delay1x:
+			state = COP_strobe_delay2x;
+			break;
+
+		case COP_strobe_delay2:
+		case COP_strobe_delay2x:
+			state = COP_read1;
+			if (cop_state.strobe == 1)
+				ip = cop1lc;
+			else
+				ip = cop2lc;
+			break;
+
+		case COP_start_delay:
+			state = COP_read1;
+			ip = cop1lc;
+			break;
+
+		case COP_read1:
+			w1 = chipmem_wget_indirect(ip);
+			ip += 2;
+			state = COP_read2;
+			break;
+
+		case COP_read2:
+			w2 = chipmem_wget_indirect(ip);
+			ip += 2;
+			if (w1 & 1) { // WAIT or SKIP
 				if (w2 & 1)
-            state = COP_skip_in2;
-          else
-            state = COP_wait_in2;
-			} else { // MOVE
-          unsigned int reg = w1 & 0x1FE;
-          state = COP_read1;
-          // check from test_copper_dangerous()
-          if (reg < ((copcon & 2) ? ((currprefs.chipset_mask & CSMASK_ECS_AGNUS) ? 0 : 0x40) : 0x80)) {
-            force_exit = 1;
-            break;
-          }
-          if(reg == 0x88 || reg == 0x8a) { // next is strobe
-            force_exit = 1; 
-            break;
-          }
-          modified |= regtypes[reg];
+					state = COP_skip_in2;
+				else
+					state = COP_wait_in2;
 			}
-        break;
-
-      case COP_wait1:
-				if (w1 == 0xFFFF && w2 == 0xFFFE) {
-				  c_hpos = until_hpos; // new state is COP_waitforever -> run till end of line
-				break;
-        }
-
-        state = COP_wait;
-
-  			vcmp = (w1 & (w2 | 0x8000)) >> 8;
-        vp = vpos & (((w2 >> 8) & 0x7F) | 80);
-				
-        if(vp < vcmp)
-          c_hpos = until_hpos; // run till end of line
-        break;
-
-      case COP_wait:
-        {
-          unsigned int hcmp = (w1 & w2 & 0xFE);
-          
-          int hp = c_hpos & (w2 & 0xFE);
-          if(vp == vcmp && hp < hcmp)
-            break; // position not reached
-					state = COP_read1;
+			else { // MOVE
+				unsigned int reg = w1 & 0x1FE;
+				state = COP_read1;
+				// check from test_copper_dangerous()
+				if (reg < ((copcon & 2) ? ((currprefs.chipset_mask & CSMASK_ECS_AGNUS) ? 0 : 0x40) : 0x80)) {
+					force_exit = 1;
+					break;
 				}
-        break;
+				if (reg == 0x88 || reg == 0x8a) { // next is strobe
+					force_exit = 1;
+					break;
+				}
+				modified |= regtypes[reg];
+			}
+			break;
 
-      case COP_skip1:
-        // must be handled by real code
-        force_exit = 1;
-        break;
+		case COP_wait1:
+			if (w1 == 0xFFFF && w2 == 0xFFFE) {
+				c_hpos = until_hpos; // new state is COP_waitforever -> run till end of line
+				break;
+			}
+
+			state = COP_wait;
+
+			vcmp = (w1 & (w2 | 0x8000)) >> 8;
+			vp = vpos & (((w2 >> 8) & 0x7F) | 80);
+
+			if (vp < vcmp)
+				c_hpos = until_hpos; // run till end of line
+			break;
+
+		case COP_wait:
+		{
+			unsigned int hcmp = (w1 & w2 & 0xFE);
+
+			int hp = c_hpos & (w2 & 0xFE);
+			if (vp == vcmp && hp < hcmp)
+				break; // position not reached
+			state = COP_read1;
+		}
+		break;
+
+		case COP_skip1:
+			// must be handled by real code
+			force_exit = 1;
+			break;
 		}
 	}
-	
+
 	cycle_count = c_hpos - cop_state.hpos;
 	if (cycle_count >= 8) {
-  	cop_state.regtypes_modified = modified;
-		unset_special (SPCFLAG_COPPER);
+		cop_state.regtypes_modified = modified;
+		unset_special(SPCFLAG_COPPER);
 		eventtab[ev_copper].active = 1;
-		eventtab[ev_copper].evtime = get_cycles () + cycle_count * CYCLE_UNIT;
-		events_schedule ();
+		eventtab[ev_copper].evtime = get_cycles() + cycle_count * CYCLE_UNIT;
+		events_schedule();
 	}
 }
 #endif
@@ -6575,7 +6570,7 @@ static void update_copper (int until_hpos)
 
 	if (nocustom ()) {
 #ifdef AMIBERRY
-		eventtab[ev_copper].active = 0;
+		eventtab[ev_copper].active = false;
 #endif
 		return;
 	}
@@ -6583,7 +6578,7 @@ static void update_copper (int until_hpos)
 #ifdef AMIBERRY
 	if (currprefs.fast_copper) {
 		if (eventtab[ev_copper].active) {
-			eventtab[ev_copper].active = 0;
+			eventtab[ev_copper].active = false;
 			return;
 		}
 	}
@@ -6591,7 +6586,7 @@ static void update_copper (int until_hpos)
 	
 	if (cop_state.state == COP_wait && vp < cop_state.vcmp) {
 #ifdef AMIBERRY
-		eventtab[ev_copper].active = 0;
+		eventtab[ev_copper].active = false;
 #endif
 		copper_enabled_thisline = 0;
 		cop_state.state = COP_stop;
@@ -6838,34 +6833,34 @@ static void update_copper (int until_hpos)
 
 				hp = ch_comp & (cop_state.saved_i2 & 0xFE);
 				if (vp == cop_state.vcmp && hp < cop_state.hcmp) {
-				  /* Position not reached yet.  */
+					/* Position not reached yet.  */
 #ifdef AMIBERRY
-				  if(currprefs.fast_copper) {
-  						while(c_hpos < until_hpos) {
-                int redo_hpos = c_hpos;
-            
-            		if (c_hpos == maxhpos - 3)
-            			c_hpos += 1;
-            		else
-            		  c_hpos += 2;
+					if (currprefs.fast_copper) {
+						while (c_hpos < until_hpos) {
+							auto redo_hpos = c_hpos;
 
-                ch_comp = c_hpos;
-      				  if (ch_comp & 1)
-      					  ch_comp = 0;
+							if (c_hpos == maxhpos - 3)
+								c_hpos += 1;
+							else
+								c_hpos += 2;
 
-				        hp = ch_comp & (cop_state.saved_i2 & 0xFE);
-				        if(hp >= cop_state.hcmp) {
-				          c_hpos = redo_hpos; // run outer loop with last c_hpos
-				          break;
-				        }
-  						}
-    				}
+							ch_comp = c_hpos;
+							if (ch_comp & 1)
+								ch_comp = 0;
+
+							hp = ch_comp & (cop_state.saved_i2 & 0xFE);
+							if (hp >= cop_state.hcmp) {
+								c_hpos = redo_hpos; // run outer loop with last c_hpos
+								break;
+							}
+						}
+					}
 #endif
-				  break;
-			  }
+					break;
+				}
 
 				cop_state.state = COP_read1;
-			}
+		}
 			break;
 
 		case COP_skip1:
@@ -7820,22 +7815,22 @@ static void vsync_handler_post (void)
 	bplcon0_interlace_seen = false;
 
 #ifdef AMIBERRY
-	eventtab[ev_copper].active = 0;
+	eventtab[ev_copper].active = false;
 #endif
-	COPJMP (1, 1);
+	COPJMP(1, 1);
 
-	init_hardware_frame ();
+	init_hardware_frame();
 
-	vsync_cycles = get_cycles ();
+	vsync_cycles = get_cycles();
 }
 
-static void copper_check (int n)
+static void copper_check(int n)
 {
 	if (cop_state.state == COP_wait) {
 		int vp = vpos & (((cop_state.saved_i2 >> 8) & 0x7F) | 0x80);
 		if (vp < cop_state.vcmp) {
 			if (copper_enabled_thisline)
-				write_log (_T("COPPER BUG %d: vp=%d vpos=%d vcmp=%d thisline=%d\n"), n, vp, vpos, cop_state.vcmp, copper_enabled_thisline);
+				write_log(_T("COPPER BUG %d: vp=%d vpos=%d vcmp=%d thisline=%d\n"), n, vp, vpos, cop_state.vcmp, copper_enabled_thisline);
 		}
 	}
 }
@@ -8488,8 +8483,7 @@ static void hsync_handler_post (bool onvsync)
 #ifdef AMIBERRY // used by Fast Copper
 static void init_regtypes(void)
 {
-	int i;
-	for (i = 0; i < 512; i += 2) {
+	for (auto i = 0; i < 512; i += 2) {
 		regtypes[i] = REGTYPE_ALL;
 		if ((i >= 0x20 && i < 0x26) || i == 0x7E)
 			regtypes[i] = REGTYPE_DISK;
@@ -8595,7 +8589,7 @@ void init_eventtab (void)
 	eventtab[ev_hsync].active = 1;
 #ifdef AMIBERRY
 	eventtab[ev_copper].handler = copper_handler;
-	eventtab[ev_copper].active = 0;
+	eventtab[ev_copper].active = false;
 #endif
 	eventtab[ev_misc].handler = MISC_handler;
 	eventtab[ev_audio].handler = audio_evhandler;
