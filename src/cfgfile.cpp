@@ -2830,7 +2830,7 @@ static int cfgfile_parse_host(struct uae_prefs* p, TCHAR* option, TCHAR* value)
 
 #ifdef AMIBERRY
 	// custom options LOADING
-	for (auto i = 0; i < 4; ++i) // Loop 1 ... all 4 joyports
+	for (i = 0; i < 4; ++i) // Loop 1 ... all 4 joyports
 	{
 		struct joypad_map_layout tempcustom = {};
 
