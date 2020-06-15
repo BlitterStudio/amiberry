@@ -147,13 +147,6 @@ else ifeq ($(PLATFORM),go-advance)
     CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64
     AARCH64 = 1
 
-# Odroid Go Advance special target (libgo2, 64-bit)
-else ifeq ($(PLATFORM),go-advance-libgo2)
-    CPUFLAGS += -mcpu=cortex-a35
-    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 ${LIBGO2_FLAGS}
-    LDFLAGS += ${LIBGO2_LDFLAGS}
-    AARCH64 = 1
-
 # RK3288 e.g. Asus Tinker Board
 # RK3328 e.g. PINE64 Rock64 
 # RK3399 e.g. PINE64 RockPro64 
