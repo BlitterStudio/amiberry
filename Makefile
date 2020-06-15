@@ -147,6 +147,12 @@ else ifeq ($(PLATFORM),go-advance)
     CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64
     AARCH64 = 1
 
+# Generic Cortex A53 aarch64 target (SDL2, 64-bit)
+else ifeq ($(PLATFORM),a64)
+    CPUFLAGS += -mcpu=cortex-a53
+    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64
+    AARCH64 = 1
+
 # RK3288 e.g. Asus Tinker Board
 # RK3328 e.g. PINE64 Rock64 
 # RK3399 e.g. PINE64 RockPro64 
