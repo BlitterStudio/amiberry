@@ -27,12 +27,6 @@ endif
 DISPMANX_FLAGS = -DUSE_DISPMANX -I/opt/vc/include -I/opt/vc/include/interface/vmcs_host/linux -I/opt/vc/include/interface/vcos/pthreads 
 DISPMANX_LDFLAGS = -lbcm_host -lvchiq_arm -L/opt/vc/lib -Wl,-rpath=/opt/vc/lib
 
-#
-# libgo2 flags (Odroid Go Advance)
-#
-LIBGO2_FLAGS = -DUSE_LIBGO2 -Iexternal/libgo2/src
-LIBGO2_LDFLAGS = -lgo2
-
 CPPFLAGS=-MD -MT $@ -MF $(@:%.o=%.d)
 #DEBUG=1
 #GCC_PROFILE=1
