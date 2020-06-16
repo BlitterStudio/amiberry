@@ -435,7 +435,7 @@ TCHAR *cfgfile_option_get(const TCHAR *s, const TCHAR *option)
 	return cfgfile_option_find_it(s, option, true);
 }
 
-static void trimwsa(char* s)
+static void trim_wsa(char* s)
 {
 	/* Delete trailing whitespace.  */
 	int len = strlen(s);
@@ -626,7 +626,7 @@ static TCHAR *cfgfile_get_multipath2 (struct multipath *mp, const TCHAR *path, c
 			if (!s) {
 				TCHAR np[MAX_DPATH];
 				_tcscpy (np, mp->path[i]);
-				fixtrailing (np);
+				fix_trailing (np);
 				_tcscat (np, file);
 				//fullpath (np, sizeof np / sizeof (TCHAR));
 				s = my_strdup (np);
@@ -971,7 +971,7 @@ static void cfgfile_adjust_path(TCHAR *path, int maxsz, struct multipath *mp)
 			if (mp->path[i][0] && _tcscmp(mp->path[i], _T(".\\")) != 0 && _tcscmp(mp->path[i], _T("./")) != 0 && (path[0] != '/' && path[0] != '\\' && !_tcschr(path, ':'))) {
 				TCHAR np[MAX_DPATH];
 				_tcscpy(np, mp->path[i]);
-				fixtrailing(np);
+				fix_trailing(np);
 				_tcscat(np, s);
 				//fullpath(np, sizeof np / sizeof(TCHAR));
 				if (zfile_exists(np)) {
@@ -2620,7 +2620,7 @@ static int cfgfile_multipath (const TCHAR *option, const TCHAR *value, const TCH
 			TCHAR *s = target_expand_environment (tmploc, NULL, 0);
 			_tcsncpy (mp->path[i], s, MAX_DPATH - 1);
 			mp->path[i][MAX_DPATH - 1] = 0;
-			fixtrailing (mp->path[i]);
+			fix_trailing (mp->path[i]);
 			xfree (s);
 			//target_multipath_modified(p);
 			return 1;
@@ -5127,7 +5127,7 @@ static int cfgfile_load_2(struct uae_prefs* p, const TCHAR* filename, bool real,
 
 	while (cfg_fgets(linea, sizeof (linea), fh) != nullptr)
 	{
-		trimwsa(linea);
+		trim_wsa(linea);
 		if (strlen(linea) > 0)
 		{
 			if (linea[0] == '#' || linea[0] == ';')

@@ -51,8 +51,8 @@ bool LoadConfigByName(const char* name)
 
 void SetLastActiveConfig(const char* filename)
 {
-	extractFileName(filename, last_active_config);
-	removeFileExtension(last_active_config);
+	extract_filename(filename, last_active_config);
+	remove_file_extension(last_active_config);
 }
 
 class ConfigsListModel : public gcn::ListModel
@@ -288,7 +288,7 @@ void InitPanelConfig(const struct _ConfigCategory& category)
 		else
 		{
 			strcpy(last_active_config, last_loaded_config);
-			removeFileExtension(last_active_config);
+			remove_file_extension(last_active_config);
 		}
 	}
 	txtName->setText(last_active_config);

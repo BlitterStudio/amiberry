@@ -295,9 +295,9 @@ void cd_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	//      *** GAME DETECTION ***
 	write_log("\nCD Autoload: %s  \n\n", filepath);
 
-	extractFileName(filepath, last_loaded_config);
-	extractFileName(filepath, game_name);
-	removeFileExtension(game_name);
+	extract_filename(filepath, last_loaded_config);
+	extract_filename(filepath, game_name);
+	remove_file_extension(game_name);
 
 	// LOAD GAME SPECIFICS FOR EXISTING .UAE - USE SHA1 IF AVAILABLE
 	//  CONFIG LOAD IF .UAE IS IN CONFIG PATH
@@ -456,9 +456,9 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	// REMOVE THE FILE PATH AND EXTENSION
 	const auto* const filename = my_getfilepart(filepath);
 	// SOMEWHERE HERE WE NEED TO SET THE GAME 'NAME' FOR SAVESTATE ETC PURPOSES
-	extractFileName(filepath, last_loaded_config);
-	extractFileName(filepath, game_name);
-	removeFileExtension(game_name);
+	extract_filename(filepath, last_loaded_config);
+	extract_filename(filepath, game_name);
+	remove_file_extension(game_name);
 
 	// LOAD GAME SPECIFICS FOR EXISTING .UAE - USE SHA1 IF AVAILABLE
 	//  CONFIG LOAD IF .UAE IS IN CONFIG PATH

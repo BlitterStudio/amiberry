@@ -199,13 +199,13 @@ public:
 						strncpy(changed_prefs.floppyslots[i].df, tmp, MAX_DPATH);
 						disk_insert(i, tmp);
 						AddFileToDiskList(tmp, 1);
-						extractPath(tmp, currentDir);
+						extract_path(tmp, currentDir);
 
 						if (i == 0 && chkLoadConfig->isSelected())
 						{
 							// Search for config of disk
-							extractFileName(changed_prefs.floppyslots[i].df, tmp);
-							removeFileExtension(tmp);
+							extract_filename(changed_prefs.floppyslots[i].df, tmp);
+							remove_file_extension(tmp);
 							LoadConfigByName(tmp);
 						}
 						AdjustDropDownControls();
@@ -261,8 +261,8 @@ public:
 								// Search for config of disk
 								char tmp[MAX_DPATH];
 
-								extractFileName(changed_prefs.floppyslots[i].df, tmp);
-								removeFileExtension(tmp);
+								extract_filename(changed_prefs.floppyslots[i].df, tmp);
+								remove_file_extension(tmp);
 								LoadConfigByName(tmp);
 							}
 						}
@@ -304,8 +304,8 @@ public:
 			char filename[MAX_DPATH];
 			char diskname[MAX_DPATH];
 
-			extractFileName(changed_prefs.floppyslots[0].df, diskname);
-			removeFileExtension(diskname);
+			extract_filename(changed_prefs.floppyslots[0].df, diskname);
+			remove_file_extension(diskname);
 
 			get_configuration_path(filename, MAX_DPATH);
 			strncat(filename, diskname, MAX_DPATH - 1);
@@ -334,12 +334,12 @@ public:
 			strncpy(tmp, currentDir, MAX_DPATH);
 			if (SelectFile("Create 3.5'' DD disk file", tmp, diskfile_filter, true))
 			{
-				extractFileName(tmp, diskname);
-				removeFileExtension(diskname);
+				extract_filename(tmp, diskname);
+				remove_file_extension(diskname);
 				diskname[31] = '\0';
 				disk_creatediskfile(&changed_prefs, tmp, 0, DRV_35_DD, -1, diskname, false, false, nullptr);
 				AddFileToDiskList(tmp, 1);
-				extractPath(tmp, currentDir);
+				extract_path(tmp, currentDir);
 			}
 			cmdCreateDDDisk->requestFocus();
 		}
@@ -351,12 +351,12 @@ public:
 			strcpy(tmp, currentDir);
 			if (SelectFile("Create 3.5'' HD disk file", tmp, diskfile_filter, true))
 			{
-				extractFileName(tmp, diskname);
-				removeFileExtension(diskname);
+				extract_filename(tmp, diskname);
+				remove_file_extension(diskname);
 				diskname[31] = '\0';
 				disk_creatediskfile(&changed_prefs, tmp, 0, DRV_35_HD, -1, diskname, false, false, nullptr);
 				AddFileToDiskList(tmp, 1);
-				extractPath(tmp, currentDir);
+				extract_path(tmp, currentDir);
 			}
 			cmdCreateHDDisk->requestFocus();
 		}

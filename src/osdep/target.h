@@ -81,9 +81,9 @@ extern void get_rp9_path(char* out, int size);
 extern void get_savestate_path(char* out, int size);
 extern void get_screenshot_path(char* out, int size);
 
-extern void extractFileName(const char* str, char* buffer);
-extern void extractPath(char* str, char* buffer);
-extern void removeFileExtension(char* filename);
+extern void extract_filename(const char* str, char* buffer);
+extern void extract_path(char* str, char* buffer);
+extern void remove_file_extension(char* filename);
 extern void ReadConfigFileList(void);
 extern void RescanROMs(void);
 extern void SymlinkROMs(void);

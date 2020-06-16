@@ -434,7 +434,7 @@ bool EditFilesysVirtual(const int unit_no)
 	{
 		struct uaedev_config_info ci{};
 		const auto bp = tweakbootpri(atoi(txtBootPri->getText().c_str()), chkAutoboot->isSelected() ? 1 : 0, 0);
-		extractPath(const_cast<char *>(txtPath->getText().c_str()), currentDir);
+		extract_path(const_cast<char *>(txtPath->getText().c_str()), currentDir);
 
 		uci_set_defaults(&ci, true);
 		strncpy(ci.devname, const_cast<char *>(txtDevice->getText().c_str()), MAX_DPATH);

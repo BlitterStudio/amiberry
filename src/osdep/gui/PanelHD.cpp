@@ -259,7 +259,7 @@ public:
 					changed_prefs.cdslots[0].inuse = true;
 					changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
 					AddFileToCDList(tmp, 1);
-					extractPath(tmp, currentDir);
+					extract_path(tmp, currentDir);
 
 					AdjustDropDownControls();
 				}

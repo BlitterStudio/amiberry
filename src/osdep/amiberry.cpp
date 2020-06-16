@@ -193,7 +193,7 @@ void logging_init(void)
 	{
 		static int started;
 		static int first;
-		char debugfilename[MAX_DPATH];
+		char debug_filename[MAX_DPATH];
 
 		if (first > 1)
 		{
@@ -207,9 +207,9 @@ void logging_init(void)
 			debugfile = nullptr;
 		}
 
-		sprintf(debugfilename, "%s", logfile_path);
+		sprintf(debug_filename, "%s", logfile_path);
 		if (!debugfile)
-			debugfile = fopen(debugfilename, "wt");
+			debugfile = fopen(debug_filename, "wt");
 
 		first++;
 		write_log("AMIBERRY Logfile\n\n");
@@ -224,13 +224,13 @@ void logging_cleanup(void)
 }
 
 
-void stripslashes(TCHAR* p)
+void strip_slashes(TCHAR* p)
 {
 	while (_tcslen(p) > 0 && (p[_tcslen(p) - 1] == '\\' || p[_tcslen(p) - 1] == '/'))
 		p[_tcslen(p) - 1] = 0;
 }
 
-void fixtrailing(TCHAR* p)
+void fix_trailing(TCHAR* p)
 {
 	if (_tcslen(p) == 0)
 		return;
@@ -239,23 +239,23 @@ void fixtrailing(TCHAR* p)
 	_tcscat(p, "/");
 }
 
-bool samepath(const TCHAR* p1, const TCHAR* p2)
+bool same_path(const TCHAR* p1, const TCHAR* p2)
 {
 	if (!_tcsicmp(p1, p2))
 		return true;
 	return false;
 }
 
-void getpathpart(TCHAR* outpath, int size, const TCHAR* inpath)
+void get_path_part(TCHAR* outpath, int size, const TCHAR* inpath)
 {
 	_tcscpy(outpath, inpath);
 	auto* const p = _tcsrchr(outpath, '/');
 	if (p)
 		p[0] = 0;
-	fixtrailing(outpath);
+	fix_trailing(outpath);
 }
 
-void getfilepart(TCHAR* out, int size, const TCHAR* path)
+void get_file_part(TCHAR* out, int size, const TCHAR* path)
 {
 	out[0] = 0;
 	const auto* const p = _tcsrchr(path, '/');
@@ -630,7 +630,7 @@ void get_saveimage_path(char* out, int size, int dir)
 
 void get_configuration_path(char* out, int size)
 {
-	fixtrailing(config_path);
+	fix_trailing(config_path);
 	strncpy(out, config_path, size - 1);
 }
 
@@ -641,7 +641,7 @@ void set_configuration_path(char* newpath)
 
 void get_controllers_path(char* out, int size)
 {
-	fixtrailing(controllers_path);
+	fix_trailing(controllers_path);
 	strncpy(out, controllers_path, size - 1);
 }
 
@@ -682,7 +682,7 @@ void set_logfile_path(char* newpath)
 
 void get_rom_path(char* out, int size)
 {
-	fixtrailing(rom_path);
+	fix_trailing(rom_path);
 	strncpy(out, rom_path, size - 1);
 }
 
@@ -693,7 +693,7 @@ void set_rom_path(char* newpath)
 
 void get_rp9_path(char* out, int size)
 {
-	fixtrailing(rp9_path);
+	fix_trailing(rp9_path);
 	strncpy(out, rp9_path, size - 1);
 }
 
@@ -724,7 +724,7 @@ int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int
 		// Load rp9 config
 		result = rp9_parse_file(p, filename);
 		if (result)
-			extractFileName(filename, last_loaded_config);
+			extract_filename(filename, last_loaded_config);
 	}
 	else
 	{
@@ -735,7 +735,7 @@ int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int
 			result = cfgfile_load(p, filename, &config_type, 0, 1);
 		}
 		if (result)
-			extractFileName(filename, last_loaded_config);
+			extract_filename(filename, last_loaded_config);
 	}
 
 	if (result)
@@ -785,7 +785,7 @@ int check_configfile(char* file)
 	return 0;
 }
 
-void extractFileName(const char* str, char* buffer)
+void extract_filename(const char* str, char* buffer)
 {
 	const auto* p = str + strlen(str) - 1;
 	while (*p != '/' && p >= str)
@@ -794,7 +794,7 @@ void extractFileName(const char* str, char* buffer)
 	strncpy(buffer, p, MAX_DPATH - 1);
 }
 
-void extractPath(char* str, char* buffer)
+void extract_path(char* str, char* buffer)
 {
 	strncpy(buffer, str, MAX_DPATH - 1);
 	auto* p = buffer + strlen(buffer) - 1;
@@ -803,7 +803,7 @@ void extractPath(char* str, char* buffer)
 	p[1] = '\0';
 }
 
-void removeFileExtension(char* filename)
+void remove_file_extension(char* filename)
 {
 	auto* p = filename + strlen(filename) - 1;
 	while (p >= filename && *p != '.')
@@ -814,7 +814,7 @@ void removeFileExtension(char* filename)
 	*p = '\0';
 }
 
-void ReadDirectory(const char* path, std::vector<std::string>* dirs, std::vector<std::string>* files)
+void read_directory(const char* path, std::vector<std::string>* dirs, std::vector<std::string>* files)
 {
 	struct dirent* dent;
 
@@ -1092,7 +1092,7 @@ void get_string(FILE* f, char* dst, int size)
 	strncpy(dst, buffer, size);
 }
 
-static void trimwsa(char* s)
+static void trim_wsa(char* s)
 {
 	/* Delete trailing whitespace.  */
 	int len = strlen(s);
@@ -1139,7 +1139,7 @@ void load_amiberry_settings(void)
 
 		while (zfile_fgetsa(linea, sizeof linea, fh) != nullptr)
 		{
-			trimwsa(linea);
+			trim_wsa(linea);
 			if (strlen(linea) > 0)
 			{
 				if (!cfgfile_separate_linea(path, linea, option, value))

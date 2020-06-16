@@ -161,7 +161,7 @@ void ShowHelp(const char* title, const std::vector<std::string>& text);
 bool LoadConfigByName(const char* name);
 ConfigFileInfo* SearchConfigInList(const char* name);
 
-extern void ReadDirectory(const char* path, vector<string>* dirs, vector<string>* files);
+extern void read_directory(const char* path, vector<string>* dirs, vector<string>* files);
 extern void FilterFiles(vector<string>* files, const char* filter[]);
 
 enum

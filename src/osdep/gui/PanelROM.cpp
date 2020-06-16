@@ -167,8 +167,8 @@ public:
 			if (SelectFile("Select System ROM", tmp, filter))
 			{
 				const auto newrom = new AvailableROM();
-				extractFileName(tmp, newrom->Name);
-				removeFileExtension(newrom->Name);
+				extract_filename(tmp, newrom->Name);
+				remove_file_extension(newrom->Name);
 				strncpy(newrom->Path, tmp, MAX_DPATH - 1);
 				newrom->ROMType = ROMTYPE_KICK;
 				lstAvailableROMs.push_back(newrom);
@@ -183,8 +183,8 @@ public:
 			if (SelectFile("Select Extended ROM", tmp, filter))
 			{
 				const auto newrom = new AvailableROM();
-				extractFileName(tmp, newrom->Name);
-				removeFileExtension(newrom->Name);
+				extract_filename(tmp, newrom->Name);
+				remove_file_extension(newrom->Name);
 				strncpy(newrom->Path, tmp, MAX_DPATH - 1);
 				newrom->ROMType = ROMTYPE_EXTCDTV;
 				lstAvailableROMs.push_back(newrom);
@@ -199,8 +199,8 @@ public:
 			if (SelectFile("Select Cartridge ROM", tmp, filter))
 			{
 				const auto newrom = new AvailableROM();
-				extractFileName(tmp, newrom->Name);
-				removeFileExtension(newrom->Name);
+				extract_filename(tmp, newrom->Name);
+				remove_file_extension(newrom->Name);
 				strncpy(newrom->Path, tmp, MAX_DPATH - 1);
 				newrom->ROMType = ROMTYPE_CD32CART;
 				lstAvailableROMs.push_back(newrom);
@@ -347,8 +347,8 @@ void RefreshPanelROM()
 	{
 		// ROM file not in the list of known ROMs -- let's add it
 		auto newrom = new AvailableROM();
-		extractFileName(changed_prefs.romfile, newrom->Name);
-		removeFileExtension(newrom->Name);
+		extract_filename(changed_prefs.romfile, newrom->Name);
+		remove_file_extension(newrom->Name);
 		strncpy(newrom->Path, changed_prefs.romfile, MAX_DPATH - 1);
 		newrom->ROMType = ROMTYPE_KICK;
 		lstAvailableROMs.push_back(newrom);
@@ -364,8 +364,8 @@ void RefreshPanelROM()
 	{
 		// ROM file not in the list of known ROMs
 		auto newrom = new AvailableROM();
-		extractFileName(changed_prefs.romextfile, newrom->Name);
-		removeFileExtension(newrom->Name);
+		extract_filename(changed_prefs.romextfile, newrom->Name);
+		remove_file_extension(newrom->Name);
 		strncpy(newrom->Path, changed_prefs.romextfile, MAX_DPATH - 1);
 		newrom->ROMType = ROMTYPE_EXTCDTV;
 		lstAvailableROMs.push_back(newrom);

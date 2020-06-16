@@ -80,7 +80,7 @@ public:
 
 	void changeDir(const char* path)
 	{
-		ReadDirectory(path, &dirs, nullptr);
+		read_directory(path, &dirs, nullptr);
 		if (dirs.empty())
 			dirs.emplace_back("..");
 	}

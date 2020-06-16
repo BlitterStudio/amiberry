@@ -384,7 +384,7 @@ public:
 					changed_prefs.cdslots[0].inuse = true;
 					changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
 					AddFileToCDList(tmp, 1);
-					extractPath(tmp, currentDir);
+					extract_path(tmp, currentDir);
 
 					AdjustDropDownControls();
 				}
@@ -669,7 +669,7 @@ public:
 						strncpy(changed_prefs.floppyslots[i].df, tmp, MAX_DPATH);
 						disk_insert(i, tmp);
 						AddFileToDiskList(tmp, 1);
-						extractPath(tmp, currentDir);
+						extract_path(tmp, currentDir);
 
 						AdjustDropDownControls();
 					}

@@ -275,7 +275,7 @@ void RescanROMs()
 	get_rom_path(path, MAX_DPATH);
 
 	load_keyring(&changed_prefs, path);
-	ReadDirectory(path, nullptr, &files);
+	read_directory(path, nullptr, &files);
 	for (auto & file : files)
 	{
 		char tmppath[MAX_DPATH];
@@ -320,7 +320,7 @@ void ReadConfigFileList(void)
 
 	// Read rp9 files
 	get_rp9_path(path, MAX_DPATH);
-	ReadDirectory(path, nullptr, &files);
+	read_directory(path, nullptr, &files);
 	FilterFiles(&files, filter_rp9);
 	for (auto & file : files)
 	{
@@ -328,14 +328,14 @@ void ReadConfigFileList(void)
 		strncpy(tmp->FullPath, path, MAX_DPATH - 1);
 		strncat(tmp->FullPath, file.c_str(), MAX_DPATH - 1);
 		strncpy(tmp->Name, file.c_str(), MAX_DPATH - 1);
-		removeFileExtension(tmp->Name);
+		remove_file_extension(tmp->Name);
 		strncpy(tmp->Description, _T("rp9"), MAX_DPATH - 1);
 		ConfigFilesList.emplace_back(tmp);
 	}
 
 	// Read standard config files
 	get_configuration_path(path, MAX_DPATH);
-	ReadDirectory(path, nullptr, &files);
+	read_directory(path, nullptr, &files);
 	FilterFiles(&files, filter_uae);
 	for (auto & file : files)
 	{
@@ -343,7 +343,7 @@ void ReadConfigFileList(void)
 		strncpy(tmp->FullPath, path, MAX_DPATH - 1);
 		strncat(tmp->FullPath, file.c_str(), MAX_DPATH - 1);
 		strncpy(tmp->Name, file.c_str(), MAX_DPATH - 1);
-		removeFileExtension(tmp->Name);
+		remove_file_extension(tmp->Name);
 		// If the user has many (thousands) of configs, this will take a long time
 		if (amiberry_options.read_config_descriptions)
 		{
@@ -469,14 +469,14 @@ int gui_update()
 	get_screenshot_path(screenshot_filename, MAX_DPATH - 1);
 
 	if (strlen(currprefs.floppyslots[0].df) > 0)
-		extractFileName(currprefs.floppyslots[0].df, tmp);
+		extract_filename(currprefs.floppyslots[0].df, tmp);
 	else
 		strncpy(tmp, last_loaded_config, MAX_DPATH - 1);
 
 	strncat(savestate_fname, tmp, MAX_DPATH - 1);
 	strncat(screenshot_filename, tmp, MAX_DPATH - 1);
-	removeFileExtension(savestate_fname);
-	removeFileExtension(screenshot_filename);
+	remove_file_extension(savestate_fname);
+	remove_file_extension(screenshot_filename);
 
   switch(currentStateNum)
   {
