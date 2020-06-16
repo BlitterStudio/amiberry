@@ -483,52 +483,55 @@ int find_retroarch(const TCHAR* find_setting, char* retroarch_file, host_input_b
 	auto tempbutton = -1;
 
 	// read each line in
-	while (std::getline(readFile, line) && line.length() > 1)
+	while (std::getline(readFile, line))
 	{
-		if (strncmp(find_setting, "count_hats", 10) == 0)
+		if (line.length() > 1)
 		{
-			auto param = line.substr(line.find(delimiter) + delimiter.length(), line.length());
-			// remove leading "
-			if (param.at(0) == '"')
-				param.erase(0, 1);
-			// remove trailing "
-			if (param.at(param.length() - 1) == '"')
-				param.erase(param.length() - 1, 1);
-
-			if (param.find('h') == 0)
+			if (strncmp(find_setting, "count_hats", 10) == 0)
 			{
-				tempbutton = 1;
-				break;
+				auto param = line.substr(line.find(delimiter) + delimiter.length(), line.length());
+				// remove leading "
+				if (param.at(0) == '"')
+					param.erase(0, 1);
+				// remove trailing "
+				if (param.at(param.length() - 1) == '"')
+					param.erase(param.length() - 1, 1);
+
+				if (param.find('h') == 0)
+				{
+					tempbutton = 1;
+					break;
+				}
+
 			}
 
-		}
-
-		const auto option = line.substr(0, line.find(delimiter));
-		// exit if we got no result from splitting the string
-		if (option != line)
-		{
-			if (option != find_setting)
-				continue;
-
-			// using the " = " to work out which is the option, and which is the parameter.
-			auto param = line.substr(line.find(delimiter) + delimiter.length(), line.length());
-
-			// remove leading "
-			if (param.at(0) == '"')
-				param.erase(0, 1);
-
-			// remove trailing "
-			if (param.at(param.length() - 1) == '"')
-				param.erase(param.length() - 1, 1);
-
-			//  time to get the output number
-			if (param.find('h') != 0) // check it isn't some kind of hat starting 'h' (so if D-pad uses buttons)
+			const auto option = line.substr(0, line.find(delimiter));
+			// exit if we got no result from splitting the string
+			if (option != line)
 			{
-				tempbutton = abs(atol(param.c_str()));
-			}
+				if (option != find_setting)
+					continue;
 
-			if (option == find_setting)
-				break;
+				// using the " = " to work out which is the option, and which is the parameter.
+				auto param = line.substr(line.find(delimiter) + delimiter.length(), line.length());
+
+				// remove leading "
+				if (param.at(0) == '"')
+					param.erase(0, 1);
+
+				// remove trailing "
+				if (param.at(param.length() - 1) == '"')
+					param.erase(param.length() - 1, 1);
+
+				//  time to get the output number
+				if (param.find('h') != 0) // check it isn't some kind of hat starting 'h' (so if D-pad uses buttons)
+				{
+					tempbutton = abs(atol(param.c_str()));
+				}
+
+				if (option == find_setting)
+					break;
+			}
 		}
 	}
 	write_log("Controller Detection: %s : %d\n", find_setting, tempbutton);
@@ -545,32 +548,35 @@ bool find_retroarch_polarity(const TCHAR* find_setting, char* retroarch_file)
 	auto tempbutton = false;
 
 	// read each line in
-	while (std::getline(readFile, line) && line.length() > 1)
+	while (std::getline(readFile, line))
 	{
-		const auto option = line.substr(0, line.find(delimiter));
-
-		if (option != line) // exit if we got no result from splitting the string
+		if (line.length() > 1)
 		{
-			// using the " = " to work out which is the option, and which is the parameter.
-			auto param = line.substr(line.find(delimiter) + delimiter.length(), line.length());
+			const auto option = line.substr(0, line.find(delimiter));
 
-			// remove leading "
-			if (param.at(0) == '"')
-				param.erase(0, 1);
-
-			// remove trailing "
-			if (param.at(param.length() - 1) == '"')
-				param.erase(param.length() - 1, 1);
-
-			// ok, this is the 'normal' storing of values
-			if (option == find_setting)
+			if (option != line) // exit if we got no result from splitting the string
 			{
-				//  time to get the output value
-				if (param.at(0) == '-')
+				// using the " = " to work out which is the option, and which is the parameter.
+				auto param = line.substr(line.find(delimiter) + delimiter.length(), line.length());
+
+				// remove leading "
+				if (param.at(0) == '"')
+					param.erase(0, 1);
+
+				// remove trailing "
+				if (param.at(param.length() - 1) == '"')
+					param.erase(param.length() - 1, 1);
+
+				// ok, this is the 'normal' storing of values
+				if (option == find_setting)
 				{
-					tempbutton = true;
+					//  time to get the output value
+					if (param.at(0) == '-')
+					{
+						tempbutton = true;
+					}
+					break;
 				}
-				break;
 			}
 		}
 	}
@@ -597,32 +603,35 @@ const TCHAR* find_retroarch_key(const TCHAR* find_setting_prefix, int player, co
 	}
 
 	// read each line in
-	while (std::getline(read_file, line) && line.length() > 1)
+	while (std::getline(read_file, line))
 	{
-		const auto option = line.substr(0, line.find(delimiter));
-
-		if (option != line) // exit if we got no result from splitting the string
+		if (line.length() > 1)
 		{
-			// using the " = " to work out which is the option, and which is the parameter.
-			auto param = line.substr(line.find(delimiter) + delimiter.length(), line.length());
+			const auto option = line.substr(0, line.find(delimiter));
 
-			if (!param.empty())
+			if (option != line) // exit if we got no result from splitting the string
 			{
-				// remove leading "
-				if (param.at(0) == '"')
-					param.erase(0, 1);
+				// using the " = " to work out which is the option, and which is the parameter.
+				auto param = line.substr(line.find(delimiter) + delimiter.length(), line.length());
 
-				// remove trailing "
-				if (param.at(param.length() - 1) == '"')
-					param.erase(param.length() - 1, 1);
+				if (!param.empty())
+				{
+					// remove leading "
+					if (param.at(0) == '"')
+						param.erase(0, 1);
 
-				output = &param[0U];
+					// remove trailing "
+					if (param.at(param.length() - 1) == '"')
+						param.erase(param.length() - 1, 1);
 
-				// ok, this is the 'normal' storing of values
-				if (option == find_setting)
-					break;
+					output = &param[0U];
 
-				output = "nul";
+					// ok, this is the 'normal' storing of values
+					if (option == find_setting)
+						break;
+
+					output = "nul";
+				}
 			}
 		}
 	}
@@ -667,7 +676,7 @@ static bool init_kb_from_retroarch(int index, char* retroarch_file)
 	struct host_keyboard_button temp_keyboard_buttons{};
 	auto player = index + 1;
 
-	auto tempkey = find_retroarch_key("input_player", player, "y", retroarch_file);
+	const auto* tempkey = find_retroarch_key("input_player", player, "y", retroarch_file);
 	auto x = find_string_in_array(remap_key_map_list_strings, remap_key_map_list_size, tempkey);
 	temp_keyboard_buttons.north_button = remap_key_map_list[x];
 
