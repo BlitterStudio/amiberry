@@ -298,6 +298,14 @@ void fix_apmodes(struct uae_prefs* p)
 
 void target_fixup_options(struct uae_prefs* p)
 {
+	// If we have a CD inserted, but not emulating a CDTV or CD32, enable SCSI
+	if (p->cdslots[0].inuse 
+		&& (!p->cs_cd32cd && !p->cs_cd32nvram) 
+		&& (!p->cs_cdtvcd && !p->cs_cdtvram))
+	{
+		p->scsi = 1;
+	}
+	
 	p->rtgboards[0].rtgmem_type = GFXBOARD_UAE_Z3;
 
 	if (z3_base_adr == Z3BASE_REAL)

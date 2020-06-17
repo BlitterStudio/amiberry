@@ -22,6 +22,9 @@ extern int special_mem;
 
 bool init_shm (void);
 void free_shm (void);
+bool preinit_shm (void);
+extern bool canbang;
+extern bool jit_direct_compatible_memory;
 
 #define Z3BASE_UAE 0x10000000
 #define Z3BASE_REAL 0x40000000
@@ -32,8 +35,10 @@ void free_shm (void);
 
 #ifdef ADDRESS_SPACE_24BIT
 #define MEMORY_BANKS 256
+#define MEMORY_RANGE_MASK ((1<<24)-1)
 #else
 #define MEMORY_BANKS 65536
+#define MEMORY_RANGE_MASK (~0)
 #endif
 
 typedef uae_u32 (REGPARAM3 *mem_get_func)(uaecptr) REGPARAM;
@@ -43,6 +48,12 @@ typedef int (REGPARAM3 *check_func)(uaecptr, uae_u32) REGPARAM;
 
 extern uae_u32 max_z3fastmem;
 
+extern uae_u32 wait_cpu_cycle_read (uaecptr addr, int mode);
+extern void wait_cpu_cycle_write (uaecptr addr, int mode, uae_u32 v);
+extern uae_u32 wait_cpu_cycle_read_ce020 (uaecptr addr, int mode);
+extern void wait_cpu_cycle_write_ce020 (uaecptr addr, int mode, uae_u32 v);
+
+#undef DIRECT_MEMFUNCS_SUCCESSFUL
 #include "machdep/maccess.h"
 
 #define chipmem_start_addr 0x00000000
@@ -54,19 +65,45 @@ extern uae_u32 max_z3fastmem;
 #define ROM_SIZE_256 262144
 #define ROM_SIZE_128 131072
 
+extern bool ersatzkickfile;
 extern bool cloanto_rom, kickstart_rom;
 extern uae_u16 kickstart_version;
 extern int uae_boot_rom_type;
 extern int uae_boot_rom_size;
 extern uaecptr rtarea_base;
+extern uaecptr uaeboard_base;
 
+extern uae_u8* baseaddr[];
+
+#define CACHE_ENABLE_DATA 0x01
+#define CACHE_ENABLE_DATA_BURST 0x02
+#define CACHE_ENABLE_COPYBACK 0x020
+#define CACHE_ENABLE_INS 0x80
+#define CACHE_ENABLE_INS_BURST 0x40
+#define CACHE_ENABLE_BOTH (CACHE_ENABLE_DATA | CACHE_ENABLE_INS)
+#define CACHE_ENABLE_ALL (CACHE_ENABLE_BOTH | CACHE_ENABLE_INS_BURST | CACHE_ENABLE_DATA_BURST)
+#define CACHE_DISABLE_ALLOCATE 0x08
+#define CACHE_DISABLE_MMU 0x10
+extern uae_u8 ce_banktype[65536], ce_cachable[65536];
+
+#define ABFLAG_CACHE_SHIFT 24
 enum
 {
 	ABFLAG_UNK = 0, ABFLAG_RAM = 1, ABFLAG_ROM = 2, ABFLAG_ROMIN = 4, ABFLAG_IO = 8,
 	ABFLAG_NONE = 16, ABFLAG_SAFE = 32, ABFLAG_INDIRECT = 64, ABFLAG_NOALLOC = 128,
 	ABFLAG_RTG = 256, ABFLAG_THREADSAFE = 512, ABFLAG_DIRECTMAP = 1024, ABFLAG_ALLOCINDIRECT = 2048,
-	ABFLAG_CHIPRAM = 4096, ABFLAG_CIA = 8192, ABFLAG_PPCIOSPACE = 16384
+	ABFLAG_CHIPRAM = 4096, ABFLAG_CIA = 8192, ABFLAG_PPCIOSPACE = 16384,
+	ABFLAG_MAPPED = 32768,
+	ABFLAG_DIRECTACCESS = 65536,
+	ABFLAG_CACHE_ENABLE_DATA = CACHE_ENABLE_DATA << ABFLAG_CACHE_SHIFT,
+	ABFLAG_CACHE_ENABLE_DATA_BURST = CACHE_ENABLE_DATA_BURST << ABFLAG_CACHE_SHIFT,
+	ABFLAG_CACHE_ENABLE_INS = CACHE_ENABLE_INS << ABFLAG_CACHE_SHIFT,
+	ABFLAG_CACHE_ENABLE_INS_BURST = CACHE_ENABLE_INS_BURST << ABFLAG_CACHE_SHIFT,
 };
+
+#define ABFLAG_CACHE_ENABLE_BOTH (ABFLAG_CACHE_ENABLE_DATA | ABFLAG_CACHE_ENABLE_INS)
+#define ABFLAG_CACHE_ENABLE_ALL (ABFLAG_CACHE_ENABLE_BOTH | ABFLAG_CACHE_ENABLE_INS_BURST | ABFLAG_CACHE_ENABLE_DATA_BURST)
+
 typedef struct {
 	/* These ones should be self-explanatory... */
 	mem_get_func lget, wget, bget;
@@ -87,18 +124,23 @@ typedef struct {
 	for this particular bank. */
 	uae_u8 *baseaddr;
 	const TCHAR *label;
-  const TCHAR *name;
-  /* for instruction opcode/operand fetches */
-  mem_get_func wgeti;
-  int flags;
+	const TCHAR *name;
+	/* for instruction opcode/operand fetches */
+	mem_get_func wgeti;
+	int flags;
 	int jit_read_flag, jit_write_flag;
 	struct addrbank_sub *sub_banks;
 	uae_u32 mask;
+	uae_u32 startmask;
 	uae_u32 start;
 	// if RAM: size of allocated RAM. Zero if failed.
 	uae_u32 allocated_size;
 	// size of bank (if IO or before RAM allocation)
 	uae_u32 reserved_size;
+	/* non-NULL if xget/xput can be bypassed */
+	uae_u8 *baseaddr_direct_r;
+	uae_u8 *baseaddr_direct_w;
+	uae_u32 startaccessmask;
 } addrbank;
 
 #define MEMORY_MIN_SUBBANK 1024
@@ -115,22 +157,62 @@ struct autoconfig_info
 {
 	struct uae_prefs *prefs;
 	bool doinit;
+	bool postinit;
 	int devnum;
 	uae_u8 autoconfig_raw[128];
 	uae_u8 autoconfig_bytes[16];
 	TCHAR name[128];
 	const uae_u8 *autoconfigp;
+	bool autoconfig_automatic;
 	uae_u32 start;
 	uae_u32 size;
 	int zorro;
 	const TCHAR *label;
 	addrbank *addrbankp;
 	struct romconfig *rc;
+	uae_u32 last_high_ram;
+	const struct cpuboardsubtype *cst;
 	const struct expansionromtype *ert;
+	struct autoconfig_info *parent;
+	const int *parent_romtype;
+	bool parent_of_previous;
+	bool parent_address_space;
 	bool direct_vram;
+	const TCHAR *parent_name;
+	bool can_sort;
+	bool hardwired;
 	bool (*get_params)(struct uae_prefs*, struct expansion_params*);
+	bool (*set_params)(struct uae_prefs*, struct expansion_params*);
+	void *userdata;
 };
 
+#define CE_MEMBANK_FAST32 0
+#define CE_MEMBANK_CHIP16 1
+#define CE_MEMBANK_CHIP32 2
+#define CE_MEMBANK_CIA 3
+#define CE_MEMBANK_FAST16 4
+//#define CE_MEMBANK_FAST16_EXTRA_ACCURACY 5
+
+#define MEMORY_LGETI(name) \
+static uae_u32 REGPARAM3 name ## _lgeti (uaecptr) REGPARAM; \
+static uae_u32 REGPARAM2 name ## _lgeti (uaecptr addr) \
+{ \
+	uae_u8 *m; \
+	addr -= name ## _bank.startaccessmask; \
+	addr &= name ## _bank.mask; \
+	m = name ## _bank.baseaddr + addr; \
+	return do_get_mem_long ((uae_u32 *)m); \
+}
+#define MEMORY_WGETI(name) \
+static uae_u32 REGPARAM3 name ## _wgeti (uaecptr) REGPARAM; \
+static uae_u32 REGPARAM2 name ## _wgeti (uaecptr addr) \
+{ \
+	uae_u8 *m; \
+	addr -= name ## _bank.startaccessmask; \
+	addr &= name ## _bank.mask; \
+	m = name ## _bank.baseaddr + addr; \
+	return do_get_mem_word ((uae_u16 *)m); \
+}
 #define MEMORY_LGET(name) \
 static uae_u32 REGPARAM3 name ## _lget (uaecptr) REGPARAM; \
 static uae_u32 REGPARAM2 name ## _lget (uaecptr addr) \
@@ -225,6 +307,7 @@ MEMORY_BPUT(name); \
 MEMORY_CHECK(name); \
 MEMORY_XLATE(name);
 
+
 #define MEMORY_ARRAY_LGET(name, index) \
 static uae_u32 REGPARAM3 name ## index ## _lget (uaecptr) REGPARAM; \
 static uae_u32 REGPARAM2 name ## index ## _lget (uaecptr addr) \
@@ -309,6 +392,8 @@ MEMORY_ARRAY_CHECK(name, index); \
 MEMORY_ARRAY_XLATE(name, index);
 
 extern addrbank chipmem_bank;
+extern addrbank chipmem_agnus_bank;
+extern addrbank chipmem_bank_ce2;
 extern addrbank kickmem_bank;
 extern addrbank custom_bank;
 extern addrbank clock_bank;
@@ -317,28 +402,41 @@ extern addrbank rtarea_bank;
 extern addrbank filesys_bank;
 extern addrbank uaeboard_bank;
 extern addrbank expamem_bank;
-extern addrbank expamem_null;
+extern addrbank expamem_null, expamem_none;
 extern addrbank fastmem_bank[MAX_RAM_BOARDS];
+extern addrbank fastmem_nojit_bank[MAX_RAM_BOARDS];
 extern addrbank *gfxmem_banks[MAX_RTG_BOARDS];
 extern addrbank gayle_bank;
 extern addrbank gayle2_bank;
 extern addrbank mbres_bank;
 extern addrbank akiko_bank;
+extern addrbank cardmem_bank;
 extern addrbank bogomem_bank;
 extern addrbank z3fastmem_bank[MAX_RAM_BOARDS];
+extern addrbank z3chipmem_bank;
+extern addrbank mem25bit_bank;
+extern addrbank debugmem_bank;
 extern addrbank a3000lmem_bank;
 extern addrbank a3000hmem_bank;
 extern addrbank extendedkickmem_bank;
 extern addrbank extendedkickmem2_bank;
 extern addrbank custmem1_bank;
 extern addrbank custmem2_bank;
+extern addrbank romboardmem_bank[MAX_ROM_BOARDS];
 
 extern void rtarea_init(void);
 extern void rtarea_free(void);
-extern void rtarea_setup (void);
+extern void rtarea_init_mem(void);
+extern void rtarea_setup(void);
 extern void expamem_reset(int);
+extern void expamem_next(addrbank *mapped, addrbank *next);
+extern void expamem_shutup(addrbank *mapped);
+extern bool expamem_z3hack(struct uae_prefs*);
+extern void expansion_cpu_fallback(void);
 extern void set_expamem_z3_hack_mode(int);
-extern uaecptr expamem_board_pointer;
+extern uaecptr expamem_board_pointer, expamem_highmem_pointer;
+extern uaecptr expamem_z3_pointer_real, expamem_z3_pointer_uae;
+extern uae_u32 expamem_z3_highram_real, expamem_z3_highram_uae;
 extern uae_u32 expamem_board_size;
 
 extern uae_u32 last_custom_value1;
@@ -470,17 +568,21 @@ STATIC_INLINE uae_u32 get_byte_jit(uaecptr addr)
 # if SIZEOF_VOID_P == 8
 STATIC_INLINE void *get_pointer (uaecptr addr)
 {
-  const unsigned int n = SIZEOF_VOID_P / 4;
-  union {
-	  void    *ptr;
-	  uae_u32  longs[SIZEOF_VOID_P / 4];
-  } p;
-  unsigned int i;
+	const unsigned int n = SIZEOF_VOID_P / 4;
+	union {
+		void    *ptr;
+		uae_u32  longs[SIZEOF_VOID_P / 4];
+	} p;
+	unsigned int i;
 
-  for (i = 0; i < n; i++) {
-  	p.longs[n - 1 - i] = get_long (addr + i * 4);
-  }
-  return p.ptr;
+	for (i = 0; i < n; i++) {
+#ifdef WORDS_BIGENDIAN
+		p.longs[i]     = get_long (addr + i * 4);
+#else
+		p.longs[n - 1 - i] = get_long (addr + i * 4);
+#endif
+	}
+	return p.ptr;
 }
 # else
 #  error "Unknown or unsupported pointer size."
@@ -574,11 +676,15 @@ STATIC_INLINE void put_pointer (uaecptr addr, void *v)
 	} p;
 	unsigned int i;
 
-  p.ptr = v;
+	p.ptr = v;
 
-  for (i = 0; i < n; i++) {
-  	put_long (addr + i * 4, p.longs[n - 1 - i]);
-  }
+	for (i = 0; i < n; i++) {
+#ifdef WORDS_BIGENDIAN
+		put_long (addr + i * 4, p.longs[i]);
+#else
+		put_long (addr + i * 4, p.longs[n - 1 - i]);
+#endif
+	}
 }
 # endif
 #endif
@@ -631,6 +737,7 @@ extern void REGPARAM3 chipmem_lput (uaecptr, uae_u32) REGPARAM;
 extern void REGPARAM3 chipmem_wput (uaecptr, uae_u32) REGPARAM;
 extern void REGPARAM3 chipmem_bput (uaecptr, uae_u32) REGPARAM;
 
+extern uae_u32 REGPARAM3 chipmem_agnus_wget (uaecptr) REGPARAM;
 extern void REGPARAM3 chipmem_agnus_wput (uaecptr, uae_u32) REGPARAM;
 
 extern uae_u32 chipmem_full_mask;
@@ -647,11 +754,38 @@ STATIC_INLINE uae_u32 chipmem_wget_indirect (uae_u32 PT) {
 
 extern bool mapped_malloc (addrbank*);
 extern void mapped_free (addrbank*);
+extern void a3000_fakekick (int);
 
 extern uaecptr strcpyha_safe (uaecptr dst, const uae_char *src);
 extern void memcpyha_safe (uaecptr dst, const uae_u8 *src, int size);
 extern void memcpyha (uaecptr dst, const uae_u8 *src, int size);
 extern void memcpyah_safe (uae_u8 *dst, uaecptr src, int size);
 extern void memcpyah (uae_u8 *dst, uaecptr src, int size);
+
+#define UAE_MEMORY_REGIONS_MAX 64
+#define UAE_MEMORY_REGION_NAME_LENGTH 64
+
+#define UAE_MEMORY_REGION_RAM (1 << 0)
+#define UAE_MEMORY_REGION_ALIAS (1 << 1)
+#define UAE_MEMORY_REGION_MIRROR (1 << 2)
+
+/* Get a list of memory regions in the Amiga address space */
+
+typedef struct UaeMemoryRegion {
+	uaecptr start;
+	uae_u32 size;
+	TCHAR name[UAE_MEMORY_REGION_NAME_LENGTH];
+	TCHAR rom_name[UAE_MEMORY_REGION_NAME_LENGTH];
+	uaecptr alias;
+	int flags;
+	uae_u8 *memory;
+} UaeMemoryRegion;
+
+typedef struct UaeMemoryMap {
+	UaeMemoryRegion regions[UAE_MEMORY_REGIONS_MAX];
+	int num_regions;
+} UaeMemoryMap;
+
+void uae_memory_map(UaeMemoryMap *map);
 
 #endif /* UAE_MEMORY_H */

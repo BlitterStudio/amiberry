@@ -1,10 +1,10 @@
 /*
-  * UAE - The Un*x Amiga Emulator
-  *
-  * MC68000 emulation
-  *
-  * Copyright 1995 Bernd Schmidt
-  */
+* UAE - The Un*x Amiga Emulator
+*
+* MC68000 emulation
+*
+* Copyright 1995 Bernd Schmidt
+*/
 
 #ifndef UAE_NEWCPU_H
 #define UAE_NEWCPU_H
@@ -35,7 +35,7 @@ struct cputbl
 #ifdef JIT
 #define MIN_JIT_CACHE 128
 #define MAX_JIT_CACHE 16384
-typedef uae_u32 REGPARAM3 compop_func(uae_u32) REGPARAM;
+typedef uae_u32 REGPARAM3 compop_func (uae_u32) REGPARAM;
 
 #define COMP_OPCODE_ISJUMP      0x0001
 #define COMP_OPCODE_LONG_OPCODE 0x0002
@@ -64,10 +64,47 @@ typedef uae_u8 flagtype;
 typedef double fptype;
 #endif
 
+#define MAX68020CYCLES 4
+
+#define CPU_PIPELINE_MAX 4
+#define CPU000_MEM_CYCLE 4
+#define CPU000_CLOCK_MULT 2
+#define CPU020_MEM_CYCLE 3
+#define CPU020_CLOCK_MULT 4
+
+#define CACHELINES020 64
+struct cache020
+{
+	uae_u32 data;
+	uae_u32 tag;
+	bool valid;
+};
+
+#define CACHELINES030 16
+struct cache030
+{
+	uae_u32 data[4];
+	bool valid[4];
+	uae_u32 tag;
+	uae_u8 fc;
+};
+
+#define CACHESETS040 64
+#define CACHESETS060 128
+#define CACHELINES040 4
+struct cache040
+{
+	uae_u32 data[CACHELINES040][4];
+	bool dirty[CACHELINES040][4];
+	bool gdirty[CACHELINES040];
+	bool valid[CACHELINES040];
+	uae_u32 tag[CACHELINES040];
+};
+
 struct mmufixup
 {
-	int reg;
-	uae_u32 value;
+    int reg;
+    uae_u32 value;
 };
 
 extern struct mmufixup mmufixup[1];
@@ -88,8 +125,8 @@ struct regstruct
 	struct flag_struct ccrflags;
 
 	uae_u32 pc;
-	uae_u8* pc_p;
-	uae_u8* pc_oldp;
+	uae_u8 *pc_p;
+	uae_u8 *pc_oldp;
 	uae_u16 opcode;
 	uae_u32 instruction_pc;
 
@@ -446,11 +483,19 @@ extern void compemu_reset(void);
 #endif
 bool check_prefs_changed_comp(bool);
 
+#define CPU_HALT_PPC_ONLY -1
 #define CPU_HALT_BUS_ERROR_DOUBLE_FAULT 1
 #define CPU_HALT_DOUBLE_FAULT 2
 #define CPU_HALT_OPCODE_FETCH_FROM_NON_EXISTING_ADDRESS 3
+#define CPU_HALT_ACCELERATOR_CPU_FALLBACK 4
+#define CPU_HALT_ALL_CPUS_STOPPED 5
+#define CPU_HALT_FAKE_DMA 6
 #define CPU_HALT_AUTOCONFIG_CONFLICT 7
+#define CPU_HALT_PCI_CONFLICT 8
+#define CPU_HALT_CPU_STUCK 9
 #define CPU_HALT_SSP_IN_NON_EXISTING_ADDRESS 10
 #define CPU_HALT_INVALID_START_ADDRESS 11
+#define CPU_HALT_68060_HALT 12
+#define CPU_HALT_BKPT 13
 
 #endif /* UAE_NEWCPU_H */

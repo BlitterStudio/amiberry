@@ -1,11 +1,11 @@
- /*
-  * UAE - The Un*x Amiga Emulator
-  *
-  * Custom chip emulation
-  *
-  * (c) 1995 Bernd Schmidt, Alessandro Bissacco
-  * (c) 2002 - 2005 Toni Wilen
-  */
+/*
+* UAE - The Un*x Amiga Emulator
+*
+* Custom chip emulation
+*
+* (c) 1995 Bernd Schmidt, Alessandro Bissacco
+* (c) 2002 - 2005 Toni Wilen
+*/
 
 #include "sysconfig.h"
 #include "sysdeps.h"
@@ -423,8 +423,7 @@ static void blitter_dofast (void)
 				if (bltadatptr) {
 					blt_info.bltadat = bltadat = chipmem_wget_indirect (bltadatptr);
 					bltadatptr += 2;
-				}
-				else
+				} else
 					bltadat = blt_info.bltadat;
 				bltadat &= blit_masktable[i];
 				blitahold = (((uae_u32)blt_info.bltaold << 16) | bltadat) >> blt_info.blitashift;
@@ -505,11 +504,10 @@ static void blitter_dofast_desc (void)
 		bltddatptr = bltdpt;
 		bltdpt -= (blt_info.hblitsize * 2 + blt_info.bltdmod) * blt_info.vblitsize;
 	}
-  if (blitfunc_dofast_desc[mt] && !blitfill) {
-	  (*blitfunc_dofast_desc[mt])(bltadatptr, bltbdatptr, bltcdatptr, bltddatptr, &blt_info);
-  }
-  else 
-  {
+	if (blitfunc_dofast_desc[mt] && !blitfill) {
+		(*blitfunc_dofast_desc[mt])(bltadatptr, bltbdatptr, bltcdatptr, bltddatptr, &blt_info);
+	} else
+	{
 		uae_u32 blitbhold = blt_info.bltbhold;
 		uaecptr dstp = 0;
 		int dodst = 0;

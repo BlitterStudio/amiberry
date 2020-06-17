@@ -7,12 +7,15 @@
 * Copyright 1995 Alessandro Bissacco
 * Copyright 2000-2012 Toni Wilen
 */
+
+#include "sysconfig.h"
 #include "sysdeps.h"
 
 #include "options.h"
-#include "include/memory.h"
+#include "memory.h"
 #include "newcpu.h"
 #include "xwin.h"
+#include "audio.h"
 
 static const int pissoff_nojit_value = 256 * CYCLE_UNIT;
 

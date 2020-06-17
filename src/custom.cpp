@@ -28,9 +28,11 @@
 #include "xwin.h"
 #include "inputdevice.h"
 #include "autoconf.h"
+#include "traps.h"
 #include "gui.h"
 #include "picasso96.h"
 #include "drawing.h"
+#include "savestate.h"
 #include "ar.h"
 #include "akiko.h"
 #include "devices.h"
@@ -7817,20 +7819,20 @@ static void vsync_handler_post (void)
 #ifdef AMIBERRY
 	eventtab[ev_copper].active = false;
 #endif
-	COPJMP(1, 1);
+	COPJMP (1, 1);
 
-	init_hardware_frame();
+	init_hardware_frame ();
 
-	vsync_cycles = get_cycles();
+	vsync_cycles = get_cycles ();
 }
 
-static void copper_check(int n)
+static void copper_check (int n)
 {
 	if (cop_state.state == COP_wait) {
 		int vp = vpos & (((cop_state.saved_i2 >> 8) & 0x7F) | 0x80);
 		if (vp < cop_state.vcmp) {
 			if (copper_enabled_thisline)
-				write_log(_T("COPPER BUG %d: vp=%d vpos=%d vcmp=%d thisline=%d\n"), n, vp, vpos, cop_state.vcmp, copper_enabled_thisline);
+				write_log (_T("COPPER BUG %d: vp=%d vpos=%d vcmp=%d thisline=%d\n"), n, vp, vpos, cop_state.vcmp, copper_enabled_thisline);
 		}
 	}
 }
@@ -7989,7 +7991,7 @@ static void events_dmal (int hp)
 {
 	if (!dmal)
 		return;
-	if (currprefs.cpu_memory_cycle_exact) {
+	if (currprefs.cpu_compatible) {
 		while (dmal) {
 			if (dmal & 3)
 				break;
@@ -8085,9 +8087,9 @@ static void hsync_handler_pre (bool onvsync)
 		finish_decisions ();
 		if (thisline_decision.plfleft >= 0) {
 			if (currprefs.collision_level > 1)
-				do_sprite_collisions();
+				do_sprite_collisions ();
 			if (currprefs.collision_level > 2)
-				do_playfield_collisions();
+				do_playfield_collisions ();
 		}
 		hsync_record_line_state (next_lineno, nextline_how, thisline_changed);
 
@@ -8267,7 +8269,7 @@ static void hsync_handler_post (bool onvsync)
 	if (currprefs.cpu_memory_cycle_exact || currprefs.blitter_cycle_exact) {
 		int hp = maxhpos - 1, i;
 		for (i = 0; i < 4; i++) {
-			alloc_cycle(hp, i == 0 ? CYCLE_STROBE : CYCLE_REFRESH); /* strobe */
+			alloc_cycle (hp, i == 0 ? CYCLE_STROBE : CYCLE_REFRESH); /* strobe */
 #ifdef DEBUGGER
 			if (debug_dma) {
 				uae_u16 strobe = 0x3c;
@@ -8279,7 +8281,7 @@ static void hsync_handler_post (bool onvsync)
 					strobe = 0x38;
 				else if ((currprefs.chipset_mask & CSMASK_ECS_AGNUS) && lol)
 					strobe = 0x3e;
-				record_dma(i == 0 ? strobe : 0x1fe, 0xffff, 0xffffffff, hp, vpos, DMARECORD_REFRESH, i);
+				record_dma (i == 0 ? strobe : 0x1fe, 0xffff, 0xffffffff, hp, vpos, DMARECORD_REFRESH, i);
 			}
 #endif
 			hp += 2;
@@ -8288,16 +8290,17 @@ static void hsync_handler_post (bool onvsync)
 		}
 	}
 #endif
-	
+
 	events_dmal_hsync ();
 
 	if (!currprefs.cpu_thread && !cpu_sleepmode && currprefs.m68k_speed < 0 && !currprefs.cpu_memory_cycle_exact) {
 
 		static int sleeps_remaining;
-		if (is_last_line()) {
+		if (is_last_line ()) {
 			sleeps_remaining = (165 - currprefs.cpu_idle) / 6;
 			if (sleeps_remaining < 0)
 				sleeps_remaining = 0;
+			/* really last line, just run the cpu emulation until whole vsync time has been used */
 			if (regs.stopped && currprefs.cpu_idle) {
 				// CPU in STOP state: sleep if enough time left.
 				frame_time_t rpt = read_processor_time();
@@ -8315,7 +8318,6 @@ static void hsync_handler_post (bool onvsync)
 				//maybe_process_pull_audio();
 			}
 			else {
-				/* really last line, just run the cpu emulation until whole vsync time has been used */
 				vsyncmintime = vsyncmaxtime; /* emulate if still time left */
 				is_syncline_end = read_processor_time() + vsynctimebase; /* far enough in future, we never wait that long */
 				is_syncline = -12;

@@ -1698,9 +1698,9 @@ int hrtmon_load (void)
 	cart_type = CART_AR;
 	hrtmem_start = 0xa10000;
 	if(!_tcscmp(currprefs.cartfile, _T(":HRTMon")))
-	  rd = getromdatabyid(63);
+		rd = getromdatabyid(63);
 	else
-  	rd = getromdatabypath(currprefs.cartfile);
+		rd = getromdatabypath(currprefs.cartfile);
 	if (rd) {
 		if (rd->id == 63)
 			isinternal = 1;

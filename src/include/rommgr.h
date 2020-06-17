@@ -192,6 +192,7 @@ extern int decode_cloanto_rom_do (uae_u8 *mem, int size, int real_size);
 #define ROMTYPE_PCMCIAIDE	0x00100081
 #define ROMTYPE_SSQUIRREL	0x00100082
 #define ROMTYPE_MASTERCARD	0x00100083
+#define ROMTYPE_DOTTO		0x00100084
 
 #define ROMTYPE_NOT			0x00800000
 #define ROMTYPE_QUAD		0x01000000

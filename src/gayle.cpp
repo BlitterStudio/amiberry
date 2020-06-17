@@ -25,10 +25,14 @@
 #include "threaddep/thread.h"
 #include "ide.h"
 #include "autoconf.h"
+#include "rommgr.h"
 #include "devices.h"
 
 #define PCMCIA_SRAM 1
 #define PCMCIA_IDE 2
+#define PCMCIA_NE2000 3
+#define PCMCIA_ARCHOSHD 4
+#define PCMCIA_SURFSQUIRREL 5
 
 /*
 600000 to 9FFFFF	4 MB	Credit Card memory if CC present
@@ -241,7 +245,7 @@ static void gayle_cs_change (uae_u8 mask, int onoff)
 	}
 	if (changed) {
 		gayle_irq |= mask;
-		rethink_gayle ();
+		devices_rethink_all(rethink_gayle);
 		if ((mask & GAYLE_CS_CCDET) && (gayle_irq & (GAYLE_IRQ_RESET | GAYLE_IRQ_BERR)) != (GAYLE_IRQ_RESET | GAYLE_IRQ_BERR)) {
 			if (gayle_irq & GAYLE_IRQ_RESET)
 				uae_reset (0, 0);
@@ -1154,8 +1158,7 @@ static int initpcmcia (const TCHAR *path, int readonly, int type, int reset, str
 				hdf_read(&pcmcia_disk->hfd, pcmcia_attrs, pcmcia_common_size, extrasize);
 				write_log(_T("PCMCIA SRAM: Attribute data read %ld bytes\n"), extrasize);
 				pcmcia_attrs_full = 1;
-			}
-			else {
+			} else {
 				initsramattr(pcmcia_common_size, readonly);
 			}
 			write_log(_T("PCMCIA SRAM: '%s' open, size=%d\n"), path, pcmcia_common_size);
@@ -1366,13 +1369,12 @@ static void gayle_map_pcmcia (void)
 	while (!pcmcia_override) {
 		int cnt = 0;
 		for (int i = 0; i < 8; i++) {
-			struct autoconfig_info* aci = expansion_get_autoconfig_by_address(&currprefs, 6 * 1024 * 1024 + i * 512 * 1024, idx);
+			struct autoconfig_info *aci = expansion_get_autoconfig_by_address(&currprefs, 6 * 1024 * 1024 + i * 512 * 1024, idx);
 			if (aci) {
 				if (aci->zorro > 0) {
 					pcmcia_override = true;
 				}
-			}
-			else {
+			} else {
 				cnt++;
 			}
 		}
@@ -1440,7 +1442,7 @@ bool gayle_init_pcmcia(struct autoconfig_info *aci)
 static void gayle_hsync(void)
 {
 	if (ide_interrupt_hsync(idedrive[0]) || ide_interrupt_hsync(idedrive[2]) || ide_interrupt_hsync(idedrive[4]))
-		rethink_gayle();
+		devices_rethink_all(rethink_gayle);
 }
 
 static void initide (void)

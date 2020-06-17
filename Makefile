@@ -289,6 +289,8 @@ OBJS =	\
 	src/cd32_fmv.o \
 	src/cd32_fmv_genlock.o \
 	src/cdrom.o \
+	src/cdtv.o \
+	src/cdtvcr.o \
 	src/cfgfile.o \
 	src/cia.o \
 	src/crc32.o \
@@ -315,6 +317,7 @@ OBJS =	\
 	src/hrtmon.rom.o \
 	src/ide.o \
 	src/inputdevice.o \
+	src/isofs.o \
 	src/keybuf.o \
 	src/main.o \
 	src/memory.o \
@@ -324,6 +327,7 @@ OBJS =	\
 	src/savestate.o \
 	src/scp.o \
 	src/scsi.o \
+	src/scsiemul.o \
 	src/statusline.o \
 	src/traps.o \
 	src/uaelib.o \

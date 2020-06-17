@@ -37,6 +37,7 @@
 #include "sounddep/sound.h"
 #include "disk.h"
 #include "amiberry_gfx.h"
+#include "cdtv.h"
 #include "statusline.h"
 #include "cia.h"
 

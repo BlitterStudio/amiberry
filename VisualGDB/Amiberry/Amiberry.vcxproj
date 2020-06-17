@@ -200,6 +200,8 @@
     <ClCompile Include="..\..\src\cd32_fmv.cpp" />
     <ClCompile Include="..\..\src\cd32_fmv_genlock.cpp" />
     <ClCompile Include="..\..\src\cdrom.cpp" />
+    <ClCompile Include="..\..\src\cdtv.cpp" />
+    <ClCompile Include="..\..\src\cdtvcr.cpp" />
     <ClCompile Include="..\..\src\cfgfile.cpp" />
     <ClCompile Include="..\..\src\cia.cpp" />
     <ClCompile Include="..\..\src\cpudefs.cpp" />
@@ -233,6 +235,7 @@
     <ClCompile Include="..\..\src\hrtmon.rom.cpp" />
     <ClCompile Include="..\..\src\ide.cpp" />
     <ClCompile Include="..\..\src\inputdevice.cpp" />
+    <ClCompile Include="..\..\src\isofs.cpp" />
     <ClCompile Include="..\..\src\jit\compemu.cpp" />
     <ClCompile Include="..\..\src\jit\compemu_fpp.cpp" />
     <ClCompile Include="..\..\src\jit\compemu_support.cpp" />
@@ -296,6 +299,7 @@
     <ClCompile Include="..\..\src\savestate.cpp" />
     <ClCompile Include="..\..\src\scp.cpp" />
     <ClCompile Include="..\..\src\scsi.cpp" />
+    <ClCompile Include="..\..\src\scsiemul.cpp" />
     <ClCompile Include="..\..\src\sounddep\sound.cpp" />
     <ClCompile Include="..\..\src\statusline.cpp" />
     <ClCompile Include="..\..\src\traps.cpp" />
@@ -367,6 +371,8 @@
     <ClInclude Include="..\..\src\include\bsdsocket.h" />
     <ClInclude Include="..\..\src\include\calc.h" />
     <ClInclude Include="..\..\src\include\cd32_fmv.h" />
+    <ClInclude Include="..\..\src\include\cdtv.h" />
+    <ClInclude Include="..\..\src\include\cdtvcr.h" />
     <ClInclude Include="..\..\src\include\cia.h" />
     <ClInclude Include="..\..\src\include\commpipe.h" />
     <ClInclude Include="..\..\src\include\cpummu.h" />
@@ -394,6 +400,8 @@
     <ClInclude Include="..\..\src\include\gui.h" />
     <ClInclude Include="..\..\src\include\ide.h" />
     <ClInclude Include="..\..\src\include\inputdevice.h" />
+    <ClInclude Include="..\..\src\include\isofs.h" />
+    <ClInclude Include="..\..\src\include\isofs_api.h" />
     <ClInclude Include="..\..\src\include\keyboard.h" />
     <ClInclude Include="..\..\src\include\keybuf.h" />
     <ClInclude Include="..\..\src\include\memory.h" />
@@ -409,6 +417,7 @@
     <ClInclude Include="..\..\src\include\savestate.h" />
     <ClInclude Include="..\..\src\include\scp.h" />
     <ClInclude Include="..\..\src\include\scsi.h" />
+    <ClInclude Include="..\..\src\include\scsidev.h" />
     <ClInclude Include="..\..\src\include\statusline.h" />
     <ClInclude Include="..\..\src\include\sysdeps.h" />
     <ClInclude Include="..\..\src\include\traps.h" />

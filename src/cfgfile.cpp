@@ -10,13 +10,15 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
+#include <ctype.h>
+
 #include "options.h"
-#include "memory.h"
 #include "uae.h"
 #include "audio.h"
 #include "custom.h"
 #include "inputdevice.h"
 #include "savestate.h"
+#include "memory.h"
 #include "autoconf.h"
 #include "rommgr.h"
 #include "gui.h"
@@ -33,14 +35,14 @@
 #define cfgfile_warning_obsolete write_log
 
 static int config_newfilesystem;
-static struct strlist* temp_lines;
-static struct strlist* error_lines;
+static struct strlist *temp_lines;
+static struct strlist *error_lines;
 static struct zfile *default_file, *configstore;
 static int uaeconfig;
 static int unicode_config = 0;
 
 /* @@@ need to get rid of this... just cut part of the manual and print that
- * as a help text.  */
+* as a help text.  */
 struct cfg_lines
 {
 	const TCHAR *config_label, *config_help;
@@ -129,7 +131,7 @@ static const TCHAR *linemode[] = {
 	_T("double3"), _T("scanlines3"), _T("scanlines3p2"), _T("scanlines3p3"),
 	nullptr
 };
-static const TCHAR* speedmode[] = {_T("max"), _T("real"), _T("turbo"), nullptr};
+static const TCHAR* speedmode[] = {_T("max"), _T("real"), nullptr};
 static const TCHAR* colormode1[] = { _T("8bit"), _T("15bit"), _T("16bit"), _T("8bit_dither"), _T("4bit_dither"), _T("32bit"), 0 };
 static const TCHAR* colormode2[] = { _T("8"), _T("15"), _T("16"), _T("8d"), _T("4d"), _T("32"), 0 };
 static const TCHAR* soundmode1[] = {_T("none"), _T("interrupts"), _T("normal"), _T("exact"), nullptr};
@@ -239,11 +241,17 @@ struct hdcontrollerconfig
 };
 
 static const struct hdcontrollerconfig hdcontrollers[] = {
-	{_T("uae"), 0},
-	{_T("ide%d"), 0},
-	{_T("ide%d_mainboard"), ROMTYPE_MB_IDE},
+	{ _T("uae"), 0 },
 
-	{nullptr}
+	{ _T("ide%d"), 0 },
+	{ _T("ide%d_mainboard"), ROMTYPE_MB_IDE },
+
+	{ _T("scsi%d"), 0 },
+	{ _T("scsi%d_a3000"), ROMTYPE_SCSI_A3000 },
+	{ _T("scsi%d_a4000t"), ROMTYPE_SCSI_A4000T },
+	{ _T("scsi%d_cdtv"), ROMTYPE_CDTVSCSI },
+
+	{ NULL }
 };
 static const TCHAR* z3mapping[] = {
 	_T("auto"),
@@ -2286,6 +2294,10 @@ void cfgfile_save_options(struct zfile* f, struct uae_prefs* p, int type)
 	cfgfile_dwrite_bool(f, _T("cd32c2p"), p->cs_cd32c2p);
 	cfgfile_dwrite_bool(f, _T("cd32nvram"), p->cs_cd32nvram);
 	cfgfile_dwrite(f, _T("cd32nvram_size"), _T("%d"), p->cs_cd32nvram_size / 1024);
+	cfgfile_dwrite_bool(f, _T("cdtvcd"), p->cs_cdtvcd);
+	cfgfile_dwrite_bool(f, _T("cdtv-cr"), p->cs_cdtvcr);
+	cfgfile_dwrite_bool(f, _T("cdtvram"), p->cs_cdtvram);
+	cfgfile_dwrite_bool(f, _T("a1000ram"), p->cs_a1000ram);
 	cfgfile_dwrite(f, _T("fatgary"), _T("%d"), p->cs_fatgaryrev);
 	cfgfile_dwrite(f, _T("ramsey"), _T("%d"), p->cs_ramseyrev);
 	cfgfile_dwrite_bool(f, _T("pcmcia"), p->cs_pcmcia);
@@ -4449,6 +4461,18 @@ static int cfgfile_parse_hardware(struct uae_prefs* p, const TCHAR* option, TCHA
 		return 1;
 	}
 
+	//if (cfgfile_intval(option, value, _T("cdtvramcard"), &utmpval, 1)) {
+	//	if (utmpval)
+	//		addbcromtype(p, ROMTYPE_CDTVSRAM, true, NULL, 0);
+	//	return 1;
+	//}
+
+	if (cfgfile_yesno(option, value, _T("scsi_cdtv"), &tmpval)) {
+		if (tmpval)
+			addbcromtype(p, ROMTYPE_CDTVSCSI, true, NULL, 0);
+		return 1;
+	}
+
 	if (cfgfile_yesno(option, value, _T("pcmcia"), &p->cs_pcmcia))
 	{
 		if (p->cs_pcmcia)
@@ -4777,7 +4801,22 @@ void cfgfile_compatibility_romtype(struct uae_prefs* p)
 
 	addbcromtype(p, ROMTYPE_MB_IDE, p->cs_ide != 0, nullptr, 0);
 
-	addbcromtype(p, ROMTYPE_CD32CART, p->cs_cd32fmv, p->cartfile, 0);
+	if (p->cs_mbdmac == 1) {
+		addbcromtype(p, ROMTYPE_SCSI_A4000T, false, NULL, 0);
+		addbcromtype(p, ROMTYPE_SCSI_A3000, true, NULL, 0);
+	} else if (p->cs_mbdmac == 2) {
+		addbcromtype(p, ROMTYPE_SCSI_A3000, false, NULL, 0);
+		addbcromtype(p, ROMTYPE_SCSI_A4000T, true, NULL, 0);
+	} else {
+		addbcromtype(p, ROMTYPE_SCSI_A3000, false, NULL, 0);
+		addbcromtype(p, ROMTYPE_SCSI_A4000T, false, NULL, 0);
+	}
+
+	addbcromtype(p, ROMTYPE_CDTVDMAC, p->cs_cdtvcd && !p->cs_cdtvcr, NULL, 0);
+
+	addbcromtype(p, ROMTYPE_CDTVCR, p->cs_cdtvcr, NULL, 0);
+
+	addbcromtype(p, ROMTYPE_CD32CART, p->cs_cd32fmv, p->cartfile,0);
 }
 
 
@@ -7169,6 +7208,7 @@ int built_in_chipset_prefs(struct uae_prefs* p)
 		return 1;
 
 	p->cs_cd32c2p = p->cs_cd32cd = p->cs_cd32nvram = false;
+    p->cs_cdtvcd = p->cs_cdtvram = p->cs_cdtvcr = 0;
 	p->cs_fatgaryrev = -1;
 	p->cs_ide = 0;
 	p->cs_ramseyrev = -1;

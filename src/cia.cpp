@@ -21,6 +21,7 @@
 #include "inputdevice.h"
 #include "ar.h"
 #include "akiko.h"
+#include "cdtv.h"
 #include "audio.h"
 #include "keyboard.h"
 #include "rtc.h"

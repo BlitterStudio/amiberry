@@ -484,7 +484,7 @@ void check_custom_limits(void)
 
 void set_custom_limits (int w, int h, int dx, int dy)
 {
-	struct gfx_filterdata* fd = &currprefs.gf[0];
+	struct gfx_filterdata *fd = &currprefs.gf[0];
 	int vls = visible_left_start;
 	int vrs = visible_right_stop;
 	int vts = visible_top_start;
@@ -796,6 +796,7 @@ STATIC_INLINE xcolnr getbgc (int blank)
 	return (blank >= 0 && (blank > 0 || hposblank || ce_is_borderblank(colors_for_drawing.extra))) ? 0 : colors_for_drawing.acolors[0];
 }
 
+
 static void set_res_shift(void)
 {
 	int shift = lores_shift - bplres;
@@ -870,6 +871,7 @@ static void pfield_init_linetoscr (bool border)
 	// Sprite hpos don't include DIW_DDF_OFFSET and can appear 1 lores pixel
 	// before first bitplane pixel appears.
 	// This means "bordersprite" condition is possible under OCS/ECS too. Argh!
+
 	if (dip_for_drawing->nr_sprites) {
 		if (!ce_is_borderblank(colors_for_drawing.extra)) {
 			/* bordersprite off or not supported: sprites are visible until diw_end */
@@ -914,7 +916,6 @@ static void pfield_init_linetoscr (bool border)
 		}
 #if 0
 		min = coord_hw_to_window_x(min >> sprite_buffer_res) + (DIW_DDF_OFFSET << lores_shift);
-
 		if (min < playfield_start)
 			playfield_start = min;
 		if (playfield_start < visible_left_border)
@@ -2322,6 +2323,7 @@ Don't touch this if you don't know what you are doing.  */
 	b ^= (tmp << shift); \
 } while (0)
 
+
 #define GETLONG(P) (*(uae_u32 *)P)
 #define GETLONG64(P) (*(uae_u64 *)P)
 
@@ -2357,7 +2359,7 @@ static pfield_doline_func pfield_doline_n[9]={
 
 #else
 
-STATIC_INLINE void pfield_doline_1(uae_u32 *pixels, int wordcount, int planes)
+STATIC_INLINE void pfield_doline_1 (uae_u32 *pixels, int wordcount, int planes)
 {
 	while (wordcount-- > 0) {
 		uae_u32 b0, b1, b2, b3, b4, b5, b6, b7;
@@ -3277,7 +3279,7 @@ static void pfield_draw_line (struct vidbuffer *vb, int lineno, int gfx_ypos, in
 	}
 }
 
-static void center_image(void)
+static void center_image (void)
 {
 	auto ad = &adisplays;
 	auto vidinfo = &ad->gfxvidinfo;

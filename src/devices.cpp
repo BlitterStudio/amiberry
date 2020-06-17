@@ -7,6 +7,8 @@
 #include "threaddep/thread.h"
 #include "memory.h"
 #include "audio.h"
+#include "scsi.h"
+#include "scsidev.h"
 #ifdef CD32
 #include "cd32_fmv.h"
 #include "akiko.h"
@@ -153,7 +155,7 @@ void devices_reset(int hardreset)
 	memory_reset();
 	DISK_reset();
 	CIA_reset();
-	//a1000_reset();
+	a1000_reset();
 #ifdef JIT
 	compemu_reset();
 #endif

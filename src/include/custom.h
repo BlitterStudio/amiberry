@@ -83,9 +83,9 @@ STATIC_INLINE void send_interrupt (int num)
 	INTREQ_0 (0x8000 | (1 << num));
 }
 extern void rethink_uae_int(void);
-STATIC_INLINE uae_u16 INTREQR (void)
+STATIC_INLINE uae_u16 INTREQR(void)
 {
-  return intreq;
+	return intreq;
 }
 
 STATIC_INLINE void safe_interrupt_set(bool i6)
@@ -93,7 +93,7 @@ STATIC_INLINE void safe_interrupt_set(bool i6)
 	uae_u16 v = i6 ? 0x2000 : 0x0008;
 	if (!(intreq & v)) {
 		INTREQ_0(0x8000 | v);
-  }
+	}
 }
 
 /* maximums for statically allocated tables */
