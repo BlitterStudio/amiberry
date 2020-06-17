@@ -562,23 +562,23 @@ struct scsi_data *scsi_alloc_cd(int id, int unitnum, bool atapi, int uae_unitnum
 	return sd;
 }
 
-struct scsi_data *scsi_alloc_tape(int id, const TCHAR *tape_directory, bool readonly, int uae_unitnum)
-{
-	struct scsi_data_tape *tape;
-	tape = tape_alloc (id, tape_directory, readonly);
-	if (!tape)
-		return NULL;
-	struct scsi_data *sd = xcalloc (struct scsi_data, 1);
-	sd->id = id;
-	sd->nativescsiunit = -1;
-	sd->cd_emu_unit = -1;
-	sd->blocksize = tape->blocksize;
-	sd->tape = tape;
-	sd->device_type = UAEDEV_TAPE;
-	sd->uae_unitnum = uae_unitnum;
-	allocscsibuf(sd);
-	return sd;
-}
+//struct scsi_data *scsi_alloc_tape(int id, const TCHAR *tape_directory, bool readonly, int uae_unitnum)
+//{
+//	struct scsi_data_tape *tape;
+//	tape = tape_alloc (id, tape_directory, readonly);
+//	if (!tape)
+//		return NULL;
+//	struct scsi_data *sd = xcalloc (struct scsi_data, 1);
+//	sd->id = id;
+//	sd->nativescsiunit = -1;
+//	sd->cd_emu_unit = -1;
+//	sd->blocksize = tape->blocksize;
+//	sd->tape = tape;
+//	sd->device_type = UAEDEV_TAPE;
+//	sd->uae_unitnum = uae_unitnum;
+//	allocscsibuf(sd);
+//	return sd;
+//}
 
 struct scsi_data *scsi_alloc_native(int id, int nativeunit)
 {
@@ -708,8 +708,8 @@ int add_scsi_device(struct scsi_data **sd, int ch, struct uaedev_config_info *ci
 {
 	if (ci->type == UAEDEV_CD)
 		return add_scsi_cd(sd, ch, ci->device_emu_unit);
-	else if (ci->type == UAEDEV_TAPE)
-		return add_scsi_tape(sd, ch, ci->rootdir, ci->readonly);
+	//else if (ci->type == UAEDEV_TAPE)
+	//	return add_scsi_tape(sd, ch, ci->rootdir, ci->readonly);
 	else if (ci->type == UAEDEV_HDF)
 		return add_scsi_hd(sd, ch, NULL, ci);
 	return 0;
@@ -1415,23 +1415,23 @@ uae_u8 apollo_scsi_bget(uaecptr addr, uae_u32 config)
 	return v;
 }
 
-void apollo_add_ide_unit(int ch, struct uaedev_config_info *ci, struct romconfig *rc);
+//void apollo_add_ide_unit(int ch, struct uaedev_config_info *ci, struct romconfig *rc);
 
-void apollo_add_scsi_unit(int ch, struct uaedev_config_info *ci, struct romconfig *rc)
-{
-	if (ch < 0) {
-		generic_soft_scsi_add(-1, ci, rc, NONCR_APOLLO, -1, -1, ROMTYPE_APOLLO);
-		// make sure IDE side is also initialized
-		struct uaedev_config_info ci2 = { 0 };
-		apollo_add_ide_unit(-1, &ci2, rc);
-	} else {
-		if (ci->controller_type < HD_CONTROLLER_TYPE_SCSI_FIRST) {
-			apollo_add_ide_unit(ch, ci, rc);
-		} else {
-			generic_soft_scsi_add(ch, ci, rc, NONCR_APOLLO, -1, -1, ROMTYPE_APOLLO);
-		}
-	}
-}
+//void apollo_add_scsi_unit(int ch, struct uaedev_config_info *ci, struct romconfig *rc)
+//{
+//	if (ch < 0) {
+//		generic_soft_scsi_add(-1, ci, rc, NONCR_APOLLO, -1, -1, ROMTYPE_APOLLO);
+//		// make sure IDE side is also initialized
+//		struct uaedev_config_info ci2 = { 0 };
+//		apollo_add_ide_unit(-1, &ci2, rc);
+//	} else {
+//		if (ci->controller_type < HD_CONTROLLER_TYPE_SCSI_FIRST) {
+//			apollo_add_ide_unit(ch, ci, rc);
+//		} else {
+//			generic_soft_scsi_add(ch, ci, rc, NONCR_APOLLO, -1, -1, ROMTYPE_APOLLO);
+//		}
+//	}
+//}
 
 uae_u8 ncr5380_bget(struct soft_scsi *scsi, int reg);
 void ncr5380_bput(struct soft_scsi *scsi, int reg, uae_u8 v);

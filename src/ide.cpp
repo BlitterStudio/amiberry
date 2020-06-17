@@ -252,6 +252,36 @@ static bool ide_interrupt_do (struct ide_hdf *ide)
 	return true;
 }
 
+bool ide_drq_check(struct ide_hdf* idep)
+{
+	for (int i = 0; idep && i < 2; i++) {
+		struct ide_hdf* ide = i == 0 ? idep : idep->pair;
+		if (ide) {
+			if (ide->regs.ide_status & IDE_STATUS_DRQ)
+				return true;
+		}
+	}
+	return false;
+}
+
+bool ide_irq_check(struct ide_hdf* idep, bool edge_triggered)
+{
+	for (int i = 0; idep && i < 2; i++) {
+		struct ide_hdf* ide = i == 0 ? idep : idep->pair;
+		if (ide->irq) {
+			if (edge_triggered) {
+				if (ide->irq_new) {
+					ide->irq_new = false;
+					return true;
+				}
+				continue;
+			}
+			return true;
+		}
+	}
+	return false;
+}
+
 bool ide_interrupt_hsync(struct ide_hdf *idep)
 {
 	bool irq = false;
