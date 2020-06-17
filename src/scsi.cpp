@@ -697,12 +697,12 @@ int add_scsi_cd (struct scsi_data **sd, int ch, int unitnum)
 	return *sd ? 1 : 0;
 }
 
-int add_scsi_tape (struct scsi_data **sd, int ch, const TCHAR *tape_directory, bool readonly)
-{
-	free_scsi (*sd);
-	*sd = scsi_alloc_tape (ch, tape_directory, readonly, ch);
-	return *sd ? 1 : 0;
-}
+//int add_scsi_tape (struct scsi_data **sd, int ch, const TCHAR *tape_directory, bool readonly)
+//{
+//	free_scsi (*sd);
+//	*sd = scsi_alloc_tape (ch, tape_directory, readonly, ch);
+//	return *sd ? 1 : 0;
+//}
 
 int add_scsi_device(struct scsi_data **sd, int ch, struct uaedev_config_info *ci, struct romconfig *rc)
 {
