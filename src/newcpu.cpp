@@ -1961,7 +1961,16 @@ static void m68k_run_2(void)
 
 static int in_m68k_go = 0;
 
-static bool cpu_hardreset;
+static bool cpu_hardreset, cpu_keyboardreset;
+
+bool is_hardreset(void)
+{
+	return cpu_hardreset;
+}
+bool is_keyboardreset(void)
+{
+	return  cpu_keyboardreset;
+}
 
 #ifdef USE_JIT_FPU
 static uae_u8 fp_buffer[9 * 16];
@@ -1999,7 +2008,7 @@ void m68k_go(int may_quit)
 
 		if (quit_program > 0)
 		{
-			bool cpu_keyboardreset = quit_program == UAE_RESET_KEYBOARD;
+			cpu_keyboardreset = quit_program == UAE_RESET_KEYBOARD;
 			cpu_hardreset = ((quit_program == UAE_RESET_HARD ? 1 : 0) | hardboot) != 0;
 
 			if (quit_program == UAE_QUIT)

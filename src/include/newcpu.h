@@ -401,6 +401,9 @@ extern void setdivsoverflowflags(uae_s32 dividend, uae_s16 divisor);
 extern void setchkundefinedflags(uae_s32 src, uae_s32 dst, int size);
 extern void setchk2undefinedflags(uae_u32 lower, uae_u32 upper, uae_u32 val, int size);
 extern void protect_roms(bool);
+extern void unprotect_maprom(void);
+extern bool is_hardreset(void);
+extern bool is_keyboardreset(void);
 extern void Exception_build_stack_frame_common(uae_u32 oldpc, uae_u32 currpc, int nr);
 extern void Exception_build_stack_frame(uae_u32 oldpc, uae_u32 currpc, uae_u32 ssw, int nr, int format);
 extern void Exception_build_68000_address_error_stack_frame(uae_u16 mode, uae_u16 opcode, uaecptr fault_addr,
