@@ -5359,6 +5359,8 @@ void overdrive_add_scsi_unit(int ch, struct uaedev_config_info *ci, struct romco
 	generic_soft_scsi_add(ch, ci, rc, NCR5380_OVERDRIVE, 65536, 32768, ROMTYPE_OVERDRIVE);
 }
 
+#ifdef WITH_X86
+
 // x86 bridge scsi rancho rt1000
 void x86_rt1000_bput(int portnum, uae_u8 v)
 {
@@ -5383,32 +5385,32 @@ uae_u8 x86_rt1000_bget(int portnum)
 	return v;
 }
 
-//extern void x86_rt1000_bios(struct zfile*, struct romconfig *rc);
-//bool x86_rt1000_init(struct autoconfig_info *aci)
-//{
-//	static const int parent[] = { ROMTYPE_A1060, ROMTYPE_A2088, ROMTYPE_A2088T, ROMTYPE_A2286, ROMTYPE_A2386, 0 };
-//	aci->parent_romtype = parent;
-//	scsi_add_reset();
-//	if (!aci->doinit)
-//		return true;
-//
-//	struct soft_scsi *scsi = getscsi(aci->rc);
-//
-//	if (!scsi)
-//		return false;
-//	struct zfile *f = read_device_from_romconfig(aci->rc, 0);
-//	if (f) {
-//		x86_rt1000_bios(f, aci->rc);
-//		zfile_fclose(f);
-//	}
-//	scsi->configured = 1;
-//	scsi->dma_controller = true;
-//	scsi->c400 = true;
-//	x86_hd_data = scsi;
-//	return true;
-//}
+bool x86_rt1000_init(struct autoconfig_info *aci)
+{
+	static const int parent[] = { ROMTYPE_A1060, ROMTYPE_A2088, ROMTYPE_A2088T, ROMTYPE_A2286, ROMTYPE_A2386, 0 };
+	aci->parent_romtype = parent;
+	if (!aci->doinit)
+		return true;
 
-//void x86_rt1000_add_unit(int ch, struct uaedev_config_info *ci, struct romconfig *rc)
-//{
-//	generic_soft_scsi_add(ch, ci, rc, NCR5380_X86_RT1000, 0, 0, ROMTYPE_X86_RT1000);
-//}
+	struct soft_scsi *scsi = getscsi(aci->rc);
+
+	if (!scsi)
+		return false;
+	struct zfile *f = read_device_from_romconfig(aci->rc, 0);
+	if (f) {
+		x86_rt1000_bios(f, aci->rc);
+		zfile_fclose(f);
+	}
+	scsi->configured = 1;
+	scsi->dma_controller = true;
+	scsi->c400 = true;
+	x86_hd_data = scsi;
+	return true;
+}
+
+void x86_rt1000_add_unit(int ch, struct uaedev_config_info *ci, struct romconfig *rc)
+{
+	generic_soft_scsi_add(ch, ci, rc, NCR5380_X86_RT1000, 0, 0, ROMTYPE_X86_RT1000);
+}
+
+#endif // WITH_X86
