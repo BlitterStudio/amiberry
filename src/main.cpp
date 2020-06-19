@@ -266,7 +266,6 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 	{
 		error_log(_T("Unsupported chipmem size %d (0x%x)."), p->chipmem_size, p->chipmem_size);
 		p->chipmem_size = 0x200000;
-		//err = 1;
 	}
 
 	for (auto& i : p->fastmem)
@@ -508,9 +507,7 @@ void uae_reset(int hardreset, int keyboardreset)
 void uae_quit(void)
 {
 	if (quit_program != -UAE_QUIT)
-	{
 		quit_program = -UAE_QUIT;
-	}
 	target_quit();
 }
 
@@ -524,52 +521,6 @@ void uae_restart(int opengui, const TCHAR* cfgfile)
 	if (cfgfile)
 		_tcscpy(restart_config, cfgfile);
 	target_restart();
-}
-
-static void parse_cmdline_2(int argc, TCHAR** argv)
-{
-	cfgfile_addcfgparam(nullptr);
-	for (auto i = 1; i < argc; i++)
-	{
-		if (_tcsncmp(argv[i], _T("-cfgparam="), 10) == 0)
-		{
-			cfgfile_addcfgparam(argv[i] + 10);
-		}
-		else if (_tcscmp(argv[i], _T("-cfgparam")) == 0)
-		{
-			if (i + 1 == argc)
-				write_log(_T("Missing argument for '-cfgparam' option.\n"));
-			else
-				cfgfile_addcfgparam(argv[++i]);
-		}
-	}
-}
-
-static TCHAR* parse_text(const TCHAR* s)
-{
-	if (*s == '"' || *s == '\'')
-	{
-		const auto c = *s++;
-		auto* const d = my_strdup(s);
-		for (unsigned int i = 0; i < _tcslen(d); i++)
-		{
-			if (d[i] == c)
-			{
-				d[i] = 0;
-				break;
-			}
-		}
-		return d;
-	}
-	return my_strdup(s);
-}
-
-static TCHAR* parse_text_path(const TCHAR* s)
-{
-	auto* const s2 = parse_text(s);
-	auto* const s3 = target_expand_environment(s2, nullptr, 0);
-	xfree(s2);
-	return s3;
 }
 
 void usage()
@@ -614,6 +565,87 @@ void usage()
 	exit(1);
 }
 
+static void parse_cmdline_2(int argc, TCHAR** argv)
+{
+	cfgfile_addcfgparam(nullptr);
+	for (auto i = 1; i < argc; i++)
+	{
+		if (_tcsncmp(argv[i], _T("-cfgparam="), 10) == 0)
+		{
+			cfgfile_addcfgparam(argv[i] + 10);
+		}
+		else if (_tcscmp(argv[i], _T("-cfgparam")) == 0)
+		{
+			if (i + 1 == argc)
+				write_log(_T("Missing argument for '-cfgparam' option.\n"));
+			else
+				cfgfile_addcfgparam(argv[++i]);
+		}
+	}
+}
+
+static int diskswapper_cb(struct zfile* f, void* vrsd)
+{
+	int* num = (int*)vrsd;
+	if (*num >= MAX_SPARE_DRIVES)
+		return 1;
+	if (zfile_gettype(f) == ZFILE_DISKIMAGE) {
+		_tcsncpy(currprefs.dfxlist[*num], zfile_getname(f), 255);
+		(*num)++;
+	}
+	return 0;
+}
+
+static void parse_diskswapper(const TCHAR* s)
+{
+	TCHAR* tmp = my_strdup(s);
+	const TCHAR* delim = _T(",");
+	TCHAR* p1, * p2;
+	int num = 0;
+
+	p1 = tmp;
+	for (;;) {
+		p2 = _tcstok(p1, delim);
+		if (!p2)
+			break;
+		p1 = NULL;
+		if (num >= MAX_SPARE_DRIVES)
+			break;
+		if (!zfile_zopen(p2, diskswapper_cb, &num)) {
+			_tcsncpy(currprefs.dfxlist[num], p2, 255);
+			num++;
+		}
+	}
+	free(tmp);
+}
+
+static TCHAR* parse_text(const TCHAR* s)
+{
+	if (*s == '"' || *s == '\'')
+	{
+		const auto c = *s++;
+		auto* const d = my_strdup(s);
+		for (unsigned int i = 0; i < _tcslen(d); i++)
+		{
+			if (d[i] == c)
+			{
+				d[i] = 0;
+				break;
+			}
+		}
+		return d;
+	}
+	return my_strdup(s);
+}
+
+static TCHAR* parse_text_path(const TCHAR* s)
+{
+	auto* const s2 = parse_text(s);
+	auto* const s3 = target_expand_environment(s2, nullptr, 0);
+	xfree(s2);
+	return s3;
+}
+
 std::string get_filename_extension(const TCHAR* filename)
 {
 	const std::string fName(filename);
@@ -638,7 +670,15 @@ static void parse_cmdline(int argc, TCHAR** argv)
 
 	for (auto i = 1; i < argc; i++)
 	{
-		if (_tcscmp(argv[i], _T("-cfgparam")) == 0)
+		if (!_tcsncmp(argv[i], _T("-diskswapper="), 13)) {
+			TCHAR* txt = parse_text_path(argv[i] + 13);
+			parse_diskswapper(txt);
+			xfree(txt);
+		}
+		else if (_tcsncmp(argv[i], _T("-cfgparam="), 10) == 0) {
+			;
+		}
+		else if (_tcscmp(argv[i], _T("-cfgparam")) == 0)
 		{
 			if (i + 1 < argc)
 				i++;
@@ -987,6 +1027,10 @@ static int real_main2(int argc, TCHAR** argv)
 		abort();
 	}
 
+#ifdef NATMEM_OFFSET
+	preinit_shm();
+#endif
+	
 	if (restart_config[0])
 	{
 		parse_cmdline_and_init_file(argc, argv);
@@ -1001,6 +1045,11 @@ static int real_main2(int argc, TCHAR** argv)
 		return -1;
 	}
 
+	//if (console_emulation) {
+	//	consolehook_config(&currprefs);
+	//	fixup_prefs(&currprefs, true);
+	//}
+	
 	if (!setup_sound())
 	{
 		write_log(_T("Sound driver unavailable: Sound output disabled\n"));
@@ -1018,7 +1067,7 @@ static int real_main2(int argc, TCHAR** argv)
 	restart_program = 0;
 	if (!no_gui)
 	{
-		auto err = gui_init();
+		const auto err = gui_init();
 		copy_prefs(&changed_prefs, &currprefs);
 		set_config_changed();
 		if (err == -1)
@@ -1031,22 +1080,23 @@ static int real_main2(int argc, TCHAR** argv)
 			return 1;
 		}
 	}
-	else
-	{
-		update_display(&currprefs);
-	}
+
 	memset(&gui_data, 0, sizeof gui_data);
 	gui_data.cd = -1;
 	gui_data.hd = -1;
 	gui_data.net = -1;
 	gui_data.md = currprefs.cs_cd32nvram ? 0 : -1;
 
-	if (!init_shm())
-	{
+#ifdef NATMEM_OFFSET
+	if (!init_shm()) {
 		if (currprefs.start_gui)
-			uae_restart(-1, nullptr);
+			uae_restart(-1, NULL);
 		return 0;
 	}
+#endif
+#ifdef WITH_LUA
+	uae_lua_init();
+#endif
 
 	fixup_prefs(&currprefs, true);
 	copy_prefs(&currprefs, &changed_prefs);
@@ -1064,7 +1114,13 @@ static int real_main2(int argc, TCHAR** argv)
 #endif
 
 	custom_init(); /* Must come after memory_init */
+#ifdef SERIAL_PORT
+	serial_init();
+#endif
 	DISK_init();
+#ifdef WITH_PPC
+	uae_ppc_reset(true);
+#endif
 
 	reset_frame_rate_hack();
 	init_m68k(); /* must come after reset_frame_rate_hack (); */
