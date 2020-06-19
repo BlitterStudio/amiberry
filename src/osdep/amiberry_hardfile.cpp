@@ -61,7 +61,7 @@ int hdf_open_target(struct hardfiledata *hfd, const TCHAR *pname)
 	hfd->virtual_rdb = nullptr;
 	if (!hfd->cache)
 	{
-		write_log("malloc(%d) failed in hdf_open_target, error %d\n", CACHE_SIZE, errno);
+		write_log("VirtualAlloc(%d) failed in hdf_open_target, error %d\n", CACHE_SIZE, errno);
 		goto end;
 	}
 	hfd->handle = xcalloc(struct hardfilehandle, 1);
