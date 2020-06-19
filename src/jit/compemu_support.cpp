@@ -1998,7 +1998,7 @@ STATIC_INLINE void create_popalls(void)
 #endif
 
     // no need to further write into popallspace
-    vm_protect(popallspace, POPALLSPACE_SIZE, VM_PAGE_READ | VM_PAGE_EXECUTE);
+    //TODO vm_protect(popallspace, POPALLSPACE_SIZE, VM_PAGE_READ | VM_PAGE_EXECUTE);
     // No need to flush. Initialized and not modified
     // flush_cpu_icache((void *)popallspace, (void *)target);
 }
