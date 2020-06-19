@@ -83,11 +83,9 @@ static uae_u16 opcode_nums[65536];
 
 static int untranslated_compfn(const void *e1, const void *e2)
 {
-  return raw_cputbl_count[*(const uae_u16 *)e1] < raw_cputbl_count[*(const uae_u16 *)e2];
+	return raw_cputbl_count[*(const uae_u16 *)e1] < raw_cputbl_count[*(const uae_u16 *)e2];
 }
 #endif
-
-#define NATMEM_OFFSETX regs.natmem_offset
 
 static compop_func *compfunctbl[65536];
 static compop_func *nfcompfunctbl[65536];
@@ -114,7 +112,7 @@ static bool disasm_this = false;
 
 STATIC_INLINE bool is_const_jump(uae_u32 opcode)
 {
-  return (prop[opcode].cflow == fl_const_jump);
+    return (prop[opcode].cflow == fl_const_jump);
 }
 
 uae_u8* start_pc_p;
@@ -175,9 +173,6 @@ static uae_u8 *cache_alloc (int size)
 
 #endif
 
-extern const struct comptbl op_smalltbl_0_comp_nf[];
-extern const struct comptbl op_smalltbl_0_comp_ff[];
-
 static bigstate live;
 
 static int writereg(int r);
@@ -216,23 +211,23 @@ uae_u32 m68k_pc_offset;
  * by default, we are, but a call to dont_care_flags can change that
  * until the next call to live_flags. If we are not, pretty much whatever
  * is in the register and/or the native flags is seen as valid.
-*/
+ */
 
 STATIC_INLINE blockinfo* get_blockinfo(uae_u32 cl)
 {
-  return cache_tags[cl+1].bi;
+	return cache_tags[cl+1].bi;
 }
 
 STATIC_INLINE blockinfo* get_blockinfo_addr(void* addr)
 {
-  blockinfo*  bi = get_blockinfo(cacheline(addr));
+	blockinfo*  bi = get_blockinfo(cacheline(addr));
 
-  while (bi) {
-    if (bi->pc_p == addr)
-      return bi;
-    bi = bi->next_same_cl;
-  }
-  return NULL;
+	while (bi) {
+		if (bi->pc_p == addr)
+			return bi;
+		bi = bi->next_same_cl;
+	}
+	return NULL;
 }
 
 
@@ -242,87 +237,87 @@ STATIC_INLINE blockinfo* get_blockinfo_addr(void* addr)
 
 STATIC_INLINE void remove_from_cl_list(blockinfo* bi)
 {
-  uae_u32 cl = cacheline(bi->pc_p);
+	uae_u32 cl=cacheline(bi->pc_p);
 
-  if (bi->prev_same_cl_p)
-    *(bi->prev_same_cl_p) = bi->next_same_cl;
-  if (bi->next_same_cl)
-    bi->next_same_cl->prev_same_cl_p = bi->prev_same_cl_p;
-  if (cache_tags[cl+1].bi)
-    cache_tags[cl].handler = cache_tags[cl+1].bi->handler_to_use;
-  else
-    cache_tags[cl].handler = (cpuop_func *)popall_execute_normal;
+	if (bi->prev_same_cl_p)
+		*(bi->prev_same_cl_p)=bi->next_same_cl;
+	if (bi->next_same_cl)
+		bi->next_same_cl->prev_same_cl_p=bi->prev_same_cl_p;
+	if (cache_tags[cl+1].bi)
+		cache_tags[cl].handler=cache_tags[cl+1].bi->handler_to_use;
+	else
+		cache_tags[cl].handler=(cpuop_func*)popall_execute_normal;
 }
 
 STATIC_INLINE void remove_from_list(blockinfo* bi)
 {
-  if (bi->prev_p)
-    *(bi->prev_p) = bi->next;
-  if (bi->next)
-    bi->next->prev_p = bi->prev_p;
+	if (bi->prev_p)
+		*(bi->prev_p)=bi->next;
+	if (bi->next)
+		bi->next->prev_p=bi->prev_p;
 }
 
 STATIC_INLINE void add_to_cl_list(blockinfo* bi)
 {
-  uae_u32 cl = cacheline(bi->pc_p);
+	uae_u32 cl=cacheline(bi->pc_p);
 
-  if (cache_tags[cl+1].bi)
-    cache_tags[cl+1].bi->prev_same_cl_p = &(bi->next_same_cl);
-  bi->next_same_cl = cache_tags[cl+1].bi;
+	if (cache_tags[cl+1].bi)
+		cache_tags[cl+1].bi->prev_same_cl_p=&(bi->next_same_cl);
+	bi->next_same_cl=cache_tags[cl+1].bi;
 
-  cache_tags[cl+1].bi = bi;
-  bi->prev_same_cl_p = &(cache_tags[cl+1].bi);
+	cache_tags[cl+1].bi=bi;
+	bi->prev_same_cl_p=&(cache_tags[cl+1].bi);
 
-  cache_tags[cl].handler = bi->handler_to_use;
+	cache_tags[cl].handler=bi->handler_to_use;
 }
 
 void raise_in_cl_list(blockinfo* bi)
 {
-  remove_from_cl_list(bi);
-  add_to_cl_list(bi);
+	remove_from_cl_list(bi);
+	add_to_cl_list(bi);
 }
 
 STATIC_INLINE void add_to_active(blockinfo* bi)
 {
-  if (active)
-    active->prev_p = &(bi->next);
-  bi->next = active;
+	if (active)
+		active->prev_p=&(bi->next);
+	bi->next=active;
 
-  active = bi;
-  bi->prev_p = &active;
+	active=bi;
+	bi->prev_p=&active;
 }
 
 STATIC_INLINE void add_to_dormant(blockinfo* bi)
 {
-  if (dormant)
-    dormant->prev_p = &(bi->next);
-  bi->next = dormant;
+	if (dormant)
+		dormant->prev_p=&(bi->next);
+	bi->next=dormant;
 
-  dormant = bi;
-  bi->prev_p = &dormant;
+	dormant=bi;
+	bi->prev_p=&dormant;
 }
 
 STATIC_INLINE void remove_dep(dependency* d)
 {
-  if (d->prev_p)
-    *(d->prev_p) = d->next;
-  if (d->next)
-    d->next->prev_p = d->prev_p;
-  d->prev_p = NULL;
-  d->next = NULL;
+	if (d->prev_p)
+		*(d->prev_p)=d->next;
+	if (d->next)
+		d->next->prev_p=d->prev_p;
+	d->prev_p=NULL;
+	d->next=NULL;
 }
 
 /* This block's code is about to be thrown away, so it no longer
    depends on anything else */
 STATIC_INLINE void remove_deps(blockinfo* bi)
 {
-  remove_dep(&(bi->dep[0]));
-  remove_dep(&(bi->dep[1]));
+	remove_dep(&(bi->dep[0]));
+	remove_dep(&(bi->dep[1]));
 }
 
 STATIC_INLINE void adjust_jmpdep(dependency* d, cpuop_func* a)
 {
-  write_jmp_target(d->jmp_off, (uintptr)a);
+	write_jmp_target(d->jmp_off, (uintptr)a);
 }
 
 /********************************************************************
@@ -331,74 +326,74 @@ STATIC_INLINE void adjust_jmpdep(dependency* d, cpuop_func* a)
 
 STATIC_INLINE void set_dhtu(blockinfo* bi, cpuop_func* dh)
 {
-  if (dh != bi->direct_handler_to_use) {
-    dependency* x = bi->deplist;
-    while (x) {
-      if (x->jmp_off) {
-        adjust_jmpdep(x, dh);
-      }
-      x = x->next;
-    }
-    bi->direct_handler_to_use = (cpuop_func*)dh;
-  }
+	if (dh != bi->direct_handler_to_use) {
+		dependency* x = bi->deplist;
+		while (x) {
+			if (x->jmp_off) {
+				adjust_jmpdep(x, dh);
+			}
+			x = x->next;
+		}
+		bi->direct_handler_to_use = dh;
+	}
 }
 
 void invalidate_block(blockinfo* bi)
 {
-  int i;
+	int i;
 
-  bi->optlevel = 0;
-  bi->count = optcount-1;
-  bi->handler = NULL;
-  bi->handler_to_use = (cpuop_func *)popall_execute_normal;
-  bi->direct_handler = NULL;
-  set_dhtu(bi, bi->direct_pen);
-  bi->needed_flags = 0xff;
-  bi->status = BI_INVALID;
-  for (i=0; i<2; i++) {
-    bi->dep[i].jmp_off = NULL;
-    bi->dep[i].target = NULL;
-  }
-  remove_deps(bi);
+	bi->optlevel = 0;
+	bi->count = optcount-1;
+	bi->handler = NULL;
+	bi->handler_to_use = (cpuop_func *)popall_execute_normal;
+	bi->direct_handler = NULL;
+	set_dhtu(bi, bi->direct_pen);
+	bi->needed_flags = 0xff;
+	bi->status = BI_INVALID;
+	for (i=0; i<2; i++) {
+		bi->dep[i].jmp_off = NULL;
+		bi->dep[i].target = NULL;
+	}
+	remove_deps(bi);
 }
 
 STATIC_INLINE void create_jmpdep(blockinfo* bi, int i, uae_u32* jmpaddr, uae_u32 target)
 {
-  blockinfo* tbi = get_blockinfo_addr((void*)(uintptr)target);
+    blockinfo* tbi = get_blockinfo_addr((void*)(uintptr)target);
 
-  bi->dep[i].jmp_off = jmpaddr;
-  bi->dep[i].source = bi;
-  bi->dep[i].target = tbi;
-  bi->dep[i].next = tbi->deplist;
-  if (bi->dep[i].next)
-    bi->dep[i].next->prev_p = &(bi->dep[i].next);
-  bi->dep[i].prev_p = &(tbi->deplist);
-  tbi->deplist = &(bi->dep[i]);
+    bi->dep[i].jmp_off = jmpaddr;
+    bi->dep[i].source = bi;
+    bi->dep[i].target = tbi;
+    bi->dep[i].next = tbi->deplist;
+    if (bi->dep[i].next)
+        bi->dep[i].next->prev_p = &(bi->dep[i].next);
+    bi->dep[i].prev_p = &(tbi->deplist);
+    tbi->deplist = &(bi->dep[i]);
 }
 
 STATIC_INLINE blockinfo* get_blockinfo_addr_new(void* addr)
 {
-  blockinfo* bi = get_blockinfo_addr(addr);
-  int i;
+    blockinfo* bi = get_blockinfo_addr(addr);
+    int i;
 
-  if (!bi) {
-    for (i=0; i<MAX_HOLD_BI && !bi; i++) {
-      if (hold_bi[i]) {
-        (void)cacheline(addr);
+    if (!bi) {
+        for (i = 0; i < MAX_HOLD_BI && !bi; i++) {
+            if (hold_bi[i]) {
+                (void)cacheline(addr);
 
-        bi = hold_bi[i];
-        hold_bi[i] = NULL;
-        bi->pc_p = (uae_u8 *)addr;
-        invalidate_block(bi);
-        add_to_active(bi);
-        add_to_cl_list(bi);
-      }
+                bi = hold_bi[i];
+                hold_bi[i] = NULL;
+                bi->pc_p = (uae_u8*)addr;
+                invalidate_block(bi);
+                add_to_active(bi);
+                add_to_cl_list(bi);
+            }
+        }
     }
-  }
-  if (!bi) {
-    jit_abort (_T("JIT: Looking for blockinfo, can't find free one\n"));
-  }
-  return bi;
+    if (!bi) {
+        jit_abort(_T("JIT: Looking for blockinfo, can't find free one\n"));
+    }
+    return bi;
 }
 
 static void prepare_block(blockinfo* bi);
@@ -419,113 +414,127 @@ static void prepare_block(blockinfo* bi);
 template< class T >
 class LazyBlockAllocator
 {
-  enum {
-    kPoolSize = 1 + (16384 - sizeof(T) - sizeof(void *)) / sizeof(T)
-  };
-  struct Pool {
-    T chunk[kPoolSize];
-    Pool * next;
-  };
-  Pool * mPools;
-  T * mChunks;
+	enum {
+		kPoolSize = 1 + (16384 - sizeof(T) - sizeof(void *)) / sizeof(T)
+	};
+	struct Pool {
+		T chunk[kPoolSize];
+		Pool * next;
+	};
+	Pool * mPools;
+	T * mChunks;
 public:
-  LazyBlockAllocator() : mPools(0), mChunks(0) { }
-  ~LazyBlockAllocator();
-  T * acquire();
-  void release(T * const);
+	LazyBlockAllocator() : mPools(0), mChunks(0) { }
+	~LazyBlockAllocator();
+	T * acquire();
+	void release(T * const);
 };
 
 template< class T >
 LazyBlockAllocator<T>::~LazyBlockAllocator()
 {
-  Pool * currentPool = mPools;
-  while (currentPool) {
-    Pool * deadPool = currentPool;
-    currentPool = currentPool->next;
-    free(deadPool);
-  }
+	Pool * currentPool = mPools;
+	while (currentPool) {
+		Pool * deadPool = currentPool;
+		currentPool = currentPool->next;
+		vm_release(deadPool, sizeof(Pool));
+	}
 }
 
 template< class T >
 T * LazyBlockAllocator<T>::acquire()
 {
-  if (!mChunks) {
-    // There is no chunk left, allocate a new pool and link the
-    // chunks into the free list
-    Pool * newPool = (Pool *)malloc(sizeof(Pool));
-    if (newPool == NULL) {
-      jit_abort(_T("FATAL: Could not allocate block pool!\n"));
-    }
-    for (T * chunk = &newPool->chunk[0]; chunk < &newPool->chunk[kPoolSize]; chunk++) {
-      chunk->next = mChunks;
-      mChunks = chunk;
-    }
-    newPool->next = mPools;
-    mPools = newPool;
-  }
-  T * chunk = mChunks;
-  mChunks = chunk->next;
-  return chunk;
+	if (!mChunks) {
+		// There is no chunk left, allocate a new pool and link the
+		// chunks into the free list
+		Pool * newPool = (Pool *)vm_acquire(sizeof(Pool), VM_MAP_DEFAULT | VM_MAP_32BIT);
+		if (newPool == VM_MAP_FAILED) {
+			jit_abort("Could not allocate block pool!");
+		}
+		for (T * chunk = &newPool->chunk[0]; chunk < &newPool->chunk[kPoolSize]; chunk++) {
+			chunk->next = mChunks;
+			mChunks = chunk;
+		}
+		newPool->next = mPools;
+		mPools = newPool;
+	}
+	T * chunk = mChunks;
+	mChunks = chunk->next;
+	return chunk;
 }
 
 template< class T >
 void LazyBlockAllocator<T>::release(T * const chunk)
 {
-  chunk->next = mChunks;
-  mChunks = chunk;
+	chunk->next = mChunks;
+	mChunks = chunk;
 }
 
+template< class T >
+class HardBlockAllocator
+{
+public:
+	T * acquire() {
+		T * data = (T *)current_compile_p;
+		current_compile_p += sizeof(T);
+		return data;
+	}
+
+	void release(T * const ) {
+		// Deallocated on invalidation
+	}
+};
 
 static LazyBlockAllocator<blockinfo> BlockInfoAllocator;
 static LazyBlockAllocator<checksum_info> ChecksumInfoAllocator;
 
 STATIC_INLINE checksum_info *alloc_checksum_info(void)
 {
-  checksum_info *csi = ChecksumInfoAllocator.acquire();
-  csi->next = NULL;
-  return csi;
+	checksum_info *csi = ChecksumInfoAllocator.acquire();
+	csi->next = NULL;
+	return csi;
 }
 
 STATIC_INLINE void free_checksum_info(checksum_info *csi)
 {
-  csi->next = NULL;
-  ChecksumInfoAllocator.release(csi);
+	csi->next = NULL;
+	ChecksumInfoAllocator.release(csi);
 }
 
 STATIC_INLINE void free_checksum_info_chain(checksum_info *csi)
 {
-  while (csi != NULL) {
-    checksum_info *csi2 = csi->next;
-    free_checksum_info(csi);
-    csi = csi2;
-  }
+	while (csi != NULL) {
+		checksum_info *csi2 = csi->next;
+		free_checksum_info(csi);
+		csi = csi2;
+	}
 }
 
 STATIC_INLINE blockinfo *alloc_blockinfo(void)
 {
-  blockinfo *bi = BlockInfoAllocator.acquire();
-  bi->csi = NULL;
-  return bi;
+	blockinfo *bi = BlockInfoAllocator.acquire();
+	bi->csi = NULL;
+	return bi;
 }
 
 STATIC_INLINE void free_blockinfo(blockinfo *bi)
 {
-  free_checksum_info_chain(bi->csi);
-  bi->csi = NULL;
-  BlockInfoAllocator.release(bi);
+	free_checksum_info_chain(bi->csi);
+	bi->csi = NULL;
+	BlockInfoAllocator.release(bi);
 }
 
 STATIC_INLINE void alloc_blockinfos(void)
 {
-  int i;
-  blockinfo* bi;
+	int i;
+	blockinfo* bi;
 
-  for (i = 0; i < MAX_HOLD_BI; i++) {
-    if (hold_bi[i])
-      return;
-    bi = hold_bi[i] = alloc_blockinfo();
-    prepare_block(bi);
-  }
+	for (i = 0; i < MAX_HOLD_BI; i++) {
+		if (hold_bi[i])
+			return;
+		bi = hold_bi[i] = alloc_blockinfo();
+		prepare_block(bi);
+	}
 }
 
 bool check_prefs_changed_comp(bool checkonly)
@@ -560,26 +569,26 @@ static uae_u8* target;
 
 STATIC_INLINE void emit_long(uae_u32 x)
 {
-  *((uae_u32*)target) = x;
-  target += 4;
+	*(uae_u32*)target = x;
+	target += 4;
 }
 
 STATIC_INLINE void emit_longlong(uae_u64 x)
 {
-  *((uae_u64*)target) = x;
-  target += 8;
+	*(uae_u64*)target = x;
+	target += 8;
 }
 
 #define MAX_COMPILE_PTR max_compile_start
 
 static void set_target(uae_u8* t)
 {
-  target = t;
+	target = t;
 }
 
 STATIC_INLINE uae_u8* get_target(void)
 {
-  return target;
+	return target;
 }
 
 /********************************************************************
@@ -600,55 +609,55 @@ STATIC_INLINE void compemu_raw_branch(IM32 d);
 
 STATIC_INLINE void data_check_end(uae_s32 n, uae_s32 codesize)
 {
-  if(data_writepos + n > data_endpos || get_target() + codesize - data_writepos > DATA_BUFFER_MAXOFFSET) {
+	if(data_writepos + n > data_endpos || get_target() + codesize - data_writepos > DATA_BUFFER_MAXOFFSET) {
     // Start new buffer
 #ifdef DEBUG_DATA_BUFFER
-    if(data_writepos < data_endpos)
-      data_wasted += data_endpos - data_writepos;
-    data_buffers_used++;
+		if(data_writepos < data_endpos)
+			data_wasted += data_endpos - data_writepos;
+		data_buffers_used++;
 #endif
-    compemu_raw_branch(DATA_BUFFER_SIZE);
-    data_writepos = get_target();
-    data_endpos = data_writepos + DATA_BUFFER_SIZE;
-    set_target(get_target() + DATA_BUFFER_SIZE);
-  }
+		compemu_raw_branch(DATA_BUFFER_SIZE);
+		data_writepos = get_target();
+		data_endpos = data_writepos + DATA_BUFFER_SIZE;
+		set_target(get_target() + DATA_BUFFER_SIZE);
+	}
 }
 
 STATIC_INLINE uae_s32 data_word_offs(uae_u16 x)
 {
-  data_check_end(4, 4);
-  *((uae_u16*)data_writepos) = x;
-  data_writepos += 2;
-  *((uae_u16*)data_writepos) = 0;
-  data_writepos += 2;
-  return (uae_s32)data_writepos - (uae_s32)get_target() - 12;
+	data_check_end(4, 4);
+	*((uae_u16*)data_writepos) = x;
+	data_writepos += 2;
+	*((uae_u16*)data_writepos) = 0;
+	data_writepos += 2;
+	return (uae_s32)data_writepos - (uae_s32)get_target() - 12;
 }
 
 STATIC_INLINE uae_s32 data_long(uae_u32 x, uae_s32 codesize)
 {
-  data_check_end(4, codesize);
-  *((uae_u32*)data_writepos) = x;
-  data_writepos += 4;
-  return (uae_s32)data_writepos - 4;
+	data_check_end(4, codesize);
+	*((uae_u32*)data_writepos) = x;
+	data_writepos += 4;
+	return (uae_s32)data_writepos - 4;
 }
 
 STATIC_INLINE uae_s32 data_long_offs(uae_u32 x)
 {
-  data_check_end(4, 4);
-  *((uae_u32*)data_writepos) = x;
-  data_writepos += 4;
-  return (uae_s32)data_writepos - (uae_s32)get_target() - 12;
+	data_check_end(4, 4);
+	*((uae_u32*)data_writepos) = x;
+	data_writepos += 4;
+	return (uae_s32)data_writepos - (uae_s32)get_target() - 12;
 }
 
 STATIC_INLINE uae_s32 get_data_offset(uae_s32 t) 
 {
-  return t - (uae_s32)get_target() - 8;
+	return t - (uae_s32)get_target() - 8;
 }
 
 STATIC_INLINE void reset_data_buffer(void)
 {
-  data_writepos = 0;
-  data_endpos = 0;
+	data_writepos = 0;
+	data_endpos = 0;
 }
 
 #endif
@@ -674,52 +683,52 @@ STATIC_INLINE void clobber_flags(void);
 
 static void make_flags_live_internal(void)
 {
-  if (live.flags_in_flags == VALID)
-    return;
-  if (live.flags_on_stack == VALID) {
-    int tmp;
-    tmp = readreg(FLAGTMP);
-    raw_reg_to_flags(tmp);
-    unlock2(tmp);
-    flags_carry_inverted = false;
+	if (live.flags_in_flags == VALID)
+		return;
+	if (live.flags_on_stack == VALID) {
+		int tmp;
+		tmp = readreg(FLAGTMP);
+		raw_reg_to_flags(tmp);
+		unlock2(tmp);
+		flags_carry_inverted = false;
 
-    live.flags_in_flags = VALID;
-    return;
-  }
-  jit_abort("Huh? live.flags_in_flags=%d, live.flags_on_stack=%d, but need to make live",
-    live.flags_in_flags, live.flags_on_stack);
+		live.flags_in_flags = VALID;
+		return;
+	}
+	jit_abort("Huh? live.flags_in_flags=%d, live.flags_on_stack=%d, but need to make live",
+	live.flags_in_flags, live.flags_on_stack);
 }
 
 static void flags_to_stack(void)
 {
-  if (live.flags_on_stack == VALID) {
-    flags_carry_inverted = false;
-    return;
-  }
-  if (!live.flags_are_important) {
-    live.flags_on_stack = VALID;
-    flags_carry_inverted = false;
-    return;
-  }
+	if (live.flags_on_stack == VALID) {
+		flags_carry_inverted = false;
+		return;
+	}
+	if (!live.flags_are_important) {
+		live.flags_on_stack = VALID;
+		flags_carry_inverted = false;
+		return;
+	}
 
-  int tmp = writereg(FLAGTMP);
-  raw_flags_to_reg(tmp);
-  unlock2(tmp);
+	int tmp = writereg(FLAGTMP);
+	raw_flags_to_reg(tmp);
+	unlock2(tmp);
 
-  live.flags_on_stack = VALID;
+	live.flags_on_stack = VALID;
 }
 
 STATIC_INLINE void clobber_flags(void)
 {
-  if (live.flags_in_flags == VALID && live.flags_on_stack != VALID)
-    flags_to_stack();
-  live.flags_in_flags = TRASH;
+	if (live.flags_in_flags == VALID && live.flags_on_stack != VALID)
+		flags_to_stack();
+	live.flags_in_flags = TRASH;
 }
 
 /* Prepare for leaving the compiled stuff */
 STATIC_INLINE void flush_flags(void)
 {
-  flags_to_stack();
+	flags_to_stack();
 }
 
 static int touchcnt;
@@ -730,7 +739,7 @@ static int touchcnt;
 
 STATIC_INLINE void do_load_reg(int n, int r)
 {
-  compemu_raw_mov_l_rm(n, (uintptr) live.state[r].mem);
+	compemu_raw_mov_l_rm(n, (uintptr) live.state[r].mem);
 }
 
 /********************************************************************
@@ -739,246 +748,250 @@ STATIC_INLINE void do_load_reg(int n, int r)
 
 STATIC_INLINE void set_status(int r, int status)
 {
-  live.state[r].status = status;
+	live.state[r].status = status;
 }
 
 STATIC_INLINE int isinreg(int r)
 {
-  return live.state[r].status == CLEAN || live.state[r].status == DIRTY;
+	return live.state[r].status == CLEAN || live.state[r].status == DIRTY;
 }
 
 static void tomem(int r)
 {
-  if (live.state[r].status == DIRTY) {
-    compemu_raw_mov_l_mr((uintptr)live.state[r].mem, live.state[r].realreg);
-    set_status(r, CLEAN);
-  }
+	if (live.state[r].status == DIRTY) {
+		compemu_raw_mov_l_mr((uintptr)live.state[r].mem, live.state[r].realreg);
+		set_status(r, CLEAN);
+	}
 }
 
 STATIC_INLINE int isconst(int r)
 {
-  return live.state[r].status == ISCONST;
+	return live.state[r].status == ISCONST;
 }
 
 STATIC_INLINE void writeback_const(int r)
 {
-  if (!isconst(r))
-    return;
+    if (!isconst(r))
+        return;
 
-  compemu_raw_mov_l_mi((uintptr)live.state[r].mem, live.state[r].val);
-  live.state[r].val = 0;
-  set_status(r, INMEM);
+    compemu_raw_mov_l_mi((uintptr)live.state[r].mem, live.state[r].val);
+    live.state[r].val = 0;
+    set_status(r, INMEM);
 }
 
 static void evict(int r)
 {
-  if (!isinreg(r))
-    return;
-  tomem(r);
-  int rr = live.state[r].realreg;
+    if (!isinreg(r))
+        return;
+    tomem(r);
+    int rr = live.state[r].realreg;
 
-  live.nat[rr].nholds--;
-  if (live.nat[rr].nholds != live.state[r].realind) { /* Was not last */
-    int topreg = live.nat[rr].holds[live.nat[rr].nholds];
-    int thisind = live.state[r].realind;
-    
-    live.nat[rr].holds[thisind] = topreg;
-    live.state[topreg].realind = thisind;
-  }
-  live.state[r].realreg = -1;
-  set_status(r, INMEM);
+    live.nat[rr].nholds--;
+    if (live.nat[rr].nholds != live.state[r].realind) { /* Was not last */
+        int topreg = live.nat[rr].holds[live.nat[rr].nholds];
+        int thisind = live.state[r].realind;
+
+        live.nat[rr].holds[thisind] = topreg;
+        live.state[topreg].realind = thisind;
+    }
+    live.state[r].realreg = -1;
+    set_status(r, INMEM);
 }
 
 STATIC_INLINE void free_nreg(int r)
 {
-  int i = live.nat[r].nholds;
+    int i = live.nat[r].nholds;
 
-  while (i) {
-    int vr;
+    while (i) {
+        int vr;
 
-    --i;
-    vr = live.nat[r].holds[i];
-    evict(vr);
-  }
+        --i;
+        vr = live.nat[r].holds[i];
+        evict(vr);
+    }
 }
 
 /* Use with care! */
 STATIC_INLINE void isclean(int r)
 {
-  if (!isinreg(r))
-    return;
-  live.state[r].val = 0;
-  set_status(r, CLEAN);
+    if (!isinreg(r))
+        return;
+    live.state[r].val = 0;
+    set_status(r, CLEAN);
 }
 
 STATIC_INLINE void disassociate(int r)
 {
-  isclean(r);
-  evict(r);
+    isclean(r);
+    evict(r);
 }
 
 STATIC_INLINE void set_const(int r, uae_u32 val)
 {
-  disassociate(r);
-  live.state[r].val = val;
-  set_status(r, ISCONST);
+    disassociate(r);
+    live.state[r].val = val;
+    set_status(r, ISCONST);
 }
 
 static int alloc_reg_hinted(int r, int willclobber, int hint)
 {
-  int bestreg = -1;
-  uae_s32 when = 2000000000;
-  int i;
+    int bestreg = -1;
+    uae_s32 when = 2000000000;
+    int i;
 
-  for (i = N_REGS - 1; i >= 0; i--) {
-    if(!live.nat[i].locked) {
-      uae_s32 badness = live.nat[i].touched;
-      if (live.nat[i].nholds == 0)
-        badness = 0;
-      if (i == hint)
-        badness -= 200000000;
-      if (badness < when) {
-        bestreg = i;
-        when = badness;
-        if (live.nat[i].nholds == 0 && hint < 0)
-          break;
-        if (i == hint)
-          break;
-      }
+    for (i = N_REGS - 1; i >= 0; i--) {
+        if (!live.nat[i].locked) {
+            uae_s32 badness = live.nat[i].touched;
+            if (live.nat[i].nholds == 0)
+                badness = 0;
+            if (i == hint)
+                badness -= 200000000;
+            if (badness < when) {
+                bestreg = i;
+                when = badness;
+                if (live.nat[i].nholds == 0 && hint < 0)
+                    break;
+                if (i == hint)
+                    break;
+            }
+        }
     }
-  }
 
-  if (live.nat[bestreg].nholds > 0) {
-    free_nreg(bestreg);
-  }
+    if (live.nat[bestreg].nholds > 0) {
+        free_nreg(bestreg);
+    }
 
-  if (!willclobber) {
-    if (live.state[r].status != UNDEF) {
-      if (isconst(r)) {
-        compemu_raw_mov_l_ri(bestreg, live.state[r].val);
+    if (!willclobber) {
+        if (live.state[r].status != UNDEF) {
+            if (isconst(r)) {
+                compemu_raw_mov_l_ri(bestreg, live.state[r].val);
+                live.state[r].val = 0;
+                set_status(r, DIRTY);
+            }
+            else {
+                do_load_reg(bestreg, r);
+                set_status(r, CLEAN);
+            }
+        }
+        else {
+            live.state[r].val = 0;
+            set_status(r, CLEAN);
+        }
+    }
+    else { /* this is the easiest way, but not optimal. */
         live.state[r].val = 0;
         set_status(r, DIRTY);
-      } else {
-        do_load_reg(bestreg, r);
-        set_status(r, CLEAN);
-      }
-    } else {
-      live.state[r].val = 0;
-      set_status(r, CLEAN);
     }
-  } else { /* this is the easiest way, but not optimal. */
-    live.state[r].val = 0;
-    set_status(r, DIRTY);
-  }
-  live.state[r].realreg = bestreg;
-  live.state[r].realind = 0;
-  live.nat[bestreg].touched = touchcnt++;
-  live.nat[bestreg].holds[0] = r;
-  live.nat[bestreg].nholds = 1;
+    live.state[r].realreg = bestreg;
+    live.state[r].realind = 0;
+    live.nat[bestreg].touched = touchcnt++;
+    live.nat[bestreg].holds[0] = r;
+    live.nat[bestreg].nholds = 1;
 
-  return bestreg;
+    return bestreg;
 }
 
 
 static void unlock2(int r)
 {
-  live.nat[r].locked--;
+    live.nat[r].locked--;
 }
 
 static void setlock(int r)
 {
-  live.nat[r].locked++;
+    live.nat[r].locked++;
 }
 
 
 static void mov_nregs(int d, int s)
 {
-  if (s == d)
-    return;
+    if (s == d)
+        return;
 
-  if (live.nat[d].nholds > 0)
-    free_nreg(d);
+    if (live.nat[d].nholds > 0)
+        free_nreg(d);
 
-  compemu_raw_mov_l_rr(d, s);
+    compemu_raw_mov_l_rr(d, s);
 
-  for (int i=0; i<live.nat[s].nholds; i++) {
-    int vs = live.nat[s].holds[i];
+    for (int i = 0; i < live.nat[s].nholds; i++) {
+        int vs = live.nat[s].holds[i];
 
-    live.state[vs].realreg = d;
-    live.state[vs].realind = i;
-    live.nat[d].holds[i] = vs;
-  }
-  live.nat[d].nholds = live.nat[s].nholds;
+        live.state[vs].realreg = d;
+        live.state[vs].realind = i;
+        live.nat[d].holds[i] = vs;
+    }
+    live.nat[d].nholds = live.nat[s].nholds;
 
-  live.nat[s].nholds = 0;
+    live.nat[s].nholds = 0;
 }
 
 
 STATIC_INLINE void make_exclusive(int r, int needcopy)
 {
-  reg_status oldstate;
-  int rr = live.state[r].realreg;
-  int nr;
-  int nind;
+    reg_status oldstate;
+    int rr = live.state[r].realreg;
+    int nr;
+    int nind;
 
-  if (!isinreg(r))
-    return;
-  if (live.nat[rr].nholds == 1)
-    return;
-    
-  /* We have to split the register */
-  oldstate = live.state[r];
+    if (!isinreg(r))
+        return;
+    if (live.nat[rr].nholds == 1)
+        return;
 
-  setlock(rr); /* Make sure this doesn't go away */
-  /* Forget about r being in the register rr */
-  disassociate(r);
-  /* Get a new register, that we will clobber completely */
-  nr = alloc_reg_hinted(r, 1, -1);
-  nind = live.state[r].realind;
-  live.state[r] = oldstate;   /* Keep all the old state info */
-  live.state[r].realreg = nr;
-  live.state[r].realind = nind;
+    /* We have to split the register */
+    oldstate = live.state[r];
 
-  if (needcopy) {
-    compemu_raw_mov_l_rr(nr, rr);  /* Make another copy */
-  }
-  unlock2(rr);
+    setlock(rr); /* Make sure this doesn't go away */
+    /* Forget about r being in the register rr */
+    disassociate(r);
+    /* Get a new register, that we will clobber completely */
+    nr = alloc_reg_hinted(r, 1, -1);
+    nind = live.state[r].realind;
+    live.state[r] = oldstate;   /* Keep all the old state info */
+    live.state[r].realreg = nr;
+    live.state[r].realind = nind;
+
+    if (needcopy) {
+        compemu_raw_mov_l_rr(nr, rr);  /* Make another copy */
+    }
+    unlock2(rr);
 }
 
 STATIC_INLINE int readreg_general(int r, int spec)
 {
-  int answer = -1;
+    int answer = -1;
 
-  if (live.state[r].status == UNDEF) {
-    jit_log("WARNING: Unexpected read of undefined register %d", r);
-  }
+    if (live.state[r].status == UNDEF) {
+        jit_log("WARNING: Unexpected read of undefined register %d", r);
+    }
 
-  if (isinreg(r)) {
-    answer = live.state[r].realreg;
-  } else {
-    /* the value is in memory to start with */
-    answer = alloc_reg_hinted(r, 0, spec);
-  }
+    if (isinreg(r)) {
+        answer = live.state[r].realreg;
+    }
+    else {
+        /* the value is in memory to start with */
+        answer = alloc_reg_hinted(r, 0, spec);
+    }
 
-  if (spec >= 0 && spec != answer) {
-    /* Too bad */
-    mov_nregs(spec, answer);
-    answer = spec;
-  }
-  live.nat[answer].locked++;
-  live.nat[answer].touched = touchcnt++;
-  return answer;
+    if (spec >= 0 && spec != answer) {
+        /* Too bad */
+        mov_nregs(spec, answer);
+        answer = spec;
+    }
+    live.nat[answer].locked++;
+    live.nat[answer].touched = touchcnt++;
+    return answer;
 }
 
 
 static int readreg(int r)
 {
-  return readreg_general(r, -1);
+    return readreg_general(r, -1);
 }
 
 static int readreg_specific(int r, int spec)
 {
-  return readreg_general(r, spec);
+    return readreg_general(r, spec);
 }
 
 /* writereg(r)
@@ -991,45 +1004,47 @@ static int readreg_specific(int r, int spec)
  */
 static int writereg(int r)
 {
-  int answer = -1;
+    int answer = -1;
 
-  make_exclusive(r, 0);
-  if (isinreg(r)) {
-    answer = live.state[r].realreg;
-  } else {
-    /* the value is in memory to start with */
-    answer = alloc_reg_hinted(r, 1, -1);
-  }
+    make_exclusive(r, 0);
+    if (isinreg(r)) {
+        answer = live.state[r].realreg;
+    }
+    else {
+        /* the value is in memory to start with */
+        answer = alloc_reg_hinted(r, 1, -1);
+    }
 
-  live.nat[answer].locked++;
-  live.nat[answer].touched = touchcnt++;
-  live.state[r].val = 0;
-  set_status(r, DIRTY);
-  return answer;
+    live.nat[answer].locked++;
+    live.nat[answer].touched = touchcnt++;
+    live.state[r].val = 0;
+    set_status(r, DIRTY);
+    return answer;
 }
 
 static int rmw(int r)
 {
-  int answer = -1;
+    int answer = -1;
 
-  if (live.state[r].status == UNDEF) {
-    jit_log("WARNING: Unexpected read of undefined register %d", r);
-  }
-  make_exclusive(r, 1);
+    if (live.state[r].status == UNDEF) {
+        jit_log("WARNING: Unexpected read of undefined register %d", r);
+    }
+    make_exclusive(r, 1);
 
-  if (isinreg(r)) {
-    answer = live.state[r].realreg;
-  } else {
-    /* the value is in memory to start with */
-    answer = alloc_reg_hinted(r, 0, -1);
-  }
+    if (isinreg(r)) {
+        answer = live.state[r].realreg;
+    }
+    else {
+        /* the value is in memory to start with */
+        answer = alloc_reg_hinted(r, 0, -1);
+    }
 
-  set_status(r, DIRTY);
+    set_status(r, DIRTY);
 
-  live.nat[answer].locked++;
-  live.nat[answer].touched = touchcnt++;
+    live.nat[answer].locked++;
+    live.nat[answer].touched = touchcnt++;
 
-  return answer;
+    return answer;
 }
 
 /********************************************************************
@@ -1039,77 +1054,78 @@ static int rmw(int r)
 
 STATIC_INLINE void f_tomem_drop(int r)
 {
-  if (live.fate[r].status == DIRTY) {
-    compemu_raw_fmov_mr_drop((uintptr)live.fate[r].mem, live.fate[r].realreg);
-    live.fate[r].status = INMEM;
-  }
+    if (live.fate[r].status == DIRTY) {
+        compemu_raw_fmov_mr_drop((uintptr)live.fate[r].mem, live.fate[r].realreg);
+        live.fate[r].status = INMEM;
+    }
 }
 
 
 STATIC_INLINE int f_isinreg(int r)
 {
-  return live.fate[r].status == CLEAN || live.fate[r].status == DIRTY;
+    return live.fate[r].status == CLEAN || live.fate[r].status == DIRTY;
 }
 
 STATIC_INLINE void f_evict(int r)
 {
-  int rr;
+    int rr;
 
-  if (!f_isinreg(r))
-    return;
-  rr = live.fate[r].realreg;
-  f_tomem_drop(r);
+    if (!f_isinreg(r))
+        return;
+    rr = live.fate[r].realreg;
+    f_tomem_drop(r);
 
-  live.fat[rr].nholds = 0;
-  live.fate[r].status = INMEM;
-  live.fate[r].realreg = -1;
+    live.fat[rr].nholds = 0;
+    live.fate[r].status = INMEM;
+    live.fate[r].realreg = -1;
 }
 
 STATIC_INLINE void f_free_nreg(int r)
 {
-  int vr = live.fat[r].holds;
-  f_evict(vr);
+    int vr = live.fat[r].holds;
+    f_evict(vr);
 }
 
 
 /* Use with care! */
 STATIC_INLINE void f_isclean(int r)
 {
-  if (!f_isinreg(r))
-    return;
-  live.fate[r].status = CLEAN;
+    if (!f_isinreg(r))
+        return;
+    live.fate[r].status = CLEAN;
 }
 
 STATIC_INLINE void f_disassociate(int r)
 {
-  f_isclean(r);
-  f_evict(r);
+    f_isclean(r);
+    f_evict(r);
 }
 
 static int f_alloc_reg(int r, int willclobber)
 {
-  int bestreg;
+    int bestreg;
 
-  if(r < 8)
-    bestreg = r + 8;   // map real Amiga reg to ARM VFP reg 8-15 (call save)
-  else if(r == FP_RESULT)
-    bestreg = 6;         // map FP_RESULT to ARM VFP reg 6
-  else // FS1
-    bestreg = 7;         // map FS1 to ARM VFP reg 7
+    if (r < 8)
+        bestreg = r + 8;   // map real Amiga reg to ARM VFP reg 8-15 (call save)
+    else if (r == FP_RESULT)
+        bestreg = 6;         // map FP_RESULT to ARM VFP reg 6
+    else // FS1
+        bestreg = 7;         // map FS1 to ARM VFP reg 7
 
-  if (!willclobber) {
-    if (live.fate[r].status == INMEM) {
-      compemu_raw_fmov_rm(bestreg, (uintptr)live.fate[r].mem);
-      live.fate[r].status = CLEAN;
+    if (!willclobber) {
+        if (live.fate[r].status == INMEM) {
+            compemu_raw_fmov_rm(bestreg, (uintptr)live.fate[r].mem);
+            live.fate[r].status = CLEAN;
+        }
     }
-  } else {
-    live.fate[r].status = DIRTY;
-  }
-  live.fate[r].realreg = bestreg;
-  live.fat[bestreg].holds = r;
-  live.fat[bestreg].nholds = 1;
+    else {
+        live.fate[r].status = DIRTY;
+    }
+    live.fate[r].realreg = bestreg;
+    live.fat[bestreg].holds = r;
+    live.fat[bestreg].nholds = 1;
 
-  return bestreg;
+    return bestreg;
 }
 
 STATIC_INLINE void f_unlock(int r)
@@ -1118,50 +1134,53 @@ STATIC_INLINE void f_unlock(int r)
 
 STATIC_INLINE int f_readreg(int r)
 {
-  int answer;
+    int answer;
 
-  if (f_isinreg(r)) {
-    answer = live.fate[r].realreg;
-  } else {
-    /* the value is in memory to start with */
-    answer = f_alloc_reg(r,0);
-  }
+    if (f_isinreg(r)) {
+        answer = live.fate[r].realreg;
+    }
+    else {
+        /* the value is in memory to start with */
+        answer = f_alloc_reg(r, 0);
+    }
 
-  return answer;
+    return answer;
 }
 
 STATIC_INLINE int f_writereg(int r)
 {
-  int answer;
+    int answer;
 
-  if (f_isinreg(r)) {
-    answer = live.fate[r].realreg;
-  } else {
-    answer = f_alloc_reg(r, 1);
-  }
-  live.fate[r].status = DIRTY;
-  return answer;
+    if (f_isinreg(r)) {
+        answer = live.fate[r].realreg;
+    }
+    else {
+        answer = f_alloc_reg(r, 1);
+    }
+    live.fate[r].status = DIRTY;
+    return answer;
 }
 
 STATIC_INLINE int f_rmw(int r)
 {
-  int n;
+    int n;
 
-  if (f_isinreg(r)) {
-    n = live.fate[r].realreg;
-  } else {
-    n = f_alloc_reg(r, 0);
-  }
-  live.fate[r].status = DIRTY;
-  return n;
+    if (f_isinreg(r)) {
+        n = live.fate[r].realreg;
+    }
+    else {
+        n = f_alloc_reg(r, 0);
+    }
+    live.fate[r].status = DIRTY;
+    return n;
 }
 
 static void fflags_into_flags_internal(void)
 {
-  int r = f_readreg(FP_RESULT);
-  raw_fflags_into_flags(r);
-  f_unlock(r);
-  live_flags();
+    int r = f_readreg(FP_RESULT);
+    raw_fflags_into_flags(r);
+    f_unlock(r);
+    live_flags();
 }
 
 #endif
@@ -1185,16 +1204,16 @@ static void fflags_into_flags_internal(void)
 
 uae_u32 get_const(int r)
 {
-  return live.state[r].val;
+    return live.state[r].val;
 }
 
 void sync_m68k_pc(void)
 {
-  if (m68k_pc_offset) {
-    arm_ADD_l_ri(PC_P, m68k_pc_offset);
-    comp_pc_p += m68k_pc_offset;
-    m68k_pc_offset = 0;
-  }
+    if (m68k_pc_offset) {
+        arm_ADD_l_ri(PC_P, m68k_pc_offset);
+        comp_pc_p += m68k_pc_offset;
+        m68k_pc_offset = 0;
+    }
 }
 
 /********************************************************************
@@ -1203,200 +1222,206 @@ void sync_m68k_pc(void)
 
 void compiler_exit(void)
 {
-  if(current_compile_p != 0 && compiled_code != 0 && current_compile_p > compiled_code)
-    jit_log("used size: %8d bytes", current_compile_p - compiled_code);
-    
+    if (current_compile_p != 0 && compiled_code != 0 && current_compile_p > compiled_code)
+        jit_log("used size: %8d bytes", current_compile_p - compiled_code);
+
 #ifdef PROFILE_COMPILE_TIME
-  emul_end_time = clock();
+    emul_end_time = clock();
 #endif
 
 #if defined(CPU_arm) && !defined(ARMV6T2)
 #ifdef DEBUG_DATA_BUFFER
-  printf("data_wasted = %d bytes in %d blocks\n", data_wasted, data_buffers_used);
+    printf("data_wasted = %d bytes in %d blocks\n", data_wasted, data_buffers_used);
 #endif
 #endif
 
-  // Deallocate translation cache
-  compiled_code = 0;
+    // Deallocate translation cache
+    if (compiled_code) {
+        vm_release(compiled_code, cache_size * 1024);
+        compiled_code = 0;
+    }
 
-  // Deallocate popallspace
-  if (popallspace) {
-    cache_free(popallspace, POPALLSPACE_SIZE + MAX_JIT_CACHE * 1024);
-    popallspace = 0;
-  }
+    // Deallocate popallspace
+    if (popallspace) {
+        vm_release(popallspace, POPALLSPACE_SIZE + MAX_JIT_CACHE * 1024);
+        popallspace = 0;
+    }
 
 #ifdef PROFILE_COMPILE_TIME
-  jit_log("### Compile Block statistics");
-  jit_log("Number of calls to compile_block : %d", compile_count);
-  uae_u32 emul_time = emul_end_time - emul_start_time;
-  jit_log("Total emulation time   : %.1f sec", double(emul_time)/double(CLOCKS_PER_SEC));
-  jit_log("Total compilation time : %.1f sec (%.1f%%)", double(compile_time)/double(CLOCKS_PER_SEC), 100.0*double(compile_time)/double(emul_time));
+    jit_log("### Compile Block statistics");
+    jit_log("Number of calls to compile_block : %d", compile_count);
+    uae_u32 emul_time = emul_end_time - emul_start_time;
+    jit_log("Total emulation time   : %.1f sec", double(emul_time) / double(CLOCKS_PER_SEC));
+    jit_log("Total compilation time : %.1f sec (%.1f%%)", double(compile_time) / double(CLOCKS_PER_SEC), 100.0 * double(compile_time) / double(emul_time));
 #endif
 
 #ifdef PROFILE_UNTRANSLATED_INSNS
-  uae_u64 untranslated_count = 0;
-  for (int i = 0; i < 65536; i++) {
-    opcode_nums[i] = i;
-    untranslated_count += raw_cputbl_count[i];
-  }
-  jit_log("Sorting out untranslated instructions count...");
-  qsort(opcode_nums, 65536, sizeof(uae_u16), untranslated_compfn);
-  jit_log("Rank  Opc      Count Name");
-  for (int i = 0; i < untranslated_top_ten && i < 65536; i++) {
-    uae_u32 count = raw_cputbl_count[opcode_nums[i]];
-    struct instr *dp;
-    struct mnemolookup *lookup;
-    if (!count)
-      break;
-    dp = table68k + opcode_nums[i];
-    for (lookup = lookuptab; lookup->mnemo != (instrmnem)dp->mnemo; lookup++)
-      ;
-    jit_log("%03d: %04x %10u %s", i, opcode_nums[i], count, lookup->name);
-  }
+    uae_u64 untranslated_count = 0;
+    for (int i = 0; i < 65536; i++) {
+        opcode_nums[i] = i;
+        untranslated_count += raw_cputbl_count[i];
+    }
+    jit_log("Sorting out untranslated instructions count...");
+    qsort(opcode_nums, 65536, sizeof(uae_u16), untranslated_compfn);
+    jit_log("Rank  Opc      Count Name");
+    for (int i = 0; i < untranslated_top_ten && i < 65536; i++) {
+        uae_u32 count = raw_cputbl_count[opcode_nums[i]];
+        struct instr* dp;
+        struct mnemolookup* lookup;
+        if (!count)
+            break;
+        dp = table68k + opcode_nums[i];
+        for (lookup = lookuptab; lookup->mnemo != (instrmnem)dp->mnemo; lookup++)
+            ;
+        jit_log("%03d: %04x %10u %s", i, opcode_nums[i], count, lookup->name);
+    }
 #endif
 }
 
 static void init_comp(void)
 {
-  int i;
-  uae_s8* au = always_used;
+    int i;
+    uae_s8* au = always_used;
 
-  for (i=0; i<VREGS; i++) {
-    live.state[i].realreg = -1;
-    live.state[i].val = 0;
-    set_status(i, UNDEF);
-  }
-
-  for (i=0;i<VFREGS;i++) {
-    live.fate[i].status = UNDEF;
-    live.fate[i].realreg = -1;
-    live.fate[i].needflush = NF_SCRATCH;
-  }
-
-  for (i=0; i<VREGS; i++) {
-    if (i < 16) { /* First 16 registers map to 68k registers */
-      live.state[i].mem = &regs.regs[i];
-      set_status(i, INMEM);
-    } else if(i >= S1) {
-      live.state[i].mem = &regs.scratchregs[i - S1];
+    for (i = 0; i < VREGS; i++) {
+        live.state[i].realreg = -1;
+        live.state[i].val = 0;
+        set_status(i, UNDEF);
     }
-  }
-  live.state[PC_P].mem = (uae_u32*)&(regs.pc_p);
-  set_const(PC_P, (uintptr)comp_pc_p);
 
-  live.state[FLAGX].mem = (uae_u32*)&(regs.ccrflags.x);
-  set_status(FLAGX, INMEM);
-  
+    for (i = 0; i < VFREGS; i++) {
+        live.fate[i].status = UNDEF;
+        live.fate[i].realreg = -1;
+        live.fate[i].needflush = NF_SCRATCH;
+    }
+
+    for (i = 0; i < VREGS; i++) {
+        if (i < 16) { /* First 16 registers map to 68k registers */
+            live.state[i].mem = &regs.regs[i];
+            set_status(i, INMEM);
+        }
+        else if (i >= S1) {
+            live.state[i].mem = &regs.scratchregs[i - S1];
+        }
+    }
+    live.state[PC_P].mem = (uae_u32*)&(regs.pc_p);
+    set_const(PC_P, (uintptr)comp_pc_p);
+
+    live.state[FLAGX].mem = (uae_u32*)&(regs.ccrflags.x);
+    set_status(FLAGX, INMEM);
+
 #if defined(CPU_arm)
-  live.state[FLAGTMP].mem = (uae_u32*)&(regs.ccrflags.nzcv);
+    live.state[FLAGTMP].mem = (uae_u32*)&(regs.ccrflags.nzcv);
 #else
-  live.state[FLAGTMP].mem = (uae_u32*)&(regs.ccrflags.cznv);
+    live.state[FLAGTMP].mem = (uae_u32*)&(regs.ccrflags.cznv);
 #endif
-  set_status(FLAGTMP, INMEM);
-  flags_carry_inverted = false;
+    set_status(FLAGTMP, INMEM);
+    flags_carry_inverted = false;
 
-  for (i = 0; i < VFREGS; i++) {
-    if (i < 8) { /* First 8 registers map to 68k FPU registers */
-      live.fate[i].mem = (uae_u32*)(&regs.fp[i].fp);
-      live.fate[i].needflush = NF_TOMEM;
-      live.fate[i].status = INMEM;
-    } else if (i == FP_RESULT) {
-      live.fate[i].mem = (uae_u32*)(&regs.fp_result.fp);
-      live.fate[i].needflush = NF_TOMEM;
-      live.fate[i].status = INMEM;
-    } else {
-      live.fate[i].mem = (uae_u32*)(&regs.scratchfregs[i - 8]);
+    for (i = 0; i < VFREGS; i++) {
+        if (i < 8) { /* First 8 registers map to 68k FPU registers */
+            live.fate[i].mem = (uae_u32*)(&regs.fp[i].fp);
+            live.fate[i].needflush = NF_TOMEM;
+            live.fate[i].status = INMEM;
+        }
+        else if (i == FP_RESULT) {
+            live.fate[i].mem = (uae_u32*)(&regs.fp_result.fp);
+            live.fate[i].needflush = NF_TOMEM;
+            live.fate[i].status = INMEM;
+        }
+        else {
+            live.fate[i].mem = (uae_u32*)(&regs.scratchfregs[i - 8]);
+        }
     }
-  }
 
-  for (i = 0;  i < N_REGS; i++) {
-    live.nat[i].touched = 0;
-    live.nat[i].nholds = 0;
-    live.nat[i].locked = 0;
-    if (*au == i) {
-      live.nat[i].locked = 1; 
-      au++;
+    for (i = 0; i < N_REGS; i++) {
+        live.nat[i].touched = 0;
+        live.nat[i].nholds = 0;
+        live.nat[i].locked = 0;
+        if (*au == i) {
+            live.nat[i].locked = 1;
+            au++;
+        }
     }
-  }
 
-  for (i=0;i<N_FREGS;i++) {
-    live.fat[i].nholds = 0;
-  }
+    for (i = 0; i < N_FREGS; i++) {
+        live.fat[i].nholds = 0;
+    }
 
-  touchcnt = 1;
-  m68k_pc_offset = 0;
-  live.flags_in_flags = TRASH;
-  live.flags_on_stack = VALID;
-  live.flags_are_important = 1;
-  
-  regs.jit_exception = 0;
+    touchcnt = 1;
+    m68k_pc_offset = 0;
+    live.flags_in_flags = TRASH;
+    live.flags_on_stack = VALID;
+    live.flags_are_important = 1;
+
+    regs.jit_exception = 0;
 }
 
 /* Only do this if you really mean it! The next call should be to init!*/
 static void flush(int save_regs)
 {
-  int i;
+    int i;
 
-  flush_flags(); /* low level */
-  sync_m68k_pc(); /* mid level */
+    flush_flags(); /* low level */
+    sync_m68k_pc(); /* mid level */
 
-  if (save_regs) {
+    if (save_regs) {
 #ifdef USE_JIT_FPU
-    for (i = 0; i < VFREGS; i++) {
-      if (live.fate[i].needflush == NF_SCRATCH || live.fate[i].status == CLEAN) {
-        f_disassociate(i);
-      }
-    }
+        for (i = 0; i < VFREGS; i++) {
+            if (live.fate[i].needflush == NF_SCRATCH || live.fate[i].status == CLEAN) {
+                f_disassociate(i);
+            }
+        }
 #endif
-    for (i = 0; i <= FLAGTMP; i++) {
-      switch(live.state[i].status) {
-        case INMEM:
-          if (live.state[i].val) {
-            write_log("JIT: flush INMEM and val != 0!\n");
-          }
-          break;
-        case CLEAN:
-        case DIRTY:
-          tomem(i); 
-          break;
-        case ISCONST:
-          if (i != PC_P)
-            writeback_const(i);
-          break;
-        default: 
-          break;
-      }
-    }
+        for (i = 0; i <= FLAGTMP; i++) {
+            switch (live.state[i].status) {
+            case INMEM:
+                if (live.state[i].val) {
+                    write_log("JIT: flush INMEM and val != 0!\n");
+                }
+                break;
+            case CLEAN:
+            case DIRTY:
+                tomem(i);
+                break;
+            case ISCONST:
+                if (i != PC_P)
+                    writeback_const(i);
+                break;
+            default:
+                break;
+            }
+        }
 #ifdef USE_JIT_FPU
-    for (i = 0; i <= FP_RESULT; i++) {
-      if (live.fate[i].status == DIRTY) {
-        f_evict(i);
-      }
-    }
+        for (i = 0; i <= FP_RESULT; i++) {
+            if (live.fate[i].status == DIRTY) {
+                f_evict(i);
+            }
+        }
 #endif
-  }
+    }
 }
 
 static void freescratch(void)
 {
-  int i;
-  for (i = 0; i < N_REGS; i++) {
+    int i;
+    for (i = 0; i < N_REGS; i++) {
 #if defined(CPU_AARCH64) 
-    if (live.nat[i].locked && i > 5 && i < 18) {
+        if (live.nat[i].locked && i > 5 && i < 18) {
 #elif defined(CPU_arm)
-    if (live.nat[i].locked && i != 2 && i != 3 && i != 10 && i != 11 && i != 12) {
+        if (live.nat[i].locked && i != 2 && i != 3 && i != 10 && i != 11 && i != 12) {
 #else
-    if (live.nat[i].locked && i!=4 && i!= 12) {
+        if (live.nat[i].locked && i != 4 && i != 12) {
 #endif
-      jit_log("Warning! %d is locked",i);
+            jit_log("Warning! %d is locked", i);
+        }
     }
-  }
-    
-  for (i = S1; i < VREGS; i++)
-    forget_about(i);
+
+    for (i = S1; i < VREGS; i++)
+        forget_about(i);
 
 #ifdef USE_JIT_FPU
-  f_forget_about(FS1);
+    f_forget_about(FS1);
 #endif
 }
 
@@ -1407,27 +1432,27 @@ static void freescratch(void)
 
 STATIC_INLINE int isinrom(uintptr addr)
 {
-  return (addr >= (uintptr)kickmem_bank.baseaddr &&
-    addr < (uintptr)(kickmem_bank.baseaddr + 8 * 65536));
+    return (addr >= (uintptr)kickmem_bank.baseaddr &&
+        addr < (uintptr)(kickmem_bank.baseaddr + 8 * 65536));
 }
 
 static void flush_all(void)
 {
-  int i;
+    int i;
 
-  for (i = 0; i < VREGS; i++) {
-    if (live.state[i].status == DIRTY) {
-      if (!call_saved[live.state[i].realreg]) {
-        tomem(i);
-      }
+    for (i = 0; i < VREGS; i++) {
+        if (live.state[i].status == DIRTY) {
+            if (!call_saved[live.state[i].realreg]) {
+                tomem(i);
+            }
+        }
     }
-  }
-  
+
 #ifdef USE_JIT_FPU
-  if (f_isinreg(FP_RESULT))
-    f_evict(FP_RESULT);
-  if (f_isinreg(FS1))
-    f_evict(FS1);
+    if (f_isinreg(FP_RESULT))
+        f_evict(FP_RESULT);
+    if (f_isinreg(FS1))
+        f_evict(FS1);
 #endif
 }
 
@@ -1435,30 +1460,30 @@ static void flush_all(void)
    save and sound in memory */
 static void prepare_for_call_1(void)
 {
-  flush_all();
+    flush_all();
 }
 
 /* We will call a C routine in a moment. That will clobber all registers,
    so we need to disassociate everything */
 static void prepare_for_call_2(void)
 {
-  int i;
-  for (i = 0; i < N_REGS; i++) {
+    int i;
+    for (i = 0; i < N_REGS; i++) {
 #if defined(CPU_AARCH64)
-    if (live.nat[i].nholds > 0) // in aarch64: first 18 regs not call saved
+        if (live.nat[i].nholds > 0) // in aarch64: first 18 regs not call saved
 #else
-    if (!call_saved[i] && live.nat[i].nholds > 0)
+        if (!call_saved[i] && live.nat[i].nholds > 0)
 #endif
-      free_nreg(i);
-  }
-  
+            free_nreg(i);
+    }
+
 #ifdef USE_JIT_FPU
-  for (i = 6; i <= 7; i++) // only FP_RESULT and FS1, FP0-FP7 are call save
-    if (live.fat[i].nholds > 0)
-      f_free_nreg(i);
+    for (i = 6; i <= 7; i++) // only FP_RESULT and FS1, FP0-FP7 are call save
+        if (live.fat[i].nholds > 0)
+            f_free_nreg(i);
 #endif
-  live.flags_in_flags = TRASH;  /* Note: We assume we already rescued the
-                                   flags at the very start of the call_r functions! */
+    live.flags_in_flags = TRASH;  /* Note: We assume we already rescued the
+                                     flags at the very start of the call_r functions! */
 }
 
 /********************************************************************
@@ -1467,14 +1492,14 @@ static void prepare_for_call_2(void)
 
 void register_branch(uae_u32 not_taken, uae_u32 taken, uae_u8 cond)
 {
-  next_pc_p = not_taken;
-  taken_pc_p = taken;
-  branch_cc = cond;
+    next_pc_p = not_taken;
+    taken_pc_p = taken;
+    branch_cc = cond;
 }
 
 void register_possible_exception(void)
 {
-  may_raise_exception = true;
+    may_raise_exception = true;
 }
 
 /* Note: get_handler may fail in 64 Bit environments, if direct_handler_to_use is
@@ -1482,8 +1507,8 @@ void register_possible_exception(void)
  */
 static uintptr get_handler(uintptr addr)
 {
-  blockinfo* bi = get_blockinfo_addr_new((void*)(uintptr) addr);
-  return (uintptr)bi->direct_handler_to_use;
+    blockinfo* bi = get_blockinfo_addr_new((void*)(uintptr)addr);
+    return (uintptr)bi->direct_handler_to_use;
 }
 
 /* This version assumes that it is writing *real* memory, and *will* fail
@@ -1492,67 +1517,68 @@ static uintptr get_handler(uintptr addr)
 
 static void writemem_real(int address, int source, int size)
 {
-  if(currprefs.address_space_24) {
-    switch(size) {
-      case 1: jnf_MEM_WRITE24_OFF_b(address, source); break;
-      case 2: jnf_MEM_WRITE24_OFF_w(address, source); break;
-      case 4: jnf_MEM_WRITE24_OFF_l(address, source); break;
+    if (currprefs.address_space_24) {
+        switch (size) {
+        case 1: jnf_MEM_WRITE24_OFF_b(address, source); break;
+        case 2: jnf_MEM_WRITE24_OFF_w(address, source); break;
+        case 4: jnf_MEM_WRITE24_OFF_l(address, source); break;
+        }
     }
-  } else {
-    switch(size) {
-      case 1: jnf_MEM_WRITE_OFF_b(address, source); break;
-      case 2: jnf_MEM_WRITE_OFF_w(address, source); break;
-      case 4: jnf_MEM_WRITE_OFF_l(address, source); break;
+    else {
+        switch (size) {
+        case 1: jnf_MEM_WRITE_OFF_b(address, source); break;
+        case 2: jnf_MEM_WRITE_OFF_w(address, source); break;
+        case 4: jnf_MEM_WRITE_OFF_l(address, source); break;
+        }
     }
-  }
 }
 
 STATIC_INLINE void writemem_special(int address, int source, int offset)
 {
-  jnf_MEM_WRITEMEMBANK(address, source, offset);
+    jnf_MEM_WRITEMEMBANK(address, source, offset);
 }
 
 void writebyte(int address, int source)
 {
-  if (special_mem & S_WRITE)
-    writemem_special(address, source, SIZEOF_VOID_P * 5);
-  else
-    writemem_real(address, source, 1);
+    if (special_mem & S_WRITE)
+        writemem_special(address, source, SIZEOF_VOID_P * 5);
+    else
+        writemem_real(address, source, 1);
 }
 
 void writeword(int address, int source)
 {
-  if (special_mem & S_WRITE)
-    writemem_special(address, source, SIZEOF_VOID_P * 4);
-  else
-    writemem_real(address, source, 2);
+    if (special_mem & S_WRITE)
+        writemem_special(address, source, SIZEOF_VOID_P * 4);
+    else
+        writemem_real(address, source, 2);
 }
 
 void writelong(int address, int source)
 {
-  if (special_mem & S_WRITE)
-    writemem_special(address, source, SIZEOF_VOID_P * 3);
-  else
-    writemem_real(address, source, 4);
+    if (special_mem & S_WRITE)
+        writemem_special(address, source, SIZEOF_VOID_P * 3);
+    else
+        writemem_real(address, source, 4);
 }
 
 // Now the same for clobber variant
 void writeword_clobber(int address, int source)
 {
-  if (special_mem & S_WRITE)
-    writemem_special(address, source, SIZEOF_VOID_P * 4);
-  else
-    writemem_real(address, source, 2);
-  forget_about(source);
+    if (special_mem & S_WRITE)
+        writemem_special(address, source, SIZEOF_VOID_P * 4);
+    else
+        writemem_real(address, source, 2);
+    forget_about(source);
 }
 
 void writelong_clobber(int address, int source)
 {
-  if (special_mem & S_WRITE)
-    writemem_special(address, source, SIZEOF_VOID_P * 3);
-  else
-    writemem_real(address, source, 4);
-  forget_about(source);
+    if (special_mem & S_WRITE)
+        writemem_special(address, source, SIZEOF_VOID_P * 3);
+    else
+        writemem_real(address, source, 4);
+    forget_about(source);
 }
 
 
@@ -1562,353 +1588,394 @@ void writelong_clobber(int address, int source)
 
 static void readmem_real(int address, int dest, int size)
 {
-  if(currprefs.address_space_24) {
-    switch(size) {
-      case 1: jnf_MEM_READ24_OFF_b(dest, address); break;
-      case 2: jnf_MEM_READ24_OFF_w(dest, address); break;
-      case 4: jnf_MEM_READ24_OFF_l(dest, address); break;
+    if (currprefs.address_space_24) {
+        switch (size) {
+        case 1: jnf_MEM_READ24_OFF_b(dest, address); break;
+        case 2: jnf_MEM_READ24_OFF_w(dest, address); break;
+        case 4: jnf_MEM_READ24_OFF_l(dest, address); break;
+        }
     }
-  } else {
-    switch(size) {
-      case 1: jnf_MEM_READ_OFF_b(dest, address); break;
-      case 2: jnf_MEM_READ_OFF_w(dest, address); break;
-      case 4: jnf_MEM_READ_OFF_l(dest, address); break;
+    else {
+        switch (size) {
+        case 1: jnf_MEM_READ_OFF_b(dest, address); break;
+        case 2: jnf_MEM_READ_OFF_w(dest, address); break;
+        case 4: jnf_MEM_READ_OFF_l(dest, address); break;
+        }
     }
-  }
 }
 
 STATIC_INLINE void readmem_special(int address, int dest, int offset)
 {
-  jnf_MEM_READMEMBANK(dest, address, offset);
+    jnf_MEM_READMEMBANK(dest, address, offset);
 }
 
 void readbyte(int address, int dest)
 {
-  if (special_mem & S_READ)
-    readmem_special(address, dest, SIZEOF_VOID_P * 2);
-  else
-    readmem_real(address, dest, 1);
+    if (special_mem & S_READ)
+        readmem_special(address, dest, SIZEOF_VOID_P * 2);
+    else
+        readmem_real(address, dest, 1);
 }
 
 void readword(int address, int dest)
 {
-  if (special_mem & S_READ)
-    readmem_special(address, dest, SIZEOF_VOID_P * 1);
-  else
-    readmem_real(address, dest, 2);
+    if (special_mem & S_READ)
+        readmem_special(address, dest, SIZEOF_VOID_P * 1);
+    else
+        readmem_real(address, dest, 2);
 }
 
 void readlong(int address, int dest)
 {
-  if (special_mem & S_READ)
-    readmem_special(address, dest, SIZEOF_VOID_P * 0);
-  else
-    readmem_real(address, dest, 4);
+    if (special_mem & S_READ)
+        readmem_special(address, dest, SIZEOF_VOID_P * 0);
+    else
+        readmem_real(address, dest, 4);
 }
 
 /* This one might appear a bit odd... */
 STATIC_INLINE void get_n_addr_old(int address, int dest)
 {
-  readmem_special(address, dest, SIZEOF_VOID_P * 6);
+    readmem_special(address, dest, SIZEOF_VOID_P * 6);
 }
 
 STATIC_INLINE void get_n_addr_real(int address, int dest)
 {
-  if(currprefs.address_space_24)
-    jnf_MEM_GETADR24_OFF(dest, address);
-  else
-    jnf_MEM_GETADR_OFF(dest, address);
+    if (currprefs.address_space_24)
+        jnf_MEM_GETADR24_OFF(dest, address);
+    else
+        jnf_MEM_GETADR_OFF(dest, address);
 }
 
 void get_n_addr(int address, int dest)
 {
-  if (special_mem)
-    get_n_addr_old(address, dest);
-  else
-    get_n_addr_real(address, dest);
+    if (special_mem)
+        get_n_addr_old(address, dest);
+    else
+        get_n_addr_real(address, dest);
 }
 
 void get_n_addr_jmp(int address, int dest)
 {
-  /* For this, we need to get the same address as the rest of UAE
-     would --- otherwise we end up translating everything twice */
-  if (special_mem)
-    get_n_addr_old(address, dest);
-  else
-    get_n_addr_real(address, dest);
+    /* For this, we need to get the same address as the rest of UAE
+       would --- otherwise we end up translating everything twice */
+    if (special_mem)
+        get_n_addr_old(address, dest);
+    else
+        get_n_addr_real(address, dest);
 }
 
 /* base is a register, but dp is an actual value. 
    target is a register */
 void calc_disp_ea_020(int base, uae_u32 dp, int target)
 {
-  int reg = (dp >> 12) & 15;
-  int regd_shift=(dp >> 9) & 3;
+    int reg = (dp >> 12) & 15;
+    int regd_shift = (dp >> 9) & 3;
 
-  if (dp & 0x100) {
-    int ignorebase = (dp&0x80);
-    int ignorereg = (dp&0x40);
-    int addbase = 0;
-    int outer = 0;
+    if (dp & 0x100) {
+        int ignorebase = (dp & 0x80);
+        int ignorereg = (dp & 0x40);
+        int addbase = 0;
+        int outer = 0;
 
-    if ((dp & 0x30) == 0x20) 
-      addbase = (uae_s32)(uae_s16)comp_get_iword((m68k_pc_offset+=2)-2);
-    if ((dp & 0x30) == 0x30) 
-      addbase = comp_get_ilong((m68k_pc_offset+=4)-4);
+        if ((dp & 0x30) == 0x20)
+            addbase = (uae_s32)(uae_s16)comp_get_iword((m68k_pc_offset += 2) - 2);
+        if ((dp & 0x30) == 0x30)
+            addbase = comp_get_ilong((m68k_pc_offset += 4) - 4);
 
-    if ((dp & 0x3) == 0x2) 
-      outer = (uae_s32)(uae_s16)comp_get_iword((m68k_pc_offset+=2)-2);
-    if ((dp & 0x3) == 0x3) 
-      outer = comp_get_ilong((m68k_pc_offset+=4)-4);
+        if ((dp & 0x3) == 0x2)
+            outer = (uae_s32)(uae_s16)comp_get_iword((m68k_pc_offset += 2) - 2);
+        if ((dp & 0x3) == 0x3)
+            outer = comp_get_ilong((m68k_pc_offset += 4) - 4);
 
-    if ((dp & 0x4) == 0) {  /* add regd *before* the get_long */
-      if (!ignorereg) {
-        disp_ea20_target_mov(target, reg, regd_shift, ((dp & 0x800) == 0));
-      } else {
-        mov_l_ri(target, 0);
-      }
+        if ((dp & 0x4) == 0) {  /* add regd *before* the get_long */
+            if (!ignorereg) {
+                disp_ea20_target_mov(target, reg, regd_shift, ((dp & 0x800) == 0));
+            }
+            else {
+                mov_l_ri(target, 0);
+            }
 
-      /* target is now regd */
-      if (!ignorebase)
-        arm_ADD_l(target, base);
-      arm_ADD_l_ri(target, addbase);
-      if (dp&0x03) 
-        readlong(target, target);
-    } else { /* do the getlong first, then add regd */
-      if (!ignorebase) {
-        mov_l_rr(target, base);
-        arm_ADD_l_ri(target, addbase);
-      } else{
-        mov_l_ri(target, addbase);
-      }
-      if (dp&0x03)
-        readlong(target, target);
+            /* target is now regd */
+            if (!ignorebase)
+                arm_ADD_l(target, base);
+            arm_ADD_l_ri(target, addbase);
+            if (dp & 0x03)
+                readlong(target, target);
+        }
+        else { /* do the getlong first, then add regd */
+            if (!ignorebase) {
+                mov_l_rr(target, base);
+                arm_ADD_l_ri(target, addbase);
+            }
+            else {
+                mov_l_ri(target, addbase);
+            }
+            if (dp & 0x03)
+                readlong(target, target);
 
-      if (!ignorereg) {
-        disp_ea20_target_add(target, reg, regd_shift, ((dp & 0x800) == 0));
-      }
+            if (!ignorereg) {
+                disp_ea20_target_add(target, reg, regd_shift, ((dp & 0x800) == 0));
+            }
+        }
+        arm_ADD_l_ri(target, outer);
     }
-    arm_ADD_l_ri(target, outer);
-  } else { /* 68000 version */
-    if ((dp & 0x800) == 0) { /* Sign extend */
-      sign_extend_16_rr(target, reg);
-      lea_l_brr_indexed(target, base, target, 1 << regd_shift, (uae_s8)dp);
-    } else {
-      lea_l_brr_indexed(target, base, reg, 1 << regd_shift, (uae_s8)dp);
+    else { /* 68000 version */
+        if ((dp & 0x800) == 0) { /* Sign extend */
+            sign_extend_16_rr(target, reg);
+            lea_l_brr_indexed(target, base, target, 1 << regd_shift, (uae_s8)dp);
+        }
+        else {
+            lea_l_brr_indexed(target, base, reg, 1 << regd_shift, (uae_s8)dp);
+        }
     }
-  }
 }
 
 void set_cache_state(int enabled)
 {
-  if (enabled != letit)
-    flush_icache_hard(3);
-  letit = enabled;
+    if (enabled != cache_enabled)
+        flush_icache_hard(3);
+    cache_enabled = enabled;
+}
+
+int get_cache_state(void)
+{
+    return cache_enabled;
+}
+
+uae_u32 get_jitted_size(void)
+{
+    if (compiled_code)
+        return current_compile_p - compiled_code;
+    return 0;
+}
+
+static uae_u8* do_alloc_code(unsigned int size, int depth)
+{
+    //UNUSED(depth);
+    uae_u8* code = (uae_u8*)vm_acquire(size, VM_MAP_DEFAULT | VM_MAP_32BIT);
+    return code == VM_MAP_FAILED ? NULL : code;
+}
+
+static inline uae_u8* alloc_code(unsigned int size)
+{
+    uae_u8* ptr = do_alloc_code(size, 0);
+    /* allocated code must fit in 32-bit boundaries */
+    assert((uintptr)ptr <= 0xffffffff);
+    return ptr;
 }
 
 void alloc_cache(void)
 {
-  if (compiled_code) {
-    flush_icache_hard(3);
-    compiled_code = 0;
-  }
-   
-  cache_size = currprefs.cachesize;
-  if (cache_size == 0)
-    return;
+    if (compiled_code) {
+        flush_icache_hard(3);
+        vm_release(compiled_code, cache_size * 1024);
+        compiled_code = 0;
+    }
 
-  if(popallspace)
-    compiled_code = popallspace + POPALLSPACE_SIZE;
+    cache_size = currprefs.cachesize;
+    if (cache_size == 0)
+        return;
 
-  if (compiled_code) {
-    write_log("Actual translation cache size : %d KB at %p-%p\n", cache_size, compiled_code, compiled_code + cache_size*1024);
+    while (!compiled_code && cache_size) {
+        if ((compiled_code = alloc_code(cache_size * 1024)) == NULL) {
+            compiled_code = 0;
+            cache_size /= 2;
+        }
+    }
+    vm_protect(compiled_code, cache_size * 1024, VM_PAGE_READ | VM_PAGE_WRITE | VM_PAGE_EXECUTE);
+
+    if (compiled_code) {
+        write_log("Actual translation cache size : %d KB at %p-%p\n", cache_size, compiled_code, compiled_code + cache_size * 1024);
 #if defined(CPU_arm) && !defined(ARMV6T2) && !defined(CPU_AARCH64)
-    max_compile_start = compiled_code + cache_size*1024 - BYTES_PER_INST - DATA_BUFFER_SIZE;
+        max_compile_start = compiled_code + cache_size * 1024 - BYTES_PER_INST - DATA_BUFFER_SIZE;
 #else
-    max_compile_start = compiled_code + cache_size*1024 - BYTES_PER_INST;
+        max_compile_start = compiled_code + cache_size * 1024 - BYTES_PER_INST;
 #endif
-    current_compile_p = compiled_code;
-    current_cache_size = 0;
+        current_compile_p = compiled_code;
+        current_cache_size = 0;
 #if defined(CPU_arm) && !defined(ARMV6T2) && !defined(CPU_AARCH64)
-    reset_data_buffer();
+        reset_data_buffer();
 #endif
-  }
+    }
 }
 
 static void calc_checksum(blockinfo* bi, uae_u32* c1, uae_u32* c2)
 {
-  uae_u32 k1 = 0;
-  uae_u32 k2 = 0;
+    uae_u32 k1 = 0;
+    uae_u32 k2 = 0;
 
-  checksum_info *csi = bi->csi;
-  while (csi) {
-    uae_s32 len = csi->length;
-    uintptr tmp = (uintptr)csi->start_p;
-    uae_u32* pos;
+    checksum_info* csi = bi->csi;
+    while (csi) {
+        uae_s32 len = csi->length;
+        uintptr tmp = (uintptr)csi->start_p;
+        uae_u32* pos;
 
-    len += (tmp & 3);
-    tmp &= ~((uintptr)3);
-    pos = (uae_u32*)tmp;
+        len += (tmp & 3);
+        tmp &= ~((uintptr)3);
+        pos = (uae_u32*)tmp;
 
-    if (len >= 0 && len <= MAX_CHECKSUM_LEN) {
-      while (len > 0) {
-        k1 += *pos;
-        k2 ^= *pos;
-        pos++;
-        len -= 4;
-      }
+        if (len >= 0 && len <= MAX_CHECKSUM_LEN) {
+            while (len > 0) {
+                k1 += *pos;
+                k2 ^= *pos;
+                pos++;
+                len -= 4;
+            }
+        }
+
+        csi = csi->next;
     }
 
-    csi = csi->next;
-  }
-
-  *c1 = k1;
-  *c2 = k2;
+    *c1 = k1;
+    *c2 = k2;
 }
 
 int check_for_cache_miss(void)
 {
-  blockinfo* bi = get_blockinfo_addr(regs.pc_p);
+    blockinfo* bi = get_blockinfo_addr(regs.pc_p);
 
-  if (bi) {
-    int cl = cacheline(regs.pc_p);
-    if (bi != cache_tags[cl+1].bi) {
-      raise_in_cl_list(bi);
-      return 1;
+    if (bi) {
+        int cl = cacheline(regs.pc_p);
+        if (bi != cache_tags[cl + 1].bi) {
+            raise_in_cl_list(bi);
+            return 1;
+        }
     }
-  }
-  return 0;
+    return 0;
 }
 
 
 static void recompile_block(void)
 {
-  /* An existing block's countdown code has expired. We need to make
-     sure that execute_normal doesn't refuse to recompile due to a
-     perceived cache miss... */
-  blockinfo* bi = get_blockinfo_addr(regs.pc_p);
+    /* An existing block's countdown code has expired. We need to make
+       sure that execute_normal doesn't refuse to recompile due to a
+       perceived cache miss... */
+    blockinfo* bi = get_blockinfo_addr(regs.pc_p);
 
-  raise_in_cl_list(bi);
-  execute_normal();
+    raise_in_cl_list(bi);
+    execute_normal();
 }
 
 static void cache_miss(void)
 {
-  blockinfo* bi = get_blockinfo_addr(regs.pc_p);
+    blockinfo* bi = get_blockinfo_addr(regs.pc_p);
 
-  if (!bi) {
-    execute_normal(); /* Compile this block now */
-    return;
-  }
-  raise_in_cl_list(bi);
+    if (!bi) {
+        execute_normal(); /* Compile this block now */
+        return;
+    }
+    raise_in_cl_list(bi);
 }
 
 static int called_check_checksum(blockinfo* bi);
 
-STATIC_INLINE int block_check_checksum(blockinfo* bi) 
+STATIC_INLINE int block_check_checksum(blockinfo* bi)
 {
-  uae_u32 c1,c2;
-  int isgood;
+    uae_u32 c1, c2;
+    int isgood;
 
-  if (bi->status != BI_NEED_CHECK)
-    return 1;  /* This block is in a checked state */
+    if (bi->status != BI_NEED_CHECK)
+        return 1;  /* This block is in a checked state */
 
-  if (bi->c1 || bi->c2)
-    calc_checksum(bi, &c1, &c2);
-  else
-    c1 = c2 = 1;  /* Make sure it doesn't match */
+    if (bi->c1 || bi->c2)
+        calc_checksum(bi, &c1, &c2);
+    else
+        c1 = c2 = 1;  /* Make sure it doesn't match */
 
-  isgood = (c1 == bi->c1 && c2 == bi->c2);
+    isgood = (c1 == bi->c1 && c2 == bi->c2);
 
-  if (isgood) {
-    /* This block is still OK. So we reactivate. Of course, that
-       means we have to move it into the needs-to-be-flushed list */
-    bi->handler_to_use = bi->handler;
-    set_dhtu(bi, bi->direct_handler);
-    bi->status = BI_CHECKING;
-    isgood = called_check_checksum(bi) != 0;
-  }
-  if (isgood) {
-    remove_from_list(bi);
-    add_to_active(bi);
-    raise_in_cl_list(bi);
-    bi->status = BI_ACTIVE;
-  } else {
-    /* This block actually changed. We need to invalidate it,
-       and set it up to be recompiled */
-    invalidate_block(bi);
-    raise_in_cl_list(bi);
-  }
-  return isgood;
+    if (isgood) {
+        /* This block is still OK. So we reactivate. Of course, that
+           means we have to move it into the needs-to-be-flushed list */
+        bi->handler_to_use = bi->handler;
+        set_dhtu(bi, bi->direct_handler);
+        bi->status = BI_CHECKING;
+        isgood = called_check_checksum(bi) != 0;
+    }
+    if (isgood) {
+        remove_from_list(bi);
+        add_to_active(bi);
+        raise_in_cl_list(bi);
+        bi->status = BI_ACTIVE;
+    }
+    else {
+        /* This block actually changed. We need to invalidate it,
+           and set it up to be recompiled */
+        invalidate_block(bi);
+        raise_in_cl_list(bi);
+    }
+    return isgood;
 }
 
-static int called_check_checksum(blockinfo* bi) 
+static int called_check_checksum(blockinfo* bi)
 {
-  int isgood = 1;
-  int i;
-    
-  for (i = 0; i < 2 && isgood; i++) {
-    if (bi->dep[i].jmp_off) {
-      isgood = block_check_checksum(bi->dep[i].target);
+    int isgood = 1;
+    int i;
+
+    for (i = 0; i < 2 && isgood; i++) {
+        if (bi->dep[i].jmp_off) {
+            isgood = block_check_checksum(bi->dep[i].target);
+        }
     }
-  }
-  return isgood;
+    return isgood;
 }
 
 static void check_checksum(void)
 {
-  blockinfo* bi = get_blockinfo_addr(regs.pc_p);
-  uae_u32 cl = cacheline(regs.pc_p);
-  blockinfo* bi2 = get_blockinfo(cl);
+    blockinfo* bi = get_blockinfo_addr(regs.pc_p);
+    uae_u32 cl = cacheline(regs.pc_p);
+    blockinfo* bi2 = get_blockinfo(cl);
 
-  /* These are not the droids you are looking for...  */
-  if (!bi) {
-    /* Whoever is the primary target is in a dormant state, but
-       calling it was accidental, and we should just compile this
-       new block */
-    execute_normal();
-    return;
-  }
-  if (bi != bi2) {
-    /* The block was hit accidentally, but it does exist. Cache miss */
-    cache_miss();
-    return;
-  }
+    /* These are not the droids you are looking for...  */
+    if (!bi) {
+        /* Whoever is the primary target is in a dormant state, but
+           calling it was accidental, and we should just compile this
+           new block */
+        execute_normal();
+        return;
+    }
+    if (bi != bi2) {
+        /* The block was hit accidentally, but it does exist. Cache miss */
+        cache_miss();
+        return;
+    }
 
-  if (!block_check_checksum(bi))
-    execute_normal();
+    if (!block_check_checksum(bi))
+        execute_normal();
 }
 
 STATIC_INLINE void match_states(blockinfo* bi)
 {
-  if (bi->status == BI_NEED_CHECK) {
-    block_check_checksum(bi);
-  }
+    if (bi->status == BI_NEED_CHECK) {
+        block_check_checksum(bi);
+    }
 }
 
 STATIC_INLINE void create_popalls(void)
 {
-  int i, r;
+    int i, r;
 
-  if (popallspace == NULL) {
-    if ((popallspace = cache_alloc (POPALLSPACE_SIZE + MAX_JIT_CACHE * 1024)) == NULL) {
-      jit_log("WARNING: Could not allocate popallspace!");
-      /* This is not fatal if JIT is not used. If JIT is
-       * turned on, it will crash, but it would have crashed
-       * anyway. */
-      return;
+    if (popallspace == NULL) {
+        if ((popallspace = cache_alloc(POPALLSPACE_SIZE + MAX_JIT_CACHE * 1024)) == NULL) {
+            jit_log("WARNING: Could not allocate popallspace!");
+            /* This is not fatal if JIT is not used. If JIT is
+             * turned on, it will crash, but it would have crashed
+             * anyway. */
+            return;
+        }
     }
-  }
-  write_log("JIT popallspace: %p-%p\n", popallspace, popallspace + POPALLSPACE_SIZE);
+    vm_protect(popallspace, POPALLSPACE_SIZE, VM_PAGE_READ | VM_PAGE_WRITE);
+    write_log("JIT popallspace: %p-%p\n", popallspace, popallspace + POPALLSPACE_SIZE);
 
-  current_compile_p = popallspace;
-  set_target(current_compile_p);
+    current_compile_p = popallspace;
+    set_target(current_compile_p);
 
 #if defined(CPU_arm) && !defined(ARMV6T2) && !defined(CPU_AARCH64)
-  reset_data_buffer();
-  data_long(0, 0); // Make sure we emit the branch over the first buffer outside pushall_call_handler
+    reset_data_buffer();
+    data_long(0, 0); // Make sure we emit the branch over the first buffer outside pushall_call_handler
 #endif
-  
+
   /* We need to guarantee 16-byte stack alignment on x86 at any point
      within the JIT generated code. We have multiple exit points
      possible but a single entry. A "jmp" is used so that we don't
