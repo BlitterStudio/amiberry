@@ -153,6 +153,9 @@ struct addrbank_sub
 	uae_u32 maskval;
 };
 
+/* GCC does not like addrbank *addrbank in struct autoconfig_info. */
+typedef addrbank addrbank_t;
+
 struct autoconfig_info
 {
 	struct uae_prefs *prefs;
@@ -168,7 +171,8 @@ struct autoconfig_info
 	uae_u32 size;
 	int zorro;
 	const TCHAR *label;
-	addrbank *addrbankp;
+	addrbank_t *addrbank;
+	uaecptr write_bank_address;
 	struct romconfig *rc;
 	uae_u32 last_high_ram;
 	const struct cpuboardsubtype *cst;

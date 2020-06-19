@@ -427,7 +427,7 @@ static void call_card_init(int index)
 	if (ok) {
 		ab = NULL;
 		if (!cd->map)
-			ab = aci->addrbankp;
+			ab = aci->addrbank;
 	} else {
 		write_log(_T("Card %d: skipping autoconfig (init failed)\n"), ecard);
 		expamem_next(NULL, NULL);
@@ -633,9 +633,9 @@ static void REGPARAM2 expamem_wput (uaecptr addr, uae_u32 value)
 				return;
 			}
 			if (expamem_autoconfig_mode) {
-				map_banks_z2(cd->aci.addrbankp, expamem_board_pointer >> 16, expamem_board_size >> 16);
+				map_banks_z2(cd->aci.addrbank, expamem_board_pointer >> 16, expamem_board_size >> 16);
 				cd->initrc(&cd->aci);
-				expamem_next(cd->aci.addrbankp, NULL);
+				expamem_next(cd->aci.addrbank, NULL);
 				return;
 			}
 			if (expamem_bank_current && expamem_bank_current != &expamem_bank) {
@@ -656,9 +656,9 @@ static void REGPARAM2 expamem_wput (uaecptr addr, uae_u32 value)
 			return;
 		}
 		if (expamem_autoconfig_mode) {
-			map_banks_z3(cd->aci.addrbankp, expamem_board_pointer >> 16, expamem_board_size >> 16);
+			map_banks_z3(cd->aci.addrbank, expamem_board_pointer >> 16, expamem_board_size >> 16);
 			cd->initrc(&cd->aci);
-			expamem_next(cd->aci.addrbankp, NULL);
+			expamem_next(cd->aci.addrbank, NULL);
 			return;
 		}
 		break;
@@ -704,9 +704,9 @@ static void REGPARAM2 expamem_bput (uaecptr addr, uae_u32 value)
 					  return;
 				  }
 				  if (expamem_autoconfig_mode) {
-					  map_banks_z2(cd->aci.addrbankp, expamem_board_pointer >> 16, expamem_board_size >> 16);
+					  map_banks_z2(cd->aci.addrbank, expamem_board_pointer >> 16, expamem_board_size >> 16);
 					  cd->initrc(&cd->aci);
-					  expamem_next(cd->aci.addrbankp, NULL);
+					  expamem_next(cd->aci.addrbank, NULL);
 					  return;
 				  }
 		    } else {
@@ -722,9 +722,9 @@ static void REGPARAM2 expamem_bput (uaecptr addr, uae_u32 value)
 					  return;
 				  }
 				  if (expamem_autoconfig_mode) {
-					  map_banks_z3(cd->aci.addrbankp, expamem_board_pointer >> 16, expamem_board_size >> 16);
+					  map_banks_z3(cd->aci.addrbank, expamem_board_pointer >> 16, expamem_board_size >> 16);
 					  cd->initrc(&cd->aci);
-					  expamem_next(cd->aci.addrbankp, NULL);
+					  expamem_next(cd->aci.addrbank, NULL);
 					  return;
 				  }
 			  }
@@ -1077,7 +1077,7 @@ static bool expamem_init_uaeboard(struct autoconfig_info *aci)
 	struct uae_prefs *p = aci->prefs;
 
 	aci->label = _T("UAE Boot ROM");
-	aci->addrbankp = &uaeboard_bank;
+	aci->addrbank = &uaeboard_bank;
 	aci->get_params = get_params_filesys;
 
 	expamem_init_clear();
@@ -1269,7 +1269,7 @@ static bool expamem_init_fastcard_2(struct autoconfig_info *aci, int zorro)
 	else if (size == 0x800000)
 		type |= Z2_MEM_8MB;
 
-	aci->addrbankp = bank;
+	aci->addrbank = bank;
 
 	if (!fastmem_autoconfig(p, aci, BOARD_AUTOCONFIG_Z2, type, 1, size)) {
 		aci->zorro = -1;
@@ -1293,7 +1293,7 @@ static bool expamem_rtarea_init(struct autoconfig_info *aci)
 {
 	aci->start = rtarea_base;
 	aci->size = 65536;
-	aci->addrbankp = &rtarea_bank;
+	aci->addrbank = &rtarea_bank;
 	aci->label = _T("UAE Boot ROM");
 	return true;
 }
@@ -1380,7 +1380,7 @@ static bool expamem_init_filesys(struct autoconfig_info *aci)
 	if (aci) {
 		aci->label = ks12 ? _T("Pre-KS 1.3 UAE FS ROM") : _T("UAE FS ROM");
 		aci->get_params = get_params_filesys;
-		aci->addrbankp = &filesys_bank;
+		aci->addrbank = &filesys_bank;
 	}
 
   /* struct DiagArea - the size has to be large enough to store several device ROMTags */
@@ -1489,7 +1489,7 @@ static bool expamem_init_z3fastmem(struct autoconfig_info *aci)
 		aci->zorro = -1;
 
 	memcpy(aci->autoconfig_raw, expamem, sizeof aci->autoconfig_raw);
-	aci->addrbankp = bank;
+	aci->addrbank = bank;
 
 	if (!aci->doinit)
 		return true;
@@ -1571,7 +1571,7 @@ static bool expamem_init_gfxcard (struct autoconfig_info *aci, bool z3)
   expamem_write (0x40, 0x00); /* Ctrl/Statusreg.*/
 
 	memcpy(aci->autoconfig_raw, expamem, sizeof aci->autoconfig_raw);
-	aci->addrbankp = gfxmem_banks[devnum];
+	aci->addrbank = gfxmem_banks[devnum];
 	return true;
 }
 static bool expamem_init_gfxcard_z3(struct autoconfig_info *aci)
@@ -1928,6 +1928,14 @@ void expansion_generate_autoconfig_info(struct uae_prefs *p)
 	expansion_scan_autoconfig(p, true);
 }
 
+struct autoconfig_info* expansion_get_autoconfig_data(struct uae_prefs* p, int index)
+{
+	if (index >= cardno)
+		return NULL;
+	struct card_data* cd = cards[index];
+	return &cd->aci;
+}
+
 struct autoconfig_info* expansion_get_autoconfig_by_address(struct uae_prefs* p, uaecptr addr, int index)
 {
 	if (index >= cardno)
@@ -1963,7 +1971,7 @@ static void expansion_init_cards(struct uae_prefs *p)
 			ok = cd->initrc(aci);
 		}
 		
-		if ((aci->zorro == 1 || aci->zorro == 2 || aci->zorro == 3) && aci->addrbankp != &expamem_null && (aci->autoconfig_raw[0] != 0xff || aci->autoconfigp)) {
+		if ((aci->zorro == 1 || aci->zorro == 2 || aci->zorro == 3) && aci->addrbank != &expamem_null && (aci->autoconfig_raw[0] != 0xff || aci->autoconfigp)) {
 			uae_u8 ac2[16];
 			const uae_u8 *a = aci->autoconfigp;
 			if (!a) {
@@ -2043,8 +2051,8 @@ static void expansion_parse_cards(struct uae_prefs *p, bool log)
 			if (!label[0]) {
 				if (aci->label) {
 					_tcscpy(label, aci->label);
-				} else if (aci->addrbankp && aci->addrbankp->label) {
-					_tcscpy(label, aci->addrbankp->label);
+				} else if (aci->addrbank && aci->addrbank->label) {
+					_tcscpy(label, aci->addrbank->label);
 				} else {
 					_tcscpy(label, _T("<no name>"));
 				}
@@ -2100,10 +2108,10 @@ static void expansion_parse_cards(struct uae_prefs *p, bool log)
 				}
 				aci->size = cd->size;
 				memcpy(aci->autoconfig_bytes, a, sizeof aci->autoconfig_bytes);
-				if (aci->addrbankp) {
-					aci->addrbankp->start = expamem_board_pointer;
-					if (aci->addrbankp->reserved_size == 0 && !(type & add_memory) && expamem_board_size < 524288) {
-						aci->addrbankp->reserved_size = expamem_board_size;
+				if (aci->addrbank) {
+					aci->addrbank->start = expamem_board_pointer;
+					if (aci->addrbank->reserved_size == 0 && !(type & add_memory) && expamem_board_size < 524288) {
+						aci->addrbank->reserved_size = expamem_board_size;
 					}
 				}
 				aci->zorro = cd->zorro;
@@ -2424,15 +2432,15 @@ void expamem_reset (int hardreset)
 	}
 }
 
-void expansion_init (void)
+void expansion_init(void)
 {
 	if (savestate_state != STATE_RESTORE) {
 
-	  for (int i = 0; i < MAX_RAM_BOARDS; i++) {
-      fastmem_bank[i].reserved_size = 0;
+		for (int i = 0; i < MAX_RAM_BOARDS; i++) {
+			fastmem_bank[i].reserved_size = 0;
 			fastmem_bank[i].mask = 0;
-      fastmem_bank[i].baseaddr = NULL;
-    }
+			fastmem_bank[i].baseaddr = NULL;
+		}
 
 #ifdef PICASSO96
 		for (int i = 0; i < MAX_RTG_BOARDS; i++) {
@@ -2443,13 +2451,17 @@ void expansion_init (void)
 #endif
 
 		for (int i = 0; i < MAX_RAM_BOARDS; i++) {
-      z3fastmem_bank[i].reserved_size = 0;
+			z3fastmem_bank[i].reserved_size = 0;
 			z3fastmem_bank[i].mask = 0;
-      z3fastmem_bank[i].baseaddr = NULL;
-    }
-  }
-  
-  allocate_expamem ();
+			z3fastmem_bank[i].baseaddr = NULL;
+		}
+
+		//z3chipmem_bank.reserved_size = 0;
+		//z3chipmem_bank.mask = z3chipmem_bank.start = 0;
+		//z3chipmem_bank.baseaddr = NULL;
+	}
+
+	allocate_expamem();
 
 	if (currprefs.uaeboard) {
 		uaeboard_bank.reserved_size = 0x10000;
@@ -2458,21 +2470,22 @@ void expansion_init (void)
 
 }
 
-void expansion_cleanup (void)
+void expansion_cleanup(void)
 {
 	for (int i = 0; i < MAX_RAM_BOARDS; i++) {
-	  mapped_free (&fastmem_bank[i]);
-	  mapped_free (&z3fastmem_bank[i]);
-  }
-
+		mapped_free(&fastmem_bank[i]);
+		mapped_free(&z3fastmem_bank[i]);
+	}
+	//mapped_free(&z3chipmem_bank);
+	
 #ifdef PICASSO96
 	for (int i = 0; i < MAX_RTG_BOARDS; i++) {
-		mapped_free (gfxmem_banks[i]);
+		mapped_free(gfxmem_banks[i]);
 	}
 #endif
 
 #ifdef FILESYS
-	mapped_free (&filesys_bank);
+	mapped_free(&filesys_bank);
 #endif
 	if (currprefs.uaeboard) {
 		mapped_free(&uaeboard_bank);
@@ -2675,8 +2688,8 @@ void restore_expansion_finish(void)
 			_tcscpy(ec->aci.name, ec->ert->friendlyname);
 			if (ec->ert->init) {
 				if (ec->ert->init(&ec->aci)) {
-					if (ec->aci.addrbankp) {
-						map_banks(ec->aci.addrbankp, ec->base >> 16, ec->size >> 16, 0);
+					if (ec->aci.addrbank) {
+						map_banks(ec->aci.addrbank, ec->base >> 16, ec->size >> 16, 0);
 					}
 				}
 			}

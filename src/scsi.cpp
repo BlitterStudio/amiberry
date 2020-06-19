@@ -4174,7 +4174,7 @@ bool supra_init(struct autoconfig_info *aci)
 		}
 		load_rom_rc(aci->rc, ROMTYPE_SUPRA, 16384, 0, scsi->rom, 32768, LOADROM_EVENONLY_ODDONE | LOADROM_FILL);
 	}
-	aci->addrbankp = scsi->bank;
+	aci->addrbank = scsi->bank;
 	return true;
 }
 
@@ -4200,7 +4200,7 @@ bool golem_init(struct autoconfig_info *aci)
 	load_rom_rc(aci->rc, ROMTYPE_GOLEM, 8192, aci->rc->autoboot_disabled ? 8192 : 0, scsi->rom, 8192, 0);
 	memcpy(scsi->acmemory, scsi->rom, sizeof scsi->acmemory);
 
-	aci->addrbankp = scsi->bank;
+	aci->addrbank = scsi->bank;
 	return true;
 }
 
@@ -4225,7 +4225,7 @@ bool stardrive_init(struct autoconfig_info *aci)
 		uae_u8 b = ert->autoconfig[i];
 		ew(scsi, i * 4, b);
 	}
-	aci->addrbankp = scsi->bank;
+	aci->addrbank = scsi->bank;
 	return true;
 }
 
@@ -4253,7 +4253,7 @@ bool kommos_init(struct autoconfig_info *aci)
 	map_banks(scsi->bank, 0xeb0000 >> 16, 1, 0);
 	scsi->baseaddress = 0xeb0000;
 	scsi->baseaddress2 = 0xf10000;
-	aci->addrbankp = scsi->bank;
+	aci->addrbank = scsi->bank;
 	return true;
 }
 
@@ -4285,7 +4285,7 @@ bool vector_init(struct autoconfig_info *aci)
 		load_rom_rc(aci->rc, ROMTYPE_VECTOR, 32768, 0, scsi->rom, 32768, 0);
 		memcpy(scsi->acmemory, scsi->rom, sizeof scsi->acmemory);
 	}
-	aci->addrbankp = scsi->bank;
+	aci->addrbank = scsi->bank;
 	return true;
 }
 
@@ -4309,7 +4309,7 @@ bool protar_init(struct autoconfig_info *aci)
 
 	load_rom_rc(aci->rc, ROMTYPE_PROTAR, 32768, 0, scsi->rom, 32768, LOADROM_EVENONLY_ODDONE);
 	memcpy(scsi->acmemory, scsi->rom + 0x200 * 2, sizeof scsi->acmemory);
-	aci->addrbankp = scsi->bank;
+	aci->addrbank = scsi->bank;
 	return true;
 }
 
@@ -4332,7 +4332,7 @@ bool add500_init(struct autoconfig_info *aci)
 
 	load_rom_rc(aci->rc, ROMTYPE_ADD500, 16384, 0, scsi->rom, 32768, LOADROM_EVENONLY_ODDONE | LOADROM_FILL);
 	memcpy(scsi->acmemory, scsi->rom, sizeof scsi->acmemory);
-	aci->addrbankp = scsi->bank;
+	aci->addrbank = scsi->bank;
 	return true;
 }
 
@@ -4378,7 +4378,7 @@ bool kronos_init(struct autoconfig_info *aci)
 	//scsi->eeprom = eeprom93xx_new(kronos_eeprom, 16, NULL);
 
 	//load_rom_rc(aci->rc, ROMTYPE_KRONOS, 4096, 0, scsi->rom, 32768, LOADROM_EVENONLY_ODDONE | LOADROM_FILL);
-	//aci->addrbankp = scsi->bank;
+	//aci->addrbank = scsi->bank;
 	return true;
 }
 
@@ -4401,7 +4401,7 @@ bool adscsi_init(struct autoconfig_info *aci)
 
 	load_rom_rc(aci->rc, ROMTYPE_ADSCSI, 32768, 0, scsi->rom, 65536, LOADROM_EVENONLY_ODDONE | LOADROM_FILL);
 	memcpy(scsi->acmemory, scsi->rom, sizeof scsi->acmemory);
-	aci->addrbankp = scsi->bank;
+	aci->addrbank = scsi->bank;
 	return true;
 }
 
@@ -4430,7 +4430,7 @@ bool trumpcardpro_init(struct autoconfig_info *aci)
 		uae_u8 b = ert->autoconfig[i];
 		ew(scsi, i * 4, b);
 	}
-	aci->addrbankp = scsi->bank;
+	aci->addrbank = scsi->bank;
 	return true;
 }
 
@@ -4460,7 +4460,7 @@ bool trumpcard_init(struct autoconfig_info *aci)
 		uae_u8 b = ert->autoconfig[i];
 		ew(scsi, i * 4, b);
 	}
-	aci->addrbankp = scsi->bank;
+	aci->addrbank = scsi->bank;
 	return true;
 }
 
@@ -4514,7 +4514,7 @@ bool cltda1000scsi_init(struct autoconfig_info *aci)
 		uae_u8 b = ert->autoconfig[i];
 		ew(scsi, i * 4, b);
 	}
-	aci->addrbankp = scsi->bank;
+	aci->addrbank = scsi->bank;
 	return true;
 }
 
@@ -4544,7 +4544,7 @@ bool ptnexus_init(struct autoconfig_info *aci)
 		ew(scsi, i * 4, b);
 	}
 	load_rom_rc(aci->rc, ROMTYPE_PTNEXUS, 8192, 0, scsi->rom, 65536, LOADROM_EVENONLY_ODDONE | LOADROM_FILL);
-	aci->addrbankp = scsi->bank;
+	aci->addrbank = scsi->bank;
 	return true;
 }
 
@@ -4661,7 +4661,7 @@ bool tecmar_init(struct autoconfig_info *aci)
 	tecmar_clock_regs[11] = 0x04 | 0x02 | 0x01;
 	scsi->configured = true;
 	scsi->baseaddress = AUTOCONFIG_Z2;
-	aci->addrbankp = scsi->bank;
+	aci->addrbank = scsi->bank;
 	return true;
 }
 
@@ -4767,7 +4767,7 @@ bool hda506_init(struct autoconfig_info *aci)
 	}
 	scsi->level6 = true;
 	scsi->intena = true;
-	aci->addrbankp  = scsi->bank;
+	aci->addrbank  = scsi->bank;
 	return true;
 }
 
@@ -4791,7 +4791,7 @@ bool alf1_init(struct autoconfig_info *aci)
 	scsi->board_mask = aci->size - 1;
 	scsi->baseaddress = aci->start;
 	scsi->configured = 1;
-	aci->addrbankp = scsi->bank;
+	aci->addrbank = scsi->bank;
 	return true;
 }
 
@@ -4817,7 +4817,7 @@ bool promigos_init(struct autoconfig_info *aci)
 	scsi->configured = 1;
 	scsi->intena = true;
 
-	aci->addrbankp = scsi->bank;
+	aci->addrbank = scsi->bank;
 	return true;
 }
 
@@ -4855,7 +4855,7 @@ bool system2000_preinit(struct autoconfig_info *aci)
 	if (!aci->rc->autoboot_disabled) {
 		load_rom_rc(aci->rc, ROMTYPE_SYSTEM2000, 16384, 0, scsi->rom, 16384, 0);
 	}
-	aci->addrbankp = scsi->bank;
+	aci->addrbank = scsi->bank;
 	return true;
 }
 
@@ -4890,7 +4890,7 @@ bool wedge_preinit(struct autoconfig_info *aci)
 	scsi->board_mask = aci->size - 1;
 	scsi->baseaddress = aci->start;
 	scsi->configured = 1;
-	aci->addrbankp = scsi->bank;
+	aci->addrbank = scsi->bank;
 	return true;
 }
 
@@ -4915,7 +4915,7 @@ bool omtiadapter_init(struct autoconfig_info *aci)
 	scsi->board_mask = aci->size - 1;
 	scsi->baseaddress = aci->start;
 	scsi->configured = 1;
-	aci->addrbankp = scsi->bank;
+	aci->addrbank = scsi->bank;
 	return true;
 }
 
@@ -4941,7 +4941,7 @@ bool phoenixboard_init(struct autoconfig_info *aci)
 	load_rom_rc(aci->rc, ROMTYPE_PHOENIXB, 16384, 16384, scsi->rom + 16384, 16384, LOADROM_EVENONLY_ODDONE | LOADROM_FILL);
 	memcpy(scsi->acmemory, scsi->rom, sizeof scsi->acmemory);
 
-	aci->addrbankp = scsi->bank;
+	aci->addrbank = scsi->bank;
 	return true;
 }
 
@@ -4974,7 +4974,7 @@ bool twelvegauge_init(struct autoconfig_info *aci)
 	load_rom_rc(aci->rc, ROMTYPE_CB_12GAUGE, 32768, 0, scsi->rom, 32768, 0);
 	memcpy(scsi->acmemory, scsi->rom, sizeof scsi->acmemory);
 
-	aci->addrbankp = scsi->bank;
+	aci->addrbank = scsi->bank;
 
 	return true;
 }
@@ -5003,11 +5003,11 @@ bool ivsvector_init(struct autoconfig_info *aci)
 
 	memcpy(scsi->acmemory, scsi->rom + 0x300, sizeof scsi->acmemory);
 
-	aci->addrbankp = scsi->bank;
+	aci->addrbank = scsi->bank;
 	aci->hardwired = true;
 
 	if (!currprefs.address_space_24) {
-		map_banks(aci->addrbankp, 0x01000000 >> 16, (65536 * 16) >> 16, 65536);
+		map_banks(aci->addrbank, 0x01000000 >> 16, (65536 * 16) >> 16, 65536);
 		scsi->baseaddress2 = 0x01000000;
 		scsi->board_mask2 = (65536 * 16) - 1;
 	}
@@ -5035,7 +5035,7 @@ bool scram5380_init(struct autoconfig_info *aci)
 		uae_u8 b = ert->autoconfig[i];
 		ew(scsi, i * 4, b);
 	}
-	aci->addrbankp = scsi->bank;
+	aci->addrbank = scsi->bank;
 	return true;
 }
 
@@ -5066,7 +5066,7 @@ bool ossi_init(struct autoconfig_info *aci)
 			ew(scsi, i * 4, b);
 		}
 	}
-	aci->addrbankp = scsi->bank;
+	aci->addrbank = scsi->bank;
 	return true;
 }
 
@@ -5105,7 +5105,7 @@ bool hardframe_init(struct autoconfig_info *aci)
 	if (aci->rc->autoboot_disabled)
 		memcpy(scsi->rom, scsi->rom + 128, 128);
 	memcpy(scsi->acmemory, scsi->rom, sizeof scsi->acmemory);
-	aci->addrbankp = scsi->bank;
+	aci->addrbank = scsi->bank;
 	return true;
 }
 
@@ -5128,7 +5128,7 @@ bool inmate_init(struct autoconfig_info *aci)
 
 	load_rom_rc(aci->rc, ROMTYPE_INMATE, 32768, 0, scsi->rom, 65536, LOADROM_EVENONLY_ODDONE);
 	memcpy(scsi->acmemory, scsi->rom, sizeof scsi->acmemory);
-	aci->addrbankp = scsi->bank;
+	aci->addrbank = scsi->bank;
 	return true;
 }
 
@@ -5157,7 +5157,7 @@ bool malibu_init(struct autoconfig_info *aci)
 			b = 0xc1;
 		ew(scsi, i * 4, b);
 	}
-	aci->addrbankp = scsi->bank;
+	aci->addrbank = scsi->bank;
 	return true;
 }
 
@@ -5184,7 +5184,7 @@ bool addhard_init(struct autoconfig_info *aci)
 		uae_u8 b = ert->autoconfig[i];
 		ew(scsi, i * 4, b);
 	}
-	aci->addrbankp = scsi->bank;
+	aci->addrbank = scsi->bank;
 	scsi->intena = true;
 	return true;
 }
@@ -5212,7 +5212,7 @@ bool emplant_init(struct autoconfig_info *aci)
 		uae_u8 b = ert->autoconfig[i];
 		ew(scsi, i * 4, b);
 	}
-	aci->addrbankp = scsi->bank;
+	aci->addrbank = scsi->bank;
 	return true;
 }
 
@@ -5237,7 +5237,7 @@ bool hd3000_init(struct autoconfig_info *aci)
 
 	load_rom_rc(aci->rc, ROMTYPE_GOLEMHD3000, 8192, !aci->rc->autoboot_disabled ? 0 : 8192, scsi->rom, 65536, 0);
 	memcpy(scsi->acmemory, scsi->rom, sizeof scsi->acmemory);
-	aci->addrbankp = scsi->bank;
+	aci->addrbank = scsi->bank;
 	return true;
 }
 
@@ -5260,7 +5260,7 @@ bool eveshamref_init(struct autoconfig_info *aci)
 
 	load_rom_rc(aci->rc, ROMTYPE_EVESHAMREF, 65536, aci->rc->autoboot_disabled ? 0x1000 : 0, scsi->rom, 65536, LOADROM_EVENONLY_ODDONE);
 	memcpy(scsi->acmemory, scsi->rom, sizeof scsi->acmemory);
-	aci->addrbankp = scsi->bank;
+	aci->addrbank = scsi->bank;
 	return true;
 }
 
@@ -5289,7 +5289,7 @@ bool profex_init(struct autoconfig_info *aci)
 	if (aci->rc->autoboot_disabled)
 		scsi->rom[0] &= ~0x10;
 	memcpy(scsi->acmemory, scsi->rom, sizeof scsi->acmemory);
-	aci->addrbankp = scsi->bank;
+	aci->addrbank = scsi->bank;
 	return true;
 }
 
@@ -5317,7 +5317,7 @@ bool fasttrak_init(struct autoconfig_info *aci)
 
 	load_rom_rc(aci->rc, ROMTYPE_FASTTRAK, 65536, aci->rc->autoboot_disabled ? 0x4000 : 0x6000, scsi->rom, 0x4000, LOADROM_EVENONLY_ODDONE);
 	memcpy(scsi->acmemory, scsi->rom, sizeof scsi->acmemory);
-	aci->addrbankp = scsi->bank;
+	aci->addrbank = scsi->bank;
 	return true;
 }
 
@@ -5350,7 +5350,7 @@ bool overdrive_init(struct autoconfig_info *aci)
 		}
 		ew(scsi, i * 4, b);
 	}
-	aci->addrbankp = scsi->bank;
+	aci->addrbank = scsi->bank;
 	return true;
 }
 

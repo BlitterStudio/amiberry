@@ -17,6 +17,8 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
+#ifdef CDTV
+
 #include "options.h"
 #include "memory.h"
 #include "custom.h"
@@ -1695,7 +1697,7 @@ bool cdtv_init(struct autoconfig_info *aci)
 	if (aci) {
 		aci->label = dmac_bank.name;
 		aci->hardwired = true;
-		aci->addrbankp = &dmac_bank;
+		aci->addrbank = &dmac_bank;
 		if (!aci->doinit) {
 			memcpy(aci->autoconfig_raw, dmacmemory, sizeof dmacmemory);
 			return true;
@@ -1945,4 +1947,6 @@ void restore_cdtv_final(void)
 	}
 }
 
-#endif
+#endif /* SAVESTATE */
+
+#endif /* CDTV */
