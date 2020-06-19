@@ -44,11 +44,7 @@ typedef uae_u32 uintptr;
 #define TAGMASK 0x0000ffff
 #define TAGSIZE (TAGMASK+1)
 #define MAXRUN 1024
-#if defined(CPU_AARCH64)
-#define cacheline(x) (((uae_u64)x)&TAGMASK)
-#else
-#define cacheline(x) (((uae_u32)x)&TAGMASK)
-#endif
+#define cacheline(x) (((uintptr)x)&TAGMASK)
 
 extern uae_u8* start_pc_p;
 extern uae_u32 start_pc;
@@ -105,6 +101,7 @@ typedef union {
 #define FLAG_X    0x0001
 #endif
 #define FLAG_CZNV (FLAG_C | FLAG_Z | FLAG_N | FLAG_V)
+#define FLAG_ALL  (FLAG_C | FLAG_Z | FLAG_N | FLAG_V | FLAG_X)
 #define FLAG_ZNV  (FLAG_Z | FLAG_N | FLAG_V)
 
 #if defined(CPU_arm)
