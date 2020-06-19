@@ -23,6 +23,7 @@
 #include "gensound.h"
 #include "picasso96.h"
 #include "filesys.h"
+#include "newcpu.h"
 
 /*
 * Returns UAE Version
