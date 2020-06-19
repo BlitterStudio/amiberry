@@ -43,6 +43,21 @@
 #include "compemu.h"
 #include <SDL.h>
 
+#include "uae/vm.h"
+#define VM_PAGE_READ UAE_VM_READ
+#define VM_PAGE_WRITE UAE_VM_WRITE
+#define VM_PAGE_EXECUTE UAE_VM_EXECUTE
+#define VM_MAP_FAILED UAE_VM_ALLOC_FAILED
+#define VM_MAP_DEFAULT 1
+#define VM_MAP_32BIT 1
+#define vm_protect(address, size, protect) uae_vm_protect(address, size, protect)
+#define vm_release(address, size) uae_vm_free(address, size)
+
+static inline void* vm_acquire(size_t size, int options = VM_MAP_DEFAULT)
+{
+    assert(options == (VM_MAP_DEFAULT | VM_MAP_32BIT));
+    return uae_vm_alloc(size, UAE_VM_32BIT, UAE_VM_READ_WRITE);
+}
 
 #if DEBUG
 #define PROFILE_COMPILE_TIME        1
