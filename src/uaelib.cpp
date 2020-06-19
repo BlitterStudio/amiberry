@@ -267,6 +267,64 @@ static uae_u32 emulib_GetDisk(TrapContext *ctx, uae_u32 drive, uaecptr name)
 	return 1;
 }
 
+/*
+* Enter debugging state
+*/
+static uae_u32 emulib_Debug(void)
+{
+#ifdef DEBUGGER
+	activate_debugger ();
+	return 1;
+#else
+	return 0;
+#endif
+}
+
+
+#define CREATE_NATIVE_FUNC_PTR uae_u32 (* native_func) (uae_u32, uae_u32, uae_u32, uae_u32, uae_u32, uae_u32, uae_u32, \
+	uae_u32, uae_u32, uae_u32, uae_u32, uae_u32, uae_u32)
+#define SET_NATIVE_FUNC(x) native_func = (uae_u32 (*)(uae_u32, uae_u32, uae_u32, uae_u32, uae_u32, uae_u32, uae_u32, uae_u32, uae_u32, uae_u32, uae_u32, uae_u32, uae_u32))(x)
+#define CALL_NATIVE_FUNC( d1,d2,d3,d4,d5,d6,d7,a1,a2,a3,a4,a5,a6 ) if(native_func) native_func( d1,d2,d3,d4,d5,d6,d7,a1,a2,a3,a4,a5,a6 )
+/* A0 - Contains a ptr to the native .obj data.  This ptr is Amiga-based. */
+/*      We simply find the first function in this .obj data, and execute it. */
+static uae_u32 REGPARAM2 emulib_ExecuteNativeCode (void)
+{
+#if 0
+	uaecptr object_AAM = m68k_areg (regs, 0);
+	uae_u32 d1 = m68k_dreg (regs, 1);
+	uae_u32 d2 = m68k_dreg (regs, 2);
+	uae_u32 d3 = m68k_dreg (regs, 3);
+	uae_u32 d4 = m68k_dreg (regs, 4);
+	uae_u32 d5 = m68k_dreg (regs, 5);
+	uae_u32 d6 = m68k_dreg (regs, 6);
+	uae_u32 d7 = m68k_dreg (regs, 7);
+	uae_u32 a1 = m68k_areg (regs, 1);
+	uae_u32 a2 = m68k_areg (regs, 2);
+	uae_u32 a3 = m68k_areg (regs, 3);
+	uae_u32 a4 = m68k_areg (regs, 4);
+	uae_u32 a5 = m68k_areg (regs, 5);
+	uae_u32 a6 = m68k_areg (regs, 6);
+
+	uae_u8* object_UAM = NULL;
+	CREATE_NATIVE_FUNC_PTR;
+
+	if (get_mem_bank(object_AAM).check (object_AAM, 1))
+		object_UAM = get_mem_bank (object_AAM).xlateaddr (object_AAM);
+
+	if (object_UAM) {
+		SET_NATIVE_FUNC (FindFunctionInObject (object_UAM));
+		CALL_NATIVE_FUNC (d1, d2, d3, d4, d5, d6, d7, a1, a2, a3, a4, a5, a6);
+	}
+	return 1;
+#endif
+	return 0;
+}
+
+static uae_u32 emulib_Minimize (void)
+{
+	return 0; // OSDEP_minimize_uae();
+}
+
 static int native_dos_op(TrapContext *ctx, uae_u32 mode, uae_u32 p1, uae_u32 p2, uae_u32 p3)
 {
 	TCHAR tmp[MAX_DPATH];
@@ -359,10 +417,10 @@ static uae_u32 REGPARAM2 uaelib_demux2 (TrapContext *ctx)
 
 static uae_u32 REGPARAM2 uaelib_demux (TrapContext *ctx)
 {
-  uae_u32 v;
+	uae_u32 v;
 
-  v = uaelib_demux2 (ctx);
-  return v;
+	v = uaelib_demux2 (ctx);
+	return v;
 }
 
 /*
