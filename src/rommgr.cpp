@@ -1510,8 +1510,6 @@ void getromname	(const struct romdata *rd, TCHAR *name)
 		_stprintf (name + _tcslen (name), _T(" [%s]"), rd->partnumber);
 }
 
-static struct romlist *getromlistbyids (const int *ids, const TCHAR *romname);
-
 struct romlist *getromlistbyromdata (const struct romdata *rd)
 {
 	int ids[2];
@@ -1521,7 +1519,7 @@ struct romlist *getromlistbyromdata (const struct romdata *rd)
 	return getromlistbyids(ids, NULL);
 }
 
-static struct romlist *getromlistbyromtype(uae_u32 romtype, const TCHAR *romname)
+struct romlist *getromlistbyromtype(uae_u32 romtype, const TCHAR *romname)
 {
 	int i = 0;
 	while (roms[i].name) {
@@ -1543,7 +1541,7 @@ static struct romlist *getromlistbyromtype(uae_u32 romtype, const TCHAR *romname
 	return NULL;
 }
 
-static struct romlist *getromlistbyids (const int *ids, const TCHAR *romname)
+struct romlist *getromlistbyids (const int *ids, const TCHAR *romname)
 {
 	struct romdata *rd;
 	int i, j;
@@ -1577,6 +1575,7 @@ static struct romlist *getromlistbyids (const int *ids, const TCHAR *romname)
 	return NULL;
 }
 
+static
 struct romdata *getromdatabyids (const int *ids)
 {
 	struct romdata *rd;
@@ -1716,7 +1715,7 @@ static int read_rom_file (uae_u8 *buf, const struct romdata *rd)
 	return 1;
 }
 
-static struct zfile *read_rom (struct romdata *prd)
+struct zfile *read_rom (struct romdata *prd)
 {
 	struct romdata *rd2 = prd;
 	struct romdata *rd = prd;
@@ -2278,7 +2277,7 @@ static bool isspecialrom(const TCHAR *name)
 	return false;
 }
 
-static struct zfile *read_device_from_romconfig(struct romconfig *rc, uae_u32 romtype)
+struct zfile *read_device_from_romconfig(struct romconfig *rc, uae_u32 romtype)
 {
 	struct zfile *z = NULL;
 	if (isspecialrom(rc->romfile))
