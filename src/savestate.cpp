@@ -65,70 +65,112 @@
 
 int savestate_state = 0;
 
+#ifdef SAVESTATE
+
 struct zfile *savestate_file;
 
 TCHAR savestate_fname[MAX_DPATH];
 
 static void state_incompatible_warn(void)
 {
-  static int warned;
-  int dowarn = 0;
-  int i;
+	static int warned;
+	int dowarn = 0;
+	int i;
 
 #ifdef BSDSOCKET
 	if (currprefs.socket_emu)
 		dowarn = 1;
 #endif
-#ifdef FILESYS
-  for(i = 0; i < currprefs.mountitems; i++) {
-    struct mountedinfo mi;
-  	int type = get_filesys_unitconfig (&currprefs, i, &mi);
-  	if (mi.ismounted && type != FILESYS_VIRTUAL && type != FILESYS_HARDFILE && type != FILESYS_HARDFILE_RDB)
-	    dowarn = 1;
-  }
+#ifdef UAESERIAL
+	if (currprefs.uaeserial)
+		dowarn = 1;
 #endif
-  if (!warned && dowarn) {
-  	warned = 1;
-  	notify_user (NUMSG_STATEHD);
-  }
+#ifdef SCSIEMU
+	if (currprefs.scsi)
+		dowarn = 1;
+#endif
+#ifdef CATWEASEL
+	if (currprefs.catweasel)
+		dowarn = 1;
+#endif
+#ifdef FILESYS
+	for(i = 0; i < currprefs.mountitems; i++) {
+		struct mountedinfo mi;
+		int type = get_filesys_unitconfig (&currprefs, i, &mi);
+		if (mi.ismounted && type != FILESYS_VIRTUAL && type != FILESYS_HARDFILE && type != FILESYS_HARDFILE_RDB)
+			dowarn = 1;
+	}
+#endif
+	if (!warned && dowarn) {
+		warned = 1;
+		notify_user (NUMSG_STATEHD);
+	}
+}
+
+#endif
+
+/* functions for reading/writing bytes, shorts and longs in big-endian
+* format independent of host machine's endianness */
+
+static uae_u8 *storepos;
+void save_store_pos_func (uae_u8 **dstp)
+{
+	storepos = *dstp;
+	*dstp += 4;
+}
+void save_store_size_func (uae_u8 **dstp)
+{
+	uae_u8 *p = storepos;
+	save_u32_func (&p, *dstp - storepos);
+}
+void restore_store_pos_func (uae_u8 **srcp)
+{
+	storepos = *srcp;
+	*srcp += 4;
+}
+void restore_store_size_func (uae_u8 **srcp)
+{
+	uae_u8 *p = storepos;
+	uae_u32 len = restore_u32_func (&p);
+	*srcp = storepos + len;
 }
 
 void save_u32_func (uae_u8 **dstp, uae_u32 v)
 {
-  uae_u8 *dst = *dstp;
-  *dst++ = (uae_u8)(v >> 24);
-  *dst++ = (uae_u8)(v >> 16);
-  *dst++ = (uae_u8)(v >> 8);
-  *dst++ = (uae_u8)(v >> 0);
-  *dstp = dst;
+	uae_u8 *dst = *dstp;
+	*dst++ = (uae_u8)(v >> 24);
+	*dst++ = (uae_u8)(v >> 16);
+	*dst++ = (uae_u8)(v >> 8);
+	*dst++ = (uae_u8)(v >> 0);
+	*dstp = dst;
 }
 void save_u64_func (uae_u8 **dstp, uae_u64 v)
 {
-  save_u32_func (dstp, (uae_u32)(v >> 32));
-  save_u32_func (dstp, (uae_u32)v);
+	save_u32_func (dstp, (uae_u32)(v >> 32));
+	save_u32_func (dstp, (uae_u32)v);
 }
 void save_u16_func (uae_u8 **dstp, uae_u16 v)
 {
-  uae_u8 *dst = *dstp;
-  *dst++ = (uae_u8)(v >> 8);
-  *dst++ = (uae_u8)(v >> 0);
-  *dstp = dst;
+	uae_u8 *dst = *dstp;
+	*dst++ = (uae_u8)(v >> 8);
+	*dst++ = (uae_u8)(v >> 0);
+	*dstp = dst;
 }
 void save_u8_func (uae_u8 **dstp, uae_u8 v)
 {
-  uae_u8 *dst = *dstp;
-  *dst++ = v;
-  *dstp = dst;
+	uae_u8 *dst = *dstp;
+	*dst++ = v;
+	*dstp = dst;
 }
 void save_string_func (uae_u8 **dstp, const TCHAR *from)
 {
-  uae_u8 *dst = *dstp;
+	uae_u8 *dst = *dstp;
 	char *s, *s2;
 	s2 = s = uutf8 (from);
 	while (s && *s)
 		*dst++ = *s++;
-  *dst++ = 0;
-  *dstp = dst;
+	*dst++ = 0;
+	*dstp = dst;
 	xfree (s2);
 }
 void save_path_func (uae_u8 **dstp, const TCHAR *from, int type)
@@ -147,56 +189,58 @@ void save_path_full_func(uae_u8 **dstp, const TCHAR *spath, int type)
 
 uae_u32 restore_u32_func (uae_u8 **dstp)
 {
-  uae_u32 v;
-  uae_u8 *dst = *dstp;
-  v = (dst[0] << 24) | (dst[1] << 16) | (dst[2] << 8) | (dst[3]);
-  *dstp = dst + 4;
-  return v;
+	uae_u32 v;
+	uae_u8 *dst = *dstp;
+	v = (dst[0] << 24) | (dst[1] << 16) | (dst[2] << 8) | (dst[3]);
+	*dstp = dst + 4;
+	return v;
 }
 uae_u64 restore_u64_func (uae_u8 **dstp)
 {
-  uae_u64 v;
-    
-  v = restore_u32_func (dstp);
-  v <<= 32;
-  v |= restore_u32_func (dstp);
-  return v;
+	uae_u64 v;
+
+	v = restore_u32_func (dstp);
+	v <<= 32;
+	v |= restore_u32_func (dstp);
+	return v;
 }
 uae_u16 restore_u16_func (uae_u8 **dstp)
 {
-  uae_u16 v;
-  uae_u8 *dst = *dstp;
-  v=(dst[0] << 8) | (dst[1]);
-  *dstp = dst + 2;
-  return v;
+	uae_u16 v;
+	uae_u8 *dst = *dstp;
+	v=(dst[0] << 8) | (dst[1]);
+	*dstp = dst + 2;
+	return v;
 }
 uae_u8 restore_u8_func (uae_u8 **dstp)
 {
-  uae_u8 v;
-  uae_u8 *dst = *dstp;
-  v = dst[0];
-  *dstp = dst + 1;
-  return v;
+	uae_u8 v;
+	uae_u8 *dst = *dstp;
+	v = dst[0];
+	*dstp = dst + 1;
+	return v;
 }
 TCHAR *restore_string_func (uae_u8 **dstp)
 {
-  int len;
-  uae_u8 v;
-  uae_u8 *dst = *dstp;
-  char *top, *to;
+	int len;
+	uae_u8 v;
+	uae_u8 *dst = *dstp;
+	char *top, *to;
 	TCHAR *s;
 
-  len = strlen((char *)dst) + 1;
-  top = to = xmalloc (char, len);
-  do {
-  	v = *dst++;
-  	*top++ = v;
-  } while(v);
-  *dstp = dst;
+	len = strlen ((char*)dst) + 1;
+	top = to = xmalloc (char, len);
+	do {
+		v = *dst++;
+		*top++ = v;
+	} while (v);
+	*dstp = dst;
 	s = utf8u (to);
 	xfree (to);
 	return s;
 }
+
+#ifdef SAVESTATE
 
 static bool state_path_exists(const TCHAR *path, int type)
 {
@@ -208,7 +252,7 @@ static bool state_path_exists(const TCHAR *path, int type)
 static TCHAR *state_resolve_path(TCHAR *s, int type, bool newmode)
 {
 	TCHAR *newpath;
-  TCHAR tmp[MAX_DPATH], tmp2[MAX_DPATH];
+	TCHAR tmp[MAX_DPATH], tmp2[MAX_DPATH];
 
 	if (s[0] == 0)
 		return s;
@@ -224,20 +268,20 @@ static TCHAR *state_resolve_path(TCHAR *s, int type, bool newmode)
 		}
 		get_file_part(tmp, sizeof tmp / sizeof(TCHAR), s);
 	} else {
-	get_file_part (tmp, sizeof tmp / sizeof (TCHAR), s);
-	  if (state_path_exists(tmp, type)) {
-		  xfree (s);
-		  return my_strdup (tmp);
-	  }
-  }
+		get_file_part (tmp, sizeof tmp / sizeof (TCHAR), s);
+		if (state_path_exists(tmp, type)) {
+			xfree (s);
+			return my_strdup (tmp);
+		}
+	}
 	for (int i = 0; i < MAX_PATHS; i++) {
-	  newpath = NULL;
-	  if (type == SAVESTATE_PATH_FLOPPY)
-		  newpath = currprefs.path_floppy.path[i];
-	  else if (type == SAVESTATE_PATH_VDIR || type == SAVESTATE_PATH_HDF)
-		  newpath = currprefs.path_hardfile.path[i];
-	  else if (type == SAVESTATE_PATH_CD)
-		  newpath = currprefs.path_cd.path[i];
+		newpath = NULL;
+		if (type == SAVESTATE_PATH_FLOPPY)
+			newpath = currprefs.path_floppy.path[i];
+		else if (type == SAVESTATE_PATH_VDIR || type == SAVESTATE_PATH_HDF)
+			newpath = currprefs.path_hardfile.path[i];
+		else if (type == SAVESTATE_PATH_CD)
+			newpath = currprefs.path_cd.path[i];
 		if (newpath == NULL || newpath[0] == 0)
 			break;
 		_tcscpy (tmp2, newpath);
@@ -247,7 +291,7 @@ static TCHAR *state_resolve_path(TCHAR *s, int type, bool newmode)
 			xfree (s);
 			return my_strdup (tmp2);
 		}
-  }
+	}
 	get_path_part (tmp2, sizeof tmp2 / sizeof (TCHAR), savestate_fname);
 	_tcscat (tmp2, tmp);
 	if (state_path_exists(tmp2, type)) {
@@ -296,192 +340,199 @@ TCHAR *restore_path_full_func(uae_u8 **dstp)
 
 static void save_chunk (struct zfile *f, uae_u8 *chunk, unsigned int len, const TCHAR *name, int compress)
 {
-  uae_u8 tmp[8], *dst;
-  uae_u8 zero[4]= { 0, 0, 0, 0 };
-  uae_u32 flags;
+	uae_u8 tmp[8], *dst;
+	uae_u8 zero[4]= { 0, 0, 0, 0 };
+	uae_u32 flags;
 	unsigned int pos;
 	unsigned int chunklen, len2;
 	char *s;
 
-  if (!chunk)
-  	return;
+	if (!chunk)
+		return;
 
-  if (compress < 0) {
-  	zfile_fwrite (chunk, 1, len, f);
-  	return;
-  }
+	if (compress < 0) {
+		zfile_fwrite (chunk, 1, len, f);
+		return;
+	}
 
-  /* chunk name */
+	/* chunk name */
 	s = ua (name);
 	zfile_fwrite (s, 1, 4, f);
 	xfree (s);
-  pos = zfile_ftell (f);
-  /* chunk size */
-  dst = &tmp[0];
-  chunklen = len + 4 + 4 + 4;
-  save_u32 (chunklen);
-  zfile_fwrite (&tmp[0], 1, 4, f);
-  /* chunk flags */
-  flags = 0;
-  dst = &tmp[0];
-  save_u32 (flags | compress);
-  zfile_fwrite (&tmp[0], 1, 4, f);
-  /* chunk data */
-  if (compress) {
-  	int tmplen = len;
-  	size_t opos;
-  	dst = &tmp[0];
-  	save_u32 (len);
-  	opos = zfile_ftell (f);
-  	zfile_fwrite (&tmp[0], 1, 4, f);
-  	len = zfile_zcompress (f, chunk, len);
-  	if (len > 0) {
-	    zfile_fseek (f, pos, SEEK_SET);
-	    dst = &tmp[0];
-	    save_u32 (len + 4 + 4 + 4 + 4);
-	    zfile_fwrite (&tmp[0], 1, 4, f);
-	    zfile_fseek (f, 0, SEEK_END);
-  	} else {
-	    len = tmplen;
-	    compress = 0;
-	    zfile_fseek (f, opos, SEEK_SET);
-	    dst = &tmp[0];
-	    save_u32 (flags);
-	    zfile_fwrite (&tmp[0], 1, 4, f);
-  	}
-  }
-  if (!compress)
-  	zfile_fwrite (chunk, 1, len, f);
-  /* alignment */
-  len2 = 4 - (len & 3);
-  if (len2)
-  	zfile_fwrite (zero, 1, len2, f);
+	pos = zfile_ftell (f);
+	/* chunk size */
+	dst = &tmp[0];
+	chunklen = len + 4 + 4 + 4;
+	save_u32 (chunklen);
+	zfile_fwrite (&tmp[0], 1, 4, f);
+	/* chunk flags */
+	flags = 0;
+	dst = &tmp[0];
+	save_u32 (flags | compress);
+	zfile_fwrite (&tmp[0], 1, 4, f);
+	/* chunk data */
+	if (compress) {
+		int tmplen = len;
+		size_t opos;
+		dst = &tmp[0];
+		save_u32 (len);
+		opos = zfile_ftell (f);
+		zfile_fwrite (&tmp[0], 1, 4, f);
+		len = zfile_zcompress (f, chunk, len);
+		if (len > 0) {
+			zfile_fseek (f, pos, SEEK_SET);
+			dst = &tmp[0];
+			save_u32 (len + 4 + 4 + 4 + 4);
+			zfile_fwrite (&tmp[0], 1, 4, f);
+			zfile_fseek (f, 0, SEEK_END);
+		} else {
+			len = tmplen;
+			compress = 0;
+			zfile_fseek (f, opos, SEEK_SET);
+			dst = &tmp[0];
+			save_u32 (flags);
+			zfile_fwrite (&tmp[0], 1, 4, f);
+		}
+	}
+	if (!compress)
+		zfile_fwrite (chunk, 1, len, f);
+	/* alignment */
+	len2 = 4 - (len & 3);
+	if (len2)
+		zfile_fwrite (zero, 1, len2, f);
 
 	write_log (_T("Chunk '%s' chunk size %u (%u)\n"), name, chunklen, len);
 }
 
 static uae_u8 *restore_chunk (struct zfile *f, TCHAR *name, unsigned int *len, unsigned int *totallen, size_t *filepos)
 {
-  uae_u8 tmp[6], dummy[4], *mem, *src;
-  uae_u32 flags;
-  int len2;
+	uae_u8 tmp[6], dummy[4], *mem, *src;
+	uae_u32 flags;
+	int len2;
 
-  *totallen = 0;
+	*totallen = 0;
 	*filepos = 0;
 	*name = 0;
-  /* chunk name */
+	/* chunk name */
 	if (zfile_fread(tmp, 1, 4, f) != 4)
 		return NULL;
 	tmp[4] = 0;
 	au_copy (name, 5, (char*)tmp);
-  /* chunk size */
+	/* chunk size */
 	if (zfile_fread(tmp, 1, 4, f) != 4) {
 		*name = 0;
 		return NULL;
 	}
-  src = tmp;
-  len2 = restore_u32 () - 4 - 4 - 4;
-  if (len2 < 0)
-  	len2 = 0;
-  *len = len2;
-  if (len2 == 0) {
-	  *filepos = zfile_ftell (f);
-	  return 0;
-  }
+	src = tmp;
+	len2 = restore_u32 () - 4 - 4 - 4;
+	if (len2 < 0)
+		len2 = 0;
+	*len = len2;
+	if (len2 == 0) {
+		*filepos = zfile_ftell (f);
+		return 0;
+	}
 
-  /* chunk flags */
+	/* chunk flags */
 	if (zfile_fread(tmp, 1, 4, f) != 4) {
 		*name = 0;
 		return NULL;
 	}
-  src = tmp;
-  flags = restore_u32 ();
-  *totallen = *len;
-  if (flags & 1) {
-  	zfile_fread (tmp, 1, 4, f);
-  	src = tmp;
-  	*totallen = restore_u32();
-  	*filepos = zfile_ftell (f) - 4 - 4 - 4;
-  	len2 -= 4;
-  } else {
-    *filepos = zfile_ftell (f) - 4 - 4;
-  }
-  /* chunk data.  RAM contents will be loaded during the reset phase,
-     no need to malloc multiple megabytes here.  */
-  if (_tcscmp (name, _T("CRAM")) != 0
-  	&& _tcscmp (name, _T("BRAM")) != 0
-  	&& _tcscmp (name, _T("FRAM")) != 0
-  	&& _tcscmp (name, _T("ZRAM")) != 0
-  	&& _tcscmp (name, _T("PRAM")) != 0
-  	&& _tcscmp (name, _T("A3K1")) != 0
-		&& _tcscmp (name, _T("A3K2")) != 0
-		&& _tcscmp (name, _T("BORO")) != 0
+	src = tmp;
+	flags = restore_u32 ();
+	*totallen = *len;
+	if (flags & 1) {
+		zfile_fread (tmp, 1, 4, f);
+		src = tmp;
+		*totallen = restore_u32 ();
+		*filepos = zfile_ftell (f) - 4 - 4 - 4;
+		len2 -= 4;
+	} else {
+		*filepos = zfile_ftell (f) - 4 - 4;
+	}
+	/* chunk data.  RAM contents will be loaded during the reset phase,
+	   no need to malloc multiple megabytes here.  */
+	if (_tcscmp (name, _T("CRAM")) != 0
+		&& _tcscmp(name, _T("BRAM")) != 0
+		&& _tcscmp(name, _T("FRAM")) != 0
+		&& _tcscmp(name, _T("ZRAM")) != 0
+		&& _tcscmp(name, _T("FRA2")) != 0
+		&& _tcscmp(name, _T("ZRA2")) != 0
+		&& _tcscmp(name, _T("FRA3")) != 0
+		&& _tcscmp(name, _T("ZRA3")) != 0
+		&& _tcscmp(name, _T("FRA4")) != 0
+		&& _tcscmp(name, _T("ZRA4")) != 0
+		&& _tcscmp(name, _T("ZCRM")) != 0
+		&& _tcscmp(name, _T("PRAM")) != 0
+		&& _tcscmp(name, _T("A3K1")) != 0
+		&& _tcscmp(name, _T("A3K2")) != 0
+		&& _tcscmp(name, _T("BORO")) != 0
 	)
-  {
-  	/* extra bytes at the end needed to handle old statefiles that now have new fields */
-	  mem = xcalloc (uae_u8, *totallen + 100); 
-	  if (!mem)
-	  	return NULL;
-	  if (flags & 1) {
-	    zfile_zuncompress (mem, *totallen, f, len2);
-	  } else {
-	    zfile_fread (mem, 1, len2, f);
-	  }
-  } else {
-	  mem = 0;
-	  zfile_fseek (f, len2, SEEK_CUR);
-  }
+	{
+		/* extra bytes at the end needed to handle old statefiles that now have new fields */
+		mem = xcalloc (uae_u8, *totallen + 100);
+		if (!mem)
+			return NULL;
+		if (flags & 1) {
+			zfile_zuncompress (mem, *totallen, f, len2);
+		} else {
+			zfile_fread (mem, 1, len2, f);
+		}
+	} else {
+		mem = 0;
+		zfile_fseek (f, len2, SEEK_CUR);
+	}
 
-  /* alignment */
-  len2 = 4 - (len2 & 3);
-  if (len2)
-  	zfile_fread (dummy, 1, len2, f);
-  return mem;
+	/* alignment */
+	len2 = 4 - (len2 & 3);
+	if (len2)
+		zfile_fread (dummy, 1, len2, f);
+	return mem;
 }
 
 void restore_ram (size_t filepos, uae_u8 *memory)
 {
-  uae_u8 tmp[8];
-  uae_u8 *src = tmp;
-  int size, fullsize;
-  uae_u32 flags;
-    
-  if (filepos == 0 || memory == NULL)
-  	return;
-  zfile_fseek (savestate_file, filepos, SEEK_SET);
-  zfile_fread (tmp, 1, sizeof tmp, savestate_file);
-  size = restore_u32();
-  flags = restore_u32();
-  size -= 4 + 4 + 4;
-  if (flags & 1) {
-    zfile_fread (tmp, 1, 4, savestate_file);
-    src = tmp;
-    fullsize = restore_u32();
-    size -= 4;
-    zfile_zuncompress (memory, fullsize, savestate_file, size);
-  } else {
-    zfile_fread (memory, 1, size, savestate_file);
-  }
+	uae_u8 tmp[8];
+	uae_u8 *src = tmp;
+	int size, fullsize;
+	uae_u32 flags;
+
+	if (filepos == 0 || memory == NULL)
+		return;
+	zfile_fseek (savestate_file, filepos, SEEK_SET);
+	zfile_fread (tmp, 1, sizeof tmp, savestate_file);
+	size = restore_u32 ();
+	flags = restore_u32 ();
+	size -= 4 + 4 + 4;
+	if (flags & 1) {
+		zfile_fread (tmp, 1, 4, savestate_file);
+		src = tmp;
+		fullsize = restore_u32 ();
+		size -= 4;
+		zfile_zuncompress (memory, fullsize, savestate_file, size);
+	} else {
+		zfile_fread (memory, 1, size, savestate_file);
+	}
 }
 
 static void restore_header (uae_u8 *src)
 {
-  TCHAR *emuname, *emuversion, *description;
+	TCHAR *emuname, *emuversion, *description;
 
-  restore_u32();
-  emuname = restore_string ();
-  emuversion = restore_string ();
-  description = restore_string ();
+	restore_u32 ();
+	emuname = restore_string ();
+	emuversion = restore_string ();
+	description = restore_string ();
 	write_log (_T("Saved with: '%s %s', description: '%s'\n"),
-  	emuname,emuversion,description);
-  xfree (description);
-  xfree (emuversion);
-  xfree (emuname);
+		emuname, emuversion, description);
+	xfree (description);
+	xfree (emuversion);
+	xfree (emuname);
 }
 
 /* restore all subsystems */
 
-void restore_state(const TCHAR* filename)
+void restore_state (const TCHAR *filename)
 {
 	struct zfile* f;
 	uae_u8* chunk, * end;
@@ -499,16 +550,16 @@ void restore_state(const TCHAR* filename)
 	zfile_fseek(f, 0, SEEK_SET);
 	savestate_state = STATE_RESTORE;
 
-	chunk = restore_chunk(f, name, &len, &totallen, &filepos);
-	if (!chunk || _tcsncmp(name, _T("ASF "), 4)) {
-		write_log(_T("%s is not an AmigaStateFile\n"), filename);
+	chunk = restore_chunk (f, name, &len, &totallen, &filepos);
+	if (!chunk || _tcsncmp (name, _T("ASF "), 4)) {
+		write_log (_T("%s is not an AmigaStateFile\n"), filename);
 		goto error;
 	}
-	write_log(_T("STATERESTORE: '%s'\n"), filename);
-	set_config_changed();
+	write_log (_T("STATERESTORE: '%s'\n"), filename);
+	set_config_changed ();
 	savestate_file = f;
-	restore_header(chunk);
-	xfree(chunk);
+	restore_header (chunk);
+	xfree (chunk);
 	devices_restore_start();
 	z2num = z3num = 0;
 	for (;;) {
@@ -845,31 +896,31 @@ static int save_state_internal(struct zfile* f, const TCHAR* description, int co
 
 	_tcscpy(name, _T("SPRx"));
 	for (i = 0; i < 8; i++) {
-		dst = save_custom_sprite(i, &len, 0);
+		dst = save_custom_sprite (i, &len, 0);
 		name[3] = i + '0';
-		save_chunk(f, dst, len, name, 0);
-		xfree(dst);
+		save_chunk (f, dst, len, name, 0);
+		xfree (dst);
 	}
 
-	_tcscpy(name, _T("AUDx"));
+	_tcscpy (name, _T("AUDx"));
 	for (i = 0; i < 4; i++) {
-		dst = save_audio(i, &len, 0);
+		dst = save_audio (i, &len, 0);
 		name[3] = i + '0';
-		save_chunk(f, dst, len, name, 0);
-		xfree(dst);
+		save_chunk (f, dst, len, name, 0);
+		xfree (dst);
 	}
 
-	dst = save_cia(0, &len, 0);
-	save_chunk(f, dst, len, _T("CIAA"), 0);
-	xfree(dst);
+	dst = save_cia (0, &len, 0);
+	save_chunk (f, dst, len, _T("CIAA"), 0);
+	xfree (dst);
 
-	dst = save_cia(1, &len, 0);
-	save_chunk(f, dst, len, _T("CIAB"), 0);
-	xfree(dst);
+	dst = save_cia (1, &len, 0);
+	save_chunk (f, dst, len, _T("CIAB"), 0);
+	xfree (dst);
 
-	dst = save_keyboard(&len, NULL);
-	save_chunk(f, dst, len, _T("KEYB"), 0);
-	xfree(dst);
+	dst = save_keyboard (&len, NULL);
+	save_chunk (f, dst, len, _T("KEYB"), 0);
+	xfree (dst);
 
 #ifdef AUTOCONFIG
 	// new
@@ -887,23 +938,23 @@ static int save_state_internal(struct zfile* f, const TCHAR* description, int co
 	xfree(dst);
 #endif
 #ifdef PICASSO96
-	dst = save_p96(&len, 0);
-	save_chunk(f, dst, len, _T("P96 "), 0);
+	dst = save_p96 (&len, 0);
+	save_chunk (f, dst, len, _T("P96 "), 0);
 #endif
-	save_rams(f, comp);
+	save_rams (f, comp);
 
-	dst = save_rom(1, &len, 0);
+	dst = save_rom (1, &len, 0);
 	do {
 		if (!dst)
 			break;
-		save_chunk(f, dst, len, _T("ROM "), 0);
-		xfree(dst);
-	} while ((dst = save_rom(0, &len, 0)));
+		save_chunk (f, dst, len, _T("ROM "), 0);
+		xfree (dst);
+	} while ((dst = save_rom (0, &len, 0)));
 
 #ifdef CD32
-	dst = save_akiko(&len, NULL);
-	save_chunk(f, dst, len, _T("CD32"), 0);
-	xfree(dst);
+	dst = save_akiko (&len, NULL);
+	save_chunk (f, dst, len, _T("CD32"), 0);
+	xfree (dst);
 #endif
 #ifdef CDTV
 	dst = save_cdtv(&len, NULL);
@@ -914,16 +965,16 @@ static int save_state_internal(struct zfile* f, const TCHAR* description, int co
 	xfree(dst);
 #endif
 #ifdef ACTION_REPLAY
-	dst = save_action_replay(&len, NULL);
-	save_chunk(f, dst, len, _T("ACTR"), comp);
-	dst = save_hrtmon(&len, NULL);
-	save_chunk(f, dst, len, _T("HRTM"), comp);
+	dst = save_action_replay (&len, NULL);
+	save_chunk (f, dst, len, _T("ACTR"), comp);
+	dst = save_hrtmon (&len, NULL);
+	save_chunk (f, dst, len, _T("HRTM"), comp);
 #endif
 #ifdef FILESYS
-	dst = save_filesys_common(&len);
+	dst = save_filesys_common (&len);
 	if (dst) {
-		save_chunk(f, dst, len, _T("FSYC"), 0);
-		for (i = 0; i < nr_units(); i++) {
+		save_chunk (f, dst, len, _T("FSYC"), 0);
+		for (i = 0; i < nr_units (); i++) {
 			dst = save_filesys_paths(i, &len);
 			if (dst) {
 				save_chunk(f, dst, len, _T("FSYP"), 0);
@@ -937,24 +988,24 @@ static int save_state_internal(struct zfile* f, const TCHAR* description, int co
 		}
 	}
 #endif
-	dst = save_gayle(&len, NULL);
+	dst = save_gayle (&len, NULL);
 	if (dst) {
-		save_chunk(f, dst, len, _T("GAYL"), 0);
+		save_chunk (f, dst, len, _T("GAYL"), 0);
 		xfree(dst);
 	}
 	for (i = 0; i < 4; i++) {
-		dst = save_gayle_ide(i, &len, NULL);
+		dst = save_gayle_ide (i, &len, NULL);
 		if (dst) {
-			save_chunk(f, dst, len, _T("IDE "), 0);
-			xfree(dst);
+			save_chunk (f, dst, len, _T("IDE "), 0);
+			xfree (dst);
 		}
 	}
 
 	for (i = 0; i < MAX_TOTAL_SCSI_DEVICES; i++) {
-		dst = save_cd(i, &len);
+		dst = save_cd (i, &len);
 		if (dst) {
-			_stprintf(name, _T("CDU%d"), i);
-			save_chunk(f, dst, len, name, 0);
+			_stprintf (name, _T("CDU%d"), i);
+			save_chunk (f, dst, len, name, 0);
 		}
 	}
 
@@ -967,20 +1018,20 @@ int save_state (const TCHAR *filename, const TCHAR *description)
 {
 	struct zfile *f;
 
-  state_incompatible_warn();
-  if (!save_filesys_cando()) {
+	state_incompatible_warn();
+	if (!save_filesys_cando()) {
 		gui_message (_T("Filesystem active. Try again later."));
-    return -1;
+		return -1;
 	}
-  custom_prepare_savestate ();
+	custom_prepare_savestate ();
 	f = zfile_fopen (filename, _T("w+b"), 0);
-  if (!f)
-  	return 0;
+	if (!f)
+		return 0;
 	int v = save_state_internal (f, description, false, true);
 	if (v)
-    write_log (_T("Save of '%s' complete\n"), filename);
-  zfile_fclose (f);
-  savestate_state = 0;
+		write_log (_T("Save of '%s' complete\n"), filename);
+	zfile_fclose (f);
+	savestate_state = 0;
 	return v;
 }
 
@@ -1009,99 +1060,99 @@ version 0.8
 
 HUNK HEADER (beginning of every hunk)
 
-        hunk name (4 ascii-characters)
-        hunk size (including header)
-        hunk flags             
+hunk name (4 ascii-characters)
+hunk size (including header)
+hunk flags
 
-        bit 0 = chunk contents are compressed with zlib (maybe RAM chunks only?)
+bit 0 = chunk contents are compressed with zlib (maybe RAM chunks only?)
 
 HEADER
 
-        "ASF " (AmigaStateFile)
-        
-	statefile version
-        emulator name ("uae", "fellow" etc..)
-        emulator version string (example: "0.8.15")
-        free user writable comment string
+"ASF " (AmigaStateFile)
+
+statefile version
+emulator name ("uae", "fellow" etc..)
+emulator version string (example: "0.8.15")
+free user writable comment string
 
 CPU
 
-	 "CPU "
+"CPU "
 
-	CPU model               4 (68000,68010,68020,68030,68040,68060)
-	CPU typeflags           bit 0=EC-model or not, bit 31 = clock rate included
-	D0-D7                   8*4=32
-	A0-A6                   7*4=32
-	PC                      4
-	unused			4
-	68000 prefetch (IRC)    2
-	68000 prefetch (IR)     2
-	USP                     4
-	ISP                     4
-	SR/CCR                  2
-	flags                   4 (bit 0=CPU was HALTed)
+CPU model               4 (68000,68010,68020,68030,68040,68060)
+CPU typeflags           bit 0=EC-model or not, bit 31 = clock rate included
+D0-D7                   8*4=32
+A0-A6                   7*4=32
+PC                      4
+unused			4
+68000 prefetch (IRC)    2
+68000 prefetch (IR)     2
+USP                     4
+ISP                     4
+SR/CCR                  2
+flags                   4 (bit 0=CPU was HALTed)
 
-	CPU specific registers
+CPU specific registers
 
-	68000: SR/CCR is last saved register
-	68010: save also DFC,SFC and VBR
-	68020: all 68010 registers and CAAR,CACR and MSP
-	etc..
+68000: SR/CCR is last saved register
+68010: save also DFC,SFC and VBR
+68020: all 68010 registers and CAAR,CACR and MSP
+etc..
 
-	68010+:
+68010+:
 
-	DFC                     4
-	SFC                     4
-	VBR                     4
+DFC                     4
+SFC                     4
+VBR                     4
 
-	68020+:
+68020+:
 
-	CAAR                    4
-	CACR                    4
-	MSP                     4
+CAAR                    4
+CACR                    4
+MSP                     4
 
-	68030+:
+68030+:
 
-	AC0                     4
-	AC1                     4
-	ACUSR                   2
-	TT0                     4
-	TT1                     4
+AC0                     4
+AC1                     4
+ACUSR                   2
+TT0                     4
+TT1                     4
 
-	68040+:
+68040+:
 
-	ITT0                    4
-	ITT1                    4
-	DTT0                    4
-	DTT1                    4
-	TCR                     4
-	URP                     4
-	SRP                     4
+ITT0                    4
+ITT1                    4
+DTT0                    4
+DTT1                    4
+TCR                     4
+URP                     4
+SRP                     4
 
-	68060:
+68060:
 
-	BUSCR                   4
-	PCR                     4
+BUSCR                   4
+PCR                     4
 
-        All:
+All:
 
-	Clock in KHz            4 (only if bit 31 in flags)
-	                        4 (spare, only if bit 31 in flags)
+Clock in KHz            4 (only if bit 31 in flags)
+4 (spare, only if bit 31 in flags)
 
 
 FPU (only if used)
 
-	"FPU "
+"FPU "
 
-	FPU model               4 (68881/68882/68040/68060)
-	FPU typeflags           4 (bit 31 = clock rate included)
-	FP0-FP7                 4+4+2 (80 bits)
-	FPCR                    4
-	FPSR                    4
-	FPIAR                   4
+FPU model               4 (68881/68882/68040/68060)
+FPU typeflags           4 (bit 31 = clock rate included)
+FP0-FP7                 4+4+2 (80 bits)
+FPCR                    4
+FPSR                    4
+FPIAR                   4
 
-	Clock in KHz            4 (only if bit 31 in flags)
-	                        4 (spare, only if bit 31 in flags)
+Clock in KHz            4 (only if bit 31 in flags)
+4 (spare, only if bit 31 in flags)
 
 MMU (when and if MMU is supported in future..)
 
@@ -1112,173 +1163,173 @@ flags			4 (none defined yet)
 
 CUSTOM CHIPS
 
-	"CHIP"
+"CHIP"
 
-	chipset flags   4      OCS=0,ECSAGNUS=1,ECSDENISE=2,AGA=4
-			       ECSAGNUS and ECSDENISE can be combined
+chipset flags   4      OCS=0,ECSAGNUS=1,ECSDENISE=2,AGA=4
+ECSAGNUS and ECSDENISE can be combined
 
-	DFF000-DFF1FF   352    (0x120 - 0x17f and 0x0a0 - 0xdf excluded)
+DFF000-DFF1FF   352    (0x120 - 0x17f and 0x0a0 - 0xdf excluded)
 
-	sprite registers (0x120 - 0x17f) saved with SPRx chunks
-	audio registers (0x0a0 - 0xdf) saved with AUDx chunks
+sprite registers (0x120 - 0x17f) saved with SPRx chunks
+audio registers (0x0a0 - 0xdf) saved with AUDx chunks
 
 AGA COLORS
 
-	"AGAC"
+"AGAC"
 
-	AGA color               8 banks * 32 registers *
-	registers               LONG (XRGB) = 1024
+AGA color               8 banks * 32 registers *
+registers               LONG (XRGB) = 1024
 
 SPRITE
 
-	"SPR0" - "SPR7"
+"SPR0" - "SPR7"
 
 
-	SPRxPT                  4
-	SPRxPOS                 2
-	SPRxCTL                 2
-	SPRxDATA                2
-	SPRxDATB                2
-	AGA sprite DATA/DATB    3 * 2 * 2
-	sprite "armed" status   1
+SPRxPT                  4
+SPRxPOS                 2
+SPRxCTL                 2
+SPRxDATA                2
+SPRxDATB                2
+AGA sprite DATA/DATB    3 * 2 * 2
+sprite "armed" status   1
 
-	sprites maybe armed in non-DMA mode
-	use bit 0 only, other bits are reserved
+sprites maybe armed in non-DMA mode
+use bit 0 only, other bits are reserved
 
 
 AUDIO
-	"AUD0" "AUD1" "AUD2" "AUD3"
+"AUD0" "AUD1" "AUD2" "AUD3"
 
-	audio state             1
-	machine mode
-	AUDxVOL                 1
-	irq?                    1
-	data_written?           1
-	internal AUDxLEN        2
-	AUDxLEN                 2
-	internal AUDxPER        2
-	AUDxPER                 2
-	internal AUDxLC         4
-	AUDxLC                  4
-	evtime?                 4
+audio state             1
+machine mode
+AUDxVOL                 1
+irq?                    1
+data_written?           1
+internal AUDxLEN        2
+AUDxLEN                 2
+internal AUDxPER        2
+AUDxPER                 2
+internal AUDxLC         4
+AUDxLC                  4
+evtime?                 4
 
 BLITTER
 
-	"BLIT"
+"BLIT"
 
-	internal blitter state
+internal blitter state
 
-	flags                   4
-	bit 0=blitter active
-	bit 1=fill carry bit
-	internal ahold          4
-	internal bhold          4
-	internal hsize          2
-	internal vsize          2
+flags                   4
+bit 0=blitter active
+bit 1=fill carry bit
+internal ahold          4
+internal bhold          4
+internal hsize          2
+internal vsize          2
 
 CIA
 
-	"CIAA" and "CIAB"
+"CIAA" and "CIAB"
 
-	BFE001-BFEF01   16*1 (CIAA)
-	BFD000-BFDF00   16*1 (CIAB)
+BFE001-BFEF01   16*1 (CIAA)
+BFD000-BFDF00   16*1 (CIAB)
 
-	internal registers
+internal registers
 
-	IRQ mask (ICR)  1 BYTE
-	timer latches   2 timers * 2 BYTES (LO/HI)
-	latched tod     3 BYTES (LO/MED/HI)
-	alarm           3 BYTES (LO/MED/HI)
-	flags           1 BYTE
-			bit 0=tod latched (read)
-			bit 1=tod stopped (write)
-	div10 counter	1 BYTE
+IRQ mask (ICR)  1 BYTE
+timer latches   2 timers * 2 BYTES (LO/HI)
+latched tod     3 BYTES (LO/MED/HI)
+alarm           3 BYTES (LO/MED/HI)
+flags           1 BYTE
+bit 0=tod latched (read)
+bit 1=tod stopped (write)
+div10 counter	1 BYTE
 
 FLOPPY DRIVES
 
-	"DSK0" "DSK1" "DSK2" "DSK3"
+"DSK0" "DSK1" "DSK2" "DSK3"
 
-	drive state
+drive state
 
-	drive ID-word           4
-	state                   1 (bit 0: motor on, bit 1: drive disabled, bit 2: current id bit)
-	rw-head track           1
-	dskready                1
-	id-mode                 1 (ID mode bit number 0-31)
-	floppy information
+drive ID-word           4
+state                   1 (bit 0: motor on, bit 1: drive disabled, bit 2: current id bit)
+rw-head track           1
+dskready                1
+id-mode                 1 (ID mode bit number 0-31)
+floppy information
 
-	bits from               4
-	beginning of track
-	CRC of disk-image       4 (used during restore to check if image
-				  is correct)
-	disk-image              null-terminated
-	file name
+bits from               4
+beginning of track
+CRC of disk-image       4 (used during restore to check if image
+is correct)
+disk-image              null-terminated
+file name
 
 INTERNAL FLOPPY	CONTROLLER STATUS
 
-	"DISK"
+"DISK"
 
-	current DMA word        2
-	DMA word bit offset     1
-	WORDSYNC found          1 (no=0,yes=1)
-	hpos of next bit        1
-	DSKLENGTH status        0=off,1=written once,2=written twice
-	unused                  2
+current DMA word        2
+DMA word bit offset     1
+WORDSYNC found          1 (no=0,yes=1)
+hpos of next bit        1
+DSKLENGTH status        0=off,1=written once,2=written twice
+unused                  2
 
 RAM SPACE
 
-	"xRAM" (CRAM = chip, BRAM = bogo, FRAM = fast, ZRAM = Z3, P96 = RTG RAM, A3K1/A3K2 = MB RAM)
+"xRAM" (CRAM = chip, BRAM = bogo, FRAM = fast, ZRAM = Z3, P96 = RTG RAM, A3K1/A3K2 = MB RAM)
 
-	start address           4 ("bank"=chip/slow/fast etc..)
-	of RAM "bank"
-	RAM "bank" size         4
-	RAM flags               4 (bit 0 = zlib compressed)
-	RAM "bank" contents
+start address           4 ("bank"=chip/slow/fast etc..)
+of RAM "bank"
+RAM "bank" size         4
+RAM flags               4 (bit 0 = zlib compressed)
+RAM "bank" contents
 
 ROM SPACE
 
-	"ROM "
+"ROM "
 
-	ROM start               4
-	address
-	size of ROM             4
-	ROM type                4 KICK=0
-	ROM flags               4
-	ROM version             2
-	ROM revision            2
-	ROM CRC                 4 see below
-	ROM-image ID-string     null terminated, see below
-	path to rom image
-	ROM contents            (Not mandatory, use hunk size to check if
-				this hunk contains ROM data or not)
+ROM start               4
+address
+size of ROM             4
+ROM type                4 KICK=0
+ROM flags               4
+ROM version             2
+ROM revision            2
+ROM CRC                 4 see below
+ROM-image ID-string     null terminated, see below
+path to rom image
+ROM contents            (Not mandatory, use hunk size to check if
+this hunk contains ROM data or not)
 
-	Kickstart ROM:
-	 ID-string is "Kickstart x.x"
-	 ROM version: version in high word and revision in low word
-	 Kickstart ROM version and revision can be found from ROM start
-	 + 12 (version) and +14 (revision)
+Kickstart ROM:
+ID-string is "Kickstart x.x"
+ROM version: version in high word and revision in low word
+Kickstart ROM version and revision can be found from ROM start
++ 12 (version) and +14 (revision)
 
-	ROM version and CRC is only meant for emulator to automatically
-	find correct image from its ROM-directory during state restore.
+ROM version and CRC is only meant for emulator to automatically
+find correct image from its ROM-directory during state restore.
 
-	Usually saving ROM contents is not good idea.
+Usually saving ROM contents is not good idea.
 
 ACTION REPLAY
 
-	"ACTR"
+"ACTR"
 
-	Model (1,2,3)		4
-	path to rom image
-	RAM space		(depends on model)
-	ROM CRC                 4
+Model (1,2,3)		4
+path to rom image
+RAM space		(depends on model)
+ROM CRC             4
 
-  "CDx "
+"CDx "
 
-  Flags               4 (bit 0 = scsi, bit 1 = ide, bit 2 = image)
-  Path                  (for example image file or drive letter)
+Flags               4 (bit 0 = scsi, bit 1 = ide, bit 2 = image)
+Path                  (for example image file or drive letter)
 
 END
-	hunk "END " ends, remember hunk size 8!
+hunk "END " ends, remember hunk size 8!
 
 
 EMULATOR SPECIFIC HUNKS
@@ -1293,3 +1344,5 @@ misc:
 - should we strip all paths from image file names?
 
 */
+
+#endif /* SAVESTATE */
