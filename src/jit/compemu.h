@@ -360,7 +360,7 @@ typedef struct blockinfo_t {
 #define BI_COMPILING 5
 #define BI_FINALIZING 6
 
-#if defined(CPU_arm) && !defined(ARMV6T2) && !defined(CPU_AARCH64)
+#if defined(CPU_arm) && !defined(ARMV6T2)
 const int POPALLSPACE_SIZE = 2048; /* That should be enough space */
 #else
 const int POPALLSPACE_SIZE = 512; /* That should be enough space */
