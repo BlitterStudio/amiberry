@@ -622,6 +622,7 @@ static void check_changes (int unitnum)
 		if (st->wasopen) {
 			st->device_func->closedev (unitnum);
 			st->wasopen = -1;
+#ifdef SCSIEMU
 			if (currprefs.scsi)  {
 				scsi_do_disk_change (unitnum, 0, &pollmode);
 				if (pollmode)
@@ -631,6 +632,7 @@ static void check_changes (int unitnum)
 					pollmode = 0;
 				}
 			}
+#endif
 		}
 		write_log (_T("CD: eject (%s) open=%d\n"), pollmode ? _T("slow") : _T("fast"), st->wasopen ? 1 : 0);
 		if (wasimage)
@@ -666,6 +668,7 @@ static void check_changes (int unitnum)
 			write_log (_T("-> device reopened\n"));
 		}
 	}
+#ifdef SCSIEMU
 	if (currprefs.scsi && st->wasopen) {
 		struct device_info di;
 		st->device_func->info (unitnum, &di, 0, -1);
@@ -677,6 +680,7 @@ static void check_changes (int unitnum)
 		scsi_do_disk_change (unitnum, 1, &pollmode);
 		filesys_do_disk_change (unitnum, 1);
 	}
+#endif
 	st->mediawaschanged = true;
 	st->showstatusline = true;
 	if (gotsem) {
@@ -2354,7 +2358,7 @@ uae_u8 *save_cd (int num, int *len)
 	sys_command_cd_qcode (num, st->play_qcode, -1, false);
 	for (int i = 0; i < SUBQ_SIZE; i++)
 		save_u8 (st->play_qcode[i]);
-	save_u32 (0);
+	save_u32 (st->play_end_pos);
 	save_path_full(currprefs.cdslots[num].name, SAVESTATE_PATH_CD);
 	*len = dst - dstbak;
 	return dstbak;
@@ -2376,7 +2380,7 @@ uae_u8 *restore_cd (int num, uae_u8 *src)
 		restore_u32 ();
 		for (int i = 0; i < SUBQ_SIZE; i++)
 			st->play_qcode[i] = restore_u8 ();
-		restore_u32 ();
+		st->play_end_pos = restore_u32 ();
 	}
 	if (flags & 16) {
 		xfree(s);
