@@ -332,6 +332,7 @@ OBJS =	\
 	src/traps.o \
 	src/uaelib.o \
 	src/uaeresource.o \
+	src/vm.o \
 	src/zfile.o \
 	src/zfile_archive.o \
 	src/archivers/7z/7zAlloc.o \
