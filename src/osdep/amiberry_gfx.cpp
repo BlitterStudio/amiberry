@@ -428,6 +428,7 @@ int graphics_setup(void)
 void toggle_fullscreen()
 {
 #ifdef USE_DISPMANX
+	// Dispmanx is fullscreen always
 #else
 	const Uint32 fullscreen_flag = SDL_WINDOW_FULLSCREEN_DESKTOP;
 	if (sdl_window)
@@ -435,8 +436,20 @@ void toggle_fullscreen()
 		const bool is_fullscreen = SDL_GetWindowFlags(sdl_window) & fullscreen_flag;
 		SDL_SetWindowFullscreen(sdl_window, is_fullscreen ? 0 : fullscreen_flag);
 		SDL_ShowCursor(is_fullscreen);
+		const auto idx = screen_is_picasso ? 1 : 0;
+		currprefs.gfx_apmode[idx].gfx_fullscreen = is_fullscreen ? GFX_FULLSCREEN : GFX_WINDOW;
 	}
 #endif
+}
+
+static int isfullscreen_2(struct uae_prefs* p)
+{
+	const auto idx = screen_is_picasso ? 1 : 0;
+	return p->gfx_apmode[idx].gfx_fullscreen == GFX_FULLSCREEN ? 1 : (p->gfx_apmode[idx].gfx_fullscreen == GFX_FULLWINDOW ? -1 : 0);
+}
+int isfullscreen(void)
+{
+	return isfullscreen_2(&currprefs);
 }
 
 #ifdef USE_DISPMANX
