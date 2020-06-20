@@ -1383,7 +1383,7 @@ int main(int argc, char* argv[])
 		inputdevice_do_keyboard(AK_CAPSLOCK, 0);
 	}
 	ioctl(0, KDSETLED, kbd_led_status);
-
+	
 	real_main(argc, argv);
 
 	// restore keyboard LEDs to normal state

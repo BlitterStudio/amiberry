@@ -365,10 +365,10 @@ static uae_u32 uaelib_demux_common(TrapContext *ctx, uae_u32 ARG0, uae_u32 ARG1,
 			/* The next call brings bad luck */
 		case 13: return emulib_ExitEmu();
 		case 14: return emulib_GetDisk(ctx, ARG1, ARG2);
-		case 15: return 0;
+		case 15: return emulib_Debug();
 
-		case 68: return 0;
-		case 69: return 0;
+		case 68: return emulib_Minimize();
+		case 69: return emulib_ExecuteNativeCode();
 
 		case 70: return 0; /* RESERVED. Something uses this.. */
 
