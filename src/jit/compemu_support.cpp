@@ -87,8 +87,6 @@ static int untranslated_compfn(const void* e1, const void* e2)
 }
 #endif
 
-#define NATMEM_OFFSETX regs.natmem_offset
-
 static compop_func *compfunctbl[65536];
 static compop_func *nfcompfunctbl[65536];
 uae_u8* comp_pc_p;

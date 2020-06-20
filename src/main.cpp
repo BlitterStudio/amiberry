@@ -1028,7 +1028,7 @@ static int real_main2(int argc, TCHAR** argv)
 	}
 
 #ifdef NATMEM_OFFSET
-	preinit_shm();
+	//preinit_shm();
 #endif
 	
 	if (restart_config[0])

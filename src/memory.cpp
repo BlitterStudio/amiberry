@@ -1705,7 +1705,7 @@ void map_banks (addrbank *bank, int start, int size, int realsize)
 	map_banks2 (bank, start, size, realsize);
 }
 
-static bool validate_banks_z3(addrbank *bank, int start, int size)
+bool validate_banks_z3(addrbank *bank, int start, int size)
 {
 	if (start < 0x1000 || size <= 0) {
 		error_log(_T("Z3 invalid map_banks(%s) start=%08x size=%08x\n"), bank->name, start << 16, size << 16);

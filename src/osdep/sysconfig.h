@@ -22,7 +22,7 @@
 #if defined(ARMV6T2) || defined(CPU_AARCH64)
 #define USE_JIT_FPU
 #endif
-/* #define NATMEM_OFFSET regs.natmem_offset */
+#define NATMEM_OFFSET regs.natmem_offset
 /* #define CATWEASEL */ /* Catweasel MK2/3 support */
 /* #define AHI */ /* AHI sound emulation */
 /* #define ENFORCER */ /* UAE Enforcer */

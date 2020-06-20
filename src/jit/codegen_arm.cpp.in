@@ -223,7 +223,7 @@ LENDFUNC(WRITE,RMW,1,compemu_raw_inc_opcount,(IM16 op))
 
 LOWFUNC(WRITE,READ,1,compemu_raw_cmp_pc,(IMPTR s))
 {
-  /* s is always >= NATMEM_OFFSETX and < NATMEM_OFFSETX + max. Amiga mem */
+  /* s is always >= NATMEM_OFFSET and < NATMEM_OFFSET + max. Amiga mem */
   clobber_flags();
   
   uintptr idx = (uintptr) &(regs.pc_p) - (uintptr) &regs;
@@ -527,7 +527,7 @@ STATIC_INLINE void compemu_raw_branch(IM32 d)
 LOWFUNC(NONE,NONE,1,compemu_raw_init_r_regstruct,(IMPTR s))
 {
   LOAD_U32(R_REGSTRUCT, s);
-	uintptr offsmem = (uintptr)&NATMEM_OFFSETX - (uintptr) &regs;
+	uintptr offsmem = (uintptr)&NATMEM_OFFSET - (uintptr) &regs;
   LDR_rRI(R_MEMSTART, R_REGSTRUCT, offsmem);
 }
 LENDFUNC(NONE,NONE,1,compemu_raw_init_r_regstruct,(IMPTR s))
@@ -565,7 +565,7 @@ LENDFUNC(NONE,NONE,2,compemu_raw_endblock_pc_inreg,(RR4 rr_pc, IM32 cycles))
 
 STATIC_INLINE uae_u32* compemu_raw_endblock_pc_isconst(IM32 cycles, IMPTR v)
 {
-  /* v is always >= NATMEM_OFFSETX and < NATMEM_OFFSETX + max. Amiga mem */
+  /* v is always >= NATMEM_OFFSET and < NATMEM_OFFSET + max. Amiga mem */
 	uae_u32* tba;
   clobber_flags();
 
