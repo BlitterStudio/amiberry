@@ -80,6 +80,24 @@
     <None Include="..\..\src\aks.def">
       <Filter>Source files</Filter>
     </None>
+    <None Include="..\..\src\jit\codegen_arm.cpp.in">
+      <Filter>Source files\jit</Filter>
+    </None>
+    <None Include="..\..\src\jit\codegen_armA64.cpp.in">
+      <Filter>Source files\jit</Filter>
+    </None>
+    <None Include="..\..\src\jit\compemu_midfunc_arm.cpp.in">
+      <Filter>Source files\jit</Filter>
+    </None>
+    <None Include="..\..\src\jit\compemu_midfunc_arm2.cpp.in">
+      <Filter>Source files\jit</Filter>
+    </None>
+    <None Include="..\..\src\jit\compemu_midfunc_armA64.cpp.in">
+      <Filter>Source files\jit</Filter>
+    </None>
+    <None Include="..\..\src\jit\compemu_midfunc_armA64_2.cpp.in">
+      <Filter>Source files\jit</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\akiko.cpp">

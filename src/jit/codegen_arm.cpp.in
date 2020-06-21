@@ -84,10 +84,10 @@ uae_u8 call_saved[]={0,0,0,0, 1,1,1,1, 1,1,1,1, 0,1,1,1};
 
 /* This *should* be the same as call_saved. But:
    - We might not really know which registers are saved, and which aren't,
-     so we need to preserve some, but don't want to rely on everyone else
-     also saving those registers
+	 so we need to preserve some, but don't want to rely on everyone else
+	 also saving those registers
    - Special registers (such like the stack pointer) should not be "preserved"
-     by pushing, even though they are "saved" across function calls
+	 by pushing, even though they are "saved" across function calls
 */
 /* Without save and restore R12, we sometimes get seg faults when entering gui...
    Don't understand why. */
@@ -102,7 +102,7 @@ static const uae_u32 PRESERVE_MASK = ((1<<R4_INDEX)|(1<<R5_INDEX)|(1<<R6_INDEX)|
 	  MRS_CPSR(REG_WORK1);                \
 	  EOR_rri(REG_WORK1, REG_WORK1, ARM_C_FLAG);  \
 	  MSR_CPSRf_r(REG_WORK1);             \
-    flags_carry_inverted = false;       \
+	flags_carry_inverted = false;       \
   }
 
 
@@ -164,7 +164,7 @@ STATIC_INLINE void LOAD_U32(int r, uae_u32 val)
 #ifdef ARMV6T2
   MOVW_ri16(r, val);
   if(val >> 16)
-    MOVT_ri16(r, val >> 16);
+	MOVT_ri16(r, val >> 16);
 #else
   uae_s32 offs = data_long_offs(val);
   LDR_rRI(r, RPC_INDEX, offs);
@@ -268,10 +268,10 @@ LENDFUNC(NONE,NONE,2,compemu_raw_mov_l_ri,(W4 d, IM32 s))
 LOWFUNC(NONE,READ,2,compemu_raw_mov_l_rm,(W4 d, MEMR s))
 {
   if(s >= (uintptr) &regs && s < ((uintptr) &regs) + sizeof(struct regstruct)) {
-    uintptr idx = s - (uintptr) &regs;
-    LDR_rRI(d, R_REGSTRUCT, idx);
+	uintptr idx = s - (uintptr) &regs;
+	LDR_rRI(d, R_REGSTRUCT, idx);
   } else {
-    LOAD_U32(REG_WORK1, s);
+	LOAD_U32(REG_WORK1, s);
 	  LDR_rR(d, REG_WORK1);
   }
 }
@@ -397,7 +397,7 @@ STATIC_INLINE void compemu_raw_jcc_l_oponly(int cc)
 			break;
 	
 		default:
-	    CC_B_i(cc, 0);
+		CC_B_i(cc, 0);
 			break;
 	}
   // emit of target into last branch will be done by caller
@@ -467,7 +467,7 @@ STATIC_INLINE void compemu_raw_jmp(uintptr t)
 		B_i(0);
 		write_jmp_target(loc, t);
 	} else {
-    LDR_rRI(RPC_INDEX, RPC_INDEX, -4);
+	LDR_rRI(RPC_INDEX, RPC_INDEX, -4);
 	  emit_long(t);
 	}
 }
@@ -501,9 +501,9 @@ STATIC_INLINE void compemu_raw_maybe_do_nothing(IM32 cycles)
   idx = (uintptr)&countdown - (uintptr) &regs;
   LDR_rRI(REG_WORK2, R_REGSTRUCT, idx);
   if(CHECK32(cycles)) {
-    SUB_rri(REG_WORK2, REG_WORK2, cycles);
+	SUB_rri(REG_WORK2, REG_WORK2, cycles);
   } else {
-    LOAD_U32(REG_WORK1, cycles);
+	LOAD_U32(REG_WORK1, cycles);
 	  SUB_rrr(REG_WORK2, REG_WORK2, REG_WORK1);
   }
   STR_rRI(REG_WORK2, R_REGSTRUCT, idx);
@@ -543,8 +543,8 @@ LOWFUNC(NONE,NONE,2,compemu_raw_endblock_pc_inreg,(RR4 rr_pc, IM32 cycles))
   if(CHECK32(cycles)) {
 	  SUBS_rri(REG_WORK1, REG_WORK1, cycles);
 	} else {
-    LOAD_U32(REG_WORK2, cycles);
-  	SUBS_rrr(REG_WORK1, REG_WORK1, REG_WORK2);
+	LOAD_U32(REG_WORK2, cycles);
+	SUBS_rrr(REG_WORK1, REG_WORK1, REG_WORK2);
   }
 	STR_rRI(REG_WORK1, R_REGSTRUCT, offs);
 
@@ -575,8 +575,8 @@ STATIC_INLINE uae_u32* compemu_raw_endblock_pc_isconst(IM32 cycles, IMPTR v)
   if(CHECK32(cycles)) {
 	  SUBS_rri(REG_WORK1, REG_WORK1, cycles);
 	} else {
-    LOAD_U32(REG_WORK2, cycles);
-  	SUBS_rrr(REG_WORK1, REG_WORK1, REG_WORK2);
+	LOAD_U32(REG_WORK2, cycles);
+	SUBS_rrr(REG_WORK1, REG_WORK1, REG_WORK2);
   }
 	STR_rRI(REG_WORK1, R_REGSTRUCT, offs);
 
@@ -610,15 +610,15 @@ LENDFUNC(NONE,NONE,2,raw_fmov_rr,(FW d, FR s))
 LOWFUNC(NONE,WRITE,2,compemu_raw_fmov_mr_drop,(MEMW mem, FR s))
 {
   if(mem >= (uintptr) &regs && mem < (uintptr) &regs + 1020 && ((mem - (uintptr) &regs) & 0x3) == 0) {
-    VSTR64_dRi(s, R_REGSTRUCT, (mem - (uintptr) &regs));
+	VSTR64_dRi(s, R_REGSTRUCT, (mem - (uintptr) &regs));
   } else {
-    LOAD_U32(REG_WORK3, mem);
-    if((mem & 0x3) == 0)
-      VSTR64_dRi(s, REG_WORK3, 0);
-    else {
-      VMOV64_rrd(REG_WORK1, REG_WORK2, s);
-      STRD_rRI(REG_WORK1, REG_WORK3, 0);
-    }
+	LOAD_U32(REG_WORK3, mem);
+	if((mem & 0x3) == 0)
+	  VSTR64_dRi(s, REG_WORK3, 0);
+	else {
+	  VMOV64_rrd(REG_WORK1, REG_WORK2, s);
+	  STRD_rRI(REG_WORK1, REG_WORK3, 0);
+	}
   }
 }
 LENDFUNC(NONE,WRITE,2,compemu_raw_fmov_mr_drop,(MEMW mem, FR s))
@@ -626,15 +626,15 @@ LENDFUNC(NONE,WRITE,2,compemu_raw_fmov_mr_drop,(MEMW mem, FR s))
 LOWFUNC(NONE,READ,2,compemu_raw_fmov_rm,(FW d, MEMR mem))
 {
   if(mem >= (uintptr) &regs && mem < (uintptr) &regs + 1020 && ((mem - (uintptr) &regs) & 0x3) == 0) {
-    VLDR64_dRi(d, R_REGSTRUCT, (mem - (uintptr) &regs));
+	VLDR64_dRi(d, R_REGSTRUCT, (mem - (uintptr) &regs));
   } else {
-    LOAD_U32(REG_WORK3, mem);
-    if((mem & 0x3) == 0)
-      VLDR64_dRi(d, REG_WORK3, 0);
-    else {
-    	LDRD_rRI(REG_WORK1, REG_WORK3, 0);
-    	VMOV64_drr(d, REG_WORK1, REG_WORK2);
-    }
+	LOAD_U32(REG_WORK3, mem);
+	if((mem & 0x3) == 0)
+	  VLDR64_dRi(d, REG_WORK3, 0);
+	else {
+		LDRD_rRI(REG_WORK1, REG_WORK3, 0);
+		VMOV64_drr(d, REG_WORK1, REG_WORK2);
+	}
   }
 }
 LENDFUNC(NONE,READ,2,compemu_raw_fmov_rm,(FW d, MEMW mem))
@@ -750,10 +750,10 @@ LOWFUNC(NONE,READ,2,raw_fmov_d_rm,(FW r, MEMR m))
 {
   LOAD_U32(REG_WORK3, m);
   if((m & 0x3) == 0)
-    VLDR64_dRi(r, REG_WORK3, 0);
+	VLDR64_dRi(r, REG_WORK3, 0);
   else {
-  	LDRD_rRI(REG_WORK1, REG_WORK3, 0);
-  	VMOV64_drr(r, REG_WORK1, REG_WORK2);
+	LDRD_rRI(REG_WORK1, REG_WORK3, 0);
+	VMOV64_drr(r, REG_WORK1, REG_WORK2);
   }
 }
 LENDFUNC(NONE,READ,2,raw_fmov_d_rm,(FW r, MEMR m))
@@ -1087,7 +1087,7 @@ LOWFUNC(NONE,NONE,2,raw_fp_fscc_ri,(RW4 d, int cc))
 			break;
 
 		case NATIVE_CC_F_OGT: // Set if valid and greater than
-  		BVS_i(2);		// do not set if NaN
+		BVS_i(2);		// do not set if NaN
 			BLE_i(1);		// do not set if less or equal
 			ORR_rri(d, d, 0xff);
 			B_i(0);

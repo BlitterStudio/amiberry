@@ -315,6 +315,12 @@
     <None Include="..\..\src\aks.def" />
     <None Include="..\..\src\filesys.asm" />
     <None Include="..\..\src\inputevents.def" />
+    <None Include="..\..\src\jit\codegen_arm.cpp.in" />
+    <None Include="..\..\src\jit\codegen_armA64.cpp.in" />
+    <None Include="..\..\src\jit\compemu_midfunc_arm.cpp.in" />
+    <None Include="..\..\src\jit\compemu_midfunc_arm2.cpp.in" />
+    <None Include="..\..\src\jit\compemu_midfunc_armA64.cpp.in" />
+    <None Include="..\..\src\jit\compemu_midfunc_armA64_2.cpp.in" />
     <None Include="Amiberry-Debug.vgdbsettings" />
     <None Include="Amiberry-Release.vgdbsettings" />
   </ItemGroup>

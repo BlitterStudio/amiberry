@@ -84,10 +84,10 @@ uae_u8 call_saved[] = {0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,1, 1,1,1,1, 1,1
 
 /* This *should* be the same as call_saved. But:
    - We might not really know which registers are saved, and which aren't,
-     so we need to preserve some, but don't want to rely on everyone else
-     also saving those registers
+	 so we need to preserve some, but don't want to rely on everyone else
+	 also saving those registers
    - Special registers (such like the stack pointer) should not be "preserved"
-     by pushing, even though they are "saved" across function calls
+	 by pushing, even though they are "saved" across function calls
    - r19 - r26 not in use, so no need to preserve
    - if you change need_to_preserve, modify raw_push_regs_to_preserve() and raw_pop_preserved_regs()
 */
@@ -97,10 +97,10 @@ static const uae_u8 need_to_preserve[] = {0,0,0,0, 0,0,1,1, 1,1,1,1, 1,1,1,1, 1,
 
 #define FIX_INVERTED_CARRY              \
   if(flags_carry_inverted) {            \
-  	MRS_NZCV_x(REG_WORK1);              \
-  	EOR_xxCflag(REG_WORK1, REG_WORK1);  \
-  	MSR_NZCV_x(REG_WORK1);              \
-    flags_carry_inverted = false;       \
+	MRS_NZCV_x(REG_WORK1);              \
+	EOR_xxCflag(REG_WORK1, REG_WORK1);  \
+	MSR_NZCV_x(REG_WORK1);              \
+	flags_carry_inverted = false;       \
   }
 
 
@@ -144,11 +144,11 @@ STATIC_INLINE void SIGNED16_REG_2_REG(W4 d, RR4 s) {
 STATIC_INLINE void LOAD_U32(int r, uae_u32 val)
 {
   if((val & 0xffff0000) == 0xffff0000) {
-    MOVN_xi(r, ~val);
+	MOVN_xi(r, ~val);
   } else {
-    MOV_xi(r, val);
-    if(val >> 16)
-      MOVK_xish(r, val >> 16, 16);
+	MOV_xi(r, val);
+	if(val >> 16)
+	  MOVK_xish(r, val >> 16, 16);
   }
 }
 
@@ -156,11 +156,11 @@ STATIC_INLINE void LOAD_U64(int r, uae_u64 val)
 {
   MOV_xi(r, val);
   if((val >> 16) & 0xffff)
-    MOVK_xish(r, val >> 16, 16);
+	MOVK_xish(r, val >> 16, 16);
   if((val >> 32) & 0xffff)
-    MOVK_xish(r, val >> 32, 32);
+	MOVK_xish(r, val >> 32, 32);
   if(val >> 48)
-    MOVK_xish(r, val >> 48, 48);
+	MOVK_xish(r, val >> 48, 48);
 }
 
 
@@ -238,9 +238,9 @@ LOWFUNC(NONE,WRITE,2,compemu_raw_mov_l_mi,(MEMW d, IM32 s))
   LOAD_U32(REG_WORK2, s);
   uintptr idx = d - (uintptr) &regs;
   if(d == (uintptr) &(regs.pc_p))
-    STR_xXi(REG_WORK2, R_REGSTRUCT, idx);
+	STR_xXi(REG_WORK2, R_REGSTRUCT, idx);
   else
-    STR_wXi(REG_WORK2, R_REGSTRUCT, idx);
+	STR_wXi(REG_WORK2, R_REGSTRUCT, idx);
 }
 LENDFUNC(NONE,WRITE,2,compemu_raw_mov_l_mi,(MEMW d, IM32 s))
 
@@ -249,9 +249,9 @@ LOWFUNC(NONE,WRITE,2,compemu_raw_mov_l_mr,(MEMW d, RR4 s))
   /* d points always to memory in regs struct */
   uintptr idx = d - (uintptr) &regs;
   if(d == (uintptr) &(regs.pc_p))
-    STR_xXi(s, R_REGSTRUCT, idx);
+	STR_xXi(s, R_REGSTRUCT, idx);
   else
-    STR_wXi(s, R_REGSTRUCT, idx);
+	STR_wXi(s, R_REGSTRUCT, idx);
 }
 LENDFUNC(NONE,WRITE,2,compemu_raw_mov_l_mr,(MEMW d, RR4 s))
 
@@ -264,13 +264,13 @@ LENDFUNC(NONE,NONE,2,compemu_raw_mov_l_ri,(W4 d, IM32 s))
 LOWFUNC(NONE,READ,2,compemu_raw_mov_l_rm,(W4 d, MEMR s))
 {
   if(s >= (uintptr) &regs && s < ((uintptr) &regs) + sizeof(struct regstruct)) {
-    uintptr idx = s - (uintptr) &regs;
-    if(s == (uintptr) &(regs.pc_p))
-      LDR_xXi(d, R_REGSTRUCT, idx);
-    else
-      LDR_wXi(d, R_REGSTRUCT, idx);
+	uintptr idx = s - (uintptr) &regs;
+	if(s == (uintptr) &(regs.pc_p))
+	  LDR_xXi(d, R_REGSTRUCT, idx);
+	else
+	  LDR_wXi(d, R_REGSTRUCT, idx);
   } else {
-    LOAD_U64(REG_WORK1, s);
+	LOAD_U64(REG_WORK1, s);
 	  LDR_xXi(d, REG_WORK1, 0);
   }
 }
@@ -316,12 +316,12 @@ STATIC_INLINE void compemu_raw_jcc_l_oponly(int cc)
 	switch (cc) {
 		case NATIVE_CC_HI: // HI
 			BEQ_i(2);										// beq no jump
- 			BCC_i(0);										// bcc jump
+			BCC_i(0);										// bcc jump
 			break;
 
 		case NATIVE_CC_LS: // LS
 			BEQ_i(2);										// beq jump
- 			BCC_i(2);										// bcc no jump
+			BCC_i(2);										// bcc no jump
 			// jump
 			B_i(0); 
 			// no jump
@@ -333,7 +333,7 @@ STATIC_INLINE void compemu_raw_jcc_l_oponly(int cc)
 			break;
 
 		case NATIVE_CC_F_OGE: // Jump if valid and greater or equal
-  		BVS_i(2);		// do not jump if NaN
+		BVS_i(2);		// do not jump if NaN
 			BCS_i(0);		// jump if carry set
 			break;
 			
@@ -396,7 +396,7 @@ STATIC_INLINE void compemu_raw_jcc_l_oponly(int cc)
 			break;
 	
 		default:
-	    CC_B_i(cc, 0);
+		CC_B_i(cc, 0);
 			break;
 	}
   // emit of target into last branch will be done by caller
@@ -466,9 +466,9 @@ STATIC_INLINE void compemu_raw_jmp(uintptr t)
 		B_i(0);
 		write_jmp_target((uae_u32*)loc, t);
 	} else {
-    LDR_xPCi(REG_WORK1, 8);
-    BR_x(REG_WORK1);
-    emit_longlong(t);
+	LDR_xPCi(REG_WORK1, 8);
+	BR_x(REG_WORK1);
+	emit_longlong(t);
   }
 }
 
@@ -500,9 +500,9 @@ STATIC_INLINE void compemu_raw_maybe_do_nothing(IM32 cycles)
   idx = (uintptr)&countdown - (uintptr) &regs;
   LDR_wXi(REG_WORK2, R_REGSTRUCT, idx);
   if(cycles >= 0 && cycles <= 0xfff) {
-    SUB_wwi(REG_WORK2, REG_WORK2, cycles);
+	SUB_wwi(REG_WORK2, REG_WORK2, cycles);
   } else {
-    LOAD_U32(REG_WORK1, cycles);
+	LOAD_U32(REG_WORK1, cycles);
 	  SUB_www(REG_WORK2, REG_WORK2, REG_WORK1);
   }
   STR_wXi(REG_WORK2, R_REGSTRUCT, idx);
@@ -535,7 +535,7 @@ LOWFUNC(NONE,NONE,2,compemu_raw_endblock_pc_inreg,(RR4 rr_pc, IM32 cycles))
 	  SUB_wwi(REG_WORK1, REG_WORK1, cycles);
 	} else {
 	  LOAD_U32(REG_WORK2, cycles);
-  	SUB_www(REG_WORK1, REG_WORK1, REG_WORK2);
+	SUB_www(REG_WORK1, REG_WORK1, REG_WORK2);
   }
 	STR_wXi(REG_WORK1, R_REGSTRUCT, offs);
 
@@ -563,7 +563,7 @@ STATIC_INLINE uae_u32* compemu_raw_endblock_pc_isconst(IM32 cycles, IMPTR v)
 	  SUB_wwi(REG_WORK1, REG_WORK1, cycles);
 	} else {
 	  LOAD_U32(REG_WORK2, cycles);
-  	SUB_www(REG_WORK1, REG_WORK1, REG_WORK2);
+	SUB_www(REG_WORK1, REG_WORK1, REG_WORK2);
   }
 	STR_wXi(REG_WORK1, R_REGSTRUCT, offs);
 
@@ -598,10 +598,10 @@ LENDFUNC(NONE,NONE,2,raw_fmov_rr,(FW d, FR s))
 LOWFUNC(NONE,WRITE,2,compemu_raw_fmov_mr_drop,(MEMW mem, FR s))
 {
   if(mem >= (uintptr) &regs && mem < (uintptr) &regs + 32760 && ((mem - (uintptr) &regs) & 0x7) == 0) {
-    STR_dXi(s, R_REGSTRUCT, (mem - (uintptr) &regs));
+	STR_dXi(s, R_REGSTRUCT, (mem - (uintptr) &regs));
   } else {
-    LOAD_U64(REG_WORK1, mem);
-    STR_dXi(s, REG_WORK1, 0);
+	LOAD_U64(REG_WORK1, mem);
+	STR_dXi(s, REG_WORK1, 0);
   }
 }
 LENDFUNC(NONE,WRITE,2,compemu_raw_fmov_mr_drop,(MEMW mem, FR s))
@@ -609,10 +609,10 @@ LENDFUNC(NONE,WRITE,2,compemu_raw_fmov_mr_drop,(MEMW mem, FR s))
 LOWFUNC(NONE,READ,2,compemu_raw_fmov_rm,(FW d, MEMR mem))
 {
   if(mem >= (uintptr) &regs && mem < (uintptr) &regs + 32760 && ((mem - (uintptr) &regs) & 0x7) == 0) {
-    LDR_dXi(d, R_REGSTRUCT, (mem - (uintptr) &regs));
+	LDR_dXi(d, R_REGSTRUCT, (mem - (uintptr) &regs));
   } else {
-    LOAD_U64(REG_WORK1, mem);
-    LDR_dXi(d, REG_WORK1, 0);
+	LOAD_U64(REG_WORK1, mem);
+	LDR_dXi(d, REG_WORK1, 0);
   }
 }
 LENDFUNC(NONE,READ,2,compemu_raw_fmov_rm,(FW d, MEMW mem))
@@ -1034,7 +1034,7 @@ LOWFUNC(NONE,NONE,2,raw_fp_fscc_ri,(RW4 d, int cc))
 			break;
 
 		case NATIVE_CC_F_OGT: // Set if valid and greater than
-  		BVS_i(4);		// do not set if NaN
+		BVS_i(4);		// do not set if NaN
 			BLE_i(3);		// do not set if less or equal
 			SET_LOW8_xx(d, d);
 			B_i(2);
