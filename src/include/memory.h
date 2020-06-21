@@ -471,10 +471,6 @@ extern addrbank *get_sub_bank(uaecptr *addr);
 
 extern addrbank *mem_banks[MEMORY_BANKS];
 
-#ifdef JIT
-extern uae_u8 *baseaddr[MEMORY_BANKS];
-#endif
-
 #define get_mem_bank(addr) (*mem_banks[bankindex(addr)])
 extern addrbank *get_mem_bank_real(uaecptr);
 
