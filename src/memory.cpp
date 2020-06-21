@@ -1118,8 +1118,8 @@ err:
 static void init_mem_banks(void)
 {
 	// unsigned so i << 16 won't overflow to negative when i >= 32768
-	for (unsigned int i = 0; i < MEMORY_BANKS; i++)
-		mem_banks[i] = &dummy_bank;
+	for (auto& mem_bank : mem_banks)
+		mem_bank = &dummy_bank;
 }
 
 static void map_banks_set(addrbank *bank, int start, int size, int realsize)
