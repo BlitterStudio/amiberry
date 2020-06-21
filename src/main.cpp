@@ -275,7 +275,6 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 		{
 			error_log(_T("Unsupported fastmem size %d (0x%x)."), i.size, i.size);
 			i.size = 0;
-			//err = 1;
 		}
 	}
 
@@ -299,7 +298,6 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 				rbc->rtgmem_size = max_z3fastmem;
 			else
 				rbc->rtgmem_size = 0;
-			//err = 1;
 		}
 	}
 
@@ -309,7 +307,6 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 		{
 			error_log(_T("Unsupported Zorro III fastmem size %d (0x%x)."), i.size, i.size);
 			i.size = 0;
-			//err = 1;
 		}
 	}
 
@@ -328,7 +325,6 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 	{
 		error_log(_T("Unsupported bogomem size %d (0x%x)"), p->bogomem_size, p->bogomem_size);
 		p->bogomem_size = 0;
-		//err = 1;
 	}
 
 	if (p->bogomem_size > 0x180000 && (p->cs_fatgaryrev >= 0 || p->cs_ide || p->cs_ramseyrev >= 0))
@@ -340,7 +336,6 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 	{
 		error_log(_T("You can't use fastmem and more than 2MB chip at the same time."));
 		p->chipmem_size = 0x200000;
-		//err = 1;
 	}
 	if (p->mbresmem_low_size > 0x04000000 || (p->mbresmem_low_size & 0xfffff))
 	{
@@ -360,7 +355,6 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 		{
 			error_log(_T("You can't use Zorro II RTG and more than 2MB chip at the same time."));
 			p->chipmem_size = 0x200000;
-			//err = 1;
 		}
 		if (p->address_space_24 && rbc->rtgmem_size && rbc->rtgmem_type == GFXBOARD_UAE_Z3)
 		{
@@ -380,7 +374,6 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 	{
 		error_log(_T("Bad value for -S parameter: enable value must be within 0..3."));
 		p->produce_sound = 0;
-		//err = 1;
 	}
 	if (p->cachesize < 0 || p->cachesize > MAX_JIT_CACHE)
 	{
@@ -392,7 +385,6 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 	{
 		error_log(_T("Z3 fast memory can't be used if address space is 24-bit."));
 		p->z3fastmem[0].size = 0;
-		//err = 1;
 	}
 	for (auto& rtgboard : p->rtgboards)
 	{
@@ -400,7 +392,6 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 		{
 			error_log(_T("UAEGFX Z3 RTG can't be used if address space is 24-bit."));
 			rtgboard.rtgmem_size = 0;
-			//err = 1;
 		}
 	}
 
@@ -420,7 +411,6 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 		p->floppyslots[1].dfxtype = 0;
 		p->floppyslots[2].dfxtype = -1;
 		p->floppyslots[3].dfxtype = -1;
-		//err = 1;
 	}
 
 	if (p->floppy_speed > 0 && p->floppy_speed < 10)
@@ -432,7 +422,6 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 	{
 		error_log(_T("Invalid collision support level.  Using 1."));
 		p->collision_level = 1;
-		//err = 1;
 	}
 	if (p->cs_compatible == CP_GENERIC)
 	{
@@ -443,6 +432,7 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 			p->cs_fatgaryrev = 0;
 			p->cs_ide = -1;
 			p->cs_ramseyrev = 0x0f;
+			p->cs_mbdmac = 0;
 		}
 	}
 	else if (p->cs_compatible == 0)
@@ -455,6 +445,8 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 				p->cs_ramseyrev = 0x0f;
 		}
 	}
+	if (p->chipmem_size >= 0x100000)
+		p->cs_1mchipjumper = true;
 
 	fixup_prefs_dimensions(p);
 
@@ -464,6 +456,17 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 #ifdef CPU_68000_ONLY
 	p->cpu_model = 68000;
 	p->fpu_model = 0;
+#endif
+#ifndef CPUEMU_0
+	p->cpu_compatible = 1;
+	p->address_space_24 = 1;
+#endif
+#if !defined (CPUEMU_11) && !defined (CPUEMU_13)
+	p->cpu_compatible = 0;
+	p->address_space_24 = 0;
+#endif
+#if !defined (CPUEMU_13)
+	p->cpu_cycle_exact = p->blitter_cycle_exact = 0;
 #endif
 #ifndef AGA
 	p->chipset_mask &= ~CSMASK_AGA;
