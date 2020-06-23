@@ -41,7 +41,7 @@ extern SDL_Surface* gui_screen;
 extern SDL_Joystick* gui_joystick;
 extern gcn::SDLGraphics* gui_graphics;
 
-extern char currentDir[MAX_DPATH];
+extern char current_dir[MAX_DPATH];
 extern char last_loaded_config[MAX_DPATH];
 
 extern int quickstart_model;
@@ -144,10 +144,10 @@ void RefreshPanelOnScreen(void);
 bool HelpPanelOnScreen(std::vector<std::string> &helptext);
 #endif
 
-void RefreshAllPanels(void);
-void RegisterRefreshFunc(void (*func)(void));
+void refresh_all_panels(void);
+void register_refresh_func(void (*func)(void));
 
-void DisableResume(void);
+void disable_resume(void);
 
 bool ShowMessage(const char* title, const char* line1, const char* line2, const char* button1, const char* button2);
 const char* ShowMessageForInput(const char* title, const char* line1, const char* button1);
@@ -185,7 +185,7 @@ extern char* screenshot_filename;
 extern int currentStateNum;
 extern int delay_savestate_frame;
 
-extern void UpdateGuiScreen();
+extern void update_gui_screen();
 extern void cap_fps(Uint64 start, int fps);
 extern long get_file_size(const std::string& filename);
 extern bool download_file(const std::string& source, std::string destination);

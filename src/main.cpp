@@ -7,13 +7,13 @@
 * Copyright 1995, 1996, 1997 Bernd Schmidt
 */
 #include <iostream>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
 #include "sysconfig.h"
 #include "sysdeps.h"
-#include <assert.h>
+#include <cassert>
 
 #include "options.h"
 #include "threaddep/thread.h"
@@ -287,7 +287,6 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 				_T("Graphics card memory size %d (0x%x) larger than maximum reserved %d (0x%x)."), rbc->rtgmem_size,
 				rbc->rtgmem_size, 0x1000000, 0x1000000);
 			rbc->rtgmem_size = 0x1000000;
-			//err = 1;
 		}
 
 		if ((rbc->rtgmem_size & (rbc->rtgmem_size - 1)) != 0 || (rbc->rtgmem_size != 0 && (rbc->rtgmem_size < 0x100000))
@@ -379,7 +378,6 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 	{
 		error_log(_T("Bad value for cachesize parameter: value must be within 0..16384."));
 		p->cachesize = 0;
-		//err = 1;
 	}
 	if ((p->z3fastmem[0].size) && p->address_space_24)
 	{
@@ -388,7 +386,7 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 	}
 	for (auto& rtgboard : p->rtgboards)
 	{
-		if ((rtgboard.rtgmem_size > 0 && rtgboard.rtgmem_type == GFXBOARD_UAE_Z3) && p->address_space_24)
+		if (rtgboard.rtgmem_size > 0 && rtgboard.rtgmem_type == GFXBOARD_UAE_Z3 && p->address_space_24)
 		{
 			error_log(_T("UAEGFX Z3 RTG can't be used if address space is 24-bit."));
 			rtgboard.rtgmem_size = 0;
@@ -589,7 +587,7 @@ static void parse_cmdline_2(int argc, TCHAR** argv)
 
 static int diskswapper_cb(struct zfile* f, void* vrsd)
 {
-	int* num = (int*)vrsd;
+	auto* num = static_cast<int*>(vrsd);
 	if (*num >= MAX_SPARE_DRIVES)
 		return 1;
 	if (zfile_gettype(f) == ZFILE_DISKIMAGE) {
@@ -601,12 +599,12 @@ static int diskswapper_cb(struct zfile* f, void* vrsd)
 
 static void parse_diskswapper(const TCHAR* s)
 {
-	TCHAR* tmp = my_strdup(s);
-	const TCHAR* delim = _T(",");
-	TCHAR* p1, * p2;
-	int num = 0;
+	const auto tmp = my_strdup(s);
+	const auto* delim = _T(",");
+	TCHAR* p2;
+	auto num = 0;
 
-	p1 = tmp;
+	auto p1 = tmp;
 	for (;;) {
 		p2 = _tcstok(p1, delim);
 		if (!p2)
@@ -674,7 +672,7 @@ static void parse_cmdline(int argc, TCHAR** argv)
 	for (auto i = 1; i < argc; i++)
 	{
 		if (!_tcsncmp(argv[i], _T("-diskswapper="), 13)) {
-			TCHAR* txt = parse_text_path(argv[i] + 13);
+			auto* txt = parse_text_path(argv[i] + 13);
 			parse_diskswapper(txt);
 			xfree(txt);
 		}
@@ -897,7 +895,7 @@ static void start_program(void)
 	char kbd_flags;
 	// set capslock state based upon current "real" state
 	ioctl(0, KDGKBLED, &kbd_flags);
-	if ((kbd_flags & 07) & LED_CAP)
+	if (kbd_flags & 07 & LED_CAP)
 	{
 		// record capslock pressed
 		inputdevice_do_keyboard(AK_CAPSLOCK, 1);

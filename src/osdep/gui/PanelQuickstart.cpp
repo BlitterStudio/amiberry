@@ -374,7 +374,7 @@ public:
 			if (strlen(changed_prefs.cdslots[0].name) > 0)
 				strncpy(tmp, changed_prefs.cdslots[0].name, MAX_DPATH);
 			else
-				strncpy(tmp, currentDir, MAX_DPATH);
+				strncpy(tmp, current_dir, MAX_DPATH);
 
 			if (SelectFile("Select CD image file", tmp, cdfile_filter))
 			{
@@ -384,7 +384,7 @@ public:
 					changed_prefs.cdslots[0].inuse = true;
 					changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
 					AddFileToCDList(tmp, 1);
-					extract_path(tmp, currentDir);
+					extract_path(tmp, current_dir);
 
 					AdjustDropDownControls();
 				}
@@ -472,7 +472,7 @@ public:
 					}
 					whdload_auto_prefs(&changed_prefs, whdload_file);
 				}
-				RefreshAllPanels();
+				refresh_all_panels();
 			}
 		}
 	}
@@ -499,7 +499,7 @@ public:
 			if (strlen(whdload_file) > 0)
 				strncpy(tmp, whdload_file, MAX_DPATH);
 			else
-				strncpy(tmp, currentDir, MAX_DPATH);
+				strncpy(tmp, current_dir, MAX_DPATH);
 
 			if (SelectFile("Select WHDLoad LHA file", tmp, whdload_filter))
 			{
@@ -509,7 +509,7 @@ public:
 			}
 			cmdWhdloadSelect->requestFocus();
 		}
-		RefreshAllPanels();
+		refresh_all_panels();
 	}
 };
 
@@ -534,7 +534,7 @@ public:
 					cboConfig->setSelected(0);
 					SetControlState(quickstart_model);
 					AdjustPrefs();
-					DisableResume();
+					disable_resume();
 				}
 			}
 			else if (actionEvent.getSource() == cboConfig)
@@ -548,13 +548,13 @@ public:
 					AdjustPrefs();
 				}
 			}
-			RefreshAllPanels();
+			refresh_all_panels();
 		}
 
 		if (actionEvent.getSource() == cmdSetConfiguration)
 		{
 			AdjustPrefs();
-			RefreshAllPanels();
+			refresh_all_panels();
 		}
 	}
 };
@@ -661,7 +661,7 @@ public:
 				if (strlen(changed_prefs.floppyslots[i].df) > 0)
 					strncpy(tmp, changed_prefs.floppyslots[i].df, MAX_DPATH);
 				else
-					strncpy(tmp, currentDir, MAX_DPATH);
+					strncpy(tmp, current_dir, MAX_DPATH);
 				if (SelectFile("Select disk image file", tmp, diskfile_filter))
 				{
 					if (strncmp(changed_prefs.floppyslots[i].df, tmp, MAX_DPATH) != 0)
@@ -669,7 +669,7 @@ public:
 						strncpy(changed_prefs.floppyslots[i].df, tmp, MAX_DPATH);
 						disk_insert(i, tmp);
 						AddFileToDiskList(tmp, 1);
-						extract_path(tmp, currentDir);
+						extract_path(tmp, current_dir);
 
 						AdjustDropDownControls();
 					}

@@ -249,7 +249,7 @@ public:
 			if (strlen(changed_prefs.cdslots[0].name) > 0)
 				strncpy(tmp, changed_prefs.cdslots[0].name, MAX_DPATH);
 			else
-				strcpy(tmp, currentDir);
+				strcpy(tmp, current_dir);
 
 			if (SelectFile("Select CD image file", tmp, cdfile_filter))
 			{
@@ -259,7 +259,7 @@ public:
 					changed_prefs.cdslots[0].inuse = true;
 					changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
 					AddFileToCDList(tmp, 1);
-					extract_path(tmp, currentDir);
+					extract_path(tmp, current_dir);
 
 					AdjustDropDownControls();
 				}

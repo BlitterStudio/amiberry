@@ -90,14 +90,14 @@ public:
 		{
 			changed_prefs.mbresmem_low_size = A3000LowMem_values[static_cast<int>(sldA3000Lowmem->getValue())];
 			if (currprefs.mbresmem_low_size != changed_prefs.mbresmem_low_size)
-				DisableResume();
+				disable_resume();
 		}
 
 		if (actionEvent.getSource() == sldA3000Highmem)
 		{
 			changed_prefs.mbresmem_high_size = A3000HighMem_values[static_cast<int>(sldA3000Highmem->getValue())];
 			if (currprefs.mbresmem_high_size != changed_prefs.mbresmem_high_size)
-				DisableResume();
+				disable_resume();
 		}
 
 		RefreshPanelRAM();

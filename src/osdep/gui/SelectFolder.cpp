@@ -396,7 +396,7 @@ static void SelectFolderLoop()
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
 		// Finally we update the screen.
-		UpdateGuiScreen();
+		update_gui_screen();
 	}
 }
 
@@ -412,7 +412,7 @@ bool SelectFolder(const char* title, char* value)
 	// Prepare the screen once
 	uae_gui->logic();
 	uae_gui->draw();
-	UpdateGuiScreen();
+	update_gui_screen();
 
 	while (!dialogFinished)
 	{

@@ -163,7 +163,7 @@ public:
 
 		if (actionEvent.getSource() == cmdMainROM)
 		{
-			strncpy(tmp, currentDir, MAX_DPATH - 1);
+			strncpy(tmp, current_dir, MAX_DPATH - 1);
 			if (SelectFile("Select System ROM", tmp, filter))
 			{
 				const auto newrom = new AvailableROM();
@@ -179,7 +179,7 @@ public:
 		}
 		else if (actionEvent.getSource() == cmdExtROM)
 		{
-			strncpy(tmp, currentDir, MAX_DPATH - 1);
+			strncpy(tmp, current_dir, MAX_DPATH - 1);
 			if (SelectFile("Select Extended ROM", tmp, filter))
 			{
 				const auto newrom = new AvailableROM();
@@ -195,7 +195,7 @@ public:
 		}
 		else if (actionEvent.getSource() == cmdCartROM)
 		{
-			strncpy(tmp, currentDir, MAX_DPATH - 1);
+			strncpy(tmp, current_dir, MAX_DPATH - 1);
 			if (SelectFile("Select Cartridge ROM", tmp, filter))
 			{
 				const auto newrom = new AvailableROM();

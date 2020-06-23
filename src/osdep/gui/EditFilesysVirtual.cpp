@@ -373,7 +373,7 @@ static void EditFilesysVirtualLoop()
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
 		// Finally we update the screen.
-		UpdateGuiScreen();
+		update_gui_screen();
 	}
 }
 
@@ -412,7 +412,7 @@ bool EditFilesysVirtual(const int unit_no)
 		CreateDefaultDevicename(tmp);
 		txtDevice->setText(tmp);
 		txtVolume->setText(tmp);
-		strroot.assign(currentDir);
+		strroot.assign(current_dir);
 		txtPath->setText(strroot);
 		chkReadWrite->setSelected(true);
 		txtBootPri->setText("0");
@@ -421,7 +421,7 @@ bool EditFilesysVirtual(const int unit_no)
 	// Prepare the screen once
 	uae_gui->logic();
 	uae_gui->draw();
-	UpdateGuiScreen();
+	update_gui_screen();
 
 	while (!dialogFinished)
 	{
@@ -434,7 +434,7 @@ bool EditFilesysVirtual(const int unit_no)
 	{
 		struct uaedev_config_info ci{};
 		const auto bp = tweakbootpri(atoi(txtBootPri->getText().c_str()), chkAutoboot->isSelected() ? 1 : 0, 0);
-		extract_path(const_cast<char *>(txtPath->getText().c_str()), currentDir);
+		extract_path(const_cast<char *>(txtPath->getText().c_str()), current_dir);
 
 		uci_set_defaults(&ci, true);
 		strncpy(ci.devname, const_cast<char *>(txtDevice->getText().c_str()), MAX_DPATH);

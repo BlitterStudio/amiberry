@@ -103,7 +103,7 @@ extern void signal_term(int signum, siginfo_t* info, void* ptr);
 extern void SetLastActiveConfig(const char* filename);
 
 char start_path_data[MAX_DPATH];
-char currentDir[MAX_DPATH];
+char current_dir[MAX_DPATH];
 
 #include <linux/kd.h>
 #include <sys/ioctl.h>
@@ -1025,7 +1025,7 @@ void save_amiberry_settings(void)
 	fputs(buffer, f);
 	
 	// Paths
-	snprintf(buffer, MAX_DPATH, "path=%s\n", currentDir);
+	snprintf(buffer, MAX_DPATH, "path=%s\n", current_dir);
 	fputs(buffer, f);
 
 	snprintf(buffer, MAX_DPATH, "config_path=%s\n", config_path);
@@ -1112,7 +1112,7 @@ void load_amiberry_settings(void)
 {
 	char path[MAX_DPATH];
 	int i;
-	strncpy(currentDir, start_path_data, MAX_DPATH - 1);
+	strncpy(current_dir, start_path_data, MAX_DPATH - 1);
 	snprintf(config_path, MAX_DPATH, "%s/conf/", start_path_data);
 	snprintf(controllers_path, MAX_DPATH, "%s/controllers/", start_path_data);
 	snprintf(retroarch_file, MAX_DPATH, "%s/conf/retroarch.cfg", start_path_data);
@@ -1198,7 +1198,7 @@ void load_amiberry_settings(void)
 				}
 				else
 				{
-					cfgfile_string(option, value, "path", currentDir, sizeof currentDir);
+					cfgfile_string(option, value, "path", current_dir, sizeof current_dir);
 					cfgfile_string(option, value, "config_path", config_path, sizeof config_path);
 					cfgfile_string(option, value, "controllers_path", controllers_path, sizeof controllers_path);
 					cfgfile_string(option, value, "retroarch_config", retroarch_file, sizeof retroarch_file);

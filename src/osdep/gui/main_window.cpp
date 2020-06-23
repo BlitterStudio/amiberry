@@ -1,7 +1,6 @@
-#include <stdbool.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
 #include <iostream>
 
 #include <guisan.hpp>
@@ -200,14 +199,14 @@ void gui_restart()
 	gui_running = false;
 }
 
-static void (*refreshFuncAfterDraw)(void) = nullptr;
+static void (*refresh_func_after_draw)(void) = nullptr;
 
-void RegisterRefreshFunc(void (*func)(void))
+void register_refresh_func(void (*func)(void))
 {
-	refreshFuncAfterDraw = func;
+	refresh_func_after_draw = func;
 }
 
-static void ShowHelpRequested()
+static void show_help_requested()
 {
 	vector<string> helptext;
 	if (categories[last_active_panel].HelpFunc != nullptr && categories[last_active_panel].HelpFunc(helptext))
@@ -231,7 +230,7 @@ void cap_fps(Uint64 start, int fps)
 		SDL_Delay(floor(20.000f - elapsed_ms));
 }
 
-void UpdateGuiScreen()
+void update_gui_screen()
 {
 #ifdef USE_DISPMANX
 	vc_dispmanx_resource_write_data(gui_resource, rgb_mode, gui_screen->pitch, gui_screen->pixels, &blit_rect);
@@ -272,14 +271,14 @@ void setup_cursor()
 		return;
 	}
 	
-	auto* formattedSurface = SDL_ConvertSurfaceFormat(cursor_surface, SDL_PIXELFORMAT_RGBA8888, 0);
-	if (formattedSurface != nullptr)
+	auto* formatted_surface = SDL_ConvertSurfaceFormat(cursor_surface, SDL_PIXELFORMAT_RGBA8888, 0);
+	if (formatted_surface != nullptr)
 	{
 		SDL_FreeSurface(cursor_surface);
 
 		// Create new cursor with surface
-		cursor = SDL_CreateColorCursor(formattedSurface, 0, 0);
-		SDL_FreeSurface(formattedSurface);
+		cursor = SDL_CreateColorCursor(formatted_surface, 0, 0);
+		SDL_FreeSurface(formatted_surface);
 	}
 
 	if (!cursor)
@@ -287,7 +286,7 @@ void setup_cursor()
 		// Cursor creation failed. Log error and free surface
 		write_log("Could not create color cursor: %s\n", SDL_GetError());
 		cursor_surface = nullptr;
-		formattedSurface = nullptr;
+		formatted_surface = nullptr;
 		SDL_SetCursor(SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW));
 		return;
 	}
@@ -489,7 +488,7 @@ int get_joypad_axis_state(int axis)
 	return result;
 }
 
-void checkInput()
+void check_input()
 {
 	const auto key_for_gui = SDL_GetKeyFromName(currprefs.open_gui);
 	int gotEvent = 0;
@@ -574,7 +573,7 @@ void checkInput()
 				}
 				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].left_trigger))
 				{
-					ShowHelpRequested();
+					show_help_requested();
 					cmdHelp->requestFocus();
 					break;
 				}
@@ -714,7 +713,7 @@ void checkInput()
 					break;
 
 				case SDLK_F1:
-					ShowHelpRequested();
+					show_help_requested();
 					cmdHelp->requestFocus();
 					break;
 
@@ -788,7 +787,7 @@ void checkInput()
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
 
-		UpdateGuiScreen();
+		update_gui_screen();
 	}
 }
 
@@ -818,7 +817,7 @@ void amiberry_gui_run()
 	// Prepare the screen once
 	uae_gui->logic();
 	uae_gui->draw();
-	UpdateGuiScreen();
+	update_gui_screen();
 	
 	//-------------------------------------------------
 	// The main loop
@@ -826,15 +825,15 @@ void amiberry_gui_run()
 	while (gui_running)
 	{
 		const auto start = SDL_GetPerformanceCounter();
-		checkInput();
+		check_input();
 
 		if (gui_rtarea_flags_onenter != gui_create_rtarea_flag(&changed_prefs))
-			DisableResume();
+			disable_resume();
 
-		if (refreshFuncAfterDraw != nullptr)
+		if (refresh_func_after_draw != nullptr)
 		{
-			void (*currFunc)() = refreshFuncAfterDraw;
-			refreshFuncAfterDraw = nullptr;
+			void (*currFunc)() = refresh_func_after_draw;
+			refresh_func_after_draw = nullptr;
 			currFunc();
 		}
 
@@ -917,7 +916,7 @@ public:
 		}
 		else if (actionEvent.getSource() == cmdHelp)
 		{
-			ShowHelpRequested();
+			show_help_requested();
 			cmdHelp->requestFocus();
 		}
 	}
@@ -1133,7 +1132,7 @@ void gui_widgets_halt()
 	delete gui_top;
 }
 
-void RefreshAllPanels()
+void refresh_all_panels()
 {
 	for (auto i = 0; categories[i].category != nullptr; ++i)
 	{
@@ -1142,7 +1141,7 @@ void RefreshAllPanels()
 	}
 }
 
-void DisableResume()
+void disable_resume()
 {
 	if (emulating)
 	{

@@ -368,7 +368,7 @@ static void CreateFilesysHardfileLoop()
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
 		// Finally we update the screen.
-		UpdateGuiScreen();
+		update_gui_screen();
 	}
 }
 
@@ -385,7 +385,7 @@ bool CreateFilesysHardfile()
 
 	CreateDefaultDevicename(tmp);
 	txtDevice->setText(tmp);
-	strroot.assign(currentDir);
+	strroot.assign(current_dir);
 	txtPath->setText(strroot);
 	fileSelected = false;
 
@@ -395,7 +395,7 @@ bool CreateFilesysHardfile()
 	// Prepare the screen once
 	uae_gui->logic();
 	uae_gui->draw();
-	UpdateGuiScreen();
+	update_gui_screen();
 
 	while (!dialogFinished)
 	{

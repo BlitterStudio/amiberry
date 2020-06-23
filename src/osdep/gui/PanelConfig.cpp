@@ -41,8 +41,8 @@ bool LoadConfigByName(const char* name)
 			txtDesc->setText(config->Description);
 			target_cfgfile_load(&changed_prefs, config->FullPath, 0, 0);
 			strncpy(last_active_config, config->Name, MAX_DPATH);
-			DisableResume();
-			RefreshAllPanels();
+			disable_resume();
+			refresh_all_panels();
 		}
 	}
 
@@ -111,16 +111,16 @@ public:
 			
 			if (emulating)
 			{
-				DisableResume();
+				disable_resume();
 				target_cfgfile_load(&changed_prefs, ConfigFilesList[i]->FullPath, 0, 0);
 				strncpy(last_active_config, ConfigFilesList[i]->Name, MAX_DPATH);
-				RefreshAllPanels();
+				refresh_all_panels();
 			}
 			else
 			{
 				target_cfgfile_load(&changed_prefs, ConfigFilesList[i]->FullPath, 0, 0);
 				strncpy(last_active_config, ConfigFilesList[i]->Name, MAX_DPATH);
-				RefreshAllPanels();
+				refresh_all_panels();
 			}
 		}
 		else if (actionEvent.getSource() == cmdSave)
@@ -194,9 +194,9 @@ public:
 
 			if (emulating)
 			{
-				DisableResume();
+				disable_resume();
 			}
-			RefreshAllPanels();
+			refresh_all_panels();
 			uae_reset(1, 0);
 			gui_running = false;
 		}
@@ -340,7 +340,7 @@ void RefreshPanelConfig()
 				// Select current entry
 				lstConfigs->setSelected(i);
 				ensureVisible = i;
-				RegisterRefreshFunc(MakeCurrentVisible);
+				register_refresh_func(MakeCurrentVisible);
 				break;
 			}
 		}

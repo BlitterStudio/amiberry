@@ -191,7 +191,7 @@ public:
 				if (strlen(changed_prefs.floppyslots[i].df) > 0)
 					strncpy(tmp, changed_prefs.floppyslots[i].df, MAX_DPATH);
 				else
-					strncpy(tmp, currentDir, MAX_DPATH);
+					strncpy(tmp, current_dir, MAX_DPATH);
 				if (SelectFile("Select disk image file", tmp, diskfile_filter))
 				{
 					if (strncmp(changed_prefs.floppyslots[i].df, tmp, MAX_DPATH) != 0)
@@ -199,7 +199,7 @@ public:
 						strncpy(changed_prefs.floppyslots[i].df, tmp, MAX_DPATH);
 						disk_insert(i, tmp);
 						AddFileToDiskList(tmp, 1);
-						extract_path(tmp, currentDir);
+						extract_path(tmp, current_dir);
 
 						if (i == 0 && chkLoadConfig->isSelected())
 						{
@@ -331,7 +331,7 @@ public:
 			// Create 3.5'' DD Disk
 			char tmp[MAX_DPATH];
 			char diskname[MAX_DPATH];
-			strncpy(tmp, currentDir, MAX_DPATH);
+			strncpy(tmp, current_dir, MAX_DPATH);
 			if (SelectFile("Create 3.5'' DD disk file", tmp, diskfile_filter, true))
 			{
 				extract_filename(tmp, diskname);
@@ -339,7 +339,7 @@ public:
 				diskname[31] = '\0';
 				disk_creatediskfile(&changed_prefs, tmp, 0, DRV_35_DD, -1, diskname, false, false, nullptr);
 				AddFileToDiskList(tmp, 1);
-				extract_path(tmp, currentDir);
+				extract_path(tmp, current_dir);
 			}
 			cmdCreateDDDisk->requestFocus();
 		}
@@ -348,7 +348,7 @@ public:
 			// Create 3.5'' HD Disk
 			char tmp[MAX_DPATH];
 			char diskname[MAX_DPATH];
-			strcpy(tmp, currentDir);
+			strcpy(tmp, current_dir);
 			if (SelectFile("Create 3.5'' HD disk file", tmp, diskfile_filter, true))
 			{
 				extract_filename(tmp, diskname);
@@ -356,7 +356,7 @@ public:
 				diskname[31] = '\0';
 				disk_creatediskfile(&changed_prefs, tmp, 0, DRV_35_HD, -1, diskname, false, false, nullptr);
 				AddFileToDiskList(tmp, 1);
-				extract_path(tmp, currentDir);
+				extract_path(tmp, current_dir);
 			}
 			cmdCreateHDDisk->requestFocus();
 		}

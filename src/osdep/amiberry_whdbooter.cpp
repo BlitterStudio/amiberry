@@ -23,7 +23,7 @@ extern FILE* debugfile;
 #include <libxml/tree.h>
 
 extern void SetLastActiveConfig(const char* filename);
-extern char currentDir[MAX_DPATH];
+extern char current_dir[MAX_DPATH];
 extern char last_loaded_config[MAX_DPATH];
 
 #include <fstream> /// Horace added
@@ -249,7 +249,7 @@ void symlink_roms(struct uae_prefs* prefs)
 	write_log("SymLink Kickstart ROMs for Booter\n");
 
 	// here we can do some checks for Kickstarts we might need to make symlinks for
-	strncpy(currentDir, start_path_data, MAX_DPATH);
+	strncpy(current_dir, start_path_data, MAX_DPATH);
 
 	// are we using save-data/ ?
 	snprintf(kick_path, MAX_DPATH, "%s/whdboot/save-data/Kickstarts", start_path_data);

@@ -145,7 +145,7 @@ static void ShowMessageWaitInputLoop()
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
 		// Finally we update the screen.
-		UpdateGuiScreen();
+		update_gui_screen();
 	}
 
 }
@@ -289,7 +289,7 @@ static void ShowMessageLoop()
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
 		// Finally we update the screen.
-		UpdateGuiScreen();
+		update_gui_screen();
 	}
 }
 
@@ -315,7 +315,7 @@ bool ShowMessage(const char* title, const char* line1, const char* line2, const 
 	// Prepare the screen once
 	uae_gui->logic();
 	uae_gui->draw();
-	UpdateGuiScreen();
+	update_gui_screen();
 
 	while (!dialogFinished)
 	{
@@ -343,7 +343,7 @@ const char* ShowMessageForInput(const char* title, const char* line1, const char
 	// Prepare the screen once
 	uae_gui->logic();
 	uae_gui->draw();
-	UpdateGuiScreen();
+	update_gui_screen();
 
 	while (!dialogFinished)
 	{

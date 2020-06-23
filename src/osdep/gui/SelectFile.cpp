@@ -484,7 +484,7 @@ static void SelectFileLoop()
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
 		// Finally we update the screen.
-		UpdateGuiScreen();
+		update_gui_screen();
 	}
 }
 
@@ -510,7 +510,7 @@ bool SelectFile(const char* title, char* value, const char* filter[], const bool
 	// Prepare the screen once
 	uae_gui->logic();
 	uae_gui->draw();
-	UpdateGuiScreen();
+	update_gui_screen();
 
 	while (!dialogFinished)
 	{
