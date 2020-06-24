@@ -71,10 +71,6 @@ bool can_have_1gb()
 
 void alloc_AmigaMem(void)
 {
-	int i;
-	uae_u64 total;
-	int max_allowed_mman;
-
 	free_AmigaMem();
 	set_expamem_z3_hack_mode(Z3MAPPING_AUTO);
 
@@ -225,7 +221,7 @@ static bool HandleA3000Mem(unsigned int lowsize, unsigned int highsize)
 
 static bool A3000MemAvailable(void)
 {
-	return (a3000_mem != MAP_FAILED);
+	return a3000_mem != MAP_FAILED;
 }
 
 bool uae_mman_info(addrbank* ab, struct uae_mman_data* md)
@@ -504,7 +500,7 @@ bool mapped_malloc(addrbank* ab)
 	}
 	ab->flags |= ABFLAG_DIRECTMAP;
 
-	return (ab->baseaddr != nullptr);
+	return ab->baseaddr != nullptr;
 }
 
 void mapped_free(addrbank* ab)
@@ -522,27 +518,26 @@ void mapped_free(addrbank* ab)
 
 void protect_roms(bool protect)
 {
-	/*
-If this code is enabled, we can't switch back from JIT to nonJIT emulation...
+	//If this code is enabled, we can't switch back from JIT to nonJIT emulation...
 
-  if (protect) {
-	  // protect only if JIT enabled, always allow unprotect
-	  if (!currprefs.cachesize)
-		  return;
-  }
+	//if (protect) {
+	//	// protect only if JIT enabled, always allow unprotect
+	//	if (!currprefs.cachesize || currprefs.comptrustbyte || currprefs.comptrustword || currprefs.comptrustlong)
+	//		return;
+	//}
 
-// Protect all regions, which contains ROM
-if(extendedkickmem_bank.baseaddr != NULL)
-  mprotect(extendedkickmem_bank.baseaddr, 0x80000, protect ? PROT_READ : PROT_READ | PROT_WRITE);
-if(extendedkickmem2_bank.baseaddr != NULL)
-  mprotect(extendedkickmem2_bank.baseaddr, 0x80000, protect ? PROT_READ : PROT_READ | PROT_WRITE);
-if(kickmem_bank.baseaddr != NULL)
-  mprotect(kickmem_bank.baseaddr, 0x80000, protect ? PROT_READ : PROT_READ | PROT_WRITE);
-if(rtarea != NULL)
-  mprotect(rtarea, RTAREA_SIZE, protect ? PROT_READ : PROT_READ | PROT_WRITE);
-if(filesysory != NULL)
-  mprotect(filesysory, 0x10000, protect ? PROT_READ : PROT_READ | PROT_WRITE);
-*/
+	// Protect all regions, which contains ROM
+	//if (extendedkickmem_bank.baseaddr != NULL)
+		//mprotect(extendedkickmem_bank.baseaddr, 0x80000, protect ? PROT_READ : PROT_READ | PROT_WRITE);
+	//if (extendedkickmem2_bank.baseaddr != NULL)
+		//mprotect(extendedkickmem2_bank.baseaddr, 0x80000, protect ? PROT_READ : PROT_READ | PROT_WRITE);
+	//if (kickmem_bank.baseaddr != NULL)
+		//mprotect(kickmem_bank.baseaddr, 0x80000, protect ? PROT_READ : PROT_READ | PROT_WRITE);
+	//if (rtarea != NULL)
+	//	mprotect(rtarea, RTAREA_SIZE, protect ? PROT_READ : PROT_READ | PROT_WRITE);
+	//if (filesysory != NULL)
+	//	mprotect(filesysory, 0x10000, protect ? PROT_READ : PROT_READ | PROT_WRITE);
+
 }
 
 static int doinit_shm(void)
