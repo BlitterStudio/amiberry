@@ -1405,6 +1405,23 @@ int main(int argc, char* argv[])
 	return 0;
 }
 
+void toggle_mouse_grab()
+{
+	// Release mouse
+	if (mouse_grabbed)
+	{
+		mouse_grabbed = false;
+		SDL_ShowCursor(SDL_ENABLE);
+		SDL_SetRelativeMouseMode(SDL_FALSE);
+	}
+	else
+	{
+		mouse_grabbed = true;
+		SDL_ShowCursor(SDL_DISABLE);
+		SDL_SetRelativeMouseMode(SDL_TRUE);
+	}
+}
+
 int handle_msgpump()
 {
 	auto gotEvent = 0;
@@ -1575,19 +1592,7 @@ int handle_msgpump()
 				if (event.button.button == SDL_BUTTON_MIDDLE)
 				{
 					setmousebuttonstate(0, 2, 0);
-					// Release mouse
-					if (mouse_grabbed)
-					{
-						mouse_grabbed = false;
-						SDL_ShowCursor(SDL_ENABLE);
-						SDL_SetRelativeMouseMode(SDL_FALSE);
-					}
-					else
-					{
-						mouse_grabbed = true;
-						SDL_ShowCursor(SDL_DISABLE);
-						SDL_SetRelativeMouseMode(SDL_TRUE);
-					}
+					toggle_mouse_grab();
 				}
 			}
 			break;
