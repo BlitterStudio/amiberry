@@ -22,8 +22,8 @@
 #define GETBDM(x) (((x) - (((x) / 10000) * 10000)) / 100)
 #define GETBDD(x) ((x) % 100)
 
-#define AMIBERRYVERSION _T("Amiberry v3.2 beta (2020-06-25)")
-#define AMIBERRYDATE MAKEBD(2020, 6, 25)
+#define AMIBERRYVERSION _T("Amiberry v3.2 beta (2020-06-26)")
+#define AMIBERRYDATE MAKEBD(2020, 6, 26)
 
 extern std::string get_version_string();
 
