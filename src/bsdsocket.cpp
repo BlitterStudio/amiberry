@@ -47,12 +47,16 @@ static struct sockd *sockdata;
 uae_u32 strncpyha(TrapContext *ctx, uae_u32 dst, const uae_char *src, int size)
 {
 	uae_u32 res = dst;
-	if (!addr_valid(_T("strncpyha"), dst, size))
-		return res;
-	while (size--) {
-		put_byte (dst++, *src);
-		if (!*src++)
+	if (trap_is_indirect()) {
+		trap_put_string(ctx, src, dst, size);
+	} else {
+		if (!addr_valid(_T("strncpyha"), dst, size))
 			return res;
+		while (size--) {
+			put_byte (dst++, *src);
+			if (!*src++)
+				return res;
+		}
 	}
 	return res;
 }
@@ -63,7 +67,11 @@ uae_u32 addstr(TrapContext *ctx, uae_u32 * dst, const TCHAR *src)
 	int len;
 	char *s = ua(src);
 	len = strlen(s) + 1;
-	strcpyha_safe (*dst, s);
+	if (trap_is_indirect()) {
+		trap_put_bytes(ctx, dst, res, len);
+	} else {
+		strcpyha_safe (*dst, s);
+	}
 	(*dst) += len;
 	xfree (s);
 	return res;
@@ -73,7 +81,11 @@ uae_u32 addstr_ansi(TrapContext *ctx, uae_u32 * dst, const uae_char *src)
 	uae_u32 res = *dst;
 	int len;
 	len = strlen (src) + 1;
-	strcpyha_safe (*dst, src);
+	if (trap_is_indirect()) {
+		trap_put_bytes(ctx, dst, res, len);
+	} else {
+		strcpyha_safe (*dst, src);
+	}
 	(*dst) += len;
 	return res;
 }
@@ -84,7 +96,11 @@ uae_u32 addmem(TrapContext *ctx, uae_u32 * dst, const uae_char *src, int len)
 
 	if (!src)
 		return 0;
-	memcpyha_safe (*dst, (uae_u8*)src, len);
+	if (trap_is_indirect()) {
+		trap_put_bytes(ctx, src, res, len);
+	} else {
+		memcpyha_safe (*dst, (uae_u8*)src, len);
+	}
 	(*dst) += len;
 
 	return res;
