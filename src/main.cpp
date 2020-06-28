@@ -477,6 +477,9 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 #if !defined (BSDSOCKET)
 	p->socket_emu = 0;
 #endif
+#if !defined (SCSIEMU)
+	p->scsi = 0;
+#endif
 
 	if (p->gfx_framerate < 1)
 		p->gfx_framerate = 1;
