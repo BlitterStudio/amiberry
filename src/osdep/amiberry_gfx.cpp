@@ -1,8 +1,7 @@
-#include <stdbool.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstdlib>
+#include <cstring>
 #include <unistd.h>
-#include <stdio.h>
+#include <cstdio>
 #include <cmath>
 
 #include "sysdeps.h"
@@ -624,21 +623,28 @@ static void open_screen(struct uae_prefs* p)
 
 	if (sdl_window && strcmp(sdl_video_driver, "x11") == 0)
 	{
-		const bool is_fullscreen = SDL_GetWindowFlags(sdl_window) & SDL_WINDOW_FULLSCREEN_DESKTOP;
+		const bool is_fullwindow = SDL_GetWindowFlags(sdl_window) & SDL_WINDOW_FULLSCREEN_DESKTOP;
+		const bool is_fullscreen = SDL_GetWindowFlags(sdl_window) & SDL_WINDOW_FULLSCREEN;
+		
 		if (p->gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN)
 		{
 			// Switch to Fullscreen mode, if we don't have it already
 			if (!is_fullscreen)
+				SDL_SetWindowFullscreen(sdl_window, SDL_WINDOW_FULLSCREEN);
+		}
+		else if (p->gfx_apmode[0].gfx_fullscreen == GFX_FULLWINDOW)
+		{
+			if (!is_fullwindow)
 				SDL_SetWindowFullscreen(sdl_window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 		}
 		else
 		{
 			// Switch to Window mode, if we don't have it already
-			if (is_fullscreen)
+			if (is_fullscreen || is_fullwindow)
 				SDL_SetWindowFullscreen(sdl_window, 0);
 		}
 
-		if (!is_fullscreen)
+		if (!is_fullscreen && !is_fullwindow)
 			if ((SDL_GetWindowFlags(sdl_window) & SDL_WINDOW_MAXIMIZED) == 0)
 			{
 				if (screen_is_picasso)

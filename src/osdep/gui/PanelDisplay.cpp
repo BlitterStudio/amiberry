@@ -1,9 +1,8 @@
-#include <stdio.h>
+#include <cstdio>
 
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
-#include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
 
 #include "sysdeps.h"
@@ -13,6 +12,38 @@
 
 const int amigawidth_values[] = {320, 362, 384, 640, 704, 720};
 const int amigaheight_values[] = {200, 216, 240, 256, 262, 270, 284};
+
+class StringListModel : public gcn::ListModel
+{
+	std::vector<std::string> values;
+public:
+	StringListModel(const char* entries[], const int count)
+	{
+		for (auto i = 0; i < count; ++i)
+			values.emplace_back(entries[i]);
+	}
+
+	int getNumberOfElements() override
+	{
+		return values.size();
+	}
+
+	int AddElement(const char* Elem)
+	{
+		values.emplace_back(Elem);
+		return 0;
+	}
+
+	std::string getElementAt(const int i) override
+	{
+		if (i < 0 || i >= static_cast<int>(values.size()))
+			return "---";
+		return values[i];
+	}
+};
+
+const char* fullscreen_modes[] = { "Windowed", "Fullscreen", "Full-window" };
+StringListModel fullscreen_modes_list(fullscreen_modes, 3);
 
 static gcn::Window* grpScalingMethod;
 static gcn::RadioButton* optAuto;
@@ -26,16 +57,20 @@ static gcn::RadioButton* optScanlines;
 
 static gcn::Window* grpAmigaScreen;
 static gcn::Label* lblAmigaWidth;
-static gcn::Label* lblAmigaWidthInfo;
+static gcn::TextField* txtAmigaWidth;
 static gcn::Slider* sldAmigaWidth;
+
 static gcn::Label* lblAmigaHeight;
-static gcn::Label* lblAmigaHeightInfo;
+static gcn::TextField* txtAmigaHeight;
 static gcn::Slider* sldAmigaHeight;
+
 static gcn::CheckBox* chkAutoHeight;
 
 static gcn::CheckBox* chkFrameskip;
 static gcn::CheckBox* chkAspect;
-static gcn::CheckBox* chkFullscreen;
+
+static gcn::Label* lblScreenmode;
+static gcn::DropDown* cboScreenmode;
 
 static gcn::Window* grpCentering;
 static gcn::CheckBox* chkHorizontal;
@@ -71,17 +106,22 @@ public:
 		else if (actionEvent.getSource() == chkAspect)
 			changed_prefs.gfx_correct_aspect = chkAspect->isSelected();
 
-		else if (actionEvent.getSource() == chkFullscreen)
+		else if (actionEvent.getSource() == cboScreenmode)
 		{
-			if (changed_prefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN)
+			if (cboScreenmode->getSelected() == 0)
 			{
 				changed_prefs.gfx_apmode[0].gfx_fullscreen = GFX_WINDOW;
 				changed_prefs.gfx_apmode[1].gfx_fullscreen = GFX_WINDOW;
 			}
-			else
+			else if (cboScreenmode->getSelected() == 1)
 			{
 				changed_prefs.gfx_apmode[0].gfx_fullscreen = GFX_FULLSCREEN;
 				changed_prefs.gfx_apmode[1].gfx_fullscreen = GFX_FULLSCREEN;
+			}
+			else if (cboScreenmode->getSelected() == 2)
+			{
+				changed_prefs.gfx_apmode[0].gfx_fullscreen = GFX_FULLWINDOW;
+				changed_prefs.gfx_apmode[1].gfx_fullscreen = GFX_FULLWINDOW;
 			}
 		}
 
@@ -142,26 +182,30 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	auto posY = DISTANCE_BORDER;
 
 	lblAmigaWidth = new gcn::Label("Width:");
-	lblAmigaWidth->setAlignment(gcn::Graphics::RIGHT);
+	lblAmigaWidth->setAlignment(gcn::Graphics::LEFT);
 	sldAmigaWidth = new gcn::Slider(0, AMIGAWIDTH_COUNT - 1);
-	sldAmigaWidth->setSize(160, SLIDER_HEIGHT);
+	sldAmigaWidth->setSize(135, SLIDER_HEIGHT);
 	sldAmigaWidth->setBaseColor(gui_baseCol);
 	sldAmigaWidth->setMarkerLength(20);
 	sldAmigaWidth->setStepLength(1);
 	sldAmigaWidth->setId("sldWidth");
 	sldAmigaWidth->addActionListener(amigaScreenActionListener);
-	lblAmigaWidthInfo = new gcn::Label("320");
+	txtAmigaWidth = new gcn::TextField();
+	txtAmigaWidth->setSize(35, TEXTFIELD_HEIGHT);
+	txtAmigaWidth->setBackgroundColor(colTextboxBackground);
 
 	lblAmigaHeight = new gcn::Label("Height:");
-	lblAmigaHeight->setAlignment(gcn::Graphics::RIGHT);
+	lblAmigaHeight->setAlignment(gcn::Graphics::LEFT);
 	sldAmigaHeight = new gcn::Slider(0, AMIGAHEIGHT_COUNT - 1);
-	sldAmigaHeight->setSize(160, SLIDER_HEIGHT);
+	sldAmigaHeight->setSize(135, SLIDER_HEIGHT);
 	sldAmigaHeight->setBaseColor(gui_baseCol);
 	sldAmigaHeight->setMarkerLength(20);
 	sldAmigaHeight->setStepLength(1);
 	sldAmigaHeight->setId("sldHeight");
 	sldAmigaHeight->addActionListener(amigaScreenActionListener);
-	lblAmigaHeightInfo = new gcn::Label("200");
+	txtAmigaHeight = new gcn::TextField();
+	txtAmigaHeight->setSize(35, TEXTFIELD_HEIGHT);
+	txtAmigaHeight->setBackgroundColor(colTextboxBackground);
 
 	chkAutoHeight = new gcn::CheckBox("Auto Height");
 	chkAutoHeight->setId("chkAutoHeight");
@@ -182,30 +226,34 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	chkFrameskip->setId("Frameskip");
 	chkFrameskip->addActionListener(amigaScreenActionListener);
 
-	chkFullscreen = new gcn::CheckBox("Fullscreen");
-	chkFullscreen->setId("Fullscreen");
-	chkFullscreen->addActionListener(amigaScreenActionListener);
-
+	lblScreenmode = new gcn::Label("Screen mode:");
+	lblScreenmode->setAlignment(gcn::Graphics::RIGHT);
+	cboScreenmode = new gcn::DropDown(&fullscreen_modes_list);
+	cboScreenmode->setSize(100, cboScreenmode->getHeight());
+	cboScreenmode->setBaseColor(gui_baseCol);
+	cboScreenmode->setBackgroundColor(colTextboxBackground);
+	cboScreenmode->setId("cboScreenmode");
+	cboScreenmode->addActionListener(amigaScreenActionListener);
+	
 	grpAmigaScreen = new gcn::Window("Amiga Screen");
 	grpAmigaScreen->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
 
 	grpAmigaScreen->add(lblAmigaWidth, DISTANCE_BORDER, posY);
-	grpAmigaScreen->add(sldAmigaWidth, lblAmigaWidth->getX() + lblAmigaWidth->getWidth() + DISTANCE_NEXT_X, posY);
-	grpAmigaScreen->add(lblAmigaWidthInfo, sldAmigaWidth->getX() + sldAmigaWidth->getWidth() + DISTANCE_NEXT_X, posY);
+	grpAmigaScreen->add(sldAmigaWidth, lblAmigaWidth->getX() + lblAmigaHeight->getWidth() + DISTANCE_NEXT_X, posY);
+	grpAmigaScreen->add(txtAmigaWidth, sldAmigaWidth->getX() + sldAmigaWidth->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += sldAmigaWidth->getHeight() + DISTANCE_NEXT_Y;
 
 	grpAmigaScreen->add(lblAmigaHeight, DISTANCE_BORDER, posY);
 	grpAmigaScreen->add(sldAmigaHeight, lblAmigaHeight->getX() + lblAmigaHeight->getWidth() + DISTANCE_NEXT_X, posY);
-	grpAmigaScreen->add(lblAmigaHeightInfo, sldAmigaHeight->getX() + sldAmigaHeight->getWidth() + DISTANCE_NEXT_X,
-	                    posY);
+	grpAmigaScreen->add(txtAmigaHeight, sldAmigaHeight->getX() + sldAmigaHeight->getWidth() + DISTANCE_NEXT_X,
+		posY);
+	
 	posY += sldAmigaHeight->getHeight() + DISTANCE_NEXT_Y;
 	grpAmigaScreen->add(chkAutoHeight, DISTANCE_BORDER, posY);
 	posY += chkAutoHeight->getHeight() + DISTANCE_NEXT_Y;
 
 	grpAmigaScreen->setMovable(false);
-	grpAmigaScreen->setSize(
-		lblAmigaWidth->getX() + lblAmigaWidth->getWidth() + sldAmigaWidth->getWidth() + lblAmigaWidth->getWidth() + (
-			DISTANCE_BORDER * 2), posY + DISTANCE_BORDER * 2);
+	grpAmigaScreen->setSize(lblAmigaWidth->getX() + lblAmigaWidth->getWidth() + sldAmigaWidth->getWidth() + lblAmigaWidth->getWidth() + txtAmigaHeight->getWidth() + DISTANCE_BORDER, posY + DISTANCE_BORDER * 2);
 	grpAmigaScreen->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpAmigaScreen->setBaseColor(gui_baseCol);
 	category.panel->add(grpAmigaScreen);
@@ -277,7 +325,8 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	grpLineMode->setBaseColor(gui_baseCol);
 	category.panel->add(grpLineMode);
 	category.panel->add(chkAspect, DISTANCE_BORDER, posY);
-	category.panel->add(chkFullscreen, chkAspect->getX() + chkAspect->getWidth() + DISTANCE_NEXT_X * 2, posY);
+	category.panel->add(lblScreenmode, chkAspect->getX() + chkAspect->getWidth() + DISTANCE_NEXT_X * 2, posY);
+	category.panel->add(cboScreenmode, lblScreenmode->getX() + lblScreenmode->getWidth() + 8, posY);
 	posY += chkAspect->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(chkFrameskip, DISTANCE_BORDER, posY);
@@ -292,10 +341,10 @@ void ExitPanelDisplay()
 	delete amigaScreenActionListener;
 	delete lblAmigaWidth;
 	delete sldAmigaWidth;
-	delete lblAmigaWidthInfo;
+	delete txtAmigaWidth;
 	delete lblAmigaHeight;
 	delete sldAmigaHeight;
-	delete lblAmigaHeightInfo;
+	delete txtAmigaHeight;
 	delete chkAutoHeight;
 	delete grpAmigaScreen;
 
@@ -304,7 +353,7 @@ void ExitPanelDisplay()
 	delete grpCentering;
 	
 	delete chkAspect;
-	delete chkFullscreen;
+	delete cboScreenmode;
 
 	delete optSingle;
 	delete optDouble;
@@ -333,14 +382,14 @@ void RefreshPanelDisplay()
 		{
 			sldAmigaWidth->setValue(i);
 			snprintf(tmp, 32, "%d", changed_prefs.gfx_monitor.gfx_size.width);
-			lblAmigaWidthInfo->setCaption(tmp);
+			txtAmigaWidth->setText(tmp);
 			break;
 		}
 		// if we reached the end and didn't find anything, set the maximum value
 		if (i == AMIGAWIDTH_COUNT - 1)
 		{
 			snprintf(tmp, 32, "%d", changed_prefs.gfx_monitor.gfx_size.width);
-			lblAmigaWidthInfo->setCaption(tmp);
+			txtAmigaWidth->setText(tmp);
 			break;
 		}
 	}
@@ -351,14 +400,14 @@ void RefreshPanelDisplay()
 		{
 			sldAmigaHeight->setValue(i);
 			snprintf(tmp, 32, "%d", changed_prefs.gfx_monitor.gfx_size.height);
-			lblAmigaHeightInfo->setCaption(tmp);
+			txtAmigaHeight->setText(tmp);
 			break;
 		}
 		// if we reached the end and didn't find anything, set the maximum value
 		if (i == AMIGAHEIGHT_COUNT - 1)
 		{
 			snprintf(tmp, 32, "%d", changed_prefs.gfx_monitor.gfx_size.height);
-			lblAmigaHeightInfo->setCaption(tmp);
+			txtAmigaHeight->setText(tmp);
 			break;
 		}
 	}
@@ -368,8 +417,14 @@ void RefreshPanelDisplay()
 	chkVertical->setSelected(changed_prefs.gfx_ycenter == 2);
 	
 	chkAspect->setSelected(changed_prefs.gfx_correct_aspect);
-	chkFullscreen->setSelected(changed_prefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN);
 
+	if (changed_prefs.gfx_apmode[0].gfx_fullscreen == GFX_WINDOW)
+		cboScreenmode->setSelected(0);
+	else if (changed_prefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN)
+		cboScreenmode->setSelected(1);
+	else if (changed_prefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLWINDOW)
+		cboScreenmode->setSelected(2);
+	
 	if (changed_prefs.scaling_method == -1)
 		optAuto->setSelected(true);
 	else if (changed_prefs.scaling_method == 0)
