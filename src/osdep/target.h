@@ -22,8 +22,8 @@
 #define GETBDM(x) (((x) - (((x) / 10000) * 10000)) / 100)
 #define GETBDD(x) ((x) % 100)
 
-#define AMIBERRYVERSION _T("Amiberry v3.2 beta (2020-06-26)")
-#define AMIBERRYDATE MAKEBD(2020, 6, 26)
+#define AMIBERRYVERSION _T("Amiberry v3.2 beta (2020-06-28)")
+#define AMIBERRYDATE MAKEBD(2020, 6, 28)
 
 extern std::string get_version_string();
 
@@ -57,6 +57,7 @@ void graphics_subshutdown(void);
 void stop_sound();
 
 void keyboard_settrans();
+void set_mouse_grab(const bool grab);
 
 extern void free_AmigaMem();
 extern void alloc_AmigaMem();

@@ -358,8 +358,8 @@ static uae_u32 emulib_ExecuteOnHost(TrapContext* ctx, uaecptr name)
 	if (trap_get_string(ctx, real_name, name, sizeof real_name) >= sizeof real_name)
 		return 0; /* ENAMETOOLONG */
 
-	SDL_ShowCursor(SDL_ENABLE);
-	SDL_SetRelativeMouseMode(SDL_FALSE);
+	set_mouse_grab(false);
+	
 	system(real_name);
 	return 1;
 }
