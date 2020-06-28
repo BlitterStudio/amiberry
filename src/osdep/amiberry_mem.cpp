@@ -64,7 +64,7 @@ bool can_have_1gb()
 	long long total_phys_mem = mem_info.totalram;
 	total_phys_mem *= mem_info.mem_unit;
 	// Do we have more than 2GB in the system?
-	if (total_phys_mem > 2048 * 1024 * 1024)
+	if (total_phys_mem > 2147483648LL)
 		return true;
 	return false;
 }
