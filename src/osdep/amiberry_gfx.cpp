@@ -623,9 +623,10 @@ static void open_screen(struct uae_prefs* p)
 
 	if (sdl_window && strcmp(sdl_video_driver, "x11") == 0)
 	{
-		const bool is_fullwindow = SDL_GetWindowFlags(sdl_window) & SDL_WINDOW_FULLSCREEN_DESKTOP;
-		const bool is_fullscreen = SDL_GetWindowFlags(sdl_window) & SDL_WINDOW_FULLSCREEN;
-		
+		const auto window_flags = SDL_GetWindowFlags(sdl_window);
+		const bool is_fullwindow = window_flags & SDL_WINDOW_FULLSCREEN_DESKTOP;
+		const bool is_fullscreen = window_flags & SDL_WINDOW_FULLSCREEN;
+
 		if (p->gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN)
 		{
 			// Switch to Fullscreen mode, if we don't have it already
