@@ -11,11 +11,9 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
-#include <assert.h>
-#include <string.h>
+#include <cassert>
+#include <cstring>
 
-
-#include "amiberry_gfx.h"
 #include "options.h"
 #include "uae.h"
 #include "memory.h"
@@ -26,6 +24,7 @@
 #include "picasso96.h"
 #include "filesys.h"
 #include "newcpu.h"
+#include "target.h"
 
 /*
 * Returns UAE Version
