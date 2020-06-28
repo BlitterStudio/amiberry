@@ -574,6 +574,43 @@ bool isModeAspectRatioExact(SDL_DisplayMode* mode, const int width, const int he
 	return mode->w % width == 0 && mode->h % height == 0;
 }
 
+void set_screen_mode(struct uae_prefs* p)
+{
+	if (sdl_window && strcmp(sdl_video_driver, "x11") == 0)
+	{
+		const auto window_flags = SDL_GetWindowFlags(sdl_window);
+		const bool is_fullwindow = window_flags & SDL_WINDOW_FULLSCREEN_DESKTOP;
+		const bool is_fullscreen = window_flags & SDL_WINDOW_FULLSCREEN;
+
+		if (p->gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN)
+		{
+			// Switch to Fullscreen mode, if we don't have it already
+			if (!is_fullscreen)
+				SDL_SetWindowFullscreen(sdl_window, SDL_WINDOW_FULLSCREEN);
+		}
+		else if (p->gfx_apmode[0].gfx_fullscreen == GFX_FULLWINDOW)
+		{
+			if (!is_fullwindow)
+				SDL_SetWindowFullscreen(sdl_window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+		}
+		else
+		{
+			// Switch to Window mode, if we don't have it already
+			if (is_fullscreen || is_fullwindow)
+				SDL_SetWindowFullscreen(sdl_window, 0);
+		}
+
+		if (!is_fullscreen && !is_fullwindow)
+			if ((SDL_GetWindowFlags(sdl_window) & SDL_WINDOW_MAXIMIZED) == 0)
+			{
+				if (screen_is_picasso)
+					SDL_SetWindowSize(sdl_window, display_width, display_height);
+				else
+					SDL_SetWindowSize(sdl_window, display_width * 2 >> p->gfx_resolution, display_height * 2 >> p->gfx_vresolution);
+			}
+	}
+}
+
 static void open_screen(struct uae_prefs* p)
 {
 	auto* avidinfo = &adisplays.gfxvidinfo;
@@ -621,39 +658,7 @@ static void open_screen(struct uae_prefs* p)
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0xFF);
 	SDL_RenderClear(renderer);
 
-	if (sdl_window && strcmp(sdl_video_driver, "x11") == 0)
-	{
-		const auto window_flags = SDL_GetWindowFlags(sdl_window);
-		const bool is_fullwindow = window_flags & SDL_WINDOW_FULLSCREEN_DESKTOP;
-		const bool is_fullscreen = window_flags & SDL_WINDOW_FULLSCREEN;
-
-		if (p->gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN)
-		{
-			// Switch to Fullscreen mode, if we don't have it already
-			if (!is_fullscreen)
-				SDL_SetWindowFullscreen(sdl_window, SDL_WINDOW_FULLSCREEN);
-		}
-		else if (p->gfx_apmode[0].gfx_fullscreen == GFX_FULLWINDOW)
-		{
-			if (!is_fullwindow)
-				SDL_SetWindowFullscreen(sdl_window, SDL_WINDOW_FULLSCREEN_DESKTOP);
-		}
-		else
-		{
-			// Switch to Window mode, if we don't have it already
-			if (is_fullscreen || is_fullwindow)
-				SDL_SetWindowFullscreen(sdl_window, 0);
-		}
-
-		if (!is_fullscreen && !is_fullwindow)
-			if ((SDL_GetWindowFlags(sdl_window) & SDL_WINDOW_MAXIMIZED) == 0)
-			{
-				if (screen_is_picasso)
-					SDL_SetWindowSize(sdl_window, display_width, display_height);
-				else
-					SDL_SetWindowSize(sdl_window, display_width * 2 >> p->gfx_resolution, display_height * 2 >> p->gfx_vresolution);
-			}	
-	}
+	set_screen_mode(p);
 
 	int depth;
 	Uint32 pixel_format;
