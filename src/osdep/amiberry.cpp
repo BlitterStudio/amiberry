@@ -1571,7 +1571,7 @@ int handle_msgpump()
 		break;
 
 		case SDL_FINGERDOWN:
-			setmousebuttonstate(0, 0, 0);
+			setmousebuttonstate(0, 0, 1);
 			break;
 			
 		case SDL_MOUSEBUTTONDOWN:
@@ -1599,8 +1599,10 @@ int handle_msgpump()
 					setmousebuttonstate(0, 1, 0);
 				if (event.button.button == SDL_BUTTON_MIDDLE)
 				{
-					setmousebuttonstate(0, 2, 0);
-					toggle_mouse_grab();
+					if (currprefs.input_mouse_untrap)
+						toggle_mouse_grab();
+					else
+						setmousebuttonstate(0, 2, 0);
 				}
 			}
 			break;

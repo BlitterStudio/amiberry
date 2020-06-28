@@ -1,9 +1,8 @@
-#include <string.h>
+#include <cstring>
 
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
-#include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
 
 #include "sysdeps.h"
@@ -17,7 +16,7 @@ static gcn::CheckBox* chkRetroArchReset;
 
 static gcn::CheckBox* chkStatusLine;
 static gcn::CheckBox* chkShowGUI;
-
+static gcn::CheckBox* chkMouseUntrap;
 static gcn::CheckBox* chkBSDSocket;
 static gcn::CheckBox* chkMasterWP;
 
@@ -79,6 +78,9 @@ public:
 		else if (actionEvent.getSource() == chkShowGUI)
 			changed_prefs.start_gui = chkShowGUI->isSelected();
 
+		else if (actionEvent.getSource() == chkMouseUntrap)
+			changed_prefs.input_mouse_untrap = chkMouseUntrap->isSelected();
+		
 		else if (actionEvent.getSource() == chkRetroArchQuit)
 		{
 			changed_prefs.use_retroarch_quit = chkRetroArchQuit->isSelected();
@@ -173,6 +175,10 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	chkShowGUI->setId("ShowGUI");
 	chkShowGUI->addActionListener(miscActionListener);
 
+	chkMouseUntrap = new gcn::CheckBox("Untrap = middle button");
+	chkMouseUntrap->setId("chkMouseUntrap");
+	chkMouseUntrap->addActionListener(miscActionListener);
+	
 	chkRetroArchQuit = new gcn::CheckBox("Use RetroArch Quit Button");
 	chkRetroArchQuit->setId("RetroArchQuit");
 	chkRetroArchQuit->addActionListener(miscActionListener);
@@ -266,6 +272,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	posY += chkStatusLine->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(chkShowGUI, DISTANCE_BORDER, posY);
 	posY += chkShowGUI->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(chkMouseUntrap, DISTANCE_BORDER, posY);
 
 	posY = DISTANCE_BORDER;
 	auto posX = 300;
@@ -317,6 +324,7 @@ void ExitPanelMisc()
 {
 	delete chkStatusLine;
 	delete chkShowGUI;
+	delete chkMouseUntrap;
 
 	delete chkRetroArchQuit;
 	delete chkRetroArchMenu;
@@ -354,6 +362,7 @@ void RefreshPanelMisc()
 {
 	chkStatusLine->setSelected(changed_prefs.leds_on_screen);
 	chkShowGUI->setSelected(changed_prefs.start_gui);
+	chkMouseUntrap->setSelected(changed_prefs.input_mouse_untrap);
 
 	chkRetroArchQuit->setSelected(changed_prefs.use_retroarch_quit);
 	chkRetroArchMenu->setSelected(changed_prefs.use_retroarch_menu);

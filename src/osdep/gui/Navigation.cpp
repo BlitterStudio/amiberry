@@ -280,12 +280,13 @@ static NavigationMap navMap[] =
 	//  active            move left           move right          move up           move down
 
 	{"StatusLine", "Miscellaneous", "RetroArchQuit", "cboScrolllock", "ShowGUI"},
-	{"ShowGUI", "Miscellaneous", "RetroArchMenu", "StatusLine", "BSDSocket"},
+	{"ShowGUI", "Miscellaneous", "RetroArchMenu", "StatusLine", "chkMouseUntrap"},
+	{"chkMouseUntrap", "Miscellaneous", "RetroArchReset", "ShowGUI", "BSDSocket"},
 	{"RetroArchQuit", "StatusLine", "Miscellaneous", "KeyForQuit", "RetroArchMenu"},
 	{"RetroArchMenu", "ShowGUI", "Miscellaneous", "RetroArchQuit", "RetroArchReset"},
-	{"RetroArchReset", "ShowGUI", "Miscellaneous", "RetroArchMenu", "BSDSocket"},
+	{"RetroArchReset", "chkMouseUntrap", "Miscellaneous", "RetroArchMenu", "BSDSocket"},
 
-	{"BSDSocket", "Miscellaneous", "Miscellaneous", "ShowGUI", "MasterWP"},
+	{"BSDSocket", "Miscellaneous", "Miscellaneous", "chkMouseUntrap", "MasterWP"},
 	{"MasterWP", "Miscellaneous", "Miscellaneous", "BSDSocket", "cboNumlock"},
 	{"cboNumlock", "Miscellaneous", "cboScrolllock", "MasterWP", "OpenGUI"},
 	{"cboScrolllock", "cboNumlock", "Miscellaneous", "MasterWP", "KeyForQuit"},

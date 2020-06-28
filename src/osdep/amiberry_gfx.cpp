@@ -850,6 +850,11 @@ int check_prefs_changed_gfx()
 		currprefs.chipset_refreshrate = changed_prefs.chipset_refreshrate;
 		changed = 1;
 	}
+	if (currprefs.input_mouse_untrap != changed_prefs.input_mouse_untrap)
+	{
+		currprefs.input_mouse_untrap = changed_prefs.input_mouse_untrap;
+		changed = 1;
+	}
 
 	currprefs.filesys_limit = changed_prefs.filesys_limit;
 	currprefs.harddrive_read_only = changed_prefs.harddrive_read_only;
