@@ -28,7 +28,7 @@
 #include "rommgr.h"
 #include "zfile.h"
 #include "amiberry_rp9.h"
-#include "include/memory.h"
+#include "memory.h"
 #include "keyboard.h"
 #include "rtgmodes.h"
 #include "gfxboard.h"
@@ -298,7 +298,7 @@ void fix_apmodes(struct uae_prefs* p)
 
 void target_fixup_options(struct uae_prefs* p)
 {
-	// If we have a CD inserted, but not emulating a CDTV or CD32, enable SCSI
+	// If we have a CD inserted, but not emulating a CDTV or CD32, enable SCSI automatically
 	if (p->cdslots[0].inuse 
 		&& (!p->cs_cd32cd && !p->cs_cd32nvram) 
 		&& (!p->cs_cdtvcd && !p->cs_cdtvram))
@@ -1383,7 +1383,7 @@ int main(int argc, char* argv[])
 		inputdevice_do_keyboard(AK_CAPSLOCK, 0);
 	}
 	ioctl(0, KDSETLED, kbd_led_status);
-	
+
 	real_main(argc, argv);
 
 	// restore keyboard LEDs to normal state
@@ -1420,6 +1420,14 @@ void toggle_mouse_grab()
 		SDL_ShowCursor(SDL_DISABLE);
 		SDL_SetRelativeMouseMode(SDL_TRUE);
 	}
+}
+
+void set_mouse_grab(const bool grab)
+{
+	if (grab && mouse_grabbed || !grab && !mouse_grabbed)
+		return;
+	if (!grab && mouse_grabbed || grab && !mouse_grabbed)
+		toggle_mouse_grab();
 }
 
 int handle_msgpump()
