@@ -57,7 +57,7 @@ void graphics_subshutdown(void);
 void stop_sound();
 
 void keyboard_settrans();
-void set_mouse_grab(const bool grab);
+void set_mouse_grab(bool grab);
 
 extern void free_AmigaMem();
 extern void alloc_AmigaMem();
