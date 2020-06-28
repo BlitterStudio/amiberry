@@ -1211,7 +1211,6 @@ void restore_blitter_finish (void)
 		blit_interrupt = 1;
 		if (bltstate == BLT_init) {
 			write_log (_T("blitter was started but DMA was inactive during save\n"));
-			//do_blitter (0);
 		}
 		if (blt_delayed_irq < 0) {
 			if (intreq & 0x0040)

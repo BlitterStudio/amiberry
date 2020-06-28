@@ -243,7 +243,7 @@ void RefreshPanelSavestate()
 		}
 	}
 
-	const auto enabled = true; // nr_units () == 0;
+	const auto enabled = true;
 	optState0->setEnabled(enabled);
 	optState1->setEnabled(enabled);
 	optState2->setEnabled(enabled);

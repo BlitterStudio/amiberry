@@ -1208,8 +1208,8 @@ void sync_m68k_pc(void)
 
 void compiler_exit(void)
 {
-    if (current_compile_p != 0 && compiled_code != 0 && current_compile_p > compiled_code)
-        jit_log("used size: %8d bytes", current_compile_p - compiled_code);
+  //if(current_compile_p != 0 && compiled_code != 0 && current_compile_p > compiled_code)
+  //  jit_log("used size: %8d bytes", current_compile_p - compiled_code);
 
 #ifdef PROFILE_COMPILE_TIME
     emul_end_time = clock();
@@ -2140,8 +2140,8 @@ void build_comp(void)
 
 void flush_icache_hard(int n)
 {
-    if (current_compile_p != 0 && compiled_code != 0 && current_compile_p > compiled_code)
-        jit_log("used size: %8d bytes", current_compile_p - compiled_code);
+  //if(current_compile_p != 0 && compiled_code != 0 && current_compile_p > compiled_code)
+  //  jit_log("used size: %8d bytes", current_compile_p - compiled_code);
 
     blockinfo* bi, * dbi;
 

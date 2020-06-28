@@ -189,7 +189,6 @@ static uae_u32 REGPARAM2 rtarea_bget (uaecptr addr)
 		return v;
 	} else if (addr == RTAREA_INTREQ + 0) {
 		rtarea_bank.baseaddr[addr] = atomic_bit_test_and_reset(&uae_int_requested, 0);
-		//write_log(rtarea_bank.baseaddr[addr] ? _T("+") : _T("-"));
 	} else if (addr == RTAREA_INTREQ + 1) {
 		rtarea_bank.baseaddr[addr] = hwtrap_waiting != 0;
 	} else if (addr == RTAREA_INTREQ + 2) {
@@ -554,6 +553,7 @@ static uae_u32 REGPARAM2 uae_puts (TrapContext *ctx)
 
 void rtarea_init_mem (void)
 {
+	need_uae_boot_rom(&currprefs);
 	rtarea_bank.reserved_size = RTAREA_SIZE;
 	rtarea_bank.start = rtarea_base;
 	if (!mapped_malloc (&rtarea_bank)) {
