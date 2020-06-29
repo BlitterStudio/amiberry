@@ -164,9 +164,6 @@ static int dataflyer_state;
 static int dataflyer_disable_irq;
 static uae_u8 dataflyer_byte;
 
-static void gayle_reset(int hardreset);
-static void gayle_map_pcmcia(void);
-
 static void pcmcia_reset (void)
 {
 	memset (pcmcia_configuration, 0, sizeof pcmcia_configuration);
@@ -212,7 +209,7 @@ bool isideint(void)
 	return checkgayleideirq() != 0;
 }
 
-static void rethink_gayle (void)
+void rethink_gayle (void)
 {
 	int lev2 = 0;
 	int lev6 = 0;
@@ -1553,7 +1550,7 @@ static void REGPARAM2 gayle_common_bput (uaecptr addr, uae_u32 value)
 	gayle_common_write_byte(addr, value);
 }
 
-static void gayle_map_pcmcia (void)
+void gayle_map_pcmcia (void)
 {
 	if (currprefs.cs_pcmcia == 0)
 		return;
@@ -1632,10 +1629,18 @@ bool gayle_init_pcmcia(struct autoconfig_info *aci)
 	return true;
 }
 
-static void gayle_hsync(void)
+void gayle_hsync(void)
 {
 	if (ide_interrupt_hsync(idedrive[0]) || ide_interrupt_hsync(idedrive[2]) || ide_interrupt_hsync(idedrive[4]))
 		devices_rethink_all(rethink_gayle);
+}
+
+bool gayle_pcmcia_init(struct autoconfig_info* aci)
+{
+	aci->start = 0x600000;
+	aci->size = 0xa80000 - aci->start;
+	aci->zorro = 0;
+	return true;
 }
 
 static void initide (void)
@@ -1656,20 +1661,20 @@ static void initide (void)
 	gayle_irq = gayle_int = 0;
 }
 
-static void gayle_free (void)
+void gayle_free (void)
 {
 	stop_ide_thread(&gayle_its);
 	//stop_ide_thread(&pcmcia_its);
 }
 
-static void check_prefs_changed_gayle(void)
+void check_prefs_changed_gayle(void)
 {
 	if (!currprefs.cs_pcmcia)
 		return;
 	//pcmcia_card_check(1, -1);
 }
 
-static void gayle_reset (int hardreset)
+void gayle_reset (int hardreset)
 {
 	static TCHAR bankname[100];
 

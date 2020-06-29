@@ -2775,7 +2775,7 @@ const struct expansionromtype expansionroms[] = {
 	},
 	{
 		_T("pcmcia_mb"), _T("A600/A1200 PCMCIA"), _T("Commodore"),
-		NULL, gayle_init_pcmcia, NULL, NULL, ROMTYPE_MB_PCMCIA | ROMTYPE_NOT, 0, 0, BOARD_NONAUTOCONFIG_BEFORE, true,
+		NULL, gayle_pcmcia_init, NULL, NULL, ROMTYPE_MB_PCMCIA | ROMTYPE_NOT, 0, 0, BOARD_NONAUTOCONFIG_BEFORE, true,
 		NULL, 0,
 		false, EXPANSIONTYPE_INTERNAL
 	},

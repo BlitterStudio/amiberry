@@ -487,7 +487,9 @@ extern addrbank *get_mem_bank_real(uaecptr);
 	(mem_banks[bankindex(addr)] = (b));
 #endif
 
+extern void memory_init(void);
 extern void memory_cleanup (void);
+extern void restore_banks(void);
 extern void map_banks (addrbank *bank, int first, int count, int realsize);
 extern void map_banks_z2 (addrbank *bank, int first, int count);
 extern void map_banks_z3(addrbank *bank, int first, int count);
@@ -762,19 +764,18 @@ extern void REGPARAM3 chipmem_wput (uaecptr, uae_u32) REGPARAM;
 extern void REGPARAM3 chipmem_bput (uaecptr, uae_u32) REGPARAM;
 
 extern uae_u32 REGPARAM3 chipmem_agnus_wget (uaecptr) REGPARAM;
-extern void REGPARAM3 chipmem_agnus_wput (uaecptr, uae_u32) REGPARAM;
+extern void REGPARAM3 chipmem_agnus_wput(uaecptr, uae_u32) REGPARAM;
 
-extern uae_u32 chipmem_full_mask;
 extern addrbank dummy_bank;
 
-STATIC_INLINE uae_u32 chipmem_lget_indirect(uae_u32 PT) {
-  return do_get_mem_long((uae_u32 *)&chipmem_bank.baseaddr[PT & chipmem_bank.mask]);
-}
-STATIC_INLINE uae_u32 chipmem_wget_indirect (uae_u32 PT) {
-  return do_get_mem_word((uae_u16 *)&chipmem_bank.baseaddr[PT & chipmem_full_mask]);
-}
-
-#define chipmem_wput_indirect  chipmem_agnus_wput
+extern uae_u32(REGPARAM3* chipmem_lget_indirect)(uaecptr) REGPARAM;
+extern uae_u32(REGPARAM3* chipmem_wget_indirect)(uaecptr) REGPARAM;
+extern uae_u32(REGPARAM3* chipmem_bget_indirect)(uaecptr) REGPARAM;
+extern void (REGPARAM3* chipmem_lput_indirect)(uaecptr, uae_u32) REGPARAM;
+extern void (REGPARAM3* chipmem_wput_indirect)(uaecptr, uae_u32) REGPARAM;
+extern void (REGPARAM3* chipmem_bput_indirect)(uaecptr, uae_u32) REGPARAM;
+extern int (REGPARAM3* chipmem_check_indirect)(uaecptr, uae_u32) REGPARAM;
+extern uae_u8* (REGPARAM3* chipmem_xlate_indirect)(uaecptr) REGPARAM;
 
 extern bool mapped_malloc (addrbank*);
 extern void mapped_free (addrbank*);
