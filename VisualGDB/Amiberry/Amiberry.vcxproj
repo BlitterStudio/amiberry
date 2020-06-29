@@ -382,6 +382,7 @@
     <ClInclude Include="..\..\src\include\cia.h" />
     <ClInclude Include="..\..\src\include\commpipe.h" />
     <ClInclude Include="..\..\src\include\cpummu.h" />
+    <ClInclude Include="..\..\src\include\cpummu030.h" />
     <ClInclude Include="..\..\src\include\cputbl.h" />
     <ClInclude Include="..\..\src\include\cpu_prefetch.h" />
     <ClInclude Include="..\..\src\include\crc32.h" />
