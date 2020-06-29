@@ -17,6 +17,8 @@
 #include "scsi.h"
 #include "ide.h"
 
+#include "blkdev.h"
+
 /* STATUS bits */
 #define IDE_STATUS_ERR 0x01		// 0
 #define IDE_STATUS_IDX 0x02		// 1
@@ -339,12 +341,16 @@ static void ide_identity_buffer(struct ide_hdf *ide)
 {
 	TCHAR tmp[100];
 	bool atapi = ide->atapi;
+	int device_type = ide->atapi_device_type;
 	bool cf = ide->media_type > 0;
+	bool real = false;
 	int v;
 
 	memset(ide->secbuf, 0, 512);
+	if (!device_type)
+		device_type = 5; // CD
 
-	pw (ide, 0, atapi ? 0x85c0 : (cf ? 0x848a : (1 << 6)));
+	pw (ide, 0, atapi ? 0x80c0 | (device_type << 8) : (cf ? 0x848a : (1 << 6)));
 	pw (ide, 1, ide->hdhfd.cyls_def);
 	pw (ide, 2, 0xc837);
 	pw (ide, 3, ide->hdhfd.heads_def);
@@ -1358,6 +1364,7 @@ void alloc_ide_mem (struct ide_hdf **idetable, int max, struct ide_thread_state 
 		struct ide_hdf *ide;
 		if (!idetable[i]) {
 			ide = idetable[i] = xcalloc (struct ide_hdf, 1);
+			ide->cd_unit_num = -1;
 		}
 		ide = idetable[i];
 		ide_grow_buffer(ide, 1024);
@@ -1393,7 +1400,46 @@ struct ide_hdf *add_ide_unit (struct ide_hdf **idetable, int max, int ch, struct
 	ide = idetable[ch];
 	if (ci)
 		memcpy (&ide->hdhfd.hfd.ci, ci, sizeof (struct uaedev_config_info));
-	if (ci->type == UAEDEV_HDF) {
+	if (ci->type == UAEDEV_CD && ci->device_emu_unit >= 0) {
+
+		device_func_init(0);
+		ide->scsi = scsi_alloc_cd(ch, ci->device_emu_unit, true, ci->uae_unitnum);
+		if (!ide->scsi) {
+			write_log(_T("IDE: CD EMU unit %d failed to open\n"), ide->cd_unit_num);
+			return NULL;
+		}
+
+		ide_identity_buffer(ide);
+		ide->cd_unit_num = ci->device_emu_unit;
+		ide->atapi = true;
+		ide->atapi_device_type = 5;
+		ide->blocksize = 512;
+		ide->uae_unitnum = ci->uae_unitnum;
+		gui_flicker_led(LED_CD, ci->uae_unitnum, -1);
+
+		write_log(_T("IDE%d CD %d\n"), ch, ide->cd_unit_num);
+
+	}
+	//else if (ci->type == UAEDEV_TAPE) {
+
+	//	ide->scsi = scsi_alloc_tape(ch, ci->rootdir, ci->readonly, ci->uae_unitnum);
+	//	if (!ide->scsi) {
+	//		write_log(_T("IDE: TAPE EMU unit %d failed to open\n"), ch);
+	//		return NULL;
+	//	}
+
+	//	ide_identity_buffer(ide);
+	//	ide->atapi = true;
+	//	ide->atapi_device_type = 1;
+	//	ide->blocksize = 512;
+	//	ide->cd_unit_num = -1;
+	//	ide->uae_unitnum = ci->uae_unitnum;
+
+	//	write_log(_T("IDE%d TAPE %d\n"), ch, ide->cd_unit_num);
+
+
+	//}
+	else if (ci->type == UAEDEV_HDF) {
 
 		if (!hdf_hd_open (&ide->hdhfd))
 			return NULL;

@@ -1940,7 +1940,7 @@ struct autoconfig_info* expansion_get_autoconfig_by_address(struct uae_prefs* p,
 {
 	if (index >= cardno)
 		return NULL;
-	for (int i = 0; i < cardno; i++) {
+	for (int i = index; i < cardno; i++) {
 		struct card_data *cd = cards[i];
 		if (addr >= cd->base && addr < cd->base + cd->size)
 			return &cd->aci;
@@ -2327,26 +2327,25 @@ static void expansion_add_autoconfig(struct uae_prefs *p)
 
 #ifdef FILESYS
 	if (do_mount && p->uaeboard >= 0) {
-		cards_set[cardno].flags = 0;
+		cards_set[cardno].flags = CARD_FLAG_UAEROM;
 		cards_set[cardno].name = _T("UAEFS");
 		cards_set[cardno].zorro = 2;
 		cards_set[cardno].initnum = expamem_init_filesys;
 		cards_set[cardno++].map = expamem_map_filesys;
 	}
 	if (p->uaeboard > 0) {
-		cards_set[cardno].flags = 0;
+		cards_set[cardno].flags = CARD_FLAG_UAEROM;
 		cards_set[cardno].name = _T("UAEBOARD");
 		cards_set[cardno].zorro = 2;
 		cards_set[cardno].initnum = expamem_init_uaeboard;
 		cards_set[cardno++].map = expamem_map_uaeboard;
 	}
 	if (do_mount) {
-		cards_set[cardno].flags = 0;
+		cards_set[cardno].flags = CARD_FLAG_UAEROM;
 		cards_set[cardno].name = _T("UAEBOOTROM");
 		cards_set[cardno].zorro = BOARD_NONAUTOCONFIG_BEFORE;
 		cards_set[cardno].initnum = expamem_rtarea_init;
 		cards_set[cardno++].map = NULL;
-
 	}
 #endif
 #ifdef PICASSO96
@@ -2676,15 +2675,18 @@ void restore_expansion_finish(void)
 {
 	cardno = restore_cardno;
 	for (int i = 0; i < cardno; i++) {
-		struct card_data *ec = &cards_set[i];
+		struct card_data* ec = &cards_set[i];
 		cards[i] = ec;
-		struct romconfig *rc = ec->rc;
+		struct romconfig* rc = ec->rc;
+		expamem_board_pointer = ec->base;
 		// Handle only IO boards, RAM boards are handled differently
+		ec->aci.doinit = false;
+		ec->aci.start = ec->base;
+		ec->aci.size = ec->size;
+		ec->aci.prefs = &currprefs;
+		ec->aci.ert = ec->ert;
+		ec->aci.rc = rc;
 		if (rc && ec->ert) {
-			ec->aci.doinit = false;
-			ec->aci.start = ec->base;
-			ec->aci.size = ec->size;
-			ec->aci.prefs = &currprefs;
 			_tcscpy(ec->aci.name, ec->ert->friendlyname);
 			if (ec->ert->init) {
 				if (ec->ert->init(&ec->aci)) {
