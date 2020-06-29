@@ -44,7 +44,11 @@ typedef uae_u32 uintptr;
 #define TAGMASK 0x0000ffff
 #define TAGSIZE (TAGMASK+1)
 #define MAXRUN 1024
-#define cacheline(x) (((uintptr)x)&TAGMASK)
+#if defined(CPU_AARCH64)
+#define cacheline(x) (((uae_u64)x)&TAGMASK)
+#else
+#define cacheline(x) (((uae_u32)x)&TAGMASK)
+#endif
 
 extern uae_u8* start_pc_p;
 extern uae_u32 start_pc;
@@ -360,7 +364,7 @@ typedef struct blockinfo_t {
 #define BI_COMPILING 5
 #define BI_FINALIZING 6
 
-#if defined(CPU_arm) && !defined(ARMV6T2)
+#if defined(CPU_arm) && !defined(ARMV6T2) && !defined(CPU_AARCH64)
 const int POPALLSPACE_SIZE = 2048; /* That should be enough space */
 #else
 const int POPALLSPACE_SIZE = 512; /* That should be enough space */
