@@ -6512,18 +6512,18 @@ end:
 	return v;
 }
 
-void cfgfile_backup(const TCHAR* path)
-{
-	TCHAR dpath[MAX_DPATH];
-
-	get_configuration_path(dpath, sizeof(dpath) / sizeof(TCHAR));
-	_tcscat(dpath, _T("configuration.backup"));
-	bool hidden = my_isfilehidden(dpath);
-	my_unlink(dpath);
-	my_rename(path, dpath);
-	if (hidden)
-		my_setfilehidden(dpath, hidden);
-}
+//void cfgfile_backup(const TCHAR* path)
+//{
+//	TCHAR dpath[MAX_DPATH];
+//
+//	get_configuration_path(dpath, sizeof(dpath) / sizeof(TCHAR));
+//	_tcscat(dpath, _T("configuration.backup"));
+//	bool hidden = my_isfilehidden(dpath);
+//	my_unlink(dpath);
+//	my_rename(path, dpath);
+//	if (hidden)
+//		my_setfilehidden(dpath, hidden);
+//}
 
 int cfgfile_save(struct uae_prefs* p, const TCHAR* filename, int type)
 {
