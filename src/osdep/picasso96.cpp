@@ -1603,6 +1603,8 @@ static void inituaegfx(TrapContext *ctx, uaecptr ABI)
 		flags |= BIF_BLITTER;
 	}
 	flags |= BIF_NOMEMORYMODEMIX;
+	flags |= BIF_GRANTDIRECTACCESS;
+	flags &= ~BIF_HARDWARESPRITE;
 	if (!uaegfx_old)
 		flags |= BIF_VBLANKINTERRUPT;
 	if (!(flags & BIF_INDISPLAYCHAIN)) {
@@ -1743,7 +1745,7 @@ static uae_u32 REGPARAM2 picasso_SetSwitch(TrapContext* ctx)
 		_stprintf(p96text, _T("Picasso96 %dx%dx%d (%dx%dx%d)"),
 			state->Width, state->Height, state->BytesPerPixel * 8,
 			vidinfo->width, vidinfo->height, vidinfo->pixbytes * 8);
-	write_log (_T("SetSwitch() - %s.\n"), flag ? p96text : _T("amiga"));
+	write_log (_T("SetSwitch() - %s\n"), flag ? p96text : _T("amiga"));
 
 	/* Put old switch-state in D0 */
 	return !flag;
@@ -3833,9 +3835,10 @@ static void copyallinvert(uae_u8 *src, uae_u8 *dst, int pwidth, int pheight, int
 	}
 }
 
-static void copyall (uae_u8 *src, uae_u8 *dst, int pwidth, int pheight, int srcbytesperrow, int srcpixbytes, int dstbytesperrow, int dstpixbytes, bool direct, int mode_convert)
+static void copyall(uae_u8* src, uae_u8* dst, int pwidth, int pheight, int srcbytesperrow, int srcpixbytes, int dstbytesperrow, int dstpixbytes, bool direct, int mode_convert)
 {
-  struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo;
+	struct picasso_vidbuf_description* vidinfo = &picasso_vidinfo;
+
 	int y, bytes;
 	if (direct)
 	{
@@ -3850,7 +3853,7 @@ static void copyall (uae_u8 *src, uae_u8 *dst, int pwidth, int pheight, int srcb
 	else
 	{
 		for (y = 0; y < pheight; y++)
-			copyrow (src, dst, 0, y, pwidth, srcbytesperrow, srcpixbytes, 0, y, dstbytesperrow, dstpixbytes, direct, mode_convert, p96_rgbx16);
+			copyrow(src, dst, 0, y, pwidth, srcbytesperrow, srcpixbytes, 0, y, dstbytesperrow, dstpixbytes, direct, mode_convert, p96_rgbx16);
 	}
 }
 
@@ -3919,15 +3922,21 @@ void picasso_invalidate(int x, int y, int w, int h)
 
 }
 
-static bool picasso_flushpixels (uae_u8 *src, int off)
+static bool picasso_flushpixels(uae_u8* src, int off)
 {
-	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo;
-	struct picasso96_state_struct *state = &picasso96_state;
+	struct picasso_vidbuf_description* vidinfo = &picasso_vidinfo;
+	struct picasso96_state_struct* state = &picasso96_state;
 	uae_u8* src_start;
 	uae_u8* src_end;
 	uae_u8* dst = nullptr;
 	int pwidth = state->Width > state->VirtualWidth ? state->VirtualWidth : state->Width;
 	int pheight = state->Height > state->VirtualHeight ? state->VirtualHeight : state->Height;
+
+	// safety check
+	if (pwidth * state->BytesPerPixel > vidinfo->rowbytes)
+		pwidth = vidinfo->rowbytes / state->BytesPerPixel;
+	if (pheight > vidinfo->height)
+		pheight = vidinfo->height;
 
 	src_start = src + off;
 	src_end = src + off + state->BytesPerRow * pheight - 1;
@@ -3940,9 +3949,9 @@ static bool picasso_flushpixels (uae_u8 *src, int off)
 		return false;
 
 	copyall(src + off, dst, pwidth, pheight,
-			state->BytesPerRow, state->BytesPerPixel,
-			vidinfo->rowbytes, vidinfo->pixbytes,
-			state->RGBFormat == vidinfo->host_mode, vidinfo->picasso_convert);
+		state->BytesPerRow, state->BytesPerPixel,
+		vidinfo->rowbytes, vidinfo->pixbytes,
+		state->RGBFormat == vidinfo->host_mode, vidinfo->picasso_convert);
 
 	if (currprefs.leds_on_screen)
 		picasso_statusline(dst);
