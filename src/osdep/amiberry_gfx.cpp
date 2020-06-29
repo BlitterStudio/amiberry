@@ -50,7 +50,6 @@ const char* sdl_video_driver;
 
 static int display_width;
 static int display_height;
-int window_width = 800, window_height = 600;
 bool can_have_linedouble;
 
 static unsigned long last_synctime;
@@ -177,7 +176,7 @@ static int display_thread(void *unused)
 			}
 
 			if (!screen)
-				screen = SDL_CreateRGBSurface(0, display_width, display_height, depth, 0, 0, 0, 0);
+				screen = SDL_CreateRGBSurface(0, width, height, depth, 0, 0, 0, 0);
 
 			displayHandle = vc_dispmanx_display_open(0);
 
@@ -380,8 +379,8 @@ int graphics_setup(void)
 			sdl_window = SDL_CreateWindow("Amiberry",
 				SDL_WINDOWPOS_CENTERED,
 				SDL_WINDOWPOS_CENTERED,
-				window_height,
-				window_width,
+				GUI_HEIGHT,
+				GUI_WIDTH,
 				sdl_window_mode);
 		}
 		else
@@ -389,8 +388,8 @@ int graphics_setup(void)
 			sdl_window = SDL_CreateWindow("Amiberry",
 				SDL_WINDOWPOS_CENTERED,
 				SDL_WINDOWPOS_CENTERED,
-				window_width,
-				window_height,
+				GUI_WIDTH,
+				GUI_HEIGHT,
 				sdl_window_mode);
 		}
 		check_error_sdl(sdl_window == nullptr, "Unable to create window:");		
@@ -1201,7 +1200,6 @@ static int save_png(SDL_Surface* surface, char* path)
 	}
 
 	png_init_io(png_ptr, f);
-
 	png_set_IHDR(png_ptr,
 		info_ptr,
 		w,

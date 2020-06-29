@@ -1,6 +1,9 @@
 #pragma once
 #include <SDL.h>
 
+#define GUI_WIDTH  800
+#define GUI_HEIGHT 600
+
 #ifdef USE_DISPMANX
 #include <bcm_host.h>
 #define DISPLAY_SIGNAL_SETUP 				1
