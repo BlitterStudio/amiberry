@@ -1078,8 +1078,6 @@ static int sound_prefs_changed(void)
 	return 0;
 }
 
-double softfloat_tan(double v);
-
 /* This computes the 1st order low-pass filter term b0.
  * The a1 term is 1.0 - b0. The center frequency marks the -3 dB point. */
 #ifndef M_PI
@@ -1095,7 +1093,7 @@ static float rc_calculate_a0(int sample_rate, int cutoff_freq)
 	/* Compensate for the bilinear transformation. This allows us to specify the
 	 * stop frequency more exactly, but the filter becomes less steep further
 	 * from stopband. */
-	omega = softfloat_tan(omega / 2.0) * 2.0;
+	omega = tan(omega / 2.0) * 2.0;
 	const float out = 1.0 / (1.0 + 1.0 / omega);
 	return out;
 }
