@@ -743,6 +743,11 @@ error:
 		zfile_fclose(f);
 }
 
+void savestate_restore_final(void)
+{
+	restore_akiko_final();
+}
+
 bool savestate_restore_finish(void)
 {
 	if (!isrestore ())

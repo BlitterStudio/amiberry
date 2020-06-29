@@ -2089,6 +2089,7 @@ void m68k_go(int may_quit)
 		if (restored)
 		{
 			restored = 0;
+			savestate_restore_final();
 		}
 #endif
 
