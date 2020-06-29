@@ -40,10 +40,10 @@ static bool last_address_space_24;
 
 addrbank *mem_banks[MEMORY_BANKS];
 
-int addr_valid(const TCHAR *txt, uaecptr addr, uae_u32 len)
+int addr_valid(const TCHAR* txt, uaecptr addr, uae_u32 len)
 {
-	addrbank *ab = &get_mem_bank(addr);
-  if (ab == 0 || !(ab->flags & (ABFLAG_RAM | ABFLAG_ROM)) || addr < 0x100 || len > 16777215 || !valid_address(addr, len)) {
+	addrbank* ab = &get_mem_bank(addr);
+	if (ab == 0 || !(ab->flags & (ABFLAG_RAM | ABFLAG_ROM)) || addr < 0x100 || len > 16777215 || !valid_address(addr, len)) {
 		write_log(_T("corrupt %s pointer %x (%d) detected!\n"), txt, addr, len);
 		return 0;
 	}
@@ -308,7 +308,7 @@ void REGPARAM2 chipmem_agnus_wput(uaecptr addr, uae_u32 w)
 static int REGPARAM2 chipmem_check(uaecptr addr, uae_u32 size)
 {
 	addr &= chipmem_bank.mask;
-  return (addr + size) <= chipmem_bank.reserved_size;
+	return (addr + size) <= chipmem_bank.reserved_size;
 }
 
 static uae_u8 *REGPARAM2 chipmem_xlate(uaecptr addr)
@@ -937,37 +937,37 @@ static bool load_kickstart_replacement(void)
 }
 
 /* disable incompatible drivers */
-static int patch_residents (uae_u8 *kickmemory, int size)
+static int patch_residents(uae_u8* kickmemory, int size)
 {
 	int i, j, patched = 0;
-	const uae_char *residents[] = { "NCR scsi.device", NULL };
+	const uae_char* residents[] = { "NCR scsi.device", NULL };
 	// "scsi.device", "carddisk.device", "card.resource" };
 	uaecptr base = size == ROM_SIZE_512 ? 0xf80000 : 0xfc0000;
 
-  for (i = 0; i < size - 100; i++) {
-  	if (kickmemory[i] == 0x4a && kickmemory[i + 1] == 0xfc) {
-      uaecptr addr;
-      addr = (kickmemory[i + 2] << 24) | (kickmemory[i + 3] << 16) | (kickmemory[i + 4] << 8) | (kickmemory[i + 5] << 0);
-      if (addr != i + base)
-    		continue;
-      addr = (kickmemory[i + 14] << 24) | (kickmemory[i + 15] << 16) | (kickmemory[i + 16] << 8) | (kickmemory[i + 17] << 0);
-      if (addr >= base && addr < base + size) {
-    		j = 0;
-    		while (residents[j]) {
-  		    if (!memcmp (residents[j], kickmemory + addr - base, strlen (residents[j]) + 1)) {
-					  TCHAR *s = au (residents[j]);
-					  write_log (_T("KSPatcher: '%s' at %08X disabled\n"), s, i + base);
-					  xfree (s);
-      			kickmemory[i] = 0x4b; /* destroy RTC_MATCHWORD */
-      			patched++;
-      			break;
-  		    }
-  		    j++;
-    		}
-      }	
-  	}
-  }
-  return patched;
+	for (i = 0; i < size - 100; i++) {
+		if (kickmemory[i] == 0x4a && kickmemory[i + 1] == 0xfc) {
+			uaecptr addr;
+			addr = (kickmemory[i + 2] << 24) | (kickmemory[i + 3] << 16) | (kickmemory[i + 4] << 8) | (kickmemory[i + 5] << 0);
+			if (addr != i + base)
+				continue;
+			addr = (kickmemory[i + 14] << 24) | (kickmemory[i + 15] << 16) | (kickmemory[i + 16] << 8) | (kickmemory[i + 17] << 0);
+			if (addr >= base && addr < base + size) {
+				j = 0;
+				while (residents[j]) {
+					if (!memcmp(residents[j], kickmemory + addr - base, strlen(residents[j]) + 1)) {
+						TCHAR* s = au(residents[j]);
+						write_log(_T("KSPatcher: '%s' at %08X disabled\n"), s, i + base);
+						xfree(s);
+						kickmemory[i] = 0x4b; /* destroy RTC_MATCHWORD */
+						patched++;
+						break;
+					}
+					j++;
+				}
+			}
+		}
+	}
+	return patched;
 }
 
 static void patch_kick(void)
@@ -1244,16 +1244,17 @@ static void allocate_memory(void)
 void map_overlay(int chip)
 {
 	int size;
-	addrbank *cb;
+	addrbank* cb;
 	int currPC = m68k_getpc();
 
 	size = chipmem_bank.allocated_size >= 0x180000 ? (chipmem_bank.allocated_size >> 16) : 32;
 	cb = &chipmem_bank;
-  if (chip) {
+	if (chip) {
 		map_banks(&dummy_bank, 0, size, 0);
 		map_banks(cb, 0, size, chipmem_bank.allocated_size);
-  } else {
-		addrbank *rb = NULL;
+	}
+	else {
+		addrbank* rb = NULL;
 		if (size < 32)
 			size = 32;
 		cb = &get_mem_bank(0xf00000);
