@@ -1783,6 +1783,21 @@ static void add_expansions(struct uae_prefs *p, int zorro, int *fastmem_nump, in
 		*fastmem_nump = fastmem_num;
 }
 
+uae_u32 expansion_board_size(addrbank* ab)
+{
+	uae_u32 size = 0;
+	uae_u8 code = (ab->bget(0) & 0xf0) | ((ab->bget(2) & 0xf0) >> 4);
+	if ((code & 0xc0) == zorroII) {
+		// Z2
+		code &= 7;
+		if (code == 0)
+			size = 8 * 1024 * 1024;
+		else
+			size = 32768 << code;
+	}
+	return size;
+}
+
 static uae_u8 autoconfig_read(const uae_u8 *autoconfig, int offset)
 {
 	uae_u8 b = (autoconfig[offset] & 0xf0) | (autoconfig[offset + 2] >> 4);

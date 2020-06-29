@@ -118,11 +118,12 @@ __inline__ void byteput(uaecptr addr, uae_u32 b)
 }
 #endif
 
-extern bool debugmem_initialized;
+//extern bool debugmem_initialized;
 
 bool real_address_allowed(void)
 {
-	return debugmem_initialized == false;
+	//return debugmem_initialized == false;
+	return true;
 }
 
 int addr_valid(const TCHAR* txt, uaecptr addr, uae_u32 len)
