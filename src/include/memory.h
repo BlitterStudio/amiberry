@@ -471,6 +471,10 @@ extern addrbank *get_sub_bank(uaecptr *addr);
 
 extern addrbank *mem_banks[MEMORY_BANKS];
 
+#ifdef JIT
+extern uae_u8* baseaddr[MEMORY_BANKS];
+#endif
+
 #define get_mem_bank(addr) (*mem_banks[bankindex(addr)])
 extern addrbank *get_mem_bank_real(uaecptr);
 
@@ -715,14 +719,14 @@ STATIC_INLINE void put_pointer (uaecptr addr, void *v)
 # endif
 #endif
 
-STATIC_INLINE uae_u8 *get_real_address(uaecptr addr)
+STATIC_INLINE uae_u8* get_real_address(uaecptr addr)
 {
-  return get_mem_bank(addr).xlateaddr(addr);
+	return get_mem_bank(addr).xlateaddr(addr);
 }
 
-STATIC_INLINE int valid_address (uaecptr addr, uae_u32 size)
+STATIC_INLINE int valid_address(uaecptr addr, uae_u32 size)
 {
-  return get_mem_bank(addr).check(addr, size);
+	return get_mem_bank(addr).check(addr, size);
 }
 
 STATIC_INLINE void put_long_host(void *addr, uae_u32 v)
@@ -776,6 +780,25 @@ extern void (REGPARAM3* chipmem_wput_indirect)(uaecptr, uae_u32) REGPARAM;
 extern void (REGPARAM3* chipmem_bput_indirect)(uaecptr, uae_u32) REGPARAM;
 extern int (REGPARAM3* chipmem_check_indirect)(uaecptr, uae_u32) REGPARAM;
 extern uae_u8* (REGPARAM3* chipmem_xlate_indirect)(uaecptr) REGPARAM;
+
+#ifdef NATMEM_OFFSET
+
+typedef struct shmpiece_reg {
+	uae_u8* native_address;
+	int id;
+	uae_u32 size;
+	const TCHAR* name;
+	struct shmpiece_reg* next;
+	struct shmpiece_reg* prev;
+} shmpiece;
+
+extern shmpiece* shm_start;
+
+extern uae_u8* natmem_offset;
+extern uae_u8* natmem_reserved;
+extern uae_u32 natmem_reserved_size;
+
+#endif
 
 extern bool mapped_malloc (addrbank*);
 extern void mapped_free (addrbank*);

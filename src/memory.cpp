@@ -26,6 +26,8 @@
 #include "gayle.h"
 #include "devices.h"
 
+extern uae_u8* natmem_offset, * natmem_offset_end;
+
 bool canbang;
 static bool rom_write_enabled;
 #ifdef JIT
