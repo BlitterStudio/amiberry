@@ -465,6 +465,10 @@ void allocsoftbuffer(struct uae_prefs* p)
 	/* Initialize structure for Amiga video modes */
 	auto* ad = &adisplays;
 	ad->gfxvidinfo.drawbuffer.pixbytes = screen->format->BytesPerPixel;
+	if (screen->format->BytesPerPixel == 2)
+		p->color_mode = 2;
+	else
+		p->color_mode = 5;
 	ad->gfxvidinfo.drawbuffer.width_allocated = screen->w;
 	ad->gfxvidinfo.drawbuffer.height_allocated = screen->h;
 	
@@ -1105,7 +1109,7 @@ int GetSurfacePixelFormat()
 		: depth == 15 && unit == 16
 		? RGBFB_R5G5B5
 		: depth == 16 && unit == 16
-		? RGBFB_R5G6B5PC
+		? RGBFB_R5G6B5
 		: unit == 24
 		? RGBFB_R8G8B8
 		: unit == 32
@@ -1177,7 +1181,7 @@ static int save_png(SDL_Surface* surface, char* path)
 	const auto w = surface->w;
 	const auto h = surface->h;
 	auto* const pix = static_cast<unsigned char *>(surface->pixels);
-	unsigned char writeBuffer[1024 * 3];
+	unsigned char writeBuffer[1920 * 3];
 	auto* const f = fopen(path, "wbe");
 	if (!f) return 0;
 	auto* png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING,
@@ -1209,32 +1213,50 @@ static int save_png(SDL_Surface* surface, char* path)
 		PNG_INTERLACE_NONE,
 		PNG_COMPRESSION_TYPE_DEFAULT,
 		PNG_FILTER_TYPE_DEFAULT);
-
 	png_write_info(png_ptr, info_ptr);
 
 	auto* b = writeBuffer;
 
 	const auto sizeX = w;
 	const auto sizeY = h;
+	const auto depth = get_display_depth();
 
-	auto* p = reinterpret_cast<unsigned short *>(pix);
-	for (auto y = 0; y < sizeY; y++)
+	if (depth <= 16)
 	{
-		for (auto x = 0; x < sizeX; x++)
+		auto* p = reinterpret_cast<unsigned short*>(pix);
+		for (auto y = 0; y < sizeY; y++)
 		{
-			auto v = p[x];
+			for (auto x = 0; x < sizeX; x++)
+			{
+				const auto v = p[x];
 
-			*b++ = ((v & SYSTEM_RED_MASK) >> SYSTEM_RED_SHIFT) << 3; // R
-			*b++ = ((v & SYSTEM_GREEN_MASK) >> SYSTEM_GREEN_SHIFT) << 2; // G
-			*b++ = ((v & SYSTEM_BLUE_MASK) >> SYSTEM_BLUE_SHIFT) << 3; // B
+				*b++ = ((v & SYSTEM_RED_MASK) >> SYSTEM_RED_SHIFT) << 3; // R
+				*b++ = ((v & SYSTEM_GREEN_MASK) >> SYSTEM_GREEN_SHIFT) << 2; // G
+				*b++ = ((v & SYSTEM_BLUE_MASK) >> SYSTEM_BLUE_SHIFT) << 3; // B
+			}
+			p += surface->pitch / 2;
+			png_write_row(png_ptr, writeBuffer);
+			b = writeBuffer;
 		}
-		p += surface->pitch / 2;
-		png_write_row(png_ptr, writeBuffer);
-		b = writeBuffer;
+	}
+	else
+	{
+		auto* p = reinterpret_cast<unsigned int*>(pix);
+		for (auto y = 0; y < sizeY; y++) {
+			for (auto x = 0; x < sizeX; x++) {
+				auto v = p[x];
+
+				*b++ = ((v & SYSTEM_RED_MASK) >> SYSTEM_RED_SHIFT); // R
+				*b++ = ((v & SYSTEM_GREEN_MASK) >> SYSTEM_GREEN_SHIFT); // G 
+				*b++ = ((v & SYSTEM_BLUE_MASK) >> SYSTEM_BLUE_SHIFT); // B
+			}
+			p += surface->pitch / 4;
+			png_write_row(png_ptr, writeBuffer);
+			b = writeBuffer;
+		}
 	}
 
 	png_write_end(png_ptr, info_ptr);
-
 	png_destroy_write_struct(&png_ptr, &info_ptr);
 
 	fclose(f);
@@ -1433,9 +1455,10 @@ void picasso_init_resolutions()
 		for (auto bitdepth : bits)
 		{
 			const auto bit_unit = bitdepth + 1 & 0xF8;
-			const auto rgbFormat = 
-				bitdepth == 8 ? RGBFB_CLUT : 
-			bitdepth == 16 ? RGBFB_R5G6B5PC : RGBFB_R8G8B8A8;
+			const auto rgbFormat =
+				bitdepth == 8 ? RGBFB_CLUT :
+				bitdepth == 16 ? RGBFB_R5G6B5 :
+				bitdepth == 24 ? RGBFB_R8G8B8 : RGBFB_R8G8B8A8;
 			auto pixelFormat = 1 << rgbFormat;
 			pixelFormat |= RGBFF_CHUNKY;
 			DisplayModes[count].res.width = x_size_table[i];
@@ -1482,10 +1505,10 @@ void gfx_set_picasso_modeinfo(uae_u32 w, uae_u32 h, uae_u32 depth, RGBFTYPE rgbf
 	picasso_vidinfo.selected_rgbformat = rgbfmt;
 	picasso_vidinfo.width = w;
 	picasso_vidinfo.height = h;
-	picasso_vidinfo.depth = screen->format->BitsPerPixel; // Native depth
+	picasso_vidinfo.depth = screen->format->BitsPerPixel;
 	picasso_vidinfo.extra_mem = 1;
 	picasso_vidinfo.rowbytes = screen->pitch;
-	picasso_vidinfo.pixbytes = screen->format->BytesPerPixel; // Native bytes
+	picasso_vidinfo.pixbytes = screen->format->BytesPerPixel;
 	picasso_vidinfo.offset = 0;
 
 	if (screen_is_picasso)
@@ -1494,7 +1517,11 @@ void gfx_set_picasso_modeinfo(uae_u32 w, uae_u32 h, uae_u32 depth, RGBFTYPE rgbf
 		if(screen != nullptr) {
 			picasso_vidinfo.rowbytes = screen->pitch;
 			picasso_vidinfo.rgbformat = 
-				screen->format->BytesPerPixel == 4 ? RGBFB_R8G8B8A8 : RGBFB_R5G6B5PC;
+				screen->format->BytesPerPixel == 4
+			? RGBFB_R8G8B8A8
+			: screen->format->BytesPerPixel == 2
+			? RGBFB_R5G6B5
+			: RGBFB_R8G8B8;
 		}
 	}
 }
