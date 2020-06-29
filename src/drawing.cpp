@@ -3925,7 +3925,7 @@ void vsync_handle_redraw(int long_field, int lof_changed, uae_u16 bplcon0p, uae_
 #ifdef AMIBERRY
 			if (render_tid) {
 				while (render_thread_busy)
-					sleep_millis(1);
+					sleep_micros(10);
 				write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_FRAME_DONE, 1);
 				uae_sem_wait(&render_sem);
 			}
@@ -3938,10 +3938,10 @@ void vsync_handle_redraw(int long_field, int lof_changed, uae_u16 bplcon0p, uae_
 #ifdef AMIBERRY
 			if (render_tid) {
 				while (render_thread_busy)
-					sleep_millis(1);
+					sleep_micros(1);
 				write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_QUIT, 1);
 				while (render_tid != 0) {
-					sleep_millis(10);
+					sleep_micros(10);
 				}
 				destroy_comm_pipe(render_pipe);
 				xfree(render_pipe);
@@ -4163,10 +4163,17 @@ static int render_thread(void *unused)
 		switch (signal) {
 
 		case RENDER_SIGNAL_PARTIAL:
-			partial_draw_frame();
+#ifdef USE_DISPMANX
+			if(!flip_in_progess)
+#endif
+				partial_draw_frame();
 			break;
 
 		case RENDER_SIGNAL_FRAME_DONE:
+#ifdef USE_DISPMANX
+			while (flip_in_progess)
+				sleep_micros(1);
+#endif
 			finish_drawing_frame(true);
 			uae_sem_post(&render_sem);
 			break;

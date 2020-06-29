@@ -32,6 +32,7 @@ static bool volatile display_thread_busy = false;
 static unsigned int current_vsync_frame = 0;
 unsigned long time_per_frame = 20000; // Default for PAL (50 Hz): 20000 microsecs
 static int vsync_modulo = 1;
+bool volatile flip_in_progess = false;
 #endif
 
 /* SDL Surface for output of emulation */
@@ -279,6 +280,7 @@ static int display_thread(void *unused)
 				vc_dispmanx_element_change_source(updateHandle, elementHandle, amigafb_resource_2);
 			}
 			vc_dispmanx_update_submit(updateHandle, nullptr, nullptr);
+			flip_in_progess = false;
 			break;
 
 		case DISPLAY_SIGNAL_QUIT:
@@ -988,6 +990,7 @@ void show_screen(int mode)
 
 #ifdef USE_DISPMANX
 	wait_for_display_thread();
+	flip_in_progess = true;
 	write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SHOW, 1);
 #else
 	if (amiberry_options.use_sdl2_render_thread)
