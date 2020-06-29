@@ -7792,6 +7792,9 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 	p->z3autoconfig_start = 0x10000000;
 	p->chipmem_size = 0x00080000;
 	p->bogomem_size = 0x00080000;
+	for (auto i = 0; i < MAX_RTG_BOARDS; i++) {
+		p->rtgboards[i].rtg_index = i;
+	}
 	p->rtgboards[0].rtgmem_size = 0x00000000;
 	p->rtgboards[0].rtgmem_type = GFXBOARD_UAE_Z3;
 	p->custom_memory_addrs[0] = 0;
