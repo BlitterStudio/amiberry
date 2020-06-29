@@ -324,7 +324,7 @@ void ReadConfigFileList(void)
 	FilterFiles(&files, filter_rp9);
 	for (auto & file : files)
 	{
-		auto tmp = new ConfigFileInfo();
+		auto* tmp = new ConfigFileInfo();
 		strncpy(tmp->FullPath, path, MAX_DPATH - 1);
 		strncat(tmp->FullPath, file.c_str(), MAX_DPATH - 1);
 		strncpy(tmp->Name, file.c_str(), MAX_DPATH - 1);
@@ -339,7 +339,7 @@ void ReadConfigFileList(void)
 	FilterFiles(&files, filter_uae);
 	for (auto & file : files)
 	{
-		auto tmp = new ConfigFileInfo();
+		auto* tmp = new ConfigFileInfo();
 		strncpy(tmp->FullPath, path, MAX_DPATH - 1);
 		strncat(tmp->FullPath, file.c_str(), MAX_DPATH - 1);
 		strncpy(tmp->Name, file.c_str(), MAX_DPATH - 1);
@@ -347,9 +347,9 @@ void ReadConfigFileList(void)
 		// If the user has many (thousands) of configs, this will take a long time
 		if (amiberry_options.read_config_descriptions)
 		{
-			struct uae_prefs *p = cfgfile_open(tmp->FullPath, NULL);
+			auto p = cfgfile_open(tmp->FullPath, NULL);
 			if (p) {
-				cfgfile_get_description(p, NULL, tmp->Description, NULL);
+				cfgfile_get_description(p, NULL, tmp->Description, NULL, NULL, NULL, NULL, NULL);
 				cfgfile_close(p);
 			}
 		}

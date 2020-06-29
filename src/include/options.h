@@ -1047,7 +1047,7 @@ extern int cfgfile_save(struct uae_prefs* p, const TCHAR* filename, int);
 extern void cfgfile_parse_line(struct uae_prefs* p, TCHAR*, int);
 extern void cfgfile_parse_lines(struct uae_prefs* p, const TCHAR*, int);
 extern int cfgfile_parse_option(struct uae_prefs* p, const TCHAR* option, TCHAR* value, int);
-extern int cfgfile_get_description(struct uae_prefs* p, const TCHAR* filename, TCHAR* description, int* type);
+extern int cfgfile_get_description(struct uae_prefs* p, const TCHAR* filename, TCHAR* description, TCHAR* category, TCHAR* tags, TCHAR* hostlink, TCHAR* hardwarelink, int* type);
 extern void cfgfile_show_usage(void);
 extern int cfgfile_searchconfig(const TCHAR* in, int index, TCHAR* out, int outsize);
 extern uae_u32 cfgfile_uaelib(TrapContext* ctx, int mode, uae_u32 name, uae_u32 dst, uae_u32 maxlen);
