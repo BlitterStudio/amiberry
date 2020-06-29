@@ -13,6 +13,7 @@
 
 extern void real_main (int, TCHAR **);
 extern void usage (void);
+extern void sleep_micros (int ms);
 extern void sleep_millis (int ms);
 extern int sleep_millis_main(int ms);
 extern int sleep_millis_amiga(int ms);

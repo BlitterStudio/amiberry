@@ -124,6 +124,11 @@ int max_uae_height;
 
 extern "C" int main(int argc, char* argv[]);
 
+void sleep_micros (int ms)
+{
+	usleep(ms);
+}
+
 void sleep_millis(int ms)
 {
 	usleep(ms * 1000);
