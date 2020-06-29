@@ -72,7 +72,7 @@ static uae_u8 kbcode;
 static struct rtc_msm_data rtc_msm;
 static struct rtc_ricoh_data rtc_ricoh;
 
-STATIC_INLINE void setclr (unsigned int *p, unsigned int val)
+static void setclr (unsigned int *p, unsigned int val)
 {
 	if (val & 0x80) {
 		*p |= val & 0x7F;
@@ -81,12 +81,12 @@ STATIC_INLINE void setclr (unsigned int *p, unsigned int val)
 	}
 }
 
-STATIC_INLINE void ICR (uae_u32 data)
+static void ICR (uae_u32 data)
 {
 	safe_interrupt_set((data & 0x2000) != 0);
 }
 
-STATIC_INLINE void ICRA(uae_u32 dummy)
+static void ICRA(uae_u32 dummy)
 {
 	if (ciaaicr & 0x80)
   	ciaaicr |= 0x40;
@@ -94,7 +94,7 @@ STATIC_INLINE void ICRA(uae_u32 dummy)
 	ICR (0x0008);
 }
 
-STATIC_INLINE void ICRB(uae_u32 dummy)
+static void ICRB(uae_u32 dummy)
 {
 	if (ciabicr & 0x80)
 	  ciabicr |= 0x40;
@@ -102,7 +102,7 @@ STATIC_INLINE void ICRB(uae_u32 dummy)
 	ICR (0x2000);
 }
 
-STATIC_INLINE void RethinkICRA (void)
+static void RethinkICRA (void)
 {
   if (ciaaicr & ciaaimask) {
 		if (!(ciaaicr & 0x80)) {
@@ -112,7 +112,7 @@ STATIC_INLINE void RethinkICRA (void)
   }
 }
 
-STATIC_INLINE void RethinkICRB (void)
+static void RethinkICRB (void)
 {
   if (ciabicr & ciabimask) {
 		if (!(ciabicr & 0x80)) {

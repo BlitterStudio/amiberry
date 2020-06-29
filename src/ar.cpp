@@ -1058,9 +1058,9 @@ void action_replay_cia_access(bool write)
 	if (action_replay_flag == ACTION_REPLAY_INACTIVE)
 		return;
 	if ((armode_write & ARMODE_ACTIVATE_BFE001) && !write) {
-		event2_newevent_xx(-1, 1, write, action_replay_cia_access_delay);
+		event2_newevent_xx(-1, 0, write, action_replay_cia_access_delay);
 	} else if ((armode_write & ARMODE_ACTIVATE_BFD100) && write) {
-		event2_newevent_xx(-1, 1, write, action_replay_cia_access_delay);
+		event2_newevent_xx(-1, 0, write, action_replay_cia_access_delay);
 	}
 }
 
