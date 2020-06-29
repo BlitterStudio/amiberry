@@ -630,7 +630,6 @@ bool EditFilesysHardfile(const int unit_no)
 		ci.controller_type = controller[cboController->getSelected()].type;
 		ci.controller_type_unit = 0;
 		ci.controller_unit = cboUnit->getSelected();
-		ci.controller_media_type = 0;
 		ci.unit_feature_level = 1;
 		ci.unit_special_flags = 0;
 		ci.readonly = !chkReadWrite->isSelected();
@@ -644,7 +643,7 @@ bool EditFilesysHardfile(const int unit_no)
 		uci = add_filesys_config(&changed_prefs, unit_no, &ci);
 		if (uci)
 		{
-			const auto hfd = get_hardfile_data(uci->configoffset);
+			auto* const hfd = get_hardfile_data(uci->configoffset);
 			if (hfd)
 				hardfile_media_change(hfd, &ci, true, false);
 		}

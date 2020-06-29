@@ -446,14 +446,14 @@ bool CreateFilesysHardfile()
 		ci.controller_type = 0;
 		ci.controller_type_unit = 0;
 		ci.controller_unit = 0;
-		ci.controller_media_type = 0;
 		ci.unit_feature_level = 1;
 		ci.readonly = false;
 		auto* const uci = add_filesys_config(&changed_prefs, -1, &ci);
 		if (uci)
 		{
 			auto* const hfd = get_hardfile_data(uci->configoffset);
-			hardfile_media_change(hfd, &ci, true, false);
+			if (hfd)
+				hardfile_media_change(hfd, &ci, true, false);
 		}
 	}
 

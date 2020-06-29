@@ -394,7 +394,8 @@ static void parse_boot(struct uae_prefs* p, xmlNode* node)
 							if (uci)
 							{
 								const auto hfd = get_hardfile_data(uci->configoffset);
-								hardfile_media_change(hfd, &ci, true, false);
+                                if(hfd)
+									hardfile_media_change(hfd, &ci, true, false);
 							}
 						}
 						xmlFree(content);
@@ -506,7 +507,8 @@ static void extract_media(struct uae_prefs* p, unzFile uz, xmlNode* node)
 												if (uci)
 												{
 													const auto hfd = get_hardfile_data(uci->configoffset);
-													hardfile_media_change(hfd, &ci, true, false);
+													if(hfd)
+														hardfile_media_change(hfd, &ci, true, false);
 												}
 											}
 											lstTmpRP9Files.emplace_back(target_file);
