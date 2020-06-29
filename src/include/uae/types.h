@@ -42,10 +42,25 @@ typedef long uae_s32;
 #endif
 
 #ifndef uae_s64
-typedef long long int uae_s64;
+typedef long long uae_s64;
 #endif
 #ifndef uae_u64
-typedef unsigned long long int uae_u64;
+typedef unsigned long long uae_u64;
+#endif
+
+#if SIZEOF_LONG_LONG == 8
+#define VAL64(a) (a ## LL)
+#define UVAL64(a) (a ## uLL)
+#elif SIZEOF___INT64 == 8
+#define uae_s64 __int64
+#define uae_u64 unsigned __int64
+#define VAL64(a) (a)
+#define UVAL64(a) (a)
+#elif SIZEOF_LONG == 8
+#define uae_s64 long;
+#define uae_u64 unsigned long;
+#define VAL64(a) (a ## l)
+#define UVAL64(a) (a ## ul)
 #endif
 
 /* Parts of the UAE/WinUAE code uses the bool type (from C++).
