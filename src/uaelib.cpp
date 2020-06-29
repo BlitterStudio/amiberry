@@ -13,6 +13,8 @@
 
 #include <cassert>
 #include <cstring>
+#include <stdexcept>
+
 
 #include "options.h"
 #include "uae.h"
@@ -349,17 +351,21 @@ static int native_dos_op(TrapContext* ctx, uae_u32 mode, uae_u32 p1, uae_u32 p2,
 }
 
 // Execute a command on the Host OS
-static uae_u32 emulib_ExecuteOnHost(TrapContext* ctx, uaecptr name)
+static uae_u32 emulib_run_on_host(TrapContext* ctx, uaecptr name)
 {
 	char real_name[MAX_DPATH];
-	TCHAR* s;
-
 	if (trap_get_string(ctx, real_name, name, sizeof real_name) >= sizeof real_name)
 		return 0; /* ENAMETOOLONG */
 
 	set_mouse_grab(false);
-	
-	system(real_name);
+	try
+	{
+		system(real_name);
+	}
+	catch (...)
+	{
+		write_log("Exception thrown when trying to execute: %s", real_name);
+	}
 	return 1;
 }
 
@@ -418,7 +424,7 @@ static uae_u32 uaelib_demux_common(TrapContext* ctx, uae_u32 ARG0, uae_u32 ARG1,
 			trap_set_dreg(ctx, 1, d1);
 			return d0;
 		}
-	case 88: return emulib_ExecuteOnHost(ctx, ARG1);
+	case 88: return emulib_run_on_host(ctx, ARG1);
 	}
 	
 	return 0;
