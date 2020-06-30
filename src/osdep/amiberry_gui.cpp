@@ -1,9 +1,8 @@
-#include <stdio.h>
+#include <cstdio>
 #include <strings.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <stdbool.h>
+#include <cstring>
+#include <cstdlib>
+#include <cstdarg>
 
 #include <guisan.hpp>
 #include <guisan/sdl.hpp>
@@ -139,7 +138,7 @@ void ClearAvailableROMList()
 {
 	while (!lstAvailableROMs.empty())
 	{
-		const auto tmp = lstAvailableROMs[0];
+		auto* const tmp = lstAvailableROMs[0];
 		lstAvailableROMs.erase(lstAvailableROMs.begin());
 		delete tmp;
 	}
@@ -148,7 +147,7 @@ void ClearAvailableROMList()
 static void addrom(struct romdata* rd, const char* path)
 {
 	char tmpName[MAX_DPATH];
-	const auto tmp = new AvailableROM();
+	auto* const tmp = new AvailableROM();
 	getromname(rd, tmpName);
 	strncpy(tmp->Name, tmpName, MAX_DPATH - 1);
 	if (path != nullptr)
@@ -191,7 +190,7 @@ static struct romdata* scan_single_rom_2(struct zfile* f)
 	{
 		zfile_fseek(f, 0, SEEK_SET);
 	}
-	uae_u8* rombuf = xcalloc(uae_u8, size);
+	auto* rombuf = xcalloc(uae_u8, size);
 	if (!rombuf)
 		return nullptr;
 	zfile_fread(rombuf, 1, size, f);
@@ -222,7 +221,7 @@ static int isromext(char* path)
 {
 	if (!path)
 		return 0;
-	auto ext = strrchr(path, '.');
+	auto* ext = strrchr(path, '.');
 	if (!ext)
 		return 0;
 	ext++;
@@ -240,11 +239,11 @@ static int isromext(char* path)
 
 static int scan_rom_2(struct zfile* f, void* dummy)
 {
-	const auto path = zfile_getname(f);
+	auto* const path = zfile_getname(f);
 
 	if (!isromext(path))
 		return 0;
-	const auto rd = scan_single_rom_2(f);
+	auto* const rd = scan_single_rom_2(f);
 	if (rd)
 		addrom(rd, path);
 	return 0;
@@ -286,7 +285,7 @@ void RescanROMs()
 
 	auto id = 1;
 	for (;;) {
-		auto rd = getromdatabyid(id);
+		auto* rd = getromdatabyid(id);
 		if (!rd)
 			break;
 		if (rd->crc32 == 0xffffffff && strncmp(rd->model, "AROS", 4) == 0)
@@ -302,12 +301,11 @@ static void ClearConfigFileList()
 {
 	while (!ConfigFilesList.empty())
 	{
-		const auto tmp = ConfigFilesList[0];
+		auto* const tmp = ConfigFilesList[0];
 		ConfigFilesList.erase(ConfigFilesList.begin());
 		delete tmp;
 	}
 }
-
 
 void ReadConfigFileList(void)
 {
@@ -372,23 +370,12 @@ static void clearallkeys (void)
 	inputdevice_updateconfig (NULL, &changed_prefs);
 }
 
-void setmouseactive(int active)
-{
-	if (active) {
-		inputdevice_acquire(TRUE);
-	} else {
-		inputdevice_acquire (FALSE);
-		inputdevice_releasebuttons();
-	}
-}
-
 static void prefs_to_gui()
 {
 	/* filesys hack */
 	changed_prefs.mountitems = currprefs.mountitems;
 	memcpy(&changed_prefs.mountconfig, &currprefs.mountconfig, MOUNT_CONFIG_SIZE * sizeof(struct uaedev_config_info));
 }
-
 
 static void gui_to_prefs(void)
 {
@@ -397,7 +384,6 @@ static void gui_to_prefs(void)
 	memcpy(&currprefs.mountconfig, &changed_prefs.mountconfig, MOUNT_CONFIG_SIZE * sizeof(struct uaedev_config_info));
 	fixup_prefs(&changed_prefs, true);
 }
-
 
 static void after_leave_gui()
 {
@@ -419,7 +405,6 @@ static void after_leave_gui()
 	inputdevice_copyconfig(&changed_prefs, &currprefs);
 	inputdevice_config_change_test();
 }
-
 
 int gui_init()
 {
@@ -454,12 +439,10 @@ void gui_exit()
 	ClearAvailableROMList();
 }
 
-
 void gui_purge_events()
 {
 	keybuf_init();
 }
-
 
 int gui_update()
 {
@@ -498,7 +481,6 @@ int gui_update()
   }
   return 0;
 }
-
 
 void gui_display(int shortcut)
 {
@@ -769,8 +751,8 @@ bool DevicenameExists(const char* name)
 {
 	for (auto i = 0; i < MAX_HD_DEVICES; ++i)
 	{
-		auto uci = &changed_prefs.mountconfig[i];
-		const auto ci = &uci->ci;
+		auto* uci = &changed_prefs.mountconfig[i];
+		auto* const ci = &uci->ci;
 
 		if (ci->devname[0])
 		{
@@ -813,7 +795,7 @@ int tweakbootpri(int bp, int ab, int dnm)
 bool hardfile_testrdb(const TCHAR* filename)
 {
 	auto isrdb = false;
-	auto f = zfile_fopen(filename, _T("rb"), ZFD_NORMAL);
+	auto* f = zfile_fopen(filename, _T("rb"), ZFD_NORMAL);
 	uae_u8 tmp[8];
 
 	if (!f)

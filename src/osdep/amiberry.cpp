@@ -189,6 +189,7 @@ bool resumepaused(int priority)
 	if (pausemouseactive)
 	{
 		pausemouseactive = 0;
+		setmouseactive(isfullscreen() > 0 ? 1 : -1);
 	}
 	pause_emulation = 0;
 	setsystime();
@@ -204,6 +205,10 @@ bool setpaused(int priority)
 	devices_pause();
 	setsoundpaused();
 	pausemouseactive = 1;
+	if (isfullscreen() <= 0) {
+		pausemouseactive = mouseactive;
+		setmouseactive(0);
+	}
 	return true;
 }
 
@@ -1476,19 +1481,16 @@ static void amiberry_inactive(int minimized)
 		if (minimized) {
 			inputdevice_unacquire();
 			setpaused(1);
-			setsoundpaused();
 			sound_closed = -1;
 		}
 		else if (mouseactive) {
 			inputdevice_unacquire();
 			setpaused(2);
-			setsoundpaused();
 			sound_closed = -1;
 		}
 		else {
 			inputdevice_unacquire();
 			setpaused(2);
-			setsoundpaused();
 			sound_closed = -1;
 		}
 	} else {
@@ -1512,6 +1514,67 @@ static void amiberry_active(int minimized)
 	//clipboard_active(1);
 }
 
+static void setmouseactive2(int active, bool allowpause)
+{
+	if (active == 0)
+		set_mouse_grab(false);
+	if (mouseactive == active && active >= 0)
+		return;
+
+	if (active == 1 && !(currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC)) {
+		set_mouse_grab(true);
+	}
+	
+	if (active < 0)
+		active = 1;
+
+	mouseactive = active ? 1 : 0;
+
+	recapture = 0;
+	
+	if (isfullscreen() <= 0 && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_tablet > 0) {
+		if (mousehack_alive())
+			return;
+	}
+	
+	if (active) {
+		inputdevice_acquire(TRUE);
+		resumepaused(2);
+		if (sound_closed < 0)
+			resumesoundpaused();
+	}
+	else {
+		inputdevice_acquire(FALSE);
+		inputdevice_releasebuttons();
+		setpaused(2);
+		sound_closed = -1;
+	}
+}
+
+void setmouseactive(int active)
+{
+	if (active > 1)
+		SDL_RaiseWindow(sdl_window);
+	setmouseactive2(active, true);
+}
+
+void enablecapture()
+{
+	if (pause_emulation > 2)
+		return;
+	setmouseactive(1);
+	if (sound_closed < 0) {
+		resumesoundpaused();
+		sound_closed = 0;
+	}
+}
+
+void disablecapture()
+{
+	setmouseactive(0);
+	focus = 0;
+}
+
 int handle_msgpump()
 {
 	auto gotEvent = 0;
@@ -1530,6 +1593,9 @@ int handle_msgpump()
 			case SDL_WINDOWEVENT_MINIMIZED:
 				setminimized();
 				amiberry_inactive(minimized);
+				break;
+			case SDL_WINDOWEVENT_LEAVE:
+				set_mouse_grab(false);
 				break;
 			case SDL_WINDOWEVENT_CLOSE:
 				uae_quit();
@@ -1708,34 +1774,36 @@ int handle_msgpump()
 
 		case SDL_FINGERMOTION:
 			//TODO this doesn't work yet
-			mouseScale = currprefs.input_joymouse_multiplier / 2;
-			x = event.motion.xrel;
-			y = event.motion.yrel;
-			setmousestate(0, 0, x* mouseScale, 0);
-			setmousestate(0, 1, y* mouseScale, 0);
+			setmousestate(0, 0, event.motion.xrel, 0);
+			setmousestate(0, 1, event.motion.yrel, 0);
 			break;
 			
 		case SDL_MOUSEMOTION:
-			if (currprefs.input_tablet == TABLET_OFF)
+			if (recapture && isfullscreen() <= 0) {
+				enablecapture();
+			}
+
+			if (currprefs.input_tablet >= TABLET_MOUSEHACK)
 			{
-				if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
-				{
-					mouseScale = currprefs.input_joymouse_multiplier / 2;
-					x = event.motion.xrel;
-					y = event.motion.yrel;
+				/* absolute */
+				setmousestate(0, 0, event.motion.x, 1);
+				setmousestate(0, 1, event.motion.y, 1);
+			}
+			else if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
+			{
+				/* relative */
 #if defined (ANDROID)
-					if (event.motion.x == 0 && x > -4)
-						x = -4;
-					if (event.motion.y == 0 && y > -4)
-						y = -4;
-					if (event.motion.x == currprefs.gfx_monitor.gfx_size.width - 1 && x < 4)
-						x = 4;
-					if (event.motion.y == currprefs.gfx_monitor.gfx_size.height - 1 && y < 4)
-						y = 4;
+				if (event.motion.x == 0 && x > -4)
+					x = -4;
+				if (event.motion.y == 0 && y > -4)
+					y = -4;
+				if (event.motion.x == currprefs.gfx_monitor.gfx_size.width - 1 && x < 4)
+					x = 4;
+				if (event.motion.y == currprefs.gfx_monitor.gfx_size.height - 1 && y < 4)
+					y = 4;
 #endif //ANDROID
-					setmousestate(0, 0, x * mouseScale, 0);
-					setmousestate(0, 1, y * mouseScale, 0);
-				}
+				setmousestate(0, 0, event.motion.xrel, 0);
+				setmousestate(0, 1, event.motion.yrel, 0);
 			}
 			break;
 
@@ -1790,6 +1858,9 @@ bool handle_events()
 			case SDL_WINDOWEVENT_RESTORED:
 				amiberry_active(minimized);
 				unsetminimized();
+				break;
+			case SDL_WINDOWEVENT_LEAVE:
+				set_mouse_grab(false);
 				break;
 			case SDL_WINDOWEVENT_CLOSE:
 				uae_quit();

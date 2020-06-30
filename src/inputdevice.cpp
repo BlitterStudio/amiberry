@@ -4054,9 +4054,9 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 	case AKS_WARP:
 		warpmode(newstate);
 		break;
-	//case AKS_INHIBITSCREEN:
-	//	toggle_inhibit_frame(monid, IHF_SCROLLLOCK);
-	//	break;
+	case AKS_INHIBITSCREEN:
+		toggle_inhibit_frame(IHF_SCROLLLOCK);
+		break;
 	//case AKS_STATEREWIND:
 	//	savestate_dorewind(-2);
 	//	break;
