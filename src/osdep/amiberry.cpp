@@ -1591,6 +1591,10 @@ void process_event(SDL_Event event)
 			amiberry_active(minimized);
 			unsetminimized();
 			break;
+		case SDL_WINDOWEVENT_ENTER:
+			mouseinside = true;
+			set_mouse_grab(true);
+			break;
 		case SDL_WINDOWEVENT_LEAVE:
 			mouseinside = false;
 			set_mouse_grab(false);
