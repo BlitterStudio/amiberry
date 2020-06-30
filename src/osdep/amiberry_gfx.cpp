@@ -404,7 +404,10 @@ int graphics_setup(void)
 	}
 	
 	if (SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1") != SDL_TRUE)
-		write_log("SDL could not grab the keyboard");
+		write_log("SDL2: could not grab the keyboard!\n");
+
+	if (SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0") == SDL_TRUE)
+		write_log("SDL2: Set window not to minimize on focus loss\n");
 	
 	currprefs.gfx_apmode[1].gfx_refreshrate = host_hz;
 
