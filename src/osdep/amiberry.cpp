@@ -1575,260 +1575,278 @@ void disablecapture()
 	focus = 0;
 }
 
-int handle_msgpump()
+void process_event(SDL_Event event)
 {
-	auto gotEvent = 0;
-	SDL_Event event;
-	int mouseScale, x, y;
+	const auto* keystate = SDL_GetKeyboardState(nullptr);
 	
-	while (SDL_PollEvent(&event))
+	if (event.type == SDL_WINDOWEVENT)
 	{
-		gotEvent = 1;
-		const auto* keystate = SDL_GetKeyboardState(nullptr);
-
-		if (event.type == SDL_WINDOWEVENT)
+		switch (event.window.event)
 		{
-			switch (event.window.event)
-			{
-			case SDL_WINDOWEVENT_MINIMIZED:
-				setminimized();
-				amiberry_inactive(minimized);
-				break;
-			case SDL_WINDOWEVENT_LEAVE:
-				set_mouse_grab(false);
-				break;
-			case SDL_WINDOWEVENT_CLOSE:
-				uae_quit();
-				break;
-				
-			default:
-				break;
-			}
-		}
-		
-		switch (event.type)
-		{
-		case SDL_QUIT:
+		case SDL_WINDOWEVENT_MINIMIZED:
+			setminimized();
+			amiberry_inactive(minimized);
+			break;
+		case SDL_WINDOWEVENT_RESTORED:
+			amiberry_active(minimized);
+			unsetminimized();
+			break;
+		case SDL_WINDOWEVENT_LEAVE:
+			mouseinside = false;
+			set_mouse_grab(false);
+			break;
+		case SDL_WINDOWEVENT_CLOSE:
 			uae_quit();
-			break;
-
-		case SDL_JOYDEVICEADDED:
-		case SDL_CONTROLLERDEVICEADDED:
-			write_log("SDL Controller/Joystick device added! Re-running import joysticks...\n");
-			import_joysticks();
-			break;
-
-		case SDL_JOYDEVICEREMOVED:
-		case SDL_CONTROLLERDEVICEREMOVED:
-			write_log("SDL Controller/Joystick device removed!\n");
-			break;
-			
-		case SDL_KEYDOWN:
-		{
-			// if the key belongs to a "retro arch joystick" ignore it
-			// ONLY when in game though, we need to remove the joysticks really 
-			// if we want to use the KB
-			// i've added this so when using the joysticks it doesn't hit the 'r' key for some games
-			// which starts a replay!!!
-			const auto ok_to_use = !key_used_by_retroarch_joy(event.key.keysym.scancode);
-			if (ok_to_use)
-			{
-				if (event.key.repeat == 0)
-				{
-					// If the Enter GUI key was pressed, handle it
-					if (enter_gui_key && event.key.keysym.sym == enter_gui_key)
-					{
-						inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
-						break;
-					}
-
-					// If the Quit emulator key was pressed, handle it
-					if (quit_key && event.key.keysym.sym == quit_key)
-					{
-						inputdevice_add_inputcode(AKS_QUIT, 1, nullptr);
-						break;
-					}
-
-					if (action_replay_button && event.key.keysym.sym == action_replay_button)
-					{
-						inputdevice_add_inputcode(AKS_FREEZEBUTTON, 1, nullptr);
-						break;
-					}
-
-					if (fullscreen_key && event.key.keysym.sym == fullscreen_key)
-					{
-						inputdevice_add_inputcode(AKS_TOGGLEWINDOWEDFULLSCREEN, 1, nullptr);
-						break;
-					}
-				}
-				// If the reset combination was pressed, handle it
-				if (amiberry_options.swap_win_alt_keys)
-				{
-					if (keystate[SDL_SCANCODE_LCTRL] && keystate[SDL_SCANCODE_LALT] && (keystate[SDL_SCANCODE_RALT] || keystate[SDL_SCANCODE_APPLICATION]))
-					{
-						uae_reset(0, 1);
-						break;
-					}
-				}
-				else if (keystate[SDL_SCANCODE_LCTRL] && keystate[SDL_SCANCODE_LGUI] && (keystate[SDL_SCANCODE_RGUI] || keystate[SDL_SCANCODE_APPLICATION]))
-				{
-					uae_reset(0, 1);
-					break;
-				}
-
-				if (event.key.repeat == 0)
-				{
-					if (event.key.keysym.sym == SDLK_CAPSLOCK)
-					{
-						// Treat CAPSLOCK as a toggle. If on, set off and vice/versa
-						ioctl(0, KDGKBLED, &kbd_flags);
-						ioctl(0, KDGETLED, &kbd_led_status);
-						if (kbd_flags & 07 & LED_CAP)
-						{
-							// On, so turn off
-							kbd_led_status &= ~LED_CAP;
-							kbd_flags &= ~LED_CAP;
-							inputdevice_do_keyboard(AK_CAPSLOCK, 0);
-						}
-						else
-						{
-							// Off, so turn on
-							kbd_led_status |= LED_CAP;
-							kbd_flags |= LED_CAP;
-							inputdevice_do_keyboard(AK_CAPSLOCK, 1);
-						}
-						ioctl(0, KDSETLED, kbd_led_status);
-						ioctl(0, KDSKBLED, kbd_flags);
-						break;
-					}
-
-					// Handle all other keys
-					if (amiberry_options.swap_win_alt_keys)
-					{
-						if (event.key.keysym.scancode == SDL_SCANCODE_LALT)
-							event.key.keysym.scancode = SDL_SCANCODE_LGUI;
-						else if (event.key.keysym.scancode == SDL_SCANCODE_RALT)
-							event.key.keysym.scancode = SDL_SCANCODE_RGUI;
-					}
-					inputdevice_translatekeycode(0, event.key.keysym.scancode, 1, false);
-				}
-			}
-		}
-		break;
-		case SDL_KEYUP:
-		{
-			const auto ok_to_use = !key_used_by_retroarch_joy(event.key.keysym.scancode);
-			if (ok_to_use)
-			{
-				if (event.key.repeat == 0)
-				{
-					if (amiberry_options.swap_win_alt_keys)
-					{
-						if (event.key.keysym.scancode == SDL_SCANCODE_LALT)
-							event.key.keysym.scancode = SDL_SCANCODE_LGUI;
-						else if (event.key.keysym.scancode == SDL_SCANCODE_RALT)
-							event.key.keysym.scancode = SDL_SCANCODE_RGUI;
-					}
-					inputdevice_translatekeycode(0, event.key.keysym.scancode, 0, true);
-				}
-			}
-		}
-		break;
-
-		case SDL_FINGERDOWN:
-			setmousebuttonstate(0, 0, 1);
-			break;
-			
-		case SDL_MOUSEBUTTONDOWN:
-			if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
-			{
-				if (event.button.button == SDL_BUTTON_LEFT)
-					setmousebuttonstate(0, 0, 1);
-				if (event.button.button == SDL_BUTTON_RIGHT)
-					setmousebuttonstate(0, 1, 1);
-				if (event.button.button == SDL_BUTTON_MIDDLE)
-					setmousebuttonstate(0, 2, 1);
-			}
-			break;
-
-		case SDL_FINGERUP:
-			setmousebuttonstate(0, 0, 0);
-			break;
-			
-		case SDL_MOUSEBUTTONUP:
-			if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
-			{
-				if (event.button.button == SDL_BUTTON_LEFT)
-					setmousebuttonstate(0, 0, 0);
-				if (event.button.button == SDL_BUTTON_RIGHT)
-					setmousebuttonstate(0, 1, 0);
-				if (event.button.button == SDL_BUTTON_MIDDLE)
-				{
-					if (currprefs.input_mouse_untrap)
-						toggle_mouse_grab();
-					else
-						setmousebuttonstate(0, 2, 0);
-				}
-			}
-			break;
-
-		case SDL_FINGERMOTION:
-			//TODO this doesn't work yet
-			setmousestate(0, 0, event.motion.xrel, 0);
-			setmousestate(0, 1, event.motion.yrel, 0);
-			break;
-			
-		case SDL_MOUSEMOTION:
-			if (recapture && isfullscreen() <= 0) {
-				enablecapture();
-			}
-
-			if (currprefs.input_tablet >= TABLET_MOUSEHACK)
-			{
-				/* absolute */
-				setmousestate(0, 0, event.motion.x, 1);
-				setmousestate(0, 1, event.motion.y, 1);
-			}
-			else if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
-			{
-				/* relative */
-#if defined (ANDROID)
-				if (event.motion.x == 0 && x > -4)
-					x = -4;
-				if (event.motion.y == 0 && y > -4)
-					y = -4;
-				if (event.motion.x == currprefs.gfx_monitor.gfx_size.width - 1 && x < 4)
-					x = 4;
-				if (event.motion.y == currprefs.gfx_monitor.gfx_size.height - 1 && y < 4)
-					y = 4;
-#endif //ANDROID
-				setmousestate(0, 0, event.motion.xrel, 0);
-				setmousestate(0, 1, event.motion.yrel, 0);
-			}
-			break;
-
-		case SDL_MOUSEWHEEL:
-			if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
-			{
-				const auto val_y = event.wheel.y;
-				setmousestate(0, 2, val_y, 0);
-				if (val_y < 0)
-					setmousebuttonstate(0, 3 + 0, -1);
-				else if (val_y > 0)
-					setmousebuttonstate(0, 3 + 1, -1);
-
-				const auto val_x = event.wheel.x;
-				setmousestate(0, 3, val_x, 0);
-				if (val_x < 0)
-					setmousebuttonstate(0, 3 + 2, -1);
-				else if (val_x > 0)
-					setmousebuttonstate(0, 3 + 3, -1);
-			}
 			break;
 
 		default:
 			break;
 		}
+	}
+
+	switch (event.type)
+	{
+	case SDL_QUIT:
+		uae_quit();
+		break;
+
+	case SDL_JOYDEVICEADDED:
+	case SDL_CONTROLLERDEVICEADDED:
+		write_log("SDL Controller/Joystick device added! Re-running import joysticks...\n");
+		import_joysticks();
+		break;
+
+	case SDL_JOYDEVICEREMOVED:
+	case SDL_CONTROLLERDEVICEREMOVED:
+		write_log("SDL Controller/Joystick device removed!\n");
+		break;
+
+	case SDL_KEYDOWN:
+	{
+		// if the key belongs to a "retro arch joystick" ignore it
+		// ONLY when in game though, we need to remove the joysticks really 
+		// if we want to use the KB
+		// i've added this so when using the joysticks it doesn't hit the 'r' key for some games
+		// which starts a replay!!!
+		const auto ok_to_use = !key_used_by_retroarch_joy(event.key.keysym.scancode);
+		if (ok_to_use)
+		{
+			if (event.key.repeat == 0)
+			{
+				// If the Enter GUI key was pressed, handle it
+				if (enter_gui_key && event.key.keysym.sym == enter_gui_key)
+				{
+					inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
+					break;
+				}
+
+				// If the Quit emulator key was pressed, handle it
+				if (quit_key && event.key.keysym.sym == quit_key)
+				{
+					inputdevice_add_inputcode(AKS_QUIT, 1, nullptr);
+					break;
+				}
+
+				if (action_replay_button && event.key.keysym.sym == action_replay_button)
+				{
+					inputdevice_add_inputcode(AKS_FREEZEBUTTON, 1, nullptr);
+					break;
+				}
+
+				if (fullscreen_key && event.key.keysym.sym == fullscreen_key)
+				{
+					inputdevice_add_inputcode(AKS_TOGGLEWINDOWEDFULLSCREEN, 1, nullptr);
+					break;
+				}
+			}
+			// If the reset combination was pressed, handle it
+			if (amiberry_options.swap_win_alt_keys)
+			{
+				if (keystate[SDL_SCANCODE_LCTRL] && keystate[SDL_SCANCODE_LALT] && (keystate[SDL_SCANCODE_RALT] || keystate[SDL_SCANCODE_APPLICATION]))
+				{
+					uae_reset(0, 1);
+					break;
+				}
+			}
+			else if (keystate[SDL_SCANCODE_LCTRL] && keystate[SDL_SCANCODE_LGUI] && (keystate[SDL_SCANCODE_RGUI] || keystate[SDL_SCANCODE_APPLICATION]))
+			{
+				uae_reset(0, 1);
+				break;
+			}
+
+			if (event.key.repeat == 0)
+			{
+				if (event.key.keysym.sym == SDLK_CAPSLOCK)
+				{
+					// Treat CAPSLOCK as a toggle. If on, set off and vice/versa
+					ioctl(0, KDGKBLED, &kbd_flags);
+					ioctl(0, KDGETLED, &kbd_led_status);
+					if (kbd_flags & 07 & LED_CAP)
+					{
+						// On, so turn off
+						kbd_led_status &= ~LED_CAP;
+						kbd_flags &= ~LED_CAP;
+						inputdevice_do_keyboard(AK_CAPSLOCK, 0);
+					}
+					else
+					{
+						// Off, so turn on
+						kbd_led_status |= LED_CAP;
+						kbd_flags |= LED_CAP;
+						inputdevice_do_keyboard(AK_CAPSLOCK, 1);
+					}
+					ioctl(0, KDSETLED, kbd_led_status);
+					ioctl(0, KDSKBLED, kbd_flags);
+					break;
+				}
+
+				// Handle all other keys
+				if (amiberry_options.swap_win_alt_keys)
+				{
+					if (event.key.keysym.scancode == SDL_SCANCODE_LALT)
+						event.key.keysym.scancode = SDL_SCANCODE_LGUI;
+					else if (event.key.keysym.scancode == SDL_SCANCODE_RALT)
+						event.key.keysym.scancode = SDL_SCANCODE_RGUI;
+				}
+				inputdevice_translatekeycode(0, event.key.keysym.scancode, 1, false);
+			}
+		}
+	}
+	break;
+	case SDL_KEYUP:
+	{
+		const auto ok_to_use = !key_used_by_retroarch_joy(event.key.keysym.scancode);
+		if (ok_to_use)
+		{
+			if (event.key.repeat == 0)
+			{
+				if (amiberry_options.swap_win_alt_keys)
+				{
+					if (event.key.keysym.scancode == SDL_SCANCODE_LALT)
+						event.key.keysym.scancode = SDL_SCANCODE_LGUI;
+					else if (event.key.keysym.scancode == SDL_SCANCODE_RALT)
+						event.key.keysym.scancode = SDL_SCANCODE_RGUI;
+				}
+				inputdevice_translatekeycode(0, event.key.keysym.scancode, 0, true);
+			}
+		}
+	}
+	break;
+
+	case SDL_FINGERDOWN:
+		setmousebuttonstate(0, 0, 1);
+		break;
+
+	case SDL_MOUSEBUTTONDOWN:
+		if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
+		{
+			if (event.button.button == SDL_BUTTON_LEFT)
+				setmousebuttonstate(0, 0, 1);
+			if (event.button.button == SDL_BUTTON_RIGHT)
+				setmousebuttonstate(0, 1, 1);
+			if (event.button.button == SDL_BUTTON_MIDDLE)
+				setmousebuttonstate(0, 2, 1);
+		}
+		break;
+
+	case SDL_FINGERUP:
+		setmousebuttonstate(0, 0, 0);
+		break;
+
+	case SDL_MOUSEBUTTONUP:
+		if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
+		{
+			if (event.button.button == SDL_BUTTON_LEFT)
+				setmousebuttonstate(0, 0, 0);
+			if (event.button.button == SDL_BUTTON_RIGHT)
+				setmousebuttonstate(0, 1, 0);
+			if (event.button.button == SDL_BUTTON_MIDDLE)
+			{
+				if (currprefs.input_mouse_untrap)
+					toggle_mouse_grab();
+				else
+					setmousebuttonstate(0, 2, 0);
+			}
+		}
+		break;
+
+	case SDL_FINGERMOTION:
+		//TODO this doesn't work yet
+		setmousestate(0, 0, event.motion.xrel, 0);
+		setmousestate(0, 1, event.motion.yrel, 0);
+		break;
+
+	case SDL_MOUSEMOTION:
+		if (!mouseinside) {
+			mouseinside = true;
+		}
+
+		if (recapture && isfullscreen() <= 0) {
+			enablecapture();
+			break;
+		}
+
+		if (currprefs.input_tablet >= TABLET_MOUSEHACK)
+		{
+			/* absolute */
+			setmousestate(0, 0, event.motion.x, 1);
+			setmousestate(0, 1, event.motion.y, 1);
+			break;
+		}
+
+		if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
+		{
+			/* relative */
+#if defined (ANDROID)
+			if (event.motion.x == 0 && x > -4)
+				x = -4;
+			if (event.motion.y == 0 && y > -4)
+				y = -4;
+			if (event.motion.x == currprefs.gfx_monitor.gfx_size.width - 1 && x < 4)
+				x = 4;
+			if (event.motion.y == currprefs.gfx_monitor.gfx_size.height - 1 && y < 4)
+				y = 4;
+#endif //ANDROID
+			setmousestate(0, 0, event.motion.xrel, 0);
+			setmousestate(0, 1, event.motion.yrel, 0);
+			break;
+		}
+		break;
+
+	case SDL_MOUSEWHEEL:
+		if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
+		{
+			const auto val_y = event.wheel.y;
+			setmousestate(0, 2, val_y, 0);
+			if (val_y < 0)
+				setmousebuttonstate(0, 3 + 0, -1);
+			else if (val_y > 0)
+				setmousebuttonstate(0, 3 + 1, -1);
+
+			const auto val_x = event.wheel.x;
+			setmousestate(0, 3, val_x, 0);
+			if (val_x < 0)
+				setmousebuttonstate(0, 3 + 2, -1);
+			else if (val_x > 0)
+				setmousebuttonstate(0, 3 + 3, -1);
+		}
+		break;
+
+	default:
+		break;
+	}
+	
+}
+
+int handle_msgpump()
+{
+	auto gotEvent = 0;
+	SDL_Event event;
+
+	while (SDL_PollEvent(&event))
+	{
+		gotEvent = 1;
+		process_event(event);
 	}
 	return gotEvent;
 }
@@ -1849,50 +1867,9 @@ bool handle_events()
 			return true;
 		}
 		SDL_Event event;
-		SDL_WaitEvent(&event);
-
-		if (event.type == SDL_WINDOWEVENT)
+		while (SDL_PollEvent(&event))
 		{
-			switch (event.window.event)
-			{
-			case SDL_WINDOWEVENT_RESTORED:
-				amiberry_active(minimized);
-				unsetminimized();
-				break;
-			case SDL_WINDOWEVENT_LEAVE:
-				set_mouse_grab(false);
-				break;
-			case SDL_WINDOWEVENT_CLOSE:
-				uae_quit();
-				break;
-			default:
-				break;
-			}
-		}
-
-		switch (event.type)
-		{
-		case SDL_QUIT:
-			uae_quit();
-			break;
-		case SDL_KEYDOWN:
-		{
-			if (event.key.repeat == 0)
-			{
-				if (enter_gui_key && event.key.keysym.sym == enter_gui_key)
-				{
-					inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
-					break;
-				}
-				if (quit_key && event.key.keysym.sym == quit_key)
-				{
-					inputdevice_add_inputcode(AKS_QUIT, 1, nullptr);
-					break;
-				}
-			}
-		}
-		default:
-			break;
+			process_event(event);
 		}
 		
 		inputdevicefunc_keyboard.read();
@@ -1905,6 +1882,7 @@ bool handle_events()
 		//updatedisplayarea();
 		pause_emulation = was_paused;
 		resumepaused(was_paused);
+		sound_closed = 0;
 		was_paused = 0;
 	}
 
