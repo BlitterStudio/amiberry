@@ -25,6 +25,8 @@
 #define AMIBERRYVERSION _T("Amiberry v3.2 beta (2020-06-30)")
 #define AMIBERRYDATE MAKEBD(2020, 6, 30)
 
+#define IHF_WINDOWHIDDEN 6
+
 extern std::string get_version_string();
 
 STATIC_INLINE FILE* uae_tfopen(const TCHAR* path, const TCHAR* mode)

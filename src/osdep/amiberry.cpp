@@ -6,41 +6,56 @@
  */
 
 #include <unistd.h>
-#include <stdio.h>
-#include <string.h>
+#include <cstdio>
+#include <cstring>
 #include <sys/types.h>
 #include <dirent.h>
-#include <stdlib.h>
-#include <time.h>
-#include <signal.h>
+#include <cstdlib>
+#include <ctime>
+#include <csignal>
 
 #include <algorithm>
 #ifndef ANDROID
 #include <execinfo.h>
 #endif
+
 #include "sysdeps.h"
-#include "uae.h"
 #include "options.h"
+#include "audio.h"
+#include "sounddep/sound.h"
+#include "uae.h"
+#include "memory.h"
+#include "rommgr.h"
 #include "custom.h"
+#include "newcpu.h"
+#include "traps.h"
+#include "xwin.h"
+#include "keyboard.h"
 #include "inputdevice.h"
+#include "drawing.h"
+#include "amiberry_gfx.h"
+#include "autoconf.h"
+#include "gui.h"
 #include "disk.h"
 #include "savestate.h"
-#include "rommgr.h"
 #include "zfile.h"
 #include "amiberry_rp9.h"
-#include "memory.h"
-#include "keyboard.h"
 #include "rtgmodes.h"
 #include "gfxboard.h"
-#include "amiberry_gfx.h"
-#include "gui.h"
-#include "sounddep/sound.h"
 #include "devices.h"
 #include <map>
 
 extern FILE* debugfile;
 
 int pause_emulation;
+
+static int sound_closed;
+static int recapture;
+static int focus;
+static int mouseinside;
+int mouseactive;
+int minimized;
+
 int quickstart_model = 0;
 int quickstart_conf = 0;
 bool host_poweroff = false;
@@ -1435,6 +1450,68 @@ void set_mouse_grab(const bool grab)
 		toggle_mouse_grab();
 }
 
+void setminimized()
+{
+	if (!minimized)
+		minimized = 1;
+	set_inhibit_frame(IHF_WINDOWHIDDEN);
+}
+
+void unsetminimized()
+{
+	if (minimized > 0)
+		full_redraw_all();
+	minimized = 0;
+	clear_inhibit_frame(IHF_WINDOWHIDDEN);
+}
+
+static void amiberry_inactive(int minimized)
+{
+	focus = 0;
+	recapture = 0;
+	setmouseactive(0);
+	//clipboard_active(0);
+
+	if (!quit_program) {
+		if (minimized) {
+			inputdevice_unacquire();
+			setpaused(1);
+			setsoundpaused();
+			sound_closed = -1;
+		}
+		else if (mouseactive) {
+			inputdevice_unacquire();
+			setpaused(2);
+			setsoundpaused();
+			sound_closed = -1;
+		}
+		else {
+			inputdevice_unacquire();
+			setpaused(2);
+			setsoundpaused();
+			sound_closed = -1;
+		}
+	} else {
+		inputdevice_unacquire();
+	}
+}
+
+static void amiberry_active(int minimized)
+{
+	if (sound_closed != 0) {
+		if (sound_closed < 0) {
+			resumesoundpaused();
+		}
+		sound_closed = 0;
+	}
+	resumepaused(2);
+	//getcapslock();
+	inputdevice_acquire(TRUE);
+	if (isfullscreen() > 0)
+		setmouseactive(1);
+	//clipboard_active(1);
+}
+
 int handle_msgpump()
 {
 	auto gotEvent = 0;
@@ -1446,6 +1523,23 @@ int handle_msgpump()
 		gotEvent = 1;
 		const auto* keystate = SDL_GetKeyboardState(nullptr);
 
+		if (event.type == SDL_WINDOWEVENT)
+		{
+			switch (event.window.event)
+			{
+			case SDL_WINDOWEVENT_MINIMIZED:
+				setminimized();
+				amiberry_inactive(minimized);
+				break;
+			case SDL_WINDOWEVENT_CLOSE:
+				uae_quit();
+				break;
+				
+			default:
+				break;
+			}
+		}
+		
 		switch (event.type)
 		{
 		case SDL_QUIT:
@@ -1689,6 +1783,47 @@ bool handle_events()
 		SDL_Event event;
 		SDL_WaitEvent(&event);
 
+		if (event.type == SDL_WINDOWEVENT)
+		{
+			switch (event.window.event)
+			{
+			case SDL_WINDOWEVENT_RESTORED:
+				amiberry_active(minimized);
+				unsetminimized();
+				break;
+			case SDL_WINDOWEVENT_CLOSE:
+				uae_quit();
+				break;
+			default:
+				break;
+			}
+		}
+
+		switch (event.type)
+		{
+		case SDL_QUIT:
+			uae_quit();
+			break;
+		case SDL_KEYDOWN:
+		{
+			if (event.key.repeat == 0)
+			{
+				if (enter_gui_key && event.key.keysym.sym == enter_gui_key)
+				{
+					inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
+					break;
+				}
+				if (quit_key && event.key.keysym.sym == quit_key)
+				{
+					inputdevice_add_inputcode(AKS_QUIT, 1, nullptr);
+					break;
+				}
+			}
+		}
+		default:
+			break;
+		}
+		
 		inputdevicefunc_keyboard.read();
 		inputdevicefunc_mouse.read();
 		inputdevicefunc_joystick.read();
