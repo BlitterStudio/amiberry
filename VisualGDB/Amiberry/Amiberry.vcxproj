@@ -305,6 +305,7 @@
     <ClCompile Include="..\..\src\traps.cpp" />
     <ClCompile Include="..\..\src\uaelib.cpp" />
     <ClCompile Include="..\..\src\uaeresource.cpp" />
+    <ClCompile Include="..\..\src\vm.cpp" />
     <ClCompile Include="..\..\src\zfile.cpp" />
     <ClCompile Include="..\..\src\zfile_archive.cpp" />
   </ItemGroup>
@@ -437,6 +438,7 @@
     <ClInclude Include="..\..\src\include\uae\string.h" />
     <ClInclude Include="..\..\src\include\uae\types.h" />
     <ClInclude Include="..\..\src\include\uae\uae.h" />
+    <ClInclude Include="..\..\src\include\uae\vm.h" />
     <ClInclude Include="..\..\src\include\xwin.h" />
     <ClInclude Include="..\..\src\include\zarchive.h" />
     <ClInclude Include="..\..\src\include\zfile.h" />

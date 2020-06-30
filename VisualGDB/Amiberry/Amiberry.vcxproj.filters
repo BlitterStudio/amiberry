@@ -625,6 +625,9 @@
     <ClCompile Include="..\..\src\scsiemul.cpp">
       <Filter>Source files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\vm.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\threaddep\thread.h">
@@ -1022,6 +1025,9 @@
     </ClInclude>
     <ClInclude Include="..\..\src\include\cpummu030.h">
       <Filter>Source files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\uae\vm.h">
+      <Filter>Source files\include\uae</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
