@@ -47,6 +47,7 @@
 #include "uaeresource.h"
 #include "inputdevice.h"
 #include "blkdev.h"
+#include "consolehook.h"
 #include "isofs_api.h"
 #include "scsi.h"
 #include "newcpu.h"
@@ -8221,6 +8222,39 @@ static uae_u32 REGPARAM2 mousehack_done (TrapContext *ctx)
 		uaecptr dispinfo = trap_get_areg(ctx, 3);
 		uaecptr vp = trap_get_areg(ctx, 4);
 		return input_mousehack_status(ctx, mode, diminfo, dispinfo, vp, trap_get_dreg(ctx, 2));
+	}
+	else if (mode == 10) {
+		//amiga_clipboard_die(ctx);
+	}
+	else if (mode == 11) {
+		//amiga_clipboard_got_data(ctx, trap_get_areg(ctx, 2), trap_get_dreg(ctx, 2), trap_get_dreg(ctx, 0) + 8);
+	}
+	else if (mode == 12) {
+		//return amiga_clipboard_want_data(ctx);
+	}
+	else if (mode == 13) {
+		//return amiga_clipboard_proc_start(ctx);
+	}
+	else if (mode == 14) {
+		//amiga_clipboard_task_start(ctx, trap_get_dreg(ctx, 0));
+	}
+	else if (mode == 15) {
+		//amiga_clipboard_init(ctx);
+	}
+	else if (mode == 16) {
+		uaecptr a2 = trap_get_areg(ctx, 2);
+		input_mousehack_mouseoffset(a2);
+	}
+	else if (mode == 17) {
+		uae_u32 v = 0;
+		if (currprefs.clipboard_sharing)
+			v |= 1;
+		if (consolehook_activate())
+			v |= 2;
+		if (currprefs.uaeboard > 2)
+			v |= 4;
+		trap_dos_active();
+		return v;
 	} else if (mode == 18) {
 		put_long_host(rtarea_bank.baseaddr + RTAREA_EXTERTASK, trap_get_dreg(ctx, 0));
 		put_long_host(rtarea_bank.baseaddr + RTAREA_TRAPTASK, trap_get_dreg(ctx, 2));
@@ -8232,8 +8266,97 @@ static uae_u32 REGPARAM2 mousehack_done (TrapContext *ctx)
 	} else if (mode == 20) {
 		// boot rom copy done
 		return 0;
-  } else {
-		write_log (_T("Unknown mousehack hook %d\n"), mode);
+	}
+	else if (mode == 21) {
+		// keymap hook
+#ifdef RETROPLATFORM
+		rp_keymap(ctx, trap_get_areg(ctx, 1), trap_get_dreg(ctx, 0));
+#endif
+		return 1;
+	}
+	else if (mode == 101) {
+		consolehook_ret(ctx, trap_get_areg(ctx, 1), trap_get_areg(ctx, 2));
+	}
+	else if (mode == 102) {
+		uaecptr ret = consolehook_beginio(ctx, trap_get_areg(ctx, 1));
+		trap_put_long(ctx, trap_get_areg(ctx, 7) + 4 * 4, ret);
+	}
+	else if (mode == 200) {
+		//uae_u32 v;
+		//// a0 = data, d0 = length, a1 = task, d3 = stack size (in), stack ptr (out)
+		//// a2 = debugdata, d2 = debuglength
+		//// d4 = flags
+		//if ((trap_get_dreg(ctx, 4) & 3) != 1) {
+		//	write_log(_T("unsupported uaedbg version\n"));
+		//	return 0;
+		//}
+		//uae_u32 stack = trap_get_dreg(ctx, 3);
+		//v = debugmem_reloc(trap_get_areg(ctx, 0), trap_get_dreg(ctx, 0),
+		//	trap_get_areg(ctx, 2), trap_get_dreg(ctx, 2),
+		//	trap_get_areg(ctx, 1), &stack);
+		//trap_set_dreg(ctx, 2, stack);
+		//return v;
+	}
+	else if (mode == 201) {
+		//debugmem_break(8);
+		return 1;
+	}
+	else if (mode == 202) {
+		// a0 = seglist, a1 = name, d2 = lock
+		//debugmem_addsegs(ctx, trap_get_areg(ctx, 0), trap_get_areg(ctx, 1), trap_get_dreg(ctx, 2), true);
+		return 1;
+	}
+	else if (mode == 203) {
+		// a0 = seglist
+		//debugmem_remsegs(trap_get_areg(ctx, 0));
+		return 1;
+	}
+	else if (mode == 204 || mode == 206) {
+		// d0 = size, a1 = flags
+		//uae_u32 v = debugmem_allocmem(mode == 206, trap_get_dreg(ctx, 0), trap_get_areg(ctx, 1), trap_get_areg(ctx, 0));
+		//if (v) {
+		//	trap_set_areg(ctx, 0, v);
+		//	return v;
+		//}
+		//else {
+		//	trap_set_areg(ctx, 0, 0);
+		//	trap_set_dreg(ctx, 1, trap_get_areg(ctx, 1));
+		//	return trap_get_dreg(ctx, 0);
+		//}
+	}
+	else if (mode == 205 || mode == 207) {
+		//return debugmem_freemem(mode == 207, trap_get_areg(ctx, 1), trap_get_dreg(ctx, 0), trap_get_areg(ctx, 0));
+	}
+	else if (mode == 208) {
+		// segtrack: bit 0
+		// fsdebug: bit 1
+		segtrack_mode = currprefs.debugging_features;
+		return segtrack_mode;
+	}
+	else if (mode == 209) {
+		// called if segtrack was enabled
+		return 0;
+	}
+	else if (mode == 210) {
+		// debug trapcode
+		//debugmem_trap(trap_get_areg(ctx, 0));
+	}
+	else if (mode == 212) {
+		// a0 = seglist, a1 = name, d2 = lock
+		//debugmem_addsegs(ctx, trap_get_areg(ctx, 0), trap_get_areg(ctx, 1), trap_get_dreg(ctx, 2), false);
+		return 1;
+	}
+	else if (mode == 213) {
+		// a0 = seglist
+		//debugmem_remsegs(trap_get_areg(ctx, 0));
+		return 1;
+	}
+	else if (mode == 299) {
+		//return debugmem_exit();
+
+	}
+	else {
+		write_log(_T("Unknown mousehack hook %d\n"), mode);
 	}
 	return 1;
 }

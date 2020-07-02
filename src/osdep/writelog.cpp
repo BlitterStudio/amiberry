@@ -16,6 +16,10 @@
 #define WRITE_LOG_BUF_SIZE 4096
 FILE *debugfile = NULL;
 
+int consoleopen = 0;
+static int realconsole;
+static TCHAR* console_buffer;
+
 void console_out (const TCHAR *format,...)
 {
     va_list parms;
@@ -25,6 +29,38 @@ void console_out (const TCHAR *format,...)
     vsnprintf (buffer, WRITE_LOG_BUF_SIZE-1, format, parms);
     va_end (parms);
     cout << buffer << endl;
+}
+
+void f_out(FILE* f, const TCHAR* format, ...)
+{
+    if (f == NULL) {
+        return;
+    }
+    va_list arg_ptr;
+    va_start(arg_ptr, format);
+    vfprintf(f, format, arg_ptr);
+    va_end(arg_ptr);
+}
+
+TCHAR console_getch(void)
+{
+    //flushmsgpump();
+    if (console_buffer) {
+        return 0;
+    }
+    else if (realconsole) {
+        return getwc(stdin);
+    }
+    else if (consoleopen < 0) {
+        unsigned long len;
+
+        for (;;) {
+	        const auto out = getchar();
+            putchar(out);
+            return out;
+        }
+    }
+    return 0;
 }
 
 void write_log(const char* format, ...)

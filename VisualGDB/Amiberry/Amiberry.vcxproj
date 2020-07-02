@@ -204,6 +204,7 @@
     <ClCompile Include="..\..\src\cdtvcr.cpp" />
     <ClCompile Include="..\..\src\cfgfile.cpp" />
     <ClCompile Include="..\..\src\cia.cpp" />
+    <ClCompile Include="..\..\src\consolehook.cpp" />
     <ClCompile Include="..\..\src\cpudefs.cpp" />
     <ClCompile Include="..\..\src\cpuemu_0.cpp" />
     <ClCompile Include="..\..\src\cpuemu_11.cpp" />
@@ -382,6 +383,7 @@
     <ClInclude Include="..\..\src\include\cdtvcr.h" />
     <ClInclude Include="..\..\src\include\cia.h" />
     <ClInclude Include="..\..\src\include\commpipe.h" />
+    <ClInclude Include="..\..\src\include\consolehook.h" />
     <ClInclude Include="..\..\src\include\cpummu.h" />
     <ClInclude Include="..\..\src\include\cpummu030.h" />
     <ClInclude Include="..\..\src\include\cputbl.h" />

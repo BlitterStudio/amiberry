@@ -293,6 +293,7 @@ OBJS =	\
 	src/cdtvcr.o \
 	src/cfgfile.o \
 	src/cia.o \
+	src/consolehook.o \
 	src/crc32.o \
 	src/custom.o \
 	src/def_icons.o \

@@ -42,6 +42,8 @@
 
 #include <linux/kd.h>
 #include <sys/ioctl.h>
+
+#include "consolehook.h"
 #include "keyboard.h"
 
 long int version = 256 * 65536L * UAEMAJOR + 65536L * UAEMINOR + UAESUBREV;
@@ -52,6 +54,7 @@ int config_changed;
 bool no_gui = false, quit_to_gui = false;
 bool cloanto_rom = false;
 bool kickstart_rom = true;
+bool console_emulation = 0;
 
 struct gui_info gui_data;
 
@@ -769,6 +772,8 @@ static void parse_cmdline(int argc, TCHAR** argv)
 			else
 				write_log("Can't find extension ... %s\n", txt);
 		}
+		else if (_tcsncmp(argv[i], _T("-cli"), 4) == 0)
+			console_emulation = true;
 		else if (_tcscmp(argv[i], _T("-f")) == 0)
 		{
 			/* Check for new-style "-f xxx" argument, where xxx is config-file */
@@ -1049,10 +1054,10 @@ static int real_main2(int argc, TCHAR** argv)
 		return -1;
 	}
 
-	//if (console_emulation) {
-	//	consolehook_config(&currprefs);
-	//	fixup_prefs(&currprefs, true);
-	//}
+	if (console_emulation) {
+		consolehook_config(&currprefs);
+		fixup_prefs(&currprefs, true);
+	}
 	
 	if (!setup_sound())
 	{

@@ -306,6 +306,8 @@ extern void mallocemu_free (void *ptr);
 #endif
 
 extern void write_log (const TCHAR *,...);
+extern TCHAR console_getch(void);
+extern void f_out(FILE*, const TCHAR*, ...);
 extern void gui_message (const TCHAR *,...);
 
 #ifndef O_BINARY
