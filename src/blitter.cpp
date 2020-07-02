@@ -58,9 +58,9 @@ static uaecptr blit_waitpc;
 static int blit_maxcyclecounter, blit_slowdown, blit_totalcyclecounter;
 static int blit_startcycles, blit_misscyclecounter;
 
-#ifdef CPUEMU_13
+//#ifdef CPUEMU_13
 extern uae_u8 cycle_line[256];
-#endif
+//#endif
 
 static long blit_firstline_cycles;
 static long blit_first_cycle;
@@ -311,6 +311,18 @@ STATIC_INLINE int channel_pos (int cycles)
 int blitter_channel_state (void)
 {
 	return channel_state (blit_cyclecounter);
+}
+
+STATIC_INLINE int canblit(int hpos)
+{
+	if (!dmaen(DMA_BLITTER))
+		return -1;
+	if (is_bitplane_dma(hpos))
+		return 0;
+	if (cycle_line[hpos] & CYCLE_MASK) {
+		return 0;
+	}
+	return 1;
 }
 
 static void reset_channel_mods (void)
@@ -877,7 +889,20 @@ static void blitter_force_finish(void)
 		*/
 		odmacon = dmacon;
 		dmacon |= DMA_MASTER | DMA_BLITTER;
-		actually_do_blit();
+		if (blitter_cycle_exact && !immediate_blits) {
+			int rounds = 10000;
+			while (bltstate != BLT_done && rounds > 0) {
+				memset(cycle_line, 0, sizeof cycle_line);
+				decide_blitter(-1);
+				rounds--;
+			}
+			if (rounds == 0)
+				write_log(_T("blitter froze!?\n"));
+			blit_startcycles = 0;
+		}
+		else {
+			actually_do_blit();
+		}
 		blitter_done(current_hpos());
 		dmacon = odmacon;
 	}

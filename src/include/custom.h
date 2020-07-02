@@ -241,6 +241,7 @@ extern int current_maxvpos (void);
 extern struct chipset_refresh *get_chipset_refresh(struct uae_prefs*);
 extern void compute_framesync(void);
 //extern void getsyncregisters(uae_u16 *phsstrt, uae_u16 *phsstop, uae_u16 *pvsstrt, uae_u16 *pvsstop);
+int is_bitplane_dma(int hpos);
 void custom_cpuchange(void);
 
 struct custom_store
