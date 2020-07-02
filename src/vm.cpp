@@ -202,7 +202,7 @@ static void *uae_vm_alloc_with_flags(uae_u32 size, int flags, int protect)
 	int native_protect = protect_to_native(protect);
 #endif
 
-#ifndef CPU_64_BIT
+#ifndef CPU_AARCH64
 	flags &= ~UAE_VM_32BIT;
 #endif
 	if (flags & UAE_VM_32BIT) {
@@ -357,11 +357,6 @@ static void *try_reserve(uintptr_t try_addr, uae_u32 size, int flags)
 
 void *uae_vm_reserve(uae_u32 size, int flags)
 {
-#if 0
-	if (size > 768 * 1024 * 1024) {
-		return NULL;
-	}
-#endif
 	void *address = NULL;
 #ifdef _WIN32
 	address = try_reserve(0x80000000, size, flags);
