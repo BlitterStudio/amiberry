@@ -361,6 +361,10 @@ static void setid_af(struct uae_input_device* uid, const int i, const int slot, 
 	uid[i].flags[slot][sub] &= ~ID_FLAG_AUTOFIRE_MASK;
 	if (af >= JPORT_AF_NORMAL)
 		uid[i].flags[slot][sub] |= ID_FLAG_AUTOFIRE;
+	if (af == JPORT_AF_TOGGLE)
+		uid[i].flags[slot][sub] |= ID_FLAG_TOGGLE;
+	if (af == JPORT_AF_ALWAYS)
+		uid[i].flags[slot][sub] |= ID_FLAG_INVERTTOGGLE;
 }
 
 int input_get_default_mouse(struct uae_input_device* uid, const int i, const int port, const int af, const bool gp,
