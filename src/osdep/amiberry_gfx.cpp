@@ -1442,14 +1442,13 @@ void picasso_init_resolutions()
 	int bits[] = { 8, 16, 32 };
 
 	Displays[0].primary = 1;
-	Displays[0].disabled = 0;
 	Displays[0].rect.left = 0;
 	Displays[0].rect.top = 0;
 	Displays[0].rect.right = 800;
 	Displays[0].rect.bottom = 600;
 	sprintf(tmp, "%s (%d*%d)", "Display", Displays[0].rect.right, Displays[0].rect.bottom);
-	Displays[0].name = my_strdup(tmp);
-	Displays[0].name2 = my_strdup("Display");
+	Displays[0].fullname = my_strdup(tmp);
+	Displays[0].monitorname = my_strdup("Display");
 
 	auto* const md1 = Displays;
 	DisplayModes = md1->DisplayModes = xmalloc(struct PicassoResolution, MAX_PICASSO_MODES);
@@ -1534,8 +1533,10 @@ void gfx_set_picasso_colors(RGBFTYPE rgbfmt)
 	alloc_colors_picasso(red_bits, green_bits, blue_bits, red_shift, green_shift, blue_shift, rgbfmt, p96_rgbx16);
 }
 
-uae_u8* gfx_lock_picasso()
+uae_u8* gfx_lock_picasso(bool fullupdate, bool doclear)
 {
+	struct picasso_vidbuf_description* vidinfo = &picasso_vidinfo;
+	static uae_u8* p;
 	if (screen == nullptr || screen_is_picasso == 0)
 		return nullptr;
 	if (SDL_MUSTLOCK(screen))
@@ -1543,7 +1544,17 @@ uae_u8* gfx_lock_picasso()
 
 	picasso_vidinfo.pixbytes = screen->format->BytesPerPixel;
 	picasso_vidinfo.rowbytes = screen->pitch;
-	return static_cast<uae_u8 *>(screen->pixels);
+	p = static_cast<uae_u8 *>(screen->pixels);
+
+	if (doclear)
+	{
+		auto* p2 = p;
+		for (auto h = 0; h < vidinfo->height; h++) {
+			memset(p2, 0, vidinfo->width * vidinfo->pixbytes);
+			p2 += vidinfo->rowbytes;
+		}
+	}
+	return p;
 }
 
 void gfx_unlock_picasso(const bool dorender)
