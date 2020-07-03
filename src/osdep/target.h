@@ -161,15 +161,15 @@ STATIC_INLINE uae_atomic atomic_dec(volatile uae_atomic *p)
 {
 	return __atomic_sub_fetch(p, 1, __ATOMIC_SEQ_CST);
 }
-STATIC_INLINE uae_u32 atomic_bit_test_and_reset(volatile uae_atomic *p, uae_u32 v)
+STATIC_INLINE uae_u32 atomic_bit_test_and_reset(volatile uae_atomic* p, uae_u32 v)
 {
-  uae_u32 mask = (1 << v);
-  uae_u32 res = __atomic_fetch_and(p, ~mask, __ATOMIC_SEQ_CST);
+	uae_u32 mask = (1 << v);
+	uae_u32 res = __atomic_fetch_and(p, ~mask, __ATOMIC_SEQ_CST);
 	return (res & mask);
 }
-STATIC_INLINE void atomic_set(volatile uae_atomic *p, uae_u32 v)
+STATIC_INLINE void atomic_set(volatile uae_atomic* p, uae_u32 v)
 {
-  __atomic_store_n(p, v, __ATOMIC_SEQ_CST);
+	__atomic_store_n(p, v, __ATOMIC_SEQ_CST);
 }
 
 #else
