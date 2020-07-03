@@ -872,7 +872,8 @@ static void setconvert()
 	struct picasso96_state_struct* state = &picasso96_state;
 
 	vidinfo->picasso_convert = getconvert (state->RGBFormat, picasso_vidinfo.pixbytes);
-	vidinfo->host_mode = GetSurfacePixelFormat();
+	vidinfo->host_mode = picasso_vidinfo.pixbytes == 4 ? RGBFB_R8G8B8A8 : RGBFB_R5G6B5;
+	//vidinfo->host_mode = GetSurfacePixelFormat();
 	if (picasso_vidinfo.pixbytes == 4)
 		alloc_colors_rgb(8, 8, 8, 16, 8, 0, 0, 0, 0, 0, p96rc, p96gc, p96bc);
 	else
@@ -4684,21 +4685,41 @@ static void copyallinvert(uae_u8 *src, uae_u8 *dst, int pwidth, int pheight, int
 static void copyall(uae_u8* src, uae_u8* dst, int pwidth, int pheight, int srcbytesperrow, int srcpixbytes, int dstbytesperrow, int dstpixbytes, bool direct, int mode_convert)
 {
 	struct picasso_vidbuf_description* vidinfo = &picasso_vidinfo;
-
-	int y, bytes;
-	if (direct)
-	{
-		auto w = pwidth * vidinfo->pixbytes;
-		for (y = 0; y < pheight; y++)
-		{
-			memcpy(dst, src, w);
-			dst += dstbytesperrow;
-			src += srcbytesperrow;
-		}
-	} else {
-		for (y = 0; y < pheight; y++)
-			copyrow(src, dst, 0, y, pwidth, srcbytesperrow, srcpixbytes, 0, y, dstbytesperrow, dstpixbytes, direct, mode_convert, p96_rgbx16);
+	struct picasso96_state_struct* state = &picasso96_state;
+	if (state->RGBFormat == RGBFB_R5G6B5) {
+		if (vidinfo->pixbytes == 2)
+			copy_screen_16bit_swap(dst, src, state->Width * state->Height * 2);
+		else
+			copy_screen_16bit_to_32bit(dst, src, state->Width * state->Height * 2);
 	}
+	else if (state->RGBFormat == RGBFB_CLUT) {
+		const auto pixels = state->Width * state->Height;
+		if (vidinfo->pixbytes == 2)
+			copy_screen_8bit_to_16bit(dst, src, pixels, vidinfo->clut);
+		else
+			copy_screen_8bit_to_32bit(dst, src, pixels, vidinfo->clut);
+	}
+	else {
+		if (vidinfo->pixbytes == 2)
+			copy_screen_32bit_to_16bit(dst, src, state->Width * state->Height * 4);
+		else
+			copy_screen_32bit_to_32bit(dst, src, state->Width * state->Height * 4);
+	}
+	
+	//int y, bytes;
+	//if (direct)
+	//{
+	//	auto w = pwidth * vidinfo->pixbytes;
+	//	for (y = 0; y < pheight; y++)
+	//	{
+	//		memcpy(dst, src, w);
+	//		dst += dstbytesperrow;
+	//		src += srcbytesperrow;
+	//	}
+	//} else {
+	//	for (y = 0; y < pheight; y++)
+	//		copyrow(src, dst, 0, y, pwidth, srcbytesperrow, srcpixbytes, 0, y, dstbytesperrow, dstpixbytes, direct, mode_convert, p96_rgbx16);
+	//}
 }
 
 uae_u8 *getrtgbuffer(int *widthp, int *heightp, int *pitch, int *depth, uae_u8 *palette)

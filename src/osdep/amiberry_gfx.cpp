@@ -166,7 +166,7 @@ static int display_thread(void *unused)
 				else 
 				{
 					depth = 32;
-					rgb_mode = VC_IMAGE_RGBA32;
+					rgb_mode = VC_IMAGE_ARGB8888;
 				}	
 			}
 			else
@@ -683,7 +683,7 @@ static void open_screen(struct uae_prefs* p)
 		else
 		{
 			depth = 32;
-			pixel_format = SDL_PIXELFORMAT_RGBA32;
+			pixel_format = SDL_PIXELFORMAT_BGRA32;
 		}
 
 		if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
@@ -731,7 +731,7 @@ static void open_screen(struct uae_prefs* p)
 			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 	}
 
-	screen = SDL_CreateRGBSurface(0, display_width, display_height, depth, 0, 0, 0, 0);
+	screen = SDL_CreateRGBSurfaceWithFormat(0, display_width, display_height, depth, pixel_format);
 	check_error_sdl(screen == nullptr, "Unable to create a surface");
 
 	texture = SDL_CreateTexture(renderer, pixel_format, SDL_TEXTUREACCESS_STREAMING, screen->w, screen->h);
@@ -1491,13 +1491,15 @@ void gfx_set_picasso_state(int on)
 
 	screen_is_picasso = on;
 	open_screen(&currprefs);
-	if (screen != nullptr)
-		picasso_vidinfo.rowbytes = screen->pitch;
 }
 
 void gfx_set_picasso_modeinfo(uae_u32 w, uae_u32 h, uae_u32 depth, RGBFTYPE rgbfmt)
 {
-	depth >>= 3;
+	if (!screen_is_picasso)
+		return;
+	black_screen_now();
+	gfx_set_picasso_colors(rgbfmt);
+
 	if (static_cast<unsigned>(picasso_vidinfo.width) == w &&
 		static_cast<unsigned>(picasso_vidinfo.height) == h &&
 		static_cast<unsigned>(picasso_vidinfo.depth) == depth &&
@@ -1507,25 +1509,14 @@ void gfx_set_picasso_modeinfo(uae_u32 w, uae_u32 h, uae_u32 depth, RGBFTYPE rgbf
 	picasso_vidinfo.selected_rgbformat = rgbfmt;
 	picasso_vidinfo.width = w;
 	picasso_vidinfo.height = h;
-	picasso_vidinfo.depth = screen->format->BitsPerPixel;
+	picasso_vidinfo.depth = depth;
 	picasso_vidinfo.extra_mem = 1;
-	picasso_vidinfo.rowbytes = screen->pitch;
-	picasso_vidinfo.pixbytes = screen->format->BytesPerPixel;
+	picasso_vidinfo.rowbytes = static_cast<int>(w * (depth / 8));
+	picasso_vidinfo.pixbytes = static_cast<int>(depth / 8);
 	picasso_vidinfo.offset = 0;
 
 	if (screen_is_picasso)
-	{
 		open_screen(&currprefs);
-		if(screen != nullptr) {
-			picasso_vidinfo.rowbytes = screen->pitch;
-			picasso_vidinfo.rgbformat = 
-				screen->format->BytesPerPixel == 4
-			? RGBFB_R8G8B8A8
-			: screen->format->BytesPerPixel == 2
-			? RGBFB_R5G6B5
-			: RGBFB_R8G8B8;
-		}
-	}
 }
 
 void gfx_set_picasso_colors(RGBFTYPE rgbfmt)
