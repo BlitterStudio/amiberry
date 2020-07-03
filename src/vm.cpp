@@ -47,7 +47,7 @@ static struct alloc_size alloc_sizes[MAX_ALLOCATIONS];
 
 static void add_allocation(void *address, uae_u32 size)
 {
-	uae_log("VM: add_allocation %p (%d)\n", address, size);
+	write_log("VM: add_allocation %p (%d)\n", address, size);
 	for (int i = 0; i < MAX_ALLOCATIONS; i++) {
 		if (alloc_sizes[i].address == NULL) {
 			alloc_sizes[i].address = address;
@@ -91,7 +91,7 @@ static int protect_to_native(int protect)
 	if (protect == UAE_VM_READ_WRITE) return PAGE_READWRITE;
 	if (protect == UAE_VM_READ_EXECUTE) return PAGE_EXECUTE_READ;
 	if (protect == UAE_VM_READ_WRITE_EXECUTE) return PAGE_EXECUTE_READWRITE;
-	uae_log("VM: Invalid protect value %d\n", protect);
+	write_log("VM: Invalid protect value %d\n", protect);
 	return PAGE_NOACCESS;
 #else
 	if (protect == UAE_VM_NO_ACCESS) return PROT_NONE;
@@ -187,7 +187,7 @@ static void *uae_vm_alloc_with_flags(uae_u32 size, int flags, int protect)
 		first_allocation = false;
 	}
 #ifdef LOG_ALLOCATIONS
-	uae_log("VM: Allocate 0x%-8x bytes [%d] (%s)\n",
+	write_log("VM: Allocate 0x%-8x bytes [%d] (%s)\n",
 			size, flags, protect_description(protect));
 #endif
 
@@ -210,13 +210,13 @@ static void *uae_vm_alloc_with_flags(uae_u32 size, int flags, int protect)
 		 * work well enough when there is not a lot of allocations. */
 		/* FIXME: Consider allocating a bigger chunk of memory, and manually
 		 * keep track of allocations. */
-#if 1
+
 		if (!address) {
 			address = try_alloc_32bit(
 						size, native_flags, native_protect,
 						(uae_u8 *) 0x40000000, natmem_reserved - size);
 		}
-#endif
+
 		if (!address && natmem_reserved < (uae_u8 *) 0x60000000) {
 			address = try_alloc_32bit(
 						size, native_flags, native_protect,
@@ -249,7 +249,7 @@ static void *uae_vm_alloc_with_flags(uae_u32 size, int flags, int protect)
 	add_allocation(address, size);
 #endif
 #ifdef LOG_ALLOCATIONS
-	uae_log("VM: %p\n", address);
+	write_log("VM: %p\n", address);
 #endif
 	return address;
 }
@@ -268,7 +268,7 @@ static bool do_protect(void *address, int size, int protect)
 #ifdef _WIN32
 	DWORD old;
 	if (VirtualProtect(address, size, protect_to_native(protect), &old) == 0) {
-		uae_log("VM: uae_vm_protect(%p, %d, %d) VirtualProtect failed (%d)\n",
+		write_log("VM: uae_vm_protect(%p, %d, %d) VirtualProtect failed (%d)\n",
 				address, size, protect, GetLastError());
 		return false;
 	}
@@ -337,11 +337,11 @@ static void *try_reserve(uintptr_t try_addr, uae_u32 size, int flags)
 		return NULL;
 	}
 #endif
-#ifdef CPU_64_BIT
+#ifdef CPU_AARCH64
 	if (flags & UAE_VM_32BIT) {
 		uintptr_t end = (uintptr_t) address + size;
 		if (address && end > (uintptr_t) 0x100000000ULL) {
-			uae_log("VM: Reserve  0x%-8x bytes, got address 0x%llx (> 32-bit)\n",
+			write_log("VM: Reserve  0x%-8x bytes, got address 0x%llx (> 32-bit)\n",
 					size, (uae_u64) (uintptr_t) address);
 #ifdef _WIN32
 			VirtualFree(address, 0, MEM_RELEASE);
