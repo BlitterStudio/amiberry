@@ -221,6 +221,14 @@ public:
 			{
 				changed_prefs.cdslots[0].inuse = true;
 				changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
+
+				if (!changed_prefs.cs_cd32cd && !changed_prefs.cs_cd32nvram
+					&& (!changed_prefs.cs_cdtvcd && !changed_prefs.cs_cdtvram)
+					&& !changed_prefs.scsi)
+				{
+					changed_prefs.scsi = 1;
+					chkScsi->setSelected(true);
+				}
 			}
 			RefreshPanelHD();
 			RefreshPanelQuickstart();
@@ -257,7 +265,7 @@ public:
 			{
 				if (strncmp(changed_prefs.cdslots[0].name, tmp, MAX_DPATH) != 0)
 				{
-					strncpy(changed_prefs.cdslots[0].name, tmp, sizeof(changed_prefs.cdslots[0].name));
+					strncpy(changed_prefs.cdslots[0].name, tmp, sizeof changed_prefs.cdslots[0].name);
 					changed_prefs.cdslots[0].inuse = true;
 					changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
 					AddFileToCDList(tmp, 1);

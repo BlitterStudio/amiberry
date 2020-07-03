@@ -326,7 +326,8 @@ void target_fixup_options(struct uae_prefs* p)
 	// If we have a CD inserted, but not emulating a CDTV or CD32, enable SCSI automatically
 	if (p->cdslots[0].inuse 
 		&& (!p->cs_cd32cd && !p->cs_cd32nvram) 
-		&& (!p->cs_cdtvcd && !p->cs_cdtvram))
+		&& (!p->cs_cdtvcd && !p->cs_cdtvram)
+		&& !p->scsi)
 	{
 		p->scsi = 1;
 	}
