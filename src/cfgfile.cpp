@@ -1091,7 +1091,8 @@ static void cfgfile_resolve_path_out_all(const TCHAR *path, TCHAR *out, int size
 		s = cfgfile_subst_path_load(UNEXPANDED, &p->path_rom, path, false);
 		break;
 	case PATH_FLOPPY:
-		_tcscpy(out, path);
+		if (_tcscmp(out, path) != 0)
+			_tcscpy(out, path);
 		cfgfile_adjust_path(out, MAX_DPATH, &p->path_floppy);
 		break;
 	default:
