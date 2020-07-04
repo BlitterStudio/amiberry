@@ -1,13 +1,6 @@
-#ifndef AMIBERRY_ANDROID_AMIBERRY_FILESYS_HPP
-#define AMIBERRY_ANDROID_AMIBERRY_FILESYS_HPP
+#pragma once
 
-#include <stdio.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <dirent.h>
-#include <string.h>
-#include <fcntl.h>
+#include <cstdio>
 
 #include "sysdeps.h"
 #include "options.h"
@@ -57,4 +50,3 @@ const TCHAR* my_getfilepart(const TCHAR* filename);
 int target_get_volume_name(struct uaedev_mount_info* mtinf, struct uaedev_config_info* ci, bool inserted,
                            bool fullcheck, int cnt);
 
-#endif //AMIBERRY_ANDROID_AMIBERRY_FILESYS_HPP
