@@ -1112,10 +1112,11 @@ void gui_widgets_halt()
 	{
 		if (categories[i].ExitFunc != nullptr)
 			(*categories[i].ExitFunc)();
+
+		delete categories[i].selector;
+		delete categories[i].panel;
 	}
 
-	for (i = 0; categories[i].category != nullptr; ++i)
-		delete categories[i].selector;
 	delete panelFocusListener;
 	delete selectors;
 
