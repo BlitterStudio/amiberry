@@ -330,6 +330,7 @@ OBJS =	\
 	src/scsi.o \
 	src/scsiemul.o \
 	src/statusline.o \
+	src/tabletlibrary.o \
 	src/traps.o \
 	src/uaeexe.o \
 	src/uaelib.o \

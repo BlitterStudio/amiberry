@@ -634,6 +634,9 @@
     <ClCompile Include="..\..\src\uaeexe.cpp">
       <Filter>Source files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\tabletlibrary.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\threaddep\thread.h">
@@ -1039,6 +1042,9 @@
       <Filter>Source files\include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\include\uaeexe.h">
+      <Filter>Source files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\tabletlibrary.h">
       <Filter>Source files\include</Filter>
     </ClInclude>
   </ItemGroup>
