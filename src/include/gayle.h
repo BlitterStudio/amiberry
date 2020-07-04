@@ -3,23 +3,15 @@
 
 #include "uae/types.h"
 
-extern void gayle_reset(int);
-extern void gayle_hsync(void);
-extern void gayle_free(void);
-extern void gayle_add_ide_unit(int ch, struct uaedev_config_info* ci, struct romconfig* rc);
-extern bool gayle_ide_init(struct autoconfig_info*);
-extern int gayle_modify_pcmcia_sram_unit(struct uaedev_config_info*, int insert);
-extern int gayle_modify_pcmcia_ide_unit(struct uaedev_config_info*, int insert);
-extern int gayle_add_pcmcia_sram_unit(struct uaedev_config_info*);
-extern int gayle_add_pcmcia_ide_unit(struct uaedev_config_info*);
-extern void gayle_free_units(void);
-extern void rethink_gayle(void);
-extern void gayle_map_pcmcia(void);
-extern void check_prefs_changed_gayle(void);
-extern void gayle_add_pcmcia_unit(int ch, struct uaedev_config_info* ci, struct romconfig* rc);
-extern bool gayle_pcmcia_init(struct autoconfig_info*);
-extern bool gayle_init_ne2000_pcmcia(struct autoconfig_info* aci);
-bool isideint(void);
+void gayle_add_ide_unit(int ch, struct uaedev_config_info* ci, struct romconfig* rc);
+bool gayle_ide_init(struct autoconfig_info*);
+void gayle_free_units(void);
+bool gayle_init_pcmcia(struct autoconfig_info* aci);
+bool gayle_init_board_io_pcmcia(struct autoconfig_info* aci);
+bool gayle_init_board_common_pcmcia(struct autoconfig_info* aci);
+void pcmcia_eject(struct uae_prefs* p);
+void pcmcia_reinsert(struct uae_prefs*);
+bool pcmcia_disk_reinsert(struct uae_prefs* p, struct uaedev_config_info* uci, bool ejectonly);
 
 extern int gary_toenb; // non-existing memory access = bus error.
 extern int gary_timeout; // non-existing memory access = delay

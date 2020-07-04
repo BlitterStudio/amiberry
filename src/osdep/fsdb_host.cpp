@@ -34,7 +34,7 @@ int dos_errno(void)
 #endif
 
 	default:
-		//write_log(("Unimplemented error %s\n", strerror(e)));
+		write_log(("Unimplemented error %s\n", strerror(e)));
 		return ERROR_NOT_IMPLEMENTED;
 	}
 }
@@ -156,8 +156,7 @@ bool my_utime(const TCHAR *name, struct mytimeval *tv)
 		gettimeofday(&time, &tz);
 		mtv.tv_sec = time.tv_sec + tz.tz_minuteswest;
 		mtv.tv_usec = time.tv_usec;
-	}
-	else {
+  } else {
 		mtv.tv_sec = tv->tv_sec;
 		mtv.tv_usec = tv->tv_usec;
 	}

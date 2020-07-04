@@ -91,6 +91,100 @@ void ata_parse_identity(uae_u8 *out, struct uaedev_config_info *uci, bool *lba, 
 	}
 }
 
+uae_u16 adide_decode_word(uae_u16 w)
+{
+	uae_u16 o = 0;
+
+	if (w & 0x8000)
+		o |= 0x0001;
+	if (w & 0x0001)
+		o |= 0x0002;
+
+	if (w & 0x4000)
+		o |= 0x0004;
+	if (w & 0x0002)
+		o |= 0x0008;
+
+	if (w & 0x2000)
+		o |= 0x0010;
+	if (w & 0x0004)
+		o |= 0x0020;
+
+	if (w & 0x1000)
+		o |= 0x0040;
+	if (w & 0x0008)
+		o |= 0x0080;
+
+	if (w & 0x0800)
+		o |= 0x0100;
+	if (w & 0x0010)
+		o |= 0x0200;
+
+	if (w & 0x0400)
+		o |= 0x0400;
+	if (w & 0x0020)
+		o |= 0x0800;
+
+	if (w & 0x0200)
+		o |= 0x1000;
+	if (w & 0x0040)
+		o |= 0x2000;
+
+	if (w & 0x0100)
+		o |= 0x4000;
+	if (w & 0x0080)
+		o |= 0x8000;
+
+	return o;
+}
+
+uae_u16 adide_encode_word(uae_u16 w)
+{
+	uae_u16 o = 0;
+
+	if (w & 0x0001)
+		o |= 0x8000;
+	if (w & 0x0002)
+		o |= 0x0001;
+
+	if (w & 0x0004)
+		o |= 0x4000;
+	if (w & 0x0008)
+		o |= 0x0002;
+
+	if (w & 0x0010)
+		o |= 0x2000;
+	if (w & 0x0020)
+		o |= 0x0004;
+
+	if (w & 0x0040)
+		o |= 0x1000;
+	if (w & 0x0080)
+		o |= 0x0008;
+
+	if (w & 0x0100)
+		o |= 0x0800;
+	if (w & 0x0200)
+		o |= 0x0010;
+
+	if (w & 0x0400)
+		o |= 0x0400;
+	if (w & 0x0800)
+		o |= 0x0020;
+
+	if (w & 0x1000)
+		o |= 0x0200;
+	if (w & 0x2000)
+		o |= 0x0040;
+
+	if (w & 0x4000)
+		o |= 0x0100;
+	if (w & 0x8000)
+		o |= 0x0080;
+
+	return o;
+}
+
 static void ide_grow_buffer(struct ide_hdf *ide, int newsize)
 {
 	if (ide->secbuf_size >= newsize)

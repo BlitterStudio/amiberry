@@ -1,7 +1,4 @@
-#include "stdlib.h"
-#include "stdio.h"
-#include <cstring>
-
+#include "sysconfig.h"
 #include "sysdeps.h"
 
 #include "options.h"
@@ -14,7 +11,7 @@ struct hardfilehandle
 {
 	int zfile;
 	struct zfile *zf;
-	FILE *f;
+	FILE *h;
 };
 
 struct uae_driveinfo {
@@ -46,9 +43,11 @@ static const TCHAR *hdz[] = { _T("hdz"), _T("zip"), _T("7z"), nullptr };
 
 int hdf_open_target(struct hardfiledata *hfd, const TCHAR *pname)
 {
-	FILE *f = INVALID_HANDLE_VALUE;
+	FILE *h = INVALID_HANDLE_VALUE;
 	int i;
-	const auto name = my_strdup(pname);
+	struct uae_driveinfo* udi;
+	auto* const name = my_strdup(pname);
+	
 	auto zmode = 0;
 	char* ext;
 
@@ -65,7 +64,7 @@ int hdf_open_target(struct hardfiledata *hfd, const TCHAR *pname)
 		goto end;
 	}
 	hfd->handle = xcalloc(struct hardfilehandle, 1);
-	hfd->handle->f = INVALID_HANDLE_VALUE;
+	hfd->handle->h = INVALID_HANDLE_VALUE;
 	write_log(_T("hfd attempting to open: '%s'\n"), name);
 
 	ext = _tcsrchr(name, '.');
@@ -78,16 +77,16 @@ int hdf_open_target(struct hardfiledata *hfd, const TCHAR *pname)
 				zmode = 1;
 		}
 	}
-	f = fopen(name, (hfd->ci.readonly ? "rb" : "r+b"));
-	if (f == INVALID_HANDLE_VALUE && !hfd->ci.readonly)
+	h = fopen(name, (hfd->ci.readonly ? "rb" : "r+b"));
+	if (h == INVALID_HANDLE_VALUE && !hfd->ci.readonly)
 	{
-		f = fopen(name, "rbe");
-		if (f != nullptr)
+		h = fopen(name, "rbe");
+		if (h != nullptr)
 			hfd->ci.readonly = true;
 		else
 			goto end;
 	}
-	hfd->handle->f = f;
+	hfd->handle->h = h;
 	i = _tcslen(name) - 1;
 	while (i >= 0)
 	{
@@ -100,7 +99,7 @@ int hdf_open_target(struct hardfiledata *hfd, const TCHAR *pname)
 		}
 		i--;
 	}
-	if (f != INVALID_HANDLE_VALUE)
+	if (h != INVALID_HANDLE_VALUE)
 	{
 		// determine size of hdf file
 		int ret;
@@ -108,10 +107,10 @@ int hdf_open_target(struct hardfiledata *hfd, const TCHAR *pname)
 
 		if (low == -1) {
 			// assuming regular file; seek to end and ftell
-			ret = _fseeki64(f, 0, SEEK_END);
+			ret = _fseeki64(h, 0, SEEK_END);
 			if (ret)
 				goto end;
-			low = _ftelli64(f);
+			low = _ftelli64(h);
 			if (low == -1)
 				goto end;
 		}
@@ -125,11 +124,11 @@ int hdf_open_target(struct hardfiledata *hfd, const TCHAR *pname)
 		hfd->handle_valid = HDF_HANDLE_FILE;
 		if (hfd->physsize < 64 * 1024 * 1024 && zmode) {
 			write_log("HDF '%s' re-opened in zfile-mode\n", name);
-			fclose(f);
-			hfd->handle->f = INVALID_HANDLE_VALUE;
+			fclose(h);
+			hfd->handle->h = INVALID_HANDLE_VALUE;
 			hfd->handle->zf = zfile_fopen(name, hfd->ci.readonly ? "rb" : "r+b", ZFD_NORMAL);
 			hfd->handle->zfile = 1;
-			if (!f)
+			if (!h)
 				goto end;
 			zfile_fseek(hfd->handle->zf, 0, SEEK_END);
 			hfd->physsize = hfd->virtsize = zfile_ftell(hfd->handle->zf);
@@ -160,9 +159,9 @@ end:
 void hdf_close_target(struct hardfiledata *hfd)
 {
 	write_log("hdf_close_target\n");
-	if (hfd->handle && hfd->handle->f) {
-		write_log("closing file handle %p\n", hfd->handle->f);
-		fclose(hfd->handle->f);
+	if (hfd->handle && hfd->handle->h) {
+		write_log("closing file handle %p\n", hfd->handle->h);
+		fclose(hfd->handle->h);
 	}
 	xfree(hfd->handle);
 	xfree(hfd->emptyname);
@@ -203,7 +202,7 @@ static int hdf_seek(struct hardfiledata *hfd, uae_u64 offset)
 	}
 	if (hfd->handle_valid == HDF_HANDLE_FILE)
 	{
-		auto ret = _fseeki64(hfd->handle->f, offset, SEEK_SET);
+		auto ret = _fseeki64(hfd->handle->h, offset, SEEK_SET);
 		if (ret != 0)
 		{
 			write_log("hdf_seek failed\n");
@@ -224,14 +223,14 @@ static void poscheck(struct hardfiledata *hfd, int len)
 
 	if (hfd->handle_valid == HDF_HANDLE_FILE)
 	{
-		ret = _fseeki64(hfd->handle->f, 0, SEEK_CUR);
+		ret = _fseeki64(hfd->handle->h, 0, SEEK_CUR);
 		if (ret)
 		{
 			write_log(_T("hd: poscheck failed. seek failure"));
 			target_startup_msg(_T("Internal error"), _T("hd: poscheck failed. seek failure."));
 			abort();
 		}
-		pos = _ftelli64(hfd->handle->f);
+		pos = _ftelli64(hfd->handle->h);
 	}
 	else if (hfd->handle_valid == HDF_HANDLE_ZFILE)
 	{
@@ -290,7 +289,7 @@ static int hdf_read_2(struct hardfiledata *hfd, void *buffer, uae_u64 offset, in
 	hdf_seek(hfd, hfd->cache_offset);
 	poscheck(hfd, CACHE_SIZE);
 	if (hfd->handle_valid == HDF_HANDLE_FILE)
-		outlen = fread(hfd->cache, 1, CACHE_SIZE, hfd->handle->f);
+		outlen = fread(hfd->cache, 1, CACHE_SIZE, hfd->handle->h);
 	else if (hfd->handle_valid == HDF_HANDLE_ZFILE)
 		outlen = zfile_fread(hfd->cache, 1, CACHE_SIZE, hfd->handle->zf);
 	hfd->cache_valid = 0;
@@ -341,7 +340,7 @@ int hdf_read_target(struct hardfiledata *hfd, void *buffer, uae_u64 offset, int 
 				poscheck(hfd, len);
 			if (hfd->handle_valid == HDF_HANDLE_FILE)
 			{
-				ret = fread(hfd->cache, 1, len, hfd->handle->f);
+				ret = fread(hfd->cache, 1, len, hfd->handle->h);
 				memcpy(buffer, hfd->cache, ret);
 			}
 			else if (hfd->handle_valid == HDF_HANDLE_ZFILE)
@@ -384,7 +383,7 @@ static int hdf_write_2(struct hardfiledata *hfd, void *buffer, uae_u64 offset, i
 	if (hfd->handle_valid == HDF_HANDLE_FILE)
 	{
 		const auto name = hfd->emptyname == nullptr ? static_cast<char const*>("<unknown>") : hfd->emptyname;
-		outlen = fwrite(hfd->cache, 1, len, hfd->handle->f);
+		outlen = fwrite(hfd->cache, 1, len, hfd->handle->h);
 		if (offset == 0)
 		{
 			int tmplen = 512;
@@ -393,7 +392,7 @@ static int hdf_write_2(struct hardfiledata *hfd, void *buffer, uae_u64 offset, i
 			{
 				memset(tmp, 0xa1, tmplen);
 				hdf_seek(hfd, offset);
-				int outlen2 = fread(tmp, 1, tmplen, hfd->handle->f);
+				int outlen2 = fread(tmp, 1, tmplen, hfd->handle->h);
 				if (memcmp(hfd->cache, tmp, tmplen) != 0 || outlen != len)
 					gui_message(_T("\"%s\"\n\nblock zero write failed!"), name);
 				free(tmp);
@@ -429,4 +428,29 @@ int hdf_write_target(struct hardfiledata *hfd, void *buffer, uae_u64 offset, int
 		len -= maxlen;
 	}
 	return got;
+}
+
+int hdf_resize_target(struct hardfiledata* hfd, uae_u64 newsize)
+{
+	if (newsize < hfd->physsize) {
+		write_log("hdf_resize_target: truncation not implemented\n");
+		return 0;
+	}
+	if (newsize == hfd->physsize) {
+		return 1;
+	}
+	/* Now, newsize must be larger than hfd->physsize, we seek to newsize - 1
+	 * and write a single 0 byte to make the file exactly newsize bytes big. */
+	if (_fseeki64(hfd->handle->h, newsize - 1, SEEK_SET) != 0) {
+		write_log("hdf_resize_target: fseek failed errno %d\n", errno);
+		return 0;
+	}
+	if (fwrite("", 1, 1, hfd->handle->h) != 1) {
+		write_log("hdf_resize_target: failed to write byte at position "
+			"%lld errno %d\n", newsize - 1, errno);
+		return 0;
+	}
+	write_log("hdf_resize_target: %lld -> %lld\n", hfd->physsize, newsize);
+	hfd->physsize = newsize;
+	return 1;
 }

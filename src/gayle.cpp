@@ -164,6 +164,9 @@ static int dataflyer_state;
 static int dataflyer_disable_irq;
 static uae_u8 dataflyer_byte;
 
+static void gayle_reset(int hardreset);
+static void gayle_map_pcmcia(void);
+
 static void pcmcia_reset (void)
 {
 	memset (pcmcia_configuration, 0, sizeof pcmcia_configuration);
@@ -1629,18 +1632,62 @@ bool gayle_init_pcmcia(struct autoconfig_info *aci)
 	return true;
 }
 
+static int pcmcia_eject2(struct uae_prefs* p)
+{
+	for (int i = 0; i < MAX_EXPANSION_BOARDS; i++) {
+		struct boardromconfig* brc_changed = &changed_prefs.expansionboard[i];
+		struct boardromconfig* brc_cur = &currprefs.expansionboard[i];
+		struct boardromconfig* brc = &p->expansionboard[i];
+		if (brc->device_type) {
+			const struct expansionromtype* ert = get_device_expansion_rom(brc->device_type);
+			if (ert && (ert->deviceflags & EXPANSIONTYPE_PCMCIA) && brc->roms[0].inserted) {
+				write_log(_T("PCMCIA: '%s' removed\n"), ert->friendlyname);
+				brc->roms[0].inserted = false;
+				brc_changed->roms[0].inserted = false;
+				brc_cur->roms[0].inserted = false;
+				freepcmcia(0);
+				return i;
+			}
+		}
+	}
+	return -1;
+}
+
+void pcmcia_eject(struct uae_prefs* p)
+{
+	pcmcia_eject2(p);
+}
+
+// eject and insert card back after few second delay
+void pcmcia_reinsert(struct uae_prefs* p)
+{
+	pcmcia_delayed_insert_count = 0;
+	int num = pcmcia_eject2(p);
+	if (num < 0)
+		return;
+	pcmcia_delayed_insert = num + 1;
+	pcmcia_delayed_insert_count = 3 * 50 * 300;
+}
+
+bool pcmcia_disk_reinsert(struct uae_prefs* p, struct uaedev_config_info* uci, bool ejectonly)
+{
+	const struct expansionromtype* ert = get_unit_expansion_rom(uci->controller_type);
+	if (ert && (ert->deviceflags & EXPANSIONTYPE_PCMCIA)) {
+		if (ejectonly) {
+			pcmcia_eject2(p);
+		}
+		else {
+			pcmcia_reinsert(p);
+		}
+		return true;
+	}
+	return false;
+}
+
 void gayle_hsync(void)
 {
 	if (ide_interrupt_hsync(idedrive[0]) || ide_interrupt_hsync(idedrive[2]) || ide_interrupt_hsync(idedrive[4]))
 		devices_rethink_all(rethink_gayle);
-}
-
-bool gayle_pcmcia_init(struct autoconfig_info* aci)
-{
-	aci->start = 0x600000;
-	aci->size = 0xa80000 - aci->start;
-	aci->zorro = 0;
-	return true;
 }
 
 static void initide (void)

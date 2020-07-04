@@ -2368,7 +2368,6 @@ void memory_reset(void)
 			map_banks(&gayle_bank, 0xD8, 6, 0);
 			map_banks(&gayle2_bank, 0xDD, 2, 0);
 		}
-		gayle_map_pcmcia();
 		if (currprefs.cs_ide == IDE_A4000 || is_device_rom(&currprefs, ROMTYPE_SCSI_A4000T, 0))
 			map_banks(&gayle_bank, 0xDD, 1, 0);
 		if (currprefs.cs_ide < 0 && !currprefs.cs_pcmcia)
