@@ -512,7 +512,7 @@ int hdf_read_target(struct hardfiledata *hfd, void *buffer, uae_u64 offset, int 
 
 	if (offset < hfd->virtual_size)
 	{
-		uae_u64 len2 = offset + len <= hfd->virtual_size ? len : hfd->virtual_size - offset;
+		const auto len2 = offset + len <= hfd->virtual_size ? len : hfd->virtual_size - offset;
 		if (!hfd->virtual_rdb)
 			return 0;
 		memcpy(buffer, hfd->virtual_rdb + offset, len2);
@@ -581,7 +581,7 @@ static int hdf_write_2(struct hardfiledata *hfd, void *buffer, uae_u64 offset, i
 		if (offset == 0)
 		{
 			const auto tmplen = 512;
-			const auto tmp = (uae_u8*)xmalloc(uae_u8, tmplen);
+			auto* const tmp = (uae_u8*)xmalloc(uae_u8, tmplen);
 			if (tmp)
 			{
 				memset(tmp, 0xa1, tmplen);
