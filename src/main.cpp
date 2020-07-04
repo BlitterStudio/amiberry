@@ -895,7 +895,15 @@ static void do_start_program(void)
 	inputdevice_updateconfig(&changed_prefs, &currprefs);
 	if (quit_program >= 0)
 		quit_program = UAE_RESET;
-	m68k_go(1);
+
+	try
+	{
+		m68k_go(1);
+	}
+	catch (...)
+	{
+		write_log("An exception was thrown while running m68k_go!\n");
+	}
 }
 
 static void start_program(void)
