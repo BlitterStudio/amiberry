@@ -304,6 +304,7 @@
     <ClCompile Include="..\..\src\sounddep\sound.cpp" />
     <ClCompile Include="..\..\src\statusline.cpp" />
     <ClCompile Include="..\..\src\traps.cpp" />
+    <ClCompile Include="..\..\src\uaeexe.cpp" />
     <ClCompile Include="..\..\src\uaelib.cpp" />
     <ClCompile Include="..\..\src\uaeresource.cpp" />
     <ClCompile Include="..\..\src\vm.cpp" />
@@ -432,6 +433,7 @@
     <ClInclude Include="..\..\src\include\sysdeps.h" />
     <ClInclude Include="..\..\src\include\traps.h" />
     <ClInclude Include="..\..\src\include\uae.h" />
+    <ClInclude Include="..\..\src\include\uaeexe.h" />
     <ClInclude Include="..\..\src\include\uaeresource.h" />
     <ClInclude Include="..\..\src\include\uae\caps.h" />
     <ClInclude Include="..\..\src\include\uae\dlopen.h" />

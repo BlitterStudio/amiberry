@@ -30,6 +30,7 @@
 #include "gui.h"
 #include "drawing.h"
 #include "statusline.h"
+#include "uaeexe.h"
 #ifdef JIT
 #include "jit/compemu.h"
 #endif
@@ -337,7 +338,7 @@ void virtualdevice_init (void)
 #ifdef AUTOCONFIG
 	expansion_init ();
 	emulib_install ();
-	//uaeexe_install ();
+	uaeexe_install ();
 #endif
 #ifdef FILESYS
 	filesys_install ();

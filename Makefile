@@ -331,6 +331,7 @@ OBJS =	\
 	src/scsiemul.o \
 	src/statusline.o \
 	src/traps.o \
+	src/uaeexe.o \
 	src/uaelib.o \
 	src/uaeresource.o \
 	src/zfile.o \
