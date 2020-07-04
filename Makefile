@@ -227,7 +227,7 @@ LDFLAGS += -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed
 ifndef DEBUG
     CFLAGS += -Ofast
 else
-    CFLAGS += -g -rdynamic -funwind-tables -DDEBUG -Wl,--export-dynamic
+    CFLAGS += -g -rdynamic -funwind-tables -fno-omit-frame-pointer -DDEBUG -Wl,--export-dynamic
 endif
 
 #LTO is supposed to reduced code size and increased execution speed. For Amiberry, it does not.
@@ -256,7 +256,7 @@ ifdef USE_PROFILE
 endif
 
 ifdef SANITIZE
-    LDFLAGS += -lasan
+    export LDFLAGS := -lasan $(LDFLAGS)
     CFLAGS += -fsanitize=leak -fsanitize-recover=address
 endif
 
