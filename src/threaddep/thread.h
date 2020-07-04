@@ -41,18 +41,24 @@ STATIC_INLINE void uae_end_thread(uae_thread_id* tid)
 
 STATIC_INLINE long uae_start_thread(const TCHAR* name, int (*f)(void*), void* arg, uae_thread_id* foo)
 {
-	uae_thread_id id = SDL_CreateThread(f, "StartThread", arg);
-	if (foo != nullptr)
+	auto result = 1;
+	auto* id = SDL_CreateThread(f, "StartThread", arg);
+	if (id == nullptr)
+	{
+		write_log("ERROR creating thread\n");
+		result = 0;
+	}
+	if (foo)
+	{
 		*foo = id;
-	return (long)id;
+	}
+
+	return result;
 }
 
 STATIC_INLINE long uae_start_thread_fast(int (*f)(void*), void* arg, uae_thread_id* foo)
 {
-	uae_thread_id id = SDL_CreateThread(f, "StartThreadFast", arg);
-	if (foo != nullptr)
-		*foo = id;
-	return (long)id;
+	return uae_start_thread(nullptr, f, arg, foo);
 }
 
 STATIC_INLINE void uae_wait_thread(uae_thread_id thread)
