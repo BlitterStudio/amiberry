@@ -501,8 +501,6 @@ static void prefs_changed_cpu(void)
 		//invalidate_cpu_data_caches();
 	}
 	currprefs.address_space_24 = changed_prefs.address_space_24;
-	currprefs.fpu_no_unimplemented = changed_prefs.fpu_no_unimplemented;
-	currprefs.address_space_24 = changed_prefs.address_space_24;
 	currprefs.cpu_cycle_exact = changed_prefs.cpu_cycle_exact;
 	currprefs.cpu_memory_cycle_exact = changed_prefs.cpu_memory_cycle_exact;
 	currprefs.int_no_unimplemented = changed_prefs.int_no_unimplemented;
