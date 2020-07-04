@@ -8497,12 +8497,10 @@ void filesys_cleanup(void)
 	filesys_free_handles();
 	free_mountinfo();
 	destroy_comm_pipe(&shellexecute_pipe);
-	uae_sem_destroy(&singlethread_int_sem);
-	shell_execute_data = 0;
-
-	if(singlethread_int_sem != 0)
+	if (singlethread_int_sem != nullptr)
 		uae_sem_destroy(&singlethread_int_sem);
-	singlethread_int_sem = 0;
+	shell_execute_data = 0;
+	singlethread_int_sem = nullptr;
 
 	filesys_in_interrupt = 0;
 	mountertask = 0;
