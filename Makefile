@@ -382,6 +382,7 @@ OBJS =	\
 	src/osdep/cda_play.o \
 	src/osdep/charset.o \
 	src/osdep/fsdb_host.o \
+	src/osdep/clipboard.o \
 	src/osdep/amiberry_hardfile.o \
 	src/osdep/keyboard.o \
 	src/osdep/mp3decoder.o \
