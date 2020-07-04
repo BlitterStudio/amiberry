@@ -2014,7 +2014,7 @@ void m68k_go(int may_quit)
 #ifdef USE_JIT_FPU
 #ifdef CPU_AARCH64
 	save_host_fp_regs(fp_buffer);
-#else
+#elif defined (CPU_arm)
 	// This caused crashes in RockChip 32-bit platforms unless it was inlined like this
 	__asm__ volatile ("vstmia %[fp_buffer]!, {d7-d15}"::[fp_buffer] "r" (fp_buffer));
 #endif
@@ -2154,7 +2154,7 @@ void m68k_go(int may_quit)
 #ifdef USE_JIT_FPU
 #ifdef CPU_AARCH64
 	restore_host_fp_regs(fp_buffer);
-#else
+#elif defined (CPU_arm)
 	// This caused crashes in RockChip platforms unless it was inlined like this
 	__asm__ volatile ("vldmia %[fp_buffer]!, {d7-d15}" ::[fp_buffer] "r"(fp_buffer));
 #endif
