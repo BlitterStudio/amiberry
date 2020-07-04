@@ -24,6 +24,7 @@
 #include "custom.h"
 #include "xwin.h"
 #include "bsdsocket.h"
+#include "clipboard.h"
 #include "uaeresource.h"
 #include "native2amiga.h"
 #include "gensound.h"
@@ -214,7 +215,7 @@ void devices_vsync_pre(void)
 	inputdevice_vsync();
 	filesys_vsync();
 	//sampler_vsync ();
-	//clipboard_vsync ();
+	clipboard_vsync ();
 	statusline_vsync();
 
 	execute_device_items(device_vsyncs_pre, device_vsync_pre_cnt);
@@ -393,4 +394,9 @@ void devices_unpause(void)
 #endif
 	//pausevideograb(0);
 	//ethernet_pause(0);
+}
+
+void devices_unsafeperiod(void)
+{
+	clipboard_unsafeperiod();
 }

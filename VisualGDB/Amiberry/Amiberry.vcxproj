@@ -260,6 +260,7 @@
     <ClCompile Include="..\..\src\osdep\bsdsocket_host.cpp" />
     <ClCompile Include="..\..\src\osdep\cda_play.cpp" />
     <ClCompile Include="..\..\src\osdep\charset.cpp" />
+    <ClCompile Include="..\..\src\osdep\clipboard.cpp" />
     <ClCompile Include="..\..\src\osdep\fsdb_host.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\CreateFilesysHardfile.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\EditFilesysHardfile.cpp" />
@@ -384,6 +385,7 @@
     <ClInclude Include="..\..\src\include\cdtv.h" />
     <ClInclude Include="..\..\src\include\cdtvcr.h" />
     <ClInclude Include="..\..\src\include\cia.h" />
+    <ClInclude Include="..\..\src\include\clipboard.h" />
     <ClInclude Include="..\..\src\include\commpipe.h" />
     <ClInclude Include="..\..\src\include\consolehook.h" />
     <ClInclude Include="..\..\src\include\cpummu.h" />

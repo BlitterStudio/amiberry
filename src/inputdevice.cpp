@@ -4117,8 +4117,35 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 	//case AKS_STATERESTOREQUICK9:
 	//	savestate_quick((code - AKS_STATERESTOREQUICK) / 2, 0);
 	//	break;
+	case AKS_TOGGLEDEFAULTSCREEN:
+		toggle_fullscreen(-1);
+		break;
 	case AKS_TOGGLEWINDOWEDFULLSCREEN:
-		toggle_fullscreen();
+		toggle_fullscreen(0);
+		break;
+	case AKS_TOGGLEFULLWINDOWFULLSCREEN:
+		toggle_fullscreen(1);
+		break;
+	case AKS_TOGGLEWINDOWFULLWINDOW:
+		toggle_fullscreen(2);
+		break;
+	case AKS_TOGGLEMOUSEGRAB:
+		toggle_mousegrab();
+		break;
+	case AKS_SWAPJOYPORTS:
+		if (state == 1)
+			inputdevice_swap_compa_ports(&changed_prefs, 0);
+		else if (state == 2)
+			inputdevice_swap_compa_ports(&changed_prefs, 2);
+		break;
+	case AKS_PASTE:
+		target_paste_to_keyboard();
+		break;
+	case AKS_SWITCHINTERPOL:
+		changed_prefs.sound_interpol++;
+		if (changed_prefs.sound_interpol > 4)
+			changed_prefs.sound_interpol = 0;
+		set_config_changed();
 		break;
 	case AKS_STATESAVEDIALOG:
 		if (s) {

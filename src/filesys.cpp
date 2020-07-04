@@ -46,6 +46,7 @@
 #include "bsdsocket.h"
 #include "uaeresource.h"
 #include "inputdevice.h"
+#include "clipboard.h"
 #include "consolehook.h"
 #include "blkdev.h"
 #include "isofs_api.h"
@@ -8320,26 +8321,19 @@ static uae_u32 REGPARAM2 mousehack_done (TrapContext *ctx)
 		uaecptr dispinfo = trap_get_areg(ctx, 3);
 		uaecptr vp = trap_get_areg(ctx, 4);
 		return input_mousehack_status(ctx, mode, diminfo, dispinfo, vp, trap_get_dreg(ctx, 2));
-	}
-	else if (mode == 10) {
-		//amiga_clipboard_die(ctx);
-	}
-	else if (mode == 11) {
-		//amiga_clipboard_got_data(ctx, trap_get_areg(ctx, 2), trap_get_dreg(ctx, 2), trap_get_dreg(ctx, 0) + 8);
-	}
-	else if (mode == 12) {
-		//return amiga_clipboard_want_data(ctx);
-	}
-	else if (mode == 13) {
-		//return amiga_clipboard_proc_start(ctx);
-	}
-	else if (mode == 14) {
-		//amiga_clipboard_task_start(ctx, trap_get_dreg(ctx, 0));
-	}
-	else if (mode == 15) {
-		//amiga_clipboard_init(ctx);
-	}
-	else if (mode == 16) {
+	} else if (mode == 10) {
+		amiga_clipboard_die(ctx);
+	} else if (mode == 11) {
+		amiga_clipboard_got_data(ctx, trap_get_areg(ctx, 2), trap_get_dreg(ctx, 2), trap_get_dreg(ctx, 0) + 8);
+	} else if (mode == 12) {
+		return amiga_clipboard_want_data(ctx);
+	} else if (mode == 13) {
+		return amiga_clipboard_proc_start(ctx);
+	} else if (mode == 14) {
+		amiga_clipboard_task_start(ctx, trap_get_dreg(ctx, 0));
+	} else if (mode == 15) {
+		amiga_clipboard_init(ctx);
+	} else if (mode == 16) {
 		uaecptr a2 = trap_get_areg(ctx, 2);
 		input_mousehack_mouseoffset(a2);
 	} else if (mode == 17) {

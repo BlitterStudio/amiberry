@@ -15,6 +15,9 @@
 #include "amiberry_gfx.h"
 
 #include <png.h>
+
+#include "clipboard.h"
+#include "devices.h"
 #include "inputdevice.h"
 
 #if 0
@@ -54,6 +57,7 @@ bool can_have_linedouble;
 
 static unsigned long last_synctime;
 static int host_hz = 50;
+static bool clipboard_initialized;
 
 /* Possible screen modes (x and y resolutions) */
 #define MAX_SCREEN_MODES 14
@@ -64,6 +68,7 @@ struct PicassoResolution* DisplayModes;
 struct MultiDisplay Displays[MAX_DISPLAYS];
 
 int screen_is_picasso = 0;
+static int wasfullwindow_a, wasfullwindow_p;
 
 static SDL_Surface* current_screenshot = nullptr;
 static char screenshot_filename_default[MAX_DPATH] =
@@ -428,20 +433,92 @@ int graphics_setup(void)
 	return 1;
 }
 
-void toggle_fullscreen()
+void set_screen_mode(struct uae_prefs* p)
+{
+	if (sdl_window && strcmp(sdl_video_driver, "x11") == 0)
+	{
+		const auto window_flags = SDL_GetWindowFlags(sdl_window);
+		const bool is_fullwindow = window_flags & SDL_WINDOW_FULLSCREEN_DESKTOP;
+		const bool is_fullscreen = window_flags & SDL_WINDOW_FULLSCREEN;
+
+		if (p->gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN)
+		{
+			// Switch to Fullscreen mode, if we don't have it already
+			if (!is_fullscreen)
+				SDL_SetWindowFullscreen(sdl_window, SDL_WINDOW_FULLSCREEN);
+		}
+		else if (p->gfx_apmode[0].gfx_fullscreen == GFX_FULLWINDOW)
+		{
+			if (!is_fullwindow)
+				SDL_SetWindowFullscreen(sdl_window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+		}
+		else
+		{
+			// Switch to Window mode, if we don't have it already
+			if (is_fullscreen || is_fullwindow)
+				SDL_SetWindowFullscreen(sdl_window, 0);
+		}
+
+		if (!is_fullscreen && !is_fullwindow)
+			if ((SDL_GetWindowFlags(sdl_window) & SDL_WINDOW_MAXIMIZED) == 0)
+			{
+				if (screen_is_picasso)
+					SDL_SetWindowSize(sdl_window, display_width, display_height);
+				else
+					SDL_SetWindowSize(sdl_window, display_width * 2 >> p->gfx_resolution, display_height * 2 >> p->gfx_vresolution);
+			}
+}
+}
+
+void toggle_fullscreen(int mode)
 {
 #ifdef USE_DISPMANX
 	// Dispmanx is fullscreen always
 #else
-	const Uint32 fullscreen_flag = SDL_WINDOW_FULLSCREEN_DESKTOP;
-	if (sdl_window)
-	{
-		const bool is_fullscreen = SDL_GetWindowFlags(sdl_window) & fullscreen_flag;
-		SDL_SetWindowFullscreen(sdl_window, is_fullscreen ? 0 : fullscreen_flag);
-		SDL_ShowCursor(is_fullscreen);
-		const auto idx = screen_is_picasso ? 1 : 0;
-		currprefs.gfx_apmode[idx].gfx_fullscreen = is_fullscreen ? GFX_FULLSCREEN : GFX_WINDOW;
+	struct amigadisplay* ad = &adisplays;
+	int* p = ad->picasso_on ? &changed_prefs.gfx_apmode[1].gfx_fullscreen : &changed_prefs.gfx_apmode[0].gfx_fullscreen;
+	int wfw = ad->picasso_on ? wasfullwindow_p : wasfullwindow_a;
+	int v = *p;
+
+	if (mode < 0) {
+		// fullscreen <> window (if in fullwindow: fullwindow <> fullscreen)
+		if (v == GFX_FULLWINDOW)
+			v = GFX_FULLSCREEN;
+		else if (v == GFX_WINDOW)
+			v = GFX_FULLSCREEN;
+		else if (v == GFX_FULLSCREEN)
+			if (wfw > 0)
+				v = GFX_FULLWINDOW;
+			else
+				v = GFX_WINDOW;
 	}
+	else if (mode == 0) {
+		// fullscreen <> window
+		if (v == GFX_FULLSCREEN)
+			v = GFX_WINDOW;
+		else
+			v = GFX_FULLSCREEN;
+	}
+	else if (mode == 1) {
+		// fullscreen <> fullwindow
+		if (v == GFX_FULLSCREEN)
+			v = GFX_FULLWINDOW;
+		else
+			v = GFX_FULLSCREEN;
+	}
+	else if (mode == 2) {
+		// window <> fullwindow
+		if (v == GFX_FULLWINDOW)
+			v = GFX_WINDOW;
+		else
+			v = GFX_FULLWINDOW;
+	}
+	else if (mode == 10) {
+		v = GFX_WINDOW;
+	}
+	*p = v;
+	devices_unsafeperiod();
+	set_screen_mode(&currprefs);
 #endif
 }
 
@@ -582,43 +659,6 @@ bool isModeAspectRatioExact(SDL_DisplayMode* mode, const int width, const int he
 	return mode->w % width == 0 && mode->h % height == 0;
 }
 
-void set_screen_mode(struct uae_prefs* p)
-{
-	if (sdl_window && strcmp(sdl_video_driver, "x11") == 0)
-	{
-		const auto window_flags = SDL_GetWindowFlags(sdl_window);
-		const bool is_fullwindow = window_flags & SDL_WINDOW_FULLSCREEN_DESKTOP;
-		const bool is_fullscreen = window_flags & SDL_WINDOW_FULLSCREEN;
-
-		if (p->gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN)
-		{
-			// Switch to Fullscreen mode, if we don't have it already
-			if (!is_fullscreen)
-				SDL_SetWindowFullscreen(sdl_window, SDL_WINDOW_FULLSCREEN);
-		}
-		else if (p->gfx_apmode[0].gfx_fullscreen == GFX_FULLWINDOW)
-		{
-			if (!is_fullwindow)
-				SDL_SetWindowFullscreen(sdl_window, SDL_WINDOW_FULLSCREEN_DESKTOP);
-		}
-		else
-		{
-			// Switch to Window mode, if we don't have it already
-			if (is_fullscreen || is_fullwindow)
-				SDL_SetWindowFullscreen(sdl_window, 0);
-		}
-
-		if (!is_fullscreen && !is_fullwindow)
-			if ((SDL_GetWindowFlags(sdl_window) & SDL_WINDOW_MAXIMIZED) == 0)
-			{
-				if (screen_is_picasso)
-					SDL_SetWindowSize(sdl_window, display_width, display_height);
-				else
-					SDL_SetWindowSize(sdl_window, display_width * 2 >> p->gfx_resolution, display_height * 2 >> p->gfx_vresolution);
-			}
-	}
-}
-
 static void open_screen(struct uae_prefs* p)
 {
 	auto* avidinfo = &adisplays.gfxvidinfo;
@@ -652,6 +692,11 @@ static void open_screen(struct uae_prefs* p)
 		display_height = (p->gfx_monitor.gfx_size.height ? p->gfx_monitor.gfx_size.height : 270) << p->gfx_vresolution;
 	}
 
+	if (wasfullwindow_a == 0)
+		wasfullwindow_a = currprefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLWINDOW ? 1 : -1;
+	if (wasfullwindow_p == 0)
+		wasfullwindow_p = currprefs.gfx_apmode[1].gfx_fullscreen == GFX_FULLWINDOW ? 1 : -1;
+	
 #ifdef USE_DISPMANX
 	next_synctime = 0;
 	current_resource_amigafb = 0;

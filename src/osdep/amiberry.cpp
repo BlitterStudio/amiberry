@@ -45,6 +45,9 @@
 #include "devices.h"
 #include <map>
 
+#include "clipboard.h"
+#include "uae/uae.h"
+
 extern FILE* debugfile;
 
 int pause_emulation;
@@ -1302,6 +1305,7 @@ void target_addtorecent(const TCHAR* name, int t)
 
 void target_reset(void)
 {
+	clipboard_reset();
 }
 
 bool target_can_autoswitchdevice(void)
@@ -1392,7 +1396,8 @@ int main(int argc, char* argv[])
 
 	alloc_AmigaMem();
 	RescanROMs();
-
+	clipboard_init();
+	
 	// set capslock state based upon current "real" state
 	ioctl(0, KDGKBLED, &kbd_flags);
 	ioctl(0, KDGETLED, &kbd_led_status);
@@ -1431,7 +1436,7 @@ int main(int argc, char* argv[])
 	return 0;
 }
 
-void toggle_mouse_grab()
+void toggle_mousegrab()
 {
 	// Release mouse
 	if (mouse_grabbed)
@@ -1453,7 +1458,7 @@ void set_mouse_grab(const bool grab)
 	if (grab && mouse_grabbed || !grab && !mouse_grabbed)
 		return;
 	if (!grab && mouse_grabbed || grab && !mouse_grabbed)
-		toggle_mouse_grab();
+		toggle_mousegrab();
 }
 
 void setminimized()
@@ -1476,7 +1481,7 @@ static void amiberry_inactive(int minimized)
 	focus = 0;
 	recapture = 0;
 	setmouseactive(0);
-	//clipboard_active(0);
+	clipboard_active(1, 0);
 
 	if (!quit_program) {
 		if (minimized) {
@@ -1512,7 +1517,7 @@ static void amiberry_active(int minimized)
 	inputdevice_acquire(TRUE);
 	if (isfullscreen() > 0)
 		setmouseactive(1);
-	//clipboard_active(1);
+	clipboard_active(1, 1);
 }
 
 static void setmouseactive2(int active, bool allowpause)
@@ -1768,7 +1773,7 @@ void process_event(SDL_Event event)
 			if (event.button.button == SDL_BUTTON_MIDDLE)
 			{
 				if (currprefs.input_mouse_untrap)
-					toggle_mouse_grab();
+					toggle_mousegrab();
 				else
 					setmousebuttonstate(0, 2, 0);
 			}
@@ -1845,15 +1850,15 @@ void process_event(SDL_Event event)
 
 int handle_msgpump()
 {
-	auto gotEvent = 0;
+	auto got_event = 0;
 	SDL_Event event;
 
 	while (SDL_PollEvent(&event))
 	{
-		gotEvent = 1;
+		got_event = 1;
 		process_event(event);
 	}
-	return gotEvent;
+	return got_event;
 }
 
 bool handle_events()
@@ -1894,35 +1899,3 @@ bool handle_events()
 	return pause_emulation != 0;
 }
 
-static uaecptr clipboard_data;
-
-void amiga_clipboard_die()
-{
-}
-
-void amiga_clipboard_init()
-{
-}
-
-void amiga_clipboard_task_start(uaecptr data)
-{
-	clipboard_data = data;
-}
-
-uae_u32 amiga_clipboard_proc_start()
-{
-	return clipboard_data;
-}
-
-void amiga_clipboard_got_data(uaecptr data, uae_u32 size, uae_u32 actual)
-{
-}
-
-int amiga_clipboard_want_data()
-{
-	return 0;
-}
-
-void clipboard_vsync()
-{
-}
