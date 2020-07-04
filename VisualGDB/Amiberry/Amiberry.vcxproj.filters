@@ -1053,5 +1053,8 @@
     <ClInclude Include="..\..\src\include\tabletlibrary.h">
       <Filter>Source files\include</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\osdep\amiberry_filesys.hpp">
+      <Filter>Source files\osdep</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
