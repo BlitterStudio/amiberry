@@ -91,6 +91,38 @@ void ata_parse_identity(uae_u8 *out, struct uaedev_config_info *uci, bool *lba, 
 	}
 }
 
+bool ata_get_identity(struct ini_data *ini, uae_u8 *out, bool overwrite)
+{
+#ifdef AMIBERRY
+	return false;
+#else
+	if (!out)
+		return false;
+	if (overwrite) {
+		uae_u8 *out2;
+		int len;
+		if (!ini_getdata(ini, _T("IDENTITY"), _T("DATA"), &out2, &len))
+			return false;
+		if (len == 512) {
+			memcpy(out, out2, 512);
+		}
+		xfree(out2);
+	}
+	int v;
+	if (ini_getval(ini, _T("IDENTITY"), _T("multiple_mode"), &v)) {
+		if (v) {
+			out[59 * 2 + 1] |= 1;
+			out[47 * 2 + 0] = 0;
+			out[47 * 2 + 1] = v;
+		} else {
+			out[59 * 2 + 1] &= ~1;
+		}
+	}
+
+	return true;
+#endif
+}
+
 uae_u16 adide_decode_word(uae_u16 w)
 {
 	uae_u16 o = 0;
@@ -219,7 +251,7 @@ static void ql(uae_u8 *d, int o)
 	d[o + 7] = t;
 }
 
-static void ata_byteswapidentity(uae_u8 *d)
+void ata_byteswapidentity(uae_u8 *d)
 {
 	for (int i = 0; i < 512; i += 2)
 	{
@@ -444,67 +476,96 @@ static void ide_identity_buffer(struct ide_hdf *ide)
 	if (!device_type)
 		device_type = 5; // CD
 
-	pw (ide, 0, atapi ? 0x80c0 | (device_type << 8) : (cf ? 0x848a : (1 << 6)));
-	pw (ide, 1, ide->hdhfd.cyls_def);
-	pw (ide, 2, 0xc837);
-	pw (ide, 3, ide->hdhfd.heads_def);
-	pw (ide, 4, ide->blocksize * ide->hdhfd.secspertrack_def);
-	pw (ide, 5, ide->blocksize);
-	pw (ide, 6, ide->hdhfd.secspertrack_def);
-	ps (ide, 10, _T("68000"), 20); /* serial */
-	pw (ide, 20, 3);
-	pw (ide, 21, ide->blocksize);
-	pw (ide, 22, 4);
-	ps (ide, 23, _T("0.7"), 8); /* firmware revision */
-	if (ide->atapi)
-		_tcscpy (tmp, _T("UAE-ATAPI"));
-	else
-		_stprintf (tmp, _T("UAE-IDE %s"), ide->hdhfd.hfd.product_id);
-	ps (ide, 27, tmp, 40); /* model */
-	pw(ide, 47, ide->max_multiple_mode ? (0x8000 | (ide->max_multiple_mode >> (ide->blocksize / 512 - 1))) : 0); /* max sectors in multiple mode */
-	pw (ide, 48, 1);
-	pw(ide, 49, (ide->lba ? (1 << 9) : 0) | (1 << 8)); /* LBA and DMA supported */
-	pw (ide, 51, 0x200); /* PIO cycles */
-	pw (ide, 52, 0x200); /* DMA cycles */
-	pw(ide, 53, 1 | (ide->lba ? 2 | 4 : 0)); // b0 = 54-58 valid b1 = 64-70 valid b2 = 88 valid
-	pw (ide, 54, ide->hdhfd.cyls);
-	pw (ide, 55, ide->hdhfd.heads);
-	pw (ide, 56, ide->hdhfd.secspertrack);
-	uae_u64 totalsecs = (uae_u64)ide->hdhfd.cyls * ide->hdhfd.heads * ide->hdhfd.secspertrack;
-	pl(ide, 57, totalsecs);
-	pw(ide, 59, ide->max_multiple_mode ? (0x100 | ide->max_multiple_mode >> (ide->blocksize / 512 - 1)) : 0); /* Multiple mode supported */
-	pw(ide, 62, 0x0f);
-	pw(ide, 63, 0x0f);
-	if (ide->lba) {
-	  totalsecs = ide->blocksize ? ide->hdhfd.size / ide->blocksize : 0;
-	  if (totalsecs > 0x0fffffff)
-		  totalsecs = 0x0fffffff;
-		pl(ide, 60, totalsecs);
-	  if (ide->ata_level > 0) {
-		  pw (ide, 64, ide->ata_level ? 0x03 : 0x00); /* PIO3 and PIO4 */
-		  pw (ide, 65, 120); /* MDMA2 supported */
-		  pw (ide, 66, 120);
-		  pw (ide, 67, 120);
-		  pw (ide, 68, 120);
-		  pw (ide, 80, (1 << 1) | (1 << 2) | (1 << 3) | (1 << 4) | (1 << 5) | (1 << 6)); /* ATA-1 to ATA-6 */
-		  pw (ide, 81, 0x1c); /* ATA revision */
-		  pw (ide, 82, (1 << 14) | (atapi ? 0x10 | 4 : 0)); /* NOP, ATAPI: PACKET and Removable media features supported */
-		  pw (ide, 83, (1 << 14) | (1 << 13) | (1 << 12) | (ide->lba48 ? (1 << 10) : 0)); /* cache flushes, LBA 48 supported */
-		  pw (ide, 84, 1 << 14);
-		  pw (ide, 85, 1 << 14);
-		  pw (ide, 86, (1 << 14) | (1 << 13) | (1 << 12) | (ide->lba48 ? (1 << 10) : 0)); /* cache flushes, LBA 48 enabled */
-		  pw (ide, 87, 1 << 14);
-		  pw (ide, 88, (1 << 5) | (1 << 4) | (1 << 3) | (1 << 2) | (1 << 1) | (1 << 0)); /* UDMA modes */
-		  pw (ide, 93, (1 << 14) | (1 << 13) | (1 << 0));
-		  if (ide->lba48) {
-			  totalsecs = ide->hdhfd.size / ide->blocksize;
-				pq(ide, 100, totalsecs);
-		  }
-	  }
+	if (ata_get_identity(ide->hdhfd.hfd.geometry, ide->secbuf, true)) {
+
+		//if (ini_getval(ide->hdhfd.hfd.geometry, _T("IDENTITY"), _T("atapi"), &v)) {
+		//	ide->atapi = v != 0;
+		//	if (ide->atapi) {
+		//		ide->atapi_device_type = 0;
+		//		ini_getval(ide->hdhfd.hfd.geometry, _T("IDENTITY"), _T("atapi_type"), &ide->atapi_device_type);
+		//		if (!ide->atapi_device_type)
+		//			ide->atapi_device_type = 5;
+		//	}
+		//}
+		if (!ide->byteswap) {
+			ata_byteswapidentity(ide->secbuf);
+		}
+
+	} else if (ide->hdhfd.hfd.ci.loadidentity && (ide->hdhfd.hfd.identity[0] || ide->hdhfd.hfd.identity[1])) {
+
+		memcpy(ide->secbuf, ide->hdhfd.hfd.identity, 512);
+		if (!ide->byteswap) {
+			ata_byteswapidentity(ide->secbuf);
+		}
+		real = true;
+
+	} else {
+
+		pw(ide, 0, atapi ? 0x80c0 | (device_type << 8) : (cf ? 0x848a : (1 << 6)));
+		pw(ide, 1, ide->hdhfd.cyls_def);
+		pw(ide, 2, 0xc837);
+		pw(ide, 3, ide->hdhfd.heads_def);
+		pw(ide, 4, ide->blocksize * ide->hdhfd.secspertrack_def);
+		pw(ide, 5, ide->blocksize);
+		pw(ide, 6, ide->hdhfd.secspertrack_def);
+		ps(ide, 10, _T("68000"), 20); /* serial */
+		pw(ide, 20, 3);
+		pw(ide, 21, ide->blocksize);
+		pw(ide, 22, 4);
+		ps(ide, 23, _T("0.7"), 8); /* firmware revision */
+		if (ide->atapi)
+			_tcscpy(tmp, _T("UAE-ATAPI"));
+		else
+			_stprintf(tmp, _T("UAE-IDE %s"), ide->hdhfd.hfd.product_id);
+		ps(ide, 27, tmp, 40); /* model */
+		pw(ide, 47, ide->max_multiple_mode ? (0x8000 | (ide->max_multiple_mode >> (ide->blocksize / 512 - 1))) : 0); /* max sectors in multiple mode */
+		pw(ide, 48, 1);
+		pw(ide, 49, (ide->lba ? (1 << 9) : 0) | (1 << 8)); /* LBA and DMA supported */
+		pw(ide, 51, 0x200); /* PIO cycles */
+		pw(ide, 52, 0x200); /* DMA cycles */
+		pw(ide, 53, 1 | (ide->lba ? 2 | 4 : 0)); // b0 = 54-58 valid b1 = 64-70 valid b2 = 88 valid
+		pw(ide, 54, ide->hdhfd.cyls);
+		pw(ide, 55, ide->hdhfd.heads);
+		pw(ide, 56, ide->hdhfd.secspertrack);
+		uae_u64 totalsecs = (uae_u64)ide->hdhfd.cyls * ide->hdhfd.heads * ide->hdhfd.secspertrack;
+		pl(ide, 57, totalsecs);
+		pw(ide, 59, ide->max_multiple_mode ? (0x100 | ide->max_multiple_mode >> (ide->blocksize / 512 - 1)) : 0); /* Multiple mode supported */
+		pw(ide, 62, 0x0f);
+		pw(ide, 63, 0x0f);
+		if (ide->lba) {
+			totalsecs = ide->blocksize ? ide->hdhfd.size / ide->blocksize : 0;
+			if (totalsecs > 0x0fffffff)
+				totalsecs = 0x0fffffff;
+			pl(ide, 60, totalsecs);
+			if (ide->ata_level > 0) {
+				pw(ide, 64, ide->ata_level ? 0x03 : 0x00); /* PIO3 and PIO4 */
+				pw(ide, 65, 120); /* MDMA2 supported */
+				pw(ide, 66, 120);
+				pw(ide, 67, 120);
+				pw(ide, 68, 120);
+				pw(ide, 80, (1 << 1) | (1 << 2) | (1 << 3) | (1 << 4) | (1 << 5) | (1 << 6)); /* ATA-1 to ATA-6 */
+				pw(ide, 81, 0x1c); /* ATA revision */
+				pw(ide, 82, (1 << 14) | (atapi ? 0x10 | 4 : 0)); /* NOP, ATAPI: PACKET and Removable media features supported */
+				pw(ide, 83, (1 << 14) | (1 << 13) | (1 << 12) | (ide->lba48 ? (1 << 10) : 0)); /* cache flushes, LBA 48 supported */
+				pw(ide, 84, 1 << 14);
+				pw(ide, 85, 1 << 14);
+				pw(ide, 86, (1 << 14) | (1 << 13) | (1 << 12) | (ide->lba48 ? (1 << 10) : 0)); /* cache flushes, LBA 48 enabled */
+				pw(ide, 87, 1 << 14);
+				pw(ide, 88, (1 << 5) | (1 << 4) | (1 << 3) | (1 << 2) | (1 << 1) | (1 << 0)); /* UDMA modes */
+				pw(ide, 93, (1 << 14) | (1 << 13) | (1 << 0));
+				if (ide->lba48) {
+					totalsecs = ide->hdhfd.size / ide->blocksize;
+					pq(ide, 100, totalsecs);
+				}
+			}
+		}
+		ata_get_identity(ide->hdhfd.hfd.geometry, ide->secbuf, false);
 	}
 
-	v = ide->multiple_mode;
-	pwor(ide, 59, v > 0 ? 0x100 : 0);
+	if (!real) {
+		v = ide->multiple_mode;
+		pwor(ide, 59, v > 0 ? 0x100 : 0);
+	}
 	if (!atapi && cf) {
 		pw(ide, 0, 0x848a);
 	} else if (!atapi && !cf) {
@@ -521,6 +582,14 @@ static void ide_identify_drive (struct ide_hdf *ide)
 	ide_data_ready (ide);
 	ide->direction = 0;
 	ide_identity_buffer(ide);
+	if (ide->adide) {
+		for (int i = 0; i < 256; i++) {
+			uae_u16 w = (ide->secbuf[i * 2 + 0] << 8) | (ide->secbuf[i * 2 + 1] << 0);
+			uae_u16 we = adide_decode_word(w);
+			ide->secbuf[i * 2 + 0] = we >> 8;
+			ide->secbuf[i * 2 + 1] = we >> 0;
+		}
+	}
 }
 
 static void set_signature (struct ide_hdf *ide)
@@ -548,6 +617,11 @@ static void reset_device (struct ide_hdf *ide, bool both)
 	set_signature (ide);
 	if (both)
 		set_signature (ide->pair);
+}
+
+void ide_reset_device(struct ide_hdf* ide)
+{
+	reset_device(ide, true);
 }
 
 static void ide_execute_drive_diagnostics (struct ide_hdf *ide, bool irq)
@@ -601,7 +675,7 @@ static void ide_set_multiple_mode (struct ide_hdf *ide)
 	ide_interrupt (ide);
 }
 
-static void ide_set_features (struct ide_hdf *ide)
+static void ide_set_features(struct ide_hdf* ide)
 {
 	if (ide->ata_level < 0) {
 		ide_fail(ide);
@@ -611,23 +685,25 @@ static void ide_set_features (struct ide_hdf *ide)
 	int type = ide->regs.ide_nsector >> 3;
 	int mode = ide->regs.ide_nsector & 7;
 
-	write_log (_T("IDE%d set features %02X (%02X)\n"), ide->num, ide->regs.ide_feat, ide->regs.ide_nsector);
+	write_log(_T("IDE%d set features %02X (%02X)\n"), ide->num, ide->regs.ide_feat, ide->regs.ide_nsector);
 	switch (ide->regs.ide_feat)
 	{
 		// 8-bit mode
-		case 1:
+	case 1:
+		ide->mode_8bit = true;
 		ide_interrupt(ide);
 		break;
-		case 0x81:
+	case 0x81:
+		ide->mode_8bit = false;
 		ide_interrupt(ide);
 		break;
 		// write cache
-		case 2:
-		case 0x82:
+	case 2:
+	case 0x82:
 		ide_interrupt(ide);
 		break;
-		default:
-		ide_fail (ide);
+	default:
+		ide_fail(ide);
 		break;
 	}
 }
@@ -1181,6 +1257,10 @@ uae_u16 ide_get_data(struct ide_hdf *ide)
 {
 	return ide_get_data_2(ide, 1);
 }
+uae_u8 ide_get_data_8bit(struct ide_hdf *ide)
+{
+	return (uae_u8)ide_get_data_2(ide, 0);
+}
 
 static void ide_put_data_2(struct ide_hdf *ide, uae_u16 v, int bussize)
 {
@@ -1224,6 +1304,10 @@ static void ide_put_data_2(struct ide_hdf *ide, uae_u16 v, int bussize)
 void ide_put_data(struct ide_hdf *ide, uae_u16 v)
 {
 	ide_put_data_2(ide, v, 1);
+}
+void ide_put_data_8bit(struct ide_hdf *ide, uae_u8 v)
+{
+	ide_put_data_2(ide, v, 0);
 }
 
 uae_u32 ide_read_reg (struct ide_hdf *ide, int ide_reg)
@@ -1545,6 +1629,7 @@ struct ide_hdf *add_ide_unit (struct ide_hdf **idetable, int max, int ch, struct
 		ide->lba = true;
 		ide->uae_unitnum = ci->uae_unitnum;
 		gui_flicker_led (LED_HD, ide->uae_unitnum, -1);
+		ide->cd_unit_num = -1;
 		ide->media_type = ci->controller_media_type;
 		ide->ata_level = ci->unit_feature_level;
 		if (!ide->ata_level && (ide->hdhfd.size >= 4 * (uae_u64)0x40000000 || ide->media_type))

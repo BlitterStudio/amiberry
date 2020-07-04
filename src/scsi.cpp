@@ -1450,8 +1450,8 @@ static void supra_do_dma(struct soft_scsi *ncr)
 	}
 }
 
-uae_u8 aic_bget_dma(struct soft_scsi *scsi, bool *phaseerr);
-void aic_bput_dma(struct soft_scsi *scsi, uae_u8 v, bool *phaseerr);
+static uae_u8 aic_bget_dma(struct soft_scsi *scsi, bool *phaseerr);
+static void aic_bput_dma(struct soft_scsi *scsi, uae_u8 v, bool *phaseerr);
 
 static void hardframe_do_dma(struct soft_scsi *ncr)
 {
@@ -1596,7 +1596,7 @@ static uae_u8 aic_bget_reg(struct soft_scsi *scsi)
 	return scsi->aic_reg & 15;
 }
 
-uae_u8 aic_bget_dma(struct soft_scsi *scsi, bool *phaseerr)
+static uae_u8 aic_bget_dma(struct soft_scsi *scsi, bool *phaseerr)
 {
 	struct raw_scsi *r = &scsi->rscsi;
 	if (!scsi->dma_direction)
@@ -1706,7 +1706,7 @@ static void aic_bput_reg(struct soft_scsi *scsi, uae_u8 v)
 	scsi->aic_reg = v & 15;
 }
 
-void aic_bput_dma(struct soft_scsi *scsi, uae_u8 v, bool *phaseerr)
+static void aic_bput_dma(struct soft_scsi *scsi, uae_u8 v, bool *phaseerr)
 {
 	struct raw_scsi *r = &scsi->rscsi;
 	if (!scsi->dma_direction)
@@ -5385,10 +5385,12 @@ uae_u8 x86_rt1000_bget(int portnum)
 	return v;
 }
 
+extern void x86_rt1000_bios(struct zfile*, struct romconfig *rc);
 bool x86_rt1000_init(struct autoconfig_info *aci)
 {
 	static const int parent[] = { ROMTYPE_A1060, ROMTYPE_A2088, ROMTYPE_A2088T, ROMTYPE_A2286, ROMTYPE_A2386, 0 };
 	aci->parent_romtype = parent;
+	scsi_add_reset();
 	if (!aci->doinit)
 		return true;
 
