@@ -1015,22 +1015,23 @@ void check_error_sdl(const bool check, const char* message)
 
 static int real_main2(int argc, TCHAR** argv)
 {
+	if (
 #ifdef USE_DISPMANX
-	int ret = SDL_Init(SDL_INIT_TIMER
-		| SDL_INIT_AUDIO
-		| SDL_INIT_JOYSTICK
-		| SDL_INIT_HAPTIC
-		| SDL_INIT_GAMECONTROLLER
-		| SDL_INIT_EVENTS) != 0;
+		SDL_Init(SDL_INIT_TIMER
+			| SDL_INIT_AUDIO
+			| SDL_INIT_JOYSTICK
+			| SDL_INIT_HAPTIC
+			| SDL_INIT_GAMECONTROLLER
+			| SDL_INIT_EVENTS) != 0
 #else
-	const int ret = SDL_Init(SDL_INIT_EVERYTHING) != 0;
+		SDL_Init(SDL_INIT_EVERYTHING) != 0
 #endif
-	if (ret < 0)
+		)
 	{
 		printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
 		abort();
 	}
-
+		
 	keyboard_settrans();
 	set_config_changed();
 	if (restart_config[0])
