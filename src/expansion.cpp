@@ -966,6 +966,35 @@ uae_u32 uaeboard_base; /* Determined by the OS */
 static uae_u32 uaeboard_ram_start;
 #define UAEBOARD_WRITEOFFSET 0x4000
 
+uae_u8* uaeboard_map_ram(uaecptr p)
+{
+	if (currprefs.uaeboard > 1) {
+		p -= uaeboard_base;
+		return uaeboard_bank.baseaddr + p;
+	}
+	else {
+		p -= filesys_bank.start;
+		return filesys_bank.baseaddr + p;
+	}
+}
+
+uaecptr uaeboard_alloc_ram(uae_u32 size)
+{
+	uaecptr p;
+	size += 7;
+	size &= ~7;
+	if (currprefs.uaeboard > 1) {
+		p = uaeboard_ram_start + uaeboard_base;
+		memset(uaeboard_bank.baseaddr + uaeboard_ram_start, 0, size);
+	}
+	else {
+		p = uaeboard_ram_start + filesys_bank.start;
+		memset(filesys_bank.baseaddr + uaeboard_ram_start, 0, size);
+	}
+	uaeboard_ram_start += size;
+	return p;
+}
+
 static bool uaeboard_write(uaecptr addr)
 {
 	if (addr >= UAEBOARD_WRITEOFFSET)

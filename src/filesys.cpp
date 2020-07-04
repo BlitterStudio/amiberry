@@ -46,8 +46,8 @@
 #include "bsdsocket.h"
 #include "uaeresource.h"
 #include "inputdevice.h"
-#include "blkdev.h"
 #include "consolehook.h"
+#include "blkdev.h"
 #include "isofs_api.h"
 #include "scsi.h"
 #include "newcpu.h"
@@ -1103,10 +1103,9 @@ int kill_filesys_unitconfig (struct uae_prefs *p, int nr)
 	hardfile_do_disk_change (uci, 0);
 	if (uci->configoffset >= 0 && uci->ci.controller_type == HD_CONTROLLER_TYPE_UAE) {
 		filesys_media_change(uci->ci.rootdir, 0, uci);
+	} else {
+		pcmcia_disk_reinsert(p, &uci->ci, true);
 	}
-	//else {
-	//	pcmcia_disk_reinsert(p, &uci->ci, true);
-	//}
 	while (nr < MOUNT_CONFIG_SIZE) {
 		memmove (&p->mountconfig[nr], &p->mountconfig[nr + 1], sizeof (struct uaedev_config_data));
 		nr++;
@@ -1390,7 +1389,7 @@ static void readdpacket(TrapContext *ctx, dpacket *packet, uaecptr pck)
 {
 	// Read enough to get also all 64-bit fields
 	packet->packet_addr = pck;
-	if (!valid_address(pck, dp_Max)) {
+	if (trap_is_indirect() || !valid_address(pck, dp_Max)) {
 		trap_get_bytes(ctx, packet->packet_array, pck, dp_Max);
 		packet->packet_data = packet->packet_array;
 		packet->need_flush = true;
@@ -5077,9 +5076,34 @@ static void	action_read(TrapContext *ctx, Unit *unit, dpacket *packet)
 			return;
 		}
 
-		/* normal fast read */
-		uae_u8 *realpt = get_real_address (addr);
-		actual = fs_read (k->fd, realpt, size);
+		if (trap_is_indirect()) {
+
+			uae_u8 buf[RTAREA_TRAP_DATA_EXTRA_SIZE];
+			actual = 0;
+			while (size > 0) {
+				int toread = size > RTAREA_TRAP_DATA_EXTRA_SIZE ? RTAREA_TRAP_DATA_EXTRA_SIZE : size;
+				int read = fs_read(k->fd, buf, toread);
+				if (read < 0) {
+					actual = -1;
+					break;
+				}
+				if (read == 0)
+					break;
+				trap_put_bytes(ctx, buf, addr, read);
+				size -= read;
+				addr += read;
+				actual += read;
+				if (read < toread)
+					break;
+			}
+
+		} else {
+
+			/* normal fast read */
+			uae_u8 *realpt = get_real_address (addr);
+			actual = fs_read (k->fd, realpt, size);
+
+		}
 
 		if (actual == 0) {
 			PUT_PCK_RES1 (packet, 0);
@@ -5130,8 +5154,33 @@ static void action_write(TrapContext *ctx, Unit *unit, dpacket *packet)
 			return;
 		}
 
-		uae_u8 *realpt = get_real_address (addr);
-		actual = fs_write (k->fd, realpt, size);
+		if (trap_is_indirect()) {
+
+			uae_u8 buf[RTAREA_TRAP_DATA_EXTRA_SIZE];
+			actual = 0;
+			int sizecnt = size;
+			while (sizecnt > 0) {
+				int towrite = sizecnt > RTAREA_TRAP_DATA_EXTRA_SIZE ? RTAREA_TRAP_DATA_EXTRA_SIZE : sizecnt;
+				trap_get_bytes(ctx, buf, addr, towrite);
+				int write = fs_write(k->fd, buf, towrite);
+				if (write < 0) {
+					actual = -1;
+					break;
+				}
+				if (write == 0)
+					break;
+				sizecnt -= write;
+				addr += write;
+				actual += write;
+				if (write < towrite)
+					break;
+			}
+
+		} else {
+
+			uae_u8 *realpt = get_real_address (addr);
+			actual = fs_write (k->fd, realpt, size);
+		}
 
 	} else {
 		/* ugh this is inefficient but easy */
@@ -6323,6 +6372,39 @@ static uae_u32 REGPARAM2 exter_int_helper(TrapContext *ctx)
 	int n = trap_get_dreg(ctx, 0);
 	static int unit_no;
 
+	if (n == 20) {
+		// d1 = shellexec process
+		shell_execute_process = trap_get_dreg(ctx, 1);
+		return 0;
+	} else if (n == 21) {
+		trap_set_areg(ctx, 0, 0);
+		if (comm_pipe_has_data(&shellexecute_pipe)) {
+			TCHAR *p = (TCHAR*)read_comm_pipe_pvoid_blocking(&shellexecute_pipe);
+			if (p) {
+				int maxsize = SHELLEXEC_MAX_CMD_LEN - 1;
+				if (shell_execute_data) {
+					uae_char *src = ua(p);
+					uae_u8 *dst = uaeboard_map_ram(shell_execute_data);
+					uae_char *srcp = src;
+					while (maxsize-- > 0) {
+						uae_u8 v = *srcp++;
+						*dst++ = v;
+						if (!v)
+							break;
+					}
+					*dst = 0;
+					xfree(src);
+				}
+				trap_set_areg(ctx, 0, shell_execute_data);
+			}
+			xfree(p);
+		}
+		return 0;
+	} else if (n == 22) {
+		// ack
+		return 0;
+	}
+
 	if (n == 1) {
 		/* Release a message_lock. This is called as soon as the message is
 		* received by the assembly code. We use the opportunity to check
@@ -6412,6 +6494,21 @@ static uae_u32 REGPARAM2 exter_int_helper(TrapContext *ctx)
 				trap_set_areg(ctx, 0, read_comm_pipe_u32_blocking(&native2amiga_pending));
 				trap_set_areg(ctx, 1, read_comm_pipe_u32_blocking(&native2amiga_pending));
 				return 5;
+
+				case 5: /* shell execute */
+				{
+					TCHAR *p = (TCHAR*)read_comm_pipe_pvoid_blocking(&native2amiga_pending);
+					write_comm_pipe_pvoid(&shellexecute_pipe, p, 0);
+					if (shell_execute_data) {
+						if (!shell_execute_process)
+							break;
+						trap_set_areg(ctx, 1, shell_execute_process - 92);
+						trap_set_dreg(ctx, 1, 1 << 13);
+						return 2; // signal process
+					}
+					shell_execute_data = uaeboard_alloc_ram(SHELLEXEC_MAX_CMD_LEN);
+					return 6; // create process
+				}
 
 				default:
 				write_log(_T("exter_int_helper: unknown native action %X\n"), cmd);
@@ -6690,6 +6787,7 @@ static uae_u32 REGPARAM2 filesys_handler(TrapContext *ctx)
 		trap_multi(ctx, md, sizeof md / sizeof(struct trapmd));
 		morelocks = md[0].params[0];
 
+		trap_set_background(ctx);
 		write_comm_pipe_pvoid(unit->ui.unit_pipe, ctx, 0);
 		write_comm_pipe_u32(unit->ui.unit_pipe, packet_addr, 0);
 		write_comm_pipe_u32(unit->ui.unit_pipe, message_addr, 0);
@@ -8244,8 +8342,7 @@ static uae_u32 REGPARAM2 mousehack_done (TrapContext *ctx)
 	else if (mode == 16) {
 		uaecptr a2 = trap_get_areg(ctx, 2);
 		input_mousehack_mouseoffset(a2);
-	}
-	else if (mode == 17) {
+	} else if (mode == 17) {
 		uae_u32 v = 0;
 		if (currprefs.clipboard_sharing)
 			v |= 1;
@@ -8273,11 +8370,9 @@ static uae_u32 REGPARAM2 mousehack_done (TrapContext *ctx)
 		rp_keymap(ctx, trap_get_areg(ctx, 1), trap_get_dreg(ctx, 0));
 #endif
 		return 1;
-	}
-	else if (mode == 101) {
+	} else if (mode == 101) {
 		consolehook_ret(ctx, trap_get_areg(ctx, 1), trap_get_areg(ctx, 2));
-	}
-	else if (mode == 102) {
+	} else if (mode == 102) {
 		uaecptr ret = consolehook_beginio(ctx, trap_get_areg(ctx, 1));
 		trap_put_long(ctx, trap_get_areg(ctx, 7) + 4 * 4, ret);
 	}
@@ -8332,12 +8427,10 @@ static uae_u32 REGPARAM2 mousehack_done (TrapContext *ctx)
 		// fsdebug: bit 1
 		segtrack_mode = currprefs.debugging_features;
 		return segtrack_mode;
-	}
-	else if (mode == 209) {
+	} else if (mode == 209) {
 		// called if segtrack was enabled
 		return 0;
-	}
-	else if (mode == 210) {
+	} else if (mode == 210) {
 		// debug trapcode
 		//debugmem_trap(trap_get_areg(ctx, 0));
 	}
@@ -8354,9 +8447,8 @@ static uae_u32 REGPARAM2 mousehack_done (TrapContext *ctx)
 	else if (mode == 299) {
 		//return debugmem_exit();
 
-	}
-	else {
-		write_log(_T("Unknown mousehack hook %d\n"), mode);
+	} else {
+		write_log (_T("Unknown mousehack hook %d\n"), mode);
 	}
 	return 1;
 }
@@ -8410,6 +8502,10 @@ void filesys_cleanup(void)
 {
 	filesys_free_handles();
 	free_mountinfo();
+	destroy_comm_pipe(&shellexecute_pipe);
+	uae_sem_destroy(&singlethread_int_sem);
+	shell_execute_data = 0;
+
 	if(singlethread_int_sem != 0)
 		uae_sem_destroy(&singlethread_int_sem);
 	singlethread_int_sem = 0;
@@ -8424,9 +8520,10 @@ void filesys_install (void)
 	uaecptr loop;
 
 	uae_sem_init (&singlethread_int_sem, 0, 1);
+	init_comm_pipe(&shellexecute_pipe, 100, 1);
 
-	ds_ansi ("UAEfs.resource");
-	ds_ansi (UAEFS_VERSION);
+	ROM_filesys_resname = ds_ansi ("UAEfs.resource");
+	ROM_filesys_resid = ds_ansi (UAEFS_VERSION);
 
 	fsdevname = ROM_hardfile_resname;
 	fshandlername = ds_bstr_ansi ("uaefs");
@@ -8436,6 +8533,9 @@ void filesys_install (void)
 
 	afterdos_name = ds_ansi("UAE afterdos");
 	afterdos_id = ds_ansi("UAE afterdos 0.1");
+
+	keymaphook_name = ds_ansi("UAE keymaphook");
+	keymaphook_id = ds_ansi("UAE keymaphook 0.1");
 
 	ROM_filesys_diagentry = here ();
 	calltrap (deftrap2 (filesys_diagentry, 0, _T("filesys_diagentry")));
@@ -8458,6 +8558,7 @@ void filesys_install (void)
 	org (rtarea_base + RTAREA_HEARTBEAT);
 	dl (0);
 	heartbeat = 0;
+	heartbeat_task = 0;
 
 	org (rtarea_base + 0xFF18);
 	calltrap (deftrap2 (filesys_dev_bootfilesys, 0, _T("filesys_dev_bootfilesys")));
@@ -8525,6 +8626,7 @@ void filesys_install_code (void)
 	b = bootrom_start + bootrom_header + 3 * 4 - 4;
 	filesys_initcode = bootrom_start + dlg (b) + bootrom_header - 4;
 	afterdos_initcode = filesys_get_entry(8);
+	keymaphook_initcode = filesys_get_entry(11);
 
 	// Fill struct resident
 	TCHAR buf[256];
