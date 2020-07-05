@@ -1874,7 +1874,8 @@ int handle_msgpump()
 	{
 		got_event = 1;
 		process_event(event);
-		update_clipboard();
+		if (currprefs.clipboard_sharing)
+			update_clipboard();
 	}
 	return got_event;
 }
