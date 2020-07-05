@@ -1160,44 +1160,44 @@ static const TCHAR *getunittype(struct uaedev_config_info *uci)
 static int cpuboard_hd;
 static romconfig cpuboard_dummy;
 
-void add_cpuboard_unit(int unit, struct uaedev_config_info *uci, struct romconfig *rc)
-{
-	int flags = (uci->controller_type >= HD_CONTROLLER_TYPE_IDE_FIRST && uci->controller_type <= HD_CONTROLLER_TYPE_IDE_LAST) ? EXPANSIONTYPE_IDE : EXPANSIONTYPE_SCSI;
-	const struct cpuboardtype *cbt = &cpuboards[currprefs.cpuboard_type];
-	cpuboard_hd = 0;
-	if (cbt->subtypes) {
-		if (cbt->subtypes[currprefs.cpuboard_subtype].add && (cbt->subtypes[currprefs.cpuboard_subtype].deviceflags & flags)) {
-			if (unit >= 0) {
-				write_log(_T("Adding CPUBoard '%s' %s unit %d ('%s')\n"),
-					cbt->subtypes[currprefs.cpuboard_subtype].name,
-					getunittype(uci), unit, uci->rootdir);
-			}
-			cbt->subtypes[currprefs.cpuboard_subtype].add(unit, uci, rc);
-			cpuboard_hd = 1;
-		}
-	}
-}
-
-static void add_cpuboard_unit_init(void)
-{
-	memset(&cpuboard_dummy, 0, sizeof cpuboard_dummy);
-	cpuboard_dummy.device_id = 7;
-	if (currprefs.cpuboard_type) {
-		struct romconfig *rc = get_device_romconfig(&currprefs, ROMTYPE_CPUBOARD, 0);
-		if (!rc)
-			rc = &cpuboard_dummy;
-		const struct cpuboardtype *cbt = &cpuboards[currprefs.cpuboard_type];
-		if (cbt->subtypes) {
-			if (cbt->subtypes[currprefs.cpuboard_subtype].add) {
-				const struct cpuboardsubtype *cst = &cbt->subtypes[currprefs.cpuboard_subtype];
-				struct uaedev_config_info ci = { 0 };
-				write_log(_T("Initializing CPUBoard '%s' %s controller\n"),
-					cst->name, (cst->deviceflags & EXPANSIONTYPE_SCSI) ? _T("SCSI") : _T("IDE"));
-				cst->add(-1, &ci, rc);
-			}
-		}
-	}
-}
+//void add_cpuboard_unit(int unit, struct uaedev_config_info *uci, struct romconfig *rc)
+//{
+//	int flags = (uci->controller_type >= HD_CONTROLLER_TYPE_IDE_FIRST && uci->controller_type <= HD_CONTROLLER_TYPE_IDE_LAST) ? EXPANSIONTYPE_IDE : EXPANSIONTYPE_SCSI;
+//	const struct cpuboardtype *cbt = &cpuboards[currprefs.cpuboard_type];
+//	cpuboard_hd = 0;
+//	if (cbt->subtypes) {
+//		if (cbt->subtypes[currprefs.cpuboard_subtype].add && (cbt->subtypes[currprefs.cpuboard_subtype].deviceflags & flags)) {
+//			if (unit >= 0) {
+//				write_log(_T("Adding CPUBoard '%s' %s unit %d ('%s')\n"),
+//					cbt->subtypes[currprefs.cpuboard_subtype].name,
+//					getunittype(uci), unit, uci->rootdir);
+//			}
+//			cbt->subtypes[currprefs.cpuboard_subtype].add(unit, uci, rc);
+//			cpuboard_hd = 1;
+//		}
+//	}
+//}
+//
+//static void add_cpuboard_unit_init(void)
+//{
+//	memset(&cpuboard_dummy, 0, sizeof cpuboard_dummy);
+//	cpuboard_dummy.device_id = 7;
+//	if (currprefs.cpuboard_type) {
+//		struct romconfig *rc = get_device_romconfig(&currprefs, ROMTYPE_CPUBOARD, 0);
+//		if (!rc)
+//			rc = &cpuboard_dummy;
+//		const struct cpuboardtype *cbt = &cpuboards[currprefs.cpuboard_type];
+//		if (cbt->subtypes) {
+//			if (cbt->subtypes[currprefs.cpuboard_subtype].add) {
+//				const struct cpuboardsubtype *cst = &cbt->subtypes[currprefs.cpuboard_subtype];
+//				struct uaedev_config_info ci = { 0 };
+//				write_log(_T("Initializing CPUBoard '%s' %s controller\n"),
+//					cst->name, (cst->deviceflags & EXPANSIONTYPE_SCSI) ? _T("SCSI") : _T("IDE"));
+//				cst->add(-1, &ci, rc);
+//			}
+//		}
+//	}
+//}
 
 static bool add_ide_unit(int type, int unit, struct uaedev_config_info *uci)
 {
