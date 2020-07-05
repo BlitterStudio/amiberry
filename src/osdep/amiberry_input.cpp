@@ -421,12 +421,12 @@ static int get_kb_num()
 
 static const TCHAR* get_kb_friendlyname(int kb)
 {
-	return strdup("Default Keyboard");
+	return "Default Keyboard";
 }
 
 static const TCHAR* get_kb_uniquename(int kb)
 {
-	return strdup("KEYBOARD0");
+	return "KEYBOARD0";
 }
 
 static int get_kb_widget_num(int kb)
@@ -593,7 +593,7 @@ const TCHAR* find_retroarch_key(const TCHAR* find_setting_prefix, int player, co
 	std::ifstream read_file(retroarch_file);
 	std::string line;
 	std::string delimiter = " = ";
-	auto output = "nul";
+	const auto* output = "nul";
 
 	//
 	std::string find_setting = find_setting_prefix;
@@ -997,15 +997,18 @@ static void unacquire_joystick(int num)
 
 static const TCHAR* get_joystick_friendlyname(const int joy)
 {
-	auto* const tmp1 = new char[255];
+	const char fmt[] = "RetroArch Keyboard as Joystick [#%d]";
+	char tmp1[255];
 	for (auto n = 0; n < num_keys_as_joys; ++n)
 	{
 		if (joy == n)
 		{
 			if (host_keyboard_buttons[n].is_retroarch)
 			{
-				sprintf(tmp1, "RetroArch Keyboard as Joystick [#%d]", n + 1);
-				return tmp1;
+				snprintf(tmp1, sizeof tmp1, fmt, n + 1);
+				auto* const result = my_strdup(tmp1);
+				tmp1[0]= '\0';
+				return result;
 			}
 			return "Keyboard as Joystick [Default]";
 		}
