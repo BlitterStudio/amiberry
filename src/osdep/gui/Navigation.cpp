@@ -288,8 +288,10 @@ static NavigationMap navMap[] =
 	{"RetroArchReset", "chkMouseUntrap", "Miscellaneous", "RetroArchMenu", "BSDSocket"},
 
 	{"BSDSocket", "Miscellaneous", "Miscellaneous", "chkMouseUntrap", "MasterWP"},
-	{"MasterWP", "Miscellaneous", "Miscellaneous", "BSDSocket", "cboNumlock"},
-	{"cboNumlock", "Miscellaneous", "cboScrolllock", "MasterWP", "OpenGUI"},
+	{"MasterWP", "Miscellaneous", "Miscellaneous", "BSDSocket", "chkClipboardSharing"},
+	{"chkClipboardSharing", "Miscellaneous", "Miscellaneous", "MasterWP", "chkAllowHostRun"},
+	{"chkAllowHostRun", "Miscellaneous", "Miscellaneous", "chkClipboardSharing", "cboNumlock"},
+	{"cboNumlock", "Miscellaneous", "cboScrolllock", "chkAllowHostRun", "OpenGUI"},
 	{"cboScrolllock", "cboNumlock", "Miscellaneous", "MasterWP", "KeyForQuit"},
 	{"OpenGUI", "Miscellaneous", "KeyForQuit", "cboNumlock", "KeyActionReplay"},
 	{"KeyForQuit", "OpenGUI", "Miscellaneous", "cboScrolllock", "KeyFullScreen"},

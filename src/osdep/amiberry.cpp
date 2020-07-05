@@ -457,6 +457,8 @@ void target_default_options(struct uae_prefs* p, int type)
 	_tcscpy(p->action_replay, amiberry_options.default_ar_key);
 	_tcscpy(p->fullscreen_toggle, amiberry_options.default_fullscreen_toggle_key);
 
+	p->allow_host_run = false;
+	
 	p->input_analog_remap = false;
 
 	p->use_retroarch_quit = amiberry_options.default_retroarch_quit;
@@ -527,6 +529,7 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_dwrite_str(f, _T("amiberry.quit_amiberry"), p->quit_amiberry);
 	cfgfile_dwrite_str(f, _T("amiberry.action_replay"), p->action_replay);
 	cfgfile_dwrite_str(f, _T("amiberry.fullscreen_toggle"), p->fullscreen_toggle);
+	cfgfile_write_bool(f, _T("amiberry.allow_host_run"), p->allow_host_run);
 	cfgfile_write_bool(f, _T("amiberry.use_analogue_remap"), p->input_analog_remap);
 
 	cfgfile_write_bool(f, _T("amiberry.use_retroarch_quit"), p->use_retroarch_quit);
@@ -616,7 +619,8 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 	if (result)
 		return 1;
 #endif
-
+	if (cfgfile_yesno(option, value, _T("allow_host_run"), &p->allow_host_run))
+		return 1;
 	if (cfgfile_yesno(option, value, _T("use_retroarch_quit"), &p->use_retroarch_quit))
 		return 1;
 	if (cfgfile_yesno(option, value, _T("use_retroarch_menu"), &p->use_retroarch_menu))

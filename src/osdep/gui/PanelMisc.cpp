@@ -20,6 +20,7 @@ static gcn::CheckBox* chkMouseUntrap;
 static gcn::CheckBox* chkBSDSocket;
 static gcn::CheckBox* chkMasterWP;
 static gcn::CheckBox* chkClipboardSharing;
+static gcn::CheckBox* chkAllowHostRun;
 
 static gcn::Label* lblNumLock;
 static gcn::DropDown* cboKBDLed_num;
@@ -115,6 +116,9 @@ public:
 
 		else if (actionEvent.getSource() == chkClipboardSharing)
 			changed_prefs.clipboard_sharing = chkClipboardSharing->isSelected();
+
+		else if (actionEvent.getSource() == chkAllowHostRun)
+			changed_prefs.clipboard_sharing = chkAllowHostRun->isSelected();
 		
 		else if (actionEvent.getSource() == cboKBDLed_num)
 			changed_prefs.kbd_led_num = cboKBDLed_num->getSelected() - 1;
@@ -210,6 +214,10 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	chkClipboardSharing = new gcn::CheckBox("Clipboard sharing");
 	chkClipboardSharing->setId("chkClipboardSharing");
 	chkClipboardSharing->addActionListener(miscActionListener);
+
+	chkAllowHostRun = new gcn::CheckBox("Allow host-run");
+	chkAllowHostRun->setId("chkAllowHostRun");
+	chkAllowHostRun->addActionListener(miscActionListener);
 	
 	lblNumLock = new gcn::Label("NumLock:");
 	lblNumLock->setAlignment(gcn::Graphics::RIGHT);
@@ -297,7 +305,9 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	category.panel->add(chkMasterWP, DISTANCE_BORDER, posY);
 	posY += chkMasterWP->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(chkClipboardSharing, DISTANCE_BORDER, posY);
-	posY += chkClipboardSharing->getHeight() + DISTANCE_NEXT_Y * 2;
+	posY += chkClipboardSharing->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(chkAllowHostRun, DISTANCE_BORDER, posY);
+	posY += chkAllowHostRun->getHeight() + DISTANCE_NEXT_Y * 2;
 
 	const auto column2_x = DISTANCE_BORDER + 290;
 
@@ -344,6 +354,7 @@ void ExitPanelMisc()
 	delete chkBSDSocket;
 	delete chkMasterWP;
 	delete chkClipboardSharing;
+	delete chkAllowHostRun;
 
 	delete lblScrLock;
 	delete lblNumLock;
@@ -384,6 +395,7 @@ void RefreshPanelMisc()
 	chkBSDSocket->setSelected(changed_prefs.socket_emu);
 	chkMasterWP->setSelected(changed_prefs.floppy_read_only);
 	chkClipboardSharing->setSelected(changed_prefs.clipboard_sharing);
+	chkAllowHostRun->setSelected(changed_prefs.allow_host_run);
 
 	cboKBDLed_num->setSelected(changed_prefs.kbd_led_num + 1);
 	cboKBDLed_scr->setSelected(changed_prefs.kbd_led_scr + 1);
