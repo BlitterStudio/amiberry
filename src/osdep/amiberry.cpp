@@ -1705,6 +1705,9 @@ void process_event(SDL_Event event)
 					break;
 				}
 
+				if (event.key.keysym.sym == SDLK_SYSREQ)
+					clipboard_disable(true);
+				
 				// Handle all other keys
 				if (amiberry_options.swap_win_alt_keys)
 				{
@@ -1843,6 +1846,25 @@ void process_event(SDL_Event event)
 	
 }
 
+void update_clipboard()
+{
+	auto* clipboard_uae = uae_clipboard_get_text();
+	if (clipboard_uae) {
+		SDL_SetClipboardText(clipboard_uae);
+		uae_clipboard_free_text(clipboard_uae);
+	}
+	else {
+		// FIXME: Ideally, we would want to avoid this alloc/free
+		// when the clipboard hasn't changed.
+		if (SDL_HasClipboardText() == SDL_TRUE)
+		{
+			auto* clipboard_host = SDL_GetClipboardText();
+			uae_clipboard_put_text(clipboard_host);
+			SDL_free(clipboard_host);
+		}
+	}
+}
+
 int handle_msgpump()
 {
 	auto got_event = 0;
@@ -1852,6 +1874,7 @@ int handle_msgpump()
 	{
 		got_event = 1;
 		process_event(event);
+		update_clipboard();
 	}
 	return got_event;
 }

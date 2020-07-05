@@ -444,54 +444,54 @@ void add_rom_absolute(uaecptr addr)
 	save_rom_absolute(h);
 }
 
-//uae_u32 boot_rom_copy(TrapContext *ctx, uaecptr rombase, int mode)
-//{
-//	uaecptr reloc = 0;
-//	if (currprefs.uaeboard < 3)
-//		return 0;
-//	if (!mode) {
-//		rtarea_write_enabled = true;
-//		protect_roms(false);
-//		rombase_new = rombase;
-//		int size = 4 + 2 + 4;
-//		for (int i = 0; i < absolute_rom_address; i++) {
-//			uae_u32 a = absolute_rom_addresses[i];
-//			if (a >= rtarea_base && a < rtarea_base + 0x10000) {
-//				size += 2;
-//			} else {
-//				size += 4;
-//			}
-//		}
-//		reloc = uaeboard_alloc_ram(size);
-//		uae_u8 *p = uaeboard_map_ram(reloc);
-//		put_long_host(p, rtarea_base);
-//		p += 4;
-//		for (int i = 0; i < absolute_rom_address; i++) {
-//			uae_u32 a = absolute_rom_addresses[i];
-//			if (a >= rtarea_base && a < rtarea_base + 0x10000) {
-//				put_word_host(p, a & 0xffff);
-//				p += 2;
-//			}
-//		}
-//		put_word_host(p, 0);
-//		p += 2;
-//		for (int i = 0; i < absolute_rom_address; i++) {
-//			uae_u32 a = absolute_rom_addresses[i];
-//			if (a < rtarea_base || a >= rtarea_base + 0x10000) {
-//				put_long_host(p, a);
-//				p += 4;
-//			}
-//		}
-//		put_long_host(p, 0);
-//		write_log(_T("ROMBASE %08x RAMBASE %08x RELOC %08x (%d)\n"), rtarea_base, rombase, reloc, absolute_rom_address);
-//	} else {
-//		rtarea_write_enabled = false;
-//		protect_roms(true);
-//		write_log(_T("ROMBASE changed.\n"), absolute_rom_address);
-//		reloc = 1;
-//	}
-//	return reloc;
-//}
+uae_u32 boot_rom_copy(TrapContext *ctx, uaecptr rombase, int mode)
+{
+	uaecptr reloc = 0;
+	if (currprefs.uaeboard < 3)
+		return 0;
+	if (!mode) {
+		rtarea_write_enabled = true;
+		protect_roms(false);
+		rombase_new = rombase;
+		int size = 4 + 2 + 4;
+		for (int i = 0; i < absolute_rom_address; i++) {
+			uae_u32 a = absolute_rom_addresses[i];
+			if (a >= rtarea_base && a < rtarea_base + 0x10000) {
+				size += 2;
+			} else {
+				size += 4;
+			}
+		}
+		reloc = uaeboard_alloc_ram(size);
+		uae_u8 *p = uaeboard_map_ram(reloc);
+		put_long_host(p, rtarea_base);
+		p += 4;
+		for (int i = 0; i < absolute_rom_address; i++) {
+			uae_u32 a = absolute_rom_addresses[i];
+			if (a >= rtarea_base && a < rtarea_base + 0x10000) {
+				put_word_host(p, a & 0xffff);
+				p += 2;
+			}
+		}
+		put_word_host(p, 0);
+		p += 2;
+		for (int i = 0; i < absolute_rom_address; i++) {
+			uae_u32 a = absolute_rom_addresses[i];
+			if (a < rtarea_base || a >= rtarea_base + 0x10000) {
+				put_long_host(p, a);
+				p += 4;
+			}
+		}
+		put_long_host(p, 0);
+		write_log(_T("ROMBASE %08x RAMBASE %08x RELOC %08x (%d)\n"), rtarea_base, rombase, reloc, absolute_rom_address);
+	} else {
+		rtarea_write_enabled = false;
+		protect_roms(true);
+		write_log(_T("ROMBASE changed.\n"), absolute_rom_address);
+		reloc = 1;
+	}
+	return reloc;
+}
 
 void calltrap (uae_u32 n)
 {

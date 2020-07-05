@@ -19,6 +19,7 @@ static gcn::CheckBox* chkShowGUI;
 static gcn::CheckBox* chkMouseUntrap;
 static gcn::CheckBox* chkBSDSocket;
 static gcn::CheckBox* chkMasterWP;
+static gcn::CheckBox* chkClipboardSharing;
 
 static gcn::Label* lblNumLock;
 static gcn::DropDown* cboKBDLed_num;
@@ -80,7 +81,7 @@ public:
 
 		else if (actionEvent.getSource() == chkMouseUntrap)
 			changed_prefs.input_mouse_untrap = chkMouseUntrap->isSelected();
-		
+
 		else if (actionEvent.getSource() == chkRetroArchQuit)
 		{
 			changed_prefs.use_retroarch_quit = chkRetroArchQuit->isSelected();
@@ -112,6 +113,9 @@ public:
 			RefreshPanelFloppy();
 		}
 
+		else if (actionEvent.getSource() == chkClipboardSharing)
+			changed_prefs.clipboard_sharing = chkClipboardSharing->isSelected();
+		
 		else if (actionEvent.getSource() == cboKBDLed_num)
 			changed_prefs.kbd_led_num = cboKBDLed_num->getSelected() - 1;
 
@@ -203,6 +207,10 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	chkMasterWP->setId("MasterWP");
 	chkMasterWP->addActionListener(miscActionListener);
 
+	chkClipboardSharing = new gcn::CheckBox("Clipboard sharing");
+	chkClipboardSharing->setId("chkClipboardSharing");
+	chkClipboardSharing->addActionListener(miscActionListener);
+	
 	lblNumLock = new gcn::Label("NumLock:");
 	lblNumLock->setAlignment(gcn::Graphics::RIGHT);
 	cboKBDLed_num = new gcn::DropDown(&KBDLedList);
@@ -287,7 +295,9 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	category.panel->add(chkBSDSocket, DISTANCE_BORDER, posY);
 	posY += chkBSDSocket->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(chkMasterWP, DISTANCE_BORDER, posY);
-	posY += chkMasterWP->getHeight() + DISTANCE_NEXT_Y * 2;
+	posY += chkMasterWP->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(chkClipboardSharing, DISTANCE_BORDER, posY);
+	posY += chkClipboardSharing->getHeight() + DISTANCE_NEXT_Y * 2;
 
 	const auto column2_x = DISTANCE_BORDER + 290;
 
@@ -333,6 +343,7 @@ void ExitPanelMisc()
 
 	delete chkBSDSocket;
 	delete chkMasterWP;
+	delete chkClipboardSharing;
 
 	delete lblScrLock;
 	delete lblNumLock;
@@ -372,6 +383,7 @@ void RefreshPanelMisc()
 	chkBSDSocket->setEnabled(!emulating);
 	chkBSDSocket->setSelected(changed_prefs.socket_emu);
 	chkMasterWP->setSelected(changed_prefs.floppy_read_only);
+	chkClipboardSharing->setSelected(changed_prefs.clipboard_sharing);
 
 	cboKBDLed_num->setSelected(changed_prefs.kbd_led_num + 1);
 	cboKBDLed_scr->setSelected(changed_prefs.kbd_led_scr + 1);

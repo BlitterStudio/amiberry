@@ -51,6 +51,9 @@
 #include "blkdev.h"
 #include "isofs_api.h"
 #include "scsi.h"
+
+#include "tabletlibrary.h"
+#include "cia.h"
 #include "newcpu.h"
 #include "picasso96.h"
 #include "rommgr.h"
@@ -1154,6 +1157,48 @@ static const TCHAR *getunittype(struct uaedev_config_info *uci)
 	return uci->type == UAEDEV_CD ? _T("CD") : (uci->type == UAEDEV_TAPE ? _T("TAPE") : _T("HD"));
 }
 
+static int cpuboard_hd;
+static romconfig cpuboard_dummy;
+
+void add_cpuboard_unit(int unit, struct uaedev_config_info *uci, struct romconfig *rc)
+{
+	int flags = (uci->controller_type >= HD_CONTROLLER_TYPE_IDE_FIRST && uci->controller_type <= HD_CONTROLLER_TYPE_IDE_LAST) ? EXPANSIONTYPE_IDE : EXPANSIONTYPE_SCSI;
+	const struct cpuboardtype *cbt = &cpuboards[currprefs.cpuboard_type];
+	cpuboard_hd = 0;
+	if (cbt->subtypes) {
+		if (cbt->subtypes[currprefs.cpuboard_subtype].add && (cbt->subtypes[currprefs.cpuboard_subtype].deviceflags & flags)) {
+			if (unit >= 0) {
+				write_log(_T("Adding CPUBoard '%s' %s unit %d ('%s')\n"),
+					cbt->subtypes[currprefs.cpuboard_subtype].name,
+					getunittype(uci), unit, uci->rootdir);
+			}
+			cbt->subtypes[currprefs.cpuboard_subtype].add(unit, uci, rc);
+			cpuboard_hd = 1;
+		}
+	}
+}
+
+static void add_cpuboard_unit_init(void)
+{
+	memset(&cpuboard_dummy, 0, sizeof cpuboard_dummy);
+	cpuboard_dummy.device_id = 7;
+	if (currprefs.cpuboard_type) {
+		struct romconfig *rc = get_device_romconfig(&currprefs, ROMTYPE_CPUBOARD, 0);
+		if (!rc)
+			rc = &cpuboard_dummy;
+		const struct cpuboardtype *cbt = &cpuboards[currprefs.cpuboard_type];
+		if (cbt->subtypes) {
+			if (cbt->subtypes[currprefs.cpuboard_subtype].add) {
+				const struct cpuboardsubtype *cst = &cbt->subtypes[currprefs.cpuboard_subtype];
+				struct uaedev_config_info ci = { 0 };
+				write_log(_T("Initializing CPUBoard '%s' %s controller\n"),
+					cst->name, (cst->deviceflags & EXPANSIONTYPE_SCSI) ? _T("SCSI") : _T("IDE"));
+				cst->add(-1, &ci, rc);
+			}
+		}
+	}
+}
+
 static bool add_ide_unit(int type, int unit, struct uaedev_config_info *uci)
 {
 	bool added = false;
@@ -1162,13 +1207,15 @@ static bool add_ide_unit(int type, int unit, struct uaedev_config_info *uci)
 			if (i == type - HD_CONTROLLER_TYPE_IDE_EXPANSION_FIRST) {
 				const struct expansionromtype *ert = &expansionroms[i];
 				if ((ert->deviceflags & 2) && is_board_enabled(&currprefs, ert->romtype, uci->controller_type_unit)) {
+					cpuboard_hd = 1;
 					if (ert->add) {
 						struct romconfig *rc = get_device_romconfig(&currprefs, ert->romtype, uci->controller_type_unit);
 						write_log(_T("Adding IDE %s '%s' unit %d ('%s')\n"), getunittype(uci),
 							ert->name, unit, uci->rootdir);
 						ert->add(unit, uci, rc);
 					}
-					added = true;
+					if (cpuboard_hd)
+						added = true;
 				}
 			}
 		}
@@ -1184,14 +1231,14 @@ static bool add_scsi_unit(int type, int unit, struct uaedev_config_info *uci)
 			if (i == type - HD_CONTROLLER_TYPE_SCSI_EXPANSION_FIRST) {
 				const struct expansionromtype *ert = &expansionroms[i];
 				if ((ert->deviceflags & 1) && is_board_enabled(&currprefs, ert->romtype, uci->controller_type_unit)) {
-					//cpuboard_hd = 1;
+					cpuboard_hd = 1;
 					if (ert->add) {
 						struct romconfig *rc = get_device_romconfig(&currprefs, ert->romtype, uci->controller_type_unit);
 						write_log(_T("Adding SCSI %s '%s' unit %d ('%s')\n"), getunittype(uci),
 							ert->name, unit, uci->rootdir);
 						ert->add(unit, uci, rc);
 					}
-					//if (cpuboard_hd)
+					if (cpuboard_hd)
 						added = true;
 				}
 			}
@@ -1258,6 +1305,7 @@ static void initialize_mountinfo (void)
 	}
 
 	// init all controllers first
+	//add_cpuboard_unit_init();
 	for (int i = 0; expansionroms[i].name; i++) {
 		const struct expansionromtype *ert = &expansionroms[i];
 		for (int j = 0; j < MAX_DUPLICATE_EXPANSION_BOARDS; j++) {
@@ -1818,6 +1866,43 @@ static void setsystime_vblank (void)
 	for (u = units; u; u = u->next) {
 		if (is_virtual(u->unit) && filesys_isvolume(u)) {
 			put_byte(u->volume + 173 - 32, get_byte(u->volume + 173 - 32) | 1);
+			uae_Signal(get_long(u->volume + 176 - 32), 1 << 13);
+			break;
+		}
+	}
+}
+
+static uae_u32 REGPARAM2 debugger_helper(TrapContext *ctx)
+{
+	int mode = trap_get_dreg(ctx, 1);
+	switch (mode)
+	{
+		case 1:
+		// Execute debugger_boot() to get here.
+		write_log(_T("debugger #1\n"));
+		// return RunCommand(() parameters
+		// does nothing if D1 == 0.
+		break;
+		case 2:
+		// called when RunCommand() returns
+		// D0 = RunCommand() return code.
+		write_log(_T("debugger #2\n"));
+		break;
+		default:
+		write_log(_T("Unknown debugger hook %d\n"), mode);
+		return 0;
+	}
+	return 1;
+}
+
+static void debugger_boot(void)
+{
+	Unit *u;
+	TrapContext *ctx = NULL;
+
+	for (u = units; u; u = u->next) {
+		if (is_virtual(u->unit) && filesys_isvolume(u)) {
+			put_byte(u->volume + 173 - 32, get_byte(u->volume + 173 - 32) | 2);
 			uae_Signal(get_long(u->volume + 176 - 32), 1 << 13);
 			break;
 		}
@@ -3064,10 +3149,10 @@ static uae_u32 REGPARAM2 startup_handler(TrapContext *ctx)
 
 	if (mode == 1) {
 		uaecptr addr = 0;
-		//if (currprefs.uaeboard > 1) {
-		//	// return board ram instead of allocating normal RAM
-		//	addr = uaeboard_alloc_ram(trap_get_dreg(ctx, 1));
-		//}
+		if (currprefs.uaeboard > 1) {
+			// return board ram instead of allocating normal RAM
+			addr = uaeboard_alloc_ram(trap_get_dreg(ctx, 1));
+		}
 		return addr;
 	}
 
@@ -3844,7 +3929,7 @@ static void get_fileinfo(TrapContext *ctx, Unit *unit, dpacket *packet, uaecptr 
 	uae_u8 *buf;
 	uae_u8 buf_array[260] = { 0 };
 
-	if (!valid_address(info, (sizeof buf_array) - 36)) {
+	if (trap_is_indirect() || !valid_address(info, (sizeof buf_array) - 36)) {
 		buf = buf_array;
 	} else {
 		buf = get_real_address(info);
@@ -6906,14 +6991,6 @@ static void filesys_prepare_reset2 (void)
 			write_comm_pipe_int(uip[i].unit_pipe, 0, 1);
 			uae_sem_wait (&uip[i].reset_sync_sem);
 			uae_end_thread (&uip[i].tid);
-			uae_sem_destroy(&uip[i].reset_sync_sem);
-			uip[i].reset_sync_sem = 0;
-			destroy_comm_pipe(uip[i].unit_pipe);
-			xfree(uip[i].unit_pipe);
-			uip[i].unit_pipe = 0;
-			destroy_comm_pipe(uip[i].back_pipe);
-			xfree(uip[i].back_pipe);
-			uip[i].back_pipe = 0;
 		}
 	}
 #endif
@@ -7305,6 +7382,32 @@ static uae_u32 REGPARAM2 filesys_diagentry (TrapContext *ctx)
 	}
 
 	trap_set_areg(ctx, 0, last_resident);
+	
+	if (currprefs.uae_hide_autoconfig && expansion) {
+		bool found = true;
+		while (found) {
+			uaecptr node = trap_get_long(ctx, expansion + 0x3c);
+			found = false;
+			while (trap_get_long(ctx, node)) {
+				if (trap_get_word(ctx, node + 0x10 + 4) == 2011) {
+					uae_u8 prod = trap_get_byte(ctx, node + 0x10 + 1);
+					if (prod != 2) {
+						// remove all 2011 boards except filesystem
+						found = true;
+						uaecptr succ = trap_get_long(ctx, node);
+						uaecptr pred = trap_get_long(ctx, node + 4);
+						trap_put_long(ctx, pred,  succ);
+						trap_put_long(ctx, succ + 4, pred);
+						break;
+					}
+					// replace filesystem with A590/A2091 IDs..
+					trap_put_byte(ctx, node + 0x10 + 1, 3);
+					trap_put_word(ctx, node + 0x10 + 4, 514);
+				}
+				node = trap_get_long(ctx, node);
+			}
+		}
+	}
 
 	tmp = first_resident;
 	while (tmp < last_resident && tmp >= first_resident) {
@@ -7379,6 +7482,7 @@ static uae_u32 REGPARAM2 filesys_dev_bootfilesys (TrapContext *ctx)
 							trap_put_long(ctx, devicenode + 4 + 3 * 4, trap_get_long(ctx, fsnode + 22 + 4 + 7 * 4));
 							data = (trap_get_long(ctx, rtarea_base + bootrom_header + 4 + 6 * 4) + rtarea_base + bootrom_header) >> 2;
 						}
+						write_log(_T("Filesys %08x entry=%08x\n"), dostype, data << 2);
 					}
 					trap_put_long(ctx, devicenode + 4 + i * 4, data);
 				}
@@ -7494,6 +7598,10 @@ static uae_u32 REGPARAM2 filesys_dev_remember (TrapContext *ctx)
 	if (trap_get_long(ctx, parmpacket + PP_FSPTR)) {
 		uaecptr addr = trap_get_long(ctx, parmpacket + PP_FSPTR);
 		trap_put_bytes(ctx, fs, addr, fssize);
+		// filesystem debugging, negative FSSIZE = debug mode.
+		if (segtrack_mode & 2) {
+			trap_put_long(ctx, parmpacket + PP_FSSIZE, -trap_get_long(ctx, parmpacket + PP_FSSIZE));
+		}
 	}
 
 	xfree (fs);
@@ -8353,12 +8461,11 @@ static uae_u32 REGPARAM2 mousehack_done (TrapContext *ctx)
 	} else if (mode == 19) {
 		// boot rom copy
 		// d2 = ram address
-		return 0;
+		return boot_rom_copy(ctx, trap_get_dreg(ctx, 2), 0);
 	} else if (mode == 20) {
 		// boot rom copy done
-		return 0;
-	}
-	else if (mode == 21) {
+		return boot_rom_copy(ctx, trap_get_dreg(ctx, 2), 1);
+	} else if (mode == 21) {
 		// keymap hook
 #ifdef RETROPLATFORM
 		rp_keymap(ctx, trap_get_areg(ctx, 1), trap_get_dreg(ctx, 0));
@@ -8455,10 +8562,45 @@ void filesys_vsync (void)
 	if (uae_boot_rom_type <= 0)
 		return;
 
+	if (currprefs.uaeboard > 1 && !(uae_int_requested & 1)) {
+		bool req = false;
+		// check if there is waiting requests without signal
+		if (!uae_sem_trywait(&singlethread_int_sem)) {
+			if (comm_pipe_has_data(&native2amiga_pending))
+				req = true;
+			if (!req) {
+				UnitInfo* uip = mountinfo.ui;
+				int unit_no = 0;
+				for (;;) {
+					if (unit_no >= MAX_FILESYSTEM_UNITS)
+						break;
+					if (uip[unit_no].open > 0 && uip[unit_no].self != 0
+						&& uip[unit_no].self->cmds_acked == uip[unit_no].self->cmds_complete
+						&& uip[unit_no].self->cmds_acked != uip[unit_no].self->cmds_sent)
+						break;
+					unit_no++;
+				}
+				if (unit_no < MAX_FILESYSTEM_UNITS) {
+					if (uip[unit_no].self->port)
+						req = true;
+				}
+			}
+			uae_sem_post(&singlethread_int_sem);
+			if (req)
+				do_uae_int_requested();
+		}
+	}
+	
 	if (heartbeat == get_long_host(rtarea_bank.baseaddr + RTAREA_HEARTBEAT)) {
+		if (heartbeat_count > 0)
+			heartbeat_count--;
+		if (heartbeat_count_cont > 0)
+			heartbeat_count_cont--;
 		return;
 	}
 	heartbeat = get_long_host(rtarea_bank.baseaddr + RTAREA_HEARTBEAT);
+	heartbeat_count_cont = 10;
+	cia_heartbeat();
 
 	for (u = units; u; u = u->next) {
 		if (u->reinsertdelay > 0) {
@@ -8490,6 +8632,14 @@ void filesys_vsync (void)
 			}
 		}
 	}
+
+	if (heartbeat_count <= 0)
+		return;
+
+	if (heartbeat_task & 1) {
+		setsystime_vblank();
+		heartbeat_task &= ~1;
+	}
 }
 
 void filesys_cleanup(void)
@@ -8497,14 +8647,8 @@ void filesys_cleanup(void)
 	filesys_free_handles();
 	free_mountinfo();
 	destroy_comm_pipe(&shellexecute_pipe);
-	if (singlethread_int_sem != nullptr)
-		uae_sem_destroy(&singlethread_int_sem);
+	uae_sem_destroy(&singlethread_int_sem);
 	shell_execute_data = 0;
-	singlethread_int_sem = nullptr;
-
-	filesys_in_interrupt = 0;
-	mountertask = 0;
-	automountunit = -1;
 }
 
 void filesys_install (void)
@@ -8593,9 +8737,14 @@ void filesys_install (void)
 	calltrap(deftrap2(filesys_bcpl_wrapper, 0, _T("filesys_bcpl_wrapper")));
 	dw(RTS);
 
+	org(rtarea_base + 0xFF78);
+	calltrap(deftrap2(debugger_helper, 0, _T("debugger_helper")));
+	dw(RTS);
+
 	org (loop);
 
 	create_ks12_boot();
+	//create_68060_nofpu();
 }
 
 uaecptr filesys_get_entry(int index)

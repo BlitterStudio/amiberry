@@ -10,22 +10,45 @@
 
 #include "sysconfig.h"
 #include "sysdeps.h"
+#include <assert.h>
+
 #include "options.h"
 #include "memory.h"
 #include "custom.h"
 #include "newcpu.h"
+#include "cia.h"
 #include "disk.h"
+#include "xwin.h"
 #include "keybuf.h"
 #include "gui.h"
 #include "savestate.h"
 #include "inputdevice.h"
+#include "zfile.h"
 #include "ar.h"
 #include "akiko.h"
 #include "cdtv.h"
 #include "audio.h"
 #include "keyboard.h"
-#include "rtc.h"
 #include "uae.h"
+#include "autoconf.h"
+#include "rommgr.h"
+#include "scsi.h"
+#include "rtc.h"
+#include "devices.h"
+
+#define CIAA_DEBUG_R 0
+#define CIAA_DEBUG_W 0
+#define CIAA_DEBUG_IRQ 0
+
+#define CIAB_DEBUG_R 0
+#define CIAB_DEBUG_W 0
+#define CIAB_DEBUG_IRQ 0
+
+#define DONGLE_DEBUG 0
+#define KB_DEBUG 0
+#define CLOCK_DEBUG 0
+
+#define TOD_HACK
 
 /* Akiko internal CIA differences:
 
@@ -67,7 +90,11 @@ static unsigned int ciaapra, ciaaprb, ciaadra, ciaadrb, ciaasdr, ciaasdr_buf, ci
 static unsigned int ciabprb, ciabdra, ciabdrb, ciabsdr, ciabsdr_buf, ciabsdr_load, ciabsdr_cnt;
 static int div10;
 static int kbstate, kblostsynccnt;
+static unsigned long kbhandshakestart;
 static uae_u8 kbcode;
+
+static uae_u8 serbits;
+static int warned = 10;
 
 static struct rtc_msm_data rtc_msm;
 static struct rtc_ricoh_data rtc_ricoh;
@@ -81,45 +108,88 @@ static void setclr (unsigned int *p, unsigned int val)
 	}
 }
 
+/* delay interrupt after current CIA register access if
+ * interrupt would have triggered mid access
+ */
+static int cia_interrupt_disabled;
+static int cia_interrupt_delay;
+
 static void ICR (uae_u32 data)
 {
 	safe_interrupt_set((data & 0x2000) != 0);
 }
 
-static void ICRA(uae_u32 dummy)
+static void ICRA (uae_u32 dummy)
 {
 	if (ciaaicr & 0x80)
-  	ciaaicr |= 0x40;
+		ciaaicr |= 0x40;
+#if 1
+	if (currprefs.cpu_memory_cycle_exact && !(ciaaicr & 0x20) && (cia_interrupt_disabled & 1)) {
+		cia_interrupt_delay |= 1;
+#if CIAB_DEBUG_IRQ
+		write_log(_T("ciab interrupt disabled ICR=%02X PC=%x\n"), ciabicr, M68K_GETPC);
+#endif
+		return;
+	}
+#endif
 	ciaaicr |= 0x20;
 	ICR (0x0008);
 }
 
-static void ICRB(uae_u32 dummy)
+static void ICRB (uae_u32 dummy)
 {
 	if (ciabicr & 0x80)
-	  ciabicr |= 0x40;
+		ciabicr |= 0x40;
+#if 1
+	if (currprefs.cpu_memory_cycle_exact && !(ciabicr & 0x20) && (cia_interrupt_disabled & 2)) {
+		cia_interrupt_delay |= 2;
+#if CIAB_DEBUG_IRQ
+		write_log(_T("ciab interrupt disabled ICR=%02X PC=%x\n"), ciabicr, M68K_GETPC);
+#endif
+		return;
+	}
+#endif
 	ciabicr |= 0x20;
-	ICR (0x2000);
+	if (currprefs.cs_compatible == CP_VELVET) {
+		// Both CIAs in Velvet are connected to level 2.
+		ICR (0x0008);
+	} else {
+		ICR (0x2000);
+	}
 }
 
 static void RethinkICRA (void)
 {
-  if (ciaaicr & ciaaimask) {
+	if (ciaaicr & ciaaimask) {
+#if CIAA_DEBUG_IRQ
+		write_log (_T("CIAA IRQ %02X\n"), ciaaicr);
+#endif
 		if (!(ciaaicr & 0x80)) {
 			ciaaicr |= 0x80;
-      ICRA (0);
-    }
-  }
+			if (currprefs.cpu_memory_cycle_exact) {
+				event2_newevent_xx (-1, DIV10 + 2 * CYCLE_UNIT + CYCLE_UNIT / 2 + 4 * CYCLE_UNIT, 0, ICRA);
+			} else {
+				ICRA (0);
+			}
+		}
+	}
 }
 
 static void RethinkICRB (void)
 {
-  if (ciabicr & ciabimask) {
+	if (ciabicr & ciabimask) {
+#if CIAB_DEBUG_IRQ
+		write_log (_T("CIAB IRQ %02X\n"), ciabicr);
+#endif
 		if (!(ciabicr & 0x80)) {
 			ciabicr |= 0x80;
-  	  ICRB (0);
-    }
-  }
+			if (currprefs.cpu_memory_cycle_exact) {
+				event2_newevent_xx (-1, DIV10 + 2 * CYCLE_UNIT + CYCLE_UNIT / 2 + 4 * CYCLE_UNIT, 0, ICRB);
+			} else {
+				ICRB (0);
+			}
+		}
+	}
 }
 
 void rethink_cias (void)
@@ -147,6 +217,7 @@ static void compute_passed_time (void)
 			cc -= ciaastarta;
 		else
 			cc = 0;
+		//assert ((ciaata + 1) >= cc);
 		ciaata_passed = cc;
 	}
 	if ((ciaacrb & 0x61) == 0x01) {
@@ -155,6 +226,7 @@ static void compute_passed_time (void)
 			cc -= ciaastartb;
 		else
 			cc = 0;
+		//assert ((ciaatb + 1) >= cc);
 		ciaatb_passed = cc;
 	}
 
@@ -165,6 +237,7 @@ static void compute_passed_time (void)
 			cc -= ciabstarta;
 		else
 			cc = 0;
+		//assert ((ciabta + 1) >= cc);
 		ciabta_passed = cc;
 	}
 	if ((ciabcrb & 0x61) == 0x01) {
@@ -173,6 +246,7 @@ static void compute_passed_time (void)
 			cc -= ciabstartb;
 		else
 			cc = 0;
+		//assert ((ciabtb + 1) >= cc);
 		ciabtb_passed = cc;
 	}
 }
@@ -206,6 +280,7 @@ static int CIA_update_check (void)
 			}
 		}
 		if (check) {
+			//assert ((ciaata + 1) >= cc);
 			if ((ciaata + 1) == cc) {
 				// SP in output mode (data sent can be ignored)
 				if ((ciaacra & 0x48) == 0x40 && ciaasdr_cnt > 0) {
@@ -243,6 +318,7 @@ static int CIA_update_check (void)
 			}
 		}
 		if (check) {
+			//assert ((ciaatb + 1) >= cc);
 			if ((ciaatb + 1) == cc)
 				aovflb = 1;
 			ciaatb -= cc;
@@ -264,6 +340,7 @@ static int CIA_update_check (void)
 			}
 		}
 		if (check) {
+			//assert ((ciabta + 1) >= cc);
 			if ((ciabta + 1) == cc) {
 				// SP in output mode
 				if ((ciabcra & 0x48) == 0x40 && ciabsdr_cnt > 0) {
@@ -304,6 +381,7 @@ static int CIA_update_check (void)
 			}
 		}
 		if (check) {
+			//assert ((ciabtb + 1) >= cc);
 			if ((ciabtb + 1) == cc)
 				bovflb = 1;
 			ciabtb -= cc;
@@ -458,6 +536,105 @@ STATIC_INLINE void ciaa_checkalarm (bool inc)
 	if (checkalarm (ciaatod, ciaaalarm, inc, 0)) {
 		ciaaicr |= 4;
 		RethinkICRA ();
+	}
+}
+
+#ifdef TOD_HACK
+static uae_u64 tod_hack_tv, tod_hack_tod, tod_hack_tod_last;
+static int tod_hack_enabled;
+static int tod_hack_delay;
+static int tod_diff_cnt;
+#define TOD_HACK_DELAY 50
+#define TOD_HACK_TIME 312 * 50 * 10
+static void tod_hack_reset (void)
+{
+	struct timeval tv;
+	gettimeofday (&tv, NULL);
+	tod_hack_tv = (uae_u64)tv.tv_sec * 1000000 + tv.tv_usec;
+	tod_hack_tod = ciaatod;
+	tod_hack_tod_last = tod_hack_tod;
+	tod_diff_cnt = 0;
+}
+#endif
+
+static int heartbeat_cnt;
+void cia_heartbeat (void)
+{
+	heartbeat_cnt = 10;
+}
+
+static void do_tod_hack (int dotod)
+{
+	struct timeval tv;
+	static int oldrate;
+	uae_u64 t;
+	int rate;
+	int docount = 0;
+
+	if (tod_hack_enabled == 0)
+		return;
+	if (!heartbeat_cnt) {
+		if (tod_hack_enabled > 0)
+			tod_hack_enabled = -1;
+		return;
+	}
+	if (tod_hack_enabled < 0) {
+		tod_hack_enabled = TOD_HACK_TIME;
+		return;
+	}
+	if (tod_hack_enabled > 1) {
+		tod_hack_enabled--;
+		if (tod_hack_enabled == 1) {
+			//write_log (_T("TOD HACK enabled\n"));
+			tod_hack_reset ();
+		}
+		return;
+	}
+
+	if (currprefs.cs_ciaatod == 0) {
+		rate = (int)(vblank_hz + 0.5);
+		if (rate >= 59 && rate <= 61)
+			rate = 60;
+		if (rate >= 49 && rate <= 51)
+			rate = 50;
+	} else if (currprefs.cs_ciaatod == 1) {
+		rate = 50;
+	} else {
+		rate = 60;
+	}
+	if (rate <= 0)
+		return;
+	if (rate != oldrate || (ciaatod & 0xfff) != (tod_hack_tod_last & 0xfff)) {
+		write_log (_T("TOD HACK reset %d,%d %ld,%lld\n"), rate, oldrate, ciaatod, tod_hack_tod_last);
+		tod_hack_reset ();
+		oldrate = rate;
+		docount = 1;
+	}
+
+	if (!dotod && currprefs.cs_ciaatod == 0)
+		return;
+
+	if (tod_hack_delay > 0) {
+		tod_hack_delay--;
+		if (tod_hack_delay > 0)
+			return;
+		tod_hack_delay = TOD_HACK_DELAY;
+	}
+
+	gettimeofday (&tv, NULL);
+	t = (uae_u64)tv.tv_sec * 1000000 + tv.tv_usec;
+	if (t - tod_hack_tv >= 1000000 / rate) {
+		tod_hack_tv += 1000000 / rate;
+		tod_diff_cnt += 1000000 - (1000000 / rate) * rate;
+		tod_hack_tv += tod_diff_cnt / rate;
+		tod_diff_cnt %= rate;
+		docount = 1;
+	}
+	if (docount) {
+		ciaatod++;
+		ciaatod &= 0x00ffffff;
+		tod_hack_tod_last = ciaatod;
+		ciaa_checkalarm (false);
 	}
 }
 
@@ -699,8 +876,27 @@ static void led_vsync (void)
 	led_cycle = get_cycles ();
 }
 
+static void write_battclock (void);
 void CIA_vsync_prehandler (void)
 {
+	if (heartbeat_cnt > 0)
+		heartbeat_cnt--;
+
+	if (rtc_msm.delayed_write < 0) {
+		rtc_msm.delayed_write = 50;
+	} else if (rtc_msm.delayed_write > 0) {
+		rtc_msm.delayed_write--;
+		if (rtc_msm.delayed_write == 0)
+			write_battclock ();
+	}
+	if (rtc_ricoh.delayed_write < 0) {
+		rtc_ricoh.delayed_write = 50;
+	} else if (rtc_ricoh.delayed_write > 0) {
+		rtc_ricoh.delayed_write--;
+		if (rtc_ricoh.delayed_write == 0)
+			write_battclock ();
+	}
+
 	led_vsync ();
 	CIA_handler ();
 	if (kblostsynccnt > 0) {
@@ -763,6 +959,35 @@ static void bfe001_change(void)
 		oldcd32mute = v & 1;
 		akiko_mute(oldcd32mute ? 0 : 1);
 	}
+}
+
+static uae_u32 getciatod(uae_u32 tod)
+{
+	if (!currprefs.cs_cia6526)
+		return tod;
+	uae_u32 bcdtod = 0;
+	for (int i = 0; i < 4; i++) {
+		int val = tod % 10;
+		bcdtod *= 16;
+		bcdtod += val;
+		tod /= 10;
+	}
+	return bcdtod;
+}
+static void setciatod(unsigned long *tod, uae_u32 v)
+{
+	if (!currprefs.cs_cia6526) {
+		*tod = v;
+		return;
+	}
+	uae_u32 bintod = 0;
+	for (int i = 0; i < 4; i++) {
+		int val = v / 16;
+		bintod *= 10;
+		bintod += val;
+		v /= 16;
+	}
+	*tod = bintod;
 }
 
 static uae_u8 ReadCIAA (unsigned int addr, uae_u32 *flags)
@@ -838,23 +1063,30 @@ static uae_u8 ReadCIAA (unsigned int addr, uae_u32 *flags)
 	case 8:
 		if (ciaatlatch) {
 			ciaatlatch = 0;
-			return (uae_u8)ciaatol;
+			return getciatod(ciaatol);
 		} else
-			return (uae_u8)ciaatod;
+			return getciatod(ciaatod);
 	case 9:
 		if (ciaatlatch)
-		return (uae_u8)(ciaatol >> 8);
+			return getciatod(ciaatol) >> 8;
 		else
-		return (uae_u8)(ciaatod >> 8);
+			return getciatod(ciaatod) >> 8;
 	case 10:
 		/* only if not already latched. A1200 confirmed. (TW) */
-		if (!ciaatlatch) {
+		if (!currprefs.cs_cia6526) {
+			if (!ciaatlatch) {
 				/* no latching if ALARM is set */
 				if (!(ciaacrb & 0x80))
 					ciaatlatch = 1;
 				ciaatol = ciaatod;
 			}
-		return (uae_u8)(ciaatol >> 16);
+			return getciatod(ciaatol) >> 16;
+		} else {
+			if (ciaatlatch)
+				return getciatod(ciaatol) >> 16;
+			else
+				return getciatod(ciaatod) >> 16;
+		}
 		break;
 	case 11:
 		if (currprefs.cs_cia6526) {
@@ -864,9 +1096,9 @@ static uae_u8 ReadCIAA (unsigned int addr, uae_u32 *flags)
 				ciaatol = ciaatod;
 			}
 			if (ciaatlatch)
-				return (uae_u8)(ciaatol) >> 24;
+				return getciatod(ciaatol) >> 24;
 			else
-				return (uae_u8)(ciaatod) >> 24;
+				return getciatod(ciaatod) >> 24;
 		}
 		break;
 	case 12:
@@ -946,15 +1178,15 @@ static uae_u8 ReadCIAB (unsigned int addr, uae_u32 *flags)
 		CIAB_tod_check ();
 		if (ciabtlatch) {
 			ciabtlatch = 0;
-			return (uae_u8)ciabtol;
+			return getciatod(ciabtol);
 		} else
-			return (uae_u8)ciabtod;
+			return getciatod(ciabtod);
 	case 9:
 		CIAB_tod_check ();
 		if (ciabtlatch)
-		return (uae_u8)(ciabtol >> 8);
+			return getciatod(ciabtol) >> 8;
 		else
-		return (uae_u8)(ciabtod >> 8);
+			return getciatod(ciabtod) >> 8;
 	case 10:
 		CIAB_tod_check ();
 		if (!currprefs.cs_cia6526) {
@@ -964,12 +1196,12 @@ static uae_u8 ReadCIAB (unsigned int addr, uae_u32 *flags)
 					ciabtlatch = 1;
 				ciabtol = ciabtod;
 			}
-			return (uae_u8)(ciabtol) >> 16;
+			return getciatod(ciabtol) >> 16;
 		} else {
 			if (ciabtlatch)
-				return (uae_u8)(ciabtol) >> 16;
+				return getciatod(ciabtol) >> 16;
 			else
-				return (uae_u8)(ciabtod) >> 16;
+				return getciatod(ciabtod) >> 16;
 		}
 	case 11:
 		if (currprefs.cs_cia6526) {
@@ -979,9 +1211,9 @@ static uae_u8 ReadCIAB (unsigned int addr, uae_u32 *flags)
 				ciabtol = ciabtod;
 			}
 			if (ciabtlatch)
-				return (uae_u8)(ciabtol) >> 24;
+				return getciatod(ciabtol) >> 24;
 			else
-				return (uae_u8)(ciabtod) >> 24;
+				return getciatod(ciabtod) >> 24;
 		}
 		break;
 	case 12:
@@ -1062,34 +1294,35 @@ static void WriteCIAA (uae_u16 addr, uae_u8 val, uae_u32 *flags)
 		break;
 	case 8:
 		if (ciaacrb & 0x80) {
-			ciaaalarm = (ciaaalarm & ~0xff) | val;
-  	} else {
-	    ciaatod = (ciaatod & ~0xff) | val;
-	    ciaatodon = 1;
-	    ciaa_checkalarm (false);
-	  }
-	  break;
-  case 9:
-  	if (ciaacrb & 0x80) {
-	    ciaaalarm = (ciaaalarm & ~0xff00) | (val << 8);
-  	} else {
-	    ciaatod = (ciaatod & ~0xff00) | (val << 8);
-  	}
-  	break;
-  case 10:
-  	if (ciaacrb & 0x80) {
-	    ciaaalarm = (ciaaalarm & ~0xff0000) | (val << 16);
-  	} else {
-	    ciaatod = (ciaatod & ~0xff0000) | (val << 16);
-	    ciaatodon = 0;
-  	}
-  	break;
+			setciatod(&ciaaalarm , (getciatod(ciaaalarm) & ~0xff) | val);
+		} else {
+			setciatod(&ciaatod, (getciatod(ciaatod) & ~0xff) | val);
+			ciaatodon = 1;
+			ciaa_checkalarm (false);
+		}
+		break;
+	case 9:
+		if (ciaacrb & 0x80) {
+			setciatod(&ciaaalarm, (getciatod(ciaaalarm) & ~0xff00) | (val << 8));
+		} else {
+			setciatod(&ciaatod, (getciatod(ciaatod) & ~0xff00) | (val << 8));
+		}
+		break;
+	case 10:
+		if (ciaacrb & 0x80) {
+			setciatod(&ciaaalarm, (getciatod(ciaaalarm) & ~0xff0000) | (val << 16));
+		} else {
+			setciatod(&ciaatod, (getciatod(ciaatod) & ~0xff0000) | (val << 16));
+			if (!currprefs.cs_cia6526)
+				ciaatodon = 0;
+		}
+		break;
 	case 11:
 		if (currprefs.cs_cia6526) {
 			if (ciaacrb & 0x80) {
-				ciaaalarm = (ciaaalarm & ~0xff000000) | (val << 24);
+				setciatod(&ciaaalarm, (getciatod(ciaaalarm) & ~0xff000000) | (val << 24));
 			} else {
-				ciaatod = (ciaatod & ~0xff000000) | (val << 24);
+				setciatod(&ciaatod, (getciatod(ciaatod) & ~0xff000000) | (val << 24));
 				ciaatodon = 0;
 			}
 		}
@@ -1218,28 +1451,28 @@ static void WriteCIAB (uae_u16 addr, uae_u8 val, uae_u32 *flags)
 		break;
 	case 8:
 		CIAB_tod_check ();
-  	if (ciabcrb & 0x80) {
-	    ciabalarm = (ciabalarm & ~0xff) | val;
-  	} else {
-	    ciabtod = (ciabtod & ~0xff) | val;
-	    ciabtodon = 1;
+		if (ciabcrb & 0x80) {
+			setciatod(&ciabalarm, (getciatod(ciabalarm) & ~0xff) | val);
+		} else {
+			setciatod(&ciabtod, (getciatod(ciabtod) & ~0xff) | val);
+			ciabtodon = 1;
 			ciab_checkalarm (false, true);
 		}
 		break;
 	case 9:
 		CIAB_tod_check ();
-  	if (ciabcrb & 0x80) {
-	    ciabalarm = (ciabalarm & ~0xff00) | (val << 8);
-  	} else {
-	    ciabtod = (ciabtod & ~0xff00) | (val << 8);
-  	}
-  	break;
-  case 10:
+		if (ciabcrb & 0x80) {
+			setciatod(&ciabalarm, (getciatod(ciabalarm) & ~0xff00) | (val << 8));
+		} else {
+			setciatod(&ciabtod, (getciatod(ciabtod) & ~0xff00) | (val << 8));
+		}
+		break;
+	case 10:
 		CIAB_tod_check ();
 		if (ciabcrb & 0x80) {
-			ciabalarm = (ciabalarm & ~0xff0000) | (val << 16);
+			setciatod(&ciabalarm, (getciatod(ciabalarm) & ~0xff0000) | (val << 16));
 		} else {
-			ciabtod = (ciabtod & ~0xff0000) | (val << 16);
+			setciatod(&ciabtod, (getciatod(ciabtod) & ~0xff0000) | (val << 16));
 			if (!currprefs.cs_cia6526)
 				ciabtodon = 0;
 		}
@@ -1248,9 +1481,9 @@ static void WriteCIAB (uae_u16 addr, uae_u8 val, uae_u32 *flags)
 		if (currprefs.cs_cia6526) {
 			CIAB_tod_check ();
 			if (ciabcrb & 0x80) {
-				ciabalarm = (ciabalarm & ~0xff000000) | (val << 24);
+				setciatod(&ciabalarm, (getciatod(ciabalarm) & ~0xff000000) | (val << 24));
 			} else {
-				ciabtod = (ciabtod & ~0xff000000) | (val << 24);
+				setciatod(&ciabtod, (getciatod(ciabtod) & ~0xff000000) | (val << 24));
 				ciabtodon = 0;
 			}
 		}
@@ -1304,9 +1537,18 @@ void cia_set_overlay (bool overlay)
 
 void CIA_reset (void)
 {
+#ifdef TOD_HACK
+	tod_hack_tv = 0;
+	tod_hack_tod = 0;
+	tod_hack_enabled = 0;
+	if (currprefs.tod_hack)
+		tod_hack_enabled = TOD_HACK_TIME;
+#endif
+
 	kblostsynccnt = 0;
 	oldcd32mute = 1;
 	resetwarning_phase = resetwarning_timer = 0;
+	heartbeat_cnt = 0;
 	ciab_tod_event_state = 0;
 
 	if (!savestate_state) {
@@ -1654,13 +1896,56 @@ static uae_u8 getclockreg (int addr, struct tm *ct)
 	return v;
 }
 
-void rtc_hardreset(void)
+static void write_battclock (void)
+{
+	if (!currprefs.rtcfile[0] || currprefs.cs_rtc == 0)
+		return;
+	TCHAR path[MAX_DPATH];
+	cfgfile_resolve_path_out_load(currprefs.rtcfile, path, MAX_DPATH, PATH_ROM);
+	struct zfile *f = zfile_fopen (path, _T("wb"));
+	if (f) {
+		struct tm *ct;
+		time_t t = time (0);
+		t += currprefs.cs_rtc_adjust;
+		ct = localtime (&t);
+		uae_u8 od;
+		if (currprefs.cs_rtc == 2) {
+			od = rtc_ricoh.clock_control_d;
+			rtc_ricoh.clock_control_d &= ~3;
+		} else {
+			od = rtc_msm.clock_control_d;
+		}
+		for (int i = 0; i < 13; i++) {
+			uae_u8 v = getclockreg (i, ct);
+			zfile_fwrite (&v, 1, 1, f);
+		}
+		if (currprefs.cs_rtc == 2) {
+			rtc_ricoh.clock_control_d = od;
+			zfile_fwrite (&rtc_ricoh.clock_control_d, 1, 1, f);
+			zfile_fwrite (&rtc_ricoh.clock_control_e, 1, 1, f);
+			zfile_fwrite (&rtc_ricoh.clock_control_f, 1, 1, f);
+		} else {
+			rtc_msm.clock_control_d = od;
+			zfile_fwrite (&rtc_msm.clock_control_d, 1, 1, f);
+			zfile_fwrite (&rtc_msm.clock_control_e, 1, 1, f);
+			zfile_fwrite (&rtc_msm.clock_control_f, 1, 1, f);
+		}
+		if (currprefs.cs_rtc == 2) {
+			zfile_fwrite (rtc_ricoh.rtc_alarm, RF5C01A_RAM_SIZE, 1, f);
+			zfile_fwrite (rtc_ricoh.rtc_memory, RF5C01A_RAM_SIZE, 1, f);
+		}
+		zfile_fclose (f);
+	}
+}
+
+void rtc_hardreset (void)
 {
 	if (currprefs.cs_rtc == 1 || currprefs.cs_rtc == 3) { /* MSM6242B */
 		clock_bank.name = currprefs.cs_rtc == 1 ? _T("Battery backed up clock (MSM6242B)") : _T("Battery backed up clock A2000 (MSM6242B)");
 		rtc_msm.clock_control_d = 0x1;
 		rtc_msm.clock_control_e = 0;
 		rtc_msm.clock_control_f = 0x4; /* 24/12 */
+		rtc_msm.delayed_write = 0;
 	} else if (currprefs.cs_rtc == 2) { /* RF5C01A */
 		clock_bank.name = _T("Battery backed up clock (RF5C01A)");
 		rtc_ricoh.clock_control_d = 0x8; /* Timer EN */
@@ -1669,6 +1954,29 @@ void rtc_hardreset(void)
 		memset (rtc_ricoh.rtc_memory, 0, RF5C01A_RAM_SIZE);
 		memset (rtc_ricoh.rtc_alarm, 0, RF5C01A_RAM_SIZE);
 		rtc_ricoh.rtc_alarm[10] = 1; /* 24H mode */
+		rtc_ricoh.delayed_write = 0;
+	}
+	if (currprefs.rtcfile[0]) {
+		TCHAR path[MAX_DPATH];
+		cfgfile_resolve_path_out_load(currprefs.rtcfile, path, MAX_DPATH, PATH_ROM);
+		struct zfile *f = zfile_fopen (path, _T("rb"));
+		if (f) {
+			uae_u8 empty[13];
+			zfile_fread (empty, 13, 1, f);
+			uae_u8 v;
+			zfile_fread (&v, 1, 1, f);
+			rtc_ricoh.clock_control_d = v;
+			rtc_msm.clock_control_d = v;
+			zfile_fread (&v, 1, 1, f);
+			rtc_ricoh.clock_control_e = v;
+			rtc_msm.clock_control_d = v;
+			zfile_fread (&v, 1, 1, f);
+			rtc_ricoh.clock_control_f = v;
+			rtc_msm.clock_control_d = v;
+			zfile_fread (rtc_ricoh.rtc_alarm, RF5C01A_RAM_SIZE, 1, f);
+			zfile_fread (rtc_ricoh.rtc_memory, RF5C01A_RAM_SIZE, 1, f);
+			zfile_fclose (f);
+		}
 	}
 }
 
