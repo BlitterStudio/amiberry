@@ -181,6 +181,8 @@ public:
 				changed_prefs.cpu_compatible = false;
 				changed_prefs.cachesize = MAX_JIT_CACHE;
 				changed_prefs.compfpu = true;
+				changed_prefs.cpu_cycle_exact = false;
+				changed_prefs.cpu_memory_cycle_exact = false;
 			}
 			else
 			{
@@ -426,7 +428,7 @@ void RefreshPanelCPU()
 	chk24Bit->setSelected(changed_prefs.address_space_24);
 	chk24Bit->setEnabled(changed_prefs.cpu_model == 68020);
 	chkCPUCompatible->setSelected(changed_prefs.cpu_compatible > 0);
-	chkJIT->setEnabled(changed_prefs.cpu_model > 68010);
+	chkJIT->setEnabled(!changed_prefs.address_space_24 && !changed_prefs.cpu_compatible && changed_prefs.cpu_model >= 68020);
 	chkJIT->setSelected(changed_prefs.cachesize > 0);
 
 	switch (changed_prefs.fpu_model)

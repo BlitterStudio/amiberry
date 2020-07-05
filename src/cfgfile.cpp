@@ -5311,7 +5311,7 @@ static int cfgfile_parse_hardware(struct uae_prefs* p, const TCHAR* option, TCHA
 	if (cfgfile_yesno(option, value, _T("cpu_cycle_exact"), &p->cpu_cycle_exact)) {
 		/* we don't want cycle-exact in 68020/40+JIT modes */
 		if (p->cpu_model >= 68020 && p->cachesize > 0)
-			p->cpu_cycle_exact = p->cpu_memory_cycle_exact = p->blitter_cycle_exact = 0;
+			p->cpu_cycle_exact = p->cpu_memory_cycle_exact = p->blitter_cycle_exact = false;
 		p->cpu_memory_cycle_exact = p->cpu_cycle_exact;
 		// pre-4.4.0 didn't support cpu multiplier in prefetch mode without cycle-exact
 		// set pre-4.4.0 defaults first
@@ -5330,7 +5330,7 @@ static int cfgfile_parse_hardware(struct uae_prefs* p, const TCHAR* option, TCHA
 	}
 	if (cfgfile_yesno(option, value, _T("blitter_cycle_exact"), &p->blitter_cycle_exact)) {
 		if (p->cpu_model >= 68020 && p->cachesize > 0)
-			p->cpu_cycle_exact = p->cpu_memory_cycle_exact = p->blitter_cycle_exact = 0;
+			p->cpu_cycle_exact = p->cpu_memory_cycle_exact = p->blitter_cycle_exact = false;
 		return 1;
 	}
 	if (cfgfile_yesno(option, value, _T("cpu_memory_cycle_exact"), &p->cpu_memory_cycle_exact)) {

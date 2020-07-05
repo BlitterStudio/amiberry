@@ -129,6 +129,8 @@ static void fixup_prefs_dim2(struct wh* wh)
 void fixup_prefs_dimensions(struct uae_prefs* prefs)
 {
 	fixup_prefs_dim2(&prefs->gfx_monitor.gfx_size);
+	if (prefs->gfx_apmode[1].gfx_vsync > 0)
+		prefs->gfx_apmode[1].gfx_vsyncmode = 1;
 }
 
 void fixup_cpu(struct uae_prefs* p)
@@ -181,9 +183,14 @@ void fixup_cpu(struct uae_prefs* p)
 	if (!p->cpu_memory_cycle_exact && p->cpu_cycle_exact)
 		p->cpu_memory_cycle_exact = true;
 
-	if (p->cpu_model >= 68020 && p->cachesize && p->cpu_compatible)
+	if (p->cpu_model >= 68040 && p->cachesize && p->cpu_compatible)
 		p->cpu_compatible = false;
 
+	if ((p->cpu_model < 68030 || p->cachesize) && p->mmu_model) {
+		error_log(_T("MMU emulation requires 68030/040/060 and it is not JIT compatible."));
+		p->mmu_model = 0;
+	}
+	
 	if (p->cachesize && p->cpu_memory_cycle_exact)
 	{
 		error_log(_T("JIT and cycle-exact can't be enabled simultaneously."));
@@ -316,15 +323,23 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 	if (p->z3autoconfig_start != 0 && p->z3autoconfig_start < 0x1000000)
 		p->z3autoconfig_start = 0x1000000;
 
-	if (p->address_space_24 && (p->z3fastmem[0].size != 0))
+	if (p->z3chipmem_size > max_z3fastmem) {
+		error_log(_T("Zorro III fake chipmem size %d (0x%x) larger than max reserved %d (0x%x)."), p->z3chipmem_size, p->z3chipmem_size, max_z3fastmem, max_z3fastmem);
+		p->z3chipmem_size = max_z3fastmem;
+	}
+	if (((p->z3chipmem_size & (p->z3chipmem_size - 1)) != 0 && p->z3chipmem_size != 0x18000000 && p->z3chipmem_size != 0x30000000) || (p->z3chipmem_size != 0 && p->z3chipmem_size < 0x100000))
 	{
-		p->z3fastmem[0].size = 0;
-		error_log(_T("Can't use 32-bit memory when using a 24 bit address space."));
+		error_log(_T("Unsupported 32-bit chipmem size %d (0x%x)."), p->z3chipmem_size, p->z3chipmem_size);
+		p->z3chipmem_size = 0;
+	}
+	
+	if (p->address_space_24 && (p->z3fastmem[0].size != 0 || p->z3fastmem[1].size != 0 || p->z3fastmem[2].size != 0 || p->z3fastmem[3].size != 0 || p->z3chipmem_size != 0)) {
+		p->z3fastmem[0].size = p->z3fastmem[1].size = p->z3fastmem[2].size = p->z3fastmem[3].size = 0;
+		p->z3chipmem_size = 0;
+		error_log(_T("Can't use a Z3 graphics card or 32-bit memory when using a 24 bit address space."));
 	}
 
-	if (p->bogomem_size != 0 && p->bogomem_size != 0x80000 && p->bogomem_size != 0x100000 && p->bogomem_size != 0x180000
-		&& p->bogomem_size != 0x1c0000)
-	{
+	if (p->bogomem_size != 0 && p->bogomem_size != 0x80000 && p->bogomem_size != 0x100000 && p->bogomem_size != 0x180000 && p->bogomem_size != 0x1c0000) {
 		error_log(_T("Unsupported bogomem size %d (0x%x)"), p->bogomem_size, p->bogomem_size);
 		p->bogomem_size = 0;
 	}
@@ -339,13 +354,15 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 		error_log(_T("You can't use fastmem and more than 2MB chip at the same time."));
 		p->chipmem_size = 0x200000;
 	}
-	if (p->mbresmem_low_size > 0x04000000 || (p->mbresmem_low_size & 0xfffff))
-	{
+	if (p->mem25bit_size > 128 * 1024 * 1024 || (p->mem25bit_size & 0xfffff)) {
+		p->mem25bit_size = 0;
+		error_log(_T("Unsupported 25bit RAM size"));
+	}
+	if (p->mbresmem_low_size > 0x04000000 || (p->mbresmem_low_size & 0xfffff)) {
 		p->mbresmem_low_size = 0;
 		error_log(_T("Unsupported Mainboard RAM size"));
 	}
-	if (p->mbresmem_high_size > 0x08000000 || (p->mbresmem_high_size & 0xfffff))
-	{
+	if (p->mbresmem_high_size > 0x08000000 || (p->mbresmem_high_size & 0xfffff)) {
 		p->mbresmem_high_size = 0;
 		error_log(_T("Unsupported CPU Board RAM size."));
 	}
@@ -377,15 +394,11 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 		error_log(_T("Bad value for -S parameter: enable value must be within 0..3."));
 		p->produce_sound = 0;
 	}
-	if (p->cachesize < 0 || p->cachesize > MAX_JIT_CACHE)
-	{
-		error_log(_T("Bad value for cachesize parameter: value must be within 0..16384."));
-		p->cachesize = 0;
-	}
-	if ((p->z3fastmem[0].size) && p->address_space_24)
+	if ((p->z3fastmem[0].size || p->z3chipmem_size) && p->address_space_24)
 	{
 		error_log(_T("Z3 fast memory can't be used if address space is 24-bit."));
 		p->z3fastmem[0].size = 0;
+		p->z3chipmem_size = 0;
 	}
 	for (auto& rtgboard : p->rtgboards)
 	{
@@ -403,7 +416,11 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 		err = 1;
 	}
 #endif
-
+	if (p->socket_emu && p->uaeboard >= 3) {
+		write_log(_T("bsdsocket.library is not compatible with indirect UAE Boot ROM.\n"));
+		p->socket_emu = false;
+	}
+	
 	if (p->nr_floppies < 0 || p->nr_floppies > 4)
 	{
 		error_log(_T("Invalid number of floppies.  Using 2."));
@@ -419,14 +436,20 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 		error_log(_T("Invalid floppy speed."));
 		p->floppy_speed = 100;
 	}
+	if (p->input_mouse_speed < 1 || p->input_mouse_speed > 1000) {
+		error_log(_T("Invalid mouse speed."));
+		p->input_mouse_speed = 100;
+	}
 	if (p->collision_level < 0 || p->collision_level > 3)
 	{
 		error_log(_T("Invalid collision support level.  Using 1."));
 		p->collision_level = 1;
 	}
+	if (p->parallel_postscript_emulation)
+		p->parallel_postscript_detection = 1;
 	if (p->cs_compatible == CP_GENERIC)
 	{
-		p->cs_fatgaryrev = p->cs_ramseyrev = -1;
+		p->cs_fatgaryrev = p->cs_ramseyrev = p->cs_mbdmac = -1;
 		p->cs_ide = 0;
 		if (p->cpu_model >= 68020)
 		{
@@ -467,7 +490,7 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 	p->address_space_24 = 0;
 #endif
 #if !defined (CPUEMU_13)
-	p->cpu_cycle_exact = p->blitter_cycle_exact = 0;
+	p->cpu_cycle_exact = p->blitter_cycle_exact = false;
 #endif
 #ifndef AGA
 	p->chipset_mask &= ~CSMASK_AGA;
@@ -483,10 +506,51 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 #if !defined (SCSIEMU)
 	p->scsi = 0;
 #endif
+#if !defined (SANA2)
+	p->sana2 = 0;
+#endif
+#if !defined (UAESERIAL)
+	p->uaeserial = false;
+#endif
+#if defined (CPUEMU_13)
+	if (p->cpu_memory_cycle_exact) {
+		if (p->gfx_framerate > 1) {
+			error_log(_T("Cycle-exact requires disabled frameskip."));
+			p->gfx_framerate = 1;
+		}
+		if (p->cachesize) {
+			error_log(_T("Cycle-exact and JIT can't be active simultaneously."));
+			p->cachesize = 0;
+		}
+	}
+#endif
 
 	if (p->gfx_framerate < 1)
 		p->gfx_framerate = 1;
+	if (p->gfx_display_sections < 1) {
+		p->gfx_display_sections = 1;
+	}
+	else if (p->gfx_display_sections > 99) {
+		p->gfx_display_sections = 99;
+	}
+	if (p->maprom && !p->address_space_24) {
+		p->maprom = 0x0f000000;
+	}
+	if (((p->maprom & 0xff000000) && p->address_space_24) || (p->maprom && p->mbresmem_high_size >= 0x08000000)) {
+		p->maprom = 0x00e00000;
+	}
+	if (p->maprom && p->cpuboard_type) {
+		error_log(_T("UAE Maprom and accelerator board emulation are not compatible."));
+		p->maprom = 0;
+	}
 
+	if (p->tod_hack && p->cs_ciaatod == 0)
+		p->cs_ciaatod = p->ntscmode ? 2 : 1;
+
+	// PCem does not support max speed.
+	if (p->x86_speed_throttle < 0)
+		p->x86_speed_throttle = 0;
+	
 	built_in_chipset_prefs(p);
 	blkdev_fix_prefs(p);
 	inputdevice_fix_prefs(p, userconfig);

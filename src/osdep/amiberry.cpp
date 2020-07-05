@@ -373,11 +373,6 @@ void target_fixup_options(struct uae_prefs* p)
 		// If there's not enough vertical space, cancel Line Doubling/Scanlines
 		p->gfx_vresolution = 0;
 
-	if (p->cachesize > 0)
-		p->fpu_no_unimplemented = false;
-	else
-		p->fpu_no_unimplemented = true;
-
 	if (p->cachesize <= 0)
 		p->compfpu = false;
 
