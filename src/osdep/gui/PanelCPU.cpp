@@ -183,6 +183,8 @@ public:
 				changed_prefs.compfpu = true;
 				changed_prefs.cpu_cycle_exact = false;
 				changed_prefs.cpu_memory_cycle_exact = false;
+				changed_prefs.address_space_24 = false;
+				changed_prefs.cpu_compatible = false;
 			}
 			else
 			{
@@ -426,9 +428,10 @@ void RefreshPanelCPU()
 		optCPU68040->setSelected(true);
 
 	chk24Bit->setSelected(changed_prefs.address_space_24);
-	chk24Bit->setEnabled(changed_prefs.cpu_model == 68020);
+	chk24Bit->setEnabled(changed_prefs.cpu_model == 68020 && changed_prefs.cachesize == 0);
 	chkCPUCompatible->setSelected(changed_prefs.cpu_compatible > 0);
-	chkJIT->setEnabled(!changed_prefs.address_space_24 && !changed_prefs.cpu_compatible && changed_prefs.cpu_model >= 68020);
+	chkCPUCompatible->setEnabled(changed_prefs.cachesize == 0);
+	chkJIT->setEnabled(changed_prefs.cpu_model >= 68020);
 	chkJIT->setSelected(changed_prefs.cachesize > 0);
 
 	switch (changed_prefs.fpu_model)
