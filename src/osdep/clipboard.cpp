@@ -833,7 +833,7 @@ static void clipboard_read(TrapContext* ctx, HWND hwnd, bool keyboardinject)
 	if (text)
 	{
 #ifdef AMIBERRY
-		if constexpr (true)
+		if (true)
 		{
 #else
 		hglb = GetClipboardData (CF_UNICODETEXT); 
