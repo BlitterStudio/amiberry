@@ -118,7 +118,7 @@ public:
 			changed_prefs.clipboard_sharing = chkClipboardSharing->isSelected();
 
 		else if (actionEvent.getSource() == chkAllowHostRun)
-			changed_prefs.clipboard_sharing = chkAllowHostRun->isSelected();
+			changed_prefs.allow_host_run = chkAllowHostRun->isSelected();
 		
 		else if (actionEvent.getSource() == cboKBDLed_num)
 			changed_prefs.kbd_led_num = cboKBDLed_num->getSelected() - 1;
