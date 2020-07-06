@@ -34,7 +34,7 @@ uae_u16* finish_cdbuff = cdaudio_buffer[0] + CDAUDIO_BUFFER_LEN * DEFAULT_SOUND_
 bool cdaudio_active = false;
 static int cdwrcnt = 0;
 static int cdrdcnt = 0;
-SDL_AudioDeviceID dev;
+
 
 static int have_sound = 0;
 
@@ -129,8 +129,8 @@ static int start_sound(int rate, int bits, int stereo)
 		return 0;
 
 
-	SDL_AudioSpec as, have;
-	SDL_memset(&as, 0, sizeof as);
+	SDL_AudioSpec as;
+	memset(&as, 0, sizeof(as));
 
 	as.freq = rate;
 	as.format = (bits == 8 ? AUDIO_S8 : AUDIO_S16);
@@ -138,9 +138,8 @@ static int start_sound(int rate, int bits, int stereo)
 	as.samples = SOUND_CONSUMER_BUFFER_LENGTH;
 	as.callback = sound_thread_mixer;
 
-	dev = SDL_OpenAudioDevice(NULL, 0, &as, &have, 0);
-	if (dev == 0)
-		write_log("Error when opening SDL audio !\n");
+	if (SDL_OpenAudio(&as, nullptr))
+	write_log("Error when opening SDL audio !\n");
 
 	s_oldrate = rate;
 	s_oldbits = bits;
@@ -149,7 +148,7 @@ static int start_sound(int rate, int bits, int stereo)
 	clear_sound_buffers();
 	clear_cdaudio_buffers();
 
-	SDL_PauseAudioDevice(dev, 0);
+	SDL_PauseAudio(0);
 
 	return 0;
 }
@@ -159,9 +158,9 @@ void stop_sound()
 {
 	if (sound_thread_exit == 0)
 	{
-		SDL_PauseAudioDevice(dev, 1);
+		SDL_PauseAudio(1);
 		sound_thread_exit = 1;
-		SDL_CloseAudioDevice(dev);
+		SDL_CloseAudio();
 	}
 }
 
@@ -270,12 +269,12 @@ int init_sound()
 
 void pause_sound()
 {
-	SDL_PauseAudioDevice(dev, 1);
+	SDL_PauseAudio(1);
 }
 
 void resume_sound()
 {
-	SDL_PauseAudioDevice(dev, 0);
+	SDL_PauseAudio(0);
 }
 
 void reset_sound()
