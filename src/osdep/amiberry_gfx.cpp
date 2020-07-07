@@ -939,19 +939,6 @@ void unlockscr()
 		SDL_UnlockSurface(screen);
 }
 
-#ifdef USE_DISPMANX
-void wait_for_vsync()
-{
-	const auto start = read_processor_time();
-	const auto wait_till = current_vsync_frame;
-	do
-	{
-		usleep(10);
-		current_vsync_frame = vsync_counter;
-	} while (wait_till >= current_vsync_frame && read_processor_time() - start < 20000);
-}
-#endif
-
 bool render_screen(bool immediate)
 {
 	if (savestate_state == STATE_DOSAVE)
