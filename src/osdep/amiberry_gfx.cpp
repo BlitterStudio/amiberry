@@ -15,6 +15,8 @@
 #include "amiberry_gfx.h"
 
 #include <png.h>
+#include <SDL_image.h>
+
 
 #include "clipboard.h"
 #include "devices.h"
@@ -409,6 +411,13 @@ int graphics_setup(void)
 	}
 
 #endif
+
+	auto* const icon_surface = IMG_Load("data/amiberry.png");
+	if (icon_surface != nullptr)
+	{
+		SDL_SetWindowIcon(sdl_window, icon_surface);
+		SDL_FreeSurface(icon_surface);
+	}
 	
 	if (renderer == nullptr)
 	{
