@@ -1463,10 +1463,8 @@ void set_mouse_grab(const bool grab)
 			change_layer_number(-128);
 	}
 #endif
-	if (grab && mouse_grabbed || !grab && !mouse_grabbed)
-		return;
-	if (!grab && mouse_grabbed || grab && !mouse_grabbed)
-		toggle_mousegrab();
+	if (grab != mouse_grabbed)
+		toggle_mousegrab();	
 }
 
 void setminimized()
