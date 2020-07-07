@@ -1455,10 +1455,13 @@ void toggle_mousegrab()
 void set_mouse_grab(const bool grab)
 {
 #ifdef USE_DISPMANX
-	if (grab)
-		change_layer_number(0);
-	else
-		change_layer_number(-128);
+	if (currprefs.allow_host_run)
+	{
+		if (grab)
+			change_layer_number(0);
+		else
+			change_layer_number(-128);
+	}
 #endif
 	if (grab && mouse_grabbed || !grab && !mouse_grabbed)
 		return;
