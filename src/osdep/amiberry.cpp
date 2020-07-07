@@ -1454,6 +1454,12 @@ void toggle_mousegrab()
 
 void set_mouse_grab(const bool grab)
 {
+#ifdef USE_DISPMANX
+	if (grab)
+		change_layer_number(0);
+	else
+		change_layer_number(-128);
+#endif
 	if (grab && mouse_grabbed || !grab && !mouse_grabbed)
 		return;
 	if (!grab && mouse_grabbed || grab && !mouse_grabbed)
@@ -1597,10 +1603,12 @@ void process_event(SDL_Event event)
 			unsetminimized();
 			break;
 		case SDL_WINDOWEVENT_ENTER:
+		case SDL_WINDOWEVENT_FOCUS_GAINED:
 			mouseinside = true;
 			set_mouse_grab(true);
 			break;
 		case SDL_WINDOWEVENT_LEAVE:
+		case SDL_WINDOWEVENT_FOCUS_LOST:
 			mouseinside = false;
 			set_mouse_grab(false);
 			break;

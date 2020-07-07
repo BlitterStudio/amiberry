@@ -251,7 +251,7 @@ static int display_thread(void *unused)
 						&black_rect, blackfb_resource, &src_rect, DISPMANX_PROTECTION_NONE, &alpha,
 						nullptr, DISPMANX_NO_ROTATE);
 				if (!elementHandle)
-					elementHandle = vc_dispmanx_element_add(updateHandle, displayHandle, 2,
+					elementHandle = vc_dispmanx_element_add(updateHandle, displayHandle, 0,
 						&dst_rect, amigafb_resource_1, &src_rect, DISPMANX_PROTECTION_NONE, &alpha,
 						nullptr, DISPMANX_NO_ROTATE);
 
@@ -302,6 +302,14 @@ static int display_thread(void *unused)
 		}
 	}
 	return 0;
+}
+
+void change_layer_number(int layer)
+{
+	updateHandle = vc_dispmanx_update_start(0);
+	vc_dispmanx_element_change_layer(updateHandle, blackscreen_element, layer);
+	vc_dispmanx_element_change_layer(updateHandle, elementHandle, layer);
+	vc_dispmanx_update_submit_sync(updateHandle);
 }
 #endif
 
