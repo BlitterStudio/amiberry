@@ -1605,12 +1605,12 @@ void process_event(SDL_Event event)
 		case SDL_WINDOWEVENT_ENTER:
 		case SDL_WINDOWEVENT_FOCUS_GAINED:
 			mouseinside = true;
-			
+			//set_mouse_grab(true);
 			break;
 		case SDL_WINDOWEVENT_LEAVE:
 		case SDL_WINDOWEVENT_FOCUS_LOST:
 			mouseinside = false;
-			set_mouse_grab(false);
+			//set_mouse_grab(false);
 			break;
 		case SDL_WINDOWEVENT_CLOSE:
 			uae_quit();
@@ -1758,8 +1758,8 @@ void process_event(SDL_Event event)
 		break;
 
 	case SDL_MOUSEBUTTONDOWN:
-		if (mouseinside && event.button.button == SDL_BUTTON_LEFT)
-			set_mouse_grab(true);
+		if (event.button.button == SDL_BUTTON_LEFT)
+			set_mouse_grab(mouseinside);
 		if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
 		{
 			if (event.button.button == SDL_BUTTON_LEFT)
