@@ -8,6 +8,7 @@
 #include "sysdeps.h"
 #include "options.h"
 #include "gui_handling.h"
+#include "statusline.h"
 
 static gcn::CheckBox* chkRetroArchQuit;
 static gcn::CheckBox* chkRetroArchMenu;
@@ -15,6 +16,7 @@ static gcn::CheckBox* chkRetroArchReset;
 //static gcn::CheckBox* chkRetroArchSaveState;
 
 static gcn::CheckBox* chkStatusLine;
+static gcn::CheckBox* chkStatusLineRtg;
 static gcn::CheckBox* chkShowGUI;
 static gcn::CheckBox* chkMouseUntrap;
 static gcn::CheckBox* chkBSDSocket;
@@ -75,7 +77,19 @@ public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (actionEvent.getSource() == chkStatusLine)
-			changed_prefs.leds_on_screen = chkStatusLine->isSelected();
+		{
+			if (chkStatusLine->isSelected())
+				changed_prefs.leds_on_screen = changed_prefs.leds_on_screen | STATUSLINE_CHIPSET;
+			else
+				changed_prefs.leds_on_screen = changed_prefs.leds_on_screen | ~STATUSLINE_CHIPSET;
+		}
+		else if (actionEvent.getSource() == chkStatusLineRtg)
+		{
+			if (chkStatusLineRtg->isSelected())
+				changed_prefs.leds_on_screen = changed_prefs.leds_on_screen | STATUSLINE_RTG;
+			else
+				changed_prefs.leds_on_screen = changed_prefs.leds_on_screen & ~STATUSLINE_RTG;
+		}
 
 		else if (actionEvent.getSource() == chkShowGUI)
 			changed_prefs.start_gui = chkShowGUI->isSelected();
@@ -175,9 +189,13 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 {
 	miscActionListener = new MiscActionListener();
 
-	chkStatusLine = new gcn::CheckBox("Status Line");
-	chkStatusLine->setId("StatusLine");
+	chkStatusLine = new gcn::CheckBox("Status Line native");
+	chkStatusLine->setId("chkStatusLineNative");
 	chkStatusLine->addActionListener(miscActionListener);
+
+	chkStatusLineRtg = new gcn::CheckBox("Status Line RTG");
+	chkStatusLineRtg->setId("chkStatusLineRtg");
+	chkStatusLineRtg->addActionListener(miscActionListener);
 
 	chkShowGUI = new gcn::CheckBox("Show GUI on startup");
 	chkShowGUI->setId("ShowGUI");
@@ -286,9 +304,9 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	auto posY = DISTANCE_BORDER;
 	category.panel->add(chkStatusLine, DISTANCE_BORDER, posY);
 	posY += chkStatusLine->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(chkStatusLineRtg, DISTANCE_BORDER, posY);
+	posY += chkStatusLineRtg->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(chkShowGUI, DISTANCE_BORDER, posY);
-	posY += chkShowGUI->getHeight() + DISTANCE_NEXT_Y;
-	category.panel->add(chkMouseUntrap, DISTANCE_BORDER, posY);
 
 	posY = DISTANCE_BORDER;
 	auto posX = 300;
@@ -300,6 +318,8 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	posY += chkRetroArchReset->getHeight() + DISTANCE_NEXT_Y;
 	//category.panel->add(chkRetroArchSavestate, posX + DISTANCE_BORDER, posY);
 
+	category.panel->add(chkMouseUntrap, DISTANCE_BORDER, posY);
+	posY += chkMouseUntrap->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(chkBSDSocket, DISTANCE_BORDER, posY);
 	posY += chkBSDSocket->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(chkMasterWP, DISTANCE_BORDER, posY);
@@ -343,6 +363,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 void ExitPanelMisc()
 {
 	delete chkStatusLine;
+	delete chkStatusLineRtg;
 	delete chkShowGUI;
 	delete chkMouseUntrap;
 
@@ -382,7 +403,8 @@ void ExitPanelMisc()
 
 void RefreshPanelMisc()
 {
-	chkStatusLine->setSelected(changed_prefs.leds_on_screen);
+	chkStatusLine->setSelected(changed_prefs.leds_on_screen & STATUSLINE_CHIPSET);
+	chkStatusLineRtg->setSelected(changed_prefs.leds_on_screen & STATUSLINE_RTG);
 	chkShowGUI->setSelected(changed_prefs.start_gui);
 	chkMouseUntrap->setSelected(changed_prefs.input_mouse_untrap);
 

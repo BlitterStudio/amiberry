@@ -2109,7 +2109,14 @@ void cfgfile_save_options(struct zfile* f, struct uae_prefs* p, int type)
 	cfg_write(_T("; "), f);
 
 	cfgfile_write_str(f, _T("use_gui"), guimode1[p->start_gui]);
-	cfgfile_dwrite_bool(f, _T("show_leds"), p->leds_on_screen);
+	cfgfile_dwrite_bool(f, _T("show_leds"), !!(p->leds_on_screen & STATUSLINE_CHIPSET));
+	cfgfile_dwrite_bool(f, _T("show_leds_rtg"), !!(p->leds_on_screen & STATUSLINE_RTG));
+	write_leds(f, _T("show_leds_enabled"), p->leds_on_screen_mask[0]);
+	write_leds(f, _T("show_leds_enabled_rtg"), p->leds_on_screen_mask[1]);
+	cfgfile_dwrite_str(f, _T("show_leds_size"), ledscale[p->leds_on_screen_multiplier[0]]);
+	cfgfile_dwrite_str(f, _T("show_leds_size_rtg"), ledscale[p->leds_on_screen_multiplier[1]]);
+	cfgfile_dwrite_bool(f, _T("show_refresh_indicator"), p->refresh_indicator);
+	cfgfile_dwrite(f, _T("power_led_dim"), _T("%d"), p->power_led_dim);
 
 	cfgfile_write_rom(f, &p->path_rom, p->romfile, _T("kickstart_rom_file"));
 	cfgfile_write_rom(f, &p->path_rom, p->romextfile, _T("kickstart_ext_rom_file"));
@@ -3634,7 +3641,17 @@ static int cfgfile_parse_host(struct uae_prefs* p, TCHAR* option, TCHAR* value)
 	
 	if (cfgfile_yesno(option, value, _T("show_leds"), &vb))
 	{
-		p->leds_on_screen = vb;
+		if (vb)
+			p->leds_on_screen |= STATUSLINE_CHIPSET;
+		else
+			p->leds_on_screen &= ~STATUSLINE_CHIPSET;
+		return 1;
+	}
+	if (cfgfile_yesno(option, value, _T("show_leds_rtg"), &vb)) {
+		if (vb)
+			p->leds_on_screen |= STATUSLINE_RTG;
+		else
+			p->leds_on_screen &= ~STATUSLINE_RTG;
 		return 1;
 	}
 

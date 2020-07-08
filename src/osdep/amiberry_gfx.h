@@ -4,13 +4,14 @@
 #define GUI_WIDTH  800
 #define GUI_HEIGHT 600
 
-#ifdef USE_DISPMANX
-#include <bcm_host.h>
 #define DISPLAY_SIGNAL_SETUP 				1
 #define DISPLAY_SIGNAL_SUBSHUTDOWN 			2
 #define DISPLAY_SIGNAL_OPEN 				3
 #define DISPLAY_SIGNAL_SHOW 				4
 #define DISPLAY_SIGNAL_QUIT 				5
+
+#ifdef USE_DISPMANX
+#include <bcm_host.h>
 extern DISPMANX_DISPLAY_HANDLE_T displayHandle;
 extern DISPMANX_MODEINFO_T modeInfo;
 extern DISPMANX_UPDATE_HANDLE_T updateHandle;

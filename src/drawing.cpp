@@ -47,11 +47,12 @@ happening, all ports should restrict window widths to be multiples of 16 pixels.
 #include "drawing.h"
 #include "savestate.h"
 #include "statusline.h"
+#include "inputdevice.h"
 #ifdef CD32
 #include "cd32_fmv.h"
 #endif
-#include "audio.h"
 #include "devices.h"
+#include "gfxboard.h"
 
 struct amigadisplay adisplays;
 
@@ -209,14 +210,14 @@ static uae_u8 *real_bplpt[8];
 static uae_u8 all_ones[MAX_PIXELS_PER_LINE];
 static uae_u8 all_zeros[MAX_PIXELS_PER_LINE];
 
-uae_u8 *xlinebuffer;//, *xlinebuffer_genlock;
+uae_u8 *xlinebuffer, *xlinebuffer_genlock;
 
 static int *amiga2aspect_line_map, *native2amiga_line_map;
 static uae_u8 **row_map;
 static uae_u8 *row_map_genlock_buffer;
 static uae_u8 row_tmp[MAX_PIXELS_PER_LINE * 32 / 8];
 static int max_drawn_amiga_line;
-//uae_u8 **row_map_genlock;
+uae_u8 **row_map_genlock;
 uae_u8 *row_map_color_burst_buffer;
 
 /* line_draw_funcs: pfield_do_linetoscr, pfield_do_fill_line, decode_ham */
@@ -235,7 +236,6 @@ typedef void (*line_draw_func)(int, int, int);
 #define LINESTATE_SIZE ((MAXVPOS + 2) * 2 + 1)
 
 #ifdef AMIBERRY
-static bool screenlocked = false;
 static int next_line_to_render = 0;
 static int linestate_first_undecided = 0;
 #endif
@@ -279,9 +279,9 @@ static int plf1pri, plf2pri, bplxor, bplxorsp, bpland, bpldelay_sh;
 static uae_u32 plf_sprite_mask;
 static int sbasecol[2] = { 16, 16 };
 static int hposblank;
-//static bool ecs_genlock_features_active;
-//static uae_u8 ecs_genlock_features_mask;
-//static bool ecs_genlock_features_colorkey;
+static bool ecs_genlock_features_active;
+static uae_u8 ecs_genlock_features_mask;
+static bool ecs_genlock_features_colorkey;
 static int hsync_shift_hack;
 static bool sprite_smaller_than_64, sprite_smaller_than_64_inuse;
 
@@ -305,7 +305,6 @@ void toggle_inhibit_frame(int bit)
 
 #define xlinecheck(start, end)
 
-#ifndef AMIBERRY
 static void clearbuffer (struct vidbuffer *dst)
 {
 	if (!dst->bufmem_allocated)
@@ -316,7 +315,6 @@ static void clearbuffer (struct vidbuffer *dst)
 		p += dst->rowbytes;
 	}
 }
-#endif
 
 static void reset_decision_table (void)
 {
@@ -325,7 +323,7 @@ static void reset_decision_table (void)
 	}
 }
 
-static void count_frame(void)
+static void count_frame()
 {
 	struct amigadisplay *ad = &adisplays;
 	ad->framecnt++;
@@ -666,9 +664,9 @@ int get_custom_limits (int *pw, int *ph, int *pdx, int *pdy, int *prealh)
 	if (w <= 0 || h <= 0 || dx < 0 || dy < 0)
 		return ret;
 	if (doublescan <= 0 && !programmedmode) {
-		if (dx > vidinfo->drawbuffer.inwidth / 3)
+		if (dx > vidinfo->outbuffer->inwidth / 3)
 			return ret;
-		if (dy > vidinfo->drawbuffer.inheight / 3)
+		if (dy > vidinfo->outbuffer->inheight / 3)
 			return ret;
 	}
 
@@ -1160,7 +1158,7 @@ static void fill_line2 (int startpos, int len)
 	}
 }
 
-STATIC_INLINE void fill_line_border (int lineno)
+static void fill_line_border (int lineno)
 {
 	struct vidbuf_description *vidinfo = &adisplays.gfxvidinfo;
 	int lastpos = visible_left_border;
@@ -1290,35 +1288,37 @@ static uae_u8 render_sprites(int pos, int dualpf, uae_u8 apixel, int aga)
 	return 0;
 }
 
-//static bool get_genlock_very_rare_and_complex_case(uae_u8 v)
-//{
-//	// border color without BRDNTRAN bit set = transparent
-//	if (v == 0 && !ce_is_borderntrans(colors_for_drawing.extra))
-//		return false;
-//	if (ecs_genlock_features_colorkey) {
-//		// color key match?
-//		if (currprefs.chipset_mask & CSMASK_AGA) {
-//			if (colors_for_drawing.color_regs_aga[v] & 0x80000000)
-//				return false;
-//		} else {
-//			if (colors_for_drawing.color_regs_ecs[v] & 0x8000)
-//				return false;
-//		}
-//	}
-//	// plane mask match?
-//	if (v & ecs_genlock_features_mask)
-//		return false;
-//	return true;
-//}
+static bool get_genlock_very_rare_and_complex_case(uae_u8 v)
+{
+	// border color without BRDNTRAN bit set = transparent
+	if (v == 0 && !ce_is_borderntrans(colors_for_drawing.extra))
+		return false;
+	if (ecs_genlock_features_colorkey) {
+		// color key match?
+		if (currprefs.chipset_mask & CSMASK_AGA) {
+			if (colors_for_drawing.color_regs_aga[v] & 0x80000000)
+				return false;
+		} else {
+			if (colors_for_drawing.color_regs_ecs[v] & 0x8000)
+				return false;
+		}
+	}
+	// plane mask match?
+	if (v & ecs_genlock_features_mask)
+		return false;
+	return true;
+}
 // false = transparent
-//STATIC_INLINE bool get_genlock_transparency(uae_u8 v)
-//{
-//	if (!ecs_genlock_features_active) {
-//		return v != 0;
-//	} else {
-//		return get_genlock_very_rare_and_complex_case(v);
-//	}
-//}
+STATIC_INLINE bool get_genlock_transparency(uae_u8 v)
+{
+	if (!ecs_genlock_features_active) {
+		if (v == 0)
+			return false;
+		return true;
+	} else {
+		return get_genlock_very_rare_and_complex_case(v);
+	}
+}
 
 #include "linetoscr.cpp.in"
 
@@ -2823,6 +2823,8 @@ static void pfield_expand_dp_bplconx (int regno, int v)
 	set_res_shift();
 }
 
+#ifdef AMIBERRY
+// this handles auto-height
 STATIC_INLINE void do_flush_screen(int start, int stop)
 {
 	struct amigadisplay* ad = &adisplays;
@@ -2834,6 +2836,7 @@ STATIC_INLINE void do_flush_screen(int start, int stop)
 	else
 		flush_screen(vb, 0, 0); /* vsync mode */
 }
+#endif
 
 static int drawing_color_matches;
 static enum { color_match_acolors, color_match_full } color_match_type;
@@ -3411,7 +3414,7 @@ static void init_drawing_frame (void)
 				// enable full doubling/superhires support if programmed mode. It may be "half-width" only and may fit in normal display window.
 				vidinfo->gfx_resolution_reserved = RES_SUPERHIRES;
 				vidinfo->gfx_vresolution_reserved = VRES_DOUBLE;
-				//graphics_reset(false);
+				graphics_reset(false);
 			}
 			int newres = largest_res;
 			if (htotal < 190)
@@ -3674,38 +3677,6 @@ static void refresh_indicator_update(struct vidbuffer *vb)
 	}
 }
 
-#ifdef AMIBERRY
-static void partial_draw_frame(void)
-{
-	struct amigadisplay *ad = &adisplays;
-	if (ad->framecnt == 0) {
-		struct vidbuf_description *vidinfo = &ad->gfxvidinfo;
-		struct vidbuffer *vb = &vidinfo->drawbuffer;
-
-		if(!screenlocked) {
-			if(!lockscr())
-				return;
-			screenlocked = true;
-		}
-  
-  		for (; next_line_to_render < max_ypos_thisframe; ++next_line_to_render) {
-			int i1 = next_line_to_render + min_ypos_for_screen;
-  			int line = next_line_to_render + thisframe_y_adjust_real;
-			int whereline = amiga2aspect_line_map[i1];
-			int wherenext = amiga2aspect_line_map[i1 + 1];
-
-		    if (whereline >= vb->outheight || line >= linestate_first_undecided)
-  				break;
-		    if (whereline < 0)
-			    continue;
-
-			hposblank = 0;
-  			pfield_draw_line (vb, line, whereline, wherenext);
-  		}
-	}
-}
-#endif
-
 static void draw_frame2()
 {
 	struct amigadisplay *ad = &adisplays;
@@ -3735,6 +3706,83 @@ static void draw_frame2()
 			hposblank = 0;
 			pfield_draw_line(vb, line, whereline, wherenext);
 		}
+	}
+}
+
+static void draw_frame_extras(struct vidbuffer* vb, int y_start, int y_end)
+{
+	if ((currprefs.leds_on_screen & STATUSLINE_CHIPSET)) {
+		int slx, sly;
+		int mult = statusline_get_multiplier();
+		statusline_getpos(&slx, &sly, vb->outwidth, vb->outheight);
+		//statusbar_y1 = sly + min_ypos_for_screen - 1;
+		//statusbar_y2 = statusbar_y1 + TD_TOTAL_HEIGHT * mult + 1;
+		//draw_status_line(sly, -1);
+		for (int i = 0; i < TD_TOTAL_HEIGHT * mult; i++) {
+			int line = sly + i;
+			draw_status_line(line, i);
+		}
+	}
+	//if (debug_dma > 1 || debug_heatmap > 1) {
+	//	for (int i = 0; i < vb->outheight; i++) {
+	//		int line = i;
+	//		draw_debug_status_line(vb->monitor_id, line);
+	//	}
+	//}
+
+	//if (lightpen_active) {
+	//	if (lightpen_active & 1) {
+	//		lightpen_update(vb, 0);
+	//	}
+	//	if (inputdevice_get_lightpen_id() >= 0 && (lightpen_active & 2)) {
+	//		lightpen_update(vb, 1);
+	//	}
+	//}
+	if (refresh_indicator_buffer)
+		refresh_indicator_update(vb);
+}
+
+static void draw_lines(void)
+{
+	struct amigadisplay* ad = &adisplays;
+	if (ad->framecnt == 0) {
+		struct vidbuf_description* vidinfo = &ad->gfxvidinfo;
+		struct vidbuffer* vb = &vidinfo->drawbuffer;
+		int y_start = -1;
+		int y_end = -1;
+		
+		vidinfo->outbuffer = vb;
+		if (!lockscr(vb, false, vb->last_drawn_line ? false : true))
+			return;
+
+		for (; next_line_to_render < max_ypos_thisframe; ++next_line_to_render) {
+			int i1 = next_line_to_render + min_ypos_for_screen;
+			int line = next_line_to_render + thisframe_y_adjust_real;
+			int whereline = amiga2aspect_line_map[i1];
+			int wherenext = amiga2aspect_line_map[i1 + 1];
+
+			if (whereline >= vb->inheight || line >= linestate_first_undecided)
+			{
+				y_end = vb->inheight - 1;
+				break;
+			}
+				
+			if (whereline < 0)
+				continue;
+			if (y_start < 0) {
+				y_start = whereline;
+			}
+			
+			hposblank = 0;
+			pfield_draw_line(vb, line, whereline, wherenext);
+
+			vb->last_drawn_line++;
+			//if (vb->last_drawn_line == end) {
+			//	y_end = whereline;
+			//}
+		}
+		draw_frame_extras(vb, y_start, y_end + 1);
+		unlockscr(vb, y_start, y_end + 1);
 	}
 }
 
@@ -3768,7 +3816,7 @@ bool draw_frame(struct vidbuffer *vb)
 	last_drawn_line = 0;
 	first_drawn_line = 32767;
 	drawing_color_matches = -1;
-	draw_frame2();
+	draw_frame2 ();
 	last_drawn_line = 0;
 	first_drawn_line = 32767;
 	drawing_color_matches = -1;
@@ -3789,45 +3837,84 @@ static void setnativeposition(struct vidbuffer *vb)
 	vb->outheight = vidinfo->drawbuffer.outheight;
 }
 
+static void setspecialmonitorpos(struct vidbuffer *vb)
+{
+	struct vidbuf_description *vidinfo = &adisplays.gfxvidinfo;
+	vb->extrawidth = vidinfo->drawbuffer.extrawidth;
+	vb->xoffset = vidinfo->drawbuffer.xoffset;
+	vb->yoffset = vidinfo->drawbuffer.yoffset;
+	vb->inxoffset = vidinfo->drawbuffer.inxoffset;
+	vb->inyoffset = vidinfo->drawbuffer.inyoffset;
+}
+
 static void finish_drawing_frame(bool drawlines)
 {
 	struct amigadisplay *ad = &adisplays;
 	struct vidbuf_description *vidinfo = &ad->gfxvidinfo;
 	struct vidbuffer *vb = &vidinfo->drawbuffer;
 
+	vidinfo->outbuffer = vb;
 	vb->last_drawn_line = 0;
 
 	if (!drawlines) {
 		return;
 	}
 
-	if (!lockscr()) {
+	if (!lockscr(vb, false, true)) {
 		notice_screen_contents_lost();
 		return;
 	}
 
 	draw_frame2();
 
-	if (currprefs.leds_on_screen) {
-		for (int i = 0; i < TD_TOTAL_HEIGHT; i++) {
-			int line = vidinfo->drawbuffer.outheight - TD_TOTAL_HEIGHT + i;
-			draw_status_line(line, i);
-		}
-	}
+	draw_frame_extras(vb, -1, -1);
+
+	// genlock
+	//if (currprefs.genlock_image && currprefs.genlock && !currprefs.monitoremu && vidinfo->tempbuffer.bufmem_allocated) {
+	//	setspecialmonitorpos(&vidinfo->tempbuffer);
+	//	if (init_genlock_data != specialmonitor_need_genlock()) {
+	//		need_genlock_data = init_genlock_data = specialmonitor_need_genlock();
+	//		init_row_map();
+	//		pfield_set_linetoscr();
+	//	}
+	//	emulate_genlock(vb, &vidinfo->tempbuffer);
+	//	vb = vidinfo->outbuffer = &vidinfo->tempbuffer;
+	//	if (vb->nativepositioning)
+	//		setnativeposition(vb);
+	//	vidinfo->drawbuffer.tempbufferinuse = true;
+	//}
+
 #ifdef CD32
 	// cd32 fmv
-	if (currprefs.cs_cd32fmv) {
+	if (!currprefs.monitoremu && vidinfo->tempbuffer.bufmem_allocated && currprefs.cs_cd32fmv) {
 		if (cd32_fmv_active) {
-			cd32_fmv_genlock(vb, &vidinfo->drawbuffer);
+			cd32_fmv_genlock(vb, &vidinfo->tempbuffer);
+			vb = vidinfo->outbuffer = &vidinfo->tempbuffer;
 			setnativeposition(vb);
+			vidinfo->drawbuffer.tempbufferinuse = true;
+		} else {
+			vidinfo->drawbuffer.tempbufferinuse = false;
 		}
 	}
 #endif
-	unlockscr();
+
+	// grayscale
+	//if (!currprefs.monitoremu && vidinfo->tempbuffer.bufmem_allocated &&
+	//	((!currprefs.genlock && (!bplcolorburst_field && currprefs.cs_color_burst)) || currprefs.gfx_grayscale)) {
+	//	setspecialmonitorpos(&vidinfo->tempbuffer);
+	//	emulate_grayscale(vb, &vidinfo->tempbuffer);
+	//	vb = vidinfo->outbuffer = &vidinfo->tempbuffer;
+	//	if (vb->nativepositioning)
+	//		setnativeposition(vb);
+	//	vidinfo->drawbuffer.tempbufferinuse = true;
+	//}
+
+	unlockscr(vb, -1, -1);
 #ifdef AMIBERRY
 	next_line_to_render = 0;
-#endif
+	// for auto-height
 	do_flush_screen(first_drawn_line, last_drawn_line);
+#endif
 }
 
 void check_prefs_picasso(void)
@@ -3840,6 +3927,8 @@ void check_prefs_picasso(void)
 
 	if (ad->picasso_requested_on == ad->picasso_on && !ad->picasso_requested_forced_on)
 		return;
+
+	devices_unsafeperiod();
 
 	ad->picasso_requested_forced_on = false;
 	ad->picasso_on = ad->picasso_requested_on;
@@ -3964,10 +4053,10 @@ void vsync_handle_redraw(int long_field, int lof_changed, uae_u16 bplcon0p, uae_
 		}
 	}
 
-	gui_flicker_led(-1, 0, 0);
+	gui_flicker_led (-1, 0, 0);
 }
 
-void hsync_record_line_state(int lineno, enum nln_how how, int changed)
+void hsync_record_line_state (int lineno, enum nln_how how, int changed)
 {
 	struct amigadisplay *ad = &adisplays;
 	uae_u8 *state;
@@ -4053,7 +4142,7 @@ void hsync_record_line_state(int lineno, enum nln_how how, int changed)
 #endif
 }
 
-void notice_resolution_seen(int res, bool lace)
+void notice_resolution_seen (int res, bool lace)
 {
 	if (res > frame_res)
 		frame_res = res;
@@ -4063,7 +4152,7 @@ void notice_resolution_seen(int res, bool lace)
 		frame_res_lace = lace;
 }
 
-bool notice_interlace_seen(bool lace)
+bool notice_interlace_seen (bool lace)
 {
 	bool changed = false;
 	// non-lace to lace switch (non-lace active at least one frame)?
@@ -4087,28 +4176,31 @@ void allocvidbuffer(struct vidbuffer *buf, int width, int height, int depth)
 	buf->pixbytes = (depth + 7) / 8;
 	buf->width_allocated = (width + 7) & ~7;
 	buf->height_allocated = height;
-		
+
 	buf->outwidth = buf->width_allocated;
 	buf->outheight = buf->height_allocated;
 	buf->inwidth = buf->width_allocated;
 	buf->inheight = buf->height_allocated;
 
 	int size = width * height * buf->pixbytes;
-	//buf->realbufmem = xcalloc(uae_u8, size);
-	//buf->bufmem_allocated = buf->bufmem = buf->realbufmem;
+	buf->realbufmem = xcalloc(uae_u8, size);
+	buf->bufmem_allocated = buf->bufmem = buf->realbufmem;
 	buf->rowbytes = width * buf->pixbytes;
-	//buf->bufmemend = buf->realbufmem + size - buf->rowbytes;
-	//buf->bufmem_lockable = true;
+	buf->bufmemend = buf->realbufmem + size - buf->rowbytes;
+	buf->bufmem_lockable = true;
 }
 
 void freevidbuffer(struct vidbuffer *buf)
 {
-	xfree(buf->bufmem);
-	memset(buf, 0, sizeof(struct vidbuffer));
+	xfree (buf->realbufmem);
+	memset (buf, 0, sizeof (struct vidbuffer));
 }
 
 void reset_drawing(void)
 {
+	struct amigadisplay* ad = &adisplays;
+	struct vidbuf_description* vidinfo = &ad->gfxvidinfo;
+		
 	max_diwstop = 0;
 
 	lores_reset ();
@@ -4138,7 +4230,11 @@ void reset_drawing(void)
 
 	reset_custom_limits ();
 
+	clearbuffer (&vidinfo->drawbuffer);
+	clearbuffer (&vidinfo->tempbuffer);
+
 	center_reset = true;
+	ad->specialmonitoron = false;
 	bplcolorburst_field = 1;
 	hsync_shift_hack = 0;
 }
@@ -4158,15 +4254,15 @@ static int render_thread(void *unused)
 {
 	for (;;) {
 		render_thread_busy = false;
-		uae_u32 signal = read_comm_pipe_u32_blocking(render_pipe);
+		auto signal = read_comm_pipe_u32_blocking(render_pipe);
 		render_thread_busy = true;
 		switch (signal) {
 
 		case RENDER_SIGNAL_PARTIAL:
 #ifdef USE_DISPMANX
-			if(!flip_in_progess)
+			if (!flip_in_progess)
 #endif
-				partial_draw_frame();
+				draw_lines();
 			break;
 
 		case RENDER_SIGNAL_FRAME_DONE:
@@ -4181,6 +4277,8 @@ static int render_thread(void *unused)
 		case RENDER_SIGNAL_QUIT:
 			render_tid = nullptr;
 			return 0;
+		default:
+			break;
 		}
 	}
 }

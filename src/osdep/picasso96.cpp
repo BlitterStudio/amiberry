@@ -4954,8 +4954,11 @@ static void picasso_flushpixels(uae_u8* src, int off, bool render)
 			picasso_flushoverlay(src, off, dst);
 	}
 	
-	if (currprefs.leds_on_screen)
+	if (currprefs.leds_on_screen & STATUSLINE_RTG)
 	{
+		if (dst == NULL) {
+			dst = gfx_lock_picasso(false, false);
+		}
 		picasso_statusline(dst);
 		maxy = vidinfo->height;
 		if (miny > vidinfo->height - TD_TOTAL_HEIGHT)

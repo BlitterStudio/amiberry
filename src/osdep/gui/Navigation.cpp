@@ -35,7 +35,7 @@ static NavigationMap navMap[] =
 	{"Sound", "sndDisable", "sndDisable", "Display", "Input"},
 	{"Input", "cboPort0mode", "cboPort0", "Sound", "Custom controls"},
 	{"Custom controls", "Right Trigger", "0: Mouse", "Input", "Miscellaneous"},
-	{"Miscellaneous", "StatusLine", "StatusLine", "Custom controls", "Savestates"},
+	{"Miscellaneous", "chkStatusLineNative", "chkStatusLineNative", "Custom controls", "Savestates"},
 #ifdef ANDROID
 { "Savestates",       "State0",         "State0",         "Miscellaneous",  "OnScreen" },
 { "OnScreen",         "OnScrButton3",   "OnScrCtrl",      "Savestates",     "Shutdown" },
@@ -280,12 +280,13 @@ static NavigationMap navMap[] =
 	// PanelMisc
 	//  active            move left           move right          move up           move down
 
-	{"StatusLine", "Miscellaneous", "RetroArchQuit", "cboScrolllock", "ShowGUI"},
-	{"ShowGUI", "Miscellaneous", "RetroArchMenu", "StatusLine", "chkMouseUntrap"},
-	{"chkMouseUntrap", "Miscellaneous", "RetroArchReset", "ShowGUI", "BSDSocket"},
-	{"RetroArchQuit", "StatusLine", "Miscellaneous", "KeyForQuit", "RetroArchMenu"},
-	{"RetroArchMenu", "ShowGUI", "Miscellaneous", "RetroArchQuit", "RetroArchReset"},
-	{"RetroArchReset", "chkMouseUntrap", "Miscellaneous", "RetroArchMenu", "BSDSocket"},
+	{"chkStatusLineNative", "Miscellaneous", "RetroArchQuit", "cboScrolllock", "chkStatusLineRtg"},
+	{"chkStatusLineRtg", "Miscellaneous", "RetroArchMenu", "chkStatusLineNative", "ShowGUI"},
+	{"ShowGUI", "Miscellaneous", "RetroArchReset", "chkStatusLineRtg", "chkMouseUntrap"},
+	{"chkMouseUntrap", "Miscellaneous", "Miscellaneous", "ShowGUI", "BSDSocket"},
+	{"RetroArchQuit", "chkStatusLineNative", "Miscellaneous", "KeyForQuit", "RetroArchMenu"},
+	{"RetroArchMenu", "chkStatusLineRtg", "Miscellaneous", "RetroArchQuit", "RetroArchReset"},
+	{"RetroArchReset", "ShowGUI", "Miscellaneous", "RetroArchMenu", "BSDSocket"},
 
 	{"BSDSocket", "Miscellaneous", "Miscellaneous", "chkMouseUntrap", "MasterWP"},
 	{"MasterWP", "Miscellaneous", "Miscellaneous", "BSDSocket", "chkClipboardSharing"},
