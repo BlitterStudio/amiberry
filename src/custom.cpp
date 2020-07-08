@@ -1063,7 +1063,7 @@ STATIC_INLINE int isocs7planes (void)
 	return !(currprefs.chipset_mask & CSMASK_AGA) && bplcon0_res == 0 && bplcon0_planes == 7;
 }
 
-int is_bitplane_dma(int hpos)
+int is_bitplane_dma (int hpos)
 {
 	if (hpos < bpl_hstart || fetch_state == fetch_not_started || plf_state == plf_wait) {
 		if (bitplane_overrun && hpos < bitplane_overrun_hpos) {
@@ -1077,7 +1077,7 @@ int is_bitplane_dma(int hpos)
 	return curr_diagram[(hpos - cycle_diagram_shift) & fetchstart_mask];
 }
 
-STATIC_INLINE int is_bitplane_dma_inline(int hpos)
+STATIC_INLINE int is_bitplane_dma_inline (int hpos)
 {
 	if (hpos < bpl_hstart || fetch_state == fetch_not_started || plf_state == plf_wait) {
 		if (bitplane_overrun && hpos < bitplane_overrun_hpos) {
@@ -8391,6 +8391,7 @@ static void hsync_handler_post (bool onvsync)
 				vsyncmintime = vsyncmaxtime; /* emulate if still time left */
 				is_syncline_end = read_processor_time() + vsynctimebase; /* far enough in future, we never wait that long */
 				is_syncline = -12;
+				//maybe_process_pull_audio();
 			}
 		} else {
 			static int linecounter;
@@ -8418,6 +8419,7 @@ static void hsync_handler_post (bool onvsync)
 					}
 				}
 			}
+			//maybe_process_pull_audio();
 		}
 
 	} else if (!currprefs.cpu_thread) {

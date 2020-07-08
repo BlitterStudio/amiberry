@@ -27,10 +27,13 @@
 #define MAXVPOS_LINES_OCS 512
 #define HPOS_SHIFT 3
 
+uae_u32 get_copper_address (int copno);
+
 extern int custom_init (void);
 extern void custom_prepare (void);
 extern void custom_reset (bool hardreset, bool keyboardreset);
 extern int intlev (void);
+extern void dumpcustom (void);
 
 extern void do_copper (void);
 
@@ -40,12 +43,19 @@ extern void init_row_map (void);
 extern void init_hz_normal (void);
 extern void init_custom (void);
 
-extern unsigned long int hsync_counter;
+extern void set_picasso_hack_rate(int hz);
+
+/* Set to 1 to leave out the current frame in average frame time calculation.
+* Useful if the debugger was active.  */
+extern int bogusframe;
+extern unsigned long int hsync_counter, vsync_counter;
 
 extern uae_u16 dmacon;
-extern uae_u16 intreq;
+extern uae_u16 intena, intreq, intreqr;
 
 extern int vpos, lof_store;
+
+extern int n_frames;
 
 STATIC_INLINE int dmaen (unsigned int dmamask)
 {
@@ -231,12 +241,12 @@ struct customhack {
 	uae_u16 v;
 	int vpos, hpos;
 };
-void customhack_put(struct customhack *ch, uae_u16 v, int hpos);
-uae_u16 customhack_get(struct customhack *ch, int hpos);
-extern void alloc_cycle_ext(int, int);
-extern void alloc_cycle_blitter(int hpos, uaecptr *ptr, int);
-extern bool ispal(void);
-extern bool isvga(void);
+void customhack_put (struct customhack *ch, uae_u16 v, int hpos);
+uae_u16 customhack_get (struct customhack *ch, int hpos);
+extern void alloc_cycle_ext (int, int);
+extern void alloc_cycle_blitter (int hpos, uaecptr *ptr, int);
+extern bool ispal (void);
+extern bool isvga (void);
 extern int current_maxvpos (void);
 extern struct chipset_refresh *get_chipset_refresh(struct uae_prefs*);
 extern void compute_framesync(void);

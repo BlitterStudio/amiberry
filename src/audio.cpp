@@ -309,9 +309,9 @@ static void samplexx_anti_handler (int *datasp)
 static void sinc_prehandler_paula(unsigned long best_evtime)
 {
 	int i, output;
-  struct audio_channel_data2 *acd;
+	struct audio_channel_data2 *acd;
 
-  for (i = 0; i < AUDIO_CHANNELS_PAULA; i++) {
+	for (i = 0; i < AUDIO_CHANNELS_PAULA; i++)  {
 		acd = audio_data[i];
 		int vol = acd->mixvol;
 		output = (acd->current_sample * vol) & acd->adk_mask;
@@ -339,8 +339,7 @@ static void samplexx_sinc_handler (int *datasp)
 		n = (sound_use_filter_sinc == FILTER_MODEL_A500) ? 0 : 2;
 		if (led_filter_on)
 			n += 1;
-	}
-	else {
+	} else {
 		n = 4;
 	}
 	auto winsinc = winsinc_integral[n];
@@ -415,7 +414,7 @@ static void sample16i_anti_handler(void)
 
 static void sample16i_rh_handler(void)
 {
-  unsigned long delta, ratio;
+	unsigned long delta, ratio;
 
 	int data0 = audio_channel[0].data.current_sample;
 	int data1 = audio_channel[1].data.current_sample;
@@ -427,14 +426,14 @@ static void sample16i_rh_handler(void)
 	int data3p = audio_channel[3].data.last_sample;
 	int data;
 
-	DO_CHANNEL_1(data0, 0);
-	DO_CHANNEL_1(data1, 1);
-	DO_CHANNEL_1(data2, 2);
-	DO_CHANNEL_1(data3, 3);
-	DO_CHANNEL_1(data0p, 0);
-	DO_CHANNEL_1(data1p, 1);
-	DO_CHANNEL_1(data2p, 2);
-	DO_CHANNEL_1(data3p, 3);
+	DO_CHANNEL_1 (data0, 0);
+	DO_CHANNEL_1 (data1, 1);
+	DO_CHANNEL_1 (data2, 2);
+	DO_CHANNEL_1 (data3, 3);
+	DO_CHANNEL_1 (data0p, 0);
+	DO_CHANNEL_1 (data1p, 1);
+	DO_CHANNEL_1 (data2p, 2);
+	DO_CHANNEL_1 (data3p, 3);
 
 	data0 &= audio_channel[0].data.adk_mask;
 	data0p &= audio_channel[0].data.adk_mask;
@@ -446,8 +445,8 @@ static void sample16i_rh_handler(void)
 	data3p &= audio_channel[3].data.adk_mask;
 
 	/* linear interpolation and summing up... */
-  delta = audio_channel[0].per;
-  ratio = ((audio_channel[0].evtime % delta) << 8) / delta;
+	delta = audio_channel[0].per;
+	ratio = ((audio_channel[0].evtime % delta) << 8) / delta;
 	data0 = (data0 * (256 - ratio) + data0p * ratio) >> 8;
 	delta = audio_channel[1].per;
 	ratio = ((audio_channel[1].evtime % delta) << 8) / delta;
@@ -465,7 +464,7 @@ static void sample16i_rh_handler(void)
 	check_sound_buffers();
 }
 
-static void sample16i_crux_handler(void)
+static void sample16i_crux_handler (void)
 {
 	int data0 = audio_channel[0].data.current_sample;
 	int data1 = audio_channel[1].data.current_sample;
@@ -477,14 +476,14 @@ static void sample16i_crux_handler(void)
 	int data3p = audio_channel[3].data.last_sample;
 	int data;
 
-	DO_CHANNEL_1(data0, 0);
-	DO_CHANNEL_1(data1, 1);
-	DO_CHANNEL_1(data2, 2);
-	DO_CHANNEL_1(data3, 3);
-	DO_CHANNEL_1(data0p, 0);
-	DO_CHANNEL_1(data1p, 1);
-	DO_CHANNEL_1(data2p, 2);
-	DO_CHANNEL_1(data3p, 3);
+	DO_CHANNEL_1 (data0, 0);
+	DO_CHANNEL_1 (data1, 1);
+	DO_CHANNEL_1 (data2, 2);
+	DO_CHANNEL_1 (data3, 3);
+	DO_CHANNEL_1 (data0p, 0);
+	DO_CHANNEL_1 (data1p, 1);
+	DO_CHANNEL_1 (data2p, 2);
+	DO_CHANNEL_1 (data3p, 3);
 
 	data0 &= audio_channel[0].data.adk_mask;
 	data0p &= audio_channel[0].data.adk_mask;
@@ -653,7 +652,7 @@ static void sample16si_crux_handler(void)
 	check_sound_buffers();
 }
 
-static void sample16si_rh_handler(void)
+static void sample16si_rh_handler (void)
 {
 	auto data0 = audio_channel[0].data.current_sample;
 	auto data1 = audio_channel[1].data.current_sample;
@@ -664,14 +663,14 @@ static void sample16si_rh_handler(void)
 	auto data2p = audio_channel[2].data.last_sample;
 	auto data3p = audio_channel[3].data.last_sample;
 
-	DO_CHANNEL_1(data0, 0);
-	DO_CHANNEL_1(data1, 1);
-	DO_CHANNEL_1(data2, 2);
-	DO_CHANNEL_1(data3, 3);
-	DO_CHANNEL_1(data0p, 0);
-	DO_CHANNEL_1(data1p, 1);
-	DO_CHANNEL_1(data2p, 2);
-	DO_CHANNEL_1(data3p, 3);
+	DO_CHANNEL_1 (data0, 0);
+	DO_CHANNEL_1 (data1, 1);
+	DO_CHANNEL_1 (data2, 2);
+	DO_CHANNEL_1 (data3, 3);
+	DO_CHANNEL_1 (data0p, 0);
+	DO_CHANNEL_1 (data1p, 1);
+	DO_CHANNEL_1 (data2p, 2);
+	DO_CHANNEL_1 (data3p, 3);
 
 	data0 &= audio_channel[0].data.adk_mask;
 	data0p &= audio_channel[0].data.adk_mask;
@@ -704,7 +703,7 @@ static void sample16si_rh_handler(void)
 
 static int audio_work_to_do;
 
-static void zerostate(int nr)
+static void zerostate (int nr)
 {
 	auto cdp = audio_channel + nr;
 	cdp->state = 0;
@@ -714,7 +713,7 @@ static void zerostate(int nr)
 	cdp->dmaofftime_active = 0;
 }
 
-static void schedule_audio(void)
+static void schedule_audio (void)
 {
 	unsigned long best = MAX_EV;
 
