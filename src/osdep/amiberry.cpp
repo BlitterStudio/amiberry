@@ -74,7 +74,7 @@ int action_replay_button = 0;
 // No default value for Full Screen toggle
 int fullscreen_key = 0;
 
-bool mouse_grabbed = true;
+bool mouse_grabbed = false;
 
 std::string get_version_string()
 {
@@ -1604,14 +1604,18 @@ void process_event(SDL_Event event)
 			unsetminimized();
 			break;
 		case SDL_WINDOWEVENT_ENTER:
+			mouseinside = true;
+			break;
 		case SDL_WINDOWEVENT_FOCUS_GAINED:
 			mouseinside = true;
-			//set_mouse_grab(true);
+			set_mouse_grab(true);
 			break;
 		case SDL_WINDOWEVENT_LEAVE:
+			mouseinside = false;
+			break;
 		case SDL_WINDOWEVENT_FOCUS_LOST:
 			mouseinside = false;
-			//set_mouse_grab(false);
+			set_mouse_grab(false);
 			break;
 		case SDL_WINDOWEVENT_CLOSE:
 			uae_quit();
@@ -1759,8 +1763,8 @@ void process_event(SDL_Event event)
 		break;
 
 	case SDL_MOUSEBUTTONDOWN:
-		if (event.button.button == SDL_BUTTON_LEFT)
-			set_mouse_grab(mouseinside);
+		if (event.button.button == SDL_BUTTON_LEFT && mouseinside && !currprefs.input_mouse_untrap)
+			set_mouse_grab(true);
 		if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
 		{
 			if (event.button.button == SDL_BUTTON_LEFT)
@@ -1800,10 +1804,6 @@ void process_event(SDL_Event event)
 		break;
 
 	case SDL_MOUSEMOTION:
-		if (!mouseinside) {
-			mouseinside = true;
-		}
-
 		if (recapture && isfullscreen() <= 0) {
 			enablecapture();
 			break;
