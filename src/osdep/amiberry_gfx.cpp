@@ -876,8 +876,7 @@ void update_display(struct uae_prefs* p)
 {
 	auto* ad = &adisplays;
 	open_screen(p);
-	SDL_SetRelativeMouseMode(SDL_TRUE);
-	SDL_ShowCursor(SDL_DISABLE);
+	set_mouse_grab(true);
 }
 
 void graphics_reset(bool forced)
