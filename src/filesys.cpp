@@ -8648,7 +8648,10 @@ void filesys_cleanup(void)
 	free_mountinfo();
 	destroy_comm_pipe(&shellexecute_pipe);
 	if (singlethread_int_sem != nullptr)
+	{
 		uae_sem_destroy(&singlethread_int_sem);
+		singlethread_int_sem == nullptr;
+	}
 	shell_execute_data = 0;
 }
 
