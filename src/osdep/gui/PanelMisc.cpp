@@ -81,7 +81,7 @@ public:
 			if (chkStatusLine->isSelected())
 				changed_prefs.leds_on_screen = changed_prefs.leds_on_screen | STATUSLINE_CHIPSET;
 			else
-				changed_prefs.leds_on_screen = changed_prefs.leds_on_screen | ~STATUSLINE_CHIPSET;
+				changed_prefs.leds_on_screen = changed_prefs.leds_on_screen & ~STATUSLINE_CHIPSET;
 		}
 		else if (actionEvent.getSource() == chkStatusLineRtg)
 		{
