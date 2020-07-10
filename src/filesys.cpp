@@ -8647,7 +8647,8 @@ void filesys_cleanup(void)
 	filesys_free_handles();
 	free_mountinfo();
 	destroy_comm_pipe(&shellexecute_pipe);
-	uae_sem_destroy(&singlethread_int_sem);
+	if (singlethread_int_sem != nullptr)
+		uae_sem_destroy(&singlethread_int_sem);
 	shell_execute_data = 0;
 }
 
