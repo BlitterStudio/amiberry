@@ -11,8 +11,8 @@ int machdep_init(void)
 {
 	struct amigadisplay* ad = &adisplays;
 
-	ad->picasso_requested_on = 0;
-	ad->picasso_on = 0;
+	ad->picasso_requested_on = false;
+	ad->picasso_on = false;
 	screen_is_picasso = 0;
 
 	// Initialize timebase

@@ -1548,9 +1548,8 @@ void picasso_init_resolutions()
 #ifdef PICASSO96
 void gfx_set_picasso_state(int on)
 {
-	if (on == screen_is_picasso)
+	if (screen_is_picasso == on)
 		return;
-
 	screen_is_picasso = on;
 	open_screen(&currprefs);
 }

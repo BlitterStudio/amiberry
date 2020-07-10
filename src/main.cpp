@@ -574,9 +574,8 @@ void uae_reset(int hardreset, int keyboardreset)
 			quit_program = -UAE_RESET_HARD;
 	}
 	struct amigadisplay* ad = &adisplays;
-	ad->picasso_requested_on = 0;
-	ad->picasso_on = 0;
-	screen_is_picasso = 0;
+	ad->picasso_requested_on = false;
+	ad->picasso_on = false;
 }
 
 void uae_quit(void)
