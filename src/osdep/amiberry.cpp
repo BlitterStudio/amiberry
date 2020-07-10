@@ -334,7 +334,7 @@ void target_fixup_options(struct uae_prefs* p)
 	{
 		p->scsi = 1;
 	}
-	
+
 	p->rtgboards[0].rtgmem_type = GFXBOARD_UAE_Z3;
 
 	if (z3_base_adr == Z3BASE_REAL)

@@ -423,7 +423,6 @@ int gui_init()
 		ret = -2; // Quit without start of emulator
 
 	inputdevice_acquire (TRUE);
-	update_display(&changed_prefs);
 
 	after_leave_gui();
 	emulating = 1;
