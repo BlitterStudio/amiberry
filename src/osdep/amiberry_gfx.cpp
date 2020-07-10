@@ -178,8 +178,8 @@ static int display_thread(void *unused)
 				}
 				else 
 				{
-					rgb_mode = VC_IMAGE_ARGB8888;
 					display_depth = 32;
+					rgb_mode = VC_IMAGE_RGBA32;
 				}	
 			}
 			else
@@ -763,8 +763,8 @@ static void open_screen(struct uae_prefs* p)
 		}
 		else
 		{
-			pixel_format = SDL_PIXELFORMAT_BGRA32;
 			display_depth = 32;
+			pixel_format = SDL_PIXELFORMAT_RGBA32;
 		}
 
 		if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
