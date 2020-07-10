@@ -17,10 +17,17 @@ typedef SDL_sem* uae_sem_t;
 STATIC_INLINE int uae_sem_init(uae_sem_t* sem, int dummy, int init)
 {
 	*sem = SDL_CreateSemaphore(init);
-	return (*sem == nullptr);
+	return *sem == nullptr;
 }
 
-#define uae_sem_destroy(PSEM) SDL_DestroySemaphore (*PSEM)
+STATIC_INLINE void uae_sem_destroy(uae_sem_t* event)
+{
+	if (*event)
+	{
+		SDL_DestroySemaphore(*event);
+		*event = nullptr;
+	}
+}
 #define uae_sem_post(PSEM) SDL_SemPost (*PSEM)
 #define uae_sem_wait(PSEM) SDL_SemWait (*PSEM)
 #define uae_sem_trywait(PSEM) SDL_SemTryWait (*PSEM)
