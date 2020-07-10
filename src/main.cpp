@@ -980,6 +980,7 @@ static void start_program(void)
 		// record capslock pressed
 		inputdevice_do_keyboard(AK_CAPSLOCK, 1);
 	}
+	set_mouse_grab(true);
 	do_start_program();
 }
 
