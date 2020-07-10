@@ -685,7 +685,7 @@ extern void picasso_enablescreen(int on);
 extern void picasso_refresh();
 extern void init_hz_p96();
 extern void picasso_handle_vsync(void);
-extern void picasso_trigger_vblank(void);
+//extern void picasso_trigger_vblank(void);
 extern bool picasso_is_active();
 extern int picasso_setwincursor();
 extern int picasso_palette(struct MyCLUTEntry* MCLUT, uae_u32* clut);
