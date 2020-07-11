@@ -505,6 +505,10 @@ bool mapped_malloc(addrbank* ab)
 
 void mapped_free(addrbank* ab)
 {
+	ab->flags &= ~ABFLAG_MAPPED;
+	if (ab->baseaddr == nullptr)
+		return;
+	
 	if (ab->label != nullptr && !strcmp(ab->label, "filesys") && ab->baseaddr != nullptr)
 	{		
 		write_log("mapped_free(): 0x%08x - 0x%08x (0x%08x - 0x%08x) -> %s (%s)\n",

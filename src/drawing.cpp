@@ -69,9 +69,9 @@ typedef enum
 #define RENDER_SIGNAL_PARTIAL 1
 #define RENDER_SIGNAL_FRAME_DONE 2
 #define RENDER_SIGNAL_QUIT 3
-static uae_thread_id render_tid = 0;
-static smp_comm_pipe *volatile render_pipe = 0;
-static uae_sem_t render_sem = 0;
+static uae_thread_id render_tid = nullptr;
+static smp_comm_pipe *volatile render_pipe = nullptr;
+static uae_sem_t render_sem = nullptr;
 static bool volatile render_thread_busy = false;
 #endif
 
@@ -4029,14 +4029,14 @@ void vsync_handle_redraw(int long_field, int lof_changed, uae_u16 bplcon0p, uae_
 				while (render_thread_busy)
 					sleep_micros(1);
 				write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_QUIT, 1);
-				while (render_tid != 0) {
+				while (render_tid != nullptr) {
 					sleep_micros(10);
 				}
 				destroy_comm_pipe(render_pipe);
 				xfree(render_pipe);
-				render_pipe = 0;
+				render_pipe = nullptr;
 				uae_sem_destroy(&render_sem);
-				render_sem = 0;
+				render_sem = nullptr;
 			}
 #endif
 
@@ -4311,8 +4311,8 @@ void drawing_init(void)
 #ifdef PICASSO96
 	if (!isrestore())
 	{
-		ad->picasso_on = 0;
-		ad->picasso_requested_on = 0;
+		ad->picasso_on = false;
+		ad->picasso_requested_on = false;
 		gfx_set_picasso_state(0);
 	}
 #endif

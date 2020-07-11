@@ -1105,9 +1105,7 @@ void gui_widgets_init()
 
 void gui_widgets_halt()
 {
-	int i;
-
-	for (i = 0; categories[i].category != nullptr; ++i)
+	for (auto i = 0; categories[i].category != nullptr; ++i)
 	{
 		if (categories[i].ExitFunc != nullptr)
 			(*categories[i].ExitFunc)();
@@ -1217,7 +1215,6 @@ void run_gui()
 		// Prepare everything for Reset of Amiga
 		//--------------------------------------------------
 		currprefs.nr_floppies = changed_prefs.nr_floppies;
-		screen_is_picasso = 0;
 
 		if (gui_rtarea_flags_onenter != gui_create_rtarea_flag(&changed_prefs))
 			quit_program = -UAE_RESET_HARD; // Hardreset required...

@@ -1305,6 +1305,11 @@ void target_addtorecent(const TCHAR* name, int t)
 void target_reset(void)
 {
 	clipboard_reset();
+
+	auto* const ad = &adisplays;
+	ad->picasso_requested_on = false;
+	ad->picasso_on = false;
+	
 }
 
 bool target_can_autoswitchdevice(void)
