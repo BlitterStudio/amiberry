@@ -5370,8 +5370,7 @@ static uae_u32 REGPARAM2 picasso_CreateFeature(TrapContext* ctx)
 		trap_put_long(ctx, overlay_tagmem + i * 4 + 0, ovltags[i + 0]);
 		if (i == 0) {
 			trap_put_long(ctx, overlay_tagmem + i * 4 + 4, overlay_format);
-		}
-		else {
+		} else {
 			trap_put_long(ctx, overlay_tagmem + i * 4 + 4, ovltags[i + 1]);
 		}
 	}
