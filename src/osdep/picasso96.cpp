@@ -201,8 +201,6 @@ static int set_gc_called = 0, init_picasso_screen_called = 0;
 static uaecptr oldscr = 0;
 
 extern addrbank gfxmem_bank;
-extern addrbank* gfxmem_banks[MAX_RTG_BOARDS];
-extern int rtg_index;
 
 //void lockrtg(void)
 //{
@@ -287,7 +285,7 @@ STATIC_INLINE bool validatecoords2(TrapContext *ctx, struct RenderInfo *ri, uae_
 }
 static bool validatecoords(TrapContext *ctx, struct RenderInfo *ri, uae_u32 *X, uae_u32 *Y, uae_u32 *Width, uae_u32 *Height)
 {
-	if (trap_is_indirect() || validatecoords2(ctx, ri, X, Y, Width, Height))
+	if (validatecoords2(ctx, ri, X, Y, Width, Height))
 		return true;
 	write_log (_T("RTG invalid region: %08X:%d:%d (%dx%d)-(%dx%d)\n"), ri->AMemory, ri->BytesPerRow, ri->RGBFormat, *X, *Y, *Width, *Height);
 	return false;
@@ -335,9 +333,6 @@ static int CopyPatternStructureA2U(TrapContext* ctx, uaecptr amigamemptr, struct
 		};
 		trap_multi(ctx, md, sizeof md / sizeof(struct trapmd));
 		uaecptr memp = md[0].params[0];
-		if (trap_is_indirect())
-			pattern->Memory = NULL;
-		else
 			pattern->Memory = get_real_address(memp);
 		pattern->AMemory = memp;
 		pattern->XOffset = md[1].params[0];
@@ -384,7 +379,6 @@ static int CopyBitMapStructureA2U(TrapContext* ctx, uaecptr amigamemptr, struct 
 
 	for (i = 0; i < bm->Depth; i++) {
 		uaecptr plane = md[4 + i].params[0];
-		bm->APlanes[i] = plane;
 		switch (plane) {
 		case 0:
 			bm->Planes[i] = &all_zeros_bitmap;
@@ -393,7 +387,7 @@ static int CopyBitMapStructureA2U(TrapContext* ctx, uaecptr amigamemptr, struct 
 			bm->Planes[i] = &all_ones_bitmap;
 			break;
 		default:
-			if (!trap_is_indirect() && trap_valid_address(ctx, plane, bm->BytesPerRow * bm->Rows))
+	    if (trap_valid_address(ctx, plane, bm->BytesPerRow * bm->Rows))
 				bm->Planes[i] = get_real_address(plane);
 			else
 				bm->Planes[i] = &all_zeros_bitmap;
@@ -418,9 +412,6 @@ static int CopyTemplateStructureA2U(TrapContext* ctx, uaecptr amigamemptr, struc
 		trap_multi(ctx, md, sizeof md / sizeof(struct trapmd));
 
 		uaecptr memp = md[0].params[0];
-		if (trap_is_indirect())
-			tmpl->Memory = NULL;
-		else
 			tmpl->Memory = get_real_address(memp);
 		tmpl->AMemory = memp;
 		tmpl->BytesPerRow = md[1].params[0];
@@ -871,10 +862,10 @@ static void setconvert()
 	struct picasso_vidbuf_description* vidinfo = &picasso_vidinfo;
 	struct picasso96_state_struct* state = &picasso96_state;
 
-	vidinfo->picasso_convert = getconvert (state->RGBFormat, picasso_vidinfo.pixbytes);
-	vidinfo->host_mode = picasso_vidinfo.pixbytes == 4 ? RGBFB_R8G8B8A8 : RGBFB_R5G6B5;
+	vidinfo->picasso_convert = getconvert (state->RGBFormat, vidinfo->pixbytes);
+	vidinfo->host_mode = vidinfo->pixbytes == 4 ? RGBFB_R8G8B8A8 : RGBFB_R5G6B5;
 	//vidinfo->host_mode = GetSurfacePixelFormat();
-	if (picasso_vidinfo.pixbytes == 4)
+	if (vidinfo->pixbytes == 4)
 		alloc_colors_rgb(8, 8, 8, 16, 8, 0, 0, 0, 0, 0, p96rc, p96gc, p96bc);
 	else
 		alloc_colors_rgb(5, 6, 5, 11, 5, 0, 0, 0, 0, 0, p96rc, p96gc, p96bc);
@@ -1423,8 +1414,8 @@ d7: RGBFTYPE RGBFormat
 static uae_u32 REGPARAM2 picasso_SetSpritePosition(TrapContext* ctx)
 {
 	//struct picasso96_state_struct* state = &picasso96_state;
-	//uaecptr bi = trap_get_areg(ctx, 0);
-	//boardinfo = bi;
+	uaecptr bi = trap_get_areg(ctx, 0);
+	boardinfo = bi;
 	//int x = (uae_s16)trap_get_word(ctx, bi + PSSO_BoardInfo_MouseX) - state->XOffset;
 	//int y = (uae_s16)trap_get_word(ctx, bi + PSSO_BoardInfo_MouseY) - state->YOffset;
 	//newcursor_x = x;
@@ -1449,12 +1440,12 @@ This function changes one of the possible three colors of the hardware sprite.
 */
 static uae_u32 REGPARAM2 picasso_SetSpriteColor(TrapContext* ctx)
 {
-	//uaecptr bi = trap_get_areg(ctx, 0);
+	uaecptr bi = trap_get_areg(ctx, 0);
 	//uae_u8 idx = trap_get_dreg(ctx, 0);
 	//uae_u8 red = trap_get_dreg(ctx, 1);
 	//uae_u8 green = trap_get_dreg(ctx, 2);
 	//uae_u8 blue = trap_get_dreg(ctx, 3);
-	//boardinfo = bi;
+	boardinfo = bi;
 	//idx++;
 	//if (!hwsprite)
 		return 0;
@@ -1825,10 +1816,10 @@ compensate for this when accounting for hotspot offsets and sprite dimensions.
 */
 static uae_u32 REGPARAM2 picasso_SetSpriteImage(TrapContext* ctx)
 {
-	return 0;
-	//uaecptr bi = trap_get_areg(ctx, 0);
-	//boardinfo = bi;
+	uaecptr bi = trap_get_areg(ctx, 0);
+	boardinfo = bi;
 	//return setspriteimage(ctx, bi);
+	return 0;
 }
 
 /*
@@ -3109,7 +3100,6 @@ static uae_u32 REGPARAM2 picasso_BlitPattern(TrapContext* ctx)
 			result = 0;
 
 		if (result) {
-			bool indirect = trap_is_indirect();
 			uae_u32 fgpen, bgpen;
 
 			ysize_mask = (1 << pattern.Size) - 1;
@@ -3120,23 +3110,13 @@ static uae_u32 REGPARAM2 picasso_BlitPattern(TrapContext* ctx)
 			bgpen = pattern.BgPen;
 			endianswap(&bgpen, Bpp);
 
-			uae_u16* tmplbuf = NULL;
-			if (indirect) {
-				tmplbuf = xcalloc(uae_u16, 1 << pattern.Size);
-				trap_get_words(ctx, tmplbuf, pattern.AMemory, 1 << pattern.Size);
-			}
-			
 			for (rows = 0; rows < H; rows++, uae_mem += ri.BytesPerRow) {
 				unsigned long prow = (rows + pattern.YOffset) & ysize_mask;
 				unsigned int d;
 				uae_u8* uae_mem2 = uae_mem;
 				unsigned long cols;
 
-				if (indirect) {
-					d = do_get_mem_word(tmplbuf + prow);
-				} else {
 					d = do_get_mem_word(((uae_u16*)pattern.Memory) + prow);
-				}
 
 				if (xshift != 0)
 					d = (d << xshift) | (d >> (16 - xshift));
@@ -3214,7 +3194,6 @@ static uae_u32 REGPARAM2 picasso_BlitPattern(TrapContext* ctx)
 				}
 			}
 			result = 1;
-			xfree(tmplbuf);
 		}
 	}
 
@@ -3287,7 +3266,6 @@ static uae_u32 REGPARAM2 picasso_BlitTemplate(TrapContext* ctx)
 
 		if(result) {
 			uae_u32 fgpen, bgpen;
-			bool indirect = trap_is_indirect();
 			
 			bitoffset = tmp.XOffset % 8;
 
@@ -3296,15 +3274,7 @@ static uae_u32 REGPARAM2 picasso_BlitTemplate(TrapContext* ctx)
 			bgpen = tmp.BgPen;
 			endianswap(&bgpen, Bpp);
 
-			uae_u8* tmpl_buffer = NULL;
-			if (indirect) {
-				int tmpl_size = H * tmp.BytesPerRow * Bpp;
-				tmpl_buffer = xcalloc(uae_u8, tmpl_size);
-				trap_get_bytes(ctx, tmpl_buffer, tmp.AMemory, tmpl_size);
-				tmpl_base = tmpl_buffer + tmp.XOffset / 8;
-			} else {
 				tmpl_base = tmp.Memory + tmp.XOffset / 8;
-			}
 
 			for (rows = 0; rows < H; rows++, uae_mem += ri.BytesPerRow, tmpl_base += tmp.BytesPerRow) {
 				unsigned long cols;
@@ -3393,7 +3363,6 @@ static uae_u32 REGPARAM2 picasso_BlitTemplate(TrapContext* ctx)
 				}
 			}
 			result = 1;
-			xfree(tmpl_buffer);
 		}
 	}
 
@@ -3468,7 +3437,6 @@ static void PlanarToChunky(TrapContext* ctx, struct RenderInfo* ri, struct BitMa
 	int j;
 
 	uae_u8* PLANAR[8];
-	uaecptr APLANAR[8];
 	uae_u8* image = ri->Memory + dstx * GetBytesPerPixel(ri->RGBFormat) + dsty * ri->BytesPerRow;
 	int Depth = bm->Depth;
 	unsigned long rows, bitoffset = srcx & 7;
@@ -3477,21 +3445,12 @@ static void PlanarToChunky(TrapContext* ctx, struct RenderInfo* ri, struct BitMa
 
 	/* Set up our bm->Planes[] pointers to the right horizontal offset */
 	for (j = 0; j < Depth; j++) {
-		if (indirect) {
-			uaecptr ap = bm->APlanes[j];
-			if (ap != 0 && ap != 0xffffffff)
-				ap += srcx / 8 + srcy * bm->BytesPerRow;
-			APLANAR[j] = ap;
-			if ((mask & (1 << j)) == 0)
-				APLANAR[j] = 0;
-		} else {
 			uae_u8* p = bm->Planes[j];
 			if (p != &all_zeros_bitmap && p != &all_ones_bitmap)
 				p += srcx / 8 + srcy * bm->BytesPerRow;
 			PLANAR[j] = p;
 			if ((mask & (1 << j)) == 0)
 				PLANAR[j] = &all_zeros_bitmap;
-		}
 	}
 	eol_offset = (long)bm->BytesPerRow - (long)((width + 7) >> 3);
 	for (rows = 0; rows < height; rows++, image += ri->BytesPerRow) {
@@ -3514,16 +3473,6 @@ static void PlanarToChunky(TrapContext* ctx, struct RenderInfo* ri, struct BitMa
 			}
 			for (k = 0; k < Depth; k++) {
 				unsigned int data;
-				if (indirect) {
-					if (APLANAR[k] == 0)
-						data = 0;
-					else if (APLANAR[k] == 0xffffffff)
-						data = 0xFF;
-					else {
-						data = (uae_u8)(trap_get_word(ctx, APLANAR[k]) >> (8 - bitoffset));
-						APLANAR[k]++;
-					}
-				} else {
 					if (PLANAR[k] == &all_zeros_bitmap)
 						data = 0;
 					else if (PLANAR[k] == &all_ones_bitmap)
@@ -3532,7 +3481,6 @@ static void PlanarToChunky(TrapContext* ctx, struct RenderInfo* ri, struct BitMa
 						data = (uae_u8)(do_get_mem_word((uae_u16*)PLANAR[k]) >> (8 - bitoffset));
 						PLANAR[k]++;
 					}
-				}
 				data &= msk;
 				a |= p2ctab[data][0] << k;
 				b |= p2ctab[data][1] << k;
@@ -3541,18 +3489,12 @@ static void PlanarToChunky(TrapContext* ctx, struct RenderInfo* ri, struct BitMa
 			do_put_mem_long((uae_u32*)(image + cols + 4), b);
 		}
 		for (j = 0; j < Depth; j++) {
-			if (indirect) {
-				if (APLANAR[j] != 0 && APLANAR[j] != 0xffffffff) {
-					APLANAR[j] += eol_offset;
-				}
-			} else {
 				if (PLANAR[j] != &all_zeros_bitmap && PLANAR[j] != &all_ones_bitmap) {
 					PLANAR[j] += eol_offset;
 				}
 			}
 		}
 	}
-}
 
 /*
 * BlitPlanar2Chunky:
@@ -3611,7 +3553,6 @@ static void PlanarToDirect(TrapContext* ctx, struct RenderInfo* ri, struct BitMa
 	int j;
 	int bpp = GetBytesPerPixel(ri->RGBFormat);
 	uae_u8* PLANAR[8];
-	uaecptr APLANAR[8];
 	uae_u8* image = ri->Memory + dstx * bpp + dsty * ri->BytesPerRow;
 	int Depth = bm->Depth;
 	unsigned long rows;
@@ -3625,14 +3566,6 @@ static void PlanarToDirect(TrapContext* ctx, struct RenderInfo* ri, struct BitMa
 
 	/* Set up our bm->Planes[] pointers to the right horizontal offset */
 	for (j = 0; j < Depth; j++) {
-		if (indirect) {
-			uaecptr ap = bm->APlanes[j];
-			if (ap != 0 && ap != 0xffffffff)
-				ap += srcx / 8 + srcy * bm->BytesPerRow;
-			APLANAR[j] = ap;
-			if ((mask & (1 << j)) == 0)
-				APLANAR[j] = 0;
-		} else {
 			uae_u8* p = bm->Planes[j];
 			if (p != &all_zeros_bitmap && p != &all_ones_bitmap)
 				p += srcx / 8 + srcy * bm->BytesPerRow;
@@ -3640,13 +3573,6 @@ static void PlanarToDirect(TrapContext* ctx, struct RenderInfo* ri, struct BitMa
 			if ((mask & (1 << j)) == 0)
 				PLANAR[j] = &all_zeros_bitmap;
 		}
-	}
-
-	uae_u8* planebuf = NULL;
-	int planebuf_width = (width + 1) & ~1;
-	if (indirect) {
-		planebuf = xmalloc(uae_u8, planebuf_width * Depth);
-	}
 	
 	eol_offset = (long)bm->BytesPerRow - (long)((width + (srcx & 7)) >> 3);
 	for (rows = 0; rows < height; rows++, image += ri->BytesPerRow) {
@@ -3655,19 +3581,6 @@ static void PlanarToDirect(TrapContext* ctx, struct RenderInfo* ri, struct BitMa
 		unsigned int bitoffs = 7 - (srcx & 7);
 		int i;
 
-		if (indirect) {
-			for (int k = 0; k < Depth; k++) {
-				if (APLANAR[k] != 0 && APLANAR[k] != 0xffffffff) {
-					PLANAR[k] = planebuf + planebuf_width * k;
-					trap_get_bytes(ctx, PLANAR[k], APLANAR[k], planebuf_width);
-				} else if (APLANAR[k] == 0) {
-					PLANAR[k] = &all_zeros_bitmap;
-				} else {
-					PLANAR[k] = &all_ones_bitmap;
-				}
-			}
-		}
-		
 		for (cols = 0; cols < width; cols++) {
 			int v = 0, k;
 			for (k = 0; k < Depth; k++) {
@@ -3701,7 +3614,6 @@ static void PlanarToDirect(TrapContext* ctx, struct RenderInfo* ri, struct BitMa
 				maxc = vc;
 			}
 
-
 			switch (bpp)
 			{
 			case 2:
@@ -3726,8 +3638,6 @@ static void PlanarToDirect(TrapContext* ctx, struct RenderInfo* ri, struct BitMa
 				for (k = 0; k < Depth; k++) {
 					if (PLANAR[k] != &all_zeros_bitmap && PLANAR[k] != &all_ones_bitmap) {
 						PLANAR[k]++;
-						if (indirect)
-							APLANAR[k]++;
 					}
 				}
 			}
@@ -3736,13 +3646,9 @@ static void PlanarToDirect(TrapContext* ctx, struct RenderInfo* ri, struct BitMa
 		for (i = 0; i < Depth; i++) {
 			if (PLANAR[i] != &all_zeros_bitmap && PLANAR[i] != &all_ones_bitmap) {
 				PLANAR[i] += eol_offset;
-				if (indirect)
-					APLANAR[i] += eol_offset;
 			}
 		}
 	}
-	if (planebuf)
-		xfree(planebuf);
 }
 
 /*
@@ -5617,8 +5523,7 @@ static void picasso_reset(int hardreset)
 	}
 
 	//lockrtg();
-
-	//rtg_index = -1;
+	
 	if (savestate_state != STATE_RESTORE) {
 		uaegfx_base = 0;
 		uaegfx_old = 0;
