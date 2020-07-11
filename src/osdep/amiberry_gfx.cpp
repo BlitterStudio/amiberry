@@ -1115,6 +1115,20 @@ bool show_screen_maybe(const bool show)
 	return false;
 }
 
+void DX_Fill(int dstx, int dsty, int width, int height, uae_u32 color)
+{
+	SDL_Rect dstrect;
+	if (width < 0)
+		width = screen->w;
+	if (height < 0)
+		height = screen->h;
+	dstrect.x = dstx;
+	dstrect.y = dsty;
+	dstrect.w = width;
+	dstrect.h = height;
+	SDL_FillRect(screen, &dstrect, color);
+}
+
 void black_screen_now()
 {
 #ifndef USE_DISPMANX

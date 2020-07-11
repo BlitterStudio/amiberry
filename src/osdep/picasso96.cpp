@@ -35,6 +35,8 @@
 
 #include <stdlib.h>
 
+#include "amiberry_gfx.h"
+
 #if defined(PICASSO96)
 
 #define WINCURSOR 1
@@ -939,11 +941,7 @@ void picasso_refresh()
 			// Let's put a black-border around the case where we've got a sub-screen...
 			if (!state->BigAssBitmap) {
 				if (state->XOffset || state->YOffset)
-#ifdef AMIBERRY
-					write_log("DX_FILL..\n");
-#else
-					DX_Fill(mon, 0, 0, state->Width, state->Height, 0);
-#endif
+					DX_Fill(0, 0, state->Width, state->Height, 0);
 			}
 		} else {
 			width = state->Width;
