@@ -3607,11 +3607,22 @@ void putpixel(uae_u8 *buf, uae_u8 *genlockbuf, int bpp, int x, xcolnr c8, int op
 	}
 }
 
+static uae_u8* status_line_ptr(int line)
+{
+	struct vidbuf_description* vidinfo = &adisplays.gfxvidinfo;
+
+	auto y = line - (vidinfo->drawbuffer.outheight - TD_TOTAL_HEIGHT);
+	xlinebuffer = vidinfo->drawbuffer.linemem;
+	if (xlinebuffer == nullptr)
+		xlinebuffer = row_map[line];
+	//xlinebuffer_genlock = row_map_genlock[line];
+	return xlinebuffer;
+}
+
 static void draw_status_line(int line, int statusy)
 {
 	struct vidbuf_description *vidinfo = &adisplays.gfxvidinfo;
-	xlinebuffer = row_map[line];
-	uae_u8 *buf = xlinebuffer;
+	uae_u8* buf = status_line_ptr(line);
 	if (!buf)
 		return;
 	if (statusy < 0)
@@ -3712,14 +3723,16 @@ static void draw_frame2()
 static void draw_frame_extras(struct vidbuffer* vb, int y_start, int y_end)
 {
 	if ((currprefs.leds_on_screen & STATUSLINE_CHIPSET)) {
-		int slx, sly;
-		int mult = statusline_get_multiplier();
-		statusline_getpos(&slx, &sly, vb->outwidth, vb->outheight);
+		//int slx, sly;
+		//int mult = statusline_get_multiplier();
+		//statusline_getpos(&slx, &sly, vb->outwidth, vb->outheight);
 		//statusbar_y1 = sly + min_ypos_for_screen - 1;
 		//statusbar_y2 = statusbar_y1 + TD_TOTAL_HEIGHT * mult + 1;
 		//draw_status_line(sly, -1);
-		for (int i = 0; i < TD_TOTAL_HEIGHT * mult; i++) {
-			int line = sly + i;
+		struct amigadisplay* ad = &adisplays;
+		struct vidbuf_description* vidinfo = &ad->gfxvidinfo;
+		for (int i = 0; i < TD_TOTAL_HEIGHT; i++) {
+			int line = vidinfo->drawbuffer.outheight - TD_TOTAL_HEIGHT + i;
 			draw_status_line(line, i);
 		}
 	}
