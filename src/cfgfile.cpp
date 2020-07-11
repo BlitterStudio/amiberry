@@ -2342,7 +2342,7 @@ void cfgfile_save_options(struct zfile* f, struct uae_prefs* p, int type)
 #ifdef USE_JIT_FPU
 	cfgfile_write_bool(f, _T("compfpu"), p->compfpu);
 #endif
-	cfgfile_write_bool(f, _T("comp_catchdetect"), p->comp_catchfault);
+	cfgfile_write_bool(f, _T("comp_catchfault"), p->comp_catchfault);
 	cfgfile_write(f, _T("cachesize"), _T("%d"), p->cachesize);
 
 	cfg_write(_T("; "), f);
