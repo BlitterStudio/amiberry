@@ -141,7 +141,8 @@ static NavigationMap navMap[] =
 	{"ExtROM", "cboExtROM", "ROM", "MainROM", "CartROM"},
 	{"cboCartROM", "ROM", "CartROM", "cboExtROM", "cboUAEROM"},
 	{"CartROM", "cboCartROM", "ROM", "ExtROM", "cboUAEROM"},
-	{ "cboUAEROM", "ROM", "ROM", "cboCartROM", "cboMainROM"},
+	{"cboUAEROM", "ROM", "ROM", "cboCartROM", "chkShapeShifter"},
+	{"chkShapeShifter", "ROM", "ROM", "cboUAEROM", "cboMainROM"},
 
 	//PanelRAM
 	{"Chipmem", "", "", "RAM", "Slowmem"},

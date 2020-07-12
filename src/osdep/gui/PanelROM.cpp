@@ -22,6 +22,7 @@ static gcn::DropDown* cboCartROM;
 static gcn::Button* cmdCartROM;
 static gcn::Label* lblUAEROM;
 static gcn::DropDown* cboUAEROM;
+static gcn::CheckBox* chkShapeShifter;
 
 class ROMListModel : public gcn::ListModel
 {
@@ -42,14 +43,14 @@ public:
 
 	std::string getElementAt(const int i) override
 	{
-		if (i < 0 || i >= int(roms.size()))
+		if (i < 0 || i >= static_cast<int>(roms.size()))
 			return "---";
 		return roms[i];
 	}
 
 	AvailableROM* get_rom_at(const int i)
 	{
-		if (i >= 0 && i < int(idxToAvailableROMs.size()))
+		if (i >= 0 && i < static_cast<int>(idxToAvailableROMs.size()))
 			return idxToAvailableROMs[i] < 0 ? nullptr : lstAvailableROMs[idxToAvailableROMs[i]];
 		return nullptr;
 	}
@@ -67,7 +68,7 @@ public:
 			currIdx = 0;
 		}
 
-		for (auto i = 0; i < int(lstAvailableROMs.size()); ++i)
+		for (auto i = 0; i < static_cast<int>(lstAvailableROMs.size()); ++i)
 		{
 			if (lstAvailableROMs[i]->ROMType & ROMType)
 			{
@@ -114,7 +115,7 @@ class MainROMActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		const auto rom = mainROMList->get_rom_at(cboMainROM->getSelected());
+		auto* const rom = mainROMList->get_rom_at(cboMainROM->getSelected());
 		if (rom != nullptr)
 			strncpy(changed_prefs.romfile, rom->Path, sizeof(changed_prefs.romfile));
 	}
@@ -128,7 +129,7 @@ class ExtROMActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		const auto rom = extROMList->get_rom_at(cboExtROM->getSelected());
+		auto* const rom = extROMList->get_rom_at(cboExtROM->getSelected());
 		if (rom != nullptr)
 			strncpy(changed_prefs.romextfile, rom->Path, sizeof(changed_prefs.romextfile));
 		else
@@ -143,7 +144,7 @@ class CartROMActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		const auto rom = cartROMList->get_rom_at(cboCartROM->getSelected());
+		auto* const rom = cartROMList->get_rom_at(cboCartROM->getSelected());
 		if (rom != nullptr)
 			strncpy(changed_prefs.cartfile, rom->Path, sizeof changed_prefs.cartfile);
 		else
@@ -166,7 +167,7 @@ public:
 			strncpy(tmp, current_dir, MAX_DPATH - 1);
 			if (SelectFile("Select System ROM", tmp, filter))
 			{
-				const auto newrom = new AvailableROM();
+				auto* const newrom = new AvailableROM();
 				extract_filename(tmp, newrom->Name);
 				remove_file_extension(newrom->Name);
 				strncpy(newrom->Path, tmp, MAX_DPATH - 1);
@@ -182,7 +183,7 @@ public:
 			strncpy(tmp, current_dir, MAX_DPATH - 1);
 			if (SelectFile("Select Extended ROM", tmp, filter))
 			{
-				const auto newrom = new AvailableROM();
+				auto* const newrom = new AvailableROM();
 				extract_filename(tmp, newrom->Name);
 				remove_file_extension(newrom->Name);
 				strncpy(newrom->Path, tmp, MAX_DPATH - 1);
@@ -198,7 +199,7 @@ public:
 			strncpy(tmp, current_dir, MAX_DPATH - 1);
 			if (SelectFile("Select Cartridge ROM", tmp, filter))
 			{
-				const auto newrom = new AvailableROM();
+				auto* const newrom = new AvailableROM();
 				extract_filename(tmp, newrom->Name);
 				remove_file_extension(newrom->Name);
 				strncpy(newrom->Path, tmp, MAX_DPATH - 1);
@@ -210,7 +211,7 @@ public:
 			cmdCartROM->requestFocus();
 		}
 		else if (actionEvent.getSource() == cboUAEROM) {
-			int v = cboUAEROM->getSelected();
+			const auto v = cboUAEROM->getSelected();
 			if (v > 0) {
 				changed_prefs.uaeboard = v - 1;
 				changed_prefs.boot_rom = 0;
@@ -219,6 +220,10 @@ public:
 				changed_prefs.uaeboard = 0;
 				changed_prefs.boot_rom = 1; // disabled
 			}
+		}
+		else if (actionEvent.getSource() == chkShapeShifter)
+		{
+			changed_prefs.kickshifter = chkShapeShifter->isSelected();
 		}
 	}
 };
@@ -285,7 +290,11 @@ void InitPanelROM(const struct _ConfigCategory& category)
 	cboUAEROM->setId("cboUAEROM");
 	cboUAEROM->addActionListener(romButtonActionListener);
 
-	int posY = DISTANCE_BORDER;
+	chkShapeShifter = new gcn::CheckBox("ShapeShifter support");
+	chkShapeShifter->setId("chkShapeShifter");
+	chkShapeShifter->addActionListener(romButtonActionListener);
+
+	auto posY = DISTANCE_BORDER;
 	category.panel->add(lblMainROM, DISTANCE_BORDER, posY);
 	posY += lblMainROM->getHeight() + 4;
 	category.panel->add(cboMainROM, DISTANCE_BORDER, posY);
@@ -307,7 +316,9 @@ void InitPanelROM(const struct _ConfigCategory& category)
 	category.panel->add(lblUAEROM, DISTANCE_BORDER, posY);
 	posY += lblUAEROM->getHeight() + 4;
 	category.panel->add(cboUAEROM, DISTANCE_BORDER, posY);
-	posY += cboUAEROM->getHeight() + DISTANCE_NEXT_Y;
+	posY += cboUAEROM->getHeight() + DISTANCE_NEXT_Y * 2;
+
+	category.panel->add(chkShapeShifter, DISTANCE_BORDER, posY);
 
 	RefreshPanelROM();
 }
@@ -335,6 +346,7 @@ void ExitPanelROM()
 
 	delete lblUAEROM;
 	delete cboUAEROM;
+	delete chkShapeShifter;
 	delete romButtonActionListener;
 }
 
@@ -346,7 +358,7 @@ void RefreshPanelROM()
 	else
 	{
 		// ROM file not in the list of known ROMs -- let's add it
-		auto newrom = new AvailableROM();
+		auto* newrom = new AvailableROM();
 		extract_filename(changed_prefs.romfile, newrom->Name);
 		remove_file_extension(newrom->Name);
 		strncpy(newrom->Path, changed_prefs.romfile, MAX_DPATH - 1);
@@ -363,7 +375,7 @@ void RefreshPanelROM()
 	else if (idx == 0 && strlen(changed_prefs.romextfile) > 0)
 	{
 		// ROM file not in the list of known ROMs
-		auto newrom = new AvailableROM();
+		auto* newrom = new AvailableROM();
 		extract_filename(changed_prefs.romextfile, newrom->Name);
 		remove_file_extension(newrom->Name);
 		strncpy(newrom->Path, changed_prefs.romextfile, MAX_DPATH - 1);
@@ -387,6 +399,8 @@ void RefreshPanelROM()
 		cboUAEROM->setSelected(changed_prefs.uaeboard + 1);
 	}
 	cboUAEROM->setEnabled(!emulating);
+
+	chkShapeShifter->setSelected(changed_prefs.kickshifter);
 }
 
 bool HelpPanelROM(std::vector<std::string>& helptext)
@@ -395,6 +409,9 @@ bool HelpPanelROM(std::vector<std::string>& helptext)
 	helptext.emplace_back("Select the required Kickstart ROM for the Amiga you want to emulate in \"Main ROM File\".");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("In \"Extended ROM File\", you can only select the required ROM for CD32 emulation.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("You can use the ShapeShifter support checkbox to patch the system ROM for ShapeShifter");
+	helptext.emplace_back("compatibility. You do not need to run PrepareEmul on startup with this enabled.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("In \"Cartridge ROM File\", you can select the CD32 FMV module to activate video");
 	helptext.emplace_back("playback in CD32. There are also some Action Replay and Freezer cards and the built-in");
