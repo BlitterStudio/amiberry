@@ -197,6 +197,7 @@ public:
 				disable_resume();
 			}
 			refresh_all_panels();
+			copy_prefs(&changed_prefs, &currprefs);
 			uae_reset(1, 0);
 			gui_running = false;
 		}

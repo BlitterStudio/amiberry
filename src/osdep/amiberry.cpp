@@ -1308,25 +1308,6 @@ void target_reset()
 	auto* const ad = &adisplays;
 	ad->picasso_requested_on = false;
 	ad->picasso_on = false;
-
-	if (currprefs.z3fastmem[0].size != changed_prefs.z3fastmem[0].size)
-	{
-		currprefs.z3fastmem[0].size = changed_prefs.z3fastmem[0].size;
-		z3fastmem_bank[0].reserved_size = 0;
-		z3fastmem_bank[0].mask = 0;
-		z3fastmem_bank[0].baseaddr = NULL;
-
-		mapped_free(&z3fastmem_bank[0]);
-
-		z3fastmem_bank[0].allocated_size = 0;
-		z3fastmem_bank[0].reserved_size = currprefs.z3fastmem[0].size;
-		if (currprefs.z3fastmem[0].size) return;
-
-		z3fastmem_bank[0].mask = currprefs.z3fastmem[0].size - 1;
-		z3fastmem_bank[0].label = _T("*");
-		mapped_malloc(&z3fastmem_bank[0]);
-		changed_prefs.z3fastmem[0].size = currprefs.z3fastmem[0].size;
-	}
 }
 
 bool target_can_autoswitchdevice(void)
