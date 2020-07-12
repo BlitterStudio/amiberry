@@ -362,7 +362,7 @@ void target_fixup_options(struct uae_prefs* p)
 		p->cs_cd32fmv = true;
 	}
 
-	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5 | RGBFF_R8G8B8A8;
+	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5PC | RGBFF_R8G8B8A8;
 	if (p->gfx_monitor.gfx_size.width == 0)
 		p->gfx_monitor.gfx_size.width = 720;
 	if (p->gfx_monitor.gfx_size.height == 0)
@@ -383,7 +383,7 @@ void target_fixup_options(struct uae_prefs* p)
 void target_default_options(struct uae_prefs* p, int type)
 {
 	p->fast_copper = 0;
-	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5 | RGBFF_R8G8B8A8;
+	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5PC | RGBFF_R8G8B8A8;
 
 	p->kbd_led_num = -1; // No status on numlock
 	p->kbd_led_scr = -1; // No status on scrollock

@@ -863,7 +863,7 @@ static void setconvert()
 	struct picasso96_state_struct* state = &picasso96_state;
 
 	vidinfo->picasso_convert = getconvert (state->RGBFormat, vidinfo->pixbytes);
-	vidinfo->host_mode = vidinfo->pixbytes == 4 ? RGBFB_R8G8B8A8 : RGBFB_R5G6B5;
+	vidinfo->host_mode = vidinfo->pixbytes == 4 ? RGBFB_R8G8B8A8 : RGBFB_R5G6B5PC;
 	//vidinfo->host_mode = GetSurfacePixelFormat();
 	if (vidinfo->pixbytes == 4)
 		alloc_colors_rgb(8, 8, 8, 16, 8, 0, 0, 0, 0, 0, p96rc, p96gc, p96bc);
@@ -4580,9 +4580,18 @@ static void copyall(uae_u8* src, uae_u8* dst, int pwidth, int pheight, int srcby
 {
 	struct picasso_vidbuf_description* vidinfo = &picasso_vidinfo;
 	struct picasso96_state_struct* state = &picasso96_state;
-	if (state->RGBFormat == RGBFB_R5G6B5) {
+	if (state->RGBFormat == RGBFB_R5G6B5PC) {
 		if (vidinfo->pixbytes == 2)
-			copy_screen_16bit_swap(dst, src, state->Width * state->Height * 2);
+		{
+			//copy_screen_16bit_swap(dst, src, state->Width * state->Height * 2);
+			const auto w = pwidth * vidinfo->pixbytes;
+			for (auto y = 0; y < pheight; y++)
+			{
+				memcpy(dst, src, w);
+				dst += dstbytesperrow;
+				src += srcbytesperrow;
+			}
+		}
 		else
 			copy_screen_16bit_to_32bit(dst, src, state->Width * state->Height * 2);
 	}
@@ -4608,21 +4617,6 @@ static void copyall(uae_u8* src, uae_u8* dst, int pwidth, int pheight, int srcby
 			}
 		}
 	}
-	
-	//int y, bytes;
-	//if (direct)
-	//{
-	//	auto w = pwidth * vidinfo->pixbytes;
-	//	for (y = 0; y < pheight; y++)
-	//	{
-	//		memcpy(dst, src, w);
-	//		dst += dstbytesperrow;
-	//		src += srcbytesperrow;
-	//	}
-	//} else {
-	//	for (y = 0; y < pheight; y++)
-	//		copyrow(src, dst, 0, y, pwidth, srcbytesperrow, srcpixbytes, 0, y, dstbytesperrow, dstpixbytes, direct, mode_convert, p96_rgbx16);
-	//}
 }
 
 uae_u8 *getrtgbuffer(int *widthp, int *heightp, int *pitch, int *depth, uae_u8 *palette)
