@@ -270,7 +270,7 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 
 	read_kickstart_version(p);
 
-	if (((p->chipmem_size & (p->chipmem_size - 1)) != 0 && p->chipmem_size != 0x180000)
+	if ((p->chipmem_size & p->chipmem_size - 1) != 0 && p->chipmem_size != 0x180000
 		|| p->chipmem_size < 0x20000
 		|| p->chipmem_size > 0x800000)
 	{
@@ -280,7 +280,7 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 
 	for (auto& i : p->fastmem)
 	{
-		if ((i.size & (i.size - 1)) != 0
+		if ((i.size & i.size - 1) != 0
 			|| (i.size != 0 && (i.size < 0x10000 || i.size > 0x800000)))
 		{
 			error_log(_T("Unsupported fastmem size %d (0x%x)."), i.size, i.size);
@@ -299,8 +299,7 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 			rbc->rtgmem_size = 0x1000000;
 		}
 
-		if ((rbc->rtgmem_size & (rbc->rtgmem_size - 1)) != 0 || (rbc->rtgmem_size != 0 && (rbc->rtgmem_size < 0x100000))
-		)
+		if ((rbc->rtgmem_size & rbc->rtgmem_size - 1) != 0 || rbc->rtgmem_size != 0 && rbc->rtgmem_size < 0x100000)
 		{
 			error_log(_T("Unsupported graphics card memory size %d (0x%x)."), rbc->rtgmem_size, rbc->rtgmem_size);
 			if (rbc->rtgmem_size > max_z3fastmem)
@@ -312,7 +311,7 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 
 	for (auto& i : p->z3fastmem)
 	{
-		if ((i.size & (i.size - 1)) != 0 || (i.size != 0 && i.size < 0x100000))
+		if ((i.size & i.size - 1) != 0 || i.size != 0 && i.size < 0x100000)
 		{
 			error_log(_T("Unsupported Zorro III fastmem size %d (0x%x)."), i.size, i.size);
 			i.size = 0;
@@ -327,7 +326,7 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 		error_log(_T("Zorro III fake chipmem size %d (0x%x) larger than max reserved %d (0x%x)."), p->z3chipmem_size, p->z3chipmem_size, max_z3fastmem, max_z3fastmem);
 		p->z3chipmem_size = max_z3fastmem;
 	}
-	if (((p->z3chipmem_size & (p->z3chipmem_size - 1)) != 0 && p->z3chipmem_size != 0x18000000 && p->z3chipmem_size != 0x30000000) || (p->z3chipmem_size != 0 && p->z3chipmem_size < 0x100000))
+	if ((p->z3chipmem_size & p->z3chipmem_size - 1) != 0 && p->z3chipmem_size != 0x18000000 && p->z3chipmem_size != 0x30000000 || p->z3chipmem_size != 0 && p->z3chipmem_size < 0x100000)
 	{
 		error_log(_T("Unsupported 32-bit chipmem size %d (0x%x)."), p->z3chipmem_size, p->z3chipmem_size);
 		p->z3chipmem_size = 0;
@@ -536,7 +535,7 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 	if (p->maprom && !p->address_space_24) {
 		p->maprom = 0x0f000000;
 	}
-	if (((p->maprom & 0xff000000) && p->address_space_24) || (p->maprom && p->mbresmem_high_size >= 0x08000000)) {
+	if (p->maprom & 0xff000000 && p->address_space_24 || p->maprom && p->mbresmem_high_size >= 0x08000000) {
 		p->maprom = 0x00e00000;
 	}
 	if (p->maprom && p->cpuboard_type) {
@@ -669,12 +668,12 @@ static int diskswapper_cb(struct zfile* f, void* vrsd)
 
 static void parse_diskswapper(const TCHAR* s)
 {
-	const auto tmp = my_strdup(s);
+	auto* const tmp = my_strdup(s);
 	const auto* delim = _T(",");
 	TCHAR* p2;
 	auto num = 0;
 
-	auto p1 = tmp;
+	auto* p1 = tmp;
 	for (;;) {
 		p2 = _tcstok(p1, delim);
 		if (!p2)
@@ -687,7 +686,7 @@ static void parse_diskswapper(const TCHAR* s)
 			num++;
 		}
 	}
-	free(tmp);
+	xfree(tmp);
 }
 
 static TCHAR* parse_text(const TCHAR* s)

@@ -7557,16 +7557,16 @@ static void copy_inputdevice_settings_free(struct uae_input_device *src, struct 
 
 void copy_prefs(struct uae_prefs *src, struct uae_prefs *dst)
 {
-	for (int slot = 0; slot < MAX_INPUT_SETTINGS; slot++) {
-		for (int m = 0; m < MAX_INPUT_DEVICES; m++) {
+	for (auto slot = 0; slot < MAX_INPUT_SETTINGS; slot++) {
+		for (auto m = 0; m < MAX_INPUT_DEVICES; m++) {
 			copy_inputdevice_settings_free(&src->joystick_settings[slot][m], &dst->joystick_settings[slot][m]);
 			copy_inputdevice_settings_free(&src->mouse_settings[slot][m], &dst->mouse_settings[slot][m]);
 			copy_inputdevice_settings_free(&src->keyboard_settings[slot][m], &dst->keyboard_settings[slot][m]);
 		}
 	}
 	memcpy(dst, src, sizeof(struct uae_prefs));
-	for (int slot = 0; slot < MAX_INPUT_SETTINGS; slot++) {
-		for (int m = 0; m < MAX_INPUT_DEVICES; m++) {
+	for (auto slot = 0; slot < MAX_INPUT_SETTINGS; slot++) {
+		for (auto m = 0; m < MAX_INPUT_DEVICES; m++) {
 			copy_inputdevice_settings(&src->joystick_settings[slot][m], &dst->joystick_settings[slot][m]);
 			copy_inputdevice_settings(&src->mouse_settings[slot][m], &dst->mouse_settings[slot][m]);
 			copy_inputdevice_settings(&src->keyboard_settings[slot][m], &dst->keyboard_settings[slot][m]);
