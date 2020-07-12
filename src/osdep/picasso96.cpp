@@ -71,6 +71,11 @@
 #define CURSORMAXHEIGHT 128
 static const int default_freq = 60;
 
+#ifdef AMIBERRY
+SDL_Cursor* p96_cursor;
+SDL_Surface* p96_cursor_surface;
+#endif
+
 typedef int CRITICAL_SECTION;
 
 static void InitializeCriticalSection(CRITICAL_SECTION*)
@@ -606,9 +611,11 @@ static void disablemouse()
 	cursordeactivate = 0;
 	if (!hwsprite)
 		return;
-	if (!currprefs.gfx_api)
-		return;
+	//if (!currprefs.gfx_api)
+		//return;
 #ifdef AMIBERRY
+	if (p96_cursor)
+		SDL_FreeCursor(p96_cursor);
 #else
 	D3D_setcursor(0, 0, 0, 0, 0, false, true);
 #endif
@@ -631,9 +638,10 @@ static void mouseupdate()
 		}
 	}
 
-	if (!currprefs.gfx_api)
-		return;
+	//if (!currprefs.gfx_api)
+		//return;
 #ifdef AMIBERRY
+	SDL_WarpMouseInWindow(sdl_window, x, y);
 #else
 	if (currprefs.gf[1].gfx_filter_autoscale == RTG_MODE_CENTER) {
 		D3D_setcursor(mon->monitor_id, x, y, WIN32GFX_GetWidth(mon), WIN32GFX_GetHeight(mon), cursorvisible, mon->scalepicasso == 2);
@@ -1413,16 +1421,16 @@ d7: RGBFTYPE RGBFormat
 */
 static uae_u32 REGPARAM2 picasso_SetSpritePosition(TrapContext* ctx)
 {
-	//struct picasso96_state_struct* state = &picasso96_state;
+	struct picasso96_state_struct* state = &picasso96_state;
 	uaecptr bi = trap_get_areg(ctx, 0);
 	boardinfo = bi;
-	//int x = (uae_s16)trap_get_word(ctx, bi + PSSO_BoardInfo_MouseX) - state->XOffset;
-	//int y = (uae_s16)trap_get_word(ctx, bi + PSSO_BoardInfo_MouseY) - state->YOffset;
-	//newcursor_x = x;
-	//newcursor_y = y;
-	//if (!hwsprite)
+	int x = (uae_s16)trap_get_word(ctx, bi + PSSO_BoardInfo_MouseX) - state->XOffset;
+	int y = (uae_s16)trap_get_word(ctx, bi + PSSO_BoardInfo_MouseY) - state->YOffset;
+	newcursor_x = x;
+	newcursor_y = y;
+	if (!hwsprite)
 		return 0;
-	//return 1;
+	return 1;
 }
 
 
@@ -1441,18 +1449,18 @@ This function changes one of the possible three colors of the hardware sprite.
 static uae_u32 REGPARAM2 picasso_SetSpriteColor(TrapContext* ctx)
 {
 	uaecptr bi = trap_get_areg(ctx, 0);
-	//uae_u8 idx = trap_get_dreg(ctx, 0);
-	//uae_u8 red = trap_get_dreg(ctx, 1);
-	//uae_u8 green = trap_get_dreg(ctx, 2);
-	//uae_u8 blue = trap_get_dreg(ctx, 3);
+	uae_u8 idx = trap_get_dreg(ctx, 0);
+	uae_u8 red = trap_get_dreg(ctx, 1);
+	uae_u8 green = trap_get_dreg(ctx, 2);
+	uae_u8 blue = trap_get_dreg(ctx, 3);
 	boardinfo = bi;
-	//idx++;
-	//if (!hwsprite)
+	idx++;
+	if (!hwsprite)
 		return 0;
-	//if (idx >= 4)
-		//return 0;
-	//cursorrgb[idx] = (red << 16) | (green << 8) | (blue << 0);
-	//return 1;
+	if (idx >= 4)
+		return 0;
+	cursorrgb[idx] = (red << 16) | (green << 8) | (blue << 0);
+	return 1;
 }
 
 STATIC_INLINE uae_u16 rgb32torgb16pc(uae_u32 rgb)
@@ -1498,6 +1506,7 @@ STATIC_INLINE void putmousepixel(uae_u8* d, int bpp, int idx)
 }
 
 #ifdef AMIBERRY
+
 #else
 static void putwinmousepixel(HDC andDC, HDC xorDC, int x, int y, int c, uae_u32* ct)
 {
@@ -1695,7 +1704,9 @@ exit:
 int picasso_setwincursor(int monid)
 {
 #ifdef AMIBERRY
-
+	if (p96_cursor)
+		SDL_SetCursor(p96_cursor);
+	return 1;
 #else
 	struct amigadisplay* ad = &adisplays[monid];
 	if (wincursor) {
@@ -1818,8 +1829,7 @@ static uae_u32 REGPARAM2 picasso_SetSpriteImage(TrapContext* ctx)
 {
 	uaecptr bi = trap_get_areg(ctx, 0);
 	boardinfo = bi;
-	//return setspriteimage(ctx, bi);
-	return 0;
+	return setspriteimage(ctx, bi);
 }
 
 /*
@@ -1833,19 +1843,19 @@ This function activates or deactivates the hardware sprite.
 */
 static uae_u32 REGPARAM2 picasso_SetSprite(TrapContext* ctx)
 {
-	//uae_u32 result = 0;
-	//uae_u32 activate = trap_get_dreg(ctx, 0);
-	//if (!hwsprite)
+	uae_u32 result = 0;
+	uae_u32 activate = trap_get_dreg(ctx, 0);
+	if (!hwsprite)
 		return 0;
-	//if (activate) {
-		//picasso_SetSpriteImage(ctx);
-		//cursorvisible = true;
-	//} else {
-		//cursordeactivate = 2;
-	//}
-	//result = 1;
+	if (activate) {
+		picasso_SetSpriteImage(ctx);
+		cursorvisible = true;
+	} else {
+		cursordeactivate = 2;
+	}
+	result = 1;
 
-	//return result;
+	return result;
 }
 
 /*
