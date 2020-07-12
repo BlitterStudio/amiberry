@@ -4580,41 +4580,23 @@ static void copyall(uae_u8* src, uae_u8* dst, int pwidth, int pheight, int srcby
 {
 	struct picasso_vidbuf_description* vidinfo = &picasso_vidinfo;
 	struct picasso96_state_struct* state = &picasso96_state;
-	if (state->RGBFormat == RGBFB_R5G6B5PC) {
-		if (vidinfo->pixbytes == 2)
-		{
-			//copy_screen_16bit_swap(dst, src, state->Width * state->Height * 2);
-			const auto w = pwidth * vidinfo->pixbytes;
-			for (auto y = 0; y < pheight; y++)
-			{
-				memcpy(dst, src, w);
-				dst += dstbytesperrow;
-				src += srcbytesperrow;
-			}
-		}
-		else
-			copy_screen_16bit_to_32bit(dst, src, state->Width * state->Height * 2);
-	}
-	else if (state->RGBFormat == RGBFB_CLUT) {
+	if (state->RGBFormat == RGBFB_CLUT) 
+	{
 		const auto pixels = state->Width * state->Height;
 		if (vidinfo->pixbytes == 2)
 			copy_screen_8bit_to_16bit(dst, src, pixels, vidinfo->clut);
 		else
 			copy_screen_8bit_to_32bit(dst, src, pixels, vidinfo->clut);
 	}
-	else {
-		if (vidinfo->pixbytes == 2)
-			copy_screen_32bit_to_16bit(dst, src, state->Width * state->Height * 4);
-		else
+	else
+	{
+		// 16-bit and 32-bit modes are direct
+		const auto w = pwidth * vidinfo->pixbytes;
+		for (auto y = 0; y < pheight; y++)
 		{
-			//copy_screen_32bit_to_32bit(dst, src, state->Width * state->Height * 4);
-			const auto w = pwidth * vidinfo->pixbytes;
-			for (auto y = 0; y < pheight; y++)
-			{
-				memcpy(dst, src, w);
-				dst += dstbytesperrow;
-				src += srcbytesperrow;
-			}
+			memcpy(dst, src, w);
+			dst += dstbytesperrow;
+			src += srcbytesperrow;
 		}
 	}
 }
