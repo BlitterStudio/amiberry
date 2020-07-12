@@ -1648,78 +1648,79 @@ static bool mapped_malloc_dynamic (uae_u32 *currpsize, uae_u32 *changedpsize, ad
 	return false;
 }
 
-static void allocate_expamem (void)
+static void allocate_expamem(void)
 {
 	for (int i = 0; i < MAX_RTG_BOARDS; i++) {
 		memcpy(&currprefs.rtgboards[i], &changed_prefs.rtgboards[i], sizeof(struct rtgboardconfig));
 	}
 
 	for (int i = 0; i < MAX_RAM_BOARDS; i++) {
-    currprefs.fastmem[i].size = changed_prefs.fastmem[i].size;
-    currprefs.z3fastmem[i].size = changed_prefs.z3fastmem[i].size;
-  }
+		currprefs.fastmem[i].size = changed_prefs.fastmem[i].size;
+		currprefs.z3fastmem[i].size = changed_prefs.z3fastmem[i].size;
+	}
 
 	for (int i = 0; i < MAX_RAM_BOARDS; i++) {
-    if (fastmem_bank[i].reserved_size != currprefs.fastmem[i].size) {
-      free_fastmemory (i);
+		if (fastmem_bank[i].reserved_size != currprefs.fastmem[i].size) {
+			free_fastmemory(i);
 
 			if (fastmem_bank[i].start == 0xffffffff) {
 				fastmem_bank[i].reserved_size = 0;
-			} else {
-      	fastmem_bank[i].reserved_size = currprefs.fastmem[i].size;
-		    fastmem_bank[i].mask = fastmem_bank[i].reserved_size - 1;
-      	if (fastmem_bank[i].reserved_size && fastmem_bank[i].start != 0xffffffff) {
-			    mapped_malloc (&fastmem_bank[i]);
-      		if (fastmem_bank[i].baseaddr == 0) {
-      			write_log (_T("Out of memory for fastmem card.\n"));
-      		}
-      	}
 			}
-      memory_hardreset(1);
-    }
-  }
+			else {
+				fastmem_bank[i].reserved_size = currprefs.fastmem[i].size;
+				fastmem_bank[i].mask = fastmem_bank[i].reserved_size - 1;
+				if (fastmem_bank[i].reserved_size && fastmem_bank[i].start != 0xffffffff) {
+					mapped_malloc(&fastmem_bank[i]);
+					if (fastmem_bank[i].baseaddr == 0) {
+						write_log(_T("Out of memory for fastmem card.\n"));
+					}
+				}
+			}
+			memory_hardreset(1);
+		}
+	}
 
-  if (z3fastmem_bank[0].reserved_size != currprefs.z3fastmem[0].size) {
-		mapped_free (&z3fastmem_bank[0]);
-		mapped_malloc_dynamic (&currprefs.z3fastmem[0].size, &changed_prefs.z3fastmem[0].size, &z3fastmem_bank[0], 1, _T("*"));
-    memory_hardreset(1);
-  }
+	if (z3fastmem_bank[0].reserved_size != currprefs.z3fastmem[0].size) {
+		mapped_free(&z3fastmem_bank[0]);
+		mapped_malloc_dynamic(&currprefs.z3fastmem[0].size, &changed_prefs.z3fastmem[0].size, &z3fastmem_bank[0], 1, _T("*"));
+		memory_hardreset(1);
+	}
 
 #ifdef PICASSO96
-	struct rtgboardconfig *rbc = &currprefs.rtgboards[0];
+	struct rtgboardconfig* rbc = &currprefs.rtgboards[0];
 	if (gfxmem_banks[0]->reserved_size != rbc->rtgmem_size) {
-		mapped_free (gfxmem_banks[0]);
-		mapped_malloc_dynamic (&rbc->rtgmem_size, &changed_prefs.rtgboards[0].rtgmem_size, gfxmem_banks[0], 1, NULL);
-    memory_hardreset(1);
-  }
+		mapped_free(gfxmem_banks[0]);
+		mapped_malloc_dynamic(&rbc->rtgmem_size, &changed_prefs.rtgboards[0].rtgmem_size, gfxmem_banks[0], 1, NULL);
+		memory_hardreset(1);
+	}
 #endif
 
 #ifdef SAVESTATE
-  if (savestate_state == STATE_RESTORE) {
+	if (savestate_state == STATE_RESTORE) {
 		for (int i = 0; i < MAX_RAM_BOARDS; i++) {
-    	if (fastmem_bank[i].allocated_size > 0) {
-				restore_ram (fast_filepos[i], fastmem_bank[i].baseaddr);
-			  if (!fastmem_bank[i].start) {
-				  // old statefile compatibility support
-				  fastmem_bank[i].start = 0x00200000;
-			  }
-    		map_banks (&fastmem_bank[i], fastmem_bank[i].start >> 16, currprefs.fastmem[i].size >> 16,
-    			fastmem_bank[i].allocated_size);
-    	}
-    	if (z3fastmem_bank[i].allocated_size > 0) {
-				restore_ram (z3_filepos[i], z3fastmem_bank[i].baseaddr);
-    		map_banks (&z3fastmem_bank[i], z3fastmem_bank[i].start >> 16, currprefs.z3fastmem[i].size >> 16,
-    			z3fastmem_bank[i].allocated_size);
-    	}
-    }
+			if (fastmem_bank[i].allocated_size > 0) {
+				restore_ram(fast_filepos[i], fastmem_bank[i].baseaddr);
+				if (!fastmem_bank[i].start) {
+					// old statefile compatibility support
+					fastmem_bank[i].start = 0x00200000;
+				}
+				map_banks(&fastmem_bank[i], fastmem_bank[i].start >> 16, currprefs.fastmem[i].size >> 16,
+					fastmem_bank[i].allocated_size);
+			}
+			if (z3fastmem_bank[i].allocated_size > 0) {
+				restore_ram(z3_filepos[i], z3fastmem_bank[i].baseaddr);
+				map_banks(&z3fastmem_bank[i], z3fastmem_bank[i].start >> 16, currprefs.z3fastmem[i].size >> 16,
+					z3fastmem_bank[i].allocated_size);
+			}
+		}
 #ifdef PICASSO96
 		if (gfxmem_banks[0]->allocated_size > 0 && gfxmem_banks[0]->start > 0) {
-			restore_ram (p96_filepos, gfxmem_banks[0]->baseaddr);
+			restore_ram(p96_filepos, gfxmem_banks[0]->baseaddr);
 			map_banks(gfxmem_banks[0], gfxmem_banks[0]->start >> 16, currprefs.rtgboards[0].rtgmem_size >> 16,
 				gfxmem_banks[0]->allocated_size);
-  	}
+		}
 #endif
-  }
+	}
 #endif /* SAVESTATE */
 }
 
