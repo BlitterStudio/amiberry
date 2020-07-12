@@ -27,6 +27,8 @@
 #endif
 #endif
 
+#include "gfxboard.h"
+#include "statusline.h"
 #include "threaddep/thread.h"
 static uae_thread_id display_tid = nullptr;
 static smp_comm_pipe *volatile display_pipe = nullptr;
@@ -588,6 +590,12 @@ void allocsoftbuffer(struct vidbuffer* buf, int width, int height, int depth)
 	buf->pixbytes = screen->format->BytesPerPixel;
 	buf->width_allocated = (width + 7) & ~7;
 	buf->height_allocated = height;
+
+	buf->outwidth = buf->width_allocated;
+	buf->outheight = buf->height_allocated;
+	buf->inwidth = buf->width_allocated;
+	buf->inheight = buf->height_allocated;
+	
 	buf->rowbytes = screen->pitch;
 	buf->realbufmem = static_cast<uae_u8*>(screen->pixels);
 	buf->bufmem_allocated = buf->bufmem = buf->realbufmem;
@@ -1565,6 +1573,8 @@ void gfx_set_picasso_state(int on)
 	if (screen_is_picasso == on)
 		return;
 	screen_is_picasso = on;
+
+	black_screen_now();
 	open_screen(&currprefs);
 }
 
@@ -1586,8 +1596,8 @@ void gfx_set_picasso_modeinfo(uae_u32 w, uae_u32 h, uae_u32 depth, RGBFTYPE rgbf
 	picasso_vidinfo.height = h;
 	picasso_vidinfo.depth = depth;
 	picasso_vidinfo.extra_mem = 1;
-	picasso_vidinfo.rowbytes = static_cast<int>(w * (depth / 8));
-	picasso_vidinfo.pixbytes = static_cast<int>(depth / 8);
+	picasso_vidinfo.rowbytes = screen->pitch;
+	picasso_vidinfo.pixbytes = screen->format->BytesPerPixel;
 	picasso_vidinfo.offset = 0;
 
 	if (screen_is_picasso)

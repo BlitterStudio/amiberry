@@ -23,6 +23,7 @@ extern VC_RECT_T black_rect;
 extern VC_IMAGE_TYPE_T rgb_mode;
 extern void change_layer_number(int layer);
 #else
+extern SDL_Surface* screen;
 extern SDL_Texture* texture;
 extern SDL_Cursor* cursor;
 extern SDL_Texture* gui_texture;
