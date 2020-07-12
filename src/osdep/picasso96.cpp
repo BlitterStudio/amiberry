@@ -1869,7 +1869,7 @@ static uae_u32 REGPARAM2 picasso_FindCard(TrapContext* ctx)
 	uaecptr AmigaBoardInfo = trap_get_areg(ctx, 0);
 	struct picasso96_state_struct* state = &picasso96_state;
 	/* NOTES: See BoardInfo struct definition in Picasso96 dev info */
-	if (!uaegfx_active || !(gfxmem_bank.flags & ABFLAG_MAPPED))
+	if (!uaegfx_active || !gfxmem_bank.start)
 		return 0;
 	if (uaegfx_base) {
 		trap_put_long(ctx, uaegfx_base + CARD_BOARDINFO, AmigaBoardInfo);
@@ -2428,7 +2428,7 @@ static uae_u32 REGPARAM2 picasso_SetSwitch(TrapContext* ctx)
 
 void picasso_enablescreen(int on)
 {
-	bool uaegfx = currprefs.rtgboards[0].rtgmem_type < GFXBOARD_HARDWARE && currprefs.rtgboards[0].rtgmem_size;
+	bool uaegfx = currprefs.rtgboards[0].rtgmem_size;
 	bool uaegfx_active = is_uaegfx_active();
 
 	if (uaegfx_active && uaegfx) {
@@ -2459,7 +2459,6 @@ static void resetpalette(struct picasso96_state_struct *state)
 */
 static int updateclut(TrapContext* ctx, uaecptr clut, int start, int count)
 {
-	bool uaegfx = currprefs.rtgboards[0].rtgmem_type < GFXBOARD_HARDWARE && currprefs.rtgboards[0].rtgmem_size;
 	struct picasso96_state_struct *state = &picasso96_state;
 	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo;
 	uae_u8 clutbuf[256 * 3];
@@ -4813,7 +4812,6 @@ static int render_thread(void* v)
 	return 0;
 }
 
-extern addrbank gfxmem_bank;
 MEMORY_FUNCTIONS(gfxmem);
 addrbank gfxmem_bank = {
 	gfxmem_lget, gfxmem_wget, gfxmem_bget,
@@ -5547,7 +5545,7 @@ static void picasso_reset(int hardreset)
 	//unlockrtg();
 }
 
-static void picasso_free(void)
+static void picasso_free()
 {
 	if (render_thread_state > 0) {
 		write_comm_pipe_int(render_pipe, -1, 0);
@@ -5596,7 +5594,7 @@ static uaecptr uaegfx_card_install(TrapContext* ctx, uae_u32 extrasize)
 	uaecptr findcardfunc, initcardfunc;
 	uaecptr exec = trap_get_long(ctx, 4);
 
-	if (uaegfx_old || !(gfxmem_bank.flags & ABFLAG_MAPPED))
+	if (uaegfx_old || !gfxmem_bank.start)
 		return 0;
 
 	uaegfx_resid = ds (_T("UAE Graphics Card 3.4"));
