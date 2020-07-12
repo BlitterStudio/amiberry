@@ -306,7 +306,7 @@ void RefreshPanelRAM()
 		}
 	}
 
-	if (changed_prefs.address_space_24 || emulating)
+	if (changed_prefs.address_space_24)
 	{
 		// Disable Z3 and RTG memory
 		sldZ3mem->setEnabled(false);
