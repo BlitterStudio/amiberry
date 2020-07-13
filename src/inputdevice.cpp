@@ -7065,7 +7065,7 @@ void inputdevice_default_prefs (struct uae_prefs *p)
 	p->input_analog_joystick_mult = 15;
 	p->input_analog_joystick_offset = -1;
 	p->input_mouse_speed = amiberry_options.input_default_mouse_speed;
-	p->input_autofire_linecnt = 0; //8 * 312; // Disable Autofire by default
+	p->input_autofire_linecnt = 600;
 	p->input_keyboard_type = 0;
 	p->input_autoswitch = true;
 	p->input_device_match_mask = -1;

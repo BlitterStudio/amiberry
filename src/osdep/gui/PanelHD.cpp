@@ -398,19 +398,19 @@ void InitPanelHD(const struct _ConfigCategory& category)
 
 	cmdAddDirectory = new gcn::Button("Add Directory");
 	cmdAddDirectory->setBaseColor(gui_baseCol);
-	cmdAddDirectory->setSize(cmdAddDirectory->getWidth(), BUTTON_HEIGHT);
+	cmdAddDirectory->setSize(cmdAddDirectory->getWidth() + 10, BUTTON_HEIGHT);
 	cmdAddDirectory->setId("cmdAddDir");
 	cmdAddDirectory->addActionListener(addVirtualHDActionListener);
 
 	cmdAddHardfile = new gcn::Button("Add Hardfile");
 	cmdAddHardfile->setBaseColor(gui_baseCol);
-	cmdAddHardfile->setSize(cmdAddHardfile->getWidth(), BUTTON_HEIGHT);
+	cmdAddHardfile->setSize(cmdAddHardfile->getWidth() + 10, BUTTON_HEIGHT);
 	cmdAddHardfile->setId("cmdAddHDF");
 	cmdAddHardfile->addActionListener(addHardfileActionListener);
 
 	cmdCreateHardfile = new gcn::Button("Create Hardfile");
 	cmdCreateHardfile->setBaseColor(gui_baseCol);
-	cmdCreateHardfile->setSize(cmdCreateHardfile->getWidth(), BUTTON_HEIGHT);
+	cmdCreateHardfile->setSize(cmdCreateHardfile->getWidth() + 10, BUTTON_HEIGHT);
 	cmdCreateHardfile->setId("cmdCreateHDF");
 	cmdCreateHardfile->addActionListener(createHardfileActionListener);
 
@@ -492,7 +492,7 @@ void InitPanelHD(const struct _ConfigCategory& category)
 	posY += cmdAddDirectory->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(chkHDReadOnly, DISTANCE_BORDER, posY);
-	category.panel->add(chkScsi, cmdCreateHardfile->getX() + cmdCreateHardfile->getWidth(), posY);
+	category.panel->add(chkScsi, chkHDReadOnly->getX() + chkHDReadOnly->getWidth() + DISTANCE_NEXT_X * 3, posY);
 	posY += chkHDReadOnly->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(chkCD, DISTANCE_BORDER, posY + 2);

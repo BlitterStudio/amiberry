@@ -197,44 +197,44 @@ void InitPanelRAM(const struct _ConfigCategory& category)
 	grpRAM->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
 
 	int posY = 10;
-	grpRAM->add(lblChipmem, 8, posY);
+	grpRAM->add(lblChipmem, 10, posY);
 	grpRAM->add(sldChipmem, lblA3000Lowmem->getWidth() + DISTANCE_NEXT_Y, posY);
 	grpRAM->add(lblChipsize, lblA3000Lowmem->getWidth() + DISTANCE_NEXT_Y + sldChipmem->getWidth() + 12, posY);
 	posY += sldChipmem->getHeight() + DISTANCE_NEXT_Y;
 
-	grpRAM->add(lblSlowmem, 8, posY);
+	grpRAM->add(lblSlowmem, 10, posY);
 	grpRAM->add(sldSlowmem, lblA3000Lowmem->getWidth() + DISTANCE_NEXT_Y, posY);
 	grpRAM->add(lblSlowsize, lblA3000Lowmem->getWidth() + DISTANCE_NEXT_Y + sldSlowmem->getWidth() + 12, posY);
 	posY += sldSlowmem->getHeight() + DISTANCE_NEXT_Y;
 
-	grpRAM->add(lblFastmem, 8, posY);
+	grpRAM->add(lblFastmem, 10, posY);
 	grpRAM->add(sldFastmem, lblA3000Lowmem->getWidth() + DISTANCE_NEXT_Y, posY);
 	grpRAM->add(lblFastsize, lblA3000Lowmem->getWidth() + DISTANCE_NEXT_Y + sldFastmem->getWidth() + 12, posY);
 	posY += sldFastmem->getHeight() + DISTANCE_NEXT_Y;
 
-	grpRAM->add(lblZ3mem, 8, posY);
+	grpRAM->add(lblZ3mem, 10, posY);
 	grpRAM->add(sldZ3mem, lblA3000Lowmem->getWidth() + DISTANCE_NEXT_Y, posY);
 	grpRAM->add(lblZ3size, lblA3000Lowmem->getWidth() + DISTANCE_NEXT_Y + sldZ3mem->getWidth() + 12, posY);
 	posY += sldZ3mem->getHeight() + DISTANCE_NEXT_Y;
 
-	grpRAM->add(lblGfxmem, 8, posY);
+	grpRAM->add(lblGfxmem, 10, posY);
 	grpRAM->add(sldGfxmem, lblA3000Lowmem->getWidth() + DISTANCE_NEXT_Y, posY);
 	grpRAM->add(lblGfxsize, lblA3000Lowmem->getWidth() + DISTANCE_NEXT_Y + sldGfxmem->getWidth() + 12, posY);
 	posY += sldGfxmem->getHeight() + DISTANCE_NEXT_Y;
 
-	grpRAM->add(lblA3000Lowmem, 8, posY);
+	grpRAM->add(lblA3000Lowmem, 10, posY);
 	grpRAM->add(sldA3000Lowmem, lblA3000Lowmem->getWidth() + DISTANCE_NEXT_Y, posY);
 	grpRAM->add(lblA3000Lowsize, lblA3000Lowmem->getWidth() + DISTANCE_NEXT_Y + sldA3000Lowmem->getWidth() + 12, posY);
 	posY += sldA3000Lowmem->getHeight() + DISTANCE_NEXT_Y;
 
-	grpRAM->add(lblA3000Highmem, 8, posY);
+	grpRAM->add(lblA3000Highmem, 10, posY);
 	grpRAM->add(sldA3000Highmem, lblA3000Lowmem->getWidth() + DISTANCE_NEXT_Y, posY);
 	grpRAM->add(lblA3000Highsize, lblA3000Lowmem->getWidth() + DISTANCE_NEXT_Y + sldA3000Highmem->getWidth() + 12,
 	            posY);
 	posY += sldA3000Highmem->getHeight() + DISTANCE_NEXT_Y;
 
 	grpRAM->setMovable(false);
-	grpRAM->setSize(400, posY + DISTANCE_BORDER * 2);
+	grpRAM->setSize(375, posY + DISTANCE_BORDER * 2);
 	grpRAM->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpRAM->setBaseColor(gui_baseCol);
 

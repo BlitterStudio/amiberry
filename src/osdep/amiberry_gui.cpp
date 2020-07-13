@@ -387,21 +387,6 @@ static void gui_to_prefs(void)
 
 static void after_leave_gui()
 {
-	// Check if we have to set or clear autofire
-	const auto new_af = changed_prefs.input_autofire_linecnt == 0 ? 0 : 1;
-	auto update = 0;
-
-	for (auto num = 0; num < 2; ++num)
-	{
-		if (changed_prefs.jports[num].id < JSEM_MICE && changed_prefs.jports[num].autofire != new_af)
-		{
-			changed_prefs.jports[num].autofire = new_af;
-			update = 1;
-		}
-	}
-	if (update)
-		inputdevice_updateconfig(nullptr, &changed_prefs);
-
 	inputdevice_copyconfig(&changed_prefs, &currprefs);
 	inputdevice_config_change_test();
 }

@@ -377,23 +377,23 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 
 	grpPort = new gcn::Window("Joystick Port");
 	grpPort->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
-	grpPort->add(optPort0, 10, 5);
-	grpPort->add(optPort1, 150, 5);
-	grpPort->add(optPort2, 290, 5);
-	grpPort->add(optPort3, 430, 5);
-	grpPort->setSize(580, 50);
+	grpPort->add(optPort0, 10, 10);
+	grpPort->add(optPort1, optPort0->getX() + optPort0->getWidth() + DISTANCE_NEXT_X, optPort0->getY());
+	grpPort->add(optPort2, optPort1->getX() + optPort1->getWidth() + DISTANCE_NEXT_X, optPort0->getY());
+	grpPort->add(optPort3, optPort2->getX() + optPort2->getWidth() + DISTANCE_NEXT_X, optPort0->getY());
+	grpPort->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, TITLEBAR_HEIGHT + optPort0->getHeight() * 3);
 	grpPort->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpPort->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpPort);
 
 	grpFunction = new gcn::Window("Function Key");
-	grpFunction->setPosition(DISTANCE_BORDER, 75);
-	grpFunction->add(optMultiNone, 10, 5);
-	grpFunction->add(optMultiSelect, 150, 5);
+	grpFunction->setPosition(DISTANCE_BORDER, grpPort->getY() + grpPort->getHeight() + DISTANCE_NEXT_Y);
+	grpFunction->add(optMultiNone, 10, 10);
+	grpFunction->add(optMultiSelect, optMultiNone->getX() + optMultiNone->getWidth() + DISTANCE_NEXT_X, optMultiNone->getY());
 	//	grpFunction->add(optMultiLeft,   290, 5);
 	//	grpFunction->add(optMultiRight,  430, 5);
-	grpFunction->setSize(580, 50);
+	grpFunction->setSize(grpPort->getWidth(), grpPort->getHeight());
 	grpFunction->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpFunction->setBaseColor(gui_baseCol);
 
@@ -446,7 +446,12 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 		cboCustomAction[i]->addActionListener(customActionListener);
 	}
 
-	auto posY = 144 + 40;
+	auto posY = grpFunction->getY() + grpFunction->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(lblPortInput, DISTANCE_BORDER, posY);
+	category.panel->add(txtPortInput, lblPortInput->getX() + lblPortInput->getWidth() + DISTANCE_NEXT_X, posY);
+	category.panel->add(lblRetroarch, txtPortInput->getX() + txtPortInput->getWidth() + DISTANCE_NEXT_X, posY);
+	posY = txtPortInput->getY() + txtPortInput->getHeight() + DISTANCE_NEXT_Y * 2;
+	
 	for (i = 0; i < 7; ++i)
 	{
 		category.panel->add(lblCustomAction[i], DISTANCE_BORDER / 2, posY);
@@ -454,7 +459,7 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 		posY = posY + DROPDOWN_HEIGHT + 6;
 	}
 
-	posY = 144 + 40;
+	posY = txtPortInput->getY() + txtPortInput->getHeight() + DISTANCE_NEXT_Y * 2;
 	for (i = 7; i < 14; ++i)
 	{
 		category.panel->add(lblCustomAction[i], DISTANCE_BORDER + 290, posY);
@@ -464,10 +469,6 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 
 	category.panel->add(chkAnalogRemap, DISTANCE_BORDER + lblCustomAction[0]->getWidth(), posY);
 	posY += chkAnalogRemap->getHeight() + DISTANCE_NEXT_Y;
-
-	category.panel->add(lblPortInput, DISTANCE_BORDER, 144);
-	category.panel->add(txtPortInput, lblPortInput->getX() + lblPortInput->getWidth() + DISTANCE_NEXT_X, 144);
-	category.panel->add(lblRetroarch, txtPortInput->getX() + txtPortInput->getWidth() + DISTANCE_NEXT_X, 144);
 
 	// optMultiLeft->setEnabled(false);
 	// optMultiRight->setEnabled(false);

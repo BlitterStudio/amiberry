@@ -809,7 +809,7 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 		cmdDFxEject[i]->addActionListener(dfxButtonActionListener);
 
 		cmdDFxSelect[i] = new gcn::Button("Select file");
-		cmdDFxSelect[i]->setSize(BUTTON_WIDTH + 8, SMALL_BUTTON_HEIGHT);
+		cmdDFxSelect[i]->setSize(BUTTON_WIDTH + 10, SMALL_BUTTON_HEIGHT);
 		cmdDFxSelect[i]->setBaseColor(gui_baseCol);
 		snprintf(tmp, 20, "qscmdSel%d", i);
 		cmdDFxSelect[i]->setId(tmp);
@@ -887,16 +887,12 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 
 	for (auto i = 0; i < 2; ++i)
 	{
-		auto posX = DISTANCE_BORDER;
-		category.panel->add(chkDFx[i], posX, posY);
-		posX += DISTANCE_NEXT_X * 12;
-		category.panel->add(chkDFxWriteProtect[i], posX, posY);
-		posX += DISTANCE_NEXT_X * 13;
+		category.panel->add(chkDFx[i], DISTANCE_BORDER, posY);
+		category.panel->add(chkDFxWriteProtect[i], DISTANCE_BORDER + DISTANCE_NEXT_X * 8, posY);
 		//	  category.panel->add(cmdDFxInfo[i], posX, posY);
 		//posX += cmdDFxInfo[i]->getWidth() + DISTANCE_NEXT_X;
-		category.panel->add(cmdDFxEject[i], posX, posY);
-		posX += cmdDFxEject[i]->getWidth() + DISTANCE_NEXT_X;
-		category.panel->add(cmdDFxSelect[i], posX, posY);
+		category.panel->add(cmdDFxEject[i], DISTANCE_BORDER + DISTANCE_NEXT_X * 26, posY);
+		category.panel->add(cmdDFxSelect[i], cmdDFxEject[i]->getX() + cmdDFxEject[i]->getWidth() + DISTANCE_NEXT_X, posY);
 		posY += cmdDFxEject[i]->getHeight() + 8;
 
 		category.panel->add(cboDFxFile[i], DISTANCE_BORDER, posY);

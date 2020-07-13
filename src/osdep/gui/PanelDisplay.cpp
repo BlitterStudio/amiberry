@@ -229,7 +229,7 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	lblScreenmode = new gcn::Label("Screen mode:");
 	lblScreenmode->setAlignment(gcn::Graphics::RIGHT);
 	cboScreenmode = new gcn::DropDown(&fullscreen_modes_list);
-	cboScreenmode->setSize(100, cboScreenmode->getHeight());
+	cboScreenmode->setSize(125, cboScreenmode->getHeight());
 	cboScreenmode->setBaseColor(gui_baseCol);
 	cboScreenmode->setBackgroundColor(colTextboxBackground);
 	cboScreenmode->setId("cboScreenmode");
@@ -290,7 +290,7 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	grpScalingMethod->add(optNearest, 5, 40);
 	grpScalingMethod->add(optLinear, 5, 70);
 	grpScalingMethod->setMovable(false);
-	grpScalingMethod->setSize(optNearest->getWidth() + DISTANCE_BORDER,
+	grpScalingMethod->setSize(grpAmigaScreen->getWidth(),
 	                          optLinear->getY() + optLinear->getHeight() + DISTANCE_BORDER * 3);
 	grpScalingMethod->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpScalingMethod->setBaseColor(gui_baseCol);
@@ -319,7 +319,7 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	grpLineMode->add(optDouble, 5, 40);
 	grpLineMode->add(optScanlines, 5, 70);
 	grpLineMode->setMovable(false);
-	grpLineMode->setSize(optScanlines->getWidth() + DISTANCE_BORDER,
+	grpLineMode->setSize(grpCentering->getWidth(),
 	                     optScanlines->getY() + optScanlines->getHeight() + DISTANCE_BORDER * 3);
 	grpLineMode->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpLineMode->setBaseColor(gui_baseCol);

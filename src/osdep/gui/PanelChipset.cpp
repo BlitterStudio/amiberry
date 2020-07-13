@@ -223,7 +223,7 @@ void InitPanelChipset(const struct _ConfigCategory& category)
 	lblChipset = new gcn::Label("Extra:");
 	lblChipset->setAlignment(gcn::Graphics::RIGHT);
 	cboChipset = new gcn::DropDown(&chipsetList);
-	cboChipset->setSize(75, cboChipset->getHeight());
+	cboChipset->setSize(100, cboChipset->getHeight());
 	cboChipset->setBaseColor(gui_baseCol);
 	cboChipset->setBackgroundColor(colTextboxBackground);
 	cboChipset->setId("ChipsetExtra");
@@ -231,16 +231,16 @@ void InitPanelChipset(const struct _ConfigCategory& category)
 
 	grpChipset = new gcn::Window("Chipset");
 	grpChipset->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
-	grpChipset->add(optOCS, 5, 10);
-	grpChipset->add(optECSAgnus, 5, 40);
-	grpChipset->add(optECS, 5, 70);
-	grpChipset->add(optAGA, 5, 100);
-	grpChipset->add(chkNTSC, 5, 140);
+	grpChipset->add(optOCS, 10, 10);
+	grpChipset->add(optECSAgnus, 10, 40);
+	grpChipset->add(optECS, 10, 70);
+	grpChipset->add(optAGA, 10, 100);
+	grpChipset->add(chkNTSC, 10, 140);
 	grpChipset->add(lblChipset, 145, 10);
-	grpChipset->add(cboChipset, 145 + lblChipset->getWidth() + 8, 10);
+	grpChipset->add(cboChipset, 145 + lblChipset->getWidth() + 10, 10);
 
 	grpChipset->setMovable(false);
-	grpChipset->setSize(optOCS->getWidth() + 125 + lblChipset->getWidth() + cboChipset->getWidth(), 195);
+	grpChipset->setSize(optOCS->getWidth() + 125 + lblChipset->getWidth() + cboChipset->getWidth(), 205);
 	grpChipset->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpChipset->setBaseColor(gui_baseCol);
 
@@ -256,17 +256,17 @@ void InitPanelChipset(const struct _ConfigCategory& category)
 	optBlitImmed->setId("Immediate");
 	optBlitImmed->addActionListener(blitterButtonActionListener);
 
-	optBlitWait = new gcn::RadioButton("Wait for blit.", "radiocblittergroup");
+	optBlitWait = new gcn::RadioButton("Wait for blitter", "radiocblittergroup");
 	optBlitWait->setId("BlitWait");
 	optBlitWait->addActionListener(blitterButtonActionListener);
 
 	grpBlitter = new gcn::Window("Blitter");
 	grpBlitter->setPosition(DISTANCE_BORDER + grpChipset->getWidth() + DISTANCE_NEXT_X, DISTANCE_BORDER);
-	grpBlitter->add(optBlitNormal, 5, 10);
-	grpBlitter->add(optBlitImmed, 5, 40);
-	grpBlitter->add(optBlitWait, 5, 70);
+	grpBlitter->add(optBlitNormal, 10, 10);
+	grpBlitter->add(optBlitImmed, 10, 40);
+	grpBlitter->add(optBlitWait, 10, 70);
 	grpBlitter->setMovable(false);
-	grpBlitter->setSize(optBlitWait->getWidth() + DISTANCE_BORDER, 125);
+	grpBlitter->setSize(optBlitWait->getWidth() + DISTANCE_BORDER + 10, 125);
 	grpBlitter->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpBlitter->setBaseColor(gui_baseCol);
 
@@ -281,9 +281,9 @@ void InitPanelChipset(const struct _ConfigCategory& category)
 	grpCopper = new gcn::Window("Copper");
 	grpCopper->setPosition(DISTANCE_BORDER + grpChipset->getWidth() + DISTANCE_NEXT_X,
 	                       grpBlitter->getY() + grpBlitter->getHeight() + DISTANCE_NEXT_Y);
-	grpCopper->add(chkFastCopper, 5, 10);
+	grpCopper->add(chkFastCopper, 10, 10);
 	grpCopper->setMovable(false);
-	grpCopper->setSize(chkFastCopper->getWidth() + DISTANCE_BORDER, 65);
+	grpCopper->setSize(grpBlitter->getWidth(), 65);
 	grpCopper->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpCopper->setBaseColor(gui_baseCol);
 
@@ -309,12 +309,12 @@ void InitPanelChipset(const struct _ConfigCategory& category)
 
 	grpCollisionLevel = new gcn::Window("Collision Level");
 	grpCollisionLevel->setPosition(DISTANCE_BORDER, DISTANCE_BORDER + grpChipset->getHeight() + DISTANCE_NEXT_Y);
-	grpCollisionLevel->add(optCollNone, 5, 10);
-	grpCollisionLevel->add(optCollSprites, 5, 40);
-	grpCollisionLevel->add(optCollPlayfield, 5, 70);
-	grpCollisionLevel->add(optCollFull, 5, 100);
+	grpCollisionLevel->add(optCollNone, 10, 10);
+	grpCollisionLevel->add(optCollSprites, 10, 40);
+	grpCollisionLevel->add(optCollPlayfield, 10, 70);
+	grpCollisionLevel->add(optCollFull, 10, 100);
 	grpCollisionLevel->setMovable(false);
-	grpCollisionLevel->setSize(optCollPlayfield->getWidth() + DISTANCE_BORDER, 155);
+	grpCollisionLevel->setSize(grpChipset->getWidth(), 165);
 	grpCollisionLevel->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpCollisionLevel->setBaseColor(gui_baseCol);
 
