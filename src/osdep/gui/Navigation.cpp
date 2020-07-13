@@ -205,7 +205,7 @@ static NavigationMap navMap[] =
 
 	//  active            move left           move right          move up           move down
 	// PanelDisplay
-	{"sldWidth", "", "", "Frameskip", "sldHeight"},
+	{"sldWidth", "", "", "chkFrameskip", "sldHeight"},
 	{"sldHeight", "", "", "sldWidth", "chkAutoHeight"},
 	{"chkAutoHeight", "Display", "Horizontal", "sldHeight", "Auto"},
 	{"Auto", "Display", "Single", "chkAutoHeight", "Nearest Neighbor (pixelated)"},
@@ -214,9 +214,10 @@ static NavigationMap navMap[] =
 	{"Single", "Auto", "Auto", "Vertical", "Double"},
 	{"Double", "Nearest Neighbor (pixelated)", "Nearest Neighbor (pixelated)", "Single", "Scanlines"},
 	{"Scanlines", "Linear (smooth)", "Linear (smooth)", "Double", "cboScreenmode"},
-	{"CorrectAR", "Display", "cboScreenmode", "Linear (smooth)", "Frameskip"},
-	{"cboScreenmode", "CorrectAR", "CorrectAR", "Scanlines", "Frameskip"},
-	{"Frameskip", "Display", "Display", "CorrectAR", "sldWidth"},
+	{"CorrectAR", "Display", "cboScreenmode", "Linear (smooth)", "chkFrameskip"},
+	{"cboScreenmode", "CorrectAR", "CorrectAR", "Scanlines", "chkFlickerFixer"},
+	{"chkFlickerFixer", "Display", "cboScreenmode", "CorrectAR", "chkFrameskip"},
+	{"chkFrameskip", "Display", "Display", "chkFlickerFixer", "sldWidth"},
 	{"Vertical", "", "", "Horizontal", "Single"},
 	{"Horizontal", "chkAutoHeight", "", "", "Vertical"},
 

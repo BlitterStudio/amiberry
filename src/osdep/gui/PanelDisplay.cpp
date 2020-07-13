@@ -75,6 +75,7 @@ static gcn::DropDown* cboScreenmode;
 static gcn::Window* grpCentering;
 static gcn::CheckBox* chkHorizontal;
 static gcn::CheckBox* chkVertical;
+static gcn::CheckBox* chkFlickerFixer;
 
 class AmigaScreenActionListener : public gcn::ActionListener
 {
@@ -99,7 +100,7 @@ public:
 		}
 		else if (actionEvent.getSource() == chkAutoHeight)
 			changed_prefs.gfx_auto_height = chkAutoHeight->isSelected();
-		
+
 		else if (actionEvent.getSource() == chkFrameskip)
 			changed_prefs.gfx_framerate = chkFrameskip->isSelected() ? 2 : 1;
 
@@ -127,9 +128,12 @@ public:
 
 		else if (actionEvent.getSource() == chkHorizontal)
 			changed_prefs.gfx_xcenter = chkHorizontal->isSelected() ? 2 : 0;
-		
+
 		else if (actionEvent.getSource() == chkVertical)
 			changed_prefs.gfx_ycenter = chkVertical->isSelected() ? 2 : 0;
+
+		else if (actionEvent.getSource() == chkFlickerFixer)
+			changed_prefs.gfx_scandoubler = chkFlickerFixer->isSelected();
 	}
 };
 
@@ -217,13 +221,17 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	chkVertical = new gcn::CheckBox("Vertical");
 	chkVertical->setId("Vertical");
 	chkVertical->addActionListener(amigaScreenActionListener);
+
+	chkFlickerFixer = new gcn::CheckBox("Remove interlace artifacts");
+	chkFlickerFixer->setId("chkFlickerFixer");
+	chkFlickerFixer->addActionListener(amigaScreenActionListener);
 	
 	chkAspect = new gcn::CheckBox("Correct Aspect Ratio");
 	chkAspect->setId("CorrectAR");
 	chkAspect->addActionListener(amigaScreenActionListener);
 
 	chkFrameskip = new gcn::CheckBox("Frameskip");
-	chkFrameskip->setId("Frameskip");
+	chkFrameskip->setId("chkFrameskip");
 	chkFrameskip->addActionListener(amigaScreenActionListener);
 
 	lblScreenmode = new gcn::Label("Screen mode:");
@@ -325,10 +333,12 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	grpLineMode->setBaseColor(gui_baseCol);
 	category.panel->add(grpLineMode);
 	category.panel->add(chkAspect, DISTANCE_BORDER, posY);
-	category.panel->add(lblScreenmode, chkAspect->getX() + chkAspect->getWidth() + DISTANCE_NEXT_X * 2, posY);
+	category.panel->add(lblScreenmode, chkAspect->getX() + chkAspect->getWidth() + DISTANCE_NEXT_X * 3, posY);
 	category.panel->add(cboScreenmode, lblScreenmode->getX() + lblScreenmode->getWidth() + 8, posY);
 	posY += chkAspect->getHeight() + DISTANCE_NEXT_Y;
 
+	category.panel->add(chkFlickerFixer, DISTANCE_BORDER, posY);
+	posY += chkFlickerFixer->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(chkFrameskip, DISTANCE_BORDER, posY);
 
 	RefreshPanelDisplay();
@@ -350,6 +360,7 @@ void ExitPanelDisplay()
 
 	delete chkHorizontal;
 	delete chkVertical;
+	delete chkFlickerFixer;
 	delete grpCentering;
 	
 	delete chkAspect;
@@ -415,7 +426,8 @@ void RefreshPanelDisplay()
 	
 	chkHorizontal->setSelected(changed_prefs.gfx_xcenter == 2);
 	chkVertical->setSelected(changed_prefs.gfx_ycenter == 2);
-	
+
+	chkFlickerFixer->setSelected(changed_prefs.gfx_scandoubler);
 	chkAspect->setSelected(changed_prefs.gfx_correct_aspect);
 
 	if (changed_prefs.gfx_apmode[0].gfx_fullscreen == GFX_WINDOW)
