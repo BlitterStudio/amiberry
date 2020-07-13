@@ -67,6 +67,7 @@ static gcn::Slider* sldAmigaHeight;
 static gcn::CheckBox* chkAutoHeight;
 
 static gcn::CheckBox* chkFrameskip;
+static gcn::Slider* sldRefresh;
 static gcn::CheckBox* chkAspect;
 
 static gcn::Label* lblScreenmode;
@@ -96,8 +97,15 @@ public:
 			changed_prefs.gfx_auto_height = chkAutoHeight->isSelected();
 
 		else if (actionEvent.getSource() == chkFrameskip)
+		{
 			changed_prefs.gfx_framerate = chkFrameskip->isSelected() ? 2 : 1;
+			sldRefresh->setEnabled(chkFrameskip->isSelected());
+			sldRefresh->setValue(changed_prefs.gfx_framerate);
+		}
 
+		else if (actionEvent.getSource() == sldRefresh)
+			changed_prefs.gfx_framerate = static_cast<int>(sldRefresh->getValue());
+		
 		else if (actionEvent.getSource() == chkAspect)
 			changed_prefs.gfx_correct_aspect = chkAspect->isSelected();
 
@@ -230,6 +238,14 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	chkFrameskip->setId("chkFrameskip");
 	chkFrameskip->addActionListener(amigaScreenActionListener);
 
+	sldRefresh = new gcn::Slider(1, 10);
+	sldRefresh->setSize(100, SLIDER_HEIGHT);
+	sldRefresh->setBaseColor(gui_baseCol);
+	sldRefresh->setMarkerLength(20);
+	sldRefresh->setStepLength(1);
+	sldRefresh->setId("sldRefresh");
+	sldRefresh->addActionListener(amigaScreenActionListener);
+	
 	lblScreenmode = new gcn::Label("Screen mode:");
 	lblScreenmode->setAlignment(gcn::Graphics::RIGHT);
 	cboScreenmode = new gcn::DropDown(&fullscreen_modes_list);
@@ -337,6 +353,7 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	category.panel->add(chkFlickerFixer, DISTANCE_BORDER, posY);
 	posY += chkFlickerFixer->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(chkFrameskip, DISTANCE_BORDER, posY);
+	category.panel->add(sldRefresh, chkFrameskip->getX() + chkFrameskip->getWidth() + DISTANCE_NEXT_X, posY);
 
 	RefreshPanelDisplay();
 }
@@ -345,6 +362,7 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 void ExitPanelDisplay()
 {
 	delete chkFrameskip;
+	delete sldRefresh;
 	delete amigaScreenActionListener;
 	delete lblAmigaWidth;
 	delete sldAmigaWidth;
@@ -380,7 +398,9 @@ void ExitPanelDisplay()
 void RefreshPanelDisplay()
 {
 	chkFrameskip->setSelected(changed_prefs.gfx_framerate > 1);
-
+	sldRefresh->setEnabled(chkFrameskip->isSelected());
+	sldRefresh->setValue(changed_prefs.gfx_framerate);
+	
 	int i;
 	char tmp[32];
 

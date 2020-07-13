@@ -218,6 +218,7 @@ static NavigationMap navMap[] =
 	{ "CorrectAR", "Display", "Display", "Linear (smooth)", "chkFlickerFixer" },
 	{ "chkFlickerFixer", "Display", "Display", "CorrectAR", "chkFrameskip" },
 	{ "chkFrameskip", "Display", "Display", "chkFlickerFixer", "sldWidth" },
+	{ "sldRefresh", "", "", "chkFlickerFixer", "sldWidth" },
 	{ "Vertical", "", "", "Horizontal", "Single" },
 	{ "Horizontal", "chkAutoHeight", "", "", "Vertical" },
 
