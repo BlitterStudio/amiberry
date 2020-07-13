@@ -85,18 +85,12 @@ public:
 		if (actionEvent.getSource() == sldAmigaWidth)
 		{
 			if (changed_prefs.gfx_monitor.gfx_size.width != amigawidth_values[static_cast<int>(sldAmigaWidth->getValue())])
-			{
 				changed_prefs.gfx_monitor.gfx_size.width = amigawidth_values[static_cast<int>(sldAmigaWidth->getValue())];
-				RefreshPanelDisplay();
-			}
 		}
 		else if (actionEvent.getSource() == sldAmigaHeight)
 		{
 			if (changed_prefs.gfx_monitor.gfx_size.height != amigaheight_values[static_cast<int>(sldAmigaHeight->getValue())])
-			{
 				changed_prefs.gfx_monitor.gfx_size.height = amigaheight_values[static_cast<int>(sldAmigaHeight->getValue())];
-				RefreshPanelDisplay();
-			}
 		}
 		else if (actionEvent.getSource() == chkAutoHeight)
 			changed_prefs.gfx_auto_height = chkAutoHeight->isSelected();
@@ -134,6 +128,8 @@ public:
 
 		else if (actionEvent.getSource() == chkFlickerFixer)
 			changed_prefs.gfx_scandoubler = chkFlickerFixer->isSelected();
+
+		RefreshPanelDisplay();
 	}
 };
 
@@ -237,7 +233,7 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	lblScreenmode = new gcn::Label("Screen mode:");
 	lblScreenmode->setAlignment(gcn::Graphics::RIGHT);
 	cboScreenmode = new gcn::DropDown(&fullscreen_modes_list);
-	cboScreenmode->setSize(125, cboScreenmode->getHeight());
+	cboScreenmode->setSize(150, cboScreenmode->getHeight());
 	cboScreenmode->setBaseColor(gui_baseCol);
 	cboScreenmode->setBackgroundColor(colTextboxBackground);
 	cboScreenmode->setId("cboScreenmode");
@@ -259,6 +255,9 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	posY += sldAmigaHeight->getHeight() + DISTANCE_NEXT_Y;
 	grpAmigaScreen->add(chkAutoHeight, DISTANCE_BORDER, posY);
 	posY += chkAutoHeight->getHeight() + DISTANCE_NEXT_Y;
+	grpAmigaScreen->add(lblScreenmode, DISTANCE_BORDER, posY);
+	grpAmigaScreen->add(cboScreenmode, lblScreenmode->getX() + lblScreenmode->getWidth() + 8, posY);
+	posY += cboScreenmode->getHeight() + DISTANCE_NEXT_Y;
 
 	grpAmigaScreen->setMovable(false);
 	grpAmigaScreen->setSize(lblAmigaWidth->getX() + lblAmigaWidth->getWidth() + sldAmigaWidth->getWidth() + lblAmigaWidth->getWidth() + txtAmigaHeight->getWidth() + DISTANCE_BORDER, posY + DISTANCE_BORDER * 2);
@@ -333,8 +332,6 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	grpLineMode->setBaseColor(gui_baseCol);
 	category.panel->add(grpLineMode);
 	category.panel->add(chkAspect, DISTANCE_BORDER, posY);
-	category.panel->add(lblScreenmode, chkAspect->getX() + chkAspect->getWidth() + DISTANCE_NEXT_X * 3, posY);
-	category.panel->add(cboScreenmode, lblScreenmode->getX() + lblScreenmode->getWidth() + 8, posY);
 	posY += chkAspect->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(chkFlickerFixer, DISTANCE_BORDER, posY);
@@ -423,6 +420,10 @@ void RefreshPanelDisplay()
 		}
 	}
 	chkAutoHeight->setSelected(changed_prefs.gfx_auto_height);
+
+	lblAmigaHeight->setEnabled(!chkAutoHeight->isSelected());
+	sldAmigaHeight->setEnabled(!chkAutoHeight->isSelected());
+	txtAmigaHeight->setEnabled(!chkAutoHeight->isSelected());
 	
 	chkHorizontal->setSelected(changed_prefs.gfx_xcenter == 2);
 	chkVertical->setSelected(changed_prefs.gfx_ycenter == 2);
