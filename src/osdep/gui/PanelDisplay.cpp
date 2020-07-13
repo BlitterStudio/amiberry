@@ -424,6 +424,11 @@ void RefreshPanelDisplay()
 		cboScreenmode->setSelected(1);
 	else if (changed_prefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLWINDOW)
 		cboScreenmode->setSelected(2);
+
+#ifdef USE_DISPMANX
+	lblScreenmode->setEnabled(false);
+	cboScreenmode->setEnabled(false);
+#endif
 	
 	if (changed_prefs.scaling_method == -1)
 		optAuto->setSelected(true);
@@ -432,6 +437,13 @@ void RefreshPanelDisplay()
 	else if (changed_prefs.scaling_method == 1)
 		optLinear->setSelected(true);
 
+#ifdef USE_DISPMANX
+	grpScalingMethod->setEnabled(false);
+	optAuto->setEnabled(false);
+	optNearest->setEnabled(false);
+	optLinear->setEnabled(false);
+#endif
+	
 	if (changed_prefs.gfx_vresolution == VRES_NONDOUBLE && changed_prefs.gfx_pscanlines == 0)
 		optSingle->setSelected(true);
 	else if (changed_prefs.gfx_vresolution == VRES_DOUBLE && changed_prefs.gfx_pscanlines == 0)
