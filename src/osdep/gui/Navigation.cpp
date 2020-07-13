@@ -301,12 +301,18 @@ static NavigationMap navMap[] =
 	{"KeyFullScreen", "KeyActionReplay", "KeyActionReplay", "KeyForQuit", "RetroArchQuit"},
 
 	// PanelSavestate
-	{"State0", "Savestates", "Savestates", "LoadState", "State1"},
-	{"State1", "Savestates", "Savestates", "State0", "State2"},
-	{"State2", "Savestates", "Savestates", "State1", "State3"},
-	{"State3", "Savestates", "Savestates", "State2", "LoadState"},
-	{"LoadState", "Savestates", "SaveState", "State3", "State0"},
-	{"SaveState", "LoadState", "Savestates", "State3", "State0"},
+	{ "State0", "Savestates", "Savestates", "LoadState", "State1" },
+	{ "State1", "Savestates", "Savestates", "State0", "State2" },
+	{ "State2", "Savestates", "Savestates", "State1", "State3" },
+	{ "State3", "Savestates", "Savestates", "State2", "State4" },
+	{ "State4", "Savestates", "Savestates", "State3", "State5" },
+	{ "State5", "Savestates", "Savestates", "State4", "State6" },
+	{ "State6", "Savestates", "Savestates", "State5", "State7" },
+	{ "State7", "Savestates", "Savestates", "State6", "State8" },
+	{ "State8", "Savestates", "Savestates", "State7", "State9" },
+	{ "State9", "Savestates", "Savestates", "State8", "LoadState" },
+	{ "LoadState", "Savestates", "SaveState", "State9", "State0" },
+	{ "SaveState", "LoadState", "Savestates", "State9", "State0" },
 
 #ifdef ANDROID
 // PanelOnScreen

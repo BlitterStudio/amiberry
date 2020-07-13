@@ -474,6 +474,30 @@ int gui_update()
   		strncat(savestate_fname,"-3.uss", MAX_DPATH - 1);
   		strncat(screenshot_filename,"-3.png", MAX_DPATH - 1);
   		break;
+	case 4:
+		strncat(savestate_fname, "-4.uss", MAX_DPATH - 1);
+		strncat(screenshot_filename, "-4.png", MAX_DPATH - 1);
+		break;
+	case 5:
+		strncat(savestate_fname, "-5.uss", MAX_DPATH - 1);
+		strncat(screenshot_filename, "-5.png", MAX_DPATH - 1);
+		break;
+	case 6:
+		strncat(savestate_fname, "-6.uss", MAX_DPATH - 1);
+		strncat(screenshot_filename, "-6.png", MAX_DPATH - 1);
+		break;
+	case 7:
+		strncat(savestate_fname, "-7.uss", MAX_DPATH - 1);
+		strncat(screenshot_filename, "-7.png", MAX_DPATH - 1);
+		break;
+	case 8:
+		strncat(savestate_fname, "-8.uss", MAX_DPATH - 1);
+		strncat(screenshot_filename, "-8.png", MAX_DPATH - 1);
+		break;
+	case 9:
+		strncat(savestate_fname, "-9.uss", MAX_DPATH - 1);
+		strncat(screenshot_filename, "-9.png", MAX_DPATH - 1);
+		break;
     default: 
 	   	strncat(savestate_fname,".uss", MAX_DPATH - 1);
   		strncat(screenshot_filename,".png", MAX_DPATH - 1);
