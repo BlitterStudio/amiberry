@@ -785,8 +785,6 @@ static void open_screen(struct uae_prefs* p)
 			SDL_RenderSetLogicalSize(renderer, display_height, display_width);
 			renderQuad = { -(display_width - display_height) / 2, (display_width - display_height) / 2, display_width, display_height };
 		}
-
-		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 	}
 	else
 	{
@@ -800,26 +798,25 @@ static void open_screen(struct uae_prefs* p)
 			SDL_RenderSetLogicalSize(renderer, width, height);
 			renderQuad = { 0, 0, width, height };
 		}
-
 		else
 		{
 			SDL_RenderSetLogicalSize(renderer, height, width);
 			renderQuad = { -(width - height) / 2, (width - height) / 2, width, height };
 		}
-
-		if (p->scaling_method == -1)
-		{
-			if (isModeAspectRatioExact(&sdlMode, display_width, display_height))
-				SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
-			else
-				SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
-		}
-		else if (p->scaling_method == 0)
-			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
-		else if (p->scaling_method == 1)
-			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 	}
 
+	if (p->scaling_method == -1)
+	{
+		if (isModeAspectRatioExact(&sdlMode, display_width, display_height))
+			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
+		else
+			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+	}
+	else if (p->scaling_method == 0)
+		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
+	else if (p->scaling_method == 1)
+		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+	
 	screen = SDL_CreateRGBSurfaceWithFormat(0, display_width, display_height, display_depth, pixel_format);
 	check_error_sdl(screen == nullptr, "Unable to create a surface");
 
