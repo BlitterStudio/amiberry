@@ -10,8 +10,8 @@
 #include "custom.h"
 #include "gui_handling.h"
 
-const int amigawidth_values[] = {320, 362, 384, 640, 704, 720};
-const int amigaheight_values[] = {200, 216, 240, 256, 262, 270, 284};
+const int amigawidth_values[] = { 320, 362, 384, 640, 704, 720 };
+const int amigaheight_values[] = { 200, 216, 240, 256, 262, 270, 284 };
 
 class StringListModel : public gcn::ListModel
 {
@@ -187,6 +187,9 @@ static LineModeActionListener* lineModeActionListener;
 void InitPanelDisplay(const struct _ConfigCategory& category)
 {
 	amigaScreenActionListener = new AmigaScreenActionListener();
+	scalingMethodActionListener = new ScalingMethodActionListener();
+	lineModeActionListener = new LineModeActionListener();
+	
 	auto posY = DISTANCE_BORDER;
 
 	lblAmigaWidth = new gcn::Label("Width:");
@@ -220,10 +223,10 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	chkAutoHeight->addActionListener(amigaScreenActionListener);
 	
 	chkHorizontal = new gcn::CheckBox("Horizontal");
-	chkHorizontal->setId("Horizontal");
+	chkHorizontal->setId("chkHorizontal");
 	chkHorizontal->addActionListener(amigaScreenActionListener);
 	chkVertical = new gcn::CheckBox("Vertical");
-	chkVertical->setId("Vertical");
+	chkVertical->setId("chkVertical");
 	chkVertical->addActionListener(amigaScreenActionListener);
 
 	chkFlickerFixer = new gcn::CheckBox("Remove interlace artifacts");
@@ -276,24 +279,21 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	posY += cboScreenmode->getHeight() + DISTANCE_NEXT_Y;
 
 	grpAmigaScreen->setMovable(false);
-	grpAmigaScreen->setSize(lblAmigaWidth->getX() + lblAmigaWidth->getWidth() + sldAmigaWidth->getWidth() + lblAmigaWidth->getWidth() + txtAmigaHeight->getWidth() + DISTANCE_BORDER, posY + DISTANCE_BORDER * 2);
+	grpAmigaScreen->setSize(lblAmigaWidth->getX() + lblAmigaWidth->getWidth() + sldAmigaWidth->getWidth() + lblAmigaWidth->getWidth() + txtAmigaHeight->getWidth() + DISTANCE_BORDER, posY + DISTANCE_BORDER * 4);
 	grpAmigaScreen->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpAmigaScreen->setBaseColor(gui_baseCol);
 	category.panel->add(grpAmigaScreen);
 
 	grpCentering = new gcn::Window("Centering");
-	grpCentering->setPosition(DISTANCE_BORDER + grpAmigaScreen->getWidth() + DISTANCE_BORDER, DISTANCE_BORDER);
+	grpCentering->setPosition(DISTANCE_BORDER + grpAmigaScreen->getWidth() + DISTANCE_NEXT_X, DISTANCE_BORDER);
 	grpCentering->add(chkHorizontal, DISTANCE_BORDER, DISTANCE_BORDER);
 	grpCentering->add(chkVertical, DISTANCE_BORDER, chkHorizontal->getY() + chkHorizontal->getHeight() + DISTANCE_NEXT_Y);
 	grpCentering->setMovable(false);
-	grpCentering->setSize(chkHorizontal->getX() + chkHorizontal->getWidth() + DISTANCE_BORDER * 2, posY + DISTANCE_BORDER * 2);
+	grpCentering->setSize(chkHorizontal->getX() + chkHorizontal->getWidth() + DISTANCE_BORDER * 2, TITLEBAR_HEIGHT + chkVertical->getY() + chkVertical->getHeight() + DISTANCE_NEXT_Y);
 	grpCentering->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpCentering->setBaseColor(gui_baseCol);
-	category.panel->add(grpCentering);
-	
+	category.panel->add(grpCentering);	
 	posY = DISTANCE_BORDER + grpAmigaScreen->getHeight() + DISTANCE_NEXT_Y;
-
-	scalingMethodActionListener = new ScalingMethodActionListener();
 
 	optAuto = new gcn::RadioButton("Auto", "radioscalingmethodgroup");
 	optAuto->setId("Auto");
@@ -309,9 +309,9 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 
 	grpScalingMethod = new gcn::Window("Scaling method");
 	grpScalingMethod->setPosition(DISTANCE_BORDER, posY);
-	grpScalingMethod->add(optAuto, 5, 10);
-	grpScalingMethod->add(optNearest, 5, 40);
-	grpScalingMethod->add(optLinear, 5, 70);
+	grpScalingMethod->add(optAuto, 10, 10);
+	grpScalingMethod->add(optNearest, optAuto->getX(), optAuto->getY() + optAuto->getHeight() + DISTANCE_NEXT_Y);
+	grpScalingMethod->add(optLinear, optNearest->getX(), optNearest->getY() + optNearest->getHeight() + DISTANCE_NEXT_Y);
 	grpScalingMethod->setMovable(false);
 	grpScalingMethod->setSize(grpAmigaScreen->getWidth(),
 	                          optLinear->getY() + optLinear->getHeight() + DISTANCE_BORDER * 3);
@@ -319,9 +319,8 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	grpScalingMethod->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpScalingMethod);
-	posY += DISTANCE_BORDER + grpScalingMethod->getHeight() + DISTANCE_NEXT_Y;
+	posY += grpScalingMethod->getHeight() + DISTANCE_NEXT_Y;
 
-	lineModeActionListener = new LineModeActionListener();
 	optSingle = new gcn::RadioButton("Single", "linemodegroup");
 	optSingle->setId("Single");
 	optSingle->addActionListener(lineModeActionListener);
@@ -335,23 +334,22 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	optScanlines->addActionListener(lineModeActionListener);
 
 	grpLineMode = new gcn::Window("Line mode");
-	grpLineMode->setPosition(
-		grpScalingMethod->getWidth() + DISTANCE_BORDER + DISTANCE_NEXT_X,
-		posY - DISTANCE_BORDER - grpScalingMethod->getHeight() - DISTANCE_NEXT_Y);
+	grpLineMode->setPosition(grpCentering->getX(), grpCentering->getY() + grpCentering->getHeight() + DISTANCE_NEXT_Y);
 	grpLineMode->add(optSingle, 5, 10);
 	grpLineMode->add(optDouble, 5, 40);
 	grpLineMode->add(optScanlines, 5, 70);
 	grpLineMode->setMovable(false);
-	grpLineMode->setSize(grpCentering->getWidth(),
-	                     optScanlines->getY() + optScanlines->getHeight() + DISTANCE_BORDER * 3);
+	grpLineMode->setSize(grpCentering->getWidth(), TITLEBAR_HEIGHT + optScanlines->getY() + optScanlines->getHeight() + DISTANCE_NEXT_Y);
 	grpLineMode->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpLineMode->setBaseColor(gui_baseCol);
+	
 	category.panel->add(grpLineMode);
 	category.panel->add(chkAspect, DISTANCE_BORDER, posY);
 	posY += chkAspect->getHeight() + DISTANCE_NEXT_Y;
-
+	
 	category.panel->add(chkFlickerFixer, DISTANCE_BORDER, posY);
 	posY += chkFlickerFixer->getHeight() + DISTANCE_NEXT_Y;
+	
 	category.panel->add(chkFrameskip, DISTANCE_BORDER, posY);
 	category.panel->add(sldRefresh, chkFrameskip->getX() + chkFrameskip->getWidth() + DISTANCE_NEXT_X, posY);
 
@@ -379,6 +377,7 @@ void ExitPanelDisplay()
 	delete grpCentering;
 	
 	delete chkAspect;
+	delete lblScreenmode;
 	delete cboScreenmode;
 
 	delete optSingle;

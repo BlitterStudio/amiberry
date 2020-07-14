@@ -207,20 +207,20 @@ static NavigationMap navMap[] =
 	// PanelDisplay
 	{ "sldWidth", "", "", "chkFrameskip", "sldHeight" },
 	{ "sldHeight", "", "", "sldWidth", "chkAutoHeight" },
-	{ "chkAutoHeight", "Display", "Horizontal", "sldHeight", "cboScreenmode" },
-	{ "cboScreenmode", "Display", "Horizontal", "chkAutoHeight", "Auto" },
+	{ "chkAutoHeight", "Display", "chkHorizontal", "sldHeight", "cboScreenmode" },
+	{ "cboScreenmode", "Display", "chkHorizontal", "chkAutoHeight", "Auto" },
 	{ "Auto", "Display", "Single", "chkAutoHeight", "Nearest Neighbor (pixelated)" },
 	{ "Nearest Neighbor (pixelated)", "Display", "Double", "Auto", "Linear (smooth)" },
 	{ "Linear (smooth)", "Display", "Scanlines", "Nearest Neighbor (pixelated)", "CorrectAR" },
-	{ "Single", "Auto", "Auto", "Vertical", "Double" },
+	{ "Single", "Auto", "Auto", "chkVertical", "Double" },
 	{ "Double", "Nearest Neighbor (pixelated)", "Nearest Neighbor (pixelated)", "Single", "Scanlines" },
 	{ "Scanlines", "Linear (smooth)", "Linear (smooth)", "Double", "CorrectAR" },
 	{ "CorrectAR", "Display", "Display", "Linear (smooth)", "chkFlickerFixer" },
 	{ "chkFlickerFixer", "Display", "Display", "CorrectAR", "chkFrameskip" },
 	{ "chkFrameskip", "Display", "Display", "chkFlickerFixer", "sldWidth" },
 	{ "sldRefresh", "", "", "chkFlickerFixer", "sldWidth" },
-	{ "Vertical", "", "", "Horizontal", "Single" },
-	{ "Horizontal", "chkAutoHeight", "", "", "Vertical" },
+	{ "chkHorizontal", "chkAutoHeight", "", "", "chkVertical" },
+	{ "chkVertical", "chkAutoHeight", "", "chkHorizontal", "Single" },
 
 	//  active            move left           move right          move up           move down
 	//PanelSound
