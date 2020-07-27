@@ -129,16 +129,12 @@ static void to_amiga_start(TrapContext* ctx)
 
 static uae_char* pctoamiga(const uae_char* txt)
 {
-	int len;
-	uae_char* txt2;
-	int i, j;
-
-	len = strlen(txt) + 1;
-	txt2 = xmalloc(uae_char, len);
-	j = 0;
-	for (i = 0; i < len; i++)
+	const auto len = strlen(txt) + 1;
+	auto* txt2 = xmalloc(uae_char, len);
+	auto j = 0;
+	for (unsigned int i = 0; i < len; i++)
 	{
-		uae_char c = txt[i];
+		const auto c = txt[i];
 #ifdef _WIN32
 		if (c == 13)
 			continue;
@@ -168,12 +164,12 @@ static void to_keyboard(const TCHAR* pctxt)
 
 static TCHAR* amigatopc(const char* txt)
 {
-	int pc = 0;
-	int cnt = 0;
-	size_t len = strlen(txt) + 1;
-	for (int i = 0; i < len; i++)
+	auto pc = 0;
+	auto cnt = 0;
+	const auto len = strlen(txt) + 1;
+	for (unsigned int i = 0; i < len; i++)
 	{
-		uae_char c = txt[i];
+		const auto c = txt[i];
 		if (c == 13)
 			pc = 1;
 		if (c == 10)
@@ -181,11 +177,11 @@ static TCHAR* amigatopc(const char* txt)
 	}
 	if (pc)
 		return my_strdup_ansi(txt);
-	char* txt2 = xcalloc(char, len + cnt);
-	int j = 0;
-	for (int i = 0; i < len; i++)
+	auto* const txt2 = xcalloc(char, len + cnt);
+	auto j = 0;
+	for (unsigned int i = 0; i < len; i++)
 	{
-		uae_char c = txt[i];
+		const auto c = txt[i];
 		if (c == 0 && i + 1 < len)
 			continue;
 #ifdef _WIN32
@@ -204,7 +200,7 @@ static TCHAR* amigatopc(const char* txt)
 		}
 		txt2[j++] = c;
 	}
-	TCHAR* s = my_strdup_ansi(txt2);
+	auto* const s = my_strdup_ansi(txt2);
 	xfree(txt2);
 	return s;
 }
@@ -244,22 +240,21 @@ static int clipboard_put_text(const TCHAR* txt);
 
 static void from_iff_text(uae_u8* addr, uae_u32 len)
 {
-	uae_u8* eaddr;
 	char* txt = nullptr;
-	int txtsize = 0;
+	auto txtsize = 0;
 
-	eaddr = addr + len;
-	if (memcmp("FTXT", addr + 8, 4))
+	auto* const eaddr = addr + len;
+	if (memcmp("FTXT", addr + 8, 4) != 0)
 		return;
 	addr += 12;
 	while (addr < eaddr)
 	{
-		uae_u32 csize = (addr[4] << 24) | (addr[5] << 16) | (addr[6] << 8) | (addr[7] << 0);
+		const uae_u32 csize = (addr[4] << 24) | (addr[5] << 16) | (addr[6] << 8) | (addr[7] << 0);
 		if (addr + 8 + csize > eaddr)
 			break;
 		if (!memcmp(addr, "CHRS", 4) && csize)
 		{
-			int prevsize = txtsize;
+			const auto prevsize = txtsize;
 			txtsize += csize;
 			txt = xrealloc(char, txt, txtsize + 1);
 			memcpy(txt + prevsize, addr + 8, csize);
@@ -277,7 +272,7 @@ static void from_iff_text(uae_u8* addr, uae_u32 len)
 	}
 	else
 	{
-		TCHAR* pctxt = amigatopc(txt);
+		auto* const pctxt = amigatopc(txt);
 		clipboard_put_text(pctxt);
 		xfree(pctxt);
 	}
@@ -741,13 +736,11 @@ static void from_iff_ilbm(uae_u8 *saddr, uae_u32 len)
 
 static void from_iff(TrapContext* ctx, uaecptr data, uae_u32 len)
 {
-	uae_u8* buf;
-
 	if (len < 18)
 		return;
 	if (!trap_valid_address(ctx, data, len))
 		return;
-	buf = xmalloc(uae_u8, (len + 3) & ~3);
+	auto* const buf = xmalloc(uae_u8, (len + 3) & ~3);
 	trap_get_bytes(ctx, buf, data, (len + 3) & ~3);
 
 	if (clipboard_debug)
@@ -1045,10 +1038,9 @@ int amiga_clipboard_want_data(TrapContext* ctx)
 #ifdef AMIBERRY
 	write_log("amiga_clipboard_want_data\n");
 #endif
-	uae_u32 addr, size;
 
-	addr = trap_get_long(ctx, clipboard_data + 4);
-	size = trap_get_long(ctx, clipboard_data);
+	const auto addr = trap_get_long(ctx, clipboard_data + 4);
+	const auto size = trap_get_long(ctx, clipboard_data);
 	if (!initialized)
 	{
 		write_log(_T("clipboard: want_data() before initialized!? (%08x %08x %d)\n"), clipboard_data, addr, size);
@@ -1101,7 +1093,7 @@ void clipboard_active(HWND hwnd, int active)
 
 static uae_u32 clipboard_vsync_cb(TrapContext* ctx, void* ud)
 {
-	uaecptr task = trap_get_long(ctx, clipboard_data + 8);
+	const auto task = trap_get_long(ctx, clipboard_data + 8);
 	if (task && native2amiga_isfree())
 	{
 		uae_Signal(task, 1 << 13);
