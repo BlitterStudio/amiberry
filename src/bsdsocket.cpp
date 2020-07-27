@@ -1651,6 +1651,9 @@ void bsdlib_reset (void)
 	write_log (_T("BSDSOCK: cleanup end\n"));
 
 	socketbases = NULL;
+#if 1
+	sbsigqueue = NULL;
+#endif
 
 	for (i = 0; i < SOCKPOOLSIZE; i++) {
 		if (sockdata->sockpoolids[i] != UNIQUE_ID) {
@@ -1728,11 +1731,8 @@ void bsdlib_install (void)
 			sockdata->sockpoolids[i] = UNIQUE_ID;
 	}
 
-	if (!init_socket_layer ()) {
-	  res_name = 0;
-	  res_id = 0;
+	if (!init_socket_layer ())
 		return;
-  }
 
 	res_name = ds (_T("bsdsocket.library"));
 	res_id = ds (_T("UAE bsdsocket.library 4.1"));
