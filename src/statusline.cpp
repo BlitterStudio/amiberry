@@ -178,7 +178,7 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 		else if (led == LED_POWER)
 		{
 			pos = 3;
-			on_rgb = bpp == 2 ? ((gui_data.powerled_brightness * 10 / 16) + 0x33) << 16 : ((gui_data.powerled_brightness * 10 / 16) + 0x330000) << 4;
+			on_rgb = bpp == 2 ? ((gui_data.powerled_brightness * 10 / 16) + 0x330000) << 16 : ((gui_data.powerled_brightness * 10 / 16) + 0x000033) << 16;
 			on = 1;
 			off_rgb = bpp == 2 ? 0x330000 : 0x000033;
 		}
