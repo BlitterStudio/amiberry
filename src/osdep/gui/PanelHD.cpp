@@ -216,6 +216,16 @@ public:
 			{
 				changed_prefs.cdslots[0].inuse = false;
 				changed_prefs.cdslots[0].type = SCSI_UNIT_DISABLED;
+				changed_prefs.cdslots[0].name[0] = 0;
+				AdjustDropDownControls();
+
+				if (!changed_prefs.cs_cd32cd && !changed_prefs.cs_cd32nvram
+					&& (!changed_prefs.cs_cdtvcd && !changed_prefs.cs_cdtvram)
+					&& changed_prefs.scsi)
+				{
+					changed_prefs.scsi = 0;
+					chkScsi->setSelected(false);
+				}
 			}
 			else
 			{
@@ -249,7 +259,7 @@ public:
 			//---------------------------------------
 			// Eject CD from drive
 			//---------------------------------------
-			strncpy(changed_prefs.cdslots[0].name, "", MAX_DPATH);
+			changed_prefs.cdslots[0].name[0] = 0;
 			AdjustDropDownControls();
 		}
 		else if (actionEvent.getSource() == cmdCDSelect)
@@ -325,7 +335,7 @@ public:
 
 			if (idx < 0)
 			{
-				strncpy(changed_prefs.cdslots[0].name, "", MAX_DPATH);
+				changed_prefs.cdslots[0].name[0] = 0;
 				AdjustDropDownControls();
 			}
 			else
@@ -564,7 +574,7 @@ static void AdjustDropDownControls()
 	cboCDFile->clearSelected();
 	if (changed_prefs.cdslots[0].inuse && strlen(changed_prefs.cdslots[0].name) > 0)
 	{
-		for (unsigned int i = 0; i < lstMRUCDList.size(); ++i)
+		for (auto i = 0; i < static_cast<int>(lstMRUCDList.size()); ++i)
 		{
 			if (strcmp(lstMRUCDList[i].c_str(), changed_prefs.cdslots[0].name) == 0)
 			{
