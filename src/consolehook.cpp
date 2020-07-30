@@ -45,8 +45,6 @@ void consolehook_config (struct uae_prefs *p)
 	p->floppyslots[1].dfxtype = DRV_NONE;
 	p->floppy_speed = 0;
 	p->start_gui = 0;
-	p->gfx_monitor.gfx_size.width = 320;
-	p->gfx_monitor.gfx_size.height = 256;
 	p->gfx_monitor.gfx_size_win.width = 320;
 	p->gfx_monitor.gfx_size_win.height = 256;
 	p->turbo_emulation = 0;

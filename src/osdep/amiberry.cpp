@@ -326,15 +326,6 @@ void fix_apmodes(struct uae_prefs* p)
 
 void target_fixup_options(struct uae_prefs* p)
 {
-	// If we have a CD inserted, but not emulating a CDTV or CD32, enable SCSI automatically
-	if (p->cdslots[0].inuse 
-		&& (!p->cs_cd32cd && !p->cs_cd32nvram) 
-		&& (!p->cs_cdtvcd && !p->cs_cdtvram)
-		&& !p->scsi)
-	{
-		p->scsi = 1;
-	}
-
 	p->rtgboards[0].rtgmem_type = GFXBOARD_UAE_Z3;
 
 	if (z3_base_adr == Z3BASE_REAL)
@@ -363,11 +354,6 @@ void target_fixup_options(struct uae_prefs* p)
 	}
 
 	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5PC | RGBFF_R8G8B8A8;
-	if (p->gfx_monitor.gfx_size.width == 0)
-		p->gfx_monitor.gfx_size.width = 720;
-	if (p->gfx_monitor.gfx_size.height == 0)
-		p->gfx_monitor.gfx_size.height = 284;
-	p->gfx_resolution = p->gfx_monitor.gfx_size.width > 600 ? RES_HIRES : RES_LORES;
 
 	if (p->gfx_vresolution && !can_have_linedouble)
 		// If there's not enough vertical space, cancel Line Doubling/Scanlines

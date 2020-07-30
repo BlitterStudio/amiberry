@@ -21,6 +21,8 @@
 #include "sounddep/sound.h"
 #include "savestate.h"
 #include "blkdev.h"
+#include "memory.h"
+#include "amiberry_gfx.h"
 
 #ifdef AMIBERRY
 #include <linux/kd.h>
@@ -375,14 +377,19 @@ static void prefs_to_gui()
 	/* filesys hack */
 	changed_prefs.mountitems = currprefs.mountitems;
 	memcpy(&changed_prefs.mountconfig, &currprefs.mountconfig, MOUNT_CONFIG_SIZE * sizeof(struct uaedev_config_info));
+	update_win_fs_mode(&currprefs);
 }
 
 static void gui_to_prefs(void)
 {
+	if (quit_program == -UAE_RESET_HARD) {
+		memory_hardreset(2);
+	}
 	/* filesys hack */
 	currprefs.mountitems = changed_prefs.mountitems;
 	memcpy(&currprefs.mountconfig, &changed_prefs.mountconfig, MOUNT_CONFIG_SIZE * sizeof(struct uaedev_config_info));
 	fixup_prefs(&changed_prefs, true);
+	update_win_fs_mode(&changed_prefs);
 }
 
 static void after_leave_gui()

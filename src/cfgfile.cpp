@@ -2249,12 +2249,23 @@ void cfgfile_save_options(struct zfile* f, struct uae_prefs* p, int type)
 	cfg_write(_T("; "), f);
 
 	cfgfile_write(f, _T("gfx_framerate"), _T("%d"), p->gfx_framerate);
-	write_resolution (f, _T("gfx_width"), _T("gfx_height"), &p->gfx_monitor.gfx_size); /* compatibility with old versions */
-	cfgfile_write (f, _T("gfx_top_windowed"), _T("%d"), p->gfx_monitor.gfx_size.y);
-	cfgfile_write(f, _T("gfx_left_windowed"), _T("%d"), p->gfx_monitor.gfx_size.x);
+	write_resolution (f, _T("gfx_width"), _T("gfx_height"), &p->gfx_monitor.gfx_size_win); /* compatibility with old versions */
+	cfgfile_write (f, _T("gfx_top_windowed"), _T("%d"), p->gfx_monitor.gfx_size_win.y);
+	cfgfile_write(f, _T("gfx_left_windowed"), _T("%d"), p->gfx_monitor.gfx_size_win.x);
+	cfgfile_dwrite_bool(f, _T("gfx_resize_windowed"), p->gfx_windowed_resize);
+	write_resolution(f, _T("gfx_width_windowed"), _T("gfx_height_windowed"), &p->gfx_monitor.gfx_size_win);
+	write_resolution(f, _T("gfx_width_fullscreen"), _T("gfx_height_fullscreen"), &p->gfx_monitor.gfx_size_fs);
 	cfgfile_write(f, _T("gfx_refreshrate"), _T("%d"), p->gfx_apmode[0].gfx_refreshrate);
 	cfgfile_dwrite(f, _T("gfx_refreshrate_rtg"), _T("%d"), p->gfx_apmode[1].gfx_refreshrate);
 
+	cfgfile_write(f, _T("gfx_backbuffers"), _T("%d"), p->gfx_apmode[0].gfx_backbuffers);
+	cfgfile_write(f, _T("gfx_backbuffers_rtg"), _T("%d"), p->gfx_apmode[1].gfx_backbuffers);
+	if (p->gfx_apmode[APMODE_NATIVE].gfx_interlaced)
+		cfgfile_write_bool(f, _T("gfx_interlace"), p->gfx_apmode[APMODE_NATIVE].gfx_interlaced);
+	cfgfile_write_str(f, _T("gfx_vsync"), vsyncmodes[p->gfx_apmode[0].gfx_vsync]);
+	cfgfile_write_str(f, _T("gfx_vsyncmode"), vsyncmodes2[p->gfx_apmode[0].gfx_vsyncmode]);
+	cfgfile_write_str(f, _T("gfx_vsync_picasso"), vsyncmodes[p->gfx_apmode[1].gfx_vsync]);
+	cfgfile_write_str(f, _T("gfx_vsyncmode_picasso"), vsyncmodes2[p->gfx_apmode[1].gfx_vsyncmode]);
 	cfgfile_write_bool(f, _T("gfx_lores"), p->gfx_resolution == 0);
 	cfgfile_write_str(f, _T("gfx_resolution"), lorestype1[p->gfx_resolution]);
 	cfgfile_write_str(f, _T("gfx_lores_mode"), loresmode[p->gfx_lores_mode]);
@@ -2266,6 +2277,15 @@ void cfgfile_save_options(struct zfile* f, struct uae_prefs* p, int type)
 	cfgfile_write_str(f, _T("gfx_center_vertical"), centermode1[p->gfx_ycenter]);
 	cfgfile_write_str(f, _T("gfx_colour_mode"), colormode1[p->color_mode]);
 	cfgfile_write_bool(f, _T("gfx_blacker_than_black"), p->gfx_blackerthanblack);
+	cfgfile_dwrite_str(f, _T("gfx_atari_palette_fix"), threebitcolors[p->gfx_threebitcolors]);
+	cfgfile_dwrite_bool(f, _T("gfx_black_frame_insertion"), p->lightboost_strobo);
+	cfgfile_dwrite(f, _T("gfx_black_frame_insertion_ratio"), _T("%d"), p->lightboost_strobo_ratio);
+	cfgfile_write_str(f, _T("gfx_api"), filterapi[p->gfx_api]);
+	cfgfile_write_str(f, _T("gfx_api_options"), filterapiopts[p->gfx_api_options]);
+	cfgfile_dwrite_bool(f, _T("gfx_hdr"), p->gfx_hdr);
+	cfgfile_dwrite(f, _T("gfx_horizontal_tweak"), _T("%d"), p->gfx_extrawidth);
+	cfgfile_dwrite(f, _T("gfx_frame_slices"), _T("%d"), p->gfx_display_sections);
+	cfgfile_dwrite_bool(f, _T("gfx_vrr_monitor"), p->gfx_variable_sync != 0);
 	
 	cfg_write(_T("; "), f);
 	cfg_write(_T("; *** CPU options"), f);
@@ -3712,10 +3732,10 @@ static int cfgfile_parse_host(struct uae_prefs* p, TCHAR* option, TCHAR* value)
 	
 	if (_tcscmp(option, _T("gfx_width")) == 0 || _tcscmp(option, _T("gfx_height")) == 0)
 	{
-		cfgfile_intval (option, value, _T("gfx_width"), &p->gfx_monitor.gfx_size.width, 1);
-		cfgfile_intval (option, value, _T("gfx_height"), &p->gfx_monitor.gfx_size.height, 1);
-		p->gfx_monitor.gfx_size_fs.width = p->gfx_monitor.gfx_size_win.width = p->gfx_monitor.gfx_size.width;
-		p->gfx_monitor.gfx_size_fs.height = p->gfx_monitor.gfx_size_win.height = p->gfx_monitor.gfx_size.height;
+		cfgfile_intval (option, value, _T("gfx_width"), &p->gfx_monitor.gfx_size_win.width, 1);
+		cfgfile_intval (option, value, _T("gfx_height"), &p->gfx_monitor.gfx_size_win.height, 1);
+		p->gfx_monitor.gfx_size_fs.width = p->gfx_monitor.gfx_size_win.width;
+		p->gfx_monitor.gfx_size_fs.height = p->gfx_monitor.gfx_size_win.height;
 		return 1;
 	}
 
@@ -7666,8 +7686,6 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 	p->gfx_monitor.gfx_size_fs.height = 600;
 	p->gfx_monitor.gfx_size_win.width = 720;
 	p->gfx_monitor.gfx_size_win.height = 568;
-	p->gfx_monitor.gfx_size.width = 640;
-	p->gfx_monitor.gfx_size.height = 270;
 	for (auto i = 0; i < 4; i++) {
 		p->gfx_monitor.gfx_size_fs_xtra[i].width = 0;
 		p->gfx_monitor.gfx_size_fs_xtra[i].height = 0;

@@ -56,6 +56,7 @@ const char* sdl_video_driver;
 static int display_width;
 static int display_height;
 static int display_depth;
+Uint32 pixel_format;
 bool can_have_linedouble;
 
 static unsigned long last_synctime;
@@ -168,7 +169,7 @@ static int display_thread(void *unused)
 			break;
 
 		case DISPLAY_SIGNAL_OPEN:
-#ifdef USE_DISPMANX
+#ifdef USE_DISPMANX			
 			if (screen_is_picasso)
 			{
 				if (picasso96_state.RGBFormat == RGBFB_R5G6B5
@@ -177,21 +178,26 @@ static int display_thread(void *unused)
 				{
 					display_depth = 16;
 					rgb_mode = VC_IMAGE_RGB565;
+					pixel_format = SDL_PIXELFORMAT_RGB565;
 				}
 				else 
 				{
 					display_depth = 32;
 					rgb_mode = VC_IMAGE_RGBA32;
+					pixel_format = SDL_PIXELFORMAT_RGBA32;
 				}	
 			}
 			else
 			{
-				display_depth = 16;
-				rgb_mode = VC_IMAGE_RGB565;
+				//display_depth = 16;
+				//rgb_mode = VC_IMAGE_RGB565;
+				display_depth = 32;
+				rgb_mode = VC_IMAGE_RGBA32;
+				pixel_format = SDL_PIXELFORMAT_RGBA32;
 			}
 
 			if (!screen)
-				screen = SDL_CreateRGBSurface(0, display_width, display_height, display_depth, 0, 0, 0, 0);
+				screen = SDL_CreateRGBSurfaceWithFormat(0, display_width, display_height, display_depth, pixel_format);
 
 			displayHandle = vc_dispmanx_display_open(0);
 
@@ -479,8 +485,13 @@ int graphics_setup(void)
 	return 1;
 }
 
-void set_screen_mode(struct uae_prefs* p)
+void update_win_fs_mode(struct uae_prefs* p)
 {
+	auto* avidinfo = &adisplays.gfxvidinfo;
+#ifdef USE_DISPMANX
+	// Dispmanx modes use configurable width/height and are fullwindow always
+	p->gfx_monitor.gfx_size = p->gfx_monitor.gfx_size_win;
+#else
 	if (sdl_window && strcmp(sdl_video_driver, "x11") == 0)
 	{
 		const auto window_flags = SDL_GetWindowFlags(sdl_window);
@@ -489,42 +500,59 @@ void set_screen_mode(struct uae_prefs* p)
 
 		if (p->gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN)
 		{
+			p->gfx_monitor.gfx_size = p->gfx_monitor.gfx_size_fs;
 			// Switch to Fullscreen mode, if we don't have it already
 			if (!is_fullscreen)
 				SDL_SetWindowFullscreen(sdl_window, SDL_WINDOW_FULLSCREEN);
 		}
 		else if (p->gfx_apmode[0].gfx_fullscreen == GFX_FULLWINDOW)
 		{
+			p->gfx_monitor.gfx_size = p->gfx_monitor.gfx_size_win;
 			if (!is_fullwindow)
 				SDL_SetWindowFullscreen(sdl_window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 		}
 		else
 		{
+			p->gfx_monitor.gfx_size = p->gfx_monitor.gfx_size_win;
 			// Switch to Window mode, if we don't have it already
 			if (is_fullscreen || is_fullwindow)
 				SDL_SetWindowFullscreen(sdl_window, 0);
 		}
+		
+		set_config_changed();
+	}
+	else
+	{
+		// KMSDRM is fullwindow always
+		p->gfx_monitor.gfx_size = p->gfx_monitor.gfx_size_win;
+	}
+#endif
+	if (screen_is_picasso)
+	{
+		display_width = picasso96_state.Width ? picasso96_state.Width : 640;
+		display_height = picasso96_state.Height ? picasso96_state.Height : 480;
+	}
+	else
+	{
+		if (currprefs.gfx_resolution > avidinfo->gfx_resolution_reserved)
+			avidinfo->gfx_resolution_reserved = currprefs.gfx_resolution;
+		if (currprefs.gfx_vresolution > avidinfo->gfx_vresolution_reserved)
+			avidinfo->gfx_vresolution_reserved = currprefs.gfx_vresolution;
 
-		if (!is_fullscreen && !is_fullwindow)
-			if ((SDL_GetWindowFlags(sdl_window) & SDL_WINDOW_MAXIMIZED) == 0)
-			{
-				if (screen_is_picasso)
-					SDL_SetWindowSize(sdl_window, display_width, display_height);
-				else
-					SDL_SetWindowSize(sdl_window, display_width * 2 >> p->gfx_resolution, display_height * 2 >> p->gfx_vresolution);
-			}
-}
+		display_width = p->gfx_monitor.gfx_size.width / 2 << p->gfx_resolution;
+		display_height = p->gfx_monitor.gfx_size.height / 2 << p->gfx_vresolution;
+	}
 }
 
 void toggle_fullscreen(int mode)
 {
 #ifdef USE_DISPMANX
-	// Dispmanx is fullscreen always
+	// Dispmanx is full-window always
 #else
-	struct amigadisplay* ad = &adisplays;
-	int* p = ad->picasso_on ? &changed_prefs.gfx_apmode[1].gfx_fullscreen : &changed_prefs.gfx_apmode[0].gfx_fullscreen;
-	int wfw = ad->picasso_on ? wasfullwindow_p : wasfullwindow_a;
-	int v = *p;
+	auto* const ad = &adisplays;
+	auto* p = ad->picasso_on ? &changed_prefs.gfx_apmode[1].gfx_fullscreen : &changed_prefs.gfx_apmode[0].gfx_fullscreen;
+	const auto wfw = ad->picasso_on ? wasfullwindow_p : wasfullwindow_a;
+	auto v = *p;
 
 	if (mode < 0) {
 		// fullscreen <> window (if in fullwindow: fullwindow <> fullscreen)
@@ -533,10 +561,12 @@ void toggle_fullscreen(int mode)
 		else if (v == GFX_WINDOW)
 			v = GFX_FULLSCREEN;
 		else if (v == GFX_FULLSCREEN)
+		{
 			if (wfw > 0)
 				v = GFX_FULLWINDOW;
 			else
 				v = GFX_WINDOW;
+		}
 	}
 	else if (mode == 0) {
 		// fullscreen <> window
@@ -564,14 +594,14 @@ void toggle_fullscreen(int mode)
 	}
 	*p = v;
 	devices_unsafeperiod();
-	set_screen_mode(&currprefs);
+	update_win_fs_mode(&currprefs);
 #endif
 }
 
 static int isfullscreen_2(struct uae_prefs* p)
 {
 	const auto idx = screen_is_picasso ? 1 : 0;
-	return p->gfx_apmode[idx].gfx_fullscreen == GFX_FULLSCREEN ? 1 : (p->gfx_apmode[idx].gfx_fullscreen == GFX_FULLWINDOW ? -1 : 0);
+	return p->gfx_apmode[idx].gfx_fullscreen == GFX_FULLSCREEN ? 1 : p->gfx_apmode[idx].gfx_fullscreen == GFX_FULLWINDOW ? -1 : 0;
 }
 int isfullscreen(void)
 {
@@ -642,56 +672,56 @@ void update_onscreen()
 	else
 	{
 	  SDL_ANDROID_SetScreenKeyboardShown(1);
-	    SDL_Rect pos_textinput, pos_dpad, pos_button1, pos_button2, pos_button3, pos_button4, pos_button5, pos_button6;
-	    pos_textinput.x = changed_prefs.pos_x_textinput*(SDL_ListModes(NULL, 0)[0]->w/(float)480);
-	    pos_textinput.y = changed_prefs.pos_y_textinput*(SDL_ListModes(NULL, 0)[0]->h/(float)360);
-	    pos_textinput.h=SDL_ListModes(NULL, 0)[0]->h / (float)10;
-	    pos_textinput.w=pos_textinput.h;
-	    SDL_ANDROID_SetScreenKeyboardButtonPos(SDL_ANDROID_SCREENKEYBOARD_BUTTON_TEXT, &pos_textinput);
-	    pos_dpad.x = changed_prefs.pos_x_dpad*(SDL_ListModes(NULL, 0)[0]->w/(float)480);
-	    pos_dpad.y = changed_prefs.pos_y_dpad*(SDL_ListModes(NULL, 0)[0]->h/(float)360);
-	    pos_dpad.h=SDL_ListModes(NULL, 0)[0]->h / (float)2.5;
-	    pos_dpad.w=pos_dpad.h;
-	    SDL_ANDROID_SetScreenKeyboardButtonPos(SDL_ANDROID_SCREENKEYBOARD_BUTTON_DPAD, &pos_dpad);
-	    pos_button1.x = changed_prefs.pos_x_button1*(SDL_ListModes(NULL, 0)[0]->w/(float)480);
-	    pos_button1.y = changed_prefs.pos_y_button1*(SDL_ListModes(NULL, 0)[0]->h/(float)360);
-	    pos_button1.h=SDL_ListModes(NULL, 0)[0]->h / (float)5;
-	    pos_button1.w=pos_button1.h;
-	    SDL_ANDROID_SetScreenKeyboardButtonPos(SDL_ANDROID_SCREENKEYBOARD_BUTTON_0, &pos_button1);
-	    pos_button2.x = changed_prefs.pos_x_button2*(SDL_ListModes(NULL, 0)[0]->w/(float)480);
-	    pos_button2.y = changed_prefs.pos_y_button2*(SDL_ListModes(NULL, 0)[0]->h/(float)360);
-	    pos_button2.h=SDL_ListModes(NULL, 0)[0]->h / (float)5;
-	    pos_button2.w=pos_button2.h;
-	    SDL_ANDROID_SetScreenKeyboardButtonPos(SDL_ANDROID_SCREENKEYBOARD_BUTTON_1, &pos_button2);
-	    pos_button3.x = changed_prefs.pos_x_button3*(SDL_ListModes(NULL, 0)[0]->w/(float)480);
-	    pos_button3.y = changed_prefs.pos_y_button3*(SDL_ListModes(NULL, 0)[0]->h/(float)360);
-	    pos_button3.h=SDL_ListModes(NULL, 0)[0]->h / (float)5;
-	    pos_button3.w=pos_button3.h;
-	    SDL_ANDROID_SetScreenKeyboardButtonPos(SDL_ANDROID_SCREENKEYBOARD_BUTTON_2, &pos_button3);
-	    pos_button4.x = changed_prefs.pos_x_button4*(SDL_ListModes(NULL, 0)[0]->w/(float)480);
-	    pos_button4.y = changed_prefs.pos_y_button4*(SDL_ListModes(NULL, 0)[0]->h/(float)360);
-	    pos_button4.h=SDL_ListModes(NULL, 0)[0]->h / (float)5;
-	    pos_button4.w=pos_button4.h;
-	    SDL_ANDROID_SetScreenKeyboardButtonPos(SDL_ANDROID_SCREENKEYBOARD_BUTTON_3, &pos_button4);
-	    pos_button5.x = changed_prefs.pos_x_button5*(SDL_ListModes(NULL, 0)[0]->w/(float)480);
-	    pos_button5.y = changed_prefs.pos_y_button5*(SDL_ListModes(NULL, 0)[0]->h/(float)360);
-	    pos_button5.h=SDL_ListModes(NULL, 0)[0]->h / (float)5;
-	    pos_button5.w=pos_button5.h;
-	    SDL_ANDROID_SetScreenKeyboardButtonPos(SDL_ANDROID_SCREENKEYBOARD_BUTTON_4, &pos_button5);
-	    pos_button6.x = changed_prefs.pos_x_button6*(SDL_ListModes(NULL, 0)[0]->w/(float)480);
-	    pos_button6.y = changed_prefs.pos_y_button6*(SDL_ListModes(NULL, 0)[0]->h/(float)360);
-	    pos_button6.h=SDL_ListModes(NULL, 0)[0]->h / (float)5;
-	    pos_button6.w=pos_button6.h;
-	    SDL_ANDROID_SetScreenKeyboardButtonPos(SDL_ANDROID_SCREENKEYBOARD_BUTTON_5, &pos_button6);
+		SDL_Rect pos_textinput, pos_dpad, pos_button1, pos_button2, pos_button3, pos_button4, pos_button5, pos_button6;
+		pos_textinput.x = changed_prefs.pos_x_textinput*(SDL_ListModes(NULL, 0)[0]->w/(float)480);
+		pos_textinput.y = changed_prefs.pos_y_textinput*(SDL_ListModes(NULL, 0)[0]->h/(float)360);
+		pos_textinput.h=SDL_ListModes(NULL, 0)[0]->h / (float)10;
+		pos_textinput.w=pos_textinput.h;
+		SDL_ANDROID_SetScreenKeyboardButtonPos(SDL_ANDROID_SCREENKEYBOARD_BUTTON_TEXT, &pos_textinput);
+		pos_dpad.x = changed_prefs.pos_x_dpad*(SDL_ListModes(NULL, 0)[0]->w/(float)480);
+		pos_dpad.y = changed_prefs.pos_y_dpad*(SDL_ListModes(NULL, 0)[0]->h/(float)360);
+		pos_dpad.h=SDL_ListModes(NULL, 0)[0]->h / (float)2.5;
+		pos_dpad.w=pos_dpad.h;
+		SDL_ANDROID_SetScreenKeyboardButtonPos(SDL_ANDROID_SCREENKEYBOARD_BUTTON_DPAD, &pos_dpad);
+		pos_button1.x = changed_prefs.pos_x_button1*(SDL_ListModes(NULL, 0)[0]->w/(float)480);
+		pos_button1.y = changed_prefs.pos_y_button1*(SDL_ListModes(NULL, 0)[0]->h/(float)360);
+		pos_button1.h=SDL_ListModes(NULL, 0)[0]->h / (float)5;
+		pos_button1.w=pos_button1.h;
+		SDL_ANDROID_SetScreenKeyboardButtonPos(SDL_ANDROID_SCREENKEYBOARD_BUTTON_0, &pos_button1);
+		pos_button2.x = changed_prefs.pos_x_button2*(SDL_ListModes(NULL, 0)[0]->w/(float)480);
+		pos_button2.y = changed_prefs.pos_y_button2*(SDL_ListModes(NULL, 0)[0]->h/(float)360);
+		pos_button2.h=SDL_ListModes(NULL, 0)[0]->h / (float)5;
+		pos_button2.w=pos_button2.h;
+		SDL_ANDROID_SetScreenKeyboardButtonPos(SDL_ANDROID_SCREENKEYBOARD_BUTTON_1, &pos_button2);
+		pos_button3.x = changed_prefs.pos_x_button3*(SDL_ListModes(NULL, 0)[0]->w/(float)480);
+		pos_button3.y = changed_prefs.pos_y_button3*(SDL_ListModes(NULL, 0)[0]->h/(float)360);
+		pos_button3.h=SDL_ListModes(NULL, 0)[0]->h / (float)5;
+		pos_button3.w=pos_button3.h;
+		SDL_ANDROID_SetScreenKeyboardButtonPos(SDL_ANDROID_SCREENKEYBOARD_BUTTON_2, &pos_button3);
+		pos_button4.x = changed_prefs.pos_x_button4*(SDL_ListModes(NULL, 0)[0]->w/(float)480);
+		pos_button4.y = changed_prefs.pos_y_button4*(SDL_ListModes(NULL, 0)[0]->h/(float)360);
+		pos_button4.h=SDL_ListModes(NULL, 0)[0]->h / (float)5;
+		pos_button4.w=pos_button4.h;
+		SDL_ANDROID_SetScreenKeyboardButtonPos(SDL_ANDROID_SCREENKEYBOARD_BUTTON_3, &pos_button4);
+		pos_button5.x = changed_prefs.pos_x_button5*(SDL_ListModes(NULL, 0)[0]->w/(float)480);
+		pos_button5.y = changed_prefs.pos_y_button5*(SDL_ListModes(NULL, 0)[0]->h/(float)360);
+		pos_button5.h=SDL_ListModes(NULL, 0)[0]->h / (float)5;
+		pos_button5.w=pos_button5.h;
+		SDL_ANDROID_SetScreenKeyboardButtonPos(SDL_ANDROID_SCREENKEYBOARD_BUTTON_4, &pos_button5);
+		pos_button6.x = changed_prefs.pos_x_button6*(SDL_ListModes(NULL, 0)[0]->w/(float)480);
+		pos_button6.y = changed_prefs.pos_y_button6*(SDL_ListModes(NULL, 0)[0]->h/(float)360);
+		pos_button6.h=SDL_ListModes(NULL, 0)[0]->h / (float)5;
+		pos_button6.w=pos_button6.h;
+		SDL_ANDROID_SetScreenKeyboardButtonPos(SDL_ANDROID_SCREENKEYBOARD_BUTTON_5, &pos_button6);
 
-	    SDL_ANDROID_SetScreenKeyboardButtonShown(SDL_ANDROID_SCREENKEYBOARD_BUTTON_TEXT, changed_prefs.onScreen_textinput);
-	    SDL_ANDROID_SetScreenKeyboardButtonShown(SDL_ANDROID_SCREENKEYBOARD_BUTTON_DPAD, changed_prefs.onScreen_dpad);
-	    SDL_ANDROID_SetScreenKeyboardButtonShown(SDL_ANDROID_SCREENKEYBOARD_BUTTON_0, changed_prefs.onScreen_button1);
-	    SDL_ANDROID_SetScreenKeyboardButtonShown(SDL_ANDROID_SCREENKEYBOARD_BUTTON_1, changed_prefs.onScreen_button2);
-	    SDL_ANDROID_SetScreenKeyboardButtonShown(SDL_ANDROID_SCREENKEYBOARD_BUTTON_2, changed_prefs.onScreen_button3);
-	    SDL_ANDROID_SetScreenKeyboardButtonShown(SDL_ANDROID_SCREENKEYBOARD_BUTTON_3, changed_prefs.onScreen_button4);
-	    SDL_ANDROID_SetScreenKeyboardButtonShown(SDL_ANDROID_SCREENKEYBOARD_BUTTON_4, changed_prefs.onScreen_button5);
-	    SDL_ANDROID_SetScreenKeyboardButtonShown(SDL_ANDROID_SCREENKEYBOARD_BUTTON_5, changed_prefs.onScreen_button6);
+		SDL_ANDROID_SetScreenKeyboardButtonShown(SDL_ANDROID_SCREENKEYBOARD_BUTTON_TEXT, changed_prefs.onScreen_textinput);
+		SDL_ANDROID_SetScreenKeyboardButtonShown(SDL_ANDROID_SCREENKEYBOARD_BUTTON_DPAD, changed_prefs.onScreen_dpad);
+		SDL_ANDROID_SetScreenKeyboardButtonShown(SDL_ANDROID_SCREENKEYBOARD_BUTTON_0, changed_prefs.onScreen_button1);
+		SDL_ANDROID_SetScreenKeyboardButtonShown(SDL_ANDROID_SCREENKEYBOARD_BUTTON_1, changed_prefs.onScreen_button2);
+		SDL_ANDROID_SetScreenKeyboardButtonShown(SDL_ANDROID_SCREENKEYBOARD_BUTTON_2, changed_prefs.onScreen_button3);
+		SDL_ANDROID_SetScreenKeyboardButtonShown(SDL_ANDROID_SCREENKEYBOARD_BUTTON_3, changed_prefs.onScreen_button4);
+		SDL_ANDROID_SetScreenKeyboardButtonShown(SDL_ANDROID_SCREENKEYBOARD_BUTTON_4, changed_prefs.onScreen_button5);
+		SDL_ANDROID_SetScreenKeyboardButtonShown(SDL_ANDROID_SCREENKEYBOARD_BUTTON_5, changed_prefs.onScreen_button6);
 	}
 }
 #endif
@@ -714,34 +744,20 @@ static void open_screen(struct uae_prefs* p)
 		max_uae_width = 1920;
 		max_uae_height = 1080;
 	}
-
+	
+	if (wasfullwindow_a == 0)
+		wasfullwindow_a = currprefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLWINDOW ? 1 : -1;
+	if (wasfullwindow_p == 0)
+		wasfullwindow_p = currprefs.gfx_apmode[1].gfx_fullscreen == GFX_FULLWINDOW ? 1 : -1;
+	
 #if 0
 #ifdef ANDROID
 	update_onscreen();
 #endif
 #endif
+
+	update_win_fs_mode(p);
 	
-	if (screen_is_picasso)
-	{
-		display_width = picasso_vidinfo.width ? picasso_vidinfo.width : 720;
-		display_height = picasso_vidinfo.height ? picasso_vidinfo.height : 270;
-	}
-	else
-	{
-		if (currprefs.gfx_resolution > avidinfo->gfx_resolution_reserved)
-			avidinfo->gfx_resolution_reserved = currprefs.gfx_resolution;
-		if (currprefs.gfx_vresolution > avidinfo->gfx_vresolution_reserved)
-			avidinfo->gfx_vresolution_reserved = currprefs.gfx_vresolution;
-		
-		display_width = p->gfx_monitor.gfx_size.width ? p->gfx_monitor.gfx_size.width : 720;
-		display_height = (p->gfx_monitor.gfx_size.height ? p->gfx_monitor.gfx_size.height : 270) << p->gfx_vresolution;
-	}
-
-	if (wasfullwindow_a == 0)
-		wasfullwindow_a = currprefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLWINDOW ? 1 : -1;
-	if (wasfullwindow_p == 0)
-		wasfullwindow_p = currprefs.gfx_apmode[1].gfx_fullscreen == GFX_FULLWINDOW ? 1 : -1;
-
 #ifdef USE_DISPMANX
 	next_synctime = 0;
 	current_resource_amigafb = 0;
@@ -755,10 +771,6 @@ static void open_screen(struct uae_prefs* p)
 	
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0xFF);
 	SDL_RenderClear(renderer);
-
-	set_screen_mode(p);
-
-	Uint32 pixel_format;
 
 	if (screen_is_picasso)
 	{
@@ -785,11 +797,16 @@ static void open_screen(struct uae_prefs* p)
 			SDL_RenderSetLogicalSize(renderer, display_height, display_width);
 			renderQuad = { -(display_width - display_height) / 2, (display_width - display_height) / 2, display_width, display_height };
 		}
+		
+		if (isfullscreen() == 0)
+			SDL_SetWindowSize(sdl_window, display_width, display_height);
 	}
 	else
 	{
-		display_depth = 16;
-		pixel_format = SDL_PIXELFORMAT_RGB565;
+		//display_depth = 16;
+		//pixel_format = SDL_PIXELFORMAT_RGB565;
+		display_depth = 32;
+		pixel_format = SDL_PIXELFORMAT_RGBA32;
 		const auto width = display_width * 2 >> p->gfx_resolution;
 		const auto height = display_height * 2 >> p->gfx_vresolution;
 
@@ -803,6 +820,9 @@ static void open_screen(struct uae_prefs* p)
 			SDL_RenderSetLogicalSize(renderer, height, width);
 			renderQuad = { -(width - height) / 2, (width - height) / 2, width, height };
 		}
+		
+		if (isfullscreen() == 0)
+			SDL_SetWindowSize(sdl_window, width, height);
 	}
 
 	if (p->scaling_method == -1)
@@ -861,10 +881,10 @@ void flush_screen(struct vidbuffer* vidbuffer, int ystart, int ystop)
 			
 			if (new_height < 200)
 				new_height = 200;
-			if (new_height != currprefs.gfx_monitor.gfx_size.height)
+			if (new_height * 2 != currprefs.gfx_monitor.gfx_size_win.height)
 			{
-				display_height = new_height;
-				currprefs.gfx_monitor.gfx_size.height = new_height;
+				display_height = new_height * 2;
+				currprefs.gfx_monitor.gfx_size_win.height = new_height * 2;
 				copy_prefs(&currprefs, &changed_prefs);
 				open_screen(&currprefs);
 				init_custom();
@@ -905,8 +925,12 @@ int check_prefs_changed_gfx()
 	auto changed = 0;
 
 	if (currprefs.color_mode != changed_prefs.color_mode ||
-		currprefs.gfx_monitor.gfx_size.height != changed_prefs.gfx_monitor.gfx_size.height ||
+		currprefs.gfx_monitor.gfx_size_fs.width != changed_prefs.gfx_monitor.gfx_size_fs.width ||
+		currprefs.gfx_monitor.gfx_size_fs.height != changed_prefs.gfx_monitor.gfx_size_fs.height ||
+		currprefs.gfx_monitor.gfx_size_win.width != changed_prefs.gfx_monitor.gfx_size_win.width ||
+		currprefs.gfx_monitor.gfx_size_win.height != changed_prefs.gfx_monitor.gfx_size_win.height ||
 		currprefs.gfx_monitor.gfx_size.width != changed_prefs.gfx_monitor.gfx_size.width ||
+		currprefs.gfx_monitor.gfx_size.height != changed_prefs.gfx_monitor.gfx_size.height ||
 		currprefs.gfx_apmode[0].gfx_fullscreen != changed_prefs.gfx_apmode[0].gfx_fullscreen ||
 		currprefs.gfx_apmode[1].gfx_fullscreen != changed_prefs.gfx_apmode[1].gfx_fullscreen ||
 		currprefs.gfx_resolution != changed_prefs.gfx_resolution ||
@@ -919,8 +943,12 @@ int check_prefs_changed_gfx()
 		currprefs.gfx_scandoubler != changed_prefs.gfx_scandoubler)
 	{
 		currprefs.color_mode = changed_prefs.color_mode;
-		currprefs.gfx_monitor.gfx_size.height = changed_prefs.gfx_monitor.gfx_size.height;
+		currprefs.gfx_monitor.gfx_size_fs.width = changed_prefs.gfx_monitor.gfx_size_fs.width;
+		currprefs.gfx_monitor.gfx_size_fs.height = changed_prefs.gfx_monitor.gfx_size_fs.height;
+		currprefs.gfx_monitor.gfx_size_win.width = changed_prefs.gfx_monitor.gfx_size_win.width;
+		currprefs.gfx_monitor.gfx_size_win.height = changed_prefs.gfx_monitor.gfx_size_win.height;
 		currprefs.gfx_monitor.gfx_size.width = changed_prefs.gfx_monitor.gfx_size.width;
+		currprefs.gfx_monitor.gfx_size.height = changed_prefs.gfx_monitor.gfx_size.height;
 		currprefs.gfx_apmode[0].gfx_fullscreen = changed_prefs.gfx_apmode[0].gfx_fullscreen;
 		currprefs.gfx_apmode[1].gfx_fullscreen = changed_prefs.gfx_apmode[1].gfx_fullscreen;
 		currprefs.gfx_resolution = changed_prefs.gfx_resolution;
@@ -1275,9 +1303,9 @@ static int save_png(SDL_Surface* surface, char* path)
 	auto* const f = fopen(path, "wbe");
 	if (!f) return 0;
 	auto* png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING,
-	                                        nullptr,
-	                                        nullptr,
-	                                        nullptr);
+											nullptr,
+											nullptr,
+											nullptr);
 	if (!png_ptr)
 	{
 		fclose(f);

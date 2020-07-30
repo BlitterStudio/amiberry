@@ -22,8 +22,8 @@
 #define GETBDM(x) (((x) - (((x) / 10000) * 10000)) / 100)
 #define GETBDD(x) ((x) % 100)
 
-#define AMIBERRYVERSION _T("Amiberry v3.2 beta (2020-07-13)")
-#define AMIBERRYDATE MAKEBD(2020, 7, 13)
+#define AMIBERRYVERSION _T("Amiberry v3.2 beta (2020-07-30)")
+#define AMIBERRYDATE MAKEBD(2020, 7, 30)
 
 #define IHF_WINDOWHIDDEN 6
 
@@ -116,11 +116,6 @@ extern void AddFileToCDList(const char* file, int moveToTop);
 #define MAX_MRU_WHDLOADLIST 10
 extern std::vector<std::string> lstMRUWhdloadList;
 extern void AddFileToWHDLoadList(const char* file, int moveToTop);
-
-#define AMIGAWIDTH_COUNT 6
-#define AMIGAHEIGHT_COUNT 7
-extern const int amigawidth_values[AMIGAWIDTH_COUNT];
-extern const int amigaheight_values[AMIGAHEIGHT_COUNT];
 
 int count_HDs(struct uae_prefs* p);
 extern void gui_force_rtarea_hdchange(void);
