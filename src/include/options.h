@@ -888,6 +888,14 @@ struct uae_prefs
 	int gfx_correct_aspect;
 	int scaling_method;
 
+	int active_capture_priority;
+	bool active_nocapture_pause;
+	bool active_nocapture_nosound;
+	int inactive_priority;
+	bool inactive_pause;
+	bool inactive_nosound;
+	int inactive_input;
+	
 	TCHAR open_gui[256];
 	TCHAR quit_amiberry[256];
 	TCHAR action_replay[256];

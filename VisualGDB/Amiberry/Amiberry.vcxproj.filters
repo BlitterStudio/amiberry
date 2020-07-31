@@ -640,6 +640,9 @@
     <ClCompile Include="..\..\src\tabletlibrary.cpp">
       <Filter>Source files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\osdep\gui\PanelPrio.cpp">
+      <Filter>Source files\osdep\gui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\threaddep\thread.h">

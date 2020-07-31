@@ -62,7 +62,7 @@ public:
 
 	std::string getElementAt(int i) override
 	{
-		if (i < 0 || i >= values.size())
+		if (i < 0 || i >= static_cast<int>(values.size()))
 			return "---";
 		return values[i];
 	}

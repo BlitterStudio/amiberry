@@ -130,6 +130,11 @@ void ExitPanelMisc(void);
 void RefreshPanelMisc(void);
 bool HelpPanelMisc(std::vector<std::string>& helptext);
 
+void InitPanelPrio(const struct _ConfigCategory& category);
+void ExitPanelPrio(void);
+void RefreshPanelPrio(void);
+bool HelpPanelPrio(std::vector<std::string>& helptext);
+
 void InitPanelSavestate(const struct _ConfigCategory& category);
 void ExitPanelSavestate(void);
 void RefreshPanelSavestate(void);

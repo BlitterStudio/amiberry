@@ -281,6 +281,7 @@
     <ClCompile Include="..\..\src\osdep\gui\PanelInput.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelMisc.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelPaths.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\PanelPrio.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelQuickstart.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelRAM.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelROM.cpp" />

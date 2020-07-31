@@ -192,6 +192,7 @@ set(SRC_FILES
         src/osdep/gui/PanelDisplay.cpp
         src/osdep/gui/PanelSound.cpp
         src/osdep/gui/PanelMisc.cpp
+		src/osdep/gui/PanelPrio.cpp
         src/osdep/gui/PanelSavestate.cpp
         src/osdep/gui/main_window.cpp
         src/osdep/gui/Navigation.cpp

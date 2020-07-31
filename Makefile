@@ -422,6 +422,7 @@ OBJS =	\
 	src/osdep/gui/PanelDisplay.o \
 	src/osdep/gui/PanelSound.o \
 	src/osdep/gui/PanelMisc.o \
+	src/osdep/gui/PanelPrio.o \
 	src/osdep/gui/PanelSavestate.o \
 	src/osdep/gui/main_window.o \
 	src/osdep/gui/Navigation.o

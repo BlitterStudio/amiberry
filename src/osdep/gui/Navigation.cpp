@@ -37,13 +37,14 @@ static NavigationMap navMap[] =
 	{"Custom controls", "Right Trigger", "0: Mouse", "Input", "Miscellaneous"},
 	{"Miscellaneous", "chkStatusLineNative", "chkStatusLineNative", "Custom controls", "Savestates"},
 #ifdef ANDROID
-{ "Savestates",       "State0",         "State0",         "Miscellaneous",  "OnScreen" },
-{ "OnScreen",         "OnScrButton3",   "OnScrCtrl",      "Savestates",     "Shutdown" },
-{ "Quit",             "Start",          "Help",           "OnScreen",       "Paths" },
-{ "Help",             "Quit",           "Start",          "OnScreen",       "Paths" },
-{ "Start",            "Help",           "Quit",           "OnScreen",       "Paths" },
+	{ "Savestates",       "State0",         "State0",         "Miscellaneous",  "OnScreen" },
+	{ "OnScreen",         "OnScrButton3",   "OnScrCtrl",      "Savestates",     "Shutdown" },
+	{ "Quit",             "Start",          "Help",           "OnScreen",       "Paths" },
+	{ "Help",             "Quit",           "Start",          "OnScreen",       "Paths" },
+	{ "Start",            "Help",           "Quit",           "OnScreen",       "Paths" },
 #else
-	{"Savestates", "State0", "State0", "Miscellaneous", "Shutdown"},
+	{"Priority", "cboInactiveRunAtPrio", "cboActiveRunAtPrio", "Miscellaneous", "Savestates" },
+	{"Savestates", "State0", "State0", "Priority", "Shutdown"},
 	{"Shutdown", "Start", "Quit", "Savestates", "Paths"},
 	{"Quit", "Shutdown", "Restart", "Savestates", "Paths"},
 	{"Restart", "Quit", "Help", "Savestates", "Paths"},
@@ -314,6 +315,15 @@ static NavigationMap navMap[] =
 	{"KeyActionReplay", "Miscellaneous", "KeyFullScreen", "OpenGUI", "StatusLine"},
 	{"KeyFullScreen", "KeyActionReplay", "KeyActionReplay", "KeyForQuit", "RetroArchQuit"},
 
+	// PanelPrio
+	{ "cboActiveRunAtPrio", "Priority", "cboInactiveRunAtPrio", "chkActiveDisableSound", "chkActivePauseEmulation" },
+	{ "chkActivePauseEmulation", "Priority", "chkInactivePauseEmulation", "cboActiveRunAtPrio", "chkActiveDisableSound" },
+	{ "chkActiveDisableSound", "Priority", "chkInactiveDisableSound", "chkActivePauseEmulation", "cboActiveRunAtPrio" },
+	{ "cboInactiveRunAtPrio", "cboActiveRunAtPrio", "Priority", "chkInactiveDisableControllers", "chkInactivePauseEmulation" },
+	{ "chkInactivePauseEmulation", "chkActivePauseEmulation", "Priority", "cboInactiveRunAtPrio", "chkInactiveDisableSound" },
+	{ "chkInactiveDisableSound", "chkActiveDisableSound", "Priority", "chkInactivePauseEmulation", "chkInactiveDisableControllers" },
+	{ "chkInactiveDisableControllers", "chkActiveDisableSound", "Priority", "chkInactiveDisableSound", "cboInactiveRunAtPrio" },
+	
 	// PanelSavestate
 	{ "State0", "Savestates", "Savestates", "LoadState", "State1" },
 	{ "State1", "Savestates", "Savestates", "State0", "State2" },

@@ -444,6 +444,13 @@ void target_default_options(struct uae_prefs* p, int type)
 	_tcscpy(p->fullscreen_toggle, amiberry_options.default_fullscreen_toggle_key);
 
 	p->allow_host_run = false;
+	p->active_capture_priority = 1;
+	p->active_nocapture_pause = false;
+	p->active_nocapture_nosound = false;
+	p->inactive_priority = 0;
+	p->inactive_nosound = true;
+	p->inactive_pause = true;
+	p->inactive_input = 0;
 	
 	p->input_analog_remap = false;
 
@@ -523,6 +530,14 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_write_bool(f, _T("amiberry.use_retroarch_reset"), p->use_retroarch_reset);
 
 	cfgfile_target_dwrite(f, _T("cpu_idle"), _T("%d"), p->cpu_idle);
+	cfgfile_write(f, _T("active_priority"), _T("%d"), p->active_capture_priority);
+	cfgfile_target_dwrite_bool(f, _T("active_not_captured_nosound"), p->active_nocapture_nosound);
+	cfgfile_target_dwrite_bool(f, _T("active_not_captured_pause"), p->active_nocapture_pause);
+	cfgfile_write(f, _T("inactive_priority"), _T("%d"), p->inactive_priority);
+	cfgfile_target_dwrite_bool(f, _T("inactive_nosound"), p->inactive_nosound);
+	cfgfile_target_dwrite_bool(f, _T("inactive_pause"), p->inactive_pause);
+	cfgfile_target_dwrite(f, _T("inactive_input"), _T("%d"), p->inactive_input);
+	
 #ifdef ANDROID
 	cfgfile_write(f, "amiberry.onscreen", "%d", p->onScreen);
 	cfgfile_write(f, "amiberry.onscreen_textinput", "%d", p->onScreen_textinput);
@@ -634,6 +649,20 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 	if (cfgfile_string(option, value, "fullscreen_toggle", p->fullscreen_toggle, sizeof p->fullscreen_toggle))
 		return 1;
 	if (cfgfile_intval(option, value, _T("cpu_idle"), &p->cpu_idle, 1))
+		return 1;
+	if (cfgfile_intval(option, value, _T("active_priority"), &p->active_capture_priority, 1))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("active_nocapture_pause"), &p->active_nocapture_pause))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("active_nocapture_nosound"), &p->active_nocapture_nosound))
+		return 1;
+	if (cfgfile_intval(option, value, _T("inactive_priority"), &p->inactive_priority, 1))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("inactive_pause"), &p->inactive_pause))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("inactive_nosound"), &p->inactive_nosound))
+		return 1;
+	if (cfgfile_intval(option, value, _T("inactive_input"), &p->inactive_input, 1))
 		return 1;
 	return 0;
 }
@@ -1424,6 +1453,27 @@ int main(int argc, char* argv[])
 	return 0;
 }
 
+void setpriority(int prio)
+{
+	if (prio >= 0 && prio <= 2)
+	{
+		switch (prio)
+		{
+		case 0:
+			SDL_SetThreadPriority(SDL_THREAD_PRIORITY_LOW);
+			break;
+		case 1:
+			SDL_SetThreadPriority(SDL_THREAD_PRIORITY_NORMAL);
+			break;
+		case 2:
+			SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH);
+			break;
+		default:
+			break;
+		}		
+	}
+}
+
 void toggle_mousegrab()
 {
 	// Release mouse
@@ -1486,28 +1536,60 @@ static void amiberry_inactive(int minimized)
 		}
 		else if (mouseactive) {
 			inputdevice_unacquire();
-			setpaused(2);
-			sound_closed = -1;
+			if (currprefs.active_nocapture_pause)
+			{
+				setpaused(2);
+				sound_closed = 1;
+			}
+			else if (currprefs.active_nocapture_nosound)
+			{
+				setsoundpaused();
+				sound_closed = -1;
+			}
 		}
 		else {
-			inputdevice_unacquire();
-			setpaused(2);
-			sound_closed = -1;
+			if (currprefs.inactive_pause)
+			{
+				inputdevice_unacquire();
+				setpaused(2);
+				sound_closed = 1;
+			}
+			else if (currprefs.inactive_nosound)
+			{
+				inputdevice_unacquire(true, currprefs.inactive_input);
+				setsoundpaused();
+				sound_closed = -1;
+			}
+			else {
+				inputdevice_unacquire(true, currprefs.inactive_input);
+			}
 		}
 	} else {
 		inputdevice_unacquire();
 	}
+	setpriority(currprefs.inactive_priority);
 }
 
 static void amiberry_active(int minimized)
 {
+	setpriority(currprefs.active_capture_priority);
+	
 	if (sound_closed != 0) {
 		if (sound_closed < 0) {
 			resumesoundpaused();
 		}
+		else
+		{
+			if (currprefs.active_nocapture_pause)
+			{
+				if (mouseactive)
+					resumepaused(2);
+			}
+			else if (currprefs.inactive_pause)
+				resumepaused(2);
+		}
 		sound_closed = 0;
 	}
-	resumepaused(2);
 	//getcapslock();
 	inputdevice_acquire(TRUE);
 	if (isfullscreen() > 0)
@@ -1540,15 +1622,23 @@ static void setmouseactive2(int active, bool allowpause)
 	
 	if (active) {
 		inputdevice_acquire(TRUE);
-		resumepaused(2);
-		if (sound_closed < 0)
+		setpriority(currprefs.active_capture_priority);
+		if (currprefs.active_nocapture_pause)
+			resumepaused(2);
+		else if (currprefs.active_nocapture_nosound && sound_closed < 0)
 			resumesoundpaused();
 	}
 	else {
 		inputdevice_acquire(FALSE);
 		inputdevice_releasebuttons();
-		setpaused(2);
-		sound_closed = -1;
+	}
+	if (!active && allowpause)
+	{
+		if (currprefs.active_nocapture_pause)
+			setpaused(2);
+		else if (currprefs.active_nocapture_nosound)
+			setsoundpaused();
+			sound_closed = -1;
 	}
 }
 
@@ -1568,12 +1658,22 @@ void enablecapture()
 		resumesoundpaused();
 		sound_closed = 0;
 	}
+	if (currprefs.inactive_pause || currprefs.active_nocapture_pause)
+		resumepaused(2);
 }
 
 void disablecapture()
 {
 	setmouseactive(0);
 	focus = 0;
+	if (currprefs.active_nocapture_pause && sound_closed == 0) {
+		setpaused(2);
+		sound_closed = 1;
+	}
+	else if (currprefs.active_nocapture_nosound && sound_closed == 0) {
+		setsoundpaused();
+		sound_closed = -1;
+	}
 }
 
 void process_event(SDL_Event event)
@@ -1598,6 +1698,7 @@ void process_event(SDL_Event event)
 		case SDL_WINDOWEVENT_FOCUS_GAINED:
 			mouseinside = true;
 			set_mouse_grab(true);
+			amiberry_active(minimized);
 			break;
 		case SDL_WINDOWEVENT_LEAVE:
 			mouseinside = false;
@@ -1605,6 +1706,7 @@ void process_event(SDL_Event event)
 		case SDL_WINDOWEVENT_FOCUS_LOST:
 			mouseinside = false;
 			set_mouse_grab(false);
+			amiberry_inactive(minimized);
 			break;
 		case SDL_WINDOWEVENT_CLOSE:
 			uae_quit();

@@ -81,6 +81,7 @@ ConfigCategory categories[] = {
 		RefreshPanelCustom, HelpPanelCustom
 	},
 	{"Miscellaneous", "data/misc.ico", nullptr, nullptr, InitPanelMisc, ExitPanelMisc, RefreshPanelMisc, HelpPanelMisc},
+	{ "Priority", "data/misc.ico", nullptr, nullptr, InitPanelPrio, ExitPanelPrio, RefreshPanelPrio, HelpPanelPrio},
 	{
 		"Savestates", "data/savestate.png", nullptr, nullptr, InitPanelSavestate, ExitPanelSavestate,
 		RefreshPanelSavestate, HelpPanelSavestate

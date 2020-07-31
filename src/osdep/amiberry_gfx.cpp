@@ -29,6 +29,7 @@
 
 #include "gfxboard.h"
 #include "statusline.h"
+#include "sounddep/sound.h"
 #include "threaddep/thread.h"
 static uae_thread_id display_tid = nullptr;
 static smp_comm_pipe *volatile display_pipe = nullptr;
@@ -845,6 +846,7 @@ static void open_screen(struct uae_prefs* p)
 
 #endif
 
+	setpriority(currprefs.active_capture_priority);
 	if (screen != nullptr)
 	{
 		allocsoftbuffer(&avidinfo->drawbuffer, display_width, display_height, display_depth);
@@ -924,6 +926,13 @@ int check_prefs_changed_gfx()
 	
 	auto changed = 0;
 
+	if (currprefs.chipset_refreshrate != changed_prefs.chipset_refreshrate)
+	{
+		currprefs.chipset_refreshrate = changed_prefs.chipset_refreshrate;
+		init_hz_normal();
+		return 1;
+	}
+	
 	if (currprefs.color_mode != changed_prefs.color_mode ||
 		currprefs.gfx_monitor.gfx_size_fs.width != changed_prefs.gfx_monitor.gfx_size_fs.width ||
 		currprefs.gfx_monitor.gfx_size_fs.height != changed_prefs.gfx_monitor.gfx_size_fs.height ||
@@ -963,6 +972,9 @@ int check_prefs_changed_gfx()
 		changed = 1;
 	}
 
+	if (changed)
+		init_custom();
+	
 	if (currprefs.gf[0].gfx_filter_autoscale != changed_prefs.gf[0].gfx_filter_autoscale ||
 		currprefs.gfx_xcenter_pos != changed_prefs.gfx_xcenter_pos ||
 		currprefs.gfx_ycenter_pos != changed_prefs.gfx_ycenter_pos ||
@@ -984,30 +996,44 @@ int check_prefs_changed_gfx()
 
 		return 1;
 	}
-	
-	if (currprefs.leds_on_screen != changed_prefs.leds_on_screen)
-	{
-		currprefs.leds_on_screen = changed_prefs.leds_on_screen;
-		changed = 1;
-	}
-	if (currprefs.chipset_refreshrate != changed_prefs.chipset_refreshrate)
-	{
-		currprefs.chipset_refreshrate = changed_prefs.chipset_refreshrate;
-		changed = 1;
-	}
-	if (currprefs.input_mouse_untrap != changed_prefs.input_mouse_untrap)
-	{
-		currprefs.input_mouse_untrap = changed_prefs.input_mouse_untrap;
-		changed = 1;
-	}
 
 	currprefs.filesys_limit = changed_prefs.filesys_limit;
 	currprefs.harddrive_read_only = changed_prefs.harddrive_read_only;
+	
+	if (currprefs.leds_on_screen != changed_prefs.leds_on_screen ||
+		currprefs.keyboard_leds[0] != changed_prefs.keyboard_leds[0] ||
+		currprefs.keyboard_leds[1] != changed_prefs.keyboard_leds[1] ||
+		currprefs.keyboard_leds[2] != changed_prefs.keyboard_leds[2] ||
+		currprefs.input_mouse_untrap != changed_prefs.input_mouse_untrap ||
+		currprefs.active_capture_priority != changed_prefs.active_capture_priority ||
+		currprefs.inactive_priority != changed_prefs.inactive_priority ||
+		currprefs.active_nocapture_nosound != changed_prefs.active_nocapture_nosound ||
+		currprefs.active_nocapture_pause != changed_prefs.active_nocapture_pause ||
+		currprefs.inactive_nosound != changed_prefs.inactive_nosound ||
+		currprefs.inactive_pause != changed_prefs.inactive_pause ||
+		currprefs.inactive_input != changed_prefs.inactive_input)
+	{
+		currprefs.leds_on_screen = changed_prefs.leds_on_screen;
+		currprefs.keyboard_leds[0] = changed_prefs.keyboard_leds[0];
+		currprefs.keyboard_leds[1] = changed_prefs.keyboard_leds[1];
+		currprefs.keyboard_leds[2] = changed_prefs.keyboard_leds[2];
+		currprefs.input_mouse_untrap = changed_prefs.input_mouse_untrap;
+		currprefs.active_capture_priority = changed_prefs.active_capture_priority;
+		currprefs.inactive_priority = changed_prefs.inactive_priority;
+		currprefs.active_nocapture_nosound = changed_prefs.active_nocapture_nosound;
+		currprefs.active_nocapture_pause = changed_prefs.active_nocapture_pause;
+		currprefs.inactive_nosound = changed_prefs.inactive_nosound;
+		currprefs.inactive_pause = changed_prefs.inactive_pause;
+		currprefs.inactive_input = changed_prefs.inactive_input;
+		inputdevice_unacquire();
+		pause_sound();
+		resume_sound();
+		inputdevice_acquire(TRUE);
+		setpriority(currprefs.active_capture_priority);
+		return 1;
+	}
 
-	if (changed)
-		init_custom();
-
-	return changed;
+	return 0;
 }
 
 

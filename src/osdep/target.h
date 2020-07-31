@@ -22,8 +22,8 @@
 #define GETBDM(x) (((x) - (((x) / 10000) * 10000)) / 100)
 #define GETBDD(x) ((x) % 100)
 
-#define AMIBERRYVERSION _T("Amiberry v3.2 beta (2020-07-30)")
-#define AMIBERRYDATE MAKEBD(2020, 7, 30)
+#define AMIBERRYVERSION _T("Amiberry v3.2 beta (2020-08-01)")
+#define AMIBERRYDATE MAKEBD(2020, 8, 1)
 
 #define IHF_WINDOWHIDDEN 6
 
@@ -92,6 +92,7 @@ extern void ReadConfigFileList(void);
 extern void RescanROMs(void);
 extern void SymlinkROMs(void);
 extern void ClearAvailableROMList(void);
+extern void setpriority(int prio);
 
 #include <vector>
 #include <string>
