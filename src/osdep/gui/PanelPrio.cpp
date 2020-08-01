@@ -161,6 +161,7 @@ void InitPanelPrio(const struct _ConfigCategory& category)
 	posY += chkActivePauseEmulation->getHeight() + DISTANCE_NEXT_Y;
 	grpWhenActive->add(chkActiveDisableSound, DISTANCE_BORDER, posY);
 	grpWhenActive->setMovable(false);
+	grpWhenActive->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpWhenActive->setSize(cboActiveRunAtPrio->getWidth() + DISTANCE_BORDER * 2, TITLEBAR_HEIGHT + chkActiveDisableSound->getY() + chkActiveDisableSound->getHeight() + DISTANCE_NEXT_Y * 3);
 	grpWhenActive->setBaseColor(gui_baseCol);
 	category.panel->add(grpWhenActive);
@@ -195,6 +196,7 @@ void InitPanelPrio(const struct _ConfigCategory& category)
 	posY += chkInactiveDisableSound->getHeight() + DISTANCE_NEXT_Y;
 	grpWhenInactive->add(chkInactiveDisableControllers, DISTANCE_BORDER, posY);
 	grpWhenInactive->setMovable(false);
+	grpWhenInactive->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpWhenInactive->setSize(chkInactiveDisableControllers->getWidth() + DISTANCE_BORDER * 2, grpWhenActive->getHeight());
 	grpWhenInactive->setBaseColor(gui_baseCol);
 	category.panel->add(grpWhenInactive);
