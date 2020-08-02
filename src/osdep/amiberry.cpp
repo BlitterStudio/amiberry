@@ -529,14 +529,14 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_write_bool(f, _T("amiberry.use_retroarch_menu"), p->use_retroarch_menu);
 	cfgfile_write_bool(f, _T("amiberry.use_retroarch_reset"), p->use_retroarch_reset);
 
-	cfgfile_target_dwrite(f, _T("cpu_idle"), _T("%d"), p->cpu_idle);
-	cfgfile_write(f, _T("active_priority"), _T("%d"), p->active_capture_priority);
-	cfgfile_target_dwrite_bool(f, _T("active_not_captured_nosound"), p->active_nocapture_nosound);
-	cfgfile_target_dwrite_bool(f, _T("active_not_captured_pause"), p->active_nocapture_pause);
-	cfgfile_write(f, _T("inactive_priority"), _T("%d"), p->inactive_priority);
-	cfgfile_target_dwrite_bool(f, _T("inactive_nosound"), p->inactive_nosound);
-	cfgfile_target_dwrite_bool(f, _T("inactive_pause"), p->inactive_pause);
-	cfgfile_target_dwrite(f, _T("inactive_input"), _T("%d"), p->inactive_input);
+	cfgfile_target_dwrite(f, _T("amiberry.cpu_idle"), _T("%d"), p->cpu_idle);
+	cfgfile_write(f, _T("amiberry.active_priority"), _T("%d"), p->active_capture_priority);
+	cfgfile_target_dwrite_bool(f, _T("amiberry.active_not_captured_nosound"), p->active_nocapture_nosound);
+	cfgfile_target_dwrite_bool(f, _T("amiberry.active_not_captured_pause"), p->active_nocapture_pause);
+	cfgfile_write(f, _T("amiberry.inactive_priority"), _T("%d"), p->inactive_priority);
+	cfgfile_target_dwrite_bool(f, _T("amiberry.inactive_nosound"), p->inactive_nosound);
+	cfgfile_target_dwrite_bool(f, _T("amiberry.inactive_pause"), p->inactive_pause);
+	cfgfile_target_dwrite(f, _T("amiberry.inactive_input"), _T("%d"), p->inactive_input);
 	
 #ifdef ANDROID
 	cfgfile_write(f, "amiberry.onscreen", "%d", p->onScreen);
