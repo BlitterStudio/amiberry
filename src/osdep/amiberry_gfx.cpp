@@ -645,7 +645,8 @@ void graphics_subshutdown()
 		write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SUBSHUTDOWN, 1);
 		uae_sem_wait(&display_sem);
 	}
-	
+	reset_sound();
+
 #ifndef USE_DISPMANX
 	if (texture != nullptr)
 	{
@@ -735,6 +736,20 @@ bool isModeAspectRatioExact(SDL_DisplayMode* mode, const int width, const int he
 	return mode->w % width == 0 && mode->h % height == 0;
 }
 
+static void updatepicasso96()
+{
+#ifdef PICASSO96
+	struct picasso_vidbuf_description* vidinfo = &picasso_vidinfo;
+	vidinfo->rowbytes = 0;
+	vidinfo->pixbytes = screen->format->BytesPerPixel;
+	vidinfo->rgbformat = 0;
+	vidinfo->extra_mem = 1;
+	vidinfo->height = screen->h;
+	vidinfo->width = screen->w;
+	vidinfo->depth = screen->format->BytesPerPixel * 8;
+	vidinfo->offset = 0;
+#endif
+}
 static void open_screen(struct uae_prefs* p)
 {
 	auto* avidinfo = &adisplays.gfxvidinfo;
@@ -847,12 +862,22 @@ static void open_screen(struct uae_prefs* p)
 #endif
 
 	setpriority(currprefs.active_capture_priority);
+	updatepicasso96();
+
 	if (screen != nullptr)
 	{
 		allocsoftbuffer(&avidinfo->drawbuffer, display_width, display_height, display_depth);
 		notice_screen_contents_lost();
-		init_row_map();
+		if (!screen_is_picasso)
+		{
+			init_row_map();
+		}
 	}
+	init_colors();
+	picasso_refresh();
+
+	if (isfullscreen() != 0)
+		setmouseactive(-1);
 }
 
 extern int vstrt; // vertical start
@@ -921,60 +946,287 @@ void graphics_reset(bool forced)
 
 int check_prefs_changed_gfx()
 {
+	int c = 0;
+	
 	if (!config_changed && !display_change_requested)
 		return 0;
-	
-	auto changed = 0;
 
-	if (currprefs.chipset_refreshrate != changed_prefs.chipset_refreshrate)
+	int c2 = 0;
+	c2 |= currprefs.gfx_monitor.gfx_size_fs.width != changed_prefs.gfx_monitor.gfx_size_fs.width ? 16 : 0;
+	c2 |= currprefs.gfx_monitor.gfx_size_fs.height != changed_prefs.gfx_monitor.gfx_size_fs.height ? 16 : 0;
+	c2 |= ((currprefs.gfx_monitor.gfx_size_win.width + 7) & ~7) != ((changed_prefs.gfx_monitor.gfx_size_win.width + 7) & ~7) ? 16 : 0;
+	c2 |= currprefs.gfx_monitor.gfx_size_win.height != changed_prefs.gfx_monitor.gfx_size_win.height ? 16 : 0;
+	if (c2) {
+		c |= c2;
+	}
+
+	c |= currprefs.color_mode != changed_prefs.color_mode ? 2 | 16 : 0;
+	c |= currprefs.gfx_apmode[0].gfx_fullscreen != changed_prefs.gfx_apmode[0].gfx_fullscreen ? 16 : 0;
+	c |= currprefs.gfx_apmode[1].gfx_fullscreen != changed_prefs.gfx_apmode[1].gfx_fullscreen ? 16 : 0;
+	c |= currprefs.gfx_apmode[0].gfx_vsync != changed_prefs.gfx_apmode[0].gfx_vsync ? 2 | 16 : 0;
+	c |= currprefs.gfx_apmode[1].gfx_vsync != changed_prefs.gfx_apmode[1].gfx_vsync ? 2 | 16 : 0;
+	c |= currprefs.gfx_apmode[0].gfx_vsyncmode != changed_prefs.gfx_apmode[0].gfx_vsyncmode ? 2 | 16 : 0;
+	c |= currprefs.gfx_apmode[1].gfx_vsyncmode != changed_prefs.gfx_apmode[1].gfx_vsyncmode ? 2 | 16 : 0;
+	c |= currprefs.gfx_apmode[0].gfx_refreshrate != changed_prefs.gfx_apmode[0].gfx_refreshrate ? 2 | 16 : 0;
+	c |= currprefs.gfx_autoresolution != changed_prefs.gfx_autoresolution ? (2 | 8 | 16) : 0;
+	c |= currprefs.gfx_autoresolution_vga != changed_prefs.gfx_autoresolution_vga ? (2 | 8 | 16) : 0;
+	c |= currprefs.gfx_api != changed_prefs.gfx_api ? (1 | 8 | 32) : 0;
+	c |= currprefs.gfx_api_options != changed_prefs.gfx_api_options ? (1 | 8 | 32) : 0;
+	c |= currprefs.lightboost_strobo != changed_prefs.lightboost_strobo ? (2 | 16) : 0;
+
+	for (int j = 0; j < 2; j++) {
+		struct gfx_filterdata* gf = &currprefs.gf[j];
+		struct gfx_filterdata* gfc = &changed_prefs.gf[j];
+
+		c |= gf->gfx_filter != gfc->gfx_filter ? (2 | 8) : 0;
+
+		for (int i = 0; i <= 2 * MAX_FILTERSHADERS; i++) {
+			c |= _tcscmp(gf->gfx_filtershader[i], gfc->gfx_filtershader[i]) ? (2 | 8) : 0;
+			c |= _tcscmp(gf->gfx_filtermask[i], gfc->gfx_filtermask[i]) ? (2 | 8) : 0;
+		}
+		c |= _tcscmp(gf->gfx_filteroverlay, gfc->gfx_filteroverlay) ? (2 | 8) : 0;
+
+		c |= gf->gfx_filter_scanlines != gfc->gfx_filter_scanlines ? (1 | 8) : 0;
+		c |= gf->gfx_filter_scanlinelevel != gfc->gfx_filter_scanlinelevel ? (1 | 8) : 0;
+		c |= gf->gfx_filter_scanlineratio != gfc->gfx_filter_scanlineratio ? (1 | 8) : 0;
+		c |= gf->gfx_filter_scanlineoffset != gfc->gfx_filter_scanlineoffset ? (1 | 8) : 0;
+
+		c |= gf->gfx_filter_horiz_zoom_mult != gfc->gfx_filter_horiz_zoom_mult ? (1) : 0;
+		c |= gf->gfx_filter_vert_zoom_mult != gfc->gfx_filter_vert_zoom_mult ? (1) : 0;
+
+		c |= gf->gfx_filter_filtermodeh != gfc->gfx_filter_filtermodeh ? (2 | 8) : 0;
+		c |= gf->gfx_filter_filtermodev != gfc->gfx_filter_filtermodev ? (2 | 8) : 0;
+		c |= gf->gfx_filter_bilinear != gfc->gfx_filter_bilinear ? (2 | 8 | 16) : 0;
+		c |= gf->gfx_filter_noise != gfc->gfx_filter_noise ? (1) : 0;
+		c |= gf->gfx_filter_blur != gfc->gfx_filter_blur ? (1) : 0;
+
+		c |= gf->gfx_filter_aspect != gfc->gfx_filter_aspect ? (1) : 0;
+		c |= gf->gfx_filter_keep_aspect != gfc->gfx_filter_keep_aspect ? (1) : 0;
+		c |= gf->gfx_filter_keep_autoscale_aspect != gfc->gfx_filter_keep_autoscale_aspect ? (1) : 0;
+		c |= gf->gfx_filter_luminance != gfc->gfx_filter_luminance ? (1) : 0;
+		c |= gf->gfx_filter_contrast != gfc->gfx_filter_contrast ? (1) : 0;
+		c |= gf->gfx_filter_saturation != gfc->gfx_filter_saturation ? (1) : 0;
+		c |= gf->gfx_filter_gamma != gfc->gfx_filter_gamma ? (1) : 0;
+		c |= gf->gfx_filter_integerscalelimit != gfc->gfx_filter_integerscalelimit ? (1) : 0;
+		if (j && gf->gfx_filter_autoscale != gfc->gfx_filter_autoscale)
+			c |= 8 | 64;
+	}
+
+	c |= currprefs.rtg_horiz_zoom_mult != changed_prefs.rtg_horiz_zoom_mult ? 16 : 0;
+	c |= currprefs.rtg_vert_zoom_mult != changed_prefs.rtg_vert_zoom_mult ? 16 : 0;
+
+	c |= currprefs.gfx_luminance != changed_prefs.gfx_luminance ? (1 | 256) : 0;
+	c |= currprefs.gfx_contrast != changed_prefs.gfx_contrast ? (1 | 256) : 0;
+	c |= currprefs.gfx_gamma != changed_prefs.gfx_gamma ? (1 | 256) : 0;
+
+	c |= currprefs.gfx_resolution != changed_prefs.gfx_resolution ? (128) : 0;
+	c |= currprefs.gfx_vresolution != changed_prefs.gfx_vresolution ? (128) : 0;
+	c |= currprefs.gfx_autoresolution_minh != changed_prefs.gfx_autoresolution_minh ? (128) : 0;
+	c |= currprefs.gfx_autoresolution_minv != changed_prefs.gfx_autoresolution_minv ? (128) : 0;
+	c |= currprefs.gfx_iscanlines != changed_prefs.gfx_iscanlines ? (2 | 8) : 0;
+	c |= currprefs.gfx_pscanlines != changed_prefs.gfx_pscanlines ? (2 | 8) : 0;
+
+	c |= currprefs.monitoremu != changed_prefs.monitoremu ? (2 | 8) : 0;
+	c |= currprefs.genlock_image != changed_prefs.genlock_image ? (2 | 8) : 0;
+	c |= currprefs.genlock != changed_prefs.genlock ? (2 | 8) : 0;
+	c |= currprefs.genlock_alpha != changed_prefs.genlock_alpha ? (1 | 8) : 0;
+	c |= currprefs.genlock_mix != changed_prefs.genlock_mix ? (1 | 256) : 0;
+	c |= currprefs.genlock_aspect != changed_prefs.genlock_aspect ? (1 | 256) : 0;
+	c |= currprefs.genlock_scale != changed_prefs.genlock_scale ? (1 | 256) : 0;
+	c |= _tcsicmp(currprefs.genlock_image_file, changed_prefs.genlock_image_file) ? (2 | 8) : 0;
+	c |= _tcsicmp(currprefs.genlock_video_file, changed_prefs.genlock_video_file) ? (2 | 8) : 0;
+
+	c |= currprefs.gfx_lores_mode != changed_prefs.gfx_lores_mode ? (2 | 8) : 0;
+	c |= currprefs.gfx_scandoubler != changed_prefs.gfx_scandoubler ? (2 | 8) : 0;
+	c |= currprefs.gfx_threebitcolors != changed_prefs.gfx_threebitcolors ? (256) : 0;
+	c |= currprefs.gfx_grayscale != changed_prefs.gfx_grayscale ? (512) : 0;
+
+	c |= currprefs.gfx_display_sections != changed_prefs.gfx_display_sections ? (512) : 0;
+	c |= currprefs.gfx_variable_sync != changed_prefs.gfx_variable_sync ? 1 : 0;
+	c |= currprefs.gfx_windowed_resize != changed_prefs.gfx_windowed_resize ? 1 : 0;
+
+	c |= currprefs.gfx_apmode[APMODE_NATIVE].gfx_display != changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_display ? (2 | 4 | 8) : 0;
+	c |= currprefs.gfx_apmode[APMODE_RTG].gfx_display != changed_prefs.gfx_apmode[APMODE_RTG].gfx_display ? (2 | 4 | 8) : 0;
+	c |= currprefs.gfx_blackerthanblack != changed_prefs.gfx_blackerthanblack ? (2 | 8) : 0;
+	c |= currprefs.gfx_apmode[APMODE_NATIVE].gfx_backbuffers != changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_backbuffers ? (2 | 16) : 0;
+	c |= currprefs.gfx_apmode[APMODE_NATIVE].gfx_interlaced != changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_interlaced ? (2 | 8) : 0;
+	c |= currprefs.gfx_apmode[APMODE_RTG].gfx_backbuffers != changed_prefs.gfx_apmode[APMODE_RTG].gfx_backbuffers ? (2 | 16) : 0;
+
+	if (display_change_requested || c)
 	{
+		bool setpause = false;
+		bool dontcapture = false;
+		int keepfsmode =
+			currprefs.gfx_apmode[0].gfx_fullscreen == changed_prefs.gfx_apmode[0].gfx_fullscreen &&
+			currprefs.gfx_apmode[1].gfx_fullscreen == changed_prefs.gfx_apmode[1].gfx_fullscreen;
+
+		currprefs.gfx_autoresolution = changed_prefs.gfx_autoresolution;
+		currprefs.gfx_autoresolution_vga = changed_prefs.gfx_autoresolution_vga;
+		currprefs.color_mode = changed_prefs.color_mode;
+		currprefs.lightboost_strobo = changed_prefs.lightboost_strobo;
+
+		if (currprefs.gfx_api != changed_prefs.gfx_api) {
+			display_change_requested = 1;
+		}
+
+		if (display_change_requested) {
+			if (display_change_requested == 3) {
+				c = 1024;
+			}
+			else if (display_change_requested == 2) {
+				c = 512;
+			}
+			else {
+				c = 2;
+				keepfsmode = 0;
+				if (display_change_requested <= -1) {
+					dontcapture = true;
+					if (display_change_requested == -2)
+						setpause = true;
+					if (pause_emulation)
+						setpause = true;
+				}
+			}
+			display_change_requested = 0;
+		}
+
+		for (int j = 0; j < 2; j++) {
+			struct gfx_filterdata* gf = &currprefs.gf[j];
+			struct gfx_filterdata* gfc = &changed_prefs.gf[j];
+			memcpy(gf, gfc, sizeof(struct gfx_filterdata));
+		}
+
+		currprefs.rtg_horiz_zoom_mult = changed_prefs.rtg_horiz_zoom_mult;
+		currprefs.rtg_vert_zoom_mult = changed_prefs.rtg_vert_zoom_mult;
+
+		currprefs.gfx_luminance = changed_prefs.gfx_luminance;
+		currprefs.gfx_contrast = changed_prefs.gfx_contrast;
+		currprefs.gfx_gamma = changed_prefs.gfx_gamma;
+
+		currprefs.gfx_resolution = changed_prefs.gfx_resolution;
+		currprefs.gfx_vresolution = changed_prefs.gfx_vresolution;
+		currprefs.gfx_autoresolution_minh = changed_prefs.gfx_autoresolution_minh;
+		currprefs.gfx_autoresolution_minv = changed_prefs.gfx_autoresolution_minv;
+		currprefs.gfx_iscanlines = changed_prefs.gfx_iscanlines;
+		currprefs.gfx_pscanlines = changed_prefs.gfx_pscanlines;
+		currprefs.monitoremu = changed_prefs.monitoremu;
+
+		currprefs.genlock_image = changed_prefs.genlock_image;
+		currprefs.genlock = changed_prefs.genlock;
+		currprefs.genlock_mix = changed_prefs.genlock_mix;
+		currprefs.genlock_alpha = changed_prefs.genlock_alpha;
+		currprefs.genlock_aspect = changed_prefs.genlock_aspect;
+		currprefs.genlock_scale = changed_prefs.genlock_scale;
+		_tcscpy(currprefs.genlock_image_file, changed_prefs.genlock_image_file);
+		_tcscpy(currprefs.genlock_video_file, changed_prefs.genlock_video_file);
+
+		currprefs.gfx_lores_mode = changed_prefs.gfx_lores_mode;
+		currprefs.gfx_scandoubler = changed_prefs.gfx_scandoubler;
+		currprefs.gfx_threebitcolors = changed_prefs.gfx_threebitcolors;
+		currprefs.gfx_grayscale = changed_prefs.gfx_grayscale;
+
+		currprefs.gfx_display_sections = changed_prefs.gfx_display_sections;
+		currprefs.gfx_variable_sync = changed_prefs.gfx_variable_sync;
+		currprefs.gfx_windowed_resize = changed_prefs.gfx_windowed_resize;
+
+		currprefs.gfx_apmode[APMODE_NATIVE].gfx_display = changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_display;
+		currprefs.gfx_apmode[APMODE_RTG].gfx_display = changed_prefs.gfx_apmode[APMODE_RTG].gfx_display;
+		currprefs.gfx_blackerthanblack = changed_prefs.gfx_blackerthanblack;
+		currprefs.gfx_apmode[APMODE_NATIVE].gfx_backbuffers = changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_backbuffers;
+		currprefs.gfx_apmode[APMODE_NATIVE].gfx_interlaced = changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_interlaced;
+		currprefs.gfx_apmode[APMODE_RTG].gfx_backbuffers = changed_prefs.gfx_apmode[APMODE_RTG].gfx_backbuffers;
+
+		bool unacquired = false;
+		//for (int monid = MAX_AMIGAMONITORS - 1; monid >= 0; monid--) {
+			//if (!monitors[monid])
+				//continue;
+			//struct AmigaMonitor* mon = &AMonitors[monid];
+
+			if (c & 64) {
+				if (!unacquired) {
+					inputdevice_unacquire();
+					unacquired = true;
+				}
+				black_screen_now();
+			}
+			if (c & 256) {
+				init_colors();
+				reset_drawing();
+			}
+			if (c & 128) {
+				if (currprefs.gfx_autoresolution) {
+					c |= 2 | 8;
+				}
+				else {
+					c |= 16;
+					reset_drawing();
+					//S2X_reset();
+				}
+			}
+			if (c & 1024) {
+				target_graphics_buffer_update();
+			}
+			if (c & 512) {
+				open_screen(&currprefs);
+			}
+			if ((c & 16) || ((c & 8) && keepfsmode)) {
+				open_screen(&currprefs);
+				c |= 2;
+			}
+			if ((c & 32) || ((c & 2) && !keepfsmode)) {
+				if (!unacquired) {
+					inputdevice_unacquire();
+					unacquired = true;
+				}
+				graphics_subshutdown();
+				if (currprefs.gfx_api != changed_prefs.gfx_api || currprefs.gfx_api_options != changed_prefs.gfx_api_options) {
+					currprefs.gfx_api = changed_prefs.gfx_api;
+					currprefs.gfx_api_options = changed_prefs.gfx_api_options;
+				}
+				graphics_init(dontcapture ? false : true);
+			}
+		//}
+
+		init_custom();
+		if (c & 4) {
+			pause_sound();
+			reset_sound();
+			resume_sound();
+		}
+
+		if (setpause || dontcapture) {
+			if (!unacquired)
+				inputdevice_unacquire();
+			unacquired = false;
+		}
+
+		if (unacquired)
+			inputdevice_acquire(TRUE);
+
+		if (setpause)
+			setpaused(1);
+
+		return 1;
+	}
+	
+	bool changed = false;
+	for (int i = 0; i < MAX_CHIPSET_REFRESH_TOTAL; i++) {
+		if (currprefs.cr[i].rate != changed_prefs.cr[i].rate ||
+			currprefs.cr[i].locked != changed_prefs.cr[i].locked) {
+			memcpy(&currprefs.cr[i], &changed_prefs.cr[i], sizeof(struct chipset_refresh));
+			changed = true;
+		}
+	}
+	if (changed) {
+		init_hz_normal();
+	}
+
+	if (currprefs.chipset_refreshrate != changed_prefs.chipset_refreshrate) {
 		currprefs.chipset_refreshrate = changed_prefs.chipset_refreshrate;
 		init_hz_normal();
 		return 1;
 	}
-	
-	if (currprefs.color_mode != changed_prefs.color_mode ||
-		currprefs.gfx_monitor.gfx_size_fs.width != changed_prefs.gfx_monitor.gfx_size_fs.width ||
-		currprefs.gfx_monitor.gfx_size_fs.height != changed_prefs.gfx_monitor.gfx_size_fs.height ||
-		currprefs.gfx_monitor.gfx_size_win.width != changed_prefs.gfx_monitor.gfx_size_win.width ||
-		currprefs.gfx_monitor.gfx_size_win.height != changed_prefs.gfx_monitor.gfx_size_win.height ||
-		currprefs.gfx_monitor.gfx_size.width != changed_prefs.gfx_monitor.gfx_size.width ||
-		currprefs.gfx_monitor.gfx_size.height != changed_prefs.gfx_monitor.gfx_size.height ||
-		currprefs.gfx_apmode[0].gfx_fullscreen != changed_prefs.gfx_apmode[0].gfx_fullscreen ||
-		currprefs.gfx_apmode[1].gfx_fullscreen != changed_prefs.gfx_apmode[1].gfx_fullscreen ||
-		currprefs.gfx_resolution != changed_prefs.gfx_resolution ||
-		currprefs.gfx_vresolution != changed_prefs.gfx_vresolution ||
-		currprefs.gfx_iscanlines != changed_prefs.gfx_iscanlines ||
-		currprefs.gfx_pscanlines != changed_prefs.gfx_pscanlines ||
-		currprefs.gfx_auto_height != changed_prefs.gfx_auto_height ||
-		currprefs.gfx_correct_aspect != changed_prefs.gfx_correct_aspect ||
-		currprefs.gfx_lores_mode != changed_prefs.gfx_lores_mode ||
-		currprefs.gfx_scandoubler != changed_prefs.gfx_scandoubler)
-	{
-		currprefs.color_mode = changed_prefs.color_mode;
-		currprefs.gfx_monitor.gfx_size_fs.width = changed_prefs.gfx_monitor.gfx_size_fs.width;
-		currprefs.gfx_monitor.gfx_size_fs.height = changed_prefs.gfx_monitor.gfx_size_fs.height;
-		currprefs.gfx_monitor.gfx_size_win.width = changed_prefs.gfx_monitor.gfx_size_win.width;
-		currprefs.gfx_monitor.gfx_size_win.height = changed_prefs.gfx_monitor.gfx_size_win.height;
-		currprefs.gfx_monitor.gfx_size.width = changed_prefs.gfx_monitor.gfx_size.width;
-		currprefs.gfx_monitor.gfx_size.height = changed_prefs.gfx_monitor.gfx_size.height;
-		currprefs.gfx_apmode[0].gfx_fullscreen = changed_prefs.gfx_apmode[0].gfx_fullscreen;
-		currprefs.gfx_apmode[1].gfx_fullscreen = changed_prefs.gfx_apmode[1].gfx_fullscreen;
-		currprefs.gfx_resolution = changed_prefs.gfx_resolution;
-		currprefs.gfx_vresolution = changed_prefs.gfx_vresolution;
-		currprefs.gfx_iscanlines = changed_prefs.gfx_iscanlines;
-		currprefs.gfx_pscanlines = changed_prefs.gfx_pscanlines;
-		currprefs.gfx_auto_height = changed_prefs.gfx_auto_height;
-		currprefs.gfx_correct_aspect = changed_prefs.gfx_correct_aspect;
-		currprefs.gfx_lores_mode = changed_prefs.gfx_lores_mode;
-		currprefs.gfx_scandoubler = changed_prefs.gfx_scandoubler;
-		update_display(&currprefs);
-		changed = 1;
-	}
 
-	if (changed)
-		init_custom();
-	
 	if (currprefs.gf[0].gfx_filter_autoscale != changed_prefs.gf[0].gfx_filter_autoscale ||
 		currprefs.gfx_xcenter_pos != changed_prefs.gfx_xcenter_pos ||
 		currprefs.gfx_ycenter_pos != changed_prefs.gfx_ycenter_pos ||
@@ -999,7 +1251,7 @@ int check_prefs_changed_gfx()
 
 	currprefs.filesys_limit = changed_prefs.filesys_limit;
 	currprefs.harddrive_read_only = changed_prefs.harddrive_read_only;
-	
+
 	if (currprefs.leds_on_screen != changed_prefs.leds_on_screen ||
 		currprefs.keyboard_leds[0] != changed_prefs.keyboard_leds[0] ||
 		currprefs.keyboard_leds[1] != changed_prefs.keyboard_leds[1] ||
@@ -1026,6 +1278,7 @@ int check_prefs_changed_gfx()
 		currprefs.inactive_pause = changed_prefs.inactive_pause;
 		currprefs.inactive_input = changed_prefs.inactive_input;
 		inputdevice_unacquire();
+		currprefs.keyboard_leds_in_use = changed_prefs.keyboard_leds_in_use = (currprefs.keyboard_leds[0] | currprefs.keyboard_leds[1] | currprefs.keyboard_leds[2]) != 0;
 		pause_sound();
 		resume_sound();
 		inputdevice_acquire(TRUE);
@@ -1217,7 +1470,7 @@ static int red_bits, green_bits, blue_bits, alpha_bits;
 static int red_shift, green_shift, blue_shift, alpha_shift;
 static int alpha;
 
-static int init_colors()
+void init_colors()
 {
 	/* Truecolor: */
 	red_bits = bits_in_mask(screen->format->Rmask);
@@ -1231,8 +1484,6 @@ static int init_colors()
 
 	alloc_colors64k(red_bits, green_bits, blue_bits, red_shift, green_shift, blue_shift, alpha_bits, alpha_shift, alpha, 0, false);
 	notice_new_xcolors();
-
-	return 1;
 }
 
 /*
@@ -1265,9 +1516,7 @@ int graphics_init(bool mousecapture)
 {
 	inputdevice_unacquire();
 	graphics_subinit();
-
-	if (!init_colors())
-		return 0;
+	init_colors();
 
 	inputdevice_acquire(TRUE);
 	return 1;

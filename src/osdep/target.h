@@ -93,6 +93,8 @@ extern void RescanROMs(void);
 extern void SymlinkROMs(void);
 extern void ClearAvailableROMList(void);
 extern void setpriority(int prio);
+extern bool setpaused(int priority);
+extern void init_colors();
 
 #include <vector>
 #include <string>

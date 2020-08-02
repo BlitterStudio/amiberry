@@ -876,7 +876,6 @@ public:
 			//-------------------------------------------------
 			// Reset Amiga via click on Reset-button
 			//-------------------------------------------------
-			copy_prefs(&changed_prefs, &currprefs);
 			uae_reset(1, 1);
 			gui_running = false;
 		}
@@ -911,7 +910,6 @@ public:
 				//------------------------------------------------
 				// First start of emulator -> reset Amiga
 				//------------------------------------------------
-				copy_prefs(&changed_prefs, &currprefs);
 				uae_reset(0, 1);
 				gui_running = false;
 			}
