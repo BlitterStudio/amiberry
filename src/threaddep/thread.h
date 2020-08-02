@@ -12,7 +12,7 @@
 
 /* Sempahores. We use POSIX semaphores; if you are porting this to a machine
  * with different ones, make them look like POSIX semaphores. */
-typedef SDL_sem* uae_sem_t;
+typedef SDL_sem *uae_sem_t;
 
 STATIC_INLINE int uae_sem_init(uae_sem_t* sem, int dummy, int init)
 {
@@ -35,15 +35,17 @@ STATIC_INLINE void uae_sem_destroy(uae_sem_t* event)
 
 #include "commpipe.h"
 
-typedef SDL_Thread* uae_thread_id;
+typedef SDL_Thread *uae_thread_id;
 #define BAD_THREAD 0
 
 STATIC_INLINE void uae_set_thread_priority(uae_thread_id* id, int pri)
 {
+	SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH);
 }
 
 STATIC_INLINE void uae_end_thread(uae_thread_id* tid)
 {
+	SDL_WaitThread(*tid, static_cast<int*>(nullptr));
 }
 
 STATIC_INLINE long uae_start_thread(const TCHAR* name, int (*f)(void*), void* arg, uae_thread_id* foo)
