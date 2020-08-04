@@ -376,7 +376,7 @@ void target_fixup_options(struct uae_prefs* p)
 		p->compfpu = false;
 
 	// Fix old height values, which were 50% of the real height
-	if (p->gfx_monitor.gfx_size_win.height < AMIGA_HEIGHT_MAX)
+	if (p->gfx_monitor.gfx_size_win.height < AMIGA_HEIGHT_MAX && p->gfx_resolution > 0)
 		p->gfx_monitor.gfx_size_win.height = p->gfx_monitor.gfx_size_win.height * 2;
 
 	fix_apmodes(p);
