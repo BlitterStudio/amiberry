@@ -1280,7 +1280,14 @@ int check_prefs_changed_gfx()
 		currprefs.active_nocapture_pause != changed_prefs.active_nocapture_pause ||
 		currprefs.inactive_nosound != changed_prefs.inactive_nosound ||
 		currprefs.inactive_pause != changed_prefs.inactive_pause ||
-		currprefs.inactive_input != changed_prefs.inactive_input)
+		currprefs.inactive_input != changed_prefs.inactive_input ||
+		currprefs.allow_host_run != changed_prefs.allow_host_run ||
+		currprefs.use_retroarch_quit != changed_prefs.use_retroarch_quit ||
+		currprefs.use_retroarch_menu != changed_prefs.use_retroarch_menu ||
+		currprefs.use_retroarch_reset != changed_prefs.use_retroarch_reset ||
+		currprefs.input_analog_remap != changed_prefs.input_analog_remap ||
+		currprefs.kbd_led_num != changed_prefs.kbd_led_num ||
+		currprefs.kbd_led_scr != changed_prefs.kbd_led_scr)
 	{
 		currprefs.leds_on_screen = changed_prefs.leds_on_screen;
 		currprefs.keyboard_leds[0] = changed_prefs.keyboard_leds[0];
@@ -1294,6 +1301,13 @@ int check_prefs_changed_gfx()
 		currprefs.inactive_nosound = changed_prefs.inactive_nosound;
 		currprefs.inactive_pause = changed_prefs.inactive_pause;
 		currprefs.inactive_input = changed_prefs.inactive_input;
+		currprefs.allow_host_run = changed_prefs.allow_host_run;
+		currprefs.use_retroarch_quit = changed_prefs.use_retroarch_quit;
+		currprefs.use_retroarch_menu = changed_prefs.use_retroarch_menu;
+		currprefs.use_retroarch_reset = changed_prefs.use_retroarch_reset;
+		currprefs.input_analog_remap = changed_prefs.input_analog_remap;
+		currprefs.kbd_led_num = changed_prefs.kbd_led_num;
+		currprefs.kbd_led_scr = changed_prefs.kbd_led_scr;
 		inputdevice_unacquire();
 		currprefs.keyboard_leds_in_use = changed_prefs.keyboard_leds_in_use = (currprefs.keyboard_leds[0] | currprefs.keyboard_leds[1] | currprefs.keyboard_leds[2]) != 0;
 		pause_sound();
