@@ -351,23 +351,41 @@ static int native_dos_op(TrapContext* ctx, uae_u32 mode, uae_u32 p1, uae_u32 p2,
 }
 
 // Execute a command on the Host OS
-static uae_u32 emulib_run_on_host(TrapContext* ctx, uaecptr name)
+static uae_u32 emulib_execute_on_host(TrapContext* ctx, uaecptr name)
 {
 	char real_name[MAX_DPATH];
 	if (trap_get_string(ctx, real_name, name, sizeof real_name) >= sizeof real_name)
 		return 0; /* ENAMETOOLONG */
 
-	set_mouse_grab(false);
+	target_execute(real_name);
+	return 1;
+}
+
+#if 0
+static uae_u32 emulib_host_session(TrapContext* ctx, uaecptr name, uae_u32 out, uae_u32 outsize)
+{
+	char real_name[MAX_DPATH];
+	if (trap_get_string(ctx, real_name, name, sizeof real_name) >= sizeof real_name)
+		return 0; /* ENAMETOOLONG */
+
+	char buffer[128];
+	std::string result = "";
+	auto* pipe = popen(real_name, "r");
+	if (!pipe) throw std::runtime_error("popen() failed!");
 	try
 	{
-		system(real_name);
+		while (fgets(buffer, sizeof buffer, pipe) != nullptr)
+			result += buffer;
 	}
 	catch (...)
 	{
-		write_log("Exception thrown when trying to execute: %s", real_name);
+		pclose(pipe);
 	}
-	return 1;
+	pclose(pipe);
+	trap_put_string(ctx, result.c_str(), out, outsize - 1);
+	return 0;
 }
+#endif
 
 static uae_u32 uaelib_demux_common(TrapContext* ctx, uae_u32 ARG0, uae_u32 ARG1, uae_u32 ARG2, uae_u32 ARG3,
                                    uae_u32 ARG4, uae_u32 ARG5)
@@ -426,7 +444,7 @@ static uae_u32 uaelib_demux_common(TrapContext* ctx, uae_u32 ARG0, uae_u32 ARG1,
 		}
 	case 88:
 		if (currprefs.allow_host_run)
-			return emulib_run_on_host(ctx, ARG1);
+			return emulib_execute_on_host(ctx, ARG1);
 		return 0;
 	//case 89: return emulib_host_session(ctx, ARG1, ARG2, ARG3);
 	}

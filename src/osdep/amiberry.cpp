@@ -298,6 +298,19 @@ uae_u8* target_load_keyfile(struct uae_prefs* p, const char* path, int* sizep, c
 	return nullptr;
 }
 
+void target_execute(const char* command)
+{
+	set_mouse_grab(false);
+	try
+	{
+		system(command);
+	}
+	catch (...)
+	{
+		write_log("Exception thrown when trying to execute: %s", command);
+	}
+}
+
 void target_run(void)
 {
 	// Reset counter for access violations

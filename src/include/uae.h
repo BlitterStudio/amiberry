@@ -29,6 +29,7 @@ extern void uae_reset (int, int);
 extern void uae_quit (void);
 extern void target_shutdown(void);
 extern void uae_restart (int, const TCHAR*);
+extern void target_execute(const char* command);
 extern void target_reset (void);
 extern void target_addtorecent (const TCHAR*, int);
 extern void target_run (void);
