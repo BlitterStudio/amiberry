@@ -1102,11 +1102,6 @@ static int real_main2(int argc, TCHAR** argv)
 		fixup_prefs(&currprefs, true);
 	}
 
-	if (!graphics_setup())
-	{
-		abort();
-	}
-
 #ifdef NATMEM_OFFSET
 	//preinit_shm();
 #endif
@@ -1119,6 +1114,11 @@ static int real_main2(int argc, TCHAR** argv)
 	else
 		copy_prefs(&changed_prefs, &currprefs);
 
+	if (!graphics_setup())
+	{
+		abort();
+	}
+	
 	if (!machdep_init())
 	{
 		restart_program = 0;
