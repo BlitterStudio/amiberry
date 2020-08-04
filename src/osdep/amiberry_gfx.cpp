@@ -956,6 +956,11 @@ int check_prefs_changed_gfx()
 	c2 |= currprefs.gfx_monitor.gfx_size_fs.height != changed_prefs.gfx_monitor.gfx_size_fs.height ? 16 : 0;
 	c2 |= ((currprefs.gfx_monitor.gfx_size_win.width + 7) & ~7) != ((changed_prefs.gfx_monitor.gfx_size_win.width + 7) & ~7) ? 16 : 0;
 	c2 |= currprefs.gfx_monitor.gfx_size_win.height != changed_prefs.gfx_monitor.gfx_size_win.height ? 16 : 0;
+#ifdef AMIBERRY
+	c2 |= currprefs.gfx_auto_height != changed_prefs.gfx_auto_height ? 16 : 0;
+	c2 |= currprefs.gfx_correct_aspect != changed_prefs.gfx_correct_aspect ? 16 : 0;
+	c2 |= currprefs.scaling_method != changed_prefs.scaling_method ? 16 : 0;
+#endif
 	if (c2) {
 		c |= c2;
 	}
@@ -1096,6 +1101,18 @@ int check_prefs_changed_gfx()
 			memcpy(gf, gfc, sizeof(struct gfx_filterdata));
 		}
 
+#ifdef AMIBERRY
+		currprefs.gfx_monitor.gfx_size_fs.width = changed_prefs.gfx_monitor.gfx_size_fs.width;
+		currprefs.gfx_monitor.gfx_size_fs.height = changed_prefs.gfx_monitor.gfx_size_fs.height;
+		currprefs.gfx_monitor.gfx_size_win.width = changed_prefs.gfx_monitor.gfx_size_win.width;
+		currprefs.gfx_monitor.gfx_size_win.height = changed_prefs.gfx_monitor.gfx_size_win.height;
+		currprefs.gfx_monitor.gfx_size.width = changed_prefs.gfx_monitor.gfx_size.width;
+		currprefs.gfx_monitor.gfx_size.height = changed_prefs.gfx_monitor.gfx_size.height;
+		
+		currprefs.gfx_auto_height = changed_prefs.gfx_auto_height;
+		currprefs.gfx_correct_aspect = changed_prefs.gfx_correct_aspect;
+		currprefs.scaling_method = changed_prefs.scaling_method;
+#endif
 		currprefs.rtg_horiz_zoom_mult = changed_prefs.rtg_horiz_zoom_mult;
 		currprefs.rtg_vert_zoom_mult = changed_prefs.rtg_vert_zoom_mult;
 
