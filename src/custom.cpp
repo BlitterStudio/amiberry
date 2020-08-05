@@ -52,7 +52,7 @@ int debug_sprite_mask = 0xff;
 STATIC_INLINE bool nocustom (void)
 {
 	struct amigadisplay *ad = &adisplays;
-	if (ad->picasso_on)
+	if (ad->picasso_on && currprefs.picasso96_nocustom)
 		return true;
 	return false;
 }
@@ -4340,19 +4340,33 @@ void compute_framesync(void)
 		double v = -1;
 		if (!ad->picasso_on && !ad->picasso_requested_on) {
 			if (isvsync_chipset ()) {
-				if (cr->index == CHIPSET_REFRESH_PAL || cr->index == CHIPSET_REFRESH_NTSC) {
-					if ((fabs(vblank_hz - 50) < 1 || fabs(vblank_hz - 60) < 1 || fabs(vblank_hz - 100) < 1 || fabs(vblank_hz - 120) < 1)) {
-						vsync_switchmode(int(vblank_hz));
+				if (!currprefs.gfx_variable_sync) {
+					if (cr->index == CHIPSET_REFRESH_PAL || cr->index == CHIPSET_REFRESH_NTSC) {
+						if ((fabs(vblank_hz - 50) < 1 || fabs(vblank_hz - 60) < 1 || fabs(vblank_hz - 100) < 1 || fabs(vblank_hz - 120) < 1) && currprefs.gfx_apmode[0].gfx_vsync == 2 && currprefs.gfx_apmode[0].gfx_fullscreen > 0) {
+							vsync_switchmode((int)vblank_hz);
+						}
+					}
+					if (isvsync_chipset() < 0) {
+
+						double v2;
+						v2 = target_getcurrentvblankrate();
+						if (!cr->locked)
+							v = v2;
+					} else if (isvsync_chipset() > 0) {
+						if (currprefs.gfx_apmode[0].gfx_refreshrate)
+							v = abs(currprefs.gfx_apmode[0].gfx_refreshrate);
 					}
 				}
-				else if (isvsync_chipset() > 0) {
-					if (currprefs.gfx_apmode[0].gfx_refreshrate)
-						v = abs(currprefs.gfx_apmode[0].gfx_refreshrate);
+			} else {
+				if (cr->locked == false) {
+					changed_prefs.chipset_refreshrate = currprefs.chipset_refreshrate = vblank_hz;
+					cfgfile_parse_lines (&changed_prefs, cr->commands, -1);
+					if (cr->commands[0])
+						write_log (_T("CMD1: '%s'\n"), cr->commands);
+					break;
+				} else {
+					v = cr->rate;
 				}
-			}
-			else {
-				changed_prefs.chipset_refreshrate = currprefs.chipset_refreshrate = vblank_hz;
-				break;
 			}
 			if (v < 0)
 				v = cr->rate;
@@ -4362,17 +4376,20 @@ void compute_framesync(void)
 				if (cr->commands[0])
 					write_log (_T("CMD2: '%s'\n"), cr->commands);
 			}
-		}
-		else {
-			v = vblank_hz;
+		} else {
+			if (cr->locked == false)
+				v = vblank_hz;
+			else
+				v = cr->rate;
 			changed_prefs.chipset_refreshrate = currprefs.chipset_refreshrate = v;
-			vsync_switchmode(int(v));
+			cfgfile_parse_lines (&changed_prefs, cr->commands, -1);
+			if (cr->commands[0])
+				write_log (_T("CMD3: '%s'\n"), cr->commands);
 		}
 		found = true;
 		break;
 	}
 	if (!found) {
-		vsync_switchmode(int(vblank_hz));
 		changed_prefs.chipset_refreshrate = currprefs.chipset_refreshrate = vblank_hz;
 	}
 	stored_chipset_refresh = cr;
