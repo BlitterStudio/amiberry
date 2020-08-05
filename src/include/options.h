@@ -895,6 +895,10 @@ struct uae_prefs
 	bool inactive_pause;
 	bool inactive_nosound;
 	int inactive_input;
+	int minimized_priority;
+	bool minimized_pause;
+	bool minimized_nosound;
+	int minimized_input;
 	
 	TCHAR open_gui[256];
 	TCHAR quit_amiberry[256];

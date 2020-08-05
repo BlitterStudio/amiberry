@@ -1281,6 +1281,10 @@ int check_prefs_changed_gfx()
 		currprefs.inactive_nosound != changed_prefs.inactive_nosound ||
 		currprefs.inactive_pause != changed_prefs.inactive_pause ||
 		currprefs.inactive_input != changed_prefs.inactive_input ||
+		currprefs.minimized_priority != changed_prefs.minimized_priority ||
+		currprefs.minimized_nosound != changed_prefs.minimized_nosound ||
+		currprefs.minimized_pause != changed_prefs.minimized_pause ||
+		currprefs.minimized_input != changed_prefs.minimized_input ||
 		currprefs.allow_host_run != changed_prefs.allow_host_run ||
 		currprefs.use_retroarch_quit != changed_prefs.use_retroarch_quit ||
 		currprefs.use_retroarch_menu != changed_prefs.use_retroarch_menu ||
@@ -1301,6 +1305,10 @@ int check_prefs_changed_gfx()
 		currprefs.inactive_nosound = changed_prefs.inactive_nosound;
 		currprefs.inactive_pause = changed_prefs.inactive_pause;
 		currprefs.inactive_input = changed_prefs.inactive_input;
+		currprefs.minimized_priority = changed_prefs.minimized_priority;
+		currprefs.minimized_nosound = changed_prefs.minimized_nosound;
+		currprefs.minimized_pause = changed_prefs.minimized_pause;
+		currprefs.minimized_input = changed_prefs.minimized_input;
 		currprefs.allow_host_run = changed_prefs.allow_host_run;
 		currprefs.use_retroarch_quit = changed_prefs.use_retroarch_quit;
 		currprefs.use_retroarch_menu = changed_prefs.use_retroarch_menu;

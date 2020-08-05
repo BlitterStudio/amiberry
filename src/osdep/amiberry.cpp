@@ -465,9 +465,13 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->active_nocapture_pause = false;
 	p->active_nocapture_nosound = false;
 	p->inactive_priority = 0;
-	p->inactive_nosound = true;
-	p->inactive_pause = true;
+	p->inactive_nosound = false;
+	p->inactive_pause = false;
 	p->inactive_input = 0;
+	p->minimized_priority = 0;
+	p->minimized_pause = true;
+	p->minimized_nosound = true;
+	p->minimized_input = 0;
 	
 	p->input_analog_remap = false;
 
@@ -554,6 +558,10 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_target_dwrite_bool(f, _T("inactive_nosound"), p->inactive_nosound);
 	cfgfile_target_dwrite_bool(f, _T("inactive_pause"), p->inactive_pause);
 	cfgfile_target_dwrite(f, _T("inactive_input"), _T("%d"), p->inactive_input);
+	cfgfile_write(f, _T("amiberry.minimized_priority"), _T("%d"), p->minimized_priority);
+	cfgfile_target_dwrite_bool(f, _T("minimized_nosound"), p->minimized_nosound);
+	cfgfile_target_dwrite_bool(f, _T("minimized_pause"), p->minimized_pause);
+	cfgfile_write(f, _T("amiberry.minimized_input"), _T("%d"), p->minimized_input);
 	
 #ifdef ANDROID
 	cfgfile_write(f, "amiberry.onscreen", "%d", p->onScreen);
@@ -680,6 +688,14 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 	if (cfgfile_yesno(option, value, _T("inactive_nosound"), &p->inactive_nosound))
 		return 1;
 	if (cfgfile_intval(option, value, _T("inactive_input"), &p->inactive_input, 1))
+		return 1;
+	if (cfgfile_intval(option, value, _T("minimized_priority"), &p->minimized_priority, 1))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("minimized_pause"), &p->minimized_pause))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("minimized_nosound"), &p->minimized_nosound))
+		return 1;
+	if (cfgfile_intval(option, value, _T("minimized_input"), &p->minimized_input, 1))
 		return 1;
 	return 0;
 }
@@ -1547,9 +1563,19 @@ static void amiberry_inactive(int minimized)
 
 	if (!quit_program) {
 		if (minimized) {
-			inputdevice_unacquire();
-			setpaused(1);
-			sound_closed = -1;
+			if (currprefs.minimized_pause) {
+				inputdevice_unacquire();
+				setpaused(1);
+				sound_closed = 1;
+			}
+			else if (currprefs.minimized_nosound) {
+				inputdevice_unacquire(true, currprefs.minimized_input);
+				setsoundpaused();
+				sound_closed = -1;
+			}
+			else {
+				inputdevice_unacquire(true, currprefs.minimized_input);
+			}
 		}
 		else if (mouseactive) {
 			inputdevice_unacquire();
