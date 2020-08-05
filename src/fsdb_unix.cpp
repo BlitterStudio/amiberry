@@ -8,11 +8,7 @@
   * Copyright 1999 Bernd Schmidt
   */
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <stdlib.h>
-
+#include "sysconfig.h"
 #include "sysdeps.h"
 
 #include "fsdb.h"
@@ -27,12 +23,12 @@ static TCHAR evilchars[NUM_EVILCHARS] = { '\\', '*', '?', '\"', '<', '>', '|' };
 /* Return nonzero for any name we can't create on the native filesystem.  */
 static int fsdb_name_invalid_2 (a_inode *aino, const TCHAR *n, int dir)
 {
-  int i;
+	int i;
 	int l = _tcslen (n);
 
-  /* the reserved fsdb filename */
-  if (_tcscmp (n, FSDB_FILE) == 0)
-  	return -1;
+	/* the reserved fsdb filename */
+	if (_tcscmp (n, FSDB_FILE) == 0)
+		return -1;
 
 	if (dir) {
 		if (n[0] == '.' && l == 1)
@@ -41,11 +37,11 @@ static int fsdb_name_invalid_2 (a_inode *aino, const TCHAR *n, int dir)
 			return -1;
 	}
 
-  /* these characters are *never* allowed */
-  for (i = 0; i < NUM_EVILCHARS; i++) {
-    if (_tcschr (n, evilchars[i]) != 0)
-      return 1;
-  }
+	/* these characters are *never* allowed */
+	for (i = 0; i < NUM_EVILCHARS; i++) {
+		if (_tcschr (n, evilchars[i]) != 0)
+			return 1;
+	}
 
 	return 0; /* the filename passed all checks, now it should be ok */
 }

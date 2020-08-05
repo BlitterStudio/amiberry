@@ -23,26 +23,26 @@ void InitPanelAbout(const struct _ConfigCategory& category)
 	textBox = new gcn::TextBox(
 		"Dimitris Panokostas (MiDWaN) - Amiberry author\n"
 		"Toni Wilen - WinUAE author\n"
-		"TomB - Original ARM port of UAE, core emulation updates\n"
-		"Alynna Trypnotk - Tinker Board port\n"
+		"TomB - Original ARM port of UAE, JIT ARM updates\n"
 		"Chips - Original RPI port\n"
 		"Dom Cresswell (Horace & The Spider) - Controller and WHDBooter updates\n"
-		"Christer Solskogen - Makefile improvements\n"
+		"Christer Solskogen - Makefile and testing\n"
 		"Gunnar Kristjansson - Amibian and inspiration\n"
-		"Thomas Navarro Garcia - Amiberry logo\n"
+		"Thomas Navarro Garcia - Original Amiberry logo\n"
 		"Vasiliki Soufi - Amiberry name\n"
 		"\n"
 		"Dedicated to HeZoR - R.I.P. little brother (1978-2017)\n"
 	);
-
+	textBox->setEditable(false);
 	textBox->setBackgroundColor(gui_baseCol);
+
 	textBoxScrollArea = new gcn::ScrollArea(textBox);
 	textBoxScrollArea->setBackgroundColor(gui_baseCol);
 	textBoxScrollArea->setBaseColor(gui_baseCol);
 	textBoxScrollArea->setWidth(category.panel->getWidth() - DISTANCE_BORDER * 2);
 	textBoxScrollArea->setHeight(220);
 	textBoxScrollArea->setBorderSize(1);
-
+	
 	auto pos_y = DISTANCE_BORDER;
 	category.panel->add(icon, DISTANCE_BORDER, pos_y);
 	pos_y += icon->getHeight() + DISTANCE_NEXT_Y;

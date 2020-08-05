@@ -71,6 +71,7 @@ extern int scsi_send_data(struct scsi_data*, uae_u8);
 extern int scsi_receive_data(struct scsi_data*, uae_u8*, bool next);
 extern void scsi_emulate_cmd(struct scsi_data *sd);
 extern void scsi_illegal_lun(struct scsi_data *sd);
+extern void scsi_clear_sense(struct scsi_data *sd);
 extern bool scsi_cmd_is_safe(uae_u8 cmd);
 
 extern int scsi_hd_emulate(struct hardfiledata *hfd, struct hd_hardfiledata *hdhfd, uae_u8 *cmdbuf, int scsi_cmd_len,

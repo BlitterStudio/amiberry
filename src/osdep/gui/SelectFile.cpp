@@ -72,7 +72,7 @@ public:
 
 	void changeDir(const char* path)
 	{
-		ReadDirectory(path, &dirs, &files);
+		read_directory(path, &dirs, &files);
 		if (dirs.empty())
 			dirs.emplace_back("..");
 		FilterFiles(&files, filefilter);
@@ -146,7 +146,7 @@ static void checkfoldername(char* current)
 static void checkfilename(char* current)
 {
 	char actfile[MAX_DPATH];
-	extractFileName(current, actfile);
+	extract_filename(current, actfile);
 	for (auto i = 0; i < fileList->getNumberOfElements(); ++i)
 	{
 		if (!fileList->isDir(i) && !stricmp(fileList->getElementAt(i).c_str(), actfile))
@@ -484,7 +484,7 @@ static void SelectFileLoop()
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
 		// Finally we update the screen.
-		UpdateGuiScreen();
+		update_gui_screen();
 	}
 }
 
@@ -498,7 +498,7 @@ bool SelectFile(const char* title, char* value, const char* filter[], const bool
 
 	InitSelectFile(title);
 
-	extractPath(value, workingDir);
+	extract_path(value, workingDir);
 	checkfoldername(workingDir);
 	checkfilename(value);
 
@@ -510,7 +510,7 @@ bool SelectFile(const char* title, char* value, const char* filter[], const bool
 	// Prepare the screen once
 	uae_gui->logic();
 	uae_gui->draw();
-	UpdateGuiScreen();
+	update_gui_screen();
 
 	while (!dialogFinished)
 	{

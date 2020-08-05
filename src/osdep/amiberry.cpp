@@ -6,74 +6,75 @@
  */
 
 #include <unistd.h>
-#include <stdio.h>
-#include <string.h>
+#include <cstdio>
+#include <cstring>
 #include <sys/types.h>
 #include <dirent.h>
-#include <stdlib.h>
-#include <time.h>
-#include <signal.h>
+#include <cstdlib>
+#include <ctime>
+#include <csignal>
 
 #include <algorithm>
 #ifndef ANDROID
 #include <execinfo.h>
 #endif
+
 #include "sysdeps.h"
-#include "uae.h"
 #include "options.h"
+#include "audio.h"
+#include "sounddep/sound.h"
+#include "uae.h"
+#include "memory.h"
+#include "rommgr.h"
 #include "custom.h"
+#include "newcpu.h"
+#include "traps.h"
+#include "xwin.h"
+#include "keyboard.h"
 #include "inputdevice.h"
+#include "drawing.h"
+#include "amiberry_gfx.h"
+#include "autoconf.h"
+#include "gui.h"
 #include "disk.h"
 #include "savestate.h"
-#include "rommgr.h"
 #include "zfile.h"
 #include "amiberry_rp9.h"
-#include "include/memory.h"
-#include "keyboard.h"
 #include "rtgmodes.h"
 #include "gfxboard.h"
-#include "amiberry_gfx.h"
-#include "gui.h"
-#include "sounddep/sound.h"
 #include "devices.h"
 #include <map>
+
+#include "clipboard.h"
+#include "uae/uae.h"
 
 extern FILE* debugfile;
 
 int pause_emulation;
-int quickstart_start = 1;
+
+static int sound_closed;
+static int recapture;
+static int focus;
+static int mouseinside;
+int mouseactive;
+int minimized;
+
 int quickstart_model = 0;
 int quickstart_conf = 0;
 bool host_poweroff = false;
-bool read_config_descriptions = true;
-bool write_logfile = false;
-bool scanlines_by_default = false;
-bool swap_win_alt_keys = false;
-bool gui_joystick_control = true;
-#ifdef USE_RENDER_THREAD
-bool use_sdl2_render_thread = true;
-#else
-bool use_sdl2_render_thread = false;
-#endif
-int input_default_mouse_speed = 100;
-bool input_keyboard_as_joystick_stop_keypresses = false;
-static char default_open_gui_key[128];
-static char default_quit_key[128];
-int rotation_angle = 0;
-bool default_horizontal_centering = false;
-bool default_vertical_centering = false;
-int default_scaling_method = -1;
+
+struct amiberry_options amiberry_options = {};
 
 // Default Enter GUI key is F12
 int enter_gui_key = 0;
 // We don't set a default value for Quitting
 int quit_key = 0;
 // The default value for Action Replay is Pause/Break
-int action_replay_button = SDLK_PAUSE;
+int action_replay_button = 0;
 // No default value for Full Screen toggle
 int fullscreen_key = 0;
 
-bool mouse_grabbed = true;
+bool mouse_grabbed = false;
 
 std::string get_version_string()
 {
@@ -84,38 +85,31 @@ std::string get_version_string()
 void set_key_configs(struct uae_prefs* p)
 {
 	if (strncmp(p->open_gui, "", 1) != 0)
-	{
 		// If we have a value in the config, we use that instead
 		enter_gui_key = SDL_GetKeyFromName(p->open_gui);
-	}
 	else
-	{
 		// Otherwise we go for the default found in amiberry.conf
-		enter_gui_key = SDL_GetKeyFromName(default_open_gui_key);
-	}
-	// if nothing was found in amiberry.conf either, let's default back to F12
+		enter_gui_key = SDL_GetKeyFromName(amiberry_options.default_open_gui_key);
+	// if nothing was found in amiberry.conf either, we default back to F12
 	if (enter_gui_key == 0)
 		enter_gui_key = SDLK_F12;
 
 	if (strncmp(p->quit_amiberry, "", 1) != 0)
-	{
-		// If we have a value in the config, we use that instead
 		quit_key = SDL_GetKeyFromName(p->quit_amiberry);
-	}
 	else
-	{
-		quit_key = SDL_GetKeyFromName(default_quit_key);
-	}
+		quit_key = SDL_GetKeyFromName(amiberry_options.default_quit_key);
 
 	if (strncmp(p->action_replay, "", 1) != 0)
-	{
 		action_replay_button = SDL_GetKeyFromName(p->action_replay);
-	}
+	else
+		action_replay_button = SDL_GetKeyFromName(amiberry_options.default_ar_key);
+	if (action_replay_button == 0)
+		action_replay_button = SDLK_PAUSE;
 
 	if (strncmp(p->fullscreen_toggle, "", 1) != 0)
-	{
 		fullscreen_key = SDL_GetKeyFromName(p->fullscreen_toggle);
-	}
+	else
+		fullscreen_key = SDL_GetKeyFromName(amiberry_options.default_fullscreen_toggle_key);
 }
 
 int pissoff_value = 15000 * CYCLE_UNIT;
@@ -127,7 +121,7 @@ extern void signal_term(int signum, siginfo_t* info, void* ptr);
 extern void SetLastActiveConfig(const char* filename);
 
 char start_path_data[MAX_DPATH];
-char currentDir[MAX_DPATH];
+char current_dir[MAX_DPATH];
 
 #include <linux/kd.h>
 #include <sys/ioctl.h>
@@ -147,6 +141,11 @@ int max_uae_width;
 int max_uae_height;
 
 extern "C" int main(int argc, char* argv[]);
+
+void sleep_micros (int ms)
+{
+	usleep(ms);
+}
 
 void sleep_millis(int ms)
 {
@@ -193,6 +192,7 @@ bool resumepaused(int priority)
 	if (pausemouseactive)
 	{
 		pausemouseactive = 0;
+		setmouseactive(isfullscreen() > 0 ? 1 : -1);
 	}
 	pause_emulation = 0;
 	setsystime();
@@ -208,16 +208,20 @@ bool setpaused(int priority)
 	devices_pause();
 	setsoundpaused();
 	pausemouseactive = 1;
+	if (isfullscreen() <= 0) {
+		pausemouseactive = mouseactive;
+		setmouseactive(0);
+	}
 	return true;
 }
 
 void logging_init(void)
 {
-	if (write_logfile)
+	if (amiberry_options.write_logfile)
 	{
 		static int started;
 		static int first;
-		char debugfilename[MAX_DPATH];
+		char debug_filename[MAX_DPATH];
 
 		if (first > 1)
 		{
@@ -231,9 +235,9 @@ void logging_init(void)
 			debugfile = nullptr;
 		}
 
-		sprintf(debugfilename, "%s", logfile_path);
+		sprintf(debug_filename, "%s", logfile_path);
 		if (!debugfile)
-			debugfile = fopen(debugfilename, "wt");
+			debugfile = fopen(debug_filename, "wt");
 
 		first++;
 		write_log("AMIBERRY Logfile\n\n");
@@ -248,13 +252,13 @@ void logging_cleanup(void)
 }
 
 
-void stripslashes(TCHAR* p)
+void strip_slashes(TCHAR* p)
 {
 	while (_tcslen(p) > 0 && (p[_tcslen(p) - 1] == '\\' || p[_tcslen(p) - 1] == '/'))
 		p[_tcslen(p) - 1] = 0;
 }
 
-void fixtrailing(TCHAR* p)
+void fix_trailing(TCHAR* p)
 {
 	if (_tcslen(p) == 0)
 		return;
@@ -263,23 +267,23 @@ void fixtrailing(TCHAR* p)
 	_tcscat(p, "/");
 }
 
-bool samepath(const TCHAR* p1, const TCHAR* p2)
+bool same_path(const TCHAR* p1, const TCHAR* p2)
 {
 	if (!_tcsicmp(p1, p2))
 		return true;
 	return false;
 }
 
-void getpathpart(TCHAR* outpath, int size, const TCHAR* inpath)
+void get_path_part(TCHAR* outpath, int size, const TCHAR* inpath)
 {
 	_tcscpy(outpath, inpath);
 	auto* const p = _tcsrchr(outpath, '/');
 	if (p)
 		p[0] = 0;
-	fixtrailing(outpath);
+	fix_trailing(outpath);
 }
 
-void getfilepart(TCHAR* out, int size, const TCHAR* path)
+void get_file_part(TCHAR* out, int size, const TCHAR* path)
 {
 	out[0] = 0;
 	const auto* const p = _tcsrchr(path, '/');
@@ -292,6 +296,19 @@ void getfilepart(TCHAR* out, int size, const TCHAR* path)
 uae_u8* target_load_keyfile(struct uae_prefs* p, const char* path, int* sizep, char* name)
 {
 	return nullptr;
+}
+
+void target_execute(const char* command)
+{
+	set_mouse_grab(false);
+	try
+	{
+		system(command);
+	}
+	catch (...)
+	{
+		write_log("Exception thrown when trying to execute: %s", command);
+	}
 }
 
 void target_run(void)
@@ -350,23 +367,17 @@ void target_fixup_options(struct uae_prefs* p)
 	}
 
 	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5PC | RGBFF_R8G8B8A8;
-	if (p->gfx_monitor.gfx_size.width == 0)
-		p->gfx_monitor.gfx_size.width = 720;
-	if (p->gfx_monitor.gfx_size.height == 0)
-		p->gfx_monitor.gfx_size.height = 284;
-	p->gfx_resolution = p->gfx_monitor.gfx_size.width > 600 ? RES_HIRES : RES_LORES;
 
 	if (p->gfx_vresolution && !can_have_linedouble)
 		// If there's not enough vertical space, cancel Line Doubling/Scanlines
 		p->gfx_vresolution = 0;
 
-	if (p->cachesize > 0)
-		p->fpu_no_unimplemented = false;
-	else
-		p->fpu_no_unimplemented = true;
-
 	if (p->cachesize <= 0)
 		p->compfpu = false;
+
+	// Fix old height values, which were 50% of the real height
+	if (p->gfx_monitor.gfx_size_win.height < AMIGA_HEIGHT_MAX && p->gfx_resolution > 0)
+		p->gfx_monitor.gfx_size_win.height = p->gfx_monitor.gfx_size_win.height * 2;
 
 	fix_apmodes(p);
 	set_key_configs(p);
@@ -380,43 +391,93 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->kbd_led_num = -1; // No status on numlock
 	p->kbd_led_scr = -1; // No status on scrollock
 
-	p->gfx_auto_height = false;
-	p->gfx_correct_aspect = 1; // Default is Enabled
-	p->scaling_method = -1; //Default is Auto
-	if (scanlines_by_default)
+	p->gfx_monitor.gfx_size.width = amiberry_options.default_width;
+	p->gfx_monitor.gfx_size.height = amiberry_options.default_height;
+	
+	p->gfx_auto_height = amiberry_options.default_auto_height;
+	p->gfx_correct_aspect = amiberry_options.default_correct_aspect_ratio;
+
+	if (amiberry_options.default_fullscreen)
 	{
+		p->gfx_apmode[0].gfx_fullscreen = GFX_FULLSCREEN;
+		p->gfx_apmode[1].gfx_fullscreen = GFX_FULLSCREEN;
+	}
+	else
+	{
+		p->gfx_apmode[0].gfx_fullscreen = GFX_WINDOW;
+		p->gfx_apmode[1].gfx_fullscreen = GFX_WINDOW;
+	}
+	
+	p->scaling_method = -1; //Default is Auto
+	if (amiberry_options.default_scaling_method != -1)
+	{
+		// only valid values are -1 (Auto), 0 (Nearest) and 1 (Linear)
+		if (amiberry_options.default_scaling_method == 0 || amiberry_options.default_scaling_method == 1)
+			p->scaling_method = amiberry_options.default_scaling_method;
+	}
+	
+	if (amiberry_options.default_line_mode == 1)
+	{
+		// Double line mode
+		p->gfx_vresolution = VRES_DOUBLE;
+		p->gfx_pscanlines = 0;
+	}
+	else if (amiberry_options.default_line_mode == 2)
+	{
+		// Scanlines line mode
 		p->gfx_vresolution = VRES_DOUBLE;
 		p->gfx_pscanlines = 1;
 	}
 	else
 	{
-		p->gfx_vresolution = VRES_NONDOUBLE; // Disabled by default due to performance hit
+		// Single line mode (default)
+		p->gfx_vresolution = VRES_NONDOUBLE;
 		p->gfx_pscanlines = 0;
 	}
 
-	if (default_horizontal_centering)
+	if (amiberry_options.default_horizontal_centering)
 		p->gfx_xcenter = 2;
 	
-	if (default_vertical_centering)
+	if (amiberry_options.default_vertical_centering)
 		p->gfx_ycenter = 2;
 
-	if (default_scaling_method != -1)
+	if (amiberry_options.default_frameskip)
+		p->gfx_framerate = 2;
+	
+	if (amiberry_options.default_stereo_separation >= 0 && amiberry_options.default_stereo_separation <= 10)
+		p->sound_stereo_separation = amiberry_options.default_stereo_separation;
+
+	if (amiberry_options.default_joystick_deadzone >= 0
+		&& amiberry_options.default_joystick_deadzone <= 100
+		&& amiberry_options.default_joystick_deadzone != 33)
 	{
-		// only valid values are -1 (Auto), 0 (Nearest) and 1 (Linear)
-		if (default_scaling_method == 0 || default_scaling_method == 1)
-			p->scaling_method = default_scaling_method;
+		p->input_joymouse_deadzone = amiberry_options.default_joystick_deadzone;
+		p->input_joystick_deadzone = amiberry_options.default_joystick_deadzone;
 	}
 	
-	_tcscpy(p->open_gui, default_open_gui_key);
-	_tcscpy(p->quit_amiberry, default_quit_key);
-	_tcscpy(p->action_replay, "Pause");
-	_tcscpy(p->fullscreen_toggle, "");
+	_tcscpy(p->open_gui, amiberry_options.default_open_gui_key);
+	_tcscpy(p->quit_amiberry, amiberry_options.default_quit_key);
+	_tcscpy(p->action_replay, amiberry_options.default_ar_key);
+	_tcscpy(p->fullscreen_toggle, amiberry_options.default_fullscreen_toggle_key);
 
+	p->allow_host_run = false;
+	p->active_capture_priority = 1;
+	p->active_nocapture_pause = false;
+	p->active_nocapture_nosound = false;
+	p->inactive_priority = 0;
+	p->inactive_nosound = false;
+	p->inactive_pause = false;
+	p->inactive_input = 0;
+	p->minimized_priority = 0;
+	p->minimized_pause = true;
+	p->minimized_nosound = true;
+	p->minimized_input = 0;
+	
 	p->input_analog_remap = false;
 
-	p->use_retroarch_quit = true;
-	p->use_retroarch_menu = true;
-	p->use_retroarch_reset = false;
+	p->use_retroarch_quit = amiberry_options.default_retroarch_quit;
+	p->use_retroarch_menu = amiberry_options.default_retroarch_menu;
+	p->use_retroarch_reset = amiberry_options.default_retroarch_reset;
 
 #ifdef ANDROID
 	p->onScreen = 1;
@@ -482,6 +543,7 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_dwrite_str(f, _T("amiberry.quit_amiberry"), p->quit_amiberry);
 	cfgfile_dwrite_str(f, _T("amiberry.action_replay"), p->action_replay);
 	cfgfile_dwrite_str(f, _T("amiberry.fullscreen_toggle"), p->fullscreen_toggle);
+	cfgfile_write_bool(f, _T("amiberry.allow_host_run"), p->allow_host_run);
 	cfgfile_write_bool(f, _T("amiberry.use_analogue_remap"), p->input_analog_remap);
 
 	cfgfile_write_bool(f, _T("amiberry.use_retroarch_quit"), p->use_retroarch_quit);
@@ -489,6 +551,18 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_write_bool(f, _T("amiberry.use_retroarch_reset"), p->use_retroarch_reset);
 
 	cfgfile_target_dwrite(f, _T("cpu_idle"), _T("%d"), p->cpu_idle);
+	cfgfile_write(f, _T("amiberry.active_priority"), _T("%d"), p->active_capture_priority);
+	cfgfile_target_dwrite_bool(f, _T("active_not_captured_nosound"), p->active_nocapture_nosound);
+	cfgfile_target_dwrite_bool(f, _T("active_not_captured_pause"), p->active_nocapture_pause);
+	cfgfile_write(f, _T("amiberry.inactive_priority"), _T("%d"), p->inactive_priority);
+	cfgfile_target_dwrite_bool(f, _T("inactive_nosound"), p->inactive_nosound);
+	cfgfile_target_dwrite_bool(f, _T("inactive_pause"), p->inactive_pause);
+	cfgfile_target_dwrite(f, _T("inactive_input"), _T("%d"), p->inactive_input);
+	cfgfile_write(f, _T("amiberry.minimized_priority"), _T("%d"), p->minimized_priority);
+	cfgfile_target_dwrite_bool(f, _T("minimized_nosound"), p->minimized_nosound);
+	cfgfile_target_dwrite_bool(f, _T("minimized_pause"), p->minimized_pause);
+	cfgfile_write(f, _T("amiberry.minimized_input"), _T("%d"), p->minimized_input);
+	
 #ifdef ANDROID
 	cfgfile_write(f, "amiberry.onscreen", "%d", p->onScreen);
 	cfgfile_write(f, "amiberry.onscreen_textinput", "%d", p->onScreen_textinput);
@@ -571,7 +645,8 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 	if (result)
 		return 1;
 #endif
-
+	if (cfgfile_yesno(option, value, _T("allow_host_run"), &p->allow_host_run))
+		return 1;
 	if (cfgfile_yesno(option, value, _T("use_retroarch_quit"), &p->use_retroarch_quit))
 		return 1;
 	if (cfgfile_yesno(option, value, _T("use_retroarch_menu"), &p->use_retroarch_menu))
@@ -600,6 +675,28 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 		return 1;
 	if (cfgfile_intval(option, value, _T("cpu_idle"), &p->cpu_idle, 1))
 		return 1;
+	if (cfgfile_intval(option, value, _T("active_priority"), &p->active_capture_priority, 1))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("active_nocapture_pause"), &p->active_nocapture_pause))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("active_nocapture_nosound"), &p->active_nocapture_nosound))
+		return 1;
+	if (cfgfile_intval(option, value, _T("inactive_priority"), &p->inactive_priority, 1))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("inactive_pause"), &p->inactive_pause))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("inactive_nosound"), &p->inactive_nosound))
+		return 1;
+	if (cfgfile_intval(option, value, _T("inactive_input"), &p->inactive_input, 1))
+		return 1;
+	if (cfgfile_intval(option, value, _T("minimized_priority"), &p->minimized_priority, 1))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("minimized_pause"), &p->minimized_pause))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("minimized_nosound"), &p->minimized_nosound))
+		return 1;
+	if (cfgfile_intval(option, value, _T("minimized_input"), &p->minimized_input, 1))
+		return 1;
 	return 0;
 }
 
@@ -617,7 +714,7 @@ void get_saveimage_path(char* out, int size, int dir)
 
 void get_configuration_path(char* out, int size)
 {
-	fixtrailing(config_path);
+	fix_trailing(config_path);
 	strncpy(out, config_path, size - 1);
 }
 
@@ -628,7 +725,7 @@ void set_configuration_path(char* newpath)
 
 void get_controllers_path(char* out, int size)
 {
-	fixtrailing(controllers_path);
+	fix_trailing(controllers_path);
 	strncpy(out, controllers_path, size - 1);
 }
 
@@ -649,12 +746,12 @@ void set_retroarch_file(char* newpath)
 
 bool get_logfile_enabled()
 {
-	return write_logfile;
+	return amiberry_options.write_logfile;
 }
 
 void set_logfile_enabled(bool enabled)
 {
-	write_logfile = enabled;
+	amiberry_options.write_logfile = enabled;
 }
 
 void get_logfile_path(char* out, int size)
@@ -669,7 +766,7 @@ void set_logfile_path(char* newpath)
 
 void get_rom_path(char* out, int size)
 {
-	fixtrailing(rom_path);
+	fix_trailing(rom_path);
 	strncpy(out, rom_path, size - 1);
 }
 
@@ -680,7 +777,7 @@ void set_rom_path(char* newpath)
 
 void get_rp9_path(char* out, int size)
 {
-	fixtrailing(rp9_path);
+	fix_trailing(rp9_path);
 	strncpy(out, rp9_path, size - 1);
 }
 
@@ -711,7 +808,7 @@ int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int
 		// Load rp9 config
 		result = rp9_parse_file(p, filename);
 		if (result)
-			extractFileName(filename, last_loaded_config);
+			extract_filename(filename, last_loaded_config);
 	}
 	else
 	{
@@ -722,7 +819,7 @@ int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int
 			result = cfgfile_load(p, filename, &config_type, 0, 1);
 		}
 		if (result)
-			extractFileName(filename, last_loaded_config);
+			extract_filename(filename, last_loaded_config);
 	}
 
 	if (result)
@@ -772,7 +869,7 @@ int check_configfile(char* file)
 	return 0;
 }
 
-void extractFileName(const char* str, char* buffer)
+void extract_filename(const char* str, char* buffer)
 {
 	const auto* p = str + strlen(str) - 1;
 	while (*p != '/' && p >= str)
@@ -781,7 +878,7 @@ void extractFileName(const char* str, char* buffer)
 	strncpy(buffer, p, MAX_DPATH - 1);
 }
 
-void extractPath(char* str, char* buffer)
+void extract_path(char* str, char* buffer)
 {
 	strncpy(buffer, str, MAX_DPATH - 1);
 	auto* p = buffer + strlen(buffer) - 1;
@@ -790,7 +887,7 @@ void extractPath(char* str, char* buffer)
 	p[1] = '\0';
 }
 
-void removeFileExtension(char* filename)
+void remove_file_extension(char* filename)
 {
 	auto* p = filename + strlen(filename) - 1;
 	while (p >= filename && *p != '.')
@@ -801,7 +898,7 @@ void removeFileExtension(char* filename)
 	*p = '\0';
 }
 
-void ReadDirectory(const char* path, std::vector<std::string>* dirs, std::vector<std::string>* files)
+void read_directory(const char* path, std::vector<std::string>* dirs, std::vector<std::string>* files)
 {
 	struct dirent* dent;
 
@@ -861,67 +958,150 @@ void save_amiberry_settings(void)
 	char buffer[MAX_DPATH];
 
 	// Should the Quickstart Panel be the default when opening the GUI?
-	snprintf(buffer, MAX_DPATH, "Quickstart=%d\n", quickstart_start);
+	snprintf(buffer, MAX_DPATH, "Quickstart=%d\n", amiberry_options.quickstart_start);
 	fputs(buffer, f);
 
 	// Open each config file and read the Description field? 
 	// This will slow down scanning the config list if it's very large
-	snprintf(buffer, MAX_DPATH, "read_config_descriptions=%s\n", read_config_descriptions ? "yes" : "no");
+	snprintf(buffer, MAX_DPATH, "read_config_descriptions=%s\n", amiberry_options.read_config_descriptions ? "yes" : "no");
 	fputs(buffer, f);
 
 	// Write to logfile? 
 	// If enabled, a file named "amiberry_log.txt" will be generated in the startup folder
-	snprintf(buffer, MAX_DPATH, "write_logfile=%s\n", write_logfile ? "yes" : "no");
+	snprintf(buffer, MAX_DPATH, "write_logfile=%s\n", amiberry_options.write_logfile ? "yes" : "no");
 	fputs(buffer, f);
 
 	// Scanlines ON by default?
 	// This will only be enabled if the vertical height is enough, as we need Line Doubling set to ON also
 	// Beware this comes with a performance hit, as double the amount of lines need to be drawn on-screen
-	snprintf(buffer, MAX_DPATH, "scanlines_by_default=%s\n", scanlines_by_default ? "yes" : "no");
+	snprintf(buffer, MAX_DPATH, "default_line_mode=%d\n", amiberry_options.default_line_mode);
 	fputs(buffer, f);
 
 	// Swap Win keys with Alt keys?
 	// This helps with keyboards that may not have 2 Win keys and no Menu key either
-	snprintf(buffer, MAX_DPATH, "swap_win_alt_keys=%s\n", swap_win_alt_keys ? "yes" : "no");
+	snprintf(buffer, MAX_DPATH, "swap_win_alt_keys=%s\n", amiberry_options.swap_win_alt_keys ? "yes" : "no");
 	fputs(buffer, f);
 
 	// Disable controller in the GUI?
 	// If you want to disable the default behavior for some reason
-	snprintf(buffer, MAX_DPATH, "gui_joystick_control=%s\n", gui_joystick_control ? "yes" : "no");
+	snprintf(buffer, MAX_DPATH, "gui_joystick_control=%s\n", amiberry_options.gui_joystick_control ? "yes" : "no");
 	fputs(buffer, f);
 
 	// Use a separate render thread under SDL2?
 	// This might give a performance boost, but it's not supported on all SDL2 back-ends
-	snprintf(buffer, MAX_DPATH, "use_sdl2_render_thread=%s\n", use_sdl2_render_thread ? "yes" : "no");
+	snprintf(buffer, MAX_DPATH, "use_sdl2_render_thread=%s\n", amiberry_options.use_sdl2_render_thread ? "yes" : "no");
 	fputs(buffer, f);
 
+	// Default mouse input speed
+	snprintf(buffer, MAX_DPATH, "input_default_mouse_speed=%d\n", amiberry_options.input_default_mouse_speed);
+	fputs(buffer, f);
+
+	// When using Keyboard as Joystick, stop any double keypresses
+	snprintf(buffer, MAX_DPATH, "input_keyboard_as_joystick_stop_keypresses=%s\n", amiberry_options.input_keyboard_as_joystick_stop_keypresses ? "yes" : "no");
+	
 	// Default key for opening the GUI (e.g. "F12")
-	snprintf(buffer, MAX_DPATH, "default_open_gui_key=%s\n", default_open_gui_key);
+	snprintf(buffer, MAX_DPATH, "default_open_gui_key=%s\n", amiberry_options.default_open_gui_key);
 	fputs(buffer, f);
 
 	// Default key for Quitting the emulator
-	snprintf(buffer, MAX_DPATH, "default_quit_key=%s\n", default_quit_key);
+	snprintf(buffer, MAX_DPATH, "default_quit_key=%s\n", amiberry_options.default_quit_key);
+	fputs(buffer, f);
+
+	// Default key for opening Action Replay
+	snprintf(buffer, MAX_DPATH, "default_ar_key=%s\n", amiberry_options.default_ar_key);
+	fputs(buffer, f);
+
+	// Default key for Fullscreen Toggle
+	snprintf(buffer, MAX_DPATH, "default_fullscreen_toggle_key=%s\n", amiberry_options.default_fullscreen_toggle_key);
 	fputs(buffer, f);
 
 	// Rotation angle of the output display (useful for screens with portrait orientation, like the Go Advance)
-	snprintf(buffer, MAX_DPATH, "rotation_angle=%d\n", rotation_angle);
+	snprintf(buffer, MAX_DPATH, "rotation_angle=%d\n", amiberry_options.rotation_angle);
 	fputs(buffer, f);
 
 	// Enable Horizontal Centering by default?
-	snprintf(buffer, MAX_DPATH, "default_horizontal_centering=%s\n", default_horizontal_centering ? "yes" : "no");
+	snprintf(buffer, MAX_DPATH, "default_horizontal_centering=%s\n", amiberry_options.default_horizontal_centering ? "yes" : "no");
 	fputs(buffer, f);
 
 	// Enable Vertical Centering by default?
-	snprintf(buffer, MAX_DPATH, "default_vertical_centering=%s\n", default_vertical_centering ? "yes" : "no");
+	snprintf(buffer, MAX_DPATH, "default_vertical_centering=%s\n", amiberry_options.default_vertical_centering ? "yes" : "no");
 	fputs(buffer, f);
 
 	// Scaling method to use by default?
 	// Valid options are: -1 Auto, 0 Nearest Neighbor, 1 Linear
-	snprintf(buffer, MAX_DPATH, "default_scaling_method=%d\n", default_scaling_method);
+	snprintf(buffer, MAX_DPATH, "default_scaling_method=%d\n", amiberry_options.default_scaling_method);
+	fputs(buffer, f);
+
+	// Enable frameskip by default?
+	snprintf(buffer, MAX_DPATH, "default_frameskip=%s\n", amiberry_options.default_frameskip ? "yes" : "no");
+	fputs(buffer, f);
+
+	// Correct Aspect Ratio by default?
+	snprintf(buffer, MAX_DPATH, "default_correct_aspect_ratio=%s\n", amiberry_options.default_correct_aspect_ratio ? "yes" : "no");
+	fputs(buffer, f);
+
+	// Enable Auto-Height by default?
+	snprintf(buffer, MAX_DPATH, "default_auto_height=%s\n", amiberry_options.default_auto_height ? "yes" : "no");
+	fputs(buffer, f);
+
+	// Default Screen Width
+	snprintf(buffer, MAX_DPATH, "default_width=%d\n", amiberry_options.default_width);
+	fputs(buffer, f);
+	
+	// Default Screen Height
+	snprintf(buffer, MAX_DPATH, "default_height=%d\n", amiberry_options.default_height);
+	fputs(buffer, f);
+
+	// Full screen by default?
+	snprintf(buffer, MAX_DPATH, "default_fullscreen=%s\n", amiberry_options.default_fullscreen ? "yes" : "no");
+	fputs(buffer, f);
+	
+	// Default Stereo Separation
+	snprintf(buffer, MAX_DPATH, "default_stereo_separation=%d\n", amiberry_options.default_stereo_separation);
+	fputs(buffer, f);
+
+	// Default Joystick Deadzone
+	snprintf(buffer, MAX_DPATH, "default_joystick_deadzone=%d\n", amiberry_options.default_joystick_deadzone);
+	fputs(buffer, f);
+
+	// Enable RetroArch Quit by default?
+	snprintf(buffer, MAX_DPATH, "default_retroarch_quit=%s\n", amiberry_options.default_retroarch_quit ? "yes" : "no");
+	fputs(buffer, f);
+
+	// Enable RetroArch Menu by default?
+	snprintf(buffer, MAX_DPATH, "default_retroarch_menu=%s\n", amiberry_options.default_retroarch_menu ? "yes" : "no");
+	fputs(buffer, f);
+
+	// Enable RetroArch Reset by default?
+	snprintf(buffer, MAX_DPATH, "default_retroarch_reset=%s\n", amiberry_options.default_retroarch_reset ? "yes" : "no");
+	fputs(buffer, f);
+
+	// Controller1
+	snprintf(buffer, MAX_DPATH, "default_controller1=%s\n", amiberry_options.default_controller1);
+	fputs(buffer, f);
+
+	// Controller2
+	snprintf(buffer, MAX_DPATH, "default_controller2=%s\n", amiberry_options.default_controller2);
+	fputs(buffer, f);
+
+	// Controller3
+	snprintf(buffer, MAX_DPATH, "default_controller3=%s\n", amiberry_options.default_controller3);
+	fputs(buffer, f);
+
+	// Controller4
+	snprintf(buffer, MAX_DPATH, "default_controller4=%s\n", amiberry_options.default_controller4);
+	fputs(buffer, f);
+
+	// Mouse1
+	snprintf(buffer, MAX_DPATH, "default_mouse1=%s\n", amiberry_options.default_mouse1);
+	fputs(buffer, f);
+
+	// Mouse2
+	snprintf(buffer, MAX_DPATH, "default_mouse2=%s\n", amiberry_options.default_mouse2);
 	fputs(buffer, f);
 	
 	// Paths
-	snprintf(buffer, MAX_DPATH, "path=%s\n", currentDir);
+	snprintf(buffer, MAX_DPATH, "path=%s\n", current_dir);
 	fputs(buffer, f);
 
 	snprintf(buffer, MAX_DPATH, "config_path=%s\n", config_path);
@@ -996,7 +1176,7 @@ void get_string(FILE* f, char* dst, int size)
 	strncpy(dst, buffer, size);
 }
 
-static void trimwsa(char* s)
+static void trim_wsa(char* s)
 {
 	/* Delete trailing whitespace.  */
 	int len = strlen(s);
@@ -1008,7 +1188,7 @@ void load_amiberry_settings(void)
 {
 	char path[MAX_DPATH];
 	int i;
-	strncpy(currentDir, start_path_data, MAX_DPATH - 1);
+	strncpy(current_dir, start_path_data, MAX_DPATH - 1);
 	snprintf(config_path, MAX_DPATH, "%s/conf/", start_path_data);
 	snprintf(controllers_path, MAX_DPATH, "%s/controllers/", start_path_data);
 	snprintf(retroarch_file, MAX_DPATH, "%s/conf/retroarch.cfg", start_path_data);
@@ -1043,7 +1223,7 @@ void load_amiberry_settings(void)
 
 		while (zfile_fgetsa(linea, sizeof linea, fh) != nullptr)
 		{
-			trimwsa(linea);
+			trim_wsa(linea);
 			if (strlen(linea) > 0)
 			{
 				if (!cfgfile_separate_linea(path, linea, option, value))
@@ -1094,7 +1274,7 @@ void load_amiberry_settings(void)
 				}
 				else
 				{
-					cfgfile_string(option, value, "path", currentDir, sizeof currentDir);
+					cfgfile_string(option, value, "path", current_dir, sizeof current_dir);
 					cfgfile_string(option, value, "config_path", config_path, sizeof config_path);
 					cfgfile_string(option, value, "controllers_path", controllers_path, sizeof controllers_path);
 					cfgfile_string(option, value, "retroarch_config", retroarch_file, sizeof retroarch_file);
@@ -1103,21 +1283,40 @@ void load_amiberry_settings(void)
 					cfgfile_intval(option, value, "ROMs", &numROMs, 1);
 					cfgfile_intval(option, value, "MRUDiskList", &numDisks, 1);
 					cfgfile_intval(option, value, "MRUCDList", &numCDs, 1);
-					cfgfile_intval(option, value, "Quickstart", &quickstart_start, 1);
-					cfgfile_yesno(option, value, "read_config_descriptions", &read_config_descriptions);
-					cfgfile_yesno(option, value, "write_logfile", &write_logfile);
-					cfgfile_yesno(option, value, "scanlines_by_default", &scanlines_by_default);
-					cfgfile_yesno(option, value, "swap_win_alt_keys", &swap_win_alt_keys);
-					cfgfile_yesno(option, value, "gui_joystick_control", &gui_joystick_control);
-					cfgfile_yesno(option, value, "use_sdl2_render_thread", &use_sdl2_render_thread);
-					cfgfile_intval(option, value, "input_default_mouse_speed", &input_default_mouse_speed, 1);
-					cfgfile_yesno(option, value, "input_keyboard_as_joystick_stop_keypresses", &input_keyboard_as_joystick_stop_keypresses);
-					cfgfile_string(option, value, "default_open_gui_key", default_open_gui_key, sizeof default_open_gui_key);
-					cfgfile_string(option, value, "default_quit_key", default_quit_key, sizeof default_quit_key);
-					cfgfile_intval(option, value, "rotation_angle", &rotation_angle, 1);
-					cfgfile_yesno(option, value, "default_horizontal_centering", &default_horizontal_centering);
-					cfgfile_yesno(option, value, "default_vertical_centering", &default_vertical_centering);
-					cfgfile_intval(option, value, "default_scaling_method", &default_scaling_method, 1);
+					cfgfile_yesno(option, value, "Quickstart", &amiberry_options.quickstart_start);
+					cfgfile_yesno(option, value, "read_config_descriptions", &amiberry_options.read_config_descriptions);
+					cfgfile_yesno(option, value, "write_logfile", &amiberry_options.write_logfile);
+					cfgfile_intval(option, value, "default_line_mode", &amiberry_options.default_line_mode, 1);
+					cfgfile_yesno(option, value, "swap_win_alt_keys", &amiberry_options.swap_win_alt_keys);
+					cfgfile_yesno(option, value, "gui_joystick_control", &amiberry_options.gui_joystick_control);
+					cfgfile_yesno(option, value, "use_sdl2_render_thread", &amiberry_options.use_sdl2_render_thread);
+					cfgfile_intval(option, value, "input_default_mouse_speed", &amiberry_options.input_default_mouse_speed, 1);
+					cfgfile_yesno(option, value, "input_keyboard_as_joystick_stop_keypresses", &amiberry_options.input_keyboard_as_joystick_stop_keypresses);
+					cfgfile_string(option, value, "default_open_gui_key", amiberry_options.default_open_gui_key, sizeof amiberry_options.default_open_gui_key);
+					cfgfile_string(option, value, "default_quit_key", amiberry_options.default_quit_key, sizeof amiberry_options.default_quit_key);
+					cfgfile_string(option, value, "default_ar_key", amiberry_options.default_ar_key, sizeof amiberry_options.default_ar_key);
+					cfgfile_string(option, value, "default_fullscreen_toggle_key", amiberry_options.default_fullscreen_toggle_key, sizeof amiberry_options.default_fullscreen_toggle_key);
+					cfgfile_intval(option, value, "rotation_angle", &amiberry_options.rotation_angle, 1);
+					cfgfile_yesno(option, value, "default_horizontal_centering", &amiberry_options.default_horizontal_centering);
+					cfgfile_yesno(option, value, "default_vertical_centering", &amiberry_options.default_vertical_centering);
+					cfgfile_intval(option, value, "default_scaling_method", &amiberry_options.default_scaling_method, 1);
+					cfgfile_yesno(option, value, "default_frameskip", &amiberry_options.default_frameskip);
+					cfgfile_yesno(option, value, "default_correct_aspect_ratio", &amiberry_options.default_correct_aspect_ratio);
+					cfgfile_yesno(option, value, "default_auto_height", &amiberry_options.default_auto_height);
+					cfgfile_intval(option, value, "default_width", &amiberry_options.default_width, 1);
+					cfgfile_intval(option, value, "default_height", &amiberry_options.default_height, 1);
+					cfgfile_yesno(option, value, "default_fullscreen", &amiberry_options.default_fullscreen);
+					cfgfile_intval(option, value, "default_stereo_separation", &amiberry_options.default_stereo_separation, 1);
+					cfgfile_intval(option, value, "default_joystick_deadzone", &amiberry_options.default_joystick_deadzone, 1);
+					cfgfile_yesno(option, value, "default_retroarch_quit", &amiberry_options.default_retroarch_quit);
+					cfgfile_yesno(option, value, "default_retroarch_menu", &amiberry_options.default_retroarch_menu);
+					cfgfile_yesno(option, value, "default_retroarch_reset", &amiberry_options.default_retroarch_reset);
+					cfgfile_string(option, value, "default_controller1", amiberry_options.default_controller1, sizeof amiberry_options.default_controller1);
+					cfgfile_string(option, value, "default_controller2", amiberry_options.default_controller2, sizeof amiberry_options.default_controller2);
+					cfgfile_string(option, value, "default_controller3", amiberry_options.default_controller3, sizeof amiberry_options.default_controller3);
+					cfgfile_string(option, value, "default_controller4", amiberry_options.default_controller4, sizeof amiberry_options.default_controller4);
+					cfgfile_string(option, value, "default_mouse1", amiberry_options.default_mouse1, sizeof amiberry_options.default_mouse1);
+					cfgfile_string(option, value, "default_mouse2", amiberry_options.default_mouse2, sizeof amiberry_options.default_mouse2);
 				}
 			}
 		}
@@ -1150,9 +1349,13 @@ void target_addtorecent(const TCHAR* name, int t)
 {
 }
 
-
-void target_reset(void)
+void target_reset()
 {
+	clipboard_reset();
+
+	auto* const ad = &adisplays;
+	ad->picasso_requested_on = false;
+	ad->picasso_on = false;
 }
 
 bool target_can_autoswitchdevice(void)
@@ -1243,7 +1446,8 @@ int main(int argc, char* argv[])
 
 	alloc_AmigaMem();
 	RescanROMs();
-
+	clipboard_init();
+	
 	// set capslock state based upon current "real" state
 	ioctl(0, KDGKBLED, &kbd_flags);
 	ioctl(0, KDGETLED, &kbd_led_status);
@@ -1282,250 +1486,547 @@ int main(int argc, char* argv[])
 	return 0;
 }
 
-int handle_msgpump()
+void setpriority(int prio)
 {
-	auto gotEvent = 0;
-	SDL_Event event;
-	int mouseScale, x, y;
-	
-	while (SDL_PollEvent(&event))
+	if (prio >= 0 && prio <= 2)
 	{
-		gotEvent = 1;
-		const auto* keystate = SDL_GetKeyboardState(nullptr);
-
-		switch (event.type)
+		switch (prio)
 		{
-		case SDL_QUIT:
+		case 0:
+			SDL_SetThreadPriority(SDL_THREAD_PRIORITY_LOW);
+			break;
+		case 1:
+			SDL_SetThreadPriority(SDL_THREAD_PRIORITY_NORMAL);
+			break;
+		case 2:
+			SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH);
+			break;
+		default:
+			break;
+		}		
+	}
+}
+
+void toggle_mousegrab()
+{
+	// Release mouse
+	if (mouse_grabbed)
+	{
+		mouse_grabbed = false;
+		SDL_ShowCursor(SDL_ENABLE);
+		SDL_SetRelativeMouseMode(SDL_FALSE);
+	}
+	else
+	{
+		mouse_grabbed = true;
+		SDL_ShowCursor(SDL_DISABLE);
+		SDL_SetRelativeMouseMode(SDL_TRUE);
+	}
+}
+
+void set_mouse_grab(const bool grab)
+{
+#ifdef USE_DISPMANX
+	if (currprefs.allow_host_run)
+	{
+		if (grab)
+			change_layer_number(0);
+		else
+			change_layer_number(-128);
+	}
+#endif
+	if (grab != mouse_grabbed)
+		toggle_mousegrab();	
+}
+
+void setminimized()
+{
+	if (!minimized)
+		minimized = 1;
+	set_inhibit_frame(IHF_WINDOWHIDDEN);
+}
+
+void unsetminimized()
+{
+	if (minimized > 0)
+		full_redraw_all();
+	minimized = 0;
+	clear_inhibit_frame(IHF_WINDOWHIDDEN);
+}
+
+static void amiberry_inactive(int minimized)
+{
+	focus = 0;
+	recapture = 0;
+	setmouseactive(0);
+	clipboard_active(1, 0);
+
+	if (!quit_program) {
+		if (minimized) {
+			if (currprefs.minimized_pause) {
+				inputdevice_unacquire();
+				setpaused(1);
+				sound_closed = 1;
+			}
+			else if (currprefs.minimized_nosound) {
+				inputdevice_unacquire(true, currprefs.minimized_input);
+				setsoundpaused();
+				sound_closed = -1;
+			}
+			else {
+				inputdevice_unacquire(true, currprefs.minimized_input);
+			}
+		}
+		else if (mouseactive) {
+			inputdevice_unacquire();
+			if (currprefs.active_nocapture_pause)
+			{
+				setpaused(2);
+				sound_closed = 1;
+			}
+			else if (currprefs.active_nocapture_nosound)
+			{
+				setsoundpaused();
+				sound_closed = -1;
+			}
+		}
+		else {
+			if (currprefs.inactive_pause)
+			{
+				inputdevice_unacquire();
+				setpaused(2);
+				sound_closed = 1;
+			}
+			else if (currprefs.inactive_nosound)
+			{
+				inputdevice_unacquire(true, currprefs.inactive_input);
+				setsoundpaused();
+				sound_closed = -1;
+			}
+			else {
+				inputdevice_unacquire(true, currprefs.inactive_input);
+			}
+		}
+	} else {
+		inputdevice_unacquire();
+	}
+	setpriority(currprefs.inactive_priority);
+}
+
+static void amiberry_active(int minimized)
+{
+	setpriority(currprefs.active_capture_priority);
+	
+	if (sound_closed != 0) {
+		if (sound_closed < 0) {
+			resumesoundpaused();
+		}
+		else
+		{
+			if (currprefs.active_nocapture_pause)
+			{
+				if (mouseactive)
+					resumepaused(2);
+			}
+			else if (currprefs.inactive_pause)
+				resumepaused(2);
+		}
+		sound_closed = 0;
+	}
+	//getcapslock();
+	inputdevice_acquire(TRUE);
+	if (isfullscreen() > 0)
+		setmouseactive(1);
+	clipboard_active(1, 1);
+}
+
+static void setmouseactive2(int active, bool allowpause)
+{
+	if (active == 0)
+		set_mouse_grab(false);
+	if (mouseactive == active && active >= 0)
+		return;
+
+	if (active == 1 && !(currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC)) {
+		set_mouse_grab(true);
+	}
+	
+	if (active < 0)
+		active = 1;
+
+	mouseactive = active ? 1 : 0;
+
+	recapture = 0;
+	
+	if (isfullscreen() <= 0 && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_tablet > 0) {
+		if (mousehack_alive())
+			return;
+	}
+	
+	if (active) {
+		inputdevice_acquire(TRUE);
+		setpriority(currprefs.active_capture_priority);
+		if (currprefs.active_nocapture_pause)
+			resumepaused(2);
+		else if (currprefs.active_nocapture_nosound && sound_closed < 0)
+			resumesoundpaused();
+	}
+	else {
+		inputdevice_acquire(FALSE);
+		inputdevice_releasebuttons();
+	}
+	if (!active && allowpause)
+	{
+		if (currprefs.active_nocapture_pause)
+			setpaused(2);
+		else if (currprefs.active_nocapture_nosound)
+			setsoundpaused();
+			sound_closed = -1;
+	}
+}
+
+void setmouseactive(int active)
+{
+	if (active > 1)
+		SDL_RaiseWindow(sdl_window);
+	setmouseactive2(active, true);
+}
+
+void enablecapture()
+{
+	if (pause_emulation > 2)
+		return;
+	setmouseactive(1);
+	if (sound_closed < 0) {
+		resumesoundpaused();
+		sound_closed = 0;
+	}
+	if (currprefs.inactive_pause || currprefs.active_nocapture_pause)
+		resumepaused(2);
+}
+
+void disablecapture()
+{
+	setmouseactive(0);
+	focus = 0;
+	if (currprefs.active_nocapture_pause && sound_closed == 0) {
+		setpaused(2);
+		sound_closed = 1;
+	}
+	else if (currprefs.active_nocapture_nosound && sound_closed == 0) {
+		setsoundpaused();
+		sound_closed = -1;
+	}
+}
+
+void process_event(SDL_Event event)
+{
+	const auto* keystate = SDL_GetKeyboardState(nullptr);
+	
+	if (event.type == SDL_WINDOWEVENT)
+	{
+		switch (event.window.event)
+		{
+		case SDL_WINDOWEVENT_MINIMIZED:
+			setminimized();
+			amiberry_inactive(minimized);
+			break;
+		case SDL_WINDOWEVENT_RESTORED:
+			amiberry_active(minimized);
+			unsetminimized();
+			break;
+		case SDL_WINDOWEVENT_ENTER:
+			mouseinside = true;
+			break;
+		case SDL_WINDOWEVENT_FOCUS_GAINED:
+			mouseinside = true;
+			set_mouse_grab(true);
+			amiberry_active(minimized);
+			break;
+		case SDL_WINDOWEVENT_LEAVE:
+			mouseinside = false;
+			break;
+		case SDL_WINDOWEVENT_FOCUS_LOST:
+			mouseinside = false;
+			set_mouse_grab(false);
+			amiberry_inactive(minimized);
+			break;
+		case SDL_WINDOWEVENT_CLOSE:
 			uae_quit();
-			break;
-
-		case SDL_JOYDEVICEADDED:
-		case SDL_CONTROLLERDEVICEADDED:
-			write_log("SDL Controller/Joystick device added! Re-running import joysticks...\n");
-			import_joysticks();
-			break;
-
-		case SDL_JOYDEVICEREMOVED:
-		case SDL_CONTROLLERDEVICEREMOVED:
-			write_log("SDL Controller/Joystick device removed!\n");
-			break;
-			
-		case SDL_KEYDOWN:
-		{
-			// if the key belongs to a "retro arch joystick" ignore it
-			// ONLY when in game though, we need to remove the joysticks really 
-			// if we want to use the KB
-			// i've added this so when using the joysticks it doesn't hit the 'r' key for some games
-			// which starts a replay!!!
-			const auto ok_to_use = !key_used_by_retroarch_joy(event.key.keysym.scancode);
-			if (ok_to_use)
-			{
-				if (event.key.repeat == 0)
-				{
-					// If the Enter GUI key was pressed, handle it
-					if (enter_gui_key && event.key.keysym.sym == enter_gui_key)
-					{
-						inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
-						break;
-					}
-
-					// If the Quit emulator key was pressed, handle it
-					if (quit_key && event.key.keysym.sym == quit_key)
-					{
-						inputdevice_add_inputcode(AKS_QUIT, 1, nullptr);
-						break;
-					}
-
-					if (action_replay_button && event.key.keysym.sym == action_replay_button)
-					{
-						inputdevice_add_inputcode(AKS_FREEZEBUTTON, 1, nullptr);
-						break;
-					}
-
-					if (fullscreen_key && event.key.keysym.sym == fullscreen_key)
-					{
-						inputdevice_add_inputcode(AKS_TOGGLEWINDOWEDFULLSCREEN, 1, nullptr);
-						break;
-					}
-				}
-				// If the reset combination was pressed, handle it
-				if (swap_win_alt_keys)
-				{
-					if (keystate[SDL_SCANCODE_LCTRL] && keystate[SDL_SCANCODE_LALT] && (keystate[SDL_SCANCODE_RALT] || keystate[SDL_SCANCODE_APPLICATION]))
-					{
-						uae_reset(0, 1);
-						break;
-					}
-				}
-				else if (keystate[SDL_SCANCODE_LCTRL] && keystate[SDL_SCANCODE_LGUI] && (keystate[SDL_SCANCODE_RGUI] || keystate[SDL_SCANCODE_APPLICATION]))
-				{
-					uae_reset(0, 1);
-					break;
-				}
-
-				if (event.key.repeat == 0)
-				{
-					if (event.key.keysym.sym == SDLK_CAPSLOCK)
-					{
-						// Treat CAPSLOCK as a toggle. If on, set off and vice/versa
-						ioctl(0, KDGKBLED, &kbd_flags);
-						ioctl(0, KDGETLED, &kbd_led_status);
-						if (kbd_flags & 07 & LED_CAP)
-						{
-							// On, so turn off
-							kbd_led_status &= ~LED_CAP;
-							kbd_flags &= ~LED_CAP;
-							inputdevice_do_keyboard(AK_CAPSLOCK, 0);
-						}
-						else
-						{
-							// Off, so turn on
-							kbd_led_status |= LED_CAP;
-							kbd_flags |= LED_CAP;
-							inputdevice_do_keyboard(AK_CAPSLOCK, 1);
-						}
-						ioctl(0, KDSETLED, kbd_led_status);
-						ioctl(0, KDSKBLED, kbd_flags);
-						break;
-					}
-
-					// Handle all other keys
-					if (swap_win_alt_keys)
-					{
-						if (event.key.keysym.scancode == SDL_SCANCODE_LALT)
-							event.key.keysym.scancode = SDL_SCANCODE_LGUI;
-						else if (event.key.keysym.scancode == SDL_SCANCODE_RALT)
-							event.key.keysym.scancode = SDL_SCANCODE_RGUI;
-					}
-					inputdevice_translatekeycode(0, event.key.keysym.scancode, 1, false);
-				}
-			}
-		}
-		break;
-		case SDL_KEYUP:
-		{
-			const auto ok_to_use = !key_used_by_retroarch_joy(event.key.keysym.scancode);
-			if (ok_to_use)
-			{
-				if (event.key.repeat == 0)
-				{
-					if (swap_win_alt_keys)
-					{
-						if (event.key.keysym.scancode == SDL_SCANCODE_LALT)
-							event.key.keysym.scancode = SDL_SCANCODE_LGUI;
-						else if (event.key.keysym.scancode == SDL_SCANCODE_RALT)
-							event.key.keysym.scancode = SDL_SCANCODE_RGUI;
-					}
-					inputdevice_translatekeycode(0, event.key.keysym.scancode, 0, true);
-				}
-			}
-		}
-		break;
-
-		case SDL_FINGERDOWN:
-			setmousebuttonstate(0, 0, 0);
-			break;
-			
-		case SDL_MOUSEBUTTONDOWN:
-			if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
-			{
-				if (event.button.button == SDL_BUTTON_LEFT)
-					setmousebuttonstate(0, 0, 1);
-				if (event.button.button == SDL_BUTTON_RIGHT)
-					setmousebuttonstate(0, 1, 1);
-				if (event.button.button == SDL_BUTTON_MIDDLE)
-					setmousebuttonstate(0, 2, 1);
-			}
-			break;
-
-		case SDL_FINGERUP:
-			setmousebuttonstate(0, 0, 0);
-			break;
-			
-		case SDL_MOUSEBUTTONUP:
-			if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
-			{
-				if (event.button.button == SDL_BUTTON_LEFT)
-					setmousebuttonstate(0, 0, 0);
-				if (event.button.button == SDL_BUTTON_RIGHT)
-					setmousebuttonstate(0, 1, 0);
-				if (event.button.button == SDL_BUTTON_MIDDLE)
-				{
-					setmousebuttonstate(0, 2, 0);
-					// Release mouse
-					if (mouse_grabbed)
-					{
-						mouse_grabbed = false;
-						SDL_ShowCursor(SDL_ENABLE);
-						SDL_SetRelativeMouseMode(SDL_FALSE);
-					}
-					else
-					{
-						mouse_grabbed = true;
-						SDL_ShowCursor(SDL_DISABLE);
-						SDL_SetRelativeMouseMode(SDL_TRUE);
-					}
-				}
-			}
-			break;
-
-		case SDL_FINGERMOTION:
-			//TODO this doesn't work yet
-			mouseScale = currprefs.input_joymouse_multiplier / 2;
-			x = event.motion.xrel;
-			y = event.motion.yrel;
-			setmousestate(0, 0, x* mouseScale, 0);
-			setmousestate(0, 1, y* mouseScale, 0);
-			break;
-			
-		case SDL_MOUSEMOTION:
-			if (currprefs.input_tablet == TABLET_OFF)
-			{
-				if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
-				{
-					mouseScale = currprefs.input_joymouse_multiplier / 2;
-					x = event.motion.xrel;
-					y = event.motion.yrel;
-#if defined (ANDROID)
-					if (event.motion.x == 0 && x > -4)
-						x = -4;
-					if (event.motion.y == 0 && y > -4)
-						y = -4;
-					if (event.motion.x == currprefs.gfx_monitor.gfx_size.width - 1 && x < 4)
-						x = 4;
-					if (event.motion.y == currprefs.gfx_monitor.gfx_size.height - 1 && y < 4)
-						y = 4;
-#endif //ANDROID
-					setmousestate(0, 0, x * mouseScale, 0);
-					setmousestate(0, 1, y * mouseScale, 0);
-				}
-			}
-			break;
-
-		case SDL_MOUSEWHEEL:
-			if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
-			{
-				const auto val_y = event.wheel.y;
-				setmousestate(0, 2, val_y, 0);
-				if (val_y < 0)
-					setmousebuttonstate(0, 3 + 0, -1);
-				else if (val_y > 0)
-					setmousebuttonstate(0, 3 + 1, -1);
-
-				const auto val_x = event.wheel.x;
-				setmousestate(0, 3, val_x, 0);
-				if (val_x < 0)
-					setmousebuttonstate(0, 3 + 2, -1);
-				else if (val_x > 0)
-					setmousebuttonstate(0, 3 + 3, -1);
-			}
 			break;
 
 		default:
 			break;
 		}
 	}
-	return gotEvent;
+
+	switch (event.type)
+	{
+	case SDL_QUIT:
+		uae_quit();
+		break;
+
+	case SDL_JOYDEVICEADDED:
+	case SDL_CONTROLLERDEVICEADDED:
+		write_log("SDL Controller/Joystick device added! Re-running import joysticks...\n");
+		import_joysticks();
+		break;
+
+	case SDL_JOYDEVICEREMOVED:
+	case SDL_CONTROLLERDEVICEREMOVED:
+		write_log("SDL Controller/Joystick device removed!\n");
+		break;
+
+	case SDL_KEYDOWN:
+	{
+		// if the key belongs to a "retro arch joystick" ignore it
+		// ONLY when in game though, we need to remove the joysticks really 
+		// if we want to use the KB
+		// i've added this so when using the joysticks it doesn't hit the 'r' key for some games
+		// which starts a replay!!!
+		const auto ok_to_use = !key_used_by_retroarch_joy(event.key.keysym.scancode);
+		if (ok_to_use)
+		{
+			if (event.key.repeat == 0)
+			{
+				// If the Enter GUI key was pressed, handle it
+				if (enter_gui_key && event.key.keysym.sym == enter_gui_key)
+				{
+					inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
+					break;
+				}
+
+				// If the Quit emulator key was pressed, handle it
+				if (quit_key && event.key.keysym.sym == quit_key)
+				{
+					inputdevice_add_inputcode(AKS_QUIT, 1, nullptr);
+					break;
+				}
+
+				if (action_replay_button && event.key.keysym.sym == action_replay_button)
+				{
+					inputdevice_add_inputcode(AKS_FREEZEBUTTON, 1, nullptr);
+					break;
+				}
+
+				if (fullscreen_key && event.key.keysym.sym == fullscreen_key)
+				{
+					inputdevice_add_inputcode(AKS_TOGGLEWINDOWEDFULLSCREEN, 1, nullptr);
+					break;
+				}
+			}
+			// If the reset combination was pressed, handle it
+			if (amiberry_options.swap_win_alt_keys)
+			{
+				if (keystate[SDL_SCANCODE_LCTRL] && keystate[SDL_SCANCODE_LALT] && (keystate[SDL_SCANCODE_RALT] || keystate[SDL_SCANCODE_APPLICATION]))
+				{
+					uae_reset(0, 1);
+					break;
+				}
+			}
+			else if (keystate[SDL_SCANCODE_LCTRL] && keystate[SDL_SCANCODE_LGUI] && (keystate[SDL_SCANCODE_RGUI] || keystate[SDL_SCANCODE_APPLICATION]))
+			{
+				uae_reset(0, 1);
+				break;
+			}
+
+			if (event.key.repeat == 0)
+			{
+				if (event.key.keysym.sym == SDLK_CAPSLOCK)
+				{
+					// Treat CAPSLOCK as a toggle. If on, set off and vice/versa
+					ioctl(0, KDGKBLED, &kbd_flags);
+					ioctl(0, KDGETLED, &kbd_led_status);
+					if (kbd_flags & 07 & LED_CAP)
+					{
+						// On, so turn off
+						kbd_led_status &= ~LED_CAP;
+						kbd_flags &= ~LED_CAP;
+						inputdevice_do_keyboard(AK_CAPSLOCK, 0);
+					}
+					else
+					{
+						// Off, so turn on
+						kbd_led_status |= LED_CAP;
+						kbd_flags |= LED_CAP;
+						inputdevice_do_keyboard(AK_CAPSLOCK, 1);
+					}
+					ioctl(0, KDSETLED, kbd_led_status);
+					ioctl(0, KDSKBLED, kbd_flags);
+					break;
+				}
+
+				if (event.key.keysym.sym == SDLK_SYSREQ)
+					clipboard_disable(true);
+				
+				// Handle all other keys
+				if (amiberry_options.swap_win_alt_keys)
+				{
+					if (event.key.keysym.scancode == SDL_SCANCODE_LALT)
+						event.key.keysym.scancode = SDL_SCANCODE_LGUI;
+					else if (event.key.keysym.scancode == SDL_SCANCODE_RALT)
+						event.key.keysym.scancode = SDL_SCANCODE_RGUI;
+				}
+				inputdevice_translatekeycode(0, event.key.keysym.scancode, 1, false);
+			}
+		}
+	}
+	break;
+	case SDL_KEYUP:
+	{
+		const auto ok_to_use = !key_used_by_retroarch_joy(event.key.keysym.scancode);
+		if (ok_to_use)
+		{
+			if (event.key.repeat == 0)
+			{
+				if (amiberry_options.swap_win_alt_keys)
+				{
+					if (event.key.keysym.scancode == SDL_SCANCODE_LALT)
+						event.key.keysym.scancode = SDL_SCANCODE_LGUI;
+					else if (event.key.keysym.scancode == SDL_SCANCODE_RALT)
+						event.key.keysym.scancode = SDL_SCANCODE_RGUI;
+				}
+				inputdevice_translatekeycode(0, event.key.keysym.scancode, 0, true);
+			}
+		}
+	}
+	break;
+
+	case SDL_FINGERDOWN:
+		setmousebuttonstate(0, 0, 1);
+		break;
+
+	case SDL_MOUSEBUTTONDOWN:
+		if (event.button.button == SDL_BUTTON_LEFT && mouseinside && !currprefs.input_mouse_untrap)
+			set_mouse_grab(true);
+		if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
+		{
+			if (event.button.button == SDL_BUTTON_LEFT)
+				setmousebuttonstate(0, 0, 1);
+			if (event.button.button == SDL_BUTTON_RIGHT)
+				setmousebuttonstate(0, 1, 1);
+			if (event.button.button == SDL_BUTTON_MIDDLE)
+				setmousebuttonstate(0, 2, 1);
+		}
+		break;
+
+	case SDL_FINGERUP:
+		setmousebuttonstate(0, 0, 0);
+		break;
+
+	case SDL_MOUSEBUTTONUP:
+		if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
+		{
+			if (event.button.button == SDL_BUTTON_LEFT)
+				setmousebuttonstate(0, 0, 0);
+			if (event.button.button == SDL_BUTTON_RIGHT)
+				setmousebuttonstate(0, 1, 0);
+			if (event.button.button == SDL_BUTTON_MIDDLE)
+			{
+				if (currprefs.input_mouse_untrap)
+					toggle_mousegrab();
+				else
+					setmousebuttonstate(0, 2, 0);
+			}
+		}
+		break;
+
+	case SDL_FINGERMOTION:
+		//TODO this doesn't work yet
+		setmousestate(0, 0, event.motion.xrel, 0);
+		setmousestate(0, 1, event.motion.yrel, 0);
+		break;
+
+	case SDL_MOUSEMOTION:
+		if (recapture && isfullscreen() <= 0) {
+			enablecapture();
+			break;
+		}
+
+		if (currprefs.input_tablet >= TABLET_MOUSEHACK)
+		{
+			/* absolute */
+			setmousestate(0, 0, event.motion.x, 1);
+			setmousestate(0, 1, event.motion.y, 1);
+			break;
+		}
+
+		if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
+		{
+			/* relative */
+#if defined (ANDROID)
+			if (event.motion.x == 0 && x > -4)
+				x = -4;
+			if (event.motion.y == 0 && y > -4)
+				y = -4;
+			if (event.motion.x == currprefs.gfx_monitor.gfx_size.width - 1 && x < 4)
+				x = 4;
+			if (event.motion.y == currprefs.gfx_monitor.gfx_size.height - 1 && y < 4)
+				y = 4;
+#endif //ANDROID
+			setmousestate(0, 0, event.motion.xrel, 0);
+			setmousestate(0, 1, event.motion.yrel, 0);
+			break;
+		}
+		break;
+
+	case SDL_MOUSEWHEEL:
+		if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
+		{
+			const auto val_y = event.wheel.y;
+			setmousestate(0, 2, val_y, 0);
+			if (val_y < 0)
+				setmousebuttonstate(0, 3 + 0, -1);
+			else if (val_y > 0)
+				setmousebuttonstate(0, 3 + 1, -1);
+
+			const auto val_x = event.wheel.x;
+			setmousestate(0, 3, val_x, 0);
+			if (val_x < 0)
+				setmousebuttonstate(0, 3 + 2, -1);
+			else if (val_x > 0)
+				setmousebuttonstate(0, 3 + 3, -1);
+		}
+		break;
+
+	default:
+		break;
+	}
+	
+}
+
+void update_clipboard()
+{
+	auto* clipboard_uae = uae_clipboard_get_text();
+	if (clipboard_uae) {
+		SDL_SetClipboardText(clipboard_uae);
+		uae_clipboard_free_text(clipboard_uae);
+	}
+	else {
+		// FIXME: Ideally, we would want to avoid this alloc/free
+		// when the clipboard hasn't changed.
+		if (SDL_HasClipboardText() == SDL_TRUE)
+		{
+			auto* clipboard_host = SDL_GetClipboardText();
+			uae_clipboard_put_text(clipboard_host);
+			SDL_free(clipboard_host);
+		}
+	}
+}
+
+int handle_msgpump()
+{
+	auto got_event = 0;
+	SDL_Event event;
+
+	while (SDL_PollEvent(&event))
+	{
+		got_event = 1;
+		process_event(event);
+		if (currprefs.clipboard_sharing)
+			update_clipboard();
+	}
+	return got_event;
 }
 
 bool handle_events()
@@ -1544,8 +2045,11 @@ bool handle_events()
 			return true;
 		}
 		SDL_Event event;
-		SDL_WaitEvent(&event);
-
+		while (SDL_PollEvent(&event))
+		{
+			process_event(event);
+		}
+		
 		inputdevicefunc_keyboard.read();
 		inputdevicefunc_mouse.read();
 		inputdevicefunc_joystick.read();
@@ -1556,41 +2060,10 @@ bool handle_events()
 		//updatedisplayarea();
 		pause_emulation = was_paused;
 		resumepaused(was_paused);
+		sound_closed = 0;
 		was_paused = 0;
 	}
 
 	return pause_emulation != 0;
 }
 
-static uaecptr clipboard_data;
-
-void amiga_clipboard_die()
-{
-}
-
-void amiga_clipboard_init()
-{
-}
-
-void amiga_clipboard_task_start(uaecptr data)
-{
-	clipboard_data = data;
-}
-
-uae_u32 amiga_clipboard_proc_start()
-{
-	return clipboard_data;
-}
-
-void amiga_clipboard_got_data(uaecptr data, uae_u32 size, uae_u32 actual)
-{
-}
-
-int amiga_clipboard_want_data()
-{
-	return 0;
-}
-
-void clipboard_vsync()
-{
-}

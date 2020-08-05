@@ -12,15 +12,22 @@
 
 /* Sempahores. We use POSIX semaphores; if you are porting this to a machine
  * with different ones, make them look like POSIX semaphores. */
-typedef SDL_sem* uae_sem_t;
+typedef SDL_sem *uae_sem_t;
 
 STATIC_INLINE int uae_sem_init(uae_sem_t* sem, int dummy, int init)
 {
 	*sem = SDL_CreateSemaphore(init);
-	return (*sem == nullptr);
+	return *sem == nullptr;
 }
 
-#define uae_sem_destroy(PSEM) SDL_DestroySemaphore (*PSEM)
+STATIC_INLINE void uae_sem_destroy(uae_sem_t* event)
+{
+	if (*event)
+	{
+		SDL_DestroySemaphore(*event);
+		*event = nullptr;
+	}
+}
 #define uae_sem_post(PSEM) SDL_SemPost (*PSEM)
 #define uae_sem_wait(PSEM) SDL_SemWait (*PSEM)
 #define uae_sem_trywait(PSEM) SDL_SemTryWait (*PSEM)
@@ -28,31 +35,39 @@ STATIC_INLINE int uae_sem_init(uae_sem_t* sem, int dummy, int init)
 
 #include "commpipe.h"
 
-typedef SDL_Thread* uae_thread_id;
+typedef SDL_Thread *uae_thread_id;
 #define BAD_THREAD 0
 
 STATIC_INLINE void uae_set_thread_priority(uae_thread_id* id, int pri)
 {
+	SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH);
 }
 
 STATIC_INLINE void uae_end_thread(uae_thread_id* tid)
 {
+	SDL_WaitThread(*tid, static_cast<int*>(nullptr));
 }
 
 STATIC_INLINE long uae_start_thread(const TCHAR* name, int (*f)(void*), void* arg, uae_thread_id* foo)
 {
-	uae_thread_id id = SDL_CreateThread(f, "StartThread", arg);
-	if (foo != nullptr)
+	auto result = 1;
+	auto* id = SDL_CreateThread(f, "StartThread", arg);
+	if (id == nullptr)
+	{
+		write_log("ERROR creating thread\n");
+		result = 0;
+	}
+	if (foo)
+	{
 		*foo = id;
-	return (long)id;
+	}
+
+	return result;
 }
 
 STATIC_INLINE long uae_start_thread_fast(int (*f)(void*), void* arg, uae_thread_id* foo)
 {
-	uae_thread_id id = SDL_CreateThread(f, "StartThreadFast", arg);
-	if (foo != nullptr)
-		*foo = id;
-	return (long)id;
+	return uae_start_thread(nullptr, f, arg, foo);
 }
 
 STATIC_INLINE void uae_wait_thread(uae_thread_id thread)

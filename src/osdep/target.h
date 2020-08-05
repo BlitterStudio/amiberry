@@ -22,8 +22,10 @@
 #define GETBDM(x) (((x) - (((x) / 10000) * 10000)) / 100)
 #define GETBDD(x) ((x) % 100)
 
-#define AMIBERRYVERSION _T("Amiberry v3.2 beta (2020-05-26)")
-#define AMIBERRYDATE MAKEBD(2020, 5, 26)
+#define AMIBERRYVERSION _T("Amiberry v3.2 beta (2020-08-05)")
+#define AMIBERRYDATE MAKEBD(2020, 8, 5)
+
+#define IHF_WINDOWHIDDEN 6
 
 extern std::string get_version_string();
 
@@ -41,6 +43,7 @@ extern bool config_loaded;
 extern int z3_base_adr;
 #ifdef USE_DISPMANX
 extern unsigned long time_per_frame;
+extern bool volatile flip_in_progess;
 #endif
 void run_gui(void);
 void InGameMessage(const char* msg);
@@ -57,6 +60,7 @@ void graphics_subshutdown(void);
 void stop_sound();
 
 void keyboard_settrans();
+void set_mouse_grab(bool grab);
 
 extern void free_AmigaMem();
 extern void alloc_AmigaMem();
@@ -81,13 +85,16 @@ extern void get_rp9_path(char* out, int size);
 extern void get_savestate_path(char* out, int size);
 extern void get_screenshot_path(char* out, int size);
 
-extern void extractFileName(const char* str, char* buffer);
-extern void extractPath(char* str, char* buffer);
-extern void removeFileExtension(char* filename);
+extern void extract_filename(const char* str, char* buffer);
+extern void extract_path(char* str, char* buffer);
+extern void remove_file_extension(char* filename);
 extern void ReadConfigFileList(void);
 extern void RescanROMs(void);
 extern void SymlinkROMs(void);
 extern void ClearAvailableROMList(void);
+extern void setpriority(int prio);
+extern bool setpaused(int priority);
+extern void init_colors();
 
 #include <vector>
 #include <string>
@@ -112,11 +119,6 @@ extern void AddFileToCDList(const char* file, int moveToTop);
 #define MAX_MRU_WHDLOADLIST 10
 extern std::vector<std::string> lstMRUWhdloadList;
 extern void AddFileToWHDLoadList(const char* file, int moveToTop);
-
-#define AMIGAWIDTH_COUNT 6
-#define AMIGAHEIGHT_COUNT 7
-extern const int amigawidth_values[AMIGAWIDTH_COUNT];
-extern const int amigaheight_values[AMIGAHEIGHT_COUNT];
 
 int count_HDs(struct uae_prefs* p);
 extern void gui_force_rtarea_hdchange(void);
@@ -157,15 +159,15 @@ STATIC_INLINE uae_atomic atomic_dec(volatile uae_atomic *p)
 {
 	return __atomic_sub_fetch(p, 1, __ATOMIC_SEQ_CST);
 }
-STATIC_INLINE uae_u32 atomic_bit_test_and_reset(volatile uae_atomic *p, uae_u32 v)
+STATIC_INLINE uae_u32 atomic_bit_test_and_reset(volatile uae_atomic* p, uae_u32 v)
 {
-  uae_u32 mask = (1 << v);
-  uae_u32 res = __atomic_fetch_and(p, ~mask, __ATOMIC_SEQ_CST);
+	uae_u32 mask = (1 << v);
+	uae_u32 res = __atomic_fetch_and(p, ~mask, __ATOMIC_SEQ_CST);
 	return (res & mask);
 }
-STATIC_INLINE void atomic_set(volatile uae_atomic *p, uae_u32 v)
+STATIC_INLINE void atomic_set(volatile uae_atomic* p, uae_u32 v)
 {
-  __atomic_store_n(p, v, __ATOMIC_SEQ_CST);
+	__atomic_store_n(p, v, __ATOMIC_SEQ_CST);
 }
 
 #else

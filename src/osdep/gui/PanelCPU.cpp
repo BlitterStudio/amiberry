@@ -181,6 +181,10 @@ public:
 				changed_prefs.cpu_compatible = false;
 				changed_prefs.cachesize = MAX_JIT_CACHE;
 				changed_prefs.compfpu = true;
+				changed_prefs.cpu_cycle_exact = false;
+				changed_prefs.cpu_memory_cycle_exact = false;
+				changed_prefs.address_space_24 = false;
+				changed_prefs.cpu_compatible = false;
 			}
 			else
 			{
@@ -193,6 +197,7 @@ public:
 			changed_prefs.compfpu = chkFPUJIT->isSelected();
 		}
 		RefreshPanelCPU();
+		RefreshPanelRAM();
 	}
 };
 
@@ -269,16 +274,16 @@ void InitPanelCPU(const struct _ConfigCategory& category)
 
 	grpCPU = new gcn::Window("CPU");
 	grpCPU->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
-	grpCPU->add(optCPU68000, 5, 10);
-	grpCPU->add(optCPU68010, 5, 40);
-	grpCPU->add(optCPU68020, 5, 70);
-	grpCPU->add(optCPU68030, 5, 100);
-	grpCPU->add(optCPU68040, 5, 130);
-	grpCPU->add(chk24Bit, 5, 170);
-	grpCPU->add(chkCPUCompatible, 5, 200);
-	grpCPU->add(chkJIT, 5, 230);
+	grpCPU->add(optCPU68000, 10, 10);
+	grpCPU->add(optCPU68010, 10, 40);
+	grpCPU->add(optCPU68020, 10, 70);
+	grpCPU->add(optCPU68030, 10, 100);
+	grpCPU->add(optCPU68040, 10, 130);
+	grpCPU->add(chk24Bit, 10, 170);
+	grpCPU->add(chkCPUCompatible, 10, 200);
+	grpCPU->add(chkJIT, 10, 230);
 	grpCPU->setMovable(false);
-	grpCPU->setSize(175, 285);
+	grpCPU->setSize(chk24Bit->getWidth() + 20, 285);
 	grpCPU->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpCPU->setBaseColor(gui_baseCol);
 
@@ -312,14 +317,14 @@ void InitPanelCPU(const struct _ConfigCategory& category)
 
 	grpFPU = new gcn::Window("FPU");
 	grpFPU->setPosition(DISTANCE_BORDER + grpCPU->getWidth() + DISTANCE_NEXT_X, DISTANCE_BORDER);
-	grpFPU->add(optFPUnone, 5, 10);
-	grpFPU->add(optFPU68881, 5, 40);
-	grpFPU->add(optFPU68882, 5, 70);
-	grpFPU->add(optFPUinternal, 5, 100);
-	grpFPU->add(chkFPUstrict, 5, 140);
-	grpFPU->add(chkFPUJIT, 5, 170);
+	grpFPU->add(optFPUnone, 10, 10);
+	grpFPU->add(optFPU68881, 10, 40);
+	grpFPU->add(optFPU68882, 10, 70);
+	grpFPU->add(optFPUinternal, 10, 100);
+	grpFPU->add(chkFPUstrict, 10, 140);
+	grpFPU->add(chkFPUJIT, 10, 170);
 	grpFPU->setMovable(false);
-	grpFPU->setSize(185, 225);
+	grpFPU->setSize(175, 225);
 	grpFPU->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpFPU->setBaseColor(gui_baseCol);
 
@@ -354,14 +359,14 @@ void InitPanelCPU(const struct _ConfigCategory& category)
 
 	grpCPUSpeed = new gcn::Window("CPU Speed");
 	grpCPUSpeed->setPosition(grpFPU->getX() + grpFPU->getWidth() + DISTANCE_NEXT_X, DISTANCE_BORDER);
-	grpCPUSpeed->add(opt7Mhz, 5, 10);
-	grpCPUSpeed->add(opt14Mhz, 5, 40);
-	grpCPUSpeed->add(opt25Mhz, 5, 70);
-	grpCPUSpeed->add(optFastest, 5, 100);
-	grpCPUSpeed->add(lblCpuIdle, 5, 170);
-	grpCPUSpeed->add(sldCpuIdle, lblCpuIdle->getWidth() + 10, 170);
+	grpCPUSpeed->add(opt7Mhz, 10, 10);
+	grpCPUSpeed->add(opt14Mhz, 10, 40);
+	grpCPUSpeed->add(opt25Mhz, 10, 70);
+	grpCPUSpeed->add(optFastest, 10, 100);
+	grpCPUSpeed->add(lblCpuIdle, 10, 160);
+	grpCPUSpeed->add(sldCpuIdle, lblCpuIdle->getWidth() + 20, 160);
 	grpCPUSpeed->setMovable(false);
-	grpCPUSpeed->setSize(180, 250);
+	grpCPUSpeed->setSize(175, 225);
 	grpCPUSpeed->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpCPUSpeed->setBaseColor(gui_baseCol);
 
@@ -424,9 +429,10 @@ void RefreshPanelCPU()
 		optCPU68040->setSelected(true);
 
 	chk24Bit->setSelected(changed_prefs.address_space_24);
-	chk24Bit->setEnabled(changed_prefs.cpu_model == 68020);
+	chk24Bit->setEnabled(changed_prefs.cpu_model == 68020 && changed_prefs.cachesize == 0);
 	chkCPUCompatible->setSelected(changed_prefs.cpu_compatible > 0);
-	chkJIT->setEnabled(changed_prefs.cpu_model > 68010);
+	chkCPUCompatible->setEnabled(changed_prefs.cachesize == 0);
+	chkJIT->setEnabled(changed_prefs.cpu_model >= 68020);
 	chkJIT->setSelected(changed_prefs.cachesize > 0);
 
 	switch (changed_prefs.fpu_model)

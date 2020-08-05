@@ -90,19 +90,19 @@ our_seglist:
 	dc.l 0 									; 8 /* NextSeg */
 start:
 	bra.s startjmp
-	dc.w 13						            ;  0 12
+	dc.w 13						;  0 12
 startjmp:
-	bra.w filesys_mainloop		    ;  1 16
-	dc.l make_dev-start			      ;  2 20
-	dc.l filesys_init-start		    ;  3 24
-	dc.l moverom-start				    ;  4 28
-	dc.l bootcode-start			      ;  5 32
-	dc.l setup_exter-start		    ;  6 36
-	dc.l bcplwrapper-start        ;  7 40
-	dc.l afterdos-start 	        ;  8 44
-	dc.l hwtrap_install-start     ;  9 48
-	dc.l hwtrap_entry-start   	  ; 10 52
-	dc.l 0 ; keymaphack-start		  ; 11 56
+	bra.w filesys_mainloop		;  1 16
+	dc.l make_dev-start			;  2 20
+	dc.l filesys_init-start		;  3 24
+	dc.l moverom-start			;  4 28
+	dc.l bootcode-start			;  5 32
+	dc.l setup_exter-start		;  6 36
+	dc.l bcplwrapper-start		;  7 40
+	dc.l afterdos-start			;  8 44
+	dc.l hwtrap_install-start	;  9 48
+	dc.l 0 ; hwtrap_entry-start 	; 10 52
+	dc.l 0 ; keymaphack-start		; 11 56
 	dc.l 0 ; fpu060disable-start	; 12 60
 
 bootcode:
@@ -161,6 +161,9 @@ afterdos:
 	bsr.w getrtbase
 	move.l d1,(a0)
 	
+	bsr.w clipboard_init
+	bsr.w consolehook
+
 	movem.l (sp)+,d2-d7/a2-a6
 	moveq #0,d0
 	rts
@@ -552,7 +555,7 @@ EXTT_cause:
 	bra.b EXTT_loop
 EXTT_notificationhack:
 	cmp.w #5,d0
-	bgt.b EXTT_loop
+	bgt.b EXTT_shellexec
 	movem.l a0-a1,-(sp)
 	moveq #38,d0
 	move.l #65536+1,d1
@@ -569,6 +572,20 @@ EXTT_notificationhack:
 	move.l a2,a1
 	jsr -366(a6) ; PutMsg
 	bra.w EXTT_loop
+EXTT_shellexec
+	cmp.w #6,d0
+	bgt.w EXTT_loop
+	lea shellexecname(pc),a0
+	lea shellexecproc(pc),a1
+	moveq #1,d0
+	move.l #10000,d1
+	bsr.w createproc
+	move.l d0,d1
+	move.w #$FF50,d0 ; exter_int_helper
+	bsr.w getrtbaselocal
+	moveq #20,d0
+	jsr (a0)
+	bra.w EXTT_loop
 
 exter_server_new:
 	moveq #0,d0
@@ -576,6 +593,10 @@ exter_server_new:
 	tst.b (a0)
 	beq.s .nouaeint
 	move.l (a1)+,a6 ; SysBase
+	
+;	movem.l d7/a0/a2,-(sp)
+;	bsr.w exter_do
+;	movem.l (sp)+,d7/a0/a2
 	
 	move.l (a1),a1 ; Task
 	move.l #$100,d0 ; SIGF_DOS
@@ -587,6 +608,101 @@ exter_server_new:
 	rts
 
 	cnop 0,4
+	dc.l 16
+shellexecproc:
+	dc.l 0
+
+	move.l 4.w,a6
+	lea doslibname(pc),a1
+	moveq #0,d0
+	jsr -$228(a6) ; OpenLibrary
+	move.l d0,a5
+	exg a5,a6
+	bra.s .seproc1
+
+.seproc0
+	exg a5,a6
+	moveq #0,d0	
+	bset #13,d0 ; SIGBREAK_CTRL_D
+	jsr -$013e(a6) ;Wait
+	exg a5,a6
+	
+.seproc1
+	move.w #$FF50,d0 ; exter_int_helper
+	bsr.w getrtbaselocal
+	moveq #21,d0
+	jsr (a0)
+	; a0 = command
+	move.l a0,d7
+	beq.s .seproc0
+
+	move.l sp,a4
+	lea -5*8-512(sp),sp
+	move.l sp,d6
+	move.l d6,a2
+
+	lea 5*8(a2),a3
+	move.l a3,a1
+	move.l d7,a0
+.seproc2
+	move.b (a0)+,(a1)+
+	bne.s .seproc2
+	move.l d7,a0
+	clr.b (a0)
+
+	; SYS_Input
+	move.l #$80000000+32+1,(a2)+
+	lea nil_name(pc),a0
+	move.l a0,d1
+	move.l #1005,d2
+	jsr -$1e(a6) ;Open
+	move.l d0,(a2)+
+
+	; SYS_Output
+	move.l #$80000000+32+2,(a2)+
+	lea nil_name(pc),a0
+	move.l a0,d1
+	jsr -$1e(a6) ;Open
+	move.l d0,(a2)+
+
+	; SYS_Async
+	move.l #$80000000+32+3,(a2)+
+	moveq #-1,d0
+	move.l d0,(a2)+
+
+	clr.l (a2)+
+	clr.l (a2)
+
+	cmp.w #36,20(a6)
+	bcc.s .seproc3
+
+	move.l d6,a2
+	move.l a3,d1 ;Command
+	moveq #0,d2 ;Input
+	move.l 1*8+4(a2),d3 ;Output
+	jsr -$de(a6) ;Execute
+
+	move.l 0*8+4(a2),d1
+	jsr -$24(a6) ;Close
+	move.l 1*8+4(a2),d1
+	jsr -$24(a6) ;Close
+
+	bra.s .seproc4
+
+.seproc3
+	move.l a3,d1
+	move.l d6,d2
+	jsr -$25e(a6) ; SystemTagList	
+
+.seproc4
+	move.l a4,sp
+
+	move.w #$FF50,d0 ; exter_int_helper
+	bsr.w getrtbaselocal
+	moveq #22,d0
+	jsr (a0)
+
+	bra.w .seproc0
 
 	; d0 = exter task, d1 = trap task
 heartbeatvblank:
@@ -1490,6 +1606,12 @@ addfsonthefly ; d1 = fs index
 	jsr FreeMem(a6)
 .nomem	move.l a4,a1
 	jsr -414(a6) ; CloseLibrary
+	; reply done
+	moveq #4,d1
+	move.w #$FF48,d0
+	bsr.w getrtbaselocal
+	move.l d6,d0
+	jsr (a0)
 	movem.l (sp)+,d2-d7/a2-a6
 	rts
 
@@ -1643,8 +1765,24 @@ FSML_loop:
 	bclr #1,173(a3)
 .nodebug
 	; disk change notification from native code
+	tst.b 172(a3)
+	beq.s .nodc
+	; call filesys_media_change_reply (pre)
+	move.w #$ff58,d0 ; fsmisc_helper
+	bsr.w getrtbaselocal
+	moveq #1,d0 ; filesys_media_change_reply
+	jsr (a0)
+	tst.l d0
+	beq.s .nodc2
+	bsr.w diskchange
+.nodc2
 	clr.b 172(a3)
-
+	; call filesys_media_change_reply (post)
+	move.w #$ff58,d0 ; fsmisc_helper
+	bsr.w getrtbaselocal
+	moveq #2,d0 ; filesys_media_change_reply
+	jsr (a0)
+.nodc
 	move.l a4,d0
 	beq.s nonnotif
 
@@ -2087,7 +2225,7 @@ getgfxlimits:
 	move.w 100(a0),d4
 	move.l MH_FOO_GFXBASE(a5),a6
 
-  ; Text Overscan area needed
+	; Text Overscan area needed
 	sub.l a0,a0
 	lea MH_FOO_DIMS(a5),a1
 	moveq #0,d0
@@ -2183,7 +2321,7 @@ mousehack_task:
 	moveq #-1,d0
 	move.w d0,MH_FOO_CNT(a3)
 
-    ; send data structure address
+	; send data structure address
 	move.w #$FF38,d0
 	moveq #5,d1
 	bsr.w getrtbaselocal
@@ -2396,7 +2534,7 @@ mhloop:
 	clr.l (a1) ;TAG_DONE
 
 	bsr.w mhdoio
-	
+
 .notablet
 	move.b MH_E(a4),d0
 	btst #MH_TABLET,d0
@@ -2532,6 +2670,425 @@ mousehackint:
 	moveq #0,d0
 	rts
 
+; clipboard sharing
+
+CLIP_WRITE_SIZE = 0
+CLIP_WRITE_ALLOC = (CLIP_WRITE_SIZE+4)
+CLIP_TASK = (CLIP_WRITE_ALLOC+4)
+CLIP_UNIT = (CLIP_TASK+4)
+CLIP_ID = (CLIP_UNIT+4)
+CLIP_EXEC = (CLIP_ID+4)
+CLIP_DOS = (CLIP_EXEC+4)
+CLIP_HOOK = (CLIP_DOS+4)
+CLIP_BUF = (CLIP_HOOK+20)
+CLIP_BUF_SIZE = 8
+CLIP_POINTER_NOTIFY = (CLIP_BUF+CLIP_BUF_SIZE)
+CLIP_POINTER_PREFS = (CLIP_POINTER_NOTIFY+48)
+CLIP_END = (CLIP_POINTER_PREFS+32)
+
+clipboard_init:
+	movem.l a5/a6,-(sp)
+
+	move.w #$FF38,d0
+	moveq #17,d1
+	bsr.w getrtbaselocal
+	jsr (a0)
+	btst #0,d0
+	beq.s .noclip
+
+	move.l 4.w,a6
+	move.l #CLIP_END,d0
+	move.l #$10001,d1
+	jsr AllocMem(a6)
+	tst.l d0
+	beq.w clipdie
+	move.l d0,a5
+	move.l a6,CLIP_EXEC(a5)
+
+	move.w #$FF38,d0
+	moveq #14,d1
+	bsr.w getrtbaselocal
+	move.l a5,d0
+	jsr (a0)
+
+	; we need to be a process, LoadLibrary() needs to call dos
+	lea clname(pc),a0
+	lea clipboard_proc(pc),a1
+	moveq #-10,d0
+	move.l #10000,d1
+	bsr.w createproc
+.noclip
+	moveq #0,d0
+	movem.l (sp)+,a5/a6
+	rts
+
+clipkill
+	move.w #$FF38,d0
+	moveq #10,d1
+	bsr.w getrtbaselocal
+	jsr (a0)
+	rts
+
+clipdie:
+	bsr.s clipkill
+	move.l a5,d0
+	beq.s .cd1
+	move.l CLIP_EXEC(a5),a6
+	move.l CLIP_DOS(a5),d0
+	beq.s .cd2
+	move.l d0,a1
+	jsr -414(a6) ; CloseLibrary
+.cd2
+	move.l a5,a1
+	move.l #CLIP_END,d0
+	jsr FreeMem(a6)	
+.cd1
+	moveq #0,d0
+	rts
+
+prefsread:
+	movem.l d2-d4/a2-a6,-(sp)
+	move.l CLIP_DOS(a5),a6
+	lea pointer_prefs(pc),a0
+	move.l a0,d1
+	move.l #1005,d2
+	jsr -$001e(a6) ;Open
+	move.l d0,d4
+	beq.s .pr1
+	lea CLIP_POINTER_PREFS(a5),a2
+.pr4
+	clr.l (a2)
+.pr3
+	move.w 2(a2),(a2)
+	move.l a2,d2
+	addq.l #2,d2
+	moveq	#2,d3
+	move.l d4,d1
+	jsr -$002a(a6) ;Read
+	cmp.l d0,d3
+	bne.s .pr1
+	cmp.l #'PNTR',(a2)
+	bne.s .pr3
+	move.l a2,d2
+	moveq #4,d3
+	move.l d4,d1
+	jsr -$002a(a6) ;Read	
+	move.l a2,d2
+	moveq #32,d3
+	move.l d4,d1
+	jsr -$002a(a6) ;Read	
+	cmp.l d0,d3
+	bne.s .pr1
+	tst.w 16(a2) ;pp_Which
+	bne.s .pr4
+	move.w #$FF38,d0
+	moveq #16,d1
+	bsr.w getrtbaselocal
+	jsr (a0)
+.pr1
+	move.l d4,d1
+	beq.s .pr2
+	jsr -$0024(a6) ;Close
+.pr2
+	movem.l (sp)+,d2-d4/a2-a6
+	rts
+
+prefshook:
+	move.l CLIP_DOS(a5),a6
+	lea ram_name(pc),a0
+	move.l a0,d1
+	moveq #-2,d2
+	jsr -$0054(a6) ;Lock
+	move.l d0,d1
+	beq.s .ph1
+	jsr -$005a(a6) ;Unlock
+	move.l CLIP_EXEC(a5),a6
+	lea CLIP_POINTER_NOTIFY(a5),a2
+	moveq #-1,d0
+	jsr -$014a(a6) ;AllocSignal
+	move.b d0,20(a2) ;nr_SignalNum
+	lea pointer_prefs(pc),a0
+	move.l a0,(a2) ;nr_Name
+	move.l #NRF_SEND_SIGNAL|NRF_NOTIFY_INITIAL,12(a2) ;nr_Flags 
+	move.l CLIP_TASK(a5),16(a2) ;nr_Task
+	move.l CLIP_DOS(a5),a6
+	move.l a2,d1
+	jsr -$378(a6) ;StartNotify
+.ph1
+	move.l CLIP_EXEC(a5),a6
+	rts
+
+	cnop 0,4
+	dc.l 16
+clipboard_proc:
+	dc.l 0
+
+	move.w #$FF38,d0
+	moveq #13,d1
+	bsr.w getrtbaselocal
+	jsr (a0)
+	tst.l d0
+	beq.w clipdie
+	move.l d0,a5
+	move.l CLIP_EXEC(a5),a6
+
+	sub.l a1,a1
+	jsr -294(a6) ; FindTask
+	move.l d0,CLIP_TASK(a5)
+
+	lea doslibname(pc),a1
+	moveq #0,d0
+	jsr -$0228(a6) ; OpenLibrary
+	move.l d0,CLIP_DOS(a5)
+	beq.w clipdie
+	move.l d0,a6
+
+.devsloop
+	moveq #50,d1
+	jsr -$00c6(a6) ;Delay
+	lea devs_name(pc),a0
+	move.l a0,d1
+	moveq #-2,d2
+	jsr -$0054(a6) ;Lock
+	tst.l d0
+	beq.s .devsloop
+	move.l d0,d1
+	jsr -$005a(a6) ;Unlock
+	moveq #50,d1
+	jsr -$00c6(a6) ;Delay
+	lea clip_name(pc),a0
+	move.l a0,d1
+	moveq #-2,d2
+	jsr -$0054(a6) ;Lock
+	tst.l d0
+	beq.w clipdie
+	move.l d0,d1
+	jsr -$005a(a6) ;Unlock
+	
+	move.l CLIP_EXEC(a5),a6
+
+	bsr.w createport
+	moveq #0,d1
+	move.w #52,d1
+	bsr.w createio
+	move.l d0,a4
+	tst.l d0
+	beq.w clipdie	
+
+cfloop2
+	moveq #0,d0
+	bset #13,d0
+	jsr -$013e(a6) ;Wait
+	
+	moveq #0,d1
+	move.l CLIP_UNIT(a5),d0
+	lea clip_dev(pc),a0
+	move.l a4,a1
+	jsr -$01bc(a6) ;OpenDevice
+	tst.l d0
+	bne.s cfloop2
+	move.l 20(a4),a0 ;device node
+	cmp.w #37,20(a0) ;must be at least v37
+	bcc.s cfversion
+	;too lazy to free everything..
+	bsr.w clipkill
+cfloop3
+	moveq #0,d0
+	jsr -$013e(a6) ;Wait
+	bra.s cfloop3
+	
+cfversion
+	bsr.w prefshook
+
+	lea CLIP_HOOK(a5),a0
+	move.l a0,40(a4)
+	moveq #1,d0
+	move.l d0,36(a4)
+	move.w #12,28(a4) ;CBD_CHANGEHOOK
+	move.l a5,CLIP_HOOK+16(a5)
+	lea cliphook(pc),a0
+	move.l a0,CLIP_HOOK+8(a5)
+	move.l a4,a1
+	jsr -$01c8(a6) ;DoIO
+
+	move.w #$FF38,d0
+	moveq #15,d1
+	bsr.w getrtbaselocal
+	jsr (a0)
+	tst.l CLIP_WRITE_SIZE(a5)
+	bne.s clipsignal
+
+cfloop
+	moveq #0,d0
+	moveq #0,d2
+	move.b CLIP_POINTER_NOTIFY+20(a5),d2
+	bset d2,d0
+	bset #13,d0
+	jsr -$013e(a6) ;Wait
+	btst d2,d0
+	beq.s clipsignal
+	bsr.w prefsread
+	bra.s cfloop
+
+clipsignal
+	move.l CLIP_WRITE_SIZE(a5),d0
+	beq.w clipread
+	;allocate amiga-side space
+	moveq #1,d1
+	jsr AllocMem(a6)
+	move.l d0,CLIP_WRITE_ALLOC(a5)
+	;and notify host-side
+	move.w #$FF38,d0
+	moveq #12,d1
+	bsr.w getrtbaselocal
+	jsr (a0)
+	tst.l d0
+	beq.s .nowrite
+	; and now we should have the data in CLIP_WRITE_ALLOC
+	tst.l CLIP_WRITE_ALLOC(a5)
+	beq.s .nowrite
+
+	move.w #3,28(a4) ;CMD_WRITE
+	clr.b 31(a4)
+	clr.l 32(a4)
+	move.l CLIP_WRITE_SIZE(a5),36(a4)
+	move.l CLIP_WRITE_ALLOC(a5),40(a4)
+	clr.l 44(a4)
+	clr.l 48(a4)
+	move.l a4,a1
+	jsr -$01c8(a6) ;DoIO
+	move.l 48(a4),CLIP_ID(a5)
+	move.w #4,28(a4) ;CMD_UPDATE
+	move.l a4,a1
+	jsr -$01c8(a6) ;DoIO
+
+.nowrite
+	move.l CLIP_WRITE_SIZE(a5),d0
+	clr.l CLIP_WRITE_SIZE(a5)
+	move.l CLIP_WRITE_ALLOC(a5),d1
+	beq.w cfloop
+	move.l d1,a1
+	jsr FreeMem(a6)
+	bra.w cfloop
+
+clipread:
+  ; read first 8 bytes	
+	move.w #2,28(a4) ;CMD_READ
+	lea CLIP_BUF(a5),a0
+	clr.l (a0)
+	clr.l 4(a0)
+	clr.b 31(a4)
+	clr.l 44(a4)
+	clr.l 48(a4)
+	move.l a0,40(a4)
+	moveq #8,d0
+	move.l d0,36(a4)
+	move.l a4,a1
+	jsr -$01c8(a6) ;DoIO
+	cmp.l #'FORM',CLIP_BUF(a5)
+	bne.s .cf1
+	move.l CLIP_BUF+4(a5),d0
+	beq.s .cf1
+	bmi.s .cf1
+	move.l 48(a4),CLIP_ID(a5)
+	addq.l #8,d0
+	move.l d0,d2
+	moveq #1,d1
+	jsr AllocMem(a6)
+	tst.l d0
+	beq.s .cf1
+	move.l d0,a2
+	; read the rest
+	move.l a2,a0
+	move.l CLIP_BUF(a5),(a0)+
+	move.l CLIP_BUF+4(a5),(a0)+
+	move.l a0,40(a4)
+	move.l d2,d0
+	subq.l #8,d0
+	move.l d0,36(a4)
+	move.l a4,a1
+	jsr -$01c8(a6) ;DoIO
+	move.w #$FF38,d0
+	moveq #11,d1
+	bsr.w getrtbaselocal
+	move.l 32(a4),d0
+	jsr (a0)
+	move.l a2,a1
+	move.l d2,d0
+	jsr FreeMem(a6)
+.cf1
+	; tell clipboard.device that we are done (read until io_Actual==0)
+	tst.l 32(a4)
+	beq.w cfloop
+	lea CLIP_BUF(a5),a0
+	move.l a0,40(a4)
+	moveq #1,d0
+	move.l d0,36(a4)
+	clr.l 32(a4)
+	move.l a4,a1
+	jsr -$01c8(a6) ;DoIO
+	bra.s .cf1
+
+cliphook:
+	lea -CLIP_HOOK(a0),a0
+	move.l 8(a1),d0
+	cmp.l CLIP_ID(a0),d0 ;ClipHookMsg->chm_ClipID
+	beq.s .same
+	move.l d0,CLIP_ID(a0)
+	move.l a6,-(sp)
+	move.l CLIP_EXEC(a0),a6
+	move.l CLIP_TASK(a0),a1
+	moveq #0,d0
+	bset #13,d0 ;SIG_D
+	jsr -$0144(a6) ;Signal
+	move.l (sp)+,a6
+.same
+	moveq #0,d0
+	rts
+
+consolehook:
+	move.l 4.w,a6
+
+	moveq #-1,d2
+	move.w #$FF38,d0
+	moveq #17,d1
+	bsr.w getrtbaselocal
+	jsr (a0)
+	btst #1,d0
+	beq.s .ch2
+
+	moveq #0,d2
+	jsr -$0084(a6) ;Forbid
+	lea 350(a6),a0 ;DeviceList
+	lea con_dev(pc),a1
+	jsr -$114(a6) ;FindName
+	tst.l d0
+	beq.s .ch1
+	move.l d0,a0
+	lea chook(pc),a1
+	move.l -$1e+2(a0),a2 ; BeginIO
+	move.l a1,-$1e+2(a0)
+	move.l a0,a1
+	move.w #$FF38,d0
+	moveq #101,d1
+	bsr.w getrtbaselocal
+	jsr (a0)
+	moveq #1,d2
+.ch1
+	jsr -$008a(a6) ;Permit
+.ch2
+	move.l d2,d0
+	rts	
+	
+chook:
+	subq.l #4,sp ; native code fills with original return address
+	movem.l d0-d1/a0,-(sp)
+	move.w #$FF38,d0
+	moveq #102,d1
+	bsr.w getrtbaselocal
+	jsr (a0)
+	movem.l (sp)+,d0-d1/a0
+	rts
 
 bootres_code:
 	
@@ -2786,6 +3343,8 @@ hwtrap_entry:
 	move.l 1*4(sp),TRAP_DATA_DATA+1*4(a0) ;D1
 	move.l 2*4(sp),TRAP_DATA_DATA+8*4(a0) ;A0
 	move.l 3*4(sp),TRAP_DATA_DATA+8*4+1*4(a0) ;A1
+	lea 4*4+2+4(sp),a2
+	move.l a2,TRAP_DATA_DATA+8*4+7*4(a0) ;A7
 
 	move.l a0,a2 ; data
 	move.l a1,a3 ; status
@@ -3292,6 +3851,17 @@ getrtbase:
 
 inp_dev: dc.b 'input.device',0
 tim_dev: dc.b 'timer.device',0
+con_dev: dc.b 'console.device',0
+key_lib: dc.b 'keymap.library',0
+devsn_name: dc.b 'DEVS',0
+devs_name: dc.b 'DEVS:',0
+clip_name: dc.b 'DEVS:clipboard.device',0
+ram_name: dc.b 'RAM:',0
+nil_name: dc.b "NIL:",0
+clip_dev: dc.b 'clipboard.device',0
+ ;argghh but StartNotify()ing non-existing ENV: causes "Insert disk ENV: in any drive" dialog..
+pointer_prefs: dc.b 'RAM:Env/Sys/Pointer.prefs',0
+clname: dc.b 'UAE clipboard sharing',0
 mhname: dc.b 'UAE mouse driver',0
 kaname: dc.b 'UAE heart beat',0
 exter_name: dc.b 'UAE fs',0
@@ -3304,7 +3874,9 @@ intlibname: dc.b 'intuition.library',0
 gfxlibname: dc.b 'graphics.library',0
 explibname: dc.b 'expansion.library',0
 fsresname: dc.b 'FileSystem.resource',0
+fchipname: dc.b 'megachip memory',0
 bcplfsname: dc.b "File System",0
+shellexecname: dc.b "UAE shell execute",0
 hwtrap_name: dc.b "UAE board",0
 	even
 rom_end:

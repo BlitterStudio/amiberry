@@ -192,6 +192,7 @@ extern int decode_cloanto_rom_do (uae_u8 *mem, int size, int real_size);
 #define ROMTYPE_PCMCIAIDE	0x00100081
 #define ROMTYPE_SSQUIRREL	0x00100082
 #define ROMTYPE_MASTERCARD	0x00100083
+#define ROMTYPE_DOTTO		0x00100084
 
 #define ROMTYPE_NOT			0x00800000
 #define ROMTYPE_QUAD		0x01000000
@@ -250,17 +251,17 @@ extern struct romdata *getarcadiarombyname (const TCHAR *name);
 extern struct romlist **getromlistbyident (int ver, int rev, int subver, int subrev, const TCHAR *model, int romflags, bool all);
 extern void getromname (const struct romdata*, TCHAR*);
 extern struct romdata *getromdatabyname (const TCHAR*);
-//extern struct romlist *getromlistbyids (const int *ids, const TCHAR *romname);
-//extern struct romlist *getromlistbyromtype(uae_u32 romtype, const TCHAR *romname);
+extern struct romlist *getromlistbyids (const int *ids, const TCHAR *romname);
+extern struct romlist *getromlistbyromtype(uae_u32 romtype, const TCHAR *romname);
 extern void romwarning(const int *ids);
 extern void romwarning(int romtype);
 extern struct romlist *getromlistbyromdata (const struct romdata *rd);
 extern void romlist_add (const TCHAR *path, struct romdata *rd);
 extern TCHAR *romlist_get (const struct romdata *rd);
 extern void romlist_clear (void);
-//extern struct zfile *read_rom (struct romdata *rd);
+extern struct zfile *read_rom (struct romdata *rd);
 extern struct zfile *read_rom_name (const TCHAR *filename);
-//extern struct zfile *read_device_from_romconfig(struct romconfig *rc, uae_u32 romtype);
+extern struct zfile *read_device_from_romconfig(struct romconfig *rc, uae_u32 romtype);
 
 extern int load_keyring (struct uae_prefs *p, const TCHAR *path);
 extern uae_u8 *target_load_keyfile (struct uae_prefs *p, const TCHAR *path, int *size, TCHAR *name);

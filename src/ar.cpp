@@ -218,13 +218,6 @@
 #include "xwin.h"
 #include "gfxboard.h"
 
-#define DEBUG
-#ifdef DEBUG
-#define write_log_debug write_log
-#else
-#define write_log_debug
-#endif
-
 static const TCHAR *cart_memnames[] = { NULL, _T("hrtmon"), _T("arhrtmon"), _T("superiv") };
 
 // Action Replay 2/3
@@ -269,7 +262,7 @@ void check_prefs_changed_carts (int in_memory_reset);
 
 static int stored_picasso_on = -1;
 
-static void cartridge_enter(void)
+static void cartridge_enter (void)
 {
 	stored_picasso_on = gfxboard_set(false) ? 1 : 0;
 }
@@ -469,21 +462,21 @@ static addrbank hrtmem_bank = {
 	hrtmem_lget, hrtmem_wget, hrtmem_bget,
 	hrtmem_lput, hrtmem_wput, hrtmem_bput,
 	hrtmem_xlate, hrtmem_check, NULL, NULL, _T("Cartridge Bank"),
-	hrtmem_lget, hrtmem_wget,
+	hrtmem_wget,
 	ABFLAG_RAM, S_READ, S_WRITE
 };
 static addrbank hrtmem2_bank = {
 	hrtmem2_lget, hrtmem2_wget, hrtmem2_bget,
 	hrtmem2_lput, hrtmem2_wput, hrtmem2_bput,
 	hrtmem2_xlate, hrtmem2_check, NULL, NULL, _T("Cartridge Bank 2"),
-	hrtmem2_lget, hrtmem2_wget,
+	hrtmem2_wget,
 	ABFLAG_RAM, S_READ, S_WRITE
 };
 static addrbank hrtmem3_bank = {
 	hrtmem3_lget, hrtmem3_wget, hrtmem3_bget,
 	hrtmem3_lput, hrtmem3_wput, hrtmem3_bput,
 	hrtmem3_xlate, hrtmem3_check, NULL, NULL, _T("Cartridge Bank 3"),
-	hrtmem3_lget, hrtmem3_wget,
+	hrtmem3_wget,
 	ABFLAG_RAM, S_READ, S_WRITE
 };
 
@@ -646,29 +639,6 @@ void REGPARAM2 chipmem_wput_actionreplay23 (uaecptr addr, uae_u32 w)
 		action_replay_chipwrite();
 }
 
-
-static uae_u32 REGPARAM3 arram_lget (uaecptr) REGPARAM;
-static uae_u32 REGPARAM3 arram_wget (uaecptr) REGPARAM;
-static uae_u32 REGPARAM3 arram_bget (uaecptr) REGPARAM;
-static void  REGPARAM3 arram_lput (uaecptr, uae_u32) REGPARAM;
-static void  REGPARAM3 arram_wput (uaecptr, uae_u32) REGPARAM;
-static void  REGPARAM3 arram_bput (uaecptr, uae_u32) REGPARAM;
-static int  REGPARAM3 arram_check (uaecptr addr, uae_u32 size) REGPARAM;
-static uae_u8 *REGPARAM3 arram_xlate (uaecptr addr) REGPARAM;
-
-static uae_u32 REGPARAM3 arrom_lget (uaecptr) REGPARAM;
-static uae_u32 REGPARAM3 arrom_wget (uaecptr) REGPARAM;
-static uae_u32 REGPARAM3 arrom_bget (uaecptr) REGPARAM;
-static void REGPARAM3 arrom_lput (uaecptr, uae_u32) REGPARAM;
-static void REGPARAM3 arrom_wput (uaecptr, uae_u32) REGPARAM;
-static void REGPARAM3 arrom_bput (uaecptr, uae_u32) REGPARAM;
-static int  REGPARAM3 arrom_check (uaecptr addr, uae_u32 size) REGPARAM;
-static uae_u8 *REGPARAM3 arrom_xlate (uaecptr addr) REGPARAM;
-static void action_replay_unmap_banks (void);
-
-static uae_u32 action_replay_calculate_checksum(void);
-static uae_u8* get_checksum_location(void);
-static void disable_rom_test(void);
 
 static uae_u32 ar_null(int size)
 {
@@ -833,14 +803,14 @@ static addrbank arrom_bank = {
 	arrom_lget, arrom_wget, arrom_bget,
 	arrom_lput, arrom_wput, arrom_bput,
 	arrom_xlate, arrom_check, NULL, NULL, _T("Action Replay ROM"),
-	arrom_lget, arrom_wget,
+	arrom_wget,
 	ABFLAG_ROM, S_READ, S_WRITE
 };
 static addrbank arram_bank = {
 	arram_lget, arram_wget, arram_bget,
 	arram_lput, arram_wput, arram_bput,
 	arram_xlate, arram_check, NULL, NULL, _T("Action Replay RAM"),
-	arram_lget, arram_wget,
+	arram_wget,
 	ABFLAG_RAM, S_READ, S_WRITE
 };
 
@@ -983,7 +953,6 @@ static void hrtmon_go (void)
 		old = get_long ((uaecptr)(regs.vbr + 0x7c));
 		put_long ((uaecptr)(regs.vbr + 0x7c), hrtmem_start + 8 + 4);
 		NMI ();
-		//put_long ((uaecptr)(regs.vbr + 0x7c), old);
 	}
 }
 
@@ -1089,9 +1058,9 @@ void action_replay_cia_access(bool write)
 	if (action_replay_flag == ACTION_REPLAY_INACTIVE)
 		return;
 	if ((armode_write & ARMODE_ACTIVATE_BFE001) && !write) {
-		event2_newevent_xx(-1, 1, write, action_replay_cia_access_delay);
+		event2_newevent_xx(-1, 0, write, action_replay_cia_access_delay);
 	} else if ((armode_write & ARMODE_ACTIVATE_BFD100) && write) {
-		event2_newevent_xx(-1, 1, write, action_replay_cia_access_delay);
+		event2_newevent_xx(-1, 0, write, action_replay_cia_access_delay);
 	}
 }
 
@@ -1116,7 +1085,6 @@ int action_replay_freeze (void)
 
 static void action_replay_chipwrite (void)
 {
-	//write_log (_T("AR CW\n"));
 	if (armodel == 2 || armodel == 3) {
 		action_replay_flag = ACTION_REPLAY_DORESET;
 		set_special (SPCFLAG_ACTION_REPLAY);
@@ -1157,7 +1125,6 @@ void hrtmon_hide(void)
 	cartridge_exit();
 	hrtmon_flag = ACTION_REPLAY_IDLE;
 	unset_special (SPCFLAG_ACTION_REPLAY);
-	//write_log (_T("HRTMON: Exit\n"));
 }
 
 /* Disabling copperlist processing:
@@ -1286,18 +1253,6 @@ static uae_u8* get_checksum_location (void)
 	while (! *(--checksum_end));
 
 	return (uae_u8*)checksum_end;
-}
-
-/* Replaces the existing cart checksum with a correct one. */
-/* Useful if you want to patch the rom. */
-static void action_replay_fixup_checksum (uae_u32 new_checksum)
-{
-	uae_u32* checksum = (uae_u32*)get_checksum_location();
-	if (checksum)
-		do_put_mem_long (checksum, new_checksum);
-	else
-		write_log (_T("Unable to locate Checksum in ROM.\n"));
-	return;
 }
 
 /* Longword search on word boundary
@@ -1463,7 +1418,6 @@ int action_replay_unload (int in_memory_reset)
 static int superiv_init (struct romdata *rd, struct zfile *f)
 {
 	uae_u32 chip = currprefs.chipmem_size - 0x10000;
-	int subtype = rd->id;
 	int flags = rd->type & ROMTYPE_MASK;
 	const TCHAR *memname1, *memname2, *memname3;
 
@@ -1696,15 +1650,6 @@ void action_replay_cleanup()
 	hrtmem2_end = 0;
 }
 
-#ifndef FALSE
-#define FALSE 0
-#endif
-#ifndef TRUE
-#define TRUE 1
-#endif
-
-int hrtmon_lang = 0;
-
 static void hrtmon_configure(void)
 {
 	HRTCFG *cfg = (HRTCFG*)hrtmemory;
@@ -1718,7 +1663,7 @@ static void hrtmon_configure(void)
 	cfg->novbr = TRUE;
 	cfg->hexmode = TRUE;
 	cfg->entered = 0;
-	cfg->keyboard = hrtmon_lang;
+	cfg->keyboard = 0;
 	do_put_mem_long (&cfg->max_chip, currprefs.chipmem_size);
 	do_put_mem_long (&cfg->mon_size, 0x800000);
 	cfg->ide = currprefs.cs_ide ? 1 : 0;
@@ -1743,9 +1688,9 @@ int hrtmon_load (void)
 	cart_type = CART_AR;
 	hrtmem_start = 0xa10000;
 	if(!_tcscmp(currprefs.cartfile, _T(":HRTMon")))
-	  rd = getromdatabyid(63);
+		rd = getromdatabyid(63);
 	else
-  	rd = getromdatabypath(currprefs.cartfile);
+		rd = getromdatabypath(currprefs.cartfile);
 	if (rd) {
 		if (rd->id == 63)
 			isinternal = 1;

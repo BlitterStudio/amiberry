@@ -1,5 +1,9 @@
 #include "amiberry_filesys.hpp"
 
+#include "sysconfig.h"
+#include "sysdeps.h"
+#include "fsdb.h"
+
 string prefix_with_application_directory_path(string currentpath)
 {
 #ifdef ANDROID
@@ -71,10 +75,10 @@ int my_readdir(struct my_opendir_s* mod, char* name)
 	if (!mod)
 		return 0;
 
-	auto de = readdir(static_cast<DIR *>(mod->h));
+	auto* de = readdir(static_cast<DIR *>(mod->h));
 	if (de == nullptr)
 		return 0;
-	strncpy(name, de->d_name, MAX_DPATH);
+	strncpy(name, de->d_name, MAX_DPATH - 1);
 	return 1;
 }
 
@@ -95,22 +99,37 @@ uae_s64 my_lseek(struct my_openfile_s* mos,const uae_s64 offset, const int pos)
 
 uae_s64 my_fsize(struct my_openfile_s* mos)
 {
-	uae_s64 pos = lseek(mos->h, 0, SEEK_CUR);
-	uae_s64 size = lseek(mos->h, 0, SEEK_END);
-	lseek(int(mos->h), pos, SEEK_SET);
+	const auto pos = lseek(mos->h, 0, SEEK_CUR);
+	const auto size = lseek(mos->h, 0, SEEK_END);
+	lseek(static_cast<int>(mos->h), pos, SEEK_SET);
 	return size;
 }
 
 
 unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 {
-	return read(mos->h, b, size);
+	const auto bytes_read = read(mos->h, b, size);
+	if (bytes_read == -1)
+	{
+		write_log("WARNING: my_read failed (-1)\n");
+		return 0;
+	}
+	return static_cast<unsigned int>(bytes_read);
 }
 
 
 unsigned int my_write(struct my_openfile_s* mos, void* b, unsigned int size)
 {
-	return write(mos->h, b, size);
+	const auto bytes_written = write(mos->h, b, size);
+	if (bytes_written == -1)
+	{
+		write_log("WARNING: my_write failed (-1) fd=%d buffer=%p size=%d\n",
+			mos->h, b, size);
+		write_log("errno %d\n", errno);
+		write_log("  mos %p -> h=%d\n", mos, mos->h);
+		return 0;
+	}
+	return static_cast<unsigned int>(bytes_written);
 }
 
 
@@ -130,7 +149,6 @@ int my_existsfile(const char* name)
 int my_existsdir(const char* name)
 {
 	struct stat st{};
-
 	if (lstat(name, &st) == -1)
 	{
 		return 0;
@@ -192,13 +210,13 @@ bool my_issamepath(const TCHAR* path1, const TCHAR* path2)
 
 const TCHAR* my_getfilepart(const TCHAR* filename)
 {
-	auto p = _tcsrchr(filename, '\\');
+	const auto* p = _tcsrchr(filename, '\\');
 	if (p)
 		return p + 1;
 	p = _tcsrchr(filename, '/');
 	if (p)
 		return p + 1;
-	return filename;
+	return p;
 }
 
 

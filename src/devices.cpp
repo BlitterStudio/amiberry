@@ -7,6 +7,8 @@
 #include "threaddep/thread.h"
 #include "memory.h"
 #include "audio.h"
+#include "scsi.h"
+#include "scsidev.h"
 #ifdef CD32
 #include "cd32_fmv.h"
 #include "akiko.h"
@@ -22,12 +24,14 @@
 #include "custom.h"
 #include "xwin.h"
 #include "bsdsocket.h"
+#include "clipboard.h"
 #include "uaeresource.h"
 #include "native2amiga.h"
 #include "gensound.h"
 #include "gui.h"
 #include "drawing.h"
 #include "statusline.h"
+#include "uaeexe.h"
 #ifdef JIT
 #include "jit/compemu.h"
 #endif
@@ -153,7 +157,7 @@ void devices_reset(int hardreset)
 	memory_reset();
 	DISK_reset();
 	CIA_reset();
-	//a1000_reset();
+	a1000_reset();
 #ifdef JIT
 	compemu_reset();
 #endif
@@ -211,7 +215,7 @@ void devices_vsync_pre(void)
 	inputdevice_vsync();
 	filesys_vsync();
 	//sampler_vsync ();
-	//clipboard_vsync ();
+	clipboard_vsync ();
 	statusline_vsync();
 
 	execute_device_items(device_vsyncs_pre, device_vsync_pre_cnt);
@@ -335,7 +339,7 @@ void virtualdevice_init (void)
 #ifdef AUTOCONFIG
 	expansion_init ();
 	emulib_install ();
-	//uaeexe_install ();
+	uaeexe_install ();
 #endif
 #ifdef FILESYS
 	filesys_install ();
@@ -390,4 +394,9 @@ void devices_unpause(void)
 #endif
 	//pausevideograb(0);
 	//ethernet_pause(0);
+}
+
+void devices_unsafeperiod(void)
+{
+	clipboard_unsafeperiod();
 }

@@ -486,8 +486,8 @@ static int delete_trigger(blockinfo *bi, void *pc)
 
 static int handle_exception(unsigned long* pregs, long fault_addr)
 {
-	int handled = HANDLE_EXCEPTION_NONE;
-	unsigned int* fault_pc = (unsigned int*)pregs[ARM_REG_PC];
+	auto handled = HANDLE_EXCEPTION_NONE;
+	auto* fault_pc = (unsigned int*)pregs[ARM_REG_PC];
 
 	if (fault_pc == 0) {
 		output_log(_T("PC is NULL.\n"));
@@ -520,7 +520,7 @@ static int handle_exception(unsigned long* pregs, long fault_addr)
 		}
 
 		// Get Amiga address of illegal memory address
-		long amiga_addr = (long)fault_addr - (long)regs.natmem_offset;
+		auto amiga_addr = (long)fault_addr - (long)regs.natmem_offset;
 
 		// Check for stupid RAM detection of kickstart
 		if (a3000lmem_bank.allocated_size > 0 && amiga_addr >= a3000lmem_bank.start - 0x00100000 && amiga_addr < a3000lmem_bank.start - 0x00100000 + 8) {
@@ -539,13 +539,13 @@ static int handle_exception(unsigned long* pregs, long fault_addr)
 		}
   
 		// Get memory bank of address
-		addrbank* ab = &get_mem_bank(amiga_addr);
+		auto* ab = &get_mem_bank(amiga_addr);
 		if (ab)
 			output_log(_T("JIT: Address bank: %s, address %08x\n"), ab->name ? ab->name : _T("NONE"), amiga_addr);
 
 		// Analyse ARM instruction
-		const unsigned int opcode = fault_pc[0];
-		transfer_type_t transfer_type = TYPE_UNKNOWN;
+		const auto opcode = fault_pc[0];
+		auto transfer_type = TYPE_UNKNOWN;
 		int transfer_size = SIZE_UNKNOWN;
 		int style = STYLE_UNSIGNED;
 		output_log(_T("JIT: ARM opcode = 0x%08x\n"), opcode);

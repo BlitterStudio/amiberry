@@ -53,8 +53,8 @@ extern bool render_screen(bool);
 extern void show_screen(int mode);
 extern bool show_screen_maybe(bool);
 
-extern int lockscr();
-extern void unlockscr();
+extern int lockscr(struct vidbuffer*, bool, bool);
+extern void unlockscr(struct vidbuffer*, int, int);
 extern bool target_graphics_buffer_update();
 extern float target_adjust_vblank_hz(float);
 extern int target_get_display_scanline(int displayindex);

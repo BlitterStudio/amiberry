@@ -351,8 +351,8 @@ extern int thisframe_first_drawn_line, thisframe_last_drawn_line;
 #define IHF_QUIT_PROGRAM 1
 #define IHF_PICASSO 2
 
-void set_inhibit_frame(int monid, int bit);
-void clear_inhibit_frame(int monid, int bit);
-void toggle_inhibit_frame(int monid, int bit);
+void set_inhibit_frame(int bit);
+void clear_inhibit_frame(int bit);
+void toggle_inhibit_frame(int bit);
 
 #endif /* UAE_DRAWING_H */

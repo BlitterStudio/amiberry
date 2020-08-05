@@ -78,15 +78,16 @@ extern struct ev2 eventtab2[ev2_max];
 extern int hpos_offset;
 extern int maxhpos;
 
-STATIC_INLINE void cycles_do_special (void)
+STATIC_INLINE void cycles_do_special(void)
 {
 #ifdef JIT
 	if (currprefs.cachesize) {
 		if (regs.pissoff >= 0)
 			regs.pissoff = -1;
-	} else 
+	}
+	else
 #endif
-  {
+	{
 		regs.pissoff = 0;
 	}
 }

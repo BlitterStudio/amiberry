@@ -24,6 +24,10 @@ On the Raspberry Pi, if you're not running Raspbian you'll also need this:
 
       sudo apt-get install libraspberrypi-dev
 
+Or if you're using an Arch-based distro (e.g. Manjaro), you can use these instead:
+
+      sudo pacman -S base-devel sdl2 sdl2_ttf sdl2_image libxml2 flac mpg123 libmpeg2
+
 ## Getting Amiberry
 
 The latest stable releases come with binaries, that you can download from the [Releases](https://github.com/midwan/amiberry/releases) area.
@@ -76,6 +80,10 @@ For the Raspberry Pi 4
 
       make -j2 PLATFORM=rpi4-sdl2
 
+For the Raspberry Pi 4 64-bit
+
+      make -j2 PLATFORM=pi64
+
 For the Raspberry Pi 3(B+)
 
       make -j2 PLATFORM=rpi3-sdl2
@@ -92,7 +100,7 @@ For the Odroid XU4
 
       make -j6 PLATFORM=xu4
 
-For the ASUS Tinker board
+For the ASUS Tinker board (Supported distro: Armbian)
 
       make -j6 PLATFORM=RK3288
 
@@ -107,6 +115,10 @@ For the Vero 4k
 For the OrangePi PC
 
       make -j2 PLATFORM=orangepi-pc
+
+For the Odroid N2/RockPro64
+
+      make -j2 PLATFORM=n2
 
 You can check the Makefile for a full list of supported platforms!
 

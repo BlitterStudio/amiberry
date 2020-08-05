@@ -51,7 +51,7 @@ struct strlist
 #define MAX_TOTAL_SCSI_DEVICES 8
 
 /* maximum number native input devices supported (single type) */
-#define MAX_INPUT_DEVICES 20
+#define MAX_INPUT_DEVICES 8
 /* maximum number of native input device's buttons and axles supported */
 #define MAX_INPUT_DEVICE_EVENTS 256
 /* 4 different customization settings */
@@ -888,6 +888,18 @@ struct uae_prefs
 	int gfx_correct_aspect;
 	int scaling_method;
 
+	int active_capture_priority;
+	bool active_nocapture_pause;
+	bool active_nocapture_nosound;
+	int inactive_priority;
+	bool inactive_pause;
+	bool inactive_nosound;
+	int inactive_input;
+	int minimized_priority;
+	bool minimized_pause;
+	bool minimized_nosound;
+	int minimized_input;
+	
 	TCHAR open_gui[256];
 	TCHAR quit_amiberry[256];
 	TCHAR action_replay[256];
@@ -922,6 +934,7 @@ struct uae_prefs
 	int input_device_match_mask;
 
 #ifdef AMIBERRY
+	bool allow_host_run;
 	bool input_analog_remap;
 	bool use_retroarch_quit;
 	bool use_retroarch_menu;
@@ -1047,7 +1060,7 @@ extern int cfgfile_save(struct uae_prefs* p, const TCHAR* filename, int);
 extern void cfgfile_parse_line(struct uae_prefs* p, TCHAR*, int);
 extern void cfgfile_parse_lines(struct uae_prefs* p, const TCHAR*, int);
 extern int cfgfile_parse_option(struct uae_prefs* p, const TCHAR* option, TCHAR* value, int);
-extern int cfgfile_get_description(struct uae_prefs* p, const TCHAR* filename, TCHAR* description, int* type);
+extern int cfgfile_get_description(struct uae_prefs* p, const TCHAR* filename, TCHAR* description, TCHAR* category, TCHAR* tags, TCHAR* hostlink, TCHAR* hardwarelink, int* type);
 extern void cfgfile_show_usage(void);
 extern int cfgfile_searchconfig(const TCHAR* in, int index, TCHAR* out, int outsize);
 extern uae_u32 cfgfile_uaelib(TrapContext* ctx, int mode, uae_u32 name, uae_u32 dst, uae_u32 maxlen);
@@ -1095,6 +1108,50 @@ struct amiberry_customised_layout
 	struct joypad_map_layout left_trigger;
 	struct joypad_map_layout right_trigger;
 };
+
+struct amiberry_options
+{
+	bool quickstart_start = true;
+	bool read_config_descriptions = true;
+	bool write_logfile = false;
+	bool swap_win_alt_keys = false;
+	bool gui_joystick_control = true;
+#ifdef USE_RENDER_THREAD
+	bool use_sdl2_render_thread = true;
+#else
+	bool use_sdl2_render_thread = false;
+#endif
+	int default_line_mode = 0;
+	int input_default_mouse_speed = 100;
+	bool input_keyboard_as_joystick_stop_keypresses = false;
+	char default_open_gui_key[128] = "F12";
+	char default_quit_key[128]{};
+	char default_ar_key[128] = "Pause";
+	char default_fullscreen_toggle_key[128]{};
+	int rotation_angle = 0;
+	bool default_horizontal_centering = true;
+	bool default_vertical_centering = false;
+	int default_scaling_method = -1;
+	bool default_frameskip = false;
+	bool default_correct_aspect_ratio = true;
+	bool default_auto_height = false;
+	int default_width = 720;
+	int default_height = 270;
+	bool default_fullscreen = false;
+	int default_stereo_separation = 7;
+	int default_joystick_deadzone = 33;
+	bool default_retroarch_quit = true;
+	bool default_retroarch_menu = true;
+	bool default_retroarch_reset = false;
+	char default_controller1[128] = "joy1";
+	char default_controller2[128] = "joy2";
+	char default_controller3[128]{};
+	char default_controller4[128]{};
+	char default_mouse1[128] = "mouse";
+	char default_mouse2[128] = "joy0";
+};
+
+extern struct amiberry_options amiberry_options;
 #endif
 
 extern const int RemapEventList[];

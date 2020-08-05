@@ -38,7 +38,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
     <GNUConfigurationType>Debug</GNUConfigurationType>
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
-    <ToolchainVersion>8.3.0/8.2.1/r1</ToolchainVersion>
+    <ToolchainVersion>8.3.0/8.2.1/r2</ToolchainVersion>
     <TargetName>$(ProjectName)-sdl2</TargetName>
     <RemoteBuildHost>
     </RemoteBuildHost>
@@ -46,21 +46,21 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-dispmanx|VisualGDB'">
     <GNUConfigurationType>Debug</GNUConfigurationType>
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
-    <ToolchainVersion>8.3.0/8.2.1/r1</ToolchainVersion>
+    <ToolchainVersion>8.3.0/8.2.1/r2</ToolchainVersion>
     <TargetName>$(ProjectName)-sdl2</TargetName>
     <RemoteBuildHost>
     </RemoteBuildHost>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
-    <ToolchainVersion>8.3.0/8.2.1/r1</ToolchainVersion>
+    <ToolchainVersion>8.3.0/8.2.1/r2</ToolchainVersion>
     <TargetName>$(ProjectName)-sdl2</TargetName>
     <RemoteBuildHost>
     </RemoteBuildHost>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-dispmanx|VisualGDB'">
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
-    <ToolchainVersion>8.3.0/8.2.1/r1</ToolchainVersion>
+    <ToolchainVersion>8.3.0/8.2.1/r2</ToolchainVersion>
     <TargetName>$(ProjectName)-sdl2</TargetName>
     <RemoteBuildHost>
     </RemoteBuildHost>
@@ -72,6 +72,7 @@
       <PreprocessorDefinitions>DEBUG=1;ARMV6T2;USE_ARMNEON;ARM_HAS_DIV;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;_FILE_OFFSET_BITS=64;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalCOptions>-mcpu=cortex-a72 -mfpu=neon-fp-armv8 -mfloat-abi=hard </AdditionalCOptions>
       <AdditionalCPPOptions>-mcpu=cortex-a72 -mfpu=neon-fp-armv8 -mfloat-abi=hard </AdditionalCPPOptions>
+      <OmitFramePointer>false</OmitFramePointer>
     </ClCompile>
     <Link>
       <AdditionalLinkerInputs>;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
@@ -87,6 +88,7 @@
       <PreprocessorDefinitions>DEBUG=1;ARMV6T2;USE_ARMNEON;ARM_HAS_DIV;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;USE_DISPMANX;_FILE_OFFSET_BITS=64;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalCOptions>-mcpu=cortex-a72 -mfpu=neon-fp-armv8 -mfloat-abi=hard </AdditionalCOptions>
       <AdditionalCPPOptions>-mcpu=cortex-a72 -mfpu=neon-fp-armv8 -mfloat-abi=hard </AdditionalCPPOptions>
+      <OmitFramePointer>false</OmitFramePointer>
     </ClCompile>
     <Link>
       <AdditionalLinkerInputs>;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
@@ -200,8 +202,11 @@
     <ClCompile Include="..\..\src\cd32_fmv.cpp" />
     <ClCompile Include="..\..\src\cd32_fmv_genlock.cpp" />
     <ClCompile Include="..\..\src\cdrom.cpp" />
+    <ClCompile Include="..\..\src\cdtv.cpp" />
+    <ClCompile Include="..\..\src\cdtvcr.cpp" />
     <ClCompile Include="..\..\src\cfgfile.cpp" />
     <ClCompile Include="..\..\src\cia.cpp" />
+    <ClCompile Include="..\..\src\consolehook.cpp" />
     <ClCompile Include="..\..\src\cpudefs.cpp" />
     <ClCompile Include="..\..\src\cpuemu_0.cpp" />
     <ClCompile Include="..\..\src\cpuemu_11.cpp" />
@@ -211,6 +216,7 @@
     <ClCompile Include="..\..\src\cpustbl.cpp" />
     <ClCompile Include="..\..\src\crc32.cpp" />
     <ClCompile Include="..\..\src\custom.cpp" />
+    <ClCompile Include="..\..\src\def_icons.cpp" />
     <ClCompile Include="..\..\src\devices.cpp" />
     <ClCompile Include="..\..\src\disk.cpp" />
     <ClCompile Include="..\..\src\diskutil.cpp" />
@@ -232,6 +238,7 @@
     <ClCompile Include="..\..\src\hrtmon.rom.cpp" />
     <ClCompile Include="..\..\src\ide.cpp" />
     <ClCompile Include="..\..\src\inputdevice.cpp" />
+    <ClCompile Include="..\..\src\isofs.cpp" />
     <ClCompile Include="..\..\src\jit\compemu.cpp" />
     <ClCompile Include="..\..\src\jit\compemu_fpp.cpp" />
     <ClCompile Include="..\..\src\jit\compemu_support.cpp" />
@@ -255,6 +262,7 @@
     <ClCompile Include="..\..\src\osdep\bsdsocket_host.cpp" />
     <ClCompile Include="..\..\src\osdep\cda_play.cpp" />
     <ClCompile Include="..\..\src\osdep\charset.cpp" />
+    <ClCompile Include="..\..\src\osdep\clipboard.cpp" />
     <ClCompile Include="..\..\src\osdep\fsdb_host.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\CreateFilesysHardfile.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\EditFilesysHardfile.cpp" />
@@ -273,6 +281,7 @@
     <ClCompile Include="..\..\src\osdep\gui\PanelInput.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelMisc.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelPaths.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\PanelPrio.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelQuickstart.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelRAM.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelROM.cpp" />
@@ -295,11 +304,15 @@
     <ClCompile Include="..\..\src\savestate.cpp" />
     <ClCompile Include="..\..\src\scp.cpp" />
     <ClCompile Include="..\..\src\scsi.cpp" />
+    <ClCompile Include="..\..\src\scsiemul.cpp" />
     <ClCompile Include="..\..\src\sounddep\sound.cpp" />
     <ClCompile Include="..\..\src\statusline.cpp" />
+    <ClCompile Include="..\..\src\tabletlibrary.cpp" />
     <ClCompile Include="..\..\src\traps.cpp" />
+    <ClCompile Include="..\..\src\uaeexe.cpp" />
     <ClCompile Include="..\..\src\uaelib.cpp" />
     <ClCompile Include="..\..\src\uaeresource.cpp" />
+    <ClCompile Include="..\..\src\vm.cpp" />
     <ClCompile Include="..\..\src\zfile.cpp" />
     <ClCompile Include="..\..\src\zfile_archive.cpp" />
   </ItemGroup>
@@ -310,6 +323,12 @@
     <None Include="..\..\src\aks.def" />
     <None Include="..\..\src\filesys.asm" />
     <None Include="..\..\src\inputevents.def" />
+    <None Include="..\..\src\jit\codegen_arm.cpp.in" />
+    <None Include="..\..\src\jit\codegen_armA64.cpp.in" />
+    <None Include="..\..\src\jit\compemu_midfunc_arm.cpp.in" />
+    <None Include="..\..\src\jit\compemu_midfunc_arm2.cpp.in" />
+    <None Include="..\..\src\jit\compemu_midfunc_armA64.cpp.in" />
+    <None Include="..\..\src\jit\compemu_midfunc_armA64_2.cpp.in" />
     <None Include="Amiberry-Debug.vgdbsettings" />
     <None Include="Amiberry-Release.vgdbsettings" />
   </ItemGroup>
@@ -366,9 +385,14 @@
     <ClInclude Include="..\..\src\include\bsdsocket.h" />
     <ClInclude Include="..\..\src\include\calc.h" />
     <ClInclude Include="..\..\src\include\cd32_fmv.h" />
+    <ClInclude Include="..\..\src\include\cdtv.h" />
+    <ClInclude Include="..\..\src\include\cdtvcr.h" />
     <ClInclude Include="..\..\src\include\cia.h" />
+    <ClInclude Include="..\..\src\include\clipboard.h" />
     <ClInclude Include="..\..\src\include\commpipe.h" />
+    <ClInclude Include="..\..\src\include\consolehook.h" />
     <ClInclude Include="..\..\src\include\cpummu.h" />
+    <ClInclude Include="..\..\src\include\cpummu030.h" />
     <ClInclude Include="..\..\src\include\cputbl.h" />
     <ClInclude Include="..\..\src\include\cpu_prefetch.h" />
     <ClInclude Include="..\..\src\include\crc32.h" />
@@ -393,6 +417,8 @@
     <ClInclude Include="..\..\src\include\gui.h" />
     <ClInclude Include="..\..\src\include\ide.h" />
     <ClInclude Include="..\..\src\include\inputdevice.h" />
+    <ClInclude Include="..\..\src\include\isofs.h" />
+    <ClInclude Include="..\..\src\include\isofs_api.h" />
     <ClInclude Include="..\..\src\include\keyboard.h" />
     <ClInclude Include="..\..\src\include\keybuf.h" />
     <ClInclude Include="..\..\src\include\memory.h" />
@@ -408,10 +434,13 @@
     <ClInclude Include="..\..\src\include\savestate.h" />
     <ClInclude Include="..\..\src\include\scp.h" />
     <ClInclude Include="..\..\src\include\scsi.h" />
+    <ClInclude Include="..\..\src\include\scsidev.h" />
     <ClInclude Include="..\..\src\include\statusline.h" />
     <ClInclude Include="..\..\src\include\sysdeps.h" />
+    <ClInclude Include="..\..\src\include\tabletlibrary.h" />
     <ClInclude Include="..\..\src\include\traps.h" />
     <ClInclude Include="..\..\src\include\uae.h" />
+    <ClInclude Include="..\..\src\include\uaeexe.h" />
     <ClInclude Include="..\..\src\include\uaeresource.h" />
     <ClInclude Include="..\..\src\include\uae\caps.h" />
     <ClInclude Include="..\..\src\include\uae\dlopen.h" />
@@ -420,6 +449,7 @@
     <ClInclude Include="..\..\src\include\uae\string.h" />
     <ClInclude Include="..\..\src\include\uae\types.h" />
     <ClInclude Include="..\..\src\include\uae\uae.h" />
+    <ClInclude Include="..\..\src\include\uae\vm.h" />
     <ClInclude Include="..\..\src\include\xwin.h" />
     <ClInclude Include="..\..\src\include\zarchive.h" />
     <ClInclude Include="..\..\src\include\zfile.h" />
@@ -428,6 +458,7 @@
     <ClInclude Include="..\..\src\machdep\m68k.h" />
     <ClInclude Include="..\..\src\machdep\maccess.h" />
     <ClInclude Include="..\..\src\machdep\rpt.h" />
+    <ClInclude Include="..\..\src\osdep\amiberry_filesys.hpp" />
     <ClInclude Include="..\..\src\osdep\amiberry_gfx.h" />
     <ClInclude Include="..\..\src\osdep\amiberry_rp9.h" />
     <ClInclude Include="..\..\src\osdep\cda_play.h" />

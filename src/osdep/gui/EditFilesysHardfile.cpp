@@ -532,7 +532,7 @@ static void EditFilesysHardfileLoop()
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
 		// Finally we update the screen.
-		UpdateGuiScreen();
+		update_gui_screen();
 	}
 }
 
@@ -589,7 +589,7 @@ bool EditFilesysHardfile(const int unit_no)
 	{
 		CreateDefaultDevicename(tmp);
 		txtDevice->setText(tmp);
-		strroot.assign(currentDir);
+		strroot.assign(current_dir);
 		txtPath->setText(strroot);
 		fileSelected = false;
 
@@ -606,7 +606,7 @@ bool EditFilesysHardfile(const int unit_no)
 	// Prepare the screen once
 	uae_gui->logic();
 	uae_gui->draw();
-	UpdateGuiScreen();
+	update_gui_screen();
 
 	while (!dialogFinished)
 	{
@@ -621,7 +621,7 @@ bool EditFilesysHardfile(const int unit_no)
 		{
 		};
 		const auto bp = tweakbootpri(atoi(txtBootPri->getText().c_str()), chkAutoboot->isSelected() ? 1 : 0, 0);
-		extractPath(const_cast<char *>(txtPath->getText().c_str()), currentDir);
+		extract_path(const_cast<char *>(txtPath->getText().c_str()), current_dir);
 
 		uci_set_defaults(&ci, false);
 		strncpy(ci.devname, const_cast<char *>(txtDevice->getText().c_str()), MAX_DPATH);
@@ -630,7 +630,6 @@ bool EditFilesysHardfile(const int unit_no)
 		ci.controller_type = controller[cboController->getSelected()].type;
 		ci.controller_type_unit = 0;
 		ci.controller_unit = cboUnit->getSelected();
-		ci.controller_media_type = 0;
 		ci.unit_feature_level = 1;
 		ci.unit_special_flags = 0;
 		ci.readonly = !chkReadWrite->isSelected();
@@ -644,7 +643,7 @@ bool EditFilesysHardfile(const int unit_no)
 		uci = add_filesys_config(&changed_prefs, unit_no, &ci);
 		if (uci)
 		{
-			const auto hfd = get_hardfile_data(uci->configoffset);
+			auto* const hfd = get_hardfile_data(uci->configoffset);
 			if (hfd)
 				hardfile_media_change(hfd, &ci, true, false);
 		}

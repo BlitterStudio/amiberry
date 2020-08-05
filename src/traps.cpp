@@ -843,9 +843,9 @@ void init_extended_traps (void)
 	exit_trap_trapaddr = here();
 	calltrap (deftrap2 (exit_trap_handler, TRAPFLAG_NO_RETVAL, _T("exit_trap")));
 
-  if(trap_mutex != 0)
-    uae_sem_destroy(&trap_mutex);
-  trap_mutex = 0;
+	if(trap_mutex != 0)
+		uae_sem_destroy(&trap_mutex);
+	trap_mutex = 0;
 	uae_sem_init (&trap_mutex, 0, 1);
 }
 

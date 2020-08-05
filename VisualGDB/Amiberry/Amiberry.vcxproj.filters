@@ -80,6 +80,24 @@
     <None Include="..\..\src\aks.def">
       <Filter>Source files</Filter>
     </None>
+    <None Include="..\..\src\jit\compemu_midfunc_arm.cpp.in">
+      <Filter>Source files\jit</Filter>
+    </None>
+    <None Include="..\..\src\jit\compemu_midfunc_arm2.cpp.in">
+      <Filter>Source files\jit</Filter>
+    </None>
+    <None Include="..\..\src\jit\compemu_midfunc_armA64.cpp.in">
+      <Filter>Source files\jit</Filter>
+    </None>
+    <None Include="..\..\src\jit\compemu_midfunc_armA64_2.cpp.in">
+      <Filter>Source files\jit</Filter>
+    </None>
+    <None Include="..\..\src\jit\codegen_arm.cpp.in">
+      <Filter>Source files\jit</Filter>
+    </None>
+    <None Include="..\..\src\jit\codegen_armA64.cpp.in">
+      <Filter>Source files\jit</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\akiko.cpp">
@@ -592,6 +610,39 @@
     <ClCompile Include="..\..\src\scp.cpp">
       <Filter>Source files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\def_icons.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\cdtv.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\cdtvcr.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\isofs.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\scsiemul.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\vm.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\consolehook.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\osdep\clipboard.cpp">
+      <Filter>Source files\osdep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\uaeexe.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\tabletlibrary.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\osdep\gui\PanelPrio.cpp">
+      <Filter>Source files\osdep\gui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\threaddep\thread.h">
@@ -971,6 +1022,42 @@
     </ClInclude>
     <ClInclude Include="..\..\src\include\scp.h">
       <Filter>Source files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\cdtv.h">
+      <Filter>Source files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\cdtvcr.h">
+      <Filter>Source files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\isofs.h">
+      <Filter>Source files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\isofs_api.h">
+      <Filter>Source files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\scsidev.h">
+      <Filter>Source files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\cpummu030.h">
+      <Filter>Source files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\uae\vm.h">
+      <Filter>Source files\include\uae</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\consolehook.h">
+      <Filter>Source files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\clipboard.h">
+      <Filter>Source files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\uaeexe.h">
+      <Filter>Source files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\tabletlibrary.h">
+      <Filter>Source files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\osdep\amiberry_filesys.hpp">
+      <Filter>Source files\osdep</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -7,8 +7,12 @@
 *
 */
 
+#include "sysconfig.h"
 #include "sysdeps.h"
 
+#include "options.h"
+#include "memory.h"
+#include "cd32_fmv.h"
 #include "xwin.h"
 
 static uae_u8 *mpeg_out_buffer;
@@ -60,6 +64,7 @@ void cd32_fmv_state(int state)
 }
 
 // slow software method but who cares.
+
 
 static void genlock_32(struct vidbuffer *vbin, struct vidbuffer *vbout, int w, int h, int d, int hoffset, int voffset, int mult)
 {
@@ -119,31 +124,6 @@ static void genlock_16(struct vidbuffer *vbin, struct vidbuffer *vbout, int w, i
 	}
 }
 
-static void genlock_16_nomult(struct vidbuffer *vbin, struct vidbuffer *vbout, int w, int h, int d, int hoffset, int voffset)
-{
-	for (int hh = 0, sh = -voffset; hh < h; sh++, hh++) {
-		uae_u8 *d8 = vbout->bufmem + vbout->rowbytes * (hh + voffset);
-		uae_u16 *d16 = (uae_u16*)d8;
-		uae_u8 *s8 = vbin->bufmem + vbin->rowbytes * (hh + voffset) ;
-		uae_u16 *srcp = NULL;
-		if (sh >= 0 && sh < mpeg_height)
-			srcp = (uae_u16*)(mpeg_out_buffer + sh * mpeg_width * MPEG_PIXBYTES_16);
-		for (int ww = 0, sw = -hoffset; ww < w; sw++, ww++) {
-			uae_u16 sv = fmv_border_color_16;
-			if (sw >= 0 && sw < mpeg_width && srcp)
-				sv = srcp[sw];
-			uae_u32 v;
-			if ((((uae_u16*)s8)[0] >> 11) >= GENLOCK_VAL_16) {
-				v = *((uae_u16*)s8);
-			} else {
-				v = sv;
-			}
-			*d16++ = v;
-			s8 += d;
-		}
-	}
-}
-
 void cd32_fmv_genlock(struct vidbuffer *vbin, struct vidbuffer *vbout)
 {
 	int hoffset, voffset, mult;
@@ -172,12 +152,8 @@ void cd32_fmv_genlock(struct vidbuffer *vbin, struct vidbuffer *vbout)
 	if (voffset < 0)
 		voffset = 0;
 
-	if (mpeg_depth == 2) {
-		if(mult == 1)
-		  genlock_16_nomult(vbin, vbout, w, h, d, hoffset, voffset);
-		else
-		  genlock_16(vbin, vbout, w, h, d, hoffset, voffset, mult);
-	}
+	if (mpeg_depth == 2)
+		genlock_16(vbin, vbout, w, h, d, hoffset, voffset, mult);
 	else
 		genlock_32(vbin, vbout, w, h, d, hoffset, voffset, mult);
 }

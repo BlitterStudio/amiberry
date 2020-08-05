@@ -1,34 +1,33 @@
- /*
-  * UAE - The Un*x Amiga Emulator
-  *
-  * Unix file system handler for AmigaDOS
-  *
-  * Copyright 1996 Ed Hanway
-  * Copyright 1996, 1997 Bernd Schmidt
-  *
-  * Version 0.4: 970308
-  *
-  * Based on example code (c) 1988 The Software Distillery
-  * and published in Transactor for the Amiga, Volume 2, Issues 2-5.
-  * (May - August 1989)
-  *
-  * Known limitations:
-  * Does not support several (useless) 2.0+ packet types.
-  * May not return the correct error code in some cases.
-  * Does not check for sane values passed by AmigaDOS.  May crash the emulation
-  * if passed garbage values.
-  * Could do tighter checks on malloc return values.
-  * Will probably fail spectacularly in some cases if the filesystem is
-  * modified at the same time by another process while UAE is running.
-  */
-#include <string.h>
-#include <stdbool.h>
-#include <stdlib.h>
+/*
+* UAE - The Un*x Amiga Emulator
+*
+* Unix file system handler for AmigaDOS
+*
+* Copyright 1996 Ed Hanway
+* Copyright 1996, 1997 Bernd Schmidt
+*
+* Version 0.4: 970308
+*
+* Based on example code (c) 1988 The Software Distillery
+* and published in Transactor for the Amiga, Volume 2, Issues 2-5.
+* (May - August 1989)
+*
+* Known limitations:
+* Does not support several (useless) 2.0+ packet types.
+* May not return the correct error code in some cases.
+* Does not check for sane values passed by AmigaDOS.  May crash the emulation
+* if passed garbage values.
+* Could do tighter checks on malloc return values.
+* Will probably fail spectacularly in some cases if the filesystem is
+* modified at the same time by another process while UAE is running.
+*/
 
+#include "sysconfig.h"
 #include "sysdeps.h"
 
 #include "threaddep/thread.h"
 #include "options.h"
+#include "traps.h"
 #include "uae.h"
 #include "memory.h"
 #include "custom.h"
@@ -36,28 +35,67 @@
 #include "autoconf.h"
 #include "fsusage.h"
 #include "native2amiga.h"
+#include "scsidev.h"
 #include "fsdb.h"
 #include "zfile.h"
 #include "zarchive.h"
 #include "gui.h"
 #include "gayle.h"
 #include "savestate.h"
+#include "cdtv.h"
 #include "bsdsocket.h"
 #include "uaeresource.h"
 #include "inputdevice.h"
+#include "clipboard.h"
+#include "consolehook.h"
+#include "blkdev.h"
+#include "isofs_api.h"
+#include "scsi.h"
+
+#include "tabletlibrary.h"
+#include "cia.h"
 #include "newcpu.h"
 #include "picasso96.h"
 #include "rommgr.h"
 
 #define KS12_BOOT_HACK 1
 
-#define UNIT_LED(unit) (LED_HD)
+#define UNIT_LED(unit) ((unit)->ui.unit_type == UNIT_CDFS ? LED_CD : LED_HD)
 
 static int bootrom_header;
 
 static uae_u32 dlg (uae_u32 a)
 {
-  return (dbg (a + 0) << 24) | (dbg (a + 1) << 16) | (dbg (a + 2) << 8) | (dbg (a + 3) << 0);
+	return (dbg (a + 0) << 24) | (dbg (a + 1) << 16) | (dbg (a + 2) << 8) | (dbg (a + 3) << 0);
+}
+
+static void aino_test (a_inode *aino)
+{
+#ifdef AINO_DEBUG
+	a_inode *aino2 = aino, *aino3;
+	for (;;) {
+		if (!aino || !aino->next)
+			return;
+		if ((aino->checksum1 ^ aino->checksum2) != 0xaaaa5555) {
+			write_log (_T("PANIC: corrupted or freed but used aino detected!"), aino);
+		}
+		aino3 = aino;
+		aino = aino->next;
+		if (aino->prev != aino3) {
+			write_log (_T("PANIC: corrupted aino linking!\n"));
+			break;
+		}
+		if (aino == aino2) break;
+	}
+#endif
+}
+
+static void aino_test_init (a_inode *aino)
+{
+#ifdef AINO_DEBUG
+	aino->checksum1 = (uae_u32)aino;
+	aino->checksum2 = aino->checksum1 ^ 0xaaaa5555;
+#endif
 }
 
 #define UAEFS_VERSION "UAE fs 0.6"
@@ -65,15 +103,21 @@ static uae_u32 dlg (uae_u32 a)
 uaecptr filesys_initcode, filesys_initcode_ptr, filesys_initcode_real;
 static uaecptr bootrom_start;
 static uae_u32 fsdevname, fshandlername, filesys_configdev;
+static uae_u32 cdfs_devname, cdfs_handlername;
 static uaecptr afterdos_name, afterdos_id, afterdos_initcode;
+static uaecptr keymaphook_name, keymaphook_id, keymaphook_initcode;
+static uaecptr shell_execute_data, shell_execute_process;
 static int filesys_in_interrupt;
 static uae_u32 mountertask;
 static int automountunit = -1;
 static int autocreatedunit;
+static int cd_unit_offset, cd_unit_number;
 static uaecptr ROM_filesys_doio, ROM_filesys_doio_original;
 static uaecptr ROM_filesys_putmsg, ROM_filesys_putmsg_original;
 static uaecptr ROM_filesys_putmsg_return;
 static uaecptr ROM_filesys_hack_remove;
+static smp_comm_pipe shellexecute_pipe;
+static uae_u32 segtrack_mode = 0;
 
 #define FS_STARTUP 0
 #define FS_GO_DOWN 1
@@ -81,38 +125,40 @@ static uaecptr ROM_filesys_hack_remove;
 #define DEVNAMES_PER_HDF 32
 
 #define UNIT_FILESYSTEM 0
+#define UNIT_CDFS 1
 
 typedef struct {
 	int unit_type;
 	int open; // >0 start as filesystem, <0 = allocated but do not start
-  TCHAR *devname; /* device name, e.g. UAE0: */
-  uaecptr devname_amiga;
-  uaecptr startup;
+	TCHAR *devname; /* device name, e.g. UAE0: */
+	uaecptr devname_amiga;
+	uaecptr startup;
 	uaecptr devicenode;
 	uaecptr parmpacket;
-  TCHAR *volname; /* volume name, e.g. CDROM, WORK, etc. */
-  int volflags; /* volume flags, readonly, stream uaefsdb support */
-  TCHAR *rootdir; /* root native directory/hdf. empty drive if invalid path */
-  struct zvolume *zarchive;
-  TCHAR *rootdirdiff; /* "diff" file/directory */
-  bool readonly; /* disallow write access? */
-  bool locked; /* action write protect */
+	TCHAR *volname; /* volume name, e.g. CDROM, WORK, etc. */
+	int volflags; /* volume flags, readonly, stream uaefsdb support */
+	TCHAR *rootdir; /* root native directory/hdf. empty drive if invalid path */
+	TCHAR *rootdirdiff; /* "diff" file/directory */
+	bool readonly; /* disallow write access? */
+	bool locked; /* action write protect */
 	bool unknown_media; /* ID_UNREADABLE_DISK */
-  int bootpri; /* boot priority. -128 = no autoboot, -129 = no mount */
-  int devno;
-  bool wasisempty; /* if true, this unit was created empty */
-  bool canremove; /* if true, this unit can be safely ejected and remounted */
-  bool configureddrive; /* if true, this is drive that was manually configured */
-  
-  struct hardfiledata hf;
+	int bootpri; /* boot priority. -128 = no autoboot, -129 = no mount */
+	int devno;
+	bool wasisempty; /* if true, this unit was created empty */
+	int canremove; /* if >0, this unit can be safely ejected and remounted */
+	bool configureddrive; /* if true, this is drive that was manually configured */
+	bool inject_icons; /* inject icons if directory filesystem */
 
-  /* Threading stuff */
-  smp_comm_pipe *volatile unit_pipe, *volatile back_pipe;
-  uae_thread_id tid;
-  struct _unit *self;
-  /* Reset handling */
-  uae_sem_t reset_sync_sem;
-  volatile int reset_state;
+	struct hardfiledata hf;
+	struct zvolume *zarchive;
+
+	/* Threading stuff */
+	smp_comm_pipe *volatile unit_pipe, *volatile back_pipe;
+	uae_thread_id tid;
+	struct _unit *self;
+	/* Reset handling */
+	uae_sem_t reset_sync_sem;
+	volatile int reset_state;
 
 	/* RDB stuff */
 	uaecptr rdb_devname_amiga[DEVNAMES_PER_HDF];
@@ -125,85 +171,360 @@ typedef struct {
 	/* filesystem seglist */
 	uaecptr filesysseg;
 	uae_u32 rdb_dostype;
+
+	/* CDFS */
+	bool cd_open;
+	int cddevno;
+	void *cdfs_superblock;
+
 } UnitInfo;
 
 struct uaedev_mount_info {
-  UnitInfo ui[MAX_FILESYSTEM_UNITS];
+	UnitInfo ui[MAX_FILESYSTEM_UNITS];
 };
 
 static struct uaedev_mount_info mountinfo;
 
+
+/* minimal AmigaDOS definitions */
+
+/* field offsets in DosPacket */
+#define dp_Type 8
+#define dp_Res1 12
+#define dp_Res2 16
+#define dp_Arg1 20
+#define dp_Arg2 24
+#define dp_Arg3 28
+#define dp_Arg4 32
+#define dp_Arg5 36
+
+#define DP64_INIT       -3L
+
+#define dp64_Type 8
+#define dp64_Res0 12
+#define dp64_Res2 16
+#define dp64_Res1 24
+#define dp64_Arg1 32
+#define dp64_Arg2 40
+#define dp64_Arg3 48
+#define dp64_Arg4 52
+#define dp64_Arg5 56
+
+#define dp_Max 60
+
+/* result codes */
+#define DOS_TRUE ((uae_u32)-1L)
+#define DOS_FALSE (0L)
+
+/* DirEntryTypes */
+#define ST_PIPEFILE -5
+#define ST_LINKFILE -4
+#define ST_FILE -3
+#define ST_ROOT 1
+#define ST_USERDIR 2
+#define ST_SOFTLINK 3
+#define ST_LINKDIR 4
+
+#if 1
+#define MAXFILESIZE32 (0xffffffff)
+#else
+/* technically correct but most native
+ * filesystems don't enforce it
+ */
+#define MAXFILESIZE32 (0x7fffffff)
+#endif
+#define MAXFILESIZE32_2G (0x7fffffff)
+
+ /* Passed as type to Lock() */
+#define SHARED_LOCK		-2  /* File is readable by others */
+#define ACCESS_READ		-2  /* Synonym */
+#define EXCLUSIVE_LOCK	-1  /* No other access allowed  */
+#define ACCESS_WRITE	-1  /* Synonym */
+
+/* packet types */
+#define ACTION_CURRENT_VOLUME	 7
+#define ACTION_LOCATE_OBJECT	 8
+#define ACTION_RENAME_DISK		 9
+#define ACTION_FREE_LOCK		15
+#define ACTION_DELETE_OBJECT	16
+#define ACTION_RENAME_OBJECT	17
+#define ACTION_MORE_CACHE		18
+#define ACTION_COPY_DIR			19
+#define ACTION_SET_PROTECT		21
+#define ACTION_CREATE_DIR		22
+#define ACTION_EXAMINE_OBJECT	23
+#define ACTION_EXAMINE_NEXT		24
+#define ACTION_DISK_INFO		25
+#define ACTION_INFO				26
+#define ACTION_FLUSH			27
+#define ACTION_SET_COMMENT		28
+#define ACTION_PARENT			29
+#define ACTION_SET_DATE			34
+#define ACTION_FIND_WRITE		1004
+#define ACTION_FIND_INPUT		1005
+#define ACTION_FIND_OUTPUT		1006
+#define ACTION_END				1007
+#define ACTION_SEEK				1008
+#define ACTION_WRITE_PROTECT	1023
+#define ACTION_IS_FILESYSTEM	1027
+#define ACTION_READ				 'R'
+#define ACTION_WRITE			 'W'
+
+/* 2.0+ packet types */
+#define ACTION_INHIBIT			  31
+#define ACTION_SET_FILE_SIZE	1022
+#define ACTION_LOCK_RECORD		2008
+#define ACTION_FREE_RECORD		2009
+#define ACTION_SAME_LOCK		  40
+#define ACTION_CHANGE_MODE		1028
+#define ACTION_FH_FROM_LOCK		1026
+#define ACTION_COPY_DIR_FH		1030
+#define ACTION_PARENT_FH		1031
+#define ACTION_EXAMINE_ALL		1033
+#define ACTION_EXAMINE_FH		1034
+#define ACTION_EXAMINE_ALL_END	1035
+
+#define ACTION_FORMAT			1020
+#define ACTION_IS_FILESYSTEM	1027
+#define ACTION_ADD_NOTIFY		4097
+#define ACTION_REMOVE_NOTIFY	4098
+
+#define ACTION_READ_LINK		1024
+
+/* OS4 64-bit filesize packets */
+#define ACTION_FILESYSTEM_ATTR         3005
+#define ACTION_CHANGE_FILE_POSITION64  8001
+#define ACTION_GET_FILE_POSITION64     8002
+#define ACTION_CHANGE_FILE_SIZE64      8003
+#define ACTION_GET_FILE_SIZE64         8004
+
+/* MOS 64-bit filesize packets */
+#define ACTION_SEEK64			26400
+#define ACTION_SET_FILE_SIZE64	26401
+#define ACTION_LOCK_RECORD64	26402
+#define ACTION_FREE_RECORD64	26403
+#define ACTION_QUERY_ATTR		26407
+#define ACTION_EXAMINE_OBJECT64	26408
+#define ACTION_EXAMINE_NEXT64	26409
+#define ACTION_EXAMINE_FH64		26410
+
+
+/* not supported */
+#define ACTION_MAKE_LINK		1021
+
+#define DISK_TYPE_DOS 0x444f5300 /* DOS\0 */
+#define DISK_TYPE_DOS_FFS 0x444f5301 /* DOS\1 */
+#define CDFS_DOSTYPE 0x43440000 /* CDxx */
+
+typedef struct _dpacket {
+	uaecptr packet_addr;
+	uae_u8 *packet_data;
+	uae_u8 packet_array[dp_Max];
+	bool need_flush;
+} dpacket;
+
+typedef struct {
+	uae_u32 uniq;
+	/* The directory we're going through.  */
+	a_inode *aino;
+	/* The file we're going to look up next.  */
+	a_inode *curr_file;
+} ExamineKey;
+
+struct lockrecord
+{
+	struct lockrecord *next;
+	dpacket *packet;
+	uae_u64 pos;
+	uae_u64 len;
+	uae_u32 mode;
+	uae_u32 timeout;
+	uae_u32 msg;
+};
+
+typedef struct key {
+	struct key *next;
+	a_inode *aino;
+	uae_u32 uniq;
+	struct fs_filehandle *fd;
+	uae_u64 file_pos;
+	int dosmode;
+	int createmode;
+	int notifyactive;
+	struct lockrecord *record;
+} Key;
+
+typedef struct notify {
+	struct notify *next;
+	uaecptr notifyrequest;
+	TCHAR *fullname;
+	TCHAR *partname;
+} Notify;
+
+typedef struct exallkey {
+	uae_u32 id;
+	struct fs_dirhandle *dirhandle;
+	TCHAR *fn;
+	uaecptr control;
+} ExAllKey;
+
+/* Since ACTION_EXAMINE_NEXT is so braindamaged, we have to keep
+* some of these around
+*/
+
+#define EXKEYS 128
+#define EXALLKEYS 100
+#define MAX_AINO_HASH 128
+#define NOTIFY_HASH_SIZE 127
+
+/* handler state info */
+
+typedef struct _unit {
+	struct _unit *next;
+
+	/* Amiga stuff */
+	uaecptr dosbase;
+	/* volume points to our IO board, always 1:1 mapping */
+	uaecptr volume;
+	uaecptr port;	/* Our port */
+	uaecptr locklist;
+
+	/* Native stuff */
+	uae_s32 unit;	/* unit number */
+	UnitInfo ui;	/* unit startup info */
+	TCHAR tmpbuf3[256];
+
+	/* Dummy message processing */
+	uaecptr dummy_message;
+	volatile unsigned int cmds_sent;
+	volatile unsigned int cmds_complete;
+	volatile unsigned int cmds_acked;
+
+	/* ExKeys */
+	ExamineKey examine_keys[EXKEYS];
+	int next_exkey;
+	unsigned int total_locked_ainos;
+
+	/* ExAll */
+	ExAllKey exalls[EXALLKEYS];
+	int exallid;
+
+	/* Keys */
+	struct key *keys;
+
+	struct lockrecord *waitingrecords;
+
+	a_inode rootnode;
+	unsigned int aino_cache_size;
+	a_inode *aino_hash[MAX_AINO_HASH];
+	unsigned int nr_cache_hits;
+	unsigned int nr_cache_lookups;
+
+	struct notify *notifyhash[NOTIFY_HASH_SIZE];
+
+	int volflags;
+	uae_u32 lockkey;
+	bool inhibited;
+	bool canremovable;
+	/* increase when media is changed.
+	 * used to detect if cached aino is valid
+	 */
+	int mountcount;
+	int mount_changed;
+	void *cdfs_superblock;
+
+	TCHAR *mount_volume;
+	TCHAR *mount_rootdir;
+	bool mount_readonly;
+	int mount_flags;
+
+	int reinsertdelay;
+	TCHAR *newvolume;
+	TCHAR *newrootdir;
+	bool newreadonly;
+	int newflags;
+
+} Unit;
+
+
 int nr_units (void)
 {
-  int cnt = 0;
+	int cnt = 0;
 	for (int i = 0; i < MAX_FILESYSTEM_UNITS; i++) {
 		if (mountinfo.ui[i].open > 0)
-	    cnt++;
-  }
-  return cnt;
+			cnt++;
+	}
+	return cnt;
 }
 
 int nr_directory_units (struct uae_prefs *p)
 {
-  int cnt = 0;
-  if (p) {
+	int cnt = 0;
+	if (p) {
 		for (int i = 0; i < p->mountitems; i++) {
 			if (p->mountconfig[i].ci.controller_type == HD_CONTROLLER_TYPE_UAE)
-    		cnt++;
-  	}
-  } else {
+				cnt++;
+		}
+	} else {
 		for (int i = 0; i < MAX_FILESYSTEM_UNITS; i++) {
 			if (mountinfo.ui[i].open > 0 && mountinfo.ui[i].hf.ci.controller_type == HD_CONTROLLER_TYPE_UAE)
-  	    cnt++;
-    }
-  }
-  return cnt;
+				cnt++;
+		}
+	}
+	return cnt;
 }
-
-static int is_hardfile(int unit_no);
 
 static int is_virtual (int unit_no)
 {
 	int t = is_hardfile (unit_no);
-	return t == FILESYS_VIRTUAL;
+	return t == FILESYS_VIRTUAL || t == FILESYS_CD;
 }
 
-static int is_hardfile (int unit_no)
+int is_hardfile (int unit_no)
 {
 	if (mountinfo.ui[unit_no].volname || mountinfo.ui[unit_no].wasisempty || mountinfo.ui[unit_no].unknown_media) {
-    return FILESYS_VIRTUAL;
-  }
-  if (mountinfo.ui[unit_no].hf.ci.sectors == 0) {
+		if (unit_no >= cd_unit_offset && unit_no < cd_unit_offset + cd_unit_number)
+			return FILESYS_CD;
+		return FILESYS_VIRTUAL;
+	}
+	if (mountinfo.ui[unit_no].hf.ci.sectors == 0) {
+		if (mountinfo.ui[unit_no].hf.flags & 1)
+			return FILESYS_HARDDRIVE;
 		return FILESYS_HARDFILE_RDB;
-  }
-  return FILESYS_HARDFILE;
+	}
+	return FILESYS_HARDFILE;
 }
 
 static void close_filesys_unit (UnitInfo *uip)
 {
-  if (!uip->open)
-  	return;
+	if (!uip->open)
+		return;
 	if (uip->hf.handle_valid)
 		hdf_close (&uip->hf);
-  if (uip->volname != 0)
-  	xfree (uip->volname);
-  if (uip->devname != 0)
-  	xfree (uip->devname);
-  if (uip->rootdir != 0)
-  	xfree (uip->rootdir);
-  if (uip->unit_pipe)
-    xfree (uip->unit_pipe);
-  if (uip->back_pipe)
-    xfree (uip->back_pipe);
+	if (uip->volname != 0)
+		xfree (uip->volname);
+	if (uip->devname != 0)
+		xfree (uip->devname);
+	if (uip->rootdir != 0)
+		xfree (uip->rootdir);
+	if (uip->unit_pipe)
+		xfree (uip->unit_pipe);
+	if (uip->back_pipe)
+		xfree (uip->back_pipe);
+	if (uip->cd_open) {
+		sys_command_close (uip->cddevno);
+		isofs_unmount (uip->cdfs_superblock);
+	}
 
-  uip->unit_pipe = 0;
-  uip->back_pipe = 0;
+	uip->unit_pipe = 0;
+	uip->back_pipe = 0;
 
 	uip->hf.handle_valid = 0;
-  uip->volname = 0;
-  uip->devname = 0;
-  uip->rootdir = 0;
-  uip->open = 0;
+	uip->volname = 0;
+	uip->devname = 0;
+	uip->rootdir = 0;
+	uip->open = 0;
+	uip->cd_open = 0;
 }
 
 static uaedev_config_data *getuci (struct uaedev_config_data *uci, int nr)
@@ -212,80 +533,149 @@ static uaedev_config_data *getuci (struct uaedev_config_data *uci, int nr)
 }
 
 
-static UnitInfo *getuip(struct uae_prefs *p, int index)
+static UnitInfo *getuip (struct uae_prefs *p, int index)
 {
-  if (index < 0)
-  	return NULL;
-  index = p->mountconfig[index].configoffset;
-  if (index < 0)
-  	return NULL;
-  return &mountinfo.ui[index];
+	if (index < 0)
+		return NULL;
+	index = p->mountconfig[index].configoffset;
+	if (index < 0)
+		return NULL;
+	return &mountinfo.ui[index];
+}
+static int getuindex (struct uae_prefs *p, int index)
+{
+	if (index < 0)
+		return -1;
+	return p->mountconfig[index].unitnum;
 }
 
 int get_filesys_unitconfig (struct uae_prefs *p, int index, struct mountedinfo *mi)
 {
-  UnitInfo *ui = getuip(p, index);
+	UnitInfo *ui = getuip (p, index);
 	struct uaedev_config_data *uci = &p->mountconfig[index];
-  UnitInfo uitmp;
+	UnitInfo uitmp;
 	TCHAR filepath[MAX_DPATH];
 
-  memset(mi, 0, sizeof (struct mountedinfo));
-  memset(&uitmp, 0, sizeof uitmp);
-  if (!ui) {
-  	ui = &uitmp;
+	memset (mi, 0, sizeof (struct mountedinfo));
+	memset (&uitmp, 0, sizeof uitmp);
+	_tcscpy(mi->rootdir, uci->ci.rootdir);
+	if (!ui) {
+		ui = &uitmp;
 		if (uci->ci.type == UAEDEV_DIR) {
 			cfgfile_resolve_path_out_load(uci->ci.rootdir, filepath, MAX_DPATH, PATH_DIR);
-	    mi->ismounted = 1;
+			_tcscpy(mi->rootdir, filepath);
+			mi->ismounted = 1;
 			if (filepath[0] == 0)
-    		return FILESYS_VIRTUAL;
+				return FILESYS_VIRTUAL;
 			if (my_existsfile (filepath)) {
-		    return FILESYS_VIRTUAL;
-	    }
+				mi->ismedia = 1;
+				return FILESYS_VIRTUAL;
+			}
 			if (my_getvolumeinfo (filepath) < 0)
-		    return -1;
-	    return FILESYS_VIRTUAL;
+				return -1;
+			mi->ismedia = true;
+			return FILESYS_VIRTUAL;
 		} else if (uci->ci.type == UAEDEV_HDF) {
 			cfgfile_resolve_path_out_load(uci->ci.rootdir, filepath, MAX_DPATH, PATH_HDF);
+			_tcscpy(mi->rootdir, filepath);
 			ui->hf.ci.readonly = true;
 			ui->hf.ci.blocksize = uci->ci.blocksize;
 			int err = hdf_open (&ui->hf, filepath);
 			if (err <= 0) {
-		    mi->ismounted = true;
+				mi->ismedia = false;
+				mi->ismounted = true;
+				mi->error = err;
 				if (uci->ci.reserved == 0 && uci->ci.sectors == 0 && uci->ci.surfaces == 0) {
+					if (ui->hf.flags & 1)
+						return FILESYS_HARDDRIVE;
 					return FILESYS_HARDFILE_RDB;
-		    }
-		    return -1;
-      }
+				}
+				return -1;
+			}
+			mi->ismedia = true;
+			if (ui->hf.drive_empty)
+				mi->ismedia = 0;
 			hdf_close (&ui->hf);
-    }
-  } else {
+		} else if (uci->ci.type == UAEDEV_CD) {
+			cfgfile_resolve_path_out_load(uci->ci.rootdir, filepath, MAX_DPATH, PATH_CD);
+			_tcscpy(mi->rootdir, filepath);
+			struct device_info di;
+			ui->hf.ci.readonly = true;
+			ui->hf.ci.blocksize = uci->ci.blocksize;
+			mi->size = -1;
+			mi->ismounted = true;
+			if (blkdev_get_info (p, ui->hf.ci.device_emu_unit, &di)) {
+				mi->ismedia = di.media_inserted != 0;
+				_tcscpy (mi->rootdir, di.label);
+			}
+#if 0
+			if (ui->hf.ci.cd_emu_unit == 0)
+				_tcscpy (mi->rootdir, _T("CD"));
+			else
+				_stprintf (mi->rootdir, _T("CD %d"), ui->hf.ci.cd_emu_unit);
+#endif
+		}
+	} else if (uci->ci.type != UAEDEV_TAPE) {
 		if (ui->hf.ci.controller_type == HD_CONTROLLER_TYPE_UAE) { // what is this? || (ui->controller && p->cs_ide)) {
-	    mi->ismounted = 1;
-    }
-  }
+			mi->ismounted = 1;
+			if (uci->ci.type == UAEDEV_HDF)
+				mi->ismedia = ui->hf.drive_empty ? false : true;
+			else
+				mi->ismedia = true;
+		}
+	}
+	//if (uci->ci.type == UAEDEV_TAPE) {
+	//	cfgfile_resolve_path_out_load(uci->ci.rootdir, filepath, MAX_DPATH, PATH_TAPE);
+	//	_tcscpy(mi->rootdir, filepath);
+	//	struct device_info di;
+	//	int unitnum = getuindex (p, index);
+	//	mi->size = -1;
+	//	mi->ismounted = false;
+	//	if (unitnum >= 0) {
+	//		mi->ismounted = true;
+	//		if (tape_get_info (unitnum, &di)) {
+	//			mi->ismedia = di.media_inserted != 0;
+	//			_tcscpy (mi->rootdir, di.label);
+	//		}
+	//	} else {
+	//		struct scsi_data_tape *tape;
+	//		unitnum = 0;
+	//		tape = tape_alloc (unitnum, filepath, uci->ci.readonly);
+	//		if (tape) {
+	//			if (tape_get_info (unitnum, &di)) {
+	//				mi->ismedia = di.media_inserted != 0;
+	//				_tcscpy (mi->rootdir, di.label);
+	//			}
+	//			tape_free (tape);
+	//		}
+	//	}
+	//	return FILESYS_TAPE;
+	//}
 
 	if (mi->size < 0)
 		return -1;
-  mi->size = ui->hf.virtsize;
+	mi->size = ui->hf.virtsize;
 	if (uci->ci.highcyl) {
-		uci->ci.cyls = uci->ci.highcyl;
+		uci->ci.cyls = mi->nrcyls = uci->ci.highcyl;
 	} else {
-		uci->ci.cyls = (int)(uci->ci.sectors * uci->ci.surfaces ? (ui->hf.virtsize / uci->ci.blocksize) / (uci->ci.sectors * uci->ci.surfaces) : 0);
+		uci->ci.cyls = mi->nrcyls = (int)(uci->ci.sectors * uci->ci.surfaces ? (ui->hf.virtsize / uci->ci.blocksize) / (uci->ci.sectors * uci->ci.surfaces) : 0);
 	}
 	if (uci->ci.type == UAEDEV_DIR)
-  	return FILESYS_VIRTUAL;
+		return FILESYS_VIRTUAL;
 	if (uci->ci.reserved == 0 && uci->ci.sectors == 0 && uci->ci.surfaces == 0) {
-	  return FILESYS_HARDFILE_RDB;
-  }
-  return FILESYS_HARDFILE;
+		if (ui->hf.flags & 1)
+			return FILESYS_HARDDRIVE;
+		return FILESYS_HARDFILE_RDB;
+	}
+	return FILESYS_HARDFILE;
 }
 
-static void stripsemicolon(TCHAR *s)
+static void stripsemicolon (TCHAR *s)
 {
-  if (!s)
-  	return;
-  while(_tcslen(s) > 0 && s[_tcslen(s) - 1] == ':')
-  	s[_tcslen(s) - 1] = 0;
+	if (!s)
+		return;
+	while (_tcslen(s) > 0 && s[_tcslen(s) - 1] == ':')
+		s[_tcslen(s) - 1] = 0;
 }
 static void stripspace (TCHAR *s)
 {
@@ -339,18 +729,18 @@ TCHAR *validatedevicename (TCHAR *s, const TCHAR *def)
 
 TCHAR *filesys_createvolname (const TCHAR *volname, const TCHAR *rootdir, struct zvolume *zv, const TCHAR *def)
 {
-  TCHAR *nvol = NULL;
-  int i, archivehd;
-  TCHAR *p = NULL;
+	TCHAR *nvol = NULL;
+	int i, archivehd;
+	TCHAR *p = NULL;
 	TCHAR path[MAX_DPATH];
 
 	cfgfile_resolve_path_out_load(rootdir, path, MAX_DPATH, PATH_DIR);
 
-  archivehd = -1;
-  if (my_existsfile(path))
-    archivehd = 1;
-  else if (my_existsdir(path))
-    archivehd = 0;
+	archivehd = -1;
+	if (my_existsfile (path))
+		archivehd = 1;
+	else if (my_existsdir (path))
+		archivehd = 0;
 
 	if (zv && zv->volumename && _tcslen(zv->volumename) > 0) {
 		nvol = my_strdup(zv->volumename);
@@ -358,71 +748,71 @@ TCHAR *filesys_createvolname (const TCHAR *volname, const TCHAR *rootdir, struct
 		return nvol;
 	}
 
-  if ((!volname || _tcslen (volname) == 0) && path && archivehd >= 0) {
-  	p = my_strdup (path);
-  	for (i = _tcslen (p) - 1; i >= 0; i--) {
-	    TCHAR c = p[i];
-	    if (c == ':' || c == '/' || c == '\\') {
-    		if (i == _tcslen (p) - 1)
-  		    continue;
-    		if (!_tcscmp (p + i, _T(":\\"))) {
-  		    xfree (p);
-		      p = xmalloc (TCHAR, 10);
-		      p[0] = path[0];
-		      p[1] = 0;
-		      i = 0;
-    		} else {
-  		    i++;
-    		}
-    		break;
-	    }
-  	}
-  	if (i >= 0)
-	    nvol = my_strdup (p + i);
-  }
-  if (!nvol && archivehd >= 0) {
-	  if (volname && _tcslen (volname) > 0)
-      nvol = my_strdup (volname);
-	  else
-      nvol = my_strdup (def);
-  }
-  if (!nvol) {
-  	if (volname && _tcslen (volname))
-	    nvol = my_strdup (volname);
-  	else
-	    nvol = my_strdup (_T(""));
-  }
+	if ((!volname || _tcslen (volname) == 0) && path && archivehd >= 0) {
+		p = my_strdup (path);
+		for (i = _tcslen (p) - 1; i >= 0; i--) {
+			TCHAR c = p[i];
+			if (c == ':' || c == '/' || c == '\\') {
+				if (i == _tcslen (p) - 1)
+					continue;
+				if (!_tcscmp (p + i, _T(":\\"))) {
+					xfree (p);
+					p = xmalloc (TCHAR, 10);
+					p[0] = path[0];
+					p[1] = 0;
+					i = 0;
+				} else {
+					i++;
+				}
+				break;
+			}
+		}
+		if (i >= 0)
+			nvol = my_strdup (p + i);
+	}
+	if (!nvol && archivehd >= 0) {
+		if (volname && _tcslen (volname) > 0)
+			nvol = my_strdup (volname);
+		else
+			nvol = my_strdup (def);
+	}
+	if (!nvol) {
+		if (volname && _tcslen (volname))
+			nvol = my_strdup (volname);
+		else
+			nvol = my_strdup (_T(""));
+	}
 	nvol = validatevolumename (nvol, def);
-  xfree (p);
-  return nvol;
+	xfree (p);
+	return nvol;
 }
 
-static int set_filesys_volume(const TCHAR *rootdir, int *flags, bool *readonly, bool *emptydrive, struct zvolume **zvp)
+static int set_filesys_volume (const TCHAR *rootdir, int *flags, bool *readonly, bool *emptydrive, struct zvolume **zvp)
 {
-  *emptydrive = 0;
-  if (my_existsfile(rootdir)) {
-	  struct zvolume *zv;
-	  zv = zfile_fopen_archive(rootdir);
-	  if (!zv) {
+	*emptydrive = 0;
+	if (my_existsfile (rootdir)) {
+		struct zvolume *zv;
+		zv = zfile_fopen_archive (rootdir);
+		if (!zv) {
 			error_log (_T("'%s' is not a supported archive file."), rootdir);
-	    return -1;
-  	}
-	  *zvp = zv;
-	  *flags = MYVOLUMEINFO_ARCHIVE;
-	  *readonly = 1;
-  } else {
-	  *flags = my_getvolumeinfo (rootdir);
-	  if (*flags < 0) {
-	    if (rootdir && rootdir[0])
+			return -1;
+		}
+		*zvp = zv;
+		*flags = MYVOLUMEINFO_ARCHIVE;
+		*readonly = 1;
+	} else {
+		*flags = my_getvolumeinfo (rootdir);
+		if (*flags < 0) {
+			if (rootdir && rootdir[0])
 				error_log (_T("directory '%s' not found, mounting as empty drive."), rootdir);
-	    *emptydrive = 1;
-	    *flags = 0;
-  	} else if ((*flags) & MYVOLUMEINFO_READONLY) {
+			*emptydrive = 1;
+			*flags = 0;
+		} else if ((*flags) & MYVOLUMEINFO_READONLY) {
 			error_log (_T("'%s' set to read-only."), rootdir);
-      *readonly = 1;
-	  }
-  }
-  return 1;
+			*readonly = 1;
+		}
+	}
+	return 1;
 }
 
 void uci_set_defaults (struct uaedev_config_info *uci, bool rdb)
@@ -442,6 +832,7 @@ void uci_set_defaults (struct uaedev_config_info *uci, bool rdb)
 	uci->bootpri = 0;
 	uci->priority = 10;
 	uci->sectorsperblock = 1;
+	uci->device_emu_unit = -1;
 }
 
 static void get_usedblocks(struct fs_usage *fsu, bool fs, int *pblocksize, uae_s64 *pnumblocks, uae_s64 *pinuse, bool reduce)
@@ -505,25 +896,26 @@ static bool get_blocks(const TCHAR *rootdir, int unit, int flags, int *pblocksiz
 
 static int set_filesys_unit_1 (int nr, struct uaedev_config_info *ci, bool custom)
 {
-  UnitInfo *ui;
-  int i;
-  bool emptydrive = false;
+	UnitInfo *ui;
+	int i;
+	bool emptydrive = false;
+	bool iscd;
 	struct uaedev_config_info c;
 
 	memcpy (&c, ci, sizeof (struct uaedev_config_info));
 
-  if (nr < 0) {
-  	for (nr = 0; nr < MAX_FILESYSTEM_UNITS; nr++) {
-	    if (!mountinfo.ui[nr].open)
-    		break;
-  	}
-  	if (nr == MAX_FILESYSTEM_UNITS) {
+	if (nr < 0) {
+		for (nr = 0; nr < MAX_FILESYSTEM_UNITS; nr++) {
+			if (!mountinfo.ui[nr].open)
+				break;
+		}
+		if (nr == MAX_FILESYSTEM_UNITS) {
 			error_log (_T("No slot allocated for this unit"));
-	    return -1;
-  	}
-  }
+			return -1;
+		}
+	}
 
-	if (ci->controller_type != HD_CONTROLLER_TYPE_UAE) {
+	if (ci->controller_type != HD_CONTROLLER_TYPE_UAE || ci->type == UAEDEV_TAPE) {
 		ui = &mountinfo.ui[nr];
 		memset (ui, 0, sizeof (UnitInfo));
 		memcpy (&ui->hf.ci, &c, sizeof (struct uaedev_config_info));
@@ -533,24 +925,26 @@ static int set_filesys_unit_1 (int nr, struct uaedev_config_info *ci, bool custo
 		return nr;
 	}
 
-	if (!custom)
-		cfgfile_resolve_path_load(c.rootdir, MAX_DPATH, (ci->volname[0] ? PATH_DIR : PATH_HDF));
+	iscd = nr >= cd_unit_offset && nr < cd_unit_offset + cd_unit_number;
 
-	  for (i = 0; i < MAX_FILESYSTEM_UNITS; i++) {
-			if (nr == i || !mountinfo.ui[i].open || mountinfo.ui[i].rootdir == NULL)
-		    continue;
-			if (_tcslen(c.rootdir) > 0 && samepath(mountinfo.ui[i].rootdir, c.rootdir)) {
-				error_log (_T("directory/hardfile '%s' already added."), c.rootdir);
-	      return -1;
-		  }
-	  }
+	if (!custom)
+		cfgfile_resolve_path_load(c.rootdir, MAX_DPATH, iscd ? PATH_CD : (ci->volname[0] ? PATH_DIR : PATH_HDF));
+
+	for (i = 0; i < MAX_FILESYSTEM_UNITS; i++) {
+		if (nr == i || !mountinfo.ui[i].open || mountinfo.ui[i].rootdir == NULL || is_hardfile (i) == FILESYS_CD)
+			continue;
+		if (_tcslen(c.rootdir) > 0 && same_path(mountinfo.ui[i].rootdir, c.rootdir)) {
+			error_log (_T("directory/hardfile '%s' already added."), c.rootdir);
+			return -1;
+		}
+	}
 	for (;;) {
 		bool retry = false;
 		for (i = 0; i < MAX_FILESYSTEM_UNITS; i++) {
 			int hf = is_hardfile(i);
 			if (nr == i || !mountinfo.ui[i].open || mountinfo.ui[i].rootdir == NULL)
 				continue;
-			if (hf != FILESYS_HARDFILE && hf != FILESYS_HARDFILE_RDB)
+			if (hf != FILESYS_HARDDRIVE && hf != FILESYS_HARDFILE && hf != FILESYS_HARDFILE_RDB)
 				continue;
 			if (mountinfo.ui[i].hf.ci.controller_unit == c.controller_unit) {
 				c.controller_unit++;
@@ -566,21 +960,26 @@ static int set_filesys_unit_1 (int nr, struct uaedev_config_info *ci, bool custo
 	}
 
 
-  ui = &mountinfo.ui[nr];
-  memset (ui, 0, sizeof (UnitInfo));
-	memcpy (&ui->hf.ci, &c, sizeof (struct uaedev_config_info));
+	ui = &mountinfo.ui[nr];
+	memset (ui, 0, sizeof (UnitInfo));
+	memcpy(&ui->hf.ci, &c, sizeof c);
 
-  if (c.volname[0]) {
-	  int flags = 0;
+	if (iscd) {
+		ui->unit_type = UNIT_CDFS;
+		emptydrive = 1;
+		ui->volflags = MYVOLUMEINFO_CDFS | MYVOLUMEINFO_READONLY;
+		c.readonly = true;
+	} else if (c.volname[0]) {
+		int flags = 0;
 		uae_s64 numblocks;
 
-	  emptydrive = 1;
+		emptydrive = 1;
 		if (c.rootdir[0]) {
 			if (set_filesys_volume (c.rootdir, &flags, &c.readonly, &emptydrive, &ui->zarchive) < 0)
-    		return -1;
-    }
+				return -1;
+		}
 		ui->volname = filesys_createvolname (c.volname, c.rootdir, ui->zarchive, _T("harddrive"));
-	  ui->volflags = flags;
+		ui->volflags = flags;
 		TCHAR *vs = au(UAEFS_VERSION);
 		TCHAR *vsp = vs + _tcslen(vs) - 1;
 		while (vsp != vs) {
@@ -600,10 +999,10 @@ static int set_filesys_unit_1 (int nr, struct uaedev_config_info *ci, bool custo
 		else
 			ui->hf.ci.max_lba = 0x00ffffff;
 
-  } else {
+	} else {
 		ui->unit_type = UNIT_FILESYSTEM;
 		ui->hf.unitnum = nr;
-	  ui->volname = 0;
+		ui->volname = 0;
 		if (ui->hf.ci.rootdir[0]) {
 			if (hdf_open (&ui->hf) <= 0 && !c.readonly) {
 				write_log (_T("Attempting to open '%s' in read-only mode.\n"), ui->hf.ci.rootdir);
@@ -611,16 +1010,16 @@ static int set_filesys_unit_1 (int nr, struct uaedev_config_info *ci, bool custo
 				if (hdf_open (&ui->hf) > 0) {
 					error_log (_T("'%s' opened in read-only mode.\n"), ui->hf.ci.rootdir);
 				}
-    	}
+			}
 		} else {
 			// empty drive?
 			ui->hf.drive_empty = 1;
 		}
-  	if (!ui->hf.drive_empty) {
+		if (!ui->hf.drive_empty) {
 			if (ui->hf.handle_valid == 0) {
 				error_log (_T("Hardfile '%s' not found."), ui->hf.ci.rootdir);
-	      goto err;
-      }
+				goto err;
+			}
 			if (ui->hf.ci.blocksize > ui->hf.virtsize || ui->hf.virtsize == 0) {
 				error_log (_T("Hardfile '%s' too small."), ui->hf.ci.rootdir);
 				goto err;
@@ -628,31 +1027,29 @@ static int set_filesys_unit_1 (int nr, struct uaedev_config_info *ci, bool custo
 		}
 		if ((ui->hf.ci.blocksize & (ui->hf.ci.blocksize - 1)) != 0 || ui->hf.ci.blocksize == 0) {
 			error_log (_T("Hardfile '%s' bad blocksize %d."), ui->hf.ci.rootdir, ui->hf.ci.blocksize);
-      goto err;
-    }
+			goto err;
+		}
 		if ((ui->hf.ci.sectors || ui->hf.ci.surfaces || ui->hf.ci.reserved) &&
 			(ui->hf.ci.sectors < 1 || ui->hf.ci.surfaces < 1 || ui->hf.ci.surfaces > 1023 ||
 			ui->hf.ci.reserved < 0 || ui->hf.ci.reserved > 1023) != 0) {
 				error_log (_T("Hardfile '%s' bad hardfile geometry."), ui->hf.ci.rootdir);
-	      goto err;
-    }
+				goto err;
+		}
 		if (!ui->hf.ci.highcyl) {
 			ui->hf.ci.cyls = (int)(ui->hf.ci.sectors * ui->hf.ci.surfaces ? (ui->hf.virtsize / ui->hf.ci.blocksize) / (ui->hf.ci.sectors * ui->hf.ci.surfaces) : 0);
-	  }
+		}
 		if (!ui->hf.ci.cyls)
 			ui->hf.ci.cyls = ui->hf.ci.highcyl;
 		if (!ui->hf.ci.cyls)
 			ui->hf.ci.cyls = 1;
 	}
-  ui->self = 0;
-  ui->reset_state = FS_STARTUP;
-  ui->wasisempty = emptydrive;
-  ui->canremove = emptydrive && (ci->flags & MYVOLUMEINFO_REUSABLE);
-  ui->rootdir = my_strdup (c.rootdir);
-  if(c.devname != 0) {
-    ui->devname = my_strdup (c.devname);
-    stripsemicolon(ui->devname);
-  }
+	ui->self = 0;
+	ui->reset_state = FS_STARTUP;
+	ui->wasisempty = emptydrive;
+	ui->canremove = emptydrive && (ci->flags & MYVOLUMEINFO_REUSABLE);
+	ui->rootdir = my_strdup (c.rootdir);
+	ui->devname = my_strdup (c.devname);
+	stripsemicolon(ui->devname);
 	if (c.filesys[0])
 		ui->filesysdir = my_strdup (c.filesys);
 	ui->readonly = c.readonly;
@@ -661,52 +1058,79 @@ static int set_filesys_unit_1 (int nr, struct uaedev_config_info *ci, bool custo
 	if (c.bootpri > 127)
 		c.bootpri = 127;
 	ui->bootpri = c.bootpri;
-  ui->open = 1;
+	ui->inject_icons = c.inject_icons;
+	ui->open = 1;
 
-  return nr;
+	return nr;
 err:
 	if (ui->hf.handle_valid)
 		hdf_close (&ui->hf);
-  return -1;
+	return -1;
 }
 
 static int set_filesys_unit (int nr, struct uaedev_config_info *ci, bool custom)
 {
-  int ret;
+	int ret;
 
 	ret = set_filesys_unit_1 (nr, ci, custom);
-  return ret;
+	return ret;
 }
 
 static int add_filesys_unit (struct uaedev_config_info *ci, bool custom)
 {
-  int nr;
+	int nr;
 
-  if (nr_units() >= MAX_FILESYSTEM_UNITS)
-  	return -1;
+	if (nr_units () >= MAX_FILESYSTEM_UNITS)
+		return -1;
 
 	nr = set_filesys_unit_1 (-1, ci, custom);
-  return nr;
+#ifdef RETROPLATFORM
+	if (nr >= 0) {
+		UnitInfo *ui = &mountinfo.ui[nr];
+		rp_hd_device_enable (nr, true);
+		if (ui->unit_type == UNIT_CDFS)
+			rp_cd_image_change(nr, ci->rootdir);
+		else
+			rp_harddrive_image_change(nr, ci->readonly, ci->rootdir);
+	}
+#endif
+	return nr;
 }
 
 int kill_filesys_unitconfig (struct uae_prefs *p, int nr)
 {
 	struct uaedev_config_data *uci;
 
-  if (nr < 0)
-  	return 0;
+	if (nr < 0)
+		return 0;
 	uci = getuci (p->mountconfig, nr);
-  hardfile_do_disk_change (uci, 0);
+	hardfile_do_disk_change (uci, 0);
 	if (uci->configoffset >= 0 && uci->ci.controller_type == HD_CONTROLLER_TYPE_UAE) {
-		filesys_media_change (uci->ci.rootdir, 0, uci);
+		filesys_media_change(uci->ci.rootdir, 0, uci);
+	} else {
+		pcmcia_disk_reinsert(p, &uci->ci, true);
 	}
-  while (nr < MOUNT_CONFIG_SIZE) {
+	while (nr < MOUNT_CONFIG_SIZE) {
 		memmove (&p->mountconfig[nr], &p->mountconfig[nr + 1], sizeof (struct uaedev_config_data));
-	  nr++;
-  }
-  p->mountitems--;
+		nr++;
+	}
+	p->mountitems--;
 	memset (&p->mountconfig[MOUNT_CONFIG_SIZE - 1], 0, sizeof (struct uaedev_config_data));
-  return 1;
+	return 1;
+}
+
+int move_filesys_unitconfig (struct uae_prefs *p, int nr, int to)
+{
+	struct uaedev_config_data *uci1, *uci2, tmpuci;
+
+	uci1 = getuci (p->mountconfig, nr);
+	uci2 = getuci (p->mountconfig, to);
+	if (nr == to)
+		return 0;
+	memcpy (&tmpuci, uci1, sizeof (struct uaedev_config_data));
+	memcpy (uci1, uci2, sizeof (struct uaedev_config_data));
+	memcpy (uci2, &tmpuci, sizeof (struct uaedev_config_data));
+	return 1;
 }
 
 static void allocuci (struct uae_prefs *p, int nr, int idx, int unitnum)
@@ -728,6 +1152,53 @@ static void allocuci (struct uae_prefs *p, int nr, int idx)
 	allocuci (p, nr, idx, -1);
 }
 
+static const TCHAR *getunittype(struct uaedev_config_info *uci)
+{
+	return uci->type == UAEDEV_CD ? _T("CD") : (uci->type == UAEDEV_TAPE ? _T("TAPE") : _T("HD"));
+}
+
+static int cpuboard_hd;
+static romconfig cpuboard_dummy;
+
+//void add_cpuboard_unit(int unit, struct uaedev_config_info *uci, struct romconfig *rc)
+//{
+//	int flags = (uci->controller_type >= HD_CONTROLLER_TYPE_IDE_FIRST && uci->controller_type <= HD_CONTROLLER_TYPE_IDE_LAST) ? EXPANSIONTYPE_IDE : EXPANSIONTYPE_SCSI;
+//	const struct cpuboardtype *cbt = &cpuboards[currprefs.cpuboard_type];
+//	cpuboard_hd = 0;
+//	if (cbt->subtypes) {
+//		if (cbt->subtypes[currprefs.cpuboard_subtype].add && (cbt->subtypes[currprefs.cpuboard_subtype].deviceflags & flags)) {
+//			if (unit >= 0) {
+//				write_log(_T("Adding CPUBoard '%s' %s unit %d ('%s')\n"),
+//					cbt->subtypes[currprefs.cpuboard_subtype].name,
+//					getunittype(uci), unit, uci->rootdir);
+//			}
+//			cbt->subtypes[currprefs.cpuboard_subtype].add(unit, uci, rc);
+//			cpuboard_hd = 1;
+//		}
+//	}
+//}
+//
+//static void add_cpuboard_unit_init(void)
+//{
+//	memset(&cpuboard_dummy, 0, sizeof cpuboard_dummy);
+//	cpuboard_dummy.device_id = 7;
+//	if (currprefs.cpuboard_type) {
+//		struct romconfig *rc = get_device_romconfig(&currprefs, ROMTYPE_CPUBOARD, 0);
+//		if (!rc)
+//			rc = &cpuboard_dummy;
+//		const struct cpuboardtype *cbt = &cpuboards[currprefs.cpuboard_type];
+//		if (cbt->subtypes) {
+//			if (cbt->subtypes[currprefs.cpuboard_subtype].add) {
+//				const struct cpuboardsubtype *cst = &cbt->subtypes[currprefs.cpuboard_subtype];
+//				struct uaedev_config_info ci = { 0 };
+//				write_log(_T("Initializing CPUBoard '%s' %s controller\n"),
+//					cst->name, (cst->deviceflags & EXPANSIONTYPE_SCSI) ? _T("SCSI") : _T("IDE"));
+//				cst->add(-1, &ci, rc);
+//			}
+//		}
+//	}
+//}
+
 static bool add_ide_unit(int type, int unit, struct uaedev_config_info *uci)
 {
 	bool added = false;
@@ -736,13 +1207,15 @@ static bool add_ide_unit(int type, int unit, struct uaedev_config_info *uci)
 			if (i == type - HD_CONTROLLER_TYPE_IDE_EXPANSION_FIRST) {
 				const struct expansionromtype *ert = &expansionroms[i];
 				if ((ert->deviceflags & 2) && is_board_enabled(&currprefs, ert->romtype, uci->controller_type_unit)) {
+					cpuboard_hd = 1;
 					if (ert->add) {
 						struct romconfig *rc = get_device_romconfig(&currprefs, ert->romtype, uci->controller_type_unit);
-						write_log(_T("Adding IDE %s '%s' unit %d ('%s')\n"), _T("HD"),
+						write_log(_T("Adding IDE %s '%s' unit %d ('%s')\n"), getunittype(uci),
 							ert->name, unit, uci->rootdir);
 						ert->add(unit, uci, rc);
 					}
-					added = true;
+					if (cpuboard_hd)
+						added = true;
 				}
 			}
 		}
@@ -750,14 +1223,40 @@ static bool add_ide_unit(int type, int unit, struct uaedev_config_info *uci)
 	return added;
 }
 
-static void initialize_mountinfo(void)
+static bool add_scsi_unit(int type, int unit, struct uaedev_config_info *uci)
 {
-  int nr;
-  UnitInfo *uip = &mountinfo.ui[0];
+	bool added = false;
+	if (type >= HD_CONTROLLER_TYPE_SCSI_EXPANSION_FIRST && type <= HD_CONTROLLER_TYPE_SCSI_LAST) {
+		for (int i = 0; expansionroms[i].name; i++) {
+			if (i == type - HD_CONTROLLER_TYPE_SCSI_EXPANSION_FIRST) {
+				const struct expansionromtype *ert = &expansionroms[i];
+				if ((ert->deviceflags & 1) && is_board_enabled(&currprefs, ert->romtype, uci->controller_type_unit)) {
+					cpuboard_hd = 1;
+					if (ert->add) {
+						struct romconfig *rc = get_device_romconfig(&currprefs, ert->romtype, uci->controller_type_unit);
+						write_log(_T("Adding SCSI %s '%s' unit %d ('%s')\n"), getunittype(uci),
+							ert->name, unit, uci->rootdir);
+						ert->add(unit, uci, rc);
+					}
+					if (cpuboard_hd)
+						added = true;
+				}
+			}
+		}
+	}
+	return added;
+}
 
+
+static void initialize_mountinfo (void)
+{
+	int nr;
+	UnitInfo *uip = &mountinfo.ui[0];
+
+	cd_unit_offset = MAX_FILESYSTEM_UNITS;
 	autocreatedunit = 0;
 
-  for (nr = 0; nr < currprefs.mountitems; nr++) {
+	for (nr = 0; nr < currprefs.mountitems; nr++) {
 		struct uaedev_config_data *uci = &currprefs.mountconfig[nr];
 		if (uci->ci.controller_type == HD_CONTROLLER_TYPE_UAE && (uci->ci.type == UAEDEV_DIR || uci->ci.type == UAEDEV_HDF)) {
 			struct uaedev_config_info ci;
@@ -765,11 +1264,48 @@ static void initialize_mountinfo(void)
 			ci.flags = MYVOLUMEINFO_REUSABLE;
 			int idx = set_filesys_unit_1 (-1, &ci, false);
 			allocuci (&currprefs, nr, idx);
-    }
-  }
+		}
+	}
+	//filesys_addexternals ();
 	nr = nr_units ();
+	cd_unit_offset = nr;
+	cd_unit_number = 0;
+	if (currprefs.scsi) {
+		uae_u32 mask = scsi_get_cd_drive_mask ();
+		for (int i = 0; i < 32; i++) {
+			if (mask & (1 << i)) {
+				struct uaedev_config_info ci = { 0 };
+				_stprintf (ci.devname, _T("CD%d"), i);
+				cd_unit_number++;
+				_tcscpy (ci.rootdir, _T("/"));
+				ci.readonly = true;
+				ci.sectors = 1;
+				ci.surfaces = 1;
+				ci.blocksize = 2048;
+				int idx = set_filesys_unit_1 (i + cd_unit_offset, &ci, true);
+				allocuci (&currprefs, nr, idx);
+				nr++;
+			}
+		}
+	}
+
+	for (nr = 0; nr < currprefs.mountitems; nr++) {
+		struct uaedev_config_data *uci = &currprefs.mountconfig[nr];
+		if (uci->ci.controller_type == HD_CONTROLLER_TYPE_UAE) {
+			if (uci->ci.type == UAEDEV_TAPE) {
+				struct uaedev_config_info ci;
+				memcpy (&ci, &uci->ci, sizeof (struct uaedev_config_info));
+				int unitnum = scsi_add_tape (&uci->ci);
+				if (unitnum >= 0) {
+					int idx = set_filesys_unit_1 (-1, &ci, false);
+					allocuci (&currprefs, nr, idx, unitnum);
+				}
+			}
+		}
+	}
 
 	// init all controllers first
+	//add_cpuboard_unit_init();
 	for (int i = 0; expansionroms[i].name; i++) {
 		const struct expansionromtype *ert = &expansionroms[i];
 		for (int j = 0; j < MAX_DUPLICATE_EXPANSION_BOARDS; j++) {
@@ -800,17 +1336,50 @@ static void initialize_mountinfo(void)
 				if (added)
 					break;
 			}
-    }
+		} else if (type != HD_CONTROLLER_TYPE_SCSI_AUTO && type >= HD_CONTROLLER_TYPE_SCSI_FIRST && type <= HD_CONTROLLER_TYPE_SCSI_LAST) {
+			added = add_scsi_unit(type, unit, uci);
+		} else if (type == HD_CONTROLLER_TYPE_SCSI_AUTO) {
+			for (int st = HD_CONTROLLER_TYPE_SCSI_FIRST; st <= HD_CONTROLLER_TYPE_SCSI_LAST; st++) {
+				added = add_scsi_unit(st, unit, uci);
+				if (added)
+					break;
+			}
+#if 0
+		} else if (type == HD_CONTROLLER_TYPE_PCMCIA) {
+			if (uci->controller_type_unit == 0) {
+				gayle_add_pcmcia_sram_unit (uci);
+				added = true;
+			} else {
+				gayle_add_pcmcia_ide_unit (uci);
+				added = true;
+			}
+#endif
+		}
 		if (added)
 			allocuci (&currprefs, nr, -1);
-  }
+	}
+	
+
+}
+
+int sprintf_filesys_unit (TCHAR *buffer, int num)
+{
+	UnitInfo *uip = mountinfo.ui;
+
+	if (uip[num].volname != 0)
+		_stprintf (buffer, _T("(DH%d:) Filesystem, %s: %s %s"), num, uip[num].volname,
+		uip[num].rootdir, uip[num].readonly ? _T("ro") : _T(""));
+	else
+		_stprintf (buffer, _T("(DH%d:) Hardfile, \"%s\", size %d Mbytes"), num,
+		uip[num].rootdir, (int)(uip[num].hf.virtsize / (1024 * 1024)));
+	return 0;
 }
 
 static void free_mountinfo (void)
 {
-  int i;
-  for (i = 0; i < MAX_FILESYSTEM_UNITS; i++)
-  	close_filesys_unit (mountinfo.ui + i);
+	int i;
+	for (i = 0; i < MAX_FILESYSTEM_UNITS; i++)
+		close_filesys_unit (mountinfo.ui + i);
 	gayle_free_units ();
 }
 
@@ -820,268 +1389,24 @@ struct hardfiledata *get_hardfile_data_controller(int nr)
 	for (int i = 0; i < MAX_FILESYSTEM_UNITS; i++) {
 		if (uip[i].open == 0)
 			continue;
-		if (uip[i].hf.ci.controller_unit == nr)
+		if (uip[i].hf.ci.controller_unit == nr && uip[i].hf.ci.type != UAEDEV_DIR)
+			return &uip[i].hf;
+	}
+	for (int i = 0; i < MAX_FILESYSTEM_UNITS; i++) {
+		if (uip[i].open == 0)
+			continue;
+		if (uip[i].hf.ci.controller_unit == nr && uip[i].hf.ci.type == UAEDEV_DIR)
 			return &uip[i].hf;
 	}
 	return NULL;
 }
 struct hardfiledata *get_hardfile_data (int nr)
 {
-  UnitInfo *uip = mountinfo.ui;
-  if (nr < 0 || nr >= MAX_FILESYSTEM_UNITS || uip[nr].open == 0 || is_virtual(nr))
+	UnitInfo *uip = mountinfo.ui;
+	if (nr < 0 || nr >= MAX_FILESYSTEM_UNITS || uip[nr].open == 0 || is_virtual (nr))
 		return NULL;
-  return &uip[nr].hf;
+	return &uip[nr].hf;
 }
-
-/* minimal AmigaDOS definitions */
-
-/* field offsets in DosPacket */
-#define dp_Type 8
-#define dp_Res1	12
-#define dp_Res2 16
-#define dp_Arg1 20
-#define dp_Arg2 24
-#define dp_Arg3 28
-#define dp_Arg4 32
-#define dp_Arg5 36
-
-#define DP64_INIT       -3L
-
-#define dp64_Type 8
-#define dp64_Res0 12
-#define dp64_Res2 16
-#define dp64_Res1 24
-#define dp64_Arg1 32
-#define dp64_Arg2 40
-#define dp64_Arg3 48
-#define dp64_Arg4 52
-#define dp64_Arg5 56
-
-#define dp_Max 60
-
-/* result codes */
-#define DOS_TRUE ((uae_u32)-1L)
-#define DOS_FALSE (0L)
-
-/* DirEntryTypes */
-#define ST_PIPEFILE -5
-#define ST_LINKFILE -4
-#define ST_FILE -3
-#define ST_ROOT 1
-#define ST_USERDIR 2
-#define ST_SOFTLINK 3
-#define ST_LINKDIR 4
-
-#if 1
-#define MAXFILESIZE32 (0xffffffff)
-#else
-/* technically correct but most native
- * filesystems don't enforce it
- */
-#define MAXFILESIZE32 (0x7fffffff)
-#endif
-#define MAXFILESIZE32_2G (0x7fffffff)
-
-/* Passed as type to Lock() */
-#define SHARED_LOCK         -2     /* File is readable by others */
-#define ACCESS_READ         -2     /* Synonym */
-#define EXCLUSIVE_LOCK      -1     /* No other access allowed    */
-#define ACCESS_WRITE        -1     /* Synonym */
-
-/* packet types */
-#define ACTION_CURRENT_VOLUME	7
-#define ACTION_LOCATE_OBJECT	8
-#define ACTION_RENAME_DISK	9
-#define ACTION_FREE_LOCK	15
-#define ACTION_DELETE_OBJECT	16
-#define ACTION_RENAME_OBJECT	17
-#define ACTION_MORE_CACHE	18
-#define ACTION_COPY_DIR		19
-#define ACTION_SET_PROTECT	21
-#define ACTION_CREATE_DIR	22
-#define ACTION_EXAMINE_OBJECT	23
-#define ACTION_EXAMINE_NEXT	24
-#define ACTION_DISK_INFO	25
-#define ACTION_INFO		26
-#define ACTION_FLUSH		27
-#define ACTION_SET_COMMENT	28
-#define ACTION_PARENT		29
-#define ACTION_SET_DATE		34
-#define ACTION_FIND_WRITE	1004
-#define ACTION_FIND_INPUT	1005
-#define ACTION_FIND_OUTPUT	1006
-#define ACTION_END		1007
-#define ACTION_SEEK		1008
-#define ACTION_WRITE_PROTECT	1023
-#define ACTION_IS_FILESYSTEM	1027
-#define ACTION_READ		'R'
-#define ACTION_WRITE		'W'
-
-/* 2.0+ packet types */
-#define ACTION_INHIBIT       31
-#define ACTION_SET_FILE_SIZE 1022
-#define ACTION_LOCK_RECORD   2008
-#define ACTION_FREE_RECORD   2009
-#define ACTION_SAME_LOCK     40
-#define ACTION_CHANGE_MODE   1028
-#define ACTION_FH_FROM_LOCK  1026
-#define ACTION_COPY_DIR_FH   1030
-#define ACTION_PARENT_FH     1031
-#define ACTION_EXAMINE_ALL	1033
-#define ACTION_EXAMINE_FH    1034
-#define ACTION_EXAMINE_ALL_END	1035
-
-#define ACTION_FORMAT        1020
-#define ACTION_IS_FILESYSTEM 1027
-#define ACTION_ADD_NOTIFY    4097
-#define ACTION_REMOVE_NOTIFY 4098
-
-#define ACTION_READ_LINK		1024
-
-/* OS4 64-bit filesize packets */
-#define ACTION_FILESYSTEM_ATTR         3005
-#define ACTION_CHANGE_FILE_POSITION64  8001
-#define ACTION_GET_FILE_POSITION64     8002
-#define ACTION_CHANGE_FILE_SIZE64      8003
-#define ACTION_GET_FILE_SIZE64         8004
-
-/* MOS 64-bit filesize packets */
-#define ACTION_SEEK64			26400
-#define ACTION_SET_FILE_SIZE64	26401
-#define ACTION_LOCK_RECORD64	26402
-#define ACTION_FREE_RECORD64	26403
-#define ACTION_QUERY_ATTR		26407
-#define ACTION_EXAMINE_OBJECT64	26408
-#define ACTION_EXAMINE_NEXT64	26409
-#define ACTION_EXAMINE_FH64		26410
-
-/* not supported */
-#define ACTION_MAKE_LINK		1021
-
-#define DISK_TYPE_DOS 0x444f5300 /* DOS\0 */
-#define DISK_TYPE_DOS_FFS 0x444f5301 /* DOS\1 */
-#define CDFS_DOSTYPE 0x43440000 /* CDxx */
-
-typedef struct _dpacket {
-	uaecptr packet_addr;
-	uae_u8 *packet_data;
-	uae_u8 packet_array[dp_Max];
-	bool need_flush;
-} dpacket;
-
-typedef struct {
-  uae_u32 uniq;
-  /* The directory we're going through.  */
-  a_inode *aino;
-  /* The file we're going to look up next.  */
-  a_inode *curr_file;
-} ExamineKey;
-
-struct lockrecord
-{
-	struct lockrecord *next;
-	dpacket *packet;
-	uae_u64 pos;
-	uae_u64 len;
-	uae_u32 mode;
-	uae_u32 timeout;
-	uae_u32 msg;
-};
-
-typedef struct key {
-  struct key *next;
-  a_inode *aino;
-  uae_u32 uniq;
-  struct fs_filehandle *fd;
-  uae_u64 file_pos;
-  int dosmode;
-  int createmode;
-  int notifyactive;
-	struct lockrecord *record;
-} Key;
-
-typedef struct notify {
-  struct notify *next;
-  uaecptr notifyrequest;
-  TCHAR *fullname;
-  TCHAR *partname;
-} Notify;
-
-typedef struct exallkey {
-  uae_u32 id;
-  struct fs_dirhandle *dirhandle;
-  TCHAR *fn;
-  uaecptr control;
-} ExAllKey;
-
-/* Since ACTION_EXAMINE_NEXT is so braindamaged, we have to keep
- * some of these around
- */
-
-#define EXKEYS 128
-#define EXALLKEYS 100
-#define MAX_AINO_HASH 128
-#define NOTIFY_HASH_SIZE 127
-
-/* handler state info */
-
-typedef struct _unit {
-  struct _unit *next;
-
-  /* Amiga stuff */
-  uaecptr dosbase;
-	/* volume points to our IO board, always 1:1 mapping */
-  uaecptr volume;
-  uaecptr port;	/* Our port */
-  uaecptr locklist;
-
-  /* Native stuff */
-  uae_s32 unit;	/* unit number */
-  UnitInfo ui;	/* unit startup info */
-  TCHAR tmpbuf3[256];
-
-  /* Dummy message processing */
-  uaecptr dummy_message;
-  volatile unsigned int cmds_sent;
-  volatile unsigned int cmds_complete;
-  volatile unsigned int cmds_acked;
-
-  /* ExKeys */
-  ExamineKey examine_keys[EXKEYS];
-  int next_exkey;
-	unsigned int total_locked_ainos;
-
-  /* ExAll */
-  ExAllKey exalls[EXALLKEYS];
-  int exallid;
-
-  /* Keys */
-  struct key *keys;
-
-	struct lockrecord *waitingrecords;
-
-  a_inode rootnode;
-	unsigned int aino_cache_size;
-  a_inode *aino_hash[MAX_AINO_HASH];
-
-  struct notify *notifyhash[NOTIFY_HASH_SIZE];
-
-  int volflags;
-  uae_u32 lockkey;
-  bool inhibited;
-	/* increase when media is changed.
-	 * used to detect if cached aino is valid
-	 */
-  int mountcount;
-	int mount_changed;
-  struct zvolume *zarchive;
-
-  int reinsertdelay;
-  TCHAR *newvolume;
-  TCHAR *newrootdir;
-  bool newreadonly;
-  int newflags;
-} Unit;
 
 static uae_u32 a_uniq, key_uniq;
 
@@ -1106,12 +1431,14 @@ static uae_u32 a_uniq, key_uniq;
 #define GET_PCK64_ARG1(p) ((uae_s32)(get_long_host((p)->packet_data + dp64_Arg1)))
 #define GET_PCK64_ARG2(p) ( (((uae_s64)(get_long_host((p)->packet_data + dp64_Arg2))) << 32) | (((uae_s64)(get_long_host((p)->packet_data + dp64_Arg2 + 4))) << 0) )
 #define GET_PCK64_ARG3(p) ((uae_s32)(get_long_host((p)->packet_data + dp64_Arg3)))
+#define GET_PCK64_ARG4(p) ((uae_s32)(get_long_host((p)->packet_data + dp64_Arg4)))
+#define GET_PCK64_ARG5(p) ( (((uae_s64)(get_long_host((p)->packet_data + dp64_Arg5))) << 32) | (((uae_s64)(get_long_host((p)->packet_data + dp64_Arg5 + 4))) << 0) )
 
 static void readdpacket(TrapContext *ctx, dpacket *packet, uaecptr pck)
 {
 	// Read enough to get also all 64-bit fields
 	packet->packet_addr = pck;
-	if (!valid_address(pck, dp_Max)) {
+	if (trap_is_indirect() || !valid_address(pck, dp_Max)) {
 		trap_get_bytes(ctx, packet->packet_array, pck, dp_Max);
 		packet->packet_data = packet->packet_array;
 		packet->need_flush = true;
@@ -1147,9 +1474,9 @@ static uae_u64 get_quadp(TrapContext *ctx, uaecptr p)
 	return trap_get_quad(ctx, p);
 }
 
-static int flush_cache(Unit *unit, int num);
+static int flush_cache (Unit *unit, int num);
 
-static TCHAR *char1 (TrapContext *ctx, uaecptr addr)
+static TCHAR *char1(TrapContext *ctx, uaecptr addr)
 {
 	uae_char buf[1024];
 
@@ -1157,44 +1484,52 @@ static TCHAR *char1 (TrapContext *ctx, uaecptr addr)
 	return au_fs(buf);
 }
 
-static TCHAR *bstr1 (TrapContext *ctx, uaecptr addr)
+static TCHAR *bstr1(TrapContext *ctx, uaecptr addr)
 {
 	uae_char buf[257];
-  int n = trap_get_byte(ctx, addr);
+	int n = trap_get_byte(ctx, addr);
 
-  addr++;
+	addr++;
 	trap_get_bytes(ctx, (uae_u8*)buf, addr, n);
-  buf[n] = 0;
+	buf[n] = 0;
 	return au_fs(buf);
 }
 
-static TCHAR *bstr (TrapContext *ctx, Unit *unit, uaecptr addr)
+static TCHAR *bstr(TrapContext *ctx, Unit *unit, uaecptr addr)
 {
-  int n = trap_get_byte(ctx, addr);
+	int n = trap_get_byte(ctx, addr);
 	uae_char buf[257];
 
-  addr++;
+	addr++;
 	trap_get_bytes(ctx, (uae_u8*)buf, addr, n);
 	buf[n] = 0;
 	au_fs_copy (unit->tmpbuf3, sizeof (unit->tmpbuf3) / sizeof (TCHAR), buf);
-  return unit->tmpbuf3;
+	return unit->tmpbuf3;
+}
+static TCHAR *cstr(TrapContext *ctx, Unit *unit, uaecptr addr)
+{
+	uae_char buf[257];
+
+	trap_get_string(ctx, buf, addr, sizeof buf);
+	au_fs_copy (unit->tmpbuf3, sizeof (unit->tmpbuf3) / sizeof (TCHAR), buf);
+	return unit->tmpbuf3;
 }
 
-static TCHAR *bstr_cut (TrapContext *ctx, Unit *unit, uaecptr addr)
+static TCHAR *bstr_cut(TrapContext *ctx, Unit *unit, uaecptr addr)
 {
-  TCHAR *p = unit->tmpbuf3;
+	TCHAR *p = unit->tmpbuf3;
 	int i, colon_seen = 0, off;
 	int n = trap_get_byte(ctx, addr);
 	uae_char buf[257];
 
 	off = 0;
-  addr++;
-  for (i = 0; i < n; i++, addr++) {
+	addr++;
+	for (i = 0; i < n; i++, addr++) {
 		uae_u8 c = trap_get_byte(ctx, addr);
 		buf[i] = c;
-  	if (c == '/' || (c == ':' && colon_seen++ == 0))
+		if (c == '/' || (c == ':' && colon_seen++ == 0))
 			off = i + 1;
-  }
+	}
 	buf[i] = 0;
 	au_fs_copy (unit->tmpbuf3, sizeof (unit->tmpbuf3) / sizeof (TCHAR), buf);
 	return &p[off];
@@ -1248,18 +1583,18 @@ static Unit *units = 0;
 
 static Unit *find_unit (uaecptr port)
 {
-  Unit* u;
-  for (u = units; u; u = u->next)
-  	if (u->port == port)
-	    break;
+	Unit* u;
+	for (u = units; u; u = u->next)
+		if (u->port == port)
+			break;
 
-  return u;
+	return u;
 }
-    
+
 static struct fs_dirhandle *fs_opendir (Unit *u, a_inode *aino)
 {
 	struct fs_dirhandle *fsd = xmalloc (struct fs_dirhandle, 1);
-	fsd->fstype = (u->volflags & MYVOLUMEINFO_ARCHIVE) ? FS_ARCHIVE : FS_DIRECTORY;
+	fsd->fstype = (u->volflags & MYVOLUMEINFO_ARCHIVE) ? FS_ARCHIVE : ((u->volflags & MYVOLUMEINFO_CDFS) ? FS_CDFS : FS_DIRECTORY);
 	if (fsd->fstype == FS_ARCHIVE) {
 		fsd->zd = zfile_opendir_archive (aino->nname);
 		if (fsd->zd)
@@ -1268,7 +1603,11 @@ static struct fs_dirhandle *fs_opendir (Unit *u, a_inode *aino)
 		fsd->od = my_opendir (aino->nname);
 		if (fsd->od)
 			return fsd;
-  }
+	} else if (fsd->fstype == FS_CDFS) {
+		fsd->isod = isofs_opendir (u->ui.cdfs_superblock, aino->uniq_external);
+		if (fsd->isod)
+			return fsd;
+	}
 	xfree (fsd);
 	return NULL;
 }
@@ -1280,12 +1619,14 @@ static void fs_closedir (struct fs_dirhandle *fsd)
 		zfile_closedir_archive (fsd->zd);
 	else if (fsd->fstype == FS_DIRECTORY)
 		my_closedir (fsd->od);
+	else if (fsd->fstype == FS_CDFS)
+		isofs_closedir (fsd->isod);
 	xfree (fsd);
 }
 static struct fs_filehandle *fs_openfile (Unit *u, a_inode *aino, int flags)
 {
 	struct fs_filehandle *fsf = xmalloc (struct fs_filehandle, 1);
-	fsf->fstype = (u->volflags & MYVOLUMEINFO_ARCHIVE) ? FS_ARCHIVE : FS_DIRECTORY;
+	fsf->fstype = (u->volflags & MYVOLUMEINFO_ARCHIVE) ? FS_ARCHIVE : ((u->volflags & MYVOLUMEINFO_CDFS) ? FS_CDFS : FS_DIRECTORY);
 	if (fsf->fstype == FS_ARCHIVE) {
 		fsf->zf = zfile_open_archive (aino->nname, flags);
 		if (fsf->zf)
@@ -1293,6 +1634,10 @@ static struct fs_filehandle *fs_openfile (Unit *u, a_inode *aino, int flags)
 	} else if (fsf->fstype == FS_DIRECTORY) {
 		fsf->of = my_open (aino->nname, flags);
 		if (fsf->of)
+			return fsf;
+	} else if (fsf->fstype == FS_CDFS) {
+		fsf->isof = isofs_openfile (u->ui.cdfs_superblock, aino->uniq_external, flags);
+		if (fsf->isof)
 			return fsf;
 	}
 	xfree (fsf);
@@ -1306,7 +1651,9 @@ static void fs_closefile (struct fs_filehandle *fsf)
 		zfile_close_archive (fsf->zf);
 	} else if (fsf->fstype == FS_DIRECTORY) {
 		my_close (fsf->of);
-  }
+	} else if (fsf->fstype == FS_CDFS) {
+		isofs_closefile (fsf->isof);
+	}
 	xfree (fsf);
 }
 static unsigned int fs_read (struct fs_filehandle *fsf, void *b, unsigned int size)
@@ -1315,12 +1662,14 @@ static unsigned int fs_read (struct fs_filehandle *fsf, void *b, unsigned int si
 		return zfile_read_archive (fsf->zf, b, size);
 	else if (fsf->fstype == FS_DIRECTORY)
 		return my_read (fsf->of, b, size);
+	else if (fsf->fstype == FS_CDFS)
+		return isofs_read (fsf->isof, b, size);
 	return 0;
 }
 static unsigned int fs_write (struct fs_filehandle *fsf, void *b, unsigned int size)
 {
 	if (fsf->fstype == FS_DIRECTORY)
-	  return my_write (fsf->of, b, size);
+		return my_write (fsf->of, b, size);
 	return 0;
 }
 
@@ -1331,6 +1680,8 @@ static uae_s64 fs_lseek64 (struct fs_filehandle *fsf, uae_s64 offset, int whence
 		return zfile_lseek_archive (fsf->zf, offset, whence);
 	else if (fsf->fstype == FS_DIRECTORY)
 		return my_lseek (fsf->of, offset, whence);
+	else if (fsf->fstype == FS_CDFS)
+		return isofs_lseek (fsf->isof, offset, whence);
 	return -1;
 }
 static uae_s32 fs_lseek (struct fs_filehandle *fsf, uae_s32 offset, int whence)
@@ -1346,6 +1697,8 @@ static uae_s64 fs_fsize64 (struct fs_filehandle *fsf)
 		return zfile_fsize_archive (fsf->zf);
 	else if (fsf->fstype == FS_DIRECTORY)
 		return my_fsize (fsf->of);
+	else if (fsf->fstype == FS_CDFS)
+		return isofs_fsize (fsf->isof);
 	return -1;
 }
 static uae_u32 fs_fsize (struct fs_filehandle *fsf)
@@ -1355,113 +1708,135 @@ static uae_u32 fs_fsize (struct fs_filehandle *fsf)
 
 static uae_s64 key_filesize(Key *k)
 {
+	if (k->aino->vfso)
+		return k->aino->vfso->size;
 	return fs_fsize64 (k->fd);
 }
 static uae_s64 key_seek(Key *k, uae_s64 offset, int whence)
 {
+	if (k->aino->vfso)
+		return k->file_pos;
 	return fs_lseek64 (k->fd, offset, whence);
 }
 
-static void set_volume_name (Unit *unit, struct mytimeval *tv)
+static void set_highcyl(uaecptr volume, uae_u32 blocks)
 {
-  int namelen;
-  int i;
+	put_long(volume + 184 - 32, blocks);
+}
+
+static void set_volume_name(Unit *unit, struct mytimeval *tv)
+{
+	int namelen;
+	int i;
 	char *s;
 
 	s = ua_fs (unit->ui.volname, -1);
 	namelen = strlen (s);
 	if (namelen >= 58)
 		namelen = 58;
-  put_byte (unit->volume + 64, namelen);
-  for (i = 0; i < namelen; i++)
-		put_byte (unit->volume + 64 + 1 + i, s[i]);
-  put_byte (unit->volume + 64 + 1 + namelen, 0);
+	put_byte(unit->volume + 64, namelen);
+	for (i = 0; i < namelen; i++)
+		put_byte(unit->volume + 64 + 1 + i, s[i]);
+	put_byte(unit->volume + 64 + 1 + namelen, 0);
 	if (tv && (tv->tv_sec || tv->tv_usec)) {
 		int days, mins, ticks;
 		timeval_to_amiga (tv, &days, &mins, &ticks, 50);
-		put_long (unit->volume + 16, days);
-		put_long (unit->volume + 20, mins);
-		put_long (unit->volume + 24, ticks);
+		put_long(unit->volume + 16, days);
+		put_long(unit->volume + 20, mins);
+		put_long(unit->volume + 24, ticks);
 	}
 	xfree (s);
-  unit->rootnode.aname = unit->ui.volname;
-  unit->rootnode.nname = unit->ui.rootdir;
-  unit->rootnode.mountcount = unit->mountcount;
+	unit->rootnode.aname = unit->ui.volname;
+	unit->rootnode.nname = unit->ui.rootdir;
+	unit->rootnode.mountcount = unit->mountcount;
 }
 
 static int filesys_isvolume(Unit *unit)
 {
 	if (!unit->volume)
 		return 0;
-	return get_byte (unit->volume + 64) || unit->ui.unknown_media;
+	return get_byte(unit->volume + 64) || unit->ui.unknown_media;
 }
 
-static void clear_exkeys(Unit *unit)
+static void clear_exkeys (Unit *unit)
 {
-  int i;
-  a_inode *a;
-  for (i = 0; i < EXKEYS; i++) {
-	  unit->examine_keys[i].aino = 0;
-	  unit->examine_keys[i].curr_file = 0;
-	  unit->examine_keys[i].uniq = 0;
-  }
-  for (i = 0; i < EXALLKEYS; i++) {
-	  fs_closedir (unit->exalls[i].dirhandle);
-	  unit->exalls[i].dirhandle = NULL;
-	  xfree (unit->exalls[i].fn);
-	  unit->exalls[i].fn = NULL;
-	  unit->exalls[i].id = 0;
-  }
-  unit->exallid = 0;
-  unit->next_exkey = 1;
-  a = &unit->rootnode;
-  while (a) {
-	  a->exnext_count = 0;
-	  if (a->locked_children) {
-	    a->locked_children = 0;
-	    unit->total_locked_ainos--;
-  	}
-	  a = a->next;
-	  if (a == &unit->rootnode)
-	    break;
-  }
+	int i;
+	a_inode *a;
+	for (i = 0; i < EXKEYS; i++) {
+		unit->examine_keys[i].aino = 0;
+		unit->examine_keys[i].curr_file = 0;
+		unit->examine_keys[i].uniq = 0;
+	}
+	for (i = 0; i < EXALLKEYS; i++) {
+		fs_closedir (unit->exalls[i].dirhandle);
+		unit->exalls[i].dirhandle = NULL;
+		xfree (unit->exalls[i].fn);
+		unit->exalls[i].fn = NULL;
+		unit->exalls[i].id = 0;
+	}
+	unit->exallid = 0;
+	unit->next_exkey = 1;
+	a = &unit->rootnode;
+	while (a) {
+		a->exnext_count = 0;
+		if (a->locked_children) {
+			a->locked_children = 0;
+			unit->total_locked_ainos--;
+		}
+		a = a->next;
+		if (a == &unit->rootnode)
+			break;
+	}
 }
 
-static int filesys_eject (int nr)
+static void filesys_delayed_eject(Unit *u)
 {
-  UnitInfo *ui = &mountinfo.ui[nr];
-  Unit *u = ui->self;
-
-	if (!mountertask || u->mount_changed)
-  	return 0;
-	if (ui->open <= 0 || u == NULL)
-  	return 0;
-	if (!is_virtual (nr))
-  	return 0;
-  if (!filesys_isvolume(u))
-  	return 0;
-	u->mount_changed = -1;
-  u->mountcount++;
-  write_log (_T("FILESYS: volume '%s' removal request\n"), u->ui.volname);
-	// -1 = remove, -2 = remove + remove device node
-  put_byte (u->volume + 172 - 32, -2);
-  uae_Signal (get_long (u->volume + 176 - 32), 1 << 13);
-  return 1;
+	if (u->reinsertdelay)
+		return;
+	u->reinsertdelay = 50;
+	u->newreadonly = false;
+	xfree(u->newrootdir);
+	u->newrootdir = NULL;
+	write_log(_T("FILESYS: delayed eject %d\n"), u->unit);
 }
 
 static void filesys_delayed_change (Unit *u, int frames, const TCHAR *rootdir, const TCHAR *volume, bool readonly, int flags)
 {
-	u->reinsertdelay = 50;
+	if (u->reinsertdelay)
+		return;
+	u->reinsertdelay = frames;
 	u->newflags = flags;
 	u->newreadonly = readonly;
 	u->newrootdir = my_strdup (rootdir);
 	if (volume)
-	  u->newvolume = my_strdup (volume);
-	filesys_eject(u->unit);
-  if (!rootdir || _tcslen (rootdir) == 0)
-    u->reinsertdelay = 0;
+		u->newvolume = my_strdup (volume);
+	filesys_eject (u->unit);
+	if (!rootdir || _tcslen (rootdir) == 0)
+		u->reinsertdelay = 0;
 	if (u->reinsertdelay > 0)
-    write_log (_T("FILESYS: delayed insert %d: '%s' ('%s')\n"), u->unit, volume ? volume : _T("<none>"), rootdir);
+		write_log (_T("FILESYS: delayed insert %d: '%s' ('%s')\n"), u->unit, volume ? volume : _T("<none>"), rootdir);
+}
+
+int filesys_eject(int nr)
+{
+	UnitInfo *ui = &mountinfo.ui[nr];
+	Unit *u = ui->self;
+
+	if (!mountertask || u->mount_changed)
+		return 0;
+	if (ui->open <= 0 || u == NULL)
+		return 0;
+	if (!is_virtual (nr))
+		return 0;
+	if (!filesys_isvolume(u))
+		return 0;
+	u->mount_changed = -1;
+	u->mountcount++;
+	write_log(_T("FILESYS: volume '%s' removal request\n"), u->ui.volname);
+	// -1 = remove, -2 = remove + remove device node
+	put_byte(u->volume + 172 - 32, ui->unit_type == UNIT_CDFS ? -1 : -2);
+	uae_Signal(get_long(u->volume + 176 - 32), 1 << 13);
+	return 1;
 }
 
 static uae_u32 heartbeat;
@@ -1497,165 +1872,363 @@ static void setsystime_vblank (void)
 	}
 }
 
-int filesys_insert (int nr, const TCHAR *volume, const TCHAR *rootdir, bool readonly, int flags)
+static uae_u32 REGPARAM2 debugger_helper(TrapContext *ctx)
 {
-  UnitInfo *ui;
-  Unit *u;
+	int mode = trap_get_dreg(ctx, 1);
+	switch (mode)
+	{
+		case 1:
+		// Execute debugger_boot() to get here.
+		write_log(_T("debugger #1\n"));
+		// return RunCommand(() parameters
+		// does nothing if D1 == 0.
+		break;
+		case 2:
+		// called when RunCommand() returns
+		// D0 = RunCommand() return code.
+		write_log(_T("debugger #2\n"));
+		break;
+		default:
+		write_log(_T("Unknown debugger hook %d\n"), mode);
+		return 0;
+	}
+	return 1;
+}
+
+static void debugger_boot(void)
+{
+	Unit *u;
 	TrapContext *ctx = NULL;
 
-  if (!mountertask)
-  	return 0;
+	for (u = units; u; u = u->next) {
+		if (is_virtual(u->unit) && filesys_isvolume(u)) {
+			put_byte(u->volume + 173 - 32, get_byte(u->volume + 173 - 32) | 2);
+			uae_Signal(get_long(u->volume + 176 - 32), 1 << 13);
+			break;
+		}
+	}
+}
+
+int filesys_insert (int nr, const TCHAR *volume, const TCHAR *rootdir, bool readonly, int flags)
+{
+	UnitInfo *ui;
+	Unit *u;
+	TrapContext *ctx = NULL;
+
+	if (!mountertask)
+		return 0;
 
 	write_log (_T("filesys_insert(%d,'%s','%s','%d','%d)\n"), nr, volume ? volume : _T("<?>"), rootdir, readonly, flags);
 
-  if (nr < 0) {
-  	for (u = units; u; u = u->next) {
-	    if (is_virtual (u->unit)) {
-    		if (!filesys_isvolume (u) && mountinfo.ui[u->unit].canremove)
-  		    break;
-	    }
-  	}
-  	if (!u) {
-	    for (u = units; u; u = u->next) {
-    		if (is_virtual (u->unit)) {
-  		    if (mountinfo.ui[u->unit].canremove)
-	      		break;
-	    	}
-	    }
-	  }
-	  if (!u)
-	    return 0;
-	  nr = u->unit;
-	  ui = &mountinfo.ui[nr];
-  } else {
-	  ui = &mountinfo.ui[nr];
-	  u = ui->self;
-  }
+	if (nr < 0) {
+		for (u = units; u; u = u->next) {
+			if (is_virtual (u->unit)) {
+				if (!filesys_isvolume(u) && mountinfo.ui[u->unit].canremove > 0)
+					break;
+			}
+		}
+		if (!u) {
+			for (u = units; u; u = u->next) {
+				if (is_virtual (u->unit)) {
+					if (mountinfo.ui[u->unit].canremove > 0)
+						break;
+				}
+			}
+		}
+		if (!u)
+			return 0;
+		nr = u->unit;
+		ui = &mountinfo.ui[nr];
+	} else {
+		ui = &mountinfo.ui[nr];
+		u = ui->self;
+	}
 
 	if (ui->open <= 0 || u == NULL)
-  	return 0;
-  if (u->reinsertdelay)
-  	return -1;
-  if (!is_virtual(nr))
-  	return 0;
-  if (filesys_isvolume (u)) {
-  	filesys_delayed_change (u, 50, rootdir, volume, readonly, flags);
-  	return -1;
-  }
-  u->mountcount++;
+		return 0;
+	if (u->reinsertdelay)
+		return -1;
+	if (!is_virtual(nr))
+		return 0;
+	if (filesys_isvolume(u)) {
+		filesys_delayed_change (u, 10, rootdir, volume, readonly, flags);
+		return 1 + nr;
+	}
+	u->mountcount++;
 	u->mount_changed = 1;
+	u->mount_volume = volume ? my_strdup (volume) : NULL;
+	u->mount_rootdir = my_strdup (rootdir);
+	u->mount_readonly = readonly;
+	u->mount_flags = flags;
 
 	write_log (_T("filesys_insert %d done!\n"), nr);
 
-	put_byte (u->volume + 172 - 32, -3); // wait for insert
-	uae_Signal (get_long (u->volume + 176 - 32), 1 << 13);
+	put_byte(u->volume + 172 - 32, -3); // wait for insert
+	uae_Signal (get_long(u->volume + 176 - 32), 1 << 13);
 
 	return 100 + nr;
 }
 
+static uae_u32 filesys_media_change_reply (int mode)
+{
+	int nr;
+	UnitInfo *ui = NULL;
+	Unit *u;
+
+	for (nr = 0; nr < MAX_FILESYSTEM_UNITS; nr++) {
+		ui = &mountinfo.ui[nr];
+		u = ui->self;
+		if (u && u->mount_changed)
+			break;
+	}
+	if (nr >= MAX_FILESYSTEM_UNITS) {
+		write_log (_T("FILESYS: filesys_media_change_reply without mount_changed flag!?\n"));
+		return 0;
+	}
+
+	if (u->mount_changed < 0) {
+		// eject
+		if (mode == 0) {
+			write_log (_T("FILESYS: got media change reply, '%s' removal finished\n"), u->ui.volname);
+			flush_cache (u, -1);
+			isofs_unmount (u->ui.cdfs_superblock);
+			ui->cdfs_superblock = u->ui.cdfs_superblock = NULL;
+			zfile_fclose_archive (ui->zarchive);
+			ui->zarchive = NULL;
+			u->ui.unknown_media = false;
+#ifdef RETROPLATFORM
+			if (ui->unit_type == UNIT_CDFS)
+				rp_cd_image_change (ui->cddevno, NULL);
+			else
+				rp_harddrive_image_change (nr, false, NULL);
+#endif
+		} else {
+			u->mount_changed = 0;
+		}
+		return 1;
+	} else if (u->mount_changed > 0) {
+		if (mode == 0) {
+			// insert
+			struct mytimeval ctime = { 0 };
+			bool emptydrive = false;
+			struct uaedev_config_data *uci = NULL;
+
+			clear_exkeys (u);
+			xfree (u->ui.rootdir);
+			ui->rootdir = u->ui.rootdir = my_strdup (u->mount_rootdir);
+			flush_cache (u, -1);
+			xfree (u->ui.volname);
+			ui->volname = u->ui.volname = NULL;
+			if (ui->unit_type == UNIT_CDFS) {
+				uae_u64 uniq;
+				ui->cdfs_superblock = u->ui.cdfs_superblock = isofs_mount (ui->cddevno, &uniq);
+				u->rootnode.uniq_external = uniq;
+				u->ui.unknown_media = true;
+				if (!u->ui.cdfs_superblock)
+					return 0;
+				struct isofs_info ii;
+				set_highcyl(u->volume, 0);
+				bool r = isofs_mediainfo (ui->cdfs_superblock, &ii);
+				if (r && ii.media) {
+					u->ui.unknown_media = ii.unknown_media;
+					if (!ii.unknown_media) {
+						u->ui.volname = ui->volname = my_strdup (ii.volumename);
+						ctime.tv_sec = ii.creation;
+						ctime.tv_usec = 0;
+						set_highcyl(u->volume, ii.blocks);
+#ifdef RETROPLATFORM
+						rp_cd_image_change (ui->cddevno, ii.devname);
+#endif
+					}
+				}
+			} else {
+				if (set_filesys_volume (u->mount_rootdir, &u->mount_flags, &u->mount_readonly, &emptydrive, &ui->zarchive) < 0)
+					return 0;
+				if (emptydrive)
+					return 0;
+				xfree (u->ui.volname);
+				ui->volname = u->ui.volname = filesys_createvolname (u->mount_volume, u->mount_rootdir, ui->zarchive, _T("removable"));
+#ifdef RETROPLATFORM
+				rp_harddrive_image_change (nr, u->mount_readonly, u->mount_rootdir);
+#endif
+				uci = getuci (currprefs.mountconfig, nr);
+			}
+			if (u->ui.unknown_media) {
+				write_log (_T("FILESYS: inserted unreadable volume NR=%d RO=%d\n"), nr, u->mount_readonly);
+			} else {
+				write_log (_T("FILESYS: inserted volume NR=%d RO=%d '%s' ('%s')\n"), nr, u->mount_readonly, ui->volname, u->mount_rootdir);
+				set_volume_name(u, &ctime);
+				if (u->mount_flags >= 0)
+					ui->volflags = u->volflags = u->ui.volflags = u->mount_flags;
+				if (uci != NULL) {
+					_tcscpy (uci->ci.volname, ui->volname);
+					_tcscpy (uci->ci.rootdir, u->mount_rootdir);
+				}
+				if (u->mount_flags >= 0) {
+					ui->readonly = u->ui.readonly = u->mount_readonly;
+					if (uci != NULL)
+						uci->ci.readonly = u->mount_readonly;
+				}
+				put_byte(u->volume + 64, 0);
+				put_byte(u->volume + 172 - 32, 1);
+			}
+		
+			xfree (u->mount_volume);
+			xfree (u->mount_rootdir);
+			u->mount_rootdir = NULL;
+			u->mount_volume = NULL;
+		} else {
+			u->mount_changed = 0;
+		}
+		
+		return 1;
+
+	}
+	return 0;
+}
+
+// if multiple drag&drop mounting, queue them because mounting is async (needs Amiga-side code to run).
+static int media_queued_total;
+static int media_queued_cnt;
+static TCHAR **media_queued_paths;
+
+int filesys_media_change_queue(const TCHAR *rootdir, int total)
+{
+	if (total < 0) {
+		media_queued_cnt = 0;
+		for (int i = 0; i < media_queued_total; i++) {
+			xfree(media_queued_paths[i]);
+		}
+		xfree(media_queued_paths);
+		media_queued_cnt = 0;
+		media_queued_total = 0;
+		media_queued_paths = NULL;
+		return 0;
+	}
+	if (total == 0) {
+		media_queued_cnt = 0;
+		return 0;
+	}
+	if (media_queued_total < total) {
+		media_queued_total = total;
+		media_queued_paths = xcalloc(TCHAR*, media_queued_total);
+		media_queued_cnt = 0;
+	}
+	media_queued_paths[media_queued_cnt++] = my_strdup(rootdir);
+	return 1;
+}
+
 int filesys_media_change (const TCHAR *rootdir, int inserted, struct uaedev_config_data *uci)
 {
-  Unit *u;
-  UnitInfo *ui;
-  int nr = -1;
-  TCHAR volname[MAX_DPATH], *volptr;
-  TCHAR devname[MAX_DPATH];
+	Unit *u;
+	UnitInfo *ui;
+	int nr = -1;
+	TCHAR volname[MAX_DPATH], *volptr;
+	TCHAR devname[MAX_DPATH];
 	TrapContext *ctx = NULL;
 
-  if (!mountertask)
-  	return 0;
-  if (automountunit >= 0)
-  	return -1;
-
+	if (!mountertask)
+		return 0;
+	if (automountunit >= 0)
+		return -1;
+	
 	write_log (_T("filesys_media_change('%s',%d,%p)\n"), rootdir, inserted, uci);
-
-  nr = -1;
-  for (u = units; u; u = u->next) {
-    if (is_virtual (u->unit)) {
-	    ui = &mountinfo.ui[u->unit];
-			// inserted == 2: drag&drop insert, do not replace existing normal drives
+	
+	nr = -1;
+	for (u = units; u; u = u->next) {
+		if (is_virtual (u->unit)) {
+			ui = &mountinfo.ui[u->unit];
+			// inserted >= 2: drag&drop insert, do not replace existing normal drives
 			if (inserted < 2 && ui->rootdir && !memcmp (ui->rootdir, rootdir, _tcslen (rootdir)) && _tcslen (rootdir) + 3 >= _tcslen (ui->rootdir)) {
-    		if (filesys_isvolume (u) && inserted) {
-  		    if (uci)
+				if (filesys_isvolume(u) && inserted) {
+					if (uci)ctx, 
 						filesys_delayed_change (u, 50, rootdir, uci->ci.volname, uci->ci.readonly, 0);
-  		    return 0;
-    		}
-    		nr = u->unit;
-    		break;
-	    }
-  	}
-  }
-  ui = NULL;
-  if (nr >= 0)
-  	ui = &mountinfo.ui[nr];
-  /* only configured drives have automount support if automount is disabled */
-  if ((!ui || !ui->configureddrive) && (inserted == 0 || inserted == 1))
-    return 0;
-  if (nr < 0 && !inserted)
-  	return 0;
-  /* already mounted volume was ejected? */
-  if (nr >= 0 && !inserted)
-  	return filesys_eject (nr);
-  if (inserted) {
+					return 0;
+				}
+				nr = u->unit;
+				break;
+			}
+		}
+	}
+	ui = NULL;
+	if (nr >= 0)
+		ui = &mountinfo.ui[nr];
+	/* only configured drives have automount support if automount is disabled */
+	if ((!ui || !ui->configureddrive) && (inserted == 0 || inserted == 1))
+		return 0;
+	if (nr < 0 && !inserted)
+		return 0;
+	/* already mounted volume was ejected? */
+	if (nr >= 0 && !inserted)
+		return filesys_eject (nr);
+	if (inserted) {
 		struct uaedev_config_info ci = { 0 };
-  	if (uci) {
+		if (uci) {
 			volptr = my_strdup (uci->ci.volname);
-  	} else {
+		} else {
 			struct uaedev_config_info ci2 = { 0 };
 			_tcscpy(ci2.rootdir, rootdir);
 			target_get_volume_name (&mountinfo, &ci2, 1, 0, -1);
 			_tcscpy(volname, ci2.volname);
-	    volptr = volname;
-	    if (!volname[0])
-    		volptr = NULL;
-	    if (ui && ui->configureddrive && ui->volname) {
-    		volptr = volname;
-    		_tcscpy (volptr, ui->volname);
-	    }
-  	}
-  	if (!volptr) {
+			volptr = volname;
+			if (!volname[0])
+				volptr = NULL;
+			if (ui && ui->configureddrive && ui->volname) {
+				volptr = volname;
+				_tcscpy (volptr, ui->volname);
+			}
+		}
+		if (!volptr) {
 			volptr = filesys_createvolname (NULL, rootdir, NULL, _T("removable"));
-	    _tcscpy (volname, volptr);
-	    xfree (volptr);
-	    volptr = volname;
-  	}
+			_tcscpy (volname, volptr);
+			xfree (volptr);
+			volptr = volname;
+		}
 
-  	/* new volume inserted and it was previously mounted? */
-	  if (nr >= 0) {
-	    if (!filesys_isvolume (u)) /* not going to mount twice */
-	    	return filesys_insert (nr, volptr, rootdir, false, -1);
-	    return 0;
-	  }
-	  if (inserted < 0) /* -1 = only mount if already exists */
-	    return 0;
-	  /* new volume inserted and it was not previously mounted? 
-	   * perhaps we have some empty device slots? */
-  	nr = filesys_insert (-1, volptr, rootdir, 0, 0);
-	  if (nr >= 100) {
-	    if (uci)
-	    	uci->configoffset = nr - 100;
-	    return nr;
-	  }
-	  /* nope, uh, need black magic now.. */
-	  if (uci)
+		/* new volume inserted and it was previously mounted? */
+		if (nr >= 0) {
+			if (!filesys_isvolume(u)) /* not going to mount twice */
+				return filesys_insert(nr, volptr, rootdir, false, -1);
+			return 0;
+		}
+		if (inserted < 0) /* -1 = only mount if already exists */
+			return 0;
+		/* new volume inserted and it was not previously mounted? 
+		 * perhaps we have some empty device slots? */
+		nr = filesys_insert (-1, volptr, rootdir, 0, 0);
+		if (nr >= 100) {
+			if (uci)
+				uci->configoffset = nr - 100;
+			if (inserted == 3 && mountinfo.ui[nr - 100].canremove > 0)
+				mountinfo.ui[nr - 100].canremove = -1;
+			return nr;
+		} else if (nr > 0) {
+			if (inserted == 3 && mountinfo.ui[nr - 1].canremove > 0)
+				mountinfo.ui[nr - 1].canremove = -1;
+			return nr;
+		}
+		/* nope, uh, need black magic now.. */
+		if (uci)
 			_tcscpy (devname, uci->ci.devname);
-	  else
-	    _stprintf (devname, _T("RDH%d"), autocreatedunit++);
+		else
+			_stprintf (devname, _T("RDH%d"), autocreatedunit++);
 		_tcscpy (ci.devname, devname);
 		_tcscpy (ci.volname, volptr);
 		_tcscpy (ci.rootdir, rootdir);
 		ci.flags = MYVOLUMEINFO_REUSABLE;
 		nr = add_filesys_unit (&ci, true);
-	  if (nr < 0)
-	    return 0;
-	  if (inserted > 1)
-	    mountinfo.ui[nr].canremove = 1;
-	  automountunit = nr;
-	  uae_Signal (mountertask, 1 << 13);
-	  /* poof */
-	  if (uci)
-	    uci->configoffset = nr;
-	  return 100 + nr;
+		if (nr < 0)
+			return 0;
+		if (inserted == 2)
+			mountinfo.ui[nr].canremove = 1;
+		if (inserted == 3)
+			mountinfo.ui[nr].canremove = -1;
+		automountunit = nr;
+		uae_Signal (mountertask, 1 << 13);
+		/* poof */
+		if (uci)
+			uci->configoffset = nr;
+		return 100 + nr;
 	}
 	return 0;
 }
@@ -1713,667 +2286,831 @@ int hardfile_media_change (struct hardfiledata *hfd, struct uaedev_config_info *
 			memcpy (&hfd->delayedci, &hfd->ci, sizeof (struct uaedev_config_info));
 			hfd->delayedci.rootdir[0] = 0;
 		}
-  }
-  return 0;
+	}
+	return 0;
+}
+
+bool filesys_do_disk_change (int cdunitnum, bool insert)
+{
+	int nr = cdunitnum + cd_unit_offset;
+	UnitInfo *ui = &mountinfo.ui[nr];
+	Unit *u = ui->self;
+	TrapContext *ctx = NULL;
+
+	if (!ui->cd_open)
+		return false;
+	if (insert) {
+		if (filesys_isvolume(u))
+			return false;
+		filesys_insert (nr, NULL, _T("/"), true, MYVOLUMEINFO_CDFS | MYVOLUMEINFO_READONLY);
+		return true;
+	} else {
+		if (!filesys_isvolume(u))
+			return false;
+		filesys_eject (nr);
+		return true;
+	}
+}
+
+/* flags and comments supported? */
+static int fsdb_cando (Unit *unit)
+{
+	if (unit->volflags & (MYVOLUMEINFO_ARCHIVE | MYVOLUMEINFO_CDFS))
+		return 1;
+	if (currprefs.filesys_custom_uaefsdb  && (unit->volflags & MYVOLUMEINFO_STREAMS))
+		return 1;
+	if (!currprefs.filesys_no_uaefsdb)
+		return 1;
+	return 0;
+}
+
+static void prepare_for_open (TCHAR *name)
+{
 }
 
 static void de_recycle_aino (Unit *unit, a_inode *aino)
 {
-  if (aino->next == 0 || aino == &unit->rootnode)
-  	return;
-  aino->next->prev = aino->prev;
-  aino->prev->next = aino->next;
-  aino->next = aino->prev = 0;
-  unit->aino_cache_size--;
+	aino_test (aino);
+	if (aino->next == 0 || aino == &unit->rootnode)
+		return;
+	aino->next->prev = aino->prev;
+	aino->prev->next = aino->next;
+	aino->next = aino->prev = 0;
+	unit->aino_cache_size--;
 }
 
 static void dispose_aino (Unit *unit, a_inode **aip, a_inode *aino)
 {
-  int hash = aino->uniq % MAX_AINO_HASH;
-  if (unit->aino_hash[hash] == aino)
-  	unit->aino_hash[hash] = 0;
+	int hash = aino->uniq % MAX_AINO_HASH;
+	if (unit->aino_hash[hash] == aino)
+		unit->aino_hash[hash] = 0;
 
-  if (aino->dirty && aino->parent)
-  	fsdb_dir_writeback (aino->parent);
+	if (aino->dirty && aino->parent)
+		fsdb_dir_writeback (aino->parent);
 
-  *aip = aino->sibling;
+	*aip = aino->sibling;
 
-  xfree (aino->aname);
+	if (unit->volflags & MYVOLUMEINFO_ARCHIVE) {
+		;
+	} else if (unit->volflags & MYVOLUMEINFO_CDFS) {
+		isofs_dispose_inode (unit->ui.cdfs_superblock, aino->uniq_external);
+	}
+
+	xfree (aino->aname);
 	xfree (aino->comment);
-  xfree (aino->nname);
-  xfree (aino);
+	xfree (aino->nname);
+	xfree (aino);
 }
 
 static void free_all_ainos (Unit *u, a_inode *parent)
 {
-  a_inode *a;
+	a_inode *a;
 	while ((a = parent->child)) {
-    free_all_ainos (u, a);
-    dispose_aino (u, &parent->child, a);
-  }
+		free_all_ainos (u, a);
+		dispose_aino (u, &parent->child, a);
+	}
 }
 
-static int flush_cache(Unit *unit, int num)
+static int flush_cache (Unit *unit, int num)
 {
-  int i = 0;
-  int cnt = 100;
+	int i = 0;
+	int cnt = 100;
 
-  //write_log (_T("FILESYS: flushing cache unit %d (max %d items)\n"), unit->unit, num);
-  if (num == 0)
-  	num = -1;
-  while (i < num || num < 0) {
-	  int ii = i;
-	  a_inode *parent = unit->rootnode.prev->parent;
-	  a_inode **aip;
+	//write_log (_T("FILESYS: flushing cache unit %d (max %d items)\n"), unit->unit, num);
+	if (num == 0)
+		num = -1;
+	while (i < num || num < 0) {
+		int ii = i;
+		a_inode *parent = unit->rootnode.prev->parent;
+		a_inode **aip;
 
-	  aip = &parent->child;
-	  if (parent && !parent->locked_children) {
-	    for (;;) {
-    		a_inode *aino = *aip;
-    		if (aino == 0)
-  		    break;
-		    /* Not recyclable if next == 0 (i.e., not chained into
-		       recyclable list), or if parent directory is being
-		       ExNext()ed.  */
-    		if (aino->next == 0) {
-  		    aip = &aino->sibling;
-    		} else {
-  		    if (aino->shlock > 0 || aino->elock)
-      			write_log (_T("panic: freeing locked a_inode!\n"));
-  		    de_recycle_aino (unit, aino);
-  		    dispose_aino (unit, aip, aino);
-  		    i++;
-    		}
-	    }
-  	}
-  	{ //if (unit->rootnode.next != unit->rootnode.prev) {
-	    /* In the previous loop, we went through all children of one
-	       parent.  Re-arrange the recycled list so that we'll find a
-	       different parent the next time around.
-	       (infinite loop if there is only one parent?)
-	    */
-	    int maxloop = 10000;
-	    do {
-		    unit->rootnode.next->prev = unit->rootnode.prev;
-		    unit->rootnode.prev->next = unit->rootnode.next;
-		    unit->rootnode.next = unit->rootnode.prev;
-		    unit->rootnode.prev = unit->rootnode.prev->prev;
-		    unit->rootnode.prev->next = unit->rootnode.next->prev = &unit->rootnode;
-	    } while (unit->rootnode.prev->parent == parent && maxloop-- > 0);
-  	}
-  	if (i == ii)
-	    cnt--;
-  	if (cnt <= 0)
-	    break;
-  }
-  return unit->aino_cache_size > 0 ? 0 : 1;
+		aip = &parent->child;
+		aino_test (parent);
+		if (parent && !parent->locked_children) {
+			for (;;) {
+				a_inode *aino = *aip;
+				aino_test (aino);
+				if (aino == 0)
+					break;
+				/* Not recyclable if next == 0 (i.e., not chained into
+				recyclable list), or if parent directory is being
+				ExNext()ed.  */
+				if (aino->next == 0) {
+					aip = &aino->sibling;
+				} else {
+					if (aino->shlock > 0 || aino->elock)
+						write_log (_T("panic: freeing locked a_inode!\n"));
+					de_recycle_aino (unit, aino);
+					dispose_aino (unit, aip, aino);
+					i++;
+				}
+			}
+		}
+		{ //if (unit->rootnode.next != unit->rootnode.prev) {
+			/* In the previous loop, we went through all children of one
+			parent.  Re-arrange the recycled list so that we'll find a
+			different parent the next time around.
+			(infinite loop if there is only one parent?)
+			*/
+			int maxloop = 10000;
+			do {
+				unit->rootnode.next->prev = unit->rootnode.prev;
+				unit->rootnode.prev->next = unit->rootnode.next;
+				unit->rootnode.next = unit->rootnode.prev;
+				unit->rootnode.prev = unit->rootnode.prev->prev;
+				unit->rootnode.prev->next = unit->rootnode.next->prev = &unit->rootnode;
+			} while (unit->rootnode.prev->parent == parent && maxloop-- > 0);
+		}
+		if (i == ii)
+			cnt--;
+		if (cnt <= 0)
+			break;
+	}
+	return unit->aino_cache_size > 0 ? 0 : 1;
 }
 
 static void recycle_aino (Unit *unit, a_inode *new_aino)
 {
-  if (new_aino->dir || new_aino->shlock > 0
-  	|| new_aino->elock || new_aino == &unit->rootnode)
-  	/* Still in use */
-  	return;
+	aino_test (new_aino);
+	if (new_aino->dir || new_aino->shlock > 0
+		|| new_aino->elock || new_aino == &unit->rootnode)
+		/* Still in use */
+		return;
 
-  if (unit->aino_cache_size > 5000 + unit->total_locked_ainos) {
-  	/* Reap a few. */
-  	flush_cache (unit, 50);
-  }
+	if (unit->aino_cache_size > 5000 + unit->total_locked_ainos) {
+		/* Reap a few. */
+		flush_cache (unit, 50);
+	}
 
-  /* Chain it into circular list. */
-  new_aino->next = unit->rootnode.next;
-  new_aino->prev = &unit->rootnode;
-  new_aino->prev->next = new_aino;
-  new_aino->next->prev = new_aino;
+	aino_test (new_aino);
+	/* Chain it into circular list. */
+	new_aino->next = unit->rootnode.next;
+	new_aino->prev = &unit->rootnode;
+	new_aino->prev->next = new_aino;
+	new_aino->next->prev = new_aino;
+	aino_test (new_aino->next);
+	aino_test (new_aino->prev);
 
-  unit->aino_cache_size++;
+	unit->aino_cache_size++;
+}
+
+void filesys_flush_cache (void)
+{
 }
 
 static void update_child_names (Unit *unit, a_inode *a, a_inode *parent)
 {
-  int l0 = _tcslen (parent->nname) + 2;
+	int l0 = _tcslen (parent->nname) + 2;
 
-  while (a != 0) {
-	  TCHAR *name_start;
-	  TCHAR *new_name;
-	  TCHAR dirsep[2] = { FSDB_DIR_SEPARATOR, '\0' };
-	  
- 	a->parent = parent;
-  	name_start = _tcsrchr (a->nname, FSDB_DIR_SEPARATOR);
-  	if (name_start == 0) {
-	    write_log (_T("malformed file name"));
-	  }
-  	name_start++;
-	  new_name = xmalloc (TCHAR, _tcslen (name_start) + l0);
-	  _tcscpy (new_name, parent->nname);
-	  _tcscat (new_name, dirsep);
-	  _tcscat (new_name, name_start);
-	  xfree (a->nname);
-	  a->nname = new_name;
-	  if (a->child)
-	    update_child_names (unit, a->child, a);
-  	a = a->sibling;
-  }
+	while (a != 0) {
+		TCHAR *name_start;
+		TCHAR *new_name;
+		TCHAR dirsep[2] = { FSDB_DIR_SEPARATOR, '\0' };
+
+		a->parent = parent;
+		name_start = _tcsrchr (a->nname, FSDB_DIR_SEPARATOR);
+		if (name_start == 0) {
+			write_log (_T("malformed file name"));
+		}
+		name_start++;
+		new_name = xmalloc (TCHAR, _tcslen (name_start) + l0);
+		_tcscpy (new_name, parent->nname);
+		_tcscat (new_name, dirsep);
+		_tcscat (new_name, name_start);
+		xfree (a->nname);
+		a->nname = new_name;
+		if (a->child)
+			update_child_names (unit, a->child, a);
+		a = a->sibling;
+	}
 }
 
 static void move_aino_children (Unit *unit, a_inode *from, a_inode *to)
 {
-  to->child = from->child;
-  from->child = 0;
-  update_child_names (unit, to->child, to);
+	aino_test (from);
+	aino_test (to);
+	to->child = from->child;
+	from->child = 0;
+	update_child_names (unit, to->child, to);
 }
 
 static void delete_aino (Unit *unit, a_inode *aino)
 {
-  a_inode **aip;
+	a_inode **aip;
 
-  aino->dirty = 1;
-  aino->deleted = 1;
-  de_recycle_aino (unit, aino);
+	aino_test (aino);
+	aino->dirty = 1;
+	aino->deleted = 1;
+	de_recycle_aino (unit, aino);
 
-  /* If any ExKeys are currently pointing at us, advance them.  */
-  if (aino->parent->exnext_count > 0) {
-  	int i;
-  	for (i = 0; i < EXKEYS; i++) {
-	    ExamineKey *k = unit->examine_keys + i;
-	    if (k->uniq == 0)
-    		continue;
-	    if (k->aino == aino->parent) {
-    		if (k->curr_file == aino) {
-  		    k->curr_file = aino->sibling;
-    		}
-      }
-  	}
-  }
+	/* If any ExKeys are currently pointing at us, advance them.  */
+	if (aino->parent->exnext_count > 0) {
+		int i;
+		for (i = 0; i < EXKEYS; i++) {
+			ExamineKey *k = unit->examine_keys + i;
+			if (k->uniq == 0)
+				continue;
+			if (k->aino == aino->parent) {
+				if (k->curr_file == aino) {
+					k->curr_file = aino->sibling;
+				}
+			}
+		}
+	}
 
-  aip = &aino->parent->child;
-  while (*aip != aino && *aip != 0)
-	aip = &(*aip)->sibling;
-  if (*aip != aino) {
-  	write_log (_T("Couldn't delete aino.\n"));
-  	return;
-  }
-  dispose_aino (unit, aip, aino);
+	aip = &aino->parent->child;
+	while (*aip != aino && *aip != 0)
+		aip = &(*aip)->sibling;
+	if (*aip != aino) {
+		write_log (_T("Couldn't delete aino.\n"));
+		return;
+	}
+	dispose_aino (unit, aip, aino);
 }
 
 static a_inode *lookup_sub (a_inode *dir, uae_u32 uniq)
 {
-  a_inode **cp = &dir->child;
-  a_inode *c, *retval;
+	a_inode **cp = &dir->child;
+	a_inode *c, *retval;
 
-  for (;;) {
-  	c = *cp;
-  	if (c == 0)
-	    return 0;
+	for (;;) {
+		c = *cp;
+		if (c == 0)
+			return 0;
 
-  	if (c->uniq == uniq) {
-	    retval = c;
-	    break;
-  	}
-  	if (c->dir) {
-	    a_inode *a = lookup_sub (c, uniq);
-	    if (a != 0) {
-		    retval = a;
-		    break;
-	    }
-  	}
-  	cp = &c->sibling;
-  }
-  if (! dir->locked_children) {
-  	/* Move to the front to speed up repeated lookups.  Don't do this if
-	   an ExNext is going on in this directory, or we'll terminally
-	   confuse it.  */
-  	*cp = c->sibling;
-  	c->sibling = dir->child;
-  	dir->child = c;
-  }
-  return retval;
+		if (c->uniq == uniq) {
+			retval = c;
+			break;
+		}
+		if (c->dir) {
+			a_inode *a = lookup_sub (c, uniq);
+			if (a != 0) {
+				retval = a;
+				break;
+			}
+		}
+		cp = &c->sibling;
+	}
+	if (! dir->locked_children) {
+		/* Move to the front to speed up repeated lookups.  Don't do this if
+		an ExNext is going on in this directory, or we'll terminally
+		confuse it.  */
+		*cp = c->sibling;
+		c->sibling = dir->child;
+		dir->child = c;
+	}
+	return retval;
 }
 
 static a_inode *lookup_aino (Unit *unit, uae_u32 uniq)
 {
-  a_inode *a;
-  int hash = uniq % MAX_AINO_HASH;
+	a_inode *a;
+	int hash = uniq % MAX_AINO_HASH;
 
-  if (uniq == 0)
-  	return &unit->rootnode;
-  a = unit->aino_hash[hash];
-  if (a == 0 || a->uniq != uniq)
-  	a = lookup_sub (&unit->rootnode, uniq);
-  unit->aino_hash[hash] = a;
-  return a;
+	if (uniq == 0)
+		return &unit->rootnode;
+	a = unit->aino_hash[hash];
+	if (a == 0 || a->uniq != uniq)
+		a = lookup_sub (&unit->rootnode, uniq);
+	else
+		unit->nr_cache_hits++;
+	unit->nr_cache_lookups++;
+	unit->aino_hash[hash] = a;
+	aino_test (a);
+	return a;
 }
-static a_inode *aino_from_lock (TrapContext *ctx, Unit *unit, uaecptr lock)
+static a_inode *aino_from_lock(TrapContext *ctx, Unit *unit, uaecptr lock)
 {
 	return lookup_aino (unit, trap_get_long(ctx, lock + 4));
 }
 
 TCHAR *build_nname (const TCHAR *d, const TCHAR *n)
 {
-  TCHAR dsep[2] = { FSDB_DIR_SEPARATOR, 0 };
-  TCHAR *p = xmalloc (TCHAR, _tcslen (d) + 1 + _tcslen (n) + 1);
-  _tcscpy (p, d);
-  _tcscat (p, dsep);
-  _tcscat (p, n);
-  return p;
+	TCHAR dsep[2] = { FSDB_DIR_SEPARATOR, 0 };
+	TCHAR *p = xmalloc (TCHAR, _tcslen (d) + 1 + _tcslen (n) + 1);
+	_tcscpy (p, d);
+	_tcscat (p, dsep);
+	_tcscat (p, n);
+	return p;
+}
+
+TCHAR *build_aname (const TCHAR *d, const TCHAR *n)
+{
+	TCHAR *p = xmalloc (TCHAR, _tcslen (d) + 1 + _tcslen (n) + 1);
+	_tcscpy (p, d);
+	_tcscat (p, _T("/"));
+	_tcscat (p, n);
+	return p;
 }
 
 /* This gets called to translate an Amiga name that some program used to
- * a name that we can use on the native filesystem.  */
+* a name that we can use on the native filesystem.  */
 static TCHAR *get_nname (Unit *unit, a_inode *base, TCHAR *rel, TCHAR **modified_rel, uae_u64 *uniq_ext)
 {
-  TCHAR *found;
+	TCHAR *found;
 
-  *modified_rel = 0;
-  
-  if (unit->volflags & MYVOLUMEINFO_ARCHIVE) {
-  	if (zfile_exists_archive(base->nname, rel))
-	    return build_nname(base->nname, rel);
-  	return NULL;
-  }
+	*modified_rel = 0;
 
-  /* If we have a mapping of some other aname to "rel", we must pretend
-   * it does not exist.
-   * This can happen for example if an Amiga program creates a
-   * file called ".".  We can't represent this in our filesystem,
-   * so we create a special file "uae_xxx" and record the mapping
-   * aname "." -> nname "uae_xxx" in the database.  Then, the Amiga
-   * program looks up "uae_xxx" (yes, it's contrived).  The filesystem
-   * should not make the uae_xxx file visible to the Amiga side.  */
-  if (fsdb_used_as_nname (base, rel))
-  	return 0;
-  /* A file called "." (or whatever else is invalid on this filesystem)
+	if (unit->volflags & MYVOLUMEINFO_ARCHIVE) {
+		if (zfile_exists_archive (base->nname, rel))
+			return build_nname (base->nname, rel);
+		return NULL;
+	} else if (unit->volflags & MYVOLUMEINFO_CDFS) {
+		if (isofs_exists (unit->ui.cdfs_superblock, base->uniq_external, rel, uniq_ext))
+			return build_nname (base->nname, rel);
+		return NULL;
+	}
+
+	aino_test (base);
+
+	/* If we have a mapping of some other aname to "rel", we must pretend
+	* it does not exist.
+	* This can happen for example if an Amiga program creates a
+	* file called ".".  We can't represent this in our filesystem,
+	* so we create a special file "uae_xxx" and record the mapping
+	* aname "." -> nname "uae_xxx" in the database.  Then, the Amiga
+	* program looks up "uae_xxx" (yes, it's contrived).  The filesystem
+	* should not make the uae_xxx file visible to the Amiga side.  */
+	if (fsdb_used_as_nname (base, rel))
+		return 0;
+	/* A file called "." (or whatever else is invalid on this filesystem)
 	* does not exist, as far as the Amiga side is concerned.  */
 	if (fsdb_name_invalid_dir (base, rel))
-	  return 0;
+		return 0;
 
-  /* See if we have a file that has the same name as the aname we are
-   * looking for.  */
-  found = fsdb_search_dir (base->nname, rel);
-  if (found == 0)
-  	return found;
-  if (found == rel)
-  	return build_nname (base->nname, rel);
+	/* See if we have a file that has the same name as the aname we are
+	* looking for.  */
+	found = fsdb_search_dir (base->nname, rel);
+	if (found == 0)
+		return found;
+	if (found == rel)
+		return build_nname (base->nname, rel);
 
-  *modified_rel = found;
-  return build_nname (base->nname, found);
+	*modified_rel = found;
+	return build_nname (base->nname, found);
 }
 
 static TCHAR *create_nname (Unit *unit, a_inode *base, TCHAR *rel)
 {
-  TCHAR *p;
+	TCHAR *p;
 
-  /* We are trying to create a file called REL.  */
-    
-  /* If the name is used otherwise in the directory (or globally), we
-   * need a new unique nname.  */
+	/* We are trying to create a file called REL.  */
+
+	/* If the name is used otherwise in the directory (or globally), we
+	* need a new unique nname.  */
 	if (fsdb_name_invalid (base, rel) || fsdb_used_as_nname (base, rel)) {
-  	p = fsdb_create_unique_nname (base, rel);
-  	return p;
-  }
-  p = build_nname (base->nname, rel);
-  return p;
+		p = fsdb_create_unique_nname (base, rel);
+		return p;
+	}
+	p = build_nname (base->nname, rel);
+	return p;
 }
 
-static int fill_file_attrs(Unit *u, a_inode *base, a_inode *c)
+static int fill_file_attrs (Unit *u, a_inode *base, a_inode *c)
 {
-  if (u->volflags & MYVOLUMEINFO_ARCHIVE) {
-    int isdir, flags;
-  	TCHAR *comment;
-    zfile_fill_file_attrs_archive(c->nname, &isdir, &flags, &comment);
-    c->dir = isdir;
-  	c->amigaos_mode = 0;
-    if (flags >= 0)
-      c->amigaos_mode = flags;
-    c->comment = comment;
-  	return 1;
-  } else {
-  	return fsdb_fill_file_attrs (base, c);
-  }
-  return 0;
+	if (u->volflags & MYVOLUMEINFO_ARCHIVE) {
+		int isdir, flags;
+		TCHAR *comment;
+		zfile_fill_file_attrs_archive (c->nname, &isdir, &flags, &comment);
+		c->dir = isdir;
+		c->amigaos_mode = 0;
+		if (flags >= 0)
+			c->amigaos_mode = flags;
+		c->comment = comment;
+		return 1;
+	} else if (u->volflags & MYVOLUMEINFO_CDFS) {
+		int isdir, flags;
+		TCHAR *comment;
+		isofss_fill_file_attrs (u->ui.cdfs_superblock, base->uniq_external, &isdir, &flags, &comment, c->uniq_external);
+		c->dir = isdir;
+		c->amigaos_mode = 0;
+		if (flags >= 0)
+			c->amigaos_mode = flags;
+		c->comment = comment;
+		return 1;
+	} else {
+		return fsdb_fill_file_attrs (base, c);
+	}
+	return 0;
+}
+
+static int test_softlink (a_inode *aino)
+{
+	int err;
+	if (aino->softlink && my_resolvesoftlink (aino->nname, -1, false))
+		err = ERROR_IS_SOFT_LINK;
+	else
+		err = ERROR_OBJECT_NOT_AROUND;
+	return err;
+}
+static void handle_softlink(TrapContext *ctx, Unit *unit, dpacket *packet, a_inode *aino)
+{
+	PUT_PCK_RES1 (packet, DOS_FALSE);
+	PUT_PCK_RES2 (packet, test_softlink (aino));
 }
 
 /*
- * This gets called if an ACTION_EXAMINE_NEXT happens and we hit an object
- * for which we know the name on the native filesystem, but no corresponding
- * Amiga filesystem name.
- * @@@ For DOS filesystems, it might make sense to declare the new name
- * "weak", so that it can get overriden by a subsequent call to get_nname().
- * That way, if someone does "dir :" and there is a file "foobar.inf", and
- * someone else tries to open "foobar.info", get_nname() could maybe made to
- * figure out that this is supposed to be the file "foobar.inf".
- * DOS sucks...
- */
+* This gets called if an ACTION_EXAMINE_NEXT happens and we hit an object
+* for which we know the name on the native filesystem, but no corresponding
+* Amiga filesystem name.
+* @@@ For DOS filesystems, it might make sense to declare the new name
+* "weak", so that it can get overriden by a subsequent call to get_nname().
+* That way, if someone does "dir :" and there is a file "foobar.inf", and
+* someone else tries to open "foobar.info", get_nname() could maybe made to
+* figure out that this is supposed to be the file "foobar.inf".
+* DOS sucks...
+*/
 static TCHAR *get_aname (Unit *unit, a_inode *base, TCHAR *rel)
 {
-  return my_strdup (rel);
+	return my_strdup (rel);
 }
 
-static void init_child_aino_tree(Unit *unit, a_inode *base, a_inode *aino)
+static void init_child_aino_tree (Unit *unit, a_inode *base, a_inode *aino)
 {
-  /* Update tree structure */
-  aino->parent = base;
-  aino->child = 0;
-  aino->sibling = base->child;
-  base->child = aino;
-  aino->next = aino->prev = 0;
-  aino->volflags = unit->volflags;
+	/* Update tree structure */
+	aino->parent = base;
+	aino->child = 0;
+	aino->sibling = base->child;
+	base->child = aino;
+	aino->next = aino->prev = 0;
+	aino->volflags = unit->volflags;
 }
 
 static void init_child_aino (Unit *unit, a_inode *base, a_inode *aino)
 {
-  aino->uniq = ++a_uniq;
-  if (a_uniq == 0xFFFFFFFF) {
-  	write_log (_T("Running out of a_inodes (prepare for big trouble)!\n"));
-  }
-  aino->shlock = 0;
-  aino->elock = 0;
+	aino->uniq = ++a_uniq;
+	if (a_uniq == 0xFFFFFFFF) {
+		write_log (_T("Running out of a_inodes (prepare for big trouble)!\n"));
+	}
+	aino->shlock = 0;
+	aino->elock = 0;
 
-  aino->dirty = 0;
-  aino->deleted = 0;
-  aino->mountcount = unit->mountcount;
+	aino->dirty = 0;
+	aino->deleted = 0;
+	aino->mountcount = unit->mountcount;
 
-  /* For directories - this one isn't being ExNext()ed yet.  */
-  aino->locked_children = 0;
-  aino->exnext_count = 0;
-  /* But the parent might be.  */
-  if (base->exnext_count) {
-  	unit->total_locked_ainos++;
-  	base->locked_children++;
-  }
-  init_child_aino_tree(unit, base, aino);
+	/* For directories - this one isn't being ExNext()ed yet.  */
+	aino->locked_children = 0;
+	aino->exnext_count = 0;
+	/* But the parent might be.  */
+	if (base->exnext_count) {
+		unit->total_locked_ainos++;
+		base->locked_children++;
+	}
+	init_child_aino_tree (unit, base, aino);
+
+	aino_test_init (aino);
+	aino_test (aino);
 }
 
 static a_inode *new_child_aino (Unit *unit, a_inode *base, TCHAR *rel)
 {
-  TCHAR *modified_rel;
-  TCHAR *nn;
-  a_inode *aino = NULL;
-  int isvirtual = unit->volflags & MYVOLUMEINFO_ARCHIVE;
+	TCHAR *modified_rel;
+	TCHAR *nn;
+	a_inode *aino = NULL;
+	int isvirtual = unit->volflags & (MYVOLUMEINFO_ARCHIVE | MYVOLUMEINFO_CDFS);
 
-  if (!isvirtual)
-    aino = fsdb_lookup_aino_aname (base, rel);
-  if (aino == 0) {
+	if (!isvirtual)
+		aino = fsdb_lookup_aino_aname (base, rel);
+	if (aino == 0) {
 		uae_u64 uniq_ext = 0;
 		nn = get_nname (unit, base, rel, &modified_rel, &uniq_ext);
-  	if (nn == 0)
-	    return 0;
+		if (nn == 0)
+			return 0;
 
-  	aino = xcalloc (a_inode, 1);
-  	if (aino == 0)
-	    return 0;
+		aino = xcalloc (a_inode, 1);
+		if (aino == 0)
+			return 0;
 		aino->uniq_external = uniq_ext;
-  	aino->aname = modified_rel ? modified_rel : my_strdup (rel);
-  	aino->nname = nn;
+		aino->aname = modified_rel ? modified_rel : my_strdup (rel);
+		aino->nname = nn;
 
-  	aino->comment = 0;
-  	aino->has_dbentry = 0;
+		aino->comment = 0;
+		aino->has_dbentry = 0;
 
-  	if (!fill_file_attrs (unit, base, aino)) {
-	    xfree (aino);
-	    return 0;
-  	}
-  	if (aino->dir && !isvirtual)
-	    fsdb_clean_dir (aino);
-  }
-  init_child_aino (unit, base, aino);
+		if (!fill_file_attrs (unit, base, aino)) {
+			xfree (aino);
+			return 0;
+		}
+		if (aino->dir && !isvirtual)
+			fsdb_clean_dir (aino);
+	}
+	init_child_aino (unit, base, aino);
 
-  recycle_aino (unit, aino);
-  return aino;
+	recycle_aino (unit, aino);
+	return aino;
 }
 
 static a_inode *create_child_aino (Unit *unit, a_inode *base, TCHAR *rel, int isdir)
 {
-  a_inode *aino = xcalloc (a_inode, 1);
-  if (aino == 0)
-  	return 0;
+	a_inode *aino = xcalloc (a_inode, 1);
+	if (aino == 0)
+		return 0;
 
-  aino->nname = create_nname (unit, base, rel);
-  if (!aino->nname) {
-  	free (aino);
-  	return 0;
-  }
-  aino->aname = my_strdup (rel);
+	aino->nname = create_nname (unit, base, rel);
+	if (!aino->nname) {
+		free (aino);
+		return 0;
+	}
+	aino->aname = my_strdup (rel);
 
-  init_child_aino (unit, base, aino);
-  aino->amigaos_mode = 0;
-  aino->dir = isdir;
+	init_child_aino (unit, base, aino);
+	aino->amigaos_mode = 0;
+	aino->dir = isdir;
 
-  aino->comment = 0;
-  aino->has_dbentry = 0;
-  aino->dirty = 1;
+	aino->comment = 0;
+	aino->has_dbentry = 0;
+	aino->dirty = 1;
 
-  recycle_aino (unit, aino);
-  return aino;
+	recycle_aino (unit, aino);
+	return aino;
 }
 
 static a_inode *lookup_child_aino (Unit *unit, a_inode *base, TCHAR *rel, int *err)
 {
-  a_inode *c = base->child;
-  int l0 = _tcslen (rel);
+	a_inode *c = base->child;
+	int l0 = _tcslen (rel);
 
-  if (base->dir == 0) {
-    *err = ERROR_OBJECT_WRONG_TYPE;
-    return 0;
-  }
-   
-  while (c != 0) {
-	  int l1 = _tcslen (c->aname);
-    if (l0 <= l1 && same_aname (rel, c->aname + l1 - l0)
-	    && (l0 == l1 || c->aname[l1-l0-1] == '/') && c->mountcount == unit->mountcount)
-      break;
-    c = c->sibling;
-  }
-  if (c != 0)
-    return c;
-  c = new_child_aino (unit, base, rel);
-  if (c == 0)
-    *err = ERROR_OBJECT_NOT_AROUND;
-  return c;
+	aino_test (base);
+	aino_test (c);
+
+	if (base->dir == 0) {
+		*err = ERROR_OBJECT_WRONG_TYPE;
+		return 0;
+	}
+
+	while (c != 0) {
+		int l1 = _tcslen (c->aname);
+		if (l0 <= l1 && same_aname (rel, c->aname + l1 - l0)
+			&& (l0 == l1 || c->aname[l1-l0-1] == '/') && c->mountcount == unit->mountcount)
+			break;
+		c = c->sibling;
+	}
+	if (c != 0)
+		return c;
+	c = new_child_aino (unit, base, rel);
+	if (c == 0)
+		*err = ERROR_OBJECT_NOT_AROUND;
+	return c;
 }
 
 /* Different version because for this one, REL is an nname.  */
-static a_inode *lookup_child_aino_for_exnext (Unit *unit, a_inode *base, TCHAR *rel, uae_u32 *err, uae_u64 uniq_external)
+static a_inode *lookup_child_aino_for_exnext (Unit *unit, a_inode *base, TCHAR *rel, uae_u32 *err, uae_u64 uniq_external, struct virtualfilesysobject *vfso)
 {
-  a_inode *c = base->child;
-  int l0 = _tcslen (rel);
-  int isvirtual = unit->volflags & MYVOLUMEINFO_ARCHIVE;
+	a_inode *c = base->child;
+	int l0 = _tcslen (rel);
+	int isvirtual = unit->volflags & (MYVOLUMEINFO_ARCHIVE | MYVOLUMEINFO_CDFS);
 
-  *err = 0;
-  while (c != 0) {
-  	int l1 = _tcslen (c->nname);
-  	/* Note: using _tcscmp here.  */
-  	if (l0 <= l1 && _tcscmp (rel, c->nname + l1 - l0) == 0
-	    && (l0 == l1 || c->nname[l1-l0-1] == FSDB_DIR_SEPARATOR) && c->mountcount == unit->mountcount)
-	    break;
-  	c = c->sibling;
-  }
-  if (c != 0)
-  	return c;
-	if (!isvirtual)
-    c = fsdb_lookup_aino_nname (base, rel);
-  if (c == 0) {
-  	c = xcalloc (a_inode, 1);
-  	if (c == 0) {
-	    *err = ERROR_NO_FREE_STORE;
-	    return 0;
-  	}
+	aino_test (base);
+	aino_test (c);
 
-  	c->nname = build_nname (base->nname, rel);
-  	c->aname = get_aname (unit, base, rel);
-  	c->comment = 0;
+	*err = 0;
+	while (c != 0) {
+		int l1 = _tcslen (c->nname);
+		/* Note: using _tcscmp here.  */
+		if (l0 <= l1 && _tcscmp (rel, c->nname + l1 - l0) == 0
+			&& (l0 == l1 || c->nname[l1-l0-1] == FSDB_DIR_SEPARATOR) && c->mountcount == unit->mountcount)
+			break;
+		c = c->sibling;
+	}
+	if (c != 0)
+		return c;
+	if (!isvirtual && !vfso)
+		c = fsdb_lookup_aino_nname (base, rel);
+	if (c == 0) {
+		c = xcalloc (a_inode, 1);
+		if (c == 0) {
+			*err = ERROR_NO_FREE_STORE;
+			return 0;
+		}
+
+		c->nname = build_nname (base->nname, rel);
+		c->aname = get_aname (unit, base, rel);
+		c->comment = 0;
 		c->uniq_external = uniq_external;
-  	c->has_dbentry = 0;
-		if (!fill_file_attrs (unit, base, c)) {
-	    xfree (c);
-	    *err = ERROR_NO_FREE_STORE;
-	    return 0;
-  	}
-		if (c->dir && !isvirtual)
-	    fsdb_clean_dir (c);
-  }
-  init_child_aino (unit, base, c);
+		c->has_dbentry = 0;
+		if (vfso) {
+			c->dir = vfso->dir;
+			c->comment = my_strdup(vfso->comment);
+			c->amigaos_mode = vfso->amigaos_mode;
+			c->vfso = vfso;
+		} else if (!fill_file_attrs (unit, base, c)) {
+			xfree (c);
+			*err = ERROR_NO_FREE_STORE;
+			return 0;
+		}
+		if (c->dir && !isvirtual && !vfso)
+			fsdb_clean_dir (c);
+	}
+	init_child_aino (unit, base, c);
 
-  recycle_aino (unit, c);
+	recycle_aino (unit, c);
 
-  return c;
+	return c;
 }
 
 static a_inode *get_aino (Unit *unit, a_inode *base, const TCHAR *rel, int *err)
 {
-  TCHAR *tmp;
-  TCHAR *p;
-  a_inode *curr;
-  int i;
+	TCHAR *tmp;
+	TCHAR *p;
+	a_inode *curr, *prev;
+	int i;
 
-  *err = 0;
-   
-  /* root-relative path? */
-  for (i = 0; rel[i] && rel[i] != '/' && rel[i] != ':'; i++)
-    ;
-  if (':' == rel[i])
-    rel += i+1;
-   
-  tmp = my_strdup (rel);
-  p = tmp;
-  curr = base;
-   
-  while (*p) {
-    /* start with a slash? go up a level. */
-    if (*p == '/') {
-      if (curr->parent != 0)
-        curr = curr->parent;
-      p++;
-    } else {
-      a_inode *next;
+	aino_test (base);
 
-      TCHAR *component_end;
-      component_end = _tcschr (p, '/');
-      if (component_end != 0)
-        *component_end = '\0';
-      next = lookup_child_aino (unit, curr, p, err);
-      if (next == 0) {
-        /* if only last component not found, return parent dir. */
-        if (*err != ERROR_OBJECT_NOT_AROUND || component_end != 0)
-				  curr = NULL;
-        /* ? what error is appropriate? */
-        break;
-      }
-      curr = next;
-      if (component_end)
-        p = component_end+1;
-      else
-        break;
-    }
-  }
-  xfree (tmp);
-  return curr;
+	*err = 0;
+
+	/* root-relative path? */
+	for (i = 0; rel[i] && rel[i] != '/' && rel[i] != ':'; i++)
+		;
+	if (':' == rel[i])
+		rel += i+1;
+
+	tmp = my_strdup (rel);
+	p = tmp;
+	curr = base;
+	prev = NULL;
+
+	while (*p) {
+		/* start with a slash? go up a level. */
+		if (*p == '/') {
+			if (curr->parent != 0)
+				curr = curr->parent;
+			p++;
+		} else {
+			a_inode *next;
+
+
+			if (prev && prev->softlink) {
+				*err = test_softlink (prev);
+				curr = NULL;
+				break;
+			}
+
+			TCHAR *component_end;
+			component_end = _tcschr (p, '/');
+			if (component_end != 0)
+				*component_end = '\0';
+			next = lookup_child_aino (unit, curr, p, err);
+			if (next == 0) {
+				/* if only last component not found, return parent dir. */
+				if (*err != ERROR_OBJECT_NOT_AROUND || component_end != 0)
+					curr = NULL;
+				/* ? what error is appropriate? */
+				break;
+			}
+			prev = next;
+			curr = next;
+			if (component_end)
+				p = component_end+1;
+			else
+				break;
+		}
+	}
+	xfree (tmp);
+	return curr;
 }
 
 
 static uae_u32 notifyhash (const TCHAR *s)
 {
-  uae_u32 hash = 0;
-  while (*s)
-  	hash = (hash << 5) + *s++;
-  return hash % NOTIFY_HASH_SIZE;
+	uae_u32 hash = 0;
+	while (*s)
+		hash = (hash << 5) + *s++;
+	return hash % NOTIFY_HASH_SIZE;
 }
 
 static Notify *new_notify (Unit *unit, TCHAR *name)
 {
-  Notify *n = xmalloc(Notify, 1);
-  uae_u32 hash = notifyhash (name);
-  n->next = unit->notifyhash[hash];
-  unit->notifyhash[hash] = n;
-  n->partname = name;
-  return n;
+	Notify *n = xmalloc (Notify, 1);
+	uae_u32 hash = notifyhash (name);
+	n->next = unit->notifyhash[hash];
+	unit->notifyhash[hash] = n;
+	n->partname = name;
+	return n;
 }
 
 static void free_notify (Unit *unit, int hash, Notify *n)
 {
-  Notify *n1, *prev = 0;
-  for (n1 = unit->notifyhash[hash]; n1; n1 = n1->next) {
-  	if (n == n1) {
-	    if (prev)
-    		prev->next = n->next;
-	    else
-    		unit->notifyhash[hash] = n->next;
-	    break;
-  	}
-  	prev = n1;
-  }
+	Notify *n1, *prev = 0;
+	for (n1 = unit->notifyhash[hash]; n1; n1 = n1->next) {
+		if (n == n1) {
+			if (prev)
+				prev->next = n->next;
+			else
+				unit->notifyhash[hash] = n->next;
+			break;
+		}
+		prev = n1;
+	}
 }
 
 static void startup_update_unit (Unit *unit, UnitInfo *uinfo)
 {
-  if (!unit)
-  	return;
-  xfree (unit->ui.volname);
+	if (!unit)
+		return;
+	xfree (unit->ui.volname);
 	memcpy (&unit->ui, uinfo, sizeof (UnitInfo));
-  unit->ui.devname = uinfo->devname;
-  unit->ui.volname = my_strdup (uinfo->volname); /* might free later for rename */
+	unit->ui.devname = uinfo->devname;
+	unit->ui.volname = my_strdup (uinfo->volname); /* might free later for rename */
 }
 
-static Unit *startup_create_unit (TrapContext *ctx, UnitInfo *uinfo, int num)
+static Unit *startup_create_unit(TrapContext *ctx, UnitInfo *uinfo, int num)
 {
-  int i;
-  Unit *unit, *u;
+	int i;
+	Unit *unit, *u;
 
-  unit = xcalloc (Unit, 1);
-  /* keep list in insertion order */
-  u = units;
-  if (u) {
-    while (u->next)
-      u = u->next;
-    u->next = unit;
-  } else {
-    units = unit;
-  }
-  uinfo->self = unit;
+	unit = xcalloc (Unit, 1);
+	/* keep list in insertion order */
+	u = units;
+	if (u) {
+		while (u->next)
+			u = u->next;
+		u->next = unit;
+	} else {
+		units = unit;
+	}
+	uinfo->self = unit;
 
-  unit->volume = 0;
+	unit->volume = 0;
 	unit->port = trap_get_areg(ctx, 5);
-  unit->unit = num;
+	unit->unit = num;
 
-  startup_update_unit (unit, uinfo);
+	startup_update_unit (unit, uinfo);
 
-  unit->cmds_complete = 0;
-  unit->cmds_sent = 0;
-  unit->cmds_acked = 0;
-  clear_exkeys(unit);
-  unit->total_locked_ainos = 0;
-  unit->keys = 0;
-  for (i = 0; i < NOTIFY_HASH_SIZE; i++) {
-	  Notify *n = unit->notifyhash[i];
-	  while (n) {
-	    Notify *n2 = n;
-	    n = n->next;
-	    xfree(n2->fullname);
-	    xfree(n2->partname);
-	    xfree(n2);
-  	}
-  	unit->notifyhash[i] = 0;
-  }
+	unit->cmds_complete = 0;
+	unit->cmds_sent = 0;
+	unit->cmds_acked = 0;
+	clear_exkeys (unit);
+	unit->total_locked_ainos = 0;
+	unit->keys = 0;
+	for (i = 0; i < NOTIFY_HASH_SIZE; i++) {
+		Notify *n = unit->notifyhash[i];
+		while (n) {
+			Notify *n2 = n;
+			n = n->next;
+			xfree (n2->fullname);
+			xfree (n2->partname);
+			xfree (n2);
+		}
+		unit->notifyhash[i] = 0;
+	}
 
-  unit->rootnode.aname = uinfo->volname;
-  unit->rootnode.nname = uinfo->rootdir;
-  unit->rootnode.sibling = 0;
-  unit->rootnode.next = unit->rootnode.prev = &unit->rootnode;
-  unit->rootnode.uniq = 0;
-  unit->rootnode.parent = 0;
-  unit->rootnode.child = 0;
-  unit->rootnode.dir = 1;
-  unit->rootnode.amigaos_mode = 0;
-  unit->rootnode.shlock = 0;
-  unit->rootnode.elock = 0;
-  unit->rootnode.comment = 0;
-  unit->rootnode.has_dbentry = 0;
-  unit->rootnode.volflags = uinfo->volflags;
-  unit->aino_cache_size = 0;
-  for (i = 0; i < MAX_AINO_HASH; i++)
-  	unit->aino_hash[i] = 0;
-  return unit;
+	unit->rootnode.aname = uinfo->volname;
+	unit->rootnode.nname = uinfo->rootdir;
+	unit->rootnode.sibling = 0;
+	unit->rootnode.next = unit->rootnode.prev = &unit->rootnode;
+	unit->rootnode.uniq = 0;
+	unit->rootnode.parent = 0;
+	unit->rootnode.child = 0;
+	unit->rootnode.dir = 1;
+	unit->rootnode.amigaos_mode = 0;
+	unit->rootnode.shlock = 0;
+	unit->rootnode.elock = 0;
+	unit->rootnode.comment = 0;
+	unit->rootnode.has_dbentry = 0;
+	unit->rootnode.volflags = uinfo->volflags;
+	aino_test_init (&unit->rootnode);
+	unit->aino_cache_size = 0;
+	for (i = 0; i < MAX_AINO_HASH; i++)
+		unit->aino_hash[i] = 0;
+	return unit;
+}
+
+
+static bool mount_cd(UnitInfo *uinfo, int nr, struct mytimeval *ctime, uae_u64 *uniq, uaecptr volume)
+{
+	uinfo->cddevno = nr - cd_unit_offset;
+	if (!sys_command_open (uinfo->cddevno)) {
+		write_log (_T("Failed attempt to open CD unit %d\n"), uinfo->cddevno);
+		return false;
+	}
+#ifdef RETROPLATFORM
+	rp_cd_device_enable (uinfo->cddevno, true);
+#endif
+	uinfo->cdfs_superblock = isofs_mount(uinfo->cddevno, uniq);
+	uinfo->wasisempty = true;
+	struct isofs_info ii;
+	if (isofs_mediainfo (uinfo->cdfs_superblock, &ii)) {
+		xfree (uinfo->volname);
+		if (ii.media) {
+			uinfo->wasisempty = false;
+			if (!ii.unknown_media) {
+				uinfo->volname = my_strdup (ii.volumename);
+				if (ctime) {
+					ctime->tv_sec = ii.creation;
+					ctime->tv_usec = 0;
+				}
+				set_highcyl(volume, ii.totalblocks);
+#ifdef RETROPLATFORM
+				rp_cd_image_change (uinfo->cddevno, ii.devname);
+#endif
+			}
+		}
+		uinfo->unknown_media = ii.unknown_media;
+	}
+	uinfo->cd_open = true;
+	return true;
 }
 
 #ifdef UAE_FILESYS_THREADS
@@ -2381,38 +3118,47 @@ static int filesys_thread (void *unit_v);
 #endif
 static void filesys_start_thread (UnitInfo *ui, int nr)
 {
-  ui->unit_pipe = 0;
-  ui->back_pipe = 0;
-  ui->reset_state = FS_STARTUP;
-  if (!isrestore ()) {
-    ui->startup = 0;
-    ui->self = 0;
-  }
+	ui->unit_pipe = 0;
+	ui->back_pipe = 0;
+	ui->reset_state = FS_STARTUP;
+	if (!isrestore ()) {
+		ui->startup = 0;
+		ui->self = 0;
+	}
 #ifdef UAE_FILESYS_THREADS
 	if (is_virtual (nr)) {
-    ui->unit_pipe = xmalloc (smp_comm_pipe, 1);
-    ui->back_pipe = xmalloc (smp_comm_pipe, 1);
-    init_comm_pipe (ui->unit_pipe, 400, 3);
-    init_comm_pipe (ui->back_pipe, 100, 1);
-    uae_start_thread (_T("filesys"), filesys_thread, (void *)ui, &ui->tid);
-  }
+		ui->unit_pipe = xmalloc (smp_comm_pipe, 1);
+		ui->back_pipe = xmalloc (smp_comm_pipe, 1);
+		init_comm_pipe (ui->unit_pipe, 400, 3);
+		init_comm_pipe (ui->back_pipe, 100, 1);
+		uae_start_thread (_T("filesys"), filesys_thread, (void *)ui, &ui->tid);
+	}
 #endif
-  if (isrestore ()) {
-    startup_update_unit (ui->self, ui);
-  }
+	if (isrestore ()) {
+		if (ui->unit_type == UNIT_CDFS) {
+			mount_cd(ui, nr, NULL, &ui->self->rootnode.uniq_external, ui->self->volume);
+		}
+		startup_update_unit (ui->self, ui);
+	}
 }
 
-static uae_u32 REGPARAM2 startup_handler (TrapContext *ctx)
+
+static uae_u32 REGPARAM2 startup_handler(TrapContext *ctx)
 {
 	uae_u32 mode = trap_get_dreg(ctx, 0);
 
 	if (mode == 1) {
-		return 0;
-  }
+		uaecptr addr = 0;
+		if (currprefs.uaeboard > 1) {
+			// return board ram instead of allocating normal RAM
+			addr = uaeboard_alloc_ram(trap_get_dreg(ctx, 1));
+		}
+		return addr;
+	}
 
 	/* Just got the startup packet. It's in D3. DosBase is in A2,
-   * our allocated volume structure is in A3, A5 is a pointer to
-   * our port. */
+	* our allocated volume structure is in A3, A5 is a pointer to
+	* our port. */
 	uaecptr rootnode = trap_get_long(ctx, trap_get_areg(ctx, 2) + 34);
 	uaecptr dos_info = trap_get_long(ctx, rootnode + 24) << 2;
 	uaecptr pkt = trap_get_dreg(ctx, 3);
@@ -2420,11 +3166,11 @@ static uae_u32 REGPARAM2 startup_handler (TrapContext *ctx)
 	uaecptr arg2 = trap_get_long(ctx, pkt + dp_Arg2);
 	uaecptr arg3 = trap_get_long(ctx, pkt + dp_Arg3);
 	uaecptr devnode, volume;
-  int nr;
-  Unit *unit;
-  UnitInfo *uinfo;
-  int late = 0;
-  int ed, ef;
+	int nr;
+	Unit *unit;
+	UnitInfo *uinfo;
+	int late = 0;
+	int ed, ef;
 	uae_u64 uniq = 0;
 	uae_u32 cdays;
 	struct mytimeval ctime = { 0 };
@@ -2434,57 +3180,66 @@ static uae_u32 REGPARAM2 startup_handler (TrapContext *ctx)
 	// dp_Arg2 = works as documented
 	// dp_Arg3 = NULL (!?). (Should be DeviceNode)
 
-  for (nr = 0; nr < MAX_FILESYSTEM_UNITS; nr++) {
-  	/* Hardfile volume name? */
+	for (nr = 0; nr < MAX_FILESYSTEM_UNITS; nr++) {
+		/* Hardfile volume name? */
 		if (mountinfo.ui[nr].open <= 0)
-	    continue;
+			continue;
 		if (!is_virtual (nr))
-	    continue;
-  	if (mountinfo.ui[nr].startup == arg2)
-	    break;
-  }
+			continue;
+		if (mountinfo.ui[nr].startup == arg2)
+			break;
+	}
 
-  if (nr == MAX_FILESYSTEM_UNITS) {
+	if (nr == MAX_FILESYSTEM_UNITS) {
 		write_log (_T("Attempt to mount unknown filesystem device\n"));
 		trap_put_long(ctx, pkt + dp_Res1, DOS_FALSE);
 		trap_put_long(ctx, pkt + dp_Res2, ERROR_DEVICE_NOT_MOUNTED);
-  	return 0;
-  }
-  uinfo = mountinfo.ui + nr;
+		return 0;
+	}
+	uinfo = mountinfo.ui + nr;
 	//devnode = arg3 << 2;
 	devnode = uinfo->devicenode;
 	volume = trap_get_areg(ctx, 3) + 32;
 	cdays = 3800 + nr;
 
-  ed = my_existsdir (uinfo->rootdir);
-  ef = my_existsfile (uinfo->rootdir);
-  if (!uinfo->wasisempty && !ef && !ed) {
-		write_log (_T("Failed attempt to mount device '%s' (%s)\n"), uinfo->devname, uinfo->rootdir);
+	if (uinfo->unit_type == UNIT_CDFS) {
+		ed = ef = 0;
+		if (!mount_cd(uinfo, nr, &ctime, &uniq, volume)) {
 			trap_put_long(ctx, pkt + dp_Res1, DOS_FALSE);
 			trap_put_long(ctx, pkt + dp_Res2, ERROR_DEVICE_NOT_MOUNTED);
-  	return 0;
-  }
+			return 0;
+		}
+	} else {
+		ed = my_existsdir (uinfo->rootdir);
+		ef = my_existsfile (uinfo->rootdir);
+		if (!uinfo->wasisempty && !ef && !ed) {
+			write_log (_T("Failed attempt to mount device '%s' (%s)\n"), uinfo->devname, uinfo->rootdir);
+			trap_put_long(ctx, pkt + dp_Res1, DOS_FALSE);
+			trap_put_long(ctx, pkt + dp_Res2, ERROR_DEVICE_NOT_MOUNTED);
+			return 0;
+		}
+	}
 
-  if (!uinfo->unit_pipe) {
-  	late = 1;
-  	filesys_start_thread (uinfo, nr);
-  }
+	if (!uinfo->unit_pipe) {
+		late = 1;
+		filesys_start_thread(uinfo, nr);
+	}
 	unit = startup_create_unit(ctx, uinfo, nr);
-  unit->volflags = uinfo->volflags;
+	unit->volflags = uinfo->volflags;
 	unit->rootnode.uniq_external = uniq;
 
-  /*    write_comm_pipe_int (unit->ui.unit_pipe, -1, 1);*/
+	/*    write_comm_pipe_int (unit->ui.unit_pipe, -1, 1);*/
 
 	write_log (_T("FS: %s (flags=%08X,E=%d,ED=%d,EF=%d,native='%s') starting..\n"),
-  	unit->ui.volname, unit->volflags, uinfo->wasisempty, ed, ef, unit->ui.rootdir);
-  
-  /* fill in our process in the device node */
+		unit->ui.volname, unit->volflags, uinfo->wasisempty, ed, ef, unit->ui.rootdir);
+
+	/* fill in our process in the device node */
 	trap_put_long(ctx, devnode + 8, unit->port);
 	unit->dosbase = trap_get_areg(ctx, 2);
 
-  /* make new volume */
+	/* make new volume */
 	unit->volume = volume;
-  put_long (unit->volume + 180 - 32, devnode);
+	put_long(unit->volume + 180 - 32, devnode);
 #ifdef UAE_FILESYS_THREADS
 	unit->locklist = trap_get_areg(ctx, 3) + 8;
 #else
@@ -2495,30 +3250,32 @@ static uae_u32 REGPARAM2 startup_handler (TrapContext *ctx)
 	trap_put_long(ctx, unit->dummy_message + 10, 0);
 
 	/* Prepare volume information */
-  put_long (unit->volume + 4, 2); /* Type = dt_volume */
-  put_long (unit->volume + 12, 0); /* Lock */
-	put_long (unit->volume + 16, cdays); /* Creation Date */
-  put_long (unit->volume + 20, 0);
-  put_long (unit->volume + 24, 0);
-  put_long (unit->volume + 28, 0); /* lock list */
-  put_long (unit->volume + 40, (unit->volume + 64) >> 2); /* Name */
+	put_long(unit->volume + 4, 2); /* Type = dt_volume */
+	put_long(unit->volume + 12, 0); /* Lock */
+	put_long(unit->volume + 16, cdays); /* Creation Date */
+	put_long(unit->volume + 20, 0);
+	put_long(unit->volume + 24, 0);
+	put_long(unit->volume + 28, 0); /* lock list */
+	put_long(unit->volume + 40, (unit->volume + 64) >> 2); /* Name */
+	//put_long(unit->volume + 44, 68);
+	//put_long(unit->volume + 48, 68);
 
-  put_byte (unit->volume + 64, 0);
+	put_byte(unit->volume + 64, 0);
 	if (!uinfo->wasisempty && !uinfo->unknown_media) {
-		int isvirtual = unit->volflags & MYVOLUMEINFO_ARCHIVE;
+		int isvirtual = unit->volflags & (MYVOLUMEINFO_ARCHIVE | MYVOLUMEINFO_CDFS);
 		/* Set volume if non-empty */
-		set_volume_name (unit, &ctime);
+		set_volume_name(unit, &ctime);
 		if (!isvirtual)
-    	fsdb_clean_dir (&unit->rootnode);
-  }
+			fsdb_clean_dir (&unit->rootnode);
+	}
 
-  put_long (unit->volume + 8, unit->port);
+	put_long(unit->volume + 8, unit->port);
 	/* not FFS because it is not understood by WB1.x C:Info */
 	put_long(unit->volume + 32, DISK_TYPE_DOS);
 
 	trap_put_long(ctx, pkt + dp_Res1, DOS_TRUE);
 
-  return 1 | (late ? 2 : 0);
+	return 1 | (late ? 2 : 0);
 }
 
 static bool is_writeprotected(Unit *unit)
@@ -2528,32 +3285,44 @@ static bool is_writeprotected(Unit *unit)
 
 static void	do_info(TrapContext *ctx, Unit *unit, dpacket *packet, uaecptr info, bool disk_info)
 {
-  struct fs_usage fsu;
+	struct fs_usage fsu;
 	int ret, err = ERROR_NO_FREE_STORE;
 	int blocksize, nr;
 	uae_u32 dostype;
 	bool fs = false, media = false;
 	uae_u8 buf[36] =  { 0 }; // InfoData
-    
+
 	blocksize = 512;
 	dostype = get_long(unit->volume + 32);
 	nr = unit->unit;
-  if (unit->volflags & MYVOLUMEINFO_ARCHIVE) {
-  	ret = zfile_fs_usage_archive (unit->ui.rootdir, 0, &fsu);
+	if (unit->volflags & MYVOLUMEINFO_ARCHIVE) {
+		ret = zfile_fs_usage_archive (unit->ui.rootdir, 0, &fsu);
 		fs = true;
-		media = filesys_isvolume (unit) != 0;
+		media = filesys_isvolume(unit) != 0;
+	} else if (unit->volflags & MYVOLUMEINFO_CDFS) {
+		struct isofs_info ii;
+		ret = isofs_mediainfo (unit->ui.cdfs_superblock, &ii) ? 0 : 1;
+		if (!ret) {
+			media = ii.media;
+			nr = unit->unit - cd_unit_offset;
+			blocksize = ii.blocksize;
+			if (ii.media) {
+				fsu.total = ii.blocks * ii.blocksize;
+				fsu.avail = 0;
+			}
+		}
 	} else {
-	  ret = get_fs_usage (unit->ui.rootdir, 0, &fsu);
+		ret = get_fs_usage (unit->ui.rootdir, 0, &fsu);
 		if (ret)
 			err = dos_errno ();
 		fs = true;
-		media = filesys_isvolume (unit) != 0;
+		media = filesys_isvolume(unit) != 0;
 	}
-  if (ret != 0) {
-  	PUT_PCK_RES1 (packet, DOS_FALSE);
+	if (ret != 0) {
+		PUT_PCK_RES1 (packet, DOS_FALSE);
 		PUT_PCK_RES2 (packet, err);
-  	return;
-  }
+		return;
+	}
 	put_long_host(buf, 0); /* errors */
 	put_long_host(buf + 4, nr); /* unit number */
 	put_long_host(buf + 8, is_writeprotected(unit) ? 80 : 82); /* state  */
@@ -2590,7 +3359,7 @@ static void	do_info(TrapContext *ctx, Unit *unit, dpacket *packet, uaecptr info,
 		put_long_host(buf + 32, (get_long(unit->volume + 28) || unit->keys) ? -1 : 0); /* inuse */
 	}
 	trap_put_bytes(ctx, buf, info, sizeof buf);
-  PUT_PCK_RES1 (packet, DOS_TRUE);
+	PUT_PCK_RES1 (packet, DOS_TRUE);
 }
 
 static void action_disk_info(TrapContext *ctx, Unit *unit, dpacket *packet)
@@ -2605,80 +3374,83 @@ static void action_info(TrapContext *ctx, Unit *unit, dpacket *packet)
 
 static void free_key (Unit *unit, Key *k)
 {
-  Key *k1;
-  Key *prev = 0;
-  for (k1 = unit->keys; k1; k1 = k1->next) {
-  	if (k == k1) {
-	    if (prev)
-    		prev->next = k->next;
-	    else
-    		unit->keys = k->next;
-	    break;
-  	}
-  	prev = k1;
-  }
+	Key *k1;
+	Key *prev = 0;
+	for (k1 = unit->keys; k1; k1 = k1->next) {
+		if (k == k1) {
+			if (prev)
+				prev->next = k->next;
+			else
+				unit->keys = k->next;
+			break;
+		}
+		prev = k1;
+	}
 
 	for (struct lockrecord *lr = k->record; lr;) {
 		struct lockrecord *next = lr->next;
 		xfree (lr);
 		lr = next;
-  }
+	}
 
-  if (k->fd != NULL)
+	if (k->fd != NULL)
 		fs_closefile (k->fd);
 
-  xfree(k);
+	xfree(k);
 }
 
 static Key *lookup_key (Unit *unit, uae_u32 uniq)
 {
-  Key *k;
-  unsigned int total = 0;
-  /* It's hardly worthwhile to optimize this - most of the time there are
-   * only one or zero keys. */
-  for (k = unit->keys; k; k = k->next) {
-  	total++;
-  	if (uniq == k->uniq)
-	    return k;
-  }
+	Key *k;
+	unsigned int total = 0;
+	/* It's hardly worthwhile to optimize this - most of the time there are
+	* only one or zero keys. */
+	for (k = unit->keys; k; k = k->next) {
+		total++;
+		if (uniq == k->uniq)
+			return k;
+	}
 	write_log (_T("Error: couldn't find key %u / %u!\n"), uniq, total);
-  return 0;
+	return 0;
 }
 
 static Key *new_key (Unit *unit)
 {
-  Key *k = xcalloc (Key, 1);
-  k->uniq = ++key_uniq;
-  k->fd = NULL;
-  k->file_pos = 0;
-  k->next = unit->keys;
-  unit->keys = k;
+	Key *k = xcalloc (Key, 1);
+	k->uniq = ++key_uniq;
+	k->fd = NULL;
+	k->file_pos = 0;
+	k->next = unit->keys;
+	unit->keys = k;
 
-  return k;
+	return k;
 }
 
-static a_inode *find_aino (TrapContext *ctx, Unit *unit, uaecptr lock, const TCHAR *name, int *err)
+static a_inode *find_aino(TrapContext *ctx, Unit *unit, uaecptr lock, const TCHAR *name, int *err)
 {
-  a_inode *a;
-   
-  if (lock) {
+	a_inode *a;
+
+	if (lock) {
 		a_inode *olda = aino_from_lock(ctx, unit, lock);
-    if (olda == 0) {
-      /* That's the best we can hope to do. */
-      a = get_aino (unit, &unit->rootnode, name, err);
-    } else {
-      a = get_aino (unit, olda, name, err);
-    }
-  } else {
-    a = get_aino (unit, &unit->rootnode, name, err);
-  }
-  return a;
+		if (olda == 0) {
+			/* That's the best we can hope to do. */
+			a = get_aino (unit, &unit->rootnode, name, err);
+		} else {
+			a = get_aino (unit, olda, name, err);
+		}
+	} else {
+		a = get_aino (unit, &unit->rootnode, name, err);
+	}
+	if (a) {
+	}
+	aino_test (a);
+	return a;
 }
 
-static uaecptr make_lock (TrapContext *ctx, Unit *unit, uae_u32 uniq, uae_s32 mode)
+static uaecptr make_lock(TrapContext *ctx, Unit *unit, uae_u32 uniq, long mode)
 {
-  /* allocate lock from the list kept by the assembly code */
-  uaecptr lock;
+	/* allocate lock from the list kept by the assembly code */
+	uaecptr lock;
 
 	struct trapmd md1[] = 
 	{
@@ -2703,7 +3475,7 @@ static uaecptr make_lock (TrapContext *ctx, Unit *unit, uae_u32 uniq, uae_s32 mo
 	};
 	trap_multi(ctx, md2, sizeof md2 / sizeof(struct trapmd));
 
-  return lock;
+	return lock;
 }
 
 #define NOTIFY_CLASS	0x40000000
@@ -2715,130 +3487,130 @@ static uaecptr make_lock (TrapContext *ctx, Unit *unit, uae_u32 uniq, uae_s32 mo
 #define NRF_NOTIFY_INITIAL 16
 #define NRF_MAGIC (1 << 31)
 
-static void notify_send (TrapContext *ctx, Unit *unit, Notify *n)
+static void notify_send(TrapContext *ctx, Unit *unit, Notify *n)
 {
-  uaecptr nr = n->notifyrequest;
+	uaecptr nr = n->notifyrequest;
 	int flags = trap_get_long(ctx, nr + 12);
 
-  if (flags & NRF_SEND_MESSAGE) {
-  	if (!(flags & NRF_WAIT_REPLY) || ((flags & NRF_WAIT_REPLY) && !(flags & NRF_MAGIC))) {
-	    uae_NotificationHack (unit->port, nr);
-  	} else if (flags & NRF_WAIT_REPLY) {
+	if (flags & NRF_SEND_MESSAGE) {
+		if (!(flags & NRF_WAIT_REPLY) || ((flags & NRF_WAIT_REPLY) && !(flags & NRF_MAGIC))) {
+			uae_NotificationHack (unit->port, nr);
+		} else if (flags & NRF_WAIT_REPLY) {
 			trap_put_long(ctx, nr + 12, trap_get_long(ctx, nr + 12) | NRF_MAGIC);
-  	}
-  } else if (flags & NRF_SEND_SIGNAL) {
+		}
+	} else if (flags & NRF_SEND_SIGNAL) {
 		uae_Signal (trap_get_long(ctx, nr + 16), 1 << trap_get_byte(ctx, nr + 20));
-  }
+	}
 }
 
-static void notify_check (TrapContext *ctx, Unit *unit, a_inode *a)
+static void notify_check(TrapContext *ctx, Unit *unit, a_inode *a)
 {
-  Notify *n;
-  int hash = notifyhash (a->aname);
-  for (n = unit->notifyhash[hash]; n; n = n->next) {
-	  uaecptr nr = n->notifyrequest;
-	  if (same_aname(n->partname, a->aname)) {
-	    int err;
+	Notify *n;
+	int hash = notifyhash (a->aname);
+	for (n = unit->notifyhash[hash]; n; n = n->next) {
+		uaecptr nr = n->notifyrequest;
+		if (same_aname (n->partname, a->aname)) {
+			int err;
 			a_inode *a2 = find_aino(ctx, unit, 0, n->fullname, &err);
-	    if (err == 0 && a == a2)
+			if (err == 0 && a == a2)
 				notify_send(ctx, unit, n);
-	  }
-  }
-  if (a->parent) {
-    hash = notifyhash (a->parent->aname);
-    for (n = unit->notifyhash[hash]; n; n = n->next) {
-	    uaecptr nr = n->notifyrequest;
-	    if (same_aname(n->partname, a->parent->aname)) {
-	      int err;
+		}
+	}
+	if (a->parent) {
+		hash = notifyhash (a->parent->aname);
+		for (n = unit->notifyhash[hash]; n; n = n->next) {
+			uaecptr nr = n->notifyrequest;
+			if (same_aname (n->partname, a->parent->aname)) {
+				int err;
 				a_inode *a2 = find_aino(ctx, unit, 0, n->fullname, &err);
-	      if (err == 0 && a->parent == a2)
+				if (err == 0 && a->parent == a2)
 					notify_send(ctx, unit, n);
-	    }
-    }
-  }
+			}
+		}
+	}
 }
 
 static void action_add_notify(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
-  uaecptr nr = GET_PCK_ARG1 (packet);
-  int flags;
-  Notify *n;
-  TCHAR *name, *p, *partname;
+	uaecptr nr = GET_PCK_ARG1 (packet);
+	int flags;
+	Notify *n;
+	TCHAR *name, *p, *partname;
 
-  name = char1 (ctx, trap_get_long(ctx, nr + 4));
-  flags = trap_get_long(ctx, nr + 12);
+	name = char1(ctx, trap_get_long(ctx, nr + 4));
+	flags = trap_get_long(ctx, nr + 12);
 
-  if (!(flags & (NRF_SEND_MESSAGE | NRF_SEND_SIGNAL))) {
-    PUT_PCK_RES1 (packet, DOS_FALSE);
-    PUT_PCK_RES2 (packet, ERROR_BAD_NUMBER);
-    return;
-  }
+	if (!(flags & (NRF_SEND_MESSAGE | NRF_SEND_SIGNAL))) {
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, ERROR_BAD_NUMBER);
+		return;
+	}
 
-  p = name + _tcslen (name) - 1;
-  if (p[0] == ':') 
-    p--;
-  while (p > name && p[0] != ':' && p[0] != '/') 
-    p--;
-  if (p[0] == ':' || p[0] == '/') 
-    p++;
-  partname = my_strdup (p);
-  n = new_notify (unit, partname);
-  n->notifyrequest = nr;
-  n->fullname = name;
-  if (flags & NRF_NOTIFY_INITIAL) {
-  	int err;
+	p = name + _tcslen (name) - 1;
+	if (p[0] == ':')
+		p--;
+	while (p > name && p[0] != ':' && p[0] != '/')
+		p--;
+	if (p[0] == ':' || p[0] == '/')
+		p++;
+	partname = my_strdup (p);
+	n = new_notify (unit, partname);
+	n->notifyrequest = nr;
+	n->fullname = name;
+	if (flags & NRF_NOTIFY_INITIAL) {
+		int err;
 		a_inode *a = find_aino(ctx, unit, 0, n->fullname, &err);
-  	if (err == 0)
+		if (err == 0)
 			notify_send(ctx, unit, n);
-  }
-  PUT_PCK_RES1 (packet, DOS_TRUE);
+	}
+	PUT_PCK_RES1 (packet, DOS_TRUE);
 }
 static void	action_remove_notify(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
-  uaecptr nr = GET_PCK_ARG1 (packet);
-  Notify *n;
-  int hash;
+	uaecptr nr = GET_PCK_ARG1 (packet);
+	Notify *n;
+	int hash;
 
-  for (hash = 0; hash < NOTIFY_HASH_SIZE; hash++) {
-    for (n = unit->notifyhash[hash]; n; n = n->next) {
-	    if (n->notifyrequest == nr) {
+	for (hash = 0; hash < NOTIFY_HASH_SIZE; hash++) {
+		for (n = unit->notifyhash[hash]; n; n = n->next) {
+			if (n->notifyrequest == nr) {
 				//write_log (_T("NotifyRequest %08X freed\n"), n->notifyrequest);
-		    xfree (n->fullname);
-		    xfree (n->partname);
-		    free_notify (unit, hash, n);
-		    PUT_PCK_RES1 (packet, DOS_TRUE);
-		    return;
-	    }
-  	}
-  }
+				xfree (n->fullname);
+				xfree (n->partname);
+				free_notify (unit, hash, n);
+				PUT_PCK_RES1 (packet, DOS_TRUE);
+				return;
+			}
+		}
+	}
 	write_log (_T("Tried to free non-existing NotifyRequest %08X\n"), nr);
-  PUT_PCK_RES1 (packet, DOS_TRUE);
+	PUT_PCK_RES1 (packet, DOS_TRUE);
 }
 
-static void free_lock (TrapContext *ctx, Unit *unit, uaecptr lock)
+static void free_lock(TrapContext *ctx, Unit *unit, uaecptr lock)
 {
-  if (! lock)
-  	return;
+	if (! lock)
+		return;
 
-  uaecptr curlock = get_long(unit->volume + 28);
-  if (lock == curlock << 2) {
-  	put_long(unit->volume + 28, trap_get_long(ctx, lock));
-  } else {
-  	uaecptr current = curlock;
-  	uaecptr next = 0;
-  	while (current) {
+	uaecptr curlock = get_long(unit->volume + 28);
+	if (lock == curlock << 2) {
+		put_long(unit->volume + 28, trap_get_long(ctx, lock));
+	} else {
+		uaecptr current = curlock;
+		uaecptr next = 0;
+		while (current) {
 			next = trap_get_long(ctx, current << 2);
-	    if (lock == next << 2)
-    		break;
-	    current = next;
-  	}
-  	if (!current) {
+			if (lock == next << 2)
+				break;
+			current = next;
+		}
+		if (!current) {
 			write_log (_T("tried to unlock non-existing lock %x\n"), lock);
-	    return;
-  	}
+			return;
+		}
 		trap_put_long(ctx, current << 2, trap_get_long(ctx, lock));
-  }
-  lock -= 4;
+	}
+	lock -= 4;
 	struct trapmd md2[] =
 	{
 		{ TRAPCMD_GET_LONG, { unit->locklist }, 1, 1 },
@@ -2850,99 +3622,268 @@ static void free_lock (TrapContext *ctx, Unit *unit, uaecptr lock)
 
 static void action_lock(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
-  uaecptr lock = GET_PCK_ARG1 (packet) << 2;
-  uaecptr name = GET_PCK_ARG2 (packet) << 2;
+	uaecptr lock = GET_PCK_ARG1 (packet) << 2;
+	uaecptr name = GET_PCK_ARG2 (packet) << 2;
 	int mode = GET_PCK_ARG3 (packet);
-  a_inode *a;
-  int err;
+	a_inode *a;
+	int err;
 
-  if (mode != SHARED_LOCK && mode != EXCLUSIVE_LOCK) {
-  	mode = SHARED_LOCK;
-  }
+	if (mode != SHARED_LOCK && mode != EXCLUSIVE_LOCK) {
+		mode = SHARED_LOCK;
+	}
 
 	a = find_aino(ctx, unit, lock, bstr(ctx, unit, name), &err);
-  if (err == 0 && (a->elock || (mode != SHARED_LOCK && a->shlock > 0))) {
-  	err = ERROR_OBJECT_IN_USE;
-  }
-  /* Lock() doesn't do access checks. */
-  if (err != 0) {
-  	PUT_PCK_RES1 (packet, DOS_FALSE);
-  	PUT_PCK_RES2 (packet, err);
-  	return;
-  }
-  if (mode == SHARED_LOCK)
-  	a->shlock++;
-  else
-  	a->elock = 1;
-  de_recycle_aino (unit, a);
-  PUT_PCK_RES1 (packet, make_lock (ctx, unit, a->uniq, mode) >> 2);
+	if (err == 0 && a->softlink) {
+		err = test_softlink (a);
+	}
+	if (err == 0 && (a->elock || (mode != SHARED_LOCK && a->shlock > 0))) {
+		err = ERROR_OBJECT_IN_USE;
+	}
+	/* Lock() doesn't do access checks. */
+	if (err != 0) {
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, err);
+		return;
+	}
+	if (mode == SHARED_LOCK)
+		a->shlock++;
+	else
+		a->elock = 1;
+	de_recycle_aino (unit, a);
+	PUT_PCK_RES1(packet, make_lock(ctx, unit, a->uniq, mode) >> 2);
+}
+static void action_read_link_add_parent(Unit *u, a_inode *a, TCHAR *path)
+{
+	if (a == NULL)
+		return;
+	action_read_link_add_parent(u, a->parent, path);
+	if (a == &u->rootnode) {
+		_tcscat (path, a->aname);
+		_tcscat (path, _T(":"));
+	} else {
+		if (path[0] && path[_tcslen (path) - 1] != ':')
+			_tcscat (path, _T("/"));
+		_tcscat (path, a->aname);
+	}
+}
+
+#define LINK_HARD 0
+#define LINK_SOFT 1
+
+static void action_make_link(TrapContext *ctx, Unit *unit, dpacket *packet)
+{
+	uaecptr lock = GET_PCK_ARG1 (packet) << 2;
+	uaecptr name = GET_PCK_ARG2 (packet) << 2;
+	uaecptr target = GET_PCK_ARG3 (packet);
+	int type = GET_PCK_ARG4 (packet);
+	a_inode *a1, *a2;
+	int err;
+	TCHAR tmp[256], tmp2[MAX_DPATH], tmp3[MAX_DPATH];
+
+	_tcscpy (tmp, bstr(ctx, unit, name));
+	a1 = aino_from_lock(ctx, unit, lock);
+
+	if (type == LINK_HARD) {
+
+		// we don't support hard links
+		uaecptr tlock = target << 2;
+		a2 = aino_from_lock(ctx, unit, tlock);
+		write_log (_T("ACTION_MAKE_LINK(HARD,'%s','%s','%s')\n"),
+			a1 ? a1->aname : _T("?"), tmp,
+			a2 ? a2->aname : _T("?"));
+
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, ERROR_NOT_IMPLEMENTED);
+
+	} else {
+
+		a_inode *a3;
+		TCHAR *link = cstr(ctx, unit, target);
+		write_log (_T("ACTION_MAKE_LINK(SOFT,'%s','%s','%s')\n"),
+			a1 ? a1->aname : _T("?"), tmp, link);
+		if (!a1) {
+			PUT_PCK_RES1 (packet, DOS_FALSE);
+			PUT_PCK_RES2 (packet, ERROR_OBJECT_NOT_AROUND);
+			return;
+		}
+		// try to find softlink target
+		for (Unit *u = units; u; u = u->next) {
+			if (u->volflags & (MYVOLUMEINFO_ARCHIVE | MYVOLUMEINFO_CDFS))
+				continue;
+			a3 = find_aino(ctx, u, 0, link, &err);
+			if (err || !a3)
+				continue;
+			_tcscpy (tmp2, a1->nname);
+			_tcscat (tmp2, FSDB_DIR_SEPARATOR_S);
+			_tcscat (tmp2, tmp);
+			tmp3[0] = 0;
+			action_read_link_add_parent (u, a3, tmp3);
+			if (!my_createshortcut (tmp2, a3->nname, tmp3)) {
+				PUT_PCK_RES1 (packet, DOS_FALSE);
+				PUT_PCK_RES2 (packet, dos_errno ());
+			}
+			return;
+		}
+		// real Amiga softlinks would accept invalid paths too, we won't.
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, ERROR_OBJECT_NOT_AROUND);
+	}
+}
+
+static void action_read_link(TrapContext *ctx, Unit *unit, dpacket *packet)
+{
+	uaecptr lock = GET_PCK_ARG1 (packet) << 2;
+	uaecptr name = GET_PCK_ARG2 (packet);
+	uaecptr newname = GET_PCK_ARG3 (packet);
+	int size = GET_PCK_ARG4 (packet);
+	a_inode *a, *matched_aino;
+	Unit *u = NULL, *u2 = NULL, *matched_unit;
+	int err, i, matched_len;
+	TCHAR tmp[MAX_DPATH];
+	TCHAR *namep, *extrapath;
+
+	extrapath = NULL;
+	namep = cstr(ctx, unit, name);
+	for (;;) {
+		a = find_aino(ctx, unit, lock, namep, &err);
+		if (err != ERROR_IS_SOFT_LINK)
+			break;
+		for (i = _tcslen (namep) - 1; i > 0; i--) {
+			if (namep[i] == '/') {
+				namep[i] = 0;
+				xfree (extrapath);
+				extrapath = my_strdup (namep + i + 1);
+				break;
+			}
+		}
+	}
+	if (!a->softlink)
+		err = ERROR_OBJECT_WRONG_TYPE;
+	if (err != 0) {
+		xfree(extrapath);
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, err);
+		return;
+	}
+	_tcscpy (tmp, a->nname);
+	write_log (_T("Resolving softlink '%s'\n"), tmp);
+	if (!my_resolvesoftlink (tmp, sizeof tmp / sizeof (TCHAR), false)) {
+		xfree(extrapath);
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		//  not sure what to return
+		PUT_PCK_RES2 (packet, ERROR_OBJECT_NOT_AROUND);
+		return;
+	}
+	write_log (_T("-> '%s'\n"), tmp);
+	matched_aino = NULL;
+	matched_unit = NULL;
+	err = 0;
+	matched_len = 0;
+	for (u = units; u; u = u->next) {
+		if (!(u->volflags & (MYVOLUMEINFO_ARCHIVE | MYVOLUMEINFO_CDFS))) {
+			TCHAR path[MAX_DPATH];
+			i = my_issamevolume (u->rootnode.nname, tmp, path);
+			if (i > matched_len) {
+				a = find_aino(ctx, u, 0, path, &err);
+				if (a && !err) {
+					write_log (_T("Match found from '%s' (%d)\n"), u->rootnode.aname, i);
+					matched_aino = a;
+					matched_unit = u;
+					matched_len = i;
+				}
+			}
+		}
+	}
+	if (!matched_aino) {
+		xfree(extrapath);
+		write_log (_T("Path not found in any mounted drive\n"));
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, ERROR_OBJECT_NOT_AROUND);
+		return;
+	}
+	tmp[0] = 0;
+	action_read_link_add_parent (matched_unit, matched_aino, tmp);
+	if (extrapath) {
+		_tcscat (tmp, _T("/"));
+		_tcscat (tmp, extrapath);
+	}
+	xfree (extrapath);
+	write_log (_T("got target '%s'\n"), tmp); 
+	char *s = ua_fs (tmp, -1);
+	for (i = 0; s[i]; i++) {
+		if (i >= size - 1)
+			break;
+		trap_put_byte(ctx, newname + i, s[i]);
+	}
+	xfree (s);
+	trap_put_byte(ctx, newname + i, 0);
 }
 
 static void action_free_lock(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
-  uaecptr lock = GET_PCK_ARG1 (packet) << 2;
-  a_inode *a;
+	uaecptr lock = GET_PCK_ARG1 (packet) << 2;
+	a_inode *a;
 
 	a = aino_from_lock(ctx, unit, lock);
-  if (a == 0) {
-  	PUT_PCK_RES1 (packet, DOS_FALSE);
-  	PUT_PCK_RES2 (packet, ERROR_OBJECT_NOT_AROUND);
-  	return;
-  }
-  if (a->elock)
-  	a->elock = 0;
-  else
-  	a->shlock--;
-  recycle_aino (unit, a);
+	if (a == 0) {
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, ERROR_OBJECT_NOT_AROUND);
+		return;
+	}
+	if (a->elock)
+		a->elock = 0;
+	else
+		a->shlock--;
+	recycle_aino (unit, a);
 	free_lock(ctx, unit, lock);
 
-  PUT_PCK_RES1 (packet, DOS_TRUE);
+	PUT_PCK_RES1 (packet, DOS_TRUE);
 }
 
 static uaecptr action_dup_lock_2(TrapContext *ctx, Unit *unit, dpacket *packet, uae_u32 uniq)
 {
-  uaecptr out;
-  a_inode *a;
+	uaecptr out;
+	a_inode *a;
 
-  a = lookup_aino (unit, uniq);
-  if (a == 0) {
-  	PUT_PCK_RES1 (packet, DOS_FALSE);
-  	PUT_PCK_RES2 (packet, ERROR_OBJECT_NOT_AROUND);
-  	return 0;
-  }
-  /* DupLock()ing exclusive locks isn't possible, says the Autodoc, but
-   * at least the RAM-Handler seems to allow it. Let's see what happens
-   * if we don't. */
-  if (a->elock) {
-  	PUT_PCK_RES1 (packet, DOS_FALSE);
-  	PUT_PCK_RES2 (packet, ERROR_OBJECT_IN_USE);
-  	return 0;
-  }
-  a->shlock++;
-  de_recycle_aino (unit, a);
+	a = lookup_aino (unit, uniq);
+	if (a == 0) {
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, ERROR_OBJECT_NOT_AROUND);
+		return 0;
+	}
+	/* DupLock()ing exclusive locks isn't possible, says the Autodoc, but
+	* at least the RAM-Handler seems to allow it. Let's see what happens
+	* if we don't. */
+	if (a->elock) {
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, ERROR_OBJECT_IN_USE);
+		return 0;
+	}
+	a->shlock++;
+	de_recycle_aino(unit, a);
 	out = make_lock(ctx, unit, a->uniq, -2) >> 2;
-  PUT_PCK_RES1 (packet, out);
-  return out;
+	PUT_PCK_RES1 (packet, out);
+	return out;
 }
 
 static void action_dup_lock(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
-  uaecptr lock = GET_PCK_ARG1 (packet) << 2;
-  if (!lock) {
-  	PUT_PCK_RES1 (packet, 0);
-  	return;
-  }
+	uaecptr lock = GET_PCK_ARG1 (packet) << 2;
+	if (!lock) {
+		PUT_PCK_RES1 (packet, 0);
+		return;
+	}
 	action_dup_lock_2(ctx, unit, packet, trap_get_long(ctx, lock + 4));
 }
 
 
 static void action_lock_from_fh(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
-  Key *k = lookup_key (unit, GET_PCK_ARG1 (packet));
-  if (k == 0) {
-  	PUT_PCK_RES1 (packet, DOS_FALSE);
-  	return;
-  }
+	Key *k = lookup_key (unit, GET_PCK_ARG1 (packet));
+	if (k == 0) {
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		return;
+	}
 	action_dup_lock_2(ctx, unit, packet, k->aino->uniq);
 }
 
@@ -2951,15 +3892,15 @@ static void free_exkey (Unit *unit, a_inode *aino)
 	if (--aino->exnext_count == 0) {
 		unit->total_locked_ainos -= aino->locked_children;
 		aino->locked_children = 0;
-  }
+	}
 }
 
 static void move_exkeys (Unit *unit, a_inode *from, a_inode *to)
 {
-  to->exnext_count = from->exnext_count;
-  to->locked_children = from->locked_children;
-  from->exnext_count = 0;
-  from->locked_children = 0;
+	to->exnext_count = from->exnext_count;
+	to->locked_children = from->locked_children;
+	from->exnext_count = 0;
+	from->locked_children = 0;
 }
 
 static bool get_statinfo(Unit *unit, a_inode *aino, struct mystat *statbuf)
@@ -2969,6 +3910,8 @@ static bool get_statinfo(Unit *unit, a_inode *aino, struct mystat *statbuf)
 	/* No error checks - this had better work. */
 	if (unit->volflags & MYVOLUMEINFO_ARCHIVE)
 		ok = zfile_stat_archive (aino->nname, statbuf) != 0;
+	else if (unit->volflags & MYVOLUMEINFO_CDFS)
+		ok = isofs_stat (unit->ui.cdfs_superblock, aino->uniq_external, statbuf);
 	else
 		my_stat (aino->nname, statbuf);
 	return ok;
@@ -2978,62 +3921,69 @@ static void get_fileinfo(TrapContext *ctx, Unit *unit, dpacket *packet, uaecptr 
 {
 	struct mystat statbuf;
 	int days, mins, ticks;
-  int i, n, entrytype, blocksize;
+	int i, n, entrytype, blocksize;
 	uae_s64 numblocks;
+	int fsdb_can = fsdb_cando (unit);
 	const TCHAR *xs;
 	char *x, *x2;
 	uae_u8 *buf;
 	uae_u8 buf_array[260] = { 0 };
 
-	if (!valid_address(info, (sizeof buf_array) - 36)) {
+	if (trap_is_indirect() || !valid_address(info, (sizeof buf_array) - 36)) {
 		buf = buf_array;
 	} else {
 		buf = get_real_address(info);
 	}
 
-	if (!get_statinfo(unit, aino, &statbuf)) {
+	if (aino->vfso) {
+		fsdb_can = 1;
+		statbuf.mode = aino->vfso->amigaos_mode;
+		statbuf.mtime.tv_sec = 0;
+		statbuf.mtime.tv_usec = 0;
+		statbuf.size = aino->vfso->size;
+	} else if (!get_statinfo(unit, aino, &statbuf)) {
 		PUT_PCK_RES1 (packet, DOS_FALSE);
 		PUT_PCK_RES2 (packet, ERROR_NOT_A_DOS_DISK);
 		return;
 	}
 
 	put_long_host(buf + 0, aino->uniq);
-  if (aino->parent == 0) {
-  	/* Guru book says ST_ROOT = 1 (root directory, not currently used)
-  	 * but some programs really expect 2 from root dir..
-  	 */
+	if (aino->parent == 0) {
+		/* Guru book says ST_ROOT = 1 (root directory, not currently used)
+		* but some programs really expect 2 from root dir..
+		*/
 		entrytype = ST_USERDIR;
 		xs = unit->ui.volname;
-  } else {
-  	entrytype = aino->dir ? ST_USERDIR : ST_FILE;
+	} else {
+		entrytype = aino->softlink ? ST_SOFTLINK : (aino->dir ? ST_USERDIR : ST_FILE);
 		xs = aino->aname;
-  }
+	}
 	put_long_host(buf + 4, entrytype);
-  /* AmigaOS docs say these have to contain the same value. */
+	/* AmigaOS docs say these have to contain the same value. */
 	put_long_host(buf + 120, entrytype);
 
 	x2 = x = ua_fs (xs, -1);
-  n = strlen (x);
-  if (n > 107)
-  	n = 107;
-	if (n > abs (currprefs.filesys_max_name))
-		n = abs (currprefs.filesys_max_name);
-  i = 8;
+	n = strlen (x);
+	if (n > 107)
+		n = 107;
+	if (n > abs(currprefs.filesys_max_name))
+		n = abs(currprefs.filesys_max_name);
+	i = 8;
 	put_byte_host(buf + i, n); i++;
-  while (n--)
+	while (n--)
 		put_byte_host(buf + i, *x), i++, x++;
-  while (i < 108)
+	while (i < 108)
 		put_byte_host(buf + i, 0), i++;
 	xfree (x2);
 
-	put_long_host(buf + 116, aino->amigaos_mode);
+	put_long_host(buf + 116, fsdb_can ? aino->amigaos_mode : fsdb_mode_supported (aino));
 
 	if (kickstart_version >= 36) {
 		put_word_host(buf + 224, 0); // OwnerUID
 		put_word_host(buf + 226, 0); // OwnerGID
 	}
 
-	blocksize = 512;
+	blocksize = (unit->volflags & MYVOLUMEINFO_CDFS) ? 2048 : 512;
 	numblocks = (statbuf.size + blocksize - 1) / blocksize;
 	put_long_host(buf + 128, numblocks > MAXFILESIZE32 ? MAXFILESIZE32 : numblocks);
 
@@ -3046,30 +3996,30 @@ static void get_fileinfo(TrapContext *ctx, Unit *unit, dpacket *packet, uaecptr 
 		put_long_host(buf + 240, (uae_u32)numblocks);
 	} else {
 		put_long_host(buf + 124, statbuf.size > MAXFILESIZE32 ? MAXFILESIZE32 : (uae_u32)statbuf.size);
-  }
+	}
 
 	timeval_to_amiga (&statbuf.mtime, &days, &mins, &ticks, 50);
 	put_long_host(buf + 132, days);
 	put_long_host(buf + 136, mins);
 	put_long_host(buf + 140, ticks);
-  if (aino->comment == 0)
+	if (aino->comment == 0 || !fsdb_can)
 		put_long_host(buf + 144, 0);
-  else {
-  	i = 144;
+	else {
+		i = 144;
 		xs = aino->comment;
 		if (!xs)
 			xs= _T("");
-		x2 = x = ua_fs (xs, -1);
-  	n = strlen (x);
-  	if (n > 78)
-	    n = 78;
+		x2 = x = ua_fs(xs, -1);
+		n = strlen(x);
+		if (n > 78)
+			n = 78;
 		put_byte_host(buf + i, n); i++;
-  	while (n--)
+		while (n--)
 			put_byte_host(buf + i, *x), i++, x++;
-  	while (i < 224)
+		while (i < 224)
 			put_byte_host(buf + i, 0), i++;
 		xfree (x2);
-  }
+	}
 
 	if (buf == buf_array) {
 		// Must not write Fib_reserved at the end.
@@ -3082,22 +4032,22 @@ static void get_fileinfo(TrapContext *ctx, Unit *unit, dpacket *packet, uaecptr 
 		}
 	}
 
-  PUT_PCK_RES1 (packet, DOS_TRUE);
+	PUT_PCK_RES1 (packet, DOS_TRUE);
 }
 
 int get_native_path(TrapContext *ctx, uae_u32 lock, TCHAR *out)
 {
-  int i = 0;
-  for (i = 0; i < MAX_FILESYSTEM_UNITS; i++) {
-  	if (mountinfo.ui[i].self) {
+	int i = 0;
+	for (i = 0; i < MAX_FILESYSTEM_UNITS; i++) {
+		if (mountinfo.ui[i].self) {
 			a_inode *a = aino_from_lock(ctx, mountinfo.ui[i].self, lock << 2);
-	    if (a) {
-    		_tcscpy (out, a->nname);
-    		return 0;
-	    }
-  	}
-  }
-  return -1;
+			if (a) {
+				_tcscpy (out, a->nname);
+				return 0;
+			}
+		}
+	}
+	return -1;
 }
 
 #define REC_EXCLUSIVE 0
@@ -3143,7 +4093,7 @@ static bool record_hit (Unit *unit, Key *k, uae_u64 pos, uae_u64 len, uae_u32 mo
 	return false;
 }
 
-static void record_timeout (TrapContext *ctx, Unit *unit)
+static void record_timeout(TrapContext *ctx, Unit *unit)
 {
 	bool retry = true;
 	while (retry) {
@@ -3157,7 +4107,7 @@ static void record_timeout (TrapContext *ctx, Unit *unit)
 				PUT_PCK_RES2 (lr->packet, ERROR_LOCK_TIMEOUT);
 				// mark packet as complete
 				trap_put_long(ctx, lr->msg + 4, 0xfffffffe);
-				uae_Signal (get_long (unit->volume + 176 - 32), 1 << 13);
+				uae_Signal (get_long(unit->volume + 176 - 32), 1 << 13);
 				if (prev)
 					prev->next = lr->next;
 				else
@@ -3172,7 +4122,7 @@ static void record_timeout (TrapContext *ctx, Unit *unit)
 	}
 }
 
-static void record_check_waiting (TrapContext *ctx, Unit *unit)
+static void record_check_waiting(TrapContext *ctx, Unit *unit)
 {
 	bool retry = true;
 	while (retry) {
@@ -3286,148 +4236,151 @@ static void action_free_record(TrapContext *ctx, Unit *unit, dpacket *packet)
 
 static ExAllKey *getexall (Unit *unit, uaecptr control, int id)
 {
-  int i;
-  if (id < 0) {
-  	for (i = 0; i < EXALLKEYS; i++) {
-	    if (unit->exalls[i].id == 0) {
-        unit->exallid++;
-    		if (unit->exallid == EXALL_END)
-	        unit->exallid++;
-		    unit->exalls[i].id = unit->exallid;
-		    unit->exalls[i].control = control;
-		    return &unit->exalls[i];
-	    }
-  	}
-  } else if (id > 0) {
-  	for (i = 0; i < EXALLKEYS; i++) {
-	    if (unit->exalls[i].id == id)
-    		return &unit->exalls[i];
-  	}
-  }
-  return NULL;
+	int i;
+	if (id < 0) {
+		for (i = 0; i < EXALLKEYS; i++) {
+			if (unit->exalls[i].id == 0) {
+				unit->exallid++;
+				if (unit->exallid == EXALL_END)
+					unit->exallid++;
+				unit->exalls[i].id = unit->exallid;
+				unit->exalls[i].control = control;
+				return &unit->exalls[i];
+			}
+		}
+	} else if (id > 0) {
+		for (i = 0; i < EXALLKEYS; i++) {
+			if (unit->exalls[i].id == id)
+				return &unit->exalls[i];
+		}
+	}
+	return NULL;
 }
 
-static int exalldo (TrapContext *ctx, uaecptr exalldata, uae_u32 exalldatasize, uae_u32 type, uaecptr control, Unit *unit, a_inode *aino)
+static int exalldo(TrapContext *ctx, uaecptr exalldata, uae_u32 exalldatasize, uae_u32 type, uaecptr control, Unit *unit, a_inode *aino)
 {
-  uaecptr exp = exalldata;
-  int i;
-  int size, size2;
-  int entrytype;
+	uaecptr exp = exalldata;
+	int i;
+	int size, size2;
+	int entrytype;
 	const TCHAR *xs = NULL, *commentx = NULL;
-  uae_u32 flags = 15;
+	uae_u32 flags = 15;
 	int days, mins, ticks;
 	struct mystat statbuf;
-  uae_u16 uid = 0, gid = 0;
-  char *x = NULL, *comment = NULL;
-  int ret = 0;
+	int fsdb_can = fsdb_cando (unit);
+	uae_u16 uid = 0, gid = 0;
+	char *x = NULL, *comment = NULL;
+	int ret = 0;
 
-  memset(&statbuf, 0, sizeof statbuf);
-  if (unit->volflags & MYVOLUMEINFO_ARCHIVE)
-  	zfile_stat_archive (aino->nname, &statbuf);
-  else
+	memset (&statbuf, 0, sizeof statbuf);
+	if (unit->volflags & MYVOLUMEINFO_ARCHIVE)
+		zfile_stat_archive (aino->nname, &statbuf);
+	else if (unit->volflags & MYVOLUMEINFO_CDFS)
+		isofs_stat (unit->ui.cdfs_superblock, aino->uniq_external, &statbuf);
+	else
 		my_stat (aino->nname, &statbuf);
 
-  if (aino->parent == 0) {
+	if (aino->parent == 0) {
 		entrytype = ST_USERDIR;
 		xs = unit->ui.volname;
-  } else {
-  	entrytype = aino->dir ? ST_USERDIR : ST_FILE;
+	} else {
+		entrytype = aino->softlink ? ST_SOFTLINK : (aino->dir ? ST_USERDIR : ST_FILE);
 		xs = aino->aname;
-  }
+	}
 	x = ua_fs (xs, -1);
 
-  size = 0;
-  size2 = 4;
-  if (type >= 1) {
-	  size2 += 4;
-	  size += strlen (x) + 1;
-	  size = (size + 3) & ~3;
-  }
-  if (type >= 2)
-  	size2 += 4;
-  if (type >= 3)
-  	size2 += 4;
-  if (type >= 4) {
-  	flags = aino->amigaos_mode;
-  	size2 += 4;
-  }
-  if (type >= 5) {
+	size = 0;
+	size2 = 4;
+	if (type >= 1) {
+		size2 += 4;
+		size += strlen (x) + 1;
+		size = (size + 3) & ~3;
+	}
+	if (type >= 2)
+		size2 += 4;
+	if (type >= 3)
+		size2 += 4;
+	if (type >= 4) {
+		flags = fsdb_can ? aino->amigaos_mode : fsdb_mode_supported (aino);
+		size2 += 4;
+	}
+	if (type >= 5) {
 		timeval_to_amiga (&statbuf.mtime, &days, &mins, &ticks, 50);
-  	size2 += 12;
-  }
-  if (type >= 6) {
-  	size2 += 4;
-    if (aino->comment == 0)
+		size2 += 12;
+	}
+	if (type >= 6) {
+		size2 += 4;
+		if (aino->comment == 0 || !fsdb_can)
 			commentx = _T("");
-  	else
+		else
 			commentx = aino->comment;
 		comment = ua_fs (commentx, -1);
-  	size += strlen (comment) + 1;
-  	size = (size + 3) & ~3;
-  }
-  if (type >= 7) {
-  	size2 += 4;
-  	uid = 0;
-  	gid = 0;
-  }
+		size += strlen (comment) + 1;
+		size = (size + 3) & ~3;
+	}
+	if (type >= 7) {
+		size2 += 4;
+		uid = 0;
+		gid = 0;
+	}
 	if (type >= 8) {
 		size2 += 8;
 	}
 
 	i = trap_get_long(ctx, control + 0);
-  while (i > 0) {
+	while (i > 0) {
 		exp = trap_get_long(ctx, exp); /* ed_Next */
-  	i--;
-  }
+		i--;
+	}
 
-  if (exalldata + exalldatasize - exp < size + size2)
-  	goto end; /* not enough space */
+	if (exalldata + exalldatasize - exp < size + size2)
+		goto end; /* not enough space */
 
 	trap_put_long(ctx, exp, exp + size + size2); /* ed_Next */
-  if (type >= 1) {
+	if (type >= 1) {
 		trap_put_long(ctx, exp + 4, exp + size2);
-  	for (i = 0; i <= strlen (x); i++) {
+		for (i = 0; i <= strlen (x); i++) {
 			trap_put_byte(ctx, exp + size2, x[i]);
-	    size2++;
-  	}
-  }
-  if (type >= 2)
+			size2++;
+		}
+	}
+	if (type >= 2)
 		trap_put_long(ctx, exp + 8, entrytype);
-  if (type >= 3)
+	if (type >= 3)
 		trap_put_long(ctx, exp + 12, statbuf.size > MAXFILESIZE32 ? MAXFILESIZE32 : statbuf.size);
-  if (type >= 4)
+	if (type >= 4)
 		trap_put_long(ctx, exp + 16, flags);
-  if (type >= 5) {
+	if (type >= 5) {
 		trap_put_long(ctx, exp + 20, days);
 		trap_put_long(ctx, exp + 24, mins);
 		trap_put_long(ctx, exp + 28, ticks);
-  }
-  if (type >= 6) {
+	}
+	if (type >= 6) {
 		trap_put_long(ctx, exp + 32, exp + size2);
 		trap_put_byte(ctx, exp + size2, strlen (comment));
-  	for (i = 0; i <= strlen (comment); i++) {
+		for (i = 0; i <= strlen (comment); i++) {
 			trap_put_byte(ctx, exp + size2, comment[i]);
-	    size2++;
-  	}
-  }
-  if (type >= 7) {
+			size2++;
+		}
+	}
+	if (type >= 7) {
 		trap_put_word(ctx, exp + 36, uid);
 		trap_put_word(ctx, exp + 38, gid);
-  }
+	}
 	if (type >= 8) {
 		trap_put_long(ctx, exp + 40, statbuf.size >> 32);
 		trap_put_long(ctx, exp + 44, (uae_u32)statbuf.size);
 	}
 
 	trap_put_long(ctx, control + 0, trap_get_long(ctx, control + 0) + 1);
-  ret = 1;
+	ret = 1;
 end:
 	xfree (x);
 	xfree (comment);
-  return ret;
+	return ret;
 }
 
-static bool filesys_name_invalid (const TCHAR *fn)
+static bool filesys_name_invalid(const TCHAR *fn)
 {
 	return _tcslen (fn) > currprefs.filesys_max_name;
 }
@@ -3436,207 +4389,213 @@ static int filesys_readdir(struct fs_dirhandle *d, TCHAR *fn, uae_u64 *uniq)
 {
 	int ok = 0;
 	if (d->fstype == FS_ARCHIVE)
-		ok = zfile_readdir_archive (d->zd, fn);
+		ok = zfile_readdir_archive(d->zd, fn);
 	else if (d->fstype == FS_DIRECTORY)
-		ok = my_readdir (d->od, fn);
+		ok = my_readdir(d->od, fn);
+	else if (d->fstype == FS_CDFS)
+		ok = isofs_readdir(d->isod, fn, uniq);
 	return ok;
 }
 
-static int action_examine_all_do (TrapContext *ctx, Unit *unit, uaecptr lock, ExAllKey *eak, uaecptr exalldata, uae_u32 exalldatasize, uae_u32 type, uaecptr control)
+static int action_examine_all_do(TrapContext *ctx, Unit *unit, uaecptr lock, ExAllKey *eak, uaecptr exalldata, uae_u32 exalldatasize, uae_u32 type, uaecptr control)
 {
-  a_inode *aino, *base = NULL;
-  int ok;
-  uae_u32 err;
-  struct fs_dirhandle *d;
-  TCHAR fn[MAX_DPATH];
+	a_inode *aino, *base = NULL;
+	int ok;
+	uae_u32 err;
+	struct fs_dirhandle *d;
+	TCHAR fn[MAX_DPATH];
 
-  if (lock != 0)
+	if (lock != 0)
 		base = aino_from_lock(ctx, unit, lock);
-  if (base == 0)
-    base = &unit->rootnode;
-  for (;;) {
+	if (base == 0)
+		base = &unit->rootnode;
+	for (;;) {
 		uae_u64 uniq = 0;
-    d = eak->dirhandle;
-    if (!eak->fn) {
-	    do {
+		d = eak->dirhandle;
+		if (!eak->fn) {
+			do {
 				ok = filesys_readdir(d, fn, &uniq);
 			} while (ok && d->fstype == FS_DIRECTORY && (filesys_name_invalid (fn) || fsdb_name_invalid_dir (NULL, fn)));
-	    if (!ok)
-    		return 0;
-	  } else {
-	    _tcscpy (fn, eak->fn);
-	    xfree (eak->fn);
-	    eak->fn = NULL;
-	  }
-		aino = lookup_child_aino_for_exnext (unit, base, fn, &err, uniq);
-    if (!aino)
-	    return 0;
-  	eak->id = unit->exallid++;
+			if (!ok)
+				return 0;
+		} else {
+			_tcscpy (fn, eak->fn);
+			xfree (eak->fn);
+			eak->fn = NULL;
+		}
+		aino = lookup_child_aino_for_exnext (unit, base, fn, &err, uniq, NULL);
+		if (!aino)
+			return 0;
+		eak->id = unit->exallid++;
 		trap_put_long(ctx, control + 4, eak->id);
-  	if (!exalldo (ctx, exalldata, exalldatasize, type, control, unit, aino)) {
-	    eak->fn = my_strdup (fn); /* no space in exallstruct, save current entry */
-	    break;
-  	}
-  }
-  return 1;
+		if (!exalldo(ctx, exalldata, exalldatasize, type, control, unit, aino)) {
+			eak->fn = my_strdup (fn); /* no space in exallstruct, save current entry */
+			break;
+		}
+	}
+	return 1;
 }
 
 static int action_examine_all_end(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
-  uae_u32 id;
-  uae_u32 doserr = 0;
-  ExAllKey *eak;
-  uaecptr control = GET_PCK_ARG5 (packet);
+	uae_u32 id;
+	uae_u32 doserr = 0;
+	ExAllKey *eak;
+	uaecptr control = GET_PCK_ARG5 (packet);
 
-  if (kickstart_version < 36)
-  	return 0;
+	if (kickstart_version < 36)
+		return 0;
 	id = trap_get_long(ctx, control + 4);
-  eak = getexall (unit, control, id);
-  if (!eak) {
+	eak = getexall (unit, control, id);
+
+	if (!eak) {
 		write_log (_T("FILESYS: EXALL_END non-existing ID %d\n"), id);
-    doserr = ERROR_OBJECT_WRONG_TYPE;
-  } else {
-    eak->id = 0;
-    fs_closedir (eak->dirhandle);
-    xfree (eak->fn);
-	  eak->fn = NULL;
-	  eak->dirhandle = NULL;
-  }
-  if (doserr) {
-  	PUT_PCK_RES1 (packet, DOS_FALSE);
-  	PUT_PCK_RES2 (packet, doserr);
-  } else {
-  	PUT_PCK_RES1 (packet, DOS_TRUE);
-  }
-  return 1;
+		doserr = ERROR_OBJECT_WRONG_TYPE;
+	} else {
+		eak->id = 0;
+		fs_closedir (eak->dirhandle);
+		xfree (eak->fn);
+		eak->fn = NULL;
+		eak->dirhandle = NULL;
+	}
+	if (doserr) {
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, doserr);
+	} else {
+		PUT_PCK_RES1 (packet, DOS_TRUE);
+	}
+	return 1;
 }
 
 static int action_examine_all(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
-  uaecptr lock = GET_PCK_ARG1 (packet) << 2;
-  uaecptr exalldata = GET_PCK_ARG2 (packet);
-  uae_u32 exalldatasize = GET_PCK_ARG3 (packet);
-  uae_u32 type = GET_PCK_ARG4 (packet);
-  uaecptr control = GET_PCK_ARG5 (packet);
+	uaecptr lock = GET_PCK_ARG1 (packet) << 2;
+	uaecptr exalldata = GET_PCK_ARG2 (packet);
+	uae_u32 exalldatasize = GET_PCK_ARG3 (packet);
+	uae_u32 type = GET_PCK_ARG4 (packet);
+	uaecptr control = GET_PCK_ARG5 (packet);
 
-  ExAllKey *eak = NULL;
+	ExAllKey *eak = NULL;
 	a_inode *base = NULL;
-  struct fs_dirhandle *d;
-  int ok, i;
-  uaecptr exp;
-  uae_u32 id, doserr = ERROR_NO_MORE_ENTRIES;
+	struct fs_dirhandle *d;
+	int ok, i;
+	uaecptr exp;
+	uae_u32 id, doserr = ERROR_NO_MORE_ENTRIES;
 
-  ok = 0;
+	ok = 0;
 
 	trap_put_long(ctx, control + 0, 0); /* eac_Entries */
 
-  /* EXAMINE ALL might use dos.library MatchPatternNoCase() which is >=36 */
-  if (kickstart_version < 36)
-  	return 0;
+	/* EXAMINE ALL might use dos.library MatchPatternNoCase() which is >=36 */
+	if (kickstart_version < 36)
+		return 0;
 
 	if (type == 0 || type > 8) {
-  	doserr = ERROR_BAD_NUMBER;
-  	goto fail;
-  }
+		doserr = ERROR_BAD_NUMBER;
+		goto fail;
+	}
 
-  PUT_PCK_RES1 (packet, DOS_TRUE);
+	PUT_PCK_RES1 (packet, DOS_TRUE);
 	id = trap_get_long(ctx, control + 4);
-  if (id == EXALL_END) {
+	if (id == EXALL_END) {
 		write_log (_T("FILESYS: EXALL called twice with ERROR_NO_MORE_ENTRIES\n"));
-  	goto fail; /* already ended exall() */
-  }
-  if (id) {
-  	eak = getexall (unit, control, id);
-  	if (!eak) {
+		goto fail; /* already ended exall() */
+	}
+	if (id) {
+		eak = getexall (unit, control, id);
+		if (!eak) {
 			write_log (_T("FILESYS: EXALL non-existing ID %d\n"), id);
-	    doserr = ERROR_OBJECT_WRONG_TYPE;
-	    goto fail;
-  	}
+			doserr = ERROR_OBJECT_WRONG_TYPE;
+			goto fail;
+		}
 		if (!action_examine_all_do(ctx, unit, lock, eak, exalldata, exalldatasize, type, control))
-	    goto fail;
+			goto fail;
 		if (trap_get_long(ctx, control + 0) == 0) {
-	    /* uh, no space for first entry.. */
-	    doserr = ERROR_NO_FREE_STORE;
-	    goto fail;
-  	}
+			/* uh, no space for first entry.. */
+			doserr = ERROR_NO_FREE_STORE;
+			goto fail;
+		}
 
-  } else {
+	} else {
 
-  	eak = getexall (unit, control, -1);
-  	if (!eak)
-	    goto fail;
-  	if (lock != 0)
+		eak = getexall (unit, control, -1);
+		if (!eak)
+			goto fail;
+		if (lock != 0)
 			base = aino_from_lock(ctx, unit, lock);
-  	if (base == 0)
-	    base = &unit->rootnode;
+		if (base == 0)
+			base = &unit->rootnode;
 		d = fs_opendir (unit, base);
-  	if (!d)
-	    goto fail;
-  	eak->dirhandle = d;
+		if (!d)
+			goto fail;
+		eak->dirhandle = d;
 		trap_put_long(ctx, control + 4, eak->id);
-  	if (!action_examine_all_do (ctx, unit, lock, eak, exalldata, exalldatasize, type, control))
-	    goto fail;
+		if (!action_examine_all_do(ctx, unit, lock, eak, exalldata, exalldatasize, type, control))
+			goto fail;
 		if (trap_get_long(ctx, control + 0) == 0) {
-	    /* uh, no space for first entry.. */
-	    doserr = ERROR_NO_FREE_STORE;
-	    goto fail;
-  	}
+			/* uh, no space for first entry.. */
+			doserr = ERROR_NO_FREE_STORE;
+			goto fail;
+		}
 
-  }
-  ok = 1;
+	}
+	ok = 1;
 
 fail:
-  /* Clear last ed_Next. This "list" is quite non-Amiga like.. */
-  exp = exalldata;
+	/* Clear last ed_Next. This "list" is quite non-Amiga like.. */
+	exp = exalldata;
 	i = trap_get_long(ctx, control + 0);
-  for (;;) {
-  	if (i <= 1) {
-	    if (exp)
+	for (;;) {
+		if (i <= 1) {
+			if (exp)
 				trap_put_long(ctx, exp, 0);
-	    break;
-  	}
+			break;
+		}
 		exp = trap_get_long(ctx, exp); /* ed_Next */
-  	i--;
-  }
+		i--;
+	}
+#if EXALL_DEBUG > 0
+	write_log("ok=%d, err=%d, eac_Entries = %d\n", ok, ok ? -1 : doserr, trap_get_long(ctx, control + 0));
+#endif
 
-  if (!ok) {
-  	PUT_PCK_RES1 (packet, DOS_FALSE);
-  	PUT_PCK_RES2 (packet, doserr);
-  	if (eak) {
-	    eak->id = 0;
-	    fs_closedir (eak->dirhandle);
-	    eak->dirhandle = NULL;
-	    xfree (eak->fn);
-	    eak->fn = NULL;
-  	}
-  	if (doserr == ERROR_NO_MORE_ENTRIES)
+	if (!ok) {
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, doserr);
+		if (eak) {
+			eak->id = 0;
+			fs_closedir (eak->dirhandle);
+			eak->dirhandle = NULL;
+			xfree (eak->fn);
+			eak->fn = NULL;
+		}
+		if (doserr == ERROR_NO_MORE_ENTRIES)
 			trap_put_long(ctx, control + 4, EXALL_END);
-  }
-  return 1;
+	}
+	return 1;
 }
 
 static uae_u32 exall_helper(TrapContext *ctx)
 {
-  int i;
-  Unit *u;
+	int i;
+	Unit *u;
 	uaecptr pck = trap_get_areg(ctx, 4);
 
 	dpacket packet;
 	readdpacket(ctx, &packet, pck);
 
 	uaecptr control = get_long_host(packet.packet_data + dp_Arg5);
-  uae_u32 id = trap_get_long(ctx, control + 4);
+	uae_u32 id = trap_get_long(ctx, control + 4);
 
-  if (id == EXALL_END)
-  	return 1;
-  for (u = units; u; u = u->next) {
-  	for (i = 0; i < EXALLKEYS; i++) {
-	    if (u->exalls[i].id == id && u->exalls[i].control == control) {
+	if (id == EXALL_END)
+		return 1;
+	for (u = units; u; u = u->next) {
+		for (i = 0; i < EXALLKEYS; i++) {
+			if (u->exalls[i].id == id && u->exalls[i].control == control) {
 				action_examine_all(ctx, u, &packet);
-	    }
-  	}
-  }
-  return 1;
+			}
+		}
+	}
+	return 1;
 }
 
 static uae_u32 REGPARAM2 fsmisc_helper (TrapContext *ctx)
@@ -3646,7 +4605,11 @@ static uae_u32 REGPARAM2 fsmisc_helper (TrapContext *ctx)
 	switch (mode)
 	{
 	case 0:
-	  return exall_helper (ctx);
+	return exall_helper(ctx);
+	case 1:
+	return filesys_media_change_reply (0);
+	case 2:
+	return filesys_media_change_reply (1);
 	case 3:
 		uae_u32 t = getlocaltime ();
 		uae_u32 secs = (uae_u32)t - (8 * 365 + 2) * 24 * 60 * 60;
@@ -3657,99 +4620,165 @@ static uae_u32 REGPARAM2 fsmisc_helper (TrapContext *ctx)
 
 static void action_examine_object(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
-  uaecptr lock = GET_PCK_ARG1 (packet) << 2;
-  uaecptr info = GET_PCK_ARG2 (packet) << 2;
-  a_inode *aino = 0;
+	uaecptr lock = GET_PCK_ARG1 (packet) << 2;
+	uaecptr info = GET_PCK_ARG2 (packet) << 2;
+	a_inode *aino = 0;
 
-  if (lock != 0)
+	if (lock != 0)
 		aino = aino_from_lock(ctx, unit, lock);
-  if (aino == 0)
-  	aino = &unit->rootnode;
+	if (aino == 0)
+		aino = &unit->rootnode;
 
 	get_fileinfo(ctx, unit, packet, info, aino, false);
 }
 
+extern unsigned char def_tool[];
+extern unsigned int def_tool_len;
+extern unsigned char def_project[];
+extern unsigned int def_project_len;
+extern unsigned char def_drawer[];
+extern unsigned int def_drawer_len;
+static struct virtualfilesysobject vfso_icon_tool;
+static struct virtualfilesysobject vfso_icon_project;
+static struct virtualfilesysobject vfso_icon_drawer;
+
+static void load_injected_icon(struct virtualfilesysobject *vfso, const TCHAR *fn, uae_u8 *default_data, int default_size)
+{
+	uae_u8 *data = NULL;
+	int size;
+
+	xfree(vfso->data);
+	if (fn && fn[0])
+		data = zfile_load_file(fn, &size);
+	if (!data) {
+		vfso->data = xmalloc(uae_u8, default_size);
+		memcpy(vfso->data, default_data, default_size);
+		vfso->size = default_size;
+		return;
+	}
+	vfso->data = data;
+	vfso->size = size;
+}
+
+static void load_injected_icons(void)
+{
+	load_injected_icon(&vfso_icon_tool, currprefs.filesys_inject_icons_tool, def_tool, def_tool_len);
+	load_injected_icon(&vfso_icon_project, currprefs.filesys_inject_icons_project, def_project, def_project_len);
+	load_injected_icon(&vfso_icon_drawer, currprefs.filesys_inject_icons_drawer, def_drawer, def_drawer_len);
+}
+
+static void inject_icons_to_directory(Unit *unit, a_inode *base)
+{
+	for (a_inode *aino = base->child; aino; aino = aino->sibling) {
+		int len = _tcslen(aino->aname);
+		if (len >= 5 && !_tcsicmp(aino->aname + len - 5, _T(".info")))
+			continue;
+		TCHAR tmp[256];
+		_stprintf(tmp, _T("%s.info"), aino->aname);
+		bool match = false;
+		for (a_inode *aino2 = base->child; aino2; aino2 = aino2->sibling) {
+			if (!_tcsicmp(aino2->aname, tmp))
+				match = true;
+		}
+		if (match)
+			continue;
+		uae_u32 err;
+		struct virtualfilesysobject *vfso;
+		if (aino->dir) {
+			vfso = &vfso_icon_drawer;
+		} else {
+			if (aino->amigaos_mode & A_FIBF_EXECUTE)
+				vfso = &vfso_icon_project;
+			else
+				vfso = &vfso_icon_tool;
+		}
+		lookup_child_aino_for_exnext(unit, base, tmp, &err, 0, vfso);
+	}
+}
+
 /* Read a directory's contents, create a_inodes for each file, and
-   mark them as locked in memory so that recycle_aino will not reap
-   them.
-   We do this to avoid problems with the host OS: we don't want to
-   leave the directory open on the host side until all ExNext()s have
-   finished - they may never finish!  */
+mark them as locked in memory so that recycle_aino will not reap
+them.
+We do this to avoid problems with the host OS: we don't want to
+leave the directory open on the host side until all ExNext()s have
+finished - they may never finish!  */
 
 static void populate_directory (Unit *unit, a_inode *base)
 {
-  struct fs_dirhandle *d;
-  a_inode *aino;
+	struct fs_dirhandle *d;
+	a_inode *aino;
 
 	d = fs_opendir (unit, base);
-  if (!d)
-  	return;
-  for (aino = base->child; aino; aino = aino->sibling) {
-  	base->locked_children++;
-  	unit->total_locked_ainos++;
-  }
-  for (;;) {
+	if (!d)
+		return;
+	for (aino = base->child; aino; aino = aino->sibling) {
+		base->locked_children++;
+		unit->total_locked_ainos++;
+	}
+	for (;;) {
 		uae_u64 uniq = 0;
-  	TCHAR fn[MAX_DPATH];
-  	int ok;
-  	uae_u32 err;
+		TCHAR fn[MAX_DPATH];
+		int ok;
+		uae_u32 err;
 
-  	/* Find next file that belongs to the Amiga fs (skipping things
-	   like "..", "." etc.  */
-  	do {
+		/* Find next file that belongs to the Amiga fs (skipping things
+		like "..", "." etc.  */
+		do {
 			ok = filesys_readdir(d, fn, &uniq);
 		} while (ok && d->fstype == FS_DIRECTORY && (filesys_name_invalid (fn) || fsdb_name_invalid_dir (NULL, fn)));
-  	if (!ok)
-	    break;
-  	/* This calls init_child_aino, which will notice that the parent is
-	   being ExNext()ed, and it will increment the locked counts.  */
-		aino = lookup_child_aino_for_exnext (unit, base, fn, &err, uniq);
-  }
-  fs_closedir (d);
+		if (!ok)
+			break;
+		/* This calls init_child_aino, which will notice that the parent is
+		being ExNext()ed, and it will increment the locked counts.  */
+		aino = lookup_child_aino_for_exnext (unit, base, fn, &err, uniq, NULL);
+	}
+	fs_closedir (d);
+	if (currprefs.filesys_inject_icons || unit->ui.inject_icons)
+		inject_icons_to_directory(unit, base);
 }
 
 static bool do_examine(TrapContext *ctx, Unit *unit, dpacket *packet, a_inode *aino, uaecptr info, bool longfilesize)
 {
-  for (;;) {
-  	TCHAR *name;
+	for (;;) {
+		TCHAR *name;
 		if (!aino)
-	    break;
+			break;
 		name = aino->nname;
-		get_fileinfo (ctx, unit, packet, info, aino, longfilesize);
-  	if (!(unit->volflags & MYVOLUMEINFO_ARCHIVE) && !fsdb_exists(name)) {
+		get_fileinfo(ctx, unit, packet, info, aino, longfilesize);
+		if (!aino->vfso && !(unit->volflags & (MYVOLUMEINFO_ARCHIVE | MYVOLUMEINFO_CDFS)) && !fsdb_exists(name)) {
 			return false;
-  	}
+		}
 		return true;
-  }
+	}
 	free_exkey (unit, aino->parent);
-  PUT_PCK_RES1 (packet, DOS_FALSE);
-  PUT_PCK_RES2 (packet, ERROR_NO_MORE_ENTRIES);
+	PUT_PCK_RES1 (packet, DOS_FALSE);
+	PUT_PCK_RES2 (packet, ERROR_NO_MORE_ENTRIES);
 	return true;
 }
 
 static void action_examine_next(TrapContext *ctx, Unit *unit, dpacket *packet, bool largefilesize)
 {
-  uaecptr lock = GET_PCK_ARG1 (packet) << 2;
-  uaecptr info = GET_PCK_ARG2 (packet) << 2;
+	uaecptr lock = GET_PCK_ARG1 (packet) << 2;
+	uaecptr info = GET_PCK_ARG2 (packet) << 2;
 	a_inode *aino = 0, *daino = 0;
-  uae_u32 uniq;
+	uae_u32 uniq;
 
 	gui_flicker_led (UNIT_LED(unit), unit->unit, 1);
 
-  if (lock != 0)
+	if (lock != 0)
 		aino = aino_from_lock(ctx, unit, lock);
-  if (aino == 0)
-  	aino = &unit->rootnode;
+	if (aino == 0)
+		aino = &unit->rootnode;
 	uniq = trap_get_long(ctx, info);
-  for(;;) {
-    if (uniq == aino->uniq) {
+	for (;;) {
+		if (uniq == aino->uniq) {
 			// first exnext
 			if (!aino->dir) {
 				write_log (_T("ExNext called for a file! %s:%d (Houston?)\n"), aino->nname, uniq);
-        goto no_more_entries;
+				goto no_more_entries;
 			}
-      if (aino->exnext_count++ == 0)
-  		  populate_directory (unit, aino);
+			if (aino->exnext_count++ == 0)
+				populate_directory (unit, aino);
 			if (!aino->child)
 				goto no_more_entries;
 			daino = aino->child;
@@ -3774,202 +4803,221 @@ static void action_examine_next(TrapContext *ctx, Unit *unit, dpacket *packet, b
 				// didn't find any but there are still entries? restart from beginning.
 				if (!daino && aino->child) {
 					daino = aino->child;
-  	    }
-      } else {
-			  daino = daino->sibling;
-      }
-    }
+				}
+			} else {
+				daino = daino->sibling;
+			}
+		}
 		if (!daino)
 			goto no_more_entries;
 		if (daino->parent != aino) {
 			write_log(_T("Houston, we have a BIG problem. %s is not parent of %s\n"), daino->nname, aino->nname);
-  	  goto no_more_entries;
-    }
+			goto no_more_entries;
+		}
 		uniq = daino->uniq;
 		if (daino->mountcount != unit->mountcount)
 			continue;
 		if (!do_examine(ctx, unit, packet, daino, info, largefilesize))
 			continue;
-    return;
+		return;
 	}
 
 no_more_entries:
 	free_exkey(unit, aino);
-  PUT_PCK_RES1 (packet, DOS_FALSE);
-  PUT_PCK_RES2 (packet, ERROR_NO_MORE_ENTRIES);
+	PUT_PCK_RES1(packet, DOS_FALSE);
+	PUT_PCK_RES2 (packet, ERROR_NO_MORE_ENTRIES);
 }
 
 static void do_find(TrapContext *ctx, Unit *unit, dpacket *packet, int mode, int create, int fallback)
 {
-  uaecptr fh = GET_PCK_ARG1 (packet) << 2;
-  uaecptr lock = GET_PCK_ARG2 (packet) << 2;
-  uaecptr name = GET_PCK_ARG3 (packet) << 2;
-  a_inode *aino;
-  Key *k;
+	uaecptr fh = GET_PCK_ARG1 (packet) << 2;
+	uaecptr lock = GET_PCK_ARG2 (packet) << 2;
+	uaecptr name = GET_PCK_ARG3 (packet) << 2;
+	a_inode *aino;
+	Key *k;
 	struct fs_filehandle *fd = NULL;
-  int err;
-  mode_t openmode;
-  int aino_created = 0;
-  int isvirtual = unit->volflags & MYVOLUMEINFO_ARCHIVE;
+	int err;
+	mode_t openmode;
+	int aino_created = 0;
+	int isvirtual = unit->volflags & (MYVOLUMEINFO_ARCHIVE | MYVOLUMEINFO_CDFS);
 
 	aino = find_aino(ctx, unit, lock, bstr(ctx, unit, name), &err);
 
-  if (aino == 0 || (err != 0 && err != ERROR_OBJECT_NOT_AROUND)) {
-    /* Whatever it is, we can't handle it. */
-    PUT_PCK_RES1 (packet, DOS_FALSE);
-    PUT_PCK_RES2 (packet, err);
-    return;
-  }
-  if (err == 0) {
-    /* Object exists. */
-    if (aino->dir) {
-      PUT_PCK_RES1 (packet, DOS_FALSE);
-      PUT_PCK_RES2 (packet, ERROR_OBJECT_WRONG_TYPE);
-      return;
-    }
-    if (aino->elock || (create == 2 && aino->shlock > 0)) {
-      PUT_PCK_RES1 (packet, DOS_FALSE);
-      PUT_PCK_RES2 (packet, ERROR_OBJECT_IN_USE);
-      return;
-    }
-    if (create == 2 && (aino->amigaos_mode & A_FIBF_DELETE) != 0) {
-      PUT_PCK_RES1 (packet, DOS_FALSE);
-      PUT_PCK_RES2 (packet, ERROR_DELETE_PROTECTED);
-      return;
-    }
-    if (create != 2) {
+	if (aino == 0 || (err != 0 && err != ERROR_OBJECT_NOT_AROUND)) {
+		/* Whatever it is, we can't handle it. */
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, err);
+		return;
+	}
+	if (aino->softlink) {
+		handle_softlink(ctx, unit, packet, aino);
+		return;
+	}
+	if (err == 0) {
+		/* Object exists. */
+		if (aino->dir) {
+			PUT_PCK_RES1 (packet, DOS_FALSE);
+			PUT_PCK_RES2 (packet, ERROR_OBJECT_WRONG_TYPE);
+			return;
+		}
+		if (aino->elock || (create == 2 && aino->shlock > 0)) {
+			PUT_PCK_RES1 (packet, DOS_FALSE);
+			PUT_PCK_RES2 (packet, ERROR_OBJECT_IN_USE);
+			return;
+		}
+		if (create && aino->vfso) {
+			PUT_PCK_RES1 (packet, DOS_FALSE);
+			PUT_PCK_RES2 (packet, ERROR_DELETE_PROTECTED);
+			return;
+		}
+		if (create == 2 && (aino->amigaos_mode & A_FIBF_DELETE) != 0) {
+			PUT_PCK_RES1 (packet, DOS_FALSE);
+			PUT_PCK_RES2 (packet, ERROR_DELETE_PROTECTED);
+			return;
+		}
+		if (create != 2) {
 			if ((((mode & aino->amigaos_mode) & A_FIBF_WRITE) != 0 || is_writeprotected(unit))
-        && fallback)
-      {
-        mode &= ~A_FIBF_WRITE;
-      }
-      /* Kick 1.3 doesn't check read and write access bits - maybe it would be
-      * simpler just not to do that either. */
+				&& fallback)
+			{
+				mode &= ~A_FIBF_WRITE;
+			}
+			/* Kick 1.3 doesn't check read and write access bits - maybe it would be
+			* simpler just not to do that either. */
 			if ((mode & A_FIBF_WRITE) != 0 && is_writeprotected(unit)) {
-        PUT_PCK_RES1 (packet, DOS_FALSE);
-        PUT_PCK_RES2 (packet, ERROR_DISK_WRITE_PROTECTED);
-        return;
-      }
-      if (((mode & aino->amigaos_mode) & A_FIBF_WRITE) != 0
-	      || mode == 0)
-      {
-         PUT_PCK_RES1 (packet, DOS_FALSE);
-         PUT_PCK_RES2 (packet, ERROR_WRITE_PROTECTED);
-         return;
-      }
-      if (((mode & aino->amigaos_mode) & A_FIBF_READ) != 0) {
-        PUT_PCK_RES1 (packet, DOS_FALSE);
-        PUT_PCK_RES2 (packet, ERROR_READ_PROTECTED);
-        return;
-      }
-    }
-  } else if (create == 0) {
-    PUT_PCK_RES1 (packet, DOS_FALSE);
-    PUT_PCK_RES2 (packet, err);
-    return;
-  } else {
-    /* Object does not exist. aino points to containing directory. */
+				PUT_PCK_RES1 (packet, DOS_FALSE);
+				PUT_PCK_RES2 (packet, ERROR_DISK_WRITE_PROTECTED);
+				return;
+			}
+			if (((mode & aino->amigaos_mode) & A_FIBF_WRITE) != 0
+				|| mode == 0)
+			{
+				PUT_PCK_RES1 (packet, DOS_FALSE);
+				PUT_PCK_RES2 (packet, ERROR_WRITE_PROTECTED);
+				return;
+			}
+			if (((mode & aino->amigaos_mode) & A_FIBF_READ) != 0) {
+				PUT_PCK_RES1 (packet, DOS_FALSE);
+				PUT_PCK_RES2 (packet, ERROR_READ_PROTECTED);
+				return;
+			}
+		}
+	} else if (create == 0) {
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, err);
+		return;
+	} else {
+		/* Object does not exist. aino points to containing directory. */
 		aino = create_child_aino(unit, aino, my_strdup (bstr_cut(ctx, unit, name)), 0);
-    if (aino == 0) {
-      PUT_PCK_RES1 (packet, DOS_FALSE);
-      PUT_PCK_RES2 (packet, ERROR_DISK_IS_FULL); /* best we can do */
-      return;
-    }
-    aino_created = 1;
-  }
-   
-  openmode = (((mode & A_FIBF_READ) == 0 ? O_WRONLY
-    : (mode & A_FIBF_WRITE) == 0 ? O_RDONLY
-    : O_RDWR)
-    | (create ? O_CREAT : 0)
-    | (create == 2 ? O_TRUNC : 0));
-   
-  fd = fs_openfile (unit, aino, openmode | O_BINARY);
-  if (fd == NULL) {
-    if (aino_created)
-      delete_aino (unit, aino);
-    PUT_PCK_RES1 (packet, DOS_FALSE);
-    /* archive and fd == NULL = corrupt archive or out of memory */
-    PUT_PCK_RES2 (packet, isvirtual ? ERROR_OBJECT_NOT_AROUND : dos_errno ());
-    return;
+		if (aino == 0) {
+			PUT_PCK_RES1 (packet, DOS_FALSE);
+			PUT_PCK_RES2 (packet, ERROR_DISK_IS_FULL); /* best we can do */
+			return;
+		}
+		aino_created = 1;
 	}
 
-  k = new_key (unit);
-  k->fd = fd;
-  k->aino = aino;
-  k->dosmode = mode;
-  k->createmode = create;
-  k->notifyactive = create ? 1 : 0;
+	prepare_for_open (aino->nname);
 
-  if (create && isvirtual)
-   fsdb_set_file_attrs (aino);
-   
+	if (!aino->vfso) {
+		openmode = (((mode & A_FIBF_READ) == 0 ? O_WRONLY
+			: (mode & A_FIBF_WRITE) == 0 ? O_RDONLY
+			: O_RDWR)
+			| (create ? O_CREAT : 0)
+			| (create == 2 ? O_TRUNC : 0));
+
+		fd = fs_openfile (unit, aino, openmode | O_BINARY);
+		if (fd == NULL) {
+			if (aino_created)
+				delete_aino (unit, aino);
+			PUT_PCK_RES1 (packet, DOS_FALSE);
+			/* archive and fd == NULL = corrupt archive or out of memory */
+			PUT_PCK_RES2 (packet, isvirtual ? ERROR_OBJECT_NOT_AROUND : dos_errno ());
+			return;
+		}
+	}
+
+	k = new_key (unit);
+	k->fd = fd;
+	k->aino = aino;
+	k->dosmode = mode;
+	k->createmode = create;
+	k->notifyactive = create ? 1 : 0;
+
+	if (create && isvirtual)
+		fsdb_set_file_attrs (aino);
+
 	trap_put_long(ctx, fh + 36, k->uniq);
-  if (create == 2) {
-    aino->elock = 1;
-	  // clear comment if file already existed
-	  if (aino->comment) {
-	    xfree (aino->comment);
-	    aino->comment = 0;
-	  }
-	  fsdb_set_file_attrs (aino);
-  } else {
-    aino->shlock++;
-  }
-  de_recycle_aino (unit, aino);
+	if (create == 2) {
+		aino->elock = 1;
+		// clear comment if file already existed
+		if (aino->comment) {
+			xfree (aino->comment);
+			aino->comment = 0;
+		}
+		fsdb_set_file_attrs (aino);
+	} else {
+		aino->shlock++;
+	}
+	de_recycle_aino (unit, aino);
 
-  PUT_PCK_RES1 (packet, DOS_TRUE);
+	PUT_PCK_RES1 (packet, DOS_TRUE);
 }
 
 static void action_fh_from_lock(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
-  uaecptr fh = GET_PCK_ARG1 (packet) << 2;
-  uaecptr lock = GET_PCK_ARG2 (packet) << 2;
-  a_inode *aino;
-  Key *k;
- struct fs_filehandle *fd;
-  mode_t openmode;
-  int mode;
+	uaecptr fh = GET_PCK_ARG1 (packet) << 2;
+	uaecptr lock = GET_PCK_ARG2 (packet) << 2;
+	a_inode *aino;
+	Key *k;
+	struct fs_filehandle *fd;
+	mode_t openmode;
+	int mode;
 
-  if (!lock) {
-  	PUT_PCK_RES1 (packet, DOS_FALSE);
-  	PUT_PCK_RES2 (packet, 0);
-  	return;
-  }
+	if (!lock) {
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, 0);
+		return;
+	}
 
 	aino = aino_from_lock(ctx, unit, lock);
-  if (aino == 0)
-  	aino = &unit->rootnode;
+	if (aino == 0)
+		aino = &unit->rootnode;
+	if (aino->softlink) {
+		handle_softlink(ctx, unit, packet, aino);
+		return;
+	}
 
-  mode = aino->amigaos_mode; /* Use same mode for opened filehandle as existing Lock() */
+	mode = aino->amigaos_mode; /* Use same mode for opened filehandle as existing Lock() */
 
-  openmode = (((mode & A_FIBF_READ) ? O_WRONLY
-	  : (mode & A_FIBF_WRITE) ? O_RDONLY
+	prepare_for_open (aino->nname);
+
+	openmode = (((mode & A_FIBF_READ) ? O_WRONLY
+		: (mode & A_FIBF_WRITE) ? O_RDONLY
 		: O_RDWR));
 
-  /* the files on CD really can have the write-bit set.  */
+	/* the files on CD really can have the write-bit set.  */
 	if (is_writeprotected(unit))
-	  openmode = O_RDONLY;
+		openmode = O_RDONLY;
 
 	fd = fs_openfile (unit, aino, openmode | O_BINARY);
 
-  if (fd == NULL) {
-  	PUT_PCK_RES1 (packet, DOS_FALSE);
-  	PUT_PCK_RES2 (packet, dos_errno());
-  	return;
-  }
-  k = new_key (unit);
-  k->fd = fd;
-  k->aino = aino;
+	if (fd == NULL) {
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, dos_errno ());
+		return;
+	}
+	k = new_key (unit);
+	k->fd = fd;
+	k->aino = aino;
 
 	trap_put_long(ctx, fh + 36, k->uniq);
-  /* I don't think I need to play with shlock count here, because I'm
-  opening from an existing lock ??? */
+	/* I don't think I need to play with shlock count here, because I'm
+	opening from an existing lock ??? */
 
-  de_recycle_aino (unit, aino);
-  free_lock (ctx, unit, lock); /* lock must be unlocked */
-  PUT_PCK_RES1 (packet, DOS_TRUE);
-  /* PUT_PCK_RES2 (packet, k->uniq); - this shouldn't be necessary, try without it */
+	de_recycle_aino (unit, aino);
+	free_lock(ctx, unit, lock); /* lock must be unlocked */
+	PUT_PCK_RES1 (packet, DOS_TRUE);
+	/* PUT_PCK_RES2 (packet, k->uniq); - this shouldn't be necessary, try without it */
 }
 
 static void	action_find_input(TrapContext *ctx, Unit *unit, dpacket *packet)
@@ -3980,20 +5028,20 @@ static void	action_find_input(TrapContext *ctx, Unit *unit, dpacket *packet)
 static void	action_find_output(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
 	if (is_writeprotected(unit)) {
-  	PUT_PCK_RES1 (packet, DOS_FALSE);
-  	PUT_PCK_RES2 (packet, ERROR_DISK_WRITE_PROTECTED);
-  	return;
-  }
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, ERROR_DISK_WRITE_PROTECTED);
+		return;
+	}
 	do_find(ctx, unit, packet, A_FIBF_READ | A_FIBF_WRITE, 2, 0);
 }
 
 static void	action_find_write(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
 	if (is_writeprotected(unit)) {
-	  PUT_PCK_RES1 (packet, DOS_FALSE);
-	  PUT_PCK_RES2 (packet, ERROR_DISK_WRITE_PROTECTED);
-	  return;
-  }
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, ERROR_DISK_WRITE_PROTECTED);
+		return;
+	}
 	do_find(ctx, unit, packet, A_FIBF_READ | A_FIBF_WRITE, 1, 0);
 }
 
@@ -4002,36 +5050,36 @@ static void updatedirtime (a_inode *a1, int now)
 {
 	struct mystat statbuf;
 
-  if (!a1->parent)
-  	return;
-  if (!now) {
+	if (!a1->parent)
+		return;
+	if (!now) {
 		if (!my_stat (a1->nname, &statbuf))
-	    return;
+			return;
 		my_utime (a1->parent->nname, &statbuf.mtime);
-  } else {
+	} else {
 		my_utime (a1->parent->nname, NULL);
-  }
+	}
 }
 
 static void	action_end(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
-  Key *k;
+	Key *k;
 
-  k = lookup_key (unit, GET_PCK_ARG1 (packet));
-  if (k != 0) {
-  	if (k->notifyactive) {
+	k = lookup_key (unit, GET_PCK_ARG1 (packet));
+	if (k != 0) {
+		if (k->notifyactive) {
 			notify_check(ctx, unit, k->aino);
-	    updatedirtime (k->aino, 1);
-  	}
-  	if (k->aino->elock)
-	    k->aino->elock = 0;
-  	else
-	    k->aino->shlock--;
-  	recycle_aino (unit, k->aino);
-  	free_key (unit, k);
-  }
-  PUT_PCK_RES1 (packet, DOS_TRUE);
-  PUT_PCK_RES2 (packet, 0);
+			updatedirtime (k->aino, 1);
+		}
+		if (k->aino->elock)
+			k->aino->elock = 0;
+		else
+			k->aino->shlock--;
+		recycle_aino (unit, k->aino);
+		free_key (unit, k);
+	}
+	PUT_PCK_RES1 (packet, DOS_TRUE);
+	PUT_PCK_RES2 (packet, 0);
 }
 
 static void	action_read(TrapContext *ctx, Unit *unit, dpacket *packet)
@@ -4040,7 +5088,7 @@ static void	action_read(TrapContext *ctx, Unit *unit, dpacket *packet)
 	uaecptr addr = GET_PCK_ARG2 (packet);
 	uae_u32 size = GET_PCK_ARG3 (packet);
 	uae_u32 actual = 0;
-	
+
 	if (k == 0) {
 		PUT_PCK_RES1 (packet, DOS_FALSE);
 		/* PUT_PCK_RES2 (packet, EINVAL); */
@@ -4048,13 +5096,22 @@ static void	action_read(TrapContext *ctx, Unit *unit, dpacket *packet)
 	}
 	gui_flicker_led (UNIT_LED(unit), unit->unit, 1);
 
-  if (size == 0) {
-	  PUT_PCK_RES1 (packet, 0);
-	  PUT_PCK_RES2 (packet, 0);
+	if (size == 0) {
+		PUT_PCK_RES1 (packet, 0);
+		PUT_PCK_RES2 (packet, 0);
+	} else if (k->aino->vfso) {
+		uae_s64 filesize = k->aino->vfso->size;
+		for (int i = 0; i < size && k->file_pos < filesize; i++) {
+			trap_put_byte(ctx, addr + i, k->aino->vfso->data[k->file_pos]);
+			k->file_pos++;
+			actual++;
+		}
+		PUT_PCK_RES1 (packet, actual);
+		size = 0;
 	} else {
 		/* check if filesize < size */
 		uae_s64 filesize, cur;
-		
+
 		filesize = key_filesize(k);
 		cur = k->file_pos;
 		if (size > filesize - cur)
@@ -4065,34 +5122,34 @@ static void	action_read(TrapContext *ctx, Unit *unit, dpacket *packet)
 			PUT_PCK_RES2 (packet, 0);
 		} else if (!trap_valid_address(ctx, addr, size)) {
 			/* it really crosses memory boundary */
-    	uae_u8 *buf;
-
-		  /* ugh this is inefficient but easy */
+			uae_u8 *buf;
+			
+			/* ugh this is inefficient but easy */
 
 			if (key_seek(k, k->file_pos, SEEK_SET) < 0) {
-				  PUT_PCK_RES1 (packet, 0);
-				  PUT_PCK_RES2 (packet, dos_errno ());
-				  return;
-			  }
+				PUT_PCK_RES1 (packet, 0);
+				PUT_PCK_RES2 (packet, dos_errno ());
+				return;
+			}
 
-	    buf = xmalloc (uae_u8, size);
-		  if (!buf) {
-			  PUT_PCK_RES1 (packet, -1);
-			  PUT_PCK_RES2 (packet, ERROR_NO_FREE_STORE);
-			  return;
-		  }
+			buf = xmalloc (uae_u8, size);
+			if (!buf) {
+				PUT_PCK_RES1 (packet, -1);
+				PUT_PCK_RES2 (packet, ERROR_NO_FREE_STORE);
+				return;
+			}
 
-	    actual = fs_read (k->fd, buf, size);
-		
+			actual = fs_read (k->fd, buf, size);
+
 			if ((uae_s32)actual == -1) {
-			  PUT_PCK_RES1 (packet, 0);
-			  PUT_PCK_RES2 (packet, dos_errno());
-		  } else {
-			  PUT_PCK_RES1 (packet, actual);
+				PUT_PCK_RES1 (packet, 0);
+				PUT_PCK_RES2 (packet, dos_errno ());
+			} else {
+				PUT_PCK_RES1 (packet, actual);
 				trap_put_bytes(ctx, buf, addr, actual);
-			  k->file_pos += actual;
-		  }
-		  xfree (buf);
+				k->file_pos += actual;
+			}
+			xfree (buf);
 			size = 0;
 		}
 	}
@@ -4100,14 +5157,39 @@ static void	action_read(TrapContext *ctx, Unit *unit, dpacket *packet)
 	if (size) {
 
 		if (key_seek(k, k->file_pos, SEEK_SET) < 0) {
-			PUT_PCK_RES1 (packet, 0);
-			PUT_PCK_RES2 (packet, dos_errno ());
+			PUT_PCK_RES1(packet, 0);
+			PUT_PCK_RES2(packet, dos_errno());
 			return;
 		}
 
-		/* normal fast read */
-		uae_u8 *realpt = get_real_address (addr);
-		actual = fs_read (k->fd, realpt, size);
+		if (trap_is_indirect()) {
+
+			uae_u8 buf[RTAREA_TRAP_DATA_EXTRA_SIZE];
+			actual = 0;
+			while (size > 0) {
+				int toread = size > RTAREA_TRAP_DATA_EXTRA_SIZE ? RTAREA_TRAP_DATA_EXTRA_SIZE : size;
+				int read = fs_read(k->fd, buf, toread);
+				if (read < 0) {
+					actual = -1;
+					break;
+				}
+				if (read == 0)
+					break;
+				trap_put_bytes(ctx, buf, addr, read);
+				size -= read;
+				addr += read;
+				actual += read;
+				if (read < toread)
+					break;
+			}
+
+		} else {
+
+			/* normal fast read */
+			uae_u8 *realpt = get_real_address (addr);
+			actual = fs_read (k->fd, realpt, size);
+
+		}
 
 		if (actual == 0) {
 			PUT_PCK_RES1 (packet, 0);
@@ -4129,28 +5211,65 @@ static void action_write(TrapContext *ctx, Unit *unit, dpacket *packet)
 	uae_u32 size = GET_PCK_ARG3 (packet);
 	uae_u32 actual;
 	uae_u8 *buf;
-	
+
 	if (k == 0) {
 		PUT_PCK_RES1 (packet, DOS_FALSE);
 		/* PUT_PCK_RES2 (packet, EINVAL); */
 		return;
 	}
-	
+
 	gui_flicker_led (UNIT_LED(unit), unit->unit, 2);
-	
-	if (is_writeprotected(unit)) {
+
+	if (is_writeprotected(unit) || k->aino->vfso) {
 		PUT_PCK_RES1 (packet, DOS_FALSE);
 		PUT_PCK_RES2 (packet, ERROR_DISK_WRITE_PROTECTED);
 		return;
 	}
-	
-  if (size == 0) {
 
-	  actual = 0;
-	  PUT_PCK_RES1 (packet, 0);
-	  PUT_PCK_RES2 (packet, 0);
+	if (size == 0) {
 
-  } else if (trap_valid_address(ctx, addr, size)) {
+		actual = 0;
+		PUT_PCK_RES1 (packet, 0);
+		PUT_PCK_RES2 (packet, 0);
+
+	} else if (trap_valid_address(ctx, addr, size)) {
+
+		if (key_seek(k, k->file_pos, SEEK_SET) < 0) {
+			PUT_PCK_RES1(packet, 0);
+			PUT_PCK_RES2(packet, dos_errno());
+			return;
+		}
+
+		if (trap_is_indirect()) {
+
+			uae_u8 buf[RTAREA_TRAP_DATA_EXTRA_SIZE];
+			actual = 0;
+			int sizecnt = size;
+			while (sizecnt > 0) {
+				int towrite = sizecnt > RTAREA_TRAP_DATA_EXTRA_SIZE ? RTAREA_TRAP_DATA_EXTRA_SIZE : sizecnt;
+				trap_get_bytes(ctx, buf, addr, towrite);
+				int write = fs_write(k->fd, buf, towrite);
+				if (write < 0) {
+					actual = -1;
+					break;
+				}
+				if (write == 0)
+					break;
+				sizecnt -= write;
+				addr += write;
+				actual += write;
+				if (write < towrite)
+					break;
+			}
+
+		} else {
+
+			uae_u8 *realpt = get_real_address (addr);
+			actual = fs_write (k->fd, realpt, size);
+		}
+
+	} else {
+		/* ugh this is inefficient but easy */
 
 		if (key_seek(k, k->file_pos, SEEK_SET) < 0) {
 			PUT_PCK_RES1 (packet, 0);
@@ -4158,541 +5277,89 @@ static void action_write(TrapContext *ctx, Unit *unit, dpacket *packet)
 			return;
 		}
 
-	  uae_u8 *realpt = get_real_address (addr);
-	  actual = fs_write (k->fd, realpt, size);
-
-  } else {
-  	/* ugh this is inefficient but easy */
-
-		if (key_seek(k, k->file_pos, SEEK_SET) < 0) {
-			PUT_PCK_RES1 (packet, 0);
-			PUT_PCK_RES2 (packet, dos_errno ());
+		buf = xmalloc (uae_u8, size);
+		if (!buf) {
+			PUT_PCK_RES1 (packet, -1);
+			PUT_PCK_RES2 (packet, ERROR_NO_FREE_STORE);
 			return;
 		}
 
-  	buf = xmalloc (uae_u8, size);
-  	if (!buf) {
-  		PUT_PCK_RES1 (packet, -1);
-  		PUT_PCK_RES2 (packet, ERROR_NO_FREE_STORE);
-  		return;
-  	}
-	
 		trap_get_bytes(ctx, buf, addr, size);
-	
-  	actual = fs_write(k->fd, buf, size);
-  	xfree (buf);
-  }
+
+		actual = fs_write (k->fd, buf, size);
+		xfree (buf);
+	}
 
 	PUT_PCK_RES1 (packet, actual);
 	if (actual != size)
 		PUT_PCK_RES2 (packet, dos_errno ());
 	if ((uae_s32)actual != -1)
 		k->file_pos += actual;
-	
-  k->notifyactive = 1;
+
+	k->notifyactive = 1;
 }
 
 static void	action_seek(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
-  Key *k = lookup_key (unit, GET_PCK_ARG1 (packet));
+	Key *k = lookup_key (unit, GET_PCK_ARG1 (packet));
 	int pos = (uae_s32)GET_PCK_ARG2 (packet);
 	int mode = (uae_s32)GET_PCK_ARG3 (packet);
-  uae_s64 res;
-  uae_s64 cur;
-  int whence = SEEK_CUR;
+	uae_s64 res;
+	uae_s64 cur;
+	int whence = SEEK_CUR;
 	uae_s64 temppos, filesize;
 
-  if (k == 0) {
-  	PUT_PCK_RES1 (packet, -1);
-  	PUT_PCK_RES2 (packet, ERROR_INVALID_LOCK);
-  	return;
-  }
+	if (k == 0) {
+		PUT_PCK_RES1 (packet, -1);
+		PUT_PCK_RES2 (packet, ERROR_INVALID_LOCK);
+		return;
+	}
 
-  if (mode > 0) 
-    whence = SEEK_END;
-  if (mode < 0) 
-    whence = SEEK_SET;
+	if (mode > 0)
+		whence = SEEK_END;
+	if (mode < 0)
+		whence = SEEK_SET;
 
 	cur = k->file_pos;
 	gui_flicker_led (UNIT_LED(unit), unit->unit, 1);
 
 	filesize = key_filesize(k);
-  if (whence == SEEK_CUR) 
-    temppos = cur + pos;
-  if (whence == SEEK_SET) 
-    temppos = pos;
-  if (whence == SEEK_END) 
-    temppos = filesize + pos;
+	if (whence == SEEK_CUR)
+		temppos = cur + pos;
+	if (whence == SEEK_SET)
+		temppos = pos;
+	if (whence == SEEK_END)
+		temppos = filesize + pos;
 	if (filesize < temppos || temppos < 0) {
 		PUT_PCK_RES1 (packet, -1);
-    PUT_PCK_RES2 (packet, ERROR_SEEK_ERROR);
-    return;
+		PUT_PCK_RES2 (packet, ERROR_SEEK_ERROR);
+		return;
 	}
 
 	res = key_seek(k, pos, whence);
-  if (-1 == res || cur > MAXFILESIZE32) {
-  	PUT_PCK_RES1 (packet, -1);
-  	PUT_PCK_RES2 (packet, ERROR_SEEK_ERROR);
+	if (-1 == res || cur > MAXFILESIZE32) {
+		PUT_PCK_RES1 (packet, -1);
+		PUT_PCK_RES2 (packet, ERROR_SEEK_ERROR);
 		key_seek(k, cur, SEEK_SET);
-  } else {
-  	PUT_PCK_RES1 (packet, cur);
+	} else {
+		PUT_PCK_RES1 (packet, cur);
 		k->file_pos = key_seek(k, 0, SEEK_CUR);
-  }
+	}
 }
 
 static void	action_set_protect(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
-  uaecptr lock = GET_PCK_ARG2 (packet) << 2;
-  uaecptr name = GET_PCK_ARG3 (packet) << 2;
-  uae_u32 mask = GET_PCK_ARG4 (packet);
-  a_inode *a;
-  int err;
+	uaecptr lock = GET_PCK_ARG2 (packet) << 2;
+	uaecptr name = GET_PCK_ARG3 (packet) << 2;
+	uae_u32 mask = GET_PCK_ARG4 (packet);
+	a_inode *a;
+	int err;
 
 	if (is_writeprotected(unit)) {
-  	PUT_PCK_RES1 (packet, DOS_FALSE);
-  	PUT_PCK_RES2 (packet, ERROR_DISK_WRITE_PROTECTED);
-  	return;
-  }
-
-	a = find_aino(ctx, unit, lock, bstr(ctx, unit, name), &err);
-  if (err != 0) {
-  	PUT_PCK_RES1 (packet, DOS_FALSE);
-  	PUT_PCK_RES2 (packet, err);
-  	return;
-  }
-
-  a->amigaos_mode = mask;
-  err = fsdb_set_file_attrs (a);
-  if (err != 0) {
-  	PUT_PCK_RES1 (packet, DOS_FALSE);
-  	PUT_PCK_RES2 (packet, err);
-  } else {
-  	PUT_PCK_RES1 (packet, DOS_TRUE);
-  }
-	notify_check(ctx, unit, a);
-	gui_flicker_led (UNIT_LED(unit), unit->unit, 2);
-}
-
-static void action_set_comment(TrapContext *ctx, Unit * unit, dpacket *packet)
-{
-  uaecptr lock = GET_PCK_ARG2 (packet) << 2;
-  uaecptr name = GET_PCK_ARG3 (packet) << 2;
-  uaecptr comment = GET_PCK_ARG4 (packet) << 2;
-  TCHAR *commented = NULL;
-  a_inode *a;
-  int err;
-
-	if (is_writeprotected(unit)) {
-  	PUT_PCK_RES1 (packet, DOS_FALSE);
-  	PUT_PCK_RES2 (packet, ERROR_DISK_WRITE_PROTECTED);
-  	return;
-  }
-
-	commented = bstr(ctx, unit, comment);
-  if (_tcslen (commented) > 80) {
-    PUT_PCK_RES1 (packet, DOS_FALSE);
-    PUT_PCK_RES2 (packet, ERROR_COMMENT_TOO_BIG);
-    return;
-  }
-	if (_tcslen (commented) > 0) {
-    TCHAR *p = commented;
-    commented = xmalloc (TCHAR, 81);
-    _tcsncpy (commented, p, 80);
-    commented[80] = 0;
-	} else {
-    commented = NULL;
-  }
-
-	a = find_aino(ctx, unit, lock, bstr(ctx, unit, name), &err);
-  if (err != 0) {
-  	PUT_PCK_RES1 (packet, DOS_FALSE);
-  	PUT_PCK_RES2 (packet, err);
-
-  	maybe_free_and_out:
-  	if (commented)
-	    xfree (commented);
-  	return;
-  }
-
-  PUT_PCK_RES1 (packet, DOS_TRUE);
-  PUT_PCK_RES2 (packet, 0);
-  if (a->comment == 0 && commented == 0)
-  	goto maybe_free_and_out;
-  if (a->comment != 0 && commented != 0 && _tcscmp (a->comment, commented) == 0)
-  	goto maybe_free_and_out;
-  if (a->comment)
-  	xfree (a->comment);
-  a->comment = commented;
-  fsdb_set_file_attrs (a);
-	notify_check(ctx, unit, a);
-	gui_flicker_led (UNIT_LED(unit), unit->unit, 2);
-}
-
-static void	action_same_lock(TrapContext *ctx, Unit *unit, dpacket *packet)
-{
-  uaecptr lock1 = GET_PCK_ARG1 (packet) << 2;
-  uaecptr lock2 = GET_PCK_ARG2 (packet) << 2;
-
-  if (!lock1 || !lock2) {
-  	PUT_PCK_RES1 (packet, lock1 == lock2 ? DOS_TRUE : DOS_FALSE);
-  } else {
-		PUT_PCK_RES1 (packet, trap_get_long(ctx, lock1 + 4) == trap_get_long(ctx, lock2 + 4) ? DOS_TRUE : DOS_FALSE);
-  }
-}
-
-static void	action_change_mode(TrapContext *ctx, Unit *unit, dpacket *packet)
-{
-#define CHANGE_LOCK 0
-#define CHANGE_FH 1
-  /* will be CHANGE_FH or CHANGE_LOCK value */
-	int type = GET_PCK_ARG1 (packet);
-  /* either a file-handle or lock */
-  uaecptr object = GET_PCK_ARG2 (packet) << 2; 
-  /* will be EXCLUSIVE_LOCK/SHARED_LOCK if CHANGE_LOCK,
-   * or MODE_OLDFILE/MODE_NEWFILE/MODE_READWRITE if CHANGE_FH *
-   * Above is wrong, it is always *_LOCK. TW. */
-	int mode = GET_PCK_ARG3 (packet);
-  uae_u32 uniq;
-  a_inode *a = NULL, *olda = NULL;
-  int err = 0;
-
-  if (! object || (type != CHANGE_FH && type != CHANGE_LOCK)) {
-  	PUT_PCK_RES1 (packet, DOS_FALSE);
-  	PUT_PCK_RES2 (packet, ERROR_INVALID_LOCK);
-  	return;
-  }
-
-  if (type == CHANGE_LOCK) {
-		uniq = trap_get_long(ctx, object + 4);
-  } else {
-		Key *k = lookup_key (unit, trap_get_long(ctx, object + 36));
-  	if (!k) {
-	    PUT_PCK_RES1 (packet, DOS_FALSE);
-	    PUT_PCK_RES2 (packet, ERROR_OBJECT_NOT_AROUND);
-	    return;
-  	}
-  	uniq = k->aino->uniq;
-  }
-  a = lookup_aino (unit, uniq);
-
-  if (! a) {
-  	err = ERROR_INVALID_LOCK;
-  } else {
-  	if (mode == -1) {
-	    if (a->shlock > 1) {
-    		err = ERROR_OBJECT_IN_USE;
-	    } else {
-    		a->shlock = 0;
-    		a->elock = 1;
-	    }
-  	} else { /* Must be SHARED_LOCK == -2 */
-	    a->elock = 0;
-	    a->shlock++;
-  	}
-  }
-
-  if (err) {
-  	PUT_PCK_RES1 (packet, DOS_FALSE);
-  	PUT_PCK_RES2 (packet, err);
-  	return;
-  } else {
-  	de_recycle_aino (unit, a);
-  	PUT_PCK_RES1 (packet, DOS_TRUE);
-  }
-}
-
-static void	action_parent_common(TrapContext *ctx, Unit *unit, dpacket *packet, uae_u32 uniq)
-{
-  a_inode *olda = lookup_aino (unit, uniq);
-  if (olda == 0) {
-  	PUT_PCK_RES1 (packet, DOS_FALSE);
-  	PUT_PCK_RES2 (packet, ERROR_INVALID_LOCK);
-  	return;
-  }
-
-  if (olda->parent == 0) {
-  	PUT_PCK_RES1 (packet, 0);
-  	PUT_PCK_RES2 (packet, 0);
-  	return;
-  }
-  if (olda->parent->elock) {
-  	PUT_PCK_RES1 (packet, DOS_FALSE);
-  	PUT_PCK_RES2 (packet, ERROR_OBJECT_IN_USE);
-  	return;
-  }
-  olda->parent->shlock++;
-  de_recycle_aino (unit, olda->parent);
-  PUT_PCK_RES1 (packet, make_lock (ctx, unit, olda->parent->uniq, -2) >> 2);
-}
-
-static void	action_parent_fh(TrapContext *ctx, Unit *unit, dpacket *packet)
-{
-  Key *k = lookup_key (unit, GET_PCK_ARG1 (packet));
-  if (!k) {
-  	PUT_PCK_RES1 (packet, DOS_FALSE);
-  	PUT_PCK_RES2 (packet, ERROR_OBJECT_NOT_AROUND);
-  	return;
-  }
-	action_parent_common (ctx, unit, packet, k->aino->uniq);
-}
-
-static void	action_parent(TrapContext *ctx, Unit *unit, dpacket *packet)
-{
-  uaecptr lock = GET_PCK_ARG1 (packet) << 2;
-
-  if (!lock) {
-  	PUT_PCK_RES1 (packet, 0);
-  	PUT_PCK_RES2 (packet, 0);
-  } else {
-		action_parent_common(ctx, unit, packet, trap_get_long(ctx, lock + 4));
-  }
-}
-
-static void	action_create_dir(TrapContext *ctx, Unit *unit, dpacket *packet)
-{
-  uaecptr lock = GET_PCK_ARG1 (packet) << 2;
-  uaecptr name = GET_PCK_ARG2 (packet) << 2;
-  a_inode *aino;
-  int err;
-
-	if (is_writeprotected(unit)) {
-  	PUT_PCK_RES1 (packet, DOS_FALSE);
-  	PUT_PCK_RES2 (packet, ERROR_DISK_WRITE_PROTECTED);
-  	return;
-  }
-
-	aino = find_aino(ctx, unit, lock, bstr(ctx, unit, name), &err);
-  if (aino == 0 || (err != 0 && err != ERROR_OBJECT_NOT_AROUND)) {
-  	PUT_PCK_RES1 (packet, DOS_FALSE);
-  	PUT_PCK_RES2 (packet, err);
-  	return;
-  }
-  if (err == 0) {
-  	/* Object exists. */
-  	PUT_PCK_RES1 (packet, DOS_FALSE);
-  	PUT_PCK_RES2 (packet, ERROR_OBJECT_EXISTS);
-  	return;
-  }
-  /* Object does not exist. aino points to containing directory. */
-	aino = create_child_aino(unit, aino, my_strdup (bstr_cut(ctx, unit, name)), 1);
-  if (aino == 0) {
-  	PUT_PCK_RES1 (packet, DOS_FALSE);
-  	PUT_PCK_RES2 (packet, ERROR_DISK_IS_FULL); /* best we can do */
-  	return;
-  }
-
-  if (my_mkdir (aino->nname) == -1) {
-  	PUT_PCK_RES1 (packet, DOS_FALSE);
-  	PUT_PCK_RES2 (packet, dos_errno());
-  	return;
-  }
-  aino->shlock = 1;
-  fsdb_set_file_attrs (aino);
-  de_recycle_aino (unit, aino);
-	notify_check(ctx, unit, aino);
-  updatedirtime (aino, 0);
-	PUT_PCK_RES1(packet, make_lock(ctx, unit, aino->uniq, -2) >> 2);
-	gui_flicker_led (UNIT_LED(unit), unit->unit, 2);
-}
-
-static void	action_examine_fh(TrapContext *ctx, Unit *unit, dpacket *packet, bool largefilesize)
-{
-  Key *k;
-  a_inode *aino = 0;
-  uaecptr info = GET_PCK_ARG2 (packet) << 2;
-
-  k = lookup_key (unit, GET_PCK_ARG1 (packet));
-  if (k != 0)
-  	aino = k->aino;
-  if (aino == 0)
-  	aino = &unit->rootnode;
-
-	get_fileinfo(ctx, unit, packet, info, aino, largefilesize);
-}
-
-/* For a nice example of just how contradictory documentation can be, see the
- * Autodoc for DOS:SetFileSize and the Packets.txt description of this packet...
- * This implementation tries to mimic the behaviour of the Kick 3.1 ramdisk
- * (which seems to match the Autodoc description). */
-static void	action_set_file_size(TrapContext *ctx, Unit *unit, dpacket *packet)
-{
-  Key *k, *k1;
-  off_t offset = GET_PCK_ARG2 (packet);
-	int mode = (uae_s32)GET_PCK_ARG3 (packet);
-  int whence = SEEK_CUR;
-
-  if (mode > 0)
-  	whence = SEEK_END;
-  if (mode < 0)
-  	whence = SEEK_SET;
-
-  k = lookup_key (unit, GET_PCK_ARG1 (packet));
-  if (k == 0) {
-  	PUT_PCK_RES1 (packet, DOS_TRUE);
-  	PUT_PCK_RES2 (packet, ERROR_OBJECT_NOT_AROUND);
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, ERROR_DISK_WRITE_PROTECTED);
 		return;
 	}
-
-	/* Fail if file is >=2G, it is not safe operation. */
-	if (key_filesize(k) > MAXFILESIZE32_2G) {
-		PUT_PCK_RES1 (packet, DOS_TRUE);
-		PUT_PCK_RES2 (packet, ERROR_BAD_NUMBER); /* ? */
-  	return;
-  }
-
-	gui_flicker_led (UNIT_LED(unit), unit->unit, 1);
-  k->notifyactive = 1;
-  /* If any open files have file pointers beyond this size, truncate only
-   * so far that these pointers do not become invalid.  */
-  for (k1 = unit->keys; k1; k1 = k1->next) {
-  	if (k != k1 && k->aino == k1->aino) {
-	    if (k1->file_pos > offset)
-    		offset = (off_t)k1->file_pos;
-  	}
-  }
-
-  /* Write one then truncate: that should give the right size in all cases.  */
-	fs_lseek (k->fd, offset, whence);
-	offset = fs_lseek (k->fd, 0, SEEK_CUR);
-  fs_write (k->fd, /* whatever */(uae_u8*)&k1, 1);
-  if (k->file_pos > offset)
-  	k->file_pos = offset;
-    fs_lseek (k->fd, (off_t)k->file_pos, SEEK_SET);
-
-  /* Brian: no bug here; the file _must_ be one byte too large after writing
-   * The write is supposed to guarantee that the file can't be smaller than
-   * the requested size, the truncate guarantees that it can't be larger.
-   * If we were to write one byte earlier we'd clobber file data.  */
-  if (my_truncate (k->aino->nname, offset) == -1) {
-		PUT_PCK_RES1 (packet, DOS_TRUE);
-  	PUT_PCK_RES2 (packet, dos_errno ());
-  	return;
-  }
-
-  PUT_PCK_RES1 (packet, offset);
-  PUT_PCK_RES2 (packet, 0);
-}
-
-static int relock_do(Unit *unit, a_inode *a1)
-{
-  Key *k1, *knext;
-  int wehavekeys = 0;
-
-  for (k1 = unit->keys; k1; k1 = knext) {
-    knext = k1->next;
-    if (k1->aino == a1 && k1->fd) {
-	    wehavekeys++;
-			fs_closefile (k1->fd);
-	    write_log (_T("handle %p freed\n"), k1->fd);
-    }
-  }
-  return wehavekeys;
-}
-
-static void relock_re(Unit *unit, a_inode *a1, a_inode *a2, int failed)
-{
-  Key *k1, *knext;
-
-  for (k1 = unit->keys; k1; k1 = knext) {
-    knext = k1->next;
-    if (k1->aino == a1 && k1->fd) {
-	    int mode = (k1->dosmode & A_FIBF_READ) == 0 ? O_WRONLY : (k1->dosmode & A_FIBF_WRITE) == 0 ? O_RDONLY : O_RDWR;
-	    mode |= O_BINARY;
-	    if (failed) {
-        /* rename still failed, restore fd */
-				k1->fd = fs_openfile (unit, a1, mode);
-        write_log (_T("restoring old handle '%s' %d\n"), a1->nname, k1->dosmode);
-	    } else {
-        /* transfer fd to new name */
-    		if (a2) {
-  		    k1->aino = a2;
-					k1->fd = fs_openfile (unit, a2, mode);
-  		    write_log (_T("restoring new handle '%s' %d\n"), a2->nname, k1->dosmode);
-    		} else {
-					write_log (_T("no new handle, deleting old lock(s).\n"));
-    		}
-	    }
-	    if (k1->fd == NULL) {
-				write_log (_T("relocking failed '%s' -> '%s'\n"), a1->nname, a2->nname);
-    		free_key (unit, k1);
-	    } else {
-				key_seek(k1, k1->file_pos, SEEK_SET);
-	    }
-  	}
-  }
-}
-
-static void	action_delete_object(TrapContext *ctx, Unit *unit, dpacket *packet)
-{
-  uaecptr lock = GET_PCK_ARG1 (packet) << 2;
-  uaecptr name = GET_PCK_ARG2 (packet) << 2;
-  a_inode *a;
-  int err;
-
-	if (is_writeprotected(unit)) {
-  	PUT_PCK_RES1 (packet, DOS_FALSE);
-  	PUT_PCK_RES2 (packet, ERROR_DISK_WRITE_PROTECTED);
-  	return;
-  }
-
-	a = find_aino(ctx, unit, lock, bstr(ctx, unit, name), &err);
-
-  if (err != 0) {
-  	PUT_PCK_RES1 (packet, DOS_FALSE);
-  	PUT_PCK_RES2 (packet, err);
-  	return;
-  }
-  if (a->amigaos_mode & A_FIBF_DELETE) {
-  	PUT_PCK_RES1 (packet, DOS_FALSE);
-  	PUT_PCK_RES2 (packet, ERROR_DELETE_PROTECTED);
-  	return;
-  }
-  if (a->shlock > 0 || a->elock) {
-  	PUT_PCK_RES1 (packet, DOS_FALSE);
-  	PUT_PCK_RES2 (packet, ERROR_OBJECT_IN_USE);
-  	return;
-  }
-  if (a->dir) {
-  	/* This should take care of removing the fsdb if no files remain.  */
-  	fsdb_dir_writeback (a);
-    if (my_rmdir (a->nname) == -1) {
-  		PUT_PCK_RES1 (packet, DOS_FALSE);
-  		PUT_PCK_RES2 (packet, dos_errno());
-  		return;
-  	}
-  } else {
-  	if (my_unlink (a->nname) == -1) {
-  		PUT_PCK_RES1 (packet, DOS_FALSE);
-  		PUT_PCK_RES2 (packet, dos_errno());
-  		return;
-  	}
-  }
-	notify_check(ctx, unit, a);
-  updatedirtime (a, 1);
-  if (a->child != 0) {
-	write_log (_T("Serious error in action_delete_object.\n"));
-  	a->deleted = 1;
-  } else {
-  	delete_aino (unit, a);
-  }
-  PUT_PCK_RES1 (packet, DOS_TRUE);
-	gui_flicker_led (UNIT_LED(unit), unit->unit, 2);
-}
-
-static void	action_set_date(TrapContext *ctx, Unit *unit, dpacket *packet)
-{
-  uaecptr lock = GET_PCK_ARG2 (packet) << 2;
-  uaecptr name = GET_PCK_ARG3 (packet) << 2;
-  uaecptr date = GET_PCK_ARG4 (packet);
-  a_inode *a;
-	struct mytimeval tv;
-	int err = 0;
-
-	if (is_writeprotected(unit)) {
-  	PUT_PCK_RES1 (packet, DOS_FALSE);
-  	PUT_PCK_RES2 (packet, ERROR_DISK_WRITE_PROTECTED);
-  	return;
-  }
 
 	a = find_aino(ctx, unit, lock, bstr(ctx, unit, name), &err);
 	if (err != 0) {
@@ -4700,191 +5367,663 @@ static void	action_set_date(TrapContext *ctx, Unit *unit, dpacket *packet)
 		PUT_PCK_RES2 (packet, err);
 		return;
 	}
-	amiga_to_timeval (&tv, trap_get_long(ctx, date), trap_get_long(ctx, date + 4), trap_get_long(ctx, date + 8), 50);
-	//write_log (_T("%llu.%u (%d,%d,%d) %s\n"), tv.tv_sec, tv.tv_usec, trap_get_long(ctx, date), trap_get_long(ctx, date + 4), trap_get_long(ctx, date + 8), a->nname);
-  if (!my_utime (a->nname, &tv))
-  	err = dos_errno ();
-  if (err != 0) {
-  	PUT_PCK_RES1 (packet, DOS_FALSE);
-  	PUT_PCK_RES2 (packet, err);
+	if (a->softlink) {
+		handle_softlink(ctx, unit, packet, a);
 		return;
-  } else {
+	}
+
+	a->amigaos_mode = mask;
+	if (!fsdb_cando (unit))
+		a->amigaos_mode = fsdb_mode_supported (a);
+	err = fsdb_set_file_attrs (a);
+	if (err != 0) {
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, err);
+	} else {
+		PUT_PCK_RES1 (packet, DOS_TRUE);
+	}
+	notify_check(ctx, unit, a);
+	gui_flicker_led (UNIT_LED(unit), unit->unit, 2);
+}
+
+static void action_set_comment(TrapContext *ctx, Unit * unit, dpacket *packet)
+{
+	uaecptr lock = GET_PCK_ARG2 (packet) << 2;
+	uaecptr name = GET_PCK_ARG3 (packet) << 2;
+	uaecptr comment = GET_PCK_ARG4 (packet) << 2;
+	TCHAR *commented = NULL;
+	a_inode *a;
+	int err;
+
+	if (is_writeprotected(unit)) {
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, ERROR_DISK_WRITE_PROTECTED);
+		return;
+	}
+
+	if (fsdb_cando (unit)) {
+		commented = bstr(ctx, unit, comment);
+		if (_tcslen (commented) > 80) {
+			PUT_PCK_RES1 (packet, DOS_FALSE);
+			PUT_PCK_RES2 (packet, ERROR_COMMENT_TOO_BIG);
+			return;
+		}
+		if (_tcslen (commented) > 0) {
+			TCHAR *p = commented;
+			commented = xmalloc (TCHAR, 81);
+			_tcsncpy (commented, p, 80);
+			commented[80] = 0;
+		} else {
+			commented = NULL;
+		}
+	}
+
+	a = find_aino(ctx, unit, lock, bstr(ctx, unit, name), &err);
+	if (err != 0) {
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, err);
+
+maybe_free_and_out:
+		if (commented)
+			xfree (commented);
+		return;
+	}
+	if (a->softlink) {
+		handle_softlink(ctx, unit, packet, a);
+		goto maybe_free_and_out;
+	}
+
+	PUT_PCK_RES1 (packet, DOS_TRUE);
+	PUT_PCK_RES2 (packet, 0);
+	if (a->comment == 0 && commented == 0)
+		goto maybe_free_and_out;
+	if (a->comment != 0 && commented != 0 && _tcscmp (a->comment, commented) == 0)
+		goto maybe_free_and_out;
+	if (a->comment)
+		xfree (a->comment);
+	a->comment = commented;
+	fsdb_set_file_attrs (a);
+	notify_check(ctx, unit, a);
+	gui_flicker_led (UNIT_LED(unit), unit->unit, 2);
+}
+
+static void	action_same_lock(TrapContext *ctx, Unit *unit, dpacket *packet)
+{
+	uaecptr lock1 = GET_PCK_ARG1 (packet) << 2;
+	uaecptr lock2 = GET_PCK_ARG2 (packet) << 2;
+
+	if (!lock1 || !lock2) {
+		PUT_PCK_RES1 (packet, lock1 == lock2 ? DOS_TRUE : DOS_FALSE);
+	} else {
+		PUT_PCK_RES1 (packet, trap_get_long(ctx, lock1 + 4) == trap_get_long(ctx, lock2 + 4) ? DOS_TRUE : DOS_FALSE);
+	}
+}
+
+static void	action_change_mode(TrapContext *ctx, Unit *unit, dpacket *packet)
+{
+#define CHANGE_LOCK 0
+#define CHANGE_FH 1
+	/* will be CHANGE_FH or CHANGE_LOCK value */
+	int type = GET_PCK_ARG1 (packet);
+	/* either a file-handle or lock */
+	uaecptr object = GET_PCK_ARG2 (packet) << 2;
+	/* will be EXCLUSIVE_LOCK/SHARED_LOCK if CHANGE_LOCK,
+	* or MODE_OLDFILE/MODE_NEWFILE/MODE_READWRITE if CHANGE_FH *
+	* Above is wrong, it is always *_LOCK. TW. */
+	int mode = GET_PCK_ARG3 (packet);
+	unsigned long uniq;
+	a_inode *a = NULL, *olda = NULL;
+	int err = 0;
+
+	if (! object || (type != CHANGE_FH && type != CHANGE_LOCK)) {
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, ERROR_INVALID_LOCK);
+		return;
+	}
+
+	if (type == CHANGE_LOCK) {
+		uniq = trap_get_long(ctx, object + 4);
+	} else {
+		Key *k = lookup_key (unit, trap_get_long(ctx, object + 36));
+		if (!k) {
+			PUT_PCK_RES1 (packet, DOS_FALSE);
+			PUT_PCK_RES2 (packet, ERROR_OBJECT_NOT_AROUND);
+			return;
+		}
+		uniq = k->aino->uniq;
+	}
+	a = lookup_aino (unit, uniq);
+
+	if (! a) {
+		err = ERROR_INVALID_LOCK;
+	} else {
+		if (mode == -1) {
+			if (a->shlock > 1) {
+				err = ERROR_OBJECT_IN_USE;
+			} else {
+				a->shlock = 0;
+				a->elock = 1;
+			}
+		} else { /* Must be SHARED_LOCK == -2 */
+			a->elock = 0;
+			a->shlock++;
+		}
+	}
+
+	if (err) {
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, err);
+		return;
+	} else {
+		de_recycle_aino (unit, a);
+		PUT_PCK_RES1 (packet, DOS_TRUE);
+	}
+}
+
+static void	action_parent_common(TrapContext *ctx, Unit *unit, dpacket *packet, unsigned long uniq)
+{
+	a_inode *olda = lookup_aino (unit, uniq);
+	if (olda == 0) {
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, ERROR_INVALID_LOCK);
+		return;
+	}
+
+	if (olda->parent == 0) {
+		PUT_PCK_RES1 (packet, 0);
+		PUT_PCK_RES2 (packet, 0);
+		return;
+	}
+	if (olda->parent->elock) {
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, ERROR_OBJECT_IN_USE);
+		return;
+	}
+	olda->parent->shlock++;
+	de_recycle_aino (unit, olda->parent);
+	PUT_PCK_RES1(packet, make_lock(ctx, unit, olda->parent->uniq, -2) >> 2);
+}
+
+static void	action_parent_fh(TrapContext *ctx, Unit *unit, dpacket *packet)
+{
+	Key *k = lookup_key (unit, GET_PCK_ARG1 (packet));
+	if (!k) {
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, ERROR_OBJECT_NOT_AROUND);
+		return;
+	}
+	action_parent_common (ctx, unit, packet, k->aino->uniq);
+}
+
+static void	action_parent(TrapContext *ctx, Unit *unit, dpacket *packet)
+{
+	uaecptr lock = GET_PCK_ARG1 (packet) << 2;
+
+	if (!lock) {
+		PUT_PCK_RES1 (packet, 0);
+		PUT_PCK_RES2 (packet, 0);
+	} else {
+		action_parent_common(ctx, unit, packet, trap_get_long(ctx, lock + 4));
+	}
+}
+
+static void	action_create_dir(TrapContext *ctx, Unit *unit, dpacket *packet)
+{
+	uaecptr lock = GET_PCK_ARG1 (packet) << 2;
+	uaecptr name = GET_PCK_ARG2 (packet) << 2;
+	a_inode *aino;
+	int err;
+
+	if (is_writeprotected(unit)) {
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, ERROR_DISK_WRITE_PROTECTED);
+		return;
+	}
+
+	aino = find_aino(ctx, unit, lock, bstr(ctx, unit, name), &err);
+	if (aino == 0 || (err != 0 && err != ERROR_OBJECT_NOT_AROUND)) {
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, err);
+		return;
+	}
+	if (err == 0) {
+		/* Object exists. */
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, ERROR_OBJECT_EXISTS);
+		return;
+	}
+	/* Object does not exist. aino points to containing directory. */
+	aino = create_child_aino(unit, aino, my_strdup (bstr_cut(ctx, unit, name)), 1);
+	if (aino == 0) {
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, ERROR_DISK_IS_FULL); /* best we can do */
+		return;
+	}
+
+	if (my_mkdir (aino->nname) == -1) {
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, dos_errno ());
+		return;
+	}
+	aino->shlock = 1;
+	fsdb_set_file_attrs (aino);
+	de_recycle_aino (unit, aino);
+	notify_check(ctx, unit, aino);
+	updatedirtime (aino, 0);
+	PUT_PCK_RES1(packet, make_lock(ctx, unit, aino->uniq, -2) >> 2);
+	gui_flicker_led (UNIT_LED(unit), unit->unit, 2);
+}
+
+static void	action_examine_fh(TrapContext *ctx, Unit *unit, dpacket *packet, bool largefilesize)
+{
+	Key *k;
+	a_inode *aino = 0;
+	uaecptr info = GET_PCK_ARG2 (packet) << 2;
+
+	k = lookup_key (unit, GET_PCK_ARG1 (packet));
+	if (k != 0)
+		aino = k->aino;
+	if (aino == 0)
+		aino = &unit->rootnode;
+
+	get_fileinfo(ctx, unit, packet, info, aino, largefilesize);
+}
+
+/* For a nice example of just how contradictory documentation can be, see the
+* Autodoc for DOS:SetFileSize and the Packets.txt description of this packet...
+* This implementation tries to mimic the behaviour of the Kick 3.1 ramdisk
+* (which seems to match the Autodoc description). */
+static void	action_set_file_size(TrapContext *ctx, Unit *unit, dpacket *packet)
+{
+	Key *k, *k1;
+	off_t offset = GET_PCK_ARG2 (packet);
+	int mode = (uae_s32)GET_PCK_ARG3 (packet);
+	int whence = SEEK_CUR;
+
+	if (mode > 0)
+		whence = SEEK_END;
+	if (mode < 0)
+		whence = SEEK_SET;
+
+	k = lookup_key (unit, GET_PCK_ARG1 (packet));
+	if (k == 0) {
+		PUT_PCK_RES1 (packet, DOS_TRUE);
+		PUT_PCK_RES2 (packet, ERROR_OBJECT_NOT_AROUND);
+		return;
+	}
+	if (k->aino->vfso) {
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, ERROR_DISK_WRITE_PROTECTED);
+		return;
+	}
+
+	/* Fail if file is >=2G, it is not safe operation. */
+	if (key_filesize(k) > MAXFILESIZE32_2G) {
+		PUT_PCK_RES1 (packet, DOS_TRUE);
+		PUT_PCK_RES2 (packet, ERROR_BAD_NUMBER); /* ? */
+		return;
+	}
+
+	gui_flicker_led (UNIT_LED(unit), unit->unit, 1);
+	k->notifyactive = 1;
+	/* If any open files have file pointers beyond this size, truncate only
+	 * so far that these pointers do not become invalid.  */
+	for (k1 = unit->keys; k1; k1 = k1->next) {
+		if (k != k1 && k->aino == k1->aino) {
+			if (k1->file_pos > offset)
+				offset = (off_t)k1->file_pos;
+		}
+	}
+
+	/* Write one then truncate: that should give the right size in all cases.  */
+	fs_lseek (k->fd, offset, whence);
+	offset = fs_lseek (k->fd, 0, SEEK_CUR);
+	fs_write (k->fd, /* whatever */(uae_u8*)&k1, 1);
+	if (k->file_pos > offset)
+		k->file_pos = offset;
+	fs_lseek (k->fd, (off_t)k->file_pos, SEEK_SET);
+
+	/* Brian: no bug here; the file _must_ be one byte too large after writing
+	 * The write is supposed to guarantee that the file can't be smaller than
+	 * the requested size, the truncate guarantees that it can't be larger.
+	 * If we were to write one byte earlier we'd clobber file data.  */
+	if (my_truncate (k->aino->nname, offset) == -1) {
+		PUT_PCK_RES1 (packet, DOS_TRUE);
+		PUT_PCK_RES2 (packet, dos_errno ());
+		return;
+	}
+
+	PUT_PCK_RES1 (packet, offset);
+	PUT_PCK_RES2 (packet, 0);
+}
+
+static int relock_do(Unit *unit, a_inode *a1)
+{
+	Key *k1, *knext;
+	int wehavekeys = 0;
+
+	for (k1 = unit->keys; k1; k1 = knext) {
+		knext = k1->next;
+		if (k1->aino == a1 && k1->fd) {
+			wehavekeys++;
+			fs_closefile (k1->fd);
+			write_log (_T("handle %p freed\n"), k1->fd);
+		}
+	}
+	return wehavekeys;
+}
+
+static void relock_re (Unit *unit, a_inode *a1, a_inode *a2, int failed)
+{
+	Key *k1, *knext;
+
+	for (k1 = unit->keys; k1; k1 = knext) {
+		knext = k1->next;
+		if (k1->aino == a1 && k1->fd) {
+			int mode = (k1->dosmode & A_FIBF_READ) == 0 ? O_WRONLY : (k1->dosmode & A_FIBF_WRITE) == 0 ? O_RDONLY : O_RDWR;
+			mode |= O_BINARY;
+			if (failed) {
+				/* rename still failed, restore fd */
+				k1->fd = fs_openfile (unit, a1, mode);
+				write_log (_T("restoring old handle '%s' %d\n"), a1->nname, k1->dosmode);
+			} else {
+				/* transfer fd to new name */
+				if (a2) {
+					k1->aino = a2;
+					k1->fd = fs_openfile (unit, a2, mode);
+					write_log (_T("restoring new handle '%s' %d\n"), a2->nname, k1->dosmode);
+				} else {
+					write_log (_T("no new handle, deleting old lock(s).\n"));
+				}
+			}
+			if (k1->fd == NULL) {
+				write_log (_T("relocking failed '%s' -> '%s'\n"), a1->nname, a2->nname);
+				free_key (unit, k1);
+			} else {
+				key_seek(k1, k1->file_pos, SEEK_SET);
+			}
+		}
+	}
+}
+
+static void	action_delete_object(TrapContext *ctx, Unit *unit, dpacket *packet)
+{
+	uaecptr lock = GET_PCK_ARG1 (packet) << 2;
+	uaecptr name = GET_PCK_ARG2 (packet) << 2;
+	a_inode *a;
+	int err;
+
+	if (is_writeprotected(unit)) {
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, ERROR_DISK_WRITE_PROTECTED);
+		return;
+	}
+
+	a = find_aino(ctx, unit, lock, bstr(ctx, unit, name), &err);
+
+	if (err != 0) {
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, err);
+		return;
+	}
+	if (a->amigaos_mode & A_FIBF_DELETE) {
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, ERROR_DELETE_PROTECTED);
+		return;
+	}
+	if (a->shlock > 0 || a->elock) {
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, ERROR_OBJECT_IN_USE);
+		return;
+	}
+	if (!a->vfso) {
+		if (a->dir) {
+			/* This should take care of removing the fsdb if no files remain.  */
+			fsdb_dir_writeback (a);
+			if (my_rmdir (a->nname) == -1) {
+				PUT_PCK_RES1 (packet, DOS_FALSE);
+				PUT_PCK_RES2 (packet, dos_errno ());
+				return;
+			}
+		} else {
+			if (my_unlink (a->nname) == -1) {
+				PUT_PCK_RES1 (packet, DOS_FALSE);
+				PUT_PCK_RES2 (packet, dos_errno ());
+				return;
+			}
+		}
+	}
+	notify_check(ctx, unit, a);
+	updatedirtime (a, 1);
+	if (a->child != 0) {
+		write_log (_T("Serious error in action_delete_object.\n"));
+		a->deleted = 1;
+	} else {
+		delete_aino (unit, a);
+	}
+	PUT_PCK_RES1 (packet, DOS_TRUE);
+	gui_flicker_led (UNIT_LED(unit), unit->unit, 2);
+}
+
+static void	action_set_date(TrapContext *ctx, Unit *unit, dpacket *packet)
+{
+	uaecptr lock = GET_PCK_ARG2 (packet) << 2;
+	uaecptr name = GET_PCK_ARG3 (packet) << 2;
+	uaecptr date = GET_PCK_ARG4 (packet);
+	a_inode *a;
+	struct mytimeval tv;
+	int err = 0;
+
+	if (is_writeprotected(unit)) {
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, ERROR_DISK_WRITE_PROTECTED);
+		return;
+	}
+
+	a = find_aino(ctx, unit, lock, bstr(ctx, unit, name), &err);
+	if (err != 0) {
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, err);
+		return;
+	}
+	if (a->softlink) {
+		handle_softlink(ctx, unit, packet, a);
+		return;
+	}
+	if (!a->vfso) {
+		amiga_to_timeval (&tv, trap_get_long(ctx, date), trap_get_long(ctx, date + 4), trap_get_long(ctx, date + 8), 50);
+		//write_log (_T("%llu.%u (%d,%d,%d) %s\n"), tv.tv_sec, tv.tv_usec, trap_get_long(ctx, date), trap_get_long(ctx, date + 4), trap_get_long(ctx, date + 8), a->nname);
+		if (!my_utime (a->nname, &tv))
+			err = dos_errno ();
+	}
+	if (err != 0) {
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, err);
+		return;
+	} else {
 		notify_check(ctx, unit, a);
-  	PUT_PCK_RES1 (packet, DOS_TRUE);
-  }
+		PUT_PCK_RES1 (packet, DOS_TRUE);
+	}
 	gui_flicker_led (UNIT_LED(unit), unit->unit, 2);
 }
 
 static void	action_rename_object(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
-  uaecptr lock1 = GET_PCK_ARG1 (packet) << 2;
-  uaecptr name1 = GET_PCK_ARG2 (packet) << 2;
-  uaecptr lock2 = GET_PCK_ARG3 (packet) << 2;
-  uaecptr name2 = GET_PCK_ARG4 (packet) << 2;
-  a_inode *a1, *a2;
-  int err1, err2;
-  Key *k1, *knext;
-  int wehavekeys = 0;
+	uaecptr lock1 = GET_PCK_ARG1 (packet) << 2;
+	uaecptr name1 = GET_PCK_ARG2 (packet) << 2;
+	uaecptr lock2 = GET_PCK_ARG3 (packet) << 2;
+	uaecptr name2 = GET_PCK_ARG4 (packet) << 2;
+	a_inode *a1, *a2;
+	int err1, err2;
+	Key *k1, *knext;
+	int wehavekeys = 0;
 
 	if (is_writeprotected(unit)) {
-  	PUT_PCK_RES1 (packet, DOS_FALSE);
-  	PUT_PCK_RES2 (packet, ERROR_DISK_WRITE_PROTECTED);
-  	return;
-  }
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, ERROR_DISK_WRITE_PROTECTED);
+		return;
+	}
 
 	a1 = find_aino(ctx, unit, lock1, bstr(ctx, unit, name1), &err1);
-  if (err1 != 0) {
-  	PUT_PCK_RES1 (packet, DOS_FALSE);
-  	PUT_PCK_RES2 (packet, err1);
-  	return;
-  }
-  /* rename always fails if file is open for writing */
-  for (k1 = unit->keys; k1; k1 = knext) {
-    knext = k1->next;
-  	if (k1->aino == a1 && k1->fd && k1->createmode == 2) {
-	    PUT_PCK_RES1 (packet, DOS_FALSE);
-	    PUT_PCK_RES2 (packet, ERROR_OBJECT_IN_USE);
-	    return;
-  	}
-  }
+	if (err1 != 0) {
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, err1);
+		return;
+	}
+	/* rename always fails if file is open for writing */
+	for (k1 = unit->keys; k1; k1 = knext) {
+		knext = k1->next;
+		if (k1->aino == a1 && k1->fd && k1->createmode == 2) {
+			PUT_PCK_RES1 (packet, DOS_FALSE);
+			PUT_PCK_RES2 (packet, ERROR_OBJECT_IN_USE);
+			return;
+		}
+	}
 
-  /* See whether the other name already exists in the filesystem.  */
+	/* See whether the other name already exists in the filesystem.  */
 	a2 = find_aino(ctx, unit, lock2, bstr(ctx, unit, name2), &err2);
 
-  if (a2 == a1) {
-  	/* Renaming to the same name, but possibly different case.  */
+	if (a2 == a1) {
+		/* Renaming to the same name, but possibly different case.  */
 		if (_tcscmp (a1->aname, bstr_cut(ctx, unit, name2)) == 0) {
-	    /* Exact match -> do nothing.  */
+			/* Exact match -> do nothing.  */
 			notify_check(ctx, unit, a1);
-	    updatedirtime (a1, 1);
-	    PUT_PCK_RES1 (packet, DOS_TRUE);
-	    return;
-  	}
-  	a2 = a2->parent;
-  } else if (a2 == 0 || err2 != ERROR_OBJECT_NOT_AROUND) {
-  	PUT_PCK_RES1 (packet, DOS_FALSE);
-  	PUT_PCK_RES2 (packet, err2 == 0 ? ERROR_OBJECT_EXISTS : err2);
-  	return;
-  }
+			updatedirtime (a1, 1);
+			PUT_PCK_RES1 (packet, DOS_TRUE);
+			return;
+		}
+		a2 = a2->parent;
+	} else if (a2 == 0 || err2 != ERROR_OBJECT_NOT_AROUND) {
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, err2 == 0 ? ERROR_OBJECT_EXISTS : err2);
+		return;
+	}
 
 	a2 = create_child_aino (unit, a2, bstr_cut(ctx, unit, name2), a1->dir);
-  if (a2 == 0) {
-  	PUT_PCK_RES1 (packet, DOS_FALSE);
-  	PUT_PCK_RES2 (packet, ERROR_DISK_IS_FULL); /* best we can do */
-  	return;
-  }
+	if (a2 == 0) {
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, ERROR_DISK_IS_FULL); /* best we can do */
+		return;
+	}
 
-  if (-1 == my_rename (a1->nname, a2->nname)) {
-  	int ret = -1;
-  	/* maybe we have open file handles that caused failure? */
-	  write_log (_T("rename '%s' -> '%s' failed, trying relocking..\n"), a1->nname, a2->nname);
-  	wehavekeys = relock_do(unit, a1);
-  	/* try again... */
-  	ret = my_rename (a1->nname, a2->nname);
-  	/* restore locks */
-  	relock_re(unit, a1, a2, ret == -1 ? 1 : 0);
-  	if (ret == -1) {
-    	delete_aino (unit, a2);
-    	PUT_PCK_RES1 (packet, DOS_FALSE);
-    	PUT_PCK_RES2 (packet, dos_errno ());
-    	return;
-    }
-  }
-    
+	if (!a1->vfso) {
+		if (-1 == my_rename (a1->nname, a2->nname)) {
+			int ret = -1;
+			/* maybe we have open file handles that caused failure? */
+			write_log (_T("rename '%s' -> '%s' failed, trying relocking..\n"), a1->nname, a2->nname);
+			wehavekeys = relock_do (unit, a1);
+			/* try again... */
+			ret = my_rename (a1->nname, a2->nname);
+			/* restore locks */
+			relock_re (unit, a1, a2, ret == -1 ? 1 : 0);
+			if (ret == -1) {
+				delete_aino (unit, a2);
+				PUT_PCK_RES1 (packet, DOS_FALSE);
+				PUT_PCK_RES2 (packet, dos_errno ());
+				return;
+			}
+		}
+	}
+
 	notify_check(ctx, unit, a1);
 	notify_check(ctx, unit, a2);
-  a2->comment = a1->comment;
-  a1->comment = 0;
-  a2->amigaos_mode = a1->amigaos_mode;
-  a2->uniq = a1->uniq;
-  a2->elock = a1->elock;
-  a2->shlock = a1->shlock;
-  a2->has_dbentry = a1->has_dbentry;
-  a2->db_offset = a1->db_offset;
-  a2->dirty = 0;
-  move_exkeys (unit, a1, a2);
-  move_aino_children (unit, a1, a2);
-  delete_aino (unit, a1);
-  a2->dirty = 1;
-  if (a2->parent)
-  	fsdb_dir_writeback (a2->parent);
-  updatedirtime (a2, 1);
-  fsdb_set_file_attrs (a2);
-  if (a2->elock > 0 || a2->shlock > 0 || wehavekeys > 0)
-  	de_recycle_aino (unit, a2);
-  PUT_PCK_RES1 (packet, DOS_TRUE);
+	a2->comment = a1->comment;
+	a1->comment = 0;
+	a2->amigaos_mode = a1->amigaos_mode;
+	a2->uniq = a1->uniq;
+	a2->elock = a1->elock;
+	a2->shlock = a1->shlock;
+	a2->has_dbentry = a1->has_dbentry;
+	a2->db_offset = a1->db_offset;
+	a2->dirty = 0;
+	a2->vfso = a1->vfso;
+	move_exkeys (unit, a1, a2);
+	move_aino_children (unit, a1, a2);
+	delete_aino (unit, a1);
+	a2->dirty = 1;
+	if (a2->parent)
+		fsdb_dir_writeback (a2->parent);
+	updatedirtime (a2, 1);
+	fsdb_set_file_attrs (a2);
+	if (a2->elock > 0 || a2->shlock > 0 || wehavekeys > 0)
+		de_recycle_aino (unit, a2);
+	PUT_PCK_RES1 (packet, DOS_TRUE);
 	gui_flicker_led (UNIT_LED(unit), unit->unit, 2);
 }
 
 static void	action_current_volume(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
-  if (filesys_isvolume(unit))
-    PUT_PCK_RES1 (packet, unit->volume >> 2);
-  else
-  	PUT_PCK_RES1 (packet, 0);
+	if (filesys_isvolume(unit))
+		PUT_PCK_RES1 (packet, unit->volume >> 2);
+	else
+		PUT_PCK_RES1 (packet, 0);
 }
 
 static void	action_rename_disk(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
-  uaecptr name = GET_PCK_ARG1 (packet) << 2;
+	uaecptr name = GET_PCK_ARG1 (packet) << 2;
 
 	if (is_writeprotected(unit)) {
-  	PUT_PCK_RES1 (packet, DOS_FALSE);
-  	PUT_PCK_RES2 (packet, ERROR_DISK_WRITE_PROTECTED);
-  	return;
-  }
+		PUT_PCK_RES1 (packet, DOS_FALSE);
+		PUT_PCK_RES2 (packet, ERROR_DISK_WRITE_PROTECTED);
+		return;
+	}
 
-  /* get volume name */
-  xfree (unit->ui.volname);
+	/* get volume name */
+	xfree (unit->ui.volname);
 	unit->ui.volname = bstr1(ctx, name);
-  set_volume_name (unit, 0);
+	set_volume_name(unit, 0);
 
-  PUT_PCK_RES1 (packet, DOS_TRUE);
+	PUT_PCK_RES1 (packet, DOS_TRUE);
 }
 
 static void	action_is_filesystem(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
-  PUT_PCK_RES1 (packet, DOS_TRUE);
+	PUT_PCK_RES1 (packet, DOS_TRUE);
 }
 
 static void	action_flush(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
-  PUT_PCK_RES1 (packet, DOS_TRUE);
-  flush_cache(unit, 0);
+	PUT_PCK_RES1 (packet, DOS_TRUE);
+	flush_cache (unit, 0);
 }
 
 static void	action_more_cache(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
-  PUT_PCK_RES1 (packet, 50); /* bug but AmigaOS expects it */
-  if (GET_PCK_ARG1 (packet) != 0)
-    flush_cache(unit, 0);
+	PUT_PCK_RES1 (packet, 50); /* bug but AmigaOS expects it */
+	if (GET_PCK_ARG1 (packet) != 0)
+		flush_cache (unit, 0);
 }
 
 static void	action_inhibit(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
-  PUT_PCK_RES1 (packet, DOS_TRUE);
-  flush_cache(unit, 0);
-  unit->inhibited = GET_PCK_ARG1 (packet) != 0;
+	int old = unit->inhibited;
+	PUT_PCK_RES1 (packet, DOS_TRUE);
+	flush_cache (unit, 0);
+	unit->inhibited = GET_PCK_ARG1 (packet) != 0;
+	if (unit->ui.canremove && !unit->ui.configureddrive && unit->ui.open && old && !GET_PCK_ARG1(packet)) {
+		filesys_delayed_eject(unit);
+	}
 }
 
 static void	action_write_protect(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
-  PUT_PCK_RES1 (packet, DOS_TRUE);
-  if (GET_PCK_ARG1 (packet)) {
-  	if (!unit->ui.locked) {
-  		unit->ui.locked = true;
-	    unit->lockkey = GET_PCK_ARG2 (packet);
-  	}
-  } else {
-  	if (unit->ui.locked) {
-	    if (unit->lockkey == GET_PCK_ARG2 (packet) || unit->lockkey == 0) {
+	PUT_PCK_RES1 (packet, DOS_TRUE);
+	if (GET_PCK_ARG1 (packet)) {
+		if (!unit->ui.locked) {
+			unit->ui.locked = true;
+			unit->lockkey = GET_PCK_ARG2 (packet);
+		}
+	} else {
+		if (unit->ui.locked) {
+			if (unit->lockkey == GET_PCK_ARG2 (packet) || unit->lockkey == 0) {
 				unit->ui.locked = false;
-	    } else {
-		    PUT_PCK_RES1 (packet, DOS_FALSE);
-		    PUT_PCK_RES2 (packet, 0);
-	    }
-  	}
-  }
+			} else {
+				PUT_PCK_RES1 (packet, DOS_FALSE);
+				PUT_PCK_RES2 (packet, 0);
+			}
+		}
+	}
 }
 
 /* OS4 */
@@ -4968,142 +6107,142 @@ static void action_filesystem_attr(TrapContext *ctx, Unit *unit, dpacket *packet
 
 static void action_change_file_position64(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
-  Key *k = lookup_key (unit, GET_PCK64_ARG1 (packet));
-  uae_s64 pos = GET_PCK64_ARG2 (packet);
+	Key *k = lookup_key (unit, GET_PCK64_ARG1 (packet));
+	uae_s64 pos = GET_PCK64_ARG2 (packet);
 	int mode = (uae_s32)GET_PCK64_ARG3 (packet);
-  uae_s32 whence = SEEK_CUR;
-  uae_s64 res, cur;
+	long whence = SEEK_CUR;
+	uae_s64 res, cur;
 
-  PUT_PCK64_RES0 (packet, DP64_INIT);
+	PUT_PCK64_RES0 (packet, DP64_INIT);
 
-  if (k == 0) {
-  	PUT_PCK64_RES1 (packet, DOS_FALSE);
-  	PUT_PCK64_RES2 (packet, ERROR_INVALID_LOCK);
-  	return;
-  }
+	if (k == 0) {
+		PUT_PCK64_RES1 (packet, DOS_FALSE);
+		PUT_PCK64_RES2 (packet, ERROR_INVALID_LOCK);
+		return;
+	}
 
-  if (mode > 0)
-  	whence = SEEK_END;
-  if (mode < 0)
-  	whence = SEEK_SET;
+	if (mode > 0)
+		whence = SEEK_END;
+	if (mode < 0)
+		whence = SEEK_SET;
 
 	gui_flicker_led (UNIT_LED(unit), unit->unit, 1);
 
 	cur = k->file_pos;
-  {
-  	uae_s64 temppos;
+	{
+		uae_s64 temppos;
 		uae_s64 filesize = key_filesize(k);
 
-  	if (whence == SEEK_CUR)
-      temppos = cur + pos;
-  	if (whence == SEEK_SET)
-      temppos = pos;
-  	if (whence == SEEK_END)
-	    temppos = filesize + pos;
-  	if (filesize < temppos) {
-	    res = -1;
-	    PUT_PCK64_RES1 (packet, res);
-	    PUT_PCK64_RES2 (packet, ERROR_SEEK_ERROR);
-	    return;
-  	}
-  }
+		if (whence == SEEK_CUR)
+			temppos = cur + pos;
+		if (whence == SEEK_SET)
+			temppos = pos;
+		if (whence == SEEK_END)
+			temppos = filesize + pos;
+		if (filesize < temppos) {
+			res = -1;
+			PUT_PCK64_RES1 (packet, res);
+			PUT_PCK64_RES2 (packet, ERROR_SEEK_ERROR);
+			return;
+		}
+	}
 	res = key_seek(k, pos, whence);
 
-  if (-1 == res) {
-  	PUT_PCK64_RES1 (packet, DOS_FALSE);
-  	PUT_PCK64_RES2 (packet, ERROR_SEEK_ERROR);
-  } else {
-  	PUT_PCK64_RES1 (packet, TRUE);
-    PUT_PCK64_RES2 (packet, 0);
+	if (-1 == res) {
+		PUT_PCK64_RES1 (packet, DOS_FALSE);
+		PUT_PCK64_RES2 (packet, ERROR_SEEK_ERROR);
+	} else {
+		PUT_PCK64_RES1 (packet, TRUE);
+		PUT_PCK64_RES2 (packet, 0);
 		k->file_pos = key_seek(k, 0, SEEK_CUR);
-  }
+	}
 }
 
 static void action_get_file_position64(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
-  Key *k = lookup_key (unit, GET_PCK64_ARG1 (packet));
+	Key *k = lookup_key (unit, GET_PCK64_ARG1 (packet));
 
-  PUT_PCK64_RES0 (packet, DP64_INIT);
+	PUT_PCK64_RES0 (packet, DP64_INIT);
 
-  if (k == 0) {
+	if (k == 0) {
 		PUT_PCK64_RES1 (packet, -1);
-  	PUT_PCK64_RES2 (packet, ERROR_INVALID_LOCK);
-  	return;
-  }
-  PUT_PCK64_RES1 (packet, k->file_pos);
-  PUT_PCK64_RES2 (packet, 0);
+		PUT_PCK64_RES2 (packet, ERROR_INVALID_LOCK);
+		return;
+	}
+	PUT_PCK64_RES1 (packet, k->file_pos);
+	PUT_PCK64_RES2 (packet, 0);
 }
 
 static void action_change_file_size64(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
-  Key *k, *k1;
-  uae_s64 offset = GET_PCK64_ARG2 (packet);
+	Key *k, *k1;
+	uae_s64 offset = GET_PCK64_ARG2 (packet);
 	int mode = (uae_s32)GET_PCK64_ARG3 (packet);
-  int whence = SEEK_CUR;
+	int whence = SEEK_CUR;
 
-  PUT_PCK64_RES0 (packet, DP64_INIT);
+	PUT_PCK64_RES0 (packet, DP64_INIT);
 
-  if (mode > 0)
-  	whence = SEEK_END;
-  if (mode < 0)
-  	whence = SEEK_SET;
+	if (mode > 0)
+		whence = SEEK_END;
+	if (mode < 0)
+		whence = SEEK_SET;
 
-  k = lookup_key (unit, GET_PCK64_ARG1 (packet));
-  if (k == 0) {
-  	PUT_PCK64_RES1 (packet, DOS_FALSE);
-  	PUT_PCK64_RES2 (packet, ERROR_OBJECT_NOT_AROUND);
-  	return;
-  }
+	k = lookup_key (unit, GET_PCK64_ARG1 (packet));
+	if (k == 0) {
+		PUT_PCK64_RES1 (packet, DOS_FALSE);
+		PUT_PCK64_RES2 (packet, ERROR_OBJECT_NOT_AROUND);
+		return;
+	}
 
 	gui_flicker_led (UNIT_LED(unit), unit->unit, 1);
-  k->notifyactive = 1;
-  /* If any open files have file pointers beyond this size, truncate only
-   * so far that these pointers do not become invalid.  */
-  for (k1 = unit->keys; k1; k1 = k1->next) {
-  	if (k != k1 && k->aino == k1->aino) {
-	    if (k1->file_pos > offset)
-    		offset = k1->file_pos;
-  	}
-  }
+	k->notifyactive = 1;
+	/* If any open files have file pointers beyond this size, truncate only
+	* so far that these pointers do not become invalid.  */
+	for (k1 = unit->keys; k1; k1 = k1->next) {
+		if (k != k1 && k->aino == k1->aino) {
+			if (k1->file_pos > offset)
+				offset = k1->file_pos;
+		}
+	}
 
-  /* Write one then truncate: that should give the right size in all cases.  */
+	/* Write one then truncate: that should give the right size in all cases.  */
 	fs_lseek (k->fd, offset, whence);
 	offset = key_seek(k, offset, whence);
-  fs_write (k->fd, /* whatever */(uae_u8*)&k1, 1);
-  if (k->file_pos > offset)
-  	k->file_pos = offset;
+	fs_write (k->fd, /* whatever */(uae_u8*)&k1, 1);
+	if (k->file_pos > offset)
+		k->file_pos = offset;
 	key_seek(k, k->file_pos, SEEK_SET);
 
-  if (my_truncate (k->aino->nname, offset) == -1) {
-  	PUT_PCK64_RES1 (packet, DOS_FALSE);
-  	PUT_PCK64_RES2 (packet, dos_errno ());
-  	return;
-  }
+	if (my_truncate (k->aino->nname, offset) == -1) {
+		PUT_PCK64_RES1 (packet, DOS_FALSE);
+		PUT_PCK64_RES2 (packet, dos_errno ());
+		return;
+	}
 
-  PUT_PCK64_RES1 (packet, DOS_TRUE);
-  PUT_PCK64_RES2 (packet, 0);
+	PUT_PCK64_RES1 (packet, DOS_TRUE);
+	PUT_PCK64_RES2 (packet, 0);
 }
 
 static void action_get_file_size64(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
-  Key *k = lookup_key (unit, GET_PCK64_ARG1 (packet));
+	Key *k = lookup_key (unit, GET_PCK64_ARG1 (packet));
 	uae_s64 filesize;
 
-  PUT_PCK64_RES0 (packet, DP64_INIT);
+	PUT_PCK64_RES0 (packet, DP64_INIT);
 
-  if (k == 0) {
+	if (k == 0) {
 		PUT_PCK64_RES1 (packet, -1);
-  	PUT_PCK64_RES2 (packet, ERROR_INVALID_LOCK);
-  	return;
-  }
+		PUT_PCK64_RES2 (packet, ERROR_INVALID_LOCK);
+		return;
+	}
 	filesize = key_filesize(k);
 	if (filesize >= 0) {
-    PUT_PCK64_RES1 (packet, filesize);
-    PUT_PCK64_RES2 (packet, 0);
-    return;
-  }
+		PUT_PCK64_RES1 (packet, filesize);
+		PUT_PCK64_RES2 (packet, 0);
+		return;
+	}
 	PUT_PCK64_RES1 (packet, -1);
-  PUT_PCK64_RES2 (packet, ERROR_SEEK_ERROR);
+	PUT_PCK64_RES2 (packet, ERROR_SEEK_ERROR);
 }
 
 /* MOS */
@@ -5175,7 +6314,7 @@ static void action_seek64(TrapContext *ctx, Unit *unit, dpacket *packet)
 	Key *k = lookup_key(unit, GET_PCK_ARG1(packet));
 	uae_s64 pos = get_quadp(ctx, GET_PCK64_ARG2(packet));
 	int mode = GET_PCK_ARG3(packet);
-	uae_s32 whence = SEEK_CUR;
+	long whence = SEEK_CUR;
 	uae_s64 res, cur;
 
 	if (k == 0) {
@@ -5307,218 +6446,271 @@ static void action_free_record64(TrapContext *ctx, Unit *unit, dpacket *packet)
 }
 
 /* We don't want multiple interrupts to be active at the same time. I don't
- * know whether AmigaOS takes care of that, but this does. */
+* know whether AmigaOS takes care of that, but this does. */
 static uae_sem_t singlethread_int_sem = 0;
 
-static uae_u32 REGPARAM2 exter_int_helper (TrapContext *ctx)
+#define SHELLEXEC_MAX_CMD_LEN 512
+
+static uae_u32 REGPARAM2 exter_int_helper(TrapContext *ctx)
 {
-  UnitInfo *uip = mountinfo.ui;
-  uaecptr port;
+	UnitInfo *uip = mountinfo.ui;
+	uaecptr port;
 	int n = trap_get_dreg(ctx, 0);
-  static int unit_no;
+	static int unit_no;
+
+	if (n == 20) {
+		// d1 = shellexec process
+		shell_execute_process = trap_get_dreg(ctx, 1);
+		return 0;
+	} else if (n == 21) {
+		trap_set_areg(ctx, 0, 0);
+		if (comm_pipe_has_data(&shellexecute_pipe)) {
+			TCHAR *p = (TCHAR*)read_comm_pipe_pvoid_blocking(&shellexecute_pipe);
+			if (p) {
+				int maxsize = SHELLEXEC_MAX_CMD_LEN - 1;
+				if (shell_execute_data) {
+					uae_char *src = ua(p);
+					uae_u8 *dst = uaeboard_map_ram(shell_execute_data);
+					uae_char *srcp = src;
+					while (maxsize-- > 0) {
+						uae_u8 v = *srcp++;
+						*dst++ = v;
+						if (!v)
+							break;
+					}
+					*dst = 0;
+					xfree(src);
+				}
+				trap_set_areg(ctx, 0, shell_execute_data);
+			}
+			xfree(p);
+		}
+		return 0;
+	} else if (n == 22) {
+		// ack
+		return 0;
+	}
 
 	if (n == 1) {
-	  /* Release a message_lock. This is called as soon as the message is
-	   * received by the assembly code. We use the opportunity to check
-	   * whether we have some locks that we can give back to the assembler
-	   * code.
-	   * Note that this is called from the main loop, unlike the other cases
-	   * in this switch statement which are called from the interrupt handler.
-	   */
+		/* Release a message_lock. This is called as soon as the message is
+		* received by the assembly code. We use the opportunity to check
+		* whether we have some locks that we can give back to the assembler
+		* code.
+		* Note that this is called from the main loop, unlike the other cases
+		* in this switch statement which are called from the interrupt handler.
+		*/
 #ifdef UAE_FILESYS_THREADS
-  	{
+		{
 			Unit *unit = find_unit(trap_get_areg(ctx, 5));
 			uaecptr msg = trap_get_areg(ctx, 4);
-	    unit->cmds_complete = unit->cmds_acked;
-	    while (comm_pipe_has_data (unit->ui.back_pipe)) {
+			unit->cmds_complete = unit->cmds_acked;
+			while (comm_pipe_has_data(unit->ui.back_pipe)) {
 				uaecptr locks, lockend, lockv;
-		    int cnt = 0;
-		    locks = read_comm_pipe_int_blocking (unit->ui.back_pipe);
-		    lockend = locks;
-		    while ((lockv = trap_get_long(ctx, lockend)) != 0) {
-		      if (lockv == lockend) {
-						write_log (_T("filesystem lock queue corrupted!\n"));
-      			break;
-		      }
-		      lockend = lockv;
-		      cnt++;
-		    }
+				int cnt = 0;
+				locks = read_comm_pipe_int_blocking(unit->ui.back_pipe);
+				lockend = locks;
+				while ((lockv = trap_get_long(ctx, lockend)) != 0) {
+					if (lockv == lockend) {
+						write_log(_T("filesystem lock queue corrupted!\n"));
+						break;
+					}
+					lockend = lockv;
+					cnt++;
+				}
 				trap_put_long(ctx, lockend, trap_get_long(ctx, trap_get_areg(ctx, 3)));
 				trap_put_long(ctx, trap_get_areg(ctx, 3), locks);
-	    }
-	  }
+			}
+		}
 #else
-		write_log (_T("exter_int_helper should not be called with arg 1!\n"));
+		write_log(_T("exter_int_helper should not be called with arg 1!\n"));
 #endif
 		return 0;
 	}
 
-  if(n == 10) {
-    if (uae_sem_trywait (&singlethread_int_sem) != 0) {
-    	/* Pretend it isn't for us. We might get it again later. */
+	if (n == 10) {
+		if (uae_sem_trywait(&singlethread_int_sem) != 0) {
+			/* Pretend it isn't for us. We might get it again later. */
 			do_uae_int_requested();
-    	return 0;
-    }
-    filesys_in_interrupt++;
-    unit_no = 0;
-  }
+			return 0;
+		}
+		filesys_in_interrupt++;
+		unit_no = 0;
+	}
 	if (n >= 10) {
 
-	  /* Find work that needs to be done:
-	   * return d0 = 0: none
-	   *        d0 = 1: PutMsg(), port in a0, message in a1
-	   *        d0 = 2: Signal(), task in a1, signal set in d1
-	   *        d0 = 3: ReplyMsg(), message in a1
-	   *        d0 = 4: Cause(), interrupt in a1
-	   *        d0 = 5: Send FileNofication message, port in a0, notifystruct in a1
-	   */
+		/* Find work that needs to be done:
+		* return d0 = 0: none
+		*        d0 = 1: PutMsg(), port in a0, message in a1
+		*        d0 = 2: Signal(), task in a1, signal set in d1
+		*        d0 = 3: ReplyMsg(), message in a1
+		*        d0 = 4: Cause(), interrupt in a1
+		*        d0 = 5: Send FileNofication message, port in a0, notifystruct in a1
+		*/
 
 #ifdef SUPPORT_THREADS
-  	/* First, check signals/messages */
-  	while (comm_pipe_has_data (&native2amiga_pending)) {
-      int cmd = read_comm_pipe_int_blocking (&native2amiga_pending);
+		/* First, check signals/messages */
+		while (comm_pipe_has_data(&native2amiga_pending)) {
+			int cmd = read_comm_pipe_int_blocking(&native2amiga_pending);
 			if (cmd & 0x80) {
 				cmd &= ~0x80;
 				// tell the sender that message was processed
 				UAE_PROCESSED func = (UAE_PROCESSED)read_comm_pipe_pvoid_blocking(&native2amiga_pending);
 				func(cmd);
 			}
-	    switch (cmd) {
-	    case 0: /* Signal() */
+			switch (cmd) {
+				case 0: /* Signal() */
 				trap_set_areg(ctx, 1, read_comm_pipe_u32_blocking(&native2amiga_pending));
 				trap_set_dreg(ctx, 1, read_comm_pipe_u32_blocking(&native2amiga_pending));
-		    return 2;
+				return 2;
 
-	    case 1: /* PutMsg() */
+				case 1: /* PutMsg() */
 				trap_set_areg(ctx, 0, read_comm_pipe_u32_blocking(&native2amiga_pending));
 				trap_set_areg(ctx, 1, read_comm_pipe_u32_blocking(&native2amiga_pending));
-		    return 1;
+				return 1;
 
-	    case 2: /* ReplyMsg() */
+				case 2: /* ReplyMsg() */
 				trap_set_areg(ctx, 1, read_comm_pipe_u32_blocking(&native2amiga_pending));
-		    return 3;
+				return 3;
 
-	    case 3: /* Cause() */
+				case 3: /* Cause() */
 				trap_set_areg(ctx, 1, read_comm_pipe_u32_blocking(&native2amiga_pending));
-		    return 4;
+				return 4;
 
-	    case 4: /* NotifyHack() */
+				case 4: /* NotifyHack() */
 				trap_set_areg(ctx, 0, read_comm_pipe_u32_blocking(&native2amiga_pending));
 				trap_set_areg(ctx, 1, read_comm_pipe_u32_blocking(&native2amiga_pending));
-		    return 5;
+				return 5;
 
-	    default:
-				 write_log (_T("exter_int_helper: unknown native action %X\n"), cmd);
-		     break;
-	    }
-	  }
+				case 5: /* shell execute */
+				{
+					TCHAR *p = (TCHAR*)read_comm_pipe_pvoid_blocking(&native2amiga_pending);
+					write_comm_pipe_pvoid(&shellexecute_pipe, p, 0);
+					if (shell_execute_data) {
+						if (!shell_execute_process)
+							break;
+						trap_set_areg(ctx, 1, shell_execute_process - 92);
+						trap_set_dreg(ctx, 1, 1 << 13);
+						return 2; // signal process
+					}
+					shell_execute_data = uaeboard_alloc_ram(SHELLEXEC_MAX_CMD_LEN);
+					return 6; // create process
+				}
+
+				default:
+				write_log(_T("exter_int_helper: unknown native action %X\n"), cmd);
+				break;
+			}
+		}
 #endif
 
-	  /* Find some unit that needs a message sent, and return its port,
-	   * or zero if all are done.
-	   * Take care not to dereference self for units that didn't have their
-	   * startup packet sent. */
-	  for (;;) {
-	    if (unit_no >= MAX_FILESYSTEM_UNITS)
+		/* Find some unit that needs a message sent, and return its port,
+		 * or zero if all are done.
+		 * Take care not to dereference self for units that didn't have their
+		 * startup packet sent. */
+		for (;;) {
+			if (unit_no >= MAX_FILESYSTEM_UNITS)
 				goto end;
 
 			if (uip[unit_no].open > 0 && uip[unit_no].self != 0
-		    && uip[unit_no].self->cmds_acked == uip[unit_no].self->cmds_complete
-		    && uip[unit_no].self->cmds_acked != uip[unit_no].self->cmds_sent)
-		    break;
-	    unit_no++;
-	  }
-	  uip[unit_no].self->cmds_acked = uip[unit_no].self->cmds_sent;
-	  port = uip[unit_no].self->port;
-	  if (port) {
+				&& uip[unit_no].self->cmds_acked == uip[unit_no].self->cmds_complete
+				&& uip[unit_no].self->cmds_acked != uip[unit_no].self->cmds_sent)
+				break;
+			unit_no++;
+		}
+		uip[unit_no].self->cmds_acked = uip[unit_no].self->cmds_sent;
+		port = uip[unit_no].self->port;
+		if (port) {
 			trap_set_areg(ctx, 0, port);
 			trap_set_areg(ctx, 1, find_unit(port)->dummy_message);
-	    unit_no++;
-	    return 1;
-	  }
+			unit_no++;
+			return 1;
+		}
 
 end:
-	  /* Exit the interrupt, and release the single-threading lock. */
-    filesys_in_interrupt--;
-	  uae_sem_post (&singlethread_int_sem);
-  }
-  return 0;
+		/* Exit the interrupt, and release the single-threading lock. */
+		filesys_in_interrupt--;
+		uae_sem_post(&singlethread_int_sem);
+
+	}
+	return 0;
 }
 
-static int handle_packet(TrapContext* ctx, Unit* unit, dpacket* pck, uae_u32 msg, int isvolume)
+static int handle_packet(TrapContext *ctx, Unit *unit, dpacket *pck, uae_u32 msg, int isvolume)
 {
 	bool noidle = false;
 	int ret = 1;
-	uae_s32 type = GET_PCK_TYPE(pck);
-	PUT_PCK_RES2(pck, 0);
+	uae_s32 type = GET_PCK_TYPE (pck);
+	PUT_PCK_RES2 (pck, 0);
 
 	if (unit->inhibited && isvolume
 		&& type != ACTION_INHIBIT && type != ACTION_MORE_CACHE
 		&& type != ACTION_DISK_INFO) {
-		PUT_PCK_RES1(pck, DOS_FALSE);
-		PUT_PCK_RES2(pck, ERROR_NOT_A_DOS_DISK);
-		return 1;
+			PUT_PCK_RES1 (pck, DOS_FALSE);
+			PUT_PCK_RES2 (pck, ERROR_NOT_A_DOS_DISK);
+			return 1;
 	}
 	if (type != ACTION_INHIBIT && type != ACTION_CURRENT_VOLUME
 		&& type != ACTION_IS_FILESYSTEM && type != ACTION_MORE_CACHE
 		&& type != ACTION_WRITE_PROTECT && type != ACTION_DISK_INFO
 		&& !isvolume) {
-		PUT_PCK_RES1(pck, DOS_FALSE);
-		PUT_PCK_RES2(pck, unit->ui.unknown_media ? ERROR_NOT_A_DOS_DISK : ERROR_NO_DISK);
-		return 1;
+			PUT_PCK_RES1 (pck, DOS_FALSE);
+			PUT_PCK_RES2 (pck, unit->ui.unknown_media ? ERROR_NOT_A_DOS_DISK : ERROR_NO_DISK);
+			return 1;
 	}
 
 	switch (type) {
-	case ACTION_LOCATE_OBJECT: action_lock(ctx, unit, pck); break;
-	case ACTION_FREE_LOCK: action_free_lock(ctx, unit, pck); break;
-	case ACTION_COPY_DIR: action_dup_lock(ctx, unit, pck); break;
-	case ACTION_DISK_INFO: action_disk_info(ctx, unit, pck); break;
-	case ACTION_INFO: action_info(ctx, unit, pck); break;
-	case ACTION_EXAMINE_OBJECT: action_examine_object(ctx, unit, pck); break;
-	case ACTION_EXAMINE_NEXT: noidle = true; action_examine_next(ctx, unit, pck, false); break;
-	case ACTION_FIND_INPUT: action_find_input(ctx, unit, pck); break;
-	case ACTION_FIND_WRITE: action_find_write(ctx, unit, pck); break;
-	case ACTION_FIND_OUTPUT: action_find_output(ctx, unit, pck); break;
-	case ACTION_END: action_end(ctx, unit, pck); break;
+	case ACTION_LOCATE_OBJECT: action_lock (ctx, unit, pck); break;
+	case ACTION_FREE_LOCK: action_free_lock (ctx, unit, pck); break;
+	case ACTION_COPY_DIR: action_dup_lock (ctx, unit, pck); break;
+	case ACTION_DISK_INFO: action_disk_info (ctx, unit, pck); break;
+	case ACTION_INFO: action_info (ctx, unit, pck); break;
+	case ACTION_EXAMINE_OBJECT: action_examine_object (ctx, unit, pck); break;
+	case ACTION_EXAMINE_NEXT: noidle = true; action_examine_next (ctx, unit, pck, false); break;
+	case ACTION_FIND_INPUT: action_find_input (ctx, unit, pck); break;
+	case ACTION_FIND_WRITE: action_find_write (ctx, unit, pck); break;
+	case ACTION_FIND_OUTPUT: action_find_output (ctx, unit, pck); break;
+	case ACTION_END: action_end (ctx, unit, pck); break;
 	case ACTION_READ: noidle = true; action_read(ctx, unit, pck); break;
-	case ACTION_WRITE: noidle = true; action_write(ctx, unit, pck); break;
-	case ACTION_SEEK: action_seek(ctx, unit, pck); break;
-	case ACTION_SET_PROTECT: action_set_protect(ctx, unit, pck); break;
-	case ACTION_SET_COMMENT: action_set_comment(ctx, unit, pck); break;
-	case ACTION_SAME_LOCK: action_same_lock(ctx, unit, pck); break;
-	case ACTION_PARENT: action_parent(ctx, unit, pck); break;
-	case ACTION_CREATE_DIR: action_create_dir(ctx, unit, pck); break;
-	case ACTION_DELETE_OBJECT: action_delete_object(ctx, unit, pck); break;
-	case ACTION_RENAME_OBJECT: action_rename_object(ctx, unit, pck); break;
-	case ACTION_SET_DATE: action_set_date(ctx, unit, pck); break;
-	case ACTION_CURRENT_VOLUME: action_current_volume(ctx, unit, pck); break;
-	case ACTION_RENAME_DISK: action_rename_disk(ctx, unit, pck); break;
-	case ACTION_IS_FILESYSTEM: action_is_filesystem(ctx, unit, pck); break;
-	case ACTION_FLUSH: action_flush(ctx, unit, pck); break;
-	case ACTION_MORE_CACHE: action_more_cache(ctx, unit, pck); break;
-	case ACTION_INHIBIT: action_inhibit(ctx, unit, pck); break;
-	case ACTION_WRITE_PROTECT: action_write_protect(ctx, unit, pck); break;
+	case ACTION_WRITE: noidle = true; action_write (ctx, unit, pck); break;
+	case ACTION_SEEK: action_seek (ctx, unit, pck); break;
+	case ACTION_SET_PROTECT: action_set_protect (ctx, unit, pck); break;
+	case ACTION_SET_COMMENT: action_set_comment (ctx, unit, pck); break;
+	case ACTION_SAME_LOCK: action_same_lock (ctx, unit, pck); break;
+	case ACTION_PARENT: action_parent (ctx, unit, pck); break;
+	case ACTION_CREATE_DIR: action_create_dir (ctx, unit, pck); break;
+	case ACTION_DELETE_OBJECT: action_delete_object (ctx, unit, pck); break;
+	case ACTION_RENAME_OBJECT: action_rename_object (ctx, unit, pck); break;
+	case ACTION_SET_DATE: action_set_date (ctx, unit, pck); break;
+	case ACTION_CURRENT_VOLUME: action_current_volume (ctx, unit, pck); break;
+	case ACTION_RENAME_DISK: action_rename_disk (ctx, unit, pck); break;
+	case ACTION_IS_FILESYSTEM: action_is_filesystem (ctx, unit, pck); break;
+	case ACTION_FLUSH: action_flush (ctx, unit, pck); break;
+	case ACTION_MORE_CACHE: action_more_cache (ctx, unit, pck); break;
+	case ACTION_INHIBIT: action_inhibit (ctx, unit, pck); break;
+	case ACTION_WRITE_PROTECT: action_write_protect (ctx, unit, pck); break;
 
 		/* 2.0+ packet types */
-	case ACTION_SET_FILE_SIZE: action_set_file_size(ctx, unit, pck); break;
-	case ACTION_EXAMINE_FH: action_examine_fh(ctx, unit, pck, false); break;
-	case ACTION_FH_FROM_LOCK: action_fh_from_lock(ctx, unit, pck); break;
-	case ACTION_COPY_DIR_FH: action_lock_from_fh(ctx, unit, pck); break;
-	case ACTION_CHANGE_MODE: action_change_mode(ctx, unit, pck); break;
-	case ACTION_PARENT_FH: action_parent_fh(ctx, unit, pck); break;
-	case ACTION_ADD_NOTIFY: action_add_notify(ctx, unit, pck); break;
-	case ACTION_REMOVE_NOTIFY: action_remove_notify(ctx, unit, pck); break;
+	case ACTION_SET_FILE_SIZE: action_set_file_size (ctx, unit, pck); break;
+	case ACTION_EXAMINE_FH: action_examine_fh (ctx, unit, pck, false); break;
+	case ACTION_FH_FROM_LOCK: action_fh_from_lock (ctx, unit, pck); break;
+	case ACTION_COPY_DIR_FH: action_lock_from_fh (ctx, unit, pck); break;
+	case ACTION_CHANGE_MODE: action_change_mode (ctx, unit, pck); break;
+	case ACTION_PARENT_FH: action_parent_fh (ctx, unit, pck); break;
+	case ACTION_ADD_NOTIFY: action_add_notify (ctx, unit, pck); break;
+	case ACTION_REMOVE_NOTIFY: action_remove_notify (ctx, unit, pck); break;
 	case ACTION_EXAMINE_ALL: noidle = true; ret = action_examine_all(ctx, unit, pck); break;
 	case ACTION_EXAMINE_ALL_END: ret = action_examine_all_end(ctx, unit, pck); break;
-	case ACTION_LOCK_RECORD: ret = action_lock_record(ctx, unit, pck, msg); break;
-	case ACTION_FREE_RECORD: action_free_record(ctx, unit, pck); break;
+	case ACTION_LOCK_RECORD: ret = action_lock_record (ctx, unit, pck, msg); break;
+	case ACTION_FREE_RECORD: action_free_record (ctx, unit, pck); break;
+	case ACTION_READ_LINK: action_read_link (ctx, unit, pck); break;
+	case ACTION_MAKE_LINK: action_make_link (ctx, unit, pck); break;
 
 		/* OS4 packet types */
 	case ACTION_FILESYSTEM_ATTR: action_filesystem_attr(ctx, unit, pck); break;
-	case ACTION_CHANGE_FILE_POSITION64: action_change_file_position64(ctx, unit, pck); break;
-	case ACTION_GET_FILE_POSITION64: action_get_file_position64(ctx, unit, pck); break;
-	case ACTION_CHANGE_FILE_SIZE64: action_change_file_size64(ctx, unit, pck); break;
-	case ACTION_GET_FILE_SIZE64: action_get_file_size64(ctx, unit, pck); break;
+	case ACTION_CHANGE_FILE_POSITION64: action_change_file_position64 (ctx, unit, pck); break;
+	case ACTION_GET_FILE_POSITION64: action_get_file_position64 (ctx, unit, pck); break;
+	case ACTION_CHANGE_FILE_SIZE64: action_change_file_size64 (ctx, unit, pck); break;
+	case ACTION_GET_FILE_SIZE64: action_get_file_size64 (ctx, unit, pck); break;
 
 		/* MOS packet types */
 	case ACTION_SEEK64: action_seek64(ctx, unit, pck); break;
@@ -5530,13 +6722,11 @@ static int handle_packet(TrapContext* ctx, Unit* unit, dpacket* pck, uae_u32 msg
 	case ACTION_FREE_RECORD64: action_free_record64(ctx, unit, pck); break;
 
 		/* unsupported packets */
-	case ACTION_MAKE_LINK:
-	case ACTION_READ_LINK:
 	case ACTION_FORMAT:
-		write_log(_T("FILESYS: UNSUPPORTED PACKET %x\n"), type);
+		write_log (_T("FILESYS: UNSUPPORTED PACKET %x\n"), type);
 		return 0;
 	default:
-		write_log(_T("FILESYS: UNKNOWN PACKET %x\n"), type);
+		write_log (_T("FILESYS: UNKNOWN PACKET %x\n"), type);
 		return 0;
 	}
 	if (noidle) {
@@ -5550,22 +6740,23 @@ static int handle_packet(TrapContext* ctx, Unit* unit, dpacket* pck, uae_u32 msg
 static int filesys_iteration(UnitInfo *ui)
 {
 	uaecptr pck;
-  uaecptr msg;
-  uae_u32 morelocks;
+	uaecptr msg;
+	uae_u32 morelocks;
 	TrapContext *ctx = NULL;
 
 	ctx = (TrapContext*)read_comm_pipe_pvoid_blocking(ui->unit_pipe);
-  pck = read_comm_pipe_u32_blocking (ui->unit_pipe);
-  msg = read_comm_pipe_u32_blocking (ui->unit_pipe);
-  morelocks = (uae_u32)read_comm_pipe_int_blocking (ui->unit_pipe);
+	pck = read_comm_pipe_u32_blocking(ui->unit_pipe);
+	msg = read_comm_pipe_u32_blocking(ui->unit_pipe);
+	morelocks = (uae_u32)read_comm_pipe_int_blocking(ui->unit_pipe);
 
-  if (ui->reset_state == FS_GO_DOWN) {
-    if (pck != 0)
-	    return 1;
-    /* Death message received. */
-    uae_sem_post (&ui->reset_sync_sem);
-    /* Die.  */
-    return 0;
+	if (ui->reset_state == FS_GO_DOWN) {
+		trap_background_set_complete(ctx);
+		if (pck != 0)
+		   return 1;
+		/* Death message received. */
+		uae_sem_post (&ui->reset_sync_sem);
+		/* Die.  */
+		return 0;
 	}
 
 	dpacket packet;
@@ -5602,14 +6793,14 @@ static int filesys_iteration(UnitInfo *ui)
 	if (ret >= 0) {
 		mdp = &md2[0];
 		mdcnt = 3;
-    /* Mark the packet as processed for the list scan in the assembly code. */
+		/* Mark the packet as processed for the list scan in the assembly code. */
 		//trap_put_long(ctx, msg + 4, 0xffffffff);
 	} else {
 		mdp = &md2[1];
 		mdcnt = 2;
 	}
 	/* Acquire the message lock, so that we know we can safely send the message. */
-  ui->self->cmds_sent++;
+	ui->self->cmds_sent++;
 
 	/* Send back the locks. */
 	trap_multi(ctx, mdp, mdcnt);
@@ -5617,7 +6808,7 @@ static int filesys_iteration(UnitInfo *ui)
 		write_comm_pipe_int(ui->back_pipe, (int)md2[1].params[0], 0);
 
 	/* The message is sent by our interrupt handler, so make sure an interrupt happens. */
-  do_uae_int_requested();
+	do_uae_int_requested();
 
 	return 1;
 }
@@ -5629,7 +6820,7 @@ static int filesys_thread (void *unit_v)
 
 	uae_set_thread_priority (NULL, 1);
 	for (;;) {
-		if (!filesys_iteration (ui)) {
+		if (!filesys_iteration(ui)) {
 			return 0;
 		}
 	}
@@ -5638,7 +6829,7 @@ static int filesys_thread (void *unit_v)
 #endif
 
 /* Talk about spaghetti code... */
-static uae_u32 REGPARAM2 filesys_handler (TrapContext *ctx)
+static uae_u32 REGPARAM2 filesys_handler(TrapContext *ctx)
 {
 	bool packet_valid = false;
 	Unit *unit = find_unit(trap_get_areg(ctx, 5));
@@ -5647,19 +6838,19 @@ static uae_u32 REGPARAM2 filesys_handler (TrapContext *ctx)
 
 	if (!trap_valid_address(ctx, packet_addr, 36) || !trap_valid_address(ctx, message_addr, 14)) {
 		write_log (_T("FILESYS: Bad address %x/%x passed for packet.\n"), packet_addr, message_addr);
-  	goto error2;
-  }
+		goto error2;
+	}
 
-  if (!unit || !unit->volume) {
+	if (!unit || !unit->volume) {
 		write_log (_T("FILESYS: was not initialized.\n"));
-  	goto error;
-  }
+		goto error;
+	}
 #ifdef UAE_FILESYS_THREADS
-  {
-  	uae_u32 morelocks;
-  	if (!unit->ui.unit_pipe)
-	    goto error;
-  	/* Get two more locks and hand them over to the other thread. */
+	{
+		uae_u32 morelocks;
+		if (!unit->ui.unit_pipe)
+			goto error;
+		/* Get two more locks and hand them over to the other thread. */
 
 		struct trapmd md[] = {
 			// morelocks = trap_get_long(ctx, trap_get_areg(ctx, 3));
@@ -5682,13 +6873,14 @@ static uae_u32 REGPARAM2 filesys_handler (TrapContext *ctx)
 		trap_multi(ctx, md, sizeof md / sizeof(struct trapmd));
 		morelocks = md[0].params[0];
 
+		trap_set_background(ctx);
 		write_comm_pipe_pvoid(unit->ui.unit_pipe, ctx, 0);
-  	write_comm_pipe_u32 (unit->ui.unit_pipe, packet_addr, 0);
-  	write_comm_pipe_u32 (unit->ui.unit_pipe, message_addr, 0);
-  	write_comm_pipe_int (unit->ui.unit_pipe, (int)morelocks, 1);
-  	/* Don't reply yet. */
-  	return 1;
-  }
+		write_comm_pipe_u32(unit->ui.unit_pipe, packet_addr, 0);
+		write_comm_pipe_u32(unit->ui.unit_pipe, message_addr, 0);
+		write_comm_pipe_int(unit->ui.unit_pipe, (int)morelocks, 1);
+		/* Don't reply yet. */
+		return 1;
+	}
 #endif
 
 	dpacket packet;
@@ -5696,124 +6888,122 @@ static uae_u32 REGPARAM2 filesys_handler (TrapContext *ctx)
 	packet_valid = true;
 
 	if (! handle_packet(ctx, unit, &packet, 0, filesys_isvolume(unit))) {
-  	error:
+error:
 		if (!packet_valid)
 			readdpacket(ctx, &packet, packet_addr);
 		PUT_PCK_RES1 (&packet, DOS_FALSE);
 		PUT_PCK_RES2 (&packet, ERROR_ACTION_NOT_KNOWN);
-  }
+	}
 
 	writedpacket(ctx, &packet);
 
 error2:
 	trap_put_long(ctx, message_addr + 4, 0xffffffff);
 
-  return 0;
+	return 0;
 }
 
 void filesys_start_threads (void)
 {
-  int i;
+	int i;
 
-  filesys_in_interrupt = 0;
-  for (i = 0; i < MAX_FILESYSTEM_UNITS; i++) {
-    UnitInfo *ui = &mountinfo.ui[i];
+	filesys_in_interrupt = 0;
+	for (i = 0; i < MAX_FILESYSTEM_UNITS; i++) {
+		UnitInfo *ui = &mountinfo.ui[i];
 		if (ui->open <= 0)
-	    continue;
-	  filesys_start_thread (ui, i);
-  }
+			continue;
+		filesys_start_thread (ui, i);
+	}
 }
 
-static void filesys_free_handles(void)
+void filesys_free_handles (void)
 {
-  Unit *u, *u1;
-  for (u = units; u; u = u1) {
-  	Key *k1, *knext;
-  	u1 = u->next;
-  	for (k1 = u->keys; k1; k1 = knext) {
-	    knext = k1->next;
-	    if (k1->fd)
+	Unit *u, *u1;
+	for (u = units; u; u = u1) {
+		Key *k1, *knext;
+		u1 = u->next;
+		for (k1 = u->keys; k1; k1 = knext) {
+			knext = k1->next;
+			if (k1->fd)
 				fs_closefile (k1->fd);
-	    xfree(k1);
-  	}
-  	u->keys = NULL;
+			xfree (k1);
+		}
+		u->keys = NULL;
 		struct lockrecord *lrnext;
 		for (struct lockrecord *lr = u->waitingrecords; lr; lr = lrnext) {
 			lrnext = lr->next;
 			xfree (lr);
 		}
 		u->waitingrecords = NULL;
-  	free_all_ainos (u, &u->rootnode);
-  	u->rootnode.next = u->rootnode.prev = &u->rootnode;
-  	u->aino_cache_size = 0;
-  	xfree(u->newrootdir);
-  	xfree(u->newvolume);
-  	u->newrootdir = NULL;
-  	u->newvolume = NULL;
-  }
+		free_all_ainos (u, &u->rootnode);
+		u->rootnode.next = u->rootnode.prev = &u->rootnode;
+		u->aino_cache_size = 0;
+		xfree (u->newrootdir);
+		xfree (u->newvolume);
+		u->newrootdir = NULL;
+		u->newvolume = NULL;
+	}
 }
 
 static void filesys_reset2 (void)
 {
-  Unit *u, *u1;
+	Unit *u, *u1;
 
-  filesys_free_handles();
-  for (u = units; u; u = u1) {
-  	u1 = u->next;
-  	xfree (u);
-  }
-  units = 0;
-  key_uniq = 0;
-  a_uniq = 0;
-  free_mountinfo ();
+
+	filesys_free_handles ();
+	for (u = units; u; u = u1) {
+		u1 = u->next;
+		xfree (u);
+	}
+	units = 0;
+	key_uniq = 0;
+	a_uniq = 0;
+	free_mountinfo ();
 }
 
 void filesys_reset (void)
 {
 	if (isrestore ())
-	  return;
-  filesys_reset2 ();
-  initialize_mountinfo();
+		return;
+	load_injected_icons();
+	filesys_reset2 ();
+	initialize_mountinfo ();
+
+	shell_execute_data = 0;
+	shell_execute_process = 0;
 }
 
 static void filesys_prepare_reset2 (void)
 {
-  UnitInfo *uip;
-  int i;
+	UnitInfo *uip;
+	int i;
 
-  uip = mountinfo.ui;
+	uip = mountinfo.ui;
 #ifdef UAE_FILESYS_THREADS
-  for (i = 0; i < MAX_FILESYSTEM_UNITS; i++) {
-  	if (uip[i].open > 0 && uip[i].unit_pipe != 0) {
-	    uae_sem_init (&uip[i].reset_sync_sem, 0, 0);
-	    uip[i].reset_state = FS_GO_DOWN;
-	    /* send death message */
+	for (i = 0; i < MAX_FILESYSTEM_UNITS; i++) {
+		if (uip[i].open > 0 && uip[i].unit_pipe != 0) {
+			uae_sem_init (&uip[i].reset_sync_sem, 0, 0);
+			uip[i].reset_state = FS_GO_DOWN;
+			/* send death message */
 			write_comm_pipe_pvoid(uip[i].unit_pipe, NULL, 0);
-	    write_comm_pipe_int (uip[i].unit_pipe, 0, 0);
-	    write_comm_pipe_int (uip[i].unit_pipe, 0, 0);
-	    write_comm_pipe_int (uip[i].unit_pipe, 0, 1);
-	    uae_sem_wait (&uip[i].reset_sync_sem);
+			write_comm_pipe_int(uip[i].unit_pipe, 0, 0);
+			write_comm_pipe_int(uip[i].unit_pipe, 0, 0);
+			write_comm_pipe_int(uip[i].unit_pipe, 0, 1);
+			uae_sem_wait (&uip[i].reset_sync_sem);
 			uae_end_thread (&uip[i].tid);
-      uae_sem_destroy(&uip[i].reset_sync_sem);
-      uip[i].reset_sync_sem = 0;
-      destroy_comm_pipe(uip[i].unit_pipe);
-      xfree(uip[i].unit_pipe);
-      uip[i].unit_pipe = 0;
-      destroy_comm_pipe(uip[i].back_pipe);
-      xfree(uip[i].back_pipe);
-      uip[i].back_pipe = 0;
-  	}
-  }
+		}
+	}
 #endif
-  filesys_free_handles();
+	filesys_free_handles();
 }
 
 void filesys_prepare_reset (void)
 {
 	if (isrestore ())
-	  return;
-  filesys_prepare_reset2 ();
+		return;
+	filesys_prepare_reset2 ();
 }
+
 
 /* don't forget filesys.asm! */
 #define PP_MAXSIZE 4 * 96
@@ -5988,25 +7178,32 @@ static uae_u32 REGPARAM2 filesys_diagentry (TrapContext *ctx)
 
 	filesys_configdev = trap_get_areg(ctx, 3);
 
-	baseaddr = filesys_bank.baseaddr;
-	resaddr += 0x10;
+	if (currprefs.uaeboard > 1) {
+		baseaddr = uaeboard_bank.baseaddr;
+		resaddr += 0x100;
+	} else {
+		baseaddr = filesys_bank.baseaddr;
+		resaddr += 0x10;
+	}
 
 	if (baseaddr) {
-	  put_long_host(baseaddr + 0x2100, EXPANSION_explibname);
-	  put_long_host(baseaddr + 0x2104, filesys_configdev);
-	  put_long_host(baseaddr + 0x2108, EXPANSION_doslibname);
-	  put_word_host(baseaddr + 0x210c, 0);
-	  put_word_host(baseaddr + 0x210e, nr_units());
-	  put_word_host(baseaddr + 0x2110, 0);
-	  put_word_host(baseaddr + 0x2112, 1);
+		put_long_host(baseaddr + 0x2100, EXPANSION_explibname);
+		put_long_host(baseaddr + 0x2104, filesys_configdev);
+		put_long_host(baseaddr + 0x2108, EXPANSION_doslibname);
+		put_word_host(baseaddr + 0x210c, 0);
+		put_word_host(baseaddr + 0x210e, nr_units());
+		put_word_host(baseaddr + 0x2110, 0);
+		put_word_host(baseaddr + 0x2112, 1 | (currprefs.uae_hide_autoconfig || currprefs.uaeboard > 1 ? 16 : 0));
 	}
+
+	native2amiga_startup();
 
 	write_log (_T("filesystem: diagentry %08x configdev %08x\n"), resaddr, filesys_configdev);
 
 	first_resident = resaddr;
-  if (ROM_hardfile_resid != 0) {
-  	/* Build a struct Resident. This will set up and initialize
-  	 * the uae.device */
+	if (ROM_hardfile_resid != 0) {
+		/* Build a struct Resident. This will set up and initialize
+		* the uae.device */
 		trap_put_word(ctx, resaddr + 0x0, 0x4AFC);
 		trap_put_long(ctx, resaddr + 0x2, resaddr);
 		trap_put_long(ctx, resaddr + 0x6, resaddr + 0x1A); /* Continue scan here */
@@ -6015,15 +7212,15 @@ static uae_u32 REGPARAM2 filesys_diagentry (TrapContext *ctx)
 		trap_put_long(ctx, resaddr + 0xE, ROM_hardfile_resname);
 		trap_put_long(ctx, resaddr + 0x12, ROM_hardfile_resid);
 		trap_put_long(ctx, resaddr + 0x16, ROM_hardfile_init); /* calls filesys_init */
-  }
-  resaddr += 0x1A;
+	}
+	resaddr += 0x1A;
 	if (!KS12_BOOT_HACK || expansion)
-    first_resident = resaddr;
-  /* The good thing about this function is that it always gets called
-   * when we boot. So we could put all sorts of stuff that wants to be done
-   * here.
-   * We can simply add more Resident structures here. Although the Amiga OS
-   * only knows about the one at address DiagArea + 0x10, we scan for other
+		first_resident = resaddr;
+	/* The good thing about this function is that it always gets called
+	* when we boot. So we could put all sorts of stuff that wants to be done
+	* here.
+	* We can simply add more Resident structures here. Although the Amiga OS
+	* only knows about the one at address DiagArea + 0x10, we scan for other
 	* Resident structures and inject them to ResList in priority order
 	*/
 
@@ -6039,15 +7236,43 @@ static uae_u32 REGPARAM2 filesys_diagentry (TrapContext *ctx)
 		resaddr += 0x1A;
 	}
 
-  resaddr = uaeres_startup (ctx, resaddr);
+	resaddr = uaeres_startup(ctx, resaddr);
 #ifdef BSDSOCKET
 	resaddr = bsdlib_startup(ctx, resaddr);
+#endif
+#ifdef WITH_UAENATIVE
+	resaddr = uaenative_startup(ctx, resaddr);
+#endif
+#ifdef SCSIEMU
+	resaddr = scsidev_startup(ctx, resaddr);
+#endif
+#ifdef SANA2
+	resaddr = netdev_startup(ctx, resaddr);
+#endif
+#ifdef UAESERIAL
+	resaddr = uaeserialdev_startup(ctx, resaddr);
+#endif
+#ifdef WITH_TABLETLIBRARY
+	resaddr = tabletlib_startup(ctx, resaddr);
+#endif
+#ifdef RETROPLATFORM
+	if (rp_isactive()) {
+		trap_put_word(ctx, resaddr + 0x0, 0x4afc);
+		trap_put_long(ctx, resaddr + 0x2, resaddr);
+		trap_put_long(ctx, resaddr + 0x6, resaddr + 0x1A);
+		trap_put_word(ctx, resaddr + 0xA, 0x0100); /* RTF_COLDSTART; Version 0 */
+		trap_put_word(ctx, resaddr + 0xC, 0x0000); /* NT_UNKNOWN; pri */
+		trap_put_long(ctx, resaddr + 0xE, keymaphook_name);
+		trap_put_long(ctx, resaddr + 0x12, keymaphook_id);
+		trap_put_long(ctx, resaddr + 0x16, keymaphook_initcode);
+		resaddr += 0x1A;
+	}
 #endif
 
 	last_resident = resaddr;
 
-  /* call setup_exter */
-	trap_put_word(ctx, resaddr +  0, 0x7000 | 1); /* moveq #x,d0 */
+	/* call setup_exter */
+	trap_put_word(ctx, resaddr +  0, 0x7000 | (currprefs.uaeboard > 1 ? 3 : 1)); /* moveq #x,d0 */
 	trap_put_word(ctx, resaddr +  2, 0x2079); /* move.l RTAREA_BASE+setup_exter,a0 */
 	trap_put_long(ctx, resaddr +  4, rtarea_base + bootrom_header + 4 + 5 * 4);
 	trap_put_word(ctx, resaddr +  8, 0xd1fc); /* add.l #RTAREA_BASE+bootrom_header,a0 */
@@ -6156,7 +7381,33 @@ static uae_u32 REGPARAM2 filesys_diagentry (TrapContext *ctx)
 		org(temp);
 	}
 
-  trap_set_areg(ctx, 0, last_resident);
+	trap_set_areg(ctx, 0, last_resident);
+	
+	if (currprefs.uae_hide_autoconfig && expansion) {
+		bool found = true;
+		while (found) {
+			uaecptr node = trap_get_long(ctx, expansion + 0x3c);
+			found = false;
+			while (trap_get_long(ctx, node)) {
+				if (trap_get_word(ctx, node + 0x10 + 4) == 2011) {
+					uae_u8 prod = trap_get_byte(ctx, node + 0x10 + 1);
+					if (prod != 2) {
+						// remove all 2011 boards except filesystem
+						found = true;
+						uaecptr succ = trap_get_long(ctx, node);
+						uaecptr pred = trap_get_long(ctx, node + 4);
+						trap_put_long(ctx, pred,  succ);
+						trap_put_long(ctx, succ + 4, pred);
+						break;
+					}
+					// replace filesystem with A590/A2091 IDs..
+					trap_put_byte(ctx, node + 0x10 + 1, 3);
+					trap_put_word(ctx, node + 0x10 + 4, 514);
+				}
+				node = trap_get_long(ctx, node);
+			}
+		}
+	}
 
 	tmp = first_resident;
 	while (tmp < last_resident && tmp >= first_resident) {
@@ -6168,7 +7419,7 @@ static uae_u32 REGPARAM2 filesys_diagentry (TrapContext *ctx)
 		}
 	}
 
-  return 1;
+	return 1;
 }
 
 static uae_u32 REGPARAM2 filesys_dev_bootfilesys (TrapContext *ctx)
@@ -6176,22 +7427,29 @@ static uae_u32 REGPARAM2 filesys_dev_bootfilesys (TrapContext *ctx)
 	uaecptr devicenode = trap_get_areg(ctx, 3);
 	uaecptr parmpacket = trap_get_areg(ctx, 1);
 	uaecptr fsres = trap_get_long(ctx, parmpacket + PP_FSRES);
-  uaecptr fsnode;
-  uae_u32 dostype, dostype2;
+	uaecptr fsnode;
+	uae_u32 dostype, dostype2;
 	int no = trap_get_dreg(ctx, 6) & 0x7fffffff;
-  int unit_no = no & 65535;
+	int unit_no = no & 65535;
 	UnitInfo *uip = &mountinfo.ui[unit_no];
-  int type;
+	int iscd = (trap_get_dreg(ctx, 6) & 0x80000000) != 0 || uip->unit_type == UNIT_CDFS;
+	int type;
+	
+	if (iscd) {
+		if (!trap_get_long(ctx, devicenode + 16))
+			trap_put_long(ctx, devicenode + 16, cdfs_handlername);
+		return 0;
+	} else {
+		type = is_hardfile (unit_no);
+	}
 
-  type = is_hardfile (unit_no);
-
-  if (type == FILESYS_VIRTUAL) {
+	if (type == FILESYS_VIRTUAL) {
 		if (!trap_get_long(ctx, devicenode + 16))
 			trap_put_long(ctx, devicenode + 16, fshandlername);
-  	return 0;
-  }
+		return 0;
+	}
 
-  dostype = trap_get_long(ctx, parmpacket + 80);
+	dostype = trap_get_long(ctx, parmpacket + 80);
 	if (trap_get_long(ctx, parmpacket + PP_FSPTR) && !trap_get_long(ctx, parmpacket + PP_ADDTOFSRES)) {
 		uaecptr fsptr = trap_get_long(ctx, parmpacket + PP_FSPTR);
 		uip->filesysseg = fsptr;
@@ -6207,28 +7465,30 @@ static uae_u32 REGPARAM2 filesys_dev_bootfilesys (TrapContext *ctx)
 			seglist = (trap_get_long(ctx, rtarea_base + bootrom_header + 4 + 6 * 4) + rtarea_base + bootrom_header) >> 2;
 		}
 		trap_put_long(ctx, devicenode + 4 + 7 * 4, seglist);
+		write_log(_T("Filesys %08x entry=%08x\n"), dostype, fsptr);
 		return 1;
 	}
-  fsnode = trap_get_long(ctx, fsres + 18);
-  while (trap_get_long(ctx, fsnode)) {
-  	dostype2 = trap_get_long(ctx, fsnode + 14);
-  	if (dostype2 == dostype) {
+	fsnode = trap_get_long(ctx, fsres + 18);
+	while (trap_get_long(ctx, fsnode)) {
+		dostype2 = trap_get_long(ctx, fsnode + 14);
+		if (dostype2 == dostype) {
 			uae_u32 pf = trap_get_long(ctx, fsnode + 22); // fse_PatchFlags
 			for (int i = 0; i < 32; i++) {
 				if (pf & (1 << i)) {
 					uae_u32 data = trap_get_long(ctx, fsnode + 22 + 4 + i * 4);
 					if (i == 7) {
 						if (bcplonlydos()) { // seglist
-						  // point seglist to bcpl wrapper and put original seglist in dn_Handler
-						  trap_put_long(ctx, devicenode + 4 + 3 * 4, trap_get_long(ctx, fsnode + 22 + 4 + 7 * 4));
-						  data = (trap_get_long(ctx, rtarea_base + bootrom_header + 4 + 6 * 4) + rtarea_base + bootrom_header) >> 2;
+							// point seglist to bcpl wrapper and put original seglist in dn_Handler
+							trap_put_long(ctx, devicenode + 4 + 3 * 4, trap_get_long(ctx, fsnode + 22 + 4 + 7 * 4));
+							data = (trap_get_long(ctx, rtarea_base + bootrom_header + 4 + 6 * 4) + rtarea_base + bootrom_header) >> 2;
 						}
+						write_log(_T("Filesys %08x entry=%08x\n"), dostype, data << 2);
 					}
 					trap_put_long(ctx, devicenode + 4 + i * 4, data);
 				}
-	    }
-	    return 1;
-  	}
+			}
+			return 1;
+		}
 		fsnode = trap_get_long(ctx, fsnode);
 	}
 	if (type == FILESYS_HARDFILE) {
@@ -6238,7 +7498,7 @@ static uae_u32 REGPARAM2 filesys_dev_bootfilesys (TrapContext *ctx)
 				trap_put_long(ctx, devicenode + 4 + i * 4, trap_get_long(ctx, parmpacket + PP_FSHDSTART + 8 + 4 + i * 4));
 		}
 		trap_put_long(ctx, devicenode + 4 + 7 * 4, 0); // seglist
-  }
+	}
 
 	uaecptr file_system_proc = trap_get_dreg(ctx, 1);
 	if (bcplonlydos() && file_system_proc && trap_get_long(ctx, devicenode + 4 + 7 * 4) == 0) {
@@ -6256,7 +7516,7 @@ static uae_u32 REGPARAM2 filesys_dev_bootfilesys (TrapContext *ctx)
 		}
 	}
 
-  return 0;
+	return 0;
 }
 
 // called from bcplwrapper
@@ -6294,33 +7554,37 @@ static uae_u32 REGPARAM2 filesys_bcpl_wrapper(TrapContext *ctx)
 
 static uae_u32 REGPARAM2 filesys_init_storeinfo (TrapContext *ctx)
 {
-  int ret = -1;
+	int ret = -1;
 	switch (trap_get_dreg(ctx, 1))
-  {
+	{
 	case 1:
 		mountertask = trap_get_areg(ctx, 1);
 #ifdef PICASSO96
-  	picasso96_alloc (ctx);
+		picasso96_alloc(ctx);
 #endif
-  	break;
-	case 2:
-  	ret = automountunit;
-  	automountunit = -1;
-  	break;
+		break;
+	case 2: // new unit number query
+		ret = automountunit;
+		automountunit = -2;
+		break;
 	case 3:
-  	return 0;
-  }
-  return ret;
+		return 0;
+	case 4: // mount done (d0=automountunit)
+		automountunit = -1;
+		return 0;
+	}
+	return ret;
 }
 
 /* Remember a pointer AmigaOS gave us so we can later use it to identify
- * which unit a given startup message belongs to.  */
+* which unit a given startup message belongs to.  */
 static uae_u32 REGPARAM2 filesys_dev_remember (TrapContext *ctx)
 {
 	int no = trap_get_dreg(ctx, 6) & 0x7fffffff;
-  int unit_no = no & 65535;
-  int sub_no = no >> 16;
-  UnitInfo *uip = &mountinfo.ui[unit_no];
+	int unit_no = no & 65535;
+	int sub_no = no >> 16;
+	UnitInfo *uip = &mountinfo.ui[unit_no];
+	int iscd = (trap_get_dreg(ctx, 6) & 0x80000000) != 0 || uip->unit_type == UNIT_CDFS;
 	uaecptr devicenode = trap_get_areg(ctx, 3);
 	uaecptr parmpacket = trap_get_areg(ctx, 1);
 	int fssize;
@@ -6334,6 +7598,10 @@ static uae_u32 REGPARAM2 filesys_dev_remember (TrapContext *ctx)
 	if (trap_get_long(ctx, parmpacket + PP_FSPTR)) {
 		uaecptr addr = trap_get_long(ctx, parmpacket + PP_FSPTR);
 		trap_put_bytes(ctx, fs, addr, fssize);
+		// filesystem debugging, negative FSSIZE = debug mode.
+		if (segtrack_mode & 2) {
+			trap_put_long(ctx, parmpacket + PP_FSSIZE, -trap_get_long(ctx, parmpacket + PP_FSSIZE));
+		}
 	}
 
 	xfree (fs);
@@ -6342,7 +7610,7 @@ static uae_u32 REGPARAM2 filesys_dev_remember (TrapContext *ctx)
 	if (trap_get_dreg(ctx, 3) >= 0)
 		uip->startup = trap_get_long(ctx, devicenode + 28);
 
-  return devicenode;
+	return devicenode;
 }
 
 static int legalrdbblock (UnitInfo *uip, int block)
@@ -6387,9 +7655,9 @@ static int rdb_checksum (const uae_char *id, uae_u8 *p, int block)
 
 static int device_isdup (TrapContext *ctx, uaecptr expbase, TCHAR *devname)
 {
-  uaecptr bnode, dnode, name;
-  int len, i;
-  TCHAR dname[256];
+	uaecptr bnode, dnode, name;
+	int len, i;
+	TCHAR dname[256];
 
 	if (!expbase)
 		return 0;
@@ -6398,35 +7666,35 @@ static int device_isdup (TrapContext *ctx, uaecptr expbase, TCHAR *devname)
 		dnode = trap_get_long(ctx, bnode + 16); /* device node */
 		name = trap_get_long(ctx, dnode + 40) << 2; /* device name BSTR */
 		len = trap_get_byte(ctx, name);
-  	for (i = 0; i < len; i++)
+		for (i = 0; i < len; i++)
 			dname[i] = trap_get_byte(ctx, name + 1 + i);
-  	dname[len] = 0;
-  	if (!_tcsicmp (devname, dname))
-	    return 1;
+		dname[len] = 0;
+		if (!_tcsicmp(devname, dname))
+			return 1;
 		bnode = trap_get_long(ctx, bnode);
-  }
-  return 0;
+	}
+	return 0;
 }
 
 static TCHAR *device_dupfix (TrapContext *ctx, uaecptr expbase, TCHAR *devname)
 {
-  int modified;
-  TCHAR newname[256];
+	int modified;
+	TCHAR newname[256];
 
-  _tcscpy (newname, devname);
-  modified = 1;
-  while (modified) {
-  	modified = 0;
+	_tcscpy (newname, devname);
+	modified = 1;
+	while (modified) {
+		modified = 0;
 		if (device_isdup (ctx, expbase, newname)) {
-	    if (_tcslen (newname) > 2 && newname[_tcslen (newname) - 2] == '_') {
-    		newname[_tcslen (newname) - 1]++;
-	    } else {
+			if (_tcslen (newname) > 2 && newname[_tcslen (newname) - 2] == '_') {
+				newname[_tcslen (newname) - 1]++;
+			} else {
 				_tcscat (newname, _T("_0"));
-	    }
-	    modified = 1;
+			}
+			modified = 1;
 		}
-  }
-  return my_strdup (newname);
+	}
+	return my_strdup (newname);
 }
 
 static const TCHAR *dostypes(TCHAR *dt, uae_u32 dostype)
@@ -6450,27 +7718,31 @@ static const TCHAR *dostypes(TCHAR *dt, uae_u32 dostype)
 
 static void get_new_device (TrapContext *ctx, int type, uaecptr parmpacket, TCHAR **devname, uaecptr *devname_amiga, int unit_no)
 {
-  TCHAR buffer[80];
+	TCHAR buffer[80];
 	uaecptr expbase = trap_get_long(ctx, parmpacket + PP_EXPLIB);
 
-  if (*devname == 0 || _tcslen (*devname) == 0) {
-    int un = unit_no;
-    for (;;) {
-      _stprintf (buffer, _T("DH%d"), un++);
-      if (!device_isdup(ctx, expbase, buffer))
-	      break;
-    }
-  } else {
-  	_tcscpy (buffer, *devname);
-  }
-  *devname_amiga = ds (device_dupfix(ctx, expbase, buffer));
-  if (type == FILESYS_VIRTUAL)
-  	write_log (_T("FS: mounted virtual unit %s (%s)\n"), buffer, mountinfo.ui[unit_no].rootdir);
-  else
+	if (*devname == 0 || _tcslen (*devname) == 0) {
+		int un = unit_no;
+		for (;;) {
+			_stprintf (buffer, type == FILESYS_CD ? _T("CD%d") : _T("DH%d"), un++);
+			if (type == FILESYS_CD)
+				*devname = my_strdup (buffer);
+			if (!device_isdup(ctx, expbase, buffer))
+				break;
+		}
+	} else {
+		_tcscpy (buffer, *devname);
+	}
+	*devname_amiga = ds (device_dupfix(ctx, expbase, buffer));
+	if (type == FILESYS_CD)
+		write_log (_T("FS: mounted CD unit %s\n"), buffer);
+	else if (type == FILESYS_VIRTUAL)
+		write_log (_T("FS: mounted virtual unit %s (%s)\n"), buffer, mountinfo.ui[unit_no].rootdir);
+	else
 		write_log (_T("FS: mounted HDF unit %s (%04x-%08x, %s)\n"), buffer,
-      (uae_u32)(mountinfo.ui[unit_no].hf.virtsize >> 32),
-	    (uae_u32)(mountinfo.ui[unit_no].hf.virtsize),
-	    mountinfo.ui[unit_no].rootdir);
+		(uae_u32)(mountinfo.ui[unit_no].hf.virtsize >> 32),
+		(uae_u32)(mountinfo.ui[unit_no].hf.virtsize),
+		mountinfo.ui[unit_no].rootdir);
 }
 
 #define rdbmnt write_log (_T("Mounting uaehf.device %d (%d) (size=%llu):\n"), unit_no, partnum, hfd->virtsize)
@@ -6505,6 +7777,13 @@ static int pt_babe(TrapContext *ctx, uae_u8 *bufrdb, UnitInfo *uip, int unit_no,
 
 	if (uip->bootpri <= -129) {
 		return -1;
+	}
+
+	if (bad) {
+		uae_u16 badnum = (bufrdb2[2] << 8) | bufrdb2[3];
+		if (badnum) {
+			write_log(_T("A2090 partition table: bad block table is not empty, bad blocks not yet supported!\n"));
+		}
 	}
 
 	hfd->rdbcylinders = rl(bufrdb + 0x08);
@@ -6706,7 +7985,7 @@ static int pt_rdsk (TrapContext *ctx, uae_u8 *bufrdb, int rdblock, UnitInfo *uip
 			goto error;
 		memset (buf, 0, readblocksize);
 		hdf_read (hfd, buf, lsegblock * hfd->ci.blocksize, readblocksize);
-		if (!rdb_checksum ("LSEG", buf, lsegblock)) {
+		if (!rdb_checksum("LSEG", buf, lsegblock)) {
 			write_log(_T("RDB: checksum error in LSEG block %d\n"), lsegblock);
 			goto error;
 		}
@@ -6760,7 +8039,7 @@ static int rdb_mount (TrapContext *ctx, UnitInfo *uip, int unit_no, int partnum,
 		write_log(_T("failed, too large block size %d\n"), hfd->ci.blocksize);
 		return -2;
 	}
-	
+
 	for (rdblock = 0; rdblock < lastblock; rdblock++) {
 		hdf_read_rdb (hfd, bufrdb, rdblock * hfd->ci.blocksize, hfd->ci.blocksize);
 		if (rdblock == 0 && bufrdb[0] == 0xBA && bufrdb[1] == 0xBE) {
@@ -6802,7 +8081,7 @@ static void addfakefilesys (TrapContext *ctx, uaecptr parmpacket, uae_u32 dostyp
 	if (dostype) {
 		trap_put_long(ctx, parmpacket + 80, dostype);
 		trap_put_long(ctx, parmpacket + PP_FSHDSTART, dostype);
-  }
+	}
 	if (ver >= 0 && rev >= 0)
 		trap_put_long(ctx, parmpacket + PP_FSHDSTART + 4, (ver << 16) | rev);
 
@@ -6861,9 +8140,9 @@ static int dofakefilesys (TrapContext *ctx, UnitInfo *uip, uaecptr parmpacket, s
 	}
 
 	if (!ci->dostype) {
-	  memset (buf, 0, 4);
-	  hdf_read (&uip->hf, buf, 0, 512);
-	  dostype = (buf[0] << 24) | (buf[1] << 16) |(buf[2] << 8) | buf[3];
+		memset (buf, 0, 4);
+		hdf_read (&uip->hf, buf, 0, 512);
+		dostype = (buf[0] << 24) | (buf[1] << 16) |(buf[2] << 8) | buf[3];
 	} else {
 		dostype = ci->dostype;
 	}
@@ -6889,7 +8168,7 @@ static int dofakefilesys (TrapContext *ctx, UnitInfo *uip, uaecptr parmpacket, s
 	}
 	if (tmp[0] == 0) {
 		write_log (_T("RDB: no filesystem for dostype 0x%08X (%s)\n"), dostype, dostypes (dt, dostype));
-		addfakefilesys (ctx, parmpacket, dostype, ver, rev, ci);
+		addfakefilesys(ctx, parmpacket, dostype, ver, rev, ci);
 		if ((dostype & 0xffffff00) == DISK_TYPE_DOS)
 			return FILESYS_HARDFILE;
 		write_log (_T("RDB: mounted without filesys\n"));
@@ -6977,26 +8256,27 @@ static int dofakefilesys (TrapContext *ctx, UnitInfo *uip, uaecptr parmpacket, s
 		oldversion = 0;
 	trap_put_long(ctx, parmpacket + PP_FSSIZE, uip->rdb_filesyssize);
 	trap_put_long(ctx, parmpacket + PP_ADDTOFSRES, oldversion < 0 ? -1 : 0);
-	addfakefilesys (ctx, parmpacket, dostype, ver, rev, ci);
+	addfakefilesys(ctx, parmpacket, dostype, ver, rev, ci);
 	write_log (_T("RDB: faked RDB filesystem %08X (%s %d.%d) loaded. ADD2FS=%d\n"), dostype, dostypes (dt, dostype), ver, rev, oldversion < 0 ? 1 : 0);
 	return FILESYS_HARDFILE;
 }
-
+	
 /* Fill in per-unit fields of a parampacket */
 static uae_u32 REGPARAM2 filesys_dev_storeinfo (TrapContext *ctx)
 {
 	int no = trap_get_dreg(ctx, 6) & 0x7fffffff;
-  int unit_no = no & 65535;
-  int sub_no = no >> 16;
-  int type;
+	int unit_no = no & 65535;
+	int sub_no = no >> 16;
+	int type;
 
 	if (unit_no >= MAX_FILESYSTEM_UNITS)
 		return -2;
 	if (sub_no >= MAX_FILESYSTEM_UNITS)
 		return -2;
 
-  UnitInfo *uip = mountinfo.ui;
+	UnitInfo *uip = mountinfo.ui;
 	uaecptr parmpacket = trap_get_areg(ctx, 0);
+	int iscd = (trap_get_dreg(ctx, 6) & 0x80000000) != 0 || uip[unit_no].unit_type == UNIT_CDFS;
 	struct uaedev_config_info *ci = &uip[unit_no].hf.ci;
 
 	uip[unit_no].parmpacket = parmpacket;
@@ -7005,32 +8285,74 @@ static uae_u32 REGPARAM2 filesys_dev_storeinfo (TrapContext *ctx)
 	trap_put_long(ctx, parmpacket + PP_DEVICEPROC, 0);
 	trap_put_long(ctx, parmpacket + PP_ADDTOFSRES, 0);
 	trap_put_long(ctx, parmpacket + PP_FSSIZE, 0);
+	if (iscd) {
+		TCHAR *cdname = NULL;
+		uaecptr cdname_amiga;
+		int cd_unit_no = unit_no - cd_unit_offset;
 
-	gui_flicker_led (LED_HD, unit_no, 0);
-  type = is_hardfile (unit_no);
-	if (type == FILESYS_HARDFILE_RDB) {
-		/* RDB hardfile */
+		if (sub_no)
+			return -2;
+
+		type = FILESYS_CD;
+		get_new_device(ctx, type, parmpacket, &uip[unit_no].devname, &uip[unit_no].devname_amiga, cd_unit_no);
+		cdname_amiga = uip[unit_no].devname_amiga;
+		uip[unit_no].devno = unit_no;
+		type = FILESYS_VIRTUAL;
+		gui_flicker_led (LED_CD, cd_unit_no, 0);
+
+		write_log (_T("Mounting uaescsi.device %d: (%d)\n"), cd_unit_no, unit_no);
+		trap_put_long(ctx, parmpacket + 0, cdname_amiga);
+		trap_put_long(ctx, parmpacket + 4, cdfs_devname);
+		trap_put_long(ctx, parmpacket + 8, cd_unit_no);
+		trap_put_long(ctx, parmpacket + 12, 0); /* Device flags */
+		trap_put_long(ctx, parmpacket + 16, 19); /* Env. size */
+		trap_put_long(ctx, parmpacket + 20, 2048 >> 2); /* longwords per block */
+		trap_put_long(ctx, parmpacket + 24, 0); /* unused */
+		trap_put_long(ctx, parmpacket + 28, 1); /* heads */
+		trap_put_long(ctx, parmpacket + 32, 1); /* sectors per block */
+		trap_put_long(ctx, parmpacket + 36, 1); /* sectors per track */
+		trap_put_long(ctx, parmpacket + 40, 0); /* reserved blocks */
+		trap_put_long(ctx, parmpacket + 44, 0); /* unused */
+		trap_put_long(ctx, parmpacket + 48, 0); /* interleave */
+		trap_put_long(ctx, parmpacket + 52, 0); /* lowCyl */
+		trap_put_long(ctx, parmpacket + 56, 0); /* hiCyl */
+		trap_put_long(ctx, parmpacket + 60, 50); /* Number of buffers */
+		trap_put_long(ctx, parmpacket + 64, 1); /* Buffer mem type */
+		trap_put_long(ctx, parmpacket + 68, 0x7FFFFFFE); /* largest transfer */
+		trap_put_long(ctx, parmpacket + 72, 0xFFFFFFFE); /* dma mask */
+		trap_put_long(ctx, parmpacket + 76, scsi_get_cd_drive_media_mask () & (1 << cd_unit_no) ? -127 : -128); /* bootPri */
+		trap_put_long(ctx, parmpacket + 80, CDFS_DOSTYPE | (((cd_unit_no / 10) + '0') << 8) | ((cd_unit_no % 10) + '0'));
+		trap_put_long(ctx, parmpacket + 84, 0); /* baud */
+		trap_put_long(ctx, parmpacket + 88, 0); /* control */
+		trap_put_long(ctx, parmpacket + 92, 0); /* bootblocks */
+		return type;
+
+	} else {
+		gui_flicker_led (LED_HD, unit_no, 0);
+		type = is_hardfile (unit_no);
+		if (type == FILESYS_HARDFILE_RDB || type == FILESYS_HARDDRIVE) {
+			/* RDB hardfile */
+			uip[unit_no].devno = uip[unit_no].hf.ci.controller_unit;
+			return rdb_mount(ctx, &uip[unit_no], unit_no, sub_no, parmpacket);
+		}
+		if (sub_no)
+			return -2;
+		write_log (_T("Mounting uaehf.device:%d %d (%d):\n"), uip->hf.ci.controller_unit, unit_no, sub_no);
+		get_new_device(ctx, type, parmpacket, &uip[unit_no].devname, &uip[unit_no].devname_amiga, unit_no);
 		uip[unit_no].devno = uip[unit_no].hf.ci.controller_unit;
-		return rdb_mount (ctx, &uip[unit_no], unit_no, sub_no, parmpacket);
-	}
-  if (sub_no)
-  	return -2;
-	write_log (_T("Mounting uaehf.device:%d %d (%d):\n"), uip->hf.ci.controller_unit, unit_no, sub_no);
-	get_new_device(ctx, type, parmpacket, &uip[unit_no].devname, &uip[unit_no].devname_amiga, unit_no);
-	uip[unit_no].devno = uip[unit_no].hf.ci.controller_unit;
-	trap_put_long(ctx, parmpacket, uip[unit_no].devname_amiga);
-	trap_put_long(ctx, parmpacket + 8, uip[unit_no].devno);
-	trap_put_long(ctx, parmpacket + 12, 0); /* Device flags */
-	trap_put_long(ctx, parmpacket + 16, 16); /* Env. size */
-	trap_put_long(ctx, parmpacket + 24, 0); /* unused */
-	trap_put_long(ctx, parmpacket + 44, 0); /* unused */
-	trap_put_long(ctx, parmpacket + 48, 0); /* interleave */
-	trap_put_long(ctx, parmpacket + 60, 50); /* Number of buffers */
-	trap_put_long(ctx, parmpacket + 64, 1); /* Buffer mem type */
-	trap_put_long(ctx, parmpacket + 68, 0x7FFFFFFE); /* largest transfer */
-	trap_put_long(ctx, parmpacket + 72, 0xFFFFFFFE); /* dma mask */
-	trap_put_long(ctx, parmpacket + 76, uip[unit_no].bootpri); /* bootPri */
-	if (type == FILESYS_VIRTUAL) {
+		trap_put_long(ctx, parmpacket, uip[unit_no].devname_amiga);
+		trap_put_long(ctx, parmpacket + 8, uip[unit_no].devno);
+		trap_put_long(ctx, parmpacket + 12, 0); /* Device flags */
+		trap_put_long(ctx, parmpacket + 16, 16); /* Env. size */
+		trap_put_long(ctx, parmpacket + 24, 0); /* unused */
+		trap_put_long(ctx, parmpacket + 44, 0); /* unused */
+		trap_put_long(ctx, parmpacket + 48, 0); /* interleave */
+		trap_put_long(ctx, parmpacket + 60, 50); /* Number of buffers */
+		trap_put_long(ctx, parmpacket + 64, 1); /* Buffer mem type */
+		trap_put_long(ctx, parmpacket + 68, 0x7FFFFFFE); /* largest transfer */
+		trap_put_long(ctx, parmpacket + 72, 0xFFFFFFFE); /* dma mask */
+		trap_put_long(ctx, parmpacket + 76, uip[unit_no].bootpri); /* bootPri */
+		if (type == FILESYS_VIRTUAL) {
 			// generate some sane-looking geometry if some program really cares..
 			uae_s64 hicyl = 100;
 			uae_u32 heads = 16;
@@ -7047,65 +8369,91 @@ static uae_u32 REGPARAM2 filesys_dev_storeinfo (TrapContext *ctx)
 					}
 				}
 			}
-		trap_put_long(ctx, parmpacket + 4, fsdevname);
-		trap_put_long(ctx, parmpacket + 20, 512 >> 2); /* longwords per block */
-		trap_put_long(ctx, parmpacket + 28, heads); /* heads */
-		trap_put_long(ctx, parmpacket + 32, 1); /* sectors per block */
-		trap_put_long(ctx, parmpacket + 36, 127); /* sectors per track */
-		trap_put_long(ctx, parmpacket + 40, 2); /* reserved blocks */
-		trap_put_long(ctx, parmpacket + 52, 1); /* lowCyl */
-		trap_put_long(ctx, parmpacket + 56, (uae_u32)hicyl); /* hiCyl */
-    trap_put_long(ctx, parmpacket + 80, DISK_TYPE_DOS); /* DOS\0 */
-	} else {
-		uae_u8 buf[512];
-		trap_put_long(ctx, parmpacket + 4, ROM_hardfile_resname);
-		trap_put_long(ctx, parmpacket + 20, ci->blocksize >> 2); /* longwords per block */
-		trap_put_long(ctx, parmpacket + 28, ci->surfaces); /* heads */
-		trap_put_long(ctx, parmpacket + 32, ci->sectorsperblock); /* sectors per block */
-		trap_put_long(ctx, parmpacket + 36, ci->sectors); /* sectors per track */
-		trap_put_long(ctx, parmpacket + 40, ci->reserved); /* reserved blocks */
-		trap_put_long(ctx, parmpacket + 52, ci->lowcyl); /* lowCyl */
-		trap_put_long(ctx, parmpacket + 56, ci->highcyl <= 0 ? ci->cyls - 1 : ci->highcyl - 1); /* hiCyl */
-		trap_put_long(ctx, parmpacket + 48, ci->interleave); /* interleave */
-		trap_put_long(ctx, parmpacket + 60, ci->buffers); /* Number of buffers */
-		trap_put_long(ctx, parmpacket + 64, ci->bufmemtype); /* Buffer mem type */
-		trap_put_long(ctx, parmpacket + 68, ci->maxtransfer); /* largest transfer */
-		trap_put_long(ctx, parmpacket + 72, ci->mask); /* dma mask */
-		trap_put_long(ctx, parmpacket + 80, DISK_TYPE_DOS); /* DOS\0 */
-		memset(buf, 0, sizeof buf);
-		if (ci->dostype) { // forced dostype?
-			trap_put_long(ctx, parmpacket + 80, ci->dostype); /* dostype */
-		} else if (hdf_read (&uip[unit_no].hf, buf, 0, sizeof buf)) {
-			uae_u32 dt = rl (buf);
-			if (dt != 0x00000000 && dt != 0xffffffff)
-				trap_put_long(ctx, parmpacket + 80, dt);
+			trap_put_long(ctx, parmpacket + 4, fsdevname);
+			trap_put_long(ctx, parmpacket + 20, 512 >> 2); /* longwords per block */
+			trap_put_long(ctx, parmpacket + 28, heads); /* heads */
+			trap_put_long(ctx, parmpacket + 32, 1); /* sectors per block */
+			trap_put_long(ctx, parmpacket + 36, 127); /* sectors per track */
+			trap_put_long(ctx, parmpacket + 40, 2); /* reserved blocks */
+			trap_put_long(ctx, parmpacket + 52, 1); /* lowCyl */
+			trap_put_long(ctx, parmpacket + 56, (uae_u32)hicyl); /* hiCyl */
+			trap_put_long(ctx, parmpacket + 80, DISK_TYPE_DOS); /* DOS\0 */
+		} else {
+			uae_u8 buf[512];
+			trap_put_long(ctx, parmpacket + 4, ROM_hardfile_resname);
+			trap_put_long(ctx, parmpacket + 20, ci->blocksize >> 2); /* longwords per block */
+			trap_put_long(ctx, parmpacket + 28, ci->surfaces); /* heads */
+			trap_put_long(ctx, parmpacket + 32, ci->sectorsperblock); /* sectors per block */
+			trap_put_long(ctx, parmpacket + 36, ci->sectors); /* sectors per track */
+			trap_put_long(ctx, parmpacket + 40, ci->reserved); /* reserved blocks */
+			trap_put_long(ctx, parmpacket + 52, ci->lowcyl); /* lowCyl */
+			trap_put_long(ctx, parmpacket + 56, ci->highcyl <= 0 ? ci->cyls - 1 : ci->highcyl - 1); /* hiCyl */
+			trap_put_long(ctx, parmpacket + 48, ci->interleave); /* interleave */
+			trap_put_long(ctx, parmpacket + 60, ci->buffers); /* Number of buffers */
+			trap_put_long(ctx, parmpacket + 64, ci->bufmemtype); /* Buffer mem type */
+			trap_put_long(ctx, parmpacket + 68, ci->maxtransfer); /* largest transfer */
+			trap_put_long(ctx, parmpacket + 72, ci->mask); /* dma mask */
+			trap_put_long(ctx, parmpacket + 80, DISK_TYPE_DOS); /* DOS\0 */
+			memset(buf, 0, sizeof buf);
+			if (ci->dostype) { // forced dostype?
+				trap_put_long(ctx, parmpacket + 80, ci->dostype); /* dostype */
+			} else if (hdf_read (&uip[unit_no].hf, buf, 0, sizeof buf)) {
+				uae_u32 dt = rl (buf);
+				if (dt != 0x00000000 && dt != 0xffffffff)
+					trap_put_long(ctx, parmpacket + 80, dt);
+			}
+			memset(buf, 0, sizeof buf);
+			char *s = ua_fs(uip[unit_no].devname, -1);
+			buf[36] = strlen(s);
+			for (int i = 0; i < buf[36]; i++)
+				buf[37 + i] = s[i];
+			xfree(s);
+			for (int i = 0; i < 80; i++)
+				buf[i + 128] = trap_get_byte(ctx, parmpacket + 16 + i);
 		}
-		memset(buf, 0, sizeof buf);
-		char *s = ua_fs(uip[unit_no].devname, -1);
-		buf[36] = strlen(s);
-		for (int i = 0; i < buf[36]; i++)
-			buf[37 + i] = s[i];
-		xfree(s);
-		for (int i = 0; i < 80; i++)
-			buf[i + 128] = trap_get_byte(ctx, parmpacket + 16 + i);
-	}
-	if (type == FILESYS_HARDFILE)
-			type = dofakefilesys (ctx, &uip[unit_no], parmpacket, ci);
+		if (type == FILESYS_HARDFILE)
+			type = dofakefilesys(ctx, &uip[unit_no], parmpacket, ci);
 		if (uip[unit_no].bootpri < -127 || (type == FILESYS_HARDFILE && ci->rootdir[0] == 0))
 			trap_set_dreg(ctx, 7, trap_get_dreg(ctx, 7) & ~1); /* do not boot */
-  if (uip[unit_no].bootpri < -128)
-  	return -1; /* do not mount */
-  return type;
+		if (uip[unit_no].bootpri < -128)
+			return -1; /* do not mount */
+		return type;
+	}
 }
 
 static uae_u32 REGPARAM2 mousehack_done (TrapContext *ctx)
 {
 	int mode = trap_get_dreg(ctx, 1);
-  if (mode < 10) {
+	if (mode < 10) {
 		uaecptr diminfo = trap_get_areg(ctx, 2);
 		uaecptr dispinfo = trap_get_areg(ctx, 3);
 		uaecptr vp = trap_get_areg(ctx, 4);
 		return input_mousehack_status(ctx, mode, diminfo, dispinfo, vp, trap_get_dreg(ctx, 2));
+	} else if (mode == 10) {
+		amiga_clipboard_die(ctx);
+	} else if (mode == 11) {
+		amiga_clipboard_got_data(ctx, trap_get_areg(ctx, 2), trap_get_dreg(ctx, 2), trap_get_dreg(ctx, 0) + 8);
+	} else if (mode == 12) {
+		return amiga_clipboard_want_data(ctx);
+	} else if (mode == 13) {
+		return amiga_clipboard_proc_start(ctx);
+	} else if (mode == 14) {
+		amiga_clipboard_task_start(ctx, trap_get_dreg(ctx, 0));
+	} else if (mode == 15) {
+		amiga_clipboard_init(ctx);
+	} else if (mode == 16) {
+		uaecptr a2 = trap_get_areg(ctx, 2);
+		input_mousehack_mouseoffset(a2);
+	} else if (mode == 17) {
+		uae_u32 v = 0;
+		if (currprefs.clipboard_sharing)
+			v |= 1;
+		if (consolehook_activate())
+			v |= 2;
+		if (currprefs.uaeboard > 2)
+			v |= 4;
+		trap_dos_active();
+		return v;
 	} else if (mode == 18) {
 		put_long_host(rtarea_bank.baseaddr + RTAREA_EXTERTASK, trap_get_dreg(ctx, 0));
 		put_long_host(rtarea_bank.baseaddr + RTAREA_TRAPTASK, trap_get_dreg(ctx, 2));
@@ -7113,41 +8461,163 @@ static uae_u32 REGPARAM2 mousehack_done (TrapContext *ctx)
 	} else if (mode == 19) {
 		// boot rom copy
 		// d2 = ram address
-		return 0;
+		return boot_rom_copy(ctx, trap_get_dreg(ctx, 2), 0);
 	} else if (mode == 20) {
 		// boot rom copy done
+		return boot_rom_copy(ctx, trap_get_dreg(ctx, 2), 1);
+	} else if (mode == 21) {
+		// keymap hook
+#ifdef RETROPLATFORM
+		rp_keymap(ctx, trap_get_areg(ctx, 1), trap_get_dreg(ctx, 0));
+#endif
+		return 1;
+	} else if (mode == 101) {
+		consolehook_ret(ctx, trap_get_areg(ctx, 1), trap_get_areg(ctx, 2));
+	} else if (mode == 102) {
+		uaecptr ret = consolehook_beginio(ctx, trap_get_areg(ctx, 1));
+		trap_put_long(ctx, trap_get_areg(ctx, 7) + 4 * 4, ret);
+	}
+	else if (mode == 200) {
+		//uae_u32 v;
+		//// a0 = data, d0 = length, a1 = task, d3 = stack size (in), stack ptr (out)
+		//// a2 = debugdata, d2 = debuglength
+		//// d4 = flags
+		//if ((trap_get_dreg(ctx, 4) & 3) != 1) {
+		//	write_log(_T("unsupported uaedbg version\n"));
+		//	return 0;
+		//}
+		//uae_u32 stack = trap_get_dreg(ctx, 3);
+		//v = debugmem_reloc(trap_get_areg(ctx, 0), trap_get_dreg(ctx, 0),
+		//	trap_get_areg(ctx, 2), trap_get_dreg(ctx, 2),
+		//	trap_get_areg(ctx, 1), &stack);
+		//trap_set_dreg(ctx, 2, stack);
+		//return v;
+	}
+	else if (mode == 201) {
+		//debugmem_break(8);
+		return 1;
+	}
+	else if (mode == 202) {
+		// a0 = seglist, a1 = name, d2 = lock
+		//debugmem_addsegs(ctx, trap_get_areg(ctx, 0), trap_get_areg(ctx, 1), trap_get_dreg(ctx, 2), true);
+		return 1;
+	}
+	else if (mode == 203) {
+		// a0 = seglist
+		//debugmem_remsegs(trap_get_areg(ctx, 0));
+		return 1;
+	}
+	else if (mode == 204 || mode == 206) {
+		// d0 = size, a1 = flags
+		//uae_u32 v = debugmem_allocmem(mode == 206, trap_get_dreg(ctx, 0), trap_get_areg(ctx, 1), trap_get_areg(ctx, 0));
+		//if (v) {
+		//	trap_set_areg(ctx, 0, v);
+		//	return v;
+		//}
+		//else {
+		//	trap_set_areg(ctx, 0, 0);
+		//	trap_set_dreg(ctx, 1, trap_get_areg(ctx, 1));
+		//	return trap_get_dreg(ctx, 0);
+		//}
+	}
+	else if (mode == 205 || mode == 207) {
+		//return debugmem_freemem(mode == 207, trap_get_areg(ctx, 1), trap_get_dreg(ctx, 0), trap_get_areg(ctx, 0));
+	}
+	else if (mode == 208) {
+		// segtrack: bit 0
+		// fsdebug: bit 1
+		segtrack_mode = currprefs.debugging_features;
+		return segtrack_mode;
+	} else if (mode == 209) {
+		// called if segtrack was enabled
 		return 0;
-  } else {
+	} else if (mode == 210) {
+		// debug trapcode
+		//debugmem_trap(trap_get_areg(ctx, 0));
+	}
+	else if (mode == 212) {
+		// a0 = seglist, a1 = name, d2 = lock
+		//debugmem_addsegs(ctx, trap_get_areg(ctx, 0), trap_get_areg(ctx, 1), trap_get_dreg(ctx, 2), false);
+		return 1;
+	}
+	else if (mode == 213) {
+		// a0 = seglist
+		//debugmem_remsegs(trap_get_areg(ctx, 0));
+		return 1;
+	}
+	else if (mode == 299) {
+		//return debugmem_exit();
+
+	} else {
 		write_log (_T("Unknown mousehack hook %d\n"), mode);
-  }
-  return 1;
+	}
+	return 1;
 }
 
 void filesys_vsync (void)
 {
 	TrapContext *ctx = NULL;
-  Unit *u;
+	Unit *u;
 
 	if (uae_boot_rom_type <= 0)
 		return;
 
+	if (currprefs.uaeboard > 1 && !(uae_int_requested & 1)) {
+		bool req = false;
+		// check if there is waiting requests without signal
+		if (!uae_sem_trywait(&singlethread_int_sem)) {
+			if (comm_pipe_has_data(&native2amiga_pending))
+				req = true;
+			if (!req) {
+				UnitInfo* uip = mountinfo.ui;
+				int unit_no = 0;
+				for (;;) {
+					if (unit_no >= MAX_FILESYSTEM_UNITS)
+						break;
+					if (uip[unit_no].open > 0 && uip[unit_no].self != 0
+						&& uip[unit_no].self->cmds_acked == uip[unit_no].self->cmds_complete
+						&& uip[unit_no].self->cmds_acked != uip[unit_no].self->cmds_sent)
+						break;
+					unit_no++;
+				}
+				if (unit_no < MAX_FILESYSTEM_UNITS) {
+					if (uip[unit_no].self->port)
+						req = true;
+				}
+			}
+			uae_sem_post(&singlethread_int_sem);
+			if (req)
+				do_uae_int_requested();
+		}
+	}
+	
 	if (heartbeat == get_long_host(rtarea_bank.baseaddr + RTAREA_HEARTBEAT)) {
+		if (heartbeat_count > 0)
+			heartbeat_count--;
+		if (heartbeat_count_cont > 0)
+			heartbeat_count_cont--;
 		return;
 	}
 	heartbeat = get_long_host(rtarea_bank.baseaddr + RTAREA_HEARTBEAT);
+	heartbeat_count_cont = 10;
+	cia_heartbeat();
 
-  for (u = units; u; u = u->next) {
-  	if (u->reinsertdelay > 0) {
-	    u->reinsertdelay--;
-	    if (u->reinsertdelay == 0) {
-    		filesys_insert (u->unit, u->newvolume, u->newrootdir, u->newreadonly, u->newflags);
-    		xfree (u->newvolume);
-    		u->newvolume = NULL;
-    		xfree (u->newrootdir);
-    		u->newrootdir = NULL;
-	    }
-  	}
-  	record_timeout (ctx, u);
+	for (u = units; u; u = u->next) {
+		if (u->reinsertdelay > 0) {
+			u->reinsertdelay--;
+			if (u->reinsertdelay == 0) {
+				if (u->newrootdir == NULL && u->newvolume == NULL) {
+					filesys_eject(u->unit);
+				} else {
+					filesys_insert(u->unit, u->newvolume, u->newrootdir, u->newreadonly, u->newflags);
+				}
+				xfree (u->newvolume);
+				u->newvolume = NULL;
+				xfree (u->newrootdir);
+				u->newrootdir = NULL;
+			}
+		}
+		record_timeout(ctx, u);
 	}
 
 	for (int i = 0; i < currprefs.mountitems; i++) {
@@ -7162,41 +8632,51 @@ void filesys_vsync (void)
 			}
 		}
 	}
+
+	if (heartbeat_count <= 0)
+		return;
+
+	if (heartbeat_task & 1) {
+		setsystime_vblank();
+		heartbeat_task &= ~1;
+	}
 }
 
-void filesys_cleanup (void)
+void filesys_cleanup(void)
 {
 	filesys_free_handles();
-  free_mountinfo ();
-  
-  if(singlethread_int_sem != 0)
-    uae_sem_destroy(&singlethread_int_sem);
-  singlethread_int_sem = 0;
-    
-  filesys_in_interrupt = 0;
-  mountertask = 0;
-  automountunit = -1;
+	free_mountinfo();
+	destroy_comm_pipe(&shellexecute_pipe);
+	uae_sem_destroy(&singlethread_int_sem);
+	shell_execute_data = 0;
 }
 
 void filesys_install (void)
 {
-  uaecptr loop;
+	uaecptr loop;
 
-  uae_sem_init (&singlethread_int_sem, 0, 1);
+	uae_sem_init (&singlethread_int_sem, 0, 1);
+	init_comm_pipe(&shellexecute_pipe, 100, 1);
 
-  ds_ansi ("UAEfs.resource");
-  ds_ansi (UAEFS_VERSION);
+	ROM_filesys_resname = ds_ansi ("UAEfs.resource");
+	ROM_filesys_resid = ds_ansi (UAEFS_VERSION);
 
 	fsdevname = ROM_hardfile_resname;
 	fshandlername = ds_bstr_ansi ("uaefs");
 
+	cdfs_devname = ds_ansi ("uaescsi.device");
+	cdfs_handlername = ds_bstr_ansi ("uaecdfs");
+
 	afterdos_name = ds_ansi("UAE afterdos");
 	afterdos_id = ds_ansi("UAE afterdos 0.1");
 
-  ROM_filesys_diagentry = here();
+	keymaphook_name = ds_ansi("UAE keymaphook");
+	keymaphook_id = ds_ansi("UAE keymaphook 0.1");
+
+	ROM_filesys_diagentry = here ();
 	calltrap (deftrap2 (filesys_diagentry, 0, _T("filesys_diagentry")));
-  dw(0x4ED0); /* JMP (a0) - jump to code that inits Residents */
-  
+	dw(0x4ED0); /* JMP (a0) - jump to code that inits Residents */
+
 	ROM_filesys_doio = here();
 	calltrap(deftrap2(filesys_doio, 0, _T("filesys_doio")));
 	dw(RTS);
@@ -7208,57 +8688,63 @@ void filesys_install (void)
 	ROM_filesys_putmsg_return = here();
 	calltrap(deftrap2(filesys_putmsg_return, 0, _T("filesys_putmsg_return")));
 	dw(RTS);
- 
- loop = here ();
-  
+
+	loop = here ();
+
 	org (rtarea_base + RTAREA_HEARTBEAT);
 	dl (0);
 	heartbeat = 0;
+	heartbeat_task = 0;
 
-  org (rtarea_base + 0xFF18);
+	org (rtarea_base + 0xFF18);
 	calltrap (deftrap2 (filesys_dev_bootfilesys, 0, _T("filesys_dev_bootfilesys")));
-  dw (RTS);
-  
-  /* Special trap for the assembly make_dev routine */
-  org (rtarea_base + 0xFF20);
-	calltrap (deftrap2 (filesys_dev_remember, 0, _T("filesys_dev_remember")));
-  dw (RTS);
+	dw (RTS);
 
-  org (rtarea_base + 0xFF28);
+	/* Special trap for the assembly make_dev routine */
+	org (rtarea_base + 0xFF20);
+	calltrap (deftrap2 (filesys_dev_remember, 0, _T("filesys_dev_remember")));
+	dw (RTS);
+
+	org (rtarea_base + 0xFF28);
 	calltrap (deftrap2 (filesys_dev_storeinfo, 0, _T("filesys_dev_storeinfo")));
 	dw (RTS);
 
-  org (rtarea_base + 0xFF30);
+	org (rtarea_base + 0xFF30);
 	calltrap (deftrap2 (filesys_handler, 0, _T("filesys_handler")));
-  dw (RTS);
+	dw (RTS);
 
-  org (rtarea_base + 0xFF38);
+	org (rtarea_base + 0xFF38);
 	calltrap (deftrapres(mousehack_done, 0, _T("misc_funcs")));
-  dw (RTS);
+	dw (RTS);
 
-  org (rtarea_base + 0xFF40);
+	org (rtarea_base + 0xFF40);
 	calltrap (deftrap2 (startup_handler, 0, _T("startup_handler")));
-  dw (RTS);
+	dw (RTS);
 
-  org (rtarea_base + 0xFF48);
+	org (rtarea_base + 0xFF48);
 	calltrap (deftrap2 (filesys_init_storeinfo, TRAPFLAG_EXTRA_STACK, _T("filesys_init_storeinfo")));
-  dw (RTS);
+	dw (RTS);
 
-  org (rtarea_base + 0xFF50);
+	org (rtarea_base + 0xFF50);
 	calltrap (deftrap2 (exter_int_helper, 0, _T("exter_int_helper")));
-  dw (RTS);
+	dw (RTS);
 
-  org (rtarea_base + 0xFF58);
+	org (rtarea_base + 0xFF58);
 	calltrap (deftrap2 (fsmisc_helper, 0, _T("fsmisc_helper")));
-  dw (RTS);
+	dw (RTS);
 
 	org(rtarea_base + 0xFF68);
 	calltrap(deftrap2(filesys_bcpl_wrapper, 0, _T("filesys_bcpl_wrapper")));
 	dw(RTS);
 
-  org (loop);
+	org(rtarea_base + 0xFF78);
+	calltrap(deftrap2(debugger_helper, 0, _T("debugger_helper")));
+	dw(RTS);
+
+	org (loop);
 
 	create_ks12_boot();
+	//create_68060_nofpu();
 }
 
 uaecptr filesys_get_entry(int index)
@@ -7270,17 +8756,18 @@ void filesys_install_code (void)
 {
 	uae_u32 b, items;
 
-  bootrom_header = 3 * 4;
-  align(4);
+	bootrom_header = 3 * 4;
+	align(4);
 	bootrom_start = here ();
-  #include "filesys_bootrom.cpp.in"
+#include "filesys_bootrom.cpp.in"
 
 	items = dlg (bootrom_start + 8) & 0xffff;
-  /* The last offset comes from the code itself, look for it near the top. */
+	/* The last offset comes from the code itself, look for it near the top. */
 	EXPANSION_bootcode = bootrom_start + bootrom_header + items * 4 - 4;
 	b = bootrom_start + bootrom_header + 3 * 4 - 4;
 	filesys_initcode = bootrom_start + dlg (b) + bootrom_header - 4;
 	afterdos_initcode = filesys_get_entry(8);
+	keymaphook_initcode = filesys_get_entry(11);
 
 	// Fill struct resident
 	TCHAR buf[256];
@@ -7318,549 +8805,549 @@ void filesys_install_code (void)
 
 static uae_u8 *restore_filesys_hardfile (UnitInfo *ui, uae_u8 *src)
 {
-  struct hardfiledata *hfd = &ui->hf;
-  TCHAR *s;
+	struct hardfiledata *hfd = &ui->hf;
+	TCHAR *s;
 
-  hfd->virtsize = restore_u64();
-  hfd->offset = restore_u64();
+	hfd->virtsize = restore_u64 ();
+	hfd->offset = restore_u64 ();
 	hfd->ci.highcyl = restore_u32 ();
 	hfd->ci.sectors = restore_u32 ();
 	hfd->ci.surfaces = restore_u32 ();
 	hfd->ci.reserved = restore_u32 ();
 	hfd->ci.blocksize = restore_u32 ();
 	hfd->ci.readonly = restore_u32 () != 0;
-  hfd->flags = restore_u32();
+	hfd->flags = restore_u32 ();
 	hfd->rdbcylinders = restore_u32 ();
 	hfd->rdbsectors = restore_u32 ();
 	hfd->rdbheads = restore_u32 ();
-  s = restore_string();
-  _tcscpy (hfd->vendor_id, s);
-  xfree(s);
-  s = restore_string();
-  _tcscpy (hfd->product_id, s);
-  xfree(s);
-  s = restore_string();
-  _tcscpy (hfd->product_rev, s);
-  xfree(s);
-  s = restore_string();
+	s = restore_string ();
+	_tcscpy (hfd->vendor_id, s);
+	xfree (s);
+	s = restore_string ();
+	_tcscpy (hfd->product_id, s);
+	xfree (s);
+	s = restore_string ();
+	_tcscpy (hfd->product_rev, s);
+	xfree (s);
+	s = restore_string ();
 	_tcscpy (hfd->ci.devname, s);
-  xfree(s);
-  return src;
+	xfree (s);
+	return src;
 }
 
 static uae_u8 *save_filesys_hardfile (UnitInfo *ui, uae_u8 *dst)
 {
-  struct hardfiledata *hfd = &ui->hf;
+	struct hardfiledata *hfd = &ui->hf;
 
-  save_u64 (hfd->virtsize);
-  save_u64 (hfd->offset);
+	save_u64 (hfd->virtsize);
+	save_u64 (hfd->offset);
 	save_u32 (hfd->ci.highcyl);
 	save_u32 (hfd->ci.sectors);
 	save_u32 (hfd->ci.surfaces);
 	save_u32 (hfd->ci.reserved);
 	save_u32 (hfd->ci.blocksize);
 	save_u32 (hfd->ci.readonly);
-  save_u32 (hfd->flags);
+	save_u32 (hfd->flags);
 	save_u32 (hfd->rdbcylinders);
 	save_u32 (hfd->rdbsectors);
 	save_u32 (hfd->rdbheads);
-  save_string (hfd->vendor_id);
-  save_string (hfd->product_id);
-  save_string (hfd->product_rev);
+	save_string (hfd->vendor_id);
+	save_string (hfd->product_id);
+	save_string (hfd->product_rev);
 	save_string (hfd->ci.devname);
-  return dst;
+	return dst;
 }
 
 static a_inode *restore_filesys_get_base (Unit *u, TCHAR *npath)
 {
-  TCHAR *path, *p, *p2;
-  a_inode *a;
-  int cnt, err, i;
+	TCHAR *path, *p, *p2;
+	a_inode *a;
+	int cnt, err, i;
 
-  /* no '/' = parent is root */
-  if (!_tcschr (npath, '/'))
-  	return &u->rootnode;
+	/* no '/' = parent is root */
+	if (!_tcschr (npath, '/'))
+		return &u->rootnode;
 
-  /* iterate from root to last to previous path part,
-   * create ainos if not already created.
-   */
-  path = xcalloc(TCHAR, _tcslen (npath) + 2);
-  cnt = 1;
-  for (;;) {
-  	_tcscpy (path, npath);
-  	p = path;
-  	for (i = 0; i < cnt ;i++) {
-	    if (i > 0)
-    		p++;
-	    while (*p != '/' && *p != 0)
-    		p++;
-  	}
-  	if (*p) {
-	    *p = 0;
-	    err = 0;
-	    get_aino (u, &u->rootnode, path, &err);
-	    if (err) {
+	/* iterate from root to last to previous path part,
+	* create ainos if not already created.
+	*/
+	path = xcalloc(TCHAR, _tcslen (npath) + 2);
+	cnt = 1;
+	for (;;) {
+		_tcscpy (path, npath);
+		p = path;
+		for (i = 0; i < cnt ;i++) {
+			if (i > 0)
+				p++;
+			while (*p != '/' && *p != 0)
+				p++;
+		}
+		if (*p) {
+			*p = 0;
+			err = 0;
+			get_aino (u, &u->rootnode, path, &err);
+			if (err) {
 				write_log (_T("*** FS: missing path '%s'!\n"), path);
-    		return NULL;
-      }
-      cnt++;
-  	} else {
-      break;
-  	}
-  }
+				return NULL;
+			}
+			cnt++;
+		} else {
+			break;
+		}
+	}
 
-  /* find base (parent) of last path part */
-  _tcscpy (path, npath);
-  p = path;
-  a = u->rootnode.child;
-  for (;;) {
-  	if (*p == 0) {
+	/* find base (parent) of last path part */
+	_tcscpy (path, npath);
+	p = path;
+	a = u->rootnode.child;
+	for (;;) {
+		if (*p == 0) {
 			write_log (_T("*** FS: base aino NOT found '%s' ('%s')\n"), a->nname, npath);
-	    xfree (path);
-	    return NULL;
-  	}
-  	p2 = p;
-  	while(*p2 != '/' && *p2 != '\\' && *p2 != 0)
-	    p2++;
-  	*p2 = 0;
-    while (a) {
-	    if (!same_aname(p, a->aname)) {
-    		a = a->sibling;
-    		continue;
-	    }
-	    p = p2 + 1;
-	    if (*p == 0) {
+			xfree (path);
+			return NULL;
+		}
+		p2 = p;
+		while(*p2 != '/' && *p2 != '\\' && *p2 != 0)
+			p2++;
+		*p2 = 0;
+		while (a) {
+			if (!same_aname(p, a->aname)) {
+				a = a->sibling;
+				continue;
+			}
+			p = p2 + 1;
+			if (*p == 0) {
 				write_log (_T("FS: base aino found '%s' ('%s')\n"), a->nname, npath);
-    		xfree (path);
-    		return a;
-      }
-      a = a->child;
-      break;
-	  }
-	  if (!a) {
-		  write_log (_T("*** FS: path part '%s' not found ('%s')\n"), p, npath);
-      xfree (path);
-      return NULL;
-	  }
-  }
+				xfree (path);
+				return a;
+			}
+			a = a->child;
+			break;
+		}
+		if (!a) {
+			write_log (_T("*** FS: path part '%s' not found ('%s')\n"), p, npath);
+			xfree (path);
+			return NULL;
+		}
+	}
 }
 
 static TCHAR *makenativepath (UnitInfo *ui, TCHAR *apath)
 {
-  TCHAR *pn;
-  /* create native path. FIXME: handle 'illegal' characters */
-  pn = xcalloc (TCHAR, _tcslen (apath) + 1 + _tcslen (ui->rootdir) + 1);
+	TCHAR *pn;
+	/* create native path. FIXME: handle 'illegal' characters */
+	pn = xcalloc (TCHAR, _tcslen (apath) + 1 + _tcslen (ui->rootdir) + 1);
 	_stprintf (pn, _T("%s/%s"), ui->rootdir, apath);
-  if (FSDB_DIR_SEPARATOR != '/') {
+	if (FSDB_DIR_SEPARATOR != '/') {
 		for (int i = 0; i < _tcslen (pn); i++) {
-	    if (pn[i] == '/')
-    		pn[i] = FSDB_DIR_SEPARATOR;
-  	}
-  }
-  return pn;
+			if (pn[i] == '/')
+				pn[i] = FSDB_DIR_SEPARATOR;
+		}
+	}
+	return pn;
 }
 
-static uae_u8 *restore_aino(UnitInfo *ui, Unit *u, uae_u8 *src)
+static uae_u8 *restore_aino (UnitInfo *ui, Unit *u, uae_u8 *src)
 {
-  TCHAR *p, *p2, *pn;
-  uae_u32 flags;
-  int missing;
-  a_inode *base, *a;
+	TCHAR *p, *p2, *pn;
+	uae_u32 flags;
+	int missing;
+	a_inode *base, *a;
 
-  missing = 0;
-  a = xcalloc (a_inode, 1);
-  a->uniq = restore_u64 ();
-  a->locked_children = restore_u32 ();
-  a->exnext_count = restore_u32 ();
-  a->shlock = restore_u32 ();
-  flags = restore_u32 ();
-  if (flags & 1)
-    a->elock = 1;
+	missing = 0;
+	a = xcalloc (a_inode, 1);
+	a->uniq = restore_u64 ();
+	a->locked_children = restore_u32 ();
+	a->exnext_count = restore_u32 ();
+	a->shlock = restore_u32 ();
+	flags = restore_u32 ();
+	if (flags & 1)
+		a->elock = 1;
 	if (flags & 4)
 		a->uniq_external = restore_u64 ();
-  /* full Amiga-side path without drive, eg. "C/SetPatch" */
-  p = restore_string ();
-  /* root (p = volume label) */
-  if (a->uniq == 0) {
-	  a->nname = my_strdup(ui->rootdir);
-	  a->aname = p;
-	  a->dir = 1;
-	  if (ui->volflags < 0) {
-		  write_log (_T("FS: Volume '%s' ('%s') missing!\n"), a->aname, a->nname);
-	  } else {
-      a->volflags = ui->volflags;
-      recycle_aino (u, a);
-		  write_log (_T("FS: Lock (root) '%s' ('%s')\n"), a->aname, a->nname);
-	  }
-	  return src;
-  }
-  p2 = _tcsrchr(p, '/');
-  if (p2)
-  	p2++;
-  else
-  	p2 = p;
-  pn = makenativepath(ui, p);
-  a->nname = pn;
-  a->aname = my_strdup(p2);
+	/* full Amiga-side path without drive, eg. "C/SetPatch" */
+	p = restore_string ();
+	/* root (p = volume label) */
+	if (a->uniq == 0) {
+		a->nname = my_strdup (ui->rootdir);
+		a->aname = p;
+		a->dir = 1;
+		if (ui->volflags < 0) {
+			write_log (_T("FS: Volume '%s' ('%s') missing!\n"), a->aname, a->nname);
+		} else {
+			a->volflags = ui->volflags;
+			recycle_aino (u, a);
+			write_log (_T("FS: Lock (root) '%s' ('%s')\n"), a->aname, a->nname);
+		}
+		return src;
+	}
+	p2 = _tcsrchr(p, '/');
+	if (p2)
+		p2++;
+	else
+		p2 = p;
+	pn = makenativepath (ui, p);
+	a->nname = pn;
+	a->aname = my_strdup (p2);
 	/* create path to parent dir */
-  if (p2 != p)
+	if (p2 != p)
 		p2[0] = 0;
-  /* find parent of a->aname (Already restored previously. I hope..) */
-  base = restore_filesys_get_base(u, p);
-  xfree(p);
-  if (flags & 2) {
-  	a->dir = 1;
-  	if (!my_existsdir(a->nname))
+	/* find parent of a->aname (Already restored previously. I hope..) */
+	base = restore_filesys_get_base (u, p);
+	xfree(p);
+	if (flags & 2) {
+		a->dir = 1;
+		if (!my_existsdir(a->nname))
 			write_log (_T("*** FS: Directory '%s' missing!\n"), a->nname);
-  	else 
-	    fsdb_clean_dir (a);
-  } else {
-  	if (!my_existsfile(a->nname))
+		else
+			fsdb_clean_dir (a);
+	} else {
+		if (!my_existsfile(a->nname))
 			write_log (_T("*** FS: File '%s' missing!\n"), a->nname);
-  }
-  if (base) {
-  	fill_file_attrs (u, base, a);
-  	init_child_aino_tree (u, base, a);
-  } else {
+	}
+	if (base) {
+		fill_file_attrs (u, base, a);
+		init_child_aino_tree (u, base, a);
+	} else {
 		write_log (_T("*** FS: parent directory missing '%s' ('%s')\n"), a->aname, a->nname);
-  	missing = 1;
-  }
-  if (missing) {
+		missing = 1;
+	}
+	if (missing) {
 		write_log (_T("*** FS: Lock restore failed '%s' ('%s')\n"), a->aname, a->nname);
-    xfree (a->nname);
-    xfree (a->aname);
-    xfree (a);
-  } else {
+		xfree (a->nname);
+		xfree (a->aname);
+		xfree (a);
+	} else {
 		write_log (_T("FS: Lock '%s' ('%s')\n"), a->aname, a->nname);
-    recycle_aino (u, a);
-  }
-  return src;
+		recycle_aino (u, a);
+	}
+	return src;
 }
 
-static uae_u8 *restore_key(UnitInfo *ui, Unit *u, uae_u8 *src)
+static uae_u8 *restore_key (UnitInfo *ui, Unit *u, uae_u8 *src)
 {
-  int uniq;
-  TCHAR *p, *pn;
-  mode_t openmode;
-  int err;
-  int missing;
-  a_inode *a;
-  Key *k;
+	int uniq;
+	TCHAR *p, *pn;
+	mode_t openmode;
+	int err;
+	int missing;
+	a_inode *a;
+	Key *k;
 	uae_u64 savedsize, size, pos;
 
-  missing = 0;
-  k = xcalloc(Key, 1);
-  k->uniq = restore_u64();
-  k->file_pos = restore_u32();
-  k->createmode = restore_u32();
-  k->dosmode = restore_u32();
-  savedsize = restore_u32();
-  uniq = restore_u64();
-  p = restore_string();
+	missing = 0;
+	k = xcalloc (Key, 1);
+	k->uniq = restore_u64 ();
+	k->file_pos = restore_u32 ();
+	k->createmode = restore_u32 ();
+	k->dosmode = restore_u32 ();
+	savedsize = restore_u32 ();
+	uniq = restore_u64 ();
+	p = restore_string ();
 	pos = restore_u64 ();
 	size = restore_u64 ();
 	if (size) {
 		savedsize = size;
 		k->file_pos = pos;
 	}
-  pn = makenativepath (ui, p);
-  openmode = ((k->dosmode & A_FIBF_READ) == 0 ? O_WRONLY
-	  : (k->dosmode & A_FIBF_WRITE) == 0 ? O_RDONLY
-	  : O_RDWR);
+	pn = makenativepath (ui, p);
+	openmode = ((k->dosmode & A_FIBF_READ) == 0 ? O_WRONLY
+		: (k->dosmode & A_FIBF_WRITE) == 0 ? O_RDONLY
+		: O_RDWR);
 	write_log (_T("FS: open file '%s' ('%s'), pos=%llu\n"), p, pn, k->file_pos);
-  a = get_aino (u, &u->rootnode, p, &err);
-  if (!a)
+	a = get_aino (u, &u->rootnode, p, &err);
+	if (!a)
 		write_log (_T("*** FS: Open file aino creation failed '%s'\n"), p);
-  missing = 1;
-  if (a) {
-  	missing = 0;
-    k->aino = a;
-    if (a->uniq != uniq)
+	missing = 1;
+	if (a) {
+		missing = 0;
+		k->aino = a;
+		if (a->uniq != uniq)
 			write_log (_T("*** FS: Open file '%s' aino id %d != %d\n"), p, uniq, a->uniq);
-  	if (!my_existsfile(pn)) {
-	    write_log(_T("*** FS: Open file '%s' is missing, creating dummy file!\n"), p);
+		if (!my_existsfile (pn)) {
+			write_log (_T("*** FS: Open file '%s' is missing, creating dummy file!\n"), p);
 			if (savedsize < 10 * 1024 * 1024) {
 				k->fd = fs_openfile (u, a, openmode | O_CREAT |O_BINARY);
-  	    if (k->fd) {
-      		uae_u8 *buf = xcalloc (uae_u8, 10000);
+				if (k->fd) {
+					uae_u8 *buf = xcalloc (uae_u8, 10000);
 					uae_u64 sp = savedsize;
-      		while (sp) {
+					while (sp) {
 						uae_u32 s = sp >= 10000 ? 10000 : sp;
-    		    fs_write(k->fd, buf, s);
-    		    sp -= s;
-      		}
-      		xfree(buf);
-				  write_log (_T("*** FS: dummy file created\n"));
-	      } else {
-				  write_log (_T("*** FS: Open file '%s', couldn't create dummy file!\n"), p);
-	      }
-    	} else {
+						fs_write (k->fd, buf, s);
+						sp -= s;
+					}
+					xfree(buf);
+					write_log (_T("*** FS: dummy file created\n"));
+				} else {
+					write_log (_T("*** FS: Open file '%s', couldn't create dummy file!\n"), p);
+				}
+			} else {
 				write_log (_T("*** FS: Too big, ignored\n"));
-		  }
-	  } else {
-		  k->fd = fs_openfile (u, a, openmode | O_BINARY);
-	  }
-  	if (!k->fd) {
+			}
+		} else {
+			k->fd = fs_openfile (u, a, openmode | O_BINARY);
+		}
+		if (!k->fd) {
 			write_log (_T("*** FS: Open file '%s' failed to open!\n"), p);
-	    missing = 1;
-  	} else {
-	    uae_s64 s;
+			missing = 1;
+		} else {
+			uae_s64 s;
 			s = key_filesize(k);
-	    if (s != savedsize)
+			if (s != savedsize)
 				write_log (_T("FS: restored file '%s' size changed! orig=%llu, now=%lld!!\n"), p, savedsize, s);
-	    if (k->file_pos > s) {
+			if (k->file_pos > s) {
 				write_log (_T("FS: restored filepos larger than size of file '%s'!! %llu > %lld\n"), p, k->file_pos, s);
-        k->file_pos = s;
-	    }
+				k->file_pos = s;
+			}
 			key_seek(k, k->file_pos, SEEK_SET);
-  	}
-  }
-  xfree (p);
-  if (missing) {
-  	xfree(k);
-  } else {
-  	k->next = u->keys;
-  	u->keys = k;
-  }
-  return src;
+		}
+	}
+	xfree (p);
+	if (missing) {
+		xfree (k);
+	} else {
+		k->next = u->keys;
+		u->keys = k;
+	}
+	return src;
 }
 
-static uae_u8 *restore_notify(UnitInfo *ui, Unit *u, uae_u8 *src)
+static uae_u8 *restore_notify (UnitInfo *ui, Unit *u, uae_u8 *src)
 {
-  Notify *n = xcalloc (Notify, 1);
-  uae_u32 hash;
-  TCHAR *s;
+	Notify *n = xcalloc (Notify, 1);
+	uae_u32 hash;
+	TCHAR *s;
 
-  n->notifyrequest = restore_u32();
-  s = restore_string();
-  n->fullname = xmalloc (TCHAR, _tcslen (ui->volname) + 2 + _tcslen (s) + 1);
+	n->notifyrequest = restore_u32 ();
+	s = restore_string ();
+	n->fullname = xmalloc (TCHAR, _tcslen (ui->volname) + 2 + _tcslen (s) + 1);
 	_stprintf (n->fullname, _T("%s:%s"), ui->volname, s);
-  xfree(s);
-  s = _tcsrchr (n->fullname, '/');
-  if (s)
-  	s++;
-  else
-  	s = n->fullname;
-  n->partname = my_strdup(s);
-  hash = notifyhash (n->fullname);
-  n->next = u->notifyhash[hash];
-  u->notifyhash[hash] = n;
+	xfree(s);
+	s = _tcsrchr (n->fullname, '/');
+	if (s)
+		s++;
+	else
+		s = n->fullname;
+	n->partname = my_strdup (s);
+	hash = notifyhash (n->fullname);
+	n->next = u->notifyhash[hash];
+	u->notifyhash[hash] = n;
 	write_log (_T("FS: notify %08X '%s' '%s'\n"), n->notifyrequest, n->fullname, n->partname);
-  return src;
+	return src;
 }
 
-static uae_u8 *restore_exkey(UnitInfo *ui, Unit *u, uae_u8 *src)
+static uae_u8 *restore_exkey (UnitInfo *ui, Unit *u, uae_u8 *src)
 {
-  restore_u64();
-  restore_u64();
-  restore_u64();
-  return src;
+	restore_u64 ();
+	restore_u64 ();
+	restore_u64 ();
+	return src;
 }
 
 static uae_u8 *restore_filesys_virtual (UnitInfo *ui, uae_u8 *src, int num)
 {
-  Unit *u = startup_create_unit (NULL, ui, num);
-  int cnt;
+	Unit *u = startup_create_unit(NULL, ui, num);
+	int cnt;
 
-  u->dosbase = restore_u32 ();
-  u->volume = restore_u32 ();
-  u->port = restore_u32 ();
-  u->locklist = restore_u32 ();
-  u->dummy_message = restore_u32 ();
-  u->cmds_sent = restore_u64 ();
-  u->cmds_complete = restore_u64 ();
-  u->cmds_acked = restore_u64 ();
-  u->next_exkey = restore_u32 ();
-  u->total_locked_ainos = restore_u32 ();
-  u->volflags = ui->volflags;
+	u->dosbase = restore_u32 ();
+	u->volume = restore_u32 ();
+	u->port = restore_u32 ();
+	u->locklist = restore_u32 ();
+	u->dummy_message = restore_u32 ();
+	u->cmds_sent = restore_u64 ();
+	u->cmds_complete = restore_u64 ();
+	u->cmds_acked = restore_u64 ();
+	u->next_exkey = restore_u32 ();
+	u->total_locked_ainos = restore_u32 ();
+	u->volflags = ui->volflags;
 
-  cnt = restore_u32 ();
+	cnt = restore_u32 ();
 	write_log (_T("FS: restoring %d locks\n"), cnt);
-  while (cnt-- > 0)
-  	src = restore_aino(ui, u, src);
+	while (cnt-- > 0)
+		src = restore_aino (ui, u, src);
 
-  cnt = restore_u32 ();
+	cnt = restore_u32 ();
 	write_log (_T("FS: restoring %d open files\n"), cnt);
-  while (cnt-- > 0)
-  	src = restore_key(ui, u, src);
+	while (cnt-- > 0)
+		src = restore_key (ui, u, src);
 
-  cnt = restore_u32 ();
+	cnt = restore_u32 ();
 	write_log (_T("FS: restoring %d notifications\n"), cnt);
-  while (cnt-- > 0)
-  	src = restore_notify (ui, u, src);
+	while (cnt-- > 0)
+		src = restore_notify (ui, u, src);
 
-  cnt = restore_u32 ();
+	cnt = restore_u32 ();
 	write_log (_T("FS: restoring %d exkeys\n"), cnt);
-  while (cnt-- > 0)
-  	src = restore_exkey (ui, u, src);
+	while (cnt-- > 0)
+		src = restore_exkey (ui, u, src);
 
-  return src;
+	return src;
 }
 
-static TCHAR *getfullaname(a_inode *a)
+static TCHAR *getfullaname (a_inode *a)
 {
-  TCHAR *p;
-  int first = 1;
+	TCHAR *p;
+	int first = 1;
 
 	p = xcalloc (TCHAR, MAX_DPATH);
-  while (a) {
-  	int len = _tcslen (a->aname);
-  	memmove (p + len + 1, p, (_tcslen (p) + 1) * sizeof (TCHAR));
+	while (a) {
+		int len = _tcslen (a->aname);
+		memmove (p + len + 1, p, (_tcslen (p) + 1) * sizeof (TCHAR));
 		memcpy (p, a->aname, len * sizeof (TCHAR));
-  	if (!first)
-	    p[len] = '/';
-  	first = 0;
-  	a = a->parent;
-  	if (a && a->uniq == 0)
-	    return p;
-  }
-  return p;
+		if (!first)
+			p[len] = '/';
+		first = 0;
+		a = a->parent;
+		if (a && a->uniq == 0)
+			return p;
+	}
+	return p;
 }
 
 /* scan and save all Lock()'d files */
 static int recurse_aino (UnitInfo *ui, a_inode *a, int cnt, uae_u8 **dstp)
 {
-  uae_u8 *dst = NULL;
-  int dirty = 0;
-  a_inode *a2 = a;
+	uae_u8 *dst = NULL;
+	int dirty = 0;
+	a_inode *a2 = a;
 
-  if (dstp)
-  	dst = *dstp;
-  while (a) {
+	if (dstp)
+		dst = *dstp;
+	while (a) {
 		//write_log("recurse '%s' '%s' %d %08x\n", a->aname, a->nname, a->uniq, a->parent);
-  	if (a->elock || a->shlock || a->uniq == 0) {
-	    if (dst) {
-    		TCHAR *fn = NULL;
+		if (a->elock || a->shlock || a->uniq == 0) {
+			if (dst) {
+				TCHAR *fn = NULL;
 				write_log (_T("uniq=%d %lld s=%d e=%d d=%d '%s' '%s'\n"), a->uniq, a->uniq_external, a->shlock, a->elock, a->dir, a->aname, a->nname);
 				if (a->aname) {
-      		fn = getfullaname(a);
+					fn = getfullaname (a);
 					write_log (_T("->'%s'\n"), fn);
 				}
-    		save_u64 (a->uniq);
-    		save_u32 (a->locked_children);
-    		save_u32 (a->exnext_count);
-    		save_u32 (a->shlock);
+				save_u64 (a->uniq);
+				save_u32 (a->locked_children);
+				save_u32 (a->exnext_count);
+				save_u32 (a->shlock);
 				save_u32 ((a->elock ? 1 : 0) | (a->dir ? 2 : 0) | 4);
 				save_u64 (a->uniq_external);
-    		save_string (fn);
-    		xfree(fn);
-	    }
-	    cnt++;
-  	}
-  	if (a->dirty)
-	    dirty = 1;
-  	if (a->child)
-	    cnt = recurse_aino (ui, a->child, cnt, &dst);
-  	a = a->sibling;
-  }
-  if (dirty && a2->parent)
-  	fsdb_dir_writeback (a2->parent);
-  if (dst)
-  	*dstp = dst;
-  return cnt;
+				save_string (fn);
+				xfree(fn);
+			}
+			cnt++;
+		}
+		if (a->dirty)
+			dirty = 1;
+		if (a->child)
+			cnt = recurse_aino (ui, a->child, cnt, &dst);
+		a = a->sibling;
+	}
+	if (dirty && a2->parent)
+		fsdb_dir_writeback (a2->parent);
+	if (dst)
+		*dstp = dst;
+	return cnt;
 }
 
-static uae_u8 *save_key(uae_u8 *dst, Key *k)
+static uae_u8 *save_key (uae_u8 *dst, Key *k)
 {
-  TCHAR *fn = getfullaname(k->aino);
-  uae_u64 size;
-  save_u64 (k->uniq);
-  save_u32 ((uae_u32)k->file_pos);
-  save_u32 (k->createmode);
-  save_u32 (k->dosmode);
+	TCHAR *fn = getfullaname (k->aino);
+	uae_u64 size;
+	save_u64 (k->uniq);
+	save_u32 ((uae_u32)k->file_pos);
+	save_u32 (k->createmode);
+	save_u32 (k->dosmode);
 	size = fs_fsize (k->fd);
-  save_u32 ((uae_u32)size);
-  save_u64 (k->aino->uniq);
-  save_string (fn);
-  save_u64 (k->file_pos);
-  save_u64 (size);
+	save_u32 ((uae_u32)size);
+	save_u64 (k->aino->uniq);
+	save_string (fn);
+	save_u64 (k->file_pos);
+	save_u64 (size);
 	write_log (_T("'%s' uniq=%d size=%lld seekpos=%lld mode=%d dosmode=%d\n"),
-    fn, k->uniq, size, k->file_pos, k->createmode, k->dosmode);
-  xfree(fn);
-  return dst;
+		fn, k->uniq, size, k->file_pos, k->createmode, k->dosmode);
+	xfree (fn);
+	return dst;
 }
 
 static uae_u8 *save_notify (UnitInfo *ui, uae_u8 *dst, Notify *n)
 {
-  TCHAR *s;
-  save_u32(n->notifyrequest);
-  s = n->fullname;
-  if (_tcslen (s) >= _tcslen (ui->volname) && !_tcsncmp (n->fullname, ui->volname, _tcslen (ui->volname)))
-  	s = n->fullname + _tcslen (ui->volname) + 1;
-  save_string(s);
+	TCHAR *s;
+	save_u32 (n->notifyrequest);
+	s = n->fullname;
+	if (_tcslen (s) >= _tcslen (ui->volname) && !_tcsncmp (n->fullname, ui->volname, _tcslen (ui->volname)))
+		s = n->fullname + _tcslen (ui->volname) + 1;
+	save_string (s);
 	write_log (_T("FS: notify %08X '%s'\n"), n->notifyrequest, n->fullname);
-  return dst;
+	return dst;
 }
 
 static uae_u8 *save_exkey (uae_u8 *dst, ExamineKey *ek)
 {
-  save_u64(ek->uniq);
-  save_u64(ek->aino->uniq);
-  save_u64(ek->curr_file->uniq);
-  return dst;
+	save_u64 (ek->uniq);
+	save_u64 (ek->aino->uniq);
+	save_u64 (ek->curr_file->uniq);
+	return dst;
 }
 
 static uae_u8 *save_filesys_virtual (UnitInfo *ui, uae_u8 *dst)
 {
-  Unit *u = ui->self;
-  Key *k;
-  int cnt, i, j;
+	Unit *u = ui->self;
+	Key *k;
+	int cnt, i, j;
 
 	write_log (_T("FSSAVE: '%s'\n"), ui->devname);
-  save_u32 (u->dosbase);
-  save_u32 (u->volume);
-  save_u32 (u->port);
-  save_u32 (u->locklist);
-  save_u32 (u->dummy_message);
-  save_u64 (u->cmds_sent);
-  save_u64 (u->cmds_complete);
-  save_u64 (u->cmds_acked);
-  save_u32 (u->next_exkey);
-  save_u32 (u->total_locked_ainos);
-  cnt = recurse_aino (ui, &u->rootnode, 0, NULL);
-  save_u32 (cnt);
+	save_u32 (u->dosbase);
+	save_u32 (u->volume);
+	save_u32 (u->port);
+	save_u32 (u->locklist);
+	save_u32 (u->dummy_message);
+	save_u64 (u->cmds_sent);
+	save_u64 (u->cmds_complete);
+	save_u64 (u->cmds_acked);
+	save_u32 (u->next_exkey);
+	save_u32 (u->total_locked_ainos);
+	cnt = recurse_aino (ui, &u->rootnode, 0, NULL);
+	save_u32 (cnt);
 	write_log (_T("%d open locks\n"), cnt);
-  cnt = recurse_aino (ui, &u->rootnode, 0, &dst);
-  cnt = 0;
-  for (k = u->keys; k; k = k->next)
-  	cnt++;
-  save_u32 (cnt);
+	cnt = recurse_aino (ui, &u->rootnode, 0, &dst);
+	cnt = 0;
+	for (k = u->keys; k; k = k->next)
+		cnt++;
+	save_u32 (cnt);
 	write_log (_T("%d open files\n"), cnt);
-  for (k = u->keys; k; k = k->next)
-	  dst = save_key (dst, k);
-  for (j = 0; j < 2; j++) {
-	  cnt = 0;
-	  for (i = 0; i < NOTIFY_HASH_SIZE; i++) {
-	    Notify *n = u->notifyhash[i];
-	    while (n) {
-	    	if (j > 0)
-	  	    dst = save_notify (ui, dst, n);
-	    	cnt++;
-	    	n = n->next;
-	    }
-	  }
-	  if (j == 0) {
-	    save_u32 (cnt);
+	for (k = u->keys; k; k = k->next)
+		dst = save_key (dst, k);
+	for (j = 0; j < 2; j++) {
+		cnt = 0;
+		for (i = 0; i < NOTIFY_HASH_SIZE; i++) {
+			Notify *n = u->notifyhash[i];
+			while (n) {
+				if (j > 0)
+					dst = save_notify (ui, dst, n);
+				cnt++;
+				n = n->next;
+			}
+		}
+		if (j == 0) {
+			save_u32 (cnt);
 			write_log (_T("%d notify requests\n"), cnt);
-	  }
-  }
-  for (j = 0; j < 2; j++) {
-  	cnt = 0;
-  	for (i = 0; i < EXKEYS; i++) {
-	    ExamineKey *ek = &u->examine_keys[i];
-	    if (ek->uniq) {
-    		cnt++;
-    		if (j > 0)
-  		    dst = save_exkey (dst, ek);
-	    }
-  	}
-  	if (j == 0) {
-	    save_u32 (cnt);
+		}
+	}
+	for (j = 0; j < 2; j++) {
+		cnt = 0;
+		for (i = 0; i < EXKEYS; i++) {
+			ExamineKey *ek = &u->examine_keys[i];
+			if (ek->uniq) {
+				cnt++;
+				if (j > 0)
+					dst = save_exkey (dst, ek);
+			}
+		}
+		if (j == 0) {
+			save_u32 (cnt);
 			write_log (_T("%d exkeys\n"), cnt);
-  	}
-  }
+		}
+	}
 	write_log (_T("END\n"));
-  return dst;
+	return dst;
 }
 
 
@@ -7868,31 +9355,33 @@ static TCHAR *new_filesys_root_path, *new_filesys_fs_path;
 
 uae_u8 *save_filesys_common (int *len)
 {
-  uae_u8 *dstbak, *dst;
-  if (nr_units() == 0)
-  	return NULL;
-  dstbak = dst = xmalloc (uae_u8, 1000);
-  save_u32 (2);
-  save_u64 (a_uniq);
-  save_u64 (key_uniq);
-  *len = dst - dstbak;
-  return dstbak;
+	uae_u8 *dstbak, *dst;
+	if (nr_units () == 0)
+		return NULL;
+	dstbak = dst = xmalloc (uae_u8, 1000);
+	save_u32 (2);
+	save_u64 (a_uniq);
+	save_u64 (key_uniq);
+	*len = dst - dstbak;
+	return dstbak;
 }
 
 uae_u8 *restore_filesys_common (uae_u8 *src)
 {
-  if (restore_u32 () != 2)
-  	return src;
-  filesys_prepare_reset2 ();
-  filesys_reset2 ();
-  a_uniq = restore_u64 ();
-  key_uniq = restore_u64 ();
+	if (restore_u32 () != 2)
+		return src;
+	cd_unit_offset = MAX_FILESYSTEM_UNITS;
+	cd_unit_number = 0;
+	filesys_prepare_reset2 ();
+	filesys_reset2 ();
+	a_uniq = restore_u64 ();
+	key_uniq = restore_u64 ();
 
 	xfree(new_filesys_root_path);
 	xfree(new_filesys_fs_path);
 	new_filesys_root_path = NULL;
 	new_filesys_fs_path = NULL;
-  return src;
+	return src;
 }
 
 uae_u8 *save_filesys_paths(int num, int *len)
@@ -7907,10 +9396,12 @@ uae_u8 *save_filesys_paths(int num, int *len)
 		return NULL;
 	dstbak = dst = xmalloc(uae_u8, 4 + 4 + 2 + 2 * 2 * MAX_DPATH);
 
-	if (type == FILESYS_VIRTUAL)
+	if (type == FILESYS_VIRTUAL || type == FILESYS_CD)
 		ptype = SAVESTATE_PATH_VDIR;
 	else if (type == FILESYS_HARDFILE || type == FILESYS_HARDFILE_RDB)
 		ptype = SAVESTATE_PATH_HDF;
+	else if (type == FILESYS_HARDDRIVE)
+		ptype = SAVESTATE_PATH_HD;
 	else
 		ptype = SAVESTATE_PATH;
 
@@ -7926,42 +9417,44 @@ uae_u8 *save_filesys_paths(int num, int *len)
 
 uae_u8 *save_filesys (int num, int *len)
 {
-  uae_u8 *dstbak, *dst;
-  UnitInfo *ui;
-  int type = is_hardfile (num);
+	uae_u8 *dstbak, *dst;
+	UnitInfo *ui;
+	int type = is_hardfile (num);
 	int ptype;
 
-  ui = &mountinfo.ui[num];
+	ui = &mountinfo.ui[num];
 	if (ui->open <= 0)
-  	return NULL;
-  /* not initialized yet, do not save */
-	if ((type == FILESYS_VIRTUAL) && ui->self == NULL)
-  	return NULL;
+		return NULL;
+	/* not initialized yet, do not save */
+	if ((type == FILESYS_VIRTUAL || type == FILESYS_CD) && ui->self == NULL)
+		return NULL;
 	write_log (_T("FS_FILESYS: '%s' '%s'\n"), ui->devname, ui->volname ? ui->volname : _T("<no name>"));
-  dstbak = dst = xmalloc (uae_u8, 100000);
-  save_u32 (2); /* version */
-  save_u32 (ui->devno);
-  save_u16 (type);
-	if (type == FILESYS_VIRTUAL)
+	dstbak = dst = xmalloc (uae_u8, 100000);
+	save_u32 (2); /* version */
+	save_u32 (ui->devno);
+	save_u16 (type);
+	if (type == FILESYS_VIRTUAL || type == FILESYS_CD)
 		ptype = SAVESTATE_PATH_VDIR;
 	else if (type == FILESYS_HARDFILE || type == FILESYS_HARDFILE_RDB)
 		ptype = SAVESTATE_PATH_HDF;
+	else if (type == FILESYS_HARDDRIVE)
+		ptype = SAVESTATE_PATH_HD;
 	else
 		ptype = SAVESTATE_PATH;
 	save_path(ui->rootdir, ptype);
-  save_string (ui->devname);
-  save_string (ui->volname);
+	save_string (ui->devname);
+	save_string (ui->volname);
 	save_path (ui->filesysdir, SAVESTATE_PATH);
-  save_u8 (ui->bootpri);
-  save_u8 (ui->readonly);
-  save_u32 (ui->startup);
-  save_u32 (filesys_configdev);
-  if (type == FILESYS_VIRTUAL)
-	  dst = save_filesys_virtual (ui, dst);
-  if (type == FILESYS_HARDFILE || type == FILESYS_HARDFILE_RDB)
-	  dst = save_filesys_hardfile (ui, dst);
-  *len = dst - dstbak;
-  return dstbak;
+	save_u8 (ui->bootpri);
+	save_u8 (ui->readonly);
+	save_u32 (ui->startup);
+	save_u32 (filesys_configdev);
+	if (type == FILESYS_VIRTUAL || type == FILESYS_CD)
+		dst = save_filesys_virtual (ui, dst);
+	if (type == FILESYS_HARDFILE || type == FILESYS_HARDFILE_RDB)
+		dst = save_filesys_hardfile (ui, dst);
+	*len = dst - dstbak;
+	return dstbak;
 }
 
 uae_u8 *restore_filesys_paths(uae_u8 *src)
@@ -7976,33 +9469,40 @@ uae_u8 *restore_filesys_paths(uae_u8 *src)
 
 uae_u8 *restore_filesys (uae_u8 *src)
 {
-  int type, devno;
-  UnitInfo *ui;
-  TCHAR *devname = 0, *volname = 0, *rootdir = 0, *filesysdir = 0;
+	int type, devno;
+	UnitInfo *ui;
+	TCHAR *devname = 0, *volname = 0, *rootdir = 0, *filesysdir = 0;
 	uae_u32 startup;
 	struct uaedev_config_info *ci;
 
-  if (restore_u32 () != 2)
+	if (restore_u32() != 2)
 		goto end2;
-  devno = restore_u32 ();
+	devno = restore_u32 ();
 	ui = &mountinfo.ui[devno];
 	ci = &ui->hf.ci;
 	uci_set_defaults (ci, false);
-  type = restore_u16 ();
+	type = restore_u16 ();
 	if (type == FILESYS_VIRTUAL) {
 		rootdir = restore_path (SAVESTATE_PATH_VDIR);
+	} else if (type == FILESYS_CD) {
+		rootdir = restore_path (SAVESTATE_PATH_VDIR);
+		if (cd_unit_offset == MAX_FILESYSTEM_UNITS)
+			cd_unit_offset = devno;
+		cd_unit_number++;
 	} else if (type == FILESYS_HARDFILE || type == FILESYS_HARDFILE_RDB) {
 		rootdir = restore_path (SAVESTATE_PATH_HDF);
+	} else if (type == FILESYS_HARDDRIVE) {
+		rootdir = restore_path (SAVESTATE_PATH_HD);
 	} else {
 		rootdir = restore_path (SAVESTATE_PATH);
-  }
-  devname = restore_string ();
-  volname = restore_string ();
+	}
+	devname = restore_string ();
+	volname = restore_string ();
 	filesysdir = restore_path (SAVESTATE_PATH);
 	ci->bootpri = restore_u8 ();
 	ci->readonly = restore_u8 () != 0;
-  startup = restore_u32 ();
-  filesys_configdev = restore_u32 ();
+	startup = restore_u32 ();
+	filesys_configdev = restore_u32 ();
 
 	if (new_filesys_root_path) {
 		xfree(rootdir);
@@ -8016,40 +9516,41 @@ uae_u8 *restore_filesys (uae_u8 *src)
 	}
 
 	if (type == FILESYS_HARDFILE || type == FILESYS_HARDFILE_RDB) {
-	  src = restore_filesys_hardfile(ui, src);
-	  xfree (volname);
-	  volname = NULL;
-  }
+		src = restore_filesys_hardfile (ui, src);
+		xfree (volname);
+		volname = NULL;
+	}
 	_tcscpy (ci->rootdir, rootdir);
 	_tcscpy (ci->devname, devname);
 	_tcscpy (ci->volname, volname ? volname : _T(""));
 	_tcscpy (ci->filesys, filesysdir);
 
 	if (set_filesys_unit (devno, ci, false) < 0) {
-			write_log (_T("filesys '%s' failed to restore\n"), rootdir);
-  	  goto end;
-  }
+		write_log (_T("filesys '%s' failed to restore\n"), rootdir);
+		goto end;
+	}
 	ui->devno = devno;
 	ui->startup = startup;
-  if (type == FILESYS_VIRTUAL)
-  	src = restore_filesys_virtual (ui, src, devno);
+	if (type == FILESYS_VIRTUAL || type == FILESYS_CD)
+		src = restore_filesys_virtual (ui, src, devno);
+
 	write_log (_T("'%s' restored\n"), rootdir);
 end:
-  xfree (rootdir);
-  xfree (devname);
-  xfree (volname);
+	xfree (rootdir);
+	xfree (devname);
+	xfree (volname);
 	xfree (filesysdir);
 end2:
 	xfree(new_filesys_root_path);
 	xfree(new_filesys_fs_path);
 	new_filesys_root_path = NULL;
 	new_filesys_fs_path = NULL;
-  return src;
+	return src;
 }
 
-int save_filesys_cando(void)
+int save_filesys_cando (void)
 {
-  if (nr_units() == 0)
-  	return -1;
-  return filesys_in_interrupt ? 0 : 1;
+	if (nr_units () == 0)
+		return -1;
+	return filesys_in_interrupt ? 0 : 1;
 }

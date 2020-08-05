@@ -1,7 +1,6 @@
-#include <stdbool.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
 #include <iostream>
 
 #include <guisan.hpp>
@@ -82,6 +81,7 @@ ConfigCategory categories[] = {
 		RefreshPanelCustom, HelpPanelCustom
 	},
 	{"Miscellaneous", "data/misc.ico", nullptr, nullptr, InitPanelMisc, ExitPanelMisc, RefreshPanelMisc, HelpPanelMisc},
+	{ "Priority", "data/misc.ico", nullptr, nullptr, InitPanelPrio, ExitPanelPrio, RefreshPanelPrio, HelpPanelPrio},
 	{
 		"Savestates", "data/savestate.png", nullptr, nullptr, InitPanelSavestate, ExitPanelSavestate,
 		RefreshPanelSavestate, HelpPanelSavestate
@@ -133,11 +133,6 @@ int element_present = 0;
 SDL_Texture* gui_texture;
 SDL_Cursor* cursor;
 SDL_Surface* cursor_surface;
-#ifdef SOFTWARE_CURSOR
-SDL_Texture* swcursor_texture = NULL;
-static SDL_DisplayMode physmode;
-static double mscalex, mscaley;
-#endif // SOFTWARE_CURSOR
 #endif
 
 /*
@@ -205,14 +200,14 @@ void gui_restart()
 	gui_running = false;
 }
 
-static void (*refreshFuncAfterDraw)(void) = nullptr;
+static void (*refresh_func_after_draw)(void) = nullptr;
 
-void RegisterRefreshFunc(void (*func)(void))
+void register_refresh_func(void (*func)(void))
 {
-	refreshFuncAfterDraw = func;
+	refresh_func_after_draw = func;
 }
 
-static void ShowHelpRequested()
+static void show_help_requested()
 {
 	vector<string> helptext;
 	if (categories[last_active_panel].HelpFunc != nullptr && categories[last_active_panel].HelpFunc(helptext))
@@ -226,41 +221,17 @@ static void ShowHelpRequested()
 	}
 }
 
-#ifdef SOFTWARE_CURSOR
-static SDL_Rect dst;
-void swcursor(bool op) {
-	if (!op) {
-		cursor_surface = SDL_LoadBMP("data/cursor.bmp");
-		swcursor_texture = SDL_CreateTextureFromSurface(renderer, cursor_surface);
-		// Hide real cursor
-		SDL_SetCursor(SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW));
-		SDL_ShowCursor(0);
-		// Set cursor width,height to that of loaded bmp
-		dst.w = cursor_surface->w;
-		dst.h = cursor_surface->h;
-		SDL_FreeSurface(cursor_surface);
-
-	}
-	else {
-		SDL_GetMouseState(&dst.x, &dst.y);
-		dst.x *= mscalex * 1.03;
-		dst.y *= mscaley * 1.005;
-		SDL_RenderCopyEx(renderer, swcursor_texture, nullptr, &dst, rotation_angle, nullptr, SDL_FLIP_NONE);
-	}
-}
-#endif
-
 void cap_fps(Uint64 start, int fps)
 {
 	const auto end = SDL_GetPerformanceCounter();
-	const auto elapsed_ms = float(end - start) / float(SDL_GetPerformanceFrequency()) * 1000.0f;
+	const auto elapsed_ms = static_cast<float>(end - start) / static_cast<float>(SDL_GetPerformanceFrequency()) * 1000.0f;
 	if (fps == 60)
 		SDL_Delay(floor(16.666f - elapsed_ms));
 	else if (fps == 50)
 		SDL_Delay(floor(20.000f - elapsed_ms));
 }
 
-void UpdateGuiScreen()
+void update_gui_screen()
 {
 #ifdef USE_DISPMANX
 	vc_dispmanx_resource_write_data(gui_resource, rgb_mode, gui_screen->pitch, gui_screen->pixels, &blit_rect);
@@ -268,23 +239,20 @@ void UpdateGuiScreen()
 	vc_dispmanx_element_change_source(updateHandle, gui_element, gui_resource);
 	vc_dispmanx_update_submit_sync(updateHandle);
 #else
+	SDL_RenderClear(renderer);
 	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
-	if (rotation_angle == 0 || rotation_angle == 180)
+	if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
 		renderQuad = { 0, 0, gui_screen->w, gui_screen->h };
 	else
 		renderQuad = { -(GUI_WIDTH - GUI_HEIGHT) / 2, (GUI_WIDTH - GUI_HEIGHT) / 2, gui_screen->w, gui_screen->h };
 	
-	SDL_RenderCopyEx(renderer, gui_texture, nullptr, &renderQuad, rotation_angle, nullptr, SDL_FLIP_NONE);
-#ifdef SOFTWARE_CURSOR
-	swcursor(true);
-#endif
+	SDL_RenderCopyEx(renderer, gui_texture, nullptr, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
 	SDL_RenderPresent(renderer);
 #endif
 }
 
 #ifdef USE_DISPMANX
 #else
-// Sets the cursor image up
 void setup_cursor()
 {
 	// Detect resolution and load appropriate cursor image
@@ -300,28 +268,31 @@ void setup_cursor()
 	if (!cursor_surface)
 	{
 		// Load failed. Log error.
-		SDL_Log("Could not load cursor bitmap: %s\n", SDL_GetError());
+		write_log("Could not load cursor bitmap: %s\n", SDL_GetError());
 		return;
 	}
-	auto* formattedSurface = SDL_ConvertSurfaceFormat(cursor_surface, SDL_PIXELFORMAT_RGBA8888, 0);
-	if (formattedSurface != nullptr)
+	
+	auto* formatted_surface = SDL_ConvertSurfaceFormat(cursor_surface, SDL_PIXELFORMAT_RGBA8888, 0);
+	if (formatted_surface != nullptr)
 	{
 		SDL_FreeSurface(cursor_surface);
+
 		// Create new cursor with surface
-		cursor = SDL_CreateColorCursor(formattedSurface, 0, 0);
-		SDL_FreeSurface(formattedSurface);
+		cursor = SDL_CreateColorCursor(formatted_surface, 0, 0);
+		SDL_FreeSurface(formatted_surface);
 	}
 
 	if (!cursor)
 	{
 		// Cursor creation failed. Log error and free surface
-		SDL_Log("Could not create color cursor: %s\n", SDL_GetError());
-		SDL_FreeSurface(cursor_surface);
+		write_log("Could not create color cursor: %s\n", SDL_GetError());
 		cursor_surface = nullptr;
+		formatted_surface = nullptr;
+		SDL_SetCursor(SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW));
 		return;
 	}
-	if (cursor)
-		SDL_SetCursor(cursor);
+
+	SDL_SetCursor(cursor);	
 }
 #endif
 
@@ -399,18 +370,11 @@ void amiberry_gui_init()
 		vc_dispmanx_update_submit_sync(updateHandle);
 	}
 #else
-#ifdef SOFTWARE_CURSOR
-	swcursor(false);
-	SDL_GetCurrentDisplayMode(0, &physmode);
-	mscalex = (double(GUI_WIDTH) / double(physmode.w));
-	mscaley = (double(GUI_HEIGHT) / double(physmode.h));
-#else
 	setup_cursor();
-#endif
 
 	if (sdl_window)
 	{
-		if (rotation_angle != 0 && rotation_angle != 180)
+		if (amiberry_options.rotation_angle != 0 && amiberry_options.rotation_angle != 180)
 			SDL_SetWindowSize(sdl_window, GUI_HEIGHT, GUI_WIDTH);
 		else
 			SDL_SetWindowSize(sdl_window, GUI_WIDTH, GUI_HEIGHT);
@@ -424,13 +388,12 @@ void amiberry_gui_init()
 	check_error_sdl(gui_texture == nullptr, "Unable to create GUI texture:");
 #endif
 	
-	if (rotation_angle == 0 || rotation_angle == 180)
+	if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
 		SDL_RenderSetLogicalSize(renderer, GUI_WIDTH, GUI_HEIGHT);
 	else
 		SDL_RenderSetLogicalSize(renderer, GUI_HEIGHT, GUI_WIDTH);
 	
-	SDL_ShowCursor(SDL_ENABLE);
-	SDL_SetRelativeMouseMode(SDL_FALSE);
+	set_mouse_grab(false);
 
 	//-------------------------------------------------
 	// Create helpers for GUI framework
@@ -501,13 +464,6 @@ void amiberry_gui_halt()
 		cursor = nullptr;
 	}
 
-#ifdef SOFTWARE_CURSOR
-	if (swcursor_texture != nullptr)
-	{
-		SDL_DestroyTexture(swcursor_texture);
-		swcursor_texture = nullptr;
-	}
-#endif
 	// Clear the screen
 	SDL_RenderClear(renderer);
 	SDL_RenderPresent(renderer);
@@ -532,7 +488,7 @@ int get_joypad_axis_state(int axis)
 	return result;
 }
 
-void checkInput()
+void check_input()
 {
 	const auto key_for_gui = SDL_GetKeyFromName(currprefs.open_gui);
 	int gotEvent = 0;
@@ -617,7 +573,7 @@ void checkInput()
 				}
 				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].left_trigger))
 				{
-					ShowHelpRequested();
+					show_help_requested();
 					cmdHelp->requestFocus();
 					break;
 				}
@@ -757,7 +713,7 @@ void checkInput()
 					break;
 
 				case SDLK_F1:
-					ShowHelpRequested();
+					show_help_requested();
 					cmdHelp->requestFocus();
 					break;
 
@@ -831,13 +787,13 @@ void checkInput()
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
 
-		UpdateGuiScreen();
+		update_gui_screen();
 	}
 }
 
 void amiberry_gui_run()
 {
-	if (gui_joystick_control)
+	if (amiberry_options.gui_joystick_control)
 	{
 		const auto available_joysticks = SDL_NumJoysticks();
 		if (available_joysticks > 0)
@@ -861,7 +817,7 @@ void amiberry_gui_run()
 	// Prepare the screen once
 	uae_gui->logic();
 	uae_gui->draw();
-	UpdateGuiScreen();
+	update_gui_screen();
 	
 	//-------------------------------------------------
 	// The main loop
@@ -869,15 +825,15 @@ void amiberry_gui_run()
 	while (gui_running)
 	{
 		const auto start = SDL_GetPerformanceCounter();
-		checkInput();
+		check_input();
 
 		if (gui_rtarea_flags_onenter != gui_create_rtarea_flag(&changed_prefs))
-			DisableResume();
+			disable_resume();
 
-		if (refreshFuncAfterDraw != nullptr)
+		if (refresh_func_after_draw != nullptr)
 		{
-			void (*currFunc)() = refreshFuncAfterDraw;
-			refreshFuncAfterDraw = nullptr;
+			void (*currFunc)() = refresh_func_after_draw;
+			refresh_func_after_draw = nullptr;
 			currFunc();
 		}
 
@@ -960,7 +916,7 @@ public:
 		}
 		else if (actionEvent.getSource() == cmdHelp)
 		{
-			ShowHelpRequested();
+			show_help_requested();
 			cmdHelp->requestFocus();
 		}
 	}
@@ -1142,7 +1098,7 @@ void gui_widgets_init()
 	//--------------------------------------------------
 	// Activate last active panel
 	//--------------------------------------------------
-	if (!emulating && quickstart_start)
+	if (!emulating && amiberry_options.quickstart_start)
 		last_active_panel = 2;
 	categories[last_active_panel].selector->requestFocus();
 	cmdHelp->setVisible(categories[last_active_panel].HelpFunc != nullptr);
@@ -1150,16 +1106,15 @@ void gui_widgets_init()
 
 void gui_widgets_halt()
 {
-	int i;
-
-	for (i = 0; categories[i].category != nullptr; ++i)
+	for (auto i = 0; categories[i].category != nullptr; ++i)
 	{
 		if (categories[i].ExitFunc != nullptr)
 			(*categories[i].ExitFunc)();
+
+		delete categories[i].selector;
+		delete categories[i].panel;
 	}
 
-	for (i = 0; categories[i].category != nullptr; ++i)
-		delete categories[i].selector;
 	delete panelFocusListener;
 	delete selectors;
 
@@ -1176,7 +1131,7 @@ void gui_widgets_halt()
 	delete gui_top;
 }
 
-void RefreshAllPanels()
+void refresh_all_panels()
 {
 	for (auto i = 0; categories[i].category != nullptr; ++i)
 	{
@@ -1185,7 +1140,7 @@ void RefreshAllPanels()
 	}
 }
 
-void DisableResume()
+void disable_resume()
 {
 	if (emulating)
 	{
@@ -1261,7 +1216,6 @@ void run_gui()
 		// Prepare everything for Reset of Amiga
 		//--------------------------------------------------
 		currprefs.nr_floppies = changed_prefs.nr_floppies;
-		screen_is_picasso = 0;
 
 		if (gui_rtarea_flags_onenter != gui_create_rtarea_flag(&changed_prefs))
 			quit_program = -UAE_RESET_HARD; // Hardreset required...

@@ -34,11 +34,59 @@ int dos_errno(void)
 #endif
 
 	default:
-		//write_log(("Unimplemented error %s\n", strerror(e)));
+		write_log(("Unimplemented error %s\n", strerror(e)));
 		return ERROR_NOT_IMPLEMENTED;
 	}
 }
 
+/* return supported combination */
+int fsdb_mode_supported(const a_inode* aino)
+{
+	int mask = aino->amigaos_mode;
+	return mask;
+}
+
+bool my_createshortcut(const char* source, const char* target, const char* description)
+{
+	return false;
+}
+
+bool my_resolvesoftlink(TCHAR* linkfile, int size, bool linkonly)
+{
+	return false;
+}
+
+void my_canonicalize_path(const TCHAR* path, TCHAR* out, int size)
+{
+	_tcsncpy(out, path, size);
+	out[size - 1] = 0;
+	return;
+}
+
+int my_issamevolume(const TCHAR* path1, const TCHAR* path2, TCHAR* path)
+{
+	TCHAR p1[MAX_DPATH];
+	TCHAR p2[MAX_DPATH];
+	unsigned int len, cnt;
+
+	my_canonicalize_path(path1, p1, sizeof p1 / sizeof(TCHAR));
+	my_canonicalize_path(path2, p2, sizeof p2 / sizeof(TCHAR));
+	len = _tcslen(p1);
+	if (len > _tcslen(p2))
+		len = _tcslen(p2);
+	if (_tcsnicmp(p1, p2, len))
+		return 0;
+	_tcscpy(path, p2 + len);
+	cnt = 0;
+	for (unsigned int i = 0; i < _tcslen(path); i++) {
+		if (path[i] == '\\' || path[i] == '/') {
+			path[i] = '/';
+			cnt++;
+		}
+	}
+	write_log(_T("'%s' (%s) matched with '%s' (%s), extra = '%s'\n"), path1, p1, path2, p2, path);
+	return cnt;
+}
 
 bool my_stat(const TCHAR *name, struct mystat *statbuf)
 {
@@ -108,8 +156,7 @@ bool my_utime(const TCHAR *name, struct mytimeval *tv)
 		gettimeofday(&time, &tz);
 		mtv.tv_sec = time.tv_sec + tz.tz_minuteswest;
 		mtv.tv_usec = time.tv_usec;
-	}
-	else {
+  } else {
 		mtv.tv_sec = tv->tv_sec;
 		mtv.tv_usec = tv->tv_usec;
 	}

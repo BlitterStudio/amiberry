@@ -1,7 +1,8 @@
-#include <cstdlib>
-#include <cstring>
-
+#include "sysconfig.h"
 #include "sysdeps.h"
+
+#include <ctype.h>
+#include <assert.h>
 
 #include "options.h"
 #include "uae.h"
@@ -18,8 +19,35 @@
 * Some code to put status information on the screen.
 */
 
-static const char* numbers = {
-	/* ugly  0123456789CHD%+-PNK */
+void statusline_getpos(int *x, int *y, int width, int height)
+{
+	int mx = statusline_get_multiplier();
+	int total_height = TD_TOTAL_HEIGHT * mx;
+	if (currprefs.osd_pos.x >= 20000) {
+		if (currprefs.osd_pos.x >= 30000)
+			*y = width * (currprefs.osd_pos.x - 30000) / 1000;
+		else
+			*y = width - (width * (30000 - currprefs.osd_pos.y) / 1000);
+	} else {
+		if (currprefs.osd_pos.x >= 0)
+			*x = currprefs.osd_pos.x;
+		else
+			*x = -currprefs.osd_pos.x + 1;
+	}
+	if (currprefs.osd_pos.y >= 20000) {
+		if (currprefs.osd_pos.y >= 30000)
+			*y = (height - total_height) * (currprefs.osd_pos.y - 30000) / 1000;
+		else
+			*y = (height - total_height) - ((height - total_height) * (30000 - currprefs.osd_pos.y) / 1000);
+	} else {
+		if (currprefs.osd_pos.y >= 0)
+			*y = height - total_height - currprefs.osd_pos.y;
+		else
+			*y = -currprefs.osd_pos.y + 1;
+	}
+}
+
+static const char *numbers = { /* ugly  0123456789CHD%+-PNK */
 	"+++++++--++++-+++++++++++++++++-++++++++++++++++++++++++++++++++++++++++++++-++++++-++++----++---+--------------+++++++++++++++++++++"
 	"+xxxxx+--+xx+-+xxxxx++xxxxx++x+-+x++xxxxx++xxxxx++xxxxx++xxxxx++xxxxx++xxxx+-+x++x+-+xxx++-+xx+-+x---+----------+xxxxx++x+++x++x++x++"
 	"+x+++x+--++x+-+++++x++++++x++x+++x++x++++++x++++++++++x++x+++x++x+++x++x++++-+x++x+-+x++x+--+x++x+--+x+----+++--+x---x++xx++x++x+x+++"
@@ -61,6 +89,32 @@ static uae_u32 rgbmuldiv(uae_u32 rgb, int mul, int div)
 	}
 	out |= rgb & 0xff000000;
 	return out;
+}
+
+static int statusline_mult[2];
+
+int statusline_set_multiplier(int width, int height)
+{
+	struct amigadisplay *ad = &adisplays;
+	int idx = ad->picasso_on ? 1 : 0;
+	int mult = currprefs.leds_on_screen_multiplier[idx];
+	if (!mult) {
+		mult = 1;
+	}
+	if (mult > 4) {
+		mult = 4;
+	}
+	statusline_mult[idx] = mult;
+	return mult;
+}
+
+int statusline_get_multiplier()
+{
+	struct amigadisplay *ad = &adisplays;
+	int idx = ad->picasso_on ? 1 : 0;
+	if (statusline_mult[idx] <= 0)
+		return 1;
+	return statusline_mult[idx];
 }
 
 void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u32 *rc, uae_u32 *gc, uae_u32 *bc, uae_u32 *alpha)
@@ -124,7 +178,7 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 		else if (led == LED_POWER)
 		{
 			pos = 3;
-			on_rgb = bpp == 2 ? ((gui_data.powerled_brightness * 10 / 16) + 0x33) << 16 : ((gui_data.powerled_brightness * 10 / 16) + 0x330000) << 4;
+			on_rgb = bpp == 2 ? ((gui_data.powerled_brightness * 10 / 16) + 0x330000) << 16 : ((gui_data.powerled_brightness * 10 / 16) + 0x000033) << 16;
 			on = 1;
 			off_rgb = bpp == 2 ? 0x330000 : 0x000033;
 		}
@@ -470,7 +524,7 @@ void statusline_vsync(void)
 	statusline_update_notification();
 }
 
-void statusline_single_erase(int monid, uae_u8* buf, int bpp, int y, int totalwidth)
+void statusline_single_erase(uae_u8* buf, int bpp, int y, int totalwidth)
 {
 	memset(buf, 0, bpp * totalwidth);
 }

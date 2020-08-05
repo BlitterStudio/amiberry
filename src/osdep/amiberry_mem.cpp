@@ -63,18 +63,14 @@ bool can_have_1gb()
 	sysinfo(&mem_info);
 	long long total_phys_mem = mem_info.totalram;
 	total_phys_mem *= mem_info.mem_unit;
-	// Do we have more than 1GB in the system?
-	if (total_phys_mem > 1024 * 1024 * 1024)
+	// Do we have more than 2GB in the system?
+	if (total_phys_mem > 2147483648LL)
 		return true;
 	return false;
 }
 
 void alloc_AmigaMem(void)
 {
-	int i;
-	uae_u64 total;
-	int max_allowed_mman;
-
 	free_AmigaMem();
 	set_expamem_z3_hack_mode(Z3MAPPING_AUTO);
 
@@ -225,7 +221,7 @@ static bool HandleA3000Mem(unsigned int lowsize, unsigned int highsize)
 
 static bool A3000MemAvailable(void)
 {
-	return (a3000_mem != MAP_FAILED);
+	return a3000_mem != MAP_FAILED;
 }
 
 bool uae_mman_info(addrbank* ab, struct uae_mman_data* md)
@@ -473,10 +469,7 @@ bool mapped_malloc(addrbank* ab)
 		write_log(_T("mapped_malloc with memory bank '%s' already allocated!?\n"), ab->name);
 	}
 	ab->allocated_size = 0;
-	ab->baseaddr_direct_r = NULL;
-	ab->baseaddr_direct_w = NULL;
-	ab->flags &= ~ABFLAG_MAPPED;
-	
+
 	if (ab->label && ab->label[0] == '*')
 	{
 		if (ab->start == 0 || ab->start == 0xffffffff)
@@ -487,15 +480,12 @@ bool mapped_malloc(addrbank* ab)
 	}
 
 	struct uae_mman_data md = {0};
-	uaecptr start = ab->start;
 	if (uae_mman_info(ab, &md))
 	{
-		start = md.start;
+		const auto start = md.start;
 		ab->baseaddr = regs.natmem_offset + start;
 	}
-	ab->startmask = start;
-	ab->startaccessmask = start & ab->mask;
-	
+
 	if (ab->baseaddr)
 	{
 		if (md.hasbarrier)
@@ -515,6 +505,10 @@ bool mapped_malloc(addrbank* ab)
 
 void mapped_free(addrbank* ab)
 {
+	ab->flags &= ~ABFLAG_MAPPED;
+	if (ab->baseaddr == nullptr)
+		return;
+	
 	if (ab->label != nullptr && !strcmp(ab->label, "filesys") && ab->baseaddr != nullptr)
 	{		
 		write_log("mapped_free(): 0x%08x - 0x%08x (0x%08x - 0x%08x) -> %s (%s)\n",
@@ -528,21 +522,23 @@ void mapped_free(addrbank* ab)
 
 void protect_roms(bool protect)
 {
-	if (protect) {
-		// protect only if JIT enabled, always allow unprotect
-		if (!currprefs.cachesize || currprefs.comptrustbyte || currprefs.comptrustword || currprefs.comptrustlong)
-			return;
-	}
+	//If this code is enabled, we can't switch back from JIT to nonJIT emulation...
+
+	//if (protect) {
+	//	// protect only if JIT enabled, always allow unprotect
+	//	if (!currprefs.cachesize || currprefs.comptrustbyte || currprefs.comptrustword || currprefs.comptrustlong)
+	//		return;
+	//}
 
 	// Protect all regions, which contains ROM
-	if (extendedkickmem_bank.baseaddr != NULL)
-		mprotect(extendedkickmem_bank.baseaddr, 0x80000, protect ? PROT_READ : PROT_READ | PROT_WRITE);
-	if (extendedkickmem2_bank.baseaddr != NULL)
-		mprotect(extendedkickmem2_bank.baseaddr, 0x80000, protect ? PROT_READ : PROT_READ | PROT_WRITE);
-	if (kickmem_bank.baseaddr != NULL)
-		mprotect(kickmem_bank.baseaddr, 0x80000, protect ? PROT_READ : PROT_READ | PROT_WRITE);
-	//if (rtarea_bank.baseaddr != NULL)
-	//	mprotect(rtarea_bank.baseaddr, RTAREA_SIZE, protect ? PROT_READ : PROT_READ | PROT_WRITE);
+	//if (extendedkickmem_bank.baseaddr != NULL)
+		//mprotect(extendedkickmem_bank.baseaddr, 0x80000, protect ? PROT_READ : PROT_READ | PROT_WRITE);
+	//if (extendedkickmem2_bank.baseaddr != NULL)
+		//mprotect(extendedkickmem2_bank.baseaddr, 0x80000, protect ? PROT_READ : PROT_READ | PROT_WRITE);
+	//if (kickmem_bank.baseaddr != NULL)
+		//mprotect(kickmem_bank.baseaddr, 0x80000, protect ? PROT_READ : PROT_READ | PROT_WRITE);
+	//if (rtarea != NULL)
+	//	mprotect(rtarea, RTAREA_SIZE, protect ? PROT_READ : PROT_READ | PROT_WRITE);
 	//if (filesysory != NULL)
 	//	mprotect(filesysory, 0x10000, protect ? PROT_READ : PROT_READ | PROT_WRITE);
 
@@ -550,14 +546,13 @@ void protect_roms(bool protect)
 
 static int doinit_shm(void)
 {
-	changed_prefs.z3autoconfig_start = currprefs.z3autoconfig_start = 0;
 	expansion_scan_autoconfig(&currprefs, true);
+
 	return 1;
 }
 
 static uae_u32 oz3fastmem_size[MAX_RAM_BOARDS];
 static uae_u32 ofastmem_size[MAX_RAM_BOARDS];
-static uae_u32 oz3chipmem_size;
 static uae_u32 ortgmem_size[MAX_RTG_BOARDS];
 static int ortgmem_type[MAX_RTG_BOARDS];
 
@@ -579,7 +574,7 @@ bool init_shm(void)
 		if (ortgmem_type[i] != changed_prefs.rtgboards[i].rtgmem_type)
 			changed = true;
 	}
-	if (!changed && oz3chipmem_size == changed_prefs.z3chipmem_size)
+	if (!changed)
 		return true;
 
 	for (auto i = 0; i < MAX_RAM_BOARDS; i++)
@@ -592,8 +587,7 @@ bool init_shm(void)
 		ortgmem_size[i] = changed_prefs.rtgboards[i].rtgmem_size;
 		ortgmem_type[i] = changed_prefs.rtgboards[i].rtgmem_type;
 	}
-	oz3chipmem_size = changed_prefs.z3chipmem_size;
-	
+
 	if (doinit_shm() < 0)
 		return false;
 

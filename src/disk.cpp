@@ -2036,11 +2036,13 @@ static void drive_fill_bigbuf (drive * drv, int force)
 #ifdef CAPS
 		caps_loadtrack (drv->bigmfmbuf, drv->tracktiming, drv - floppy, tr, &drv->tracklen, &drv->multi_revolution, &drv->skipoffset, &drv->lastrev, retrytrack);
 #endif
+
 	} else if (drv->filetype == ADF_SCP) {
 
 #ifdef SCP
 		scp_loadtrack (drv->bigmfmbuf, drv->tracktiming, drv - floppy, tr, &drv->tracklen, &drv->multi_revolution, &drv->skipoffset, &drv->lastrev, retrytrack);
 #endif
+
 	} else if (drv->filetype == ADF_FDI) {
 
 #ifdef FDI2RAW

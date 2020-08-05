@@ -368,7 +368,7 @@ static void CreateFilesysHardfileLoop()
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
 		// Finally we update the screen.
-		UpdateGuiScreen();
+		update_gui_screen();
 	}
 }
 
@@ -385,7 +385,7 @@ bool CreateFilesysHardfile()
 
 	CreateDefaultDevicename(tmp);
 	txtDevice->setText(tmp);
-	strroot.assign(currentDir);
+	strroot.assign(current_dir);
 	txtPath->setText(strroot);
 	fileSelected = false;
 
@@ -395,7 +395,7 @@ bool CreateFilesysHardfile()
 	// Prepare the screen once
 	uae_gui->logic();
 	uae_gui->draw();
-	UpdateGuiScreen();
+	update_gui_screen();
 
 	while (!dialogFinished)
 	{
@@ -446,14 +446,14 @@ bool CreateFilesysHardfile()
 		ci.controller_type = 0;
 		ci.controller_type_unit = 0;
 		ci.controller_unit = 0;
-		ci.controller_media_type = 0;
 		ci.unit_feature_level = 1;
 		ci.readonly = false;
 		auto* const uci = add_filesys_config(&changed_prefs, -1, &ci);
 		if (uci)
 		{
 			auto* const hfd = get_hardfile_data(uci->configoffset);
-			hardfile_media_change(hfd, &ci, true, false);
+			if (hfd)
+				hardfile_media_change(hfd, &ci, true, false);
 		}
 	}
 

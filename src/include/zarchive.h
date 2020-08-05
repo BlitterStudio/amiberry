@@ -8,63 +8,64 @@ typedef uae_s64 (*ZFILEWRITE)(const void*, uae_u64, uae_u64, struct zfile*);
 typedef uae_s64 (*ZFILESEEK)(struct zfile*, uae_s64, int);
 
 struct zfile {
-  TCHAR *name;
-  TCHAR *zipname;
-  TCHAR *mode;
+    TCHAR *name;
+    TCHAR *zipname;
+    TCHAR *mode;
 	TCHAR *originalname;
-  FILE *f; // real file handle if physical file
-  uae_u8 *data; // unpacked data
-  int dataseek; // use seek position even if real file
+    FILE *f; // real file handle if physical file
+    uae_u8 *data; // unpacked data
+    int dataseek; // use seek position even if real file
 	struct zfile *archiveparent; // set if parent is archive and this has not yet been unpacked (datasize < size)
 	int archiveid;
-  uae_s64 size; // real size
+    uae_s64 size; // real size
 	uae_s64 datasize; // available size (not yet unpacked completely?)
 	uae_s64 allocsize; // memory allocated before realloc() needed again
-  uae_s64 seek; // seek position
-  int deleteafterclose;
-  int textmode;
-  struct zfile *next;
-  int zfdmask;
-  struct zfile *parent;
-  uae_u64 offset; // byte offset from parent file
-  int opencnt;
-  ZFILEREAD zfileread;
-  ZFILEWRITE zfilewrite;
-  ZFILESEEK zfileseek;
-  void *userdata;
-  int useparent;
+    uae_s64 seek; // seek position
+    int deleteafterclose;
+    int textmode;
+    struct zfile *next;
+    int zfdmask;
+    struct zfile *parent;
+    uae_u64 offset; // byte offset from parent file
+    int opencnt;
+    ZFILEREAD zfileread;
+    ZFILEWRITE zfilewrite;
+    ZFILESEEK zfileseek;
+    void *userdata;
+    int useparent;
 };
 
 #define ZNODE_FILE 0
 #define ZNODE_DIR 1
 #define ZNODE_VDIR -1
 struct znode {
-  int type;
-  struct znode *sibling;
-  struct znode *child;
-  struct zvolume *vchild;
-  struct znode *parent;
-  struct zvolume *volume;
-  struct znode *next;
-  struct znode *prev;
-  struct znode *vfile; // points to real file when this node is virtual directory
-  TCHAR *name;
-  TCHAR *fullname;
-  uae_s64 size;
-  struct zfile *f;
-  TCHAR *comment;
-  int flags;
-  struct mytimeval mtime;
-  /* decompressor specific */
-  unsigned int offset;
-  unsigned int offset2;
-  unsigned int method;
-  unsigned int packedsize;
+    int type;
+    struct znode *sibling;
+    struct znode *child;
+    struct zvolume *vchild;
+    struct znode *parent;
+    struct zvolume *volume;
+    struct znode *next;
+    struct znode *prev;
+    struct znode *vfile; // points to real file when this node is virtual directory
+    TCHAR *name;
+    TCHAR *fullname;
+    uae_s64 size;
+    struct zfile *f;
+    TCHAR *comment;
+    int flags;
+    struct mytimeval mtime;
+    /* decompressor specific */
+    unsigned int offset;
+    unsigned int offset2;
+    unsigned int method;
+    unsigned int packedsize;
 };
 
 struct zvolume
 {
     struct zfile *archive;
+    bool autofree;
     void *handle;
     struct znode root;
     struct zvolume *next;

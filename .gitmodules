@@ -4,6 +4,3 @@
 [submodule "external/capsimg"]
 	path = external/capsimg
 	url = https://github.com/FrodeSolheim/capsimg
-[submodule "external/libgo2"]
-	path = external/libgo2
-	url = https://github.com/OtherCrashOverride/libgo2

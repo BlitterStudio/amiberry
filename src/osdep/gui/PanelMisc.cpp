@@ -1,14 +1,14 @@
-#include <string.h>
+#include <cstring>
 
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
-#include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
 
 #include "sysdeps.h"
 #include "options.h"
 #include "gui_handling.h"
+#include "statusline.h"
 
 static gcn::CheckBox* chkRetroArchQuit;
 static gcn::CheckBox* chkRetroArchMenu;
@@ -16,10 +16,13 @@ static gcn::CheckBox* chkRetroArchReset;
 //static gcn::CheckBox* chkRetroArchSaveState;
 
 static gcn::CheckBox* chkStatusLine;
+static gcn::CheckBox* chkStatusLineRtg;
 static gcn::CheckBox* chkShowGUI;
-
+static gcn::CheckBox* chkMouseUntrap;
 static gcn::CheckBox* chkBSDSocket;
 static gcn::CheckBox* chkMasterWP;
+static gcn::CheckBox* chkClipboardSharing;
+static gcn::CheckBox* chkAllowHostRun;
 
 static gcn::Label* lblNumLock;
 static gcn::DropDown* cboKBDLed_num;
@@ -59,7 +62,7 @@ public:
 
 	std::string getElementAt(int i) override
 	{
-		if (i < 0 || i >= values.size())
+		if (i < 0 || i >= static_cast<int>(values.size()))
 			return "---";
 		return values[i];
 	}
@@ -74,10 +77,25 @@ public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (actionEvent.getSource() == chkStatusLine)
-			changed_prefs.leds_on_screen = chkStatusLine->isSelected();
+		{
+			if (chkStatusLine->isSelected())
+				changed_prefs.leds_on_screen = changed_prefs.leds_on_screen | STATUSLINE_CHIPSET;
+			else
+				changed_prefs.leds_on_screen = changed_prefs.leds_on_screen & ~STATUSLINE_CHIPSET;
+		}
+		else if (actionEvent.getSource() == chkStatusLineRtg)
+		{
+			if (chkStatusLineRtg->isSelected())
+				changed_prefs.leds_on_screen = changed_prefs.leds_on_screen | STATUSLINE_RTG;
+			else
+				changed_prefs.leds_on_screen = changed_prefs.leds_on_screen & ~STATUSLINE_RTG;
+		}
 
 		else if (actionEvent.getSource() == chkShowGUI)
 			changed_prefs.start_gui = chkShowGUI->isSelected();
+
+		else if (actionEvent.getSource() == chkMouseUntrap)
+			changed_prefs.input_mouse_untrap = chkMouseUntrap->isSelected();
 
 		else if (actionEvent.getSource() == chkRetroArchQuit)
 		{
@@ -110,6 +128,12 @@ public:
 			RefreshPanelFloppy();
 		}
 
+		else if (actionEvent.getSource() == chkClipboardSharing)
+			changed_prefs.clipboard_sharing = chkClipboardSharing->isSelected();
+
+		else if (actionEvent.getSource() == chkAllowHostRun)
+			changed_prefs.allow_host_run = chkAllowHostRun->isSelected();
+		
 		else if (actionEvent.getSource() == cboKBDLed_num)
 			changed_prefs.kbd_led_num = cboKBDLed_num->getSelected() - 1;
 
@@ -165,14 +189,22 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 {
 	miscActionListener = new MiscActionListener();
 
-	chkStatusLine = new gcn::CheckBox("Status Line");
-	chkStatusLine->setId("StatusLine");
+	chkStatusLine = new gcn::CheckBox("Status Line native");
+	chkStatusLine->setId("chkStatusLineNative");
 	chkStatusLine->addActionListener(miscActionListener);
+
+	chkStatusLineRtg = new gcn::CheckBox("Status Line RTG");
+	chkStatusLineRtg->setId("chkStatusLineRtg");
+	chkStatusLineRtg->addActionListener(miscActionListener);
 
 	chkShowGUI = new gcn::CheckBox("Show GUI on startup");
 	chkShowGUI->setId("ShowGUI");
 	chkShowGUI->addActionListener(miscActionListener);
 
+	chkMouseUntrap = new gcn::CheckBox("Untrap = middle button");
+	chkMouseUntrap->setId("chkMouseUntrap");
+	chkMouseUntrap->addActionListener(miscActionListener);
+	
 	chkRetroArchQuit = new gcn::CheckBox("Use RetroArch Quit Button");
 	chkRetroArchQuit->setId("RetroArchQuit");
 	chkRetroArchQuit->addActionListener(miscActionListener);
@@ -197,6 +229,14 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	chkMasterWP->setId("MasterWP");
 	chkMasterWP->addActionListener(miscActionListener);
 
+	chkClipboardSharing = new gcn::CheckBox("Clipboard sharing");
+	chkClipboardSharing->setId("chkClipboardSharing");
+	chkClipboardSharing->addActionListener(miscActionListener);
+
+	chkAllowHostRun = new gcn::CheckBox("Allow host-run");
+	chkAllowHostRun->setId("chkAllowHostRun");
+	chkAllowHostRun->addActionListener(miscActionListener);
+	
 	lblNumLock = new gcn::Label("NumLock:");
 	lblNumLock->setAlignment(gcn::Graphics::RIGHT);
 	cboKBDLed_num = new gcn::DropDown(&KBDLedList);
@@ -264,8 +304,9 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	auto posY = DISTANCE_BORDER;
 	category.panel->add(chkStatusLine, DISTANCE_BORDER, posY);
 	posY += chkStatusLine->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(chkStatusLineRtg, DISTANCE_BORDER, posY);
+	posY += chkStatusLineRtg->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(chkShowGUI, DISTANCE_BORDER, posY);
-	posY += chkShowGUI->getHeight() + DISTANCE_NEXT_Y;
 
 	posY = DISTANCE_BORDER;
 	auto posX = 300;
@@ -277,10 +318,16 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	posY += chkRetroArchReset->getHeight() + DISTANCE_NEXT_Y;
 	//category.panel->add(chkRetroArchSavestate, posX + DISTANCE_BORDER, posY);
 
+	category.panel->add(chkMouseUntrap, DISTANCE_BORDER, posY);
+	posY += chkMouseUntrap->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(chkBSDSocket, DISTANCE_BORDER, posY);
 	posY += chkBSDSocket->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(chkMasterWP, DISTANCE_BORDER, posY);
-	posY += chkMasterWP->getHeight() + DISTANCE_NEXT_Y * 2;
+	posY += chkMasterWP->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(chkClipboardSharing, DISTANCE_BORDER, posY);
+	posY += chkClipboardSharing->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(chkAllowHostRun, DISTANCE_BORDER, posY);
+	posY += chkAllowHostRun->getHeight() + DISTANCE_NEXT_Y * 2;
 
 	const auto column2_x = DISTANCE_BORDER + 290;
 
@@ -316,7 +363,9 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 void ExitPanelMisc()
 {
 	delete chkStatusLine;
+	delete chkStatusLineRtg;
 	delete chkShowGUI;
+	delete chkMouseUntrap;
 
 	delete chkRetroArchQuit;
 	delete chkRetroArchMenu;
@@ -325,6 +374,8 @@ void ExitPanelMisc()
 
 	delete chkBSDSocket;
 	delete chkMasterWP;
+	delete chkClipboardSharing;
+	delete chkAllowHostRun;
 
 	delete lblScrLock;
 	delete lblNumLock;
@@ -352,8 +403,10 @@ void ExitPanelMisc()
 
 void RefreshPanelMisc()
 {
-	chkStatusLine->setSelected(changed_prefs.leds_on_screen);
+	chkStatusLine->setSelected(changed_prefs.leds_on_screen & STATUSLINE_CHIPSET);
+	chkStatusLineRtg->setSelected(changed_prefs.leds_on_screen & STATUSLINE_RTG);
 	chkShowGUI->setSelected(changed_prefs.start_gui);
+	chkMouseUntrap->setSelected(changed_prefs.input_mouse_untrap);
 
 	chkRetroArchQuit->setSelected(changed_prefs.use_retroarch_quit);
 	chkRetroArchMenu->setSelected(changed_prefs.use_retroarch_menu);
@@ -363,6 +416,8 @@ void RefreshPanelMisc()
 	chkBSDSocket->setEnabled(!emulating);
 	chkBSDSocket->setSelected(changed_prefs.socket_emu);
 	chkMasterWP->setSelected(changed_prefs.floppy_read_only);
+	chkClipboardSharing->setSelected(changed_prefs.clipboard_sharing);
+	chkAllowHostRun->setSelected(changed_prefs.allow_host_run);
 
 	cboKBDLed_num->setSelected(changed_prefs.kbd_led_num + 1);
 	cboKBDLed_scr->setSelected(changed_prefs.kbd_led_scr + 1);

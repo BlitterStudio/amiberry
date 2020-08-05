@@ -29,8 +29,8 @@ static gcn::Button* cmdCreateDDDisk;
 static gcn::Button* cmdCreateHDDisk;
 
 static const char* diskfile_filter[] = {".adf", ".adz", ".fdi", ".ipf", ".zip", ".dms", ".gz", ".xz", "\0"};
-static const char* drive_speed_list[] = {"100% (compatible)", "200%", "400%", "800%"};
-static const int drive_speed_values[] = {100, 200, 400, 800};
+static const char* drive_speed_list[] = {"Turbo", "100% (compatible)", "200%", "400%", "800%"};
+static const int drive_speed_values[] = {0, 100, 200, 400, 800};
 
 static void AdjustDropDownControls();
 static bool bLoadConfigForDisk = false;
@@ -191,7 +191,7 @@ public:
 				if (strlen(changed_prefs.floppyslots[i].df) > 0)
 					strncpy(tmp, changed_prefs.floppyslots[i].df, MAX_DPATH);
 				else
-					strncpy(tmp, currentDir, MAX_DPATH);
+					strncpy(tmp, current_dir, MAX_DPATH);
 				if (SelectFile("Select disk image file", tmp, diskfile_filter))
 				{
 					if (strncmp(changed_prefs.floppyslots[i].df, tmp, MAX_DPATH) != 0)
@@ -199,13 +199,13 @@ public:
 						strncpy(changed_prefs.floppyslots[i].df, tmp, MAX_DPATH);
 						disk_insert(i, tmp);
 						AddFileToDiskList(tmp, 1);
-						extractPath(tmp, currentDir);
+						extract_path(tmp, current_dir);
 
 						if (i == 0 && chkLoadConfig->isSelected())
 						{
 							// Search for config of disk
-							extractFileName(changed_prefs.floppyslots[i].df, tmp);
-							removeFileExtension(tmp);
+							extract_filename(changed_prefs.floppyslots[i].df, tmp);
+							remove_file_extension(tmp);
 							LoadConfigByName(tmp);
 						}
 						AdjustDropDownControls();
@@ -261,8 +261,8 @@ public:
 								// Search for config of disk
 								char tmp[MAX_DPATH];
 
-								extractFileName(changed_prefs.floppyslots[i].df, tmp);
-								removeFileExtension(tmp);
+								extract_filename(changed_prefs.floppyslots[i].df, tmp);
+								remove_file_extension(tmp);
 								LoadConfigByName(tmp);
 							}
 						}
@@ -283,7 +283,7 @@ class DriveSpeedSliderActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		changed_prefs.floppy_speed = drive_speed_values[int(sldDriveSpeed->getValue())];
+		changed_prefs.floppy_speed = drive_speed_values[static_cast<int>(sldDriveSpeed->getValue())];
 		RefreshPanelFloppy();
 	}
 };
@@ -304,8 +304,8 @@ public:
 			char filename[MAX_DPATH];
 			char diskname[MAX_DPATH];
 
-			extractFileName(changed_prefs.floppyslots[0].df, diskname);
-			removeFileExtension(diskname);
+			extract_filename(changed_prefs.floppyslots[0].df, diskname);
+			remove_file_extension(diskname);
 
 			get_configuration_path(filename, MAX_DPATH);
 			strncat(filename, diskname, MAX_DPATH - 1);
@@ -331,15 +331,15 @@ public:
 			// Create 3.5'' DD Disk
 			char tmp[MAX_DPATH];
 			char diskname[MAX_DPATH];
-			strncpy(tmp, currentDir, MAX_DPATH);
+			strncpy(tmp, current_dir, MAX_DPATH);
 			if (SelectFile("Create 3.5'' DD disk file", tmp, diskfile_filter, true))
 			{
-				extractFileName(tmp, diskname);
-				removeFileExtension(diskname);
+				extract_filename(tmp, diskname);
+				remove_file_extension(diskname);
 				diskname[31] = '\0';
 				disk_creatediskfile(&changed_prefs, tmp, 0, DRV_35_DD, -1, diskname, false, false, nullptr);
 				AddFileToDiskList(tmp, 1);
-				extractPath(tmp, currentDir);
+				extract_path(tmp, current_dir);
 			}
 			cmdCreateDDDisk->requestFocus();
 		}
@@ -348,15 +348,15 @@ public:
 			// Create 3.5'' HD Disk
 			char tmp[MAX_DPATH];
 			char diskname[MAX_DPATH];
-			strcpy(tmp, currentDir);
+			strcpy(tmp, current_dir);
 			if (SelectFile("Create 3.5'' HD disk file", tmp, diskfile_filter, true))
 			{
-				extractFileName(tmp, diskname);
-				removeFileExtension(diskname);
+				extract_filename(tmp, diskname);
+				remove_file_extension(diskname);
 				diskname[31] = '\0';
 				disk_creatediskfile(&changed_prefs, tmp, 0, DRV_35_HD, -1, diskname, false, false, nullptr);
 				AddFileToDiskList(tmp, 1);
-				extractPath(tmp, currentDir);
+				extract_path(tmp, current_dir);
 			}
 			cmdCreateHDDisk->requestFocus();
 		}
@@ -371,7 +371,7 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 	int posX;
 	auto posY = DISTANCE_BORDER;
 	int i;
-	const auto textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER - SMALL_BUTTON_WIDTH - DISTANCE_NEXT_X;
+	const auto textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER;
 
 	dfxCheckActionListener = new DFxCheckActionListener();
 	driveTypeActionListener = new DriveTypeActionListener();
@@ -437,29 +437,29 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 	}
 
 	lblDriveSpeed = new gcn::Label("Floppy Drive Emulation Speed:");
-	sldDriveSpeed = new gcn::Slider(0, 3);
+	sldDriveSpeed = new gcn::Slider(0, 4);
 	sldDriveSpeed->setSize(110, SLIDER_HEIGHT);
 	sldDriveSpeed->setBaseColor(gui_baseCol);
 	sldDriveSpeed->setMarkerLength(20);
 	sldDriveSpeed->setStepLength(1);
 	sldDriveSpeed->setId("DriveSpeed");
 	sldDriveSpeed->addActionListener(driveSpeedSliderActionListener);
-	lblDriveSpeedInfo = new gcn::Label(drive_speed_list[0]);
+	lblDriveSpeedInfo = new gcn::Label(drive_speed_list[1]);
 
 	cmdSaveForDisk = new gcn::Button("Save config for disk");
-	cmdSaveForDisk->setSize(cmdSaveForDisk->getWidth(), BUTTON_HEIGHT);
+	cmdSaveForDisk->setSize(cmdSaveForDisk->getWidth() + 10, BUTTON_HEIGHT);
 	cmdSaveForDisk->setBaseColor(gui_baseCol);
 	cmdSaveForDisk->setId("SaveForDisk");
 	cmdSaveForDisk->addActionListener(saveForDiskActionListener);
 
 	cmdCreateDDDisk = new gcn::Button("Create 3.5'' DD disk");
-	cmdCreateDDDisk->setSize(cmdCreateDDDisk->getWidth(), BUTTON_HEIGHT);
+	cmdCreateDDDisk->setSize(cmdCreateDDDisk->getWidth() + 10, BUTTON_HEIGHT);
 	cmdCreateDDDisk->setBaseColor(gui_baseCol);
 	cmdCreateDDDisk->setId("CreateDD");
 	cmdCreateDDDisk->addActionListener(createDiskActionListener);
 
 	cmdCreateHDDisk = new gcn::Button("Create 3.5'' HD disk");
-	cmdCreateHDDisk->setSize(cmdCreateHDDisk->getWidth(), BUTTON_HEIGHT);
+	cmdCreateHDDisk->setSize(cmdCreateHDDisk->getWidth() + 10, BUTTON_HEIGHT);
 	cmdCreateHDDisk->setBaseColor(gui_baseCol);
 	cmdCreateHDDisk->setId("CreateHD");
 	cmdCreateHDDisk->addActionListener(createDiskActionListener);
@@ -468,11 +468,11 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 	{
 		posX = DISTANCE_BORDER;
 		category.panel->add(chkDFx[i], posX, posY);
-		posX += 80;
+		posX += chkDFx[i]->getWidth() + DISTANCE_NEXT_X * 2;
 		category.panel->add(cboDFxType[i], posX, posY);
-		posX += cboDFxType[i]->getWidth() + 2 * DISTANCE_NEXT_X;
+		posX += cboDFxType[i]->getWidth() + DISTANCE_NEXT_X * 2;
 		category.panel->add(chkDFxWriteProtect[i], posX, posY);
-		posX += chkDFxWriteProtect[i]->getWidth() + 4 * DISTANCE_NEXT_X;
+		posX += 3 + chkDFxWriteProtect[i]->getWidth() + 7 * DISTANCE_NEXT_X;
 		//category.panel->add(cmdDFxInfo[i], posX, posY); //TODO disabled?
 		//posX += cmdDFxInfo[i]->getWidth() + DISTANCE_NEXT_X;
 		category.panel->add(cmdDFxEject[i], posX, posY);
@@ -591,7 +591,7 @@ void RefreshPanelFloppy()
 
 	chkLoadConfig->setSelected(bLoadConfigForDisk);
 
-	for (i = 0; i < 4; ++i)
+	for (i = 0; i <= 4; ++i)
 	{
 		if (changed_prefs.floppy_speed == drive_speed_values[i])
 		{

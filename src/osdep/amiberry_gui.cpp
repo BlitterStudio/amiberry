@@ -1,9 +1,8 @@
-#include <stdio.h>
+#include <cstdio>
 #include <strings.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <stdbool.h>
+#include <cstring>
+#include <cstdlib>
+#include <cstdarg>
 
 #include <guisan.hpp>
 #include <guisan/sdl.hpp>
@@ -22,6 +21,8 @@
 #include "sounddep/sound.h"
 #include "savestate.h"
 #include "blkdev.h"
+#include "memory.h"
+#include "amiberry_gfx.h"
 
 #ifdef AMIBERRY
 #include <linux/kd.h>
@@ -139,7 +140,7 @@ void ClearAvailableROMList()
 {
 	while (!lstAvailableROMs.empty())
 	{
-		const auto tmp = lstAvailableROMs[0];
+		auto* const tmp = lstAvailableROMs[0];
 		lstAvailableROMs.erase(lstAvailableROMs.begin());
 		delete tmp;
 	}
@@ -148,7 +149,7 @@ void ClearAvailableROMList()
 static void addrom(struct romdata* rd, const char* path)
 {
 	char tmpName[MAX_DPATH];
-	const auto tmp = new AvailableROM();
+	auto* const tmp = new AvailableROM();
 	getromname(rd, tmpName);
 	strncpy(tmp->Name, tmpName, MAX_DPATH - 1);
 	if (path != nullptr)
@@ -191,7 +192,7 @@ static struct romdata* scan_single_rom_2(struct zfile* f)
 	{
 		zfile_fseek(f, 0, SEEK_SET);
 	}
-	uae_u8* rombuf = xcalloc(uae_u8, size);
+	auto* rombuf = xcalloc(uae_u8, size);
 	if (!rombuf)
 		return nullptr;
 	zfile_fread(rombuf, 1, size, f);
@@ -222,7 +223,7 @@ static int isromext(char* path)
 {
 	if (!path)
 		return 0;
-	auto ext = strrchr(path, '.');
+	auto* ext = strrchr(path, '.');
 	if (!ext)
 		return 0;
 	ext++;
@@ -240,11 +241,11 @@ static int isromext(char* path)
 
 static int scan_rom_2(struct zfile* f, void* dummy)
 {
-	const auto path = zfile_getname(f);
+	auto* const path = zfile_getname(f);
 
 	if (!isromext(path))
 		return 0;
-	const auto rd = scan_single_rom_2(f);
+	auto* const rd = scan_single_rom_2(f);
 	if (rd)
 		addrom(rd, path);
 	return 0;
@@ -275,7 +276,7 @@ void RescanROMs()
 	get_rom_path(path, MAX_DPATH);
 
 	load_keyring(&changed_prefs, path);
-	ReadDirectory(path, nullptr, &files);
+	read_directory(path, nullptr, &files);
 	for (auto & file : files)
 	{
 		char tmppath[MAX_DPATH];
@@ -286,7 +287,7 @@ void RescanROMs()
 
 	auto id = 1;
 	for (;;) {
-		auto rd = getromdatabyid(id);
+		auto* rd = getromdatabyid(id);
 		if (!rd)
 			break;
 		if (rd->crc32 == 0xffffffff && strncmp(rd->model, "AROS", 4) == 0)
@@ -302,12 +303,11 @@ static void ClearConfigFileList()
 {
 	while (!ConfigFilesList.empty())
 	{
-		const auto tmp = ConfigFilesList[0];
+		auto* const tmp = ConfigFilesList[0];
 		ConfigFilesList.erase(ConfigFilesList.begin());
 		delete tmp;
 	}
 }
-
 
 void ReadConfigFileList(void)
 {
@@ -320,36 +320,36 @@ void ReadConfigFileList(void)
 
 	// Read rp9 files
 	get_rp9_path(path, MAX_DPATH);
-	ReadDirectory(path, nullptr, &files);
+	read_directory(path, nullptr, &files);
 	FilterFiles(&files, filter_rp9);
 	for (auto & file : files)
 	{
-		auto tmp = new ConfigFileInfo();
+		auto* tmp = new ConfigFileInfo();
 		strncpy(tmp->FullPath, path, MAX_DPATH - 1);
 		strncat(tmp->FullPath, file.c_str(), MAX_DPATH - 1);
 		strncpy(tmp->Name, file.c_str(), MAX_DPATH - 1);
-		removeFileExtension(tmp->Name);
+		remove_file_extension(tmp->Name);
 		strncpy(tmp->Description, _T("rp9"), MAX_DPATH - 1);
 		ConfigFilesList.emplace_back(tmp);
 	}
 
 	// Read standard config files
 	get_configuration_path(path, MAX_DPATH);
-	ReadDirectory(path, nullptr, &files);
+	read_directory(path, nullptr, &files);
 	FilterFiles(&files, filter_uae);
 	for (auto & file : files)
 	{
-		auto tmp = new ConfigFileInfo();
+		auto* tmp = new ConfigFileInfo();
 		strncpy(tmp->FullPath, path, MAX_DPATH - 1);
 		strncat(tmp->FullPath, file.c_str(), MAX_DPATH - 1);
 		strncpy(tmp->Name, file.c_str(), MAX_DPATH - 1);
-		removeFileExtension(tmp->Name);
+		remove_file_extension(tmp->Name);
 		// If the user has many (thousands) of configs, this will take a long time
-		if (read_config_descriptions)
+		if (amiberry_options.read_config_descriptions)
 		{
-			struct uae_prefs *p = cfgfile_open(tmp->FullPath, NULL);
+			auto p = cfgfile_open(tmp->FullPath, NULL);
 			if (p) {
-				cfgfile_get_description(p, NULL, tmp->Description, NULL);
+				cfgfile_get_description(p, NULL, tmp->Description, NULL, NULL, NULL, NULL, NULL);
 				cfgfile_close(p);
 			}
 		}
@@ -372,54 +372,31 @@ static void clearallkeys (void)
 	inputdevice_updateconfig (NULL, &changed_prefs);
 }
 
-void setmouseactive(int active)
-{
-	if (active) {
-		inputdevice_acquire(TRUE);
-	} else {
-		inputdevice_acquire (FALSE);
-		inputdevice_releasebuttons();
-	}
-}
-
 static void prefs_to_gui()
 {
 	/* filesys hack */
 	changed_prefs.mountitems = currprefs.mountitems;
 	memcpy(&changed_prefs.mountconfig, &currprefs.mountconfig, MOUNT_CONFIG_SIZE * sizeof(struct uaedev_config_info));
+	update_win_fs_mode(&currprefs);
 }
-
 
 static void gui_to_prefs(void)
 {
+	if (quit_program == -UAE_RESET_HARD) {
+		memory_hardreset(2);
+	}
 	/* filesys hack */
 	currprefs.mountitems = changed_prefs.mountitems;
 	memcpy(&currprefs.mountconfig, &changed_prefs.mountconfig, MOUNT_CONFIG_SIZE * sizeof(struct uaedev_config_info));
 	fixup_prefs(&changed_prefs, true);
+	update_win_fs_mode(&changed_prefs);
 }
-
 
 static void after_leave_gui()
 {
-	// Check if we have to set or clear autofire
-	const auto new_af = changed_prefs.input_autofire_linecnt == 0 ? 0 : 1;
-	auto update = 0;
-
-	for (auto num = 0; num < 2; ++num)
-	{
-		if (changed_prefs.jports[num].id < JSEM_MICE && changed_prefs.jports[num].autofire != new_af)
-		{
-			changed_prefs.jports[num].autofire = new_af;
-			update = 1;
-		}
-	}
-	if (update)
-		inputdevice_updateconfig(nullptr, &changed_prefs);
-
 	inputdevice_copyconfig(&changed_prefs, &currprefs);
 	inputdevice_config_change_test();
 }
-
 
 int gui_init()
 {
@@ -438,7 +415,6 @@ int gui_init()
 		ret = -2; // Quit without start of emulator
 
 	inputdevice_acquire (TRUE);
-	update_display(&changed_prefs);
 
 	after_leave_gui();
 	emulating = 1;
@@ -454,12 +430,10 @@ void gui_exit()
 	ClearAvailableROMList();
 }
 
-
 void gui_purge_events()
 {
 	keybuf_init();
 }
-
 
 int gui_update()
 {
@@ -469,14 +443,14 @@ int gui_update()
 	get_screenshot_path(screenshot_filename, MAX_DPATH - 1);
 
 	if (strlen(currprefs.floppyslots[0].df) > 0)
-		extractFileName(currprefs.floppyslots[0].df, tmp);
+		extract_filename(currprefs.floppyslots[0].df, tmp);
 	else
 		strncpy(tmp, last_loaded_config, MAX_DPATH - 1);
 
 	strncat(savestate_fname, tmp, MAX_DPATH - 1);
 	strncat(screenshot_filename, tmp, MAX_DPATH - 1);
-	removeFileExtension(savestate_fname);
-	removeFileExtension(screenshot_filename);
+	remove_file_extension(savestate_fname);
+	remove_file_extension(screenshot_filename);
 
   switch(currentStateNum)
   {
@@ -492,13 +466,36 @@ int gui_update()
   		strncat(savestate_fname,"-3.uss", MAX_DPATH - 1);
   		strncat(screenshot_filename,"-3.png", MAX_DPATH - 1);
   		break;
+	case 4:
+		strncat(savestate_fname, "-4.uss", MAX_DPATH - 1);
+		strncat(screenshot_filename, "-4.png", MAX_DPATH - 1);
+		break;
+	case 5:
+		strncat(savestate_fname, "-5.uss", MAX_DPATH - 1);
+		strncat(screenshot_filename, "-5.png", MAX_DPATH - 1);
+		break;
+	case 6:
+		strncat(savestate_fname, "-6.uss", MAX_DPATH - 1);
+		strncat(screenshot_filename, "-6.png", MAX_DPATH - 1);
+		break;
+	case 7:
+		strncat(savestate_fname, "-7.uss", MAX_DPATH - 1);
+		strncat(screenshot_filename, "-7.png", MAX_DPATH - 1);
+		break;
+	case 8:
+		strncat(savestate_fname, "-8.uss", MAX_DPATH - 1);
+		strncat(screenshot_filename, "-8.png", MAX_DPATH - 1);
+		break;
+	case 9:
+		strncat(savestate_fname, "-9.uss", MAX_DPATH - 1);
+		strncat(screenshot_filename, "-9.png", MAX_DPATH - 1);
+		break;
     default: 
 	   	strncat(savestate_fname,".uss", MAX_DPATH - 1);
   		strncat(screenshot_filename,".png", MAX_DPATH - 1);
   }
   return 0;
 }
-
 
 void gui_display(int shortcut)
 {
@@ -769,8 +766,8 @@ bool DevicenameExists(const char* name)
 {
 	for (auto i = 0; i < MAX_HD_DEVICES; ++i)
 	{
-		auto uci = &changed_prefs.mountconfig[i];
-		const auto ci = &uci->ci;
+		auto* uci = &changed_prefs.mountconfig[i];
+		auto* const ci = &uci->ci;
 
 		if (ci->devname[0])
 		{
@@ -813,7 +810,7 @@ int tweakbootpri(int bp, int ab, int dnm)
 bool hardfile_testrdb(const TCHAR* filename)
 {
 	auto isrdb = false;
-	auto f = zfile_fopen(filename, _T("rb"), ZFD_NORMAL);
+	auto* f = zfile_fopen(filename, _T("rb"), ZFD_NORMAL);
 	uae_u8 tmp[8];
 
 	if (!f)

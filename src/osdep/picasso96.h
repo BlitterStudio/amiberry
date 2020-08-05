@@ -23,15 +23,22 @@ struct ScreenResolution
 
 #define MAX_PICASSO_MODES 100
 #define MAX_REFRESH_RATES 10
+
+#define REFRESH_RATE_RAW 1
+#define REFRESH_RATE_LACE 2
+
 struct PicassoResolution
 {
-    struct ScreenResolution res;
-    int depth;   /* depth in bytes-per-pixel */
-    int residx;
-    int refresh[MAX_REFRESH_RATES]; /* refresh-rates in Hz */
-    char name[25];
-    /* Bit mask of RGBFF_xxx values.  */
-    uae_u32 colormodes;
+	struct ScreenResolution res;
+	int depth;   /* depth in bytes-per-pixel */
+	int residx;
+	int refresh[MAX_REFRESH_RATES]; /* refresh-rates in Hz */
+	int refreshtype[MAX_REFRESH_RATES]; /* 0=normal,1=raw,2=lace */
+	TCHAR name[25];
+	/* Bit mask of RGBFF_xxx values.  */
+	uae_u32 colormodes;
+	int rawmode;
+	bool lace; // all modes lace
 };
 extern struct PicassoResolution *DisplayModes;
 
@@ -45,9 +52,10 @@ typedef struct _RECT
 
 #define MAX_DISPLAYS 1
 struct MultiDisplay {
-    int primary, disabled, gdi;
-    char *name;
-    char *name2;
+    int primary;
+	TCHAR* adaptername, * adapterid, * adapterkey;
+	TCHAR* monitorname, * monitorid;
+	TCHAR* fullname;
     struct PicassoResolution *DisplayModes;
     RECT rect;
 };
@@ -673,10 +681,19 @@ extern bool picasso_rendered;
 
 extern struct picasso96_state_struct picasso96_state;
 
-extern void picasso_enablescreen (int on);
-extern void picasso_refresh (void);
-extern void picasso_handle_vsync (void);
-extern int picasso_palette (struct MyCLUTEntry *CLUT, uae_u32 *clut);
+extern void picasso_enablescreen(int on);
+extern void picasso_refresh();
+extern void init_hz_p96();
+extern void picasso_handle_vsync(void);
+//extern void picasso_trigger_vblank(void);
+extern bool picasso_is_active();
+extern int picasso_setwincursor();
+extern int picasso_palette(struct MyCLUTEntry* MCLUT, uae_u32* clut);
+extern void picasso_allocatewritewatch(int index, int gfxmemsize);
+extern void picasso_getwritewatch(int index, int offset);
+extern bool picasso_is_vram_dirty(int index, uaecptr addr, int size);
+extern void picasso_statusline(uae_u8* dst);
+extern void picasso_invalidate(int x, int y, int w, int h);
 
 /* This structure describes the UAE-side framebuffer for the Picasso
  * screen.  */
@@ -702,7 +719,7 @@ extern struct picasso_vidbuf_description picasso_vidinfo;
 extern void gfx_set_picasso_modeinfo (uae_u32 w, uae_u32 h, uae_u32 d, RGBFTYPE rgbfmt);
 extern void gfx_set_picasso_colors(RGBFTYPE rgbfmt);
 extern void gfx_set_picasso_state (int on);
-extern uae_u8 *gfx_lock_picasso (void);
+extern uae_u8 *gfx_lock_picasso (bool, bool);
 extern void gfx_unlock_picasso (bool);
 
 extern int p96refresh_active;
@@ -730,9 +747,12 @@ extern int p96refresh_active;
 #ifdef __cplusplus
   extern "C" {
 #endif
-  void copy_screen_8bit(uae_u8 *dst, uae_u8 *src, int bytes, uae_u32 *clut);
+  void copy_screen_8bit_to_16bit(uae_u8 *dst, uae_u8 *src, int bytes, uae_u32 *clut);
+  void copy_screen_8bit_to_32bit(uae_u8 *dst, uae_u8 *src, int bytes, uae_u32 *clut);
   void copy_screen_16bit_swap(uae_u8 *dst, uae_u8 *src, int bytes);
+  void copy_screen_16bit_to_32bit(uae_u8 *dst, uae_u8 *src, int bytes);
   void copy_screen_32bit_to_16bit(uae_u8 *dst, uae_u8 *src, int bytes);
+  void copy_screen_32bit_to_32bit(uae_u8 *dst, uae_u8 *src, int bytes);
 #ifdef __cplusplus
   }
 #endif

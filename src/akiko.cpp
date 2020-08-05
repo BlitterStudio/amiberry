@@ -2064,6 +2064,15 @@ static void akiko_free(void)
 {
 	akiko_thread_do(0);
 	akiko_cdrom_free();
+	if(akiko_sem != 0)
+	  uae_sem_destroy(&akiko_sem);
+	akiko_sem = 0;
+	if(sub_sem != 0)
+	  uae_sem_destroy(&sub_sem);
+	sub_sem = 0;
+	if(cda_sem != 0)
+	  uae_sem_destroy(&cda_sem);
+	cda_sem = 0;
 	mediacheckcounter = 0;
 	akiko_inited = false;
 }
@@ -2083,8 +2092,17 @@ int akiko_init (void)
 	sector_buffer_info_2 = xmalloc (uae_u8, SECTOR_BUFFER_SIZE);
 	sector_buffer_sector_1 = -1;
 	sector_buffer_sector_2 = -1;
+	if(akiko_sem != 0)
+	  uae_sem_destroy(&akiko_sem);
+	akiko_sem = 0;
 	uae_sem_init (&akiko_sem, 0, 1);
+	if(sub_sem != 0)
+	  uae_sem_destroy(&sub_sem);
+	sub_sem = 0;
 	uae_sem_init(&sub_sem, 0, 1);
+	if(cda_sem != 0)
+	  uae_sem_destroy(&cda_sem);
+	cda_sem= 0;
 	uae_sem_init(&cda_sem, 0, 0);
 	if (!savestate_state) {
 		cdrom_playing = cdrom_paused = 0;

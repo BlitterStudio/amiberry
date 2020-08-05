@@ -37,6 +37,7 @@
 #include "sounddep/sound.h"
 #include "disk.h"
 #include "amiberry_gfx.h"
+#include "cdtv.h"
 #include "statusline.h"
 #include "cia.h"
 
@@ -4053,9 +4054,9 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 	case AKS_WARP:
 		warpmode(newstate);
 		break;
-	//case AKS_INHIBITSCREEN:
-	//	toggle_inhibit_frame(monid, IHF_SCROLLLOCK);
-	//	break;
+	case AKS_INHIBITSCREEN:
+		toggle_inhibit_frame(IHF_SCROLLLOCK);
+		break;
 	//case AKS_STATEREWIND:
 	//	savestate_dorewind(-2);
 	//	break;
@@ -4116,8 +4117,35 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 	//case AKS_STATERESTOREQUICK9:
 	//	savestate_quick((code - AKS_STATERESTOREQUICK) / 2, 0);
 	//	break;
+	case AKS_TOGGLEDEFAULTSCREEN:
+		toggle_fullscreen(-1);
+		break;
 	case AKS_TOGGLEWINDOWEDFULLSCREEN:
-		toggle_fullscreen();
+		toggle_fullscreen(0);
+		break;
+	case AKS_TOGGLEFULLWINDOWFULLSCREEN:
+		toggle_fullscreen(1);
+		break;
+	case AKS_TOGGLEWINDOWFULLWINDOW:
+		toggle_fullscreen(2);
+		break;
+	case AKS_TOGGLEMOUSEGRAB:
+		toggle_mousegrab();
+		break;
+	case AKS_SWAPJOYPORTS:
+		if (state == 1)
+			inputdevice_swap_compa_ports(&changed_prefs, 0);
+		else if (state == 2)
+			inputdevice_swap_compa_ports(&changed_prefs, 2);
+		break;
+	case AKS_PASTE:
+		target_paste_to_keyboard();
+		break;
+	case AKS_SWITCHINTERPOL:
+		changed_prefs.sound_interpol++;
+		if (changed_prefs.sound_interpol > 4)
+			changed_prefs.sound_interpol = 0;
+		set_config_changed();
 		break;
 	case AKS_STATESAVEDIALOG:
 		if (s) {
@@ -7036,8 +7064,8 @@ void inputdevice_default_prefs (struct uae_prefs *p)
 	p->input_joymouse_speed = 10;
 	p->input_analog_joystick_mult = 15;
 	p->input_analog_joystick_offset = -1;
-	p->input_mouse_speed = input_default_mouse_speed;
-	p->input_autofire_linecnt = 0; //8 * 312; // Disable Autofire by default
+	p->input_mouse_speed = amiberry_options.input_default_mouse_speed;
+	p->input_autofire_linecnt = 600;
 	p->input_keyboard_type = 0;
 	p->input_autoswitch = true;
 	p->input_device_match_mask = -1;

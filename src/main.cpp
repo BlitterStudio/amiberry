@@ -7,13 +7,12 @@
 * Copyright 1995, 1996, 1997 Bernd Schmidt
 */
 #include <iostream>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
 #include "sysconfig.h"
 #include "sysdeps.h"
-#include <assert.h>
 
 #include "options.h"
 #include "threaddep/thread.h"
@@ -42,6 +41,8 @@
 
 #include <linux/kd.h>
 #include <sys/ioctl.h>
+
+#include "consolehook.h"
 #include "keyboard.h"
 
 long int version = 256 * 65536L * UAEMAJOR + 65536L * UAEMINOR + UAESUBREV;
@@ -52,6 +53,7 @@ int config_changed;
 bool no_gui = false, quit_to_gui = false;
 bool cloanto_rom = false;
 bool kickstart_rom = true;
+bool console_emulation = 0;
 
 struct gui_info gui_data;
 
@@ -125,20 +127,25 @@ static void fixup_prefs_dim2(struct wh* wh)
 
 void fixup_prefs_dimensions(struct uae_prefs* prefs)
 {
-	fixup_prefs_dim2(&prefs->gfx_monitor.gfx_size);
+	fixup_prefs_dim2(&prefs->gfx_monitor.gfx_size_fs);
+	fixup_prefs_dim2(&prefs->gfx_monitor.gfx_size_win);
+	
+	if (prefs->gfx_apmode[1].gfx_vsync > 0)
+		prefs->gfx_apmode[1].gfx_vsyncmode = 1;
 }
 
 void fixup_cpu(struct uae_prefs* p)
 {
 	if (p->cpu_frequency == 1000000)
 		p->cpu_frequency = 0;
-	
+
 	if (p->cpu_model >= 68040 && p->address_space_24)
 	{
 		error_log(_T("24-bit address space is not supported with 68040/060 configurations."));
 		p->address_space_24 = false;
 	}
-	if (p->cpu_model < 68020 && p->fpu_model && (p->cpu_compatible || p->cpu_memory_cycle_exact)) {
+	if (p->cpu_model < 68020 && p->fpu_model && (p->cpu_compatible || p->cpu_memory_cycle_exact))
+	{
 		error_log(_T("FPU is not supported with 68000/010 configurations."));
 		p->fpu_model = 0;
 	}
@@ -146,11 +153,8 @@ void fixup_cpu(struct uae_prefs* p)
 	switch (p->cpu_model)
 	{
 	case 68000:
-		break;
 	case 68010:
-		break;
 	case 68020:
-		break;
 	case 68030:
 		break;
 	case 68040:
@@ -161,11 +165,13 @@ void fixup_cpu(struct uae_prefs* p)
 		break;
 	}
 
-	if (p->cpu_thread && (p->cpu_compatible || p->ppc_mode || p->cpu_memory_cycle_exact || p->cpu_model < 68020)) {
+	if (p->cpu_thread && (p->cpu_compatible || p->ppc_mode || p->cpu_memory_cycle_exact || p->cpu_model < 68020))
+	{
 		p->cpu_thread = false;
-		error_log(_T("Threaded CPU mode is not compatible with PPC emulation, More compatible or Cycle Exact modes. CPU type must be 68020 or higher."));
+		error_log(_T(
+			"Threaded CPU mode is not compatible with PPC emulation, More compatible or Cycle Exact modes. CPU type must be 68020 or higher."));
 	}
-	
+
 	if (p->cpu_model < 68020 && p->cachesize)
 	{
 		p->cachesize = 0;
@@ -174,42 +180,56 @@ void fixup_cpu(struct uae_prefs* p)
 
 	if (!p->cpu_memory_cycle_exact && p->cpu_cycle_exact)
 		p->cpu_memory_cycle_exact = true;
-	
-	if (p->cpu_model >= 68020 && p->cachesize && p->cpu_compatible)
+
+	if (p->cpu_model >= 68040 && p->cachesize && p->cpu_compatible)
 		p->cpu_compatible = false;
 
-	if (p->cachesize && p->cpu_memory_cycle_exact) {
+	if ((p->cpu_model < 68030 || p->cachesize) && p->mmu_model) {
+		error_log(_T("MMU emulation requires 68030/040/060 and it is not JIT compatible."));
+		p->mmu_model = 0;
+	}
+	
+	if (p->cachesize && p->cpu_memory_cycle_exact)
+	{
 		error_log(_T("JIT and cycle-exact can't be enabled simultaneously."));
 		p->cachesize = 0;
 	}
-	
-	if (p->cachesize && (p->fpu_no_unimplemented || p->int_no_unimplemented)) {
+
+	if (p->cachesize && (p->fpu_no_unimplemented || p->int_no_unimplemented))
+	{
 		error_log(_T("JIT is not compatible with unimplemented CPU/FPU instruction emulation."));
 		p->fpu_no_unimplemented = p->int_no_unimplemented = false;
 	}
-	if (p->cachesize && p->compfpu && p->fpu_mode > 0) {
+	if (p->cachesize && p->compfpu && p->fpu_mode > 0)
+	{
 		error_log(_T("JIT FPU emulation is not compatible with softfloat FPU emulation."));
 		p->fpu_mode = 0;
 	}
 
-	if (p->comptrustbyte < 0 || p->comptrustbyte > 3) {
+	if (p->comptrustbyte < 0 || p->comptrustbyte > 3)
+	{
 		error_log(_T("Bad value for comptrustbyte parameter: value must be within 0..2."));
 		p->comptrustbyte = 1;
 	}
-	if (p->comptrustword < 0 || p->comptrustword > 3) {
+	if (p->comptrustword < 0 || p->comptrustword > 3)
+	{
 		error_log(_T("Bad value for comptrustword parameter: value must be within 0..2."));
 		p->comptrustword = 1;
 	}
-	if (p->comptrustlong < 0 || p->comptrustlong > 3) {
+	if (p->comptrustlong < 0 || p->comptrustlong > 3)
+	{
 		error_log(_T("Bad value for comptrustlong parameter: value must be within 0..2."));
 		p->comptrustlong = 1;
 	}
-	if (p->comptrustnaddr < 0 || p->comptrustnaddr > 3) {
+	if (p->comptrustnaddr < 0 || p->comptrustnaddr > 3)
+	{
 		error_log(_T("Bad value for comptrustnaddr parameter: value must be within 0..2."));
 		p->comptrustnaddr = 1;
 	}
-	if (p->cachesize < 0 || p->cachesize > MAX_JIT_CACHE || (p->cachesize > 0 && p->cachesize < MIN_JIT_CACHE)) {
-		error_log(_T("JIT Bad value for cachesize parameter: value must zero or within %d..%d."), MIN_JIT_CACHE, MAX_JIT_CACHE);
+	if (p->cachesize < 0 || p->cachesize > MAX_JIT_CACHE || (p->cachesize > 0 && p->cachesize < MIN_JIT_CACHE))
+	{
+		error_log(_T("JIT Bad value for cachesize parameter: value must zero or within %d..%d."), MIN_JIT_CACHE,
+		          MAX_JIT_CACHE);
 		p->cachesize = 0;
 	}
 
@@ -221,16 +241,19 @@ void fixup_cpu(struct uae_prefs* p)
 	if (p->cpu_memory_cycle_exact)
 		p->cpu_compatible = true;
 
-	if (p->cpu_memory_cycle_exact && p->produce_sound == 0) {
+	if (p->cpu_memory_cycle_exact && p->produce_sound == 0)
+	{
 		p->produce_sound = 1;
 		error_log(_T("Cycle-exact mode requires at least Disabled but emulated sound setting."));
 	}
 
-	if (p->cpu_data_cache && (!p->cpu_compatible || p->cachesize || p->cpu_model < 68030)) {
+	if (p->cpu_data_cache && (!p->cpu_compatible || p->cachesize || p->cpu_model < 68030))
+	{
 		p->cpu_data_cache = false;
 		error_log(_T("Data cache emulation requires More compatible, is not JIT compatible, 68030+ only."));
 	}
-	if (p->cpu_data_cache && (p->uaeboard != 3 && need_uae_boot_rom(p))) {
+	if (p->cpu_data_cache && (p->uaeboard != 3 && need_uae_boot_rom(p)))
+	{
 		p->cpu_data_cache = false;
 		error_log(_T("Data cache emulation requires Indirect UAE Boot ROM."));
 	}
@@ -245,23 +268,21 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 
 	read_kickstart_version(p);
 
-	if (((p->chipmem_size & (p->chipmem_size - 1)) != 0 && p->chipmem_size != 0x180000)
+	if (((p->chipmem_size & p->chipmem_size - 1) != 0 && p->chipmem_size != 0x180000)
 		|| p->chipmem_size < 0x20000
 		|| p->chipmem_size > 0x800000)
 	{
 		error_log(_T("Unsupported chipmem size %d (0x%x)."), p->chipmem_size, p->chipmem_size);
 		p->chipmem_size = 0x200000;
-		//err = 1;
 	}
 
 	for (auto& i : p->fastmem)
 	{
-		if ((i.size & (i.size - 1)) != 0
+		if ((i.size & i.size - 1) != 0
 			|| (i.size != 0 && (i.size < 0x10000 || i.size > 0x800000)))
 		{
 			error_log(_T("Unsupported fastmem size %d (0x%x)."), i.size, i.size);
 			i.size = 0;
-			//err = 1;
 		}
 	}
 
@@ -274,28 +295,24 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 				_T("Graphics card memory size %d (0x%x) larger than maximum reserved %d (0x%x)."), rbc->rtgmem_size,
 				rbc->rtgmem_size, 0x1000000, 0x1000000);
 			rbc->rtgmem_size = 0x1000000;
-			//err = 1;
 		}
 
-		if ((rbc->rtgmem_size & (rbc->rtgmem_size - 1)) != 0 || (rbc->rtgmem_size != 0 && (rbc->rtgmem_size < 0x100000))
-		)
+		if ((rbc->rtgmem_size & rbc->rtgmem_size - 1) != 0 || (rbc->rtgmem_size != 0 && rbc->rtgmem_size < 0x100000))
 		{
 			error_log(_T("Unsupported graphics card memory size %d (0x%x)."), rbc->rtgmem_size, rbc->rtgmem_size);
 			if (rbc->rtgmem_size > max_z3fastmem)
 				rbc->rtgmem_size = max_z3fastmem;
 			else
 				rbc->rtgmem_size = 0;
-			//err = 1;
 		}
 	}
 
 	for (auto& i : p->z3fastmem)
 	{
-		if ((i.size & (i.size - 1)) != 0 || (i.size != 0 && i.size < 0x100000))
+		if ((i.size & i.size - 1) != 0 || (i.size != 0 && i.size < 0x100000))
 		{
 			error_log(_T("Unsupported Zorro III fastmem size %d (0x%x)."), i.size, i.size);
 			i.size = 0;
-			//err = 1;
 		}
 	}
 
@@ -303,18 +320,25 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 	if (p->z3autoconfig_start != 0 && p->z3autoconfig_start < 0x1000000)
 		p->z3autoconfig_start = 0x1000000;
 
-	if (p->address_space_24 && (p->z3fastmem[0].size != 0))
+	if (p->z3chipmem_size > max_z3fastmem) {
+		error_log(_T("Zorro III fake chipmem size %d (0x%x) larger than max reserved %d (0x%x)."), p->z3chipmem_size, p->z3chipmem_size, max_z3fastmem, max_z3fastmem);
+		p->z3chipmem_size = max_z3fastmem;
+	}
+	if (((p->z3chipmem_size & p->z3chipmem_size - 1) != 0 && p->z3chipmem_size != 0x18000000 && p->z3chipmem_size != 0x30000000) || (p->z3chipmem_size != 0 && p->z3chipmem_size < 0x100000))
 	{
-		p->z3fastmem[0].size = 0;
-		error_log(_T("Can't use 32-bit memory when using a 24 bit address space."));
+		error_log(_T("Unsupported 32-bit chipmem size %d (0x%x)."), p->z3chipmem_size, p->z3chipmem_size);
+		p->z3chipmem_size = 0;
+	}
+	
+	if (p->address_space_24 && (p->z3fastmem[0].size != 0 || p->z3fastmem[1].size != 0 || p->z3fastmem[2].size != 0 || p->z3fastmem[3].size != 0 || p->z3chipmem_size != 0)) {
+		p->z3fastmem[0].size = p->z3fastmem[1].size = p->z3fastmem[2].size = p->z3fastmem[3].size = 0;
+		p->z3chipmem_size = 0;
+		error_log(_T("Can't use a Z3 graphics card or 32-bit memory when using a 24 bit address space."));
 	}
 
-	if (p->bogomem_size != 0 && p->bogomem_size != 0x80000 && p->bogomem_size != 0x100000 && p->bogomem_size != 0x180000
-		&& p->bogomem_size != 0x1c0000)
-	{
+	if (p->bogomem_size != 0 && p->bogomem_size != 0x80000 && p->bogomem_size != 0x100000 && p->bogomem_size != 0x180000 && p->bogomem_size != 0x1c0000) {
 		error_log(_T("Unsupported bogomem size %d (0x%x)"), p->bogomem_size, p->bogomem_size);
 		p->bogomem_size = 0;
-		//err = 1;
 	}
 
 	if (p->bogomem_size > 0x180000 && (p->cs_fatgaryrev >= 0 || p->cs_ide || p->cs_ramseyrev >= 0))
@@ -326,15 +350,16 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 	{
 		error_log(_T("You can't use fastmem and more than 2MB chip at the same time."));
 		p->chipmem_size = 0x200000;
-		//err = 1;
 	}
-	if (p->mbresmem_low_size > 0x04000000 || (p->mbresmem_low_size & 0xfffff))
-	{
+	if (p->mem25bit_size > 128 * 1024 * 1024 || (p->mem25bit_size & 0xfffff)) {
+		p->mem25bit_size = 0;
+		error_log(_T("Unsupported 25bit RAM size"));
+	}
+	if (p->mbresmem_low_size > 0x04000000 || (p->mbresmem_low_size & 0xfffff)) {
 		p->mbresmem_low_size = 0;
 		error_log(_T("Unsupported Mainboard RAM size"));
 	}
-	if (p->mbresmem_high_size > 0x08000000 || (p->mbresmem_high_size & 0xfffff))
-	{
+	if (p->mbresmem_high_size > 0x08000000 || (p->mbresmem_high_size & 0xfffff)) {
 		p->mbresmem_high_size = 0;
 		error_log(_T("Unsupported CPU Board RAM size."));
 	}
@@ -346,7 +371,6 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 		{
 			error_log(_T("You can't use Zorro II RTG and more than 2MB chip at the same time."));
 			p->chipmem_size = 0x200000;
-			//err = 1;
 		}
 		if (p->address_space_24 && rbc->rtgmem_size && rbc->rtgmem_type == GFXBOARD_UAE_Z3)
 		{
@@ -366,27 +390,19 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 	{
 		error_log(_T("Bad value for -S parameter: enable value must be within 0..3."));
 		p->produce_sound = 0;
-		//err = 1;
 	}
-	if (p->cachesize < 0 || p->cachesize > MAX_JIT_CACHE)
-	{
-		error_log(_T("Bad value for cachesize parameter: value must be within 0..16384."));
-		p->cachesize = 0;
-		//err = 1;
-	}
-	if ((p->z3fastmem[0].size) && p->address_space_24)
+	if ((p->z3fastmem[0].size || p->z3chipmem_size) && p->address_space_24)
 	{
 		error_log(_T("Z3 fast memory can't be used if address space is 24-bit."));
 		p->z3fastmem[0].size = 0;
-		//err = 1;
+		p->z3chipmem_size = 0;
 	}
 	for (auto& rtgboard : p->rtgboards)
 	{
-		if ((rtgboard.rtgmem_size > 0 && rtgboard.rtgmem_type == GFXBOARD_UAE_Z3) && p->address_space_24)
+		if (rtgboard.rtgmem_size > 0 && rtgboard.rtgmem_type == GFXBOARD_UAE_Z3 && p->address_space_24)
 		{
 			error_log(_T("UAEGFX Z3 RTG can't be used if address space is 24-bit."));
 			rtgboard.rtgmem_size = 0;
-			//err = 1;
 		}
 	}
 
@@ -397,7 +413,11 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 		err = 1;
 	}
 #endif
-
+	if (p->socket_emu && p->uaeboard >= 3) {
+		write_log(_T("bsdsocket.library is not compatible with indirect UAE Boot ROM.\n"));
+		p->socket_emu = false;
+	}
+	
 	if (p->nr_floppies < 0 || p->nr_floppies > 4)
 	{
 		error_log(_T("Invalid number of floppies.  Using 2."));
@@ -406,7 +426,6 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 		p->floppyslots[1].dfxtype = 0;
 		p->floppyslots[2].dfxtype = -1;
 		p->floppyslots[3].dfxtype = -1;
-		//err = 1;
 	}
 
 	if (p->floppy_speed > 0 && p->floppy_speed < 10)
@@ -414,21 +433,27 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 		error_log(_T("Invalid floppy speed."));
 		p->floppy_speed = 100;
 	}
+	if (p->input_mouse_speed < 1 || p->input_mouse_speed > 1000) {
+		error_log(_T("Invalid mouse speed."));
+		p->input_mouse_speed = 100;
+	}
 	if (p->collision_level < 0 || p->collision_level > 3)
 	{
 		error_log(_T("Invalid collision support level.  Using 1."));
 		p->collision_level = 1;
-		//err = 1;
 	}
+	if (p->parallel_postscript_emulation)
+		p->parallel_postscript_detection = 1;
 	if (p->cs_compatible == CP_GENERIC)
 	{
-		p->cs_fatgaryrev = p->cs_ramseyrev = -1;
+		p->cs_fatgaryrev = p->cs_ramseyrev = p->cs_mbdmac = -1;
 		p->cs_ide = 0;
 		if (p->cpu_model >= 68020)
 		{
 			p->cs_fatgaryrev = 0;
 			p->cs_ide = -1;
 			p->cs_ramseyrev = 0x0f;
+			p->cs_mbdmac = 0;
 		}
 	}
 	else if (p->cs_compatible == 0)
@@ -441,6 +466,8 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 				p->cs_ramseyrev = 0x0f;
 		}
 	}
+	if (p->chipmem_size >= 0x100000)
+		p->cs_1mchipjumper = true;
 
 	fixup_prefs_dimensions(p);
 
@@ -450,6 +477,17 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 #ifdef CPU_68000_ONLY
 	p->cpu_model = 68000;
 	p->fpu_model = 0;
+#endif
+#ifndef CPUEMU_0
+	p->cpu_compatible = 1;
+	p->address_space_24 = 1;
+#endif
+#if !defined (CPUEMU_11) && !defined (CPUEMU_13)
+	p->cpu_compatible = 0;
+	p->address_space_24 = 0;
+#endif
+#if !defined (CPUEMU_13)
+	p->cpu_cycle_exact = p->blitter_cycle_exact = false;
 #endif
 #ifndef AGA
 	p->chipset_mask &= ~CSMASK_AGA;
@@ -462,10 +500,54 @@ void fixup_prefs(struct uae_prefs* p, bool userconfig)
 #if !defined (BSDSOCKET)
 	p->socket_emu = 0;
 #endif
+#if !defined (SCSIEMU)
+	p->scsi = 0;
+#endif
+#if !defined (SANA2)
+	p->sana2 = 0;
+#endif
+#if !defined (UAESERIAL)
+	p->uaeserial = false;
+#endif
+#if defined (CPUEMU_13)
+	if (p->cpu_memory_cycle_exact) {
+		if (p->gfx_framerate > 1) {
+			error_log(_T("Cycle-exact requires disabled frameskip."));
+			p->gfx_framerate = 1;
+		}
+		if (p->cachesize) {
+			error_log(_T("Cycle-exact and JIT can't be active simultaneously."));
+			p->cachesize = 0;
+		}
+	}
+#endif
 
 	if (p->gfx_framerate < 1)
 		p->gfx_framerate = 1;
+	if (p->gfx_display_sections < 1) {
+		p->gfx_display_sections = 1;
+	}
+	else if (p->gfx_display_sections > 99) {
+		p->gfx_display_sections = 99;
+	}
+	if (p->maprom && !p->address_space_24) {
+		p->maprom = 0x0f000000;
+	}
+	if ((p->maprom & 0xff000000 && p->address_space_24) || (p->maprom && p->mbresmem_high_size >= 0x08000000)) {
+		p->maprom = 0x00e00000;
+	}
+	if (p->maprom && p->cpuboard_type) {
+		error_log(_T("UAE Maprom and accelerator board emulation are not compatible."));
+		p->maprom = 0;
+	}
 
+	if (p->tod_hack && p->cs_ciaatod == 0)
+		p->cs_ciaatod = p->ntscmode ? 2 : 1;
+
+	// PCem does not support max speed.
+	if (p->x86_speed_throttle < 0)
+		p->x86_speed_throttle = 0;
+	
 	built_in_chipset_prefs(p);
 	blkdev_fix_prefs(p);
 	inputdevice_fix_prefs(p, userconfig);
@@ -493,9 +575,7 @@ void uae_reset(int hardreset, int keyboardreset)
 void uae_quit(void)
 {
 	if (quit_program != -UAE_QUIT)
-	{
 		quit_program = -UAE_QUIT;
-	}
 	target_quit();
 }
 
@@ -509,6 +589,48 @@ void uae_restart(int opengui, const TCHAR* cfgfile)
 	if (cfgfile)
 		_tcscpy(restart_config, cfgfile);
 	target_restart();
+}
+
+void usage()
+{
+	std::cout << get_version_string() << std::endl;
+	std::cout << "Usage:" << std::endl;
+	std::cout << " -h                         Show this help." << std::endl;
+	std::cout << " --help                     Show this help." << std::endl;
+	std::cout << " -f <file>                  Load a configuration file." << std::endl;
+	std::cout << " -config=<file>             Load a configuration file." << std::endl;
+	std::cout << " -model=<Amiga Model>       Amiga model to emulate, from the QuickStart options." << std::endl;
+	std::cout << "                            Available options are: A500, A500P, A1200, A4000 and CD32." << std::endl;
+	std::cout << " -autoload=<file>           Load a WHDLoad game or .CUE CD32 image using the WHDBooter." << std::endl;
+	std::cout << " -cdimage=<file>            Load the CD image provided when starting emulation (for CD32)." <<
+		std::endl;
+	std::cout << " -statefile=<file>          Load a save state file." << std::endl;
+	std::cout << " -s <config param>=<value>  Set the configuration parameter with value." << std::endl;
+	std::cout << "                            Edit a configuration file in order to know valid parameters and settings."
+		<< std::endl;
+	std::cout << "\nAdditional options:" << std::endl;
+	std::cout << " -0 <filename>              Set adf for drive 0." << std::endl;
+	std::cout << " -1 <filename>              Set adf for drive 1." << std::endl;
+	std::cout << " -2 <filename>              Set adf for drive 2." << std::endl;
+	std::cout << " -3 <filename>              Set adf for drive 3." << std::endl;
+	std::cout << " -r <filename>              Set kickstart rom file." << std::endl;
+	std::cout << " -G                         Start directly into emulation." << std::endl;
+	std::cout << " -c <value>                 Size of chip memory (in number of 512 KBytes chunks)." << std::endl;
+	std::cout << " -F <value>                 Size of fast memory (in number of 1024 KBytes chunks)." << std::endl;
+	std::cout << "\nNote:" << std::endl;
+	std::cout <<
+		"Parameters are parsed from the beginning of command line, so in case of ambiguity for parameters, last one will be used."
+		<< std::endl;
+	std::cout << "File names should be with absolute path." << std::endl;
+	std::cout << "\nExample:" << std::endl;
+	std::cout << "amiberry -model=A1200 -G" << std::endl;
+	std::cout << "It will use the A1200 default settings as found in the QuickStart panel." << std::endl;
+	std::cout << "It will override use_gui to 'no' so that it enters emulation directly." << std::endl;
+	std::cout << "\nExample 2:" << std::endl;
+	std::cout << "amiberry -config=conf/A500.uae -statefile=savestates/game.uss -s use_gui=no" << std::endl;
+	std::cout << "It will load A500.uae configuration with the save state named game." << std::endl;
+	std::cout << "It will override use_gui to 'no' so that it enters emulation directly." << std::endl;
+	exit(1);
 }
 
 static void parse_cmdline_2(int argc, TCHAR** argv)
@@ -528,6 +650,41 @@ static void parse_cmdline_2(int argc, TCHAR** argv)
 				cfgfile_addcfgparam(argv[++i]);
 		}
 	}
+}
+
+static int diskswapper_cb(struct zfile* f, void* vrsd)
+{
+	auto* num = static_cast<int*>(vrsd);
+	if (*num >= MAX_SPARE_DRIVES)
+		return 1;
+	if (zfile_gettype(f) == ZFILE_DISKIMAGE) {
+		_tcsncpy(currprefs.dfxlist[*num], zfile_getname(f), 255);
+		(*num)++;
+	}
+	return 0;
+}
+
+static void parse_diskswapper(const TCHAR* s)
+{
+	auto* const tmp = my_strdup(s);
+	const auto* delim = _T(",");
+	TCHAR* p2;
+	auto num = 0;
+
+	auto* p1 = tmp;
+	for (;;) {
+		p2 = _tcstok(p1, delim);
+		if (!p2)
+			break;
+		p1 = NULL;
+		if (num >= MAX_SPARE_DRIVES)
+			break;
+		if (!zfile_zopen(p2, diskswapper_cb, &num)) {
+			_tcsncpy(currprefs.dfxlist[num], p2, 255);
+			num++;
+		}
+	}
+	xfree(tmp);
 }
 
 static TCHAR* parse_text(const TCHAR* s)
@@ -557,44 +714,6 @@ static TCHAR* parse_text_path(const TCHAR* s)
 	return s3;
 }
 
-void usage()
-{
-	std::cout << get_version_string() << std::endl;
-	std::cout << "Usage:" << std::endl;
-	std::cout << " -h                         Show this help." << std::endl;
-	std::cout << " --help                     Show this help." << std::endl;
-	std::cout << " -f <file>                  Load a configuration file." << std::endl;
-	std::cout << " -config=<file>             Load a configuration file." << std::endl;
-	std::cout << " -model=<Amiga Model>       Amiga model to emulate, from the QuickStart options." << std::endl;
-	std::cout << "                            Available options are: A500, A500P, A1200, A4000 and CD32." << std::endl;
-	std::cout << " -autoload=<file>           Load a WHDLoad game or .CUE CD32 image using the WHDBooter." << std::endl;
-	std::cout << " -cdimage=<file>            Load the CD image provided when starting emulation (for CD32)." << std::endl;
-	std::cout << " -statefile=<file>          Load a save state file." << std::endl;
-	std::cout << " -s <config param>=<value>  Set the configuration parameter with value." << std::endl;
-	std::cout << "                            Edit a configuration file in order to know valid parameters and settings." << std::endl;
-	std::cout << "\nAdditional options:" << std::endl;
-	std::cout << " -0 <filename>              Set adf for drive 0." << std::endl;
-	std::cout << " -1 <filename>              Set adf for drive 1." << std::endl;
-	std::cout << " -2 <filename>              Set adf for drive 2." << std::endl;
-	std::cout << " -3 <filename>              Set adf for drive 3." << std::endl;
-	std::cout << " -r <filename>              Set kickstart rom file." << std::endl;
-	std::cout << " -G                         Start directly into emulation." << std::endl;
-	std::cout << " -c <value>                 Size of chip memory (in number of 512 KBytes chunks)." << std::endl;
-	std::cout << " -F <value>                 Size of fast memory (in number of 1024 KBytes chunks)." << std::endl;
-	std::cout << "\nNote:" << std::endl;
-	std::cout << "Parameters are parsed from the beginning of command line, so in case of ambiguity for parameters, last one will be used." << std::endl;
-	std::cout << "File names should be with absolute path." << std::endl;
-	std::cout << "\nExample:" << std::endl;
-	std::cout << "amiberry -model=A1200 -G" << std::endl;
-	std::cout << "It will use the A1200 default settings as found in the QuickStart panel." << std::endl;
-	std::cout << "It will override use_gui to 'no' so that it enters emulation directly." << std::endl;
-	std::cout << "\nExample 2:" << std::endl;
-	std::cout << "amiberry -config=conf/A500.uae -statefile=savestates/game.uss -s use_gui=no" << std::endl;
-	std::cout << "It will load A500.uae configuration with the save state named game." << std::endl;
-	std::cout << "It will override use_gui to 'no' so that it enters emulation directly." << std::endl;
-	exit(1);
-}
-
 std::string get_filename_extension(const TCHAR* filename)
 {
 	const std::string fName(filename);
@@ -619,7 +738,15 @@ static void parse_cmdline(int argc, TCHAR** argv)
 
 	for (auto i = 1; i < argc; i++)
 	{
-		if (_tcscmp(argv[i], _T("-cfgparam")) == 0)
+		if (!_tcsncmp(argv[i], _T("-diskswapper="), 13)) {
+			auto* txt = parse_text_path(argv[i] + 13);
+			parse_diskswapper(txt);
+			xfree(txt);
+		}
+		else if (_tcsncmp(argv[i], _T("-cfgparam="), 10) == 0) {
+			;
+		}
+		else if (_tcscmp(argv[i], _T("-cfgparam")) == 0)
 		{
 			if (i + 1 < argc)
 				i++;
@@ -639,19 +766,24 @@ static void parse_cmdline(int argc, TCHAR** argv)
 		else if (_tcsncmp(argv[i], _T("-model="), 7) == 0)
 		{
 			auto* const txt = parse_text_path(argv[i] + 7);
-			if (_tcsncmp(txt, _T("A500"), 4) == 0) {
+			if (_tcsncmp(txt, _T("A500"), 4) == 0)
+			{
 				bip_a500(&currprefs, -1);
 			}
-			else if (_tcsncmp(txt, _T("A500P"), 5) == 0) {
+			else if (_tcsncmp(txt, _T("A500P"), 5) == 0)
+			{
 				bip_a500plus(&currprefs, -1);
 			}
-			else if (_tcsncmp(txt, _T("A1200"), 5) == 0) {
+			else if (_tcsncmp(txt, _T("A1200"), 5) == 0)
+			{
 				bip_a1200(&currprefs, -1);
 			}
-			else if (_tcsncmp(txt, _T("A4000"), 5) == 0) {
+			else if (_tcsncmp(txt, _T("A4000"), 5) == 0)
+			{
 				bip_a4000(&currprefs, -1);
 			}
-			else if (_tcsncmp(txt, _T("CD32"), 4) == 0) {
+			else if (_tcsncmp(txt, _T("CD32"), 4) == 0)
+			{
 				bip_cd32(&currprefs, -1);
 			}
 		}
@@ -701,6 +833,8 @@ static void parse_cmdline(int argc, TCHAR** argv)
 			else
 				write_log("Can't find extension ... %s\n", txt);
 		}
+		else if (_tcsncmp(argv[i], _T("-cli"), 4) == 0)
+			console_emulation = true;
 		else if (_tcscmp(argv[i], _T("-f")) == 0)
 		{
 			/* Check for new-style "-f xxx" argument, where xxx is config-file */
@@ -822,7 +956,15 @@ static void do_start_program(void)
 	inputdevice_updateconfig(&changed_prefs, &currprefs);
 	if (quit_program >= 0)
 		quit_program = UAE_RESET;
-	m68k_go(1);
+
+	try
+	{
+		m68k_go(1);
+	}
+	catch (...)
+	{
+		write_log("An exception was thrown while running m68k_go!\n");
+	}
 }
 
 static void start_program(void)
@@ -830,11 +972,12 @@ static void start_program(void)
 	char kbd_flags;
 	// set capslock state based upon current "real" state
 	ioctl(0, KDGKBLED, &kbd_flags);
-	if ((kbd_flags & 07) & LED_CAP)
+	if (kbd_flags & 07 & LED_CAP)
 	{
 		// record capslock pressed
 		inputdevice_do_keyboard(AK_CAPSLOCK, 1);
 	}
+	set_mouse_grab(true);
 	do_start_program();
 }
 
@@ -843,11 +986,82 @@ static void leave_program(void)
 	do_leave_program();
 }
 
-bool check_internet_connection()
+long get_file_size(const std::string& filename)
 {
-	if (system("ping -c1 -s1 www.google.com"))
+	struct stat stat_buf{};
+	const auto rc = stat(filename.c_str(), &stat_buf);
+	return rc == 0 ? static_cast<long>(stat_buf.st_size) : -1;
+}
+
+bool download_file(const std::string& source, std::string destination)
+{
+	std::string download_command = "wget -np -nv -O ";
+	const auto tmp = destination.append(".tmp");
+
+	download_command.append(tmp);
+	download_command.append(" ");
+	download_command.append(source);
+	download_command.append(" 2>&1");
+
+	// Cleanup if the tmp destination already exists
+	if (get_file_size(tmp) > 0)
+	{
+		if (std::remove(tmp.c_str()) < 0)
+		{
+			write_log(strerror(errno) + '\n');
+		}
+	}
+
+	try
+	{
+		char buffer[1035];
+		const auto output = popen(download_command.c_str(), "r");
+		if (!output)
+		{
+			write_log("Failed while trying to run wget! Make sure it exists in your system...\n");
+			return false;
+		}
+
+		while (fgets(buffer, sizeof buffer, output))
+		{
+			write_log(buffer);
+		}
+		pclose(output);
+	}
+	catch (...)
+	{
+		write_log("An exception was thrown while trying to execute wget!\n");
 		return false;
-	return true;
+	}
+
+	if (get_file_size(tmp) > 0)
+	{
+		if (std::rename(tmp.c_str(), destination.c_str()) < 0)
+		{
+			write_log(strerror(errno) + '\n');
+		}
+		return true;
+	}
+
+	if (std::remove(tmp.c_str()) < 0)
+	{
+		write_log(strerror(errno) + '\n');
+	}
+	return false;
+}
+
+void download_rtb(std::string filename)
+{
+	char destination[MAX_DPATH];
+	char url[MAX_DPATH];
+	
+	snprintf(destination, MAX_DPATH, "%s/whdboot/save-data/Kickstarts/%s", start_path_data, filename.c_str());
+	if (get_file_size(destination) <= 0)
+	{
+		write_log("Downloading %s ...\n", destination);
+		snprintf(url, MAX_DPATH, "https://github.com/midwan/amiberry/blob/master/whdboot/save-data/Kickstarts/%s?raw=true", filename.c_str());
+		download_file(url,  destination);
+	}
 }
 
 // In case of error, print the error code and close the application
@@ -863,22 +1077,23 @@ void check_error_sdl(const bool check, const char* message)
 
 static int real_main2(int argc, TCHAR** argv)
 {
+	if (
 #ifdef USE_DISPMANX
-	int ret = SDL_Init(SDL_INIT_TIMER
-		| SDL_INIT_AUDIO
-		| SDL_INIT_JOYSTICK
-		| SDL_INIT_HAPTIC
-		| SDL_INIT_GAMECONTROLLER
-		| SDL_INIT_EVENTS) != 0;
+		SDL_Init(SDL_INIT_TIMER
+			| SDL_INIT_AUDIO
+			| SDL_INIT_JOYSTICK
+			| SDL_INIT_HAPTIC
+			| SDL_INIT_GAMECONTROLLER
+			| SDL_INIT_EVENTS) != 0
 #else
-	const int ret = SDL_Init(SDL_INIT_EVERYTHING) != 0;
+		SDL_Init(SDL_INIT_EVERYTHING) != 0
 #endif
-	if (ret < 0)
+		)
 	{
 		printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
 		abort();
 	}
-
+		
 	keyboard_settrans();
 	set_config_changed();
 	if (restart_config[0])
@@ -887,10 +1102,9 @@ static int real_main2(int argc, TCHAR** argv)
 		fixup_prefs(&currprefs, true);
 	}
 
-	if (!graphics_setup())
-	{
-		abort();
-	}
+#ifdef NATMEM_OFFSET
+	//preinit_shm();
+#endif
 	
 	if (restart_config[0])
 	{
@@ -900,12 +1114,22 @@ static int real_main2(int argc, TCHAR** argv)
 	else
 		copy_prefs(&changed_prefs, &currprefs);
 
+	if (!graphics_setup())
+	{
+		abort();
+	}
+	
 	if (!machdep_init())
 	{
 		restart_program = 0;
 		return -1;
 	}
 
+	if (console_emulation) {
+		consolehook_config(&currprefs);
+		fixup_prefs(&currprefs, true);
+	}
+	
 	if (!setup_sound())
 	{
 		write_log(_T("Sound driver unavailable: Sound output disabled\n"));
@@ -923,7 +1147,7 @@ static int real_main2(int argc, TCHAR** argv)
 	restart_program = 0;
 	if (!no_gui)
 	{
-		auto err = gui_init();
+		const auto err = gui_init();
 		copy_prefs(&changed_prefs, &currprefs);
 		set_config_changed();
 		if (err == -1)
@@ -936,22 +1160,23 @@ static int real_main2(int argc, TCHAR** argv)
 			return 1;
 		}
 	}
-	else
-	{
-		update_display(&currprefs);
-	}
+
 	memset(&gui_data, 0, sizeof gui_data);
 	gui_data.cd = -1;
 	gui_data.hd = -1;
 	gui_data.net = -1;
 	gui_data.md = currprefs.cs_cd32nvram ? 0 : -1;
 
-	if (!init_shm())
-	{
+#ifdef NATMEM_OFFSET
+	if (!init_shm()) {
 		if (currprefs.start_gui)
-			uae_restart(-1, nullptr);
+			uae_restart(-1, NULL);
 		return 0;
 	}
+#endif
+#ifdef WITH_LUA
+	uae_lua_init();
+#endif
 
 	fixup_prefs(&currprefs, true);
 	copy_prefs(&currprefs, &changed_prefs);
@@ -969,7 +1194,13 @@ static int real_main2(int argc, TCHAR** argv)
 #endif
 
 	custom_init(); /* Must come after memory_init */
+#ifdef SERIAL_PORT
+	serial_init();
+#endif
 	DISK_init();
+#ifdef WITH_PPC
+	uae_ppc_reset(true);
+#endif
 
 	reset_frame_rate_hack();
 	init_m68k(); /* must come after reset_frame_rate_hack (); */

@@ -1,4 +1,4 @@
- /*
+/*
   * UAE - The Un*x Amiga Emulator
   *
   * bsdsocket.library emulation
@@ -90,7 +90,9 @@ struct socketbase {
     uae_u32 timeout;
     uae_u32 sigmp;
 #endif
-	TrapContext *context;
+#ifdef AMIBERRY
+    TrapContext *context;
+#endif
 };
 
 #define LIBRARY_SIZEOF 36
@@ -174,6 +176,7 @@ extern uae_u32 host_getsockopt (TrapContext *, SB, uae_u32, uae_u32, uae_u32, ua
 extern uae_u32 host_getsockname (TrapContext *, SB, uae_u32, uae_u32, uae_u32);
 extern uae_u32 host_getpeername (TrapContext *, SB, uae_u32, uae_u32, uae_u32);
 extern uae_u32 host_IoctlSocket (TrapContext *, SB, uae_u32, uae_u32, uae_u32);
+extern uae_u32 host_shutdown (SB, uae_u32, uae_u32);
 extern int host_CloseSocket (TrapContext *, SB, int);
 extern void host_connect (TrapContext *, SB, uae_u32, uae_u32, uae_u32);
 extern void host_WaitSelect (TrapContext *, SB, uae_u32, uae_u32, uae_u32, uae_u32, uae_u32, uae_u32);

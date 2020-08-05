@@ -23,12 +23,18 @@
 #include "savestate.h"
 #include "uae.h"
 #include "threaddep/thread.h"
+#include "blkdev.h"
+#include "scsi.h"
 #include "ide.h"
 #include "autoconf.h"
+#include "rommgr.h"
 #include "devices.h"
 
 #define PCMCIA_SRAM 1
 #define PCMCIA_IDE 2
+#define PCMCIA_NE2000 3
+#define PCMCIA_ARCHOSHD 4
+#define PCMCIA_SURFSQUIRREL 5
 
 /*
 600000 to 9FFFFF	4 MB	Credit Card memory if CC present
@@ -143,12 +149,20 @@ static int pcmcia_readonly;
 static int pcmcia_type;
 static uae_u8 pcmcia_configuration[20];
 static int pcmcia_configured;
+static int pcmcia_delayed_insert, pcmcia_delayed_insert_count;
+static int external_card_int;
 
 static int gayle_id_cnt;
 static uae_u8 gayle_irq, gayle_int, gayle_cs, gayle_cs_mask, gayle_cfg;
 static int ide_splitter;
 
-static struct ide_thread_state gayle_its;
+static struct ide_thread_state gayle_its, pcmcia_its;
+
+static bool ne2000_pcmcia_irq;
+
+static int dataflyer_state;
+static int dataflyer_disable_irq;
+static uae_u8 dataflyer_byte;
 
 static void gayle_reset(int hardreset);
 static void gayle_map_pcmcia(void);
@@ -175,6 +189,10 @@ static uae_u8 checkgayleideirq (void)
 	int i;
 	bool irq = false;
 
+	if (dataflyer_disable_irq) {
+		gayle_irq &= ~GAYLE_IRQ_IDE;
+		return 0;
+	}
 	for (i = 0; i < 2; i++) {
 		if (idedrive[i]) {
 			if (!(idedrive[i]->regs.ide_devcon & 2) && (idedrive[i]->irq || (idedrive[i + 2] && idedrive[i + 2]->irq)))
@@ -189,7 +207,12 @@ static uae_u8 checkgayleideirq (void)
 	return irq ? GAYLE_IRQ_IDE : 0;
 }
 
-static void rethink_gayle (void)
+bool isideint(void)
+{
+	return checkgayleideirq() != 0;
+}
+
+void rethink_gayle (void)
 {
 	int lev2 = 0;
 	int lev6 = 0;
@@ -241,7 +264,7 @@ static void gayle_cs_change (uae_u8 mask, int onoff)
 	}
 	if (changed) {
 		gayle_irq |= mask;
-		rethink_gayle ();
+		devices_rethink_all(rethink_gayle);
 		if ((mask & GAYLE_CS_CCDET) && (gayle_irq & (GAYLE_IRQ_RESET | GAYLE_IRQ_BERR)) != (GAYLE_IRQ_RESET | GAYLE_IRQ_BERR)) {
 			if (gayle_irq & GAYLE_IRQ_RESET)
 				uae_reset (0, 0);
@@ -476,11 +499,113 @@ addrbank gayle_bank = {
 	ABFLAG_IO, S_READ, S_WRITE
 };
 
+void gayle_dataflyer_enable(bool enable)
+{
+	if (!enable) {
+		dataflyer_state = 0;
+		dataflyer_disable_irq = 0;
+		return;
+	}
+	dataflyer_state = 1;
+}
+
+static bool isdataflyerscsiplus(uaecptr addr, uae_u32 *v, int size)
+{
+	if (!dataflyer_state)
+		return false;
+	uaecptr addrmask = addr & 0xffff;
+	if (addrmask >= GAYLE_IRQ_4000 && addrmask <= GAYLE_IRQ_4000 + 1 && currprefs.cs_ide == IDE_A4000)
+		return false;
+	uaecptr addrbase = (addr & ~0xff) & ~0x1020;
+	int reg = ((addr & 0xffff) & ~0x2020) >> 2;
+	if (reg >= IDE_SECONDARY) {
+		reg &= ~IDE_SECONDARY;
+		if (reg >= 6) // normal IDE registers
+			return false;
+		if (size < 0) {
+			switch (reg)
+			{
+				case 0: // 53C80 fake dma port
+				soft_scsi_put(addrbase | 8, 1, *v);
+				break;
+				case 3:
+				dataflyer_byte = *v;
+				break;
+			}
+		} else {
+			switch (reg)
+			{
+				case 0: // 53C80 fake dma port
+				*v = soft_scsi_get(addrbase | 8, 1);
+				break;
+				case 3:
+				*v = 0;
+				if (ide_irq_check(idedrive[0], false))
+					*v = dataflyer_byte;
+				break;
+				case 4: // select SCSI
+				dataflyer_disable_irq = 1;
+				dataflyer_state |= 2;
+				break;
+				case 5: // select IDE
+				dataflyer_disable_irq = 1;
+				dataflyer_state &= ~2;
+				break;
+			}
+		}
+#if 0
+		if (size < 0)
+			write_log(_T("SECONDARY BASE PUT(%d) %08x %08x PC=%08x\n"), -size, addr, *v, M68K_GETPC);
+		else
+			write_log(_T("SECONDARY BASE GET(%d) %08x PC=%08x\n"), size, addr, M68K_GETPC);
+#endif
+		return true;
+	}
+	if (!(dataflyer_state & 2))
+		return false;
+	if (size < 0)
+		soft_scsi_put(addrbase | reg, -size, *v);
+	else
+		*v = soft_scsi_get(addrbase | reg, size);
+	return true;
+}
+
+//static bool isa4000t (uaecptr *paddr)
+//{
+//	if (!is_a4000t_scsi())
+//		return false;
+//	uaecptr addr = *paddr;
+//	if ((addr & 0xffff) >= (GAYLE_BASE_4000 & 0xffff))
+//		return false;
+//	addr &= 0xff;
+//	*paddr = addr;
+//	return true;
+//}
+
 static uae_u32 REGPARAM2 gayle_lget (uaecptr addr)
 {
 	struct ide_hdf *ide = NULL;
 	int ide_reg;
 	uae_u32 v;
+#ifdef NCR
+	if (is_a4000t_scsi() && (addr & 0xffff) == 0x3000)
+		return 0xffffffff; // NCR DIP BANK
+	if (isdataflyerscsiplus(addr, &v, 4)) {
+		return v;
+	}
+	if (isa4000t (&addr)) {
+		if (addr >= NCR_ALT_OFFSET) {
+			addr &= NCR_MASK;
+			v = (ncr710_io_bget_a4000t(addr + 3) << 0) | (ncr710_io_bget_a4000t(addr + 2) << 8) |
+				(ncr710_io_bget_a4000t(addr + 1) << 16) | (ncr710_io_bget_a4000t(addr + 0) << 24);
+		} else if (addr >= NCR_OFFSET) {
+			addr &= NCR_MASK;
+			v = (ncr710_io_bget_a4000t(addr + 3) << 0) | (ncr710_io_bget_a4000t(addr + 2) << 8) |
+				(ncr710_io_bget_a4000t(addr + 1) << 16) | (ncr710_io_bget_a4000t(addr + 0) << 24);
+		}
+		return v;
+	}
+#endif
 	ide_reg = get_gayle_ide_reg (addr, &ide);
 	if (ide_reg == IDE_DATA) {
 		v = ide_get_data (ide) << 16;
@@ -496,6 +621,20 @@ static uae_u32 REGPARAM2 gayle_wget (uaecptr addr)
 	struct ide_hdf *ide = NULL;
 	int ide_reg;
 	uae_u32 v;
+#ifdef NCR
+	if (is_a4000t_scsi() && (addr & (0xffff - 1)) == 0x3000)
+		return 0xffff; // NCR DIP BANK
+	if (isdataflyerscsiplus(addr, &v, 2)) {
+		return v;
+	}
+	if (isa4000t(&addr)) {
+		if (addr >= NCR_OFFSET) {
+			addr &= NCR_MASK;
+			v = (ncr710_io_bget_a4000t(addr) << 8) | ncr710_io_bget_a4000t(addr + 1);
+		}
+		return v;
+	}
+#endif
 	ide_reg = get_gayle_ide_reg (addr, &ide);
 	if (ide_reg == IDE_DATA) {
 		v = ide_get_data (ide);
@@ -508,6 +647,20 @@ static uae_u32 REGPARAM2 gayle_wget (uaecptr addr)
 static uae_u32 REGPARAM2 gayle_bget (uaecptr addr)
 {
 	uae_u32 v;
+#ifdef NCR
+	if (is_a4000t_scsi() && (addr & (0xffff - 3)) == 0x3000)
+		return 0xff; // NCR DIP BANK
+	if (isdataflyerscsiplus(addr, &v, 1)) {
+		return v;
+	}
+	if (isa4000t(&addr)) {
+		if (addr >= NCR_OFFSET) {
+			addr &= NCR_MASK;
+			return ncr710_io_bget_a4000t(addr);
+		}
+		return 0;
+	}
+#endif
 	v = gayle_read (addr);
 	return v;
 }
@@ -516,6 +669,25 @@ static void REGPARAM2 gayle_lput (uaecptr addr, uae_u32 value)
 {
 	struct ide_hdf *ide = NULL;
 	int ide_reg;
+	if (isdataflyerscsiplus(addr, &value, -4)) {
+		return;
+	}
+	//if (isa4000t(&addr)) {
+	//	if (addr >= NCR_ALT_OFFSET) {
+	//		addr &= NCR_MASK;
+	//		ncr710_io_bput_a4000t(addr + 3, value >> 0);
+	//		ncr710_io_bput_a4000t(addr + 2, value >> 8);
+	//		ncr710_io_bput_a4000t(addr + 1, value >> 16);
+	//		ncr710_io_bput_a4000t(addr + 0, value >> 24);
+	//	} else if (addr >= NCR_OFFSET) {
+	//		addr &= NCR_MASK;
+	//		ncr710_io_bput_a4000t(addr + 3, value >> 0);
+	//		ncr710_io_bput_a4000t(addr + 2, value >> 8);
+	//		ncr710_io_bput_a4000t(addr + 1, value >> 16);
+	//		ncr710_io_bput_a4000t(addr + 0, value >> 24);
+	//	}
+	//	return;
+	//}
 	ide_reg = get_gayle_ide_reg (addr, &ide);
 	if (ide_reg == IDE_DATA) {
 		ide_put_data (ide, value >> 16);
@@ -529,6 +701,19 @@ static void REGPARAM2 gayle_wput (uaecptr addr, uae_u32 value)
 {
 	struct ide_hdf *ide = NULL;
 	int ide_reg;
+#ifdef NCR
+	if (isdataflyerscsiplus(addr, &value, -2)) {
+		return;
+	}
+	if (isa4000t(&addr)) {
+		if (addr >= NCR_OFFSET) {
+			addr &= NCR_MASK;
+			ncr710_io_bput_a4000t(addr, value >> 8);
+			ncr710_io_bput_a4000t(addr + 1, value);
+		}
+		return;
+	}
+#endif
 	ide_reg = get_gayle_ide_reg (addr, &ide);
 	if (ide_reg == IDE_DATA) {
 		ide_put_data (ide, value);
@@ -540,6 +725,18 @@ static void REGPARAM2 gayle_wput (uaecptr addr, uae_u32 value)
 
 static void REGPARAM2 gayle_bput (uaecptr addr, uae_u32 value)
 {
+#ifdef NCR
+	if (isdataflyerscsiplus(addr, &value, -1)) {
+		return;
+	}
+	if (isa4000t(&addr)) {
+		if (addr >= NCR_OFFSET) {
+			addr &= NCR_MASK;
+			ncr710_io_bput_a4000t(addr, value);
+		}
+		return;
+	}
+#endif
 	gayle_write (addr, value);
 }
 
@@ -1154,8 +1351,7 @@ static int initpcmcia (const TCHAR *path, int readonly, int type, int reset, str
 				hdf_read(&pcmcia_disk->hfd, pcmcia_attrs, pcmcia_common_size, extrasize);
 				write_log(_T("PCMCIA SRAM: Attribute data read %ld bytes\n"), extrasize);
 				pcmcia_attrs_full = 1;
-			}
-			else {
+			} else {
 				initsramattr(pcmcia_common_size, readonly);
 			}
 			write_log(_T("PCMCIA SRAM: '%s' open, size=%d\n"), path, pcmcia_common_size);
@@ -1357,7 +1553,7 @@ static void REGPARAM2 gayle_common_bput (uaecptr addr, uae_u32 value)
 	gayle_common_write_byte(addr, value);
 }
 
-static void gayle_map_pcmcia (void)
+void gayle_map_pcmcia (void)
 {
 	if (currprefs.cs_pcmcia == 0)
 		return;
@@ -1366,13 +1562,12 @@ static void gayle_map_pcmcia (void)
 	while (!pcmcia_override) {
 		int cnt = 0;
 		for (int i = 0; i < 8; i++) {
-			struct autoconfig_info* aci = expansion_get_autoconfig_by_address(&currprefs, 6 * 1024 * 1024 + i * 512 * 1024, idx);
+			struct autoconfig_info *aci = expansion_get_autoconfig_by_address(&currprefs, 6 * 1024 * 1024 + i * 512 * 1024, idx);
 			if (aci) {
 				if (aci->zorro > 0) {
 					pcmcia_override = true;
 				}
-			}
-			else {
+			} else {
 				cnt++;
 			}
 		}
@@ -1437,10 +1632,62 @@ bool gayle_init_pcmcia(struct autoconfig_info *aci)
 	return true;
 }
 
-static void gayle_hsync(void)
+static int pcmcia_eject2(struct uae_prefs* p)
+{
+	for (int i = 0; i < MAX_EXPANSION_BOARDS; i++) {
+		struct boardromconfig* brc_changed = &changed_prefs.expansionboard[i];
+		struct boardromconfig* brc_cur = &currprefs.expansionboard[i];
+		struct boardromconfig* brc = &p->expansionboard[i];
+		if (brc->device_type) {
+			const struct expansionromtype* ert = get_device_expansion_rom(brc->device_type);
+			if (ert && (ert->deviceflags & EXPANSIONTYPE_PCMCIA) && brc->roms[0].inserted) {
+				write_log(_T("PCMCIA: '%s' removed\n"), ert->friendlyname);
+				brc->roms[0].inserted = false;
+				brc_changed->roms[0].inserted = false;
+				brc_cur->roms[0].inserted = false;
+				freepcmcia(0);
+				return i;
+			}
+		}
+	}
+	return -1;
+}
+
+void pcmcia_eject(struct uae_prefs* p)
+{
+	pcmcia_eject2(p);
+}
+
+// eject and insert card back after few second delay
+void pcmcia_reinsert(struct uae_prefs* p)
+{
+	pcmcia_delayed_insert_count = 0;
+	int num = pcmcia_eject2(p);
+	if (num < 0)
+		return;
+	pcmcia_delayed_insert = num + 1;
+	pcmcia_delayed_insert_count = 3 * 50 * 300;
+}
+
+bool pcmcia_disk_reinsert(struct uae_prefs* p, struct uaedev_config_info* uci, bool ejectonly)
+{
+	const struct expansionromtype* ert = get_unit_expansion_rom(uci->controller_type);
+	if (ert && (ert->deviceflags & EXPANSIONTYPE_PCMCIA)) {
+		if (ejectonly) {
+			pcmcia_eject2(p);
+		}
+		else {
+			pcmcia_reinsert(p);
+		}
+		return true;
+	}
+	return false;
+}
+
+void gayle_hsync(void)
 {
 	if (ide_interrupt_hsync(idedrive[0]) || ide_interrupt_hsync(idedrive[2]) || ide_interrupt_hsync(idedrive[4]))
-		rethink_gayle();
+		devices_rethink_all(rethink_gayle);
 }
 
 static void initide (void)
@@ -1461,20 +1708,20 @@ static void initide (void)
 	gayle_irq = gayle_int = 0;
 }
 
-static void gayle_free (void)
+void gayle_free (void)
 {
 	stop_ide_thread(&gayle_its);
 	//stop_ide_thread(&pcmcia_its);
 }
 
-static void check_prefs_changed_gayle(void)
+void check_prefs_changed_gayle(void)
 {
 	if (!currprefs.cs_pcmcia)
 		return;
 	//pcmcia_card_check(1, -1);
 }
 
-static void gayle_reset (int hardreset)
+void gayle_reset (int hardreset)
 {
 	static TCHAR bankname[100];
 

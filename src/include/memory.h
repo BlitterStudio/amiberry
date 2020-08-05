@@ -122,14 +122,14 @@ typedef struct {
 	of going through function calls, and instead simply grab the memory
 	ourselves. This holds the memory address where the start of memory is
 	for this particular bank. */
-	uae_u8* baseaddr;
-	const TCHAR* label;
-	const TCHAR* name;
+	uae_u8 *baseaddr;
+	const TCHAR *label;
+	const TCHAR *name;
 	/* for instruction opcode/operand fetches */
-	mem_get_func lgeti, wgeti;
+	mem_get_func wgeti;
 	int flags;
 	int jit_read_flag, jit_write_flag;
-	struct addrbank_sub* sub_banks;
+	struct addrbank_sub *sub_banks;
 	uae_u32 mask;
 	uae_u32 startmask;
 	uae_u32 start;
@@ -153,9 +153,12 @@ struct addrbank_sub
 	uae_u32 maskval;
 };
 
+/* GCC does not like addrbank *addrbank in struct autoconfig_info. */
+typedef addrbank addrbank_t;
+
 struct autoconfig_info
 {
-	struct uae_prefs* prefs;
+	struct uae_prefs *prefs;
 	bool doinit;
 	bool postinit;
 	int devnum;
@@ -167,8 +170,8 @@ struct autoconfig_info
 	uae_u32 start;
 	uae_u32 size;
 	int zorro;
-	const TCHAR* label;
-	addrbank* addrbankp;
+	const TCHAR *label;
+	addrbank_t *addrbank;
 	uaecptr write_bank_address;
 	struct romconfig *rc;
 	uae_u32 last_high_ram;
@@ -289,7 +292,6 @@ static uae_u8 *REGPARAM2 name ## _xlate (uaecptr addr) \
 
 #define DECLARE_MEMORY_FUNCTIONS(name) \
 static uae_u32 REGPARAM3 NOWARN_UNUSED(name ## _lget) (uaecptr) REGPARAM; \
-static uae_u32 REGPARAM3 NOWARN_UNUSED(name ## _lgeti) (uaecptr) REGPARAM; \
 static uae_u32 REGPARAM3 NOWARN_UNUSED(name ## _wget) (uaecptr) REGPARAM; \
 static uae_u32 REGPARAM3 NOWARN_UNUSED(name ## _wgeti) (uaecptr) REGPARAM; \
 static uae_u32 REGPARAM3 NOWARN_UNUSED(name ## _bget) (uaecptr) REGPARAM; \
@@ -298,18 +300,6 @@ static void REGPARAM3 NOWARN_UNUSED(name ## _wput) (uaecptr, uae_u32) REGPARAM; 
 static void REGPARAM3 NOWARN_UNUSED(name ## _bput) (uaecptr, uae_u32) REGPARAM; \
 static int REGPARAM3 NOWARN_UNUSED(name ## _check) (uaecptr addr, uae_u32 size) REGPARAM; \
 static uae_u8 *REGPARAM3 NOWARN_UNUSED(name ## _xlate) (uaecptr addr) REGPARAM;
-
-#define DECLARE_MEMORY_FUNCTIONS_WITH_SUFFIX(name, suffix) \
-static uae_u32 REGPARAM3 NOWARN_UNUSED(name ## _lget_ ## suffix) (uaecptr) REGPARAM; \
-static uae_u32 REGPARAM3 NOWARN_UNUSED(name ## _lgeti_ ## suffix) (uaecptr) REGPARAM; \
-static uae_u32 REGPARAM3 NOWARN_UNUSED(name ## _wget_ ## suffix) (uaecptr) REGPARAM; \
-static uae_u32 REGPARAM3 NOWARN_UNUSED(name ## _wgeti_ ## suffix) (uaecptr) REGPARAM; \
-static uae_u32 REGPARAM3 NOWARN_UNUSED(name ## _bget_ ## suffix) (uaecptr) REGPARAM; \
-static void REGPARAM3 NOWARN_UNUSED(name ## _lput_ ## suffix) (uaecptr, uae_u32) REGPARAM; \
-static void REGPARAM3 NOWARN_UNUSED(name ## _wput_ ## suffix) (uaecptr, uae_u32) REGPARAM; \
-static void REGPARAM3 NOWARN_UNUSED(name ## _bput_ ## suffix) (uaecptr, uae_u32) REGPARAM; \
-static int REGPARAM3 NOWARN_UNUSED(name ## _check_ ## suffix) (uaecptr addr, uae_u32 size) REGPARAM; \
-static uae_u8 *REGPARAM3 NOWARN_UNUSED(name ## _xlate_ ## suffix) (uaecptr addr) REGPARAM;
 
 #define MEMORY_FUNCTIONS(name) \
 MEMORY_LGET(name); \
@@ -419,7 +409,7 @@ extern addrbank expamem_bank;
 extern addrbank expamem_null, expamem_none;
 extern addrbank fastmem_bank[MAX_RAM_BOARDS];
 extern addrbank fastmem_nojit_bank[MAX_RAM_BOARDS];
-extern addrbank* gfxmem_banks[MAX_RTG_BOARDS];
+extern addrbank *gfxmem_banks[MAX_RTG_BOARDS];
 extern addrbank gayle_bank;
 extern addrbank gayle2_bank;
 extern addrbank mbres_bank;
@@ -443,8 +433,8 @@ extern void rtarea_free(void);
 extern void rtarea_init_mem(void);
 extern void rtarea_setup(void);
 extern void expamem_reset(int);
-extern void expamem_next(addrbank* mapped, addrbank* next);
-extern void expamem_shutup(addrbank* mapped);
+extern void expamem_next(addrbank *mapped, addrbank *next);
+extern void expamem_shutup(addrbank *mapped);
 extern bool expamem_z3hack(struct uae_prefs*);
 extern void expansion_cpu_fallback(void);
 extern void set_expamem_z3_hack_mode(int);
@@ -457,14 +447,12 @@ extern uae_u32 last_custom_value1;
 
 /* Default memory access functions */
 
-extern void dummy_put (uaecptr addr, int size, uae_u32 val);
 extern uae_u32 dummy_get (uaecptr addr, int size, bool inst, uae_u32 defvalue);
 extern uae_u32 dummy_get_safe(uaecptr addr, int size, bool inst, uae_u32 defvalue);
 
 extern int REGPARAM3 default_check(uaecptr addr, uae_u32 size) REGPARAM;
 extern uae_u8 *REGPARAM3 default_xlate(uaecptr addr) REGPARAM;
 /* 680x0 opcode fetches */
-extern uae_u32 REGPARAM3 dummy_lgeti (uaecptr addr) REGPARAM;
 extern uae_u32 REGPARAM3 dummy_wgeti (uaecptr addr) REGPARAM;
 
 /* sub bank support */
@@ -474,7 +462,6 @@ extern uae_u32 REGPARAM3 sub_bank_bget(uaecptr) REGPARAM;
 extern void REGPARAM3 sub_bank_lput(uaecptr, uae_u32) REGPARAM;
 extern void REGPARAM3 sub_bank_wput(uaecptr, uae_u32) REGPARAM;
 extern void REGPARAM3 sub_bank_bput(uaecptr, uae_u32) REGPARAM;
-extern uae_u32 REGPARAM3 sub_bank_lgeti(uaecptr) REGPARAM;
 extern uae_u32 REGPARAM3 sub_bank_wgeti(uaecptr) REGPARAM;
 extern int REGPARAM3 sub_bank_check(uaecptr addr, uae_u32 size) REGPARAM;
 extern uae_u8 *REGPARAM3 sub_bank_xlate(uaecptr addr) REGPARAM;
@@ -489,7 +476,7 @@ extern uae_u8* baseaddr[MEMORY_BANKS];
 #endif
 
 #define get_mem_bank(addr) (*mem_banks[bankindex(addr)])
-extern addrbank* get_mem_bank_real(uaecptr);
+extern addrbank *get_mem_bank_real(uaecptr);
 
 #ifdef JIT
 #define put_mem_bank(addr, b, realstart) do { \
@@ -505,51 +492,45 @@ extern addrbank* get_mem_bank_real(uaecptr);
 #endif
 
 extern void memory_init(void);
-extern void memory_cleanup(void);
+extern void memory_cleanup (void);
 extern void restore_banks(void);
-extern void map_banks(addrbank * bank, int first, int count, int realsize);
-extern void map_banks_z2(addrbank * bank, int first, int count);
-extern uae_u32 map_banks_z2_autosize(addrbank * bank, int first);
-extern void map_banks_z3(addrbank * bank, int first, int count);
-extern bool validate_banks_z2(addrbank * bank, int start, int size);
-extern bool validate_banks_z3(addrbank * bank, int start, int size);
-extern void map_banks_quick(addrbank * bank, int first, int count, int realsize);
-extern void map_banks_nojitdirect(addrbank * bank, int first, int count, int realsize);
-extern void map_banks_cond(addrbank * bank, int first, int count, int realsize);
-extern void map_overlay(int chip);
-extern void memory_hardreset(int);
-extern void memory_clear(void);
-extern void free_fastmemory(int);
-extern void set_roms_modified(void);
+extern void map_banks (addrbank *bank, int first, int count, int realsize);
+extern void map_banks_z2 (addrbank *bank, int first, int count);
+extern void map_banks_z3(addrbank *bank, int first, int count);
+extern bool validate_banks_z2(addrbank *bank, int start, int size);
+extern bool validate_banks_z3(addrbank *bank, int start, int size);
+extern void map_banks_quick (addrbank *bank, int first, int count, int realsize);
+extern void map_banks_nojitdirect (addrbank *bank, int first, int count, int realsize);
+extern void map_banks_cond (addrbank *bank, int first, int count, int realsize);
+extern void map_overlay (int chip);
+extern void memory_hardreset (int);
+extern void memory_clear (void);
+extern void free_fastmemory (int);
+extern void set_roms_modified (void);
 extern void reload_roms(void);
-extern bool read_kickstart_version(struct uae_prefs* p);
+extern bool read_kickstart_version(struct uae_prefs *p);
 extern void chipmem_setindirect(void);
 
-uae_u32 memory_get_long(uaecptr);
-uae_u32 memory_get_word(uaecptr);
-uae_u32 memory_get_byte(uaecptr);
-uae_u32 memory_get_longi(uaecptr);
-uae_u32 memory_get_wordi(uaecptr);
+#define memory_get_long(addr) (call_mem_get_func(get_mem_bank(addr).lget, addr))
+#define memory_get_word(addr) (call_mem_get_func(get_mem_bank(addr).wget, addr))
+#define memory_get_byte(addr) (call_mem_get_func(get_mem_bank(addr).bget, addr))
+#define memory_get_wordi(addr) (call_mem_get_func(get_mem_bank(addr).wgeti, addr))
 
 STATIC_INLINE uae_u32 get_long(uaecptr addr)
 {
-	return memory_get_long(addr);
+  return memory_get_long(addr);
 }
-STATIC_INLINE uae_u32 get_word (uaecptr addr)
+STATIC_INLINE uae_u32 get_word(uaecptr addr)
 {
-	return memory_get_word(addr);
+  return memory_get_word(addr);
 }
-STATIC_INLINE uae_u32 get_byte (uaecptr addr)
+STATIC_INLINE uae_u32 get_byte(uaecptr addr)
 {
-	return memory_get_byte(addr);
-}
-STATIC_INLINE uae_u32 get_longi(uaecptr addr)
-{
-	return memory_get_longi(addr);
+  return memory_get_byte(addr);
 }
 STATIC_INLINE uae_u32 get_wordi(uaecptr addr)
 {
-	return memory_get_wordi(addr);
+  return memory_get_wordi(addr);
 }
 
 // do split memory access if it can cross memory banks
@@ -582,68 +563,37 @@ STATIC_INLINE uae_u32 get_byte_compatible(uaecptr addr)
 {
 	return memory_get_byte(addr);
 }
-STATIC_INLINE uae_u32 get_longi_compatible(uaecptr addr)
-{
-	if ((addr & 0xffff) < 0xfffd) {
-		return memory_get_longi(addr);
-	} else {
-		uae_u16 v0 = memory_get_wordi(addr + 0);
-		uae_u16 v1 = memory_get_wordi(addr + 2);
-		return (v0 << 16) | (v1 << 0);
-	}
-}
-STATIC_INLINE uae_u32 get_wordi_compatible(uaecptr addr)
-{
-	return memory_get_wordi(addr);
-}
-
 
 STATIC_INLINE uae_u32 get_long_jit(uaecptr addr)
 {
-#ifdef JIT
 	addrbank *bank = &get_mem_bank(addr);
+#ifdef JIT
 	special_mem |= bank->jit_read_flag;
 #endif
-	return memory_get_long(addr);
+	return bank->lget(addr);
 }
 STATIC_INLINE uae_u32 get_word_jit(uaecptr addr)
 {
-#ifdef JIT
 	addrbank *bank = &get_mem_bank(addr);
+#ifdef JIT
 	special_mem |= bank->jit_read_flag;
 #endif
-	return memory_get_word(addr);
+	return bank->wget(addr);
 }
 STATIC_INLINE uae_u32 get_byte_jit(uaecptr addr)
 {
-#ifdef JIT
 	addrbank *bank = &get_mem_bank(addr);
+#ifdef JIT
 	special_mem |= bank->jit_read_flag;
 #endif
-	return memory_get_byte(addr);
-}
-STATIC_INLINE uae_u32 get_longi_jit(uaecptr addr)
-{
-#ifdef JIT
-	addrbank *bank = &get_mem_bank(addr);
-	special_mem |= bank->jit_read_flag;
-#endif
-	return memory_get_longi(addr);
-}
-STATIC_INLINE uae_u32 get_wordi_jit(uaecptr addr)
-{
-#ifdef JIT
-	addrbank *bank = &get_mem_bank(addr);
-	special_mem |= bank->jit_read_flag;
-#endif
-	return memory_get_wordi(addr);
+	return bank->bget(addr);
 }
 
 /*
- * Read a host pointer from addr
- */
+* Read a host pointer from addr
+*/
 #if SIZEOF_VOID_P == 4
-# define get_pointer(addr) ((void *)get_long(addr))
+# define get_pointer(addr) ((void *)get_long (addr))
 #else
 # if SIZEOF_VOID_P == 8
 STATIC_INLINE void *get_pointer (uaecptr addr)
@@ -669,9 +619,9 @@ STATIC_INLINE void *get_pointer (uaecptr addr)
 # endif
 #endif
 
-void memory_put_long(uaecptr, uae_u32);
-void memory_put_word(uaecptr, uae_u32);
-void memory_put_byte(uaecptr, uae_u32);
+#define memory_put_long(addr,l) (call_mem_put_func(get_mem_bank(addr).lput, addr, l))
+#define memory_put_word(addr,w) (call_mem_put_func(get_mem_bank(addr).wput, addr, w))
+#define memory_put_byte(addr,b) (call_mem_put_func(get_mem_bank(addr).bput, addr, b))
 
 STATIC_INLINE void put_long (uaecptr addr, uae_u32 l)
 {
@@ -717,27 +667,27 @@ STATIC_INLINE void put_byte_compatible(uaecptr addr, uae_u32 b)
 
 STATIC_INLINE void put_long_jit(uaecptr addr, uae_u32 l)
 {
-#ifdef JIT
 	addrbank *bank = &get_mem_bank(addr);
+#ifdef JIT
 	special_mem |= bank->jit_write_flag;
 #endif
-	memory_put_long(addr, l);
+	bank->lput(addr, l);
 }
 STATIC_INLINE void put_word_jit(uaecptr addr, uae_u32 l)
 {
-#ifdef JIT
 	addrbank *bank = &get_mem_bank(addr);
+#ifdef JIT
 	special_mem |= bank->jit_write_flag;
 #endif
-	memory_put_word(addr, l);
+	bank->wput(addr, l);
 }
 STATIC_INLINE void put_byte_jit(uaecptr addr, uae_u32 l)
 {
-#ifdef JIT
 	addrbank *bank = &get_mem_bank(addr);
+#ifdef JIT
 	special_mem |= bank->jit_write_flag;
 #endif
-	memory_put_byte(addr, l);
+	bank->bput(addr, l);
 }
 
 /*
@@ -769,25 +719,16 @@ STATIC_INLINE void put_pointer (uaecptr addr, void *v)
 # endif
 #endif
 
-bool real_address_allowed(void);
-uae_u8* memory_get_real_address(uaecptr);
-int memory_valid_address(uaecptr, uae_u32);
-
-STATIC_INLINE uae_u8 *get_real_address (uaecptr addr)
+STATIC_INLINE uae_u8* get_real_address(uaecptr addr)
 {
-	return memory_get_real_address(addr);
+	return get_mem_bank(addr).xlateaddr(addr);
 }
 
-STATIC_INLINE int valid_address (uaecptr addr, uae_u32 size)
+STATIC_INLINE int valid_address(uaecptr addr, uae_u32 size)
 {
-	return memory_valid_address(addr, size);
+	return get_mem_bank(addr).check(addr, size);
 }
 
-STATIC_INLINE void put_quad_host(void *addr, uae_u64 v)
-{
-	do_put_mem_long((uae_u32*)addr, v >> 32);
-	do_put_mem_long(((uae_u32*)addr) + 1, (uae_u32)v);
-}
 STATIC_INLINE void put_long_host(void *addr, uae_u32 v)
 {
 	do_put_mem_long((uae_u32*)addr, v);
@@ -827,34 +768,41 @@ extern void REGPARAM3 chipmem_wput (uaecptr, uae_u32) REGPARAM;
 extern void REGPARAM3 chipmem_bput (uaecptr, uae_u32) REGPARAM;
 
 extern uae_u32 REGPARAM3 chipmem_agnus_wget (uaecptr) REGPARAM;
-extern void REGPARAM3 chipmem_agnus_wput (uaecptr, uae_u32) REGPARAM;
+extern void REGPARAM3 chipmem_agnus_wput(uaecptr, uae_u32) REGPARAM;
 
 extern addrbank dummy_bank;
 
-/* 68020+ Chip RAM DMA contention emulation */
-extern void REGPARAM3 chipmem_bput_c2 (uaecptr, uae_u32) REGPARAM;
+extern uae_u32(REGPARAM3* chipmem_lget_indirect)(uaecptr) REGPARAM;
+extern uae_u32(REGPARAM3* chipmem_wget_indirect)(uaecptr) REGPARAM;
+extern uae_u32(REGPARAM3* chipmem_bget_indirect)(uaecptr) REGPARAM;
+extern void (REGPARAM3* chipmem_lput_indirect)(uaecptr, uae_u32) REGPARAM;
+extern void (REGPARAM3* chipmem_wput_indirect)(uaecptr, uae_u32) REGPARAM;
+extern void (REGPARAM3* chipmem_bput_indirect)(uaecptr, uae_u32) REGPARAM;
+extern int (REGPARAM3* chipmem_check_indirect)(uaecptr, uae_u32) REGPARAM;
+extern uae_u8* (REGPARAM3* chipmem_xlate_indirect)(uaecptr) REGPARAM;
 
-extern uae_u32 (REGPARAM3 *chipmem_lget_indirect)(uaecptr) REGPARAM;
-extern uae_u32 (REGPARAM3 *chipmem_wget_indirect)(uaecptr) REGPARAM;
-extern uae_u32 (REGPARAM3 *chipmem_bget_indirect)(uaecptr) REGPARAM;
-extern void (REGPARAM3 *chipmem_lput_indirect)(uaecptr, uae_u32) REGPARAM;
-extern void (REGPARAM3 *chipmem_wput_indirect)(uaecptr, uae_u32) REGPARAM;
-extern void (REGPARAM3 *chipmem_bput_indirect)(uaecptr, uae_u32) REGPARAM;
-extern int (REGPARAM3 *chipmem_check_indirect)(uaecptr, uae_u32) REGPARAM;
-extern uae_u8 *(REGPARAM3 *chipmem_xlate_indirect)(uaecptr) REGPARAM;
+#ifdef NATMEM_OFFSET
 
-//STATIC_INLINE uae_u32 chipmem_lget_indirect(uae_u32 PT) {
-//	return do_get_mem_long((uae_u32*)&chipmem_bank.baseaddr[PT & chipmem_bank.mask]);
-//}
-//STATIC_INLINE uae_u32 chipmem_wget_indirect(uae_u32 PT) {
-//	return do_get_mem_word((uae_u16*)&chipmem_bank.baseaddr[PT & chipmem_full_mask]);
-//}
+typedef struct shmpiece_reg {
+	uae_u8* native_address;
+	int id;
+	uae_u32 size;
+	const TCHAR* name;
+	struct shmpiece_reg* next;
+	struct shmpiece_reg* prev;
+} shmpiece;
 
-//#define chipmem_wput_indirect  chipmem_agnus_wput
+extern shmpiece* shm_start;
 
-extern bool mapped_malloc(addrbank*);
-extern void mapped_free(addrbank*);
-extern void a3000_fakekick(int);
+extern uae_u8* natmem_offset;
+extern uae_u8* natmem_reserved;
+extern uae_u32 natmem_reserved_size;
+
+#endif
+
+extern bool mapped_malloc (addrbank*);
+extern void mapped_free (addrbank*);
+extern void a3000_fakekick (int);
 
 extern uaecptr strcpyha_safe (uaecptr dst, const uae_char *src);
 extern uae_char *strcpyah_safe (uae_char *dst, uaecptr src, int maxsize);
@@ -862,5 +810,31 @@ extern void memcpyha_safe (uaecptr dst, const uae_u8 *src, int size);
 extern void memcpyha (uaecptr dst, const uae_u8 *src, int size);
 extern void memcpyah_safe (uae_u8 *dst, uaecptr src, int size);
 extern void memcpyah (uae_u8 *dst, uaecptr src, int size);
+
+#define UAE_MEMORY_REGIONS_MAX 64
+#define UAE_MEMORY_REGION_NAME_LENGTH 64
+
+#define UAE_MEMORY_REGION_RAM (1 << 0)
+#define UAE_MEMORY_REGION_ALIAS (1 << 1)
+#define UAE_MEMORY_REGION_MIRROR (1 << 2)
+
+/* Get a list of memory regions in the Amiga address space */
+
+typedef struct UaeMemoryRegion {
+	uaecptr start;
+	uae_u32 size;
+	TCHAR name[UAE_MEMORY_REGION_NAME_LENGTH];
+	TCHAR rom_name[UAE_MEMORY_REGION_NAME_LENGTH];
+	uaecptr alias;
+	int flags;
+	uae_u8 *memory;
+} UaeMemoryRegion;
+
+typedef struct UaeMemoryMap {
+	UaeMemoryRegion regions[UAE_MEMORY_REGIONS_MAX];
+	int num_regions;
+} UaeMemoryMap;
+
+void uae_memory_map(UaeMemoryMap *map);
 
 #endif /* UAE_MEMORY_H */

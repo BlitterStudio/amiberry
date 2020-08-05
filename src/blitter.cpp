@@ -1,11 +1,11 @@
- /*
-  * UAE - The Un*x Amiga Emulator
-  *
-  * Custom chip emulation
-  *
-  * (c) 1995 Bernd Schmidt, Alessandro Bissacco
-  * (c) 2002 - 2005 Toni Wilen
-  */
+/*
+* UAE - The Un*x Amiga Emulator
+*
+* Custom chip emulation
+*
+* (c) 1995 Bernd Schmidt, Alessandro Bissacco
+* (c) 2002 - 2005 Toni Wilen
+*/
 
 #include "sysconfig.h"
 #include "sysdeps.h"
@@ -58,9 +58,9 @@ static uaecptr blit_waitpc;
 static int blit_maxcyclecounter, blit_slowdown, blit_totalcyclecounter;
 static int blit_startcycles, blit_misscyclecounter;
 
-#ifdef CPUEMU_13
+//#ifdef CPUEMU_13
 extern uae_u8 cycle_line[256];
-#endif
+//#endif
 
 static long blit_firstline_cycles;
 static long blit_first_cycle;
@@ -313,6 +313,18 @@ int blitter_channel_state (void)
 	return channel_state (blit_cyclecounter);
 }
 
+STATIC_INLINE int canblit(int hpos)
+{
+	if (!dmaen(DMA_BLITTER))
+		return -1;
+	if (is_bitplane_dma(hpos))
+		return 0;
+	if (cycle_line[hpos] & CYCLE_MASK) {
+		return 0;
+	}
+	return 1;
+}
+
 static void reset_channel_mods (void)
 {
 	if (bltptxpos < 0)
@@ -423,8 +435,7 @@ static void blitter_dofast (void)
 				if (bltadatptr) {
 					blt_info.bltadat = bltadat = chipmem_wget_indirect (bltadatptr);
 					bltadatptr += 2;
-				}
-				else
+				} else
 					bltadat = blt_info.bltadat;
 				bltadat &= blit_masktable[i];
 				blitahold = (((uae_u32)blt_info.bltaold << 16) | bltadat) >> blt_info.blitashift;
@@ -505,11 +516,10 @@ static void blitter_dofast_desc (void)
 		bltddatptr = bltdpt;
 		bltdpt -= (blt_info.hblitsize * 2 + blt_info.bltdmod) * blt_info.vblitsize;
 	}
-  if (blitfunc_dofast_desc[mt] && !blitfill) {
-	  (*blitfunc_dofast_desc[mt])(bltadatptr, bltbdatptr, bltcdatptr, bltddatptr, &blt_info);
-  }
-  else 
-  {
+	if (blitfunc_dofast_desc[mt] && !blitfill) {
+		(*blitfunc_dofast_desc[mt])(bltadatptr, bltbdatptr, bltcdatptr, bltddatptr, &blt_info);
+	} else
+	{
 		uae_u32 blitbhold = blt_info.bltbhold;
 		uaecptr dstp = 0;
 		int dodst = 0;
@@ -879,7 +889,20 @@ static void blitter_force_finish(void)
 		*/
 		odmacon = dmacon;
 		dmacon |= DMA_MASTER | DMA_BLITTER;
-		actually_do_blit();
+		if (blitter_cycle_exact && !immediate_blits) {
+			int rounds = 10000;
+			while (bltstate != BLT_done && rounds > 0) {
+				memset(cycle_line, 0, sizeof cycle_line);
+				decide_blitter(-1);
+				rounds--;
+			}
+			if (rounds == 0)
+				write_log(_T("blitter froze!?\n"));
+			blit_startcycles = 0;
+		}
+		else {
+			actually_do_blit();
+		}
 		blitter_done(current_hpos());
 		dmacon = odmacon;
 	}
@@ -1213,7 +1236,6 @@ void restore_blitter_finish (void)
 		blit_interrupt = 1;
 		if (bltstate == BLT_init) {
 			write_log (_T("blitter was started but DMA was inactive during save\n"));
-			//do_blitter (0);
 		}
 		if (blt_delayed_irq < 0) {
 			if (intreq & 0x0040)

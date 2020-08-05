@@ -19,7 +19,7 @@ namespace gcn
 		label = new Label(caption);
 		label->setHeight(16);
 
-		auto img = Image::load(imagepath);
+		auto* img = Image::load(imagepath);
 		icon = new Icon(img);
 		icon->setSize(16, 16);
 

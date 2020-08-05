@@ -26,7 +26,7 @@ static const int sz1[8] = {4, 4, 12, 12, 2, 8, 1, 0};
 static const int sz2[8] = {4, 4, 12, 12, 2, 8, 2, 0};
 
 /* return the required floating point precision or -1 for failure, 0=E, 1=S, 2=D */
-STATIC_INLINE int comp_fp_get(uae_u32 opcode, uae_u16 extra, int treg)
+STATIC_INLINE int comp_fp_get (uae_u32 opcode, uae_u16 extra, int treg)
 {
 	int reg = opcode & 7;
 	int mode = (opcode >> 3) & 7;
@@ -34,13 +34,11 @@ STATIC_INLINE int comp_fp_get(uae_u32 opcode, uae_u16 extra, int treg)
 
 	if (size == 3 || size == 7) /* 3 = packed decimal, 7 is not defined */
 		return -1;
-	switch (mode)
-	{
+	switch (mode) {
 	case 0: /* Dn */
-		switch (size)
-		{
+		switch (size) {
 		case 0: /* Long */
-			fmov_l_rr(treg, reg);
+			fmov_l_rr (treg, reg);
 			return 2;
 		case 1: /* Single */
 			fmov_s_rr(treg, reg);

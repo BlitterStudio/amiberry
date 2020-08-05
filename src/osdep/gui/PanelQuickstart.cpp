@@ -374,7 +374,7 @@ public:
 			if (strlen(changed_prefs.cdslots[0].name) > 0)
 				strncpy(tmp, changed_prefs.cdslots[0].name, MAX_DPATH);
 			else
-				strncpy(tmp, currentDir, MAX_DPATH);
+				strncpy(tmp, current_dir, MAX_DPATH);
 
 			if (SelectFile("Select CD image file", tmp, cdfile_filter))
 			{
@@ -384,7 +384,7 @@ public:
 					changed_prefs.cdslots[0].inuse = true;
 					changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
 					AddFileToCDList(tmp, 1);
-					extractPath(tmp, currentDir);
+					extract_path(tmp, current_dir);
 
 					AdjustDropDownControls();
 				}
@@ -472,7 +472,7 @@ public:
 					}
 					whdload_auto_prefs(&changed_prefs, whdload_file);
 				}
-				RefreshAllPanels();
+				refresh_all_panels();
 			}
 		}
 	}
@@ -499,7 +499,7 @@ public:
 			if (strlen(whdload_file) > 0)
 				strncpy(tmp, whdload_file, MAX_DPATH);
 			else
-				strncpy(tmp, currentDir, MAX_DPATH);
+				strncpy(tmp, current_dir, MAX_DPATH);
 
 			if (SelectFile("Select WHDLoad LHA file", tmp, whdload_filter))
 			{
@@ -509,7 +509,7 @@ public:
 			}
 			cmdWhdloadSelect->requestFocus();
 		}
-		RefreshAllPanels();
+		refresh_all_panels();
 	}
 };
 
@@ -534,7 +534,7 @@ public:
 					cboConfig->setSelected(0);
 					SetControlState(quickstart_model);
 					AdjustPrefs();
-					DisableResume();
+					disable_resume();
 				}
 			}
 			else if (actionEvent.getSource() == cboConfig)
@@ -548,13 +548,13 @@ public:
 					AdjustPrefs();
 				}
 			}
-			RefreshAllPanels();
+			refresh_all_panels();
 		}
 
 		if (actionEvent.getSource() == cmdSetConfiguration)
 		{
 			AdjustPrefs();
-			RefreshAllPanels();
+			refresh_all_panels();
 		}
 	}
 };
@@ -661,7 +661,7 @@ public:
 				if (strlen(changed_prefs.floppyslots[i].df) > 0)
 					strncpy(tmp, changed_prefs.floppyslots[i].df, MAX_DPATH);
 				else
-					strncpy(tmp, currentDir, MAX_DPATH);
+					strncpy(tmp, current_dir, MAX_DPATH);
 				if (SelectFile("Select disk image file", tmp, diskfile_filter))
 				{
 					if (strncmp(changed_prefs.floppyslots[i].df, tmp, MAX_DPATH) != 0)
@@ -669,7 +669,7 @@ public:
 						strncpy(changed_prefs.floppyslots[i].df, tmp, MAX_DPATH);
 						disk_insert(i, tmp);
 						AddFileToDiskList(tmp, 1);
-						extractPath(tmp, currentDir);
+						extract_path(tmp, current_dir);
 
 						AdjustDropDownControls();
 					}
@@ -735,7 +735,7 @@ class QuickstartModeActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		quickstart_start = chkQuickstartMode->isSelected();
+		amiberry_options.quickstart_start = chkQuickstartMode->isSelected();
 	}
 };
 
@@ -809,7 +809,7 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 		cmdDFxEject[i]->addActionListener(dfxButtonActionListener);
 
 		cmdDFxSelect[i] = new gcn::Button("Select file");
-		cmdDFxSelect[i]->setSize(BUTTON_WIDTH + 8, SMALL_BUTTON_HEIGHT);
+		cmdDFxSelect[i]->setSize(BUTTON_WIDTH + 10, SMALL_BUTTON_HEIGHT);
 		cmdDFxSelect[i]->setBaseColor(gui_baseCol);
 		snprintf(tmp, 20, "qscmdSel%d", i);
 		cmdDFxSelect[i]->setId(tmp);
@@ -887,16 +887,12 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 
 	for (auto i = 0; i < 2; ++i)
 	{
-		auto posX = DISTANCE_BORDER;
-		category.panel->add(chkDFx[i], posX, posY);
-		posX += DISTANCE_NEXT_X * 12;
-		category.panel->add(chkDFxWriteProtect[i], posX, posY);
-		posX += DISTANCE_NEXT_X * 13;
+		category.panel->add(chkDFx[i], DISTANCE_BORDER, posY);
+		category.panel->add(chkDFxWriteProtect[i], DISTANCE_BORDER + DISTANCE_NEXT_X * 8, posY);
 		//	  category.panel->add(cmdDFxInfo[i], posX, posY);
 		//posX += cmdDFxInfo[i]->getWidth() + DISTANCE_NEXT_X;
-		category.panel->add(cmdDFxEject[i], posX, posY);
-		posX += cmdDFxEject[i]->getWidth() + DISTANCE_NEXT_X;
-		category.panel->add(cmdDFxSelect[i], posX, posY);
+		category.panel->add(cmdDFxEject[i], DISTANCE_BORDER + DISTANCE_NEXT_X * 26, posY);
+		category.panel->add(cmdDFxSelect[i], cmdDFxEject[i]->getX() + cmdDFxEject[i]->getWidth() + DISTANCE_NEXT_X, posY);
 		posY += cmdDFxEject[i]->getHeight() + 8;
 
 		category.panel->add(cboDFxFile[i], DISTANCE_BORDER, posY);
@@ -1065,7 +1061,7 @@ void RefreshPanelQuickstart(void)
 	cmdCDSelect->setEnabled(changed_prefs.cdslots[0].inuse);
 	cboCDFile->setEnabled(changed_prefs.cdslots[0].inuse);
 
-	chkQuickstartMode->setSelected(quickstart_start);
+	chkQuickstartMode->setSelected(amiberry_options.quickstart_start);
 }
 
 bool HelpPanelQuickstart(std::vector<std::string>& helptext)

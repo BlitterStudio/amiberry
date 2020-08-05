@@ -22,7 +22,7 @@
 #if defined(ARMV6T2) || defined(CPU_AARCH64)
 #define USE_JIT_FPU
 #endif
-/* #define NATMEM_OFFSET regs.natmem_offset */
+#define NATMEM_OFFSET regs.natmem_offset
 /* #define CATWEASEL */ /* Catweasel MK2/3 support */
 /* #define AHI */ /* AHI sound emulation */
 /* #define ENFORCER */ /* UAE Enforcer */
@@ -31,12 +31,12 @@
 #ifndef ANDROID
 #define CD32 /* CD32 emulation */
 #endif
-/* #define CDTV */ /* CDTV emulation */
+#define CDTV /* CDTV emulation */
 /* #define PARALLEL_PORT */ /* parallel port emulation */
 /* #define PARALLEL_DIRECT */ /* direct parallel port emulation */
 /* #define SERIAL_PORT */ /* serial port emulation */
 /* #define SERIAL_ENET */ /* serial port UDP transport */
-/* #define SCSIEMU */ /* uaescsi.device emulation */
+#define SCSIEMU /* uaescsi.device emulation */
 /* #define UAESERIAL */ /* uaeserial.device emulation */
 #define FPUEMU /* FPU emulation */
 /* #define FPU_UAE */

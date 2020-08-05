@@ -43,6 +43,7 @@ static const int COLUMN_SIZE[] =
 
 static const char* cdfile_filter[] = {".cue", ".ccd", ".iso", "\0"};
 static void AdjustDropDownControls();
+static bool bIgnoreListChange = false;
 
 static gcn::Label* lblList[COL_COUNT];
 static gcn::Container* listEntry[MAX_HD_DEVICES];
@@ -53,6 +54,7 @@ static gcn::Button* cmdAddDirectory;
 static gcn::Button* cmdAddHardfile;
 static gcn::Button* cmdCreateHardfile;
 static gcn::CheckBox* chkHDReadOnly;
+static gcn::CheckBox* chkScsi;
 static gcn::CheckBox* chkCD;
 static gcn::DropDown* cboCDFile;
 static gcn::Button* cmdCDEject;
@@ -214,11 +216,29 @@ public:
 			{
 				changed_prefs.cdslots[0].inuse = false;
 				changed_prefs.cdslots[0].type = SCSI_UNIT_DISABLED;
+				changed_prefs.cdslots[0].name[0] = 0;
+				AdjustDropDownControls();
+
+				if (!changed_prefs.cs_cd32cd && !changed_prefs.cs_cd32nvram
+					&& (!changed_prefs.cs_cdtvcd && !changed_prefs.cs_cdtvram)
+					&& changed_prefs.scsi)
+				{
+					changed_prefs.scsi = 0;
+					chkScsi->setSelected(false);
+				}
 			}
 			else
 			{
 				changed_prefs.cdslots[0].inuse = true;
 				changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
+
+				if (!changed_prefs.cs_cd32cd && !changed_prefs.cs_cd32nvram
+					&& (!changed_prefs.cs_cdtvcd && !changed_prefs.cs_cdtvram)
+					&& !changed_prefs.scsi)
+				{
+					changed_prefs.scsi = 1;
+					chkScsi->setSelected(true);
+				}
 			}
 			RefreshPanelHD();
 			RefreshPanelQuickstart();
@@ -239,7 +259,7 @@ public:
 			//---------------------------------------
 			// Eject CD from drive
 			//---------------------------------------
-			strncpy(changed_prefs.cdslots[0].name, "", MAX_DPATH);
+			changed_prefs.cdslots[0].name[0] = 0;
 			AdjustDropDownControls();
 		}
 		else if (actionEvent.getSource() == cmdCDSelect)
@@ -249,17 +269,17 @@ public:
 			if (strlen(changed_prefs.cdslots[0].name) > 0)
 				strncpy(tmp, changed_prefs.cdslots[0].name, MAX_DPATH);
 			else
-				strcpy(tmp, currentDir);
+				strcpy(tmp, current_dir);
 
 			if (SelectFile("Select CD image file", tmp, cdfile_filter))
 			{
 				if (strncmp(changed_prefs.cdslots[0].name, tmp, MAX_DPATH) != 0)
 				{
-					strncpy(changed_prefs.cdslots[0].name, tmp, sizeof(changed_prefs.cdslots[0].name));
+					strncpy(changed_prefs.cdslots[0].name, tmp, sizeof changed_prefs.cdslots[0].name);
 					changed_prefs.cdslots[0].inuse = true;
 					changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
 					AddFileToCDList(tmp, 1);
-					extractPath(tmp, currentDir);
+					extract_path(tmp, current_dir);
 
 					AdjustDropDownControls();
 				}
@@ -292,13 +312,14 @@ public:
 		{
 			changed_prefs.harddrive_read_only = chkHDReadOnly->isSelected();
 		}
+		else if (actionEvent.getSource() == chkScsi) 
+		{
+			changed_prefs.scsi = chkScsi->isSelected();
+		}
 	}
 };
 
 GenericActionListener* genericActionListener;
-
-
-static bool bIgnoreListChange = false;
 
 class CDFileActionListener : public gcn::ActionListener
 {
@@ -314,7 +335,7 @@ public:
 
 			if (idx < 0)
 			{
-				strncpy(changed_prefs.cdslots[0].name, "", MAX_DPATH);
+				changed_prefs.cdslots[0].name[0] = 0;
 				AdjustDropDownControls();
 			}
 			else
@@ -387,19 +408,19 @@ void InitPanelHD(const struct _ConfigCategory& category)
 
 	cmdAddDirectory = new gcn::Button("Add Directory");
 	cmdAddDirectory->setBaseColor(gui_baseCol);
-	cmdAddDirectory->setSize(cmdAddDirectory->getWidth(), BUTTON_HEIGHT);
+	cmdAddDirectory->setSize(cmdAddDirectory->getWidth() + 10, BUTTON_HEIGHT);
 	cmdAddDirectory->setId("cmdAddDir");
 	cmdAddDirectory->addActionListener(addVirtualHDActionListener);
 
 	cmdAddHardfile = new gcn::Button("Add Hardfile");
 	cmdAddHardfile->setBaseColor(gui_baseCol);
-	cmdAddHardfile->setSize(cmdAddHardfile->getWidth(), BUTTON_HEIGHT);
+	cmdAddHardfile->setSize(cmdAddHardfile->getWidth() + 10, BUTTON_HEIGHT);
 	cmdAddHardfile->setId("cmdAddHDF");
 	cmdAddHardfile->addActionListener(addHardfileActionListener);
 
 	cmdCreateHardfile = new gcn::Button("Create Hardfile");
 	cmdCreateHardfile->setBaseColor(gui_baseCol);
-	cmdCreateHardfile->setSize(cmdCreateHardfile->getWidth(), BUTTON_HEIGHT);
+	cmdCreateHardfile->setSize(cmdCreateHardfile->getWidth() + 10, BUTTON_HEIGHT);
 	cmdCreateHardfile->setId("cmdCreateHDF");
 	cmdCreateHardfile->addActionListener(createHardfileActionListener);
 
@@ -412,6 +433,10 @@ void InitPanelHD(const struct _ConfigCategory& category)
 	chkHDReadOnly->setId("chkHDRO");
 	chkHDReadOnly->addActionListener(genericActionListener);
 
+	chkScsi = new gcn::CheckBox("scsi.device emulation");
+	chkScsi->setId("chkSCSI");
+	chkScsi->addActionListener(genericActionListener);
+	
 	chkCD = new gcn::CheckBox("CD drive");
 	chkCD->setId("CD drive");
 	chkCD->addActionListener(cdCheckActionListener);
@@ -477,6 +502,7 @@ void InitPanelHD(const struct _ConfigCategory& category)
 	posY += cmdAddDirectory->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(chkHDReadOnly, DISTANCE_BORDER, posY);
+	category.panel->add(chkScsi, chkHDReadOnly->getX() + chkHDReadOnly->getWidth() + DISTANCE_NEXT_X * 3, posY);
 	posY += chkHDReadOnly->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(chkCD, DISTANCE_BORDER, posY + 2);
@@ -518,6 +544,7 @@ void ExitPanelHD()
 	delete cmdAddHardfile;
 	delete cmdCreateHardfile;
 	delete chkHDReadOnly;
+	delete chkScsi;
 
 	delete chkCD;
 	delete cmdCDEject;
@@ -542,10 +569,12 @@ void ExitPanelHD()
 
 static void AdjustDropDownControls()
 {
+	bIgnoreListChange = true;
+	
 	cboCDFile->clearSelected();
 	if (changed_prefs.cdslots[0].inuse && strlen(changed_prefs.cdslots[0].name) > 0)
 	{
-		for (unsigned int i = 0; i < lstMRUCDList.size(); ++i)
+		for (auto i = 0; i < static_cast<int>(lstMRUCDList.size()); ++i)
 		{
 			if (strcmp(lstMRUCDList[i].c_str(), changed_prefs.cdslots[0].name) == 0)
 			{
@@ -554,6 +583,7 @@ static void AdjustDropDownControls()
 			}
 		}
 	}
+	bIgnoreListChange = false;
 }
 
 void RefreshPanelHD()
@@ -604,9 +634,9 @@ void RefreshPanelHD()
 				if (nosize)
 					snprintf(tmp, 32, "n/a");
 				else if (mi.size >= 1024 * 1024 * 1024)
-					snprintf(tmp, 32, "%.1fG", double(uae_u32(mi.size / (1024 * 1024))) / 1024.0);
+					snprintf(tmp, 32, "%.1fG", static_cast<double>(uae_u32(mi.size / (1024 * 1024))) / 1024.0);
 				else
-					snprintf(tmp, 32, "%.1fM", double(uae_u32(mi.size / 1024)) / 1024.0);
+					snprintf(tmp, 32, "%.1fM", static_cast<double>(uae_u32(mi.size / 1024)) / 1024.0);
 				listCells[row][COL_SIZE]->setText(tmp);
 				snprintf(tmp, 32, "%d", ci->bootpri);
 				listCells[row][COL_BOOTPRI]->setText(tmp);
@@ -625,7 +655,7 @@ void RefreshPanelHD()
 	}
 
 	chkHDReadOnly->setSelected(changed_prefs.harddrive_read_only);
-
+	chkScsi->setSelected(changed_prefs.scsi);
 	chkCD->setSelected(changed_prefs.cdslots[0].inuse);
 	cmdCDEject->setEnabled(changed_prefs.cdslots[0].inuse);
 	cmdCDSelect->setEnabled(changed_prefs.cdslots[0].inuse);

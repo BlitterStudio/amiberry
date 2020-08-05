@@ -41,8 +41,8 @@ bool LoadConfigByName(const char* name)
 			txtDesc->setText(config->Description);
 			target_cfgfile_load(&changed_prefs, config->FullPath, 0, 0);
 			strncpy(last_active_config, config->Name, MAX_DPATH);
-			DisableResume();
-			RefreshAllPanels();
+			disable_resume();
+			refresh_all_panels();
 		}
 	}
 
@@ -51,8 +51,8 @@ bool LoadConfigByName(const char* name)
 
 void SetLastActiveConfig(const char* filename)
 {
-	extractFileName(filename, last_active_config);
-	removeFileExtension(last_active_config);
+	extract_filename(filename, last_active_config);
+	remove_file_extension(last_active_config);
 }
 
 class ConfigsListModel : public gcn::ListModel
@@ -111,16 +111,16 @@ public:
 			
 			if (emulating)
 			{
-				DisableResume();
+				disable_resume();
 				target_cfgfile_load(&changed_prefs, ConfigFilesList[i]->FullPath, 0, 0);
 				strncpy(last_active_config, ConfigFilesList[i]->Name, MAX_DPATH);
-				RefreshAllPanels();
+				refresh_all_panels();
 			}
 			else
 			{
 				target_cfgfile_load(&changed_prefs, ConfigFilesList[i]->FullPath, 0, 0);
 				strncpy(last_active_config, ConfigFilesList[i]->Name, MAX_DPATH);
-				RefreshAllPanels();
+				refresh_all_panels();
 			}
 		}
 		else if (actionEvent.getSource() == cmdSave)
@@ -194,9 +194,10 @@ public:
 
 			if (emulating)
 			{
-				DisableResume();
+				disable_resume();
 			}
-			RefreshAllPanels();
+			refresh_all_panels();
+			copy_prefs(&changed_prefs, &currprefs);
 			uae_reset(1, 0);
 			gui_running = false;
 		}
@@ -288,7 +289,7 @@ void InitPanelConfig(const struct _ConfigCategory& category)
 		else
 		{
 			strcpy(last_active_config, last_loaded_config);
-			removeFileExtension(last_active_config);
+			remove_file_extension(last_active_config);
 		}
 	}
 	txtName->setText(last_active_config);
@@ -340,7 +341,7 @@ void RefreshPanelConfig()
 				// Select current entry
 				lstConfigs->setSelected(i);
 				ensureVisible = i;
-				RegisterRefreshFunc(MakeCurrentVisible);
+				register_refresh_func(MakeCurrentVisible);
 				break;
 			}
 		}

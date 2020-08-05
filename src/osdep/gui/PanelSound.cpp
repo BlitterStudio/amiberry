@@ -17,9 +17,9 @@ static gcn::RadioButton* optSoundDisabled;
 static gcn::RadioButton* optSoundDisabledEmu;
 static gcn::RadioButton* optSoundEmulated;
 static gcn::RadioButton* optSoundEmulatedBest;
-static gcn::Window* grpMode;
-static gcn::RadioButton* optMono;
-static gcn::RadioButton* optStereo;
+static gcn::Window* grpSettings;
+static gcn::Label* lblChannelMode;
+static gcn::DropDown* cboChannelMode;
 static gcn::Label* lblFrequency;
 static gcn::DropDown* cboFrequency;
 static gcn::Label* lblInterpolation;
@@ -27,11 +27,10 @@ static gcn::DropDown* cboInterpolation;
 static gcn::Label* lblFilter;
 static gcn::DropDown* cboFilter;
 static gcn::Label* lblSeparation;
-static gcn::Label* lblSeparationInfo;
-static gcn::Slider* sldSeparation;
+static gcn::DropDown* cboSeparation;
 static gcn::Label* lblStereoDelay;
-static gcn::Label* lblStereoDelayInfo;
-static gcn::Slider* sldStereoDelay;
+static gcn::DropDown* cboStereoDelay;
+static gcn::Window* grpVolume;
 static gcn::Label* lblPaulaVol;
 static gcn::Label* lblPaulaVolInfo;
 static gcn::Slider* sldPaulaVol;
@@ -39,6 +38,102 @@ static gcn::Slider* sldPaulaVol;
 static int curr_separation_idx;
 static int curr_stereodelay_idx;
 
+
+class ChannelModeListModel : public gcn::ListModel
+{
+	std::vector<std::string> mode;
+
+public:
+	ChannelModeListModel()
+	{
+		mode.emplace_back("Mono");
+		mode.emplace_back("Stereo");
+	}
+
+	int getNumberOfElements() override
+	{
+		return mode.size();
+	}
+
+	std::string getElementAt(int i) override
+	{
+		if (i < 0 || i >= static_cast<int>(mode.size()))
+			return "---";
+		return mode[i];
+	}
+};
+
+static ChannelModeListModel channelModeList;
+
+class SeparationListModel : public gcn::ListModel
+{
+	std::vector<std::string> mode;
+
+public:
+	SeparationListModel()
+	{
+		mode.emplace_back("100%");
+		mode.emplace_back("90%");
+		mode.emplace_back("80%");
+		mode.emplace_back("70%");
+		mode.emplace_back("60%");
+		mode.emplace_back("50%");
+		mode.emplace_back("40%");
+		mode.emplace_back("30%");
+		mode.emplace_back("20%");
+		mode.emplace_back("10%");
+		mode.emplace_back("0%");
+	}
+
+	int getNumberOfElements() override
+	{
+		return mode.size();
+	}
+
+	std::string getElementAt(int i) override
+	{
+		if (i < 0 || i >= static_cast<int>(mode.size()))
+			return "---";
+		return mode[i];
+	}
+};
+
+static SeparationListModel separationList;
+
+class StereoDelayListModel : public gcn::ListModel
+{
+	std::vector<std::string> mode;
+
+public:
+	StereoDelayListModel()
+	{
+		mode.emplace_back("-");
+		mode.emplace_back("1");
+		mode.emplace_back("2");
+		mode.emplace_back("3");
+		mode.emplace_back("4");
+		mode.emplace_back("5");
+		mode.emplace_back("6");
+		mode.emplace_back("7");
+		mode.emplace_back("8");
+		mode.emplace_back("9");
+		mode.emplace_back("10");
+	}
+
+	int getNumberOfElements() override
+	{
+		return mode.size();
+	}
+
+	std::string getElementAt(int i) override
+	{
+		if (i < 0 || i >= static_cast<int>(mode.size()))
+			return "---";
+		return mode[i];
+	}
+};
+
+static StereoDelayListModel stereoDelayList;
 
 class FrequencyListModel : public gcn::ListModel
 {
@@ -60,7 +155,7 @@ public:
 
 	std::string getElementAt(const int i) override
 	{
-		if (i < 0 || i >= freq.size())
+		if (i < 0 || i >= static_cast<int>(freq.size()))
 			return "---";
 		return freq[i];
 	}
@@ -143,10 +238,8 @@ public:
 		else if (actionEvent.getSource() == optSoundEmulatedBest)
 			changed_prefs.produce_sound = 3;
 
-		else if (actionEvent.getSource() == optMono)
-			changed_prefs.sound_stereo = 0;
-		else if (actionEvent.getSource() == optStereo)
-			changed_prefs.sound_stereo = 1;
+		else if (actionEvent.getSource() == cboChannelMode)
+			changed_prefs.sound_stereo = cboChannelMode->getSelected();
 
 		else if (actionEvent.getSource() == cboFrequency)
 		{
@@ -200,22 +293,22 @@ public:
 			}
 		}
 
-		else if (actionEvent.getSource() == sldSeparation)
+		else if (actionEvent.getSource() == cboSeparation)
 		{
-			if (curr_separation_idx != static_cast<int>(sldSeparation->getValue())
+			if (curr_separation_idx != static_cast<int>(cboSeparation->getSelected())
 				&& changed_prefs.sound_stereo > 0)
 			{
-				curr_separation_idx = static_cast<int>(sldSeparation->getValue());
+				curr_separation_idx = static_cast<int>(cboSeparation->getSelected());
 				changed_prefs.sound_stereo_separation = 10 - curr_separation_idx;
 			}
 		}
 
-		else if (actionEvent.getSource() == sldStereoDelay)
+		else if (actionEvent.getSource() == cboStereoDelay)
 		{
-			if (curr_stereodelay_idx != static_cast<int>(sldStereoDelay->getValue())
+			if (curr_stereodelay_idx != static_cast<int>(cboStereoDelay->getSelected())
 				&& changed_prefs.sound_stereo > 0)
 			{
-				curr_stereodelay_idx = static_cast<int>(sldStereoDelay->getValue());
+				curr_stereodelay_idx = static_cast<int>(cboStereoDelay->getSelected());
 				if (curr_stereodelay_idx > 0)
 					changed_prefs.sound_mixed_stereo_delay = curr_stereodelay_idx;
 				else
@@ -256,45 +349,28 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	optSoundEmulatedBest->setId("sndEmuBest");
 	optSoundEmulatedBest->addActionListener(soundActionListener);
 
-	grpSound = new gcn::Window("Sound Emulation");
-	grpSound->add(optSoundDisabled, 5, 10);
-	grpSound->add(optSoundDisabledEmu, 5, 40);
-	grpSound->add(optSoundEmulated, 5, 70);
-	grpSound->add(optSoundEmulatedBest, 5, 100);
-	grpSound->setMovable(false);
-	grpSound->setSize(optSoundEmulatedBest->getWidth() + DISTANCE_BORDER, 150);
-	grpSound->setTitleBarHeight(TITLEBAR_HEIGHT);
-	grpSound->setBaseColor(gui_baseCol);
-
 	lblFrequency = new gcn::Label("Frequency:");
 	lblFrequency->setAlignment(gcn::Graphics::RIGHT);
 	cboFrequency = new gcn::DropDown(&frequencyTypeList);
-	cboFrequency->setSize(160, cboFrequency->getHeight());
+	cboFrequency->setSize(100, cboFrequency->getHeight());
 	cboFrequency->setBaseColor(gui_baseCol);
 	cboFrequency->setBackgroundColor(colTextboxBackground);
 	cboFrequency->setId("cboFrequency");
 	cboFrequency->addActionListener(soundActionListener);
 
-	optMono = new gcn::RadioButton("Mono", "radiosoundmodegroup");
-	optMono->setId("Mono");
-	optMono->addActionListener(soundActionListener);
-
-	optStereo = new gcn::RadioButton("Stereo", "radiosoundmodegroup");
-	optStereo->setId("Stereo");
-	optStereo->addActionListener(soundActionListener);
-
-	grpMode = new gcn::Window("Mode");
-	grpMode->add(optMono, 5, 10);
-	grpMode->add(optStereo, 5, 40);
-	grpMode->setMovable(false);
-	grpMode->setSize(90, 90);
-	grpMode->setTitleBarHeight(TITLEBAR_HEIGHT);
-	grpMode->setBaseColor(gui_baseCol);
-
+	lblChannelMode = new gcn::Label("Channel mode:");
+	lblChannelMode->setAlignment(gcn::Graphics::RIGHT);
+	cboChannelMode = new gcn::DropDown(&channelModeList);
+	cboChannelMode->setSize(100, cboChannelMode->getHeight());
+	cboChannelMode->setBaseColor(gui_baseCol);
+	cboChannelMode->setBackgroundColor(colTextboxBackground);
+	cboChannelMode->setId("cboChannelMode");
+	cboChannelMode->addActionListener(soundActionListener);
+	
 	lblInterpolation = new gcn::Label("Interpolation:");
 	lblInterpolation->setAlignment(gcn::Graphics::RIGHT);
 	cboInterpolation = new gcn::DropDown(&interpolationTypeList);
-	cboInterpolation->setSize(160, cboInterpolation->getHeight());
+	cboInterpolation->setSize(150, cboInterpolation->getHeight());
 	cboInterpolation->setBaseColor(gui_baseCol);
 	cboInterpolation->setBackgroundColor(colTextboxBackground);
 	cboInterpolation->setId("cboInterpol");
@@ -303,7 +379,7 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	lblFilter = new gcn::Label("Filter:");
 	lblFilter->setAlignment(gcn::Graphics::RIGHT);
 	cboFilter = new gcn::DropDown(&filterTypeList);
-	cboFilter->setSize(160, cboFilter->getHeight());
+	cboFilter->setSize(150, cboFilter->getHeight());
 	cboFilter->setBaseColor(gui_baseCol);
 	cboFilter->setBackgroundColor(colTextboxBackground);
 	cboFilter->setId("cboFilter");
@@ -311,64 +387,75 @@ void InitPanelSound(const struct _ConfigCategory& category)
 
 	lblSeparation = new gcn::Label("Stereo separation:");
 	lblSeparation->setAlignment(gcn::Graphics::RIGHT);
-	sldSeparation = new gcn::Slider(0, 10);
-	sldSeparation->setSize(160, SLIDER_HEIGHT);
-	sldSeparation->setBaseColor(gui_baseCol);
-	sldSeparation->setMarkerLength(20);
-	sldSeparation->setStepLength(1);
-	sldSeparation->setId("sldSeparation");
-	sldSeparation->addActionListener(soundActionListener);
-	lblSeparationInfo = new gcn::Label("100%");
-
+	cboSeparation = new gcn::DropDown(&separationList);
+	cboSeparation->setSize(150, cboSeparation->getHeight());
+	cboSeparation->setBaseColor(gui_baseCol);
+	cboSeparation->setBackgroundColor(colTextboxBackground);
+	cboSeparation->setId("cboSeparation");
+	cboSeparation->addActionListener(soundActionListener);
+	
 	lblStereoDelay = new gcn::Label("Stereo delay:");
 	lblStereoDelay->setAlignment(gcn::Graphics::RIGHT);
-	sldStereoDelay = new gcn::Slider(0, 10);
-	sldStereoDelay->setSize(160, SLIDER_HEIGHT);
-	sldStereoDelay->setBaseColor(gui_baseCol);
-	sldStereoDelay->setMarkerLength(20);
-	sldStereoDelay->setStepLength(1);
-	sldStereoDelay->setId("sldStereoDelay");
-	sldStereoDelay->addActionListener(soundActionListener);
-	lblStereoDelayInfo = new gcn::Label("10");
+	cboStereoDelay = new gcn::DropDown(&stereoDelayList);
+	cboStereoDelay->setSize(150, cboStereoDelay->getHeight());
+	cboStereoDelay->setBaseColor(gui_baseCol);
+	cboStereoDelay->setBackgroundColor(colTextboxBackground);
+	cboStereoDelay->setId("cboSeparation");
+	cboStereoDelay->addActionListener(soundActionListener);
 
 	lblPaulaVol = new gcn::Label("Paula Volume:");
 	lblPaulaVol->setAlignment(gcn::Graphics::RIGHT);
 	sldPaulaVol = new gcn::Slider(0, 100);
-	sldPaulaVol->setSize(160, SLIDER_HEIGHT);
+	sldPaulaVol->setSize(150, SLIDER_HEIGHT);
 	sldPaulaVol->setBaseColor(gui_baseCol);
 	sldPaulaVol->setMarkerLength(20);
 	sldPaulaVol->setStepLength(10);
 	sldPaulaVol->setId("sldPaulaVol");
 	sldPaulaVol->addActionListener(soundActionListener);
-	lblPaulaVolInfo = new gcn::Label("80 %");
+	lblPaulaVolInfo = new gcn::Label("100 %");
 
+	grpSound = new gcn::Window("Sound Emulation");
+	grpSound->add(optSoundDisabled, 10, 10);
+	grpSound->add(optSoundDisabledEmu, 10, 40);
+	grpSound->add(optSoundEmulated, 10, 70);
+	grpSound->add(optSoundEmulatedBest, 10, 100);
+	grpSound->setMovable(false);
+	grpSound->setSize(optSoundEmulatedBest->getWidth() + DISTANCE_BORDER + 10, 160);
+	grpSound->setTitleBarHeight(TITLEBAR_HEIGHT);
+	grpSound->setBaseColor(gui_baseCol);
+
+	grpVolume = new gcn::Window("Volume");
+	grpVolume->add(lblPaulaVol, 10, 10);
+	grpVolume->add(sldPaulaVol, lblPaulaVol->getX() + lblPaulaVol->getWidth() + 10, lblPaulaVol->getY());
+	grpVolume->add(lblPaulaVolInfo, sldPaulaVol->getX() + sldPaulaVol->getWidth() + 10, sldPaulaVol->getY());
+	grpVolume->setMovable(false);
+	grpVolume->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2 - grpSound->getWidth() - DISTANCE_NEXT_X, grpSound->getHeight());
+	grpVolume->setTitleBarHeight(TITLEBAR_HEIGHT);
+	grpVolume->setBaseColor(gui_baseCol);
+	
+	grpSettings = new gcn::Window("Settings");
+	grpSettings->add(lblChannelMode, 10, 10);
+	grpSettings->add(cboChannelMode, 10, lblChannelMode->getY() + lblChannelMode->getHeight() + 10);
+	grpSettings->add(lblFrequency, 10, 70);
+	grpSettings->add(cboFrequency, 10, lblFrequency->getY() + lblFrequency->getHeight() + 10);
+	grpSettings->add(lblSeparation, cboChannelMode->getX() + cboChannelMode->getWidth() + DISTANCE_NEXT_X * 3, 10);
+	grpSettings->add(cboSeparation, lblSeparation->getX(), lblSeparation->getY() + lblSeparation->getHeight() + 10);
+	grpSettings->add(lblStereoDelay, cboSeparation->getX(), lblFrequency->getY());
+	grpSettings->add(cboStereoDelay, lblStereoDelay->getX(), cboFrequency->getY());
+	grpSettings->add(lblInterpolation, cboSeparation->getX() + cboSeparation->getWidth() + DISTANCE_NEXT_X * 3, 10);
+	grpSettings->add(cboInterpolation, lblInterpolation->getX(), lblInterpolation->getY() + lblInterpolation->getHeight() + 10);
+	grpSettings->add(lblFilter, lblInterpolation->getX(), lblFrequency->getY());
+	grpSettings->add(cboFilter, cboInterpolation->getX(), cboFrequency->getY());
+	grpSettings->setMovable(false);
+	grpSettings->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, category.panel->getHeight() - grpSound->getHeight() -DISTANCE_NEXT_Y * 3);
+	grpSettings->setTitleBarHeight(TITLEBAR_HEIGHT);
+	grpSettings->setBaseColor(gui_baseCol);
+	
 	auto posY = DISTANCE_BORDER;
 	category.panel->add(grpSound, DISTANCE_BORDER, posY);
-	category.panel->add(grpMode, grpSound->getX() + grpSound->getWidth() + DISTANCE_NEXT_X, posY);
+	category.panel->add(grpVolume, grpSound->getX() + grpSound->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += grpSound->getHeight() + DISTANCE_NEXT_Y;
-	category.panel->add(lblFrequency, DISTANCE_BORDER, posY);
-	category.panel->add(cboFrequency, lblFrequency->getX() + lblFrequency->getWidth() + DISTANCE_NEXT_X, posY);
-	posY += cboFrequency->getHeight() + DISTANCE_NEXT_Y;
-	category.panel->add(lblInterpolation, DISTANCE_BORDER, posY);
-	category.panel->add(cboInterpolation, lblInterpolation->getX() + lblInterpolation->getWidth() + DISTANCE_NEXT_X,
-	                    posY);
-	posY += cboInterpolation->getHeight() + DISTANCE_NEXT_Y;
-	category.panel->add(lblFilter, DISTANCE_BORDER, posY);
-	category.panel->add(cboFilter, lblFilter->getX() + lblFilter->getWidth() + DISTANCE_NEXT_X, posY);
-	posY += cboFilter->getHeight() + DISTANCE_NEXT_Y;
-	category.panel->add(lblSeparation, DISTANCE_BORDER, posY);
-	category.panel->add(sldSeparation, lblSeparation->getX() + lblSeparation->getWidth() + DISTANCE_NEXT_X, posY);
-	category.panel->add(lblSeparationInfo, sldSeparation->getX() + sldSeparation->getWidth() + DISTANCE_NEXT_X, posY);
-	posY += SLIDER_HEIGHT + DISTANCE_NEXT_Y;
-	category.panel->add(lblStereoDelay, DISTANCE_BORDER, posY);
-	category.panel->add(sldStereoDelay, lblStereoDelay->getX() + lblStereoDelay->getWidth() + DISTANCE_NEXT_X, posY);
-	category.panel->add(lblStereoDelayInfo, sldStereoDelay->getX() + sldStereoDelay->getWidth() + DISTANCE_NEXT_X,
-	                    posY);
-	posY += SLIDER_HEIGHT + DISTANCE_NEXT_Y;
-	category.panel->add(lblPaulaVol, DISTANCE_BORDER, posY);
-	category.panel->add(sldPaulaVol, lblPaulaVol->getX() + lblPaulaVol->getWidth() + DISTANCE_NEXT_X, posY);
-	category.panel->add(lblPaulaVolInfo, sldPaulaVol->getX() + sldPaulaVol->getWidth() + DISTANCE_NEXT_X, posY);
-	posY += SLIDER_HEIGHT + DISTANCE_NEXT_Y;
+	category.panel->add(grpSettings, DISTANCE_BORDER, posY);
 
 	RefreshPanelSound();
 }
@@ -381,9 +468,10 @@ void ExitPanelSound()
 	delete optSoundEmulated;
 	delete optSoundEmulatedBest;
 	delete grpSound;
-	delete optMono;
-	delete optStereo;
-	delete grpMode;
+	delete grpVolume;
+	delete lblChannelMode;
+	delete cboChannelMode;
+	delete grpSettings;
 	delete lblFrequency;
 	delete cboFrequency;
 	delete lblInterpolation;
@@ -391,11 +479,9 @@ void ExitPanelSound()
 	delete lblFilter;
 	delete cboFilter;
 	delete lblSeparation;
-	delete sldSeparation;
-	delete lblSeparationInfo;
+	delete cboSeparation;
 	delete lblStereoDelay;
-	delete sldStereoDelay;
-	delete lblStereoDelayInfo;
+	delete cboStereoDelay;
 	delete soundActionListener;
 }
 
@@ -422,11 +508,8 @@ void RefreshPanelSound()
 		break;
 	}
 
-	if (changed_prefs.sound_stereo == 0)
-		optMono->setSelected(true);
-	else if (changed_prefs.sound_stereo == 1)
-		optStereo->setSelected(true);
-
+	cboChannelMode->setSelected(changed_prefs.sound_stereo);
+	
 	switch (changed_prefs.sound_freq)
 	{
 	case 11025:
@@ -473,26 +556,17 @@ void RefreshPanelSound()
 		curr_stereodelay_idx = changed_prefs.sound_mixed_stereo_delay > 0 ? changed_prefs.sound_mixed_stereo_delay : 0;
 	}
 
-	sldSeparation->setValue(curr_separation_idx);
-	sldSeparation->setEnabled(changed_prefs.sound_stereo >= 1);
-	snprintf(tmp, 10, "%d%%", 100 - 10 * curr_separation_idx);
-	lblSeparationInfo->setCaption(tmp);
+	cboSeparation->setSelected(curr_separation_idx);
+	cboSeparation->setEnabled(changed_prefs.sound_stereo >= 1);
 
-	sldStereoDelay->setValue(curr_stereodelay_idx);
-	sldStereoDelay->setEnabled(changed_prefs.sound_stereo >= 1);
-	if (curr_stereodelay_idx <= 0)
-		lblStereoDelayInfo->setCaption("-");
-	else
-	{
-		snprintf(tmp, 10, "%d", curr_stereodelay_idx);
-		lblStereoDelayInfo->setCaption(tmp);
-	}
+	cboStereoDelay->setSelected(curr_stereodelay_idx);
+	cboStereoDelay->setEnabled(changed_prefs.sound_stereo >= 1);
+
 	sldPaulaVol->setValue(100 - changed_prefs.sound_volume_paula);
 	snprintf(tmp, sizeof tmp - 1, "%d %%", 100 - changed_prefs.sound_volume_paula);
 	lblPaulaVolInfo->setCaption(tmp);
 
-	optMono->setEnabled(changed_prefs.produce_sound > 0);
-	optStereo->setEnabled(changed_prefs.produce_sound > 0);
+	cboChannelMode->setEnabled(changed_prefs.produce_sound > 0);
 	lblFrequency->setEnabled(changed_prefs.produce_sound > 0);
 	cboFrequency->setEnabled(changed_prefs.produce_sound > 0);
 	lblInterpolation->setEnabled(changed_prefs.produce_sound > 0);
@@ -500,11 +574,9 @@ void RefreshPanelSound()
 	lblFilter->setEnabled(changed_prefs.produce_sound > 0);
 	cboFilter->setEnabled(changed_prefs.produce_sound > 0);
 	lblSeparation->setEnabled(changed_prefs.produce_sound > 0);
-	lblSeparationInfo->setEnabled(changed_prefs.produce_sound > 0);
-	sldSeparation->setEnabled(changed_prefs.produce_sound > 0);
+	cboSeparation->setEnabled(changed_prefs.produce_sound > 0);
 	lblStereoDelay->setEnabled(changed_prefs.produce_sound > 0);
-	lblStereoDelayInfo->setEnabled(changed_prefs.produce_sound > 0);
-	sldStereoDelay->setEnabled(changed_prefs.produce_sound > 0);
+	cboStereoDelay->setEnabled(changed_prefs.produce_sound > 0);
 	lblPaulaVol->setEnabled(changed_prefs.produce_sound > 0);
 	lblPaulaVolInfo->setEnabled(changed_prefs.produce_sound > 0);
 	sldPaulaVol->setEnabled(changed_prefs.produce_sound > 0);
