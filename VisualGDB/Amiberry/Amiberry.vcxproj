@@ -39,7 +39,7 @@
     <GNUConfigurationType>Debug</GNUConfigurationType>
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
     <ToolchainVersion>8.3.0/8.2.1/r2</ToolchainVersion>
-    <TargetName>$(ProjectName)-sdl2</TargetName>
+    <TargetName>$(ProjectName)</TargetName>
     <RemoteBuildHost>
     </RemoteBuildHost>
   </PropertyGroup>
@@ -47,21 +47,21 @@
     <GNUConfigurationType>Debug</GNUConfigurationType>
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
     <ToolchainVersion>8.3.0/8.2.1/r2</ToolchainVersion>
-    <TargetName>$(ProjectName)-sdl2</TargetName>
+    <TargetName>$(ProjectName)</TargetName>
     <RemoteBuildHost>
     </RemoteBuildHost>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
     <ToolchainVersion>8.3.0/8.2.1/r2</ToolchainVersion>
-    <TargetName>$(ProjectName)-sdl2</TargetName>
+    <TargetName>$(ProjectName)</TargetName>
     <RemoteBuildHost>
     </RemoteBuildHost>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-dispmanx|VisualGDB'">
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
     <ToolchainVersion>8.3.0/8.2.1/r2</ToolchainVersion>
-    <TargetName>$(ProjectName)-sdl2</TargetName>
+    <TargetName>$(ProjectName)</TargetName>
     <RemoteBuildHost>
     </RemoteBuildHost>
   </PropertyGroup>
