@@ -143,24 +143,18 @@
     <Image Include="..\data\controller.png">
       <Filter>data</Filter>
     </Image>
+    <Image Include="..\data\amiberry.png">
+      <Filter>data</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
-    <Font Include="..\data\Topaznew.ttf">
-      <Filter>data</Filter>
-    </Font>
     <Font Include="..\data\AmigaTopaz.ttf">
       <Filter>data</Filter>
     </Font>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Makefile" />
-    <None Include="..\src\filesys.asm">
-      <Filter>src</Filter>
-    </None>
     <None Include="..\src\inputevents.def">
-      <Filter>src</Filter>
-    </None>
-    <None Include="..\src\table68k">
       <Filter>src</Filter>
     </None>
     <None Include="..\src\osdep\neon_helper.s">
@@ -564,18 +558,6 @@
     <ClCompile Include="..\src\osdep\gui\ShowMessage.cpp">
       <Filter>src\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\osdep\gui\UaeCheckBox.cpp">
-      <Filter>src\osdep\gui</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\osdep\gui\UaeDropDown.cpp">
-      <Filter>src\osdep\gui</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\osdep\gui\UaeListBox.cpp">
-      <Filter>src\osdep\gui</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\osdep\gui\UaeRadioButton.cpp">
-      <Filter>src\osdep\gui</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\sounddep\sound.cpp">
       <Filter>src\sounddep</Filter>
     </ClCompile>
@@ -740,6 +722,39 @@
     </ClCompile>
     <ClCompile Include="..\src\caps\caps_amiberry.cpp">
       <Filter>src\caps</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\cdtv.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\cdtvcr.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\consolehook.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\isofs.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\scp.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\scsiemul.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\tabletlibrary.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\uaeexe.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\vm.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\osdep\clipboard.cpp">
+      <Filter>src\osdep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\osdep\gui\PanelPrio.cpp">
+      <Filter>src\osdep\gui</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1004,18 +1019,6 @@
     <ClInclude Include="..\src\osdep\gui\SelectorEntry.hpp">
       <Filter>src\osdep\gui</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\osdep\gui\UaeCheckBox.hpp">
-      <Filter>src\osdep\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\osdep\gui\UaeDropDown.hpp">
-      <Filter>src\osdep\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\osdep\gui\UaeListBox.hpp">
-      <Filter>src\osdep\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\osdep\gui\UaeRadioButton.hpp">
-      <Filter>src\osdep\gui</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\sounddep\sound.h">
       <Filter>src\sounddep</Filter>
     </ClInclude>
@@ -1153,6 +1156,42 @@
     </ClInclude>
     <ClInclude Include="..\src\jit\codegen_armA64.h">
       <Filter>src\jit</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\uae\vm.h">
+      <Filter>src\include\uae</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\cdtv.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\cdtvcr.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\clipboard.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\consolehook.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\cpummu030.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\isofs.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\isofs_api.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\scp.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\tabletlibrary.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\uaeexe.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\scsidev.h">
+      <Filter>src\include</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
