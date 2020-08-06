@@ -3197,25 +3197,6 @@ uae_u8 DISK_status_ciab(uae_u8 st)
 	return st;
 }
 
-uae_u8 DISK_status_ciab(uae_u8 st)
-{
-	if (currprefs.cs_compatible == CP_VELVET) {
-		st |= 0x80;
-		for (int dr = 0; dr < 2; dr++) {
-			drive* drv = floppy + dr;
-			if (!(((selected >> 3) | disabled)& (1 << dr))) {
-				if (drive_writeprotected(drv))
-					st &= ~0x80;
-			}
-		}
-		//if (disk_debug_logging > 2) {
-		//	write_log(_T("DISK_STATUS_CIAB %08x %02x\n"), M68K_GETPC, st);
-		//}
-	}
-
-	return st;
-}
-
 uae_u8 DISK_status_ciaa(void)
 {
 	uae_u8 st = 0x3c;

@@ -795,30 +795,36 @@ void keyboard_connected(bool connect)
 
 static void check_keyboard(void)
 {
-	if ((keys_available () || kbstate < 3) && !kblostsynccnt ) {
-		switch (kbstate)
-		{
-			case 0:
-				kbcode = 0; /* powerup resync */
-				kbstate++;
-				break;
-			case 1:
-				setcode (AK_INIT_POWERUP);
-				kbstate++;
-				break;
-			case 2:
-				setcode (AK_TERM_POWERUP);
-				kbstate++;
-				break;
-			case 3:
-				kbcode = ~get_next_key ();
-				break;
+	if (currprefs.keyboard_connected) {
+		if ((keys_available () || kbstate < 3) && !kblostsynccnt ) {
+			switch (kbstate)
+			{
+				case 0:
+					kbcode = 0; /* powerup resync */
+					kbstate++;
+					break;
+				case 1:
+					setcode (AK_INIT_POWERUP);
+					kbstate++;
+					break;
+				case 2:
+					setcode (AK_TERM_POWERUP);
+					kbstate++;
+					break;
+				case 3:
+					kbcode = ~get_next_key ();
+					break;
+			}
+			keyreq ();
 		}
-		keyreq ();
+	} else {
+		while (keys_available()) {
+			get_next_key();
+		}
 	}
 }
 
-void CIA_hsync_posthandler (bool ciahsync)
+void CIA_hsync_posthandler (bool ciahsync, bool dotod)
 {
 	if (ciahsync) {
 		// cia hysnc
@@ -827,11 +833,24 @@ void CIA_hsync_posthandler (bool ciahsync)
 		if (ciab_tod_event_state == 1)
 			CIAB_tod_inc (false);
 		ciab_tod_event_state = 0;
-	} else {
+
+		if (currprefs.tod_hack && ciaatodon)
+			do_tod_hack (dotod);
+	} else if (currprefs.keyboard_connected) {
 		// custom hsync
-	  if ((hsync_counter & 15) == 0)
-		  check_keyboard();
-  }
+		if (resetwarning_phase) {
+			resetwarning_check ();
+			while (keys_available ())
+				get_next_key ();
+		} else {
+			if ((hsync_counter & 15) == 0)
+				check_keyboard();
+		}
+	} else {
+		while (keys_available()) {
+			get_next_key();
+		}
+	}
 }
 
 static void calc_led (int old_led)
@@ -1349,8 +1368,28 @@ static void WriteCIAA (uae_u16 addr, uae_u8 val, uae_u32 *flags)
 		val &= 0x7f; /* bit 7 is unused */
 		if ((val & 1) && !(ciaacra & 1))
 			ciaastarta = CIASTARTCYCLESCRA;
-		if ((val & 0x40) == 0 && (ciaacra & 0x40) != 0) {
-		  /* todo: check if low to high or high to low only */
+		if (currprefs.cpuboard_type != 0 && (val & 0x40) != (ciaacra & 0x40)) {
+			/* bleh, Phase5 CPU timed early boot key check fix.. */
+			if (m68k_getpc() >= 0xf00000 && m68k_getpc() < 0xf80000)
+				check_keyboard();
+		}
+		if ((val & 0x40) != 0 && (ciaacra & 0x40) == 0) {
+			// handshake start
+			if (kblostsynccnt > 0 && currprefs.cs_kbhandshake) {
+				kbhandshakestart = get_cycles();
+			}
+#if KB_DEBUG
+			write_log(_T("KB_ACK_START %02x->%02x %08x\n"), ciaacra, val, M68K_GETPC);
+#endif
+		} else if ((val & 0x40) == 0 && (ciaacra & 0x40) != 0) {
+			// handshake end
+			/* todo: check if low to high or high to low only */
+			if (kblostsynccnt > 0 && currprefs.cs_kbhandshake) {
+				int len = (int)get_cycles() - (int)kbhandshakestart;
+				if (len < currprefs.cs_kbhandshake * CYCLE_UNIT) {
+					write_log(_T("Keyboard handshake pulse length %d < %d (CCKs)\n"), len / CYCLE_UNIT, currprefs.cs_kbhandshake);
+				}
+			}
 			kblostsynccnt = 0;
 		}
 		ciaacra = val;
@@ -1597,10 +1636,18 @@ addrbank cia_bank = {
 	ABFLAG_IO | ABFLAG_CIA, S_READ, S_WRITE, NULL, 0x3f01, 0xbfc000
 };
 
-static void cia_wait_pre (void)
+static void cia_wait_pre (int cianummask)
 {
 	if (currprefs.cachesize || currprefs.cpu_thread)
 		return;
+#ifdef WITH_PPC
+	if (ppc_state)
+		return;
+#endif
+
+	if (currprefs.cpu_memory_cycle_exact) {
+		cia_interrupt_disabled |= cianummask;
+	}
 
 	int div = (get_cycles () - eventtab[ev_cia].oldcycles) % DIV10;
 	int cycles;
@@ -1615,11 +1662,14 @@ static void cia_wait_pre (void)
 	}
 
 	if (cycles) {
-		do_cycles (cycles);
-  }
+		//if (currprefs.cpu_memory_cycle_exact)
+			//x_do_cycles_pre (cycles);
+		//else
+			do_cycles (cycles);
+	}
 }
 
-static void cia_wait_post (void)
+static void cia_wait_post (int cianummask, uae_u32 value)
 {
 	if (currprefs.cpu_thread)
 		return;
@@ -1627,8 +1677,53 @@ static void cia_wait_post (void)
 		do_cycles (8 * CYCLE_UNIT / 2);
 	} else {
 		int c = 6 * CYCLE_UNIT / 2;
-		do_cycles (c);
-  }
+		//if (currprefs.cpu_memory_cycle_exact)
+			//x_do_cycles_post (c, value);
+		//else
+			do_cycles (c);
+		if (currprefs.cpu_memory_cycle_exact) {
+			cia_interrupt_disabled &= ~cianummask;
+			if ((cia_interrupt_delay & cianummask) & 1) {
+				cia_interrupt_delay &= ~1;
+				ICR(0x0008);
+			}
+			if ((cia_interrupt_delay & cianummask) & 2) {
+				cia_interrupt_delay &= ~2;
+				ICR(0x2000);
+			}
+		}
+	}
+	if (!currprefs.cpu_memory_cycle_exact && cia_interrupt_delay) {
+		int v = cia_interrupt_delay;
+		cia_interrupt_delay = 0;
+		if (v & 1)
+			ICR(0x0008);
+		if (v & 2)
+			ICR(0x2000);
+	}
+}
+
+static void validate_cia(uaecptr addr, int write, uae_u8 val)
+{
+	bool err = false;
+	if (((addr >> 12) & 3) == 0 || ((addr >> 12) & 3) == 3)
+		err = true;
+	if (((addr & 0xf00) >> 8) == 11)
+		err = true;
+	int mask = addr & 0xf000;
+	if (mask != 0xe000 && mask != 0xd000)
+		err = true;
+	if (mask == 0xe000 && (addr & 1) == 0)
+		err = true;
+	if (mask == 0xd000 && (addr & 1) != 0)
+		err = true;
+	if (err) {
+		if (write) {
+			write_log(_T("Invalid CIA write %08x = %02x PC=%08x\n"), addr, val, M68K_GETPC);
+		} else {
+			write_log(_T("Invalid CIA read %08x PC=%08x\n"), addr, M68K_GETPC);
+		}
+	}
 }
 
 // Gayle or Fat Gary does not enable CIA /CS lines if both CIAs are selected
@@ -1694,33 +1789,33 @@ static uae_u32 REGPARAM2 cia_bget (uaecptr addr)
 	{
 	case 0:
 		if (!issinglecia ()) {
-			cia_wait_pre ();
+			cia_wait_pre (1 | 2);
 			v = (addr & 1) ? ReadCIAA (r, &flags) : ReadCIAB (r, &flags);
-			cia_wait_post ();
+			cia_wait_post (1 | 2, v);
 		}
 		break;
 	case 1:
-		cia_wait_pre ();
+		cia_wait_pre (2);
 		if (currprefs.cpu_model == 68000 && currprefs.cpu_compatible) {
 			v = (addr & 1) ? regs.irc : ReadCIAB (r, &flags);
 		} else {
 			v = (addr & 1) ? dummy_get_safe(addr, 1, false, 0) : ReadCIAB (r, &flags);
 		}
-		cia_wait_post ();
+		cia_wait_post (2, v);
 		break;
 	case 2:
-		cia_wait_pre ();
+		cia_wait_pre (1);
 		if (currprefs.cpu_model == 68000 && currprefs.cpu_compatible)
 			v = (addr & 1) ? ReadCIAA (r, &flags) : regs.irc >> 8;
 		else
 			v = (addr & 1) ? ReadCIAA (r, &flags) : dummy_get_safe(addr, 1, false, 0);
-		cia_wait_post ();
+		cia_wait_post (1, v);
 		break;
 	case 3:
 		if (currprefs.cpu_model == 68000 && currprefs.cpu_compatible) {
-			cia_wait_pre ();
+			cia_wait_pre (0);
 			v = (addr & 1) ? regs.irc : regs.irc >> 8;
-			cia_wait_post ();
+			cia_wait_post (0, v);
 		}
 		break;
 	}
@@ -1749,32 +1844,32 @@ static uae_u32 REGPARAM2 cia_wget (uaecptr addr)
 	case 0:
 		if (!issinglecia ())
 		{
-			cia_wait_pre ();
+			cia_wait_pre (1 | 2);
 			v = ReadCIAB(r, &flags) << 8;
 			v |= ReadCIAA(r, &flags);
-			cia_wait_post ();
+			cia_wait_post (1 | 2, v);
 		}
 		break;
 	case 1:
-		cia_wait_pre ();
+		cia_wait_pre (2);
 		v = ReadCIAB(r, &flags) << 8;
 		v |= dummy_get_safe(addr + 1, 1, false, 0);
-		cia_wait_post ();
+		cia_wait_post (2, v);
 		break;
 	case 2:
-		cia_wait_pre ();
+		cia_wait_pre (1);
 		v = ReadCIAA(r, &flags);
 		v |= dummy_get_safe(addr, 1, false, 0) << 8;
-		cia_wait_post ();
+		cia_wait_post (1, v);
 		break;
 	case 3:
-  	if (currprefs.cpu_model == 68000 && currprefs.cpu_compatible) {
-      cia_wait_pre ();
-	    v = regs.irc;
-    	cia_wait_post ();
-    }
-  	break;
-  }
+		if (currprefs.cpu_model == 68000 && currprefs.cpu_compatible) {
+			cia_wait_pre (0);
+			v = regs.irc;
+			cia_wait_post (0, v);
+		}
+		break;
+	}
 	if (addr & 1)
 		v = (v << 8) | (v >> 8);
 #ifdef ACTION_REPLAY
@@ -1815,12 +1910,16 @@ static void REGPARAM2 cia_bput (uaecptr addr, uae_u32 value)
 
 	if (!issinglecia () || (cs & 3) != 0) {
 		uae_u32 flags = 0;
-		cia_wait_pre ();
+		cia_wait_pre (((cs & 2) == 0 ? 1 : 0) | ((cs & 1) == 0 ? 2 : 0));
 		if ((cs & 2) == 0)
 			WriteCIAB (r, value, &flags);
 		if ((cs & 1) == 0)
 			WriteCIAA (r, value, &flags);
-		cia_wait_post ();
+		cia_wait_post (((cs & 2) == 0 ? 1 : 0) | ((cs & 1) == 0 ? 2 : 0), value);
+		if (((cs & 3) == 3) && (warned > 0 || currprefs.illegal_mem)) {
+			write_log (_T("cia_bput: unknown CIA address %08X=%02X PC=%08X\n"), addr, value & 0xff, M68K_GETPC);
+			warned--;
+		}
 #ifdef ACTION_REPLAY
 		if (flags) {
 			action_replay_cia_access((flags & 2) != 0);
@@ -1847,12 +1946,16 @@ static void REGPARAM2 cia_wput (uaecptr addr, uae_u32 v)
 
 	if (!issinglecia () || (cs & 3) != 0) {
 		uae_u32 flags = 0;
-		cia_wait_pre ();
+		cia_wait_pre (((cs & 2) == 0 ? 1 : 0) | ((cs & 1) == 0 ? 2 : 0));
 		if ((cs & 2) == 0)
 			WriteCIAB (r, v >> 8, &flags);
 		if ((cs & 1) == 0)
 			WriteCIAA (r, v & 0xff, &flags);
-		cia_wait_post ();
+		cia_wait_post (((cs & 2) == 0 ? 1 : 0) | ((cs & 1) == 0 ? 2 : 0), v);
+		if (((cs & 3) == 3) && (warned > 0 || currprefs.illegal_mem)) {
+			write_log (_T("cia_wput: unknown CIA address %08X=%04X %08X\n"), addr, v & 0xffff, M68K_GETPC);
+			warned--;
+		}
 #ifdef ACTION_REPLAY
 		if (flags) {
 			action_replay_cia_access((flags & 2) != 0);
@@ -2129,31 +2232,33 @@ uae_u8 *restore_cia (int num, uae_u8 *src)
 
 	/* CIA internal data */
 
-  b = restore_u8 ();					/* ICR MASK */
-  if (num) ciabimask = b; else ciaaimask = b;
-  w = restore_u8 ();					/* timer A latch */
-  w |= restore_u8 () << 8;
-  if (num) ciabla = w; else ciaala = w;
-  w = restore_u8 ();					/* timer B latch */
-  w |= restore_u8 () << 8;
-  if (num) ciablb = w; else ciaalb = w;
-  w = restore_u8 ();					/* TOD latched value */
-  w |= restore_u8 () << 8;
-  w |= restore_u8 () << 16;
-  if (num) ciabtol = w; else ciaatol = w;
-  l = restore_u8 ();					/* alarm */
-  l |= restore_u8 () << 8;
-  l |= restore_u8 () << 16;
-  if (num) ciabalarm = l; else ciaaalarm = l;
-  b = restore_u8 ();
-  if (num) ciabtlatch = b & 1; else ciaatlatch = b & 1;	/* is TOD latched? */
-  if (num) ciabtodon = b & 2; else ciaatodon = b & 2;		/* is TOD stopped? */
-  b = restore_u8 ();
-  if (num)
-    div10 = CYCLE_UNIT * b;
-  b = restore_u8 ();
-  if (num) ciabsdr_cnt = b; else ciaasdr_cnt = b;
-  return src;
+	b = restore_u8 ();						/* ICR MASK */
+	if (num) ciabimask = b; else ciaaimask = b;
+	w = restore_u8 ();						/* timer A latch */
+	w |= restore_u8 () << 8;
+	if (num) ciabla = w; else ciaala = w;
+	w = restore_u8 ();						/* timer B latch */
+	w |= restore_u8 () << 8;
+	if (num) ciablb = w; else ciaalb = w;
+	w = restore_u8 ();						/* TOD latched value */
+	w |= restore_u8 () << 8;
+	w |= restore_u8 () << 16;
+	if (num) ciabtol = w; else ciaatol = w;
+	l = restore_u8 ();						/* alarm */
+	l |= restore_u8 () << 8;
+	l |= restore_u8 () << 16;
+	if (num) ciabalarm = l; else ciaaalarm = l;
+	b = restore_u8 ();
+	if (num) ciabtlatch = b & 1; else ciaatlatch = b & 1;	/* is TOD latched? */
+	if (num) ciabtodon = b & 2; else ciaatodon = b & 2;		/* is TOD stopped? */
+	if (num) ciaasdr_load = b & 4; else ciaasdr_load = b & 4; /* SP data pending */
+	b = restore_u8 ();
+	if (num)
+		div10 = CYCLE_UNIT * b;
+	b = restore_u8 ();
+	if (num) ciabsdr_cnt = b; else ciaasdr_cnt = b;
+	if (num) ciabsdr_buf = b;
+	return src;
 }
 
 uae_u8 *save_cia (int num, int *len, uae_u8 *dstptr)

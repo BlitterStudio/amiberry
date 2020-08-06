@@ -8248,12 +8248,12 @@ static void hsync_handler_post (bool onvsync)
 	bool ciahsyncs = !(bplcon0 & 2) || ((bplcon0 & 2) && currprefs.genlock && (!currprefs.ntscmode || genlockhtoggle));
 	bool ciavsyncs = !(bplcon0 & 2) || ((bplcon0 & 2) && currprefs.genlock && genlockvtoggle);
 
-	CIA_hsync_posthandler(false);
+	CIA_hsync_posthandler(false, false);
 	if (currprefs.cs_cd32cd) {
-		CIA_hsync_posthandler(true);
+		CIA_hsync_posthandler(true, true);
 		CIAB_tod_handler(18);
 	} else if (ciahsyncs) {
-		CIA_hsync_posthandler(true);
+		CIA_hsync_posthandler(true, ciahsyncs);
 		if (beamcon0 & (0x80 | 0x100)) {
 			if (hsstop < (maxhpos & ~1) && hsstrt < maxhpos)
 				CIAB_tod_handler(hsstop);
