@@ -329,7 +329,9 @@
     <None Include="..\..\src\jit\compemu_midfunc_arm2.cpp.in" />
     <None Include="..\..\src\jit\compemu_midfunc_armA64.cpp.in" />
     <None Include="..\..\src\jit\compemu_midfunc_armA64_2.cpp.in" />
+    <None Include="Amiberry-Debug-dispmanx.vgdbsettings" />
     <None Include="Amiberry-Debug.vgdbsettings" />
+    <None Include="Amiberry-Release-dispmanx.vgdbsettings" />
     <None Include="Amiberry-Release.vgdbsettings" />
   </ItemGroup>
   <ItemGroup>

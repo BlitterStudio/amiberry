@@ -98,6 +98,12 @@
     <None Include="..\..\src\jit\codegen_armA64.cpp.in">
       <Filter>Source files\jit</Filter>
     </None>
+    <None Include="Amiberry-Debug-dispmanx.vgdbsettings">
+      <Filter>VisualGDB settings</Filter>
+    </None>
+    <None Include="Amiberry-Release-dispmanx.vgdbsettings">
+      <Filter>VisualGDB settings</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\akiko.cpp">
