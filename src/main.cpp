@@ -229,7 +229,7 @@ void fixup_cpu(struct uae_prefs* p)
 	if (p->cachesize < 0 || p->cachesize > MAX_JIT_CACHE || (p->cachesize > 0 && p->cachesize < MIN_JIT_CACHE))
 	{
 		error_log(_T("JIT Bad value for cachesize parameter: value must zero or within %d..%d."), MIN_JIT_CACHE,
-		          MAX_JIT_CACHE);
+				  MAX_JIT_CACHE);
 		p->cachesize = 0;
 	}
 
@@ -596,18 +596,16 @@ void usage()
 	std::cout << get_version_string() << std::endl;
 	std::cout << "Usage:" << std::endl;
 	std::cout << " -h                         Show this help." << std::endl;
-	std::cout << " --help                     Show this help." << std::endl;
+	std::cout << " --help                     \n" << std::endl;
 	std::cout << " -f <file>                  Load a configuration file." << std::endl;
-	std::cout << " -config=<file>             Load a configuration file." << std::endl;
-	std::cout << " -model=<Amiga Model>       Amiga model to emulate, from the QuickStart options." << std::endl;
-	std::cout << "                            Available options are: A500, A500P, A1200, A4000 and CD32." << std::endl;
-	std::cout << " -autoload=<file>           Load a WHDLoad game or .CUE CD32 image using the WHDBooter." << std::endl;
-	std::cout << " -cdimage=<file>            Load the CD image provided when starting emulation (for CD32)." <<
-		std::endl;
-	std::cout << " -statefile=<file>          Load a save state file." << std::endl;
+	std::cout << " --config <file>            \n" << std::endl;
+	std::cout << " -m <Amiga Model>           Amiga model to emulate, from the QuickStart options." << std::endl;
+	std::cout << " --model <Amiga Model>      Available options are: A500, A500P, A1200, A4000 and CD32.\n" << std::endl;
+	std::cout << " --autoload <file>          Load a WHDLoad game or .CUE CD32 image using the WHDBooter." << std::endl;
+	std::cout << " --cdimage <file>           Load the CD image provided when starting emulation (for CD32)." << std::endl;
+	std::cout << " --statefile <file>         Load a save state file." << std::endl;
 	std::cout << " -s <config param>=<value>  Set the configuration parameter with value." << std::endl;
-	std::cout << "                            Edit a configuration file in order to know valid parameters and settings."
-		<< std::endl;
+	std::cout << "                            Edit a configuration file in order to know valid parameters and settings." << std::endl;
 	std::cout << "\nAdditional options:" << std::endl;
 	std::cout << " -0 <filename>              Set adf for drive 0." << std::endl;
 	std::cout << " -1 <filename>              Set adf for drive 1." << std::endl;
@@ -617,19 +615,16 @@ void usage()
 	std::cout << " -G                         Start directly into emulation." << std::endl;
 	std::cout << " -c <value>                 Size of chip memory (in number of 512 KBytes chunks)." << std::endl;
 	std::cout << " -F <value>                 Size of fast memory (in number of 1024 KBytes chunks)." << std::endl;
-	std::cout << "\nNote:" << std::endl;
-	std::cout <<
-		"Parameters are parsed from the beginning of command line, so in case of ambiguity for parameters, last one will be used."
-		<< std::endl;
+	std::cout << "\nNotes:" << std::endl;
 	std::cout << "File names should be with absolute path." << std::endl;
-	std::cout << "\nExample:" << std::endl;
-	std::cout << "amiberry -model=A1200 -G" << std::endl;
-	std::cout << "It will use the A1200 default settings as found in the QuickStart panel." << std::endl;
-	std::cout << "It will override use_gui to 'no' so that it enters emulation directly." << std::endl;
+	std::cout << "\nExample 1:" << std::endl;
+	std::cout << "amiberry --model A1200 -G" << std::endl;
+	std::cout << "This will use the A1200 default settings as found in the QuickStart panel." << std::endl;
+	std::cout << "Additionally, it will override 'use_gui' to 'no', so that it enters emulation directly." << std::endl;
 	std::cout << "\nExample 2:" << std::endl;
-	std::cout << "amiberry -config=conf/A500.uae -statefile=savestates/game.uss -s use_gui=no" << std::endl;
-	std::cout << "It will load A500.uae configuration with the save state named game." << std::endl;
-	std::cout << "It will override use_gui to 'no' so that it enters emulation directly." << std::endl;
+	std::cout << "amiberry --config conf/A500.uae --statefile savestates/game.uss -s use_gui=no" << std::endl;
+	std::cout << "This will load the conf/A500.uae configuration file, with the save state named game." << std::endl;
+	std::cout << "It will override 'use_gui' to 'no', so that it enters emulation directly." << std::endl;
 	exit(1);
 }
 
@@ -751,108 +746,92 @@ static void parse_cmdline(int argc, TCHAR** argv)
 			if (i + 1 < argc)
 				i++;
 		}
-		else if (_tcsncmp(argv[i], _T("-config="), 8) == 0)
+		else if (_tcscmp(argv[i], _T("--config")) == 0 || _tcscmp(argv[i], _T("-f")) == 0)
 		{
-			auto* const txt = parse_text_path(argv[i] + 8);
-			currprefs.mountitems = 0;
-			target_cfgfile_load(&currprefs, txt,
-			                    firstconfig
-				                    ? CONFIG_TYPE_ALL
-				                    : CONFIG_TYPE_HARDWARE | CONFIG_TYPE_HOST | CONFIG_TYPE_NORESET, 0);
-			xfree(txt);
-			firstconfig = false;
-			loaded = true;
-		}
-		else if (_tcsncmp(argv[i], _T("-model="), 7) == 0)
-		{
-			auto* const txt = parse_text_path(argv[i] + 7);
-			if (_tcsncmp(txt, _T("A500"), 4) == 0)
-			{
-				bip_a500(&currprefs, -1);
-			}
-			else if (_tcsncmp(txt, _T("A500P"), 5) == 0)
-			{
-				bip_a500plus(&currprefs, -1);
-			}
-			else if (_tcsncmp(txt, _T("A1200"), 5) == 0)
-			{
-				bip_a1200(&currprefs, -1);
-			}
-			else if (_tcsncmp(txt, _T("A4000"), 5) == 0)
-			{
-				bip_a4000(&currprefs, -1);
-			}
-			else if (_tcsncmp(txt, _T("CD32"), 4) == 0)
-			{
-				bip_cd32(&currprefs, -1);
-			}
-		}
-		else if (_tcsncmp(argv[i], _T("-statefile="), 11) == 0)
-		{
-			auto* const txt = parse_text_path(argv[i] + 11);
-			savestate_state = STATE_DORESTORE;
-			_tcscpy(savestate_fname, txt);
-			xfree(txt);
-			loaded = true;
-		}
-			// for backwards compatibility only - WHDLoading
-		else if (_tcsncmp(argv[i], _T("-autowhdload="), 13) == 0)
-		{
-			auto* const txt = parse_text_path(argv[i] + 13);
-			whdload_auto_prefs(&currprefs, txt);
-			xfree(txt);
-			firstconfig = false;
-			loaded = true;
-		}
-			// for backwards compatibility only - CDLoading
-		else if (_tcsncmp(argv[i], _T("-autocd="), 8) == 0)
-		{
-			auto* const txt = parse_text_path(argv[i] + 8);
-			cd_auto_prefs(&currprefs, txt);
-			xfree(txt);
-			firstconfig = false;
-			loaded = true;
-		}
-			// autoload ....  .cue / .lha  
-		else if (_tcsncmp(argv[i], _T("-autoload="), 10) == 0)
-		{
-			auto* const txt = parse_text_path(argv[i] + 10);
-			const auto txt2 = get_filename_extension(txt); // Extract the extension from the string  (incl '.')
-			if (_tcsncmp(txt2.c_str(), ".lha", 4) == 0)
-			{
-				write_log("WHDLoad... %s\n", txt);
-				whdload_auto_prefs(&currprefs, txt);
-				xfree(txt);
-			}
-			else if (_tcsncmp(txt2.c_str(), ".cue", 4) == 0)
-			{
-				write_log("CDTV/CD32... %s\n", txt);
-				cd_auto_prefs(&currprefs, txt);
-				xfree(txt);
-			}
-			else
-				write_log("Can't find extension ... %s\n", txt);
-		}
-		else if (_tcsncmp(argv[i], _T("-cli"), 4) == 0)
-			console_emulation = true;
-		else if (_tcscmp(argv[i], _T("-f")) == 0)
-		{
-			/* Check for new-style "-f xxx" argument, where xxx is config-file */
 			if (i + 1 == argc)
-				write_log(_T("Missing argument for '-f' option.\n"));
+				write_log(_T("Missing argument for '--config' option.\n"));
 			else
 			{
 				auto* const txt = parse_text_path(argv[++i]);
 				currprefs.mountitems = 0;
 				target_cfgfile_load(&currprefs, txt,
-				                    firstconfig
-					                    ? CONFIG_TYPE_ALL
-					                    : CONFIG_TYPE_HARDWARE | CONFIG_TYPE_HOST | CONFIG_TYPE_NORESET, 0);
+					firstconfig
+					? CONFIG_TYPE_ALL
+					: CONFIG_TYPE_HARDWARE | CONFIG_TYPE_HOST | CONFIG_TYPE_NORESET, 0);
 				xfree(txt);
 				firstconfig = false;
 			}
 			loaded = true;
 		}
+		else if (_tcscmp(argv[i], _T("--model")) == 0 || _tcscmp(argv[i], _T("-m")) == 0)
+		{
+			if (i + 1 == argc)
+				write_log(_T("Missing argument for '--model' option.\n"));
+			else
+			{
+				auto* const txt = parse_text_path(argv[++i]);
+				if (_tcscmp(txt, _T("A500")) == 0)
+				{
+					bip_a500(&currprefs, -1);
+				}
+				else if (_tcscmp(txt, _T("A500P")) == 0)
+				{
+					bip_a500plus(&currprefs, -1);
+				}
+				else if (_tcscmp(txt, _T("A1200")) == 0)
+				{
+					bip_a1200(&currprefs, -1);
+				}
+				else if (_tcscmp(txt, _T("A4000")) == 0)
+				{
+					bip_a4000(&currprefs, -1);
+				}
+				else if (_tcscmp(txt, _T("CD32")) == 0)
+				{
+					bip_cd32(&currprefs, -1);
+				}
+			}
+		}
+		else if (_tcscmp(argv[i], _T("--statefile")) == 0)
+		{
+			if (i + 1 == argc)
+				write_log(_T("Missing argument for '--statefile' option.\n"));
+			else
+			{
+				auto* const txt = parse_text_path(argv[++i]);
+				savestate_state = STATE_DORESTORE;
+				_tcscpy(savestate_fname, txt);
+				xfree(txt);
+			}
+			loaded = true;
+		}
+		// Auto-load .cue / .lha  
+		else if (_tcscmp(argv[i], _T("--autoload")) == 0)
+		{
+			if (i + 1 == argc)
+				write_log(_T("Missing argument for '--autoload' option.\n"));
+			else
+			{
+				auto* const txt = parse_text_path(argv[++i]);
+				const auto txt2 = get_filename_extension(txt); // Extract the extension from the string  (incl '.')
+				if (_tcscmp(txt2.c_str(), ".lha") == 0)
+				{
+					write_log("WHDLoad... %s\n", txt);
+					whdload_auto_prefs(&currprefs, txt);
+					xfree(txt);
+				}
+				else if (_tcscmp(txt2.c_str(), ".cue") == 0)
+				{
+					write_log("CDTV/CD32... %s\n", txt);
+					cd_auto_prefs(&currprefs, txt);
+					xfree(txt);
+				}
+				else
+					write_log("Can't find extension ... %s\n", txt);
+			}
+		}
+		else if (_tcscmp(argv[i], _T("--cli")) == 0)
+			console_emulation = true;
 		else if (_tcscmp(argv[i], _T("-s")) == 0)
 		{
 			if (i + 1 == argc)
@@ -860,19 +839,24 @@ static void parse_cmdline(int argc, TCHAR** argv)
 			else
 				cfgfile_parse_line(&currprefs, argv[++i], 0);
 		}
-		else if (_tcsncmp(argv[i], _T("-cdimage="), 9) == 0)
+		else if (_tcscmp(argv[i], _T("--cdimage")) == 0)
 		{
-			auto* const txt = parse_text_path(argv[i] + 9);
-			auto* const txt2 = xmalloc(TCHAR, _tcslen(txt) + 5);
-			_tcscpy(txt2, txt);
-			if (_tcsrchr(txt2, ',') == nullptr)
-				_tcscat(txt2, _T(",image"));
-			cfgfile_parse_option(&currprefs, _T("cdimage0"), txt2, 0);
-			xfree(txt2);
-			xfree(txt);
+			if (i + 1 == argc)
+				write_log(_T("Missing argument for '--cdimage' option.\n"));
+			else
+			{
+				auto* const txt = parse_text_path(argv[++i]);
+				auto* const txt2 = xmalloc(TCHAR, _tcslen(txt) + 5);
+				_tcscpy(txt2, txt);
+				if (_tcsrchr(txt2, ',') == nullptr)
+					_tcscat(txt2, _T(",image"));
+				cfgfile_parse_option(&currprefs, _T("cdimage0"), txt2, 0);
+				xfree(txt2);
+				xfree(txt);
+			}
 			loaded = true;
 		}
-		else if (_tcscmp(argv[i], _T("-h")) == 0 || _tcsncmp(argv[i], _T("--help"), 6) == 0)
+		else if (_tcscmp(argv[i], _T("-h")) == 0 || _tcscmp(argv[i], _T("--help")) == 0)
 		{
 			usage();
 		}
