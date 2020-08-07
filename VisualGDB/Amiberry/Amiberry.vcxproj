@@ -39,7 +39,7 @@
     <GNUConfigurationType>Debug</GNUConfigurationType>
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
     <ToolchainVersion>8.3.0/8.2.1/r2</ToolchainVersion>
-    <TargetName>$(ProjectName)-sdl2</TargetName>
+    <TargetName>$(ProjectName)</TargetName>
     <RemoteBuildHost>
     </RemoteBuildHost>
   </PropertyGroup>
@@ -47,21 +47,21 @@
     <GNUConfigurationType>Debug</GNUConfigurationType>
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
     <ToolchainVersion>8.3.0/8.2.1/r2</ToolchainVersion>
-    <TargetName>$(ProjectName)-sdl2</TargetName>
+    <TargetName>$(ProjectName)</TargetName>
     <RemoteBuildHost>
     </RemoteBuildHost>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
     <ToolchainVersion>8.3.0/8.2.1/r2</ToolchainVersion>
-    <TargetName>$(ProjectName)-sdl2</TargetName>
+    <TargetName>$(ProjectName)</TargetName>
     <RemoteBuildHost>
     </RemoteBuildHost>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-dispmanx|VisualGDB'">
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
     <ToolchainVersion>8.3.0/8.2.1/r2</ToolchainVersion>
-    <TargetName>$(ProjectName)-sdl2</TargetName>
+    <TargetName>$(ProjectName)</TargetName>
     <RemoteBuildHost>
     </RemoteBuildHost>
   </PropertyGroup>
@@ -329,7 +329,9 @@
     <None Include="..\..\src\jit\compemu_midfunc_arm2.cpp.in" />
     <None Include="..\..\src\jit\compemu_midfunc_armA64.cpp.in" />
     <None Include="..\..\src\jit\compemu_midfunc_armA64_2.cpp.in" />
+    <None Include="Amiberry-Debug-dispmanx.vgdbsettings" />
     <None Include="Amiberry-Debug.vgdbsettings" />
+    <None Include="Amiberry-Release-dispmanx.vgdbsettings" />
     <None Include="Amiberry-Release.vgdbsettings" />
   </ItemGroup>
   <ItemGroup>
