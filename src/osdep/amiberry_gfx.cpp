@@ -1102,6 +1102,8 @@ int check_prefs_changed_gfx()
 		}
 
 #ifdef AMIBERRY
+		currprefs.gfx_apmode[0].gfx_fullscreen = changed_prefs.gfx_apmode[0].gfx_fullscreen;
+		currprefs.gfx_apmode[1].gfx_fullscreen = changed_prefs.gfx_apmode[1].gfx_fullscreen;
 		currprefs.gfx_monitor.gfx_size_fs.width = changed_prefs.gfx_monitor.gfx_size_fs.width;
 		currprefs.gfx_monitor.gfx_size_fs.height = changed_prefs.gfx_monitor.gfx_size_fs.height;
 		currprefs.gfx_monitor.gfx_size_win.width = changed_prefs.gfx_monitor.gfx_size_win.width;
