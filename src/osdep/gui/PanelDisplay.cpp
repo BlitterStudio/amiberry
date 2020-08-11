@@ -635,39 +635,23 @@ void RefreshPanelDisplay()
 		cboScreenmode->setSelected(0);
 		cboFullscreen->setEnabled(false);
 
-		lblAmigaWidth->setEnabled(true);
-		sldAmigaWidth->setEnabled(true);
-		txtAmigaWidth->setEnabled(true);
 		lblAmigaHeight->setEnabled(!chkAutoHeight->isSelected());
 		sldAmigaHeight->setEnabled(!chkAutoHeight->isSelected());
 		txtAmigaHeight->setEnabled(!chkAutoHeight->isSelected());
-		chkAutoHeight->setEnabled(true);
 	}
 	else if (changed_prefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN)
 	{
 		cboScreenmode->setSelected(1);
 		cboFullscreen->setEnabled(true);
-		
-		lblAmigaWidth->setEnabled(false);
-		sldAmigaWidth->setEnabled(false);
-		txtAmigaWidth->setEnabled(false);
-		lblAmigaHeight->setEnabled(false);
-		sldAmigaHeight->setEnabled(false);
-		txtAmigaHeight->setEnabled(false);
-		chkAutoHeight->setEnabled(false);
 	}
 	else if (changed_prefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLWINDOW)
 	{
 		cboScreenmode->setSelected(2);
 		cboFullscreen->setEnabled(false);
 
-		lblAmigaWidth->setEnabled(true);
-		sldAmigaWidth->setEnabled(true);
-		txtAmigaWidth->setEnabled(true);
 		lblAmigaHeight->setEnabled(!chkAutoHeight->isSelected());
 		sldAmigaHeight->setEnabled(!chkAutoHeight->isSelected());
 		txtAmigaHeight->setEnabled(!chkAutoHeight->isSelected());
-		chkAutoHeight->setEnabled(true);
 	}
 
 	if (changed_prefs.gfx_monitor.gfx_size_fs.width && changed_prefs.gfx_monitor.gfx_size_fs.height)

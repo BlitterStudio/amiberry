@@ -501,10 +501,13 @@ void update_win_fs_mode(struct uae_prefs* p)
 
 		if (p->gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN)
 		{
-			p->gfx_monitor.gfx_size = p->gfx_monitor.gfx_size_fs;
+			p->gfx_monitor.gfx_size = p->gfx_monitor.gfx_size_win;
 			// Switch to Fullscreen mode, if we don't have it already
 			if (!is_fullscreen)
+			{
 				SDL_SetWindowFullscreen(sdl_window, SDL_WINDOW_FULLSCREEN);
+				SDL_SetWindowSize(sdl_window, p->gfx_monitor.gfx_size_fs.width, p->gfx_monitor.gfx_size_fs.height);
+			}
 		}
 		else if (p->gfx_apmode[0].gfx_fullscreen == GFX_FULLWINDOW)
 		{
