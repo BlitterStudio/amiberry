@@ -564,7 +564,7 @@ static void AdjustDropDownControls()
 void RefreshPanelFloppy()
 {
 	int i;
-	auto prevAvailable = true;
+	auto prev_available = true;
 
 	AdjustDropDownControls();
 
@@ -575,8 +575,8 @@ void RefreshPanelFloppy()
 		chkDFx[i]->setSelected(driveEnabled);
 		cboDFxType[i]->setSelected(changed_prefs.floppyslots[i].dfxtype + 1);
 		chkDFxWriteProtect[i]->setSelected(disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df));
-		chkDFx[i]->setEnabled(prevAvailable);
-		cboDFxType[i]->setEnabled(prevAvailable);
+		chkDFx[i]->setEnabled(prev_available);
+		cboDFxType[i]->setEnabled(prev_available);
 
 		chkDFxWriteProtect[i]->setEnabled(driveEnabled && !changed_prefs.floppy_read_only);
 		cmdDFxInfo[i]->setEnabled(driveEnabled);
@@ -584,7 +584,7 @@ void RefreshPanelFloppy()
 		cmdDFxSelect[i]->setEnabled(driveEnabled);
 		cboDFxFile[i]->setEnabled(driveEnabled);
 
-		prevAvailable = driveEnabled;
+		prev_available = driveEnabled;
 		if (driveEnabled)
 			changed_prefs.nr_floppies = i + 1;
 	}

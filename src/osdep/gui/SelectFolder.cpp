@@ -97,7 +97,7 @@ static void checkfoldername(char* current)
 	if ((dir = opendir(current)))
 	{
 		dirList = current;
-		const auto ptr = realpath(current, actualpath);
+		auto* const ptr = realpath(current, actualpath);
 		strncpy(workingDir, ptr, MAX_DPATH);
 		closedir(dir);
 	}
@@ -222,8 +222,8 @@ static void ExitSelectFolder()
 
 static void navigate_right()
 {
-	const auto focusHdl = gui_top->_getFocusHandler();
-	const auto activeWidget = focusHdl->getFocused();
+	auto* const focusHdl = gui_top->_getFocusHandler();
+	auto* const activeWidget = focusHdl->getFocused();
 	if (activeWidget == lstFolders)
 		cmdOK->requestFocus();
 	else if (activeWidget == cmdCancel)
@@ -234,8 +234,8 @@ static void navigate_right()
 
 static void navigate_left()
 {
-	const auto focusHdl = gui_top->_getFocusHandler();
-	const auto activeWidget = focusHdl->getFocused();
+	auto* const focusHdl = gui_top->_getFocusHandler();
+	auto* const activeWidget = focusHdl->getFocused();
 	if (activeWidget == lstFolders)
 		cmdCancel->requestFocus();
 	else if (activeWidget == cmdCancel)

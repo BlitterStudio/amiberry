@@ -28,7 +28,7 @@ static gcn::ScrollArea* scrAreaConfigs;
 
 bool LoadConfigByName(const char* name)
 {
-	ConfigFileInfo* config = SearchConfigInList(name);
+	auto* config = SearchConfigInList(name);
 	if (config != nullptr)
 	{
 		if (emulating)
@@ -272,15 +272,15 @@ void InitPanelConfig(const struct _ConfigCategory& category)
 	cmdDelete->setId("CfgDelete");
 	cmdDelete->addActionListener(configButtonActionListener);
 
-	auto buttonX = DISTANCE_BORDER;
+	auto button_x = DISTANCE_BORDER;
 	const auto buttonY = category.panel->getHeight() - DISTANCE_BORDER - BUTTON_HEIGHT;
-	category.panel->add(cmdLoad, buttonX, buttonY);
-	buttonX += BUTTON_WIDTH + DISTANCE_NEXT_X;
-	category.panel->add(cmdSave, buttonX, buttonY);
-	buttonX += BUTTON_WIDTH + 3 * DISTANCE_NEXT_X;
-	buttonX += BUTTON_WIDTH + DISTANCE_NEXT_X;
-	buttonX = category.panel->getWidth() - DISTANCE_BORDER - BUTTON_WIDTH;
-	category.panel->add(cmdDelete, buttonX, buttonY);
+	category.panel->add(cmdLoad, button_x, buttonY);
+	button_x += BUTTON_WIDTH + DISTANCE_NEXT_X;
+	category.panel->add(cmdSave, button_x, buttonY);
+	button_x += BUTTON_WIDTH + 3 * DISTANCE_NEXT_X;
+	button_x += BUTTON_WIDTH + DISTANCE_NEXT_X;
+	button_x = category.panel->getWidth() - DISTANCE_BORDER - BUTTON_WIDTH;
+	category.panel->add(cmdDelete, button_x, buttonY);
 	
 	if (strlen(last_active_config) == 0)
 	{

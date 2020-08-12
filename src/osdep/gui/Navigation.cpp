@@ -319,10 +319,14 @@ static NavigationMap navMap[] =
 	{ "cboActiveRunAtPrio", "Priority", "cboInactiveRunAtPrio", "chkActiveDisableSound", "chkActivePauseEmulation" },
 	{ "chkActivePauseEmulation", "Priority", "chkInactivePauseEmulation", "cboActiveRunAtPrio", "chkActiveDisableSound" },
 	{ "chkActiveDisableSound", "Priority", "chkInactiveDisableSound", "chkActivePauseEmulation", "cboActiveRunAtPrio" },
-	{ "cboInactiveRunAtPrio", "cboActiveRunAtPrio", "Priority", "chkInactiveDisableControllers", "chkInactivePauseEmulation" },
-	{ "chkInactivePauseEmulation", "chkActivePauseEmulation", "Priority", "cboInactiveRunAtPrio", "chkInactiveDisableSound" },
-	{ "chkInactiveDisableSound", "chkActiveDisableSound", "Priority", "chkInactivePauseEmulation", "chkInactiveDisableControllers" },
-	{ "chkInactiveDisableControllers", "chkActiveDisableSound", "Priority", "chkInactiveDisableSound", "cboInactiveRunAtPrio" },
+	{ "cboInactiveRunAtPrio", "cboActiveRunAtPrio", "cboMinimizedRunAtPrio", "chkInactiveDisableControllers", "chkInactivePauseEmulation" },
+	{ "chkInactivePauseEmulation", "chkActivePauseEmulation", "chkMinimizedPauseEmulation", "cboInactiveRunAtPrio", "chkInactiveDisableSound" },
+	{ "chkInactiveDisableSound", "chkActiveDisableSound", "chkMinimizedDisableSound", "chkInactivePauseEmulation", "chkInactiveDisableControllers" },
+	{ "chkInactiveDisableControllers", "chkActiveDisableSound", "chkMinimizedDisableControllers", "chkInactiveDisableSound", "cboInactiveRunAtPrio" },
+	{ "cboMinimizedRunAtPrio", "cboInactiveRunAtPrio", "Priority", "chkMinimizedDisableControllers", "chkMinimizedPauseEmulation" },
+	{ "chkMinimizedPauseEmulation", "chkInactivePauseEmulation", "Priority", "cboMinimizedRunAtPrio", "chkMinimizedDisableSound" },
+	{ "chkMinimizedDisableSound", "chkInactiveDisableSound", "Priority", "chkMinimizedPauseEmulation", "chkMinimizedDisableControllers" },
+	{ "chkMinimizedDisableControllers", "chkInactiveDisableControllers", "Priority", "chkMinimizedDisableSound", "cboMinimizedRunAtPrio" },
 	
 	// PanelSavestate
 	{ "State0", "Savestates", "Savestates", "LoadState", "State1" },

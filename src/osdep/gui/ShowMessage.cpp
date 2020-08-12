@@ -103,13 +103,13 @@ static void ExitShowMessage()
 
 static void ShowMessageWaitInputLoop()
 {
-	int gotEvent = 0;
+	auto got_event = 0;
 	SDL_Event event;
 	while (SDL_PollEvent(&event))
 	{
 		if (event.type == SDL_KEYDOWN)
 		{
-			gotEvent = 1;
+			got_event = 1;
 			switch (event.key.keysym.sym)
 			{
 			case VK_ESCAPE:
@@ -125,7 +125,7 @@ static void ShowMessageWaitInputLoop()
 
 		if (event.type == SDL_CONTROLLERBUTTONDOWN)
 		{
-			gotEvent = 1;
+			got_event = 1;
 			dialogControlPressed = SDL_GameControllerGetStringForButton(
 				SDL_GameControllerButton(event.cbutton.button));
 			dialogFinished = true;
@@ -138,7 +138,7 @@ static void ShowMessageWaitInputLoop()
 		gui_input->pushInput(event);
 	}
 
-	if (gotEvent)
+	if (got_event)
 	{
 		// Now we let the Gui object perform its logic.
 		uae_gui->logic();
@@ -152,17 +152,17 @@ static void ShowMessageWaitInputLoop()
 
 static void navigate_left_right()
 {
-	const auto focusHdl = gui_top->_getFocusHandler();
-	const auto activeWidget = focusHdl->getFocused();
-	if (activeWidget == cmdCancel)
+	const gcn::FocusHandler* focus_hdl = gui_top->_getFocusHandler();
+	const gcn::Widget* active_widget = focus_hdl->getFocused();
+	if (active_widget == cmdCancel)
 		cmdOK->requestFocus();
-	else if (activeWidget == cmdOK)
+	else if (active_widget == cmdOK)
 		cmdCancel->requestFocus();
 }
 
 static void ShowMessageLoop()
 {
-	int gotEvent = 0;
+	auto got_event = 0;
 	SDL_Event event;
 	SDL_Event touch_event;
 	while (SDL_PollEvent(&event))
@@ -170,7 +170,7 @@ static void ShowMessageLoop()
 		switch (event.type)
 		{
 		case SDL_KEYDOWN:
-			gotEvent = 1;
+			got_event = 1;
 			switch (event.key.keysym.sym)
 			{
 			case VK_ESCAPE:
@@ -198,7 +198,7 @@ static void ShowMessageLoop()
 		case SDL_JOYHATMOTION:
 			if (gui_joystick)
 			{
-				gotEvent = 1;
+				got_event = 1;
 				const int hat = SDL_JoystickGetHat(gui_joystick, 0);
 
 				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].south_button))
@@ -225,7 +225,7 @@ static void ShowMessageLoop()
 			break;
 
 		case SDL_FINGERDOWN:
-			gotEvent = 1;
+			got_event = 1;
 			memcpy(&touch_event, &event, sizeof event);
 			touch_event.type = SDL_MOUSEBUTTONDOWN;
 			touch_event.button.which = 0;
@@ -237,7 +237,7 @@ static void ShowMessageLoop()
 			break;
 
 		case SDL_FINGERUP:
-			gotEvent = 1;
+			got_event = 1;
 			memcpy(&touch_event, &event, sizeof event);
 			touch_event.type = SDL_MOUSEBUTTONUP;
 			touch_event.button.which = 0;
@@ -249,7 +249,7 @@ static void ShowMessageLoop()
 			break;
 
 		case SDL_FINGERMOTION:
-			gotEvent = 1;
+			got_event = 1;
 			memcpy(&touch_event, &event, sizeof event);
 			touch_event.type = SDL_MOUSEMOTION;
 			touch_event.motion.which = 0;
@@ -265,7 +265,7 @@ static void ShowMessageLoop()
 		case SDL_MOUSEBUTTONUP:
 		case SDL_MOUSEMOTION:
 		case SDL_MOUSEWHEEL:
-			gotEvent = 1;
+			got_event = 1;
 			break;
 
 		default:
@@ -282,7 +282,7 @@ static void ShowMessageLoop()
 #endif
 	}
 
-	if (gotEvent)
+	if (got_event)
 	{
 		// Now we let the Gui object perform its logic.
 		uae_gui->logic();

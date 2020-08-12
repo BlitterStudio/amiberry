@@ -110,21 +110,21 @@ static MemorySliderActionListener* memorySliderActionListener;
 void InitPanelRAM(const struct _ConfigCategory& category)
 {
 	memorySliderActionListener = new MemorySliderActionListener();
-	int sldWidth;
-	int markerLength;
+	int sld_width;
+	int marker_length;
 #ifdef ANDROID
 	sldWidth = 150;
 	markerLength = 30;
 #else
-	sldWidth = 110;
-	markerLength = 20;
+	sld_width = 110;
+	marker_length = 20;
 #endif
 
 	lblChipmem = new gcn::Label("Chip:");
 	sldChipmem = new gcn::Slider(0, 4);
-	sldChipmem->setSize(sldWidth, SLIDER_HEIGHT);
+	sldChipmem->setSize(sld_width, SLIDER_HEIGHT);
 	sldChipmem->setBaseColor(gui_baseCol);
-	sldChipmem->setMarkerLength(markerLength);
+	sldChipmem->setMarkerLength(marker_length);
 	sldChipmem->setStepLength(1);
 	sldChipmem->setId("Chipmem");
 	sldChipmem->addActionListener(memorySliderActionListener);
@@ -132,9 +132,9 @@ void InitPanelRAM(const struct _ConfigCategory& category)
 
 	lblSlowmem = new gcn::Label("Slow:");
 	sldSlowmem = new gcn::Slider(0, 4);
-	sldSlowmem->setSize(sldWidth, SLIDER_HEIGHT);
+	sldSlowmem->setSize(sld_width, SLIDER_HEIGHT);
 	sldSlowmem->setBaseColor(gui_baseCol);
-	sldSlowmem->setMarkerLength(markerLength);
+	sldSlowmem->setMarkerLength(marker_length);
 	sldSlowmem->setStepLength(1);
 	sldSlowmem->setId("Slowmem");
 	sldSlowmem->addActionListener(memorySliderActionListener);
@@ -142,9 +142,9 @@ void InitPanelRAM(const struct _ConfigCategory& category)
 
 	lblFastmem = new gcn::Label("Z2 Fast:");
 	sldFastmem = new gcn::Slider(0, 4);
-	sldFastmem->setSize(sldWidth, SLIDER_HEIGHT);
+	sldFastmem->setSize(sld_width, SLIDER_HEIGHT);
 	sldFastmem->setBaseColor(gui_baseCol);
-	sldFastmem->setMarkerLength(markerLength);
+	sldFastmem->setMarkerLength(marker_length);
 	sldFastmem->setStepLength(1);
 	sldFastmem->setId("Fastmem");
 	sldFastmem->addActionListener(memorySliderActionListener);
@@ -155,9 +155,9 @@ void InitPanelRAM(const struct _ConfigCategory& category)
 		sldZ3mem = new gcn::Slider(0, 11);
 	else
 		sldZ3mem = new gcn::Slider(0, 10);
-	sldZ3mem->setSize(sldWidth, SLIDER_HEIGHT);
+	sldZ3mem->setSize(sld_width, SLIDER_HEIGHT);
 	sldZ3mem->setBaseColor(gui_baseCol);
-	sldZ3mem->setMarkerLength(markerLength);
+	sldZ3mem->setMarkerLength(marker_length);
 	sldZ3mem->setStepLength(1);
 	sldZ3mem->setId("Z3mem");
 	sldZ3mem->addActionListener(memorySliderActionListener);
@@ -165,9 +165,9 @@ void InitPanelRAM(const struct _ConfigCategory& category)
 
 	lblGfxmem = new gcn::Label("RTG board:");
 	sldGfxmem = new gcn::Slider(0, 8);
-	sldGfxmem->setSize(sldWidth, SLIDER_HEIGHT);
+	sldGfxmem->setSize(sld_width, SLIDER_HEIGHT);
 	sldGfxmem->setBaseColor(gui_baseCol);
-	sldGfxmem->setMarkerLength(markerLength);
+	sldGfxmem->setMarkerLength(marker_length);
 	sldGfxmem->setStepLength(1);
 	sldGfxmem->setId("Gfxmem");
 	sldGfxmem->addActionListener(memorySliderActionListener);
@@ -175,9 +175,9 @@ void InitPanelRAM(const struct _ConfigCategory& category)
 
 	lblA3000Lowmem = new gcn::Label("A4000 Motherb. slot:");
 	sldA3000Lowmem = new gcn::Slider(0, 2);
-	sldA3000Lowmem->setSize(sldWidth, SLIDER_HEIGHT);
+	sldA3000Lowmem->setSize(sld_width, SLIDER_HEIGHT);
 	sldA3000Lowmem->setBaseColor(gui_baseCol);
-	sldA3000Lowmem->setMarkerLength(markerLength);
+	sldA3000Lowmem->setMarkerLength(marker_length);
 	sldA3000Lowmem->setStepLength(1);
 	sldA3000Lowmem->setId("A3000Low");
 	sldA3000Lowmem->addActionListener(memorySliderActionListener);
@@ -185,9 +185,9 @@ void InitPanelRAM(const struct _ConfigCategory& category)
 
 	lblA3000Highmem = new gcn::Label("A4000 Proc. board:");
 	sldA3000Highmem = new gcn::Slider(0, 5);
-	sldA3000Highmem->setSize(sldWidth, SLIDER_HEIGHT);
+	sldA3000Highmem->setSize(sld_width, SLIDER_HEIGHT);
 	sldA3000Highmem->setBaseColor(gui_baseCol);
-	sldA3000Highmem->setMarkerLength(markerLength);
+	sldA3000Highmem->setMarkerLength(marker_length);
 	sldA3000Highmem->setStepLength(1);
 	sldA3000Highmem->setId("A3000High");
 	sldA3000Highmem->addActionListener(memorySliderActionListener);
