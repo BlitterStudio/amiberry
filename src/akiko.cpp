@@ -410,6 +410,7 @@ static uae_u8 cdrom_command;
 static uae_u8 cdrom_last_rx;
 
 static int cdrom_toc_counter;
+static uae_u32 cdrom_toc_crc;
 static uae_u8 cdrom_toc_buffer[MAX_TOC_ENTRIES * 13];
 static struct cd_toc_head cdrom_toc_cd_buffer;
 static uae_u8 qcode_buf[SUBQ_SIZE];
@@ -695,6 +696,7 @@ static int get_cdrom_toc (void)
 		if (s->point >= 2 && s->point < 100 && (s->control & 0x0c) != 0x04 && !secondtrack)
 			secondtrack = addr;
 	}
+	cdrom_toc_crc = get_crc32 (cdrom_toc_buffer, cdrom_toc_cd_buffer.points * 13);
 	return 0;
 }
 static bool is_valid_data_sector(int sector)
@@ -811,6 +813,13 @@ static int cdrom_command_led (void)
 		return 2;
 	}
 	return 0;
+}
+
+static int cdrom_command_idle_status (void)
+{
+	cdrom_result_buffer[0] = 0x0a;
+	cdrom_result_buffer[1] = 0x70;
+	return 2;
 }
 
 static int cdrom_command_media_status (void)
@@ -1798,13 +1807,17 @@ addrbank akiko_bank = {
 	ABFLAG_IO | ABFLAG_SAFE, S_READ, S_WRITE
 };
 
-static const uae_u8 patchdata[]={0x0c,0x82,0x00,0x00,0x03,0xe8,0x64,0x00,0x00,0x46};
+static const uae_u8 patchdata[] = { 0x0c, 0x82, 0x00, 0x00, 0x03, 0xe8, 0x64, 0x00, 0x00, 0x46 };
+static const uae_u8 patchdata2[] = { 0x0c, 0x82, 0x00, 0x00, 0x03, 0xe8, 0x4e, 0x71, 0x4e, 0x71 };
 static void patchrom(void)
 {
+    int i;
 	if (currprefs.cpu_model > 68020 || currprefs.cachesize || currprefs.m68k_speed != 0) {
-		uae_u8* p = extendedkickmem_bank.baseaddr;
+		uae_u8 *p = extendedkickmem_bank.baseaddr;
 		if (p) {
-			for (unsigned int i = 0; i < 524288 - sizeof patchdata; i++) {
+			for (i = 0; i < 524288 - 512; i++) {
+				if (!memcmp(p + i, patchdata2, sizeof(patchdata2)))
+					return;				
 				if (!memcmp(p + i, patchdata, sizeof(patchdata))) {
 					protect_roms(false);
 					p[i + 6] = 0x4e;
@@ -1859,6 +1872,7 @@ static int akiko_thread_do(int start)
 
 static void akiko_reset(int hardreset)
 {
+	patchrom();
 	cdaudiostop_do ();
 	nvram_read ();
 	eeprom_reset(cd32_eeprom);
@@ -1931,7 +1945,6 @@ int akiko_init (void)
 		cdrom_playing = cdrom_paused = 0;
 		cdrom_data_offset = -1;
 	}
-	patchrom ();
 	akiko_thread_do(1);
 	gui_flicker_led (LED_HD, 0, -1);
 	akiko_inited = true;
@@ -1996,7 +2009,7 @@ uae_u8 *save_akiko (int *len, uae_u8 *dstptr)
 	save_u8 (cdrom_speed);
 	save_u8 (cdrom_current_sector);
 
-	save_u32 (0);
+	save_u32 (cdrom_toc_crc);
 	save_u8 (cdrom_toc_cd_buffer.points);
 	save_u32 (cdrom_toc_cd_buffer.lastaddress);
 

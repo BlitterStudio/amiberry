@@ -1,11 +1,11 @@
 
 /*
- *     xDMS  v1.3  -  Portable DMS archive unpacker  -  Public Domain
- *     Written by     Andre Rodrigues de la Rocha  <adlroc@usa.net>
- *
- *     Handles the processing of a single DMS archive
- *
- */
+*     xDMS  v1.3  -  Portable DMS archive unpacker  -  Public Domain
+*     Written by     Andre Rodrigues de la Rocha  <adlroc@usa.net>
+*
+*     Handles the processing of a single DMS archive
+*
+*/
 
 
 #define HEADLEN 56
@@ -51,7 +51,7 @@ UCHAR *dms_text;
 
 static void log_error(int track)
 {
-    write_log (_T("DMS: Ignored error on track %d!\n"), track);
+	write_log (_T("DMS: Ignored error on track %d!\n"), track);
 }
 
 static void addextra(const TCHAR *name, struct zfile **extra, uae_u8 *p, int size)
@@ -131,10 +131,10 @@ USHORT DMS_Process_File(struct zfile *fi, struct zfile *fo, USHORT cmd, USHORT o
 	to = (USHORT) ((b1[18]<<8) | b1[19]);		/*  Highest track in archive. May be incorrect if archive is "appended" */
 
 	if (part && from < 30) {
-    free(b1);
-    free(b2);
-    free(dms_text);
-    return DMS_FILE_END;
+		free(b1);
+		free(b2);
+		free(dms_text);
+		return DMS_FILE_END;
 	}
 
 	pkfsize = (ULONG) ((((ULONG)b1[21])<<16) | (((ULONG)b1[22])<<8) | (ULONG)b1[23]);	/*  Length of total packed data as in archive   */
@@ -231,8 +231,8 @@ USHORT DMS_Process_File(struct zfile *fi, struct zfile *fo, USHORT cmd, USHORT o
 		write_log (_T(" ------  -------  -------  ------  ----  ----  ---- -----\n"));
 	}
 
-  //	if (((cmd==CMD_UNPACK) || (cmd==CMD_SHOWBANNER)) && (geninfo & 2) && (!pwd))
-  //		return ERR_NOPASSWD;
+	//	if (((cmd==CMD_UNPACK) || (cmd==CMD_SHOWBANNER)) && (geninfo & 2) && (!pwd))
+	//		return ERR_NOPASSWD;
 
 	ret=NO_PROBLEM;
 
@@ -259,7 +259,7 @@ USHORT DMS_Process_File(struct zfile *fi, struct zfile *fo, USHORT cmd, USHORT o
 		}
 	}
 
-	if ((cmd == CMD_VIEWFULL) || (cmd == CMD_SHOWDIZ) || (cmd == CMD_SHOWBANNER)) write_log(_T("\n"));
+	if ((cmd == CMD_VIEWFULL) || (cmd == CMD_SHOWDIZ) || (cmd == CMD_SHOWBANNER)) write_log (_T("\n"));
 
 	if (ret == DMS_FILE_END) ret = NO_PROBLEM;
 
@@ -295,14 +295,14 @@ static USHORT Process_Track(struct zfile *fi, struct zfile *fo, UCHAR *b1, UCHAR
 	}
 
 	/*  "TR" identifies a Track Header  */
-	if ((b1[0] != 'T')||(b1[1] != 'R')) 
-    return ERR_NOTTRACK;
+	if ((b1[0] != 'T')||(b1[1] != 'R'))
+		return ERR_NOTTRACK;
 
 	/*  Track Header CRC  */
 	hcrc = (USHORT)((b1[THLEN-2] << 8) | b1[THLEN-1]);
 
-	if (dms_CreateCRC(b1,(ULONG)(THLEN-2)) != hcrc) 
-    return ERR_THCRC;
+	if (dms_CreateCRC(b1,(ULONG)(THLEN-2)) != hcrc)
+		return ERR_THCRC;
 
 	number = (USHORT)((b1[2] << 8) | b1[3]);	/*  Number of track  */
 	pklen1 = (USHORT)((b1[6] << 8) | b1[7]);	/*  Length of packed track data as in archive  */
@@ -329,15 +329,15 @@ static USHORT Process_Track(struct zfile *fi, struct zfile *fo, UCHAR *b1, UCHAR
 		write_log (_T("%5d    %5d   %s  %04X  %04X  %04X    %0d\n"), pklen1, unpklen, modes[cmode], usum, hcrc, dcrc, flags);
 	}
 
-	if ((pklen1 > TRACK_BUFFER_LEN) || (pklen2 >TRACK_BUFFER_LEN) || (unpklen > TRACK_BUFFER_LEN)) 
-    return ERR_BIGTRACK;
+	if ((pklen1 > TRACK_BUFFER_LEN) || (pklen2 >TRACK_BUFFER_LEN) || (unpklen > TRACK_BUFFER_LEN))
+		return ERR_BIGTRACK;
 
-	if (zfile_fread(b1,1,(size_t)pklen1,fi) != pklen1) 
-    return ERR_SREAD;
+	if (zfile_fread(b1,1,(size_t)pklen1,fi) != pklen1)
+		return ERR_SREAD;
 
 	if (dms_CreateCRC(b1,(ULONG)pklen1) != dcrc) {
-    log_error (number);
-    crcerr = 1;
+		log_error (number);
+		crcerr = 1;
 	}
 	/*  track 80 is FILEID.DIZ, track 0xffff (-1) is Banner  */
 	/*  and track 0 with 1024 bytes only is a fake boot block with more advertising */
@@ -347,7 +347,7 @@ static USHORT Process_Track(struct zfile *fi, struct zfile *fo, UCHAR *b1, UCHAR
 
 	normaltrack = false;
 	if ((cmd == CMD_UNPACK) && (number<80) && (unpklen>2048)) {
-    memset(b2, 0, unpklen);
+		memset(b2, 0, unpklen);
 		if (!crcerr) {
 			Unpack_Track(b1, b2, pklen2, unpklen, cmode, flags, number, pklen1, usum, dmsflags & DMSFLAG_ENCRYPTED);
 		}
@@ -372,21 +372,21 @@ static USHORT Process_Track(struct zfile *fi, struct zfile *fo, UCHAR *b1, UCHAR
 	}
 
 	if (crcerr)
-    return NO_PROBLEM;
+		return NO_PROBLEM;
 
 	if (number == 0xffff) {
 		if (extra){
-		  Unpack_Track(b1, b2, pklen2, unpklen, cmode, flags, number, pklen1, usum, dmsflags & DMSFLAG_ENCRYPTED);
+			Unpack_Track(b1, b2, pklen2, unpklen, cmode, flags, number, pklen1, usum, dmsflags & DMSFLAG_ENCRYPTED);
 			addextra(_T("Banner"), extra, b2, unpklen);
-    }
+		}
 		//printbandiz(b2,unpklen);
 	}
 
 	if (number == 80) {
 		if (extra) {
-		  Unpack_Track(b1, b2, pklen2, unpklen, cmode, flags, number, pklen1, usum, dmsflags & DMSFLAG_ENCRYPTED);
+			Unpack_Track(b1, b2, pklen2, unpklen, cmode, flags, number, pklen1, usum, dmsflags & DMSFLAG_ENCRYPTED);
 			addextra(_T("FILEID.DIZ"), extra, b2, unpklen);
-    }
+		}
 		//printbandiz(b2,unpklen);
 	}
 
@@ -467,67 +467,67 @@ static void dms_decrypt(UCHAR *p, USHORT len, UCHAR *src){
 
 static USHORT Unpack_Track(UCHAR *b1, UCHAR *b2, USHORT pklen2, USHORT unpklen, UCHAR cmode, UCHAR flags, USHORT number, USHORT pklen1, USHORT usum1, int enc)
 {
-  USHORT r, err = NO_PROBLEM;
-  static USHORT pass;
-  int maybeencrypted;
-  int pwrounds;
-  UCHAR *tmp;
-  USHORT prevpass = 0;
+	USHORT r, err = NO_PROBLEM;
+	static USHORT pass;
+	int maybeencrypted;
+	int pwrounds;
+	UCHAR *tmp;
+	USHORT prevpass = 0;
 
-  if (passfound) {
-  	if (number != 80)
-	    dms_decrypt(b1, pklen1, b1);
-  	r = Unpack_Track_2(b1, b2, pklen2, unpklen, cmode, flags);
-  	if (r == NO_PROBLEM) {
-	    if (usum1 == dms_Calc_CheckSum(b2,(ULONG)unpklen))
-    		return NO_PROBLEM;
-  	}
-  	log_error(number);
-  	if (passretries <= 0)
-      return ERR_CSUM;
-  }
+	if (passfound) {
+		if (number != 80)
+			dms_decrypt(b1, pklen1, b1);
+		r = Unpack_Track_2(b1, b2, pklen2, unpklen, cmode, flags);
+		if (r == NO_PROBLEM) {
+			if (usum1 == dms_Calc_CheckSum(b2,(ULONG)unpklen))
+				return NO_PROBLEM;
+		}
+		log_error(number);
+		if (passretries <= 0)
+			return ERR_CSUM;
+	}
 
-  passretries--;
-  pwrounds = 0;
-  maybeencrypted = 0;
-  tmp = (unsigned char*)malloc (pklen1);
-  memcpy (tmp, b1, pklen1);
-  memset(b2, 0, unpklen);
-  for (;;) {
-	  r = Unpack_Track_2(b1, b2, pklen2, unpklen, cmode, flags);
-	  if (r == NO_PROBLEM) {
-	    if (usum1 == dms_Calc_CheckSum(b2,(ULONG)unpklen)) {
-    		passfound = maybeencrypted;
-    		if (passfound)
+	passretries--;
+	pwrounds = 0;
+	maybeencrypted = 0;
+	tmp = (unsigned char*)malloc (pklen1);
+	memcpy (tmp, b1, pklen1);
+	memset(b2, 0, unpklen);
+	for (;;) {
+		r = Unpack_Track_2(b1, b2, pklen2, unpklen, cmode, flags);
+		if (r == NO_PROBLEM) {
+			if (usum1 == dms_Calc_CheckSum(b2,(ULONG)unpklen)) {
+				passfound = maybeencrypted;
+				if (passfound)
 					write_log (_T("DMS: decryption key = 0x%04X\n"), prevpass);
-		    err = NO_PROBLEM;
-		    pass = prevpass;
-		    break;
-	    }
-  	}
-  	if (number == 80 || !enc) {
-	    err = ERR_CSUM;
-	    break;
-  	}
-	  maybeencrypted = 1;
-	  prevpass = pass;
-	  PWDCRC = pass;
-	  pass++;
-	  dms_decrypt(b1, pklen1, tmp);
-	  pwrounds++;
-	  if (pwrounds == 65536) {
-	    err = ERR_CSUM;
-	    passfound = 0;
-	    break;
-  	}
-  }
-  free (tmp);
-  return err;
+				err = NO_PROBLEM;
+				pass = prevpass;
+				break;
+			}
+		}
+		if (number == 80 || !enc) {
+			err = ERR_CSUM;
+			break;
+		}
+		maybeencrypted = 1;
+		prevpass = pass;
+		PWDCRC = pass;
+		pass++;
+		dms_decrypt(b1, pklen1, tmp);
+		pwrounds++;
+		if (pwrounds == 65536) {
+			err = ERR_CSUM;
+			passfound = 0;
+			break;
+		}
+	}
+	free (tmp);
+	return err;
 }
 
 
 static void printbandiz(UCHAR *m, USHORT len){
-    UCHAR *i,*j;
+	UCHAR *i,*j;
 
 	i=j=m;
 	while (i<m+len) {

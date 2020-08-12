@@ -3,7 +3,6 @@
 #include "options.h"
 #include "custom.h"
 #include "memory.h"
-#include "savestate.h"
 #include "blitter.h"
 #include "blitfunc.h"
 
