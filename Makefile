@@ -302,6 +302,7 @@ OBJS =	\
 	src/diskutil.o \
 	src/dlopen.o \
 	src/drawing.o \
+	src/driveclick.o \
 	src/events.o \
 	src/expansion.o \
 	src/fdi2raw.o \
