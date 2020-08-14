@@ -438,23 +438,23 @@ static void audio_unpack (struct cdunit *cdu, struct cdtoc *t)
 		sleep_millis(10);
 }
 
-//static void next_cd_audio_buffer_callback(int bufnum, void *params)
-//{
-//	struct cdunit *cdu = (struct cdunit*)params;
-//	uae_sem_wait(&play_sem);
-//	if (bufnum >= 0) {
-//		cdu->cda_bufon[bufnum] = 0;
-//		bufnum = 1 - bufnum;
-//		if (cdu->cda_bufon[bufnum])
-//			audio_cda_new_buffer(&cdu->cas, (uae_s16*)cdu->cda->buffers[bufnum], CDDA_BUFFERS * 2352 / 4, bufnum, next_cd_audio_buffer_callback, cdu);
-//		else
-//			bufnum = -1;
-//	}
-//	if (bufnum < 0) {
-//		audio_cda_new_buffer(&cdu->cas, NULL, -1, 0, NULL, cdu);
-//	}
-//	uae_sem_post(&play_sem);
-//}
+static void next_cd_audio_buffer_callback(int bufnum, void *params)
+{
+	struct cdunit *cdu = (struct cdunit*)params;
+	uae_sem_wait(&play_sem);
+	if (bufnum >= 0) {
+		cdu->cda_bufon[bufnum] = 0;
+		bufnum = 1 - bufnum;
+		if (cdu->cda_bufon[bufnum])
+			audio_cda_new_buffer(&cdu->cas, (uae_s16*)cdu->cda->buffers[bufnum], CDDA_BUFFERS * 2352 / 4, bufnum, next_cd_audio_buffer_callback, cdu);
+		else
+			bufnum = -1;
+	}
+	if (bufnum < 0) {
+		audio_cda_new_buffer(&cdu->cas, NULL, -1, 0, NULL, cdu);
+	}
+	uae_sem_post(&play_sem);
+}
 
 static bool cdda_play_func2 (struct cdunit *cdu, int *outpos)
 {
@@ -479,7 +479,7 @@ static bool cdda_play_func2 (struct cdunit *cdu, int *outpos)
 	cdu->cda_bufon[0] = cdu->cda_bufon[1] = 0;
 	bufnum = 0;
 
-	cdu->cda = new cda_audio (CDDA_BUFFERS, 2352, 44100);
+	cdu->cda = new cda_audio (CDDA_BUFFERS, 2352, 44100, mode != 0);
 
 	while (cdu->cdda_play > 0) {
 
@@ -583,7 +583,17 @@ static bool cdda_play_func2 (struct cdunit *cdu, int *outpos)
 			}
 		}
 
-	  cdu->cda->wait(bufnum);
+		if (mode) {
+			while (cdu->cda_bufon[bufnum] && cdu->cdda_play > 0) {
+				if (cd_audio_mode_changed) {
+					restart = true;
+					goto end;
+				}
+				sleep_millis(10);
+			}
+		} else {
+			cdu->cda->wait(bufnum);
+		}
 
 		cdu->cda_bufon[bufnum] = 0;
 		if (cdu->cdda_play <= 0)
@@ -682,13 +692,22 @@ static bool cdda_play_func2 (struct cdunit *cdu, int *outpos)
 			if (idleframes <= 0)
 				cdu->cd_last_pos = cdda_pos;
 
-		  cdu->cda_bufon[bufnum] = 1;
-		  cdu->cda->setvolume (cdu->cdda_volume[0], cdu->cdda_volume[1]);
-		  if (!cdu->cda->play (bufnum)) {
-			  if (cdu->cdda_play > 0)
-					setstate (cdu, AUDIO_STATUS_PLAY_ERROR, -1);
-			  goto end;
-		  }
+			if (mode) {
+				if (cdu->cda_bufon[0] == 0 && cdu->cda_bufon[1] == 0) {
+					cdu->cda_bufon[bufnum] = 1;
+					next_cd_audio_buffer_callback(1 - bufnum, cdu);
+				}
+				audio_cda_volume(&cdu->cas, cdu->cdda_volume[0], cdu->cdda_volume[1]);
+				cdu->cda_bufon[bufnum] = 1;
+			} else {
+				cdu->cda_bufon[bufnum] = 1;
+				cdu->cda->setvolume (cdu->cdda_volume[0], cdu->cdda_volume[1]);
+				if (!cdu->cda->play (bufnum)) {
+					if (cdu->cdda_play > 0)
+						setstate (cdu, AUDIO_STATUS_PLAY_ERROR, -1);
+					goto end;
+				}
+			}
 
 			if (first) {
 				first = false;
@@ -719,8 +738,14 @@ static bool cdda_play_func2 (struct cdunit *cdu, int *outpos)
 
 end:
 	*outpos = cdda_pos;
-	cdu->cda->wait (0);
-	cdu->cda->wait (1);
+	if (mode) {
+		next_cd_audio_buffer_callback(-1, cdu);
+		if (restart)
+			audio_cda_new_buffer(&cdu->cas, NULL, -1, -1, NULL, NULL);
+	} else {
+		cdu->cda->wait (0);
+		cdu->cda->wait (1);
+	}
 
 	while (cdimage_unpack_active == 1)
 		sleep_millis(10);
@@ -1955,12 +1980,15 @@ static int parsenrg(struct cdunit *cdu, struct zfile *znrg, const TCHAR *img, co
 				} else {
 					tracknum = frombcd(trk);
 					int index = frombcd(buf[2]);
-					if (index == 0 && tracknum >= 1 && tracknum <= 99) {
+					uae_u32 address = get_long_host(buf + 4);
+					if (tracknum >= 1 && tracknum <= 99) {
 						struct cdtoc *t = &cdu->toc[tracknum - 1];
-						t->address = get_long_host(buf + 4);
-						t->ctrl = buf[0] >> 4;
-						t->adr = buf[0] & 15;
-						t->track = tracknum;
+						if (index == 0) {
+							t->address = address;
+							t->ctrl = buf[0] >> 4;
+							t->adr = buf[0] & 15;
+							t->track = tracknum;
+						}
 					}
 				}
 				size -= 8;

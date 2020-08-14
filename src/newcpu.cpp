@@ -31,6 +31,8 @@
 /* Need to have these somewhere */
 bool check_prefs_changed_comp (bool checkonly) { return false; }
 #endif
+/* For faster JIT cycles handling */
+uae_s32 pissoff = 0;
 
 /* Opcode of faulting instruction */
 static uae_u32 last_op_for_exception_3;
@@ -1158,7 +1160,7 @@ static void m68k_reset(bool hardreset)
 {
 	uae_u32 v;
 
-	regs.pissoff = 0;
+	pissoff = 0;
 	cpu_cycles = 0;
 
 	regs.halted = 0;

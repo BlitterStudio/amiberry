@@ -1,26 +1,28 @@
 
 #pragma once
+#include "audio.h"
+
 extern volatile bool cd_audio_mode_changed;
 
-class cda_audio 
+class cda_audio
 {
 private:
-  int bufsize;
-	int sectorsize;
-  int volume[2];
-  bool playing;
-  bool active;
-  int currBuf;
-  int num_sectors;
+	int bufsize;
+	int volume[2];
+	bool playing;
+	bool active;
+	int buffer_ids[2];
 
 public:
-  uae_u8 *buffers[2];
-
-	cda_audio(int num_sectors, int sectorsize, int samplerate);
-  ~cda_audio();
-  void setvolume(int left, int right);
-  bool play(int bufnum);
-  void wait(void);
-  void wait(int bufnum);
+	uae_u8 *buffers[2];
+	int num_sectors;
+	int sectorsize;
+	
+	cda_audio(int num_sectors, int sectorsize, int samplerate, bool internalmode);
+	~cda_audio();
+	void setvolume(int left, int right);
+	bool play(int bufnum);
+	void wait(void);
+	void wait(int bufnum);
 	bool isplaying(int bufnum);
 };

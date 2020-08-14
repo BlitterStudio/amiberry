@@ -9,7 +9,7 @@
 #define MAX_DPATH 4096
 #endif
 
-/* #define DRIVESOUND */
+#define DRIVESOUND
 /* #define GFXFILTER */
 //#define USE_SOFT_LONG_DOUBLE
 #define PACKAGE_STRING "AMIBERRY"

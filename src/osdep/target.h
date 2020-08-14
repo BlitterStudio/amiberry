@@ -57,8 +57,6 @@ void update_display(struct uae_prefs*);
 void black_screen_now(void);
 void graphics_subshutdown(void);
 
-void stop_sound();
-
 void keyboard_settrans();
 void set_mouse_grab(bool grab);
 
@@ -221,3 +219,12 @@ void restore_host_fp_regs(void* buf);
 }
 #endif
 #endif
+
+#define MAX_SOUND_DEVICES 100
+#define SOUND_DEVICE_DS 1
+#define SOUND_DEVICE_AL 2
+#define SOUND_DEVICE_PA 3
+#define SOUND_DEVICE_WASAPI 4
+#define SOUND_DEVICE_WASAPI_EXCLUSIVE 5
+#define SOUND_DEVICE_XAUDIO2 6
+#define SOUND_DEVICE_SDL2 7

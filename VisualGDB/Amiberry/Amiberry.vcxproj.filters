@@ -649,6 +649,9 @@
     <ClCompile Include="..\..\src\osdep\gui\PanelPrio.cpp">
       <Filter>Source files\osdep\gui</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\driveclick.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\threaddep\thread.h">
@@ -1064,6 +1067,9 @@
     </ClInclude>
     <ClInclude Include="..\..\src\osdep\amiberry_filesys.hpp">
       <Filter>Source files\osdep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\driveclick.h">
+      <Filter>Source files\include</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

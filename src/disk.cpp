@@ -34,6 +34,9 @@ int disk_debug_track = -1;
 #ifdef FDI2RAW
 #include "fdi2raw.h"
 #endif
+#ifdef DRIVESOUND
+#include "driveclick.h"
+#endif
 #ifdef CAPS
 #include "uae/caps.h"
 #endif

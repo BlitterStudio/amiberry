@@ -379,11 +379,11 @@ static void l64111_setvolume(void)
 		return;
 	write_log(_T("L64111 mute %d\n"), volume ? 0 : 1);
 	if (cda) {
-		//if (audio_mode) {
-		//	audio_cda_volume(&cas, volume, volume);
-		//} else {
+		if (audio_mode) {
+			audio_cda_volume(&cas, volume, volume);
+		} else {
 			cda->setvolume(volume, volume);
-		//}
+		}
 	}
 }
 
@@ -1302,22 +1302,22 @@ void cd32_fmv_set_sync(double svpos, double adjust)
 	fmv_syncadjust = adjust;
 }
 
-//static void fmv_next_cd_audio_buffer_callback(int bufnum, void *param)
-//{
-//	uae_sem_wait(&play_sem);
-//	if (bufnum >= 0) {
-//		fmv_bufon[bufnum] = 0;
-//		bufnum = 1 - bufnum;
-//		if (fmv_bufon[bufnum])
-//			audio_cda_new_buffer(&cas, (uae_s16*)cda->buffers[bufnum], PCM_SECTORS * KJMP2_SAMPLES_PER_FRAME, bufnum, fmv_next_cd_audio_buffer_callback, param);
-//		else
-//			bufnum = -1;
-//	}
-//	if (bufnum < 0) {
-//		audio_cda_new_buffer(&cas, NULL, 0, -1, NULL, NULL);
-//	}
-//	uae_sem_post(&play_sem);
-//}
+static void fmv_next_cd_audio_buffer_callback(int bufnum, void *param)
+{
+	uae_sem_wait(&play_sem);
+	if (bufnum >= 0) {
+		fmv_bufon[bufnum] = 0;
+		bufnum = 1 - bufnum;
+		if (fmv_bufon[bufnum])
+			audio_cda_new_buffer(&cas, (uae_s16*)cda->buffers[bufnum], PCM_SECTORS * KJMP2_SAMPLES_PER_FRAME, bufnum, fmv_next_cd_audio_buffer_callback, param);
+		else
+			bufnum = -1;
+	}
+	if (bufnum < 0) {
+		audio_cda_new_buffer(&cas, NULL, 0, -1, NULL, NULL);
+	}
+	uae_sem_post(&play_sem);
+}
 
 void cd32_fmv_vsync_handler(void)
 {
@@ -1335,13 +1335,13 @@ static void cd32_fmv_audio_handler(void)
 	if (cd_audio_mode_changed || (cl450_play && !cda)) {
 		cd_audio_mode_changed = false;
 		if (cl450_play) {
-			//if (audio_mode) {
-			//	audio_cda_new_buffer(&cas, NULL, -1, -1, NULL, NULL);
-			//}
+			if (audio_mode) {
+				audio_cda_new_buffer(&cas, NULL, -1, -1, NULL, NULL);
+			}
 			audio_mode = currprefs.sound_cdaudio;
 			fmv_bufon[0] = fmv_bufon[1] = 0;
 			delete cda;
-			cda = new cda_audio(PCM_SECTORS, KJMP2_SAMPLES_PER_FRAME * 4, 44100);
+			cda = new cda_audio(PCM_SECTORS, KJMP2_SAMPLES_PER_FRAME * 4, 44100, audio_mode != 0);
 			l64111_setvolume();
 		}
 	}
@@ -1357,13 +1357,13 @@ static void cd32_fmv_audio_handler(void)
 
 	if (!cda || !(l64111_regs[A_CONTROL1] & 1))
 		return;
-	//if (audio_mode) {
-	//	play0 = fmv_bufon[0];
-	//	play1 = fmv_bufon[1];
-	//} else {
+	if (audio_mode) {
+		play0 = fmv_bufon[0];
+		play1 = fmv_bufon[1];
+	} else {
 		play0 = cda->isplaying(0);
 		play1 = cda->isplaying(1);
-	//}
+	}
 	needsectors = PCM_SECTORS;
 	if (!play0 && !play1) {
 		needsectors *= 2;
@@ -1387,15 +1387,15 @@ static void cd32_fmv_audio_handler(void)
 		memcpy(cda->buffers[bufnum] + i * KJMP2_SAMPLES_PER_FRAME * 4, pcmaudio[offset2].pcm, KJMP2_SAMPLES_PER_FRAME * 4);
 		pcmaudio[offset2].ready = false;
 	}
-	//if (audio_mode) {
-	//	if (!play0 && !play1) {
-	//		fmv_bufon[bufnum] = 1;
-	//		fmv_next_cd_audio_buffer_callback(1 - bufnum, NULL);
-	//	}
-	//	fmv_bufon[bufnum] = 1;
-	//} else {
+	if (audio_mode) {
+		if (!play0 && !play1) {
+			fmv_bufon[bufnum] = 1;
+			fmv_next_cd_audio_buffer_callback(1 - bufnum, NULL);
+		}
+		fmv_bufon[bufnum] = 1;
+	} else {
 		cda->play(bufnum);
-	//}
+	}
 	offset += PCM_SECTORS;
 	offset &= l64111_cb_mask;
 	l64111_regs[A_CB_READ] = offset;
@@ -1469,12 +1469,12 @@ static void cd32_fmv_free(void)
 	xfree(videoram);
 	videoram = NULL;
 	if (cda) {
-		//if (audio_mode) {
-		//	fmv_next_cd_audio_buffer_callback(-1, NULL);
-		//} else {
+		if (audio_mode) {
+			fmv_next_cd_audio_buffer_callback(-1, NULL);
+		} else {
 			cda->wait(0);
 			cda->wait(1);
-		//}
+		}
 		delete cda;
 	}
 	cda = NULL;

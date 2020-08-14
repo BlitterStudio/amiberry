@@ -12,6 +12,7 @@
 #include "uae/types.h"
 #include "readcpu.h"
 #include "machdep/m68k.h"
+#include "events.h"
 
 extern const int areg_byteinc[];
 extern const int imm8_table[];
@@ -172,7 +173,6 @@ struct regstruct
 	uae_u32 pcr;
 	uae_u32 address_space_mask;
 
-	uae_s32 pissoff;
 	uae_u8* natmem_offset;
 
 #ifdef JIT

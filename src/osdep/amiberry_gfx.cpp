@@ -31,6 +31,7 @@
 #include "statusline.h"
 #include "sounddep/sound.h"
 #include "threaddep/thread.h"
+
 static uae_thread_id display_tid = nullptr;
 static smp_comm_pipe *volatile display_pipe = nullptr;
 static uae_sem_t display_sem = nullptr;

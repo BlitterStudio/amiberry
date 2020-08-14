@@ -69,8 +69,9 @@ enum {
 };
 
 extern int pissoff_value;
+extern uae_s32 pissoff;
 
-#define countdown (regs.pissoff)
+#define countdown (pissoff)
 
 extern struct ev eventtab[ev_max];
 extern struct ev2 eventtab2[ev2_max];
@@ -82,19 +83,19 @@ STATIC_INLINE void cycles_do_special(void)
 {
 #ifdef JIT
 	if (currprefs.cachesize) {
-		if (regs.pissoff >= 0)
-			regs.pissoff = -1;
+		if (pissoff >= 0)
+			pissoff = -1;
 	}
 	else
 #endif
 	{
-		regs.pissoff = 0;
+		pissoff = 0;
 	}
 }
 
 STATIC_INLINE void do_extra_cycles (unsigned long cycles_to_add)
 {
-	regs.pissoff -= cycles_to_add;
+	pissoff -= cycles_to_add;
 }
 
 STATIC_INLINE unsigned long int get_cycles (void)

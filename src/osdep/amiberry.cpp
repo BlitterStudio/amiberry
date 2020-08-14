@@ -134,6 +134,7 @@ static char rp9_path[MAX_DPATH];
 static char controllers_path[MAX_DPATH];
 static char retroarch_file[MAX_DPATH];
 static char logfile_path[MAX_DPATH];
+static char floppy_sounds_dir[MAX_DPATH];
 
 char last_loaded_config[MAX_DPATH] = {'\0'};
 
@@ -529,6 +530,11 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->cr[0].locked = true;
 	p->cr[0].rtg = true;
 	_tcscpy(p->cr[0].label, _T("RTG"));
+
+	for (auto& floppyslot : p->floppyslots)
+	{
+		floppyslot.dfxclick = 1;
+	}
 }
 
 void target_save_options(struct zfile* f, struct uae_prefs* p)
@@ -1209,6 +1215,7 @@ void load_amiberry_settings(void)
 #endif
 	snprintf(rp9_path, MAX_DPATH, "%s/rp9/", start_path_data);
 	snprintf(path, MAX_DPATH, "%s/conf/amiberry.conf", start_path_data);
+	snprintf(floppy_sounds_dir, MAX_DPATH, "%s/data/floppy_sounds/", start_path_data);
 
 	auto* const fh = zfile_fopen(path, _T("r"), ZFD_NORMAL);
 	if (fh)
@@ -2067,3 +2074,22 @@ bool handle_events()
 	return pause_emulation != 0;
 }
 
+bool get_plugin_path(TCHAR* out, int len, const TCHAR* path)
+{
+	if (strcmp(path, "floppysounds") == 0) {
+		if (floppy_sounds_dir) {
+			strncpy(out, floppy_sounds_dir, len);
+		}
+		else {
+			strncpy(out, "floppy_sounds", len);
+		}
+		// make sure out is null-terminated in any case
+		out[len - 1] = '\0';
+	}
+	else {
+		write_log("\n-----------------> STUB: get_plugin_path, "
+			"size: %d, path: %s\n", len, path);
+		out[0] = '\0';
+	}
+	return TRUE;
+}

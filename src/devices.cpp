@@ -30,6 +30,9 @@
 #include "gensound.h"
 #include "gui.h"
 #include "drawing.h"
+#ifdef DRIVESOUND
+#include "driveclick.h"
+#endif
 #include "statusline.h"
 #include "uaeexe.h"
 #ifdef JIT
@@ -257,6 +260,7 @@ void devices_rethink(void)
 void devices_update_sound(double clk, double syncadjust)
 {
 	update_sound(clk);
+	update_cda_sound(clk / syncadjust);
 }
 
 void devices_update_sync(double svpos, double syncadjust)

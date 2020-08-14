@@ -2,245 +2,385 @@
   * Sdl sound.c implementation
   * (c) 2015
   */
-#include <stdbool.h>
 #include <string.h>
-
 #include <unistd.h>
 
+#include "sysconfig.h"
 #include "sysdeps.h"
-#include "uae.h"
+
 #include "options.h"
 #include "audio.h"
-#include "gensound.h"
-#include "sounddep/sound.h"
+#include "events.h"
+#include "custom.h"
+#include "threaddep/thread.h"
 #include "gui.h"
+#include "savestate.h"
+#ifdef DRIVESOUND
+#include "driveclick.h"
+#endif
+#include "gensound.h"
+#include "xwin.h"
+#include "sounddep/sound.h"
 
 #ifdef ANDROID
 #include <android/log.h>
 #endif
 
-// "consumer" means the actual SDL sound output, as opposed to 
-#define SOUND_CONSUMER_BUFFER_LENGTH (SNDBUFFER_LEN * SOUND_BUFFERS_COUNT / 4)
+struct sound_dp
+{
+	int sndbufsize;
+	int framesperbuffer;
+	int sndbuf;
+	int pullmode;
+	uae_u8* pullbuffer;
+	int pullbufferlen;
+	int pullbuffermaxlen;
+	double avg_correct;
+	double cnt_correct;
+};
 
-uae_u16 sndbuffer[SOUND_BUFFERS_COUNT][(SNDBUFFER_LEN + 32) * DEFAULT_SOUND_CHANNELS];
-uae_u16* sndbufpt = sndbuffer[0];
-uae_u16* render_sndbuff = sndbuffer[0];
-uae_u16* finish_sndbuff = sndbuffer[0] + SNDBUFFER_LEN * DEFAULT_SOUND_CHANNELS;
+#define SND_STATUSCNT 10
 
-uae_u16 cdaudio_buffer[CDAUDIO_BUFFERS][(CDAUDIO_BUFFER_LEN + 32) * DEFAULT_SOUND_CHANNELS];
-uae_u16* cdbufpt = cdaudio_buffer[0];
-uae_u16* render_cdbuff = cdaudio_buffer[0];
-uae_u16* finish_cdbuff = cdaudio_buffer[0] + CDAUDIO_BUFFER_LEN * DEFAULT_SOUND_CHANNELS;
-bool cdaudio_active = false;
-static int cdwrcnt = 0;
-static int cdrdcnt = 0;
+#define ADJUST_SIZE 20
+#define EXP 1.9
 
+#define ADJUST_VSSIZE 12
+#define EXPVS 1.6
 
 static int have_sound = 0;
+static int statuscnt;
 
-void update_sound(double clk)
+#define SND_MAX_BUFFER2 524288
+#define SND_MAX_BUFFER 65536
+
+//uae_u16 paula_sndbuffer[SND_MAX_BUFFER];
+uae_u16 paula_sndbuffer[SND_MAX_BUFFER];
+uae_u16* paula_sndbufpt;
+int paula_sndbufsize;
+
+SDL_AudioSpec want, have;
+SDL_AudioDeviceID dev;
+
+void sdl2_audio_callback(void* userdata, Uint8* stream, int len);
+
+struct sound_device* sound_devices[MAX_SOUND_DEVICES];
+struct sound_device* record_devices[MAX_SOUND_DEVICES];
+
+static struct sound_data sdpaula;
+static struct sound_data* sdp = &sdpaula;
+
+static uae_u8* extrasndbuf;
+static int extrasndbufsize;
+static int extrasndbuffered;
+
+
+int setup_sound(void)
 {
-	const auto evtime = clk * CYCLE_UNIT / double(currprefs.sound_freq);
-	scaled_sample_evtime = evtime;
-}
-
-
-static int s_oldrate = 0, s_oldbits = 0, s_oldstereo = 0;
-static int sound_thread_active = 0, sound_thread_exit = 0;
-static int rdcnt = 0;
-static int wrcnt = 0;
-
-
-static void sound_copy_produced_block(void* ud, Uint8* stream, int len)
-{
-	if (currprefs.sound_stereo)
-	{
-		if (cdaudio_active && currprefs.sound_freq == 44100 && cdrdcnt < cdwrcnt)
-		{
-			for (auto i = 0; i < SNDBUFFER_LEN * 2; ++i)
-				sndbuffer[rdcnt & SOUND_BUFFERS_COUNT - 1][i] += cdaudio_buffer[cdrdcnt & CDAUDIO_BUFFERS - 1][i];
-			cdrdcnt++;
-		}
-
-		memcpy(stream, sndbuffer[rdcnt & SOUND_BUFFERS_COUNT - 1], len);
-	}
-	else
-		memcpy(stream, sndbuffer[rdcnt & SOUND_BUFFERS_COUNT - 1], len);
-
-	if (wrcnt - rdcnt >= SOUND_BUFFERS_COUNT / 2)
-	{
-		rdcnt++;
-	}
-}
-
-
-static void sound_thread_mixer(void* ud, Uint8* stream, int len)
-{
-	if (sound_thread_exit)
-		return;
-	sound_thread_active = 1;
-
-	const auto sample_size = currprefs.sound_stereo ? 4 : 2;
-
-	while (len > 0)
-	{
-		int l = len < SNDBUFFER_LEN * sample_size ? len : SNDBUFFER_LEN * sample_size;
-		sound_copy_produced_block(ud, stream, l);
-		stream += l;
-		len -= l;
-	}
-}
-
-
-static void init_soundbuffer_usage()
-{
-	sndbufpt = sndbuffer[0];
-	render_sndbuff = sndbuffer[0];
-	finish_sndbuff = sndbuffer[0] + SNDBUFFER_LEN * 2;
-	rdcnt = 0;
-	wrcnt = 0;
-
-	cdbufpt = cdaudio_buffer[0];
-	render_cdbuff = cdaudio_buffer[0];
-	finish_cdbuff = cdaudio_buffer[0] + CDAUDIO_BUFFER_LEN * 2;
-	cdrdcnt = 0;
-	cdwrcnt = 0;
-}
-
-
-static int start_sound(int rate, int bits, int stereo)
-{
-	int frag = 0, buffers, ret;
-	unsigned int bsize;
-
-	if (SDL_GetAudioStatus() == SDL_AUDIO_STOPPED)
-	{
-		init_soundbuffer_usage();
-
-		s_oldrate = 0;
-		s_oldbits = 0;
-		s_oldstereo = 0;
-
-		sound_thread_exit = 0;
-	}
-
-	// if no settings change, we don't need to do anything
-	if (rate == s_oldrate && s_oldbits == bits && s_oldstereo == stereo)
-		return 0;
-
-
-	SDL_AudioSpec as;
-	memset(&as, 0, sizeof(as));
-
-	as.freq = rate;
-	as.format = (bits == 8 ? AUDIO_S8 : AUDIO_S16);
-	as.channels = (stereo ? 2 : 1);
-	as.samples = SOUND_CONSUMER_BUFFER_LENGTH;
-	as.callback = sound_thread_mixer;
-
-	if (SDL_OpenAudio(&as, nullptr))
-	write_log("Error when opening SDL audio !\n");
-
-	s_oldrate = rate;
-	s_oldbits = bits;
-	s_oldstereo = stereo;
-
-	clear_sound_buffers();
-	clear_cdaudio_buffers();
-
-	SDL_PauseAudio(0);
-
-	return 0;
-}
-
-
-void stop_sound()
-{
-	if (sound_thread_exit == 0)
-	{
-		SDL_PauseAudio(1);
-		sound_thread_exit = 1;
-		SDL_CloseAudio();
-	}
-}
-
-void finish_sound_buffer()
-{
-	wrcnt++;
-	sndbufpt = render_sndbuff = sndbuffer[wrcnt & SOUND_BUFFERS_COUNT - 1];
-
-	if (currprefs.sound_stereo)
-		finish_sndbuff = sndbufpt + SNDBUFFER_LEN * 2;
-	else
-		finish_sndbuff = sndbufpt + SNDBUFFER_LEN;
-
-	while ((wrcnt & SOUND_BUFFERS_COUNT - 1) == (rdcnt & SOUND_BUFFERS_COUNT - 1))
-	{
-		usleep(500);
-	}
-}
-
-void pause_sound_buffer()
-{
-	reset_sound();
-}
-
-void restart_sound_buffer()
-{
-	sndbufpt = render_sndbuff = sndbuffer[wrcnt & (SOUND_BUFFERS_COUNT - 1)];
-	if (currprefs.sound_stereo)
-		finish_sndbuff = sndbufpt + SNDBUFFER_LEN * 2;
-	else
-		finish_sndbuff = sndbufpt + SNDBUFFER_LEN;
-
-	cdbufpt = render_cdbuff = cdaudio_buffer[cdwrcnt & (CDAUDIO_BUFFERS - 1)];
-	finish_cdbuff = cdbufpt + CDAUDIO_BUFFER_LEN * 2;
-}
-
-void finish_cdaudio_buffer()
-{
-	cdwrcnt++;
-	cdbufpt = render_cdbuff = cdaudio_buffer[cdwrcnt & (CDAUDIO_BUFFERS - 1)];
-	finish_cdbuff = cdbufpt + CDAUDIO_BUFFER_LEN * 2;
-	audio_activate();
-}
-
-
-bool cdaudio_catchup()
-{
-	while (cdwrcnt > cdrdcnt + CDAUDIO_BUFFERS - 10 && sound_thread_active != 0 && quit_program == 0)
-	{
-		sleep_millis(10);
-	}
-	return sound_thread_active != 0;
-}
-
-/* Try to determine whether sound is available.  This is only for GUI purposes.  */
-int setup_sound()
-{
-	if (start_sound(currprefs.sound_freq, 16, currprefs.sound_stereo) != 0)
-		return 0;
-
 	sound_available = 1;
 	return 1;
 }
 
+float sound_sync_multiplier = 1.0;
+float scaled_sample_evtime_orig;
+// Originally from sampler.cpp
+float sampler_evtime;
+
+void update_sound(double clk)
+{
+	if (!have_sound)
+		return;
+	scaled_sample_evtime_orig = clk * CYCLE_UNIT * sound_sync_multiplier / sdp->obtainedfreq;
+	scaled_sample_evtime = scaled_sample_evtime_orig;
+	sampler_evtime = clk * CYCLE_UNIT * sound_sync_multiplier;
+}
+
+extern int vsynctimebase_orig;
+
+#define ADJUST_LIMIT 6
+#define ADJUST_LIMIT2 1
+
+void sound_setadjust(double v)
+{
+	float mult;
+
+	if (v < -ADJUST_LIMIT)
+		v = -ADJUST_LIMIT;
+	if (v > ADJUST_LIMIT)
+		v = ADJUST_LIMIT;
+
+	mult = 1000.0 + v;
+	if (isvsync_chipset()) {
+		vsynctimebase = vsynctimebase_orig;
+		scaled_sample_evtime = scaled_sample_evtime_orig * mult / 1000.0;
+	}
+	else if (currprefs.cachesize || currprefs.m68k_speed != 0) {
+		vsynctimebase = (int)(((double)vsynctimebase_orig) * mult / 1000.0);
+		scaled_sample_evtime = scaled_sample_evtime_orig;
+	}
+	else {
+		vsynctimebase = (int)(((double)vsynctimebase_orig) * mult / 1000.0);
+		scaled_sample_evtime = scaled_sample_evtime_orig;
+	}
+}
+
+static void docorrection(struct sound_dp* s, int sndbuf, double sync, int granulaty)
+{
+	static int tfprev;
+
+	s->avg_correct += sync;
+	s->cnt_correct++;
+
+	if (granulaty < 10)
+		granulaty = 10;
+
+	if (tfprev != timeframes) {
+		double skipmode, avgskipmode;
+		double avg = s->avg_correct / s->cnt_correct;
+
+		skipmode = sync / 100.0;
+		avgskipmode = avg / (10000.0 / granulaty);
+
+		gui_data.sndbuf = sndbuf;
+
+		if (skipmode > ADJUST_LIMIT2)
+			skipmode = ADJUST_LIMIT2;
+		if (skipmode < -ADJUST_LIMIT2)
+			skipmode = -ADJUST_LIMIT2;
+
+		sound_setadjust(skipmode + avgskipmode);
+		tfprev = timeframes;
+	}
+}
+
+static double sync_sound(double m)
+{
+	double skipmode;
+	if (isvsync()) {
+
+		skipmode = pow(m < 0 ? -m : m, EXPVS) / 2;
+		if (m < 0)
+			skipmode = -skipmode;
+		if (skipmode < -ADJUST_VSSIZE)
+			skipmode = -ADJUST_VSSIZE;
+		if (skipmode > ADJUST_VSSIZE)
+			skipmode = ADJUST_VSSIZE;
+
+	}
+	else if (1) {
+
+		skipmode = pow(m < 0 ? -m : m, EXP) / 2;
+		if (m < 0)
+			skipmode = -skipmode;
+		if (skipmode < -ADJUST_SIZE)
+			skipmode = -ADJUST_SIZE;
+		if (skipmode > ADJUST_SIZE)
+			skipmode = ADJUST_SIZE;
+	}
+
+	return skipmode;
+}
+
+static void clearbuffer_sdl2(struct sound_data *sd)
+{
+	SDL_LockAudioDevice(dev);
+	SDL_memset(paula_sndbuffer, 0, sizeof paula_sndbuffer);
+	SDL_UnlockAudioDevice(dev);
+}
+
+static void clearbuffer(struct sound_data* sd)
+{
+	struct sound_dp* s = sd->data;
+	clearbuffer_sdl2(sd);
+	if (s->pullbuffer) {
+		memset(s->pullbuffer, 0, s->pullbuffermaxlen);
+	}
+}
+
+static void set_reset(struct sound_data* sd)
+{
+	sd->reset = true;
+	sd->resetcnt = 10;
+	sd->resetframecnt = 0;
+}
+
+static void pause_audio_sdl2(struct sound_data* sd)
+{
+	sd->waiting_for_buffer = 0;
+	SDL_PauseAudioDevice(dev, 1);
+	clearbuffer(sd);
+}
+
+static void resume_audio_sdl2(struct sound_data* sd)
+{
+	struct sound_dp* s = sd->data;
+	sd->paused = 0;
+	clearbuffer(sd);
+	sd->waiting_for_buffer = 1;
+	s->avg_correct = 0;
+	s->cnt_correct = 0;
+	SDL_PauseAudioDevice(dev, 0);
+}
+
+static void close_audio_sdl2(struct sound_data* sd)
+{
+	struct sound_dp* s = sd->data;
+	SDL_PauseAudioDevice(dev, 1);
+	// shut everything down
+	SDL_CloseAudioDevice(dev);
+	xfree(s->pullbuffer);
+	s->pullbuffer = NULL;
+	s->pullbufferlen = 0;
+}
+
+void set_volume_sound_device(struct sound_data* sd, int volume, int mute)
+{
+	//todo
+}
+
+void set_volume(int volume, int mute)
+{
+	set_volume_sound_device(sdp, volume, mute);
+	//setvolume_ahi(volume);
+	config_changed = 1;
+}
+
+static void finish_sound_buffer_pull(struct sound_data* sd, uae_u16* sndbuffer)
+{
+	struct sound_dp* s = sd->data;
+
+	if (s->pullbufferlen + sd->sndbufsize > s->pullbuffermaxlen) {
+		write_log(_T("pull overflow! %d %d %d\n"), s->pullbufferlen, sd->sndbufsize, s->pullbuffermaxlen);
+		s->pullbufferlen = 0;
+	}
+	memcpy(s->pullbuffer + s->pullbufferlen, sndbuffer, sd->sndbufsize);
+	s->pullbufferlen += sd->sndbufsize;
+}
+
+static int open_audio_sdl2(struct sound_data* sd, int index)
+{
+	struct sound_dp* s = sd->data;
+	int freq = sd->freq;
+	int ch = sd->channels;
+	int size;
+
+	sd->devicetype = SOUND_DEVICE_SDL2;
+	if (sd->sndbufsize < 0x80)
+		sd->sndbufsize = 0x80;
+	s->framesperbuffer = sd->sndbufsize;
+	s->sndbufsize = s->framesperbuffer;
+	sd->sndbufsize = s->sndbufsize * ch * 2;
+	if (sd->sndbufsize > SND_MAX_BUFFER)
+		sd->sndbufsize = SND_MAX_BUFFER;
+	
+	SDL_memset(&want, 0, sizeof want);
+	want.freq = freq;
+	want.format = AUDIO_S16;
+	want.channels = ch;
+	want.samples = s->framesperbuffer;
+	want.callback = sdl2_audio_callback;
+	want.userdata = sd;
+
+	sd->samplesize = ch * 16 / 8;
+	s->pullmode = 1;
+	
+	dev = SDL_OpenAudioDevice(nullptr, 0, &want, &have, 0);
+	if (dev == 0)
+		SDL_Log("Failed to open audio: %s", SDL_GetError());
+
+	s->pullbuffermaxlen = sd->sndbufsize * 2;
+	s->pullbuffer = xcalloc(uae_u8, s->pullbuffermaxlen);
+	s->pullbufferlen = 0;
+	
+	clear_sound_buffers();
+	SDL_PauseAudioDevice(dev, 0);
+
+	return 1;
+}
+
+int open_sound_device(struct sound_data* sd, int index, int bufsize, int freq, int channels)
+{
+	int ret = 0;
+	struct sound_dp* sdp = xcalloc(struct sound_dp, 1);
+
+	sd->data = sdp;
+	sd->sndbufsize = bufsize;
+	sd->freq = freq;
+	sd->channels = channels;
+	sd->paused = 1;
+	sd->index = index;
+	ret = open_audio_sdl2(sd, index);
+	sd->samplesize = sd->channels * 2;
+	sd->sndbufframes = sd->sndbufsize / sd->samplesize;
+	return ret;
+}
+
+void close_sound_device(struct sound_data* sd)
+{
+	pause_sound_device(sd);
+	close_audio_sdl2(sd);
+	xfree(sd->data);
+	sd->data = NULL;
+	sd->index = -1;
+}
+
+void pause_sound_device(struct sound_data* sd)
+{
+	struct sound_dp* s = sd->data;
+	sd->paused = 1;
+	gui_data.sndbuf_status = 0;
+	gui_data.sndbuf = 0;
+	pause_audio_sdl2(sd);
+}
+void resume_sound_device(struct sound_data* sd)
+{
+	struct sound_dp* s = sd->data;
+	resume_audio_sdl2(sd);
+	sd->paused = 0;
+}
+
 static int open_sound()
 {
-	config_changed = 1;
-	if (start_sound(currprefs.sound_freq, 16, currprefs.sound_stereo) != 0)
+	int ret = 0, ch;
+	int size = currprefs.sound_maxbsiz;
+	
+	if (!currprefs.produce_sound) {
 		return 0;
+	}
+	config_changed = 1;
+	/* Always interpret buffer size as number of samples, not as actual
+	buffer size.  Of course, since 8192 is the default, we'll have to
+	scale that to a sane value (assuming that otherwise 16 bits and
+	stereo would have been enabled and we'd have done the shift by
+	two anyway).  */
+	size >>= 2;
+	size &= ~63;
+
+	sdp->softvolume = -1;
+	ch = get_audio_nativechannels(currprefs.sound_stereo);
+	ret = open_sound_device(sdp, 0, size, currprefs.sound_freq, ch);
+	if (!ret)
+		return 0;
+	currprefs.sound_freq = changed_prefs.sound_freq = sdp->freq;
+	if (ch != sdp->channels)
+		currprefs.sound_stereo = changed_prefs.sound_stereo = get_audio_stereomode(sdp->channels);
+
+	set_volume(currprefs.sound_volume_master, sdp->mute);
+	if (get_audio_amigachannels(currprefs.sound_stereo) == 4)
+		sample_handler = sample16ss_handler;
+	else
+		sample_handler = get_audio_ismono(currprefs.sound_stereo) ? sample16_handler : sample16s_handler;
+
+	sdp->obtainedfreq = currprefs.sound_freq;
 
 	have_sound = 1;
 	sound_available = 1;
-
-	gui_data.sndbuf_avail = true;
-
-	if (currprefs.sound_stereo)
-		sample_handler = sample16s_handler;
-	else
-		sample_handler = sample16_handler;
-
+	gui_data.sndbuf_avail = audio_is_pull() == 0;
+	
+	paula_sndbufsize = sdp->sndbufsize;
+	paula_sndbufpt = paula_sndbuffer;
+#ifdef DRIVESOUND
+	driveclick_init();
+#endif
 	return 1;
 }
 
@@ -253,9 +393,42 @@ void close_sound()
 	if (!have_sound)
 		return;
 
-	stop_sound();
-
+	close_sound_device(sdp);
 	have_sound = 0;
+	extrasndbufsize = 0;
+	extrasndbuffered = 0;
+	xfree(extrasndbuf);
+	extrasndbuf = NULL;
+}
+
+bool sound_paused(void)
+{
+	return sdp->paused != 0;
+}
+
+void pause_sound()
+{
+	if (sdp->paused)
+		return;
+	if (!have_sound)
+		return;
+	pause_sound_device(sdp);
+}
+
+void resume_sound()
+{
+	if (!sdp->paused)
+		return;
+	if (!have_sound)
+		return;
+	resume_sound_device(sdp);
+}
+
+void reset_sound()
+{
+	if (!have_sound)
+		return;
+	clearbuffer(sdp);
 }
 
 int init_sound()
@@ -263,33 +436,304 @@ int init_sound()
 	gui_data.sndbuf_status = 3;
 	gui_data.sndbuf = 0;
 	gui_data.sndbuf_avail = false;
-	have_sound = open_sound();
-	return have_sound;
+	if (!sound_available)
+		return 0;
+	if (currprefs.produce_sound <= 1)
+		return 0;
+	if (have_sound)
+		return 1;
+	if (!open_sound())
+		return 0;
+	sdp->paused = 1;
+#ifdef DRIVESOUND
+	driveclick_reset();
+#endif
+	reset_sound();
+	resume_sound();
+	return 1;
 }
 
-void pause_sound()
+static void disable_sound(void)
 {
-	SDL_PauseAudio(1);
+	close_sound();
+	currprefs.produce_sound = changed_prefs.produce_sound = 1;
 }
 
-void resume_sound()
+static int reopen_sound(void)
 {
-	SDL_PauseAudio(0);
+	bool paused = sdp->paused != 0;
+	close_sound();
+	int v = open_sound();
+	if (v && !paused)
+		resume_sound_device(sdp);
+	return v;
 }
 
-void reset_sound()
+void pause_sound_buffer(void)
 {
+	sdp->deactive = true;
+	reset_sound();
+}
+
+void restart_sound_buffer(void)
+{
+	sdp->deactive = false;
+	//restart_sound_buffer2(sdp);
+}
+
+static void channelswap(uae_s16* sndbuffer, int len)
+{
+	for (int i = 0; i < len; i += 2) {
+		uae_s16 t;
+		t = sndbuffer[i];
+		sndbuffer[i] = sndbuffer[i + 1];
+		sndbuffer[i + 1] = t;
+	}
+}
+static void channelswap6(uae_s16* sndbuffer, int len)
+{
+	for (int i = 0; i < len; i += 6) {
+		uae_s16 t;
+		t = sndbuffer[i + 0];
+		sndbuffer[i + 0] = sndbuffer[i + 1];
+		sndbuffer[i + 1] = t;
+		t = sndbuffer[i + 4];
+		sndbuffer[i + 4] = sndbuffer[i + 5];
+		sndbuffer[i + 5] = t;
+	}
+}
+
+static void send_sound(struct sound_data* sd, uae_u16* sndbuffer)
+{
+	if (savestate_state)
+		return;
+	if (sd->paused)
+		return;
+	if (sd->softvolume >= 0) {
+		uae_s16* p = (uae_s16*)sndbuffer;
+		for (int i = 0; i < sd->sndbufsize / 2; i++) {
+			p[i] = p[i] * sd->softvolume / 32768;
+		}
+	}
+
+	finish_sound_buffer_pull(sd, sndbuffer);
+}
+
+bool audio_is_event_frame_possible(int)
+{
+	return false;
+}
+
+int audio_is_pull(void)
+{
+	if (sdp->reset)
+		return 0;
+	struct sound_dp* s = sdp->data;
+	if (s && s->pullmode) {
+		return sdp->paused || sdp->deactive ? -1 : 1;
+	}
+	return 0;
+}
+
+int audio_pull_buffer(void)
+{
+	int cnt = 0;
+	if (sdp->paused || sdp->deactive || sdp->reset)
+		return 0;
+	struct sound_dp* s = sdp->data;
+	if (s->pullbufferlen > 0) {
+		cnt++;
+		int size = (uae_u8*)paula_sndbufpt - (uae_u8*)paula_sndbuffer;
+		if (size > sdp->sndbufsize * 2 / 3)
+			cnt++;
+	}
+	return cnt;
+}
+
+bool audio_is_pull_event(void)
+{
+	return false;
+}
+
+bool audio_finish_pull(void)
+{
+	return false;
+}
+
+static void handle_reset(void)
+{
+	if (sdp->resetframe == timeframes)
+		return;
+	sdp->resetframe = timeframes;
+	sdp->resetframecnt--;
+	if (sdp->resetframecnt > 0)
+		return;
+	sdp->resetframecnt = 20;
+
+	sdp->reset = false;
+	if (!reopen_sound() || sdp->reset) {
+		if (sdp->resetcnt <= 0) {
+			write_log(_T("Reopen sound failed. Retrying with default device.\n"));
+			close_sound();
+			//int type = sound_devices[currprefs.win32_soundcard]->type;
+			//int max = enumerate_sound_devices();
+			//for (int i = 0; i < max; i++) {
+			//	if (sound_devices[i]->alname == NULL && sound_devices[i]->type == type) {
+			//		currprefs.win32_soundcard = changed_prefs.win32_soundcard = i;
+			//		if (open_sound())
+			//			return;
+			//		break;
+			//	}
+			//}
+			currprefs.produce_sound = changed_prefs.produce_sound = 1;
+		}
+		else {
+			write_log(_T("Retrying sound.. %d..\n"), sdp->resetcnt);
+			sdp->resetcnt--;
+			sdp->reset = true;
+		}
+	}
+	else {
+		resume_sound_device(sdp);
+	}
+}
+
+void finish_sound_buffer()
+{
+	static unsigned long tframe;
+	int bufsize = (uae_u8*)paula_sndbufpt - (uae_u8*)paula_sndbuffer;
+
+	if (sdp->reset) {
+		handle_reset();
+		paula_sndbufpt = paula_sndbuffer;
+		return;
+	}
+	
+	if (currprefs.turbo_emulation) {
+		paula_sndbufpt = paula_sndbuffer;
+		return;
+	}
+	if (currprefs.sound_stereo_swap_paula) {
+		if (get_audio_nativechannels(currprefs.sound_stereo) == 2 || get_audio_nativechannels(currprefs.sound_stereo) == 4)
+			channelswap((uae_s16*)paula_sndbuffer, bufsize / 2);
+		else if (get_audio_nativechannels(currprefs.sound_stereo) == 6)
+			channelswap6((uae_s16*)paula_sndbuffer, bufsize / 2);
+	}
+#ifdef DRIVESOUND
+	driveclick_mix((uae_s16*)paula_sndbuffer, bufsize / 2, currprefs.dfxclickchannelmask);
+#endif
+	// must be after driveclick_mix
+	paula_sndbufpt = paula_sndbuffer;
+
 	if (!have_sound)
 		return;
 
-	init_soundbuffer_usage();
+	// we got buffer that was not full (recording active). Need special handling.
+	if (bufsize < sdp->sndbufsize && !extrasndbuf) {
+		extrasndbufsize = sdp->sndbufsize;
+		extrasndbuf = xcalloc(uae_u8, sdp->sndbufsize);
+		extrasndbuffered = 0;
+	}
 
-	clear_sound_buffers();
-	clear_cdaudio_buffers();
+	if (statuscnt > 0 && tframe != timeframes) {
+		tframe = timeframes;
+		statuscnt--;
+		if (statuscnt == 0)
+			gui_data.sndbuf_status = 0;
+	}
+	if (gui_data.sndbuf_status == 3)
+		gui_data.sndbuf_status = 0;
+
+	if (extrasndbuf) {
+		int size = extrasndbuffered + bufsize;
+		int copied = 0;
+		if (size > extrasndbufsize) {
+			copied = extrasndbufsize - extrasndbuffered;
+			memcpy(extrasndbuf + extrasndbuffered, paula_sndbuffer, copied);
+			send_sound(sdp, (uae_u16*)extrasndbuf);
+			extrasndbuffered = 0;
+		}
+		memcpy(extrasndbuf + extrasndbuffered, (uae_u8*)paula_sndbuffer + copied, bufsize - copied);
+		extrasndbuffered += bufsize - copied;
+	}
+	else {
+		send_sound(sdp, paula_sndbuffer);
+	}
 }
 
+static int set_master_volume(int volume, int mute)
+{
+	//todo set volume using SDL2
+}
+
+static int get_master_volume(int* volume, int* mute)
+{
+	//todo get volume using SDL2
+}
+
+void sound_mute(int newmute)
+{
+	if (newmute < 0)
+		sdp->mute = sdp->mute ? 0 : 1;
+	else
+		sdp->mute = newmute;
+	set_volume(currprefs.sound_volume_master, sdp->mute);
+	config_changed = 1;
+}
 
 void sound_volume(int dir)
 {
+	currprefs.sound_volume_master -= dir * 10;
+	currprefs.sound_volume_cd -= dir * 10;
+	if (currprefs.sound_volume_master < 0)
+		currprefs.sound_volume_master = 0;
+	if (currprefs.sound_volume_master > 100)
+		currprefs.sound_volume_master = 100;
+	changed_prefs.sound_volume_master = currprefs.sound_volume_master;
+	if (currprefs.sound_volume_cd < 0)
+		currprefs.sound_volume_cd = 0;
+	if (currprefs.sound_volume_cd > 100)
+		currprefs.sound_volume_cd = 100;
+	changed_prefs.sound_volume_cd = currprefs.sound_volume_cd;
+	set_volume(currprefs.sound_volume_master, sdp->mute);
 	config_changed = 1;
+}
+
+void master_sound_volume(int dir)
+{
+	int vol, mute, r;
+
+	r = get_master_volume(&vol, &mute);
+	if (!r)
+		return;
+	if (dir == 0)
+		mute = mute ? 0 : 1;
+	vol += dir * (65536 / 10);
+	if (vol < 0)
+		vol = 0;
+	if (vol > 65535)
+		vol = 65535;
+	set_master_volume(vol, mute);
+	config_changed = 1;
+}
+
+// Audio callback function
+void sdl2_audio_callback(void* userdata, Uint8* stream, int len)
+{
+	struct sound_data* sd = (struct sound_data*)userdata;
+	struct sound_dp* s = sd->data;
+	int bytestocopy;
+	
+	if (s->pullbufferlen <= 0)
+		return;
+
+	bytestocopy = s->framesperbuffer * sd->samplesize;
+	if (bytestocopy > 0) {
+		memcpy(stream, s->pullbuffer, bytestocopy);
+	}
+
+	if (bytestocopy < s->pullbufferlen) {
+		memmove(s->pullbuffer, s->pullbuffer + bytestocopy, s->pullbufferlen - bytestocopy);
+	}
+	s->pullbufferlen -= bytestocopy;
 }

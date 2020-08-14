@@ -222,6 +222,7 @@
     <ClCompile Include="..\..\src\diskutil.cpp" />
     <ClCompile Include="..\..\src\dlopen.cpp" />
     <ClCompile Include="..\..\src\drawing.cpp" />
+    <ClCompile Include="..\..\src\driveclick.cpp" />
     <ClCompile Include="..\..\src\events.cpp" />
     <ClCompile Include="..\..\src\expansion.cpp" />
     <ClCompile Include="..\..\src\fdi2raw.cpp" />
@@ -403,6 +404,7 @@
     <ClInclude Include="..\..\src\include\disk.h" />
     <ClInclude Include="..\..\src\include\diskutil.h" />
     <ClInclude Include="..\..\src\include\drawing.h" />
+    <ClInclude Include="..\..\src\include\driveclick.h" />
     <ClInclude Include="..\..\src\include\events.h" />
     <ClInclude Include="..\..\src\include\execio.h" />
     <ClInclude Include="..\..\src\include\execlib.h" />
