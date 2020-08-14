@@ -9,6 +9,7 @@
 #ifndef UAE_BLITTER_H
 #define UAE_BLITTER_H
 
+#include "savestate.h"
 #include "uae/types.h"
 
 struct bltinfo {

@@ -168,9 +168,9 @@ static void CountModelConfigs(void)
 
 static void SetControlState(const int model)
 {
-	auto df1Visible = true;
-	auto cdVisible = false;
-	auto df0Editable = true;
+	auto df1_visible = true;
+	auto cd_visible = false;
+	auto df0_editable = true;
 
 	switch (model)
 	{
@@ -187,31 +187,31 @@ static void SetControlState(const int model)
 	case 8: // CD32
 	case 9: // CDTV
 		// No floppy drive available, CD available
-		df0Editable = false;
-		df1Visible = false;
-		cdVisible = true;
+		df0_editable = false;
+		df1_visible = false;
+		cd_visible = true;
 		break;
 	default:
 		break;
 	}
 
-	chkDFxWriteProtect[0]->setEnabled(df0Editable && !changed_prefs.floppy_read_only);
-	cmdDFxInfo[0]->setEnabled(df0Editable);
-	cmdDFxEject[0]->setEnabled(df0Editable);
-	cmdDFxSelect[0]->setEnabled(df0Editable);
-	cboDFxFile[0]->setEnabled(df0Editable);
+	chkDFxWriteProtect[0]->setEnabled(df0_editable && !changed_prefs.floppy_read_only);
+	cmdDFxInfo[0]->setEnabled(df0_editable);
+	cmdDFxEject[0]->setEnabled(df0_editable);
+	cmdDFxSelect[0]->setEnabled(df0_editable);
+	cboDFxFile[0]->setEnabled(df0_editable);
 
-	chkDFx[1]->setVisible(df1Visible);
-	chkDFxWriteProtect[1]->setVisible(df1Visible);
-	cmdDFxInfo[1]->setVisible(df1Visible);
-	cmdDFxEject[1]->setVisible(df1Visible);
-	cmdDFxSelect[1]->setVisible(df1Visible);
-	cboDFxFile[1]->setVisible(df1Visible);
+	chkDFx[1]->setVisible(df1_visible);
+	chkDFxWriteProtect[1]->setVisible(df1_visible);
+	cmdDFxInfo[1]->setVisible(df1_visible);
+	cmdDFxEject[1]->setVisible(df1_visible);
+	cmdDFxSelect[1]->setVisible(df1_visible);
+	cboDFxFile[1]->setVisible(df1_visible);
 
-	chkCD->setVisible(cdVisible);
-	cmdCDEject->setVisible(cdVisible);
-	cmdCDSelect->setVisible(cdVisible);
-	cboCDFile->setVisible(cdVisible);
+	chkCD->setVisible(cd_visible);
+	cmdCDEject->setVisible(cd_visible);
+	cmdCDSelect->setVisible(cd_visible);
+	cboCDFile->setVisible(cd_visible);
 }
 
 static void AdjustPrefs(void)
@@ -1026,7 +1026,7 @@ static void AdjustDropDownControls(void)
 
 void RefreshPanelQuickstart(void)
 {
-	auto prevAvailable = true;
+	auto prev_available = true;
 
 	chkNTSC->setSelected(changed_prefs.ntscmode);
 
@@ -1035,24 +1035,24 @@ void RefreshPanelQuickstart(void)
 	changed_prefs.nr_floppies = 0;
 	for (auto i = 0; i < 4; ++i)
 	{
-		const auto driveEnabled = changed_prefs.floppyslots[i].dfxtype != DRV_NONE;
+		const auto drive_enabled = changed_prefs.floppyslots[i].dfxtype != DRV_NONE;
 		if (i < 2)
 		{
-			chkDFx[i]->setSelected(driveEnabled);
+			chkDFx[i]->setSelected(drive_enabled);
 			chkDFxWriteProtect[i]->setSelected(disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df));
 			if (i == 0)
 				chkDFx[i]->setEnabled(false);
 			else
-				chkDFx[i]->setEnabled(prevAvailable);
+				chkDFx[i]->setEnabled(prev_available);
 
-			cmdDFxInfo[i]->setEnabled(driveEnabled);
-			chkDFxWriteProtect[i]->setEnabled(driveEnabled && !changed_prefs.floppy_read_only);
-			cmdDFxEject[i]->setEnabled(driveEnabled);
-			cmdDFxSelect[i]->setEnabled(driveEnabled);
-			cboDFxFile[i]->setEnabled(driveEnabled);
+			cmdDFxInfo[i]->setEnabled(drive_enabled);
+			chkDFxWriteProtect[i]->setEnabled(drive_enabled && !changed_prefs.floppy_read_only);
+			cmdDFxEject[i]->setEnabled(drive_enabled);
+			cmdDFxSelect[i]->setEnabled(drive_enabled);
+			cboDFxFile[i]->setEnabled(drive_enabled);
 		}
-		prevAvailable = driveEnabled;
-		if (driveEnabled)
+		prev_available = drive_enabled;
+		if (drive_enabled)
 			changed_prefs.nr_floppies = i + 1;
 	}
 

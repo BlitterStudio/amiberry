@@ -25,7 +25,7 @@
 
 #include "kjmp2.h"
 
-#ifdef _MSC_VER_
+#ifdef _MSC_VER
     #define FASTCALL __fastcall
 #else
     #define FASTCALL

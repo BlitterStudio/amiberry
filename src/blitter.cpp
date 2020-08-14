@@ -14,9 +14,9 @@
 #include "memory.h"
 #include "custom.h"
 #include "newcpu.h"
-#include "savestate.h"
 #include "blitter.h"
 #include "blit.h"
+#include "savestate.h"
 
 /* we must not change ce-mode while blitter is running.. */
 static int blitter_cycle_exact, immediate_blits;
@@ -313,11 +313,11 @@ int blitter_channel_state (void)
 	return channel_state (blit_cyclecounter);
 }
 
-STATIC_INLINE int canblit(int hpos)
+STATIC_INLINE int canblit (int hpos)
 {
-	if (!dmaen(DMA_BLITTER))
+	if (!dmaen (DMA_BLITTER))
 		return -1;
-	if (is_bitplane_dma(hpos))
+	if (is_bitplane_dma (hpos))
 		return 0;
 	if (cycle_line[hpos] & CYCLE_MASK) {
 		return 0;
@@ -1076,7 +1076,9 @@ void do_blitter (int hpos)
 
 	bltstate = BLT_done;
 
+	blitter_cycle_exact = currprefs.blitter_cycle_exact;
 	immediate_blits = currprefs.immediate_blits;
+	blt_info.got_cycle = 0;
 	last_blitter_hpos = hpos + 1;
 	blit_firstline_cycles = blit_first_cycle = get_cycles ();
 	blit_misscyclecounter = 0;
@@ -1119,14 +1121,18 @@ void do_blitter (int hpos)
 		return;
 	}
 
+	if (dmaen (DMA_BLITTER)) {
+		blt_info.got_cycle = 1;
+	}
+
 	if (immediate_blits) {
 		if (dmaen (DMA_BLITTER))
 			blitter_doit ();
 		return;
 	}
-
-  blit_cyclecounter = cycles * (blit_dmacount2 + (blit_nod ? 0 : 1)); 
-  event2_newevent (ev2_blitter, blit_cyclecounter, 0);
+	
+	blit_cyclecounter = cycles * (blit_dmacount2 + (blit_nod ? 0 : 1));
+	event2_newevent (ev2_blitter, blit_cyclecounter, 0);
 }
 
 void blitter_check_start (void)
@@ -1137,7 +1143,7 @@ void blitter_check_start (void)
 	bltstate = BLT_work;
 	if (immediate_blits) {
 		blitter_doit ();
-  }
+	}
 }
 
 void maybe_blit2 (int hack)

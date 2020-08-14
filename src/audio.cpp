@@ -1,16 +1,16 @@
- /*
-  * UAE - The Un*x Amiga Emulator
-  *
-  * Paula audio emulation
-  *
-  * Copyright 1995, 1996, 1997 Bernd Schmidt
-  * Copyright 1996 Marcus Sundberg
-  * Copyright 1996 Manfred Thole
-  * Copyright 2006 Toni Wilen
-  *
-  * new filter algorithm and anti&sinc interpolators by Antti S. Lankila
-  *
-  */
+/*
+* UAE - The Un*x Amiga Emulator
+*
+* Paula audio emulation
+*
+* Copyright 1995, 1996, 1997 Bernd Schmidt
+* Copyright 1996 Marcus Sundberg
+* Copyright 1996 Manfred Thole
+* Copyright 2006 Toni Wilen
+*
+* new filter algorithm and anti&sinc interpolators by Antti S. Lankila
+*
+*/
 
 #include "sysconfig.h"
 #include "sysdeps.h"

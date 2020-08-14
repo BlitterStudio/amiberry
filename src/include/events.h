@@ -71,7 +71,7 @@ enum {
 extern int pissoff_value;
 extern uae_s32 pissoff;
 
-#define countdown (pissoff)
+#define countdown pissoff
 
 extern struct ev eventtab[ev_max];
 extern struct ev2 eventtab2[ev2_max];
@@ -79,7 +79,7 @@ extern struct ev2 eventtab2[ev2_max];
 extern int hpos_offset;
 extern int maxhpos;
 
-STATIC_INLINE void cycles_do_special(void)
+STATIC_INLINE void cycles_do_special (void)
 {
 #ifdef JIT
 	if (currprefs.cachesize) {

@@ -1057,10 +1057,11 @@ void action_replay_cia_access(bool write)
 		return;
 	if (action_replay_flag == ACTION_REPLAY_INACTIVE)
 		return;
+	int delay = currprefs.cpu_cycle_exact ? 1 : 0;
 	if ((armode_write & ARMODE_ACTIVATE_BFE001) && !write) {
-		event2_newevent_xx(-1, 0, write, action_replay_cia_access_delay);
+		event2_newevent_xx(-1, delay, write, action_replay_cia_access_delay);
 	} else if ((armode_write & ARMODE_ACTIVATE_BFD100) && write) {
-		event2_newevent_xx(-1, 0, write, action_replay_cia_access_delay);
+		event2_newevent_xx(-1, delay, write, action_replay_cia_access_delay);
 	}
 }
 
@@ -1255,6 +1256,18 @@ static uae_u8* get_checksum_location (void)
 	return (uae_u8*)checksum_end;
 }
 
+/* Replaces the existing cart checksum with a correct one. */
+/* Useful if you want to patch the rom. */
+static void action_replay_fixup_checksum (uae_u32 new_checksum)
+{
+	uae_u32* checksum = (uae_u32*)get_checksum_location();
+	if (checksum)
+		do_put_mem_long (checksum, new_checksum);
+	else
+		write_log (_T("Unable to locate Checksum in ROM.\n"));
+	return;
+}
+
 /* Longword search on word boundary
 * the search_value is assumed to already be in the local endian format
 * return 0 on failure
@@ -1418,6 +1431,7 @@ int action_replay_unload (int in_memory_reset)
 static int superiv_init (struct romdata *rd, struct zfile *f)
 {
 	uae_u32 chip = currprefs.chipmem_size - 0x10000;
+	int subtype = rd->id;
 	int flags = rd->type & ROMTYPE_MASK;
 	const TCHAR *memname1, *memname2, *memname3;
 

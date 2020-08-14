@@ -4403,16 +4403,16 @@ void compute_framesync(void)
 	vidinfo->drawbuffer.inyoffset = -1;
 
 	if (beamcon0 & 0x80) {
-		int res = GET_RES_AGNUS (bplcon0);
+		int res = GET_RES_AGNUS(bplcon0);
 		int vres = islace ? 1 : 0;
 		int res2, vres2;
-			
+
 		res2 = currprefs.gfx_resolution;
 		if (doublescan > 0)
 			res2++;
 		if (res2 > RES_MAX)
 			res2 = RES_MAX;
-		
+
 		vres2 = currprefs.gfx_vresolution;
 		if (doublescan > 0 && !islace)
 			vres2--;
@@ -4427,14 +4427,15 @@ void compute_framesync(void)
 
 		vidinfo->drawbuffer.inwidth = ((maxhpos - (maxhpos - start + DISPLAY_LEFT_SHIFT / 2) + 1) * 2) << res2;
 		vidinfo->drawbuffer.inxoffset = stop * 2;
-		
+
 		vidinfo->drawbuffer.extrawidth = 0;
 		vidinfo->drawbuffer.inwidth2 = vidinfo->drawbuffer.inwidth;
 
 		vidinfo->drawbuffer.inheight = ((firstblankedline < maxvpos ? firstblankedline : maxvpos) - minfirstline + 1) << vres2;
 		vidinfo->drawbuffer.inheight2 = vidinfo->drawbuffer.inheight;
 
-	} else {
+	}
+	else {
 
 		vidinfo->drawbuffer.inwidth = AMIGA_WIDTH_MAX << currprefs.gfx_resolution;
 		vidinfo->drawbuffer.extrawidth = currprefs.gfx_extrawidth ? currprefs.gfx_extrawidth : -1;
@@ -4472,20 +4473,20 @@ void compute_framesync(void)
 	if (vidinfo->drawbuffer.outheight > vidinfo->drawbuffer.height_allocated)
 		vidinfo->drawbuffer.outheight = vidinfo->drawbuffer.height_allocated;
 
-	memset (line_decisions, 0, sizeof line_decisions);
-	memset (line_drawinfo, 0, sizeof line_drawinfo);
+	memset(line_decisions, 0, sizeof line_decisions);
+	memset(line_drawinfo, 0, sizeof line_drawinfo);
 	for (auto& line_decision : line_decisions)
 	{
 		line_decision.plfleft = -2;
 	}
 
-	compute_vsynctime ();
+	compute_vsynctime();
 
 	hblank_hz = (currprefs.ntscmode ? CHIPSET_CLOCK_NTSC : CHIPSET_CLOCK_PAL) / (maxhpos + (islinetoggle() ? 0.5 : 0));
 
 	// Crashes on Android
 #ifndef ANDROID
-	write_log (_T("%s mode%s%s V=%.4fHz H=%0.4fHz (%dx%d+%d) IDX=%d (%s) D=%d RTG=%d/%d\n"),
+	write_log(_T("%s mode%s%s V=%.4fHz H=%0.4fHz (%dx%d+%d) IDX=%d (%s) D=%d RTG=%d/%d\n"),
 		isntsc ? _T("NTSC") : _T("PAL"),
 		islace ? _T(" lace") : (lof_lace ? _T(" loflace") : _T("")),
 		doublescan > 0 ? _T(" dblscan") : _T(""),
@@ -4497,11 +4498,11 @@ void compute_framesync(void)
 		currprefs.gfx_apmode[ad->picasso_on ? 1 : 0].gfx_display, ad->picasso_on, ad->picasso_requested_on
 	);
 #endif
-	
-	set_config_changed ();
+
+	set_config_changed();
 
 	if (target_graphics_buffer_update()) {
-		reset_drawing ();
+		reset_drawing();
 	}
 }
 

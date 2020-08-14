@@ -9,6 +9,7 @@
 #include "sysdeps.h"
 #include "options.h"
 #include "gui_handling.h"
+#include "audio.h"
 #include "sounddep/sound.h"
 
 

@@ -129,7 +129,7 @@ static void ExitShowHelp(void)
 
 static void ShowHelpLoop(void)
 {
-	int gotEvent = 0;
+	auto got_event = 0;
 	SDL_Event event;
 	SDL_Event touch_event;
 	while (SDL_PollEvent(&event))
@@ -137,7 +137,7 @@ static void ShowHelpLoop(void)
 		switch (event.type)
 		{
 		case SDL_KEYDOWN:
-			gotEvent = 1;
+			got_event = 1;
 			switch (event.key.keysym.sym)
 			{
 			case VK_ESCAPE:
@@ -159,7 +159,7 @@ static void ShowHelpLoop(void)
 		case SDL_JOYBUTTONDOWN:
 			if (gui_joystick)
 			{
-				gotEvent = 1;
+				got_event = 1;
 				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].south_button))
 				{
 					PushFakeKey(SDLK_RETURN);
@@ -175,7 +175,7 @@ static void ShowHelpLoop(void)
 			break;
 
 		case SDL_FINGERDOWN:
-			gotEvent = 1;
+			got_event = 1;
 			memcpy(&touch_event, &event, sizeof event);
 			touch_event.type = SDL_MOUSEBUTTONDOWN;
 			touch_event.button.which = 0;
@@ -187,7 +187,7 @@ static void ShowHelpLoop(void)
 			break;
 
 		case SDL_FINGERUP:
-			gotEvent = 1;
+			got_event = 1;
 			memcpy(&touch_event, &event, sizeof event);
 			touch_event.type = SDL_MOUSEBUTTONUP;
 			touch_event.button.which = 0;
@@ -199,7 +199,7 @@ static void ShowHelpLoop(void)
 			break;
 
 		case SDL_FINGERMOTION:
-			gotEvent = 1;
+			got_event = 1;
 			memcpy(&touch_event, &event, sizeof event);
 			touch_event.type = SDL_MOUSEMOTION;
 			touch_event.motion.which = 0;
@@ -215,7 +215,7 @@ static void ShowHelpLoop(void)
 		case SDL_MOUSEBUTTONUP:
 		case SDL_MOUSEMOTION:
 		case SDL_MOUSEWHEEL:
-			gotEvent = 1;
+			got_event = 1;
 			break;
 
 		default:
@@ -231,7 +231,7 @@ static void ShowHelpLoop(void)
 #endif
 	}
 
-	if (gotEvent)
+	if (got_event)
 	{
 		// Now we let the Gui object perform its logic.
 		uae_gui->logic();

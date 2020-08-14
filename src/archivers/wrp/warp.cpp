@@ -95,6 +95,9 @@ static uae_s32 ARCunsqueeze(struct zfile *in, struct zfile *out, struct rledata 
 	{
 		numnodes = xadIOGetBitsLow(&io, 16);
 
+		if (io.err)
+			return XADERR_ILLEGALDATA;
+
 		if(numnodes < 0 || numnodes >= ARCSQNUMVALS)
 			err = XADERR_DECRUNCH;
 		else
@@ -114,6 +117,9 @@ static uae_s32 ARCunsqueeze(struct zfile *in, struct zfile *out, struct rledata 
 				i = 0;
 				while(i >= 0 && !io.err)
 					i = node[2*i + xadIOGetBitsLow(&io, 1)];
+
+				if (io.err)
+					return XADERR_ILLEGALDATA;
 
 				i = -(i + 1); /* decode fake node index to original data value */
 
@@ -441,8 +447,12 @@ struct zfile *unwarp(struct zfile *zf)
 			{
 				int i;
 				for (i = 0; i < size; i++) {
-					uae_u8 v = zfile_getc (zf);
-					putrle (v, tmpf, algo == 3 ? &rled : NULL);
+					uae_s32 v = zfile_getc(zf);
+					if (v == -1) {
+						err = XADERR_ILLEGALDATA;
+						break;
+					}
+					putrle((uae_u8)v, tmpf, algo == 3 ? &rled : NULL);
 				}
 			}
 			break;

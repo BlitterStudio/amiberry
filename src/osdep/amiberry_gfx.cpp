@@ -29,6 +29,7 @@
 
 #include "gfxboard.h"
 #include "statusline.h"
+#include "audio.h"
 #include "sounddep/sound.h"
 #include "threaddep/thread.h"
 
@@ -502,10 +503,13 @@ void update_win_fs_mode(struct uae_prefs* p)
 
 		if (p->gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN)
 		{
-			p->gfx_monitor.gfx_size = p->gfx_monitor.gfx_size_fs;
+			p->gfx_monitor.gfx_size = p->gfx_monitor.gfx_size_win;
 			// Switch to Fullscreen mode, if we don't have it already
 			if (!is_fullscreen)
+			{
 				SDL_SetWindowFullscreen(sdl_window, SDL_WINDOW_FULLSCREEN);
+				SDL_SetWindowSize(sdl_window, p->gfx_monitor.gfx_size_fs.width, p->gfx_monitor.gfx_size_fs.height);
+			}
 		}
 		else if (p->gfx_apmode[0].gfx_fullscreen == GFX_FULLWINDOW)
 		{
@@ -1103,6 +1107,8 @@ int check_prefs_changed_gfx()
 		}
 
 #ifdef AMIBERRY
+		currprefs.gfx_apmode[0].gfx_fullscreen = changed_prefs.gfx_apmode[0].gfx_fullscreen;
+		currprefs.gfx_apmode[1].gfx_fullscreen = changed_prefs.gfx_apmode[1].gfx_fullscreen;
 		currprefs.gfx_monitor.gfx_size_fs.width = changed_prefs.gfx_monitor.gfx_size_fs.width;
 		currprefs.gfx_monitor.gfx_size_fs.height = changed_prefs.gfx_monitor.gfx_size_fs.height;
 		currprefs.gfx_monitor.gfx_size_win.width = changed_prefs.gfx_monitor.gfx_size_win.width;

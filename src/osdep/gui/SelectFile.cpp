@@ -134,7 +134,7 @@ static void checkfoldername(char* current)
 	if ((dir = opendir(current)))
 	{
 		fileList->changeDir(current);
-		const auto ptr = realpath(current, actualpath);
+		auto* const ptr = realpath(current, actualpath);
 		strncpy(workingDir, ptr, MAX_DPATH);
 		closedir(dir);
 	}
@@ -305,35 +305,35 @@ static void ExitSelectFile()
 
 static void navigate_right()
 {
-	const auto focusHdl = gui_top->_getFocusHandler();
-	const auto activeWidget = focusHdl->getFocused();
-	if (activeWidget == lstFiles)
+	auto* const focus_hdl = gui_top->_getFocusHandler();
+	auto* const active_widget = focus_hdl->getFocused();
+	if (active_widget == lstFiles)
 		if (createNew)
 			txtFilename->requestFocus();
 		else
 			cmdOK->requestFocus();
-	else if (activeWidget == txtFilename)
+	else if (active_widget == txtFilename)
 		cmdOK->requestFocus();
-	else if (activeWidget == cmdCancel)
+	else if (active_widget == cmdCancel)
 		lstFiles->requestFocus();
-	else if (activeWidget == cmdOK)
+	else if (active_widget == cmdOK)
 		cmdCancel->requestFocus();
 }
 
 static void navigate_left()
 {
-	const auto focusHdl = gui_top->_getFocusHandler();
-	const auto activeWidget = focusHdl->getFocused();
-	if (activeWidget == lstFiles)
+	auto* const focus_hdl = gui_top->_getFocusHandler();
+	auto* const active_widget = focus_hdl->getFocused();
+	if (active_widget == lstFiles)
 		cmdCancel->requestFocus();
-	else if (activeWidget == cmdCancel)
+	else if (active_widget == cmdCancel)
 		cmdOK->requestFocus();
-	else if (activeWidget == cmdOK)
+	else if (active_widget == cmdOK)
 		if (createNew)
 			txtFilename->requestFocus();
 		else
 			lstFiles->requestFocus();
-	else if (activeWidget == txtFilename)
+	else if (active_widget == txtFilename)
 		lstFiles->requestFocus();
 }
 

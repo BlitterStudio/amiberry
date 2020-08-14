@@ -1975,13 +1975,17 @@ addrbank akiko_bank = {
 	ABFLAG_IO | ABFLAG_SAFE, S_READ, S_WRITE
 };
 
-static const uae_u8 patchdata[]={0x0c,0x82,0x00,0x00,0x03,0xe8,0x64,0x00,0x00,0x46};
+static const uae_u8 patchdata[] = { 0x0c, 0x82, 0x00, 0x00, 0x03, 0xe8, 0x64, 0x00, 0x00, 0x46 };
+static const uae_u8 patchdata2[] = { 0x0c, 0x82, 0x00, 0x00, 0x03, 0xe8, 0x4e, 0x71, 0x4e, 0x71 };
 static void patchrom(void)
 {
+    int i;
 	if (currprefs.cpu_model > 68020 || currprefs.cachesize || currprefs.m68k_speed != 0) {
-		uae_u8* p = extendedkickmem_bank.baseaddr;
+		uae_u8 *p = extendedkickmem_bank.baseaddr;
 		if (p) {
-			for (unsigned int i = 0; i < 524288 - sizeof patchdata; i++) {
+			for (i = 0; i < 524288 - 512; i++) {
+				if (!memcmp(p + i, patchdata2, sizeof(patchdata2)))
+					return;				
 				if (!memcmp(p + i, patchdata, sizeof(patchdata))) {
 					protect_roms(false);
 					p[i + 6] = 0x4e;
@@ -2036,6 +2040,7 @@ static int akiko_thread_do(int start)
 
 static void akiko_reset(int hardreset)
 {
+	patchrom();
 	cdaudiostop_do ();
 	nvram_read ();
 	eeprom_reset(cd32_eeprom);
@@ -2108,7 +2113,6 @@ int akiko_init (void)
 		cdrom_playing = cdrom_paused = 0;
 		cdrom_data_offset = -1;
 	}
-	patchrom ();
 	akiko_thread_do(1);
 	gui_flicker_led (LED_HD, 0, -1);
 	akiko_inited = true;
