@@ -75,9 +75,9 @@ static bool event_check_vsync(void)
 			if (v < 0)
 			{
 				if (currprefs.cachesize)
-					regs.pissoff = pissoff_value;
+					pissoff = pissoff_value;
 				else
-					regs.pissoff = pissoff_nojit_value;
+					pissoff = pissoff_nojit_value;
 				return true;
 			}
 		//}
@@ -95,9 +95,9 @@ static bool event_check_vsync(void)
 			}
 			if (v < 0 && v2 < 0) {
 				if (currprefs.cachesize)
-					regs.pissoff = pissoff_value;
+					pissoff = pissoff_value;
 				else
-					regs.pissoff = pissoff_nojit_value;
+					pissoff = pissoff_nojit_value;
 				return true;
 			}
 		//}
@@ -108,11 +108,11 @@ static bool event_check_vsync(void)
 
 void do_cycles_cpu_fastest(uae_u32 cycles_to_add)
 {
-	if ((regs.pissoff -= cycles_to_add) > 0)
+	if ((pissoff -= cycles_to_add) > 0)
 		return;
 
-	cycles_to_add = -regs.pissoff;
-	regs.pissoff = 0;
+	cycles_to_add = -pissoff;
+	pissoff = 0;
 
 	if (is_syncline)
 	{
