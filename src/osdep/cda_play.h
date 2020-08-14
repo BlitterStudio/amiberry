@@ -8,16 +8,20 @@ class cda_audio
 {
 private:
 	int bufsize;
+#ifdef AMIBERRY
+	SDL_AudioDeviceID devid;
+	SDL_AudioSpec want, have;
+#endif
+	int num_sectors;
+	int sectorsize;
 	int volume[2];
+	
 	bool playing;
 	bool active;
-	int buffer_ids[2];
 
 public:
 	uae_u8 *buffers[2];
-	int num_sectors;
-	int sectorsize;
-	
+
 	cda_audio(int num_sectors, int sectorsize, int samplerate, bool internalmode);
 	~cda_audio();
 	void setvolume(int left, int right);

@@ -8,17 +8,16 @@
 #include "sounddep/sound.h"
 #include "uae/uae.h"
 
-static int (*g_audio_callback)(int type, int16_t* buffer, int size) = NULL;
-
-int amiga_set_cd_audio_callback(audio_callback func) {
-	g_audio_callback = func;
-	return 1;
-}
-
 cda_audio::~cda_audio()
 {
 	wait(0);
 	wait(1);
+
+	if (devid != 0)
+	{
+		SDL_CloseAudioDevice(devid);
+		devid = 0;
+	}
 	
 	for (auto& buffer : buffers)
 	{
@@ -37,13 +36,24 @@ cda_audio::cda_audio(int num_sectors, int sectorsize, int samplerate, bool inter
 	this->sectorsize = sectorsize;
 	for (int i = 0; i < 2; i++)
 	{
-		buffer_ids[i] = 0;
 		buffers[i] = xcalloc(uae_u8, num_sectors * ((bufsize + 4095) & ~4095));
 	}
 	this->num_sectors = num_sectors;
 
 	if (internalmode)
 		return;
+
+	SDL_memset(&want, 0, sizeof want);
+	want.freq = samplerate;
+	want.format = AUDIO_S16;
+	want.channels = 2;
+	want.samples = bufsize;
+
+	devid = SDL_OpenAudioDevice(nullptr, 0, &want, &have, 0);
+	if (devid == 0)
+		SDL_Log("Failed to open audio: %s", SDL_GetError());
+
+	SDL_PauseAudioDevice(devid, 0);
 	
 	active = true;
 	playing = true;
@@ -74,22 +84,8 @@ bool cda_audio::play(int bufnum)
 		p[i * 2 + 1] = p[i * 2 + 1] * volume[1] / 32768;
 	}
 
-	if (g_audio_callback) {
-		int len = num_sectors * sectorsize;
-#ifdef WORDS_BIGENDIAN
-		int8_t* d = (int8_t*)p;
-		int8_t temp = 0;
-		for (int i = 0; i < len; i += 2) {
-			temp = d[i + 1];
-			d[i + 1] = d[i];
-			d[i] = temp;
-		}
-#endif
-		buffer_ids[bufnum] = g_audio_callback(3, p, len);
-	}
-	else {
-		buffer_ids[bufnum] = 0;
-	}
+	unsigned int len = num_sectors * sectorsize;
+	SDL_QueueAudio(devid, p, len);
 	
 	return true;
 }
@@ -99,12 +95,7 @@ void cda_audio::wait(int bufnum)
 	if (!active || !playing)
 		return;
 
-	if (buffer_ids[bufnum] == 0) {
-		return;
-	}
-
-	// calling g_audio_callback with NULL parameter to check status
-	while (!g_audio_callback(3, NULL, buffer_ids[bufnum])) {
+	while (SDL_GetAudioDeviceStatus(devid) != SDL_AUDIO_PLAYING) {
 		Sleep(10);
 	}
 }
@@ -113,8 +104,6 @@ bool cda_audio::isplaying(int bufnum)
 {
 	if (!active || !playing)
 		return false;
-	if (buffer_ids[bufnum] == 0) {
-		return false;
-	}
-	return g_audio_callback(3, NULL, buffer_ids[bufnum]);
+
+	return SDL_GetAudioDeviceStatus(devid) == SDL_AUDIO_PLAYING;
 }
