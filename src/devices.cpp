@@ -21,8 +21,8 @@
 #include "newcpu.h"
 #include "savestate.h"
 #include "blitter.h"
-#include "custom.h"
 #include "xwin.h"
+#include "custom.h"
 #include "bsdsocket.h"
 #include "clipboard.h"
 #include "uaeresource.h"
@@ -304,7 +304,9 @@ void do_leave_program (void)
 	free_shm ();
 	cfgfile_addcfgparam (0);
 	machdep_free ();
-	//driveclick_free();
+#ifdef DRIVESOUND
+	driveclick_free();
+#endif
 	//ethernet_enumerate_free();
 	rtarea_free();
 

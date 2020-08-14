@@ -4249,7 +4249,7 @@ void compute_vsynctime (void)
 	}
 	if (currprefs.produce_sound > 1) {
 		double clk = svpos * shpos * fake_vblank_hz;
-		devices_update_sound(clk);
+		devices_update_sound(clk, syncadjust);
 	}
 	devices_update_sync(svpos, syncadjust);
 }
@@ -4319,23 +4319,25 @@ static bool changed_chipset_refresh (void)
 
 void compute_framesync(void)
 {
-	struct vidbuf_description *vidinfo = &adisplays.gfxvidinfo;
-	struct amigadisplay *ad = &adisplays;
+	struct vidbuf_description* vidinfo = &adisplays.gfxvidinfo;
+	struct amigadisplay* ad = &adisplays;
 	int islace = interlace_seen ? 1 : 0;
 	int isntsc = (beamcon0 & 0x20) ? 0 : 1;
 	bool found = false;
 
 	if (islace) {
 		vblank_hz = vblank_hz_lace;
-	} else if (lof_current) {
+	}
+	else if (lof_current) {
 		vblank_hz = vblank_hz_lof;
-	} else {
+	}
+	else {
 		vblank_hz = vblank_hz_shf;
 	}
 
-//	vblank_hz = target_adjust_vblank_hz(0, vblank_hz);
+	//	vblank_hz = target_adjust_vblank_hz(0, vblank_hz);
 
-	struct chipset_refresh *cr = get_chipset_refresh(&currprefs);
+	struct chipset_refresh* cr = get_chipset_refresh(&currprefs);
 	while (cr) {
 		double v = -1;
 		if (!ad->picasso_on && !ad->picasso_requested_on) {
@@ -4372,9 +4374,9 @@ void compute_framesync(void)
 				v = cr->rate;
 			if (v > 0) {
 				changed_prefs.chipset_refreshrate = currprefs.chipset_refreshrate = v;
-				cfgfile_parse_lines (&changed_prefs, cr->commands, -1);
+				cfgfile_parse_lines(&changed_prefs, cr->commands, -1);
 				if (cr->commands[0])
-					write_log (_T("CMD2: '%s'\n"), cr->commands);
+					write_log(_T("CMD2: '%s'\n"), cr->commands);
 			}
 		} else {
 			if (cr->locked == false)
