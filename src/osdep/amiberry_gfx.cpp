@@ -29,6 +29,7 @@
 
 #include "gfxboard.h"
 #include "statusline.h"
+#include "audio.h"
 #include "sounddep/sound.h"
 #include "threaddep/thread.h"
 static uae_thread_id display_tid = nullptr;

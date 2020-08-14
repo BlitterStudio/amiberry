@@ -18,6 +18,7 @@
 #include "rommgr.h"
 #include "custom.h"
 #include "inputdevice.h"
+#include "audio.h"
 #include "sounddep/sound.h"
 #include "savestate.h"
 #include "blkdev.h"
