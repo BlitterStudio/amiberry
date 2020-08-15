@@ -11,9 +11,6 @@
 
 #define SOUNDSTUFF 1
 
-#define SOUND_BUFFERS_COUNT 4
-#define SNDBUFFER_LEN 1024
-
 extern uae_u16 paula_sndbuffer[];
 extern uae_u16* paula_sndbufpt;
 extern int paula_sndbufsize;
