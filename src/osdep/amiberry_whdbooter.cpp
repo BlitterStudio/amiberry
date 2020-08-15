@@ -45,6 +45,7 @@ struct game_options
 	TCHAR sprites[256] = "nul\0";
 	TCHAR scr_height[256] = "nul\0";
 	TCHAR scr_width[256] = "nul\0";
+	TCHAR scr_autoheight[256] = "nul\0";
 	TCHAR scr_centerh[256] = "nul\0";
 	TCHAR scr_centerv[256] = "nul\0";
 	TCHAR ntsc[256] = "nul\0";
@@ -206,6 +207,7 @@ struct game_options get_game_settings(char* HW)
 	strcpy(output_detail.sprites, find_whdload_game_option("SPRITES", HW).c_str());
 	strcpy(output_detail.scr_height, find_whdload_game_option("SCREEN_HEIGHT", HW).c_str());
 	strcpy(output_detail.scr_width, find_whdload_game_option("SCREEN_WIDTH", HW).c_str());
+	strcpy(output_detail.scr_autoheight, find_whdload_game_option("SCREEN_AUTOHEIGHT", HW).c_str());
 	strcpy(output_detail.scr_centerh, find_whdload_game_option("SCREEN_CENTERH", HW).c_str());
 	strcpy(output_detail.scr_centerv, find_whdload_game_option("SCREEN_CENTERV", HW).c_str());
 	strcpy(output_detail.ntsc, find_whdload_game_option("NTSC", HW).c_str());
@@ -689,6 +691,7 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	write_log("WHDBooter - Game: Sprite Col : %s  \n", game_detail.sprites);
 	write_log("WHDBooter - Game: Scr Height : %s  \n", game_detail.scr_height);
 	write_log("WHDBooter - Game: Scr Width  : %s  \n", game_detail.scr_width);
+	write_log("WHDBooter - Game: Scr AutoHgt: %s  \n", game_detail.scr_autoheight);
 	write_log("WHDBooter - Game: Scr CentrH : %s  \n", game_detail.scr_centerh);
 	write_log("WHDBooter - Game: Scr CentrV : %s  \n", game_detail.scr_centerv);
 	write_log("WHDBooter - Game: NTSC       : %s  \n", game_detail.ntsc);
@@ -1029,6 +1032,18 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	if (strcmpi(game_detail.ntsc, "true") == 0)
 	{
 		_stprintf(txt2, "ntsc=true");
+		cfgfile_parse_line(prefs, txt2, 0);
+	}
+
+	// SCREEN AUTO-HEIGHT
+	if (strcmpi(game_detail.scr_autoheight, "true") == 0)
+	{
+		_stprintf(txt2, "amiberry.gfx_auto_height=true");
+		cfgfile_parse_line(prefs, txt2, 0);
+	}
+	else if (strcmpi(game_detail.scr_autoheight, "false") == 0)
+	{
+		_stprintf(txt2, "amiberry.gfx_auto_height=false");
 		cfgfile_parse_line(prefs, txt2, 0);
 	}
 
