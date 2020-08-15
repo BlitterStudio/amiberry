@@ -34,9 +34,9 @@ cda_audio::cda_audio(int num_sectors, int sectorsize, int samplerate, bool inter
 
 	bufsize = num_sectors * sectorsize;
 	this->sectorsize = sectorsize;
-	for (int i = 0; i < 2; i++)
+	for (auto& buffer : buffers)
 	{
-		buffers[i] = xcalloc(uae_u8, num_sectors * ((bufsize + 4095) & ~4095));
+		buffer = xcalloc(uae_u8, num_sectors * ((bufsize + 4095) & ~4095));
 	}
 	this->num_sectors = num_sectors;
 
