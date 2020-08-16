@@ -356,7 +356,6 @@ int graphics_setup(void)
 	bcm_host_init();
 	displayHandle = vc_dispmanx_display_open(0);
 	vc_dispmanx_display_get_info(displayHandle, &modeInfo);
-	can_have_linedouble = modeInfo.height >= 540;
 	
 	VCHI_INSTANCE_T vchi_instance;
 	VCHI_CONNECTION_T* vchi_connection;
