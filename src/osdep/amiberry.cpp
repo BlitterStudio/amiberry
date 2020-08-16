@@ -326,13 +326,13 @@ void fix_apmodes(struct uae_prefs* p)
 {
 	if (p->ntscmode)
 	{
-		p->gfx_apmode[0].gfx_refreshrate = 60;
-		p->gfx_apmode[1].gfx_refreshrate = 60;
+		p->gfx_apmode[APMODE_NATIVE].gfx_refreshrate = 60;
+		p->gfx_apmode[APMODE_RTG].gfx_refreshrate = 60;
 	}
 	else
 	{
-		p->gfx_apmode[0].gfx_refreshrate = 50;
-		p->gfx_apmode[1].gfx_refreshrate = 50;
+		p->gfx_apmode[APMODE_NATIVE].gfx_refreshrate = 50;
+		p->gfx_apmode[APMODE_RTG].gfx_refreshrate = 50;
 	}
 
 	fixup_prefs_dimensions(p);

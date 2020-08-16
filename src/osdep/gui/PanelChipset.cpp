@@ -136,12 +136,12 @@ public:
 		if (chkNTSC->isSelected())
 		{
 			changed_prefs.ntscmode = true;
-			changed_prefs.chipset_refreshrate = 60;
+			changed_prefs.chipset_refreshrate = 60.0;
 		}
 		else
 		{
 			changed_prefs.ntscmode = false;
-			changed_prefs.chipset_refreshrate = 50;
+			changed_prefs.chipset_refreshrate = 50.0;
 		}
 		RefreshPanelQuickstart();
 	}
