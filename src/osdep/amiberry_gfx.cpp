@@ -59,7 +59,6 @@ static int display_width;
 static int display_height;
 static int display_depth;
 Uint32 pixel_format;
-bool can_have_linedouble;
 
 static unsigned long last_synctime;
 static int host_hz = 50;
@@ -401,7 +400,6 @@ int graphics_setup(void)
 	{
 		write_log("Current Display mode: bpp %i\t%s\t%i x %i\t%iHz\n", SDL_BITSPERPIXEL(current_mode.format), SDL_GetPixelFormatName(current_mode.format), current_mode.w, current_mode.h, current_mode.refresh_rate);
 		host_hz = current_mode.refresh_rate;
-		can_have_linedouble = current_mode.h >= 540;
 	}
 
 	Uint32 sdl_window_mode;

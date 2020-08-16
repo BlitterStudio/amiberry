@@ -35,7 +35,6 @@ extern SDL_Window* sdl_window;
 extern SDL_Surface* gui_screen;
 extern SDL_Rect renderQuad;
 
-extern bool can_have_linedouble;
 extern void check_error_sdl(bool check, const char* message);
 extern void toggle_fullscreen();
 extern void DX_Fill(int dstx, int dsty, int width, int height, uae_u32 color);
