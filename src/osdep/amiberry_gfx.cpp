@@ -60,7 +60,6 @@ static int display_width;
 static int display_height;
 static int display_depth;
 Uint32 pixel_format;
-bool can_have_linedouble;
 
 static unsigned long last_synctime;
 static int host_hz = 50;
@@ -358,7 +357,6 @@ int graphics_setup(void)
 	bcm_host_init();
 	displayHandle = vc_dispmanx_display_open(0);
 	vc_dispmanx_display_get_info(displayHandle, &modeInfo);
-	can_have_linedouble = modeInfo.height >= 540;
 	
 	VCHI_INSTANCE_T vchi_instance;
 	VCHI_CONNECTION_T* vchi_connection;
@@ -402,7 +400,6 @@ int graphics_setup(void)
 	{
 		write_log("Current Display mode: bpp %i\t%s\t%i x %i\t%iHz\n", SDL_BITSPERPIXEL(current_mode.format), SDL_GetPixelFormatName(current_mode.format), current_mode.w, current_mode.h, current_mode.refresh_rate);
 		host_hz = current_mode.refresh_rate;
-		can_have_linedouble = current_mode.h >= 540;
 	}
 
 	Uint32 sdl_window_mode;
@@ -1107,15 +1104,26 @@ int check_prefs_changed_gfx()
 		}
 
 #ifdef AMIBERRY
-		currprefs.gfx_apmode[0].gfx_fullscreen = changed_prefs.gfx_apmode[0].gfx_fullscreen;
-		currprefs.gfx_apmode[1].gfx_fullscreen = changed_prefs.gfx_apmode[1].gfx_fullscreen;
 		currprefs.gfx_monitor.gfx_size_fs.width = changed_prefs.gfx_monitor.gfx_size_fs.width;
 		currprefs.gfx_monitor.gfx_size_fs.height = changed_prefs.gfx_monitor.gfx_size_fs.height;
 		currprefs.gfx_monitor.gfx_size_win.width = changed_prefs.gfx_monitor.gfx_size_win.width;
 		currprefs.gfx_monitor.gfx_size_win.height = changed_prefs.gfx_monitor.gfx_size_win.height;
 		currprefs.gfx_monitor.gfx_size.width = changed_prefs.gfx_monitor.gfx_size.width;
 		currprefs.gfx_monitor.gfx_size.height = changed_prefs.gfx_monitor.gfx_size.height;
+		currprefs.gfx_monitor.gfx_size_win.x = changed_prefs.gfx_monitor.gfx_size_win.x;
+		currprefs.gfx_monitor.gfx_size_win.y = changed_prefs.gfx_monitor.gfx_size_win.y;
 		
+		currprefs.gfx_apmode[0].gfx_fullscreen = changed_prefs.gfx_apmode[0].gfx_fullscreen;
+		currprefs.gfx_apmode[1].gfx_fullscreen = changed_prefs.gfx_apmode[1].gfx_fullscreen;
+		currprefs.gfx_apmode[0].gfx_vsync = changed_prefs.gfx_apmode[0].gfx_vsync;
+		currprefs.gfx_apmode[1].gfx_vsync = changed_prefs.gfx_apmode[1].gfx_vsync;
+		currprefs.gfx_apmode[0].gfx_vsyncmode = changed_prefs.gfx_apmode[0].gfx_vsyncmode;
+		currprefs.gfx_apmode[1].gfx_vsyncmode = changed_prefs.gfx_apmode[1].gfx_vsyncmode;
+		currprefs.gfx_apmode[0].gfx_refreshrate = changed_prefs.gfx_apmode[0].gfx_refreshrate;
+
+		currprefs.rtg_horiz_zoom_mult = changed_prefs.rtg_horiz_zoom_mult;
+		currprefs.rtg_vert_zoom_mult = changed_prefs.rtg_vert_zoom_mult;
+
 		currprefs.gfx_auto_height = changed_prefs.gfx_auto_height;
 		currprefs.gfx_correct_aspect = changed_prefs.gfx_correct_aspect;
 		currprefs.scaling_method = changed_prefs.scaling_method;

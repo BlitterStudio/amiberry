@@ -100,7 +100,7 @@
       <StepIntoNewInstanceEntry>main</StepIntoNewInstanceEntry>
       <ExamineRegistersInRawFormat>true</ExamineRegistersInRawFormat>
       <DisableSignals>false</DisableSignals>
-      <EnableAsyncExecutionMode>false</EnableAsyncExecutionMode>
+      <EnableAsyncExecutionMode>true</EnableAsyncExecutionMode>
       <EnableNonStopMode>false</EnableNonStopMode>
       <MaxBreakpointLimit>0</MaxBreakpointLimit>
       <EnableVerboseMode>true</EnableVerboseMode>

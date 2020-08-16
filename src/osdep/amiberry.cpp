@@ -369,10 +369,6 @@ void target_fixup_options(struct uae_prefs* p)
 
 	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5PC | RGBFF_R8G8B8A8;
 
-	if (p->gfx_vresolution && !can_have_linedouble)
-		// If there's not enough vertical space, cancel Line Doubling/Scanlines
-		p->gfx_vresolution = 0;
-
 	if (p->cachesize <= 0)
 		p->compfpu = false;
 
