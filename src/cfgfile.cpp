@@ -2483,7 +2483,7 @@ void cfgfile_save_options(struct zfile* f, struct uae_prefs* p, int type)
 	
 	for (i = 0; i < MAX_CHIPSET_REFRESH_TOTAL; i++)
 	{
-		auto* cr = &p->cr[i];
+		struct chipset_refresh* cr = &p->cr[i];
 		if (!cr->inuse)
 			continue;
 		cr->index = i;
