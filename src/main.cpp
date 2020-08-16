@@ -132,6 +132,56 @@ void fixup_prefs_dimensions(struct uae_prefs* prefs)
 	
 	if (prefs->gfx_apmode[1].gfx_vsync > 0)
 		prefs->gfx_apmode[1].gfx_vsyncmode = 1;
+
+	for (int i = 0; i < 2; i++) {
+		struct apmode* ap = &prefs->gfx_apmode[i];
+		if (ap->gfx_backbuffers < 1)
+			ap->gfx_backbuffers = 1;
+		ap->gfx_vflip = 0;
+		ap->gfx_strobo = false;
+		if (ap->gfx_vsync) {
+			if (ap->gfx_vsyncmode) {
+				if (ap->gfx_fullscreen != 0) {
+					ap->gfx_backbuffers = 1;
+					ap->gfx_strobo = prefs->lightboost_strobo;
+				}
+				else {
+					ap->gfx_vsyncmode = 0;
+					ap->gfx_vsync = 0;
+				}
+			}
+			else {
+				// legacy vsync: always wait for flip
+				ap->gfx_vflip = -1;
+				if (ap->gfx_vflip)
+					ap->gfx_strobo = prefs->lightboost_strobo;
+			}
+		}
+		else {
+			if (ap->gfx_backbuffers > 0 && (prefs->gfx_api > 1 || prefs->gfx_variable_sync))
+				ap->gfx_strobo = prefs->lightboost_strobo;
+			// no vsync: wait if triple bufferirng
+			if (ap->gfx_backbuffers >= 2)
+				ap->gfx_vflip = -1;
+		}
+		if (prefs->gf[i].gfx_filter == 0 && ((prefs->gf[i].gfx_filter_autoscale && !prefs->gfx_api) || (prefs->gfx_apmode[APMODE_NATIVE].gfx_vsyncmode))) {
+			prefs->gf[i].gfx_filter = 1;
+		}
+		if (i == 0) {
+			if (prefs->gf[i].gfx_filter == 0 && prefs->monitoremu) {
+				error_log(_T("Display port adapter emulation require at least null filter enabled."));
+				prefs->gf[i].gfx_filter = 1;
+			}
+			if (prefs->gf[i].gfx_filter == 0 && prefs->cs_cd32fmv) {
+				error_log(_T("CD32 MPEG module overlay support require at least null filter enabled."));
+				prefs->gf[i].gfx_filter = 1;
+			}
+			if (prefs->gf[i].gfx_filter == 0 && (prefs->genlock && prefs->genlock_image)) {
+				error_log(_T("Genlock emulation require at least null filter enabled."));
+				prefs->gf[i].gfx_filter = 1;
+			}
+		}
+	}
 }
 
 void fixup_cpu(struct uae_prefs* p)

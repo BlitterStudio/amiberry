@@ -64,6 +64,8 @@ static bool event_check_vsync(void)
 			events_reset_syncline();
 			return false;
 		}
+		// wait for vblank
+		audio_finish_pull();
 	}
 
 	else if (is_syncline == -10) {

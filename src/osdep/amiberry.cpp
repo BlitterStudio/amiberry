@@ -508,25 +508,13 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->floatingJoystick = 0;
 	p->disableMenuVKeyb = 0;
 #endif
-
-	p->cr[CHIPSET_REFRESH_PAL].locked = true;
-	p->cr[CHIPSET_REFRESH_PAL].vsync = 1;
-
-	p->cr[CHIPSET_REFRESH_NTSC].locked = true;
-	p->cr[CHIPSET_REFRESH_NTSC].vsync = 1;
-
-	p->cr[0].index = 0;
-	p->cr[0].horiz = -1;
-	p->cr[0].vert = -1;
-	p->cr[0].lace = -1;
-	p->cr[0].resolution = 0;
-	p->cr[0].vsync = -1;
-	p->cr[0].rate = 60.0;
-	p->cr[0].ntsc = 1;
-	p->cr[0].locked = true;
-	p->cr[0].rtg = true;
-	_tcscpy(p->cr[0].label, _T("RTG"));
-
+	
+	//for (auto& i : p->gfx_apmode)
+	//{
+	//	i.gfx_vsync = 1;
+	//}
+	
+	//todo remove this when it's added in the GUI
 	for (auto& floppyslot : p->floppyslots)
 	{
 		floppyslot.dfxclick = 1;

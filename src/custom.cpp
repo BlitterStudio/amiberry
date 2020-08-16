@@ -7775,7 +7775,7 @@ static void vsync_handler_pre (void)
 			frame_rendered = render_screen(false);
 		}
 		if (frame_rendered && !frame_shown) {
-			frame_shown = show_screen_maybe(true);
+			frame_shown = show_screen_maybe(isvsync_chipset() >= 0);
 		}
 	}
 
@@ -8232,6 +8232,29 @@ static void hsync_handler_pre (bool onvsync)
 STATIC_INLINE bool is_last_line (void)
 {
 	return vpos + 1 == maxvpos + lof_store;
+}
+
+// called when extra CPU wait is done
+void vsync_event_done(void)
+{
+	if (!isvsync_chipset()) {
+		events_reset_syncline();
+		return;
+	}
+	//if (currprefs.gfx_display_sections <= 1) {
+	//	if (vsync_vblank >= 85)
+	//		linesync_beam_single_dual();
+	//	else
+	//		linesync_beam_single_single();
+	//}
+	//else {
+	//	if (currprefs.gfx_variable_sync)
+	//		linesync_beam_vrr();
+	//	else if (vsync_vblank >= 85)
+	//		linesync_beam_multi_dual();
+	//	else
+	//		linesync_beam_multi_single();
+	//}
 }
 
 // this prepares for new line
