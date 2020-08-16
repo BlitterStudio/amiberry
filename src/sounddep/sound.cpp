@@ -514,6 +514,16 @@ static void channelswap6(uae_s16* sndbuffer, int len)
 	}
 }
 
+static bool send_sound_do(struct sound_data* sd)
+{
+	int type = sd->devicetype;
+	if (type == SOUND_DEVICE_SDL2) {
+		finish_sound_buffer_pull(sd, paula_sndbuffer);
+		return true;
+	}
+	return false;
+}
+
 static void send_sound(struct sound_data* sd, uae_u16* sndbuffer)
 {
 	if (savestate_state)
@@ -568,6 +578,14 @@ bool audio_is_pull_event()
 
 bool audio_finish_pull()
 {
+	int type = sdp->devicetype;
+	if (sdp->paused || sdp->deactive || sdp->reset)
+		return false;
+	if (type != SOUND_DEVICE_SDL2 && type != SOUND_DEVICE_WASAPI && type != SOUND_DEVICE_WASAPI_EXCLUSIVE && type != SOUND_DEVICE_PA)
+		return false;
+	if (audio_pull_buffer() && audio_is_pull_event()) {
+		return send_sound_do(sdp);
+	}
 	return false;
 }
 
