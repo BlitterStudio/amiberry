@@ -14,6 +14,18 @@
 extern uae_u16 paula_sndbuffer[];
 extern uae_u16* paula_sndbufpt;
 extern int paula_sndbufsize;
+#ifdef AMIBERRY
+extern uae_u16 cdaudio_buffer[];
+extern uae_u16* cdbufpt;
+extern int cdaudio_bufsize;
+extern bool cdaudio_active;
+extern void finish_cdaudio_buffer();
+extern bool cdaudio_catchup();
+#define PUT_CDAUDIO_WORD_STEREO(l,r) do { *((uae_u32 *)cdbufpt) = ((r) << 16) | ((l) & 0xffff); cdbufpt = cdbufpt + 2; } while (0)
+
+extern SDL_AudioDeviceID dev;
+#endif
+
 extern void finish_sound_buffer(void);
 extern void restart_sound_buffer(void);
 extern void pause_sound_buffer(void);
@@ -124,11 +136,29 @@ STATIC_INLINE void check_sound_buffers()
 #endif
 }
 
-STATIC_INLINE void clear_sound_buffers(void)
+STATIC_INLINE void clear_sound_buffers()
 {
 	memset(paula_sndbuffer, 0, paula_sndbufsize);
 	paula_sndbufpt = paula_sndbuffer;
 }
+
+#ifdef AMIBERRY
+STATIC_INLINE void check_cdaudio_buffers()
+{
+	if ((uae_u8*)cdbufpt - (uae_u8*)cdaudio_buffer >= cdaudio_bufsize)
+	{
+		finish_cdaudio_buffer();
+		cdbufpt = cdaudio_buffer;
+	}
+}
+
+STATIC_INLINE void clear_cdaudio_buffers()
+{
+	memset(cdaudio_buffer, 0, cdaudio_bufsize);
+	cdbufpt = cdaudio_buffer;
+}
+
+#endif
 
 #define PUT_SOUND_WORD(b) do { *(uae_u16 *)paula_sndbufpt = b; paula_sndbufpt = (uae_u16 *)(((uae_u8 *)paula_sndbufpt) + 2); } while (0)
 #define PUT_SOUND_WORD_MONO(b) PUT_SOUND_WORD(b)

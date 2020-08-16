@@ -13,11 +13,7 @@ cda_audio::~cda_audio()
 	wait(0);
 	wait(1);
 
-	if (devid != 0)
-	{
-		SDL_CloseAudioDevice(devid);
-		devid = 0;
-	}
+	cdaudio_active = false;
 	
 	for (auto& buffer : buffers)
 	{
@@ -36,24 +32,14 @@ cda_audio::cda_audio(int num_sectors, int sectorsize, int samplerate, bool inter
 	this->sectorsize = sectorsize;
 	for (auto& buffer : buffers)
 	{
-		buffer = xcalloc(uae_u8, num_sectors * ((bufsize + 4095) & ~4095));
+		buffer = xcalloc(uae_u8, num_sectors * ( bufsize + 4095 & ~4095));
 	}
 	this->num_sectors = num_sectors;
 
 	if (internalmode)
 		return;
 
-	SDL_memset(&want, 0, sizeof want);
-	want.freq = samplerate;
-	want.format = AUDIO_S16;
-	want.channels = 2;
-	want.samples = bufsize;
-
-	devid = SDL_OpenAudioDevice(nullptr, 0, &want, &have, 0);
-	if (devid == 0)
-		SDL_Log("Failed to open audio: %s", SDL_GetError());
-
-	SDL_PauseAudioDevice(devid, 0);
+	cdaudio_active = true;
 	
 	active = true;
 	playing = true;
@@ -61,7 +47,7 @@ cda_audio::cda_audio(int num_sectors, int sectorsize, int samplerate, bool inter
 
 void cda_audio::setvolume(int left, int right)
 {
-	for (int j = 0; j < 2; j++)
+	for (auto j = 0; j < 2; j++)
 	{
 		volume[j] = j == 0 ? left : right;
 		volume[j] = sound_cd_volume[j] * volume[j] / 32768;
@@ -78,16 +64,16 @@ bool cda_audio::play(int bufnum)
 	if (!active)
 		return false;
 
-	uae_s16* p = (uae_s16*)(buffers[bufnum]);
-	for (int i = 0; i < num_sectors * sectorsize / 4; i++) {
+	auto* const p = reinterpret_cast<uae_s16*>(buffers[bufnum]);
+	for (auto i = 0; i < num_sectors * sectorsize / 4; i++) {
 		p[i * 2 + 0] = p[i * 2 + 0] * volume[0] / 32768;
 		p[i * 2 + 1] = p[i * 2 + 1] * volume[1] / 32768;
+		//PUT_CDAUDIO_WORD_STEREO(p[i * 2 + 0] * volume[0] / 32768, p[i * 2 + 1] * volume[1] / 32768);
+		//check_cdaudio_buffers();
 	}
-
-	unsigned int len = num_sectors * sectorsize;
-	SDL_QueueAudio(devid, p, len);
 	
 	return true;
+	//return cdaudio_catchup();
 }
 
 void cda_audio::wait(int bufnum)
@@ -95,7 +81,7 @@ void cda_audio::wait(int bufnum)
 	if (!active || !playing)
 		return;
 
-	while (SDL_GetAudioDeviceStatus(devid) != SDL_AUDIO_PLAYING) {
+	while (SDL_GetAudioDeviceStatus(dev) != SDL_AUDIO_PLAYING) {
 		Sleep(10);
 	}
 }
@@ -105,5 +91,5 @@ bool cda_audio::isplaying(int bufnum)
 	if (!active || !playing)
 		return false;
 
-	return SDL_GetAudioDeviceStatus(devid) == SDL_AUDIO_PLAYING;
+	return SDL_GetAudioDeviceStatus(dev) == SDL_AUDIO_PLAYING;
 }

@@ -53,15 +53,19 @@ static int statuscnt;
 #define SND_MAX_BUFFER2 524288
 #define SND_MAX_BUFFER 65536
 
-//uae_u16 paula_sndbuffer[SND_MAX_BUFFER];
 uae_u16 paula_sndbuffer[SND_MAX_BUFFER];
 uae_u16* paula_sndbufpt;
 int paula_sndbufsize;
 
-SDL_AudioSpec want, have;
+#ifdef AMIBERRY
 SDL_AudioDeviceID dev;
-
 void sdl2_audio_callback(void* userdata, Uint8* stream, int len);
+
+uae_u16 cdaudio_buffer[SND_MAX_BUFFER];
+uae_u16* cdbufpt;
+int cdaudio_bufsize;
+bool cdaudio_active = false;
+#endif
 
 struct sound_device* sound_devices[MAX_SOUND_DEVICES];
 struct sound_device* record_devices[MAX_SOUND_DEVICES];
@@ -101,14 +105,12 @@ extern int vsynctimebase_orig;
 
 void sound_setadjust(double v)
 {
-	float mult;
-
 	if (v < -ADJUST_LIMIT)
 		v = -ADJUST_LIMIT;
 	if (v > ADJUST_LIMIT)
 		v = ADJUST_LIMIT;
 
-	mult = 1000.0 + v;
+	const float mult = 1000.0 + v;
 	if (isvsync_chipset()) {
 		vsynctimebase = vsynctimebase_orig;
 		scaled_sample_evtime = scaled_sample_evtime_orig * mult / 1000.0;
@@ -134,11 +136,10 @@ static void docorrection(struct sound_dp* s, int sndbuf, double sync, int granul
 		granulaty = 10;
 
 	if (tfprev != timeframes) {
-		double skipmode, avgskipmode;
-		double avg = s->avg_correct / s->cnt_correct;
+		const auto avg = s->avg_correct / s->cnt_correct;
 
-		skipmode = sync / 100.0;
-		avgskipmode = avg / (10000.0 / granulaty);
+		auto skipmode = sync / 100.0;
+		const auto avgskipmode = avg / (10000.0 / granulaty);
 
 		gui_data.sndbuf = sndbuf;
 
@@ -166,7 +167,7 @@ static double sync_sound(double m)
 			skipmode = ADJUST_VSSIZE;
 
 	}
-	else if (1) {
+	else {
 
 		skipmode = pow(m < 0 ? -m : m, EXP) / 2;
 		if (m < 0)
@@ -183,13 +184,16 @@ static double sync_sound(double m)
 static void clearbuffer_sdl2(struct sound_data *sd)
 {
 	SDL_LockAudioDevice(dev);
-	SDL_memset(paula_sndbuffer, 0, sizeof paula_sndbuffer);
+	memset(paula_sndbuffer, 0, sizeof paula_sndbuffer);
+#ifdef AMIBERRY
+	clear_cdaudio_buffers();
+#endif
 	SDL_UnlockAudioDevice(dev);
 }
 
 static void clearbuffer(struct sound_data* sd)
 {
-	struct sound_dp* s = sd->data;
+	auto* s = sd->data;
 	clearbuffer_sdl2(sd);
 	if (s->pullbuffer) {
 		memset(s->pullbuffer, 0, s->pullbuffermaxlen);
@@ -212,7 +216,7 @@ static void pause_audio_sdl2(struct sound_data* sd)
 
 static void resume_audio_sdl2(struct sound_data* sd)
 {
-	struct sound_dp* s = sd->data;
+	auto* s = sd->data;
 	sd->paused = 0;
 	clearbuffer(sd);
 	sd->waiting_for_buffer = 1;
@@ -223,9 +227,8 @@ static void resume_audio_sdl2(struct sound_data* sd)
 
 static void close_audio_sdl2(struct sound_data* sd)
 {
-	struct sound_dp* s = sd->data;
+	auto* s = sd->data;
 	SDL_PauseAudioDevice(dev, 1);
-	// shut everything down
 	SDL_CloseAudioDevice(dev);
 	xfree(s->pullbuffer);
 	s->pullbuffer = NULL;
@@ -246,7 +249,7 @@ void set_volume(int volume, int mute)
 
 static void finish_sound_buffer_pull(struct sound_data* sd, uae_u16* sndbuffer)
 {
-	struct sound_dp* s = sd->data;
+	auto* s = sd->data;
 
 	if (s->pullbufferlen + sd->sndbufsize > s->pullbuffermaxlen) {
 		write_log(_T("pull overflow! %d %d %d\n"), s->pullbufferlen, sd->sndbufsize, s->pullbuffermaxlen);
@@ -256,12 +259,17 @@ static void finish_sound_buffer_pull(struct sound_data* sd, uae_u16* sndbuffer)
 	s->pullbufferlen += sd->sndbufsize;
 }
 
+void finish_cdaudio_buffer()
+{
+	
+}
+
+
 static int open_audio_sdl2(struct sound_data* sd, int index)
 {
-	struct sound_dp* s = sd->data;
-	int freq = sd->freq;
-	int ch = sd->channels;
-	int size;
+	auto* const s = sd->data;
+	const auto freq = sd->freq;
+	const auto ch = sd->channels;
 
 	sd->devicetype = SOUND_DEVICE_SDL2;
 	if (sd->sndbufsize < 0x80)
@@ -271,8 +279,9 @@ static int open_audio_sdl2(struct sound_data* sd, int index)
 	sd->sndbufsize = s->sndbufsize * ch * 2;
 	if (sd->sndbufsize > SND_MAX_BUFFER)
 		sd->sndbufsize = SND_MAX_BUFFER;
-	
-	SDL_memset(&want, 0, sizeof want);
+
+	SDL_AudioSpec want, have;
+	memset(&want, 0, sizeof want);
 	want.freq = freq;
 	want.format = AUDIO_S16;
 	want.channels = ch;
@@ -285,13 +294,17 @@ static int open_audio_sdl2(struct sound_data* sd, int index)
 	
 	dev = SDL_OpenAudioDevice(nullptr, 0, &want, &have, 0);
 	if (dev == 0)
-		SDL_Log("Failed to open audio: %s", SDL_GetError());
+	{
+		write_log("Failed to open audio: %s", SDL_GetError());
+		return 0;
+	}
 
 	s->pullbuffermaxlen = sd->sndbufsize * 2;
 	s->pullbuffer = xcalloc(uae_u8, s->pullbuffermaxlen);
 	s->pullbufferlen = 0;
 	
 	clear_sound_buffers();
+	clear_cdaudio_buffers();
 	SDL_PauseAudioDevice(dev, 0);
 
 	return 1;
@@ -299,16 +312,15 @@ static int open_audio_sdl2(struct sound_data* sd, int index)
 
 int open_sound_device(struct sound_data* sd, int index, int bufsize, int freq, int channels)
 {
-	int ret = 0;
-	struct sound_dp* sdp = xcalloc(struct sound_dp, 1);
+	auto* dp = xcalloc(struct sound_dp, 1);
 
-	sd->data = sdp;
+	sd->data = dp;
 	sd->sndbufsize = bufsize;
 	sd->freq = freq;
 	sd->channels = channels;
 	sd->paused = 1;
 	sd->index = index;
-	ret = open_audio_sdl2(sd, index);
+	const auto ret = open_audio_sdl2(sd, index);
 	sd->samplesize = sd->channels * 2;
 	sd->sndbufframes = sd->sndbufsize / sd->samplesize;
 	return ret;
@@ -325,7 +337,6 @@ void close_sound_device(struct sound_data* sd)
 
 void pause_sound_device(struct sound_data* sd)
 {
-	struct sound_dp* s = sd->data;
 	sd->paused = 1;
 	gui_data.sndbuf_status = 0;
 	gui_data.sndbuf = 0;
@@ -333,15 +344,13 @@ void pause_sound_device(struct sound_data* sd)
 }
 void resume_sound_device(struct sound_data* sd)
 {
-	struct sound_dp* s = sd->data;
 	resume_audio_sdl2(sd);
 	sd->paused = 0;
 }
 
 static int open_sound()
 {
-	int ret = 0, ch;
-	int size = currprefs.sound_maxbsiz;
+	auto size = currprefs.sound_maxbsiz;
 	
 	if (!currprefs.produce_sound) {
 		return 0;
@@ -356,8 +365,8 @@ static int open_sound()
 	size &= ~63;
 
 	sdp->softvolume = -1;
-	ch = get_audio_nativechannels(currprefs.sound_stereo);
-	ret = open_sound_device(sdp, 0, size, currprefs.sound_freq, ch);
+	const auto ch = get_audio_nativechannels(currprefs.sound_stereo);
+	const auto ret = open_sound_device(sdp, 0, size, currprefs.sound_freq, ch);
 	if (!ret)
 		return 0;
 	currprefs.sound_freq = changed_prefs.sound_freq = sdp->freq;
@@ -381,6 +390,10 @@ static int open_sound()
 #ifdef DRIVESOUND
 	driveclick_init();
 #endif
+#ifdef AMIBERRY
+	cdaudio_bufsize = SND_MAX_BUFFER;
+	cdbufpt = cdaudio_buffer;
+#endif
 	return 1;
 }
 
@@ -398,10 +411,10 @@ void close_sound()
 	extrasndbufsize = 0;
 	extrasndbuffered = 0;
 	xfree(extrasndbuf);
-	extrasndbuf = NULL;
+	extrasndbuf = nullptr;
 }
 
-bool sound_paused(void)
+bool sound_paused()
 {
 	return sdp->paused != 0;
 }
@@ -453,7 +466,7 @@ int init_sound()
 	return 1;
 }
 
-static void disable_sound(void)
+static void disable_sound()
 {
 	close_sound();
 	currprefs.produce_sound = changed_prefs.produce_sound = 1;
@@ -461,21 +474,21 @@ static void disable_sound(void)
 
 static int reopen_sound(void)
 {
-	bool paused = sdp->paused != 0;
+	const auto paused = sdp->paused != 0;
 	close_sound();
-	int v = open_sound();
+	const auto v = open_sound();
 	if (v && !paused)
 		resume_sound_device(sdp);
 	return v;
 }
 
-void pause_sound_buffer(void)
+void pause_sound_buffer()
 {
 	sdp->deactive = true;
 	reset_sound();
 }
 
-void restart_sound_buffer(void)
+void restart_sound_buffer()
 {
 	sdp->deactive = false;
 	//restart_sound_buffer2(sdp);
@@ -483,18 +496,16 @@ void restart_sound_buffer(void)
 
 static void channelswap(uae_s16* sndbuffer, int len)
 {
-	for (int i = 0; i < len; i += 2) {
-		uae_s16 t;
-		t = sndbuffer[i];
+	for (auto i = 0; i < len; i += 2) {
+		const auto t = sndbuffer[i];
 		sndbuffer[i] = sndbuffer[i + 1];
 		sndbuffer[i + 1] = t;
 	}
 }
 static void channelswap6(uae_s16* sndbuffer, int len)
 {
-	for (int i = 0; i < len; i += 6) {
-		uae_s16 t;
-		t = sndbuffer[i + 0];
+	for (auto i = 0; i < len; i += 6) {
+		auto t = sndbuffer[i + 0];
 		sndbuffer[i + 0] = sndbuffer[i + 1];
 		sndbuffer[i + 1] = t;
 		t = sndbuffer[i + 4];
@@ -510,8 +521,8 @@ static void send_sound(struct sound_data* sd, uae_u16* sndbuffer)
 	if (sd->paused)
 		return;
 	if (sd->softvolume >= 0) {
-		uae_s16* p = (uae_s16*)sndbuffer;
-		for (int i = 0; i < sd->sndbufsize / 2; i++) {
+		auto* p = reinterpret_cast<uae_s16*>(sndbuffer);
+		for (auto i = 0; i < sd->sndbufsize / 2; i++) {
 			p[i] = p[i] * sd->softvolume / 32768;
 		}
 	}
@@ -524,43 +535,43 @@ bool audio_is_event_frame_possible(int)
 	return false;
 }
 
-int audio_is_pull(void)
+int audio_is_pull()
 {
 	if (sdp->reset)
 		return 0;
-	struct sound_dp* s = sdp->data;
+	auto* s = sdp->data;
 	if (s && s->pullmode) {
 		return sdp->paused || sdp->deactive ? -1 : 1;
 	}
 	return 0;
 }
 
-int audio_pull_buffer(void)
+int audio_pull_buffer()
 {
-	int cnt = 0;
+	auto cnt = 0;
 	if (sdp->paused || sdp->deactive || sdp->reset)
 		return 0;
-	struct sound_dp* s = sdp->data;
+	auto* s = sdp->data;
 	if (s->pullbufferlen > 0) {
 		cnt++;
-		int size = (uae_u8*)paula_sndbufpt - (uae_u8*)paula_sndbuffer;
+		const auto size = reinterpret_cast<uae_u8*>(paula_sndbufpt) - reinterpret_cast<uae_u8*>(paula_sndbuffer);
 		if (size > sdp->sndbufsize * 2 / 3)
 			cnt++;
 	}
 	return cnt;
 }
 
-bool audio_is_pull_event(void)
+bool audio_is_pull_event()
 {
 	return false;
 }
 
-bool audio_finish_pull(void)
+bool audio_finish_pull()
 {
 	return false;
 }
 
-static void handle_reset(void)
+static void handle_reset()
 {
 	if (sdp->resetframe == timeframes)
 		return;
@@ -575,16 +586,6 @@ static void handle_reset(void)
 		if (sdp->resetcnt <= 0) {
 			write_log(_T("Reopen sound failed. Retrying with default device.\n"));
 			close_sound();
-			//int type = sound_devices[currprefs.win32_soundcard]->type;
-			//int max = enumerate_sound_devices();
-			//for (int i = 0; i < max; i++) {
-			//	if (sound_devices[i]->alname == NULL && sound_devices[i]->type == type) {
-			//		currprefs.win32_soundcard = changed_prefs.win32_soundcard = i;
-			//		if (open_sound())
-			//			return;
-			//		break;
-			//	}
-			//}
 			currprefs.produce_sound = changed_prefs.produce_sound = 1;
 		}
 		else {
@@ -601,7 +602,7 @@ static void handle_reset(void)
 void finish_sound_buffer()
 {
 	static unsigned long tframe;
-	int bufsize = (uae_u8*)paula_sndbufpt - (uae_u8*)paula_sndbuffer;
+	const auto bufsize = reinterpret_cast<uae_u8*>(paula_sndbufpt) - reinterpret_cast<uae_u8*>(paula_sndbuffer);
 
 	if (sdp->reset) {
 		handle_reset();
@@ -645,15 +646,15 @@ void finish_sound_buffer()
 		gui_data.sndbuf_status = 0;
 
 	if (extrasndbuf) {
-		int size = extrasndbuffered + bufsize;
-		int copied = 0;
+		const auto size = extrasndbuffered + bufsize;
+		auto copied = 0;
 		if (size > extrasndbufsize) {
 			copied = extrasndbufsize - extrasndbuffered;
 			memcpy(extrasndbuf + extrasndbuffered, paula_sndbuffer, copied);
-			send_sound(sdp, (uae_u16*)extrasndbuf);
+			send_sound(sdp, reinterpret_cast<uae_u16*>(extrasndbuf));
 			extrasndbuffered = 0;
 		}
-		memcpy(extrasndbuf + extrasndbuffered, (uae_u8*)paula_sndbuffer + copied, bufsize - copied);
+		memcpy(extrasndbuf + extrasndbuffered, reinterpret_cast<uae_u8*>(paula_sndbuffer) + copied, bufsize - copied);
 		extrasndbuffered += bufsize - copied;
 	}
 	else {
@@ -701,9 +702,9 @@ void sound_volume(int dir)
 
 void master_sound_volume(int dir)
 {
-	int vol, mute, r;
+	int vol, mute;
 
-	r = get_master_volume(&vol, &mute);
+	const auto r = get_master_volume(&vol, &mute);
 	if (!r)
 		return;
 	if (dir == 0)
@@ -720,20 +721,19 @@ void master_sound_volume(int dir)
 // Audio callback function
 void sdl2_audio_callback(void* userdata, Uint8* stream, int len)
 {
-	struct sound_data* sd = (struct sound_data*)userdata;
-	struct sound_dp* s = sd->data;
-	int bytestocopy;
-	
+	auto* sd = static_cast<sound_data*>(userdata);
+	auto* s = sd->data;
+
 	if (s->pullbufferlen <= 0)
 		return;
 
-	bytestocopy = s->framesperbuffer * sd->samplesize;
-	if (bytestocopy > 0) {
-		memcpy(stream, s->pullbuffer, bytestocopy);
+	const auto bytes_to_copy = s->framesperbuffer * sd->samplesize;
+	if (bytes_to_copy > 0) {
+		memcpy(stream, s->pullbuffer, bytes_to_copy);
 	}
 
-	if (bytestocopy < s->pullbufferlen) {
-		memmove(s->pullbuffer, s->pullbuffer + bytestocopy, s->pullbufferlen - bytestocopy);
+	if (bytes_to_copy < s->pullbufferlen) {
+		memmove(s->pullbuffer, s->pullbuffer + bytes_to_copy, s->pullbufferlen - bytes_to_copy);
 	}
-	s->pullbufferlen -= bytestocopy;
+	s->pullbufferlen -= bytes_to_copy;
 }
