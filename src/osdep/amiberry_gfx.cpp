@@ -1754,7 +1754,9 @@ static int save_thumb(char* path)
 	return ret;
 }
 
+#ifdef USE_DISPMANX	
 static int currVSyncRate = 0;
+#endif
 bool vsync_switchmode(int hz)
 {
 	static struct PicassoResolution* oldmode;
@@ -1871,6 +1873,12 @@ bool vsync_switchmode(int hz)
 		return true;
 	}
 #endif
+}
+
+int vsync_isdone(frame_time_t* dt)
+{
+	if (isvsync() == 0)
+		return -1;
 }
 
 bool target_graphics_buffer_update()

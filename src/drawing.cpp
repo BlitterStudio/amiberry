@@ -3126,7 +3126,13 @@ static void pfield_draw_line (struct vidbuffer *vb, int lineno, int gfx_ypos, in
 	have_color_changes = is_color_changes(dip_for_drawing);
 	sprite_smaller_than_64_inuse = false;
 
-	xlinebuffer = row_map[gfx_ypos], dh = dh_buf;
+	dh = dh_line;
+	xlinebuffer = vidinfo->drawbuffer.linemem;
+	if (xlinebuffer == 0 && do_double
+		&& (border == 0 || have_color_changes))
+		xlinebuffer = vidinfo->drawbuffer.emergmem, dh = dh_emerg;
+	if (xlinebuffer == 0)
+		xlinebuffer = row_map[gfx_ypos], dh = dh_buf;
 	xlinebuffer -= linetoscr_x_adjust_pixbytes;
 	//xlinebuffer_genlock = row_map_genlock[gfx_ypos] - linetoscr_x_adjust_pixels;
 
@@ -3606,8 +3612,19 @@ void putpixel(uae_u8 *buf, uae_u8 *genlockbuf, int bpp, int x, xcolnr c8, int op
 	case 4:
 		{
 			int i;
-			uae_u32 *p = (uae_u32*)buf + x;
-			*p = c8;
+			if (1 || opaq || currprefs.gf[0].gfx_filter == 0) {
+				uae_u32 *p = (uae_u32*)buf + x;
+				*p = c8;
+			} else {
+				for (i = 0; i < 4; i++) {
+					int v1 = buf[i + bpp * x];
+					int v2 = (c8 >> (i * 8)) & 255;
+					v1 = (v1 * 2 + v2 * 3) / 5;
+					if (v1 > 255)
+						v1 = 255;
+					buf[i + bpp * x] = v1;
+				}
+			}
 			break;
 		}
 	}
@@ -4219,7 +4236,7 @@ void reset_drawing(void)
 {
 	struct amigadisplay* ad = &adisplays;
 	struct vidbuf_description* vidinfo = &ad->gfxvidinfo;
-		
+
 	max_diwstop = 0;
 
 	lores_reset ();

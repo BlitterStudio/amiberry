@@ -12,6 +12,7 @@
 #include "sysdeps.h"
 
 #include "options.h"
+#include "events.h"
 #include "memory.h"
 #include "newcpu.h"
 #include "xwin.h"
@@ -51,6 +52,8 @@ void events_schedule(void)
 	nextevent = currcycle + mintime;
 }
 
+extern void vsync_event_done(void);
+
 static bool event_check_vsync(void)
 {
 	/* Keep only CPU emulation running while waiting for sync point. */
@@ -66,6 +69,16 @@ static bool event_check_vsync(void)
 		}
 		// wait for vblank
 		audio_finish_pull();
+		int done = vsync_isdone(NULL);
+		if (!done)
+		{
+			if (currprefs.cachesize)
+				pissoff = pissoff_value;
+			else
+				pissoff = pissoff_nojit_value;
+			return true;
+		}
+		vsync_event_done();
 	}
 
 	else if (is_syncline == -10) {
@@ -110,20 +123,24 @@ static bool event_check_vsync(void)
 
 void do_cycles_cpu_fastest(uae_u32 cycles_to_add)
 {
-	if ((pissoff -= cycles_to_add) > 0)
-		return;
-
-	cycles_to_add = -pissoff;
-	pissoff = 0;
-
-	if (is_syncline)
-	{
-		if (event_check_vsync())
+	if (!currprefs.cpu_thread) {
+		if ((pissoff -= cycles_to_add) >= 0)
 			return;
+
+		cycles_to_add = -pissoff;
+		pissoff = 0;
+	} else {
+		pissoff = 0x40000000;
 	}
 
 	while ((nextevent - currcycle) <= cycles_to_add)
 	{
+		if (is_syncline)
+		{
+			if (event_check_vsync())
+				return;
+		}
+		
 		cycles_to_add -= (nextevent - currcycle);
 		currcycle = nextevent;
 
@@ -131,7 +148,10 @@ void do_cycles_cpu_fastest(uae_u32 cycles_to_add)
 		{
 			if (i.active && i.evtime == currcycle)
 			{
-				(*i.handler)();
+				if (i.handler == nullptr)
+					i.active = false;
+				else
+					(*i.handler)();
 			}
 		}
 		events_schedule();
@@ -207,6 +227,7 @@ void MISC_handler(void)
 	if (mintime != ~0UL)
 	{
 		eventtab[ev_misc].active = true;
+		eventtab[ev_misc].oldcycles = ct;
 		eventtab[ev_misc].evtime = ct + mintime;
 		events_schedule();
 	}
@@ -246,4 +267,18 @@ void event2_newevent_xx(int no, evt t, uae_u32 data, evfunc2 func)
 	eventtab2[no].handler = func;
 	eventtab2[no].data = data;
 	MISC_handler();
+}
+
+void event2_newevent_x_replace(evt t, uae_u32 data, evfunc2 func)
+{
+	for (int i = 0; i < ev2_max; i++) {
+		if (eventtab2[i].active && eventtab2[i].handler == func) {
+			eventtab2[i].active = false;
+		}
+	}
+	if (((int)t) <= 0) {
+		func(data);
+		return;
+	}
+	event2_newevent_xx(-1, t * CYCLE_UNIT, data, func);
 }
