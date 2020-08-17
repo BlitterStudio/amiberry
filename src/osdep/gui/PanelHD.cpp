@@ -59,9 +59,7 @@ static gcn::CheckBox* chkCD;
 static gcn::DropDown* cboCDFile;
 static gcn::Button* cmdCDEject;
 static gcn::Button* cmdCDSelect;
-static gcn::Label* lblCDVol;
-static gcn::Label* lblCDVolInfo;
-static gcn::Slider* sldCDVol;
+static gcn::CheckBox* chkCDTurbo;
 
 static int GetHDType(const int index)
 {
@@ -240,14 +238,16 @@ public:
 					chkScsi->setSelected(true);
 				}
 			}
-			RefreshPanelHD();
-			RefreshPanelQuickstart();
 		}
+		else if (actionEvent.getSource() == chkCDTurbo)
+			changed_prefs.cd_speed = chkCDTurbo->isSelected() ? 0 : 100;
+
+		RefreshPanelHD();
+		RefreshPanelQuickstart();
 	}
 };
 
 CDCheckActionListener* cdCheckActionListener;
-
 
 class CDButtonActionListener : public gcn::ActionListener
 {
@@ -293,22 +293,12 @@ public:
 
 CDButtonActionListener* cdButtonActionListener;
 
-
 class GenericActionListener : public gcn::ActionListener
 {
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		if (actionEvent.getSource() == sldCDVol)
-		{
-			const auto newvol = 100 - static_cast<int>(sldCDVol->getValue());
-			if (changed_prefs.sound_volume_cd != newvol)
-			{
-				changed_prefs.sound_volume_cd = newvol;
-				RefreshPanelHD();
-			}
-		}
-		else if (actionEvent.getSource() == chkHDReadOnly)
+		if (actionEvent.getSource() == chkHDReadOnly)
 		{
 			changed_prefs.harddrive_read_only = chkHDReadOnly->isSelected();
 		}
@@ -438,8 +428,12 @@ void InitPanelHD(const struct _ConfigCategory& category)
 	chkScsi->addActionListener(genericActionListener);
 	
 	chkCD = new gcn::CheckBox("CD drive");
-	chkCD->setId("CD drive");
+	chkCD->setId("chkCD");
 	chkCD->addActionListener(cdCheckActionListener);
+
+	chkCDTurbo = new gcn::CheckBox("CDTV/CDTV-CR/CD32 turbo CD read speed");
+	chkCDTurbo->setId("chkCDTurbo");
+	chkCDTurbo->addActionListener(cdCheckActionListener);
 
 	cmdCDEject = new gcn::Button("Eject");
 	cmdCDEject->setSize(SMALL_BUTTON_WIDTH * 2, SMALL_BUTTON_HEIGHT);
@@ -459,17 +453,6 @@ void InitPanelHD(const struct _ConfigCategory& category)
 	cboCDFile->setBackgroundColor(colTextboxBackground);
 	cboCDFile->setId("cboCD");
 	cboCDFile->addActionListener(cdFileActionListener);
-
-	lblCDVol = new gcn::Label("CD Volume:");
-	lblCDVol->setAlignment(gcn::Graphics::RIGHT);
-	sldCDVol = new gcn::Slider(0, 100);
-	sldCDVol->setSize(200, SLIDER_HEIGHT);
-	sldCDVol->setBaseColor(gui_baseCol);
-	sldCDVol->setMarkerLength(20);
-	sldCDVol->setStepLength(10);
-	sldCDVol->setId("CDVol");
-	sldCDVol->addActionListener(genericActionListener);
-	lblCDVolInfo = new gcn::Label("80 %");
 
 	int posX = DISTANCE_BORDER + 2 + SMALL_BUTTON_WIDTH + 34;
 	for (col = 0; col < COL_COUNT; ++col)
@@ -516,9 +499,7 @@ void InitPanelHD(const struct _ConfigCategory& category)
 	category.panel->add(cboCDFile, DISTANCE_BORDER, posY);
 	posY += cboCDFile->getHeight() + DISTANCE_NEXT_Y;
 
-	category.panel->add(lblCDVol, DISTANCE_BORDER, posY);
-	category.panel->add(sldCDVol, DISTANCE_BORDER + lblCDVol->getWidth() + 8, posY);
-	category.panel->add(lblCDVolInfo, sldCDVol->getX() + sldCDVol->getWidth() + 12, posY);
+	category.panel->add(chkCDTurbo, DISTANCE_BORDER, posY);
 
 	RefreshPanelHD();
 }
@@ -550,9 +531,7 @@ void ExitPanelHD()
 	delete cmdCDEject;
 	delete cmdCDSelect;
 	delete cboCDFile;
-	delete lblCDVol;
-	delete lblCDVolInfo;
-	delete sldCDVol;
+	delete chkCDTurbo;
 
 	delete cdCheckActionListener;
 	delete cdButtonActionListener;
@@ -660,13 +639,7 @@ void RefreshPanelHD()
 	cmdCDEject->setEnabled(changed_prefs.cdslots[0].inuse);
 	cmdCDSelect->setEnabled(changed_prefs.cdslots[0].inuse);
 	cboCDFile->setEnabled(changed_prefs.cdslots[0].inuse);
-	sldCDVol->setEnabled(changed_prefs.cdslots[0].inuse);
-	lblCDVol->setEnabled(changed_prefs.cdslots[0].inuse);
-	lblCDVolInfo->setEnabled(changed_prefs.cdslots[0].inuse);
-
-	sldCDVol->setValue(100 - changed_prefs.sound_volume_cd);
-	snprintf(tmp, 32, "%d %%", 100 - changed_prefs.sound_volume_cd);
-	lblCDVolInfo->setCaption(tmp);
+	chkCDTurbo->setSelected(changed_prefs.cd_speed == 0);
 }
 
 

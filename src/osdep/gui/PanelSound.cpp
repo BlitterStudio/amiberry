@@ -35,6 +35,9 @@ static gcn::Window* grpVolume;
 static gcn::Label* lblPaulaVol;
 static gcn::Label* lblPaulaVolInfo;
 static gcn::Slider* sldPaulaVol;
+static gcn::Label* lblCDVol;
+static gcn::Label* lblCDVolInfo;
+static gcn::Slider* sldCDVol;
 
 static int curr_separation_idx;
 static int curr_stereodelay_idx;
@@ -322,6 +325,12 @@ public:
 			if (changed_prefs.sound_volume_paula != newvol)
 				changed_prefs.sound_volume_paula = newvol;
 		}
+		else if (actionEvent.getSource() == sldCDVol)
+		{
+			const auto newvol = 100 - static_cast<int>(sldCDVol->getValue());
+			if (changed_prefs.sound_volume_cd != newvol)
+				changed_prefs.sound_volume_cd = newvol;
+		}
 
 		RefreshPanelSound();
 	}
@@ -415,6 +424,17 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	sldPaulaVol->addActionListener(soundActionListener);
 	lblPaulaVolInfo = new gcn::Label("100 %");
 
+	lblCDVol = new gcn::Label("CD Volume:");
+	lblCDVol->setAlignment(gcn::Graphics::RIGHT);
+	sldCDVol = new gcn::Slider(0, 100);
+	sldCDVol->setSize(150, SLIDER_HEIGHT);
+	sldCDVol->setBaseColor(gui_baseCol);
+	sldCDVol->setMarkerLength(20);
+	sldCDVol->setStepLength(10);
+	sldCDVol->setId("sldCDVol");
+	sldCDVol->addActionListener(soundActionListener);
+	lblCDVolInfo = new gcn::Label("80 %");
+
 	grpSound = new gcn::Window("Sound Emulation");
 	grpSound->add(optSoundDisabled, 10, 10);
 	grpSound->add(optSoundDisabledEmu, 10, 40);
@@ -429,6 +449,9 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	grpVolume->add(lblPaulaVol, 10, 10);
 	grpVolume->add(sldPaulaVol, lblPaulaVol->getX() + lblPaulaVol->getWidth() + 10, lblPaulaVol->getY());
 	grpVolume->add(lblPaulaVolInfo, sldPaulaVol->getX() + sldPaulaVol->getWidth() + 10, sldPaulaVol->getY());
+	grpVolume->add(lblCDVol, lblPaulaVol->getX(), lblPaulaVol->getY() + lblPaulaVol->getHeight() + DISTANCE_NEXT_Y);
+	grpVolume->add(sldCDVol, sldPaulaVol->getX(), lblCDVol->getY());
+	grpVolume->add(lblCDVolInfo, sldCDVol->getX() + sldCDVol->getWidth() + 10, sldCDVol->getY());
 	grpVolume->setMovable(false);
 	grpVolume->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2 - grpSound->getWidth() - DISTANCE_NEXT_X, grpSound->getHeight());
 	grpVolume->setTitleBarHeight(TITLEBAR_HEIGHT);
@@ -469,6 +492,12 @@ void ExitPanelSound()
 	delete optSoundEmulated;
 	delete optSoundEmulatedBest;
 	delete grpSound;
+	delete lblPaulaVol;
+	delete lblPaulaVolInfo;
+	delete sldPaulaVol;
+	delete lblCDVol;
+	delete lblCDVolInfo;
+	delete sldCDVol;
 	delete grpVolume;
 	delete lblChannelMode;
 	delete cboChannelMode;
@@ -567,6 +596,14 @@ void RefreshPanelSound()
 	snprintf(tmp, sizeof tmp - 1, "%d %%", 100 - changed_prefs.sound_volume_paula);
 	lblPaulaVolInfo->setCaption(tmp);
 
+	sldCDVol->setEnabled(changed_prefs.cdslots[0].inuse);
+	lblCDVol->setEnabled(changed_prefs.cdslots[0].inuse);
+	lblCDVolInfo->setEnabled(changed_prefs.cdslots[0].inuse);
+
+	sldCDVol->setValue(100 - changed_prefs.sound_volume_cd);
+	snprintf(tmp, 10, "%d %%", 100 - changed_prefs.sound_volume_cd);
+	lblCDVolInfo->setCaption(tmp);
+	
 	cboChannelMode->setEnabled(changed_prefs.produce_sound > 0);
 	lblFrequency->setEnabled(changed_prefs.produce_sound > 0);
 	cboFrequency->setEnabled(changed_prefs.produce_sound > 0);
