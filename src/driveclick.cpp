@@ -20,12 +20,6 @@
 #include "events.h"
 #include "driveclick.h"
 
-#ifdef AMIBERRY
-SDL_AudioSpec wav_spec;
-Uint32 wav_length;
-Uint8* wav_buffer;
-#endif
-
 static struct drvsample drvs[4][DS_END];
 static int freq = 44100;
 
