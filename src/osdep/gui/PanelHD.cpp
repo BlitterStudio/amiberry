@@ -59,6 +59,7 @@ static gcn::CheckBox* chkCD;
 static gcn::DropDown* cboCDFile;
 static gcn::Button* cmdCDEject;
 static gcn::Button* cmdCDSelect;
+static gcn::CheckBox* chkCDTurbo;
 
 static int GetHDType(const int index)
 {
@@ -237,9 +238,12 @@ public:
 					chkScsi->setSelected(true);
 				}
 			}
-			RefreshPanelHD();
-			RefreshPanelQuickstart();
 		}
+		else if (actionEvent.getSource() == chkCDTurbo)
+			changed_prefs.cd_speed = chkCDTurbo->isSelected() ? 0 : 100;
+
+		RefreshPanelHD();
+		RefreshPanelQuickstart();
 	}
 };
 
@@ -424,8 +428,12 @@ void InitPanelHD(const struct _ConfigCategory& category)
 	chkScsi->addActionListener(genericActionListener);
 	
 	chkCD = new gcn::CheckBox("CD drive");
-	chkCD->setId("CD drive");
+	chkCD->setId("chkCD");
 	chkCD->addActionListener(cdCheckActionListener);
+
+	chkCDTurbo = new gcn::CheckBox("CDTV/CDTV-CR/CD32 turbo CD read speed");
+	chkCDTurbo->setId("chkCDTurbo");
+	chkCDTurbo->addActionListener(cdCheckActionListener);
 
 	cmdCDEject = new gcn::Button("Eject");
 	cmdCDEject->setSize(SMALL_BUTTON_WIDTH * 2, SMALL_BUTTON_HEIGHT);
@@ -491,6 +499,8 @@ void InitPanelHD(const struct _ConfigCategory& category)
 	category.panel->add(cboCDFile, DISTANCE_BORDER, posY);
 	posY += cboCDFile->getHeight() + DISTANCE_NEXT_Y;
 
+	category.panel->add(chkCDTurbo, DISTANCE_BORDER, posY);
+
 	RefreshPanelHD();
 }
 
@@ -521,6 +531,7 @@ void ExitPanelHD()
 	delete cmdCDEject;
 	delete cmdCDSelect;
 	delete cboCDFile;
+	delete chkCDTurbo;
 
 	delete cdCheckActionListener;
 	delete cdButtonActionListener;
@@ -628,6 +639,7 @@ void RefreshPanelHD()
 	cmdCDEject->setEnabled(changed_prefs.cdslots[0].inuse);
 	cmdCDSelect->setEnabled(changed_prefs.cdslots[0].inuse);
 	cboCDFile->setEnabled(changed_prefs.cdslots[0].inuse);
+	chkCDTurbo->setSelected(changed_prefs.cd_speed == 0);
 }
 
 

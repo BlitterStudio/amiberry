@@ -183,8 +183,8 @@ static NavigationMap navMap[] =
 
 	//  active            move left           move right          move up           move down
 	// PanelHD
-	{"cmdProp0", "Hard drives/CD", "cmdDel0", "CDVol", "cmdProp1"},
-	{"cmdDel0", "cmdProp0", "Hard drives/CD", "CDVol", "cmdDel1"},
+	{"cmdProp0", "Hard drives/CD", "cmdDel0", "chkCDTurbo", "cmdProp1"},
+	{"cmdDel0", "cmdProp0", "Hard drives/CD", "chkCDTurbo", "cmdDel1"},
 	{"cmdProp1", "Hard drives/CD", "cmdDel1", "cmdProp0", "cmdProp2"},
 	{"cmdDel1", "cmdProp1", "Hard drives/CD", "cmdDel0", "cmdDel2"},
 	{"cmdProp2", "Hard drives/CD", "cmdDel2", "cmdProp1", "cmdProp3"},
@@ -196,13 +196,13 @@ static NavigationMap navMap[] =
 	{"cmdAddDir", "Hard drives/CD", "cmdAddHDF", "cmdProp4", "chkHDRO"},
 	{"cmdAddHDF", "cmdAddDir", "cmdCreateHDF", "cmdDel4", "chkHDRO"},
 	{"cmdCreateHDF", "cmdAddHDF", "Hard drives / CD", "cmdDel4", "chkSCSI" },
-	{"chkHDRO", "Hard drives / CD", "chkSCSI", "cmdAddDir", "CD drive" },
+	{"chkHDRO", "Hard drives / CD", "chkSCSI", "cmdAddDir", "chkCD" },
 	{"chkSCSI", "chkHDRO", "Hard drives / CD", "cmdCreateHDF", "cdEject" },
-	{"CD drive", "Hard drives/CD", "cdEject", "chkHDRO", "cboCD"},
-	{"cdEject", "CD drive", "CDSelect", "chkSCSI", "cboCD" },
+	{"chkCD", "Hard drives/CD", "cdEject", "chkHDRO", "cboCD"},
+	{"cdEject", "chkCD", "CDSelect", "chkSCSI", "cboCD" },
 	{"CDSelect", "cdEject", "Hard drives/CD", "cmdCreateHDF", "cboCD"},
-	{"cboCD", "Hard drives/CD", "Hard drives/CD", "CD drive", "CDVol"},
-	{"CDVol", "", "", "cboCD", "cmdProp0"},
+	{"cboCD", "Hard drives/CD", "Hard drives/CD", "chkCD", "chkCDTurbo"},
+	{ "chkCDTurbo", "Hard drives/CD", "Hard drives/CD", "cboCD", "cmdProp0" },
 
 	//  active            move left           move right          move up           move down
 	// PanelDisplay
@@ -234,17 +234,18 @@ static NavigationMap navMap[] =
 
 	//  active            move left           move right          move up           move down
 	//PanelSound
-	{"sndDisable", "Sound", "sldPaulaVol", "cboFrequency", "sndDisEmu"},
-	{"sndDisEmu", "Sound", "sldPaulaVol", "sndDisable", "sndEmulate"},
-	{"sndEmulate", "Sound", "sldPaulaVol", "sndDisEmu", "sndEmuBest"},
-	{"sndEmuBest", "Sound", "sldPaulaVol", "sndEmulate", "cboChannelMode"},
-	{"cboChannelMode", "Sound", "cboSeparation", "sndEmuBest", "cboFrequency"},
-	{"cboFrequency", "Sound", "cboFilter", "cboChannelMode", "sndDisable"},
-	{"cboInterpol", "cboSeparation", "Sound", "sldPaulaVol", "cboFilter"},
-	{"cboFilter", "Sound", "Sound", "cboInterpol", "sldPaulaVol"},
-	{"cboSeparation", "cboChannelMode", "cboInterpol", "sndEmuBest", "cboStereoDelay"},
-	{"cboStereoDelay", "cboFrequency", "cboFilter", "cboSeparation", "sldPaulaVol"},
-	{"sldPaulaVol", "", "", "cboStereoDelay", "cboInterpol"},
+	{ "sndDisable", "Sound", "sldPaulaVol", "cboFrequency", "sndDisEmu" },
+	{ "sndDisEmu", "Sound", "sldPaulaVol", "sndDisable", "sndEmulate" },
+	{ "sndEmulate", "Sound", "sldPaulaVol", "sndDisEmu", "sndEmuBest" },
+	{ "sndEmuBest", "Sound", "sldPaulaVol", "sndEmulate", "cboChannelMode" },
+	{ "cboChannelMode", "Sound", "cboSeparation", "sndEmuBest", "cboFrequency" },
+	{ "cboFrequency", "Sound", "cboFilter", "cboChannelMode", "sndDisable" },
+	{ "cboInterpol", "cboSeparation", "Sound", "sldCDVol", "cboFilter" },
+	{ "cboFilter", "Sound", "Sound", "cboInterpol", "sldPaulaVol" },
+	{ "cboSeparation", "cboChannelMode", "cboInterpol", "sndEmuBest", "cboStereoDelay" },
+	{ "cboStereoDelay", "cboFrequency", "cboFilter", "cboSeparation", "sldPaulaVol" },
+	{ "sldPaulaVol", "", "", "cboStereoDelay", "sldCDVol" },
+	{ "sldCDVol", "", "", "sldPaulaVol", "cboInterpol" },
 
 	//  active            move left           move right          move up           move down
 	// PanelInput
