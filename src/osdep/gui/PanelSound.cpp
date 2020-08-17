@@ -46,9 +46,14 @@ static gcn::Slider* sldFloppySoundEmpty;
 static gcn::Label* lblFloppySoundDisk;
 static gcn::Label* lblFloppySoundDiskInfo;
 static gcn::Slider* sldFloppySoundDisk;
+static gcn::Window* grpSoundBufferSize;
+static gcn::Slider* sldSoundBufferSize;
+static gcn::Label* lblSoundBufferSize;
 
 static int curr_separation_idx;
 static int curr_stereodelay_idx;
+
+static const int sndbufsizes[] = { 1024, 2048, 3072, 4096, 6144, 8192, 12288, 16384, 32768, 65536, -1 };
 
 class ChannelModeListModel : public gcn::ListModel
 {
@@ -366,6 +371,18 @@ public:
 			}
 		}
 
+		else if (actionEvent.getSource() == sldSoundBufferSize)
+		{
+			int v = static_cast<int>(sldSoundBufferSize->getValue());
+			if (v >= 0)
+			{
+				if (v == 0)
+					changed_prefs.sound_maxbsiz = 0;
+				else
+					changed_prefs.sound_maxbsiz = sndbufsizes[v - 1];
+			}
+		}
+		
 		RefreshPanelSound();
 	}
 };
@@ -491,6 +508,15 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	sldFloppySoundDisk->addActionListener(sound_action_listener);
 	lblFloppySoundDiskInfo = new gcn::Label("67 %");
 	lblFloppySoundDisk = new gcn::Label("Disk in drive:");
+
+	sldSoundBufferSize = new gcn::Slider(0, 10);
+	sldSoundBufferSize->setSize(170, SLIDER_HEIGHT);
+	sldSoundBufferSize->setBaseColor(gui_baseCol);
+	sldSoundBufferSize->setMarkerLength(20);
+	sldSoundBufferSize->setStepLength(10);
+	sldSoundBufferSize->setId("sldSoundBufferSize");
+	sldSoundBufferSize->addActionListener(sound_action_listener);
+	lblSoundBufferSize = new gcn::Label("Min");
 	
 	grpSound = new gcn::Window("Sound Emulation");
 	grpSound->add(optSoundDisabled, 10, 10);
@@ -537,15 +563,21 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	grpFloppySound->add(lblFloppySoundEmpty, chkFloppySound->getX(), chkFloppySound->getY() + chkFloppySound->getHeight() + DISTANCE_NEXT_Y);
 	grpFloppySound->add(sldFloppySoundEmpty, lblFloppySoundEmpty->getX() + lblFloppySoundEmpty->getWidth() + DISTANCE_NEXT_X + 10, lblFloppySoundEmpty->getY());
 	grpFloppySound->add(lblFloppySoundEmptyInfo, sldFloppySoundEmpty->getX() + sldFloppySoundEmpty->getWidth() + DISTANCE_NEXT_X, sldFloppySoundEmpty->getY());
-
 	grpFloppySound->add(lblFloppySoundDisk, lblFloppySoundEmpty->getX(), lblFloppySoundEmpty->getY() + lblFloppySoundEmpty->getHeight() + DISTANCE_NEXT_Y);
 	grpFloppySound->add(sldFloppySoundDisk, sldFloppySoundEmpty->getX(), lblFloppySoundDisk->getY());
 	grpFloppySound->add(lblFloppySoundDiskInfo, sldFloppySoundDisk->getX() + sldFloppySoundDisk->getWidth() + DISTANCE_NEXT_X, sldFloppySoundDisk->getY());
-	
 	grpFloppySound->setMovable(false);
-	grpFloppySound->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, sldFloppySoundDisk->getY() + sldFloppySoundDisk->getHeight() + TITLEBAR_HEIGHT + DISTANCE_NEXT_Y * 2);
+	grpFloppySound->setSize(lblFloppySoundDisk->getWidth() + sldFloppySoundDisk->getWidth() + lblFloppySoundDiskInfo->getWidth() + DISTANCE_NEXT_X + 10 + DISTANCE_BORDER * 2, sldFloppySoundDisk->getY() + sldFloppySoundDisk->getHeight() + TITLEBAR_HEIGHT + DISTANCE_NEXT_Y * 2);
 	grpFloppySound->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpFloppySound->setBaseColor(gui_baseCol);
+
+	grpSoundBufferSize = new gcn::Window("Sound Buffer Size");
+	grpSoundBufferSize->add(sldSoundBufferSize, DISTANCE_BORDER * 2, 10);
+	grpSoundBufferSize->add(lblSoundBufferSize, sldSoundBufferSize->getX() + sldSoundBufferSize->getWidth() + DISTANCE_NEXT_X, sldSoundBufferSize->getY());
+	grpSoundBufferSize->setMovable(false);
+	grpSoundBufferSize->setSize(category.panel->getWidth() - grpFloppySound->getWidth() - DISTANCE_NEXT_X - DISTANCE_BORDER * 2, grpFloppySound->getHeight());
+	grpSoundBufferSize->setTitleBarHeight(TITLEBAR_HEIGHT);
+	grpSoundBufferSize->setBaseColor(gui_baseCol);
 	
 	auto posY = DISTANCE_BORDER;
 	category.panel->add(grpSound, DISTANCE_BORDER, posY);
@@ -554,6 +586,7 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	category.panel->add(grpSettings, DISTANCE_BORDER, posY);
 	posY += grpSettings->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(grpFloppySound, DISTANCE_BORDER, posY);
+	category.panel->add(grpSoundBufferSize, grpFloppySound->getX() + grpFloppySound->getWidth() + DISTANCE_NEXT_X, posY);
 
 	RefreshPanelSound();
 }
@@ -594,9 +627,20 @@ void ExitPanelSound()
 	delete lblFloppySoundDiskInfo;
 	delete sldFloppySoundDisk;
 	delete grpFloppySound;
+	delete sldSoundBufferSize;
+	delete lblSoundBufferSize;
+	delete grpSoundBufferSize;
 	delete sound_action_listener;
 }
 
+static int getsoundbufsizeindex(int size)
+{
+	int idx;
+	if (size < sndbufsizes[0])
+		return 0;
+	for (idx = 0; sndbufsizes[idx] < size && sndbufsizes[idx + 1] >= 0; idx++);
+	return idx + 1;
+}
 
 void RefreshPanelSound()
 {
@@ -701,6 +745,19 @@ void RefreshPanelSound()
 	sldFloppySoundDisk->setValue(100 - changed_prefs.dfxclickvolume_disk[0]);
 	snprintf(tmp, sizeof tmp - 1, "%d %%", 100 - changed_prefs.dfxclickvolume_disk[0]);
 	lblFloppySoundDiskInfo->setCaption(tmp);
+
+	int bufsize = getsoundbufsizeindex(changed_prefs.sound_maxbsiz);
+	if (bufsize <= 0)
+	{
+		lblSoundBufferSize->setCaption("Min");
+		sldSoundBufferSize->setValue(0);
+	}
+	else
+	{
+		snprintf(tmp, sizeof tmp - 1, "%d", bufsize);
+		lblSoundBufferSize->setCaption(tmp);
+		sldSoundBufferSize->setValue(bufsize);
+	}
 	
 	cboChannelMode->setEnabled(changed_prefs.produce_sound > 0);
 	lblFrequency->setEnabled(changed_prefs.produce_sound > 0);
