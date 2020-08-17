@@ -508,12 +508,6 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->floatingJoystick = 0;
 	p->disableMenuVKeyb = 0;
 #endif
-	
-	//todo remove this when it's added in the GUI
-	for (auto& floppyslot : p->floppyslots)
-	{
-		floppyslot.dfxclick = 1;
-	}
 }
 
 void target_save_options(struct zfile* f, struct uae_prefs* p)
