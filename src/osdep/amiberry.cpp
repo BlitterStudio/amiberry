@@ -509,11 +509,6 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->disableMenuVKeyb = 0;
 #endif
 	
-	//for (auto& i : p->gfx_apmode)
-	//{
-	//	i.gfx_vsync = 1;
-	//}
-	
 	//todo remove this when it's added in the GUI
 	for (auto& floppyslot : p->floppyslots)
 	{
