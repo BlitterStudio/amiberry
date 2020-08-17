@@ -1879,6 +1879,7 @@ int vsync_isdone(frame_time_t* dt)
 {
 	if (isvsync() == 0)
 		return -1;
+	return 0;
 }
 
 bool target_graphics_buffer_update()
