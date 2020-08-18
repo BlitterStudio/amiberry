@@ -387,8 +387,8 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->kbd_led_num = -1; // No status on numlock
 	p->kbd_led_scr = -1; // No status on scrollock
 
-	p->gfx_monitor.gfx_size.width = amiberry_options.default_width;
-	p->gfx_monitor.gfx_size.height = amiberry_options.default_height;
+	p->gfx_monitor.gfx_size_win.width = amiberry_options.default_width;
+	p->gfx_monitor.gfx_size_win.height = amiberry_options.default_height;
 	
 	p->gfx_auto_height = amiberry_options.default_auto_height;
 	p->gfx_correct_aspect = amiberry_options.default_correct_aspect_ratio;
