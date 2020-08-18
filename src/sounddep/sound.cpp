@@ -8,8 +8,11 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
+#include <math.h>
+
 #include "options.h"
 #include "audio.h"
+#include "memory.h"
 #include "events.h"
 #include "custom.h"
 #include "threaddep/thread.h"
@@ -352,9 +355,8 @@ static int open_sound()
 {
 	auto size = currprefs.sound_maxbsiz;
 	
-	if (!currprefs.produce_sound) {
+	if (!currprefs.produce_sound)
 		return 0;
-	}
 	config_changed = 1;
 	/* Always interpret buffer size as number of samples, not as actual
 	buffer size.  Of course, since 8192 is the default, we'll have to
@@ -390,7 +392,7 @@ static int open_sound()
 #ifdef DRIVESOUND
 	driveclick_init();
 #endif
-#ifdef AMIBERRY
+#if 0
 	cdaudio_bufsize = SND_MAX_BUFFER;
 	cdbufpt = cdaudio_buffer;
 #endif
@@ -405,7 +407,6 @@ void close_sound()
 	gui_data.sndbuf_avail = false;
 	if (!have_sound)
 		return;
-
 	close_sound_device(sdp);
 	have_sound = 0;
 	extrasndbufsize = 0;
@@ -611,8 +612,7 @@ static void handle_reset()
 			sdp->resetcnt--;
 			sdp->reset = true;
 		}
-	}
-	else {
+	} else {
 		resume_sound_device(sdp);
 	}
 }
@@ -674,8 +674,7 @@ void finish_sound_buffer()
 		}
 		memcpy(extrasndbuf + extrasndbuffered, reinterpret_cast<uae_u8*>(paula_sndbuffer) + copied, bufsize - copied);
 		extrasndbuffered += bufsize - copied;
-	}
-	else {
+	} else {
 		send_sound(sdp, paula_sndbuffer);
 	}
 }
