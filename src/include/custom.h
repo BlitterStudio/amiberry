@@ -85,19 +85,11 @@ extern uae_u16 adkcon;
 extern unsigned int joy0dir, joy1dir;
 extern int joy0button, joy1button;
 
-extern void INTREQ (uae_u16);
-extern bool INTREQ_0 (uae_u16);
-extern void INTREQ_f (uae_u16);
-STATIC_INLINE void send_interrupt (int num)
-{
-	INTREQ_0 (0x8000 | (1 << num));
-}
+extern void INTREQ(uae_u16);
+extern bool INTREQ_0(uae_u16);
+extern void INTREQ_f(uae_u16);
+extern void send_interrupt(int num, int delay);
 extern void rethink_uae_int(void);
-STATIC_INLINE uae_u16 INTREQR(void)
-{
-	return intreq;
-}
-
 STATIC_INLINE void safe_interrupt_set(bool i6)
 {
 	uae_u16 v = i6 ? 0x2000 : 0x0008;
@@ -105,6 +97,7 @@ STATIC_INLINE void safe_interrupt_set(bool i6)
 		INTREQ_0(0x8000 | v);
 	}
 }
+extern uae_u16 INTREQR(void);
 
 /* maximums for statically allocated tables */
 #ifdef UAE_MINI

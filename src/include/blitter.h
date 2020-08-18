@@ -9,7 +9,6 @@
 #ifndef UAE_BLITTER_H
 #define UAE_BLITTER_H
 
-#include "savestate.h"
 #include "uae/types.h"
 
 struct bltinfo {
@@ -39,23 +38,13 @@ extern uae_u32 bltptx;
 extern int bltptxpos, bltptxc;
 extern int blit_singlechannel;
 
-extern void maybe_blit2 (int);
-STATIC_INLINE void maybe_blit(int hack)
-{
-	if (bltstate == BLT_done)
-		return;
-
-	if (savestate_state)
-		return;
-
-	maybe_blit2(hack);
-}
+extern void maybe_blit (int, int);
 extern void reset_blit (int);
 extern int blitnasty (void);
 extern int blitnnasty (int);
 extern void blitter_handler (uae_u32);
 extern void build_blitfilltable (void);
-extern void do_blitter (int);
+extern void do_blitter (int, int, uaecptr);
 extern void decide_blitter (int hpos);
 extern int blitter_need (int hpos);
 extern void blitter_done_notify (int hpos);
