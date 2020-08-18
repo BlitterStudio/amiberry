@@ -388,6 +388,7 @@ static const TCHAR* obsolete[] = {
 	_T("comp_lowopt"),
 	_T("avoid_cmov"),
 	_T("compforcesettings"),
+	_T("comp_catchdetect"),
 	
 	nullptr
 };
@@ -2534,17 +2535,14 @@ void cfgfile_save_options(struct zfile* f, struct uae_prefs* p, int type)
 			_tcscat(s, _T(",exit"));
 		if (cr->defaultdata)
 			_tcscat(s, _T(",default"));
-		if (i == CHIPSET_REFRESH_PAL)
-		{
-			cfgfile_dwrite(f, _T("displaydata_pal"), tmp);
-		}
-		else if (i == CHIPSET_REFRESH_NTSC)
-		{
-			cfgfile_dwrite(f, _T("displaydata_ntsc"), tmp);
-		}
-		else
-		{
-			cfgfile_dwrite(f, _T("displaydata"), tmp);
+		if (i == CHIPSET_REFRESH_PAL) {
+			if (cr->locked)
+				cfgfile_dwrite (f, _T("displaydata_pal"), tmp);
+		} else if (i == CHIPSET_REFRESH_NTSC) {
+			if (cr->locked)
+				cfgfile_dwrite (f, _T("displaydata_ntsc"), tmp);
+		} else {
+			cfgfile_dwrite (f, _T("displaydata"), tmp);
 		}
 	}
 
@@ -3402,8 +3400,8 @@ static int cfgfile_parse_host(struct uae_prefs* p, TCHAR* option, TCHAR* value)
 
 		|| cfgfile_intval(option, value, _T("gfx_frame_slices"), &p->gfx_display_sections, 1)
 		|| cfgfile_intval(option, value, _T("gfx_framerate"), &p->gfx_framerate, 1)
-		|| cfgfile_intval(option, value, _T("gfx_top_windowed"), &p->gfx_monitor.gfx_size_win.x, 1)
-		|| cfgfile_intval(option, value, _T("gfx_left_windowed"), &p->gfx_monitor.gfx_size_win.y, 1)
+		|| cfgfile_intval(option, value, _T("gfx_top_windowed"), &p->gfx_monitor.gfx_size_win.y, 1)
+		|| cfgfile_intval(option, value, _T("gfx_left_windowed"), &p->gfx_monitor.gfx_size_win.x, 1)
 		|| cfgfile_intval(option, value, _T("gfx_refreshrate"), &p->gfx_apmode[APMODE_NATIVE].gfx_refreshrate, 1)
 		|| cfgfile_intval(option, value, _T("gfx_refreshrate_rtg"), &p->gfx_apmode[APMODE_RTG].gfx_refreshrate, 1)
 		|| cfgfile_intval(option, value, _T("gfx_autoresolution_delay"), &p->gfx_autoresolution_delay, 1)
@@ -3517,9 +3515,9 @@ static int cfgfile_parse_host(struct uae_prefs* p, TCHAR* option, TCHAR* value)
 		|| cfgfile_strval(option, value, _T("gfx_color_mode"), &p->color_mode, colormode2, 0)
 		|| cfgfile_strval(option, value, _T("gfx_max_horizontal"), &p->gfx_max_horizontal, maxhoriz, 0)
 		|| cfgfile_strval(option, value, _T("gfx_max_vertical"), &p->gfx_max_vertical, maxvert, 0)
-		//|| cfgfile_strval(option, value, _T("gfx_api"), &p->gfx_api, filterapi, 0)
-		//|| cfgfile_strval(option, value, _T("gfx_api_options"), &p->gfx_api_options, filterapiopts, 0)
-		//|| cfgfile_strval(option, value, _T("gfx_atari_palette_fix"), &p->gfx_threebitcolors, threebitcolors, 0)
+		|| cfgfile_strval(option, value, _T("gfx_api"), &p->gfx_api, filterapi, 0)
+		|| cfgfile_strval(option, value, _T("gfx_api_options"), &p->gfx_api_options, filterapiopts, 0)
+		|| cfgfile_strval(option, value, _T("gfx_atari_palette_fix"), &p->gfx_threebitcolors, threebitcolors, 0)
 		|| cfgfile_strval(option, value, _T("magic_mousecursor"), &p->input_magic_mouse_cursor, magiccursors, 0)
 		|| cfgfile_strval(option, value, _T("absolute_mouse"), &p->input_tablet, abspointers, 0))
 		return 1;
@@ -4957,9 +4955,9 @@ static int cfgfile_parse_newfilesys(struct uae_prefs* p, int nr, int type, TCHAR
 				uci.controller_media_type = 0;
 
 			TCHAR* pflags;
-			if ((pflags = cfgfile_option_get(tmpp2, _T("flags"))))
-			{
+			if ((pflags = cfgfile_option_get(tmpp2, _T("flags")))) {
 				getintval(&pflags, &uci.unit_special_flags, 0);
+				xfree(pflags);
 			}
 
 			if (cfgfile_option_find(tmpp2, _T("lock")))
@@ -5637,6 +5635,7 @@ static int cfgfile_parse_hardware(struct uae_prefs* p, const TCHAR* option, TCHA
 		TCHAR* s = cfgfile_option_get(value, _T("order"));
 		if (s)
 			p->uaeboard_order = _tstol(s);
+		xfree(s);
 		return 1;
 	}
 
@@ -5720,6 +5719,7 @@ static int cfgfile_parse_hardware(struct uae_prefs* p, const TCHAR* option, TCHA
 			if (s)
 			{
 				rbc->device_order = _tstol(s);
+                xfree(s);
 			}
 			return 1;
 		}
@@ -5730,6 +5730,7 @@ static int cfgfile_parse_hardware(struct uae_prefs* p, const TCHAR* option, TCHA
 		if (cfgfile_string(option, value, tmp, tmpbuf, sizeof tmpbuf / sizeof(TCHAR)))
 		{
 			rbc->rtgmem_type = 0;
+			rbc->rtg_index = i;
 			int j = 0;
 			for (;;)
 			{
@@ -7765,9 +7766,6 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 
 	p->immediate_blits = false;
 	p->waiting_blits = 0;
-	
-	p->chipset_refreshrate = 50;
-	
 	p->collision_level = 2;
 	p->leds_on_screen = 0;
 	p->leds_on_screen_mask[0] = p->leds_on_screen_mask[1] = (1 << LED_MAX) - 1;
@@ -7818,6 +7816,34 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 	p->cs_ciatype[0] = 0;
 	p->cs_ciatype[1] = 0;
 
+	for (int i = APMODE_NATIVE; i <= APMODE_RTG; i++) {
+		struct gfx_filterdata *f = &p->gf[i];
+		f->gfx_filter = 0;
+		f->gfx_filter_scanlineratio = (1 << 4) | 1;
+		f->gfx_filter_scanlineoffset = 1;
+		for (int j = 0; j <= 2 * MAX_FILTERSHADERS; j++) {
+			f->gfx_filtershader[i][0] = 0;
+			f->gfx_filtermask[i][0] = 0;
+		}
+		f->gfx_filter_horiz_zoom_mult = 1.0;
+		f->gfx_filter_vert_zoom_mult = 1.0;
+		f->gfx_filter_bilinear = 0;
+		f->gfx_filter_filtermodeh = 0;
+		f->gfx_filter_filtermodev = 0;
+		f->gfx_filter_keep_aspect = 0;
+// this one would cancel auto-centering if enabled
+#ifndef AMIBERRY
+		f->gfx_filter_autoscale = AUTOSCALE_STATIC_AUTO;
+#endif
+		f->gfx_filter_keep_autoscale_aspect = false;
+		f->gfx_filteroverlay_overscan = 0;
+		f->gfx_filter_left_border = -1;
+		f->gfx_filter_top_border = -1;
+	}
+
+	p->rtg_horiz_zoom_mult = 1.0;
+	p->rtg_vert_zoom_mult = 1.0;
+	
 	_tcscpy(p->floppyslots[0].df, _T(""));
 	_tcscpy(p->floppyslots[1].df, _T(""));
 	_tcscpy(p->floppyslots[2].df, _T(""));
