@@ -980,7 +980,8 @@ long get_file_size(const std::string& filename)
 bool download_file(const std::string& source, std::string destination)
 {
 	std::string download_command = "wget -np -nv -O ";
-	const auto tmp = destination.append(".tmp");
+	auto tmp = destination;
+	tmp = tmp.append(".tmp");
 
 	download_command.append(tmp);
 	download_command.append(" ");
