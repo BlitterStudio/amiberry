@@ -1026,6 +1026,14 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	{
 		_stprintf(txt2, "cachesize=16384");
 		cfgfile_parse_line(prefs, txt2, 0);
+		_stprintf(txt2, "cpu_compatible=false");
+		cfgfile_parse_line(prefs, txt2, 0);
+		_stprintf(txt2, "cpu_cycle_exact=false");
+		cfgfile_parse_line(prefs, txt2, 0);
+		_stprintf(txt2, "cpu_memory_cycle_exact=false");
+		cfgfile_parse_line(prefs, txt2, 0);
+		_stprintf(txt2, "address_space_24=false");
+		cfgfile_parse_line(prefs, txt2, 0);
 	}
 
 	// NTSC

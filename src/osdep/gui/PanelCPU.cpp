@@ -184,7 +184,6 @@ public:
 				changed_prefs.cpu_cycle_exact = false;
 				changed_prefs.cpu_memory_cycle_exact = false;
 				changed_prefs.address_space_24 = false;
-				changed_prefs.cpu_compatible = false;
 			}
 			else
 			{
