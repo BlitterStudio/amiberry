@@ -2,6 +2,7 @@
 #include "audio.h"
 
 extern volatile bool cd_audio_mode_changed;
+extern SDL_AudioDeviceID cdda_dev;
 
 class cda_audio
 {
