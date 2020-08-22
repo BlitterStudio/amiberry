@@ -4,20 +4,29 @@
 #include "cda_play.h"
 #include "audio.h"
 #include "options.h"
+#include "uae.h"
 
 #include "sounddep/sound.h"
 #include "uae/uae.h"
 
+bool pull_mode = true;
+
+void sdl2_cdaudio_callback(void* userdata, Uint8* stream, int len);
 SDL_AudioDeviceID cdda_dev;
+int pull_buffer_len[2];
+uae_u8* pull_buffer[2];
+int pull_buffer_max_len;
 
 cda_audio::~cda_audio()
 {
 	wait(0);
 	wait(1);
 
-	if (SDL_GetAudioDeviceStatus(cdda_dev) != SDL_AUDIO_STOPPED)
-		SDL_CloseAudioDevice(cdda_dev);
-
+	SDL_LockAudioDevice(cdda_dev);
+	for (auto& i : pull_buffer_len)
+		i = 0;
+	SDL_UnlockAudioDevice(cdda_dev);
+	
 	for (auto& buffer : buffers)
 	{
 		xfree(buffer);
@@ -41,18 +50,30 @@ cda_audio::cda_audio(int num_sectors, int sectorsize, int samplerate, bool inter
 	if (internalmode)
 		return;
 
+	const Uint8 channels = 2;
 	SDL_AudioSpec cdda_want, cdda_have;
 	memset(&cdda_want, 0, sizeof cdda_want);
 	cdda_want.freq = samplerate;
 	cdda_want.format = AUDIO_S16;
-	cdda_want.channels = 2;
-	cdda_want.samples = num_sectors * sectorsize;
+	cdda_want.channels = channels;
+	cdda_want.samples = static_cast<Uint16>(bufsize);
+	if (pull_mode)
+		cdda_want.callback = sdl2_cdaudio_callback;
 
 	cdda_dev = SDL_OpenAudioDevice(nullptr, 0, &cdda_want, &cdda_have, 0);
 	if (cdda_dev == 0)
+	{
 		write_log("Failed to open SDL2 device for CD-Audio: %s", SDL_GetError());
+	}
 	else
 	{
+		pull_buffer_max_len = bufsize * 2;
+		for (auto i = 0; i < 2; i++)
+		{
+			pull_buffer[i] = buffers[i];
+			pull_buffer_len[i] = bufsize;
+		}
+		
 		SDL_PauseAudioDevice(cdda_dev, 0);
 		active = true;
 		playing = true;
@@ -86,7 +107,21 @@ bool cda_audio::play(int bufnum)
 		}
 	}
 
-	SDL_QueueAudio(cdda_dev, p, num_sectors * sectorsize);
+	if (pull_mode)
+	{
+		if (pull_buffer_len[bufnum] + bufsize > pull_buffer_max_len)
+		{
+			write_log(_T("CD Audio pull overflow! %d %d %d\n"), pull_buffer_len[bufnum], bufsize, pull_buffer_max_len);
+			pull_buffer_len[bufnum] = 0;
+		}
+		SDL_LockAudioDevice(cdda_dev);
+		pull_buffer_len[bufnum] += bufsize;
+		SDL_UnlockAudioDevice(cdda_dev);
+	}		
+	else
+	{
+		SDL_QueueAudio(cdda_dev, p, bufsize);
+	}
 	
 	return true;
 }
@@ -96,8 +131,15 @@ void cda_audio::wait(int bufnum)
 	if (!active || !playing)
 		return;
 
-	while (SDL_GetQueuedAudioSize(cdda_dev) > 0) {
-		Sleep(10);
+	if (pull_mode)
+	{
+		while (pull_buffer_len[bufnum] > 0 && quit_program == 0)
+			Sleep(10);
+	}
+	else
+	{
+		while (SDL_GetQueuedAudioSize(cdda_dev) > 0 && quit_program == 0)
+			Sleep(10);
 	}
 }
 
@@ -106,5 +148,25 @@ bool cda_audio::isplaying(int bufnum)
 	if (!active || !playing)
 		return false;
 	
+	if (pull_mode)
+		return pull_buffer_len[bufnum] > 0;
+	
 	return SDL_GetQueuedAudioSize(cdda_dev) > 0;
+}
+
+void sdl2_cdaudio_callback(void* userdata, Uint8* stream, int len)
+{
+	for (auto i = 0; i < 2; ++i)
+	{
+		if (pull_buffer_len[i] <= 0)
+			continue;
+		
+		if (len > 0)
+			memcpy(stream, pull_buffer[i], len);
+
+		if (len < pull_buffer_len[i])
+			memmove(pull_buffer[i], pull_buffer[i] + len, pull_buffer_len[i] - len);
+
+		pull_buffer_len[i] -= len;
+	}
 }
