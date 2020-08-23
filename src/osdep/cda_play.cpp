@@ -108,12 +108,12 @@ bool cda_audio::play(int bufnum)
 	if (pull_mode)
 	{
 		SDL_LockAudioDevice(cdda_dev);
-		pull_buffer_len[bufnum] += bufsize;
+		pull_buffer_len[bufnum] += bufsize * 2;
 		SDL_UnlockAudioDevice(cdda_dev);
 	}		
 	else
 	{
-		SDL_QueueAudio(cdda_dev, p, bufsize);
+		SDL_QueueAudio(cdda_dev, p, bufsize * 2);
 	}
 	
 	return true;
@@ -154,8 +154,8 @@ void sdl2_cdaudio_callback(void* userdata, Uint8* stream, int len)
 		if (pull_buffer_len[i] == 0)
 			continue;
 		
-		memcpy(stream, pull_buffer[i], pull_buffer_len[i]);
-		stream += pull_buffer_len[i];
+		memcpy(stream, pull_buffer[i], len / 2);
+		stream += len / 2;
 
 		pull_buffer_len[i] = 0;
 	}
