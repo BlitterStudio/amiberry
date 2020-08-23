@@ -15,7 +15,6 @@ void sdl2_cdaudio_callback(void* userdata, Uint8* stream, int len);
 SDL_AudioDeviceID cdda_dev;
 int pull_buffer_len[2];
 uae_u8* pull_buffer[2];
-int pull_buffer_max_len;
 
 cda_audio::~cda_audio()
 {
@@ -67,11 +66,10 @@ cda_audio::cda_audio(int num_sectors, int sectorsize, int samplerate, bool inter
 	}
 	else
 	{
-		pull_buffer_max_len = bufsize * 2;
 		for (auto i = 0; i < 2; i++)
 		{
 			pull_buffer[i] = buffers[i];
-			pull_buffer_len[i] = bufsize;
+			pull_buffer_len[i] = 0;
 		}
 		
 		SDL_PauseAudioDevice(cdda_dev, 0);
@@ -109,11 +107,6 @@ bool cda_audio::play(int bufnum)
 
 	if (pull_mode)
 	{
-		if (pull_buffer_len[bufnum] + bufsize > pull_buffer_max_len)
-		{
-			write_log(_T("CD Audio pull overflow! %d %d %d\n"), pull_buffer_len[bufnum], bufsize, pull_buffer_max_len);
-			pull_buffer_len[bufnum] = 0;
-		}
 		SDL_LockAudioDevice(cdda_dev);
 		pull_buffer_len[bufnum] += bufsize;
 		SDL_UnlockAudioDevice(cdda_dev);
@@ -158,15 +151,12 @@ void sdl2_cdaudio_callback(void* userdata, Uint8* stream, int len)
 {
 	for (auto i = 0; i < 2; ++i)
 	{
-		if (pull_buffer_len[i] <= 0)
+		if (pull_buffer_len[i] == 0)
 			continue;
 		
-		if (len > 0)
-			memcpy(stream, pull_buffer[i], len);
+		memcpy(stream, pull_buffer[i], pull_buffer_len[i]);
+		stream += pull_buffer_len[i];
 
-		if (len < pull_buffer_len[i])
-			memmove(pull_buffer[i], pull_buffer[i] + len, pull_buffer_len[i] - len);
-
-		pull_buffer_len[i] -= len;
+		pull_buffer_len[i] = 0;
 	}
 }
