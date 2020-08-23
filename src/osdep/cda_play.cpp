@@ -9,7 +9,7 @@
 #include "sounddep/sound.h"
 #include "uae/uae.h"
 
-bool pull_mode = true;
+bool pull_mode = false;
 
 void sdl2_cdaudio_callback(void* userdata, Uint8* stream, int len);
 SDL_AudioDeviceID cdda_dev;
@@ -21,11 +21,21 @@ cda_audio::~cda_audio()
 	wait(0);
 	wait(1);
 
-	SDL_LockAudioDevice(cdda_dev);
+	if (cdda_dev != 0)
+	{
+		SDL_PauseAudioDevice(cdda_dev, 1);
+		SDL_LockAudioDevice(cdda_dev);
+	}
+
 	for (auto& i : pull_buffer_len)
 		i = 0;
-	SDL_UnlockAudioDevice(cdda_dev);
-	
+
+	if (cdda_dev != 0)
+	{
+		SDL_UnlockAudioDevice(cdda_dev);
+		SDL_CloseAudioDevice(cdda_dev);
+	}
+
 	for (auto& buffer : buffers)
 	{
 		xfree(buffer);
@@ -55,7 +65,7 @@ cda_audio::cda_audio(int num_sectors, int sectorsize, int samplerate, bool inter
 	cdda_want.freq = samplerate;
 	cdda_want.format = AUDIO_S16;
 	cdda_want.channels = channels;
-	cdda_want.samples = static_cast<Uint16>(bufsize);
+	cdda_want.samples = static_cast<Uint16>(bufsize / 4);
 	if (pull_mode)
 		cdda_want.callback = sdl2_cdaudio_callback;
 
@@ -69,7 +79,7 @@ cda_audio::cda_audio(int num_sectors, int sectorsize, int samplerate, bool inter
 		for (auto i = 0; i < 2; i++)
 		{
 			pull_buffer[i] = buffers[i];
-			pull_buffer_len[i] = 0;
+			pull_buffer_len[i] = bufsize;
 		}
 		
 		SDL_PauseAudioDevice(cdda_dev, 0);
@@ -108,12 +118,14 @@ bool cda_audio::play(int bufnum)
 	if (pull_mode)
 	{
 		SDL_LockAudioDevice(cdda_dev);
-		pull_buffer_len[bufnum] += bufsize * 2;
+		pull_buffer_len[bufnum] += bufsize;
 		SDL_UnlockAudioDevice(cdda_dev);
+		while (pull_buffer_len[bufnum] > 0 && quit_program == 0)
+			Sleep(10);
 	}		
 	else
 	{
-		SDL_QueueAudio(cdda_dev, p, bufsize * 2);
+		SDL_QueueAudio(cdda_dev, p, bufsize);
 	}
 	
 	return true;
@@ -151,12 +163,11 @@ void sdl2_cdaudio_callback(void* userdata, Uint8* stream, int len)
 {
 	for (auto i = 0; i < 2; ++i)
 	{
-		if (pull_buffer_len[i] == 0)
-			continue;
-		
-		memcpy(stream, pull_buffer[i], len / 2);
-		stream += len / 2;
-
-		pull_buffer_len[i] = 0;
+		while (pull_buffer_len[i] > 0)
+		{
+			memcpy(stream, pull_buffer[i], len);
+			stream += len;
+			pull_buffer_len[i] = 0;
+		}
 	}
 }
