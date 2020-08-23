@@ -490,7 +490,7 @@ static bool cdda_play_func2 (struct cdunit *cdu, int *outpos)
 			struct _timeb tb1, tb2;
 #else
 #ifdef HAVE_SYS_TIMEB_H
-			struct timeb tb1, tb2;
+			struct timespec ts1, ts2;
 #else
 #warning Missing timing functions
 #endif
@@ -500,7 +500,7 @@ static bool cdda_play_func2 (struct cdunit *cdu, int *outpos)
 			silentframes = 0;
 			foundsub = false;
 #ifdef HAVE_SYS_TIMEB_H
-			_ftime (&tb1);
+			clock_gettime(CLOCK_REALTIME, &ts1);
 #endif
 			cdda_pos = cdu->cdda_start;
 			oldplay = cdu->cdda_play;
@@ -557,9 +557,9 @@ static bool cdda_play_func2 (struct cdunit *cdu, int *outpos)
 
 			if (*outpos < 0) {
 #ifdef HAVE_SYS_TIMEB_H
-				_ftime (&tb2);
-			  diff = (tb2.time * (uae_s64)1000 + tb2.millitm) - (tb1.time * (uae_s64)1000 + tb1.millitm);
-			  diff -= cdu->cdda_delay;
+				clock_gettime(CLOCK_REALTIME, &ts2);
+				diff = (ts2.tv_sec * (uae_s64)1000 + (ts2.tv_nsec / 1000000) - (ts1.tv_sec * (uae_s64)1000 + (ts1.tv_nsec / 1000000)));
+				diff -= cdu->cdda_delay;
 #else
 				diff = 0;
 #endif

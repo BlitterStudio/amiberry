@@ -564,9 +564,6 @@ typedef char TCHAR;
 #define _tzset()            tzset()
 #define _timezone           timezone
 #define _daylight           daylight
-#ifndef _ftime
-#define _ftime(x)           ftime(x)
-#endif
 #ifdef ANDROID
 #define _ftelli64(x)        ftello(x)
 #define _fseeki64(x,y,z)    fseeko(x,y,z)
