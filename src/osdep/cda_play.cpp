@@ -21,19 +21,18 @@ cda_audio::~cda_audio()
 	wait(0);
 	wait(1);
 
-	if (cdda_dev != 0)
+	if (cdda_dev > 0)
 	{
 		SDL_PauseAudioDevice(cdda_dev, 1);
 		SDL_LockAudioDevice(cdda_dev);
-	}
 
-	for (auto& i : pull_buffer_len)
-		i = 0;
+		if (pull_mode)
+		{
+			for (auto& i : pull_buffer_len)
+				i = 0;
+		}
 
-	if (cdda_dev != 0)
-	{
 		SDL_UnlockAudioDevice(cdda_dev);
-		SDL_CloseAudioDevice(cdda_dev);
 	}
 
 	for (auto& buffer : buffers)
@@ -76,13 +75,16 @@ cda_audio::cda_audio(int num_sectors, int sectorsize, int samplerate, bool inter
 	}
 	else
 	{
-		for (auto i = 0; i < 2; i++)
+		if (pull_mode)
 		{
-			pull_buffer[i] = buffers[i];
-			pull_buffer_len[i] = bufsize;
+			for (auto i = 0; i < 2; i++)
+			{
+				pull_buffer[i] = buffers[i];
+				pull_buffer_len[i] = bufsize;
+			}
 		}
 		
-		SDL_PauseAudioDevice(cdda_dev, 0);
+		SDL_PauseAudioDevice(cdda_dev, 0);		
 		active = true;
 		playing = true;
 	}
