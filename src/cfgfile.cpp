@@ -7703,8 +7703,8 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 	p->sound_mixed_stereo_delay = 0;
 	p->sound_freq = DEFAULT_SOUND_FREQ;
 	p->sound_maxbsiz = DEFAULT_SOUND_MAXB;
-	p->sound_interpol = 0;
-	p->sound_filter = FILTER_SOUND_OFF;
+	p->sound_interpol = 1;
+	p->sound_filter = FILTER_SOUND_EMUL;
 	p->sound_filter_type = 0;
 	p->sound_auto = 1;
 	p->sound_cdaudio = false;
