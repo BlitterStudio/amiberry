@@ -98,7 +98,7 @@ namespace gcn
 
 		if (toBeFocusedIndex < 0)
 		{
-			throw GCN_EXCEPTION("Trying to focus a none existing widget.");
+			throw GCN_EXCEPTION("Trying to focus a non-existing widget.");
 		}
 
 		auto* oldFocused = mFocusedWidget;
@@ -527,7 +527,7 @@ namespace gcn
 
 	void FocusHandler::distributeFocusGainedEvent(const Event& focusEvent)
 	{
-		auto sourceWidget = focusEvent.getSource();
+		auto* sourceWidget = focusEvent.getSource();
 
 		auto focusListeners = sourceWidget->_getFocusListeners();
 
