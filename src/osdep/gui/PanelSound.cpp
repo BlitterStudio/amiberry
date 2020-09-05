@@ -18,7 +18,7 @@ static gcn::RadioButton* optSoundDisabled;
 static gcn::RadioButton* optSoundDisabledEmu;
 static gcn::RadioButton* optSoundEmulated;
 static gcn::RadioButton* optSoundEmulatedBest;
-static gcn::Window* grpSettings;
+static gcn::Container* grpSettings;
 static gcn::Label* lblChannelMode;
 static gcn::DropDown* cboChannelMode;
 static gcn::Label* lblFrequency;
@@ -540,7 +540,7 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	grpVolume->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpVolume->setBaseColor(gui_baseCol);
 	
-	grpSettings = new gcn::Window("Settings");
+	grpSettings = new gcn::Container();
 	grpSettings->add(lblChannelMode, 10, 10);
 	grpSettings->add(cboChannelMode, lblChannelMode->getX(), lblChannelMode->getY() + lblChannelMode->getHeight() + 10);
 	grpSettings->add(lblFrequency, lblChannelMode->getX(), 70);
@@ -553,9 +553,7 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	grpSettings->add(cboInterpolation, lblInterpolation->getX(), lblInterpolation->getY() + lblInterpolation->getHeight() + 10);
 	grpSettings->add(lblFilter, lblInterpolation->getX(), lblFrequency->getY());
 	grpSettings->add(cboFilter, cboInterpolation->getX(), cboFrequency->getY());
-	grpSettings->setMovable(false);
-	grpSettings->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, cboFrequency->getY() + cboFrequency->getHeight() + 10 + DISTANCE_NEXT_Y * 2);
-	grpSettings->setTitleBarHeight(TITLEBAR_HEIGHT);
+	grpSettings->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, cboFrequency->getY() + cboFrequency->getHeight() + 15 + DISTANCE_NEXT_Y * 2);
 	grpSettings->setBaseColor(gui_baseCol);
 
 	grpFloppySound = new gcn::Window("Floppy Drive Sound Emulation");
