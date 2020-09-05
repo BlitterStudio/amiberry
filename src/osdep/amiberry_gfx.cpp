@@ -32,6 +32,7 @@
 #include "audio.h"
 #include "sounddep/sound.h"
 #include "threaddep/thread.h"
+
 static uae_thread_id display_tid = nullptr;
 static smp_comm_pipe *volatile display_pipe = nullptr;
 static uae_sem_t display_sem = nullptr;
@@ -1475,8 +1476,13 @@ unsigned long target_lastsynctime()
 
 bool show_screen_maybe(const bool show)
 {
-	if (show)
-		show_screen(0);
+	struct amigadisplay* ad = &adisplays;
+	struct apmode* ap = ad->picasso_on ? &currprefs.gfx_apmode[1] : &currprefs.gfx_apmode[0];
+	if (!ap->gfx_vflip || ap->gfx_vsyncmode == 0 || ap->gfx_vsync <= 0) {
+		if (show)
+			show_screen(0);
+		return false;
+	}
 	return false;
 }
 
@@ -1748,19 +1754,38 @@ static int save_thumb(char* path)
 	return ret;
 }
 
+#ifdef USE_DISPMANX	
 static int currVSyncRate = 0;
+#endif
 bool vsync_switchmode(int hz)
 {
+	static struct PicassoResolution* oldmode;
+	static int oldhz;
+	int w = screen->w;
+	int h = screen->h;
+	struct PicassoResolution* found;
+	int newh, i, cnt;
+	bool preferdouble = false, preferlace = false;
+	bool lace = false;
+
+	if (currprefs.gfx_apmode[APMODE_NATIVE].gfx_refreshrate > 85) {
+		preferdouble = true;
+	}
+	else if (currprefs.gfx_apmode[APMODE_NATIVE].gfx_interlaced) {
+		preferlace = true;
+	}
+	
 	if (hz >= 55)
 		hz = 60;
 	else
 		hz = 50;
-
+	
+#ifdef USE_DISPMANX	
 	if (hz != currVSyncRate)
 	{
 		currVSyncRate = hz;
 		fpscounter_reset();
-#ifdef USE_DISPMANX		
+
 		time_per_frame = 1000 * 1000 / (hz);
 
 		if (hz == host_hz)
@@ -1769,10 +1794,92 @@ bool vsync_switchmode(int hz)
 			vsync_modulo = 6; // Amiga draws 6 frames while host has 5 vsyncs -> sync every 6th Amiga frame
 		else
 			vsync_modulo = 5; // Amiga draws 5 frames while host has 6 vsyncs -> sync every 5th Amiga frame
-#endif
 	}
-
 	return true;
+#else
+	newh = h * (currprefs.ntscmode ? 60 : 50) / hz;
+
+	found = NULL;
+
+	for (cnt = 0; cnt <= abs(newh - h) + 1 && !found; cnt++) {
+		for (int dbl = 0; dbl < 2 && !found; dbl++) {
+			bool doublecheck = false;
+			bool lacecheck = false;
+			if (preferdouble && dbl == 0)
+				doublecheck = true;
+			else if (preferlace && dbl == 0)
+				lacecheck = true;
+
+			for (int extra = 1; extra >= -1 && !found; extra--) {
+				for (i = 0; DisplayModes[i].depth >= 0 && !found; i++) {
+					struct PicassoResolution* r = &DisplayModes[i];
+					if (r->res.width == w && (r->res.height == newh + cnt || r->res.height == newh - cnt)) {
+						int j;
+						for (j = 0; r->refresh[j] > 0; j++) {
+							if (doublecheck) {
+								if (r->refreshtype[j] & REFRESH_RATE_LACE)
+									continue;
+								if (r->refresh[j] == hz * 2 + extra) {
+									found = r;
+									hz = r->refresh[j];
+									break;
+								}
+							}
+							else if (lacecheck) {
+								if (!(r->refreshtype[j] & REFRESH_RATE_LACE))
+									continue;
+								if (r->refresh[j] * 2 == hz + extra) {
+									found = r;
+									lace = true;
+									hz = r->refresh[j];
+									break;
+								}
+							}
+							else {
+								if (r->refresh[j] == hz + extra) {
+									found = r;
+									hz = r->refresh[j];
+									break;
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	if (found == oldmode && hz == oldhz)
+		return true;
+	oldmode = found;
+	oldhz = hz;
+	if (!found) {
+		changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_vsync = 0;
+		if (currprefs.gfx_apmode[APMODE_NATIVE].gfx_vsync != changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_vsync) {
+			set_config_changed();
+		}
+		write_log(_T("refresh rate changed to %d%s but no matching screenmode found, vsync disabled\n"), hz, lace ? _T("i") : _T("p"));
+		return false;
+	}
+	else {
+		newh = found->res.height;
+		changed_prefs.gfx_monitor.gfx_size_fs.height = newh;
+		changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_refreshrate = hz;
+		changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_interlaced = lace;
+		if (changed_prefs.gfx_monitor.gfx_size_fs.height != currprefs.gfx_monitor.gfx_size_fs.height ||
+			changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_refreshrate != currprefs.gfx_apmode[APMODE_NATIVE].gfx_refreshrate) {
+			write_log(_T("refresh rate changed to %d%s, new screenmode %dx%d\n"), hz, lace ? _T("i") : _T("p"), w, newh);
+			set_config_changed();
+		}
+		return true;
+	}
+#endif
+}
+
+int vsync_isdone(frame_time_t* dt)
+{
+	if (isvsync() == 0)
+		return -1;
+	return 0;
 }
 
 bool target_graphics_buffer_update()
@@ -1802,7 +1909,7 @@ int picasso_palette(struct MyCLUTEntry *CLUT, uae_u32 *clut)
 {
 	auto changed = 0;
 
-	for (auto i = 0; i < 256; i++) {
+	for (auto i = 0; i < 256 * 2; i++) {
 		int r = CLUT[i].Red;
 		int g = CLUT[i].Green;
 		int b = CLUT[i].Blue;

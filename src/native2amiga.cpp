@@ -30,12 +30,8 @@ static uae_sem_t n2asem = 0;
 
 void native2amiga_install (void)
 {
-	if (native2amiga_pending.size != 300)
-		init_comm_pipe(&native2amiga_pending, 300, 2);
-	if (n2asem != 0)
-		uae_sem_destroy(&n2asem);
-	n2asem = 0;
-	uae_sem_init(&n2asem, 0, 1);
+	init_comm_pipe (&native2amiga_pending, 300, 2);
+	uae_sem_init (&n2asem, 0, 1);
 }
 
 void native2amiga_reset (void)

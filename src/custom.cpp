@@ -17,13 +17,15 @@
 
 #include "options.h"
 #include "uae.h"
+#include "gensound.h"
 #include "audio.h"
+#include "sounddep/sound.h"
+#include "events.h"
 #include "memory.h"
 #include "custom.h"
 #include "newcpu.h"
 #include "cia.h"
 #include "disk.h"
-#include "savestate.h"
 #include "blitter.h"
 #include "xwin.h"
 #include "inputdevice.h"
@@ -52,7 +54,7 @@ int debug_sprite_mask = 0xff;
 STATIC_INLINE bool nocustom (void)
 {
 	struct amigadisplay *ad = &adisplays;
-	if (ad->picasso_on)
+	if (ad->picasso_on && currprefs.picasso96_nocustom)
 		return true;
 	return false;
 }
@@ -4249,7 +4251,8 @@ void compute_vsynctime (void)
 	}
 	if (currprefs.produce_sound > 1) {
 		double clk = svpos * shpos * fake_vblank_hz;
-		devices_update_sound(clk);
+		write_log (_T("SNDRATE %.1f*%.1f*%.6f=%.6f\n"), svpos, shpos, fake_vblank_hz, clk);
+		devices_update_sound(clk, syncadjust);
 	}
 	devices_update_sync(svpos, syncadjust);
 }
@@ -4319,8 +4322,8 @@ static bool changed_chipset_refresh (void)
 
 void compute_framesync(void)
 {
-	struct vidbuf_description *vidinfo = &adisplays.gfxvidinfo;
-	struct amigadisplay *ad = &adisplays;
+	struct vidbuf_description* vidinfo = &adisplays.gfxvidinfo;
+	struct amigadisplay* ad = &adisplays;
 	int islace = interlace_seen ? 1 : 0;
 	int isntsc = (beamcon0 & 0x20) ? 0 : 1;
 	bool found = false;
@@ -4333,26 +4336,40 @@ void compute_framesync(void)
 		vblank_hz = vblank_hz_shf;
 	}
 
-//	vblank_hz = target_adjust_vblank_hz(0, vblank_hz);
+	//	vblank_hz = target_adjust_vblank_hz(0, vblank_hz);
 
-	struct chipset_refresh *cr = get_chipset_refresh(&currprefs);
+	struct chipset_refresh* cr = get_chipset_refresh(&currprefs);
 	while (cr) {
 		double v = -1;
 		if (!ad->picasso_on && !ad->picasso_requested_on) {
 			if (isvsync_chipset ()) {
-				if (cr->index == CHIPSET_REFRESH_PAL || cr->index == CHIPSET_REFRESH_NTSC) {
-					if ((fabs(vblank_hz - 50) < 1 || fabs(vblank_hz - 60) < 1 || fabs(vblank_hz - 100) < 1 || fabs(vblank_hz - 120) < 1)) {
-						vsync_switchmode(int(vblank_hz));
+				if (!currprefs.gfx_variable_sync) {
+					if (cr->index == CHIPSET_REFRESH_PAL || cr->index == CHIPSET_REFRESH_NTSC) {
+						if ((fabs(vblank_hz - 50) < 1 || fabs(vblank_hz - 60) < 1 || fabs(vblank_hz - 100) < 1 || fabs(vblank_hz - 120) < 1) && currprefs.gfx_apmode[0].gfx_vsync == 2 && currprefs.gfx_apmode[0].gfx_fullscreen > 0) {
+							vsync_switchmode((int)vblank_hz);
+						}
+					}
+					if (isvsync_chipset() < 0) {
+
+						double v2;
+						v2 = target_getcurrentvblankrate();
+						if (!cr->locked)
+							v = v2;
+					} else if (isvsync_chipset() > 0) {
+						if (currprefs.gfx_apmode[0].gfx_refreshrate)
+							v = abs(currprefs.gfx_apmode[0].gfx_refreshrate);
 					}
 				}
-				else if (isvsync_chipset() > 0) {
-					if (currprefs.gfx_apmode[0].gfx_refreshrate)
-						v = abs(currprefs.gfx_apmode[0].gfx_refreshrate);
+			} else {
+				if (cr->locked == false) {
+					changed_prefs.chipset_refreshrate = currprefs.chipset_refreshrate = vblank_hz;
+					cfgfile_parse_lines (&changed_prefs, cr->commands, -1);
+					if (cr->commands[0])
+						write_log (_T("CMD1: '%s'\n"), cr->commands);
+					break;
+				} else {
+					v = cr->rate;
 				}
-			}
-			else {
-				changed_prefs.chipset_refreshrate = currprefs.chipset_refreshrate = vblank_hz;
-				break;
 			}
 			if (v < 0)
 				v = cr->rate;
@@ -4362,17 +4379,20 @@ void compute_framesync(void)
 				if (cr->commands[0])
 					write_log (_T("CMD2: '%s'\n"), cr->commands);
 			}
-		}
-		else {
-			v = vblank_hz;
+		} else {
+			if (cr->locked == false)
+				v = vblank_hz;
+			else
+				v = cr->rate;
 			changed_prefs.chipset_refreshrate = currprefs.chipset_refreshrate = v;
-			vsync_switchmode(int(v));
+			cfgfile_parse_lines (&changed_prefs, cr->commands, -1);
+			if (cr->commands[0])
+				write_log (_T("CMD3: '%s'\n"), cr->commands);
 		}
 		found = true;
 		break;
 	}
 	if (!found) {
-		vsync_switchmode(int(vblank_hz));
 		changed_prefs.chipset_refreshrate = currprefs.chipset_refreshrate = vblank_hz;
 	}
 	stored_chipset_refresh = cr;
@@ -4384,7 +4404,7 @@ void compute_framesync(void)
 	vidinfo->drawbuffer.inyoffset = -1;
 
 	if (beamcon0 & 0x80) {
-		int res = GET_RES_AGNUS(bplcon0);
+		int res = GET_RES_AGNUS (bplcon0);
 		int vres = islace ? 1 : 0;
 		int res2, vres2;
 
@@ -4415,8 +4435,7 @@ void compute_framesync(void)
 		vidinfo->drawbuffer.inheight = ((firstblankedline < maxvpos ? firstblankedline : maxvpos) - minfirstline + 1) << vres2;
 		vidinfo->drawbuffer.inheight2 = vidinfo->drawbuffer.inheight;
 
-	}
-	else {
+	} else {
 
 		vidinfo->drawbuffer.inwidth = AMIGA_WIDTH_MAX << currprefs.gfx_resolution;
 		vidinfo->drawbuffer.extrawidth = currprefs.gfx_extrawidth ? currprefs.gfx_extrawidth : -1;
@@ -4838,7 +4857,7 @@ STATIC_INLINE uae_u16 DMACONR (int hpos)
 	decide_line (hpos);
 	decide_fetch_safe (hpos);
 	dmacon &= ~(0x4000 | 0x2000);
-	dmacon |= ((blit_interrupt || (!blit_interrupt && currprefs.cs_agnusbltbusybug)) ? 0 : 0x4000)
+	dmacon |= ((blit_interrupt || (!blit_interrupt && currprefs.cs_agnusbltbusybug && !blt_info.got_cycle)) ? 0 : 0x4000)
 		| (blt_info.blitzero ? 0x2000 : 0);
 	return dmacon;
 }
@@ -4846,10 +4865,10 @@ STATIC_INLINE uae_u16 INTENAR (void)
 {
 	return intena;
 }
-//uae_u16 INTREQR (void)
-//{
-//	return intreq;
-//}
+uae_u16 INTREQR (void)
+{
+	return intreq;
+}
 STATIC_INLINE uae_u16 ADKCONR (void)
 {
 	return adkcon;
@@ -5425,10 +5444,13 @@ bool INTREQ_0 (uae_u16 v)
 	uae_u16 old = intreq;
 	setclr (&intreq, v);
 
-	if ((old & 0x0800) && !(intreq & 0x0800))
-		return false;
-	if ((v & 0x8000) && old != v)
+	if ((old & 0x0800) && !(intreq & 0x0800)) {
+		//serial_rbf_clear();
+	}
+
+	if ((v & 0x8000) && old != v) {
 		doint_delay();
+	}
 	return true;
 }
 
@@ -5447,6 +5469,8 @@ static void ADKCON (int hpos, uae_u16 v)
 	DISK_update_adkcon (hpos, v);
 	setclr (&adkcon, v);
 	audio_update_adkmasks ();
+	//if ((v >> 11) & 1)
+		//serial_uartbreak ((adkcon >> 11) & 1);
 }
 
 static void BEAMCON0 (uae_u16 v)
@@ -5891,7 +5915,7 @@ static void FNULL (uae_u16 v)
 
 static void BLTADAT (int hpos, uae_u16 v)
 {
-	maybe_blit (0);
+	maybe_blit (hpos, 0);
 
 	blt_info.bltadat = v;
 }
@@ -5902,7 +5926,7 @@ static void BLTADAT (int hpos, uae_u16 v)
 */
 static void BLTBDAT (int hpos, uae_u16 v)
 {
-	maybe_blit(0);
+	maybe_blit (hpos, 0);
 
 	int shift = bltcon1 >> 12;
 
@@ -5914,72 +5938,120 @@ static void BLTBDAT (int hpos, uae_u16 v)
 	blt_info.bltbdat = v;
 	blt_info.bltbold = v;
 }
-static void BLTCDAT (int hpos, uae_u16 v) { maybe_blit (0); blt_info.bltcdat = v; reset_blit(0); }
+static void BLTCDAT (int hpos, uae_u16 v) { maybe_blit (hpos, 0); blt_info.bltcdat = v; reset_blit (0); }
 
-static void BLTAMOD (int hpos, uae_u16 v) { maybe_blit (1); blt_info.bltamod = uae_s16(v & 0xFFFE); reset_blit (0); }
-static void BLTBMOD (int hpos, uae_u16 v) { maybe_blit (1); blt_info.bltbmod = uae_s16(v & 0xFFFE); reset_blit (0); }
-static void BLTCMOD (int hpos, uae_u16 v) { maybe_blit (1); blt_info.bltcmod = uae_s16(v & 0xFFFE); reset_blit (0); }
-static void BLTDMOD (int hpos, uae_u16 v) { maybe_blit (1); blt_info.bltdmod = uae_s16(v & 0xFFFE); reset_blit (0); }
+static void BLTAMOD (int hpos, uae_u16 v) { maybe_blit (hpos, 1); blt_info.bltamod = (uae_s16)(v & 0xFFFE); reset_blit (0); }
+static void BLTBMOD (int hpos, uae_u16 v) { maybe_blit (hpos, 1); blt_info.bltbmod = (uae_s16)(v & 0xFFFE); reset_blit (0); }
+static void BLTCMOD (int hpos, uae_u16 v) { maybe_blit (hpos, 1); blt_info.bltcmod = (uae_s16)(v & 0xFFFE); reset_blit (0); }
+static void BLTDMOD (int hpos, uae_u16 v) { maybe_blit (hpos, 1); blt_info.bltdmod = (uae_s16)(v & 0xFFFE); reset_blit (0); }
 
-static void BLTCON0 (int hpos, uae_u16 v) { maybe_blit (2); bltcon0 = v; reset_blit(1); }
+static void BLTCON0 (int hpos, uae_u16 v) { maybe_blit (hpos, 2); bltcon0 = v; reset_blit (1); }
 /* The next category is "Most useless hardware register".
 * And the winner is... */
 static void BLTCON0L (int hpos, uae_u16 v)
 {
-	if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS))
+	if (! (currprefs.chipset_mask & CSMASK_ECS_AGNUS))
 		return; // ei voittoa.
-	maybe_blit (2); bltcon0 = (bltcon0 & 0xFF00) | (v & 0xFF);
+	maybe_blit (hpos, 2); bltcon0 = (bltcon0 & 0xFF00) | (v & 0xFF);
 	reset_blit (1);
 }
-static void BLTCON1 (int hpos, uae_u16 v) { maybe_blit (2); bltcon1 = v; reset_blit (2); }
+static void BLTCON1 (int hpos, uae_u16 v) { maybe_blit (hpos, 2); bltcon1 = v; reset_blit (2); }
 
-static void BLTAFWM (int hpos, uae_u16 v) { maybe_blit (2); blt_info.bltafwm = v; reset_blit (0); }
-static void BLTALWM (int hpos, uae_u16 v) { maybe_blit (2); blt_info.bltalwm = v; reset_blit (0); }
+static void BLTAFWM (int hpos, uae_u16 v) { maybe_blit (hpos, 2); blt_info.bltafwm = v; reset_blit (0); }
+static void BLTALWM (int hpos, uae_u16 v) { maybe_blit (hpos, 2); blt_info.bltalwm = v; reset_blit (0); }
 
 static void BLTAPTH (int hpos, uae_u16 v)
 {
-	maybe_blit (0);
-	bltapt = (bltapt & 0xffff) | ((uae_u32)v << 16);
+	maybe_blit (hpos, 0);
+	if (bltstate != BLT_done && currprefs.blitter_cycle_exact && currprefs.cpu_memory_cycle_exact) {
+		bltptx = (bltapt & 0xffff) | ((uae_u32)v << 16);
+		bltptxpos = hpos;
+		bltptxc = 1;
+	} else {
+		bltapt = (bltapt & 0xffff) | ((uae_u32)v << 16);
+	}
 }
 static void BLTAPTL (int hpos, uae_u16 v)
 {
-	maybe_blit (0);
-	bltapt = (bltapt & ~0xffff) | (v & 0xFFFE);
+	maybe_blit (hpos, 0);
+	if (bltstate != BLT_done && currprefs.blitter_cycle_exact && currprefs.cpu_memory_cycle_exact) {
+		bltptx = (bltapt & ~0xffff) | (v & 0xFFFE);
+		bltptxpos = hpos;
+		bltptxc = 1;
+	} else {
+		bltapt = (bltapt & ~0xffff) | (v & 0xFFFE);
+	}
 }
 static void BLTBPTH (int hpos, uae_u16 v)
 {
-	maybe_blit (0);
-	bltbpt = (bltbpt & 0xffff) | ((uae_u32)v << 16);
+	maybe_blit (hpos, 0);
+	if (bltstate != BLT_done && currprefs.blitter_cycle_exact && currprefs.cpu_memory_cycle_exact) {
+		bltptx = (bltbpt & 0xffff) | ((uae_u32)v << 16);
+		bltptxpos = hpos;
+		bltptxc = 2;
+	} else {
+		bltbpt = (bltbpt & 0xffff) | ((uae_u32)v << 16);
+	}
 }
 static void BLTBPTL (int hpos, uae_u16 v)
 {
-	maybe_blit (0);
-	bltbpt = (bltbpt & ~0xffff) | (v & 0xFFFE);
+	maybe_blit (hpos, 0);
+	if (bltstate != BLT_done && currprefs.blitter_cycle_exact && currprefs.cpu_memory_cycle_exact) {
+		bltptx = (bltbpt & ~0xffff) | (v & 0xFFFE);
+		bltptxpos = hpos;
+		bltptxc = 2;
+	} else {
+		bltbpt = (bltbpt & ~0xffff) | (v & 0xFFFE);
+	}
 }
 static void BLTCPTH (int hpos, uae_u16 v)
 {
-	maybe_blit (0);
-	bltcpt = (bltcpt & 0xffff) | ((uae_u32)v << 16);
+	maybe_blit (hpos, 0);
+	if (bltstate != BLT_done && currprefs.blitter_cycle_exact && currprefs.cpu_memory_cycle_exact) {
+		bltptx = (bltcpt & 0xffff) | ((uae_u32)v << 16);
+		bltptxpos = hpos;
+		bltptxc = 3;
+	} else {
+		bltcpt = (bltcpt & 0xffff) | ((uae_u32)v << 16);
+	}
 }
 static void BLTCPTL (int hpos, uae_u16 v)
 {
-	maybe_blit (0);
-	bltcpt = (bltcpt & ~0xffff) | (v & 0xFFFE);
+	maybe_blit (hpos, 0);
+	if (bltstate != BLT_done && currprefs.blitter_cycle_exact && currprefs.cpu_memory_cycle_exact) {
+		bltptx = (bltcpt & ~0xffff) | (v & 0xFFFE);
+		bltptxpos = hpos;
+		bltptxc = 3;
+	} else {
+		bltcpt = (bltcpt & ~0xffff) | (v & 0xFFFE);
+	}
 }
 static void BLTDPTH (int hpos, uae_u16 v)
 {
-	maybe_blit (0);
-	bltdpt = (bltdpt & 0xffff) | ((uae_u32)v << 16);
+	maybe_blit (hpos, 0);
+	if (bltstate != BLT_done && currprefs.blitter_cycle_exact && currprefs.cpu_memory_cycle_exact) {
+		bltptx = (bltdpt & 0xffff) | ((uae_u32)v << 16);
+		bltptxpos = hpos;
+		bltptxc = 4;
+	} else {
+		bltdpt = (bltdpt & 0xffff) | ((uae_u32)v << 16);
+	}
 }
 static void BLTDPTL (int hpos, uae_u16 v)
 {
-	maybe_blit (0);
-	bltdpt = (bltdpt & ~0xffff) | (v & 0xFFFE);
+	maybe_blit (hpos, 0);
+	if (bltstate != BLT_done && currprefs.blitter_cycle_exact && currprefs.cpu_memory_cycle_exact) {
+		bltptx = (bltdpt & ~0xffff) | (v & 0xFFFE);
+		bltptxpos = hpos;
+		bltptxc = 4;
+	} else {
+		bltdpt = (bltdpt & ~0xffff) | (v & 0xFFFE);
+	}
 }
 
 static void BLTSIZE (int hpos, uae_u16 v)
 {
-	maybe_blit (0);
+	maybe_blit (hpos, 0);
 
 	blt_info.vblitsize = v >> 6;
 	blt_info.hblitsize = v & 0x3F;
@@ -5987,7 +6059,7 @@ static void BLTSIZE (int hpos, uae_u16 v)
 		blt_info.vblitsize = 1024;
 	if (!blt_info.hblitsize)
 		blt_info.hblitsize = 64;
-	do_blitter(hpos);
+	do_blitter(hpos, copper_access, copper_access ? cop_state.ip : M68K_GETPC);
 	dcheck_is_blit_dangerous ();
 }
 
@@ -5995,7 +6067,7 @@ static void BLTSIZV (int hpos, uae_u16 v)
 {
 	if (! (currprefs.chipset_mask & CSMASK_ECS_AGNUS))
 		return;
-	maybe_blit (0);
+	maybe_blit (hpos, 0);
 	blt_info.vblitsize = v & 0x7FFF;
 }
 
@@ -6003,13 +6075,13 @@ static void BLTSIZH (int hpos, uae_u16 v)
 {
 	if (! (currprefs.chipset_mask & CSMASK_ECS_AGNUS))
 		return;
-	maybe_blit (0);
+	maybe_blit (hpos, 0);
 	blt_info.hblitsize = v & 0x7FF;
 	if (!blt_info.vblitsize)
 		blt_info.vblitsize = 0x8000;
 	if (!blt_info.hblitsize)
 		blt_info.hblitsize = 0x0800;
-	do_blitter(hpos);
+	do_blitter(hpos, copper_access, copper_access ? cop_state.ip : M68K_GETPC);
 }
 
 STATIC_INLINE void spr_arm (int num, int state)
@@ -7756,7 +7828,7 @@ static void vsync_handler_pre (void)
 			frame_rendered = render_screen(false);
 		}
 		if (frame_rendered && !frame_shown) {
-			frame_shown = show_screen_maybe(true);
+			frame_shown = show_screen_maybe(isvsync_chipset() >= 0);
 		}
 	}
 
@@ -8215,6 +8287,29 @@ STATIC_INLINE bool is_last_line (void)
 	return vpos + 1 == maxvpos + lof_store;
 }
 
+// called when extra CPU wait is done
+void vsync_event_done(void)
+{
+	if (!isvsync_chipset()) {
+		events_reset_syncline();
+		return;
+	}
+	//if (currprefs.gfx_display_sections <= 1) {
+	//	if (vsync_vblank >= 85)
+	//		linesync_beam_single_dual();
+	//	else
+	//		linesync_beam_single_single();
+	//}
+	//else {
+	//	if (currprefs.gfx_variable_sync)
+	//		linesync_beam_vrr();
+	//	else if (vsync_vblank >= 85)
+	//		linesync_beam_multi_dual();
+	//	else
+	//		linesync_beam_multi_single();
+	//}
+}
+
 // this prepares for new line
 static void hsync_handler_post (bool onvsync)
 {
@@ -8232,12 +8327,12 @@ static void hsync_handler_post (bool onvsync)
 	bool ciahsyncs = !(bplcon0 & 2) || ((bplcon0 & 2) && currprefs.genlock && (!currprefs.ntscmode || genlockhtoggle));
 	bool ciavsyncs = !(bplcon0 & 2) || ((bplcon0 & 2) && currprefs.genlock && genlockvtoggle);
 
-	CIA_hsync_posthandler(false);
+	CIA_hsync_posthandler(false, false);
 	if (currprefs.cs_cd32cd) {
-		CIA_hsync_posthandler(true);
+		CIA_hsync_posthandler(true, true);
 		CIAB_tod_handler(18);
 	} else if (ciahsyncs) {
-		CIA_hsync_posthandler(true);
+		CIA_hsync_posthandler(true, ciahsyncs);
 		if (beamcon0 & (0x80 | 0x100)) {
 			if (hsstop < (maxhpos & ~1) && hsstrt < maxhpos)
 				CIAB_tod_handler(hsstop);

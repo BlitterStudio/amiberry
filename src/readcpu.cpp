@@ -197,48 +197,47 @@ STATIC_INLINE amodes mode_from_mr (int mode, int reg)
 	return (amodes)0;
 }
 
-static void build_insn (int insn)
+static void build_insn(int insn)
 {
 	int find = -1;
 	int variants;
 	struct instr_def id;
-	const TCHAR *opcstr;
+	const TCHAR* opcstr;
 	int i, n;
 
 	int flaglive = 0, flagdead = 0;
-  int cflow = 0;
+	int cflow = 0;
 
-  // Mask of flags set/used
-  unsigned char flags_set = 0;
-  unsigned char flags_used = 0;
+	// Mask of flags set/used
+	unsigned char flags_set = 0, flags_used = 0;
 
 	id = defs68k[insn];
 
-  // Control flow information
-  cflow = id.cflow;
+	// Control flow information
+	cflow = id.cflow;
 
-  for (i = 0, n = 4; i < 5; i++, n--) {
-  	switch (id.flaginfo[i].flagset) {
-	    case fa_unset: 
-      case fa_isjmp: 
-        break;
-	    default: 
-        flags_set |= (1 << n);
-  	}
+	for (i = 0, n = 4; i < 5; i++, n--) {
+		switch (id.flaginfo[i].flagset) {
+		case fa_unset:
+		case fa_isjmp:
+			break;
+		default:
+			flags_set |= (1 << n);
+		}
 
-  	switch (id.flaginfo[i].flaguse) {
-	    case fu_unused: 
-      case fu_isjmp: 
-        break;
-	    default: 
-        flags_used |= (1 << n);
-  	}
-  }
+		switch (id.flaginfo[i].flaguse) {
+		case fu_unused:
+		case fu_isjmp:
+			break;
+		default:
+			flags_used |= (1 << n);
+		}
+	}
 
 	for (i = 0; i < 5; i++) {
-		switch (id.flaginfo[i].flagset){
+		switch (id.flaginfo[i].flagset) {
 		case fa_unset: break;
-	 	case fa_isjmp: break;
+		case fa_isjmp: break;
 		case fa_zero: flagdead |= 1 << i; break;
 		case fa_one: flagdead |= 1 << i; break;
 		case fa_dontcare: flagdead |= 1 << i; break;
@@ -286,7 +285,7 @@ out2:
 
 		for (i = 0; i < lastbit; i++) {
 			bitcnt[i] = bitval[i] = 0;
-    }
+		}
 
 		vmsk = 1 << id.n_variable;
 
@@ -344,7 +343,8 @@ out2:
 					break;
 				default: abort();
 				}
-			} else {
+			}
+			else {
 				mnemonic[mnp] = opcstr[pos];
 				if (mnemonic[mnp] == 'f') {
 					find = -1;
@@ -382,7 +382,7 @@ out2:
 		case 'A':
 			srcmode = Areg;
 			switch (opcstr[pos++]) {
-	    case 'l': srcmode = absl; break;
+			case 'l': srcmode = absl; break;
 			case 'r': srcreg = bitval[bitr]; srcgather = 1; srcpos = bitpos[bitr]; break;
 			case 'R': srcreg = bitval[bitR]; srcgather = 1; srcpos = bitpos[bitR]; break;
 			default: abort();
@@ -441,15 +441,15 @@ out2:
 					srcpos = bitpos[bitK];
 				}
 				break;
-      case 'E': srcmode = immi; srcreg = bitval[bitE];
-		    if (CPU_EMU_SIZE < 5) {
-			    /* 1..255 */
-			    srcgather = 1;
-			    srctype = 6;
-			    srcpos = bitpos[bitE];
-    		}
-    		break;
-      case 'p': srcmode = immi; srcreg = bitval[bitp];
+			case 'E': srcmode = immi; srcreg = bitval[bitE];
+				if (CPU_EMU_SIZE < 5) {
+					/* 1..255 */
+					srcgather = 1;
+					srctype = 6;
+					srcpos = bitpos[bitE];
+				}
+				break;
+			case 'p': srcmode = immi; srcreg = bitval[bitp];
 				if (CPU_EMU_SIZE < 5) {
 					/* 0..3 */
 					srcgather = 1;
@@ -462,13 +462,13 @@ out2:
 			break;
 		case 'd':
 			srcreg = bitval[bitD];
-			srcmode = mode_from_mr(bitval[bitd],bitval[bitD]);
+			srcmode = mode_from_mr(bitval[bitd], bitval[bitD]);
 			if (srcmode == am_illg)
 				continue;
 			if (CPU_EMU_SIZE < 2 &&
 				(srcmode == Areg || srcmode == Dreg || srcmode == Aind
-				|| srcmode == Ad16 || srcmode == Ad8r || srcmode == Aipi
-				|| srcmode == Apdi))
+					|| srcmode == Ad16 || srcmode == Ad8r || srcmode == Aipi
+					|| srcmode == Apdi))
 			{
 				srcgather = 1; srcpos = bitpos[bitD];
 			}
@@ -478,28 +478,30 @@ out2:
 					/* exclusion */
 					do {
 						pos++;
-						if (mode_from_str(opcstr+pos) == srcmode)
+						if (mode_from_str(opcstr + pos) == srcmode)
 							goto nomatch;
 						pos += 4;
 					} while (opcstr[pos] == ',');
 					pos++;
-				} else {
-					if (opcstr[pos+4] == '-') {
+				}
+				else {
+					if (opcstr[pos + 4] == '-') {
 						/* replacement */
-						if (mode_from_str(opcstr+pos) == srcmode)
-							srcmode = mode_from_str(opcstr+pos+5);
+						if (mode_from_str(opcstr + pos) == srcmode)
+							srcmode = mode_from_str(opcstr + pos + 5);
 						else
 							goto nomatch;
 						pos += 10;
-					} else {
+					}
+					else {
 						/* normal */
-						while(mode_from_str(opcstr+pos) != srcmode) {
+						while (mode_from_str(opcstr + pos) != srcmode) {
 							pos += 4;
 							if (opcstr[pos] == ']')
 								goto nomatch;
 							pos++;
 						}
-						while(opcstr[pos] != ']') pos++;
+						while (opcstr[pos] != ']') pos++;
 						pos++;
 						break;
 					}
@@ -511,14 +513,14 @@ out2:
 			break;
 		case 's':
 			srcreg = bitval[bitS];
-			srcmode = mode_from_mr(bitval[bits],bitval[bitS]);
+			srcmode = mode_from_mr(bitval[bits], bitval[bitS]);
 
 			if (srcmode == am_illg)
 				continue;
 			if (CPU_EMU_SIZE < 2 &&
 				(srcmode == Areg || srcmode == Dreg || srcmode == Aind
-				|| srcmode == Ad16 || srcmode == Ad8r || srcmode == Aipi
-				|| srcmode == Apdi))
+					|| srcmode == Ad16 || srcmode == Ad8r || srcmode == Aipi
+					|| srcmode == Apdi))
 			{
 				srcgather = 1; srcpos = bitpos[bitS];
 			}
@@ -528,28 +530,30 @@ out2:
 					/* exclusion */
 					do {
 						pos++;
-						if (mode_from_str(opcstr+pos) == srcmode)
+						if (mode_from_str(opcstr + pos) == srcmode)
 							goto nomatch;
 						pos += 4;
 					} while (opcstr[pos] == ',');
 					pos++;
-				} else {
-					if (opcstr[pos+4] == '-') {
+				}
+				else {
+					if (opcstr[pos + 4] == '-') {
 						/* replacement */
-						if (mode_from_str(opcstr+pos) == srcmode)
-							srcmode = mode_from_str(opcstr+pos+5);
+						if (mode_from_str(opcstr + pos) == srcmode)
+							srcmode = mode_from_str(opcstr + pos + 5);
 						else
 							goto nomatch;
 						pos += 10;
-					} else {
+					}
+					else {
 						/* normal */
-						while(mode_from_str(opcstr+pos) != srcmode) {
+						while (mode_from_str(opcstr + pos) != srcmode) {
 							pos += 4;
 							if (opcstr[pos] == ']')
 								goto nomatch;
 							pos++;
 						}
-						while(opcstr[pos] != ']') pos++;
+						while (opcstr[pos] != ']') pos++;
 						pos++;
 					}
 				}
@@ -582,19 +586,19 @@ out2:
 			default: abort();
 			}
 			if (dstpos < 0 || dstpos >= 32)
-				abort ();
+				abort();
 			break;
 		case 'A':
 			destmode = Areg;
 			switch (opcstr[pos++]) {
-	    case 'l': destmode = absl; break;
+			case 'l': destmode = absl; break;
 			case 'r': destreg = bitval[bitr]; dstgather = 1; dstpos = bitpos[bitr]; break;
 			case 'R': destreg = bitval[bitR]; dstgather = 1; dstpos = bitpos[bitR]; break;
 			case 'x': destreg = 0; dstgather = 0; dstpos = 0; break;
 			default: abort();
 			}
-	    if (destmode != absl && (dstpos < 0 || dstpos >= 32))
-				abort ();
+			if (destmode != absl && (dstpos < 0 || dstpos >= 32))
+				abort();
 			switch (opcstr[pos]) {
 			case 'p': destmode = Apdi; pos++; break;
 			case 'P': destmode = Aipi; pos++; break;
@@ -619,13 +623,13 @@ out2:
 			break;
 		case 'd':
 			destreg = bitval[bitD];
-			destmode = mode_from_mr(bitval[bitd],bitval[bitD]);
+			destmode = mode_from_mr(bitval[bitd], bitval[bitD]);
 			if (destmode == am_illg)
 				continue;
 			if (CPU_EMU_SIZE < 1 &&
 				(destmode == Areg || destmode == Dreg || destmode == Aind
-				|| destmode == Ad16 || destmode == Ad8r || destmode == Aipi
-				|| destmode == Apdi))
+					|| destmode == Ad16 || destmode == Ad8r || destmode == Aipi
+					|| destmode == Apdi))
 			{
 				dstgather = 1; dstpos = bitpos[bitD];
 			}
@@ -636,28 +640,30 @@ out2:
 					/* exclusion */
 					do {
 						pos++;
-						if (mode_from_str(opcstr+pos) == destmode)
+						if (mode_from_str(opcstr + pos) == destmode)
 							goto nomatch;
 						pos += 4;
 					} while (opcstr[pos] == ',');
 					pos++;
-				} else {
-					if (opcstr[pos+4] == '-') {
+				}
+				else {
+					if (opcstr[pos + 4] == '-') {
 						/* replacement */
-						if (mode_from_str(opcstr+pos) == destmode)
-							destmode = mode_from_str(opcstr+pos+5);
+						if (mode_from_str(opcstr + pos) == destmode)
+							destmode = mode_from_str(opcstr + pos + 5);
 						else
 							goto nomatch;
 						pos += 10;
-					} else {
+					}
+					else {
 						/* normal */
-						while(mode_from_str(opcstr+pos) != destmode) {
+						while (mode_from_str(opcstr + pos) != destmode) {
 							pos += 4;
 							if (opcstr[pos] == ']')
 								goto nomatch;
 							pos++;
 						}
-						while(opcstr[pos] != ']') pos++;
+						while (opcstr[pos] != ']') pos++;
 						pos++;
 						break;
 					}
@@ -669,14 +675,14 @@ out2:
 			break;
 		case 's':
 			destreg = bitval[bitS];
-			destmode = mode_from_mr(bitval[bits],bitval[bitS]);
+			destmode = mode_from_mr(bitval[bits], bitval[bitS]);
 
 			if (destmode == am_illg)
 				continue;
 			if (CPU_EMU_SIZE < 1 &&
 				(destmode == Areg || destmode == Dreg || destmode == Aind
-				|| destmode == Ad16 || destmode == Ad8r || destmode == Aipi
-				|| destmode == Apdi))
+					|| destmode == Ad16 || destmode == Ad8r || destmode == Aipi
+					|| destmode == Apdi))
 			{
 				dstgather = 1; dstpos = bitpos[bitS];
 			}
@@ -687,28 +693,30 @@ out2:
 					/* exclusion */
 					do {
 						pos++;
-						if (mode_from_str(opcstr+pos) == destmode)
+						if (mode_from_str(opcstr + pos) == destmode)
 							goto nomatch;
 						pos += 4;
 					} while (opcstr[pos] == ',');
 					pos++;
-				} else {
-					if (opcstr[pos+4] == '-') {
+				}
+				else {
+					if (opcstr[pos + 4] == '-') {
 						/* replacement */
-						if (mode_from_str(opcstr+pos) == destmode)
-							destmode = mode_from_str(opcstr+pos+5);
+						if (mode_from_str(opcstr + pos) == destmode)
+							destmode = mode_from_str(opcstr + pos + 5);
 						else
 							goto nomatch;
 						pos += 10;
-					} else {
+					}
+					else {
 						/* normal */
-						while(mode_from_str(opcstr+pos) != destmode) {
+						while (mode_from_str(opcstr + pos) != destmode) {
 							pos += 4;
 							if (opcstr[pos] == ']')
 								goto nomatch;
 							pos++;
 						}
-						while(opcstr[pos] != ']') pos++;
+						while (opcstr[pos] != ']') pos++;
 						pos++;
 					}
 				}
@@ -726,17 +734,17 @@ out2:
 
 		if (destmode == Areg && sz == sz_byte)
 			goto nomatch;
-endofline:
+	endofline:
 		/* now, we have a match */
 		if (table68k[opc].mnemo != i_ILLG)
 			;//write_log (_T("Double match: %x: %s\n"), opc, opcstr);
 		if (find == -1) {
 			for (find = 0;; find++) {
-				if (_tcscmp (mnemonic, lookuptab[find].name) == 0) {
+				if (_tcscmp(mnemonic, lookuptab[find].name) == 0) {
 					table68k[opc].mnemo = lookuptab[find].mnemo;
 					break;
 				}
-				if (_tcslen (lookuptab[find].name) == 0)
+				if (_tcslen(lookuptab[find].name) == 0)
 					abort();
 			}
 		}
@@ -779,44 +787,44 @@ endofline:
 		table68k[opc].clocks = id.clocks;
 		table68k[opc].fetchmode = id.fetchmode;
 
-	// Fix flags used information for Scc, Bcc, TRAPcc, DBcc instructions
-	if	(	table68k[opc].mnemo == i_Scc
-		||	table68k[opc].mnemo == i_Bcc
-		||	table68k[opc].mnemo == i_DBcc
-		||	table68k[opc].mnemo == i_TRAPcc
-		)	{
-		switch (table68k[opc].cc) {
-		// CC mask:	XNZVC
-		// 			 8421
-		case 0: flags_used = 0x00; break;	/*  T */
-		case 1: flags_used = 0x00; break;	/*  F */
-		case 2: flags_used = 0x05; break;	/* HI */
-		case 3: flags_used = 0x05; break;	/* LS */
-		case 4: flags_used = 0x01; break;	/* CC */
-		case 5: flags_used = 0x01; break;	/* CS */
-		case 6: flags_used = 0x04; break;	/* NE */
-		case 7: flags_used = 0x04; break;	/* EQ */
-		case 8: flags_used = 0x02; break;	/* VC */
-		case 9: flags_used = 0x02; break;	/* VS */
-		case 10:flags_used = 0x08; break;	/* PL */
-		case 11:flags_used = 0x08; break;	/* MI */
-		case 12:flags_used = 0x0A; break;	/* GE */
-		case 13:flags_used = 0x0A; break;	/* LT */
-		case 14:flags_used = 0x0E; break;	/* GT */
-		case 15:flags_used = 0x0E; break;	/* LE */
+		// Fix flags used information for Scc, Bcc, TRAPcc, DBcc instructions
+		if (table68k[opc].mnemo == i_Scc
+			|| table68k[opc].mnemo == i_Bcc
+			|| table68k[opc].mnemo == i_DBcc
+			|| table68k[opc].mnemo == i_TRAPcc
+			) {
+			switch (table68k[opc].cc) {
+				// CC mask:	XNZVC
+				// 			 8421
+			case 0: flags_used = 0x00; break;	/*  T */
+			case 1: flags_used = 0x00; break;	/*  F */
+			case 2: flags_used = 0x05; break;	/* HI */
+			case 3: flags_used = 0x05; break;	/* LS */
+			case 4: flags_used = 0x01; break;	/* CC */
+			case 5: flags_used = 0x01; break;	/* CS */
+			case 6: flags_used = 0x04; break;	/* NE */
+			case 7: flags_used = 0x04; break;	/* EQ */
+			case 8: flags_used = 0x02; break;	/* VC */
+			case 9: flags_used = 0x02; break;	/* VS */
+			case 10:flags_used = 0x08; break;	/* PL */
+			case 11:flags_used = 0x08; break;	/* MI */
+			case 12:flags_used = 0x0A; break;	/* GE */
+			case 13:flags_used = 0x0A; break;	/* LT */
+			case 14:flags_used = 0x0E; break;	/* GT */
+			case 15:flags_used = 0x0E; break;	/* LE */
+			}
 		}
-	}
 
 #if 1
-	/* gb-- flagdead and flaglive would not have correct information */
-	table68k[opc].flagdead = flags_set;
-	table68k[opc].flaglive = flags_used;
+		/* gb-- flagdead and flaglive would not have correct information */
+		table68k[opc].flagdead = flags_set;
+		table68k[opc].flaglive = flags_used;
 #else
 		table68k[opc].flagdead = flagdead;
 		table68k[opc].flaglive = flaglive;
 #endif
-	  table68k[opc].cflow = cflow;
-nomatch:
+		table68k[opc].cflow = cflow;
+	nomatch:
 		/* FOO! */;
 	}
 }

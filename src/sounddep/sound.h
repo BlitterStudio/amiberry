@@ -7,43 +7,100 @@
   */
 
 #pragma once
-#define DEFAULT_SOUND_CHANNELS 2
+#include "audio.h"
 
-#define SOUND_BUFFERS_COUNT 4
-#define SNDBUFFER_LEN 1024
+extern uae_u16 paula_sndbuffer[];
+extern uae_u16* paula_sndbufpt;
+extern int paula_sndbufsize;
+#ifdef AMIBERRY
+extern SDL_AudioDeviceID dev;
+#endif
 
-extern uae_u16 sndbuffer[SOUND_BUFFERS_COUNT][(SNDBUFFER_LEN + 32) * DEFAULT_SOUND_CHANNELS];
-extern uae_u16* sndbufpt;
-extern uae_u16* render_sndbuff;
-extern uae_u16* finish_sndbuff;
-extern int sndbufsize;
 extern void finish_sound_buffer(void);
 extern void restart_sound_buffer(void);
 extern void pause_sound_buffer(void);
-extern void finish_cdaudio_buffer(void);
-extern bool cdaudio_catchup(void);
 extern int init_sound(void);
 extern void close_sound(void);
 extern int setup_sound(void);
 extern void resume_sound(void);
 extern void pause_sound(void);
 extern void reset_sound(void);
+extern bool sound_paused(void);
+extern void sound_setadjust(double);
+
+extern int drivesound_init(void);
+extern void drivesound_free(void);
+extern void sound_mute(int);
 extern void sound_volume(int);
-extern void stop_sound(void);
+extern void set_volume(int, int);
+extern void master_sound_volume(int);
 
-#define check_sound_buffers() { if (sndbufpt >= finish_sndbuff) finish_sound_buffer (); }
+struct sound_dp;
 
-STATIC_INLINE void clear_sound_buffers(void)
+struct sound_data
 {
-	memset(sndbuffer, 0, sizeof(sndbuffer));
+	int waiting_for_buffer;
+	int deactive;
+	int devicetype;
+	int obtainedfreq;
+	int paused;
+	int mute;
+	int channels;
+	int freq;
+	int samplesize;
+	int sndbufsize;
+	int sndbufframes;
+	int softvolume;
+	struct sound_dp* data;
+	int index;
+	bool reset;
+	int resetcnt;
+	int resetframe;
+	int resetframecnt;
+};
+
+int open_sound_device(struct sound_data* sd, int index, int exclusive, int bufsize, int freq, int channels);
+void close_sound_device(struct sound_data* sd);
+void pause_sound_device(struct sound_data* sd);
+void resume_sound_device(struct sound_data* sd);
+void set_volume_sound_device(struct sound_data* sd, int volume, int mute);
+
+static uae_u16* paula_sndbufpt_prev, * paula_sndbufpt_start;
+
+STATIC_INLINE void check_sound_buffers()
+{
+	if (currprefs.sound_stereo == SND_4CH_CLONEDSTEREO) {
+		((uae_u16*)paula_sndbufpt)[0] = ((uae_u16*)paula_sndbufpt)[-2];
+		((uae_u16*)paula_sndbufpt)[1] = ((uae_u16*)paula_sndbufpt)[-1];
+		paula_sndbufpt = (uae_u16*)(((uae_u8*)paula_sndbufpt) + 2 * 2);
+	}
+	else if (currprefs.sound_stereo == SND_6CH_CLONEDSTEREO) {
+		uae_s16* p = ((uae_s16*)paula_sndbufpt);
+		uae_s32 sum;
+		p[2] = p[-2];
+		p[3] = p[-1];
+		sum = (uae_s32)(p[-2]) + (uae_s32)(p[-1]) + (uae_s32)(p[2]) + (uae_s32)(p[3]);
+		p[0] = sum / 8;
+		p[1] = sum / 8;
+		paula_sndbufpt = (uae_u16*)(((uae_u8*)paula_sndbufpt) + 4 * 2);
+	}
+
+	if ((uae_u8*)paula_sndbufpt - (uae_u8*)paula_sndbuffer >= paula_sndbufsize) {
+		finish_sound_buffer();
+		paula_sndbufpt = paula_sndbuffer;
+	}
 }
 
-#define PUT_SOUND_WORD(b) do { *sndbufpt = b; sndbufpt = sndbufpt + 1; } while (0)
-#define PUT_SOUND_WORD_STEREO(l,r) do { *((uae_u32 *)sndbufpt) = (r << 16) | (l & 0xffff); sndbufpt = sndbufpt + 2; } while (0)
+STATIC_INLINE void clear_sound_buffers()
+{
+	memset(paula_sndbuffer, 0, paula_sndbufsize);
+	paula_sndbufpt = paula_sndbuffer;
+}
 
-#define DEFAULT_SOUND_BITS 16
-#define DEFAULT_SOUND_FREQ 44100
-#define HAVE_STEREO_SUPPORT
+#define PUT_SOUND_WORD(b) do { *(uae_u16 *)paula_sndbufpt = b; paula_sndbufpt = (uae_u16 *)(((uae_u8 *)paula_sndbufpt) + 2); } while (0)
+#define PUT_SOUND_WORD_MONO(b) PUT_SOUND_WORD(b)
+#define SOUND16_BASE_VAL 0
+#define SOUND8_BASE_VAL 128
 
 #define DEFAULT_SOUND_MAXB 16384
 #define DEFAULT_SOUND_MINB 16384
@@ -57,21 +114,3 @@ STATIC_INLINE void clear_sound_buffers(void)
 
 #define FILTER_SOUND_TYPE_A500 0
 #define FILTER_SOUND_TYPE_A1200 1
-
-
-#define CDAUDIO_BUFFERS 16
-#define CDAUDIO_BUFFER_LEN 1024
-extern uae_u16 cdaudio_buffer[CDAUDIO_BUFFERS][(CDAUDIO_BUFFER_LEN + 32) * DEFAULT_SOUND_CHANNELS];
-extern uae_u16* cdbufpt;
-extern uae_u16* render_cdbuff;
-extern uae_u16* finish_cdbuff;
-extern bool cdaudio_active;
-
-#define check_cdaudio_buffers() { if (cdbufpt >= finish_cdbuff) finish_cdaudio_buffer (); }
-
-STATIC_INLINE void clear_cdaudio_buffers(void)
-{
-	memset(cdaudio_buffer, 0, sizeof(cdaudio_buffer));
-}
-
-#define PUT_CDAUDIO_WORD_STEREO(l,r) do { *((uae_u32 *)cdbufpt) = (r << 16) | (l & 0xffff); cdbufpt = cdbufpt + 2; } while (0)

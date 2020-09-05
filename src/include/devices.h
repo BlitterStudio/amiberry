@@ -9,12 +9,7 @@ void devices_hsync(void);
 void devices_rethink(void);
 void devices_rethink_all(void func(void));
 void devices_syncchange(void);
-void update_sound (double clk);
-STATIC_INLINE void devices_update_sound(double clk)
-{
-  update_sound (clk);
-}
-
+void devices_update_sound(double clk, double syncadjust);
 void devices_update_sync(double svpos, double syncadjust);
 void do_leave_program(void);
 void virtualdevice_init(void);

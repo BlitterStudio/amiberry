@@ -21,8 +21,8 @@
 #include "newcpu.h"
 #include "savestate.h"
 #include "blitter.h"
-#include "custom.h"
 #include "xwin.h"
+#include "custom.h"
 #include "bsdsocket.h"
 #include "clipboard.h"
 #include "uaeresource.h"
@@ -30,6 +30,9 @@
 #include "gensound.h"
 #include "gui.h"
 #include "drawing.h"
+#ifdef DRIVESOUND
+#include "driveclick.h"
+#endif
 #include "statusline.h"
 #include "uaeexe.h"
 #ifdef JIT
@@ -257,6 +260,7 @@ void devices_rethink(void)
 void devices_update_sound(double clk, double syncadjust)
 {
 	update_sound(clk);
+	update_cda_sound(clk / syncadjust);
 }
 
 void devices_update_sync(double svpos, double syncadjust)
@@ -304,7 +308,9 @@ void do_leave_program (void)
 	free_shm ();
 	cfgfile_addcfgparam (0);
 	machdep_free ();
-	//driveclick_free();
+#ifdef DRIVESOUND
+	driveclick_free();
+#endif
 	//ethernet_enumerate_free();
 	rtarea_free();
 

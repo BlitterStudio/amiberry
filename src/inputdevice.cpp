@@ -27,20 +27,22 @@
 #include "xwin.h"
 #include "drawing.h"
 #include "memory.h"
+#include "events.h"
 #include "newcpu.h"
 #include "uae.h"
 #include "picasso96.h"
 #include "ar.h"
 #include "gui.h"
-#include "savestate.h"
-#include "autoconf.h"
+#include "disk.h"
 #include "audio.h"
 #include "sounddep/sound.h"
-#include "disk.h"
+#include "savestate.h"
+#include "zfile.h"
+#include "cia.h"
+#include "autoconf.h"
 #include "amiberry_gfx.h"
 #include "cdtv.h"
 #include "statusline.h"
-#include "cia.h"
 
 #define COMPA_RESERVED_FLAGS (ID_FLAG_INVERT)
 
@@ -7063,8 +7065,8 @@ void inputdevice_default_prefs (struct uae_prefs *p)
 	p->input_joymouse_deadzone = 33;
 	p->input_joystick_deadzone = 33;
 	p->input_joymouse_speed = 10;
-	p->input_analog_joystick_mult = 15;
-	p->input_analog_joystick_offset = -1;
+	p->input_analog_joystick_mult = 18;
+	p->input_analog_joystick_offset = -5;
 	p->input_mouse_speed = amiberry_options.input_default_mouse_speed;
 	p->input_autofire_linecnt = 600;
 	p->input_keyboard_type = 0;

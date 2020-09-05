@@ -47,14 +47,15 @@ void statusline_getpos(int *x, int *y, int width, int height)
 	}
 }
 
-static const char *numbers = { /* ugly  0123456789CHD%+-PNK */
-	"+++++++--++++-+++++++++++++++++-++++++++++++++++++++++++++++++++++++++++++++-++++++-++++----++---+--------------+++++++++++++++++++++"
-	"+xxxxx+--+xx+-+xxxxx++xxxxx++x+-+x++xxxxx++xxxxx++xxxxx++xxxxx++xxxxx++xxxx+-+x++x+-+xxx++-+xx+-+x---+----------+xxxxx++x+++x++x++x++"
-	"+x+++x+--++x+-+++++x++++++x++x+++x++x++++++x++++++++++x++x+++x++x+++x++x++++-+x++x+-+x++x+--+x++x+--+x+----+++--+x---x++xx++x++x+x+++"
-	"+x+-+x+---+x+-+xxxxx++xxxxx++xxxxx++xxxxx++xxxxx+--++x+-+xxxxx++xxxxx++x+----+xxxx+-+x++x+----+x+--+xxx+--+xxx+-+xxxxx++x+x+x++xx++++"
-	"+x+++x+---+x+-+x++++++++++x++++++x++++++x++x+++x+--+x+--+x+++x++++++x++x++++-+x++x+-+x++x+---+x+x+--+x+----+++--+x++++++x+x+x++x+x+++"
-	"+xxxxx+---+x+-+xxxxx++xxxxx+----+x++xxxxx++xxxxx+--+x+--+xxxxx++xxxxx++xxxx+-+x++x+-+xxx+---+x++xx--------------+x+----+x++xx++x++x++"
-	"+++++++---+++-++++++++++++++----+++++++++++++++++--+++--++++++++++++++++++++-++++++-++++------------------------+++----++++++++++++++"
+static const char* numbers = { /* ugly  0123456789CHD%+-PNKV */
+	"+++++++--++++-+++++++++++++++++-++++++++++++++++++++++++++++++++++++++++++++-++++++-++++----++---+--------------++++++++++-++++++++++++  +++"
+	"+xxxxx+--+xx+-+xxxxx++xxxxx++x+-+x++xxxxx++xxxxx++xxxxx++xxxxx++xxxxx++xxxx+-+x++x+-+xxx++-+xx+-+x---+----------+xxxxx++x+-+x++x++x++x+  +x+"
+	"+x+++x+--++x+-+++++x++++++x++x+++x++x++++++x++++++++++x++x+++x++x+++x++x++++-+x++x+-+x++x+--+x++x+--+x+----+++--+x---x++xx++x++x+x+++x+  +x+"
+	"+x+-+x+---+x+-+xxxxx++xxxxx++xxxxx++xxxxx++xxxxx+--++x+-+xxxxx++xxxxx++x+----+xxxx+-+x++x+----+x+--+xxx+--+xxx+-+xxxxx++x+x+x++xx+   +x++x+ "
+	"+x+++x+---+x+-+x++++++++++x++++++x++++++x++x+++x+--+x+--+x+++x++++++x++x++++-+x++x+-+x++x+---+x+x+--+x+----+++--+x++++++x+x+x++x+x++  +xx+  "
+	"+xxxxx+---+x+-+xxxxx++xxxxx+----+x++xxxxx++xxxxx+--+x+--+xxxxx++xxxxx++xxxx+-+x++x+-+xxx+---+x++xx--------------+x+----+x++xx++x++x+  +xx+  "
+	"+++++++---+++-++++++++++++++----+++++++++++++++++--+++--++++++++++++++++++++-++++++-++++------------------------+++----+++++++++++++  ++++  "
+	//   x      x      x      x      x      x      x      x      x      x      x      x      x      x      x      x      x      x      x      x      x  
 };
 
 STATIC_INLINE uae_u32 ledcolor(uae_u32 c, uae_u32 *rc, uae_u32 *gc, uae_u32 *bc, uae_u32 *a)
@@ -133,7 +134,7 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 
 	for (led = 0; led < LED_MAX; led++)
 	{
-		int side, pos, num1 = -1, num2 = -1, num3 = -1, num4 = -1;
+		int pos, num1 = -1, num2 = -1, num3 = -1, num4 = -1;
 		int x, c, on = 0, am = 2;
 		xcolnr on_rgb = 0, on_rgb2 = 0, off_rgb = 0, pen_rgb = 0;
 		int half = 0, extraborder = 0;
@@ -170,7 +171,6 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 					extraborder = 1;
 				}
 			}
-			side = gui_data.drive_side;
 			on_rgb &= 0xffffff;
 			off_rgb = rgbmuldiv(on_rgb, 2, 4);
 			on_rgb2 = rgbmuldiv(on_rgb, 2, 3);
@@ -310,19 +310,23 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 			off_rgb = 0x000000;
 			am = 3;
 		}
-		else if (led == LED_MD && gui_data.drives[3].drive_disabled)
+		else if (led == LED_MD)
 		{
 			// DF3 reused as internal non-volatile ram led (cd32/cdtv)
-			pos = 7 + 3;
-			if (gui_data.md >= 0)
-			{
-				on = gui_data.md;
-				on_rgb = on == 2 ? bpp == 2 ? 0xcc0000: 0x0000cc : 0x00cc00;
-				off_rgb = 0x003300;
+			if (gui_data.drives[3].drive_disabled && gui_data.md >= 0) {
+				pos = 7 + 3;
+				if (gui_data.md >= 0) {
+					on = gui_data.md;
+					on_rgb = on == 2 ? bpp == 2 ? 0xcc0000 : 0x0000cc : 0x00cc00;
+					off_rgb = 0x003300;
+				}
+				num1 = -1;
+				num2 = 17;
+				num3 = 19;
 			}
-			num1 = -1;
-			num2 = -1;
-			num3 = -1;
+			else {
+				continue;
+			}
 		}
 		else if (led == LED_NET)
 		{

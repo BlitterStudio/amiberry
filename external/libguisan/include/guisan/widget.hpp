@@ -6,11 +6,11 @@
  * /______/ //______/ //_/ //_____/\ /_/ //_/ //_/ //_/ //_/ /|_/ /
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
- * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
+ * Copyright (c) 2004, 2005, 2006, 2007 Olof NaessÃ©n and Per Larsson
  *
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
- * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
+ * Olof NaessÃ©n a.k.a jansem/yakslem                _asww7!uY`>  )\a//
  *                                                 _Qhm`] _f "'c  1!5m
  * Visit: http://guichan.darkbits.org             )Qk<P ` _: :+' .'  "{[
  *                                               .)j(] .d_/ '-(  P .   S
@@ -87,7 +87,7 @@ namespace gcn
 	 * NOTE: Functions begining with underscore "_" should not
 	 *       be overloaded unless you know what you are doing
 	 *
-	 * @author Olof Naessén
+	 * @author Olof NaessÃ©n
 	 * @author Per Larsson.
 	 */
 	class GCN_CORE_DECLSPEC Widget
@@ -463,7 +463,7 @@ namespace gcn
 		 * it will be sent to the widget's FocusListeners.
 		 *
 		 * @param focusListener the FocusListener to add.
-		 * @author Olof Naessén
+		 * @author Olof NaessÃ©n
 		 * @since 0.7.0
 		 */
 		void addFocusListener(FocusListener* focusListener);
@@ -472,7 +472,7 @@ namespace gcn
 		 * Removes an added FocusListener from the widget.
 		 *
 		 * @param focusListener the FocusListener to remove.
-		 * @author Olof Naessén
+		 * @author Olof NaessÃ©n
 		 * @since 0.7.0
 		 */
 		void removeFocusListener(FocusListener* focusListener);
@@ -481,7 +481,7 @@ namespace gcn
 		 * Adds a WidgetListener to the widget.
 		 *
 		 * @param widgetListener the WidgetListener to add.
-		 * @author Olof Naessén
+		 * @author Olof NaessÃ©n
 		 * @since 0.8.0
 		 */
 		void addWidgetListener(WidgetListener* widgetListener);
@@ -490,7 +490,7 @@ namespace gcn
 		 * Removes an added WidgetListener from the widget.
 		 *
 		 * @param widgetListener the WidgetListener to remove.
-		 * @author Olof Naessén
+		 * @author Olof NaessÃ©n
 		 * @since 0.8.0
 		 */
 		void removeWidgetListener(WidgetListener* widgetListener);
@@ -800,7 +800,7 @@ namespace gcn
 		 * Distributes resized events to all of the widget's listeners.
 		 *
 		 * @since 0.8.0
-		 * @author Olof Naessén
+		 * @author Olof NaessÃ©n
 		 */
 		void distributeResizedEvent();
 
@@ -808,7 +808,7 @@ namespace gcn
 		 * Distributes moved events to all of the widget's listeners.
 		 *
 		 * @since 0.8.0
-		 * @author Olof Naessén
+		 * @author Olof NaessÃ©n
 		 */
 		void distributeMovedEvent();
 
@@ -816,7 +816,7 @@ namespace gcn
 		 * Distributes hidden events to all of the widget's listeners.
 		 *
 		 * @since 0.8.0
-		 * @author Olof Naessén
+		 * @author Olof NaessÃ©n
 		 */
 		void distributeHiddenEvent();
 
@@ -824,7 +824,7 @@ namespace gcn
 		 * Distributes shown events to all of the widget's listeners.
 		 *
 		 * @since 0.8.0
-		 * @author Olof Naessén
+		 * @author Olof NaessÃ©n
 		 */
 		void distributeShownEvent();
 

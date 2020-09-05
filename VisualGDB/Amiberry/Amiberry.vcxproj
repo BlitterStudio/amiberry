@@ -222,6 +222,7 @@
     <ClCompile Include="..\..\src\diskutil.cpp" />
     <ClCompile Include="..\..\src\dlopen.cpp" />
     <ClCompile Include="..\..\src\drawing.cpp" />
+    <ClCompile Include="..\..\src\driveclick.cpp" />
     <ClCompile Include="..\..\src\events.cpp" />
     <ClCompile Include="..\..\src\expansion.cpp" />
     <ClCompile Include="..\..\src\fdi2raw.cpp" />
@@ -322,6 +323,8 @@
   <ItemGroup>
     <None Include="..\..\src\aks.def" />
     <None Include="..\..\src\filesys.asm" />
+    <None Include="..\..\src\filesys_bootrom.cpp.in" />
+    <None Include="..\..\src\fpp_native.cpp.in" />
     <None Include="..\..\src\inputevents.def" />
     <None Include="..\..\src\jit\codegen_arm.cpp.in" />
     <None Include="..\..\src\jit\codegen_armA64.cpp.in" />
@@ -329,6 +332,9 @@
     <None Include="..\..\src\jit\compemu_midfunc_arm2.cpp.in" />
     <None Include="..\..\src\jit\compemu_midfunc_armA64.cpp.in" />
     <None Include="..\..\src\jit\compemu_midfunc_armA64_2.cpp.in" />
+    <None Include="..\..\src\linetoscr.cpp.in" />
+    <None Include="..\..\src\p96_blit.cpp.in" />
+    <None Include="..\..\src\sinctable.cpp.in" />
     <None Include="Amiberry-Debug-dispmanx.vgdbsettings" />
     <None Include="Amiberry-Debug.vgdbsettings" />
     <None Include="Amiberry-Release-dispmanx.vgdbsettings" />
@@ -403,6 +409,7 @@
     <ClInclude Include="..\..\src\include\disk.h" />
     <ClInclude Include="..\..\src\include\diskutil.h" />
     <ClInclude Include="..\..\src\include\drawing.h" />
+    <ClInclude Include="..\..\src\include\driveclick.h" />
     <ClInclude Include="..\..\src\include\events.h" />
     <ClInclude Include="..\..\src\include\execio.h" />
     <ClInclude Include="..\..\src\include\execlib.h" />
@@ -455,7 +462,12 @@
     <ClInclude Include="..\..\src\include\xwin.h" />
     <ClInclude Include="..\..\src\include\zarchive.h" />
     <ClInclude Include="..\..\src\include\zfile.h" />
+    <ClInclude Include="..\..\src\jit\aarch64.h" />
+    <ClInclude Include="..\..\src\jit\codegen_arm.h" />
+    <ClInclude Include="..\..\src\jit\codegen_armA64.h" />
     <ClInclude Include="..\..\src\jit\compemu.h" />
+    <ClInclude Include="..\..\src\jit\compemu_midfunc_arm.h" />
+    <ClInclude Include="..\..\src\jit\compemu_midfunc_arm2.h" />
     <ClInclude Include="..\..\src\jit\comptbl.h" />
     <ClInclude Include="..\..\src\machdep\m68k.h" />
     <ClInclude Include="..\..\src\machdep\maccess.h" />

@@ -19,7 +19,7 @@ static int td_pos = (TD_RIGHT | TD_BOTTOM);
 
 #define TD_TOTAL_HEIGHT (TD_PADY * 2 + TD_NUM_HEIGHT)
 
-#define NUMBERS_NUM 19
+#define NUMBERS_NUM 20
 
 #define TD_BORDER 0x333333
 

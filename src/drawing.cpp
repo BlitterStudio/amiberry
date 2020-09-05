@@ -588,6 +588,12 @@ int get_custom_limits (int *pw, int *ph, int *pdx, int *pdy, int *prealh)
 			ddffirstword_total = min;
 		if (ddflastword_total > max)
 			ddflastword_total = max;
+		if (0 && !(currprefs.chipset_mask & CSMASK_AGA)) {
+			if (ddffirstword_total > diwfirstword_total)
+				diwfirstword_total = ddffirstword_total;
+			if (ddflastword_total < diwlastword_total)
+				diwlastword_total = ddflastword_total;
+		}
 	}
 
 	w = diwlastword_total - diwfirstword_total;
@@ -3120,7 +3126,13 @@ static void pfield_draw_line (struct vidbuffer *vb, int lineno, int gfx_ypos, in
 	have_color_changes = is_color_changes(dip_for_drawing);
 	sprite_smaller_than_64_inuse = false;
 
-	xlinebuffer = row_map[gfx_ypos], dh = dh_buf;
+	dh = dh_line;
+	xlinebuffer = vidinfo->drawbuffer.linemem;
+	if (xlinebuffer == 0 && do_double
+		&& (border == 0 || have_color_changes))
+		xlinebuffer = vidinfo->drawbuffer.emergmem, dh = dh_emerg;
+	if (xlinebuffer == 0)
+		xlinebuffer = row_map[gfx_ypos], dh = dh_buf;
 	xlinebuffer -= linetoscr_x_adjust_pixbytes;
 	//xlinebuffer_genlock = row_map_genlock[gfx_ypos] - linetoscr_x_adjust_pixels;
 
@@ -3600,8 +3612,19 @@ void putpixel(uae_u8 *buf, uae_u8 *genlockbuf, int bpp, int x, xcolnr c8, int op
 	case 4:
 		{
 			int i;
-			uae_u32 *p = (uae_u32*)buf + x;
-			*p = c8;
+			if (1 || opaq || currprefs.gf[0].gfx_filter == 0) {
+				uae_u32 *p = (uae_u32*)buf + x;
+				*p = c8;
+			} else {
+				for (i = 0; i < 4; i++) {
+					int v1 = buf[i + bpp * x];
+					int v2 = (c8 >> (i * 8)) & 255;
+					v1 = (v1 * 2 + v2 * 3) / 5;
+					if (v1 > 255)
+						v1 = 255;
+					buf[i + bpp * x] = v1;
+				}
+			}
 			break;
 		}
 	}
@@ -3708,7 +3731,7 @@ static void draw_frame2()
 #ifdef AMIBERRY
 			if (whereline >= vb->inheight || line >= linestate_first_undecided)
 #else
-			if (whereline >= vb->outheight)
+			if (whereline >= vb->inheight)
 #endif
 				break;
 			if (whereline < 0)
@@ -4213,7 +4236,7 @@ void reset_drawing(void)
 {
 	struct amigadisplay* ad = &adisplays;
 	struct vidbuf_description* vidinfo = &ad->gfxvidinfo;
-		
+
 	max_diwstop = 0;
 
 	lores_reset ();
@@ -4340,17 +4363,25 @@ void drawing_init(void)
 int isvsync_chipset(void)
 {
 	struct amigadisplay *ad = &adisplays;
-	if (ad->picasso_on)
+	if (ad->picasso_on || currprefs.gfx_apmode[0].gfx_vsync <= 0)
 		return 0;
-	return 1;
+	if (currprefs.gfx_apmode[0].gfx_vsyncmode == 0)
+		return 1;
+	if (currprefs.m68k_speed >= 0)
+		return -1;
+	return currprefs.cachesize ? -3 : -2;
 }
 
 int isvsync_rtg(void)
 {
 	struct amigadisplay *ad = &adisplays;
-	if (!ad->picasso_on)
+	if (!ad->picasso_on || currprefs.gfx_apmode[1].gfx_vsync <= 0)
 		return 0;
-	return 1;
+	if (currprefs.gfx_apmode[1].gfx_vsyncmode == 0)
+		return 1;
+	if (currprefs.m68k_speed >= 0)
+		return -1;
+	return currprefs.cachesize ? -3 : -2;
 }
 
 int isvsync(void)

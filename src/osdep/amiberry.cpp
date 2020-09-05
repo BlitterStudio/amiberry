@@ -134,6 +134,7 @@ static char rp9_path[MAX_DPATH];
 static char controllers_path[MAX_DPATH];
 static char retroarch_file[MAX_DPATH];
 static char logfile_path[MAX_DPATH];
+static char floppy_sounds_dir[MAX_DPATH];
 
 char last_loaded_config[MAX_DPATH] = {'\0'};
 
@@ -325,13 +326,13 @@ void fix_apmodes(struct uae_prefs* p)
 {
 	if (p->ntscmode)
 	{
-		p->gfx_apmode[0].gfx_refreshrate = 60;
-		p->gfx_apmode[1].gfx_refreshrate = 60;
+		p->gfx_apmode[APMODE_NATIVE].gfx_refreshrate = 60;
+		p->gfx_apmode[APMODE_RTG].gfx_refreshrate = 60;
 	}
 	else
 	{
-		p->gfx_apmode[0].gfx_refreshrate = 50;
-		p->gfx_apmode[1].gfx_refreshrate = 50;
+		p->gfx_apmode[APMODE_NATIVE].gfx_refreshrate = 50;
+		p->gfx_apmode[APMODE_RTG].gfx_refreshrate = 50;
 	}
 
 	fixup_prefs_dimensions(p);
@@ -507,24 +508,6 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->floatingJoystick = 0;
 	p->disableMenuVKeyb = 0;
 #endif
-
-	p->cr[CHIPSET_REFRESH_PAL].locked = true;
-	p->cr[CHIPSET_REFRESH_PAL].vsync = 1;
-
-	p->cr[CHIPSET_REFRESH_NTSC].locked = true;
-	p->cr[CHIPSET_REFRESH_NTSC].vsync = 1;
-
-	p->cr[0].index = 0;
-	p->cr[0].horiz = -1;
-	p->cr[0].vert = -1;
-	p->cr[0].lace = -1;
-	p->cr[0].resolution = 0;
-	p->cr[0].vsync = -1;
-	p->cr[0].rate = 60.0;
-	p->cr[0].ntsc = 1;
-	p->cr[0].locked = true;
-	p->cr[0].rtg = true;
-	_tcscpy(p->cr[0].label, _T("RTG"));
 }
 
 void target_save_options(struct zfile* f, struct uae_prefs* p)
@@ -1205,6 +1188,7 @@ void load_amiberry_settings(void)
 #endif
 	snprintf(rp9_path, MAX_DPATH, "%s/rp9/", start_path_data);
 	snprintf(path, MAX_DPATH, "%s/conf/amiberry.conf", start_path_data);
+	snprintf(floppy_sounds_dir, MAX_DPATH, "%s/data/floppy_sounds/", start_path_data);
 
 	auto* const fh = zfile_fopen(path, _T("r"), ZFD_NORMAL);
 	if (fh)
@@ -2063,3 +2047,22 @@ bool handle_events()
 	return pause_emulation != 0;
 }
 
+bool get_plugin_path(TCHAR* out, int len, const TCHAR* path)
+{
+	if (strcmp(path, "floppysounds") == 0) {
+		if (floppy_sounds_dir) {
+			strncpy(out, floppy_sounds_dir, len);
+		}
+		else {
+			strncpy(out, "floppy_sounds", len);
+		}
+		// make sure out is null-terminated in any case
+		out[len - 1] = '\0';
+	}
+	else {
+		write_log("\n-----------------> STUB: get_plugin_path, "
+			"size: %d, path: %s\n", len, path);
+		out[0] = '\0';
+	}
+	return TRUE;
+}

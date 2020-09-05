@@ -104,6 +104,21 @@
     <None Include="Amiberry-Release-dispmanx.vgdbsettings">
       <Filter>VisualGDB settings</Filter>
     </None>
+    <None Include="..\..\src\filesys_bootrom.cpp.in">
+      <Filter>Source files</Filter>
+    </None>
+    <None Include="..\..\src\fpp_native.cpp.in">
+      <Filter>Source files</Filter>
+    </None>
+    <None Include="..\..\src\linetoscr.cpp.in">
+      <Filter>Source files</Filter>
+    </None>
+    <None Include="..\..\src\p96_blit.cpp.in">
+      <Filter>Source files</Filter>
+    </None>
+    <None Include="..\..\src\sinctable.cpp.in">
+      <Filter>Source files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\akiko.cpp">
@@ -649,6 +664,9 @@
     <ClCompile Include="..\..\src\osdep\gui\PanelPrio.cpp">
       <Filter>Source files\osdep\gui</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\driveclick.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\threaddep\thread.h">
@@ -1064,6 +1082,24 @@
     </ClInclude>
     <ClInclude Include="..\..\src\osdep\amiberry_filesys.hpp">
       <Filter>Source files\osdep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\driveclick.h">
+      <Filter>Source files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\jit\compemu_midfunc_arm.h">
+      <Filter>Source files\jit</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\jit\compemu_midfunc_arm2.h">
+      <Filter>Source files\jit</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\jit\codegen_arm.h">
+      <Filter>Source files\jit</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\jit\codegen_armA64.h">
+      <Filter>Source files\jit</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\jit\aarch64.h">
+      <Filter>Source files\jit</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
