@@ -45,7 +45,11 @@ STATIC_INLINE void uae_set_thread_priority(uae_thread_id* id, int pri)
 
 STATIC_INLINE void uae_end_thread(uae_thread_id* tid)
 {
-	SDL_WaitThread(*tid, static_cast<int*>(nullptr));
+	if (tid)
+	{
+		SDL_WaitThread(*tid, static_cast<int*>(nullptr));
+		*tid = NULL;
+	}
 }
 
 STATIC_INLINE long uae_start_thread(const TCHAR* name, int (*f)(void*), void* arg, uae_thread_id* foo)
