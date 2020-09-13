@@ -394,17 +394,16 @@ int graphics_setup(void)
 	write_log("Trying to get Current Video Driver...\n");
 	sdl_video_driver = SDL_GetCurrentVideoDriver();
 	
-	SDL_DisplayMode current_mode;
-	const auto should_be_zero = SDL_GetCurrentDisplayMode(0, &current_mode);
+	const auto should_be_zero = SDL_GetCurrentDisplayMode(0, &sdlMode);
 	if (should_be_zero == 0)
 	{
-		write_log("Current Display mode: bpp %i\t%s\t%i x %i\t%iHz\n", SDL_BITSPERPIXEL(current_mode.format), SDL_GetPixelFormatName(current_mode.format), current_mode.w, current_mode.h, current_mode.refresh_rate);
-		host_hz = current_mode.refresh_rate;
+		write_log("Current Display mode: bpp %i\t%s\t%i x %i\t%iHz\n", SDL_BITSPERPIXEL(sdlMode.format), SDL_GetPixelFormatName(sdlMode.format), sdlMode.w, sdlMode.h, sdlMode.refresh_rate);
+		host_hz = sdlMode.refresh_rate;
 	}
 
 	Uint32 sdl_window_mode;
 	if (sdl_video_driver != nullptr && strcmp(sdl_video_driver,"x11") == 0 
-		&& current_mode.w >= 800 && current_mode.h >= 600)
+		&& sdlMode.w >= 800 && sdlMode.h >= 600)
 	{
 		// Only enable Windowed mode if we're running under x11 and the resolution is at least 800x600
 		sdl_window_mode = SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
@@ -825,8 +824,18 @@ static void open_screen(struct uae_prefs* p)
 		//pixel_format = SDL_PIXELFORMAT_RGB565;
 		display_depth = 32;
 		pixel_format = SDL_PIXELFORMAT_RGBA32;
-		const auto width = display_width * 2 >> p->gfx_resolution;
-		const auto height = display_height * 2 >> p->gfx_vresolution;
+		int width, height;
+		
+		if (changed_prefs.gfx_correct_aspect == 0)
+		{
+			width = sdlMode.w;
+			height = sdlMode.h;
+		}
+		else
+		{
+			width = display_width * 2 >> p->gfx_resolution;
+			height = display_height * 2 >> p->gfx_vresolution;
+		}
 
 		if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
 		{

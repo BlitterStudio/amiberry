@@ -623,11 +623,6 @@ void RefreshPanelDisplay()
 	chkBlackerThanBlack->setSelected(changed_prefs.gfx_blackerthanblack);
 	
 	chkAspect->setSelected(changed_prefs.gfx_correct_aspect);
-#ifdef USE_DISPMANX
-	chkAspect->setEnabled(true);
-#else
-	chkAspect->setEnabled(false);
-#endif
 	chkFilterLowRes->setSelected(changed_prefs.gfx_lores_mode);
 
 	if (changed_prefs.gfx_apmode[0].gfx_fullscreen == GFX_WINDOW)
