@@ -6,12 +6,12 @@
 trigger:
 - master
 
-pool: Default
+pool: RPI-64
 
 jobs:
 - job: Build
   strategy:
-   matrix:
+    matrix:
       SDL2:
         platform: 'pi64'
       DMX:
@@ -20,4 +20,3 @@ jobs:
   steps:
   - script: make -j4 PLATFORM=$(platform)
     displayName: 'Compile $(platform) target'
-
