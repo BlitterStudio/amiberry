@@ -1,0 +1,16 @@
+# RPI4, Dispmanx, 32-bit
+steps:
+  - checkout: self
+    submodules: true
+  - script: make -j4 PLATFORM=rpi4
+    displayName: 'Compile for RPI4 (Dispmanx) 32-bit'
+  
+  - task: CopyFiles@2
+    inputs:
+     Contents: amiberry
+     TargetFolder: $(Build.ArtifactStagingDirectory)
+  
+  - task: PublishBuildArtifacts@1
+    inputs:
+     PathtoPublish: $(Build.ArtifactStagingDirectory)
+     ArtifactName: rpi4_dmx_release

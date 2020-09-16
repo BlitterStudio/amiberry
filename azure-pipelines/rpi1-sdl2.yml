@@ -1,0 +1,16 @@
+# RPI1, SDL2, 32-bit
+steps:
+  - checkout: self
+    submodules: true
+  - script: make -j4 PLATFORM=rpi1-sdl2
+    displayName: 'Compile for RPI1 (SDL2) 32-bit'
+  
+  - task: CopyFiles@2
+    inputs:
+     Contents: amiberry
+     TargetFolder: $(Build.ArtifactStagingDirectory)
+  
+  - task: PublishBuildArtifacts@1
+    inputs:
+     PathtoPublish: $(Build.ArtifactStagingDirectory)
+     ArtifactName: rpi1_sdl2_release
