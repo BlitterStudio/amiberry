@@ -28,7 +28,7 @@ jobs:
         platform: 'rpi1'
       RPI1-SDL2:
         platform: 'rpi1-sdl2'
-		
+
   steps:
   - script: make -j4 PLATFORM=$(platform)
     displayName: 'Compile $(platform) target'
