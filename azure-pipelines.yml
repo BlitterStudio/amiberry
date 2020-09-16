@@ -8,11 +8,16 @@ trigger:
 
 pool: Default
 
-steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
+jobs:
+- job: Build
+  strategy:
+   matrix:
+      SDL2:
+        platform: 'pi64'
+      DMX:
+        platform: 'pi64-dispmanx'
 
-- script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+  steps:
+  - script: make -j4 PLATFORM=$(platform)
+    displayName: 'Compile $(platform) target'
+
