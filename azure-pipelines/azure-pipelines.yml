@@ -4,7 +4,7 @@ jobs:
     matrix:
       rpi4-dmx:
         platform: 'rpi4'
-  pool: RPI-32
+  pool: RPI-32-dmx
   steps:
     - template: rpi4.yml
 
@@ -13,7 +13,7 @@ jobs:
     matrix:
       rpi3-dmx:
         platform: 'rpi3'
-  pool: RPI-32
+  pool: RPI-32-dmx
   steps:
     - template: rpi3.yml
 
@@ -22,7 +22,7 @@ jobs:
     matrix:
       rpi2-dmx:
         platform: 'rpi2'
-  pool: RPI-32
+  pool: RPI-32-dmx
   steps:
     - template: rpi2.yml
 
@@ -31,7 +31,7 @@ jobs:
     matrix:
       rpi1-dmx:
         platform: 'rpi1'
-  pool: RPI-32
+  pool: RPI-32-dmx
   steps:
     - template: rpi1.yml
 
