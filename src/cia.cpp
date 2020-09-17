@@ -1119,6 +1119,9 @@ static uae_u8 ReadCIAA (unsigned int addr, uae_u32 *flags)
 			else
 				return getciatod(ciaatod) >> 24;
 		}
+		else {
+			return 0xff;
+		}
 		break;
 	case 12:
 #if KB_DEBUG
@@ -1233,6 +1236,9 @@ static uae_u8 ReadCIAB (unsigned int addr, uae_u32 *flags)
 				return getciatod(ciabtol) >> 24;
 			else
 				return getciatod(ciabtod) >> 24;
+		}
+		else {
+			return 0xff;
 		}
 		break;
 	case 12:
@@ -1597,7 +1603,7 @@ void CIA_reset (void)
 		ciaapra = 0; ciaadra = 0;
 		ciaatod = ciabtod = 0; ciaatodon = ciabtodon = 0;
 		ciaaicr = ciabicr = ciaaimask = ciabimask = 0;
-		ciaacra = ciaacrb = ciabcra = ciabcrb = 0x4; /* outmode = toggle; */
+		ciaacra = ciaacrb = ciabcra = ciabcrb = 0;
 		ciaala = ciaalb = ciabla = ciablb = ciaata = ciaatb = ciabta = ciabtb = 0xFFFF;
 		ciaaalarm = ciabalarm = 0;
 		ciabpra = 0x8C; ciabdra = 0;

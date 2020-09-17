@@ -31,6 +31,8 @@
 #include "uae.h"
 #include "memory.h"
 #include "custom.h"
+#include "events.h"
+#include "newcpu.h"
 #include "filesys.h"
 #include "autoconf.h"
 #include "fsusage.h"
@@ -700,7 +702,7 @@ static void fixcharset (TCHAR *s)
 	if (!s)
 		return;
 	ua_fs_copy (tmp, MAX_DPATH, s, '_');
-	au_fs_copy (s, int(strlen (tmp)) + 1, tmp);
+	au_fs_copy (s, strlen (tmp) + 1, tmp);
 }
 
 TCHAR *validatevolumename (TCHAR *s, const TCHAR *def)
@@ -6447,7 +6449,7 @@ static void action_free_record64(TrapContext *ctx, Unit *unit, dpacket *packet)
 
 /* We don't want multiple interrupts to be active at the same time. I don't
 * know whether AmigaOS takes care of that, but this does. */
-static uae_sem_t singlethread_int_sem = 0;
+static uae_sem_t singlethread_int_sem;
 
 #define SHELLEXEC_MAX_CMD_LEN 512
 
@@ -6810,6 +6812,7 @@ static int filesys_iteration(UnitInfo *ui)
 	/* The message is sent by our interrupt handler, so make sure an interrupt happens. */
 	do_uae_int_requested();
 
+	trap_background_set_complete(ctx);
 	return 1;
 }
 
@@ -8637,7 +8640,7 @@ void filesys_vsync (void)
 		return;
 
 	if (heartbeat_task & 1) {
-		setsystime_vblank();
+		setsystime_vblank ();
 		heartbeat_task &= ~1;
 	}
 }
