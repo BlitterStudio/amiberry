@@ -3,6 +3,7 @@ steps:
   - checkout: self
     submodules: true
   - script: |
+      make clean
       cd external/capsimg
       ./bootstrap.fs
       ./configure.fs
