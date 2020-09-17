@@ -1,5 +1,7 @@
 # Amiga emulator for ARM boards
 
+[![Build Status](https://dev.azure.com/BlitterStudio/Amiberry/_apis/build/status/azure-pipelines/amiberry?branchName=master)](https://dev.azure.com/BlitterStudio/Amiberry/_build/latest?definitionId=4&branchName=master)
+
 [![Gitter](https://badges.gitter.im/amiberry/Amiberry.svg)](https://gitter.im/amiberry/Amiberry?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 [![Backers on Open Collective](https://opencollective.com/amiberry/backers/badge.svg)](#backers) [![Sponsors on Open Collective](https://opencollective.com/amiberry/sponsors/badge.svg)](#sponsors)
