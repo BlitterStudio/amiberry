@@ -17,12 +17,12 @@ steps:
      Contents: |
         amiberry
         capsimg.so
-        **/conf/**
-        **/data/**
-        **/kickstarts/**
-        **/savestates/**
-        **/screenshots/**
-        **/whdboot/**
+        conf/**
+        data/**
+        kickstarts/**
+        savestates/**
+        screenshots/**
+        whdboot/**
      TargetFolder: $(Build.ArtifactStagingDirectory)
   
   - task: PublishBuildArtifacts@1
