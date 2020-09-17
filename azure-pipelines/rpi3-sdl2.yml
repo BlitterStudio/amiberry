@@ -11,6 +11,7 @@ steps:
       cp capsimg.so $(Build.SourcesDirectory)
       cd $(Build.SourcesDirectory)
       make -j4 PLATFORM=rpi3-sdl2
+      mkdir amiberry-rpi3-sdl2-32bit
     displayName: 'Compile for RPI3 (SDL2) 32-bit'
   
   - task: CopyFiles@2
@@ -24,8 +25,15 @@ steps:
         savestates/**
         screenshots/**
         whdboot/**
-     TargetFolder: $(Build.ArtifactStagingDirectory)
-  
+     TargetFolder: amiberry-rpi3-sdl2-32bit
+
+  - task: ArchiveFiles@2
+    displayName: 'Archive rpi3_sdl2_release'
+    inputs:
+      rootFolderOrFile: 'amiberry-rpi3-sdl2-32bit'
+      includeRootFolder: true
+      archiveFile: '$(Build.ArtifactStagingDirectory)/amiberry-$(AmiberryVersion)-rpi3-sdl2-32bit.zip'
+      
   - task: PublishBuildArtifacts@1
     inputs:
      PathtoPublish: $(Build.ArtifactStagingDirectory)
