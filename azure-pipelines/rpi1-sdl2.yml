@@ -1,0 +1,31 @@
+# RPI1, SDL2, 32-bit
+steps:
+  - checkout: self
+    submodules: true
+  - script: |
+      cd external/capsimg
+      ./bootstrap.fs
+      ./configure.fs
+      make -f Makefile.fs
+      cp capsimg.so $(Build.SourcesDirectory)
+      cd $(Build.SourcesDirectory)
+      make -j4 PLATFORM=rpi1-sdl2
+    displayName: 'Compile for RPI1 (SDL2) 32-bit'
+  
+  - task: CopyFiles@2
+    inputs:
+     Contents: |
+        amiberry
+        capsimg.so
+        conf/**
+        data/**
+        kickstarts/**
+        savestates/**
+        screenshots/**
+        whdboot/**
+     TargetFolder: $(Build.ArtifactStagingDirectory)
+  
+  - task: PublishBuildArtifacts@1
+    inputs:
+     PathtoPublish: $(Build.ArtifactStagingDirectory)
+     ArtifactName: rpi1_sdl2_release

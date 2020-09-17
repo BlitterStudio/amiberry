@@ -1,0 +1,81 @@
+jobs:
+- job: RPI4_dmx_32bit
+  strategy:
+    matrix:
+      rpi4-dmx:
+        platform: 'rpi4'
+  pool: RPI-32
+  steps:
+    - template: rpi4.yml
+
+- job: RPI3_dmx_32bit
+  strategy:
+    matrix:
+      rpi3-dmx:
+        platform: 'rpi3'
+  pool: RPI-32
+  steps:
+    - template: rpi3.yml
+
+- job: RPI2_dmx_32bit
+  strategy:
+    matrix:
+      rpi2-dmx:
+        platform: 'rpi2'
+  pool: RPI-32
+  steps:
+    - template: rpi2.yml
+
+- job: RPI1_dmx_32bit
+  strategy:
+    matrix:
+      rpi1-dmx:
+        platform: 'rpi1'
+  pool: RPI-32
+  steps:
+    - template: rpi1.yml
+
+- job: RPI4_sdl2_32bit
+  strategy:
+    matrix:
+      rpi4-sdl2:
+        platform: 'rpi4-sdl2'
+  pool: RPI-32
+  steps:
+    - template: rpi4-sdl2.yml
+
+- job: RPI3_sdl2_32bit
+  strategy:
+    matrix:
+      rpi3-sdl2:
+        platform: 'rpi3-sdl2'
+  pool: RPI-32
+  steps:
+    - template: rpi3-sdl2.yml
+
+- job: RPI2_sdl2_32bit
+  strategy:
+    matrix:
+      rpi2-sdl2:
+        platform: 'rpi2-sdl2'
+  pool: RPI-32
+  steps:
+    - template: rpi2-sdl2.yml
+
+- job: RPI1_sdl2_32bit
+  strategy:
+    matrix:
+      rpi1-sdl2:
+        platform: 'rpi1-sdl2'
+  pool: RPI-32
+  steps:
+    - template: rpi1-sdl2.yml
+
+- job: RPI4_64bit
+  strategy:
+    matrix:
+      rpi4-sdl2-64bit:
+        platform: 'pi64'
+  pool: RPI-64
+  steps:
+    - template: pi64.yml
