@@ -1,3 +1,9 @@
+# Trigger on new tags.
+trigger:
+  tags:
+    include:
+    - '*'
+
 jobs:
 - job: RPI4_dmx_32bit
   strategy:
