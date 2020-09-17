@@ -29,7 +29,7 @@ steps:
         savestates/**
         screenshots/**
         whdboot/**
-     TargetFolder: mkdir amiberry-rpi4-sdl2-32bit
+     TargetFolder: amiberry-rpi4-sdl2-32bit
 
   - task: ArchiveFiles@2
     displayName: 'Archive rpi4_sdl2_release'
