@@ -2315,11 +2315,10 @@ static void clear_bitplane_border_aga (void)
 
 static void weird_bitplane_fix (int start, int end)
 {
-	int sh = lores_shift;
 	uae_u8 *p = pixdata.apixels + pixels_offset;
 
-	start >>= sh;
-	end >>= sh;
+	start = res_shift_from_window(start);
+	end = res_shift_from_window(end);
 	if (!bpldualpf) {
 		// HAM is unaffected (probably because plane 5 is HAM control bit)
 		if (bplham)
