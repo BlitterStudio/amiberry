@@ -1144,7 +1144,7 @@ addvolumenode
 	tst.b 32+64(a3)
 	beq.s .end ;empty volume string = empty drive
 	move.l 160(a3),a6
-	cmp.w #37, 20(a6)
+	cmp.w #37,20(a6)
 	bcs.s .prev37
 	moveq #(1<<1)+(1<<3)+(1<<2),d1 ;LDF_WRITE | LDF_VOLUMES | LDF_DEVICES
 	jsr -$29A(a6) ;AttemptLockDosList
@@ -1896,11 +1896,11 @@ FSML_loop:
 	beq.s nonnotif
 
 	; notify reply?
-	cmp.l #NOTIFY_CLASS, 20(a4)
+	cmp.l #NOTIFY_CLASS,20(a4)
 	bne.s nonnotif
-	cmp.w #NOTIFY_CODE, 24(a4)
+	cmp.w #NOTIFY_CODE,24(a4)
 	bne.s nonnotif
-	cmp.w #38, 18(a4)
+	cmp.w #38,18(a4)
 	bne.s nonnotif
 	move.l 26(a4),a0 ; NotifyRequest
 	move.l 12(a0),d0 ; flags
