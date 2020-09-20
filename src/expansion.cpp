@@ -4806,72 +4806,72 @@ static struct expansionboardsettings *netsettings[] = {
 	NULL
 };
 
-struct netdriverdata **target_ethernet_enumerate(void);
+//struct netdriverdata **target_ethernet_enumerate(void);
 
-uae_u32 ethernet_getselection(const TCHAR *name)
-{
-	struct netdriverdata **ndd = target_ethernet_enumerate();
-	if (!ndd)
-		return 0;
-	for (int i = 0; ndd && i < MAX_TOTAL_NET_DEVICES; i++) {
-		if (ndd[i] && !_tcsicmp(ndd[i]->name, name))
-			return i << 16;
-	}
-	return 0;
-}
+//uae_u32 ethernet_getselection(const TCHAR *name)
+//{
+//	struct netdriverdata **ndd = target_ethernet_enumerate();
+//	if (!ndd)
+//		return 0;
+//	for (int i = 0; ndd && i < MAX_TOTAL_NET_DEVICES; i++) {
+//		if (ndd[i] && !_tcsicmp(ndd[i]->name, name))
+//			return i << 16;
+//	}
+//	return 0;
+//}
 
-const TCHAR *ethernet_getselectionname(uae_u32 settings)
-{
-	struct netdriverdata **ndd = target_ethernet_enumerate();
-	if (!ndd)
-		return 0;
-	settings = (settings >> 16) & 255;
-	for (int i = 0; ndd && i < MAX_TOTAL_NET_DEVICES; i++) {
-		if (i == settings)
-			return ndd[i]->name;
-	}
-	return _T("slirp");
-}
+//const TCHAR *ethernet_getselectionname(uae_u32 settings)
+//{
+//	struct netdriverdata **ndd = target_ethernet_enumerate();
+//	if (!ndd)
+//		return 0;
+//	settings = (settings >> 16) & 255;
+//	for (int i = 0; ndd && i < MAX_TOTAL_NET_DEVICES; i++) {
+//		if (i == settings)
+//			return ndd[i]->name;
+//	}
+//	return _T("slirp");
+//}
 
-void ethernet_updateselection(void)
-{
-	static int updated;
-	if (updated)
-		return;
-	updated = 1;
-	struct netdriverdata **ndd = target_ethernet_enumerate();
-	if (!ndd)
-		return;
-	static TCHAR tmp1[MAX_DPATH];
-	static TCHAR tmp2[MAX_DPATH];
-	_tcscpy(tmp1, _T("Network mode"));
-	_tcscpy(tmp2, _T("netmode"));
-	TCHAR *p1 = tmp1 + _tcslen(tmp1) + 1;
-	TCHAR *p2 = tmp2 + _tcslen(tmp2) + 1;
-	for (int i = 0; ndd && i < MAX_TOTAL_NET_DEVICES; i++) {
-		if (ndd[i]) {
-			TCHAR mac[20];
-			mac[0] = 0;
-			if (ndd[i]->type == UAENET_SLIRP || ndd[i]->type == UAENET_SLIRP_INBOUND) {
-				_stprintf(mac, _T(" xx:xx:xx:%02X:%02X:%02X"),
-					ndd[i]->mac[3], ndd[i]->mac[4], ndd[i]->mac[5]);
-			}
-			_stprintf(p1, _T("%s%s"), ndd[i]->desc, mac[0] ? mac : _T(""));
-			p1 += _tcslen(p1) + 1;
-			_tcscpy(p2, ndd[i]->name);
-			p2 += _tcslen(p2) + 1;
-		}
-	}
-	*p1 = 0;
-	*p2 = 0;
-	for (int i = 0; netsettings[i]; i++) {
-		struct expansionboardsettings *ebs = netsettings[i];
-		int j;
-		for (j = 0; ebs[j].name; j++);
-		ebs[j].name = tmp1;
-		ebs[j].configname = tmp2;
-	}
-}
+//void ethernet_updateselection(void)
+//{
+//	static int updated;
+//	if (updated)
+//		return;
+//	updated = 1;
+//	struct netdriverdata **ndd = target_ethernet_enumerate();
+//	if (!ndd)
+//		return;
+//	static TCHAR tmp1[MAX_DPATH];
+//	static TCHAR tmp2[MAX_DPATH];
+//	_tcscpy(tmp1, _T("Network mode"));
+//	_tcscpy(tmp2, _T("netmode"));
+//	TCHAR *p1 = tmp1 + _tcslen(tmp1) + 1;
+//	TCHAR *p2 = tmp2 + _tcslen(tmp2) + 1;
+//	for (int i = 0; ndd && i < MAX_TOTAL_NET_DEVICES; i++) {
+//		if (ndd[i]) {
+//			TCHAR mac[20];
+//			mac[0] = 0;
+//			if (ndd[i]->type == UAENET_SLIRP || ndd[i]->type == UAENET_SLIRP_INBOUND) {
+//				_stprintf(mac, _T(" xx:xx:xx:%02X:%02X:%02X"),
+//					ndd[i]->mac[3], ndd[i]->mac[4], ndd[i]->mac[5]);
+//			}
+//			_stprintf(p1, _T("%s%s"), ndd[i]->desc, mac[0] ? mac : _T(""));
+//			p1 += _tcslen(p1) + 1;
+//			_tcscpy(p2, ndd[i]->name);
+//			p2 += _tcslen(p2) + 1;
+//		}
+//	}
+//	*p1 = 0;
+//	*p2 = 0;
+//	for (int i = 0; netsettings[i]; i++) {
+//		struct expansionboardsettings *ebs = netsettings[i];
+//		int j;
+//		for (j = 0; ebs[j].name; j++);
+//		ebs[j].name = tmp1;
+//		ebs[j].configname = tmp2;
+//	}
+//}
 
 static void fastlane_memory_callback(struct romconfig *rc, uae_u8 *ac, int size)
 {
