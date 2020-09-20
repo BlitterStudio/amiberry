@@ -105,19 +105,19 @@ int fsdb_set_file_attrs (a_inode *aino)
   mode = statbuf.st_mode;
 
 	if (mask & A_FIBF_READ)
-    mode &= ~S_IRUSR;
+	    mode &= ~S_IRUSR;
 	else
-    mode |= S_IRUSR;
+	    mode |= S_IRUSR;
 
 	if (mask & A_FIBF_WRITE)
-    mode &= ~S_IWUSR;
+	    mode &= ~S_IWUSR;
 	else
-    mode |= S_IWUSR;
+	    mode |= S_IWUSR;
 
 	if (mask & A_FIBF_EXECUTE)
-    mode &= ~S_IXUSR;
+	    mode &= ~S_IXUSR;
 	else
-    mode |= S_IXUSR;
+	    mode |= S_IXUSR;
 
 	chmod (aino->nname, mode);
 
@@ -171,11 +171,12 @@ TCHAR *fsdb_create_unique_nname (a_inode *base, const TCHAR *suggestion)
   	    write_log (_T("unique name: %s\n"), p);
   	    return p;
   	}
-  	xfree (p);
-	  /* tmpnam isn't reentrant and I don't really want to hack configure
-	   * right now to see whether tmpnam_r is available...  */
-	  for (i = 0; i < 8; i++) {
-      tmp[i+8] = "_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[uaerand () % 63];
-	  }
-  }
+	xfree (p);
+
+	/* tmpnam isn't reentrant and I don't really want to hack configure
+	 * right now to see whether tmpnam_r is available...  */
+	for (i = 0; i < 8; i++) {
+		tmp[i+8] = "_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[uaerand () % 63];
+	}
+    }
 }

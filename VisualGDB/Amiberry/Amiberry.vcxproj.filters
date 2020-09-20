@@ -71,9 +71,6 @@
     <None Include="Amiberry-Release.vgdbsettings">
       <Filter>VisualGDB settings</Filter>
     </None>
-    <None Include="..\..\src\filesys.asm">
-      <Filter>Source files</Filter>
-    </None>
     <None Include="..\..\src\inputevents.def">
       <Filter>Source files</Filter>
     </None>
@@ -103,9 +100,6 @@
     </None>
     <None Include="Amiberry-Release-dispmanx.vgdbsettings">
       <Filter>VisualGDB settings</Filter>
-    </None>
-    <None Include="..\..\src\filesys_bootrom.cpp.in">
-      <Filter>Source files</Filter>
     </None>
     <None Include="..\..\src\fpp_native.cpp.in">
       <Filter>Source files</Filter>
@@ -1100,6 +1094,15 @@
     </ClInclude>
     <ClInclude Include="..\..\src\jit\aarch64.h">
       <Filter>Source files\jit</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\cpuboard.h">
+      <Filter>Source files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\sana2.h">
+      <Filter>Source files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\ethernet.h">
+      <Filter>Source files\include</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -1,3 +1,323 @@
+#if 0
+
+/*****************************************************************************
+ Name    : GetKeyMapData.c
+ Project : RetroPlatform Player
+ Support : http://www.retroplatform.com
+ Legal   : Copyright 2016 Cloanto Italia srl - All rights reserved. This
+         : file is multi-licensed under the terms of the Mozilla Public License
+         : version 2.0 as published by Mozilla Corporation and the GNU General
+         : Public License, version 2 or later, as published by the Free
+         : Software Foundation.
+ Authors : os
+ Created : 2016-07-12 09:58:12
+ Comment : this guest-side Amiga code allocates and initializes a keymap data buffer
+           which can be used in RP_IPC_TO_HOST_KEYBOARDLAYOUT notifications
+ *****************************************************************************/
+
+#include <exec/types.h>
+#include <exec/memory.h>
+#include <exec/io.h>
+#include <dos/dos.h>
+#include <devices/inputevent.h>
+#include <devices/console.h>
+#include <devices/keymap.h>
+#include <clib/exec_protos.h>
+#include <clib/dos_protos.h>
+#include <stdlib.h>
+#include <string.h>
+
+struct KeyStringData
+{
+	UBYTE nLength;
+	UBYTE nOffset;
+};
+
+struct KeyDeadData
+{
+	UBYTE nType;
+	UBYTE nValue;
+};
+
+struct KeyMapData
+{
+	int nHighestDeadKeyIndex;
+	int nHighestDoubleDeadKeyIndex;
+	int nDoubleDeadOffset;
+	int nDeadableKeyCount;
+	int nDeadableKeyDataCount;
+	ULONG nSize;
+	void *pData;
+	ULONG nDataPos;
+};
+
+struct KeyMapDataHeader
+{
+	UBYTE nVersion;
+	UBYTE nDeadableKeyDataCount;
+};
+#define KDH_VERSION 1 // current version
+
+
+
+/*****************************************************************************
+ Name      : GetQualifierCount
+ Arguments : UBYTE type - 
+ Return    : int        - 
+ Comment   : 
+ *****************************************************************************/
+
+static int GetQualifierCount(UBYTE type)
+{
+	int nCount = 0;
+	if (type & KCF_SHIFT)
+		nCount += 1;
+	if (type & KCF_ALT)
+		nCount += 1;
+	if (type & KCF_CONTROL)
+		nCount += 1;
+	return nCount;
+}
+
+/*****************************************************************************
+ Name      : ExcludeKey
+ Arguments : int nKey - 
+ Return    : int      - 
+ Comment   : 
+ *****************************************************************************/
+
+static int ExcludeKey(int nKey)
+{
+	return (nKey > 0x40 &&
+		   nKey != 0x4A && // numapd -
+		   nKey != 0x5A && // numapd {
+		   nKey != 0x5B && // numpad }
+		   nKey != 0x5C && // numpad /
+		   nKey != 0x5D && // numpad *
+		   nKey != 0x5E)   // numpad +
+		   ? 1 : 0;
+}
+
+/*****************************************************************************
+ Name      : GetKeyMapDataInfo
+ Arguments : struct KeyMapData *pKeyMapData - 
+           : const UBYTE *pKeyMapTypes      - 
+           : const ULONG *pKeyMap           - 
+           : int nFirstKey                  - 
+ Return    : void
+ Comment   : 
+ *****************************************************************************/
+
+static void GetKeyMapDataInfo(struct KeyMapData *pKeyMapData, const UBYTE *pKeyMapTypes, const ULONG *pKeyMap, int nFirstKey)
+{
+	const struct KeyStringData *pStringData;
+	const struct KeyDeadData *pDeadData;
+	int nLastKey, nCount, nIndex, nKey, i;
+
+	nLastKey = nFirstKey + 0x3F;
+	for (nKey = nFirstKey; nKey <= nLastKey; nKey++, pKeyMapTypes++, pKeyMap++)
+	{
+		if (ExcludeKey(nKey))
+			continue;
+		switch (*pKeyMapTypes & ~KC_VANILLA)
+		{
+			case KCF_STRING:
+				nCount = 1 << GetQualifierCount(*pKeyMapTypes);
+				pKeyMapData->nSize += nCount * sizeof(struct KeyStringData);
+				pStringData = (const struct KeyStringData *)(*pKeyMap);
+				for (i = 0; i < nCount; i++, pStringData++)
+					pKeyMapData->nSize += (ULONG)pStringData->nLength;
+				break;
+			case KCF_DEAD:
+				nCount = 1 << GetQualifierCount(*pKeyMapTypes);
+				pKeyMapData->nSize += nCount * sizeof(struct KeyDeadData);
+				pDeadData = (const struct KeyDeadData *)(*pKeyMap);
+				for (i = 0; i < nCount; i++, pDeadData++)
+				{
+					if (pDeadData->nType == DPF_DEAD)
+					{
+						nIndex = (int)((pDeadData->nValue >> DP_2DFACSHIFT) & DP_2DINDEXMASK);
+						if (nIndex)
+						{
+							pKeyMapData->nDoubleDeadOffset = nIndex;
+							nIndex = (int)(pDeadData->nValue & DP_2DINDEXMASK);
+							if (nIndex > pKeyMapData->nHighestDoubleDeadKeyIndex)
+								pKeyMapData->nHighestDoubleDeadKeyIndex = nIndex;
+						}
+						else
+						{
+							nIndex = (int)(pDeadData->nValue & DP_2DINDEXMASK);
+							if (nIndex > pKeyMapData->nHighestDeadKeyIndex)
+								pKeyMapData->nHighestDeadKeyIndex = nIndex;
+						}
+					}
+					else if (pDeadData->nType == DPF_MOD)
+						pKeyMapData->nDeadableKeyCount += 1;
+				}
+				break;
+		}
+	}
+}
+
+/*****************************************************************************
+ Name      : AddKeyMapData
+ Arguments : struct KeyMapData *pKeyMapData - 
+           : const void *pData              - 
+           : ULONG nSize                    - 
+ Return    : void *                         - 
+ Comment   : 
+ *****************************************************************************/
+
+static void *AddKeyMapData(struct KeyMapData *pKeyMapData, const void *pData, ULONG nSize)
+{
+	void *pCopiedData;
+	pCopiedData = pKeyMapData->pData;
+	memcpy(pKeyMapData->pData, pData, nSize);
+	pKeyMapData->pData = (UBYTE *)pKeyMapData->pData + nSize;
+	pKeyMapData->nDataPos += nSize;
+	return pCopiedData;
+}
+
+/*****************************************************************************
+ Name      : CopyKeyMapData
+ Arguments : struct KeyMapData *pKeyMapData - 
+           : const UBYTE *pKeyMapTypes      - 
+           : UBYTE *pKeyMapTypesDest        - 
+           : const ULONG *pKeyMap           - 
+           : ULONG *pKeyMapDest             - 
+           : int nFirstKey                  - 
+ Return    : void
+ Comment   : 
+ *****************************************************************************/
+
+static void CopyKeyMapData(struct KeyMapData *pKeyMapData, const UBYTE *pKeyMapTypes, UBYTE *pKeyMapTypesDest, const ULONG *pKeyMap, ULONG *pKeyMapDest, int nFirstKey)
+{
+	const struct KeyStringData *pStringData;
+	const struct KeyDeadData *pDeadData;
+	struct KeyStringData *pStringDataDest;
+	struct KeyDeadData *pDeadDataDest;
+	int nLastKey, nCount, nKey, i;
+	UBYTE nByteOffset, tp;
+
+	nLastKey = nFirstKey + 0x3F;
+	for (nKey = nFirstKey; nKey <= nLastKey; nKey++, pKeyMapTypes++, pKeyMapTypesDest++, pKeyMap++, pKeyMapDest++)
+	{
+		tp = ExcludeKey(nKey) ? KCF_NOP : *pKeyMapTypes;
+		switch (tp & ~KC_VANILLA)
+		{
+			case KCF_STRING:
+				nCount = 1 << GetQualifierCount(*pKeyMapTypes);
+				pStringData = (const struct KeyStringData *)(*pKeyMap);
+				*pKeyMapDest = pKeyMapData->nDataPos;
+				pStringDataDest = AddKeyMapData(pKeyMapData, pStringData, nCount * sizeof(struct KeyStringData));
+				nByteOffset = (UBYTE)(nCount * sizeof(struct KeyStringData));
+
+				for (i = 0; i < nCount; i++, pStringData++, pStringDataDest++)
+				{
+					pStringDataDest->nLength = pStringData->nLength;
+					pStringDataDest->nOffset = nByteOffset;
+					AddKeyMapData(pKeyMapData, (UBYTE *)*pKeyMap + pStringData->nOffset, pStringData->nLength);
+					nByteOffset += pStringData->nLength;
+				}
+				break;
+			case KCF_DEAD:
+				nCount = 1 << GetQualifierCount(*pKeyMapTypes);
+				pDeadData = (const struct KeyDeadData *)(*pKeyMap);
+				*pKeyMapDest = pKeyMapData->nDataPos;
+				pDeadDataDest = AddKeyMapData(pKeyMapData, pDeadData, nCount * sizeof(struct KeyDeadData));
+				nByteOffset = (UBYTE)(nCount * sizeof(struct KeyDeadData));
+
+				for (i = 0; i < nCount; i++, pDeadData++, pDeadDataDest++)
+				{
+					pDeadDataDest->nType = pDeadData->nType;
+					if (pDeadData->nType == DPF_MOD)
+					{
+						pDeadDataDest->nValue = nByteOffset;
+						AddKeyMapData(pKeyMapData, (UBYTE *)(*pKeyMap) + pDeadData->nValue, pKeyMapData->nDeadableKeyDataCount);
+						nByteOffset += (UBYTE)pKeyMapData->nDeadableKeyDataCount;
+					}
+					else pDeadDataDest->nValue = pDeadData->nValue;
+				}
+				break;
+			default:
+				*pKeyMapTypesDest = KCF_NOP;
+				break;
+		}
+	}
+}
+
+/*****************************************************************************
+ Name      : GetKeyMapData
+ Arguments : const struct KeyMap *pKeyMap - 
+           : ULONG *pnSize                - 
+ Return    : void *                       - use FreeMem() to free the returned data
+ Comment   : 
+ *****************************************************************************/
+
+void *GetKeyMapData(const struct KeyMap *pKeyMap, ULONG *pnSize)
+{
+	struct KeyMapData kd;
+	struct KeyMapDataHeader kdh;
+	ULONG *pLoKeyMap, *pHiKeyMap;
+	UBYTE *pLoKeyMapTypes, *pHiKeyMapTypes;
+	void *pData;
+
+	if (!pKeyMap || !pnSize)
+		return NULL;
+
+	if (pKeyMap->km_LoKeyMapTypes == NULL ||
+		pKeyMap->km_HiKeyMapTypes == NULL ||
+		pKeyMap->km_LoKeyMap == NULL ||
+		pKeyMap->km_HiKeyMap == NULL ||
+		pKeyMap->km_LoCapsable == NULL ||
+		pKeyMap->km_HiCapsable == NULL ||
+		pKeyMap->km_LoRepeatable == NULL ||
+		pKeyMap->km_HiRepeatable == NULL)
+		return NULL;
+
+	memset(&kd, 0, sizeof(kd));
+	kd.nSize = (sizeof(struct KeyMapDataHeader) +
+		        0x40 + // km_LoKeyMapTypes data size
+	            0x40 + // km_HiKeyMapTypes data size
+	            (0x40 * sizeof(ULONG)) + // km_LoKeyMap data size
+	            (0x40 * sizeof(ULONG)) + // km_HiKeyMap data size
+	            8 + // km_LoCapsable data size
+	            8 + // km_HiCapsable data size
+	            8 + // km_LoRepeatable data size
+	            8); // km_HiRepeatable data size
+
+	GetKeyMapDataInfo(&kd, pKeyMap->km_LoKeyMapTypes, pKeyMap->km_LoKeyMap, 0);
+	GetKeyMapDataInfo(&kd, pKeyMap->km_HiKeyMapTypes, pKeyMap->km_HiKeyMap, 0x40);
+
+	if (kd.nDeadableKeyCount)
+	{
+		kd.nDeadableKeyDataCount = kd.nDoubleDeadOffset ? ((1 + kd.nHighestDoubleDeadKeyIndex) * kd.nDoubleDeadOffset) : (1 + kd.nHighestDeadKeyIndex);
+		kd.nSize += kd.nDeadableKeyCount * kd.nDeadableKeyDataCount;
+	}
+	pData = AllocMem(kd.nSize, MEMF_ANY);
+	if (pData)
+	{
+		kd.pData = pData;
+		kdh.nVersion = KDH_VERSION;
+		kdh.nDeadableKeyDataCount = kd.nDeadableKeyDataCount;
+		AddKeyMapData(&kd, &kdh, sizeof(struct KeyMapDataHeader));
+		pLoKeyMapTypes = AddKeyMapData(&kd, pKeyMap->km_LoKeyMapTypes, 0x40);
+		pHiKeyMapTypes = AddKeyMapData(&kd, pKeyMap->km_HiKeyMapTypes, 0x40);
+		pLoKeyMap = AddKeyMapData(&kd, pKeyMap->km_LoKeyMap, (0x40 * sizeof(ULONG)));
+		pHiKeyMap = AddKeyMapData(&kd, pKeyMap->km_HiKeyMap, (0x40 * sizeof(ULONG)));
+		AddKeyMapData(&kd, pKeyMap->km_LoCapsable, 8);
+		AddKeyMapData(&kd, pKeyMap->km_HiCapsable, 8);
+		AddKeyMapData(&kd, pKeyMap->km_LoRepeatable, 8);
+		AddKeyMapData(&kd, pKeyMap->km_HiRepeatable, 8);
+		CopyKeyMapData(&kd, pKeyMap->km_LoKeyMapTypes, pLoKeyMapTypes, pKeyMap->km_LoKeyMap, pLoKeyMap, 0);
+		CopyKeyMapData(&kd, pKeyMap->km_HiKeyMapTypes, pHiKeyMapTypes, pKeyMap->km_HiKeyMap, pHiKeyMap, 0x40);
+		*pnSize = kd.nSize;
+	}
+	return pData;
+}
+
+#endif
+
 xAllocMem
 	move.l 8(sp),d1
 	move.l 4(sp),d0
@@ -495,9 +815,20 @@ ___GetKeyMapData__17:
 ___GetKeyMapData__18:
               MOVE.L         $2c(A7),D1               ;222f 002c 
               BEQ.B          ___GetKeyMapData__20     ;670e 
+___GetKeyMapData__19:
+              MOVE.L         $28(A7),D2               ;242f 0028 
+              ADDQ.L         #$1,D2                   ;5282 
+              MOVE.L         D2,D0                    ;2002 
+              BSR.W          _CXM33                   ;6100 0000 
+              BRA.B          ___GetKeyMapData__21     ;6006 
 ___GetKeyMapData__20:
               MOVE.L         $24(A7),D0               ;202f 0024 
               ADDQ.L         #$1,D0                   ;5280 
+___GetKeyMapData__21:
+              MOVE.L         D0,$34(A7)               ;2f40 0034 
+              MOVE.L         $30(A7),D1               ;222f 0030 
+              BSR.W          _CXM33                   ;6100 0000 
+              ADD.L          D0,$38(A7)               ;d1af 0038 
 ___GetKeyMapData__22:
               CLR.L          -(A7)                    ;42a7 
               MOVE.L         $3c(A7),-(A7)            ;2f2f 003c 

@@ -6,18 +6,22 @@
 * (c) 2006 - 2015 Toni Wilen
 */
 
+#define IDE_LOG 0
+
+#include "sysconfig.h"
 #include "sysdeps.h"
 
 #include "options.h"
+#include "blkdev.h"
 #include "filesys.h"
 #include "gui.h"
 #include "uae.h"
+#include "memory.h"
+#include "newcpu.h"
 #include "threaddep/thread.h"
 #include "savestate.h"
 #include "scsi.h"
 #include "ide.h"
-
-#include "blkdev.h"
 
 /* STATUS bits */
 #define IDE_STATUS_ERR 0x01		// 0
@@ -380,10 +384,10 @@ static bool ide_interrupt_do (struct ide_hdf *ide)
 	return true;
 }
 
-bool ide_drq_check(struct ide_hdf* idep)
+bool ide_drq_check(struct ide_hdf *idep)
 {
 	for (int i = 0; idep && i < 2; i++) {
-		struct ide_hdf* ide = i == 0 ? idep : idep->pair;
+		struct ide_hdf *ide = i == 0 ? idep : idep->pair;
 		if (ide) {
 			if (ide->regs.ide_status & IDE_STATUS_DRQ)
 				return true;
@@ -392,10 +396,10 @@ bool ide_drq_check(struct ide_hdf* idep)
 	return false;
 }
 
-bool ide_irq_check(struct ide_hdf* idep, bool edge_triggered)
+bool ide_irq_check(struct ide_hdf *idep, bool edge_triggered)
 {
 	for (int i = 0; idep && i < 2; i++) {
-		struct ide_hdf* ide = i == 0 ? idep : idep->pair;
+		struct ide_hdf *ide = i == 0 ? idep : idep->pair;
 		if (ide->irq) {
 			if (edge_triggered) {
 				if (ide->irq_new) {
@@ -514,9 +518,9 @@ static void ide_identity_buffer(struct ide_hdf *ide)
 		pw(ide, 22, 4);
 		ps(ide, 23, _T("0.7"), 8); /* firmware revision */
 		if (ide->atapi)
-			_tcscpy(tmp, _T("UAE-ATAPI"));
+			_tcscpy (tmp, _T("UAE-ATAPI"));
 		else
-			_stprintf(tmp, _T("UAE-IDE %s"), ide->hdhfd.hfd.product_id);
+			_stprintf (tmp, _T("UAE-IDE %s"), ide->hdhfd.hfd.product_id);
 		ps(ide, 27, tmp, 40); /* model */
 		pw(ide, 47, ide->max_multiple_mode ? (0x8000 | (ide->max_multiple_mode >> (ide->blocksize / 512 - 1))) : 0); /* max sectors in multiple mode */
 		pw(ide, 48, 1);
@@ -670,12 +674,12 @@ static void ide_set_multiple_mode (struct ide_hdf *ide)
 	if (ide->regs.ide_nsector > (ide->max_multiple_mode >> (ide->blocksize / 512 - 1))) {
 		ide_fail(ide);
 	} else {
-	  ide->multiple_mode = ide->regs.ide_nsector;
+		ide->multiple_mode = ide->regs.ide_nsector;
 	}
-	ide_interrupt (ide);
+	ide_interrupt(ide);
 }
 
-static void ide_set_features(struct ide_hdf* ide)
+static void ide_set_features (struct ide_hdf *ide)
 {
 	if (ide->ata_level < 0) {
 		ide_fail(ide);
@@ -685,25 +689,25 @@ static void ide_set_features(struct ide_hdf* ide)
 	int type = ide->regs.ide_nsector >> 3;
 	int mode = ide->regs.ide_nsector & 7;
 
-	write_log(_T("IDE%d set features %02X (%02X)\n"), ide->num, ide->regs.ide_feat, ide->regs.ide_nsector);
+	write_log (_T("IDE%d set features %02X (%02X)\n"), ide->num, ide->regs.ide_feat, ide->regs.ide_nsector);
 	switch (ide->regs.ide_feat)
 	{
 		// 8-bit mode
-	case 1:
+		case 1:
 		ide->mode_8bit = true;
 		ide_interrupt(ide);
 		break;
-	case 0x81:
+		case 0x81:
 		ide->mode_8bit = false;
 		ide_interrupt(ide);
 		break;
 		// write cache
-	case 2:
-	case 0x82:
+		case 2:
+		case 0x82:
 		ide_interrupt(ide);
 		break;
-	default:
-		ide_fail(ide);
+		default:
+		ide_fail (ide);
 		break;
 	}
 }
@@ -1180,8 +1184,8 @@ static void ide_do_command (struct ide_hdf *ide, uae_u8 cmd)
 			if (ide->ata_level < 0) {
 				ide_fail(ide);
 			} else {
-			  ide_interrupt (ide);
-  		}
+				ide_interrupt(ide);
+			}
 		} else if (cmd == 0xe5) { /* check power mode */
 			ide->regs.ide_nsector = 0xff;
 			ide_interrupt (ide);

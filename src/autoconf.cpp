@@ -10,10 +10,13 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
+#define NEW_TRAP_DEBUG 0
+
 #include "options.h"
 #include "uae.h"
 #include "memory.h"
 #include "custom.h"
+#include "events.h"
 #include "newcpu.h"
 #include "autoconf.h"
 #include "traps.h"
@@ -44,7 +47,7 @@ addrbank rtarea_bank = {
 	rtarea_lget, rtarea_wget, rtarea_bget,
 	rtarea_lput, rtarea_wput, rtarea_bput,
 	rtarea_xlate, rtarea_check, NULL, _T("rtarea"), _T("UAE Boot ROM"),
-	rtarea_wget,
+	rtarea_lget, rtarea_wget,
 	ABFLAG_ROMIN | ABFLAG_PPCIOSPACE, S_READ, S_WRITE
 };
 
@@ -190,6 +193,7 @@ static uae_u32 REGPARAM2 rtarea_bget (uaecptr addr)
 		return v;
 	} else if (addr == RTAREA_INTREQ + 0) {
 		rtarea_bank.baseaddr[addr] = atomic_bit_test_and_reset(&uae_int_requested, 0);
+		//write_log(rtarea_bank.baseaddr[addr] ? _T("+") : _T("-"));
 	} else if (addr == RTAREA_INTREQ + 1) {
 		rtarea_bank.baseaddr[addr] = hwtrap_waiting != 0;
 	} else if (addr == RTAREA_INTREQ + 2) {
@@ -537,15 +541,15 @@ static uae_u32 REGPARAM2 nullfunc (TrapContext *ctx)
 
 static uae_u32 REGPARAM2 getchipmemsize (TrapContext *ctx)
 {
-	//trap_set_dreg(ctx, 1, z3chipmem_bank.allocated_size);
-	//trap_set_areg(ctx, 1, z3chipmem_bank.start);
+	trap_set_dreg(ctx, 1, z3chipmem_bank.allocated_size);
+	trap_set_areg(ctx, 1, z3chipmem_bank.start);
 	return chipmem_bank.allocated_size;
 }
 
 static uae_u32 REGPARAM2 uae_puts (TrapContext *ctx)
 {
 	uae_char buf[MAX_DPATH];
-	trap_get_string(ctx, buf, trap_get_areg(ctx, 0), sizeof(uae_char));
+	trap_get_string(ctx, buf, trap_get_areg(ctx, 0), sizeof (uae_char));
 	TCHAR *s = au(buf);
 	write_log(_T("%s"), s);
 	xfree(s);

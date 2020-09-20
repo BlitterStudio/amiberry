@@ -37,11 +37,17 @@
 #include "savestate.h"
 #include "ar.h"
 #include "akiko.h"
+#include "threaddep/thread.h"
 #include "devices.h"
 #include "rommgr.h"
 
+#define CUSTOM_DEBUG 0
+#define SPRITE_DEBUG 0
+#define SPRITE_DEBUG_MINY 0
+#define SPRITE_DEBUG_MAXY 0x30
 #define SPR0_HPOS 0x15
 #define MAX_SPRITES 8
+#define SPEEDUP 1
 #define AUTOSCALE_SPRITES 1
 #define ALL_SUBPIXEL 1
 
@@ -5374,9 +5380,9 @@ void rethink_uae_int(void)
 			bsdsock_fake_int_handler();
 	}
 	if (irq6)
-		safe_interrupt_set(true);
+		safe_interrupt_set(IRQ_SOURCE_UAE, 0, true);
 	if (irq2)
-		safe_interrupt_set(false);
+		safe_interrupt_set(IRQ_SOURCE_UAE, 0, false);
 }
 
 static void rethink_intreq (void)
@@ -9068,6 +9074,7 @@ int custom_init (void)
 static uae_u32 REGPARAM3 custom_lget (uaecptr) REGPARAM;
 static uae_u32 REGPARAM3 custom_wget (uaecptr) REGPARAM;
 static uae_u32 REGPARAM3 custom_bget (uaecptr) REGPARAM;
+static uae_u32 REGPARAM3 custom_lgeti (uaecptr) REGPARAM;
 static uae_u32 REGPARAM3 custom_wgeti (uaecptr) REGPARAM;
 static void REGPARAM3 custom_lput (uaecptr, uae_u32) REGPARAM;
 static void REGPARAM3 custom_wput (uaecptr, uae_u32) REGPARAM;
@@ -9077,7 +9084,7 @@ addrbank custom_bank = {
 	custom_lget, custom_wget, custom_bget,
 	custom_lput, custom_wput, custom_bput,
 	default_xlate, default_check, NULL, NULL, _T("Custom chipset"),
-	custom_wgeti,
+	custom_lgeti, custom_wgeti,
 	ABFLAG_IO, S_READ, S_WRITE, NULL, 0x1ff, 0xdff000
 };
 
@@ -9086,6 +9093,12 @@ static uae_u32 REGPARAM2 custom_wgeti (uaecptr addr)
 	if (currprefs.cpu_model >= 68020)
 		return dummy_wgeti (addr);
 	return custom_wget (addr);
+}
+static uae_u32 REGPARAM2 custom_lgeti (uaecptr addr)
+{
+	if (currprefs.cpu_model >= 68020)
+		return dummy_lgeti (addr);
+	return custom_lget (addr);
 }
 
 static uae_u32 REGPARAM2 custom_wget_1(int hpos, uaecptr addr, int noput)
@@ -9184,7 +9197,7 @@ writeonly:
 				if (bmdma || (c > CYCLE_REFRESH && c < CYCLE_CPU)) {
 					v = last_custom_value1;
 				} else if (c == CYCLE_CPU) {
-					v = regs.db;
+					v = regs.ird;
 				} else {
 					v = last_custom_value1 >> ((addr & 2) ? 0 : 16);
 				}
@@ -9487,6 +9500,7 @@ static void REGPARAM2 custom_bput (uaecptr addr, uae_u32 value)
 	uae_u16 rval;
 
 	if ((addr & 0xffff) < 0x8000 && currprefs.cs_fatgaryrev >= 0) {
+		dummy_put(addr, 1, value);
 		return;
 	}
 	if (currprefs.chipset_mask & CSMASK_AGA) {
@@ -9512,6 +9526,7 @@ static void REGPARAM2 custom_bput (uaecptr addr, uae_u32 value)
 static void REGPARAM2 custom_lput (uaecptr addr, uae_u32 value)
 {
 	if ((addr & 0xffff) < 0x8000 && currprefs.cs_fatgaryrev >= 0) {
+		dummy_put(addr, 4, value);
 		return;
 	}
 	custom_wput (addr & 0xfffe, value >> 16);

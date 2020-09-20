@@ -9,6 +9,9 @@
 #include "audio.h"
 #include "scsi.h"
 #include "scsidev.h"
+#include "sana2.h"
+#include "clipboard.h"
+#include "statusline.h"
 #ifdef CD32
 #include "cd32_fmv.h"
 #include "akiko.h"
@@ -19,24 +22,24 @@
 #include "blkdev.h"
 #include "autoconf.h"
 #include "newcpu.h"
-#include "savestate.h"
 #include "blitter.h"
 #include "xwin.h"
 #include "custom.h"
 #include "bsdsocket.h"
-#include "clipboard.h"
 #include "uaeresource.h"
 #include "native2amiga.h"
 #include "gensound.h"
 #include "gui.h"
-#include "drawing.h"
+#include "savestate.h"
+#include "uaeexe.h"
 #ifdef DRIVESOUND
 #include "driveclick.h"
 #endif
-#include "statusline.h"
-#include "uaeexe.h"
-#ifdef JIT
-#include "jit/compemu.h"
+#include "drawing.h"
+#include "rommgr.h"
+#include "newcpu.h"
+#ifdef RETROPLATFORM
+#include "rp.h"
 #endif
 
 #define MAX_DEVICE_ITEMS 64

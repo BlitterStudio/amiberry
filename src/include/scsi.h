@@ -244,6 +244,9 @@ void hda506_add_scsi_unit(int ch, struct uaedev_config_info *ci, struct romconfi
 bool alf1_init(struct autoconfig_info *aci);
 void alf1_add_scsi_unit(int ch, struct uaedev_config_info *ci, struct romconfig *rc);
 
+bool alf2_init(struct autoconfig_info *aci);
+void alf2_add_scsi_unit(int ch, struct uaedev_config_info *ci, struct romconfig *rc);
+
 bool promigos_init(struct autoconfig_info *aci);
 void promigos_add_scsi_unit(int ch, struct uaedev_config_info *ci, struct romconfig *rc);
 

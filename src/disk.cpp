@@ -24,6 +24,7 @@ int disk_debug_track = -1;
 #include "uae.h"
 #include "options.h"
 #include "memory.h"
+#include "events.h"
 #include "custom.h"
 #include "disk.h"
 #include "gui.h"
@@ -3434,7 +3435,7 @@ static void disk_doupdate_write(int floppybits, int trackspeed)
 				}
 			}
 		}
-		if (dmaen (DMA_DISK) && dskdmaen == DSKDMA_WRITE && dsklength > 0 && fifo_filled) {
+		if (dmaen(DMA_DISK) && dmaen(DMA_MASTER) && dskdmaen == DSKDMA_WRITE && dsklength > 0 && fifo_filled) {
 			bitoffset++;
 			bitoffset &= 15;
 			if (!bitoffset) {
@@ -3587,7 +3588,7 @@ int disk_fifostatus (void)
 
 static int doreaddma (void)
 {
-	if (dmaen (DMA_DISK) && bitoffset == 15 && dma_enable && dskdmaen == DSKDMA_READ && dsklength >= 0) {
+	if (dmaen(DMA_DISK) && dmaen(DMA_MASTER) && bitoffset == 15 && dma_enable && dskdmaen == DSKDMA_READ && dsklength >= 0) {
 		if (dsklength > 0) {
 			// DSKLEN == 1: finish without DMA transfer.
 			if (dsklength == 1 && dsklength2 == 1) {
@@ -3783,7 +3784,7 @@ uae_u16 DSKBYTR (int hpos)
 			dumpdisk(_T("DSKBYTR SYNC"));
 		}
 	}
-	if (dskdmaen != DSKDMA_OFF && dmaen (DMA_DISK))
+	if (dskdmaen != DSKDMA_OFF && dmaen(DMA_DISK) && dmaen(DMA_MASTER))
 		v |= 0x4000;
 	if (dsklen & 0x4000)
 		v |= 0x2000;

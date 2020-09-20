@@ -4802,8 +4802,8 @@ MEMORY_FUNCTIONS(gfxmem);
 addrbank gfxmem_bank = {
 	gfxmem_lget, gfxmem_wget, gfxmem_bget,
 	gfxmem_lput, gfxmem_wput, gfxmem_bput,
-	gfxmem_xlate, gfxmem_check, nullptr, nullptr, _T("RTG RAM"),
-	dummy_wgeti,
+	gfxmem_xlate, gfxmem_check, NULL, NULL, _T("RTG RAM"),
+	dummy_lgeti, dummy_wgeti,
 	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS, 0, 0
 };
 addrbank* gfxmem_banks[MAX_RTG_BOARDS];

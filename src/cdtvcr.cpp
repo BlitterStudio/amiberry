@@ -253,7 +253,7 @@ static void cdtvcr_4510_reset(uae_u8 v)
 static void rethink_cdtvcr(void)
 {
 	if ((cdtvcr_4510_ram[CDTVCR_INTREQ] & cdtvcr_4510_ram[CDTVCR_INTENA]) && !cdtvcr_4510_ram[CDTVCR_INTDISABLE]) {
-		safe_interrupt_set(false);
+		safe_interrupt_set(IRQ_SOURCE_CD32CDTV, 0, false);
 		cd_led ^= LED_CD_ACTIVE2;
 	}
 }
@@ -852,7 +852,7 @@ static addrbank cdtvcr_bank = {
 	cdtvcr_lget, cdtvcr_wget, cdtvcr_bget,
 	cdtvcr_lput, cdtvcr_wput, cdtvcr_bput,
 	default_xlate, default_check, NULL, NULL, _T("CDTV-CR"),
-	cdtvcr_wgeti,
+	cdtvcr_lgeti, cdtvcr_wgeti,
 	ABFLAG_IO | ABFLAG_SAFE, S_READ, S_WRITE
 };
 

@@ -3,9 +3,12 @@
 *
 * RTC chips
 */
-#include <time.h>
 
+#include "sysconfig.h"
 #include "sysdeps.h"
+
+#include "options.h"
+
 #include "rtc.h"
 
 uae_u8 get_clock_msm(struct rtc_msm_data *data, int addr, struct tm *ct)
@@ -15,6 +18,7 @@ uae_u8 get_clock_msm(struct rtc_msm_data *data, int addr, struct tm *ct)
 
 	if (!ct) {
 		time_t t = time (0);
+		t += currprefs.cs_rtc_adjust;
 		ct = localtime (&t);
 	}
 	year = ct->tm_year;
@@ -72,10 +76,14 @@ uae_u8 get_clock_ricoh(struct rtc_ricoh_data *data, int addr, struct tm *ct)
 	/* alarm */
 	if (bank == 1 && addr < 0x0d) {
 		v = data->rtc_alarm[addr];
+#if CLOCK_DEBUG
+		write_log (_T("CLOCK ALARM R %X: %X\n"), addr, v);
+#endif
 		return v;
 	}
 	if (!ct) {
 		time_t t = time (0);
+		t += currprefs.cs_rtc_adjust;
 		ct = localtime (&t);
 	}
 	switch (addr)
@@ -111,12 +119,19 @@ void put_clock_ricoh(struct rtc_ricoh_data *data, int addr, uae_u8 v)
 	int bank = data->clock_control_d & 3;
 	/* memory access */
 	if (bank >= 2 && addr < 0x0d) {
+		uae_u8 ov = data->rtc_memory[addr];
 		data->rtc_memory[addr] &= ((bank == 2) ? 0xf0 : 0x0f);
 		data->rtc_memory[addr] |= v << ((bank == 2) ? 0 : 4);
+		if (data->rtc_memory[addr] != ov)
+			data->delayed_write = -1;
 		return;
 	}
 	/* alarm */
 	if (bank == 1 && addr < 0x0d) {
+#if CLOCK_DEBUG
+		write_log (_T("CLOCK ALARM W %X: %X\n"), addr, value);
+#endif
+		uae_u8 ov = data->rtc_alarm[addr];
 		data->rtc_alarm[addr] = v;
 		data->rtc_alarm[0] = data->rtc_alarm[1] = data->rtc_alarm[9] = data->rtc_alarm[12] = 0;
 		data->rtc_alarm[3] &= ~0x8;
@@ -125,8 +140,13 @@ void put_clock_ricoh(struct rtc_ricoh_data *data, int addr, uae_u8 v)
 		data->rtc_alarm[8] &= ~0xc;
 		data->rtc_alarm[10] &= ~0xe;
 		data->rtc_alarm[11] &= ~0xc;
+		if (data->rtc_alarm[addr] != ov)
+			data->delayed_write = -1;
 		return;
 	}
+#if CLOCK_DEBUG
+	write_log (_T("CLOCK W %X: %X\n"), addr, value);
+#endif
 	switch (addr)
 	{
 		case 0xD: data->clock_control_d = v; break;

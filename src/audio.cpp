@@ -150,7 +150,9 @@ static int audio_extra_streams[AUDIO_CHANNEL_STREAMS];
 static int audio_total_extra_streams;
 
 static int samplecnt;
+#if SOUNDSTUFF > 0
 static int extrasamples, outputsample, doublesample;
+#endif
 
 int sampleripper_enabled;
 struct ripped_sample
@@ -743,6 +745,7 @@ static void sample16i_sinc_handler (void)
 
 	get_extra_channels_sample2(&data1, NULL, 2);
 
+	//set_sound_buffers ();
 	PUT_SOUND_WORD_MONO (data1);
 	check_sound_buffers ();
 }
@@ -773,6 +776,7 @@ void sample16_handler (void)
 
 	get_extra_channels_sample2(&data, NULL, 0);
 
+	//set_sound_buffers ();
 	PUT_SOUND_WORD_MONO (data);
 	check_sound_buffers ();
 }
@@ -791,6 +795,7 @@ static void sample16i_anti_handler (void)
 
 	get_extra_channels_sample2(&data1, NULL, 1);
 
+	//set_sound_buffers ();
 	PUT_SOUND_WORD_MONO (data1);
 	check_sound_buffers ();
 }
@@ -847,6 +852,7 @@ static void sample16i_rh_handler (void)
 
 	get_extra_channels_sample2(&data, NULL, 0);
 
+	//set_sound_buffers ();
 	PUT_SOUND_WORD_MONO (data);
 	check_sound_buffers ();
 }
@@ -923,6 +929,7 @@ static void sample16i_crux_handler (void)
 
 	get_extra_channels_sample2(&data, NULL, 0);
 
+	//set_sound_buffers ();
 	PUT_SOUND_WORD_MONO (data);
 	check_sound_buffers ();
 }
@@ -969,6 +976,7 @@ void sample16ss_handler (void)
 
 	get_extra_channels_sample6(&data0, &data1, &data3, &data2, &data4, &data5, 0);
 
+	//set_sound_buffers ();
 	put_sound_word_right(data0);
 	put_sound_word_left (data1);
 	if (currprefs.sound_stereo == SND_6CH) {
@@ -1004,6 +1012,7 @@ static void sample16ss_anti_handler (void)
 
 	get_extra_channels_sample6(&data0, &data1, &data3, &data2, &data4, &data5, 0);
 
+	//set_sound_buffers ();
 	put_sound_word_right(data0);
 	put_sound_word_left (data1);
 	if (currprefs.sound_stereo == SND_6CH) {
@@ -1030,6 +1039,7 @@ static void sample16si_anti_handler (void)
 
 	get_extra_channels_sample2(&data1, &data2, 1);
 
+	//set_sound_buffers ();
 	put_sound_word_right(data1);
 	put_sound_word_left (data2);
 	check_sound_buffers ();
@@ -1056,6 +1066,7 @@ static void sample16ss_sinc_handler (void)
 
 	get_extra_channels_sample6(&data0, &data1, &data3, &data2, &data4, &data5, 0);
 
+	//set_sound_buffers ();
 	put_sound_word_right(data0);
 	put_sound_word_left (data1);
 	if (currprefs.sound_stereo == SND_6CH) {
@@ -1082,6 +1093,7 @@ static void sample16si_sinc_handler (void)
 
 	get_extra_channels_sample2(&data1, &data2, 2);
 
+	//set_sound_buffers ();
 	put_sound_word_right(data1);
 	put_sound_word_left(data2);
 	check_sound_buffers ();
@@ -1115,6 +1127,7 @@ void sample16s_handler (void)
 
 	get_extra_channels_sample2(&data2, &data3, 0);
 
+	//set_sound_buffers ();
 	put_sound_word_right(data2);
 	put_sound_word_left(data3);
 	check_sound_buffers ();
@@ -1193,6 +1206,7 @@ static void sample16si_crux_handler (void)
 
 	get_extra_channels_sample2(&data2, &data3, 0);
 
+	//set_sound_buffers ();
 	put_sound_word_right(data2);
 	put_sound_word_left (data3);
 	check_sound_buffers ();
@@ -1252,6 +1266,7 @@ static void sample16si_rh_handler (void)
 
 	get_extra_channels_sample2(&data2, &data3, 0);
 
+	//set_sound_buffers ();
 	put_sound_word_right(data2);
 	put_sound_word_left (data3);
 	check_sound_buffers ();
@@ -1547,7 +1562,7 @@ static void audio_state_channel2 (int nr, bool perfin)
 		if (!chan_ena && old_dma) {
 			// DMA switched off, state=2/3 and "too fast CPU": set flag
 			cdp->dmaofftime_active = true;
-			//cdp->dmaofftime_cpu_cnt = regs.instruction_cnt;
+			cdp->dmaofftime_cpu_cnt = regs.instruction_cnt;
 			cdp->dmaofftime_pc = M68K_GETPC;
 		}
 		// check if CPU executed at least 60 instructions (if JIT is off), there are stupid code that
@@ -1558,7 +1573,7 @@ static void audio_state_channel2 (int nr, bool perfin)
 			// We are still in state=2/3 and program is going to re-enable
 			// DMA. Force state to zero to prevent CPU timed DMA wait
 			// routines in common tracker players to lose notes.
-			if (usehacks() && currprefs.cachesize) {
+			if (usehacks() && (currprefs.cachesize || (regs.instruction_cnt - cdp->dmaofftime_cpu_cnt) >= 60)) {
 				if (warned >= 0) {
 					warned--;
 					write_log(_T("Audio %d DMA wait hack: ENABLED. OFF=%08x, ON=%08x\n"), nr, cdp->dmaofftime_pc, M68K_GETPC);
@@ -2121,7 +2136,9 @@ static void update_audio_volcnt(int cycles, float evtime, bool nextsmp)
 void update_audio (void)
 {
 	unsigned long int n_cycles = 0;
+#if SOUNDSTUFF > 1
 	static int samplecounter;
+#endif
 
 	if (!isaudio ())
 		goto end;
@@ -2191,7 +2208,29 @@ void update_audio (void)
 				if (rounded == best_evtime) {
 					/* Before the following addition, next_sample_evtime is in range [-0.5, 0.5) */
 					next_sample_evtime += scaled_sample_evtime;
+#if SOUNDSTUFF > 1
+					next_sample_evtime -= extrasamples * 15;
+					doublesample = 0;
+					if (--samplecounter <= 0) {
+						samplecounter = currprefs.sound_freq / 1000;
+						if (extrasamples > 0) {
+							outputsample = 1;
+							doublesample = 1;
+							extrasamples--;
+						} else if (extrasamples < 0) {
+							outputsample = 0;
+							doublesample = 0;
+							extrasamples++;
+						}
+					}
+#endif
 					(*sample_handler) ();
+#if SOUNDSTUFF > 1
+					if (outputsample == 0)
+						outputsample = -1;
+					else if (outputsample < 0)
+						outputsample = 1;
+#endif
 
 				}
 			}

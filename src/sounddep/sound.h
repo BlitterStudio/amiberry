@@ -9,6 +9,8 @@
 #pragma once
 #include "audio.h"
 
+#define SOUNDSTUFF 1
+
 extern uae_u16 paula_sndbuffer[];
 extern uae_u16* paula_sndbufpt;
 extern int paula_sndbufsize;

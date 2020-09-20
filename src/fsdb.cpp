@@ -12,17 +12,30 @@
 
 #include "options.h"
 #include "memory.h"
+#include "custom.h"
+#include "newcpu.h"
+#include "filesys.h"
+#include "autoconf.h"
+#include "fsusage.h"
+#include "scsidev.h"
 #include "fsdb.h"
 
 /* The on-disk format is as follows:
- * Offset 0, 1 byte, valid
- * Offset 1, 4 bytes, mode
- * Offset 5, 257 bytes, aname
- * Offset 263, 257 bytes, nname
- * Offset 519, 81 bytes, comment
- */
+* Offset 0, 1 byte, valid
+* Offset 1, 4 bytes, mode
+* Offset 5, 257 bytes, aname
+* Offset 263, 257 bytes, nname
+* Offset 519, 81 bytes, comment
+*/
 
-static TCHAR *nname_begin (TCHAR *nname)
+#define TRACING_ENABLED 0
+#if TRACING_ENABLED
+#define TRACE(x) do { write_log x; } while(0)
+#else
+#define TRACE(x)
+#endif
+
+TCHAR *nname_begin (TCHAR *nname)
 {
 	TCHAR *p = _tcsrchr (nname, FSDB_DIR_SEPARATOR);
 	if (p)
@@ -50,7 +63,7 @@ TCHAR *fsdb_search_dir (const TCHAR *dirname, TCHAR *rel)
 
 	while (p == 0 && (de = my_readdir (dir, fn)) != 0) {
 		if (strcmp (fn, rel) == 0)
-	    p = rel;
+			p = rel;
 		else if (stricmp(fn, rel) == 0)
 			p = my_strdup (fn);
 	}
@@ -165,14 +178,14 @@ static a_inode *aino_from_buf (a_inode *base, uae_u8 *buf, long off)
 
 a_inode *fsdb_lookup_aino_aname (a_inode *base, const TCHAR *aname)
 {
-  FILE *f;
+	FILE *f;
 
-  f = get_fsdb (base, _T("r+b"));
-  if (f == 0) {
-    return 0;
-  }
-  for (;;) {
-  	uae_u8 buf[1 + 4 + 257 + 257 + 81];
+	f = get_fsdb (base, _T("r+b"));
+	if (f == 0) {
+		return 0;
+	}
+	for (;;) {
+		uae_u8 buf[1 + 4 + 257 + 257 + 81];
 		TCHAR *s;
 		if (fread (buf, 1, sizeof buf, f) < sizeof buf)
 			break;
@@ -194,10 +207,10 @@ a_inode *fsdb_lookup_aino_nname (a_inode *base, const TCHAR *nname)
 	FILE *f;
 	char *s;
 
-  f = get_fsdb (base, _T("r+b"));
-  if (f == 0) {
-  	return 0;
-  }
+	f = get_fsdb (base, _T("r+b"));
+	if (f == 0) {
+		return 0;
+	}
 	s = ua (nname);
 	for (;;) {
 		uae_u8 buf[1 + 4 + 257 + 257 + 81];
@@ -221,10 +234,10 @@ int fsdb_used_as_nname (a_inode *base, const TCHAR *nname)
 	uae_u8 buf[1 + 4 + 257 + 257 + 81];
 
 	f = get_fsdb (base, _T("r+b"));
-  if (f == 0) {
-    return 0;
-  }
-  for (;;) {
+	if (f == 0) {
+		return 0;
+	}
+	for (;;) {
 		TCHAR *s;
 		if (fread (buf, 1, sizeof buf, f) < sizeof buf)
 			break;

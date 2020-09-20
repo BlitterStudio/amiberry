@@ -212,7 +212,7 @@ bool isideint(void)
 	return checkgayleideirq() != 0;
 }
 
-void rethink_gayle (void)
+static void rethink_gayle (void)
 {
 	int lev2 = 0;
 	int lev6 = 0;
@@ -220,8 +220,8 @@ void rethink_gayle (void)
 
 	if (currprefs.cs_ide == IDE_A4000) {
 		gayle_irq |= checkgayleideirq ();
-		if (gayle_irq & GAYLE_IRQ_IDE)
-			safe_interrupt_set(false);
+		if ((gayle_irq & GAYLE_IRQ_IDE))
+			safe_interrupt_set(IRQ_SOURCE_GAYLE, 0, false);
 		return;
 	}
 
@@ -247,9 +247,23 @@ void rethink_gayle (void)
 			lev2 = 1;
 	}
 	if (lev2)
-		safe_interrupt_set(false);
+		safe_interrupt_set(IRQ_SOURCE_GAYLE, 0, false);
 	if (lev6)
-		safe_interrupt_set(true);
+		safe_interrupt_set(IRQ_SOURCE_GAYLE, 0, true);
+}
+
+void pcmcia_interrupt_set(int level)
+{
+	if (level) {
+		if (!external_card_int)
+			write_log("PCMCIA IRQ ACTIVE\n");
+		external_card_int |= GAYLE_INT_IRQ;
+	} else {
+		if (external_card_int)
+			write_log("PCMCIA IRQ INACTIVE\n");
+		external_card_int &= ~GAYLE_INT_IRQ;
+	}
+	rethink_gayle();
 }
 
 static void gayle_cs_change (uae_u8 mask, int onoff)
@@ -276,6 +290,7 @@ static void gayle_cs_change (uae_u8 mask, int onoff)
 
 static void card_trigger (int insert)
 {
+	external_card_int = 0;
 	if (insert) {
 		if (pcmcia_card) {
 			gayle_cs_change (GAYLE_CS_CCDET, 1);
@@ -495,7 +510,7 @@ addrbank gayle_bank = {
 	gayle_lget, gayle_wget, gayle_bget,
 	gayle_lput, gayle_wput, gayle_bput,
 	default_xlate, default_check, NULL, NULL, _T("Gayle (low)"),
-	dummy_wgeti,
+	dummy_lgeti, dummy_wgeti,
 	ABFLAG_IO, S_READ, S_WRITE
 };
 
@@ -766,7 +781,7 @@ addrbank gayle2_bank = {
 	gayle2_lget, gayle2_wget, gayle2_bget,
 	gayle2_lput, gayle2_wput, gayle2_bput,
 	default_xlate, default_check, NULL, NULL, _T("Gayle (high)"),
-	dummy_wgeti,
+	dummy_lgeti, dummy_wgeti,
 	ABFLAG_IO, S_READ, S_WRITE
 };
 
@@ -912,7 +927,7 @@ static addrbank mbres_sub_bank = {
 	mbres_lget, mbres_wget, mbres_bget,
 	mbres_lput, mbres_wput, mbres_bput,
 	default_xlate, default_check, NULL, NULL, _T("Motherboard Resources"),
-	dummy_wgeti,
+	dummy_lgeti, dummy_wgeti,
 	ABFLAG_IO, S_READ, S_WRITE
 };
 
@@ -926,7 +941,7 @@ addrbank mbres_bank = {
 	sub_bank_lget, sub_bank_wget, sub_bank_bget,
 	sub_bank_lput, sub_bank_wput, sub_bank_bput,
 	sub_bank_xlate, sub_bank_check, NULL, NULL, _T("Motherboard Resources"),
-	sub_bank_wgeti,
+	sub_bank_lgeti, sub_bank_wgeti,
 	ABFLAG_IO, S_READ, S_WRITE, mbres_sub_banks
 };
 
@@ -1029,8 +1044,7 @@ static uae_u32 gayle_attr_read (uaecptr addr)
 	}
 	if (pcmcia_attrs_full) {
 		v = pcmcia_attrs[addr];
-	}
-	else {
+	} else {
 		v = pcmcia_attrs[addr / 2];
 	}
 	return v;
@@ -1177,6 +1191,7 @@ static void initsramattr (int size, int readonly)
 	uae_u8 *p = pcmcia_attrs;
 	int sm, su, code, units;
 	struct hardfiledata *hfd = &pcmcia_disk->hfd;
+	int real = hfd->flags & HFD_FLAGS_REALDRIVE;
 
 	code = 0;
 	su = 512;
@@ -1211,9 +1226,15 @@ static void initsramattr (int size, int readonly)
 	rp = p++;
 	*p++= 4; /* PCMCIA 2.1 */
 	*p++= 1;
-	strcpy ((char*)p, "UAE");
-	p += strlen ((char*)p) + 1;
-	strcpy ((char*)p, "68000");
+	if (real) {
+		ua_copy ((char*)p, 8, hfd->product_id);
+		p += strlen ((char*)p) + 1;
+		ua_copy ((char*)p, 16, hfd->product_rev);
+	} else {
+		strcpy ((char*)p, "UAE");
+		p += strlen ((char*)p) + 1;
+		strcpy ((char*)p, "68000");
+	}
 	p += strlen ((char*)p) + 1;
 	sprintf ((char*)p, "Generic Emulated %dKB PCMCIA SRAM Card", size >> 10);
 	p += strlen ((char*)p) + 1;
@@ -1300,6 +1321,7 @@ static int freepcmcia (int reset)
 
 	gayle_cfg = 0;
 	gayle_cs = 0;
+	external_card_int = 0;
 	return 1;
 }
 
@@ -1440,7 +1462,7 @@ static addrbank gayle_common_bank = {
 	gayle_common_lget, gayle_common_wget, gayle_common_bget,
 	gayle_common_lput, gayle_common_wput, gayle_common_bput,
 	gayle_common_xlate, gayle_common_check, NULL, NULL, _T("Gayle PCMCIA Common"),
-	gayle_common_wget,
+	gayle_common_lget, gayle_common_wget,
 	ABFLAG_RAM | ABFLAG_SAFE, S_READ, S_WRITE
 };
 
@@ -1456,7 +1478,7 @@ static addrbank gayle_attr_bank = {
 	gayle_attr_lget, gayle_attr_wget, gayle_attr_bget,
 	gayle_attr_lput, gayle_attr_wput, gayle_attr_bput,
 	default_xlate, default_check, NULL, NULL, _T("Gayle PCMCIA Attribute/Misc"),
-	dummy_wgeti,
+	dummy_lgeti, dummy_wgeti,
 	ABFLAG_IO | ABFLAG_SAFE, S_READ, S_WRITE
 };
 
@@ -1553,7 +1575,7 @@ static void REGPARAM2 gayle_common_bput (uaecptr addr, uae_u32 value)
 	gayle_common_write_byte(addr, value);
 }
 
-void gayle_map_pcmcia (void)
+static void gayle_map_pcmcia (void)
 {
 	if (currprefs.cs_pcmcia == 0)
 		return;
@@ -1632,14 +1654,14 @@ bool gayle_init_pcmcia(struct autoconfig_info *aci)
 	return true;
 }
 
-static int pcmcia_eject2(struct uae_prefs* p)
+static int pcmcia_eject2(struct uae_prefs *p)
 {
 	for (int i = 0; i < MAX_EXPANSION_BOARDS; i++) {
-		struct boardromconfig* brc_changed = &changed_prefs.expansionboard[i];
-		struct boardromconfig* brc_cur = &currprefs.expansionboard[i];
-		struct boardromconfig* brc = &p->expansionboard[i];
+		struct boardromconfig *brc_changed = &changed_prefs.expansionboard[i];
+		struct boardromconfig *brc_cur = &currprefs.expansionboard[i];
+		struct boardromconfig *brc = &p->expansionboard[i];
 		if (brc->device_type) {
-			const struct expansionromtype* ert = get_device_expansion_rom(brc->device_type);
+			const struct expansionromtype *ert = get_device_expansion_rom(brc->device_type);
 			if (ert && (ert->deviceflags & EXPANSIONTYPE_PCMCIA) && brc->roms[0].inserted) {
 				write_log(_T("PCMCIA: '%s' removed\n"), ert->friendlyname);
 				brc->roms[0].inserted = false;
@@ -1653,13 +1675,14 @@ static int pcmcia_eject2(struct uae_prefs* p)
 	return -1;
 }
 
-void pcmcia_eject(struct uae_prefs* p)
+// eject any inserted PCMCIA card
+void pcmcia_eject(struct uae_prefs *p)
 {
 	pcmcia_eject2(p);
 }
 
 // eject and insert card back after few second delay
-void pcmcia_reinsert(struct uae_prefs* p)
+void pcmcia_reinsert(struct uae_prefs *p)
 {
 	pcmcia_delayed_insert_count = 0;
 	int num = pcmcia_eject2(p);
@@ -1669,14 +1692,13 @@ void pcmcia_reinsert(struct uae_prefs* p)
 	pcmcia_delayed_insert_count = 3 * 50 * 300;
 }
 
-bool pcmcia_disk_reinsert(struct uae_prefs* p, struct uaedev_config_info* uci, bool ejectonly)
+bool pcmcia_disk_reinsert(struct uae_prefs *p, struct uaedev_config_info *uci, bool ejectonly)
 {
-	const struct expansionromtype* ert = get_unit_expansion_rom(uci->controller_type);
+	const struct expansionromtype *ert = get_unit_expansion_rom(uci->controller_type);
 	if (ert && (ert->deviceflags & EXPANSIONTYPE_PCMCIA)) {
 		if (ejectonly) {
 			pcmcia_eject2(p);
-		}
-		else {
+		} else {
 			pcmcia_reinsert(p);
 		}
 		return true;
@@ -1708,20 +1730,20 @@ static void initide (void)
 	gayle_irq = gayle_int = 0;
 }
 
-void gayle_free (void)
+static void gayle_free (void)
 {
 	stop_ide_thread(&gayle_its);
 	//stop_ide_thread(&pcmcia_its);
 }
 
-void check_prefs_changed_gayle(void)
+static void check_prefs_changed_gayle(void)
 {
 	if (!currprefs.cs_pcmcia)
 		return;
 	//pcmcia_card_check(1, -1);
 }
 
-void gayle_reset (int hardreset)
+static void gayle_reset (int hardreset)
 {
 	static TCHAR bankname[100];
 

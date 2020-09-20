@@ -85,7 +85,7 @@ NRF_NOTIFY_INITIAL = 16
 NRF_MAGIC = $80000000
 
 ; normal filehandler segment entrypoint
-	dc.l (rom_end-start)>>2 					; 4
+	dc.l (rom_end-start)/4 					; 4
 our_seglist:
 	dc.l 0 									; 8 /* NextSeg */
 start:
@@ -101,9 +101,9 @@ startjmp:
 	dc.l bcplwrapper-start		;  7 40
 	dc.l afterdos-start			;  8 44
 	dc.l hwtrap_install-start	;  9 48
-	dc.l 0 ; hwtrap_entry-start 	; 10 52
-	dc.l 0 ; keymaphack-start		; 11 56
-	dc.l 0 ; fpu060disable-start	; 12 60
+	dc.l hwtrap_entry-start 	; 10 52
+	dc.l keymaphack-start		; 11 56
+	dc.l fpu060disable-start	; 12 60
 
 bootcode:
 	lea.l doslibname(pc),a1
@@ -114,13 +114,19 @@ bootcode:
 	jsr (a0)
 	rts
 
+fpu060disable:
+	movec pcr,d0
+	bset #1,d0
+	movec d0,pcr
+	jmp (a5)
+
 ; BCPL filehandler segment entry point
 ; for KS 1.1 and older.
 	cnop 0,4
-	dc.l ((bcpl_end-bcpl_start)>>2)+1
+	dc.l (bcpl_end-bcpl_start)/4+1
 our_bcpl_seglist:
 	dc.l 0
-	dc.l ((bcpl_end-bcpl_start)>>2)+1
+	dc.l (bcpl_end-bcpl_start)/4+1
 bcpl_start:
 	; d1 = startup packet
 	lsl.l #2,d1
@@ -142,6 +148,83 @@ resident
 	dc.l 0
 	dc.l start-resident
 
+	; KS 1.x does not support RTF_AFTERDOS and KS 2.x RTF_AFTERDOS is broken.
+afterdos_hack:
+	movem.l d0-d2/a0-a2/a6,-(sp)
+
+	move.l 4.w,a6
+	cmp.w #39,20(a6)
+	bcc.s .rsh
+	cmp.w #37,20(a6)
+	bcs.s .rsh
+
+	move.w #$FF38,d0
+	moveq #17,d1
+	bsr.w getrtbase
+	jsr (a0)
+	tst.l d0
+	beq.s .rsh
+
+	moveq #residentcodeend-residentcodestart,d0
+	move.l d0,d2
+	moveq #1,d1
+	jsr AllocMem(a6)
+	tst.l d0
+	beq.s .rsh
+	move.l d0,a2
+
+	move.l a2,a0
+	lea residentcodestart(pc),a1
+.cp1
+	move.l (a1)+,(a0)+
+	subq.l #4,d2
+	bne.s .cp1
+
+	jsr -$0078(a6) ;Disable
+	move.l a6,a1
+	move.w #-$48,a0 ;InitCode
+	move.l a2,d0
+	jsr -$01a4(a6) ;SetFunction
+	move.l d0,residentcodejump2-residentcodestart+2(a2)
+	lea myafterdos(pc),a0
+	move.l a0,residentcodejump1-residentcodestart+2(a2)
+	jsr -$27C(a6) ;CacheClearU
+	jsr -$007e(a6) ;Enable
+.rsh
+	movem.l (sp)+,d0-d2/a0-a2/a6
+	rts
+	
+myafterdos
+	move.l (sp),a0
+	move.l 2(a0),a0
+	move.l a0,-(sp)
+	jsr (a0) ;jump to original InitCode
+	move.l (sp)+,a0
+	addq.l #4,sp ;remove return address
+	movem.l d0-d7/a1-a6,-(sp)
+	move.l a6,a1
+	move.l a0,d0
+	move.w #-$48,a0 ;InitCode
+	jsr -$01a4(a6) ;SetFunction (restore original)
+	
+	bsr run_afterdos
+
+	movem.l (sp)+,d0-d7/a1-a6
+	rts ;return directly to caller
+
+	cnop 0,4
+residentcodestart:
+	btst #2,d0 ;RTF_AFTERDOS?
+	beq.s resjump
+residentcodejump1
+	jsr $f00000
+resjump
+residentcodejump2
+	jmp $f00000
+	cnop 0,4
+residentcodeend:
+
+	; v39 RTF_AFTERDOS
 afterdos:
 	movem.l d2-d7/a2-a6,-(sp)
 
@@ -161,12 +244,18 @@ afterdos:
 	bsr.w getrtbase
 	move.l d1,(a0)
 	
-	bsr.w clipboard_init
-	bsr.w consolehook
-
+	bsr run_afterdos
+	
 	movem.l (sp)+,d2-d7/a2-a6
 	moveq #0,d0
 	rts
+
+run_afterdos
+	bsr.w clipboard_init
+	bsr.w consolehook
+	bsr.w segtrack_init
+	rts
+
 
 filesys_init:
 	movem.l d0-d7/a0-a6,-(sp)
@@ -268,6 +357,7 @@ FSIN_none:
 	cmp.w #34,20(a6) ; 1.2 or older?
 	bcs.w FSIN_tooold
 
+	; add MegaChipRAM
 	moveq #3,d4 ; MEMF_CHIP | MEMF_PUBLIC
 	cmp.w #36,20(a6)
 	bcs.s FSIN_ksold
@@ -275,8 +365,16 @@ FSIN_none:
 FSIN_ksold
 	move.w #$FF80,d0
 	bsr.w getrtbase
-	jsr (a0)
+	jsr (a0) ; d1 = size, a1 = start address
 	move.l d0,d5
+	move.l a1,a0
+	move.l d1,d0
+	beq.s FSIN_fchip_done
+	move.l d4,d1
+	moveq #-5,d2
+	lea fchipname(pc),a1
+	jsr -618(a6) ; AddMemList
+FSIN_fchip_done
 
 	; only if >=4M chip
 	cmp.l #$400000,d5
@@ -322,6 +420,8 @@ FSIN_chip_done
 	move.w #$FF48,d0 ; store task pointer
 	bsr.w getrtbase
 	jsr (a0)
+
+
 
 FSIN_tooold
 
@@ -722,7 +822,7 @@ heartbeatvblank:
 	move.l #65536+1,d1
 	jsr AllocMem(a6)
 	move.l d0,a4
-
+	
 	lea 22(a4),a3
 	move.l a3,a1
 	move.l a2,(a1)+
@@ -772,6 +872,9 @@ kaint:
 setup_exter:
 	movem.l d0-d3/d7/a0-a2,-(sp)
 	move.l d0,d7
+
+	bsr.w afterdos_hack
+
 	move.l #RTAREA_INTREQ,d0
 	bsr.w getrtbase
 	move.l a0,a2
@@ -800,13 +903,13 @@ setup_exter:
 	move.l #$10001,d1
 	jsr AllocMem(a6)
 	move.l d0,a1
-
+	
 	lea 26(a1),a0
 	move.l a2,(a0)+
 	move.l a6,(a0)+
 	move.l d2,(a0)+
 	move.l d3,(a0)
-
+	
 	lea.l exter_name(pc),a0
 	move.l a0,10(a1)
 	lea 26(a1),a2
@@ -1422,7 +1525,12 @@ dont_mount:
 	move.l PP_FSPTR(a1),a0
 	tst.l PP_FSSIZE(a1)
 	bpl.s nordbfs4
-	moveq #0,d0
+	movem.l d1/a0-a1,-(sp)
+	move.l PP_FSSIZE(a1),d0
+	neg.l d0
+	move.l PP_FSPTR(a1),a0
+	bsr.w fstrack_init
+	movem.l (sp)+,d1/a0-a1
 	move.l d0,PP_FSPTR(a1)
 	move.l d0,a0
 	clr.l PP_FSSIZE(a1)
@@ -1762,6 +1870,7 @@ FSML_loop:
 .noclk
 	btst #1,173(a3)
 	beq.s .nodebug
+	bsr.w debuggerstart
 	bclr #1,173(a3)
 .nodebug
 	; disk change notification from native code
@@ -2868,8 +2977,7 @@ clipboard_proc:
 	move.l CLIP_EXEC(a5),a6
 
 	bsr.w createport
-	moveq #0,d1
-	move.w #52,d1
+	moveq #52,d1
 	bsr.w createio
 	move.l d0,a4
 	tst.l d0
@@ -2877,7 +2985,7 @@ clipboard_proc:
 
 cfloop2
 	moveq #0,d0
-	bset #13,d0
+	bset #13,d0 ; SIGBREAK_CTRL_D
 	jsr -$013e(a6) ;Wait
 	
 	moveq #0,d1
@@ -3090,6 +3198,42 @@ chook:
 	movem.l (sp)+,d0-d1/a0
 	rts
 
+debuggerstart
+	move.l 4.w,a6
+	lea debuggerprocname(pc),a0
+	lea debuggerproc(pc),a1
+	moveq #15,d0
+	move.l #8000,d1
+	bsr.w createproc
+	rts
+	cnop 0,4
+	dc.l 16
+debuggerproc
+	dc.l 0
+	move.l 4.w,a6
+	moveq #0,d0
+	lea doslibname(pc),a1
+	jsr -$0228(a6) ; OpenLibrary
+	move.l d0,a6
+	moveq #2,d1
+	move.w #$FF78,d0
+	bsr.w getrtbaselocal
+	move.l a0,a2
+	moveq #1,d1
+	jsr (a0) ; debugger init
+	tst.l d1
+	beq.s .dend
+	move.l d1,a3
+	jsr -$1f8(a6) ; RunCommand
+	moveq #2,d1
+	move.l a3,a0
+	jsr (a2) ; debugger end
+.dend
+	move.l a6,a1
+	move.l 4.w,a6
+	jsr -$19e(a6)
+	rts
+
 bootres_code:
 	
 	rts
@@ -3210,10 +3354,10 @@ adddosnodec
 	;We need to put dospacket back in pr_MsgPort.
 
 	cnop 0,4
-	dc.l ((bcplwrapper_end-bcplwrapper_start)>>2)+1
+	dc.l (bcplwrapper_end-bcplwrapper_start)/4+1
 bcplwrapper:
 	dc.l 0
-	dc.l ((bcplwrapper_end-bcplwrapper_start)>>2)+1
+	dc.l (bcplwrapper_end-bcplwrapper_start)/4+1
 bcplwrapper_start:
 	move.l d1,d2
 	move.l 4.w,a6
@@ -3834,6 +3978,433 @@ moveromreloc:
 	dc.w exter_task_wait-start
 	dc.w 0
 
+keymaphack:
+	move.l 4.w,a6
+
+	moveq #keymapfunc_end-keymapfunc,d0
+	moveq #1,d1
+	jsr -$c6(a6) ;AllocMem
+	tst.l d0
+	beq.s .keymap0
+	move.l d0,a3
+
+	lea keymapfunc(pc),a0
+	move.l a3,a1
+	moveq #keymapfunc_end-keymapfunc-1,d0
+.keymap1
+	move.b (a0)+,(a1)+
+	dbf d0,.keymap1
+	lea keymapfunc_patch(pc),a0
+	move.l a0,keymap_func_ptr-keymapfunc+2(a3)
+	lea keymapfunc2_patch(pc),a0
+	move.l a0,keymaplibfunc-keymapfunc+2(a3)
+
+	jsr -$84(a6)
+
+	lea 350(a6),a0 ;DeviceList
+	lea con_dev(pc),a1
+	jsr -$114(a6) ;FindName
+	tst.l d0
+	beq.s .keymap2
+	move.l d0,a1
+	move.l a3,d0
+	move.w #-$1e,a0 ;BeginIO
+	jsr -$1a4(a6)
+	move.l d0,keymap_original-keymapfunc(a3)
+.keymap2
+
+	lea 378(a6),a0 ;LibList
+	lea key_lib(pc),a1
+	jsr -$114(a6) ;FindName
+	tst.l d0
+	beq.s .keymap3
+	move.l d0,a1
+	lea keymaplibfunc-keymapfunc(a3),a0
+	move.l a0,d0
+	move.w #-$1e,a0 ;SetKeyMapDefault
+	jsr -$1a4(a6)
+	move.l d0,keymap_original2-keymapfunc(a3)
+.keymap3
+
+	jsr -$8a(a6)
+
+.keymap0	
+	rts
+
+keymapfunc
+	cmp.w #10,28(a1) ;CD_SETKEYMAP
+	beq.s keymap_func_ptr
+	cmp.w #12,28(a1) ;CD_SETDEFAULTKEYMAP
+	bne.s keymapfunc2
+keymap_func_ptr
+	jsr 0.l
+keymapfunc2
+	move.l keymap_original(pc),-(sp)
+	rts
+keymaplibfunc
+	jsr 0.l
+	move.l keymap_original2(pc),-(sp)
+	rts
+keymap_original
+	dc.l 0
+keymap_original2
+	dc.l 0
+keymapfunc_end
+
+	; a0 = keymap
+keymapfunc2_patch
+	movem.l d0-d7/a0-a6,-(sp)
+	move.l a0,a2
+	bra.s keymapfunc_entry
+
+	; a1 = request
+keymapfunc_patch
+	movem.l d0-d7/a0-a6,-(sp)
+	move.l 40(a1),a2 ;io_Data
+
+keymapfunc_entry
+	move.l 4.w,a6
+
+	subq.l #8,sp
+	move.l sp,a4
+
+	move.l a4,-(sp) ; &size
+	move.l a2,-(sp)
+	bsr.w GetKeyMapData
+	addq.l #8,sp
+	tst.l d0
+	beq.s .keymap0
+	move.l d0,d2
+
+	move.w #$ff38,d0
+	bsr.w getrtbase
+
+	moveq #21,d1
+	move.l d2,a1 ; a1 = data
+	move.l (a4),d0 ; d0 = size
+	jsr (a0)
+
+	move.l d2,a1
+	move.l (a4),d0
+	jsr -$d2(a6) ;FreeMem
+
+.keymap0
+	addq.l #8,sp
+	movem.l (sp)+,d0-d7/a0-a6
+	rts
+
+FSTRACK_DATA = 16
+
+	; a0 = fsdata (raw)
+	; d0 = size
+fstrack_init
+	movem.l d2-d7/a2-a6,-(sp)
+	move.l d0,d5
+	move.l a0,a5
+	moveq #0,d7
+	
+	move.l 4.w,a6
+	cmp.w #37,20(a6)
+	bcs .noinit
+
+	move.w #$FF38,d0
+	move.l #208,d1
+	bsr.w getrtbaselocal
+	move.l a0,a4
+	jsr (a0)
+	btst #1,d0
+	beq .noinit
+
+	move.l #fstrack_end-fstrack_start+FSTRACK_DATA,d0
+	move.l #65536+1,d1
+	jsr -$c6(a6)
+	tst.l d0
+	beq .noinit
+	move.l d0,a2
+	add.w #FSTRACK_DATA,a2
+	
+	move.l a2,a1
+	moveq #(fstrack_end-fstrack_start)/4-1,d0
+	lea fstrack_start(pc),a0
+.copyfstrack
+	move.l (a0)+,(a1)+
+	dbf d0,.copyfstrack
+
+	lea allocmem_uae_p+2-fstrack_start(a2),a0
+	move.l a4,(a0)
+	lea freemem_uae_p+2-fstrack_start(a2),a0
+	move.l a4,(a0)
+
+	lea allocvec_uae_p+2-fstrack_start(a2),a0
+	move.l a4,(a0)
+	lea freevec_uae_p+2-fstrack_start(a2),a0
+	move.l a4,(a0)
+
+	lea allocmem-fstrack_start(a2),a0
+	move.l a0,d0
+	move.l a6,a1
+	move.w #-$c6,a0
+	jsr -$1a4(a6)
+	lea allocmem_func+2-fstrack_start(a2),a0
+	move.l d0,(a0)
+
+	lea freemem-fstrack_start(a2),a0
+	move.l a0,d0
+	move.l a6,a1
+	move.w #-$d2,a0
+	jsr -$1a4(a6)
+	lea freemem_func+2-fstrack_start(a2),a0
+	move.l d0,(a0)
+
+	lea allocvec-fstrack_start(a2),a0
+	move.l a0,d0
+	move.l a6,a1
+	move.w #-$2ac,a0
+	jsr -$1a4(a6)
+	lea allocvec_func+2-fstrack_start(a2),a0
+	move.l d0,(a0)
+
+	lea freevec-fstrack_start(a2),a0
+	move.l a0,d0
+	move.l a6,a1
+	move.w #-$2b2,a0
+	jsr -$1a4(a6)
+	lea freevec_func+2-fstrack_start(a2),a0
+	move.l d0,(a0)
+
+	lea -FSTRACK_DATA(a2),a0
+	move.l a5,(a0)+
+	move.l d5,(a0)+
+	move.l a4,(a0)+
+
+	move.l a2,d7
+
+.noinit
+	move.l d7,d0
+	movem.l (sp)+,d2-d7/a2-a6
+	rts
+
+	cnop 0,4
+fstrack_start
+
+	;dc.l 0 ;real_filesys_entry
+	;dc.l 0 ;fs_size
+	;dc.l 0 ;misc_funcs
+	;dc.l 0
+
+fstrack_entry
+	nop
+	nop
+	move.l 4.w,a1
+	move.l 276(a1),a1 ;task
+	lea freemem+2(pc),a0
+	move.l a1,(a0)
+	lea allocmem+2(pc),a0
+	move.l a1,(a0)
+	lea freevec+2(pc),a0
+	move.l a1,(a0)
+	lea allocvec+2(pc),a0
+	move.l a1,(a0)
+	lea fstrack_entry-FSTRACK_DATA(pc),a2
+	move.l (a2)+,a0 ;data
+	move.l (a2)+,d0 ;len
+	move.l (a2),a2 ;misc_funcs
+	moveq #0,d2 ;stack
+	move.l #200,d1
+	jsr (a2)
+	move.l d0,-(sp)
+	rts
+
+	; a1 / d0
+freemem
+	cmp.l #$ffffffff,276(a6)
+	beq.s freemem_uae
+freemem_func
+	jsr 0.l
+	rts
+freemem_uae
+	move.l #205,d1
+	move.l (sp),a0
+freemem_uae_p
+	jsr 0.l
+	tst.l d0
+	beq.s freemem_func
+	rts
+
+	; d0 / d1
+allocmem
+	cmp.l #$ffffffff,276(a6)
+	beq.s allocmem_uae
+allocmem_func
+	jsr 0.l
+	rts
+allocmem_uae
+	move.l d1,a1
+	move.l (sp),a0
+	move.l #204,d1
+allocmem_uae_p
+	jsr 0.l
+	cmp.w #0,a0
+	beq.s allocmem_func
+	rts
+
+	; a1
+freevec
+	cmp.l #$ffffffff,276(a6)
+	beq.s freevec_uae
+freevec_func
+	jsr 0.l
+	rts
+freevec_uae
+	move.l #207,d1
+	move.l (sp),a0
+freevec_uae_p
+	jsr 0.l
+	tst.l d0
+	beq.s freevec_func
+	rts
+
+	; d0 / d1	
+allocvec
+	cmp.l #$ffffffff,276(a6)
+	beq.s allocvec_uae
+allocvec_func
+	jsr 0.l
+	rts
+allocvec_uae
+	move.l d1,a1
+	move.l (sp),a0
+	move.l #206,d1
+allocvec_uae_p
+	jsr 0.l
+	cmp.w #0,a0
+	beq.s allocvec_func
+	rts
+
+	cnop 0,4
+fstrack_end
+
+segtrack_init
+	move.l 4.w,a0
+	cmp.w #37,20(a0)
+	bcs .noinit
+
+	move.w #$FF38,d0
+	move.l #208,d1
+	bsr.w getrtbaselocal
+	move.l a0,d4
+	jsr (a0)
+	btst #0,d0
+	beq .noinit
+
+	move.l #segtrack_end-segtrack_start,d0
+	move.l #65536+1,d1
+	jsr -$c6(a6)
+	tst.l d0
+	beq .noinit
+	move.l d0,a2
+	
+	move.l a2,a1
+	moveq #(segtrack_end-segtrack_start)/4-1,d0
+	lea segtrack_start(pc),a0
+.copysegtrack
+	move.l (a0)+,(a1)+
+	dbf d0,.copysegtrack
+
+	lea doslibname(pc),a1
+	moveq #0,d0
+	jsr -$0228(a6) ; OpenLibrary
+	tst.l d0
+	beq.s .noinit
+	move.l d0,a4
+
+	lea loadseg_uae+2-segtrack_start(a2),a0
+	move.l d4,(a0)
+	lea unloadseg_uae+2-segtrack_start(a2),a0
+	move.l d4,(a0)
+
+	lea loadseg-segtrack_start(a2),a0
+	move.l a0,d0
+	move.l a4,a1
+	move.w #-$96,a0
+	jsr -$1a4(a6)
+	lea loadseg_ptr+2-segtrack_start(a2),a0
+	move.l d0,(a0)
+
+	lea newloadseg-segtrack_start(a2),a0
+	move.l a0,d0
+	move.l a4,a1
+	move.w #-$300,a0
+	jsr -$1a4(a6)
+	lea newloadseg_ptr+2-segtrack_start(a2),a0
+	move.l d0,(a0)
+
+	lea unloadseg-segtrack_start(a2),a0
+	move.l a0,d0
+	move.l a4,a1
+	move.w #-$9c,a0
+	jsr -$1a4(a6)
+	lea unloadseg_ptr+2-segtrack_start(a2),a0
+	move.l d0,(a0)
+
+	moveq #0,d0
+	move.l d4,a0
+	move.l #209,d1
+	move.l a2,a1
+	jsr (a0)
+	
+.noinit
+	rts
+
+	cnop 0,4
+segtrack_start
+
+newloadseg
+	move.l d1,-(sp)
+newloadseg_ptr
+	jsr 0.l
+	bra.s doloadseg
+
+loadseg
+	move.l d1,-(sp)
+loadseg_ptr
+	jsr 0.l
+
+doloadseg
+	movem.l d0-d3/a0-a1,-(sp)
+	move.l d0,d3 ; segment
+	move.l 6*4(sp),d1 ;name
+	jsr -$54(a6) ; Lock
+	move.l d0,d2
+	move.l #202,d1
+	move.l d3,a0
+	move.l 6*4(sp),a1 ;name
+loadseg_uae
+	jsr 0.l
+	move.l d2,d1
+	beq.s loadseg_nolock
+	jsr -$5a(a6) ;Unlock
+loadseg_nolock	
+	movem.l (sp)+,d0-d3/a0-a1
+	addq.l #4,sp
+	rts
+
+unloadseg
+	movem.l d0-d1/a0-a1,-(sp)
+	move.l d1,a0
+	move.l #203,d1
+unloadseg_uae
+	jsr 0.l
+	movem.l (sp)+,d0-d1/a0-a1
+unloadseg_ptr
+	jsr 0.l
+	rts
+
+	cnop 0,4
+segtrack_end	
+
+	include "filesys_helpers.asm"
+
 	cnop 0,4
 getrtbaselocal:
 	lea start-8-4(pc),a0
@@ -3855,10 +4426,10 @@ con_dev: dc.b 'console.device',0
 key_lib: dc.b 'keymap.library',0
 devsn_name: dc.b 'DEVS',0
 devs_name: dc.b 'DEVS:',0
-clip_name: dc.b 'DEVS:clipboard.device',0
+clip_name: dc.b 'DEVS:'
+clip_dev: dc.b 'clipboard.device',0
 ram_name: dc.b 'RAM:',0
 nil_name: dc.b "NIL:",0
-clip_dev: dc.b 'clipboard.device',0
  ;argghh but StartNotify()ing non-existing ENV: causes "Insert disk ENV: in any drive" dialog..
 pointer_prefs: dc.b 'RAM:Env/Sys/Pointer.prefs',0
 clname: dc.b 'UAE clipboard sharing',0
@@ -3869,6 +4440,7 @@ fstaskname: dc.b 'UAE fs automounter',0
 fswtaskname: dc.b 'UAE fs worker',0
 fstraptaskname: dc.b 'UAE trap worker',0
 fsprocname: dc.b 'UAE fs automount process',0
+debuggerprocname: dc.b 'UAE debugger',0
 doslibname: dc.b 'dos.library',0
 intlibname: dc.b 'intuition.library',0
 gfxlibname: dc.b 'graphics.library',0
@@ -3878,7 +4450,9 @@ fchipname: dc.b 'megachip memory',0
 bcplfsname: dc.b "File System",0
 shellexecname: dc.b "UAE shell execute",0
 hwtrap_name: dc.b "UAE board",0
-	even
+uaeres dc.b "uae.resource",0
+uaeres_func dc.b "misc_funcs",0
+	cnop 0,4
 rom_end:
 
 	END

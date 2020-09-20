@@ -45,6 +45,7 @@
 #include "gayle.h"
 #include "savestate.h"
 #include "cdtv.h"
+#include "sana2.h"
 #include "bsdsocket.h"
 #include "uaeresource.h"
 #include "inputdevice.h"
@@ -1162,44 +1163,44 @@ static const TCHAR *getunittype(struct uaedev_config_info *uci)
 static int cpuboard_hd;
 static romconfig cpuboard_dummy;
 
-//void add_cpuboard_unit(int unit, struct uaedev_config_info *uci, struct romconfig *rc)
-//{
-//	int flags = (uci->controller_type >= HD_CONTROLLER_TYPE_IDE_FIRST && uci->controller_type <= HD_CONTROLLER_TYPE_IDE_LAST) ? EXPANSIONTYPE_IDE : EXPANSIONTYPE_SCSI;
-//	const struct cpuboardtype *cbt = &cpuboards[currprefs.cpuboard_type];
-//	cpuboard_hd = 0;
-//	if (cbt->subtypes) {
-//		if (cbt->subtypes[currprefs.cpuboard_subtype].add && (cbt->subtypes[currprefs.cpuboard_subtype].deviceflags & flags)) {
-//			if (unit >= 0) {
-//				write_log(_T("Adding CPUBoard '%s' %s unit %d ('%s')\n"),
-//					cbt->subtypes[currprefs.cpuboard_subtype].name,
-//					getunittype(uci), unit, uci->rootdir);
-//			}
-//			cbt->subtypes[currprefs.cpuboard_subtype].add(unit, uci, rc);
-//			cpuboard_hd = 1;
-//		}
-//	}
-//}
-//
-//static void add_cpuboard_unit_init(void)
-//{
-//	memset(&cpuboard_dummy, 0, sizeof cpuboard_dummy);
-//	cpuboard_dummy.device_id = 7;
-//	if (currprefs.cpuboard_type) {
-//		struct romconfig *rc = get_device_romconfig(&currprefs, ROMTYPE_CPUBOARD, 0);
-//		if (!rc)
-//			rc = &cpuboard_dummy;
-//		const struct cpuboardtype *cbt = &cpuboards[currprefs.cpuboard_type];
-//		if (cbt->subtypes) {
-//			if (cbt->subtypes[currprefs.cpuboard_subtype].add) {
-//				const struct cpuboardsubtype *cst = &cbt->subtypes[currprefs.cpuboard_subtype];
-//				struct uaedev_config_info ci = { 0 };
-//				write_log(_T("Initializing CPUBoard '%s' %s controller\n"),
-//					cst->name, (cst->deviceflags & EXPANSIONTYPE_SCSI) ? _T("SCSI") : _T("IDE"));
-//				cst->add(-1, &ci, rc);
-//			}
-//		}
-//	}
-//}
+void add_cpuboard_unit(int unit, struct uaedev_config_info *uci, struct romconfig *rc)
+{
+	int flags = (uci->controller_type >= HD_CONTROLLER_TYPE_IDE_FIRST && uci->controller_type <= HD_CONTROLLER_TYPE_IDE_LAST) ? EXPANSIONTYPE_IDE : EXPANSIONTYPE_SCSI;
+	const struct cpuboardtype *cbt = &cpuboards[currprefs.cpuboard_type];
+	cpuboard_hd = 0;
+	if (cbt->subtypes) {
+		if (cbt->subtypes[currprefs.cpuboard_subtype].add && (cbt->subtypes[currprefs.cpuboard_subtype].deviceflags & flags)) {
+			if (unit >= 0) {
+				write_log(_T("Adding CPUBoard '%s' %s unit %d ('%s')\n"),
+					cbt->subtypes[currprefs.cpuboard_subtype].name,
+					getunittype(uci), unit, uci->rootdir);
+			}
+			cbt->subtypes[currprefs.cpuboard_subtype].add(unit, uci, rc);
+			cpuboard_hd = 1;
+		}
+	}
+}
+
+static void add_cpuboard_unit_init(void)
+{
+	memset(&cpuboard_dummy, 0, sizeof cpuboard_dummy);
+	cpuboard_dummy.device_id = 7;
+	if (currprefs.cpuboard_type) {
+		struct romconfig *rc = get_device_romconfig(&currprefs, ROMTYPE_CPUBOARD, 0);
+		if (!rc)
+			rc = &cpuboard_dummy;
+		const struct cpuboardtype *cbt = &cpuboards[currprefs.cpuboard_type];
+		if (cbt->subtypes) {
+			if (cbt->subtypes[currprefs.cpuboard_subtype].add) {
+				const struct cpuboardsubtype *cst = &cbt->subtypes[currprefs.cpuboard_subtype];
+				struct uaedev_config_info ci = { 0 };
+				write_log(_T("Initializing CPUBoard '%s' %s controller\n"),
+					cst->name, (cst->deviceflags & EXPANSIONTYPE_SCSI) ? _T("SCSI") : _T("IDE"));
+				cst->add(-1, &ci, rc);
+			}
+		}
+	}
+}
 
 static bool add_ide_unit(int type, int unit, struct uaedev_config_info *uci)
 {
@@ -7227,7 +7228,8 @@ static uae_u32 REGPARAM2 filesys_diagentry (TrapContext *ctx)
 	* Resident structures and inject them to ResList in priority order
 	*/
 
-	if (kickstart_version >= 37) {
+	// KS 2.x RTF_AFTERDOS is broken
+	if (kickstart_version >= 39) {
 		trap_put_word(ctx, resaddr + 0x0, 0x4afc);
 		trap_put_long(ctx, resaddr + 0x2, resaddr);
 		trap_put_long(ctx, resaddr + 0x6, resaddr + 0x1A);
@@ -8593,7 +8595,38 @@ void filesys_vsync (void)
 				do_uae_int_requested();
 		}
 	}
-	
+
+	if (media_queued_total > 0) {
+		if (automountunit == -1) {
+			bool cont = true;
+			for (u = units; u; u = u->next) {
+				if (u->reinsertdelay > 0) {
+					cont = false;
+					break;
+				}
+			}
+			if (cont) {
+				TCHAR *mountpath = media_queued_paths[media_queued_cnt++];
+				if (mountpath) {
+					filesys_media_change(mountpath, 3, NULL);
+				}
+				if (media_queued_cnt >= media_queued_total) {
+					for (int i = 0; i < media_queued_total; i++) {
+						xfree(media_queued_paths[i]);
+					}
+					xfree(media_queued_paths);
+					media_queued_cnt = 0;
+					media_queued_total = 0;
+					media_queued_paths = NULL;
+					for (int i = 0; i < MAX_FILESYSTEM_UNITS; i++) {
+						if (mountinfo.ui[i].canremove < 0)
+							mountinfo.ui[i].canremove = 1;
+					}
+				}
+			}
+		}
+	}
+
 	if (heartbeat == get_long_host(rtarea_bank.baseaddr + RTAREA_HEARTBEAT)) {
 		if (heartbeat_count > 0)
 			heartbeat_count--;
@@ -8603,7 +8636,7 @@ void filesys_vsync (void)
 	}
 	heartbeat = get_long_host(rtarea_bank.baseaddr + RTAREA_HEARTBEAT);
 	heartbeat_count_cont = 10;
-	cia_heartbeat();
+	cia_heartbeat ();
 
 	for (u = units; u; u = u->next) {
 		if (u->reinsertdelay > 0) {
@@ -8671,7 +8704,7 @@ void filesys_install (void)
 	cdfs_handlername = ds_bstr_ansi ("uaecdfs");
 
 	afterdos_name = ds_ansi("UAE afterdos");
-	afterdos_id = ds_ansi("UAE afterdos 0.1");
+	afterdos_id = ds_ansi("UAE afterdos 0.2");
 
 	keymaphook_name = ds_ansi("UAE keymaphook");
 	keymaphook_id = ds_ansi("UAE keymaphook 0.1");

@@ -103,7 +103,7 @@ static void do_stch (void);
 
 static void INT2 (void)
 {
-	safe_interrupt_set(false);
+	safe_interrupt_set(IRQ_SOURCE_CD32CDTV, 0, false);
 	cd_led ^= LED_CD_ACTIVE2;
 }
 
@@ -1501,7 +1501,7 @@ static addrbank dmac_bank = {
 	dmac_lget, dmac_wget, dmac_bget,
 	dmac_lput, dmac_wput, dmac_bput,
 	default_xlate, default_check, NULL, NULL, _T("CDTV DMAC/CD Controller"),
-	dmac_wgeti,
+	dmac_lgeti, dmac_wgeti,
 	ABFLAG_IO, S_READ, S_WRITE
 };
 
@@ -1649,7 +1649,7 @@ addrbank cardmem_bank = {
 	cardmem_lget, cardmem_wget, cardmem_bget,
 	cardmem_lput, cardmem_wput, cardmem_bput,
 	cardmem_xlate, cardmem_check, NULL, _T("rom_e0"), _T("CDTV memory card"),
-	cardmem_wget,
+	cardmem_lget, cardmem_wget,
 	ABFLAG_RAM, 0, 0
 };
 

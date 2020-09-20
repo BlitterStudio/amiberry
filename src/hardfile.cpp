@@ -2913,8 +2913,7 @@ static int hardfile_thread(void* devs)
 			trap_put_bytes(ctx, iobuf + 8, request + 8, 48 - 8);
 			release_async_request(hfpd, request);
 			uae_ReplyMsg(request);
-		}
-		else {
+		} else {
 			trap_put_bytes(ctx, iobuf + 8, request + 8, 48 - 8);
 		}
 		trap_background_set_complete(ctx);
@@ -2952,7 +2951,7 @@ void hardfile_reset (void)
 			hfpd->requests.size = 0;
 		}
 
-		memset(hfpd, 0, sizeof(struct hardfileprivdata));
+		memset (hfpd, 0, sizeof (struct hardfileprivdata));
 	}
 }
 
@@ -2966,7 +2965,7 @@ void hardfile_install (void)
 		uae_sem_destroy(&change_sem);
 		change_sem = nullptr;
 	}
-	uae_sem_init(&change_sem, 0, 1);
+	uae_sem_init (&change_sem, 0, 1);
 
 	ROM_hardfile_resname = ds (currprefs.uaescsidevmode == 1 ? _T("scsi.device") : _T("uaehf.device"));
 	ROM_hardfile_resid = ds (_T("UAE hardfile.device 0.6"));

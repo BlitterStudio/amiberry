@@ -128,9 +128,11 @@ struct regstruct
 	uae_u16 opcode;
 	uae_u32 instruction_pc;
 
-	uae_u16 irc, ir, db;
+	uae_u16 irc, ir, ird;
 	volatile uae_atomic spcflags;
-	uae_u16 write_buffer, read_buffer;
+	uae_u16 db, write_buffer, read_buffer;
+	int loop_mode;
+	int instruction_cnt;
 
 	uaecptr usp, isp, msp;
 	uae_u16 sr;
@@ -198,6 +200,8 @@ STATIC_INLINE uae_u32 munge24(uae_u32 x)
 
 extern int cpu_cycles;
 extern int m68k_pc_indirect;
+
+extern void safe_interrupt_set(int, int, bool);
 
 STATIC_INLINE void set_special_exter(uae_u32 x)
 {

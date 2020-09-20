@@ -51,6 +51,7 @@ extern int decode_cloanto_rom_do (uae_u8 *mem, int size, int real_size);
 #define ROMTYPE_CB_QUIKPAK	0x0004001e
 #define ROMTYPE_CB_12GAUGE	0x0004001f
 #define ROMTYPE_CB_HARMS3KP	0x00040020
+#define ROMTYPE_CB_A1230S1	0x00040021
 
 #define ROMTYPE_FREEZER		0x00080000
 #define ROMTYPE_AR			0x00080001
@@ -193,6 +194,7 @@ extern int decode_cloanto_rom_do (uae_u8 *mem, int size, int real_size);
 #define ROMTYPE_SSQUIRREL	0x00100082
 #define ROMTYPE_MASTERCARD	0x00100083
 #define ROMTYPE_DOTTO		0x00100084
+#define ROMTYPE_ALF2		0x00100085
 
 #define ROMTYPE_NOT			0x00800000
 #define ROMTYPE_QUAD		0x01000000

@@ -13,6 +13,7 @@
 #include <assert.h>
 
 #include "options.h"
+#include "events.h"
 #include "memory.h"
 #include "custom.h"
 #include "newcpu.h"
@@ -82,7 +83,7 @@ static bool led;
 static int led_old_brightness;
 static unsigned long led_cycles_on, led_cycles_off, led_cycle;
 
-static unsigned int ciabpra;
+unsigned int ciabpra;
 
 static unsigned long ciaala, ciaalb, ciabla, ciablb;
 static int ciaatodon, ciabtodon;
@@ -116,7 +117,7 @@ static int cia_interrupt_delay;
 
 static void ICR (uae_u32 data)
 {
-	safe_interrupt_set((data & 0x2000) != 0);
+	safe_interrupt_set(IRQ_SOURCE_CIA, 0, (data & 0x2000) != 0);
 }
 
 static void ICRA (uae_u32 dummy)
@@ -1118,8 +1119,7 @@ static uae_u8 ReadCIAA (unsigned int addr, uae_u32 *flags)
 				return getciatod(ciaatol) >> 24;
 			else
 				return getciatod(ciaatod) >> 24;
-		}
-		else {
+		} else {
 			return 0xff;
 		}
 		break;
@@ -1236,8 +1236,7 @@ static uae_u8 ReadCIAB (unsigned int addr, uae_u32 *flags)
 				return getciatod(ciabtol) >> 24;
 			else
 				return getciatod(ciabtod) >> 24;
-		}
-		else {
+		} else {
 			return 0xff;
 		}
 		break;
@@ -1419,6 +1418,66 @@ static void WriteCIAA (uae_u16 addr, uae_u8 val, uae_u32 *flags)
 	}
 }
 
+static void write_ciab_serial(uae_u8 ndata, uae_u8 odata, uae_u8 ndir, uae_u8 odir)
+{
+	uae_u8 val = ndata & ndir;
+	// CNT 0->1?
+	if ((val & 2) && !((odata & odir) & 2)) {
+		int icr = 0;
+		// CIA-B SP in input mode
+		if (!(ciabcra & 0x40)) {
+			ciabsdr_buf <<= 1;
+			ciabsdr_buf |= (val & 1) ? 0x01 : 0x00;
+			ciabsdr_cnt++;
+			if (ciabsdr_cnt >= 8) {
+				// Data received
+				ciabsdr = ciabsdr_buf;
+				ciabicr |= 8;
+				icr = 1;
+				ciabsdr_cnt = 0;
+			}
+		}
+		// A INMODE=1 (count CNT pulses)
+		if ((ciabcra & 0x21) == 0x21) {
+			ciabta--;
+			if (ciabta == 0) {
+				ciabicr |= 1;
+				ciabta = ciabla;
+				if (ciabcra & 0x8) {
+					ciabcra &= ~1;
+				}
+				// B INMODE = 10 or 11 (count A undeflows)
+				if ((ciabcrb & 0x41) == 0x41) {
+					ciabtb--;
+					if (ciabtb == 0) {
+						ciabicr |= 2;
+						ciabtb = ciablb;
+						if (ciabcrb & 0x8) {
+							ciabcrb &= ~1;
+						}
+					}
+				}
+				icr = 1;
+			}
+		}
+		// B INMODE=01 (count CNT pulses)
+		if ((ciabcrb & 0x61) == 0x21) {
+			ciabtb--;
+			if (ciabtb == 0) {
+				ciabicr |= 2;
+				ciabtb = ciablb;
+				if (ciabcrb & 0x8) {
+					ciabcrb &= ~1;
+				}
+				icr = 1;
+			}
+		}
+		if (icr) {
+			RethinkICRB();
+		}
+	}
+}
+
 static void WriteCIAB (uae_u16 addr, uae_u8 val, uae_u32 *flags)
 {
 	int reg = addr & 15;
@@ -1591,6 +1650,7 @@ void CIA_reset (void)
 #endif
 
 	kblostsynccnt = 0;
+	serbits = 0;
 	oldcd32mute = 1;
 	resetwarning_phase = resetwarning_timer = 0;
 	heartbeat_cnt = 0;
@@ -1638,7 +1698,7 @@ addrbank cia_bank = {
 	cia_lget, cia_wget, cia_bget,
 	cia_lput, cia_wput, cia_bput,
 	default_xlate, default_check, NULL, NULL, _T("CIA"),
-	cia_wgeti,
+	cia_lgeti, cia_wgeti,
 	ABFLAG_IO | ABFLAG_CIA, S_READ, S_WRITE, NULL, 0x3f01, 0xbfc000
 };
 
@@ -1900,12 +1960,19 @@ static uae_u32 REGPARAM2 cia_wgeti (uaecptr addr)
 		return dummy_wgeti (addr);
 	return cia_wget (addr);
 }
+static uae_u32 REGPARAM2 cia_lgeti (uaecptr addr)
+{
+	if (currprefs.cpu_model >= 68020)
+		return dummy_lgeti (addr);
+	return cia_lget (addr);
+}
 
 static void REGPARAM2 cia_bput (uaecptr addr, uae_u32 value)
 {
 	int r = (addr & 0xf00) >> 8;
 
 	if (isgarynocia(addr)) {
+		dummy_put(addr, 1, false);
 		return;
 	}
 
@@ -1939,6 +2006,7 @@ static void REGPARAM2 cia_wput (uaecptr addr, uae_u32 v)
 	int r = (addr & 0xf00) >> 8;
 
 	if (isgarynocia(addr)) {
+		dummy_put(addr, 2, false);
 		return;
 	}
 
@@ -1989,7 +2057,7 @@ addrbank clock_bank = {
 	clock_lget, clock_wget, clock_bget,
 	clock_lput, clock_wput, clock_bput,
 	default_xlate, default_check, NULL, NULL, _T("Battery backed up clock (none)"),
-	dummy_wgeti,
+	dummy_lgeti, dummy_wgeti,
 	ABFLAG_IO, S_READ, S_WRITE, NULL, 0x3f, 0xd80000
 };
 
@@ -2132,6 +2200,7 @@ static uae_u32 REGPARAM2 clock_bget (uaecptr addr)
 static void REGPARAM2 clock_lput (uaecptr addr, uae_u32 value)
 {
 	if ((addr & 0xffff) >= 0x8000 && currprefs.cs_fatgaryrev >= 0) {
+		dummy_put(addr, 4, value);
 		return;
 	}
 
@@ -2142,6 +2211,7 @@ static void REGPARAM2 clock_lput (uaecptr addr, uae_u32 value)
 static void REGPARAM2 clock_wput (uaecptr addr, uae_u32 value)
 {
 	if ((addr & 0xffff) >= 0x8000 && currprefs.cs_fatgaryrev >= 0) {
+		dummy_put(addr, 2, value);
 		return;
 	}
 
@@ -2152,6 +2222,7 @@ static void REGPARAM2 clock_wput (uaecptr addr, uae_u32 value)
 static void REGPARAM2 clock_bput (uaecptr addr, uae_u32 value)
 {
 	if ((addr & 0xffff) >= 0x8000 && currprefs.cs_fatgaryrev >= 0) {
+		dummy_put(addr, 1, value);
 		return;
 	}
 

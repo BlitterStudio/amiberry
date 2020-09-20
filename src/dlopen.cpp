@@ -1,3 +1,4 @@
+#include "sysconfig.h"
 #include "sysdeps.h"
 #include "uae/dlopen.h"
 
@@ -62,7 +63,7 @@ static amiga_plugin_lookup_function plugin_lookup;
 
 UAE_DLHANDLE uae_dlopen_plugin(const TCHAR *name)
 {
-#if defined(AMIBERRY) // ME
+#if defined(AMIBERRY)
 	const TCHAR *path = NULL;
 	if (plugin_lookup) {
 		path = plugin_lookup(name);

@@ -322,8 +322,6 @@
   </ImportGroup>
   <ItemGroup>
     <None Include="..\..\src\aks.def" />
-    <None Include="..\..\src\filesys.asm" />
-    <None Include="..\..\src\filesys_bootrom.cpp.in" />
     <None Include="..\..\src\fpp_native.cpp.in" />
     <None Include="..\..\src\inputevents.def" />
     <None Include="..\..\src\jit\codegen_arm.cpp.in" />
@@ -399,6 +397,7 @@
     <ClInclude Include="..\..\src\include\clipboard.h" />
     <ClInclude Include="..\..\src\include\commpipe.h" />
     <ClInclude Include="..\..\src\include\consolehook.h" />
+    <ClInclude Include="..\..\src\include\cpuboard.h" />
     <ClInclude Include="..\..\src\include\cpummu.h" />
     <ClInclude Include="..\..\src\include\cpummu030.h" />
     <ClInclude Include="..\..\src\include\cputbl.h" />
@@ -410,6 +409,7 @@
     <ClInclude Include="..\..\src\include\diskutil.h" />
     <ClInclude Include="..\..\src\include\drawing.h" />
     <ClInclude Include="..\..\src\include\driveclick.h" />
+    <ClInclude Include="..\..\src\include\ethernet.h" />
     <ClInclude Include="..\..\src\include\events.h" />
     <ClInclude Include="..\..\src\include\execio.h" />
     <ClInclude Include="..\..\src\include\execlib.h" />
@@ -440,6 +440,7 @@
     <ClInclude Include="..\..\src\include\rommgr.h" />
     <ClInclude Include="..\..\src\include\rtc.h" />
     <ClInclude Include="..\..\src\include\rtgmodes.h" />
+    <ClInclude Include="..\..\src\include\sana2.h" />
     <ClInclude Include="..\..\src\include\savestate.h" />
     <ClInclude Include="..\..\src\include\scp.h" />
     <ClInclude Include="..\..\src\include\scsi.h" />

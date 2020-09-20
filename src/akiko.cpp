@@ -149,7 +149,7 @@
 
 #include "options.h"
 #include "memory.h"
-//#include "events.h"
+#include "events.h"
 #include "savestate.h"
 #include "blkdev.h"
 #include "zfile.h"
@@ -175,7 +175,7 @@ int log_cd32 = 0;
 
 static void irq (void)
 {
-	safe_interrupt_set(false);
+	safe_interrupt_set(IRQ_SOURCE_CD32CDTV, 0, false);
 }
 
 /*
@@ -1971,7 +1971,7 @@ addrbank akiko_bank = {
 	akiko_lget, akiko_wget, akiko_bget,
 	akiko_lput, akiko_wput, akiko_bput,
 	default_xlate, default_check, NULL, NULL, _T("Akiko"),
-	dummy_wgeti,
+	dummy_lgeti, dummy_wgeti,
 	ABFLAG_IO | ABFLAG_SAFE, S_READ, S_WRITE
 };
 

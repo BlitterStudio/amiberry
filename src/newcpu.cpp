@@ -1074,7 +1074,8 @@ kludge_me_do:
 static void ExceptionX (int nr)
 {
 	regs.exception = nr;
-
+	regs.loop_mode = 0;
+	
 #ifdef JIT
   if (currprefs.cachesize)
 	  regs.instruction_pc = m68k_getpc ();
@@ -1605,6 +1606,26 @@ static void check_uae_int_request(void)
 	}
 }
 
+void safe_interrupt_set(int num, int id, bool i6)
+{
+	//if (!is_mainthread()) {
+	//	set_special_exter(SPCFLAG_UAEINT);
+	//	volatile uae_atomic* p;
+	//	if (i6)
+	//		p = &uae_interrupts6[num];
+	//	else
+	//		p = &uae_interrupts2[num];
+	//	atomic_or(p, 1 << id);
+	//	atomic_or(&uae_interrupt, 1);
+	//}
+	//else {
+		uae_u16 v = i6 ? 0x2000 : 0x0008;
+		if (currprefs.cpu_cycle_exact || (!(intreq & v) && !currprefs.cpu_cycle_exact)) {
+			INTREQ_0(0x8000 | v);
+		}
+	//}
+}
+
 int cpu_sleep_millis(int ms)
 {
 	return sleep_millis_main(ms);
@@ -1806,14 +1827,17 @@ static void m68k_run_1(void)
 #if defined (CPU_arm) && defined(USE_ARMNEON)
 				// Well not really since pli is ArmV7...
 				/* Load ARM code for next opcode into L2 cache during execute of do_cycles() */
-				__asm__ volatile ("pli [%[radr]]\n\t":: [radr]"r"(cpufunctbl[r->opcode]):);
+				__asm__ volatile ("pli [%[radr]]\n\t"::[radr]"r"(cpufunctbl[r->opcode]) : );
 #endif
 				count_instr(r->opcode);
 
 				do_cycles(cpu_cycles);
 				r->instruction_pc = m68k_getpc();
 				cpu_cycles = (*cpufunctbl[r->opcode])(r->opcode);
+				if (!regs.loop_mode)
+					regs.ird = regs.opcode;
 				cpu_cycles = adjust_cycles(cpu_cycles);
+				regs.instruction_cnt++;
 				if (r->spcflags)
 				{
 					if (do_specialties(cpu_cycles))

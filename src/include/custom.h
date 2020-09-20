@@ -90,13 +90,6 @@ extern bool INTREQ_0(uae_u16);
 extern void INTREQ_f(uae_u16);
 extern void send_interrupt(int num, int delay);
 extern void rethink_uae_int(void);
-STATIC_INLINE void safe_interrupt_set(bool i6)
-{
-	uae_u16 v = i6 ? 0x2000 : 0x0008;
-	if (!(intreq & v)) {
-		INTREQ_0(0x8000 | v);
-	}
-}
 extern uae_u16 INTREQR(void);
 
 /* maximums for statically allocated tables */
@@ -241,10 +234,10 @@ extern void alloc_cycle_blitter (int hpos, uaecptr *ptr, int);
 extern bool ispal (void);
 extern bool isvga (void);
 extern int current_maxvpos (void);
-extern struct chipset_refresh *get_chipset_refresh(struct uae_prefs*);
-extern void compute_framesync(void);
+extern struct chipset_refresh *get_chipset_refresh (struct uae_prefs*);
+extern void compute_framesync (void);
 //extern void getsyncregisters(uae_u16 *phsstrt, uae_u16 *phsstop, uae_u16 *pvsstrt, uae_u16 *pvsstop);
-int is_bitplane_dma(int hpos);
+int is_bitplane_dma (int hpos);
 void custom_cpuchange(void);
 
 struct custom_store
