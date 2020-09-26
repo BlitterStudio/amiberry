@@ -332,6 +332,7 @@ OBJS =	\
 	src/scsiemul.o \
 	src/statusline.o \
 	src/tabletlibrary.o \
+	src/tinyxml2.o \
 	src/traps.o \
 	src/uaeexe.o \
 	src/uaelib.o \
@@ -479,10 +480,6 @@ clean:
 cleanprofile:
 	$(RM) $(OBJS:%.o=%.gcda)
 	
-bootrom:
-	od -v -t xC -w8 src/filesys |tail -n +5 | sed -e "s,^.......,," -e "s,[0123456789abcdefABCDEF][0123456789abcdefABCDEF],db(0x&);,g" > src/filesys_bootrom.cpp
-	touch src/filesys.cpp
-
 guisan:
 	$(MAKE) -C external/libguisan
 	

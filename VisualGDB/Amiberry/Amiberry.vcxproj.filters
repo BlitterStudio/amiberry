@@ -661,6 +661,9 @@
     <ClCompile Include="..\..\src\driveclick.cpp">
       <Filter>Source files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\tinyxml2.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\threaddep\thread.h">
@@ -1102,6 +1105,9 @@
       <Filter>Source files\include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\include\ethernet.h">
+      <Filter>Source files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\tinyxml2.h">
       <Filter>Source files\include</Filter>
     </ClInclude>
   </ItemGroup>
