@@ -48,6 +48,7 @@ int disk_debug_track = -1;
 #include "fsdb.h"
 #include "statusline.h"
 #include "rommgr.h"
+#include "tinyxml2.h"
 
 #undef CATWEASEL
 
@@ -1133,7 +1134,7 @@ static int drive_insert (drive * drv, struct uae_prefs *p, int dnum, const TCHAR
 
 	drive_image_free (drv);
 	if (!fake)
-		DISK_examine_image(p, dnum, &disk_info_data);
+		DISK_examine_image(p, dnum, &disk_info_data, false);
 	DISK_validate_filename (p, fname_in, outname, 1, &drv->wrprot, &drv->crc32, &drv->diskfile);
 	drv->forcedwrprot = forcedwriteprotect;
 	if (drv->forcedwrprot)
@@ -2158,7 +2159,7 @@ static int decode_buffer (uae_u16 *mbuf, int cyl, int drvsec, int ddhd, int file
 	int length = 2 * fwlen;
 	uae_u32 odd, even, chksum, id, dlong;
 	uae_u8 *secdata;
-	uae_u8 secbuf[544], secheadbuf[16];
+	uae_u8 secbuf[544];
 	uae_u16 *mend = mbuf + length, *mstart;
 	uae_u32 sechead[4];
 	int shift = 0;
@@ -2407,7 +2408,7 @@ static int drive_write_pcdos (drive *drv, struct zfile *zf, bool count)
 
 static int drive_write_adf_amigados (drive *drv)
 {
-	int drvsec, i;
+	int drvsec;
 	int sectable[MAX_SECTORS];
 
 	if (decode_buffer (drv->bigmfmbuf, drv->cyl, drv->num_secs, drv->ddhd, drv->filetype, &drvsec, sectable, 0))
@@ -4397,7 +4398,144 @@ static void load_track (int num, int cyl, int side, int *sectable)
 	drv->buffered_cyl = -1;
 }
 
-int DISK_examine_image (struct uae_prefs *p, int num, struct diskinfo *di)
+using namespace tinyxml2;
+
+static bool abr_loaded;
+static tinyxml2::XMLDocument abr_xml[2];
+static TCHAR* abr_files[] = { _T("brainfile.xml"), _T("catlist.xml"), NULL };
+
+static void abrcheck(struct diskinfo* di)
+{
+	TCHAR path[MAX_DPATH];
+
+	if (!abr_loaded) {
+		bool error = false;
+		for (int i = 0; abr_files[i] && !error; i++) {
+			get_plugin_path(path, sizeof(path) / sizeof(TCHAR), _T("abr"));
+			_tcscat(path, abr_files[i]);
+			FILE* f = fopen(path, _T("rb"));
+			if (f) {
+				tinyxml2::XMLError err = abr_xml[i].LoadFile(f);
+				if (err != XML_SUCCESS) {
+					write_log(_T("failed to parse '%s': %d\n"), path, err);
+					error = true;
+				}
+				fclose(f);
+			}
+			else {
+				error = true;
+			}
+		}
+		if (!error) {
+			abr_loaded = true;
+		}
+	}
+	if (!abr_loaded)
+		return;
+	tinyxml2::XMLElement* detectedelementcrc32 = NULL;
+	tinyxml2::XMLElement* detectedelementrecog = NULL;
+	tinyxml2::XMLElement* e = abr_xml[0].FirstChildElement("Bootblocks");
+	if (e) {
+		e = e->FirstChildElement("Bootblock");
+		if (e) {
+			do {
+				tinyxml2::XMLElement* ercrc = e->FirstChildElement("CRC");
+				if (ercrc) {
+					const char* n_crc32 = ercrc->GetText();
+					if (strlen(n_crc32) == 8) {
+						char* endptr;
+						uae_u32 crc32 = strtol(n_crc32, &endptr, 16);
+						if (di->bootblockcrc32 == crc32) {
+							detectedelementcrc32 = e;
+						}
+					}
+				}
+				tinyxml2::XMLElement* er = e->FirstChildElement("Recog");
+				if (er) {
+					const char* tr = er->GetText();
+					bool detected = false;
+					while (tr) {
+						int offset = atoi(tr);
+						if (offset < 0 || offset > 1023)
+							break;
+						tr = strchr(tr, ',');
+						if (!tr || !tr[1])
+							break;
+						tr++;
+						int val = atoi(tr);
+						if (val < 0 || val > 255)
+							break;
+						if (di->bootblock[offset] != val)
+							break;
+						tr = strchr(tr, ',');
+						if (!tr) {
+							detected = true;
+						}
+						else {
+							tr++;
+						}
+					}
+					if (detected) {
+						detectedelementrecog = e;
+					}
+				}
+				e = e->NextSiblingElement();
+			} while (e && !detectedelementcrc32);
+
+			if (detectedelementcrc32 != NULL || detectedelementrecog != NULL) {
+				if (detectedelementcrc32) {
+					e = detectedelementcrc32;
+				}
+				else {
+					e = detectedelementrecog;
+				}
+				tinyxml2::XMLElement* e_name = e->FirstChildElement("Name");
+				if (e_name) {
+					const char* n_name = e_name->GetText();
+					if (n_name) {
+						TCHAR* s = au(n_name);
+						_tcscpy(di->bootblockinfo, s);
+						xfree(s);
+					}
+				}
+				tinyxml2::XMLElement* e_class = e->FirstChildElement("Class");
+				if (e_class) {
+					const char* t_class = e_class->GetText();
+					if (t_class) {
+						tinyxml2::XMLElement* ecats = abr_xml[1].FirstChildElement("Categories");
+						if (ecats) {
+							tinyxml2::XMLElement* ecat = ecats->FirstChildElement("Category");
+							if (ecat) {
+								do {
+									tinyxml2::XMLElement* ecatr = ecat->FirstChildElement("abbrev");
+									if (ecatr) {
+										const char* catabbr = ecatr->GetText();
+										if (!strcmp(catabbr, t_class)) {
+											tinyxml2::XMLElement* ecatn = ecat->FirstChildElement("Name");
+											if (ecatn) {
+												const char* n_catname = ecatn->GetText();
+												if (n_catname) {
+													TCHAR* s = au(n_catname);
+													_tcscpy(di->bootblockclass, s);
+													xfree(s);
+													break;
+												}
+											}
+										}
+									}
+									ecat = ecat->NextSiblingElement();
+								} while (ecat);
+							}
+						}
+						return;
+					}
+				}
+			}
+		}
+	}
+}
+
+int DISK_examine_image (struct uae_prefs *p, int num, struct diskinfo *di, bool deepcheck)
 {
 	int drvsec;
 	int ret, i;
@@ -4420,7 +4558,7 @@ int DISK_examine_image (struct uae_prefs *p, int num, struct diskinfo *di)
 		side = oldside;
 		return 1;
 	}
-	di->crc32 = zfile_crc32 (drv->diskfile);
+	di->imagecrc32 = zfile_crc32 (drv->diskfile);
 	di->unreadable = false;
 	decode_buffer (drv->bigmfmbuf, drv->cyl, 11, drv->ddhd, drv->filetype, &drvsec, sectable, 1);
 	di->hd = drv->ddhd == 2;
@@ -4446,6 +4584,10 @@ int DISK_examine_image (struct uae_prefs *p, int num, struct diskinfo *di)
 		if (crc + v < crc)
 			crc++;
 		crc += v;
+	}
+	di->bootblockcrc32 = get_crc32(di->bootblock, 1024);
+	if (deepcheck) {
+		abrcheck(di);
 	}
 	if (dos == 0x4b49434b) { /* KICK */
 		ret = 10;

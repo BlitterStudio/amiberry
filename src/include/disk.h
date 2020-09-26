@@ -30,11 +30,14 @@ struct diskinfo
 {
 	uae_u8 bootblock[1024];
 	bool bb_crc_valid;
-	uae_u32 crc32;
+	uae_u32 imagecrc32;
+	uae_u32 bootblockcrc32;
 	bool hd;
 	bool unreadable;
 	int bootblocktype;
 	TCHAR diskname[110];
+	TCHAR bootblockinfo[256];
+	TCHAR bootblockclass[256];
 };
 
 #define FLOPPY_RATE_500K 0
@@ -83,7 +86,7 @@ extern bool disk_creatediskfile (struct uae_prefs *p, const TCHAR *name, int typ
 extern void dumpdisk (const TCHAR*);
 extern int DISK_history_add (const TCHAR *name, int idx, int type, int donotcheck);
 extern TCHAR *DISK_history_get (int idx, int type);
-int DISK_examine_image (struct uae_prefs *p, int num, struct diskinfo *di);
+int DISK_examine_image (struct uae_prefs *p, int num, struct diskinfo *di, bool deepcheck);
 extern TCHAR *DISK_get_saveimagepath(const TCHAR *name, int type);
 extern void DISK_reinsert (int num);
 extern int disk_prevnext (int drive, int dir);
