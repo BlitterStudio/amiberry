@@ -19,6 +19,10 @@ struct bltinfo {
     int vblitsize, hblitsize;
     int bltamod, bltbmod, bltcmod, bltdmod;
     int got_cycle;
+    int nasty_cnt, wait_nasty;
+    int blitter_nasty, blit_interrupt;
+    // blitter is active and D may write to visible bitplane addresses
+    int blitter_dangerous_bpl;
 };
 
 extern enum blitter_states {
@@ -26,8 +30,6 @@ extern enum blitter_states {
 } bltstate;
 
 extern struct bltinfo blt_info;
-
-extern int blitter_nasty, blit_interrupt, blitter_dangerous_bpl;
 
 extern void check_is_blit_dangerous (uaecptr *bplpt, int planes, int words);
 
@@ -41,7 +43,6 @@ extern int blit_singlechannel;
 extern void maybe_blit (int, int);
 extern void reset_blit (int);
 extern int blitnasty (void);
-extern int blitnnasty (int);
 extern void blitter_handler (uae_u32);
 extern void build_blitfilltable (void);
 extern void do_blitter (int, int, uaecptr);

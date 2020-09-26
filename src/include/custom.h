@@ -27,6 +27,8 @@
 #define MAXVPOS_LINES_OCS 512
 #define HPOS_SHIFT 3
 
+#define BLIT_NASTY_CPU_STEAL_CYCLE_COUNT 4
+
 uae_u32 get_copper_address (int copno);
 
 extern int custom_init (void);

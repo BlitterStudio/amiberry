@@ -3064,7 +3064,7 @@ static void decide_fetch (int hpos)
 
 STATIC_INLINE void decide_fetch_safe (int hpos)
 {
-	if (!blitter_dangerous_bpl && !bitplane_overrun) {
+	if (!blt_info.blitter_dangerous_bpl && !bitplane_overrun) {
 		decide_fetch (hpos);
 		decide_blitter (hpos);
 	} else {
@@ -4863,7 +4863,7 @@ STATIC_INLINE uae_u16 DMACONR (int hpos)
 	decide_line (hpos);
 	decide_fetch_safe (hpos);
 	dmacon &= ~(0x4000 | 0x2000);
-	dmacon |= ((blit_interrupt || (!blit_interrupt && currprefs.cs_agnusbltbusybug && !blt_info.got_cycle)) ? 0 : 0x4000)
+	dmacon |= ((blt_info.blit_interrupt || (!blt_info.blit_interrupt && currprefs.cs_agnusbltbusybug && !blt_info.got_cycle)) ? 0 : 0x4000)
 		| (blt_info.blitzero ? 0x2000 : 0);
 	return dmacon;
 }
@@ -8867,7 +8867,7 @@ void custom_reset (bool hardreset, bool keyboardreset)
 		setup_fmodes (0);
 		beamcon0 = new_beamcon0 = beamcon0_saved = currprefs.ntscmode ? 0x00 : 0x20;
 		bltstate = BLT_done;
-		blit_interrupt = 1;
+		blt_info.blit_interrupt = 1;
 		init_sprites ();
 	}
 
