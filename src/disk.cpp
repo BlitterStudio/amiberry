@@ -63,8 +63,8 @@ int floppy_writemode = 0;
 #define FLOPPY_WRITE_MAXLEN 0x3800
 /* This works out to 350 */
 #define FLOPPY_GAP_LEN (FLOPPY_WRITE_LEN - 11 * 544)
-/* (cycles/bitcell) << 8, normal = ((2us/280ns)<<8) = ~1828.5714 */
-#define NORMAL_FLOPPY_SPEED (currprefs.ntscmode ? 1812 : 1829)
+/* 7 CCK per bit */
+#define NORMAL_FLOPPY_SPEED (7 * 256)
 /* max supported floppy drives, for small memory systems */
 #define MAX_FLOPPY_DRIVES 4
 
@@ -563,8 +563,11 @@ static int get_floppy_speed_from_image(drive *drv)
 {
 	int l, m;
 	
-	l = drv->tracklen;
-	m = get_floppy_speed () * l / (2 * 8 * FLOPPY_WRITE_LEN * drv->ddhd);
+	m = get_floppy_speed();
+	if (!drv->tracktiming[0]) {
+		l = drv->tracklen;
+		m = m * l / (2 * 8 * FLOPPY_WRITE_LEN * drv->ddhd);
+	}
 
 	// 4us track?
 	if (l < (FLOPPY_WRITE_LEN_PAL * 8) * 4 / 6)
