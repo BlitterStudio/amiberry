@@ -15,7 +15,7 @@
 #include "traps.h"
 
 #define UAEMAJOR 4
-#define UAEMINOR 4
+#define UAEMINOR 5
 #define UAESUBREV 0
 
 typedef enum { KBD_LANG_US, KBD_LANG_DK, KBD_LANG_DE, KBD_LANG_SE, KBD_LANG_FR, KBD_LANG_IT, KBD_LANG_ES } KbdLang;
@@ -614,6 +614,7 @@ struct uae_prefs
 	bool comp_constjump;
 	bool comp_catchfault;
 	int cachesize;
+	TCHAR jitblacklist[MAX_DPATH];
 	bool fpu_strict;
 	int fpu_mode;
 
