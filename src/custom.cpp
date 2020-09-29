@@ -344,6 +344,7 @@ struct copper {
 	int strobe; /* COPJMP1 / COPJMP2 accessed */
 	int last_strobe;
 	int moveaddr, movedata, movedelay;
+	int blitbusy;
 };
 
 #ifdef AMIBERRY
@@ -436,6 +437,8 @@ enum plfstate
 	plf_wait,
 	// ddfstop passed
 	plf_passed_stop,
+	// before ddfstop+4 passed
+	plf_passed_stop_pre_act,
 	// ddfstop+4 passed
 	plf_passed_stop_act,
 	// last block finished
@@ -2742,6 +2745,14 @@ STATIC_INLINE int one_fetch_cycle_0 (int pos, int dma, int fm)
 		// 4+ stage shift register that causes these delays.
 		if (plf_state == plf_active || plf_state == plf_passed_stop || plf_state == plf_passed_stop_act) {
 			bpl_dma_off_when_active = 1;
+			if (!dma) {
+				// if DMA ends just before next BPL1DAT fetch: do one block only.
+				// otherwise: do two blocks.
+				if (is_bitplane_dma(pos + 2) != 1) {
+					bpl_dma_off_when_active = 2;
+				}
+				bpl_dma_off_when_active |= 4;
+			}
 			if (bitplane_off_delay <= 0)
 				bitplane_off_delay = !dma ? 4 : 5;
 		}
@@ -2751,6 +2762,12 @@ STATIC_INLINE int one_fetch_cycle_0 (int pos, int dma, int fm)
 			if (bitplane_off_delay == 0) {
 				bplactive = false;
 				plf_state = plf_wait;
+			}
+		}
+		if (bpl_dma_off_when_active) {
+			// check if passed DDFSTOP
+			if (pos == plfstop && ddfstop_written_hpos != pos) {
+				bpl_dma_off_when_active |= 8;
 			}
 		}
 	}
@@ -2776,7 +2793,10 @@ STATIC_INLINE int one_fetch_cycle_0 (int pos, int dma, int fm)
 			finish_last_fetch(pos, fm, false);
 			return 1;
 		}
-		if (plf_state == plf_passed_stop_act) {
+		if (plf_state == plf_passed_stop_pre_act) {
+			plf_state = plf_passed_stop_act;
+		}
+		else if (plf_state == plf_passed_stop_act) {
 			plf_state = plf_passed_stop2;
 		}
 	}
@@ -3303,11 +3323,19 @@ static void decide_line (int hpos)
 						plf_end_hpos = HARD_DDF_STOP + DDF_OFFSET;
 						nextstate = plf_passed_stop;
 					}
-					if (bpl_dma_off_when_active) {
-							nextstate = plf_passed_stop_act;
-						bpl_dma_off_when_active = 0;
+					// if DMA was switched off, DDFSTOP was passed during off period and DMA got re-enabled: state machine continues from DDFSTOP passed state.
+					if (bpl_dma_off_when_active & 8) {
+						nextstate = (bpl_dma_off_when_active & 1) ? plf_passed_stop_act : plf_passed_stop_pre_act;
+						ddfstop_matched = true;
 					}
 				}
+				else {
+					if ((bpl_dma_off_when_active & 8) && (bpl_dma_off_when_active & 4)) {
+						nextstate = (bpl_dma_off_when_active & 1) ? plf_passed_stop_act : plf_passed_stop_pre_act;
+						ddfstop_matched = true;
+					}
+				}
+				bpl_dma_off_when_active = 0;
 				if (nextstate != plf_end) {
 					plf_state = nextstate;
 					estimate_last_fetch_cycle(hstart);
@@ -4147,13 +4175,6 @@ static void reset_decisions (void)
 	hack_delay_shift = 0;
 	toscr_scanline_complex_bplcon1 = false;
 
-	if (line_cyclebased) {
-		line_cyclebased--;
-		if (!line_cyclebased) {
-			bpl_dma_off_when_active = 0;
-		}
-	}
-
 	memset(outword, 0, sizeof outword);
 	// fetched[] must not be cleared (Sony VX-90 / Royal Amiga Force)
 	todisplay_fetched[0] = todisplay_fetched[1] = false;
@@ -4858,13 +4879,36 @@ static uae_u16 DENISEID (int *missing)
 		*missing = 1;
 	return 0xFFFF;
 }
+
+static bool blit_busy(void)
+{
+	if (blt_info.blit_interrupt)
+		return false;
+	if (currprefs.cs_agnusbltbusybug) {
+		// Blitter busy bug: A1000 Agnus only sets busy-bit when blitter gets first DMA slot.
+		if (!blt_info.blit_interrupt && !blt_info.got_cycle)
+			return false;
+		// A1000 Agnus also has below bug but it does not need separate check because of above bug.
+	}
+	else if (!(currprefs.chipset_mask & CSMASK_AGA)) {
+#if 0
+		// AGA apparently does not have this bug.
+		// Blitter busy bug: Blitter nasty off, CPU attempting to steal cycle, Copper started blitter,
+		// Copper WAITing for blitter finished: busy is not set until CPU gets the cycle.
+		// NOT CORRECT YET
+		if (!(dmacon & DMA_BLITPRI) && blt_info.wait_nasty && blt_info.nasty_cnt >= BLIT_NASTY_CPU_STEAL_CYCLE_COUNT)
+			return false;
+#endif
+	}
+	return true;
+}
+
 STATIC_INLINE uae_u16 DMACONR (int hpos)
 {
 	decide_line (hpos);
 	decide_fetch_safe (hpos);
 	dmacon &= ~(0x4000 | 0x2000);
-	dmacon |= ((blt_info.blit_interrupt || (!blt_info.blit_interrupt && currprefs.cs_agnusbltbusybug && !blt_info.got_cycle)) ? 0 : 0x4000)
-		| (blt_info.blitzero ? 0x2000 : 0);
+	dmacon |= (blit_busy() ? 0x4000 : 0x0000) | (blt_info.blitzero ? 0x2000 : 0);
 	return dmacon;
 }
 STATIC_INLINE uae_u16 INTENAR (void)
@@ -4993,7 +5037,6 @@ static void VPOSW (uae_u16 v)
 	if (vpos < oldvpos)
 		vpos = oldvpos;
 }
-
 
 static void VHPOSW (uae_u16 v)
 {
@@ -5416,7 +5459,7 @@ static void doint_delay ()
 	if (currprefs.cpu_compatible) {
 		event2_newevent_xx(-1, CYCLE_UNIT + CYCLE_UNIT / 2, 0, doint_delay_do);
 	} else {
-		doint();
+		doint_delay_do(0);
 	}
 }
 
@@ -5767,14 +5810,18 @@ static void BPL2MOD (int hpos, uae_u16 v)
 /* Needed in special OCS/ECS "7-plane" mode,
  * also handles CPU generated bitplane data
  */
-static void BPLxDAT (int hpos, int num, uae_u16 v)
+static void BPLxDAT_next(uae_u32 v)
 {
+	int num = v >> 16;
+	uae_u16 data = (uae_u16)v;
+	int hpos = current_hpos();
+	
 	// only BPL1DAT access can do anything visible
 	if (num == 0 && hpos >= 8) {
-		decide_line (hpos);
-		decide_fetch_safe (hpos);
+		decide_line(hpos);
+		decide_fetch_safe(hpos);
 	}
-	flush_display (fetchmode);
+	flush_display(fetchmode);
 	fetched[num] = v;
 	if ((fmode & 3) == 3) {
 		fetched_aga[num] = (uae_u64(last_custom_value2) << 48) | (uae_u64(v) << 32) | (v << 16) | v;
@@ -5785,12 +5832,19 @@ static void BPLxDAT (int hpos, int num, uae_u16 v)
 	} else {
 		fetched_aga[num] = v;
 	}
+}
+
+
+static void BPLxDAT(int hpos, int num, uae_u16 v)
+{
+	event2_newevent2(1, (num << 16) | v, BPLxDAT_next);
+
 	if (num == 0 && hpos >= 8) {
 		bpl1dat_written = true;
 		bpl1dat_written_at_least_once = true;
 		if (thisline_decision.plfleft < 0)
-			reset_bpl_vars ();
-		beginning_of_plane_block (hpos, fetchmode);
+			reset_bpl_vars();
+		beginning_of_plane_block(hpos, fetchmode);
 	}
 }
 
@@ -6775,11 +6829,23 @@ static void update_copper (int until_hpos)
 			if (copper_cant_read (old_hpos))
 				continue;
 			cop_state.state = COP_wait1;
+			// check blitter status early
+			cop_state.blitbusy = 0;
+			if ((cop_state.saved_i2 & 0x8000) == 0) {
+				decide_blitter(old_hpos);
+				cop_state.blitbusy = blit_busy();
+			}
 			break;
 		case COP_skip_in2:
 			if (copper_cant_read (old_hpos))
 				continue;
 			cop_state.state = COP_skip1;
+			// check blitter status early
+			cop_state.blitbusy = 0;
+			if ((cop_state.saved_i2 & 0x8000) == 0) {
+				decide_blitter(old_hpos);
+				cop_state.blitbusy = blit_busy();
+			}
 			break;
 
 		case COP_strobe_extra:
@@ -6959,7 +7025,13 @@ static void update_copper (int until_hpos)
 				 */
 				if ((cop_state.saved_i2 & 0x8000) == 0) {
 					decide_blitter(old_hpos);
-					if (bltstate != BLT_done) {
+					if (cop_state.blitbusy) {
+						if (!blit_busy()) {
+							// if blitter was actually finished
+							// check again next copper cycle.
+							cop_state.state = COP_wait_in2;
+							continue;
+						}
 						/* We need to wait for the blitter.  */
 						cop_state.state = COP_bltwait;
 						copper_enabled_thisline = 0;
@@ -7007,18 +7079,19 @@ static void update_copper (int until_hpos)
 			{
 				unsigned int vcmp, hcmp, vp1, hp1;
 
-				if (c_hpos >= (maxhpos & ~1) || (c_hpos & 1))
-					break;
-
 				if (copper_cant_read (old_hpos))
 					continue;
+
+				int ch_comp = c_hpos;
+				if (ch_comp & 1)
+					ch_comp = 0;
 
 				vcmp = (cop_state.saved_i1 & (cop_state.saved_i2 | 0x8000)) >> 8;
 				hcmp = (cop_state.saved_i1 & cop_state.saved_i2 & 0xFE);
 				vp1 = vpos & (((cop_state.saved_i2 >> 8) & 0x7F) | 0x80);
-				hp1 = c_hpos & (cop_state.saved_i2 & 0xFE);
+				hp1 = ch_comp & (cop_state.saved_i2 & 0xFE);
 
-				if ((vp1 > vcmp || (vp1 == vcmp && hp1 >= hcmp)) && ((cop_state.saved_i2 & 0x8000) != 0 || bltstate == BLT_done))
+				if ((vp1 > vcmp || (vp1 == vcmp && hp1 >= hcmp)) && ((cop_state.saved_i2 & 0x8000) != 0 || !cop_state.blitbusy))
 					cop_state.ignore_next = 1;
 
 				cop_state.state = COP_read1;
@@ -9700,6 +9773,7 @@ uae_u8 *restore_custom (uae_u8 *src)
 	bplcon3_saved = bplcon3;
 	bplcon4_saved = bplcon4;
 	fmode_saved = fmode;
+	beamcon0_saved = new_beamcon0;
 
 	current_colors.extra = 0;
 	if (isbrdblank (-1, bplcon0, bplcon3))
