@@ -749,6 +749,7 @@ static void updatepicasso96()
 	vidinfo->width = screen->w;
 	vidinfo->depth = screen->format->BytesPerPixel * 8;
 	vidinfo->offset = 0;
+	//vidinfo->splitypos = -1;
 #endif
 }
 static void open_screen(struct uae_prefs* p)

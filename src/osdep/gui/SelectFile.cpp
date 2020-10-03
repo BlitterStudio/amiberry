@@ -373,45 +373,39 @@ static void SelectFileLoop()
 			}
 			break;
 
-		case SDL_JOYBUTTONDOWN:
-		case SDL_JOYHATMOTION:
-		case SDL_JOYAXISMOTION:
-			if (gui_joystick)
+		case SDL_CONTROLLERBUTTONDOWN:
+			if (gui_controller)
 			{
 				got_event = 1;
-				const int hat = SDL_JoystickGetHat(gui_joystick, 0);
-
-				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].south_button))
+				if (SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_A) ||
+					SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_B))
 				{
 					PushFakeKey(SDLK_RETURN);
 					break;
 				}
-				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].east_button) ||
-					SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].start_button))
+				if (SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_X) ||
+					SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_Y) ||
+					SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_START))
 				{
 					dialogFinished = true;
 					break;
 				}
-				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_left) || (hat & SDL_HAT_LEFT) ||
-					SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_x) == -32768)
+				if (SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_DPAD_LEFT))
 				{
 					navigate_left();
 					break;
 				}
-				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_right) || (hat & SDL_HAT_RIGHT)
-					|| SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_x) == 32767)
+				if (SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_DPAD_RIGHT))
 				{
 					navigate_right();
 					break;
 				}
-				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_up) || (hat & SDL_HAT_UP) ||
-					SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_y) == -32768)
+				if (SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_DPAD_UP))
 				{
 					PushFakeKey(SDLK_UP);
 					break;
 				}
-				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_down) || (hat & SDL_HAT_DOWN) ||
-					SDL_JoystickGetAxis(gui_joystick, host_input_buttons[0].lstick_axis_y) == 32767)
+				if (SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_DPAD_DOWN))
 				{
 					PushFakeKey(SDLK_DOWN);
 					break;

@@ -297,6 +297,7 @@
     <ClCompile Include="..\..\src\osdep\mp3decoder.cpp" />
     <ClCompile Include="..\..\src\osdep\neon_helper.s" />
     <ClCompile Include="..\..\src\osdep\picasso96.cpp" />
+    <ClCompile Include="..\..\src\osdep\retroarch.cpp" />
     <ClCompile Include="..\..\src\osdep\sigsegv_handler.cpp" />
     <ClCompile Include="..\..\src\osdep\writelog.cpp" />
     <ClCompile Include="..\..\src\readcpu.cpp" />
@@ -477,6 +478,7 @@
     <ClInclude Include="..\..\src\machdep\rpt.h" />
     <ClInclude Include="..\..\src\osdep\amiberry_filesys.hpp" />
     <ClInclude Include="..\..\src\osdep\amiberry_gfx.h" />
+    <ClInclude Include="..\..\src\osdep\amiberry_input.h" />
     <ClInclude Include="..\..\src\osdep\amiberry_rp9.h" />
     <ClInclude Include="..\..\src\osdep\cda_play.h" />
     <ClInclude Include="..\..\src\osdep\config.h" />

@@ -45,6 +45,8 @@
 #include "devices.h"
 #include <map>
 
+
+#include "amiberry_input.h"
 #include "clipboard.h"
 #include "uae/uae.h"
 
@@ -67,6 +69,7 @@ struct amiberry_options amiberry_options = {};
 
 // Default Enter GUI key is F12
 int enter_gui_key = 0;
+SDL_GameControllerButton enter_gui_button;
 // We don't set a default value for Quitting
 int quit_key = 0;
 // The default value for Action Replay is Pause/Break
@@ -94,6 +97,12 @@ void set_key_configs(struct uae_prefs* p)
 	if (enter_gui_key == 0)
 		enter_gui_key = SDLK_F12;
 
+	enter_gui_button = SDL_GameControllerGetButtonFromString(p->open_gui);
+	if (enter_gui_button == SDL_CONTROLLER_BUTTON_INVALID)
+		enter_gui_button = SDL_GameControllerGetButtonFromString(amiberry_options.default_open_gui_key);
+	if (enter_gui_button == SDL_CONTROLLER_BUTTON_INVALID)
+		enter_gui_button = SDL_CONTROLLER_BUTTON_GUIDE;
+	
 	if (strncmp(p->quit_amiberry, "", 1) != 0)
 		quit_key = SDL_GetKeyFromName(p->quit_amiberry);
 	else
@@ -1755,6 +1764,14 @@ void process_event(SDL_Event event)
 	case SDL_JOYDEVICEREMOVED:
 	case SDL_CONTROLLERDEVICEREMOVED:
 		write_log("SDL Controller/Joystick device removed!\n");
+		break;
+
+	case SDL_CONTROLLERBUTTONDOWN:
+		if (event.cbutton.button == enter_gui_button)
+		{
+			inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
+			break;
+		}
 		break;
 
 	case SDL_KEYDOWN:

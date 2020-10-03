@@ -123,7 +123,7 @@ static void ShowMessageWaitInputLoop()
 			}
 		}
 
-		if (event.type == SDL_CONTROLLERBUTTONDOWN)
+		if (event.type == SDL_CONTROLLERBUTTONDOWN || event.type == SDL_JOYBUTTONDOWN)
 		{
 			got_event = 1;
 			dialogControlPressed = SDL_GameControllerGetStringForButton(
@@ -195,28 +195,25 @@ static void ShowMessageLoop()
 			break;
 
 		case SDL_JOYBUTTONDOWN:
-		case SDL_JOYHATMOTION:
-			if (gui_joystick)
+		case SDL_CONTROLLERBUTTONDOWN:
+			if (gui_controller)
 			{
 				got_event = 1;
-				const int hat = SDL_JoystickGetHat(gui_joystick, 0);
-
-				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].south_button))
+				if (SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_A) ||
+					SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_B))
 				{
 					PushFakeKey(SDLK_RETURN);
 					break;
 				}
-				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].east_button) ||
-					SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].start_button))
+				if (SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_X) ||
+					SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_Y) ||
+					SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_START))
 				{
 					dialogFinished = true;
 					break;
 				}
-				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_left) ||
-					SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].dpad_right) ||
-					(hat & SDL_HAT_LEFT) ||
-					(hat & SDL_HAT_RIGHT))
-
+				if (SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_DPAD_LEFT) ||
+					SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_DPAD_RIGHT))
 				{
 					navigate_left_right();
 					break;

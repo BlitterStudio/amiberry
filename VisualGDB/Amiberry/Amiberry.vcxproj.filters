@@ -664,6 +664,9 @@
     <ClCompile Include="..\..\src\tinyxml2.cpp">
       <Filter>Source files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\osdep\retroarch.cpp">
+      <Filter>Source files\osdep</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\threaddep\thread.h">
@@ -1109,6 +1112,9 @@
     </ClInclude>
     <ClInclude Include="..\..\src\include\tinyxml2.h">
       <Filter>Source files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\osdep\amiberry_input.h">
+      <Filter>Source files\osdep</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -142,41 +142,45 @@ public:
 
 		else if (actionEvent.getSource() == cmdOpenGUI)
 		{
-			const auto* const key = ShowMessageForInput("Press a key", "Press a key to map to Open the GUI", "Cancel");
+			const auto* const key = ShowMessageForInput("Press a key", "Press a key to map to Open the GUI, or ESC to cancel...", "Cancel");
 			if (key != nullptr)
 			{
 				txtOpenGUI->setText(key);
 				strcpy(changed_prefs.open_gui, key);
+				strcpy(currprefs.open_gui, key);
 			}
 		}
 
 		else if (actionEvent.getSource() == cmdKeyForQuit)
 		{
-			const auto* const key = ShowMessageForInput("Press a key", "Press a key to map to Quit the emulator", "Cancel");
+			const auto* const key = ShowMessageForInput("Press a key", "Press a key to map to Quit the emulator, or ESC to cancel...", "Cancel");
 			if (key != nullptr)
 			{
 				txtKeyForQuit->setText(key);
 				strcpy(changed_prefs.quit_amiberry, key);
+				strcpy(currprefs.quit_amiberry, key);
 			}
 		}
 
 		else if (actionEvent.getSource() == cmdKeyActionReplay)
 		{
-			const auto* const key = ShowMessageForInput("Press a key", "Press a key to map to Action Replay", "Cancel");
+			const auto* const key = ShowMessageForInput("Press a key", "Press a key to map to Action Replay, or ESC to cancel...", "Cancel");
 			if (key != nullptr)
 			{
 				txtKeyActionReplay->setText(key);
 				strcpy(changed_prefs.action_replay, key);
+				strcpy(currprefs.action_replay, key);
 			}
 		}
 
 		else if (actionEvent.getSource() == cmdKeyFullScreen)
 		{
-			const auto* const key = ShowMessageForInput("Press a key", "Press a key to map to toggle FullScreen", "Cancel");
+			const auto* const key = ShowMessageForInput("Press a key", "Press a key to map to toggle FullScreen, or ESC to cancel...", "Cancel");
 			if (key != nullptr)
 			{
 				txtKeyFullScreen->setText(key);
 				strcpy(changed_prefs.fullscreen_toggle, key);
+				strcpy(currprefs.fullscreen_toggle, key);
 			}
 		}
 	}

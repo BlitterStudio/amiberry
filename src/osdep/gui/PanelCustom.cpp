@@ -1,17 +1,18 @@
-#include <stdio.h>
-#include <string.h>
-#include <stdbool.h>
+#include <cstdio>
+#include <cstring>
 
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
+
 #include "SelectorEntry.hpp"
 
 #include "sysdeps.h"
 #include "options.h"
 #include "gui_handling.h"
 #include "inputdevice.h"
+#include "amiberry_input.h"
 
 static gcn::Window* grpPort;
 static gcn::RadioButton* optPort0;
