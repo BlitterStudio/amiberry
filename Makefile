@@ -399,6 +399,7 @@ OBJS =	\
 	src/osdep/amiberry_mem.o \
 	src/osdep/amiberry_whdbooter.o \
 	src/osdep/sigsegv_handler.o \
+	src/osdep/retroarch.o \
 	src/sounddep/sound.o \
 	src/osdep/gui/InGameMessage.o \
 	src/osdep/gui/SelectorEntry.o \
