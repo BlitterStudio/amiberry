@@ -826,17 +826,18 @@ static void read_joystick()
 				}
 			}
 			// temporary solution for retroarch buttons inc. HOTKEY
-			else if (current_controller_map.is_retroarch && SDL_JoystickGetButton(joy, current_controller_map.hotkey_button) & 1)
+			else if (current_controller_map.is_retroarch)
 			{
-				held_offset = REMAP_BUTTONS;
-				setjoybuttonstate(host_joy_id + num_keys_as_joys, 14,
-					SDL_JoystickGetButton(joy, current_controller_map.menu_button) & 1);
-
-				setjoybuttonstate(host_joy_id + num_keys_as_joys, 15,
-					SDL_JoystickGetButton(joy, current_controller_map.quit_button) & 1);
-
-				setjoybuttonstate(host_joy_id + num_keys_as_joys, 30,
-					SDL_JoystickGetButton(joy, current_controller_map.reset_button) & 1);
+				if (SDL_JoystickGetButton(joy, current_controller_map.hotkey_button) & 1)
+				{
+					held_offset = REMAP_BUTTONS;
+					setjoybuttonstate(host_joy_id + num_keys_as_joys, 14,
+						SDL_JoystickGetButton(joy, current_controller_map.menu_button) & 1);
+					setjoybuttonstate(host_joy_id + num_keys_as_joys, 15,
+						SDL_JoystickGetButton(joy, current_controller_map.quit_button) & 1);
+					setjoybuttonstate(host_joy_id + num_keys_as_joys, 30,
+						SDL_JoystickGetButton(joy, current_controller_map.reset_button) & 1);
+				}
 			}
 			else if (SDL_GameControllerGetButton(controller_table[host_joy_id], static_cast<SDL_GameControllerButton>(current_controller_map.hotkey_button)) & 1)
 			{
@@ -1048,6 +1049,7 @@ static void read_joystick()
 						static_cast<SDL_GameControllerButton>(current_controller_map.right_shoulder)) & 1;
 				setjoybuttonstate(host_joy_id + num_keys_as_joys, 5 + held_offset, state);
 			}
+			
 			// start
 			if (current_controller_map.start_button != -1)
 			{

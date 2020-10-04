@@ -1989,7 +1989,6 @@ void process_event(SDL_Event event)
 	default:
 		break;
 	}
-	
 }
 
 void update_clipboard()
