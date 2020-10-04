@@ -393,23 +393,16 @@ void map_from_retroarch(int cpt, char* control_config)
 	host_input_buttons[cpt].number_of_hats = find_retroarch("count_hats", control_config);
 
 	// invert on axes
-	host_input_buttons[cpt].lstick_axis_y_invert = find_retroarch_polarity(
-		"input_down_axis", control_config);
+	host_input_buttons[cpt].lstick_axis_y_invert = find_retroarch_polarity("input_down_axis", control_config);
 	if (!host_input_buttons[cpt].lstick_axis_y_invert)
-		host_input_buttons[cpt].lstick_axis_y_invert = find_retroarch_polarity(
-			"input_l_y_plus_axis", control_config);
+		host_input_buttons[cpt].lstick_axis_y_invert = find_retroarch_polarity("input_l_y_plus_axis", control_config);
 
-	host_input_buttons[cpt].lstick_axis_x_invert = find_retroarch_polarity(
-		"input_right_axis", control_config);
+	host_input_buttons[cpt].lstick_axis_x_invert = find_retroarch_polarity("input_right_axis", control_config);
 	if (!host_input_buttons[cpt].lstick_axis_x_invert)
+		host_input_buttons[cpt].lstick_axis_x_invert = find_retroarch_polarity("input_l_x_plus_axis", control_config);
 
-		host_input_buttons[cpt].lstick_axis_x_invert = find_retroarch_polarity(
-			"input_l_x_plus_axis", control_config);
-
-	host_input_buttons[cpt].rstick_axis_x_invert = find_retroarch_polarity(
-		"input_r_x_plus_axis", control_config);
-	host_input_buttons[cpt].rstick_axis_y_invert = find_retroarch_polarity(
-		"input_r_y_plus_axis", control_config);
+	host_input_buttons[cpt].rstick_axis_x_invert = find_retroarch_polarity("input_r_x_plus_axis", control_config);
+	host_input_buttons[cpt].rstick_axis_y_invert = find_retroarch_polarity("input_r_y_plus_axis", control_config);
 
 	write_log("Controller Detection: invert left  y axis: %d\n",
 	          host_input_buttons[cpt].lstick_axis_y_invert);

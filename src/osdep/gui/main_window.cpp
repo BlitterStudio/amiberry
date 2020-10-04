@@ -18,8 +18,7 @@
 #include "amiberry_gfx.h"
 #include "amiberry_filesys.hpp"
 #include "autoconf.h"
-
-#include "inputdevice.h"
+#include "amiberry_input.h"
 
 #if defined(ANDROID)
 #include "androidsdl_event.h"
@@ -565,18 +564,20 @@ void check_input()
 					continue;
 				}
 
-				//if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].quit_button) &&
-				//	SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].hotkey_button)) // use the HOTKEY button
-				//{
-				//	uae_quit();
-				//	gui_running = false;
-				//	break;
-				//}
+				if (SDL_GameControllerGetButton(gui_controller, static_cast<SDL_GameControllerButton>(host_input_buttons[0].quit_button)) &&
+					SDL_GameControllerGetButton(gui_controller, static_cast<SDL_GameControllerButton>(host_input_buttons[0].hotkey_button)))
+				{
+					// use the HOTKEY button
+					uae_quit();
+					gui_running = false;
+					break;
+				}
 
-				//if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].menu_button)) // use the HOTKEY button
-				//{
-				//	gui_running = false;
-				//}
+				if (SDL_GameControllerGetButton(gui_controller, static_cast<SDL_GameControllerButton>(host_input_buttons[0].menu_button)))
+				{
+					// use the HOTKEY button
+					gui_running = false;
+				}
 			}
 			break;
 

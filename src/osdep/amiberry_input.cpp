@@ -63,13 +63,13 @@ static void fill_default_controller()
 	default_controller_map.left_trigger = SDL_CONTROLLER_AXIS_TRIGGERLEFT; // alt. fire
 	default_controller_map.right_trigger = SDL_CONTROLLER_AXIS_TRIGGERRIGHT; // esc?
 
-	default_controller_map.lstick_button = -1;
+	default_controller_map.lstick_button = SDL_CONTROLLER_BUTTON_INVALID;
 	default_controller_map.lstick_axis_y = SDL_CONTROLLER_AXIS_LEFTY;
 	default_controller_map.lstick_axis_x = SDL_CONTROLLER_AXIS_LEFTX;
 	default_controller_map.lstick_axis_y_invert = false;
 	default_controller_map.lstick_axis_x_invert = false;
 
-	default_controller_map.rstick_button = -1;
+	default_controller_map.rstick_button = SDL_CONTROLLER_BUTTON_INVALID;
 	default_controller_map.rstick_axis_y = SDL_CONTROLLER_AXIS_RIGHTY;
 	default_controller_map.rstick_axis_x = SDL_CONTROLLER_AXIS_RIGHTX;
 	default_controller_map.rstick_axis_y_invert = false;
