@@ -322,8 +322,8 @@ bool key_used_by_retroarch_joy(int scancode)
 		for (auto joy_id = 0; joy_id < MAX_JPORTS && !key_used; joy_id++)
 		{
 			// First handle retroarch (or default) keys as Joystick...
-			if (currprefs.jports[joy_id].id >= JSEM_JOYS && currprefs.jports[joy_id].id < JSEM_JOYS +
-				num_keys_as_joys)
+			if (currprefs.jports[joy_id].id >= JSEM_JOYS 
+				&& currprefs.jports[joy_id].id < JSEM_JOYS + num_keys_as_joys)
 			{
 				const auto host_key_id = currprefs.jports[joy_id].id - JSEM_JOYS;
 				const auto kb = host_key_id;
