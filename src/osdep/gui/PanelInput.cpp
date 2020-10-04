@@ -205,7 +205,7 @@ public:
 			RefreshPanelCustom();
 		}
 
-			// mousemap drop-down change
+		// mousemap drop-down change
 		else if (actionEvent.getSource() == cboPort0mousemode)
 		{
 			changed_prefs.jports[0].mousemap = cboPort0mousemode->getSelected();

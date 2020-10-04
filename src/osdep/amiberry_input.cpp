@@ -32,7 +32,7 @@ const int remap_buttons = 16;
 static char joystick_name[MAX_INPUT_DEVICES][80];
 static SDL_GameController* controller_table[MAX_INPUT_DEVICES];
 
-static int num_mouse, num_keyboard = 1;
+static int num_mouse = 1, num_keyboard = 1;
 static int num_joystick = 0;
 int num_keys_as_joys = 0;
 
