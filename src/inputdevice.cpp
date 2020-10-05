@@ -3750,14 +3750,12 @@ static bool inputdevice_handle_inputcode_immediate(int code, int state)
 {
 	if (!state)
 		return false;
-#ifndef AMIBERRY
 	switch(code)
 	{
 		case AKS_ENTERDEBUGGER:
-			activate_debugger ();
+			//activate_debugger ();
 			return true;
 	}
-#endif
 	return false;
 }
 
@@ -3772,7 +3770,10 @@ void inputdevice_add_inputcode (int code, int state, const TCHAR *s)
 			if (!inputdevice_handle_inputcode_immediate(code, state)) {
 				inputcode_pending[i].code = code;
 				inputcode_pending[i].state = state;
-				inputcode_pending[i].s = my_strdup(s);
+				if (s == NULL)
+					inputcode_pending[i].s = NULL;
+				else
+					inputcode_pending[i].s = my_strdup(s);
 			}
 			return;
 		}
