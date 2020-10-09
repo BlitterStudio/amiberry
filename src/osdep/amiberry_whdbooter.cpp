@@ -20,13 +20,13 @@
 extern FILE* debugfile;
 
 #include "fsdb.h"
-#include <libxml/tree.h>
+#include "tinyxml2.h"
 
 extern void SetLastActiveConfig(const char* filename);
 extern char current_dir[MAX_DPATH];
 extern char last_loaded_config[MAX_DPATH];
 
-#include <fstream> /// Horace added
+#include <fstream>
 
 struct game_options
 {
@@ -53,38 +53,6 @@ struct game_options
 	TCHAR fast[256] = "nul\0";
 	TCHAR z3[256] = "nul\0";
 };
-
-static xmlNode* get_node(xmlNode* node, const char* name)
-{
-	for (auto* curr_node = node; curr_node; curr_node = curr_node->next)
-	{
-		if (curr_node->type == XML_ELEMENT_NODE && strcmp(reinterpret_cast<const char*>(curr_node->name), name) == 0)
-			return curr_node->children;
-	}
-	return nullptr;
-}
-
-static bool get_value(xmlNode* node, const char* key, char* value, int max_size)
-{
-	auto result = false;
-
-	for (auto* curr_node = node; curr_node; curr_node = curr_node->next)
-	{
-		if (curr_node->type == XML_ELEMENT_NODE && strcmp(reinterpret_cast<const char*>(curr_node->name), key) == 0)
-		{
-			auto* const content = xmlNodeGetContent(curr_node);
-			if (content != nullptr)
-			{
-				strncpy(value, reinterpret_cast<char*>(content), max_size);
-				xmlFree(content);
-				result = true;
-			}
-			break;
-		}
-	}
-
-	return result;
-}
 
 static TCHAR* parse_text(const TCHAR* s)
 {
@@ -120,10 +88,10 @@ void remove_char(char* array, int len, int index)
 	array[len - 1] = 0;
 }
 
-void parse_custom_settings(struct uae_prefs* p, char* InSettings)
+void parse_custom_settings(struct uae_prefs* p, const char* settings)
 {
 	char temp_options[4096];
-	strcpy(temp_options, InSettings);
+	strcpy(temp_options, settings);
 
 	auto* full_line = strtok(temp_options, "\n");
 
@@ -148,7 +116,7 @@ struct membuf final : std::streambuf
 	}
 };
 
-std::string find_whdload_game_option(const TCHAR* find_setting, char* whd_options)
+std::string find_whdload_game_option(const TCHAR* find_setting, const char* whd_options)
 {
 	char temp_options[4096];
 	char temp_setting[4096];
@@ -189,7 +157,7 @@ std::string find_whdload_game_option(const TCHAR* find_setting, char* whd_option
 	return output;
 }
 
-struct game_options get_game_settings(char* HW)
+struct game_options get_game_settings(const char* HW)
 {
 	struct game_options output_detail;
 	strcpy(output_detail.port0, find_whdload_game_option("PORT0", HW).c_str());
@@ -424,9 +392,6 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 
 	char whd_bootscript[4096];
 
-	char hardware_settings[4096];
-	char custom_settings[4096];
-
 	char selected_slave[4096];
 	// note!! this should be global later on, and only collected from the XML if set to 'nothing'
 	char subpath[4096];
@@ -504,46 +469,62 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 
 	if (zfile_exists(whd_config)) // use XML database
 	{
+		tinyxml2::XMLDocument doc;
+		auto error = false;
 		write_log("WHDBooter - Loading whdload_db.xml\n");
 		write_log("WHDBooter - Searching whdload_db.xml for %s\n", game_name);
 
-		auto* const doc = xmlParseFile(whd_config);
-		auto* const root_element = xmlDocGetRootElement(doc);
-		auto* game_node = get_node(root_element, "whdbooter");
-
-		while (game_node != nullptr)
+		auto* f = fopen(whd_config, _T("rb"));
+		if (f)
 		{
-			auto* const attr = xmlGetProp(game_node, reinterpret_cast<const xmlChar*>("filename"));
-			if (attr != nullptr)
+			auto err = doc.LoadFile(f);
+			if (err != tinyxml2::XML_SUCCESS)
 			{
-				if (strcmpi(reinterpret_cast<const char *>(attr), game_name) == 0)
+				write_log(_T("Failed to parse '%s':  %d\n"), whd_config, err);
+				error = true;
+			}
+			fclose(f);
+		}
+		else
+		{
+			error = true;
+		}
+
+		if (!error)
+		{
+			auto* game_node = doc.FirstChildElement("whdbooter");
+			game_node = game_node->FirstChildElement("game");
+			while (game_node != nullptr)
+			{
+				if (game_node->Attribute("filename", game_name))
 				{
 					// now get the <hardware> and <custom_controls> items
 					// get hardware
-					auto* temp_node = game_node->xmlChildrenNode;
-					temp_node = get_node(temp_node, "hardware");
-					if (xmlNodeGetContent(temp_node) != nullptr)
+					auto* temp_node = game_node->FirstChildElement("hardware");
+					if (temp_node)
 					{
-						_stprintf(hardware_settings, "%s",
-						          reinterpret_cast<const char*>(xmlNodeGetContent(temp_node)));
-						game_detail = get_game_settings(hardware_settings);
-
-						write_log("WHDBooter - Game H/W Settings: \n%s\n", hardware_settings);
+						const auto* hardware = temp_node->GetText();
+						if (hardware)
+						{
+							game_detail = get_game_settings(hardware);
+							write_log("WHDBooter - Game H/W Settings: \n%s\n", hardware);
+						}
 					}
-
+					
 					// get custom controls
-					temp_node = game_node->xmlChildrenNode;
-					temp_node = get_node(temp_node, "custom_controls");
-					if (xmlNodeGetContent(temp_node) != nullptr)
+					temp_node = game_node->FirstChildElement("custom_controls");
+					if (temp_node)
 					{
-						_stprintf(custom_settings, "%s",
-						          reinterpret_cast<const char*>(xmlNodeGetContent(temp_node)));
+						const auto* custom_settings = temp_node->GetText();
+						if (custom_settings)
+						{
+							parse_custom_settings(prefs, custom_settings);
+						}
 					}
 
 					if (strlen(selected_slave) == 0)
 					{
-						temp_node = game_node->xmlChildrenNode;
-						temp_node = get_node(temp_node, "slave_default");
+						temp_node = game_node->FirstChildElement("slave_default");
 
 						// use a selected slave if we have one
 						if (strlen(currprefs.whdbootprefs.slave) != 0)
@@ -551,48 +532,41 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 							strcpy(selected_slave, currprefs.whdbootprefs.slave);
 							write_log("WHDBooter - Config Selected Slave: %s \n", selected_slave);
 						}
-							// otherwise use the XML default
-						else if (xmlNodeGetContent(temp_node) != nullptr)
+						// otherwise use the XML default
+						else if (temp_node->GetText() != nullptr)
 						{
-							_stprintf(selected_slave, "%s",
-							          reinterpret_cast<const char*>(xmlNodeGetContent(temp_node)));
+							_stprintf(selected_slave, "%s", temp_node->GetText());
 							write_log("WHDBooter - Default Slave: %s\n", selected_slave);
 						}
 
-						temp_node = game_node->xmlChildrenNode;
-						temp_node = get_node(temp_node, "subpath");
+						temp_node = game_node->FirstChildElement("subpath");
 
-						if (xmlNodeGetContent(temp_node) != nullptr)
+						if (temp_node->GetText() != nullptr)
 						{
-							_stprintf(subpath, "%s",
-							          reinterpret_cast<const char*>(xmlNodeGetContent(temp_node)));
+							_stprintf(subpath, "%s",	temp_node->GetText());
 							write_log("WHDBooter - SubPath:  %s\n", subpath);
 						}
-
-						temp_node = game_node->xmlChildrenNode;
 					}
 
 					// get slave_libraries
-					temp_node = game_node->xmlChildrenNode;
-					temp_node = get_node(temp_node, "slave_libraries");
-					if (xmlNodeGetContent(temp_node) != nullptr)
+					temp_node = game_node->FirstChildElement("slave_libraries");
+					if (temp_node->GetText() != nullptr)
 					{
-						if (strcmpi(reinterpret_cast<const char *>(xmlNodeGetContent(temp_node)), "true") == 0)
+						if (strcmpi(temp_node->GetText(), "true") == 0)
 							use_slave_libs = true;
 
 						write_log("WHDBooter - Libraries:  %s\n", subpath);
 					}
 					break;
 				}
+				game_node = game_node->NextSiblingElement();
 			}
-			xmlFree(attr);
-			game_node = game_node->next;
 		}
-		xmlCleanupParser();
 	}
 	else
+	{
 		write_log("WHDBooter -  Could not load whdload_db.xml - does not exist?\n");
-
+	}
 
 	_stprintf(whd_bootscript, "\n");
 	// currently, we have selected a slave, so we create a startup-sequence
@@ -897,10 +871,6 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 		_stprintf(txt2, "%s=%s", _T("joyport3"), _T(amiberry_options.default_controller4));
 		cfgfile_parse_line(prefs, txt2, 0);
 	}
-
-	// CUSTOM CONTROLS
-	if (strlen(custom_settings) > 0)
-		parse_custom_settings(prefs, custom_settings);
 
 	//      *** GAME-SPECIFICS ***
 	//  SET THE GAME COMPATIBILITY SETTINGS
