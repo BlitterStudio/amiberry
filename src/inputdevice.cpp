@@ -5295,7 +5295,15 @@ static void setbuttonstateall (struct uae_input_device *id, struct uae_input_dev
 			int evt = id->eventid[ID_BUTTON_OFFSET + button][sub];
 			TCHAR *custom = id->custom[ID_BUTTON_OFFSET + button][sub];
 			uae_u64 flags = flagsp[0];
-			int autofire = (flags & ID_FLAG_AUTOFIRE) ? 1 : 0;
+
+#ifdef AMIBERRY
+			int autofire = (flags & ID_FLAG_AUTOFIRE)
+			? 1
+			: evt > INPUTEVENT_AUTOFIRE_BEGIN && evt < INPUTEVENT_AUTOFIRE_END
+			? 1
+			: 0;
+
+#endif
 			int toggle = (flags & ID_FLAG_TOGGLE) ? 1 : 0;
 			int inverttoggle = (flags & ID_FLAG_INVERTTOGGLE) ? 1 : 0;
 			int invert = (flags & ID_FLAG_INVERT) ? 1 : 0;
