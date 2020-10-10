@@ -56,12 +56,13 @@ int floppy_writemode = 0;
 
 /* support HD floppies */
 #define FLOPPY_DRIVE_HD
-/* writable track length with normal 2us bitcell/300RPM motor, 12667 PAL, 12797 NTSC */
-#define FLOPPY_WRITE_LEN_PAL 12668
-#define FLOPPY_WRITE_LEN_NTSC 12798
+/* Writable track length with normal 2us bitcell/300RPM motor, 12688 PAL, 12784 NTSC */
+/* DMA clock / (7 clocks per bit * 5 revs per second * 8 bits per byte) */
+#define FLOPPY_WRITE_LEN_PAL 12668 // 3546895 / (7 * 5 * 8)
+#define FLOPPY_WRITE_LEN_NTSC 12784 // 3579545 / (7 * 5 * 8)
 #define FLOPPY_WRITE_LEN (currprefs.floppy_write_length > 256 ? currprefs.floppy_write_length / 2 : (currprefs.ntscmode ? (FLOPPY_WRITE_LEN_NTSC / 2) : (FLOPPY_WRITE_LEN_PAL / 2)))
 #define FLOPPY_WRITE_MAXLEN 0x3800
-/* This works out to 350 */
+/* This works out to 350 PAL, 408 NTSC */
 #define FLOPPY_GAP_LEN (FLOPPY_WRITE_LEN - 11 * 544)
 /* 7 CCK per bit */
 #define NORMAL_FLOPPY_SPEED (7 * 256)
