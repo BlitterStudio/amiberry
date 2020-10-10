@@ -55,7 +55,7 @@
     <RemoteBuildCommandLine>cd ~/projects/Amiberry; make -j4 PLATFORM=rpi4-sdl2</RemoteBuildCommandLine>
     <RemoteReBuildCommandLine>cd ~/projects/Amiberry; make clean; make -j4 PLATFORM=rpi4-sdl2</RemoteReBuildCommandLine>
     <RemoteCleanCommandLine>cd ~/projects/Amiberry; make clean</RemoteCleanCommandLine>
-    <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\archivers;..\guisan-dev\include;C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\6\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\6;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\arm-linux-gnueabihf;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\local\include\SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
+    <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\archivers;..\guisan-dev\include;C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\6\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\6;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\arm-linux-gnueabihf;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\local\include\SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
     <NMakePreprocessorDefinitions>DEBUG;ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;CPU_arm;ARM_HAS_DIV;USE_SDL2;_REENTRANT;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <RemoteBuildOutputs>
     </RemoteBuildOutputs>
@@ -107,7 +107,7 @@
     <NMakeIncludeSearchPath>..\src\include;..\src\osdep;..\src\archivers;..\guisan-dev\include;..\src</NMakeIncludeSearchPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
-    <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\archivers;..\guisan-dev\include;C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\6\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\6;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\arm-linux-gnueabihf;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\local\include\SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
+    <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\archivers;..\guisan-dev\include;C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\6\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\6;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\arm-linux-gnueabihf;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\local\include\SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
     <RemoteBuildCommandLine>cd ~/projects/Amiberry; make -j4 PLATFORM=rpi4-sdl2</RemoteBuildCommandLine>
     <RemoteReBuildCommandLine>cd ~/projects/Amiberry; make clean; make -j4 PLATFORM=rpi4-sdl2</RemoteReBuildCommandLine>
     <RemoteCleanCommandLine>cd ~/projects/Amiberry; make clean</RemoteCleanCommandLine>
@@ -365,6 +365,7 @@
     <ClCompile Include="..\src\drawing.cpp">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
+    <ClCompile Include="..\src\driveclick.cpp" />
     <ClCompile Include="..\src\events.cpp">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
@@ -443,7 +444,6 @@
     <ClCompile Include="..\src\osdep\amiberry_gui.cpp" />
     <ClCompile Include="..\src\osdep\amiberry_input.cpp" />
     <ClCompile Include="..\src\osdep\amiberry_mem.cpp" />
-    <ClCompile Include="..\src\osdep\amiberry_rp9.cpp" />
     <ClCompile Include="..\src\osdep\amiberry_whdbooter.cpp" />
     <ClCompile Include="..\src\osdep\bsdsocket_host.cpp" />
     <ClCompile Include="..\src\osdep\cda_play.cpp" />
@@ -482,6 +482,7 @@
     <ClCompile Include="..\src\osdep\keyboard.cpp" />
     <ClCompile Include="..\src\osdep\mp3decoder.cpp" />
     <ClCompile Include="..\src\osdep\picasso96.cpp" />
+    <ClCompile Include="..\src\osdep\retroarch.cpp" />
     <ClCompile Include="..\src\osdep\sigsegv_handler.cpp" />
     <ClCompile Include="..\src\osdep\writelog.cpp" />
     <ClCompile Include="..\src\p96_blit.cpp.in">
@@ -508,6 +509,7 @@
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
     <ClCompile Include="..\src\tabletlibrary.cpp" />
+    <ClCompile Include="..\src\tinyxml2.cpp" />
     <ClCompile Include="..\src\traps.cpp">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
@@ -588,6 +590,7 @@
     <ClInclude Include="..\src\include\clipboard.h" />
     <ClInclude Include="..\src\include\commpipe.h" />
     <ClInclude Include="..\src\include\consolehook.h" />
+    <ClInclude Include="..\src\include\cpuboard.h" />
     <ClInclude Include="..\src\include\cpummu.h" />
     <ClInclude Include="..\src\include\cpummu030.h" />
     <ClInclude Include="..\src\include\cputbl.h" />
@@ -598,6 +601,8 @@
     <ClInclude Include="..\src\include\disk.h" />
     <ClInclude Include="..\src\include\diskutil.h" />
     <ClInclude Include="..\src\include\drawing.h" />
+    <ClInclude Include="..\src\include\driveclick.h" />
+    <ClInclude Include="..\src\include\ethernet.h" />
     <ClInclude Include="..\src\include\events.h" />
     <ClInclude Include="..\src\include\execio.h" />
     <ClInclude Include="..\src\include\execlib.h" />
@@ -628,6 +633,7 @@
     <ClInclude Include="..\src\include\rommgr.h" />
     <ClInclude Include="..\src\include\rtc.h" />
     <ClInclude Include="..\src\include\rtgmodes.h" />
+    <ClInclude Include="..\src\include\sana2.h" />
     <ClInclude Include="..\src\include\savestate.h" />
     <ClInclude Include="..\src\include\scp.h" />
     <ClInclude Include="..\src\include\scsi.h" />
@@ -635,6 +641,7 @@
     <ClInclude Include="..\src\include\statusline.h" />
     <ClInclude Include="..\src\include\sysdeps.h" />
     <ClInclude Include="..\src\include\tabletlibrary.h" />
+    <ClInclude Include="..\src\include\tinyxml2.h" />
     <ClInclude Include="..\src\include\traps.h" />
     <ClInclude Include="..\src\include\uae.h" />
     <ClInclude Include="..\src\include\uaeexe.h" />
@@ -661,7 +668,7 @@
     <ClInclude Include="..\src\machdep\maccess.h" />
     <ClInclude Include="..\src\machdep\rpt.h" />
     <ClInclude Include="..\src\osdep\amiberry_gfx.h" />
-    <ClInclude Include="..\src\osdep\amiberry_rp9.h" />
+    <ClInclude Include="..\src\osdep\amiberry_input.h" />
     <ClInclude Include="..\src\osdep\cda_play.h" />
     <ClInclude Include="..\src\osdep\config.h" />
     <ClInclude Include="..\src\osdep\gui\gui_handling.h" />

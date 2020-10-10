@@ -6,7 +6,7 @@
     <DebuggerFlavor>LinuxDebugger</DebuggerFlavor>
     <PreLaunchCommand>
     </PreLaunchCommand>
-    <RemoteTarget>983517077;rpi4.midlair (username=, port=22, authentication=Password)</RemoteTarget>
+    <RemoteTarget>1721017924;rpi4.midlair (username=, port=22, authentication=Password)</RemoteTarget>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
     <RemoteDebuggerCommand>/home/pi/projects/amiberry/amiberry</RemoteDebuggerCommand>
@@ -34,6 +34,7 @@
     <RemoteDebuggerWorkingDirectory>projects/amiberry</RemoteDebuggerWorkingDirectory>
     <DebuggerFlavor>LinuxDebugger</DebuggerFlavor>
     <PreLaunchCommand>export DEBUG=0</PreLaunchCommand>
+    <RemoteTarget>1721017924;rpi4.midlair (username=, port=22, authentication=Password)</RemoteTarget>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
     <RemoteDebuggerCommand>projects/amiberry/amiberry-sdl2-dev</RemoteDebuggerCommand>

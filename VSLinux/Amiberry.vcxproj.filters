@@ -462,9 +462,6 @@
     <ClCompile Include="..\src\osdep\amiberry_mem.cpp">
       <Filter>src\osdep</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\osdep\amiberry_rp9.cpp">
-      <Filter>src\osdep</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\osdep\bsdsocket_host.cpp">
       <Filter>src\osdep</Filter>
     </ClCompile>
@@ -756,6 +753,15 @@
     <ClCompile Include="..\src\osdep\gui\PanelPrio.cpp">
       <Filter>src\osdep\gui</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\osdep\retroarch.cpp">
+      <Filter>src\osdep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\tinyxml2.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\driveclick.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\archivers\7z\7zBuf.h">
@@ -995,9 +1001,6 @@
     <ClInclude Include="..\src\osdep\amiberry_gfx.h">
       <Filter>src\osdep</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\osdep\amiberry_rp9.h">
-      <Filter>src\osdep</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\osdep\cda_play.h">
       <Filter>src\osdep</Filter>
     </ClInclude>
@@ -1191,6 +1194,24 @@
       <Filter>src\include</Filter>
     </ClInclude>
     <ClInclude Include="..\src\include\scsidev.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\osdep\amiberry_input.h">
+      <Filter>src\osdep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\tinyxml2.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\driveclick.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\cpuboard.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\ethernet.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\sana2.h">
       <Filter>src\include</Filter>
     </ClInclude>
   </ItemGroup>
