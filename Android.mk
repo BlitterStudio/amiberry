@@ -18,7 +18,6 @@ LOCAL_C_INCLUDES := $(LOCAL_PATH)/src \
                     $(LOCAL_PATH)/src/include \
                     $(LOCAL_PATH)/src/archivers \
                     $(LOCAL_PATH)/external/libguisan/include \
-                    $(LOCAL_PATH)/external/libxml2/include \
                     $(SDL_PATH)/include \
                     $(LIBPNG_PATH) \
 
@@ -26,7 +25,7 @@ ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
     LOCAL_ARM_NEON := true
     LOCAL_CFLAGS := -DCPU_arm -DARM_HAS_DIV -DARMV6T2 -DARMV6_ASSEMBLY -DAMIBERRY -D_FILE_OFFSET_BITS=64 -DUSE_ARMNEON -DSTATIC_LIBXML
 else ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
-    LOCAL_CFLAGS := -DCPU_AARCH64 -DAMIBERRY -D_FILE_OFFSET_BITS=64 -DSTATIC_LIBXML
+    LOCAL_CFLAGS := -DCPU_AARCH64 -DAMIBERRY -D_FILE_OFFSET_BITS=64
 endif
 
 #LOCAL_CPPFLAGS := -std=gnu++14 -pipe -frename-registers 
@@ -54,15 +53,20 @@ LOCAL_SRC_FILES := src/archivers/7z/BraIA64.c \
                     src/bsdsocket.cpp \
                     src/calc.cpp \
                     src/cdrom.cpp \
+					src/cdtv.cpp \
+					src/cdtvcr.cpp \
                     src/cfgfile.cpp \
                     src/cia.cpp \
+					src/consolehook.cpp \
                     src/crc32.cpp \
                     src/custom.cpp \
+					src/def_icons.cpp \
                     src/devices.cpp \
                     src/disk.cpp \
                     src/diskutil.cpp \
                     src/dlopen.cpp \
                     src/drawing.cpp \
+					src/driveclick.cpp \
                     src/events.cpp \
                     src/expansion.cpp \
                     src/fdi2raw.cpp \
@@ -79,6 +83,7 @@ LOCAL_SRC_FILES := src/archivers/7z/BraIA64.c \
                     src/hrtmon.rom.cpp \
                     src/ide.cpp \
                     src/inputdevice.cpp \
+					src/isofs.cpp \
                     src/keybuf.cpp \
                     src/main.cpp \
                     src/memory.cpp \
@@ -88,8 +93,12 @@ LOCAL_SRC_FILES := src/archivers/7z/BraIA64.c \
                     src/savestate.cpp \
                     src/scp.cpp \
                     src/scsi.cpp \
+					src/scsiemul.cpp \
                     src/statusline.cpp \
+					src/tabletlibrary.cpp \
+					src/tinyxml2.cpp \
                     src/traps.cpp \
+					src/uaeexe.cpp \
                     src/uaelib.cpp \
                     src/uaeresource.cpp \
                     src/zfile.cpp \
@@ -139,6 +148,7 @@ LOCAL_SRC_FILES := src/archivers/7z/BraIA64.c \
                     src/osdep/cda_play.cpp \
                     src/osdep/charset.cpp \
                     src/osdep/fsdb_host.cpp \
+					src/osdep/clipboard.cpp \
                     src/osdep/amiberry_hardfile.cpp \
                     src/osdep/keyboard.cpp \
                     src/osdep/mp3decoder.cpp \
@@ -149,10 +159,10 @@ LOCAL_SRC_FILES := src/archivers/7z/BraIA64.c \
                     src/osdep/amiberry_input.cpp \
                     src/osdep/amiberry_gfx.cpp \
                     src/osdep/amiberry_gui.cpp \
-                    src/osdep/amiberry_rp9.cpp \
                     src/osdep/amiberry_mem.cpp \
                     src/osdep/amiberry_whdbooter.cpp \
                     src/osdep/sigsegv_handler.cpp \
+					src/osdep/retroarch.cpp \
                     src/sounddep/sound.cpp \
                     src/osdep/gui/InGameMessage.cpp \
                     src/osdep/gui/SelectorEntry.cpp \
@@ -206,7 +216,6 @@ LOCAL_SRC_FILES += src/newcpu.cpp \
                     src/jit/compemu_support.cpp
 
 LOCAL_SHARED_LIBRARIES := SDL2 SDL2_image SDL2_ttf SDL2_mixer mpg123 guisan
-LOCAL_STATIC_LIBRARIES := xml2
 
 LOCAL_LDLIBS := -ldl -lGLESv1_CM -lGLESv2 -llog -lz
 

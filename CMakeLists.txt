@@ -64,14 +64,20 @@ set(SRC_FILES
         src/cd32_fmv.cpp
         src/cd32_fmv_genlock.cpp
         src/cdrom.cpp
+		src/cdtv.cpp
+		src/cdtvcr.cpp
         src/cfgfile.cpp
         src/cia.cpp
+		src/consolehook.cpp
         src/crc32.cpp
         src/custom.cpp
+		src/def_icons.cpp
         src/devices.cpp
         src/disk.cpp
         src/diskutil.cpp
+		src/dlopen.cpp
         src/drawing.cpp
+		src/driveclick.cpp
         src/events.cpp
         src/expansion.cpp
         src/fdi2raw.cpp
@@ -88,6 +94,7 @@ set(SRC_FILES
         src/hrtmon.rom.cpp
         src/ide.cpp
         src/inputdevice.cpp
+		src/isofs.cpp
         src/keybuf.cpp
         src/main.cpp
         src/memory.cpp
@@ -97,8 +104,12 @@ set(SRC_FILES
         src/savestate.cpp
 		src/scp.cpp
         src/scsi.cpp
+		src/scsiemul.cpp
         src/statusline.cpp
+		src/tabletlibrary.cpp
+		src/tinyxml2.cpp
         src/traps.cpp
+		src/uaeexe.cpp
         src/uaelib.cpp
         src/uaeresource.cpp
         src/zfile.cpp
@@ -153,6 +164,7 @@ set(SRC_FILES
         src/osdep/cda_play.cpp
         src/osdep/charset.cpp
         src/osdep/fsdb_host.cpp
+		src/osdep/clipboard.cpp
         src/osdep/amiberry_hardfile.cpp
         src/osdep/keyboard.cpp
         src/osdep/mp3decoder.cpp
@@ -163,10 +175,10 @@ set(SRC_FILES
         src/osdep/amiberry_input.cpp
         src/osdep/amiberry_gfx.cpp
         src/osdep/amiberry_gui.cpp
-        src/osdep/amiberry_rp9.cpp
         src/osdep/amiberry_mem.cpp
         src/osdep/amiberry_whdbooter.cpp
         src/osdep/sigsegv_handler.cpp
+		src/osdep/retroarch.cpp
         src/sounddep/sound.cpp
         src/osdep/gui/InGameMessage.cpp
         src/osdep/gui/SelectorEntry.cpp
@@ -367,7 +379,6 @@ if(BUILD_NX)
     SDL2 
     SDL2_image
     SDL2_ttf
-    xml2
     EGL
     GLESv2
     glapi
