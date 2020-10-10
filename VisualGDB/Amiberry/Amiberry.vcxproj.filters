@@ -325,9 +325,6 @@
     <ClCompile Include="..\..\src\osdep\amiberry_mem.cpp">
       <Filter>Source files\osdep</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\osdep\amiberry_rp9.cpp">
-      <Filter>Source files\osdep</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\osdep\bsdsocket_host.cpp">
       <Filter>Source files\osdep</Filter>
     </ClCompile>
@@ -676,9 +673,6 @@
       <Filter>Source files\sounddep</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\osdep\amiberry_gfx.h">
-      <Filter>Source files\osdep</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\osdep\amiberry_rp9.h">
       <Filter>Source files\osdep</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\osdep\cda_play.h">

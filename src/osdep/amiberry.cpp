@@ -39,12 +39,10 @@
 #include "disk.h"
 #include "savestate.h"
 #include "zfile.h"
-#include "amiberry_rp9.h"
 #include "rtgmodes.h"
 #include "gfxboard.h"
 #include "devices.h"
 #include <map>
-
 
 #include "amiberry_input.h"
 #include "clipboard.h"
@@ -790,25 +788,14 @@ int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int
 	discard_prefs(p, type);
 	default_prefs(p, true, 0);
 
-	const char* ptr = strstr(const_cast<char*>(filename), ".rp9");
+	const char* ptr = strstr(const_cast<char*>(filename), ".uae");
 	if (ptr)
 	{
-		// Load rp9 config
-		result = rp9_parse_file(p, filename);
-		if (result)
-			extract_filename(filename, last_loaded_config);
+		auto config_type = CONFIG_TYPE_HARDWARE | CONFIG_TYPE_HOST;
+		result = cfgfile_load(p, filename, &config_type, 0, 1);
 	}
-	else
-	{
-		ptr = strstr(const_cast<char*>(filename), ".uae");
-		if (ptr)
-		{
-			auto config_type = CONFIG_TYPE_HARDWARE | CONFIG_TYPE_HOST;
-			result = cfgfile_load(p, filename, &config_type, 0, 1);
-		}
-		if (result)
-			extract_filename(filename, last_loaded_config);
-	}
+	if (result)
+		extract_filename(filename, last_loaded_config);
 
 	if (result)
 	{
@@ -1396,7 +1383,6 @@ int main(int argc, char* argv[])
 #endif
 	rename_old_adfdir();
 	load_amiberry_settings();
-	rp9_init();
 
 	snprintf(savestate_fname, sizeof savestate_fname, "%s/savestates/default.ads", start_path_data);
 	logging_init();
@@ -1466,7 +1452,6 @@ int main(int argc, char* argv[])
 	lstMRUDiskList.clear();
 	lstMRUCDList.clear();
 	lstMRUWhdloadList.clear();
-	rp9_cleanup();
 
 	logging_cleanup();
 

@@ -68,7 +68,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
-      <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/usr/include/libxml2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../external/libguisan/include;../../src/archivers;=/usr/include/SDL2;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/usr/include/SDL2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../external/libguisan/include;../../src/archivers;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>DEBUG=1;ARMV6T2;USE_ARMNEON;ARM_HAS_DIV;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;_FILE_OFFSET_BITS=64;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalCOptions>-mcpu=cortex-a72 -mfpu=neon-fp-armv8 -mfloat-abi=hard </AdditionalCOptions>
       <AdditionalCPPOptions>-mcpu=cortex-a72 -mfpu=neon-fp-armv8 -mfloat-abi=hard </AdditionalCPPOptions>
@@ -77,14 +77,14 @@
     <Link>
       <AdditionalLinkerInputs>;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
       <LibrarySearchDirectories>=/usr/local/lib;../../external/libguisan/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
-      <AdditionalLibraryNames>SDL2;pthread;z;png;rt;xml2;FLAC;mpg123;dl;mpeg2convert;mpeg2;SDL2_image;SDL2_ttf;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
+      <AdditionalLibraryNames>SDL2;pthread;z;png;rt;FLAC;mpg123;dl;mpeg2convert;mpeg2;SDL2_image;SDL2_ttf;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript />
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-dispmanx|VisualGDB'">
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
-      <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/usr/include/libxml2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../external/libguisan/include;../../src/archivers;=/opt/vc/include;=/opt/vc/include/interface/vmcs_host/linux;=/opt/vc/include/interface/vcos/pthreads;=/usr/include/SDL2;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/usr/include/SDL2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../external/libguisan/include;../../src/archivers;=/opt/vc/include;=/opt/vc/include/interface/vmcs_host/linux;=/opt/vc/include/interface/vcos/pthreads;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>DEBUG=1;ARMV6T2;USE_ARMNEON;ARM_HAS_DIV;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;USE_DISPMANX;_FILE_OFFSET_BITS=64;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalCOptions>-mcpu=cortex-a72 -mfpu=neon-fp-armv8 -mfloat-abi=hard </AdditionalCOptions>
       <AdditionalCPPOptions>-mcpu=cortex-a72 -mfpu=neon-fp-armv8 -mfloat-abi=hard </AdditionalCPPOptions>
@@ -93,7 +93,7 @@
     <Link>
       <AdditionalLinkerInputs>;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
       <LibrarySearchDirectories>=/usr/local/lib;../../external/libguisan/lib;=/opt/vc/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
-      <AdditionalLibraryNames>SDL2;pthread;z;png;rt;xml2;FLAC;mpg123;dl;mpeg2convert;mpeg2;SDL2_image;SDL2_ttf;guisan;bcm_host;vchiq_arm;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
+      <AdditionalLibraryNames>SDL2;pthread;z;png;rt;FLAC;mpg123;dl;mpeg2convert;mpeg2;SDL2_image;SDL2_ttf;guisan;bcm_host;vchiq_arm;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript>
       </LinkerScript>
     </Link>
@@ -101,7 +101,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
-      <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/usr/include/libxml2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../external/libguisan/include;../../src/archivers;=/usr/include/SDL2;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/usr/include/SDL2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../external/libguisan/include;../../src/archivers;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;ARMV6T2;USE_ARMNEON;ARM_HAS_DIV;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;_FILE_OFFSET_BITS=64;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalCOptions>-mcpu=cortex-a72 -mfpu=neon-fp-armv8 -mfloat-abi=hard </AdditionalCOptions>
       <AdditionalCPPOptions>-mcpu=cortex-a72 -mfpu=neon-fp-armv8 -mfloat-abi=hard </AdditionalCPPOptions>
@@ -109,7 +109,7 @@
     <Link>
       <AdditionalLinkerInputs>;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
       <LibrarySearchDirectories>=/usr/local/lib;../../external/libguisan/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
-      <AdditionalLibraryNames>SDL2;pthread;z;png;rt;xml2;FLAC;mpg123;dl;mpeg2convert;mpeg2;SDL2_image;SDL2_ttf;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
+      <AdditionalLibraryNames>SDL2;pthread;z;png;rt;FLAC;mpg123;dl;mpeg2convert;mpeg2;SDL2_image;SDL2_ttf;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript />
       <CustomPostLinkTool>C:\SysGCC\raspberry\bin\arm-linux-gnueabihf-strip</CustomPostLinkTool>
       <CustomPostLinkArguments>$@</CustomPostLinkArguments>
@@ -118,7 +118,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-dispmanx|VisualGDB'">
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
-      <AdditionalIncludeDirectories>=/usr/include/libxml2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../external/libguisan/include;../../src/archivers;=/opt/vc/include;=/opt/vc/include/interface/vmcs_host/linux;=/usr/local/include/SDL2;=/opt/vc/include/interface/vcos/pthreads;=/usr/include/SDL2;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/usr/include/SDL2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../external/libguisan/include;../../src/archivers;=/opt/vc/include;=/opt/vc/include/interface/vmcs_host/linux;=/opt/vc/include/interface/vcos/pthreads;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;ARMV6T2;USE_ARMNEON;ARM_HAS_DIV;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;USE_DISPMANX;_FILE_OFFSET_BITS=64;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalCOptions>-mcpu=cortex-a72 -mfpu=neon-fp-armv8 -mfloat-abi=hard </AdditionalCOptions>
       <AdditionalCPPOptions>-mcpu=cortex-a72 -mfpu=neon-fp-armv8 -mfloat-abi=hard </AdditionalCPPOptions>
@@ -126,7 +126,7 @@
     <Link>
       <AdditionalLinkerInputs>;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
       <LibrarySearchDirectories>=/usr/local/lib;../../external/libguisan/lib;=/opt/vc/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
-      <AdditionalLibraryNames>SDL2;pthread;z;png;rt;xml2;FLAC;mpg123;dl;mpeg2convert;mpeg2;SDL2_image;SDL2_ttf;guisan;bcm_host;vchiq_arm;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
+      <AdditionalLibraryNames>SDL2;pthread;z;png;rt;FLAC;mpg123;dl;mpeg2convert;mpeg2;SDL2_image;SDL2_ttf;guisan;bcm_host;vchiq_arm;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript>
       </LinkerScript>
       <CustomPostLinkTool>C:\SysGCC\raspberry\bin\arm-linux-gnueabihf-strip</CustomPostLinkTool>
@@ -258,7 +258,6 @@
     <ClCompile Include="..\..\src\osdep\amiberry_hardfile.cpp" />
     <ClCompile Include="..\..\src\osdep\amiberry_input.cpp" />
     <ClCompile Include="..\..\src\osdep\amiberry_mem.cpp" />
-    <ClCompile Include="..\..\src\osdep\amiberry_rp9.cpp" />
     <ClCompile Include="..\..\src\osdep\amiberry_whdbooter.cpp" />
     <ClCompile Include="..\..\src\osdep\bsdsocket_host.cpp" />
     <ClCompile Include="..\..\src\osdep\cda_play.cpp" />
@@ -479,7 +478,6 @@
     <ClInclude Include="..\..\src\osdep\amiberry_filesys.hpp" />
     <ClInclude Include="..\..\src\osdep\amiberry_gfx.h" />
     <ClInclude Include="..\..\src\osdep\amiberry_input.h" />
-    <ClInclude Include="..\..\src\osdep\amiberry_rp9.h" />
     <ClInclude Include="..\..\src\osdep\cda_play.h" />
     <ClInclude Include="..\..\src\osdep\config.h" />
     <ClInclude Include="..\..\src\osdep\gui\gui_handling.h" />

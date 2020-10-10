@@ -219,9 +219,8 @@ LDFLAGS += $(SDL_LDFLAGS) -lSDL2_image -lSDL2_ttf -lguisan -Lexternal/libguisan/
 #
 # Common options
 #
-DEFS = $(XML_CFLAGS) -DAMIBERRY
+DEFS = -DAMIBERRY
 CPPFLAGS += -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers $(DEFS)
-XML_CFLAGS := $(shell xml2-config --cflags )
 LDFLAGS += -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed
 
 ifndef DEBUG
@@ -260,7 +259,7 @@ ifdef SANITIZE
     CFLAGS += -fsanitize=leak -fsanitize-recover=address
 endif
 
-LDFLAGS += -lpthread -lz -lpng -lrt -lxml2 -lFLAC -lmpg123 -ldl -lmpeg2convert -lmpeg2
+LDFLAGS += -lpthread -lz -lpng -lrt -lFLAC -lmpg123 -ldl -lmpeg2convert -lmpeg2
 export ASFLAGS = $(CPUFLAGS)
 
 export CFLAGS := $(CPUFLAGS) $(CFLAGS) -pipe -Wno-shift-overflow -Wno-narrowing $(EXTRA_CFLAGS)
@@ -395,7 +394,6 @@ OBJS =	\
 	src/osdep/amiberry_input.o \
 	src/osdep/amiberry_gfx.o \
 	src/osdep/amiberry_gui.o \
-	src/osdep/amiberry_rp9.o \
 	src/osdep/amiberry_mem.o \
 	src/osdep/amiberry_whdbooter.o \
 	src/osdep/sigsegv_handler.o \
