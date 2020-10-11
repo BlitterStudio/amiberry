@@ -1270,7 +1270,7 @@ static int drive_insert (drive * drv, struct uae_prefs *p, int dnum, const TCHAR
 			offs += tid->len;
 		}
 
-	} else if (memcmp (exeheader, buffer, sizeof exeheader) == 0) {
+	} else if (memcmp (exeheader, buffer, sizeof exeheader) == 0 && size <= 512 * (1760 - 7) && !canauto) {
 		int i;
 		struct zfile *z = zfile_fopen_empty (NULL, _T(""), 512 * 1760);
 		createimagefromexe (drv->diskfile, z);
