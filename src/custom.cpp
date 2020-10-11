@@ -10191,6 +10191,7 @@ void check_prefs_changed_custom (void)
 		inputdevice_copyconfig (&changed_prefs, &currprefs);
 	currprefs.immediate_blits = changed_prefs.immediate_blits;
 	currprefs.waiting_blits = changed_prefs.waiting_blits;
+	currprefs.blitter_speed_throttle = changed_prefs.blitter_speed_throttle;
 	currprefs.collision_level = changed_prefs.collision_level;
 #ifdef AMIBERRY
 	currprefs.fast_copper = changed_prefs.fast_copper;
