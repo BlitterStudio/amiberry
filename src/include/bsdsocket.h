@@ -63,6 +63,7 @@ struct socketbase {
 	uae_u32 logmask;
 	uae_u32 logfacility;
 	uaecptr fdcallback;
+    uae_u64 bytestransmitted, bytesreceived;
 
     unsigned int *mtable;	/* window messages allocated for asynchronous event notification */
     /* host-specific fields below */

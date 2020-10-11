@@ -1297,6 +1297,8 @@ static uae_u32 strErrptr, strReleaseVer;
 #define SBTC_ERRNOLONGPTR   24
 #define SBTC_HERRNOLONGPTR  25
 #define SBTC_RELEASESTRPTR  29
+#define SBTC_GET_BYTES_RECEIVED 64
+#define SBTC_GET_BYTES_SENT 65
 
 #define LOG_FACMASK     0x03f8
 
@@ -1511,6 +1513,19 @@ static uae_u32 REGPARAM2 bsdsocklib_SocketBaseTagList(TrapContext *ctx)
 						tagcopy(ctx, currtag, currval, tagptr, &strReleaseVer);
 					}
 					break;
+				case SBTC_GET_BYTES_RECEIVED:
+					if ((currtag & 0x8001) == 0x8000) { /* SBTM_GETREF */
+						trap_put_long(ctx, currval + 0, sb->bytesreceived >> 32);
+						trap_put_long(ctx, currval + 4, sb->bytesreceived >> 0);
+					}
+					break;
+				case SBTC_GET_BYTES_SENT:
+					if ((currtag & 0x8001) == 0x8000) { /* SBTM_GETREF */
+						trap_put_long(ctx, currval + 0, sb->bytestransmitted >> 32);
+						trap_put_long(ctx, currval + 4, sb->bytestransmitted >> 0);
+					}
+					break;
+				
 				default:
 					write_log (_T("bsdsocket: WARNING: Unsupported tag type (%08x=%d) in SocketBaseTagList(%x)\n"),
 						currtag, (currtag / 2) & SBTS_CODE, trap_get_areg(ctx, 0));
