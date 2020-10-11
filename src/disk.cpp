@@ -3625,21 +3625,6 @@ static int doreaddma (void)
 	return 0;
 }
 
-static void disk_doupdate_read_nothing(int floppybits)
-{
-	while (floppybits >= get_floppy_speed ()) {
-		word <<= 1;
-		doreaddma ();
-		if ((bitoffset & 7) == 7) {
-			dskbytr_val = word & 0xff;
-			dskbytr_val |= 0x8000;
-		}
-		bitoffset++;
-		bitoffset &= 15;
-		floppybits -= get_floppy_speed ();
-	}
-}
-
 static void wordsync_detected(bool startup)
 {
 	dsksync_cycles = get_cycles() + WORDSYNC_TIME * CYCLE_UNIT;
@@ -3663,6 +3648,37 @@ static void wordsync_detected(bool startup)
 	}
 	if (adkcon & 0x0400) { // WORDSYNC
 		bitoffset = 15;
+	}
+}
+
+static void disk_doupdate_read_nothing(int floppybits)
+{
+	while (floppybits >= get_floppy_speed()) {
+		bool skipbit = false;
+		word <<= 1;
+		word |= (uaerand() & 0x1000) ? 1 : 0;
+		doreaddma();
+		// MSBSYNC
+		if (adkcon & 0x200) {
+			if ((word & 0x0001) == 0 && bitoffset == 0) {
+				word = 0;
+				skipbit = true;
+			}
+			if ((word & 0x0001) == 0 && bitoffset == 8) {
+				word >>= 1;
+				skipbit = true;
+			}
+		}
+		if (!skipbit && (bitoffset & 7) == 7) {
+			dskbytr_val = word & 0xff;
+			dskbytr_val |= 0x8000;
+		}
+		if (!(adkcon & 0x200) && word == dsksync) {
+			wordsync_detected(false);
+		}
+		bitoffset++;
+		bitoffset &= 15;
+		floppybits -= get_floppy_speed();
 	}
 }
 
