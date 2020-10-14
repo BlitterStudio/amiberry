@@ -10,17 +10,17 @@
 
 Amiberry is an optimized Amiga emulator, for ARM-based boards (like the Raspberry Pi, ASUS Tinkerboard, Odroid XU4, etc). The core emulation comes from WinUAE, but stripped down somewhat in order to achieve good performance in underpowered boards. It includes JIT CPU and FPU support, to get high-performance results on CPU-intensive emulated environments. On top of that, we have some unique features developed only for Amiberry, such as the WHDLoad booter and support for RetroArch controller mapping.
 
-Amiberry requires the [SDL2 framework](https://libsdl.org) for graphics display, input handling and audio output. On the RPI platform specifically, we offer a special alternative version which uses Dispmanx directly for the emulation screen, for maximum performance.
+Amiberry requires the [SDL2 framework](https://libsdl.org) for graphics display, input handling and audio output. On the 32-bit RPI platform specifically, we offer a special alternative version which uses Dispmanx directly for the emulation screen, for maximum performance.
 
 ## Requirements
 
 Amiberry has been tested on Debian/Raspbian Buster, and requires the following packages to run:
 
-      sudo apt-get install libsdl2-2.0-0 libsdl2-ttf-2.0-0 libsdl2-image-2.0-0 libxml2 flac mpg123 libmpeg2-4
+      sudo apt-get install libsdl2-2.0-0 libsdl2-ttf-2.0-0 libsdl2-image-2.0-0 flac mpg123 libmpeg2-4
 
 If you want to compile Amiberry from source, you'll need the `-dev` version of the same packages instead:
 
-      sudo apt-get install libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev libxml2-dev libflac-dev libmpg123-dev libpng-dev libmpeg2-4-dev
+      sudo apt-get install libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev libflac-dev libmpg123-dev libpng-dev libmpeg2-4-dev
 
 On the Raspberry Pi, if you're not running Raspbian you'll also need this:
 
@@ -28,7 +28,7 @@ On the Raspberry Pi, if you're not running Raspbian you'll also need this:
 
 Or if you're using an Arch-based distro (e.g. Manjaro), you can use these instead:
 
-      sudo pacman -S base-devel sdl2 sdl2_ttf sdl2_image libxml2 flac mpg123 libmpeg2
+      sudo pacman -S base-devel sdl2 sdl2_ttf sdl2_image flac mpg123 libmpeg2
 
 ## Getting Amiberry
 
