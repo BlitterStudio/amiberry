@@ -112,16 +112,11 @@ public:
 			if (emulating)
 			{
 				disable_resume();
-				target_cfgfile_load(&changed_prefs, ConfigFilesList[i]->FullPath, 0, 0);
-				strncpy(last_active_config, ConfigFilesList[i]->Name, MAX_DPATH);
-				refresh_all_panels();
 			}
-			else
-			{
-				target_cfgfile_load(&changed_prefs, ConfigFilesList[i]->FullPath, 0, 0);
-				strncpy(last_active_config, ConfigFilesList[i]->Name, MAX_DPATH);
-				refresh_all_panels();
-			}
+			
+			target_cfgfile_load(&changed_prefs, ConfigFilesList[i]->FullPath, 0, 0);
+			strncpy(last_active_config, ConfigFilesList[i]->Name, MAX_DPATH);
+			refresh_all_panels();
 		}
 		else if (actionEvent.getSource() == cmdSave)
 		{
@@ -189,16 +184,15 @@ public:
 			//-----------------------------------------------
 			// Second click on selected config -> Load it and start emulation
 			// ----------------------------------------------
-			target_cfgfile_load(&changed_prefs, ConfigFilesList[selected_item]->FullPath, 0, 0);
-			strncpy(last_active_config, ConfigFilesList[selected_item]->Name, MAX_DPATH);
-
 			if (emulating)
 			{
 				disable_resume();
 			}
+			target_cfgfile_load(&changed_prefs, ConfigFilesList[selected_item]->FullPath, 0, 0);
+			strncpy(last_active_config, ConfigFilesList[selected_item]->Name, MAX_DPATH);
 			refresh_all_panels();
-			copy_prefs(&changed_prefs, &currprefs);
-			uae_reset(1, 0);
+			
+			uae_reset(1, 1);
 			gui_running = false;
 		}
 	}
