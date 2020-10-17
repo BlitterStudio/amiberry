@@ -648,6 +648,15 @@ void graphics_subshutdown()
 	}
 	reset_sound();
 
+	auto* avidinfo = &adisplays.gfxvidinfo;
+	avidinfo->drawbuffer.realbufmem = NULL;
+	avidinfo->drawbuffer.bufmem = NULL;
+	avidinfo->drawbuffer.bufmem_allocated = NULL;
+	avidinfo->drawbuffer.bufmem_lockable = false;
+
+	avidinfo->outbuffer = &avidinfo->drawbuffer;
+	avidinfo->inbuffer = &avidinfo->drawbuffer;
+	
 #ifndef USE_DISPMANX
 	if (texture != nullptr)
 	{

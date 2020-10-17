@@ -3864,6 +3864,7 @@ bool draw_frame(struct vidbuffer *vb)
 
 	memcpy (&oldvb, &vidinfo->drawbuffer, sizeof (struct vidbuffer));
 	memcpy (&vidinfo->drawbuffer, vb, sizeof (struct vidbuffer));
+	clearbuffer(vb);
 	init_row_map();
 	memcpy (oldstate, linestate, LINESTATE_SIZE);
 	for (int i = 0; i < LINESTATE_SIZE; i++) {
