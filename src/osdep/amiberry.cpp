@@ -1695,8 +1695,6 @@ void disablecapture()
 
 void process_event(SDL_Event event)
 {
-	const auto* keystate = SDL_GetKeyboardState(nullptr);
-	
 	if (event.type == SDL_WINDOWEVENT)
 	{
 		switch (event.window.event)
@@ -1767,109 +1765,87 @@ void process_event(SDL_Event event)
 		// i've added this so when using the joysticks it doesn't hit the 'r' key for some games
 		// which starts a replay!!!
 		const auto ok_to_use = !key_used_by_retroarch_joy(event.key.keysym.scancode);
-		if (ok_to_use)
+		if (ok_to_use && event.key.repeat == 0)
 		{
-			if (event.key.repeat == 0)
+			// If the Enter GUI key was pressed, handle it
+			if (enter_gui_key && event.key.keysym.sym == enter_gui_key)
 			{
-				// If the Enter GUI key was pressed, handle it
-				if (enter_gui_key && event.key.keysym.sym == enter_gui_key)
-				{
-					inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
-					break;
-				}
-
-				// If the Quit emulator key was pressed, handle it
-				if (quit_key && event.key.keysym.sym == quit_key)
-				{
-					inputdevice_add_inputcode(AKS_QUIT, 1, nullptr);
-					break;
-				}
-
-				if (action_replay_button && event.key.keysym.sym == action_replay_button)
-				{
-					inputdevice_add_inputcode(AKS_FREEZEBUTTON, 1, nullptr);
-					break;
-				}
-
-				if (fullscreen_key && event.key.keysym.sym == fullscreen_key)
-				{
-					inputdevice_add_inputcode(AKS_TOGGLEWINDOWEDFULLSCREEN, 1, nullptr);
-					break;
-				}
-			}
-			// If the reset combination was pressed, handle it
-			if (amiberry_options.swap_win_alt_keys)
-			{
-				if (keystate[SDL_SCANCODE_LCTRL] && keystate[SDL_SCANCODE_LALT] && (keystate[SDL_SCANCODE_RALT] || keystate[SDL_SCANCODE_APPLICATION]))
-				{
-					uae_reset(0, 1);
-					break;
-				}
-			}
-			else if (keystate[SDL_SCANCODE_LCTRL] && keystate[SDL_SCANCODE_LGUI] && (keystate[SDL_SCANCODE_RGUI] || keystate[SDL_SCANCODE_APPLICATION]))
-			{
-				uae_reset(0, 1);
+				inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
 				break;
 			}
 
-			if (event.key.repeat == 0)
+			// If the Quit emulator key was pressed, handle it
+			if (quit_key && event.key.keysym.sym == quit_key)
 			{
-				if (event.key.keysym.sym == SDLK_CAPSLOCK)
-				{
-					// Treat CAPSLOCK as a toggle. If on, set off and vice/versa
-					ioctl(0, KDGKBLED, &kbd_flags);
-					ioctl(0, KDGETLED, &kbd_led_status);
-					if (kbd_flags & 07 & LED_CAP)
-					{
-						// On, so turn off
-						kbd_led_status &= ~LED_CAP;
-						kbd_flags &= ~LED_CAP;
-						inputdevice_do_keyboard(AK_CAPSLOCK, 0);
-					}
-					else
-					{
-						// Off, so turn on
-						kbd_led_status |= LED_CAP;
-						kbd_flags |= LED_CAP;
-						inputdevice_do_keyboard(AK_CAPSLOCK, 1);
-					}
-					ioctl(0, KDSETLED, kbd_led_status);
-					ioctl(0, KDSKBLED, kbd_flags);
-					break;
-				}
-
-				if (event.key.keysym.sym == SDLK_SYSREQ)
-					clipboard_disable(true);
-				
-				// Handle all other keys
-				if (amiberry_options.swap_win_alt_keys)
-				{
-					if (event.key.keysym.scancode == SDL_SCANCODE_LALT)
-						event.key.keysym.scancode = SDL_SCANCODE_LGUI;
-					else if (event.key.keysym.scancode == SDL_SCANCODE_RALT)
-						event.key.keysym.scancode = SDL_SCANCODE_RGUI;
-				}
-				inputdevice_translatekeycode(0, event.key.keysym.scancode, 1, false);
+				inputdevice_add_inputcode(AKS_QUIT, 1, nullptr);
+				break;
 			}
+
+			if (action_replay_button && event.key.keysym.sym == action_replay_button)
+			{
+				inputdevice_add_inputcode(AKS_FREEZEBUTTON, 1, nullptr);
+				break;
+			}
+
+			if (fullscreen_key && event.key.keysym.sym == fullscreen_key)
+			{
+				inputdevice_add_inputcode(AKS_TOGGLEWINDOWEDFULLSCREEN, 1, nullptr);
+				break;
+			}
+
+			if (event.key.keysym.sym == SDLK_CAPSLOCK)
+			{
+				// Treat CAPSLOCK as a toggle. If on, set off and vice/versa
+				ioctl(0, KDGKBLED, &kbd_flags);
+				ioctl(0, KDGETLED, &kbd_led_status);
+				if (kbd_flags & 07 & LED_CAP)
+				{
+					// On, so turn off
+					kbd_led_status &= ~LED_CAP;
+					kbd_flags &= ~LED_CAP;
+					inputdevice_do_keyboard(AK_CAPSLOCK, 0);
+				}
+				else
+				{
+					// Off, so turn on
+					kbd_led_status |= LED_CAP;
+					kbd_flags |= LED_CAP;
+					inputdevice_do_keyboard(AK_CAPSLOCK, 1);
+				}
+				ioctl(0, KDSETLED, kbd_led_status);
+				ioctl(0, KDSKBLED, kbd_flags);
+				break;
+			}
+
+			if (event.key.keysym.sym == SDLK_SYSREQ)
+				clipboard_disable(true);
+
+			// Handle all other keys
+			if (amiberry_options.swap_win_alt_keys)
+			{
+				if (event.key.keysym.scancode == SDL_SCANCODE_LALT)
+					event.key.keysym.scancode = SDL_SCANCODE_LGUI;
+				else if (event.key.keysym.scancode == SDL_SCANCODE_RALT)
+					event.key.keysym.scancode = SDL_SCANCODE_RGUI;
+			}
+			inputdevice_translatekeycode(0, event.key.keysym.scancode, 1, false);
 		}
 	}
 	break;
+
 	case SDL_KEYUP:
 	{
 		const auto ok_to_use = !key_used_by_retroarch_joy(event.key.keysym.scancode);
-		if (ok_to_use)
+		if (ok_to_use && event.key.repeat == 0)
 		{
-			if (event.key.repeat == 0)
+			if (amiberry_options.swap_win_alt_keys)
 			{
-				if (amiberry_options.swap_win_alt_keys)
-				{
-					if (event.key.keysym.scancode == SDL_SCANCODE_LALT)
-						event.key.keysym.scancode = SDL_SCANCODE_LGUI;
-					else if (event.key.keysym.scancode == SDL_SCANCODE_RALT)
-						event.key.keysym.scancode = SDL_SCANCODE_RGUI;
-				}
-				inputdevice_translatekeycode(0, event.key.keysym.scancode, 0, true);
+				if (event.key.keysym.scancode == SDL_SCANCODE_LALT)
+					event.key.keysym.scancode = SDL_SCANCODE_LGUI;
+				else if (event.key.keysym.scancode == SDL_SCANCODE_RALT)
+					event.key.keysym.scancode = SDL_SCANCODE_RGUI;
 			}
+			inputdevice_translatekeycode(0, event.key.keysym.scancode, 0, true);
 		}
 	}
 	break;
@@ -1973,8 +1949,8 @@ void process_event(SDL_Event event)
 
 	default:
 		break;
+		}
 	}
-}
 
 void update_clipboard()
 {
