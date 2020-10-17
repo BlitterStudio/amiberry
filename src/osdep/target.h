@@ -45,7 +45,11 @@ extern int z3_base_adr;
 extern unsigned long time_per_frame;
 extern bool volatile flip_in_progess;
 #endif
+void amiberry_gui_init();
+void gui_widgets_init();
 void run_gui(void);
+void gui_widgets_halt();
+void amiberry_gui_halt();
 void InGameMessage(const char* msg);
 void init_max_signals(void);
 void wait_for_vsync(void);
@@ -92,6 +96,7 @@ extern void SymlinkROMs(void);
 extern void ClearAvailableROMList(void);
 extern void setpriority(int prio);
 extern bool setpaused(int priority);
+extern bool resumepaused(int priority);
 extern void init_colors();
 
 #include <vector>

@@ -24,6 +24,7 @@
 #include "blkdev.h"
 #include "memory.h"
 #include "amiberry_gfx.h"
+#include "disk.h"
 
 #ifdef AMIBERRY
 #include <linux/kd.h>
@@ -368,6 +369,27 @@ ConfigFileInfo* SearchConfigInList(const char* name)
 	return nullptr;
 }
 
+void disk_selection(const int drive, uae_prefs* prefs)
+{
+	const char* diskfile_filter[] = { ".adf", ".adz", ".fdi", ".ipf", ".zip", ".dms", ".gz", ".xz", "\0" };
+	char tmp[MAX_DPATH];
+
+	if (strlen(prefs->floppyslots[drive].df) > 0)
+		strncpy(tmp, prefs->floppyslots[drive].df, MAX_DPATH);
+	else
+		strncpy(tmp, current_dir, MAX_DPATH);
+	if (SelectFile("Select disk image file", tmp, diskfile_filter))
+	{
+		if (strncmp(prefs->floppyslots[drive].df, tmp, MAX_DPATH) != 0)
+		{
+			strncpy(prefs->floppyslots[drive].df, tmp, MAX_DPATH);
+			disk_insert(drive, tmp);
+			AddFileToDiskList(tmp, 1);
+			extract_path(tmp, current_dir);
+		}
+	}
+}
+
 static void clearallkeys (void)
 {
 	inputdevice_updateconfig (NULL, &changed_prefs);
@@ -498,42 +520,51 @@ int gui_update()
   return 0;
 }
 
+/* if drive is -1, show the full GUI, otherwise file-requester for DF[drive] */
 void gui_display(int shortcut)
 {
 	if (quit_program != 0)
 		return;
 	gui_active++;
-	emulating = 1;
-	pause_emulation = 1;
-	pause_sound();
-	blkdev_entergui();
 
-	if (lstAvailableROMs.empty())
-		RescanROMs();
+	if (setpaused(7)) {
+		inputdevice_unacquire();
+		clearallkeys();
+		setmouseactive(0);
+	}
 
-	graphics_subshutdown();
+	if (shortcut == -1)
+	{
+		graphics_subshutdown();
 
-	prefs_to_gui();
-	run_gui();
-	gui_to_prefs();
+		prefs_to_gui();
+		run_gui();
+		gui_to_prefs();
 
-	black_screen_now();
+		black_screen_now();
 
-	gui_update ();
-	gui_purge_events();
-	update_display(&changed_prefs);
+		gui_update();
+		gui_purge_events();
+	}
+	else if (shortcut >= 0 && shortcut < 4)
+	{
+		amiberry_gui_init();
+		gui_widgets_init();
+		disk_selection(shortcut, &changed_prefs);
+		gui_widgets_halt();
+		amiberry_gui_halt();
+	}
 	
 	reset_sound();
-	after_leave_gui();
+	inputdevice_copyconfig(&changed_prefs, &currprefs);
 	clearallkeys ();
-	blkdev_exitgui();
-	resume_sound();
-
-	inputdevice_acquire (TRUE);
-	setmouseactive(1);
+	update_display(&changed_prefs);
+	if (resumepaused(7)) {
+		inputdevice_acquire(TRUE);
+		setmouseactive(1);
+	}
 	
 	fpscounter_reset();
-	pause_emulation = 0;
 	gui_active--;
 }
 
