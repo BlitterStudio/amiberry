@@ -442,8 +442,6 @@ static void copyjport (const struct uae_prefs *src, struct uae_prefs *dst, int n
   dst->jports[num].mousemap = src->jports[num].mousemap;
   dst->jports[num].amiberry_custom_none = src->jports[num].amiberry_custom_none;
   dst->jports[num].amiberry_custom_hotkey = src->jports[num].amiberry_custom_hotkey;
-  dst->jports[num].amiberry_custom_left_trigger = src->jports[num].amiberry_custom_left_trigger;
-  dst->jports[num].amiberry_custom_right_trigger = src->jports[num].amiberry_custom_right_trigger;
 #endif
 	dst->jports[num].nokeyboardoverride = src->jports[num].nokeyboardoverride;
 }

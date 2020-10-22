@@ -10,6 +10,7 @@
 #ifndef UAE_OPTIONS_H
 #define UAE_OPTIONS_H
 
+#include <array>
 #include "uae/types.h"
 
 #include "traps.h"
@@ -76,34 +77,6 @@ struct uae_input_device
 	uae_s8 enabled;
 };
 
-#ifdef AMIBERRY
-struct joypad_map_layout
-{
-	int south_action = 0;
-	int east_action = 0;
-	int west_action = 0;
-	int north_action = 0;
-	int left_shoulder_action = 0;
-	int right_shoulder_action = 0;
-	int start_action = 0;
-	int select_action = 0;
-	int dpad_left_action = 0;
-	int dpad_right_action = 0;
-	int dpad_up_action = 0;
-	int dpad_down_action = 0;
-	int lstick_select_action = 0;
-	int lstick_left_action = 0;
-	int lstick_right_action = 0;
-	int lstick_up_action = 0;
-	int lstick_down_action = 0;
-	int rstick_select_action = 0;
-	int rstick_left_action = 0;
-	int rstick_right_action = 0;
-	int rstick_up_action = 0;
-	int rstick_down_action = 0;
-};
-#endif
-
 #define MAX_JPORTS_CUSTOM 6
 #define MAX_JPORTS 4
 #define NORMAL_JPORTS 2
@@ -133,10 +106,8 @@ struct jport
 	bool changed{};
 #ifdef AMIBERRY
 	int mousemap{};
-	struct joypad_map_layout amiberry_custom_none;
-	struct joypad_map_layout amiberry_custom_hotkey;
-	struct joypad_map_layout amiberry_custom_left_trigger;
-	struct joypad_map_layout amiberry_custom_right_trigger;
+	std::array<int, 15> amiberry_custom_none;
+	std::array<int, 15> amiberry_custom_hotkey;
 #endif
 };
 
@@ -1104,10 +1075,8 @@ extern void machdep_free(void);
 struct amiberry_customised_layout
 {
 	// create structures for each 'function' button
-	struct joypad_map_layout none;
-	struct joypad_map_layout select;
-	struct joypad_map_layout left_trigger;
-	struct joypad_map_layout right_trigger;
+	std::array<int, 15> none;
+	std::array<int, 15> select;
 };
 
 struct amiberry_options

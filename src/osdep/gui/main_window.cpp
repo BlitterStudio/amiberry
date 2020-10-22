@@ -573,7 +573,7 @@ void check_input()
 					break;
 				}
 
-				if (SDL_GameControllerGetButton(gui_controller, static_cast<SDL_GameControllerButton>(host_input_buttons[0].menu_button)))
+				if (SDL_GameControllerGetButton(gui_controller, static_cast<SDL_GameControllerButton>(host_input_buttons[0].button[SDL_CONTROLLER_BUTTON_GUIDE])))
 				{
 					// use the HOTKEY button
 					gui_running = false;

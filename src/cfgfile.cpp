@@ -1963,7 +1963,7 @@ void cfgfile_save_options(struct zfile* f, struct uae_prefs* p, int type)
 		// custom options SAVING
 		if (i < 4)
 		{
-			struct joypad_map_layout tempcustom;
+			std::array<int, 15> tempcustom{};
 			const TCHAR* namecustom;
 
 			// this allows us to go through the available function keys
@@ -1987,89 +1987,14 @@ void cfgfile_save_options(struct zfile* f, struct uae_prefs* p, int type)
 				}
 
 				// get all of the custom actions
-				for (auto n = 0; n < 14; ++n) // loop through all buttons
+				for (auto n = 0; n < 15; ++n) // loop through all buttons
 				{
-					auto b = 0;
-					switch (n)
-					{
-					case 0:
-						{
-							b = tempcustom.dpad_up_action;
-							break;
-						}
-					case 1:
-						{
-							b = tempcustom.dpad_down_action;
-							break;
-						}
-					case 2:
-						{
-							b = tempcustom.dpad_left_action;
-							break;
-						}
-					case 3:
-						{
-							b = tempcustom.dpad_right_action;
-							break;
-						}
-					case 4:
-						{
-							b = tempcustom.select_action;
-							break;
-						}
-					case 5:
-						{
-							b = tempcustom.left_shoulder_action;
-							break;
-						}
-					case 6:
-						{
-							b = tempcustom.lstick_select_action;
-							break;
-						}
-					case 7:
-						{
-							b = tempcustom.north_action;
-							break;
-						}
-					case 8:
-						{
-							b = tempcustom.south_action;
-							break;
-						}
-					case 9:
-						{
-							b = tempcustom.east_action;
-							break;
-						}
-					case 10:
-						{
-							b = tempcustom.west_action;
-							break;
-						}
-					case 11:
-						{
-							b = tempcustom.start_action;
-							break;
-						}
-					case 12:
-						{
-							b = tempcustom.right_shoulder_action;
-							break;
-						}
-					case 13:
-						{
-							b = tempcustom.rstick_select_action;
-							break;
-						}
-					}
+					auto b = tempcustom[n];
 
 					if (b > 0) { _tcscpy(tmp2, _T(find_inputevent_name(b))); }
 					else { snprintf(tmp2, 1, "%s", ""); }
 
 					_stprintf(tmp1, "joyport%d%s%s", i, namecustom, button_remap_name[n]);
-
-					// cfgfile_write (f, tmp1, tmp2); }
 					cfgfile_dwrite_str(f, tmp1, tmp2);
 				}
 			}
@@ -3181,7 +3106,7 @@ static int cfgfile_parse_host(struct uae_prefs* p, TCHAR* option, TCHAR* value)
 	// custom options LOADING
 	for (i = 0; i < 4; ++i) // Loop 1 ... all 4 joyports
 	{
-		struct joypad_map_layout tempcustom = {};
+		std::array<int, 15>tempcustom{};
 
 		for (auto m = 0; m < 2; ++m) // Loop 2 ... none/hotkey function keys
 		{
@@ -3196,7 +3121,7 @@ static int cfgfile_parse_host(struct uae_prefs* p, TCHAR* option, TCHAR* value)
 				tempcustom = p->jports[i].amiberry_custom_hotkey;
 			}
 
-			for (auto n = 0; n < 14; ++n) // Loop 3 ... all 14 buttons
+			for (auto n = 0; n < 15; ++n) // Loop 3 ... all 14 buttons
 			{
 				_stprintf(tmpbuf, "joyport%d_amiberry_custom_%s_%s", i, tmp1, button_remap_name[n]);
 
@@ -3205,32 +3130,14 @@ static int cfgfile_parse_host(struct uae_prefs* p, TCHAR* option, TCHAR* value)
 				{
 					auto b = 0;
 					if (find_inputevent(value) > -1) { b = RemapEventList[find_inputevent(value)]; }
-					//else {b=0;}
-
-					if (n == 0) { tempcustom.dpad_up_action = b; }
-					if (n == 1) { tempcustom.dpad_down_action = b; }
-					if (n == 2) { tempcustom.dpad_left_action = b; }
-					if (n == 3) { tempcustom.dpad_right_action = b; }
-					if (n == 4) { tempcustom.select_action = b; }
-					if (n == 5) { tempcustom.left_shoulder_action = b; }
-					if (n == 6) { tempcustom.lstick_select_action = b; }
-					if (n == 7) { tempcustom.north_action = b; }
-					if (n == 8) { tempcustom.south_action = b; }
-					if (n == 9) { tempcustom.east_action = b; }
-					if (n == 10) { tempcustom.west_action = b; }
-					if (n == 11) { tempcustom.start_action = b; }
-					if (n == 12) { tempcustom.right_shoulder_action = b; }
-					if (n == 13) { tempcustom.rstick_select_action = b; }
+					tempcustom[n] = b;
 
 					if (m == 0)
-					{
 						p->jports[i].amiberry_custom_none = tempcustom;
-					}
 
 					else if (m == 1)
-					{
 						p->jports[i].amiberry_custom_hotkey = tempcustom;
-					}
+					
 					return 1;
 				} // close the IF check
 			} // close loop 3 
