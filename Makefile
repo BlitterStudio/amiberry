@@ -138,8 +138,7 @@ else ifneq (,$(findstring AMLG,$(PLATFORM)))
 # Amlogic S905D3/S905X3/S905Y3 (AMLSM1) e.g. HardKernel ODroid C4 & Khadas VIM3L (SDL2 64-bit)
 else ifneq (,$(findstring AMLSM1,$(PLATFORM)))
     CPUFLAGS += -mcpu=cortex-a55
-    CPUFLAGS += -mfloat-abi=hard -mfpu=neon-fp-armv8
-    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 -DUSE_RENDER_THREAD
+    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64
     AARCH64 = 1
 
 # Odroid Go Advance target (SDL2, 64-bit)
