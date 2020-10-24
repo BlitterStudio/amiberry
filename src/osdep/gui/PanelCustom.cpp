@@ -201,11 +201,11 @@ public:
 
 			//  get the selected action from the drop-down, and 
 			//    push it into the 'temp map' 
-			for (auto& t : cboCustomAction)
+			for (auto t = 0; t < 15; t++)
 			{
-				if (actionEvent.getSource() == t)
+				if (actionEvent.getSource() == cboCustomAction[t])
 				{
-					tempmap[reinterpret_cast<int>(t)] = RemapEventList[t->getSelected() - 1];
+					tempmap[t] = RemapEventList[cboCustomAction[t]->getSelected() - 1];
 				}
 			}
 
