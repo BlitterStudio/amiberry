@@ -758,7 +758,7 @@ static void updatepicasso96()
 	vidinfo->width = screen->w;
 	vidinfo->depth = screen->format->BytesPerPixel * 8;
 	vidinfo->offset = 0;
-	//vidinfo->splitypos = -1;
+	vidinfo->splitypos = -1;
 #endif
 }
 static void open_screen(struct uae_prefs* p)
@@ -1928,7 +1928,7 @@ int picasso_palette(struct MyCLUTEntry *CLUT, uae_u32 *clut)
 {
 	auto changed = 0;
 
-	for (auto i = 0; i < 256; i++) {
+	for (auto i = 0; i < 256 * 2; i++) {
 		int r = CLUT[i].Red;
 		int g = CLUT[i].Green;
 		int b = CLUT[i].Blue;

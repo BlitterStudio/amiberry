@@ -522,8 +522,8 @@ enum {
 #define PSSO_BoardInfo_Reserved0		    PSSO_BoardInfo_BlitPlanar2DirectDefault + 4
 #define PSSO_BoardInfo_Reserved0Default		    PSSO_BoardInfo_Reserved0 + 4
 #define PSSO_BoardInfo_Reserved1		    PSSO_BoardInfo_Reserved0Default + 4
-#define PSSO_BoardInfo_Reserved1Default		    PSSO_BoardInfo_Reserved1 + 4
-#define PSSO_BoardInfo_Reserved2		    PSSO_BoardInfo_Reserved1Default + 4
+#define PSSO_SetSplitPosition		    PSSO_BoardInfo_Reserved1 + 4
+#define PSSO_BoardInfo_Reserved2		    PSSO_SetSplitPosition + 4
 #define PSSO_BoardInfo_Reserved2Default		    PSSO_BoardInfo_Reserved2 + 4
 #define PSSO_BoardInfo_Reserved3		    PSSO_BoardInfo_Reserved2Default + 4
 #define PSSO_BoardInfo_Reserved3Default		    PSSO_BoardInfo_Reserved3 + 4
@@ -596,6 +596,8 @@ enum {
 #define BIB_NEEDSALIGNMENT		 2	/* bitmaps have to be aligned (not yet supported!) */
 #define BIB_CACHEMODECHANGE		 3	/* board memory may be set to Imprecise (060) or Nonserialised (040) */
 #define BIB_VBLANKINTERRUPT		 4	/* board can cause a hardware interrupt on a vertical retrace */
+#define BIB_HASSPRITEBUFFER      5  /* board has allocated memory for software sprite image and save buffer */
+#define BIB_VGASCREENSPLIT       6  /* has a screen B with fixed screen position for split-screens */
 #define BIB_DBLSCANDBLSPRITEY	 8	/* hardware sprite y position is doubled on doublescan display modes */
 #define BIB_ILACEHALFSPRITEY	 9	/* hardware sprite y position is halved on interlace display modes */
 #define BIB_ILACEDBLROWOFFSET	10	/* doubled row offset in interlaced display modes needs additional horizontal bit */
@@ -623,6 +625,8 @@ enum {
 #define BIF_NEEDSALIGNMENT		(1 << BIB_NEEDSALIGNMENT)
 #define BIF_CACHEMODECHANGE		(1 << BIB_CACHEMODECHANGE)
 #define BIF_VBLANKINTERRUPT		(1 << BIB_VBLANKINTERRUPT)
+#define BIF_HASSPRITEBUFFER		(1 << BIB_HASSPRITEBUFFER)
+#define BIF_VGASCREENSPLIT		(1 << BIB_VGASCREENSPLIT)
 #define BIF_DBLSCANDBLSPRITEY	(1 << BIB_DBLSCANDBLSPRITEY)
 #define BIF_ILACEHALFSPRITEY	(1 << BIB_ILACEHALFSPRITEY)
 #define BIF_ILACEDBLROWOFFSET	(1 << BIB_ILACEDBLROWOFFSET)
@@ -649,7 +653,7 @@ enum {
 struct picasso96_state_struct
 {
     RGBFTYPE            RGBFormat;   /* true-colour, CLUT, hi-colour, etc.*/
-    struct MyCLUTEntry  CLUT[256];   /* Duh! */
+    struct MyCLUTEntry  CLUT[256 * 2];   /* Duh! */
     uaecptr             Address;     /* Active screen address (Amiga-side)*/
     uaecptr             Extent;      /* End address of screen (Amiga-side)*/
     uae_u16             Width;       /* Active display width  (From SetGC)*/
@@ -703,7 +707,7 @@ struct picasso_vidbuf_description {
     int extra_mem; /* nonzero if there's a second buffer that must be updated */
     uae_u32 rgbformat;
     RGBFTYPE selected_rgbformat;
-    uae_u32 clut[256];
+    uae_u32 clut[256 * 2];
 	int picasso_convert, host_mode;
 	int ohost_mode, orgbformat;
 	int full_refresh;
@@ -711,6 +715,7 @@ struct picasso_vidbuf_description {
 	int rtg_clear_flag;
 	bool picasso_active;
 	bool picasso_changed;
+	uae_s16 splitypos;
 	uae_atomic picasso_state_change;
 };
 
