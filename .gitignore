@@ -215,3 +215,4 @@ Thumbs.db
 *.user
 *___jb_old___
 *.orig
+cmake-build-debug
