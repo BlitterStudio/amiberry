@@ -45,7 +45,7 @@ static gcn::Label* lblKeyFullScreen;
 static gcn::TextField* txtKeyFullScreen;
 static gcn::Button* cmdKeyFullScreen;
 
-#idef SERIAL_PORT
+#ifdef SERIAL_PORT
 static gcn::Window* grpSerialDevice;
 static gcn::TextField* txtSerialDevice;
 static gcn::CheckBox* chkSerialDirect;
@@ -78,14 +78,20 @@ public:
 static const char* listValues[] = {"none", "POWER", "DF0", "DF1", "DF2", "DF3", "HD", "CD"};
 static StringListModel KBDLedList(listValues, 8);
 
-#idef SERIAL_PORT
+#ifdef SERIAL_PORT
 class MiscKeyListener : public gcn::KeyListener
 {
 public:
 	void keyPressed(gcn::KeyEvent& keyEvent) override
 	{
 		if (keyEvent.getSource() == txtSerialDevice)
+		{
 			snprintf (changed_prefs.sername, 256, "%s", txtSerialDevice->getText().c_str());
+			if( changed_prefs.sername[0] )
+				changed_prefs.use_serial = 1;
+			else
+				changed_prefs.use_serial = 0;
+		}
 	}
 };
 #endif
@@ -152,7 +158,7 @@ public:
 
 		else if (actionEvent.getSource() == chkAllowHostRun)
 			changed_prefs.allow_host_run = chkAllowHostRun->isSelected();
-		
+
 		else if (actionEvent.getSource() == cboKBDLed_num)
 			changed_prefs.kbd_led_num = cboKBDLed_num->getSelected() - 1;
 
@@ -203,7 +209,7 @@ public:
 			}
 		}
 
-#idef SERIAL_PORT
+#ifdef SERIAL_PORT
 		else if (actionEvent.getSource() == txtSerialDevice)
 			snprintf (changed_prefs.sername, 256, "%s", txtSerialDevice->getText().c_str());
 
@@ -217,7 +223,7 @@ public:
 };
 
 MiscActionListener* miscActionListener;
-#idef SERIAL_PORT
+#ifdef SERIAL_PORT
 MiscKeyListener* miscKeyListener;
 #endif
 
@@ -225,7 +231,7 @@ MiscKeyListener* miscKeyListener;
 void InitPanelMisc(const struct _ConfigCategory& category)
 {
 	miscActionListener = new MiscActionListener();
-#idef SERIAL_PORT
+#ifdef SERIAL_PORT
 	miscKeyListener = new MiscKeyListener();
 #endif
 
@@ -244,7 +250,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	chkMouseUntrap = new gcn::CheckBox("Untrap = middle button");
 	chkMouseUntrap->setId("chkMouseUntrap");
 	chkMouseUntrap->addActionListener(miscActionListener);
-	
+
 	chkRetroArchQuit = new gcn::CheckBox("Use RetroArch Quit Button");
 	chkRetroArchQuit->setId("RetroArchQuit");
 	chkRetroArchQuit->addActionListener(miscActionListener);
@@ -276,7 +282,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	chkAllowHostRun = new gcn::CheckBox("Allow host-run");
 	chkAllowHostRun->setId("chkAllowHostRun");
 	chkAllowHostRun->addActionListener(miscActionListener);
-	
+
 	lblNumLock = new gcn::Label("NumLock:");
 	lblNumLock->setAlignment(gcn::Graphics::RIGHT);
 	cboKBDLed_num = new gcn::DropDown(&KBDLedList);
@@ -341,7 +347,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	cmdKeyFullScreen->setBaseColor(gui_baseCol);
 	cmdKeyFullScreen->addActionListener(miscActionListener);
 
-#idef SERIAL_PORT
+#ifdef SERIAL_PORT
 	grpSerialDevice = new gcn::Window("Serial Port");
 	grpSerialDevice->setId("grpSerialDevice");
 
@@ -415,7 +421,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	category.panel->add(txtKeyFullScreen, lblKeyFullScreen->getX() + lblKeyFullScreen->getWidth() + 8, posY);
 	category.panel->add(cmdKeyFullScreen, txtKeyFullScreen->getX() + txtKeyFullScreen->getWidth() + 8, posY);
 
-#idef SERIAL_PORT
+#ifdef SERIAL_PORT
 	posY += cmdKeyActionReplay->getHeight() + DISTANCE_NEXT_Y * 2;
 
 	grpSerialDevice->setPosition(DISTANCE_BORDER, posY);
@@ -471,14 +477,14 @@ void ExitPanelMisc()
 	delete cmdKeyFullScreen;
 
 	delete miscActionListener;
-#idef SERIAL_PORT
+#ifdef SERIAL_PORT
 	delete miscKeyListener;
 
 	delete grpSerialDevice;
 	delete txtSerialDevice;
 	delete chkRTSCTS;
 	delete chkSerialDirect;
-endif
+#endif
 }
 
 void RefreshPanelMisc()
@@ -491,7 +497,7 @@ void RefreshPanelMisc()
 	chkRetroArchQuit->setSelected(changed_prefs.use_retroarch_quit);
 	chkRetroArchMenu->setSelected(changed_prefs.use_retroarch_menu);
 	chkRetroArchReset->setSelected(changed_prefs.use_retroarch_reset);
-	//chkRetroArchSavestate->setSelected(changed_prefs.use_retroarch_statebuttons);  
+	//chkRetroArchSavestate->setSelected(changed_prefs.use_retroarch_statebuttons);
 
 	chkBSDSocket->setEnabled(!emulating);
 	chkBSDSocket->setSelected(changed_prefs.socket_emu);
@@ -512,7 +518,7 @@ void RefreshPanelMisc()
 	txtKeyFullScreen->setText(strncmp(changed_prefs.fullscreen_toggle, "", 1) != 0
 		                          ? changed_prefs.fullscreen_toggle
 		                          : "Click to map");
-#idef SERIAL_PORT
+#ifdef SERIAL_PORT
 	chkRTSCTS->setSelected(changed_prefs.serial_hwctsrts);
 	chkSerialDirect->setSelected(changed_prefs.serial_direct);
 	txtSerialDevice->setText(changed_prefs.sername);
@@ -540,7 +546,7 @@ bool HelpPanelMisc(std::vector<std::string>& helptext)
 	helptext.emplace_back(" ");
 	helptext.emplace_back("You can set some of the keyboard LEDs to react on drive activity, using the relevant options.");
 	helptext.emplace_back(" ");
-#indef SERIAL_PORT
+#ifndef SERIAL_PORT
 	helptext.emplace_back("Finally, you can assign the desired hotkeys to Open the GUI, Quit the emulator,");
 	helptext.emplace_back("open Action Replay/HRTMon or toggle Fullscreen mode ON/OFF.");
 #else
