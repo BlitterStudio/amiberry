@@ -25,6 +25,9 @@
 #include "blitter.h"
 #include "xwin.h"
 #include "custom.h"
+#ifdef SERIAL_PORT
+#include "serial.h"
+#endif
 #include "bsdsocket.h"
 #include "uaeresource.h"
 #include "native2amiga.h"
@@ -239,7 +242,9 @@ void devices_hsync(void)
 	//CIA_hsync_prehandler(); // This is a no-op!
 
 	decide_blitter(-1);
-	//serial_hsynchandler ();
+#ifdef SERIAL_PORT
+	serial_hsynchandler ();
+#endif
 
 	execute_device_items(device_hsyncs, device_hsync_cnt);
 }

@@ -29,6 +29,9 @@
 #include "blitter.h"
 #include "xwin.h"
 #include "inputdevice.h"
+#ifdef SERIAL_PORT
+#include "serial.h"
+#endif
 #include "autoconf.h"
 #include "traps.h"
 #include "gui.h"
@@ -52,6 +55,10 @@
 #define ALL_SUBPIXEL 1
 
 #define SPRBORDER 0
+
+#ifdef SERIAL_PORT
+extern uae_u16 serper;
+#endif
 
 #ifdef AMIBERRY
 int debug_sprite_mask = 0xff;
@@ -5430,7 +5437,9 @@ void rethink_uae_int(void)
 
 static void rethink_intreq (void)
 {
-//	serial_check_irq ();
+#ifdef SERIAL_PORT
+	serial_check_irq ();
+#endif
 	devices_rethink();
 }
 
@@ -5483,9 +5492,11 @@ void INTREQ_f (uae_u16 v)
 {
 	uae_u16 old = intreq;
 	setclr (&intreq, v);
+#ifdef SERIAL_PORT
 	if ((old & 0x0800) && !(intreq & 0x0800)) {
-		//serial_rbf_clear();
+		serial_rbf_clear();
 	}
+#endif
 }
 
 bool INTREQ_0 (uae_u16 v)
@@ -5493,9 +5504,11 @@ bool INTREQ_0 (uae_u16 v)
 	uae_u16 old = intreq;
 	setclr (&intreq, v);
 
+#ifdef SERIAL_PORT
 	if ((old & 0x0800) && !(intreq & 0x0800)) {
-		//serial_rbf_clear();
+		serial_rbf_clear();
 	}
+#endif
 
 	if ((v & 0x8000) && old != v) {
 		doint_delay();
@@ -5518,8 +5531,10 @@ static void ADKCON (int hpos, uae_u16 v)
 	DISK_update_adkcon (hpos, v);
 	setclr (&adkcon, v);
 	audio_update_adkmasks ();
-	//if ((v >> 11) & 1)
-		//serial_uartbreak ((adkcon >> 11) & 1);
+#ifdef SERIAL_PORT
+	if ((v >> 11) & 1)
+		serial_uartbreak ((adkcon >> 11) & 1);
+#endif
 }
 
 static void BEAMCON0 (uae_u16 v)
@@ -8984,6 +8999,9 @@ void custom_reset (bool hardreset, bool keyboardreset)
 	if (!isrestore ()) {
 		/* must be called after audio_reset */
 		adkcon = 0;
+#ifdef SERIAL_PORT
+		serial_uartbreak (0);
+#endif
 		audio_update_adkmasks ();
 	}
 
@@ -9036,6 +9054,11 @@ void custom_reset (bool hardreset, bool keyboardreset)
 		CLXCON (clxcon);
 		CLXCON2 (clxcon2);
 		calcdiw ();
+#ifdef SERIAL_PORT
+		v = serper;
+		serper = 0;
+		SERPER(v);
+#endif
 		for (int i = 0; i < 8; i++) {
 			SPRxCTLPOS (i);
 			nr_armed += spr[i].armed != 0;
@@ -9196,7 +9219,11 @@ static uae_u32 REGPARAM2 custom_wget_1(int hpos, uaecptr addr, int noput)
 	case 0x012: v = POT0DAT (); break;
 	case 0x014: v = POT1DAT (); break;
 	case 0x016: v = POTGOR (); break;
+#ifdef SERIAL_PORT
+	case 0x018: v = SERDATR (); break;
+#else
 	case 0x018: v = 0x3000 /* no data */; break;
+#endif
 	case 0x01A: v = DSKBYTR (hpos); break;
 	case 0x01C: v = INTENAR (); break;
 	case 0x01E: v = INTREQR (); break;
@@ -9362,8 +9389,13 @@ static int REGPARAM2 custom_wput_1 (int hpos, uaecptr addr, uae_u32 value, int n
 	case 0x02A: VPOSW (value); break;
 	case 0x02C: VHPOSW (value); break;
 	case 0x02E: COPCON (value); break;
+#ifdef SERIAL_PORT
+	case 0x030: SERDAT (value); break;
+	case 0x032: SERPER (value); break;
+#else
 	case 0x030: break;
 	case 0x032: break;
+#endif
 	case 0x034: POTGO (value); break;
 
 	case 0x040: BLTCON0 (hpos, value); break;
@@ -9663,7 +9695,11 @@ uae_u8 *restore_custom (uae_u8 *src)
 	RW;						/* 02C VHPOSW */
 	COPCON (RW);			/* 02E COPCON */
 	RW;						/* 030 SERDAT* */
+#ifdef SERIAL_PORT
+	serper = RW;			/* 032 SERPER* */
+#else
 	RW;			/* 032 SERPER* */
+#endif
 	potgo_value = 0; POTGO (RW); /* 034 POTGO */
 	RW;						/* 036 JOYTEST* */
 	RW;						/* 038 STREQU */
@@ -9830,8 +9866,13 @@ uae_u8 *save_custom (int *len, uae_u8 *dstptr, int full)
 	SW((lof_store ? 0x8001 : 0) | (lol ? 0x0080 : 0));/* 02A VPOSW */
 	SW(0);			        /* 02C VHPOSW */
 	SW(copcon);		    /* 02E COPCON */
+#ifdef SERIAL_PORT
+	SW (serdat);			/* 030 SERDAT * */
+	SW (serper);			/* 032 SERPER * */
+#else
 	SW(0);		          /* 030 SERDAT * */
 	SW(0);		          /* 032 SERPER * */
+#endif
 	SW(potgo_value);		/* 034 POTGO */
 	SW(0);			        /* 036 JOYTEST * */
 	SW(0);			        /* 038 STREQU */

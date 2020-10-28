@@ -2568,6 +2568,9 @@ void cfgfile_save_options(struct zfile* f, struct uae_prefs* p, int type)
 	cfg_write(_T("; "), f);
 
 	cfgfile_write_bool(f, _T("parallel_on_demand"), p->parallel_demand);
+#ifdef SERIAL_PORT
+	cfgfile_write_str( f, _T("serial_port"), p->sername[0] ? p->sername : _T("none"));
+#endif
 	cfgfile_write_bool(f, _T("serial_on_demand"), p->serial_demand);
 	cfgfile_write_bool(f, _T("serial_hardware_ctsrts"), p->serial_hwctsrts);
 	cfgfile_write_bool(f, _T("serial_direct"), p->serial_direct);
@@ -5456,6 +5459,17 @@ static int cfgfile_parse_hardware(struct uae_prefs* p, const TCHAR* option, TCHA
 		|| cfgfile_yesno(option, value, _T("board_custom_order"), &p->autoconfig_custom_sort)
 		|| cfgfile_yesno(option, value, _T("uaeserial"), &p->uaeserial))
 		return 1;
+
+#ifdef SERIAL_PORT
+	if (cfgfile_string(option, value, _T("serial_port"), p->sername, sizeof p->sername / sizeof(TCHAR)))
+	{
+		if (p->sername[0])
+			p->use_serial=1;
+		else
+			p->use_serial=0;
+		return 1;
+	}
+#endif
 
 	if (cfgfile_intval(option, value, _T("cachesize"), &p->cachesize, 1)
 		|| cfgfile_intval(option, value, _T("cd32nvram_size"), &p->cs_cd32nvram_size, 1024)

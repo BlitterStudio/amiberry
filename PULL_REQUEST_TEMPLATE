@@ -1,8 +1,30 @@
-Fixes # .
+Fixes # https://github.com/midwan/amiberry/issues/682
 
 Changes proposed in this pull request:
--
--
--
+
+Adds serial port emulation.
+
+This is based heavily on the implementation in WinUAE for the top level
+emulation (almost a direct copy of serial_win32.cpp) and parser.cpp from FS-UAE
+for the low level support. The code on this branch adds some extra serial port
+configuration (which also fixes issues on the FS-UAE branch).
+
+Some notes....
+
+-Everything is wrapped with the SERIAL_PORT switch. Existing implementations in
+bot WinUAE and FA-UAE use this switch sporadically and it does not make sense to
+me. It should either be used for everything or not used at all.
+-Additional GUI configuration has also been added. I have no idea on the plans
+here and is not necessary for the serial port emulation to be enabled if the
+decision is made not to use it. It's adequate just to add the required options
+to the individual configuration files.
+-Only serial port emulation on a HW UART has been enabled which includes USB
+based UARTS as well.
+-I chose not to add enumeration for serial devices. Code is available but has
+some restrictions.
+-I still don't like the way this is implemented in WinUAE or FS-UAE but it is
+here in that form for legacy/compatibility purposes hence the naming not having
+being changed for the filename serial_win32.cpp.
+
 
 @midwan

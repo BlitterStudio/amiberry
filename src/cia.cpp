@@ -18,6 +18,9 @@
 #include "custom.h"
 #include "newcpu.h"
 #include "cia.h"
+#ifdef SERIAL_PORT
+#include "serial.h"
+#endif
 #include "disk.h"
 #include "xwin.h"
 #include "keybuf.h"
@@ -94,7 +97,9 @@ static int kbstate, kblostsynccnt;
 static unsigned long kbhandshakestart;
 static uae_u8 kbcode;
 
+#ifdef SERIAL_PORT
 static uae_u8 serbits;
+#endif
 static int warned = 10;
 
 static struct rtc_msm_data rtc_msm;
@@ -1150,6 +1155,12 @@ static uae_u8 ReadCIAB (unsigned int addr, uae_u32 *flags)
 	switch (reg) {
 	case 0:
 		tmp = (ciabpra & ciabdra) | (ciabdra ^ 0xff);
+#ifdef SERIAL_PORT
+		if (currprefs.use_serial) {
+			tmp &= 7;
+			tmp |= serial_readstatus(ciabdra) & 0xf8;
+		}
+#endif
 		tmp |= handle_parport_joystick(1, tmp);
 
 		if (currprefs.cs_ciatype[1]) {
@@ -1418,6 +1429,7 @@ static void WriteCIAA (uae_u16 addr, uae_u8 val, uae_u32 *flags)
 	}
 }
 
+#ifdef SERIAL_PORT
 static void write_ciab_serial(uae_u8 ndata, uae_u8 odata, uae_u8 ndir, uae_u8 odir)
 {
 	uae_u8 val = ndata & ndir;
@@ -1477,6 +1489,7 @@ static void write_ciab_serial(uae_u8 ndata, uae_u8 odata, uae_u8 ndir, uae_u8 od
 		}
 	}
 }
+#endif
 
 static void WriteCIAB (uae_u16 addr, uae_u8 val, uae_u32 *flags)
 {
@@ -1487,7 +1500,14 @@ static void WriteCIAB (uae_u16 addr, uae_u8 val, uae_u32 *flags)
 #endif
 	switch (reg) {
 	case 0:
+#ifdef SERIAL_PORT
+		write_ciab_serial(val, ciabpra, ciabdra, ciabdra);
+#endif
 		ciabpra = val;
+#ifdef SERIAL_PORT
+		if (currprefs.use_serial)
+			serial_writestatus(ciabpra, ciabdra);
+#endif
 		break;
 	case 1:
 		*flags |= 2;
@@ -1514,7 +1534,14 @@ static void WriteCIAB (uae_u16 addr, uae_u8 val, uae_u32 *flags)
 		DISK_select (val);
 		break;
 	case 2:
+#ifdef SERIAL_PORT
+		write_ciab_serial(ciabpra, ciabpra, val, ciabdra);
+#endif
 		ciabdra = val;
+#ifdef SERIAL_PORT
+		if (currprefs.use_serial)
+			serial_writestatus (ciabpra, ciabdra);
+#endif
 		break;
 	case 3:
 		ciabdrb = val;
@@ -1650,7 +1677,9 @@ void CIA_reset (void)
 #endif
 
 	kblostsynccnt = 0;
+#ifdef SERIAL_PORT
 	serbits = 0;
+#endif
 	oldcd32mute = 1;
 	resetwarning_phase = resetwarning_timer = 0;
 	heartbeat_cnt = 0;

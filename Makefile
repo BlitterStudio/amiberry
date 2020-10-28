@@ -329,12 +329,14 @@ OBJS =	\
 	src/main.o \
 	src/memory.o \
 	src/native2amiga.o \
+	src/parser.o \
 	src/rommgr.o \
 	src/rtc.o \
 	src/savestate.o \
 	src/scp.o \
 	src/scsi.o \
 	src/scsiemul.o \
+	src/serial_win32.o \
 	src/statusline.o \
 	src/tabletlibrary.o \
 	src/tinyxml2.o \
