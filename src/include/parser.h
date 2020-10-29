@@ -9,20 +9,21 @@
 
 #define PRTBUFSIZE 65536
 
-int setbaud (long baud );
+int setbaud(long baud );
 void getserstat(int *status);
-void setserstat (int mask, int onoff);
-int readser (int *buffer);
-int readseravail (void);
+void setserstat(int mask, int onoff);
+int readser(int *buffer);
+int readseravail(bool*);
+void flushser(void);
 void writeser(int c);
 void writeser_flush(void);
-int openser (const TCHAR *sername);
-void closeser (void);
-void doserout (void);
-void closeprinter (void);
-void flushprinter (void);
-int checkserwrite (int spaceneeded);
-void serialuartbreak (int);
+int openser(const TCHAR *sername);
+void closeser(void);
+void doserout(void);
+void closeprinter(void);
+void flushprinter(void);
+int checkserwrite(int spaceneeded);
+void serialuartbreak(int);
 
 void hsyncstuff(void);
 
