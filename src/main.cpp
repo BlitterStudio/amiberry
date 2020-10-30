@@ -993,6 +993,7 @@ static void do_start_program(void)
 
 	try
 	{
+		emulating = 1;
 		m68k_go(1);
 	}
 	catch (...)
