@@ -4390,18 +4390,18 @@ bool kronos_init(struct autoconfig_info *aci)
 	//scsi->databuffer_size = 1024;
 	//scsi->databufferptr = xcalloc(uae_u8, scsi->databuffer_size);
 
-	//uae_u16 sum = 0, xor = 0;
+	//uae_u16 sum = 0, xorv = 0;
 	//for (int i = 0; i < 16 - 2; i++) {
 	//	uae_u16 v = (kronos_eeprom[i * 2 + 0] << 8) | (kronos_eeprom[i * 2 + 1]);
 	//	sum += v;
-	//	xor ^= v;
+	//	xorv ^= v;
 	//}
 	//sum = 0 - sum;
 	//kronos_eeprom[14 * 2 + 0] = sum >> 8;
 	//kronos_eeprom[14 * 2 + 1] = (uae_u8)sum;
-	//xor ^= sum;
-	//kronos_eeprom[15 * 2 + 0] = xor >> 8;
-	//kronos_eeprom[15 * 2 + 1] = (uae_u8)xor;
+	//xorv ^= sum;
+	//kronos_eeprom[15 * 2 + 0] = xorv >> 8;
+	//kronos_eeprom[15 * 2 + 1] = (uae_u8)xorv;
 
 	//scsi->eeprom = eeprom93xx_new(kronos_eeprom, 16, NULL);
 
