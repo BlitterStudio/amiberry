@@ -1269,10 +1269,12 @@ static void cdrom_run_read (void)
 			buf[1] = 0;
 			buf[2] = 0;
 			buf[3] = cdrom_sector_counter & 31;
-			for (int i = 0; i < 2352; i++)
-				put_byte (cdrom_addressdata + seccnt * 4096 + i, buf[i]);
-			for (int i = 0; i < 73 * 2; i++)
-				put_byte (cdrom_addressdata + seccnt * 4096 + 0xc00 + i, 0);
+			for (int i = 0; i < 2352; i++) {
+				dma_put_byte(cdrom_addressdata + seccnt * 4096 + i, buf[i]);
+			}
+			for (int i = 0; i < 73 * 2; i++) {
+				dma_put_byte(cdrom_addressdata + seccnt * 4096 + 0xc00 + i, 0);
+			}
 			cdrom_pbx &= ~(1 << seccnt);
 			set_status (CDINTERRUPT_PBX);
 
@@ -1289,9 +1291,11 @@ static void cdrom_run_read (void)
 				else
 					cdrom_subcodeoffset = 128;
 				// 96 byte subchannel data
-				for (int i = 0; i < SUB_CHANNEL_SIZE; i++)
-					put_byte(subcode_address + cdrom_subcodeoffset + i, subbuf[i]);
-				put_long(subcode_address + cdrom_subcodeoffset + SUB_CHANNEL_SIZE, 0xffff0000);
+				for (int i = 0; i < SUB_CHANNEL_SIZE; i++) {
+					dma_put_byte(subcode_address + cdrom_subcodeoffset + i, subbuf[i]);
+				}
+				dma_put_word(subcode_address + cdrom_subcodeoffset + SUB_CHANNEL_SIZE + 0, 0xffff);
+				dma_put_word(subcode_address + cdrom_subcodeoffset + SUB_CHANNEL_SIZE + 2, 0x0000);
 				cdrom_subcodeoffset += 100;
 				set_status(CDINTERRUPT_SUBCODE);
 			}

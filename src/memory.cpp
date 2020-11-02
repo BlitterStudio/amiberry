@@ -3256,6 +3256,53 @@ uae_u8 *save_rom (int first, int *len, uae_u8 *dstptr)
 
 #endif /* SAVESTATE */
 
+static void REGPARAM2 empty_put(uaecptr addr, uae_u32 v)
+{
+}
+
+void loadboardfile(addrbank* ab, struct boardloadfile* lf)
+{
+	if (!ab->baseaddr)
+		return;
+	if (!lf->loadfile[0])
+		return;
+	struct zfile* zf = zfile_fopen(lf->loadfile, _T("rb"));
+	if (zf) {
+		int size = lf->filesize;
+		if (!size) {
+			size = ab->allocated_size;
+		}
+		else if (lf->loadoffset + size > ab->allocated_size)
+			size = ab->allocated_size - lf->loadoffset;
+		if (size > 0) {
+			int total = zfile_fread(ab->baseaddr + lf->loadoffset, 1, size, zf);
+			write_log(_T("Expansion file '%s': load %u bytes, offset %u, start addr %08x\n"),
+				lf->loadfile, total, lf->loadoffset, ab->start + lf->loadoffset);
+		}
+		zfile_fclose(zf);
+	}
+	else {
+		write_log(_T("Couldn't open expansion file '%s'\n"), lf->loadfile);
+	}
+}
+
+void initramboard(addrbank* ab, struct ramboard* rb)
+{
+	ab->flags &= ~ABFLAG_NODMA;
+	if (rb->nodma)
+		ab->flags |= ABFLAG_NODMA;
+	if (!ab->baseaddr)
+		return;
+	loadboardfile(ab, &rb->lf);
+	if (rb->readonly) {
+		ab->lput = empty_put;
+		ab->wput = empty_put;
+		ab->bput = empty_put;
+		ab->jit_write_flag = 0;
+	}
+}
+
+
 /* memory helpers */
 
 void memcpyha_safe(uaecptr dst, const uae_u8 *src, int size)
@@ -3439,4 +3486,33 @@ int memory_valid_address(uaecptr addr, uae_u32 size)
 	addr -= ab->startaccessmask;
 	addr &= ab->mask;
 	return addr + size <= ab->allocated_size;
+}
+
+void dma_put_word(uaecptr addr, uae_u16 v)
+{
+	addrbank* ab = &get_mem_bank(addr);
+	if (ab->flags & ABFLAG_NODMA)
+		return;
+	put_word(addr, v);
+}
+void dma_put_byte(uaecptr addr, uae_u8 v)
+{
+	addrbank* ab = &get_mem_bank(addr);
+	if (ab->flags & ABFLAG_NODMA)
+		return;
+	put_byte(addr, v);
+}
+uae_u16 dma_get_word(uaecptr addr)
+{
+	addrbank* ab = &get_mem_bank(addr);
+	if (ab->flags & ABFLAG_NODMA)
+		return 0xffff;
+	return get_word(addr);
+}
+uae_u8 dma_get_byte(uaecptr addr)
+{
+	addrbank* ab = &get_mem_bank(addr);
+	if (ab->flags & ABFLAG_NODMA)
+		return 0xff;
+	return get_byte(addr);
 }

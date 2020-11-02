@@ -841,6 +841,7 @@ struct soft_scsi
 	bool dma_controller;
 	bool dma_drq;
 	bool dma_autodack;
+	uae_u32 dma_mask;
 	struct romconfig *rc;
 	struct soft_scsi **self_ptr;
 
@@ -980,6 +981,7 @@ static struct soft_scsi *generic_soft_scsi_add(int ch, struct uaedev_config_info
 	ss->bank = &soft_bank_generic;
 	ss->subtype = rc->subtype;
 	ss->intena = false;
+	ss->dma_mask = 0xffffffff;
 	if (boardsize > 0) {
 		ss->board_size = boardsize;
 		ss->board_mask = ss->board_size - 1;
@@ -1442,9 +1444,9 @@ static void supra_do_dma(struct soft_scsi *ncr)
 	int len = ncr->dmac_length;
 	for (int i = 0; i < len; i++) {
 		if (ncr->dmac_direction < 0) {
-			x_put_byte(ncr->dmac_address, ncr5380_bget(ncr, 0));
+			dma_put_byte(ncr->dmac_address & ncr->dma_mask, ncr5380_bget(ncr, 0));
 		} else if (ncr->dmac_direction > 0) {
-			ncr5380_bput(ncr, 0, x_get_byte(ncr->dmac_address));
+			ncr5380_bput(ncr, 0, dma_get_byte(ncr->dmac_address & ncr->dma_mask));
 		}
 		ncr->dmac_length--;
 		ncr->dmac_address++;
@@ -1463,9 +1465,9 @@ static void hardframe_do_dma(struct soft_scsi *ncr)
 			uae_u8 v = aic_bget_dma(ncr, &phaseerr);
 			if (phaseerr)
 				break;
-			x_put_byte(ncr->dmac_address, v);
+			dma_put_byte(ncr->dmac_address & ncr->dma_mask, v);
 		} else if (ncr->dmac_direction > 0) {
-			uae_u8 v = x_get_byte(ncr->dmac_address);
+			uae_u8 v = dma_get_byte(ncr->dmac_address & ncr->dma_mask);
 			aic_bput_dma(ncr, v, &phaseerr);
 			if (phaseerr)
 				break;
@@ -1480,9 +1482,9 @@ static void xebec_do_dma(struct soft_scsi *ncr)
 	struct raw_scsi *rs = &ncr->rscsi;
 	while (rs->bus_phase == SCSI_SIGNAL_PHASE_DATA_OUT || rs->bus_phase == SCSI_SIGNAL_PHASE_DATA_IN) {
 		if (rs->bus_phase == SCSI_SIGNAL_PHASE_DATA_IN) {
-			x_put_byte(ncr->dmac_address, ncr5380_bget(ncr, 8));
+			dma_put_byte(ncr->dmac_address & ncr->dma_mask, ncr5380_bget(ncr, 8));
 		} else if (rs->bus_phase == SCSI_SIGNAL_PHASE_DATA_OUT) {
-			ncr5380_bput(ncr, 8, x_get_byte(ncr->dmac_address));
+			ncr5380_bput(ncr, 8, dma_get_byte(ncr->dmac_address & ncr->dma_mask));
 		}
 	}
 }
@@ -1492,11 +1494,11 @@ static void overdrive_do_dma(struct soft_scsi *ncr)
 	struct raw_scsi *rs = &ncr->rscsi;
 	while ((rs->bus_phase == SCSI_SIGNAL_PHASE_DATA_OUT || rs->bus_phase == SCSI_SIGNAL_PHASE_DATA_IN) && ncr->dmac_length > 0) {
 		if (rs->bus_phase == SCSI_SIGNAL_PHASE_DATA_IN) {
-			x_put_byte(ncr->dmac_address, ncr5380_bget(ncr, 8));
+			dma_put_byte(ncr->dmac_address & ncr->dma_mask, ncr5380_bget(ncr, 8));
 			ncr->dmac_address++;
 			ncr->dmac_length--;
 		} else if (rs->bus_phase == SCSI_SIGNAL_PHASE_DATA_OUT) {
-			ncr5380_bput(ncr, 8, x_get_byte(ncr->dmac_address));
+			ncr5380_bput(ncr, 8, dma_get_byte(ncr->dmac_address & ncr->dma_mask));
 			ncr->dmac_address++;
 			ncr->dmac_length--;
 		}

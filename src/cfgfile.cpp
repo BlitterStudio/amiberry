@@ -1513,7 +1513,7 @@ static void cfgfile_write_board_rom(struct uae_prefs* prefs, struct zfile* f, st
 				_stprintf(buf, _T("%s%s_rom"), name, i ? _T("_ext") : _T(""));
 				cfgfile_dwrite_str(f, buf, rc->romident);
 			}
-			if (rc->autoboot_disabled || rc->inserted || ert->subtypes || ert->settings || ert->id_jumper || br->device_order > 0 || is_custom_romboard(br)) {
+			if (rc->autoboot_disabled || rc->dma24bit || rc->inserted || ert->subtypes || ert->settings || ert->id_jumper || br->device_order > 0 || is_custom_romboard(br)) {
 				TCHAR buf2[256];
 				buf2[0] = 0;
 				auto* p = buf2;
@@ -1537,6 +1537,11 @@ static void cfgfile_write_board_rom(struct uae_prefs* prefs, struct zfile* f, st
 					if (buf2[0])
 						_tcscat(buf2, _T(","));
 					_tcscat(buf2, _T("autoboot_disabled=true"));
+				}
+				if (rc->dma24bit) {
+					if (buf2[0])
+						_tcscat(buf2, _T(","));
+					_tcscat(buf2, _T("dma24bit=true"));
 				}
 				if (rc->inserted) {
 					if (buf2[0])
@@ -1683,6 +1688,10 @@ static bool cfgfile_readramboard(const TCHAR *option, const TCHAR *value, const 
 			if (s)
 				rb->no_reset_unmap = true;
 			xfree(s);
+			s = cfgfile_option_get(value, _T("nodma"));
+			if (s)
+				rb->nodma = true;
+			xfree(s);
 			s = cfgfile_option_get(value, _T("data"));
 			if (s && _tcslen(s) >= 3 * 16 - 1) {
 				rb->autoconfig_inuse = true;
@@ -1795,6 +1804,12 @@ static void cfgfile_writeramboard(struct uae_prefs *prefs, struct zfile *f, cons
 		if (tmp2[0])
 			*p++ = ',';
 		_tcscpy(p, _T("no_reset_unmap=true"));
+		p += _tcslen(p);
+	}
+	if (rb->nodma) {
+		if (tmp2[0])
+			*p++ = ',';
+		_tcscpy(p, _T("nodma=true"));
 		p += _tcslen(p);
 	}
 	if (rb->autoconfig_inuse) {
@@ -5201,6 +5216,9 @@ static bool cfgfile_read_board_rom(struct uae_prefs *p, const TCHAR *option, con
 					TCHAR* p;
 					if (cfgfile_option_bool(buf2, _T("autoboot_disabled")) == 1) {
 						brc->roms[idx].autoboot_disabled = true;
+					}
+					if (cfgfile_option_bool(buf2, _T("dma24bit")) == 1) {
+						brc->roms[idx].dma24bit = true;
 					}
 					if (cfgfile_option_bool(buf2, _T("inserted")) == 1) {
 						brc->roms[idx].inserted = true;

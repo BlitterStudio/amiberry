@@ -95,6 +95,7 @@ enum
 	ABFLAG_CHIPRAM = 4096, ABFLAG_CIA = 8192, ABFLAG_PPCIOSPACE = 16384,
 	ABFLAG_MAPPED = 32768,
 	ABFLAG_DIRECTACCESS = 65536,
+	ABFLAG_NODMA = 131072,
 	ABFLAG_CACHE_ENABLE_DATA = CACHE_ENABLE_DATA << ABFLAG_CACHE_SHIFT,
 	ABFLAG_CACHE_ENABLE_DATA_BURST = CACHE_ENABLE_DATA_BURST << ABFLAG_CACHE_SHIFT,
 	ABFLAG_CACHE_ENABLE_INS = CACHE_ENABLE_INS << ABFLAG_CACHE_SHIFT,
@@ -527,6 +528,8 @@ extern void set_roms_modified (void);
 extern void reload_roms(void);
 extern bool read_kickstart_version(struct uae_prefs *p);
 extern void chipmem_setindirect(void);
+extern void initramboard(addrbank * ab, struct ramboard* rb);
+extern void loadboardfile(addrbank * ab, struct boardloadfile* lf);
 
 uae_u32 memory_get_long(uaecptr);
 uae_u32 memory_get_word(uaecptr);
@@ -671,6 +674,11 @@ STATIC_INLINE void *get_pointer (uaecptr addr)
 #  error "Unknown or unsupported pointer size."
 # endif
 #endif
+
+void dma_put_word(uaecptr addr, uae_u16 v);
+uae_u16 dma_get_word(uaecptr addr);
+void dma_put_byte(uaecptr addr, uae_u8 v);
+uae_u8 dma_get_byte(uaecptr addr);
 
 void memory_put_long(uaecptr, uae_u32);
 void memory_put_word(uaecptr, uae_u32);
