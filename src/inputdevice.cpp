@@ -8907,7 +8907,10 @@ void inputdevice_fix_prefs(struct uae_prefs *p, bool userconfig)
 					struct jport jpt = { 0 };
 					memcpy(&jpt.idc, &jp->idc, sizeof(struct inputdevconfig));
 					jpt.id = JPORT_UNPLUGGED;
-					write_log(_T("Unplugged stored, port %d '%s' (%s)\n"), i, jp->idc.name, jp->idc.configname);
+					jpt.mode = jp->mode;
+					jpt.submode = jp->submode;
+					jpt.autofire = jp->autofire;
+					write_log(_T("Unplugged stored, port %d '%s' (%s) %d %d %d\n"), i, jp->idc.name, jp->idc.configname, jp->mode, jp->submode, jp->autofire);
 					inputdevice_store_used_device(&jpt, i, defaultports);
 					freejport(p, i);
 					inputdevice_get_previous_joy(p, i, userconfig);
