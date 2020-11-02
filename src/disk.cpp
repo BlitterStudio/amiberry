@@ -4422,7 +4422,7 @@ using namespace tinyxml2;
 
 static bool abr_loaded;
 static tinyxml2::XMLDocument abr_xml[2];
-static TCHAR* abr_files[] = { _T("brainfile.xml"), _T("catlist.xml"), NULL };
+static const TCHAR* abr_files[] = { _T("brainfile.xml"), _T("catlist.xml"), NULL };
 
 static void abrcheck(struct diskinfo* di)
 {
