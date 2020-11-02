@@ -276,7 +276,7 @@ bool expamem_z3hack(struct uae_prefs *p)
  */
 static void addextrachip (uae_u32 sysbase)
 {
-	if (currprefs.chipmem_size <= 0x00200000)
+	if (currprefs.chipmem.size <= 0x00200000)
 		return;
 	if (sysbase & 0x80000001)
 		return;
@@ -300,11 +300,11 @@ static void addextrachip (uae_u32 sysbase)
 			ml = next;
 			continue;
 		}
-		if (upper >= currprefs.chipmem_size)
+		if (upper >= currprefs.chipmem.size)
 			return;
-		uae_u32 added = currprefs.chipmem_size - upper;
+		uae_u32 added = currprefs.chipmem.size - upper;
 		uae_u32 first = get_long (ml + 16);
-		put_long (ml + 24, currprefs.chipmem_size); // mh_Upper
+		put_long (ml + 24, currprefs.chipmem.size); // mh_Upper
 		put_long (ml + 28, get_long (ml + 28) + added); // mh_Free
 		uae_u32 next = 0;
 		while (first) {
@@ -314,7 +314,7 @@ static void addextrachip (uae_u32 sysbase)
 		if (next) {
 			uae_u32 bytes = get_long(next + 4);
 			if (next + bytes == 0x00200000) {
-				put_long(next + 4, currprefs.chipmem_size - next);
+				put_long(next + 4, currprefs.chipmem.size - next);
 			} else {
 				put_long(0x00200000 + 0, 0);
 				put_long(0x00200000 + 4, added);
@@ -598,6 +598,7 @@ void expamem_next(addrbank *mapped, addrbank *next)
 			aci.doinit = true;
 			aci.prefs = &currprefs;
 			aci.rc = cards[ecard]->rc;
+			aci.devnum = (ec->flags >> 16) & 255;
 			ec->initrc(&aci);
 		} else {
 			call_card_init(ecard);
@@ -1734,7 +1735,7 @@ static bool megachipram_init(struct autoconfig_info *aci)
 {
 	aci->zorro = 0;
 	aci->start = 0x10000000;
-	aci->size = aci->prefs->z3chipmem_size;
+	aci->size = aci->prefs->z3chipmem.size;
 	aci->label = _T("32-bit Chip RAM");
 	return true;
 }
@@ -2214,7 +2215,7 @@ static void allocate_expamem (void)
 	for (int i = 0; i < MAX_RTG_BOARDS; i++) {
 		memcpy(&currprefs.rtgboards[i], &changed_prefs.rtgboards[i], sizeof(struct rtgboardconfig));
 	}
-	currprefs.z3chipmem_size = changed_prefs.z3chipmem_size;
+	currprefs.z3chipmem.size = changed_prefs.z3chipmem.size;
 
 	for (int i = 0; i < MAX_RAM_BOARDS; i++) {
 		currprefs.fastmem[i].size = changed_prefs.fastmem[i].size;
@@ -2240,11 +2241,11 @@ static void allocate_expamem (void)
 
 	z3chipmem_bank.start = Z3BASE_UAE;
 
-	if (currprefs.mbresmem_high_size >= 128 * 1024 * 1024)
-		z3chipmem_bank.start += (currprefs.mbresmem_high_size - 128 * 1024 * 1024) + 16 * 1024 * 1024;
+	if (currprefs.mbresmem_high.size >= 128 * 1024 * 1024)
+		z3chipmem_bank.start += (currprefs.mbresmem_high.size - 128 * 1024 * 1024) + 16 * 1024 * 1024;
 
-	if (currprefs.z3chipmem_size && z3fastmem_bank[0].start - z3chipmem_bank.start < currprefs.z3chipmem_size)
-		currprefs.z3chipmem_size = changed_prefs.z3chipmem_size = 0;	
+	if (currprefs.z3chipmem.size && z3fastmem_bank[0].start - z3chipmem_bank.start < currprefs.z3chipmem.size)
+		currprefs.z3chipmem.size = changed_prefs.z3chipmem.size = 0;	
 
 	for (int i = 0; i < MAX_RAM_BOARDS; i++) {
 		if (fastmem_bank[i].reserved_size != currprefs.fastmem[i].size) {
@@ -2303,9 +2304,9 @@ static void allocate_expamem (void)
 			memory_hardreset (1);
 		}
 	}
-	if (z3chipmem_bank.reserved_size != currprefs.z3chipmem_size) {
+	if (z3chipmem_bank.reserved_size != currprefs.z3chipmem.size) {
 		mapped_free (&z3chipmem_bank);
-		mapped_malloc_dynamic (&currprefs.z3chipmem_size, &changed_prefs.z3chipmem_size, &z3chipmem_bank, 16, _T("*"));
+		mapped_malloc_dynamic (&currprefs.z3chipmem.size, &changed_prefs.z3chipmem.size, &z3chipmem_bank, 16, _T("*"));
 		memory_hardreset (1);
 	}
 
@@ -2339,8 +2340,9 @@ static void allocate_expamem (void)
 		}
 		if (z3chipmem_bank.allocated_size > 0) {
 			restore_ram (z3_fileposchip, z3chipmem_bank.baseaddr);
-			map_banks(&z3chipmem_bank, z3chipmem_bank.start >> 16, currprefs.z3chipmem_size >> 16,
+			map_banks(&z3chipmem_bank, z3chipmem_bank.start >> 16, currprefs.z3chipmem.size >> 16,
 				z3chipmem_bank.allocated_size);
+			initramboard(&z3chipmem_bank, &currprefs.z3chipmem);
 		}
 #ifdef PICASSO96
 		if (gfxmem_banks[0]->allocated_size > 0 && gfxmem_banks[0]->start > 0) {
@@ -2396,9 +2398,9 @@ static uaecptr check_boot_rom (struct uae_prefs *p, int *boot_rom_type)
 		return b;
 	//if (p->win32_automount_removable)
 	//	return b;
-	if (p->chipmem_size > 2 * 1024 * 1024)
+	if (p->chipmem.size > 2 * 1024 * 1024)
 		return b;
-	if (p->z3chipmem_size)
+	if (p->z3chipmem.size)
 		return b;
 	if (p->boot_rom >= 3)
 		return b;
@@ -2515,6 +2517,7 @@ static void add_expansions(struct uae_prefs *p, int zorro, int *fastmem_nump, in
 					cards_set[cardno].rc = rc;
 					cards_set[cardno].zorro = zorro;
 					cards_set[cardno].ert = ert;
+					cards_set[cardno].flags = j << 16;
 					cards_set[cardno++].map = NULL;
 					if (ert->init2) {
 						cards_set[cardno].flags = CARD_FLAG_CHILD;
@@ -2672,14 +2675,14 @@ static void reset_ac_data(struct uae_prefs *p)
 	expamem_z3_highram_uae = 0;
 
 	expamem_highmem_pointer = 0;
-	if (p->mbresmem_low_size)
+	if (p->mbresmem_low.size)
 		expamem_highmem_pointer = 0x08000000;
-	if (p->mbresmem_high_size)
-		expamem_highmem_pointer = 0x08000000 + p->mbresmem_high_size;
+	if (p->mbresmem_high.size)
+		expamem_highmem_pointer = 0x08000000 + p->mbresmem_high.size;
 
-	if (p->mbresmem_high_size >= 128 * 1024 * 1024)
-		expamem_z3_pointer_uae += (p->mbresmem_high_size - 128 * 1024 * 1024) + 16 * 1024 * 1024;
-	expamem_z3_pointer_uae += p->z3chipmem_size;
+	if (p->mbresmem_high.size >= 128 * 1024 * 1024)
+		expamem_z3_pointer_uae += (p->mbresmem_high.size - 128 * 1024 * 1024) + 16 * 1024 * 1024;
+	expamem_z3_pointer_uae += p->z3chipmem.size;
 	expamem_board_pointer = 0;
 	expamem_board_size = 0;
 	memset(slots_20, 0, sizeof slots_20);
@@ -3474,7 +3477,7 @@ static void expansion_add_autoconfig(struct uae_prefs *p)
 		cards_set[cardno++].map = NULL;
 	}
 
-	if (p->z3chipmem_size) {
+	if (p->z3chipmem.size) {
 		cards_set[cardno].flags = 0;
 		cards_set[cardno].name = _T("MegaChipRAM");
 		cards_set[cardno].initrc = megachipram_init;
@@ -3788,8 +3791,8 @@ void expansion_map(void)
 			map_banks(&romboardmem_bank[i], rb->start_address >> 16, rb->size >> 16, 0);
 		}
 	}
-	if (currprefs.z3chipmem_size) {
-		map_banks_z3(&z3chipmem_bank, z3chipmem_bank.start >> 16, currprefs.z3chipmem_size >> 16);
+	if (currprefs.z3chipmem.size) {
+		map_banks_z3(&z3chipmem_bank, z3chipmem_bank.start >> 16, currprefs.z3chipmem.size >> 16);
 	}
 	if (do_mount < 0 && ks11orolder()) {
 		filesys_bank.start = 0xe90000;
@@ -3856,7 +3859,7 @@ void restore_zram (int len, size_t filepos, int num)
 {
 	if (num == -1) {
 		z3_fileposchip = filepos;
-		changed_prefs.z3chipmem_size = len;
+		changed_prefs.z3chipmem.size = len;
 	} else {
 		z3_filepos[num] = filepos;
 		changed_prefs.z3fastmem[num].size = len;
@@ -4119,12 +4122,12 @@ static const struct expansionsubromtype a2091_sub[] = {
 	{
 		_T("DMAC-01"), _T("dmac01"), 0,
 		commodore, commodore_a2091_ram, 0, true,
-		{ 0 }
+		0
 	},
 	{
 		_T("DMAC-02"), _T("dmac02"), 0,
 		commodore, commodore_a2091_ram, 0, true,
-		{ 0 }
+		0
 	},
 	{
 		NULL
@@ -4134,17 +4137,17 @@ static const struct expansionsubromtype gvp1_sub[] = {
 	{
 		_T("Impact A2000-1/X"), _T("a2000-1"), 0,
 		1761, 8, 0, false,
-		{ 0 }
+		0
 	},
 	{
 		_T("Impact A2000-HC"), _T("a2000-hc"), 0,
 		1761, 8, 0, false,
-		{ 0 }
+		0
 	},
 	{
 		_T("Impact A2000-HC+2"), _T("a2000-hc+"), 0,
 		1761, 8, 0, false,
-		{ 0 }
+		0
 	},
 	{
 		NULL
@@ -4154,12 +4157,12 @@ static const struct expansionsubromtype masoboshi_sub[] = {
 	{
 		_T("MC-302"), _T("mc-302"), 0,
 		2157, 3, 0, false,
-		{ 0 }
+		0
 	},
 	{
 		_T("MC-702"), _T("mc-702"), 0,
 		2157, 3, 0, false,
-		{ 0 }
+		0
 	},
 	{
 		NULL
@@ -4169,12 +4172,12 @@ static const struct expansionsubromtype rochard_sub[] = {
 	{
 		_T("IDE"), _T("ide"), 0,
 		2144, 2, 0, false,
-		{ 0 }
+		0
 	},
 	{
 		_T("IDE+SCSI"), _T("scsi"), 0,
 		2144, 2, 0, false,
-		{ 0 }
+		0
 	},
 	{
 		NULL
@@ -4185,12 +4188,12 @@ static const struct expansionsubromtype trifecta_sub[] = {
 	{
 		_T("EC (IDE)"), _T("ec"), 0, // IDE-only
 		2071, 32, 0, false,
-		{ 0 }
+		0
 	},
 	{
 		_T("LX (IDE + SCSI)"), _T("lx"), 0, // IDE+SCSI
 		2071, 32, 0, false,
-		{ 0 }
+		0
 	},
 	{
 		NULL
@@ -4261,7 +4264,7 @@ static const struct expansionsubromtype supra_sub[] = {
 	},
 	{
 		_T("A2000 DMA"), _T("dma"), ROMTYPE_NONE | ROMTYPE_SUPRADMA,
-		1056, 2, 0, false, 0,
+		1056, 2, 0, false, EXPANSIONTYPE_DMA24,
 		{ 0xd1, 3, 0x00, 0x00, 0x04, 0x20, 0x00, 0x00, 0x00, 0x00, 0x40, 0x00 },
 	},
 	{
@@ -5523,7 +5526,7 @@ const struct expansionromtype expansionroms[] = {
 		_T("hardframe"), _T("HardFrame"), _T("Microbotics"),
 		NULL, hardframe_init, NULL, hardframe_add_scsi_unit, ROMTYPE_HARDFRAME, 0, 0, BOARD_AUTOCONFIG_Z2, false,
 		NULL, 0,
-		true, EXPANSIONTYPE_SCSI | EXPANSIONTYPE_DMA24
+		true, EXPANSIONTYPE_SCSI | EXPANSIONTYPE_DMA24,
 		0, 0, 0, false, NULL,
 		true
 	},

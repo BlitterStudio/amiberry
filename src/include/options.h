@@ -398,7 +398,8 @@ struct gfx_filterdata
 	int gfx_filter_keep_autoscale_aspect;
 };
 
-#define MAX_DUPLICATE_EXPANSION_BOARDS 4
+#define MAX_DUPLICATE_EXPANSION_BOARDS 5
+#define MAX_AVAILABLE_DUPLICATE_EXPANSION_BOARDS 4
 #define MAX_EXPANSION_BOARDS 20
 #define ROMCONFIG_CONFIGTEXT_LEN 256
 struct boardromconfig;
@@ -796,20 +797,19 @@ struct uae_prefs
 	struct ramboard z3fastmem[MAX_RAM_BOARDS];
 	struct ramboard fastmem[MAX_RAM_BOARDS];
 	struct romboard romboards[MAX_ROM_BOARDS];
-	uae_u32 z3chipmem_size;
-	uae_u32 z3chipmem_start;
-	uae_u32 chipmem_size;
-	uae_u32 bogomem_size;
-	uae_u32 mbresmem_low_size;
-	uae_u32 mbresmem_high_size;
-	uae_u32 mem25bit_size;
+	struct ramboard z3chipmem;
+	struct ramboard chipmem;
+	struct ramboard bogomem;
+	struct ramboard mbresmem_low;
+	struct ramboard mbresmem_high;
+	struct ramboard mem25bit;
 	uae_u32 debugmem_start;
 	uae_u32 debugmem_size;
 	int cpuboard_type;
 	int cpuboard_subtype;
 	int cpuboard_settings;
-	uae_u32 cpuboardmem1_size;
-	uae_u32 cpuboardmem2_size;
+	struct ramboard cpuboardmem1;
+	struct ramboard cpuboardmem2;
 	int ppc_implementation;
 	bool rtg_hardwareinterrupt;
 	bool rtg_hardwaresprite;

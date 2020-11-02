@@ -56,21 +56,21 @@ public:
 	{
 		if (actionEvent.getSource() == sldChipmem)
 		{
-			changed_prefs.chipmem_size = ChipMem_values[static_cast<int>(sldChipmem->getValue())];
-			if ((changed_prefs.chipmem_size > 0x200000) && (changed_prefs.fastmem[0].size > 0))
+			changed_prefs.chipmem.size = ChipMem_values[static_cast<int>(sldChipmem->getValue())];
+			if ((changed_prefs.chipmem.size > 0x200000) && (changed_prefs.fastmem[0].size > 0))
 				changed_prefs.fastmem[0].size = 0;
 		}
 
 		if (actionEvent.getSource() == sldSlowmem)
 		{
-			changed_prefs.bogomem_size = SlowMem_values[static_cast<int>(sldSlowmem->getValue())];
+			changed_prefs.bogomem.size = SlowMem_values[static_cast<int>(sldSlowmem->getValue())];
 		}
 
 		if (actionEvent.getSource() == sldFastmem)
 		{
 			changed_prefs.fastmem[0].size = FastMem_values[static_cast<int>(sldFastmem->getValue())];
-			if (changed_prefs.fastmem[0].size > 0 && changed_prefs.chipmem_size > 0x200000)
-				changed_prefs.chipmem_size = 0x200000;
+			if (changed_prefs.fastmem[0].size > 0 && changed_prefs.chipmem.size > 0x200000)
+				changed_prefs.chipmem.size = 0x200000;
 		}
 
 		if (actionEvent.getSource() == sldZ3mem)
@@ -88,15 +88,15 @@ public:
 
 		if (actionEvent.getSource() == sldA3000Lowmem)
 		{
-			changed_prefs.mbresmem_low_size = A3000LowMem_values[static_cast<int>(sldA3000Lowmem->getValue())];
-			if (currprefs.mbresmem_low_size != changed_prefs.mbresmem_low_size)
+			changed_prefs.mbresmem_low.size = A3000LowMem_values[static_cast<int>(sldA3000Lowmem->getValue())];
+			if (currprefs.mbresmem_low.size != changed_prefs.mbresmem_low.size)
 				disable_resume();
 		}
 
 		if (actionEvent.getSource() == sldA3000Highmem)
 		{
-			changed_prefs.mbresmem_high_size = A3000HighMem_values[static_cast<int>(sldA3000Highmem->getValue())];
-			if (currprefs.mbresmem_high_size != changed_prefs.mbresmem_high_size)
+			changed_prefs.mbresmem_high.size = A3000HighMem_values[static_cast<int>(sldA3000Highmem->getValue())];
+			if (currprefs.mbresmem_high.size != changed_prefs.mbresmem_high.size)
 				disable_resume();
 		}
 
@@ -278,7 +278,7 @@ void RefreshPanelRAM()
 
 	for (i = 0; i < 5; ++i)
 	{
-		if (changed_prefs.chipmem_size == ChipMem_values[i])
+		if (changed_prefs.chipmem.size == ChipMem_values[i])
 		{
 			sldChipmem->setValue(i);
 			lblChipsize->setCaption(ChipMem_list[i]);
@@ -288,7 +288,7 @@ void RefreshPanelRAM()
 
 	for (i = 0; i < 5; ++i)
 	{
-		if (changed_prefs.bogomem_size == SlowMem_values[i])
+		if (changed_prefs.bogomem.size == SlowMem_values[i])
 		{
 			sldSlowmem->setValue(i);
 			lblSlowsize->setCaption(SlowMem_list[i]);
@@ -357,7 +357,7 @@ void RefreshPanelRAM()
 
 	for (i = 0; i < 3; ++i)
 	{
-		if (changed_prefs.mbresmem_low_size == A3000LowMem_values[i])
+		if (changed_prefs.mbresmem_low.size == A3000LowMem_values[i])
 		{
 			sldA3000Lowmem->setValue(i);
 			lblA3000Lowsize->setCaption(A3000LowMem_list[i]);
@@ -367,7 +367,7 @@ void RefreshPanelRAM()
 
 	for (i = 0; i < 6; ++i)
 	{
-		if (changed_prefs.mbresmem_high_size == A3000HighMem_values[i])
+		if (changed_prefs.mbresmem_high.size == A3000HighMem_values[i])
 		{
 			sldA3000Highmem->setValue(i);
 			lblA3000Highsize->setCaption(A3000HighMem_list[i]);

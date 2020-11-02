@@ -1461,7 +1461,7 @@ int action_replay_unload (int in_memory_reset)
 
 static int superiv_init (struct romdata *rd, struct zfile *f)
 {
-	uae_u32 chip = currprefs.chipmem_size - 0x10000;
+	uae_u32 chip = currprefs.chipmem.size - 0x10000;
 	int subtype = rd->id;
 	int flags = rd->type & ROMTYPE_MASK;
 	const TCHAR *memname1, *memname2, *memname3;
@@ -1709,7 +1709,7 @@ static void hrtmon_configure(void)
 	cfg->hexmode = TRUE;
 	cfg->entered = 0;
 	cfg->keyboard = 0;
-	do_put_mem_long (&cfg->max_chip, currprefs.chipmem_size);
+	do_put_mem_long(&cfg->max_chip, currprefs.chipmem.size);
 	do_put_mem_long (&cfg->mon_size, 0x800000);
 	cfg->ide = currprefs.cs_ide ? 1 : 0;
 	cfg->a1200 = currprefs.cs_ide == IDE_A600A1200 ? 1 : 0; /* type of IDE interface, not Amiga model */
