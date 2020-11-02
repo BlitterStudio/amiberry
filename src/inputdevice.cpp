@@ -4064,6 +4064,22 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 	case AKS_EFLOPPY3:
 		disk_eject (3);
 		break;
+	case AKS_CD0:
+		if (s) {
+			_tcsncpy(changed_prefs.cdslots[0].name, s, MAX_DPATH);
+			changed_prefs.cdslots[0].name[MAX_DPATH - 1] = 0;
+			changed_prefs.cdslots[0].inuse = true;
+			set_config_changed();
+		}
+		else {
+			gui_display(6);
+			setsystime();
+		}
+		break;
+	case AKS_ECD0:
+		changed_prefs.cdslots[0].name[0] = 0;
+		changed_prefs.cdslots[0].inuse = false;
+		break;
 	//case AKS_IRQ7:
 	//	NMI_delayed();
 	//	break;
