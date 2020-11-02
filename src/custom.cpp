@@ -3292,7 +3292,7 @@ static void decide_line (int hpos)
 			if (ecs) {
 				test = (plf_state == plf_active && (hpos >= HARD_DDF_START_REAL + DDF_OFFSET || HARD_DDF_LIMITS_DISABLED));
 				if (bpl_dma_off_when_active) {
-					if (plfstop < hstart) {
+					if (plfstop <= hstart) {
 						test = false;
 					}
 				}
