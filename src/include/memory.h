@@ -15,10 +15,12 @@ extern void a1000_reset(void);
 
 #ifdef JIT
 extern int special_mem;
+extern int jit_n_addr_unsafe;
 #endif
 
 #define S_READ 1
 #define S_WRITE 2
+#define S_N_ADDR 4
 
 bool init_shm (void);
 void free_shm (void);
