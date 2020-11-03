@@ -39,21 +39,17 @@
 #include "autoconf.h"
 #include "newcpu.h"
 #include "traps.h"
-//#include "ahidsound.h"
 #include "picasso96.h"
 #include "threaddep/thread.h"
 #include "serial.h"
 #include "parser.h"
-//#include "ioport.h"
-//#include "parallel.h"
 #include "cia.h"
 #include "savestate.h"
-//#include "ahidsound_new.h"
 #include "xwin.h"
 #include "drawing.h"
-//#include "vpar.h"
 
 #define POSIX_SERIAL
+
 #ifdef POSIX_SERIAL
 #include <termios.h>
 #include <unistd.h>
@@ -61,9 +57,8 @@
 #include <sys/socket.h>
 #include <sys/select.h>
 #include <netdb.h>
+#include <linux/serial.h>
 #endif
-
-//#include "uae/socket.h"
 
 #if !defined B300 || !defined B1200 || !defined B2400 || !defined B4800 || !defined B9600
 #undef POSIX_SERIAL
@@ -73,7 +68,8 @@
 #endif
 
 #ifdef POSIX_SERIAL
-struct termios tios;
+static int brk_cond_count = 0;
+static bool breakpending = false;
 #endif
 
 #define MIN_PRTBYTES 10
@@ -374,7 +370,7 @@ static int writepending;
 #define BOOL bool
 #endif
 
-#if 0
+#if SERIAL_ENET
 static SOCKET serialsocket = UAE_SOCKET_INVALID;
 static SOCKET serialconn = UAE_SOCKET_INVALID;
 static BOOL tcpserial;
@@ -437,9 +433,10 @@ static int opentcp (const TCHAR *sername)
 
 int openser (const TCHAR *sername)
 {
-	struct termios oldtio, newtio;
+	struct termios newtio;
+	struct serial_icounter_struct serial_counter;
 
-#if 0
+#if SERIAL_ENET
 	if (_tcsnicmp(sername, _T("tcp:"), 4) == 0) {
 		return opentcp(sername);
 	}
@@ -448,27 +445,30 @@ int openser (const TCHAR *sername)
 #ifdef POSIX_SERIAL
 	ser_fd = open (currprefs.sername, O_RDWR|O_NONBLOCK|O_BINARY, 0);
 
-	/* backup current setings to we can exit cleanly later. */
+	newtio.c_cflag = B115200 | CS8 | CLOCAL | CREAD;
 
-  newtio.c_cflag = B115200 | CS8 | CLOCAL | CREAD;
+	/* Disable HW flow control. */
+	newtio.c_cflag &= ~CRTSCTS;
 
-  /* Disable HW flow control. */
-  newtio.c_cflag &= ~CRTSCTS;
+	/* Disable flow control. */
+	newtio.c_iflag &= ~(IXON | IXOFF | IXANY);
 
-  /* Disable flow control. */
-  newtio.c_iflag &= ~(IXON | IXOFF | IXANY);
+	/* No parity. */
+	newtio.c_iflag |= IGNPAR;
+	newtio.c_oflag = 0;
 
-  /* No parity. */
-  newtio.c_iflag |= IGNPAR;
-  newtio.c_oflag = 0;
+	/* Equivielnt of cfmakeraw() */
+	newtio.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
+	newtio.c_cc[VMIN] = 1;
+	newtio.c_cc[VTIME] = 0;
 
-  /* Equivielnt of cfmakeraw() */
-  newtio.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
-  newtio.c_cc[VMIN] = 1;
-  newtio.c_cc[VTIME] = 0;
+	/* Set new settings */
+	tcsetattr (ser_fd, TCSANOW, &newtio);
 
-  /* Set mew settings */
-  tcsetattr(ser_fd, TCSANOW, &newtio);
+	/* Initialise the break condition count */
+	memset (&serial_counter, 0, sizeof(serial_counter));
+	if (ioctl(ser_fd, TIOCGICOUNT, &serial_counter) >= 0)
+		brk_cond_count = serial_counter.brk;
 
 	write_log("serial: open '%s' -> fd=%d\n", sername, ser_fd);
 	return (ser_fd >= 0);
@@ -489,7 +489,7 @@ static bool valid_serial_handle(void)
 
 void closeser (void)
 {
-#if 0
+#if SERIAL_ENET
 	if (tcpserial) {
 		closetcp ();
 		tcpserial = FALSE;
@@ -528,7 +528,7 @@ void writeser_flush(void)
 
 void writeser (int c)
 {
-#if 0
+#if SERIAL_ENET
 	if (tcpserial) {
 		if (tcp_is_connected ()) {
 			char buf[1];
@@ -537,11 +537,6 @@ void writeser (int c)
 				tcp_disconnect ();
 			}
 		}
-#ifdef WITH_MIDI
-	} else if (midi_ready) {
-		BYTE outchar = (BYTE)c;
-		Midi_Parse (midi_output, &outchar);
-#endif
 	} else {
 #endif
 		if (!valid_serial_handle() || !currprefs.use_serial)
@@ -561,7 +556,9 @@ void writeser (int c)
 				  errno);
 		}
 #endif
-	//}
+#if SERIAL_ENET
+	}
+#endif
 }
 
 int checkserwrite(int spaceneeded)
@@ -584,10 +581,20 @@ int checkserwrite(int spaceneeded)
 	return 1;
 }
 
-int readseravail (void)
+void flushser(void)
 {
+	while (readseravail(NULL) > 0) {
+		int data;
+		if (!readser(&data))
+			break;
+	}
+}
 
-#if 0
+int readseravail (bool *breakcond)
+{
+	if (breakcond)
+		*breakcond = false;
+#if SERIAL_ENET
 	if (tcpserial) {
 		if (tcp_is_connected ()) {
 			int err = uae_socket_select_read(serialconn);
@@ -599,11 +606,6 @@ int readseravail (void)
 				return 1;
 		}
 		return 0;
-#ifdef WITH_MIDI
-	} else if (midi_ready) {
-		if (ismidibyte ())
-			return 1;
-#endif
 	} else {
 #endif
 		if (!currprefs.use_serial)
@@ -623,6 +625,16 @@ int readseravail (void)
 		if (ser_fd < 0) {
 			return 0;
 		}
+
+		struct serial_icounter_struct serial_counter;
+		memset (&serial_counter, 0, sizeof(serial_counter));
+		if (ioctl (ser_fd, TIOCGICOUNT, &serial_counter) >= 0)
+			if (breakcond && ((brk_cond_count < serial_counter.brk) || breakpending)) {
+				brk_cond_count = serial_counter.brk;
+				*breakcond = true;
+				breakpending = false;
+			}
+
 		/* poll if read data is available */
 		struct timeval tv;
 		fd_set fd;
@@ -633,13 +645,15 @@ int readseravail (void)
 		int num_ready = select (FD_SETSIZE, &fd, NULL, NULL, &tv);
 		return (num_ready == 1);
 #endif
-	//}
+#if SERIAL_ENET
+	}
+#endif
 	return 0;
 }
 
 int readser (int *buffer)
 {
-#if 0
+#if SERIAL_ENET
 	if (tcpserial) {
 		if (tcp_is_connected ()) {
 			char buf[1];
@@ -654,13 +668,6 @@ int readser (int *buffer)
 			}
 		}
 		return 0;
-#ifdef WITH_MIDI
-	} else if (midi_ready) {
-		*buffer = getmidibyte ();
-		if (*buffer < 0)
-			return 0;
-		return 1;
-#endif
 	} else {
 #endif
 		if (!currprefs.use_serial)
@@ -702,6 +709,15 @@ int readser (int *buffer)
 		}
 
 		char b;
+
+		struct serial_icounter_struct serial_counter;
+		memset (&serial_counter, 0, sizeof(serial_counter));
+		if (ioctl (ser_fd, TIOCGICOUNT, &serial_counter) >= 0)
+			if (brk_cond_count<serial_counter.brk) {
+				brk_cond_count = serial_counter.brk;
+				breakpending = true;
+			}
+
 		int num = read(ser_fd, &b, 1);
 		if (num == 1) {
 			*buffer = b;
@@ -710,7 +726,9 @@ int readser (int *buffer)
 			return 0;
 		}
 #endif
-	//}
+#ifdef SERIAL_ENET
+	}
+#endif
 	return 0;
 }
 
@@ -828,8 +846,9 @@ int setbaud (long baud)
 		return 1;
 	}
 
-#if defined POSIX_SERIAL
+#ifdef POSIX_SERIAL
 	int pspeed;
+	struct termios tios;
 
 	/* device not open? */
 	if (ser_fd < 0) {
@@ -882,7 +901,7 @@ void initparallel (void)
 #ifdef FSUAE
 	write_log("initparallel\n");
 #endif
-#if 0
+#if SERIAL_ENET
 	if (_tcsnicmp(currprefs.prtname, "tcp:", 4) == 0) {
 		parallel_tcp_open(currprefs.prtname);
 	} else {
@@ -890,7 +909,9 @@ void initparallel (void)
 #ifdef WITH_VPAR
 		vpar_open();
 #endif
-	//}
+#ifdef SERIAL_ENET
+	}
+#endif
 
 #ifdef AHI
 	if (uae_boot_rom_type) {
@@ -920,7 +941,6 @@ void doflashscreen (void)
 	init_colors ();
 	picasso_refresh ();
 	reset_drawing ();
-	//flush_screen (gfxvidinfo.outbuffer, 0, 0);
 #endif
 }
 
