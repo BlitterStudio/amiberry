@@ -46,7 +46,8 @@ void device_add_exit(DEVICE_VOID p);
 #define IRQ_SOURCE_CIA 12
 #define IRQ_SOURCE_CD32CDTV 13
 #define IRQ_SOURCE_IDE 14
-#define IRQ_SOURCE_MAX 15
+#define IRQ_SOURCE_GFX 15
+#define IRQ_SOURCE_MAX 16
 
 
 #endif /* UAE_DEVICES_H */

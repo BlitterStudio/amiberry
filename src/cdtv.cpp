@@ -79,6 +79,7 @@ static volatile uae_u16 dmac_dawr;
 static volatile uae_u32 dmac_acr;
 static volatile int dmac_wtc;
 static volatile int dmac_dma;
+static uae_u32 dma_mask;
 
 static volatile int activate_stch, cdrom_command_done;
 static volatile int cdrom_sector, cdrom_sectors, cdrom_length, cdrom_offset;
@@ -679,8 +680,8 @@ static void dma_do_thread (void)
 			}
 
 		}
-		put_byte (dmac_acr, buffer[(cdrom_offset % cdtv_sectorsize) + 0]);
-		put_byte (dmac_acr + 1, buffer[(cdrom_offset % cdtv_sectorsize) + 1]);
+		dma_put_byte(dmac_acr & dma_mask, buffer[(cdrom_offset % cdtv_sectorsize) + 0]);
+		dma_put_byte((dmac_acr + 1) & dma_mask, buffer[(cdrom_offset % cdtv_sectorsize) + 1]);
 		cnt--;
 		dmac_acr += 2;
 		cdrom_length -= 2;
@@ -1695,6 +1696,7 @@ bool cdtv_init(struct autoconfig_info *aci)
 	ew(0x24, 0x00); /* ser.no. Byte 3 */
 
 	if (aci) {
+		dma_mask = aci->rc->dma24bit ? 0x00ffffff : 0xffffffff;
 		aci->label = dmac_bank.name;
 		aci->hardwired = true;
 		aci->addrbank = &dmac_bank;
@@ -1772,7 +1774,7 @@ bool cdtvscsi_init(struct autoconfig_info *aci)
 	if (!aci->doinit)
 		return true;
 	cdtvscsi = true;
-	//init_wd_scsi(wd_cdtv);
+	//init_wd_scsi(wd_cdtv, aci->rc->dma24bit);
 	//wd_cdtv->dmac_type = COMMODORE_DMAC;
 	if (configured > 0)
 		map_banks_z2(&dmac_bank, configured, 0x10000 >> 16);

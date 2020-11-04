@@ -334,7 +334,7 @@ static void blitter_debugsave(int copper, uaecptr pc)
 
 static void blitter_dump (void)
 {
-	//int chipsize = currprefs.chipmem_size;
+	//int chipsize = currprefs.chipmem.size;
 	//console_out_f(_T("PT A=%08X B=%08X C=%08X D=%08X\n"), bltapt, bltbpt, bltcpt, bltdpt);
 	//console_out_f(_T("CON0=%04X CON1=%04X DAT A=%04X B=%04X C=%04X\n"),
 	//	bltcon0, bltcon1, blt_info.bltadat, blt_info.bltbdat, blt_info.bltcdat);

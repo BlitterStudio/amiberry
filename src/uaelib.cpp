@@ -138,7 +138,7 @@ static uae_u32 REGPARAM2 emulib_ChgCMemSize(TrapContext *ctx, uae_u32 memsize)
 	}
 	trap_set_dreg(ctx, 0,  0);
 
-	changed_prefs.chipmem_size = memsize;
+	changed_prefs.chipmem.size = memsize;
 	uae_reset(1, 1);
 	return 1;
 }
@@ -156,7 +156,7 @@ static uae_u32 REGPARAM2 emulib_ChgSMemSize(TrapContext *ctx, uae_u32 memsize)
 	}
 
 	trap_set_dreg(ctx, 0, 0);
-	changed_prefs.bogomem_size = memsize;
+	changed_prefs.bogomem.size = memsize;
 	uae_reset (1, 1);
 	return 1;
 }

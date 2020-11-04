@@ -191,6 +191,8 @@ typedef void(*DEVICE_MEMORY_CALLBACK)(struct romconfig*, uae_u8*, int);
 #define EXPANSIONTYPE_X86_EXPANSION 0x20000
 #define EXPANSIONTYPE_PCMCIA 0x40000
 #define EXPANSIONTYPE_CUSTOMDISK 0x80000
+#define EXPANSIONTYPE_CLOCKPORT 0x100000
+#define EXPANSIONTYPE_DMA24 0x200000
 
 #define EXPANSIONBOARD_CHECKBOX 0
 #define EXPANSIONBOARD_MULTI 1
@@ -212,6 +214,7 @@ struct expansionsubromtype
 	int memory_mid, memory_pid;
 	uae_u32 memory_serial;
 	bool memory_after;
+	int deviceflags;
 	uae_u8 autoconfig[16];
 };
 struct expansionromtype

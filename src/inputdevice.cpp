@@ -4064,6 +4064,22 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 	case AKS_EFLOPPY3:
 		disk_eject (3);
 		break;
+	case AKS_CD0:
+		if (s) {
+			_tcsncpy(changed_prefs.cdslots[0].name, s, MAX_DPATH);
+			changed_prefs.cdslots[0].name[MAX_DPATH - 1] = 0;
+			changed_prefs.cdslots[0].inuse = true;
+			set_config_changed();
+		}
+		else {
+			gui_display(6);
+			setsystime();
+		}
+		break;
+	case AKS_ECD0:
+		changed_prefs.cdslots[0].name[0] = 0;
+		changed_prefs.cdslots[0].inuse = false;
+		break;
 	//case AKS_IRQ7:
 	//	NMI_delayed();
 	//	break;
@@ -8891,7 +8907,10 @@ void inputdevice_fix_prefs(struct uae_prefs *p, bool userconfig)
 					struct jport jpt = { 0 };
 					memcpy(&jpt.idc, &jp->idc, sizeof(struct inputdevconfig));
 					jpt.id = JPORT_UNPLUGGED;
-					write_log(_T("Unplugged stored, port %d '%s' (%s)\n"), i, jp->idc.name, jp->idc.configname);
+					jpt.mode = jp->mode;
+					jpt.submode = jp->submode;
+					jpt.autofire = jp->autofire;
+					write_log(_T("Unplugged stored, port %d '%s' (%s) %d %d %d\n"), i, jp->idc.name, jp->idc.configname, jp->mode, jp->submode, jp->autofire);
 					inputdevice_store_used_device(&jpt, i, defaultports);
 					freejport(p, i);
 					inputdevice_get_previous_joy(p, i, userconfig);

@@ -102,7 +102,7 @@ static void picasso_flushpixels(uae_u8 *src, int offset, bool render);
 
 int p96refresh_active;
 bool have_done_picasso = 1; /* For the JIT compiler */
-static int p96syncrate;
+int p96syncrate;
 static int p96hsync_counter;
 
 static smp_comm_pipe* render_pipe;

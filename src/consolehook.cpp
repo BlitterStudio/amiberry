@@ -38,9 +38,9 @@ void consolehook_config (struct uae_prefs *p)
 	p->cachesize = 8192;
 	p->cpu_compatible = 0;
 	p->address_space_24 = 0;
-	p->chipmem_size = 0x00200000;
+	p->chipmem.size = 0x00200000;
 	p->z3fastmem[0].size = 0x00800000;
-	p->bogomem_size = 0;
+	p->bogomem.size = 0;
 	p->nr_floppies = 1;
 	p->floppyslots[1].dfxtype = DRV_NONE;
 	p->floppy_speed = 0;
