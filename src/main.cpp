@@ -21,6 +21,9 @@
 #include "audio.h"
 #include "memory.h"
 #include "custom.h"
+#ifdef SERIAL_PORT
+#include "serial.h"
+#endif
 #include "newcpu.h"
 #include "disk.h"
 #include "xwin.h"
