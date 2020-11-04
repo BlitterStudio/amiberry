@@ -30,6 +30,7 @@ const int remap_buttons = 16;
 #define FIRST_JOY_BUTTON	MAX_JOY_AXES
 
 static char joystick_name[MAX_INPUT_DEVICES][80];
+static uae_s16 axisold[MAX_INPUT_DEVICES][256], buttonold[MAX_INPUT_DEVICES][256];
 static SDL_GameController* controller_table[MAX_INPUT_DEVICES];
 
 static int num_mouse = 1, num_keyboard = 1;
@@ -88,6 +89,7 @@ static void fill_default_keyboard()
 	default_keyboard_map.button[SDL_CONTROLLER_BUTTON_Y] = SDL_SCANCODE_LSHIFT;
 	
 	default_keyboard_map.button[SDL_CONTROLLER_BUTTON_BACK] = SDL_SCANCODE_1;
+	default_keyboard_map.button[SDL_CONTROLLER_BUTTON_GUIDE] = SDL_SCANCODE_F12;
 	default_keyboard_map.button[SDL_CONTROLLER_BUTTON_START] = SDL_SCANCODE_2;
 	default_keyboard_map.button[SDL_CONTROLLER_BUTTON_LEFTSTICK] = SDL_SCANCODE_F1;
 	default_keyboard_map.button[SDL_CONTROLLER_BUTTON_RIGHTSTICK] = SDL_SCANCODE_F2;
@@ -671,10 +673,69 @@ static void read_joystick()
 			const auto host_key_id = currprefs.jports[joy_id].id - JSEM_JOYS;
 			const auto* key_state = SDL_GetKeyboardState(nullptr);
 			const auto kb = host_key_id;
+			int button_index;
+			auto uae_index = -1;
 
-			for (auto k = 0; k < SDL_CONTROLLER_BUTTON_MAX; k++)
+			// A/B/X/Y
+			for (button_index = 0; button_index <= SDL_CONTROLLER_BUTTON_Y; button_index++)
 			{
-				setjoybuttonstate(kb, k, key_state[host_keyboard_buttons[kb].button[k]] & 1);
+				uae_index++;
+				if (host_keyboard_buttons[kb].button[button_index] != -1 && buttonold[kb][uae_index] != key_state[host_keyboard_buttons[kb].button[button_index]])
+				{
+					setjoybuttonstate(kb, uae_index, key_state[host_keyboard_buttons[kb].button[button_index]] & 1);
+					buttonold[kb][uae_index] = key_state[host_keyboard_buttons[kb].button[button_index]];
+				}
+			}
+
+			// Left/Right Shoulder
+			for (button_index = SDL_CONTROLLER_BUTTON_LEFTSHOULDER; button_index <= SDL_CONTROLLER_BUTTON_RIGHTSHOULDER; button_index++)
+			{
+				uae_index++;
+				if (host_keyboard_buttons[kb].button[button_index] != -1 && buttonold[kb][uae_index] != key_state[host_keyboard_buttons[kb].button[button_index]])
+				{
+					setjoybuttonstate(kb, uae_index, key_state[host_keyboard_buttons[kb].button[button_index]] & 1);
+					buttonold[kb][uae_index] = key_state[host_keyboard_buttons[kb].button[button_index]];
+				}
+			}
+
+			// Start
+			button_index = SDL_CONTROLLER_BUTTON_START;
+			uae_index++;
+			if (host_keyboard_buttons[kb].button[button_index] != -1 && buttonold[kb][uae_index] != key_state[host_keyboard_buttons[kb].button[button_index]])
+			{
+				setjoybuttonstate(kb, uae_index, key_state[host_keyboard_buttons[kb].button[button_index]] & 1);
+				buttonold[kb][uae_index] = key_state[host_keyboard_buttons[kb].button[button_index]];
+			}
+
+			// D-Pad
+			for (button_index = SDL_CONTROLLER_BUTTON_DPAD_UP; button_index <= SDL_CONTROLLER_BUTTON_DPAD_RIGHT; button_index++)
+			{
+				uae_index++;
+				if (host_keyboard_buttons[kb].button[button_index] != -1 && buttonold[kb][uae_index] != key_state[host_keyboard_buttons[kb].button[button_index]])
+				{
+					setjoybuttonstate(kb, uae_index, key_state[host_keyboard_buttons[kb].button[button_index]] & 1);
+					buttonold[kb][uae_index] = key_state[host_keyboard_buttons[kb].button[button_index]];
+				}
+			}
+
+			// Left/Right stick buttons
+			for (button_index = SDL_CONTROLLER_BUTTON_LEFTSTICK; button_index <= SDL_CONTROLLER_BUTTON_LEFTSTICK; button_index++)
+			{
+				uae_index++;
+				if (host_keyboard_buttons[kb].button[button_index] != -1 && buttonold[kb][uae_index] != key_state[host_keyboard_buttons[kb].button[button_index]])
+				{
+					setjoybuttonstate(kb, uae_index, key_state[host_keyboard_buttons[kb].button[button_index]] & 1);
+					buttonold[kb][uae_index] = key_state[host_keyboard_buttons[kb].button[button_index]];
+				}
+			}
+
+			// Back
+			button_index = SDL_CONTROLLER_BUTTON_BACK;
+			uae_index++;
+			if (host_keyboard_buttons[kb].button[button_index] != -1 && buttonold[kb][uae_index] != key_state[host_keyboard_buttons[kb].button[button_index]])
+			{
+				setjoybuttonstate(kb, uae_index, key_state[host_keyboard_buttons[kb].button[button_index]] & 1);
+				buttonold[kb][uae_index] = key_state[host_keyboard_buttons[kb].button[button_index]];
 			}
 
 			// hotkey?
