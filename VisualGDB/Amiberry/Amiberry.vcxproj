@@ -299,6 +299,7 @@
     <ClCompile Include="..\..\src\osdep\retroarch.cpp" />
     <ClCompile Include="..\..\src\osdep\sigsegv_handler.cpp" />
     <ClCompile Include="..\..\src\osdep\writelog.cpp" />
+    <ClCompile Include="..\..\src\parser.cpp" />
     <ClCompile Include="..\..\src\readcpu.cpp" />
     <ClCompile Include="..\..\src\rommgr.cpp" />
     <ClCompile Include="..\..\src\rtc.cpp" />
@@ -306,6 +307,7 @@
     <ClCompile Include="..\..\src\scp.cpp" />
     <ClCompile Include="..\..\src\scsi.cpp" />
     <ClCompile Include="..\..\src\scsiemul.cpp" />
+    <ClCompile Include="..\..\src\serial_win32.cpp" />
     <ClCompile Include="..\..\src\sounddep\sound.cpp" />
     <ClCompile Include="..\..\src\statusline.cpp" />
     <ClCompile Include="..\..\src\tabletlibrary.cpp" />

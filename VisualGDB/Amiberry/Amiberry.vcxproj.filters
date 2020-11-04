@@ -664,6 +664,12 @@
     <ClCompile Include="..\..\src\osdep\retroarch.cpp">
       <Filter>Source files\osdep</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\parser.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\serial_win32.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\threaddep\thread.h">
