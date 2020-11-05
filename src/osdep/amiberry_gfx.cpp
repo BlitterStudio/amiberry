@@ -450,7 +450,7 @@ int graphics_setup(void)
 	
 	if (renderer == nullptr)
 	{
-		renderer = SDL_CreateRenderer(sdl_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+		renderer = SDL_CreateRenderer(sdl_window, -1, SDL_RENDERER_ACCELERATED);
 		check_error_sdl(renderer == nullptr, "Unable to create a renderer:");
 	}
 	
