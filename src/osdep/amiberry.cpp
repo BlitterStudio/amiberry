@@ -952,9 +952,9 @@ void save_amiberry_settings(void)
 	snprintf(buffer, MAX_DPATH, "default_line_mode=%d\n", amiberry_options.default_line_mode);
 	fputs(buffer, f);
 
-	// Swap Win keys with Alt keys?
+	// Map RCtrl key to RAmiga key?
 	// This helps with keyboards that may not have 2 Win keys and no Menu key either
-	snprintf(buffer, MAX_DPATH, "swap_win_alt_keys=%s\n", amiberry_options.swap_win_alt_keys ? "yes" : "no");
+	snprintf(buffer, MAX_DPATH, "rctrl_as_ramiga=%s\n", amiberry_options.rctrl_as_ramiga ? "yes" : "no");
 	fputs(buffer, f);
 
 	// Disable controller in the GUI?
@@ -1263,7 +1263,7 @@ void load_amiberry_settings(void)
 					cfgfile_yesno(option, value, "read_config_descriptions", &amiberry_options.read_config_descriptions);
 					cfgfile_yesno(option, value, "write_logfile", &amiberry_options.write_logfile);
 					cfgfile_intval(option, value, "default_line_mode", &amiberry_options.default_line_mode, 1);
-					cfgfile_yesno(option, value, "swap_win_alt_keys", &amiberry_options.swap_win_alt_keys);
+					cfgfile_yesno(option, value, "rctrl_as_ramiga", &amiberry_options.rctrl_as_ramiga);
 					cfgfile_yesno(option, value, "gui_joystick_control", &amiberry_options.gui_joystick_control);
 					cfgfile_yesno(option, value, "use_sdl2_render_thread", &amiberry_options.use_sdl2_render_thread);
 					cfgfile_intval(option, value, "input_default_mouse_speed", &amiberry_options.input_default_mouse_speed, 1);
@@ -1821,11 +1821,9 @@ void process_event(SDL_Event event)
 				clipboard_disable(true);
 
 			// Handle all other keys
-			if (amiberry_options.swap_win_alt_keys)
+			if (amiberry_options.rctrl_as_ramiga)
 			{
-				if (event.key.keysym.scancode == SDL_SCANCODE_LALT)
-					event.key.keysym.scancode = SDL_SCANCODE_LGUI;
-				else if (event.key.keysym.scancode == SDL_SCANCODE_RALT)
+				if (event.key.keysym.scancode == SDL_SCANCODE_RCTRL)
 					event.key.keysym.scancode = SDL_SCANCODE_RGUI;
 			}
 			inputdevice_translatekeycode(0, event.key.keysym.scancode, 1, false);
@@ -1838,11 +1836,9 @@ void process_event(SDL_Event event)
 		const auto ok_to_use = !key_used_by_retroarch_joy(event.key.keysym.scancode);
 		if (ok_to_use && event.key.repeat == 0)
 		{
-			if (amiberry_options.swap_win_alt_keys)
+			if (amiberry_options.rctrl_as_ramiga)
 			{
-				if (event.key.keysym.scancode == SDL_SCANCODE_LALT)
-					event.key.keysym.scancode = SDL_SCANCODE_LGUI;
-				else if (event.key.keysym.scancode == SDL_SCANCODE_RALT)
+				if (event.key.keysym.scancode == SDL_SCANCODE_RCTRL)
 					event.key.keysym.scancode = SDL_SCANCODE_RGUI;
 			}
 			inputdevice_translatekeycode(0, event.key.keysym.scancode, 0, true);

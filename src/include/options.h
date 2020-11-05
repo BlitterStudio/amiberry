@@ -1086,7 +1086,7 @@ struct amiberry_options
 	bool quickstart_start = true;
 	bool read_config_descriptions = true;
 	bool write_logfile = false;
-	bool swap_win_alt_keys = false;
+	bool rctrl_as_ramiga = false;
 	bool gui_joystick_control = true;
 #ifdef USE_RENDER_THREAD
 	bool use_sdl2_render_thread = true;
