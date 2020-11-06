@@ -116,22 +116,60 @@ MIDFUNC(0,duplicate_carry,(void))
 	log_vwrite(FLAGX);
 }
 
-MIDFUNC(3,setcc_for_cntzero,(RR4 /* cnt */, RR4 data, int size))
+MIDFUNC(0,clear_overflow,(void))
 {
-	uae_u8 *branchadd;
-	uae_u8 *branchadd2;
+	make_flags_live_internal();
+	raw_pushfl();
+
+	// clear OF flag
+	// and dword [esp],~0x0800
+	emit_byte(0x81);
+	emit_byte(0x24);
+	emit_byte(0x24);
+	emit_byte(0xff);
+	emit_byte(0xf7);
+	emit_byte(0xff);
+	emit_byte(0xff);
+
+	raw_popfl();
+}
+
+MIDFUNC(3,setcc_for_cntzero,(RR4 /* cnt */, RR4 data, int size, int ov))
+{
+	uae_u8 *branchadd1a, *branchadd1b;
+	uae_u8* branchadd2;
+	uae_u8* branchadd3;
 
 	evict(FLAGX);
 	make_flags_live_internal();
 
 	raw_pushfl();
+
+	if (ov) {
+		// clear OF flag
+		// and dword [esp],~0x0800
+		emit_byte(0x81);
+		emit_byte(0x24);
+		emit_byte(0x24);
+		emit_byte(0xff);
+		emit_byte(0xf7);
+		emit_byte(0xff);
+		emit_byte(0xff);
+	}
+
 	/*
 	 * shift count can only be in CL register; see shrl_b_rr
 	 */
 	raw_test_b_rr(X86_CL, X86_CL);
 	/* if zero, leave X unaffected; carry flag will already be cleared */
 	raw_jz_b_oponly();
-	branchadd = get_target();
+	branchadd1a = get_target();
+	skip_byte();
+
+	/* if >= 32, recalculate all flags */
+	raw_cmp_b_ri(X86_CL, 31);
+	raw_jcc_b_oponly(NATIVE_CC_HI);
+	branchadd1b = get_target();
 	skip_byte();
 
 	/* shift count was non-zero; update also x-flag */
@@ -141,7 +179,8 @@ MIDFUNC(3,setcc_for_cntzero,(RR4 /* cnt */, RR4 data, int size))
 	raw_jmp_b_oponly();
 	branchadd2 = get_target();
 	skip_byte();
-	*branchadd = (uintptr)get_target() - ((uintptr)branchadd + 1);
+
+	*branchadd1a = (uintptr)get_target() - ((uintptr)branchadd1a + 1);
 
 	/* shift count was zero; need to set Z & N flags since the native flags were unaffected */
 	raw_popfl();
@@ -152,7 +191,28 @@ MIDFUNC(3,setcc_for_cntzero,(RR4 /* cnt */, RR4 data, int size))
 		case 2: raw_test_w_rr(data, data); break;
 		case 4: raw_test_l_rr(data, data); break;
 	}
+
+	raw_jmp_b_oponly();
+	branchadd3 = get_target();
+	skip_byte();
+	*branchadd1b = (uintptr)get_target() - ((uintptr)branchadd1b + 1);
+
+	/* shift count was >=32, set all flags */
+	raw_popfl();
+	/* Set Z and N */
+	switch (size)
+	{
+	case 1: raw_test_b_rr(data, data); break;
+	case 2: raw_test_w_rr(data, data); break;
+	case 4: raw_test_l_rr(data, data); break;
+	}
+	/* Set C */
+	raw_bt_l_ri(data, 0);
+
+	*branchadd3 = (uintptr)get_target() - ((uintptr)branchadd3 + 1);
+
 	unlock2(data);
+
 	*branchadd2 = (uintptr)get_target() - ((uintptr)branchadd2 + 1);
 }
 

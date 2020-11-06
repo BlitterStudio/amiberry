@@ -1433,6 +1433,11 @@ static inline void raw_flags_set_zero_FLAGSTK(int s, int tmp)
 static inline void raw_flags_init_FLAGSTK(void) { }
 
 #if defined(CPU_x86_64)
+
+#ifndef SAHF_SETO_PROFITABLE
+#error x64 JIT requires SAHF_SETO_PROFITABLE
+#endif
+
 /* Try to use the LAHF/SETO method on x86_64 since it is faster.
    This can't be the default because some older CPUs don't support
    LAHF/SAHF in long mode.  */
