@@ -451,6 +451,9 @@ void target_default_options(struct uae_prefs* p, int type)
 	if (amiberry_options.default_stereo_separation >= 0 && amiberry_options.default_stereo_separation <= 10)
 		p->sound_stereo_separation = amiberry_options.default_stereo_separation;
 
+	if (amiberry_options.default_sound_buffer > 0 && amiberry_options.default_sound_buffer <= 65536)
+		p->sound_maxbsiz = amiberry_options.default_sound_buffer;
+
 	if (amiberry_options.default_joystick_deadzone >= 0
 		&& amiberry_options.default_joystick_deadzone <= 100
 		&& amiberry_options.default_joystick_deadzone != 33)
@@ -1035,6 +1038,10 @@ void save_amiberry_settings(void)
 	snprintf(buffer, MAX_DPATH, "default_stereo_separation=%d\n", amiberry_options.default_stereo_separation);
 	fputs(buffer, f);
 
+	// Default Sound buffer size
+	snprintf(buffer, MAX_DPATH, "default_sound_buffer=%d\n", amiberry_options.default_sound_buffer);
+	fputs(buffer, f);
+
 	// Default Joystick Deadzone
 	snprintf(buffer, MAX_DPATH, "default_joystick_deadzone=%d\n", amiberry_options.default_joystick_deadzone);
 	fputs(buffer, f);
@@ -1283,6 +1290,7 @@ void load_amiberry_settings(void)
 					cfgfile_intval(option, value, "default_height", &amiberry_options.default_height, 1);
 					cfgfile_yesno(option, value, "default_fullscreen", &amiberry_options.default_fullscreen);
 					cfgfile_intval(option, value, "default_stereo_separation", &amiberry_options.default_stereo_separation, 1);
+					cfgfile_intval(option, value, "default_sound_buffer", &amiberry_options.default_sound_buffer, 1);
 					cfgfile_intval(option, value, "default_joystick_deadzone", &amiberry_options.default_joystick_deadzone, 1);
 					cfgfile_yesno(option, value, "default_retroarch_quit", &amiberry_options.default_retroarch_quit);
 					cfgfile_yesno(option, value, "default_retroarch_menu", &amiberry_options.default_retroarch_menu);
