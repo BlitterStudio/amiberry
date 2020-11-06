@@ -4750,8 +4750,8 @@ static void init_hz (bool checkvposw)
 #ifdef PICASSO96
 	init_hz_p96();
 #endif
-	//if (vblank_hz != ovblank)
-	//	updatedisplayarea();
+	if (vblank_hz != ovblank)
+		updatedisplayarea();
 	inputdevice_tablet_strobe ();
 }
 

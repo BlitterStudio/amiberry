@@ -484,6 +484,11 @@ int graphics_setup(void)
 	return 1;
 }
 
+void updatedisplayarea()
+{
+	show_screen(0);
+}
+
 void update_win_fs_mode(struct uae_prefs* p)
 {
 	auto* avidinfo = &adisplays.gfxvidinfo;

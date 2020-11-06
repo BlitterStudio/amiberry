@@ -2018,7 +2018,7 @@ bool handle_events()
 	}
 	if (was_paused && (!pause_emulation || quit_program))
 	{
-		//updatedisplayarea();
+		updatedisplayarea();
 		pause_emulation = was_paused;
 		resumepaused(was_paused);
 		sound_closed = 0;
