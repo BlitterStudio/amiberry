@@ -2291,6 +2291,19 @@ uae_u8* restore_cpu(uae_u8* src)
 	}
 	set_cpu_caches(true);
 
+	if (flags & 0x10000000) {
+		regs.chipset_latch_rw = restore_u32();
+		regs.chipset_latch_read = restore_u32();
+		regs.chipset_latch_write = restore_u32();
+	}
+
+	if (flags & 0x2000000 && currprefs.cpu_model <= 68010) {
+		restore_u32();
+		regs.ird = restore_u16();
+		regs.read_buffer = restore_u16();
+		regs.write_buffer = restore_u16();
+	}
+	
 	m68k_reset_sr();
 
 	write_log(_T("CPU: %d%s%03d, PC=%08X\n"),
@@ -2375,9 +2388,9 @@ uae_u8* save_cpu(int* len, uae_u8* dstptr)
 		dstbak = dst = xmalloc(uae_u8, 1000);
 	model = currprefs.cpu_model;
 	save_u32(model); /* MODEL */
-	save_u32(0x80000000 | (currprefs.address_space_24 ? 1 : 0)); /* FLAGS */
+	save_u32(0x80000000 | 0x40000000 | 0x20000000 | 0x10000000 | 0x8000000 | 0x4000000 | 0x2000000 | (currprefs.address_space_24 ? 1 : 0)); /* FLAGS */
 	for (int i = 0; i < 15; i++)
-		save_u32(regs.regs[i]); /* D0-D7 A0-A6 */
+		save_u32(regs.regs[i]);		/* D0-D7 A0-A6 */
 	save_u32(m68k_getpc ()); /* PC */
 	save_u16(regs.irc); /* prefetch */
 	save_u16(regs.ir); /* instruction prefetch */
@@ -2426,6 +2439,20 @@ uae_u8* save_cpu(int* len, uae_u8* dstptr)
 	}
 	save_u32(khz); // clock rate in KHz: -1 = fastest possible 
 	save_u32(0); // spare
+	if (currprefs.cpu_model >= 68020) {
+		save_u32(0); //save_u32 (regs.ce020memcycles);
+		save_u32(0);
+	}
+	save_u32(regs.chipset_latch_rw);
+	save_u32(regs.chipset_latch_read);
+	save_u32(regs.chipset_latch_write);
+
+	if (currprefs.cpu_model <= 68010) {
+		save_u32(0);
+		save_u16(regs.ird);
+		save_u16(regs.read_buffer);
+		save_u16(regs.write_buffer);
+	}
 	*len = dst - dstbak;
 	return dstbak;
 }

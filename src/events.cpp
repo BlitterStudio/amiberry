@@ -20,11 +20,18 @@
 
 static const int pissoff_nojit_value = 256 * CYCLE_UNIT;
 
-unsigned long int nextevent, currcycle;
+unsigned long int event_cycles, nextevent, currcycle;
 int is_syncline, is_syncline_end;
+long cycles_to_next_event;
+long max_cycles_to_next_event;
+long cycles_to_hsync_event;
+unsigned long start_cycles;
+bool event_wait;
 
-frame_time_t vsyncmintime, vsyncmaxtime, vsyncwaittime;
+frame_time_t vsyncmintime, vsyncmintimepre;
+frame_time_t vsyncmaxtime, vsyncwaittime;
 int vsynctimebase;
+int event2_count;
 
 static void events_fast(void)
 {
@@ -37,13 +44,11 @@ void events_reset_syncline(void)
 	events_fast();
 }
 
-void events_schedule(void)
+void events_schedule (void)
 {
 	unsigned long int mintime = ~0L;
-	for (auto& i : eventtab)
-	{
-		if (i.active)
-		{
+	for (auto& i : eventtab) {
+		if (i.active) {
 			auto eventtime = i.evtime - currcycle;
 			if (eventtime < mintime)
 				mintime = eventtime;
@@ -53,6 +58,7 @@ void events_schedule(void)
 }
 
 extern void vsync_event_done(void);
+extern int vsync_activeheight;
 
 static bool event_check_vsync(void)
 {
@@ -70,8 +76,7 @@ static bool event_check_vsync(void)
 		// wait for vblank
 		audio_finish_pull();
 		int done = vsync_isdone(NULL);
-		if (!done)
-		{
+		if (!done) {
 			if (currprefs.cachesize)
 				pissoff = pissoff_value;
 			else
@@ -79,9 +84,8 @@ static bool event_check_vsync(void)
 			return true;
 		}
 		vsync_event_done();
-	}
 
-	else if (is_syncline == -10) {
+	} else if (is_syncline == -10) {
 
 		// wait is_syncline_end
 		//if (event_wait) {
@@ -97,8 +101,8 @@ static bool event_check_vsync(void)
 			}
 		//}
 		events_reset_syncline();
-	}
-	else if (is_syncline < -10) {
+
+	} else if (is_syncline < -10) {
 
 		// wait is_syncline_end/vsyncmintime
 		//if (event_wait) {
@@ -133,28 +137,26 @@ void do_cycles_cpu_fastest(uae_u32 cycles_to_add)
 		pissoff = 0x40000000;
 	}
 
-	while ((nextevent - currcycle) <= cycles_to_add)
-	{
-		if (is_syncline)
-		{
+	while ((nextevent - currcycle) <= cycles_to_add) {
+
+		if (is_syncline) {
 			if (event_check_vsync())
 				return;
 		}
-		
+
 		cycles_to_add -= (nextevent - currcycle);
 		currcycle = nextevent;
 
-		for (auto& i : eventtab)
-		{
-			if (i.active && i.evtime == currcycle)
-			{
+		for (auto& i : eventtab) {
+			if (i.active && i.evtime == currcycle) {
 				if (i.handler == nullptr)
 					i.active = false;
 				else
 					(*i.handler)();
 			}
 		}
-		events_schedule();
+		events_schedule ();
+
 	}
 	currcycle += cycles_to_add;
 }
@@ -180,43 +182,36 @@ void do_cycles_cpu_norm(uae_u32 cycles_to_add)
 
 do_cycles_func do_cycles = do_cycles_cpu_norm;
 
-void MISC_handler(void)
+void MISC_handler (void)
 {
 	static bool dorecheck;
 	bool recheck;
 	int i;
 	evt mintime;
-	evt ct = get_cycles();
+	evt ct = get_cycles ();
 	static int recursive;
 
-	if (recursive)
-	{
+	if (recursive) {
 		dorecheck = true;
 		return;
 	}
 	recursive++;
 	eventtab[ev_misc].active = false;
 	recheck = true;
-	while (recheck)
-	{
+	while (recheck) {
 		recheck = false;
 		mintime = ~0L;
-		for (i = 0; i < ev2_max; i++)
-		{
-			if (eventtab2[i].active)
-			{
-				if (eventtab2[i].evtime == ct)
-				{
+		for (i = 0; i < ev2_max; i++) {
+			if (eventtab2[i].active) {
+				if (eventtab2[i].evtime == ct) {
 					eventtab2[i].active = false;
-					eventtab2[i].handler(eventtab2[i].data);
-					if (dorecheck || eventtab2[i].active)
-					{
+					event2_count--;
+					eventtab2[i].handler (eventtab2[i].data);
+					if (dorecheck || eventtab2[i].active) {
 						recheck = true;
 						dorecheck = false;
 					}
-				}
-				else
-				{
+				} else {
 					auto eventtime = eventtab2[i].evtime - ct;
 					if (eventtime < mintime)
 						mintime = eventtime;
@@ -224,29 +219,26 @@ void MISC_handler(void)
 			}
 		}
 	}
-	if (mintime != ~0UL)
-	{
+	if (mintime != ~0UL) {
 		eventtab[ev_misc].active = true;
 		eventtab[ev_misc].oldcycles = ct;
 		eventtab[ev_misc].evtime = ct + mintime;
-		events_schedule();
+		events_schedule ();
 	}
 	recursive--;
 }
 
 
-void event2_newevent_xx(int no, evt t, uae_u32 data, evfunc2 func)
+void event2_newevent_xx (int no, evt t, uae_u32 data, evfunc2 func)
 {
 	static int next = ev2_misc;
 
-	auto et = t + get_cycles();
-	if (no < 0)
-	{
+	auto et = t + get_cycles ();
+	if (no < 0) {
 		no = next;
-		for (;;)
-		{
-			if (!eventtab2[no].active)
-			{
+		for (;;) {
+			if (!eventtab2[no].active) {
+				event2_count++;
 				break;
 			}
 			if (eventtab2[no].evtime == et && eventtab2[no].handler == func && eventtab2[no].data == data)
@@ -254,9 +246,8 @@ void event2_newevent_xx(int no, evt t, uae_u32 data, evfunc2 func)
 			no++;
 			if (no == ev2_max)
 				no = ev2_misc;
-			if (no == next)
-			{
-				write_log(_T("out of event2's!\n"));
+			if (no == next) {
+				write_log (_T("out of event2's!\n"));
 				return;
 			}
 		}
@@ -266,7 +257,7 @@ void event2_newevent_xx(int no, evt t, uae_u32 data, evfunc2 func)
 	eventtab2[no].evtime = et;
 	eventtab2[no].handler = func;
 	eventtab2[no].data = data;
-	MISC_handler();
+	MISC_handler ();
 }
 
 void event2_newevent_x_replace(evt t, uae_u32 data, evfunc2 func)

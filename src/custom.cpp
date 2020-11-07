@@ -7945,11 +7945,11 @@ static void vsync_handler_pre (void)
 	bool frameok = framewait ();
 
 	if (!ad->picasso_on && !nodraw()) {
-		if (!frame_rendered) {
+		if (!frame_rendered && vblank_hz_state) {
 			frame_rendered = render_screen(false);
 		}
 		if (frame_rendered && !frame_shown) {
-			frame_shown = show_screen_maybe(isvsync_chipset() >= 0);
+			frame_shown = show_screen_maybe(isvsync_chipset () >= 0);
 		}
 	}
 
@@ -8194,14 +8194,12 @@ static void hsync_scandoubler (void)
 	}
 }
 
-static void events_dmal (int);
+static void events_dmal(int);
 static uae_u16 dmal, dmal_hpos;
 
-static void dmal_emu (uae_u32 v)
+static void dmal_emu(uae_u32 v)
 {
-	// Disk and Audio DMA bits are ignored by Agnus, Agnus only checks DMAL and master bit
-	if (!(dmacon & DMA_MASTER))
-		return;
+	// Disk and Audio DMA bits are ignored by Agnus. Including DMA master bit.
 	int hpos = current_hpos ();
 	if (v >= 6) {
 		v -= 6;
@@ -8209,7 +8207,7 @@ static void dmal_emu (uae_u32 v)
 		uaecptr pt = audio_getpt (nr, (v & 1) != 0);
 		uae_u16 dat = chipmem_wget_indirect (pt);
 		last_custom_value1 = last_custom_value2 = dat;
-		AUDxDAT (nr, dat);
+		AUDxDAT (nr, dat, pt);
 	} else {
 		uae_u16 dat = 0;
 		int w = v & 1;
@@ -8587,25 +8585,24 @@ static void hsync_handler_post (bool onvsync)
 			/* really last line, just run the cpu emulation until whole vsync time has been used */
 			if (regs.stopped && currprefs.cpu_idle) {
 				// CPU in STOP state: sleep if enough time left.
-				frame_time_t rpt = read_processor_time();
-				while ((int)vsyncmintime - (int)(rpt + vsynctimebase / 10) > 0 && (int)vsyncmintime - (int)rpt < vsynctimebase) {
-					//maybe_process_pull_audio();
-
-					if (cpu_sleep_millis(1) < 0)
-						break;
-					rpt = read_processor_time();
+				frame_time_t rpt = read_processor_time ();
+				while (vsync_isdone(NULL) <= 0 && (int)vsyncmintime - (int)(rpt + vsynctimebase / 10) > 0 && (int)vsyncmintime - (int)rpt < vsynctimebase) {
+					maybe_process_pull_audio();
+//					if (!execute_other_cpu(rpt + vsynctimebase / 10)) {
+						if (cpu_sleep_millis(1) < 0)
+							break;
+//					}
+					rpt = read_processor_time ();
 				}
-			}
-			else if (currprefs.m68k_speed_throttle) {
-				vsyncmintime = read_processor_time(); /* end of CPU emulation time */
+			} else if (currprefs.m68k_speed_throttle) {
+				vsyncmintime = read_processor_time (); /* end of CPU emulation time */
 				events_reset_syncline();
-				//maybe_process_pull_audio();
-			}
-			else {
+				maybe_process_pull_audio();
+			} else {
 				vsyncmintime = vsyncmaxtime; /* emulate if still time left */
-				is_syncline_end = read_processor_time() + vsynctimebase; /* far enough in future, we never wait that long */
+				is_syncline_end = read_processor_time () + vsynctimebase; /* far enough in future, we never wait that long */
 				is_syncline = -12;
-				//maybe_process_pull_audio();
+				maybe_process_pull_audio();
 			}
 		} else {
 			static int linecounter;
@@ -8613,27 +8610,36 @@ static void hsync_handler_post (bool onvsync)
 			vsyncmintime += vsynctimeperline;
 			linecounter++;
 			events_reset_syncline();
-			if (int(vsyncmaxtime) - int(vsyncmintime) > 0) {
-				if (int(vsyncwaittime) - int(vsyncmintime) > 0) {
-					frame_time_t rpt = read_processor_time();
-					/* Extra time left? Do some extra CPU emulation */
-					if (int(vsyncmintime) - int(rpt) > 0) {
-						if (regs.stopped && currprefs.cpu_idle && sleeps_remaining > 0) {
-							// STOP STATE: sleep.
-							cpu_sleep_millis(1);
-							sleeps_remaining--;
-							//maybe_process_pull_audio();
+			if (vsync_isdone(NULL) <= 0 && !currprefs.turbo_emulation) {
+				if ((int)vsyncmaxtime - (int)vsyncmintime > 0) {
+					if ((int)vsyncwaittime - (int)vsyncmintime > 0) {
+						frame_time_t rpt = read_processor_time ();
+						/* Extra time left? Do some extra CPU emulation */
+						if ((int)vsyncmintime - (int)rpt > 0) {
+							if (regs.stopped && currprefs.cpu_idle && sleeps_remaining > 0) {
+								// STOP STATE: sleep.
+								cpu_sleep_millis(1);
+								sleeps_remaining--;
+								maybe_process_pull_audio();
+							} else {
+								is_syncline = -11;
+								/* limit extra time */
+								is_syncline_end = rpt + vsynctimeperline;
+								linecounter = 0;
+							}
 						}
-						else {
-							is_syncline = -11;
-							/* limit extra time */
-							is_syncline_end = int(rpt) + vsynctimeperline;
+					}
+					if (!isvsync ()) {
+						// extra cpu emulation time if previous 10 lines without extra time.
+						if (!is_syncline && linecounter >= 10 && (!regs.stopped || !currprefs.cpu_idle)) {
+							is_syncline = -10;
+							is_syncline_end = read_processor_time () + vsynctimeperline;
 							linecounter = 0;
 						}
 					}
 				}
 			}
-			//maybe_process_pull_audio();
+			maybe_process_pull_audio();
 		}
 
 	} else if (!currprefs.cpu_thread) {
@@ -8642,17 +8648,27 @@ static void hsync_handler_post (bool onvsync)
 		static int nextwaitvpos;
 		if (vpos == 0)
 			nextwaitvpos = maxvpos_display * 1 / 4;
-		
-		if (vpos + 1 < maxvpos + lof_store && vpos >= nextwaitvpos && vpos < maxvpos - (maxvpos / 3)) {
+		if (audio_is_pull() > 0 && !currprefs.turbo_emulation) {
+			maybe_process_pull_audio();
+			frame_time_t rpt = read_processor_time();
+			while (audio_pull_buffer() > 1 && (!isvsync() || (vsync_isdone(NULL) <= 0 && (int)vsyncmintime - (int)(rpt + vsynctimebase / 10) > 0 && (int)vsyncmintime - (int)rpt < vsynctimebase))) {
+				cpu_sleep_millis(1);
+				maybe_process_pull_audio();
+				rpt = read_processor_time();
+			}
+		}
+		if (vpos + 1 < maxvpos + lof_store && vpos >= nextwaitvpos && vpos < maxvpos - (maxvpos / 3) && (audio_is_pull() <= 0 || (audio_is_pull() > 0 && audio_pull_buffer()))) {
 			nextwaitvpos += maxvpos_display * 1 / 3;
 			vsyncmintime += vsynctimeperline;
-			if (!currprefs.turbo_emulation) {
+			if (vsync_isdone(NULL) <= 0 && !currprefs.turbo_emulation) {
 				frame_time_t rpt = read_processor_time();
 				// sleep if more than 2ms "free" time
-				while ((int)vsyncmintime - (int)(rpt + vsynctimebase / 10) > 0 && (int)vsyncmintime - (int)rpt < vsynctimebase) {
-					//maybe_process_pull_audio();
-					if (cpu_sleep_millis(1) < 0)
-						break;
+				while (vsync_isdone(NULL) <= 0 && (int)vsyncmintime - (int)(rpt + vsynctimebase / 10) > 0 && (int)vsyncmintime - (int)rpt < vsynctimebase) {
+					maybe_process_pull_audio();
+//					if (!execute_other_cpu(rpt + vsynctimebase / 10)) {
+						if (cpu_sleep_millis(1) < 0)
+							break;
+//					}
 					rpt = read_processor_time();
 				}
 			}
@@ -8847,6 +8863,7 @@ static void hsync_handler (void)
 	bool vs = is_custom_vsync ();
 	hsync_handler_pre (vs);
 	if (vs) {
+		vsyncmintimepre = read_processor_time();
 		vsync_handler_pre ();
 		if (savestate_check ()) {
 			uae_reset (0, 0);
@@ -9224,7 +9241,7 @@ static uae_u32 REGPARAM2 custom_lgeti (uaecptr addr)
 	return custom_lget (addr);
 }
 
-static uae_u32 REGPARAM2 custom_wget_1(int hpos, uaecptr addr, int noput)
+static uae_u32 REGPARAM2 custom_wget_1(int hpos, uaecptr addr, int noput, bool isbyte)
 {
 	uae_u16 v;
 	int missing;
@@ -9304,15 +9321,17 @@ writeonly:
 			} else {
 				// last chip bus value (read or write) is written to register
 				if (currprefs.cpu_compatible && currprefs.cpu_model == 68000) {
-					l = regs.irc;
-				}
-				else {
-					l = 0xffff;
+					if (isbyte)
+						l = (regs.chipset_latch_rw << 8) | (regs.chipset_latch_rw & 0xff);
+					else
+						l = regs.chipset_latch_rw;
+				} else {
+					l = regs.chipset_latch_rw;
 				}
 			}
 			decide_line (hpos);
 			decide_fetch_safe (hpos);
-			custom_wput_1(hpos, addr, l, 1);
+			custom_wput_1 (hpos, addr, l, 1);
 
 			// CPU gets back (OCS/ECS only):
 			// - if last cycle was DMA cycle: DMA cycle data
@@ -9324,7 +9343,7 @@ writeonly:
 				if (bmdma || (c > CYCLE_REFRESH && c < CYCLE_CPU)) {
 					v = last_custom_value1;
 				} else if (c == CYCLE_CPU) {
-					v = regs.ird;
+					v = regs.db;
 				} else {
 					v = last_custom_value1 >> ((addr & 2) ? 0 : 16);
 				}
@@ -9349,7 +9368,7 @@ static uae_u32 custom_wget2(uaecptr addr, bool byte)
 	int hpos = current_hpos ();
 
 	sync_copper_with_cpu (hpos, 1, addr);
-	v = custom_wget_1 (hpos, addr, 0);
+	v = custom_wget_1 (hpos, addr, 0, byte);
 #ifdef ACTION_REPLAY
 #ifdef ACTION_REPLAY_COMMON
 	addr &= 0x1fe;
@@ -9600,14 +9619,14 @@ static int REGPARAM2 custom_wput_1 (int hpos, uaecptr addr, uae_u32 value, int n
 #endif
 	case 0x1FE: FNULL (value); break;
 
-      /* writing to read-only register causes read access */
-    default: 
-	    if (!noget) {
-			  custom_wget_1 (hpos, addr, 1);
-      }
-	    return 1;
-  }
-  return 0;
+	/* writing to read-only register causes read access */
+	default:
+		if (!noget) {
+			custom_wget_1 (hpos, addr, 1, false);
+		}
+		return 1;
+	}
+	return 0;
 }
 
 static void REGPARAM2 custom_wput (uaecptr addr, uae_u32 value)
@@ -10240,6 +10259,85 @@ uae_u8 *save_custom_extra (int *len, uae_u8 *dstptr)
 	return dstbak;
 }
 
+uae_u8 *restore_custom_event_delay (uae_u8 *src)
+{
+	if (restore_u32 () != 1)
+		return src;
+	int cnt = restore_u8 ();
+	for (int i = 0; i < cnt; i++) {
+		uae_u8 type = restore_u8 ();
+		evt e = restore_u64 ();
+		uae_u32 data = restore_u32 ();
+		if (type == 1)
+			event2_newevent_xx (-1, e, data, send_interrupt_do);
+	}
+	return src;
+}
+uae_u8 *save_custom_event_delay (int *len, uae_u8 *dstptr)
+{
+	uae_u8 *dstbak, *dst;
+	int cnt = 0;
+
+	for (int i = ev2_misc; i < ev2_max; i++) {
+		struct ev2 *e = &eventtab2[i];
+		if (e->active && e->handler == send_interrupt_do) {
+			cnt++;
+		}
+	}
+	if (cnt == 0)
+		return NULL;
+
+	if (dstptr)
+		dstbak = dst = dstptr;
+	else
+		dstbak = dst = xmalloc (uae_u8, 1000);
+
+	save_u32 (1);
+	save_u8 (cnt);
+	for (int i = ev2_misc; i < ev2_max; i++) {
+		struct ev2 *e = &eventtab2[i];
+		if (e->active && e->handler == send_interrupt_do) {
+			save_u8 (1);
+			save_u64 (e->evtime - get_cycles ());
+			save_u32 (e->data);
+		
+		}
+	}
+
+	*len = dst - dstbak;
+	return dstbak;
+}
+
+
+uae_u8 *save_cycles (int *len, uae_u8 *dstptr)
+{
+	uae_u8 *dstbak, *dst;
+	if (dstptr)
+		dstbak = dst = dstptr;
+	else
+		dstbak = dst = xmalloc (uae_u8, 1000);
+	save_u32 (1);
+	save_u32 (CYCLE_UNIT);
+	save_u64 (get_cycles ());
+	save_u32 (extra_cycle);
+	write_log (_T("SAVECYCLES %08lX\n"), get_cycles ());
+	*len = dst - dstbak;
+	return dstbak;
+}
+
+uae_u8 *restore_cycles (uae_u8 *src)
+{
+	if (restore_u32 () != 1)
+		return src;
+	restore_u32 ();
+	start_cycles = restore_u64 ();
+	extra_cycle = restore_u32 ();
+	if (extra_cycle < 0 || extra_cycle >= 2 * CYCLE_UNIT)
+		extra_cycle = 0;
+	write_log (_T("RESTORECYCLES %08lX\n"), start_cycles);
+	return src;
+}
+
 #endif /* SAVESTATE */
 
 void check_prefs_changed_custom (void)
@@ -10315,7 +10413,354 @@ void check_prefs_changed_custom (void)
 		currprefs.chipset_hr = changed_prefs.chipset_hr;
 		init_custom();
 	}
+
+#ifdef GFXFILTER
+	struct gfx_filterdata *fd = &currprefs.gf[0];
+	struct gfx_filterdata *fdcp = &changed_prefs.gf[0];
+
+	fd->gfx_filter_horiz_zoom = fdcp->gfx_filter_horiz_zoom;
+	fd->gfx_filter_vert_zoom = fdcp->gfx_filter_vert_zoom;
+	fd->gfx_filter_horiz_offset = fdcp->gfx_filter_horiz_offset;
+	fd->gfx_filter_vert_offset = fdcp->gfx_filter_vert_offset;
+	fd->gfx_filter_scanlines = fdcp->gfx_filter_scanlines;
+
+	fd->gfx_filter_left_border = fdcp->gfx_filter_left_border;
+	fd->gfx_filter_right_border = fdcp->gfx_filter_right_border;
+	fd->gfx_filter_top_border = fdcp->gfx_filter_top_border;
+	fd->gfx_filter_bottom_border = fdcp->gfx_filter_bottom_border;
+#endif
 }
+
+#ifdef CPUEMU_13
+
+STATIC_INLINE void sync_copper (int hpos)
+{
+	if (copper_enabled_thisline)
+		update_copper (hpos);
+}
+
+STATIC_INLINE void decide_fetch_ce (int hpos)
+{
+	if ((line_cyclebased || blt_info.blitter_dangerous_bpl) && vpos < current_maxvpos ())
+		decide_fetch (hpos);
+}
+
+// blitter not in nasty mode = CPU gets one cycle if it has been waiting
+// at least 4 cycles (all DMA cycles count, not just blitter cycles, even
+// blitter idle cycles do count!)
+
+extern int cpu_tracer;
+static int dma_cycle (void)
+{
+	int hpos, hpos_old;
+
+	blt_info.nasty_cnt = 1;
+	blt_info.wait_nasty = 0;
+	if (cpu_tracer < 0)
+		return current_hpos_safe();
+	if (!currprefs.cpu_memory_cycle_exact)
+		return current_hpos_safe();
+	while (currprefs.cpu_memory_cycle_exact) {
+		int bpldma;
+		int blitpri = dmacon & DMA_BLITPRI;
+		hpos_old = current_hpos_safe ();
+		hpos = hpos_old + 1;
+		decide_line (hpos);
+		sync_copper (hpos);
+		decide_fetch_ce (hpos);
+		bpldma = is_bitplane_dma (hpos_old);
+		if (bltstate != BLT_done) {
+			if (!blitpri && blt_info.nasty_cnt >= BLIT_NASTY_CPU_STEAL_CYCLE_COUNT && (cycle_line[hpos_old] & CYCLE_MASK) == 0 && !bpldma) {
+				alloc_cycle (hpos_old, CYCLE_CPUNASTY);
+				if (debug_dma && blt_info.nasty_cnt >= BLIT_NASTY_CPU_STEAL_CYCLE_COUNT) {
+					record_dma_event(DMA_EVENT_CPUBLITTERSTOLEN, hpos_old, vpos);
+				}
+				break;
+			}
+			decide_blitter (hpos);
+			// copper may have been waiting for the blitter
+			sync_copper (hpos);
+		}
+		if ((cycle_line[hpos_old] & CYCLE_MASK) == 0 && !bpldma) {
+			alloc_cycle (hpos_old, CYCLE_CPU);
+			break;
+		}
+		if (debug_dma && blt_info.nasty_cnt >= BLIT_NASTY_CPU_STEAL_CYCLE_COUNT) {
+			record_dma_event(DMA_EVENT_CPUBLITTERSTEAL, hpos_old, vpos);
+		}
+
+		blt_info.nasty_cnt++;
+		do_cycles (1 * CYCLE_UNIT);
+		/* bus was allocated to dma channel, wait for next cycle.. */
+	}
+	blt_info.nasty_cnt = 0;
+	return hpos_old;
+}
+
+STATIC_INLINE void checknasty (int hpos, int vpos)
+{
+	if (blt_info.blitter_nasty >= BLIT_NASTY_CPU_STEAL_CYCLE_COUNT && !(dmacon & DMA_BLITPRI))
+		record_dma_event (DMA_EVENT_BLITNASTY, hpos, vpos);
+}
+
+static void sync_ce020 (void)
+{
+	unsigned long c;
+	int extra;
+
+	c = get_cycles ();
+	extra = c & (CYCLE_UNIT - 1);
+	if (extra) {
+		extra = CYCLE_UNIT - extra;
+		do_cycles (extra);
+	}
+}
+
+#define SETIFCHIP \
+	if (addr < 0xd80000) \
+		last_custom_value1 = v;
+
+uae_u32 wait_cpu_cycle_read (uaecptr addr, int mode)
+{
+	uae_u32 v = 0;
+	int hpos;
+
+	hpos = dma_cycle ();
+	x_do_cycles_pre (CYCLE_UNIT);
+
+#ifdef DEBUGGER
+	struct dma_rec *dr = NULL;
+	if (debug_dma) {
+		int reg = 0x1000;
+		if (mode < 0)
+			reg |= 4;
+		else if (mode > 0)
+			reg |= 2;
+		else
+			reg |= 1;
+		dr = record_dma (reg, v, addr, hpos, vpos, DMARECORD_CPU, mode == -2 || mode == 2 ? 0 : 1);
+		checknasty (hpos, vpos);
+	}
+#endif
+	switch(mode)
+	{
+		case -1:
+		v = get_long(addr);
+		break;
+		case -2:
+		v = get_longi(addr);
+		break;
+		case 1:
+		v = get_word(addr);
+		break;
+		case 2:
+		v = get_wordi(addr);
+		break;
+		case 0:
+		v = get_byte(addr);
+		break;
+	}
+
+#ifdef DEBUGGER
+	if (debug_dma)
+		dr->dat = v;
+#endif
+
+	x_do_cycles_post (CYCLE_UNIT, v);
+
+	regs.chipset_latch_rw = regs.chipset_latch_read = v;
+	SETIFCHIP
+	return v;
+}
+
+uae_u32 wait_cpu_cycle_read_ce020 (uaecptr addr, int mode)
+{
+	uae_u32 v = 0;
+	int hpos;
+
+	sync_ce020 ();
+	hpos = dma_cycle ();
+	x_do_cycles_pre (CYCLE_UNIT);
+
+#ifdef DEBUGGER
+	struct dma_rec *dr = NULL;
+	if (debug_dma) {
+		int reg = 0x1000;
+		if (mode < 0)
+			reg |= 4;
+		else if (mode > 0)
+			reg |= 2;
+		else
+			reg |= 1;
+		dr = record_dma (reg, v, addr, hpos, vpos, DMARECORD_CPU, mode == -2 || mode == 2 ? 0 : 1);
+		checknasty (hpos, vpos);
+	}
+#endif
+	switch (mode) {
+		case -1:
+		v = get_long(addr);
+		break;
+		case -2:
+		v = get_longi(addr);
+		break;
+		case 1:
+		v = get_word(addr);
+		break;
+		case 2:
+		v = get_wordi(addr);
+		break;
+		case 0:
+		v = get_byte(addr);
+		break;
+	}
+
+#ifdef DEBUGGER
+	if (debug_dma)
+		dr->dat = v;
+#endif
+	
+	x_do_cycles_post (CYCLE_UNIT, v);
+
+	regs.chipset_latch_rw = regs.chipset_latch_read = v;
+	SETIFCHIP
+	return v;
+}
+
+void wait_cpu_cycle_write (uaecptr addr, int mode, uae_u32 v)
+{
+	int hpos;
+
+	hpos = dma_cycle ();
+	x_do_cycles_pre (CYCLE_UNIT);
+
+#ifdef DEBUGGER
+	if (debug_dma) {
+		int reg = 0x1100;
+		if (mode < 0)
+			reg |= 4;
+		else if (mode > 0)
+			reg |= 2;
+		else
+			reg |= 1;
+		record_dma (reg, v, addr, hpos, vpos, DMARECORD_CPU, 1);
+		checknasty (hpos, vpos);
+	}
+#endif
+
+	if (mode < 0)
+		put_long (addr, v);
+	else if (mode > 0)
+		put_word (addr, v);
+	else if (mode == 0)
+		put_byte (addr, v);
+
+	x_do_cycles_post (CYCLE_UNIT, v);
+
+	regs.chipset_latch_rw = regs.chipset_latch_write = v;
+	SETIFCHIP
+}
+
+void wait_cpu_cycle_write_ce020 (uaecptr addr, int mode, uae_u32 v)
+{
+	int hpos;
+
+	sync_ce020 ();
+	hpos = dma_cycle ();
+	x_do_cycles_pre (CYCLE_UNIT);
+
+#ifdef DEBUGGER
+	if (debug_dma) {
+		int reg = 0x1100;
+		if (mode < 0)
+			reg |= 4;
+		else if (mode > 0)
+			reg |= 2;
+		else
+			reg |= 1;
+		record_dma (reg, v, addr, hpos, vpos, DMARECORD_CPU, 1);
+		checknasty (hpos, vpos);
+	}
+#endif
+
+	if (mode < 0)
+		put_long (addr, v);
+	else if (mode > 0)
+		put_word (addr, v);
+	else if (mode == 0)
+		put_byte (addr, v);
+
+	// chipset buffer latches the write, CPU does
+	// not need to wait for the chipset cycle to finish.
+	x_do_cycles_post (cpucycleunit, v);
+
+	regs.chipset_latch_rw = regs.chipset_latch_write = v;
+	SETIFCHIP
+}
+
+void do_cycles_ce (unsigned long cycles)
+{
+	cycles += extra_cycle;
+	while (cycles >= CYCLE_UNIT) {
+		int hpos = current_hpos () + 1;
+		decide_line (hpos);
+		sync_copper (hpos);
+		decide_fetch_ce (hpos);
+		if (bltstate != BLT_done) {
+			decide_blitter(hpos);
+		}
+		do_cycles (1 * CYCLE_UNIT);
+		cycles -= CYCLE_UNIT;
+	}
+	extra_cycle = cycles;
+}
+
+void do_cycles_ce020 (unsigned long cycles)
+{
+	unsigned long c;
+	int extra;
+
+	if (!cycles)
+		return;
+	c = get_cycles ();
+	extra = c & (CYCLE_UNIT - 1);
+	if (extra) {
+		extra = CYCLE_UNIT - extra;
+		if (extra >= cycles) {
+			do_cycles (cycles);
+			return;
+		}
+		do_cycles (extra);
+		cycles -= extra;
+	}
+	c = cycles;
+	while (c) {
+		int hpos = current_hpos () + 1;
+		decide_line (hpos);
+		sync_copper (hpos);
+		decide_fetch_ce (hpos);
+		if (bltstate != BLT_done)
+			decide_blitter (hpos);
+		if (c < CYCLE_UNIT)
+			break;
+		do_cycles (1 * CYCLE_UNIT);
+		c -= CYCLE_UNIT;
+	}
+	if (c > 0)
+		do_cycles (c);
+}
+
+
+bool is_cycle_ce(uaecptr addr)
+{
+	addrbank *ab = get_mem_bank_real(addr);
+	if (!ab || (ab->flags & ABFLAG_CHIPRAM) || ab == &custom_bank) {
+		int hpos = current_hpos();
+		return (cycle_line[hpos] & CYCLE_MASK) != 0;
+	}
+	return 0;
+}
+
+#endif
 
 bool isvga(void)
 {

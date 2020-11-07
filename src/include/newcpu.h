@@ -130,6 +130,10 @@ struct regstruct
 
 	uae_u16 irc, ir, ird;
 	volatile uae_atomic spcflags;
+	uae_u32 last_prefetch;
+	uae_u32 chipset_latch_rw;
+	uae_u32 chipset_latch_read;
+	uae_u32 chipset_latch_write;
 	uae_u16 db, write_buffer, read_buffer;
 	int loop_mode;
 	int instruction_cnt;
