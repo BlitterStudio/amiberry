@@ -2802,8 +2802,7 @@ STATIC_INLINE int one_fetch_cycle_0 (int pos, int dma, int fm)
 		}
 		if (plf_state == plf_passed_stop_pre_act) {
 			plf_state = plf_passed_stop_act;
-		}
-		else if (plf_state == plf_passed_stop_act) {
+		} else if (plf_state == plf_passed_stop_act) {
 			plf_state = plf_passed_stop2;
 		}
 	}
@@ -3335,8 +3334,7 @@ static void decide_line (int hpos)
 						nextstate = (bpl_dma_off_when_active & 1) ? plf_passed_stop_act : plf_passed_stop_pre_act;
 						ddfstop_matched = true;
 					}
-				}
-				else {
+				} else {
 					if ((bpl_dma_off_when_active & 8) && (bpl_dma_off_when_active & 4)) {
 						nextstate = (bpl_dma_off_when_active & 1) ? plf_passed_stop_act : plf_passed_stop_pre_act;
 						ddfstop_matched = true;
@@ -4507,20 +4505,20 @@ void compute_framesync(void)
 	if (vidinfo->drawbuffer.outheight > vidinfo->drawbuffer.height_allocated)
 		vidinfo->drawbuffer.outheight = vidinfo->drawbuffer.height_allocated;
 
-	memset(line_decisions, 0, sizeof line_decisions);
-	memset(line_drawinfo, 0, sizeof line_drawinfo);
+	memset (line_decisions, 0, sizeof line_decisions);
+	memset (line_drawinfo, 0, sizeof line_drawinfo);
 	for (auto& line_decision : line_decisions)
 	{
 		line_decision.plfleft = -2;
 	}
 
-	compute_vsynctime();
+	compute_vsynctime ();
 
 	hblank_hz = (currprefs.ntscmode ? CHIPSET_CLOCK_NTSC : CHIPSET_CLOCK_PAL) / (maxhpos + (islinetoggle() ? 0.5 : 0));
 
 	// Crashes on Android
 #ifndef ANDROID
-	write_log(_T("%s mode%s%s V=%.4fHz H=%0.4fHz (%dx%d+%d) IDX=%d (%s) D=%d RTG=%d/%d\n"),
+	write_log (_T("%s mode%s%s V=%.4fHz H=%0.4fHz (%dx%d+%d) IDX=%d (%s) D=%d RTG=%d/%d\n"),
 		isntsc ? _T("NTSC") : _T("PAL"),
 		islace ? _T(" lace") : (lof_lace ? _T(" loflace") : _T("")),
 		doublescan > 0 ? _T(" dblscan") : _T(""),
@@ -4536,7 +4534,7 @@ void compute_framesync(void)
 	set_config_changed();
 
 	if (target_graphics_buffer_update()) {
-		reset_drawing();
+		reset_drawing ();
 	}
 }
 
@@ -4896,8 +4894,7 @@ static bool blit_busy(void)
 		if (!blt_info.blit_interrupt && !blt_info.got_cycle)
 			return false;
 		// A1000 Agnus also has below bug but it does not need separate check because of above bug.
-	}
-	else if (!(currprefs.chipset_mask & CSMASK_AGA)) {
+	} else if (!(currprefs.chipset_mask & CSMASK_AGA)) {
 #if 0
 		// AGA apparently does not have this bug.
 		// Blitter busy bug: Blitter nasty off, CPU attempting to steal cycle, Copper started blitter,
@@ -5104,6 +5101,7 @@ static uae_u16 VHPOSR (void)
 	}
 
 	vp |= hp;
+
 	return vp;
 }
 
@@ -5463,7 +5461,7 @@ static void doint_delay_do(uae_u32 v)
 	doint();
 }
 
-static void doint_delay ()
+static void doint_delay()
 {
 	if (currprefs.cpu_compatible) {
 		event2_newevent_xx(-1, CYCLE_UNIT + CYCLE_UNIT / 2, 0, doint_delay_do);
@@ -5830,7 +5828,7 @@ static void BPLxDAT_next(uae_u32 v)
 	int num = v >> 16;
 	uae_u16 data = (uae_u16)v;
 	int hpos = current_hpos();
-	
+
 	// only BPL1DAT access can do anything visible
 	if (num == 0 && hpos >= 8) {
 		decide_line(hpos);
@@ -5850,7 +5848,7 @@ static void BPLxDAT_next(uae_u32 v)
 }
 
 
-static void BPLxDAT(int hpos, int num, uae_u16 v)
+static void BPLxDAT (int hpos, int num, uae_u16 v)
 {
 	event2_newevent2(1, (num << 16) | v, BPLxDAT_next);
 
@@ -6556,7 +6554,7 @@ STATIC_INLINE int copper_cant_read(int hpos)
 	if ((hpos == maxhpos - 3) && (maxhpos & 1)) {
 		return -1;
 	}
-	return is_bitplane_dma_inline(hpos);
+	return is_bitplane_dma_inline (hpos);
 }
 
 #ifdef AMIBERRY
@@ -6826,7 +6824,6 @@ static void update_copper (int until_hpos)
 			if (cop_state.movedelay == 0) {
 				custom_wput_copper (c_hpos, cop_state.moveaddr, cop_state.movedata, 0);
 			}
-
 #ifdef AMIBERRY
 			if (!copper_enabled_thisline)
 				goto out;
@@ -7087,7 +7084,7 @@ static void update_copper (int until_hpos)
 				}
 
 				cop_state.state = COP_read1;
-		}
+			}
 			break;
 
 		case COP_skip1:
@@ -7667,12 +7664,12 @@ static int mavg (struct mavg_data *md, int newval, int size)
 
 #define MAVG_VSYNC_SIZE 128
 
-static bool framewait(void)
+static bool framewait (void)
 {
 	struct amigadisplay *ad = &adisplays;
 	frame_time_t curr_time;
 	frame_time_t start;
-	int vs = isvsync_chipset();
+	int vs = isvsync_chipset ();
 	int status = 0;
 
 	events_reset_syncline();
@@ -7688,7 +7685,7 @@ static bool framewait(void)
 		static frame_time_t vsync_time;
 		int t;
 
-		curr_time = read_processor_time();
+		curr_time = read_processor_time ();
 		vsyncwaittime = vsyncmaxtime = curr_time + vsynctimebase;
 		if (!nodraw()) {
 			if (!frame_rendered && !ad->picasso_on)
@@ -7705,8 +7702,8 @@ static bool framewait(void)
 		}
 
 		maybe_process_pull_audio();
-		
-		int legacy_avg = mavg(&ma_legacy, t, MAVG_VSYNC_SIZE);
+
+		int legacy_avg = mavg (&ma_legacy, t, MAVG_VSYNC_SIZE);
 		if (t > legacy_avg)
 			legacy_avg = t;
 		t = legacy_avg;
@@ -7717,8 +7714,7 @@ static bool framewait(void)
 
 		if (currprefs.m68k_speed < 0) {
 			vsynctimeperline = (vsynctimebase - t) / (maxvpos_display + 1);
-		}
-		else {
+		} else {
 			vsynctimeperline = (vsynctimebase - t) / 3;
 		}
 
@@ -7727,8 +7723,8 @@ static bool framewait(void)
 
 		frame_shown = true;
 		return 1;
-	}
-	else if (vs < 0) {
+
+	} else if (vs < 0) {
 
 		if (!vblank_hz_state)
 			return status != 0;
@@ -7780,15 +7776,14 @@ static bool framewait(void)
 		}
 		vsyncmaxtime = curr_time + max;
 
-	}
-	else {
+	} else {
 
 		int t = 0;
 
 		start = read_processor_time();
 		if (!frame_rendered && !ad->picasso_on) {
 			frame_rendered = render_screen(false);
-			t = read_processor_time() - start;
+			t = read_processor_time () - start;
 		}
 		if (!currprefs.cpu_thread) {
 			while (!currprefs.turbo_emulation) {
@@ -7810,16 +7805,16 @@ static bool framewait(void)
 		vsyncmaxtime = vsyncwaittime = curr_time + vstb;
 		if (frame_rendered) {
 			show_screen(0);
-			t += read_processor_time() - curr_time;
+			t += read_processor_time () - curr_time;
 		}
 		t += frameskipt_avg;
-		
+
 		vsynctimeperline = (vstb - t) / 4;
 		if (vsynctimeperline < 1)
 			vsynctimeperline = 1;
 		else if (vsynctimeperline > vstb / 4)
 			vsynctimeperline = vstb / 4;
-		
+
 		frame_shown = true;
 
 	}
@@ -7925,7 +7920,7 @@ static void vsync_handler_pre (void)
 		reset_cpu_idle();
 	cpu_last_stop_vpos = 0;
 	cpu_stopped_lines = 0;
-	
+
 	if (bogusframe > 0)
 		bogusframe--;
 
@@ -8237,23 +8232,23 @@ static void dmal_emu (uae_u32 v)
 	}
 }
 
-static void dmal_func (uae_u32 v)
+static void dmal_func(uae_u32 v)
 {
 	dmal_emu (v);
 	events_dmal (0);
 }
 
-static void dmal_func2 (uae_u32 v)
+static void dmal_func2(uae_u32 v)
 {
 	while (dmal) {
 		if (dmal & 3)
-			dmal_emu (dmal_hpos + ((dmal & 2) ? 1 : 0));
+			dmal_emu(dmal_hpos + ((dmal & 2) ? 1 : 0));
 		dmal_hpos += 2;
 		dmal >>= 2;
 	}
 }
 
-static void events_dmal (int hp)
+static void events_dmal(int hp)
 {
 	if (!dmal)
 		return;
@@ -8265,27 +8260,27 @@ static void events_dmal (int hp)
 			dmal >>= 2;
 			dmal_hpos += 2;
 		}
-		event2_newevent2 (hp, dmal_hpos + ((dmal & 2) ? 1 : 0), dmal_func);
+		event2_newevent2(hp, dmal_hpos + ((dmal & 2) ? 1 : 0), dmal_func);
 		dmal &= ~3;
 	} else if (currprefs.cachesize) {
-		dmal_func2 (0);
+		dmal_func2(0);
 	} else {
-		event2_newevent2 (hp, 13, dmal_func2);
+		event2_newevent2(hp, 13, dmal_func2);
 	}
 }
 
-static void events_dmal_hsync (void)
+static void events_dmal_hsync(void)
 {
 	if (dmal)
 		write_log (_T("DMAL error!? %04x\n"), dmal);
-	dmal = audio_dmal ();
+	dmal = audio_dmal();
 	dmal <<= 6;
-	dmal |= disk_dmal ();
+	dmal |= disk_dmal();
 	if (!dmal)
 		return;
 	dmal_hpos = 0;
 
-	events_dmal (7);
+	events_dmal(7);
 }
 
 //static void lightpen_trigger_func(uae_u32 v)
@@ -8843,7 +8838,7 @@ static void init_regtypes(void)
 			regtypes[i] |= REGTYPE_FORCE;
 			break;
 		}
-}
+	}
 }
 #endif
 
@@ -9622,7 +9617,7 @@ static void REGPARAM2 custom_wput (uaecptr addr, uae_u32 value)
 	if ((addr & 0xffff) < 0x8000 && currprefs.cs_fatgaryrev >= 0) {
 		return;
 	}
-	sync_copper_with_cpu(hpos, 1, addr);
+	sync_copper_with_cpu (hpos, 1, addr);
 	if (addr & 1) {
 		addr &= ~1;
 		custom_wput_1 (hpos, addr, (value >> 8) | (value & 0xff00), 0);
