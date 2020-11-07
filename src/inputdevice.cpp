@@ -4268,6 +4268,10 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 		changed_prefs.input_joymouse_multiplier = mousespeed_values[i];
 		inputdevice_updateconfig(&changed_prefs, &currprefs);
 		break;
+	case AKS_SHUTDOWN:
+		uae_quit();
+		host_poweroff = true;
+		break;
 #endif
 #ifdef CDTV
 	case AKS_CDTV_FRONT_PANEL_STOP:
