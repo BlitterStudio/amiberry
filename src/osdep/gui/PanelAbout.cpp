@@ -25,6 +25,7 @@ void InitPanelAbout(const struct _ConfigCategory& category)
 		"Toni Wilen - WinUAE author\n"
 		"TomB - Original ARM port of UAE, JIT ARM updates\n"
 		"Chips - Original RPI port\n"
+		"Gareth Fare - Serial port implementation\n"
 		"Dom Cresswell (Horace & The Spider) - Controller and WHDBooter updates\n"
 		"Christer Solskogen - Makefile and testing\n"
 		"Gunnar Kristjansson - Amibian and inspiration\n"
