@@ -26,7 +26,7 @@
 #define DIALOG_WIDTH 620
 #define DIALOG_HEIGHT 272
 
-static const char *harddisk_filter[] = {".hdf", "\0"};
+static const char *harddisk_filter[] = {".hdf", ".lha", "zip", "\0"};
 
 struct controller_map
 {
