@@ -81,7 +81,7 @@ extern void get_configuration_path (TCHAR *out, int size);
 extern void fetch_luapath (TCHAR *out, int size);
 extern void get_screenshot_path (TCHAR *out, int size);
 extern void fetch_ripperpath (TCHAR *out, int size);
-extern void fetch_statefilepath (TCHAR *out, int size);
+extern void get_savestate_path(TCHAR *out, int size);
 extern void fetch_inputfilepath (TCHAR *out, int size);
 extern void get_data_path (TCHAR *out, int size);
 extern void get_rom_path (TCHAR *out, int size);

@@ -2075,6 +2075,15 @@ struct zfile *zfile_fopen_data (const TCHAR *name, uae_u64 size, const uae_u8 *d
 	return l;
 }
 
+/* dump file use only */
+uae_u8* zfile_get_data_pointer(struct zfile* z, int* len)
+{
+	if (!z->data)
+		return NULL;
+	*len = z->size;
+	return z->data;
+}
+
 uae_u8 *zfile_load_file(const TCHAR *name, int *outlen)
 {
 	struct zfile *zf;

@@ -14,9 +14,12 @@
 static gcn::Window* grpChipset;
 static gcn::RadioButton* optOCS;
 static gcn::RadioButton* optECSAgnus;
+static gcn::RadioButton* optECSDenise;
 static gcn::RadioButton* optECS;
 static gcn::RadioButton* optAGA;
 static gcn::CheckBox* chkNTSC;
+static gcn::CheckBox* chkCycleExact;
+static gcn::CheckBox* chkMemoryCycleExact;
 static gcn::Label* lblChipset;
 static gcn::DropDown* cboChipset;
 static gcn::Window* grpBlitter;
@@ -82,7 +85,6 @@ public:
 static ChipsetListModel chipsetList;
 static bool bIgnoreListChange = true;
 
-
 class ChipsetActionListener : public gcn::ActionListener
 {
 public:
@@ -106,7 +108,6 @@ public:
 		}
 	}
 };
-
 static ChipsetActionListener* chipsetActionListener;
 
 class ChipsetButtonActionListener : public gcn::ActionListener
@@ -118,15 +119,52 @@ public:
 			changed_prefs.chipset_mask = 0;
 		else if (actionEvent.getSource() == optECSAgnus)
 			changed_prefs.chipset_mask = CSMASK_ECS_AGNUS;
+		else if (actionEvent.getSource() == optECSDenise)
+			changed_prefs.chipset_mask = CSMASK_ECS_DENISE;
 		else if (actionEvent.getSource() == optECS)
 			changed_prefs.chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
 		else
 			changed_prefs.chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE | CSMASK_AGA;
 	}
 };
-
 static ChipsetButtonActionListener* chipsetButtonActionListener;
 
+class CycleExactActionListener : public gcn::ActionListener
+{
+public:
+	void action(const gcn::ActionEvent& actionEvent) override
+	{
+		changed_prefs.cpu_cycle_exact = chkCycleExact->isSelected();
+		RefreshPanelQuickstart();
+	}
+};
+static CycleExactActionListener* cycleExactActionListener;
+
+class MemoryCycleExactActionListener : public gcn::ActionListener
+{
+public:
+	void action(const gcn::ActionEvent& actionEvent) override
+	{
+		changed_prefs.cpu_memory_cycle_exact = changed_prefs.blitter_cycle_exact = chkMemoryCycleExact->isSelected();
+		if (chkMemoryCycleExact->isSelected())
+		{
+			if (changed_prefs.cpu_model == 68000)
+				changed_prefs.cpu_compatible = true;
+			if (changed_prefs.cpu_model <= 68030)
+				changed_prefs.m68k_speed = 0;
+			if (changed_prefs.immediate_blits)
+			{
+				changed_prefs.immediate_blits = false;
+				optBlitImmed->setSelected(false);
+			}
+			changed_prefs.gfx_framerate = 1;
+			changed_prefs.cachesize = 0;
+		}
+		
+		RefreshPanelQuickstart();
+	}
+};
+static MemoryCycleExactActionListener* memoryCycleExactActionListener;
 
 class NTSCButtonActionListener : public gcn::ActionListener
 {
@@ -146,9 +184,7 @@ public:
 		RefreshPanelQuickstart();
 	}
 };
-
 static NTSCButtonActionListener* ntscButtonActionListener;
-
 
 class FastCopperActionListener : public gcn::ActionListener
 {
@@ -158,9 +194,7 @@ public:
 		changed_prefs.fast_copper = chkFastCopper->isSelected();
 	}
 };
-
 static FastCopperActionListener* fastCopperActionListener;
-
 
 class BlitterButtonActionListener : public gcn::ActionListener
 {
@@ -171,9 +205,7 @@ public:
 		changed_prefs.waiting_blits = optBlitWait->isSelected();
 	}
 };
-
 static BlitterButtonActionListener* blitterButtonActionListener;
-
 
 class CollisionButtonActionListener : public gcn::ActionListener
 {
@@ -190,15 +222,15 @@ public:
 			changed_prefs.collision_level = 3;
 	}
 };
-
 static CollisionButtonActionListener* collisionButtonActionListener;
-
 
 void InitPanelChipset(const struct _ConfigCategory& category)
 {
 	chipsetActionListener = new ChipsetActionListener();
 	chipsetButtonActionListener = new ChipsetButtonActionListener();
 	ntscButtonActionListener = new NTSCButtonActionListener();
+	cycleExactActionListener = new CycleExactActionListener();
+	memoryCycleExactActionListener = new MemoryCycleExactActionListener();
 
 	optOCS = new gcn::RadioButton("OCS", "radiochipsetgroup");
 	optOCS->setId("OCS");
@@ -208,6 +240,10 @@ void InitPanelChipset(const struct _ConfigCategory& category)
 	optECSAgnus->setId("ECS Agnus");
 	optECSAgnus->addActionListener(chipsetButtonActionListener);
 
+	optECSDenise = new gcn::RadioButton("ECS Denise", "radiochipsetgroup");
+	optECSDenise->setId("ECS Denise");
+	optECSDenise->addActionListener(chipsetButtonActionListener);
+	
 	optECS = new gcn::RadioButton("Full ECS", "radiochipsetgroup");
 	optECS->setId("Full ECS");
 	optECS->addActionListener(chipsetButtonActionListener);
@@ -220,10 +256,18 @@ void InitPanelChipset(const struct _ConfigCategory& category)
 	chkNTSC->setId("NTSC");
 	chkNTSC->addActionListener(ntscButtonActionListener);
 
-	lblChipset = new gcn::Label("Extra:");
+	chkCycleExact = new gcn::CheckBox("Cycle Exact (Full)");
+	chkCycleExact->setId("chkCycleExact");
+	chkCycleExact->addActionListener(cycleExactActionListener);
+
+	chkMemoryCycleExact = new gcn::CheckBox("Cycle Exact (DMA/Memory)");
+	chkMemoryCycleExact->setId("chkMemoryCycleExact");
+	chkMemoryCycleExact->addActionListener(memoryCycleExactActionListener);
+
+	lblChipset = new gcn::Label("Chipset Extra:");
 	lblChipset->setAlignment(gcn::Graphics::RIGHT);
 	cboChipset = new gcn::DropDown(&chipsetList);
-	cboChipset->setSize(100, cboChipset->getHeight());
+	cboChipset->setSize(120, cboChipset->getHeight());
 	cboChipset->setBaseColor(gui_baseCol);
 	cboChipset->setBackgroundColor(colTextboxBackground);
 	cboChipset->setId("ChipsetExtra");
@@ -234,13 +278,16 @@ void InitPanelChipset(const struct _ConfigCategory& category)
 	grpChipset->add(optOCS, 10, 10);
 	grpChipset->add(optECSAgnus, 10, 40);
 	grpChipset->add(optECS, 10, 70);
-	grpChipset->add(optAGA, 10, 100);
-	grpChipset->add(chkNTSC, 10, 140);
-	grpChipset->add(lblChipset, 145, 10);
-	grpChipset->add(cboChipset, 145 + lblChipset->getWidth() + 10, 10);
+	grpChipset->add(optAGA, 165, 10);
+	grpChipset->add(optECSDenise, 165, 40);
+	grpChipset->add(chkNTSC, 165, 70);
+	grpChipset->add(chkCycleExact, 10, 120);
+	grpChipset->add(chkMemoryCycleExact, 10, 150);
+	grpChipset->add(lblChipset, 80, 180);
+	grpChipset->add(cboChipset, 80 + lblChipset->getWidth() + 10, 180);
 
 	grpChipset->setMovable(false);
-	grpChipset->setSize(optOCS->getWidth() + 125 + lblChipset->getWidth() + cboChipset->getWidth(), 205);
+	grpChipset->setSize(350, 300);
 	grpChipset->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpChipset->setBaseColor(gui_baseCol);
 
@@ -328,14 +375,19 @@ void ExitPanelChipset()
 {
 	delete optOCS;
 	delete optECSAgnus;
+	delete optECSDenise;
 	delete optECS;
 	delete optAGA;
 	delete chkNTSC;
+	delete chkCycleExact;
+	delete chkMemoryCycleExact;
 	delete lblChipset;
 	delete cboChipset;
 	delete grpChipset;
 	delete chipsetButtonActionListener;
 	delete ntscButtonActionListener;
+	delete cycleExactActionListener;
+	delete memoryCycleExactActionListener;
 	delete chipsetActionListener;
 
 	delete optBlitNormal;
@@ -375,12 +427,16 @@ void RefreshPanelChipset()
 		optOCS->setSelected(true);
 	else if (changed_prefs.chipset_mask == CSMASK_ECS_AGNUS)
 		optECSAgnus->setSelected(true);
+	else if (changed_prefs.chipset_mask == CSMASK_ECS_DENISE)
+		optECSDenise->setSelected(true);
 	else if (changed_prefs.chipset_mask == (CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE))
 		optECS->setSelected(true);
 	else if (changed_prefs.chipset_mask == (CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE | CSMASK_AGA))
 		optAGA->setSelected(true);
 
 	chkNTSC->setSelected(changed_prefs.ntscmode);
+	chkCycleExact->setSelected(changed_prefs.cpu_cycle_exact);
+	chkMemoryCycleExact->setSelected(changed_prefs.cpu_memory_cycle_exact);
 
 	if (changed_prefs.immediate_blits)
 		optBlitImmed->setSelected(true);
