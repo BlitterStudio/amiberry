@@ -1047,6 +1047,7 @@ static uae_u8 ReadCIAA (unsigned int addr, uae_u32 *flags)
 	}
 	case 1:
 		tmp = (ciaaprb & ciaadrb) | (ciaadrb ^ 0xff);
+		tmp = handle_parport_joystick (0, tmp);
 		// PBON
 		if (ciaacrb & 2) {
 			int pb7 = 0;
