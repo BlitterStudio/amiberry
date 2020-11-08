@@ -1448,25 +1448,25 @@ void read_inputdevice_config (struct uae_prefs *pr, const TCHAR *option, TCHAR *
 		if (pr->input_selected_setting < 0 || pr->input_selected_setting > MAX_INPUT_SETTINGS)
 			pr->input_selected_setting = 0;
 	}
-	if (!_tcsicmp(p, _T("joymouse_speed_analog")))
+	if (!_tcsicmp (p, _T("joymouse_speed_analog")))
 		pr->input_joymouse_multiplier = _tstol(value);
-	if (!_tcsicmp(p, _T("joymouse_speed_digital")))
+	if (!_tcsicmp (p, _T("joymouse_speed_digital")))
 		pr->input_joymouse_speed = _tstol(value);
-	if (!_tcsicmp(p, _T("joystick_deadzone")))
+	if (!_tcsicmp (p, _T("joystick_deadzone")))
 		pr->input_joystick_deadzone = _tstol(value);
-	if (!_tcsicmp(p, _T("joymouse_deadzone")))
+	if (!_tcsicmp (p, _T("joymouse_deadzone")))
 		pr->input_joymouse_deadzone = _tstol(value);
-	if (!_tcsicmp(p, _T("mouse_speed")))
+	if (!_tcsicmp (p, _T("mouse_speed")))
 		pr->input_mouse_speed = _tstol(value);
-	if (!_tcsicmp(p, _T("autofire")))
+	if (!_tcsicmp (p, _T("autofire")))
 		pr->input_autofire_linecnt = _tstol(value) * 312;
-	if (!_tcsicmp(p, _T("autofire_speed")))
+	if (!_tcsicmp (p, _T("autofire_speed")))
 		pr->input_autofire_linecnt = _tstol(value);
-	if (!_tcsicmp(p, _T("analog_joystick_multiplier")))
+	if (!_tcsicmp (p, _T("analog_joystick_multiplier")))
 		pr->input_analog_joystick_mult = _tstol(value);
-	if (!_tcsicmp(p, _T("analog_joystick_offset")))
+	if (!_tcsicmp (p, _T("analog_joystick_offset")))
 		pr->input_analog_joystick_offset = _tstol(value);
-	if (!_tcsicmp(p, _T("autoswitch")))
+	if (!_tcsicmp (p, _T("autoswitch")))
 		pr->input_autoswitch = _tstol(value);
 	if (!_tcsicmp (p, _T("keyboard_type"))) {
 		cfgfile_strval (p, value, p, &pr->input_keyboard_type, kbtypes, 0);
@@ -2773,6 +2773,7 @@ static void mouseupdate (int pct, bool vsync)
 				pc_mouse_buttons[i] &= ~4;
 			x86_mouse(i, v1, v2, v3, pc_mouse_buttons[i]);
 #endif
+
 			if (mouse_frame_x[i] - mouse_x[i] > max) {
 				mouse_x[i] = mouse_frame_x[i] - max;
 				mouse_x[i] &= MOUSEXY_MAX - 1;
@@ -2876,7 +2877,7 @@ static void joymousecounter (int joy)
 
 static int inputread;
 
-static void inputdevice_read (void)
+static void inputdevice_read(void)
 {
 	for (;;) {
 		int got = handle_msgpump();
@@ -3275,7 +3276,7 @@ static uae_u16 handle_joystick_potgor (uae_u16 potgor)
 			if (button)
 				potgor &= ~0x1000;
 #endif
-		} else  {
+		} else {
 
 			potgor &= ~p5dat;
 			if (pot_cap[i][0] > 100)
@@ -3757,6 +3758,7 @@ static bool inputdevice_handle_inputcode_immediate(int code, int state)
 	return false;
 }
 
+
 void inputdevice_add_inputcode (int code, int state, const TCHAR *s)
 {
 	for (int i = 0; i < MAX_PENDING_EVENTS; i++) {
@@ -3999,14 +4001,21 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 		gui_display(-1);
 		setsystime();
 		break;
-	//case AKS_SCREENSHOT_FILE:
-	//	if (state > 1) {
-	//		screenshot(3, 1);
-	//	}
-	//	else {
-	//		screenshot(1, 1);
-	//	}
-	//	break;
+	case AKS_SCREENSHOT_FILE:
+		//if (state > 1) {
+		//	screenshot(-1, 3, 1);
+		//} else {
+		//	screenshot(-1, 1, 1);
+		//}
+		break;
+	case AKS_SCREENSHOT_CLIPBOARD:
+		//screenshot(-1, 0, 1);
+		break;
+#ifdef AVIOUTPUT
+	case AKS_VIDEORECORD:
+		AVIOutput_Toggle (newstate, true);
+		break;
+#endif
 #ifdef ACTION_REPLAY
 	case AKS_FREEZEBUTTON:
 		action_replay_freeze ();
@@ -4080,9 +4089,9 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 		changed_prefs.cdslots[0].name[0] = 0;
 		changed_prefs.cdslots[0].inuse = false;
 		break;
-	//case AKS_IRQ7:
+	case AKS_IRQ7:
 	//	NMI_delayed();
-	//	break;
+		break;
 	case AKS_PAUSE:
 		pausemode(newstate > 0 ? 1 : newstate);
 		break;
@@ -4092,20 +4101,20 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 		autopause = 1;
 		break;
 	case AKS_WARP:
-		warpmode(newstate);
+		warpmode (newstate);
 		break;
 	case AKS_INHIBITSCREEN:
 		toggle_inhibit_frame(IHF_SCROLLLOCK);
 		break;
-	//case AKS_STATEREWIND:
+	case AKS_STATEREWIND:
 	//	savestate_dorewind(-2);
-	//	break;
-	//case AKS_STATECURRENT:
+		break;
+	case AKS_STATECURRENT:
 	//	savestate_dorewind(-1);
-	//	break;
-	//case AKS_STATECAPTURE:
+		break;
+	case AKS_STATECAPTURE:
 	//	savestate_capture(1);
-	//	break;
+		break;
 	case AKS_VOLDOWN:
 		sound_volume (newstate <= 0 ? -1 : 1);
 		break;
@@ -4131,32 +4140,32 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 		uae_reset (0, 0);
 		break;
 	case AKS_HARDRESET:
-		uae_reset(1, 1);
+		uae_reset (1, 1);
 		break;
-	//case AKS_STATESAVEQUICK:
-	//case AKS_STATESAVEQUICK1:
-	//case AKS_STATESAVEQUICK2:
-	//case AKS_STATESAVEQUICK3:
-	//case AKS_STATESAVEQUICK4:
-	//case AKS_STATESAVEQUICK5:
-	//case AKS_STATESAVEQUICK6:
-	//case AKS_STATESAVEQUICK7:
-	//case AKS_STATESAVEQUICK8:
-	//case AKS_STATESAVEQUICK9:
-	//	savestate_quick((code - AKS_STATESAVEQUICK) / 2, 1);
-	//	break;
-	//case AKS_STATERESTOREQUICK:
-	//case AKS_STATERESTOREQUICK1:
-	//case AKS_STATERESTOREQUICK2:
-	//case AKS_STATERESTOREQUICK3:
-	//case AKS_STATERESTOREQUICK4:
-	//case AKS_STATERESTOREQUICK5:
-	//case AKS_STATERESTOREQUICK6:
-	//case AKS_STATERESTOREQUICK7:
-	//case AKS_STATERESTOREQUICK8:
-	//case AKS_STATERESTOREQUICK9:
-	//	savestate_quick((code - AKS_STATERESTOREQUICK) / 2, 0);
-	//	break;
+	case AKS_STATESAVEQUICK:
+	case AKS_STATESAVEQUICK1:
+	case AKS_STATESAVEQUICK2:
+	case AKS_STATESAVEQUICK3:
+	case AKS_STATESAVEQUICK4:
+	case AKS_STATESAVEQUICK5:
+	case AKS_STATESAVEQUICK6:
+	case AKS_STATESAVEQUICK7:
+	case AKS_STATESAVEQUICK8:
+	case AKS_STATESAVEQUICK9:
+		//savestate_quick ((code - AKS_STATESAVEQUICK) / 2, 1);
+		break;
+	case AKS_STATERESTOREQUICK:
+	case AKS_STATERESTOREQUICK1:
+	case AKS_STATERESTOREQUICK2:
+	case AKS_STATERESTOREQUICK3:
+	case AKS_STATERESTOREQUICK4:
+	case AKS_STATERESTOREQUICK5:
+	case AKS_STATERESTOREQUICK6:
+	case AKS_STATERESTOREQUICK7:
+	case AKS_STATERESTOREQUICK8:
+	case AKS_STATERESTOREQUICK9:
+		//savestate_quick ((code - AKS_STATERESTOREQUICK) / 2, 0);
+		break;
 	case AKS_TOGGLEDEFAULTSCREEN:
 		toggle_fullscreen(-1);
 		break;
@@ -4185,20 +4194,22 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 		changed_prefs.sound_interpol++;
 		if (changed_prefs.sound_interpol > 4)
 			changed_prefs.sound_interpol = 0;
-		set_config_changed();
+		set_config_changed ();
 		break;
+	case AKS_ENTERDEBUGGER:
+		//activate_debugger ();
+		//break;
 	case AKS_STATESAVEDIALOG:
 		if (s) {
 			savestate_initsave(s);
-			save_state(savestate_fname, _T("Description!"));
-		}
-		else {
-			gui_display(5);
+			save_state (savestate_fname, _T("Description!"));
+		} else {
+			gui_display (5);
 		}
 		break;
 	case AKS_STATERESTOREDIALOG:
 		if (s) {
-			savestate_initsave(s);
+			savestate_initsave (s);
 			savestate_state = STATE_DORESTORE;
 		} else {
 			gui_display (4);
@@ -4222,13 +4233,95 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 			}
 		}
 		break;
+	case AKS_DISKSWAPPER_NEXT:
+		//swapperslot++;
+		//if (swapperslot >= MAX_SPARE_DRIVES || currprefs.dfxlist[swapperslot][0] == 0)
+		//	swapperslot = 0;
+		break;
+	case AKS_DISKSWAPPER_PREV:
+		//swapperslot--;
+		//if (swapperslot < 0)
+		//	swapperslot = MAX_SPARE_DRIVES - 1;
+		//while (swapperslot > 0) {
+		//	if (currprefs.dfxlist[swapperslot][0])
+		//		break;
+		//	swapperslot--;
+		//}
+		break;
+	case AKS_DISKSWAPPER_INSERT0:
+	case AKS_DISKSWAPPER_INSERT1:
+	case AKS_DISKSWAPPER_INSERT2:
+	case AKS_DISKSWAPPER_INSERT3:
+		//_tcscpy (changed_prefs.floppyslots[code - AKS_DISKSWAPPER_INSERT0].df, currprefs.dfxlist[swapperslot]);
+		//set_config_changed ();
+		break;
 	case AKS_INPUT_CONFIG_1:
 	case AKS_INPUT_CONFIG_2:
 	case AKS_INPUT_CONFIG_3:
 	case AKS_INPUT_CONFIG_4:
-		changed_prefs.input_selected_setting = currprefs.input_selected_setting = code - AKS_INPUT_CONFIG_1;
-		inputdevice_updateconfig (&changed_prefs, &currprefs);
+		//changed_prefs.input_selected_setting = currprefs.input_selected_setting = code - AKS_INPUT_CONFIG_1;
+		//inputdevice_updateconfig (&changed_prefs, &currprefs);
 		break;
+	case AKS_DISK_PREV0:
+	case AKS_DISK_PREV1:
+	case AKS_DISK_PREV2:
+	case AKS_DISK_PREV3:
+		//disk_prevnext (code - AKS_DISK_PREV0, -1);
+		break;
+	case AKS_DISK_NEXT0:
+	case AKS_DISK_NEXT1:
+	case AKS_DISK_NEXT2:
+	case AKS_DISK_NEXT3:
+		//disk_prevnext (code - AKS_DISK_NEXT0, 1);
+		break;
+	case AKS_RTG_PREV:
+		//toggle_rtg(0, -1);
+		break;
+	case AKS_RTG_NEXT:
+		//toggle_rtg(0, MAX_RTG_BOARDS + 1);
+		break;
+	case AKS_RTG_C:
+	case AKS_RTG_0:
+	case AKS_RTG_1:
+	case AKS_RTG_2:
+	case AKS_RTG_3:
+		//toggle_rtg(0, code - AKS_RTG_C);
+		break;
+	case AKS_VIDEOGRAB_RESTART:
+		//getsetpositionvideograb(0);
+		//pausevideograb(0);
+		break;
+	case AKS_VIDEOGRAB_PAUSE:
+		//pausevideograb(-1);
+		break;
+	case AKS_VIDEOGRAB_PREV:
+	{
+		//pausevideograb(1);
+		//uae_s64 pos = getsetpositionvideograb(-1);
+		//pos--;
+		//if (pos >= 0)
+		//	getsetpositionvideograb(pos);
+		break;
+	}
+	case AKS_VIDEOGRAB_NEXT:
+	{
+		//pausevideograb(1);
+		//uae_s64 pos = getsetpositionvideograb(-1);
+		//pos++;
+		//getsetpositionvideograb(pos);
+		break;
+	}
+
+#ifdef CDTV
+	case AKS_CDTV_FRONT_PANEL_STOP:
+	case AKS_CDTV_FRONT_PANEL_PLAYPAUSE:
+	case AKS_CDTV_FRONT_PANEL_PREV:
+	case AKS_CDTV_FRONT_PANEL_NEXT:
+	case AKS_CDTV_FRONT_PANEL_REW:
+	case AKS_CDTV_FRONT_PANEL_FF:
+		cdtv_front_panel (code - AKS_CDTV_FRONT_PANEL_STOP);
+	break;
+#endif
 #ifdef AMIBERRY
 	case AKS_MOUSEMAP_PORT0_LEFT:
 		changed_prefs.jports[0].mousemap ^= 1 << 0;
@@ -4273,16 +4366,6 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 		host_poweroff = true;
 		break;
 #endif
-#ifdef CDTV
-	case AKS_CDTV_FRONT_PANEL_STOP:
-	case AKS_CDTV_FRONT_PANEL_PLAYPAUSE:
-	case AKS_CDTV_FRONT_PANEL_PREV:
-	case AKS_CDTV_FRONT_PANEL_NEXT:
-	case AKS_CDTV_FRONT_PANEL_REW:
-	case AKS_CDTV_FRONT_PANEL_FF:
-		cdtv_front_panel (code - AKS_CDTV_FRONT_PANEL_STOP);
-	break;
-#endif
 	}
 end:
 #ifndef AMIBERRY
@@ -4294,7 +4377,7 @@ end:
 	return false;
 }
 
-void inputdevice_handle_inputcode (void)
+void inputdevice_handle_inputcode(void)
 {
 	bool got = false;
 	for (auto & i : inputcode_pending) {
@@ -4919,7 +5002,7 @@ static int switchdevice (struct uae_input_device *id, int num, bool buttonmode)
 	}
 	/* "GamePorts" switch if in GamePorts mode or Input mode and GamePorts port was not NONE */
 	if (currprefs.input_selected_setting == GAMEPORT_INPUT_SETTINGS || currprefs.jports[newport].id != JPORT_NONE) {
-		if ((num == 0 || num == 1)) {
+		if ((num == 0 || num == 1) && !JSEM_ISCUSTOM(newport, &currprefs)) {
 			bool issupermouse = false;
 			int om = jsem_ismouse (num, &currprefs);
 			int om1 = jsem_ismouse (0, &currprefs);
@@ -5492,7 +5575,7 @@ static int isdigitalbutton (int ei)
 	}
 	return 0;
 }
-	
+
 #ifndef AMIBERRY
 static int islightpen (int ei)
 {
@@ -5507,7 +5590,7 @@ static int islightpen (int ei)
 	return 0;
 }
 #endif
-	
+
 static void isqualifier (int ei)
 {
 }
@@ -6647,8 +6730,8 @@ static void matchdevices(struct uae_prefs *p, struct inputdevice_functions *inf,
 		bool fullmatch = l == 0;
 		int match = -1;
 		for (i = 0; i < inf->get_num (); i++) {
-			const TCHAR* aname1 = inf->get_friendlyname(i);
-			const TCHAR* aname2 = inf->get_uniquename(i);
+			const TCHAR* aname1 = inf->get_friendlyname (i);
+			const TCHAR* aname2 = inf->get_uniquename (i);
 			for (j = 0; j < MAX_INPUT_DEVICES; j++) {
 				if (aname2 && uid[j].configname) {
 					bool matched = false;
@@ -8333,7 +8416,7 @@ void setmousestate (int mouse, int axis, int data, int isabs)
 	oldm_p = &oldm_axis[mouse][axis];
 	if (!isabs) {
 		// eat relative movements while in mousehack mode
-		if (currprefs.input_tablet == TABLET_MOUSEHACK && mousehack_alive () && axis < 2) {
+		if (currprefs.input_tablet == TABLET_MOUSEHACK && mousehack_alive() && axis < 2) {
 			return;
 		}
 		*oldm_p = *mouse_p;
@@ -8352,7 +8435,7 @@ void setmousestate (int mouse, int axis, int data, int isabs)
 		}
 		if (axis)
 			mousehack_helper (mice2[mouse].buttonmask);
-		if (currprefs.input_tablet == TABLET_MOUSEHACK && mousehack_alive () && axis < 2) {
+		if (currprefs.input_tablet == TABLET_MOUSEHACK && mousehack_alive() && axis < 2) {
 			return;
 	}
 	}
@@ -8367,7 +8450,7 @@ void setmousestate (int mouse, int axis, int data, int isabs)
 			v = -v;
 
 		handle_input_event_extra(id->eventid[ID_AXIS_OFFSET + axis][i], v, 0, HANDLE_IE_FLAG_CANSTOPPLAYBACK | extraflags, extrastate);
-  }
+	}
 }
 
 int getmousestate (int joy)
