@@ -258,7 +258,6 @@ void cd_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	TCHAR tmp[MAX_DPATH];
 	char config_path[MAX_DPATH];
 	char whd_config[255];
-	char hardware_settings[4096];
 
 	get_configuration_path(config_path, MAX_DPATH);
 
@@ -398,7 +397,7 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 
 	auto use_slave_libs = false;
 
-	write_log("WHDBooter Launched");
+	write_log("WHDBooter Launched\n");
 	strcpy(selected_slave, "");
 
 	get_configuration_path(config_path, MAX_DPATH);
@@ -681,10 +680,10 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	write_log("WHDBooter - Host: Mouse 2        : %s  \n", amiberry_options.default_mouse2);
 #endif
 
-	// so remember, we already loaded a .uae config, so we dont need to do the below manual setup for hardware
+	// so remember, we already loaded a .uae config, so we don't need to do the below manual setup for hardware
 	if (zfile_exists(uae_config))
 	{
-		write_log("WHDBooter -  %s found; ignoring WHD Quickstart setup.\n", uae_config);
+		write_log("WHDBooter - %s found; ignoring WHD Quickstart setup.\n", uae_config);
 		return;
 	}
 
