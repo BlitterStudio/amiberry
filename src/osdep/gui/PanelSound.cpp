@@ -460,7 +460,7 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	cboStereoDelay->setSize(150, cboStereoDelay->getHeight());
 	cboStereoDelay->setBaseColor(gui_baseCol);
 	cboStereoDelay->setBackgroundColor(colTextboxBackground);
-	cboStereoDelay->setId("cboSeparation");
+	cboStereoDelay->setId("cboStereoDelay");
 	cboStereoDelay->addActionListener(sound_action_listener);
 
 	lblPaulaVol = new gcn::Label("Paula Volume:");

@@ -233,27 +233,27 @@ void InitPanelChipset(const struct _ConfigCategory& category)
 	memoryCycleExactActionListener = new MemoryCycleExactActionListener();
 
 	optOCS = new gcn::RadioButton("OCS", "radiochipsetgroup");
-	optOCS->setId("OCS");
+	optOCS->setId("optOCS");
 	optOCS->addActionListener(chipsetButtonActionListener);
 
 	optECSAgnus = new gcn::RadioButton("ECS Agnus", "radiochipsetgroup");
-	optECSAgnus->setId("ECS Agnus");
+	optECSAgnus->setId("optECSAgnus");
 	optECSAgnus->addActionListener(chipsetButtonActionListener);
 
 	optECSDenise = new gcn::RadioButton("ECS Denise", "radiochipsetgroup");
-	optECSDenise->setId("ECS Denise");
+	optECSDenise->setId("optECSDenise");
 	optECSDenise->addActionListener(chipsetButtonActionListener);
 	
 	optECS = new gcn::RadioButton("Full ECS", "radiochipsetgroup");
-	optECS->setId("Full ECS");
+	optECS->setId("optFullECS");
 	optECS->addActionListener(chipsetButtonActionListener);
 
 	optAGA = new gcn::RadioButton("AGA", "radiochipsetgroup");
-	optAGA->setId("AGA");
+	optAGA->setId("optAGA");
 	optAGA->addActionListener(chipsetButtonActionListener);
 
 	chkNTSC = new gcn::CheckBox("NTSC");
-	chkNTSC->setId("NTSC");
+	chkNTSC->setId("chkNTSC");
 	chkNTSC->addActionListener(ntscButtonActionListener);
 
 	chkCycleExact = new gcn::CheckBox("Cycle Exact (Full)");

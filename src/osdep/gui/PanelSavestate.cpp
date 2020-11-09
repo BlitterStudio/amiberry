@@ -177,7 +177,7 @@ void InitPanelSavestate(const struct _ConfigCategory& category)
 
 	grpScreenshot = new gcn::Window("State screen");
 	grpScreenshot->setMovable(false);
-	grpScreenshot->setSize(300, 300);
+	grpScreenshot->setSize(320, 320);
 	grpScreenshot->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpScreenshot->setBaseColor(gui_baseCol);
 
