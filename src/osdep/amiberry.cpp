@@ -306,12 +306,74 @@ uae_u8* target_load_keyfile(struct uae_prefs* p, const char* path, int* sizep, c
 	return nullptr;
 }
 
+std::vector<std::string> split_command(const std::string& command)
+{
+	std::vector<std::string> word_vector;
+	std::size_t prev = 0, pos;
+	while ((pos = command.find_first_of(' ', prev)) != std::string::npos)
+	{
+		if (pos > prev)
+			word_vector.push_back(command.substr(prev, pos - prev));
+		prev = pos + 1;
+	}
+	if (prev < command.length())
+		word_vector.push_back(command.substr(prev, std::string::npos));
+
+	return word_vector;
+}
+
+void replace(std::string& str, const std::string& from, const std::string& to)
+{
+	const auto start_pos = str.find(from);
+	if (start_pos == std::string::npos)
+		return;
+	str.replace(start_pos, from.length(), to);
+}
+
 void target_execute(const char* command)
 {
 	set_mouse_grab(false);
+
+	write_log("Target_execute received: %s\n", command);
+	const std::string cmd_string = command;
+	auto cmd_split = split_command(cmd_string);
+
+	for (auto i = 0; i < cmd_split.size(); ++i)
+	{
+		if (i > 0)
+		{
+			const auto found = cmd_split[i].find(':');
+			if (found != std::string::npos)
+			{
+				auto chunk = cmd_split[i].substr(0, found);
+				for (auto mount = 0; mount < currprefs.mountitems; mount++)
+				{
+					if (currprefs.mountconfig[mount].ci.type == UAEDEV_DIR)
+					{
+						if (_tcsicmp(currprefs.mountconfig[mount].ci.volname, chunk.c_str()) == 0
+							|| _tcsicmp(currprefs.mountconfig[mount].ci.devname, chunk.c_str()) == 0)
+						{
+							std::string tmp = currprefs.mountconfig[mount].ci.rootdir;
+							chunk += ':';
+							replace(cmd_split[i], chunk, tmp);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	std::string cmd_result;
+	for (const auto& i : cmd_split)
+	{
+		cmd_result.append(i);
+		cmd_result.append(" ");
+	}
+	
 	try
 	{
-		system(command);
+		write_log("Executing: %s\n", cmd_result.c_str());
+		system(cmd_result.c_str());
 	}
 	catch (...)
 	{
