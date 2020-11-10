@@ -369,6 +369,8 @@ void target_execute(const char* command)
 		cmd_result.append(i);
 		cmd_result.append(" ");
 	}
+	// Ensure this runs in the background, otherwise we'll block the emulator until it returns
+	cmd_result.append(" &");
 	
 	try
 	{
