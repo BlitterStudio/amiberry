@@ -134,37 +134,64 @@ class CycleExactActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		changed_prefs.cpu_cycle_exact = chkCycleExact->isSelected();
-		RefreshPanelQuickstart();
-	}
-};
-static CycleExactActionListener* cycleExactActionListener;
-
-class MemoryCycleExactActionListener : public gcn::ActionListener
-{
-public:
-	void action(const gcn::ActionEvent& actionEvent) override
-	{
-		changed_prefs.cpu_memory_cycle_exact = changed_prefs.blitter_cycle_exact = chkMemoryCycleExact->isSelected();
-		if (chkMemoryCycleExact->isSelected())
+		auto n2 = chkMemoryCycleExact->isSelected();
+		auto n1 = chkCycleExact->isSelected();
+		if (changed_prefs.cpu_cycle_exact != n1 || changed_prefs.cpu_memory_cycle_exact != n2)
 		{
-			if (changed_prefs.cpu_model == 68000)
-				changed_prefs.cpu_compatible = true;
-			if (changed_prefs.cpu_model <= 68030)
-				changed_prefs.m68k_speed = 0;
-			if (changed_prefs.immediate_blits)
+			if (actionEvent.getSource() == chkMemoryCycleExact)
 			{
-				changed_prefs.immediate_blits = false;
-				optBlitImmed->setSelected(false);
+				if (n2)
+				{
+					if (changed_prefs.cpu_model < 68020)
+					{
+						n1 = true;
+						chkCycleExact->setSelected(n1);
+					}
+				}
+				else
+				{
+					n1 = false;
+					chkCycleExact->setSelected(n1);
+				}
 			}
-			changed_prefs.gfx_framerate = 1;
-			changed_prefs.cachesize = 0;
+			else if (actionEvent.getSource() == chkMemoryCycleExact)
+			{
+				if (n1)
+				{
+					n2 = true;
+					chkMemoryCycleExact->setSelected(n2);
+				}
+				else
+				{
+					if (changed_prefs.cpu_model < 68020)
+					{
+						n2 = false;
+						chkMemoryCycleExact->setSelected(n2);
+					}
+				}
+			}
+			changed_prefs.cpu_cycle_exact = n1;
+			changed_prefs.cpu_memory_cycle_exact = changed_prefs.blitter_cycle_exact = n2;
+			if (n2)
+			{
+				if (changed_prefs.cpu_model == 68000)
+					changed_prefs.cpu_compatible = true;
+				if (changed_prefs.cpu_model <= 68030)
+					changed_prefs.m68k_speed = 0;
+				if (changed_prefs.immediate_blits)
+				{
+					changed_prefs.immediate_blits = false;
+					optBlitImmed->setSelected(false);
+				}
+				changed_prefs.gfx_framerate = 1;
+				changed_prefs.cachesize = 0;
+			}
 		}
 		
 		RefreshPanelQuickstart();
 	}
 };
-static MemoryCycleExactActionListener* memoryCycleExactActionListener;
+static CycleExactActionListener* cycleExactActionListener;
 
 class NTSCButtonActionListener : public gcn::ActionListener
 {
@@ -230,7 +257,6 @@ void InitPanelChipset(const struct _ConfigCategory& category)
 	chipsetButtonActionListener = new ChipsetButtonActionListener();
 	ntscButtonActionListener = new NTSCButtonActionListener();
 	cycleExactActionListener = new CycleExactActionListener();
-	memoryCycleExactActionListener = new MemoryCycleExactActionListener();
 
 	optOCS = new gcn::RadioButton("OCS", "radiochipsetgroup");
 	optOCS->setId("optOCS");
@@ -262,7 +288,7 @@ void InitPanelChipset(const struct _ConfigCategory& category)
 
 	chkMemoryCycleExact = new gcn::CheckBox("Cycle Exact (DMA/Memory)");
 	chkMemoryCycleExact->setId("chkMemoryCycleExact");
-	chkMemoryCycleExact->addActionListener(memoryCycleExactActionListener);
+	chkMemoryCycleExact->addActionListener(cycleExactActionListener);
 
 	lblChipset = new gcn::Label("Chipset Extra:");
 	lblChipset->setAlignment(gcn::Graphics::RIGHT);
@@ -387,7 +413,6 @@ void ExitPanelChipset()
 	delete chipsetButtonActionListener;
 	delete ntscButtonActionListener;
 	delete cycleExactActionListener;
-	delete memoryCycleExactActionListener;
 	delete chipsetActionListener;
 
 	delete optBlitNormal;
