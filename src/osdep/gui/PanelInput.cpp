@@ -48,6 +48,7 @@ static gcn::Label* lblMouseSpeed;
 static gcn::Label* lblMouseSpeedInfo;
 static gcn::Slider* sldMouseSpeed;
 static gcn::CheckBox* chkMouseHack;
+static gcn::CheckBox* chkInputAutoswitch;
 
 class StringListModel : public gcn::ListModel
 {
@@ -247,11 +248,15 @@ public:
 #endif
 			changed_prefs.input_tablet = chkMouseHack->isSelected() ? TABLET_MOUSEHACK : TABLET_OFF;
 		}
+
+		else if (actionEvent.getSource() == chkInputAutoswitch)
+		{
+			changed_prefs.input_autoswitch = chkInputAutoswitch->isSelected();
+		}
 	}
 };
 
 static InputActionListener* inputActionListener;
-
 
 void InitPanelInput(const struct _ConfigCategory& category)
 {
@@ -404,9 +409,13 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	sldMouseSpeed->addActionListener(inputActionListener);
 	lblMouseSpeedInfo = new gcn::Label(".25");
 
-	chkMouseHack = new gcn::CheckBox("Enable mousehack");
-	chkMouseHack->setId("MouseHack");
+	chkMouseHack = new gcn::CheckBox("Virtual mouse driver");
+	chkMouseHack->setId("chkMouseHack");
 	chkMouseHack->addActionListener(inputActionListener);
+
+	chkInputAutoswitch = new gcn::CheckBox("Mouse/Joystick autoswitching");
+	chkInputAutoswitch->setId("chkInputAutoswitch");
+	chkInputAutoswitch->addActionListener(inputActionListener);
 
 	auto posY = DISTANCE_BORDER;
 	category.panel->add(lblPort0, DISTANCE_BORDER, posY);
@@ -425,6 +434,9 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	category.panel->add(cboPort1mode, cboPort1Autofire->getX() + cboPort1Autofire->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += cboPort1Autofire->getHeight() + DISTANCE_NEXT_Y * 2;
 
+	category.panel->add(chkInputAutoswitch, cboPort1Autofire->getX(), posY);
+	posY += chkInputAutoswitch->getHeight() + DISTANCE_NEXT_Y * 2;
+	
 	category.panel->add(lblParallelPortAdapter, DISTANCE_BORDER, posY);
 	posY += lblParallelPortAdapter->getHeight() + DISTANCE_NEXT_Y;
 	
@@ -463,7 +475,6 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	RefreshPanelInput();
 }
 
-
 void ExitPanelInput()
 {
 	delete lblPort0;
@@ -497,10 +508,10 @@ void ExitPanelInput()
 	delete lblMouseSpeedInfo;
 
 	delete chkMouseHack;
+	delete chkInputAutoswitch;
 
 	delete inputActionListener;
 }
-
 
 void RefreshPanelInput()
 {
@@ -605,7 +616,8 @@ void RefreshPanelInput()
 		}
 	}
 
-	chkMouseHack->setSelected(changed_prefs.input_tablet == TABLET_MOUSEHACK);
+	chkMouseHack->setSelected(changed_prefs.input_tablet > 0);
+	chkInputAutoswitch->setSelected(changed_prefs.input_autoswitch);
 }
 
 bool HelpPanelInput(std::vector<std::string>& helptext)
