@@ -271,14 +271,7 @@ static int get_mouse_widget_type(const int mouse, const int num, TCHAR* name, ua
 
 static void read_mouse()
 {
-	if (currprefs.input_tablet > TABLET_OFF)
-	{
-		// Mousehack active
-		int x, y;
-		SDL_GetMouseState(&x, &y);
-		setmousestate(0, 0, x, 1);
-		setmousestate(0, 1, y, 1);
-	}
+
 }
 
 
