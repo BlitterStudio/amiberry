@@ -352,7 +352,7 @@ static int native_dos_op(TrapContext *ctx, uae_u32 mode, uae_u32 p1, uae_u32 p2,
 static uae_u32 emulib_execute_on_host(TrapContext* ctx, uaecptr name)
 {
 	char real_name[MAX_DPATH];
-	if (trap_get_string(ctx, real_name, name, sizeof real_name) >= sizeof real_name)
+	if (trap_get_string(ctx, real_name, name, sizeof real_name) >= static_cast<int>(sizeof real_name))
 		return 0; /* ENAMETOOLONG */
 
 	target_execute(real_name);

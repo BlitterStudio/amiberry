@@ -338,7 +338,7 @@ void target_execute(const char* command)
 	const std::string cmd_string = command;
 	auto cmd_split = split_command(cmd_string);
 
-	for (auto i = 0; i < cmd_split.size(); ++i)
+	for (unsigned int i = 0; i < cmd_split.size(); ++i)
 	{
 		if (i > 0)
 		{
