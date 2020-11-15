@@ -66,7 +66,7 @@ public:
 		return values.size();
 	}
 
-	int AddElement(const char* Elem)
+	int add_element(const char* Elem)
 	{
 		values.emplace_back(Elem);
 		return 0;
@@ -263,7 +263,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	if (ctrlPortList.getNumberOfElements() == 0)
 	{
 		auto idx = 0;
-		ctrlPortList.AddElement("None");
+		ctrlPortList.add_element("None");
 		portListIDs[idx] = JPORT_NONE;
 
 		int i;
@@ -272,7 +272,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 			const auto* const device_name = inputdevice_get_device_name(IDTYPE_MOUSE, i);
 			if (device_name && device_name[0])
 			{
-				ctrlPortList.AddElement(inputdevice_get_device_name(IDTYPE_MOUSE, i));
+				ctrlPortList.add_element(inputdevice_get_device_name(IDTYPE_MOUSE, i));
 				idx++;
 				portListIDs[idx] = JSEM_MICE + i;
 			}
@@ -280,7 +280,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 
 		for (i = 0; i < inputdevice_get_device_total(IDTYPE_JOYSTICK); i++)
 		{
-			ctrlPortList.AddElement(inputdevice_get_device_name(IDTYPE_JOYSTICK, i));
+			ctrlPortList.add_element(inputdevice_get_device_name(IDTYPE_JOYSTICK, i));
 			idx++;
 			portListIDs[idx] = JSEM_JOYS + i;
 		}

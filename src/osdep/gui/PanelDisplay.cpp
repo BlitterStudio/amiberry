@@ -26,7 +26,7 @@ public:
 		return values.size();
 	}
 
-	int AddElement(const char* Elem)
+	int add_element(const char* Elem)
 	{
 		values.emplace_back(Elem);
 		return 0;

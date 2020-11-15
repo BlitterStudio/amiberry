@@ -86,29 +86,38 @@ static ROMListModel* mainROMList;
 static ROMListModel* extROMList;
 static ROMListModel* cartROMList;
 
-static const TCHAR* uaeList[] = { _T("ROM disabled"), _T("Original UAE (FS + F0 ROM)"), _T("New UAE (64k + F0 ROM)") };
-static const int numRoms = 3;
-
-class UaeROMListModel : public gcn::ListModel
+class StringListModel : public gcn::ListModel
 {
+private:
+	std::vector<std::string> values;
 public:
-	UaeROMListModel()
-		= default;
+	StringListModel(const char* entries[], const int count)
+	{
+		for (auto i = 0; i < count; ++i)
+			values.emplace_back(entries[i]);
+	}
 
 	int getNumberOfElements() override
 	{
-		return numRoms;
+		return values.size();
 	}
 
-	std::string getElementAt(int i) override
+	int add_element(const char* Elem)
 	{
-		if (i < 0 || i >= numRoms)
+		values.emplace_back(Elem);
+		return 0;
+	}
+
+	std::string getElementAt(const int i) override
+	{
+		if (i < 0 || i >= static_cast<int>(values.size()))
 			return "---";
-		return uaeList[i];
+		return values[i];
 	}
 };
 
-static UaeROMListModel uaeROMList;
+const char* uaeValues[] = { "ROM disabled", "Original UAE (FS + F0 ROM)", "New UAE (64k + F0 ROM)" };
+StringListModel uaeList(uaeValues, 3);
 
 class MainROMActionListener : public gcn::ActionListener
 {
@@ -283,7 +292,7 @@ void InitPanelROM(const struct _ConfigCategory& category)
 	cmdCartROM->addActionListener(romButtonActionListener);
 
 	lblUAEROM = new gcn::Label("Advanced UAE expansion board/Boot ROM:");
-	cboUAEROM = new gcn::DropDown(&uaeROMList);
+	cboUAEROM = new gcn::DropDown(&uaeList);
 	cboUAEROM->setSize(textFieldWidth, cboUAEROM->getHeight());
 	cboUAEROM->setBaseColor(gui_baseCol);
 	cboUAEROM->setBackgroundColor(colTextboxBackground);

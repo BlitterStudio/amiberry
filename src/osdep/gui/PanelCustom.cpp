@@ -53,13 +53,13 @@ public:
 		return values.size();
 	}
 
-	int AddElement(const char* Elem)
+	int add_element(const char* Elem)
 	{
 		values.emplace_back(Elem);
 		return 0;
 	}
 
-	int SwapFirstElement(const char* Elem)
+	int swap_first_element(const char* Elem)
 	{
 		values.erase(values.begin());
 		values.emplace(values.begin(), Elem);
@@ -240,13 +240,13 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 
 	if (CustomEventList.getNumberOfElements() == 0)
 	{
-		CustomEventList.AddElement("None");
+		CustomEventList.add_element("None");
 
 		for (auto idx : RemapEventList)
 		{
 			const auto* const ie = inputdevice_get_eventinfo(idx);
 			snprintf(tmp, 255, "%s", ie->name);
-			CustomEventList.AddElement(tmp);
+			CustomEventList.add_element(tmp);
 		}
 	}
 
@@ -255,10 +255,10 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 	CustomEventList_Quit = CustomEventList;
 	CustomEventList_Reset = CustomEventList;
 
-	CustomEventList_HotKey.SwapFirstElement("None (HotKey)");
-	CustomEventList_Menu.SwapFirstElement("None (Menu)");
-	CustomEventList_Quit.SwapFirstElement("None (Quit)");
-	CustomEventList_Reset.SwapFirstElement("None (Reset)");
+	CustomEventList_HotKey.swap_first_element("None (HotKey)");
+	CustomEventList_Menu.swap_first_element("None (Menu)");
+	CustomEventList_Quit.swap_first_element("None (Quit)");
+	CustomEventList_Reset.swap_first_element("None (Reset)");
 
 	customActionListener = new CustomActionListener();
 	grpActionListener = new GroupActionListener();
