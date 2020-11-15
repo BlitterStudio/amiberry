@@ -27,10 +27,10 @@
 
 #define IHF_WINDOWHIDDEN 6
 
-#define MAX_Z3_512MB (512*1024*1024)
-#define MAX_Z3_1GB (1024*1024*1024)
-#define MAX_Z3_2GB (2048*1024*1024)
-#define MAX_Z3_4GB (4096*1024*1024)
+#define MAX_Z3_512MB (512ULL *1024*1024)
+#define MAX_Z3_1GB (1024ULL *1024*1024)
+#define MAX_Z3_2GB (2048ULL *1024*1024)
+#define MAX_Z3_4GB (4096ULL *1024*1024)
 
 extern std::string get_version_string();
 
