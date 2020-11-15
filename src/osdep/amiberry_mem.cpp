@@ -61,19 +61,19 @@ uae_u32 get_max_z3_ram()
 {
 	struct sysinfo mem_info{};
 	sysinfo(&mem_info);
-	long long total_phys_mem = mem_info.totalram;
+	unsigned long long total_phys_mem = mem_info.totalram;
 	total_phys_mem *= mem_info.mem_unit;
 
 	// Do we have more than 4GB in the system?
-	if (total_phys_mem > 4294967296LL)
+	if (total_phys_mem > MAX_Z3_4GB)
 		return MAX_Z3_4GB;
 	
 	// Do we have more than 2GB in the system?
-	if (total_phys_mem > 2147483648LL)
+	if (total_phys_mem > MAX_Z3_2GB)
 		return MAX_Z3_2GB;
 
 	// Do we have more than 1GB in the system?
-	if (total_phys_mem > 1073741824LL)
+	if (total_phys_mem > MAX_Z3_1GB)
 		return MAX_Z3_1GB;
 	
 	return MAX_Z3_512MB;
