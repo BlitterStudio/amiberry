@@ -27,11 +27,6 @@
 
 #define IHF_WINDOWHIDDEN 6
 
-#define MAX_Z3_512MB (512*1024*1024)
-#define MAX_Z3_1GB (1024*1024*1024)
-#define MAX_Z3_2GB (2048*1024*1024)
-#define MAX_Z3_4GB (4096*1024*1024)
-
 extern std::string get_version_string();
 
 STATIC_INLINE FILE* uae_tfopen(const TCHAR* path, const TCHAR* mode)
@@ -71,6 +66,7 @@ void set_mouse_grab(bool grab);
 
 extern void free_AmigaMem();
 extern void alloc_AmigaMem();
+extern bool can_have_1gb();
 
 extern void get_configuration_path(char* out, int size);
 extern void set_configuration_path(char* newpath);
