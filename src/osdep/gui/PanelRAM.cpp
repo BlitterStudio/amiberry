@@ -18,12 +18,45 @@ static const char* FastMem_list[] = {
 	"None", "1 MB", "2 MB", "4 MB", "8 MB", "16 MB", "32 MB", "64 MB", "128 MB", "256 MB", "512 MB", "1 GB"
 };
 static unsigned int FastMem_values[] = {
-	0x000000, 0x100000, 0x200000, 0x400000, 0x800000, 0x1000000, 0x2000000, 0x4000000, 0x8000000, 0x10000000, 0x20000000, 0x40000000
+	0x000000, 0x100000, 0x200000, 0x400000, 0x800000, 0x1000000, 0x2000000, 0x4000000, 0x8000000, 0x10000000,
+	0x20000000, 0x40000000
 };
 static const char* A3000LowMem_list[] = {"None", "8 MB", "16 MB"};
 static unsigned int A3000LowMem_values[] = {0x080000, 0x800000, 0x1000000};
 static const char* A3000HighMem_list[] = {"None", "8 MB", "16 MB", "32 MB", "64 MB", "128 MB"};
 static unsigned int A3000HighMem_values[] = {0x080000, 0x800000, 0x1000000, 0x2000000, 0x4000000, 0x8000000};
+
+class StringListModel : public gcn::ListModel
+{
+private:
+	std::vector<std::string> values;
+public:
+	StringListModel(const char* entries[], const int count)
+	{
+		for (auto i = 0; i < count; ++i)
+			values.emplace_back(entries[i]);
+	}
+
+	int getNumberOfElements() override
+	{
+		return values.size();
+	}
+
+	int add_element(const char* Elem)
+	{
+		values.emplace_back(Elem);
+		return 0;
+	}
+
+	std::string getElementAt(const int i) override
+	{
+		if (i < 0 || i >= static_cast<int>(values.size()))
+			return "---";
+		return values[i];
+	}
+};
+static const TCHAR* z3memValues[] = { _T("Z3 Fast RAM #1:"), _T("Z3 Fast RAM #2:"), _T("Z3 Fast RAM #3:"), _T("Z3 Fast RAM #4:") };
+StringListModel z3memList(z3memValues, 4);
 
 static gcn::Window* grpRAM;
 static gcn::Label* lblChipmem;
@@ -35,7 +68,7 @@ static gcn::Slider* sldSlowmem;
 static gcn::Label* lblFastmem;
 static gcn::Label* lblFastsize;
 static gcn::Slider* sldFastmem;
-static gcn::Label* lblZ3mem;
+static gcn::DropDown* cboZ3mem;
 static gcn::Label* lblZ3size;
 static gcn::Slider* sldZ3mem;
 static gcn::Label* lblGfxmem;
@@ -48,8 +81,7 @@ static gcn::Label* lblA3000Highmem;
 static gcn::Label* lblA3000Highsize;
 static gcn::Slider* sldA3000Highmem;
 
-
-class MemorySliderActionListener : public gcn::ActionListener
+class MemoryActionListener : public gcn::ActionListener
 {
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
@@ -57,7 +89,7 @@ public:
 		if (actionEvent.getSource() == sldChipmem)
 		{
 			changed_prefs.chipmem.size = ChipMem_values[static_cast<int>(sldChipmem->getValue())];
-			if ((changed_prefs.chipmem.size > 0x200000) && (changed_prefs.fastmem[0].size > 0))
+			if (changed_prefs.chipmem.size > 0x200000 && changed_prefs.fastmem[0].size > 0)
 				changed_prefs.fastmem[0].size = 0;
 		}
 
@@ -75,9 +107,10 @@ public:
 
 		if (actionEvent.getSource() == sldZ3mem)
 		{
-			changed_prefs.z3fastmem[0].size = FastMem_values[static_cast<int>(sldZ3mem->getValue())];
-			if (changed_prefs.z3fastmem[0].size > max_z3fastmem)
-				changed_prefs.z3fastmem[0].size = max_z3fastmem;
+			const auto selected = cboZ3mem->getSelected();
+			changed_prefs.z3fastmem[selected].size = FastMem_values[static_cast<int>(sldZ3mem->getValue())];
+			if (changed_prefs.z3fastmem[selected].size > max_z3fastmem)
+				changed_prefs.z3fastmem[selected].size = max_z3fastmem;
 		}
 
 		if (actionEvent.getSource() == sldGfxmem)
@@ -104,12 +137,11 @@ public:
 	}
 };
 
-static MemorySliderActionListener* memorySliderActionListener;
-
+static MemoryActionListener* memoryActionListener;
 
 void InitPanelRAM(const struct _ConfigCategory& category)
 {
-	memorySliderActionListener = new MemorySliderActionListener();
+	memoryActionListener = new MemoryActionListener();
 	int sld_width;
 	int marker_length;
 #ifdef ANDROID
@@ -127,7 +159,7 @@ void InitPanelRAM(const struct _ConfigCategory& category)
 	sldChipmem->setMarkerLength(marker_length);
 	sldChipmem->setStepLength(1);
 	sldChipmem->setId("Chipmem");
-	sldChipmem->addActionListener(memorySliderActionListener);
+	sldChipmem->addActionListener(memoryActionListener);
 	lblChipsize = new gcn::Label("None   ");
 
 	lblSlowmem = new gcn::Label("Slow:");
@@ -137,7 +169,7 @@ void InitPanelRAM(const struct _ConfigCategory& category)
 	sldSlowmem->setMarkerLength(marker_length);
 	sldSlowmem->setStepLength(1);
 	sldSlowmem->setId("Slowmem");
-	sldSlowmem->addActionListener(memorySliderActionListener);
+	sldSlowmem->addActionListener(memoryActionListener);
 	lblSlowsize = new gcn::Label("None   ");
 
 	lblFastmem = new gcn::Label("Z2 Fast:");
@@ -147,11 +179,17 @@ void InitPanelRAM(const struct _ConfigCategory& category)
 	sldFastmem->setMarkerLength(marker_length);
 	sldFastmem->setStepLength(1);
 	sldFastmem->setId("Fastmem");
-	sldFastmem->addActionListener(memorySliderActionListener);
+	sldFastmem->addActionListener(memoryActionListener);
 	lblFastsize = new gcn::Label("None   ");
 
-	lblZ3mem = new gcn::Label("Z3 fast:");
-	if (can_have_1gb())
+	cboZ3mem = new gcn::DropDown(&z3memList);
+	cboZ3mem->setSize(150, cboZ3mem->getHeight());
+	cboZ3mem->setBaseColor(gui_baseCol);
+	cboZ3mem->setBackgroundColor(colTextboxBackground);
+	cboZ3mem->setId("cboZ3mem");
+	cboZ3mem->addActionListener(memoryActionListener);
+	
+	if (max_z3fastmem >= MAX_Z3_1GB)
 		sldZ3mem = new gcn::Slider(0, 11);
 	else
 		sldZ3mem = new gcn::Slider(0, 10);
@@ -160,37 +198,37 @@ void InitPanelRAM(const struct _ConfigCategory& category)
 	sldZ3mem->setMarkerLength(marker_length);
 	sldZ3mem->setStepLength(1);
 	sldZ3mem->setId("Z3mem");
-	sldZ3mem->addActionListener(memorySliderActionListener);
+	sldZ3mem->addActionListener(memoryActionListener);
 	lblZ3size = new gcn::Label("None    ");
 
 	lblGfxmem = new gcn::Label("RTG board:");
-	sldGfxmem = new gcn::Slider(0, 8);
+	sldGfxmem = new gcn::Slider(0, 5);
 	sldGfxmem->setSize(sld_width, SLIDER_HEIGHT);
 	sldGfxmem->setBaseColor(gui_baseCol);
 	sldGfxmem->setMarkerLength(marker_length);
 	sldGfxmem->setStepLength(1);
 	sldGfxmem->setId("Gfxmem");
-	sldGfxmem->addActionListener(memorySliderActionListener);
+	sldGfxmem->addActionListener(memoryActionListener);
 	lblGfxsize = new gcn::Label("None   ");
 
-	lblA3000Lowmem = new gcn::Label("A4000 Motherb. slot:");
+	lblA3000Lowmem = new gcn::Label("Motherboard Fast RAM:");
 	sldA3000Lowmem = new gcn::Slider(0, 2);
 	sldA3000Lowmem->setSize(sld_width, SLIDER_HEIGHT);
 	sldA3000Lowmem->setBaseColor(gui_baseCol);
 	sldA3000Lowmem->setMarkerLength(marker_length);
 	sldA3000Lowmem->setStepLength(1);
 	sldA3000Lowmem->setId("A3000Low");
-	sldA3000Lowmem->addActionListener(memorySliderActionListener);
+	sldA3000Lowmem->addActionListener(memoryActionListener);
 	lblA3000Lowsize = new gcn::Label("None   ");
 
-	lblA3000Highmem = new gcn::Label("A4000 Proc. board:");
+	lblA3000Highmem = new gcn::Label("Processor slot Fast RAM:");
 	sldA3000Highmem = new gcn::Slider(0, 5);
 	sldA3000Highmem->setSize(sld_width, SLIDER_HEIGHT);
 	sldA3000Highmem->setBaseColor(gui_baseCol);
 	sldA3000Highmem->setMarkerLength(marker_length);
 	sldA3000Highmem->setStepLength(1);
 	sldA3000Highmem->setId("A3000High");
-	sldA3000Highmem->addActionListener(memorySliderActionListener);
+	sldA3000Highmem->addActionListener(memoryActionListener);
 	lblA3000Highsize = new gcn::Label("None   ");
 
 	grpRAM = new gcn::Window("Memory Settings");
@@ -198,43 +236,43 @@ void InitPanelRAM(const struct _ConfigCategory& category)
 
 	int posY = 10;
 	grpRAM->add(lblChipmem, 10, posY);
-	grpRAM->add(sldChipmem, lblA3000Lowmem->getWidth() + DISTANCE_NEXT_Y, posY);
-	grpRAM->add(lblChipsize, lblA3000Lowmem->getWidth() + DISTANCE_NEXT_Y + sldChipmem->getWidth() + 12, posY);
+	grpRAM->add(sldChipmem, lblA3000Highmem->getWidth() + DISTANCE_NEXT_Y, posY);
+	grpRAM->add(lblChipsize, lblA3000Highmem->getWidth() + DISTANCE_NEXT_Y + sldChipmem->getWidth() + 12, posY);
 	posY += sldChipmem->getHeight() + DISTANCE_NEXT_Y;
 
 	grpRAM->add(lblSlowmem, 10, posY);
-	grpRAM->add(sldSlowmem, lblA3000Lowmem->getWidth() + DISTANCE_NEXT_Y, posY);
-	grpRAM->add(lblSlowsize, lblA3000Lowmem->getWidth() + DISTANCE_NEXT_Y + sldSlowmem->getWidth() + 12, posY);
+	grpRAM->add(sldSlowmem, lblA3000Highmem->getWidth() + DISTANCE_NEXT_Y, posY);
+	grpRAM->add(lblSlowsize, lblA3000Highmem->getWidth() + DISTANCE_NEXT_Y + sldSlowmem->getWidth() + 12, posY);
 	posY += sldSlowmem->getHeight() + DISTANCE_NEXT_Y;
 
 	grpRAM->add(lblFastmem, 10, posY);
-	grpRAM->add(sldFastmem, lblA3000Lowmem->getWidth() + DISTANCE_NEXT_Y, posY);
-	grpRAM->add(lblFastsize, lblA3000Lowmem->getWidth() + DISTANCE_NEXT_Y + sldFastmem->getWidth() + 12, posY);
+	grpRAM->add(sldFastmem, lblA3000Highmem->getWidth() + DISTANCE_NEXT_Y, posY);
+	grpRAM->add(lblFastsize, lblA3000Highmem->getWidth() + DISTANCE_NEXT_Y + sldFastmem->getWidth() + 12, posY);
 	posY += sldFastmem->getHeight() + DISTANCE_NEXT_Y;
 
-	grpRAM->add(lblZ3mem, 10, posY);
-	grpRAM->add(sldZ3mem, lblA3000Lowmem->getWidth() + DISTANCE_NEXT_Y, posY);
-	grpRAM->add(lblZ3size, lblA3000Lowmem->getWidth() + DISTANCE_NEXT_Y + sldZ3mem->getWidth() + 12, posY);
+	grpRAM->add(cboZ3mem, 10, posY);
+	grpRAM->add(sldZ3mem, lblA3000Highmem->getWidth() + DISTANCE_NEXT_Y, posY);
+	grpRAM->add(lblZ3size, lblA3000Highmem->getWidth() + DISTANCE_NEXT_Y + sldZ3mem->getWidth() + 12, posY);
 	posY += sldZ3mem->getHeight() + DISTANCE_NEXT_Y;
 
 	grpRAM->add(lblGfxmem, 10, posY);
-	grpRAM->add(sldGfxmem, lblA3000Lowmem->getWidth() + DISTANCE_NEXT_Y, posY);
-	grpRAM->add(lblGfxsize, lblA3000Lowmem->getWidth() + DISTANCE_NEXT_Y + sldGfxmem->getWidth() + 12, posY);
+	grpRAM->add(sldGfxmem, lblA3000Highmem->getWidth() + DISTANCE_NEXT_Y, posY);
+	grpRAM->add(lblGfxsize, lblA3000Highmem->getWidth() + DISTANCE_NEXT_Y + sldGfxmem->getWidth() + 12, posY);
 	posY += sldGfxmem->getHeight() + DISTANCE_NEXT_Y;
 
 	grpRAM->add(lblA3000Lowmem, 10, posY);
-	grpRAM->add(sldA3000Lowmem, lblA3000Lowmem->getWidth() + DISTANCE_NEXT_Y, posY);
-	grpRAM->add(lblA3000Lowsize, lblA3000Lowmem->getWidth() + DISTANCE_NEXT_Y + sldA3000Lowmem->getWidth() + 12, posY);
+	grpRAM->add(sldA3000Lowmem, lblA3000Highmem->getWidth() + DISTANCE_NEXT_Y, posY);
+	grpRAM->add(lblA3000Lowsize, lblA3000Highmem->getWidth() + DISTANCE_NEXT_Y + sldA3000Lowmem->getWidth() + 12, posY);
 	posY += sldA3000Lowmem->getHeight() + DISTANCE_NEXT_Y;
 
 	grpRAM->add(lblA3000Highmem, 10, posY);
-	grpRAM->add(sldA3000Highmem, lblA3000Lowmem->getWidth() + DISTANCE_NEXT_Y, posY);
-	grpRAM->add(lblA3000Highsize, lblA3000Lowmem->getWidth() + DISTANCE_NEXT_Y + sldA3000Highmem->getWidth() + 12,
+	grpRAM->add(sldA3000Highmem, lblA3000Highmem->getWidth() + DISTANCE_NEXT_Y, posY);
+	grpRAM->add(lblA3000Highsize, lblA3000Highmem->getWidth() + DISTANCE_NEXT_Y + sldA3000Highmem->getWidth() + 12,
 	            posY);
 	posY += sldA3000Highmem->getHeight() + DISTANCE_NEXT_Y;
 
 	grpRAM->setMovable(false);
-	grpRAM->setSize(375, posY + DISTANCE_BORDER * 2);
+	grpRAM->setSize(400, posY + DISTANCE_BORDER * 2);
 	grpRAM->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpRAM->setBaseColor(gui_baseCol);
 
@@ -242,7 +280,6 @@ void InitPanelRAM(const struct _ConfigCategory& category)
 
 	RefreshPanelRAM();
 }
-
 
 void ExitPanelRAM()
 {
@@ -255,7 +292,7 @@ void ExitPanelRAM()
 	delete lblFastmem;
 	delete sldFastmem;
 	delete lblFastsize;
-	delete lblZ3mem;
+	delete cboZ3mem;
 	delete sldZ3mem;
 	delete lblZ3size;
 	delete lblGfxmem;
@@ -268,9 +305,8 @@ void ExitPanelRAM()
 	delete sldA3000Highmem;
 	delete lblA3000Highsize;
 	delete grpRAM;
-	delete memorySliderActionListener;
+	delete memoryActionListener;
 }
-
 
 void RefreshPanelRAM()
 {
@@ -310,7 +346,7 @@ void RefreshPanelRAM()
 	{
 		// Disable Z3 and RTG memory
 		sldZ3mem->setEnabled(false);
-		lblZ3mem->setEnabled(false);
+		cboZ3mem->setEnabled(false);
 		lblZ3size->setEnabled(false);
 		lblZ3size->setCaption("N/A");
 
@@ -322,16 +358,15 @@ void RefreshPanelRAM()
 	else
 	{
 		sldZ3mem->setEnabled(true);
-		lblZ3mem->setEnabled(true);
+		cboZ3mem->setEnabled(true);
 		lblZ3size->setEnabled(true);
 		lblZ3size->setCaption("None");
-		
-		auto counter = 11;
-		if (can_have_1gb())
-			counter = 12;
+
+		const auto counter = max_z3fastmem >= MAX_Z3_1GB ? 12 : 11;
+		const auto selected = cboZ3mem->getSelected();
 		for (i = 0; i < counter; ++i)
 		{
-			if (changed_prefs.z3fastmem[0].size == FastMem_values[i])
+			if (changed_prefs.z3fastmem[selected].size == FastMem_values[i])
 			{
 				sldZ3mem->setValue(i);
 				lblZ3size->setCaption(FastMem_list[i]);
@@ -343,7 +378,7 @@ void RefreshPanelRAM()
 		lblGfxmem->setEnabled(true);
 		lblGfxsize->setEnabled(true);
 		lblGfxsize->setCaption("None");
-		
+
 		for (i = 0; i < 9; ++i)
 		{
 			if (changed_prefs.rtgboards[0].rtgmem_size == FastMem_values[i])
@@ -375,7 +410,6 @@ void RefreshPanelRAM()
 		}
 	}
 }
-
 
 bool HelpPanelRAM(std::vector<std::string>& helptext)
 {

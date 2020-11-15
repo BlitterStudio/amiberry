@@ -22,7 +22,7 @@ uae_u32 max_z3fastmem;
 #define BARRIER 32
 
 static uae_u8* additional_mem = static_cast<uae_u8*>(MAP_FAILED);
-#define MAX_RTG_MEM (128 * 1024 * 1024)
+#define MAX_RTG_MEM (16 * 1024 * 1024)
 #define ADDITIONAL_MEMSIZE (max_z3fastmem + MAX_RTG_MEM)
 
 static uae_u8* a3000_mem = static_cast<uae_u8*>(MAP_FAILED);
@@ -57,16 +57,26 @@ void free_AmigaMem(void)
 	}
 }
 
-bool can_have_1gb()
+uae_u32 get_max_z3_ram()
 {
 	struct sysinfo mem_info{};
 	sysinfo(&mem_info);
 	long long total_phys_mem = mem_info.totalram;
 	total_phys_mem *= mem_info.mem_unit;
+
+	// Do we have more than 4GB in the system?
+	if (total_phys_mem > 4294967296LL)
+		return MAX_Z3_4GB;
+	
 	// Do we have more than 2GB in the system?
 	if (total_phys_mem > 2147483648LL)
-		return true;
-	return false;
+		return MAX_Z3_2GB;
+
+	// Do we have more than 1GB in the system?
+	if (total_phys_mem > 1073741824LL)
+		return MAX_Z3_1GB;
+	
+	return MAX_Z3_512MB;
 }
 
 void alloc_AmigaMem(void)
@@ -87,11 +97,8 @@ void alloc_AmigaMem(void)
 	regs.natmem_offset = (uae_u8*)valloc(natmem_size + BARRIER);
 #endif
 
-	if (can_have_1gb())
-		max_z3fastmem = 1024 * 1024 * 1024;
-	else
-		max_z3fastmem = 512 * 1024 * 1024;
-
+	max_z3fastmem = get_max_z3_ram();
+	
 	if (!regs.natmem_offset)
 	{
 		write_log("Can't allocate 16M of virtual address space!?\n");
