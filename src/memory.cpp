@@ -69,25 +69,6 @@ static bool canjit (void)
 		return false;
 	return true;
 }
-static bool needmman (void)
-{
-	if (!jit_direct_compatible_memory)
-		return false;
-#ifdef _WIN32
-	return true;
-#endif
-	if (canjit ())
-		return true;
-	return false;
-}
-
-static void nocanbang (void)
-{
-	if (canbang) {
-		write_log(_T("Switching JIT direct off!\n"));
-	}
-	canbang = 0;
-}
 
 uae_u8 ce_banktype[65536];
 uae_u8 ce_cachable[65536];

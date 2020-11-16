@@ -1831,7 +1831,7 @@ void audio_reset (void)
 		for (i = 0; i < AUDIO_CHANNELS_PAULA; i++) {
 			cdp = &audio_channel[i];
 			memset (cdp, 0, sizeof *audio_channel);
-			cdp->per = PERIOD_MAX - 1;
+			cdp->per = static_cast<int>(PERIOD_MAX) - 1;
 			cdp->data.mixvol = 0;
 			cdp->evtime = MAX_EV;
 		}
