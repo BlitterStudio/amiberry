@@ -225,6 +225,25 @@ void restore_host_fp_regs(void* buf);
 #endif
 #endif
 
+#ifndef _WIN32
+// Dummy types so this header file can be included on other platforms (for
+// a few declarations).
+typedef void* HINSTANCE;
+typedef void* HMODULE;
+typedef void* HWND;
+typedef void* HKEY;
+typedef void* OSVERSIONINFO;
+typedef bool BOOL;
+typedef int LPARAM;
+typedef int WPARAM;
+typedef int WORD;
+typedef unsigned int UINT;
+typedef long LONG;
+#define WINAPI
+typedef long GUID;
+typedef wchar_t* LPCWSTR;
+#endif
+
 #define MAX_SOUND_DEVICES 100
 #define SOUND_DEVICE_DS 1
 #define SOUND_DEVICE_AL 2
@@ -233,3 +252,16 @@ void restore_host_fp_regs(void* buf);
 #define SOUND_DEVICE_WASAPI_EXCLUSIVE 5
 #define SOUND_DEVICE_XAUDIO2 6
 #define SOUND_DEVICE_SDL2 7
+
+struct sound_device
+{
+	GUID guid;
+	TCHAR* name;
+	TCHAR* alname;
+	TCHAR* cfgname;
+	TCHAR* prefix;
+	int panum;
+	int type;
+};
+extern struct sound_device* sound_devices[MAX_SOUND_DEVICES];
+extern struct sound_device* record_devices[MAX_SOUND_DEVICES];

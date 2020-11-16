@@ -100,6 +100,7 @@ LOCAL_SRC_FILES := src/archivers/7z/BraIA64.c \
                     src/traps.cpp \
 					src/uaeexe.cpp \
                     src/uaelib.cpp \
+                    src/uaenative.cpp \
                     src/uaeresource.cpp \
                     src/zfile.cpp \
                     src/zfile_archive.cpp \
@@ -144,6 +145,7 @@ LOCAL_SRC_FILES := src/archivers/7z/BraIA64.c \
                     src/archivers/zip/unzip.cpp \
                     src/caps/caps_amiberry.cpp \
                     src/machdep/support.cpp \
+                    src/osdep/ahi_winuae.cpp \
                     src/osdep/bsdsocket_host.cpp \
                     src/osdep/cda_play.cpp \
                     src/osdep/charset.cpp \
@@ -160,6 +162,7 @@ LOCAL_SRC_FILES := src/archivers/7z/BraIA64.c \
                     src/osdep/amiberry_gfx.cpp \
                     src/osdep/amiberry_gui.cpp \
                     src/osdep/amiberry_mem.cpp \
+                    src/osdep/amiberry_ahi.cpp \
                     src/osdep/amiberry_whdbooter.cpp \
                     src/osdep/sigsegv_handler.cpp \
 					src/osdep/retroarch.cpp \

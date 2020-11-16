@@ -54,7 +54,9 @@
 #include "blkdev.h"
 #include "isofs_api.h"
 #include "scsi.h"
-
+#ifdef WITH_UAENATIVE
+#include "uaenative.h"
+#endif
 #include "tabletlibrary.h"
 #include "cia.h"
 #include "newcpu.h"

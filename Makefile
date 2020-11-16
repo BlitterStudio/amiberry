@@ -343,6 +343,7 @@ OBJS =	\
 	src/traps.o \
 	src/uaeexe.o \
 	src/uaelib.o \
+	src/uaenative.o \
 	src/uaeresource.o \
 	src/zfile.o \
 	src/zfile_archive.o \
@@ -387,6 +388,7 @@ OBJS =	\
 	src/archivers/zip/unzip.o \
 	src/caps/caps_amiberry.o \
 	src/machdep/support.o \
+	src/osdep/ahi_winuae.o \
 	src/osdep/bsdsocket_host.o \
 	src/osdep/cda_play.o \
 	src/osdep/charset.o \
@@ -398,6 +400,7 @@ OBJS =	\
 	src/osdep/picasso96.o \
 	src/osdep/writelog.o \
 	src/osdep/amiberry.o \
+	src/osdep/amiberry_ahi.o \
 	src/osdep/amiberry_filesys.o \
 	src/osdep/amiberry_input.o \
 	src/osdep/amiberry_gfx.o \

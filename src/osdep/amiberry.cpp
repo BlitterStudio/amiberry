@@ -48,6 +48,11 @@
 #include "clipboard.h"
 #include "uae/uae.h"
 
+#ifdef AHI
+#include "ahidsound.h"
+#include "ahidsound_new.h"
+#endif
+
 extern FILE* debugfile;
 
 int pause_emulation;

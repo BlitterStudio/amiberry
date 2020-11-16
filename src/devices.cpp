@@ -35,6 +35,9 @@
 #include "gui.h"
 #include "savestate.h"
 #include "uaeexe.h"
+#ifdef WITH_UAENATIVE
+#include "uaenative.h"
+#endif
 #ifdef DRIVESOUND
 #include "driveclick.h"
 #endif

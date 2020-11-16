@@ -670,6 +670,15 @@
     <ClCompile Include="..\..\src\serial_win32.cpp">
       <Filter>Source files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\osdep\amiberry_ahi.cpp">
+      <Filter>Source files\osdep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\osdep\ahi_winuae.cpp">
+      <Filter>Source files\osdep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\uaenative.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\threaddep\thread.h">
@@ -1115,6 +1124,18 @@
     </ClInclude>
     <ClInclude Include="..\..\src\osdep\amiberry_input.h">
       <Filter>Source files\osdep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\osdep\ahidsound_new.h">
+      <Filter>Source files\osdep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\osdep\ahidsound.h">
+      <Filter>Source files\osdep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\uni_common.h">
+      <Filter>Source files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\uaenative.h">
+      <Filter>Source files\include</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

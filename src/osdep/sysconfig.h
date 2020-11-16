@@ -24,7 +24,7 @@
 #endif
 #define NATMEM_OFFSET regs.natmem_offset
 /* #define CATWEASEL */ /* Catweasel MK2/3 support */
-/* #define AHI */ /* AHI sound emulation */
+#define AHI /* AHI sound emulation */
 /* #define ENFORCER */ /* UAE Enforcer */
 #define ECS_DENISE /* ECS DENISE new features */
 #define AGA /* AGA chipset emulation (ECS_DENISE must be enabled) */
@@ -80,7 +80,7 @@
 /* #define RETROPLATFORM */ /* Cloanto RetroPlayer support */
 /* #define WITH_CHD */
 /* #define WITH_LUA */ /* lua scripting */
-/* #define WITH_UAENATIVE */
+#define WITH_UAENATIVE
 /* #define WITH_SLIRP */
 /* #define WITH_BUILTIN_SLIRP */
 /* #define WITH_TABLETLIBRARY */
@@ -114,6 +114,12 @@
 #endif
 
 #include <stdint.h>
+
+#if defined(__x86_64__) || defined(CPU_AARCH64)
+#define CPU_64_BIT 1
+#else
+#undef CPU_64_BIT
+#endif
 
 #ifdef CPU_AARCH64
 #define SIZEOF_VOID_P 8

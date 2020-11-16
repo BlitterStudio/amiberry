@@ -250,7 +250,9 @@
     <ClCompile Include="..\..\src\native2amiga.cpp" />
     <ClCompile Include="..\..\src\newcpu.cpp" />
     <ClCompile Include="..\..\src\newcpu_common.cpp" />
+    <ClCompile Include="..\..\src\osdep\ahi_winuae.cpp" />
     <ClCompile Include="..\..\src\osdep\amiberry.cpp" />
+    <ClCompile Include="..\..\src\osdep\amiberry_ahi.cpp" />
     <ClCompile Include="..\..\src\osdep\amiberry_filesys.cpp" />
     <ClCompile Include="..\..\src\osdep\amiberry_gfx.cpp" />
     <ClCompile Include="..\..\src\osdep\amiberry_gui.cpp" />
@@ -314,6 +316,7 @@
     <ClCompile Include="..\..\src\traps.cpp" />
     <ClCompile Include="..\..\src\uaeexe.cpp" />
     <ClCompile Include="..\..\src\uaelib.cpp" />
+    <ClCompile Include="..\..\src\uaenative.cpp" />
     <ClCompile Include="..\..\src\uaeresource.cpp" />
     <ClCompile Include="..\..\src\vm.cpp" />
     <ClCompile Include="..\..\src\zfile.cpp" />
@@ -454,6 +457,7 @@
     <ClInclude Include="..\..\src\include\traps.h" />
     <ClInclude Include="..\..\src\include\uae.h" />
     <ClInclude Include="..\..\src\include\uaeexe.h" />
+    <ClInclude Include="..\..\src\include\uaenative.h" />
     <ClInclude Include="..\..\src\include\uaeresource.h" />
     <ClInclude Include="..\..\src\include\uae\caps.h" />
     <ClInclude Include="..\..\src\include\uae\dlopen.h" />
@@ -463,6 +467,7 @@
     <ClInclude Include="..\..\src\include\uae\types.h" />
     <ClInclude Include="..\..\src\include\uae\uae.h" />
     <ClInclude Include="..\..\src\include\uae\vm.h" />
+    <ClInclude Include="..\..\src\include\uni_common.h" />
     <ClInclude Include="..\..\src\include\xwin.h" />
     <ClInclude Include="..\..\src\include\zarchive.h" />
     <ClInclude Include="..\..\src\include\zfile.h" />
@@ -476,6 +481,8 @@
     <ClInclude Include="..\..\src\machdep\m68k.h" />
     <ClInclude Include="..\..\src\machdep\maccess.h" />
     <ClInclude Include="..\..\src\machdep\rpt.h" />
+    <ClInclude Include="..\..\src\osdep\ahidsound.h" />
+    <ClInclude Include="..\..\src\osdep\ahidsound_new.h" />
     <ClInclude Include="..\..\src\osdep\amiberry_filesys.hpp" />
     <ClInclude Include="..\..\src\osdep\amiberry_gfx.h" />
     <ClInclude Include="..\..\src\osdep\amiberry_input.h" />

@@ -43,6 +43,8 @@
 #include "threaddep/thread.h"
 #include "serial.h"
 #include "parser.h"
+
+#include "ahidsound.h"
 #include "cia.h"
 #include "savestate.h"
 #include "xwin.h"
@@ -898,7 +900,7 @@ int setbaud (long baud)
 
 void initparallel (void)
 {
-#ifdef FSUAE
+#ifdef AMIBERRY
 	write_log("initparallel\n");
 #endif
 #if SERIAL_ENET
@@ -915,7 +917,7 @@ void initparallel (void)
 
 #ifdef AHI
 	if (uae_boot_rom_type) {
-#ifdef FSUAE
+#ifdef AMIBERRY
 		write_log("installing ahi_winuae\n");
 #endif
 		uaecptr a = here (); //this install the ahisound
@@ -934,7 +936,7 @@ int flashscreen = 0;
 
 void doflashscreen (void)
 {
-#ifdef FSUAE
+#ifdef AMIBERRY
 
 #else
 	flashscreen = 10;
@@ -951,7 +953,7 @@ void hsyncstuff (void)
 {
 	static int keycheck = 0;
 
-#ifdef FSUAE
+#ifdef AMIBERRY
 /* DISABLED -- OLD AHI VERSION? */
 #else
 #ifdef AHI
@@ -969,7 +971,7 @@ void hsyncstuff (void)
 #endif
 #endif
 
-#ifdef FSUAE
+#ifdef AMIBERRY
 /* DISABLED FOR NOW */
 #else
 #ifdef PARALLEL_PORT
