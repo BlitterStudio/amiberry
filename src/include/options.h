@@ -873,6 +873,7 @@ struct uae_prefs
 	bool minimized_pause;
 	bool minimized_nosound;
 	int minimized_input;
+	bool right_control_is_right_win_key;
 	
 	TCHAR open_gui[256];
 	TCHAR quit_amiberry[256];
