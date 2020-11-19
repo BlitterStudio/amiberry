@@ -604,6 +604,7 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_write_bool(f, _T("amiberry.use_retroarch_reset"), p->use_retroarch_reset);
 
 	cfgfile_target_dwrite(f, _T("cpu_idle"), _T("%d"), p->cpu_idle);
+	cfgfile_target_dwrite_bool(f, _T("right_control_is_right_win"), p->right_control_is_right_win_key);
 	cfgfile_write(f, _T("amiberry.active_priority"), _T("%d"), p->active_capture_priority);
 	cfgfile_target_dwrite_bool(f, _T("active_not_captured_nosound"), p->active_nocapture_nosound);
 	cfgfile_target_dwrite_bool(f, _T("active_not_captured_pause"), p->active_nocapture_pause);
@@ -749,6 +750,8 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 	if (cfgfile_yesno(option, value, _T("minimized_nosound"), &p->minimized_nosound))
 		return 1;
 	if (cfgfile_intval(option, value, _T("minimized_input"), &p->minimized_input, 1))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("right_control_is_right_win"), &p->right_control_is_right_win_key))
 		return 1;
 	return 0;
 }
@@ -1908,7 +1911,7 @@ void process_event(SDL_Event event)
 		const auto ok_to_use = !key_used_by_retroarch_joy(event.key.keysym.scancode);
 		if (ok_to_use && event.key.repeat == 0)
 		{
-			if (amiberry_options.rctrl_as_ramiga)
+			if (amiberry_options.rctrl_as_ramiga || currprefs.right_control_is_right_win_key)
 			{
 				if (event.key.keysym.scancode == SDL_SCANCODE_RCTRL)
 					event.key.keysym.scancode = SDL_SCANCODE_RGUI;

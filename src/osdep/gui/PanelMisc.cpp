@@ -23,6 +23,7 @@ static gcn::CheckBox* chkBSDSocket;
 static gcn::CheckBox* chkMasterWP;
 static gcn::CheckBox* chkClipboardSharing;
 static gcn::CheckBox* chkAllowHostRun;
+static gcn::CheckBox* chkRCtrlIsRAmiga;
 
 static gcn::Label* lblNumLock;
 static gcn::DropDown* cboKBDLed_num;
@@ -76,7 +77,7 @@ public:
 	}
 };
 
-static const char* listValues[] = {"none", "POWER", "DF0", "DF1", "DF2", "DF3", "HD", "CD"};
+static const char* listValues[] = { "none", "POWER", "DF0", "DF1", "DF2", "DF3", "HD", "CD" };
 static StringListModel KBDLedList(listValues, 8);
 
 #ifdef SERIAL_PORT
@@ -87,8 +88,8 @@ public:
 	{
 		if (keyEvent.getSource() == txtSerialDevice)
 		{
-			snprintf (changed_prefs.sername, 256, "%s", txtSerialDevice->getText().c_str());
-			if( changed_prefs.sername[0] )
+			snprintf(changed_prefs.sername, 256, "%s", txtSerialDevice->getText().c_str());
+			if (changed_prefs.sername[0])
 				changed_prefs.use_serial = 1;
 			else
 				changed_prefs.use_serial = 0;
@@ -160,6 +161,9 @@ public:
 		else if (actionEvent.getSource() == chkAllowHostRun)
 			changed_prefs.allow_host_run = chkAllowHostRun->isSelected();
 
+		else if (actionEvent.getSource() == chkRCtrlIsRAmiga)
+			changed_prefs.right_control_is_right_win_key = chkRCtrlIsRAmiga->isSelected();
+		
 		else if (actionEvent.getSource() == cboKBDLed_num)
 			changed_prefs.kbd_led_num = cboKBDLed_num->getSelected() - 1;
 
@@ -212,7 +216,7 @@ public:
 
 #ifdef SERIAL_PORT
 		else if (actionEvent.getSource() == txtSerialDevice)
-			snprintf (changed_prefs.sername, 256, "%s", txtSerialDevice->getText().c_str());
+			snprintf(changed_prefs.sername, 256, "%s", txtSerialDevice->getText().c_str());
 
 		else if (actionEvent.getSource() == chkSerialDirect)
 			changed_prefs.serial_direct = chkSerialDirect->isSelected();
@@ -286,6 +290,10 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	chkAllowHostRun = new gcn::CheckBox("Allow host-run");
 	chkAllowHostRun->setId("chkAllowHostRun");
 	chkAllowHostRun->addActionListener(miscActionListener);
+
+	chkRCtrlIsRAmiga = new gcn::CheckBox("RCtrl = RAmiga");
+	chkRCtrlIsRAmiga->setId("chkRCtrlIsRAmiga");
+	chkRCtrlIsRAmiga->addActionListener(miscActionListener);
 
 	lblNumLock = new gcn::Label("NumLock:");
 	lblNumLock->setAlignment(gcn::Graphics::RIGHT);
@@ -389,7 +397,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	category.panel->add(chkRetroArchReset, posX + DISTANCE_BORDER, posY);
 	posY += chkRetroArchReset->getHeight() + DISTANCE_NEXT_Y;
 	//category.panel->add(chkRetroArchSavestate, posX + DISTANCE_BORDER, posY);
-	
+
 	category.panel->add(chkMouseUntrap, DISTANCE_BORDER, posY);
 	category.panel->add(chkClipboardSharing, posX + DISTANCE_BORDER, posY);
 	posY += chkMouseUntrap->getHeight() + DISTANCE_NEXT_Y;
@@ -397,8 +405,9 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	category.panel->add(chkBSDSocket, DISTANCE_BORDER, posY);
 	category.panel->add(chkAllowHostRun, posX + DISTANCE_BORDER, posY);
 	posY += chkBSDSocket->getHeight() + DISTANCE_NEXT_Y;
-	
+
 	category.panel->add(chkMasterWP, DISTANCE_BORDER, posY);
+	category.panel->add(chkRCtrlIsRAmiga, posX + DISTANCE_BORDER, posY);
 	posY += chkMasterWP->getHeight() + DISTANCE_NEXT_Y * 2;
 
 	const auto column2_x = DISTANCE_BORDER + 290;
@@ -428,7 +437,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	category.panel->add(lblKeyFullScreen, column2_x, posY);
 	category.panel->add(txtKeyFullScreen, lblKeyFullScreen->getX() + lblKeyFullScreen->getWidth() + 8, posY);
 	category.panel->add(cmdKeyFullScreen, txtKeyFullScreen->getX() + txtKeyFullScreen->getWidth() + 8, posY);
-	
+
 #ifdef SERIAL_PORT
 	posY += cmdKeyActionReplay->getHeight() + DISTANCE_NEXT_Y * 2;
 
@@ -440,7 +449,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	txtSerialDevice->setBackgroundColor(colTextboxBackground);
 	grpSerialDevice->add(txtSerialDevice, DISTANCE_BORDER, DISTANCE_BORDER);
 	grpSerialDevice->add(chkRTSCTS, DISTANCE_BORDER, DISTANCE_BORDER * 3);
-	grpSerialDevice->add(chkSerialDirect,chkRTSCTS->getWidth() + chkRTSCTS->getX() + DISTANCE_NEXT_X, DISTANCE_BORDER * 3);
+	grpSerialDevice->add(chkSerialDirect, chkRTSCTS->getWidth() + chkRTSCTS->getX() + DISTANCE_NEXT_X, DISTANCE_BORDER * 3);
 	grpSerialDevice->add(chkUaeSerial, chkSerialDirect->getWidth() + chkSerialDirect->getX() + DISTANCE_NEXT_X, DISTANCE_BORDER * 3);
 	category.panel->add(grpSerialDevice);
 #endif
@@ -463,6 +472,7 @@ void ExitPanelMisc()
 	delete chkMasterWP;
 	delete chkClipboardSharing;
 	delete chkAllowHostRun;
+	delete chkRCtrlIsRAmiga;
 
 	delete lblScrLock;
 	delete lblNumLock;
@@ -514,20 +524,21 @@ void RefreshPanelMisc()
 	chkMasterWP->setSelected(changed_prefs.floppy_read_only);
 	chkClipboardSharing->setSelected(changed_prefs.clipboard_sharing);
 	chkAllowHostRun->setSelected(changed_prefs.allow_host_run);
-
+	chkRCtrlIsRAmiga->setSelected(changed_prefs.right_control_is_right_win_key);
+	
 	cboKBDLed_num->setSelected(changed_prefs.kbd_led_num + 1);
 	cboKBDLed_scr->setSelected(changed_prefs.kbd_led_scr + 1);
 
 	txtOpenGUI->setText(strncmp(changed_prefs.open_gui, "", 1) != 0 ? changed_prefs.open_gui : "Click to map");
 	txtKeyForQuit->setText(strncmp(changed_prefs.quit_amiberry, "", 1) != 0
-		                       ? changed_prefs.quit_amiberry
-		                       : "Click to map");
+		? changed_prefs.quit_amiberry
+		: "Click to map");
 	txtKeyActionReplay->setText(strncmp(changed_prefs.action_replay, "", 1) != 0
-		                            ? changed_prefs.action_replay
-		                            : "Click to map");
+		? changed_prefs.action_replay
+		: "Click to map");
 	txtKeyFullScreen->setText(strncmp(changed_prefs.fullscreen_toggle, "", 1) != 0
-		                          ? changed_prefs.fullscreen_toggle
-		                          : "Click to map");
+		? changed_prefs.fullscreen_toggle
+		: "Click to map");
 #ifdef SERIAL_PORT
 	chkRTSCTS->setSelected(changed_prefs.serial_hwctsrts);
 	chkSerialDirect->setSelected(changed_prefs.serial_direct);
@@ -564,7 +575,7 @@ bool HelpPanelMisc(std::vector<std::string>& helptext)
 	helptext.emplace_back("You can assign the desired hotkeys to Open the GUI, Quit the emulator,");
 	helptext.emplace_back("open Action Replay/HRTMon or toggle Fullscreen mode ON/OFF.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("Serial Port emulates the Amiga UART through a hardware based UART device on the host." );
+	helptext.emplace_back("Serial Port emulates the Amiga UART through a hardware based UART device on the host.");
 	helptext.emplace_back("For example /dev/ttyUSB0. For use on emulator to emulator use Direct ON and RTS/CTS OFF.");
 	helptext.emplace_back("For emulator to physical device configurations the opposite should apply.");
 #endif
