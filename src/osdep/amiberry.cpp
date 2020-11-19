@@ -1901,7 +1901,7 @@ void process_event(SDL_Event event)
 				clipboard_disable(true);
 
 			// Handle all other keys
-			if (amiberry_options.rctrl_as_ramiga)
+			if (amiberry_options.rctrl_as_ramiga || currprefs.right_control_is_right_win_key)
 			{
 				if (event.key.keysym.scancode == SDL_SCANCODE_RCTRL)
 					event.key.keysym.scancode = SDL_SCANCODE_RGUI;
