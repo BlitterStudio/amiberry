@@ -259,6 +259,7 @@ void doprinter (uae_u8 val)
     }
 #endif
 }
+#endif
 
 struct uaeserialdata
 {
@@ -338,7 +339,7 @@ void uaeser_close (void *vsd)
 {
 	STUB("");
 }
-#endif
+
 
 
 #ifdef AMIBERRY

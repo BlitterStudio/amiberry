@@ -29,6 +29,7 @@
 #include "serial.h"
 #endif
 #include "bsdsocket.h"
+#include "uaeserial.h"
 #include "uaeresource.h"
 #include "native2amiga.h"
 #include "gensound.h"

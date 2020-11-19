@@ -50,6 +50,7 @@ static gcn::Window* grpSerialDevice;
 static gcn::TextField* txtSerialDevice;
 static gcn::CheckBox* chkSerialDirect;
 static gcn::CheckBox* chkRTSCTS;
+static gcn::CheckBox* chkUaeSerial;
 #endif
 
 class StringListModel : public gcn::ListModel
@@ -218,6 +219,9 @@ public:
 
 		else if (actionEvent.getSource() == chkRTSCTS)
 			changed_prefs.serial_hwctsrts = chkRTSCTS->isSelected();
+
+		else if (actionEvent.getSource() == chkUaeSerial)
+			changed_prefs.uaeserial = chkUaeSerial->isSelected();
 #endif
 	}
 };
@@ -244,7 +248,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	chkStatusLineRtg->addActionListener(miscActionListener);
 
 	chkShowGUI = new gcn::CheckBox("Show GUI on startup");
-	chkShowGUI->setId("ShowGUI");
+	chkShowGUI->setId("chkShowGUI");
 	chkShowGUI->addActionListener(miscActionListener);
 
 	chkMouseUntrap = new gcn::CheckBox("Untrap = middle button");
@@ -252,15 +256,15 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	chkMouseUntrap->addActionListener(miscActionListener);
 
 	chkRetroArchQuit = new gcn::CheckBox("Use RetroArch Quit Button");
-	chkRetroArchQuit->setId("RetroArchQuit");
+	chkRetroArchQuit->setId("chkRetroArchQuit");
 	chkRetroArchQuit->addActionListener(miscActionListener);
 
 	chkRetroArchMenu = new gcn::CheckBox("Use RetroArch Menu Button");
-	chkRetroArchMenu->setId("RetroArchMenu");
+	chkRetroArchMenu->setId("chkRetroArchMenu");
 	chkRetroArchMenu->addActionListener(miscActionListener);
 
 	chkRetroArchReset = new gcn::CheckBox("Use RetroArch Reset Button");
-	chkRetroArchReset->setId("RetroArchReset");
+	chkRetroArchReset->setId("chkRetroArchReset");
 	chkRetroArchReset->addActionListener(miscActionListener);
 
 	//chkRetroArchSavestate = new gcn::CheckBox("Use RetroArch State Controls");
@@ -268,11 +272,11 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	//chkRetroArchSavestate->addActionListener(miscActionListener);
 
 	chkBSDSocket = new gcn::CheckBox("bsdsocket.library");
-	chkBSDSocket->setId("BSDSocket");
+	chkBSDSocket->setId("chkBSDSocket");
 	chkBSDSocket->addActionListener(miscActionListener);
 
 	chkMasterWP = new gcn::CheckBox("Master floppy write protection");
-	chkMasterWP->setId("MasterWP");
+	chkMasterWP->setId("chkMasterWP");
 	chkMasterWP->addActionListener(miscActionListener);
 
 	chkClipboardSharing = new gcn::CheckBox("Clipboard sharing");
@@ -363,6 +367,10 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	chkRTSCTS = new gcn::CheckBox("RTS/CTS");
 	chkRTSCTS->setId("chkRTSCTS");
 	chkRTSCTS->addActionListener(miscActionListener);
+
+	chkUaeSerial = new gcn::CheckBox("uaeserial.device");
+	chkUaeSerial->setId("chkUaeSerial");
+	chkUaeSerial->addActionListener(miscActionListener);
 #endif
 
 	auto posY = DISTANCE_BORDER;
@@ -381,17 +389,17 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	category.panel->add(chkRetroArchReset, posX + DISTANCE_BORDER, posY);
 	posY += chkRetroArchReset->getHeight() + DISTANCE_NEXT_Y;
 	//category.panel->add(chkRetroArchSavestate, posX + DISTANCE_BORDER, posY);
-
+	
 	category.panel->add(chkMouseUntrap, DISTANCE_BORDER, posY);
+	category.panel->add(chkClipboardSharing, posX + DISTANCE_BORDER, posY);
 	posY += chkMouseUntrap->getHeight() + DISTANCE_NEXT_Y;
+
 	category.panel->add(chkBSDSocket, DISTANCE_BORDER, posY);
+	category.panel->add(chkAllowHostRun, posX + DISTANCE_BORDER, posY);
 	posY += chkBSDSocket->getHeight() + DISTANCE_NEXT_Y;
+	
 	category.panel->add(chkMasterWP, DISTANCE_BORDER, posY);
-	posY += chkMasterWP->getHeight() + DISTANCE_NEXT_Y;
-	category.panel->add(chkClipboardSharing, DISTANCE_BORDER, posY);
-	posY += chkClipboardSharing->getHeight() + DISTANCE_NEXT_Y;
-	category.panel->add(chkAllowHostRun, DISTANCE_BORDER, posY);
-	posY += chkAllowHostRun->getHeight() + DISTANCE_NEXT_Y * 2;
+	posY += chkMasterWP->getHeight() + DISTANCE_NEXT_Y * 2;
 
 	const auto column2_x = DISTANCE_BORDER + 290;
 
@@ -420,19 +428,20 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	category.panel->add(lblKeyFullScreen, column2_x, posY);
 	category.panel->add(txtKeyFullScreen, lblKeyFullScreen->getX() + lblKeyFullScreen->getWidth() + 8, posY);
 	category.panel->add(cmdKeyFullScreen, txtKeyFullScreen->getX() + txtKeyFullScreen->getWidth() + 8, posY);
-
+	
 #ifdef SERIAL_PORT
 	posY += cmdKeyActionReplay->getHeight() + DISTANCE_NEXT_Y * 2;
 
 	grpSerialDevice->setPosition(DISTANCE_BORDER, posY);
-	grpSerialDevice->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, TITLEBAR_HEIGHT + chkSerialDirect->getHeight() * 3);
+	grpSerialDevice->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, TITLEBAR_HEIGHT + chkSerialDirect->getHeight() * 5);
 	grpSerialDevice->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpSerialDevice->setBaseColor(gui_baseCol);
-	txtSerialDevice->setSize(grpSerialDevice->getWidth() - chkSerialDirect->getWidth() - chkRTSCTS->getWidth() -  DISTANCE_BORDER * 4, TEXTFIELD_HEIGHT);
+	txtSerialDevice->setSize(grpSerialDevice->getWidth() - chkSerialDirect->getWidth() - chkRTSCTS->getWidth() - DISTANCE_BORDER * 4, TEXTFIELD_HEIGHT);
 	txtSerialDevice->setBackgroundColor(colTextboxBackground);
 	grpSerialDevice->add(txtSerialDevice, DISTANCE_BORDER, DISTANCE_BORDER);
-	grpSerialDevice->add(chkRTSCTS, DISTANCE_BORDER + txtSerialDevice->getWidth() + txtSerialDevice->getX(), DISTANCE_BORDER);
-	grpSerialDevice->add(chkSerialDirect,chkRTSCTS->getWidth() + chkRTSCTS->getX() + DISTANCE_BORDER, DISTANCE_BORDER);
+	grpSerialDevice->add(chkRTSCTS, DISTANCE_BORDER, DISTANCE_BORDER * 3);
+	grpSerialDevice->add(chkSerialDirect,chkRTSCTS->getWidth() + chkRTSCTS->getX() + DISTANCE_NEXT_X, DISTANCE_BORDER * 3);
+	grpSerialDevice->add(chkUaeSerial, chkSerialDirect->getWidth() + chkSerialDirect->getX() + DISTANCE_NEXT_X, DISTANCE_BORDER * 3);
 	category.panel->add(grpSerialDevice);
 #endif
 	RefreshPanelMisc();
@@ -484,6 +493,7 @@ void ExitPanelMisc()
 	delete txtSerialDevice;
 	delete chkRTSCTS;
 	delete chkSerialDirect;
+	delete chkUaeSerial;
 #endif
 }
 
@@ -522,6 +532,7 @@ void RefreshPanelMisc()
 	chkRTSCTS->setSelected(changed_prefs.serial_hwctsrts);
 	chkSerialDirect->setSelected(changed_prefs.serial_direct);
 	txtSerialDevice->setText(changed_prefs.sername);
+	chkUaeSerial->setSelected(changed_prefs.uaeserial);
 #endif
 }
 

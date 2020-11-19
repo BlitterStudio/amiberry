@@ -343,6 +343,7 @@ OBJS =	\
 	src/traps.o \
 	src/uaeexe.o \
 	src/uaelib.o \
+	src/uaeserial.o \
 	src/uaeresource.o \
 	src/zfile.o \
 	src/zfile_archive.o \

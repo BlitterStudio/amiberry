@@ -100,6 +100,7 @@ LOCAL_SRC_FILES := src/archivers/7z/BraIA64.c \
                     src/traps.cpp \
 					src/uaeexe.cpp \
                     src/uaelib.cpp \
+                    src/uaeserial.cpp \
                     src/uaeresource.cpp \
                     src/zfile.cpp \
                     src/zfile_archive.cpp \
