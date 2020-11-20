@@ -430,6 +430,11 @@ static int init_joystick()
 	{
 		fill_default_keyboard();
 		host_keyboard_buttons[0] = default_keyboard_map;
+		if (amiberry_options.input_keyrah_joystick)
+		{
+			host_keyboard_buttons[0].button[SDL_CONTROLLER_BUTTON_A] = SDL_SCANCODE_SPACE;
+			host_keyboard_buttons[0].button[SDL_CONTROLLER_BUTTON_X] = SDL_SCANCODE_LALT;
+		}
 		num_keys_as_joys = 1;
 	}
 

@@ -1043,6 +1043,11 @@ void save_amiberry_settings(void)
 
 	// When using Keyboard as Joystick, stop any double keypresses
 	snprintf(buffer, MAX_DPATH, "input_keyboard_as_joystick_stop_keypresses=%s\n", amiberry_options.input_keyboard_as_joystick_stop_keypresses ? "yes" : "no");
+	fputs(buffer, f);
+	
+	// Use Keyrah V2 keyboard as Joystick mapping
+	snprintf(buffer, MAX_DPATH, "input_keyrah_joystick=%s\n", amiberry_options.input_keyrah_joystick ? "yes" : "no");
+	fputs(buffer, f);
 	
 	// Default key for opening the GUI (e.g. "F12")
 	snprintf(buffer, MAX_DPATH, "default_open_gui_key=%s\n", amiberry_options.default_open_gui_key);
@@ -1342,6 +1347,7 @@ void load_amiberry_settings(void)
 					cfgfile_yesno(option, value, "use_sdl2_render_thread", &amiberry_options.use_sdl2_render_thread);
 					cfgfile_intval(option, value, "input_default_mouse_speed", &amiberry_options.input_default_mouse_speed, 1);
 					cfgfile_yesno(option, value, "input_keyboard_as_joystick_stop_keypresses", &amiberry_options.input_keyboard_as_joystick_stop_keypresses);
+					cfgfile_yesno(option, value, "input_keyrah_joystick", &amiberry_options.input_keyrah_joystick);
 					cfgfile_string(option, value, "default_open_gui_key", amiberry_options.default_open_gui_key, sizeof amiberry_options.default_open_gui_key);
 					cfgfile_string(option, value, "default_quit_key", amiberry_options.default_quit_key, sizeof amiberry_options.default_quit_key);
 					cfgfile_string(option, value, "default_ar_key", amiberry_options.default_ar_key, sizeof amiberry_options.default_ar_key);
