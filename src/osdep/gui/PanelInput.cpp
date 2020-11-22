@@ -15,6 +15,8 @@
 #endif
 #endif
 
+static int joyxprevious[4];
+auto total = 2;
 static const char* mousespeed_list[] = {".25", ".5", "1x", "2x", "4x"};
 static const int mousespeed_values[] = {2, 5, 10, 20, 40};
 
@@ -50,6 +52,11 @@ static gcn::Slider* sldMouseSpeed;
 static gcn::CheckBox* chkMouseHack;
 static gcn::CheckBox* chkInputAutoswitch;
 
+static gcn::DropDown* joys[] = { cboPort0, cboPort1, cboPort2, cboPort3 };
+static gcn::DropDown* joysm[] = { cboPort0mode, cboPort1mode, nullptr, nullptr };
+static gcn::DropDown* joysaf[] = { cboPort0Autofire, cboPort1Autofire, cboPort2Autofire, cboPort3Autofire };
+static gcn::DropDown* joysmm[] = { cboPort0mousemode, cboPort1mousemode };
+
 class StringListModel : public gcn::ListModel
 {
 private:
@@ -81,7 +88,7 @@ public:
 };
 
 static StringListModel ctrlPortList(nullptr, 0);
-static int portListIDs[MAX_INPUT_DEVICES];
+static int portListIDs[MAX_INPUT_DEVICES + JSEM_LASTKBD + 1];
 
 const char* autoFireValues[] = { "No autofire", "Autofire", "Autofire (toggle)", "Autofire (always)" };
 StringListModel autoFireList(autoFireValues, 4);
@@ -98,127 +105,71 @@ StringListModel ctrlPortModeList(joyportmodes, 8);
 class InputActionListener : public gcn::ActionListener
 {
 public:
-	static void clear_ports(const int sel, const int current_port)
-	{
-		for (auto i = 0; i < MAX_JPORTS; i++)
-		{
-			if (i == current_port)
-				continue;
-			if (changed_prefs.jports[i].id == portListIDs[sel])
-			{
-				changed_prefs.jports[i].id = JPORT_NONE;
-				changed_prefs.jports[i].idc.configname[0] = 0;
-				changed_prefs.jports[i].idc.name[0] = 0;
-				changed_prefs.jports[i].idc.shortid[0] = 0;
-			}
-		}
-	}
-
-	static void set_port(const int sel, const int current_port)
-	{
-		changed_prefs.jports[current_port].id = portListIDs[sel];
-		if (changed_prefs.jports[current_port].id == JPORT_NONE)
-		{
-			changed_prefs.jports[current_port].idc.configname[0] = 0;
-			changed_prefs.jports[current_port].idc.name[0] = 0;
-			changed_prefs.jports[current_port].idc.shortid[0] = 0;
-		}
-		inputdevice_updateconfig(nullptr, &changed_prefs);
-		RefreshPanelInput();
-		RefreshPanelCustom();
-	}
-
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		if (actionEvent.getSource() == cboPort0)
+		int changed = 0;
+		int changedport = -1;
+		for (auto i = 0; i < MAX_JPORTS; i++)
 		{
-			// Handle new device in port 0
-			const auto sel = cboPort0->getSelected();
-			const auto current_port = 0;
+			if (actionEvent.getSource() == joys[i]
+				|| actionEvent.getSource() == joysm[i]
+				|| actionEvent.getSource() == joysaf[i]
+				|| actionEvent.getSource() == joysmm[i])
+				changedport = i;
+			else
+				continue;
+			
+			auto* port = &changed_prefs.jports[i].id;
+			auto prevport = *port;
+			auto* id = joys[i];
+			auto* idm = joysm[i];
 
-			// clear 
-			clear_ports(sel, current_port);
-
-			// set
-			set_port(sel, current_port);
+			auto v = id->getSelected();
+			if (v >= 0)
+			{
+				auto max = JSEM_LASTKBD + inputdevice_get_device_total(IDTYPE_JOYSTICK);
+				if (i < 2)
+					max += inputdevice_get_device_total(IDTYPE_MOUSE);
+				v -= 1;
+				if (v < 0) {
+					*port = JPORT_NONE;
+				}
+				else if (v >= max + MAX_JPORTS_CUSTOM) {
+					*port = JPORT_NONE;
+				}
+				else if (v >= max) {
+					*port = JSEM_CUSTOM + v - max;
+				}
+				else if (v < JSEM_LASTKBD) {
+					*port = JSEM_KBDLAYOUT + (int)v;
+				}
+				else if (v >= JSEM_LASTKBD + inputdevice_get_device_total(IDTYPE_JOYSTICK)) {
+					*port = JSEM_MICE + (int)v - inputdevice_get_device_total(IDTYPE_JOYSTICK) - JSEM_LASTKBD;
+				}
+				else {
+					*port = JSEM_JOYS + (int)v - JSEM_LASTKBD;
+				}
+			}
+			if (idm != nullptr) {
+				v = idm->getSelected();
+				changed_prefs.jports[i].mode = v;
+			}
+			if (joysaf[i] != nullptr) {
+				auto af = joysaf[i]->getSelected();
+				changed_prefs.jports[i].autofire = af;
+			}
+			if (i < 2 && joysmm[i] != nullptr)
+			{
+				v = joysmm[i]->getSelected();
+				changed_prefs.jports[i].mousemap = v;
+			}
+			if (*port != prevport)
+				changed = 1;
 		}
+		if (changed)
+			inputdevice_validate_jports(&changed_prefs, changedport, NULL);
 
-		else if (actionEvent.getSource() == cboPort1)
-		{
-			// Handle new device in port 1
-			const auto sel = cboPort1->getSelected();
-			const auto current_port = 1;
-
-			// clear 
-			clear_ports(sel, current_port);
-
-			// set
-			set_port(sel, current_port);
-		}
-
-		else if (actionEvent.getSource() == cboPort2)
-		{
-			// Handle new device in port 2
-			const auto sel = cboPort2->getSelected();
-			const auto current_port = 2;
-
-			// clear 
-			clear_ports(sel, current_port);
-
-			// set
-			set_port(sel, current_port);
-		}
-
-		else if (actionEvent.getSource() == cboPort3)
-		{
-			// Handle new device in port 3
-			const auto sel = cboPort3->getSelected();
-			const auto current_port = 3;
-
-			// clear 
-			clear_ports(sel, current_port);
-
-			// set
-			set_port(sel, current_port);
-		}
-
-		else if (actionEvent.getSource() == cboPort0Autofire)
-			changed_prefs.jports[0].autofire = cboPort0Autofire->getSelected();
-		else if (actionEvent.getSource() == cboPort1Autofire)
-			changed_prefs.jports[1].autofire = cboPort1Autofire->getSelected();
-		else if (actionEvent.getSource() == cboPort2Autofire)
-			changed_prefs.jports[2].autofire = cboPort2Autofire->getSelected();
-		else if (actionEvent.getSource() == cboPort3Autofire)
-			changed_prefs.jports[3].autofire = cboPort3Autofire->getSelected();
-		
-		else if (actionEvent.getSource() == cboPort0mode)
-		{
-			changed_prefs.jports[0].mode = cboPort0mode->getSelected();
-			inputdevice_updateconfig(nullptr, &changed_prefs);
-			RefreshPanelInput();
-			RefreshPanelCustom();
-		}
-		else if (actionEvent.getSource() == cboPort1mode)
-		{
-			changed_prefs.jports[1].mode = cboPort1mode->getSelected();
-			inputdevice_updateconfig(nullptr, &changed_prefs);
-			RefreshPanelInput();
-			RefreshPanelCustom();
-		}
-
-		// mousemap drop-down change
-		else if (actionEvent.getSource() == cboPort0mousemode)
-		{
-			changed_prefs.jports[0].mousemap = cboPort0mousemode->getSelected();
-			inputdevice_updateconfig(nullptr, &changed_prefs);
-		}
-		else if (actionEvent.getSource() == cboPort1mousemode)
-		{
-			changed_prefs.jports[1].mousemap = cboPort1mousemode->getSelected();
-			inputdevice_updateconfig(nullptr, &changed_prefs);
-		}
-
-		else if (actionEvent.getSource() == cboAutofireRate)
+		if (actionEvent.getSource() == cboAutofireRate)
 		{
 			if (cboAutofireRate->getSelected() == 0)
 				changed_prefs.input_autofire_linecnt = 0;
@@ -233,7 +184,6 @@ public:
 		else if (actionEvent.getSource() == sldMouseSpeed)
 		{
 			changed_prefs.input_joymouse_multiplier = mousespeed_values[static_cast<int>(sldMouseSpeed->getValue())];
-			RefreshPanelInput();
 		}
 
 		else if (actionEvent.getSource() == chkMouseHack)
@@ -253,6 +203,9 @@ public:
 		{
 			changed_prefs.input_autoswitch = chkInputAutoswitch->isSelected();
 		}
+
+		RefreshPanelInput();
+		RefreshPanelCustom();
 	}
 };
 
@@ -263,26 +216,41 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	if (ctrlPortList.getNumberOfElements() == 0)
 	{
 		auto idx = 0;
-		ctrlPortList.add_element("None");
+		ctrlPortList.add_element("<none>");
 		portListIDs[idx] = JPORT_NONE;
+		
+		idx++;
+		ctrlPortList.add_element("Keyboard Layout A (Numpad, 0/5=Fire, Decimal/DEL=2nd Fire)");
+		portListIDs[idx] = JSEM_KBDLAYOUT;
+		
+		idx++;
+		ctrlPortList.add_element("Keyboard Layout B (Cursor, RCtrl/RAlt=Fire, RShift=2nd Fire)");
+		portListIDs[idx] = JSEM_KBDLAYOUT + 1;
+		
+		idx++;
+		ctrlPortList.add_element("Keyboard Layout C (WSAD, LAlt=Fire, LShift=2nd Fire)");
+		portListIDs[idx] = JSEM_KBDLAYOUT + 2;
 
-		int i;
-		for (i = 0; i < inputdevice_get_device_total(IDTYPE_MOUSE); i++)
+		idx++;
+		ctrlPortList.add_element("Keyrah Layout (Cursor, Space/RAlt=Fire, RShift=2nd Fire)");
+		portListIDs[idx] = JSEM_KBDLAYOUT + 3;
+
+		idx++;
+		ctrlPortList.add_element("iPac Layout (Cursor, LAlt/LCtrl=Fire, Space=2nd Fire)");
+		portListIDs[idx] = JSEM_KBDLAYOUT + 4;
+		
+		for (auto j = 0; j < inputdevice_get_device_total(IDTYPE_JOYSTICK); j++, total++)
 		{
-			const auto* const device_name = inputdevice_get_device_name(IDTYPE_MOUSE, i);
-			if (device_name && device_name[0])
-			{
-				ctrlPortList.add_element(inputdevice_get_device_name(IDTYPE_MOUSE, i));
-				idx++;
-				portListIDs[idx] = JSEM_MICE + i;
-			}
+			ctrlPortList.add_element(inputdevice_get_device_name(IDTYPE_JOYSTICK, j));
+			idx++;
+			portListIDs[idx] = JSEM_JOYS + j;
 		}
 
-		for (i = 0; i < inputdevice_get_device_total(IDTYPE_JOYSTICK); i++)
+		for (auto j = 0; j < inputdevice_get_device_total(IDTYPE_MOUSE); j++, total++)
 		{
-			ctrlPortList.add_element(inputdevice_get_device_name(IDTYPE_JOYSTICK, i));
+			ctrlPortList.add_element(inputdevice_get_device_name(IDTYPE_MOUSE, j));
 			idx++;
-			portListIDs[idx] = JSEM_JOYS + i;
+			portListIDs[idx] = JSEM_MICE + j;
 		}
 	}
 
@@ -291,103 +259,81 @@ void InitPanelInput(const struct _ConfigCategory& category)
 
 	lblPort0 = new gcn::Label("Port 0:");
 	lblPort0->setAlignment(gcn::Graphics::RIGHT);
-	cboPort0 = new gcn::DropDown(&ctrlPortList);
-	cboPort0->setSize(textFieldWidth, cboPort0->getHeight());
-	cboPort0->setBaseColor(gui_baseCol);
-	cboPort0->setBackgroundColor(colTextboxBackground);
-	cboPort0->setId("cboPort0");
-	cboPort0->addActionListener(inputActionListener);
-
-	cboPort0Autofire = new gcn::DropDown(&autoFireList);
-	cboPort0Autofire->setSize(150, cboPort0Autofire->getHeight());
-	cboPort0Autofire->setBaseColor(gui_baseCol);
-	cboPort0Autofire->setBackgroundColor(colTextboxBackground);
-	cboPort0Autofire->setId("cboPort0Autofire");
-	cboPort0Autofire->addActionListener(inputActionListener);
-
-	cboPort1Autofire = new gcn::DropDown(&autoFireList);
-	cboPort1Autofire->setSize(150, cboPort1Autofire->getHeight());
-	cboPort1Autofire->setBaseColor(gui_baseCol);
-	cboPort1Autofire->setBackgroundColor(colTextboxBackground);
-	cboPort1Autofire->setId("cboPort1Autofire");
-	cboPort1Autofire->addActionListener(inputActionListener);
-
-	cboPort2Autofire = new gcn::DropDown(&autoFireList);
-	cboPort2Autofire->setSize(150, cboPort2Autofire->getHeight());
-	cboPort2Autofire->setBaseColor(gui_baseCol);
-	cboPort2Autofire->setBackgroundColor(colTextboxBackground);
-	cboPort2Autofire->setId("cboPort2Autofire");
-	cboPort2Autofire->addActionListener(inputActionListener);
-
-	cboPort3Autofire = new gcn::DropDown(&autoFireList);
-	cboPort3Autofire->setSize(150, cboPort3Autofire->getHeight());
-	cboPort3Autofire->setBaseColor(gui_baseCol);
-	cboPort3Autofire->setBackgroundColor(colTextboxBackground);
-	cboPort3Autofire->setId("cboPort3Autofire");
-	cboPort3Autofire->addActionListener(inputActionListener);
-	
-	cboPort0mode = new gcn::DropDown(&ctrlPortModeList);
-	cboPort0mode->setSize(cboPort0mode->getWidth(), cboPort0mode->getHeight());
-	cboPort0mode->setBaseColor(gui_baseCol);
-	cboPort0mode->setBackgroundColor(colTextboxBackground);
-	cboPort0mode->setId("cboPort0mode");
-	cboPort0mode->addActionListener(inputActionListener);
 
 	lblPort1 = new gcn::Label("Port 1:");
 	lblPort1->setAlignment(gcn::Graphics::RIGHT);
-	lblPort0->setSize(lblPort1->getWidth(), lblPort0->getHeight());
-	cboPort1 = new gcn::DropDown(&ctrlPortList);
-	cboPort1->setSize(textFieldWidth, cboPort1->getHeight());
-	cboPort1->setBaseColor(gui_baseCol);
-	cboPort1->setBackgroundColor(colTextboxBackground);
-	cboPort1->setId("cboPort1");
-	cboPort1->addActionListener(inputActionListener);
 
-	cboPort1mode = new gcn::DropDown(&ctrlPortModeList);
-	cboPort1mode->setSize(cboPort1mode->getWidth(), cboPort1mode->getHeight());
-	cboPort1mode->setBaseColor(gui_baseCol);
-	cboPort1mode->setBackgroundColor(colTextboxBackground);
-	cboPort1mode->setId("cboPort1mode");
-	cboPort1mode->addActionListener(inputActionListener);
-
-	lblParallelPortAdapter = new gcn::Label("Emulated parallel port joystick adapter");
-	lblParallelPortAdapter->setAlignment(gcn::Graphics::LEFT);
-	
 	lblPort2 = new gcn::Label("Port 2:");
 	lblPort2->setAlignment(gcn::Graphics::LEFT);
-	cboPort2 = new gcn::DropDown(&ctrlPortList);
-	cboPort2->setSize(textFieldWidth, cboPort2->getHeight());
-	cboPort2->setBaseColor(gui_baseCol);
-	cboPort2->setBackgroundColor(colTextboxBackground);
-	cboPort2->setId("cboPort2");
-	cboPort2->addActionListener(inputActionListener);
 
 	lblPort3 = new gcn::Label("Port 3:");
 	lblPort3->setAlignment(gcn::Graphics::LEFT);
-	cboPort3 = new gcn::DropDown(&ctrlPortList);
-	cboPort3->setSize(textFieldWidth, cboPort3->getHeight());
-	cboPort3->setBaseColor(gui_baseCol);
-	cboPort3->setBackgroundColor(colTextboxBackground);
-	cboPort3->setId("cboPort3");
-	cboPort3->addActionListener(inputActionListener);
+	
+	for (auto i = 0; i < MAX_JPORTS; i++)
+	{
+		joys[i] = new gcn::DropDown(&ctrlPortList);
+		joys[i]->setSize(textFieldWidth, joys[i]->getHeight());
+		joys[i]->setBaseColor(gui_baseCol);
+		joys[i]->setBackgroundColor(colTextboxBackground);
+		joys[i]->addActionListener(inputActionListener);
+
+		joysaf[i] = new gcn::DropDown(&autoFireList);
+		joysaf[i]->setSize(150, joysaf[i]->getHeight());
+		joysaf[i]->setBaseColor(gui_baseCol);
+		joysaf[i]->setBackgroundColor(colTextboxBackground);
+		joysaf[i]->addActionListener(inputActionListener);
+
+		if (i < 2)
+		{
+			joysm[i] = new gcn::DropDown(&ctrlPortModeList);
+			joysm[i]->setSize(joysm[i]->getWidth(), joysm[i]->getHeight());
+			joysm[i]->setBaseColor(gui_baseCol);
+			joysm[i]->setBackgroundColor(colTextboxBackground);
+			joysm[i]->addActionListener(inputActionListener);
+
+			joysmm[i] = new gcn::DropDown(&ctrlPortMouseModeList);
+			joysmm[i]->setSize(68, joysmm[i]->getHeight());
+			joysmm[i]->setBaseColor(gui_baseCol);
+			joysmm[i]->setBackgroundColor(colTextboxBackground);
+			joysmm[i]->addActionListener(inputActionListener);
+		}
+		
+		switch (i)
+		{
+		case 0: 
+			joys[i]->setId("cboPort0");
+			joysaf[i]->setId("cboPort0Autofire");
+			joysm[i]->setId("cboPort0mode");
+			joysmm[i]->setId("cboPort0mousemode");
+			break;
+		case 1: 
+			joys[i]->setId("cboPort1");
+			joysaf[i]->setId("cboPort1Autofire");
+			joysm[i]->setId("cboPort1mode");
+			joysmm[i]->setId("cboPort1mousemode");
+			break;
+		case 2: 
+			joys[i]->setId("cboPort2");
+			joysaf[i]->setId("cboPort2Autofire");
+			break;
+		case 3: 
+			joys[i]->setId("cboPort3");
+			joysaf[i]->setId("cboPort3Autofire");
+			break;
+		default: 
+			break;
+		}
+		
+	}
+	
+	lblParallelPortAdapter = new gcn::Label("Emulated parallel port joystick adapter");
+	lblParallelPortAdapter->setAlignment(gcn::Graphics::LEFT);
 
 	lblPort0mousemode = new gcn::Label("Mouse Stick 0:");
 	lblPort0mousemode->setAlignment(gcn::Graphics::RIGHT);
-	cboPort0mousemode = new gcn::DropDown(&ctrlPortMouseModeList);
-	cboPort0mousemode->setSize(68, cboPort0mousemode->getHeight());
-	cboPort0mousemode->setBaseColor(gui_baseCol);
-	cboPort0mousemode->setBackgroundColor(colTextboxBackground);
-	cboPort0mousemode->setId("cboPort0mousemode");
-	cboPort0mousemode->addActionListener(inputActionListener);
 
 	lblPort1mousemode = new gcn::Label("Mouse Stick 1:");
 	lblPort1mousemode->setAlignment(gcn::Graphics::RIGHT);
-	cboPort1mousemode = new gcn::DropDown(&ctrlPortMouseModeList);
-	cboPort1mousemode->setSize(68, cboPort1mousemode->getHeight());
-	cboPort1mousemode->setBaseColor(gui_baseCol);
-	cboPort1mousemode->setBackgroundColor(colTextboxBackground);
-	cboPort1mousemode->setId("cboPort1mousemode");
-	cboPort1mousemode->addActionListener(inputActionListener);
 
 	lblAutofireRate = new gcn::Label("Autofire Rate:");
 	lblAutofireRate->setAlignment(gcn::Graphics::RIGHT);
@@ -419,52 +365,52 @@ void InitPanelInput(const struct _ConfigCategory& category)
 
 	auto posY = DISTANCE_BORDER;
 	category.panel->add(lblPort0, DISTANCE_BORDER, posY);
-	category.panel->add(cboPort0, DISTANCE_BORDER + lblPort0->getWidth() + 8, posY);
-	posY += cboPort0->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(joys[0], DISTANCE_BORDER + lblPort0->getWidth() + 8, posY);
+	posY += joys[0]->getHeight() + DISTANCE_NEXT_Y;
 
-	category.panel->add(cboPort0Autofire, cboPort0->getX(), posY);
-	category.panel->add(cboPort0mode, cboPort0Autofire->getX() + cboPort0Autofire->getWidth() + DISTANCE_NEXT_X, posY);
-	posY += cboPort0Autofire->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(joysaf[0], joys[0]->getX(), posY);
+	category.panel->add(joysm[0], joysaf[0]->getX() + joysaf[0]->getWidth() + DISTANCE_NEXT_X, posY);
+	posY += joysaf[0]->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(lblPort1, DISTANCE_BORDER, posY);
-	category.panel->add(cboPort1, DISTANCE_BORDER + lblPort1->getWidth() + 8, posY);
-	posY += cboPort1->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(joys[1], DISTANCE_BORDER + lblPort1->getWidth() + 8, posY);
+	posY += joys[1]->getHeight() + DISTANCE_NEXT_Y;
 
-	category.panel->add(cboPort1Autofire, cboPort1->getX(), posY);
-	category.panel->add(cboPort1mode, cboPort1Autofire->getX() + cboPort1Autofire->getWidth() + DISTANCE_NEXT_X, posY);
-	posY += cboPort1Autofire->getHeight() + DISTANCE_NEXT_Y * 2;
+	category.panel->add(joysaf[1], joys[1]->getX(), posY);
+	category.panel->add(joysm[1], joysaf[1]->getX() + joysaf[1]->getWidth() + DISTANCE_NEXT_X, posY);
+	posY += joysaf[1]->getHeight() + DISTANCE_NEXT_Y * 2;
 
-	category.panel->add(chkInputAutoswitch, cboPort1Autofire->getX(), posY);
+	category.panel->add(chkInputAutoswitch, joysaf[1]->getX(), posY);
 	posY += chkInputAutoswitch->getHeight() + DISTANCE_NEXT_Y * 2;
 	
 	category.panel->add(lblParallelPortAdapter, DISTANCE_BORDER, posY);
 	posY += lblParallelPortAdapter->getHeight() + DISTANCE_NEXT_Y;
 	
 	category.panel->add(lblPort2, DISTANCE_BORDER, posY);
-	category.panel->add(cboPort2, DISTANCE_BORDER + lblPort2->getWidth() + 8, posY);
-	posY += cboPort2->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(joys[2], DISTANCE_BORDER + lblPort2->getWidth() + 8, posY);
+	posY += joys[2]->getHeight() + DISTANCE_NEXT_Y;
 
-	category.panel->add(cboPort2Autofire, cboPort2->getX(), posY);
-	posY += cboPort2Autofire->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(joysaf[2], joys[2]->getX(), posY);
+	posY += joysaf[2]->getHeight() + DISTANCE_NEXT_Y;
 	
 	category.panel->add(lblPort3, DISTANCE_BORDER, posY);
-	category.panel->add(cboPort3, DISTANCE_BORDER + lblPort3->getWidth() + 8, posY);
-	posY += cboPort3->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(joys[3], DISTANCE_BORDER + lblPort3->getWidth() + 8, posY);
+	posY += joys[3]->getHeight() + DISTANCE_NEXT_Y;
 
-	category.panel->add(cboPort3Autofire, cboPort3->getX(), posY);
-	posY += cboPort3Autofire->getHeight() + DISTANCE_NEXT_Y * 2;
+	category.panel->add(joysaf[3], joys[3]->getX(), posY);
+	posY += joysaf[3]->getHeight() + DISTANCE_NEXT_Y * 2;
 	
 	category.panel->add(lblPort0mousemode, DISTANCE_BORDER, posY);
-	category.panel->add(cboPort0mousemode, lblPort0mousemode->getX() + lblPort0mousemode->getWidth() + 8, posY);
+	category.panel->add(joysmm[0], lblPort0mousemode->getX() + lblPort0mousemode->getWidth() + 8, posY);
 
 	category.panel->add(lblMouseSpeed,
-	                    cboPort0mousemode->getX() + cboPort0mousemode->getWidth() + (DISTANCE_NEXT_X * 2), posY);
+		joysmm[0]->getX() + joysmm[0]->getWidth() + (DISTANCE_NEXT_X * 2), posY);
 	category.panel->add(sldMouseSpeed, lblMouseSpeed->getX() + lblMouseSpeed->getWidth() + 8, posY);
 	category.panel->add(lblMouseSpeedInfo, sldMouseSpeed->getX() + sldMouseSpeed->getWidth() + 8, posY);
 	posY += lblMouseSpeed->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(lblPort1mousemode, DISTANCE_BORDER, posY);
-	category.panel->add(cboPort1mousemode, lblPort1mousemode->getX() + lblPort1mousemode->getWidth() + 8, posY);
+	category.panel->add(joysmm[1], lblPort1mousemode->getX() + lblPort1mousemode->getWidth() + 8, posY);
 	posY += lblPort1mousemode->getHeight() + DISTANCE_NEXT_Y * 2;
 
 	category.panel->add(lblAutofireRate, DISTANCE_BORDER, posY);
@@ -477,30 +423,27 @@ void InitPanelInput(const struct _ConfigCategory& category)
 
 void ExitPanelInput()
 {
+	for (auto& joy : joys)
+		delete joy;
+
+	for (auto& joyaf : joysaf)
+		delete joyaf;
+
+	for (auto& joym : joysm)
+		delete joym;
+
+	for (auto& joymm : joysmm)
+		delete joymm;
+	
 	delete lblPort0;
-	delete cboPort0;
-	delete cboPort0Autofire;
-	delete cboPort0mode;
-	delete lblPort0mousemode;
-	delete cboPort0mousemode;
-
 	delete lblPort1;
-	delete cboPort1;
-	delete cboPort1Autofire;
-	delete cboPort1mode;
+	delete lblPort2;
+	delete lblPort3;
 
+	delete lblPort0mousemode;
 	delete lblPort1mousemode;
-	delete cboPort1mousemode;
 
 	delete lblParallelPortAdapter;
-	delete lblPort2;
-	delete cboPort2;
-	delete cboPort2Autofire;
-	
-	delete lblPort3;
-	delete cboPort3;
-	delete cboPort3Autofire;
-	
 	delete lblAutofireRate;
 	delete cboAutofireRate;
 	delete lblMouseSpeed;
@@ -515,53 +458,31 @@ void ExitPanelInput()
 
 void RefreshPanelInput()
 {
-	// Set current device in port 0
-	auto idx = 0;
-	for (auto i = 0; i < ctrlPortList.getNumberOfElements(); ++i)
+	for (auto i = 0; i < MAX_JPORTS; i++) 
 	{
-		if (changed_prefs.jports[0].id == portListIDs[i])
-		{
-			idx = i;
-			break;
-		}
-	}
-	cboPort0->setSelected(idx);
+		auto idx = 0;
+		const auto* id = joys[i];
+		const auto* idm = joysm[i];
+		const auto v = changed_prefs.jports[i].id;
+		const auto vm = changed_prefs.jports[i].mode + changed_prefs.jports[i].submode;
 
-	// Set current device in port 1
-	idx = 0;
-	for (auto i = 0; i < ctrlPortList.getNumberOfElements(); ++i)
-	{
-		if (changed_prefs.jports[1].id == portListIDs[i])
-		{
-			idx = i;
-			break;
-		}
-	}
-	cboPort1->setSelected(idx);
+		if (idm != nullptr)
+			idm->setSelected(vm);
 
-	// Set current device in port 2
-	idx = 0;
-	for (auto i = 0; i < ctrlPortList.getNumberOfElements(); ++i)
-	{
-		if (changed_prefs.jports[2].id == portListIDs[i])
+		for (auto j = 0; j < ctrlPortList.getNumberOfElements(); ++j)
 		{
-			idx = i;
-			break;
+			if (v == portListIDs[j])
+			{
+				idx = j;
+				break;
+			}
 		}
+		
+		if (id != nullptr)
+			id->setSelected(idx);
+		if (joysaf[i] != nullptr)
+			joysaf[i]->setSelected(changed_prefs.jports[i].autofire);
 	}
-	cboPort2->setSelected(idx);
-
-	// Set current device in port 3
-	idx = 0;
-	for (auto i = 0; i < ctrlPortList.getNumberOfElements(); ++i)
-	{
-		if (changed_prefs.jports[3].id == portListIDs[i])
-		{
-			idx = i;
-			break;
-		}
-	}
-	cboPort3->setSelected(idx);
 
 	if (changed_prefs.input_autofire_linecnt == 0)
 		cboAutofireRate->setSelected(0);
@@ -572,37 +493,29 @@ void RefreshPanelInput()
 	else
 		cboAutofireRate->setSelected(3);
 
-	cboPort0mode->setSelected(changed_prefs.jports[0].mode);
-	cboPort1mode->setSelected(changed_prefs.jports[1].mode);
-	
-	cboPort0Autofire->setSelected(changed_prefs.jports[0].autofire);
-	cboPort1Autofire->setSelected(changed_prefs.jports[1].autofire);
-	cboPort2Autofire->setSelected(changed_prefs.jports[2].autofire);
-	cboPort3Autofire->setSelected(changed_prefs.jports[3].autofire);
-
 	// changed mouse map
-	cboPort0mousemode->setSelected(changed_prefs.jports[0].mousemap);
-	cboPort1mousemode->setSelected(changed_prefs.jports[1].mousemap);
+	joysmm[0]->setSelected(changed_prefs.jports[0].mousemap);
+	joysmm[1]->setSelected(changed_prefs.jports[1].mousemap);
 
-	if (cboPort0mode->getSelected() == 0)
+	if (joysm[0]->getSelected() == 0)
 	{
-		cboPort0mousemode->setEnabled(false);
+		joysmm[0]->setEnabled(false);
 		lblPort0mousemode->setEnabled(false);
 	}
 	else
 	{
-		cboPort0mousemode->setEnabled(true);
+		joysmm[0]->setEnabled(true);
 		lblPort0mousemode->setEnabled(true);
 	}
 
-	if (cboPort1mode->getSelected() == 0)
+	if (joysm[1]->getSelected() == 0)
 	{
-		cboPort1mousemode->setEnabled(false);
+		joysmm[1]->setEnabled(false);
 		lblPort1mousemode->setEnabled(false);
 	}
 	else
 	{
-		cboPort1mousemode->setEnabled(true);
+		joysmm[1]->setEnabled(true);
 		lblPort1mousemode->setEnabled(true);
 	}
 

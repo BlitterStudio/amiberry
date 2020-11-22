@@ -204,6 +204,7 @@ bool resumepaused(int priority)
 	}
 	pause_emulation = 0;
 	setsystime();
+	wait_keyrelease();
 	return true;
 }
 
@@ -1045,10 +1046,6 @@ void save_amiberry_settings(void)
 	snprintf(buffer, MAX_DPATH, "input_keyboard_as_joystick_stop_keypresses=%s\n", amiberry_options.input_keyboard_as_joystick_stop_keypresses ? "yes" : "no");
 	fputs(buffer, f);
 	
-	// Use Keyrah V2 keyboard as Joystick mapping
-	snprintf(buffer, MAX_DPATH, "input_keyrah_joystick=%s\n", amiberry_options.input_keyrah_joystick ? "yes" : "no");
-	fputs(buffer, f);
-	
 	// Default key for opening the GUI (e.g. "F12")
 	snprintf(buffer, MAX_DPATH, "default_open_gui_key=%s\n", amiberry_options.default_open_gui_key);
 	fputs(buffer, f);
@@ -1347,7 +1344,6 @@ void load_amiberry_settings(void)
 					cfgfile_yesno(option, value, "use_sdl2_render_thread", &amiberry_options.use_sdl2_render_thread);
 					cfgfile_intval(option, value, "input_default_mouse_speed", &amiberry_options.input_default_mouse_speed, 1);
 					cfgfile_yesno(option, value, "input_keyboard_as_joystick_stop_keypresses", &amiberry_options.input_keyboard_as_joystick_stop_keypresses);
-					cfgfile_yesno(option, value, "input_keyrah_joystick", &amiberry_options.input_keyrah_joystick);
 					cfgfile_string(option, value, "default_open_gui_key", amiberry_options.default_open_gui_key, sizeof amiberry_options.default_open_gui_key);
 					cfgfile_string(option, value, "default_quit_key", amiberry_options.default_quit_key, sizeof amiberry_options.default_quit_key);
 					cfgfile_string(option, value, "default_ar_key", amiberry_options.default_ar_key, sizeof amiberry_options.default_ar_key);
@@ -1613,6 +1609,7 @@ static void amiberry_inactive(int minimized)
 {
 	focus = 0;
 	recapture = 0;
+	wait_keyrelease();
 	setmouseactive(0);
 	clipboard_active(1, 0);
 
@@ -1688,7 +1685,8 @@ static void amiberry_active(int minimized)
 		}
 		sound_closed = 0;
 	}
-	//getcapslock();
+	getcapslock();
+	wait_keyrelease();
 	inputdevice_acquire(TRUE);
 	if (isfullscreen() > 0)
 		setmouseactive(1);
@@ -1719,6 +1717,7 @@ static void setmouseactive2(int active, bool allowpause)
 	}
 	
 	if (active) {
+		wait_keyrelease();
 		inputdevice_acquire(TRUE);
 		setpriority(currprefs.active_capture_priority);
 		if (currprefs.active_nocapture_pause)
@@ -1845,84 +1844,35 @@ void process_event(SDL_Event event)
 		// if we want to use the KB
 		// i've added this so when using the joysticks it doesn't hit the 'r' key for some games
 		// which starts a replay!!!
-		const auto ok_to_use = !key_used_by_retroarch_joy(event.key.keysym.scancode);
-		if (ok_to_use && event.key.repeat == 0)
+		// 
+		//const auto ok_to_use = !key_used_by_retroarch_joy(event.key.keysym.scancode);
+		//if (ok_to_use && event.key.repeat == 0)
+		if (event.key.repeat == 0)
 		{
-			// If the Enter GUI key was pressed, handle it
-			if (enter_gui_key && event.key.keysym.sym == enter_gui_key)
-			{
-				inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
-				break;
-			}
-
-			// If the Quit emulator key was pressed, handle it
-			if (quit_key && event.key.keysym.sym == quit_key)
-			{
-				inputdevice_add_inputcode(AKS_QUIT, 1, nullptr);
-				break;
-			}
-
-			if (action_replay_button && event.key.keysym.sym == action_replay_button)
-			{
-				inputdevice_add_inputcode(AKS_FREEZEBUTTON, 1, nullptr);
-				break;
-			}
-
-			if (fullscreen_key && event.key.keysym.sym == fullscreen_key)
-			{
-				inputdevice_add_inputcode(AKS_TOGGLEWINDOWEDFULLSCREEN, 1, nullptr);
-				break;
-			}
-
-			if (event.key.keysym.sym == SDLK_CAPSLOCK)
-			{
-				// Treat CAPSLOCK as a toggle. If on, set off and vice/versa
-				ioctl(0, KDGKBLED, &kbd_flags);
-				ioctl(0, KDGETLED, &kbd_led_status);
-				if (kbd_flags & 07 & LED_CAP)
-				{
-					// On, so turn off
-					kbd_led_status &= ~LED_CAP;
-					kbd_flags &= ~LED_CAP;
-					inputdevice_do_keyboard(AK_CAPSLOCK, 0);
-				}
-				else
-				{
-					// Off, so turn on
-					kbd_led_status |= LED_CAP;
-					kbd_flags |= LED_CAP;
-					inputdevice_do_keyboard(AK_CAPSLOCK, 1);
-				}
-				ioctl(0, KDSETLED, kbd_led_status);
-				ioctl(0, KDSKBLED, kbd_flags);
-				break;
-			}
-
-			if (event.key.keysym.sym == SDLK_SYSREQ)
-				clipboard_disable(true);
-
-			// Handle all other keys
+			auto scancode = event.key.keysym.scancode;
 			if (amiberry_options.rctrl_as_ramiga || currprefs.right_control_is_right_win_key)
 			{
-				if (event.key.keysym.scancode == SDL_SCANCODE_RCTRL)
-					event.key.keysym.scancode = SDL_SCANCODE_RGUI;
+				if (scancode == SDL_SCANCODE_RCTRL)
+					scancode = SDL_SCANCODE_RGUI;
 			}
-			inputdevice_translatekeycode(0, event.key.keysym.scancode, 1, false);
+			my_kbd_handler(0, scancode, 1, false);
 		}
 	}
 	break;
 
 	case SDL_KEYUP:
 	{
-		const auto ok_to_use = !key_used_by_retroarch_joy(event.key.keysym.scancode);
-		if (ok_to_use && event.key.repeat == 0)
+		//const auto ok_to_use = !key_used_by_retroarch_joy(event.key.keysym.scancode);
+		//if (ok_to_use && event.key.repeat == 0)
+		if (event.key.repeat == 0)
 		{
+			auto scancode = event.key.keysym.scancode;
 			if (amiberry_options.rctrl_as_ramiga || currprefs.right_control_is_right_win_key)
 			{
-				if (event.key.keysym.scancode == SDL_SCANCODE_RCTRL)
-					event.key.keysym.scancode = SDL_SCANCODE_RGUI;
+				if (scancode == SDL_SCANCODE_RCTRL)
+					scancode = SDL_SCANCODE_RGUI;
 			}
-			inputdevice_translatekeycode(0, event.key.keysym.scancode, 0, true);
+			my_kbd_handler(0, scancode, 0, true);
 		}
 	}
 	break;

@@ -1097,7 +1097,6 @@ struct amiberry_options
 	int default_line_mode = 0;
 	int input_default_mouse_speed = 100;
 	bool input_keyboard_as_joystick_stop_keypresses = false;
-	bool input_keyrah_joystick = false;
 	char default_open_gui_key[128] = "F12";
 	char default_quit_key[128]{};
 	char default_ar_key[128] = "Pause";

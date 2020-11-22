@@ -390,11 +390,6 @@ void disk_selection(const int drive, uae_prefs* prefs)
 	}
 }
 
-static void clearallkeys (void)
-{
-	inputdevice_updateconfig (NULL, &changed_prefs);
-}
-
 static void prefs_to_gui()
 {
 	/* filesys hack */
@@ -529,6 +524,7 @@ void gui_display(int shortcut)
 
 	if (setpaused(7)) {
 		inputdevice_unacquire();
+		wait_keyrelease();
 		clearallkeys();
 		setmouseactive(0);
 	}

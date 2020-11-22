@@ -37,6 +37,14 @@ STATIC_INLINE FILE* uae_tfopen(const TCHAR* path, const TCHAR* mode)
 extern void fix_apmodes(struct uae_prefs* p);
 extern int generic_main(int argc, char* argv[]);
 
+extern bool my_kbd_handler(int, int, int, bool);
+extern void clearallkeys(void);
+extern int getcapslock(void);
+extern int enter_gui_key;
+extern int quit_key;
+extern int action_replay_button;
+extern int fullscreen_key;
+
 extern int emulating;
 extern bool config_loaded;
 
@@ -61,7 +69,8 @@ void update_display(struct uae_prefs*);
 void black_screen_now(void);
 void graphics_subshutdown(void);
 
-void keyboard_settrans();
+extern void wait_keyrelease(void);
+extern void keyboard_settrans(void);
 void set_mouse_grab(bool grab);
 
 extern void free_AmigaMem();

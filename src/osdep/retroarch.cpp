@@ -261,40 +261,37 @@ bool init_kb_from_retroarch(int index, char* retroarch_file)
 	if (valid)
 	{
 		temp_keyboard_buttons.is_retroarch = true;
-		// set it!
 		host_keyboard_buttons[index] = temp_keyboard_buttons;
-		// and max!
-		num_keys_as_joys = player > num_keys_as_joys ? player : num_keys_as_joys;
 	}
 
 	write_log("Controller init_kb_from_retroarch(%i): %s \n", index, valid ? "Found" : "Not found");
 	return valid;
 }
 
-bool key_used_by_retroarch_joy(int scancode)
-{
-	auto key_used = false;
-	if (amiberry_options.input_keyboard_as_joystick_stop_keypresses)
-	{
-		//currprefs.jports[port]
-		for (auto joy_id = 0; joy_id < MAX_JPORTS && !key_used; joy_id++)
-		{
-			// First handle retroarch (or default) keys as Joystick...
-			if (currprefs.jports[joy_id].id >= JSEM_JOYS 
-				&& currprefs.jports[joy_id].id < JSEM_JOYS + num_keys_as_joys)
-			{
-				const auto host_key_id = currprefs.jports[joy_id].id - JSEM_JOYS;
-				const auto kb = host_key_id;
-				for (auto u : host_keyboard_buttons[kb].button)
-				{
-					if (u == scancode)
-						key_used = true;
-				}
-			}
-		}
-	}
-	return key_used;
-}
+//bool key_used_by_retroarch_joy(int scancode)
+//{
+//	auto key_used = false;
+//	if (amiberry_options.input_keyboard_as_joystick_stop_keypresses)
+//	{
+//		//currprefs.jports[port]
+//		for (auto joy_id = 0; joy_id < MAX_JPORTS && !key_used; joy_id++)
+//		{
+//			// First handle retroarch (or default) keys as Joystick...
+//			if (currprefs.jports[joy_id].id >= JSEM_KBDLAYOUT
+//				&& currprefs.jports[joy_id].id < JSEM_LASTKBD)
+//			{
+//				const auto host_key_id = currprefs.jports[joy_id].id + JSEM_KBDLAYOUT;
+//				const auto kb = host_key_id;
+//				for (auto u : host_keyboard_buttons[kb].button)
+//				{
+//					if (u == scancode)
+//						key_used = true;
+//				}
+//			}
+//		}
+//	}
+//	return key_used;
+//}
 
 void map_from_retroarch(int cpt, char* control_config)
 {
