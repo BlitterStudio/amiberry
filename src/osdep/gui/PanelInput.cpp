@@ -177,7 +177,7 @@ public:
 				}
 			}
 			if (joysaf[i] != nullptr) {
-				auto af = joysaf[i]->getSelected();
+				const auto af = joysaf[i]->getSelected();
 				changed_prefs.jports[i].autofire = af;
 			}
 			if (i < 2 && joysmm[i] != nullptr)
@@ -194,7 +194,6 @@ public:
 			inputdevice_validate_jports(&changed_prefs, changedport, NULL);
 		}
 			
-
 		if (actionEvent.getSource() == cboAutofireRate)
 		{
 			if (cboAutofireRate->getSelected() == 0)
