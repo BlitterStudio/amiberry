@@ -108,17 +108,16 @@ class InputActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		int changed = 0;
-		int changedport = -1;
+		auto changed = 0;
+		auto changedport = -1;
 		for (auto i = 0; i < MAX_JPORTS; i++)
 		{
 			if (actionEvent.getSource() == joys[i]
-				|| actionEvent.getSource() == joysm[i]
-				|| actionEvent.getSource() == joysaf[i]
-				|| actionEvent.getSource() == joysmm[i])
+				|| actionEvent.getSource() == joysm[i])
+			{
 				changedport = i;
-			else
-				continue;
+				inputdevice_compa_clear(&changed_prefs, changedport);
+			}
 			
 			auto* port = &changed_prefs.jports[i].id;
 			auto* portm = &changed_prefs.jports[i].mode;
@@ -157,16 +156,17 @@ public:
 				v = idm->getSelected();
 				if (v >= 0)
 				{
-					int vcnt = 0;
+					auto vcnt = 0;
 					*portsm = 0;
-					for (int j = 0; j < MAX_PORTSUBMODES; j++) {
+					for (auto portsubmode : portsubmodes)
+					{
 						if (v <= 0)
 							break;
-						if (portsubmodes[j] > 0) {
-							if (v <= portsubmodes[j]) {
+						if (portsubmode > 0) {
+							if (v <= portsubmode) {
 								*portsm = v;
 							}
-							v -= portsubmodes[j];
+							v -= portsubmode;
 						}
 						else {
 							v--;
@@ -190,7 +190,6 @@ public:
 		}
 		if (changed)
 		{
-			inputdevice_compa_clear(&changed_prefs, changedport);
 			inputdevice_validate_jports(&changed_prefs, changedport, NULL);
 		}
 			
@@ -319,7 +318,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 			joysm[i]->addActionListener(inputActionListener);
 
 			joysmm[i] = new gcn::DropDown(&ctrlPortMouseModeList);
-			joysmm[i]->setSize(68, joysmm[i]->getHeight());
+			joysmm[i]->setSize(95, joysmm[i]->getHeight());
 			joysmm[i]->setBaseColor(gui_baseCol);
 			joysmm[i]->setBackgroundColor(colTextboxBackground);
 			joysmm[i]->addActionListener(inputActionListener);
@@ -365,7 +364,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	lblAutofireRate = new gcn::Label("Autofire Rate:");
 	lblAutofireRate->setAlignment(gcn::Graphics::RIGHT);
 	cboAutofireRate = new gcn::DropDown(&autoFireRateList);
-	cboAutofireRate->setSize(80, cboAutofireRate->getHeight());
+	cboAutofireRate->setSize(95, cboAutofireRate->getHeight());
 	cboAutofireRate->setBaseColor(gui_baseCol);
 	cboAutofireRate->setBackgroundColor(colTextboxBackground);
 	cboAutofireRate->setId("cboAutofireRate");
