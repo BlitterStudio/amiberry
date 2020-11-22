@@ -33,6 +33,7 @@ static gcn::DropDown* cboPort3Autofire;
 
 static gcn::DropDown* cboPort0mode;
 static gcn::DropDown* cboPort1mode;
+static gcn::Button* cmdSwapPorts;
 
 static gcn::Label* lblPort0mousemode;
 static gcn::DropDown* cboPort0mousemode;
@@ -54,7 +55,7 @@ static gcn::CheckBox* chkMouseHack;
 static gcn::CheckBox* chkInputAutoswitch;
 
 static gcn::DropDown* joys[] = { cboPort0, cboPort1, cboPort2, cboPort3 };
-static gcn::DropDown* joysm[] = { cboPort0mode, cboPort1mode, nullptr, nullptr };
+static gcn::DropDown* joysm[] = { cboPort0mode, cboPort1mode };
 static gcn::DropDown* joysaf[] = { cboPort0Autofire, cboPort1Autofire, cboPort2Autofire, cboPort3Autofire };
 static gcn::DropDown* joysmm[] = { cboPort0mousemode, cboPort1mousemode };
 
@@ -103,7 +104,7 @@ StringListModel ctrlPortMouseModeList(mousemapValues, 4);
 const char* joyportmodes[] = { "Default", "Wheel Mouse", "Mouse", "Joystick", "Gamepad", "Analog Joystick", "CDTV remote mouse", "CD32 pad"};
 StringListModel ctrlPortModeList(joyportmodes, 8);
 
-class InputActionListener : public gcn::ActionListener
+class InputPortsActionListener : public gcn::ActionListener
 {
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
@@ -118,7 +119,7 @@ public:
 				changedport = i;
 				inputdevice_compa_clear(&changed_prefs, changedport);
 			}
-			
+
 			auto* port = &changed_prefs.jports[i].id;
 			auto* portm = &changed_prefs.jports[i].mode;
 			auto* portsm = &changed_prefs.jports[i].submode;
@@ -189,10 +190,22 @@ public:
 				changed = 1;
 		}
 		if (changed)
-		{
 			inputdevice_validate_jports(&changed_prefs, changedport, NULL);
-		}
-			
+
+		inputdevice_updateconfig(NULL, &changed_prefs);
+		inputdevice_config_change();
+		RefreshPanelInput();
+		RefreshPanelCustom();
+	}
+};
+
+static InputPortsActionListener* inputPortsActionListener;
+
+class InputActionListener : public gcn::ActionListener
+{
+public:
+	void action(const gcn::ActionEvent& actionEvent) override
+	{
 		if (actionEvent.getSource() == cboAutofireRate)
 		{
 			if (cboAutofireRate->getSelected() == 0)
@@ -228,10 +241,15 @@ public:
 			changed_prefs.input_autoswitch = chkInputAutoswitch->isSelected();
 		}
 
-		inputdevice_updateconfig(NULL, &changed_prefs);
-		inputdevice_config_change();
+		else if (actionEvent.getSource() == cmdSwapPorts)
+		{
+			inputdevice_swap_compa_ports(&changed_prefs, 0);
+			RefreshPanelInput();
+			inputdevice_forget_unplugged_device(0);
+			inputdevice_forget_unplugged_device(1);
+		}
+		
 		RefreshPanelInput();
-		RefreshPanelCustom();
 	}
 };
 
@@ -280,6 +298,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 		}
 	}
 
+	inputPortsActionListener = new InputPortsActionListener();
 	inputActionListener = new InputActionListener();
 	const auto textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER - 60;
 
@@ -301,13 +320,13 @@ void InitPanelInput(const struct _ConfigCategory& category)
 		joys[i]->setSize(textFieldWidth, joys[i]->getHeight());
 		joys[i]->setBaseColor(gui_baseCol);
 		joys[i]->setBackgroundColor(colTextboxBackground);
-		joys[i]->addActionListener(inputActionListener);
+		joys[i]->addActionListener(inputPortsActionListener);
 
 		joysaf[i] = new gcn::DropDown(&autoFireList);
 		joysaf[i]->setSize(150, joysaf[i]->getHeight());
 		joysaf[i]->setBaseColor(gui_baseCol);
 		joysaf[i]->setBackgroundColor(colTextboxBackground);
-		joysaf[i]->addActionListener(inputActionListener);
+		joysaf[i]->addActionListener(inputPortsActionListener);
 
 		if (i < 2)
 		{
@@ -315,13 +334,13 @@ void InitPanelInput(const struct _ConfigCategory& category)
 			joysm[i]->setSize(joysm[i]->getWidth(), joysm[i]->getHeight());
 			joysm[i]->setBaseColor(gui_baseCol);
 			joysm[i]->setBackgroundColor(colTextboxBackground);
-			joysm[i]->addActionListener(inputActionListener);
+			joysm[i]->addActionListener(inputPortsActionListener);
 
 			joysmm[i] = new gcn::DropDown(&ctrlPortMouseModeList);
 			joysmm[i]->setSize(95, joysmm[i]->getHeight());
 			joysmm[i]->setBaseColor(gui_baseCol);
 			joysmm[i]->setBackgroundColor(colTextboxBackground);
-			joysmm[i]->addActionListener(inputActionListener);
+			joysmm[i]->addActionListener(inputPortsActionListener);
 		}
 		
 		switch (i)
@@ -349,8 +368,12 @@ void InitPanelInput(const struct _ConfigCategory& category)
 		default: 
 			break;
 		}
-		
 	}
+
+	cmdSwapPorts = new gcn::Button("Swap ports");
+	cmdSwapPorts->setSize(BUTTON_WIDTH * 2, BUTTON_HEIGHT);
+	cmdSwapPorts->setBaseColor(gui_baseCol);
+	cmdSwapPorts->addActionListener(inputActionListener);
 	
 	lblParallelPortAdapter = new gcn::Label("Emulated parallel port joystick adapter");
 	lblParallelPortAdapter->setAlignment(gcn::Graphics::LEFT);
@@ -406,7 +429,8 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	category.panel->add(joysm[1], joysaf[1]->getX() + joysaf[1]->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += joysaf[1]->getHeight() + DISTANCE_NEXT_Y * 2;
 
-	category.panel->add(chkInputAutoswitch, joysaf[1]->getX(), posY);
+	category.panel->add(cmdSwapPorts, joysaf[1]->getX(), posY);
+	category.panel->add(chkInputAutoswitch, cmdSwapPorts->getX() + cmdSwapPorts->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += chkInputAutoswitch->getHeight() + DISTANCE_NEXT_Y * 2;
 	
 	category.panel->add(lblParallelPortAdapter, DISTANCE_BORDER, posY);
@@ -477,6 +501,7 @@ void ExitPanelInput()
 
 	delete lblPort0mousemode;
 	delete lblPort1mousemode;
+	delete cmdSwapPorts;
 
 	delete lblParallelPortAdapter;
 	delete lblAutofireRate;
