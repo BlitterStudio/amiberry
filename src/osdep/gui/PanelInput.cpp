@@ -18,8 +18,9 @@
 #define MAX_PORTSUBMODES 16
 static int portsubmodes[MAX_PORTSUBMODES];
 
-static const char* mousespeed_list[] = {".25", ".5", "1x", "2x", "4x"};
-static const int mousespeed_values[] = {2, 5, 10, 20, 40};
+static const int mousespeed_values[] = { 50, 75, 100, 125, 150 };
+static const int digital_joymousespeed_values[] = { 2, 5, 10, 15, 20 };
+static const int analog_joymousespeed_values[] = { 50, 75, 100, 125, 150 };
 
 static gcn::Label* lblPort0;
 static gcn::DropDown* cboPort0;
@@ -48,9 +49,14 @@ static gcn::DropDown* cboPort3;
 
 static gcn::Label* lblAutofireRate;
 static gcn::DropDown* cboAutofireRate;
-static gcn::Label* lblMouseSpeed;
-static gcn::Label* lblMouseSpeedInfo;
-static gcn::Slider* sldMouseSpeed;
+
+static gcn::Label* lblDigitalJoyMouseSpeed;
+static gcn::Label* lblDigitalJoyMouseSpeedInfo;
+static gcn::Slider* sldDigitalJoyMouseSpeed;
+static gcn::Label* lblAnalogJoyMouseSpeed;
+static gcn::Label* lblAnalogJoyMouseSpeedInfo;
+static gcn::Slider* sldAnalogJoyMouseSpeed;
+
 static gcn::CheckBox* chkMouseHack;
 static gcn::CheckBox* chkInputAutoswitch;
 
@@ -218,10 +224,11 @@ public:
 				changed_prefs.input_autofire_linecnt = 4 * 312;
 		}
 
-		else if (actionEvent.getSource() == sldMouseSpeed)
-		{
-			changed_prefs.input_joymouse_multiplier = mousespeed_values[static_cast<int>(sldMouseSpeed->getValue())];
-		}
+		else if (actionEvent.getSource() == sldDigitalJoyMouseSpeed)
+			changed_prefs.input_joymouse_speed = digital_joymousespeed_values[static_cast<int>(sldDigitalJoyMouseSpeed->getValue())];
+
+		else if (actionEvent.getSource() == sldAnalogJoyMouseSpeed)
+			changed_prefs.input_joymouse_multiplier = analog_joymousespeed_values[static_cast<int>(sldAnalogJoyMouseSpeed->getValue())];
 
 		else if (actionEvent.getSource() == chkMouseHack)
 		{
@@ -237,9 +244,7 @@ public:
 		}
 
 		else if (actionEvent.getSource() == chkInputAutoswitch)
-		{
 			changed_prefs.input_autoswitch = chkInputAutoswitch->isSelected();
-		}
 
 		else if (actionEvent.getSource() == cmdSwapPorts)
 		{
@@ -393,17 +398,28 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	cboAutofireRate->setId("cboAutofireRate");
 	cboAutofireRate->addActionListener(inputActionListener);
 
-	lblMouseSpeed = new gcn::Label("Mouse Speed:");
-	lblMouseSpeed->setAlignment(gcn::Graphics::RIGHT);
-	sldMouseSpeed = new gcn::Slider(0, 4);
-	sldMouseSpeed->setSize(110, SLIDER_HEIGHT);
-	sldMouseSpeed->setBaseColor(gui_baseCol);
-	sldMouseSpeed->setMarkerLength(20);
-	sldMouseSpeed->setStepLength(1);
-	sldMouseSpeed->setId("MouseSpeed");
-	sldMouseSpeed->addActionListener(inputActionListener);
-	lblMouseSpeedInfo = new gcn::Label(".25");
+	lblDigitalJoyMouseSpeed = new gcn::Label("Digital joy-mouse speed:");
+	lblDigitalJoyMouseSpeed->setAlignment(gcn::Graphics::RIGHT);
+	lblDigitalJoyMouseSpeedInfo = new gcn::Label("100");
+	sldDigitalJoyMouseSpeed = new gcn::Slider(0, 4);
+	sldDigitalJoyMouseSpeed->setSize(100, SLIDER_HEIGHT);
+	sldDigitalJoyMouseSpeed->setBaseColor(gui_baseCol);
+	sldDigitalJoyMouseSpeed->setMarkerLength(20);
+	sldDigitalJoyMouseSpeed->setStepLength(1);
+	sldDigitalJoyMouseSpeed->setId("sldDigitalJoyMouseSpeed");
+	sldDigitalJoyMouseSpeed->addActionListener(inputActionListener);
 
+	lblAnalogJoyMouseSpeed = new gcn::Label("Analog joy-mouse speed:");
+	lblAnalogJoyMouseSpeed->setAlignment(gcn::Graphics::RIGHT);
+	lblAnalogJoyMouseSpeedInfo = new gcn::Label("100");
+	sldAnalogJoyMouseSpeed = new gcn::Slider(0, 4);
+	sldAnalogJoyMouseSpeed->setSize(100, SLIDER_HEIGHT);
+	sldAnalogJoyMouseSpeed->setBaseColor(gui_baseCol);
+	sldAnalogJoyMouseSpeed->setMarkerLength(20);
+	sldAnalogJoyMouseSpeed->setStepLength(1);
+	sldAnalogJoyMouseSpeed->setId("sldAnalogJoyMouseSpeed");
+	sldAnalogJoyMouseSpeed->addActionListener(inputActionListener);
+	
 	chkMouseHack = new gcn::CheckBox("Virtual mouse driver");
 	chkMouseHack->setId("chkMouseHack");
 	chkMouseHack->addActionListener(inputActionListener);
@@ -427,7 +443,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 
 	category.panel->add(joysaf[1], joys[1]->getX(), posY);
 	category.panel->add(joysm[1], joysaf[1]->getX() + joysaf[1]->getWidth() + DISTANCE_NEXT_X, posY);
-	posY += joysaf[1]->getHeight() + DISTANCE_NEXT_Y * 2;
+	posY += joysaf[1]->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(cmdSwapPorts, joysaf[1]->getX(), posY);
 	category.panel->add(chkInputAutoswitch, cmdSwapPorts->getX() + cmdSwapPorts->getWidth() + DISTANCE_NEXT_X, posY + BUTTON_HEIGHT/4);
@@ -453,15 +469,18 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	category.panel->add(lblPort0mousemode, DISTANCE_BORDER, posY);
 	category.panel->add(joysmm[0], lblPort0mousemode->getX() + lblPort0mousemode->getWidth() + 8, posY);
 
-	category.panel->add(lblMouseSpeed,
-		joysmm[0]->getX() + joysmm[0]->getWidth() + (DISTANCE_NEXT_X * 2), posY);
-	category.panel->add(sldMouseSpeed, lblMouseSpeed->getX() + lblMouseSpeed->getWidth() + 8, posY);
-	category.panel->add(lblMouseSpeedInfo, sldMouseSpeed->getX() + sldMouseSpeed->getWidth() + 8, posY);
-	posY += lblMouseSpeed->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(lblDigitalJoyMouseSpeed, joysmm[0]->getX() + joysmm[0]->getWidth() + DISTANCE_NEXT_X * 2, posY);
+	category.panel->add(sldDigitalJoyMouseSpeed, lblDigitalJoyMouseSpeed->getX() + lblDigitalJoyMouseSpeed->getWidth() + 8, posY);
+	category.panel->add(lblDigitalJoyMouseSpeedInfo, sldDigitalJoyMouseSpeed->getX() + sldDigitalJoyMouseSpeed->getWidth() + 8, posY);
+	posY += lblDigitalJoyMouseSpeed->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(lblPort1mousemode, DISTANCE_BORDER, posY);
 	category.panel->add(joysmm[1], lblPort1mousemode->getX() + lblPort1mousemode->getWidth() + 8, posY);
-	posY += lblPort1mousemode->getHeight() + DISTANCE_NEXT_Y * 2;
+
+	category.panel->add(lblAnalogJoyMouseSpeed, joysmm[1]->getX() + joysmm[1]->getWidth() + DISTANCE_NEXT_X * 2, posY);
+	category.panel->add(sldAnalogJoyMouseSpeed, lblAnalogJoyMouseSpeed->getX() + lblAnalogJoyMouseSpeed->getWidth() + 8, posY);
+	category.panel->add(lblAnalogJoyMouseSpeedInfo, sldAnalogJoyMouseSpeed->getX() + sldAnalogJoyMouseSpeed->getWidth() + 8, posY);
+	posY += lblAnalogJoyMouseSpeed->getHeight() + DISTANCE_NEXT_Y * 2;
 
 	category.panel->add(lblAutofireRate, DISTANCE_BORDER, posY);
 	category.panel->add(cboAutofireRate, DISTANCE_BORDER + lblAutofireRate->getWidth() + 8, posY);
@@ -506,9 +525,13 @@ void ExitPanelInput()
 	delete lblParallelPortAdapter;
 	delete lblAutofireRate;
 	delete cboAutofireRate;
-	delete lblMouseSpeed;
-	delete sldMouseSpeed;
-	delete lblMouseSpeedInfo;
+	
+	delete lblDigitalJoyMouseSpeed;
+	delete sldDigitalJoyMouseSpeed;
+	delete lblDigitalJoyMouseSpeedInfo;
+	delete lblAnalogJoyMouseSpeed;
+	delete sldAnalogJoyMouseSpeed;
+	delete lblAnalogJoyMouseSpeedInfo;
 
 	delete chkMouseHack;
 	delete chkInputAutoswitch;
@@ -581,14 +604,24 @@ void RefreshPanelInput()
 
 	for (auto i = 0; i < 5; ++i)
 	{
-		if (changed_prefs.input_joymouse_multiplier == mousespeed_values[i])
+		if (changed_prefs.input_joymouse_speed == digital_joymousespeed_values[i])
 		{
-			sldMouseSpeed->setValue(i);
-			lblMouseSpeedInfo->setCaption(mousespeed_list[i]);
+			lblDigitalJoyMouseSpeedInfo->setCaption(to_string(changed_prefs.input_joymouse_speed));
+			sldDigitalJoyMouseSpeed->setValue(i);
 			break;
 		}
 	}
 
+	for (auto i = 0; i < 5; ++i)
+	{
+		if (changed_prefs.input_joymouse_multiplier == analog_joymousespeed_values[i])
+		{
+			lblAnalogJoyMouseSpeedInfo->setCaption(to_string(changed_prefs.input_joymouse_multiplier));
+			sldAnalogJoyMouseSpeed->setValue(i);
+			break;
+		}
+	}
+	
 	chkMouseHack->setSelected(changed_prefs.input_tablet > 0);
 	chkInputAutoswitch->setSelected(changed_prefs.input_autoswitch);
 }
