@@ -569,7 +569,6 @@ void RefreshPanelInput()
 {
 	for (auto i = 0; i < MAX_JPORTS; i++) 
 	{
-		auto idx = 0;
 		const auto* id = joys[i];
 		const auto* idm = joysm[i];
 		const auto* iaf = joysaf[i];
