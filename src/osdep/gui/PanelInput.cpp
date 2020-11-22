@@ -371,7 +371,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	}
 
 	cmdSwapPorts = new gcn::Button("Swap ports");
-	cmdSwapPorts->setSize(BUTTON_WIDTH * 2, BUTTON_HEIGHT);
+	cmdSwapPorts->setSize(150, BUTTON_HEIGHT);
 	cmdSwapPorts->setBaseColor(gui_baseCol);
 	cmdSwapPorts->addActionListener(inputActionListener);
 	
@@ -430,7 +430,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	posY += joysaf[1]->getHeight() + DISTANCE_NEXT_Y * 2;
 
 	category.panel->add(cmdSwapPorts, joysaf[1]->getX(), posY);
-	category.panel->add(chkInputAutoswitch, cmdSwapPorts->getX() + cmdSwapPorts->getWidth() + DISTANCE_NEXT_X, posY);
+	category.panel->add(chkInputAutoswitch, cmdSwapPorts->getX() + cmdSwapPorts->getWidth() + DISTANCE_NEXT_X, posY + BUTTON_HEIGHT/4);
 	posY += chkInputAutoswitch->getHeight() + DISTANCE_NEXT_Y * 2;
 	
 	category.panel->add(lblParallelPortAdapter, DISTANCE_BORDER, posY);
