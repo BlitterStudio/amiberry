@@ -270,7 +270,9 @@ struct uaeserialdata
 	void *readdata, *writedata;
 	volatile int threadactive;
 	uae_sem_t change_sem, sync_sem;
+	int fd;
 	void *user;
+	struct serial_icounter_struct serial_counter;
 };
 
 int uaeser_getdatalength (void)
@@ -280,67 +282,273 @@ int uaeser_getdatalength (void)
 
 static void uaeser_initdata (void *vsd, void *user)
 {
-	STUB("");
+	struct uaeserialdata* sd = (struct uaeserialdata*)vsd;
+	memset(sd, 0, sizeof(struct uaeserialdata));
+	sd->user = user;
 }
 
 int uaeser_query (void *vsd, uae_u16 *status, uae_u32 *pending)
 {
-	STUB("");
-	return 0;
+	struct uaeserialdata* sd = (struct uaeserialdata*)vsd;
+	struct serial_icounter_struct new_serial_counter;
+	uae_u16 s = 0;
+	int stat = 0;
+	int nread = 0;
+
+	memset(&new_serial_counter, 0, sizeof(struct serial_icounter_struct));
+	if (ioctl(sd->fd, TIOCGICOUNT, &new_serial_counter) > 0) {
+		if (new_serial_counter.brk > sd->serial_counter.brk)
+			s |= (1 << 10);
+		if (new_serial_counter.buf_overrun != sd->serial_counter.brk)
+			s |= (1 << 8);
+	}
+	else
+		return 0;
+
+	/* read control signals */
+	if (ioctl(sd->fd, TIOCMGET, &stat) > 0) {
+		if (!(stat & TIOCM_CTS))
+			s |= (1 << 4);
+		if (!(stat & TIOCM_DSR))
+			s |= (1 << 7);
+		if (stat & TIOCM_RI)
+			s |= (1 << 2);
+	}
+	else
+		return 0;
+
+	*status = s;
+
+	ioctl(sd->fd, FIONREAD, &nread);
+	*pending = nread;
+
+	return 1;
 }
 
 int uaeser_break (void *vsd, int brklen)
 {
-	STUB("");
-	return 0;
+	struct uaeserialdata* sd = (struct uaeserialdata*)vsd;
+
+	if (ioctl(sd->fd, TIOCSBRK) < 0)
+		return 0;
+
+	usleep(brklen);
+	ioctl(sd->fd, TIOCCBRK);
+
+	return 1;
 }
 
 int uaeser_setparams (void *vsd, int baud, int rbuffer, int bits, int sbits, int rtscts, int parity, uae_u32 xonxoff)
 {
-	STUB("");
-	return 0;
+	struct termios newtio;
+	struct uaeserialdata* sd = (struct uaeserialdata*)vsd;
+	int pspeed = 0;
+	int pbits = 0;
+
+	switch (baud) {
+	case 300: pspeed = B300; break;
+	case 1200: pspeed = B1200; break;
+	case 2400: pspeed = B2400; break;
+	case 4800: pspeed = B4800; break;
+	case 9600: pspeed = B9600; break;
+	case 19200: pspeed = B19200; break;
+	case 38400: pspeed = B38400; break;
+	case 57600: pspeed = B57600; break;
+	case 115200: pspeed = B115200; break;
+	case 230400: pspeed = B230400; break;
+	default:
+		write_log("serial: unsupported baudrate %ld\n", baud);
+		return 0;
+	}
+
+	switch (bits) {
+	case 5: pbits = CS5; break;
+	case 6: pbits = CS6; break;
+	case 7: pbits = CS7; break;
+	case 8: pbits = CS8; break;
+	default:
+		write_log("serial: unsupported bits %d\n", bits);
+		return 0;
+	}
+
+	newtio.c_cflag = pspeed | pbits | CLOCAL | CREAD;
+
+	switch (sbits) {
+	case 1: break;
+	case 2: newtio.c_cflag |= CSTOPB; break;
+	default:
+		write_log("serial: unsupported stop bits %d\n", sbits);
+		return 0;
+	}
+
+	if (rtscts)
+		newtio.c_cflag |= CRTSCTS;
+	else
+		newtio.c_cflag &= ~CRTSCTS;
+
+	if (xonxoff & 1)
+		newtio.c_iflag |= (IXON | IXOFF | IXANY);
+	else
+		newtio.c_iflag &= ~(IXON | IXOFF | IXANY);
+
+	if (parity) {
+		newtio.c_iflag &= ~IGNPAR;
+		newtio.c_cflag = PARENB;
+		if (parity == 1)
+			newtio.c_cflag |= PARODD;
+		else
+			newtio.c_cflag &= ~PARODD;
+	}
+	else {
+		newtio.c_iflag |= IGNPAR;
+	}
+
+	newtio.c_oflag = 0;
+
+	/* Equivielnt of cfmakeraw() */
+	newtio.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
+	newtio.c_cc[VMIN] = 1;
+	newtio.c_cc[VTIME] = 0;
+
+	/* Set new settings */
+	if (tcsetattr(sd->fd, TCSANOW, &newtio) < 0)
+		return 0;
+
+	/*
+	 * TODO
+	 * What to do with rbuffer?
+	 */
+	return 1;
 }
 
 static void *uaeser_trap_thread (void *arg)
 {
-	STUB("");
-	return NULL;
+	struct uaeserialdata* sd = (struct uaeserialdata*)arg;
+	HANDLE handles[4];
+	int cnt;
+	DWORD evtmask, actual;
+	
+	uae_set_thread_priority(NULL, 1);
+	sd->threadactive = 1;
+	uae_sem_post(&sd->sync_sem);
+	//startwce(sd, &evtmask);
+	while (sd->threadactive == 1) {
+		int sigmask = 0;
+		uae_sem_wait(&sd->change_sem);
+		if (WaitForSingleObject(sd->evtwce, 0) == WAIT_OBJECT_0) {
+			if (evtmask & EV_RXCHAR)
+				sigmask |= 1;
+			if ((evtmask & EV_TXEMPTY) && !sd->writeactive)
+				sigmask |= 2;
+			if (evtmask & EV_BREAK)
+				sigmask |= 4;
+			startwce(sd, &evtmask);
+		}		
+		cnt = 0;
+		handles[cnt++] = sd->evtt;
+		handles[cnt++] = sd->evtwce;
+		if (sd->writeactive) {
+			if (GetOverlappedResult(sd->hCom, &sd->olw, &actual, FALSE)) {
+				sd->writeactive = 0;
+				sigmask |= 2;
+			}
+			else {
+				handles[cnt++] = sd->evtw;
+			}
+		}
+		if (!sd->writeactive)
+			sigmask |= 2;
+		uaeser_signal(sd->user, sigmask | 1);
+		uae_sem_post(&sd->change_sem);
+		WaitForMultipleObjects(cnt, handles, FALSE, INFINITE);
+	}
+	sd->threadactive = 0;
+	uae_sem_post(&sd->sync_sem);
 }
 
 void uaeser_trigger (void *vsd)
 {
+	struct uaeserialdatawin32* sd = (struct uaeserialdatawin32*)vsd;
+	
 	STUB("");
+	/*
+	 * TODO
+	 * What to do with this? There is some sync/aysnc Win32 stuff required here
+	 * but I don't know how this relates to POSIX serial devices yet. Related to
+	 * uaeser_trap_thread().
+	 */
 }
 
 int uaeser_write (void *vsd, uae_u8 *data, uae_u32 len)
 {
-	STUB("");
-	return 0;
+	struct uaeserialdata* sd = (struct uaeserialdata*)vsd;
+	if (write(sd->fd, data, len) != len)
+		return 0;
+	return 1;
 }
 
 int uaeser_read (void *vsd, uae_u8 *data, uae_u32 len)
 {
-	STUB("");
-	return 0;
+	struct uaeserialdata* sd = (struct uaeserialdata*)vsd;
+	if (read(sd->fd, data, len) != len)
+		return 0;
+	return 1;
 }
 
 void uaeser_clearbuffers (void *vsd)
 {
-	STUB("");
+	struct uaeserialdata* sd = (struct uaeserialdata*)vsd;
+	tcflush(sd->fd, TCOFLUSH);
 }
 
 int uaeser_open (void *vsd, void *user, int unit)
 {
-	STUB("");
-	return 0;
+	struct uaeserialdata* sd = (struct uaeserialdata*)vsd;
+	struct termios newtio;
+	struct serial_icounter_struct serial_counter;
+	char ser[128];
+
+	snprintf(ser, 64, "/dev/ttyS%d", unit);
+	sd->fd = open(ser, O_RDWR | O_NONBLOCK | O_BINARY, 0);
+
+	newtio.c_cflag = B115200 | CS8 | CLOCAL | CREAD;
+
+	/* Disable HW flow control. */
+	newtio.c_cflag &= ~CRTSCTS;
+
+	/* Disable flow control. */
+	newtio.c_iflag &= ~(IXON | IXOFF | IXANY);
+
+	/* No parity. */
+	newtio.c_iflag |= IGNPAR;
+	newtio.c_oflag = 0;
+
+	/* Equivielnt of cfmakeraw() */
+	newtio.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
+	newtio.c_cc[VMIN] = 1;
+	newtio.c_cc[VTIME] = 0;
+
+	/* Set new settings */
+	tcsetattr(sd->fd, TCSANOW, &newtio);
+
+	/* Initialise the io_status condition count */
+	ioctl(sd->fd, TIOCGICOUNT, &serial_counter);
+
+	if (sd->fd < 0)
+		return 0;
+
+	return 1;
 }
 
 void uaeser_close (void *vsd)
 {
-	STUB("");
+	struct uaeserialdata* sd = (struct uaeserialdata*)vsd;
+
+	if (sd->fd >= 0)
+		close(sd->fd);
+
+	uaeser_initdata(sd, sd->user);
 }
-
-
 
 #ifdef AMIBERRY
 /* No MIDI support. */
