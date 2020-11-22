@@ -572,25 +572,22 @@ void RefreshPanelInput()
 		auto idx = 0;
 		const auto* id = joys[i];
 		const auto* idm = joysm[i];
+		const auto* iaf = joysaf[i];
 		const auto v = changed_prefs.jports[i].id;
 		const auto vm = changed_prefs.jports[i].mode + changed_prefs.jports[i].submode;
+		const auto vaf = changed_prefs.jports[i].autofire;
 
 		if (idm != nullptr)
 			idm->setSelected(vm);
 
+		if (iaf != nullptr)
+			iaf->setSelected(vaf);
+		
 		for (auto j = 0; j < ctrlPortList.getNumberOfElements(); ++j)
 		{
 			if (v == portListIDs[j])
-			{
-				idx = j;
-				break;
-			}
+				id->setSelected(j);
 		}
-		
-		if (id != nullptr)
-			id->setSelected(idx);
-		if (joysaf[i] != nullptr)
-			joysaf[i]->setSelected(changed_prefs.jports[i].autofire);
 	}
 
 	if (changed_prefs.input_autofire_linecnt == 0)
