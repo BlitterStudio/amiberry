@@ -64,9 +64,9 @@ static gcn::CheckBox* chkMouseHack;
 static gcn::CheckBox* chkInputAutoswitch;
 
 static gcn::DropDown* joys[] = { cboPort0, cboPort1, cboPort2, cboPort3 };
-static gcn::DropDown* joysm[] = { cboPort0mode, cboPort1mode };
+static gcn::DropDown* joysm[] = { cboPort0mode, cboPort1mode, nullptr, nullptr };
 static gcn::DropDown* joysaf[] = { cboPort0Autofire, cboPort1Autofire, cboPort2Autofire, cboPort3Autofire };
-static gcn::DropDown* joysmm[] = { cboPort0mousemode, cboPort1mousemode };
+static gcn::DropDown* joysmm[] = { cboPort0mousemode, cboPort1mousemode, nullptr, nullptr };
 
 class StringListModel : public gcn::ListModel
 {
