@@ -56,6 +56,9 @@ static gcn::Slider* sldDigitalJoyMouseSpeed;
 static gcn::Label* lblAnalogJoyMouseSpeed;
 static gcn::Label* lblAnalogJoyMouseSpeedInfo;
 static gcn::Slider* sldAnalogJoyMouseSpeed;
+static gcn::Label* lblMouseSpeed;
+static gcn::Label* lblMouseSpeedInfo;
+static gcn::Slider* sldMouseSpeed;
 
 static gcn::CheckBox* chkMouseHack;
 static gcn::CheckBox* chkInputAutoswitch;
@@ -230,6 +233,9 @@ public:
 		else if (actionEvent.getSource() == sldAnalogJoyMouseSpeed)
 			changed_prefs.input_joymouse_multiplier = analog_joymousespeed_values[static_cast<int>(sldAnalogJoyMouseSpeed->getValue())];
 
+		else if (actionEvent.getSource() == sldMouseSpeed)
+			changed_prefs.input_mouse_speed = mousespeed_values[static_cast<int>(sldMouseSpeed->getValue())];
+		
 		else if (actionEvent.getSource() == chkMouseHack)
 		{
 #if 0
@@ -419,6 +425,17 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	sldAnalogJoyMouseSpeed->setStepLength(1);
 	sldAnalogJoyMouseSpeed->setId("sldAnalogJoyMouseSpeed");
 	sldAnalogJoyMouseSpeed->addActionListener(inputActionListener);
+
+	lblMouseSpeed = new gcn::Label("Mouse speed:");
+	lblMouseSpeed->setAlignment(gcn::Graphics::RIGHT);
+	lblMouseSpeedInfo = new gcn::Label("100");
+	sldMouseSpeed = new gcn::Slider(0, 4);
+	sldMouseSpeed->setSize(100, SLIDER_HEIGHT);
+	sldMouseSpeed->setBaseColor(gui_baseCol);
+	sldMouseSpeed->setMarkerLength(20);
+	sldMouseSpeed->setStepLength(1);
+	sldMouseSpeed->setId("sldMouseSpeed");
+	sldMouseSpeed->addActionListener(inputActionListener);
 	
 	chkMouseHack = new gcn::CheckBox("Virtual mouse driver");
 	chkMouseHack->setId("chkMouseHack");
@@ -478,13 +495,19 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	category.panel->add(joysmm[1], lblPort1mousemode->getX() + lblPort1mousemode->getWidth() + 8, posY);
 
 	category.panel->add(lblAnalogJoyMouseSpeed, joysmm[1]->getX() + joysmm[1]->getWidth() + DISTANCE_NEXT_X * 2, posY);
-	category.panel->add(sldAnalogJoyMouseSpeed, lblAnalogJoyMouseSpeed->getX() + lblAnalogJoyMouseSpeed->getWidth() + 8, posY);
+	category.panel->add(sldAnalogJoyMouseSpeed, sldDigitalJoyMouseSpeed->getX(), posY);
 	category.panel->add(lblAnalogJoyMouseSpeedInfo, sldAnalogJoyMouseSpeed->getX() + sldAnalogJoyMouseSpeed->getWidth() + 8, posY);
 	posY += lblAnalogJoyMouseSpeed->getHeight() + DISTANCE_NEXT_Y * 2;
 
 	category.panel->add(lblAutofireRate, DISTANCE_BORDER, posY);
 	category.panel->add(cboAutofireRate, DISTANCE_BORDER + lblAutofireRate->getWidth() + 8, posY);
-	category.panel->add(chkMouseHack, cboAutofireRate->getX() + cboAutofireRate->getWidth() + DISTANCE_NEXT_X, posY);
+
+	category.panel->add(lblMouseSpeed, joysmm[1]->getX() + joysmm[1]->getWidth() + DISTANCE_NEXT_X * 2, posY);
+	category.panel->add(sldMouseSpeed, sldAnalogJoyMouseSpeed->getX(), posY);
+	category.panel->add(lblMouseSpeedInfo, sldMouseSpeed->getX() + sldMouseSpeed->getWidth() + 8, posY);
+	posY += lblMouseSpeed->getHeight() + DISTANCE_NEXT_Y;
+	
+	category.panel->add(chkMouseHack, DISTANCE_BORDER, posY);
 	posY += chkMouseHack->getHeight() + DISTANCE_NEXT_Y;
 
 	for (auto& portsubmode : portsubmodes)
@@ -495,7 +518,6 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	portsubmodes[9] = -1;
 
 	inputdevice_updateconfig(NULL, &changed_prefs);
-	
 	RefreshPanelInput();
 }
 
@@ -532,10 +554,14 @@ void ExitPanelInput()
 	delete lblAnalogJoyMouseSpeed;
 	delete sldAnalogJoyMouseSpeed;
 	delete lblAnalogJoyMouseSpeedInfo;
+	delete lblMouseSpeed;
+	delete sldMouseSpeed;
+	delete lblMouseSpeedInfo;
 
 	delete chkMouseHack;
 	delete chkInputAutoswitch;
 
+	delete inputPortsActionListener;
 	delete inputActionListener;
 }
 
@@ -618,6 +644,16 @@ void RefreshPanelInput()
 		{
 			lblAnalogJoyMouseSpeedInfo->setCaption(to_string(changed_prefs.input_joymouse_multiplier));
 			sldAnalogJoyMouseSpeed->setValue(i);
+			break;
+		}
+	}
+
+	for (auto i = 0; i < 5; ++i)
+	{
+		if (changed_prefs.input_mouse_speed == mousespeed_values[i])
+		{
+			lblMouseSpeedInfo->setCaption(to_string(changed_prefs.input_mouse_speed));
+			sldMouseSpeed->setValue(i);
 			break;
 		}
 	}
