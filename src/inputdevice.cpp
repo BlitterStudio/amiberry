@@ -5,7 +5,7 @@
 *
 * Copyright 2001-2016 Toni Wilen
 *
-* new fetures:
+* new features:
 * - very configurable (and very complex to configure :)
 * - supports multiple native input devices (joysticks and mice)
 * - supports mapping joystick/mouse buttons to keys and vice versa
