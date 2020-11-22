@@ -789,6 +789,7 @@ static int sprite_playfield_start, sprite_end;
 static int may_require_hard_way;
 static int linetoscr_diw_start, linetoscr_diw_end;
 static int native_ddf_left, native_ddf_right;
+static int hamleftborderhidden;
 
 static int pixels_offset;
 static int src_pixel;
@@ -975,9 +976,12 @@ static void pfield_init_linetoscr (bool border)
 	pixels_offset = MAX_PIXELS_PER_LINE - ddf_left;
 
 	leftborderhidden = playfield_start - native_ddf_left2;
+	hamleftborderhidden = 0;
 
-	if (hblank_left_start > playfield_start)
+	if (hblank_left_start > playfield_start) {
 		leftborderhidden += hblank_left_start - playfield_start;
+		hamleftborderhidden = hblank_left_start - playfield_start;
+	}
 
 	src_pixel = MAX_PIXELS_PER_LINE + res_shift_from_window(leftborderhidden);
 
@@ -1997,9 +2001,9 @@ static unsigned int ham_lastcolor;
  */
 static void init_ham_decoding (void)
 {
-	int unpainted_amiga = unpainted;
+	int unpainted_amiga = unpainted + hamleftborderhidden;
 
-	ham_decode_pixel = src_pixel;
+	ham_decode_pixel = src_pixel - hamleftborderhidden;
 	ham_lastcolor = color_reg_get (&colors_for_drawing, 0);
 
 	if (!bplham) {
