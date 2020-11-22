@@ -170,6 +170,8 @@ public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		const int selected_item = lstConfigs->getSelected();
+		if (selected_item == -1) return;
+		
 		if (txtName->getText() != ConfigFilesList[selected_item]->Name || txtDesc->getText() != ConfigFilesList[
 			selected_item]->Description)
 		{
