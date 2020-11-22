@@ -505,7 +505,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	category.panel->add(lblMouseSpeed, joysmm[1]->getX() + joysmm[1]->getWidth() + DISTANCE_NEXT_X * 2, posY);
 	category.panel->add(sldMouseSpeed, sldAnalogJoyMouseSpeed->getX(), posY);
 	category.panel->add(lblMouseSpeedInfo, sldMouseSpeed->getX() + sldMouseSpeed->getWidth() + 8, posY);
-	posY += lblMouseSpeed->getHeight() + DISTANCE_NEXT_Y;
+	posY += lblMouseSpeed->getHeight() + DISTANCE_NEXT_Y * 2;
 	
 	category.panel->add(chkMouseHack, DISTANCE_BORDER, posY);
 	posY += chkMouseHack->getHeight() + DISTANCE_NEXT_Y;
