@@ -2091,6 +2091,20 @@ static void allocate_memory(void)
 	//cpuboard_init();
 }
 
+static void setmemorywidth(struct ramboard* mb, addrbank* ab)
+{
+	if (!ab || !ab->allocated_size)
+		return;
+	if (!mb->force16bit)
+		return;
+	for (int i = (ab->start >> 16); i < ((ab->start + ab->allocated_size) >> 16); i++) {
+		if (ce_banktype[i] == CE_MEMBANK_FAST32)
+			ce_banktype[i] = CE_MEMBANK_FAST16;
+		if (ce_banktype[i] == CE_MEMBANK_CHIP32)
+			ce_banktype[i] = CE_MEMBANK_CHIP16;
+	}
+}
+
 static void fill_ce_banks (void)
 {
 	int i;
@@ -2149,6 +2163,15 @@ static void fill_ce_banks (void)
 			ce_banktype[i] = CE_MEMBANK_CHIP16;
 	}
 
+	setmemorywidth(&currprefs.chipmem, &chipmem_bank);
+	setmemorywidth(&currprefs.bogomem, &bogomem_bank);
+	setmemorywidth(&currprefs.z3chipmem, &z3chipmem_bank);
+	setmemorywidth(&currprefs.mbresmem_low, &a3000lmem_bank);
+	for (int i = 0; i < MAX_RAM_BOARDS; i++) {
+		setmemorywidth(&currprefs.z3fastmem[i], &z3fastmem_bank[i]);
+		setmemorywidth(&currprefs.fastmem[i], &fastmem_bank[i]);
+	}
+	
 	if (currprefs.address_space_24) {
 		for (i = 1; i < 256; i++)
 			memcpy(&ce_banktype[i * 256], &ce_banktype[0], 256);
