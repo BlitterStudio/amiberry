@@ -15,8 +15,9 @@
 #endif
 #endif
 
-static int joyxprevious[4];
-auto total = 2;
+#define MAX_PORTSUBMODES 16
+static int portsubmodes[MAX_PORTSUBMODES];
+
 static const char* mousespeed_list[] = {".25", ".5", "1x", "2x", "4x"};
 static const int mousespeed_values[] = {2, 5, 10, 20, 40};
 
@@ -120,6 +121,8 @@ public:
 				continue;
 			
 			auto* port = &changed_prefs.jports[i].id;
+			auto* portm = &changed_prefs.jports[i].mode;
+			auto* portsm = &changed_prefs.jports[i].submode;
 			auto prevport = *port;
 			auto* id = joys[i];
 			auto* idm = joysm[i];
@@ -152,7 +155,26 @@ public:
 			}
 			if (idm != nullptr) {
 				v = idm->getSelected();
-				changed_prefs.jports[i].mode = v;
+				if (v >= 0)
+				{
+					int vcnt = 0;
+					*portsm = 0;
+					for (int j = 0; j < MAX_PORTSUBMODES; j++) {
+						if (v <= 0)
+							break;
+						if (portsubmodes[j] > 0) {
+							if (v <= portsubmodes[j]) {
+								*portsm = v;
+							}
+							v -= portsubmodes[j];
+						}
+						else {
+							v--;
+							vcnt++;
+						}
+					}
+					*portm = vcnt;
+				}
 			}
 			if (joysaf[i] != nullptr) {
 				auto af = joysaf[i]->getSelected();
@@ -167,7 +189,11 @@ public:
 				changed = 1;
 		}
 		if (changed)
+		{
+			inputdevice_compa_clear(&changed_prefs, changedport);
 			inputdevice_validate_jports(&changed_prefs, changedport, NULL);
+		}
+			
 
 		if (actionEvent.getSource() == cboAutofireRate)
 		{
@@ -204,6 +230,8 @@ public:
 			changed_prefs.input_autoswitch = chkInputAutoswitch->isSelected();
 		}
 
+		inputdevice_updateconfig(NULL, &changed_prefs);
+		inputdevice_config_change();
 		RefreshPanelInput();
 		RefreshPanelCustom();
 	}
@@ -239,14 +267,14 @@ void InitPanelInput(const struct _ConfigCategory& category)
 		ctrlPortList.add_element("iPac Layout (Cursor, LAlt/LCtrl=Fire, Space=2nd Fire)");
 		portListIDs[idx] = JSEM_KBDLAYOUT + 4;
 		
-		for (auto j = 0; j < inputdevice_get_device_total(IDTYPE_JOYSTICK); j++, total++)
+		for (auto j = 0; j < inputdevice_get_device_total(IDTYPE_JOYSTICK); j++)
 		{
 			ctrlPortList.add_element(inputdevice_get_device_name(IDTYPE_JOYSTICK, j));
 			idx++;
 			portListIDs[idx] = JSEM_JOYS + j;
 		}
 
-		for (auto j = 0; j < inputdevice_get_device_total(IDTYPE_MOUSE); j++, total++)
+		for (auto j = 0; j < inputdevice_get_device_total(IDTYPE_MOUSE); j++)
 		{
 			ctrlPortList.add_element(inputdevice_get_device_name(IDTYPE_MOUSE, j));
 			idx++;
@@ -418,6 +446,15 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	category.panel->add(chkMouseHack, cboAutofireRate->getX() + cboAutofireRate->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += chkMouseHack->getHeight() + DISTANCE_NEXT_Y;
 
+	for (auto& portsubmode : portsubmodes)
+	{
+		portsubmode = 0;
+	}
+	portsubmodes[8] = 2;
+	portsubmodes[9] = -1;
+
+	inputdevice_updateconfig(NULL, &changed_prefs);
+	
 	RefreshPanelInput();
 }
 

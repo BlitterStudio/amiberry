@@ -553,6 +553,7 @@ void gui_display(int shortcut)
 	
 	reset_sound();
 	inputdevice_copyconfig(&changed_prefs, &currprefs);
+	inputdevice_config_change_test();
 	clearallkeys ();
 	update_display(&changed_prefs);
 	if (resumepaused(7)) {

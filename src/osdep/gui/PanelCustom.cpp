@@ -232,7 +232,6 @@ public:
 
 static CustomActionListener* customActionListener;
 
-
 void InitPanelCustom(const struct _ConfigCategory& category)
 {
 	int i;
@@ -373,7 +372,6 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 	RefreshPanelCustom();
 }
 
-
 void ExitPanelCustom()
 {
 	delete optPort0;
@@ -490,9 +488,7 @@ void RefreshPanelCustom()
 			}
 
 			else
-			{
 				cboCustomAction[n]->setListModel(&CustomEventList);
-			}
 		}
 
 		if (changed_prefs.input_analog_remap == true)
