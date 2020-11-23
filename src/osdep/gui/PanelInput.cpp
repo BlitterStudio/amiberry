@@ -497,7 +497,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	category.panel->add(lblAnalogJoyMouseSpeed, joysmm[1]->getX() + joysmm[1]->getWidth() + DISTANCE_NEXT_X * 2, posY);
 	category.panel->add(sldAnalogJoyMouseSpeed, sldDigitalJoyMouseSpeed->getX(), posY);
 	category.panel->add(lblAnalogJoyMouseSpeedInfo, sldAnalogJoyMouseSpeed->getX() + sldAnalogJoyMouseSpeed->getWidth() + 8, posY);
-	posY += lblAnalogJoyMouseSpeed->getHeight() + DISTANCE_NEXT_Y * 2;
+	posY += lblAnalogJoyMouseSpeed->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(lblAutofireRate, DISTANCE_BORDER, posY);
 	category.panel->add(cboAutofireRate, DISTANCE_BORDER + lblAutofireRate->getWidth() + 8, posY);
