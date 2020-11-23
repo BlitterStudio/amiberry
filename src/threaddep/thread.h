@@ -28,10 +28,11 @@ STATIC_INLINE void uae_sem_destroy(uae_sem_t* event)
 		*event = nullptr;
 	}
 }
-#define uae_sem_post(PSEM) SDL_SemPost (*PSEM)
-#define uae_sem_wait(PSEM) SDL_SemWait (*PSEM)
-#define uae_sem_trywait(PSEM) SDL_SemTryWait (*PSEM)
-#define uae_sem_getvalue(PSEM) SDL_SemValue (*PSEM)
+#define uae_sem_post(PSEM) SDL_SemPost (*(PSEM))
+#define uae_sem_wait(PSEM) SDL_SemWait (*(PSEM))
+#define uae_sem_trywait(PSEM) SDL_SemTryWait (*(PSEM))
+#define uae_sem_trywait_delay(PSEM, ms) SDL_SemWaitTimeout(*(PSEM), ms)
+#define uae_sem_getvalue(PSEM) SDL_SemValue (*(PSEM))
 
 #include "commpipe.h"
 
