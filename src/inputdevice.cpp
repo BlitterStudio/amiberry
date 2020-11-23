@@ -1844,15 +1844,23 @@ void inputdevice_parse_jport_custom(struct uae_prefs *pr, int index, int port, T
 	_tcscat(data, _T(" "));
 	bufp = data;
 	for (;;) {
+		const struct inputevent* ie;
 		TCHAR *next = bufp;
+		TCHAR devtype;
+		int devindex;
+		int flags = 0;
+		const TCHAR* bufp2 = bufp;
+		struct uae_input_device* id = 0;
+		int joystick = 0;
+		int devnum = 0;
+		int num = -1;
+		int keynum = 0;
+		
 		while (next != NULL && *next != ' ' && *next != 0)
 			next++;
 		if (!next || *next == 0)
 			break;
 		*next++ = 0;
-		const TCHAR *bufp2 = bufp;
-		struct uae_input_device *id = 0;
-		int joystick = 0;
 		TCHAR *p = getstring(&bufp2);
 		if (!p)
 			goto skip;
@@ -1865,7 +1873,6 @@ void inputdevice_parse_jport_custom(struct uae_prefs *pr, int index, int port, T
 
 		devtype = _totupper(*p);
 
-		devnum = 0;
 		if (devtype == 'M') {
 			id = &pr->mouse_settings[pr->input_selected_setting][devindex];
 			joystick = 0;
@@ -1896,8 +1903,6 @@ void inputdevice_parse_jport_custom(struct uae_prefs *pr, int index, int port, T
 		if (!p)
 			goto skip;
 
-		num = -1;
-		keynum = 0;
 		if (joystick < 0) {
 			num = getnum(&bufp2);
 			if (*bufp == 0)
@@ -1924,7 +1929,6 @@ void inputdevice_parse_jport_custom(struct uae_prefs *pr, int index, int port, T
 			}
 		}
 
-		flags = 0;
 		if (*bufp2 != '=') {
 			flags = getnum(&bufp2);
 		}
@@ -2324,6 +2328,12 @@ void tablet_lightpen(int tx, int ty, int tmaxx, int tmaxy, int touch, int button
 {
 	struct vidbuf_description *vidinfo = &adisplays.gfxvidinfo;
 	struct amigadisplay *ad = &adisplays;
+	int dw, dh, ax, ay, aw, ah;
+	float fx, fy;
+	float xmult, ymult;
+	float fdx, fdy, fmx, fmy;
+	int x, y;
+	
 	if (ad->picasso_on)
 		goto end;
 
@@ -2332,10 +2342,6 @@ void tablet_lightpen(int tx, int ty, int tmaxx, int tmaxy, int touch, int button
 
 	if (touch < 0)
 		goto end;
-
-	int dw, dh, ax, ay, aw, ah;
-	float fx, fy;
-	float xmult, ymult;
 
 	fx = (float)tx;
 	fy = (float)ty;
@@ -2366,11 +2372,10 @@ void tablet_lightpen(int tx, int ty, int tmaxx, int tmaxy, int touch, int button
 	fx -= ax;
 	fy -= ay;
 
-	float fdx, fdy, fmx, fmy;
 	getgfxoffset(0, &fdx, &fdy, &fmx, &fmy);
 
-	int x = (int)(fx * fmx);
-	int y = (int)(fy * fmy);
+	x = (int)(fx * fmx);
+	y = (int)(fy * fmy);
 	x -= (int)(fdx * fmx) - 1;
 	y -= (int)(fdy * fmy) - 2;
 
@@ -3865,7 +3870,8 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 {
 	//static int swapperslot;
 	//static int tracer_enable;
-	int newstate, onoffstate;
+	int newstate;
+	int onoffstate = state & ~SET_ONOFF_MASK_PRESS;
 
 	if (s != NULL && s[0] == 0)
 		s = NULL;
@@ -3883,8 +3889,6 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 
 	if (vpos != 0)
 		write_log (_T("inputcode=%d but vpos = %d"), code, vpos);
-
-	onoffstate = state & ~SET_ONOFF_MASK_PRESS;
 
 	if (onoffstate == SET_ONOFF_ON_VALUE)
 		newstate = 1;
@@ -8425,9 +8429,9 @@ void setmousestate (int mouse, int axis, int data, int isabs)
 	} else {
 		extraflags |= HANDLE_IE_FLAG_ABSOLUTE;
 		extrastate = data;
-		d = data - *oldm_p;
+		d = (float)(data - *oldm_p);
 		*oldm_p = data;
-		*mouse_p += d;
+		*mouse_p += (int)d;
 		if (axis == 0) {
 			lastmx = data;
 		} else {

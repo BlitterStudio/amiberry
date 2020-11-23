@@ -565,18 +565,19 @@ static int get_floppy_speed_from_image(drive *drv)
 	int l, m;
 	
 	m = get_floppy_speed();
-	if (!drv->tracktiming[0]) {
-		l = drv->tracklen;
+	l = drv->tracklen;
+	if (!drv->tracktiming[0]) {		
 		m = m * l / (2 * 8 * FLOPPY_WRITE_LEN * drv->ddhd);
 	}
 
 	// 4us track?
-	if (l < (FLOPPY_WRITE_LEN_PAL * 8) * 4 / 6)
+	if (l < (FLOPPY_WRITE_LEN_PAL * 8) * 4 / 6) {
 		m *= 2;
-
-	if (m <= 0)
+	}
+	if (m <= 0) {
 		m = 1;
-
+	}
+	
 	return m;
 }
 

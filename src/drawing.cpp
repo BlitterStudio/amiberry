@@ -3874,10 +3874,12 @@ bool draw_frame(struct vidbuffer *vb)
 	for (int i = 0; i < LINESTATE_SIZE; i++) {
 		uae_u8 v = linestate[i];
 		if (v == LINE_REMEMBERED_AS_PREVIOUS) {
-			linestate[i - 1] = LINE_DECIDED_DOUBLE;
+			if (i > 0)
+				linestate[i - 1] = LINE_DECIDED_DOUBLE;
 			v = LINE_AS_PREVIOUS;
 		} else if (v == LINE_DONE_AS_PREVIOUS) {
-			linestate[i - 1] = LINE_DECIDED_DOUBLE;
+			if (i > 0)
+				linestate[i - 1] = LINE_DECIDED_DOUBLE;
 			v = LINE_AS_PREVIOUS;
 		} else if (v == LINE_REMEMBERED_AS_BLACK) {
 			v = LINE_BLACK;
