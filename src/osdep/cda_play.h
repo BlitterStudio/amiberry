@@ -26,3 +26,5 @@ public:
 	void wait(int bufnum);
 	bool isplaying(int bufnum);
 };
+
+#define CDDA_BUFFERS 14

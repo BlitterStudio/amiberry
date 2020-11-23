@@ -43,8 +43,6 @@
 
 #define scsi_log write_log
 
-#define CDDA_BUFFERS 12
-
 enum audenc { AUDENC_NONE, AUDENC_PCM, AUDENC_MP3, AUDENC_FLAC, ENC_CHD };
 
 struct cdtoc

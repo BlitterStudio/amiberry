@@ -1873,7 +1873,7 @@ void inputdevice_parse_jport_custom(struct uae_prefs *pr, int index, int port, T
 		int devnum = 0;
 		int num = -1;
 		int keynum = 0;
-
+		
 		while (next != NULL && *next != ' ' && *next != 0)
 			next++;
 		if (!next || *next == 0)
@@ -2352,7 +2352,7 @@ void tablet_lightpen(int tx, int ty, int tmaxx, int tmaxy, int touch, int button
 	float xmult, ymult;
 	float fdx, fdy, fmx, fmy;
 	int x, y;
-
+	
 	if (ad->picasso_on)
 		goto end;
 
@@ -3891,7 +3891,8 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 {
 	//static int swapperslot;
 	//static int tracer_enable;
-	int newstate, onoffstate;
+	int newstate;
+	int onoffstate = state & ~SET_ONOFF_MASK_PRESS;
 
 	if (s != NULL && s[0] == 0)
 		s = NULL;
