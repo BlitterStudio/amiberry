@@ -951,7 +951,6 @@ void flush_screen(struct vidbuffer* vidbuffer, int ystart, int ystop)
 void update_display(struct uae_prefs* p)
 {
 	open_screen(p);
-	set_mouse_grab(true);
 }
 
 void graphics_reset(bool forced)
@@ -1510,6 +1509,41 @@ bool show_screen_maybe(const bool show)
 		return false;
 	}
 	return false;
+}
+
+void getgfxoffset(float* dxp, float* dyp, float* mxp, float* myp)
+{
+	//struct AmigaMonitor* mon = &AMonitors[monid];
+	struct amigadisplay* ad = &adisplays;
+	//struct uae_filter* usedfilter = mon->usedfilter;
+	float dx, dy, mx, my;
+
+	//getfilteroffset(&dx, &dy, &mx, &my);
+	//if (ad->picasso_on) {
+	//	dx = picasso_offset_x * picasso_offset_mx;
+	//	dy = picasso_offset_y * picasso_offset_my;
+	//	mx = picasso_offset_mx;
+	//	my = picasso_offset_my;
+	//}
+
+	//if (mon->currentmode.flags & DM_W_FULLSCREEN) {
+	//	for (;;) {
+	//		if (mon->scalepicasso && mon->screen_is_picasso)
+	//			break;
+	//		if (usedfilter && !mon->screen_is_picasso)
+	//			break;
+	//		if (mon->currentmode.fullfill && (mon->currentmode.current_width > mon->currentmode.native_width || mon->currentmode.current_height > mon->currentmode.native_height))
+	//			break;
+	//		dx += (mon->currentmode.native_width - mon->currentmode.current_width) / 2;
+	//		dy += (mon->currentmode.native_height - mon->currentmode.current_height) / 2;
+	//		break;
+	//	}
+	//}
+
+	*dxp = dx;
+	*dyp = dy;
+	*mxp = 1.0 / mx;
+	*myp = 1.0 / my;
 }
 
 void DX_Fill(int dstx, int dsty, int width, int height, uae_u32 color)

@@ -1972,7 +1972,6 @@ void cfgfile_save_options (struct zfile* f, struct uae_prefs* p, int type)
 	}
 #endif
 
-	cfgfile_dwrite_str(f, _T("absolute_mouse"), abspointers[p->input_tablet]);
 	write_inputdevice_config(p, f);
 	cfgfile_write_str(f, _T("kbd_lang"), (p->keyboard_lang == KBD_LANG_DE
 		                                      ? _T("de")

@@ -238,15 +238,12 @@ public:
 		
 		else if (actionEvent.getSource() == chkMouseHack)
 		{
-#if 0
-#ifdef ANDROID
-			if (chkMouseHack->isSelected())
-				SDL_ANDROID_SetMouseEmulationMode(0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1);
-			else
-				SDL_ANDROID_SetMouseEmulationMode(1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1);
-#endif
-#endif
 			changed_prefs.input_tablet = chkMouseHack->isSelected() ? TABLET_MOUSEHACK : TABLET_OFF;
+			changed_prefs.input_magic_mouse_cursor = chkMouseHack->isSelected() ? MAGICMOUSE_NATIVE_ONLY : MAGICMOUSE_BOTH;
+			if (chkMouseHack->isSelected())
+				changed_prefs.input_mouse_untrap |= MOUSEUNTRAP_MAGIC;
+			else 
+				changed_prefs.input_mouse_untrap &= ~MOUSEUNTRAP_MAGIC;
 		}
 
 		else if (actionEvent.getSource() == chkInputAutoswitch)

@@ -34,6 +34,7 @@ extern SDL_Renderer* renderer;
 extern SDL_Window* sdl_window;
 extern SDL_Surface* gui_screen;
 extern SDL_Rect renderQuad;
+extern SDL_Cursor* normalcursor;
 
 extern void check_error_sdl(bool check, const char* message);
 extern void toggle_fullscreen();

@@ -40,6 +40,8 @@ extern int generic_main(int argc, char* argv[]);
 extern bool my_kbd_handler(int, int, int, bool);
 extern void clearallkeys(void);
 extern int getcapslock(void);
+void releasecapture();
+
 extern int enter_gui_key;
 extern int quit_key;
 extern int action_replay_button;

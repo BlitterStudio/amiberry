@@ -49,6 +49,7 @@
 #include "uae/uae.h"
 
 extern FILE* debugfile;
+SDL_Cursor* normalcursor;
 
 int pause_emulation;
 
@@ -168,8 +169,8 @@ int sleep_millis_main(int ms)
 	return 0;
 }
 
+static int mon_cursorclipped;
 static int pausemouseactive;
-
 void resumesoundpaused(void)
 {
 	resume_sound();
@@ -333,7 +334,7 @@ void replace(std::string& str, const std::string& from, const std::string& to)
 
 void target_execute(const char* command)
 {
-	set_mouse_grab(false);
+	releasecapture();
 
 	write_log("Target_execute received: %s\n", command);
 	const std::string cmd_string = command;
@@ -1498,6 +1499,8 @@ int main(int argc, char* argv[])
 
 	alloc_AmigaMem();
 	RescanROMs();
+
+	normalcursor = SDL_GetDefaultCursor();
 	clipboard_init();
 	
 	// set capslock state based upon current "real" state
@@ -1558,37 +1561,58 @@ void setpriority(int prio)
 	}
 }
 
-void toggle_mousegrab()
+static void setcursorshape()
 {
-	// Release mouse
-	if (mouse_grabbed)
-	{
-		mouse_grabbed = false;
-		SDL_ShowCursor(SDL_ENABLE);
-		SDL_SetRelativeMouseMode(SDL_FALSE);
+	if (currprefs.input_tablet && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_magic_mouse_cursor == MAGICMOUSE_NATIVE_ONLY) {
+		if (SDL_GetCursor() != NULL)
+			SDL_ShowCursor(SDL_DISABLE);
 	}
-	else
-	{
-		mouse_grabbed = true;
-		SDL_ShowCursor(SDL_DISABLE);
-		SDL_SetRelativeMouseMode(SDL_TRUE);
-	}
+	//else if (!picasso_setwincursor()) {
+	//	if (SDL_GetCursor() != normalcursor)
+	//		SDL_SetCursor(normalcursor);
+	//}
 }
 
-void set_mouse_grab(const bool grab)
+void releasecapture()
 {
-#ifdef USE_DISPMANX
-	if (currprefs.allow_host_run)
-	{
-		if (grab)
-			change_layer_number(0);
-		else
-			change_layer_number(-128);
-	}
-#endif
-	if (grab != mouse_grabbed)
-		toggle_mousegrab();	
+	if (!mon_cursorclipped)
+		return;
+	SDL_SetWindowGrab(sdl_window, SDL_FALSE);
+	int c = SDL_ShowCursor(SDL_ENABLE);
+	write_log(_T("ShowCursor %d\n"), c);
+	mon_cursorclipped = 0;
 }
+
+//void updatewinrect(bool allowfullscreen)
+//{
+//	int f = isfullscreen();
+//	if (!allowfullscreen && f > 0)
+//		return;
+//	GetWindowRect(mon->hAmigaWnd, &mon->amigawin_rect);
+//	GetWindowRect(mon->hAmigaWnd, &mon->amigawinclip_rect);
+//
+//	if (f == 0) {
+//		changed_prefs.gfx_monitor.gfx_size_win.x = mon->amigawin_rect.left;
+//		changed_prefs.gfx_monitor.gfx_size_win.y = mon->amigawin_rect.top;
+//		currprefs.gfx_monitor.gfx_size_win.x = changed_prefs.gfx_monitor.gfx_size_win.x;
+//		currprefs.gfx_monitor.gfx_size_win.y = changed_prefs.gfx_monitor.gfx_size_win.y;
+//	}
+//}
+
+//void set_mouse_grab(const bool grab)
+//{
+//#ifdef USE_DISPMANX
+//	if (currprefs.allow_host_run)
+//	{
+//		if (grab)
+//			change_layer_number(0);
+//		else
+//			change_layer_number(-128);
+//	}
+//#endif
+//	if (grab != mouse_grabbed)
+//		toggle_mousegrab();	
+//}
 
 void setminimized()
 {
@@ -1667,6 +1691,7 @@ static void amiberry_inactive(int minimized)
 
 static void amiberry_active(int minimized)
 {
+	focus = 1;
 	setpriority(currprefs.active_capture_priority);
 	
 	if (sound_closed != 0) {
@@ -1696,27 +1721,44 @@ static void amiberry_active(int minimized)
 static void setmouseactive2(int active, bool allowpause)
 {
 	if (active == 0)
-		set_mouse_grab(false);
+		releasecapture();
 	if (mouseactive == active && active >= 0)
 		return;
 
 	if (active == 1 && !(currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC)) {
-		set_mouse_grab(true);
+		auto* c = SDL_GetCursor();
+		if (c != normalcursor)
+			return;
 	}
 	
 	if (active < 0)
 		active = 1;
 
 	mouseactive = active ? 1 : 0;
-
+	
+	releasecapture();
 	recapture = 0;
 	
 	if (isfullscreen() <= 0 && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_tablet > 0) {
 		if (mousehack_alive())
 			return;
+		SDL_SetCursor(normalcursor);
 	}
+
+	if (mouseactive > 0)
+		focus = 1;
 	
-	if (active) {
+	if (mouseactive) {
+		if (focus) {
+			if (!mon_cursorclipped) {
+				SDL_ShowCursor(SDL_DISABLE);
+				SDL_SetWindowGrab(sdl_window, SDL_TRUE);
+				//updatewinrect(false);
+				mon_cursorclipped = 1;
+				//updatemouseclip();
+			}
+			//setcursor(-30000, -30000);
+		}
 		wait_keyrelease();
 		inputdevice_acquire(TRUE);
 		setpriority(currprefs.active_capture_priority);
@@ -1734,8 +1776,10 @@ static void setmouseactive2(int active, bool allowpause)
 		if (currprefs.active_nocapture_pause)
 			setpaused(2);
 		else if (currprefs.active_nocapture_nosound)
+		{
 			setsoundpaused();
 			sound_closed = -1;
+		}	
 	}
 }
 
@@ -1773,6 +1817,100 @@ void disablecapture()
 	}
 }
 
+void setmouseactivexy(int x, int y, int dir)
+{
+	int diff = 8;
+
+	if (isfullscreen() > 0)
+		return;
+	//x += mon->amigawin_rect.left;
+	//y += mon->amigawin_rect.top;
+	//if (dir & 1)
+	//	x = mon->amigawin_rect.left - diff;
+	//if (dir & 2)
+	//	x = mon->amigawin_rect.right + diff;
+	//if (dir & 4)
+	//	y = mon->amigawin_rect.top - diff;
+	//if (dir & 8)
+	//	y = mon->amigawin_rect.bottom + diff;
+	//if (!dir) {
+	//	x += (mon->amigawin_rect.right - mon->amigawin_rect.left) / 2;
+	//	y += (mon->amigawin_rect.bottom - mon->amigawin_rect.top) / 2;
+	//}
+	//if (isfullscreen() < 0) {
+	//	POINT pt;
+	//	pt.x = x;
+	//	pt.y = y;
+	//	if (MonitorFromPoint(pt, MONITOR_DEFAULTTONULL) == NULL)
+	//		return;
+	//}
+	if (mouseactive) {
+		disablecapture();
+		SDL_WarpMouseInWindow(sdl_window, x, y);
+		if (dir) {
+			recapture = 1;
+		}
+	}
+}
+
+int isfocus(void)
+{
+	if (isfullscreen() > 0) {
+		if (!minimized)
+			return 2;
+		return 0;
+	}
+	if (currprefs.input_tablet >= TABLET_MOUSEHACK && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC)) {
+		if (mouseinside)
+			return 2;
+		if (focus)
+			return 1;
+		return 0;
+	}
+	if (focus && mouseactive > 0)
+		return 2;
+	if (focus)
+		return -1;
+	return 0;
+}
+
+static void activationtoggle(bool inactiveonly)
+{
+	if (mouseactive) {
+		//if ((isfullscreen() > 0) || (isfullscreen() < 0 && currprefs.minimize_inactive)) {
+		//	disablecapture();
+		//	minimizewindow();
+		//}
+		//else 
+		{
+			setmouseactive(0);
+		}
+	}
+	else {
+		if (!inactiveonly)
+			setmouseactive(1);
+	}
+}
+
+void toggle_mousegrab()
+{
+	activationtoggle(false);
+
+	//// Release mouse
+	//if (mouse_grabbed)
+	//{
+	//	mouse_grabbed = false;
+	//	SDL_ShowCursor(SDL_ENABLE);
+	//	SDL_SetRelativeMouseMode(SDL_FALSE);
+	//}
+	//else
+	//{
+	//	mouse_grabbed = true;
+	//	SDL_ShowCursor(SDL_DISABLE);
+	//	SDL_SetRelativeMouseMode(SDL_TRUE);
+	//}
+}
+
 void process_event(SDL_Event event)
 {
 	if (event.type == SDL_WINDOWEVENT)
@@ -1789,10 +1927,18 @@ void process_event(SDL_Event event)
 			break;
 		case SDL_WINDOWEVENT_ENTER:
 			mouseinside = true;
+			if (currprefs.input_tablet > 0 && currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC && isfullscreen() <= 0)
+			{
+				if (mousehack_alive())
+				{
+					setcursorshape();
+					break;
+				}
+			}
 			break;
 		case SDL_WINDOWEVENT_FOCUS_GAINED:
 			mouseinside = true;
-			set_mouse_grab(true);
+			//set_mouse_grab(true);
 			amiberry_active(minimized);
 			break;
 		case SDL_WINDOWEVENT_LEAVE:
@@ -1800,7 +1946,8 @@ void process_event(SDL_Event event)
 			break;
 		case SDL_WINDOWEVENT_FOCUS_LOST:
 			mouseinside = false;
-			set_mouse_grab(false);
+			focus = 0;
+			//set_mouse_grab(false);
 			amiberry_inactive(minimized);
 			break;
 		case SDL_WINDOWEVENT_CLOSE:
@@ -1849,6 +1996,11 @@ void process_event(SDL_Event event)
 		//if (ok_to_use && event.key.repeat == 0)
 		if (event.key.repeat == 0)
 		{
+			if (!isfocus())
+				break;
+			if (isfocus() < 2 && currprefs.input_tablet >= TABLET_MOUSEHACK && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC))
+				break;
+			
 			auto scancode = event.key.keysym.scancode;
 			if (amiberry_options.rctrl_as_ramiga || currprefs.right_control_is_right_win_key)
 			{
@@ -1866,6 +2018,11 @@ void process_event(SDL_Event event)
 		//if (ok_to_use && event.key.repeat == 0)
 		if (event.key.repeat == 0)
 		{
+			if (!isfocus())
+				break;
+			if (isfocus() < 2 && currprefs.input_tablet >= TABLET_MOUSEHACK && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC))
+				break;
+			
 			auto scancode = event.key.keysym.scancode;
 			if (amiberry_options.rctrl_as_ramiga || currprefs.right_control_is_right_win_key)
 			{
@@ -1878,29 +2035,53 @@ void process_event(SDL_Event event)
 	break;
 
 	case SDL_FINGERDOWN:
-		setmousebuttonstate(0, 0, 1);
+		if (isfocus())
+		{
+			setmousebuttonstate(0, 0, 1);
+		}
 		break;
 
 	case SDL_MOUSEBUTTONDOWN:
-		if (event.button.button == SDL_BUTTON_LEFT && mouseinside && !currprefs.input_mouse_untrap)
-			set_mouse_grab(true);
-		if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
+		if (event.button.button == SDL_BUTTON_LEFT
+			&& !mouseactive
+			&& (!mousehack_alive() 
+				|| currprefs.input_tablet != TABLET_MOUSEHACK 
+				|| (currprefs.input_tablet == TABLET_MOUSEHACK 
+					&& !(currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC)) 
+				|| isfullscreen() > 0))
+		{
+			if (!pause_emulation || currprefs.active_nocapture_pause)
+				setmouseactive((event.button.button == SDL_BUTTON_LEFT || isfullscreen() > 0) ? 2 : 1);
+		}
+		else if (isfocus())
 		{
 			if (event.button.button == SDL_BUTTON_LEFT)
 				setmousebuttonstate(0, 0, 1);
 			if (event.button.button == SDL_BUTTON_RIGHT)
 				setmousebuttonstate(0, 1, 1);
 			if (event.button.button == SDL_BUTTON_MIDDLE)
-				setmousebuttonstate(0, 2, 1);
+			{
+				if (currprefs.input_mouse_untrap & MOUSEUNTRAP_MIDDLEBUTTON)
+				{
+					activationtoggle(true);
+				}
+				else
+				{
+					setmousebuttonstate(0, 2, 1);
+				}
+			}
 		}
 		break;
 
 	case SDL_FINGERUP:
-		setmousebuttonstate(0, 0, 0);
+		if (isfocus())
+		{
+			setmousebuttonstate(0, 0, 0);
+		}
 		break;
 
 	case SDL_MOUSEBUTTONUP:
-		if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
+		if (isfocus())
 		{
 			if (event.button.button == SDL_BUTTON_LEFT)
 				setmousebuttonstate(0, 0, 0);
@@ -1908,9 +2089,7 @@ void process_event(SDL_Event event)
 				setmousebuttonstate(0, 1, 0);
 			if (event.button.button == SDL_BUTTON_MIDDLE)
 			{
-				if (currprefs.input_mouse_untrap)
-					toggle_mousegrab();
-				else
+				if (!(currprefs.input_mouse_untrap & MOUSEUNTRAP_MIDDLEBUTTON))
 					setmousebuttonstate(0, 2, 0);
 			}
 		}
@@ -1918,8 +2097,11 @@ void process_event(SDL_Event event)
 
 	case SDL_FINGERMOTION:
 		//TODO this doesn't work yet
-		setmousestate(0, 0, event.motion.xrel, 0);
-		setmousestate(0, 1, event.motion.yrel, 0);
+		if (isfocus())
+		{
+			setmousestate(0, 0, event.motion.xrel, 0);
+			setmousestate(0, 1, event.motion.yrel, 0);
+		}
 		break;
 
 	case SDL_MOUSEMOTION:
@@ -1936,27 +2118,19 @@ void process_event(SDL_Event event)
 			break;
 		}
 
-		if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
-		{
-			/* relative */
-#if defined (ANDROID)
-			if (event.motion.x == 0 && x > -4)
-				x = -4;
-			if (event.motion.y == 0 && y > -4)
-				y = -4;
-			if (event.motion.x == currprefs.gfx_monitor.gfx_size.width - 1 && x < 4)
-				x = 4;
-			if (event.motion.y == currprefs.gfx_monitor.gfx_size.height - 1 && y < 4)
-				y = 4;
-#endif //ANDROID
-			setmousestate(0, 0, event.motion.xrel, 0);
-			setmousestate(0, 1, event.motion.yrel, 0);
+		if (!focus || !mouseactive)
 			break;
-		}
+
+		/* relative */
+		setmousestate(0, 0, event.motion.xrel, 0);
+		setmousestate(0, 1, event.motion.yrel, 0);
+
+		//if (mon_cursorclipped || mouseactive)
+		//	setcursor(event.motion.x, event.motion.y);
 		break;
 
 	case SDL_MOUSEWHEEL:
-		if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
+		if (isfocus() > 0)
 		{
 			const auto val_y = event.wheel.y;
 			setmousestate(0, 2, val_y, 0);
