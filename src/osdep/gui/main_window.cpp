@@ -395,7 +395,8 @@ void amiberry_gui_init()
 	else
 		SDL_RenderSetLogicalSize(renderer, GUI_HEIGHT, GUI_WIDTH);
 	
-	//set_mouse_grab(false);
+	SDL_SetRelativeMouseMode(SDL_FALSE);
+	SDL_ShowCursor(SDL_ENABLE);
 
 	//-------------------------------------------------
 	// Create helpers for GUI framework

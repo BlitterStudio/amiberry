@@ -73,7 +73,6 @@ void graphics_subshutdown(void);
 
 extern void wait_keyrelease(void);
 extern void keyboard_settrans(void);
-void set_mouse_grab(bool grab);
 
 extern void free_AmigaMem();
 extern void alloc_AmigaMem();
