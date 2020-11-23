@@ -44,6 +44,8 @@
 #include "devices.h"
 #include <map>
 
+
+#include "amiberry_filesys.hpp"
 #include "amiberry_input.h"
 #include "clipboard.h"
 #include "uae/uae.h"
@@ -169,6 +171,56 @@ int sleep_millis_main(int ms)
 	return 0;
 }
 
+//TODO: implement AmigaMonitor first, then enable following code
+//static void setcursor(struct AmigaMonitor* mon, int oldx, int oldy)
+//{
+//	int dx = (mon->amigawinclip_rect.left - mon->amigawin_rect.left) + (mon->amigawinclip_rect.right - mon->amigawinclip_rect.left) / 2;
+//	int dy = (mon->amigawinclip_rect.top - mon->amigawin_rect.top) + (mon->amigawinclip_rect.bottom - mon->amigawinclip_rect.top) / 2;
+//	mon->mouseposx = oldx - dx;
+//	mon->mouseposy = oldy - dy;
+//
+//	mon->windowmouse_max_w = (mon->amigawinclip_rect.right - mon->amigawinclip_rect.left) / 2 - 50;
+//	mon->windowmouse_max_h = (mon->amigawinclip_rect.bottom - mon->amigawinclip_rect.top) / 2 - 50;
+//	if (mon->windowmouse_max_w < 10)
+//		mon->windowmouse_max_w = 10;
+//	if (mon->windowmouse_max_h < 10)
+//		mon->windowmouse_max_h = 10;
+//
+//	if ((currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_tablet > 0 && mousehack_alive() && isfullscreen() <= 0) {
+//		mon->mouseposx = mon->mouseposy = 0;
+//		return;
+//	}
+//#if MOUSECLIP_LOG
+//	write_log(_T("mon=%d %dx%d %dx%d %dx%d %dx%d (%dx%d %dx%d)\n"),
+//		mon->monitor_id,
+//		dx, dy,
+//		mon->mouseposx, mon->mouseposy,
+//		oldx, oldy,
+//		oldx + mon->amigawinclip_rect.left, oldy + mon->amigawinclip_rect.top,
+//		mon->amigawinclip_rect.left, mon->amigawinclip_rect.top,
+//		mon->amigawinclip_rect.right, mon->amigawinclip_rect.bottom);
+//#endif
+//	if (oldx >= 30000 || oldy >= 30000 || oldx <= -30000 || oldy <= -30000) {
+//		oldx = oldy = 0;
+//	}
+//	else {
+//		if (abs(mon->mouseposx) < mon->windowmouse_max_w && abs(mon->mouseposy) < mon->windowmouse_max_h)
+//			return;
+//	}
+//	mon->mouseposx = mon->mouseposy = 0;
+//	if (oldx < 0 || oldy < 0 || oldx > mon->amigawin_rect.right - mon->amigawin_rect.left || oldy > mon->amigawin_rect.bottom - mon->amigawin_rect.top) {
+//		write_log(_T("Mouse out of range: mon=%d %dx%d (%dx%d %dx%d)\n"), mon->monitor_id, oldx, oldy,
+//			mon->amigawin_rect.left, mon->amigawin_rect.top, mon->amigawin_rect.right, mon->amigawin_rect.bottom);
+//		return;
+//	}
+//	int cx = (mon->amigawinclip_rect.right - mon->amigawinclip_rect.left) / 2 + mon->amigawin_rect.left + (mon->amigawinclip_rect.left - mon->amigawin_rect.left);
+//	int cy = (mon->amigawinclip_rect.bottom - mon->amigawinclip_rect.top) / 2 + mon->amigawin_rect.top + (mon->amigawinclip_rect.top - mon->amigawin_rect.top);
+//#if MOUSECLIP_LOG
+//	write_log(_T("SetCursorPos(%d,%d) mon=%d\n"), cx, cy, mon->monitor_id);
+//#endif
+//	SetCursorPos(cx, cy);
+//}
+
 static int mon_cursorclipped;
 static int pausemouseactive;
 void resumesoundpaused(void)
@@ -191,6 +243,7 @@ void setsoundpaused(void)
 
 bool resumepaused(int priority)
 {
+	//struct AmigaMonitor* mon = &AMonitors[0];
 	//write_log (_T("resume %d (%d)\n"), priority, pause_emulation);
 	if (pause_emulation > priority)
 		return false;
@@ -211,6 +264,7 @@ bool resumepaused(int priority)
 
 bool setpaused(int priority)
 {
+	//struct AmigaMonitor* mon = &AMonitors[0];
 	//write_log (_T("pause %d (%d)\n"), priority, pause_emulation);
 	if (pause_emulation > priority)
 		return false;
@@ -223,6 +277,906 @@ bool setpaused(int priority)
 		setmouseactive(0);
 	}
 	return true;
+}
+
+void setminimized()
+{
+	if (!minimized)
+		minimized = 1;
+	set_inhibit_frame(IHF_WINDOWHIDDEN);
+}
+
+void unsetminimized()
+{
+	if (minimized > 0)
+		full_redraw_all();
+	minimized = 0;
+	clear_inhibit_frame(IHF_WINDOWHIDDEN);
+}
+
+void setpriority(int prio)
+{
+	if (prio >= 0 && prio <= 2)
+	{
+		switch (prio)
+		{
+		case 0:
+			SDL_SetThreadPriority(SDL_THREAD_PRIORITY_LOW);
+			break;
+		case 1:
+			SDL_SetThreadPriority(SDL_THREAD_PRIORITY_NORMAL);
+			break;
+		case 2:
+			SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH);
+			break;
+		default:
+			break;
+		}
+	}
+}
+
+static void setcursorshape()
+{
+	if (currprefs.input_tablet && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_magic_mouse_cursor == MAGICMOUSE_NATIVE_ONLY) {
+		if (SDL_GetCursor() != NULL)
+			SDL_ShowCursor(SDL_DISABLE);
+	}
+	//else if (!picasso_setwincursor()) {
+	//	if (SDL_GetCursor() != normalcursor)
+	//		SDL_SetCursor(normalcursor);
+	//}
+}
+
+void releasecapture()
+{
+	if (!mon_cursorclipped)
+		return;
+	SDL_SetWindowGrab(sdl_window, SDL_FALSE);
+	int c = SDL_ShowCursor(SDL_ENABLE);
+	write_log(_T("ShowCursor %d\n"), c);
+	mon_cursorclipped = 0;
+}
+
+//TODO: implement this
+//void updatemouseclip(struct AmigaMonitor* mon)
+//{
+//	if (mon_cursorclipped) {
+//		mon->amigawinclip_rect = mon->amigawin_rect;
+//		if (!isfullscreen()) {
+//			int idx = 0;
+//			reenumeratemonitors();
+//			while (Displays[idx].monitorname) {
+//				RECT out;
+//				struct MultiDisplay* md = &Displays[idx];
+//				idx++;
+//				if (md->rect.left == md->workrect.left && md->rect.right == md->workrect.right
+//					&& md->rect.top == md->workrect.top && md->rect.bottom == md->workrect.bottom)
+//					continue;
+//				// not in this monitor?
+//				if (!IntersectRect(&out, &md->rect, &mon->amigawin_rect))
+//					continue;
+//				for (int e = 0; e < 4; e++) {
+//					int v1, v2, x, y;
+//					LONG* lp;
+//					switch (e)
+//					{
+//					case 0:
+//					default:
+//						v1 = md->rect.left;
+//						v2 = md->workrect.left;
+//						lp = &mon->amigawinclip_rect.left;
+//						x = v1 - 1;
+//						y = (md->rect.bottom - md->rect.top) / 2;
+//						break;
+//					case 1:
+//						v1 = md->rect.top;
+//						v2 = md->workrect.top;
+//						lp = &mon->amigawinclip_rect.top;
+//						x = (md->rect.right - md->rect.left) / 2;
+//						y = v1 - 1;
+//						break;
+//					case 2:
+//						v1 = md->rect.right;
+//						v2 = md->workrect.right;
+//						lp = &mon->amigawinclip_rect.right;
+//						x = v1 + 1;
+//						y = (md->rect.bottom - md->rect.top) / 2;
+//						break;
+//					case 3:
+//						v1 = md->rect.bottom;
+//						v2 = md->workrect.bottom;
+//						lp = &mon->amigawinclip_rect.bottom;
+//						x = (md->rect.right - md->rect.left) / 2;
+//						y = v1 + 1;
+//						break;
+//					}
+//					// is there another monitor sharing this edge?
+//					POINT pt;
+//					pt.x = x;
+//					pt.y = y;
+//					if (MonitorFromPoint(pt, MONITOR_DEFAULTTONULL))
+//						continue;
+//					// restrict mouse clip bounding box to this edge
+//					if (e >= 2) {
+//						if (*lp > v2) {
+//							*lp = v2;
+//						}
+//					}
+//					else {
+//						if (*lp < v2) {
+//							*lp = v2;
+//						}
+//					}
+//				}
+//			}
+//			// Too small or invalid?
+//			if (mon->amigawinclip_rect.right <= mon->amigawinclip_rect.left + 7 || mon->amigawinclip_rect.bottom <= mon->amigawinclip_rect.top + 7)
+//				mon->amigawinclip_rect = mon->amigawin_rect;
+//		}
+//		if (mon_cursorclipped == mon->monitor_id + 1) {
+//#if MOUSECLIP_LOG
+//			write_log(_T("CLIP mon=%d %dx%d %dx%d %d\n"), mon->monitor_id, mon->amigawin_rect.left, mon->amigawin_rect.top, mon->amigawin_rect.right, mon->amigawin_rect.bottom, isfullscreen());
+//#endif
+//			if (!ClipCursor(&mon->amigawinclip_rect))
+//				write_log(_T("ClipCursor error %d\n"), GetLastError());
+//		}
+//	}
+//}
+
+//TODO
+//void updatewinrect(struct AmigaMonitor *mon, bool allowfullscreen)
+//{
+//	int f = isfullscreen();
+//	if (!allowfullscreen && f > 0)
+//		return;
+//	GetWindowRect(mon->hAmigaWnd, &mon->amigawin_rect);
+//	GetWindowRect(mon->hAmigaWnd, &mon->amigawinclip_rect);
+//
+//	if (f == 0) {
+//		changed_prefs.gfx_monitor.gfx_size_win.x = mon->amigawin_rect.left;
+//		changed_prefs.gfx_monitor.gfx_size_win.y = mon->amigawin_rect.top;
+//		currprefs.gfx_monitor.gfx_size_win.x = changed_prefs.gfx_monitor.gfx_size_win.x;
+//		currprefs.gfx_monitor.gfx_size_win.y = changed_prefs.gfx_monitor.gfx_size_win.y;
+//	}
+//}
+
+//TODO: Tablet only
+//void target_inputdevice_unacquire(void)
+//{
+//	close_tablet(tablet);
+//	tablet = NULL;
+//}
+//void target_inputdevice_acquire(void)
+//{
+//	struct AmigaMonitor* mon = &AMonitors[0];
+//	target_inputdevice_unacquire();
+//	tablet = open_tablet(mon->hAmigaWnd);
+//}
+
+static void setmouseactive2(int active, bool allowpause)
+{
+	if (active == 0)
+		releasecapture();
+	if (mouseactive == active && active >= 0)
+		return;
+
+	if (active == 1 && !(currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC)) {
+		auto* c = SDL_GetCursor();
+		if (c != normalcursor)
+			return;
+	}
+
+	if (active < 0)
+		active = 1;
+
+	mouseactive = active ? 1 : 0;
+
+	//TODO: Needs AmigaMon support
+	//mon->mouseposx = mon->mouseposy = 0;
+	releasecapture();
+	recapture = 0;
+
+	if (isfullscreen() <= 0 && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_tablet > 0) {
+		if (mousehack_alive())
+			return;
+		SDL_SetCursor(normalcursor);
+	}
+
+	if (mouseactive > 0)
+		focus = 1;
+
+	if (mouseactive) {
+		if (focus) {
+			if (!mon_cursorclipped) {
+				SDL_ShowCursor(SDL_DISABLE);
+				SDL_SetWindowGrab(sdl_window, SDL_TRUE);
+				//TODO
+				//updatewinrect(mon, false);
+				mon_cursorclipped = 1;
+				//TODO
+				//updatemouseclip(mon);
+			}
+			//TODO
+			//setcursor(mon, -30000, -30000);
+		}
+		wait_keyrelease();
+		inputdevice_acquire(TRUE);
+		setpriority(currprefs.active_capture_priority);
+		if (currprefs.active_nocapture_pause)
+			resumepaused(2);
+		else if (currprefs.active_nocapture_nosound && sound_closed < 0)
+			resumesoundpaused();
+	}
+	else {
+		inputdevice_acquire(FALSE);
+		inputdevice_releasebuttons();
+	}
+	if (!active && allowpause)
+	{
+		if (currprefs.active_nocapture_pause)
+			setpaused(2);
+		else if (currprefs.active_nocapture_nosound)
+		{
+			setsoundpaused();
+			sound_closed = -1;
+		}
+	}
+}
+
+void setmouseactive(int active)
+{
+	if (active > 1)
+		SDL_RaiseWindow(sdl_window);
+	setmouseactive2(active, true);
+}
+
+static void amiberry_active(int minimized)
+{
+	focus = 1;
+	auto pri = currprefs.inactive_priority;
+	if (!minimized)
+		pri = currprefs.active_capture_priority;
+	setpriority(pri);
+
+	if (sound_closed != 0) {
+		if (sound_closed < 0) {
+			resumesoundpaused();
+		}
+		else
+		{
+			if (currprefs.active_nocapture_pause)
+			{
+				if (mouseactive)
+					resumepaused(2);
+			}
+			else if (currprefs.inactive_pause)
+				resumepaused(2);
+		}
+		sound_closed = 0;
+	}
+	getcapslock();
+	wait_keyrelease();
+	inputdevice_acquire(TRUE);
+	if (isfullscreen() > 0)
+		setmouseactive(1);
+	clipboard_active(1, 1);
+}
+
+static void amiberry_inactive(int minimized)
+{
+	focus = 0;
+	recapture = 0;
+	wait_keyrelease();
+	setmouseactive(0);
+	clipboard_active(1, 0);
+	auto pri = currprefs.inactive_priority;
+	if (!quit_program) {
+		if (minimized) {
+			pri = currprefs.minimized_priority;
+			if (currprefs.minimized_pause) {
+				inputdevice_unacquire();
+				setpaused(1);
+				sound_closed = 1;
+			}
+			else if (currprefs.minimized_nosound) {
+				inputdevice_unacquire(true, currprefs.minimized_input);
+				setsoundpaused();
+				sound_closed = -1;
+			}
+			else {
+				inputdevice_unacquire(true, currprefs.minimized_input);
+			}
+		}
+		else if (mouseactive) {
+			inputdevice_unacquire();
+			if (currprefs.active_nocapture_pause)
+			{
+				setpaused(2);
+				sound_closed = 1;
+			}
+			else if (currprefs.active_nocapture_nosound)
+			{
+				setsoundpaused();
+				sound_closed = -1;
+			}
+		}
+		else {
+			if (currprefs.inactive_pause)
+			{
+				inputdevice_unacquire();
+				setpaused(2);
+				sound_closed = 1;
+			}
+			else if (currprefs.inactive_nosound)
+			{
+				inputdevice_unacquire(true, currprefs.inactive_input);
+				setsoundpaused();
+				sound_closed = -1;
+			}
+			else {
+				inputdevice_unacquire(true, currprefs.inactive_input);
+			}
+		}
+	}
+	else {
+		inputdevice_unacquire();
+	}
+	setpriority(pri);
+	filesys_flush_cache();
+}
+
+//TODO: find usages and implement them
+void minimizewindow()
+{
+	SDL_MinimizeWindow(sdl_window);
+}
+
+void enablecapture()
+{
+	if (pause_emulation > 2)
+		return;
+	setmouseactive(1);
+	if (sound_closed < 0) {
+		resumesoundpaused();
+		sound_closed = 0;
+	}
+	if (currprefs.inactive_pause || currprefs.active_nocapture_pause)
+		resumepaused(2);
+}
+
+void disablecapture()
+{
+	setmouseactive(0);
+	focus = 0;
+	if (currprefs.active_nocapture_pause && sound_closed == 0) {
+		setpaused(2);
+		sound_closed = 1;
+	}
+	else if (currprefs.active_nocapture_nosound && sound_closed == 0) {
+		setsoundpaused();
+		sound_closed = -1;
+	}
+}
+
+//TODO: implement missing parts
+void setmouseactivexy(int x, int y, int dir)
+{
+	int diff = 8;
+
+	if (isfullscreen() > 0)
+		return;
+	//x += mon->amigawin_rect.left;
+	//y += mon->amigawin_rect.top;
+	//if (dir & 1)
+	//	x = mon->amigawin_rect.left - diff;
+	//if (dir & 2)
+	//	x = mon->amigawin_rect.right + diff;
+	//if (dir & 4)
+	//	y = mon->amigawin_rect.top - diff;
+	//if (dir & 8)
+	//	y = mon->amigawin_rect.bottom + diff;
+	//if (!dir) {
+	//	x += (mon->amigawin_rect.right - mon->amigawin_rect.left) / 2;
+	//	y += (mon->amigawin_rect.bottom - mon->amigawin_rect.top) / 2;
+	//}
+	//if (isfullscreen() < 0) {
+	//	POINT pt;
+	//	pt.x = x;
+	//	pt.y = y;
+	//	if (MonitorFromPoint(pt, MONITOR_DEFAULTTONULL) == NULL)
+	//		return;
+	//}
+	if (mouseactive) {
+		disablecapture();
+		SDL_WarpMouseInWindow(sdl_window, x, y);
+		if (dir) {
+			recapture = 1;
+		}
+	}
+}
+
+int isfocus(void)
+{
+	if (isfullscreen() > 0) {
+		if (!minimized)
+			return 2;
+		return 0;
+	}
+	if (currprefs.input_tablet >= TABLET_MOUSEHACK && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC)) {
+		if (mouseinside)
+			return 2;
+		if (focus)
+			return 1;
+		return 0;
+	}
+	if (focus && mouseactive > 0)
+		return 2;
+	if (focus)
+		return -1;
+	return 0;
+}
+
+static void activationtoggle(bool inactiveonly)
+{
+	if (mouseactive) {
+		if ((isfullscreen() > 0) || (isfullscreen() < 0 && currprefs.minimize_inactive)) {
+			disablecapture();
+			minimizewindow();
+		}
+		else 
+		{
+			setmouseactive(0);
+		}
+	}
+	else {
+		if (!inactiveonly)
+			setmouseactive(1);
+	}
+}
+
+#define MEDIA_INSERT_QUEUE_SIZE 10
+static TCHAR* media_insert_queue[MEDIA_INSERT_QUEUE_SIZE];
+static int media_insert_queue_type[MEDIA_INSERT_QUEUE_SIZE];
+static SDL_TimerID media_change_timer;
+static SDL_TimerID device_change_timer;
+
+static int is_in_media_queue(const TCHAR* drvname)
+{
+	for (int i = 0; i < MEDIA_INSERT_QUEUE_SIZE; i++) {
+		if (media_insert_queue[i] != NULL) {
+			if (!_tcsicmp(drvname, media_insert_queue[i]))
+				return i;
+		}
+	}
+	return -1;
+}
+
+//TODO Implement this from WinUAE's window timer event
+Uint32 timer_callbackfunc(Uint32 interval, void* param)
+{
+	return 0;
+//	if (wParam == 2) {
+//		bool restart = false;
+//		SDL_RemoveTimer(media_change_timer);
+//		media_change_timer = 0;
+//		DWORD r = CMP_WaitNoPendingInstallEvents(0);
+//		write_log(_T("filesys timer, CMP_WaitNoPendingInstallEvents=%d\n"), r);
+//		if (r == WAIT_OBJECT_0) {
+//			for (int i = 0; i < MEDIA_INSERT_QUEUE_SIZE; i++) {
+//				if (media_insert_queue[i]) {
+//					TCHAR* drvname = media_insert_queue[i];
+//					int r = my_getvolumeinfo(drvname);
+//					if (r < 0) {
+//						if (media_insert_queue_type[i] > 0) {
+//							write_log(_T("Mounting %s but drive is not ready, %d.. retrying %d..\n"), drvname, r, media_insert_queue_type[i]);
+//							media_insert_queue_type[i]--;
+//							restart = true;
+//							continue;
+//						}
+//						else {
+//							write_log(_T("Mounting %s but drive is not ready, %d.. aborting..\n"), drvname, r);
+//						}
+//					}
+//					else {
+//						int inserted = 1;
+//						DWORD type = GetDriveType(drvname);
+//						if (type == DRIVE_CDROM)
+//							inserted = -1;
+//						r = filesys_media_change(drvname, inserted, NULL);
+//						if (r < 0) {
+//							write_log(_T("Mounting %s but previous media change is still in progress..\n"), drvname);
+//							restart = true;
+//							break;
+//						}
+//						else if (r > 0) {
+//							write_log(_T("%s mounted\n"), drvname);
+//						}
+//						else {
+//							write_log(_T("%s mount failed\n"), drvname);
+//						}
+//					}
+//					xfree(media_insert_queue[i]);
+//					media_insert_queue[i] = NULL;
+//				}
+//			}
+//		}
+//		else if (r == WAIT_TIMEOUT) {
+//			restart = true;
+//		}
+//		if (restart)
+//			start_media_insert_timer(hWnd);
+//	}
+//	else if (wParam == 4) {
+//		SDL_RemoveTimer(device_change_timer);
+//		device_change_timer = 0;
+//		inputdevice_devicechange(&changed_prefs);
+//		inputdevice_copyjports(&changed_prefs, &workprefs);
+//	}
+//	else if (wParam == 1) {
+//#ifdef PARALLEL_PORT
+//		finishjob();
+//#endif
+//	}
+}
+
+static void start_media_insert_timer()
+{
+	if (!media_change_timer) {
+		media_change_timer = SDL_AddTimer(1000, timer_callbackfunc, nullptr);
+	}
+}
+
+static void add_media_insert_queue(const TCHAR* drvname, int retrycnt)
+{
+	int idx = is_in_media_queue(drvname);
+	if (idx >= 0) {
+		if (retrycnt > media_insert_queue_type[idx])
+			media_insert_queue_type[idx] = retrycnt;
+		write_log(_T("%s already queued for insertion, cnt=%d.\n"), drvname, retrycnt);
+		start_media_insert_timer();
+		return;
+	}
+	for (int i = 0; i < MEDIA_INSERT_QUEUE_SIZE; i++) {
+		if (media_insert_queue[i] == NULL) {
+			media_insert_queue[i] = my_strdup(drvname);
+			media_insert_queue_type[i] = retrycnt;
+			start_media_insert_timer();
+			return;
+		}
+	}
+}
+
+void process_event(SDL_Event event)
+{
+	if (event.type == SDL_WINDOWEVENT)
+	{
+		switch (event.window.event)
+		{
+		case SDL_WINDOWEVENT_MINIMIZED:
+			setminimized();
+			amiberry_inactive(minimized);
+			break;
+		case SDL_WINDOWEVENT_RESTORED:
+			amiberry_active(minimized);
+			unsetminimized();
+			break;
+		case SDL_WINDOWEVENT_ENTER:
+			mouseinside = true;
+			if (currprefs.input_tablet > 0 && currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC && isfullscreen() <= 0)
+			{
+				if (mousehack_alive())
+				{
+					setcursorshape();
+					break;
+				}
+			}
+			break;
+		case SDL_WINDOWEVENT_LEAVE:
+			mouseinside = false;
+			break;
+		case SDL_WINDOWEVENT_FOCUS_GAINED:
+			amiberry_active(minimized);
+			unsetminimized();
+			break;
+		case SDL_WINDOWEVENT_FOCUS_LOST:
+			focus = 0;
+			amiberry_inactive(minimized);
+			break;
+		case SDL_WINDOWEVENT_CLOSE:
+			if (device_change_timer)
+				SDL_RemoveTimer(device_change_timer);
+			device_change_timer = 0;
+			uae_quit();
+			break;
+
+		default:
+			break;
+		}
+	}
+
+	switch (event.type)
+	{
+	case SDL_QUIT:
+		uae_quit();
+		break;
+
+	case SDL_JOYDEVICEADDED:
+	case SDL_CONTROLLERDEVICEADDED:
+		write_log("SDL Controller/Joystick device added! Re-running import joysticks...\n");
+		import_joysticks();
+		break;
+
+	case SDL_JOYDEVICEREMOVED:
+	case SDL_CONTROLLERDEVICEREMOVED:
+		write_log("SDL Controller/Joystick device removed!\n");
+		break;
+
+	case SDL_CONTROLLERBUTTONDOWN:
+		if (event.cbutton.button == enter_gui_button)
+		{
+			inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
+			break;
+		}
+		break;
+
+	case SDL_KEYDOWN:
+		// if the key belongs to a "retro arch joystick" ignore it
+		// ONLY when in game though, we need to remove the joysticks really 
+		// if we want to use the KB
+		// i've added this so when using the joysticks it doesn't hit the 'r' key for some games
+		// which starts a replay!!!
+		// 
+		//const auto ok_to_use = !key_used_by_retroarch_joy(event.key.keysym.scancode);
+		//if (ok_to_use && event.key.repeat == 0)
+		if (event.key.repeat == 0)
+		{
+			if (!isfocus())
+				break;
+			if (isfocus() < 2 && currprefs.input_tablet >= TABLET_MOUSEHACK && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC))
+				break;
+
+			auto scancode = event.key.keysym.scancode;
+			if (amiberry_options.rctrl_as_ramiga || currprefs.right_control_is_right_win_key)
+			{
+				if (scancode == SDL_SCANCODE_RCTRL)
+					scancode = SDL_SCANCODE_RGUI;
+			}
+			my_kbd_handler(0, scancode, 1, false);
+		}
+		break;
+
+	case SDL_KEYUP:
+		//const auto ok_to_use = !key_used_by_retroarch_joy(event.key.keysym.scancode);
+		//if (ok_to_use && event.key.repeat == 0)
+		if (event.key.repeat == 0)
+		{
+			if (!isfocus())
+				break;
+			if (isfocus() < 2 && currprefs.input_tablet >= TABLET_MOUSEHACK && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC))
+				break;
+
+			auto scancode = event.key.keysym.scancode;
+			if (amiberry_options.rctrl_as_ramiga || currprefs.right_control_is_right_win_key)
+			{
+				if (scancode == SDL_SCANCODE_RCTRL)
+					scancode = SDL_SCANCODE_RGUI;
+			}
+			my_kbd_handler(0, scancode, 0, true);
+		}
+		break;
+
+	case SDL_FINGERDOWN:
+		if (isfocus())
+		{
+			setmousebuttonstate(0, 0, 1);
+		}
+		break;
+
+	case SDL_MOUSEBUTTONDOWN:
+		if (event.button.button == SDL_BUTTON_LEFT
+			&& !mouseactive
+			&& (!mousehack_alive()
+				|| currprefs.input_tablet != TABLET_MOUSEHACK
+				|| (currprefs.input_tablet == TABLET_MOUSEHACK
+					&& !(currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC))
+				|| isfullscreen() > 0))
+		{
+			if (!pause_emulation || currprefs.active_nocapture_pause)
+				setmouseactive((event.button.button == SDL_BUTTON_LEFT || isfullscreen() > 0) ? 2 : 1);
+		}
+		else if (isfocus())
+		{
+			switch (event.button.button)
+			{
+			case SDL_BUTTON_LEFT:
+				setmousebuttonstate(0, 0, 1);
+				break;
+			case SDL_BUTTON_RIGHT:
+				setmousebuttonstate(0, 1, 1);
+				break;
+			case SDL_BUTTON_MIDDLE:
+				if (currprefs.input_mouse_untrap & MOUSEUNTRAP_MIDDLEBUTTON)
+				{
+					activationtoggle(true);
+				}
+				else
+				{
+					setmousebuttonstate(0, 2, 1);
+				}
+				break;
+			case SDL_BUTTON_X1:
+				setmousebuttonstate(0, 3, 1);
+				break;
+			case SDL_BUTTON_X2:
+				setmousebuttonstate(0, 4, 1);
+				break;
+			default: break;
+			}
+		}
+		break;
+
+	case SDL_FINGERUP:
+		if (isfocus())
+		{
+			setmousebuttonstate(0, 0, 0);
+		}
+		break;
+
+	case SDL_MOUSEBUTTONUP:
+		if (isfocus())
+		{
+			switch (event.button.button)
+			{
+			case SDL_BUTTON_LEFT:
+				setmousebuttonstate(0, 0, 0);
+				break;
+			case SDL_BUTTON_RIGHT:
+				setmousebuttonstate(0, 1, 0);
+				break;
+			case SDL_BUTTON_MIDDLE:
+				if (!(currprefs.input_mouse_untrap & MOUSEUNTRAP_MIDDLEBUTTON))
+					setmousebuttonstate(0, 2, 0);
+				break;
+			case SDL_BUTTON_X1:
+				setmousebuttonstate(0, 3, 0);
+				break;
+			case SDL_BUTTON_X2:
+				setmousebuttonstate(0, 4, 0);
+				break;
+			default: break;
+			}
+		}
+		break;
+
+	case SDL_FINGERMOTION:
+		//TODO this doesn't work yet
+		if (isfocus())
+		{
+			setmousestate(0, 0, event.motion.xrel, 0);
+			setmousestate(0, 1, event.motion.yrel, 0);
+		}
+		break;
+
+	case SDL_MOUSEMOTION:
+		if (recapture && isfullscreen() <= 0) {
+			enablecapture();
+			break;
+		}
+
+		if (currprefs.input_tablet >= TABLET_MOUSEHACK)
+		{
+			/* absolute */
+			setmousestate(0, 0, event.motion.x, 1);
+			setmousestate(0, 1, event.motion.y, 1);
+			break;
+		}
+
+		if (!focus || !mouseactive)
+			break;
+
+		/* relative */
+		setmousestate(0, 0, event.motion.xrel, 0);
+		setmousestate(0, 1, event.motion.yrel, 0);
+
+		//TODO
+		//if (mon_cursorclipped || mouseactive)
+		//	setcursor(event.motion.x, event.motion.y);
+		break;
+
+	case SDL_MOUSEWHEEL:
+		if (isfocus() > 0)
+		{
+			const auto val_y = event.wheel.y;
+			setmousestate(0, 2, val_y, 0);
+			if (val_y < 0)
+				setmousebuttonstate(0, 3 + 0, -1);
+			else if (val_y > 0)
+				setmousebuttonstate(0, 3 + 1, -1);
+
+			const auto val_x = event.wheel.x;
+			setmousestate(0, 3, val_x, 0);
+			if (val_x < 0)
+				setmousebuttonstate(0, 3 + 2, -1);
+			else if (val_x > 0)
+				setmousebuttonstate(0, 3 + 3, -1);
+		}
+		break;
+
+	default:
+		break;
+	}
+}
+
+void update_clipboard()
+{
+	auto* clipboard_uae = uae_clipboard_get_text();
+	if (clipboard_uae) {
+		SDL_SetClipboardText(clipboard_uae);
+		uae_clipboard_free_text(clipboard_uae);
+	}
+	else {
+		// FIXME: Ideally, we would want to avoid this alloc/free
+		// when the clipboard hasn't changed.
+		if (SDL_HasClipboardText() == SDL_TRUE)
+		{
+			auto* clipboard_host = SDL_GetClipboardText();
+			uae_clipboard_put_text(clipboard_host);
+			SDL_free(clipboard_host);
+		}
+	}
+}
+
+int handle_msgpump()
+{
+	auto got_event = 0;
+	SDL_Event event;
+
+	while (SDL_PollEvent(&event))
+	{
+		got_event = 1;
+		process_event(event);
+		if (currprefs.clipboard_sharing)
+			update_clipboard();
+	}
+	return got_event;
+}
+
+bool handle_events()
+{
+	static auto was_paused = 0;
+
+	if (pause_emulation)
+	{
+		if (was_paused == 0)
+		{
+			setpaused(pause_emulation);
+			was_paused = pause_emulation;
+			gui_fps(0, 0, 0);
+			gui_led(LED_SND, 0, -1);
+			// we got just paused, report it to caller.
+			return true;
+		}
+		SDL_Event event;
+		while (SDL_PollEvent(&event))
+		{
+			process_event(event);
+		}
+
+		inputdevicefunc_keyboard.read();
+		inputdevicefunc_mouse.read();
+		inputdevicefunc_joystick.read();
+		inputdevice_handle_inputcode();
+	}
+	if (was_paused && (!pause_emulation || quit_program))
+	{
+		updatedisplayarea();
+		pause_emulation = was_paused;
+		resumepaused(was_paused);
+		sound_closed = 0;
+		was_paused = 0;
+	}
+
+	return pause_emulation != 0;
 }
 
 void logging_init(void)
@@ -260,7 +1214,6 @@ void logging_cleanup(void)
 		fclose(debugfile);
 	debugfile = nullptr;
 }
-
 
 void strip_slashes(TCHAR* p)
 {
@@ -545,6 +1498,8 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->minimized_pause = true;
 	p->minimized_nosound = true;
 	p->minimized_input = 0;
+	p->minimize_inactive = false;
+	p->capture_always = false;
 	
 	p->input_analog_remap = false;
 
@@ -1414,6 +2369,8 @@ void target_reset()
 
 bool target_can_autoswitchdevice(void)
 {
+	if (mouseactive <= 0)
+		return false;
 	return true;
 }
 
@@ -1540,690 +2497,12 @@ int main(int argc, char* argv[])
 	return 0;
 }
 
-void setpriority(int prio)
-{
-	if (prio >= 0 && prio <= 2)
-	{
-		switch (prio)
-		{
-		case 0:
-			SDL_SetThreadPriority(SDL_THREAD_PRIORITY_LOW);
-			break;
-		case 1:
-			SDL_SetThreadPriority(SDL_THREAD_PRIORITY_NORMAL);
-			break;
-		case 2:
-			SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH);
-			break;
-		default:
-			break;
-		}		
-	}
-}
-
-static void setcursorshape()
-{
-	if (currprefs.input_tablet && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_magic_mouse_cursor == MAGICMOUSE_NATIVE_ONLY) {
-		if (SDL_GetCursor() != NULL)
-			SDL_ShowCursor(SDL_DISABLE);
-	}
-	//else if (!picasso_setwincursor()) {
-	//	if (SDL_GetCursor() != normalcursor)
-	//		SDL_SetCursor(normalcursor);
-	//}
-}
-
-void releasecapture()
-{
-	if (!mon_cursorclipped)
-		return;
-	SDL_SetWindowGrab(sdl_window, SDL_FALSE);
-	int c = SDL_ShowCursor(SDL_ENABLE);
-	write_log(_T("ShowCursor %d\n"), c);
-	mon_cursorclipped = 0;
-}
-
-//void updatewinrect(bool allowfullscreen)
-//{
-//	int f = isfullscreen();
-//	if (!allowfullscreen && f > 0)
-//		return;
-//	GetWindowRect(mon->hAmigaWnd, &mon->amigawin_rect);
-//	GetWindowRect(mon->hAmigaWnd, &mon->amigawinclip_rect);
-//
-//	if (f == 0) {
-//		changed_prefs.gfx_monitor.gfx_size_win.x = mon->amigawin_rect.left;
-//		changed_prefs.gfx_monitor.gfx_size_win.y = mon->amigawin_rect.top;
-//		currprefs.gfx_monitor.gfx_size_win.x = changed_prefs.gfx_monitor.gfx_size_win.x;
-//		currprefs.gfx_monitor.gfx_size_win.y = changed_prefs.gfx_monitor.gfx_size_win.y;
-//	}
-//}
-
-//void set_mouse_grab(const bool grab)
-//{
-//#ifdef USE_DISPMANX
-//	if (currprefs.allow_host_run)
-//	{
-//		if (grab)
-//			change_layer_number(0);
-//		else
-//			change_layer_number(-128);
-//	}
-//#endif
-//	if (grab != mouse_grabbed)
-//		toggle_mousegrab();	
-//}
-
-void setminimized()
-{
-	if (!minimized)
-		minimized = 1;
-	set_inhibit_frame(IHF_WINDOWHIDDEN);
-}
-
-void unsetminimized()
-{
-	if (minimized > 0)
-		full_redraw_all();
-	minimized = 0;
-	clear_inhibit_frame(IHF_WINDOWHIDDEN);
-}
-
-static void amiberry_inactive(int minimized)
-{
-	focus = 0;
-	recapture = 0;
-	wait_keyrelease();
-	setmouseactive(0);
-	clipboard_active(1, 0);
-
-	if (!quit_program) {
-		if (minimized) {
-			if (currprefs.minimized_pause) {
-				inputdevice_unacquire();
-				setpaused(1);
-				sound_closed = 1;
-			}
-			else if (currprefs.minimized_nosound) {
-				inputdevice_unacquire(true, currprefs.minimized_input);
-				setsoundpaused();
-				sound_closed = -1;
-			}
-			else {
-				inputdevice_unacquire(true, currprefs.minimized_input);
-			}
-		}
-		else if (mouseactive) {
-			inputdevice_unacquire();
-			if (currprefs.active_nocapture_pause)
-			{
-				setpaused(2);
-				sound_closed = 1;
-			}
-			else if (currprefs.active_nocapture_nosound)
-			{
-				setsoundpaused();
-				sound_closed = -1;
-			}
-		}
-		else {
-			if (currprefs.inactive_pause)
-			{
-				inputdevice_unacquire();
-				setpaused(2);
-				sound_closed = 1;
-			}
-			else if (currprefs.inactive_nosound)
-			{
-				inputdevice_unacquire(true, currprefs.inactive_input);
-				setsoundpaused();
-				sound_closed = -1;
-			}
-			else {
-				inputdevice_unacquire(true, currprefs.inactive_input);
-			}
-		}
-	} else {
-		inputdevice_unacquire();
-	}
-	setpriority(currprefs.inactive_priority);
-}
-
-static void amiberry_active(int minimized)
-{
-	focus = 1;
-	setpriority(currprefs.active_capture_priority);
-	
-	if (sound_closed != 0) {
-		if (sound_closed < 0) {
-			resumesoundpaused();
-		}
-		else
-		{
-			if (currprefs.active_nocapture_pause)
-			{
-				if (mouseactive)
-					resumepaused(2);
-			}
-			else if (currprefs.inactive_pause)
-				resumepaused(2);
-		}
-		sound_closed = 0;
-	}
-	getcapslock();
-	wait_keyrelease();
-	inputdevice_acquire(TRUE);
-	if (isfullscreen() > 0)
-		setmouseactive(1);
-	clipboard_active(1, 1);
-}
-
-static void setmouseactive2(int active, bool allowpause)
-{
-	if (active == 0)
-		releasecapture();
-	if (mouseactive == active && active >= 0)
-		return;
-
-	if (active == 1 && !(currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC)) {
-		auto* c = SDL_GetCursor();
-		if (c != normalcursor)
-			return;
-	}
-	
-	if (active < 0)
-		active = 1;
-
-	mouseactive = active ? 1 : 0;
-	
-	releasecapture();
-	recapture = 0;
-	
-	if (isfullscreen() <= 0 && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_tablet > 0) {
-		if (mousehack_alive())
-			return;
-		SDL_SetCursor(normalcursor);
-	}
-
-	if (mouseactive > 0)
-		focus = 1;
-	
-	if (mouseactive) {
-		if (focus) {
-			if (!mon_cursorclipped) {
-				SDL_ShowCursor(SDL_DISABLE);
-				SDL_SetWindowGrab(sdl_window, SDL_TRUE);
-				//updatewinrect(false);
-				mon_cursorclipped = 1;
-				//updatemouseclip();
-			}
-			//setcursor(-30000, -30000);
-		}
-		wait_keyrelease();
-		inputdevice_acquire(TRUE);
-		setpriority(currprefs.active_capture_priority);
-		if (currprefs.active_nocapture_pause)
-			resumepaused(2);
-		else if (currprefs.active_nocapture_nosound && sound_closed < 0)
-			resumesoundpaused();
-	}
-	else {
-		inputdevice_acquire(FALSE);
-		inputdevice_releasebuttons();
-	}
-	if (!active && allowpause)
-	{
-		if (currprefs.active_nocapture_pause)
-			setpaused(2);
-		else if (currprefs.active_nocapture_nosound)
-		{
-			setsoundpaused();
-			sound_closed = -1;
-		}	
-	}
-}
-
-void setmouseactive(int active)
-{
-	if (active > 1)
-		SDL_RaiseWindow(sdl_window);
-	setmouseactive2(active, true);
-}
-
-void enablecapture()
-{
-	if (pause_emulation > 2)
-		return;
-	setmouseactive(1);
-	if (sound_closed < 0) {
-		resumesoundpaused();
-		sound_closed = 0;
-	}
-	if (currprefs.inactive_pause || currprefs.active_nocapture_pause)
-		resumepaused(2);
-}
-
-void disablecapture()
-{
-	setmouseactive(0);
-	focus = 0;
-	if (currprefs.active_nocapture_pause && sound_closed == 0) {
-		setpaused(2);
-		sound_closed = 1;
-	}
-	else if (currprefs.active_nocapture_nosound && sound_closed == 0) {
-		setsoundpaused();
-		sound_closed = -1;
-	}
-}
-
-void setmouseactivexy(int x, int y, int dir)
-{
-	int diff = 8;
-
-	if (isfullscreen() > 0)
-		return;
-	//x += mon->amigawin_rect.left;
-	//y += mon->amigawin_rect.top;
-	//if (dir & 1)
-	//	x = mon->amigawin_rect.left - diff;
-	//if (dir & 2)
-	//	x = mon->amigawin_rect.right + diff;
-	//if (dir & 4)
-	//	y = mon->amigawin_rect.top - diff;
-	//if (dir & 8)
-	//	y = mon->amigawin_rect.bottom + diff;
-	//if (!dir) {
-	//	x += (mon->amigawin_rect.right - mon->amigawin_rect.left) / 2;
-	//	y += (mon->amigawin_rect.bottom - mon->amigawin_rect.top) / 2;
-	//}
-	//if (isfullscreen() < 0) {
-	//	POINT pt;
-	//	pt.x = x;
-	//	pt.y = y;
-	//	if (MonitorFromPoint(pt, MONITOR_DEFAULTTONULL) == NULL)
-	//		return;
-	//}
-	if (mouseactive) {
-		disablecapture();
-		SDL_WarpMouseInWindow(sdl_window, x, y);
-		if (dir) {
-			recapture = 1;
-		}
-	}
-}
-
-int isfocus(void)
-{
-	if (isfullscreen() > 0) {
-		if (!minimized)
-			return 2;
-		return 0;
-	}
-	if (currprefs.input_tablet >= TABLET_MOUSEHACK && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC)) {
-		if (mouseinside)
-			return 2;
-		if (focus)
-			return 1;
-		return 0;
-	}
-	if (focus && mouseactive > 0)
-		return 2;
-	if (focus)
-		return -1;
-	return 0;
-}
-
-static void activationtoggle(bool inactiveonly)
-{
-	if (mouseactive) {
-		//if ((isfullscreen() > 0) || (isfullscreen() < 0 && currprefs.minimize_inactive)) {
-		//	disablecapture();
-		//	minimizewindow();
-		//}
-		//else 
-		{
-			setmouseactive(0);
-		}
-	}
-	else {
-		if (!inactiveonly)
-			setmouseactive(1);
-	}
-}
-
 void toggle_mousegrab()
 {
 	activationtoggle(false);
-
-	//// Release mouse
-	//if (mouse_grabbed)
-	//{
-	//	mouse_grabbed = false;
-	//	SDL_ShowCursor(SDL_ENABLE);
-	//	SDL_SetRelativeMouseMode(SDL_FALSE);
-	//}
-	//else
-	//{
-	//	mouse_grabbed = true;
-	//	SDL_ShowCursor(SDL_DISABLE);
-	//	SDL_SetRelativeMouseMode(SDL_TRUE);
-	//}
 }
 
-void process_event(SDL_Event event)
-{
-	if (event.type == SDL_WINDOWEVENT)
-	{
-		switch (event.window.event)
-		{
-		case SDL_WINDOWEVENT_MINIMIZED:
-			setminimized();
-			amiberry_inactive(minimized);
-			break;
-		case SDL_WINDOWEVENT_RESTORED:
-			amiberry_active(minimized);
-			unsetminimized();
-			break;
-		case SDL_WINDOWEVENT_ENTER:
-			mouseinside = true;
-			if (currprefs.input_tablet > 0 && currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC && isfullscreen() <= 0)
-			{
-				if (mousehack_alive())
-				{
-					setcursorshape();
-					break;
-				}
-			}
-			break;
-		case SDL_WINDOWEVENT_FOCUS_GAINED:
-			mouseinside = true;
-			//set_mouse_grab(true);
-			amiberry_active(minimized);
-			break;
-		case SDL_WINDOWEVENT_LEAVE:
-			mouseinside = false;
-			break;
-		case SDL_WINDOWEVENT_FOCUS_LOST:
-			mouseinside = false;
-			focus = 0;
-			//set_mouse_grab(false);
-			amiberry_inactive(minimized);
-			break;
-		case SDL_WINDOWEVENT_CLOSE:
-			uae_quit();
-			break;
 
-		default:
-			break;
-		}
-	}
-
-	switch (event.type)
-	{
-	case SDL_QUIT:
-		uae_quit();
-		break;
-
-	case SDL_JOYDEVICEADDED:
-	case SDL_CONTROLLERDEVICEADDED:
-		write_log("SDL Controller/Joystick device added! Re-running import joysticks...\n");
-		import_joysticks();
-		break;
-
-	case SDL_JOYDEVICEREMOVED:
-	case SDL_CONTROLLERDEVICEREMOVED:
-		write_log("SDL Controller/Joystick device removed!\n");
-		break;
-
-	case SDL_CONTROLLERBUTTONDOWN:
-		if (event.cbutton.button == enter_gui_button)
-		{
-			inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
-			break;
-		}
-		break;
-
-	case SDL_KEYDOWN:
-	{
-		// if the key belongs to a "retro arch joystick" ignore it
-		// ONLY when in game though, we need to remove the joysticks really 
-		// if we want to use the KB
-		// i've added this so when using the joysticks it doesn't hit the 'r' key for some games
-		// which starts a replay!!!
-		// 
-		//const auto ok_to_use = !key_used_by_retroarch_joy(event.key.keysym.scancode);
-		//if (ok_to_use && event.key.repeat == 0)
-		if (event.key.repeat == 0)
-		{
-			if (!isfocus())
-				break;
-			if (isfocus() < 2 && currprefs.input_tablet >= TABLET_MOUSEHACK && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC))
-				break;
-			
-			auto scancode = event.key.keysym.scancode;
-			if (amiberry_options.rctrl_as_ramiga || currprefs.right_control_is_right_win_key)
-			{
-				if (scancode == SDL_SCANCODE_RCTRL)
-					scancode = SDL_SCANCODE_RGUI;
-			}
-			my_kbd_handler(0, scancode, 1, false);
-		}
-	}
-	break;
-
-	case SDL_KEYUP:
-	{
-		//const auto ok_to_use = !key_used_by_retroarch_joy(event.key.keysym.scancode);
-		//if (ok_to_use && event.key.repeat == 0)
-		if (event.key.repeat == 0)
-		{
-			if (!isfocus())
-				break;
-			if (isfocus() < 2 && currprefs.input_tablet >= TABLET_MOUSEHACK && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC))
-				break;
-			
-			auto scancode = event.key.keysym.scancode;
-			if (amiberry_options.rctrl_as_ramiga || currprefs.right_control_is_right_win_key)
-			{
-				if (scancode == SDL_SCANCODE_RCTRL)
-					scancode = SDL_SCANCODE_RGUI;
-			}
-			my_kbd_handler(0, scancode, 0, true);
-		}
-	}
-	break;
-
-	case SDL_FINGERDOWN:
-		if (isfocus())
-		{
-			setmousebuttonstate(0, 0, 1);
-		}
-		break;
-
-	case SDL_MOUSEBUTTONDOWN:
-		if (event.button.button == SDL_BUTTON_LEFT
-			&& !mouseactive
-			&& (!mousehack_alive() 
-				|| currprefs.input_tablet != TABLET_MOUSEHACK 
-				|| (currprefs.input_tablet == TABLET_MOUSEHACK 
-					&& !(currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC)) 
-				|| isfullscreen() > 0))
-		{
-			if (!pause_emulation || currprefs.active_nocapture_pause)
-				setmouseactive((event.button.button == SDL_BUTTON_LEFT || isfullscreen() > 0) ? 2 : 1);
-		}
-		else if (isfocus())
-		{
-			if (event.button.button == SDL_BUTTON_LEFT)
-				setmousebuttonstate(0, 0, 1);
-			if (event.button.button == SDL_BUTTON_RIGHT)
-				setmousebuttonstate(0, 1, 1);
-			if (event.button.button == SDL_BUTTON_MIDDLE)
-			{
-				if (currprefs.input_mouse_untrap & MOUSEUNTRAP_MIDDLEBUTTON)
-				{
-					activationtoggle(true);
-				}
-				else
-				{
-					setmousebuttonstate(0, 2, 1);
-				}
-			}
-		}
-		break;
-
-	case SDL_FINGERUP:
-		if (isfocus())
-		{
-			setmousebuttonstate(0, 0, 0);
-		}
-		break;
-
-	case SDL_MOUSEBUTTONUP:
-		if (isfocus())
-		{
-			if (event.button.button == SDL_BUTTON_LEFT)
-				setmousebuttonstate(0, 0, 0);
-			if (event.button.button == SDL_BUTTON_RIGHT)
-				setmousebuttonstate(0, 1, 0);
-			if (event.button.button == SDL_BUTTON_MIDDLE)
-			{
-				if (!(currprefs.input_mouse_untrap & MOUSEUNTRAP_MIDDLEBUTTON))
-					setmousebuttonstate(0, 2, 0);
-			}
-		}
-		break;
-
-	case SDL_FINGERMOTION:
-		//TODO this doesn't work yet
-		if (isfocus())
-		{
-			setmousestate(0, 0, event.motion.xrel, 0);
-			setmousestate(0, 1, event.motion.yrel, 0);
-		}
-		break;
-
-	case SDL_MOUSEMOTION:
-		if (recapture && isfullscreen() <= 0) {
-			enablecapture();
-			break;
-		}
-
-		if (currprefs.input_tablet >= TABLET_MOUSEHACK)
-		{
-			/* absolute */
-			setmousestate(0, 0, event.motion.x, 1);
-			setmousestate(0, 1, event.motion.y, 1);
-			break;
-		}
-
-		if (!focus || !mouseactive)
-			break;
-
-		/* relative */
-		setmousestate(0, 0, event.motion.xrel, 0);
-		setmousestate(0, 1, event.motion.yrel, 0);
-
-		//if (mon_cursorclipped || mouseactive)
-		//	setcursor(event.motion.x, event.motion.y);
-		break;
-
-	case SDL_MOUSEWHEEL:
-		if (isfocus() > 0)
-		{
-			const auto val_y = event.wheel.y;
-			setmousestate(0, 2, val_y, 0);
-			if (val_y < 0)
-				setmousebuttonstate(0, 3 + 0, -1);
-			else if (val_y > 0)
-				setmousebuttonstate(0, 3 + 1, -1);
-
-			const auto val_x = event.wheel.x;
-			setmousestate(0, 3, val_x, 0);
-			if (val_x < 0)
-				setmousebuttonstate(0, 3 + 2, -1);
-			else if (val_x > 0)
-				setmousebuttonstate(0, 3 + 3, -1);
-		}
-		break;
-
-	default:
-		break;
-		}
-	}
-
-void update_clipboard()
-{
-	auto* clipboard_uae = uae_clipboard_get_text();
-	if (clipboard_uae) {
-		SDL_SetClipboardText(clipboard_uae);
-		uae_clipboard_free_text(clipboard_uae);
-	}
-	else {
-		// FIXME: Ideally, we would want to avoid this alloc/free
-		// when the clipboard hasn't changed.
-		if (SDL_HasClipboardText() == SDL_TRUE)
-		{
-			auto* clipboard_host = SDL_GetClipboardText();
-			uae_clipboard_put_text(clipboard_host);
-			SDL_free(clipboard_host);
-		}
-	}
-}
-
-int handle_msgpump()
-{
-	auto got_event = 0;
-	SDL_Event event;
-
-	while (SDL_PollEvent(&event))
-	{
-		got_event = 1;
-		process_event(event);
-		if (currprefs.clipboard_sharing)
-			update_clipboard();
-	}
-	return got_event;
-}
-
-bool handle_events()
-{
-	static auto was_paused = 0;
-
-	if (pause_emulation)
-	{
-		if (was_paused == 0)
-		{
-			setpaused(pause_emulation);
-			was_paused = pause_emulation;
-			gui_fps(0, 0, 0);
-			gui_led(LED_SND, 0, -1);
-			// we got just paused, report it to caller.
-			return true;
-		}
-		SDL_Event event;
-		while (SDL_PollEvent(&event))
-		{
-			process_event(event);
-		}
-		
-		inputdevicefunc_keyboard.read();
-		inputdevicefunc_mouse.read();
-		inputdevicefunc_joystick.read();
-		inputdevice_handle_inputcode();
-	}
-	if (was_paused && (!pause_emulation || quit_program))
-	{
-		updatedisplayarea();
-		pause_emulation = was_paused;
-		resumepaused(was_paused);
-		sound_closed = 0;
-		was_paused = 0;
-	}
-
-	return pause_emulation != 0;
-}
 
 bool get_plugin_path(TCHAR* out, int len, const TCHAR* path)
 {
