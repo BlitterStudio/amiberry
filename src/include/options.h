@@ -863,6 +863,9 @@ struct uae_prefs
 	int gfx_correct_aspect;
 	int scaling_method;
 
+	bool minimize_inactive;
+	bool capture_always;
+	
 	int active_capture_priority;
 	bool active_nocapture_pause;
 	bool active_nocapture_nosound;
