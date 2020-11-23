@@ -332,6 +332,7 @@ void releasecapture()
 	if (!mon_cursorclipped)
 		return;
 	SDL_SetWindowGrab(sdl_window, SDL_FALSE);
+	SDL_SetRelativeMouseMode(SDL_FALSE);
 	int c = SDL_ShowCursor(SDL_ENABLE);
 	write_log(_T("ShowCursor %d\n"), c);
 	mon_cursorclipped = 0;
@@ -490,6 +491,7 @@ static void setmouseactive2(int active, bool allowpause)
 			if (!mon_cursorclipped) {
 				SDL_ShowCursor(SDL_DISABLE);
 				SDL_SetWindowGrab(sdl_window, SDL_TRUE);
+				SDL_SetRelativeMouseMode(SDL_TRUE);
 				//TODO
 				//updatewinrect(mon, false);
 				mon_cursorclipped = 1;
