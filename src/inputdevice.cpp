@@ -2642,10 +2642,10 @@ end:
 			x += dx;
 			y += dy;
 		}
-		if (!dmaen (DMA_SPRITE))
-			setmouseactivexy(x, y, 0);
-		else
-			setmouseactivexy(x, y, dir);
+		//if (!dmaen (DMA_SPRITE))
+		//	setmouseactivexy(x, y, 0);
+		//else
+		//	setmouseactivexy(x, y, dir);
 	}
 	return 1;
 }
