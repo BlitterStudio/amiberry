@@ -57,7 +57,8 @@ struct MultiDisplay {
 	TCHAR* monitorname, * monitorid;
 	TCHAR* fullname;
     struct PicassoResolution *DisplayModes;
-    RECT rect;
+    SDL_Rect rect;
+	SDL_Rect workrect;
 };
 extern struct MultiDisplay Displays[MAX_DISPLAYS];
 

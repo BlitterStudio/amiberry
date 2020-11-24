@@ -1513,7 +1513,6 @@ bool show_screen_maybe(const bool show)
 
 void getgfxoffset(float* dxp, float* dyp, float* mxp, float* myp)
 {
-	//struct AmigaMonitor* mon = &AMonitors[monid];
 	struct amigadisplay* ad = &adisplays;
 	//struct uae_filter* usedfilter = mon->usedfilter;
 	float dx, dy, mx, my;
@@ -2046,11 +2045,11 @@ void picasso_init_resolutions()
 	int bits[] = { 8, 16, 32 };
 
 	Displays[0].primary = 1;
-	Displays[0].rect.left = 0;
-	Displays[0].rect.top = 0;
-	Displays[0].rect.right = 800;
-	Displays[0].rect.bottom = 600;
-	sprintf(tmp, "%s (%d*%d)", "Display", Displays[0].rect.right, Displays[0].rect.bottom);
+	Displays[0].rect.x = 0;
+	Displays[0].rect.y = 0;
+	Displays[0].rect.w = 800;
+	Displays[0].rect.h = 600;
+	sprintf(tmp, "%s (%d*%d)", "Display", Displays[0].rect.w, Displays[0].rect.h);
 	Displays[0].fullname = my_strdup(tmp);
 	Displays[0].monitorname = my_strdup("Display");
 

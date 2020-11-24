@@ -171,56 +171,6 @@ int sleep_millis_main(int ms)
 	return 0;
 }
 
-//TODO: implement AmigaMonitor first, then enable following code
-//static void setcursor(struct AmigaMonitor* mon, int oldx, int oldy)
-//{
-//	int dx = (mon->amigawinclip_rect.left - mon->amigawin_rect.left) + (mon->amigawinclip_rect.right - mon->amigawinclip_rect.left) / 2;
-//	int dy = (mon->amigawinclip_rect.top - mon->amigawin_rect.top) + (mon->amigawinclip_rect.bottom - mon->amigawinclip_rect.top) / 2;
-//	mon->mouseposx = oldx - dx;
-//	mon->mouseposy = oldy - dy;
-//
-//	mon->windowmouse_max_w = (mon->amigawinclip_rect.right - mon->amigawinclip_rect.left) / 2 - 50;
-//	mon->windowmouse_max_h = (mon->amigawinclip_rect.bottom - mon->amigawinclip_rect.top) / 2 - 50;
-//	if (mon->windowmouse_max_w < 10)
-//		mon->windowmouse_max_w = 10;
-//	if (mon->windowmouse_max_h < 10)
-//		mon->windowmouse_max_h = 10;
-//
-//	if ((currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_tablet > 0 && mousehack_alive() && isfullscreen() <= 0) {
-//		mon->mouseposx = mon->mouseposy = 0;
-//		return;
-//	}
-//#if MOUSECLIP_LOG
-//	write_log(_T("mon=%d %dx%d %dx%d %dx%d %dx%d (%dx%d %dx%d)\n"),
-//		mon->monitor_id,
-//		dx, dy,
-//		mon->mouseposx, mon->mouseposy,
-//		oldx, oldy,
-//		oldx + mon->amigawinclip_rect.left, oldy + mon->amigawinclip_rect.top,
-//		mon->amigawinclip_rect.left, mon->amigawinclip_rect.top,
-//		mon->amigawinclip_rect.right, mon->amigawinclip_rect.bottom);
-//#endif
-//	if (oldx >= 30000 || oldy >= 30000 || oldx <= -30000 || oldy <= -30000) {
-//		oldx = oldy = 0;
-//	}
-//	else {
-//		if (abs(mon->mouseposx) < mon->windowmouse_max_w && abs(mon->mouseposy) < mon->windowmouse_max_h)
-//			return;
-//	}
-//	mon->mouseposx = mon->mouseposy = 0;
-//	if (oldx < 0 || oldy < 0 || oldx > mon->amigawin_rect.right - mon->amigawin_rect.left || oldy > mon->amigawin_rect.bottom - mon->amigawin_rect.top) {
-//		write_log(_T("Mouse out of range: mon=%d %dx%d (%dx%d %dx%d)\n"), mon->monitor_id, oldx, oldy,
-//			mon->amigawin_rect.left, mon->amigawin_rect.top, mon->amigawin_rect.right, mon->amigawin_rect.bottom);
-//		return;
-//	}
-//	int cx = (mon->amigawinclip_rect.right - mon->amigawinclip_rect.left) / 2 + mon->amigawin_rect.left + (mon->amigawinclip_rect.left - mon->amigawin_rect.left);
-//	int cy = (mon->amigawinclip_rect.bottom - mon->amigawinclip_rect.top) / 2 + mon->amigawin_rect.top + (mon->amigawinclip_rect.top - mon->amigawin_rect.top);
-//#if MOUSECLIP_LOG
-//	write_log(_T("SetCursorPos(%d,%d) mon=%d\n"), cx, cy, mon->monitor_id);
-//#endif
-//	SetCursorPos(cx, cy);
-//}
-
 static int mon_cursorclipped;
 static int pausemouseactive;
 void resumesoundpaused(void)
@@ -243,8 +193,6 @@ void setsoundpaused(void)
 
 bool resumepaused(int priority)
 {
-	//struct AmigaMonitor* mon = &AMonitors[0];
-	//write_log (_T("resume %d (%d)\n"), priority, pause_emulation);
 	if (pause_emulation > priority)
 		return false;
 	if (!pause_emulation)
@@ -264,8 +212,6 @@ bool resumepaused(int priority)
 
 bool setpaused(int priority)
 {
-	//struct AmigaMonitor* mon = &AMonitors[0];
-	//write_log (_T("pause %d (%d)\n"), priority, pause_emulation);
 	if (pause_emulation > priority)
 		return false;
 	pause_emulation = priority;
@@ -338,109 +284,6 @@ void releasecapture()
 	mon_cursorclipped = 0;
 }
 
-//TODO: implement this
-//void updatemouseclip(struct AmigaMonitor* mon)
-//{
-//	if (mon_cursorclipped) {
-//		mon->amigawinclip_rect = mon->amigawin_rect;
-//		if (!isfullscreen()) {
-//			int idx = 0;
-//			reenumeratemonitors();
-//			while (Displays[idx].monitorname) {
-//				RECT out;
-//				struct MultiDisplay* md = &Displays[idx];
-//				idx++;
-//				if (md->rect.left == md->workrect.left && md->rect.right == md->workrect.right
-//					&& md->rect.top == md->workrect.top && md->rect.bottom == md->workrect.bottom)
-//					continue;
-//				// not in this monitor?
-//				if (!IntersectRect(&out, &md->rect, &mon->amigawin_rect))
-//					continue;
-//				for (int e = 0; e < 4; e++) {
-//					int v1, v2, x, y;
-//					LONG* lp;
-//					switch (e)
-//					{
-//					case 0:
-//					default:
-//						v1 = md->rect.left;
-//						v2 = md->workrect.left;
-//						lp = &mon->amigawinclip_rect.left;
-//						x = v1 - 1;
-//						y = (md->rect.bottom - md->rect.top) / 2;
-//						break;
-//					case 1:
-//						v1 = md->rect.top;
-//						v2 = md->workrect.top;
-//						lp = &mon->amigawinclip_rect.top;
-//						x = (md->rect.right - md->rect.left) / 2;
-//						y = v1 - 1;
-//						break;
-//					case 2:
-//						v1 = md->rect.right;
-//						v2 = md->workrect.right;
-//						lp = &mon->amigawinclip_rect.right;
-//						x = v1 + 1;
-//						y = (md->rect.bottom - md->rect.top) / 2;
-//						break;
-//					case 3:
-//						v1 = md->rect.bottom;
-//						v2 = md->workrect.bottom;
-//						lp = &mon->amigawinclip_rect.bottom;
-//						x = (md->rect.right - md->rect.left) / 2;
-//						y = v1 + 1;
-//						break;
-//					}
-//					// is there another monitor sharing this edge?
-//					POINT pt;
-//					pt.x = x;
-//					pt.y = y;
-//					if (MonitorFromPoint(pt, MONITOR_DEFAULTTONULL))
-//						continue;
-//					// restrict mouse clip bounding box to this edge
-//					if (e >= 2) {
-//						if (*lp > v2) {
-//							*lp = v2;
-//						}
-//					}
-//					else {
-//						if (*lp < v2) {
-//							*lp = v2;
-//						}
-//					}
-//				}
-//			}
-//			// Too small or invalid?
-//			if (mon->amigawinclip_rect.right <= mon->amigawinclip_rect.left + 7 || mon->amigawinclip_rect.bottom <= mon->amigawinclip_rect.top + 7)
-//				mon->amigawinclip_rect = mon->amigawin_rect;
-//		}
-//		if (mon_cursorclipped == mon->monitor_id + 1) {
-//#if MOUSECLIP_LOG
-//			write_log(_T("CLIP mon=%d %dx%d %dx%d %d\n"), mon->monitor_id, mon->amigawin_rect.left, mon->amigawin_rect.top, mon->amigawin_rect.right, mon->amigawin_rect.bottom, isfullscreen());
-//#endif
-//			if (!ClipCursor(&mon->amigawinclip_rect))
-//				write_log(_T("ClipCursor error %d\n"), GetLastError());
-//		}
-//	}
-//}
-
-//TODO
-//void updatewinrect(struct AmigaMonitor *mon, bool allowfullscreen)
-//{
-//	int f = isfullscreen();
-//	if (!allowfullscreen && f > 0)
-//		return;
-//	GetWindowRect(mon->hAmigaWnd, &mon->amigawin_rect);
-//	GetWindowRect(mon->hAmigaWnd, &mon->amigawinclip_rect);
-//
-//	if (f == 0) {
-//		changed_prefs.gfx_monitor.gfx_size_win.x = mon->amigawin_rect.left;
-//		changed_prefs.gfx_monitor.gfx_size_win.y = mon->amigawin_rect.top;
-//		currprefs.gfx_monitor.gfx_size_win.x = changed_prefs.gfx_monitor.gfx_size_win.x;
-//		currprefs.gfx_monitor.gfx_size_win.y = changed_prefs.gfx_monitor.gfx_size_win.y;
-//	}
-//}
-
 //TODO: Tablet only
 //void target_inputdevice_unacquire(void)
 //{
@@ -472,8 +315,6 @@ static void setmouseactive2(int active, bool allowpause)
 
 	mouseactive = active ? 1 : 0;
 
-	//TODO: Needs AmigaMon support
-	//mon->mouseposx = mon->mouseposy = 0;
 	releasecapture();
 	recapture = 0;
 
@@ -492,14 +333,8 @@ static void setmouseactive2(int active, bool allowpause)
 				SDL_ShowCursor(SDL_DISABLE);
 				SDL_SetWindowGrab(sdl_window, SDL_TRUE);
 				SDL_SetRelativeMouseMode(SDL_TRUE);
-				//TODO
-				//updatewinrect(mon, false);
 				mon_cursorclipped = 1;
-				//TODO
-				//updatemouseclip(mon);
 			}
-			//TODO
-			//setcursor(mon, -30000, -30000);
 		}
 		wait_keyrelease();
 		inputdevice_acquire(TRUE);
@@ -660,27 +495,27 @@ void disablecapture()
 	}
 }
 
-//TODO: implement missing parts
 void setmouseactivexy(int x, int y, int dir)
 {
+	struct AmigaMonitor* mon = &AMonitors[0];
 	int diff = 8;
 
 	if (isfullscreen() > 0)
 		return;
-	//x += mon->amigawin_rect.left;
-	//y += mon->amigawin_rect.top;
-	//if (dir & 1)
-	//	x = mon->amigawin_rect.left - diff;
-	//if (dir & 2)
-	//	x = mon->amigawin_rect.right + diff;
-	//if (dir & 4)
-	//	y = mon->amigawin_rect.top - diff;
-	//if (dir & 8)
-	//	y = mon->amigawin_rect.bottom + diff;
-	//if (!dir) {
-	//	x += (mon->amigawin_rect.right - mon->amigawin_rect.left) / 2;
-	//	y += (mon->amigawin_rect.bottom - mon->amigawin_rect.top) / 2;
-	//}
+	x += mon->amigawin_rect.x;
+	y += mon->amigawin_rect.y;
+	if (dir & 1)
+		x = mon->amigawin_rect.x - diff;
+	if (dir & 2)
+		x = mon->amigawin_rect.w + diff;
+	if (dir & 4)
+		y = mon->amigawin_rect.y - diff;
+	if (dir & 8)
+		y = mon->amigawin_rect.h + diff;
+	if (!dir) {
+		x += (mon->amigawin_rect.w - mon->amigawin_rect.x) / 2;
+		y += (mon->amigawin_rect.h - mon->amigawin_rect.y) / 2;
+	}
 	//if (isfullscreen() < 0) {
 	//	POINT pt;
 	//	pt.x = x;
@@ -1054,12 +889,16 @@ void process_event(SDL_Event event)
 		//TODO this doesn't work yet
 		if (isfocus())
 		{
-			setmousestate(0, 0, event.motion.xrel, 0);
-			setmousestate(0, 1, event.motion.yrel, 0);
+			setmousestate(0, 0, event.motion.x, 1);
+			setmousestate(0, 1, event.motion.y, 1);
 		}
 		break;
 
 	case SDL_MOUSEMOTION:
+	{
+		if (!mouseinside)
+			mouseinside = true;
+
 		if (recapture && isfullscreen() <= 0) {
 			enablecapture();
 			break;
@@ -1079,11 +918,8 @@ void process_event(SDL_Event event)
 		/* relative */
 		setmousestate(0, 0, event.motion.xrel, 0);
 		setmousestate(0, 1, event.motion.yrel, 0);
-
-		//TODO
-		//if (mon_cursorclipped || mouseactive)
-		//	setcursor(event.motion.x, event.motion.y);
-		break;
+	}
+	break;
 
 	case SDL_MOUSEWHEEL:
 		if (isfocus() > 0)
