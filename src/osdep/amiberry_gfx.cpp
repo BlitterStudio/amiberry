@@ -798,7 +798,8 @@ static void open_screen(struct uae_prefs* p)
 	
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0xFF);
 	SDL_RenderClear(renderer);
-
+	
+	int width = 0, height = 0;
 	if (screen_is_picasso)
 	{
 		if (picasso96_state.RGBFormat == RGBFB_R5G6B5
@@ -834,8 +835,7 @@ static void open_screen(struct uae_prefs* p)
 		//pixel_format = SDL_PIXELFORMAT_RGB565;
 		display_depth = 32;
 		pixel_format = SDL_PIXELFORMAT_RGBA32;
-		int width, height;
-		
+
 		if (changed_prefs.gfx_correct_aspect == 0)
 		{
 			width = sdlMode.w;
@@ -887,7 +887,7 @@ static void open_screen(struct uae_prefs* p)
 
 	if (screen != nullptr)
 	{
-		allocsoftbuffer(&avidinfo->drawbuffer, display_width, display_height, display_depth);
+		allocsoftbuffer(&avidinfo->drawbuffer, width, height, display_depth);
 		notice_screen_contents_lost();
 		if (!screen_is_picasso)
 		{
@@ -1510,7 +1510,7 @@ void getgfxoffset(float* dxp, float* dyp, float* mxp, float* myp)
 {
 	struct amigadisplay* ad = &adisplays;
 	//struct uae_filter* usedfilter = mon->usedfilter;
-	float dx, dy, mx, my;
+	float dx = 0, dy = 0, mx = 1.0, my = 1.0;
 
 	//getfilteroffset(&dx, &dy, &mx, &my);
 	//if (ad->picasso_on) {

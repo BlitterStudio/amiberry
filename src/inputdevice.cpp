@@ -8444,7 +8444,7 @@ void setmousestate (int mouse, int axis, int data, int isabs)
 	struct uae_input_device *id = &mice[mouse];
 	static float fract[MAX_INPUT_DEVICES][MAX_INPUT_DEVICE_EVENTS];
 
-	//if (!mice[mouse].enabled) {
+	if (!mice[mouse].enabled) {
 		if (isabs && currprefs.input_tablet > 0) {
 			if (axis == 0)
 				lastmx = data;
@@ -8453,9 +8453,8 @@ void setmousestate (int mouse, int axis, int data, int isabs)
 			if (axis)
 				mousehack_helper (mice2[mouse].buttonmask);
 			return;
-		}
-		
-	//}
+		}	
+	}
 	d = 0;
 	mouse_p = &mouse_axis[mouse][axis];
 	oldm_p = &oldm_axis[mouse][axis];
