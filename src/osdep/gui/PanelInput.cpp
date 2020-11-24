@@ -241,9 +241,14 @@ public:
 			changed_prefs.input_tablet = chkMouseHack->isSelected() ? TABLET_MOUSEHACK : TABLET_OFF;
 			changed_prefs.input_magic_mouse_cursor = chkMouseHack->isSelected() ? MAGICMOUSE_NATIVE_ONLY : MAGICMOUSE_BOTH;
 			if (chkMouseHack->isSelected())
+			{
 				changed_prefs.input_mouse_untrap |= MOUSEUNTRAP_MAGIC;
-			else 
+				SDL_SetRelativeMouseMode(SDL_FALSE);
+			}
+			else
+			{
 				changed_prefs.input_mouse_untrap &= ~MOUSEUNTRAP_MAGIC;
+			}
 		}
 
 		else if (actionEvent.getSource() == chkInputAutoswitch)
