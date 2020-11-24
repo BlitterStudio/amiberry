@@ -402,8 +402,7 @@ int graphics_setup(void)
 	}
 
 	Uint32 sdl_window_mode;
-	if (sdl_video_driver != nullptr && strcmp(sdl_video_driver,"x11") == 0 
-		&& sdlMode.w >= 800 && sdlMode.h >= 600)
+	if (sdlMode.w >= 800 && sdlMode.h >= 600)
 	{
 		// Only enable Windowed mode if we're running under x11 and the resolution is at least 800x600
 		sdl_window_mode = SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
