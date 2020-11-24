@@ -495,7 +495,7 @@ void update_win_fs_mode(struct uae_prefs* p)
 	// Dispmanx modes use configurable width/height and are fullwindow always
 	p->gfx_monitor.gfx_size = p->gfx_monitor.gfx_size_win;
 #else
-	if (sdl_window && strcmp(sdl_video_driver, "x11") == 0)
+	if (sdl_window)
 	{
 		const auto window_flags = SDL_GetWindowFlags(sdl_window);
 		const bool is_fullwindow = window_flags & SDL_WINDOW_FULLSCREEN_DESKTOP;
@@ -527,11 +527,7 @@ void update_win_fs_mode(struct uae_prefs* p)
 		
 		set_config_changed();
 	}
-	else
-	{
-		// KMSDRM is fullwindow always
-		p->gfx_monitor.gfx_size = p->gfx_monitor.gfx_size_win;
-	}
+
 #endif
 	if (screen_is_picasso)
 	{
