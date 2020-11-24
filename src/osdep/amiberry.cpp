@@ -849,7 +849,6 @@ void process_event(SDL_Event event)
 		break;
 
 	case SDL_FINGERMOTION:
-		//TODO this doesn't work yet
 		if (isfocus())
 		{
 			setmousestate(0, 0, event.motion.x, 1);
