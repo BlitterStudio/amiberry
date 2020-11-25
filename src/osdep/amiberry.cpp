@@ -796,13 +796,9 @@ void process_event(SDL_Event event)
 				break;
 			case SDL_BUTTON_MIDDLE:
 				if (currprefs.input_mouse_untrap & MOUSEUNTRAP_MIDDLEBUTTON)
-				{
 					activationtoggle(true);
-				}
 				else
-				{
 					setmousebuttonstate(0, 2, 1);
-				}
 				break;
 			case SDL_BUTTON_X1:
 				setmousebuttonstate(0, 3, 1);
