@@ -2585,7 +2585,7 @@ void cfgfile_save_options (struct zfile* f, struct uae_prefs* p, int type)
 	cfgfile_write(f, _T("parallel_autoflush"), _T("%d"), p->parallel_autoflush_time);
 	cfgfile_dwrite(f, _T("uae_hide"), _T("%d"), p->uae_hide);
 	cfgfile_dwrite_bool(f, _T("uae_hide_autoconfig"), p->uae_hide_autoconfig);
-	cfgfile_dwrite_bool(f, _T("magic_mouse"), (p->input_mouse_untrap& MOUSEUNTRAP_MAGIC) != 0);
+	cfgfile_dwrite_bool(f, _T("magic_mouse"), (p->input_mouse_untrap & MOUSEUNTRAP_MAGIC) != 0);
 	cfgfile_dwrite_str(f, _T("magic_mousecursor"), magiccursors[p->input_magic_mouse_cursor]);
 	cfgfile_dwrite_str(f, _T("absolute_mouse"), abspointers[p->input_tablet]);
 	cfgfile_dwrite_bool(f, _T("tablet_library"), p->tablet_library);
