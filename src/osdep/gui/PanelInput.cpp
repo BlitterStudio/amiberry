@@ -41,7 +41,6 @@ static gcn::DropDown* cboPort0mousemode;
 static gcn::Label* lblPort1mousemode;
 static gcn::DropDown* cboPort1mousemode;
 
-static gcn::Label* lblParallelPortAdapter;
 static gcn::Label* lblPort2;
 static gcn::DropDown* cboPort2;
 static gcn::Label* lblPort3;
@@ -61,7 +60,12 @@ static gcn::Label* lblMouseSpeedInfo;
 static gcn::Slider* sldMouseSpeed;
 
 static gcn::CheckBox* chkMouseHack;
+static gcn::CheckBox* chkMagicMouseUntrap;
 static gcn::CheckBox* chkInputAutoswitch;
+
+static gcn::RadioButton* optBoth;
+static gcn::RadioButton* optNative;
+static gcn::RadioButton* optHost;
 
 static gcn::DropDown* joys[] = { cboPort0, cboPort1, cboPort2, cboPort3 };
 static gcn::DropDown* joysm[] = { cboPort0mode, cboPort1mode, nullptr, nullptr };
@@ -235,12 +239,13 @@ public:
 
 		else if (actionEvent.getSource() == sldMouseSpeed)
 			changed_prefs.input_mouse_speed = mousespeed_values[static_cast<int>(sldMouseSpeed->getValue())];
-		
+
 		else if (actionEvent.getSource() == chkMouseHack)
-		{
 			changed_prefs.input_tablet = chkMouseHack->isSelected() ? TABLET_MOUSEHACK : TABLET_OFF;
-			changed_prefs.input_magic_mouse_cursor = chkMouseHack->isSelected() ? MAGICMOUSE_NATIVE_ONLY : MAGICMOUSE_BOTH;
-			if (chkMouseHack->isSelected())
+
+		else if (actionEvent.getSource() == chkMagicMouseUntrap)
+		{
+			if (chkMagicMouseUntrap->isSelected())
 			{
 				changed_prefs.input_mouse_untrap |= MOUSEUNTRAP_MAGIC;
 				SDL_SetRelativeMouseMode(SDL_FALSE);
@@ -251,6 +256,13 @@ public:
 			}
 		}
 
+		else if (actionEvent.getSource() == optBoth)
+			changed_prefs.input_magic_mouse_cursor = MAGICMOUSE_BOTH;
+		else if (actionEvent.getSource() == optNative)
+			changed_prefs.input_magic_mouse_cursor = MAGICMOUSE_NATIVE_ONLY;
+		else if (actionEvent.getSource() == optHost)
+			changed_prefs.input_magic_mouse_cursor = MAGICMOUSE_HOST_ONLY;
+		
 		else if (actionEvent.getSource() == chkInputAutoswitch)
 			changed_prefs.input_autoswitch = chkInputAutoswitch->isSelected();
 
@@ -387,9 +399,6 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	cmdSwapPorts->setSize(150, BUTTON_HEIGHT);
 	cmdSwapPorts->setBaseColor(gui_baseCol);
 	cmdSwapPorts->addActionListener(inputActionListener);
-	
-	lblParallelPortAdapter = new gcn::Label("Emulated parallel port joystick adapter");
-	lblParallelPortAdapter->setAlignment(gcn::Graphics::LEFT);
 
 	lblPort0mousemode = new gcn::Label("Mouse Stick 0:");
 	lblPort0mousemode->setAlignment(gcn::Graphics::RIGHT);
@@ -443,6 +452,20 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	chkMouseHack->setId("chkMouseHack");
 	chkMouseHack->addActionListener(inputActionListener);
 
+	chkMagicMouseUntrap = new gcn::CheckBox("Magic Mouse untrap");
+	chkMagicMouseUntrap->setId("chkMagicMouseUntrap");
+	chkMagicMouseUntrap->addActionListener(inputActionListener);
+
+	optBoth = new gcn::RadioButton("Both", "radioCursorGroup");
+	optBoth->setId("optBoth");
+	optBoth->addActionListener(inputActionListener);
+	optNative = new gcn::RadioButton("Native only", "radioCursorGroup");
+	optNative->setId("optNative");
+	optNative->addActionListener(inputActionListener);
+	optHost = new gcn::RadioButton("Host only", "radioCursorGroup");
+	optHost->setId("optHost");
+	optHost->addActionListener(inputActionListener);
+	
 	chkInputAutoswitch = new gcn::CheckBox("Mouse/Joystick autoswitching");
 	chkInputAutoswitch->setId("chkInputAutoswitch");
 	chkInputAutoswitch->addActionListener(inputActionListener);
@@ -467,9 +490,6 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	category.panel->add(cmdSwapPorts, joysaf[1]->getX(), posY);
 	category.panel->add(chkInputAutoswitch, cmdSwapPorts->getX() + cmdSwapPorts->getWidth() + DISTANCE_NEXT_X, posY + BUTTON_HEIGHT/4);
 	posY += chkInputAutoswitch->getHeight() + DISTANCE_NEXT_Y * 2;
-	
-	category.panel->add(lblParallelPortAdapter, DISTANCE_BORDER, posY);
-	posY += lblParallelPortAdapter->getHeight() + DISTANCE_NEXT_Y;
 	
 	category.panel->add(lblPort2, DISTANCE_BORDER, posY);
 	category.panel->add(joys[2], DISTANCE_BORDER + lblPort2->getWidth() + 8, posY);
@@ -510,8 +530,13 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	posY += lblMouseSpeed->getHeight() + DISTANCE_NEXT_Y * 2;
 	
 	category.panel->add(chkMouseHack, DISTANCE_BORDER, posY);
+	category.panel->add(chkMagicMouseUntrap, lblMouseSpeed->getX(), posY);
 	posY += chkMouseHack->getHeight() + DISTANCE_NEXT_Y;
 
+	category.panel->add(optBoth, DISTANCE_BORDER, posY);
+	category.panel->add(optNative, optBoth->getX() + optBoth->getWidth() + 8, posY);
+	category.panel->add(optHost, optNative->getX() + optNative->getWidth() + 8, posY);
+	
 	for (auto& portsubmode : portsubmodes)
 	{
 		portsubmode = 0;
@@ -546,7 +571,6 @@ void ExitPanelInput()
 	delete lblPort1mousemode;
 	delete cmdSwapPorts;
 
-	delete lblParallelPortAdapter;
 	delete lblAutofireRate;
 	delete cboAutofireRate;
 	
@@ -561,10 +585,15 @@ void ExitPanelInput()
 	delete lblMouseSpeedInfo;
 
 	delete chkMouseHack;
+	delete chkMagicMouseUntrap;
 	delete chkInputAutoswitch;
 
 	delete inputPortsActionListener;
 	delete inputActionListener;
+
+	delete optBoth;
+	delete optNative;
+	delete optHost;
 }
 
 void RefreshPanelInput()
@@ -657,7 +686,26 @@ void RefreshPanelInput()
 	}
 	
 	chkMouseHack->setSelected(changed_prefs.input_tablet > 0);
+	optBoth->setEnabled(changed_prefs.input_tablet > 0);
+	optNative->setEnabled(changed_prefs.input_tablet > 0);
+	optHost->setEnabled(changed_prefs.input_tablet > 0);
+	
+	chkMagicMouseUntrap->setSelected(changed_prefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC);
 	chkInputAutoswitch->setSelected(changed_prefs.input_autoswitch);
+	switch (changed_prefs.input_magic_mouse_cursor)
+	{
+		case MAGICMOUSE_BOTH:
+			optBoth->setSelected(true);	
+			break;
+		case MAGICMOUSE_NATIVE_ONLY:
+			optNative->setSelected(true);
+			break;
+		case MAGICMOUSE_HOST_ONLY:
+			optHost->setSelected(true);
+			break;
+		default:
+			break;
+	}
 }
 
 bool HelpPanelInput(std::vector<std::string>& helptext)

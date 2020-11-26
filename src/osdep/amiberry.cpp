@@ -267,10 +267,13 @@ static void setcursorshape()
 		if (SDL_GetCursor() != NULL)
 			SDL_ShowCursor(SDL_DISABLE);
 	}
-	//else if (!picasso_setwincursor()) {
-	//	if (SDL_GetCursor() != normalcursor)
-	//		SDL_SetCursor(normalcursor);
-	//}
+	else if (!picasso_setwincursor()) {
+		if (SDL_GetCursor() != normalcursor)
+		{
+			SDL_SetCursor(normalcursor);
+			SDL_ShowCursor(SDL_ENABLE);
+		}
+	}
 }
 
 void releasecapture()
@@ -2297,8 +2300,6 @@ void toggle_mousegrab()
 {
 	activationtoggle(false);
 }
-
-
 
 bool get_plugin_path(TCHAR* out, int len, const TCHAR* path)
 {
