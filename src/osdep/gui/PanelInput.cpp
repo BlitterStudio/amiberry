@@ -396,6 +396,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	}
 
 	cmdSwapPorts = new gcn::Button("Swap ports");
+	cmdSwapPorts->setId("cmdSwapPorts");
 	cmdSwapPorts->setSize(150, BUTTON_HEIGHT);
 	cmdSwapPorts->setBaseColor(gui_baseCol);
 	cmdSwapPorts->addActionListener(inputActionListener);
