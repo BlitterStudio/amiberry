@@ -1307,6 +1307,7 @@ int check_prefs_changed_gfx()
 		currprefs.keyboard_leds[1] != changed_prefs.keyboard_leds[1] ||
 		currprefs.keyboard_leds[2] != changed_prefs.keyboard_leds[2] ||
 		currprefs.input_mouse_untrap != changed_prefs.input_mouse_untrap ||
+		currprefs.input_magic_mouse_cursor != changed_prefs.input_magic_mouse_cursor ||
 		currprefs.active_capture_priority != changed_prefs.active_capture_priority ||
 		currprefs.inactive_priority != changed_prefs.inactive_priority ||
 		currprefs.active_nocapture_nosound != changed_prefs.active_nocapture_nosound ||
@@ -1332,6 +1333,7 @@ int check_prefs_changed_gfx()
 		currprefs.keyboard_leds[1] = changed_prefs.keyboard_leds[1];
 		currprefs.keyboard_leds[2] = changed_prefs.keyboard_leds[2];
 		currprefs.input_mouse_untrap = changed_prefs.input_mouse_untrap;
+		currprefs.input_magic_mouse_cursor = changed_prefs.input_magic_mouse_cursor;
 		currprefs.active_capture_priority = changed_prefs.active_capture_priority;
 		currprefs.inactive_priority = changed_prefs.inactive_priority;
 		currprefs.active_nocapture_nosound = changed_prefs.active_nocapture_nosound;
