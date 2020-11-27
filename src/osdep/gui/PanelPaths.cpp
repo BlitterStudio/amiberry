@@ -131,7 +131,7 @@ public:
 		RefreshPanelCustom();
 		RefreshPanelROM();
 
-		ShowMessage("Rescan Paths", "Scan complete,", "Symlinks recreated.", "Ok", "");
+		ShowMessage("Rescan Paths", "Scan complete,", "ROMs updated, Joysticks (re)initialized, Symlinks recreated.", "Ok", "");
 		cmdRescanROMs->requestFocus();
 	}
 };
