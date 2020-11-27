@@ -795,7 +795,6 @@ void amiberry_gui_run()
 {
 	if (amiberry_options.gui_joystick_control)
 	{
-		SDL_GameControllerAddMappingsFromFile("conf/gamecontrollerdb.txt");
 		for (auto j = 0; j < SDL_NumJoysticks(); j++)
 		{
 			if (SDL_IsGameController(j))

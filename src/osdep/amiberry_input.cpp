@@ -404,6 +404,11 @@ static int init_joystick()
 	char tmp[MAX_DPATH];
 	get_controllers_path(tmp, MAX_DPATH);
 
+	char cfg[MAX_DPATH];
+	get_configuration_path(cfg, MAX_DPATH);
+	strcat(cfg, "gamecontrollerdb.txt");
+	SDL_GameControllerAddMappingsFromFile(cfg);
+	
 	// do the loop
 	for (auto cpt = 0; cpt < num_joystick; cpt++)
 	{
