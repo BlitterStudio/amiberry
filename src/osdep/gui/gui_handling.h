@@ -1,6 +1,8 @@
 #ifndef GUI_HANDLING_H
 #define GUI_HANDLING_H
 
+#include "amiberry_gfx.h"
+
 #define DISTANCE_BORDER 15
 #define DISTANCE_NEXT_X 15
 #define DISTANCE_NEXT_Y 15
@@ -35,9 +37,21 @@ extern gcn::Color gui_baseCol;
 extern gcn::Color colTextboxBackground;
 extern gcn::Color colSelectorActive;
 extern gcn::SDLInput* gui_input;
+extern gcn::SDLTrueTypeFont* gui_font;
 extern SDL_Surface* gui_screen;
 extern SDL_GameController* gui_controller;
 extern gcn::SDLGraphics* gui_graphics;
+
+#ifdef USE_DISPMANX
+extern DISPMANX_RESOURCE_HANDLE_T gui_resource;
+extern DISPMANX_RESOURCE_HANDLE_T black_gui_resource;
+extern DISPMANX_ELEMENT_HANDLE_T gui_element;
+extern int element_present;
+#else
+extern SDL_Texture* gui_texture;
+extern SDL_Cursor* cursor;
+extern SDL_Surface* cursor_surface;
+#endif
 
 extern char current_dir[MAX_DPATH];
 extern char last_loaded_config[MAX_DPATH];

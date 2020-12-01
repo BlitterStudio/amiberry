@@ -1558,6 +1558,11 @@ static bool load_kickstart_replacement(void)
 	get_rom_path(path, MAX_DPATH);
 	strcat(path, "aros-ext.bin");
 	auto* arosrom = zfile_load_file(path, &arosrom_len);
+	if (arosrom == nullptr)
+	{
+		gui_message("Could not find the 'aros-ext.bin' file in the Kickstarts directory!");
+		return false;
+	}
 	struct zfile* f = zfile_fopen_data(path, arosrom_len, arosrom);
 	if (!f)
 		return false;
@@ -1582,6 +1587,11 @@ static bool load_kickstart_replacement(void)
 	get_rom_path(path, MAX_DPATH);
 	strcat(path, "aros-rom.bin");
 	arosrom = zfile_load_file(path, &arosrom_len);
+	if (arosrom == nullptr)
+	{
+		gui_message("Could not find the 'aros-rom.bin' file in the Kickstarts directory!");
+		return false;
+	}
 	f = zfile_fopen_data(path, arosrom_len, arosrom);
 	if (!f)
 		return false;

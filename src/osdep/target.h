@@ -60,7 +60,6 @@ void gui_widgets_init();
 void run_gui(void);
 void gui_widgets_halt();
 void amiberry_gui_halt();
-void InGameMessage(const char* msg);
 void init_max_signals(void);
 void wait_for_vsync(void);
 unsigned long target_lastsynctime(void);

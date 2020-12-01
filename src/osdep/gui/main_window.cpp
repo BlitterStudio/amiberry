@@ -420,9 +420,12 @@ void amiberry_gui_init()
 void amiberry_gui_halt()
 {
 	delete uae_gui;
+	uae_gui = nullptr;
 	delete gui_imageLoader;
 	delete gui_input;
+	gui_input = nullptr;
 	delete gui_graphics;
+	gui_graphics = nullptr;
 
 	if (gui_screen != nullptr)
 	{
@@ -1128,7 +1131,9 @@ void gui_widgets_halt()
 	delete mainButtonActionListener;
 
 	delete gui_font;
+	gui_font = nullptr;
 	delete gui_top;
+	gui_top = nullptr;
 }
 
 void refresh_all_panels()
