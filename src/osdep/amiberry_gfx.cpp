@@ -799,7 +799,7 @@ static void open_screen(struct uae_prefs* p)
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0xFF);
 	SDL_RenderClear(renderer);
 	
-	int width = 0, height = 0;
+	int width, height;
 	if (screen_is_picasso)
 	{
 		if (picasso96_state.RGBFormat == RGBFB_R5G6B5

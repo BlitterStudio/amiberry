@@ -1372,6 +1372,8 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_target_dwrite_bool(f, _T("minimized_nosound"), p->minimized_nosound);
 	cfgfile_target_dwrite_bool(f, _T("minimized_pause"), p->minimized_pause);
 	cfgfile_write(f, _T("amiberry.minimized_input"), _T("%d"), p->minimized_input);
+	cfgfile_target_dwrite_bool(f, _T("inactive_iconify"), p->minimize_inactive);
+	cfgfile_target_dwrite_bool(f, _T("active_capture_automatically"), p->capture_always);
 	
 #ifdef ANDROID
 	cfgfile_write(f, "amiberry.onscreen", "%d", p->onScreen);
@@ -1506,6 +1508,10 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 	if (cfgfile_yesno(option, value, _T("minimized_nosound"), &p->minimized_nosound))
 		return 1;
 	if (cfgfile_intval(option, value, _T("minimized_input"), &p->minimized_input, 1))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("active_capture_automatically"), &p->capture_always))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("inactive_iconify"), &p->minimize_inactive))
 		return 1;
 	if (cfgfile_yesno(option, value, _T("right_control_is_right_win"), &p->right_control_is_right_win_key))
 		return 1;
