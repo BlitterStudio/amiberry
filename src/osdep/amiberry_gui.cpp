@@ -703,14 +703,8 @@ void gui_message(const char* format, ...)
 	vsprintf(msg, format, parms);
 	va_end(parms);
 
-	if (!uae_gui)
-	{
-		// GUI screen is not initialized, output message to the console instead
-		printf("%s\n", msg);
-		return;
-	}
 	graphics_subshutdown();
-	InGameMessage(msg);
+	ShowMessage(_T(""), msg, _T(""), _T("Ok"), _T(""));
 }
 
 void notify_user(int msg)

@@ -406,7 +406,6 @@ OBJS =	\
 	src/osdep/sigsegv_handler.o \
 	src/osdep/retroarch.o \
 	src/sounddep/sound.o \
-	src/osdep/gui/InGameMessage.o \
 	src/osdep/gui/SelectorEntry.o \
 	src/osdep/gui/ShowHelp.o \
 	src/osdep/gui/ShowMessage.o \
