@@ -27,6 +27,7 @@
 static bool dialogResult = false;
 static bool dialogFinished = false;
 static const char* dialogControlPressed;
+static bool halt_gui = false;
 
 static gcn::Window* wndShowMessage;
 static gcn::Button* cmdOK;
@@ -173,6 +174,7 @@ static void InitShowMessage()
 	}
 	if (uae_gui == nullptr)
 	{
+		halt_gui = true;
 		uae_gui = new gcn::Gui();
 		uae_gui->setGraphics(gui_graphics);
 		uae_gui->setInput(gui_input);
@@ -245,64 +247,67 @@ static void ExitShowMessage()
 
 	delete wndShowMessage;
 
-	delete uae_gui;
-	uae_gui = nullptr;
-	delete gui_input;
-	gui_input = nullptr;
-	delete gui_graphics;
-	gui_graphics = nullptr;
-	delete gui_font;
-	gui_font = nullptr;
-	delete gui_top;
-	gui_top = nullptr;
-	
-	if (gui_screen != nullptr)
+	if (halt_gui)
 	{
-		SDL_FreeSurface(gui_screen);
-		gui_screen = nullptr;
-	}
+		delete uae_gui;
+		uae_gui = nullptr;
+		delete gui_input;
+		gui_input = nullptr;
+		delete gui_graphics;
+		gui_graphics = nullptr;
+		delete gui_font;
+		gui_font = nullptr;
+		delete gui_top;
+		gui_top = nullptr;
+
+		if (gui_screen != nullptr)
+		{
+			SDL_FreeSurface(gui_screen);
+			gui_screen = nullptr;
+		}
 #ifdef USE_DISPMANX
-	if (element_present == 1)
-	{
-		element_present = 0;
-		updateHandle = vc_dispmanx_update_start(0);
-		vc_dispmanx_element_remove(updateHandle, gui_element);
-		gui_element = 0;
-		vc_dispmanx_element_remove(updateHandle, blackscreen_element);
-		blackscreen_element = 0;
-		vc_dispmanx_update_submit_sync(updateHandle);
-	}
+		if (element_present == 1)
+		{
+			element_present = 0;
+			updateHandle = vc_dispmanx_update_start(0);
+			vc_dispmanx_element_remove(updateHandle, gui_element);
+			gui_element = 0;
+			vc_dispmanx_element_remove(updateHandle, blackscreen_element);
+			blackscreen_element = 0;
+			vc_dispmanx_update_submit_sync(updateHandle);
+		}
 
-	if (gui_resource)
-	{
-		vc_dispmanx_resource_delete(gui_resource);
-		gui_resource = 0;
-	}
+		if (gui_resource)
+		{
+			vc_dispmanx_resource_delete(gui_resource);
+			gui_resource = 0;
+		}
 
-	if (black_gui_resource)
-	{
-		vc_dispmanx_resource_delete(black_gui_resource);
-		black_gui_resource = 0;
-	}
-	if (displayHandle)
-		vc_dispmanx_display_close(displayHandle);
+		if (black_gui_resource)
+		{
+			vc_dispmanx_resource_delete(black_gui_resource);
+			black_gui_resource = 0;
+		}
+		if (displayHandle)
+			vc_dispmanx_display_close(displayHandle);
 #else
-	if (gui_texture != nullptr)
-	{
-		SDL_DestroyTexture(gui_texture);
-		gui_texture = nullptr;
-	}
+		if (gui_texture != nullptr)
+		{
+			SDL_DestroyTexture(gui_texture);
+			gui_texture = nullptr;
+		}
 
-	if (cursor != nullptr)
-	{
-		SDL_FreeCursor(cursor);
-		cursor = nullptr;
-	}
+		if (cursor != nullptr)
+		{
+			SDL_FreeCursor(cursor);
+			cursor = nullptr;
+		}
 
-	// Clear the screen
-	SDL_RenderClear(renderer);
-	SDL_RenderPresent(renderer);
+		// Clear the screen
+		SDL_RenderClear(renderer);
+		SDL_RenderPresent(renderer);
 #endif
+	}
 }
 
 static void ShowMessageWaitInputLoop()
