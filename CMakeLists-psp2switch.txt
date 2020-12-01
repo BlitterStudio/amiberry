@@ -51,7 +51,6 @@ set(TITLEID "AMIBERRY00")
 set(SRC_FILES
         src/akiko.cpp
         src/ar.cpp
-        src/aros.rom.cpp
         src/audio.cpp
         src/autoconf.cpp
         src/blitfunc.cpp

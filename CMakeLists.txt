@@ -7,7 +7,6 @@ add_subdirectory(external/libguisan)
 add_executable(amiberry
         src/akiko.cpp
         src/ar.cpp
-        src/aros.rom.cpp
         src/audio.cpp
         src/autoconf.cpp
         src/blitfunc.cpp

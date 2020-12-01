@@ -281,7 +281,6 @@ C_OBJS= \
 OBJS =	\
 	src/akiko.o \
 	src/ar.o \
-	src/aros.rom.o \
 	src/audio.o \
 	src/autoconf.o \
 	src/blitfunc.o \
