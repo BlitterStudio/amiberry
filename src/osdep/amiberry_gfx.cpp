@@ -887,7 +887,7 @@ static void open_screen(struct uae_prefs* p)
 
 	if (screen != nullptr)
 	{
-		allocsoftbuffer(&avidinfo->drawbuffer, width, height, display_depth);
+		allocsoftbuffer(&avidinfo->drawbuffer, display_width, display_height, display_depth);
 		notice_screen_contents_lost();
 		if (!screen_is_picasso)
 		{
