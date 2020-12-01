@@ -93,7 +93,7 @@ struct romdata *getromdatabypath (const TCHAR *path)
 	return NULL;
 }
 
-#define NEXT_ROM_ID 255
+#define NEXT_ROM_ID 272
 
 #define ALTROM(id,grp,num,size,flags,crc32,a,b,c,d,e) \
 { _T("X"), 0, 0, 0, 0, 0, size, id, 0, 0, flags, (grp << 16) | num, 0, NULL, crc32, a, b, c, d, e },
@@ -173,19 +173,19 @@ static struct romdata roms[] = {
 	ALTROMPN(15, 1, 2, 262144, ROMTYPE_ODD , _T("391774-01"), 0x16c07bf8,0x90e331be,0x1970b0e5,0x3f53a9b0,0x390b51b5,0x9b3869c2)
 
 #ifdef AMIBERRY
-	{ _T("KS ROM v3.2 (Walker)"), 3, 2, 43, 1, _T("Walker\0"), 524288, 246, 2, 1, ROMTYPE_KICK, 0, 0, NULL,
+	{ _T("KS ROM v3.2 (Walker)"), 3, 2, 43, 1, _T("Walker\0"), 524288, 265, 2, 1, ROMTYPE_KICK, 0, 0, NULL,
 	0x261339f8, 0x7A9095F1, 0x107966F9, 0x0267DC4C, 0xB3C1972E, 0xFB4B78A8 },
-	{ _T("KS ROM v3.1.4 (A1200)"), 3, 1, 46, 143, _T("A1200\0"), 524288, 247, 1, 0, ROMTYPE_KICK, 0, 0, NULL,
+	{ _T("KS ROM v3.1.4 (A1200)"), 3, 1, 46, 143, _T("A1200\0"), 524288, 266, 1, 0, ROMTYPE_KICK, 0, 0, NULL,
 	0xF17FA97F, 0x6355A9ED, 0x5DC84042, 0x2F9B7330, 0x8A91BE0D, 0x0BB506BD },
-	{ _T("KS ROM v3.1.4 (A1200)"), 3, 1, 46, 143, _T("A1200\0"), 524288, 248, 1, 0, ROMTYPE_KICK, 0, 0, NULL,
+	{ _T("KS ROM v3.1.4 (A1200)"), 3, 1, 46, 143, _T("A1200\0"), 524288, 267, 1, 0, ROMTYPE_KICK, 0, 0, NULL,
 	0xB87506A7, 0xEF36C463, 0x8EE45DE6, 0xBB937017, 0x61216C95, 0x8CD0D57B },
-	{ _T("KS ROM v3.1.4 (A3000)"), 3, 1, 46, 143, _T("A3000\0"), 524288, 249, 2, 0, ROMTYPE_KICK, 0, 0, NULL,
+	{ _T("KS ROM v3.1.4 (A3000)"), 3, 1, 46, 143, _T("A3000\0"), 524288, 268, 2, 0, ROMTYPE_KICK, 0, 0, NULL,
 	0xBA35F8EB, 0xD73AE3A3, 0x6F12BB49, 0xBBF6BA04, 0xA890FF7A, 0xAC419015 },
-	{ _T("KS ROM v3.1.4 (A500)"), 3, 1, 46, 143, _T("A500\0"), 524288, 250, 0, 0, ROMTYPE_KICK, 0, 0, NULL,
+	{ _T("KS ROM v3.1.4 (A500)"), 3, 1, 46, 143, _T("A500\0"), 524288, 269, 0, 0, ROMTYPE_KICK, 0, 0, NULL,
 	0xD52B52FD, 0x8A240508, 0x7CE18222, 0x5656DD0B, 0x93069C45, 0x743F9E34 },
-	{ _T("KS ROM v3.1.4 (A500)"), 3, 1, 46, 143, _T("A500\0"), 524288, 251, 0, 0, ROMTYPE_KICK, 0, 0, NULL,
+	{ _T("KS ROM v3.1.4 (A500)"), 3, 1, 46, 143, _T("A500\0"), 524288, 270, 0, 0, ROMTYPE_KICK, 0, 0, NULL,
 	0x568F8786, 0xD81CD6F1, 0x31040895, 0x843D9DFA, 0x95A45BC9, 0x5EDD9704 },
-	{ _T("KS ROM v3.1.4 (A4000)"), 3, 1, 46, 143, _T("A4000\0"), 524288, 252, 2 | 4, 0, ROMTYPE_KICK, 0, 0, NULL,
+	{ _T("KS ROM v3.1.4 (A4000)"), 3, 1, 46, 143, _T("A4000\0"), 524288, 271, 2 | 4, 0, ROMTYPE_KICK, 0, 0, NULL,
 	0x1B84CB33, 0xAAB44CD6, 0x51E6B6F8, 0x1A3EFFD8, 0xE0BA6B37, 0xAB322F32 },
 #endif
 
@@ -429,6 +429,12 @@ static struct romdata roms[] = {
 	0xa2ba67d1, 0x2015685f, 0xaadfbaf6, 0x8b19b07e, 0x5f4e888f, 0x738b99d7, NULL, NULL },
 	{ _T("GVP A1230 Turbo+ Series II"), 0, 0, 0, 0, _T("A1230SII\0"), 16384, 230, 0, 0, ROMTYPE_CB_A1230S2, 0, 0, NULL,
 	0x96bd351f, 0xb7648daf, 0x52d0732d, 0x897548f3, 0x29ebf624, 0x101474d5, NULL, NULL },
+	{ _T("GVP A1230 Turbo+"), 0, 0, 0, 0, _T("A1230SI\0"), 16384, 260, 0, 0, ROMTYPE_CB_A1230S1, 0, 0, NULL,
+	0x3f0b8d7a, 0x258c6ee7, 0x5d8dfee5, 0x7871c5be, 0x79a83fa3, 0xca53a1a9, NULL, NULL },
+	{ _T("Harms 3000 Professional"), 0, 0, 0, 00, _T("HARMS3000PRO\0"), 65536, 248, 0, 0, ROMTYPE_CB_HARMS3KP, 0, 0, NULL,
+	0x80da32b5,0x0a3ded88,0x20a24238,0xd3e43baf,0x7163226c,0x861e2d88, NULL, NULL },
+	ALTROMPN(248, 1, 1, 32768, ROMTYPE_ODD  | ROMTYPE_8BIT, NULL, 0xc22c5ee5, 0xc211f305, 0xacb2ce10, 0x32b1b296, 0xc5780dde, 0x78dba814)
+	ALTROMPN(248, 1, 2, 32768, ROMTYPE_EVEN | ROMTYPE_8BIT, NULL, 0xe1062444, 0x7c0dd74f, 0x2bc0a94d, 0xd85aa85f, 0x771b8658, 0x697533cd)
 
 	{ _T("A2620/A2630 -07"), 0, 0, 0, 0, _T("A2620\0A2630\0"), 65536, 105, 0, 0, ROMTYPE_CB_A26x0, 0, 0, _T("390282-07/390283-07"),
 	0x169d80e9, 0x41f518cb,0x41c1dc1f,0xcc636383,0x20676af5,0x4969010c, NULL, NULL },
@@ -538,6 +544,8 @@ static struct romdata roms[] = {
 	0xf99c6f11, 0x77098a9e,0x35acaef2,0x11a546f0,0xc564cdac,0xf52836c4, NULL, NULL },
 	{ _T("GVP Series I/II v3.7"), 3, 7, 3, 7, _T("GVPII\0GVPI\0"), 16384, 238, 0, 0, ROMTYPE_GVPS12, 0, 0, NULL,
 	0xe136b9c4, 0xabcc0b52,0xa99dba6f,0xc2eb8428,0x63c7c805,0xb7f4d770, NULL, NULL },
+	{ _T("GVP Series II v4.13"), 4, 13, 4, 13, _T("GVPII\0"), 16384, 263, 0, 0, ROMTYPE_GVPS2, 0, 0, NULL,
+	0xfc20b5e2, 0x85c050ba, 0x894ced53, 0x359fd7d6, 0x730250e7, 0x4c4b66bf, NULL, NULL },
 	{ _T("GVP Series II v4.15"), 4, 15, 4, 15, _T("GVPII\0"), 16384, 109, 0, 0, ROMTYPE_GVPS2, 0, 0, NULL,
 	0xf89f44d6, 0xbf10c12c,0xc72dd040,0x549ea17c,0x24947633,0xe3773297, NULL, NULL },
 	{ _T("GVP Series II Guru ROM"), 6, 14, 6, 14, _T("GVPII\0"), 32768, 110, 0, 0, ROMTYPE_GVPS2, 0, 0, NULL,
@@ -578,6 +586,12 @@ static struct romdata roms[] = {
 	0x1f672e4b, 0xb20d50b8, 0x31ec9823, 0xfa732fc6, 0x522ecc6a, 0xae36ec33, NULL, NULL },
 	{ _T("IVS GrandSlam/Trumpcard Pro v4.9"), 4, 9, 4, 9, _T("IVSPRO\0"), 16384, 161, 0, 0, ROMTYPE_IVSTPRO, 0, 0, NULL,
 	0x4a15f224, 0x29500b47, 0x289e84ac, 0x575e3c7d, 0x82199b45, 0x605d8fc9, NULL, NULL },
+	{ _T("IVS Trumpcard v4.9"), 4, 9, 4, 9, _T("IVSTC\0"), 16384, 249, 0, 0, ROMTYPE_IVSTC, 0, 0, NULL,
+	0x5282febc, 0x9d69a534, 0x60529d66, 0x13b64723, 0xb0c8dfa5, 0x80274048, NULL, NULL },
+	{ _T("IVS Trumpcard v3.1"), 3, 1, 3, 1, _T("IVSTC\0"), 8192, 261, 0, 0, ROMTYPE_IVSTC, 0, 0, NULL,
+	0xfe48dd5d, 0x03e6c1b1, 0xf3300c94, 0x4cc176ea, 0xb3082e91, 0xe75d5e62, NULL, NULL },
+	{ _T("IVS Trumpcard v1.5"), 1, 5, 1, 5, _T("IVSTC\0"), 8192, 262, 0, 0, ROMTYPE_IVSTC, 0, 0, NULL,
+	0x6f37eb74, 0xbf510c23, 0x1c2134d7, 0xed4b4158, 0xba4acf14, 0xa34824d2, NULL, NULL },
 	{ _T("Expansion Systems Dataflyer+ v1.5"), 1, 5, 1, 5, _T("DATAFLYERPLUS\0"), 32768, 170, 0, 0, ROMTYPE_DATAFLYER, 0, 0, NULL,
 	0x00888f19, 0x54b73354, 0xb3592691, 0x59a80909, 0x0bdb67df, 0x8ac22aa9, NULL, NULL },
 	{ _T("Expansion Systems Dataflyer+ v1.7"), 1, 7, 1, 7, _T("DATAFLYERPLUS\0"), 32768, 171, 0, 0, ROMTYPE_DATAFLYER, 0, 0, NULL,
@@ -588,6 +602,10 @@ static struct romdata roms[] = {
 	0xc49daa65, 0x20275716, 0xdc7eb00e, 0x5dc53680, 0xb5c8a90a, 0x7c00e390, NULL, NULL },
 	{ _T("Microbotics HardFrame v1.5"), 1, 5, 1, 5, _T("HARDFRAME\0"), 32768, 173, 0, 0, ROMTYPE_HARDFRAME, 0, 0, NULL,
 	0x8d144212, 0xc5a4f497, 0x5216c1b1, 0xe08760d0, 0x0bd579ef, 0xea226354, NULL, NULL },
+	{ _T("Microbotics HardFrame v1.8"), 1, 8, 1, 8, _T("HARDFRAME\0"), 32768, 258, 0, 0, ROMTYPE_HARDFRAME, 0, 0, NULL,
+	0x10de5e2d, 0x3e25af59, 0xe6bb0d69, 0xd925f07b, 0x200b1b0e, 0x45e57d33, NULL, NULL },
+	{ _T("Microbotics HardFrame v1.9"), 1, 9, 1, 9, _T("HARDFRAME\0"), 32768, 256, 0, 0, ROMTYPE_HARDFRAME, 0, 0, NULL,
+	0x948a3de8, 0xc34cb0ef, 0xa0ebdd71, 0x9d604d38, 0x625a160d, 0x9e2ca95d, NULL, NULL },
 	{ _T("Mainhattan Data A-Team v1.8"), 1, 8, 1, 8, _T("ATEAM\0"), 65536, 174, 0, 0, ROMTYPE_ATEAM, 0, 0, NULL,
 	0x4fe08a5d, 0x007e5c61, 0x4048f598, 0x6d14011d, 0x23a41435, 0x5e0a2259, NULL, NULL },
 	{ _T("M-Tec AT500 Megabody v1.33"), 1, 33, 1, 33, _T("MTECAT\0"), 32768, 199, 0, 0, ROMTYPE_MTEC, 0, 0, NULL,
@@ -622,8 +640,28 @@ static struct romdata roms[] = {
 	0x9366d357, 0x7113add0,0x4c782ed7,0xa56a74ba,0x3378d55c,0x5605eaf6, NULL, NULL },
 	{ _T("AccessX 500 v2.1"), 2, 1, 2, 1, _T("ACCESSX500\0"), 32768, 242, 0, 0, ROMTYPE_ACCESSX, 0, 0, NULL,
 	0x039a14a7, 0x1a710b94, 0xcc1bd217, 0xb0c310af, 0x4b0f6d0a, 0x1125b05a, NULL, NULL },
-	{ _T("AccessX 500 v2.1 (descrambled)"), 2, 1, 2, 1, _T("ACCESSX\0"), 32768, 243, 0, 0, ROMTYPE_ACCESSX, 0, 0, NULL,
+	{ _T("AccessX 2000 v2.1"), 2, 1, 2, 1, _T("ACCESSX2000\0"), 32768, 255, 0, 0, ROMTYPE_ACCESSX, 0, 0, NULL,
+	0xd1b7ab32, 0x09da8da3, 0x12310256, 0x42f761da, 0xc2af7f49, 0x84db4c31, NULL, NULL },
+	{ _T("AccessX 500/2000 v2.1 (descrambled)"), 2, 1, 2, 1, _T("ACCESSX\0"), 32768, 243, 0, 0, ROMTYPE_ACCESSX, 0, 0, NULL,
 	0x415a5cae, 0x15c8c15f, 0x3700e867, 0xd1dbe2ee, 0xcbb7c7cd, 0x245555fa, NULL, NULL },
+	{ _T("Pacific Peripherals Overdrive v1.5"), 1, 5, 1, 5, _T("OVERDRIVE\0"), 8192, 246, 0, 0, ROMTYPE_OVERDRIVE, 0, 0, NULL,
+	0x086e2716b, 0x075b50cb,0x166e00ac,0x4016ef7f,0x02532e86,0xe73b7711, NULL, NULL },
+	{ _T("Pacific Peripherals Overdrive v2.0"), 2, 0, 2, 0, _T("OVERDRIVE\0"), 8192, 247, 0, 0, ROMTYPE_OVERDRIVE, 0, 0, NULL,
+	0xebe42aa6, 0xdff761c2,0x429d0d26,0x2151d831,0x12746f83,0x3b8d36f0, NULL, NULL },
+	{ _T("Archos Overdrive HD"), 0, 0, 0, 0, _T("ARCHOSHD\0"), 32768, 250, 0, 0, ROMTYPE_ARCHOSHD, 0, 0, NULL,
+	0x30c0e3f9, 0x90014e97,0x700333a7,0x931b382f,0xe672b6e4,0x4b7b8acc, NULL, NULL },
+	{ _T("Trumpcard 500AT v1.1"), 1, 1, 1, 1, _T("TRUMPCARDAT\0"), 16384, 251, 0, 0, ROMTYPE_IVST500AT, 0, 0, NULL,
+	0xb6467cb8, 0xbc1cd85f,0x16011691,0x32a2a8d6, 0x2ee38666,0x520d5cf1, NULL, NULL },
+	{ _T("Trumpcard 500AT v1.2"), 1, 2, 1, 2, _T("TRUMPCARDAT\0"), 16384, 252, 0, 0, ROMTYPE_IVST500AT, 0, 0, NULL,
+	0x3eb87eb3, 0xff41889e,0x641114e5,0x5ec1f784,0xd79216ce,0xe9a74a40, NULL, NULL },
+	{ _T("Trifecta v4.31"), 0, 0, 0, 0, _T("TRIFECTA\0"), 32768, 253, 0, 0, ROMTYPE_TRIFECTA, 0, 0, NULL,
+	0x591c3cd4, 0x681b8a67,0x3775dd0c,0x8f13b641,0x8852a51e,0xf3a29da3, NULL, NULL },
+	{ _T("Mastercard v2.3"), 0, 0, 0, 0, _T("MTECMASTERCARD\0"), 65536, 254, 0, 0, ROMTYPE_MASTERCARD, 0, 0, NULL,
+	0x4837cc3d, 0xeea5e9ab,0xb3ffb4ed,0xdf09825c,0x7e8de75d,0x0d08c01f, NULL, NULL },
+	{ _T("Hardital Dotto"), 0, 0, 0, 0, _T("DOTTO\0"), 32768, 257, 0, 0, ROMTYPE_DOTTO, 0, 0, NULL,
+	0xee803484, 0x62822cb9,0x0b095efa,0x455496ea,0xd5b22740,0x77d86375, NULL, NULL },
+	{ _T("A.L.F. 2"), 0, 0, 0, 0, _T("ALF2\0"), 65536, 264, 0, 0, ROMTYPE_ALF2, 0, 0, NULL,
+	0x9cf8a7b7, 0x3df4667c,0xd3436367,0x7896da65,0x94994769,0x13bc6746, NULL, NULL },
 
 	{ _T("CyberStorm MK I 68040"), 0, 0, 0, 0, _T("CSMKI\0"), 32768, 95, 0, 0, ROMTYPE_CB_CSMK1, 0, 0, NULL,
 	  0, 0, 0, 0, 0, 0, NULL, _T("cyberstormmk1_040.rom") },
@@ -645,6 +683,8 @@ static struct romdata roms[] = {
 	{ _T("Picasso IV"), 7, 4, 7, 4, _T("PIV\0"), 131072, 91, 0, 0, ROMTYPE_PICASSOIV, 0, 0, NULL,
 	0xa8133e7e, 0xcafafb91,0x6f16b9f3,0xec9b49aa,0x4b40eb4e,0xeceb5b5b },
 
+	{ _T("A1060 BIOS 2.05"), 2, 5, 2, 5, _T("A1060\0"), 16384, 259, 0, 0, ROMTYPE_A1060, 0, 0, _T("380619-02"),
+	0xf5384f6a, 0xa3bab2ad,0xd9555353,0x64d6e5fc,0x5bedac05,0xe35fad0b, NULL, NULL },
 	{ _T("A1060 BIOS 2.06"), 2, 6, 2, 6, _T("A1060\0"), 16384, 147, 0, 0, ROMTYPE_A1060, 0, 0, _T("380619-03"),
 	0x185f2bbd, 0xeba74ad1,0x000a5351,0xa5d99179,0xbf75f831,0xac2d2402, NULL, NULL },
 	{ _T("A2088 BIOS 3.4"), 3, 4, 3, 4, _T("A2088\0"), 16384, 148, 0, 0, ROMTYPE_A2088, 0, 0, _T("380788-04"),

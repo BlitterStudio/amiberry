@@ -42,7 +42,6 @@ LOCAL_SRC_FILES := src/archivers/7z/BraIA64.c \
                    	src/archivers/7z/XzDec.c \
                    	src/akiko.cpp \
                     src/ar.cpp \
-                    src/aros.rom.cpp \
                     src/audio.cpp \
                     src/autoconf.cpp \
                     src/blitfunc.cpp \
