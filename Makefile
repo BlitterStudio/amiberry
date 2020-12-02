@@ -281,7 +281,6 @@ C_OBJS= \
 OBJS =	\
 	src/akiko.o \
 	src/ar.o \
-	src/aros.rom.o \
 	src/audio.o \
 	src/autoconf.o \
 	src/blitfunc.o \
@@ -410,7 +409,6 @@ OBJS =	\
 	src/osdep/sigsegv_handler.o \
 	src/osdep/retroarch.o \
 	src/sounddep/sound.o \
-	src/osdep/gui/InGameMessage.o \
 	src/osdep/gui/SelectorEntry.o \
 	src/osdep/gui/ShowHelp.o \
 	src/osdep/gui/ShowMessage.o \

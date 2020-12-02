@@ -42,7 +42,6 @@ LOCAL_SRC_FILES := src/archivers/7z/BraIA64.c \
                    	src/archivers/7z/XzDec.c \
                    	src/akiko.cpp \
                     src/ar.cpp \
-                    src/aros.rom.cpp \
                     src/audio.cpp \
                     src/autoconf.cpp \
                     src/blitfunc.cpp \
@@ -167,7 +166,6 @@ LOCAL_SRC_FILES := src/archivers/7z/BraIA64.c \
                     src/osdep/sigsegv_handler.cpp \
 					src/osdep/retroarch.cpp \
                     src/sounddep/sound.cpp \
-                    src/osdep/gui/InGameMessage.cpp \
                     src/osdep/gui/SelectorEntry.cpp \
                     src/osdep/gui/ShowHelp.cpp \
                     src/osdep/gui/ShowMessage.cpp \

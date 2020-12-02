@@ -268,7 +268,6 @@
     <ClCompile Include="..\..\src\osdep\gui\CreateFilesysHardfile.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\EditFilesysHardfile.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\EditFilesysVirtual.cpp" />
-    <ClCompile Include="..\..\src\osdep\gui\InGameMessage.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\main_window.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\Navigation.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelAbout.cpp" />

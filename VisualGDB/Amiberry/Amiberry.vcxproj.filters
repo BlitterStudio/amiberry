@@ -364,9 +364,6 @@
     <ClCompile Include="..\..\src\osdep\gui\EditFilesysVirtual.cpp">
       <Filter>Source files\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\osdep\gui\InGameMessage.cpp">
-      <Filter>Source files\osdep\gui</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\osdep\gui\main_window.cpp">
       <Filter>Source files\osdep\gui</Filter>
     </ClCompile>

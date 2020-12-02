@@ -35,7 +35,7 @@ static NavigationMap navMap[] =
 	{"Sound", "sndDisable", "sndDisable", "Display", "Input"},
 	{"Input", "cboPort0mode", "cboPort0", "Sound", "Custom controls"},
 	{"Custom controls", "Right Trigger", "0: Mouse", "Input", "Miscellaneous"},
-	{"Miscellaneous", "chkStatusLineNative", "chkStatusLineNative", "Custom controls", "Savestates"},
+	{"Miscellaneous", "chkStatusLineNative", "chkStatusLineNative", "Custom controls", "Priority"},
 #ifdef ANDROID
 	{ "Savestates",       "State0",         "State0",         "Miscellaneous",  "OnScreen" },
 	{ "OnScreen",         "OnScrButton3",   "OnScrCtrl",      "Savestates",     "Shutdown" },

@@ -22,8 +22,8 @@
 #define GETBDM(x) (((x) - (((x) / 10000) * 10000)) / 100)
 #define GETBDD(x) ((x) % 100)
 
-#define AMIBERRYVERSION _T("Amiberry v3.4 beta (2020-11-19)")
-#define AMIBERRYDATE MAKEBD(2020, 11, 19)
+#define AMIBERRYVERSION _T("Amiberry v3.4 beta (2020-11-22)")
+#define AMIBERRYDATE MAKEBD(2020, 11, 22)
 
 #define IHF_WINDOWHIDDEN 6
 
@@ -50,7 +50,6 @@ void gui_widgets_init();
 void run_gui(void);
 void gui_widgets_halt();
 void amiberry_gui_halt();
-void InGameMessage(const char* msg);
 void init_max_signals(void);
 void wait_for_vsync(void);
 unsigned long target_lastsynctime(void);

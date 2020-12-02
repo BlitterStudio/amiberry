@@ -40,8 +40,11 @@ struct scpdrive {
     unsigned int revs;       /* stored disk revolutions */
     unsigned int dat_idx;    /* current index into dat[] */
     unsigned int index_pos;  /* next index offset */
-    unsigned int nr_index;
+    unsigned int rev;
 
+    int total_ticks;         /* total ticks to final index pulse */
+    int acc_ticks;           /* accumulated ticks so far */
+	
     unsigned int index_off[MAX_REVS]; /* data offsets of each index */
 
     /* Accumulated read latency in nanosecs. */
@@ -139,10 +142,12 @@ int scp_loadtrack(
     if (trk_header[3] != track)
         return 0;
 
+    d->total_ticks = 0;
     for (rev = 0 ; rev < d->revs ; rev++) {
         zfile_fread(longwords, sizeof(longwords), 1, d->zf);
         trkoffset[rev] = tdh_offset + le32toh(longwords[2]);
         d->index_off[rev] = le32toh(longwords[1]);
+        d->total_ticks += le32toh(longwords[0]);
         d->datsz += d->index_off[rev];
     }
 
@@ -163,9 +168,10 @@ int scp_loadtrack(
     d->dat_idx = 0;
     d->index_pos = d->index_off[0];
     d->clock = d->clock_centre = CLOCK_CENTRE;
-    d->nr_index = 0;
+    d->rev = 0;
     d->flux = 0;
     d->clocked_zeros = 0;
+    d->acc_ticks = 0;
 
     scp_loadrevolution(mfmbuf, drv, tracktiming, tracklength);
     return 1;
@@ -175,11 +181,18 @@ static int scp_next_flux(struct scpdrive *d)
 {
     uint32_t val = 0, flux, t;
 
+    if (d->rev == d->revs) {
+        d->rev = d->dat_idx = 0;
+        /* We are wrapping back to the start of the dump. Unless a flux
+         * reversal sits exactly on the index we have some time to donate to
+         * the first reversal of the first revolution. */
+        val = d->total_ticks - d->acc_ticks;
+        d->acc_ticks = -val;
+    }
+	
     for (;;) {
         if (d->dat_idx >= d->index_pos) {
-            uint32_t rev = d->nr_index++ % d->revs;
-            d->index_pos = d->index_off[rev];
-            d->dat_idx = rev ? d->index_off[rev-1] : 0;
+            d->index_pos = d->index_off[++d->rev % d->revs];
             return -1;
         }
 
@@ -194,6 +207,8 @@ static int scp_next_flux(struct scpdrive *d)
         break;
     }
 
+    d->acc_ticks += val;
+	
     flux = val * SCK_NS_PER_TICK;
     return (int)flux;
 }
