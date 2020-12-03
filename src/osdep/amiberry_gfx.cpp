@@ -610,6 +610,34 @@ int isfullscreen(void)
 	return isfullscreen_2(&currprefs);
 }
 
+static struct MultiDisplay* getdisplay2(struct uae_prefs* p, int index)
+{
+	static int max;
+	int display = index < 0 ? p->gfx_apmode[screen_is_picasso ? APMODE_RTG : APMODE_NATIVE].gfx_display - 1 : index;
+
+	if (!max || (max > 0 && Displays[max].monitorname != NULL)) {
+		max = 0;
+		while (Displays[max].monitorname)
+			max++;
+		if (max == 0) {
+			gui_message(_T("no display adapters! Exiting"));
+			exit(0);
+		}
+	}
+	if (index >= 0 && display >= max)
+		return NULL;
+	if (display >= max)
+		display = 0;
+	if (display < 0)
+		display = 0;
+	return &Displays[display];
+}
+
+struct MultiDisplay* getdisplay(struct uae_prefs* p, int monid)
+{
+	return getdisplay2(p, -1);
+}
+
 int target_get_display(const TCHAR* name)
 {
 	return 0;
@@ -1511,6 +1539,18 @@ bool show_screen_maybe(const bool show)
 		return false;
 	}
 	return false;
+}
+
+const TCHAR* target_get_display_name(int num, bool friendlyname)
+{
+	if (num <= 0)
+		return NULL;
+	struct MultiDisplay* md = getdisplay2(NULL, num - 1);
+	if (!md)
+		return NULL;
+	if (friendlyname)
+		return md->monitorname;
+	return md->monitorid;
 }
 
 void getgfxoffset(float* dxp, float* dyp, float* mxp, float* myp)
