@@ -402,8 +402,7 @@ int graphics_setup(void)
 	}
 
 	Uint32 sdl_window_mode;
-	if (sdl_video_driver != nullptr && strcmp(sdl_video_driver,"x11") == 0 
-		&& sdlMode.w >= 800 && sdlMode.h >= 600)
+	if (sdlMode.w >= 800 && sdlMode.h >= 600)
 	{
 		// Only enable Windowed mode if we're running under x11 and the resolution is at least 800x600
 		sdl_window_mode = SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
@@ -496,7 +495,7 @@ void update_win_fs_mode(struct uae_prefs* p)
 	// Dispmanx modes use configurable width/height and are fullwindow always
 	p->gfx_monitor.gfx_size = p->gfx_monitor.gfx_size_win;
 #else
-	if (sdl_window && strcmp(sdl_video_driver, "x11") == 0)
+	if (sdl_window)
 	{
 		const auto window_flags = SDL_GetWindowFlags(sdl_window);
 		const bool is_fullwindow = window_flags & SDL_WINDOW_FULLSCREEN_DESKTOP;
@@ -528,11 +527,7 @@ void update_win_fs_mode(struct uae_prefs* p)
 		
 		set_config_changed();
 	}
-	else
-	{
-		// KMSDRM is fullwindow always
-		p->gfx_monitor.gfx_size = p->gfx_monitor.gfx_size_win;
-	}
+
 #endif
 	if (screen_is_picasso)
 	{
@@ -613,6 +608,39 @@ static int isfullscreen_2(struct uae_prefs* p)
 int isfullscreen(void)
 {
 	return isfullscreen_2(&currprefs);
+}
+
+static struct MultiDisplay* getdisplay2(struct uae_prefs* p, int index)
+{
+	static int max;
+	int display = index < 0 ? p->gfx_apmode[screen_is_picasso ? APMODE_RTG : APMODE_NATIVE].gfx_display - 1 : index;
+
+	if (!max || (max > 0 && Displays[max].monitorname != NULL)) {
+		max = 0;
+		while (Displays[max].monitorname)
+			max++;
+		if (max == 0) {
+			gui_message(_T("no display adapters! Exiting"));
+			exit(0);
+		}
+	}
+	if (index >= 0 && display >= max)
+		return NULL;
+	if (display >= max)
+		display = 0;
+	if (display < 0)
+		display = 0;
+	return &Displays[display];
+}
+
+struct MultiDisplay* getdisplay(struct uae_prefs* p, int monid)
+{
+	return getdisplay2(p, -1);
+}
+
+int target_get_display(const TCHAR* name)
+{
+	return 0;
 }
 
 static void wait_for_display_thread(void)
@@ -803,7 +831,8 @@ static void open_screen(struct uae_prefs* p)
 	
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0xFF);
 	SDL_RenderClear(renderer);
-
+	
+	int width, height;
 	if (screen_is_picasso)
 	{
 		if (picasso96_state.RGBFormat == RGBFB_R5G6B5
@@ -839,8 +868,7 @@ static void open_screen(struct uae_prefs* p)
 		//pixel_format = SDL_PIXELFORMAT_RGB565;
 		display_depth = 32;
 		pixel_format = SDL_PIXELFORMAT_RGBA32;
-		int width, height;
-		
+
 		if (changed_prefs.gfx_correct_aspect == 0)
 		{
 			width = sdlMode.w;
@@ -951,7 +979,6 @@ void flush_screen(struct vidbuffer* vidbuffer, int ystart, int ystop)
 void update_display(struct uae_prefs* p)
 {
 	open_screen(p);
-	set_mouse_grab(true);
 }
 
 void graphics_reset(bool forced)
@@ -1313,6 +1340,7 @@ int check_prefs_changed_gfx()
 		currprefs.keyboard_leds[1] != changed_prefs.keyboard_leds[1] ||
 		currprefs.keyboard_leds[2] != changed_prefs.keyboard_leds[2] ||
 		currprefs.input_mouse_untrap != changed_prefs.input_mouse_untrap ||
+		currprefs.input_magic_mouse_cursor != changed_prefs.input_magic_mouse_cursor ||
 		currprefs.active_capture_priority != changed_prefs.active_capture_priority ||
 		currprefs.inactive_priority != changed_prefs.inactive_priority ||
 		currprefs.active_nocapture_nosound != changed_prefs.active_nocapture_nosound ||
@@ -1338,6 +1366,7 @@ int check_prefs_changed_gfx()
 		currprefs.keyboard_leds[1] = changed_prefs.keyboard_leds[1];
 		currprefs.keyboard_leds[2] = changed_prefs.keyboard_leds[2];
 		currprefs.input_mouse_untrap = changed_prefs.input_mouse_untrap;
+		currprefs.input_magic_mouse_cursor = changed_prefs.input_magic_mouse_cursor;
 		currprefs.active_capture_priority = changed_prefs.active_capture_priority;
 		currprefs.inactive_priority = changed_prefs.inactive_priority;
 		currprefs.active_nocapture_nosound = changed_prefs.active_nocapture_nosound;
@@ -1510,6 +1539,52 @@ bool show_screen_maybe(const bool show)
 		return false;
 	}
 	return false;
+}
+
+const TCHAR* target_get_display_name(int num, bool friendlyname)
+{
+	if (num <= 0)
+		return NULL;
+	struct MultiDisplay* md = getdisplay2(NULL, num - 1);
+	if (!md)
+		return NULL;
+	if (friendlyname)
+		return md->monitorname;
+	return md->monitorid;
+}
+
+void getgfxoffset(float* dxp, float* dyp, float* mxp, float* myp)
+{
+	struct amigadisplay* ad = &adisplays;
+	//struct uae_filter* usedfilter = mon->usedfilter;
+	float dx = 0, dy = 0, mx = 1.0, my = 1.0;
+
+	//getfilteroffset(&dx, &dy, &mx, &my);
+	//if (ad->picasso_on) {
+	//	dx = picasso_offset_x * picasso_offset_mx;
+	//	dy = picasso_offset_y * picasso_offset_my;
+	//	mx = picasso_offset_mx;
+	//	my = picasso_offset_my;
+	//}
+
+	//if (mon->currentmode.flags & DM_W_FULLSCREEN) {
+	//	for (;;) {
+	//		if (mon->scalepicasso && mon->screen_is_picasso)
+	//			break;
+	//		if (usedfilter && !mon->screen_is_picasso)
+	//			break;
+	//		if (mon->currentmode.fullfill && (mon->currentmode.current_width > mon->currentmode.native_width || mon->currentmode.current_height > mon->currentmode.native_height))
+	//			break;
+	//		dx += (mon->currentmode.native_width - mon->currentmode.current_width) / 2;
+	//		dy += (mon->currentmode.native_height - mon->currentmode.current_height) / 2;
+	//		break;
+	//	}
+	//}
+
+	*dxp = dx;
+	*dyp = dy;
+	*mxp = 1.0 / mx;
+	*myp = 1.0 / my;
 }
 
 void DX_Fill(int dstx, int dsty, int width, int height, uae_u32 color)
@@ -2012,11 +2087,11 @@ void picasso_init_resolutions()
 	int bits[] = { 8, 16, 32 };
 
 	Displays[0].primary = 1;
-	Displays[0].rect.left = 0;
-	Displays[0].rect.top = 0;
-	Displays[0].rect.right = 800;
-	Displays[0].rect.bottom = 600;
-	sprintf(tmp, "%s (%d*%d)", "Display", Displays[0].rect.right, Displays[0].rect.bottom);
+	Displays[0].rect.x = 0;
+	Displays[0].rect.y = 0;
+	Displays[0].rect.w = 800;
+	Displays[0].rect.h = 600;
+	sprintf(tmp, "%s (%d*%d)", "Display", Displays[0].rect.w, Displays[0].rect.h);
 	Displays[0].fullname = my_strdup(tmp);
 	Displays[0].monitorname = my_strdup("Display");
 

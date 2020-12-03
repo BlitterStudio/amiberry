@@ -121,9 +121,6 @@
     <ClCompile Include="..\..\src\ar.cpp">
       <Filter>Source files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\aros.rom.cpp">
-      <Filter>Source files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\audio.cpp">
       <Filter>Source files</Filter>
     </ClCompile>

@@ -232,7 +232,6 @@ public:
 
 static CustomActionListener* customActionListener;
 
-
 void InitPanelCustom(const struct _ConfigCategory& category)
 {
 	int i;
@@ -373,7 +372,6 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 	RefreshPanelCustom();
 }
 
-
 void ExitPanelCustom()
 {
 	delete optPort0;
@@ -432,10 +430,10 @@ void RefreshPanelCustom()
 	// update the joystick port and disable those not available
 	char tmp[255];
 
-	if (changed_prefs.jports[SelectedPort].id >= JSEM_JOYS + num_keys_as_joys 
+	if (changed_prefs.jports[SelectedPort].id >= JSEM_JOYS
 		&& changed_prefs.jports[SelectedPort].id < JSEM_MICE - 1)
 	{
-		const auto hostjoyid = changed_prefs.jports[SelectedPort].id - JSEM_JOYS - num_keys_as_joys;
+		const auto hostjoyid = changed_prefs.jports[SelectedPort].id - JSEM_JOYS;
 		strncpy(tmp, SDL_JoystickNameForIndex(hostjoyid), 255);
 
 		for (auto n = 0; n < 15; ++n)
@@ -490,9 +488,7 @@ void RefreshPanelCustom()
 			}
 
 			else
-			{
 				cboCustomAction[n]->setListModel(&CustomEventList);
-			}
 		}
 
 		if (changed_prefs.input_analog_remap == true)

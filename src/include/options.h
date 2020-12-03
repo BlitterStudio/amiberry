@@ -863,6 +863,9 @@ struct uae_prefs
 	int gfx_correct_aspect;
 	int scaling_method;
 
+	bool minimize_inactive;
+	bool capture_always;
+	
 	int active_capture_priority;
 	bool active_nocapture_pause;
 	bool active_nocapture_nosound;
@@ -1098,7 +1101,6 @@ struct amiberry_options
 	int default_line_mode = 0;
 	int input_default_mouse_speed = 100;
 	bool input_keyboard_as_joystick_stop_keypresses = false;
-	bool input_keyrah_joystick = false;
 	char default_open_gui_key[128] = "F12";
 	char default_quit_key[128]{};
 	char default_ar_key[128] = "Pause";

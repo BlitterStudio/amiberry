@@ -1705,7 +1705,7 @@ exit:
 #endif
 }
 
-int picasso_setwincursor(int monid)
+int picasso_setwincursor()
 {
 #ifdef AMIBERRY
 	if (p96_cursor)

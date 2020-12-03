@@ -122,7 +122,12 @@ public:
 			changed_prefs.start_gui = chkShowGUI->isSelected();
 
 		else if (actionEvent.getSource() == chkMouseUntrap)
-			changed_prefs.input_mouse_untrap = chkMouseUntrap->isSelected();
+		{
+			if (chkMouseUntrap->isSelected())
+				changed_prefs.input_mouse_untrap |= MOUSEUNTRAP_MIDDLEBUTTON;
+			else
+				changed_prefs.input_mouse_untrap &= ~MOUSEUNTRAP_MIDDLEBUTTON;
+		}
 
 		else if (actionEvent.getSource() == chkRetroArchQuit)
 		{
@@ -512,7 +517,7 @@ void RefreshPanelMisc()
 	chkStatusLine->setSelected(changed_prefs.leds_on_screen & STATUSLINE_CHIPSET);
 	chkStatusLineRtg->setSelected(changed_prefs.leds_on_screen & STATUSLINE_RTG);
 	chkShowGUI->setSelected(changed_prefs.start_gui);
-	chkMouseUntrap->setSelected(changed_prefs.input_mouse_untrap);
+	chkMouseUntrap->setSelected(changed_prefs.input_mouse_untrap & MOUSEUNTRAP_MIDDLEBUTTON);
 
 	chkRetroArchQuit->setSelected(changed_prefs.use_retroarch_quit);
 	chkRetroArchMenu->setSelected(changed_prefs.use_retroarch_menu);
