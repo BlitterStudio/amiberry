@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sstream>
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -389,8 +390,6 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	char whd_config[255];
 	char whd_startup[255];
 
-	char whd_bootscript[4096];
-
 	char selected_slave[4096];
 	// note!! this should be global later on, and only collected from the XML if set to 'nothing'
 	char subpath[4096];
@@ -563,78 +562,76 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 		}
 	}
 	else
-	{
 		write_log("WHDBooter -  Could not load whdload_db.xml - does not exist?\n");
-	}
 
-	_stprintf(whd_bootscript, "\n");
 	// currently, we have selected a slave, so we create a startup-sequence
 	if (strlen(selected_slave) != 0)
 	{
-		_stprintf(whd_bootscript, " \n");
+		std::ostringstream whd_bootscript;
+		whd_bootscript << '\n';
 
 		if (use_slave_libs)
 		{
-			_stprintf(whd_bootscript, "%sDH3:C/Assign LIBS: DH3:LIBS/ ADD\n", whd_bootscript);
+			whd_bootscript << "DH3:C/Assign LIBS: DH3:LIBS/ ADD\n";
 		}
 
-		_stprintf(whd_bootscript, "%sIF NOT EXISTS WHDLoad\n", whd_bootscript);
-		_stprintf(whd_bootscript, "%sDH3:C/Assign C: DH3:C/ ADD\n", whd_bootscript);
-		_stprintf(whd_bootscript, "%sENDIF\n", whd_bootscript);
+		whd_bootscript << "IF NOT EXISTS WHDLoad\n";
+		whd_bootscript << "DH3:C/Assign C: DH3:C/ ADD\n";
+		whd_bootscript << "ENDIF\n";
 
-		_stprintf(whd_bootscript, "%sCD \"Games:%s\"\n", whd_bootscript, subpath);
-		_stprintf(whd_bootscript, "%sWHDLoad SLAVE=\"Games:%s/%s\"", whd_bootscript, subpath, selected_slave);
-		_stprintf(whd_bootscript, "%s PRELOAD NOWRITECACHE NOREQ", whd_bootscript);
+		whd_bootscript << "CD \"Games:" << subpath << "\"\n";
+		whd_bootscript << "WHDLoad SLAVE=\"Games:" << subpath << "/" << selected_slave << "\"";
+		whd_bootscript << " PRELOAD NOWRITECACHE NOREQ";
 
 		// CUSTOM options
 		if (currprefs.whdbootprefs.custom1 > 0)
 		{
-			_stprintf(whd_bootscript, "%s CUSTOM1=%d", whd_bootscript, currprefs.whdbootprefs.custom1);
+			whd_bootscript << " CUSTOM1=" << currprefs.whdbootprefs.custom1;
 		}
 		if (currprefs.whdbootprefs.custom2 > 0)
 		{
-			_stprintf(whd_bootscript, "%s CUSTOM2=%d", whd_bootscript, currprefs.whdbootprefs.custom2);
+			whd_bootscript << " CUSTOM2=" << currprefs.whdbootprefs.custom2;
 		}
 		if (currprefs.whdbootprefs.custom3 > 0)
 		{
-			_stprintf(whd_bootscript, "%s CUSTOM3=%d", whd_bootscript, currprefs.whdbootprefs.custom3);
+			whd_bootscript << " CUSTOM3=" << currprefs.whdbootprefs.custom3;
 		}
 		if (currprefs.whdbootprefs.custom4 > 0)
 		{
-			_stprintf(whd_bootscript, "%s CUSTOM4=%d", whd_bootscript, currprefs.whdbootprefs.custom4);
+			whd_bootscript << " CUSTOM4=" << currprefs.whdbootprefs.custom4;
 		}
 		if (currprefs.whdbootprefs.custom5 > 0)
 		{
-			_stprintf(whd_bootscript, "%s CUSTOM5=%d", whd_bootscript, currprefs.whdbootprefs.custom5);
+			whd_bootscript << " CUSTOM5=" << currprefs.whdbootprefs.custom5;
 		}
 		if (strlen(currprefs.whdbootprefs.custom) != 0)
 		{
-			_stprintf(whd_bootscript, "%s CUSTOM=\"%s\"", whd_bootscript, currprefs.whdbootprefs.custom);
+			whd_bootscript << " CUSTOM=\"" << currprefs.whdbootprefs.custom << "\"";
 		}
 
 		// BUTTONWAIT
 		if (currprefs.whdbootprefs.buttonwait == true)
 		{
-			_stprintf(whd_bootscript, "%s BUTTONWAIT", whd_bootscript);
+			whd_bootscript << " BUTTONWAIT";
 		}
 
 		// SPLASH
 		if (currprefs.whdbootprefs.showsplash != true)
 		{
-			_stprintf(whd_bootscript, "%s SPLASHDELAY=0", whd_bootscript);
+			whd_bootscript << " SPLASHDELAY=0";
 		}
 
 		// SPECIAL SAVE PATH
-		_stprintf(whd_bootscript, "%s SAVEPATH=Saves:Savegames/ SAVEDIR=\"%s\"", whd_bootscript, subpath);
-		_stprintf(whd_bootscript, "%s\n", whd_bootscript);
+		whd_bootscript << " SAVEPATH=Saves:Savegames/ SAVEDIR=\"" << subpath << "\"";
+		whd_bootscript << '\n';
 
-		write_log("WHDBooter - Created Startup-Sequence  \n\n%s\n", whd_bootscript);
+		write_log("WHDBooter - Created Startup-Sequence  \n\n%s\n", whd_bootscript.str().c_str());
 		write_log("WHDBooter - Saved Auto-Startup to %s\n", whd_startup);
 
 		ofstream myfile(whd_startup);
 		if (myfile.is_open())
 		{
-			myfile << whd_bootscript;
+			myfile << whd_bootscript.str();
 			myfile.close();
 		}
 	}
@@ -649,7 +646,7 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 		// create a symlink for DEVS in /tmp/
 		symlink(kick_path, "/tmp/devs/Kickstarts");
 	}
-#if 0
+#if DEBUG
 	// debugging code!
 	write_log("WHDBooter - Game: Port 0     : %s  \n", game_detail.port0);
 	write_log("WHDBooter - Game: Port 1     : %s  \n", game_detail.port1);
