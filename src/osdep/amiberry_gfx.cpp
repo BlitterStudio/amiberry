@@ -610,6 +610,11 @@ int isfullscreen(void)
 	return isfullscreen_2(&currprefs);
 }
 
+int target_get_display(const TCHAR* name)
+{
+	return 0;
+}
+
 static void wait_for_display_thread(void)
 {
 	while (display_thread_busy)
