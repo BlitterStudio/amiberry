@@ -392,6 +392,8 @@ static void amiberry_active(int minimized)
 				if (mouseactive)
 					resumepaused(2);
 			}
+			else if (currprefs.minimized_pause && !currprefs.inactive_pause)
+				resumepaused(1);
 			else if (currprefs.inactive_pause)
 				resumepaused(2);
 		}
@@ -400,7 +402,7 @@ static void amiberry_active(int minimized)
 	getcapslock();
 	wait_keyrelease();
 	inputdevice_acquire(TRUE);
-	if (isfullscreen() > 0)
+	if (isfullscreen() > 0 || currprefs.capture_always)
 		setmouseactive(1);
 	clipboard_active(1, 1);
 }
@@ -558,7 +560,6 @@ static int is_in_media_queue(const TCHAR* drvname)
 
 static void start_media_insert_timer();
 
-//TODO Implement this from WinUAE's window timer event
 Uint32 timer_callbackfunc(Uint32 interval, void* param)
 {
 	if ((*(int*)&param) == 2) {
