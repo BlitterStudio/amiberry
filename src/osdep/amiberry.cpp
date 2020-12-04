@@ -751,6 +751,12 @@ void process_event(SDL_Event event)
 				if (scancode == SDL_SCANCODE_RCTRL)
 					scancode = SDL_SCANCODE_RGUI;
 			}
+			if (enter_gui_key && scancode == enter_gui_key)
+			{
+				inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
+				break;
+			}
+			
 			my_kbd_handler(0, scancode, 1, false);
 		}
 		break;
