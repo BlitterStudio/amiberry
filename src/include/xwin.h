@@ -32,6 +32,7 @@ extern bool toggle_rtg(int);
 extern void close_rtg();
 
 extern void toggle_mousegrab (void);
+void setmouseactivexy(int x, int y, int dir);
 
 extern void desktop_coords(int *dw, int *dh, int *x, int *y, int *w, int *h);
 extern bool vsync_switchmode(int hz);

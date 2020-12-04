@@ -502,6 +502,43 @@ void disablecapture()
 	}
 }
 
+void setmouseactivexy(int x, int y, int dir)
+{
+	//struct AmigaMonitor* mon = &AMonitors[monid];
+	//int diff = 8;
+
+	if (isfullscreen() > 0)
+		return;
+	//x += mon->amigawin_rect.left;
+	//y += mon->amigawin_rect.top;
+	//if (dir & 1)
+	//	x = mon->amigawin_rect.left - diff;
+	//if (dir & 2)
+	//	x = mon->amigawin_rect.right + diff;
+	//if (dir & 4)
+	//	y = mon->amigawin_rect.top - diff;
+	//if (dir & 8)
+	//	y = mon->amigawin_rect.bottom + diff;
+	//if (!dir) {
+	//	x += (mon->amigawin_rect.right - mon->amigawin_rect.left) / 2;
+	//	y += (mon->amigawin_rect.bottom - mon->amigawin_rect.top) / 2;
+	//}
+	//if (isfullscreen() < 0) {
+	//	POINT pt;
+	//	pt.x = x;
+	//	pt.y = y;
+	//	if (MonitorFromPoint(pt, MONITOR_DEFAULTTONULL) == NULL)
+	//		return;
+	//}
+	if (mouseactive) {
+		disablecapture();
+		//SetCursorPos(x, y);
+		if (dir) {
+			recapture = 1;
+		}
+	}
+}
+
 int isfocus()
 {
 	if (isfullscreen() > 0) {
