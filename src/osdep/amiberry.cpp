@@ -756,7 +756,21 @@ void process_event(SDL_Event event)
 				inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
 				break;
 			}
-			
+			if (action_replay_button && scancode == action_replay_button)
+			{
+				inputdevice_add_inputcode(AKS_FREEZEBUTTON, 1, nullptr);
+				break;
+			}
+			if (fullscreen_key && scancode == fullscreen_key)
+			{
+				inputdevice_add_inputcode(AKS_TOGGLEWINDOWEDFULLSCREEN, 1, nullptr);
+				break;
+			}
+			if (quit_key && scancode == quit_key)
+			{
+				inputdevice_add_inputcode(AKS_QUIT, 1, nullptr);
+				break;
+			}
 			my_kbd_handler(0, scancode, 1, false);
 		}
 		break;
