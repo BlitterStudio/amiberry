@@ -686,6 +686,195 @@ static void add_media_insert_queue(const TCHAR* drvname, int retrycnt)
 	}
 }
 
+static int touch_touched;
+static unsigned long touch_time;
+
+#define MAX_TOUCHES 10
+struct touch_store
+{
+	bool inuse;
+	unsigned long id;
+	int port;
+	int button;
+	int axis;
+};
+static struct touch_store touches[MAX_TOUCHES];
+
+static void touch_release(struct touch_store* ts, const RECT* rcontrol)
+{
+	if (ts->port == 0) {
+		if (ts->button == 0)
+			inputdevice_uaelib(_T("JOY1_FIRE_BUTTON"), 0, 1, false);
+		if (ts->button == 1)
+			inputdevice_uaelib(_T("JOY1_2ND_BUTTON"), 0, 1, false);
+	}
+	else if (ts->port == 1) {
+		if (ts->button == 0)
+			inputdevice_uaelib(_T("JOY2_FIRE_BUTTON"), 0, 1, false);
+		if (ts->button == 1)
+			inputdevice_uaelib(_T("JOY2_2ND_BUTTON"), 0, 1, false);
+	}
+	if (ts->axis >= 0) {
+		if (ts->port == 0) {
+			inputdevice_uaelib(_T("MOUSE1_HORIZ"), 0, -1, false);
+			inputdevice_uaelib(_T("MOUSE1_VERT"), 0, -1, false);
+		}
+		else {
+			inputdevice_uaelib(_T("JOY2_HORIZ"), 0, 1, false);
+			inputdevice_uaelib(_T("JOY2_VERT"), 0, 1, false);
+		}
+	}
+	ts->button = -1;
+	ts->axis = -1;
+}
+
+static void tablet_touch(unsigned long id, int pressrel, int x, int y, const RECT* rcontrol)
+{
+	struct touch_store* ts = NULL;
+	int buttony = rcontrol->bottom - (rcontrol->bottom - rcontrol->top) / 4;
+
+	int new_slot = -1;
+	for (int i = 0; i < MAX_TOUCHES; i++) {
+		struct touch_store* tts = &touches[i];
+		if (!tts->inuse && new_slot < 0)
+			new_slot = i;
+		if (tts->inuse && tts->id == id) {
+			ts = tts;
+#if TOUCH_DEBUG > 1
+			write_log(_T("touch_event: old touch event %d\n"), id);
+#endif
+			break;
+		}
+	}
+	if (!ts) {
+		// do not allocate new if release
+		if (pressrel == 0)
+			return;
+		if (new_slot < 0)
+			return;
+#if TOUCH_DEBUG > 1
+		write_log(_T("touch_event: new touch event %d\n"), id);
+#endif
+		ts = &touches[new_slot];
+		ts->inuse = true;
+		ts->axis = -1;
+		ts->button = -1;
+		ts->id = id;
+
+	}
+
+	// Touch release? Release buttons, center stick/mouse.
+	if (ts->inuse && ts->id == id && pressrel < 0) {
+		touch_release(ts, rcontrol);
+		ts->inuse = false;
+		return;
+	}
+
+	// Check hit boxes if new touch.
+	for (int i = 0; i < 2; i++) {
+		const RECT* r = &rcontrol[i];
+		if (x >= r->left && x < r->right && y >= r->top && y < r->bottom) {
+
+#if TOUCH_DEBUG > 1
+			write_log(_T("touch_event: press=%d rect=%d wm=%d\n"), pressrel, i, dinput_winmouse());
+#endif
+			if (pressrel == 0) {
+				// move? port can't change, axis<>button not allowed
+				if (ts->port == i) {
+					if (y >= buttony && ts->button >= 0) {
+						int button = x > r->left + (r->right - r->left) / 2 ? 1 : 0;
+						if (button != ts->button) {
+							// button change, release old button
+							touch_release(ts, rcontrol);
+							ts->button = button;
+							pressrel = 1;
+						}
+					}
+				}
+			}
+			else if (pressrel > 0) {
+				// new touch
+				ts->port = i;
+				if (ts->button < 0 && y >= buttony) {
+					ts->button = x > r->left + (r->right - r->left) / 2 ? 1 : 0;
+				}
+				else if (ts->axis < 0 && y < buttony) {
+					ts->axis = 1;
+				}
+			}
+		}
+	}
+
+	// Directions hit?
+	if (ts->inuse && ts->id == id && ts->axis >= 0) {
+		const RECT* r = &rcontrol[ts->port];
+		int xdiff = (r->left + (r->right - r->left) / 2) - x;
+		int ydiff = (r->top + (buttony - r->top) / 2) - y;
+
+#if TOUCH_DEBUG > 1
+		write_log(_T("touch_event: rect=%d xdiff %03d ydiff %03d\n"), ts->port, xdiff, ydiff);
+#endif
+		xdiff = -xdiff;
+		ydiff = -ydiff;
+
+		if (ts->port == 0) {
+
+			int div = (r->bottom - r->top) / (2 * 5);
+			if (div <= 0)
+				div = 1;
+			int vx = xdiff / div;
+			int vy = ydiff / div;
+
+#if TOUCH_DEBUG > 1
+			write_log(_T("touch_event: xdiff %03d ydiff %03d div %03d vx %03d vy %03d\n"), xdiff, ydiff, div, vx, vy);
+#endif
+			inputdevice_uaelib(_T("MOUSE1_HORIZ"), vx, -1, false);
+			inputdevice_uaelib(_T("MOUSE1_VERT"), vy, -1, false);
+
+		}
+		else {
+
+			int div = (r->bottom - r->top) / (2 * 3);
+			if (div <= 0)
+				div = 1;
+			if (xdiff <= -div)
+				inputdevice_uaelib(_T("JOY2_HORIZ"), -1, 1, false);
+			else if (xdiff >= div)
+				inputdevice_uaelib(_T("JOY2_HORIZ"), 1, 1, false);
+			else
+				inputdevice_uaelib(_T("JOY2_HORIZ"), 0, 1, false);
+			if (ydiff <= -div)
+				inputdevice_uaelib(_T("JOY2_VERT"), -1, 1, false);
+			else if (ydiff >= div)
+				inputdevice_uaelib(_T("JOY2_VERT"), 1, 1, false);
+			else
+				inputdevice_uaelib(_T("JOY2_VERT"), 0, 1, false);
+		}
+	}
+
+	// Buttons hit?
+	if (ts->inuse && ts->id == id && pressrel > 0) {
+		if (ts->port == 0) {
+			if (ts->button == 0)
+				inputdevice_uaelib(_T("JOY1_FIRE_BUTTON"), 1, 1, false);
+			if (ts->button == 1)
+				inputdevice_uaelib(_T("JOY1_2ND_BUTTON"), 1, 1, false);
+		}
+		else if (ts->port == 1) {
+			if (ts->button == 0)
+				inputdevice_uaelib(_T("JOY2_FIRE_BUTTON"), 1, 1, false);
+			if (ts->button == 1)
+				inputdevice_uaelib(_T("JOY2_2ND_BUTTON"), 1, 1, false);
+		}
+	}
+}
+
+static void touch_event(unsigned long id, int pressrel, int x, int y, const RECT* rcontrol)
+{
+	// No lightpen support (yet?)
+	tablet_touch(id, pressrel, x, y, rcontrol);
+}
+
 void process_event(SDL_Event event)
 {
 	if (event.type == SDL_WINDOWEVENT)
