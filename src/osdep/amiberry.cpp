@@ -793,7 +793,7 @@ void process_event(SDL_Event event)
 				|| isfullscreen() > 0))
 		{
 			if (!pause_emulation || currprefs.active_nocapture_pause)
-				setmouseactive((event.button.clicks == 2 || isfullscreen() > 0) ? 2 : 1);
+				setmouseactive((event.button.clicks == 1 || isfullscreen() > 0) ? 2 : 1);
 		}
 		else if (isfocus())
 		{
