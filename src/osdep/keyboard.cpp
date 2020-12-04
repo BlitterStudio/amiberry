@@ -389,19 +389,19 @@ bool my_kbd_handler(int keyboard, int scancode, int newstate, bool alwaysrelease
 		scancode = 0;
 
 	if (newstate) {
-		if (enter_gui_key && SDL_SCANCODE_TO_KEYCODE(scancode) == enter_gui_key)
+		if (enter_gui_key && scancode == enter_gui_key)
 		{
 			inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
 			scancode = 0;
 		}
 		
-		if (action_replay_button && SDL_SCANCODE_TO_KEYCODE(scancode) == action_replay_button)
+		if (action_replay_button && scancode == action_replay_button)
 		{
 			inputdevice_add_inputcode(AKS_FREEZEBUTTON, 1, nullptr);
 			scancode = 0;
 		}
 
-		if (fullscreen_key && SDL_SCANCODE_TO_KEYCODE(scancode) == fullscreen_key)
+		if (fullscreen_key && scancode == fullscreen_key)
 		{
 			inputdevice_add_inputcode(AKS_TOGGLEWINDOWEDFULLSCREEN, 1, nullptr);
 			scancode = 0;

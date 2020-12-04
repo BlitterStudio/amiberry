@@ -92,13 +92,13 @@ void set_key_configs(struct uae_prefs* p)
 {
 	if (strncmp(p->open_gui, "", 1) != 0)
 		// If we have a value in the config, we use that instead
-		enter_gui_key = SDL_GetKeyFromName(p->open_gui);
+		enter_gui_key = SDL_GetScancodeFromName(p->open_gui);
 	else
 		// Otherwise we go for the default found in amiberry.conf
-		enter_gui_key = SDL_GetKeyFromName(amiberry_options.default_open_gui_key);
+		enter_gui_key = SDL_GetScancodeFromName(amiberry_options.default_open_gui_key);
 	// if nothing was found in amiberry.conf either, we default back to F12
 	if (enter_gui_key == 0)
-		enter_gui_key = SDLK_F12;
+		enter_gui_key = SDL_SCANCODE_F12;
 
 	enter_gui_button = SDL_GameControllerGetButtonFromString(p->open_gui);
 	if (enter_gui_button == SDL_CONTROLLER_BUTTON_INVALID)
@@ -107,21 +107,21 @@ void set_key_configs(struct uae_prefs* p)
 		enter_gui_button = SDL_CONTROLLER_BUTTON_GUIDE;
 	
 	if (strncmp(p->quit_amiberry, "", 1) != 0)
-		quit_key = SDL_GetKeyFromName(p->quit_amiberry);
+		quit_key = SDL_GetScancodeFromName(p->quit_amiberry);
 	else
-		quit_key = SDL_GetKeyFromName(amiberry_options.default_quit_key);
+		quit_key = SDL_GetScancodeFromName(amiberry_options.default_quit_key);
 
 	if (strncmp(p->action_replay, "", 1) != 0)
-		action_replay_button = SDL_GetKeyFromName(p->action_replay);
+		action_replay_button = SDL_GetScancodeFromName(p->action_replay);
 	else
-		action_replay_button = SDL_GetKeyFromName(amiberry_options.default_ar_key);
+		action_replay_button = SDL_GetScancodeFromName(amiberry_options.default_ar_key);
 	if (action_replay_button == 0)
-		action_replay_button = SDLK_PAUSE;
+		action_replay_button = SDL_SCANCODE_PAUSE;
 
 	if (strncmp(p->fullscreen_toggle, "", 1) != 0)
-		fullscreen_key = SDL_GetKeyFromName(p->fullscreen_toggle);
+		fullscreen_key = SDL_GetScancodeFromName(p->fullscreen_toggle);
 	else
-		fullscreen_key = SDL_GetKeyFromName(amiberry_options.default_fullscreen_toggle_key);
+		fullscreen_key = SDL_GetScancodeFromName(amiberry_options.default_fullscreen_toggle_key);
 }
 
 int pissoff_value = 15000 * CYCLE_UNIT;
