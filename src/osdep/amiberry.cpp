@@ -1436,39 +1436,39 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_target_write_bool(f, _T("middle_mouse"), (p->input_mouse_untrap & MOUSEUNTRAP_MIDDLEBUTTON) != 0);
 	cfgfile_target_dwrite_str(f, _T("serial_port"), p->sername[0] ? p->sername : _T("none"));
 
-	cfgfile_write(f, _T("active_priority"), _T("%d"), p->active_capture_priority);
+	cfgfile_target_dwrite(f, _T("active_priority"), _T("%d"), p->active_capture_priority);
 	cfgfile_target_dwrite_bool(f, _T("active_not_captured_nosound"), p->active_nocapture_nosound);
 	cfgfile_target_dwrite_bool(f, _T("active_not_captured_pause"), p->active_nocapture_pause);
-	cfgfile_write(f, _T("inactive_priority"), _T("%d"), p->inactive_priority);
+	cfgfile_target_dwrite(f, _T("inactive_priority"), _T("%d"), p->inactive_priority);
 	cfgfile_target_dwrite_bool(f, _T("inactive_nosound"), p->inactive_nosound);
 	cfgfile_target_dwrite_bool(f, _T("inactive_pause"), p->inactive_pause);
 	cfgfile_target_dwrite(f, _T("inactive_input"), _T("%d"), p->inactive_input);
-	cfgfile_write(f, _T("minimized_priority"), _T("%d"), p->minimized_priority);
+	cfgfile_target_dwrite(f, _T("minimized_priority"), _T("%d"), p->minimized_priority);
 	cfgfile_target_dwrite_bool(f, _T("minimized_nosound"), p->minimized_nosound);
 	cfgfile_target_dwrite_bool(f, _T("minimized_pause"), p->minimized_pause);
-	cfgfile_write(f, _T("minimized_input"), _T("%d"), p->minimized_input);
+	cfgfile_target_dwrite(f, _T("minimized_input"), _T("%d"), p->minimized_input);
 	cfgfile_target_dwrite_bool(f, _T("inactive_minimize"), p->minimize_inactive);
 	cfgfile_target_dwrite_bool(f, _T("active_capture_automatically"), p->capture_always);
 
 	cfgfile_target_dwrite(f, _T("cpu_idle"), _T("%d"), p->cpu_idle);
 	cfgfile_target_dwrite_bool(f, _T("right_control_is_right_win"), p->right_control_is_right_win_key);
 	
-	cfgfile_write_bool(f, _T("amiberry.gfx_auto_height"), p->gfx_auto_height);
-	cfgfile_write(f, _T("amiberry.gfx_correct_aspect"), _T("%d"), p->gfx_correct_aspect);
-	cfgfile_write(f, _T("amiberry.kbd_led_num"), _T("%d"), p->kbd_led_num);
-	cfgfile_write(f, _T("amiberry.kbd_led_scr"), _T("%d"), p->kbd_led_scr);
-	cfgfile_write(f, _T("amiberry.scaling_method"), _T("%d"), p->scaling_method);
+	cfgfile_target_dwrite_bool(f, _T("gfx_auto_height"), p->gfx_auto_height);
+	cfgfile_target_dwrite(f, _T("gfx_correct_aspect"), _T("%d"), p->gfx_correct_aspect);
+	cfgfile_target_dwrite(f, _T("kbd_led_num"), _T("%d"), p->kbd_led_num);
+	cfgfile_target_dwrite(f, _T("kbd_led_scr"), _T("%d"), p->kbd_led_scr);
+	cfgfile_target_dwrite(f, _T("scaling_method"), _T("%d"), p->scaling_method);
 
-	cfgfile_dwrite_str(f, _T("amiberry.open_gui"), p->open_gui);
-	cfgfile_dwrite_str(f, _T("amiberry.quit_amiberry"), p->quit_amiberry);
-	cfgfile_dwrite_str(f, _T("amiberry.action_replay"), p->action_replay);
-	cfgfile_dwrite_str(f, _T("amiberry.fullscreen_toggle"), p->fullscreen_toggle);
-	cfgfile_write_bool(f, _T("amiberry.allow_host_run"), p->allow_host_run);
-	cfgfile_write_bool(f, _T("amiberry.use_analogue_remap"), p->input_analog_remap);
+	cfgfile_target_dwrite_str(f, _T("open_gui"), p->open_gui);
+	cfgfile_target_dwrite_str(f, _T("quit_amiberry"), p->quit_amiberry);
+	cfgfile_target_dwrite_str(f, _T("action_replay"), p->action_replay);
+	cfgfile_target_dwrite_str(f, _T("fullscreen_toggle"), p->fullscreen_toggle);
+	cfgfile_target_dwrite_bool(f, _T("allow_host_run"), p->allow_host_run);
+	cfgfile_target_dwrite_bool(f, _T("use_analogue_remap"), p->input_analog_remap);
 
-	cfgfile_write_bool(f, _T("amiberry.use_retroarch_quit"), p->use_retroarch_quit);
-	cfgfile_write_bool(f, _T("amiberry.use_retroarch_menu"), p->use_retroarch_menu);
-	cfgfile_write_bool(f, _T("amiberry.use_retroarch_reset"), p->use_retroarch_reset);
+	cfgfile_target_dwrite_bool(f, _T("use_retroarch_quit"), p->use_retroarch_quit);
+	cfgfile_target_dwrite_bool(f, _T("use_retroarch_menu"), p->use_retroarch_menu);
+	cfgfile_target_dwrite_bool(f, _T("use_retroarch_reset"), p->use_retroarch_reset);
 
 #ifdef ANDROID
 	cfgfile_write(f, "amiberry.onscreen", "%d", p->onScreen);
