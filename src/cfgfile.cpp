@@ -516,7 +516,7 @@ bool cfgfile_option_get_bool(const TCHAR* s, const TCHAR* option)
 	return ret;
 }
 
-static void trim_wsa(char* s)
+static void trim_wsa (char *s)
 {
 	/* Delete trailing whitespace.  */
 	int len = strlen (s);

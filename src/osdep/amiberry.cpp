@@ -43,6 +43,8 @@
 #include "gfxboard.h"
 #include "devices.h"
 #include <map>
+#include <parser.h>
+
 
 
 #include "amiberry_filesys.hpp"
@@ -554,78 +556,75 @@ static int is_in_media_queue(const TCHAR* drvname)
 	return -1;
 }
 
+static void start_media_insert_timer();
+
 //TODO Implement this from WinUAE's window timer event
 Uint32 timer_callbackfunc(Uint32 interval, void* param)
 {
+	if (int(param) == 2) {
+		bool restart = false;
+		SDL_RemoveTimer(media_change_timer);
+		media_change_timer = 0;
+
+		for (int i = 0; i < MEDIA_INSERT_QUEUE_SIZE; i++) {
+			if (media_insert_queue[i]) {
+				TCHAR* drvname = media_insert_queue[i];
+				int r = my_getvolumeinfo(drvname);
+				if (r < 0) {
+					if (media_insert_queue_type[i] > 0) {
+						write_log(_T("Mounting %s but drive is not ready, %d.. retrying %d..\n"), drvname, r, media_insert_queue_type[i]);
+						media_insert_queue_type[i]--;
+						restart = true;
+						continue;
+					}
+					else {
+						write_log(_T("Mounting %s but drive is not ready, %d.. aborting..\n"), drvname, r);
+					}
+				}
+				else {
+					int inserted = 1;
+					//DWORD type = GetDriveType(drvname);
+					//if (type == DRIVE_CDROM)
+					//	inserted = -1;
+					r = filesys_media_change(drvname, inserted, NULL);
+					if (r < 0) {
+						write_log(_T("Mounting %s but previous media change is still in progress..\n"), drvname);
+						restart = true;
+						break;
+					}
+					else if (r > 0) {
+						write_log(_T("%s mounted\n"), drvname);
+					}
+					else {
+						write_log(_T("%s mount failed\n"), drvname);
+					}
+				}
+				xfree(media_insert_queue[i]);
+				media_insert_queue[i] = NULL;
+			}
+		}
+
+		if (restart)
+			start_media_insert_timer();
+	}
+	else if (int(param) == 4) {
+		SDL_RemoveTimer(device_change_timer);
+		device_change_timer = 0;
+		inputdevice_devicechange(&changed_prefs);
+		inputdevice_copyjports(&changed_prefs, &currprefs);
+	}
+	else if (int(param) == 1) {
+#ifdef PARALLEL_PORT
+		finishjob();
+#endif
+	}
 	return 0;
-//	if (wParam == 2) {
-//		bool restart = false;
-//		SDL_RemoveTimer(media_change_timer);
-//		media_change_timer = 0;
-//		DWORD r = CMP_WaitNoPendingInstallEvents(0);
-//		write_log(_T("filesys timer, CMP_WaitNoPendingInstallEvents=%d\n"), r);
-//		if (r == WAIT_OBJECT_0) {
-//			for (int i = 0; i < MEDIA_INSERT_QUEUE_SIZE; i++) {
-//				if (media_insert_queue[i]) {
-//					TCHAR* drvname = media_insert_queue[i];
-//					int r = my_getvolumeinfo(drvname);
-//					if (r < 0) {
-//						if (media_insert_queue_type[i] > 0) {
-//							write_log(_T("Mounting %s but drive is not ready, %d.. retrying %d..\n"), drvname, r, media_insert_queue_type[i]);
-//							media_insert_queue_type[i]--;
-//							restart = true;
-//							continue;
-//						}
-//						else {
-//							write_log(_T("Mounting %s but drive is not ready, %d.. aborting..\n"), drvname, r);
-//						}
-//					}
-//					else {
-//						int inserted = 1;
-//						DWORD type = GetDriveType(drvname);
-//						if (type == DRIVE_CDROM)
-//							inserted = -1;
-//						r = filesys_media_change(drvname, inserted, NULL);
-//						if (r < 0) {
-//							write_log(_T("Mounting %s but previous media change is still in progress..\n"), drvname);
-//							restart = true;
-//							break;
-//						}
-//						else if (r > 0) {
-//							write_log(_T("%s mounted\n"), drvname);
-//						}
-//						else {
-//							write_log(_T("%s mount failed\n"), drvname);
-//						}
-//					}
-//					xfree(media_insert_queue[i]);
-//					media_insert_queue[i] = NULL;
-//				}
-//			}
-//		}
-//		else if (r == WAIT_TIMEOUT) {
-//			restart = true;
-//		}
-//		if (restart)
-//			start_media_insert_timer(hWnd);
-//	}
-//	else if (wParam == 4) {
-//		SDL_RemoveTimer(device_change_timer);
-//		device_change_timer = 0;
-//		inputdevice_devicechange(&changed_prefs);
-//		inputdevice_copyjports(&changed_prefs, &workprefs);
-//	}
-//	else if (wParam == 1) {
-//#ifdef PARALLEL_PORT
-//		finishjob();
-//#endif
-//	}
 }
 
 static void start_media_insert_timer()
 {
 	if (!media_change_timer) {
-		media_change_timer = SDL_AddTimer(1000, timer_callbackfunc, nullptr);
+		media_change_timer = SDL_AddTimer(1000, timer_callbackfunc, (void*)2);
 	}
 }
 
@@ -655,10 +654,18 @@ void process_event(SDL_Event event)
 	{
 		switch (event.window.event)
 		{
-		case SDL_WINDOWEVENT_MINIMIZED:
-			setminimized();
-			amiberry_inactive(minimized);
+		case SDL_WINDOWEVENT_FOCUS_GAINED:
+			amiberry_active(minimized);
+			unsetminimized();
 			break;
+		case SDL_WINDOWEVENT_MINIMIZED:
+			if (!minimized)
+			{
+				write_log(_T("SIZE_MINIMIZED\n"));
+				setminimized();
+				amiberry_inactive(minimized);
+			}
+			break;			
 		case SDL_WINDOWEVENT_RESTORED:
 			amiberry_active(minimized);
 			unsetminimized();
@@ -668,35 +675,35 @@ void process_event(SDL_Event event)
 			if (currprefs.input_tablet > 0 && currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC && isfullscreen() <= 0)
 			{
 				if (mousehack_alive())
-				{
 					setcursorshape();
-					break;
-				}
 			}
 			break;
 		case SDL_WINDOWEVENT_LEAVE:
 			mouseinside = false;
-			break;
-		case SDL_WINDOWEVENT_FOCUS_GAINED:
-			amiberry_active(minimized);
-			unsetminimized();
-			break;
+			break;	
 		case SDL_WINDOWEVENT_FOCUS_LOST:
 			focus = 0;
 			amiberry_inactive(minimized);
+			if (isfullscreen() <= 0 && currprefs.minimize_inactive)
+				minimizewindow();
 			break;
 		case SDL_WINDOWEVENT_CLOSE:
 			if (device_change_timer)
 				SDL_RemoveTimer(device_change_timer);
 			device_change_timer = 0;
+			wait_keyrelease();
+			inputdevice_unacquire();
 			uae_quit();
 			break;
-
+		case SDL_WINDOWEVENT_EXPOSED:
+			notice_screen_contents_lost();
+			updatedisplayarea();
+			break;
 		default:
 			break;
 		}
 	}
-
+	else
 	switch (event.type)
 	{
 	case SDL_QUIT:
@@ -705,13 +712,13 @@ void process_event(SDL_Event event)
 
 	case SDL_JOYDEVICEADDED:
 	case SDL_CONTROLLERDEVICEADDED:
-		write_log("SDL Controller/Joystick device added! Re-running import joysticks...\n");
-		import_joysticks();
-		break;
-
 	case SDL_JOYDEVICEREMOVED:
 	case SDL_CONTROLLERDEVICEREMOVED:
-		write_log("SDL Controller/Joystick device removed!\n");
+		write_log("SDL Controller/Joystick device added or removed! Re-running import joysticks...\n");
+		import_joysticks();
+		if (device_change_timer)
+			SDL_RemoveTimer(device_change_timer);
+		device_change_timer = SDL_AddTimer(2000, timer_callbackfunc, (void*)4);	
 		break;
 
 	case SDL_CONTROLLERBUTTONDOWN:
@@ -771,7 +778,8 @@ void process_event(SDL_Event event)
 	case SDL_FINGERDOWN:
 		if (isfocus())
 		{
-			setmousebuttonstate(0, 0, 1);
+			if (event.button.clicks == 2)
+				setmousebuttonstate(0, 0, 1);
 		}
 		break;
 
@@ -785,7 +793,7 @@ void process_event(SDL_Event event)
 				|| isfullscreen() > 0))
 		{
 			if (!pause_emulation || currprefs.active_nocapture_pause)
-				setmouseactive((event.button.button == SDL_BUTTON_LEFT || isfullscreen() > 0) ? 2 : 1);
+				setmouseactive((event.button.clicks == 2 || isfullscreen() > 0) ? 2 : 1);
 		}
 		else if (isfocus())
 		{
@@ -1425,6 +1433,26 @@ void target_default_options(struct uae_prefs* p, int type)
 
 void target_save_options(struct zfile* f, struct uae_prefs* p)
 {
+	cfgfile_target_write_bool(f, _T("middle_mouse"), (p->input_mouse_untrap & MOUSEUNTRAP_MIDDLEBUTTON) != 0);
+	cfgfile_target_dwrite_str(f, _T("serial_port"), p->sername[0] ? p->sername : _T("none"));
+
+	cfgfile_write(f, _T("active_priority"), _T("%d"), p->active_capture_priority);
+	cfgfile_target_dwrite_bool(f, _T("active_not_captured_nosound"), p->active_nocapture_nosound);
+	cfgfile_target_dwrite_bool(f, _T("active_not_captured_pause"), p->active_nocapture_pause);
+	cfgfile_write(f, _T("inactive_priority"), _T("%d"), p->inactive_priority);
+	cfgfile_target_dwrite_bool(f, _T("inactive_nosound"), p->inactive_nosound);
+	cfgfile_target_dwrite_bool(f, _T("inactive_pause"), p->inactive_pause);
+	cfgfile_target_dwrite(f, _T("inactive_input"), _T("%d"), p->inactive_input);
+	cfgfile_write(f, _T("minimized_priority"), _T("%d"), p->minimized_priority);
+	cfgfile_target_dwrite_bool(f, _T("minimized_nosound"), p->minimized_nosound);
+	cfgfile_target_dwrite_bool(f, _T("minimized_pause"), p->minimized_pause);
+	cfgfile_write(f, _T("minimized_input"), _T("%d"), p->minimized_input);
+	cfgfile_target_dwrite_bool(f, _T("inactive_minimize"), p->minimize_inactive);
+	cfgfile_target_dwrite_bool(f, _T("active_capture_automatically"), p->capture_always);
+
+	cfgfile_target_dwrite(f, _T("cpu_idle"), _T("%d"), p->cpu_idle);
+	cfgfile_target_dwrite_bool(f, _T("right_control_is_right_win"), p->right_control_is_right_win_key);
+	
 	cfgfile_write_bool(f, _T("amiberry.gfx_auto_height"), p->gfx_auto_height);
 	cfgfile_write(f, _T("amiberry.gfx_correct_aspect"), _T("%d"), p->gfx_correct_aspect);
 	cfgfile_write(f, _T("amiberry.kbd_led_num"), _T("%d"), p->kbd_led_num);
@@ -1442,22 +1470,6 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_write_bool(f, _T("amiberry.use_retroarch_menu"), p->use_retroarch_menu);
 	cfgfile_write_bool(f, _T("amiberry.use_retroarch_reset"), p->use_retroarch_reset);
 
-	cfgfile_target_dwrite(f, _T("cpu_idle"), _T("%d"), p->cpu_idle);
-	cfgfile_target_dwrite_bool(f, _T("right_control_is_right_win"), p->right_control_is_right_win_key);
-	cfgfile_write(f, _T("amiberry.active_priority"), _T("%d"), p->active_capture_priority);
-	cfgfile_target_dwrite_bool(f, _T("active_not_captured_nosound"), p->active_nocapture_nosound);
-	cfgfile_target_dwrite_bool(f, _T("active_not_captured_pause"), p->active_nocapture_pause);
-	cfgfile_write(f, _T("amiberry.inactive_priority"), _T("%d"), p->inactive_priority);
-	cfgfile_target_dwrite_bool(f, _T("inactive_nosound"), p->inactive_nosound);
-	cfgfile_target_dwrite_bool(f, _T("inactive_pause"), p->inactive_pause);
-	cfgfile_target_dwrite(f, _T("inactive_input"), _T("%d"), p->inactive_input);
-	cfgfile_write(f, _T("amiberry.minimized_priority"), _T("%d"), p->minimized_priority);
-	cfgfile_target_dwrite_bool(f, _T("minimized_nosound"), p->minimized_nosound);
-	cfgfile_target_dwrite_bool(f, _T("minimized_pause"), p->minimized_pause);
-	cfgfile_write(f, _T("amiberry.minimized_input"), _T("%d"), p->minimized_input);
-	cfgfile_target_dwrite_bool(f, _T("inactive_iconify"), p->minimize_inactive);
-	cfgfile_target_dwrite_bool(f, _T("active_capture_automatically"), p->capture_always);
-	
 #ifdef ANDROID
 	cfgfile_write(f, "amiberry.onscreen", "%d", p->onScreen);
 	cfgfile_write(f, "amiberry.onscreen_textinput", "%d", p->onScreen_textinput);
@@ -1507,39 +1519,15 @@ TCHAR* target_expand_environment(const TCHAR* path, TCHAR* out, int maxlen)
 
 int target_parse_option(struct uae_prefs* p, const char* option, const char* value)
 {
-#ifdef ANDROID
-	int result = (cfgfile_intval(option, value, "onscreen", &p->onScreen, 1)
-		|| cfgfile_intval(option, value, "onscreen_textinput", &p->onScreen_textinput, 1)
-		|| cfgfile_intval(option, value, "onscreen_dpad", &p->onScreen_dpad, 1)
-		|| cfgfile_intval(option, value, "onscreen_button1", &p->onScreen_button1, 1)
-		|| cfgfile_intval(option, value, "onscreen_button2", &p->onScreen_button2, 1)
-		|| cfgfile_intval(option, value, "onscreen_button3", &p->onScreen_button3, 1)
-		|| cfgfile_intval(option, value, "onscreen_button4", &p->onScreen_button4, 1)
-		|| cfgfile_intval(option, value, "onscreen_button5", &p->onScreen_button5, 1)
-		|| cfgfile_intval(option, value, "onscreen_button6", &p->onScreen_button6, 1)
-		|| cfgfile_intval(option, value, "custom_position", &p->custom_position, 1)
-		|| cfgfile_intval(option, value, "pos_x_textinput", &p->pos_x_textinput, 1)
-		|| cfgfile_intval(option, value, "pos_y_textinput", &p->pos_y_textinput, 1)
-		|| cfgfile_intval(option, value, "pos_x_dpad", &p->pos_x_dpad, 1)
-		|| cfgfile_intval(option, value, "pos_y_dpad", &p->pos_y_dpad, 1)
-		|| cfgfile_intval(option, value, "pos_x_button1", &p->pos_x_button1, 1)
-		|| cfgfile_intval(option, value, "pos_y_button1", &p->pos_y_button1, 1)
-		|| cfgfile_intval(option, value, "pos_x_button2", &p->pos_x_button2, 1)
-		|| cfgfile_intval(option, value, "pos_y_button2", &p->pos_y_button2, 1)
-		|| cfgfile_intval(option, value, "pos_x_button3", &p->pos_x_button3, 1)
-		|| cfgfile_intval(option, value, "pos_y_button3", &p->pos_y_button3, 1)
-		|| cfgfile_intval(option, value, "pos_x_button4", &p->pos_x_button4, 1)
-		|| cfgfile_intval(option, value, "pos_y_button4", &p->pos_y_button4, 1)
-		|| cfgfile_intval(option, value, "pos_x_button5", &p->pos_x_button5, 1)
-		|| cfgfile_intval(option, value, "pos_y_button5", &p->pos_y_button5, 1)
-		|| cfgfile_intval(option, value, "pos_x_button6", &p->pos_x_button6, 1)
-		|| cfgfile_intval(option, value, "pos_y_button6", &p->pos_y_button6, 1)
-		|| cfgfile_intval(option, value, "floating_joystick", &p->floatingJoystick, 1)
-		|| cfgfile_intval(option, value, "disable_menu_vkeyb", &p->disableMenuVKeyb, 1)
-		);
-	if (result)
+	bool tbool;
+	
+	if (cfgfile_yesno(option, value, _T("middle_mouse"), &tbool)) {
+		if (tbool)
+			p->input_mouse_untrap |= MOUSEUNTRAP_MIDDLEBUTTON;
+		else
+			p->input_mouse_untrap &= ~MOUSEUNTRAP_MIDDLEBUTTON;
 		return 1;
-#endif
+	}
 	if (cfgfile_yesno(option, value, _T("allow_host_run"), &p->allow_host_run))
 		return 1;
 	if (cfgfile_yesno(option, value, _T("use_retroarch_quit"), &p->use_retroarch_quit))
@@ -1594,10 +1582,50 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 		return 1;
 	if (cfgfile_yesno(option, value, _T("active_capture_automatically"), &p->capture_always))
 		return 1;
-	if (cfgfile_yesno(option, value, _T("inactive_iconify"), &p->minimize_inactive))
+	if (cfgfile_yesno(option, value, _T("inactive_minimize"), &p->minimize_inactive))
 		return 1;
 	if (cfgfile_yesno(option, value, _T("right_control_is_right_win"), &p->right_control_is_right_win_key))
 		return 1;
+	if (cfgfile_string(option, value, _T("serial_port"), &p->sername[0], 256)) {
+		if (p->sername[0])
+			p->use_serial = true;
+		else
+			p->use_serial = false;
+		return 1;
+	}
+#ifdef ANDROID
+	int result = (cfgfile_intval(option, value, "onscreen", &p->onScreen, 1)
+		|| cfgfile_intval(option, value, "onscreen_textinput", &p->onScreen_textinput, 1)
+		|| cfgfile_intval(option, value, "onscreen_dpad", &p->onScreen_dpad, 1)
+		|| cfgfile_intval(option, value, "onscreen_button1", &p->onScreen_button1, 1)
+		|| cfgfile_intval(option, value, "onscreen_button2", &p->onScreen_button2, 1)
+		|| cfgfile_intval(option, value, "onscreen_button3", &p->onScreen_button3, 1)
+		|| cfgfile_intval(option, value, "onscreen_button4", &p->onScreen_button4, 1)
+		|| cfgfile_intval(option, value, "onscreen_button5", &p->onScreen_button5, 1)
+		|| cfgfile_intval(option, value, "onscreen_button6", &p->onScreen_button6, 1)
+		|| cfgfile_intval(option, value, "custom_position", &p->custom_position, 1)
+		|| cfgfile_intval(option, value, "pos_x_textinput", &p->pos_x_textinput, 1)
+		|| cfgfile_intval(option, value, "pos_y_textinput", &p->pos_y_textinput, 1)
+		|| cfgfile_intval(option, value, "pos_x_dpad", &p->pos_x_dpad, 1)
+		|| cfgfile_intval(option, value, "pos_y_dpad", &p->pos_y_dpad, 1)
+		|| cfgfile_intval(option, value, "pos_x_button1", &p->pos_x_button1, 1)
+		|| cfgfile_intval(option, value, "pos_y_button1", &p->pos_y_button1, 1)
+		|| cfgfile_intval(option, value, "pos_x_button2", &p->pos_x_button2, 1)
+		|| cfgfile_intval(option, value, "pos_y_button2", &p->pos_y_button2, 1)
+		|| cfgfile_intval(option, value, "pos_x_button3", &p->pos_x_button3, 1)
+		|| cfgfile_intval(option, value, "pos_y_button3", &p->pos_y_button3, 1)
+		|| cfgfile_intval(option, value, "pos_x_button4", &p->pos_x_button4, 1)
+		|| cfgfile_intval(option, value, "pos_y_button4", &p->pos_y_button4, 1)
+		|| cfgfile_intval(option, value, "pos_x_button5", &p->pos_x_button5, 1)
+		|| cfgfile_intval(option, value, "pos_y_button5", &p->pos_y_button5, 1)
+		|| cfgfile_intval(option, value, "pos_x_button6", &p->pos_x_button6, 1)
+		|| cfgfile_intval(option, value, "pos_y_button6", &p->pos_y_button6, 1)
+		|| cfgfile_intval(option, value, "floating_joystick", &p->floatingJoystick, 1)
+		|| cfgfile_intval(option, value, "disable_menu_vkeyb", &p->disableMenuVKeyb, 1)
+		);
+	if (result)
+		return 1;
+#endif
 	return 0;
 }
 

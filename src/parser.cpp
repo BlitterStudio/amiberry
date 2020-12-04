@@ -1022,11 +1022,30 @@ int enummidiports (void)
 
 void sernametodev (TCHAR *sername)
 {
-	STUB("");
+	int i;
+
+	for (i = 0; i < MAX_SERPAR_PORTS && comports[i]; i++) {
+		if (!_tcscmp(sername, comports[i]->cfgname)) {
+			_tcscpy(sername, comports[i]->dev);
+			return;
+		}
+	}
+	if (!_tcsncmp(sername, _T("TCP:"), 4))
+		return;
+	sername[0] = 0;
 }
 
 void serdevtoname (TCHAR *sername)
 {
-	STUB("");
+	int i;
+	if (!_tcsncmp(sername, _T("TCP:"), 4))
+		return;
+	for (i = 0; i < MAX_SERPAR_PORTS && comports[i]; i++) {
+		if (!_tcscmp(sername, comports[i]->dev)) {
+			_tcscpy(sername, comports[i]->cfgname);
+			return;
+		}
+	}
+	sername[0] = 0;
 }
 #endif

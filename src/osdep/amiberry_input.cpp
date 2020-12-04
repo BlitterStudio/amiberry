@@ -464,6 +464,8 @@ static int init_joystick()
 				}
 			}
 		}
+		//TODO handle controllers with no mapping as well
+		
 	}
 	return 1;
 }
