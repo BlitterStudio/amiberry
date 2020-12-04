@@ -561,7 +561,7 @@ static void start_media_insert_timer();
 //TODO Implement this from WinUAE's window timer event
 Uint32 timer_callbackfunc(Uint32 interval, void* param)
 {
-	if (int(param) == 2) {
+	if ((*(int*)&param) == 2) {
 		bool restart = false;
 		SDL_RemoveTimer(media_change_timer);
 		media_change_timer = 0;
@@ -607,13 +607,13 @@ Uint32 timer_callbackfunc(Uint32 interval, void* param)
 		if (restart)
 			start_media_insert_timer();
 	}
-	else if (int(param) == 4) {
+	else if ((*(int*)&param) == 4) {
 		SDL_RemoveTimer(device_change_timer);
 		device_change_timer = 0;
 		inputdevice_devicechange(&changed_prefs);
 		inputdevice_copyjports(&changed_prefs, &currprefs);
 	}
-	else if (int(param) == 1) {
+	else if ((*(int*)&param) == 1) {
 #ifdef PARALLEL_PORT
 		finishjob();
 #endif
