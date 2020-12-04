@@ -930,8 +930,7 @@ static void open_screen(struct uae_prefs* p)
 	init_colors();
 	picasso_refresh();
 
-	if (isfullscreen() != 0)
-		setmouseactive(-1);
+	setmouseactive(-1);
 }
 
 extern int vstrt; // vertical start
