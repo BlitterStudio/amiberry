@@ -1708,9 +1708,10 @@ exit:
 int picasso_setwincursor()
 {
 #ifdef AMIBERRY
-	if (p96_cursor)
+	if (p96_cursor) {
 		SDL_SetCursor(p96_cursor);
-	return 1;
+		return 1;
+	}
 #else
 	struct amigadisplay* ad = &adisplays[monid];
 	if (wincursor) {
