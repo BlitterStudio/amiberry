@@ -327,6 +327,7 @@ static void setmouseactive2(int active, bool allowpause)
 		if (mousehack_alive())
 			return;
 		SDL_SetCursor(normalcursor);
+		SDL_ShowCursor(SDL_ENABLE);
 	}
 
 	if (mouseactive > 0)
@@ -467,7 +468,6 @@ static void amiberry_inactive(int minimized)
 	filesys_flush_cache();
 }
 
-//TODO: find usages and implement them
 void minimizewindow()
 {
 	SDL_MinimizeWindow(sdl_window);
@@ -710,6 +710,15 @@ void process_event(SDL_Event event)
 		uae_quit();
 		break;
 
+	case SDL_CLIPBOARDUPDATE:
+		if (currprefs.clipboard_sharing && SDL_HasClipboardText() == SDL_TRUE)
+		{
+			auto* clipboard_host = SDL_GetClipboardText();
+			uae_clipboard_put_text(clipboard_host);
+			SDL_free(clipboard_host);	
+		}
+		break;
+		
 	case SDL_JOYDEVICEADDED:
 	case SDL_CONTROLLERDEVICEADDED:
 	case SDL_JOYDEVICEREMOVED:
@@ -940,16 +949,6 @@ void update_clipboard()
 	if (clipboard_uae) {
 		SDL_SetClipboardText(clipboard_uae);
 		uae_clipboard_free_text(clipboard_uae);
-	}
-	else {
-		// FIXME: Ideally, we would want to avoid this alloc/free
-		// when the clipboard hasn't changed.
-		if (SDL_HasClipboardText() == SDL_TRUE)
-		{
-			auto* clipboard_host = SDL_GetClipboardText();
-			uae_clipboard_put_text(clipboard_host);
-			SDL_free(clipboard_host);
-		}
 	}
 }
 
