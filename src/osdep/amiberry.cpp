@@ -314,7 +314,7 @@ static void setmouseactive2(int active, bool allowpause)
 		if (c != normalcursor)
 			return;
 	}
-
+	
 	if (active < 0)
 		active = 1;
 
@@ -1121,6 +1121,11 @@ void process_event(SDL_Event event)
 
 	case SDL_MOUSEMOTION:
 	{
+		if (currprefs.input_tablet > 0 && currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC && isfullscreen() <= 0)
+		{
+			if (mousehack_alive())
+				setcursorshape();
+		}
 		if (!mouseinside)
 			mouseinside = true;
 
