@@ -59,7 +59,8 @@
     <NMakePreprocessorDefinitions>DEBUG;ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;CPU_arm;ARM_HAS_DIV;USE_SDL2;_REENTRANT;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <RemoteBuildOutputs>
     </RemoteBuildOutputs>
-    <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)</RemoteProjectDir>
+    <AdditionalSourcesToCopyMapping>
+    </AdditionalSourcesToCopyMapping>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
     <RemoteBuildCommandLine>cd ~/projects/Amiberry; make -j4 PLATFORM=pi64</RemoteBuildCommandLine>
@@ -142,6 +143,7 @@
     <Text Include="..\conf\dir.txt">
       <DeploymentContent>true</DeploymentContent>
     </Text>
+    <Text Include="..\external\libguisan\CMakeLists.txt" />
     <Text Include="..\kickstarts\dir.txt">
       <DeploymentContent>true</DeploymentContent>
     </Text>
@@ -211,6 +213,9 @@
     <None Include="..\conf\amiberry.conf">
       <DeploymentContent>true</DeploymentContent>
     </None>
+    <None Include="..\external\libguisan\Android.mk" />
+    <None Include="..\external\libguisan\lib\.keep" />
+    <None Include="..\external\libguisan\Makefile" />
     <None Include="..\Makefile">
       <DeploymentContent>false</DeploymentContent>
     </None>
@@ -226,6 +231,61 @@
     <None Include="..\src\osdep\neon_helper.s" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\external\libguisan\src\actionevent.cpp" />
+    <ClCompile Include="..\external\libguisan\src\basiccontainer.cpp" />
+    <ClCompile Include="..\external\libguisan\src\cliprectangle.cpp" />
+    <ClCompile Include="..\external\libguisan\src\color.cpp" />
+    <ClCompile Include="..\external\libguisan\src\defaultfont.cpp" />
+    <ClCompile Include="..\external\libguisan\src\event.cpp" />
+    <ClCompile Include="..\external\libguisan\src\exception.cpp" />
+    <ClCompile Include="..\external\libguisan\src\focushandler.cpp" />
+    <ClCompile Include="..\external\libguisan\src\font.cpp" />
+    <ClCompile Include="..\external\libguisan\src\genericinput.cpp" />
+    <ClCompile Include="..\external\libguisan\src\graphics.cpp" />
+    <ClCompile Include="..\external\libguisan\src\gui.cpp" />
+    <ClCompile Include="..\external\libguisan\src\guisan.cpp" />
+    <ClCompile Include="..\external\libguisan\src\image.cpp" />
+    <ClCompile Include="..\external\libguisan\src\imagefont.cpp" />
+    <ClCompile Include="..\external\libguisan\src\inputevent.cpp" />
+    <ClCompile Include="..\external\libguisan\src\key.cpp" />
+    <ClCompile Include="..\external\libguisan\src\keyevent.cpp" />
+    <ClCompile Include="..\external\libguisan\src\keyinput.cpp" />
+    <ClCompile Include="..\external\libguisan\src\mouseevent.cpp" />
+    <ClCompile Include="..\external\libguisan\src\mouseinput.cpp" />
+    <ClCompile Include="..\external\libguisan\src\opengl\opengl.cpp" />
+    <ClCompile Include="..\external\libguisan\src\opengl\openglgraphics.cpp" />
+    <ClCompile Include="..\external\libguisan\src\opengl\openglimage.cpp" />
+    <ClCompile Include="..\external\libguisan\src\rectangle.cpp" />
+    <ClCompile Include="..\external\libguisan\src\sdl\sdl.cpp" />
+    <ClCompile Include="..\external\libguisan\src\sdl\sdl2graphics.cpp" />
+    <ClCompile Include="..\external\libguisan\src\sdl\sdlgraphics.cpp" />
+    <ClCompile Include="..\external\libguisan\src\sdl\sdlimage.cpp" />
+    <ClCompile Include="..\external\libguisan\src\sdl\sdlimageloader.cpp" />
+    <ClCompile Include="..\external\libguisan\src\sdl\sdlinput.cpp" />
+    <ClCompile Include="..\external\libguisan\src\sdl\sdltruetypefont.cpp" />
+    <ClCompile Include="..\external\libguisan\src\selectionevent.cpp" />
+    <ClCompile Include="..\external\libguisan\src\widget.cpp" />
+    <ClCompile Include="..\external\libguisan\src\widgets\button.cpp" />
+    <ClCompile Include="..\external\libguisan\src\widgets\checkbox.cpp" />
+    <ClCompile Include="..\external\libguisan\src\widgets\container.cpp" />
+    <ClCompile Include="..\external\libguisan\src\widgets\dropdown.cpp" />
+    <ClCompile Include="..\external\libguisan\src\widgets\icon.cpp" />
+    <ClCompile Include="..\external\libguisan\src\widgets\imagebutton.cpp" />
+    <ClCompile Include="..\external\libguisan\src\widgets\imagetextbutton.cpp" />
+    <ClCompile Include="..\external\libguisan\src\widgets\inputbox.cpp" />
+    <ClCompile Include="..\external\libguisan\src\widgets\label.cpp" />
+    <ClCompile Include="..\external\libguisan\src\widgets\listbox.cpp" />
+    <ClCompile Include="..\external\libguisan\src\widgets\messagebox.cpp" />
+    <ClCompile Include="..\external\libguisan\src\widgets\progressbar.cpp" />
+    <ClCompile Include="..\external\libguisan\src\widgets\radiobutton.cpp" />
+    <ClCompile Include="..\external\libguisan\src\widgets\scrollarea.cpp" />
+    <ClCompile Include="..\external\libguisan\src\widgets\slider.cpp" />
+    <ClCompile Include="..\external\libguisan\src\widgets\tab.cpp" />
+    <ClCompile Include="..\external\libguisan\src\widgets\tabbedarea.cpp" />
+    <ClCompile Include="..\external\libguisan\src\widgets\textbox.cpp" />
+    <ClCompile Include="..\external\libguisan\src\widgets\textfield.cpp" />
+    <ClCompile Include="..\external\libguisan\src\widgets\togglebutton.cpp" />
+    <ClCompile Include="..\external\libguisan\src\widgets\window.cpp" />
     <ClCompile Include="..\src\akiko.cpp">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
@@ -285,9 +345,6 @@
     <ClCompile Include="..\src\archivers\mp2\kjmp2.cpp" />
     <ClCompile Include="..\src\archivers\wrp\warp.cpp" />
     <ClCompile Include="..\src\archivers\zip\unzip.cpp" />
-    <ClCompile Include="..\src\aros.rom.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
     <ClCompile Include="..\src\audio.cpp">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
@@ -453,7 +510,6 @@
     <ClCompile Include="..\src\osdep\gui\CreateFilesysHardfile.cpp" />
     <ClCompile Include="..\src\osdep\gui\EditFilesysHardfile.cpp" />
     <ClCompile Include="..\src\osdep\gui\EditFilesysVirtual.cpp" />
-    <ClCompile Include="..\src\osdep\gui\InGameMessage.cpp" />
     <ClCompile Include="..\src\osdep\gui\main_window.cpp" />
     <ClCompile Include="..\src\osdep\gui\Navigation.cpp" />
     <ClCompile Include="..\src\osdep\gui\PanelAbout.cpp" />
@@ -488,6 +544,7 @@
     <ClCompile Include="..\src\p96_blit.cpp.in">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
+    <ClCompile Include="..\src\parser.cpp" />
     <ClCompile Include="..\src\readcpu.cpp">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
@@ -501,6 +558,7 @@
     <ClCompile Include="..\src\scp.cpp" />
     <ClCompile Include="..\src\scsi.cpp" />
     <ClCompile Include="..\src\scsiemul.cpp" />
+    <ClCompile Include="..\src\serial_win32.cpp" />
     <ClCompile Include="..\src\sinctable.cpp.in">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
@@ -529,6 +587,76 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\external\libguisan\include\guisan.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\actionevent.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\actionlistener.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\basiccontainer.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\cliprectangle.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\color.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\deathlistener.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\defaultfont.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\event.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\exception.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\focushandler.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\focuslistener.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\font.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\genericinput.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\glut.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\graphics.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\gui.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\image.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\imagefont.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\imageloader.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\input.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\inputevent.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\key.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\keyevent.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\keyinput.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\keylistener.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\listmodel.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\mouseevent.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\mouseinput.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\mouselistener.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\opengl.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\opengl\openglgraphics.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\opengl\openglimage.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\opengl\openglsdlimageloader.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\platform.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\rectangle.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\sdl.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\sdl\sdl2graphics.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\sdl\sdlgraphics.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\sdl\sdlimage.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\sdl\sdlimageloader.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\sdl\sdlinput.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\sdl\sdlpixel.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\sdl\sdltruetypefont.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\selectionevent.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\selectionlistener.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\widget.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\widgetlistener.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\widgets\button.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\widgets\checkbox.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\widgets\container.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\widgets\dropdown.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\widgets\icon.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\widgets\imagebutton.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\widgets\imagetextbutton.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\widgets\inputbox.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\widgets\label.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\widgets\listbox.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\widgets\messagebox.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\widgets\progressbar.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\widgets\radiobutton.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\widgets\scrollarea.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\widgets\slider.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\widgets\tab.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\widgets\tabbedarea.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\widgets\textbox.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\widgets\textfield.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\widgets\togglebutton.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\widgets\window.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\x.hpp" />
     <ClInclude Include="..\src\archivers\7z\7z.h" />
     <ClInclude Include="..\src\archivers\7z\7zAlloc.h" />
     <ClInclude Include="..\src\archivers\7z\7zBuf.h" />
@@ -629,6 +757,7 @@
     <ClInclude Include="..\src\include\native2amiga_api.h" />
     <ClInclude Include="..\src\include\newcpu.h" />
     <ClInclude Include="..\src\include\options.h" />
+    <ClInclude Include="..\src\include\parser.h" />
     <ClInclude Include="..\src\include\readcpu.h" />
     <ClInclude Include="..\src\include\rommgr.h" />
     <ClInclude Include="..\src\include\rtc.h" />
@@ -638,6 +767,7 @@
     <ClInclude Include="..\src\include\scp.h" />
     <ClInclude Include="..\src\include\scsi.h" />
     <ClInclude Include="..\src\include\scsidev.h" />
+    <ClInclude Include="..\src\include\serial.h" />
     <ClInclude Include="..\src\include\statusline.h" />
     <ClInclude Include="..\src\include\sysdeps.h" />
     <ClInclude Include="..\src\include\tabletlibrary.h" />
@@ -667,6 +797,7 @@
     <ClInclude Include="..\src\machdep\m68k.h" />
     <ClInclude Include="..\src\machdep\maccess.h" />
     <ClInclude Include="..\src\machdep\rpt.h" />
+    <ClInclude Include="..\src\osdep\amiberry_filesys.hpp" />
     <ClInclude Include="..\src\osdep\amiberry_gfx.h" />
     <ClInclude Include="..\src\osdep\amiberry_input.h" />
     <ClInclude Include="..\src\osdep\cda_play.h" />
@@ -682,7 +813,7 @@
   </ItemGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <RemotePostBuildEvent>
-      <Command>cp ~/projects/Amiberry/amiberry ~/projects/amiberry/</Command>
+      <Command>cp ~/projects/Amiberry/amiberry ~/projects/amiberry/Amiberry</Command>
     </RemotePostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">

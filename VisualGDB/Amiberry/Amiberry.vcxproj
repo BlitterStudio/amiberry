@@ -91,14 +91,14 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
-      <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/usr/include/SDL2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../external/libguisan/include;../../src/archivers;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>=/usr/include/SDL2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../external/libguisan/include;../../src/archivers;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>DEBUG=1;ARMV6T2;USE_ARMNEON;ARM_HAS_DIV;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;_FILE_OFFSET_BITS=64;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalCOptions>-mcpu=cortex-a72 -mfpu=neon-fp-armv8 -mfloat-abi=hard </AdditionalCOptions>
       <AdditionalCPPOptions>-mcpu=cortex-a72 -mfpu=neon-fp-armv8 -mfloat-abi=hard </AdditionalCPPOptions>
     </ClCompile>
     <Link>
       <AdditionalLinkerInputs>;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
-      <LibrarySearchDirectories>=/usr/local/lib;../../external/libguisan/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
+      <LibrarySearchDirectories>../../external/libguisan/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
       <AdditionalLibraryNames>SDL2;pthread;z;png;rt;FLAC;mpg123;dl;mpeg2convert;mpeg2;SDL2_image;SDL2_ttf;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript />
     </Link>
