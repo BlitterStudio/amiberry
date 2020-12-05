@@ -3450,7 +3450,7 @@ static a_inode *find_aino(TrapContext *ctx, Unit *unit, uaecptr lock, const TCHA
 	return a;
 }
 
-static uaecptr make_lock(TrapContext *ctx, Unit *unit, uae_u32 uniq, long mode)
+static uaecptr make_lock(TrapContext *ctx, Unit *unit, uae_u32 uniq, uae_u32 mode)
 {
 	/* allocate lock from the list kept by the assembly code */
 	uaecptr lock;

@@ -7,13 +7,15 @@
     <PreLaunchCommand>
     </PreLaunchCommand>
     <RemoteTarget>1721017924;rpi4.midlair (username=, port=22, authentication=Password)</RemoteTarget>
+    <RemoteDebuggerCommandArguments>export DISPLAY=:0.0</RemoteDebuggerCommandArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
-    <RemoteDebuggerCommand>/home/pi/projects/amiberry/amiberry</RemoteDebuggerCommand>
+    <RemoteDebuggerCommand>/home/pi/projects/amiberry/Amiberry</RemoteDebuggerCommand>
     <RemoteDebuggerWorkingDirectory>/home/pi/projects/amiberry</RemoteDebuggerWorkingDirectory>
     <DebuggerFlavor>LinuxDebugger</DebuggerFlavor>
     <PreLaunchCommand />
     <RemoteTarget>-1706257654;argon (username=, port=22, authentication=Password)</RemoteTarget>
+    <RemoteDebuggerCommandArguments>export DISPLAY=:0.0</RemoteDebuggerCommandArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-xu4|ARM'">
     <RemoteDebuggerCommand>/home/pigaming/projects/Amiberry/amiberry-xu4</RemoteDebuggerCommand>
