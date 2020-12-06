@@ -664,6 +664,9 @@
     <ClCompile Include="..\..\src\serial_win32.cpp">
       <Filter>Source files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\threaddep\threading.cpp">
+      <Filter>Source files\theaddep</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\threaddep\thread.h">

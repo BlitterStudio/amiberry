@@ -469,7 +469,7 @@ static uae_u32 REGPARAM2 exit_trap_handler(TrapContext *dummy_ctx)
 	TrapContext *context = current_context;
 
 	/* Wait for trap context thread to exit. */
-	uae_wait_thread(context->thread);
+	uae_wait_thread(&context->thread);
 
 	/* Restore 68k state saved at trap entry. */
 	//regs = context->saved_regs;

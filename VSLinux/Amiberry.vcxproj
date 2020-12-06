@@ -566,6 +566,7 @@
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
     <ClCompile Include="..\src\tabletlibrary.cpp" />
+    <ClCompile Include="..\src\threaddep\threading.cpp" />
     <ClCompile Include="..\src\tinyxml2.cpp" />
     <ClCompile Include="..\src\traps.cpp">
       <DeploymentContent>false</DeploymentContent>

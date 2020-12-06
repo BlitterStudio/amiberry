@@ -227,12 +227,12 @@ LDFLAGS += $(SDL_LDFLAGS) -lSDL2_image -lSDL2_ttf -lguisan -Lexternal/libguisan/
 #
 DEFS = -DAMIBERRY
 CPPFLAGS += -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers $(DEFS)
-LDFLAGS += -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed
+LDFLAGS += -fuse-ld=gold -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed
 
 ifndef DEBUG
     CFLAGS += -Ofast
 else
-    CFLAGS += -g -rdynamic -funwind-tables -fno-omit-frame-pointer -DDEBUG -Wl,--export-dynamic
+    CFLAGS += -g -rdynamic -funwind-tables -DDEBUG -Wl,--export-dynamic
 endif
 
 #LTO is supposed to reduced code size and increased execution speed. For Amiberry, it does not.
@@ -406,6 +406,7 @@ OBJS =	\
 	src/osdep/sigsegv_handler.o \
 	src/osdep/retroarch.o \
 	src/sounddep/sound.o \
+	src/threaddep/threading.o \
 	src/osdep/gui/SelectorEntry.o \
 	src/osdep/gui/ShowHelp.o \
 	src/osdep/gui/ShowMessage.o \

@@ -14,20 +14,8 @@
  * with different ones, make them look like POSIX semaphores. */
 typedef SDL_sem *uae_sem_t;
 
-STATIC_INLINE int uae_sem_init(uae_sem_t* sem, int dummy, int init)
-{
-	*sem = SDL_CreateSemaphore(init);
-	return *sem == nullptr;
-}
-
-STATIC_INLINE void uae_sem_destroy(uae_sem_t* event)
-{
-	if (*event)
-	{
-		SDL_DestroySemaphore(*event);
-		*event = nullptr;
-	}
-}
+int uae_sem_init(uae_sem_t* sem, int dummy, int init);
+void uae_sem_destroy(uae_sem_t* event);
 #define uae_sem_post(PSEM) SDL_SemPost (*(PSEM))
 #define uae_sem_wait(PSEM) SDL_SemWait (*(PSEM))
 #define uae_sem_trywait(PSEM) SDL_SemTryWait (*(PSEM))
@@ -38,47 +26,13 @@ STATIC_INLINE void uae_sem_destroy(uae_sem_t* event)
 
 typedef SDL_Thread *uae_thread_id;
 #define BAD_THREAD 0
+typedef SDL_ThreadFunction uae_thread_function;
 
-STATIC_INLINE void uae_set_thread_priority(uae_thread_id* id, int pri)
-{
-	SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH);
-}
-
-STATIC_INLINE void uae_end_thread(uae_thread_id* tid)
-{
-	if (tid)
-	{
-		SDL_WaitThread(*tid, static_cast<int*>(nullptr));
-		*tid = NULL;
-	}
-}
-
-STATIC_INLINE long uae_start_thread(const TCHAR* name, int (*f)(void*), void* arg, uae_thread_id* foo)
-{
-	auto result = 1;
-	auto* id = SDL_CreateThread(f, "StartThread", arg);
-	if (id == nullptr)
-	{
-		write_log("ERROR creating thread\n");
-		result = 0;
-	}
-	if (foo)
-	{
-		*foo = id;
-	}
-
-	return result;
-}
-
-STATIC_INLINE long uae_start_thread_fast(int (*f)(void*), void* arg, uae_thread_id* foo)
-{
-	return uae_start_thread(nullptr, f, arg, foo);
-}
-
-STATIC_INLINE void uae_wait_thread(uae_thread_id thread)
-{
-	SDL_WaitThread(thread, static_cast<int*>(nullptr));
-}
+void uae_set_thread_priority(uae_thread_id* id, int pri);
+void uae_end_thread(uae_thread_id* thread);
+int uae_start_thread(const char* name, uae_thread_function fn, void* arg, uae_thread_id* thread);
+int uae_start_thread_fast(uae_thread_function fn, void* arg, uae_thread_id* thread);
+int uae_wait_thread(uae_thread_id* thread);
 
 /* Do nothing; thread exits if thread function returns.  */
 #define UAE_THREAD_EXIT do {} while (0)

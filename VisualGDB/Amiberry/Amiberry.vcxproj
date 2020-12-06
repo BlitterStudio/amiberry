@@ -367,6 +367,7 @@
     <ClCompile Include="..\..\src\sounddep\sound.cpp" />
     <ClCompile Include="..\..\src\statusline.cpp" />
     <ClCompile Include="..\..\src\tabletlibrary.cpp" />
+    <ClCompile Include="..\..\src\threaddep\threading.cpp" />
     <ClCompile Include="..\..\src\tinyxml2.cpp" />
     <ClCompile Include="..\..\src\traps.cpp" />
     <ClCompile Include="..\..\src\uaeexe.cpp" />

@@ -135,6 +135,7 @@ add_executable(amiberry
         src/osdep/sigsegv_handler.cpp
         src/osdep/retroarch.cpp
         src/sounddep/sound.cpp
+        src/threaddep/threading.cpp
         src/osdep/gui/SelectorEntry.cpp
         src/osdep/gui/ShowHelp.cpp
         src/osdep/gui/ShowMessage.cpp

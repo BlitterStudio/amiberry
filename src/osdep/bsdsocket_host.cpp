@@ -929,7 +929,7 @@ void host_sbcleanup (SB)
 	 * Ideally, this shouldn't be necessary, but, for example, when SDL uses
 	 * pthreads, it always creates joinable threads - and we can't do anything
 	 * about that. */
-	uae_wait_thread (thread);
+	uae_wait_thread (&thread);
 }
 
 void host_sbreset (void)

@@ -975,6 +975,9 @@
     <ClCompile Include="..\external\libguisan\src\widgets\window.cpp">
       <Filter>external\libguisan\src\widgets</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\threaddep\threading.cpp">
+      <Filter>src\threaddep</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\archivers\7z\7zBuf.h">
