@@ -96,7 +96,6 @@ public:
 
 static CDfileListModel cdfileList;
 
-
 class HDRemoveActionListener : public gcn::ActionListener
 {
 public:

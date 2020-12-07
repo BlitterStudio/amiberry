@@ -638,6 +638,19 @@ struct MultiDisplay* getdisplay(struct uae_prefs* p, int monid)
 	return getdisplay2(p, -1);
 }
 
+void desktop_coords(int* dw, int* dh, int* ax, int* ay, int* aw, int* ah)
+{
+	//struct AmigaMonitor* mon = &AMonitors[monid];
+	struct MultiDisplay* md = getdisplay(&currprefs, 0);
+
+	*dw = md->rect.w - md->rect.x;
+	*dh = md->rect.h - md->rect.y;
+	*ax = 0;
+	*ay = 0;
+	*aw = screen->w - *ax;
+	*ah = screen->h - *ay;
+}
+
 int target_get_display(const TCHAR* name)
 {
 	return 0;

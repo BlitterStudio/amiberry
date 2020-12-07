@@ -290,17 +290,17 @@ void releasecapture()
 }
 
 //TODO: Tablet only
-//void target_inputdevice_unacquire(void)
-//{
+void target_inputdevice_unacquire(void)
+{
 //	close_tablet(tablet);
 //	tablet = NULL;
-//}
-//void target_inputdevice_acquire(void)
-//{
+}
+void target_inputdevice_acquire(void)
+{
 //	struct AmigaMonitor* mon = &AMonitors[0];
 //	target_inputdevice_unacquire();
 //	tablet = open_tablet(mon->hAmigaWnd);
-//}
+}
 
 static void setmouseactive2(int active, bool allowpause)
 {

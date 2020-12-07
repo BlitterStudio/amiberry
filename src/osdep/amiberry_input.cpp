@@ -294,6 +294,35 @@ int input_get_default_mouse(struct uae_input_device* uid, const int i, const int
 	return 0;
 }
 
+int input_get_default_lightpen(struct uae_input_device* uid, int i, int port, int af, bool gp, bool joymouseswap, int submode)
+{
+	struct didata* did = NULL;
+
+	//if (!joymouseswap) {
+	//	if (i >= num_mouse)
+	//		return 0;
+	//	did = &di_mouse[i];
+	//}
+	//else {
+	//	if (i >= num_joystick)
+	//		return 0;
+	//	did = &di_joystick[i];
+	//}
+	setid(uid, i, ID_AXIS_OFFSET + 0, 0, port, INPUTEVENT_LIGHTPEN_HORIZ, gp);
+	setid(uid, i, ID_AXIS_OFFSET + 1, 0, port, INPUTEVENT_LIGHTPEN_VERT, gp);
+	int button = port ? INPUTEVENT_JOY2_3RD_BUTTON : INPUTEVENT_JOY1_3RD_BUTTON;
+	switch (submode)
+	{
+	case 1:
+		button = port ? INPUTEVENT_JOY2_LEFT : INPUTEVENT_JOY1_LEFT;
+		break;
+	}
+	setid(uid, i, ID_BUTTON_OFFSET + 0, 0, port, button, gp);
+	if (i == 0)
+		return 1;
+	return 0;
+}
+
 static int get_kb_num()
 {
 	return num_keyboard;
@@ -859,6 +888,16 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 {
 	int h, v;
 
+	//if (joymouseswap) {
+	//	if (i >= num_mouse)
+	//		return 0;
+	//	did = &di_mouse[i];
+	//}
+	//else {
+	//	if (i >= num_joystick)
+	//		return 0;
+	//	did = &di_joystick[i];
+	//}
 	if (mode == JSEM_MODE_MOUSE_CDTV) {
 		h = INPUTEVENT_MOUSE_CDTV_HORIZ;
 		v = INPUTEVENT_MOUSE_CDTV_VERT;
@@ -1111,6 +1150,16 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 
 int input_get_default_joystick_analog(struct uae_input_device* uid, int i, int port, int af, bool gp, bool joymouseswap)
 {
+	//if (joymouseswap) {
+	//	if (i >= num_mouse)
+	//		return 0;
+	//	did = &di_mouse[i];
+	//}
+	//else {
+	//	if (i >= num_joystick)
+	//		return 0;
+	//	did = &di_joystick[i];
+	//}
 	setid(uid, i, ID_AXIS_OFFSET + 0, 0, port, port ? INPUTEVENT_JOY2_HORIZ_POT : INPUTEVENT_JOY1_HORIZ_POT, gp);
 	setid(uid, i, ID_AXIS_OFFSET + 1, 0, port, port ? INPUTEVENT_JOY2_VERT_POT : INPUTEVENT_JOY1_VERT_POT, gp);
 	setid(uid, i, ID_BUTTON_OFFSET + 0, 0, port, port ? INPUTEVENT_JOY2_LEFT : INPUTEVENT_JOY1_LEFT, af, gp);
