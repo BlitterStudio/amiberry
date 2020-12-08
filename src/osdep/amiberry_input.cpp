@@ -8,6 +8,7 @@
 #include "amiberry_input.h"
 
 #include "fsdb.h"
+#include "uae.h"
 
 static struct host_input_button default_controller_map;
 struct host_input_button host_input_buttons[MAX_INPUT_DEVICES];
@@ -141,6 +142,12 @@ const char* remap_key_map_list_strings[] = {
 };
 
 const int remap_key_map_list_size = sizeof remap_key_map_list / sizeof remap_key_map_list[0];
+static int keyboard_german;
+
+int is_touch_lightpen(void)
+{
+	return 0;
+}
 
 static int init_mouse()
 {
@@ -357,6 +364,9 @@ static int get_kb_widget_type(int kb, int num, TCHAR* name, uae_u32* code)
 
 static int init_kb()
 {
+	keyboard_german = 0;
+	if (SDL_GetKeyFromScancode(SDL_SCANCODE_Y) == SDLK_z)
+		keyboard_german = 1;
 	return 1;
 }
 
