@@ -36,6 +36,11 @@ extern "C" {
 #include "mpeg2convert.h"
 #endif
 
+#define FMV_DEBUG 0
+static int fmv_audio_debug = 0;
+static int fmv_video_debug = 0;
+#define DUMP_VIDEO 0
+
 /*
  0x200000 - 0x23FFFF ROM (256k)
  0x240000 io/status (word)
@@ -272,6 +277,23 @@ static uae_u16 mpeg_io_reg;
 static mpeg2dec_t *mpeg_decoder;
 static const mpeg2_info_t *mpeg_info;
 
+#if FMV_DEBUG
+static int isdebug(uaecptr addr)
+{
+#if FMV_DEBUG > 2
+	if (M68K_GETPC >= 0x200100)
+		return 1;
+	return 0;
+#endif
+#if FMV_DEBUG == 2
+	if (M68K_GETPC >= 0x200100 && (addr & fmv_mask) >= VRAM_BASE)
+		return 1;
+	return 0;
+#endif
+	return 0;
+}
+#endif
+
 static void do_irq(void)
 {
 	safe_interrupt_set(IRQ_SOURCE_CD32CDTV, 1, false);
@@ -409,6 +431,12 @@ static int l64111_get_frame(uae_u8 *data, int remaining)
 		if (pcmaudio[offset].ready) {
 			write_log(_T("L64111 buffer overflow!\n"));
 		}
+#if 0
+		if (!fdump)
+			fdump = zfile_fopen(_T("c:\\temp\\1.mp2"), _T("wb"));
+
+		zfile_fwrite(memdata, 1, audio_frame_size, fdump);
+#endif
 		bytes = kjmp2_decode_frame(&mp2, memdata, pcmaudio[offset].pcm);
 		if (bytes < 4 || bytes > KJMP2_MAX_FRAME_SIZE) {
 			write_log(_T("mp2 decoding error\n"));
@@ -681,6 +709,10 @@ static uae_u16 l64111_wget (uaecptr addr)
 	addr >>= 1;
 	addr &= 31;
 
+	if (fmv_audio_debug) {
+		if (!(addr == A_INT1 || addr == A_INT2 || addr == A_CB_STATUS))
+			write_log(_T("L64111 read reg %d -> %04x\n"), addr, l64111_regs[addr]);
+	}
 	v = l64111_regs[addr];
 	if (addr == A_INT1) {
 		v = l64111intstatus[0];
@@ -695,6 +727,11 @@ static void l64111_wput (uaecptr addr, uae_u16 v)
 {
 	addr >>= 1;
 	addr &= 31;
+
+	if (fmv_audio_debug) {
+		if (addr != A_DATA)
+			write_log(_T("L64111 write reg %d = %04x\n"), addr, v);
+	}
 
 	switch (addr)
 	{
@@ -766,6 +803,10 @@ static void cl450_write_dram(int addr, uae_u16 w)
 	fmv_ram_bank.baseaddr[addr * 2 + 1] = w;
 }
 
+#if DUMP_VIDEO
+static struct zfile *videodump;
+#endif
+
 static void cl450_parse_frame(void)
 {
 	for (;;) {
@@ -796,6 +837,11 @@ static void cl450_parse_frame(void)
 					cl450_newpacket_offset_read++;
 					cl450_newpacket_offset_read &= CL450_NEWPACKET_BUFFER_SIZE - 1;
 				}
+#if DUMP_VIDEO
+				if (!videodump)
+					videodump = zfile_fopen(_T("c:\\temp\\1.mpg"), _T("wb"));
+				zfile_fwrite(&ram[CL450_MPEG_BUFFER], 1, cl450_buffer_offset, videodump);
+#endif
 				memcpy(&fmv_ram_bank.baseaddr[CL450_MPEG_DECODE_BUFFER] + libmpeg_offset, &fmv_ram_bank.baseaddr[CL450_MPEG_BUFFER], cl450_buffer_offset);
 				mpeg2_buffer(mpeg_decoder, &fmv_ram_bank.baseaddr[CL450_MPEG_DECODE_BUFFER] + libmpeg_offset, &fmv_ram_bank.baseaddr[CL450_MPEG_DECODE_BUFFER] + libmpeg_offset + cl450_buffer_offset);
 				libmpeg_offset += cl450_buffer_offset;
@@ -904,6 +950,9 @@ static void cl450_newpacket(void)
 		np->pts_valid = true;
 	}
 
+	if (fmv_video_debug & 1)
+		write_log(_T("CL450 NewPacket %d: size=%d pts=%09llx v=%d\n"), cl450_newpacket_offset_write, np->length, np->pts, np->pts_valid);
+
 	cl450_newpacket_offset_write++;
 	cl450_newpacket_offset_write &= CL450_NEWPACKET_BUFFER_SIZE - 1;
 }
@@ -940,6 +989,9 @@ static void cl450_reset_cmd(void)
 
 static void cl450_newcmd(void)
 {
+//	write_log(_T("* CL450 Command %04x\n"), cl450_hmem[0]);
+//	for (int i = 1; i <= 4; i++)
+//		write_log(_T("%02d: %04x\n"), i, cl450_hmem[i]);
 	switch (cl450_hmem[0])
 	{
 		case CL_Play:
@@ -961,6 +1013,8 @@ static void cl450_newcmd(void)
 			break;
 		case CL_InquireBufferFullness:
 			cl450_hmem[0x0b] = cl450_buffer_offset;
+			if (fmv_video_debug & 1)
+				write_log(_T("CL450 InquireBufferFullness (%d)\n"), cl450_buffer_offset);
 			break;
 		case CL_SetBlank:
 			cl450_blank = cl450_hmem[1] & 1;
@@ -1000,6 +1054,10 @@ static void cl450_newcmd(void)
 				cl450_regs[HOST_scr2] = cl450_hmem[3] & 0x7fff;
 				cl450_to_scr();
 			}
+			if (fmv_video_debug & 1)
+				write_log(_T("CL450 AccessSCR %c %09llx (%04x %04x %04x)\n"),
+					(cl450_hmem[1] & 0x8000) ? 'R' : 'W', (uae_u64)cl450_scr,
+					cl450_regs[HOST_scr0], cl450_regs[HOST_scr1], cl450_regs[HOST_scr2]);
 			break;
 		case CL_Reset:
 			write_log(_T("CL450 Reset\n"));
@@ -1068,6 +1126,8 @@ static uae_u16 cl450_wget (uaecptr addr)
 		return v;
 	}
 
+	if (fmv_video_debug & 2)
+		write_log (_T("CL450 read reg %02x %04x\n"), addr, v);
 	return v;
 }
 
@@ -1082,6 +1142,9 @@ static void cl450_data_wput(uae_u16 v)
 static void cl450_wput(uaecptr addr, uae_u16 v)
 {
 	addr &= 0xfe;
+
+	if (fmv_video_debug & 2)
+		write_log(_T("CL450 write reg %02x %04x\n"), addr, v);
 
 	switch (addr)
 	{
@@ -1234,6 +1297,10 @@ static uae_u32 REGPARAM2 fmv_wget (uaecptr addr)
 	else if (mask == IO_BASE)
 		v = io_wget (addr);
 
+#if FMV_DEBUG
+	if (isdebug (addr))
+		write_log (_T("fmv_wget %08X=%04X PC=%08X\n"), addr, v, M68K_GETPC);
+#endif
 	return v;
 }
 
@@ -1241,6 +1308,10 @@ static uae_u32 REGPARAM2 fmv_lget (uaecptr addr)
 {
 	uae_u32 v;
 	v = (fmv_wget (addr) << 16) | (fmv_wget (addr + 2) << 0);
+#if FMV_DEBUG
+	if (isdebug (addr))
+		write_log (_T("fmv_lget %08X=%08X PC=%08X\n"), addr, v, M68K_GETPC);
+#endif
 	return v;
 }
 
@@ -1263,6 +1334,10 @@ static void REGPARAM2 fmv_wput (uaecptr addr, uae_u32 w)
 {
 	addr -= fmv_start & fmv_bank.mask;
 	addr &= fmv_bank.mask;
+#if FMV_DEBUG
+	if (isdebug (addr))
+		write_log (_T("fmv_wput %04X=%04X PC=%08X\n"), addr, w & 65535, M68K_GETPC);
+#endif
 	int mask = addr & BANK_MASK;
 	if (mask == L64111_BASE)
 		l64111_wput (addr, w);
@@ -1276,6 +1351,10 @@ static void REGPARAM2 fmv_wput (uaecptr addr, uae_u32 w)
 
 static void REGPARAM2 fmv_lput (uaecptr addr, uae_u32 w)
 {
+#if FMV_DEBUG
+	if (isdebug (addr))
+		write_log (_T("fmv_lput %08X=%08X PC=%08X\n"), addr, w, M68K_GETPC);
+#endif
 	fmv_wput (addr + 0, w >> 16);
 	fmv_wput (addr + 2, w >>  0);
 }

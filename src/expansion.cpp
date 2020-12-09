@@ -21,21 +21,34 @@
 #include "newcpu.h"
 #include "savestate.h"
 #include "zfile.h"
+//#include "catweasel.h"
 #include "cdtv.h"
 #include "cdtvcr.h"
 #include "threaddep/thread.h"
+//#include "a2091.h"
+//#include "a2065.h"
 #include "gfxboard.h"
 #ifdef CD32
 #include "cd32_fmv.h"
 #endif
+//#include "ncr_scsi.h"
+//#include "ncr9x_scsi.h"
 #include "scsi.h"
+//#include "debug.h"
 #include "gayle.h"
+//#include "idecontrollers.h"
 #include "cpuboard.h"
+//#include "sndboard.h"
+//#include "uae/ppc.h"
 #include "autoconf.h"
+//#include "specialmonitors.h"
 #include "inputdevice.h"
+//#include "pci.h"
+//#include "x86.h"
 #include "filesys.h"
 #include "ethernet.h"
 #include "sana2.h"
+//#include "arcadia.h"
 #include "devices.h"
 
 
@@ -2396,8 +2409,8 @@ static uaecptr check_boot_rom (struct uae_prefs *p, int *boot_rom_type)
 		return b;
 	if (p->rtgboards[0].rtgmem_size && p->rtgboards[0].rtgmem_type < GFXBOARD_HARDWARE)
 		return b;
-	//if (p->win32_automount_removable)
-	//	return b;
+	if (p->automount_removable)
+		return b;
 	if (p->chipmem.size > 2 * 1024 * 1024)
 		return b;
 	if (p->z3chipmem.size)
@@ -2743,7 +2756,7 @@ bool alloc_expansion_bank(addrbank *bank, struct autoconfig_info *aci)
 void free_expansion_bank(addrbank *bank)
 {
 	mapped_free(bank);
-	bank->start = 0;
+	bank->start = NULL;
 	bank->reserved_size = 0;
 }
 
@@ -4840,7 +4853,7 @@ static struct expansionboardsettings *netsettings[] = {
 
 static void fastlane_memory_callback(struct romconfig *rc, uae_u8 *ac, int size)
 {
-	struct zfile *z = read_device_from_romconfig(rc, 0);
+	struct zfile *z = read_device_from_romconfig(rc, NULL);
 	if (z) {
 		// load autoconfig data from rom file
 		uae_u8 act[16] = { 0 };
@@ -6700,7 +6713,7 @@ const struct cpuboardtype cpuboards[] = {
 	//	harms_sub, 0
 	//},
 	{
-		0
+		NULL
 	}
 };
 

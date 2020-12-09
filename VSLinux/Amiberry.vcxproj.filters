@@ -315,9 +315,6 @@
     <ClCompile Include="..\src\fsdb.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\fsdb_unix.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\fsusage.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -978,6 +975,12 @@
     <ClCompile Include="..\src\threaddep\threading.cpp">
       <Filter>src\threaddep</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\ini.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\scsitape.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\archivers\7z\7zBuf.h">
@@ -1436,9 +1439,6 @@
     <ClInclude Include="..\src\include\serial.h">
       <Filter>src\include</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\osdep\amiberry_filesys.hpp">
-      <Filter>src\osdep</Filter>
-    </ClInclude>
     <ClInclude Include="..\external\libguisan\include\guisan.hpp">
       <Filter>external\libguisan\include</Filter>
     </ClInclude>
@@ -1648,6 +1648,15 @@
     </ClInclude>
     <ClInclude Include="..\external\libguisan\include\guisan\opengl\openglsdlimageloader.hpp">
       <Filter>external\libguisan\include\guisan\opengl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\uae\cdrom.h">
+      <Filter>src\include\uae</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\ini.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\osdep\fsdb_host.h">
+      <Filter>src\osdep</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

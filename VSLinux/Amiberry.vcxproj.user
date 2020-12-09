@@ -1,13 +1,13 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
-    <RemoteDebuggerCommand>/home/pi/projects/amiberry/Amiberry</RemoteDebuggerCommand>
+    <RemoteDebuggerCommand>/home/pi/projects/amiberry/Amiberry-Debug</RemoteDebuggerCommand>
     <RemoteDebuggerWorkingDirectory>/home/pi/projects/amiberry</RemoteDebuggerWorkingDirectory>
     <DebuggerFlavor>LinuxDebugger</DebuggerFlavor>
-    <PreLaunchCommand>
-    </PreLaunchCommand>
+    <PreLaunchCommand>export DISPLAY=:0.0</PreLaunchCommand>
     <RemoteTarget>1721017924;rpi4.midlair (username=, port=22, authentication=Password)</RemoteTarget>
-    <RemoteDebuggerCommandArguments>export DISPLAY=:0.0</RemoteDebuggerCommandArguments>
+    <RemoteDebuggerCommandArguments>
+    </RemoteDebuggerCommandArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
     <RemoteDebuggerCommand>/home/pi/projects/amiberry/Amiberry</RemoteDebuggerCommand>
@@ -32,10 +32,10 @@
     <RemoteTarget>-1406338439;192.168.1.47 (username=, port=22, authentication=Password)</RemoteTarget>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
-    <RemoteDebuggerCommand>projects/amiberry/amiberry-sdl2-dev</RemoteDebuggerCommand>
-    <RemoteDebuggerWorkingDirectory>projects/amiberry</RemoteDebuggerWorkingDirectory>
+    <RemoteDebuggerCommand>/home/pi/projects/amiberry/Amiberry-Release</RemoteDebuggerCommand>
+    <RemoteDebuggerWorkingDirectory>/home/pi/projects/amiberry</RemoteDebuggerWorkingDirectory>
     <DebuggerFlavor>LinuxDebugger</DebuggerFlavor>
-    <PreLaunchCommand>export DEBUG=0</PreLaunchCommand>
+    <PreLaunchCommand>export DISPLAY=:0.0</PreLaunchCommand>
     <RemoteTarget>1721017924;rpi4.midlair (username=, port=22, authentication=Password)</RemoteTarget>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">

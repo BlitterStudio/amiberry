@@ -29,14 +29,17 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 */
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 /* IF UAE */
+#include "sysconfig.h"
 #include "sysdeps.h"
 #include "zfile.h"
 #include "uae.h"
 /* ELSE */
+//#include "types.h"
 
 #include "fdi2raw.h"
 #include "crc32.h"
@@ -71,7 +74,11 @@ struct fdi {
 	uae_u8 track_type;
 	int current_track;
 	int last_track;
+	int last_head;
+	int rotation_speed;
+	int bit_rate;
 	int disk_type;
+	int write_protect;
 	int reversed_side;
 	int err;
 	uae_u8 header[2048];
@@ -80,6 +87,9 @@ struct fdi {
 	int out;
 	int mfmsync_offset;
 	int *mfmsync_buffer;
+	/* sector described only */
+	int index_offset;
+	int encoding_type;
 	/* bit handling */
 	int nextdrop;
 	struct fdi_cache cache[MAX_TRACKS];
@@ -87,6 +97,13 @@ struct fdi {
 
 #define get_u32(x) ((((x)[0])<<24)|(((x)[1])<<16)|(((x)[2])<<8)|((x)[3]))
 #define get_u24(x) ((((x)[0])<<16)|(((x)[1])<<8)|((x)[2]))
+STATIC_INLINE void put_u32 (uae_u8 *d, uae_u32 v)
+{
+	d[0] = v >> 24;
+	d[1] = v >> 16;
+	d[2] = v >> 8;
+	d[3] = v;
+}
 
 struct node {
 	uae_u16 v;
@@ -1004,6 +1021,9 @@ static int handle_sectors_described_track (FDI *fdi)
 {
 	int oldout;
 	uae_u8 *start_src = fdi->track_src ;
+	fdi->encoding_type = *fdi->track_src++;
+	fdi->index_offset = get_u32(fdi->track_src);
+	fdi->index_offset >>= 8;
 	fdi->track_src += 3;
 
 	do {
@@ -1050,6 +1070,19 @@ static uae_u8 *fdi_decompress (int pulses, uae_u8 *sizep, uae_u8 *src, int *dofr
 	return dst;
 }
 
+static void dumpstream(int track, uae_u8 *stream, int len)
+{
+#if 0
+	TCHAR name[100];
+	FILE *f;
+
+	_stprintf (name, "track_%d.raw", track);
+	f = fopen(name, "wb");
+	fwrite (stream, 1, len * 4, f);
+	fclose (f);
+#endif
+}
+
 static int bitoffset;
 
 STATIC_INLINE void addbit (uae_u8 *p, int bit)
@@ -1086,6 +1119,135 @@ static void init_array(unsigned long standard_MFM_2_bit_cell_size, int nb_of_bit
 	}
 	array_index = 0;
 }
+
+#if 0
+
+static void fdi2_decode (FDI *fdi, unsigned long totalavg, uae_u32 *avgp, uae_u32 *minp, uae_u32 *maxp, uae_u8 *idx, int maxidx, int *indexoffsetp, int pulses, int mfm)
+{
+	unsigned long adjust;
+	unsigned long adjusted_pulse;
+	unsigned long standard_MFM_2_bit_cell_size = totalavg / 50000;
+	unsigned long standard_MFM_8_bit_cell_size = totalavg / 12500;
+	int real_size, i, j, eodat, outstep;
+	int indexoffset = *indexoffsetp;
+	uae_u8 *d = fdi->track_dst_buffer;
+	uae_u16 *pt = fdi->track_dst_buffer_timing;
+	uae_u32 ref_pulse, pulse;
+
+	/* detects a long-enough stable pulse coming just after another stable pulse */
+	i = 1;
+	while ( (i < pulses) && ( (idx[i] < maxidx)
+		|| (idx[i - 1] < maxidx)
+		|| (avgp[i] < (standard_MFM_2_bit_cell_size - (standard_MFM_2_bit_cell_size / 4))) ) )
+		i++;
+	if (i == pulses)  {
+		outlog (_T("No stable and long-enough pulse in track.\n"));
+		return;
+	}
+	i--;
+	eodat = i;
+	adjust = 0;
+	total = 0;
+	totaldiv = 0;
+	init_array(standard_MFM_2_bit_cell_size, 2);
+	bitoffset = 0;
+	ref_pulse = 0;
+	outstep = 0;
+	while (outstep < 2) {
+
+		/* calculates the current average bitrate from previous decoded data */
+		uae_u32 avg_size = (total << 3) / totaldiv; /* this is the new average size for one MFM bit */
+		/* uae_u32 avg_size = (uae_u32)((((float)total)*8.0) / ((float)totaldiv)); */
+		/* you can try tighter ranges than 25%, or wider ranges. I would probably go for tighter... */
+		if ((avg_size < (standard_MFM_8_bit_cell_size - (pulse_limitval * standard_MFM_8_bit_cell_size / 100))) ||
+			(avg_size > (standard_MFM_8_bit_cell_size + (pulse_limitval * standard_MFM_8_bit_cell_size / 100)))) {
+				//init_array(standard_MFM_2_bit_cell_size, 2);
+				avg_size = standard_MFM_8_bit_cell_size;
+		}
+		/* this is to prevent the average value from going too far
+		* from the theoretical value, otherwise it could progressively go to (2 *
+		* real value), or (real value / 2), etc. */
+
+		/* gets the next long-enough pulse (this may require more than one pulse) */
+		pulse = 0;
+		while (pulse < ((avg_size / 4) - (avg_size / 16))) {
+			int indx;
+			i++;
+			if (i >= pulses)
+				i = 0;
+			indx = idx[i];
+			if (uaerand() <= (indx * UAE_RAND_MAX) / maxidx) {
+				pulse += avgp[i] - ref_pulse;
+				if (indx >= maxidx)
+					ref_pulse = 0;
+				else
+					ref_pulse = avgp[i];
+			}
+			if (i == eodat)
+				outstep++;
+			if (outstep == 1 && indexoffset == i)
+				*indexoffsetp = bitoffset;
+		}
+
+		/* gets the size in bits from the pulse width, considering the current average bitrate */
+		adjusted_pulse = pulse;
+		real_size = 0;
+		while (adjusted_pulse >= avg_size) {
+			real_size += 4;
+			adjusted_pulse -= avg_size / 2;
+		}
+		adjusted_pulse <<= 3;
+		while (adjusted_pulse >= ((avg_size * 4) + (avg_size / 4))) {
+			real_size += 2;
+			adjusted_pulse -= avg_size * 2;
+		}
+		if (adjusted_pulse >= ((avg_size * 3) + (avg_size / 4))) {
+			if (adjusted_pulse <= ((avg_size * 4) - (avg_size / 4))) {
+				if ((2 * ((adjusted_pulse >> 2) - adjust)) <= ((2 * avg_size) - (avg_size / 4)))
+					real_size += 3;
+				else
+					real_size += 4;
+			} else
+				real_size += 4;
+		} else {
+			if (adjusted_pulse > ((avg_size * 3) - (avg_size / 4))) {
+				real_size += 3;
+			} else {
+				if (adjusted_pulse >= ((avg_size * 2) + (avg_size / 4))) {
+					if ((2 * ((adjusted_pulse >> 2) - adjust)) < (avg_size + (avg_size / 4)))
+						real_size += 2;
+					else
+						real_size += 3;
+				} else
+					real_size += 2;
+			}
+		}
+
+		if (outstep == 1) {
+			for (j = real_size; j > 1; j--)
+				addbit (d, 0);
+			addbit (d, 1);
+			for (j = 0; j < real_size; j++)
+				*pt++ = (uae_u16)(pulse / real_size);
+		}
+
+		/* prepares for the next pulse */
+		adjust = ((real_size * avg_size)/8) - pulse;
+		total -= psarray[array_index].size;
+		totaldiv -= psarray[array_index].number_of_bits;
+		psarray[array_index].size = pulse;
+		psarray[array_index].number_of_bits = real_size;
+		total += pulse;
+		totaldiv += real_size;
+		array_index++;
+		if (array_index	>= FDI_MAX_ARRAY)
+			array_index = 0;
+	}
+
+	fdi->out = bitoffset;
+}
+
+#else
 
 static void fdi2_decode (FDI *fdi, unsigned long totalavg, uae_u32 *avgp, uae_u32 *minp, uae_u32 *maxp, uae_u8 *idx, int maxidx, int *indexoffsetp, int pulses, int mfm)
 {
@@ -1321,6 +1483,8 @@ static void fdi2_decode (FDI *fdi, unsigned long totalavg, uae_u32 *avgp, uae_u3
 	fdi->out = bitoffset;
 }
 
+#endif
+
 static void fdi2_celltiming (FDI *fdi, unsigned long totalavg, int bitoffset, uae_u16 *out)
 {
 	uae_u16 *pt2, *pt;
@@ -1361,6 +1525,7 @@ static int decode_lowlevel_track (FDI *fdi, int track, struct fdi_cache *cache)
 	p1 += 4;
 	len = 12;
 	avgp = (uae_u32*)fdi_decompress (pulses, p1 + 0, p1 + len, &avg_free);
+	dumpstream(track, (uae_u8*)avgp, pulses);
 	len += get_u24 (p1 + 0) & 0x3fffff;
 	if (!avgp)
 		return -1;
@@ -1474,6 +1639,7 @@ static int decode_lowlevel_track (FDI *fdi, int track, struct fdi_cache *cache)
 }
 
 static uae_char fdiid[] = {"Formatted Disk Image file"};
+static int bit_rate_table[16] = { 125,150,250,300,500,1000 };
 
 void fdi2raw_header_free (FDI *fdi)
 {
@@ -1509,9 +1675,29 @@ int fdi2raw_get_num_sector (FDI *fdi)
 	return 11;
 }
 
+int fdi2raw_get_last_head (FDI *fdi)
+{
+	return fdi->last_head;
+}
+
+int fdi2raw_get_rotation (FDI *fdi)
+{
+	return fdi->rotation_speed;
+}
+
+int fdi2raw_get_bit_rate (FDI *fdi)
+{
+	return fdi->bit_rate;
+}
+
 int fdi2raw_get_type (FDI *fdi)
 {
 	return fdi->disk_type;
+}
+
+int fdi2raw_get_write_protect (FDI *fdi)
+{
+	return fdi->write_protect;
 }
 
 FDI *fdi2raw_header(struct zfile *f)
@@ -1556,7 +1742,10 @@ FDI *fdi2raw_header(struct zfile *f)
 		write_log (_T("FDI: last_track >= MAX_TRACKS (%d >= %d)\n"), fdi->last_track, MAX_TRACKS);
 		fdi->last_track = MAX_TRACKS - 1;
 	}
+	fdi->last_head = fdi->header[144];
 	fdi->disk_type = fdi->header[145];
+	fdi->rotation_speed = fdi->header[146] + 128;
+	fdi->write_protect = fdi->header[147] & 1;
 	fdi->reversed_side = (fdi->header[147] & 4) ? 1 : 0;
 
 	offset = 512;
@@ -1641,8 +1830,14 @@ int fdi2raw_loadtrack (FDI *fdi, uae_u16 *mfmbuf, uae_u16 *tracktiming, int trac
 	p = fdi->header + 152 + fdi->current_track * 2;
 	fdi->track_type = *p++;
 	fdi->track_len = *p++;
+	fdi->bit_rate = 0;
 	fdi->out = 0;
 	fdi->mfmsync_offset = 0;
+
+	if ((fdi->track_type & 0xf0) == 0xf0 || (fdi->track_type & 0xf0) == 0xe0)
+		fdi->bit_rate = bit_rate_table[fdi->track_type & 0x0f];
+	else
+		fdi->bit_rate = 250;
 
 	if ((fdi->track_type & 0xc0) == 0x80) {
 
@@ -1673,6 +1868,8 @@ int fdi2raw_loadtrack (FDI *fdi, uae_u16 *mfmbuf, uae_u16 *tracktiming, int trac
 		outlen = -1;
 
 	}
+
+	//	amiga_check_track (fdi);
 
 	if (fdi->err)
 		return 0;

@@ -15,7 +15,9 @@
 #include "events.h"
 #include "memory.h"
 #include "newcpu.h"
+//#include "uae/ppc.h"
 #include "xwin.h"
+//#include "x86.h"
 #include "audio.h"
 
 static const int pissoff_nojit_value = 256 * CYCLE_UNIT;

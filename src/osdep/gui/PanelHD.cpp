@@ -14,7 +14,7 @@
 #include "filesys.h"
 #include "blkdev.h"
 #include "gui_handling.h"
-#include "amiberry_filesys.hpp"
+#include "fsdb_host.h"
 
 enum
 {

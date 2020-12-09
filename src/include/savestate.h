@@ -221,6 +221,10 @@ extern uae_u8 *save_rom (int, int *, uae_u8 *);
 
 extern uae_u8 *save_expansion_boards(int*, uae_u8*, int);
 extern uae_u8 *restore_expansion_boards(uae_u8*);
+#if 0
+extern uae_u8 *save_expansion_info_old(int*, uae_u8*);
+extern uae_u8 *restore_expansion_info_old(uae_u8*);
+#endif
 extern void restore_expansion_finish(void);
 
 extern uae_u8 *restore_action_replay (uae_u8 *);
@@ -229,7 +233,7 @@ extern uae_u8 *restore_hrtmon (uae_u8 *);
 extern uae_u8 *save_hrtmon (int *, uae_u8 *);
 extern void restore_ar_finish (void);
 
-extern void savestate_initsave (const TCHAR *filename);
+extern void savestate_initsave (const TCHAR *filename, int docompress, int nodialogs, bool save);
 extern int save_state (const TCHAR *filename, const TCHAR *description);
 extern void restore_state (const TCHAR *filename);
 extern bool savestate_restore_finish(void);

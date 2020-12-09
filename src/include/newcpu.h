@@ -149,6 +149,7 @@ struct regstruct
 	int halted;
 	int exception;
 	int intmask;
+	int ipl, ipl_pin;
 
 	uae_u32 vbr, sfc, dfc;
 

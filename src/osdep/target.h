@@ -22,8 +22,8 @@
 #define GETBDM(x) (((x) - (((x) / 10000) * 10000)) / 100)
 #define GETBDD(x) ((x) % 100)
 
-#define AMIBERRYVERSION _T("Amiberry v3.4 beta (2020-12-07)")
-#define AMIBERRYDATE MAKEBD(2020, 12, 7)
+#define AMIBERRYVERSION _T("Amiberry v3.4 beta (2020-12-09)")
+#define AMIBERRYDATE MAKEBD(2020, 12, 9)
 
 #define IHF_WINDOWHIDDEN 6
 
@@ -38,9 +38,10 @@ extern void fix_apmodes(struct uae_prefs* p);
 extern int generic_main(int argc, char* argv[]);
 
 extern bool my_kbd_handler(int, int, int, bool);
-extern void clearallkeys(void);
-extern int getcapslock(void);
-void releasecapture();
+extern void clearallkeys();
+extern int getcapslock();
+extern void releasecapture();
+extern void disablecapture();
 
 extern int enter_gui_key;
 extern int quit_key;
@@ -242,3 +243,9 @@ void restore_host_fp_regs(void* buf);
 #define SOUND_DEVICE_WASAPI_EXCLUSIVE 5
 #define SOUND_DEVICE_XAUDIO2 6
 #define SOUND_DEVICE_SDL2 7
+
+static inline int uae_deterministic_mode()
+{
+	// Only returns 1 if using netplay mode (not implemented yet)
+	return 0;
+}

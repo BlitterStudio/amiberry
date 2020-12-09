@@ -21,6 +21,7 @@
 #include "autoconf.h"
 #include "traps.h"
 #include "uae.h"
+//#include "debug.h"
 
 /*
 * Traps are the mechanism via which 68k code can call emulator code
@@ -303,8 +304,6 @@ static int trap_thread (void *arg)
 	uae_sem_post (&context->switch_to_emu_sem);
 
 	/* Good bye, cruel world... */
-
-	/* dummy return value */
 	return 0;
 }
 

@@ -4749,6 +4749,9 @@ static void picasso_flushpixels(uae_u8* src, int off, bool render)
 		return;
 	}
 
+	if (flashscreen) {
+		vidinfo->full_refresh = 1;
+	}
 	if (vidinfo->full_refresh || vidinfo->rtg_clear_flag)
 		vidinfo->full_refresh = -1;
 
@@ -4768,10 +4771,16 @@ static void picasso_flushpixels(uae_u8* src, int off, bool render)
 			break;
 		}
 
-		copyall(src + off, dst, pwidth, pheight,
-			state->BytesPerRow, state->BytesPerPixel,
-			vidinfo->rowbytes, vidinfo->pixbytes,
-			state->RGBFormat == vidinfo->host_mode, vidinfo->picasso_convert);
+		if (flashscreen != 0)
+			copyallinvert(src + off, dst, pwidth, pheight,
+				state->BytesPerRow, state->BytesPerPixel,
+				vidinfo->rowbytes, vidinfo->pixbytes,
+				state->RGBFormat == vidinfo->host_mode, vidinfo->picasso_convert);
+		else
+			copyall(src + off, dst, pwidth, pheight,
+				state->BytesPerRow, state->BytesPerPixel,
+				vidinfo->rowbytes, vidinfo->pixbytes,
+				state->RGBFormat == vidinfo->host_mode, vidinfo->picasso_convert);
 
 		miny = 0;
 		maxy = pheight;

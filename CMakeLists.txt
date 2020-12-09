@@ -40,7 +40,6 @@ add_executable(amiberry
         src/flashrom.cpp
         src/fpp.cpp
         src/fsdb.cpp
-        src/fsdb_unix.cpp
         src/fsusage.cpp
         src/gayle.cpp
         src/gfxboard.cpp
@@ -48,6 +47,7 @@ add_executable(amiberry
         src/hardfile.cpp
         src/hrtmon.rom.cpp
         src/ide.cpp
+        src/ini.cpp
         src/inputdevice.cpp
         src/isofs.cpp
         src/keybuf.cpp
@@ -60,6 +60,7 @@ add_executable(amiberry
         src/scp.cpp
         src/scsi.cpp
         src/scsiemul.cpp
+        src/scsitape.cpp
         src/statusline.cpp
         src/tabletlibrary.cpp
         src/tinyxml2.cpp

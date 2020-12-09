@@ -44,13 +44,15 @@
 #include "devices.h"
 #include <map>
 #include <parser.h>
-
-
-
-#include "amiberry_filesys.hpp"
 #include "amiberry_input.h"
 #include "clipboard.h"
+#include "fsdb.h"
+#include "scsidev.h"
 #include "uae/uae.h"
+
+int log_scsi;
+int uaelib_debug;
+int pissoff_value = 15000 * CYCLE_UNIT;
 
 extern FILE* debugfile;
 SDL_Cursor* normalcursor;
@@ -67,6 +69,7 @@ int minimized;
 int quickstart_model = 0;
 int quickstart_conf = 0;
 bool host_poweroff = false;
+int saveimageoriginalpath = 0;
 
 struct amiberry_options amiberry_options = {};
 
@@ -123,8 +126,6 @@ void set_key_configs(struct uae_prefs* p)
 	else
 		fullscreen_key = SDL_GetScancodeFromName(amiberry_options.default_fullscreen_toggle_key);
 }
-
-int pissoff_value = 15000 * CYCLE_UNIT;
 
 extern void signal_segv(int signum, siginfo_t* info, void* ptr);
 extern void signal_buserror(int signum, siginfo_t* info, void* ptr);
@@ -980,13 +981,16 @@ void process_event(SDL_Event event)
 				break;
 			if (isfocus() < 2 && currprefs.input_tablet >= TABLET_MOUSEHACK && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC))
 				break;
+			
+			int scancode = event.key.keysym.scancode;
+			int pressed = 1;
 
-			auto scancode = event.key.keysym.scancode;
-			if (amiberry_options.rctrl_as_ramiga || currprefs.right_control_is_right_win_key)
+			if ((amiberry_options.rctrl_as_ramiga || currprefs.right_control_is_right_win_key)
+				&& scancode == SDL_SCANCODE_RCTRL)
 			{
-				if (scancode == SDL_SCANCODE_RCTRL)
 					scancode = SDL_SCANCODE_RGUI;
 			}
+
 			if (enter_gui_key && scancode == enter_gui_key)
 			{
 				inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
@@ -1020,13 +1024,16 @@ void process_event(SDL_Event event)
 				break;
 			if (isfocus() < 2 && currprefs.input_tablet >= TABLET_MOUSEHACK && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC))
 				break;
+			
+			int scancode = event.key.keysym.scancode;
+			int pressed = 0;
 
-			auto scancode = event.key.keysym.scancode;
-			if (amiberry_options.rctrl_as_ramiga || currprefs.right_control_is_right_win_key)
+			if ((amiberry_options.rctrl_as_ramiga || currprefs.right_control_is_right_win_key)
+				&& scancode == SDL_SCANCODE_RCTRL)
 			{
-				if (scancode == SDL_SCANCODE_RCTRL)
-					scancode = SDL_SCANCODE_RGUI;
+				scancode = SDL_SCANCODE_RGUI;
 			}
+
 			my_kbd_handler(0, scancode, 0, true);
 		}
 		break;
@@ -1507,7 +1514,45 @@ void fix_apmodes(struct uae_prefs* p)
 
 void target_fixup_options(struct uae_prefs* p)
 {
+	if (p->automount_cddrives && !p->scsi)
+		p->scsi = 1;
+	if (p->uaescsimode > UAESCSI_LAST)
+		p->uaescsimode = UAESCSI_SPTI;
+	bool paused = false;
+	bool nosound = false;
+	bool nojoy = true;
+	if (!paused) {
+		paused = p->active_nocapture_pause;
+		nosound = p->active_nocapture_nosound;
+	}
+	else {
+		p->active_nocapture_pause = p->active_nocapture_nosound = true;
+		nosound = true;
+		nojoy = false;
+	}
+	if (!paused) {
+		paused = p->inactive_pause;
+		nosound = p->inactive_nosound;
+		nojoy = (p->inactive_input & 4) == 0;
+	}
+	else {
+		p->inactive_pause = p->inactive_nosound = true;
+		p->inactive_input = 0;
+		nosound = true;
+		nojoy = true;
+	}
+
 	p->rtgboards[0].rtgmem_type = GFXBOARD_UAE_Z3;
+	if (p->rtgboards[0].rtgmem_type >= GFXBOARD_HARDWARE) {
+		p->rtg_hardwareinterrupt = false;
+		p->rtg_hardwaresprite = false;
+		//p->win32_rtgmatchdepth = false;
+		p->color_mode = 5;
+		//if (p->ppc_model && !p->gfx_api) {
+		//	error_log(_T("Graphics board and PPC: Direct3D enabled."));
+		//	p->gfx_api = os_win7 ? 2 : 1;
+		//}
+	}
 
 	if (z3_base_adr == Z3BASE_REAL)
 	{
@@ -1642,6 +1687,9 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->minimize_inactive = false;
 	p->capture_always = false;
 	
+	p->automount_removable = false;
+	p->automount_cddrives = false;
+	p->uaescsimode = UAESCSI_CDEMU;
 	p->input_analog_remap = false;
 
 	p->use_retroarch_quit = amiberry_options.default_retroarch_quit;
@@ -1682,9 +1730,15 @@ void target_default_options(struct uae_prefs* p, int type)
 #endif
 }
 
+static const TCHAR* scsimode[] = { _T("SCSIEMU"), _T("SPTI"), _T("SPTI+SCSISCAN"), NULL };
+static const TCHAR* statusbarmode[] = { _T("none"), _T("normal"), _T("extended"), NULL };
+static const TCHAR* configmult[] = { _T("1x"), _T("2x"), _T("3x"), _T("4x"), _T("5x"), _T("6x"), _T("7x"), _T("8x"), NULL };
+
 void target_save_options(struct zfile* f, struct uae_prefs* p)
 {
 	cfgfile_target_write_bool(f, _T("middle_mouse"), (p->input_mouse_untrap & MOUSEUNTRAP_MIDDLEBUTTON) != 0);
+	cfgfile_target_dwrite_bool(f, _T("map_drives_auto"), p->automount_removable);
+	cfgfile_target_dwrite_bool(f, _T("map_cd_drives"), p->automount_cddrives);
 	cfgfile_target_dwrite_str(f, _T("serial_port"), p->sername[0] ? p->sername : _T("none"));
 
 	cfgfile_target_dwrite(f, _T("active_priority"), _T("%d"), p->active_capture_priority);
@@ -1701,6 +1755,7 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_target_dwrite_bool(f, _T("inactive_minimize"), p->minimize_inactive);
 	cfgfile_target_dwrite_bool(f, _T("active_capture_automatically"), p->capture_always);
 
+	cfgfile_target_dwrite_str(f, _T("uaescsimode"), scsimode[p->uaescsimode]);
 	cfgfile_target_dwrite(f, _T("cpu_idle"), _T("%d"), p->cpu_idle);
 	cfgfile_target_dwrite_bool(f, _T("right_control_is_right_win"), p->right_control_is_right_win_key);
 	
@@ -1779,6 +1834,10 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 			p->input_mouse_untrap &= ~MOUSEUNTRAP_MIDDLEBUTTON;
 		return 1;
 	}
+	if (cfgfile_yesno(option, value, _T("map_drives_auto"), &p->automount_removable))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("map_cd_drives"), &p->automount_cddrives))
+		return 1;
 	if (cfgfile_yesno(option, value, _T("allow_host_run"), &p->allow_host_run))
 		return 1;
 	if (cfgfile_yesno(option, value, _T("use_retroarch_quit"), &p->use_retroarch_quit))
@@ -1809,8 +1868,18 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 		return 1;
 	if (cfgfile_intval(option, value, _T("cpu_idle"), &p->cpu_idle, 1))
 		return 1;
-	if (cfgfile_intval(option, value, _T("active_priority"), &p->active_capture_priority, 1))
+	if (cfgfile_strval(option, value, _T("uaescsimode"), &p->uaescsimode, scsimode, 0)) {
+		// force SCSIEMU if pre 2.3 configuration
+		if (p->config_version < ((2 << 16) | (3 << 8)))
+			p->uaescsimode = UAESCSI_CDEMU;
 		return 1;
+	}
+	if (cfgfile_intval(option, value, _T("active_priority"), &p->active_capture_priority, 1))
+	{
+		p->active_nocapture_pause = false;
+		p->active_nocapture_nosound = false;
+		return 1;
+	}
 	if (cfgfile_yesno(option, value, _T("active_nocapture_pause"), &p->active_nocapture_pause))
 		return 1;
 	if (cfgfile_yesno(option, value, _T("active_nocapture_nosound"), &p->active_nocapture_nosound))

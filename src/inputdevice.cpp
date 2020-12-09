@@ -27,6 +27,7 @@
 #include "options.h"
 #include "keyboard.h"
 #include "inputdevice.h"
+//#include "inputrecord.h"
 #include "keybuf.h"
 #include "custom.h"
 #include "xwin.h"
@@ -36,19 +37,32 @@
 #include "newcpu.h"
 #include "uae.h"
 #include "picasso96.h"
+//#include "catweasel.h"
+//#include "debug.h"
 #include "ar.h"
 #include "gui.h"
 #include "disk.h"
 #include "audio.h"
 #include "sounddep/sound.h"
 #include "savestate.h"
+//#include "arcadia.h"
 #include "zfile.h"
 #include "cia.h"
 #include "autoconf.h"
+//#include "x86.h"
+#ifdef RETROPLATFORM
+#include "rp.h"
+#endif
+//#include "dongle.h"
 #include "amiberry_gfx.h"
 #include "cdtv.h"
+#ifdef AVIOUTPUT
+#include "avioutput.h"
+#endif
+#include "tabletlibrary.h"
 #include "statusline.h"
 #include "native2amiga_api.h"
+//#include "videograb.h"
 
 // 01 = host events
 // 02 = joystick
@@ -59,6 +73,7 @@
 // 256 = cia buttons write
 
 int inputdevice_logging = 0;
+extern int tablet_log;
 
 #define COMPA_RESERVED_FLAGS (ID_FLAG_INVERT)
 
@@ -4472,13 +4487,13 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 		toggle_inhibit_frame(IHF_SCROLLLOCK);
 		break;
 	case AKS_STATEREWIND:
-	//	savestate_dorewind(-2);
+		savestate_dorewind (-2);
 		break;
 	case AKS_STATECURRENT:
-	//	savestate_dorewind(-1);
+		savestate_dorewind (-1);
 		break;
 	case AKS_STATECAPTURE:
-	//	savestate_capture(1);
+		savestate_capture (1);
 		break;
 	case AKS_VOLDOWN:
 		sound_volume (newstate <= 0 ? -1 : 1);
@@ -4517,7 +4532,7 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 	case AKS_STATESAVEQUICK7:
 	case AKS_STATESAVEQUICK8:
 	case AKS_STATESAVEQUICK9:
-		//savestate_quick ((code - AKS_STATESAVEQUICK) / 2, 1);
+		savestate_quick ((code - AKS_STATESAVEQUICK) / 2, 1);
 		break;
 	case AKS_STATERESTOREQUICK:
 	case AKS_STATERESTOREQUICK1:
@@ -4529,7 +4544,7 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 	case AKS_STATERESTOREQUICK7:
 	case AKS_STATERESTOREQUICK8:
 	case AKS_STATERESTOREQUICK9:
-		//savestate_quick ((code - AKS_STATERESTOREQUICK) / 2, 0);
+		savestate_quick ((code - AKS_STATERESTOREQUICK) / 2, 0);
 		break;
 	case AKS_TOGGLEDEFAULTSCREEN:
 		toggle_fullscreen(-1);
@@ -4566,7 +4581,7 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 		break;
 	case AKS_STATESAVEDIALOG:
 		if (s) {
-			savestate_initsave(s);
+			savestate_initsave (s, 1, true, true);
 			save_state (savestate_fname, _T("Description!"));
 		} else {
 			gui_display (5);
@@ -4574,7 +4589,7 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 		break;
 	case AKS_STATERESTOREDIALOG:
 		if (s) {
-			savestate_initsave (s);
+			savestate_initsave (s, 1, true, false);
 			savestate_state = STATE_DORESTORE;
 		} else {
 			gui_display (4);

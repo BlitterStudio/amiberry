@@ -537,22 +537,21 @@ static void copyHostent (TrapContext *ctx, const struct hostent *hostent, SB)
 	aptr = sb->hostent + 28 + numaliases * 4 + numaddr * 4;
 
 	// transfer hostent to Amiga memory
-	put_long (sb->hostent + 4, sb->hostent + 20);
-	put_long (sb->hostent + 8, hostent->h_addrtype);
-	put_long (sb->hostent + 12, hostent->h_length);
-	put_long (sb->hostent + 16, sb->hostent + 24 + numaliases*4);
+	trap_put_long(ctx, sb->hostent + 4, sb->hostent + 20);
+	trap_put_long(ctx, sb->hostent + 8, hostent->h_addrtype);
+	trap_put_long(ctx, sb->hostent + 12, hostent->h_length);
+	trap_put_long(ctx, sb->hostent + 16, sb->hostent + 24 + numaliases*4);
 
 	for (i = 0; i < numaliases; i++)
-	put_long (sb->hostent + 20 + i * 4, addstr (ctx, &aptr, hostent->h_aliases[i]));
-	put_long (sb->hostent + 20 + numaliases * 4, 0);
+		trap_put_long(ctx, sb->hostent + 20 + i * 4, addstr (ctx, &aptr, hostent->h_aliases[i]));
+	trap_put_long(ctx, sb->hostent + 20 + numaliases * 4, 0);
 
 	for (i = 0; i < numaddr; i++) {
-		put_long (sb->hostent + 24 + (numaliases + i) * 4, addmem (ctx, &aptr, hostent->h_addr_list[i], hostent->h_length));
+		trap_put_long(ctx, sb->hostent + 24 + (numaliases + i) * 4, addmem (ctx, &aptr, hostent->h_addr_list[i], hostent->h_length));
 	}
-	put_long (sb->hostent + 24 + numaliases * 4 + numaddr * 4, 0);
-	put_long (sb->hostent, aptr);
+	trap_put_long(ctx, sb->hostent + 24 + numaliases * 4 + numaddr * 4, 0);
+	trap_put_long(ctx, sb->hostent, aptr);
 	addstr (ctx, &aptr, hostent->h_name);
-
 	bsdsocklib_seterrno (ctx, sb,0);
 }
 
@@ -1370,7 +1369,7 @@ uae_u32 host_IoctlSocket(TrapContext *ctx, SB, uae_u32 sd, uae_u32 request, uae_
 		return 0;
 
 	case 0x8004667C: /* FIOSETOWN */
-		put_long (arg,sb->ownertask);
+		trap_put_long(ctx, arg,sb->ownertask);
 		return 0;
 	case 0x8004667D: /* FIOASYNC */
 #   ifdef O_ASYNC
@@ -1396,7 +1395,7 @@ uae_u32 host_IoctlSocket(TrapContext *ctx, SB, uae_u32 sd, uae_u32 request, uae_
 	case 0x4004667F: /* FIONREAD */
 		r = ioctl (sock, FIONREAD, &flags);
 		if (r >= 0) {
-			put_long (arg, flags);
+			trap_put_long(ctx, arg, flags);
 		}
 		return r;
 
@@ -1527,13 +1526,13 @@ uae_u32 bsdthr_WaitSelect (SB)
 
 void host_WaitSelect(TrapContext *ctx, SB, uae_u32 nfds, uae_u32 readfds, uae_u32 writefds, uae_u32 exceptfds, uae_u32 timeout, uae_u32 sigmp)
 {
-	uae_u32 wssigs = (sigmp) ? get_long (sigmp) : 0;
+	uae_u32 wssigs = (sigmp) ? trap_get_long(ctx, sigmp) : 0;
 	uae_u32 sigs;
 
 	if (wssigs) {
-		m68k_dreg (regs, 0) = 0;
-		m68k_dreg (regs, 1) = wssigs;
-		sigs = CallLib (ctx, get_long (4), -0x132) & wssigs;    // SetSignal()
+		trap_call_add_dreg(ctx, 0, 0);
+		trap_call_add_dreg(ctx, 1, wssigs);
+		sigs = trap_call_lib(ctx, sb->sysbase, -0x132) & wssigs; // SetSignal()
 		if (sigs) {
 			put_long (sigmp, sigs);
 			// Check for zero address -> otherwise WinUAE crashes
@@ -1551,11 +1550,11 @@ void host_WaitSelect(TrapContext *ctx, SB, uae_u32 nfds, uae_u32 readfds, uae_u3
 
 	if (nfds == 0) {
 		/* No sockets - Just wait on signals */
-		m68k_dreg (regs, 0) = wssigs;
-		sigs = CallLib (ctx, get_long (4), -0x13e); // Wait()
-
-		if (sigmp)
+		if (wssigs != 0) {
+			trap_call_add_dreg(ctx, 0, wssigs);
+			sigs = trap_call_lib(ctx, sb->sysbase, -0x13e); // Wait()
 			trap_put_long(ctx, sigmp, sigs & wssigs);
+		}
 
 		if (readfds)
 			fd_zero (ctx, readfds,nfds);
@@ -1577,11 +1576,11 @@ void host_WaitSelect(TrapContext *ctx, SB, uae_u32 nfds, uae_u32 readfds, uae_u3
 
 	uae_sem_post (&sb->sem);
 
-	m68k_dreg (regs, 0) = (((uae_u32)1) << sb->signal) | sb->eintrsigs | wssigs;
-	sigs = CallLib (ctx, get_long (4), -0x13e); // Wait()
+	trap_call_add_dreg(ctx, 0, (((uae_u32)1) << sb->signal) | sb->eintrsigs | wssigs);
+	sigs = trap_call_lib(ctx, sb->sysbase, -0x13e);	// Wait()
 
 	if (sigmp)
-		put_long (sigmp, sigs & (sb->eintrsigs | wssigs));
+		trap_put_long(ctx, sigmp, sigs & wssigs);
 
 	if (sigs & wssigs) {
 		/* Received the signals we were waiting on */

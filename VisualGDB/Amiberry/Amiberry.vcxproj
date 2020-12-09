@@ -258,6 +258,7 @@
     <ClCompile Include="..\..\src\caps\caps_amiberry.cpp" />
     <ClCompile Include="..\..\src\cd32_fmv.cpp" />
     <ClCompile Include="..\..\src\cd32_fmv_genlock.cpp" />
+    <ClCompile Include="..\..\src\cdrom-handler.cpp" />
     <ClCompile Include="..\..\src\cdrom.cpp" />
     <ClCompile Include="..\..\src\cdtv.cpp" />
     <ClCompile Include="..\..\src\cdtvcr.cpp" />
@@ -287,7 +288,6 @@
     <ClCompile Include="..\..\src\flashrom.cpp" />
     <ClCompile Include="..\..\src\fpp.cpp" />
     <ClCompile Include="..\..\src\fsdb.cpp" />
-    <ClCompile Include="..\..\src\fsdb_unix.cpp" />
     <ClCompile Include="..\..\src\fsusage.cpp" />
     <ClCompile Include="..\..\src\gayle.cpp" />
     <ClCompile Include="..\..\src\gfxboard.cpp" />
@@ -295,6 +295,7 @@
     <ClCompile Include="..\..\src\hardfile.cpp" />
     <ClCompile Include="..\..\src\hrtmon.rom.cpp" />
     <ClCompile Include="..\..\src\ide.cpp" />
+    <ClCompile Include="..\..\src\ini.cpp" />
     <ClCompile Include="..\..\src\inputdevice.cpp" />
     <ClCompile Include="..\..\src\isofs.cpp" />
     <ClCompile Include="..\..\src\jit\compemu.cpp" />
@@ -363,6 +364,7 @@
     <ClCompile Include="..\..\src\scp.cpp" />
     <ClCompile Include="..\..\src\scsi.cpp" />
     <ClCompile Include="..\..\src\scsiemul.cpp" />
+    <ClCompile Include="..\..\src\scsitape.cpp" />
     <ClCompile Include="..\..\src\serial_win32.cpp" />
     <ClCompile Include="..\..\src\sounddep\sound.cpp" />
     <ClCompile Include="..\..\src\statusline.cpp" />
@@ -485,6 +487,7 @@
     <ClInclude Include="..\..\src\include\gfxboard.h" />
     <ClInclude Include="..\..\src\include\gui.h" />
     <ClInclude Include="..\..\src\include\ide.h" />
+    <ClInclude Include="..\..\src\include\ini.h" />
     <ClInclude Include="..\..\src\include\inputdevice.h" />
     <ClInclude Include="..\..\src\include\isofs.h" />
     <ClInclude Include="..\..\src\include\isofs_api.h" />
@@ -514,6 +517,7 @@
     <ClInclude Include="..\..\src\include\uaeexe.h" />
     <ClInclude Include="..\..\src\include\uaeresource.h" />
     <ClInclude Include="..\..\src\include\uae\caps.h" />
+    <ClInclude Include="..\..\src\include\uae\cdrom.h" />
     <ClInclude Include="..\..\src\include\uae\dlopen.h" />
     <ClInclude Include="..\..\src\include\uae\likely.h" />
     <ClInclude Include="..\..\src\include\uae\mman.h" />
@@ -539,6 +543,7 @@
     <ClInclude Include="..\..\src\osdep\amiberry_input.h" />
     <ClInclude Include="..\..\src\osdep\cda_play.h" />
     <ClInclude Include="..\..\src\osdep\config.h" />
+    <ClInclude Include="..\..\src\osdep\fsdb_host.h" />
     <ClInclude Include="..\..\src\osdep\gui\gui_handling.h" />
     <ClInclude Include="..\..\src\osdep\gui\SelectorEntry.hpp" />
     <ClInclude Include="..\..\src\osdep\mp3decoder.h" />

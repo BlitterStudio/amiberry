@@ -39,7 +39,7 @@ extern bool vsync_switchmode(int hz);
 extern void vsync_clear(void);
 extern int vsync_isdone(frame_time_t*);
 extern void doflashscreen (void);
-//extern int flashscreen;
+extern int flashscreen;
 extern void updatedisplayarea();
 extern int isvsync_chipset(void);
 extern int isvsync_rtg (void);

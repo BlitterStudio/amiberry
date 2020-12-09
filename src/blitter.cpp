@@ -415,6 +415,8 @@ static void blitter_interrupt (int hpos, int done)
 		return;
 	blt_info.blit_interrupt = 1;
 	send_interrupt (6, 4 * CYCLE_UNIT);
+	//if (debug_dma)
+	//	record_dma_event (DMA_EVENT_BLITIRQ, hpos, vpos);
 }
 
 static void blitter_done (int hpos)

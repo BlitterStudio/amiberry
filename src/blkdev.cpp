@@ -15,8 +15,6 @@
 #include "traps.h"
 #include "blkdev.h"
 #include "scsidev.h"
-#include <amiberry_filesys.hpp>
-
 #include "savestate.h"
 #include "crc32.h"
 #include "threaddep/thread.h"
@@ -24,6 +22,12 @@
 #include "zfile.h"
 #include "scsi.h"
 #include "statusline.h"
+#include "fsdb.h"
+#ifdef RETROPLATFORM
+#include "rp.h"
+#endif
+
+int log_scsiemu = 0;
 
 #define PRE_INSERT_DELAY (3 * (currprefs.ntscmode ? 60 : 50))
 
@@ -172,16 +176,16 @@ static void install_driver (int flags)
 				st->scsiemu = true;
 				break;
 				case SCSI_UNIT_SPTI:
-				//if (currprefs.win32_uaescsimode == UAESCSI_CDEMU) {
-				//	st->device_func = devicetable[SCSI_UNIT_IOCTL];
-				//	st->scsiemu = true;
-				//} else {
-				//	st->device_func = devicetable[SCSI_UNIT_SPTI];
-				//}
+				if (currprefs.uaescsimode == UAESCSI_CDEMU) {
+					st->device_func = devicetable[SCSI_UNIT_IOCTL];
+					st->scsiemu = true;
+				} else {
+					st->device_func = devicetable[SCSI_UNIT_SPTI];
+				}
 				break;
 			}
 			// do not default to image mode if unit 1+ and automount
-			if (i == 0) {
+			if (i == 0 || !currprefs.automount_cddrives) {
 				// use image mode if driver disabled
 				for (int j = 1; j < NUM_DEVICE_TABLE_ENTRIES; j++) {
 					if (devicetable[j] == st->device_func && driver_installed[j] < 0) {
@@ -239,22 +243,22 @@ void blkdev_fix_prefs (struct uae_prefs *p)
 	}
 
 	for (int i = 0; i < MAX_TOTAL_SCSI_DEVICES; i++) {
-		if (cdscsidevicetype[i] != SCSI_UNIT_DEFAULT && (currprefs.scsi == 0))
+		if (cdscsidevicetype[i] != SCSI_UNIT_DEFAULT && (currprefs.scsi == 0 || currprefs.uaescsimode < UAESCSI_SPTI))
 			continue;
 		if (p->cdslots[i].inuse || p->cdslots[i].name[0]) {
 			TCHAR *name = p->cdslots[i].name;
 			if (_tcslen (name) == 3 && name[1] == ':' && name[2] == '\\') {
-				//if (currprefs.scsi && (currprefs.win32_uaescsimode == UAESCSI_SPTI || currprefs.win32_uaescsimode == UAESCSI_SPTISCAN))
-				//	cdscsidevicetype[i] = SCSI_UNIT_SPTI;
-				//else
+				if (currprefs.scsi && (currprefs.uaescsimode == UAESCSI_SPTI || currprefs.uaescsimode == UAESCSI_SPTISCAN))
+					cdscsidevicetype[i] = SCSI_UNIT_SPTI;
+				else
 					cdscsidevicetype[i] = SCSI_UNIT_IOCTL;
 			} else {
 				cdscsidevicetype[i] = SCSI_UNIT_IMAGE;
 			}
 		} else if (currprefs.scsi) {
-			//if (currprefs.win32_uaescsimode == UAESCSI_CDEMU)
-			//	cdscsidevicetype[i] = SCSI_UNIT_IOCTL;
-			//else
+			if (currprefs.uaescsimode == UAESCSI_CDEMU)
+				cdscsidevicetype[i] = SCSI_UNIT_IOCTL;
+			else
 				cdscsidevicetype[i] = SCSI_UNIT_SPTI;
 		} else {
 			cdscsidevicetype[i] = SCSI_UNIT_IOCTL;
@@ -387,6 +391,21 @@ static int get_standard_cd_unit2 (struct uae_prefs *p, cd_standard_unit csu)
 		}
 		return unitnum;
 	}
+	device_func_init (SCSI_UNIT_IOCTL);
+#ifndef AMIBERRY
+	for (int drive = 'C'; drive <= 'Z'; ++drive) {
+		TCHAR vol[100];
+		_stprintf (vol, _T("%c:\\"), drive);
+		int drivetype = GetDriveType (vol);
+		if (drivetype == DRIVE_CDROM) {
+			if (sys_command_open_internal (unitnum, vol, csu)) {
+				if (getunitinfo (unitnum, drive, csu, &isaudio))
+					return unitnum;
+				sys_command_close (unitnum);
+			}
+		}
+	}
+#endif
 	if (isaudio) {
 		TCHAR vol[100];
 		_stprintf (vol, _T("%c:\\"), isaudio);
@@ -445,6 +464,19 @@ int sys_command_isopen (int unitnum)
 	return st->isopen;
 }
 
+int sys_command_open_tape (int unitnum, const TCHAR *tape_directory, bool readonly)
+{
+	struct blkdevstate *st = &state[unitnum];
+	if (st->isopen == 0) {
+		struct scsi_data_tape *tape = tape_alloc (unitnum, tape_directory, readonly);
+		if (!tape)
+			return 0;
+		st->tape = tape;
+	}
+	st->isopen++;
+	return 1;
+}
+
 int sys_command_open (int unitnum)
 {
 	struct blkdevstate *st = &state[unitnum];
@@ -474,10 +506,10 @@ void sys_command_close (int unitnum)
 		st->isopen--;
 		return;
 	}
-	//if (st->tape) {
-	//	tape_free (st->tape);
-	//	st->tape = NULL;
-	//}
+	if (st->tape) {
+		tape_free (st->tape);
+		st->tape = NULL;
+	}
 	sys_command_close_internal (unitnum);
 }
 
@@ -622,7 +654,6 @@ static void check_changes (int unitnum)
 		if (st->wasopen) {
 			st->device_func->closedev (unitnum);
 			st->wasopen = -1;
-#ifdef SCSIEMU
 			if (currprefs.scsi)  {
 				scsi_do_disk_change (unitnum, 0, &pollmode);
 				if (pollmode)
@@ -632,7 +663,6 @@ static void check_changes (int unitnum)
 					pollmode = 0;
 				}
 			}
-#endif
 		}
 		write_log (_T("CD: eject (%s) open=%d\n"), pollmode ? _T("slow") : _T("fast"), st->wasopen ? 1 : 0);
 		if (wasimage)
@@ -668,7 +698,6 @@ static void check_changes (int unitnum)
 			write_log (_T("-> device reopened\n"));
 		}
 	}
-#ifdef SCSIEMU
 	if (currprefs.scsi && st->wasopen) {
 		struct device_info di;
 		st->device_func->info (unitnum, &di, 0, -1);
@@ -680,7 +709,6 @@ static void check_changes (int unitnum)
 		scsi_do_disk_change (unitnum, 1, &pollmode);
 		filesys_do_disk_change (unitnum, 1);
 	}
-#endif
 	st->mediawaschanged = true;
 	st->showstatusline = true;
 	if (gotsem) {
@@ -1383,6 +1411,13 @@ int scsi_cd_emulate (int unitnum, uae_u8 *cmdbuf, int scsi_cmd_len,
 	dlen = *data_len;
 	*reply_len = *sense_len = 0;
 
+	if (log_scsiemu) {
+		write_log (_T("CD SCSIEMU %d: %02X.%02X.%02X.%02X.%02X.%02X.%02X.%02X.%02X.%02X.%02X.%02X CMDLEN=%d DATA=%p LEN=%d\n"), unitnum,
+			cmdbuf[0], cmdbuf[1], cmdbuf[2], cmdbuf[3], cmdbuf[4], cmdbuf[5], cmdbuf[6], 
+			cmdbuf[7], cmdbuf[8], cmdbuf[9], cmdbuf[10], cmdbuf[11],
+			scsi_cmd_len, scsi_data, dlen);
+	}
+
 	lun = cmdbuf[1] >> 5;
 	if (cmdbuf[0] != 0x03 && cmdbuf[0] != 0x12 && lun) {
 		status = 2; /* CHECK CONDITION */
@@ -1485,6 +1520,8 @@ int scsi_cd_emulate (int unitnum, uae_u8 *cmdbuf, int scsi_cmd_len,
 			sys_command_cd_volume (unitnum, vol_left, vol_right);
 			scsi_len = 0;
 		} else {
+			if (log_scsiemu)
+				write_log (_T("CD SCSIEMU MODE SELECT PC=%d not supported\n"), pcode);
 			goto errreq;
 		}
 	}
@@ -1506,6 +1543,8 @@ int scsi_cd_emulate (int unitnum, uae_u8 *cmdbuf, int scsi_cmd_len,
 				goto err;
 			dbd = 1;
 		}
+		if (log_scsiemu)
+			write_log (_T("CD SCSIEMU MODE SENSE PC=%d CODE=%d DBD=%d\n"), pc, pcode, dbd);
 		p = r;
 		if (sense10) {
 			totalsize = 8 - 2;
@@ -2122,13 +2161,29 @@ end:
 	*data_len = scsi_len;
 	*reply_len = lr;
 	*sense_len = ls;
-
+	if (log_scsiemu) {
+		if (lr > 0) {
+			write_log (_T("CD SCSIEMU REPLY: "));
+			for (int i = 0; i < lr && i < 100; i++)
+				write_log (_T("%02X."), r[i]);
+			write_log (_T("\n"));
+		} else if (scsi_len > 0) {
+			write_log(_T("CD SCSIEMU DATA: "));
+			for (int i = 0; i < scsi_len && i < 100; i++)
+				write_log(_T("%02X."), scsi_data[i]);
+			write_log(_T("\n"));
+		}
+	}
 	if (ls) {
 		//s[0] |= 0x80;
 		if (ls > 7)
 			s[7] = ls - 8; // additional sense length
+		if (log_scsiemu) {
+			write_log (_T("-> SENSE STATUS: KEY=%d ASC=%02X ASCQ=%02X\n"), s[2], s[12], s[13]);
+		}
 	}
-
+	if (cmdbuf[0] && log_scsiemu)
+		write_log (_T("-> DATAOUT=%d ST=%d SENSELEN=%d\n"), scsi_len, status, ls);
 	return status;
 }
 
@@ -2212,7 +2267,7 @@ static int execscsicmd_direct (int unitnum, int type, struct amigascsi *as)
 		as->status = scsi_cd_emulate (unitnum, cmd, as->cmd_len, scsi_datap, &datalen, replydata, &replylen, as->sensedata, &senselen, false);
 		break;
 		case INQ_SEQD:
-		//as->status = scsi_tape_emulate (state[unitnum].tape, cmd, as->cmd_len, scsi_datap, &datalen, replydata, &replylen, as->sensedata, &senselen);
+		as->status = scsi_tape_emulate (state[unitnum].tape, cmd, as->cmd_len, scsi_datap, &datalen, replydata, &replylen, as->sensedata, &senselen);
 		break;
 		default:
 		as->status = 2;
@@ -2297,8 +2352,26 @@ int sys_command_scsi_direct(TrapContext *ctx, int unitnum, int type, uaecptr acm
 	trap_get_bytes(ctx, as.cmd, ap, as.cmd_len);
 	as.sense_len = get_word_host(scsicmd + 26);
 
+	if (log_scsiemu) {
+		write_log(_T("HD_SCSICMD0: DATA=%08x LEN=%d CMD=%08x LEN=%d FLAGS=%02x SENSE=%08x LEN=%d\n"),
+			get_long_host(scsicmd + 0), as.len,
+			get_long_host(scsicmd + 12), as.cmd_len,
+			as.flags,
+			get_long_host(scsicmd + 22), as.sense_len);
+		for (int i = 0; i < as.cmd_len; i++) {
+			if (i > 0)
+				write_log(_T("."));
+			write_log(_T("%02x"), as.cmd[i]);
+		}
+		write_log(_T("\n"));
+	}
 
 	ret = sys_command_scsi_direct_native (unitnum, type, &as);
+
+	if (log_scsiemu) {
+		write_log(_T("HD_SCSICMD1: ACTUAL=%d CMDACTUAL=%d STATUS=%d SACTUAL=%d\n"),
+			as.actual, as.cmdactual, as.status, as.sactual);
+	}
 
 	put_long_host(scsicmd + 8, as.actual);
 	put_word_host(scsicmd + 18, as.cmdactual);

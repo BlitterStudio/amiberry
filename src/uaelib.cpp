@@ -11,10 +11,8 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
-#include <cassert>
-#include <cstring>
-#include <stdexcept>
-
+#include <assert.h>
+#include <string.h>
 
 #include "options.h"
 #include "uae.h"
@@ -25,6 +23,7 @@
 #include "autoconf.h"
 #include "traps.h"
 #include "disk.h"
+//#include "debug.h"
 #include "gensound.h"
 #include "picasso96.h"
 #include "filesys.h"
@@ -82,10 +81,12 @@ static uae_u32 emulib_SetFrameRate (uae_u32 val)
 {
 	if (val == 0)
 		return 0;
-	if (val > 20)
+	else if (val > 20)
 		return 0;
-	currprefs.gfx_framerate = val;
-	return 1;
+	else {
+		currprefs.gfx_framerate = val;
+		return 1;
+	}
 }
 
 /*
@@ -95,33 +96,34 @@ static uae_u32 emulib_ChangeLanguage (uae_u32 which)
 {
 	if (which > 6)
 		return 0;
-	switch (which)
-	{
-	case 0:
-		currprefs.keyboard_lang = KBD_LANG_US;
-		break;
-	case 1:
-		currprefs.keyboard_lang = KBD_LANG_DK;
-		break;
-	case 2:
-		currprefs.keyboard_lang = KBD_LANG_DE;
-		break;
-	case 3:
-		currprefs.keyboard_lang = KBD_LANG_SE;
-		break;
-	case 4:
-		currprefs.keyboard_lang = KBD_LANG_FR;
-		break;
-	case 5:
-		currprefs.keyboard_lang = KBD_LANG_IT;
-		break;
-	case 6:
-		currprefs.keyboard_lang = KBD_LANG_ES;
-		break;
-	default:
-		break;
+	else {
+		switch (which) {
+		case 0:
+			currprefs.keyboard_lang = KBD_LANG_US;
+			break;
+		case 1:
+			currprefs.keyboard_lang = KBD_LANG_DK;
+			break;
+		case 2:
+			currprefs.keyboard_lang = KBD_LANG_DE;
+			break;
+		case 3:
+			currprefs.keyboard_lang = KBD_LANG_SE;
+			break;
+		case 4:
+			currprefs.keyboard_lang = KBD_LANG_FR;
+			break;
+		case 5:
+			currprefs.keyboard_lang = KBD_LANG_IT;
+			break;
+		case 6:
+			currprefs.keyboard_lang = KBD_LANG_ES;
+			break;
+		default:
+			break;
+		}
+		return 1;
 	}
-	return 1;
 }
 
 /* The following ones don't work as we never realloc the arrays... */
@@ -385,68 +387,68 @@ static uae_u32 emulib_host_session(TrapContext* ctx, uaecptr name, uae_u32 out, 
 }
 #endif
 
-static uae_u32 uaelib_demux_common(TrapContext* ctx, uae_u32 ARG0, uae_u32 ARG1, uae_u32 ARG2, uae_u32 ARG3,
-                                   uae_u32 ARG4, uae_u32 ARG5)
+static uae_u32 uaelib_demux_common(TrapContext *ctx, uae_u32 ARG0, uae_u32 ARG1, uae_u32 ARG2, uae_u32 ARG3, uae_u32 ARG4, uae_u32 ARG5)
 {
-	switch (ARG0)
-	{
-	case 0: return emulib_GetVersion();
-	case 1: return emulib_GetUaeConfig(ctx, ARG1);
-	case 2: return emulib_SetUaeConfig(ARG1);
-	case 3: return emulib_HardReset();
-	case 4: return emulib_Reset();
-	case 5: return emulib_InsertDisk(ctx, ARG1, ARG2);
-	case 6: return emulib_EnableSound(ARG1);
-	case 7: return emulib_EnableJoystick(ARG1);
-	case 8: return emulib_SetFrameRate(ARG1);
-	case 9: return emulib_ChgCMemSize(ctx, ARG1);
-	case 10: return emulib_ChgSMemSize(ctx, ARG1);
-	case 11: return emulib_ChgFMemSize(ctx, ARG1);
-	case 12: return emulib_ChangeLanguage(ARG1);
-		/* The next call brings bad luck */
-	case 13: return emulib_ExitEmu();
-	case 14: return emulib_GetDisk(ctx, ARG1, ARG2);
-	case 15: return emulib_Debug();
+	switch (ARG0) {
+		case 0: return emulib_GetVersion();
+		case 1: return emulib_GetUaeConfig(ctx, ARG1);
+		case 2: return emulib_SetUaeConfig(ARG1);
+		case 3: return emulib_HardReset();
+		case 4: return emulib_Reset();
+		case 5: return emulib_InsertDisk(ctx, ARG1, ARG2);
+		case 6: return emulib_EnableSound(ARG1);
+		case 7: return emulib_EnableJoystick(ARG1);
+		case 8: return emulib_SetFrameRate(ARG1);
+		case 9: return emulib_ChgCMemSize(ctx, ARG1);
+		case 10: return emulib_ChgSMemSize(ctx, ARG1);
+		case 11: return emulib_ChgFMemSize(ctx, ARG1);
+		case 12: return emulib_ChangeLanguage(ARG1);
+			/* The next call brings bad luck */
+		case 13: return emulib_ExitEmu();
+		case 14: return emulib_GetDisk(ctx, ARG1, ARG2);
+		case 15: return emulib_Debug();
 
-	case 68: return emulib_Minimize();
-	case 69: return emulib_ExecuteNativeCode();
+		case 68: return emulib_Minimize();
+		case 69: return emulib_ExecuteNativeCode();
 
-	case 70: return 0; /* RESERVED. Something uses this.. */
+		case 70: return 0; /* RESERVED. Something uses this.. */
 
-	case 80:
-		return 0xffffffff;
-	case 81: return cfgfile_uaelib(ctx, ARG1, ARG2, ARG3, ARG4);
-	case 82: return cfgfile_uaelib_modify(ctx, ARG1, ARG2, ARG3, ARG4, ARG5);
-	case 83: currprefs.mmkeyboard = ARG1 ? 1 : 0; return currprefs.mmkeyboard;
+		case 80:
+		if (!currprefs.maprom)
+			return 0xffffffff;
+		/* Disable possible ROM protection */
+		//unprotect_maprom();
+		return currprefs.maprom;
+		case 81: return cfgfile_uaelib(ctx, ARG1, ARG2, ARG3, ARG4);
+		case 82: return cfgfile_uaelib_modify(ctx, ARG1, ARG2, ARG3, ARG4, ARG5);
+		case 83: currprefs.mmkeyboard = ARG1 ? 1 : 0; return currprefs.mmkeyboard;
 #ifdef DEBUGGER
-	case 84: return mmu_init(ARG1, ARG2, ARG3);
+		case 84: return mmu_init(ARG1, ARG2, ARG3);
 #endif
-	case 85: return native_dos_op(ctx, ARG1, ARG2, ARG3, ARG4);
-	case 86:
-		if (valid_address(ARG1, 1))
-		{
+		case 85: return native_dos_op(ctx, ARG1, ARG2, ARG3, ARG4);
+		case 86:
+		if (valid_address(ARG1, 1)) {
 			uae_char tmp[MAX_DPATH];
 			trap_get_string(ctx, tmp, ARG1, sizeof tmp);
-			TCHAR* s = au(tmp);
+			TCHAR *s = au(tmp);
 			write_log(_T("DBG: %s\n"), s);
 			xfree(s);
 			return 1;
 		}
 		return 0;
-	case 87:
+		case 87:
 		{
 			uae_u32 d0, d1;
 			d0 = emulib_target_getcpurate(ARG1, &d1);
 			trap_set_dreg(ctx, 1, d1);
 			return d0;
 		}
-	case 88:
+		case 88:
 		if (currprefs.allow_host_run)
 			return emulib_execute_on_host(ctx, ARG1);
 		return 0;
 	//case 89: return emulib_host_session(ctx, ARG1, ARG2, ARG3);
 	}
-	
 	return 0;
 }
 
@@ -479,11 +481,20 @@ static uae_u32 REGPARAM2 uaelib_demux2 (TrapContext *ctx)
 	return uaelib_demux_common(ctx, ARG0, ARG1, ARG2, ARG3, ARG4, ARG5);
 }
 
-static uae_u32 REGPARAM2 uaelib_demux (TrapContext* ctx)
+extern int uaelib_debug;
+static uae_u32 REGPARAM2 uaelib_demux (TrapContext *ctx)
 {
 	uae_u32 v;
+	struct regstruct *r = &regs;
 
-	v = uaelib_demux2(ctx);
+	if (uaelib_debug)
+		write_log (_T("%d: %08x %08x %08x %08x %08x %08x %08x %08x, %08x %08x %08x %08x %08x %08x %08x %08x\n"),
+		ARG0,
+		r->regs[0],r->regs[1],r->regs[2],r->regs[3],r->regs[4],r->regs[5],r->regs[6],r->regs[7],
+		r->regs[8],r->regs[9],r->regs[10],r->regs[11],r->regs[12],r->regs[13],r->regs[14],r->regs[15]);
+	v = uaelib_demux2 (ctx);
+	if (uaelib_debug)
+		write_log (_T("=%08x\n"), v);
 	return v;
 }
 

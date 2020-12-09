@@ -16,6 +16,7 @@
 #include "flashrom.h"
 #include "memory.h"
 #include "newcpu.h"
+//#include "debug.h"
 #include "gui.h"
 
 #define FLASH_LOG 0
@@ -340,8 +341,8 @@ static void bitbang_i2c_enter_stop(bitbang_i2c_interface *i2c)
 /* Set device data pin.  */
 static int bitbang_i2c_ret(bitbang_i2c_interface *i2c, int level)
 {
-  i2c->device_out = level;
-  return level & i2c->last_data;
+    i2c->device_out = level;
+    return level & i2c->last_data;
 }
 
 /* Leave device data pin unodified.  */

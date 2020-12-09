@@ -16,10 +16,10 @@
 #include "androidsdl_event.h"
 #endif
 
-#include "amiberry_filesys.hpp"
 #include "options.h"
 #include "inputdevice.h"
 #include "amiberry_gfx.h"
+#include "fsdb_host.h"
 
 #define DIALOG_WIDTH 600
 #define DIALOG_HEIGHT 140

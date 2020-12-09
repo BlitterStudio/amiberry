@@ -39,10 +39,16 @@
 #include "drawing.h"
 #include "savestate.h"
 #include "ar.h"
+//#include "debug.h"
 #include "akiko.h"
+#if defined(ENFORCER)
+#include "enforcer.h"
+#endif
 #include "threaddep/thread.h"
+//#include "luascript.h"
 #include "devices.h"
 #include "rommgr.h"
+//#include "specialmonitors.h"
 
 #define CUSTOM_DEBUG 0
 #define SPRITE_DEBUG 0

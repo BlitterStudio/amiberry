@@ -314,7 +314,6 @@ OBJS =	\
 	src/flashrom.o \
 	src/fpp.o \
 	src/fsdb.o \
-	src/fsdb_unix.o \
 	src/fsusage.o \
 	src/gayle.o \
 	src/gfxboard.o \
@@ -322,6 +321,7 @@ OBJS =	\
 	src/hardfile.o \
 	src/hrtmon.rom.o \
 	src/ide.o \
+	src/ini.o \
 	src/inputdevice.o \
 	src/isofs.o \
 	src/keybuf.o \
@@ -335,6 +335,7 @@ OBJS =	\
 	src/scp.o \
 	src/scsi.o \
 	src/scsiemul.o \
+	src/scsitape.o \
 	src/serial_win32.o \
 	src/statusline.o \
 	src/tabletlibrary.o \

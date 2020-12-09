@@ -16,7 +16,7 @@
 #include "uae.h"
 #include "gui_handling.h"
 #include "amiberry_gfx.h"
-#include "amiberry_filesys.hpp"
+#include "fsdb_host.h"
 #include "autoconf.h"
 #include "amiberry_input.h"
 

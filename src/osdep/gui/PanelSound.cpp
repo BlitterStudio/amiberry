@@ -12,7 +12,6 @@
 #include "audio.h"
 #include "sounddep/sound.h"
 
-
 static gcn::Window* grpSound;
 static gcn::RadioButton* optSoundDisabled;
 static gcn::RadioButton* optSoundDisabledEmu;

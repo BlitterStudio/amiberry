@@ -69,6 +69,14 @@ void set_volume_sound_device(struct sound_data* sd, int volume, int mute);
 
 static uae_u16* paula_sndbufpt_prev, * paula_sndbufpt_start;
 
+STATIC_INLINE void set_sound_buffers(void)
+{
+#if SOUNDSTUFF > 1
+	paula_sndbufpt_prev = paula_sndbufpt_start;
+	paula_sndbufpt_start = paula_sndbufpt;
+#endif
+}
+
 STATIC_INLINE void check_sound_buffers()
 {
 	if (currprefs.sound_stereo == SND_4CH_CLONEDSTEREO) {

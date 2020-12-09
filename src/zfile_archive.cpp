@@ -5,11 +5,8 @@
 *
 *     2007 Toni Wilen
 */
-#include <string.h>
-#include <time.h>
-#include <strings.h>
-#include <stdio.h>
 
+#include "sysconfig.h"
 #include "sysdeps.h"
 
 #ifdef _WIN32
@@ -17,10 +14,19 @@
 #include "win32.h"
 #endif
 
+#include "options.h"
 #include "zfile.h"
 #include "archivers/zip/unzip.h"
+#include "archivers/dms/pfile.h"
+#include "crc32.h"
 #include "zarchive.h"
 #include "disk.h"
+
+#include <zlib.h>
+
+#define unpack_log write_log
+#undef unpack_log
+#define unpack_log(fmt, ...)
 
 
 static time_t fromdostime (uae_u32 dd)
@@ -135,6 +141,10 @@ struct zfile *archive_access_select (struct znode *parent, struct zfile *zf, uns
 		diskimg = zfile_is_diskimage (zn->fullname);
 		if (isok) {
 			if (tmphist[0]) {
+#ifndef _CONSOLE
+				if (diskimg >= 0 && canhistory)
+					DISK_history_add (tmphist, -1, diskimg, 1);
+#endif
 				tmphist[0] = 0;
 				first = 0;
 			}
@@ -143,6 +153,10 @@ struct zfile *archive_access_select (struct znode *parent, struct zfile *zf, uns
 					_tcscpy (tmphist, zn->fullname);
 			} else {
 				_tcscpy (tmphist, zn->fullname);
+#ifndef _CONSOLE
+				if (diskimg >= 0 && canhistory)
+					DISK_history_add (tmphist, -1, diskimg, 1);
+#endif
 				tmphist[0] = 0;
 			}
 			select = 0;
@@ -195,6 +209,8 @@ struct zfile *archive_access_select (struct znode *parent, struct zfile *zf, uns
 	}
 #ifndef _CONSOLE
 	diskimg = zfile_is_diskimage (zfile_getname (zf));
+	if (diskimg >= 0 && first && tmphist[0] && canhistory)
+		DISK_history_add (zfile_getname (zf), -1, diskimg, 1);
 #endif
 	zfile_fclose_archive (zv);
 	if (z) {
@@ -314,7 +330,7 @@ struct zvolume *archive_directory_tar (struct zfile *z)
 	return zv;
 }
 
-static struct zfile *archive_access_tar (struct znode *zn)
+struct zfile *archive_access_tar (struct znode *zn)
 {
 	return zfile_fopen_parent (zn->volume->archive, zn->fullname, zn->offset, zn->size);
 }
@@ -1152,6 +1168,27 @@ static uae_u32 gwx (uae_u8 *p)
 static const int secs_per_day = 24 * 60 * 60;
 static const int diff = (8 * 365 + 2) * (24 * 60 * 60);
 static const int diff2 = (-8 * 365 - 2) * (24 * 60 * 60);
+
+static time_t put_time (long days, long mins, long ticks)
+{
+	time_t t;
+
+	if (days < 0)
+		days = 0;
+	if (days > 9900 * 365)
+		days = 9900 * 365; // in future far enough?
+	if (mins < 0 || mins >= 24 * 60)
+		mins = 0;
+	if (ticks < 0 || ticks >= 60 * 50)
+		ticks = 0;
+
+	t = ticks / 50;
+	t += mins * 60;
+	t += ((uae_u64)days) * secs_per_day;
+	t += diff;
+
+	return t;
+}
 
 static int adf_read_block (struct adfhandle *adf, int block)
 {
@@ -2069,6 +2106,7 @@ static struct zfile *archive_access_dir (struct znode *zn)
 {
 	return zfile_fopen (zn->fullname, _T("rb"), 0);
 }
+
 
 struct zfile *archive_unpackzfile (struct zfile *zf)
 {

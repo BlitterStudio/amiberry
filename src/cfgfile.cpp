@@ -30,10 +30,13 @@
 #include "disk.h"
 #include "blkdev.h"
 #include "statusline.h"
+//#include "debug.h"
 #include "calc.h"
 #include "gfxboard.h"
 #include "ethernet.h"
 #include "native2amiga_api.h"
+#include "ini.h"
+//#include "specialmonitors.h"
 
 #define cfgfile_warning write_log
 #define cfgfile_warning_obsolete write_log
@@ -2712,9 +2715,9 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 		: p->keyboard_lang == KBD_LANG_IT ? _T("it")
 		: _T("FOO")));
 
-#ifndef AMIBERRY
 	cfgfile_dwrite (f, _T("state_replay_rate"), _T("%d"), p->statecapturerate);
 	cfgfile_dwrite (f, _T("state_replay_buffers"), _T("%d"), p->statecapturebuffersize);
+#ifndef AMIBERRY	
 	cfgfile_dwrite_bool (f, _T("state_replay_autoplay"), p->inprec_autoplay);
 #endif
 	cfgfile_dwrite_bool (f, _T("warp"), p->turbo_emulation);
@@ -3391,10 +3394,8 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 
 	if (cfgfile_intval (option, value, _T("sound_frequency"), &p->sound_freq, 1)
 		|| cfgfile_intval (option, value, _T("sound_max_buff"), &p->sound_maxbsiz, 1)
-#ifndef AMIBERRY
 		|| cfgfile_intval (option, value, _T("state_replay_rate"), &p->statecapturerate, 1)
 		|| cfgfile_intval (option, value, _T("state_replay_buffers"), &p->statecapturebuffersize, 1)
-#endif
 		|| cfgfile_yesno (option, value, _T("state_replay_autoplay"), &p->inprec_autoplay)
 		|| cfgfile_intval (option, value, _T("sound_frequency"), &p->sound_freq, 1)
 		|| cfgfile_intval (option, value, _T("sound_volume"), &p->sound_volume_master, 1)
@@ -4668,7 +4669,7 @@ static void get_filesys_controller (const TCHAR *hdc, int *type, int *typenum, i
 	*typenum = idx;
 	*num = hdunit;
 }
-#ifndef AMIBERRY
+
 static bool parse_geo (const TCHAR *tname, struct uaedev_config_info *uci, struct hardfiledata *hfd, bool empty, bool addgeom)
 {
 	int found = 0;
@@ -4855,7 +4856,7 @@ bool get_hd_geometry (struct uaedev_config_info *uci)
 {
 	TCHAR tname[MAX_DPATH];
 
-	fetch_configurationpath (tname, sizeof tname / sizeof (TCHAR));
+	get_configuration_path (tname, sizeof tname / sizeof (TCHAR));
 	_tcscat (tname, _T("default.geo"));
 	if (zfile_exists (tname)) {
 		struct hardfiledata hfd;
@@ -4878,7 +4879,6 @@ bool get_hd_geometry (struct uaedev_config_info *uci)
 	}
 	return false;
 }
-#endif
 
 static int cfgfile_parse_partial_newfilesys (struct uae_prefs *p, int nr, int type, const TCHAR *value, int unit, bool uaehfentry)
 {
@@ -8069,8 +8069,8 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 	p->dfxclickchannelmask = 0xffff;
 	p->cd_speed = 100;
 
-	//p->statecapturebuffersize = 100;
-	//p->statecapturerate = 5 * 50;
+	p->statecapturebuffersize = 100;
+	p->statecapturerate = 5 * 50;
 	p->inprec_autoplay = true;
 
 #ifdef UAE_MINI

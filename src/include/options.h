@@ -877,7 +877,13 @@ struct uae_prefs
 	bool minimized_pause;
 	bool minimized_nosound;
 	int minimized_input;
+
+	bool automount_removable;
+	bool automount_cddrives;
+	int uaescsimode;
 	bool right_control_is_right_win_key;
+
+	int statecapturerate, statecapturebuffersize;
 	
 	TCHAR open_gui[256];
 	TCHAR quit_amiberry[256];

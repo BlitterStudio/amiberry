@@ -197,7 +197,7 @@ void make_rom_symlink(const char* kick_short, char* kick_path, int kick_numb, st
 	// this should sort any broken links
 	my_unlink(kick_long);
 
-	if (!zfile_exists(kick_long))
+	if (!my_existsfile(kick_long))
 	{
 		roms[0] = kick_numb; // kickstart 1.2 A500
 		const auto rom_test = configure_rom(p, roms, 0); // returns 0 or 1 if found or not found
