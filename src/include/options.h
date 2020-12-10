@@ -1118,11 +1118,11 @@ struct amiberry_options
 	bool default_frameskip = false;
 	bool default_correct_aspect_ratio = true;
 	bool default_auto_height = false;
-	int default_width = 720;
-	int default_height = 270;
+	int default_width = 640;
+	int default_height = 512;
 	bool default_fullscreen = false;
 	int default_stereo_separation = 7;
-	int default_sound_buffer = 2048;
+	int default_sound_buffer = 16384;
 	int default_joystick_deadzone = 33;
 	bool default_retroarch_quit = true;
 	bool default_retroarch_menu = true;
