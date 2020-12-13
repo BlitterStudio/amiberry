@@ -912,15 +912,14 @@ int fsdb_fill_file_attrs(a_inode* base, a_inode* aino)
     //    return 0;
     //}
     //aino->dir = info.type == 2;
+    //aino->amigaos_mode = filesys_parse_mask(info.mode);
 	
     aino->dir = S_ISDIR(statbuf.st_mode) ? 1 : 0;
-    //aino->amigaos_mode = filesys_parse_mask(info.mode);
     aino->amigaos_mode = ((S_IXUSR & statbuf.st_mode ? 0 : A_FIBF_EXECUTE)
         | (S_IWUSR & statbuf.st_mode ? 0 : A_FIBF_WRITE)
         | (S_IRUSR & statbuf.st_mode ? 0 : A_FIBF_READ));
-#if defined(WIN32) || defined(AMIBERRY)
+#if defined(AMIBERRY)
     // Always give execute & read permission
-    // Temporary do this for raspberry...
     aino->amigaos_mode &= ~A_FIBF_EXECUTE;
     aino->amigaos_mode &= ~A_FIBF_READ;
 #endif
