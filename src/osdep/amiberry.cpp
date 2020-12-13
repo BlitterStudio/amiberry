@@ -1688,7 +1688,7 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->capture_always = false;
 	
 	p->automount_removable = false;
-	p->automount_cddrives = false;
+	p->automount_cddrives = true;
 	p->uaescsimode = UAESCSI_CDEMU;
 	p->input_analog_remap = false;
 

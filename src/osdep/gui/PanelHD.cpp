@@ -227,7 +227,7 @@ public:
 			else
 			{
 				changed_prefs.cdslots[0].inuse = true;
-				changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
+				changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
 
 				if (!changed_prefs.cs_cd32cd && !changed_prefs.cs_cd32nvram
 					&& (!changed_prefs.cs_cdtvcd && !changed_prefs.cs_cdtvram)
@@ -259,6 +259,8 @@ public:
 			// Eject CD from drive
 			//---------------------------------------
 			changed_prefs.cdslots[0].name[0] = 0;
+			changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
+			changed_prefs.cdslots[0].inuse = false;
 			AdjustDropDownControls();
 		}
 		else if (actionEvent.getSource() == cmdCDSelect)
