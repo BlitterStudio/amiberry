@@ -278,7 +278,7 @@ public:
 				{
 					strncpy(changed_prefs.cdslots[0].name, tmp, sizeof changed_prefs.cdslots[0].name);
 					changed_prefs.cdslots[0].inuse = true;
-					changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
+					changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
 					AddFileToCDList(tmp, 1);
 					extract_path(tmp, current_dir);
 
@@ -336,7 +336,7 @@ public:
 					strncpy(changed_prefs.cdslots[0].name, cdfileList.getElementAt(idx).c_str(),
 					        sizeof changed_prefs.cdslots[0].name);
 					changed_prefs.cdslots[0].inuse = true;
-					changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
+					changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
 					lstMRUCDList.erase(lstMRUCDList.begin() + idx);
 					lstMRUCDList.insert(lstMRUCDList.begin(), changed_prefs.cdslots[0].name);
 					bIgnoreListChange = true;
