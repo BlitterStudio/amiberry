@@ -492,6 +492,7 @@ clean:
 
 cleanprofile:
 	$(RM) $(OBJS:%.o=%.gcda)
+	$(MAKE) -C external/libguisan cleanprofile
 	
 guisan:
 	$(MAKE) -C external/libguisan
