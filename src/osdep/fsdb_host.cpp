@@ -423,12 +423,11 @@ static char* nname_to_aname(const char* nname, int noconvert)
     }
 
     char* result = my_strdup(cresult);
-    unsigned char* p = (unsigned char*)result;
+    auto p = (unsigned char*)result;
     for (int i = 0; i < len; i++) {
         unsigned char c = cresult[i];
         if (c == '%' && i < len - 2) {
-            *p++ = (char_to_hex(cresult[i + 1]) << 4) |
-                char_to_hex(cresult[i + 2]);
+            *p++ = (char_to_hex(cresult[i + 1]) << 4) | char_to_hex(cresult[i + 2]);
             i += 2;
         }
         else {
@@ -893,7 +892,7 @@ extern unsigned char g_latin1_lower_table[256];
 
 static void lower_latin1(char* s)
 {
-    unsigned char* u = (unsigned char*)s;
+	auto u = (unsigned char*)s;
     while (*u) {
         *u = g_latin1_lower_table[*u];
         u++;
@@ -902,22 +901,14 @@ static void lower_latin1(char* s)
 
 int fsdb_fill_file_attrs(a_inode* base, a_inode* aino)
 {
-    struct stat statbuf{};
-    if (stat(aino->nname, &statbuf) == -1)
-        return 0;
     fsdb_file_info info;
     fsdb_get_file_info(aino->nname, &info);
-    //if (!info.type) {
-    //    // file does not exist
-    //    return 0;
-    //}
-    //aino->dir = info.type == 2;
-    //aino->amigaos_mode = filesys_parse_mask(info.mode);
-	
-    aino->dir = S_ISDIR(statbuf.st_mode) ? 1 : 0;
-    aino->amigaos_mode = ((S_IXUSR & statbuf.st_mode ? 0 : A_FIBF_EXECUTE)
-        | (S_IWUSR & statbuf.st_mode ? 0 : A_FIBF_WRITE)
-        | (S_IRUSR & statbuf.st_mode ? 0 : A_FIBF_READ));
+    if (!info.type) {
+        // file does not exist
+        return 0;
+    }
+    aino->dir = info.type == 2;
+    aino->amigaos_mode = filesys_parse_mask(info.mode);
 #if defined(AMIBERRY)
     // Always give execute & read permission
     aino->amigaos_mode &= ~A_FIBF_EXECUTE;
