@@ -127,9 +127,9 @@ time_t fs_timegm(struct tm* tm)
 int fs_get_local_time_offset(time_t time)
 {
     time_t t = time;
-    struct tm lt;
+    struct tm lt{};
     void* result1 = fs_localtime_r(&t, &lt);
-    struct tm gt;
+    struct tm gt{};
     void* result2 = fs_gmtime_r(&t, &gt);
     gt.tm_isdst = lt.tm_isdst;
     if (result1 == NULL || result2 == NULL) {
@@ -423,7 +423,7 @@ static char* nname_to_aname(const char* nname, int noconvert)
     }
 
     char* result = my_strdup(cresult);
-    auto p = (unsigned char*)result;
+    auto* p = (unsigned char*)result;
     for (int i = 0; i < len; i++) {
         unsigned char c = cresult[i];
         if (c == '%' && i < len - 2) {
@@ -551,7 +551,7 @@ static int fsdb_get_file_info(const char* nname, fsdb_file_info* info)
 
     if ((end - p) >= TIME_LEN) {
         //p[TIME_LEN - 1] = '\0';
-        struct tm tm;
+        struct tm tm{};
         tm.tm_isdst = -1;
 
         // haven't got strptime on Windows...
@@ -793,7 +793,6 @@ int fsdb_set_file_info(const char* nname, fsdb_file_info* info)
     }
 
     if (!error && f != NULL) {
-        struct mytimeval mtv{};
         amiga_to_timeval(&mtv, info->days, info->mins, info->ticks, 50);
 
         // FIXME: reentrant?
@@ -892,7 +891,7 @@ extern unsigned char g_latin1_lower_table[256];
 
 static void lower_latin1(char* s)
 {
-	auto u = (unsigned char*)s;
+	auto* u = (unsigned char*)s;
     while (*u) {
         *u = g_latin1_lower_table[*u];
         u++;
