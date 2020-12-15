@@ -10,11 +10,12 @@
 #include "gui_handling.h"
 #include "statusline.h"
 
+static gcn::ScrollArea* scrollArea;
+static gcn::Window* grpMiscOptions;
+
 static gcn::CheckBox* chkRetroArchQuit;
 static gcn::CheckBox* chkRetroArchMenu;
 static gcn::CheckBox* chkRetroArchReset;
-//static gcn::CheckBox* chkRetroArchSaveState;
-
 static gcn::CheckBox* chkStatusLine;
 static gcn::CheckBox* chkStatusLineRtg;
 static gcn::CheckBox* chkShowGUI;
@@ -24,6 +25,13 @@ static gcn::CheckBox* chkMasterWP;
 static gcn::CheckBox* chkClipboardSharing;
 static gcn::CheckBox* chkAllowHostRun;
 static gcn::CheckBox* chkRCtrlIsRAmiga;
+static gcn::CheckBox* chkSyncClock;
+static gcn::CheckBox* chkResetDelay;
+static gcn::CheckBox* chkFasterRTG;
+static gcn::CheckBox* chkAllowNativeCode;
+static gcn::CheckBox* chkIllegalMem;
+static gcn::CheckBox* chkMinimizeInactive;
+static gcn::CheckBox* chkCaptureAlways;
 
 static gcn::Label* lblNumLock;
 static gcn::DropDown* cboKBDLed_num;
@@ -147,9 +155,6 @@ public:
 			RefreshPanelCustom();
 		}
 
-		//else if (actionEvent.getSource() == chkRetroArchSavestate)
-		//   changed_prefs.amiberry_use_retroarch_savestatebuttons = chkRetroArchSavestate->isSelected();
-
 		else if (actionEvent.getSource() == chkBSDSocket)
 			changed_prefs.socket_emu = chkBSDSocket->isSelected();
 
@@ -168,6 +173,28 @@ public:
 
 		else if (actionEvent.getSource() == chkRCtrlIsRAmiga)
 			changed_prefs.right_control_is_right_win_key = chkRCtrlIsRAmiga->isSelected();
+
+		else if (actionEvent.getSource() == chkSyncClock)
+			changed_prefs.tod_hack = chkSyncClock->isSelected();
+
+		else if (actionEvent.getSource() == chkResetDelay)
+			changed_prefs.reset_delay = chkResetDelay->isSelected();
+
+		else if (actionEvent.getSource() == chkFasterRTG)
+			changed_prefs.picasso96_nocustom = chkFasterRTG->isSelected();
+
+		else if (actionEvent.getSource() == chkAllowNativeCode)
+			changed_prefs.native_code = chkAllowNativeCode->isSelected();
+
+		else if (actionEvent.getSource() == chkIllegalMem)
+			changed_prefs.illegal_mem = chkIllegalMem->isSelected();
+
+		else if (actionEvent.getSource() == chkMinimizeInactive)
+			changed_prefs.minimize_inactive = chkMinimizeInactive->isSelected();
+
+		else if (actionEvent.getSource() == chkCaptureAlways)
+			changed_prefs.capture_always = chkCaptureAlways->isSelected();
+		
 		
 		else if (actionEvent.getSource() == cboKBDLed_num)
 			changed_prefs.kbd_led_num = cboKBDLed_num->getSelected() - 1;
@@ -248,6 +275,9 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	miscKeyListener = new MiscKeyListener();
 #endif
 
+	grpMiscOptions = new gcn::Window();
+	grpMiscOptions->setId("grpMiscOptions");
+	
 	chkStatusLine = new gcn::CheckBox("Status Line native");
 	chkStatusLine->setId("chkStatusLineNative");
 	chkStatusLine->addActionListener(miscActionListener);
@@ -276,10 +306,6 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	chkRetroArchReset->setId("chkRetroArchReset");
 	chkRetroArchReset->addActionListener(miscActionListener);
 
-	//chkRetroArchSavestate = new gcn::CheckBox("Use RetroArch State Controls");
-	//chkRetroArchSavestate->setId("RetroArchState");
-	//chkRetroArchSavestate->addActionListener(miscActionListener);
-
 	chkBSDSocket = new gcn::CheckBox("bsdsocket.library");
 	chkBSDSocket->setId("chkBSDSocket");
 	chkBSDSocket->addActionListener(miscActionListener);
@@ -300,6 +326,36 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	chkRCtrlIsRAmiga->setId("chkRCtrlIsRAmiga");
 	chkRCtrlIsRAmiga->addActionListener(miscActionListener);
 
+	chkSyncClock = new gcn::CheckBox("Synchronize clock");
+	chkSyncClock->setId("chkSyncClock");
+	chkSyncClock->addActionListener(miscActionListener);
+
+	chkResetDelay = new gcn::CheckBox("One second reboot pause");
+	chkResetDelay->setId("chkResetDelay");
+	chkResetDelay->addActionListener(miscActionListener);
+
+	chkFasterRTG = new gcn::CheckBox("Faster RTG");
+	chkFasterRTG->setId("chkFasterRTG");
+	chkFasterRTG->addActionListener(miscActionListener);
+
+	chkAllowNativeCode = new gcn::CheckBox("Allow native code");
+	chkAllowNativeCode->setId("chkAllowNativeCode");
+	chkAllowNativeCode->addActionListener(miscActionListener);
+
+	chkIllegalMem = new gcn::CheckBox("Log illegal memory accesses");
+	chkIllegalMem->setId("chkIllegalMem");
+	chkIllegalMem->addActionListener(miscActionListener);
+
+	chkMinimizeInactive = new gcn::CheckBox("Minimize when focus is lost");
+	chkMinimizeInactive->setId("chkMinimizeInactive");
+	chkMinimizeInactive->addActionListener(miscActionListener);
+
+	chkCaptureAlways = new gcn::CheckBox("Capture mouse when window is activated");
+	chkCaptureAlways->setId("chkCaptureAlways");
+	chkCaptureAlways->addActionListener(miscActionListener);
+
+	
+	
 	lblNumLock = new gcn::Label("NumLock:");
 	lblNumLock->setAlignment(gcn::Graphics::RIGHT);
 	cboKBDLed_num = new gcn::DropDown(&KBDLedList);
@@ -320,7 +376,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	lblOpenGUI->setAlignment(gcn::Graphics::RIGHT);
 	txtOpenGUI = new gcn::TextField();
 	txtOpenGUI->setEnabled(false);
-	txtOpenGUI->setSize(105, TEXTFIELD_HEIGHT);
+	txtOpenGUI->setSize(120, TEXTFIELD_HEIGHT);
 	txtOpenGUI->setBackgroundColor(colTextboxBackground);
 	cmdOpenGUI = new gcn::Button("...");
 	cmdOpenGUI->setId("OpenGUI");
@@ -332,7 +388,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	lblKeyForQuit->setAlignment(gcn::Graphics::RIGHT);
 	txtKeyForQuit = new gcn::TextField();
 	txtKeyForQuit->setEnabled(false);
-	txtKeyForQuit->setSize(105, TEXTFIELD_HEIGHT);
+	txtKeyForQuit->setSize(120, TEXTFIELD_HEIGHT);
 	txtKeyForQuit->setBackgroundColor(colTextboxBackground);
 	cmdKeyForQuit = new gcn::Button("...");
 	cmdKeyForQuit->setId("KeyForQuit");
@@ -344,7 +400,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	lblKeyActionReplay->setAlignment(gcn::Graphics::RIGHT);
 	txtKeyActionReplay = new gcn::TextField();
 	txtKeyActionReplay->setEnabled(false);
-	txtKeyActionReplay->setSize(105, TEXTFIELD_HEIGHT);
+	txtKeyActionReplay->setSize(120, TEXTFIELD_HEIGHT);
 	txtKeyActionReplay->setBackgroundColor(colTextboxBackground);
 	cmdKeyActionReplay = new gcn::Button("...");
 	cmdKeyActionReplay->setId("KeyActionReplay");
@@ -356,7 +412,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	lblKeyFullScreen->setAlignment(gcn::Graphics::RIGHT);
 	txtKeyFullScreen = new gcn::TextField();
 	txtKeyFullScreen->setEnabled(false);
-	txtKeyFullScreen->setSize(105, TEXTFIELD_HEIGHT);
+	txtKeyFullScreen->setSize(120, TEXTFIELD_HEIGHT);
 	txtKeyFullScreen->setBackgroundColor(colTextboxBackground);
 	cmdKeyFullScreen = new gcn::Button("...");
 	cmdKeyFullScreen->setId("KeyFullScreen");
@@ -387,65 +443,111 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 #endif
 
 	auto posY = DISTANCE_BORDER;
-	category.panel->add(chkStatusLine, DISTANCE_BORDER, posY);
-	posY += chkStatusLine->getHeight() + DISTANCE_NEXT_Y;
-	category.panel->add(chkStatusLineRtg, DISTANCE_BORDER, posY);
-	posY += chkStatusLineRtg->getHeight() + DISTANCE_NEXT_Y;
-	category.panel->add(chkShowGUI, DISTANCE_BORDER, posY);
-
-	posY = DISTANCE_BORDER;
-	auto posX = 300;
-	category.panel->add(chkRetroArchQuit, posX + DISTANCE_BORDER, posY);
-	posY += chkRetroArchQuit->getHeight() + DISTANCE_NEXT_Y;
-	category.panel->add(chkRetroArchMenu, posX + DISTANCE_BORDER, posY);
-	posY += chkRetroArchMenu->getHeight() + DISTANCE_NEXT_Y;
-	category.panel->add(chkRetroArchReset, posX + DISTANCE_BORDER, posY);
-	posY += chkRetroArchReset->getHeight() + DISTANCE_NEXT_Y;
-	//category.panel->add(chkRetroArchSavestate, posX + DISTANCE_BORDER, posY);
-
-	category.panel->add(chkMouseUntrap, DISTANCE_BORDER, posY);
-	category.panel->add(chkClipboardSharing, posX + DISTANCE_BORDER, posY);
+	grpMiscOptions->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
+	grpMiscOptions->setSize(category.panel->getWidth() - category.panel->getWidth() / 3 - DISTANCE_BORDER, 600);
+	grpMiscOptions->setBaseColor(gui_baseCol);
+	grpMiscOptions->add(chkMouseUntrap, DISTANCE_BORDER, posY);
 	posY += chkMouseUntrap->getHeight() + DISTANCE_NEXT_Y;
-
-	category.panel->add(chkBSDSocket, DISTANCE_BORDER, posY);
-	category.panel->add(chkAllowHostRun, posX + DISTANCE_BORDER, posY);
+	grpMiscOptions->add(chkShowGUI, DISTANCE_BORDER, posY);
+	posY += chkShowGUI->getHeight() + DISTANCE_NEXT_Y;
+	grpMiscOptions->add(chkBSDSocket, DISTANCE_BORDER, posY);
 	posY += chkBSDSocket->getHeight() + DISTANCE_NEXT_Y;
+	// Use CTRL-F11 to quit
+	// Don't show taskbar button
+	// Don't show notification icon
+	// Main window always on top
+	// GUI window always on top
+	// Disable screensaver
+	grpMiscOptions->add(chkSyncClock, DISTANCE_BORDER, posY);
+	posY += chkSyncClock->getHeight() + DISTANCE_NEXT_Y;
+	grpMiscOptions->add(chkResetDelay, DISTANCE_BORDER, posY);
+	posY += chkResetDelay->getHeight() + DISTANCE_NEXT_Y;
+	grpMiscOptions->add(chkFasterRTG, DISTANCE_BORDER, posY);
+	posY += chkFasterRTG->getHeight() + DISTANCE_NEXT_Y;
+	grpMiscOptions->add(chkClipboardSharing, DISTANCE_BORDER, posY);
+	posY += chkClipboardSharing->getHeight() + DISTANCE_NEXT_Y;
+	grpMiscOptions->add(chkAllowNativeCode, DISTANCE_BORDER, posY);
+	posY += chkAllowNativeCode->getHeight() + DISTANCE_NEXT_Y;
+	grpMiscOptions->add(chkAllowHostRun, DISTANCE_BORDER, posY);
+	posY += chkAllowHostRun->getHeight() + DISTANCE_NEXT_Y;
+	grpMiscOptions->add(chkStatusLine, DISTANCE_BORDER, posY);
+	posY += chkStatusLine->getHeight() + DISTANCE_NEXT_Y;
+	grpMiscOptions->add(chkStatusLineRtg, DISTANCE_BORDER, posY);
+	posY += chkStatusLineRtg->getHeight() + DISTANCE_NEXT_Y;
+	// Create winuaelog.txt log
+	grpMiscOptions->add(chkIllegalMem, DISTANCE_BORDER, posY);
+	posY += chkIllegalMem->getHeight() + DISTANCE_NEXT_Y;
+	// Blank unused displays
+	// Start mouse uncaptured
+	// Start minimized
+	grpMiscOptions->add(chkMinimizeInactive, DISTANCE_BORDER, posY);
+	posY += chkMinimizeInactive->getHeight() + DISTANCE_NEXT_Y;
+	// Black frame insertion
+	// Master floppy write protection
+	grpMiscOptions->add(chkMasterWP, DISTANCE_BORDER, posY);
+	posY += chkMasterWP->getHeight() + DISTANCE_NEXT_Y;
+	// Hide all UAE autoconfig boards
+	// Right Control = Right Windows key
+	grpMiscOptions->add(chkRCtrlIsRAmiga, DISTANCE_BORDER, posY);
+	posY += chkRCtrlIsRAmiga->getHeight() + DISTANCE_NEXT_Y;
+	// Windows shutdown/logoff notification
+	// Warn when attempting to close window
+	// Power led dims when audio filter is disabled
+	grpMiscOptions->add(chkCaptureAlways, DISTANCE_BORDER, posY);
+	posY += chkCaptureAlways->getHeight() + DISTANCE_NEXT_Y;
+	// Debug memory space
+	grpMiscOptions->add(chkRetroArchQuit, DISTANCE_BORDER, posY);
+	posY += chkRetroArchQuit->getHeight() + DISTANCE_NEXT_Y;
+	grpMiscOptions->add(chkRetroArchMenu, DISTANCE_BORDER, posY);
+	posY += chkRetroArchMenu->getHeight() + DISTANCE_NEXT_Y;
+	grpMiscOptions->add(chkRetroArchReset, DISTANCE_BORDER, posY);
+	
+	scrollArea = new gcn::ScrollArea(grpMiscOptions);
+	scrollArea->setBackgroundColor(gui_baseCol);
+	scrollArea->setBaseColor(gui_baseCol);
+	scrollArea->setWidth(category.panel->getWidth() - (category.panel->getWidth() / 3));
+	scrollArea->setHeight(300);
+	scrollArea->setBorderSize(1);
 
-	category.panel->add(chkMasterWP, DISTANCE_BORDER, posY);
-	category.panel->add(chkRCtrlIsRAmiga, posX + DISTANCE_BORDER, posY);
-	posY += chkMasterWP->getHeight() + DISTANCE_NEXT_Y * 2;
+	category.panel->add(scrollArea, DISTANCE_BORDER, DISTANCE_BORDER);
 
-	const auto column2_x = DISTANCE_BORDER + 290;
+	const auto column2_x = scrollArea->getWidth() + DISTANCE_NEXT_X * 2;
+	posY = DISTANCE_BORDER;
+	
+	category.panel->add(lblOpenGUI, column2_x, posY);
+	posY += lblOpenGUI->getHeight() + 8;
+	category.panel->add(txtOpenGUI, lblOpenGUI->getX(), posY);
+	category.panel->add(cmdOpenGUI, txtOpenGUI->getX() + txtOpenGUI->getWidth() + 8, posY);
+	posY += cmdOpenGUI->getHeight() + DISTANCE_NEXT_Y;
+	
+	category.panel->add(lblKeyForQuit, column2_x, posY);
+	posY += lblKeyForQuit->getHeight() + 8;
+	category.panel->add(txtKeyForQuit, lblKeyForQuit->getX(), posY);
+	category.panel->add(cmdKeyForQuit, txtKeyForQuit->getX() + txtKeyForQuit->getWidth() + 8, posY);
+	posY += cmdKeyForQuit->getHeight() + DISTANCE_NEXT_Y;
+
+	category.panel->add(lblKeyActionReplay, column2_x, posY);
+	posY += lblKeyActionReplay->getHeight() + 8;
+	category.panel->add(txtKeyActionReplay, lblKeyActionReplay->getX(), posY);
+	category.panel->add(cmdKeyActionReplay, txtKeyActionReplay->getX() + txtKeyActionReplay->getWidth() + 8, posY);
+	posY += cmdKeyActionReplay->getHeight() + DISTANCE_NEXT_Y;
+	
+	category.panel->add(lblKeyFullScreen, column2_x, posY);
+	posY += lblKeyFullScreen->getHeight() + 8;
+	category.panel->add(txtKeyFullScreen, lblKeyFullScreen->getX(), posY);
+	category.panel->add(cmdKeyFullScreen, txtKeyFullScreen->getX() + txtKeyFullScreen->getWidth() + 8, posY);
+
+	posY = scrollArea->getHeight() + DISTANCE_NEXT_Y * 2;	
 
 	category.panel->add(lblNumLock, DISTANCE_BORDER, posY);
 	category.panel->add(cboKBDLed_num, DISTANCE_BORDER + lblNumLock->getWidth() + 8, posY);
 
-	category.panel->add(lblScrLock, column2_x, posY);
+	category.panel->add(lblScrLock, cboKBDLed_num->getX() + cboKBDLed_num->getWidth() + DISTANCE_NEXT_X, posY);
 	category.panel->add(cboKBDLed_scr, lblScrLock->getX() + lblScrLock->getWidth() + 8, posY);
 
 	posY += cboKBDLed_scr->getHeight() + DISTANCE_NEXT_Y * 2;
 
-	category.panel->add(lblOpenGUI, DISTANCE_BORDER, posY);
-	category.panel->add(txtOpenGUI, lblOpenGUI->getX() + lblKeyActionReplay->getWidth() + 8, posY);
-	category.panel->add(cmdOpenGUI, txtOpenGUI->getX() + txtOpenGUI->getWidth() + 8, posY);
-
-	category.panel->add(lblKeyForQuit, column2_x, posY);
-	category.panel->add(txtKeyForQuit, lblKeyForQuit->getX() + lblKeyFullScreen->getWidth() + 8, posY);
-	category.panel->add(cmdKeyForQuit, txtKeyForQuit->getX() + txtKeyForQuit->getWidth() + 8, posY);
-
-	posY += cmdOpenGUI->getHeight() + DISTANCE_NEXT_Y;
-
-	category.panel->add(lblKeyActionReplay, DISTANCE_BORDER, posY);
-	category.panel->add(txtKeyActionReplay, lblKeyActionReplay->getX() + lblKeyActionReplay->getWidth() + 8, posY);
-	category.panel->add(cmdKeyActionReplay, txtKeyActionReplay->getX() + txtKeyActionReplay->getWidth() + 8, posY);
-
-	category.panel->add(lblKeyFullScreen, column2_x, posY);
-	category.panel->add(txtKeyFullScreen, lblKeyFullScreen->getX() + lblKeyFullScreen->getWidth() + 8, posY);
-	category.panel->add(cmdKeyFullScreen, txtKeyFullScreen->getX() + txtKeyFullScreen->getWidth() + 8, posY);
-
 #ifdef SERIAL_PORT
-	posY += cmdKeyActionReplay->getHeight() + DISTANCE_NEXT_Y * 2;
-
 	grpSerialDevice->setPosition(DISTANCE_BORDER, posY);
 	grpSerialDevice->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, TITLEBAR_HEIGHT + chkSerialDirect->getHeight() * 5);
 	grpSerialDevice->setTitleBarHeight(TITLEBAR_HEIGHT);
@@ -467,18 +569,22 @@ void ExitPanelMisc()
 	delete chkStatusLineRtg;
 	delete chkShowGUI;
 	delete chkMouseUntrap;
-
 	delete chkRetroArchQuit;
 	delete chkRetroArchMenu;
 	delete chkRetroArchReset;
-	//delete chkRetroArchSaveState;
-
 	delete chkBSDSocket;
 	delete chkMasterWP;
 	delete chkClipboardSharing;
 	delete chkAllowHostRun;
 	delete chkRCtrlIsRAmiga;
-
+	delete chkSyncClock;
+	delete chkResetDelay;
+	delete chkFasterRTG;
+	delete chkAllowNativeCode;
+	delete chkIllegalMem;
+	delete chkMinimizeInactive;
+	delete chkCaptureAlways;
+	
 	delete lblScrLock;
 	delete lblNumLock;
 	delete cboKBDLed_num;
@@ -510,6 +616,8 @@ void ExitPanelMisc()
 	delete chkSerialDirect;
 	delete chkUaeSerial;
 #endif
+	delete grpMiscOptions;
+	delete scrollArea;
 }
 
 void RefreshPanelMisc()
@@ -518,18 +626,22 @@ void RefreshPanelMisc()
 	chkStatusLineRtg->setSelected(changed_prefs.leds_on_screen & STATUSLINE_RTG);
 	chkShowGUI->setSelected(changed_prefs.start_gui);
 	chkMouseUntrap->setSelected(changed_prefs.input_mouse_untrap & MOUSEUNTRAP_MIDDLEBUTTON);
-
 	chkRetroArchQuit->setSelected(changed_prefs.use_retroarch_quit);
 	chkRetroArchMenu->setSelected(changed_prefs.use_retroarch_menu);
 	chkRetroArchReset->setSelected(changed_prefs.use_retroarch_reset);
-	//chkRetroArchSavestate->setSelected(changed_prefs.use_retroarch_statebuttons);
-
 	chkBSDSocket->setEnabled(!emulating);
 	chkBSDSocket->setSelected(changed_prefs.socket_emu);
 	chkMasterWP->setSelected(changed_prefs.floppy_read_only);
 	chkClipboardSharing->setSelected(changed_prefs.clipboard_sharing);
 	chkAllowHostRun->setSelected(changed_prefs.allow_host_run);
 	chkRCtrlIsRAmiga->setSelected(changed_prefs.right_control_is_right_win_key);
+	chkSyncClock->setSelected(changed_prefs.tod_hack);
+	chkResetDelay->setSelected(changed_prefs.reset_delay);
+	chkFasterRTG->setSelected(changed_prefs.picasso96_nocustom);
+	chkAllowNativeCode->setSelected(changed_prefs.native_code);
+	chkIllegalMem->setSelected(changed_prefs.illegal_mem);
+	chkMinimizeInactive->setSelected(changed_prefs.minimize_inactive);
+	chkCaptureAlways->setSelected(changed_prefs.capture_always);
 	
 	cboKBDLed_num->setSelected(changed_prefs.kbd_led_num + 1);
 	cboKBDLed_scr->setSelected(changed_prefs.kbd_led_scr + 1);
