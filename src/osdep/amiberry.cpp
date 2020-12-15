@@ -1128,7 +1128,7 @@ void process_event(SDL_Event event)
 
 	case SDL_MOUSEMOTION:
 	{
-		if (currprefs.input_tablet > 0 && currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC && isfullscreen() <= 0)
+		if (!(SDL_GetWindowFlags(sdl_window) & SDL_WINDOW_MOUSE_CAPTURE) && currprefs.input_tablet > 0 && currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC && isfullscreen() <= 0)
 		{
 			if (mousehack_alive())
 				setcursorshape();
