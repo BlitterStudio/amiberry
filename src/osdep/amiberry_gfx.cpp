@@ -1364,7 +1364,7 @@ int check_prefs_changed_gfx()
 		currprefs.minimized_nosound != changed_prefs.minimized_nosound ||
 		currprefs.minimized_pause != changed_prefs.minimized_pause ||
 		currprefs.minimized_input != changed_prefs.minimized_input ||
-		currprefs.allow_host_run != changed_prefs.allow_host_run ||
+		currprefs.native_code != changed_prefs.native_code ||
 		currprefs.use_retroarch_quit != changed_prefs.use_retroarch_quit ||
 		currprefs.use_retroarch_menu != changed_prefs.use_retroarch_menu ||
 		currprefs.use_retroarch_reset != changed_prefs.use_retroarch_reset ||
@@ -1390,7 +1390,7 @@ int check_prefs_changed_gfx()
 		currprefs.minimized_nosound = changed_prefs.minimized_nosound;
 		currprefs.minimized_pause = changed_prefs.minimized_pause;
 		currprefs.minimized_input = changed_prefs.minimized_input;
-		currprefs.allow_host_run = changed_prefs.allow_host_run;
+		currprefs.native_code = changed_prefs.native_code;
 		currprefs.use_retroarch_quit = changed_prefs.use_retroarch_quit;
 		currprefs.use_retroarch_menu = changed_prefs.use_retroarch_menu;
 		currprefs.use_retroarch_reset = changed_prefs.use_retroarch_reset;

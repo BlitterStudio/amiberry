@@ -1672,7 +1672,6 @@ void target_default_options(struct uae_prefs* p, int type)
 	_tcscpy(p->action_replay, amiberry_options.default_ar_key);
 	_tcscpy(p->fullscreen_toggle, amiberry_options.default_fullscreen_toggle_key);
 
-	p->allow_host_run = false;
 	p->active_capture_priority = 1;
 	p->active_nocapture_pause = false;
 	p->active_nocapture_nosound = false;
@@ -1769,7 +1768,6 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_target_dwrite_str(f, _T("quit_amiberry"), p->quit_amiberry);
 	cfgfile_target_dwrite_str(f, _T("action_replay"), p->action_replay);
 	cfgfile_target_dwrite_str(f, _T("fullscreen_toggle"), p->fullscreen_toggle);
-	cfgfile_target_dwrite_bool(f, _T("allow_host_run"), p->allow_host_run);
 	cfgfile_target_dwrite_bool(f, _T("use_analogue_remap"), p->input_analog_remap);
 
 	cfgfile_target_dwrite_bool(f, _T("use_retroarch_quit"), p->use_retroarch_quit);
@@ -1837,8 +1835,6 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 	if (cfgfile_yesno(option, value, _T("map_drives_auto"), &p->automount_removable))
 		return 1;
 	if (cfgfile_yesno(option, value, _T("map_cd_drives"), &p->automount_cddrives))
-		return 1;
-	if (cfgfile_yesno(option, value, _T("allow_host_run"), &p->allow_host_run))
 		return 1;
 	if (cfgfile_yesno(option, value, _T("use_retroarch_quit"), &p->use_retroarch_quit))
 		return 1;

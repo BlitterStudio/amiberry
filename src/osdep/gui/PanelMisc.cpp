@@ -23,12 +23,11 @@ static gcn::CheckBox* chkMouseUntrap;
 static gcn::CheckBox* chkBSDSocket;
 static gcn::CheckBox* chkMasterWP;
 static gcn::CheckBox* chkClipboardSharing;
-static gcn::CheckBox* chkAllowHostRun;
+static gcn::CheckBox* chkAllowNativeCode;
 static gcn::CheckBox* chkRCtrlIsRAmiga;
 static gcn::CheckBox* chkSyncClock;
 static gcn::CheckBox* chkResetDelay;
 static gcn::CheckBox* chkFasterRTG;
-static gcn::CheckBox* chkAllowNativeCode;
 static gcn::CheckBox* chkIllegalMem;
 static gcn::CheckBox* chkMinimizeInactive;
 static gcn::CheckBox* chkCaptureAlways;
@@ -167,9 +166,6 @@ public:
 
 		else if (actionEvent.getSource() == chkClipboardSharing)
 			changed_prefs.clipboard_sharing = chkClipboardSharing->isSelected();
-
-		else if (actionEvent.getSource() == chkAllowHostRun)
-			changed_prefs.allow_host_run = chkAllowHostRun->isSelected();
 
 		else if (actionEvent.getSource() == chkRCtrlIsRAmiga)
 			changed_prefs.right_control_is_right_win_key = chkRCtrlIsRAmiga->isSelected();
@@ -318,10 +314,6 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	chkClipboardSharing->setId("chkClipboardSharing");
 	chkClipboardSharing->addActionListener(miscActionListener);
 
-	chkAllowHostRun = new gcn::CheckBox("Allow host-run");
-	chkAllowHostRun->setId("chkAllowHostRun");
-	chkAllowHostRun->addActionListener(miscActionListener);
-
 	chkRCtrlIsRAmiga = new gcn::CheckBox("RCtrl = RAmiga");
 	chkRCtrlIsRAmiga->setId("chkRCtrlIsRAmiga");
 	chkRCtrlIsRAmiga->addActionListener(miscActionListener);
@@ -468,8 +460,6 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	posY += chkClipboardSharing->getHeight() + DISTANCE_NEXT_Y;
 	grpMiscOptions->add(chkAllowNativeCode, DISTANCE_BORDER, posY);
 	posY += chkAllowNativeCode->getHeight() + DISTANCE_NEXT_Y;
-	grpMiscOptions->add(chkAllowHostRun, DISTANCE_BORDER, posY);
-	posY += chkAllowHostRun->getHeight() + DISTANCE_NEXT_Y;
 	grpMiscOptions->add(chkStatusLine, DISTANCE_BORDER, posY);
 	posY += chkStatusLine->getHeight() + DISTANCE_NEXT_Y;
 	grpMiscOptions->add(chkStatusLineRtg, DISTANCE_BORDER, posY);
@@ -575,7 +565,6 @@ void ExitPanelMisc()
 	delete chkBSDSocket;
 	delete chkMasterWP;
 	delete chkClipboardSharing;
-	delete chkAllowHostRun;
 	delete chkRCtrlIsRAmiga;
 	delete chkSyncClock;
 	delete chkResetDelay;
@@ -633,7 +622,6 @@ void RefreshPanelMisc()
 	chkBSDSocket->setSelected(changed_prefs.socket_emu);
 	chkMasterWP->setSelected(changed_prefs.floppy_read_only);
 	chkClipboardSharing->setSelected(changed_prefs.clipboard_sharing);
-	chkAllowHostRun->setSelected(changed_prefs.allow_host_run);
 	chkRCtrlIsRAmiga->setSelected(changed_prefs.right_control_is_right_win_key);
 	chkSyncClock->setSelected(changed_prefs.tod_hack);
 	chkResetDelay->setSelected(changed_prefs.reset_delay);

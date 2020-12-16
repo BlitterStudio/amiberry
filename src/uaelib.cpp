@@ -444,7 +444,7 @@ static uae_u32 uaelib_demux_common(TrapContext *ctx, uae_u32 ARG0, uae_u32 ARG1,
 			return d0;
 		}
 		case 88:
-		if (currprefs.allow_host_run)
+		if (currprefs.native_code)
 			return emulib_execute_on_host(ctx, ARG1);
 		return 0;
 	//case 89: return emulib_host_session(ctx, ARG1, ARG2, ARG3);
