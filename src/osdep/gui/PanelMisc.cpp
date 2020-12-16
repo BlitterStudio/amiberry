@@ -22,6 +22,7 @@ static gcn::CheckBox* chkShowGUI;
 static gcn::CheckBox* chkMouseUntrap;
 static gcn::CheckBox* chkBSDSocket;
 static gcn::CheckBox* chkMasterWP;
+static gcn::CheckBox* chkHDReadOnly;
 static gcn::CheckBox* chkClipboardSharing;
 static gcn::CheckBox* chkAllowNativeCode;
 static gcn::CheckBox* chkRCtrlIsRAmiga;
@@ -31,6 +32,7 @@ static gcn::CheckBox* chkFasterRTG;
 static gcn::CheckBox* chkIllegalMem;
 static gcn::CheckBox* chkMinimizeInactive;
 static gcn::CheckBox* chkCaptureAlways;
+static gcn::CheckBox* chkHideAutoconfig;
 
 static gcn::Label* lblNumLock;
 static gcn::DropDown* cboKBDLed_num;
@@ -164,6 +166,11 @@ public:
 			RefreshPanelFloppy();
 		}
 
+		else if (actionEvent.getSource() == chkHDReadOnly)
+		{
+			changed_prefs.harddrive_read_only = chkHDReadOnly->isSelected();
+		}
+
 		else if (actionEvent.getSource() == chkClipboardSharing)
 			changed_prefs.clipboard_sharing = chkClipboardSharing->isSelected();
 
@@ -190,7 +197,9 @@ public:
 
 		else if (actionEvent.getSource() == chkCaptureAlways)
 			changed_prefs.capture_always = chkCaptureAlways->isSelected();
-		
+
+		else if (actionEvent.getSource() == chkHideAutoconfig)
+			changed_prefs.uae_hide_autoconfig = chkHideAutoconfig->isSelected();
 		
 		else if (actionEvent.getSource() == cboKBDLed_num)
 			changed_prefs.kbd_led_num = cboKBDLed_num->getSelected() - 1;
@@ -310,6 +319,10 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	chkMasterWP->setId("chkMasterWP");
 	chkMasterWP->addActionListener(miscActionListener);
 
+	chkHDReadOnly = new gcn::CheckBox("Master harddrive write protection");
+	chkHDReadOnly->setId("chkHDRO");
+	chkHDReadOnly->addActionListener(miscActionListener);
+	
 	chkClipboardSharing = new gcn::CheckBox("Clipboard sharing");
 	chkClipboardSharing->setId("chkClipboardSharing");
 	chkClipboardSharing->addActionListener(miscActionListener);
@@ -346,7 +359,9 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	chkCaptureAlways->setId("chkCaptureAlways");
 	chkCaptureAlways->addActionListener(miscActionListener);
 
-	
+	chkHideAutoconfig = new gcn::CheckBox("Hide all UAE autoconfig boards");
+	chkHideAutoconfig->setId("chkHideAutoconfig");
+	chkHideAutoconfig->addActionListener(miscActionListener);
 	
 	lblNumLock = new gcn::Label("NumLock:");
 	lblNumLock->setAlignment(gcn::Graphics::RIGHT);
@@ -436,7 +451,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 
 	auto posY = DISTANCE_BORDER;
 	grpMiscOptions->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
-	grpMiscOptions->setSize(category.panel->getWidth() - category.panel->getWidth() / 3 - DISTANCE_BORDER, 600);
+	grpMiscOptions->setSize(category.panel->getWidth() - category.panel->getWidth() / 3 - DISTANCE_BORDER, 700);
 	grpMiscOptions->setBaseColor(gui_baseCol);
 	grpMiscOptions->add(chkMouseUntrap, DISTANCE_BORDER, posY);
 	posY += chkMouseUntrap->getHeight() + DISTANCE_NEXT_Y;
@@ -472,12 +487,13 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	// Start minimized
 	grpMiscOptions->add(chkMinimizeInactive, DISTANCE_BORDER, posY);
 	posY += chkMinimizeInactive->getHeight() + DISTANCE_NEXT_Y;
-	// Black frame insertion
-	// Master floppy write protection
+	// 100/120Hz VSync black frame insertion
 	grpMiscOptions->add(chkMasterWP, DISTANCE_BORDER, posY);
 	posY += chkMasterWP->getHeight() + DISTANCE_NEXT_Y;
-	// Hide all UAE autoconfig boards
-	// Right Control = Right Windows key
+	grpMiscOptions->add(chkHDReadOnly, DISTANCE_BORDER, posY);
+	posY += chkHDReadOnly->getHeight() + DISTANCE_NEXT_Y;
+	grpMiscOptions->add(chkHideAutoconfig, DISTANCE_BORDER, posY);
+	posY += chkHideAutoconfig->getHeight() + DISTANCE_NEXT_Y;
 	grpMiscOptions->add(chkRCtrlIsRAmiga, DISTANCE_BORDER, posY);
 	posY += chkRCtrlIsRAmiga->getHeight() + DISTANCE_NEXT_Y;
 	// Windows shutdown/logoff notification
@@ -564,6 +580,7 @@ void ExitPanelMisc()
 	delete chkRetroArchReset;
 	delete chkBSDSocket;
 	delete chkMasterWP;
+	delete chkHDReadOnly;
 	delete chkClipboardSharing;
 	delete chkRCtrlIsRAmiga;
 	delete chkSyncClock;
@@ -573,6 +590,7 @@ void ExitPanelMisc()
 	delete chkIllegalMem;
 	delete chkMinimizeInactive;
 	delete chkCaptureAlways;
+	delete chkHideAutoconfig;
 	
 	delete lblScrLock;
 	delete lblNumLock;
@@ -621,6 +639,7 @@ void RefreshPanelMisc()
 	chkBSDSocket->setEnabled(!emulating);
 	chkBSDSocket->setSelected(changed_prefs.socket_emu);
 	chkMasterWP->setSelected(changed_prefs.floppy_read_only);
+	chkHDReadOnly->setSelected(changed_prefs.harddrive_read_only);
 	chkClipboardSharing->setSelected(changed_prefs.clipboard_sharing);
 	chkRCtrlIsRAmiga->setSelected(changed_prefs.right_control_is_right_win_key);
 	chkSyncClock->setSelected(changed_prefs.tod_hack);
@@ -630,6 +649,7 @@ void RefreshPanelMisc()
 	chkIllegalMem->setSelected(changed_prefs.illegal_mem);
 	chkMinimizeInactive->setSelected(changed_prefs.minimize_inactive);
 	chkCaptureAlways->setSelected(changed_prefs.capture_always);
+	chkHideAutoconfig->setSelected(changed_prefs.uae_hide_autoconfig);
 	
 	cboKBDLed_num->setSelected(changed_prefs.kbd_led_num + 1);
 	cboKBDLed_scr->setSelected(changed_prefs.kbd_led_scr + 1);
