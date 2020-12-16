@@ -386,7 +386,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	txtOpenGUI->setSize(120, TEXTFIELD_HEIGHT);
 	txtOpenGUI->setBackgroundColor(colTextboxBackground);
 	cmdOpenGUI = new gcn::Button("...");
-	cmdOpenGUI->setId("OpenGUI");
+	cmdOpenGUI->setId("KeyForOpenGUI");
 	cmdOpenGUI->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdOpenGUI->setBaseColor(gui_baseCol);
 	cmdOpenGUI->addActionListener(miscActionListener);
