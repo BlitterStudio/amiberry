@@ -82,6 +82,8 @@ int quit_key = 0;
 int action_replay_button = 0;
 // No default value for Full Screen toggle
 int fullscreen_key = 0;
+// No default value for Minimize key
+int minimize_key = 0;
 
 bool mouse_grabbed = false;
 
@@ -125,6 +127,9 @@ void set_key_configs(struct uae_prefs* p)
 		fullscreen_key = SDL_GetScancodeFromName(p->fullscreen_toggle);
 	else
 		fullscreen_key = SDL_GetScancodeFromName(amiberry_options.default_fullscreen_toggle_key);
+
+	if (strncmp(p->minimize, "", 1) != 0)
+		minimize_key = SDL_GetScancodeFromName(p->minimize);
 }
 
 extern void signal_segv(int signum, siginfo_t* info, void* ptr);
@@ -1011,7 +1016,12 @@ void process_event(SDL_Event event)
 				inputdevice_add_inputcode(AKS_QUIT, 1, nullptr);
 				break;
 			}
-			my_kbd_handler(0, scancode, 1, false);
+			if (minimize_key && scancode == minimize_key)
+			{
+				minimizewindow();
+				break;
+			}
+			my_kbd_handler(0, scancode, pressed, false);
 		}
 		break;
 
@@ -1034,7 +1044,7 @@ void process_event(SDL_Event event)
 				scancode = SDL_SCANCODE_RGUI;
 			}
 
-			my_kbd_handler(0, scancode, 0, true);
+			my_kbd_handler(0, scancode, pressed, true);
 		}
 		break;
 

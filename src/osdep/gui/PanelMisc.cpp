@@ -55,6 +55,10 @@ static gcn::Label* lblKeyFullScreen;
 static gcn::TextField* txtKeyFullScreen;
 static gcn::Button* cmdKeyFullScreen;
 
+static gcn::Label* lblKeyMinimize;
+static gcn::TextField* txtKeyMinimize;
+static gcn::Button* cmdKeyMinimize;
+
 #ifdef SERIAL_PORT
 static gcn::Window* grpSerialDevice;
 static gcn::TextField* txtSerialDevice;
@@ -99,9 +103,9 @@ public:
 		{
 			snprintf(changed_prefs.sername, 256, "%s", txtSerialDevice->getText().c_str());
 			if (changed_prefs.sername[0])
-				changed_prefs.use_serial = 1;
+				changed_prefs.use_serial = true;
 			else
-				changed_prefs.use_serial = 0;
+				changed_prefs.use_serial = false;
 		}
 	}
 };
@@ -137,7 +141,7 @@ public:
 			else
 				changed_prefs.input_mouse_untrap &= ~MOUSEUNTRAP_MIDDLEBUTTON;
 		}
-
+	
 		else if (actionEvent.getSource() == chkRetroArchQuit)
 		{
 			changed_prefs.use_retroarch_quit = chkRetroArchQuit->isSelected();
@@ -209,7 +213,7 @@ public:
 
 		else if (actionEvent.getSource() == cmdOpenGUI)
 		{
-			const auto* const key = ShowMessageForInput("Press a key", "Press a key to map to Open the GUI, or ESC to cancel...", "Cancel");
+			const auto* key = ShowMessageForInput("Press a key", "Press a key to map to Open the GUI, or ESC to cancel...", "Cancel");
 			if (key != nullptr)
 			{
 				txtOpenGUI->setText(key);
@@ -220,7 +224,7 @@ public:
 
 		else if (actionEvent.getSource() == cmdKeyForQuit)
 		{
-			const auto* const key = ShowMessageForInput("Press a key", "Press a key to map to Quit the emulator, or ESC to cancel...", "Cancel");
+			const auto* key = ShowMessageForInput("Press a key", "Press a key to map to Quit the emulator, or ESC to cancel...", "Cancel");
 			if (key != nullptr)
 			{
 				txtKeyForQuit->setText(key);
@@ -231,7 +235,7 @@ public:
 
 		else if (actionEvent.getSource() == cmdKeyActionReplay)
 		{
-			const auto* const key = ShowMessageForInput("Press a key", "Press a key to map to Action Replay, or ESC to cancel...", "Cancel");
+			const auto* key = ShowMessageForInput("Press a key", "Press a key to map to Action Replay, or ESC to cancel...", "Cancel");
 			if (key != nullptr)
 			{
 				txtKeyActionReplay->setText(key);
@@ -242,7 +246,7 @@ public:
 
 		else if (actionEvent.getSource() == cmdKeyFullScreen)
 		{
-			const auto* const key = ShowMessageForInput("Press a key", "Press a key to map to toggle FullScreen, or ESC to cancel...", "Cancel");
+			const auto* key = ShowMessageForInput("Press a key", "Press a key to map to toggle FullScreen, or ESC to cancel...", "Cancel");
 			if (key != nullptr)
 			{
 				txtKeyFullScreen->setText(key);
@@ -251,6 +255,17 @@ public:
 			}
 		}
 
+		else if (actionEvent.getSource() == cmdKeyMinimize)
+		{
+			const auto* key = ShowMessageForInput("Press a key", "Press a key to map to Minimize or ESC to cancel...", "Cancel");
+			if (key != nullptr)
+			{
+				txtKeyMinimize->setText(key);
+				strcpy(changed_prefs.minimize, key);
+				strcpy(currprefs.minimize, key);
+			}
+		}
+		
 #ifdef SERIAL_PORT
 		else if (actionEvent.getSource() == txtSerialDevice)
 			snprintf(changed_prefs.sername, 256, "%s", txtSerialDevice->getText().c_str());
@@ -386,7 +401,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	txtOpenGUI->setSize(120, TEXTFIELD_HEIGHT);
 	txtOpenGUI->setBackgroundColor(colTextboxBackground);
 	cmdOpenGUI = new gcn::Button("...");
-	cmdOpenGUI->setId("KeyForOpenGUI");
+	cmdOpenGUI->setId("cmdKeyOpenGUI");
 	cmdOpenGUI->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdOpenGUI->setBaseColor(gui_baseCol);
 	cmdOpenGUI->addActionListener(miscActionListener);
@@ -398,7 +413,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	txtKeyForQuit->setSize(120, TEXTFIELD_HEIGHT);
 	txtKeyForQuit->setBackgroundColor(colTextboxBackground);
 	cmdKeyForQuit = new gcn::Button("...");
-	cmdKeyForQuit->setId("KeyForQuit");
+	cmdKeyForQuit->setId("cmdKeyForQuit");
 	cmdKeyForQuit->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdKeyForQuit->setBaseColor(gui_baseCol);
 	cmdKeyForQuit->addActionListener(miscActionListener);
@@ -410,7 +425,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	txtKeyActionReplay->setSize(120, TEXTFIELD_HEIGHT);
 	txtKeyActionReplay->setBackgroundColor(colTextboxBackground);
 	cmdKeyActionReplay = new gcn::Button("...");
-	cmdKeyActionReplay->setId("KeyActionReplay");
+	cmdKeyActionReplay->setId("cmdKeyActionReplay");
 	cmdKeyActionReplay->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdKeyActionReplay->setBaseColor(gui_baseCol);
 	cmdKeyActionReplay->addActionListener(miscActionListener);
@@ -422,10 +437,22 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	txtKeyFullScreen->setSize(120, TEXTFIELD_HEIGHT);
 	txtKeyFullScreen->setBackgroundColor(colTextboxBackground);
 	cmdKeyFullScreen = new gcn::Button("...");
-	cmdKeyFullScreen->setId("KeyFullScreen");
+	cmdKeyFullScreen->setId("cmdKeyFullScreen");
 	cmdKeyFullScreen->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdKeyFullScreen->setBaseColor(gui_baseCol);
 	cmdKeyFullScreen->addActionListener(miscActionListener);
+
+	lblKeyMinimize = new gcn::Label("Minimize:");
+	lblKeyMinimize->setAlignment(gcn::Graphics::RIGHT);
+	txtKeyMinimize = new gcn::TextField();
+	txtKeyMinimize->setEnabled(false);
+	txtKeyMinimize->setSize(120, TEXTFIELD_HEIGHT);
+	txtKeyMinimize->setBackgroundColor(colTextboxBackground);
+	cmdKeyMinimize = new gcn::Button("...");
+	cmdKeyMinimize->setId("cmdKeyMinimize");
+	cmdKeyMinimize->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	cmdKeyMinimize->setBaseColor(gui_baseCol);
+	cmdKeyMinimize->addActionListener(miscActionListener);
 
 #ifdef SERIAL_PORT
 	grpSerialDevice = new gcn::Window("Serial Port");
@@ -542,7 +569,13 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	posY += lblKeyFullScreen->getHeight() + 8;
 	category.panel->add(txtKeyFullScreen, lblKeyFullScreen->getX(), posY);
 	category.panel->add(cmdKeyFullScreen, txtKeyFullScreen->getX() + txtKeyFullScreen->getWidth() + 8, posY);
+	posY += cmdKeyFullScreen->getHeight() + DISTANCE_NEXT_Y;
 
+	category.panel->add(lblKeyMinimize, column2_x, posY);
+	posY += lblKeyMinimize->getHeight() + 8;
+	category.panel->add(txtKeyMinimize, lblKeyMinimize->getX(), posY);
+	category.panel->add(cmdKeyMinimize, txtKeyMinimize->getX() + txtKeyMinimize->getWidth() + 8, posY);
+	
 	posY = scrollArea->getHeight() + DISTANCE_NEXT_Y * 2;	
 
 	category.panel->add(lblNumLock, DISTANCE_BORDER, posY);
@@ -613,6 +646,10 @@ void ExitPanelMisc()
 	delete txtKeyFullScreen;
 	delete cmdKeyFullScreen;
 
+	delete lblKeyMinimize;
+	delete txtKeyMinimize;
+	delete cmdKeyMinimize;
+
 	delete miscActionListener;
 #ifdef SERIAL_PORT
 	delete miscKeyListener;
@@ -664,6 +701,10 @@ void RefreshPanelMisc()
 	txtKeyFullScreen->setText(strncmp(changed_prefs.fullscreen_toggle, "", 1) != 0
 		? changed_prefs.fullscreen_toggle
 		: "Click to map");
+	txtKeyMinimize->setText(strncmp(changed_prefs.minimize, "", 1) != 0
+		? changed_prefs.minimize
+		: "Click to map");
+	
 #ifdef SERIAL_PORT
 	chkRTSCTS->setSelected(changed_prefs.serial_hwctsrts);
 	chkSerialDirect->setSelected(changed_prefs.serial_direct);

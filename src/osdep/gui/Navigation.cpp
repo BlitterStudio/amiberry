@@ -312,13 +312,13 @@ static NavigationMap navMap[] =
 	// PanelMisc
 	//  active            move left           move right          move up           move down
 
-	{ "chkMouseUntrap", "Miscellaneous", "KeyForOpenGUI", "chkRTSCTS", "chkShowGUI" },
-	{ "chkShowGUI", "Miscellaneous", "KeyForQuit", "chkMouseUntrap", "chkBSDSocket" },
-	{ "chkBSDSocket", "Miscellaneous", "KeyForQuit", "chkShowGUI", "chkSyncClock" },
-	{ "chkSyncClock", "Miscellaneous", "KeyActionReplay", "chkBSDSocket", "chkResetDelay"},
-	{ "chkResetDelay", "Miscellaneous", "KeyActionReplay", "chkSyncClock", "chkFasterRTG"},
-	{ "chkFasterRTG", "Miscellaneous", "KeyFullScreen", "chkResetDelay", "chkClipboardSharing"},
-	{ "chkClipboardSharing", "Miscellaneous", "KeyFullScreen", "chkFasterRTG", "chkAllowNativeCode" },
+	{ "chkMouseUntrap", "Miscellaneous", "cmdKeyOpenGUI", "chkRTSCTS", "chkShowGUI" },
+	{ "chkShowGUI", "Miscellaneous", "cmdKeyForQuit", "chkMouseUntrap", "chkBSDSocket" },
+	{ "chkBSDSocket", "Miscellaneous", "cmdKeyForQuit", "chkShowGUI", "chkSyncClock" },
+	{ "chkSyncClock", "Miscellaneous", "cmdKeyActionReplay", "chkBSDSocket", "chkResetDelay"},
+	{ "chkResetDelay", "Miscellaneous", "cmdKeyActionReplay", "chkSyncClock", "chkFasterRTG"},
+	{ "chkFasterRTG", "Miscellaneous", "cmdKeyFullScreen", "chkResetDelay", "chkClipboardSharing"},
+	{ "chkClipboardSharing", "Miscellaneous", "cmdKeyFullScreen", "chkFasterRTG", "chkAllowNativeCode" },
 	{ "chkAllowNativeCode", "Miscellaneous", "", "chkClipboardSharing", "chkStatusLineNative" },
 	{ "chkStatusLineNative", "Miscellaneous", "", "chkAllowNativeCode", "chkStatusLineRtg" },
 	{ "chkStatusLineRtg", "Miscellaneous", "", "chkStatusLineNative", "chkIllegalMem" },
@@ -341,10 +341,11 @@ static NavigationMap navMap[] =
 	{ "chkSerialDirect", "chkRTSCTS", "chkUaeSerial", "txtSerialDevice", "chkMouseUntrap" },
 	{ "chkUaeSerial", "chkSerialDirect", "Miscellaneous", "txtSerialDevice", "chkMouseUntrap" },
 	
-	{ "KeyForOpenGUI", "chkMouseUntrap", "Miscellaneous", "KeyFullScreen", "KeyForQuit" },
-	{ "KeyForQuit", "chkBSDSocket", "Miscellaneous", "KeyForOpenGUI", "KeyActionReplay" },
-	{ "KeyActionReplay", "chkResetDelay", "Miscellaneous", "KeyForQuit", "KeyFullScreen" },
-	{ "KeyFullScreen", "chkClipboardSharing", "Miscellaneous", "KeyActionReplay", "KeyForOpenGUI" },
+	{ "cmdKeyOpenGUI", "chkMouseUntrap", "Miscellaneous", "cmdKeyFullScreen", "cmdKeyForQuit" },
+	{ "cmdKeyForQuit", "chkBSDSocket", "Miscellaneous", "cmdKeyOpenGUI", "cmdKeyActionReplay" },
+	{ "cmdKeyForQuitKeyActionReplay", "chkResetDelay", "Miscellaneous", "cmdKeyForQuit", "cmdKeyFullScreen" },
+	{ "cmdKeyFullScreen", "chkClipboardSharing", "Miscellaneous", "cmdKeyActionReplay", "cmdKeyMinimize" },
+	{ "cmdKeyMinimize", "chkAllowNativeCode", "Miscellaneous", "cmdKeyFullScreen", "cmdKeyOpenGUI" },
 	
 	// PanelPrio
 	{ "cboActiveRunAtPrio", "Priority", "cboInactiveRunAtPrio", "chkActiveDisableSound", "chkActivePauseEmulation" },
