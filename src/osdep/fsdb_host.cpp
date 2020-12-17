@@ -33,8 +33,7 @@
 #include "uae.h"
 
 #define NUM_EVILCHARS 9
-static TCHAR evilchars[NUM_EVILCHARS] = { '%', '\\', '*', '?', '\"', '/', '|',
-        '<', '>' };
+static TCHAR evilchars[NUM_EVILCHARS] = { '%', '\\', '*', '?', '\"', '/', '|', '<', '>' };
 
 enum uaem_write_flags_t {
     WF_NEVER = (1 << 0),
@@ -298,33 +297,33 @@ static char* aname_to_nname(const char* aname, int ascii)
     unsigned int repl_1 = UINT_MAX;
     unsigned int repl_2 = UINT_MAX;
 
-    TCHAR a = aname[0];
-    TCHAR b = (a == '\0' ? a : aname[1]);
-    TCHAR c = (b == '\0' ? b : aname[2]);
-    TCHAR d = (c == '\0' ? c : aname[3]);
+    //TCHAR a = aname[0];
+    //TCHAR b = (a == '\0' ? a : aname[1]);
+    //TCHAR c = (b == '\0' ? b : aname[2]);
+    //TCHAR d = (c == '\0' ? c : aname[3]);
 
-    if (a >= 'a' && a <= 'z') a -= 32;
-    if (b >= 'a' && b <= 'z') b -= 32;
-    if (c >= 'a' && c <= 'z') c -= 32;
+    //if (a >= 'a' && a <= 'z') a -= 32;
+    //if (b >= 'a' && b <= 'z') b -= 32;
+    //if (c >= 'a' && c <= 'z') c -= 32;
 
     // reserved dos devices in Windows
-    size_t ll = 0;
-    if (a == 'A' && b == 'U' && c == 'X') ll = 3; // AUX
-    if (a == 'C' && b == 'O' && c == 'N') ll = 3; // CON
-    if (a == 'P' && b == 'R' && c == 'N') ll = 3; // PRN
-    if (a == 'N' && b == 'U' && c == 'L') ll = 3; // NUL
-    if (a == 'L' && b == 'P' && c == 'T' && (d >= '0' && d <= '9')) ll = 4; // LPT#
-    if (a == 'C' && b == 'O' && c == 'M' && (d >= '0' && d <= '9')) ll = 4; // COM#
-    // AUX.anything, CON.anything etc.. are also illegal names in Windows
-    if (ll && (len == ll || (len > ll && aname[ll] == '.'))) {
-        repl_1 = 2;
-    }
+    //size_t ll = 0;
+    //if (a == 'A' && b == 'U' && c == 'X') ll = 3; // AUX
+    //if (a == 'C' && b == 'O' && c == 'N') ll = 3; // CON
+    //if (a == 'P' && b == 'R' && c == 'N') ll = 3; // PRN
+    //if (a == 'N' && b == 'U' && c == 'L') ll = 3; // NUL
+    //if (a == 'L' && b == 'P' && c == 'T' && (d >= '0' && d <= '9')) ll = 4; // LPT#
+    //if (a == 'C' && b == 'O' && c == 'M' && (d >= '0' && d <= '9')) ll = 4; // COM#
+    //// AUX.anything, CON.anything etc.. are also illegal names in Windows
+    //if (ll && (len == ll || (len > ll && aname[ll] == '.'))) {
+    //    repl_1 = 2;
+    //}
 
-    // spaces and periods at the end are a no-no in Windows
-    int ei = len - 1;
-    if (aname[ei] == '.' || aname[ei] == ' ') {
-        repl_2 = ei;
-    }
+    //// spaces and periods at the end are a no-no in Windows
+    //int ei = len - 1;
+    //if (aname[ei] == '.' || aname[ei] == ' ') {
+    //    repl_2 = ei;
+    //}
 
     // allocating for worst-case scenario here (max replacements)
     char* buf = (char*)malloc(len * 3 + 1);
