@@ -2717,6 +2717,9 @@ void m68k_go(int may_quit)
 	int hardboot = 1;
 	int startup = 1;
 
+#ifdef WITH_THREADED_CPU
+	init_cpu_thread();
+#endif
 	if (in_m68k_go || !may_quit)
 	{
 		write_log(_T("Bug! m68k_go is not reentrant.\n"));
@@ -2807,7 +2810,9 @@ void m68k_go(int may_quit)
 			{
 				fixup_cpu(&changed_prefs);
 				currprefs.m68k_speed = changed_prefs.m68k_speed;
+				currprefs.m68k_speed_throttle = changed_prefs.m68k_speed_throttle;
 				update_68k_cycles();
+				target_cpu_speed();
 			}
 			cpu_prefs_changed_flag = 0;
 		}
@@ -2819,6 +2824,7 @@ void m68k_go(int may_quit)
 			protect_roms(true);
 		}
 		startup = 0;
+		event_wait = true;
 		unset_special(SPCFLAG_MODE_CHANGE);
 
 #ifdef SAVESTATE
@@ -2842,6 +2848,10 @@ void m68k_go(int may_quit)
 		if (regs.halted)
 		{
 			cpu_halt(regs.halted);
+			if (regs.halted < 0) {
+				haltloop();
+				continue;
+			}
 		}
 
 		run_func =
