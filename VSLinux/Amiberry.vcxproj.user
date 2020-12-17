@@ -44,7 +44,7 @@
     <RemoteDebuggerWorkingDirectory>~/projects/amiberry</RemoteDebuggerWorkingDirectory>
     <DebuggerFlavor>LinuxDebugger</DebuggerFlavor>
     <PreLaunchCommand>export DISPLAY=:0.0</PreLaunchCommand>
-    <RemoteTarget>-1706257654;argon (username=, port=22, authentication=Password)</RemoteTarget>
+    <RemoteTarget>402471865;pi400 (username=, port=22, authentication=Password)</RemoteTarget>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-xu4|ARM'">
     <RemoteDebuggerCommand>projects/amiberry/amiberry-sdl2-dev</RemoteDebuggerCommand>
