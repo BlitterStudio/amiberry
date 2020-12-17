@@ -438,6 +438,9 @@ bool HelpPanelPaths(std::vector<std::string>& helptext)
 	helptext.emplace_back("You can download the latest version of the WHDLoad Booter XML file, using the");
 	helptext.emplace_back("relevant button. You will need an internet connection for this to work.");
 	helptext.emplace_back(" ");
+	helptext.emplace_back("You can also download the latest Game Controller DB file, using the relevant button.");
+	helptext.emplace_back("BEWARE: this will overwrite any changes you may have had in your local file!");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("These settings are saved automatically when you click Rescan, or exit the emulator.");
 	return true;
 }
