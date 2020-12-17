@@ -241,8 +241,11 @@ static void close_audio_sdl2(struct sound_data* sd)
 	SDL_PauseAudioDevice(dev, 1);
 	
 	SDL_LockAudioDevice(dev);
-	xfree(s->pullbuffer);
-	s->pullbuffer = NULL;
+	if (s->pullbuffer != nullptr)
+	{
+		xfree(s->pullbuffer);
+		s->pullbuffer = NULL;
+	}
 	s->pullbufferlen = 0;
 	SDL_UnlockAudioDevice(dev);
 	
@@ -292,6 +295,7 @@ static int open_audio_sdl2(struct sound_data* sd, int index)
 	sd->sndbufsize = s->sndbufsize * ch * 2;
 	if (sd->sndbufsize > SND_MAX_BUFFER)
 		sd->sndbufsize = SND_MAX_BUFFER;
+	sd->samplesize = ch * 16 / 8;
 	s->pullmode = sound_pull;
 
 	SDL_AudioSpec want, have;
@@ -307,9 +311,7 @@ static int open_audio_sdl2(struct sound_data* sd, int index)
 		want.userdata = sd;
 	}
 
-	sd->samplesize = ch * 16 / 8;
-	
-	dev = SDL_OpenAudioDevice(nullptr, 0, &want, &have, 0);
+	dev = SDL_OpenAudioDevice(nullptr, 0, &want, &have, SDL_AUDIO_ALLOW_FORMAT_CHANGE);
 	if (dev == 0)
 	{
 		write_log("Failed to open audio: %s", SDL_GetError());
