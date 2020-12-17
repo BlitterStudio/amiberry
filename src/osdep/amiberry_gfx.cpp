@@ -87,6 +87,7 @@ FILE* screenshot_file = nullptr;
 static void create_screenshot();
 static int save_thumb(char* path);
 int delay_savestate_frame = 0;
+static volatile bool vsync_active;
 
 #ifdef USE_DISPMANX
 static unsigned long next_synctime = 0;
@@ -284,6 +285,7 @@ static int display_thread(void *unused)
 			break;
 
 		case DISPLAY_SIGNAL_SHOW:
+			vsync_active = true;
 #ifdef USE_DISPMANX
 			if (current_resource_amigafb == 1)
 			{
@@ -656,6 +658,10 @@ int target_get_display(const TCHAR* name)
 	return 0;
 }
 
+int target_get_display_scanline(int displayindex)
+{
+	return -2;
+}
 static void wait_for_display_thread(void)
 {
 	while (display_thread_busy)
@@ -1993,11 +1999,22 @@ bool vsync_switchmode(int hz)
 #endif
 }
 
+void vsync_clear(void)
+{
+	vsync_active = false;
+	//if (waitvblankevent)
+	//	ResetEvent(waitvblankevent);
+}
+
 int vsync_isdone(frame_time_t* dt)
 {
 	if (isvsync() == 0)
 		return -1;
-	return 0;
+	//if (waitvblankthread_mode <= 0)
+	//	return -2;
+	//if (dt)
+	//	*dt = wait_vblank_timestamp;
+	return vsync_active ? 1 : 0;
 }
 
 bool target_graphics_buffer_update()
