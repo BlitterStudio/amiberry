@@ -8382,6 +8382,7 @@ void inputdevice_copyconfig (struct uae_prefs *src, struct uae_prefs *dst)
 	strcpy(dst->quit_amiberry, src->quit_amiberry);
 	strcpy(dst->action_replay, src->action_replay);
 	strcpy(dst->fullscreen_toggle, src->fullscreen_toggle);
+	strcpy(dst->minimize, src->minimize);
 	dst->use_retroarch_quit = src->use_retroarch_quit;
 	dst->use_retroarch_menu = src->use_retroarch_menu;
 	dst->use_retroarch_reset = src->use_retroarch_reset;

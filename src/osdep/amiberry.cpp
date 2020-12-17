@@ -1778,6 +1778,7 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_target_dwrite_str(f, _T("quit_amiberry"), p->quit_amiberry);
 	cfgfile_target_dwrite_str(f, _T("action_replay"), p->action_replay);
 	cfgfile_target_dwrite_str(f, _T("fullscreen_toggle"), p->fullscreen_toggle);
+	cfgfile_target_dwrite_str(f, _T("minimize"), p->minimize);
 	cfgfile_target_dwrite_bool(f, _T("use_analogue_remap"), p->input_analog_remap);
 
 	cfgfile_target_dwrite_bool(f, _T("use_retroarch_quit"), p->use_retroarch_quit);
@@ -1871,6 +1872,8 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 	if (cfgfile_string(option, value, "action_replay", p->action_replay, sizeof p->action_replay))
 		return 1;
 	if (cfgfile_string(option, value, "fullscreen_toggle", p->fullscreen_toggle, sizeof p->fullscreen_toggle))
+		return 1;
+	if (cfgfile_string(option, value, "minimize", p->minimize, sizeof p->minimize))
 		return 1;
 	if (cfgfile_intval(option, value, _T("cpu_idle"), &p->cpu_idle, 1))
 		return 1;
