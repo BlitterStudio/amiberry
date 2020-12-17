@@ -32,7 +32,7 @@ static gcn::Button* cmdLogfilePath;
 
 static gcn::Button* cmdRescanROMs;
 static gcn::Button* cmdDownloadXML;
-
+static gcn::Button* cmdDownloadCtrlDb;
 
 class FolderButtonActionListener : public gcn::ActionListener
 {
@@ -210,6 +210,31 @@ public:
 
 static DownloadXMLButtonActionListener* downloadXMLButtonActionListener;
 
+class DownloadControllerDbActionListener : public gcn::ActionListener
+{
+public:
+	void action(const gcn::ActionEvent& actionEvent) override
+	{
+		char destination[MAX_DPATH];
+		get_configuration_path(destination, MAX_DPATH);
+		strcat(destination, "gamecontrollerdb.txt");
+		write_log("Downloading % ...\n", destination);
+		//TODO change this to master
+		const auto result = download_file("https://github.com/midwan/amiberry/blob/dev/conf/gamecontrollerdb.txt?raw=true", destination);
+
+		if (result)
+		{
+			import_joysticks();
+			ShowMessage("Game Controllers DB", "Latest version of Game Controllers DB downloaded.", "", "Ok", "");
+		}
+		else
+			ShowMessage("Game Controllers DB", "Failed to download file!", "Please check the log for more information", "Ok", "");
+
+		cmdDownloadCtrlDb->requestFocus();
+	}
+};
+static DownloadControllerDbActionListener* downloadControllerDbActionListener;
+
 void InitPanelPaths(const struct _ConfigCategory& category)
 {
 	const auto textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER - SMALL_BUTTON_WIDTH - DISTANCE_NEXT_X;
@@ -322,9 +347,18 @@ void InitPanelPaths(const struct _ConfigCategory& category)
 	cmdDownloadXML->setId("DownloadXML");
 	cmdDownloadXML->addActionListener(downloadXMLButtonActionListener);
 
+	downloadControllerDbActionListener = new DownloadControllerDbActionListener();
+	cmdDownloadCtrlDb = new gcn::Button("Update Controllers DB");
+	cmdDownloadCtrlDb->setSize(cmdDownloadCtrlDb->getWidth() + DISTANCE_BORDER, BUTTON_HEIGHT);
+	cmdDownloadCtrlDb->setBaseColor(gui_baseCol);
+	cmdDownloadCtrlDb->setId("cmdDownloadCtrlDb");
+	cmdDownloadCtrlDb->addActionListener(downloadControllerDbActionListener);
+	
 	category.panel->add(cmdRescanROMs, DISTANCE_BORDER, category.panel->getHeight() - BUTTON_HEIGHT - DISTANCE_BORDER);
-	category.panel->add(cmdDownloadXML, DISTANCE_BORDER + cmdRescanROMs->getWidth() + 20,
-	                    category.panel->getHeight() - BUTTON_HEIGHT - DISTANCE_BORDER);
+	category.panel->add(cmdDownloadXML, cmdRescanROMs->getX() + cmdRescanROMs->getWidth() + DISTANCE_NEXT_X,
+		category.panel->getHeight() - BUTTON_HEIGHT - DISTANCE_BORDER);
+	category.panel->add(cmdDownloadCtrlDb, cmdDownloadXML->getX() + cmdDownloadXML->getWidth() + DISTANCE_NEXT_X,
+		category.panel->getHeight() - BUTTON_HEIGHT - DISTANCE_BORDER);
 
 	RefreshPanelPaths();
 }
@@ -354,9 +388,11 @@ void ExitPanelPaths()
 	
 	delete cmdRescanROMs;
 	delete cmdDownloadXML;
+	delete cmdDownloadCtrlDb;
 	delete folderButtonActionListener;
 	delete rescanROMsButtonActionListener;
 	delete downloadXMLButtonActionListener;
+	delete downloadControllerDbActionListener;
 	delete enableLoggingActionListener;
 }
 
