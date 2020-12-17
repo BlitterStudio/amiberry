@@ -1553,6 +1553,11 @@ bool show_screen_maybe(const bool show)
 	return false;
 }
 
+void target_cpu_speed(void)
+{
+	//display_vblank_thread(&AMonitors[0]);
+}
+
 const TCHAR* target_get_display_name(int num, bool friendlyname)
 {
 	if (num <= 0)
