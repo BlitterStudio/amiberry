@@ -97,7 +97,6 @@ STATIC_INLINE void check_sound_buffers()
 
 	if ((uae_u8*)paula_sndbufpt - (uae_u8*)paula_sndbuffer >= paula_sndbufsize) {
 		finish_sound_buffer();
-		paula_sndbufpt = paula_sndbuffer;
 	}
 }
 
