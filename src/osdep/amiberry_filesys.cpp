@@ -594,7 +594,7 @@ int host_errno_to_dos_errno(int err) {
 		return ERROR_SEEK_ERROR;
 	default:
 		if (!warned) {
-			gui_message(_T("Unimplemented error %d\nContact author!"), err);
+			gui_message(_T("Unimplemented error %d - Contact author!"), err);
 			warned = 1;
 		}
 		return ERROR_NOT_IMPLEMENTED;
