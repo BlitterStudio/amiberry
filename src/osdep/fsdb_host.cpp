@@ -35,6 +35,8 @@
 #define NUM_EVILCHARS 9
 static TCHAR evilchars[NUM_EVILCHARS] = { '%', '\\', '*', '?', '\"', '/', '|', '<', '>' };
 
+#define UAEFSDB_BEGINS _T("__uae___")
+
 enum uaem_write_flags_t {
     WF_NEVER = (1 << 0),
     WF_ALWAYS = (1 << 1),
@@ -443,15 +445,54 @@ static char* nname_to_aname(const char* nname, int noconvert)
  */
 int fsdb_mode_representable_p(const a_inode* aino, int amigaos_mode)
 {
-    return 1;
+    int mask = amigaos_mode ^ 15;
+
+    if (aino->vfso)
+        return 1;
+    if (mask & A_FIBF_SCRIPT) /* script */
+        return 0;
+    if ((mask & 15) == 15) /* xxxxRWED == OK */
+        return 1;
+    if (!(mask & A_FIBF_EXECUTE)) /* not executable */
+        return 0;
+    if (!(mask & A_FIBF_READ)) /* not readable */
+        return 0;
+    if ((mask & 15) == (A_FIBF_READ | A_FIBF_EXECUTE)) /* ----RxEx == ReadOnly */
+        return 1;
+    return 0;
 }
 
 TCHAR* fsdb_create_unique_nname(a_inode* base, const TCHAR* suggestion)
 {
-    char* nname = aname_to_nname(suggestion, 0);
-    TCHAR* p = build_nname(base->nname, nname);
-    free(nname);
-    return p;
+    TCHAR* c;
+    TCHAR tmp[256] = UAEFSDB_BEGINS;
+    int i;
+
+    _tcsncat(tmp, suggestion, 240);
+
+    /* replace the evil ones... */
+    for (i = 0; i < NUM_EVILCHARS; i++)
+        while ((c = _tcschr(tmp, evilchars[i])) != 0)
+            *c = '_';
+
+    while ((c = _tcschr(tmp, '.')) != 0)
+        *c = '_';
+    while ((c = _tcschr(tmp, ' ')) != 0)
+        *c = '_';
+
+    for (;;) {
+        TCHAR* p = build_nname(base->nname, tmp);
+        if (access(p, R_OK) < 0 && errno == ENOENT) {
+            write_log(_T("unique name: %s\n"), p);
+            return p;
+        }
+        xfree(p);
+        /* tmpnam isn't reentrant and I don't really want to hack configure
+         * right now to see whether tmpnam_r is available...  */
+        for (i = 0; i < 8; i++) {
+            tmp[i + 8] = "_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[uaerand() % 63];
+        }
+    }
 }
 
 /* Return 1 if the nname is a special host-only name which must be translated
