@@ -10,6 +10,13 @@
 #define DISPLAY_SIGNAL_SHOW 				4
 #define DISPLAY_SIGNAL_QUIT 				5
 
+#define  SYSTEM_RED_SHIFT      (screen->format->Rshift)
+#define  SYSTEM_GREEN_SHIFT    (screen->format->Gshift)
+#define  SYSTEM_BLUE_SHIFT     (screen->format->Bshift)
+#define  SYSTEM_RED_MASK       (screen->format->Rmask)
+#define  SYSTEM_GREEN_MASK     (screen->format->Gmask)
+#define  SYSTEM_BLUE_MASK      (screen->format->Bmask)
+
 #ifdef USE_DISPMANX
 #include <bcm_host.h>
 extern DISPMANX_DISPLAY_HANDLE_T displayHandle;

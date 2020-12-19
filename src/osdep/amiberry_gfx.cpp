@@ -451,7 +451,7 @@ int graphics_setup(void)
 	
 	if (renderer == nullptr)
 	{
-		renderer = SDL_CreateRenderer(sdl_window, -1, SDL_RENDERER_ACCELERATED);
+		renderer = SDL_CreateRenderer(sdl_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 		check_error_sdl(renderer == nullptr, "Unable to create a renderer:");
 	}
 	
@@ -1726,13 +1726,6 @@ void graphics_leave()
 
 	SDL_VideoQuit();
 }
-
-#define  SYSTEM_RED_SHIFT      (screen->format->Rshift)
-#define  SYSTEM_GREEN_SHIFT    (screen->format->Gshift)
-#define  SYSTEM_BLUE_SHIFT     (screen->format->Bshift)
-#define  SYSTEM_RED_MASK       (screen->format->Rmask)
-#define  SYSTEM_GREEN_MASK     (screen->format->Gmask)
-#define  SYSTEM_BLUE_MASK      (screen->format->Bmask)
 
 static int save_png(SDL_Surface* surface, char* path)
 {

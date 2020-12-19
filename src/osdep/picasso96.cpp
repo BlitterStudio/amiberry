@@ -871,12 +871,11 @@ static void setconvert()
 	struct picasso96_state_struct* state = &picasso96_state;
 
 	vidinfo->picasso_convert = getconvert (state->RGBFormat, vidinfo->pixbytes);
-	vidinfo->host_mode = vidinfo->pixbytes == 4 ? RGBFB_R8G8B8A8 : RGBFB_R5G6B5PC;
-	//vidinfo->host_mode = GetSurfacePixelFormat();
+	vidinfo->host_mode = vidinfo->pixbytes == 4 ? RGBFB_R8G8B8A8 : RGBFB_R5G6B5;
 	if (vidinfo->pixbytes == 4)
-		alloc_colors_rgb(8, 8, 8, 16, 8, 0, 0, 0, 0, 0, p96rc, p96gc, p96bc);
+		alloc_colors_rgb(8, 8, 8, SYSTEM_RED_SHIFT, SYSTEM_GREEN_SHIFT, SYSTEM_BLUE_SHIFT, 0, 0, 0, 0, p96rc, p96gc, p96bc);
 	else
-		alloc_colors_rgb(5, 6, 5, 11, 5, 0, 0, 0, 0, 0, p96rc, p96gc, p96bc);
+		alloc_colors_rgb(5, 6, 5, SYSTEM_RED_SHIFT, SYSTEM_GREEN_SHIFT, SYSTEM_BLUE_SHIFT, 0, 0, 0, 0, p96rc, p96gc, p96bc);
 	gfx_set_picasso_colors(state->RGBFormat);
 	picasso_palette(state->CLUT, vidinfo->clut);
 	if (vidinfo->host_mode != vidinfo->ohost_mode || state->RGBFormat != vidinfo->orgbformat) {
@@ -4677,7 +4676,7 @@ uae_u8 *getrtgbuffer(int *widthp, int *heightp, int *pitch, int *depth, uae_u8 *
 		return NULL;
 	hmode = pixbytes == 1 ? RGBFB_CLUT : RGBFB_R8G8B8A8;
 	convert = getconvert (state->RGBFormat, pixbytes);
-	alloc_colors_picasso(8, 8, 8, 16, 8, 0, state->RGBFormat, p96_rgbx16);
+	alloc_colors_picasso(8, 8, 8, SYSTEM_RED_SHIFT, SYSTEM_GREEN_SHIFT, SYSTEM_BLUE_SHIFT, state->RGBFormat, p96_rgbx16);
 
 	if (pixbytes > 1 && hmode != convert) {
 		copyall (src + off, dst, width, height, state->BytesPerRow, state->BytesPerPixel, width * pixbytes, pixbytes, false, convert);
@@ -5331,8 +5330,8 @@ static uae_u32 REGPARAM2 picasso_CreateFeature(TrapContext* ctx)
 		p96_rgbx16_ovl = xcalloc(uae_u32, 65536);
 	int of = overlay_format;
 	if (of == RGBFB_Y4U2V2 || of == RGBFB_Y4U1V1)
-		of = RGBFB_R5G5B5PC;
-	alloc_colors_picasso(8, 8, 8, 16, 8, 0, of, p96_rgbx16_ovl);
+		of = RGBFB_R5G5B5;
+	alloc_colors_picasso(8, 8, 8, SYSTEM_RED_SHIFT, SYSTEM_GREEN_SHIFT, SYSTEM_BLUE_SHIFT, of, p96_rgbx16_ovl);
 #if OVERLAY_DEBUG
 	write_log(_T("picasso_CreateFeature overlay bitmap %08x, vram %08x (%dx%d)\n"),
 		overlay_bitmap, overlay_vram, overlay_src_width, overlay_src_height);
@@ -5788,7 +5787,7 @@ void restore_p96_finish(void)
 			overlay_convert = getconvert(overlay_format, picasso_vidinfo.pixbytes);
 			if (!p96_rgbx16_ovl)
 				p96_rgbx16_ovl = xcalloc(uae_u32, 65536);
-			alloc_colors_picasso(8, 8, 8, 16, 8, 0, overlay_format, p96_rgbx16_ovl);
+			alloc_colors_picasso(8, 8, 8, SYSTEM_RED_SHIFT, SYSTEM_GREEN_SHIFT, SYSTEM_BLUE_SHIFT, overlay_format, p96_rgbx16_ovl);
 			picasso_palette(overlay_clutc, overlay_clut);
 			overlay_color = overlay_color_unswapped;
 			overlay_pix = GetBytesPerPixel(overlay_format);
