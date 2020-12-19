@@ -1677,24 +1677,6 @@ static int get_display_depth()
 	return screen->format->BytesPerPixel * 8;
 }
 
-int GetSurfacePixelFormat()
-{
-	const auto depth = get_display_depth();
-	const auto unit = depth + 1 & 0xF8;
-
-	return unit == 8
-		? RGBFB_CHUNKY
-		: depth == 15 && unit == 16
-		? RGBFB_R5G5B5
-		: depth == 16 && unit == 16
-		? RGBFB_R5G6B5
-		: unit == 24
-		? RGBFB_R8G8B8
-		: unit == 32
-		? RGBFB_R8G8B8A8
-		: RGBFB_NONE;
-}
-
 int graphics_init(bool mousecapture)
 {
 	inputdevice_unacquire();

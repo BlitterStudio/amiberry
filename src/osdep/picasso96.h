@@ -62,7 +62,6 @@ struct MultiDisplay {
 };
 extern struct MultiDisplay Displays[MAX_DISPLAYS];
 
-extern int GetSurfacePixelFormat(void);
 extern void picasso_init_resolutions (void);
 
 #ifdef PICASSO96
