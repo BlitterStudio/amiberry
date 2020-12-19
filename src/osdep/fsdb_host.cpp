@@ -150,35 +150,35 @@ extern "C" {
         g_uaem_flags |= name; \
     }
 
-    void uae_set_uaem_write_flags_from_string(const char* flags)
-    {
-        assert(flags != NULL);
-        write_log("uaem_write_flags = %s\n", flags);
-        g_uaem_flags = 0;
-        for (const char* c = flags; *c; c++) {
-            if (*c == '0') {
-                /* usually used by itself to disable all flags (by not
-                 * specifying any other) */
-            }
-            PARSE_WF('1', WF_ALWAYS)
-                PARSE_WF('n', WF_NOTE)
-                PARSE_WF('t', WF_TIME)
-                PARSE_WF('h', WF_HOLD)
-                PARSE_WF('s', WF_SCRIPT)
-                PARSE_WF('p', WF_PURE)
-                PARSE_WF('a', WF_ARCHIVE)
-                PARSE_WF('r', WF_READ)
-                PARSE_WF('w', WF_WRITE)
-                PARSE_WF('e', WF_EXECUTE)
-                PARSE_WF('d', WF_DELETE)
-            else if (*c == ' ') {
-                /* ignore space */
-            }
-            else {
-                write_log("- unknown flag '%c'\n", *c);
-            }
+void uae_set_uaem_write_flags_from_string(const char *flags)
+{
+    assert (flags != NULL);
+    write_log("uaem_write_flags = %s\n", flags);
+    g_uaem_flags = 0;
+    for (const char *c = flags; *c; c++) {
+        if (*c == '0') {
+            /* usually used by itself to disable all flags (by not
+             * specifying any other) */
+        }
+        PARSE_WF('1', WF_ALWAYS)
+        PARSE_WF('n', WF_NOTE)
+        PARSE_WF('t', WF_TIME)
+        PARSE_WF('h', WF_HOLD)
+        PARSE_WF('s', WF_SCRIPT)
+        PARSE_WF('p', WF_PURE)
+        PARSE_WF('a', WF_ARCHIVE)
+        PARSE_WF('r', WF_READ)
+        PARSE_WF('w', WF_WRITE)
+        PARSE_WF('e', WF_EXECUTE)
+        PARSE_WF('d', WF_DELETE)
+        else if (*c == ' ') {
+            /* ignore space */
+        }
+        else {
+            write_log("- unknown flag '%c'\n", *c);
         }
     }
+}
 
 #ifdef __cplusplus
 }
@@ -287,8 +287,8 @@ static FILE* fsdb_open_meta_file(const char* meta_file, const char* mode)
 /* return supported combination */
 int fsdb_mode_supported(const a_inode* aino)
 {
-	int mask = aino->amigaos_mode;
-	return mask;
+    int mask = aino->amigaos_mode;
+    return mask;
 }
 
 static char hex_chars[] = "0123456789abcdef";
@@ -445,21 +445,7 @@ static char* nname_to_aname(const char* nname, int noconvert)
  */
 int fsdb_mode_representable_p(const a_inode* aino, int amigaos_mode)
 {
-    int mask = amigaos_mode ^ 15;
-
-    if (aino->vfso)
-        return 1;
-    if (mask & A_FIBF_SCRIPT) /* script */
-        return 0;
-    if ((mask & 15) == 15) /* xxxxRWED == OK */
-        return 1;
-    if (!(mask & A_FIBF_EXECUTE)) /* not executable */
-        return 0;
-    if (!(mask & A_FIBF_READ)) /* not readable */
-        return 0;
-    if ((mask & 15) == (A_FIBF_READ | A_FIBF_EXECUTE)) /* ----RxEx == ReadOnly */
-        return 1;
-    return 0;
+    return 1;
 }
 
 TCHAR* fsdb_create_unique_nname(a_inode* base, const TCHAR* suggestion)
@@ -560,7 +546,7 @@ static int fsdb_get_file_info(const char* nname, fsdb_file_info* info)
         int count = fread(data, 1, file_size, f);
         if (count != file_size) {
             write_log("WARNING: could not read permissions "
-                "from %s (%d)\n", meta_file, errno);
+                    "from %s (%d)\n", meta_file, errno);
             error = host_errno_to_dos_errno(errno);
             end = data;
         }
@@ -810,7 +796,7 @@ int fsdb_set_file_info(const char* nname, fsdb_file_info* info)
         if (f == NULL) {
             error = host_errno_to_dos_errno(errno);
             write_log("WARNING: fsdb_set_file_info - could not open "
-                "meta file for writing\n");
+                      "meta file for writing\n");
         }
     }
     xfree(meta_file);
@@ -871,22 +857,22 @@ int fsdb_set_file_info(const char* nname, fsdb_file_info* info)
 
 void fsdb_get_file_time(a_inode* aino, int* days, int* mins, int* ticks)
 {
-	fsdb_file_info info;
-	fsdb_get_file_info(aino->nname, &info);
-	if (info.type) {
-		*days = info.days;
-		*mins = info.mins;
-		*ticks = info.ticks;
-		if (info.comment) {
-			free(info.comment);
-		}
-	}
-	else {
-		// FIXME: file does not exist
-		*days = 0;
-		*mins = 0;
-		*ticks = 0;
-	}
+    fsdb_file_info info;
+    fsdb_get_file_info(aino->nname, &info);
+    if (info.type) {
+        *days = info.days;
+        *mins = info.mins;
+        *ticks = info.ticks;
+        if (info.comment) {
+            free(info.comment);
+        }
+    }
+    else {
+        // FIXME: file does not exist
+        *days = 0;
+        *mins = 0;
+        *ticks = 0;
+    }
 }
 
 bool my_utime(const char* name, struct mytimeval* tv)
@@ -913,7 +899,7 @@ bool my_utime(const char* name, struct mytimeval* tv)
 
     if (!fs_path_exists(name)) {
         write_log("WARNING: fsdb_set_file_time file \"%s\" does not exist\n",
-            name);
+                name);
         my_errno = ERROR_OBJECT_NOT_AROUND;
         return 0;
     }

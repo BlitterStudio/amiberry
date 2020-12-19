@@ -113,7 +113,7 @@ typedef struct a_inode_struct {
 	struct virtualfilesysobject *vfso;
 } a_inode;
 
-//extern TCHAR *nname_begin (TCHAR *);
+extern TCHAR *nname_begin (TCHAR *);
 
 extern TCHAR *build_nname (const TCHAR *d, const TCHAR *n);
 extern TCHAR *build_aname (const TCHAR *d, const TCHAR *n);
