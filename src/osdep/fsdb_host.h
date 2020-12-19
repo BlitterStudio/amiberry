@@ -28,14 +28,7 @@ struct fs_stat {
     int64_t blocks;
 };
 
-void fsdb_init_file_info(fsdb_file_info* info);
-int fsdb_set_file_info(const char* nname, fsdb_file_info* info);
-
 extern bool fs_path_exists(const std::string& s);
-extern int g_fsdb_debug;
 extern int my_errno;
 extern int host_errno_to_dos_errno(int err);
-extern int fs_stat(const char* path, struct fs_stat* buf);
-extern char* Utf8ToLatin1String(char* s);
-extern std::string iso_8859_1_to_utf8(std::string& str);
 extern string prefix_with_application_directory_path(string currentpath);

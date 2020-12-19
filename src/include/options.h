@@ -1133,7 +1133,6 @@ struct amiberry_options
 	char default_controller4[128]{};
 	char default_mouse1[128] = "mouse";
 	char default_mouse2[128] = "joy0";
-	char uaem_write_flags[128] = "0";
 };
 
 extern struct amiberry_options amiberry_options;

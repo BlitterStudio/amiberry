@@ -24,81 +24,6 @@ struct my_openfile_s {
 	char* path;
 };
 
-#ifdef AMIBERRY
-int GetUtf8CharacterLength(unsigned char utf8Char)
-{
-	if (utf8Char < 0x80) return 1;
-	if ((utf8Char & 0x20) == 0) return 2;
-	if ((utf8Char & 0x10) == 0) return 3;
-	if ((utf8Char & 0x08) == 0) return 4;
-	if ((utf8Char & 0x04) == 0) return 5;
-
-	return 6;
-}
-
-char Utf8ToLatin1Character(char* s, int* readIndex)
-{
-	int len = GetUtf8CharacterLength(static_cast<unsigned char>(s[*readIndex]));
-	if (len == 1)
-	{
-		char c = s[*readIndex];
-		(*readIndex)++;
-
-		return c;
-	}
-
-	unsigned int v = (s[*readIndex] & (0xff >> (len + 1))) << ((len - 1) * 6);
-	(*readIndex)++;
-	for (len--; len > 0; len--)
-	{
-		v |= (static_cast<unsigned char>(s[*readIndex]) - 0x80) << ((len - 1) * 6);
-		(*readIndex)++;
-	}
-
-	return (v > 0xff) ? 0 : (char)v;
-}
-
-// overwrites s in place
-char* Utf8ToLatin1String(char* s)
-{
-	for (int readIndex = 0, writeIndex = 0; ; writeIndex++)
-	{
-		if (s[readIndex] == 0)
-		{
-			s[writeIndex] = 0;
-			break;
-		}
-
-		char c = Utf8ToLatin1Character(s, &readIndex);
-		if (c == 0)
-		{
-			c = '_';
-		}
-
-		s[writeIndex] = c;
-	}
-
-	return s;
-}
-
-std::string iso_8859_1_to_utf8(std::string& str)
-{
-	string strOut;
-	for (std::string::iterator it = str.begin(); it != str.end(); ++it)
-	{
-		uint8_t ch = *it;
-		if (ch < 0x80) {
-			strOut.push_back(ch);
-		}
-		else {
-			strOut.push_back(0xc0 | ch >> 6);
-			strOut.push_back(0x80 | (ch & 0x3f));
-		}
-}
-	return strOut;
-}
-#endif
-
 string prefix_with_application_directory_path(string currentpath)
 {
 #ifdef ANDROID
@@ -123,8 +48,8 @@ bool my_chmod(const TCHAR* name, uae_u32 mode)
 	// Note: only used to set or clear write protect on disk file
 
 	// get current state
-	struct stat64 st{};
-	if (stat64(name, &st) == -1) {
+	struct stat st{};
+	if (stat(name, &st) == -1) {
 		write_log("my_chmod: stat on file %s failed\n", name);
 		return false;
 	}
@@ -137,7 +62,7 @@ bool my_chmod(const TCHAR* name, uae_u32 mode)
 		st.st_mode &= ~(S_IWUSR);
 	chmod(name, st.st_mode);
 
-	stat64(name, &st);
+	stat(name, &st);
 	auto newmode = 0;
 	if (st.st_mode & S_IRUSR) {
 		newmode |= FILEFLAG_READ;
@@ -151,9 +76,9 @@ bool my_chmod(const TCHAR* name, uae_u32 mode)
 
 bool my_stat(const TCHAR* name, struct mystat* statbuf)
 {
-	struct stat64 st{};
+	struct stat st{};
 
-	if (stat64(name, &st) == -1) {
+	if (stat(name, &st) == -1) {
 		write_log("my_stat: stat on file %s failed\n", name);
 		return false;
 	}
@@ -224,7 +149,7 @@ int my_readdir(struct my_opendir_s* mod, TCHAR* name)
 	
 	while (true)
 	{
-		auto* entry = readdir64(mod->dir);
+		auto* entry = readdir(mod->dir);
 		if (entry == NULL)
 			return 0;
 		
@@ -248,7 +173,6 @@ int my_readdir(struct my_opendir_s* mod, TCHAR* name)
 			continue;
 		}
 
-		Utf8ToLatin1String(result);
 		_tcscpy(name, result);
 		return 1;
 	}
@@ -329,7 +253,6 @@ struct my_openfile_s* my_open(const TCHAR* name, const int flags)
 	}
 	char* path = my_strdup(name);
 
-	int file_existed = fs_path_exists(path);
 	int file = open(path, open_flags, 0644);
 	if (file == -1) {
 		my_errno = errno;
@@ -350,13 +273,8 @@ struct my_openfile_s* my_open(const TCHAR* name, const int flags)
 		else if (open_flags & O_WRONLY) {
 			write_log("  O_WRONLY\n");
 		}
-		free(path);
+		xfree(path);
 		return NULL;
-	}
-	if (!file_existed) {
-		fsdb_file_info info;
-		fsdb_init_file_info(&info);
-		int error = fsdb_set_file_info(path, &info);
 	}
 	xfree(path);
 
@@ -369,7 +287,7 @@ struct my_openfile_s* my_open(const TCHAR* name, const int flags)
 
 void my_close(struct my_openfile_s* mos)
 {
-	free(mos->path);
+	xfree(mos->path);
 	int result = close(mos->fd);
 	if (result != 0)
 		write_log("error closing file\n");
@@ -407,12 +325,6 @@ int my_mkdir(const TCHAR* path)
 	if (error) {
 		my_errno = errno;
 		return -1;
-	}
-	int file_existed = 0;
-	if (!file_existed) {
-		fsdb_file_info info;
-		fsdb_init_file_info(&info);
-		int error = fsdb_set_file_info(path, &info);
 	}
 	my_errno = 0;
 	return 0;
@@ -457,13 +369,6 @@ int my_rmdir(const TCHAR* path)
 	int result = rmdir(path);
 	my_errno = errno;
 
-	auto* meta_name = (TCHAR*)malloc(MAX_DPATH);
-	strcpy(meta_name, path);
-	strcat(meta_name, ".uaem");
-	
-	unlink(meta_name);
-	xfree(meta_name);
-
 	return result;
 }
 
@@ -472,13 +377,6 @@ int my_unlink(const TCHAR* path)
 	errno = 0;
 	int result = unlink(path);
 	my_errno = errno;
-
-	auto* meta_name = (TCHAR*)malloc(MAX_DPATH);
-	strcpy(meta_name, path);
-	strcat(meta_name, ".uaem");
-	
-	unlink(meta_name);
-	xfree(meta_name);
 
 	return result;
 }
@@ -508,25 +406,6 @@ int my_rename(const TCHAR* oldname, const TCHAR* newname)
 		// could not rename file
 		return result;
 	}
-
-	auto* oldname2 = (TCHAR*)malloc(MAX_DPATH);
-	strcpy(oldname2, oldname);
-	strcat(oldname2, ".uaem");
-	
-	if (fs_path_exists(oldname2)) {
-		auto* newname2 = (TCHAR*)malloc(MAX_DPATH);
-		strcpy(newname2, newname);
-		strcat(newname2, ".uaem");
-		if (rename_file(oldname2, newname2) != 0) {
-			// could not rename meta file, revert changes
-			int saved_errno = my_errno;
-			rename_file(newname, oldname);
-			my_errno = saved_errno;
-			result = -1;
-		}
-		xfree(newname2);
-	}
-	xfree(oldname2);
 	return result;
 }
 
@@ -540,8 +419,6 @@ uae_s64 my_lseek(struct my_openfile_s* mos, uae_s64 offset, int whence)
 
 FILE* my_opentext(const TCHAR* name)
 {
-	// FIXME: WinUAE's version does some content checking related to unicode.
-	// see fsdb_mywin32.cpp
 	return fopen(name, "rb");
 }
 
@@ -568,7 +445,8 @@ const TCHAR* my_getfilepart(const TCHAR* filename)
 	return p;
 }
 
-int host_errno_to_dos_errno(int err) {
+int host_errno_to_dos_errno(int err)
+{
 	static int warned = 0;
 
 	switch (err) {
@@ -588,8 +466,16 @@ int host_errno_to_dos_errno(int err) {
 		return ERROR_DISK_IS_FULL;
 	case EBUSY:
 		return ERROR_OBJECT_IN_USE;
-	case ENOTEMPTY:
-		return ERROR_DIRECTORY_NOT_EMPTY;
+	case EISDIR:	
+		return ERROR_OBJECT_WRONG_TYPE;
+#if defined(ETXTBSY)
+	case ETXTBSY:	return ERROR_OBJECT_IN_USE;
+#endif	
+#if defined(ENOTEMPTY)
+#if ENOTEMPTY != EEXIST
+	case ENOTEMPTY:	return ERROR_DIRECTORY_NOT_EMPTY;
+#endif
+#endif
 	case ESPIPE:
 		return ERROR_SEEK_ERROR;
 	default:

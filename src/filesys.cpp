@@ -4051,11 +4051,7 @@ static void get_fileinfo(TrapContext *ctx, Unit *unit, dpacket *packet, uaecptr 
 		put_long_host(buf + 124, statbuf.size > MAXFILESIZE32 ? MAXFILESIZE32 : (uae_u32)statbuf.size);
 	}
 
-#ifdef AMIBERRY
-	fsdb_get_file_time(aino, &days, &mins, &ticks);
-#else
 	timeval_to_amiga (&statbuf.mtime, &days, &mins, &ticks, 50);
-#endif
 	put_long_host(buf + 132, days);
 	put_long_host(buf + 136, mins);
 	put_long_host(buf + 140, ticks);
@@ -4365,11 +4361,8 @@ static int exalldo(TrapContext *ctx, uaecptr exalldata, uae_u32 exalldatasize, u
 		size2 += 4;
 	}
 	if (type >= 5) {
-#ifdef AMIBERRY
-		fsdb_get_file_time(aino, &days, &mins, &ticks);
-#else
+
 		timeval_to_amiga (&statbuf.mtime, &days, &mins, &ticks, 50);
-#endif
 		size2 += 12;
 	}
 	if (type >= 6) {

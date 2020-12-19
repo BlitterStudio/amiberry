@@ -2351,10 +2351,6 @@ void save_amiberry_settings(void)
 	// Mouse2
 	snprintf(buffer, MAX_DPATH, "default_mouse2=%s\n", amiberry_options.default_mouse2);
 	fputs(buffer, f);
-
-	// .uaem write flags (from FS-UAE)
-	snprintf(buffer, MAX_DPATH, "uaem_write_flags=%s\n", amiberry_options.uaem_write_flags);
-	fputs(buffer, f);
 	
 	// Paths
 	snprintf(buffer, MAX_DPATH, "path=%s\n", current_dir);
@@ -2574,7 +2570,6 @@ void load_amiberry_settings(void)
 					cfgfile_string(option, value, "default_controller4", amiberry_options.default_controller4, sizeof amiberry_options.default_controller4);
 					cfgfile_string(option, value, "default_mouse1", amiberry_options.default_mouse1, sizeof amiberry_options.default_mouse1);
 					cfgfile_string(option, value, "default_mouse2", amiberry_options.default_mouse2, sizeof amiberry_options.default_mouse2);
-					cfgfile_string(option, value, "uaem_write_flags", amiberry_options.uaem_write_flags, sizeof amiberry_options.uaem_write_flags);
 				}
 			}
 		}
@@ -2662,7 +2657,6 @@ int main(int argc, char* argv[])
 #endif
 	rename_old_adfdir();
 	load_amiberry_settings();
-	uae_set_uaem_write_flags_from_string(amiberry_options.uaem_write_flags);
 
 	snprintf(savestate_fname, sizeof savestate_fname, "%s/savestates/default.ads", start_path_data);
 	logging_init();
