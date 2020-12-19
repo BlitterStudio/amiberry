@@ -1254,7 +1254,7 @@ bool handle_events()
 	return pause_emulation != 0;
 }
 
-void logging_init(void)
+void logging_init()
 {
 	if (amiberry_options.write_logfile)
 	{

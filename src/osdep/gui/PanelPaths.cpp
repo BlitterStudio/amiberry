@@ -112,6 +112,7 @@ public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		set_logfile_enabled(chkEnableLogging->isSelected());
+		logging_init();
 		RefreshPanelPaths();
 	}
 };
