@@ -916,7 +916,6 @@ static void parse_cmdline (int argc, TCHAR **argv)
 
 static void parse_cmdline_and_init_file (int argc, TCHAR **argv)
 {
-
 	_tcscpy (optionsfile, _T(""));
 
 	parse_cmdline_2 (argc, argv);
@@ -964,15 +963,6 @@ static void do_start_program (void)
 
 static void start_program (void)
 {
-	char kbd_flags;
-	// set capslock state based upon current "real" state
-	ioctl(0, KDGKBLED, &kbd_flags);
-	if (kbd_flags & 07 & LED_CAP)
-	{
-		// record capslock pressed
-		inputdevice_do_keyboard(AK_CAPSLOCK, 1);
-	}
-
 	do_start_program ();
 }
 
