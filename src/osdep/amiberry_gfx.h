@@ -30,13 +30,13 @@ extern VC_RECT_T black_rect;
 extern VC_IMAGE_TYPE_T rgb_mode;
 extern void change_layer_number(int layer);
 #else
-extern SDL_Surface* screen;
 extern SDL_Texture* texture;
 extern SDL_Cursor* cursor;
 extern SDL_Texture* gui_texture;
 extern SDL_DisplayMode sdlMode;
 extern const char* sdl_video_driver;
 #endif
+extern SDL_Surface* screen;
 extern SDL_Renderer* renderer;
 extern SDL_Window* sdl_window;
 extern SDL_Surface* gui_screen;
