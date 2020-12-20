@@ -308,9 +308,9 @@
     <ClCompile Include="..\..\src\native2amiga.cpp" />
     <ClCompile Include="..\..\src\newcpu.cpp" />
     <ClCompile Include="..\..\src\newcpu_common.cpp" />
-    <ClCompile Include="..\..\src\osdep\ahi_winuae.cpp" />
+    <ClCompile Include="..\..\src\osdep\ahi_v1.cpp" />
+    <ClCompile Include="..\..\src\osdep\ahi_v2.cpp" />
     <ClCompile Include="..\..\src\osdep\amiberry.cpp" />
-    <ClCompile Include="..\..\src\osdep\amiberry_ahi.cpp" />
     <ClCompile Include="..\..\src\osdep\amiberry_filesys.cpp" />
     <ClCompile Include="..\..\src\osdep\amiberry_gfx.cpp" />
     <ClCompile Include="..\..\src\osdep\amiberry_gui.cpp" />
@@ -542,8 +542,8 @@
     <ClInclude Include="..\..\src\machdep\m68k.h" />
     <ClInclude Include="..\..\src\machdep\maccess.h" />
     <ClInclude Include="..\..\src\machdep\rpt.h" />
-    <ClInclude Include="..\..\src\osdep\ahidsound.h" />
-    <ClInclude Include="..\..\src\osdep\ahidsound_new.h" />
+    <ClInclude Include="..\..\src\osdep\ahi_v1.h" />
+    <ClInclude Include="..\..\src\osdep\ahi_v2.h" />
     <ClInclude Include="..\..\src\osdep\amiberry_filesys.hpp" />
     <ClInclude Include="..\..\src\osdep\amiberry_gfx.h" />
     <ClInclude Include="..\..\src\osdep\amiberry_input.h" />

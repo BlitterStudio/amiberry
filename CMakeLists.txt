@@ -117,7 +117,7 @@ add_executable(amiberry
         src/archivers/wrp/warp.cpp
         src/archivers/zip/unzip.cpp
         src/machdep/support.cpp
-        src/osdep/ahi_winuae.cpp
+        src/osdep/ahi_v1.cpp
         src/osdep/bsdsocket_host.cpp
         src/osdep/cda_play.cpp
         src/osdep/charset.cpp
@@ -129,7 +129,7 @@ add_executable(amiberry
         src/osdep/picasso96.cpp
         src/osdep/writelog.cpp
         src/osdep/amiberry.cpp
-        src/osdep/amiberry_ahi.cpp
+        src/osdep/ahi_v2.cpp
         src/osdep/amiberry_filesys.cpp
         src/osdep/amiberry_input.cpp
         src/osdep/amiberry_gfx.cpp

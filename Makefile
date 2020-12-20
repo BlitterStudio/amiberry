@@ -394,7 +394,7 @@ OBJS =	\
 	src/archivers/zip/unzip.o \
 	src/caps/caps_amiberry.o \
 	src/machdep/support.o \
-	src/osdep/ahi_winuae.o \
+	src/osdep/ahi_v1.o \
 	src/osdep/bsdsocket_host.o \
 	src/osdep/cda_play.o \
 	src/osdep/charset.o \
@@ -406,7 +406,7 @@ OBJS =	\
 	src/osdep/picasso96.o \
 	src/osdep/writelog.o \
 	src/osdep/amiberry.o \
-	src/osdep/amiberry_ahi.o \
+	src/osdep/ahi_v2.o \
 	src/osdep/amiberry_filesys.o \
 	src/osdep/amiberry_input.o \
 	src/osdep/amiberry_gfx.o \

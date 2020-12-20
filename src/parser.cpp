@@ -900,9 +900,6 @@ int setbaud (long baud)
 
 void initparallel (void)
 {
-#ifdef AMIBERRY
-	write_log("initparallel\n");
-#endif
 #if SERIAL_ENET
 	if (_tcsnicmp(currprefs.prtname, "tcp:", 4) == 0) {
 		parallel_tcp_open(currprefs.prtname);
@@ -917,10 +914,7 @@ void initparallel (void)
 
 #ifdef AHI
 	if (uae_boot_rom_type) {
-#ifdef AMIBERRY
-		write_log("installing ahi_winuae\n");
-#endif
-		uaecptr a = here (); //this install the ahisound
+		uaecptr a = here (); //this installs the ahisound
 		org (rtarea_base + 0xFFC0);
 		calltrap (deftrapres (ahi_demux, 0, _T("ahi_winuae")));
 		dw (RTS);
@@ -936,14 +930,10 @@ int flashscreen = 0;
 
 void doflashscreen (void)
 {
-#ifdef AMIBERRY
-
-#else
 	flashscreen = 10;
 	init_colors ();
 	picasso_refresh ();
 	reset_drawing ();
-#endif
 }
 
 void hsyncstuff (void)
@@ -953,9 +943,6 @@ void hsyncstuff (void)
 {
 	static int keycheck = 0;
 
-#ifdef AMIBERRY
-/* DISABLED -- OLD AHI VERSION? */
-#else
 #ifdef AHI
 	{ //begin ahi_sound
 		static int count;
@@ -968,7 +955,6 @@ void hsyncstuff (void)
 			}
 		}
 	} //end ahi_sound
-#endif
 #endif
 
 #ifdef AMIBERRY
