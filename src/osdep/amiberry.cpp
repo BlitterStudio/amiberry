@@ -1506,22 +1506,6 @@ void target_quit(void)
 {
 }
 
-void fix_apmodes(struct uae_prefs* p)
-{
-	if (p->ntscmode)
-	{
-		p->gfx_apmode[APMODE_NATIVE].gfx_refreshrate = 60;
-		p->gfx_apmode[APMODE_RTG].gfx_refreshrate = 60;
-	}
-	else
-	{
-		p->gfx_apmode[APMODE_NATIVE].gfx_refreshrate = 50;
-		p->gfx_apmode[APMODE_RTG].gfx_refreshrate = 50;
-	}
-
-	fixup_prefs_dimensions(p);
-}
-
 void target_fixup_options(struct uae_prefs* p)
 {
 	if (p->automount_cddrives && !p->scsi)
@@ -1598,7 +1582,6 @@ void target_fixup_options(struct uae_prefs* p)
 	if (p->gfx_monitor.gfx_size_win.height < AMIGA_HEIGHT_MAX && p->gfx_resolution > 0)
 		p->gfx_monitor.gfx_size_win.height = p->gfx_monitor.gfx_size_win.height * 2;
 
-	fix_apmodes(p);
 	set_key_configs(p);
 }
 

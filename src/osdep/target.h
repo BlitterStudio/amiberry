@@ -35,7 +35,6 @@ STATIC_INLINE FILE* uae_tfopen(const TCHAR* path, const TCHAR* mode)
 }
 
 extern void logging_init();
-extern void fix_apmodes(struct uae_prefs* p);
 extern int generic_main(int argc, char* argv[]);
 
 extern bool my_kbd_handler(int, int, int, bool);
