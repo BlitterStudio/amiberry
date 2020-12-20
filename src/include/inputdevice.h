@@ -158,17 +158,10 @@ struct inputevent {
 #define SET_ONOFF_OFF_VALUE 0x7fffff00
 #define SET_ONOFF_MASK_PRESS 15
 
-#ifdef AMIBERRY
-#define ID_BUTTON_OFFSET 0
-#define ID_BUTTON_TOTAL 128
-#define ID_AXIS_OFFSET 128
-#define ID_AXIS_TOTAL 64
-#else
 #define ID_BUTTON_OFFSET 0
 #define ID_BUTTON_TOTAL 32
 #define ID_AXIS_OFFSET 32
 #define ID_AXIS_TOTAL 32
-#endif
 
 #define MAX_COMPA_INPUTLIST 30
 
@@ -211,7 +204,7 @@ extern int send_input_event (int nr, int state, int max, int autofire);
 
 extern int input_get_default_mouse (struct uae_input_device *uid, int num, int port, int af, bool gp, bool wheel, bool joymouseswap);
 extern int input_get_default_lightpen (struct uae_input_device *uid, int num, int port, int af, bool gp, bool joymouseswap, int submode);
-extern int input_get_default_joystick (struct uae_input_device *uid, int num, int port, int af, int mode, bool gp, bool joymouseswap);
+extern int input_get_default_joystick (struct uae_input_device *uid, int i, int port, int af, int mode, bool gp, bool joymouseswap);
 extern int input_get_default_joystick_analog (struct uae_input_device *uid, int num, int port, int af, bool gp, bool joymouseswap);
 extern int input_get_default_keyboard (int num);
 
@@ -353,9 +346,11 @@ extern void setsystime (void);
 #define JSEM_ISNUMPAD(port,p) (jsem_iskbdjoy(port,p) == JSEM_KBDLAYOUT)
 #define JSEM_ISCURSOR(port,p) (jsem_iskbdjoy(port,p) == JSEM_KBDLAYOUT + 1)
 #define JSEM_ISSOMEWHEREELSE(port,p) (jsem_iskbdjoy(port,p) == JSEM_KBDLAYOUT + 2)
+#define JSEM_ISKEYRAH(port,p) (jsem_iskbdjoy(port,p) == JSEM_KBDLAYOUT + 3)
+#define JSEM_ISIPAC(port,p) (jsem_iskbdjoy(port,p) == JSEM_KBDLAYOUT + 4)
 #define JSEM_ISCUSTOM(port,p) ((p)->jports[port].id >= JSEM_CUSTOM && (p)->jports[port].id < JSEM_CUSTOM + MAX_JPORTS_CUSTOM)
 #define JSEM_GETCUSTOMIDX(port,p) ((p)->jports[port].id - JSEM_CUSTOM)
-#define JSEM_LASTKBD 3
+#define JSEM_LASTKBD 5
 #define JSEM_ISANYKBD(port,p) (jsem_iskbdjoy(port,p) >= JSEM_KBDLAYOUT && jsem_iskbdjoy(port,p) < JSEM_KBDLAYOUT + JSEM_LASTKBD)
 
 extern int jsem_isjoy (int port, const struct uae_prefs *p);

@@ -43,9 +43,11 @@
 #include "gfxboard.h"
 #include "devices.h"
 #include <map>
-
+#include <parser.h>
 #include "amiberry_input.h"
 #include "clipboard.h"
+#include "fsdb.h"
+#include "scsidev.h"
 #include "uae/uae.h"
 
 #ifdef AHI
@@ -53,7 +55,12 @@
 #include "ahidsound_new.h"
 #endif
 
+int log_scsi;
+int uaelib_debug;
+int pissoff_value = 15000 * CYCLE_UNIT;
+
 extern FILE* debugfile;
+SDL_Cursor* normalcursor;
 
 int pause_emulation;
 
@@ -67,6 +74,7 @@ int minimized;
 int quickstart_model = 0;
 int quickstart_conf = 0;
 bool host_poweroff = false;
+int saveimageoriginalpath = 0;
 
 struct amiberry_options amiberry_options = {};
 
@@ -79,6 +87,8 @@ int quit_key = 0;
 int action_replay_button = 0;
 // No default value for Full Screen toggle
 int fullscreen_key = 0;
+// No default value for Minimize key
+int minimize_key = 0;
 
 bool mouse_grabbed = false;
 
@@ -92,13 +102,13 @@ void set_key_configs(struct uae_prefs* p)
 {
 	if (strncmp(p->open_gui, "", 1) != 0)
 		// If we have a value in the config, we use that instead
-		enter_gui_key = SDL_GetKeyFromName(p->open_gui);
+		enter_gui_key = SDL_GetScancodeFromName(p->open_gui);
 	else
 		// Otherwise we go for the default found in amiberry.conf
-		enter_gui_key = SDL_GetKeyFromName(amiberry_options.default_open_gui_key);
+		enter_gui_key = SDL_GetScancodeFromName(amiberry_options.default_open_gui_key);
 	// if nothing was found in amiberry.conf either, we default back to F12
 	if (enter_gui_key == 0)
-		enter_gui_key = SDLK_F12;
+		enter_gui_key = SDL_SCANCODE_F12;
 
 	enter_gui_button = SDL_GameControllerGetButtonFromString(p->open_gui);
 	if (enter_gui_button == SDL_CONTROLLER_BUTTON_INVALID)
@@ -107,24 +117,25 @@ void set_key_configs(struct uae_prefs* p)
 		enter_gui_button = SDL_CONTROLLER_BUTTON_GUIDE;
 	
 	if (strncmp(p->quit_amiberry, "", 1) != 0)
-		quit_key = SDL_GetKeyFromName(p->quit_amiberry);
+		quit_key = SDL_GetScancodeFromName(p->quit_amiberry);
 	else
-		quit_key = SDL_GetKeyFromName(amiberry_options.default_quit_key);
+		quit_key = SDL_GetScancodeFromName(amiberry_options.default_quit_key);
 
 	if (strncmp(p->action_replay, "", 1) != 0)
-		action_replay_button = SDL_GetKeyFromName(p->action_replay);
+		action_replay_button = SDL_GetScancodeFromName(p->action_replay);
 	else
-		action_replay_button = SDL_GetKeyFromName(amiberry_options.default_ar_key);
+		action_replay_button = SDL_GetScancodeFromName(amiberry_options.default_ar_key);
 	if (action_replay_button == 0)
-		action_replay_button = SDLK_PAUSE;
+		action_replay_button = SDL_SCANCODE_PAUSE;
 
 	if (strncmp(p->fullscreen_toggle, "", 1) != 0)
-		fullscreen_key = SDL_GetKeyFromName(p->fullscreen_toggle);
+		fullscreen_key = SDL_GetScancodeFromName(p->fullscreen_toggle);
 	else
-		fullscreen_key = SDL_GetKeyFromName(amiberry_options.default_fullscreen_toggle_key);
-}
+		fullscreen_key = SDL_GetScancodeFromName(amiberry_options.default_fullscreen_toggle_key);
 
-int pissoff_value = 15000 * CYCLE_UNIT;
+	if (strncmp(p->minimize, "", 1) != 0)
+		minimize_key = SDL_GetScancodeFromName(p->minimize);
+}
 
 extern void signal_segv(int signum, siginfo_t* info, void* ptr);
 extern void signal_buserror(int signum, siginfo_t* info, void* ptr);
@@ -173,8 +184,8 @@ int sleep_millis_main(int ms)
 	return 0;
 }
 
+static int mon_cursorclipped;
 static int pausemouseactive;
-
 void resumesoundpaused(void)
 {
 	resume_sound();
@@ -195,7 +206,6 @@ void setsoundpaused(void)
 
 bool resumepaused(int priority)
 {
-	//write_log (_T("resume %d (%d)\n"), priority, pause_emulation);
 	if (pause_emulation > priority)
 		return false;
 	if (!pause_emulation)
@@ -209,12 +219,12 @@ bool resumepaused(int priority)
 	}
 	pause_emulation = 0;
 	setsystime();
+	wait_keyrelease();
 	return true;
 }
 
 bool setpaused(int priority)
 {
-	//write_log (_T("pause %d (%d)\n"), priority, pause_emulation);
 	if (pause_emulation > priority)
 		return false;
 	pause_emulation = priority;
@@ -228,7 +238,1028 @@ bool setpaused(int priority)
 	return true;
 }
 
-void logging_init(void)
+void setminimized()
+{
+	if (!minimized)
+		minimized = 1;
+	set_inhibit_frame(IHF_WINDOWHIDDEN);
+}
+
+void unsetminimized()
+{
+	if (minimized > 0)
+		full_redraw_all();
+	minimized = 0;
+	clear_inhibit_frame(IHF_WINDOWHIDDEN);
+}
+
+void setpriority(int prio)
+{
+	if (prio >= 0 && prio <= 2)
+	{
+		switch (prio)
+		{
+		case 0:
+			SDL_SetThreadPriority(SDL_THREAD_PRIORITY_LOW);
+			break;
+		case 1:
+			SDL_SetThreadPriority(SDL_THREAD_PRIORITY_NORMAL);
+			break;
+		case 2:
+			SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH);
+			break;
+		default:
+			break;
+		}
+	}
+}
+
+static void setcursorshape()
+{
+	if (currprefs.input_tablet && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_magic_mouse_cursor == MAGICMOUSE_NATIVE_ONLY) {
+		if (SDL_GetCursor() != NULL)
+			SDL_ShowCursor(SDL_DISABLE);
+	}
+	else if (!picasso_setwincursor()) {
+		if (SDL_GetCursor() != normalcursor)
+		{
+			SDL_SetCursor(normalcursor);
+			SDL_ShowCursor(SDL_ENABLE);
+		}
+	}
+}
+
+void releasecapture()
+{
+	if (!mon_cursorclipped)
+		return;
+	SDL_SetWindowGrab(sdl_window, SDL_FALSE);
+	SDL_SetRelativeMouseMode(SDL_FALSE);
+	int c = SDL_ShowCursor(SDL_ENABLE);
+	write_log(_T("ShowCursor %d\n"), c);
+	mon_cursorclipped = 0;
+}
+
+//TODO: Tablet only
+void target_inputdevice_unacquire(void)
+{
+//	close_tablet(tablet);
+//	tablet = NULL;
+}
+void target_inputdevice_acquire(void)
+{
+//	struct AmigaMonitor* mon = &AMonitors[0];
+//	target_inputdevice_unacquire();
+//	tablet = open_tablet(mon->hAmigaWnd);
+}
+
+static void setmouseactive2(int active, bool allowpause)
+{
+	if (active == 0)
+		releasecapture();
+	if (mouseactive == active && active >= 0)
+		return;
+
+	if (active == 1 && !(currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC)) {
+		auto* c = SDL_GetCursor();
+		if (c != normalcursor)
+			return;
+	}
+	
+	if (active < 0)
+		active = 1;
+
+	mouseactive = active ? 1 : 0;
+
+	releasecapture();
+	recapture = 0;
+
+	if (isfullscreen() <= 0 && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_tablet > 0) {
+		if (mousehack_alive())
+			return;
+		SDL_SetCursor(normalcursor);
+		SDL_ShowCursor(SDL_ENABLE);
+	}
+
+	if (mouseactive > 0)
+		focus = 1;
+
+	if (mouseactive) {
+		if (focus) {
+			if (!mon_cursorclipped) {
+				SDL_ShowCursor(SDL_DISABLE);
+				SDL_SetWindowGrab(sdl_window, SDL_TRUE);
+				SDL_SetRelativeMouseMode(SDL_TRUE);
+				mon_cursorclipped = 1;
+			}
+		}
+		wait_keyrelease();
+		inputdevice_acquire(TRUE);
+		setpriority(currprefs.active_capture_priority);
+		if (currprefs.active_nocapture_pause)
+			resumepaused(2);
+		else if (currprefs.active_nocapture_nosound && sound_closed < 0)
+			resumesoundpaused();
+	}
+	else {
+		inputdevice_acquire(FALSE);
+		inputdevice_releasebuttons();
+	}
+	if (!active && allowpause)
+	{
+		if (currprefs.active_nocapture_pause)
+			setpaused(2);
+		else if (currprefs.active_nocapture_nosound)
+		{
+			setsoundpaused();
+			sound_closed = -1;
+		}
+	}
+}
+
+void setmouseactive(int active)
+{
+	if (active > 1)
+		SDL_RaiseWindow(sdl_window);
+	setmouseactive2(active, true);
+}
+
+static void amiberry_active(int minimized)
+{
+	focus = 1;
+	auto pri = currprefs.inactive_priority;
+	if (!minimized)
+		pri = currprefs.active_capture_priority;
+	setpriority(pri);
+
+	if (sound_closed != 0) {
+		if (sound_closed < 0) {
+			resumesoundpaused();
+		}
+		else
+		{
+			if (currprefs.active_nocapture_pause)
+			{
+				if (mouseactive)
+					resumepaused(2);
+			}
+			else if (currprefs.minimized_pause && !currprefs.inactive_pause)
+				resumepaused(1);
+			else if (currprefs.inactive_pause)
+				resumepaused(2);
+		}
+		sound_closed = 0;
+	}
+	getcapslock();
+	wait_keyrelease();
+	inputdevice_acquire(TRUE);
+	if (isfullscreen() > 0 || currprefs.capture_always)
+		setmouseactive(1);
+	clipboard_active(1, 1);
+}
+
+static void amiberry_inactive(int minimized)
+{
+	focus = 0;
+	recapture = 0;
+	wait_keyrelease();
+	setmouseactive(0);
+	clipboard_active(1, 0);
+	auto pri = currprefs.inactive_priority;
+	if (!quit_program) {
+		if (minimized) {
+			pri = currprefs.minimized_priority;
+			if (currprefs.minimized_pause) {
+				inputdevice_unacquire();
+				setpaused(1);
+				sound_closed = 1;
+			}
+			else if (currprefs.minimized_nosound) {
+				inputdevice_unacquire(true, currprefs.minimized_input);
+				setsoundpaused();
+				sound_closed = -1;
+			}
+			else {
+				inputdevice_unacquire(true, currprefs.minimized_input);
+			}
+		}
+		else if (mouseactive) {
+			inputdevice_unacquire();
+			if (currprefs.active_nocapture_pause)
+			{
+				setpaused(2);
+				sound_closed = 1;
+			}
+			else if (currprefs.active_nocapture_nosound)
+			{
+				setsoundpaused();
+				sound_closed = -1;
+			}
+		}
+		else {
+			if (currprefs.inactive_pause)
+			{
+				inputdevice_unacquire();
+				setpaused(2);
+				sound_closed = 1;
+			}
+			else if (currprefs.inactive_nosound)
+			{
+				inputdevice_unacquire(true, currprefs.inactive_input);
+				setsoundpaused();
+				sound_closed = -1;
+			}
+			else {
+				inputdevice_unacquire(true, currprefs.inactive_input);
+			}
+		}
+	}
+	else {
+		inputdevice_unacquire();
+	}
+	setpriority(pri);
+	filesys_flush_cache();
+}
+
+void minimizewindow()
+{
+	SDL_MinimizeWindow(sdl_window);
+}
+
+void enablecapture()
+{
+	if (pause_emulation > 2)
+		return;
+	setmouseactive(1);
+	if (sound_closed < 0) {
+		resumesoundpaused();
+		sound_closed = 0;
+	}
+	if (currprefs.inactive_pause || currprefs.active_nocapture_pause)
+		resumepaused(2);
+}
+
+void disablecapture()
+{
+	setmouseactive(0);
+	focus = 0;
+	if (currprefs.active_nocapture_pause && sound_closed == 0) {
+		setpaused(2);
+		sound_closed = 1;
+	}
+	else if (currprefs.active_nocapture_nosound && sound_closed == 0) {
+		setsoundpaused();
+		sound_closed = -1;
+	}
+}
+
+void setmouseactivexy(int x, int y, int dir)
+{
+	//struct AmigaMonitor* mon = &AMonitors[monid];
+	//int diff = 8;
+
+	if (isfullscreen() > 0)
+		return;
+	//x += mon->amigawin_rect.left;
+	//y += mon->amigawin_rect.top;
+	//if (dir & 1)
+	//	x = mon->amigawin_rect.left - diff;
+	//if (dir & 2)
+	//	x = mon->amigawin_rect.right + diff;
+	//if (dir & 4)
+	//	y = mon->amigawin_rect.top - diff;
+	//if (dir & 8)
+	//	y = mon->amigawin_rect.bottom + diff;
+	//if (!dir) {
+	//	x += (mon->amigawin_rect.right - mon->amigawin_rect.left) / 2;
+	//	y += (mon->amigawin_rect.bottom - mon->amigawin_rect.top) / 2;
+	//}
+	//if (isfullscreen() < 0) {
+	//	POINT pt;
+	//	pt.x = x;
+	//	pt.y = y;
+	//	if (MonitorFromPoint(pt, MONITOR_DEFAULTTONULL) == NULL)
+	//		return;
+	//}
+	if (mouseactive) {
+		disablecapture();
+		//SetCursorPos(x, y);
+		if (dir) {
+			recapture = 1;
+		}
+	}
+}
+
+int isfocus()
+{
+	if (isfullscreen() > 0) {
+		if (!minimized)
+			return 2;
+		return 0;
+	}
+	if (currprefs.input_tablet >= TABLET_MOUSEHACK && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC)) {
+		if (mouseinside)
+			return 2;
+		if (focus)
+			return 1;
+		return 0;
+	}
+	if (focus && mouseactive > 0)
+		return 2;
+	if (focus)
+		return -1;
+	return 0;
+}
+
+static void activationtoggle(bool inactiveonly)
+{
+	if (mouseactive) {
+		if ((isfullscreen() > 0) || (isfullscreen() < 0 && currprefs.minimize_inactive)) {
+			disablecapture();
+			minimizewindow();
+		}
+		else 
+		{
+			setmouseactive(0);
+		}
+	}
+	else {
+		if (!inactiveonly)
+			setmouseactive(1);
+	}
+}
+
+#define MEDIA_INSERT_QUEUE_SIZE 10
+static TCHAR* media_insert_queue[MEDIA_INSERT_QUEUE_SIZE];
+static int media_insert_queue_type[MEDIA_INSERT_QUEUE_SIZE];
+static SDL_TimerID media_change_timer;
+static SDL_TimerID device_change_timer;
+
+static int is_in_media_queue(const TCHAR* drvname)
+{
+	for (int i = 0; i < MEDIA_INSERT_QUEUE_SIZE; i++) {
+		if (media_insert_queue[i] != NULL) {
+			if (!_tcsicmp(drvname, media_insert_queue[i]))
+				return i;
+		}
+	}
+	return -1;
+}
+
+static void start_media_insert_timer();
+
+Uint32 timer_callbackfunc(Uint32 interval, void* param)
+{
+	if ((*(int*)&param) == 2) {
+		bool restart = false;
+		SDL_RemoveTimer(media_change_timer);
+		media_change_timer = 0;
+
+		for (int i = 0; i < MEDIA_INSERT_QUEUE_SIZE; i++) {
+			if (media_insert_queue[i]) {
+				TCHAR* drvname = media_insert_queue[i];
+				int r = my_getvolumeinfo(drvname);
+				if (r < 0) {
+					if (media_insert_queue_type[i] > 0) {
+						write_log(_T("Mounting %s but drive is not ready, %d.. retrying %d..\n"), drvname, r, media_insert_queue_type[i]);
+						media_insert_queue_type[i]--;
+						restart = true;
+						continue;
+					}
+					else {
+						write_log(_T("Mounting %s but drive is not ready, %d.. aborting..\n"), drvname, r);
+					}
+				}
+				else {
+					int inserted = 1;
+					//DWORD type = GetDriveType(drvname);
+					//if (type == DRIVE_CDROM)
+					//	inserted = -1;
+					r = filesys_media_change(drvname, inserted, NULL);
+					if (r < 0) {
+						write_log(_T("Mounting %s but previous media change is still in progress..\n"), drvname);
+						restart = true;
+						break;
+					}
+					else if (r > 0) {
+						write_log(_T("%s mounted\n"), drvname);
+					}
+					else {
+						write_log(_T("%s mount failed\n"), drvname);
+					}
+				}
+				xfree(media_insert_queue[i]);
+				media_insert_queue[i] = NULL;
+			}
+		}
+
+		if (restart)
+			start_media_insert_timer();
+	}
+	else if ((*(int*)&param) == 4) {
+		SDL_RemoveTimer(device_change_timer);
+		device_change_timer = 0;
+		inputdevice_devicechange(&changed_prefs);
+		inputdevice_copyjports(&changed_prefs, &currprefs);
+	}
+	else if ((*(int*)&param) == 1) {
+#ifdef PARALLEL_PORT
+		finishjob();
+#endif
+	}
+	return 0;
+}
+
+static void start_media_insert_timer()
+{
+	if (!media_change_timer) {
+		media_change_timer = SDL_AddTimer(1000, timer_callbackfunc, (void*)2);
+	}
+}
+
+static void add_media_insert_queue(const TCHAR* drvname, int retrycnt)
+{
+	int idx = is_in_media_queue(drvname);
+	if (idx >= 0) {
+		if (retrycnt > media_insert_queue_type[idx])
+			media_insert_queue_type[idx] = retrycnt;
+		write_log(_T("%s already queued for insertion, cnt=%d.\n"), drvname, retrycnt);
+		start_media_insert_timer();
+		return;
+	}
+	for (int i = 0; i < MEDIA_INSERT_QUEUE_SIZE; i++) {
+		if (media_insert_queue[i] == NULL) {
+			media_insert_queue[i] = my_strdup(drvname);
+			media_insert_queue_type[i] = retrycnt;
+			start_media_insert_timer();
+			return;
+		}
+	}
+}
+
+static int touch_touched;
+static unsigned long touch_time;
+
+#define MAX_TOUCHES 10
+struct touch_store
+{
+	bool inuse;
+	unsigned long id;
+	int port;
+	int button;
+	int axis;
+};
+static struct touch_store touches[MAX_TOUCHES];
+
+static void touch_release(struct touch_store* ts, const RECT* rcontrol)
+{
+	if (ts->port == 0) {
+		if (ts->button == 0)
+			inputdevice_uaelib(_T("JOY1_FIRE_BUTTON"), 0, 1, false);
+		if (ts->button == 1)
+			inputdevice_uaelib(_T("JOY1_2ND_BUTTON"), 0, 1, false);
+	}
+	else if (ts->port == 1) {
+		if (ts->button == 0)
+			inputdevice_uaelib(_T("JOY2_FIRE_BUTTON"), 0, 1, false);
+		if (ts->button == 1)
+			inputdevice_uaelib(_T("JOY2_2ND_BUTTON"), 0, 1, false);
+	}
+	if (ts->axis >= 0) {
+		if (ts->port == 0) {
+			inputdevice_uaelib(_T("MOUSE1_HORIZ"), 0, -1, false);
+			inputdevice_uaelib(_T("MOUSE1_VERT"), 0, -1, false);
+		}
+		else {
+			inputdevice_uaelib(_T("JOY2_HORIZ"), 0, 1, false);
+			inputdevice_uaelib(_T("JOY2_VERT"), 0, 1, false);
+		}
+	}
+	ts->button = -1;
+	ts->axis = -1;
+}
+
+static void tablet_touch(unsigned long id, int pressrel, int x, int y, const RECT* rcontrol)
+{
+	struct touch_store* ts = NULL;
+	int buttony = rcontrol->bottom - (rcontrol->bottom - rcontrol->top) / 4;
+
+	int new_slot = -1;
+	for (int i = 0; i < MAX_TOUCHES; i++) {
+		struct touch_store* tts = &touches[i];
+		if (!tts->inuse && new_slot < 0)
+			new_slot = i;
+		if (tts->inuse && tts->id == id) {
+			ts = tts;
+#if TOUCH_DEBUG > 1
+			write_log(_T("touch_event: old touch event %d\n"), id);
+#endif
+			break;
+		}
+	}
+	if (!ts) {
+		// do not allocate new if release
+		if (pressrel == 0)
+			return;
+		if (new_slot < 0)
+			return;
+#if TOUCH_DEBUG > 1
+		write_log(_T("touch_event: new touch event %d\n"), id);
+#endif
+		ts = &touches[new_slot];
+		ts->inuse = true;
+		ts->axis = -1;
+		ts->button = -1;
+		ts->id = id;
+
+	}
+
+	// Touch release? Release buttons, center stick/mouse.
+	if (ts->inuse && ts->id == id && pressrel < 0) {
+		touch_release(ts, rcontrol);
+		ts->inuse = false;
+		return;
+	}
+
+	// Check hit boxes if new touch.
+	for (int i = 0; i < 2; i++) {
+		const RECT* r = &rcontrol[i];
+		if (x >= r->left && x < r->right && y >= r->top && y < r->bottom) {
+
+#if TOUCH_DEBUG > 1
+			write_log(_T("touch_event: press=%d rect=%d wm=%d\n"), pressrel, i, dinput_winmouse());
+#endif
+			if (pressrel == 0) {
+				// move? port can't change, axis<>button not allowed
+				if (ts->port == i) {
+					if (y >= buttony && ts->button >= 0) {
+						int button = x > r->left + (r->right - r->left) / 2 ? 1 : 0;
+						if (button != ts->button) {
+							// button change, release old button
+							touch_release(ts, rcontrol);
+							ts->button = button;
+							pressrel = 1;
+						}
+					}
+				}
+			}
+			else if (pressrel > 0) {
+				// new touch
+				ts->port = i;
+				if (ts->button < 0 && y >= buttony) {
+					ts->button = x > r->left + (r->right - r->left) / 2 ? 1 : 0;
+				}
+				else if (ts->axis < 0 && y < buttony) {
+					ts->axis = 1;
+				}
+			}
+		}
+	}
+
+	// Directions hit?
+	if (ts->inuse && ts->id == id && ts->axis >= 0) {
+		const RECT* r = &rcontrol[ts->port];
+		int xdiff = (r->left + (r->right - r->left) / 2) - x;
+		int ydiff = (r->top + (buttony - r->top) / 2) - y;
+
+#if TOUCH_DEBUG > 1
+		write_log(_T("touch_event: rect=%d xdiff %03d ydiff %03d\n"), ts->port, xdiff, ydiff);
+#endif
+		xdiff = -xdiff;
+		ydiff = -ydiff;
+
+		if (ts->port == 0) {
+
+			int div = (r->bottom - r->top) / (2 * 5);
+			if (div <= 0)
+				div = 1;
+			int vx = xdiff / div;
+			int vy = ydiff / div;
+
+#if TOUCH_DEBUG > 1
+			write_log(_T("touch_event: xdiff %03d ydiff %03d div %03d vx %03d vy %03d\n"), xdiff, ydiff, div, vx, vy);
+#endif
+			inputdevice_uaelib(_T("MOUSE1_HORIZ"), vx, -1, false);
+			inputdevice_uaelib(_T("MOUSE1_VERT"), vy, -1, false);
+
+		}
+		else {
+
+			int div = (r->bottom - r->top) / (2 * 3);
+			if (div <= 0)
+				div = 1;
+			if (xdiff <= -div)
+				inputdevice_uaelib(_T("JOY2_HORIZ"), -1, 1, false);
+			else if (xdiff >= div)
+				inputdevice_uaelib(_T("JOY2_HORIZ"), 1, 1, false);
+			else
+				inputdevice_uaelib(_T("JOY2_HORIZ"), 0, 1, false);
+			if (ydiff <= -div)
+				inputdevice_uaelib(_T("JOY2_VERT"), -1, 1, false);
+			else if (ydiff >= div)
+				inputdevice_uaelib(_T("JOY2_VERT"), 1, 1, false);
+			else
+				inputdevice_uaelib(_T("JOY2_VERT"), 0, 1, false);
+		}
+	}
+
+	// Buttons hit?
+	if (ts->inuse && ts->id == id && pressrel > 0) {
+		if (ts->port == 0) {
+			if (ts->button == 0)
+				inputdevice_uaelib(_T("JOY1_FIRE_BUTTON"), 1, 1, false);
+			if (ts->button == 1)
+				inputdevice_uaelib(_T("JOY1_2ND_BUTTON"), 1, 1, false);
+		}
+		else if (ts->port == 1) {
+			if (ts->button == 0)
+				inputdevice_uaelib(_T("JOY2_FIRE_BUTTON"), 1, 1, false);
+			if (ts->button == 1)
+				inputdevice_uaelib(_T("JOY2_2ND_BUTTON"), 1, 1, false);
+		}
+	}
+}
+
+static void touch_event(unsigned long id, int pressrel, int x, int y, const RECT* rcontrol)
+{
+	// No lightpen support (yet?)
+	tablet_touch(id, pressrel, x, y, rcontrol);
+}
+
+void process_event(SDL_Event event)
+{
+	if (event.type == SDL_WINDOWEVENT)
+	{
+		switch (event.window.event)
+		{
+		case SDL_WINDOWEVENT_FOCUS_GAINED:
+			amiberry_active(minimized);
+			unsetminimized();
+			break;
+		case SDL_WINDOWEVENT_MINIMIZED:
+			if (!minimized)
+			{
+				write_log(_T("SIZE_MINIMIZED\n"));
+				setminimized();
+				amiberry_inactive(minimized);
+			}
+			break;			
+		case SDL_WINDOWEVENT_RESTORED:
+			amiberry_active(minimized);
+			unsetminimized();
+			break;
+		case SDL_WINDOWEVENT_ENTER:
+			mouseinside = true;
+			if (currprefs.input_tablet > 0 && currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC && isfullscreen() <= 0)
+			{
+				if (mousehack_alive())
+					setcursorshape();
+			}
+			break;
+		case SDL_WINDOWEVENT_LEAVE:
+			mouseinside = false;
+			break;	
+		case SDL_WINDOWEVENT_FOCUS_LOST:
+			focus = 0;
+			amiberry_inactive(minimized);
+			if (isfullscreen() <= 0 && currprefs.minimize_inactive)
+				minimizewindow();
+			break;
+		case SDL_WINDOWEVENT_CLOSE:
+			if (device_change_timer)
+				SDL_RemoveTimer(device_change_timer);
+			device_change_timer = 0;
+			wait_keyrelease();
+			inputdevice_unacquire();
+			uae_quit();
+			break;
+		case SDL_WINDOWEVENT_EXPOSED:
+			notice_screen_contents_lost();
+			updatedisplayarea();
+			break;
+		default:
+			break;
+		}
+	}
+	else
+	switch (event.type)
+	{
+	case SDL_QUIT:
+		uae_quit();
+		break;
+
+	case SDL_CLIPBOARDUPDATE:
+		if (currprefs.clipboard_sharing && SDL_HasClipboardText() == SDL_TRUE)
+		{
+			auto* clipboard_host = SDL_GetClipboardText();
+			uae_clipboard_put_text(clipboard_host);
+			SDL_free(clipboard_host);	
+		}
+		break;
+		
+	case SDL_JOYDEVICEADDED:
+	case SDL_CONTROLLERDEVICEADDED:
+	case SDL_JOYDEVICEREMOVED:
+	case SDL_CONTROLLERDEVICEREMOVED:
+		write_log("SDL Controller/Joystick device added or removed! Re-running import joysticks...\n");
+		import_joysticks();
+		if (device_change_timer)
+			SDL_RemoveTimer(device_change_timer);
+		device_change_timer = SDL_AddTimer(2000, timer_callbackfunc, (void*)4);	
+		break;
+
+	case SDL_CONTROLLERBUTTONDOWN:
+		if (event.cbutton.button == enter_gui_button)
+		{
+			inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
+			break;
+		}
+		break;
+
+	case SDL_KEYDOWN:
+		// if the key belongs to a "retro arch joystick" ignore it
+		// ONLY when in game though, we need to remove the joysticks really 
+		// if we want to use the KB
+		// i've added this so when using the joysticks it doesn't hit the 'r' key for some games
+		// which starts a replay!!!
+		// 
+		//const auto ok_to_use = !key_used_by_retroarch_joy(event.key.keysym.scancode);
+		//if (ok_to_use && event.key.repeat == 0)
+		if (event.key.repeat == 0)
+		{
+			if (!isfocus())
+				break;
+			if (isfocus() < 2 && currprefs.input_tablet >= TABLET_MOUSEHACK && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC))
+				break;
+			
+			int scancode = event.key.keysym.scancode;
+			int pressed = 1;
+
+			if ((amiberry_options.rctrl_as_ramiga || currprefs.right_control_is_right_win_key)
+				&& scancode == SDL_SCANCODE_RCTRL)
+			{
+					scancode = SDL_SCANCODE_RGUI;
+			}
+
+			if (enter_gui_key && scancode == enter_gui_key)
+			{
+				inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
+				break;
+			}
+			if (action_replay_button && scancode == action_replay_button)
+			{
+				inputdevice_add_inputcode(AKS_FREEZEBUTTON, 1, nullptr);
+				break;
+			}
+			if (fullscreen_key && scancode == fullscreen_key)
+			{
+				inputdevice_add_inputcode(AKS_TOGGLEWINDOWEDFULLSCREEN, 1, nullptr);
+				break;
+			}
+			if (quit_key && scancode == quit_key)
+			{
+				inputdevice_add_inputcode(AKS_QUIT, 1, nullptr);
+				break;
+			}
+			if (minimize_key && scancode == minimize_key)
+			{
+				minimizewindow();
+				break;
+			}
+			my_kbd_handler(0, scancode, pressed, false);
+		}
+		break;
+
+	case SDL_KEYUP:
+		//const auto ok_to_use = !key_used_by_retroarch_joy(event.key.keysym.scancode);
+		//if (ok_to_use && event.key.repeat == 0)
+		if (event.key.repeat == 0)
+		{
+			if (!isfocus())
+				break;
+			if (isfocus() < 2 && currprefs.input_tablet >= TABLET_MOUSEHACK && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC))
+				break;
+			
+			int scancode = event.key.keysym.scancode;
+			int pressed = 0;
+
+			if ((amiberry_options.rctrl_as_ramiga || currprefs.right_control_is_right_win_key)
+				&& scancode == SDL_SCANCODE_RCTRL)
+			{
+				scancode = SDL_SCANCODE_RGUI;
+			}
+
+			my_kbd_handler(0, scancode, pressed, true);
+		}
+		break;
+
+	case SDL_FINGERDOWN:
+		if (isfocus())
+		{
+			if (event.button.clicks == 2)
+				setmousebuttonstate(0, 0, 1);
+		}
+		break;
+
+	case SDL_MOUSEBUTTONDOWN:
+		if (event.button.button == SDL_BUTTON_LEFT
+			&& !mouseactive
+			&& (!mousehack_alive()
+				|| currprefs.input_tablet != TABLET_MOUSEHACK
+				|| (currprefs.input_tablet == TABLET_MOUSEHACK
+					&& !(currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC))
+				|| isfullscreen() > 0))
+		{
+			if (!pause_emulation || currprefs.active_nocapture_pause)
+				setmouseactive((event.button.clicks == 1 || isfullscreen() > 0) ? 2 : 1);
+		}
+		else if (isfocus())
+		{
+			switch (event.button.button)
+			{
+			case SDL_BUTTON_LEFT:
+				setmousebuttonstate(0, 0, 1);
+				break;
+			case SDL_BUTTON_RIGHT:
+				setmousebuttonstate(0, 1, 1);
+				break;
+			case SDL_BUTTON_MIDDLE:
+				if (currprefs.input_mouse_untrap & MOUSEUNTRAP_MIDDLEBUTTON)
+					activationtoggle(true);
+				else
+					setmousebuttonstate(0, 2, 1);
+				break;
+			case SDL_BUTTON_X1:
+				setmousebuttonstate(0, 3, 1);
+				break;
+			case SDL_BUTTON_X2:
+				setmousebuttonstate(0, 4, 1);
+				break;
+			default: break;
+			}
+		}
+		break;
+
+	case SDL_FINGERUP:
+		if (isfocus())
+		{
+			setmousebuttonstate(0, 0, 0);
+		}
+		break;
+
+	case SDL_MOUSEBUTTONUP:
+		if (isfocus())
+		{
+			switch (event.button.button)
+			{
+			case SDL_BUTTON_LEFT:
+				setmousebuttonstate(0, 0, 0);
+				break;
+			case SDL_BUTTON_RIGHT:
+				setmousebuttonstate(0, 1, 0);
+				break;
+			case SDL_BUTTON_MIDDLE:
+				if (!(currprefs.input_mouse_untrap & MOUSEUNTRAP_MIDDLEBUTTON))
+					setmousebuttonstate(0, 2, 0);
+				break;
+			case SDL_BUTTON_X1:
+				setmousebuttonstate(0, 3, 0);
+				break;
+			case SDL_BUTTON_X2:
+				setmousebuttonstate(0, 4, 0);
+				break;
+			default: break;
+			}
+		}
+		break;
+
+	case SDL_FINGERMOTION:
+		if (isfocus())
+		{
+			setmousestate(0, 0, event.motion.x, 1);
+			setmousestate(0, 1, event.motion.y, 1);
+		}
+		break;
+
+	case SDL_MOUSEMOTION:
+	{
+		if (!(SDL_GetWindowFlags(sdl_window) & SDL_WINDOW_MOUSE_CAPTURE) && currprefs.input_tablet > 0 && currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC && isfullscreen() <= 0)
+		{
+			if (mousehack_alive())
+				setcursorshape();
+		}
+		if (!mouseinside)
+			mouseinside = true;
+
+		if (recapture && isfullscreen() <= 0) {
+			enablecapture();
+			break;
+		}
+
+		if (currprefs.input_tablet >= TABLET_MOUSEHACK)
+		{
+			/* absolute */
+			setmousestate(0, 0, event.motion.x, 1);
+			setmousestate(0, 1, event.motion.y, 1);
+			break;
+		}
+
+		if (!focus || !mouseactive)
+			break;
+
+		/* relative */
+		setmousestate(0, 0, event.motion.xrel, 0);
+		setmousestate(0, 1, event.motion.yrel, 0);
+	}
+	break;
+
+	case SDL_MOUSEWHEEL:
+		if (isfocus() > 0)
+		{
+			const auto val_y = event.wheel.y;
+			setmousestate(0, 2, val_y, 0);
+			if (val_y < 0)
+				setmousebuttonstate(0, 3 + 0, -1);
+			else if (val_y > 0)
+				setmousebuttonstate(0, 3 + 1, -1);
+
+			const auto val_x = event.wheel.x;
+			setmousestate(0, 3, val_x, 0);
+			if (val_x < 0)
+				setmousebuttonstate(0, 3 + 2, -1);
+			else if (val_x > 0)
+				setmousebuttonstate(0, 3 + 3, -1);
+		}
+		break;
+
+	default:
+		break;
+	}
+}
+
+void update_clipboard()
+{
+	auto* clipboard_uae = uae_clipboard_get_text();
+	if (clipboard_uae) {
+		SDL_SetClipboardText(clipboard_uae);
+		uae_clipboard_free_text(clipboard_uae);
+	}
+}
+
+int handle_msgpump()
+{
+	auto got_event = 0;
+	SDL_Event event;
+
+	while (SDL_PollEvent(&event))
+	{
+		got_event = 1;
+		process_event(event);
+		if (currprefs.clipboard_sharing)
+			update_clipboard();
+	}
+	return got_event;
+}
+
+bool handle_events()
+{
+	static auto was_paused = 0;
+
+	if (pause_emulation)
+	{
+		if (was_paused == 0)
+		{
+			setpaused(pause_emulation);
+			was_paused = pause_emulation;
+			gui_fps(0, 0, 0);
+			gui_led(LED_SND, 0, -1);
+			// we got just paused, report it to caller.
+			return true;
+		}
+		SDL_Event event;
+		while (SDL_PollEvent(&event))
+		{
+			process_event(event);
+		}
+
+		inputdevicefunc_keyboard.read();
+		inputdevicefunc_mouse.read();
+		inputdevicefunc_joystick.read();
+		inputdevice_handle_inputcode();
+	}
+	if (was_paused && (!pause_emulation || quit_program))
+	{
+		updatedisplayarea();
+		pause_emulation = was_paused;
+		resumepaused(was_paused);
+		sound_closed = 0;
+		was_paused = 0;
+	}
+
+	return pause_emulation != 0;
+}
+
+void logging_init()
 {
 	if (amiberry_options.write_logfile)
 	{
@@ -264,7 +1295,6 @@ void logging_cleanup(void)
 	debugfile = nullptr;
 }
 
-
 void strip_slashes(TCHAR* p)
 {
 	while (_tcslen(p) > 0 && (p[_tcslen(p) - 1] == '\\' || p[_tcslen(p) - 1] == '/'))
@@ -278,6 +1308,89 @@ void fix_trailing(TCHAR* p)
 	if (p[_tcslen(p) - 1] == '/' || p[_tcslen(p) - 1] == '\\')
 		return;
 	_tcscat(p, "/");
+}
+
+int relativepaths = 0;
+
+// convert path to absolute or relative
+void fullpath(TCHAR* path, int size, bool userelative)
+{
+	// FIXME: forward/backslash fix needed
+	if (path[0] == 0 || (path[0] == '\\' && path[1] == '\\') ||
+		path[0] == ':') {
+		return;
+	}
+	/* <drive letter>: is supposed to mean same as <drive letter>:\ */
+#if 0
+	if (path[0] == 0 || (path[0] == '\\' && path[1] == '\\') || path[0] == ':')
+		return;
+	// has one or more environment variables? do nothing.
+	if (_tcschr(path, '%'))
+		return;
+	if (_tcslen(path) >= 2 && path[_tcslen(path) - 1] == '.')
+		return;
+	/* <drive letter>: is supposed to mean same as <drive letter>:\ */
+	if (_istalpha(path[0]) && path[1] == ':' && path[2] == 0)
+		_tcscat(path, _T("\\"));
+	if (userelative) {
+		TCHAR tmp1[MAX_DPATH], tmp2[MAX_DPATH];
+		tmp1[0] = 0;
+		GetCurrentDirectory(sizeof tmp1 / sizeof(TCHAR), tmp1);
+		fixtrailing(tmp1);
+		tmp2[0] = 0;
+		int ret = GetFullPathName(path, sizeof tmp2 / sizeof(TCHAR), tmp2, NULL);
+		if (ret == 0 || ret >= sizeof tmp2 / sizeof(TCHAR))
+			return;
+		if (_tcslen(tmp1) > 2 && _tcsnicmp(tmp1, tmp2, 3) == 0 && tmp1[1] == ':' && tmp1[2] == '\\') {
+			// same drive letter
+			path[0] = 0;
+			if (PathRelativePathTo(path, tmp1, FILE_ATTRIBUTE_DIRECTORY, tmp2, tmp2[_tcslen(tmp2) - 1] == '\\' ? FILE_ATTRIBUTE_DIRECTORY : 0)) {
+				if (path[0]) {
+					if (path[0] == '.' && path[1] == 0) {
+						_tcscpy(path, _T(".\\"));
+					}
+					else if (path[0] == '\\') {
+						_tcscpy(tmp1, path + 1);
+						_stprintf(path, _T(".\\%s"), tmp1);
+					}
+					else if (path[0] != '.') {
+						_tcscpy(tmp1, path);
+						_stprintf(path, _T(".\\%s"), tmp1);
+					}
+				}
+				else {
+					_tcscpy(path, tmp2);
+				}
+				goto done;
+			}
+		}
+		if (_tcsnicmp(tmp1, tmp2, _tcslen(tmp1)) == 0) {
+			// tmp2 is inside tmp1
+			_tcscpy(path, _T(".\\"));
+			_tcscat(path, tmp2 + _tcslen(tmp1));
+		}
+		else {
+			_tcscpy(path, tmp2);
+		}
+	done:;
+	}
+	else {
+		TCHAR tmp[MAX_DPATH];
+		_tcscpy(tmp, path);
+		DWORD err = GetFullPathName(tmp, size, path, NULL);
+	}
+#endif
+}
+
+// convert path to absolute or relative
+void fullpath(TCHAR* path, int size)
+{
+	fullpath(path, size, relativepaths);
+}
+
+bool target_isrelativemode(void)
+{
+	return relativepaths != 0;
 }
 
 bool same_path(const TCHAR* p1, const TCHAR* p2)
@@ -337,7 +1450,7 @@ void replace(std::string& str, const std::string& from, const std::string& to)
 
 void target_execute(const char* command)
 {
-	set_mouse_grab(false);
+	releasecapture();
 
 	write_log("Target_execute received: %s\n", command);
 	const std::string cmd_string = command;
@@ -398,25 +1511,47 @@ void target_quit(void)
 {
 }
 
-void fix_apmodes(struct uae_prefs* p)
-{
-	if (p->ntscmode)
-	{
-		p->gfx_apmode[APMODE_NATIVE].gfx_refreshrate = 60;
-		p->gfx_apmode[APMODE_RTG].gfx_refreshrate = 60;
-	}
-	else
-	{
-		p->gfx_apmode[APMODE_NATIVE].gfx_refreshrate = 50;
-		p->gfx_apmode[APMODE_RTG].gfx_refreshrate = 50;
-	}
-
-	fixup_prefs_dimensions(p);
-}
-
 void target_fixup_options(struct uae_prefs* p)
 {
+	if (p->automount_cddrives && !p->scsi)
+		p->scsi = 1;
+	if (p->uaescsimode > UAESCSI_LAST)
+		p->uaescsimode = UAESCSI_SPTI;
+	bool paused = false;
+	bool nosound = false;
+	bool nojoy = true;
+	if (!paused) {
+		paused = p->active_nocapture_pause;
+		nosound = p->active_nocapture_nosound;
+	}
+	else {
+		p->active_nocapture_pause = p->active_nocapture_nosound = true;
+		nosound = true;
+		nojoy = false;
+	}
+	if (!paused) {
+		paused = p->inactive_pause;
+		nosound = p->inactive_nosound;
+		nojoy = (p->inactive_input & 4) == 0;
+	}
+	else {
+		p->inactive_pause = p->inactive_nosound = true;
+		p->inactive_input = 0;
+		nosound = true;
+		nojoy = true;
+	}
+
 	p->rtgboards[0].rtgmem_type = GFXBOARD_UAE_Z3;
+	if (p->rtgboards[0].rtgmem_type >= GFXBOARD_HARDWARE) {
+		p->rtg_hardwareinterrupt = false;
+		p->rtg_hardwaresprite = false;
+		//p->win32_rtgmatchdepth = false;
+		p->color_mode = 5;
+		//if (p->ppc_model && !p->gfx_api) {
+		//	error_log(_T("Graphics board and PPC: Direct3D enabled."));
+		//	p->gfx_api = os_win7 ? 2 : 1;
+		//}
+	}
 
 	if (z3_base_adr == Z3BASE_REAL)
 	{
@@ -452,7 +1587,6 @@ void target_fixup_options(struct uae_prefs* p)
 	if (p->gfx_monitor.gfx_size_win.height < AMIGA_HEIGHT_MAX && p->gfx_resolution > 0)
 		p->gfx_monitor.gfx_size_win.height = p->gfx_monitor.gfx_size_win.height * 2;
 
-	fix_apmodes(p);
 	set_key_configs(p);
 }
 
@@ -536,7 +1670,6 @@ void target_default_options(struct uae_prefs* p, int type)
 	_tcscpy(p->action_replay, amiberry_options.default_ar_key);
 	_tcscpy(p->fullscreen_toggle, amiberry_options.default_fullscreen_toggle_key);
 
-	p->allow_host_run = false;
 	p->active_capture_priority = 1;
 	p->active_nocapture_pause = false;
 	p->active_nocapture_nosound = false;
@@ -548,7 +1681,12 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->minimized_pause = true;
 	p->minimized_nosound = true;
 	p->minimized_input = 0;
+	p->minimize_inactive = false;
+	p->capture_always = false;
 	
+	p->automount_removable = false;
+	p->automount_cddrives = true;
+	p->uaescsimode = UAESCSI_CDEMU;
 	p->input_analog_remap = false;
 
 	p->use_retroarch_quit = amiberry_options.default_retroarch_quit;
@@ -589,39 +1727,52 @@ void target_default_options(struct uae_prefs* p, int type)
 #endif
 }
 
+static const TCHAR* scsimode[] = { _T("SCSIEMU"), _T("SPTI"), _T("SPTI+SCSISCAN"), NULL };
+static const TCHAR* statusbarmode[] = { _T("none"), _T("normal"), _T("extended"), NULL };
+static const TCHAR* configmult[] = { _T("1x"), _T("2x"), _T("3x"), _T("4x"), _T("5x"), _T("6x"), _T("7x"), _T("8x"), NULL };
+
 void target_save_options(struct zfile* f, struct uae_prefs* p)
 {
-	cfgfile_write_bool(f, _T("amiberry.gfx_auto_height"), p->gfx_auto_height);
-	cfgfile_write(f, _T("amiberry.gfx_correct_aspect"), _T("%d"), p->gfx_correct_aspect);
-	cfgfile_write(f, _T("amiberry.kbd_led_num"), _T("%d"), p->kbd_led_num);
-	cfgfile_write(f, _T("amiberry.kbd_led_scr"), _T("%d"), p->kbd_led_scr);
-	cfgfile_write(f, _T("amiberry.scaling_method"), _T("%d"), p->scaling_method);
+	cfgfile_target_write_bool(f, _T("middle_mouse"), (p->input_mouse_untrap & MOUSEUNTRAP_MIDDLEBUTTON) != 0);
+	cfgfile_target_dwrite_bool(f, _T("map_drives_auto"), p->automount_removable);
+	cfgfile_target_dwrite_bool(f, _T("map_cd_drives"), p->automount_cddrives);
+	cfgfile_target_dwrite_str(f, _T("serial_port"), p->sername[0] ? p->sername : _T("none"));
 
-	cfgfile_dwrite_str(f, _T("amiberry.open_gui"), p->open_gui);
-	cfgfile_dwrite_str(f, _T("amiberry.quit_amiberry"), p->quit_amiberry);
-	cfgfile_dwrite_str(f, _T("amiberry.action_replay"), p->action_replay);
-	cfgfile_dwrite_str(f, _T("amiberry.fullscreen_toggle"), p->fullscreen_toggle);
-	cfgfile_write_bool(f, _T("amiberry.allow_host_run"), p->allow_host_run);
-	cfgfile_write_bool(f, _T("amiberry.use_analogue_remap"), p->input_analog_remap);
-
-	cfgfile_write_bool(f, _T("amiberry.use_retroarch_quit"), p->use_retroarch_quit);
-	cfgfile_write_bool(f, _T("amiberry.use_retroarch_menu"), p->use_retroarch_menu);
-	cfgfile_write_bool(f, _T("amiberry.use_retroarch_reset"), p->use_retroarch_reset);
-
-	cfgfile_target_dwrite(f, _T("cpu_idle"), _T("%d"), p->cpu_idle);
-	cfgfile_target_dwrite_bool(f, _T("right_control_is_right_win"), p->right_control_is_right_win_key);
-	cfgfile_write(f, _T("amiberry.active_priority"), _T("%d"), p->active_capture_priority);
+	cfgfile_target_dwrite(f, _T("active_priority"), _T("%d"), p->active_capture_priority);
 	cfgfile_target_dwrite_bool(f, _T("active_not_captured_nosound"), p->active_nocapture_nosound);
 	cfgfile_target_dwrite_bool(f, _T("active_not_captured_pause"), p->active_nocapture_pause);
-	cfgfile_write(f, _T("amiberry.inactive_priority"), _T("%d"), p->inactive_priority);
+	cfgfile_target_dwrite(f, _T("inactive_priority"), _T("%d"), p->inactive_priority);
 	cfgfile_target_dwrite_bool(f, _T("inactive_nosound"), p->inactive_nosound);
 	cfgfile_target_dwrite_bool(f, _T("inactive_pause"), p->inactive_pause);
 	cfgfile_target_dwrite(f, _T("inactive_input"), _T("%d"), p->inactive_input);
-	cfgfile_write(f, _T("amiberry.minimized_priority"), _T("%d"), p->minimized_priority);
+	cfgfile_target_dwrite(f, _T("minimized_priority"), _T("%d"), p->minimized_priority);
 	cfgfile_target_dwrite_bool(f, _T("minimized_nosound"), p->minimized_nosound);
 	cfgfile_target_dwrite_bool(f, _T("minimized_pause"), p->minimized_pause);
-	cfgfile_write(f, _T("amiberry.minimized_input"), _T("%d"), p->minimized_input);
+	cfgfile_target_dwrite(f, _T("minimized_input"), _T("%d"), p->minimized_input);
+	cfgfile_target_dwrite_bool(f, _T("inactive_minimize"), p->minimize_inactive);
+	cfgfile_target_dwrite_bool(f, _T("active_capture_automatically"), p->capture_always);
+
+	cfgfile_target_dwrite_str(f, _T("uaescsimode"), scsimode[p->uaescsimode]);
+	cfgfile_target_dwrite(f, _T("cpu_idle"), _T("%d"), p->cpu_idle);
+	cfgfile_target_dwrite_bool(f, _T("right_control_is_right_win"), p->right_control_is_right_win_key);
 	
+	cfgfile_target_dwrite_bool(f, _T("gfx_auto_height"), p->gfx_auto_height);
+	cfgfile_target_dwrite(f, _T("gfx_correct_aspect"), _T("%d"), p->gfx_correct_aspect);
+	cfgfile_target_dwrite(f, _T("kbd_led_num"), _T("%d"), p->kbd_led_num);
+	cfgfile_target_dwrite(f, _T("kbd_led_scr"), _T("%d"), p->kbd_led_scr);
+	cfgfile_target_dwrite(f, _T("scaling_method"), _T("%d"), p->scaling_method);
+
+	cfgfile_target_dwrite_str(f, _T("open_gui"), p->open_gui);
+	cfgfile_target_dwrite_str(f, _T("quit_amiberry"), p->quit_amiberry);
+	cfgfile_target_dwrite_str(f, _T("action_replay"), p->action_replay);
+	cfgfile_target_dwrite_str(f, _T("fullscreen_toggle"), p->fullscreen_toggle);
+	cfgfile_target_dwrite_str(f, _T("minimize"), p->minimize);
+	cfgfile_target_dwrite_bool(f, _T("use_analogue_remap"), p->input_analog_remap);
+
+	cfgfile_target_dwrite_bool(f, _T("use_retroarch_quit"), p->use_retroarch_quit);
+	cfgfile_target_dwrite_bool(f, _T("use_retroarch_menu"), p->use_retroarch_menu);
+	cfgfile_target_dwrite_bool(f, _T("use_retroarch_reset"), p->use_retroarch_reset);
+
 #ifdef ANDROID
 	cfgfile_write(f, "amiberry.onscreen", "%d", p->onScreen);
 	cfgfile_write(f, "amiberry.onscreen_textinput", "%d", p->onScreen_textinput);
@@ -671,6 +1822,94 @@ TCHAR* target_expand_environment(const TCHAR* path, TCHAR* out, int maxlen)
 
 int target_parse_option(struct uae_prefs* p, const char* option, const char* value)
 {
+	bool tbool;
+	
+	if (cfgfile_yesno(option, value, _T("middle_mouse"), &tbool)) {
+		if (tbool)
+			p->input_mouse_untrap |= MOUSEUNTRAP_MIDDLEBUTTON;
+		else
+			p->input_mouse_untrap &= ~MOUSEUNTRAP_MIDDLEBUTTON;
+		return 1;
+	}
+	if (cfgfile_yesno(option, value, _T("map_drives_auto"), &p->automount_removable))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("map_cd_drives"), &p->automount_cddrives))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("use_retroarch_quit"), &p->use_retroarch_quit))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("use_retroarch_menu"), &p->use_retroarch_menu))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("use_retroarch_reset"), &p->use_retroarch_reset))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("use_analogue_remap"), &p->input_analog_remap))
+		return 1;
+	if (cfgfile_intval(option, value, "kbd_led_num", &p->kbd_led_num, 1))
+		return 1;
+	if (cfgfile_intval(option, value, "kbd_led_scr", &p->kbd_led_scr, 1))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("gfx_auto_height"), &p->gfx_auto_height))
+		return 1;
+	if (cfgfile_intval(option, value, "gfx_correct_aspect", &p->gfx_correct_aspect, 1))
+		return 1;
+	if (cfgfile_intval(option, value, "scaling_method", &p->scaling_method, 1))
+		return 1;
+	if (cfgfile_string(option, value, "open_gui", p->open_gui, sizeof p->open_gui))
+		return 1;
+	if (cfgfile_string(option, value, "quit_amiberry", p->quit_amiberry, sizeof p->quit_amiberry))
+		return 1;
+	if (cfgfile_string(option, value, "action_replay", p->action_replay, sizeof p->action_replay))
+		return 1;
+	if (cfgfile_string(option, value, "fullscreen_toggle", p->fullscreen_toggle, sizeof p->fullscreen_toggle))
+		return 1;
+	if (cfgfile_string(option, value, "minimize", p->minimize, sizeof p->minimize))
+		return 1;
+	if (cfgfile_intval(option, value, _T("cpu_idle"), &p->cpu_idle, 1))
+		return 1;
+	if (cfgfile_strval(option, value, _T("uaescsimode"), &p->uaescsimode, scsimode, 0)) {
+		// force SCSIEMU if pre 2.3 configuration
+		if (p->config_version < ((2 << 16) | (3 << 8)))
+			p->uaescsimode = UAESCSI_CDEMU;
+		return 1;
+	}
+	if (cfgfile_intval(option, value, _T("active_priority"), &p->active_capture_priority, 1))
+	{
+		p->active_nocapture_pause = false;
+		p->active_nocapture_nosound = false;
+		return 1;
+	}
+	if (cfgfile_yesno(option, value, _T("active_nocapture_pause"), &p->active_nocapture_pause))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("active_nocapture_nosound"), &p->active_nocapture_nosound))
+		return 1;
+	if (cfgfile_intval(option, value, _T("inactive_priority"), &p->inactive_priority, 1))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("inactive_pause"), &p->inactive_pause))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("inactive_nosound"), &p->inactive_nosound))
+		return 1;
+	if (cfgfile_intval(option, value, _T("inactive_input"), &p->inactive_input, 1))
+		return 1;
+	if (cfgfile_intval(option, value, _T("minimized_priority"), &p->minimized_priority, 1))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("minimized_pause"), &p->minimized_pause))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("minimized_nosound"), &p->minimized_nosound))
+		return 1;
+	if (cfgfile_intval(option, value, _T("minimized_input"), &p->minimized_input, 1))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("active_capture_automatically"), &p->capture_always))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("inactive_minimize"), &p->minimize_inactive))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("right_control_is_right_win"), &p->right_control_is_right_win_key))
+		return 1;
+	if (cfgfile_string(option, value, _T("serial_port"), &p->sername[0], 256)) {
+		if (p->sername[0])
+			p->use_serial = true;
+		else
+			p->use_serial = false;
+		return 1;
+	}
 #ifdef ANDROID
 	int result = (cfgfile_intval(option, value, "onscreen", &p->onScreen, 1)
 		|| cfgfile_intval(option, value, "onscreen_textinput", &p->onScreen_textinput, 1)
@@ -704,60 +1943,6 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 	if (result)
 		return 1;
 #endif
-	if (cfgfile_yesno(option, value, _T("allow_host_run"), &p->allow_host_run))
-		return 1;
-	if (cfgfile_yesno(option, value, _T("use_retroarch_quit"), &p->use_retroarch_quit))
-		return 1;
-	if (cfgfile_yesno(option, value, _T("use_retroarch_menu"), &p->use_retroarch_menu))
-		return 1;
-	if (cfgfile_yesno(option, value, _T("use_retroarch_reset"), &p->use_retroarch_reset))
-		return 1;
-	if (cfgfile_yesno(option, value, _T("use_analogue_remap"), &p->input_analog_remap))
-		return 1;
-	if (cfgfile_intval(option, value, "kbd_led_num", &p->kbd_led_num, 1))
-		return 1;
-	if (cfgfile_intval(option, value, "kbd_led_scr", &p->kbd_led_scr, 1))
-		return 1;
-	if (cfgfile_yesno(option, value, _T("gfx_auto_height"), &p->gfx_auto_height))
-		return 1;
-	if (cfgfile_intval(option, value, "gfx_correct_aspect", &p->gfx_correct_aspect, 1))
-		return 1;
-	if (cfgfile_intval(option, value, "scaling_method", &p->scaling_method, 1))
-		return 1;
-	if (cfgfile_string(option, value, "open_gui", p->open_gui, sizeof p->open_gui))
-		return 1;
-	if (cfgfile_string(option, value, "quit_amiberry", p->quit_amiberry, sizeof p->quit_amiberry))
-		return 1;
-	if (cfgfile_string(option, value, "action_replay", p->action_replay, sizeof p->action_replay))
-		return 1;
-	if (cfgfile_string(option, value, "fullscreen_toggle", p->fullscreen_toggle, sizeof p->fullscreen_toggle))
-		return 1;
-	if (cfgfile_intval(option, value, _T("cpu_idle"), &p->cpu_idle, 1))
-		return 1;
-	if (cfgfile_intval(option, value, _T("active_priority"), &p->active_capture_priority, 1))
-		return 1;
-	if (cfgfile_yesno(option, value, _T("active_nocapture_pause"), &p->active_nocapture_pause))
-		return 1;
-	if (cfgfile_yesno(option, value, _T("active_nocapture_nosound"), &p->active_nocapture_nosound))
-		return 1;
-	if (cfgfile_intval(option, value, _T("inactive_priority"), &p->inactive_priority, 1))
-		return 1;
-	if (cfgfile_yesno(option, value, _T("inactive_pause"), &p->inactive_pause))
-		return 1;
-	if (cfgfile_yesno(option, value, _T("inactive_nosound"), &p->inactive_nosound))
-		return 1;
-	if (cfgfile_intval(option, value, _T("inactive_input"), &p->inactive_input, 1))
-		return 1;
-	if (cfgfile_intval(option, value, _T("minimized_priority"), &p->minimized_priority, 1))
-		return 1;
-	if (cfgfile_yesno(option, value, _T("minimized_pause"), &p->minimized_pause))
-		return 1;
-	if (cfgfile_yesno(option, value, _T("minimized_nosound"), &p->minimized_nosound))
-		return 1;
-	if (cfgfile_intval(option, value, _T("minimized_input"), &p->minimized_input, 1))
-		return 1;
-	if (cfgfile_yesno(option, value, _T("right_control_is_right_win"), &p->right_control_is_right_win_key))
-		return 1;
 	return 0;
 }
 
@@ -1050,10 +2235,6 @@ void save_amiberry_settings(void)
 	snprintf(buffer, MAX_DPATH, "input_keyboard_as_joystick_stop_keypresses=%s\n", amiberry_options.input_keyboard_as_joystick_stop_keypresses ? "yes" : "no");
 	fputs(buffer, f);
 	
-	// Use Keyrah V2 keyboard as Joystick mapping
-	snprintf(buffer, MAX_DPATH, "input_keyrah_joystick=%s\n", amiberry_options.input_keyrah_joystick ? "yes" : "no");
-	fputs(buffer, f);
-	
 	// Default key for opening the GUI (e.g. "F12")
 	snprintf(buffer, MAX_DPATH, "default_open_gui_key=%s\n", amiberry_options.default_open_gui_key);
 	fputs(buffer, f);
@@ -1246,7 +2427,6 @@ static void trim_wsa(char* s)
 void load_amiberry_settings(void)
 {
 	char path[MAX_DPATH];
-	int i;
 	strncpy(current_dir, start_path_data, MAX_DPATH - 1);
 	snprintf(config_path, MAX_DPATH, "%s/conf/", start_path_data);
 	snprintf(controllers_path, MAX_DPATH, "%s/controllers/", start_path_data);
@@ -1352,7 +2532,6 @@ void load_amiberry_settings(void)
 					cfgfile_yesno(option, value, "use_sdl2_render_thread", &amiberry_options.use_sdl2_render_thread);
 					cfgfile_intval(option, value, "input_default_mouse_speed", &amiberry_options.input_default_mouse_speed, 1);
 					cfgfile_yesno(option, value, "input_keyboard_as_joystick_stop_keypresses", &amiberry_options.input_keyboard_as_joystick_stop_keypresses);
-					cfgfile_yesno(option, value, "input_keyrah_joystick", &amiberry_options.input_keyrah_joystick);
 					cfgfile_string(option, value, "default_open_gui_key", amiberry_options.default_open_gui_key, sizeof amiberry_options.default_open_gui_key);
 					cfgfile_string(option, value, "default_quit_key", amiberry_options.default_quit_key, sizeof amiberry_options.default_quit_key);
 					cfgfile_string(option, value, "default_ar_key", amiberry_options.default_ar_key, sizeof amiberry_options.default_ar_key);
@@ -1422,6 +2601,8 @@ void target_reset()
 
 bool target_can_autoswitchdevice(void)
 {
+	if (mouseactive <= 0)
+		return false;
 	return true;
 }
 
@@ -1447,11 +2628,6 @@ uae_u32 emulib_target_getcpurate(uae_u32 v, uae_u32* low)
 void target_shutdown(void)
 {
 	system("sudo poweroff");
-}
-
-bool target_isrelativemode(void)
-{
-	return true;
 }
 
 int main(int argc, char* argv[])
@@ -1507,6 +2683,8 @@ int main(int argc, char* argv[])
 
 	alloc_AmigaMem();
 	RescanROMs();
+
+	normalcursor = SDL_GetDefaultCursor();
 	clipboard_init();
 	
 	// set capslock state based upon current "real" state
@@ -1546,564 +2724,9 @@ int main(int argc, char* argv[])
 	return 0;
 }
 
-void setpriority(int prio)
-{
-	if (prio >= 0 && prio <= 2)
-	{
-		switch (prio)
-		{
-		case 0:
-			SDL_SetThreadPriority(SDL_THREAD_PRIORITY_LOW);
-			break;
-		case 1:
-			SDL_SetThreadPriority(SDL_THREAD_PRIORITY_NORMAL);
-			break;
-		case 2:
-			SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH);
-			break;
-		default:
-			break;
-		}		
-	}
-}
-
 void toggle_mousegrab()
 {
-	// Release mouse
-	if (mouse_grabbed)
-	{
-		mouse_grabbed = false;
-		SDL_ShowCursor(SDL_ENABLE);
-		SDL_SetRelativeMouseMode(SDL_FALSE);
-	}
-	else
-	{
-		mouse_grabbed = true;
-		SDL_ShowCursor(SDL_DISABLE);
-		SDL_SetRelativeMouseMode(SDL_TRUE);
-	}
-}
-
-void set_mouse_grab(const bool grab)
-{
-#ifdef USE_DISPMANX
-	if (currprefs.allow_host_run)
-	{
-		if (grab)
-			change_layer_number(0);
-		else
-			change_layer_number(-128);
-	}
-#endif
-	if (grab != mouse_grabbed)
-		toggle_mousegrab();	
-}
-
-void setminimized()
-{
-	if (!minimized)
-		minimized = 1;
-	set_inhibit_frame(IHF_WINDOWHIDDEN);
-}
-
-void unsetminimized()
-{
-	if (minimized > 0)
-		full_redraw_all();
-	minimized = 0;
-	clear_inhibit_frame(IHF_WINDOWHIDDEN);
-}
-
-static void amiberry_inactive(int minimized)
-{
-	focus = 0;
-	recapture = 0;
-	setmouseactive(0);
-	clipboard_active(1, 0);
-
-	if (!quit_program) {
-		if (minimized) {
-			if (currprefs.minimized_pause) {
-				inputdevice_unacquire();
-				setpaused(1);
-				sound_closed = 1;
-			}
-			else if (currprefs.minimized_nosound) {
-				inputdevice_unacquire(true, currprefs.minimized_input);
-				setsoundpaused();
-				sound_closed = -1;
-			}
-			else {
-				inputdevice_unacquire(true, currprefs.minimized_input);
-			}
-		}
-		else if (mouseactive) {
-			inputdevice_unacquire();
-			if (currprefs.active_nocapture_pause)
-			{
-				setpaused(2);
-				sound_closed = 1;
-			}
-			else if (currprefs.active_nocapture_nosound)
-			{
-				setsoundpaused();
-				sound_closed = -1;
-			}
-		}
-		else {
-			if (currprefs.inactive_pause)
-			{
-				inputdevice_unacquire();
-				setpaused(2);
-				sound_closed = 1;
-			}
-			else if (currprefs.inactive_nosound)
-			{
-				inputdevice_unacquire(true, currprefs.inactive_input);
-				setsoundpaused();
-				sound_closed = -1;
-			}
-			else {
-				inputdevice_unacquire(true, currprefs.inactive_input);
-			}
-		}
-	} else {
-		inputdevice_unacquire();
-	}
-	setpriority(currprefs.inactive_priority);
-}
-
-static void amiberry_active(int minimized)
-{
-	setpriority(currprefs.active_capture_priority);
-	
-	if (sound_closed != 0) {
-		if (sound_closed < 0) {
-			resumesoundpaused();
-		}
-		else
-		{
-			if (currprefs.active_nocapture_pause)
-			{
-				if (mouseactive)
-					resumepaused(2);
-			}
-			else if (currprefs.inactive_pause)
-				resumepaused(2);
-		}
-		sound_closed = 0;
-	}
-	//getcapslock();
-	inputdevice_acquire(TRUE);
-	if (isfullscreen() > 0)
-		setmouseactive(1);
-	clipboard_active(1, 1);
-}
-
-static void setmouseactive2(int active, bool allowpause)
-{
-	if (active == 0)
-		set_mouse_grab(false);
-	if (mouseactive == active && active >= 0)
-		return;
-
-	if (active == 1 && !(currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC)) {
-		set_mouse_grab(true);
-	}
-	
-	if (active < 0)
-		active = 1;
-
-	mouseactive = active ? 1 : 0;
-
-	recapture = 0;
-	
-	if (isfullscreen() <= 0 && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_tablet > 0) {
-		if (mousehack_alive())
-			return;
-	}
-	
-	if (active) {
-		inputdevice_acquire(TRUE);
-		setpriority(currprefs.active_capture_priority);
-		if (currprefs.active_nocapture_pause)
-			resumepaused(2);
-		else if (currprefs.active_nocapture_nosound && sound_closed < 0)
-			resumesoundpaused();
-	}
-	else {
-		inputdevice_acquire(FALSE);
-		inputdevice_releasebuttons();
-	}
-	if (!active && allowpause)
-	{
-		if (currprefs.active_nocapture_pause)
-			setpaused(2);
-		else if (currprefs.active_nocapture_nosound)
-			setsoundpaused();
-			sound_closed = -1;
-	}
-}
-
-void setmouseactive(int active)
-{
-	if (active > 1)
-		SDL_RaiseWindow(sdl_window);
-	setmouseactive2(active, true);
-}
-
-void enablecapture()
-{
-	if (pause_emulation > 2)
-		return;
-	setmouseactive(1);
-	if (sound_closed < 0) {
-		resumesoundpaused();
-		sound_closed = 0;
-	}
-	if (currprefs.inactive_pause || currprefs.active_nocapture_pause)
-		resumepaused(2);
-}
-
-void disablecapture()
-{
-	setmouseactive(0);
-	focus = 0;
-	if (currprefs.active_nocapture_pause && sound_closed == 0) {
-		setpaused(2);
-		sound_closed = 1;
-	}
-	else if (currprefs.active_nocapture_nosound && sound_closed == 0) {
-		setsoundpaused();
-		sound_closed = -1;
-	}
-}
-
-void process_event(SDL_Event event)
-{
-	if (event.type == SDL_WINDOWEVENT)
-	{
-		switch (event.window.event)
-		{
-		case SDL_WINDOWEVENT_MINIMIZED:
-			setminimized();
-			amiberry_inactive(minimized);
-			break;
-		case SDL_WINDOWEVENT_RESTORED:
-			amiberry_active(minimized);
-			unsetminimized();
-			break;
-		case SDL_WINDOWEVENT_ENTER:
-			mouseinside = true;
-			break;
-		case SDL_WINDOWEVENT_FOCUS_GAINED:
-			mouseinside = true;
-			set_mouse_grab(true);
-			amiberry_active(minimized);
-			break;
-		case SDL_WINDOWEVENT_LEAVE:
-			mouseinside = false;
-			break;
-		case SDL_WINDOWEVENT_FOCUS_LOST:
-			mouseinside = false;
-			set_mouse_grab(false);
-			amiberry_inactive(minimized);
-			break;
-		case SDL_WINDOWEVENT_CLOSE:
-			uae_quit();
-			break;
-
-		default:
-			break;
-		}
-	}
-
-	switch (event.type)
-	{
-	case SDL_QUIT:
-		uae_quit();
-		break;
-
-	case SDL_JOYDEVICEADDED:
-	case SDL_CONTROLLERDEVICEADDED:
-		write_log("SDL Controller/Joystick device added! Re-running import joysticks...\n");
-		import_joysticks();
-		break;
-
-	case SDL_JOYDEVICEREMOVED:
-	case SDL_CONTROLLERDEVICEREMOVED:
-		write_log("SDL Controller/Joystick device removed!\n");
-		break;
-
-	case SDL_CONTROLLERBUTTONDOWN:
-		if (event.cbutton.button == enter_gui_button)
-		{
-			inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
-			break;
-		}
-		break;
-
-	case SDL_KEYDOWN:
-	{
-		// if the key belongs to a "retro arch joystick" ignore it
-		// ONLY when in game though, we need to remove the joysticks really 
-		// if we want to use the KB
-		// i've added this so when using the joysticks it doesn't hit the 'r' key for some games
-		// which starts a replay!!!
-		const auto ok_to_use = !key_used_by_retroarch_joy(event.key.keysym.scancode);
-		if (ok_to_use && event.key.repeat == 0)
-		{
-			// If the Enter GUI key was pressed, handle it
-			if (enter_gui_key && event.key.keysym.sym == enter_gui_key)
-			{
-				inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
-				break;
-			}
-
-			// If the Quit emulator key was pressed, handle it
-			if (quit_key && event.key.keysym.sym == quit_key)
-			{
-				inputdevice_add_inputcode(AKS_QUIT, 1, nullptr);
-				break;
-			}
-
-			if (action_replay_button && event.key.keysym.sym == action_replay_button)
-			{
-				inputdevice_add_inputcode(AKS_FREEZEBUTTON, 1, nullptr);
-				break;
-			}
-
-			if (fullscreen_key && event.key.keysym.sym == fullscreen_key)
-			{
-				inputdevice_add_inputcode(AKS_TOGGLEWINDOWEDFULLSCREEN, 1, nullptr);
-				break;
-			}
-
-			if (event.key.keysym.sym == SDLK_CAPSLOCK)
-			{
-				// Treat CAPSLOCK as a toggle. If on, set off and vice/versa
-				ioctl(0, KDGKBLED, &kbd_flags);
-				ioctl(0, KDGETLED, &kbd_led_status);
-				if (kbd_flags & 07 & LED_CAP)
-				{
-					// On, so turn off
-					kbd_led_status &= ~LED_CAP;
-					kbd_flags &= ~LED_CAP;
-					inputdevice_do_keyboard(AK_CAPSLOCK, 0);
-				}
-				else
-				{
-					// Off, so turn on
-					kbd_led_status |= LED_CAP;
-					kbd_flags |= LED_CAP;
-					inputdevice_do_keyboard(AK_CAPSLOCK, 1);
-				}
-				ioctl(0, KDSETLED, kbd_led_status);
-				ioctl(0, KDSKBLED, kbd_flags);
-				break;
-			}
-
-			if (event.key.keysym.sym == SDLK_SYSREQ)
-				clipboard_disable(true);
-
-			// Handle all other keys
-			if (amiberry_options.rctrl_as_ramiga || currprefs.right_control_is_right_win_key)
-			{
-				if (event.key.keysym.scancode == SDL_SCANCODE_RCTRL)
-					event.key.keysym.scancode = SDL_SCANCODE_RGUI;
-			}
-			inputdevice_translatekeycode(0, event.key.keysym.scancode, 1, false);
-		}
-	}
-	break;
-
-	case SDL_KEYUP:
-	{
-		const auto ok_to_use = !key_used_by_retroarch_joy(event.key.keysym.scancode);
-		if (ok_to_use && event.key.repeat == 0)
-		{
-			if (amiberry_options.rctrl_as_ramiga || currprefs.right_control_is_right_win_key)
-			{
-				if (event.key.keysym.scancode == SDL_SCANCODE_RCTRL)
-					event.key.keysym.scancode = SDL_SCANCODE_RGUI;
-			}
-			inputdevice_translatekeycode(0, event.key.keysym.scancode, 0, true);
-		}
-	}
-	break;
-
-	case SDL_FINGERDOWN:
-		setmousebuttonstate(0, 0, 1);
-		break;
-
-	case SDL_MOUSEBUTTONDOWN:
-		if (event.button.button == SDL_BUTTON_LEFT && mouseinside && !currprefs.input_mouse_untrap)
-			set_mouse_grab(true);
-		if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
-		{
-			if (event.button.button == SDL_BUTTON_LEFT)
-				setmousebuttonstate(0, 0, 1);
-			if (event.button.button == SDL_BUTTON_RIGHT)
-				setmousebuttonstate(0, 1, 1);
-			if (event.button.button == SDL_BUTTON_MIDDLE)
-				setmousebuttonstate(0, 2, 1);
-		}
-		break;
-
-	case SDL_FINGERUP:
-		setmousebuttonstate(0, 0, 0);
-		break;
-
-	case SDL_MOUSEBUTTONUP:
-		if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
-		{
-			if (event.button.button == SDL_BUTTON_LEFT)
-				setmousebuttonstate(0, 0, 0);
-			if (event.button.button == SDL_BUTTON_RIGHT)
-				setmousebuttonstate(0, 1, 0);
-			if (event.button.button == SDL_BUTTON_MIDDLE)
-			{
-				if (currprefs.input_mouse_untrap)
-					toggle_mousegrab();
-				else
-					setmousebuttonstate(0, 2, 0);
-			}
-		}
-		break;
-
-	case SDL_FINGERMOTION:
-		//TODO this doesn't work yet
-		setmousestate(0, 0, event.motion.xrel, 0);
-		setmousestate(0, 1, event.motion.yrel, 0);
-		break;
-
-	case SDL_MOUSEMOTION:
-		if (recapture && isfullscreen() <= 0) {
-			enablecapture();
-			break;
-		}
-
-		if (currprefs.input_tablet >= TABLET_MOUSEHACK)
-		{
-			/* absolute */
-			setmousestate(0, 0, event.motion.x, 1);
-			setmousestate(0, 1, event.motion.y, 1);
-			break;
-		}
-
-		if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
-		{
-			/* relative */
-#if defined (ANDROID)
-			if (event.motion.x == 0 && x > -4)
-				x = -4;
-			if (event.motion.y == 0 && y > -4)
-				y = -4;
-			if (event.motion.x == currprefs.gfx_monitor.gfx_size.width - 1 && x < 4)
-				x = 4;
-			if (event.motion.y == currprefs.gfx_monitor.gfx_size.height - 1 && y < 4)
-				y = 4;
-#endif //ANDROID
-			setmousestate(0, 0, event.motion.xrel, 0);
-			setmousestate(0, 1, event.motion.yrel, 0);
-			break;
-		}
-		break;
-
-	case SDL_MOUSEWHEEL:
-		if (currprefs.jports[0].id == JSEM_MICE || currprefs.jports[1].id == JSEM_MICE)
-		{
-			const auto val_y = event.wheel.y;
-			setmousestate(0, 2, val_y, 0);
-			if (val_y < 0)
-				setmousebuttonstate(0, 3 + 0, -1);
-			else if (val_y > 0)
-				setmousebuttonstate(0, 3 + 1, -1);
-
-			const auto val_x = event.wheel.x;
-			setmousestate(0, 3, val_x, 0);
-			if (val_x < 0)
-				setmousebuttonstate(0, 3 + 2, -1);
-			else if (val_x > 0)
-				setmousebuttonstate(0, 3 + 3, -1);
-		}
-		break;
-
-	default:
-		break;
-		}
-	}
-
-void update_clipboard()
-{
-	auto* clipboard_uae = uae_clipboard_get_text();
-	if (clipboard_uae) {
-		SDL_SetClipboardText(clipboard_uae);
-		uae_clipboard_free_text(clipboard_uae);
-	}
-	else {
-		// FIXME: Ideally, we would want to avoid this alloc/free
-		// when the clipboard hasn't changed.
-		if (SDL_HasClipboardText() == SDL_TRUE)
-		{
-			auto* clipboard_host = SDL_GetClipboardText();
-			uae_clipboard_put_text(clipboard_host);
-			SDL_free(clipboard_host);
-		}
-	}
-}
-
-int handle_msgpump()
-{
-	auto got_event = 0;
-	SDL_Event event;
-
-	while (SDL_PollEvent(&event))
-	{
-		got_event = 1;
-		process_event(event);
-		if (currprefs.clipboard_sharing)
-			update_clipboard();
-	}
-	return got_event;
-}
-
-bool handle_events()
-{
-	static auto was_paused = 0;
-
-	if (pause_emulation)
-	{
-		if (was_paused == 0)
-		{
-			setpaused(pause_emulation);
-			was_paused = pause_emulation;
-			gui_fps(0, 0, 0);
-			gui_led(LED_SND, 0, -1);
-			// we got just paused, report it to caller.
-			return true;
-		}
-		SDL_Event event;
-		while (SDL_PollEvent(&event))
-		{
-			process_event(event);
-		}
-		
-		inputdevicefunc_keyboard.read();
-		inputdevicefunc_mouse.read();
-		inputdevicefunc_joystick.read();
-		inputdevice_handle_inputcode();
-	}
-	if (was_paused && (!pause_emulation || quit_program))
-	{
-		updatedisplayarea();
-		pause_emulation = was_paused;
-		resumepaused(was_paused);
-		sound_closed = 0;
-		was_paused = 0;
-	}
-
-	return pause_emulation != 0;
+	activationtoggle(false);
 }
 
 bool get_plugin_path(TCHAR* out, int len, const TCHAR* path)

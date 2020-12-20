@@ -14,6 +14,7 @@
 #include "filesys.h"
 #include "blkdev.h"
 #include "zfile.h"
+//#include "debug.h"
 #include "memory.h"
 #include "scsi.h"
 #include "autoconf.h"
@@ -76,7 +77,9 @@
 #define NCR5380_OVERDRIVE 42
 #define NCR5380_TRUMPCARD 43
 #define OMTI_ALF2 44
-#define NCR_LAST 45
+#define NCR5380_SYNTHESIS 45 // clone of ICD AdSCSI
+#define NCR5380_FIREBALL 46
+#define NCR_LAST 47
 
 extern int log_scsiemu;
 
@@ -276,14 +279,14 @@ void scsi_clear_sense(struct scsi_data *sd)
 }
 static void showsense(struct scsi_data *sd)
 {
-	//if (log_scsiemu) {
-	//	for (int i = 0; i < sd->sense_len; i++) {
-	//		if (i > 0)
-	//			write_log (_T("."));
-	//		write_log (_T("%02X"), sd->buffer[i]);
-	//	}
-	//	write_log (_T("\n"));
-	//}
+	if (log_scsiemu) {
+		for (int i = 0; i < sd->sense_len; i++) {
+			if (i > 0)
+				write_log (_T("."));
+			write_log (_T("%02X"), sd->buffer[i]);
+		}
+		write_log (_T("\n"));
+	}
 }
 static void copysense(struct scsi_data *sd)
 {
@@ -300,8 +303,8 @@ static void copysense(struct scsi_data *sd)
 		sd->buffer[0] = 0x70;
 		sd->sense_len = tlen;
 	}
-	//if (log_scsiemu)
-	//	write_log(_T("REQUEST SENSE %d (%d -> %d)\n"), sd->cmd[4], sd->sense_len, tlen);
+	if (log_scsiemu)
+		write_log(_T("REQUEST SENSE %d (%d -> %d)\n"), sd->cmd[4], sd->sense_len, tlen);
 	showsense (sd);
 	sd->data_len = tlen;
 	scsi_clear_sense(sd);
@@ -441,22 +444,22 @@ void scsi_emulate_cmd(struct scsi_data *sd)
 			}
 		}
 
-	//} else if (sd->device_type == UAEDEV_TAPE && sd->nativescsiunit < 0) {
+	} else if (sd->device_type == UAEDEV_TAPE && sd->nativescsiunit < 0) {
 
-	//	uae_u32 ua = 0;
-	//	ua = scsi_tape_emulate(sd->tape, NULL, 0, 0, 0, 0, 0, 0, 0);
-	//	if (ua)
-	//		sd->unit_attention = ua;
-	//	if (handle_ca(sd)) {
-	//		if (sd->cmd[0] == 0x03) { /* REQUEST SENSE */
-	//			scsi_tape_emulate(sd->tape, sd->cmd, 0, 0, 0, sd->reply, &sd->reply_len, sd->sense, &sd->sense_len); /* get request sense extra bits */
-	//			copysense(sd);
-	//		} else {
-	//			sd->status = scsi_tape_emulate(sd->tape,
-	//				sd->cmd, sd->cmd_len, sd->buffer, &sd->data_len, sd->reply, &sd->reply_len, sd->sense, &sd->sense_len);
-	//			copyreply(sd);
-	//		}
-	//	}
+		uae_u32 ua = 0;
+		ua = scsi_tape_emulate(sd->tape, NULL, 0, 0, 0, 0, 0, 0, 0);
+		if (ua)
+			sd->unit_attention = ua;
+		if (handle_ca(sd)) {
+			if (sd->cmd[0] == 0x03) { /* REQUEST SENSE */
+				scsi_tape_emulate(sd->tape, sd->cmd, 0, 0, 0, sd->reply, &sd->reply_len, sd->sense, &sd->sense_len); /* get request sense extra bits */
+				copysense(sd);
+			} else {
+				sd->status = scsi_tape_emulate(sd->tape,
+					sd->cmd, sd->cmd_len, sd->buffer, &sd->data_len, sd->reply, &sd->reply_len, sd->sense, &sd->sense_len);
+				copyreply(sd);
+			}
+		}
 
 	} else if (sd->device_type == UAEDEV_DIR) {
 
@@ -563,23 +566,23 @@ struct scsi_data *scsi_alloc_cd(int id, int unitnum, bool atapi, int uae_unitnum
 	return sd;
 }
 
-//struct scsi_data *scsi_alloc_tape(int id, const TCHAR *tape_directory, bool readonly, int uae_unitnum)
-//{
-//	struct scsi_data_tape *tape;
-//	tape = tape_alloc (id, tape_directory, readonly);
-//	if (!tape)
-//		return NULL;
-//	struct scsi_data *sd = xcalloc (struct scsi_data, 1);
-//	sd->id = id;
-//	sd->nativescsiunit = -1;
-//	sd->cd_emu_unit = -1;
-//	sd->blocksize = tape->blocksize;
-//	sd->tape = tape;
-//	sd->device_type = UAEDEV_TAPE;
-//	sd->uae_unitnum = uae_unitnum;
-//	allocscsibuf(sd);
-//	return sd;
-//}
+struct scsi_data *scsi_alloc_tape(int id, const TCHAR *tape_directory, bool readonly, int uae_unitnum)
+{
+	struct scsi_data_tape *tape;
+	tape = tape_alloc (id, tape_directory, readonly);
+	if (!tape)
+		return NULL;
+	struct scsi_data *sd = xcalloc (struct scsi_data, 1);
+	sd->id = id;
+	sd->nativescsiunit = -1;
+	sd->cd_emu_unit = -1;
+	sd->blocksize = tape->blocksize;
+	sd->tape = tape;
+	sd->device_type = UAEDEV_TAPE;
+	sd->uae_unitnum = uae_unitnum;
+	allocscsibuf(sd);
+	return sd;
+}
 
 struct scsi_data *scsi_alloc_native(int id, int nativeunit)
 {
@@ -615,7 +618,7 @@ void scsi_free(struct scsi_data *sd)
 		sys_command_close (sd->cd_emu_unit);
 		sd->cd_emu_unit = -1;
 	}
-	//tape_free (sd->tape);
+	tape_free (sd->tape);
 	xfree(sd->buffer);
 	xfree(sd);
 }
@@ -698,19 +701,19 @@ int add_scsi_cd (struct scsi_data **sd, int ch, int unitnum)
 	return *sd ? 1 : 0;
 }
 
-//int add_scsi_tape (struct scsi_data **sd, int ch, const TCHAR *tape_directory, bool readonly)
-//{
-//	free_scsi (*sd);
-//	*sd = scsi_alloc_tape (ch, tape_directory, readonly, ch);
-//	return *sd ? 1 : 0;
-//}
+int add_scsi_tape (struct scsi_data **sd, int ch, const TCHAR *tape_directory, bool readonly)
+{
+	free_scsi (*sd);
+	*sd = scsi_alloc_tape (ch, tape_directory, readonly, ch);
+	return *sd ? 1 : 0;
+}
 
 int add_scsi_device(struct scsi_data **sd, int ch, struct uaedev_config_info *ci, struct romconfig *rc)
 {
 	if (ci->type == UAEDEV_CD)
 		return add_scsi_cd(sd, ch, ci->device_emu_unit);
-	//else if (ci->type == UAEDEV_TAPE)
-	//	return add_scsi_tape(sd, ch, ci->rootdir, ci->readonly);
+	else if (ci->type == UAEDEV_TAPE)
+		return add_scsi_tape(sd, ch, ci->rootdir, ci->readonly);
 	else if (ci->type == UAEDEV_HDF)
 		return add_scsi_hd(sd, ch, NULL, ci);
 	return 0;
@@ -816,6 +819,7 @@ struct soft_scsi
 	uae_u8 scratch_400[64];
 	int c400_count;
 	bool c400;
+	bool dp8490v;
 	uae_u8 aic_reg;
 	struct raw_scsi rscsi;
 	bool irq;
@@ -1505,6 +1509,20 @@ static void overdrive_do_dma(struct soft_scsi *ncr)
 	}
 }
 
+static void fireball_do_dma(struct soft_scsi* ncr)
+{
+	struct raw_scsi* rs = &ncr->rscsi;
+	while (rs->bus_phase == SCSI_SIGNAL_PHASE_DATA_OUT || rs->bus_phase == SCSI_SIGNAL_PHASE_DATA_IN) {
+		if (rs->bus_phase == SCSI_SIGNAL_PHASE_DATA_IN) {
+			dma_put_byte(ncr->dmac_address & ncr->dma_mask, ncr5380_bget(ncr, 8));
+			ncr->dmac_address++;
+		} else if (rs->bus_phase == SCSI_SIGNAL_PHASE_DATA_OUT) {
+			ncr5380_bput(ncr, 8, dma_get_byte(ncr->dmac_address & ncr->dma_mask));
+			ncr->dmac_address++;
+		}
+	}
+}
+
 
 static void dma_check(struct soft_scsi *ncr)
 {
@@ -1539,6 +1557,12 @@ static void dma_check(struct soft_scsi *ncr)
 
 		}
 
+		if (ncr->type == NCR5380_FIREBALL) {
+
+			fireball_do_dma(ncr);
+
+		}
+
 		ncr->dmac_active = 0;
 	}
 }
@@ -1548,7 +1572,11 @@ static void ncr80_rethink(void)
 {
 	for (int i = 0; soft_scsi_devices[i]; i++) {
 		struct soft_scsi *s = soft_scsi_devices[i];
-		if (s->irq && s->intena && ((s->c400 && (s->regs_400[0] & 0x10) && !s->c400_count) || !s->c400)) {
+		if (s->irq && s->intena && (
+			(s->c400 && (s->regs_400[0] & 0x10) && !s->c400_count) ||
+			(s->dp8490v && (s->regs[18] & 0x20)) ||
+			(!s->c400 && !s->dp8490v)))
+		{
 			if (soft_scsi_devices[i] == x86_hd_data) {
 				;// x86_doirq(5);
 			} else {
@@ -1853,7 +1881,13 @@ static void ncr5380_reset(struct soft_scsi *scsi, bool busreset)
 {
 	struct raw_scsi *r = &scsi->rscsi;
 
-	memset(scsi->regs, 0, sizeof scsi->regs);
+	if (scsi->dp8490v) {
+		// DP8490V manual says all registers are reset but that can't work
+		// with Fireball driver. It assumes IMR is not reset.
+		memset(scsi->regs, 0, 16);
+	} else {
+		memset(scsi->regs, 0, sizeof scsi->regs);
+	}
 	if (busreset) {
 		raw_scsi_reset_bus(scsi);
 		scsi->regs[1] = 0x80;
@@ -1865,6 +1899,14 @@ uae_u8 ncr5380_bget(struct soft_scsi *scsi, int reg)
 {
 	if (reg > 8)
 		return 0;
+
+	if (scsi->dp8490v) {
+		if ((scsi->regs[1] & 0x40) && reg == 7) {
+			reg = 17;
+		}
+	}
+
+
 	uae_u8 v = scsi->regs[reg];
 	struct raw_scsi *r = &scsi->rscsi;
 	switch(reg)
@@ -1937,6 +1979,26 @@ uae_u8 ncr5380_bget(struct soft_scsi *scsi, int reg)
 		case 7:
 		scsi->irq = false;
 		break;
+
+		case 17: // DP8490V MODE_E
+		{
+			int efr = (scsi->regs[17] >> 1) & 3;
+			if (efr == 3) {
+				v = 0;
+				uae_u8 t = raw_scsi_get_signal_phase(r);
+				// End of DMA -> DMA Phase Mismatch
+				if (scsi->regs[5] & 0x80) {
+					v = 0x10;
+				}
+				// Any Phase Mismatch
+				if (r->bus_phase == (scsi->regs[3] & 7)) {
+					v |= 0x20;
+				}
+				scsi->regs[17] &= ~(3 << 1);
+			}
+		}
+		break;
+
 		case 8: // fake dma port
 		v = raw_scsi_get_data(r, true);
 		ncr5380_check_phase(scsi);
@@ -1950,6 +2012,13 @@ void ncr5380_bput(struct soft_scsi *scsi, int reg, uae_u8 v)
 {
 	if (reg > 8)
 		return;
+
+	if (scsi->dp8490v) {
+		if ((scsi->regs[1] & 0x40) && reg == 7) {
+			reg = 17;
+		}
+	}
+
 	bool dataoutput = (scsi->regs[1] & 1) != 0;
 	struct raw_scsi *r = &scsi->rscsi;
 	uae_u8 old = scsi->regs[reg];
@@ -1988,6 +2057,10 @@ void ncr5380_bput(struct soft_scsi *scsi, int reg, uae_u8 v)
 			}
 			if (v & 0x80) { // RST
 				ncr5380_reset(scsi, true);
+			}
+			if (scsi->dp8490v) {
+				scsi->regs[reg] &= ~0x40;
+				scsi->regs[reg] |= v & 0x40;
 			}
 		}
 		break;
@@ -2035,11 +2108,39 @@ void ncr5380_bput(struct soft_scsi *scsi, int reg, uae_u8 v)
 			scsi->dma_active = true;
 			scsi->dma_started = true;
 			dma_check(scsi);
-		}
 #if NCR5380_DEBUG
-		write_log(_T("DMA initiator recv PC=%08x\n"), M68K_GETPC);
+			write_log(_T("DMA initiator recv PC=%08x\n"), M68K_GETPC);
 #endif
+		}
 		break;
+
+		case 17: // DP8490V MODE_E
+		{
+			int efr = (old >> 1) & 3;
+			if (efr == 3) {
+				scsi->regs[18] = v;
+				scsi->regs[17] &= ~(3 << 1);
+			} else {
+				int efr = (v >> 1) & 3;
+				if (efr == 1) {
+					scsi->irq = false;
+				} else if (efr == 2) {
+					if (scsi->regs[2] & 2) {
+						// start DMA initiator receive
+						scsi->dma_direction = -1;
+						scsi->dma_active = true;
+						scsi->dma_started = true;
+						dma_check(scsi);
+#if NCR5380_DEBUG
+						write_log(_T("DMA8490 initiator recv PC=%08x\n"), M68K_GETPC);
+#endif
+					}
+				}
+			}	
+		}
+		break;
+
+
 		case 8: // fake dma port
 		if (r->bus_phase == (scsi->regs[3] & 7)) {
 			raw_scsi_put_data(r, v, true);
@@ -2759,6 +2860,13 @@ static int overdrive_reg(struct soft_scsi *ncr, uaecptr addr)
 	return -1;
 }
 
+static int fireball_reg(struct soft_scsi* ncr, uaecptr addr)
+{
+	if ((addr & 0xc000) != 0x4000)
+		return -1;
+	return (addr >> 1) & 7;
+}
+
 static uae_u8 read_684xx_dma(struct soft_scsi *ncr, uaecptr addr)
 {
 	uae_u8 val = 0;
@@ -3211,7 +3319,8 @@ static uae_u32 ncr80_bget2(struct soft_scsi *ncr, uaecptr addr, int size)
 			v = ncr->rom[addr];
 		}
 
-	} else if (ncr->type == NCR5380_ADSCSI) {
+	} else if (ncr->type == NCR5380_ADSCSI || ncr->type == NCR5380_SYNTHESIS) {
+
 
 		struct raw_scsi *rs = &ncr->rscsi;
 		if (ncr->configured)
@@ -3490,10 +3599,21 @@ static uae_u32 ncr80_bget2(struct soft_scsi *ncr, uaecptr addr, int size)
 			v = ncr->rom[addr & 0x3fff];
 		}
 
+	} else if (ncr->type == NCR5380_FIREBALL) {
+
+		reg = fireball_reg(ncr, addr);
+		if (reg >= 0) {
+			v = ncr5380_bget(ncr, reg);
+		} else if ((addr & 0xc000) == 0xc000) {
+			v = ncr->rom[addr & 0x3fff];
+		} else if (addr < 128) {
+			v = ncr->acmemory[addr];
+		}
+
 	}
 
 #if NCR5380_DEBUG > 1
-	if (0 || origaddr < 0x8000)
+	if (0 || (origaddr & 0xffff) <= 0x8100)
 		write_log(_T("GET %08x %02x %d %08x %d\n"), origaddr, v, reg, M68K_GETPC, regs.intmask);
 #endif
 
@@ -3686,7 +3806,7 @@ static void ncr80_bput2(struct soft_scsi *ncr, uaecptr addr, uae_u32 val, int si
 			}
 		}
 
-	} else if (ncr->type == NCR5380_ADSCSI) {
+	} else if (ncr->type == NCR5380_ADSCSI || ncr->type == NCR5380_SYNTHESIS) {
 
 		if (ncr->configured)
 			reg = adscsi_reg(ncr, addr, true);
@@ -3852,7 +3972,7 @@ static void ncr80_bput2(struct soft_scsi *ncr, uaecptr addr, uae_u32 val, int si
 		if (reg >= 0)
 			ncr5380_bput(ncr, reg, val);
 
-	//} else if (ncr->type == NCR5380_TRUMPCARDPRO || ncr->type == NCR5380_IVSVECTOR || ncr->type == NCR5380_TRUMPCARD) {
+	} else if (ncr->type == NCR5380_TRUMPCARDPRO || ncr->type == NCR5380_IVSVECTOR || ncr->type == NCR5380_TRUMPCARD) {
 
 	//	reg = trumpcardpro_reg(ncr, addr, ncr->type == NCR5380_IVSVECTOR);
 	//	if (reg >= 0) {
@@ -3910,7 +4030,7 @@ static void ncr80_bput2(struct soft_scsi *ncr, uaecptr addr, uae_u32 val, int si
 	}
 
 #if NCR5380_DEBUG > 1
-	if (origaddr < 0x8000)
+	if ((origaddr & 0xffff) <= 0x8100)
 		write_log(_T("PUT %08x %02x %d %08x %d\n"), origaddr, val, reg, M68K_GETPC, regs.intmask);
 #endif
 }
@@ -4464,7 +4584,7 @@ bool trumpcardpro_init(struct autoconfig_info *aci)
 
 void trumpcardpro_add_scsi_unit(int ch, struct uaedev_config_info *ci, struct romconfig *rc)
 {
-	generic_soft_scsi_add(ch, ci, rc, NCR5380_TRUMPCARDPRO, 65536, 32768, NCR5380_TRUMPCARDPRO);
+	generic_soft_scsi_add(ch, ci, rc, NCR5380_TRUMPCARDPRO, 65536, 32768, ROMTYPE_IVSTPRO);
 }
 
 bool trumpcard_init(struct autoconfig_info *aci)

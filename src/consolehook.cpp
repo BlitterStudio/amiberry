@@ -39,7 +39,7 @@ void consolehook_config (struct uae_prefs *p)
 	p->cpu_compatible = 0;
 	p->address_space_24 = 0;
 	p->chipmem.size = 0x00200000;
-	p->z3fastmem[0].size = 0x00800000;
+	p->fastmem[0].size = 0x00800000;
 	p->bogomem.size = 0;
 	p->nr_floppies = 1;
 	p->floppyslots[1].dfxtype = DRV_NONE;
@@ -49,7 +49,7 @@ void consolehook_config (struct uae_prefs *p)
 	p->gfx_monitor.gfx_size_win.height = 256;
 	p->turbo_emulation = 0;
 	//p->win32_automount_drives = 2;
-	//p->win32_automount_cddrives = 2;
+	//p->automount_cddrives = 2;
 
 	_tcscpy (ci.rootdir, _T("."));
 	_tcscpy (ci.volname, _T("CLIBOOT"));

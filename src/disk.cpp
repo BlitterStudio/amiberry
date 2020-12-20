@@ -30,11 +30,15 @@ int disk_debug_track = -1;
 #include "gui.h"
 #include "zfile.h"
 #include "newcpu.h"
+//#include "osemu.h"
+//#include "execlib.h"
 #include "savestate.h"
 #include "cia.h"
+//#include "debug.h"
 #ifdef FDI2RAW
 #include "fdi2raw.h"
 #endif
+//#include "catweasel.h"
 #ifdef DRIVESOUND
 #include "driveclick.h"
 #endif
@@ -45,6 +49,11 @@ int disk_debug_track = -1;
 #include "scp.h"
 #endif
 #include "crc32.h"
+//#include "inputrecord.h"
+//#include "amax.h"
+#ifdef RETROPLATFORM
+#include "rp.h"
+#endif
 #include "fsdb.h"
 #include "statusline.h"
 #include "rommgr.h"
@@ -566,10 +575,9 @@ static int get_floppy_speed_from_image(drive *drv)
 	
 	m = get_floppy_speed();
 	l = drv->tracklen;
-	if (!drv->tracktiming[0]) {		
+	if (!drv->tracktiming[0]) {
 		m = m * l / (2 * 8 * FLOPPY_WRITE_LEN * drv->ddhd);
 	}
-
 	// 4us track?
 	if (l < (FLOPPY_WRITE_LEN_PAL * 8) * 4 / 6) {
 		m *= 2;
@@ -577,7 +585,7 @@ static int get_floppy_speed_from_image(drive *drv)
 	if (m <= 0) {
 		m = 1;
 	}
-	
+
 	return m;
 }
 
@@ -967,7 +975,7 @@ TCHAR *DISK_get_saveimagepath(const TCHAR *name, int type)
 	int typev = type;
 
 	for (int i = 0; i < 2; i++) {
-		if (typev == 1 || (typev == -2 && i == 1)) {
+		if (typev == 1 || (typev == -1 && saveimageoriginalpath) || (typev == -2 && (saveimageoriginalpath || i == 1))) {
 			TCHAR si_name[MAX_DPATH], si_path[MAX_DPATH];
 			_tcscpy(si_name, name);
 			_tcscpy(si_path, name);
@@ -978,7 +986,7 @@ TCHAR *DISK_get_saveimagepath(const TCHAR *name, int type)
 			if (typev != -2 || (typev == -2 && zfile_exists(si_path)))
 				return my_strdup(si_path);
 		}
-		if (typev == 2 || typev == -1 || typev == -2) {
+		if (typev == 2 || (typev == -1 && !saveimageoriginalpath) || (typev == -2 && (!saveimageoriginalpath || i == 1))) {
 			TCHAR *p = DISK_get_default_saveimagepath(name);
 			if (typev != -2 || (typev == -2 && zfile_exists(p)))
 				return p;
@@ -994,12 +1002,12 @@ static struct zfile *getexistingwritefile(struct uae_prefs *p, const TCHAR *name
 	TCHAR *path;
 	TCHAR outname[MAX_DPATH];
 
-	path = DISK_get_saveimagepath(name, 0);
+	path = DISK_get_saveimagepath(name, saveimageoriginalpath);
 	DISK_validate_filename (p, path, outname, 1, wrprot, NULL, &zf);
 	xfree(path);
 	if (zf)
 		return zf;
-	path = DISK_get_saveimagepath(name, 1);
+	path = DISK_get_saveimagepath(name, !saveimageoriginalpath);
 	DISK_validate_filename (p, path, outname, 1, wrprot, NULL, &zf);
 	xfree(path);
 	return zf;
@@ -1167,6 +1175,8 @@ static int drive_insert (drive * drv, struct uae_prefs *p, int dnum, const TCHAR
 	}
 
 	if (!fake) {
+		//inprec_recorddiskchange (dnum, fname_in, drv->wrprot);
+
 		if (currprefs.floppyslots[dnum].df != fname_in) {
 			_tcsncpy (currprefs.floppyslots[dnum].df, fname_in, 255);
 			currprefs.floppyslots[dnum].df[255] = 0;
@@ -2015,6 +2025,7 @@ static void drive_fill_bigbuf (drive * drv, int force)
 	retrytrack = drv->lastdataacesstrack == drv->cyl * 2 + side;
 	if (!dskdmaen && !retrytrack)
 		drv->track_access_done = false;
+	//write_log (_T("%d:%d %d\n"), drv->cyl, side, retrytrack);
 
 	if (drv->writediskfile && drv->writetrackdata[tr].bitlen > 0) {
 		int i;
@@ -2402,6 +2413,7 @@ static int drive_write_pcdos (drive *drv, struct zfile *zf, bool count)
 			sectable[sector] = 1;
 			zfile_fseek (zf, drv->trackdata[drv->cyl * 2 + side].offs + sector * 512, SEEK_SET);
 			zfile_fwrite (secbuf + 4, sizeof (uae_u8), 512, zf);
+			//write_log (_T("PCDOS: track %d sector %d written\n"), drv->cyl * 2 + side, sector + 1);
 		}
 		sector = -1;
 	}
@@ -3718,6 +3730,7 @@ static void disk_doupdate_read (drive * drv, int floppybits)
 				word |= getonebit (drv->bigmfmbuf, drv->mfmpos);
 		}
 
+		//write_log (_T("%08X bo=%d so=%d mfmpos=%d dma=%d\n"), (word & 0xffffff), bitoffset, syncoffset, drv->mfmpos, dma_enable);
 		if (doreaddma () < 0) {
 			word >>= 1;
 			return;
@@ -4425,7 +4438,7 @@ static bool abr_loaded;
 static tinyxml2::XMLDocument abr_xml[2];
 static const TCHAR* abr_files[] = { _T("brainfile.xml"), _T("catlist.xml"), NULL };
 
-static void abrcheck(struct diskinfo* di)
+static void abrcheck(struct diskinfo *di)
 {
 	TCHAR path[MAX_DPATH];
 
@@ -4434,7 +4447,7 @@ static void abrcheck(struct diskinfo* di)
 		for (int i = 0; abr_files[i] && !error; i++) {
 			get_plugin_path(path, sizeof(path) / sizeof(TCHAR), _T("abr"));
 			_tcscat(path, abr_files[i]);
-			FILE* f = fopen(path, _T("rb"));
+			FILE *f = fopen(path, _T("rb"));
 			if (f) {
 				tinyxml2::XMLError err = abr_xml[i].LoadFile(f);
 				if (err != XML_SUCCESS) {
@@ -4442,8 +4455,7 @@ static void abrcheck(struct diskinfo* di)
 					error = true;
 				}
 				fclose(f);
-			}
-			else {
+			} else {
 				error = true;
 			}
 		}
@@ -4453,27 +4465,27 @@ static void abrcheck(struct diskinfo* di)
 	}
 	if (!abr_loaded)
 		return;
-	tinyxml2::XMLElement* detectedelementcrc32 = NULL;
-	tinyxml2::XMLElement* detectedelementrecog = NULL;
-	tinyxml2::XMLElement* e = abr_xml[0].FirstChildElement("Bootblocks");
+	tinyxml2::XMLElement *detectedelementcrc32 = NULL;
+	tinyxml2::XMLElement *detectedelementrecog = NULL;
+	tinyxml2::XMLElement *e = abr_xml[0].FirstChildElement("Bootblocks");
 	if (e) {
 		e = e->FirstChildElement("Bootblock");
 		if (e) {
 			do {
-				tinyxml2::XMLElement* ercrc = e->FirstChildElement("CRC");
+				tinyxml2::XMLElement *ercrc = e->FirstChildElement("CRC");
 				if (ercrc) {
-					const char* n_crc32 = ercrc->GetText();
+					const char *n_crc32 = ercrc->GetText();
 					if (strlen(n_crc32) == 8) {
-						char* endptr;
+						char *endptr;
 						uae_u32 crc32 = strtol(n_crc32, &endptr, 16);
 						if (di->bootblockcrc32 == crc32) {
 							detectedelementcrc32 = e;
 						}
 					}
 				}
-				tinyxml2::XMLElement* er = e->FirstChildElement("Recog");
+				tinyxml2::XMLElement *er = e->FirstChildElement("Recog");
 				if (er) {
-					const char* tr = er->GetText();
+					const char *tr = er->GetText();
 					bool detected = false;
 					while (tr) {
 						int offset = atoi(tr);
@@ -4491,8 +4503,7 @@ static void abrcheck(struct diskinfo* di)
 						tr = strchr(tr, ',');
 						if (!tr) {
 							detected = true;
-						}
-						else {
+						} else {
 							tr++;
 						}
 					}
@@ -4506,37 +4517,36 @@ static void abrcheck(struct diskinfo* di)
 			if (detectedelementcrc32 != NULL || detectedelementrecog != NULL) {
 				if (detectedelementcrc32) {
 					e = detectedelementcrc32;
-				}
-				else {
+				} else {
 					e = detectedelementrecog;
 				}
-				tinyxml2::XMLElement* e_name = e->FirstChildElement("Name");
+				tinyxml2::XMLElement *e_name = e->FirstChildElement("Name");
 				if (e_name) {
-					const char* n_name = e_name->GetText();
+					const char *n_name = e_name->GetText();
 					if (n_name) {
-						TCHAR* s = au(n_name);
+						TCHAR *s = au(n_name);
 						_tcscpy(di->bootblockinfo, s);
 						xfree(s);
 					}
 				}
-				tinyxml2::XMLElement* e_class = e->FirstChildElement("Class");
+				tinyxml2::XMLElement *e_class = e->FirstChildElement("Class");
 				if (e_class) {
-					const char* t_class = e_class->GetText();
+					const char *t_class = e_class->GetText();
 					if (t_class) {
-						tinyxml2::XMLElement* ecats = abr_xml[1].FirstChildElement("Categories");
+						tinyxml2::XMLElement *ecats = abr_xml[1].FirstChildElement("Categories");
 						if (ecats) {
-							tinyxml2::XMLElement* ecat = ecats->FirstChildElement("Category");
+							tinyxml2::XMLElement *ecat = ecats->FirstChildElement("Category");
 							if (ecat) {
 								do {
-									tinyxml2::XMLElement* ecatr = ecat->FirstChildElement("abbrev");
+									tinyxml2::XMLElement *ecatr = ecat->FirstChildElement("abbrev");
 									if (ecatr) {
-										const char* catabbr = ecatr->GetText();
+										const char *catabbr = ecatr->GetText();
 										if (!strcmp(catabbr, t_class)) {
-											tinyxml2::XMLElement* ecatn = ecat->FirstChildElement("Name");
+											tinyxml2::XMLElement *ecatn = ecat->FirstChildElement("Name");
 											if (ecatn) {
-												const char* n_catname = ecatn->GetText();
+												const char *n_catname = ecatn->GetText();
 												if (n_catname) {
-													TCHAR* s = au(n_catname);
+													TCHAR *s = au(n_catname);
 													_tcscpy(di->bootblockclass, s);
 													xfree(s);
 													break;

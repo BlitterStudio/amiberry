@@ -1,28 +1,22 @@
- /*
-  * UAE - The Un*x Amiga Emulator
-  *
-  * routines to handle compressed file automatically
-  *
-  * (c) 1996 Samuel Devulder, Tim Gunn
-  *     2002-2007 Toni Wilen
-  */
+/*
+* UAE - The Un*x Amiga Emulator
+*
+* routines to handle compressed file automatically
+*
+* (c) 1996 Samuel Devulder, Tim Gunn
+*     2002-2007 Toni Wilen
+*/
 
 #define RECURSIVE_ARCHIVES 1
+//#define ZFILE_DEBUG
 
-#include <time.h>
-#include <string.h>
-#include <stdio.h>
-#include <strings.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <stdarg.h>
-
-
+#include "sysconfig.h"
 #include "sysdeps.h"
 
 #include "options.h"
 #include "zfile.h"
 #include "disk.h"
+#include "gui.h"
 #include "crc32.h"
 #include "fsdb.h"
 #include "fsusage.h"
@@ -763,6 +757,8 @@ end:
 	return NULL;
 }
 
+
+#include "fdi2raw.h"
 static struct zfile *fdi (struct zfile *z, int index, int *retcode)
 {
 	int i, j, r;
@@ -1290,12 +1286,12 @@ end:
 }
 #endif
 
-static const TCHAR *uae_ignoreextensions[] =
-  { _T(".gif"), _T(".jpg"), _T(".png"), _T(".xml"), _T(".pdf"), _T(".txt"), 0 };
-static const TCHAR *uae_diskimageextensions[] =
-  { _T(".adf"), _T(".adz"), _T(".ipf"), _T(".scp"), _T(".fdi"), _T(".exe"), _T(".dms"), _T(".wrp"), _T(".dsq"), 0 };
+const TCHAR *uae_ignoreextensions[] =
+{ _T(".gif"), _T(".jpg"), _T(".png"), _T(".xml"), _T(".pdf"), _T(".txt"), 0 };
+const TCHAR *uae_diskimageextensions[] =
+{ _T(".adf"), _T(".adz"), _T(".ipf"), _T(".scp"), _T(".fdi"), _T(".exe"), _T(".dms"), _T(".wrp"), _T(".dsq"), 0 };
 
-int zfile_is_ignore_ext(const TCHAR *name)
+int zfile_is_ignore_ext (const TCHAR *name)
 {
 	int i;
 	const TCHAR *ext;
@@ -1651,7 +1647,7 @@ static struct zfile *openzip (const TCHAR *pname)
 			name[i] = 0;
 			for (j = 0; plugins_7z[j]; j++) {
 				int len = _tcslen (plugins_7z[j]);
-				if (name[i - len - 1] == '.' && !stricmp(name + i - len, plugins_7z[j])) {
+				if (name[i - len - 1] == '.' && !stricmp (name + i - len, plugins_7z[j])) {
 					struct zfile *f = zfile_fopen_nozip (name, _T("rb"));
 					if (f) {
 						f->zipname = my_strdup (name + i + 1);
@@ -2076,12 +2072,29 @@ struct zfile *zfile_fopen_data (const TCHAR *name, uae_u64 size, const uae_u8 *d
 }
 
 /* dump file use only */
-uae_u8* zfile_get_data_pointer(struct zfile* z, int* len)
+uae_u8 *zfile_get_data_pointer(struct zfile *z, int *len)
 {
 	if (!z->data)
 		return NULL;
 	*len = z->size;
 	return z->data;
+}
+
+uae_u8 *zfile_load_data (const TCHAR *name, const uae_u8 *data,int datalen, int *outlen)
+{
+	struct zfile *zf, *f;
+	int size;
+	uae_u8 *out;
+	
+	zf = zfile_fopen_data (name, datalen, data);
+	f = zfile_gunzip (zf);
+	size = f->datasize;
+	zfile_fseek (f, 0, SEEK_SET);
+	out = xmalloc (uae_u8, size);
+	zfile_fread (out, 1, size, f);
+	zfile_fclose (f);
+	*outlen = size;
+	return out;
 }
 
 uae_u8 *zfile_load_file(const TCHAR *name, int *outlen)
@@ -2129,6 +2142,7 @@ uae_s64 zfile_ftell (struct zfile *z)
 	if (z->data || z->dataseek || z->parent)
 		return z->seek;
 	return _ftelli64 (z->f);
+
 }
 
 uae_s64 zfile_fseek (struct zfile *z, uae_s64 offset, int mode)
@@ -2516,6 +2530,9 @@ static struct znode *znode_alloc (struct znode *parent, const TCHAR *name)
 	recurparent (fullpath, parent, FALSE);
 	_tcscat (fullpath, FSDB_DIR_SEPARATOR_S);
 	_tcscat (fullpath, tmpname);
+#ifdef ZFILE_DEBUG
+	write_log (_T("znode_alloc vol='%s' parent='%s' name='%s'\n"), parent->volume->root.name, parent->name, name);
+#endif
 	zn->fullname = my_strdup (fullpath);
 	zn->name = my_strdup (tmpname);
 	zn->volume = parent->volume;
@@ -2600,6 +2617,9 @@ static struct zvolume *zvolume_alloc_2 (const TCHAR *name, struct zfile *z, unsi
 	}
 	root->name = my_strdup (name + i);
 	root->fullname = my_strdup (name);
+#ifdef ZFILE_DEBUG
+	write_log (_T("created zvolume: '%s' (%s)\n"), root->name, root->fullname);
+#endif
 	if (volname)
 		zv->volumename = my_strdup (volname);
 	if (z) {
@@ -2621,7 +2641,7 @@ static struct zvolume *zvolume_alloc_nofile (const TCHAR *name, unsigned int id,
 	return zvolume_alloc_2 (name, NULL, id, handle, volumename);
 }
 
-static struct zvolume *zvolume_alloc_empty (struct zvolume *prev, const TCHAR *name)
+struct zvolume *zvolume_alloc_empty (struct zvolume *prev, const TCHAR *name)
 {
 	struct zvolume *zv = zvolume_alloc_2(name, 0, 0, 0, NULL);
 	if (!zv)
@@ -2808,6 +2828,9 @@ static struct zvolume *prepare_recursive_volume (struct zvolume *zv, const TCHAR
 	struct zvolume *zvnew = NULL;
 	int done = 0;
 
+#ifdef ZFILE_DEBUG
+	write_log (_T("unpacking '%s'\n"), path);
+#endif
 	zf = zfile_open_archive (path, 0);
 	if (!zf)
 		goto end;
@@ -2861,6 +2884,9 @@ static struct znode *get_znode (struct zvolume *zv, const TCHAR *ppath, int recu
 						TCHAR newpath[MAX_DPATH];
 						newpath[0] = 0;
 						recurparent (newpath, zn, recurse);
+#ifdef ZFILE_DEBUG
+						write_log (_T("'%s'\n"), newpath);
+#endif
 						zvdeep = prepare_recursive_volume (zvdeep, newpath, ZFD_ALL);
 						if (!zvdeep) {
 							write_log (_T("failed to unpack '%s'\n"), newpath);
@@ -2902,7 +2928,7 @@ static bool valid_zi(struct zarchive_info *zai)
 	return true;
 }
 
-static struct znode *znode_adddir (struct znode *parent, const TCHAR *name, struct zarchive_info *zai)
+struct znode *znode_adddir (struct znode *parent, const TCHAR *name, struct zarchive_info *zai)
 {
 	struct znode *zn;
 	TCHAR path[MAX_DPATH];
@@ -3029,7 +3055,7 @@ static struct zvolume *zfile_fopen_directory (const TCHAR *dirname)
 	return zv;
 }
 
-static struct zvolume *zfile_fopen_archive (const TCHAR *filename, int flags)
+struct zvolume *zfile_fopen_archive (const TCHAR *filename, int flags)
 {
 	struct zvolume *zv = NULL;
 	struct zfile *zf = zfile_fopen_nozip (filename, _T("rb"));
@@ -3169,7 +3195,7 @@ struct zdirectory {
 	TCHAR **filenames;
 };
 
-static struct zdirectory *zfile_opendir_archive (const TCHAR *path, int flags)
+struct zdirectory *zfile_opendir_archive (const TCHAR *path, int flags)
 {
 	struct zvolume *zv = get_zvolume (path);
 	bool created = false;
@@ -3216,7 +3242,7 @@ void zfile_closedir_archive (struct zdirectory *zd)
 	xfree (zd->filenames);
 	xfree (zd);
 }
-static int zfile_readdir_archive (struct zdirectory *zd, TCHAR *out, bool fullpath)
+int zfile_readdir_archive (struct zdirectory *zd, TCHAR *out, bool fullpath)
 {
 	if (out)
 		out[0] = 0;

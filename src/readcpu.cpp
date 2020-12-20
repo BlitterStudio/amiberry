@@ -6,149 +6,154 @@
 * Copyright 1995,1996 Bernd Schmidt
 */
 
+#include "sysconfig.h"
 #include "sysdeps.h"
+#include <ctype.h>
+
 #include "readcpu.h"
 
 int nr_cpuop_funcs;
 
 struct mnemolookup lookuptab[] = {
-	{ i_ILLG, _T("ILLEGAL") },
-	{ i_OR, _T("OR") },
-	{ i_CHK, _T("CHK") },
-	{ i_CHK2, _T("CHK2") },
-	{ i_AND, _T("AND") },
-	{ i_EOR, _T("EOR") },
-	{ i_ORSR, _T("ORSR") },
-	{ i_ANDSR, _T("ANDSR") },
-	{ i_EORSR, _T("EORSR") },
-	{ i_SUB, _T("SUB") },
-	{ i_SUBA, _T("SUBA") },
-	{ i_SUBX, _T("SUBX") },
-	{ i_SBCD, _T("SBCD") },
-	{ i_ADD, _T("ADD") },
-	{ i_ADDA, _T("ADDA") },
-	{ i_ADDX, _T("ADDX") },
-	{ i_ABCD, _T("ABCD") },
-	{ i_NEG, _T("NEG") },
-	{ i_NEGX, _T("NEGX") },
-	{ i_NBCD, _T("NBCD") },
-	{ i_CLR, _T("CLR") },
-	{ i_NOT, _T("NOT") },
-	{ i_TST, _T("TST") },
-	{ i_BTST, _T("BTST") },
-	{ i_BCHG, _T("BCHG") },
-	{ i_BCLR, _T("BCLR") },
-	{ i_BSET, _T("BSET") },
-	{ i_CMP, _T("CMP") },
-	{ i_CMPM, _T("CMPM") },
-	{ i_CMPA, _T("CMPA") },
-	{ i_MVPRM, _T("MVPRM") },
-	{ i_MVPMR, _T("MVPMR") },
-	{ i_MOVE, _T("MOVE") },
-	{ i_MOVEA, _T("MOVEA") },
-	{ i_MVSR2, _T("MVSR2") },
-	{ i_MV2SR, _T("MV2SR") },
-	{ i_SWAP, _T("SWAP") },
-	{ i_EXG, _T("EXG") },
-	{ i_EXT, _T("EXT") },
-	{ i_MVMEL, _T("MVMEL"), _T("MOVEM") },
-	{ i_MVMLE, _T("MVMLE"), _T("MOVEM") },
-	{ i_TRAP, _T("TRAP") },
-	{ i_MVR2USP, _T("MVR2USP") },
-	{ i_MVUSP2R, _T("MVUSP2R") },
-	{ i_NOP, _T("NOP") },
-	{ i_RESET, _T("RESET") },
-	{ i_RTE, _T("RTE") },
-	{ i_RTD, _T("RTD") },
-	{ i_LINK, _T("LINK") },
-	{ i_UNLK, _T("UNLK") },
-	{ i_RTS, _T("RTS") },
-	{ i_STOP, _T("STOP") },
-	{ i_TRAPV, _T("TRAPV") },
-	{ i_RTR, _T("RTR") },
-	{ i_JSR, _T("JSR") },
-	{ i_JMP, _T("JMP") },
-	{ i_BSR, _T("BSR") },
-	{ i_Bcc, _T("Bcc") },
-	{ i_LEA, _T("LEA") },
-	{ i_PEA, _T("PEA") },
-	{ i_DBcc, _T("DBcc") },
-	{ i_Scc, _T("Scc") },
-	{ i_DIVU, _T("DIVU") },
-	{ i_DIVS, _T("DIVS") },
-	{ i_MULU, _T("MULU") },
-	{ i_MULS, _T("MULS") },
-	{ i_ASR, _T("ASR") },
-	{ i_ASL, _T("ASL") },
-	{ i_LSR, _T("LSR") },
-	{ i_LSL, _T("LSL") },
-	{ i_ROL, _T("ROL") },
-	{ i_ROR, _T("ROR") },
-	{ i_ROXL, _T("ROXL") },
-	{ i_ROXR, _T("ROXR") },
-	{ i_ASRW, _T("ASRW") },
-	{ i_ASLW, _T("ASLW") },
-	{ i_LSRW, _T("LSRW") },
-	{ i_LSLW, _T("LSLW") },
-	{ i_ROLW, _T("ROLW") },
-	{ i_RORW, _T("RORW") },
-	{ i_ROXLW, _T("ROXLW") },
-	{ i_ROXRW, _T("ROXRW") },
+	{ i_ILLG, _T("ILLEGAL"), NULL, 0 },
+	{ i_OR, _T("OR"), NULL, 1 | MNEMOFLAG_LOOPMODE },
+	{ i_CHK, _T("CHK"), NULL, 0 },
+	{ i_CHK2, _T("CHK2"), NULL, 0 },
+	{ i_AND, _T("AND"), NULL, 1 | MNEMOFLAG_LOOPMODE },
+	{ i_EOR, _T("EOR"), NULL, 1 | MNEMOFLAG_LOOPMODE },
+	{ i_ORSR, _T("ORSR"), _T("OR"), 0 },
+	{ i_ANDSR, _T("ANDSR"), _T("AND"), 0 },
+	{ i_EORSR, _T("EORSR"), _T("EOR"), 0 },
+	{ i_SUB, _T("SUB"), NULL, 1 | MNEMOFLAG_LOOPMODE },
+	{ i_SUBA, _T("SUBA"), NULL, 1 | MNEMOFLAG_LOOPMODE },
+	{ i_SUBX, _T("SUBX"), NULL, 0 | MNEMOFLAG_LOOPMODE },
+	{ i_SBCD, _T("SBCD"), NULL, 0 | MNEMOFLAG_LOOPMODE },
+	{ i_ADD, _T("ADD"), NULL, 1 | MNEMOFLAG_LOOPMODE },
+	{ i_ADDA, _T("ADDA"), NULL, 1 | MNEMOFLAG_LOOPMODE },
+	{ i_ADDX, _T("ADDX"), NULL, 0 | MNEMOFLAG_LOOPMODE },
+	{ i_ABCD, _T("ABCD"), NULL, 0 | MNEMOFLAG_LOOPMODE },
+	{ i_NEG, _T("NEG"), NULL, 1 | MNEMOFLAG_LOOPMODE },
+	{ i_NEGX, _T("NEGX"), NULL, 1 | MNEMOFLAG_LOOPMODE },
+	{ i_NBCD, _T("NBCD"), NULL, 0 | MNEMOFLAG_LOOPMODE },
+	{ i_CLR, _T("CLR"), NULL, 1 | MNEMOFLAG_LOOPMODE },
+	{ i_NOT, _T("NOT"), NULL, 1 | MNEMOFLAG_LOOPMODE },
+	{ i_TST, _T("TST"), NULL, 1 | MNEMOFLAG_LOOPMODE },
+	{ i_BTST, _T("BTST"), NULL, 1 },
+	{ i_BCHG, _T("BCHG"), NULL, 1 },
+	{ i_BCLR, _T("BCLR"), NULL, 1 },
+	{ i_BSET, _T("BSET"), NULL, 1 },
+	{ i_CMP, _T("CMP"), NULL, 1 | MNEMOFLAG_LOOPMODE },
+	{ i_CMPM, _T("CMPM"), NULL, 1 | MNEMOFLAG_LOOPMODE },
+	{ i_CMPA, _T("CMPA"), NULL, 1 | MNEMOFLAG_LOOPMODE },
+	{ i_MVPRM, _T("MVPRM"), _T("MOVEP"), 0 },
+	{ i_MVPMR, _T("MVPMR"), _T("MOVEP"), 0 },
+	{ i_MOVE, _T("MOVE"), NULL, 1 | MNEMOFLAG_LOOPMODE },
+	{ i_MOVEA, _T("MOVEA"), NULL, 1 | MNEMOFLAG_LOOPMODE },
+	{ i_MVSR2, _T("MVSR2"), _T("MOVE"), 0 },
+	{ i_MV2SR, _T("MV2SR"), _T("MOVE"), 0 },
+	{ i_SWAP, _T("SWAP"), NULL, 0 },
+	{ i_EXG, _T("EXG"), NULL, 0 },
+	{ i_EXT, _T("EXT"), NULL, 0 },
+	{ i_MVMEL, _T("MVMEL"), _T("MOVEM"), 0 },
+	{ i_MVMLE, _T("MVMLE"), _T("MOVEM"), 0 },
+	{ i_TRAP, _T("TRAP"), NULL, 0 },
+	{ i_MVR2USP, _T("MVR2USP"), _T("MOVE"), 0 },
+	{ i_MVUSP2R, _T("MVUSP2R"), _T("MOVE"), 0 },
+	{ i_NOP, _T("NOP"), NULL, 0 },
+	{ i_RESET, _T("RESET"), NULL, 0 },
+	{ i_RTE, _T("RTE"), NULL, 0 },
+	{ i_RTD, _T("RTD"), NULL, 0 },
+	{ i_LINK, _T("LINK"), NULL, 0 },
+	{ i_UNLK, _T("UNLK"), NULL, 0 },
+	{ i_RTS, _T("RTS"), NULL, 0 },
+	{ i_STOP, _T("STOP"), NULL, 0 },
+	{ i_TRAPV, _T("TRAPV"), NULL, 0 },
+	{ i_RTR, _T("RTR"), NULL, 0 },
+	{ i_JSR, _T("JSR"), NULL, 0 },
+	{ i_JMP, _T("JMP"), NULL, 0 },
+	{ i_BSR, _T("BSR"), NULL, 0 },
+	{ i_Bcc, _T("Bcc"), NULL, 0 },
+	{ i_LEA, _T("LEA"), NULL, 0 },
+	{ i_PEA, _T("PEA"), NULL, 0 },
+	{ i_DBcc, _T("DBcc"), NULL, 0 },
+	{ i_Scc, _T("Scc"), NULL, 1 },
+	{ i_DIVU, _T("DIVU"), NULL, 1 },
+	{ i_DIVS, _T("DIVS"), NULL, 1 },
+	{ i_MULU, _T("MULU"), NULL, 1 },
+	{ i_MULS, _T("MULS"), NULL, 1 },
+	{ i_ASR, _T("ASR"), NULL,  },
+	{ i_ASL, _T("ASL"), NULL, 0 },
+	{ i_LSR, _T("LSR"), NULL, 0 },
+	{ i_LSL, _T("LSL"), NULL, 0 },
+	{ i_ROL, _T("ROL"), NULL, 0 },
+	{ i_ROR, _T("ROR"), NULL, 0 },
+	{ i_ROXL, _T("ROXL"), NULL, 1 },
+	{ i_ROXR, _T("ROXR"), NULL, 1 },
+	{ i_ASRW, _T("ASRW"), _T("ASR"), 1 | MNEMOFLAG_LOOPMODE },
+	{ i_ASLW, _T("ASLW"), _T("ASL"), 1 | MNEMOFLAG_LOOPMODE },
+	{ i_LSRW, _T("LSRW"), _T("LSR"), 1 | MNEMOFLAG_LOOPMODE },
+	{ i_LSLW, _T("LSLW"), _T("LSL"), 1 | MNEMOFLAG_LOOPMODE },
+	{ i_ROLW, _T("ROLW"), _T("ROL"), 1 | MNEMOFLAG_LOOPMODE },
+	{ i_RORW, _T("RORW"), _T("ROR"), 1 | MNEMOFLAG_LOOPMODE },
+	{ i_ROXLW, _T("ROXLW"), _T("ROXL"), 1 | MNEMOFLAG_LOOPMODE },
+	{ i_ROXRW, _T("ROXRW"), _T("ROXR"), 1 | MNEMOFLAG_LOOPMODE },
 
-	{ i_MOVE2C, _T("MOVE2C"), _T("MOVEC") },
-	{ i_MOVEC2, _T("MOVEC2"), _T("MOVEC") },
-	{ i_CAS, _T("CAS") },
-	{ i_CAS2, _T("CAS2") },
-	{ i_MULL, _T("MULL") },
-	{ i_DIVL, _T("DIVL") },
+	{ i_MOVE2C, _T("MOVE2C"), _T("MOVEC"), 0 },
+	{ i_MOVEC2, _T("MOVEC2"), _T("MOVEC"), 0 },
+	{ i_CAS, _T("CAS"), NULL, 1 },
+	{ i_CAS2, _T("CAS2"), NULL, 1 },
+	{ i_MULL, _T("MULL"), NULL, 0 },
+	{ i_DIVL, _T("DIVL"), NULL, 0 },
 
-	{ i_BFTST, _T("BFTST") },
-	{ i_BFEXTU, _T("BFEXTU") },
-	{ i_BFCHG, _T("BFCHG") },
-	{ i_BFEXTS, _T("BFEXTS") },
-	{ i_BFCLR, _T("BFCLR") },
-	{ i_BFFFO, _T("BFFFO") },
-	{ i_BFSET, _T("BFSET") },
-	{ i_BFINS, _T("BFINS") },
+	{ i_BFTST, _T("BFTST"), NULL, 0 },
+	{ i_BFEXTU, _T("BFEXTU"), NULL, 0 },
+	{ i_BFCHG, _T("BFCHG"), NULL, 0 },
+	{ i_BFEXTS, _T("BFEXTS"), NULL, 0 },
+	{ i_BFCLR, _T("BFCLR"), NULL, 0 },
+	{ i_BFFFO, _T("BFFFO"), NULL, 0 },
+	{ i_BFSET, _T("BFSET"), NULL, 0 },
+	{ i_BFINS, _T("BFINS"), NULL, 0 },
 
-	{ i_PACK, _T("PACK") },
-	{ i_UNPK, _T("UNPK") },
-	{ i_TAS, _T("TAS") },
-	{ i_BKPT, _T("BKPT") },
-	{ i_CALLM, _T("CALLM") },
-	{ i_RTM, _T("RTM") },
-	{ i_TRAPcc, _T("TRAPcc") },
-	{ i_MOVES, _T("MOVES") },
+	{ i_PACK, _T("PACK"), NULL, 0 },
+	{ i_UNPK, _T("UNPK"), NULL, 0 },
+	{ i_TAS, _T("TAS"), NULL, 1 },
+	{ i_BKPT, _T("BKPT"), NULL, 0 },
+	{ i_CALLM, _T("CALLM"), NULL, 0 },
+	{ i_RTM, _T("RTM"), NULL, 0 },
+	{ i_TRAPcc, _T("TRAPcc"), NULL, 0 },
+	{ i_MOVES, _T("MOVES"), NULL, 1 },
 
-	{ i_FPP, _T("FPP") },
-	{ i_FDBcc, _T("FDBcc") },
-	{ i_FScc, _T("FScc") },
-	{ i_FTRAPcc, _T("FTRAPcc") },
-	{ i_FBcc, _T("FBcc") },
-	{ i_FSAVE, _T("FSAVE") },
-	{ i_FRESTORE, _T("FRESTORE") },
+	{ i_FPP, _T("FPP"), NULL, 0 },
+	{ i_FDBcc, _T("FDBcc"), NULL, 0 },
+	{ i_FScc, _T("FScc"), NULL, 0 },
+	{ i_FTRAPcc, _T("FTRAPcc"), NULL, 0 },
+	{ i_FBcc, _T("FBcc"), NULL, 0 },
+	{ i_FSAVE, _T("FSAVE"), NULL, 0 },
+	{ i_FRESTORE, _T("FRESTORE"), NULL, 0 },
 
-	{ i_CINVL, _T("CINVL") },
-	{ i_CINVP, _T("CINVP") },
-	{ i_CINVA, _T("CINVA") },
-	{ i_CPUSHL, _T("CPUSHL") },
-	{ i_CPUSHP, _T("CPUSHP") },
-	{ i_CPUSHA, _T("CPUSHA") },
-	{ i_MOVE16, _T("MOVE16") },
+	{ i_CINVL, _T("CINVL"), NULL, 0 },
+	{ i_CINVP, _T("CINVP"), NULL, 0 },
+	{ i_CINVA, _T("CINVA"), NULL, 0 },
+	{ i_CPUSHL, _T("CPUSHL"), NULL, 0 },
+	{ i_CPUSHP, _T("CPUSHP"), NULL, 0 },
+	{ i_CPUSHA, _T("CPUSHA"), NULL, 0 },
+	{ i_MOVE16, _T("MOVE16"), NULL, 0 },
 
-	{ i_MMUOP030, _T("MMUOP030") },
-	{ i_PFLUSHN, _T("PFLUSHN") },
-	{ i_PFLUSH, _T("PFLUSH") },
-	{ i_PFLUSHAN, _T("PFLUSHAN") },
-	{ i_PFLUSHA, _T("PFLUSHA") },
+	{ i_MMUOP030, _T("MMUOP030"), NULL, 0 },
+	{ i_PFLUSHN, _T("PFLUSHN"), NULL, 0 },
+	{ i_PFLUSH, _T("PFLUSH"), NULL, 0 },
+	{ i_PFLUSHAN, _T("PFLUSHAN"), NULL, 0 },
+	{ i_PFLUSHA, _T("PFLUSHA"), NULL, 0 },
 
-	{ i_PLPAR, _T("PLPAR") },
-	{ i_PLPAW, _T("PLPAW") },
-	{ i_PTESTR, _T("PTESTR") },
-	{ i_PTESTW, _T("PTESTW") },
+	{ i_PLPAR, _T("PLPAR"), NULL, 0 },
+	{ i_PLPAW, _T("PLPAW"), NULL, 0 },
+	{ i_PTESTR, _T("PTESTR"), NULL, 0 },
+	{ i_PTESTW, _T("PTESTW"), NULL, 0 },
 
-	{ i_LPSTOP, _T("LPSTOP") },
-	{ i_ILLG, _T("") },
+	{ i_LPSTOP, _T("LPSTOP"), NULL, 0 },
+	{ i_HALT, _T("HALT"), NULL, 0 },
+	{ i_PULSE, _T("PULSE"), NULL, 0 },
+	{ i_ILLG, _T(""), NULL, 0 },
 };
 
 struct instr *table68k;
@@ -168,7 +173,7 @@ static amodes mode_from_str (const TCHAR *str)
 	if (_tcsncmp (str, _T("PC8r"), 4) == 0) return PC8r;
 	if (_tcsncmp (str, _T("Immd"), 4) == 0) return imm;
 	abort ();
-	return (amodes)0;
+	return Dreg;
 }
 
 STATIC_INLINE amodes mode_from_mr (int mode, int reg)
@@ -194,43 +199,37 @@ STATIC_INLINE amodes mode_from_mr (int mode, int reg)
 		}
 	}
 	abort ();
-	return (amodes)0;
+	return Dreg;
 }
 
-static void build_insn(int insn)
+static void build_insn (int insn)
 {
 	int find = -1;
 	int variants;
 	struct instr_def id;
-	const TCHAR* opcstr;
+	const TCHAR *opcstr;
 	int i, n;
 
 	int flaglive = 0, flagdead = 0;
 	int cflow = 0;
-
-	// Mask of flags set/used
-	unsigned char flags_set = 0, flags_used = 0;
 
 	id = defs68k[insn];
 
 	// Control flow information
 	cflow = id.cflow;
 
+	// Mask of flags set/used
+	unsigned char flags_set = 0, flags_used = 0;
+
 	for (i = 0, n = 4; i < 5; i++, n--) {
 		switch (id.flaginfo[i].flagset) {
-		case fa_unset:
-		case fa_isjmp:
-			break;
-		default:
-			flags_set |= (1 << n);
+		case fa_unset: case fa_isjmp: break;
+		default: flags_set |= (1 << n);
 		}
 
 		switch (id.flaginfo[i].flaguse) {
-		case fu_unused:
-		case fu_isjmp:
-			break;
-		default:
-			flags_used |= (1 << n);
+		case fu_unused: case fu_isjmp: break;
+		default: flags_used |= (1 << n);
 		}
 	}
 
@@ -270,7 +269,7 @@ out2:
 		int mnp = 0;
 		int bitno = 0;
 		int unsized = 1;
-		TCHAR mnemonic[64];
+		TCHAR mnemonic[10];
 		int mnemo;
 
 		wordsizes sz = sz_long;
@@ -313,9 +312,6 @@ out2:
 		if (bitcnt[bitI] && (bitval[bitI] == 0x00 || bitval[bitI] == 0xff))
 			continue;
 
-		if (bitcnt[bitE] && (bitval[bitE] == 0x00))
-			continue;
-
 		/* bitI and bitC get copied to biti and bitc */
 		if (bitcnt[bitI]) {
 			bitval[biti] = bitval[bitI]; bitpos[biti] = bitpos[bitI];
@@ -343,8 +339,7 @@ out2:
 					break;
 				default: abort();
 				}
-			}
-			else {
+			} else {
 				mnemonic[mnp] = opcstr[pos];
 				if (mnemonic[mnp] == 'f') {
 					find = -1;
@@ -370,6 +365,7 @@ out2:
 
 		/* parse the source address */
 		usesrc = 1;
+
 		switch (opcstr[pos++]) {
 		case 'D':
 			srcmode = Dreg;
@@ -392,9 +388,6 @@ out2:
 			case 'P': srcmode = Aipi; pos++; break;
 			case 'a': srcmode = Aind; pos++; break;
 			}
-			break;
-		case 'L':
-			srcmode = absl;
 			break;
 		case '#':
 			switch (opcstr[pos++]) {
@@ -442,15 +435,15 @@ out2:
 				}
 				break;
 			case 'E': srcmode = immi; srcreg = bitval[bitE];
-				if (CPU_EMU_SIZE < 5) {
+				if (CPU_EMU_SIZE < 5) { // gb-- what is CPU_EMU_SIZE used for ??
 					/* 1..255 */
 					srcgather = 1;
 					srctype = 6;
 					srcpos = bitpos[bitE];
 				}
 				break;
-			case 'p': srcmode = immi; srcreg = bitval[bitp];
-				if (CPU_EMU_SIZE < 5) {
+			case 'p': srcmode = immi; srcreg = bitval[bitK];
+				if (CPU_EMU_SIZE < 5) { // gb-- what is CPU_EMU_SIZE used for ??
 					/* 0..3 */
 					srcgather = 1;
 					srctype = 7;
@@ -462,13 +455,13 @@ out2:
 			break;
 		case 'd':
 			srcreg = bitval[bitD];
-			srcmode = mode_from_mr(bitval[bitd], bitval[bitD]);
+			srcmode = mode_from_mr(bitval[bitd],bitval[bitD]);
 			if (srcmode == am_illg)
 				continue;
 			if (CPU_EMU_SIZE < 2 &&
 				(srcmode == Areg || srcmode == Dreg || srcmode == Aind
-					|| srcmode == Ad16 || srcmode == Ad8r || srcmode == Aipi
-					|| srcmode == Apdi))
+				|| srcmode == Ad16 || srcmode == Ad8r || srcmode == Aipi
+				|| srcmode == Apdi))
 			{
 				srcgather = 1; srcpos = bitpos[bitD];
 			}
@@ -478,30 +471,28 @@ out2:
 					/* exclusion */
 					do {
 						pos++;
-						if (mode_from_str(opcstr + pos) == srcmode)
+						if (mode_from_str(opcstr+pos) == srcmode)
 							goto nomatch;
 						pos += 4;
 					} while (opcstr[pos] == ',');
 					pos++;
-				}
-				else {
-					if (opcstr[pos + 4] == '-') {
+				} else {
+					if (opcstr[pos+4] == '-') {
 						/* replacement */
-						if (mode_from_str(opcstr + pos) == srcmode)
-							srcmode = mode_from_str(opcstr + pos + 5);
+						if (mode_from_str(opcstr+pos) == srcmode)
+							srcmode = mode_from_str(opcstr+pos+5);
 						else
 							goto nomatch;
 						pos += 10;
-					}
-					else {
+					} else {
 						/* normal */
-						while (mode_from_str(opcstr + pos) != srcmode) {
+						while(mode_from_str(opcstr+pos) != srcmode) {
 							pos += 4;
 							if (opcstr[pos] == ']')
 								goto nomatch;
 							pos++;
 						}
-						while (opcstr[pos] != ']') pos++;
+						while(opcstr[pos] != ']') pos++;
 						pos++;
 						break;
 					}
@@ -513,14 +504,14 @@ out2:
 			break;
 		case 's':
 			srcreg = bitval[bitS];
-			srcmode = mode_from_mr(bitval[bits], bitval[bitS]);
+			srcmode = mode_from_mr(bitval[bits],bitval[bitS]);
 
 			if (srcmode == am_illg)
 				continue;
 			if (CPU_EMU_SIZE < 2 &&
 				(srcmode == Areg || srcmode == Dreg || srcmode == Aind
-					|| srcmode == Ad16 || srcmode == Ad8r || srcmode == Aipi
-					|| srcmode == Apdi))
+				|| srcmode == Ad16 || srcmode == Ad8r || srcmode == Aipi
+				|| srcmode == Apdi))
 			{
 				srcgather = 1; srcpos = bitpos[bitS];
 			}
@@ -530,30 +521,28 @@ out2:
 					/* exclusion */
 					do {
 						pos++;
-						if (mode_from_str(opcstr + pos) == srcmode)
+						if (mode_from_str(opcstr+pos) == srcmode)
 							goto nomatch;
 						pos += 4;
 					} while (opcstr[pos] == ',');
 					pos++;
-				}
-				else {
-					if (opcstr[pos + 4] == '-') {
+				} else {
+					if (opcstr[pos+4] == '-') {
 						/* replacement */
-						if (mode_from_str(opcstr + pos) == srcmode)
-							srcmode = mode_from_str(opcstr + pos + 5);
+						if (mode_from_str(opcstr+pos) == srcmode)
+							srcmode = mode_from_str(opcstr+pos+5);
 						else
 							goto nomatch;
 						pos += 10;
-					}
-					else {
+					} else {
 						/* normal */
-						while (mode_from_str(opcstr + pos) != srcmode) {
+						while(mode_from_str(opcstr+pos) != srcmode) {
 							pos += 4;
 							if (opcstr[pos] == ']')
 								goto nomatch;
 							pos++;
 						}
-						while (opcstr[pos] != ']') pos++;
+						while(opcstr[pos] != ']') pos++;
 						pos++;
 					}
 				}
@@ -586,7 +575,7 @@ out2:
 			default: abort();
 			}
 			if (dstpos < 0 || dstpos >= 32)
-				abort();
+				abort ();
 			break;
 		case 'A':
 			destmode = Areg;
@@ -597,15 +586,10 @@ out2:
 			case 'x': destreg = 0; dstgather = 0; dstpos = 0; break;
 			default: abort();
 			}
-			if (destmode != absl && (dstpos < 0 || dstpos >= 32))
-				abort();
 			switch (opcstr[pos]) {
 			case 'p': destmode = Apdi; pos++; break;
 			case 'P': destmode = Aipi; pos++; break;
 			}
-			break;
-		case 'L':
-			destmode = absl;
 			break;
 		case '#':
 			switch (opcstr[pos++]) {
@@ -623,13 +607,13 @@ out2:
 			break;
 		case 'd':
 			destreg = bitval[bitD];
-			destmode = mode_from_mr(bitval[bitd], bitval[bitD]);
+			destmode = mode_from_mr(bitval[bitd],bitval[bitD]);
 			if (destmode == am_illg)
 				continue;
 			if (CPU_EMU_SIZE < 1 &&
 				(destmode == Areg || destmode == Dreg || destmode == Aind
-					|| destmode == Ad16 || destmode == Ad8r || destmode == Aipi
-					|| destmode == Apdi))
+				|| destmode == Ad16 || destmode == Ad8r || destmode == Aipi
+				|| destmode == Apdi))
 			{
 				dstgather = 1; dstpos = bitpos[bitD];
 			}
@@ -640,30 +624,28 @@ out2:
 					/* exclusion */
 					do {
 						pos++;
-						if (mode_from_str(opcstr + pos) == destmode)
+						if (mode_from_str(opcstr+pos) == destmode)
 							goto nomatch;
 						pos += 4;
 					} while (opcstr[pos] == ',');
 					pos++;
-				}
-				else {
-					if (opcstr[pos + 4] == '-') {
+				} else {
+					if (opcstr[pos+4] == '-') {
 						/* replacement */
-						if (mode_from_str(opcstr + pos) == destmode)
-							destmode = mode_from_str(opcstr + pos + 5);
+						if (mode_from_str(opcstr+pos) == destmode)
+							destmode = mode_from_str(opcstr+pos+5);
 						else
 							goto nomatch;
 						pos += 10;
-					}
-					else {
+					} else {
 						/* normal */
-						while (mode_from_str(opcstr + pos) != destmode) {
+						while(mode_from_str(opcstr+pos) != destmode) {
 							pos += 4;
 							if (opcstr[pos] == ']')
 								goto nomatch;
 							pos++;
 						}
-						while (opcstr[pos] != ']') pos++;
+						while(opcstr[pos] != ']') pos++;
 						pos++;
 						break;
 					}
@@ -675,14 +657,14 @@ out2:
 			break;
 		case 's':
 			destreg = bitval[bitS];
-			destmode = mode_from_mr(bitval[bits], bitval[bitS]);
+			destmode = mode_from_mr(bitval[bits],bitval[bitS]);
 
 			if (destmode == am_illg)
 				continue;
 			if (CPU_EMU_SIZE < 1 &&
 				(destmode == Areg || destmode == Dreg || destmode == Aind
-					|| destmode == Ad16 || destmode == Ad8r || destmode == Aipi
-					|| destmode == Apdi))
+				|| destmode == Ad16 || destmode == Ad8r || destmode == Aipi
+				|| destmode == Apdi))
 			{
 				dstgather = 1; dstpos = bitpos[bitS];
 			}
@@ -693,30 +675,28 @@ out2:
 					/* exclusion */
 					do {
 						pos++;
-						if (mode_from_str(opcstr + pos) == destmode)
+						if (mode_from_str(opcstr+pos) == destmode)
 							goto nomatch;
 						pos += 4;
 					} while (opcstr[pos] == ',');
 					pos++;
-				}
-				else {
-					if (opcstr[pos + 4] == '-') {
+				} else {
+					if (opcstr[pos+4] == '-') {
 						/* replacement */
-						if (mode_from_str(opcstr + pos) == destmode)
-							destmode = mode_from_str(opcstr + pos + 5);
+						if (mode_from_str(opcstr+pos) == destmode)
+							destmode = mode_from_str(opcstr+pos+5);
 						else
 							goto nomatch;
 						pos += 10;
-					}
-					else {
+					} else {
 						/* normal */
-						while (mode_from_str(opcstr + pos) != destmode) {
+						while(mode_from_str(opcstr+pos) != destmode) {
 							pos += 4;
 							if (opcstr[pos] == ']')
 								goto nomatch;
 							pos++;
 						}
-						while (opcstr[pos] != ']') pos++;
+						while(opcstr[pos] != ']') pos++;
 						pos++;
 					}
 				}
@@ -734,17 +714,22 @@ out2:
 
 		if (destmode == Areg && sz == sz_byte)
 			goto nomatch;
-	endofline:
+#if 0
+		if (sz == sz_byte && (destmode == Aipi || destmode == Apdi)) {
+			dstgather = 0;
+		}
+#endif
+endofline:
 		/* now, we have a match */
 		if (table68k[opc].mnemo != i_ILLG)
 			;//write_log (_T("Double match: %x: %s\n"), opc, opcstr);
 		if (find == -1) {
 			for (find = 0;; find++) {
-				if (_tcscmp(mnemonic, lookuptab[find].name) == 0) {
+				if (_tcscmp (mnemonic, lookuptab[find].name) == 0) {
 					table68k[opc].mnemo = lookuptab[find].mnemo;
 					break;
 				}
-				if (_tcslen(lookuptab[find].name) == 0)
+				if (_tcslen (lookuptab[find].name) == 0)
 					abort();
 			}
 		}
@@ -787,6 +772,13 @@ out2:
 		table68k[opc].clocks = id.clocks;
 		table68k[opc].fetchmode = id.fetchmode;
 
+#if 0
+		for (i = 0; i < 5; i++) {
+			table68k[opc].flaginfo[i].flagset = id.flaginfo[i].flagset;
+			table68k[opc].flaginfo[i].flaguse = id.flaginfo[i].flaguse;
+		}
+#endif
+
 		// Fix flags used information for Scc, Bcc, TRAPcc, DBcc instructions
 		if (table68k[opc].mnemo == i_Scc
 			|| table68k[opc].mnemo == i_Bcc
@@ -824,30 +816,15 @@ out2:
 		table68k[opc].flaglive = flaglive;
 #endif
 		table68k[opc].cflow = cflow;
+
 	nomatch:
 		/* FOO! */;
 	}
 }
 
-
-void read_table68k (void)
-{
-	int i;
-
-	free (table68k);
-	table68k = xmalloc (struct instr, 65536);
-	for (i = 0; i < 65536; i++) {
-		table68k[i].mnemo = i_ILLG;
-		table68k[i].handler = -1;
-	}
-	for (i = 0; i < n_defs68k; i++) {
-		build_insn (i);
-	}
-}
-
 static int imismatch;
 
-static void handle_merges (uae_s32 opcode)
+static void handle_merges (long int opcode)
 {
 	uae_u16 smsk;
 	uae_u16 dmsk;
@@ -870,8 +847,8 @@ static void handle_merges (uae_s32 opcode)
 			smsk = 7; sbitdst = 8; break;
 		case 5:
 			smsk = 63; sbitdst = 64; break;
-	  case 6:
-	    smsk = 255; sbitdst = 256; break;
+		case 6:
+			smsk = 255; sbitdst = 256; break;
 		case 7:
 			smsk = 3; sbitdst = 4; break;
 		default:
@@ -926,7 +903,7 @@ static void handle_merges (uae_s32 opcode)
 
 void do_merges (void)
 {
-	uae_s32 opcode;
+	long int opcode;
 	int nr = 0;
 	imismatch = 0;
 	for (opcode = 0; opcode < 65536; opcode++) {
@@ -941,4 +918,64 @@ void do_merges (void)
 int get_no_mismatches (void)
 {
 	return imismatch;
+}
+
+static int isreg(amodes mode)
+{
+	if (mode == Dreg || mode == Areg)
+		return 1;
+	return 0;
+}
+
+bool opcode_loop_mode(uae_u16 opcode)
+{
+	struct instr *c = &table68k[opcode];
+	bool loopmode = false;
+	int i;
+	for (i = 0; lookuptab[i].name[0]; i++) {
+		if (c->mnemo == lookuptab[i].mnemo)
+			break;
+	}
+	if (lookuptab[i].flags & MNEMOFLAG_LOOPMODE) {
+		// Source is Dn,An,(An),(An)+,-(An)
+		// Destination is Dn,An,(An),(An)+,-(An)
+		// Both source and destination must not be Dn or An.
+		// RMW instruction must not be Dn or An
+		if (((isreg(c->smode) || c->smode == Aind || c->smode == Apdi || c->smode == Aipi)) &&
+			((!c->duse && !isreg(c->smode)) || (c->duse && (isreg(c->dmode) || c->dmode == Aind || c->dmode == Apdi || c->dmode == Aipi))) &&
+			(!c->duse || (isreg(c->smode) && !isreg(c->dmode)) || (!isreg(c->smode) && isreg(c->dmode)) || (!isreg(c->smode) && !isreg(c->dmode)))) {
+			loopmode = true;
+		}
+		if (c->mnemo == i_MOVE || c->mnemo == i_MOVEA) {
+			// move x,reg: not supported
+			if (isreg(c->dmode))
+				loopmode = false;
+			// move reg,-(an): not supported
+			if (isreg(c->smode) && c->dmode == Apdi)
+				loopmode = false;
+		}
+	}
+	return loopmode;
+}
+
+void init_table68k(void)
+{
+	int i;
+
+	free(table68k);
+	table68k = xmalloc(struct instr, 65536);
+	for (i = 0; i < 65536; i++) {
+		table68k[i].mnemo = i_ILLG;
+		table68k[i].handler = -1;
+	}
+	for (i = 0; i < n_defs68k; i++) {
+		build_insn(i);
+	}
+	do_merges();
+}
+
+void exit_table68k(void)
+{
+	free(table68k);
+	table68k = NULL;
 }

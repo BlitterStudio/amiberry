@@ -12,13 +12,13 @@
 *
 */
 #include "sysconfig.h"
+#include "sysdeps.h"
 #ifdef HAVE_SYS_TIMEB_H
 #include <sys/timeb.h>
 #endif
 #include <sys/types.h>
 #include <sys/wait.h>
 
-#include "sysdeps.h"
 #include "options.h"
 #include "traps.h"
 #include "blkdev.h"
@@ -26,11 +26,16 @@
 #include "gui.h"
 #include "fsdb.h"
 #include "threaddep/thread.h"
+#include "scsidev.h"
 #include "mp3decoder.h"
 #include "cda_play.h"
 #include "memory.h"
 #include "audio.h"
 #include "uae.h"
+#include "uae/cdrom.h"
+#ifdef RETROPLATFORM
+#include "rp.h"
+#endif
 
 #define FLAC__NO_DLL
 #include "FLAC/stream_decoder.h"
@@ -350,6 +355,14 @@ static int getsub_deinterleaved (uae_u8 *dst, struct cdunit *cdu, struct cdtoc *
 		sub_to_deinterleaved (tmp, dst);
 		ret = 2;
 	}
+
+#if 0
+	uae_u8 *s = dst + SUB_ENTRY_SIZE;
+	write_log(_T("CTRLADR:%02X TRK=%02X IDX=%02X MSF=%02X:%02X:%02X %02X:%02X:%02X\n"),
+		s[0], s[1], s[2],
+		s[3], s[4], s[5],
+		s[7], s[8], s[9]);
+#endif
 
 	uae_sem_post (&cdu->sub_sem);
 	return ret;

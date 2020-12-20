@@ -241,7 +241,7 @@ static void AdjustPrefs(void)
 		changed_prefs.floppyslots[0].dfxtype = DRV_NONE;
 		changed_prefs.floppyslots[1].dfxtype = DRV_NONE;
 		changed_prefs.cdslots[0].inuse = true;
-		changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
+		changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
 		changed_prefs.gfx_monitor.gfx_size.width = 720;
 		changed_prefs.gfx_monitor.gfx_size.height = 284;
 		break;
@@ -382,7 +382,7 @@ public:
 				{
 					strncpy(changed_prefs.cdslots[0].name, tmp, MAX_DPATH);
 					changed_prefs.cdslots[0].inuse = true;
-					changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
+					changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
 					AddFileToCDList(tmp, 1);
 					extract_path(tmp, current_dir);
 
@@ -424,7 +424,7 @@ public:
 					{
 						strncpy(changed_prefs.cdslots[0].name, cdfileList.getElementAt(idx).c_str(), MAX_DPATH);
 						changed_prefs.cdslots[0].inuse = true;
-						changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
+						changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
 						lstMRUCDList.erase(lstMRUCDList.begin() + idx);
 						lstMRUCDList.insert(lstMRUCDList.begin(), changed_prefs.cdslots[0].name);
 						bIgnoreListChange = true;

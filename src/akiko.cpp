@@ -11,6 +11,8 @@
 *
 */
 
+#define EEPROM_DEBUG 0
+
 /*
 	B80000-B80003: $C0CACAFE (Read-only identifier)
 
@@ -161,6 +163,7 @@
 #include "custom.h"
 #include "newcpu.h"
 #include "flashrom.h"
+//#include "debug.h"
 #include "rommgr.h"
 #include "devices.h"
 
@@ -2035,7 +2038,7 @@ static int akiko_thread_do(int start)
 		if (!akiko_thread_running) {
 			akiko_thread_running = 1;
 			init_comm_pipe(&requests, 100, 1);
-			uae_start_thread(_T("akiko"), akiko_thread, 0, nullptr);
+			uae_start_thread(_T("akiko"), akiko_thread, 0, NULL);
 			return 1;
 		}
 	}

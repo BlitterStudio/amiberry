@@ -63,8 +63,8 @@ set(SRC_FILES
         src/cd32_fmv.cpp
         src/cd32_fmv_genlock.cpp
         src/cdrom.cpp
-		    src/cdtv.cpp
-	    	src/cdtvcr.cpp
+    		src/cdtv.cpp
+    		src/cdtvcr.cpp
         src/cfgfile.cpp
         src/cia.cpp
 	    	src/consolehook.cpp
@@ -74,7 +74,7 @@ set(SRC_FILES
         src/devices.cpp
         src/disk.cpp
         src/diskutil.cpp
-	    	src/dlopen.cpp
+    		src/dlopen.cpp
         src/drawing.cpp
 	    	src/driveclick.cpp
         src/events.cpp
@@ -84,7 +84,6 @@ set(SRC_FILES
         src/flashrom.cpp
         src/fpp.cpp
         src/fsdb.cpp
-        src/fsdb_unix.cpp
         src/fsusage.cpp
         src/gayle.cpp
         src/gfxboard.cpp
@@ -92,8 +91,9 @@ set(SRC_FILES
         src/hardfile.cpp
         src/hrtmon.rom.cpp
         src/ide.cpp
+        src/ini.cpp
         src/inputdevice.cpp
-	    	src/isofs.cpp
+    		src/isofs.cpp
         src/keybuf.cpp
         src/main.cpp
         src/memory.cpp
@@ -101,14 +101,15 @@ set(SRC_FILES
         src/rommgr.cpp
         src/rtc.cpp
         src/savestate.cpp
-		    src/scp.cpp
+	    	src/scp.cpp
         src/scsi.cpp
 		    src/scsiemul.cpp
+        src/scsitape.cpp
         src/statusline.cpp
 		    src/tabletlibrary.cpp
 		    src/tinyxml2.cpp
         src/traps.cpp
-		    src/uaeexe.cpp
+	    	src/uaeexe.cpp
         src/uaelib.cpp
         src/uaenative.cpp
         src/uaeresource.cpp
@@ -182,6 +183,7 @@ set(SRC_FILES
         src/osdep/sigsegv_handler.cpp
 		    src/osdep/retroarch.cpp
         src/sounddep/sound.cpp
+        src/threaddep/threading.cpp
         src/osdep/gui/SelectorEntry.cpp
         src/osdep/gui/ShowHelp.cpp
         src/osdep/gui/ShowMessage.cpp

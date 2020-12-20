@@ -200,6 +200,12 @@ else ifeq ($(PLATFORM),jetson-nano)
     CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64
     AARCH64 = 1
 
+# La Frite Libre Computer
+else ifeq ($(PLATFORM),mali-drm-gles2-sdl2)
+    CPUFLAGS += -mcpu=cortex-a53
+    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 
+    AARCH64 = 1
+
 else
 $(error Unknown platform:$(PLATFORM))
 endif
@@ -227,12 +233,12 @@ LDFLAGS += $(SDL_LDFLAGS) -lSDL2_image -lSDL2_ttf -lguisan -Lexternal/libguisan/
 #
 DEFS = -DAMIBERRY
 CPPFLAGS += -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers $(DEFS)
-LDFLAGS += -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed
+LDFLAGS += -fuse-ld=gold -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed
 
 ifndef DEBUG
     CFLAGS += -Ofast
 else
-    CFLAGS += -g -rdynamic -funwind-tables -fno-omit-frame-pointer -DDEBUG -Wl,--export-dynamic
+    CFLAGS += -g -rdynamic -funwind-tables -DDEBUG -Wl,--export-dynamic
 endif
 
 #LTO is supposed to reduced code size and increased execution speed. For Amiberry, it does not.
@@ -314,7 +320,6 @@ OBJS =	\
 	src/flashrom.o \
 	src/fpp.o \
 	src/fsdb.o \
-	src/fsdb_unix.o \
 	src/fsusage.o \
 	src/gayle.o \
 	src/gfxboard.o \
@@ -322,6 +327,7 @@ OBJS =	\
 	src/hardfile.o \
 	src/hrtmon.rom.o \
 	src/ide.o \
+	src/ini.o \
 	src/inputdevice.o \
 	src/isofs.o \
 	src/keybuf.o \
@@ -335,6 +341,7 @@ OBJS =	\
 	src/scp.o \
 	src/scsi.o \
 	src/scsiemul.o \
+	src/scsitape.o \
 	src/serial_win32.o \
 	src/statusline.o \
 	src/tabletlibrary.o \
@@ -409,6 +416,7 @@ OBJS =	\
 	src/osdep/sigsegv_handler.o \
 	src/osdep/retroarch.o \
 	src/sounddep/sound.o \
+	src/threaddep/threading.o \
 	src/osdep/gui/SelectorEntry.o \
 	src/osdep/gui/ShowHelp.o \
 	src/osdep/gui/ShowMessage.o \
@@ -487,6 +495,7 @@ clean:
 
 cleanprofile:
 	$(RM) $(OBJS:%.o=%.gcda)
+	$(MAKE) -C external/libguisan cleanprofile
 	
 guisan:
 	$(MAKE) -C external/libguisan

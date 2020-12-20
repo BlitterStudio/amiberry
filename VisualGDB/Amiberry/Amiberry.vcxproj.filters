@@ -121,9 +121,6 @@
     <ClCompile Include="..\..\src\ar.cpp">
       <Filter>Source files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\aros.rom.cpp">
-      <Filter>Source files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\audio.cpp">
       <Filter>Source files</Filter>
     </ClCompile>
@@ -224,9 +221,6 @@
       <Filter>Source files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\fsdb.cpp">
-      <Filter>Source files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\fsdb_unix.cpp">
       <Filter>Source files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\fsusage.cpp">
@@ -674,6 +668,15 @@
       <Filter>Source files\osdep</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\uaenative.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\threaddep\threading.cpp">
+      <Filter>Source files\theaddep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\scsitape.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\ini.cpp">
       <Filter>Source files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -1133,6 +1136,15 @@
     </ClInclude>
     <ClInclude Include="..\..\src\include\uaenative.h">
       <Filter>Source files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\uae\cdrom.h">
+      <Filter>Source files\include\uae</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\ini.h">
+      <Filter>Source files\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\osdep\fsdb_host.h">
+      <Filter>Source files\osdep</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

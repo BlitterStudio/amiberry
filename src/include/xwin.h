@@ -32,14 +32,14 @@ extern bool toggle_rtg(int);
 extern void close_rtg();
 
 extern void toggle_mousegrab (void);
-//void setmouseactivexy(int x, int y, int dir);
+void setmouseactivexy(int x, int y, int dir);
 
 extern void desktop_coords(int *dw, int *dh, int *x, int *y, int *w, int *h);
 extern bool vsync_switchmode(int hz);
 extern void vsync_clear(void);
 extern int vsync_isdone(frame_time_t*);
 extern void doflashscreen (void);
-//extern int flashscreen;
+extern int flashscreen;
 extern void updatedisplayarea();
 extern int isvsync_chipset(void);
 extern int isvsync_rtg (void);
@@ -60,7 +60,7 @@ extern float target_adjust_vblank_hz(float);
 extern int target_get_display_scanline(int displayindex);
 extern void target_spin(int);
 
-//void getgfxoffset(float *dxp, float *dyp, float *mxp, float *myp);
+void getgfxoffset(float *dxp, float *dyp, float *mxp, float *myp);
 float target_getcurrentvblankrate();
 
 extern int debuggable (void);

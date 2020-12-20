@@ -196,6 +196,7 @@ public:
 			changed_prefs.compfpu = chkFPUJIT->isSelected();
 		}
 		RefreshPanelCPU();
+		RefreshPanelChipset();
 		RefreshPanelRAM();
 	}
 };

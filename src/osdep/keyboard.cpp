@@ -4,7 +4,10 @@
 #include "options.h"
 #include "inputdevice.h"
 #include "keyboard.h"
+
+#include "clipboard.h"
 #include "config.h"
+#include "uae.h"
 
 char keyboard_type = 0;
 static struct uae_input_device_kbr_default keytrans_amiga[] = {
@@ -268,28 +271,36 @@ static struct uae_input_device_kbr_default *keytrans[] =
 	keytrans_pc1
 };
 
+static int kb_np[] = { SDL_SCANCODE_KP_4, -1, SDL_SCANCODE_KP_6, -1, SDL_SCANCODE_KP_8, -1, SDL_SCANCODE_KP_2, -1, SDL_SCANCODE_KP_0, SDL_SCANCODE_KP_5, -1, SDL_SCANCODE_KP_DECIMAL, -1, SDL_SCANCODE_KP_ENTER, -1, -1 };
+static int kb_ck[] = { SDL_SCANCODE_LEFT, -1, SDL_SCANCODE_RIGHT, -1, SDL_SCANCODE_UP, -1, SDL_SCANCODE_DOWN, -1, SDL_SCANCODE_RCTRL, SDL_SCANCODE_RALT, -1, SDL_SCANCODE_RSHIFT, -1, -1 };
+static int kb_se[] = { SDL_SCANCODE_A, -1, SDL_SCANCODE_D, -1, SDL_SCANCODE_W, -1, SDL_SCANCODE_S, -1, SDL_SCANCODE_LALT, -1, SDL_SCANCODE_LSHIFT, -1, -1 };
+static int kb_np3[] = { SDL_SCANCODE_KP_4, -1, SDL_SCANCODE_KP_6, -1, SDL_SCANCODE_KP_8, -1, SDL_SCANCODE_KP_2, -1, SDL_SCANCODE_KP_0, SDL_SCANCODE_KP_5, -1, SDL_SCANCODE_KP_DECIMAL, -1, SDL_SCANCODE_KP_ENTER, -1, -1 };
+static int kb_ck3[] = { SDL_SCANCODE_LEFT, -1, SDL_SCANCODE_RIGHT, -1, SDL_SCANCODE_UP, -1, SDL_SCANCODE_DOWN, -1, SDL_SCANCODE_RCTRL, -1, SDL_SCANCODE_RSHIFT, -1, SDL_SCANCODE_RALT, -1, -1 };
+static int kb_se3[] = { SDL_SCANCODE_A, -1, SDL_SCANCODE_D, -1, SDL_SCANCODE_W, -1, SDL_SCANCODE_S, -1, SDL_SCANCODE_LALT, -1, SDL_SCANCODE_LSHIFT, -1, SDL_SCANCODE_LCTRL, -1, -1 };
 
-static int kb_np[] = { SDLK_KP_4, -1, SDLK_KP_6, -1, SDLK_KP_8, -1, SDLK_KP_2, -1, SDLK_KP_0, SDLK_KP_5, -1, SDLK_KP_DECIMAL, -1, SDLK_KP_ENTER, -1, -1 };
-static int kb_ck[] = { SDLK_LEFT, -1, SDLK_RIGHT, -1, SDLK_UP, -1, SDLK_DOWN, -1, SDLK_RCTRL, SDLK_RALT, -1, SDLK_RSHIFT, -1, -1 };
-static int kb_se[] = { SDLK_a, -1, SDLK_d, -1, SDLK_w, -1, SDLK_s, -1, SDLK_LALT, -1, SDLK_LSHIFT, -1, -1 };
-static int kb_np3[] = { SDLK_KP_4, -1, SDLK_KP_6, -1, SDLK_KP_8, -1, SDLK_KP_2, -1, SDLK_KP_0, SDLK_KP_5, -1, SDLK_KP_DECIMAL, -1, SDLK_KP_ENTER, -1, -1 };
-static int kb_ck3[] = { SDLK_LEFT, -1, SDLK_RIGHT, -1, SDLK_UP, -1, SDLK_DOWN, -1, SDLK_RCTRL, -1, SDLK_RSHIFT, -1, SDLK_RALT, -1, -1 };
-static int kb_se3[] = { SDLK_a, -1, SDLK_d, -1, SDLK_w, -1, SDLK_s, -1, SDLK_LALT, -1, SDLK_LSHIFT, -1, SDLK_LCTRL, -1, -1 };
-static int kb_cd32_np[] = { SDLK_KP_4, -1, SDLK_KP_6, -1, SDLK_KP_8, -1, SDLK_KP_2, -1, SDLK_KP_0, SDLK_KP_5, SDLK_KP_1, -1, SDLK_KP_DECIMAL, SDLK_KP_3, -1, SDLK_KP_7, -1, SDLK_KP_9, -1, SDLK_KP_DIVIDE, -1, SDLK_KP_MINUS, -1, SDLK_KP_MULTIPLY, -1, -1 };
-static int kb_cd32_ck[] = { SDLK_LEFT, -1, SDLK_RIGHT, -1, SDLK_UP, -1, SDLK_DOWN, -1, SDLK_RCTRL, -1, SDLK_RALT, -1, SDLK_KP_7, -1, SDLK_KP_9, -1, SDLK_KP_DIVIDE, -1, SDLK_KP_MINUS, -1, SDLK_KP_MULTIPLY, -1, -1 };
-static int kb_cd32_se[] = { SDLK_a, -1, SDLK_d, -1, SDLK_w, -1, SDLK_s, -1, -1, SDLK_LALT, -1, SDLK_LSHIFT, -1, SDLK_KP_7, -1, SDLK_KP_9, -1, SDLK_KP_DIVIDE, -1, SDLK_KP_MINUS, -1, SDLK_KP_MULTIPLY, -1, -1 };
+static int kb_cd32_np[] = { SDL_SCANCODE_KP_4, -1, SDL_SCANCODE_KP_6, -1, SDL_SCANCODE_KP_8, -1, SDL_SCANCODE_KP_2, -1, SDL_SCANCODE_KP_0, SDL_SCANCODE_KP_5, SDL_SCANCODE_KP_1, -1, SDL_SCANCODE_KP_DECIMAL, SDL_SCANCODE_KP_3, -1, SDL_SCANCODE_KP_7, -1, SDL_SCANCODE_KP_9, -1, SDL_SCANCODE_KP_DIVIDE, -1, SDL_SCANCODE_KP_MINUS, -1, SDL_SCANCODE_KP_MULTIPLY, -1, -1 };
+static int kb_cd32_ck[] = { SDL_SCANCODE_LEFT, -1, SDL_SCANCODE_RIGHT, -1, SDL_SCANCODE_UP, -1, SDL_SCANCODE_DOWN, -1, SDL_SCANCODE_RCTRL, -1, SDL_SCANCODE_RALT, -1, SDL_SCANCODE_KP_7, -1, SDL_SCANCODE_KP_9, -1, SDL_SCANCODE_KP_DIVIDE, -1, SDL_SCANCODE_KP_MINUS, -1, SDL_SCANCODE_KP_MULTIPLY, -1, -1 };
+static int kb_cd32_se[] = { SDL_SCANCODE_A, -1, SDL_SCANCODE_D, -1, SDL_SCANCODE_W, -1, SDL_SCANCODE_S, -1, -1, SDL_SCANCODE_LALT, -1, SDL_SCANCODE_LSHIFT, -1, SDL_SCANCODE_KP_7, -1, SDL_SCANCODE_KP_9, -1, SDL_SCANCODE_KP_DIVIDE, -1, SDL_SCANCODE_KP_MINUS, -1, SDL_SCANCODE_KP_MULTIPLY, -1, -1 };
 
-static int kb_cdtv[] = { SDLK_KP_1, -1, SDLK_KP_3, -1, SDLK_KP_7, -1, SDLK_KP_9, -1, -1 };
+static int kb_cdtv[] = { SDL_SCANCODE_KP_1, -1, SDL_SCANCODE_KP_3, -1, SDL_SCANCODE_KP_7, -1, SDL_SCANCODE_KP_9, -1, -1 };
 
-static int kb_xa1[] = { SDLK_KP_4, -1, SDLK_KP_6, -1, SDLK_KP_8, -1, SDLK_KP_2, SDLK_KP_5, -1, SDLK_LCTRL, -1, SDLK_LALT, -1, SDLK_SPACE, -1, -1 };
-static int kb_xa2[] = { SDLK_d, -1, SDLK_g, -1, SDLK_r, -1, SDLK_f, -1, SDLK_a, -1, SDLK_s, -1, SDLK_q, -1 };
-static int kb_arcadia[] = { SDLK_F2, -1, SDLK_1, -1, SDLK_2, -1, SDLK_5, -1, SDLK_6, -1, -1 };
-static int kb_arcadiaxa[] = { SDLK_1, -1, SDLK_2, -1, SDLK_3, -1, SDLK_4, -1, SDLK_6, -1, SDLK_LEFTBRACKET, SDLK_LSHIFT, -1, SDLK_RIGHTBRACKET, -1, SDLK_c, -1, SDLK_5, -1, SDLK_z, -1, SDLK_x, -1, -1 };
+static int kb_arcadia[] = { SDL_SCANCODE_F2, -1, SDL_SCANCODE_1, -1, SDL_SCANCODE_2, -1, SDL_SCANCODE_5, -1, SDL_SCANCODE_6, -1, -1 };
 
-static int *kbmaps[] = {
+#ifdef AMIBERRY
+static int kb_keyrah[] = { SDL_SCANCODE_LEFT, -1, SDL_SCANCODE_RIGHT, -1, SDL_SCANCODE_UP, -1, SDL_SCANCODE_DOWN, -1, SDL_SCANCODE_SPACE, SDL_SCANCODE_RALT, -1, SDL_SCANCODE_RSHIFT, -1, -1 };
+static int kb_keyrah3[] = { SDL_SCANCODE_LEFT, -1, SDL_SCANCODE_RIGHT, -1, SDL_SCANCODE_UP, -1, SDL_SCANCODE_DOWN, -1, SDL_SCANCODE_SPACE, -1, SDL_SCANCODE_RSHIFT, -1, SDL_SCANCODE_RALT, -1, -1 };
+static int kb_cd32_keyrah[] = { SDL_SCANCODE_LEFT, -1, SDL_SCANCODE_RIGHT, -1, SDL_SCANCODE_UP, -1, SDL_SCANCODE_DOWN, -1, SDL_SCANCODE_SPACE, -1, SDL_SCANCODE_RALT, -1, SDL_SCANCODE_KP_7, -1, SDL_SCANCODE_KP_9, -1, SDL_SCANCODE_KP_DIVIDE, -1, SDL_SCANCODE_KP_MINUS, -1, SDL_SCANCODE_KP_MULTIPLY, -1, -1 };
+static int kb_ipac[] = { SDL_SCANCODE_LEFT, -1, SDL_SCANCODE_RIGHT, -1, SDL_SCANCODE_UP, -1, SDL_SCANCODE_DOWN, -1, SDL_SCANCODE_LALT, SDL_SCANCODE_LCTRL, -1, SDL_SCANCODE_SPACE, -1, -1 };
+static int kb_ipac3[] = { SDL_SCANCODE_LEFT, -1, SDL_SCANCODE_RIGHT, -1, SDL_SCANCODE_UP, -1, SDL_SCANCODE_DOWN, -1, SDL_SCANCODE_LALT, -1, SDL_SCANCODE_LCTRL, -1, SDL_SCANCODE_SPACE, -1, -1 };
+static int kb_cd32_ipac[] = { SDL_SCANCODE_LEFT, -1, SDL_SCANCODE_RIGHT, -1, SDL_SCANCODE_UP, -1, SDL_SCANCODE_DOWN, -1, SDL_SCANCODE_LALT, -1, SDL_SCANCODE_LCTRL, -1, SDL_SCANCODE_SPACE, -1, SDL_SCANCODE_LSHIFT, -1, SDL_SCANCODE_Z, -1, SDL_SCANCODE_X, -1, SDL_SCANCODE_2, -1, -1 };
+#endif
+
+static int* kbmaps[] = {
 	kb_np, kb_ck, kb_se, kb_np3, kb_ck3, kb_se3,
+	kb_keyrah, kb_keyrah3, kb_ipac, kb_ipac3,
 	kb_cd32_np, kb_cd32_ck, kb_cd32_se,
-	kb_xa1, kb_xa2, kb_arcadia, kb_arcadiaxa, kb_cdtv
+	kb_cd32_keyrah, kb_cd32_ipac,
+	kb_arcadia, kb_cdtv
 };
 
 static bool specialpressed()
@@ -321,15 +332,174 @@ void setcapslockstate(int state)
 	capslockstate = state;
 }
 
+int getcapslock(void)
+{
+	int capstable[7];
+
+	// this returns bogus state if caps change when in exclusive mode..
+	host_capslockstate = SDL_GetModState() & KMOD_CAPS;
+	host_numlockstate = SDL_GetModState() & KMOD_NUM;
+	host_scrolllockstate = 0; //SDL_GetModState() & ;
+	capstable[0] = SDL_SCANCODE_CAPSLOCK;
+	capstable[1] = host_capslockstate;
+	capstable[2] = SDL_SCANCODE_NUMLOCKCLEAR;
+	capstable[3] = host_numlockstate;
+	capstable[4] = SDL_SCANCODE_SCROLLLOCK;
+	capstable[5] = host_scrolllockstate;
+	capstable[6] = 0;
+	capslockstate = inputdevice_synccapslock(capslockstate, capstable);
+	return capslockstate;
+}
+
 void clearallkeys()
 {
 	inputdevice_updateconfig(&changed_prefs, &currprefs);
 }
 
 static const int np[] = {
-	SDLK_KP_0, 0, SDLK_KP_PERIOD, 0, SDLK_KP_1, 1, SDLK_KP_2, 2,
-	SDLK_KP_3, 3, SDLK_KP_4, 4, SDLK_KP_5, 5, SDLK_KP_6, 6, SDLK_KP_7, 7,
-	SDLK_KP_8, 8, SDLK_KP_9, 9, -1 };
+	SDL_SCANCODE_KP_0, 0, SDL_SCANCODE_KP_PERIOD, 0, SDL_SCANCODE_KP_1, 1, SDL_SCANCODE_KP_2, 2,
+	SDL_SCANCODE_KP_3, 3, SDL_SCANCODE_KP_4, 4, SDL_SCANCODE_KP_5, 5, SDL_SCANCODE_KP_6, 6, SDL_SCANCODE_KP_7, 7,
+	SDL_SCANCODE_KP_8, 8, SDL_SCANCODE_KP_9, 9, -1 };
+
+bool my_kbd_handler(int keyboard, int scancode, int newstate, bool alwaysrelease)
+{
+	int code = 0;
+	int scancode_new;
+	bool amode = currprefs.input_keyboard_type == 0;
+	bool special = false;
+	static int swapperdrive = 0;
+
+	if (amode && quit_key && scancode == quit_key) {
+		uae_quit();
+		return true;
+	}
+
+	//if (scancode == DIK_F9 && specialpressed()) {
+	//	extern bool toggle_3d_debug(void);
+	//	if (newstate) {
+	//		if (!toggle_3d_debug()) {
+	//			toggle_rtg(0, MAX_RTG_BOARDS + 1);
+	//		}
+	//	}
+	//	return true;
+	//}
+
+	scancode_new = scancode;
+	if (!specialpressed() && inputdevice_iskeymapped(keyboard, scancode))
+		scancode = 0;
+
+	if (newstate) {
+		if (enter_gui_key && scancode == enter_gui_key)
+		{
+			inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
+			scancode = 0;
+		}
+		
+		if (action_replay_button && scancode == action_replay_button)
+		{
+			inputdevice_add_inputcode(AKS_FREEZEBUTTON, 1, nullptr);
+			scancode = 0;
+		}
+
+		if (fullscreen_key && scancode == fullscreen_key)
+		{
+			inputdevice_add_inputcode(AKS_TOGGLEWINDOWEDFULLSCREEN, 1, nullptr);
+			scancode = 0;
+		}
+
+		if (scancode == SDL_SCANCODE_SYSREQ)
+			clipboard_disable(true);
+	}
+
+	if (newstate && code == 0 && amode) {
+		switch (scancode)
+		{
+		case SDL_SCANCODE_1:
+		case SDL_SCANCODE_2:
+		case SDL_SCANCODE_3:
+		case SDL_SCANCODE_4:
+		case SDL_SCANCODE_5:
+		case SDL_SCANCODE_6:
+		case SDL_SCANCODE_7:
+		case SDL_SCANCODE_8:
+		case SDL_SCANCODE_9:
+		case SDL_SCANCODE_0:
+			if (specialpressed()) {
+				int num = scancode - SDL_SCANCODE_1;
+				if (shiftpressed())
+					num += 10;
+				if (ctrlpressed()) {
+					swapperdrive = num;
+					if (swapperdrive > 3)
+						swapperdrive = 0;
+				}
+				else {
+					int i;
+					for (i = 0; i < 4; i++) {
+						if (!_tcscmp(currprefs.floppyslots[i].df, currprefs.dfxlist[num]))
+							changed_prefs.floppyslots[i].df[0] = 0;
+					}
+					_tcscpy(changed_prefs.floppyslots[swapperdrive].df, currprefs.dfxlist[num]);
+					set_config_changed();
+				}
+				special = true;
+			}
+			break;
+		case SDL_SCANCODE_KP_0:
+		case SDL_SCANCODE_KP_1:
+		case SDL_SCANCODE_KP_2:
+		case SDL_SCANCODE_KP_3:
+		case SDL_SCANCODE_KP_4:
+		case SDL_SCANCODE_KP_5:
+		case SDL_SCANCODE_KP_6:
+		case SDL_SCANCODE_KP_7:
+		case SDL_SCANCODE_KP_8:
+		case SDL_SCANCODE_KP_9:
+		case SDL_SCANCODE_KP_PERIOD:
+			if (specialpressed()) {
+				int i = 0, v = -1;
+				while (np[i] >= 0) {
+					v = np[i + 1];
+					if (np[i] == scancode)
+						break;
+					i += 2;
+				}
+				if (v >= 0)
+					code = AKS_STATESAVEQUICK + v * 2 + ((shiftpressed() || ctrlpressed()) ? 0 : 1);
+				special = true;
+			}
+			break;
+		}
+	}
+
+	if (code) {
+		inputdevice_add_inputcode(code, 1, NULL);
+		return true;
+	}
+
+	scancode = scancode_new;
+	if (!specialpressed() && newstate) {
+		if (scancode == SDL_SCANCODE_CAPSLOCK) {
+			host_capslockstate = host_capslockstate ? 0 : 1;
+			capslockstate = host_capslockstate;
+		}
+		if (scancode == SDL_SCANCODE_NUMLOCKCLEAR) {
+			host_numlockstate = host_numlockstate ? 0 : 1;
+			capslockstate = host_numlockstate;
+		}
+		if (scancode == SDL_SCANCODE_SCROLLLOCK) {
+			host_scrolllockstate = host_scrolllockstate ? 0 : 1;
+			capslockstate = host_scrolllockstate;
+		}
+	}
+
+	if (special) {
+		inputdevice_checkqualifierkeycode(keyboard, scancode, newstate);
+		return true;
+	}
+
+	return inputdevice_translatekeycode(keyboard, scancode, newstate, alwaysrelease) != 0;
+}
 
 void keyboard_settrans(void)
 {
@@ -338,15 +508,15 @@ void keyboard_settrans(void)
 
 int target_checkcapslock(const int scancode, int *state)
 {
-	if (scancode != SDLK_CAPSLOCK && scancode != SDLK_NUMLOCKCLEAR && scancode != SDLK_SCROLLLOCK)
+	if (scancode != SDL_SCANCODE_CAPSLOCK && scancode != SDL_SCANCODE_NUMLOCKCLEAR && scancode != SDL_SCANCODE_SCROLLLOCK)
 		return 0;
 	if (*state == 0)
 		return -1;
-	if (scancode == SDLK_CAPSLOCK)
+	if (scancode == SDL_SCANCODE_CAPSLOCK)
 		*state = host_capslockstate;
-	if (scancode == SDLK_NUMLOCKCLEAR)
+	if (scancode == SDL_SCANCODE_NUMLOCKCLEAR)
 		*state = host_numlockstate;
-	if (scancode == SDLK_SCROLLLOCK)
+	if (scancode == SDL_SCANCODE_SCROLLLOCK)
 		*state = host_scrolllockstate;
 	return 1;
 }

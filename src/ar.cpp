@@ -540,7 +540,7 @@ STATIC_INLINE int ar3a (uaecptr addr, uae_u8 b, int writing)
 					ar_wait_pop = 0;
 					/* We get (SP+2) here, as the first word on the stack is the status register. */
 					/* We want the following long, which is the return program counter. */
-					wait_for_pc = get_long (m68k_areg (regs, 7) + 2); /* Get (SP+2) */
+					wait_for_pc = get_long(m68k_areg (regs, 7) + 2); /* Get (SP+2) */
 					set_special (SPCFLAG_ACTION_REPLAY);
 
 					uaecptr pc = m68k_getpc ();
@@ -1709,7 +1709,7 @@ static void hrtmon_configure(void)
 	cfg->hexmode = TRUE;
 	cfg->entered = 0;
 	cfg->keyboard = 0;
-	do_put_mem_long(&cfg->max_chip, currprefs.chipmem.size);
+	do_put_mem_long (&cfg->max_chip, currprefs.chipmem.size);
 	do_put_mem_long (&cfg->mon_size, 0x800000);
 	cfg->ide = currprefs.cs_ide ? 1 : 0;
 	cfg->a1200 = currprefs.cs_ide == IDE_A600A1200 ? 1 : 0; /* type of IDE interface, not Amiga model */

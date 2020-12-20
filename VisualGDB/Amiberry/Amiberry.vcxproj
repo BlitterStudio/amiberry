@@ -5,12 +5,20 @@
       <Configuration>Debug-dispmanx</Configuration>
       <Platform>VisualGDB</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug-rpi3|VisualGDB">
+      <Configuration>Debug-rpi3</Configuration>
+      <Platform>VisualGDB</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Debug|VisualGDB">
       <Configuration>Debug</Configuration>
       <Platform>VisualGDB</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release-dispmanx|VisualGDB">
       <Configuration>Release-dispmanx</Configuration>
+      <Platform>VisualGDB</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-Strip|VisualGDB">
+      <Configuration>Release-Strip</Configuration>
       <Platform>VisualGDB</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release|VisualGDB">
@@ -25,9 +33,11 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-rpi3|VisualGDB'" Label="Configuration" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-dispmanx|VisualGDB'" Label="Configuration" />
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Strip|VisualGDB'" Label="Configuration" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-dispmanx|VisualGDB'" Label="Configuration" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -42,6 +52,13 @@
     <TargetName>$(ProjectName)</TargetName>
     <RemoteBuildHost>
     </RemoteBuildHost>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-rpi3|VisualGDB'">
+    <GNUConfigurationType>Debug</GNUConfigurationType>
+    <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
+    <ToolchainVersion>8.3.0/8.2.1/r2</ToolchainVersion>
+    <TargetName>$(ProjectName)</TargetName>
+    <RemoteBuildHost />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-dispmanx|VisualGDB'">
     <GNUConfigurationType>Debug</GNUConfigurationType>
@@ -58,6 +75,12 @@
     <RemoteBuildHost>
     </RemoteBuildHost>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Strip|VisualGDB'">
+    <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
+    <ToolchainVersion>8.3.0/8.2.1/r2</ToolchainVersion>
+    <TargetName>$(ProjectName)</TargetName>
+    <RemoteBuildHost />
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-dispmanx|VisualGDB'">
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
     <ToolchainVersion>8.3.0/8.2.1/r2</ToolchainVersion>
@@ -68,16 +91,32 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
     <ClCompile>
       <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
-      <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/usr/include/SDL2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../external/libguisan/include;../../src/archivers;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>=/usr/include/SDL2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../external/libguisan/include;../../src/archivers;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>DEBUG=1;ARMV6T2;USE_ARMNEON;ARM_HAS_DIV;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;_FILE_OFFSET_BITS=64;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalCOptions>-mcpu=cortex-a72 -mfpu=neon-fp-armv8 -mfloat-abi=hard </AdditionalCOptions>
       <AdditionalCPPOptions>-mcpu=cortex-a72 -mfpu=neon-fp-armv8 -mfloat-abi=hard </AdditionalCPPOptions>
     </ClCompile>
     <Link>
       <AdditionalLinkerInputs>;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
-      <LibrarySearchDirectories>=/usr/local/lib;../../external/libguisan/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
+      <LibrarySearchDirectories>../../external/libguisan/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
       <AdditionalLibraryNames>SDL2;pthread;z;png;rt;FLAC;mpg123;dl;mpeg2convert;mpeg2;SDL2_image;SDL2_ttf;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript />
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-rpi3|VisualGDB'">
+    <ClCompile>
+      <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
+      <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/usr/include/SDL2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../external/libguisan/include;../../src/archivers;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>DEBUG=1;ARMV6T2;USE_ARMNEON;ARM_HAS_DIV;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;_FILE_OFFSET_BITS=64;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalCOptions>-mcpu=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=hard </AdditionalCOptions>
+      <AdditionalCPPOptions>-mcpu=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=hard </AdditionalCPPOptions>
+    </ClCompile>
+    <Link>
+      <AdditionalLinkerInputs>;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
+      <LibrarySearchDirectories>=/usr/local/lib;../../external/libguisan/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
+      <AdditionalLibraryNames>SDL2;pthread;z;png;rt;FLAC;mpg123;dl;mpeg2convert;mpeg2;SDL2_image;SDL2_ttf;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
+      <LinkerScript>
+      </LinkerScript>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-dispmanx|VisualGDB'">
@@ -110,6 +149,26 @@
       <LibrarySearchDirectories>=/usr/local/lib;../../external/libguisan/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
       <AdditionalLibraryNames>SDL2;pthread;z;png;rt;FLAC;mpg123;dl;mpeg2convert;mpeg2;SDL2_image;SDL2_ttf;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript />
+      <CustomPostLinkTool>
+      </CustomPostLinkTool>
+      <CustomPostLinkArguments>
+      </CustomPostLinkArguments>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Strip|VisualGDB'">
+    <ClCompile>
+      <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
+      <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/usr/include/SDL2;../../src;../../src/osdep;../../src/threaddep;../../src/include;../../external/libguisan/include;../../src/archivers;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;ARMV6T2;USE_ARMNEON;ARM_HAS_DIV;_REENTRANT;AMIBERRY;CPU_arm;ARMV6_ASSEMBLY;_FILE_OFFSET_BITS=64;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalCOptions>-mcpu=cortex-a72 -mfpu=neon-fp-armv8 -mfloat-abi=hard </AdditionalCOptions>
+      <AdditionalCPPOptions>-mcpu=cortex-a72 -mfpu=neon-fp-armv8 -mfloat-abi=hard </AdditionalCPPOptions>
+    </ClCompile>
+    <Link>
+      <AdditionalLinkerInputs>;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
+      <LibrarySearchDirectories>=/usr/local/lib;../../external/libguisan/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
+      <AdditionalLibraryNames>SDL2;pthread;z;png;rt;FLAC;mpg123;dl;mpeg2convert;mpeg2;SDL2_image;SDL2_ttf;guisan;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
+      <LinkerScript>
+      </LinkerScript>
       <CustomPostLinkTool>C:\SysGCC\raspberry\bin\arm-linux-gnueabihf-strip</CustomPostLinkTool>
       <CustomPostLinkArguments>$@</CustomPostLinkArguments>
     </Link>
@@ -187,7 +246,6 @@
     <ClCompile Include="..\..\src\archivers\mp2\kjmp2.cpp" />
     <ClCompile Include="..\..\src\archivers\wrp\warp.cpp" />
     <ClCompile Include="..\..\src\archivers\zip\unzip.cpp" />
-    <ClCompile Include="..\..\src\aros.rom.cpp" />
     <ClCompile Include="..\..\src\audio.cpp" />
     <ClCompile Include="..\..\src\autoconf.cpp" />
     <ClCompile Include="..\..\src\blitfunc.cpp" />
@@ -229,7 +287,6 @@
     <ClCompile Include="..\..\src\flashrom.cpp" />
     <ClCompile Include="..\..\src\fpp.cpp" />
     <ClCompile Include="..\..\src\fsdb.cpp" />
-    <ClCompile Include="..\..\src\fsdb_unix.cpp" />
     <ClCompile Include="..\..\src\fsusage.cpp" />
     <ClCompile Include="..\..\src\gayle.cpp" />
     <ClCompile Include="..\..\src\gfxboard.cpp" />
@@ -237,6 +294,7 @@
     <ClCompile Include="..\..\src\hardfile.cpp" />
     <ClCompile Include="..\..\src\hrtmon.rom.cpp" />
     <ClCompile Include="..\..\src\ide.cpp" />
+    <ClCompile Include="..\..\src\ini.cpp" />
     <ClCompile Include="..\..\src\inputdevice.cpp" />
     <ClCompile Include="..\..\src\isofs.cpp" />
     <ClCompile Include="..\..\src\jit\compemu.cpp" />
@@ -307,10 +365,12 @@
     <ClCompile Include="..\..\src\scp.cpp" />
     <ClCompile Include="..\..\src\scsi.cpp" />
     <ClCompile Include="..\..\src\scsiemul.cpp" />
+    <ClCompile Include="..\..\src\scsitape.cpp" />
     <ClCompile Include="..\..\src\serial_win32.cpp" />
     <ClCompile Include="..\..\src\sounddep\sound.cpp" />
     <ClCompile Include="..\..\src\statusline.cpp" />
     <ClCompile Include="..\..\src\tabletlibrary.cpp" />
+    <ClCompile Include="..\..\src\threaddep\threading.cpp" />
     <ClCompile Include="..\..\src\tinyxml2.cpp" />
     <ClCompile Include="..\..\src\traps.cpp" />
     <ClCompile Include="..\..\src\uaeexe.cpp" />
@@ -429,6 +489,7 @@
     <ClInclude Include="..\..\src\include\gfxboard.h" />
     <ClInclude Include="..\..\src\include\gui.h" />
     <ClInclude Include="..\..\src\include\ide.h" />
+    <ClInclude Include="..\..\src\include\ini.h" />
     <ClInclude Include="..\..\src\include\inputdevice.h" />
     <ClInclude Include="..\..\src\include\isofs.h" />
     <ClInclude Include="..\..\src\include\isofs_api.h" />
@@ -459,6 +520,7 @@
     <ClInclude Include="..\..\src\include\uaenative.h" />
     <ClInclude Include="..\..\src\include\uaeresource.h" />
     <ClInclude Include="..\..\src\include\uae\caps.h" />
+    <ClInclude Include="..\..\src\include\uae\cdrom.h" />
     <ClInclude Include="..\..\src\include\uae\dlopen.h" />
     <ClInclude Include="..\..\src\include\uae\likely.h" />
     <ClInclude Include="..\..\src\include\uae\mman.h" />
@@ -487,6 +549,7 @@
     <ClInclude Include="..\..\src\osdep\amiberry_input.h" />
     <ClInclude Include="..\..\src\osdep\cda_play.h" />
     <ClInclude Include="..\..\src\osdep\config.h" />
+    <ClInclude Include="..\..\src\osdep\fsdb_host.h" />
     <ClInclude Include="..\..\src\osdep\gui\gui_handling.h" />
     <ClInclude Include="..\..\src\osdep\gui\SelectorEntry.hpp" />
     <ClInclude Include="..\..\src\osdep\mp3decoder.h" />

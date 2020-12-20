@@ -1,174 +1,244 @@
-#include <string.h>
-#include <sys/time.h>
-#include <time.h>
+/*
+ * UAE - The Un*x Amiga Emulator
+ *
+ * Library of functions to make emulated filesystem as independent as
+ * possible of the host filesystem's capabilities.
+ *
+ * Copyright 1997 Mathias Ortmann
+ * Copyright 1999 Bernd Schmidt
+ * Copyright 2012 Frode Solheim
+ */
 
+#include "sysconfig.h"
 #include "sysdeps.h"
+#include "options.h"
+#include "memory.h"
+
+#include "uae/uae.h"
 #include "fsdb.h"
 #include "zfile.h"
+
 #include <sys/types.h>
 #include <sys/stat.h>
+#ifdef WINDOWS
+#include <sys/utime.h>
+#else
+#include <sys/time.h>
+#endif
+#include <string.h>
+#include <limits.h>
 
-int dos_errno(void)
+#include "fsdb_host.h"
+
+#include "uae.h"
+
+#define NUM_EVILCHARS 9
+static TCHAR evilchars[NUM_EVILCHARS] = { '%', '\\', '*', '?', '\"', '/', '|', '<', '>' };
+
+#define UAEFSDB_BEGINS _T("__uae___")
+
+/* Return nonzero for any name we can't create on the native filesystem.  */
+static int fsdb_name_invalid_2(a_inode* aino, const TCHAR* n, int dir)
 {
-	int e = errno;
+    int i;
+    int l = _tcslen(n);
 
-	switch (e) {
-	case ENOMEM:	return ERROR_NO_FREE_STORE;
-	case EEXIST:	return ERROR_OBJECT_EXISTS;
-	case EACCES:	return ERROR_WRITE_PROTECTED;
-	case ENOENT:	return ERROR_OBJECT_NOT_AROUND;
-	case ENOTDIR:	return ERROR_OBJECT_WRONG_TYPE;
-	case ENOSPC:	return ERROR_DISK_IS_FULL;
-	case EBUSY:       	return ERROR_OBJECT_IN_USE;
-	case EISDIR:	return ERROR_OBJECT_WRONG_TYPE;
-#if defined(ETXTBSY)
-	case ETXTBSY:	return ERROR_OBJECT_IN_USE;
-#endif
-#if defined(EROFS)
-	case EROFS:       	return ERROR_DISK_WRITE_PROTECTED;
-#endif
-#if defined(ENOTEMPTY)
-#if ENOTEMPTY != EEXIST
-	case ENOTEMPTY:	return ERROR_DIRECTORY_NOT_EMPTY;
-#endif
-#endif
+    /* the reserved fsdb filename */
+    if (_tcscmp(n, FSDB_FILE) == 0)
+        return -1;
 
-	default:
-		write_log(("Unimplemented error %s\n", strerror(e)));
-		return ERROR_NOT_IMPLEMENTED;
-	}
+    if (dir) {
+        if (n[0] == '.' && l == 1)
+            return -1;
+        if (n[0] == '.' && n[1] == '.' && l == 2)
+            return -1;
+    }
+
+    /* these characters are *never* allowed */
+    for (i = 0; i < NUM_EVILCHARS; i++) {
+        if (_tcschr(n, evilchars[i]) != 0)
+            return 1;
+    }
+
+    return 0; /* the filename passed all checks, now it should be ok */
+}
+
+int fsdb_name_invalid(a_inode* aino, const TCHAR* n)
+{
+    int v = fsdb_name_invalid_2(aino, n, 0);
+    if (v <= 0)
+        return v;
+    write_log(_T("FILESYS: '%s' illegal filename\n"), n);
+    return v;
+}
+
+int fsdb_name_invalid_dir(a_inode* aino, const TCHAR* n)
+{
+    int v = fsdb_name_invalid_2(aino, n, 1);
+    if (v <= 0)
+        return v;
+    write_log(_T("FILESYS: '%s' illegal filename\n"), n);
+    return v;
+}
+
+static uae_u32 filesys_parse_mask(uae_u32 mask)
+{
+    return mask ^ 0xf;
+}
+
+int fsdb_exists(const TCHAR* nname)
+{
+    return fs_path_exists(nname);
+}
+
+bool my_utime(const char* name, struct mytimeval* tv)
+{
+    struct mytimeval mtv{};
+    struct timeval times[2];
+
+    if (tv == NULL) {
+        struct timeval time{};
+        struct timezone tz{};
+
+        gettimeofday(&time, &tz);
+        mtv.tv_sec = time.tv_sec + tz.tz_minuteswest;
+        mtv.tv_usec = time.tv_usec;
+    }
+    else {
+        mtv.tv_sec = tv->tv_sec;
+        mtv.tv_usec = tv->tv_usec;
+    }
+
+    times[0].tv_sec = mtv.tv_sec;
+    times[0].tv_usec = mtv.tv_usec;
+    times[1].tv_sec = mtv.tv_sec;
+    times[1].tv_usec = mtv.tv_usec;
+    if (utimes(name, times) == 0)
+        return true;
+
+    return false;
 }
 
 /* return supported combination */
 int fsdb_mode_supported(const a_inode* aino)
 {
-	int mask = aino->amigaos_mode;
-	return mask;
+    int mask = aino->amigaos_mode;
+    return mask;
 }
 
-bool my_createshortcut(const char* source, const char* target, const char* description)
+/* For an a_inode we have newly created based on a filename we found on the
+ * native fs, fill in information about this file/directory.  */
+int fsdb_fill_file_attrs(a_inode* base, a_inode* aino)
 {
-	return false;
+    struct stat statbuf{};
+    /* This really shouldn't happen...  */
+    if (stat(aino->nname, &statbuf) == -1)
+        return 0;
+    aino->dir = S_ISDIR(statbuf.st_mode) ? 1 : 0;
+    aino->amigaos_mode = ((S_IXUSR & statbuf.st_mode ? 0 : A_FIBF_EXECUTE)
+        | (S_IWUSR & statbuf.st_mode ? 0 : A_FIBF_WRITE)
+        | (S_IRUSR & statbuf.st_mode ? 0 : A_FIBF_READ));
+
+#if defined(AMIBERRY)
+    // Always give execute & read permission
+    // Temporary do this for raspberry...
+    aino->amigaos_mode &= ~A_FIBF_EXECUTE;
+    aino->amigaos_mode &= ~A_FIBF_READ;
+#endif
+    return 1;
 }
 
-bool my_resolvesoftlink(TCHAR* linkfile, int size, bool linkonly)
+int fsdb_set_file_attrs(a_inode* aino)
 {
-	return false;
+    struct stat statbuf{};
+    int mode;
+    uae_u32 mask = aino->amigaos_mode;
+
+    if (stat(aino->nname, &statbuf) == -1)
+        return ERROR_OBJECT_NOT_AROUND;
+
+    mode = statbuf.st_mode;
+
+    if (mask & A_FIBF_READ)
+        mode &= ~S_IRUSR;
+    else
+        mode |= S_IRUSR;
+
+    if (mask & A_FIBF_WRITE)
+        mode &= ~S_IWUSR;
+    else
+        mode |= S_IWUSR;
+
+    if (mask & A_FIBF_EXECUTE)
+        mode &= ~S_IXUSR;
+    else
+        mode |= S_IXUSR;
+
+    chmod(aino->nname, mode);
+
+    aino->dirty = 1;
+    return 0;
 }
 
-void my_canonicalize_path(const TCHAR* path, TCHAR* out, int size)
+int same_aname(const char* an1, const char* an2)
 {
-	_tcsncpy(out, path, size);
-	out[size - 1] = 0;
-	return;
+    // FIXME: latin 1 chars?
+    // FIXME: compare with latin1 table in charset/filesys_host/fsdb_host
+    return strcasecmp(an1, an2) == 0;
+}
+/* Return nonzero if we can represent the amigaos_mode of AINO within the
+ * native FS.  Return zero if that is not possible.  */
+int fsdb_mode_representable_p(const a_inode* aino, int amigaos_mode)
+{
+    int mask = amigaos_mode ^ 15;
+
+    if (0 && aino->dir)
+        return amigaos_mode == 0;
+
+    if (mask & A_FIBF_SCRIPT) /* script */
+        return 0;
+    if ((mask & 15) == 15) /* xxxxRWED == OK */
+        return 1;
+    if (!(mask & A_FIBF_EXECUTE)) /* not executable */
+        return 0;
+    if (!(mask & A_FIBF_READ)) /* not readable */
+        return 0;
+    if ((mask & 15) == (A_FIBF_READ | A_FIBF_EXECUTE)) /* ----RxEx == ReadOnly */
+        return 1;
+    return 0;
 }
 
-int my_issamevolume(const TCHAR* path1, const TCHAR* path2, TCHAR* path)
+TCHAR* fsdb_create_unique_nname(a_inode* base, const TCHAR* suggestion)
 {
-	TCHAR p1[MAX_DPATH];
-	TCHAR p2[MAX_DPATH];
-	unsigned int len, cnt;
+    TCHAR* c;
+    TCHAR tmp[256] = UAEFSDB_BEGINS;
+    int i;
 
-	my_canonicalize_path(path1, p1, sizeof p1 / sizeof(TCHAR));
-	my_canonicalize_path(path2, p2, sizeof p2 / sizeof(TCHAR));
-	len = _tcslen(p1);
-	if (len > _tcslen(p2))
-		len = _tcslen(p2);
-	if (_tcsnicmp(p1, p2, len))
-		return 0;
-	_tcscpy(path, p2 + len);
-	cnt = 0;
-	for (unsigned int i = 0; i < _tcslen(path); i++) {
-		if (path[i] == '\\' || path[i] == '/') {
-			path[i] = '/';
-			cnt++;
-		}
-	}
-	write_log(_T("'%s' (%s) matched with '%s' (%s), extra = '%s'\n"), path1, p1, path2, p2, path);
-	return cnt;
-}
+    _tcsncat(tmp, suggestion, 240);
 
-bool my_stat(const TCHAR *name, struct mystat *statbuf)
-{
-	struct stat64 st;
+    /* replace the evil ones... */
+    for (i = 0; i < NUM_EVILCHARS; i++)
+        while ((c = _tcschr(tmp, evilchars[i])) != 0)
+            *c = '_';
 
-	if (stat64(name, &st) == -1) {
-		write_log("my_stat: stat on file %s failed\n", name);
-		return false;
-	}
+    while ((c = _tcschr(tmp, '.')) != 0)
+        *c = '_';
+    while ((c = _tcschr(tmp, ' ')) != 0)
+        *c = '_';
 
-	statbuf->size = st.st_size;
-	statbuf->mode = 0;
-	if (st.st_mode & S_IRUSR) {
-		statbuf->mode |= FILEFLAG_READ;
-	}
-	if (st.st_mode & S_IWUSR) {
-		statbuf->mode |= FILEFLAG_WRITE;
-	}
-	statbuf->mtime.tv_sec = st.st_mtime;
-	statbuf->mtime.tv_usec = 0;
-
-	return true;
-}
-
-
-bool my_chmod(const TCHAR *name, uae_u32 mode)
-{
-	// Note: only used to set or clear write protect on disk file
-
-	// get current state
-	struct stat64 st;
-	if (stat64(name, &st) == -1) {
-		write_log("my_chmod: stat on file %s failed\n", name);
-		return false;
-	}
-
-	if (mode & FILEFLAG_WRITE)
-		// set write permission
-		st.st_mode |= S_IWUSR;
-	else
-		// clear write permission
-		st.st_mode &= ~(S_IWUSR);
-	chmod(name, st.st_mode);
-
-	stat64(name, &st);
-	int newmode = 0;
-	if (st.st_mode & S_IRUSR) {
-		newmode |= FILEFLAG_READ;
-	}
-	if (st.st_mode & S_IWUSR) {
-		newmode |= FILEFLAG_WRITE;
-	}
-
-	return (mode == newmode);
-}
-
-
-bool my_utime(const TCHAR *name, struct mytimeval *tv)
-{
-	struct mytimeval mtv;
-	struct timeval times[2];
-
-	if (tv == NULL) {
-		struct timeval time;
-		struct timezone tz;
-
-		gettimeofday(&time, &tz);
-		mtv.tv_sec = time.tv_sec + tz.tz_minuteswest;
-		mtv.tv_usec = time.tv_usec;
-  } else {
-		mtv.tv_sec = tv->tv_sec;
-		mtv.tv_usec = tv->tv_usec;
-	}
-
-	times[0].tv_sec = mtv.tv_sec;
-	times[0].tv_usec = mtv.tv_usec;
-	times[1].tv_sec = mtv.tv_sec;
-	times[1].tv_usec = mtv.tv_usec;
-	if (utimes(name, times) == 0)
-		return true;
-
-	return false;
+    for (;;) {
+        TCHAR* p = build_nname(base->nname, tmp);
+        if (access(p, R_OK) < 0 && errno == ENOENT) {
+            write_log(_T("unique name: %s\n"), p);
+            return p;
+        }
+        xfree(p);
+        /* tmpnam isn't reentrant and I don't really want to hack configure
+         * right now to see whether tmpnam_r is available...  */
+        for (i = 0; i < 8; i++) {
+            tmp[i + 8] = "_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[uaerand() % 63];
+        }
+    }
 }
 
 // Get local time in secs, starting from 01.01.1970
