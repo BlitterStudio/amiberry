@@ -39,8 +39,8 @@
 #endif
 #ifdef AHI
 #include "traps.h"
-#include "ahidsound.h"
-#include "ahidsound_new.h"
+#include "ahi_v1.h"
+#include "ahi_v2.h"
 #endif
 #include "threaddep/thread.h"
 

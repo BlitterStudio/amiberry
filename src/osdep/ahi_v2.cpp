@@ -34,7 +34,7 @@
 #include "threaddep/thread.h"
 #include "native2amiga.h"
 #include "sounddep/sound.h"
-#include "ahidsound_new.h"
+#include "ahi_v2.h"
 
 #define AHI_STRUCT_VERSION 1
 

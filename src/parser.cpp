@@ -43,8 +43,9 @@
 #include "threaddep/thread.h"
 #include "serial.h"
 #include "parser.h"
-
-#include "ahidsound.h"
+#ifdef AHI
+#include "ahi_v1.h"
+#endif
 #include "cia.h"
 #include "savestate.h"
 #include "xwin.h"

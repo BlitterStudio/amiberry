@@ -33,7 +33,7 @@
 #include "sounddep/sound.h"
 #include "parser.h"
 //#include "enforcer.h"
-#include "ahidsound.h"
+#include "ahi_v1.h"
 #include "picasso96.h"
 #include "uaenative.h"
 

@@ -51,8 +51,8 @@
 #include "uae/uae.h"
 
 #ifdef AHI
-#include "ahidsound.h"
-#include "ahidsound_new.h"
+#include "ahi_v1.h"
+#include "ahi_v2.h"
 #endif
 
 int log_scsi;
