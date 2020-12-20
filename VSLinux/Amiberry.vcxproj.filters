@@ -981,6 +981,15 @@
     <ClCompile Include="..\src\scsitape.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\osdep\ahi_winuae.cpp">
+      <Filter>src\osdep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\osdep\amiberry_ahi.cpp">
+      <Filter>src\osdep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\uaenative.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\archivers\7z\7zBuf.h">
@@ -1657,6 +1666,18 @@
     </ClInclude>
     <ClInclude Include="..\src\osdep\fsdb_host.h">
       <Filter>src\osdep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\osdep\ahidsound.h">
+      <Filter>src\osdep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\osdep\ahidsound_new.h">
+      <Filter>src\osdep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\uaenative.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\uni_common.h">
+      <Filter>src\include</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

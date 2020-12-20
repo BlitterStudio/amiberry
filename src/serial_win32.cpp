@@ -612,7 +612,6 @@ static void serdatcopy(void)
 void serial_hsynchandler (void)
 {
 #ifdef AHI
-	extern void hsyncstuff(void);
 	hsyncstuff();
 #endif
 #ifdef ARCADIA
