@@ -257,6 +257,8 @@ static void close_audio_sdl2(struct sound_data* sd)
 	}
 }
 
+extern void setvolume_ahi(int);
+
 void set_volume_sound_device(struct sound_data* sd, int volume, int mute)
 {
 	//todo
@@ -265,7 +267,7 @@ void set_volume_sound_device(struct sound_data* sd, int volume, int mute)
 void set_volume(int volume, int mute)
 {
 	set_volume_sound_device(sdp, volume, mute);
-	//setvolume_ahi(volume);
+	setvolume_ahi(volume);
 	config_changed = 1;
 }
 

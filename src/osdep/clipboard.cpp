@@ -13,7 +13,6 @@
 #include "traps.h"
 #ifdef AMIBERRY
 #ifndef _WIN32
-typedef int HWND;
 typedef int HDC;
 typedef int HGLOBAL;
 typedef unsigned int UINT;
@@ -48,7 +47,7 @@ static char* clipboard_to_host_text;
 
 int clipboard_debug;
 
-static HWND chwnd;
+static int chwnd;
 static HDC hdc;
 static uaecptr clipboard_data;
 static int vdelay, vdelay2;
@@ -764,7 +763,7 @@ void clipboard_disable(bool disabled)
 	clip_disabled = disabled;
 }
 
-static void clipboard_read(TrapContext* ctx, HWND hwnd, bool keyboardinject)
+static void clipboard_read(TrapContext* ctx, int hwnd, bool keyboardinject)
 {
 	HGLOBAL hglb;
 	UINT f;
@@ -889,7 +888,7 @@ static void clipboard_free_delayed(void)
 	clipboard_delayed_size = 0;
 }
 
-void clipboard_changed(HWND hwnd)
+void clipboard_changed(int hwnd)
 {
 #if DEBUG_CLIP > 0
 	write_log (_T("clipboard: windows clipboard changed message\n"));
@@ -1066,7 +1065,7 @@ int amiga_clipboard_want_data(TrapContext* ctx)
 	return 1;
 }
 
-void clipboard_active(HWND hwnd, int active)
+void clipboard_active(int hwnd, int active)
 {
 	clipactive = active;
 	if (!initialized || !hwnd)
@@ -1155,7 +1154,7 @@ void clipboard_reset(void)
 #ifdef AMIBERRY
 void clipboard_init(void)
 {
-	chwnd = static_cast<HWND>(1); // fake window handle
+	chwnd = 1; // fake window handle
 	write_log(_T("clipboard_init\n"));
 	clipboard_from_host_mutex = SDL_CreateMutex();
 	clipboard_from_host_text = strdup("");

@@ -165,8 +165,6 @@ void parallel_exit(void)
 #endif
 }
 
-#if 0
-
 static void freepsbuffers (void)
 {
 }
@@ -179,12 +177,14 @@ static int openprinter_ps (void)
 static void *prt_thread (void *p)
 {
 }
+#endif
 
 static int doflushprinter (void)
 {
 	return 0;
 }
 
+#if 0
 static void openprinter (void);
 
 static void flushprtbuf (void)
@@ -200,8 +200,6 @@ static void DoSomeWeirdPrintingStuff (uae_char val)
 {
 }
 
-#endif
-
 int isprinter (void)
 {
 	if (parallel_mode == PARALLEL_MODE_TCP_PRINTER) {
@@ -214,8 +212,6 @@ int isprinter (void)
 #endif
     return 0;
 }
-
-#if 0
 
 int isprinteropen (void)
 {
@@ -236,14 +232,15 @@ static void openprinter (void)
 {
 	STUB("");
 }
+#endif
 
 void flushprinter (void)
 {
-	STUB("");
+	if (!doflushprinter())
+		return;
 }
 
-#endif
-
+#if 0
 void doprinter (uae_u8 val)
 {
 	if (parallel_mode == PARALLEL_MODE_TCP_PRINTER) {

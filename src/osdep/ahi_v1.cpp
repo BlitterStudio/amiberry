@@ -215,7 +215,7 @@ static int ahi_init_record_win32 (void)
 	return 0;
 }
 
-void setvolume_ahi (LONG vol)
+void setvolume_ahi (int vol)
 {
 #if 0
 	HRESULT hr;

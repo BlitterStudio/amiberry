@@ -548,8 +548,6 @@ typedef int32_t uae_atomic;
 #define M68K_SPEED_14MHZ_CYCLES 1024
 #define M68K_SPEED_25MHZ_CYCLES 128
 
-typedef unsigned int WPARAM;
-typedef int LPARAM;
 typedef int SOCKET;
 #define INVALID_SOCKET -1
 

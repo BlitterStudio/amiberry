@@ -236,22 +236,24 @@ static NavigationMap navMap[] =
 
 	//  active            move left           move right          move up           move down
 	//PanelSound
-	{ "sndDisable", "Sound", "sldPaulaVol", "sldFloppySoundDisk", "sndDisEmu" },
-	{ "sndDisEmu", "Sound", "sldPaulaVol", "sndDisable", "sndEmulate" },
-	{ "sndEmulate", "Sound", "sldPaulaVol", "sndDisEmu", "sndEmuBest" },
-	{ "sndEmuBest", "Sound", "sldPaulaVol", "sndEmulate", "cboChannelMode" },
+	{ "sndDisable", "Sound", "sldMasterVol", "sldFloppySoundDisk", "sndDisEmu" },
+	{ "sndDisEmu", "Sound", "sldMasterVol", "sndDisable", "sndEmulate" },
+	{ "sndEmulate", "Sound", "sldMasterVol", "sndDisEmu", "sndEmuBest" },
+	{ "sndEmuBest", "Sound", "sldMasterVol", "sndEmulate", "cboChannelMode" },
 	{ "cboChannelMode", "Sound", "cboSeparation", "sndEmuBest", "cboFrequency" },
 	{ "cboFrequency", "Sound", "cboStereoDelay", "cboChannelMode", "chkFloppySound" },
-	{ "cboInterpol", "cboSeparation", "Sound", "sldCDVol", "cboFilter" },
+	{ "cboInterpol", "cboSeparation", "Sound", "sldAHIVol", "cboFilter" },
 	{ "cboFilter", "cboStereoDelay", "Sound", "cboInterpol", "sldSoundBufferSize" },
 	{ "cboSeparation", "cboChannelMode", "cboInterpol", "sndEmuBest", "cboStereoDelay" },
 	{ "cboStereoDelay", "cboFrequency", "cboFilter", "cboSeparation", "chkFloppySound" },
-	{ "sldPaulaVol", "", "", "sldSoundBufferSize", "sldCDVol" },
-	{ "sldCDVol", "", "", "sldPaulaVol", "cboInterpol" },
+	{ "sldMasterVol", "", "", "sldSoundBufferSize", "sldPaulaVol"},
+	{ "sldPaulaVol", "", "", "sldMasterVol", "sldCDVol" },
+	{ "sldCDVol", "", "", "sldPaulaVol", "sldAHIVol" },
+	{ "sldAHIVol", "", "", "sldCDVol", "cboInterpol"},
 	{ "chkFloppySound", "Sound", "sldSoundBufferSize", "cboFrequency", "sldFloppySoundEmpty"},
 	{ "sldFloppySoundEmpty", "", "", "chkFloppySound", "sldFloppySoundDisk"},
 	{ "sldFloppySoundDisk", "", "", "sldFloppySoundEmpty", "sndDisable"},
-	{ "sldSoundBufferSize", "", "", "cboFilter", "sldPaulaVol"},
+	{ "sldSoundBufferSize", "", "", "cboFilter", "sldMasterVol"},
 
 	//  active            move left           move right          move up           move down
 	// PanelInput
