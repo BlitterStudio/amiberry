@@ -990,6 +990,9 @@
     <ClCompile Include="..\src\osdep\ahi_v1.cpp">
       <Filter>src\osdep</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\uaeserial.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\archivers\7z\7zBuf.h">
@@ -1678,6 +1681,9 @@
     </ClInclude>
     <ClInclude Include="..\src\osdep\ahi_v2.h">
       <Filter>src\osdep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\uaeserial.h">
+      <Filter>src\include</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
