@@ -423,6 +423,7 @@ int uaeser_setparams (void *vsd, int baud, int rbuffer, int bits, int sbits, int
 
 static void *uaeser_trap_thread (void *arg)
 {
+#ifndef AMIBERRY
 	struct uaeserialdata* sd = (struct uaeserialdata*)arg;
 	HANDLE handles[4];
 	int cnt;
@@ -431,7 +432,7 @@ static void *uaeser_trap_thread (void *arg)
 	uae_set_thread_priority(NULL, 1);
 	sd->threadactive = 1;
 	uae_sem_post(&sd->sync_sem);
-	//startwce(sd, &evtmask);
+	startwce(sd, &evtmask);
 	while (sd->threadactive == 1) {
 		int sigmask = 0;
 		uae_sem_wait(&sd->change_sem);
@@ -464,13 +465,13 @@ static void *uaeser_trap_thread (void *arg)
 	}
 	sd->threadactive = 0;
 	uae_sem_post(&sd->sync_sem);
+#endif
 }
 
 void uaeser_trigger (void *vsd)
 {
 	struct uaeserialdatawin32* sd = (struct uaeserialdatawin32*)vsd;
 	
-	STUB("");
 	/*
 	 * TODO
 	 * What to do with this? There is some sync/aysnc Win32 stuff required here
