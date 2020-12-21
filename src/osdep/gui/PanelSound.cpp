@@ -830,12 +830,12 @@ void RefreshPanelSound()
 	lblPaulaVol->setEnabled(enabled);
 	lblPaulaVolInfo->setEnabled(enabled);
 	sldPaulaVol->setEnabled(enabled);
-	lblMasterVol->setEnabled(enabled);
-	lblMasterVolInfo->setEnabled(enabled);
-	sldMasterVol->setEnabled(enabled);
-	lblAHIVol->setEnabled(enabled);
-	lblAHIVolInfo->setEnabled(enabled);
-	sldAHIVol->setEnabled(enabled);
+	lblMasterVol->setEnabled(false);
+	lblMasterVolInfo->setEnabled(false);
+	sldMasterVol->setEnabled(false);
+	lblAHIVol->setEnabled(false);
+	lblAHIVolInfo->setEnabled(false);
+	sldAHIVol->setEnabled(false);
 }
 
 bool HelpPanelSound(std::vector<std::string>& helptext)
