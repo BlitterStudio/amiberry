@@ -11,6 +11,8 @@
 #include "sysdeps.h"
 
 #include "options.h"
+#include "uae.h"
+#include "traps.h"
 #include "memory.h"
 #include "custom.h"
 #include "newcpu.h"
@@ -19,6 +21,7 @@
 #include "fsusage.h"
 #include "scsidev.h"
 #include "fsdb.h"
+//#include "uae/io.h"
 
 /* The on-disk format is as follows:
 * Offset 0, 1 byte, valid

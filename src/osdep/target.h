@@ -22,8 +22,8 @@
 #define GETBDM(x) (((x) - (((x) / 10000) * 10000)) / 100)
 #define GETBDD(x) ((x) % 100)
 
-#define AMIBERRYVERSION _T("Amiberry v3.4 beta (2020-11-22)")
-#define AMIBERRYDATE MAKEBD(2020, 11, 22)
+#define AMIBERRYVERSION _T("Amiberry v3.4 beta (2020-12-21)")
+#define AMIBERRYDATE MAKEBD(2020, 12, 21)
 
 #define IHF_WINDOWHIDDEN 6
 
@@ -34,8 +34,19 @@ STATIC_INLINE FILE* uae_tfopen(const TCHAR* path, const TCHAR* mode)
 	return fopen(path, mode);
 }
 
-extern void fix_apmodes(struct uae_prefs* p);
+extern void logging_init();
 extern int generic_main(int argc, char* argv[]);
+
+extern bool my_kbd_handler(int, int, int, bool);
+extern void clearallkeys();
+extern int getcapslock();
+extern void releasecapture();
+extern void disablecapture();
+
+extern int enter_gui_key;
+extern int quit_key;
+extern int action_replay_button;
+extern int fullscreen_key;
 
 extern int emulating;
 extern bool config_loaded;
@@ -60,8 +71,8 @@ void update_display(struct uae_prefs*);
 void black_screen_now(void);
 void graphics_subshutdown(void);
 
-void keyboard_settrans();
-void set_mouse_grab(bool grab);
+extern void wait_keyrelease(void);
+extern void keyboard_settrans(void);
 
 extern void free_AmigaMem();
 extern void alloc_AmigaMem();
@@ -224,6 +235,25 @@ void restore_host_fp_regs(void* buf);
 #endif
 #endif
 
+#ifndef _WIN32
+// Dummy types so this header file can be included on other platforms (for
+// a few declarations).
+typedef void* HINSTANCE;
+typedef void* HMODULE;
+typedef void* HWND;
+typedef void* HKEY;
+typedef void* OSVERSIONINFO;
+typedef bool BOOL;
+typedef int LPARAM;
+typedef int WPARAM;
+typedef int WORD;
+typedef unsigned int UINT;
+typedef long LONG;
+#define WINAPI
+typedef long GUID;
+typedef wchar_t* LPCWSTR;
+#endif
+
 #define MAX_SOUND_DEVICES 100
 #define SOUND_DEVICE_DS 1
 #define SOUND_DEVICE_AL 2
@@ -232,3 +262,23 @@ void restore_host_fp_regs(void* buf);
 #define SOUND_DEVICE_WASAPI_EXCLUSIVE 5
 #define SOUND_DEVICE_XAUDIO2 6
 #define SOUND_DEVICE_SDL2 7
+
+struct sound_device
+{
+	GUID guid;
+	TCHAR* name;
+	TCHAR* alname;
+	TCHAR* cfgname;
+	TCHAR* prefix;
+	int panum;
+	int type;
+};
+extern struct sound_device* sound_devices[MAX_SOUND_DEVICES];
+extern struct sound_device* record_devices[MAX_SOUND_DEVICES];
+
+static inline int uae_deterministic_mode()
+{
+	// Only returns 1 if using netplay mode (not implemented yet)
+	return 0;
+}
+

@@ -44,7 +44,7 @@ struct scpdrive {
 
     int total_ticks;         /* total ticks to final index pulse */
     int acc_ticks;           /* accumulated ticks so far */
-	
+
     unsigned int index_off[MAX_REVS]; /* data offsets of each index */
 
     /* Accumulated read latency in nanosecs. */
@@ -184,12 +184,12 @@ static int scp_next_flux(struct scpdrive *d)
     if (d->rev == d->revs) {
         d->rev = d->dat_idx = 0;
         /* We are wrapping back to the start of the dump. Unless a flux
-         * reversal sits exactly on the index we have some time to donate to
+         * reversal sits exactly on the index we have some time to donate to 
          * the first reversal of the first revolution. */
         val = d->total_ticks - d->acc_ticks;
         d->acc_ticks = -val;
     }
-	
+
     for (;;) {
         if (d->dat_idx >= d->index_pos) {
             d->index_pos = d->index_off[++d->rev % d->revs];
@@ -208,7 +208,7 @@ static int scp_next_flux(struct scpdrive *d)
     }
 
     d->acc_ticks += val;
-	
+
     flux = val * SCK_NS_PER_TICK;
     return (int)flux;
 }

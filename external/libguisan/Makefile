@@ -19,5 +19,8 @@ all : $(TARGET)
 clean :
 	rm -f $(OBJS) $(DEPS)
 	rm -f $(TARGET)
-	
+
+cleanprofile:
+	tm -f $(OBJS:%.o=%.gcda)
+
 -include $(DEPS)

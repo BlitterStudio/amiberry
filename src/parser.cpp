@@ -43,6 +43,9 @@
 #include "threaddep/thread.h"
 #include "serial.h"
 #include "parser.h"
+#ifdef AHI
+#include "ahi_v1.h"
+#endif
 #include "cia.h"
 #include "savestate.h"
 #include "xwin.h"
@@ -162,8 +165,6 @@ void parallel_exit(void)
 #endif
 }
 
-#if 0
-
 static void freepsbuffers (void)
 {
 }
@@ -176,12 +177,14 @@ static int openprinter_ps (void)
 static void *prt_thread (void *p)
 {
 }
+#endif
 
 static int doflushprinter (void)
 {
 	return 0;
 }
 
+#if 0
 static void openprinter (void);
 
 static void flushprtbuf (void)
@@ -197,8 +200,6 @@ static void DoSomeWeirdPrintingStuff (uae_char val)
 {
 }
 
-#endif
-
 int isprinter (void)
 {
 	if (parallel_mode == PARALLEL_MODE_TCP_PRINTER) {
@@ -211,8 +212,6 @@ int isprinter (void)
 #endif
     return 0;
 }
-
-#if 0
 
 int isprinteropen (void)
 {
@@ -233,14 +232,15 @@ static void openprinter (void)
 {
 	STUB("");
 }
+#endif
 
 void flushprinter (void)
 {
-	STUB("");
+	if (!doflushprinter())
+		return;
 }
 
-#endif
-
+#if 0
 void doprinter (uae_u8 val)
 {
 	if (parallel_mode == PARALLEL_MODE_TCP_PRINTER) {
@@ -1107,9 +1107,6 @@ int setbaud (long baud)
 
 void initparallel (void)
 {
-#ifdef FSUAE
-	write_log("initparallel\n");
-#endif
 #if SERIAL_ENET
 	if (_tcsnicmp(currprefs.prtname, "tcp:", 4) == 0) {
 		parallel_tcp_open(currprefs.prtname);
@@ -1124,10 +1121,7 @@ void initparallel (void)
 
 #ifdef AHI
 	if (uae_boot_rom_type) {
-#ifdef FSUAE
-		write_log("installing ahi_winuae\n");
-#endif
-		uaecptr a = here (); //this install the ahisound
+		uaecptr a = here (); //this installs the ahisound
 		org (rtarea_base + 0xFFC0);
 		calltrap (deftrapres (ahi_demux, 0, _T("ahi_winuae")));
 		dw (RTS);
@@ -1143,14 +1137,10 @@ int flashscreen = 0;
 
 void doflashscreen (void)
 {
-#ifdef FSUAE
-
-#else
 	flashscreen = 10;
 	init_colors ();
 	picasso_refresh ();
 	reset_drawing ();
-#endif
 }
 
 void hsyncstuff (void)
@@ -1160,9 +1150,6 @@ void hsyncstuff (void)
 {
 	static int keycheck = 0;
 
-#ifdef FSUAE
-/* DISABLED -- OLD AHI VERSION? */
-#else
 #ifdef AHI
 	{ //begin ahi_sound
 		static int count;
@@ -1176,9 +1163,8 @@ void hsyncstuff (void)
 		}
 	} //end ahi_sound
 #endif
-#endif
 
-#ifdef FSUAE
+#ifdef AMIBERRY
 /* DISABLED FOR NOW */
 #else
 #ifdef PARALLEL_PORT
@@ -1231,11 +1217,30 @@ int enummidiports (void)
 
 void sernametodev (TCHAR *sername)
 {
-	STUB("");
+	int i;
+
+	for (i = 0; i < MAX_SERPAR_PORTS && comports[i]; i++) {
+		if (!_tcscmp(sername, comports[i]->cfgname)) {
+			_tcscpy(sername, comports[i]->dev);
+			return;
+		}
+	}
+	if (!_tcsncmp(sername, _T("TCP:"), 4))
+		return;
+	sername[0] = 0;
 }
 
 void serdevtoname (TCHAR *sername)
 {
-	STUB("");
+	int i;
+	if (!_tcsncmp(sername, _T("TCP:"), 4))
+		return;
+	for (i = 0; i < MAX_SERPAR_PORTS && comports[i]; i++) {
+		if (!_tcscmp(sername, comports[i]->dev)) {
+			_tcscpy(sername, comports[i]->cfgname);
+			return;
+		}
+	}
+	sername[0] = 0;
 }
 #endif

@@ -40,7 +40,6 @@ add_executable(amiberry
         src/flashrom.cpp
         src/fpp.cpp
         src/fsdb.cpp
-        src/fsdb_unix.cpp
         src/fsusage.cpp
         src/gayle.cpp
         src/gfxboard.cpp
@@ -48,6 +47,7 @@ add_executable(amiberry
         src/hardfile.cpp
         src/hrtmon.rom.cpp
         src/ide.cpp
+        src/ini.cpp
         src/inputdevice.cpp
         src/isofs.cpp
         src/keybuf.cpp
@@ -60,6 +60,7 @@ add_executable(amiberry
         src/scp.cpp
         src/scsi.cpp
         src/scsiemul.cpp
+        src/scsitape.cpp
         src/statusline.cpp
         src/tabletlibrary.cpp
         src/tinyxml2.cpp
@@ -67,6 +68,7 @@ add_executable(amiberry
         src/uaeexe.cpp
         src/uaelib.cpp
         src/uaeserial.cpp
+        src/uaenative.cpp
         src/uaeresource.cpp
         src/zfile.cpp
         src/zfile_archive.cpp
@@ -116,6 +118,7 @@ add_executable(amiberry
         src/archivers/wrp/warp.cpp
         src/archivers/zip/unzip.cpp
         src/machdep/support.cpp
+        src/osdep/ahi_v1.cpp
         src/osdep/bsdsocket_host.cpp
         src/osdep/cda_play.cpp
         src/osdep/charset.cpp
@@ -127,6 +130,7 @@ add_executable(amiberry
         src/osdep/picasso96.cpp
         src/osdep/writelog.cpp
         src/osdep/amiberry.cpp
+        src/osdep/ahi_v2.cpp
         src/osdep/amiberry_filesys.cpp
         src/osdep/amiberry_input.cpp
         src/osdep/amiberry_gfx.cpp
@@ -136,6 +140,7 @@ add_executable(amiberry
         src/osdep/sigsegv_handler.cpp
         src/osdep/retroarch.cpp
         src/sounddep/sound.cpp
+        src/threaddep/threading.cpp
         src/osdep/gui/SelectorEntry.cpp
         src/osdep/gui/ShowHelp.cpp
         src/osdep/gui/ShowMessage.cpp

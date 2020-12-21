@@ -38,12 +38,16 @@
 #include "fsusage.h"
 #include "native2amiga.h"
 #include "scsidev.h"
+//#include "uaeserial.h"
 #include "fsdb.h"
 #include "zfile.h"
 #include "zarchive.h"
 #include "gui.h"
 #include "gayle.h"
+//#include "idecontrollers.h"
 #include "savestate.h"
+//#include "a2091.h"
+//#include "ncr_scsi.h"
 #include "cdtv.h"
 #include "sana2.h"
 #include "bsdsocket.h"
@@ -55,12 +59,24 @@
 #include "blkdev.h"
 #include "isofs_api.h"
 #include "scsi.h"
-
+#ifdef WITH_UAENATIVE
+#include "uaenative.h"
+#endif
 #include "tabletlibrary.h"
 #include "cia.h"
 #include "newcpu.h"
 #include "picasso96.h"
+//#include "cpuboard.h"
 #include "rommgr.h"
+//#include "debug.h"
+//#include "debugmem.h"
+#ifdef RETROPLATFORM
+#include "rp.h"
+#endif
+
+#ifdef AMIBERRY
+static int g_packet_delay = 0;
+#endif
 
 #define KS12_BOOT_HACK 1
 
@@ -628,33 +644,33 @@ int get_filesys_unitconfig (struct uae_prefs *p, int index, struct mountedinfo *
 				mi->ismedia = true;
 		}
 	}
-	//if (uci->ci.type == UAEDEV_TAPE) {
-	//	cfgfile_resolve_path_out_load(uci->ci.rootdir, filepath, MAX_DPATH, PATH_TAPE);
-	//	_tcscpy(mi->rootdir, filepath);
-	//	struct device_info di;
-	//	int unitnum = getuindex (p, index);
-	//	mi->size = -1;
-	//	mi->ismounted = false;
-	//	if (unitnum >= 0) {
-	//		mi->ismounted = true;
-	//		if (tape_get_info (unitnum, &di)) {
-	//			mi->ismedia = di.media_inserted != 0;
-	//			_tcscpy (mi->rootdir, di.label);
-	//		}
-	//	} else {
-	//		struct scsi_data_tape *tape;
-	//		unitnum = 0;
-	//		tape = tape_alloc (unitnum, filepath, uci->ci.readonly);
-	//		if (tape) {
-	//			if (tape_get_info (unitnum, &di)) {
-	//				mi->ismedia = di.media_inserted != 0;
-	//				_tcscpy (mi->rootdir, di.label);
-	//			}
-	//			tape_free (tape);
-	//		}
-	//	}
-	//	return FILESYS_TAPE;
-	//}
+	if (uci->ci.type == UAEDEV_TAPE) {
+		cfgfile_resolve_path_out_load(uci->ci.rootdir, filepath, MAX_DPATH, PATH_TAPE);
+		_tcscpy(mi->rootdir, filepath);
+		struct device_info di;
+		int unitnum = getuindex (p, index);
+		mi->size = -1;
+		mi->ismounted = false;
+		if (unitnum >= 0) {
+			mi->ismounted = true;
+			if (tape_get_info (unitnum, &di)) {
+				mi->ismedia = di.media_inserted != 0;
+				_tcscpy (mi->rootdir, di.label);
+			}
+		} else {
+			struct scsi_data_tape *tape;
+			unitnum = 0;
+			tape = tape_alloc (unitnum, filepath, uci->ci.readonly);
+			if (tape) {
+				if (tape_get_info (unitnum, &di)) {
+					mi->ismedia = di.media_inserted != 0;
+					_tcscpy (mi->rootdir, di.label);
+				}
+				tape_free (tape);
+			}
+		}
+		return FILESYS_TAPE;
+	}
 
 	if (mi->size < 0)
 		return -1;
@@ -1274,7 +1290,7 @@ static void initialize_mountinfo (void)
 	nr = nr_units ();
 	cd_unit_offset = nr;
 	cd_unit_number = 0;
-	if (currprefs.scsi) {
+	if (currprefs.scsi && currprefs.automount_cddrives) {
 		uae_u32 mask = scsi_get_cd_drive_mask ();
 		for (int i = 0; i < 32; i++) {
 			if (mask & (1 << i)) {
@@ -2158,7 +2174,7 @@ int filesys_media_change (const TCHAR *rootdir, int inserted, struct uaedev_conf
 	if (nr >= 0)
 		ui = &mountinfo.ui[nr];
 	/* only configured drives have automount support if automount is disabled */
-	if ((!ui || !ui->configureddrive) && (inserted == 0 || inserted == 1))
+	if (!currprefs.automount_removable && (!ui || !ui->configureddrive) && (inserted == 0 || inserted == 1))
 		return 0;
 	if (nr < 0 && !inserted)
 		return 0;
@@ -2658,11 +2674,16 @@ static TCHAR *create_nname (Unit *unit, a_inode *base, TCHAR *rel)
 {
 	TCHAR *p;
 
+	aino_test (base);
 	/* We are trying to create a file called REL.  */
 
 	/* If the name is used otherwise in the directory (or globally), we
 	* need a new unique nname.  */
 	if (fsdb_name_invalid (base, rel) || fsdb_used_as_nname (base, rel)) {
+		if (currprefs.filesys_no_uaefsdb && !(base->volflags & MYVOLUMEINFO_STREAMS)) {
+			write_log (_T("illegal filename '%s', no stream supporting filesystem and uaefsdb disabled\n"), rel);
+			return 0;
+		}
 		p = fsdb_create_unique_nname (base, rel);
 		return p;
 	}
@@ -3016,6 +3037,15 @@ static void startup_update_unit (Unit *unit, UnitInfo *uinfo)
 	xfree (unit->ui.volname);
 	memcpy (&unit->ui, uinfo, sizeof (UnitInfo));
 	unit->ui.devname = uinfo->devname;
+#ifdef AMIBERRY
+	//printf("%p %s\n", uinfo->volname, uinfo->volname);
+	if (!uinfo->volname) {
+		// prevents a crash on linux/mac, when e.g. a cd-rom
+		// image was not found
+		uinfo->volname = my_strdup("");
+	}
+	//printf("%p %s\n", uinfo->volname, uinfo->volname);
+#endif
 	unit->ui.volname = my_strdup (uinfo->volname); /* might free later for rename */
 }
 
@@ -3135,7 +3165,13 @@ static void filesys_start_thread (UnitInfo *ui, int nr)
 		ui->back_pipe = xmalloc (smp_comm_pipe, 1);
 		init_comm_pipe (ui->unit_pipe, 400, 3);
 		init_comm_pipe (ui->back_pipe, 100, 1);
-		uae_start_thread (_T("filesys"), filesys_thread, (void *)ui, &ui->tid);
+#ifdef AMIBERRY
+		if (!uae_deterministic_mode()) {
+#endif
+			uae_start_thread (_T("filesys"), filesys_thread, (void *)ui, &ui->tid);
+#ifdef AMIBERRY
+		}
+#endif
 	}
 #endif
 	if (isrestore ()) {
@@ -3368,11 +3404,17 @@ static void	do_info(TrapContext *ctx, Unit *unit, dpacket *packet, uaecptr info,
 
 static void action_disk_info(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
+#ifdef AMIBERRY
+    g_packet_delay = 10;
+#endif
 	do_info(ctx, unit, packet, GET_PCK_ARG1 (packet) << 2, true);
 }
 
 static void action_info(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
+#ifdef AMIBERRY
+    g_packet_delay = 10;
+#endif
 	do_info(ctx, unit, packet, GET_PCK_ARG2 (packet) << 2, false);
 }
 
@@ -3636,6 +3678,10 @@ static void action_lock(TrapContext *ctx, Unit *unit, dpacket *packet)
 		mode = SHARED_LOCK;
 	}
 
+#ifdef AMIBERRY
+	g_packet_delay = 2;
+#endif
+
 	a = find_aino(ctx, unit, lock, bstr(ctx, unit, name), &err);
 	if (err == 0 && a->softlink) {
 		err = test_softlink (a);
@@ -3827,6 +3873,9 @@ static void action_free_lock(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
 	uaecptr lock = GET_PCK_ARG1 (packet) << 2;
 	a_inode *a;
+#ifdef AMIBERRY
+	g_packet_delay = 2;
+#endif
 
 	a = aino_from_lock(ctx, unit, lock);
 	if (a == 0) {
@@ -3873,6 +3922,9 @@ static uaecptr action_dup_lock_2(TrapContext *ctx, Unit *unit, dpacket *packet, 
 static void action_dup_lock(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
 	uaecptr lock = GET_PCK_ARG1 (packet) << 2;
+#ifdef AMIBERRY
+	g_packet_delay = 2;
+#endif
 	if (!lock) {
 		PUT_PCK_RES1 (packet, 0);
 		return;
@@ -3933,7 +3985,7 @@ static void get_fileinfo(TrapContext *ctx, Unit *unit, dpacket *packet, uaecptr 
 	uae_u8 *buf;
 	uae_u8 buf_array[260] = { 0 };
 
-	if (trap_is_indirect() || !valid_address(info, (sizeof buf_array) - 36)) {
+	if (trap_is_indirect() || !valid_address(info, (sizeof buf_array) - 36) || !real_address_allowed()) {
 		buf = buf_array;
 	} else {
 		buf = get_real_address(info);
@@ -4161,6 +4213,9 @@ static int action_lock_record(TrapContext *ctx, Unit *unit, dpacket *packet, uae
 
 	bool exclusive = mode == REC_EXCLUSIVE || mode == REC_EXCLUSIVE_IMMED;
 
+#ifdef AMIBERRY
+	g_packet_delay = 2;
+#endif
 	write_log (_T("action_lock_record('%s',%d,%d,%d,%d)\n"), k ? k->aino->nname : _T("null"), pos, len, mode, timeout);
 
 	if (!k || mode > REC_SHARED_IMMED) {
@@ -4309,6 +4364,7 @@ static int exalldo(TrapContext *ctx, uaecptr exalldata, uae_u32 exalldatasize, u
 		size2 += 4;
 	}
 	if (type >= 5) {
+
 		timeval_to_amiga (&statbuf.mtime, &days, &mins, &ticks, 50);
 		size2 += 12;
 	}
@@ -4602,7 +4658,7 @@ static uae_u32 exall_helper(TrapContext *ctx)
 	return 1;
 }
 
-static uae_u32 REGPARAM2 fsmisc_helper (TrapContext *ctx)
+static uae_u32 REGPARAM2 fsmisc_helper(TrapContext *ctx)
 {
 	int mode = trap_get_dreg(ctx, 0);
 
@@ -4928,6 +4984,12 @@ static void do_find(TrapContext *ctx, Unit *unit, dpacket *packet, int mode, int
 			: O_RDWR)
 			| (create ? O_CREAT : 0)
 			| (create == 2 ? O_TRUNC : 0));
+	#ifdef AMIBERRY
+		if (openmode & O_CREAT) {
+			// this can be an expensive operation
+			g_packet_delay = 320;
+		}
+	#endif
 
 		fd = fs_openfile (unit, aino, openmode | O_BINARY);
 		if (fd == NULL) {
@@ -5056,6 +5118,11 @@ static void updatedirtime (a_inode *a1, int now)
 
 	if (!a1->parent)
 		return;
+#ifdef AMIBERRY
+	if (!a1->parent->parent) {
+	    return;
+	}
+#endif
 	if (!now) {
 		if (!my_stat (a1->nname, &statbuf))
 			return;
@@ -5098,6 +5165,10 @@ static void	action_read(TrapContext *ctx, Unit *unit, dpacket *packet)
 		/* PUT_PCK_RES2 (packet, EINVAL); */
 		return;
 	}
+#ifdef AMIBERRY
+    g_packet_delay = 100;
+#endif
+
 	gui_flicker_led (UNIT_LED(unit), unit->unit, 1);
 
 	if (size == 0) {
@@ -5166,7 +5237,7 @@ static void	action_read(TrapContext *ctx, Unit *unit, dpacket *packet)
 			return;
 		}
 
-		if (trap_is_indirect()) {
+		if (trap_is_indirect() || !real_address_allowed()) {
 
 			uae_u8 buf[RTAREA_TRAP_DATA_EXTRA_SIZE];
 			actual = 0;
@@ -5223,6 +5294,9 @@ static void action_write(TrapContext *ctx, Unit *unit, dpacket *packet)
 	}
 
 	gui_flicker_led (UNIT_LED(unit), unit->unit, 2);
+#ifdef AMIBERRY
+    g_packet_delay = 320;
+#endif
 
 	if (is_writeprotected(unit) || k->aino->vfso) {
 		PUT_PCK_RES1 (packet, DOS_FALSE);
@@ -5244,7 +5318,7 @@ static void action_write(TrapContext *ctx, Unit *unit, dpacket *packet)
 			return;
 		}
 
-		if (trap_is_indirect()) {
+		if (trap_is_indirect() || !real_address_allowed()) {
 
 			uae_u8 buf[RTAREA_TRAP_DATA_EXTRA_SIZE];
 			actual = 0;
@@ -5578,6 +5652,10 @@ static void	action_create_dir(TrapContext *ctx, Unit *unit, dpacket *packet)
 	a_inode *aino;
 	int err;
 
+#ifdef AMIBERRY
+	g_packet_delay = 320;
+#endif
+
 	if (is_writeprotected(unit)) {
 		PUT_PCK_RES1 (packet, DOS_FALSE);
 		PUT_PCK_RES2 (packet, ERROR_DISK_WRITE_PROTECTED);
@@ -5648,6 +5726,10 @@ static void	action_set_file_size(TrapContext *ctx, Unit *unit, dpacket *packet)
 		whence = SEEK_END;
 	if (mode < 0)
 		whence = SEEK_SET;
+
+#ifdef AMIBERRY
+	g_packet_delay = 100;
+#endif
 
 	k = lookup_key (unit, GET_PCK_ARG1 (packet));
 	if (k == 0) {
@@ -5756,6 +5838,10 @@ static void	action_delete_object(TrapContext *ctx, Unit *unit, dpacket *packet)
 	uaecptr name = GET_PCK_ARG2 (packet) << 2;
 	a_inode *a;
 	int err;
+
+#ifdef AMIBERRY
+	g_packet_delay = 320;
+#endif
 
 	if (is_writeprotected(unit)) {
 		PUT_PCK_RES1 (packet, DOS_FALSE);
@@ -6239,6 +6325,10 @@ static void action_get_file_size64(TrapContext *ctx, Unit *unit, dpacket *packet
 		PUT_PCK64_RES2 (packet, ERROR_INVALID_LOCK);
 		return;
 	}
+#ifdef AMIBERRY
+	g_packet_delay = 50;
+#endif
+
 	filesize = key_filesize(k);
 	if (filesize >= 0) {
 		PUT_PCK64_RES1 (packet, filesize);
@@ -6746,7 +6836,7 @@ static int filesys_iteration(UnitInfo *ui)
 	uaecptr pck;
 	uaecptr msg;
 	uae_u32 morelocks;
-	TrapContext *ctx = NULL;
+	TrapContext *ctx;
 
 	ctx = (TrapContext*)read_comm_pipe_pvoid_blocking(ui->unit_pipe);
 	pck = read_comm_pipe_u32_blocking(ui->unit_pipe);
@@ -6772,7 +6862,7 @@ static int filesys_iteration(UnitInfo *ui)
 		{ TRAPCMD_GET_LONG, { ui->self->locklist }, 2, 1 },
 		{ TRAPCMD_PUT_LONG },
 		{ TRAPCMD_PUT_LONG, { ui->self->locklist, morelocks }},
-		{ ui->self->volume ? TRAPCMD_GET_BYTE : TRAPCMD_NOP, { ui->self->volume + 64 }},
+		{ (uae_u16)ui->self->volume ? TRAPCMD_GET_BYTE : TRAPCMD_NOP, { ui->self->volume + 64 }},
 	};
 	trap_multi(ctx, md, sizeof md / sizeof(struct trapmd));
 
@@ -6829,7 +6919,6 @@ static int filesys_thread (void *unit_v)
 			return 0;
 		}
 	}
-	return 0;
 }
 #endif
 
@@ -6994,8 +7083,20 @@ static void filesys_prepare_reset2 (void)
 			write_comm_pipe_int(uip[i].unit_pipe, 0, 0);
 			write_comm_pipe_int(uip[i].unit_pipe, 0, 0);
 			write_comm_pipe_int(uip[i].unit_pipe, 0, 1);
+#ifdef AMIBERRY
+			if (uae_deterministic_mode()) {
+				while (comm_pipe_has_data(uip[i].unit_pipe)) {
+	            	// process remaining packets until all are done
+	            	filesys_hsync();
+	            }
+			}
+			else {
+#endif
 			uae_sem_wait (&uip[i].reset_sync_sem);
 			uae_end_thread (&uip[i].tid);
+#ifdef AMIBERRY
+			}
+#endif
 		}
 	}
 #endif
@@ -7848,7 +7949,8 @@ static int pt_rdsk (TrapContext *ctx, uae_u8 *bufrdb, int rdblock, UnitInfo *uip
 	int oldversion, oldrevision;
 	int newversion, newrevision;
 	TCHAR *s;
-	int cnt;
+	bool showdebug = partnum == 0;
+	int cnt = 0;
 
 	blocksize = rl (bufrdb + 16);
 	readblocksize = blocksize > hfd->ci.blocksize ? blocksize : hfd->ci.blocksize;
@@ -7985,7 +8087,6 @@ static int pt_rdsk (TrapContext *ctx, uae_u8 *bufrdb, int rdblock, UnitInfo *uip
 	/* we found required FSHD block */
 	fsmem = xmalloc (uae_u8, 262144);
 	lsegblock = rl (buf + 72);
-	cnt = 0;
 	for (;;) {
 		int pb = lsegblock;
 		if (!legalrdbblock (uip, lsegblock))
@@ -8483,8 +8584,7 @@ static uae_u32 REGPARAM2 mousehack_done (TrapContext *ctx)
 	} else if (mode == 102) {
 		uaecptr ret = consolehook_beginio(ctx, trap_get_areg(ctx, 1));
 		trap_put_long(ctx, trap_get_areg(ctx, 7) + 4 * 4, ret);
-	}
-	else if (mode == 200) {
+	} else if (mode == 200) {
 		//uae_u32 v;
 		//// a0 = data, d0 = length, a1 = task, d3 = stack size (in), stack ptr (out)
 		//// a2 = debugdata, d2 = debuglength
@@ -8499,22 +8599,18 @@ static uae_u32 REGPARAM2 mousehack_done (TrapContext *ctx)
 		//	trap_get_areg(ctx, 1), &stack);
 		//trap_set_dreg(ctx, 2, stack);
 		//return v;
-	}
-	else if (mode == 201) {
+	} else if (mode == 201) {
 		//debugmem_break(8);
 		return 1;
-	}
-	else if (mode == 202) {
+	} else if (mode == 202) {
 		// a0 = seglist, a1 = name, d2 = lock
 		//debugmem_addsegs(ctx, trap_get_areg(ctx, 0), trap_get_areg(ctx, 1), trap_get_dreg(ctx, 2), true);
 		return 1;
-	}
-	else if (mode == 203) {
+	} else if (mode == 203) {
 		// a0 = seglist
 		//debugmem_remsegs(trap_get_areg(ctx, 0));
 		return 1;
-	}
-	else if (mode == 204 || mode == 206) {
+	} else if (mode == 204 || mode == 206) {
 		// d0 = size, a1 = flags
 		//uae_u32 v = debugmem_allocmem(mode == 206, trap_get_dreg(ctx, 0), trap_get_areg(ctx, 1), trap_get_areg(ctx, 0));
 		//if (v) {
@@ -8526,11 +8622,9 @@ static uae_u32 REGPARAM2 mousehack_done (TrapContext *ctx)
 		//	trap_set_dreg(ctx, 1, trap_get_areg(ctx, 1));
 		//	return trap_get_dreg(ctx, 0);
 		//}
-	}
-	else if (mode == 205 || mode == 207) {
+	} else if (mode == 205 || mode == 207) {
 		//return debugmem_freemem(mode == 207, trap_get_areg(ctx, 1), trap_get_dreg(ctx, 0), trap_get_areg(ctx, 0));
-	}
-	else if (mode == 208) {
+	} else if (mode == 208) {
 		// segtrack: bit 0
 		// fsdebug: bit 1
 		segtrack_mode = currprefs.debugging_features;
@@ -8541,18 +8635,15 @@ static uae_u32 REGPARAM2 mousehack_done (TrapContext *ctx)
 	} else if (mode == 210) {
 		// debug trapcode
 		//debugmem_trap(trap_get_areg(ctx, 0));
-	}
-	else if (mode == 212) {
+	} else if (mode == 212) {
 		// a0 = seglist, a1 = name, d2 = lock
 		//debugmem_addsegs(ctx, trap_get_areg(ctx, 0), trap_get_areg(ctx, 1), trap_get_dreg(ctx, 2), false);
 		return 1;
-	}
-	else if (mode == 213) {
+	} else if (mode == 213) {
 		// a0 = seglist
 		//debugmem_remsegs(trap_get_areg(ctx, 0));
 		return 1;
-	}
-	else if (mode == 299) {
+	} else if (mode == 299) {
 		//return debugmem_exit();
 
 	} else {
@@ -8560,6 +8651,10 @@ static uae_u32 REGPARAM2 mousehack_done (TrapContext *ctx)
 	}
 	return 1;
 }
+
+#ifdef AMIBERRY // NL
+static int g_hsync_line = 0;
+#endif
 
 void filesys_vsync (void)
 {
@@ -8576,7 +8671,7 @@ void filesys_vsync (void)
 			if (comm_pipe_has_data(&native2amiga_pending))
 				req = true;
 			if (!req) {
-				UnitInfo* uip = mountinfo.ui;
+				UnitInfo *uip = mountinfo.ui;
 				int unit_no = 0;
 				for (;;) {
 					if (unit_no >= MAX_FILESYSTEM_UNITS)
@@ -8678,7 +8773,69 @@ void filesys_vsync (void)
 		setsystime_vblank ();
 		heartbeat_task &= ~1;
 	}
+
+#ifdef AMIBERRY // NL
+	g_hsync_line = 0;
+#endif
 }
+
+#ifdef AMIBERRY // NL
+#ifdef UAE_FILESYS_THREADS
+
+static void run_filesys_iterations(int max_count) {
+    UnitInfo *ui;
+    int count = 0;
+    while (count < max_count) {
+        int last_count = count;
+        for (int i = 0; i < MAX_FILESYSTEM_UNITS; i++) {
+            ui = mountinfo.ui + i;
+            if (!ui->unit_pipe) {
+                continue;
+            }
+            if (!comm_pipe_has_data(ui->unit_pipe)) {
+                continue;
+            }
+            count++;
+            filesys_iteration(ui);
+        }
+        if (count == last_count) {
+            // no more packets were processed
+            break;
+        }
+    }
+}
+
+void filesys_hsync() {
+    if (!uae_deterministic_mode()) {
+        return;
+    }
+    //printf("%d\n", g_hsync_line++);
+    static uint64_t counter = 0;
+    static uint64_t next = 0;
+    while (counter == next) {
+        // set packet delay to default value of 10, which means to process
+        // one packet every other hsync.
+        g_packet_delay = 10;
+        run_filesys_iterations(1);
+        // g_packet_delay was possibly modified by packet handlers
+
+        if (g_packet_delay >= 100) {
+            // ok, for testing, if g_packet_delay is large we try to wait
+            // approximately one frame until processing next package
+            g_packet_delay = 320;
+        }
+
+        if (g_packet_delay < 0) {
+            // should not happen..
+            g_packet_delay = 1;
+        }
+        next = counter + g_packet_delay;
+    }
+    counter++;
+}
+
+#endif // UAE_FILESYS_THREADS
+#endif // AMIBERRY
 
 void filesys_cleanup(void)
 {

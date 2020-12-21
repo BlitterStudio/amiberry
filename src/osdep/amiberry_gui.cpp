@@ -390,17 +390,11 @@ void disk_selection(const int drive, uae_prefs* prefs)
 	}
 }
 
-static void clearallkeys (void)
-{
-	inputdevice_updateconfig (NULL, &changed_prefs);
-}
-
 static void prefs_to_gui()
 {
 	/* filesys hack */
 	changed_prefs.mountitems = currprefs.mountitems;
 	memcpy(&changed_prefs.mountconfig, &currprefs.mountconfig, MOUNT_CONFIG_SIZE * sizeof(struct uaedev_config_info));
-	update_win_fs_mode(&currprefs);
 }
 
 static void gui_to_prefs(void)
@@ -529,6 +523,7 @@ void gui_display(int shortcut)
 
 	if (setpaused(7)) {
 		inputdevice_unacquire();
+		wait_keyrelease();
 		clearallkeys();
 		setmouseactive(0);
 	}
@@ -557,6 +552,7 @@ void gui_display(int shortcut)
 	
 	reset_sound();
 	inputdevice_copyconfig(&changed_prefs, &currprefs);
+	inputdevice_config_change_test();
 	clearallkeys ();
 	update_display(&changed_prefs);
 	if (resumepaused(7)) {

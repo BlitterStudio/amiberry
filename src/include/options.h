@@ -863,6 +863,9 @@ struct uae_prefs
 	int gfx_correct_aspect;
 	int scaling_method;
 
+	bool minimize_inactive;
+	bool capture_always;
+	
 	int active_capture_priority;
 	bool active_nocapture_pause;
 	bool active_nocapture_nosound;
@@ -874,12 +877,19 @@ struct uae_prefs
 	bool minimized_pause;
 	bool minimized_nosound;
 	int minimized_input;
+
+	bool automount_removable;
+	bool automount_cddrives;
+	int uaescsimode;
 	bool right_control_is_right_win_key;
+
+	int statecapturerate, statecapturebuffersize;
 	
 	TCHAR open_gui[256];
 	TCHAR quit_amiberry[256];
 	TCHAR action_replay[256];
 	TCHAR fullscreen_toggle[256];
+	TCHAR minimize[256];
 
 	/* input */
 
@@ -910,7 +920,6 @@ struct uae_prefs
 	int input_device_match_mask;
 
 #ifdef AMIBERRY
-	bool allow_host_run;
 	bool input_analog_remap;
 	bool use_retroarch_quit;
 	bool use_retroarch_menu;
@@ -1098,7 +1107,6 @@ struct amiberry_options
 	int default_line_mode = 0;
 	int input_default_mouse_speed = 100;
 	bool input_keyboard_as_joystick_stop_keypresses = false;
-	bool input_keyrah_joystick = false;
 	char default_open_gui_key[128] = "F12";
 	char default_quit_key[128]{};
 	char default_ar_key[128] = "Pause";
@@ -1110,11 +1118,11 @@ struct amiberry_options
 	bool default_frameskip = false;
 	bool default_correct_aspect_ratio = true;
 	bool default_auto_height = false;
-	int default_width = 720;
-	int default_height = 270;
+	int default_width = 640;
+	int default_height = 512;
 	bool default_fullscreen = false;
 	int default_stereo_separation = 7;
-	int default_sound_buffer = 2048;
+	int default_sound_buffer = 16384;
 	int default_joystick_deadzone = 33;
 	bool default_retroarch_quit = true;
 	bool default_retroarch_menu = true;

@@ -21,6 +21,7 @@
 #include "autoconf.h"
 #include "traps.h"
 #include "uae.h"
+//#include "debug.h"
 
 /*
 * Traps are the mechanism via which 68k code can call emulator code
@@ -148,9 +149,6 @@ void REGPARAM2 m68k_handle_trap (unsigned int trap_num)
 	int has_retval = (trap->flags & TRAPFLAG_NO_RETVAL) == 0;
 	int implicit_rts = (trap->flags & TRAPFLAG_DORET) != 0;
 
-	if (trap->name && trap->name[0] != 0 && trace_traps)
-		write_log (_T("TRAP: %s\n"), trap->name);
-
 	if (trap_num < trap_count) {
 		if (trap->flags & TRAPFLAG_EXTRA_STACK) {
 			/* Handle an extended trap.
@@ -158,9 +156,17 @@ void REGPARAM2 m68k_handle_trap (unsigned int trap_num)
 			* space via a separate, dedicated simple trap which the trap
 			* handler causes to be invoked when it is done.
 			*/
+
+			if (trap->name && trap->name[0] != 0 && trace_traps)
+				write_log(_T("XTRAP: %s\n"), trap->name);
+
 			trap_HandleExtendedTrap (trap->handler, has_retval);
 		} else {
 			/* Handle simple trap */
+
+			if (trap->name && trap->name[0] != 0 && trace_traps)
+				write_log(_T("TRAP: %s\n"), trap->name);
+
 			retval = (trap->handler) (NULL);
 
 			if (has_retval)
@@ -298,8 +304,6 @@ static int trap_thread (void *arg)
 	uae_sem_post (&context->switch_to_emu_sem);
 
 	/* Good bye, cruel world... */
-
-	/* dummy return value */
 	return 0;
 }
 
@@ -412,11 +416,11 @@ static uae_u32 REGPARAM2 m68k_call_handler(TrapContext *dummy_ctx)
 	m68k_setpc(context->call68k_func_addr);
 	fill_prefetch();
 
-	/* End critical section: allow other traps run. */
-	uae_sem_post(&trap_mutex);
-
 	/* Restore interrupts. */
 	regs.intmask = context->saved_regs.intmask;
+
+	/* End critical section: allow other traps run. */
+	uae_sem_post(&trap_mutex);
 
 	/* Dummy return value. */
 	return 0;
@@ -464,7 +468,7 @@ static uae_u32 REGPARAM2 exit_trap_handler(TrapContext *dummy_ctx)
 	TrapContext *context = current_context;
 
 	/* Wait for trap context thread to exit. */
-	uae_wait_thread(context->thread);
+	uae_wait_thread(&context->thread);
 
 	/* Restore 68k state saved at trap entry. */
 	//regs = context->saved_regs;
@@ -729,10 +733,10 @@ static uae_u32 call_hardware_trap_back(TrapContext *ctx, uae_u16 cmd, uae_u32 p1
 			hardware_trap_kill[trap_slot] = 2;
 			return  0;
 		}
-		//if (uae_sem_trywait_delay(&hardware_trap_event[trap_slot], 100) == -2) {
-		//	hardware_trap_kill[trap_slot] = 3;
-		//	return 0;
-		//}
+		if (uae_sem_trywait_delay(&hardware_trap_event[trap_slot], 100) == -2) {
+			hardware_trap_kill[trap_slot] = 3;
+			return 0;
+		}
 	}
 
 	// get result
@@ -806,7 +810,7 @@ void init_traps(void)
 		for (int i = 0; i < TRAP_THREADS; i++) {
 			init_comm_pipe(&trap_thread_pipe[i], 100, 1);
 			hardware_trap_kill[i] = 1;
-			uae_start_thread_fast(hardware_trap_thread, (void *)i, &trap_thread_id[i]);
+			uae_start_thread_fast(hardware_trap_thread, (void*)(intptr_t)i, &trap_thread_id[i]);
 		}
 	}
 }
@@ -1112,7 +1116,7 @@ void trap_put_bytes(TrapContext *ctx, const void *haddrp, uaecptr addr, int cnt)
 			cnt -= max;
 		}
 	} else {
-		if (valid_address(addr, cnt)) {
+		if (real_address_allowed() && valid_address(addr, cnt)) {
 			memcpy(get_real_address(addr), haddr, cnt);
 		} else {
 			for (int i = 0; i < cnt; i++) {
@@ -1137,7 +1141,7 @@ void trap_get_bytes(TrapContext *ctx, void *haddrp, uaecptr addr, int cnt)
 			cnt -= max;
 		}
 	} else {
-		if (valid_address(addr, cnt)) {
+		if (real_address_allowed() && valid_address(addr, cnt)) {
 			memcpy(haddr, get_real_address(addr), cnt);
 		} else {
 			for (int i = 0; i < cnt; i++) {

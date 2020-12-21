@@ -14,7 +14,7 @@
 #include "filesys.h"
 #include "blkdev.h"
 #include "gui_handling.h"
-#include "amiberry_filesys.hpp"
+#include "fsdb_host.h"
 
 enum
 {
@@ -53,7 +53,7 @@ static gcn::ImageButton* listCmdDelete[MAX_HD_DEVICES];
 static gcn::Button* cmdAddDirectory;
 static gcn::Button* cmdAddHardfile;
 static gcn::Button* cmdCreateHardfile;
-static gcn::CheckBox* chkHDReadOnly;
+
 static gcn::CheckBox* chkScsi;
 static gcn::CheckBox* chkCD;
 static gcn::DropDown* cboCDFile;
@@ -95,7 +95,6 @@ public:
 };
 
 static CDfileListModel cdfileList;
-
 
 class HDRemoveActionListener : public gcn::ActionListener
 {
@@ -228,7 +227,7 @@ public:
 			else
 			{
 				changed_prefs.cdslots[0].inuse = true;
-				changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
+				changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
 
 				if (!changed_prefs.cs_cd32cd && !changed_prefs.cs_cd32nvram
 					&& (!changed_prefs.cs_cdtvcd && !changed_prefs.cs_cdtvram)
@@ -260,6 +259,8 @@ public:
 			// Eject CD from drive
 			//---------------------------------------
 			changed_prefs.cdslots[0].name[0] = 0;
+			changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
+			changed_prefs.cdslots[0].inuse = false;
 			AdjustDropDownControls();
 		}
 		else if (actionEvent.getSource() == cmdCDSelect)
@@ -277,7 +278,7 @@ public:
 				{
 					strncpy(changed_prefs.cdslots[0].name, tmp, sizeof changed_prefs.cdslots[0].name);
 					changed_prefs.cdslots[0].inuse = true;
-					changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
+					changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
 					AddFileToCDList(tmp, 1);
 					extract_path(tmp, current_dir);
 
@@ -298,11 +299,7 @@ class GenericActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		if (actionEvent.getSource() == chkHDReadOnly)
-		{
-			changed_prefs.harddrive_read_only = chkHDReadOnly->isSelected();
-		}
-		else if (actionEvent.getSource() == chkScsi) 
+		if (actionEvent.getSource() == chkScsi) 
 		{
 			changed_prefs.scsi = chkScsi->isSelected();
 		}
@@ -335,7 +332,7 @@ public:
 					strncpy(changed_prefs.cdslots[0].name, cdfileList.getElementAt(idx).c_str(),
 					        sizeof changed_prefs.cdslots[0].name);
 					changed_prefs.cdslots[0].inuse = true;
-					changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
+					changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
 					lstMRUCDList.erase(lstMRUCDList.begin() + idx);
 					lstMRUCDList.insert(lstMRUCDList.begin(), changed_prefs.cdslots[0].name);
 					bIgnoreListChange = true;
@@ -419,10 +416,6 @@ void InitPanelHD(const struct _ConfigCategory& category)
 	cdFileActionListener = new CDFileActionListener();
 	genericActionListener = new GenericActionListener();
 
-	chkHDReadOnly = new gcn::CheckBox("Master harddrive write protection");
-	chkHDReadOnly->setId("chkHDRO");
-	chkHDReadOnly->addActionListener(genericActionListener);
-
 	chkScsi = new gcn::CheckBox("scsi.device emulation");
 	chkScsi->setId("chkSCSI");
 	chkScsi->addActionListener(genericActionListener);
@@ -484,9 +477,8 @@ void InitPanelHD(const struct _ConfigCategory& category)
 	category.panel->add(cmdCreateHardfile, cmdAddHardfile->getX() + cmdAddHardfile->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += cmdAddDirectory->getHeight() + DISTANCE_NEXT_Y;
 
-	category.panel->add(chkHDReadOnly, DISTANCE_BORDER, posY);
-	category.panel->add(chkScsi, chkHDReadOnly->getX() + chkHDReadOnly->getWidth() + DISTANCE_NEXT_X * 3, posY);
-	posY += chkHDReadOnly->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(chkScsi, DISTANCE_BORDER, posY);
+	posY += chkScsi->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(chkCD, DISTANCE_BORDER, posY + 2);
 	category.panel->add(cmdCDEject,
@@ -524,7 +516,6 @@ void ExitPanelHD()
 	delete cmdAddDirectory;
 	delete cmdAddHardfile;
 	delete cmdCreateHardfile;
-	delete chkHDReadOnly;
 	delete chkScsi;
 
 	delete chkCD;
@@ -633,7 +624,7 @@ void RefreshPanelHD()
 		}
 	}
 
-	chkHDReadOnly->setSelected(changed_prefs.harddrive_read_only);
+	
 	chkScsi->setSelected(changed_prefs.scsi);
 	chkCD->setSelected(changed_prefs.cdslots[0].inuse);
 	cmdCDEject->setEnabled(changed_prefs.cdslots[0].inuse);

@@ -24,7 +24,7 @@
 #endif
 
 #define DIALOG_WIDTH 620
-#define DIALOG_HEIGHT 272
+#define DIALOG_HEIGHT 280
 
 static const char *harddisk_filter[] = {".hdf", ".lha", "zip", "\0"};
 

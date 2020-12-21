@@ -39,8 +39,10 @@
 #endif
 #ifdef AHI
 #include "traps.h"
-#include "ahidsound.h"
-#include "ahidsound_new.h"
+#include "ahi_v1.h"
+#ifdef AHI_v2
+#include "ahi_v2.h"
+#endif
 #endif
 #include "threaddep/thread.h"
 
@@ -745,7 +747,7 @@ static void sample16i_sinc_handler (void)
 
 	get_extra_channels_sample2(&data1, NULL, 2);
 
-	//set_sound_buffers ();
+	set_sound_buffers ();
 	PUT_SOUND_WORD_MONO (data1);
 	check_sound_buffers ();
 }
@@ -776,7 +778,7 @@ void sample16_handler (void)
 
 	get_extra_channels_sample2(&data, NULL, 0);
 
-	//set_sound_buffers ();
+	set_sound_buffers ();
 	PUT_SOUND_WORD_MONO (data);
 	check_sound_buffers ();
 }
@@ -795,7 +797,7 @@ static void sample16i_anti_handler (void)
 
 	get_extra_channels_sample2(&data1, NULL, 1);
 
-	//set_sound_buffers ();
+	set_sound_buffers ();
 	PUT_SOUND_WORD_MONO (data1);
 	check_sound_buffers ();
 }
@@ -852,7 +854,7 @@ static void sample16i_rh_handler (void)
 
 	get_extra_channels_sample2(&data, NULL, 0);
 
-	//set_sound_buffers ();
+	set_sound_buffers ();
 	PUT_SOUND_WORD_MONO (data);
 	check_sound_buffers ();
 }
@@ -929,7 +931,7 @@ static void sample16i_crux_handler (void)
 
 	get_extra_channels_sample2(&data, NULL, 0);
 
-	//set_sound_buffers ();
+	set_sound_buffers ();
 	PUT_SOUND_WORD_MONO (data);
 	check_sound_buffers ();
 }
@@ -976,7 +978,7 @@ void sample16ss_handler (void)
 
 	get_extra_channels_sample6(&data0, &data1, &data3, &data2, &data4, &data5, 0);
 
-	//set_sound_buffers ();
+	set_sound_buffers ();
 	put_sound_word_right(data0);
 	put_sound_word_left (data1);
 	if (currprefs.sound_stereo == SND_6CH) {
@@ -1012,7 +1014,7 @@ static void sample16ss_anti_handler (void)
 
 	get_extra_channels_sample6(&data0, &data1, &data3, &data2, &data4, &data5, 0);
 
-	//set_sound_buffers ();
+	set_sound_buffers ();
 	put_sound_word_right(data0);
 	put_sound_word_left (data1);
 	if (currprefs.sound_stereo == SND_6CH) {
@@ -1039,7 +1041,7 @@ static void sample16si_anti_handler (void)
 
 	get_extra_channels_sample2(&data1, &data2, 1);
 
-	//set_sound_buffers ();
+	set_sound_buffers ();
 	put_sound_word_right(data1);
 	put_sound_word_left (data2);
 	check_sound_buffers ();
@@ -1066,7 +1068,7 @@ static void sample16ss_sinc_handler (void)
 
 	get_extra_channels_sample6(&data0, &data1, &data3, &data2, &data4, &data5, 0);
 
-	//set_sound_buffers ();
+	set_sound_buffers ();
 	put_sound_word_right(data0);
 	put_sound_word_left (data1);
 	if (currprefs.sound_stereo == SND_6CH) {
@@ -1093,7 +1095,7 @@ static void sample16si_sinc_handler (void)
 
 	get_extra_channels_sample2(&data1, &data2, 2);
 
-	//set_sound_buffers ();
+	set_sound_buffers ();
 	put_sound_word_right(data1);
 	put_sound_word_left(data2);
 	check_sound_buffers ();
@@ -1127,7 +1129,7 @@ void sample16s_handler (void)
 
 	get_extra_channels_sample2(&data2, &data3, 0);
 
-	//set_sound_buffers ();
+	set_sound_buffers ();
 	put_sound_word_right(data2);
 	put_sound_word_left(data3);
 	check_sound_buffers ();
@@ -1206,7 +1208,7 @@ static void sample16si_crux_handler (void)
 
 	get_extra_channels_sample2(&data2, &data3, 0);
 
-	//set_sound_buffers ();
+	set_sound_buffers ();
 	put_sound_word_right(data2);
 	put_sound_word_left (data3);
 	check_sound_buffers ();
@@ -1266,7 +1268,7 @@ static void sample16si_rh_handler (void)
 
 	get_extra_channels_sample2(&data2, &data3, 0);
 
-	//set_sound_buffers ();
+	set_sound_buffers ();
 	put_sound_word_right(data2);
 	put_sound_word_left (data3);
 	check_sound_buffers ();
@@ -1823,7 +1825,9 @@ void audio_reset (void)
 
 #ifdef AHI
 	ahi_close_sound ();
+#ifdef AHI_v2
 	free_ahi_v2 ();
+#endif
 #endif
 	reset_sound ();
 	memset (sound_filter_state, 0, sizeof sound_filter_state);

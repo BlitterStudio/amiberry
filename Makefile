@@ -200,6 +200,12 @@ else ifeq ($(PLATFORM),jetson-nano)
     CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64
     AARCH64 = 1
 
+# La Frite Libre Computer
+else ifeq ($(PLATFORM),mali-drm-gles2-sdl2)
+    CPUFLAGS += -mcpu=cortex-a53
+    CPPFLAGS += -DCPU_AARCH64 -D_FILE_OFFSET_BITS=64 
+    AARCH64 = 1
+
 else
 $(error Unknown platform:$(PLATFORM))
 endif
@@ -227,12 +233,12 @@ LDFLAGS += $(SDL_LDFLAGS) -lSDL2_image -lSDL2_ttf -lguisan -Lexternal/libguisan/
 #
 DEFS = -DAMIBERRY
 CPPFLAGS += -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers $(DEFS)
-LDFLAGS += -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed
+LDFLAGS += -fuse-ld=gold -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed
 
 ifndef DEBUG
     CFLAGS += -Ofast
 else
-    CFLAGS += -g -rdynamic -funwind-tables -fno-omit-frame-pointer -DDEBUG -Wl,--export-dynamic
+    CFLAGS += -g -rdynamic -funwind-tables -DDEBUG -Wl,--export-dynamic
 endif
 
 #LTO is supposed to reduced code size and increased execution speed. For Amiberry, it does not.
@@ -314,7 +320,6 @@ OBJS =	\
 	src/flashrom.o \
 	src/fpp.o \
 	src/fsdb.o \
-	src/fsdb_unix.o \
 	src/fsusage.o \
 	src/gayle.o \
 	src/gfxboard.o \
@@ -322,6 +327,7 @@ OBJS =	\
 	src/hardfile.o \
 	src/hrtmon.rom.o \
 	src/ide.o \
+	src/ini.o \
 	src/inputdevice.o \
 	src/isofs.o \
 	src/keybuf.o \
@@ -335,6 +341,7 @@ OBJS =	\
 	src/scp.o \
 	src/scsi.o \
 	src/scsiemul.o \
+	src/scsitape.o \
 	src/serial_win32.o \
 	src/statusline.o \
 	src/tabletlibrary.o \
@@ -343,6 +350,7 @@ OBJS =	\
 	src/uaeexe.o \
 	src/uaelib.o \
 	src/uaeserial.o \
+	src/uaenative.o \
 	src/uaeresource.o \
 	src/zfile.o \
 	src/zfile_archive.o \
@@ -387,6 +395,7 @@ OBJS =	\
 	src/archivers/zip/unzip.o \
 	src/caps/caps_amiberry.o \
 	src/machdep/support.o \
+	src/osdep/ahi_v1.o \
 	src/osdep/bsdsocket_host.o \
 	src/osdep/cda_play.o \
 	src/osdep/charset.o \
@@ -398,6 +407,7 @@ OBJS =	\
 	src/osdep/picasso96.o \
 	src/osdep/writelog.o \
 	src/osdep/amiberry.o \
+	src/osdep/ahi_v2.o \
 	src/osdep/amiberry_filesys.o \
 	src/osdep/amiberry_input.o \
 	src/osdep/amiberry_gfx.o \
@@ -407,6 +417,7 @@ OBJS =	\
 	src/osdep/sigsegv_handler.o \
 	src/osdep/retroarch.o \
 	src/sounddep/sound.o \
+	src/threaddep/threading.o \
 	src/osdep/gui/SelectorEntry.o \
 	src/osdep/gui/ShowHelp.o \
 	src/osdep/gui/ShowMessage.o \
@@ -485,6 +496,7 @@ clean:
 
 cleanprofile:
 	$(RM) $(OBJS:%.o=%.gcda)
+	$(MAKE) -C external/libguisan cleanprofile
 	
 guisan:
 	$(MAKE) -C external/libguisan

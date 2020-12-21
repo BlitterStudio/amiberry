@@ -32,7 +32,7 @@ static gcn::Button* cmdLogfilePath;
 
 static gcn::Button* cmdRescanROMs;
 static gcn::Button* cmdDownloadXML;
-
+static gcn::Button* cmdDownloadCtrlDb;
 
 class FolderButtonActionListener : public gcn::ActionListener
 {
@@ -112,6 +112,7 @@ public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		set_logfile_enabled(chkEnableLogging->isSelected());
+		logging_init();
 		RefreshPanelPaths();
 	}
 };
@@ -131,7 +132,7 @@ public:
 		RefreshPanelCustom();
 		RefreshPanelROM();
 
-		ShowMessage("Rescan Paths", "Scan complete,", "Symlinks recreated.", "Ok", "");
+		ShowMessage("Rescan Paths", "Scan complete,", "ROMs updated, Joysticks (re)initialized, Symlinks recreated.", "Ok", "");
 		cmdRescanROMs->requestFocus();
 	}
 };
@@ -209,6 +210,31 @@ public:
 };
 
 static DownloadXMLButtonActionListener* downloadXMLButtonActionListener;
+
+class DownloadControllerDbActionListener : public gcn::ActionListener
+{
+public:
+	void action(const gcn::ActionEvent& actionEvent) override
+	{
+		char destination[MAX_DPATH];
+		get_configuration_path(destination, MAX_DPATH);
+		strcat(destination, "gamecontrollerdb.txt");
+		write_log("Downloading % ...\n", destination);
+		//TODO change this to master
+		const auto result = download_file("https://github.com/midwan/amiberry/blob/dev/conf/gamecontrollerdb.txt?raw=true", destination);
+
+		if (result)
+		{
+			import_joysticks();
+			ShowMessage("Game Controllers DB", "Latest version of Game Controllers DB downloaded.", "", "Ok", "");
+		}
+		else
+			ShowMessage("Game Controllers DB", "Failed to download file!", "Please check the log for more information", "Ok", "");
+
+		cmdDownloadCtrlDb->requestFocus();
+	}
+};
+static DownloadControllerDbActionListener* downloadControllerDbActionListener;
 
 void InitPanelPaths(const struct _ConfigCategory& category)
 {
@@ -322,9 +348,18 @@ void InitPanelPaths(const struct _ConfigCategory& category)
 	cmdDownloadXML->setId("DownloadXML");
 	cmdDownloadXML->addActionListener(downloadXMLButtonActionListener);
 
+	downloadControllerDbActionListener = new DownloadControllerDbActionListener();
+	cmdDownloadCtrlDb = new gcn::Button("Update Controllers DB");
+	cmdDownloadCtrlDb->setSize(cmdDownloadCtrlDb->getWidth() + DISTANCE_BORDER, BUTTON_HEIGHT);
+	cmdDownloadCtrlDb->setBaseColor(gui_baseCol);
+	cmdDownloadCtrlDb->setId("cmdDownloadCtrlDb");
+	cmdDownloadCtrlDb->addActionListener(downloadControllerDbActionListener);
+	
 	category.panel->add(cmdRescanROMs, DISTANCE_BORDER, category.panel->getHeight() - BUTTON_HEIGHT - DISTANCE_BORDER);
-	category.panel->add(cmdDownloadXML, DISTANCE_BORDER + cmdRescanROMs->getWidth() + 20,
-	                    category.panel->getHeight() - BUTTON_HEIGHT - DISTANCE_BORDER);
+	category.panel->add(cmdDownloadXML, cmdRescanROMs->getX() + cmdRescanROMs->getWidth() + DISTANCE_NEXT_X,
+		category.panel->getHeight() - BUTTON_HEIGHT - DISTANCE_BORDER);
+	category.panel->add(cmdDownloadCtrlDb, cmdDownloadXML->getX() + cmdDownloadXML->getWidth() + DISTANCE_NEXT_X,
+		category.panel->getHeight() - BUTTON_HEIGHT - DISTANCE_BORDER);
 
 	RefreshPanelPaths();
 }
@@ -354,9 +389,11 @@ void ExitPanelPaths()
 	
 	delete cmdRescanROMs;
 	delete cmdDownloadXML;
+	delete cmdDownloadCtrlDb;
 	delete folderButtonActionListener;
 	delete rescanROMsButtonActionListener;
 	delete downloadXMLButtonActionListener;
+	delete downloadControllerDbActionListener;
 	delete enableLoggingActionListener;
 }
 
@@ -401,6 +438,9 @@ bool HelpPanelPaths(std::vector<std::string>& helptext)
 	helptext.emplace_back(" ");
 	helptext.emplace_back("You can download the latest version of the WHDLoad Booter XML file, using the");
 	helptext.emplace_back("relevant button. You will need an internet connection for this to work.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("You can also download the latest Game Controller DB file, using the relevant button.");
+	helptext.emplace_back("BEWARE: this will overwrite any changes you may have had in your local file!");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("These settings are saved automatically when you click Rescan, or exit the emulator.");
 	return true;

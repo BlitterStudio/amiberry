@@ -6,7 +6,7 @@
 
 #include "sysdeps.h"
 #include "gui_handling.h"
-#include "amiberry_filesys.hpp"
+#include "fsdb_host.h"
 
 static gcn::Label* lblEmulatorVersion;
 static gcn::Icon* icon;

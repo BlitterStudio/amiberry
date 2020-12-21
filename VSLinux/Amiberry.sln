@@ -4,11 +4,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 16.0.29324.140
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Amiberry", "Amiberry.vcxproj", "{7B9A67B2-3F13-4E7B-A875-AAB6CAAE63D7}"
-	ProjectSection(ProjectDependencies) = postProject
-		{06B356E1-FE8B-4E50-BF9F-A9D6E419ECBD} = {06B356E1-FE8B-4E50-BF9F-A9D6E419ECBD}
-	EndProjectSection
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "guisan", "guisan\guisan.vcxproj", "{06B356E1-FE8B-4E50-BF9F-A9D6E419ECBD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -30,18 +25,6 @@ Global
 		{7B9A67B2-3F13-4E7B-A875-AAB6CAAE63D7}.Release|ARM64.ActiveCfg = Release|ARM64
 		{7B9A67B2-3F13-4E7B-A875-AAB6CAAE63D7}.Release|ARM64.Build.0 = Release|ARM64
 		{7B9A67B2-3F13-4E7B-A875-AAB6CAAE63D7}.Release|ARM64.Deploy.0 = Release|ARM64
-		{06B356E1-FE8B-4E50-BF9F-A9D6E419ECBD}.Debug|ARM.ActiveCfg = Debug|ARM
-		{06B356E1-FE8B-4E50-BF9F-A9D6E419ECBD}.Debug|ARM.Build.0 = Debug|ARM
-		{06B356E1-FE8B-4E50-BF9F-A9D6E419ECBD}.Debug|ARM.Deploy.0 = Debug|ARM
-		{06B356E1-FE8B-4E50-BF9F-A9D6E419ECBD}.Debug|ARM64.ActiveCfg = Debug|ARM64
-		{06B356E1-FE8B-4E50-BF9F-A9D6E419ECBD}.Debug|ARM64.Build.0 = Debug|ARM64
-		{06B356E1-FE8B-4E50-BF9F-A9D6E419ECBD}.Debug|ARM64.Deploy.0 = Debug|ARM64
-		{06B356E1-FE8B-4E50-BF9F-A9D6E419ECBD}.Release|ARM.ActiveCfg = Release|ARM
-		{06B356E1-FE8B-4E50-BF9F-A9D6E419ECBD}.Release|ARM.Build.0 = Release|ARM
-		{06B356E1-FE8B-4E50-BF9F-A9D6E419ECBD}.Release|ARM.Deploy.0 = Release|ARM
-		{06B356E1-FE8B-4E50-BF9F-A9D6E419ECBD}.Release|ARM64.ActiveCfg = Release|ARM64
-		{06B356E1-FE8B-4E50-BF9F-A9D6E419ECBD}.Release|ARM64.Build.0 = Release|ARM64
-		{06B356E1-FE8B-4E50-BF9F-A9D6E419ECBD}.Release|ARM64.Deploy.0 = Release|ARM64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

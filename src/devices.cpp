@@ -7,11 +7,15 @@
 #include "threaddep/thread.h"
 #include "memory.h"
 #include "audio.h"
+//#include "gfxboard.h"
 #include "scsi.h"
 #include "scsidev.h"
 #include "sana2.h"
 #include "clipboard.h"
+//#include "cpuboard.h"
+//#include "sndboard.h"
 #include "statusline.h"
+//#include "uae/ppc.h"
 #ifdef CD32
 #include "cd32_fmv.h"
 #include "akiko.h"
@@ -20,7 +24,9 @@
 #include "cia.h"
 #include "inputdevice.h"
 #include "blkdev.h"
+//#include "parallel.h"
 #include "autoconf.h"
+//#include "sampler.h"
 #include "newcpu.h"
 #include "blitter.h"
 #include "xwin.h"
@@ -32,14 +38,21 @@
 #include "uaeserial.h"
 #include "uaeresource.h"
 #include "native2amiga.h"
+//#include "dongle.h"
 #include "gensound.h"
 #include "gui.h"
 #include "savestate.h"
 #include "uaeexe.h"
+#ifdef WITH_UAENATIVE
+#include "uaenative.h"
+#endif
+#include "tabletlibrary.h"
+//#include "luascript.h"
 #ifdef DRIVESOUND
 #include "driveclick.h"
 #endif
 #include "drawing.h"
+//#include "videograb.h"
 #include "rommgr.h"
 #include "newcpu.h"
 #ifdef RETROPLATFORM
@@ -223,7 +236,7 @@ void devices_vsync_pre(void)
 	blkdev_vsync();
 	CIA_vsync_prehandler();
 	inputdevice_vsync();
-	filesys_vsync();
+	filesys_vsync ();
 	//sampler_vsync ();
 	clipboard_vsync ();
 	statusline_vsync();
@@ -242,7 +255,7 @@ void devices_hsync(void)
 	audio_hsync();
 	//CIA_hsync_prehandler(); // This is a no-op!
 
-	decide_blitter(-1);
+	decide_blitter (-1);
 #ifdef SERIAL_PORT
 	serial_hsynchandler ();
 #endif
@@ -268,7 +281,7 @@ void devices_rethink(void)
 
 void devices_update_sound(double clk, double syncadjust)
 {
-	update_sound(clk);
+	update_sound (clk);
 	update_cda_sound(clk / syncadjust);
 }
 
