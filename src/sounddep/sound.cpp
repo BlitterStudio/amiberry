@@ -261,7 +261,16 @@ extern void setvolume_ahi(int);
 
 void set_volume_sound_device(struct sound_data* sd, int volume, int mute)
 {
-	//todo
+	struct sound_dp* s = sd->data;
+	if (sd->devicetype == SOUND_DEVICE_SDL2)
+	{
+		if (volume < 100 && !mute)
+			volume = 100 - volume;
+		else if (mute || volume >= 100)
+			volume = 0;
+		//TODO switch to using SDL_mixer to implement volume control properly
+		//SDL_MixAudioFormat(reinterpret_cast<uae_u8*>(s->sndbuf), reinterpret_cast<uae_u8*>(s->sndbuf), AUDIO_S16, sd->sndbufsize, volume);
+	}
 }
 
 void set_volume(int volume, int mute)
@@ -714,14 +723,13 @@ void finish_sound_buffer()
 
 static int set_master_volume(int volume, int mute)
 {
-	//todo set volume using SDL2
+	set_volume(volume, mute);
 	return 1;
 }
 
 static int get_master_volume(int* volume, int* mute)
 {
-	//todo get volume using SDL2
-	return 1;
+	return currprefs.sound_volume_master;
 }
 
 void sound_mute(int newmute)
@@ -764,8 +772,8 @@ void master_sound_volume(int dir)
 	vol += dir * (65536 / 10);
 	if (vol < 0)
 		vol = 0;
-	if (vol > 65535)
-		vol = 65535;
+	if (vol > SDL_MIX_MAXVOLUME)
+		vol = SDL_MIX_MAXVOLUME;
 	set_master_volume(vol, mute);
 	config_changed = 1;
 }
