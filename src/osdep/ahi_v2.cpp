@@ -12,7 +12,7 @@
 #include "sysconfig.h"
 
 #if defined(AHI)
-
+#ifdef AHI_v2
 #include <ctype.h>
 #include <assert.h>
 
@@ -1894,4 +1894,5 @@ void free_ahi_v2(void)
 	ds_free(&dsahi[0]);
 }
 
+#endif
 #endif

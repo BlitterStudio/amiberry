@@ -40,7 +40,9 @@
 #ifdef AHI
 #include "traps.h"
 #include "ahi_v1.h"
+#ifdef AHI_v2
 #include "ahi_v2.h"
+#endif
 #endif
 #include "threaddep/thread.h"
 
@@ -1823,7 +1825,9 @@ void audio_reset (void)
 
 #ifdef AHI
 	ahi_close_sound ();
+#ifdef AHI_v2
 	free_ahi_v2 ();
+#endif
 #endif
 	reset_sound ();
 	memset (sound_filter_state, 0, sizeof sound_filter_state);

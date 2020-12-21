@@ -56,6 +56,9 @@ static int amigablksize;
 
 static uae_u32 sound_flushes2 = 0;
 
+SDL_AudioDeviceID ahi_dev;
+SDL_AudioSpec want, have;
+
 struct winuae	//this struct is put in a6 if you call
 	//execute native function
 {
@@ -72,35 +75,19 @@ void ahi_close_sound (void)
 	ahi_on = 0;
 	record_enabled = 0;
 	ahisndbufpt = (int*)ahisndbuffer;
-#if 0
-	if (lpDSB2) {
-		hr = IDirectSoundBuffer_Stop(lpDSB2);
-		if (FAILED(hr))
-			write_log(_T("AHI: SoundStop() failure: %s\n"), DXError(hr));
+
+	if (ahi_dev) {
+		SDL_PauseAudioDevice(ahi_dev, 1);
 	}
 	else {
 		write_log(_T("AHI: Sound Stopped...\n"));
 	}
 
-	if (lpDSB2)
-		IDirectSoundBuffer_Release(lpDSB2);
-	lpDSB2 = NULL;
-	if (lpDSBprimary2)
-		IDirectSoundBuffer_Release(lpDSBprimary2);
-	lpDSBprimary2 = NULL;
-	if (lpDS2)
-		IDirectSound_Release(lpDS2);
-	lpDS2 = NULL;
+	if(ahi_dev)
+		SDL_CloseAudioDevice(ahi_dev);
 
-	if (lpDSB2r)
-		IDirectSoundCaptureBuffer_Release(lpDSB2r);
-	lpDSB2r = NULL;
-	if (lpDS2r)
-		IDirectSound_Release(lpDS2r);
-	lpDS2r = NULL;
-#endif
 	if (ahisndbuffer)
-		free (ahisndbuffer);
+		xfree (ahisndbuffer);
 	ahisndbuffer = NULL;
 }
 
@@ -428,6 +415,7 @@ uae_u32 REGPARAM2 ahi_demux (TrapContext *context)
 
 	case 3:
 		{
+			//Recording
 #if 0
 		LPVOID pos1, pos2;
 		DWORD t, cur_pos;
@@ -501,21 +489,17 @@ uae_u32 REGPARAM2 ahi_demux (TrapContext *context)
 		return 1;
 
 	case 10:
-#if 0
-		if (OpenClipboard(0)) {
-			clipdat = (TCHAR*)GetClipboardData(CF_UNICODETEXT);
-			if (clipdat) {
-				clipsize = _tcslen(clipdat);
-				clipsize++;
-				return clipsize;
-			}
+		clipdat = (TCHAR*)SDL_GetClipboardText();
+		if (clipdat) {
+			clipsize = _tcslen(clipdat);
+			clipsize++;
+			return clipsize;
 		}
-#endif
+
 		return 0;
 
 	case 11:
 		{
-#if 0
 			put_byte (m68k_areg (regs, 0), 0);
 			if (clipdat) {
 				char *tmp = ua (clipdat);
@@ -525,35 +509,33 @@ uae_u32 REGPARAM2 ahi_demux (TrapContext *context)
 				put_byte (m68k_areg (regs, 0) + clipsize - 1, 0);
 				xfree (tmp);
 			}
-			CloseClipboard ();
-#endif
 		}
 		return 0;
 
 	case 12:
 		{
 #if 0
-			TCHAR *s = au ((char*)get_real_address (m68k_areg (regs, 0)));
-			static LPTSTR p;
-			int slen;
+		TCHAR* s = au((char*)get_real_address(m68k_areg(regs, 0)));
+		static LPTSTR p;
+		int slen;
 
-			if (OpenClipboard (0)) {
-				EmptyClipboard();
-				slen = _tcslen (s);
-				if (p)
-					GlobalFree (p);
-				p = (LPTSTR)GlobalAlloc (GMEM_MOVEABLE, (slen + 1) * sizeof (TCHAR));
-				if (p) {
-					TCHAR *p2 = (TCHAR*)GlobalLock (p);
-					if (p2) {
-						_tcscpy (p2, s);
-						GlobalUnlock (p);
-						SetClipboardData (CF_UNICODETEXT, p);
-					}
+		if (OpenClipboard(0)) {
+			EmptyClipboard();
+			slen = _tcslen(s);
+			if (p)
+				GlobalFree(p);
+			p = (LPTSTR)GlobalAlloc(GMEM_MOVEABLE, (slen + 1) * sizeof(TCHAR));
+			if (p) {
+				TCHAR* p2 = (TCHAR*)GlobalLock(p);
+				if (p2) {
+					_tcscpy(p2, s);
+					GlobalUnlock(p);
+					SetClipboardData(CF_UNICODETEXT, p);
 				}
-				CloseClipboard ();
 			}
-			xfree (s);
+			CloseClipboard();
+		}
+		xfree(s);
 #endif
 		}
 		return 0;
@@ -599,155 +581,6 @@ uae_u32 REGPARAM2 ahi_demux (TrapContext *context)
 	case 105:   //returns memory offset
 		return (uae_u32)get_real_address(0);
 #endif
-		
-#if defined(X86_MSVC_ASSEMBLY)
-
-	case 106:   //byteswap 16bit vars
-		//a0 = start address
-		//d1 = number of 16bit vars
-		//returns address of new array
-		src = m68k_areg (regs, 0);
-		num_vars = m68k_dreg (regs, 1);
-
-		if (bswap_buffer_size < num_vars * 2) {
-			bswap_buffer_size = (num_vars + 1024) * 2;
-			free(bswap_buffer);
-			bswap_buffer = (void*)malloc(bswap_buffer_size);
-		}
-		if (!bswap_buffer)
-			return 0;
-
-		__asm {
-			mov esi, dword ptr [src]
-			mov edi, dword ptr [bswap_buffer]
-			mov ecx, num_vars
-
-				mov ebx, ecx
-				and ecx, 3
-				je BSWAP_WORD_4X
-
-BSWAP_WORD_LOOP:
-			mov ax, [esi]
-			mov dl, al
-				mov al, ah
-				mov ah, dl
-				mov [edi], ax
-				add esi, 2
-				add edi, 2
-				loopne BSWAP_WORD_LOOP
-
-BSWAP_WORD_4X:
-			mov ecx, ebx
-				shr ecx, 2
-				je BSWAP_WORD_END
-BSWAP_WORD_4X_LOOP:
-			mov ax, [esi]
-			mov dl, al
-				mov al, ah
-				mov ah, dl
-				mov [edi], ax
-				mov ax, [esi+2]
-			mov dl, al
-				mov al, ah
-				mov ah, dl
-				mov [edi+2], ax
-				mov ax, [esi+4]
-			mov dl, al
-				mov al, ah
-				mov ah, dl
-				mov [edi+4], ax
-				mov ax, [esi+6]
-			mov dl, al
-				mov al, ah
-				mov ah, dl
-				mov [edi+6], ax
-				add esi, 8
-				add edi, 8
-				loopne BSWAP_WORD_4X_LOOP
-BSWAP_WORD_END:
-		}
-		return (uae_u32) bswap_buffer;
-
-	case 107:   //byteswap 32bit vars - see case 106
-		//a0 = start address
-		//d1 = number of 32bit vars
-		//returns address of new array
-		src = m68k_areg (regs, 0);
-		num_vars = m68k_dreg (regs, 1);
-		if (bswap_buffer_size < num_vars * 4) {
-			bswap_buffer_size = (num_vars + 16384) * 4;
-			free(bswap_buffer);
-			bswap_buffer = (void*)malloc(bswap_buffer_size);
-		}
-		if (!bswap_buffer)
-			return 0;
-		__asm {
-			mov esi, dword ptr [src]
-			mov edi, dword ptr [bswap_buffer]
-			mov ecx, num_vars
-
-				mov ebx, ecx
-				and ecx, 3
-				je BSWAP_DWORD_4X
-
-BSWAP_DWORD_LOOP:
-			mov eax, [esi]
-			bswap eax
-				mov [edi], eax
-				add esi, 4
-				add edi, 4
-				loopne BSWAP_DWORD_LOOP
-
-BSWAP_DWORD_4X:
-			mov ecx, ebx
-				shr ecx, 2
-				je BSWAP_DWORD_END
-BSWAP_DWORD_4X_LOOP:
-			mov eax, [esi]
-			bswap eax
-				mov [edi], eax
-				mov eax, [esi+4]
-			bswap eax
-				mov [edi+4], eax
-				mov eax, [esi+8]
-			bswap eax
-				mov [edi+8], eax
-				mov eax, [esi+12]
-			bswap eax
-				mov [edi+12], eax
-				add esi, 16
-				add edi, 16
-				loopne BSWAP_DWORD_4X_LOOP
-
-BSWAP_DWORD_END:
-		}
-		return (uae_u32) bswap_buffer;
-
-	case 108: //frees swap array
-		bswap_buffer_size = 0;
-		free (bswap_buffer);
-		bswap_buffer = NULL;
-		return 0;
-
-	case 110:
-		{
-			LARGE_INTEGER p;
-			QueryPerformanceFrequency (&p);
-			put_long (m68k_areg (regs, 0), p.HighPart);
-			put_long (m68k_areg (regs, 0) + 4, p.LowPart);
-		}
-		return 1;
-
-	case 111:
-		{
-			LARGE_INTEGER p;
-			QueryPerformanceCounter (&p);
-			put_long (m68k_areg (regs, 0), p.HighPart);
-			put_long (m68k_areg (regs, 0) + 4, p.LowPart);
-		}
-		return 1;
-
-#endif
 
 	case 200:
 		ahitweak = m68k_dreg (regs, 1);
@@ -759,7 +592,7 @@ BSWAP_DWORD_END:
 		return 1;
 
 	default:
-		return 0x12345678;     // Code for not supportet function
+		return 0x12345678;     // Code for not supported function
 	}
 }
 

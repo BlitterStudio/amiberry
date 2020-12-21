@@ -52,7 +52,9 @@
 
 #ifdef AHI
 #include "ahi_v1.h"
+#ifdef AHI_v2
 #include "ahi_v2.h"
+#endif
 #endif
 
 int log_scsi;
@@ -191,7 +193,9 @@ void resumesoundpaused(void)
 	resume_sound();
 #ifdef AHI
 	ahi_open_sound();
+#ifdef AHI_v2
 	ahi2_pause_sound(0);
+#endif
 #endif
 }
 
@@ -200,7 +204,9 @@ void setsoundpaused(void)
 	pause_sound();
 #ifdef AHI
 	ahi_close_sound();
+#ifdef AHI_v2
 	ahi2_pause_sound(1);
+#endif
 #endif
 }
 
@@ -2628,6 +2634,41 @@ uae_u32 emulib_target_getcpurate(uae_u32 v, uae_u32* low)
 void target_shutdown(void)
 {
 	system("sudo poweroff");
+}
+
+struct winuae	//this struct is put in a6 if you call
+	//execute native function
+{
+	HWND amigawnd;    //address of amiga Window Windows Handle
+	unsigned int changenum;   //number to detect screen close/open
+	unsigned int z3offset;    //the offset to add to access Z3 mem from Dll side
+};
+
+void* uaenative_get_uaevar(void)
+{
+	static struct winuae uaevar;
+#ifdef _WIN32
+	uaevar.amigawnd = mon->hAmigaWnd;
+#endif
+	uaevar.z3offset = (uae_u32)get_real_address(z3fastmem_bank[0].start) - z3fastmem_bank[0].start;
+	return &uaevar;
+}
+
+const TCHAR** uaenative_get_library_dirs(void)
+{
+	static const TCHAR** nats;
+	static TCHAR* path;
+
+	if (nats == NULL)
+		nats = xcalloc(const TCHAR*, 3);
+	if (path == NULL) {
+		path = xcalloc(TCHAR, MAX_DPATH);
+		_tcscpy(path, start_path_data);
+		_tcscat(path, _T("plugins"));
+	}
+	nats[0] = start_path_data;
+	nats[1] = path;
+	return nats;
 }
 
 int main(int argc, char* argv[])
