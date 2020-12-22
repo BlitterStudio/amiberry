@@ -55,7 +55,7 @@ static const char* numbers = { /* ugly  0123456789CHD%+-PNKV */
 	"+x+++x+---+x+-+x++++++++++x++++++x++++++x++x+++x+--+x+--+x+++x++++++x++x++++-+x++x+-+x++x+---+x+x+--+x+----+++--+x++++++x+x+x++x+x++  +xx+  "
 	"+xxxxx+---+x+-+xxxxx++xxxxx+----+x++xxxxx++xxxxx+--+x+--+xxxxx++xxxxx++xxxx+-+x++x+-+xxx+---+x++xx--------------+x+----+x++xx++x++x+  +xx+  "
 	"+++++++---+++-++++++++++++++----+++++++++++++++++--+++--++++++++++++++++++++-++++++-++++------------------------+++----+++++++++++++  ++++  "
-	//   x      x      x      x      x      x      x      x      x      x      x      x      x      x      x      x      x      x      x      x      x  
+//   x      x      x      x      x      x      x      x      x      x      x      x      x      x      x      x      x      x      x      x      x  
 };
 
 STATIC_INLINE uae_u32 ledcolor(uae_u32 c, uae_u32 *rc, uae_u32 *gc, uae_u32 *bc, uae_u32 *a)
@@ -238,6 +238,7 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 					if (fps > 999)
 						fps = 999;
 					num1 = fps / 100;
+					num1 %= 10;
 					num2 = 18;
 					num3 = (fps - num1 * 100) / 10;
 				}
@@ -246,6 +247,8 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 					num1 = fps / 100;
 					num2 = (fps - num1 * 100) / 10;
 					num3 = fps % 10;
+					num1 %= 10;
+					num2 %= 10;
 					if (num1 == 0)
 						am = 2;
 				}
@@ -283,6 +286,8 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 				num1 = idle / 100;
 				num2 = (idle - num1 * 100) / 10;
 				num3 = idle % 10;
+				num1 %= 10;
+				num2 %= 10;
 				num4 = num1 == 0 ? 13 : -1;
 				am = 3;
 			}
@@ -345,9 +350,7 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 				num3 = 17;
 				am = 1;
 			}
-		}
-		else
-		{
+		} else {
 			continue;
 		}
 		on_rgb |= 0x33000000;

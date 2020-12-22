@@ -379,6 +379,7 @@ struct copper {
 	int strobe; /* COPJMP1 / COPJMP2 accessed */
 	int last_strobe;
 	int moveaddr, movedata, movedelay;
+	uaecptr moveptr;
 };
 
 #ifdef AMIBERRY
@@ -609,10 +610,13 @@ static int expand_sprres(uae_u16 con0, uae_u16 con3)
 
 STATIC_INLINE uae_u8 *pfield_xlateptr (uaecptr plpt, int bytecount)
 {
-	plpt &= chipmem_bank.mask;
-	if((plpt + bytecount) > chipmem_bank.reserved_size)
+	if (!chipmem_check_indirect (plpt, bytecount)) {
+		static int count = 0;
+		if (!count)
+			count++, write_log (_T("Warning: Bad playfield pointer %08x\n"), plpt);
 		return NULL;
-	return chipmem_bank.baseaddr + plpt;
+	}
+	return chipmem_xlate_indirect (plpt);
 }
 static void docols (struct color_entry *colentry)
 {
@@ -5410,7 +5414,7 @@ static void VHPOSW (uae_u16 v)
 
 	if (currprefs.cpu_memory_cycle_exact && currprefs.cpu_model == 68000) {
 		/* Special hack for Smooth Copper in CoolFridge / Upfront demo */
-		int chp = current_hpos();
+		int chp = current_hpos_safe();
 		int hp = v & 0xff;
 		if (chp >= 0x21 && chp <= 0x29 && hp == 0x2d) {
 			hack_delay_shift = 4;
@@ -7235,7 +7239,7 @@ static void predict_copper(void)
 }
 #endif
 
-static int custom_wput_copper (int hpos, uaecptr addr, uae_u32 value, int noget)
+static int custom_wput_copper (int hpos, uaecptr pt, uaecptr addr, uae_u32 value, int noget)
 {
 	int v;
 
@@ -7283,11 +7287,6 @@ static int customdelay[]= {
 	/* RESERVED */
 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 };
-
-static void copper_write (uae_u32 v)
-{
-	custom_wput_copper (current_hpos (), v >> 16, v & 0xffff, 0);
-}
 
 /*
 	CPU write COPJMP wakeup sequence when copper is waiting:
@@ -7352,7 +7351,7 @@ static void update_copper (int until_hpos)
 		if (cop_state.movedelay > 0) {
 			cop_state.movedelay--;
 			if (cop_state.movedelay == 0) {
-				custom_wput_copper (c_hpos, cop_state.moveaddr, cop_state.movedata, 0);
+				custom_wput_copper (c_hpos, cop_state.moveptr, cop_state.moveaddr, cop_state.movedata, 0);
 			}
 #ifdef AMIBERRY
 			if (!copper_enabled_thisline)
@@ -7650,8 +7649,9 @@ static void update_copper (int until_hpos)
 						cop_state.moveaddr = reg;
 						cop_state.movedata = data;
 						cop_state.movedelay = customdelay[cop_state.moveaddr / 2];
+						cop_state.moveptr = cop_state.ip;
 					} else {
-						custom_wput_copper (old_hpos, reg, data, 0);
+						custom_wput_copper (old_hpos, cop_state.ip, reg, data, 0);
 					}
 #endif
 				}
@@ -10505,7 +10505,8 @@ void custom_reset (bool hardreset, bool keyboardreset)
 
 	target_reset ();
 	devices_reset(hardreset);
-	write_log(_T("Reset at %08X. Chipset mask = %08X\n"), M68K_GETPC, currprefs.chipset_mask);
+	write_log (_T("Reset at %08X. Chipset mask = %08X\n"), M68K_GETPC, currprefs.chipset_mask);
+	//memory_map_dump ();
 
 	lightpen_active = 0;
 	lightpen_triggered = 0;
