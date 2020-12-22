@@ -85,8 +85,7 @@ STATIC_INLINE void cycles_do_special (void)
 	if (currprefs.cachesize) {
 		if (pissoff >= 0)
 			pissoff = -1;
-	}
-	else
+	} else
 #endif
 	{
 		pissoff = 0;
@@ -109,11 +108,13 @@ STATIC_INLINE void set_cycles (unsigned long int x)
 	eventtab[ev_hsync].oldcycles = x;
 }
 
-STATIC_INLINE int current_hpos(void)
+STATIC_INLINE int current_hpos_safe (void)
 {
-	const int hp = (get_cycles() - eventtab[ev_hsync].oldcycles) / CYCLE_UNIT;
-    return hp;
+    int hp = (get_cycles () - eventtab[ev_hsync].oldcycles) / CYCLE_UNIT;
+	return hp;
 }
+
+extern int current_hpos(void);
 
 STATIC_INLINE bool cycles_in_range (unsigned long endcycles)
 {
