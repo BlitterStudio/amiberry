@@ -882,13 +882,13 @@ static void blit_bltset(int con)
 		blitfc = !!(bltcon1 & 0x4);
 		blitife = !!(bltcon1 & 0x8);
 		if ((bltcon1 & 0x18) == 0x18) {
-			debugtest(DEBUGTEST_BLITTER, _T("weird fill mode\n"));
+			//debugtest(DEBUGTEST_BLITTER, _T("weird fill mode\n"));
 			blitife = 0;
 		}
 		if (blitfill && !blitdesc) {
-			debugtest(DEBUGTEST_BLITTER, _T("fill without desc\n"));
-			if (log_blitter & 16)
-				activate_debugger();
+			//debugtest(DEBUGTEST_BLITTER, _T("fill without desc\n"));
+			//if (log_blitter & 16)
+			//	activate_debugger();
 		}
 		shifter_skip_y = (bltcon0 & (0x100 | 0x200)) != 0x300;
 		// fill mode idle cycle needed?
