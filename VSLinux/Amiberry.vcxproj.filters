@@ -167,9 +167,6 @@
     <Image Include="..\data\cursor.bmp">
       <Filter>data</Filter>
     </Image>
-    <Image Include="..\data\cursor-x2.bmp">
-      <Filter>data</Filter>
-    </Image>
     <Image Include="..\data\quickstart.ico">
       <Filter>data</Filter>
     </Image>
