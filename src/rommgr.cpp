@@ -93,7 +93,7 @@ struct romdata *getromdatabypath (const TCHAR *path)
 	return NULL;
 }
 
-#define NEXT_ROM_ID 272
+#define NEXT_ROM_ID 274
 
 #define ALTROM(id,grp,num,size,flags,crc32,a,b,c,d,e) \
 { _T("X"), 0, 0, 0, 0, 0, size, id, 0, 0, flags, (grp << 16) | num, 0, NULL, crc32, a, b, c, d, e },
@@ -173,19 +173,19 @@ static struct romdata roms[] = {
 	ALTROMPN(15, 1, 2, 262144, ROMTYPE_ODD , _T("391774-01"), 0x16c07bf8,0x90e331be,0x1970b0e5,0x3f53a9b0,0x390b51b5,0x9b3869c2)
 
 #ifdef AMIBERRY
-	{ _T("KS ROM v3.2 (Walker)"), 3, 2, 43, 1, _T("Walker\0"), 524288, 265, 2, 1, ROMTYPE_KICK, 0, 0, NULL,
+	{ _T("KS ROM v3.2 (Walker)"), 3, 2, 43, 1, _T("Walker\0"), 524288, 267, 2, 1, ROMTYPE_KICK, 0, 0, NULL,
 	0x261339f8, 0x7A9095F1, 0x107966F9, 0x0267DC4C, 0xB3C1972E, 0xFB4B78A8 },
-	{ _T("KS ROM v3.1.4 (A1200)"), 3, 1, 46, 143, _T("A1200\0"), 524288, 266, 1, 0, ROMTYPE_KICK, 0, 0, NULL,
+	{ _T("KS ROM v3.1.4 (A1200)"), 3, 1, 46, 143, _T("A1200\0"), 524288, 268, 1, 0, ROMTYPE_KICK, 0, 0, NULL,
 	0xF17FA97F, 0x6355A9ED, 0x5DC84042, 0x2F9B7330, 0x8A91BE0D, 0x0BB506BD },
-	{ _T("KS ROM v3.1.4 (A1200)"), 3, 1, 46, 143, _T("A1200\0"), 524288, 267, 1, 0, ROMTYPE_KICK, 0, 0, NULL,
+	{ _T("KS ROM v3.1.4 (A1200)"), 3, 1, 46, 143, _T("A1200\0"), 524288, 269, 1, 0, ROMTYPE_KICK, 0, 0, NULL,
 	0xB87506A7, 0xEF36C463, 0x8EE45DE6, 0xBB937017, 0x61216C95, 0x8CD0D57B },
-	{ _T("KS ROM v3.1.4 (A3000)"), 3, 1, 46, 143, _T("A3000\0"), 524288, 268, 2, 0, ROMTYPE_KICK, 0, 0, NULL,
+	{ _T("KS ROM v3.1.4 (A3000)"), 3, 1, 46, 143, _T("A3000\0"), 524288, 270, 2, 0, ROMTYPE_KICK, 0, 0, NULL,
 	0xBA35F8EB, 0xD73AE3A3, 0x6F12BB49, 0xBBF6BA04, 0xA890FF7A, 0xAC419015 },
-	{ _T("KS ROM v3.1.4 (A500)"), 3, 1, 46, 143, _T("A500\0"), 524288, 269, 0, 0, ROMTYPE_KICK, 0, 0, NULL,
+	{ _T("KS ROM v3.1.4 (A500)"), 3, 1, 46, 143, _T("A500\0"), 524288, 271, 0, 0, ROMTYPE_KICK, 0, 0, NULL,
 	0xD52B52FD, 0x8A240508, 0x7CE18222, 0x5656DD0B, 0x93069C45, 0x743F9E34 },
-	{ _T("KS ROM v3.1.4 (A500)"), 3, 1, 46, 143, _T("A500\0"), 524288, 270, 0, 0, ROMTYPE_KICK, 0, 0, NULL,
+	{ _T("KS ROM v3.1.4 (A500)"), 3, 1, 46, 143, _T("A500\0"), 524288, 272, 0, 0, ROMTYPE_KICK, 0, 0, NULL,
 	0x568F8786, 0xD81CD6F1, 0x31040895, 0x843D9DFA, 0x95A45BC9, 0x5EDD9704 },
-	{ _T("KS ROM v3.1.4 (A4000)"), 3, 1, 46, 143, _T("A4000\0"), 524288, 271, 2 | 4, 0, ROMTYPE_KICK, 0, 0, NULL,
+	{ _T("KS ROM v3.1.4 (A4000)"), 3, 1, 46, 143, _T("A4000\0"), 524288, 273, 2 | 4, 0, ROMTYPE_KICK, 0, 0, NULL,
 	0x1B84CB33, 0xAAB44CD6, 0x51E6B6F8, 0x1A3EFFD8, 0xE0BA6B37, 0xAB322F32 },
 #endif
 
@@ -662,6 +662,10 @@ static struct romdata roms[] = {
 	0xee803484, 0x62822cb9,0x0b095efa,0x455496ea,0xd5b22740,0x77d86375, NULL, NULL },
 	{ _T("A.L.F. 2"), 0, 0, 0, 0, _T("ALF2\0"), 65536, 264, 0, 0, ROMTYPE_ALF2, 0, 0, NULL,
 	0x9cf8a7b7, 0x3df4667c,0xd3436367,0x7896da65,0x94994769,0x13bc6746, NULL, NULL },
+	{ _T("M.A.S.T. Fireball"), 0, 0, 0, 0, _T("MASTFB\0"), 8192, 265, 0, 0, ROMTYPE_MASTFB, 0, 0, NULL,
+	0xb475ff5f, 0x63609553,0x98b06812,0x23ade9ac,0x6ee31364,0x5375fce3, NULL, NULL },
+	{ _T("Hardital Synthesis"), 0, 0, 0, 0, _T("SYNTHESIS\0"), 32768, 266, 0, 0, ROMTYPE_SYNTHESIS, 0, 0, NULL,
+	0x667c7616, 0x0eb1cb38,0x3133f070,0x7cb57944,0xc516f236,0xbad4d4f6, NULL, NULL },
 
 	{ _T("CyberStorm MK I 68040"), 0, 0, 0, 0, _T("CSMKI\0"), 32768, 95, 0, 0, ROMTYPE_CB_CSMK1, 0, 0, NULL,
 	  0, 0, 0, 0, 0, 0, NULL, _T("cyberstormmk1_040.rom") },

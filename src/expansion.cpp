@@ -5381,6 +5381,7 @@ const struct expansionromtype expansionroms[] = {
 	//	NULL, dotto_init, NULL, dotto_add_ide_unit, ROMTYPE_DOTTO, 0, 0, BOARD_AUTOCONFIG_Z2, false,
 	//	NULL, 0,
 	//	true, EXPANSIONTYPE_IDE
+	//	256, 0, 0
 	//},
 	//{
 	//	_T("vector"), _T("Vector Falcon 8000"), _T("HK-Computer"),
@@ -5807,6 +5808,12 @@ const struct expansionromtype expansionroms[] = {
 		false, EXPANSIONTYPE_RTG
 	},
 	{
+		_T("vooodoo3_3k"), _T("Voodoo 3 3000"), _T("3dfx"),
+		NULL, NULL, NULL, NULL, ROMTYPE_VOODOO3 | ROMTYPE_NONE, 0, 0, BOARD_IGNORE, false,
+		NULL, 0,
+		false, EXPANSIONTYPE_RTG
+	},
+	{
 		_T("x86vga"), _T("x86 VGA"), NULL,
 		NULL, NULL, NULL, NULL, ROMTYPE_x86_VGA | ROMTYPE_NONE, 0, 0, BOARD_IGNORE, true,
 		NULL, 0,
@@ -6128,6 +6135,16 @@ static const struct cpuboardsubtype gvpboard_sub[] = {
 	//	_T("G-Force 030"),
 	//	_T("GVPGFORCE030"),
 	//	ROMTYPE_GVPS2, ROMTYPE_GVPS12, 3,
+	//	gvp_s2_add_accelerator_scsi_unit, EXPANSIONTYPE_SCSI,
+	//	BOARD_MEMORY_25BITMEM,
+	//	128 * 1024 * 1024,
+	//	0,
+	//	gvp_init_accelerator, NULL, BOARD_AUTOCONFIG_Z2, 1
+	//},
+    //	{
+	//	_T("G-Force 040"),
+	//	_T("GVPGFORCE040"),
+	//	ROMTYPE_GVPS2, ROMTYPE_GVPS12, 4,
 	//	gvp_s2_add_accelerator_scsi_unit, EXPANSIONTYPE_SCSI,
 	//	BOARD_MEMORY_25BITMEM,
 	//	128 * 1024 * 1024,
