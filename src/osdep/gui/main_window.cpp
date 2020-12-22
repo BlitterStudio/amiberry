@@ -257,16 +257,7 @@ void update_gui_screen()
 #else
 void setup_cursor()
 {
-	// Detect resolution and load appropriate cursor image
-	if (strcmp(sdl_video_driver, "x11") != 0 && sdlMode.w > 1280)
-	{
-		cursor_surface = SDL_LoadBMP(prefix_with_application_directory_path("data/cursor-x2.bmp").c_str());
-	}
-	else
-	{
-		cursor_surface = SDL_LoadBMP(prefix_with_application_directory_path("data/cursor.bmp").c_str());
-	}
-
+	cursor_surface = SDL_LoadBMP(prefix_with_application_directory_path("data/cursor.bmp").c_str());
 	if (!cursor_surface)
 	{
 		// Load failed. Log error.
