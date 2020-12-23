@@ -47,7 +47,7 @@ extern void disablecapture();
 
 extern amiberry_hotkey enter_gui_key;
 extern amiberry_hotkey quit_key;
-extern amiberry_hotkey action_replay_button;
+extern amiberry_hotkey action_replay_key;
 extern amiberry_hotkey fullscreen_key;
 extern amiberry_hotkey minimize_key;
 

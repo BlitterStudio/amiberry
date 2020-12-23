@@ -23,7 +23,6 @@
 static bool dialogResult = false;
 static bool dialogFinished = false;
 static amiberry_hotkey hotkey = {};
-static bool lctrl, rctrl, lalt, ralt, lshift, rshift, lgui, rgui;
 static bool halt_gui = false;
 
 static gcn::Window* wndShowMessage;
@@ -312,46 +311,80 @@ static void ExitShowMessage()
 static void ShowMessageWaitInputLoop()
 {
 	auto got_event = 0;
+	std::string caption;
+	std::string delimiter;
+	size_t pos;
 	SDL_Event event;
 	while (SDL_PollEvent(&event))
 	{
 		switch (event.type)
 		{
 		case SDL_KEYDOWN:
-			got_event = 1;
-			switch (event.key.keysym.sym)
+			if (event.key.repeat == 0)
 			{
-			case VK_ESCAPE:
-				dialogFinished = true;
-				break;
+				got_event = 1;
+				switch (event.key.keysym.sym)
+				{
+				case VK_ESCAPE:
+					dialogFinished = true;
+					break;
 
-			case SDLK_LCTRL:
-				lctrl = true;
-				break;
-			case SDLK_RCTRL:
-				rctrl = true;
-				break;
-			case SDLK_LALT:
-				lalt = true;
-				break;
-			case SDLK_RALT:
-				ralt = true;
-				break;
-			case SDLK_LSHIFT:
-				lshift = true;
-				break;
-			case SDLK_RSHIFT:
-				rshift = true;
-				break;
-			case SDLK_LGUI:
-				lgui = true;
-				break;
-			case SDLK_RGUI:
-				rgui = true;
-				break;
+				case SDLK_LCTRL:
+					hotkey.modifiers.lctrl = true;
+					delimiter = SDL_GetKeyName(event.key.keysym.sym);
+					caption = lblText2->getCaption();
+					lblText2->setCaption(caption + " " + delimiter);
+					break;
+				case SDLK_RCTRL:
+					hotkey.modifiers.rctrl = true;
+					delimiter = SDL_GetKeyName(event.key.keysym.sym);
+					caption = lblText2->getCaption();
+					lblText2->setCaption(caption + " " + delimiter);
+					break;
+				case SDLK_LALT:
+					hotkey.modifiers.lalt = true;
+					delimiter = SDL_GetKeyName(event.key.keysym.sym);
+					caption = lblText2->getCaption();
+					lblText2->setCaption(caption + " " + delimiter);
+					break;
+				case SDLK_RALT:
+					hotkey.modifiers.ralt = true;
+					delimiter = SDL_GetKeyName(event.key.keysym.sym);
+					caption = lblText2->getCaption();
+					lblText2->setCaption(caption + " " + delimiter);
+					break;
+				case SDLK_LSHIFT:
+					hotkey.modifiers.lshift = true;
+					delimiter = SDL_GetKeyName(event.key.keysym.sym);
+					caption = lblText2->getCaption();
+					lblText2->setCaption(caption + " " + delimiter);
+					break;
+				case SDLK_RSHIFT:
+					hotkey.modifiers.rshift = true;
+					delimiter = SDL_GetKeyName(event.key.keysym.sym);
+					caption = lblText2->getCaption();
+					lblText2->setCaption(caption + " " + delimiter);
+					break;
+				case SDLK_LGUI:
+					hotkey.modifiers.lgui = true;
+					delimiter = SDL_GetKeyName(event.key.keysym.sym);
+					caption = lblText2->getCaption();
+					lblText2->setCaption(caption + " " + delimiter);
+					break;
+				case SDLK_RGUI:
+					hotkey.modifiers.rgui = true;
+					delimiter = SDL_GetKeyName(event.key.keysym.sym);
+					caption = lblText2->getCaption();
+					lblText2->setCaption(caption + " " + delimiter);
+					break;
 
-			default:
-				break;
+				default:
+					hotkey.scancode = event.key.keysym.scancode;
+					hotkey.key_name = delimiter = SDL_GetKeyName(event.key.keysym.sym);
+					caption = lblText2->getCaption();
+					lblText2->setCaption(caption + " " + delimiter);
+					break;
+				}
 			}
 			break;
 
@@ -364,39 +397,80 @@ static void ShowMessageWaitInputLoop()
 			break;
 
 		case SDL_KEYUP:
-			got_event = 1;
-			switch (event.key.keysym.sym)
+			if (event.key.repeat == 0)
 			{
-			case SDLK_LCTRL:
-				lctrl = false;
-				break;
-			case SDLK_RCTRL:
-				rctrl = false;
-				break;
-			case SDLK_LALT:
-				lalt = false;
-				break;
-			case SDLK_RALT:
-				ralt = false;
-				break;
-			case SDLK_LSHIFT:
-				lshift = false;
-				break;
-			case SDLK_RSHIFT:
-				rshift = false;
-				break;
-			case SDLK_LGUI:
-				lgui = false;
-				break;
-			case SDLK_RGUI:
-				rgui = false;
-				break;
-			default:
-				hotkey.scancode = event.key.keysym.scancode;
-				hotkey.key_name = SDL_GetKeyName(event.key.keysym.sym);
-				dialogFinished = true;
-				break;
-			}
+				got_event = 1;
+				switch (event.key.keysym.sym)
+				{
+				case SDLK_LCTRL:
+					hotkey.modifiers.lctrl = false;
+					delimiter = SDL_GetKeyName(event.key.keysym.sym);
+					caption = lblText2->getCaption();
+					if ((pos = caption.find(delimiter)) != std::string::npos)
+						caption.erase(0, pos + delimiter.length());
+					lblText2->setCaption(caption);
+					break;
+				case SDLK_RCTRL:
+					hotkey.modifiers.rctrl = false;
+					delimiter = SDL_GetKeyName(event.key.keysym.sym);
+					caption = lblText2->getCaption();
+					if ((pos = caption.find(delimiter)) != std::string::npos)
+						caption.erase(0, pos + delimiter.length());
+					lblText2->setCaption(caption);
+					break;
+				case SDLK_LALT:
+					hotkey.modifiers.lalt = false;
+					delimiter = SDL_GetKeyName(event.key.keysym.sym);
+					caption = lblText2->getCaption();
+					if ((pos = caption.find(delimiter)) != std::string::npos)
+						caption.erase(0, pos + delimiter.length());
+					lblText2->setCaption(caption);
+					break;
+				case SDLK_RALT:
+					hotkey.modifiers.ralt = false;
+					delimiter = SDL_GetKeyName(event.key.keysym.sym);
+					caption = lblText2->getCaption();
+					if ((pos = caption.find(delimiter)) != std::string::npos)
+						caption.erase(0, pos + delimiter.length());
+					lblText2->setCaption(caption);
+					break;
+				case SDLK_LSHIFT:
+					hotkey.modifiers.lshift = false;
+					delimiter = SDL_GetKeyName(event.key.keysym.sym);
+					caption = lblText2->getCaption();
+					if ((pos = caption.find(delimiter)) != std::string::npos)
+						caption.erase(0, pos + delimiter.length());
+					lblText2->setCaption(caption);
+					break;
+				case SDLK_RSHIFT:
+					hotkey.modifiers.rshift = false;
+					delimiter = SDL_GetKeyName(event.key.keysym.sym);
+					caption = lblText2->getCaption();
+					if ((pos = caption.find(delimiter)) != std::string::npos)
+						caption.erase(0, pos + delimiter.length());
+					lblText2->setCaption(caption);
+					break;
+				case SDLK_LGUI:
+					hotkey.modifiers.lgui = false;
+					delimiter = SDL_GetKeyName(event.key.keysym.sym);
+					caption = lblText2->getCaption();
+					if ((pos = caption.find(delimiter)) != std::string::npos)
+						caption.erase(0, pos + delimiter.length());
+					lblText2->setCaption(caption);
+					break;
+				case SDLK_RGUI:
+					hotkey.modifiers.rgui = false;
+					delimiter = SDL_GetKeyName(event.key.keysym.sym);
+					caption = lblText2->getCaption();
+					if ((pos = caption.find(delimiter)) != std::string::npos)
+						caption.erase(0, pos + delimiter.length());
+					lblText2->setCaption(caption);
+					break;
+				default:
+					dialogFinished = true;
+					break;
+				}
+			}			
 			break;
 		case SDL_JOYBUTTONUP:
 		case SDL_MOUSEBUTTONDOWN:
@@ -617,7 +691,11 @@ amiberry_hotkey ShowMessageForInput(const char* title, const char* line1, const 
 	uae_gui->draw();
 	update_gui_screen();
 
-	lctrl = rctrl = lalt = ralt = lshift = rshift = lgui = rgui = false;
+	hotkey.modifiers.lctrl = hotkey.modifiers.rctrl = 
+		hotkey.modifiers.lalt = hotkey.modifiers.ralt = 
+		hotkey.modifiers.lshift = hotkey.modifiers.rshift = 
+		hotkey.modifiers.lgui = hotkey.modifiers.rgui = false;
+	
 	while (!dialogFinished)
 	{
 		const auto start = SDL_GetPerformanceCounter();
@@ -628,31 +706,22 @@ amiberry_hotkey ShowMessageForInput(const char* title, const char* line1, const 
 	ExitShowMessage();
 
 	hotkey.modifiers_string = "";
-	if (lctrl)
+	if (hotkey.modifiers.lctrl)
 		hotkey.modifiers_string = "LCtrl+";
-	if (rctrl)
+	if (hotkey.modifiers.rctrl)
 		hotkey.modifiers_string = "RCtrl+";
-	if (lalt)
+	if (hotkey.modifiers.lalt)
 		hotkey.modifiers_string = hotkey.modifiers_string + "LAlt+";
-	if (ralt)
+	if (hotkey.modifiers.ralt)
 		hotkey.modifiers_string = hotkey.modifiers_string + "RAlt+";
-	if (lshift)
+	if (hotkey.modifiers.lshift)
 		hotkey.modifiers_string = hotkey.modifiers_string + "LShift+";
-	if (rshift)
+	if (hotkey.modifiers.rshift)
 		hotkey.modifiers_string = hotkey.modifiers_string + "RShift+";
-	if (lgui)
+	if (hotkey.modifiers.lgui)
 		hotkey.modifiers_string = hotkey.modifiers_string + "LGUI+";
-	if (rgui)
+	if (hotkey.modifiers.rgui)
 		hotkey.modifiers_string = hotkey.modifiers_string + "RGUI+";
-
-	hotkey.modifiers.lctrl = lctrl;
-	hotkey.modifiers.rctrl = rctrl;
-	hotkey.modifiers.lalt = lalt;
-	hotkey.modifiers.ralt = ralt;
-	hotkey.modifiers.lshift = lshift;
-	hotkey.modifiers.rshift = rshift;
-	hotkey.modifiers.lgui = lgui;
-	hotkey.modifiers.rgui = rgui;
 	
 	return hotkey;
 }

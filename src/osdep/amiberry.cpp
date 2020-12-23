@@ -82,7 +82,7 @@ struct amiberry_options amiberry_options = {};
 amiberry_hotkey enter_gui_key;
 SDL_GameControllerButton enter_gui_button;
 amiberry_hotkey quit_key;
-amiberry_hotkey action_replay_button;
+amiberry_hotkey action_replay_key;
 amiberry_hotkey fullscreen_key;
 amiberry_hotkey minimize_key;
 
@@ -166,11 +166,11 @@ void set_key_configs(struct uae_prefs* p)
 		quit_key = get_hotkey_from_config(amiberry_options.default_quit_key);
 
 	if (strncmp(p->action_replay, "", 1) != 0)
-		action_replay_button = get_hotkey_from_config(p->action_replay);
+		action_replay_key = get_hotkey_from_config(p->action_replay);
 	else
-		action_replay_button = get_hotkey_from_config(amiberry_options.default_ar_key);
-	if (action_replay_button.scancode == 0)
-		action_replay_button.scancode = SDL_SCANCODE_PAUSE;
+		action_replay_key = get_hotkey_from_config(amiberry_options.default_ar_key);
+	if (action_replay_key.scancode == 0)
+		action_replay_key.scancode = SDL_SCANCODE_PAUSE;
 
 	if (strncmp(p->fullscreen_toggle, "", 1) != 0)
 		fullscreen_key = get_hotkey_from_config(p->fullscreen_toggle);
