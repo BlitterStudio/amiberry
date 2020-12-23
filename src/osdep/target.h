@@ -7,6 +7,8 @@
 #pragma once
 #include <SDL.h>
 
+#include "options.h"
+
 #define TARGET_NAME _T("amiberry")
 
 #define NO_MAIN_IN_MAIN_C
@@ -43,10 +45,11 @@ extern int getcapslock();
 extern void releasecapture();
 extern void disablecapture();
 
-extern int enter_gui_key;
-extern int quit_key;
-extern int action_replay_button;
-extern int fullscreen_key;
+extern amiberry_hotkey enter_gui_key;
+extern amiberry_hotkey quit_key;
+extern amiberry_hotkey action_replay_button;
+extern amiberry_hotkey fullscreen_key;
+extern amiberry_hotkey minimize_key;
 
 extern int emulating;
 extern bool config_loaded;
@@ -108,6 +111,7 @@ extern void setpriority(int prio);
 extern bool setpaused(int priority);
 extern bool resumepaused(int priority);
 extern void init_colors();
+extern void minimizewindow();
 
 #include <vector>
 #include <string>

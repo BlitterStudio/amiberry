@@ -1092,6 +1092,25 @@ struct amiberry_customised_layout
 	std::array<int, 15> select;
 };
 
+struct hotkey_modifiers
+{
+	bool lctrl;
+	bool rctrl;
+	bool lalt;
+	bool ralt;
+	bool lshift;
+	bool rshift;
+	bool lgui;
+	bool rgui;
+};
+struct amiberry_hotkey
+{
+	int scancode;
+	std::string key_name;
+	std::string modifiers_string;
+	hotkey_modifiers modifiers;
+};
+
 struct amiberry_options
 {
 	bool quickstart_start = true;

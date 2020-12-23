@@ -213,56 +213,61 @@ public:
 
 		else if (actionEvent.getSource() == cmdOpenGUI)
 		{
-			const auto* key = ShowMessageForInput("Press a key", "Press a key to map to Open the GUI, or ESC to cancel...", "Cancel");
-			if (key != nullptr)
+			const auto key = ShowMessageForInput("Press a key", "Press a key to map to Open the GUI, or ESC to cancel...", "Cancel");
+			if (!key.key_name.empty())
 			{
-				txtOpenGUI->setText(key);
-				strcpy(changed_prefs.open_gui, key);
-				strcpy(currprefs.open_gui, key);
+				std::string hotkey = key.modifiers_string + key.key_name;
+				txtOpenGUI->setText(hotkey);
+				strcpy(changed_prefs.open_gui, hotkey.c_str());
+				strcpy(currprefs.open_gui, hotkey.c_str());
 			}
 		}
 
 		else if (actionEvent.getSource() == cmdKeyForQuit)
 		{
-			const auto* key = ShowMessageForInput("Press a key", "Press a key to map to Quit the emulator, or ESC to cancel...", "Cancel");
-			if (key != nullptr)
+			const auto key = ShowMessageForInput("Press a key", "Press a key to map to Quit the emulator, or ESC to cancel...", "Cancel");
+			if (!key.key_name.empty())
 			{
-				txtKeyForQuit->setText(key);
-				strcpy(changed_prefs.quit_amiberry, key);
-				strcpy(currprefs.quit_amiberry, key);
+				std::string hotkey = key.modifiers_string + key.key_name;
+				txtKeyForQuit->setText(hotkey);
+				strcpy(changed_prefs.quit_amiberry, hotkey.c_str());
+				strcpy(currprefs.quit_amiberry, hotkey.c_str());
 			}
 		}
 
 		else if (actionEvent.getSource() == cmdKeyActionReplay)
 		{
-			const auto* key = ShowMessageForInput("Press a key", "Press a key to map to Action Replay, or ESC to cancel...", "Cancel");
-			if (key != nullptr)
+			const auto key = ShowMessageForInput("Press a key", "Press a key to map to Action Replay, or ESC to cancel...", "Cancel");
+			if (!key.key_name.empty())
 			{
-				txtKeyActionReplay->setText(key);
-				strcpy(changed_prefs.action_replay, key);
-				strcpy(currprefs.action_replay, key);
+				std::string hotkey = key.modifiers_string + key.key_name;
+				txtKeyActionReplay->setText(hotkey);
+				strcpy(changed_prefs.action_replay, hotkey.c_str());
+				strcpy(currprefs.action_replay, hotkey.c_str());
 			}
 		}
 
 		else if (actionEvent.getSource() == cmdKeyFullScreen)
 		{
-			const auto* key = ShowMessageForInput("Press a key", "Press a key to map to toggle FullScreen, or ESC to cancel...", "Cancel");
-			if (key != nullptr)
+			const auto key = ShowMessageForInput("Press a key", "Press a key to map to toggle FullScreen, or ESC to cancel...", "Cancel");
+			if (!key.key_name.empty())
 			{
-				txtKeyFullScreen->setText(key);
-				strcpy(changed_prefs.fullscreen_toggle, key);
-				strcpy(currprefs.fullscreen_toggle, key);
+				std::string hotkey = key.modifiers_string + key.key_name;
+				txtKeyFullScreen->setText(hotkey);
+				strcpy(changed_prefs.fullscreen_toggle, hotkey.c_str());
+				strcpy(currprefs.fullscreen_toggle, hotkey.c_str());
 			}
 		}
 
 		else if (actionEvent.getSource() == cmdKeyMinimize)
 		{
-			const auto* key = ShowMessageForInput("Press a key", "Press a key to map to Minimize or ESC to cancel...", "Cancel");
-			if (key != nullptr)
+			const auto key = ShowMessageForInput("Press a key", "Press a key to map to Minimize or ESC to cancel...", "Cancel");
+			if (!key.key_name.empty())
 			{
-				txtKeyMinimize->setText(key);
-				strcpy(changed_prefs.minimize, key);
-				strcpy(currprefs.minimize, key);
+				std::string hotkey = key.modifiers_string + key.key_name;
+				txtKeyMinimize->setText(hotkey);
+				strcpy(changed_prefs.minimize, hotkey.c_str());
+				strcpy(currprefs.minimize, hotkey.c_str());
 			}
 		}
 		

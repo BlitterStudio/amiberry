@@ -369,7 +369,7 @@ bool my_kbd_handler(int keyboard, int scancode, int newstate, bool alwaysrelease
 	bool special = false;
 	static int swapperdrive = 0;
 
-	if (amode && quit_key && scancode == quit_key) {
+	if (amode && quit_key.scancode && scancode == quit_key.scancode) {
 		uae_quit();
 		return true;
 	}
@@ -389,24 +389,44 @@ bool my_kbd_handler(int keyboard, int scancode, int newstate, bool alwaysrelease
 		scancode = 0;
 
 	if (newstate) {
-		if (enter_gui_key && scancode == enter_gui_key)
+		if (enter_gui_key.scancode && scancode == enter_gui_key.scancode)
 		{
 			inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
 			scancode = 0;
 		}
 		
-		if (action_replay_button && scancode == action_replay_button)
+		if (action_replay_button.scancode && scancode == action_replay_button.scancode)
 		{
 			inputdevice_add_inputcode(AKS_FREEZEBUTTON, 1, nullptr);
 			scancode = 0;
 		}
 
-		if (fullscreen_key && scancode == fullscreen_key)
+		if (fullscreen_key.scancode && scancode == fullscreen_key.scancode)
 		{
 			inputdevice_add_inputcode(AKS_TOGGLEWINDOWEDFULLSCREEN, 1, nullptr);
 			scancode = 0;
 		}
 
+		if (minimize_key.scancode && scancode == minimize_key.scancode)
+		{
+			if ((minimize_key.modifiers.lctrl || minimize_key.modifiers.rctrl) && ctrlpressed()
+				|| (minimize_key.modifiers.lshift || minimize_key.modifiers.rshift) && shiftpressed()
+				|| (minimize_key.modifiers.lalt || minimize_key.modifiers.ralt) && altpressed()
+				|| (minimize_key.modifiers.lgui || minimize_key.modifiers.rgui) && specialpressed()
+				|| !minimize_key.modifiers.lctrl
+				&& !minimize_key.modifiers.rctrl
+				&& !minimize_key.modifiers.lshift
+				&& !minimize_key.modifiers.rshift
+				&& !minimize_key.modifiers.lalt
+				&& !minimize_key.modifiers.ralt
+				&& !minimize_key.modifiers.lgui
+				&& !minimize_key.modifiers.rgui)
+			{
+				minimizewindow();
+				scancode = 0;
+			}
+		}
+		
 		if (scancode == SDL_SCANCODE_SYSREQ)
 			clipboard_disable(true);
 	}

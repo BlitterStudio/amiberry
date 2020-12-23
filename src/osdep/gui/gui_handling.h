@@ -17,6 +17,8 @@
 #define TITLEBAR_HEIGHT 24
 #include <guisan/sdl/sdlinput.hpp>
 
+#include "options.h"
+
 typedef struct _ConfigCategory
 {
 	const char* category;
@@ -167,7 +169,7 @@ void register_refresh_func(void (*func)(void));
 void disable_resume(void);
 
 bool ShowMessage(const char* title, const char* line1, const char* line2, const char* button1, const char* button2);
-const char* ShowMessageForInput(const char* title, const char* line1, const char* button1);
+amiberry_hotkey ShowMessageForInput(const char* title, const char* line1, const char* button1);
 bool SelectFolder(const char* title, char* value);
 bool SelectFile(const char* title, char* value, const char* filter[], bool create = false);
 bool EditFilesysVirtual(int unit_no);

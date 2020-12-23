@@ -79,18 +79,14 @@ bool host_poweroff = false;
 int saveimageoriginalpath = 0;
 
 struct amiberry_options amiberry_options = {};
-
-// Default Enter GUI key is F12
-int enter_gui_key = 0;
+amiberry_hotkey enter_gui_key;
 SDL_GameControllerButton enter_gui_button;
-// We don't set a default value for Quitting
-int quit_key = 0;
-// The default value for Action Replay is Pause/Break
-int action_replay_button = 0;
-// No default value for Full Screen toggle
-int fullscreen_key = 0;
-// No default value for Minimize key
-int minimize_key = 0;
+amiberry_hotkey quit_key;
+amiberry_hotkey action_replay_button;
+amiberry_hotkey fullscreen_key;
+amiberry_hotkey minimize_key;
+
+bool lctrl, rctrl, lalt, ralt, lshift, rshift, lgui, rgui;
 
 bool mouse_grabbed = false;
 
@@ -100,17 +96,63 @@ std::string get_version_string()
 	return label_text;
 }
 
+amiberry_hotkey get_hotkey_from_config(std::string config_option)
+{
+	amiberry_hotkey hotkey = {};
+	std::string delimiter = "+";
+	std::string lctrl = "LCtrl";
+	std::string rctrl = "RCtrl";
+	std::string lalt = "LAlt";
+	std::string ralt = "RAlt";
+	std::string lshift = "LShift";
+	std::string rshift = "RShift";
+	std::string lgui = "LGUI";
+	std::string rgui = "RGUI";
+	
+	if (config_option.empty()) return hotkey;
+
+	size_t pos = 0;
+	std::string token;
+	while ((pos = config_option.find(delimiter)) != std::string::npos)
+	{
+		token = config_option.substr(0, pos);
+		if (token.compare(lctrl) == 0)
+			hotkey.modifiers.lctrl = true;
+		if (token.compare(rctrl) == 0)
+			hotkey.modifiers.rctrl = true;
+		if (token.compare(lalt) == 0)
+			hotkey.modifiers.lalt = true;
+		if (token.compare(ralt) == 0)
+			hotkey.modifiers.ralt = true;
+		if (token.compare(lshift) == 0)
+			hotkey.modifiers.lshift = true;
+		if (token.compare(rshift) == 0)
+			hotkey.modifiers.rshift = true;
+		if (token.compare(lgui) == 0)
+			hotkey.modifiers.lgui = true;
+		if (token.compare(rgui) == 0)
+			hotkey.modifiers.rgui = true;
+
+		config_option.erase(0, pos + delimiter.length());
+	}
+	hotkey.key_name = config_option;
+	hotkey.scancode = SDL_GetScancodeFromName(hotkey.key_name.c_str());
+	
+	return hotkey;
+}
+
+
 void set_key_configs(struct uae_prefs* p)
 {
 	if (strncmp(p->open_gui, "", 1) != 0)
 		// If we have a value in the config, we use that instead
-		enter_gui_key = SDL_GetScancodeFromName(p->open_gui);
+		enter_gui_key = get_hotkey_from_config(p->open_gui);
 	else
 		// Otherwise we go for the default found in amiberry.conf
-		enter_gui_key = SDL_GetScancodeFromName(amiberry_options.default_open_gui_key);
+		enter_gui_key = get_hotkey_from_config(amiberry_options.default_open_gui_key);
 	// if nothing was found in amiberry.conf either, we default back to F12
-	if (enter_gui_key == 0)
-		enter_gui_key = SDL_SCANCODE_F12;
+	if (enter_gui_key.scancode == 0)
+		enter_gui_key.scancode = SDL_SCANCODE_F12;
 
 	enter_gui_button = SDL_GameControllerGetButtonFromString(p->open_gui);
 	if (enter_gui_button == SDL_CONTROLLER_BUTTON_INVALID)
@@ -119,24 +161,24 @@ void set_key_configs(struct uae_prefs* p)
 		enter_gui_button = SDL_CONTROLLER_BUTTON_GUIDE;
 	
 	if (strncmp(p->quit_amiberry, "", 1) != 0)
-		quit_key = SDL_GetScancodeFromName(p->quit_amiberry);
+		quit_key = get_hotkey_from_config(p->quit_amiberry);
 	else
-		quit_key = SDL_GetScancodeFromName(amiberry_options.default_quit_key);
+		quit_key = get_hotkey_from_config(amiberry_options.default_quit_key);
 
 	if (strncmp(p->action_replay, "", 1) != 0)
-		action_replay_button = SDL_GetScancodeFromName(p->action_replay);
+		action_replay_button = get_hotkey_from_config(p->action_replay);
 	else
-		action_replay_button = SDL_GetScancodeFromName(amiberry_options.default_ar_key);
-	if (action_replay_button == 0)
-		action_replay_button = SDL_SCANCODE_PAUSE;
+		action_replay_button = get_hotkey_from_config(amiberry_options.default_ar_key);
+	if (action_replay_button.scancode == 0)
+		action_replay_button.scancode = SDL_SCANCODE_PAUSE;
 
 	if (strncmp(p->fullscreen_toggle, "", 1) != 0)
-		fullscreen_key = SDL_GetScancodeFromName(p->fullscreen_toggle);
+		fullscreen_key = get_hotkey_from_config(p->fullscreen_toggle);
 	else
-		fullscreen_key = SDL_GetScancodeFromName(amiberry_options.default_fullscreen_toggle_key);
+		fullscreen_key = get_hotkey_from_config(amiberry_options.default_fullscreen_toggle_key);
 
 	if (strncmp(p->minimize, "", 1) != 0)
-		minimize_key = SDL_GetScancodeFromName(p->minimize);
+		minimize_key = get_hotkey_from_config(p->minimize);
 }
 
 extern void signal_segv(int signum, siginfo_t* info, void* ptr);
@@ -1007,31 +1049,6 @@ void process_event(SDL_Event event)
 					scancode = SDL_SCANCODE_RGUI;
 			}
 
-			if (enter_gui_key && scancode == enter_gui_key)
-			{
-				inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
-				break;
-			}
-			if (action_replay_button && scancode == action_replay_button)
-			{
-				inputdevice_add_inputcode(AKS_FREEZEBUTTON, 1, nullptr);
-				break;
-			}
-			if (fullscreen_key && scancode == fullscreen_key)
-			{
-				inputdevice_add_inputcode(AKS_TOGGLEWINDOWEDFULLSCREEN, 1, nullptr);
-				break;
-			}
-			if (quit_key && scancode == quit_key)
-			{
-				inputdevice_add_inputcode(AKS_QUIT, 1, nullptr);
-				break;
-			}
-			if (minimize_key && scancode == minimize_key)
-			{
-				minimizewindow();
-				break;
-			}
 			my_kbd_handler(0, scancode, pressed, false);
 		}
 		break;
@@ -1214,6 +1231,7 @@ void update_clipboard()
 
 int handle_msgpump()
 {
+	lctrl = rctrl = lalt = ralt = lshift = rshift = lgui = rgui = false;
 	auto got_event = 0;
 	SDL_Event event;
 
@@ -1242,6 +1260,7 @@ bool handle_events()
 			// we got just paused, report it to caller.
 			return true;
 		}
+		lctrl = rctrl = lalt = ralt = lshift = rshift = lgui = rgui = false;
 		SDL_Event event;
 		while (SDL_PollEvent(&event))
 		{

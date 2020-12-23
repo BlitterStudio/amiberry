@@ -12,10 +12,6 @@
 #include "config.h"
 #include "gui_handling.h"
 
-#ifdef ANDROID
-#include "androidsdl_event.h"
-#endif
-
 #include "options.h"
 #include "inputdevice.h"
 #include "amiberry_gfx.h"
@@ -26,7 +22,8 @@
 
 static bool dialogResult = false;
 static bool dialogFinished = false;
-static const char* dialogControlPressed;
+static amiberry_hotkey hotkey = {};
+static bool lctrl, rctrl, lalt, ralt, lshift, rshift, lgui, rgui;
 static bool halt_gui = false;
 
 static gcn::Window* wndShowMessage;
@@ -42,6 +39,8 @@ public:
 	{
 		if (actionEvent.getSource() == cmdOK)
 			dialogResult = true;
+		else if (actionEvent.getSource() == cmdCancel)
+			dialogResult = false;
 		dialogFinished = true;
 	}
 };
@@ -316,8 +315,9 @@ static void ShowMessageWaitInputLoop()
 	SDL_Event event;
 	while (SDL_PollEvent(&event))
 	{
-		if (event.type == SDL_KEYDOWN)
+		switch (event.type)
 		{
+		case SDL_KEYDOWN:
 			got_event = 1;
 			switch (event.key.keysym.sym)
 			{
@@ -325,19 +325,88 @@ static void ShowMessageWaitInputLoop()
 				dialogFinished = true;
 				break;
 
+			case SDLK_LCTRL:
+				lctrl = true;
+				break;
+			case SDLK_RCTRL:
+				rctrl = true;
+				break;
+			case SDLK_LALT:
+				lalt = true;
+				break;
+			case SDLK_RALT:
+				ralt = true;
+				break;
+			case SDLK_LSHIFT:
+				lshift = true;
+				break;
+			case SDLK_RSHIFT:
+				rshift = true;
+				break;
+			case SDLK_LGUI:
+				lgui = true;
+				break;
+			case SDLK_RGUI:
+				rgui = true;
+				break;
+
 			default:
-				dialogControlPressed = SDL_GetKeyName(event.key.keysym.sym);
+				break;
+			}
+			break;
+
+		case SDL_CONTROLLERBUTTONDOWN:
+		case SDL_JOYBUTTONDOWN:
+			got_event = 1;
+			hotkey.key_name = SDL_GameControllerGetStringForButton(
+				SDL_GameControllerButton(event.cbutton.button));
+			dialogFinished = true;
+			break;
+
+		case SDL_KEYUP:
+			got_event = 1;
+			switch (event.key.keysym.sym)
+			{
+			case SDLK_LCTRL:
+				lctrl = false;
+				break;
+			case SDLK_RCTRL:
+				rctrl = false;
+				break;
+			case SDLK_LALT:
+				lalt = false;
+				break;
+			case SDLK_RALT:
+				ralt = false;
+				break;
+			case SDLK_LSHIFT:
+				lshift = false;
+				break;
+			case SDLK_RSHIFT:
+				rshift = false;
+				break;
+			case SDLK_LGUI:
+				lgui = false;
+				break;
+			case SDLK_RGUI:
+				rgui = false;
+				break;
+			default:
+				hotkey.scancode = event.key.keysym.scancode;
+				hotkey.key_name = SDL_GetKeyName(event.key.keysym.sym);
 				dialogFinished = true;
 				break;
 			}
-		}
-
-		if (event.type == SDL_CONTROLLERBUTTONDOWN || event.type == SDL_JOYBUTTONDOWN)
-		{
+			break;
+		case SDL_JOYBUTTONUP:
+		case SDL_MOUSEBUTTONDOWN:
+		case SDL_MOUSEBUTTONUP:
+		case SDL_MOUSEMOTION:
+		case SDL_MOUSEWHEEL:
 			got_event = 1;
-			dialogControlPressed = SDL_GameControllerGetStringForButton(
-				SDL_GameControllerButton(event.cbutton.button));
-			dialogFinished = true;
+			break;
+			
+		default:
 			break;
 		}
 
@@ -481,11 +550,7 @@ static void ShowMessageLoop()
 		//-------------------------------------------------
 		// Send event to guisan-controls
 		//-------------------------------------------------
-#ifdef ANDROID
-		androidsdl_event(event, gui_input);
-#else
 		gui_input->pushInput(event);
-#endif
 	}
 
 	if (got_event)
@@ -535,7 +600,7 @@ bool ShowMessage(const char* title, const char* line1, const char* line2, const 
 	return dialogResult;
 }
 
-const char* ShowMessageForInput(const char* title, const char* line1, const char* button1)
+amiberry_hotkey ShowMessageForInput(const char* title, const char* line1, const char* button1)
 {
 	dialogResult = false;
 	dialogFinished = false;
@@ -552,6 +617,7 @@ const char* ShowMessageForInput(const char* title, const char* line1, const char
 	uae_gui->draw();
 	update_gui_screen();
 
+	lctrl = rctrl = lalt = ralt = lshift = rshift = lgui = rgui = false;
 	while (!dialogFinished)
 	{
 		const auto start = SDL_GetPerformanceCounter();
@@ -560,5 +626,33 @@ const char* ShowMessageForInput(const char* title, const char* line1, const char
 	}
 
 	ExitShowMessage();
-	return dialogControlPressed;
+
+	hotkey.modifiers_string = "";
+	if (lctrl)
+		hotkey.modifiers_string = "LCtrl+";
+	if (rctrl)
+		hotkey.modifiers_string = "RCtrl+";
+	if (lalt)
+		hotkey.modifiers_string = hotkey.modifiers_string + "LAlt+";
+	if (ralt)
+		hotkey.modifiers_string = hotkey.modifiers_string + "RAlt+";
+	if (lshift)
+		hotkey.modifiers_string = hotkey.modifiers_string + "LShift+";
+	if (rshift)
+		hotkey.modifiers_string = hotkey.modifiers_string + "RShift+";
+	if (lgui)
+		hotkey.modifiers_string = hotkey.modifiers_string + "LGUI+";
+	if (rgui)
+		hotkey.modifiers_string = hotkey.modifiers_string + "RGUI+";
+
+	hotkey.modifiers.lctrl = lctrl;
+	hotkey.modifiers.rctrl = rctrl;
+	hotkey.modifiers.lalt = lalt;
+	hotkey.modifiers.ralt = ralt;
+	hotkey.modifiers.lshift = lshift;
+	hotkey.modifiers.rshift = rshift;
+	hotkey.modifiers.lgui = lgui;
+	hotkey.modifiers.rgui = rgui;
+	
+	return hotkey;
 }
