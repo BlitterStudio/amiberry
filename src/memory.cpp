@@ -53,7 +53,7 @@ addrbank* get_mem_bank_real(uaecptr addr)
 }
 #endif
 
-bool canbang;
+bool canbang = true;
 static bool rom_write_enabled;
 #ifdef JIT
 /* Set by each memory handler that does not simply access real memory. */
