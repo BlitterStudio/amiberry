@@ -343,11 +343,16 @@ static NavigationMap navMap[] =
 	{ "chkSerialDirect", "chkRTSCTS", "chkUaeSerial", "txtSerialDevice", "chkMouseUntrap" },
 	{ "chkUaeSerial", "chkSerialDirect", "Miscellaneous", "txtSerialDevice", "chkMouseUntrap" },
 	
-	{ "cmdKeyOpenGUI", "chkMouseUntrap", "Miscellaneous", "cmdKeyFullScreen", "cmdKeyForQuit" },
-	{ "cmdKeyForQuit", "chkBSDSocket", "Miscellaneous", "cmdKeyOpenGUI", "cmdKeyActionReplay" },
-	{ "cmdKeyForQuitKeyActionReplay", "chkResetDelay", "Miscellaneous", "cmdKeyForQuit", "cmdKeyFullScreen" },
-	{ "cmdKeyFullScreen", "chkClipboardSharing", "Miscellaneous", "cmdKeyActionReplay", "cmdKeyMinimize" },
-	{ "cmdKeyMinimize", "chkAllowNativeCode", "Miscellaneous", "cmdKeyFullScreen", "cmdKeyOpenGUI" },
+	{ "cmdKeyOpenGUI", "chkMouseUntrap", "cmdKeyOpenGUIClear", "cmdKeyFullScreen", "cmdKeyForQuit" },
+	{ "cmdKeyOpenGUIClear", "cmdKeyOpenGUI", "Miscellaneous", "cmdKeyFullScreenClear", "cmdKeyForQuitClear" },
+	{ "cmdKeyForQuit", "chkBSDSocket", "cmdKeyForQuitClear", "cmdKeyOpenGUI", "cmdKeyActionReplay" },
+	{ "cmdKeyForQuitClear", "cmdKeyForQuit", "Miscellaneous", "cmdKeyOpenGUIClear", "cmdKeyActionReplayClear" },
+	{ "cmdKeyActionReplay", "chkResetDelay", "cmdKeyActionReplayClear", "cmdKeyForQuit", "cmdKeyFullScreen" },
+	{ "cmdKeyActionReplayClear", "cmdKeyActionReplay", "Miscellaneous", "cmdKeyForQuitClear", "cmdKeyFullScreenClear" },
+	{ "cmdKeyFullScreen", "chkClipboardSharing", "cmdKeyFullScreenClear", "cmdKeyActionReplay", "cmdKeyMinimize" },
+	{ "cmdKeyFullScreenClear", "cmdKeyFullScreen", "Miscellaneous", "cmdKeyActionReplayClear", "cmdKeyMinimizeClear"},
+	{ "cmdKeyMinimize", "chkAllowNativeCode", "cmdKeyMinimizeClear", "cmdKeyFullScreen", "cmdKeyOpenGUI" },
+	{ "cmdKeyMinimizeClear", "cmdKeyMinimize", "Miscellaneous", "cmdKeyFullScreenClear", "cmdKeyOpenGUIClear" },
 	
 	// PanelPrio
 	{ "cboActiveRunAtPrio", "Priority", "cboInactiveRunAtPrio", "chkActiveDisableSound", "chkActivePauseEmulation" },

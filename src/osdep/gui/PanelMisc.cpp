@@ -8,6 +8,7 @@
 #include "sysdeps.h"
 #include "options.h"
 #include "gui_handling.h"
+#include "fsdb_host.h"
 #include "statusline.h"
 
 static gcn::ScrollArea* scrollArea;
@@ -41,23 +42,28 @@ static gcn::DropDown* cboKBDLed_scr;
 
 static gcn::Label* lblOpenGUI;
 static gcn::TextField* txtOpenGUI;
-static gcn::Button* cmdOpenGUI;
+static gcn::Button* cmdKeyOpenGUI;
+static gcn::ImageButton* cmdKeyOpenGUIClear;
 
 static gcn::Label* lblKeyForQuit;
 static gcn::TextField* txtKeyForQuit;
 static gcn::Button* cmdKeyForQuit;
+static gcn::ImageButton* cmdKeyForQuitClear;
 
 static gcn::Label* lblKeyActionReplay;
 static gcn::TextField* txtKeyActionReplay;
 static gcn::Button* cmdKeyActionReplay;
+static gcn::ImageButton* cmdKeyActionReplayClear;
 
 static gcn::Label* lblKeyFullScreen;
 static gcn::TextField* txtKeyFullScreen;
 static gcn::Button* cmdKeyFullScreen;
+static gcn::ImageButton* cmdKeyFullScreenClear;
 
 static gcn::Label* lblKeyMinimize;
 static gcn::TextField* txtKeyMinimize;
 static gcn::Button* cmdKeyMinimize;
+static gcn::ImageButton* cmdKeyMinimizeClear;
 
 #ifdef SERIAL_PORT
 static gcn::Window* grpSerialDevice;
@@ -211,7 +217,7 @@ public:
 		else if (actionEvent.getSource() == cboKBDLed_scr)
 			changed_prefs.kbd_led_scr = cboKBDLed_scr->getSelected() - 1;
 
-		else if (actionEvent.getSource() == cmdOpenGUI)
+		else if (actionEvent.getSource() == cmdKeyOpenGUI)
 		{
 			const auto key = ShowMessageForInput("Press a key", "Press a key to map to Open the GUI, or ESC to cancel...", "Cancel");
 			if (!key.key_name.empty())
@@ -221,6 +227,13 @@ public:
 				strcpy(changed_prefs.open_gui, hotkey.c_str());
 				strcpy(currprefs.open_gui, hotkey.c_str());
 			}
+		}
+		else if (actionEvent.getSource() == cmdKeyOpenGUIClear)
+		{
+			std::string hotkey = "";
+			strcpy(changed_prefs.open_gui, hotkey.c_str());
+			strcpy(currprefs.open_gui, hotkey.c_str());
+			RefreshPanelMisc();
 		}
 
 		else if (actionEvent.getSource() == cmdKeyForQuit)
@@ -234,6 +247,13 @@ public:
 				strcpy(currprefs.quit_amiberry, hotkey.c_str());
 			}
 		}
+		else if (actionEvent.getSource() == cmdKeyForQuitClear)
+		{
+			std::string hotkey = "";
+			strcpy(changed_prefs.quit_amiberry, hotkey.c_str());
+			strcpy(currprefs.quit_amiberry, hotkey.c_str());
+			RefreshPanelMisc();
+		}
 
 		else if (actionEvent.getSource() == cmdKeyActionReplay)
 		{
@@ -245,6 +265,13 @@ public:
 				strcpy(changed_prefs.action_replay, hotkey.c_str());
 				strcpy(currprefs.action_replay, hotkey.c_str());
 			}
+		}
+		else if (actionEvent.getSource() == cmdKeyActionReplayClear)
+		{
+			std::string hotkey = "";
+			strcpy(changed_prefs.action_replay, hotkey.c_str());
+			strcpy(currprefs.action_replay, hotkey.c_str());
+			RefreshPanelMisc();
 		}
 
 		else if (actionEvent.getSource() == cmdKeyFullScreen)
@@ -258,6 +285,13 @@ public:
 				strcpy(currprefs.fullscreen_toggle, hotkey.c_str());
 			}
 		}
+		else if (actionEvent.getSource() == cmdKeyFullScreenClear)
+		{
+			std::string hotkey = "";
+			strcpy(changed_prefs.fullscreen_toggle, hotkey.c_str());
+			strcpy(currprefs.fullscreen_toggle, hotkey.c_str());
+			RefreshPanelMisc();
+		}
 
 		else if (actionEvent.getSource() == cmdKeyMinimize)
 		{
@@ -269,6 +303,13 @@ public:
 				strcpy(changed_prefs.minimize, hotkey.c_str());
 				strcpy(currprefs.minimize, hotkey.c_str());
 			}
+		}
+		else if (actionEvent.getSource() == cmdKeyMinimizeClear)
+		{
+			std::string hotkey = "";
+			strcpy(changed_prefs.minimize, hotkey.c_str());
+			strcpy(currprefs.minimize, hotkey.c_str());
+			RefreshPanelMisc();
 		}
 		
 #ifdef SERIAL_PORT
@@ -405,11 +446,16 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	txtOpenGUI->setEnabled(false);
 	txtOpenGUI->setSize(120, TEXTFIELD_HEIGHT);
 	txtOpenGUI->setBackgroundColor(colTextboxBackground);
-	cmdOpenGUI = new gcn::Button("...");
-	cmdOpenGUI->setId("cmdKeyOpenGUI");
-	cmdOpenGUI->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
-	cmdOpenGUI->setBaseColor(gui_baseCol);
-	cmdOpenGUI->addActionListener(miscActionListener);
+	cmdKeyOpenGUI = new gcn::Button("...");
+	cmdKeyOpenGUI->setId("cmdKeyOpenGUI");
+	cmdKeyOpenGUI->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	cmdKeyOpenGUI->setBaseColor(gui_baseCol);
+	cmdKeyOpenGUI->addActionListener(miscActionListener);
+	cmdKeyOpenGUIClear = new gcn::ImageButton(prefix_with_application_directory_path("data/delete.png"));
+	cmdKeyOpenGUIClear->setBaseColor(gui_baseCol);
+	cmdKeyOpenGUIClear->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	cmdKeyOpenGUIClear->setId("cmdKeyOpenGUIClear");
+	cmdKeyOpenGUIClear->addActionListener(miscActionListener);
 
 	lblKeyForQuit = new gcn::Label("Quit Key:");
 	lblKeyForQuit->setAlignment(gcn::Graphics::RIGHT);
@@ -422,6 +468,11 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	cmdKeyForQuit->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdKeyForQuit->setBaseColor(gui_baseCol);
 	cmdKeyForQuit->addActionListener(miscActionListener);
+	cmdKeyForQuitClear = new gcn::ImageButton(prefix_with_application_directory_path("data/delete.png"));
+	cmdKeyForQuitClear->setBaseColor(gui_baseCol);
+	cmdKeyForQuitClear->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	cmdKeyForQuitClear->setId("cmdKeyForQuitClear");
+	cmdKeyForQuitClear->addActionListener(miscActionListener);
 
 	lblKeyActionReplay = new gcn::Label("Action Replay:");
 	lblKeyActionReplay->setAlignment(gcn::Graphics::RIGHT);
@@ -434,6 +485,11 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	cmdKeyActionReplay->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdKeyActionReplay->setBaseColor(gui_baseCol);
 	cmdKeyActionReplay->addActionListener(miscActionListener);
+	cmdKeyActionReplayClear = new gcn::ImageButton(prefix_with_application_directory_path("data/delete.png"));
+	cmdKeyActionReplayClear->setBaseColor(gui_baseCol);
+	cmdKeyActionReplayClear->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	cmdKeyActionReplayClear->setId("cmdKeyActionReplayClear");
+	cmdKeyActionReplayClear->addActionListener(miscActionListener);
 
 	lblKeyFullScreen = new gcn::Label("FullScreen:");
 	lblKeyFullScreen->setAlignment(gcn::Graphics::RIGHT);
@@ -446,6 +502,11 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	cmdKeyFullScreen->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdKeyFullScreen->setBaseColor(gui_baseCol);
 	cmdKeyFullScreen->addActionListener(miscActionListener);
+	cmdKeyFullScreenClear = new gcn::ImageButton(prefix_with_application_directory_path("data/delete.png"));
+	cmdKeyFullScreenClear->setBaseColor(gui_baseCol);
+	cmdKeyFullScreenClear->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	cmdKeyFullScreenClear->setId("cmdKeyFullScreenClear");
+	cmdKeyFullScreenClear->addActionListener(miscActionListener);
 
 	lblKeyMinimize = new gcn::Label("Minimize:");
 	lblKeyMinimize->setAlignment(gcn::Graphics::RIGHT);
@@ -458,6 +519,11 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	cmdKeyMinimize->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdKeyMinimize->setBaseColor(gui_baseCol);
 	cmdKeyMinimize->addActionListener(miscActionListener);
+	cmdKeyMinimizeClear = new gcn::ImageButton(prefix_with_application_directory_path("data/delete.png"));
+	cmdKeyMinimizeClear->setBaseColor(gui_baseCol);
+	cmdKeyMinimizeClear->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	cmdKeyMinimizeClear->setId("cmdKeyMinimizeClear");
+	cmdKeyMinimizeClear->addActionListener(miscActionListener);
 
 #ifdef SERIAL_PORT
 	grpSerialDevice = new gcn::Window("Serial Port");
@@ -543,7 +609,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	scrollArea = new gcn::ScrollArea(grpMiscOptions);
 	scrollArea->setBackgroundColor(gui_baseCol);
 	scrollArea->setBaseColor(gui_baseCol);
-	scrollArea->setWidth(category.panel->getWidth() - (category.panel->getWidth() / 3));
+	scrollArea->setWidth(category.panel->getWidth() - (category.panel->getWidth() / 3) - SMALL_BUTTON_WIDTH - 8);
 	scrollArea->setHeight(300);
 	scrollArea->setBorderSize(1);
 
@@ -555,31 +621,36 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	category.panel->add(lblOpenGUI, column2_x, posY);
 	posY += lblOpenGUI->getHeight() + 8;
 	category.panel->add(txtOpenGUI, lblOpenGUI->getX(), posY);
-	category.panel->add(cmdOpenGUI, txtOpenGUI->getX() + txtOpenGUI->getWidth() + 8, posY);
-	posY += cmdOpenGUI->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(cmdKeyOpenGUI, txtOpenGUI->getX() + txtOpenGUI->getWidth() + 8, posY);
+	category.panel->add(cmdKeyOpenGUIClear, cmdKeyOpenGUI->getX() + cmdKeyOpenGUI->getWidth() + 8, posY);
+	posY += cmdKeyOpenGUI->getHeight() + DISTANCE_NEXT_Y;
 	
 	category.panel->add(lblKeyForQuit, column2_x, posY);
 	posY += lblKeyForQuit->getHeight() + 8;
 	category.panel->add(txtKeyForQuit, lblKeyForQuit->getX(), posY);
 	category.panel->add(cmdKeyForQuit, txtKeyForQuit->getX() + txtKeyForQuit->getWidth() + 8, posY);
+	category.panel->add(cmdKeyForQuitClear, cmdKeyForQuit->getX() + cmdKeyForQuit->getWidth() + 8, posY);
 	posY += cmdKeyForQuit->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(lblKeyActionReplay, column2_x, posY);
 	posY += lblKeyActionReplay->getHeight() + 8;
 	category.panel->add(txtKeyActionReplay, lblKeyActionReplay->getX(), posY);
 	category.panel->add(cmdKeyActionReplay, txtKeyActionReplay->getX() + txtKeyActionReplay->getWidth() + 8, posY);
+	category.panel->add(cmdKeyActionReplayClear, cmdKeyActionReplay->getX() + cmdKeyActionReplay->getWidth() + 8, posY);
 	posY += cmdKeyActionReplay->getHeight() + DISTANCE_NEXT_Y;
 	
 	category.panel->add(lblKeyFullScreen, column2_x, posY);
 	posY += lblKeyFullScreen->getHeight() + 8;
 	category.panel->add(txtKeyFullScreen, lblKeyFullScreen->getX(), posY);
 	category.panel->add(cmdKeyFullScreen, txtKeyFullScreen->getX() + txtKeyFullScreen->getWidth() + 8, posY);
+	category.panel->add(cmdKeyFullScreenClear, cmdKeyFullScreen->getX() + cmdKeyFullScreen->getWidth() + 8, posY);
 	posY += cmdKeyFullScreen->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(lblKeyMinimize, column2_x, posY);
 	posY += lblKeyMinimize->getHeight() + 8;
 	category.panel->add(txtKeyMinimize, lblKeyMinimize->getX(), posY);
 	category.panel->add(cmdKeyMinimize, txtKeyMinimize->getX() + txtKeyMinimize->getWidth() + 8, posY);
+	category.panel->add(cmdKeyMinimizeClear, cmdKeyMinimize->getX() + cmdKeyMinimize->getWidth() + 8, posY);
 	
 	posY = scrollArea->getHeight() + DISTANCE_NEXT_Y * 2;	
 
@@ -637,23 +708,28 @@ void ExitPanelMisc()
 
 	delete lblOpenGUI;
 	delete txtOpenGUI;
-	delete cmdOpenGUI;
+	delete cmdKeyOpenGUI;
+	delete cmdKeyOpenGUIClear;
 
 	delete lblKeyForQuit;
 	delete txtKeyForQuit;
 	delete cmdKeyForQuit;
+	delete cmdKeyForQuitClear;
 
 	delete lblKeyActionReplay;
 	delete txtKeyActionReplay;
 	delete cmdKeyActionReplay;
+	delete cmdKeyActionReplayClear;
 
 	delete lblKeyFullScreen;
 	delete txtKeyFullScreen;
 	delete cmdKeyFullScreen;
+	delete cmdKeyFullScreenClear;
 
 	delete lblKeyMinimize;
 	delete txtKeyMinimize;
 	delete cmdKeyMinimize;
+	delete cmdKeyMinimizeClear;
 
 	delete miscActionListener;
 #ifdef SERIAL_PORT
