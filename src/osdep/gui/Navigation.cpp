@@ -54,14 +54,15 @@ static NavigationMap navMap[] =
 #endif
 
 	// PanelPaths
-	{"SystemROMs", "Paths", "Paths", "RescanROMs", "ConfigPath"},
-	{"ConfigPath", "Paths", "Paths", "SystemROMs", "ControllersPath"},
-	{"ControllersPath", "Paths", "Paths", "ConfigPath", "RetroArchFile"},
-	{"RetroArchFile", "Paths", "Paths", "ControllersPath", "chkEnableLogging"},
-	{"chkEnableLogging", "Paths", "Paths", "RetroArchFile", "cmdLogfilePath"},
-	{"cmdLogfilePath", "Paths", "Paths", "chkEnableLogging", "RescanROMs"},
-	{"RescanROMs", "Paths", "DownloadXML", "cmdLogfilePath", "SystemROMs"},
-	{"DownloadXML", "RescanROMs", "Paths", "cmdLogfilePath", "SystemROMs"},
+	{"cmdSystemROMs", "Paths", "Paths", "cmdRescanROMs", "cmdConfigPath"},
+	{"cmdConfigPath", "Paths", "Paths", "cmdSystemROMs", "cmdControllersPath"},
+	{"cmdControllersPath", "Paths", "Paths", "cmdConfigPath", "cmdRetroArchFile"},
+	{"cmdRetroArchFile", "Paths", "Paths", "cmdControllersPath", "chkEnableLogging"},
+	{"chkEnableLogging", "Paths", "Paths", "cmdRetroArchFile", "cmdLogfilePath"},
+	{"cmdLogfilePath", "Paths", "Paths", "chkEnableLogging", "cmdRescanROMs"},
+	{"cmdRescanROMs", "Paths", "cmdDownloadXML", "cmdLogfilePath", "cmdSystemROMs"},
+	{"cmdDownloadXML", "cmdRescanROMs", "cmdDownloadCtrlDb", "cmdLogfilePath", "cmdSystemROMs"},
+	{"cmdDownloadCtrlDb", "cmdDownloadXML", "Paths", "cmdLogfilePath", "cmdSystemROMs" },
 
 	//  active            move left         move right        move up           move down
 	// PanelQuickstart
