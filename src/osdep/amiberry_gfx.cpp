@@ -62,8 +62,6 @@ static int display_depth;
 Uint32 pixel_format;
 
 static unsigned long last_synctime;
-static int host_hz = 50;
-static bool clipboard_initialized;
 
 /* Possible screen modes (x and y resolutions) */
 #define MAX_SCREEN_MODES 14
@@ -76,6 +74,8 @@ struct MultiDisplay Displays[MAX_DISPLAYS];
 static int display_change_requested;
 int screen_is_picasso = 0;
 static int wasfullwindow_a, wasfullwindow_p;
+
+int vsync_vblank, vsync_hblank;
 
 static SDL_Surface* current_screenshot = nullptr;
 static char screenshot_filename_default[MAX_DPATH] =
@@ -400,7 +400,7 @@ int graphics_setup(void)
 	if (should_be_zero == 0)
 	{
 		write_log("Current Display mode: bpp %i\t%s\t%i x %i\t%iHz\n", SDL_BITSPERPIXEL(sdlMode.format), SDL_GetPixelFormatName(sdlMode.format), sdlMode.w, sdlMode.h, sdlMode.refresh_rate);
-		host_hz = sdlMode.refresh_rate;
+		vsync_vblank = sdlMode.refresh_rate;
 	}
 
 	Uint32 sdl_window_mode;
@@ -461,7 +461,7 @@ int graphics_setup(void)
 	if (SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0") == SDL_TRUE)
 		write_log("SDL2: Set window not to minimize on focus loss\n");
 	
-	currprefs.gfx_apmode[1].gfx_refreshrate = host_hz;
+	currprefs.gfx_apmode[1].gfx_refreshrate = vsync_vblank;
 
 #ifndef USE_DISPMANX
 	if (amiberry_options.use_sdl2_render_thread)
@@ -611,6 +611,8 @@ int isfullscreen(void)
 {
 	return isfullscreen_2(&currprefs);
 }
+
+int default_freq = 60;
 
 static struct MultiDisplay* getdisplay2(struct uae_prefs* p, int index)
 {
@@ -1416,7 +1418,6 @@ int check_prefs_changed_gfx()
 	return 0;
 }
 
-
 int lockscr(struct vidbuffer* vb, bool fullupdate, bool first)
 {
 	if (screen && SDL_MUSTLOCK(screen))
@@ -1426,7 +1427,6 @@ int lockscr(struct vidbuffer* vb, bool fullupdate, bool first)
 	init_row_map();
 	return 1;
 }
-
 
 void unlockscr(struct vidbuffer* vb, int y_start, int y_end)
 {
@@ -2231,5 +2231,5 @@ void gfx_unlock_picasso(const bool dorender)
 
 float target_getcurrentvblankrate()
 {
-	return static_cast<float>(host_hz);
+	return static_cast<float>(vsync_vblank);
 }

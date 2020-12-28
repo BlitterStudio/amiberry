@@ -69,7 +69,6 @@
 
 #define CURSORMAXWIDTH 128
 #define CURSORMAXHEIGHT 128
-static const int default_freq = 60;
 
 #ifdef AMIBERRY
 SDL_Cursor* p96_cursor;
