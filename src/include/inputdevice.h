@@ -347,7 +347,8 @@ extern void setsystime (void);
 #define JSEM_ISCURSOR(port,p) (jsem_iskbdjoy(port,p) == JSEM_KBDLAYOUT + 1)
 #define JSEM_ISSOMEWHEREELSE(port,p) (jsem_iskbdjoy(port,p) == JSEM_KBDLAYOUT + 2)
 #define JSEM_ISKEYRAH(port,p) (jsem_iskbdjoy(port,p) == JSEM_KBDLAYOUT + 3)
-#define JSEM_ISIPAC(port,p) (jsem_iskbdjoy(port,p) == JSEM_KBDLAYOUT + 4)
+#define JSEM_ISRAPLAYER1(port,p) (jsem_iskbdjoy(port,p) == JSEM_KBDLAYOUT + 4)
+
 #define JSEM_ISCUSTOM(port,p) ((p)->jports[port].id >= JSEM_CUSTOM && (p)->jports[port].id < JSEM_CUSTOM + MAX_JPORTS_CUSTOM)
 #define JSEM_GETCUSTOMIDX(port,p) ((p)->jports[port].id - JSEM_CUSTOM)
 #define JSEM_LASTKBD 5

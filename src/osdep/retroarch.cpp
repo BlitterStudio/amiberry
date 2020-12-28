@@ -11,7 +11,8 @@
 #include <algorithm>
 
 const string retroarch_kb_button_list[] = {
-	"b", "a", "x", "y", "select", "menu", "start", "l3", "r3", "l", "r", "up", "down", "left", "right"
+	//"b", "a", "x", "y", "select", "menu", "start", "l3", "r3", "l", "r", "up", "down", "left", "right"
+	"left", "right", "up", "down", "a", "b", "x", "y", "l", "r", "start"
 };
 
 const string retroarch_button_list[] = {
@@ -214,54 +215,60 @@ std::string sanitize_retroarch_name(std::string s)
 
 bool init_kb_from_retroarch(int index, char* retroarch_file)
 {
-	struct host_keyboard_button temp_keyboard_buttons{};
 	auto player = index + 1;
 	const TCHAR* key;
 	int x;
+	int* kbs[] = { kb_retroarch_player1, kb_retroarch_player1, kb_retroarch_player1, kb_retroarch_player1 };
+	int* kbs_3[] = { kb_retroarch_player1_3, kb_retroarch_player1_3, kb_retroarch_player1_3, kb_retroarch_player1_3 };
+	int* kbs_cd32[] = { kb_cd32_retroarch_player1, kb_cd32_retroarch_player1, kb_cd32_retroarch_player1, kb_cd32_retroarch_player1 };
+	auto idx = 0;
+	auto valid = false;
 	
-	for (auto i = 0; i < SDL_CONTROLLER_BUTTON_MAX; i++)
+	for (auto i = 0; i < 11; i++)
 	{
 		key = find_retroarch_key("input_player", player, retroarch_kb_button_list[i].c_str(), retroarch_file);
 		x = find_string_in_array(remap_key_map_list_strings, remap_key_map_list_size, key);
-		temp_keyboard_buttons.button[i] = remap_key_map_list[x];
-	}
+		if (x == -1 || x == 0) break;
 
+		valid = true;
+		if (idx < 9)
+		{
+			kbs[index][idx] = remap_key_map_list[x];
+			kbs_3[index][idx] = remap_key_map_list[x];
+			kbs_cd32[index][idx] = remap_key_map_list[x];
+			if (idx < 8) idx++;
+		}
+		else if (idx == 9 || idx == 11)
+		{
+			kbs[index][idx] = remap_key_map_list[x];
+			kbs_3[index][idx + 1] = remap_key_map_list[x];
+			kbs_cd32[index][idx + 1] = remap_key_map_list[x];
+			idx++;
+		}
+		else if (idx >= 13 && idx <= 23)
+		{
+			kbs_cd32[index][idx + 1] = remap_key_map_list[x];
+			idx++;
+		}
+		if (idx < 23) idx++;
+	}
+	
 	// Added for keyboard ability to pull up the amiberry menu which most people want!
 	if (index == 0)
 	{
 		key = find_retroarch_key("input_enable_hotkey", player, nullptr, retroarch_file);
 		x = find_string_in_array(remap_key_map_list_strings, remap_key_map_list_size, key);
-		temp_keyboard_buttons.hotkey_button = remap_key_map_list[x];
+		//temp_keyboard_buttons.hotkey_button = remap_key_map_list[x];
 
 		key = find_retroarch_key("input_exit_emulator", player, nullptr, retroarch_file);
 		x = find_string_in_array(remap_key_map_list_strings, remap_key_map_list_size, key);
-		temp_keyboard_buttons.quit_button = remap_key_map_list[x];
+		//temp_keyboard_buttons.quit_button = remap_key_map_list[x];
+		quit_key.scancode = remap_key_map_list[x];
 
 		key = find_retroarch_key("input_menu_toggle", player, nullptr, retroarch_file);
 		x = find_string_in_array(remap_key_map_list_strings, remap_key_map_list_size, key);
-		temp_keyboard_buttons.menu_button = remap_key_map_list[x];
-	}
-	else
-	{
-		temp_keyboard_buttons.hotkey_button = -1;
-		temp_keyboard_buttons.quit_button = -1;
-		temp_keyboard_buttons.menu_button = -1;
-	}
-
-	auto valid = false;
-	for (auto k : temp_keyboard_buttons.button)
-	{
-		if (k != SDL_CONTROLLER_BUTTON_INVALID)
-		{
-			valid = true;
-			break;
-		}
-	}
-
-	if (valid)
-	{
-		temp_keyboard_buttons.is_retroarch = true;
-		host_keyboard_buttons[index] = temp_keyboard_buttons;
+		//temp_keyboard_buttons.menu_button = remap_key_map_list[x];
+		enter_gui_key.scancode = remap_key_map_list[x];
 	}
 
 	write_log("Controller init_kb_from_retroarch(%i): %s \n", index, valid ? "Found" : "Not found");

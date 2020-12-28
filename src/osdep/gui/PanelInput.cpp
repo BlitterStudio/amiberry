@@ -2,18 +2,14 @@
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
+
 #include "SelectorEntry.hpp"
 
 #include "sysdeps.h"
 #include "options.h"
 #include "gui_handling.h"
 #include "inputdevice.h"
-
-#if 0
-#ifdef ANDROID
-#include <SDL_android.h>
-#endif
-#endif
+#include "amiberry_input.h"
 
 #define MAX_PORTSUBMODES 16
 static int portsubmodes[MAX_PORTSUBMODES];
@@ -304,9 +300,14 @@ void InitPanelInput(const struct _ConfigCategory& category)
 		ctrlPortList.add_element("Keyrah Layout (Cursor, Space/RAlt=Fire, RShift=2nd Fire)");
 		portListIDs[idx] = JSEM_KBDLAYOUT + 3;
 
-		idx++;
-		ctrlPortList.add_element("iPac Layout (Cursor, LAlt/LCtrl=Fire, Space=2nd Fire)");
-		portListIDs[idx] = JSEM_KBDLAYOUT + 4;
+		const auto retroarch_kb = get_retroarch_kb_num();
+		for (auto j = 0; j < retroarch_kb; j++)
+		{
+			auto element = "Retroarch KBD as Joystick Player" + std::to_string(j);
+			ctrlPortList.add_element(element.c_str());
+			idx++;
+			portListIDs[idx] = JSEM_KBDLAYOUT + j + 4;
+		}
 		
 		for (auto j = 0; j < inputdevice_get_device_total(IDTYPE_JOYSTICK); j++)
 		{

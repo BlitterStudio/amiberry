@@ -12,7 +12,6 @@
 
 static struct host_input_button default_controller_map;
 struct host_input_button host_input_buttons[MAX_INPUT_DEVICES];
-struct host_keyboard_button host_keyboard_buttons[4];
 
 const int remap_buttons = 16;
 #define REMAP_BUTTONS        16
@@ -31,8 +30,8 @@ const int remap_buttons = 16;
 static std::string joystick_name[MAX_INPUT_DEVICES];
 static SDL_GameController* controllers[MAX_INPUT_DEVICES];
 
-static int num_mouse = 1, num_keyboard = 1, num_joystick = 0;
-static int joystick_inited;
+static int num_mouse = 1, num_keyboard = 1, num_joystick = 0, num_retroarch_kbdjoy = 0;
+static int joystick_inited, retroarch_inited;
 const auto analog_upper_bound = 32767;
 const auto analog_lower_bound = -analog_upper_bound;
 
@@ -333,6 +332,11 @@ static int get_kb_num()
 	return num_keyboard;
 }
 
+int get_retroarch_kb_num()
+{
+	return num_retroarch_kbdjoy;
+}
+
 static const TCHAR* get_kb_friendlyname(int kb)
 {
 	return "Default Keyboard";
@@ -365,6 +369,26 @@ static int init_kb()
 	keyboard_german = 0;
 	if (SDL_GetKeyFromScancode(SDL_SCANCODE_Y) == SDLK_z)
 		keyboard_german = 1;
+
+	if (retroarch_inited) return 1;
+	
+	// Check if we have a Retroarch file
+	char retroarch_file[MAX_DPATH];
+	get_retroarch_file(retroarch_file, MAX_DPATH);
+	if (my_existsfile(retroarch_file))
+	{
+		// Add as many keyboards as joysticks that are setup
+		// on arcade machines, you could have a 4 player ipac using all keyboard buttons
+		// so you want to have at least 4 keyboards to choose from!
+		// once one config is missing, simply stop adding them!
+		auto valid = true;
+		for (auto kb = 0; kb < 4 && valid; ++kb)
+		{
+			valid = init_kb_from_retroarch(kb, retroarch_file);
+			if (valid) num_retroarch_kbdjoy++;
+		}
+	}
+	retroarch_inited = 1;
 	return 1;
 }
 
@@ -830,7 +854,7 @@ static void read_joystick()
 				}
 			}
 
-			// cd32  rwd, ffw, start
+			// cd32  rwd, ffw
 			for (int button = SDL_CONTROLLER_BUTTON_LEFTSHOULDER; button <= SDL_CONTROLLER_BUTTON_RIGHTSHOULDER; button++)
 			{
 				if (current_controller_map.button[button] != SDL_CONTROLLER_BUTTON_INVALID)

@@ -20,25 +20,18 @@ struct host_input_button {
 	bool is_retroarch;
 };
 
-struct host_keyboard_button {
-	int button[15];
+extern int kb_retroarch_player1[14];
+extern int kb_retroarch_player1_3[15];
+extern int kb_cd32_retroarch_player1[23];
 
-	int hotkey_button;
-	int quit_button;
-	int menu_button;
-
-	bool is_retroarch;
-};
-
-extern struct host_keyboard_button host_keyboard_buttons[4];
 extern struct host_input_button host_input_buttons[MAX_INPUT_DEVICES];
-extern int multipler_maps[MAX_JPORTS];
 extern int find_in_array(const int arr[], int n, int key);
 extern const int remap_key_map_list[];
 extern const char* remap_key_map_list_strings[];
 extern const int remap_key_map_list_size;
 
 //extern bool key_used_by_retroarch_joy(int scancode);
+extern int get_retroarch_kb_num();
 extern bool init_kb_from_retroarch(int index, char* retroarch_file);
 extern std::string sanitize_retroarch_name(std::string s);
 extern int find_retroarch(const TCHAR* find_setting, char* retroarch_file);

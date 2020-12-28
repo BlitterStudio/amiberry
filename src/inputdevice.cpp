@@ -364,7 +364,7 @@ static int default_keyboard_layout[MAX_JPORTS];
 #ifdef AMIBERRY
 #define KBR_DEFAULT_MAP_LAST 9
 #define KBR_DEFAULT_MAP_CD32_FIRST 10
-#define KBR_DEFAULT_MAP_CD32_LAST 13
+#define KBR_DEFAULT_MAP_CD32_LAST 14
 #else
 #define KBR_DEFAULT_MAP_LAST 5
 #define KBR_DEFAULT_MAP_CD32_FIRST 6
@@ -380,15 +380,15 @@ static int default_keyboard_layout[MAX_JPORTS];
 #ifdef AMIBERRY
 #define KBR_DEFAULT_MAP_KEYRAH 6
 #define KBR_DEFAULT_MAP_KEYRAH3 7
-#define KBR_DEFAULT_MAP_IPAC 8
-#define KBR_DEFAULT_MAP_IPAC3 9
-#define KBR_DEFAULT_MAP_CD32_NP 9
-#define KBR_DEFAULT_MAP_CD32_CK 10
-#define KBR_DEFAULT_MAP_CD32_SE 11
-#define KBR_DEFAULT_MAP_CD32_KEYRAH 12
-#define KBR_DEFAULT_MAP_CD32_IPAC 13
-#define KBR_DEFAULT_MAP_ARCADIA 14
-#define KBR_DEFAULT_MAP_CDTV 15
+#define KBR_DEFAULT_MAP_RAPLAYER1 8
+#define KBR_DEFAULT_MAP_RAPLAYER1_3 9
+#define KBR_DEFAULT_MAP_CD32_NP 10
+#define KBR_DEFAULT_MAP_CD32_CK 11
+#define KBR_DEFAULT_MAP_CD32_SE 12
+#define KBR_DEFAULT_MAP_CD32_KEYRAH 13
+#define KBR_DEFAULT_MAP_CD32_RAPLAYER1 14
+#define KBR_DEFAULT_MAP_ARCADIA 15
+#define KBR_DEFAULT_MAP_CDTV 16
 #else
 #define KBR_DEFAULT_MAP_CD32_NP 6
 #define KBR_DEFAULT_MAP_CD32_CK 7
@@ -6996,14 +6996,14 @@ static void compatibility_copy (struct uae_prefs *prefs, bool gameports)
 					else
 						kb = keyboard_default_kbmaps[KBR_DEFAULT_MAP_KEYRAH];
 				}
-				else if (JSEM_ISIPAC(i, prefs))
+				else if (JSEM_ISRAPLAYER1(i, prefs))
 				{
 					if (cd32)
-						kb = keyboard_default_kbmaps[KBR_DEFAULT_MAP_CD32_IPAC];
+						kb = keyboard_default_kbmaps[KBR_DEFAULT_MAP_CD32_RAPLAYER1];
 					else if (mode == JSEM_MODE_GAMEPAD)
-						kb = keyboard_default_kbmaps[KBR_DEFAULT_MAP_IPAC3];
+						kb = keyboard_default_kbmaps[KBR_DEFAULT_MAP_RAPLAYER1_3];
 					else
-						kb = keyboard_default_kbmaps[KBR_DEFAULT_MAP_IPAC];
+						kb = keyboard_default_kbmaps[KBR_DEFAULT_MAP_RAPLAYER1];
 				}
 #endif
 				if (kb) {
