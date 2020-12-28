@@ -218,9 +218,9 @@ bool init_kb_from_retroarch(int index, char* retroarch_file)
 	auto player = index + 1;
 	const TCHAR* key;
 	int x;
-	int* kbs[] = { kb_retroarch_player1, kb_retroarch_player1, kb_retroarch_player1, kb_retroarch_player1 };
-	int* kbs_3[] = { kb_retroarch_player1_3, kb_retroarch_player1_3, kb_retroarch_player1_3, kb_retroarch_player1_3 };
-	int* kbs_cd32[] = { kb_cd32_retroarch_player1, kb_cd32_retroarch_player1, kb_cd32_retroarch_player1, kb_cd32_retroarch_player1 };
+	int* kbs[] = { kb_retroarch_player1, kb_retroarch_player2, kb_retroarch_player3, kb_retroarch_player4 };
+	int* kbs_3[] = { kb_retroarch_player1_3, kb_retroarch_player2_3, kb_retroarch_player3_3, kb_retroarch_player4_3 };
+	int* kbs_cd32[] = { kb_cd32_retroarch_player1, kb_cd32_retroarch_player2, kb_cd32_retroarch_player3, kb_cd32_retroarch_player4 };
 	auto idx = 0;
 	auto valid = false;
 	

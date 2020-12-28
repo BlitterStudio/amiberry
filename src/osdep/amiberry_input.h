@@ -23,6 +23,15 @@ struct host_input_button {
 extern int kb_retroarch_player1[14];
 extern int kb_retroarch_player1_3[15];
 extern int kb_cd32_retroarch_player1[23];
+extern int kb_retroarch_player2[14];
+extern int kb_retroarch_player2_3[15];
+extern int kb_cd32_retroarch_player2[23];
+extern int kb_retroarch_player3[14];
+extern int kb_retroarch_player3_3[15];
+extern int kb_cd32_retroarch_player3[23];
+extern int kb_retroarch_player4[14];
+extern int kb_retroarch_player4_3[15];
+extern int kb_cd32_retroarch_player4[23];
 
 extern struct host_input_button host_input_buttons[MAX_INPUT_DEVICES];
 extern int find_in_array(const int arr[], int n, int key);

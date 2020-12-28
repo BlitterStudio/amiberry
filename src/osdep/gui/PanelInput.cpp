@@ -303,7 +303,7 @@ void InitPanelInput(const struct _ConfigCategory& category)
 		const auto retroarch_kb = get_retroarch_kb_num();
 		for (auto j = 0; j < retroarch_kb; j++)
 		{
-			auto element = "Retroarch KBD as Joystick Player" + std::to_string(j);
+			auto element = "Retroarch KBD as Joystick Player" + std::to_string(j + 1);
 			ctrlPortList.add_element(element.c_str());
 			idx++;
 			portListIDs[idx] = JSEM_KBDLAYOUT + j + 4;
