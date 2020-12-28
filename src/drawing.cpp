@@ -4501,17 +4501,13 @@ static int render_thread(void *unused)
 		switch (signal) {
 
 		case RENDER_SIGNAL_PARTIAL:
-#ifdef USE_DISPMANX
 			if (!flip_in_progess)
-#endif
 				draw_lines();
 			break;
 
 		case RENDER_SIGNAL_FRAME_DONE:
-#ifdef USE_DISPMANX
 			while (flip_in_progess)
 				sleep_micros(1);
-#endif
 			finish_drawing_frame(true);
 			uae_sem_post(&render_sem);
 			break;

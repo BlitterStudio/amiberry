@@ -41,8 +41,8 @@ static bool volatile display_thread_busy = false;
 static unsigned int current_vsync_frame = 0;
 unsigned long time_per_frame = 20000; // Default for PAL (50 Hz): 20000 microsecs
 static int vsync_modulo = 1;
-bool volatile flip_in_progess = false;
 #endif
+bool volatile flip_in_progess = false;
 
 /* SDL Surface for output of emulation */
 SDL_DisplayMode sdlMode;
@@ -312,8 +312,8 @@ static int display_thread(void *unused)
 			vc_dispmanx_update_submit(updateHandle, nullptr, nullptr);
 			flip_in_progess = false;
 #else
-			SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
 			SDL_RenderClear(renderer);
+			SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
 			SDL_RenderCopyEx(renderer, texture, nullptr, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
 #endif
 			break;
@@ -1518,16 +1518,20 @@ void show_screen(int mode)
 	if (amiberry_options.use_sdl2_render_thread)
 	{
 		wait_for_display_thread();
+		flip_in_progess = true;
 		// RenderPresent must be done in the main thread.
 		SDL_RenderPresent(renderer);
-		write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SHOW, 1);
+		write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SHOW, 1);	
+		flip_in_progess = false;
 	}
 	else 
 	{
-		SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
+		flip_in_progess = true;
 		SDL_RenderClear(renderer);
+		SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
 		SDL_RenderCopyEx(renderer, texture, nullptr, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
 		SDL_RenderPresent(renderer);
+		flip_in_progess = false;
 	}
 #endif
 
