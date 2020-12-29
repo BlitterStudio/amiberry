@@ -3861,35 +3861,29 @@ static void refresh_indicator_update(struct vidbuffer *vb)
 	}
 }
 
-static void draw_frame2()
+static void draw_frame2(struct vidbuffer *vbin, struct vidbuffer *vbout)
 {
-	struct amigadisplay *ad = &adisplays;
-	if (ad->framecnt == 0) {
-		struct vidbuf_description *vidinfo = &ad->gfxvidinfo;
-  		struct vidbuffer *vb = &vidinfo->drawbuffer;
+#ifdef AMIBERRY
+	for (int i = next_line_to_render; i < max_ypos_thisframe; i++) {
+#else
+	for (int i = 0; i < max_ypos_thisframe; i++) {
+#endif
+		int i1 = i + min_ypos_for_screen;
+		int line = i + thisframe_y_adjust_real;
+		int whereline = amiga2aspect_line_map[i1];
+		int wherenext = amiga2aspect_line_map[i1 + 1];
 
 #ifdef AMIBERRY
-		for (int i = next_line_to_render; i < max_ypos_thisframe; i++) {
+		if (whereline >= vbin->inheight || line >= linestate_first_undecided)
 #else
-		for (int i = 0; i < max_ypos_thisframe; i++) {
+		if (whereline >= vbin->inheight)
 #endif
-			int i1 = i + min_ypos_for_screen;
-			int line = i + thisframe_y_adjust_real;
-			int whereline = amiga2aspect_line_map[i1];
-			int wherenext = amiga2aspect_line_map[i1 + 1];
+			break;
+		if (whereline < 0)
+			continue;
 
-#ifdef AMIBERRY
-			if (whereline >= vb->inheight || line >= linestate_first_undecided)
-#else
-			if (whereline >= vb->inheight)
-#endif
-				break;
-			if (whereline < 0)
-				continue;
-
-			hposblank = 0;
-			pfield_draw_line(vb, line, whereline, wherenext);
-		}
+		hposblank = 0;
+		pfield_draw_line(vbout, line, whereline, wherenext);
 	}
 }
 
@@ -4005,7 +3999,7 @@ bool draw_frame(struct vidbuffer *vb)
 	last_drawn_line = 0;
 	first_drawn_line = 32767;
 	drawing_color_matches = -1;
-	draw_frame2 ();
+	draw_frame2 (vb, NULL);
 	last_drawn_line = 0;
 	first_drawn_line = 32767;
 	drawing_color_matches = -1;
@@ -4054,7 +4048,7 @@ static void finish_drawing_frame(bool drawlines)
 		return;
 	}
 
-	draw_frame2();
+	draw_frame2(vb, vb);
 
 	draw_frame_extras(vb, -1, -1);
 
@@ -4231,7 +4225,7 @@ void vsync_handle_redraw(int long_field, int lof_changed, uae_u16 bplcon0p, uae_
 				render_sem = nullptr;
 			}
 #endif
-
+			
 			quit_program = -quit_program;
 			set_inhibit_frame(IHF_QUIT_PROGRAM);
 			set_special(SPCFLAG_BRK | SPCFLAG_MODE_CHANGE);
@@ -4331,7 +4325,6 @@ void hsync_record_line_state (int lineno, enum nln_how how, int changed)
 		}
 		break;
 	}
-		
 #ifdef AMIBERRY
 	linestate_first_undecided = lineno + 1;
 	if (render_tid && linestate_first_undecided > 3 && !render_thread_busy) {
@@ -4380,7 +4373,7 @@ static void gfxbuffer_reset(int monid)
 	vidinfo->drawbuffer.lockscr            = dummy_lock;
 	vidinfo->drawbuffer.unlockscr          = dummy_unlock;
 }
-	
+
 void notice_resolution_seen (int res, bool lace)
 {
 	if (res > frame_res)
