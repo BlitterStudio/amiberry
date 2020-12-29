@@ -2252,6 +2252,11 @@ void save_amiberry_settings(void)
 	snprintf(buffer, MAX_DPATH, "use_sdl2_render_thread=%s\n", amiberry_options.use_sdl2_render_thread ? "yes" : "no");
 	fputs(buffer, f);
 
+	// Use a separate thread for drawing lines for Native screenmodes?
+	// This works well and provides a nice FPS increase, but has issues under KMSDRM if Auto-Height is enabled
+	snprintf(buffer, MAX_DPATH, "use_drawing_thread=%s\n", amiberry_options.use_drawing_thread ? "yes" : "no");
+	fputs(buffer, f);
+	
 	// Default mouse input speed
 	snprintf(buffer, MAX_DPATH, "input_default_mouse_speed=%d\n", amiberry_options.input_default_mouse_speed);
 	fputs(buffer, f);
@@ -2555,6 +2560,7 @@ void load_amiberry_settings(void)
 					cfgfile_yesno(option, value, "rctrl_as_ramiga", &amiberry_options.rctrl_as_ramiga);
 					cfgfile_yesno(option, value, "gui_joystick_control", &amiberry_options.gui_joystick_control);
 					cfgfile_yesno(option, value, "use_sdl2_render_thread", &amiberry_options.use_sdl2_render_thread);
+					cfgfile_yesno(option, value, "use_drawing_thread", &amiberry_options.use_drawing_thread);
 					cfgfile_intval(option, value, "input_default_mouse_speed", &amiberry_options.input_default_mouse_speed, 1);
 					cfgfile_yesno(option, value, "input_keyboard_as_joystick_stop_keypresses", &amiberry_options.input_keyboard_as_joystick_stop_keypresses);
 					cfgfile_string(option, value, "default_open_gui_key", amiberry_options.default_open_gui_key, sizeof amiberry_options.default_open_gui_key);

@@ -4198,31 +4198,52 @@ void vsync_handle_redraw(int long_field, int lof_changed, uae_u16 bplcon0p, uae_
 
 		if (ad->framecnt == 0) {
 #ifdef AMIBERRY
-			if (render_tid) {
-				while (render_thread_busy)
-					sleep_micros(10);
-				write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_FRAME_DONE, 1);
-				uae_sem_wait(&render_sem);
+			if (amiberry_options.use_drawing_thread)
+			{
+				if (render_tid) {
+					while (render_thread_busy)
+						sleep_micros(10);
+					write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_FRAME_DONE, 1);
+					uae_sem_wait(&render_sem);
+				}
 			}
+			else
+				finish_drawing_frame(drawlines);
 #else
 			finish_drawing_frame(drawlines);
+#endif
+#ifdef AVIOUTPUT
+			if (!ad->picasso_on) {
+				frame_drawn(monid);
+			}
 #endif
 		}
 
 		if (quit_program < 0) {
-#ifdef AMIBERRY
-			if (render_tid) {
-				while (render_thread_busy)
-					sleep_micros(1);
-				write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_QUIT, 1);
-				while (render_tid != nullptr) {
-					sleep_micros(10);
+#ifdef SAVESTATE
+			if (!savestate_state) {
+				if (currprefs.quitstatefile[0]) {
+					savestate_initsave(currprefs.quitstatefile, 1, 1, true);
+					save_state(currprefs.quitstatefile, _T(""));
 				}
-				destroy_comm_pipe(render_pipe);
-				xfree(render_pipe);
-				render_pipe = nullptr;
-				uae_sem_destroy(&render_sem);
-				render_sem = nullptr;
+			}
+#endif
+#ifdef AMIBERRY
+			if (amiberry_options.use_drawing_thread)
+			{
+				if (render_tid) {
+					while (render_thread_busy)
+						sleep_micros(1);
+					write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_QUIT, 1);
+					while (render_tid != nullptr) {
+						sleep_micros(10);
+					}
+					destroy_comm_pipe(render_pipe);
+					xfree(render_pipe);
+					render_pipe = nullptr;
+					uae_sem_destroy(&render_sem);
+					render_sem = nullptr;
+				}
 			}
 #endif
 			
@@ -4327,13 +4348,16 @@ void hsync_record_line_state (int lineno, enum nln_how how, int changed)
 	}
 #ifdef AMIBERRY
 	linestate_first_undecided = lineno + 1;
-	if (render_tid && linestate_first_undecided > 3 && !render_thread_busy) {
-		if (currprefs.gfx_vresolution) {
-			if (!(linestate_first_undecided & 0x3e))
+	if (amiberry_options.use_drawing_thread)
+	{
+		if (render_tid && linestate_first_undecided > 3 && !render_thread_busy) {
+			if (currprefs.gfx_vresolution) {
+				if (!(linestate_first_undecided & 0x3e))
+					write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_PARTIAL, 1);
+			}
+			else if (!(linestate_first_undecided & 0x1f))
 				write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_PARTIAL, 1);
 		}
-		else if (!(linestate_first_undecided & 0x1f))
-			write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_PARTIAL, 1);
 	}
 #endif
 }
@@ -4528,15 +4552,18 @@ void drawing_init (void)
 
 	uae_sem_init (&gui_sem, 0, 1);
 #ifdef AMIBERRY
-	if (render_pipe == nullptr) {
-		render_pipe = xmalloc(smp_comm_pipe, 1);
-		init_comm_pipe(render_pipe, 20, 1);
-	}
-	if (render_sem == nullptr) {
-		uae_sem_init(&render_sem, 0, 0);
-	}
-	if (render_tid == nullptr && render_pipe != nullptr && render_sem != nullptr) {
-		uae_start_thread(_T("render"), render_thread, nullptr, &render_tid);
+	if (amiberry_options.use_drawing_thread)
+	{
+		if (render_pipe == nullptr) {
+			render_pipe = xmalloc(smp_comm_pipe, 1);
+			init_comm_pipe(render_pipe, 20, 1);
+		}
+		if (render_sem == nullptr) {
+			uae_sem_init(&render_sem, 0, 0);
+		}
+		if (render_tid == nullptr && render_pipe != nullptr && render_sem != nullptr) {
+			uae_start_thread(_T("render"), render_thread, nullptr, &render_tid);
+		}
 	}
 #endif
 
