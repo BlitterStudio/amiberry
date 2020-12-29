@@ -57,6 +57,7 @@ static int amigablksize;
 static uae_u32 sound_flushes2 = 0;
 
 SDL_AudioDeviceID ahi_dev;
+SDL_AudioDeviceID ahi_dev_rec;
 SDL_AudioSpec want, have;
 
 struct winuae	//this struct is put in a6 if you call
@@ -85,17 +86,21 @@ void ahi_close_sound(void)
 
 	if (ahi_dev)
 		SDL_CloseAudioDevice(ahi_dev);
+	if (ahi_dev_rec)
+		SDL_CloseAudioDevice(ahi_dev_rec);
 
 	if (ahisndbuffer)
 		xfree(ahisndbuffer);
 	ahisndbuffer = NULL;
 }
 
+typedef unsigned long DWORD;
+//typedef void* LPVOID;
+
 void ahi_updatesound(int force)
 {
 	//HRESULT hr;
-	//DWORD pos;
-	int pos;
+	DWORD pos;
 	//DWORD dwBytes1, dwBytes2;
 	//LPVOID dwData1, dwData2;
 	static int oldpos;
@@ -112,7 +117,7 @@ void ahi_updatesound(int force)
 		//}
 	}
 
-	pos = 0;
+	pos = ahisndbufsize;
 	//hr = lpDSB2->GetCurrentPosition(&pos, 0);
 	//if (hr != DSERR_BUFFERLOST) {
 		pos -= ahitweak;
@@ -142,22 +147,23 @@ void ahi_updatesound(int force)
 	//if (FAILED(hr))
 	//	return;
 
-	//if (currprefs.sound_stereo_swap_ahi) {
-	//	int i;
-	//	uae_s16* p = (uae_s16*)ahisndbuffer;
-	//	for (i = 0; i < (dwBytes1 + dwBytes2) / 2; i += 2) {
-	//		uae_s16 tmp;
-	//		tmp = p[i + 0];
-	//		p[i + 0] = p[i + 1];
-	//		p[i + 1] = tmp;
-	//	}
-	//}
+	if (currprefs.sound_stereo_swap_ahi) {
+		int i;
+		uae_s16* p = (uae_s16*)ahisndbuffer;
+		for (i = 0; i < ahisndbufsize / 2; i += 2) {
+			uae_s16 tmp;
+			tmp = p[i + 0];
+			p[i + 0] = p[i + 1];
+			p[i + 1] = tmp;
+		}
+	}
 
-	SDL_QueueAudio(ahi_dev, ahisndbuffer, amigablksize * 4);
 	//memcpy(dwData1, ahisndbuffer, dwBytes1);
 	//if (dwData2)
 	//	memcpy(dwData2, (uae_u8*)ahisndbuffer + dwBytes1, dwBytes2);
-
+	
+	SDL_QueueAudio(ahi_dev, ahisndbuffer, amigablksize * 4);
+	
 	sndptrmax = ahisndbuffer + ahisndbufsize;
 	ahisndbufpt = (int*)ahisndbuffer;
 
@@ -235,8 +241,8 @@ static int ahi_init_sound(void)
 	//DSBUFFERDESC sound_buffer;
 	//DSCAPS DSCaps;
 
-	//if (lpDS2)
-	//	return 0;
+	if (ahi_dev)
+		return 0;
 
 	//enumerate_sound_devices();
 	//wavfmt.wFormatTag = WAVE_FORMAT_PCM;
