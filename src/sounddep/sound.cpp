@@ -312,7 +312,7 @@ static int open_audio_sdl2(struct sound_data* sd, int index)
 	SDL_AudioSpec want, have;
 	memset(&want, 0, sizeof want);
 	want.freq = freq;
-	want.format = AUDIO_S16;
+	want.format = AUDIO_S16SYS;
 	want.channels = ch;
 	want.samples = s->framesperbuffer;
 

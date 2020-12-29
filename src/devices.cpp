@@ -24,7 +24,7 @@
 #include "cia.h"
 #include "inputdevice.h"
 #include "blkdev.h"
-//#include "parallel.h"
+#include "parallel.h"
 #include "autoconf.h"
 //#include "sampler.h"
 #include "newcpu.h"
@@ -215,7 +215,7 @@ void devices_reset(int hardreset)
 	uaeserialdev_reset();
 	uaeserialdev_start_threads();
 #endif
-#if defined (PARALLEL_PORT)
+#if defined (PARALLEL_PORT) || defined (AHI)
 	initparallel();
 #endif
 	//dongle_reset();

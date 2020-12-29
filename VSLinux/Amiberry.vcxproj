@@ -765,6 +765,7 @@
     <ClInclude Include="..\src\include\native2amiga_api.h" />
     <ClInclude Include="..\src\include\newcpu.h" />
     <ClInclude Include="..\src\include\options.h" />
+    <ClInclude Include="..\src\include\parallel.h" />
     <ClInclude Include="..\src\include\parser.h" />
     <ClInclude Include="..\src\include\readcpu.h" />
     <ClInclude Include="..\src\include\rommgr.h" />
