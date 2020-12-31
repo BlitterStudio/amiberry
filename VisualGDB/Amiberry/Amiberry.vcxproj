@@ -48,7 +48,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
     <GNUConfigurationType>Debug</GNUConfigurationType>
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
-    <ToolchainVersion>8.3.0/8.2.1/r2</ToolchainVersion>
+    <ToolchainVersion>8.3.0/8.2.1/r3</ToolchainVersion>
     <TargetName>$(ProjectName)</TargetName>
     <RemoteBuildHost>
     </RemoteBuildHost>
@@ -56,34 +56,34 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-rpi3|VisualGDB'">
     <GNUConfigurationType>Debug</GNUConfigurationType>
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
-    <ToolchainVersion>8.3.0/8.2.1/r2</ToolchainVersion>
+    <ToolchainVersion>8.3.0/8.2.1/r3</ToolchainVersion>
     <TargetName>$(ProjectName)</TargetName>
     <RemoteBuildHost />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-dispmanx|VisualGDB'">
     <GNUConfigurationType>Debug</GNUConfigurationType>
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
-    <ToolchainVersion>8.3.0/8.2.1/r2</ToolchainVersion>
+    <ToolchainVersion>8.3.0/8.2.1/r3</ToolchainVersion>
     <TargetName>$(ProjectName)</TargetName>
     <RemoteBuildHost>
     </RemoteBuildHost>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
-    <ToolchainVersion>8.3.0/8.2.1/r2</ToolchainVersion>
+    <ToolchainVersion>8.3.0/8.2.1/r3</ToolchainVersion>
     <TargetName>$(ProjectName)</TargetName>
     <RemoteBuildHost>
     </RemoteBuildHost>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Strip|VisualGDB'">
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
-    <ToolchainVersion>8.3.0/8.2.1/r2</ToolchainVersion>
+    <ToolchainVersion>8.3.0/8.2.1/r3</ToolchainVersion>
     <TargetName>$(ProjectName)</TargetName>
     <RemoteBuildHost />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-dispmanx|VisualGDB'">
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
-    <ToolchainVersion>8.3.0/8.2.1/r2</ToolchainVersion>
+    <ToolchainVersion>8.3.0/8.2.1/r3</ToolchainVersion>
     <TargetName>$(ProjectName)</TargetName>
     <RemoteBuildHost>
     </RemoteBuildHost>
