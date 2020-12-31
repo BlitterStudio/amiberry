@@ -225,10 +225,10 @@ static int ahi_init_record_win32 (void)
 
 void setvolume_ahi (int vol)
 {
-#if 0
-	HRESULT hr;
-	if (!lpDS2)
+	//HRESULT hr;
+	if (!ahi_dev)
 		return;
+#if 0	
 	hr = IDirectSoundBuffer_SetVolume(lpDSB2, vol);
 	if (FAILED(hr))
 		write_log(_T("AHI: SetVolume(%d) failed: %s\n"), vol, DXError(hr));
