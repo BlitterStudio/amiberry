@@ -1146,5 +1146,8 @@
     <ClInclude Include="..\..\src\osdep\ahi_v2.h">
       <Filter>Source files\osdep</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\include\parallel.h">
+      <Filter>Source files\include</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
