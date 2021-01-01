@@ -91,10 +91,14 @@ public:
 		}
 		else if (actionEvent.getSource() == cmdSaveState)
 		{
+			if (changed_prefs.mountitems)
+			{
+				ShowMessage("Error: Cannot create Savestate", "Savestates do not currently work with HDDs!", "", "Ok", "");
+			}
 			//------------------------------------------
 			// Save current state
 			//------------------------------------------
-			if (emulating)
+			else if (emulating)
 			{
 				savestate_initsave(savestate_fname, 1, true, true);
 				save_state(savestate_fname, "...");
