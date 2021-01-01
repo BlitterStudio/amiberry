@@ -374,7 +374,7 @@ int graphics_setup(void)
 				property.property = HDMI_PROPERTY_PIXEL_CLOCK_TYPE;
 				vc_tv_hdmi_get_property(&property);
 				const auto frame_rate = property.param1 == HDMI_PIXEL_CLOCK_TYPE_NTSC ? static_cast<float>(tvstate.display.hdmi.frame_rate) * (1000.0f / 1001.0f) : static_cast<float>(tvstate.display.hdmi.frame_rate);
-				host_hz = static_cast<int>(frame_rate);
+				vsync_vblank = static_cast<int>(frame_rate);
 			}
 			vc_vchi_tv_stop();
 			vchi_disconnect(vchi_instance);
@@ -1891,9 +1891,9 @@ bool vsync_switchmode(int hz)
 
 		time_per_frame = 1000 * 1000 / (hz);
 
-		if (hz == host_hz)
+		if (hz == vsync_vblank)
 			vsync_modulo = 1;
-		else if (hz > host_hz)
+		else if (hz > vsync_vblank)
 			vsync_modulo = 6; // Amiga draws 6 frames while host has 5 vsyncs -> sync every 6th Amiga frame
 		else
 			vsync_modulo = 5; // Amiga draws 5 frames while host has 6 vsyncs -> sync every 5th Amiga frame
