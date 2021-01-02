@@ -213,6 +213,7 @@ static uae_u8 all_zeros[MAX_PIXELS_PER_LINE];
 uae_u8 *xlinebuffer, *xlinebuffer_genlock;
 
 static int *amiga2aspect_line_map, *native2amiga_line_map;
+static int native2amiga_line_map_height;
 static uae_u8 **row_map;
 static uae_u8 *row_map_genlock_buffer;
 static uae_u8 row_tmp[MAX_PIXELS_PER_LINE * 32 / 8];
@@ -350,7 +351,7 @@ int coord_native_to_amiga_x (int x)
 
 int coord_native_to_amiga_y (int y)
 {
-	if (!native2amiga_line_map)
+	if (!native2amiga_line_map || y < 0 || y >= native2amiga_line_map_height)
 		return -1;
 	return native2amiga_line_map[y] + thisframe_y_adjust - minfirstline;
 }
@@ -2685,27 +2686,28 @@ static void init_aspect_maps(void)
 		xfree (amiga2aspect_line_map);
 
 	/* At least for this array the +1 is necessary. */
+	native2amiga_line_map_height = h;
 	amiga2aspect_line_map = xmalloc (int, (MAXVPOS + 1) * 2 + 1);
-	native2amiga_line_map = xmalloc (int, h);
+	native2amiga_line_map = xmalloc(int, native2amiga_line_map_height);
 
 	for (i = 0; i < maxl; i++) {
 		int v = i - min_ypos_for_screen;
 		if (v >= h && max_drawn_amiga_line < 0)
 			max_drawn_amiga_line = v;
-		if (i < min_ypos_for_screen || v >= h)
+		if (i < min_ypos_for_screen || v >= native2amiga_line_map_height)
 			v = -1;
 		amiga2aspect_line_map[i] = v;
 	}
 	if (max_drawn_amiga_line < 0)
 		max_drawn_amiga_line = maxl - min_ypos_for_screen;
 
-	for (i = 0; i < h; i++)
+	for (i = 0; i < native2amiga_line_map_height; i++)
 		native2amiga_line_map[i] = -1;
 
 	for (i = maxl - 1; i >= min_ypos_for_screen; i--) {
 		if (amiga2aspect_line_map[i] == -1)
 			continue;
-		for (int j = amiga2aspect_line_map[i]; j < h && native2amiga_line_map[j] == -1; j++)
+		for (int j = amiga2aspect_line_map[i]; j < native2amiga_line_map_height && native2amiga_line_map[j] == -1; j++)
 			native2amiga_line_map[j] = i >> linedbl;
 	}
 }
