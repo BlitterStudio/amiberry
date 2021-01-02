@@ -16,7 +16,6 @@
 #include "options.h"
 #include "custom.h"
 #include "rommgr.h"
-#include "zfile.h"
 
 extern FILE* debugfile;
 
@@ -238,7 +237,7 @@ void symlink_roms(struct uae_prefs* prefs)
 	// destination file (symlink)
 	snprintf(tmp2, MAX_DPATH, "%s/rom.key", kick_path);
 
-	if (zfile_exists(tmp))
+	if (my_existsfile(tmp))
 		symlink(tmp, tmp2);
 }
 
@@ -265,7 +264,7 @@ void cd_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	strcat(whd_config, game_name);
 	strcat(whd_config, ".uae");
 
-	if (zfile_exists(whd_config))
+	if (my_existsfile(whd_config))
 	{
 		target_cfgfile_load(prefs, whd_config, CONFIG_TYPE_ALL, 0);
 		return;
@@ -437,7 +436,7 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 
 	// if we have a config file, we will use it
 	// we will need it for the WHDLoad options too.
-	if (zfile_exists(uae_config))
+	if (my_existsfile(uae_config))
 	{
 		write_log("WHDBooter -  %s found. Loading Config for WHDload options.\n", uae_config);
 		target_cfgfile_load(&currprefs, uae_config, CONFIG_TYPE_ALL, 0);
@@ -455,7 +454,7 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	strcpy(whd_config, whd_path);
 	strcat(whd_config, "whdload_db.xml");
 
-	if (zfile_exists(whd_config)) // use XML database
+	if (my_existsfile(whd_config)) // use XML database
 	{
 		tinyxml2::XMLDocument doc;
 		auto error = false;
@@ -627,7 +626,7 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	}
 
 	// now we should have a startup-file (if we don't, we are going to use the original booter)
-	if (zfile_exists(whd_startup))
+	if (my_existsfile(whd_startup))
 	{
 		// create a symlink to WHDLoad in /tmp/
 		snprintf(whd_path, MAX_DPATH, "%s/whdboot/WHDLoad", start_path_data);
@@ -663,7 +662,7 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 #endif
 
 	// so remember, we already loaded a .uae config, so we don't need to do the below manual setup for hardware
-	if (zfile_exists(uae_config))
+	if (my_existsfile(uae_config))
 	{
 		write_log("WHDBooter - %s found; ignoring WHD Quickstart setup.\n", uae_config);
 		return;
@@ -716,7 +715,7 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 		cfgfile_parse_line(prefs, txt2, 0);
 
 		snprintf(boot_path, MAX_DPATH, "%s/whdboot/boot-data.zip", start_path_data);
-		if (!zfile_exists(boot_path))
+		if (!my_existsfile(boot_path))
 			snprintf(boot_path, MAX_DPATH, "%s/whdboot/boot-data/", start_path_data);
 
 		_stprintf(tmp, _T("filesystem2=rw,DH3:DH3:%s,-10"), boot_path);
@@ -731,7 +730,7 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	else // revert to original booter is no slave was set
 	{
 		snprintf(boot_path, MAX_DPATH, "%s/whdboot/boot-data.zip", start_path_data);
-		if (!zfile_exists(boot_path))
+		if (!my_existsfile(boot_path))
 			snprintf(boot_path, MAX_DPATH, "%s/whdboot/boot-data/", start_path_data);
 
 		_stprintf(tmp, _T("filesystem2=rw,DH0:DH0:%s,10"), boot_path);
@@ -806,7 +805,7 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 		write_log("WHDBooter Option (Mouse Control): %s\n", txt2);
 	}
 
-	// PORT 0 -  JOYSTICK GAMES
+	// PORT 0 - JOYSTICK GAMES
 	else if (strcmpi(amiberry_options.default_controller2, "") != 0)
 	{
 		_stprintf(txt2, "%s=%s", _T("joyport0"), _T(amiberry_options.default_controller2));
@@ -916,7 +915,7 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 		cfgfile_parse_line(prefs, txt2, 0);
 	}
 
-	//FAST / Z3 MEMORY REQUIREMENTS
+	// FAST / Z3 MEMORY REQUIREMENTS
 	int temp_ram;
 	if (strcmpi(game_detail.fast, "nul") != 0)
 	{
@@ -957,14 +956,12 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 		built_in_chipset_prefs(prefs);
 		prefs->chipset_mask = 0;
 	}
-
 	else if (strcmpi(game_detail.chipset, "ecs") == 0)
 	{
 		prefs->cs_compatible = CP_A600;
 		built_in_chipset_prefs(prefs);
 		prefs->chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
 	}
-
 	else if (strcmpi(game_detail.chipset, "aga") == 0)
 	{
 		prefs->cs_compatible = CP_A1200;
