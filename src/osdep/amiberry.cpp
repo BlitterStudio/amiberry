@@ -1718,6 +1718,9 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->use_retroarch_menu = amiberry_options.default_retroarch_menu;
 	p->use_retroarch_reset = amiberry_options.default_retroarch_reset;
 
+	p->whdbootprefs.buttonwait = amiberry_options.default_whd_buttonwait;
+	p->whdbootprefs.showsplash = amiberry_options.default_whd_showsplash;
+
 #ifdef ANDROID
 	p->onScreen = 1;
 	p->onScreen_textinput = 1;
@@ -2369,6 +2372,14 @@ void save_amiberry_settings(void)
 	// Mouse2
 	snprintf(buffer, MAX_DPATH, "default_mouse2=%s\n", amiberry_options.default_mouse2);
 	fputs(buffer, f);
+
+	// WHDLoad ButtonWait
+	snprintf(buffer, MAX_DPATH, "default_whd_buttonwait=%s\n", amiberry_options.default_whd_buttonwait ? "yes" : "no");
+	fputs(buffer, f);
+
+	// WHDLoad Show Splash screen
+	snprintf(buffer, MAX_DPATH, "default_whd_showsplash=%s\n", amiberry_options.default_whd_showsplash ? "yes" : "no");
+	fputs(buffer, f);
 	
 	// Paths
 	snprintf(buffer, MAX_DPATH, "path=%s\n", current_dir);
@@ -2589,6 +2600,8 @@ void load_amiberry_settings(void)
 					cfgfile_string(option, value, "default_controller4", amiberry_options.default_controller4, sizeof amiberry_options.default_controller4);
 					cfgfile_string(option, value, "default_mouse1", amiberry_options.default_mouse1, sizeof amiberry_options.default_mouse1);
 					cfgfile_string(option, value, "default_mouse2", amiberry_options.default_mouse2, sizeof amiberry_options.default_mouse2);
+					cfgfile_yesno(option, value, "default_whd_buttonwait", &amiberry_options.default_whd_buttonwait);
+					cfgfile_yesno(option, value, "default_whd_showsplash", &amiberry_options.default_whd_showsplash);
 				}
 			}
 		}
