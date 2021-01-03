@@ -305,13 +305,13 @@ static int display_thread(void *unused)
 				updateHandle = vc_dispmanx_update_start(0);
 				vc_dispmanx_element_change_source(updateHandle, elementHandle, amigafb_resource_2);
 			}
-			vc_dispmanx_update_submit(updateHandle, nullptr, nullptr);
-			flip_in_progess = false;
+			vc_dispmanx_update_submit(updateHandle, nullptr, nullptr);		
 #else
 			SDL_RenderClear(renderer);
 			SDL_UpdateTexture(texture, nullptr, screen->pixels, screen->pitch);
 			SDL_RenderCopyEx(renderer, texture, nullptr, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
 #endif
+			flip_in_progess = false;
 			break;
 
 		case DISPLAY_SIGNAL_QUIT:
@@ -457,7 +457,18 @@ int graphics_setup(void)
 	if (SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0") == SDL_TRUE)
 		write_log("SDL2: Set window not to minimize on focus loss\n");
 	
-	currprefs.gfx_apmode[1].gfx_refreshrate = vsync_vblank;
+	if (currprefs.rtgvblankrate == 0) {
+		currprefs.gfx_apmode[1].gfx_refreshrate = currprefs.gfx_apmode[0].gfx_refreshrate;
+		if (currprefs.gfx_apmode[0].gfx_interlaced) {
+			currprefs.gfx_apmode[1].gfx_refreshrate *= 2;
+		}
+	}
+	else if (currprefs.rtgvblankrate < 0) {
+		currprefs.gfx_apmode[1].gfx_refreshrate = 0;
+	}
+	else {
+		currprefs.gfx_apmode[1].gfx_refreshrate = currprefs.rtgvblankrate;
+	}
 
 #ifndef USE_DISPMANX
 	if (amiberry_options.use_sdl2_render_thread)
@@ -1535,7 +1546,6 @@ void show_screen(int mode)
 		// RenderPresent must be done in the main thread.
 		SDL_RenderPresent(renderer);
 		write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SHOW, 1);	
-		flip_in_progess = false;
 	}
 	else 
 	{
