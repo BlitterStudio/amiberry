@@ -14,9 +14,6 @@
 extern uae_u16 paula_sndbuffer[];
 extern uae_u16* paula_sndbufpt;
 extern int paula_sndbufsize;
-#ifdef AMIBERRY
-extern SDL_AudioDeviceID dev;
-#endif
 
 extern void finish_sound_buffer(void);
 extern void restart_sound_buffer(void);

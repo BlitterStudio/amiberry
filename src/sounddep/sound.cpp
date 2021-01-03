@@ -33,6 +33,7 @@
 
 struct sound_dp
 {
+	SDL_AudioDeviceID dev;
 	int sndbufsize;
 	int framesperbuffer;
 	int sndbuf;
@@ -63,7 +64,6 @@ uae_u16* paula_sndbufpt;
 int paula_sndbufsize;
 
 #ifdef AMIBERRY
-SDL_AudioDeviceID dev;
 void sdl2_audio_callback(void* userdata, Uint8* stream, int len);
 #endif
 
@@ -184,9 +184,11 @@ static double sync_sound(double m)
 
 static void clearbuffer_sdl2(struct sound_data *sd)
 {
-	SDL_LockAudioDevice(dev);
+	struct sound_dp* s = sd->data;
+	
+	SDL_LockAudioDevice(s->dev);
 	memset(paula_sndbuffer, 0, sizeof paula_sndbuffer);
-	SDL_UnlockAudioDevice(dev);
+	SDL_UnlockAudioDevice(s->dev);
 }
 
 static void clearbuffer(struct sound_data* sd)
@@ -208,22 +210,24 @@ static void set_reset(struct sound_data* sd)
 
 static void pause_audio_sdl2(struct sound_data* sd)
 {
+	struct sound_dp* s = sd->data;
+	
 	sd->waiting_for_buffer = 0;
-	SDL_PauseAudioDevice(dev, 1);
+	SDL_PauseAudioDevice(s->dev, 1);
 	if (cdda_dev > 0)
 		SDL_PauseAudioDevice(cdda_dev, 1);
 	clearbuffer(sd);
 }
-
 static void resume_audio_sdl2(struct sound_data* sd)
 {
-	auto* s = sd->data;
-	sd->paused = 0;
+	struct sound_dp* s = sd->data;
+	
 	clearbuffer(sd);
 	sd->waiting_for_buffer = 1;
 	s->avg_correct = 0;
 	s->cnt_correct = 0;
-	SDL_PauseAudioDevice(dev, 0);
+	SDL_PauseAudioDevice(s->dev, 0);
+	sd->paused = 0;
 	if (cdda_dev > 0)
 		SDL_PauseAudioDevice(cdda_dev, 0);
 }
@@ -238,18 +242,18 @@ static int restore_sdl2(struct sound_data *sd)
 static void close_audio_sdl2(struct sound_data* sd)
 {
 	auto* s = sd->data;
-	SDL_PauseAudioDevice(dev, 1);
+	SDL_PauseAudioDevice(s->dev, 1);
 	
-	SDL_LockAudioDevice(dev);
+	SDL_LockAudioDevice(s->dev);
 	if (s->pullbuffer != nullptr)
 	{
 		xfree(s->pullbuffer);
 		s->pullbuffer = NULL;
 	}
 	s->pullbufferlen = 0;
-	SDL_UnlockAudioDevice(dev);
+	SDL_UnlockAudioDevice(s->dev);
 	
-	SDL_CloseAudioDevice(dev);
+	SDL_CloseAudioDevice(s->dev);
 	if (cdda_dev > 0)
 	{
 		SDL_PauseAudioDevice(cdda_dev, 1);
@@ -322,8 +326,8 @@ static int open_audio_sdl2(struct sound_data* sd, int index)
 		want.userdata = sd;
 	}
 
-	dev = SDL_OpenAudioDevice(nullptr, 0, &want, &have, SDL_AUDIO_ALLOW_FORMAT_CHANGE);
-	if (dev == 0)
+	s->dev = SDL_OpenAudioDevice(nullptr, 0, &want, &have, SDL_AUDIO_ALLOW_FORMAT_CHANGE);
+	if (s->dev == 0)
 	{
 		write_log("Failed to open audio: %s", SDL_GetError());
 		return 0;
@@ -470,6 +474,7 @@ void reset_sound()
 
 int init_sound()
 {
+	bool started = false;
 	gui_data.sndbuf_status = 3;
 	gui_data.sndbuf = 0;
 	gui_data.sndbuf_avail = false;
@@ -487,6 +492,11 @@ int init_sound()
 #endif
 	reset_sound();
 	resume_sound();
+	if (!started &&
+		(currprefs.start_minimized && currprefs.minimized_nosound ||
+			currprefs.start_uncaptured && currprefs.inactive_nosound))
+		pause_sound();
+	started = true;
 	return 1;
 }
 
@@ -521,7 +531,7 @@ void restart_sound_buffer()
 static void finish_sound_buffer_sdl2_push(struct sound_data* sd, uae_u16* sndbuffer)
 {
 	struct sound_dp* s = sd->data;
-	SDL_QueueAudio(dev, sndbuffer, sd->sndbufsize);
+	SDL_QueueAudio(s->dev, sndbuffer, sd->sndbufsize);
 }
 
 static void finish_sound_buffer_sdl2(struct sound_data *sd, uae_u16 *sndbuffer)
@@ -585,6 +595,8 @@ static void send_sound(struct sound_data* sd, uae_u16* sndbuffer)
 
 bool audio_is_event_frame_possible(int)
 {
+	if (sdp->paused || sdp->deactive || sdp->reset)
+		return false;	
 	return false;
 }
 
@@ -616,6 +628,8 @@ int audio_pull_buffer()
 
 bool audio_is_pull_event()
 {
+	if (sdp->paused || sdp->deactive || sdp->reset)
+		return false;
 	return false;
 }
 

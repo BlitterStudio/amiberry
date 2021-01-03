@@ -7897,14 +7897,13 @@ void blitter_done_notify (int hpos)
 	if (dmaen(DMA_COPPER) && vp_wait >= cop_state.vcmp) {
 		copper_enabled_thisline = 1;
 		set_special(SPCFLAG_COPPER);
-	}
-	else {
+	} else {
 		unset_special(SPCFLAG_COPPER);
 	}
 
 	vp_wait = vpos & (((cop_state.saved_i2 >> 8) & 0x7F) | 0x80);
 	vp = vpos;
-	
+
 	hpos += 1;
 	hpos &= ~1;
 	if (hpos >= maxhpos) {
