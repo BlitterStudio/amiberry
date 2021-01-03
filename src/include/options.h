@@ -865,6 +865,8 @@ struct uae_prefs
 
 	bool minimize_inactive;
 	bool capture_always;
+	bool start_minimized;
+	bool start_uncaptured;
 	
 	int active_capture_priority;
 	bool active_nocapture_pause;
@@ -878,6 +880,7 @@ struct uae_prefs
 	bool minimized_nosound;
 	int minimized_input;
 
+	int rtgvblankrate;
 	bool automount_removable;
 	bool automount_cddrives;
 	int uaescsimode;

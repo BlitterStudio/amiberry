@@ -681,8 +681,6 @@ struct picasso96_state_struct
 
 extern void InitPicasso96 (void);
 
-extern bool picasso_rendered;
-
 extern struct picasso96_state_struct picasso96_state;
 
 extern void picasso_enablescreen(int on);

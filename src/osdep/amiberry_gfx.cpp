@@ -62,11 +62,7 @@ static int display_depth;
 Uint32 pixel_format;
 
 static unsigned long last_synctime;
-
-/* Possible screen modes (x and y resolutions) */
-#define MAX_SCREEN_MODES 14
-static int x_size_table[MAX_SCREEN_MODES] = { 640, 640, 720, 800, 800, 960, 1024, 1280, 1280, 1280, 1360, 1366, 1680, 1920 };
-static int y_size_table[MAX_SCREEN_MODES] = { 400, 480, 400, 480, 600, 540, 768, 720, 800, 1024, 768, 768, 1050, 1080 };
+static int deskhz;
 
 struct PicassoResolution* DisplayModes;
 struct MultiDisplay Displays[MAX_DISPLAYS];
@@ -352,7 +348,7 @@ void change_layer_number(int layer)
 int graphics_setup(void)
 {
 #ifdef PICASSO96
-	picasso_init_resolutions();
+	sortdisplays();
 	InitPicasso96();
 #endif
 #ifdef USE_DISPMANX
@@ -815,6 +811,7 @@ static void updatepicasso96()
 	vidinfo->splitypos = -1;
 #endif
 }
+
 static void open_screen(struct uae_prefs* p)
 {
 	auto* avidinfo = &adisplays.gfxvidinfo;
@@ -822,8 +819,8 @@ static void open_screen(struct uae_prefs* p)
 
 	if (max_uae_width == 0 || max_uae_height == 0)
 	{
-		max_uae_width = 1920;
-		max_uae_height = 1080;
+		max_uae_width = 8192;
+		max_uae_height = 8192;
 	}
 	
 	if (wasfullwindow_a == 0)
@@ -1130,6 +1127,8 @@ int check_prefs_changed_gfx()
 	c |= currprefs.gfx_apmode[APMODE_NATIVE].gfx_interlaced != changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_interlaced ? (2 | 8) : 0;
 	c |= currprefs.gfx_apmode[APMODE_RTG].gfx_backbuffers != changed_prefs.gfx_apmode[APMODE_RTG].gfx_backbuffers ? (2 | 16) : 0;
 
+	c |= currprefs.rtgvblankrate != changed_prefs.rtgvblankrate ? 8 : 0;
+	
 	if (display_change_requested || c)
 	{
 		bool setpause = false;
@@ -1239,6 +1238,8 @@ int check_prefs_changed_gfx()
 		currprefs.gfx_apmode[APMODE_NATIVE].gfx_interlaced = changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_interlaced;
 		currprefs.gfx_apmode[APMODE_RTG].gfx_backbuffers = changed_prefs.gfx_apmode[APMODE_RTG].gfx_backbuffers;
 
+		currprefs.rtgvblankrate = changed_prefs.rtgvblankrate;
+		
 		bool unacquired = false;
 		//for (int monid = MAX_AMIGAMONITORS - 1; monid >= 0; monid--) {
 			//if (!monitors[monid])
@@ -1450,6 +1451,18 @@ bool render_screen(bool immediate)
 	}
 
 	return true;
+}
+
+float target_adjust_vblank_hz(float hz)
+{
+	int maxrate;
+	if (!currprefs.lightboost_strobo)
+		return hz;
+	maxrate = deskhz;
+	double nhz = hz * 2.0;
+	if (nhz >= maxrate - 1 && nhz < maxrate + 1)
+		hz -= 0.5;
+	return hz;
 }
 
 void show_screen(int mode)
@@ -2040,6 +2053,83 @@ int picasso_palette(struct MyCLUTEntry *CLUT, uae_u32 *clut)
 	return changed;
 }
 
+static void addmode(struct MultiDisplay* md, SDL_DisplayMode* dm, int rawmode)
+{
+	int ct;
+	int i, j;
+	int w = dm->w;
+	int h = dm->h;
+	int d = SDL_BITSPERPIXEL(dm->format);
+	bool lace = false;
+	int freq = 0;
+
+	if (w > max_uae_width || h > max_uae_height) {
+		write_log(_T("Ignored mode %d*%d\n"), w, h);
+		return;
+	}
+
+	if (dm->refresh_rate) {
+		freq = dm->refresh_rate;
+		if (freq < 10)
+			freq = 0;
+	}
+	//if (dm->dmFields & DM_DISPLAYFLAGS) {
+	//	lace = (dm->dmDisplayFlags & DM_INTERLACED) != 0;
+	//}
+
+	ct = 0;
+	if (d == 8)
+		ct = RGBMASK_8BIT;
+	if (d == 15)
+		ct = RGBMASK_15BIT;
+	if (d == 16)
+		ct = RGBMASK_16BIT;
+	if (d == 24)
+		ct = RGBMASK_24BIT;
+	if (d == 32)
+		ct = RGBMASK_32BIT;
+	if (ct == 0)
+		return;
+	d /= 8;
+	i = 0;
+	while (md->DisplayModes[i].depth >= 0) {
+		if (md->DisplayModes[i].depth == d && md->DisplayModes[i].res.width == w && md->DisplayModes[i].res.height == h) {
+			for (j = 0; j < MAX_REFRESH_RATES; j++) {
+				if (md->DisplayModes[i].refresh[j] == 0 || md->DisplayModes[i].refresh[j] == freq)
+					break;
+			}
+			if (j < MAX_REFRESH_RATES) {
+				md->DisplayModes[i].refresh[j] = freq;
+				md->DisplayModes[i].refreshtype[j] = (lace ? REFRESH_RATE_LACE : 0) | (rawmode ? REFRESH_RATE_RAW : 0);
+				md->DisplayModes[i].refresh[j + 1] = 0;
+				if (!lace)
+					md->DisplayModes[i].lace = false;
+				return;
+			}
+		}
+		i++;
+	}
+	i = 0;
+	while (md->DisplayModes[i].depth >= 0)
+		i++;
+	if (i >= MAX_PICASSO_MODES - 1)
+		return;
+	md->DisplayModes[i].rawmode = rawmode;
+	md->DisplayModes[i].lace = lace;
+	md->DisplayModes[i].res.width = w;
+	md->DisplayModes[i].res.height = h;
+	md->DisplayModes[i].depth = d;
+	md->DisplayModes[i].refresh[0] = freq;
+	md->DisplayModes[i].refreshtype[0] = (lace ? REFRESH_RATE_LACE : 0) | (rawmode ? REFRESH_RATE_RAW : 0);
+	md->DisplayModes[i].refresh[1] = 0;
+	md->DisplayModes[i].colormodes = ct;
+	md->DisplayModes[i + 1].depth = -1;
+	_stprintf(md->DisplayModes[i].name, _T("%dx%d%s, %d-bit"),
+		md->DisplayModes[i].res.width, md->DisplayModes[i].res.height,
+		lace ? _T("i") : _T(""),
+		md->DisplayModes[i].depth * 8);
+}
+
 static int resolution_compare(const void* a, const void* b)
 {
 	auto* ma = (struct PicassoResolution *)a;
@@ -2055,89 +2145,147 @@ static int resolution_compare(const void* a, const void* b)
 	return ma->depth - mb->depth;
 }
 
-static void sortmodes()
+static void sortmodes(struct MultiDisplay* md)
 {
 	auto i = 0, idx = -1;
 	unsigned int pw = -1, ph = -1;
-	while (DisplayModes[i].depth >= 0)
+	while (md->DisplayModes[i].depth >= 0)
 		i++;
-	qsort(DisplayModes, i, sizeof(struct PicassoResolution), resolution_compare);
-	for (i = 0; DisplayModes[i].depth >= 0; i++)
+	qsort(md->DisplayModes, i, sizeof(struct PicassoResolution), resolution_compare);
+	for (i = 0; md->DisplayModes[i].depth >= 0; i++)
 	{
-		if (DisplayModes[i].res.height != ph || DisplayModes[i].res.width != pw)
+		int j, k;
+		for (j = 0; md->DisplayModes[i].refresh[j]; j++) {
+			for (k = j + 1; md->DisplayModes[i].refresh[k]; k++) {
+				if (md->DisplayModes[i].refresh[j] > md->DisplayModes[i].refresh[k]) {
+					int t = md->DisplayModes[i].refresh[j];
+					md->DisplayModes[i].refresh[j] = md->DisplayModes[i].refresh[k];
+					md->DisplayModes[i].refresh[k] = t;
+					t = md->DisplayModes[i].refreshtype[j];
+					md->DisplayModes[i].refreshtype[j] = md->DisplayModes[i].refreshtype[k];
+					md->DisplayModes[i].refreshtype[k] = t;
+				}
+			}
+		}
+		if (md->DisplayModes[i].res.height != ph || md->DisplayModes[i].res.width != pw)
 		{
-			ph = DisplayModes[i].res.height;
-			pw = DisplayModes[i].res.width;
+			ph = md->DisplayModes[i].res.height;
+			pw = md->DisplayModes[i].res.width;
 			idx++;
 		}
-		DisplayModes[i].residx = idx;
+		md->DisplayModes[i].residx = idx;
 	}
 }
 
-static void modes_list()
+static void modesList(struct MultiDisplay* md)
 {
-	auto i = 0;
-	while (DisplayModes[i].depth >= 0)
+	int i, j;
+	
+	i = 0;
+	while (md->DisplayModes[i].depth >= 0)
 	{
-		write_log("%d: %s (", i, DisplayModes[i].name);
-		auto j = 0;
-		while (DisplayModes[i].refresh[j] > 0)
+		write_log(_T("%d: %s%s ("), i, md->DisplayModes[i].rawmode ? _T("!") : _T(""), md->DisplayModes[i].name);
+		j = 0;
+		while (md->DisplayModes[i].refresh[j] > 0)
 		{
 			if (j > 0)
-				write_log(",");
-			write_log("%d", DisplayModes[i].refresh[j]);
+				write_log(_T(","));
+			if (md->DisplayModes[i].refreshtype[j] & REFRESH_RATE_RAW)
+				write_log(_T("!"));
+			write_log(_T("%d"), md->DisplayModes[i].refresh[j]);
+			if (md->DisplayModes[i].refreshtype[j] & REFRESH_RATE_LACE)
+				write_log(_T("i"));
 			j++;
 		}
-		write_log(")\n");
+		write_log(_T(")\n"));
 		i++;
 	}
 }
 
-void picasso_init_resolutions()
+void sortdisplays()
 {
-	auto count = 0;
-	char tmp[200];
-	int bits[] = { 8, 16, 32 };
+	struct MultiDisplay* md;
+	int i, idx;
+	
+	SDL_DisplayMode desktop_dm;
+	if (SDL_GetDesktopDisplayMode(0, &desktop_dm) != 0) {
+		write_log("SDL_GetDesktopDisplayMode failed: %s", SDL_GetError());
+		return;
+	}
 
+	int w = desktop_dm.w;
+	int h = desktop_dm.h;
+	int wv = w;
+	int hv = h;
+	int b = SDL_BITSPERPIXEL(desktop_dm.format);
+
+	deskhz = desktop_dm.refresh_rate;
+
+	SDL_Rect bounds;
+	if (SDL_GetDisplayUsableBounds(0, &bounds) != 0)
+	{
+		write_log("SDL_GetDisplayUsableBounds failed: %s", SDL_GetError());
+		return;
+	}
+	
+	char tmp[200];
 	Displays[0].primary = 1;
-	Displays[0].rect.x = 0;
-	Displays[0].rect.y = 0;
-	Displays[0].rect.w = 800;
-	Displays[0].rect.h = 600;
+	Displays[0].rect.x = bounds.x;
+	Displays[0].rect.y = bounds.y;
+	Displays[0].rect.w = bounds.w;
+	Displays[0].rect.h = bounds.h;
 	sprintf(tmp, "%s (%d*%d)", "Display", Displays[0].rect.w, Displays[0].rect.h);
 	Displays[0].fullname = my_strdup(tmp);
 	Displays[0].monitorname = my_strdup("Display");
 
-	auto* const md1 = Displays;
-	DisplayModes = md1->DisplayModes = xmalloc(struct PicassoResolution, MAX_PICASSO_MODES);
-	for (auto i = 0; i < MAX_SCREEN_MODES && count < MAX_PICASSO_MODES; i++)
-	{
-		for (auto bitdepth : bits)
-		{
-			const auto bit_unit = bitdepth + 1 & 0xF8;
-			const auto rgbFormat =
-				bitdepth == 8 ? RGBFB_CLUT :
-				bitdepth == 16 ? RGBFB_R5G6B5 :
-				bitdepth == 24 ? RGBFB_R8G8B8 : RGBFB_R8G8B8A8;
-			auto pixelFormat = 1 << rgbFormat;
-			pixelFormat |= RGBFF_CHUNKY;
-			DisplayModes[count].res.width = x_size_table[i];
-			DisplayModes[count].res.height = y_size_table[i];
-			DisplayModes[count].depth = bit_unit >> 3;
-			DisplayModes[count].refresh[0] = 50;
-			DisplayModes[count].refresh[1] = 60;
-			DisplayModes[count].refresh[2] = 0;
-			DisplayModes[count].colormodes = pixelFormat;
-			sprintf(DisplayModes[count].name, "%dx%d, %d-bit",
-				DisplayModes[count].res.width, DisplayModes[count].res.height, DisplayModes[count].depth * 8);
+	md = Displays;
 
-			count++;
+	md->DisplayModes = xmalloc(struct PicassoResolution, MAX_PICASSO_MODES);
+	md->DisplayModes[0].depth = -1;
+
+	int numDispModes = SDL_GetNumDisplayModes(0);
+	for (int mode = 0; mode < 2; mode++) 
+	{
+		SDL_DisplayMode dm;
+		for (idx = 0; idx <= numDispModes; idx++)
+		{
+			if (SDL_GetDisplayMode(0, idx, &dm) != 0) {
+				write_log("SDL_GetDisplayMode failed: %s", SDL_GetError());
+				return;
+			}
+			int found = 0;
+			int idx2 = 0;
+			while (md->DisplayModes[idx2].depth >= 0 && !found)
+			{
+				struct PicassoResolution* pr = &md->DisplayModes[idx2];
+				if (dm.w == w && dm.h == h && SDL_BITSPERPIXEL(dm.format) == b) {
+					if (dm.refresh_rate > deskhz)
+						deskhz = dm.refresh_rate;
+				}
+				if (pr->res.width == dm.w && pr->res.height == dm.h && pr->depth == SDL_BITSPERPIXEL(dm.format) / 8) {
+					for (i = 0; pr->refresh[i]; i++) {
+						if (pr->refresh[i] == dm.refresh_rate) {
+							found = 1;
+							break;
+						}
+					}
+				}
+				idx2++;
+			}
+			if (!found && SDL_BITSPERPIXEL(dm.format) > 8) {
+				addmode(md, &dm, mode);
+			}
+			idx++;
 		}
+		
 	}
-	DisplayModes[count].depth = -1;
-	sortmodes();
-	modes_list();
-	DisplayModes = Displays[0].DisplayModes;
+	sortmodes(md);
+	modesList(md);
+	i = 0;
+	while (md->DisplayModes[i].depth > 0)
+		i++;
+	write_log(_T("%d display modes.\n"), i);
+	write_log(_T("Desktop: W=%d H=%d B=%d HZ=%d. CXVS=%d CYVS=%d\n"), w, h, b, deskhz, wv, hv);
 }
 #endif
 

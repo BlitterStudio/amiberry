@@ -4709,7 +4709,7 @@ void compute_framesync(void)
 		vblank_hz = vblank_hz_shf;
 	}
 
-	//	vblank_hz = target_adjust_vblank_hz(0, vblank_hz);
+	vblank_hz = target_adjust_vblank_hz(vblank_hz);
 
 	struct chipset_refresh* cr = get_chipset_refresh(&currprefs);
 	while (cr) {

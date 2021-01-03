@@ -1708,7 +1708,10 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->minimized_input = 0;
 	p->minimize_inactive = false;
 	p->capture_always = false;
-	
+	p->start_minimized = false;
+	p->start_uncaptured = false;
+
+	p->rtgvblankrate = -1;
 	p->automount_removable = false;
 	p->automount_cddrives = true;
 	p->uaescsimode = UAESCSI_CDEMU;
@@ -1779,7 +1782,14 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_target_dwrite(f, _T("minimized_input"), _T("%d"), p->minimized_input);
 	cfgfile_target_dwrite_bool(f, _T("inactive_minimize"), p->minimize_inactive);
 	cfgfile_target_dwrite_bool(f, _T("active_capture_automatically"), p->capture_always);
+	cfgfile_target_dwrite_bool(f, _T("start_iconified"), p->start_minimized);
+	cfgfile_target_dwrite_bool(f, _T("start_not_captured"), p->start_uncaptured);
 
+	if (p->rtgvblankrate <= 0)
+		cfgfile_target_dwrite_str(f, _T("rtg_vblank"), p->rtgvblankrate == -1 ? _T("real") : (p->rtgvblankrate == -2 ? _T("disabled") : _T("chipset")));
+	else
+		cfgfile_target_dwrite(f, _T("rtg_vblank"), _T("%d"), p->rtgvblankrate);
+	
 	cfgfile_target_dwrite_str(f, _T("uaescsimode"), scsimode[p->uaescsimode]);
 	cfgfile_target_dwrite(f, _T("cpu_idle"), _T("%d"), p->cpu_idle);
 	cfgfile_target_dwrite_bool(f, _T("right_control_is_right_win"), p->right_control_is_right_win_key);
@@ -1850,6 +1860,7 @@ TCHAR* target_expand_environment(const TCHAR* path, TCHAR* out, int maxlen)
 
 int target_parse_option(struct uae_prefs* p, const char* option, const char* value)
 {
+	TCHAR tmpbuf[CONFIG_BLEN];
 	bool tbool;
 	
 	if (cfgfile_yesno(option, value, _T("middle_mouse"), &tbool)) {
@@ -1929,6 +1940,10 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 		return 1;
 	if (cfgfile_yesno(option, value, _T("inactive_minimize"), &p->minimize_inactive))
 		return 1;
+	if (cfgfile_yesno(option, value, _T("start_iconified"), &p->start_minimized))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("start_not_captured"), &p->start_uncaptured))
+		return 1;
 	if (cfgfile_yesno(option, value, _T("right_control_is_right_win"), &p->right_control_is_right_win_key))
 		return 1;
 	if (cfgfile_string(option, value, _T("serial_port"), &p->sername[0], 256)) {
@@ -1936,6 +1951,22 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 			p->use_serial = true;
 		else
 			p->use_serial = false;
+		return 1;
+	}
+	if (cfgfile_string(option, value, _T("rtg_vblank"), tmpbuf, sizeof tmpbuf / sizeof(TCHAR))) {
+		if (!_tcscmp(tmpbuf, _T("real"))) {
+			p->rtgvblankrate = -1;
+			return 1;
+		}
+		if (!_tcscmp(tmpbuf, _T("disabled"))) {
+			p->rtgvblankrate = -2;
+			return 1;
+		}
+		if (!_tcscmp(tmpbuf, _T("chipset"))) {
+			p->rtgvblankrate = 0;
+			return 1;
+		}
+		p->rtgvblankrate = _tstol(tmpbuf);
 		return 1;
 	}
 #ifdef ANDROID
@@ -2713,8 +2744,8 @@ int main(int argc, char* argv[])
 {
 	struct sigaction action{};
 
-	max_uae_width = 1920;
-	max_uae_height = 1080;
+	max_uae_width = 8192;
+	max_uae_height = 8192;
 
 	// Get startup path
 #ifdef ANDROID

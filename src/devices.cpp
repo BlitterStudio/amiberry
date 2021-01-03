@@ -398,6 +398,11 @@ void devices_restore_start(void)
 	restore_expansion_boards(NULL);
 }
 
+void devices_syncchange(void)
+{
+	//x86_bridge_sync_change();
+}
+
 void devices_pause(void)
 {
 #ifdef WITH_PPC

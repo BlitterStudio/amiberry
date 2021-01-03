@@ -48,3 +48,4 @@ extern void check_error_sdl(bool check, const char* message);
 extern void toggle_fullscreen();
 extern void DX_Fill(int dstx, int dsty, int width, int height, uae_u32 color);
 extern void update_win_fs_mode(struct uae_prefs* p);
+extern void sortdisplays();
