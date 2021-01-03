@@ -931,6 +931,7 @@ void picasso_refresh()
 	//lockrtg();
 	vidinfo->full_refresh = 1;
 	setconvert();
+	setupcursor();
 	rtg_clear();
 
 	//if (currprefs.rtgboards[0].rtgmem_type >= GFXBOARD_HARDWARE) {
@@ -944,7 +945,7 @@ void picasso_refresh()
 	*/
 	if (state->Address) {
 		unsigned int width, height;
-		
+
 		/* blit the stuff from our static frame-buffer to the gfx-card */
 		ri.Memory = gfxmem_bank.baseaddr + (state->Address - gfxmem_bank.start);
 		ri.BytesPerRow = state->BytesPerRow;
@@ -971,11 +972,10 @@ void picasso_refresh()
 }
 
 static int p96hsync;
-bool picasso_rendered = false;
 void picasso_handle_vsync()
 {
-	struct amigadisplay* ad = &adisplays;
-	struct picasso_vidbuf_description* vidinfo = &picasso_vidinfo;
+	struct amigadisplay *ad = &adisplays;
+	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo;
 	static int vsynccnt;
 	int thisisvsync = 1;
 	int vsync = isvsync_rtg();
@@ -993,9 +993,8 @@ void picasso_handle_vsync()
 	}
 
 	int state = vidinfo->picasso_state_change;
-
 	//if (state)
-		//lockrtg();
+	//	lockrtg();
 	if (state & PICASSO_STATE_SETDAC) {
 		atomic_and(&vidinfo->picasso_state_change, ~PICASSO_STATE_SETDAC);
 		rtg_clear();
@@ -1030,7 +1029,7 @@ void picasso_handle_vsync()
 		// do nothing
 	}
 	//if (state)
-		//unlockrtg();
+	//	unlockrtg();
 
 	//getvsyncrate(currprefs.chipset_refreshrate, &mult);
 	//if (vsync && mult < 0) {
@@ -2468,7 +2467,7 @@ static uae_u32 REGPARAM2 picasso_SetSwitch(TrapContext* ctx)
 
 void picasso_enablescreen(int on)
 {
-	bool uaegfx = currprefs.rtgboards[0].rtgmem_size;
+	bool uaegfx = currprefs.rtgboards[0].rtgmem_type < GFXBOARD_HARDWARE&& currprefs.rtgboards[0].rtgmem_size;
 	bool uaegfx_active = is_uaegfx_active();
 
 	if (uaegfx_active && uaegfx) {
@@ -3484,19 +3483,17 @@ static uae_u32 REGPARAM2 picasso_SetDisplay(TrapContext* ctx)
 
 void init_hz_p96()
 {
-	if (isvsync_rtg()) {
-		const auto rate = target_getcurrentvblankrate();
+	if (currprefs.rtgvblankrate < 0 || isvsync_rtg ())  {
+		float rate = target_getcurrentvblankrate();
 		if (rate < 0)
 			p96vblank = vblank_hz;
 		else
 			p96vblank = target_getcurrentvblankrate();
+	} else if (currprefs.rtgvblankrate == 0) {
+		p96vblank = vblank_hz;
+	} else {
+		p96vblank = currprefs.rtgvblankrate;
 	}
-	//else if (currprefs.win32_rtgvblankrate == 0) {
-	//	p96vblank = vblank_hz;
-	//}
-	//else {
-	//	p96vblank = currprefs.win32_rtgvblankrate;
-	//}
 	if (p96vblank <= 0)
 		p96vblank = 60;
 	if (p96vblank >= 300)
@@ -5634,17 +5631,19 @@ static void inituaegfxfuncs(TrapContext* ctx, uaecptr start, uaecptr ABI)
 	RTGCALL2X(PSSO_BoardInfo_CreateFeature, picasso_CreateFeature);
 	RTGCALL2X(PSSO_BoardInfo_DeleteFeature, picasso_DeleteFeature);
 #endif
+
 	RTGCALL2(PSSO_SetSplitPosition, picasso_SetSplitPosition);
-	
-	RTGCALL2(PSSO_BoardInfo_SetInterrupt, picasso_SetInterrupt);
+
+	if (currprefs.rtg_hardwareinterrupt)
+		RTGCALL2(PSSO_BoardInfo_SetInterrupt, picasso_SetInterrupt);
 
 	write_log (_T("uaegfx.card magic code: %08X-%08X BI=%08X\n"), start, here (), ABI);
 
-	if (ABI)
+	if (ABI && currprefs.rtg_hardwareinterrupt)
 		initvblankABI(ctx, uaegfx_base, ABI);
 }
 
-static void picasso_reset(int hardreset)
+static void picasso_reset2(int monid)
 {
 	struct picasso96_state_struct *state = &picasso96_state;
 	if (currprefs.rtg_multithread) {
@@ -5679,10 +5678,20 @@ static void picasso_reset(int hardreset)
 	//	close_rtg();
 	//}
 
-	struct amigadisplay *ad = &adisplays;
-	ad->picasso_requested_on = false;
+	//for (int i = 0; i < MAX_AMIGADISPLAYS; i++) {
+		//struct amigadisplay *ad = &adisplays[i];
+		struct amigadisplay* ad = &adisplays;
+		ad->picasso_requested_on = false;
+	//}
 
 	//unlockrtg();
+}
+
+static void picasso_reset(int hardreset)
+{
+	//for (int i = 0; i < MAX_AMIGADISPLAYS; i++) {
+		picasso_reset2(0);
+	//}
 }
 
 static void picasso_free()
@@ -5696,11 +5705,11 @@ static void picasso_free()
 	}
 }
 
-void uaegfx_install_code(uaecptr start)
+void uaegfx_install_code (uaecptr start)
 {
 	uaegfx_rom = start;
-	org(start);
-	inituaegfxfuncs(nullptr, start, 0);
+	org (start);
+	inituaegfxfuncs(NULL, start, 0);
 
 	device_add_reset(picasso_reset);
 	//device_add_hsync(picasso_handle_hsync);
