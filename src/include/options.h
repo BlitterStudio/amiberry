@@ -1123,7 +1123,7 @@ struct amiberry_options
 #else
 	bool use_sdl2_render_thread = false;
 #endif
-	bool use_drawing_thread = true;
+	bool use_drawing_thread = false;
 	int default_line_mode = 0;
 	int input_default_mouse_speed = 100;
 	bool input_keyboard_as_joystick_stop_keypresses = false;
