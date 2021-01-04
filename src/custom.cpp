@@ -8472,6 +8472,7 @@ static bool framewait (void)
 					show_screen(4);
 			}
 		}
+
 		maybe_process_pull_audio();
 
 		int legacy_avg = mavg (&ma_legacy, t, MAVG_VSYNC_SIZE);
@@ -8707,7 +8708,7 @@ static void vsync_handler_pre (void)
 		timehack_alive--;
 
 #ifdef PICASSO96
-	if (isvsync_rtg() >= 0)
+	if (isvsync_rtg () >= 0)
 		rtg_vsync ();
 #endif
 
@@ -9177,7 +9178,7 @@ static void hsync_handler_pre (bool onvsync)
 {
 	int hpos = current_hpos ();
 
-	if (!nocustom()) {
+	if (!nocustom ()) {
 		/* Using 0x8A makes sure that we don't accidentally trip over the
 			modified_regtypes check.  */
 		sync_copper_with_cpu (maxhpos, 0, 0x8A);
@@ -10609,6 +10610,8 @@ void custom_reset (bool hardreset, bool keyboardreset)
 		init_sprites ();
 	}
 
+	//specialmonitor_reset();
+
 	unset_special (~(SPCFLAG_BRK | SPCFLAG_MODE_CHANGE));
 
 	vpos = 0;
@@ -11681,7 +11684,7 @@ uae_u8 *save_custom (int *len, uae_u8 *dstptr, int full)
 	return dstbak;
 }
 
-uae_u8 *restore_custom_agacolors(uae_u8 *src)
+uae_u8 *restore_custom_agacolors (uae_u8 *src)
 {
 	int i;
 
@@ -12178,6 +12181,7 @@ uae_u32 wait_cpu_cycle_read (uaecptr addr, int mode)
 	}
 	peekdma_data.mask = 0;
 #endif
+
 	switch(mode)
 	{
 		case -1:
