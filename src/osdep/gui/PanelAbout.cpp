@@ -73,7 +73,6 @@ void ExitPanelAbout()
 {
 	delete lblEmulatorVersion;
 	delete lblSDL_compiled_version;
-	delete lblSDL_linked_version;
 	delete icon;
 	delete amiberryLogoImage;
 	delete textBoxScrollArea;
