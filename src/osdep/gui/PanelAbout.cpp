@@ -11,7 +11,6 @@
 
 static gcn::Label* lblEmulatorVersion;
 static gcn::Label* lblSDL_compiled_version;
-static gcn::Label* lblSDL_linked_version;
 static gcn::Icon* icon;
 static gcn::Image* amiberryLogoImage;
 static gcn::TextBox* textBox;
@@ -28,11 +27,9 @@ void InitPanelAbout(const struct _ConfigCategory& category)
 	icon = new gcn::Icon(amiberryLogoImage);
 	lblEmulatorVersion = new gcn::Label(get_version_string());
 	std::ostringstream sdl_compiled;
-	sdl_compiled << "Compiled against SDL2 " << int(compiled.major) << "." << int(compiled.minor) << "." << int(compiled.patch);
+	sdl_compiled << "Compiled against SDL2 v" << int(compiled.major) << "." << int(compiled.minor) << "." << int(compiled.patch);
+	sdl_compiled << ", Linked against SDL2 v" << int(linked.major) << "." << int(linked.minor) << "." << int(linked.patch);
 	lblSDL_compiled_version = new gcn::Label(sdl_compiled.str());
-	std::ostringstream sdl_linked;
-	sdl_linked << "Linked against SDL2 " << int(linked.major) << "." << int(linked.minor) << "." << int(linked.patch);
-	lblSDL_linked_version = new gcn::Label(sdl_linked.str());
 	
 	textBox = new gcn::TextBox(
 		"Dimitris Panokostas (MiDWaN) - Amiberry author\n"
@@ -66,8 +63,6 @@ void InitPanelAbout(const struct _ConfigCategory& category)
 	pos_y += lblEmulatorVersion->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(lblSDL_compiled_version, DISTANCE_BORDER, pos_y);
 	pos_y += lblSDL_compiled_version->getHeight() + DISTANCE_NEXT_Y;
-	category.panel->add(lblSDL_linked_version, DISTANCE_BORDER, pos_y);
-	pos_y += lblSDL_linked_version->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(textBoxScrollArea, DISTANCE_BORDER, pos_y);
 
