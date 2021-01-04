@@ -1,5 +1,6 @@
 #include <guisan.hpp>
 #include <SDL_ttf.h>
+#include <sstream>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
@@ -9,17 +10,30 @@
 #include "fsdb_host.h"
 
 static gcn::Label* lblEmulatorVersion;
+static gcn::Label* lblSDL_compiled_version;
+static gcn::Label* lblSDL_linked_version;
 static gcn::Icon* icon;
 static gcn::Image* amiberryLogoImage;
 static gcn::TextBox* textBox;
 static gcn::ScrollArea* textBoxScrollArea;
+static SDL_version compiled;
+static SDL_version linked;
 
 void InitPanelAbout(const struct _ConfigCategory& category)
 {
+	SDL_VERSION(&compiled);
+	SDL_GetVersion(&linked);
+	
 	amiberryLogoImage = gcn::Image::load(prefix_with_application_directory_path("data/amiberry-logo.png"));
 	icon = new gcn::Icon(amiberryLogoImage);
 	lblEmulatorVersion = new gcn::Label(get_version_string());
-
+	std::ostringstream sdl_compiled;
+	sdl_compiled << "Compiled against SDL2 " << compiled.major << "." << compiled.minor << "." << compiled.patch;
+	lblSDL_compiled_version = new gcn::Label(sdl_compiled.str());
+	std::ostringstream sdl_linked;
+	sdl_linked << "Linked against SDL2 " << linked.major << "." << linked.minor << "." << linked.patch;
+	lblSDL_linked_version = new gcn::Label(sdl_linked.str());
+	
 	textBox = new gcn::TextBox(
 		"Dimitris Panokostas (MiDWaN) - Amiberry author\n"
 		"Toni Wilen - WinUAE author\n"
@@ -50,6 +64,10 @@ void InitPanelAbout(const struct _ConfigCategory& category)
 
 	category.panel->add(lblEmulatorVersion, DISTANCE_BORDER, pos_y);
 	pos_y += lblEmulatorVersion->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(lblSDL_compiled_version, DISTANCE_BORDER, pos_y);
+	pos_y += lblSDL_compiled_version->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(lblSDL_linked_version, DISTANCE_BORDER, pos_y);
+	pos_y += lblSDL_linked_version->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(textBoxScrollArea, DISTANCE_BORDER, pos_y);
 
@@ -59,6 +77,8 @@ void InitPanelAbout(const struct _ConfigCategory& category)
 void ExitPanelAbout()
 {
 	delete lblEmulatorVersion;
+	delete lblSDL_compiled_version;
+	delete lblSDL_linked_version;
 	delete icon;
 	delete amiberryLogoImage;
 	delete textBoxScrollArea;
