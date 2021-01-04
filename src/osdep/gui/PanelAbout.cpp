@@ -28,10 +28,10 @@ void InitPanelAbout(const struct _ConfigCategory& category)
 	icon = new gcn::Icon(amiberryLogoImage);
 	lblEmulatorVersion = new gcn::Label(get_version_string());
 	std::ostringstream sdl_compiled;
-	sdl_compiled << "Compiled against SDL2 " << compiled.major << "." << compiled.minor << "." << compiled.patch;
+	sdl_compiled << "Compiled against SDL2 " << int(compiled.major) << "." << int(compiled.minor) << "." << int(compiled.patch);
 	lblSDL_compiled_version = new gcn::Label(sdl_compiled.str());
 	std::ostringstream sdl_linked;
-	sdl_linked << "Linked against SDL2 " << linked.major << "." << linked.minor << "." << linked.patch;
+	sdl_linked << "Linked against SDL2 " << int(linked.major) << "." << int(linked.minor) << "." << int(linked.patch);
 	lblSDL_linked_version = new gcn::Label(sdl_linked.str());
 	
 	textBox = new gcn::TextBox(
