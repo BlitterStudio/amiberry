@@ -880,6 +880,8 @@ struct uae_prefs
 	bool minimized_nosound;
 	int minimized_input;
 
+	bool rtgmatchdepth;
+	int rtgscaleaspectratio;
 	int rtgvblankrate;
 	bool automount_removable;
 	bool automount_cddrives;

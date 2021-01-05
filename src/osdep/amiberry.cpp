@@ -1570,7 +1570,7 @@ void target_fixup_options(struct uae_prefs* p)
 	if (p->rtgboards[0].rtgmem_type >= GFXBOARD_HARDWARE) {
 		p->rtg_hardwareinterrupt = false;
 		p->rtg_hardwaresprite = false;
-		//p->win32_rtgmatchdepth = false;
+		p->rtgmatchdepth = false;
 		p->color_mode = 5;
 		//if (p->ppc_model && !p->gfx_api) {
 		//	error_log(_T("Graphics board and PPC: Direct3D enabled."));
@@ -1711,7 +1711,9 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->start_minimized = false;
 	p->start_uncaptured = false;
 
-	p->rtgvblankrate = -1;
+	p->rtgmatchdepth = 1;
+	p->rtgscaleaspectratio = -1;
+	p->rtgvblankrate = 0;
 	p->automount_removable = false;
 	p->automount_cddrives = true;
 	p->uaescsimode = UAESCSI_CDEMU;
@@ -1785,6 +1787,10 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_target_dwrite_bool(f, _T("start_iconified"), p->start_minimized);
 	cfgfile_target_dwrite_bool(f, _T("start_not_captured"), p->start_uncaptured);
 
+	cfgfile_target_dwrite_bool(f, _T("rtg_match_depth"), p->rtgmatchdepth);
+	cfgfile_target_dwrite(f, _T("rtg_scale_aspect_ratio"), _T("%d:%d"),
+		p->rtgscaleaspectratio >= 0 ? (p->rtgscaleaspectratio / ASPECTMULT) : -1,
+		p->rtgscaleaspectratio >= 0 ? (p->rtgscaleaspectratio & (ASPECTMULT - 1)) : -1);
 	if (p->rtgvblankrate <= 0)
 		cfgfile_target_dwrite_str(f, _T("rtg_vblank"), p->rtgvblankrate == -1 ? _T("real") : (p->rtgvblankrate == -2 ? _T("disabled") : _T("chipset")));
 	else
@@ -1811,36 +1817,7 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_target_dwrite_bool(f, _T("use_retroarch_menu"), p->use_retroarch_menu);
 	cfgfile_target_dwrite_bool(f, _T("use_retroarch_reset"), p->use_retroarch_reset);
 
-#ifdef ANDROID
-	cfgfile_write(f, "amiberry.onscreen", "%d", p->onScreen);
-	cfgfile_write(f, "amiberry.onscreen_textinput", "%d", p->onScreen_textinput);
-	cfgfile_write(f, "amiberry.onscreen_dpad", "%d", p->onScreen_dpad);
-	cfgfile_write(f, "amiberry.onscreen_button1", "%d", p->onScreen_button1);
-	cfgfile_write(f, "amiberry.onscreen_button2", "%d", p->onScreen_button2);
-	cfgfile_write(f, "amiberry.onscreen_button3", "%d", p->onScreen_button3);
-	cfgfile_write(f, "amiberry.onscreen_button4", "%d", p->onScreen_button4);
-	cfgfile_write(f, "amiberry.onscreen_button5", "%d", p->onScreen_button5);
-	cfgfile_write(f, "amiberry.onscreen_button6", "%d", p->onScreen_button6);
-	cfgfile_write(f, "amiberry.custom_position", "%d", p->custom_position);
-	cfgfile_write(f, "amiberry.pos_x_textinput", "%d", p->pos_x_textinput);
-	cfgfile_write(f, "amiberry.pos_y_textinput", "%d", p->pos_y_textinput);
-	cfgfile_write(f, "amiberry.pos_x_dpad", "%d", p->pos_x_dpad);
-	cfgfile_write(f, "amiberry.pos_y_dpad", "%d", p->pos_y_dpad);
-	cfgfile_write(f, "amiberry.pos_x_button1", "%d", p->pos_x_button1);
-	cfgfile_write(f, "amiberry.pos_y_button1", "%d", p->pos_y_button1);
-	cfgfile_write(f, "amiberry.pos_x_button2", "%d", p->pos_x_button2);
-	cfgfile_write(f, "amiberry.pos_y_button2", "%d", p->pos_y_button2);
-	cfgfile_write(f, "amiberry.pos_x_button3", "%d", p->pos_x_button3);
-	cfgfile_write(f, "amiberry.pos_y_button3", "%d", p->pos_y_button3);
-	cfgfile_write(f, "amiberry.pos_x_button4", "%d", p->pos_x_button4);
-	cfgfile_write(f, "amiberry.pos_y_button4", "%d", p->pos_y_button4);
-	cfgfile_write(f, "amiberry.pos_x_button5", "%d", p->pos_x_button5);
-	cfgfile_write(f, "amiberry.pos_y_button5", "%d", p->pos_y_button5);
-	cfgfile_write(f, "amiberry.pos_x_button6", "%d", p->pos_x_button6);
-	cfgfile_write(f, "amiberry.pos_y_button6", "%d", p->pos_y_button6);
-	cfgfile_write(f, "amiberry.floating_joystick", "%d", p->floatingJoystick);
-	cfgfile_write(f, "amiberry.disable_menu_vkeyb", "%d", p->disableMenuVKeyb);
-#endif
+
 }
 
 void target_restart(void)
@@ -1969,39 +1946,29 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 		p->rtgvblankrate = _tstol(tmpbuf);
 		return 1;
 	}
-#ifdef ANDROID
-	int result = (cfgfile_intval(option, value, "onscreen", &p->onScreen, 1)
-		|| cfgfile_intval(option, value, "onscreen_textinput", &p->onScreen_textinput, 1)
-		|| cfgfile_intval(option, value, "onscreen_dpad", &p->onScreen_dpad, 1)
-		|| cfgfile_intval(option, value, "onscreen_button1", &p->onScreen_button1, 1)
-		|| cfgfile_intval(option, value, "onscreen_button2", &p->onScreen_button2, 1)
-		|| cfgfile_intval(option, value, "onscreen_button3", &p->onScreen_button3, 1)
-		|| cfgfile_intval(option, value, "onscreen_button4", &p->onScreen_button4, 1)
-		|| cfgfile_intval(option, value, "onscreen_button5", &p->onScreen_button5, 1)
-		|| cfgfile_intval(option, value, "onscreen_button6", &p->onScreen_button6, 1)
-		|| cfgfile_intval(option, value, "custom_position", &p->custom_position, 1)
-		|| cfgfile_intval(option, value, "pos_x_textinput", &p->pos_x_textinput, 1)
-		|| cfgfile_intval(option, value, "pos_y_textinput", &p->pos_y_textinput, 1)
-		|| cfgfile_intval(option, value, "pos_x_dpad", &p->pos_x_dpad, 1)
-		|| cfgfile_intval(option, value, "pos_y_dpad", &p->pos_y_dpad, 1)
-		|| cfgfile_intval(option, value, "pos_x_button1", &p->pos_x_button1, 1)
-		|| cfgfile_intval(option, value, "pos_y_button1", &p->pos_y_button1, 1)
-		|| cfgfile_intval(option, value, "pos_x_button2", &p->pos_x_button2, 1)
-		|| cfgfile_intval(option, value, "pos_y_button2", &p->pos_y_button2, 1)
-		|| cfgfile_intval(option, value, "pos_x_button3", &p->pos_x_button3, 1)
-		|| cfgfile_intval(option, value, "pos_y_button3", &p->pos_y_button3, 1)
-		|| cfgfile_intval(option, value, "pos_x_button4", &p->pos_x_button4, 1)
-		|| cfgfile_intval(option, value, "pos_y_button4", &p->pos_y_button4, 1)
-		|| cfgfile_intval(option, value, "pos_x_button5", &p->pos_x_button5, 1)
-		|| cfgfile_intval(option, value, "pos_y_button5", &p->pos_y_button5, 1)
-		|| cfgfile_intval(option, value, "pos_x_button6", &p->pos_x_button6, 1)
-		|| cfgfile_intval(option, value, "pos_y_button6", &p->pos_y_button6, 1)
-		|| cfgfile_intval(option, value, "floating_joystick", &p->floatingJoystick, 1)
-		|| cfgfile_intval(option, value, "disable_menu_vkeyb", &p->disableMenuVKeyb, 1)
-		);
-	if (result)
+
+	if (cfgfile_yesno(option, value, _T("rtg_match_depth"), &p->rtgmatchdepth))
 		return 1;
-#endif
+	
+	if (cfgfile_string(option, value, _T("rtg_scale_aspect_ratio"), tmpbuf, sizeof tmpbuf / sizeof(TCHAR))) {
+		int v1, v2;
+		TCHAR* s;
+
+		p->rtgscaleaspectratio = -1;
+		v1 = _tstol(tmpbuf);
+		s = _tcschr(tmpbuf, ':');
+		if (s) {
+			v2 = _tstol(s + 1);
+			if (v1 < 0 || v2 < 0)
+				p->rtgscaleaspectratio = -1;
+			else if (v1 == 0 || v2 == 0)
+				p->rtgscaleaspectratio = 0;
+			else
+				p->rtgscaleaspectratio = v1 * ASPECTMULT + v2;
+		}
+		return 1;
+	}
+	
 	return 0;
 }
 
