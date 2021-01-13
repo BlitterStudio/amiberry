@@ -1,5 +1,14 @@
 #pragma once
 #include <SDL.h>
+#include "rtgmodes.h"
+#include "uae/types.h"
+#include "traps.h"
+
+#define MAX_DISPLAYS 1
+
+#define RTG_MODE_SCALE 1
+#define RTG_MODE_CENTER 2
+#define RTG_MODE_INTEGER_SCALE 3
 
 #define GUI_WIDTH  800
 #define GUI_HEIGHT 600
