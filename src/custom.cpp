@@ -4711,7 +4711,7 @@ void compute_framesync(void)
 
 	vblank_hz = target_adjust_vblank_hz(vblank_hz);
 
-	struct chipset_refresh* cr = get_chipset_refresh(&currprefs);
+	struct chipset_refresh *cr = get_chipset_refresh(&currprefs);
 	while (cr) {
 		double v = -1;
 		if (!ad->picasso_on && !ad->picasso_requested_on) {
@@ -5085,7 +5085,7 @@ static void init_hz (bool checkvposw)
 #endif
 
 	compute_framesync ();
-	//devices_syncchange();
+	devices_syncchange();
 
 #ifdef PICASSO96
 	init_hz_p96();
@@ -5759,7 +5759,7 @@ static void DMACON (int hpos, uae_u16 v)
 	if ((dmacon & DMA_BLITPRI) > (oldcon & DMA_BLITPRI) && (blt_info.blit_main || blt_info.blit_finald))
 		set_special (SPCFLAG_BLTNASTY);
 
-	if (dmaen(DMA_BLITTER) && blt_info.blit_pending) {
+	if (dmaen (DMA_BLITTER) && blt_info.blit_pending) {
 		blitter_check_start ();
 	}
 
@@ -6391,6 +6391,8 @@ static void DDFSTOP (int hpos, uae_u16 v)
 static void FMODE (int hpos, uae_u16 v)
 {
 	if (!(currprefs.chipset_mask & CSMASK_AGA)) {
+		//if (currprefs.monitoremu)
+		//	specialmonitor_store_fmode(vpos, hpos, v);
 		v = 0;
 	}
 	v &= 0xC00F;
@@ -7878,6 +7880,8 @@ static void copper_handler(void)
 
 void blitter_done_notify (int hpos)
 {
+	bool nextline = false;
+
 	if (cop_state.state != COP_bltwait)
 		return;
 
@@ -7904,12 +7908,14 @@ void blitter_done_notify (int hpos)
 	vp_wait = vpos & (((cop_state.saved_i2 >> 8) & 0x7F) | 0x80);
 	vp = vpos;
 
-	hpos += 1;
+	hpos += 3;
 	hpos &= ~1;
 	if (hpos >= maxhpos) {
 		hpos -= maxhpos;
 		vp++;
+		nextline = true;
 	}
+
 	cop_state.hpos = hpos;
 	cop_state.vpos = vp;
 	cop_state.state = COP_wait;
@@ -7923,11 +7929,11 @@ void blitter_done_notify (int hpos)
 		record_copper_blitwait(cop_state.ip - 4, hpos, vp);
 #endif
 
-	if (dmaen(DMA_COPPER) && vp_wait >= cop_state.vcmp) {
+	if (dmaen(DMA_COPPER) && vp_wait >= cop_state.vcmp && !nextline) {
 		copper_enabled_thisline = 1;
 		set_special(SPCFLAG_COPPER);
 	} else {
-		unset_special (SPCFLAG_COPPER);
+		unset_special(SPCFLAG_COPPER);
 	}
 }
 
@@ -9090,7 +9096,9 @@ static void events_dmal(int hp)
 {
 	if (!dmal)
 		return;
-	if (currprefs.cpu_compatible) {
+	if (currprefs.cachesize) {
+		dmal_func2(0);
+	} else if (currprefs.cpu_compatible) {
 		while (dmal) {
 			if (dmal & 3)
 				break;
@@ -9100,8 +9108,6 @@ static void events_dmal(int hp)
 		}
 		event2_newevent2(hp, dmal_hpos + ((dmal & 2) ? 1 : 0), dmal_func);
 		dmal &= ~3;
-	} else if (currprefs.cachesize) {
-		dmal_func2(0);
 	} else {
 		event2_newevent2(hp, 13, dmal_func2);
 	}

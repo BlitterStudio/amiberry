@@ -593,6 +593,20 @@ static void send_sound(struct sound_data* sd, uae_u16* sndbuffer)
 		finish_sound_buffer_sdl2(sd, sndbuffer);
 }
 
+int get_sound_event(void)
+{
+	int type = sdp->devicetype;
+	if (sdp->paused || sdp->deactive)
+		return 0;
+	//if (type == SOUND_DEVICE_WASAPI || type == SOUND_DEVICE_WASAPI_EXCLUSIVE || type == SOUND_DEVICE_PA) {
+	//	struct sound_dp* s = sdp->data;
+	//	if (s && s->pullmode) {
+	//		return s->pullevent;
+	//	}
+	//}
+	return 0;
+}
+
 bool audio_is_event_frame_possible(int)
 {
 	if (sdp->paused || sdp->deactive || sdp->reset)

@@ -232,10 +232,10 @@ void devices_reset(int hardreset)
 
 void devices_vsync_pre(void)
 {
-	//audio_vsync (); // this is a no-op!
-	blkdev_vsync();
-	CIA_vsync_prehandler();
-	inputdevice_vsync();
+	audio_vsync ();
+	blkdev_vsync ();
+	CIA_vsync_prehandler ();
+	inputdevice_vsync ();
 	filesys_vsync ();
 	//sampler_vsync ();
 	clipboard_vsync ();
@@ -253,7 +253,7 @@ void devices_hsync(void)
 {
 	DISK_hsync();
 	audio_hsync();
-	//CIA_hsync_prehandler(); // This is a no-op!
+	CIA_hsync_prehandler();
 
 	decide_blitter (-1);
 #ifdef SERIAL_PORT
@@ -282,7 +282,9 @@ void devices_rethink(void)
 void devices_update_sound(double clk, double syncadjust)
 {
 	update_sound (clk);
+	//update_sndboard_sound (clk / syncadjust);
 	update_cda_sound(clk / syncadjust);
+	//x86_update_sound(clk / syncadjust);
 }
 
 void devices_update_sync(double svpos, double syncadjust)

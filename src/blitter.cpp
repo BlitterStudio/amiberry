@@ -1237,8 +1237,13 @@ bool decide_blitter_maybe_write(int hpos, uaecptr addr, uae_u16 value)
 		return false;
 	}
 
+	if (hpos < 0) {
+		hpos = maxhpos;
+	}
+
 	if (!blt_info.blit_main && !blt_info.blit_finald) {
-		return false;
+		last_blitter_hpos = hpos;
+		goto end;
 	}
 
 	if (log_blitter && blitter_delayed_debug) {
@@ -1248,10 +1253,6 @@ bool decide_blitter_maybe_write(int hpos, uaecptr addr, uae_u16 value)
 
 	if (!blitter_cycle_exact) {
 		return false;
-	}
-
-	if (hpos < 0) {
-		hpos = maxhpos;
 	}
 
 	while (last_blitter_hpos < hpos) {
@@ -1357,6 +1358,7 @@ bool decide_blitter_maybe_write(int hpos, uaecptr addr, uae_u16 value)
 
 		last_blitter_hpos++;
 	}
+end:
 	reset_channel_mods();
 	if (hsync)
 		last_blitter_hpos = 0;

@@ -221,6 +221,7 @@ typedef struct {
 	int lastdataacesstrack;
 	int lastrev;
 	bool track_access_done;
+	bool fourms;
 #endif
 } drive;
 
@@ -575,12 +576,14 @@ static int get_floppy_speed_from_image(drive *drv)
 	
 	m = get_floppy_speed();
 	l = drv->tracklen;
+	drv->fourms = false;
 	if (!drv->tracktiming[0]) {
 		m = m * l / (2 * 8 * FLOPPY_WRITE_LEN * drv->ddhd);
 	}
 	// 4us track?
 	if (l < (FLOPPY_WRITE_LEN_PAL * 8) * 4 / 6) {
 		m *= 2;
+		drv->fourms = true;
 	}
 	if (m <= 0) {
 		m = 1;
@@ -3302,11 +3305,37 @@ static bool unformatted (drive *drv)
 	return false;
 }
 
-/* get one bit from MFM bit stream */
-STATIC_INLINE uae_u32 getonebit (uae_u16 * mfmbuf, int mfmpos)
+static int nextbit(drive *drv)
+{
+	return drv && !drv->fourms && !(adkcon & 0x0100) ? 2 : 1;
+}
+
+/* get one bit from bit stream */
+static uae_u32 getonebit(drive *drv, uae_u16 *mfmbuf, int mfmpos, int *inc)
 {
 	uae_u16 *buf;
 
+	if (inc)
+		*inc = 1;
+	if (inc && nextbit(drv) == 2) {
+		// 2us -> 4us
+		int b1 = getonebit(NULL, mfmbuf, mfmpos, NULL);
+		int b2 = getonebit(NULL, mfmbuf, (mfmpos + 1) % drv->tracklen, NULL);
+		if (!b1 && b2) {
+			*inc = 3;
+			return 1;
+		}
+		if (b1 && !b2) {
+			*inc = 2;
+			return 1;
+		}
+		if (b1 && b2) {
+			*inc = 3;
+			return 1;
+		}
+		*inc = 2;
+		return 0;
+	}
 	buf = &mfmbuf[mfmpos >> 4];
 	return (buf[0] & (1 << (15 - (mfmpos & 15)))) ? 1 : 0;
 }
@@ -3545,6 +3574,7 @@ static void disk_doupdate_predict (int startcycle)
 		noselected = false;
 		int countcycle = startcycle;
 		while (countcycle < (maxhpos << 8)) {
+			int inc = nextbit(drv);
 			if (drv->tracktiming[0])
 				updatetrackspeed (drv, mfmpos);
 			countcycle += drv->trackspeed;
@@ -3554,12 +3584,12 @@ static void disk_doupdate_predict (int startcycle)
 					if (unformatted (drv))
 						tword |= (uaerand () & 0x1000) ? 1 : 0;
 					else
-						tword |= getonebit (drv->bigmfmbuf, mfmpos);
+						tword |= getonebit(drv, drv->bigmfmbuf, mfmpos, &inc);
 				}
 				if (dskdmaen != DSKDMA_READ && (tword & 0xffff) == dsksync && dsksync != 0)
 					diskevent_flag |= DISK_WORDSYNC;
 			}
-			mfmpos++;
+			mfmpos += inc;
 			mfmpos %= drv->tracklen;
 			if (!dskdmaen) {
 				if (mfmpos == 0)
@@ -3717,6 +3747,7 @@ static void disk_doupdate_read (drive * drv, int floppybits)
 	*/
 	while (floppybits >= drv->trackspeed) {
 		bool skipbit = false;
+		int inc = nextbit(drv);
 
 		if (drv->tracktiming[0])
 			updatetrackspeed (drv, drv->mfmpos);
@@ -3727,7 +3758,7 @@ static void disk_doupdate_read (drive * drv, int floppybits)
 			if (unformatted (drv))
 				word |= (uaerand () & 0x1000) ? 1 : 0;
 			else
-				word |= getonebit (drv->bigmfmbuf, drv->mfmpos);
+				word |= getonebit(drv, drv->bigmfmbuf, drv->mfmpos, &inc);
 		}
 
 		//write_log (_T("%08X bo=%d so=%d mfmpos=%d dma=%d\n"), (word & 0xffffff), bitoffset, syncoffset, drv->mfmpos, dma_enable);
@@ -3735,7 +3766,7 @@ static void disk_doupdate_read (drive * drv, int floppybits)
 			word >>= 1;
 			return;
 		}
-		drv->mfmpos++;
+		drv->mfmpos += inc;
 		drv->mfmpos %= drv->tracklen;
 		if (drv->mfmpos == drv->indexoffset) {
 			if (disk_debug_logging > 2 && drv->indexhack)
@@ -3751,7 +3782,7 @@ static void disk_doupdate_read (drive * drv, int floppybits)
 		if (drv->mfmpos == drv->skipoffset) {
 			int skipcnt = disk_jitter;
 			while (skipcnt-- > 0) {
-				drv->mfmpos++;
+				drv->mfmpos += nextbit(drv);
 				drv->mfmpos %= drv->tracklen;
 				if (drv->mfmpos == drv->indexoffset) {
 					if (disk_debug_logging > 2 && drv->indexhack)
