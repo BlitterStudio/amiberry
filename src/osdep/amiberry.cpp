@@ -1617,6 +1617,79 @@ void target_fixup_options(struct uae_prefs* p)
 
 void target_default_options(struct uae_prefs* p, int type)
 {
+	//TCHAR buf[MAX_DPATH];
+	if (type == 2 || type == 0 || type == 3) {
+		//p->logfile = 0;
+		p->active_nocapture_pause = 0;
+		p->active_nocapture_nosound = 0;
+		p->minimized_nosound = 1;
+		p->minimized_pause = 1;
+		p->minimized_input = 0;
+		p->inactive_nosound = 0;
+		p->inactive_pause = 0;
+		p->inactive_input = 0;
+		//p->ctrl_F11_is_quit = 0;
+		//p->soundcard = 0;
+		//p->samplersoundcard = -1;
+		p->minimize_inactive = 0;
+		p->capture_always = false;
+		p->start_minimized = false;
+		p->start_uncaptured = false;
+		p->active_capture_priority = 1;
+		p->inactive_priority = 2;
+		p->minimized_priority = 3;
+		//p->notaskbarbutton = false;
+		//p->nonotificationicon = false;
+		//p->main_alwaysontop = false;
+		//p->gui_alwaysontop = false;
+		//p->guikey = -1;
+		p->automount_removable = 0;
+		//p->automount_drives = 0;
+		//p->automount_removabledrives = 0;
+		p->automount_cddrives = 0;
+		//p->automount_netdrives = 0;
+		//p->kbledmode = 1;
+		p->uaescsimode = UAESCSI_CDEMU;
+		p->borderless = false;
+		p->blankmonitors = false;
+		//p->powersavedisabled = true;
+		p->sana2 = false;
+		p->rtgmatchdepth = true;
+		p->gf[APMODE_RTG].gfx_filter_autoscale = RTG_MODE_SCALE;
+		p->rtgallowscaling = false;
+		p->rtgscaleaspectratio = -1;
+		p->rtgvblankrate = 0;
+		p->rtg_hardwaresprite = true;
+		//p->commandpathstart[0] = 0;
+		//p->commandpathend[0] = 0;
+		//p->statusbar = 1;
+		p->gfx_api = 2;
+		if (p->gfx_api > 1)
+			p->color_mode = 5;
+		if (p->gf[APMODE_NATIVE].gfx_filter == 0 && p->gfx_api)
+			p->gf[APMODE_NATIVE].gfx_filter = 1;
+		if (p->gf[APMODE_RTG].gfx_filter == 0 && p->gfx_api)
+			p->gf[APMODE_RTG].gfx_filter = 1;
+		//WIN32GUI_LoadUIString(IDS_INPUT_CUSTOM, buf, sizeof buf / sizeof(TCHAR));
+		//for (int i = 0; i < GAMEPORT_INPUT_SETTINGS; i++)
+		//	_stprintf(p->input_config_name[i], buf, i + 1);
+		//p->aviout_xoffset = -1;
+		//p->aviout_yoffset = -1;
+	}
+	if (type == 1 || type == 0 || type == 3) {
+		p->uaescsimode = UAESCSI_CDEMU;
+		//p->midioutdev = -2;
+		//p->midiindev = 0;
+		//p->midirouter = false;
+		p->automount_removable = 0;
+		//p->automount_drives = 0;
+		//p->automount_removabledrives = 0;
+		p->automount_cddrives = true;
+		//p->automount_netdrives = 0;
+		p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5PC | RGBFF_B8G8R8A8;
+		//p->filesystem_mangle_reserved_names = true;
+	}
+	
 	p->fast_copper = 0;
 	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5PC | RGBFF_R8G8B8A8;
 
@@ -1695,28 +1768,6 @@ void target_default_options(struct uae_prefs* p, int type)
 	_tcscpy(p->action_replay, amiberry_options.default_ar_key);
 	_tcscpy(p->fullscreen_toggle, amiberry_options.default_fullscreen_toggle_key);
 
-	p->active_capture_priority = 1;
-	p->active_nocapture_pause = false;
-	p->active_nocapture_nosound = false;
-	p->inactive_priority = 0;
-	p->inactive_nosound = false;
-	p->inactive_pause = false;
-	p->inactive_input = 0;
-	p->minimized_priority = 0;
-	p->minimized_pause = true;
-	p->minimized_nosound = true;
-	p->minimized_input = 0;
-	p->minimize_inactive = false;
-	p->capture_always = false;
-	p->start_minimized = false;
-	p->start_uncaptured = false;
-
-	p->rtgmatchdepth = 1;
-	p->rtgscaleaspectratio = -1;
-	p->rtgvblankrate = 0;
-	p->automount_removable = false;
-	p->automount_cddrives = true;
-	p->uaescsimode = UAESCSI_CDEMU;
 	p->input_analog_remap = false;
 
 	p->use_retroarch_quit = amiberry_options.default_retroarch_quit;
@@ -1725,39 +1776,6 @@ void target_default_options(struct uae_prefs* p, int type)
 
 	p->whdbootprefs.buttonwait = amiberry_options.default_whd_buttonwait;
 	p->whdbootprefs.showsplash = amiberry_options.default_whd_showsplash;
-
-#ifdef ANDROID
-	p->onScreen = 1;
-	p->onScreen_textinput = 1;
-	p->onScreen_dpad = 1;
-	p->onScreen_button1 = 1;
-	p->onScreen_button2 = 1;
-	p->onScreen_button3 = 1;
-	p->onScreen_button4 = 1;
-	p->onScreen_button5 = 0;
-	p->onScreen_button6 = 0;
-	p->custom_position = 0;
-	p->pos_x_textinput = 0;
-	p->pos_y_textinput = 0;
-	p->pos_x_dpad = 4;
-	p->pos_y_dpad = 215;
-	p->pos_x_button1 = 430;
-	p->pos_y_button1 = 286;
-	p->pos_x_button2 = 378;
-	p->pos_y_button2 = 286;
-	p->pos_x_button3 = 430;
-	p->pos_y_button3 = 214;
-	p->pos_x_button4 = 378;
-	p->pos_y_button4 = 214;
-	p->pos_x_button5 = 430;
-	p->pos_y_button5 = 142;
-	p->pos_x_button6 = 378;
-	p->pos_y_button6 = 142;
-	p->extfilter = 1;
-	p->quickSwitch = 0;
-	p->floatingJoystick = 0;
-	p->disableMenuVKeyb = 0;
-#endif
 }
 
 static const TCHAR* scsimode[] = { _T("SCSIEMU"), _T("SPTI"), _T("SPTI+SCSISCAN"), NULL };
@@ -1788,6 +1806,7 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_target_dwrite_bool(f, _T("start_not_captured"), p->start_uncaptured);
 
 	cfgfile_target_dwrite_bool(f, _T("rtg_match_depth"), p->rtgmatchdepth);
+	cfgfile_target_dwrite_bool(f, _T("rtg_scale_allow"), p->rtgallowscaling);
 	cfgfile_target_dwrite(f, _T("rtg_scale_aspect_ratio"), _T("%d:%d"),
 		p->rtgscaleaspectratio >= 0 ? (p->rtgscaleaspectratio / ASPECTMULT) : -1,
 		p->rtgscaleaspectratio >= 0 ? (p->rtgscaleaspectratio & (ASPECTMULT - 1)) : -1);
@@ -1795,8 +1814,10 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 		cfgfile_target_dwrite_str(f, _T("rtg_vblank"), p->rtgvblankrate == -1 ? _T("real") : (p->rtgvblankrate == -2 ? _T("disabled") : _T("chipset")));
 	else
 		cfgfile_target_dwrite(f, _T("rtg_vblank"), _T("%d"), p->rtgvblankrate);
-	
+	cfgfile_target_dwrite_bool(f, _T("borderless"), p->borderless);
+	cfgfile_target_dwrite_bool(f, _T("blank_monitors"), p->blankmonitors);
 	cfgfile_target_dwrite_str(f, _T("uaescsimode"), scsimode[p->uaescsimode]);
+	
 	cfgfile_target_dwrite(f, _T("cpu_idle"), _T("%d"), p->cpu_idle);
 	cfgfile_target_dwrite_bool(f, _T("right_control_is_right_win"), p->right_control_is_right_win_key);
 	
@@ -1816,8 +1837,6 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_target_dwrite_bool(f, _T("use_retroarch_quit"), p->use_retroarch_quit);
 	cfgfile_target_dwrite_bool(f, _T("use_retroarch_menu"), p->use_retroarch_menu);
 	cfgfile_target_dwrite_bool(f, _T("use_retroarch_reset"), p->use_retroarch_reset);
-
-
 }
 
 void target_restart(void)
@@ -1893,6 +1912,10 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 		p->active_nocapture_nosound = false;
 		return 1;
 	}
+	if (cfgfile_yesno(option, value, _T("borderless"), &p->borderless))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("blank_monitors"), &p->blankmonitors))
+		return 1;
 	if (cfgfile_yesno(option, value, _T("active_nocapture_pause"), &p->active_nocapture_pause))
 		return 1;
 	if (cfgfile_yesno(option, value, _T("active_nocapture_nosound"), &p->active_nocapture_nosound))
@@ -1948,6 +1971,9 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 	}
 
 	if (cfgfile_yesno(option, value, _T("rtg_match_depth"), &p->rtgmatchdepth))
+		return 1;
+
+	if (cfgfile_yesno(option, value, _T("rtg_scale_allow"), &p->rtgallowscaling))
 		return 1;
 	
 	if (cfgfile_string(option, value, _T("rtg_scale_aspect_ratio"), tmpbuf, sizeof tmpbuf / sizeof(TCHAR))) {

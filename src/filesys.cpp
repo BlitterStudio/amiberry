@@ -4363,7 +4363,6 @@ static int exalldo(TrapContext *ctx, uaecptr exalldata, uae_u32 exalldatasize, u
 		size2 += 4;
 	}
 	if (type >= 5) {
-
 		timeval_to_amiga (&statbuf.mtime, &days, &mins, &ticks, 50);
 		size2 += 12;
 	}

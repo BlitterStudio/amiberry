@@ -424,7 +424,7 @@ static void blitter_interrupt (int hpos, int done)
 	if (!done && (!blitter_cycle_exact || immediate_blits || currprefs.cpu_model >= 68030 || currprefs.cachesize || currprefs.m68k_speed < 0))
 		return;
 	blt_info.blit_interrupt = 1;
-	send_interrupt(6, (4 + 1) * CYCLE_UNIT);
+	send_interrupt (6, (4 + 1) * CYCLE_UNIT);
 	//if (debug_dma)
 	//	record_dma_event (DMA_EVENT_BLITIRQ, hpos, vpos);
 	blitter_done_notify(hpos);
@@ -1116,7 +1116,7 @@ static void blitter_doddma_new(int hpos)
 	record_dma_blit(0x00, ddat1, bltdpt, hpos);
 	chipmem_agnus_wput2 (bltdpt, ddat1);
 	alloc_cycle_blitter (hpos, &bltdpt, 4);
-	
+
 	if (!blitline) {
 		bltdpt += blit_add;
 		if (blitter_hcounter == 0) {
@@ -1310,9 +1310,9 @@ bool decide_blitter_maybe_write(int hpos, uaecptr addr, uae_u16 value)
 					last_custom_value1 = blt_info.bltcdat;
 					record_dma_blit_val(blt_info.bltcdat);
 					alloc_cycle_blitter(last_blitter_hpos, &bltcpt, 3);
-					
+
 				} else if (c == 5 && blitline) { // line 3/4 (free)
-					
+
 					blitter_line();
 
 					written = decide_blitter_idle(last_blitter_hpos, hpos, addr, value);
@@ -1325,7 +1325,7 @@ bool decide_blitter_maybe_write(int hpos, uaecptr addr, uae_u16 value)
 
 					blitter_line_proc();
 					blitter_nxline();
-					
+
 					/* onedot mode and no pixel = bus write access is skipped */
 					if (blitlinepixel) {
 						record_dma_blit(0x00, blt_info.bltddat, bltdpt, last_blitter_hpos);

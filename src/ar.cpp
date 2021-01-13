@@ -680,6 +680,7 @@ static uae_u32 REGPARAM2 arram_lget (uaecptr addr)
 	addr -= arram_start;
 	addr &= arram_mask;
 	m = (uae_u32 *)(armemory_ram + addr);
+
 	return do_get_mem_long (m);
 }
 
@@ -712,6 +713,7 @@ void REGPARAM2 arram_lput (uaecptr addr, uae_u32 l)
 	addr -= arram_start;
 	addr &= arram_mask;
 	m = (uae_u32 *)(armemory_ram + addr);
+
 	do_put_mem_long (m, l);
 }
 

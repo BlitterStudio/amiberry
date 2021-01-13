@@ -881,11 +881,14 @@ struct uae_prefs
 	int minimized_input;
 
 	bool rtgmatchdepth;
+	bool rtgallowscaling;
 	int rtgscaleaspectratio;
 	int rtgvblankrate;
+	bool borderless;
 	bool automount_removable;
 	bool automount_cddrives;
 	int uaescsimode;
+	bool blankmonitors;
 	bool right_control_is_right_win_key;
 
 	int statecapturerate, statecapturebuffersize;
@@ -937,40 +940,6 @@ struct uae_prefs
 
 	struct whdbooter whdbootprefs;
 
-#endif
-
-	/* ANDROID */
-#ifdef ANDROID
-	int onScreen;
-	int onScreen_textinput;
-	int onScreen_dpad;
-	int onScreen_button1;
-	int onScreen_button2;
-	int onScreen_button3;
-	int onScreen_button4;
-	int onScreen_button5;
-	int onScreen_button6;
-	int custom_position;
-	int pos_x_textinput;
-	int pos_y_textinput;
-	int pos_x_dpad;
-	int pos_y_dpad;
-	int pos_x_button1;
-	int pos_y_button1;
-	int pos_x_button2;
-	int pos_y_button2;
-	int pos_x_button3;
-	int pos_y_button3;
-	int pos_x_button4;
-	int pos_y_button4;
-	int pos_x_button5;
-	int pos_y_button5;
-	int pos_x_button6;
-	int pos_y_button6;
-	int extfilter;
-	int quickSwitch;
-	int floatingJoystick;
-	int disableMenuVKeyb;
 #endif
 };
 
