@@ -863,6 +863,8 @@ struct uae_prefs
 	int gfx_correct_aspect;
 	int scaling_method;
 
+	bool gui_alwaysontop;
+	bool main_alwaysontop;
 	bool minimize_inactive;
 	bool capture_always;
 	bool start_minimized;

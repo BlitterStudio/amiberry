@@ -1640,8 +1640,8 @@ void target_default_options(struct uae_prefs* p, int type)
 		p->minimized_priority = 3;
 		//p->notaskbarbutton = false;
 		//p->nonotificationicon = false;
-		//p->main_alwaysontop = false;
-		//p->gui_alwaysontop = false;
+		p->main_alwaysontop = false;
+		p->gui_alwaysontop = false;
 		//p->guikey = -1;
 		p->automount_removable = 0;
 		//p->automount_drives = 0;
@@ -1819,6 +1819,8 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_target_dwrite_str(f, _T("uaescsimode"), scsimode[p->uaescsimode]);
 	
 	cfgfile_target_dwrite(f, _T("cpu_idle"), _T("%d"), p->cpu_idle);
+	cfgfile_target_dwrite_bool(f, _T("always_on_top"), p->main_alwaysontop);
+	cfgfile_target_dwrite_bool(f, _T("gui_always_on_top"), p->gui_alwaysontop);
 	cfgfile_target_dwrite_bool(f, _T("right_control_is_right_win"), p->right_control_is_right_win_key);
 	
 	cfgfile_target_dwrite_bool(f, _T("gfx_auto_height"), p->gfx_auto_height);
@@ -1945,6 +1947,10 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 	if (cfgfile_yesno(option, value, _T("start_not_captured"), &p->start_uncaptured))
 		return 1;
 	if (cfgfile_yesno(option, value, _T("right_control_is_right_win"), &p->right_control_is_right_win_key))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("always_on_top"), &p->main_alwaysontop))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("gui_always_on_top"), &p->gui_alwaysontop))
 		return 1;
 	if (cfgfile_string(option, value, _T("serial_port"), &p->sername[0], 256)) {
 		if (p->sername[0])
