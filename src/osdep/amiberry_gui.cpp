@@ -371,7 +371,7 @@ ConfigFileInfo* SearchConfigInList(const char* name)
 
 void disk_selection(const int drive, uae_prefs* prefs)
 {
-	const char* diskfile_filter[] = { ".adf", ".adz", ".fdi", ".ipf", ".zip", ".dms", ".gz", ".xz", "\0" };
+	const char* diskfile_filter[] = { ".adf", ".adz", ".fdi", ".ipf", ".zip", ".dms", ".gz", ".xz", ".scp", "\0" };
 	char tmp[MAX_DPATH];
 
 	if (strlen(prefs->floppyslots[drive].df) > 0)
