@@ -132,8 +132,7 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 	else
 		x_start = TD_PADX;
 
-	for (led = 0; led < LED_MAX; led++)
-	{
+	for (led = 0; led < LED_MAX; led++) {
 		int pos, num1 = -1, num2 = -1, num3 = -1, num4 = -1;
 		int x, c, on = 0, am = 2;
 		xcolnr on_rgb = 0, on_rgb2 = 0, off_rgb = 0, pen_rgb = 0;
@@ -145,22 +144,19 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 			continue;
 
 		pen_rgb = c1;
-		if (led >= LED_DF0 && led <= LED_DF3)
-		{
+		if (led >= LED_DF0 && led <= LED_DF3) {
 			int pled = led - LED_DF0;
-			struct floppyslot* fs = &currprefs.floppyslots[pled];
-			struct gui_info_drive* gid = &gui_data.drives[pled];
+			struct floppyslot *fs = &currprefs.floppyslots[pled];
+			struct gui_info_drive *gid = &gui_data.drives[pled];
 			int track = gid->drive_track;
 			pos = 7 + pled;
 			on_rgb = 0x00cc00;
-			if (!gid->drive_disabled)
-			{
+			if (!gid->drive_disabled) {
 				num1 = -1;
 				num2 = track / 10;
 				num3 = track % 10;
 				on = gid->drive_motor;
-				if (gid->drive_writing)
-				{
+				if (gid->drive_writing) {
 					on_rgb = bpp == 2 ? 0xcc0000 : 0x0000cc;
 				}
 				half = gui_data.drive_side ? 1 : -1;
@@ -174,23 +170,17 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 			on_rgb &= 0xffffff;
 			off_rgb = rgbmuldiv(on_rgb, 2, 4);
 			on_rgb2 = rgbmuldiv(on_rgb, 2, 3);
-		}
-		else if (led == LED_POWER)
-		{
+		} else if (led == LED_POWER) {
 			pos = 3;
 			on_rgb = bpp == 2 ? ((gui_data.powerled_brightness * 10 / 16) + 0x330000) << 16 : ((gui_data.powerled_brightness * 10 / 16) + 0x000033) << 16;
 			on = 1;
 			off_rgb = bpp == 2 ? 0x330000 : 0x000033;
-		}
-		else if (led == LED_CD)
-		{
+		} else if (led == LED_CD) {
 			pos = 5;
-			if (gui_data.cd >= 0)
-			{
+			if (gui_data.cd >= 0) {
 				on = gui_data.cd & (LED_CD_AUDIO | LED_CD_ACTIVE);
 				on_rgb = (on & LED_CD_AUDIO) ? 0x00cc00 : bpp == 2 ? 0x0000cc : 0xcc0000;
-				if ((gui_data.cd & LED_CD_ACTIVE2) && !(gui_data.cd & LED_CD_AUDIO))
-				{
+				if ((gui_data.cd & LED_CD_ACTIVE2) && !(gui_data.cd & LED_CD_AUDIO)) {
 					on_rgb &= 0xfefefe;
 					on_rgb >>= 1;
 				}
@@ -199,12 +189,9 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 				num2 = 10;
 				num3 = 12;
 			}
-		}
-		else if (led == LED_HD)
-		{
+		} else if (led == LED_HD) {
 			pos = 4;
-			if (gui_data.hd >= 0)
-			{
+			if (gui_data.hd >= 0) {
 				on = gui_data.hd;
 				on_rgb = on == 2 ? (bpp == 2 ? 0xcc0000 : 0x0000cc) : (bpp == 2 ? 0x0000cc : 0xcc0000);
 				off_rgb = bpp == 2 ? 0x000033 : 0x330000;
@@ -212,27 +199,21 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 				num2 = 11;
 				num3 = 12;
 			}
-		}
-		else if (led == LED_FPS)
-		{
+		} else if (led == LED_FPS) {
 			pos = 2;
-			if (pause_emulation)
-			{
+			if (pause_emulation) {
 				num1 = -1;
 				num2 = -1;
 				num3 = 16;
 				on_rgb = 0xcccccc;
 				off_rgb = 0x000000;
 				am = 2;
-			}
-			else
-			{
+			} else {
 				int fps = (gui_data.fps + 5) / 10;
 				on_rgb = 0x000000;
 				off_rgb = gui_data.fps_color ? 0xcccc00 : 0x000000;
 				am = 3;
-				if (fps > 999)
-				{
+				if (fps > 999) {
 					fps += 50;
 					fps /= 10;
 					if (fps > 999)
@@ -241,9 +222,7 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 					num1 %= 10;
 					num2 = 18;
 					num3 = (fps - num1 * 100) / 10;
-				}
-				else
-				{
+				} else {
 					num1 = fps / 100;
 					num2 = (fps - num1 * 100) / 10;
 					num3 = fps % 10;
@@ -253,36 +232,28 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 						am = 2;
 				}
 			}
-		}
-		else if (led == LED_CPU)
-		{
+		} else if (led == LED_CPU) {
 			int idle = (gui_data.idle + 5) / 10;
 			pos = 1;
 			on_rgb = bpp == 2 ? 0xcc0000 : 0x0000cc;
 			off_rgb = 0x000000;
-			if (gui_data.cpu_halted)
-			{
+			if (gui_data.cpu_halted) {
 				idle = 0;
 				on = 1;
-				if (gui_data.cpu_halted < 0)
-				{
+				if (gui_data.cpu_halted < 0) {
 					on_rgb = 0x000000;
 					num1 = 16; // PPC
 					num2 = 16;
 					num3 = 10;
 					am = 3;
-				}
-				else
-				{
+				} else {
 					on_rgb = 0xcccc00;
 					num1 = gui_data.cpu_halted >= 10 ? 11 : -1;
 					num2 = gui_data.cpu_halted >= 10 ? (gui_data.cpu_halted / 10) % 10 : 11;
 					num3 = gui_data.cpu_halted % 10;
 					am = 2;
 				}
-			}
-			else
-			{
+			} else {
 				num1 = idle / 100;
 				num2 = (idle - num1 * 100) / 10;
 				num3 = idle % 10;
@@ -291,16 +262,13 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 				num4 = num1 == 0 ? 13 : -1;
 				am = 3;
 			}
-		}
-		else if (led == LED_SND && gui_data.sndbuf_avail)
-		{
+		} else if (led == LED_SND && gui_data.sndbuf_avail) {
 			int snd = abs(gui_data.sndbuf + 5) / 10;
 			if (snd > 99)
 				snd = 99;
 			pos = 0;
 			on = gui_data.sndbuf_status;
-			if (on < 3)
-			{
+			if (on < 3) {
 				num1 = gui_data.sndbuf < 0 ? 15 : 14;
 				num2 = snd / 10;
 				num3 = snd % 10;
@@ -314,9 +282,7 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 				on_rgb = bpp == 2 ? 0x0000cc : 0xcc0000; // "normal" overflow
 			off_rgb = 0x000000;
 			am = 3;
-		}
-		else if (led == LED_MD)
-		{
+		} else if (led == LED_MD) {
 			// DF3 reused as internal non-volatile ram led (cd32/cdtv)
 			if (gui_data.drives[3].drive_disabled && gui_data.md >= 0) {
 				pos = 7 + 3;
@@ -328,16 +294,12 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 				num1 = -1;
 				num2 = 17;
 				num3 = 19;
-			}
-			else {
+			} else {
 				continue;
 			}
-		}
-		else if (led == LED_NET)
-		{
+		} else if (led == LED_NET) {
 			pos = 6;
-			if (gui_data.net >= 0)
-			{
+			if (gui_data.net >= 0) {
 				on = gui_data.net;
 				on_rgb = 0;
 				if (on & 1)
@@ -406,11 +368,11 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 #define MAX_STATUSLINE_QUEUE 8
 struct statusline_struct
 {
-	TCHAR* text;
+	TCHAR *text;
 	int type;
 };
 struct statusline_struct statusline_data[MAX_STATUSLINE_QUEUE];
-static TCHAR* statusline_text_active;
+static TCHAR *statusline_text_active;
 static int statusline_delay;
 static bool statusline_had_changed;
 
@@ -428,17 +390,16 @@ static void statusline_update_notification(void)
 
 void statusline_clear(void)
 {
-	statusline_text_active = nullptr;
+	statusline_text_active = NULL;
 	statusline_delay = 0;
-	for (auto& i : statusline_data)
-	{
-		xfree(i.text);
-		i.text = nullptr;
+	for (int i = 0; i < MAX_STATUSLINE_QUEUE; i++) {
+		xfree(statusline_data[i].text);
+		statusline_data[i].text = NULL;
 	}
 	statusline_update_notification();
 }
 
-const TCHAR* statusline_fetch(void)
+const TCHAR *statusline_fetch(void)
 {
 	return statusline_text_active;
 }
@@ -520,13 +481,12 @@ void statusline_vsync(void)
 	statusline_delay--;
 	if (statusline_delay)
 		return;
-	statusline_text_active = nullptr;
+	statusline_text_active = NULL;
 	xfree(statusline_data[0].text);
-	for (int i = 1; i < MAX_STATUSLINE_QUEUE; i++)
-	{
+	for (int i = 1; i < MAX_STATUSLINE_QUEUE; i++) {
 		statusline_data[i - 1].text = statusline_data[i].text;
 	}
-	statusline_data[MAX_STATUSLINE_QUEUE - 1].text = nullptr;
+	statusline_data[MAX_STATUSLINE_QUEUE - 1].text = NULL;
 	statusline_text_active = statusline_data[0].text;
 	statusline_update_notification();
 }
