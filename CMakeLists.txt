@@ -191,7 +191,7 @@ include_directories(
         src/archivers
 )
 
-add_definitions(-DAMIBERRY)
+add_definitions(-DAMIBERRY -DCPU_AARCH64)
 
 find_package(SDL2 CONFIG REQUIRED)
 target_link_libraries(amiberry PRIVATE SDL2::SDL2 SDL2::SDL2main)
