@@ -458,12 +458,17 @@ static void blitter_maybe_done_early(int hpos)
 		}
 	}
 	// busy cleared, interrupt generated.
-	// last D write still pending if not linemode
+	// last D write still pending if not linemode and D channel active
 	if (blitline) {
 		blitter_done(hpos);
 	} else {
-		blitter_interrupt(hpos, 0);
-		blt_info.blit_finald = 1 + 2;
+		if (ddat1use) {
+			blt_info.blit_finald = 1 + 2;
+			blitter_interrupt(hpos, 0);
+		}
+		else {
+			blitter_done(hpos);
+		}
 	}
 }
 
