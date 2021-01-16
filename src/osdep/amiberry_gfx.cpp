@@ -407,7 +407,7 @@ int graphics_setup(void)
 	}
 
 	Uint32 sdl_window_mode;
-	if (sdlMode.w >= 800 && sdlMode.h >= 600)
+	if (sdlMode.w >= 800 && sdlMode.h >= 600 && strcmpi(sdl_video_driver, "KMSDRM") != 0)
 	{
 		// Only enable Windowed mode if we're running under x11 and the resolution is at least 800x600
 		sdl_window_mode = SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
@@ -536,8 +536,8 @@ void update_win_fs_mode(struct uae_prefs* p)
 		else
 		{
 			p->gfx_monitor.gfx_size = p->gfx_monitor.gfx_size_win;
-			// Switch to Window mode, if we don't have it already
-			if (is_fullscreen || is_fullwindow)
+			// Switch to Window mode, if we don't have it already - but not for KMSDRM
+			if ((is_fullscreen || is_fullwindow) && strcmpi(sdl_video_driver, "KMSDRM") != 0)
 				SDL_SetWindowFullscreen(sdl_window, 0);
 		}
 		
