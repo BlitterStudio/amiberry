@@ -64,6 +64,13 @@ Uint32 pixel_format;
 static unsigned long last_synctime;
 static int deskhz;
 
+#ifdef USE_DISPMANX
+/* Possible screen modes (x and y resolutions) */
+#define MAX_SCREEN_MODES 14
+static int x_size_table[MAX_SCREEN_MODES] = { 640, 640, 720, 800, 800, 960, 1024, 1280, 1280, 1280, 1360, 1366, 1680, 1920 };
+static int y_size_table[MAX_SCREEN_MODES] = { 400, 480, 400, 480, 600, 540, 768, 720, 800, 1024, 768, 768, 1050, 1080 };
+#endif
+
 struct PicassoResolution* DisplayModes;
 struct MultiDisplay Displays[MAX_DISPLAYS];
 
@@ -2216,7 +2223,21 @@ void sortdisplays()
 {
 	struct MultiDisplay* md;
 	int i, idx;
+
+#ifdef USE_DISPMANX
+	char tmp[200];
+	int w = 800;
+	int h = 600;
+	int wv = w;
+	int hv = h;
+	int b = 24;
 	
+	Displays[0].primary = 1;
+	Displays[0].rect.x = 0;
+	Displays[0].rect.y = 0;
+	Displays[0].rect.w = 800;
+	Displays[0].rect.h = 600;
+#else
 	SDL_DisplayMode desktop_dm;
 	if (SDL_GetDesktopDisplayMode(0, &desktop_dm) != 0) {
 		write_log("SDL_GetDesktopDisplayMode failed: %s", SDL_GetError());
@@ -2237,13 +2258,14 @@ void sortdisplays()
 		write_log("SDL_GetDisplayUsableBounds failed: %s", SDL_GetError());
 		return;
 	}
-	
+
 	char tmp[200];
 	Displays[0].primary = 1;
 	Displays[0].rect.x = bounds.x;
 	Displays[0].rect.y = bounds.y;
 	Displays[0].rect.w = bounds.w;
 	Displays[0].rect.h = bounds.h;
+#endif
 	sprintf(tmp, "%s (%d*%d)", "Display", Displays[0].rect.w, Displays[0].rect.h);
 	Displays[0].fullname = my_strdup(tmp);
 	Displays[0].monitorname = my_strdup("Display");
@@ -2252,7 +2274,35 @@ void sortdisplays()
 
 	md->DisplayModes = xmalloc(struct PicassoResolution, MAX_PICASSO_MODES);
 	md->DisplayModes[0].depth = -1;
+#ifdef USE_DISPMANX
+	auto count = 0;
+	int bits[] = { 8, 16, 32 };
+	for (auto i = 0; i < MAX_SCREEN_MODES && count < MAX_PICASSO_MODES; i++)
+	{
+		for (auto bitdepth : bits)
+		{
+			const auto bit_unit = bitdepth + 1 & 0xF8;
+			const auto rgbFormat =
+				bitdepth == 8 ? RGBFB_CLUT :
+				bitdepth == 16 ? RGBFB_R5G6B5 :
+				bitdepth == 24 ? RGBFB_R8G8B8 : RGBFB_R8G8B8A8;
+			auto pixelFormat = 1 << rgbFormat;
+			pixelFormat |= RGBFF_CHUNKY;
+			md->DisplayModes[count].res.width = x_size_table[i];
+			md->DisplayModes[count].res.height = y_size_table[i];
+			md->DisplayModes[count].depth = bit_unit >> 3;
+			md->DisplayModes[count].refresh[0] = 50;
+			md->DisplayModes[count].refresh[1] = 60;
+			md->DisplayModes[count].refresh[2] = 0;
+			md->DisplayModes[count].colormodes = pixelFormat;
+			sprintf(md->DisplayModes[count].name, "%dx%d, %d-bit",
+				md->DisplayModes[count].res.width, md->DisplayModes[count].res.height, md->DisplayModes[count].depth * 8);
 
+			count++;
+		}
+	}
+	md->DisplayModes[count].depth = -1;
+#else
 	int numDispModes = SDL_GetNumDisplayModes(0);
 	for (int mode = 0; mode < 2; mode++) 
 	{
@@ -2289,8 +2339,9 @@ void sortdisplays()
 		}
 		
 	}
+#endif	
 	sortmodes(md);
-	modesList(md);
+	modesList(md);	
 	i = 0;
 	while (md->DisplayModes[i].depth > 0)
 		i++;
