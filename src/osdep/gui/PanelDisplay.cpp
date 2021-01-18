@@ -660,6 +660,9 @@ void RefreshPanelDisplay()
 		txtAmigaHeight->setEnabled(!chkAutoHeight->isSelected());
 	}
 
+	//Disable Borderless checkbox in non-Windowed modes
+	chkBorderless->setEnabled(cboScreenmode->getSelected() == 0);
+
 	if (changed_prefs.gfx_monitor[0].gfx_size_fs.width && changed_prefs.gfx_monitor[0].gfx_size_fs.height)
 	{
 		auto found = false;
