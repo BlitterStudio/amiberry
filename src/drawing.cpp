@@ -27,6 +27,7 @@ resolution.
 To prevent extremely bad things (think pixels cut in half by window borders) from
 happening, all ports should restrict window widths to be multiples of 16 pixels.  */
 
+#define SPRITE_DEBUG_HIDE 0
 
 #include "sysconfig.h"
 #include "sysdeps.h"
@@ -48,13 +49,18 @@ happening, all ports should restrict window widths to be multiples of 16 pixels.
 #include "savestate.h"
 #include "statusline.h"
 #include "inputdevice.h"
+//#include "debug.h"
 #ifdef CD32
 #include "cd32_fmv.h"
 #endif
+//#include "specialmonitors.h"
 #include "devices.h"
 #include "gfxboard.h"
 
-struct amigadisplay adisplays;
+#define BG_COLOR_DEBUG 0
+//#define XLINECHECK
+
+struct amigadisplay adisplays[MAX_AMIGADISPLAYS];
 
 typedef enum
 {
@@ -64,16 +70,6 @@ typedef enum
 	CMODE_EXTRAHB_ECS_KILLEHB,
 	CMODE_HAM
 } CMODE_T;
-
-#ifdef AMIBERRY
-#define RENDER_SIGNAL_PARTIAL 1
-#define RENDER_SIGNAL_FRAME_DONE 2
-#define RENDER_SIGNAL_QUIT 3
-static uae_thread_id render_tid = nullptr;
-static smp_comm_pipe *volatile render_pipe = nullptr;
-static uae_sem_t render_sem = nullptr;
-static bool volatile render_thread_busy = false;
-#endif
 
 extern int sprite_buffer_res;
 static int lores_factor;
@@ -288,23 +284,60 @@ static bool sprite_smaller_than_64, sprite_smaller_than_64_inuse;
 
 uae_sem_t gui_sem;
 
-void set_inhibit_frame(int bit)
+void set_inhibit_frame(int monid, int bit)
 {
-	struct amigadisplay *ad = &adisplays;
+	struct amigadisplay *ad = &adisplays[monid];
 	ad->inhibit_frame |= 1 << bit;
 }
-void clear_inhibit_frame(int bit)
+void clear_inhibit_frame(int monid, int bit)
 {
-	struct amigadisplay *ad = &adisplays;
+	struct amigadisplay *ad = &adisplays[monid];
 	ad->inhibit_frame &= ~(1 << bit);
 }
-void toggle_inhibit_frame(int bit)
+void toggle_inhibit_frame(int monid, int bit)
 {
-	struct amigadisplay *ad = &adisplays;
+	struct amigadisplay *ad = &adisplays[monid];
 	ad->inhibit_frame ^= 1 << bit;
 }
 
+#ifdef XLINECHECK
+static void xlinecheck (unsigned int start, unsigned int end)
+{
+	unsigned int xstart = (unsigned int)xlinebuffer + start * vidinfo->drawbuffer.pixbytes;
+	unsigned int xend = (unsigned int)xlinebuffer + end * vidinfo->drawbuffer.pixbytes;
+	unsigned int end1 = (unsigned int)vidinfo->drawbuffer.bufmem + vidinfo->drawbuffer.rowbytes * vidinfo->drawbuffer.height;
+	int min = linetoscr_x_adjust_bytes / vidinfo->drawbuffer.pixbytes;
+	int ok = 1;
+
+	if (xstart >= vidinfo->drawbuffer.emergmem && xstart < vidinfo->drawbuffer.emergmem + 4096 * vidinfo->drawbuffer.pixbytes &&
+		xend >= vidinfo->drawbuffer.emergmem && xend < vidinfo->drawbuffer.emergmem + 4096 * vidinfo->drawbuffer.pixbytes)
+		return;
+
+	if (xstart < (unsigned int)vidinfo->drawbuffer.bufmem || xend < (unsigned int)vidinfo->drawbuffer.bufmem)
+		ok = 0;
+	if (xend > end1 || xstart >= end1)
+		ok = 0;
+	xstart -= (unsigned int)vidinfo->drawbuffer.bufmem;
+	xend -= (unsigned int)vidinfo->drawbuffer.bufmem;
+	if ((xstart % vidinfo->drawbuffer.rowbytes) >= vidinfo->drawbuffer.width * vidinfo->drawbuffer.pixbytes)
+		ok = 0;
+	if ((xend % vidinfo->drawbuffer.rowbytes) >= vidinfo->drawbuffer.width * vidinfo->drawbuffer.pixbytes)
+		ok = 0;
+	if (xstart >= xend)
+		ok = 0;
+	if (xend - xstart > vidinfo->drawbuffer.width * vidinfo->drawbuffer.pixbytes)
+		ok = 0;
+
+	if (!ok) {
+		write_log (_T("*** %d-%d (%dx%dx%d %d) %p\n"),
+			start - min, end - min, vidinfo->drawbuffer.width, vidinfo->drawbuffer.height,
+			vidinfo->drawbuffer.pixbytes, vidinfo->drawbuffer.rowbytes,
+			xlinebuffer);
+	}
+}
+#else
 #define xlinecheck(start, end)
+#endif
 
 static void clearbuffer (struct vidbuffer *dst)
 {
@@ -324,9 +357,9 @@ static void reset_decision_table (void)
 	}
 }
 
-static void count_frame()
+static void count_frame(int monid)
 {
-	struct amigadisplay *ad = &adisplays;
+	struct amigadisplay *ad = &adisplays[monid];
 	ad->framecnt++;
 	if (ad->framecnt >= currprefs.gfx_framerate || currprefs.monitoremu == MONITOREMU_A2024)
 		ad->framecnt = 0;
@@ -370,9 +403,9 @@ STATIC_INLINE int res_shift_from_amiga (int x)
 	return x << -res_shift;
 }
 
-void notice_screen_contents_lost()
+void notice_screen_contents_lost(int monid)
 {
-	struct amigadisplay *ad = &adisplays;
+	struct amigadisplay *ad = &adisplays[monid];
 	ad->picasso_redraw_necessary = 1;
 	ad->frame_redraw_necessary = 2;
 }
@@ -520,7 +553,7 @@ void set_custom_limits (int w, int h, int dx, int dy)
 
 	if (vls != visible_left_start || vrs != visible_right_stop ||
 		vts != visible_top_start || vbs != visible_bottom_stop)
-		notice_screen_contents_lost();
+		notice_screen_contents_lost(0);
 
 	check_custom_limits();
 }
@@ -535,7 +568,7 @@ void store_custom_limits (int w, int h, int x, int y)
 
 int get_custom_limits (int *pw, int *ph, int *pdx, int *pdy, int *prealh)
 {
-	struct vidbuf_description *vidinfo = &adisplays.gfxvidinfo;
+	struct vidbuf_description *vidinfo = &adisplays[0].gfxvidinfo;
 	int w, h, dx, dy, y1, y2, dbl1, dbl2;
 	int ret = 0;
 
@@ -1108,7 +1141,7 @@ STATIC_INLINE void fill_line_32 (uae_u8 *buf, int start, int stop, int blank)
 
 static void pfield_do_fill_line (int start, int stop, int blank)
 {
-	struct vidbuf_description *vidinfo = &adisplays.gfxvidinfo;
+	struct vidbuf_description *vidinfo = &adisplays[0].gfxvidinfo;
 	if (stop <= start)
 		return;
 	switch (vidinfo->drawbuffer.pixbytes) {
@@ -1122,7 +1155,7 @@ static void pfield_do_fill_line (int start, int stop, int blank)
 
 static void fill_line2 (int startpos, int len)
 {
-	struct vidbuf_description *vidinfo = &adisplays.gfxvidinfo;
+	struct vidbuf_description *vidinfo = &adisplays[0].gfxvidinfo;
 	int shift;
 	int nints, nrem;
 	int *start;
@@ -1170,7 +1203,7 @@ static void fill_line2 (int startpos, int len)
 
 static void fill_line_border (int lineno)
 {
-	struct vidbuf_description *vidinfo = &adisplays.gfxvidinfo;
+	struct vidbuf_description *vidinfo = &adisplays[0].gfxvidinfo;
 	int lastpos = visible_left_border;
 	int endpos = visible_left_border + vidinfo->drawbuffer.inwidth;
 
@@ -1689,7 +1722,7 @@ static call_linetoscr pfield_do_linetoscr_shdelay_sprite;
 
 static int pfield_do_linetoscr_normal_shdelay(int spix, int dpix, int dpix_end)
 {
-	struct vidbuf_description *vidinfo = &adisplays.gfxvidinfo;
+	struct vidbuf_description *vidinfo = &adisplays[0].gfxvidinfo;
 	int add = get_shdelay_add();
 	int add2 = add * vidinfo->drawbuffer.pixbytes;
 	if (add) {
@@ -1703,7 +1736,7 @@ static int pfield_do_linetoscr_normal_shdelay(int spix, int dpix, int dpix_end)
 }
 static int pfield_do_linetoscr_sprite_shdelay(int spix, int dpix, int dpix_end)
 {
-	struct vidbuf_description *vidinfo = &adisplays.gfxvidinfo;
+	struct vidbuf_description *vidinfo = &adisplays[0].gfxvidinfo;
 	int out = spix;
 	if (dpix < real_playfield_start && dpix_end > real_playfield_start) {
 		// Crosses real_playfield_start.
@@ -1734,7 +1767,7 @@ static int pfield_do_linetoscr_sprite_shdelay(int spix, int dpix, int dpix_end)
 
 static void pfield_set_linetoscr (void)
 {
-	struct vidbuf_description *vidinfo = &adisplays.gfxvidinfo;
+	struct vidbuf_description *vidinfo = &adisplays[0].gfxvidinfo;
 	xlinecheck(start, stop);
 	p_acolors = colors_for_drawing.acolors;
 	p_xcolors = xcolors;
@@ -2601,7 +2634,7 @@ static void pfield_doline (int lineno)
 
 void init_row_map(void)
 {
-	struct vidbuf_description *vidinfo = &adisplays.gfxvidinfo;
+	struct vidbuf_description *vidinfo = &adisplays[0].gfxvidinfo;
 	static uae_u8 *oldbufmem;
 	static int oldheight, oldpitch;
 	static bool oldgenlock, oldburst;
@@ -2654,7 +2687,7 @@ void init_row_map(void)
 
 static void init_aspect_maps(void)
 {
-	struct vidbuf_description *vidinfo = &adisplays.gfxvidinfo;
+	struct vidbuf_description *vidinfo = &adisplays[0].gfxvidinfo;
 	int i, maxl, h;
 
 	linedbld = linedbl = currprefs.gfx_vresolution;
@@ -2688,7 +2721,7 @@ static void init_aspect_maps(void)
 	/* At least for this array the +1 is necessary. */
 	native2amiga_line_map_height = h;
 	amiga2aspect_line_map = xmalloc (int, (MAXVPOS + 1) * 2 + 1);
-	native2amiga_line_map = xmalloc(int, native2amiga_line_map_height);
+	native2amiga_line_map = xmalloc (int, native2amiga_line_map_height);
 
 	for (i = 0; i < maxl; i++) {
 		int v = i - min_ypos_for_screen;
@@ -2871,7 +2904,7 @@ static void pfield_expand_dp_bplconx (int regno, int v)
 // this handles auto-height
 STATIC_INLINE void do_flush_screen(int start, int stop)
 {
-	struct amigadisplay* ad = &adisplays;
+	struct amigadisplay* ad = &adisplays[0];
 	struct vidbuf_description* vidinfo = &ad->gfxvidinfo;
 	struct vidbuffer* vb = &vidinfo->drawbuffer;
 	
@@ -2944,7 +2977,7 @@ static void playfield_hard_way(line_draw_func worker_pfield, int first, int last
 
 static void do_color_changes (line_draw_func worker_border, line_draw_func worker_pfield, int vp)
 {
-	struct vidbuf_description *vidinfo = &adisplays.gfxvidinfo;
+	struct vidbuf_description *vidinfo = &adisplays[0].gfxvidinfo;
 	int i;
 	int lastpos = visible_left_border;
 	int endpos = visible_left_border + vidinfo->drawbuffer.inwidth;
@@ -3103,7 +3136,7 @@ enum double_how {
 
 static void pfield_draw_line (struct vidbuffer *vb, int lineno, int gfx_ypos, int follow_ypos)
 {
-	struct vidbuf_description *vidinfo = &adisplays.gfxvidinfo;
+	struct vidbuf_description *vidinfo = &adisplays[0].gfxvidinfo;
 	static int warned = 0;
 	int border = 0;
 	int do_double = 0;
@@ -3334,7 +3367,7 @@ static void pfield_draw_line (struct vidbuffer *vb, int lineno, int gfx_ypos, in
 
 static void center_image (void)
 {
-	struct amigadisplay *ad = &adisplays;
+	struct amigadisplay *ad = &adisplays[0];
 	struct vidbuf_description *vidinfo = &ad->gfxvidinfo;
 	int prev_x_adjust = visible_left_border;
 	int prev_y_adjust = thisframe_y_adjust;
@@ -3437,8 +3470,8 @@ static int frame_res_cnt;
 static int autoswitch_old_resolution;
 static void init_drawing_frame (void)
 {
-	struct amigadisplay *ad = &adisplays;
-	struct vidbuf_description* vidinfo = &ad->gfxvidinfo;
+	struct amigadisplay *ad = &adisplays[0];
+	struct vidbuf_description *vidinfo = &ad->gfxvidinfo;
 	int maxline;
 	static int frame_res_old;
 
@@ -3515,9 +3548,9 @@ static void init_drawing_frame (void)
 					frame_res_cnt--;
 					if (frame_res_cnt == 0) {
 						int m = frame_res_detected * 2 + frame_res_lace_detected;
-						struct wh *dst = currprefs.gfx_apmode[0].gfx_fullscreen ? &changed_prefs.gfx_monitor.gfx_size_fs : &changed_prefs.gfx_monitor.gfx_size_win;
+						struct wh *dst = currprefs.gfx_apmode[0].gfx_fullscreen ? &changed_prefs.gfx_monitor[0].gfx_size_fs : &changed_prefs.gfx_monitor[0].gfx_size_win;
 						while (m < 3 * 2) {
-							struct wh *src = currprefs.gfx_apmode[0].gfx_fullscreen ? &currprefs.gfx_monitor.gfx_size_fs_xtra[m] : &currprefs.gfx_monitor.gfx_size_win_xtra[m];
+							struct wh *src = currprefs.gfx_apmode[0].gfx_fullscreen ? &currprefs.gfx_monitor[0].gfx_size_fs_xtra[m] : &currprefs.gfx_monitor[0].gfx_size_win_xtra[m];
 							if ((src->width > 0 && src->height > 0) || (currprefs.gfx_api || currprefs.gf[0].gfx_filter > 0)) {
 								int nr = m >> 1;
 								int nl = (m & 1) == 0 ? 0 : 1;
@@ -3679,11 +3712,12 @@ void putpixel(uae_u8 *buf, uae_u8 *genlockbuf, int bpp, int x, xcolnr c8, int op
 	}
 }
 
-static uae_u8* status_line_ptr(int line)
+static uae_u8 *status_line_ptr(int monid, int line)
 {
-	struct vidbuf_description* vidinfo = &adisplays.gfxvidinfo;
+	struct vidbuf_description *vidinfo = &adisplays[monid].gfxvidinfo;
+	int y;
 
-	int y = line - (vidinfo->drawbuffer.outheight - TD_TOTAL_HEIGHT);
+	y = line - (vidinfo->drawbuffer.outheight - TD_TOTAL_HEIGHT);
 	xlinebuffer = vidinfo->drawbuffer.linemem;
 	if (xlinebuffer == 0)
 		xlinebuffer = row_map[line];
@@ -3691,20 +3725,21 @@ static uae_u8* status_line_ptr(int line)
 	return xlinebuffer;
 }
 
-static void draw_status_line(int line, int statusy)
+static void draw_status_line(int monid, int line, int statusy)
 {
-	struct vidbuf_description *vidinfo = &adisplays.gfxvidinfo;
-	uae_u8* buf = status_line_ptr(line);
+	struct vidbuf_description *vidinfo = &adisplays[monid].gfxvidinfo;
+	uae_u8 *buf = status_line_ptr(monid, line);
 	if (!buf)
 		return;
 	if (statusy < 0)
-		return;
-	draw_status_line_single(buf, vidinfo->drawbuffer.pixbytes, statusy, vidinfo->drawbuffer.outwidth, xredcolors, xgreencolors, xbluecolors, NULL);
+		return; //statusline_render(monid, buf, vidinfo->drawbuffer.pixbytes, vidinfo->drawbuffer.rowbytes, vidinfo->drawbuffer.outwidth, TD_TOTAL_HEIGHT, xredcolors, xgreencolors, xbluecolors, NULL);
+	else
+		draw_status_line_single(monid, buf, vidinfo->drawbuffer.pixbytes, statusy, vidinfo->drawbuffer.outwidth, xredcolors, xgreencolors, xbluecolors, NULL);
 }
 
 static void draw_debug_status_line(int monid, int line)
 {
-	struct vidbuf_description *vidinfo = &adisplays.gfxvidinfo;
+	struct vidbuf_description *vidinfo = &adisplays[monid].gfxvidinfo;
 	xlinebuffer = vidinfo->drawbuffer.linemem;
 	if (xlinebuffer == 0)
 		xlinebuffer = row_map[line];
@@ -3732,7 +3767,7 @@ static const char *lightpen_cursor = {
 
 static void draw_lightpen_cursor(int monid, int x, int y, int line, int onscreen, int lpnum)
 {
-	struct vidbuf_description *vidinfo = &adisplays.gfxvidinfo;
+	struct vidbuf_description *vidinfo = &adisplays[monid].gfxvidinfo;
 	const char *p;
 	int color1 = onscreen ? (lpnum ? 0x0ff : 0xff0) : (lpnum ? 0x0f0 : 0xf00);
 	int color2 = (color1 & 0xeee) >> 1;
@@ -3754,7 +3789,7 @@ static void draw_lightpen_cursor(int monid, int x, int y, int line, int onscreen
 
 static void lightpen_update(struct vidbuffer *vb, int lpnum)
 {
-	struct vidbuf_description *vidinfo = &adisplays.gfxvidinfo;
+	struct vidbuf_description *vidinfo = &adisplays[vb->monitor_id].gfxvidinfo;
 	if (lightpen_x[lpnum] < 0 || lightpen_y[lpnum] < 0)
 		return;
 
@@ -3792,7 +3827,7 @@ static void lightpen_update(struct vidbuffer *vb, int lpnum)
 			int line = lightpen_y[lpnum] + i - LIGHTPEN_HEIGHT / 2;
 			if (line >= 0 && line < max_ypos_thisframe) {
 				if (lightpen_active & (1 << lpnum)) {
-					draw_lightpen_cursor(0, lightpen_x[lpnum], i, line, cx > 0, lpnum);
+					draw_lightpen_cursor(vb->monitor_id, lightpen_x[lpnum], i, line, cx > 0, lpnum);
 				}
 			}
 		}
@@ -3827,7 +3862,7 @@ static const int refresh_indicator_colors[] = { 0x777, 0x0f0, 0x00f, 0xff0, 0xf0
 
 static void refresh_indicator_update(struct vidbuffer *vb)
 {
-	struct vidbuf_description *vidinfo = &adisplays.gfxvidinfo;
+	struct vidbuf_description *vidinfo = &adisplays[vb->monitor_id].gfxvidinfo;
 	for (int i = 0; i < max_ypos_thisframe; i++) {
 		int i1 = i + min_ypos_for_screen;
 		int line = i + thisframe_y_adjust_real;
@@ -3863,6 +3898,8 @@ static void refresh_indicator_update(struct vidbuffer *vb)
 	}
 }
 
+#define LARGEST_LINE_DEBUG 0
+
 static void draw_frame2(struct vidbuffer *vbin, struct vidbuffer *vbout)
 {
 #ifdef AMIBERRY
@@ -3884,25 +3921,34 @@ static void draw_frame2(struct vidbuffer *vbin, struct vidbuffer *vbout)
 		if (whereline < 0)
 			continue;
 
+#if LARGEST_LINE_DEBUG
+		if (largest < whereline)
+			largest = whereline;
+#endif
+
 		hposblank = 0;
 		pfield_draw_line(vbout, line, whereline, wherenext);
 	}
+
+#if LARGEST_LINE_DEBUG
+	write_log (_T("%d\n"), largest);
+#endif
 }
 
 static void draw_frame_extras(struct vidbuffer *vb, int y_start, int y_end)
 {
 	if ((currprefs.leds_on_screen & STATUSLINE_CHIPSET)) {
 		//int slx, sly;
-		//int mult = statusline_get_multiplier();
-		//statusline_getpos(&slx, &sly, vb->outwidth, vb->outheight);
+		//int mult = statusline_get_multiplier(vb->monitor_id) / 100;
+		//statusline_getpos(vb->monitor_id, &slx, &sly, vb->outwidth, vb->outheight);
 		//statusbar_y1 = sly + min_ypos_for_screen - 1;
 		//statusbar_y2 = statusbar_y1 + TD_TOTAL_HEIGHT * mult + 1;
-		//draw_status_line(sly, -1);
-		struct amigadisplay* ad = &adisplays;
+		//draw_status_line(vb->monitor_id, sly, -1);
+		struct amigadisplay* ad = &adisplays[0];
 		struct vidbuf_description* vidinfo = &ad->gfxvidinfo;
 		for (int i = 0; i < TD_TOTAL_HEIGHT; i++) {
 			int line = vidinfo->drawbuffer.outheight - TD_TOTAL_HEIGHT + i;
-			draw_status_line(line, i);
+			draw_status_line(vb->monitor_id, line, i);
 		}
 	}
 	//if (debug_dma > 1 || debug_heatmap > 1) {
@@ -3924,9 +3970,9 @@ static void draw_frame_extras(struct vidbuffer *vb, int y_start, int y_end)
 		refresh_indicator_update(vb);
 }
 
-static void draw_lines(void)
+void draw_lines(int end, int section)
 {
-	struct amigadisplay* ad = &adisplays;
+	struct amigadisplay* ad = &adisplays[0];
 	if (ad->framecnt == 0) {
 		struct vidbuf_description* vidinfo = &ad->gfxvidinfo;
 		struct vidbuffer* vb = &vidinfo->drawbuffer;
@@ -3968,9 +4014,9 @@ static void draw_lines(void)
 	}
 }
 
-bool draw_frame(struct vidbuffer *vb)
+bool draw_frame (struct vidbuffer *vb)
 {
-	struct vidbuf_description *vidinfo = &adisplays.gfxvidinfo;
+	struct vidbuf_description *vidinfo = &adisplays[vb->monitor_id].gfxvidinfo;
 	uae_u8 oldstate[LINESTATE_SIZE];
 	struct vidbuffer oldvb{};
 
@@ -4013,7 +4059,7 @@ bool draw_frame(struct vidbuffer *vb)
 
 static void setnativeposition(struct vidbuffer *vb)
 {
-	struct vidbuf_description *vidinfo = &adisplays.gfxvidinfo;
+	struct vidbuf_description *vidinfo = &adisplays[0].gfxvidinfo;
 	vb->inwidth = vidinfo->drawbuffer.inwidth;
 	vb->inheight = vidinfo->drawbuffer.inheight;
 	vb->inwidth2 = vidinfo->drawbuffer.inwidth2;
@@ -4024,7 +4070,7 @@ static void setnativeposition(struct vidbuffer *vb)
 
 static void setspecialmonitorpos(struct vidbuffer *vb)
 {
-	struct vidbuf_description *vidinfo = &adisplays.gfxvidinfo;
+	struct vidbuf_description *vidinfo = &adisplays[0].gfxvidinfo;
 	vb->extrawidth = vidinfo->drawbuffer.extrawidth;
 	vb->xoffset = vidinfo->drawbuffer.xoffset;
 	vb->yoffset = vidinfo->drawbuffer.yoffset;
@@ -4034,7 +4080,8 @@ static void setspecialmonitorpos(struct vidbuffer *vb)
 
 static void finish_drawing_frame(bool drawlines)
 {
-	struct amigadisplay *ad = &adisplays;
+	int monid = 0;
+	struct amigadisplay *ad = &adisplays[monid];
 	struct vidbuf_description *vidinfo = &ad->gfxvidinfo;
 	struct vidbuffer *vb = &vidinfo->drawbuffer;
 
@@ -4046,7 +4093,7 @@ static void finish_drawing_frame(bool drawlines)
 	}
 
 	if (!lockscr(vb, false, true)) {
-		notice_screen_contents_lost();
+		notice_screen_contents_lost(monid);
 		return;
 	}
 
@@ -4055,6 +4102,54 @@ static void finish_drawing_frame(bool drawlines)
 	draw_frame_extras(vb, -1, -1);
 
 #ifndef AMIBERRY
+	// video port adapters
+	if (currprefs.monitoremu) {
+		struct vidbuf_description *outvi = &adisplays[currprefs.monitoremu_mon].gfxvidinfo;
+		struct vidbuffer *out = &outvi->drawbuffer;
+		if (init_genlock_data != specialmonitor_need_genlock()) {
+			init_genlock_data = specialmonitor_need_genlock();
+			init_row_map();
+		}
+		bool locked = true;
+		bool multimon = currprefs.monitoremu_mon != 0;
+		if (multimon) {
+			locked = lockscr(out, false, true);
+			outvi->xchange = vidinfo->xchange;
+			outvi->ychange = vidinfo->ychange;
+		} else {
+			out = &vidinfo->tempbuffer;
+		}
+		setspecialmonitorpos(out);
+		if (locked && emulate_specialmonitors(vb, out)) {
+			if (!multimon) {
+				vb->tempbufferinuse = true;
+				vb = vidinfo->outbuffer = out;
+			}
+			if (out->nativepositioning) {
+				setnativeposition(out);
+			}
+			if (!ad->specialmonitoron) {
+				need_genlock_data = specialmonitor_need_genlock();
+				ad->specialmonitoron = true;
+				compute_framesync();
+				pfield_set_linetoscr();
+			}
+		} else {
+			pfield_set_linetoscr();
+			need_genlock_data = false;
+			if (ad->specialmonitoron || out->tempbufferinuse) {
+				out->tempbufferinuse = false;
+				ad->specialmonitoron = false;
+				compute_framesync();
+			}
+		}
+		if (multimon && locked) {
+			unlockscr(out, -1, -1);
+			render_screen(out->monitor_id, 1, true);
+			show_screen(out->monitor_id, 0);
+		}
+	}
+
 	// genlock
 	if (currprefs.genlock_image && currprefs.genlock && !currprefs.monitoremu && vidinfo->tempbuffer.bufmem_allocated) {
 		setspecialmonitorpos(&vidinfo->tempbuffer);
@@ -4107,32 +4202,48 @@ static void finish_drawing_frame(bool drawlines)
 void check_prefs_picasso(void)
 {
 #ifdef PICASSO96
-	struct amigadisplay *ad = &adisplays;
-	if (ad->picasso_on && ad->picasso_redraw_necessary)
-		picasso_refresh();
-	ad->picasso_redraw_necessary = 0;
+	for (int monid = 0; monid < MAX_AMIGAMONITORS; monid++) {
+		struct amigadisplay *ad = &adisplays[monid];
 
-	if (ad->picasso_requested_on == ad->picasso_on && !ad->picasso_requested_forced_on)
-		return;
+		if (ad->picasso_on && ad->picasso_redraw_necessary)
+			picasso_refresh(monid);
+		ad->picasso_redraw_necessary = 0;
 
-	devices_unsafeperiod();
+		if (ad->picasso_requested_on == ad->picasso_on && !ad->picasso_requested_forced_on)
+			continue;
+		 
+		devices_unsafeperiod();
 
+		if (!ad->picasso_requested_on && monid > 0) {
+			ad->picasso_requested_on = ad->picasso_on;
+			continue;
+		}
 
-	ad->picasso_requested_forced_on = false;
-	ad->picasso_on = ad->picasso_requested_on;
+		if (ad->picasso_requested_on) {
+			if (!toggle_rtg(monid, -2)) {
+				ad->picasso_requested_forced_on = false;
+				ad->picasso_on = false;
+				ad->picasso_requested_on = false;
+				continue;
+			}
+		}
 
-	if (!ad->picasso_on)
-		clear_inhibit_frame(IHF_PICASSO);
-	else
-		set_inhibit_frame(IHF_PICASSO);
+		ad->picasso_requested_forced_on = false;
+		ad->picasso_on = ad->picasso_requested_on;
 
-	gfx_set_picasso_state(ad->picasso_on);
-	picasso_enablescreen(ad->picasso_requested_on);
+		if (!ad->picasso_on)
+			clear_inhibit_frame(monid, IHF_PICASSO);
+		else
+			set_inhibit_frame(monid, IHF_PICASSO);
 
-	notice_screen_contents_lost();
+		gfx_set_picasso_state(monid, ad->picasso_on);
+		picasso_enablescreen(monid, ad->picasso_requested_on);
+
+		notice_screen_contents_lost(monid);
 		notice_new_xcolors();
-		count_frame();
+		count_frame(monid);
 		compute_framesync();
+	}
 #endif
 }
 
@@ -4149,40 +4260,43 @@ void redraw_frame(void)
 
 void full_redraw_all(void)
 {
+	int monid = 0;
 	bool redraw = false;
-	struct amigadisplay *ad = &adisplays;
-	struct vidbuf_description *vidinfo = &adisplays.gfxvidinfo;
+	struct amigadisplay *ad = &adisplays[monid];
+	struct vidbuf_description *vidinfo = &adisplays[monid].gfxvidinfo;
 	if (vidinfo->drawbuffer.height_allocated && amiga2aspect_line_map) {
-		notice_screen_contents_lost();
+		notice_screen_contents_lost(monid);
 		if (!ad->picasso_on) {
 			redraw_frame();
 			redraw = true;
 		}
 	}
 	if (ad->picasso_on) {
-		picasso_refresh();
+		picasso_refresh(monid);
 		redraw = true;
 	}
 	if (redraw) {
-		render_screen(true);
-		show_screen(0);
+		render_screen(0, 1, true);
+		show_screen(0, 0);
 	}
 }
 
 bool vsync_handle_check (void)
 {
+	int monid = 0;
+	struct amigadisplay *ad = &adisplays[monid];
 	int changed = check_prefs_changed_gfx ();
 	if (changed > 0) {
 		reset_drawing ();
 		init_row_map ();
 		init_aspect_maps ();
-		notice_screen_contents_lost();
+		notice_screen_contents_lost(monid);
 		notice_new_xcolors ();
 	} else if (changed < 0) {
 		reset_drawing ();
 		init_row_map ();
 		init_aspect_maps ();
-		notice_screen_contents_lost();
+		notice_screen_contents_lost(monid);
 		notice_new_xcolors ();
 	}
 	if (config_changed) {
@@ -4193,27 +4307,14 @@ bool vsync_handle_check (void)
 
 void vsync_handle_redraw(int long_field, int lof_changed, uae_u16 bplcon0p, uae_u16 bplcon3p, bool drawlines)
 {
-	struct amigadisplay *ad = &adisplays;
+	int monid = 0;
+	struct amigadisplay *ad = &adisplays[monid];
 	last_redraw_point++;
 	if (lof_changed || interlace_seen <= 0 || (currprefs.gfx_iscanlines && interlace_seen > 0) || last_redraw_point >= 2 || long_field || doublescan < 0) {
 		last_redraw_point = 0;
 
 		if (ad->framecnt == 0) {
-#ifdef AMIBERRY
-			if (amiberry_options.use_drawing_thread)
-			{
-				if (render_tid) {
-					while (render_thread_busy)
-						sleep_micros(10);
-					write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_FRAME_DONE, 1);
-					uae_sem_wait(&render_sem);
-				}
-			}
-			else
-				finish_drawing_frame(drawlines);
-#else
 			finish_drawing_frame(drawlines);
-#endif
 #ifdef AVIOUTPUT
 			if (!ad->picasso_on) {
 				frame_drawn(monid);
@@ -4230,32 +4331,13 @@ void vsync_handle_redraw(int long_field, int lof_changed, uae_u16 bplcon0p, uae_
 				}
 			}
 #endif
-#ifdef AMIBERRY
-			if (amiberry_options.use_drawing_thread)
-			{
-				if (render_tid) {
-					while (render_thread_busy)
-						sleep_micros(1);
-					write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_QUIT, 1);
-					while (render_tid != nullptr) {
-						sleep_micros(10);
-					}
-					destroy_comm_pipe(render_pipe);
-					xfree(render_pipe);
-					render_pipe = nullptr;
-					uae_sem_destroy(&render_sem);
-					render_sem = nullptr;
-				}
-			}
-#endif
-			
 			quit_program = -quit_program;
-			set_inhibit_frame(IHF_QUIT_PROGRAM);
+			set_inhibit_frame(monid, IHF_QUIT_PROGRAM);
 			set_special(SPCFLAG_BRK | SPCFLAG_MODE_CHANGE);
 			return;
 		}
 
-		count_frame();
+		count_frame(monid);
 
 		if (ad->framecnt == 0) {
 			init_drawing_frame();
@@ -4275,7 +4357,7 @@ void vsync_handle_redraw(int long_field, int lof_changed, uae_u16 bplcon0p, uae_
 
 void hsync_record_line_state (int lineno, enum nln_how how, int changed)
 {
-	struct amigadisplay *ad = &adisplays;
+	struct amigadisplay *ad = &adisplays[0];
 	uae_u8 *state;
 
 	if (ad->framecnt != 0)
@@ -4350,17 +4432,6 @@ void hsync_record_line_state (int lineno, enum nln_how how, int changed)
 	}
 #ifdef AMIBERRY
 	linestate_first_undecided = lineno + 1;
-	if (amiberry_options.use_drawing_thread)
-	{
-		if (render_tid && linestate_first_undecided > 3 && !render_thread_busy) {
-			if (currprefs.gfx_vresolution) {
-				if (!(linestate_first_undecided & 0x3e))
-					write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_PARTIAL, 1);
-			}
-			else if (!(linestate_first_undecided & 0x1f))
-				write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_PARTIAL, 1);
-		}
-	}
 #endif
 }
 
@@ -4391,7 +4462,7 @@ static void dummy_unlock (struct vidbuf_description *gfxinfo, struct vidbuffer *
 
 static void gfxbuffer_reset(int monid)
 {
-	struct vidbuf_description *vidinfo = &adisplays.gfxvidinfo;
+	struct vidbuf_description *vidinfo = &adisplays[monid].gfxvidinfo;
 	vidinfo->drawbuffer.flush_line         = dummy_flush_line;
 	vidinfo->drawbuffer.flush_block        = dummy_flush_block;
 	vidinfo->drawbuffer.flush_screen       = dummy_flush_screen;
@@ -4430,9 +4501,10 @@ bool notice_interlace_seen (bool lace)
 	return changed;
 }
 
-void allocvidbuffer(struct vidbuffer *buf, int width, int height, int depth)
+void allocvidbuffer(int monid, struct vidbuffer *buf, int width, int height, int depth)
 {
-	memset(buf, 0, sizeof(struct vidbuffer));
+	memset (buf, 0, sizeof (struct vidbuffer));
+	buf->monitor_id = monid;
 	buf->pixbytes = (depth + 7) / 8;
 	buf->width_allocated = (width + 7) & ~7;
 	buf->height_allocated = height;
@@ -4450,7 +4522,7 @@ void allocvidbuffer(struct vidbuffer *buf, int width, int height, int depth)
 	buf->bufmem_lockable = true;
 }
 
-void freevidbuffer(struct vidbuffer *buf)
+void freevidbuffer(int monid, struct vidbuffer *buf)
 {
 	xfree (buf->realbufmem);
 	memset (buf, 0, sizeof (struct vidbuffer));
@@ -4458,8 +4530,9 @@ void freevidbuffer(struct vidbuffer *buf)
 
 void reset_drawing(void)
 {
-	struct amigadisplay* ad = &adisplays;
-	struct vidbuf_description* vidinfo = &ad->gfxvidinfo;
+	int monid = 0;
+	struct amigadisplay *ad = &adisplays[monid];
+	struct vidbuf_description *vidinfo = &ad->gfxvidinfo;
 
 	max_diwstop = 0;
 
@@ -4480,7 +4553,9 @@ void reset_drawing(void)
 	memset (spixels, 0, sizeof spixels);
 	memset (&spixstate, 0, sizeof spixstate);
 
-	notice_screen_contents_lost();
+	init_hardware_for_drawing_frame();
+		
+	notice_screen_contents_lost(monid);
 	init_drawing_frame ();
 	pfield_set_linetoscr();
 
@@ -4510,40 +4585,10 @@ static void gen_direct_drawing_table(void)
 #endif
 }
 
-#ifdef AMIBERRY
-static int render_thread(void *unused)
-{
-	for (;;) {
-		render_thread_busy = false;
-		auto signal = read_comm_pipe_u32_blocking(render_pipe);
-		render_thread_busy = true;
-		switch (signal) {
-
-		case RENDER_SIGNAL_PARTIAL:
-			if (!flip_in_progess)
-				draw_lines();
-			break;
-
-		case RENDER_SIGNAL_FRAME_DONE:
-			while (flip_in_progess)
-				sleep_micros(1);
-			finish_drawing_frame(true);
-			uae_sem_post(&render_sem);
-			break;
-
-		case RENDER_SIGNAL_QUIT:
-			render_tid = nullptr;
-			return 0;
-		default:
-			break;
-		}
-	}
-}
-#endif
-
 void drawing_init (void)
 {
-	struct amigadisplay *ad = &adisplays;
+	int monid = 0;
+	struct amigadisplay *ad = &adisplays[monid];
 	struct vidbuf_description *vidinfo = &ad->gfxvidinfo;
 
 	refresh_indicator_init();
@@ -4553,28 +4598,11 @@ void drawing_init (void)
 	gen_direct_drawing_table();
 
 	uae_sem_init (&gui_sem, 0, 1);
-#ifdef AMIBERRY
-	if (amiberry_options.use_drawing_thread)
-	{
-		if (render_pipe == nullptr) {
-			render_pipe = xmalloc(smp_comm_pipe, 1);
-			init_comm_pipe(render_pipe, 20, 1);
-		}
-		if (render_sem == nullptr) {
-			uae_sem_init(&render_sem, 0, 0);
-		}
-		if (render_tid == nullptr && render_pipe != nullptr && render_sem != nullptr) {
-			uae_start_thread(_T("render"), render_thread, nullptr, &render_tid);
-		}
-	}
-#endif
-
 #ifdef PICASSO96
-	if (!isrestore ())
-	{
+	if (!isrestore ()) {
 		ad->picasso_on = false;
 		ad->picasso_requested_on = false;
-		gfx_set_picasso_state(0);
+		gfx_set_picasso_state(0, 0);
 	}
 #endif
 	xlinebuffer = vidinfo->drawbuffer.bufmem;
@@ -4588,7 +4616,7 @@ void drawing_init (void)
 
 int isvsync_chipset(void)
 {
-	struct amigadisplay *ad = &adisplays;
+	struct amigadisplay *ad = &adisplays[0];
 	if (ad->picasso_on || currprefs.gfx_apmode[0].gfx_vsync <= 0)
 		return 0;
 	if (currprefs.gfx_apmode[0].gfx_vsyncmode == 0)
@@ -4600,7 +4628,7 @@ int isvsync_chipset(void)
 
 int isvsync_rtg(void)
 {
-	struct amigadisplay *ad = &adisplays;
+	struct amigadisplay *ad = &adisplays[0];
 	if (!ad->picasso_on || currprefs.gfx_apmode[1].gfx_vsync <= 0)
 		return 0;
 	if (currprefs.gfx_apmode[1].gfx_vsyncmode == 0)
@@ -4612,7 +4640,7 @@ int isvsync_rtg(void)
 
 int isvsync(void)
 {
-	struct amigadisplay *ad = &adisplays;
+	struct amigadisplay *ad = &adisplays[0];
 	if (ad->picasso_on)
 		return isvsync_rtg ();
 	return isvsync_chipset ();

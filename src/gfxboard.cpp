@@ -16,6 +16,24 @@
 #include "xwin.h"
 #include "devices.h"
 
+int gfxboard_get_index_from_id(int id)
+{
+	if (id == GFXBOARD_UAE_Z2)
+		return GFXBOARD_UAE_Z2;
+	if (id == GFXBOARD_UAE_Z3)
+		return GFXBOARD_UAE_Z3;
+	return 0;
+}
+
+int gfxboard_get_id_from_index(int index)
+{
+	if (index == GFXBOARD_UAE_Z2)
+		return GFXBOARD_UAE_Z2;
+	if (index == GFXBOARD_UAE_Z3)
+		return GFXBOARD_UAE_Z3;
+	return 0;
+}
+
 const TCHAR *gfxboard_get_name(int type)
 {
 	if (type == GFXBOARD_UAE_Z2)
@@ -25,10 +43,10 @@ const TCHAR *gfxboard_get_name(int type)
 	return NULL;
 }
 
-bool gfxboard_set(bool rtg)
+bool gfxboard_set(int monid, bool rtg)
 {
 	bool r;
-	struct amigadisplay *ad = &adisplays;
+	struct amigadisplay *ad = &adisplays[monid];
 	r = ad->picasso_on;
 	if (rtg) {
 		ad->picasso_requested_on = 1;

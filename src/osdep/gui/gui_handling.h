@@ -19,6 +19,101 @@
 
 #include "options.h"
 
+static const TCHAR* memsize_names[] = {
+	/* 0 */ _T("none"),
+	/* 1 */ _T("64 KB"),
+	/* 2 */ _T("128 KB"),
+	/* 3 */ _T("256 KB"),
+	/* 4 */ _T("512 KB"),
+	/* 5 */ _T("1 MB"),
+	/* 6 */ _T("2 MB"),
+	/* 7 */ _T("4 MB"),
+	/* 8 */ _T("8 MB"),
+	/* 9 */ _T("16 MB"),
+	/* 10*/ _T("32 MB"),
+	/* 11*/ _T("64 MB"),
+	/* 12*/ _T("128 MB"),
+	/* 13*/ _T("256 MB"),
+	/* 14*/ _T("512 MB"),
+	/* 15*/ _T("1 GB"),
+	/* 16*/ _T("1.5MB"),
+	/* 17*/ _T("1.8MB"),
+	/* 18*/ _T("2 GB"),
+	/* 19*/ _T("384 MB"),
+	/* 20*/ _T("768 MB"),
+	/* 21*/ _T("1.5 GB"),
+	/* 22*/ _T("2.5 GB"),
+	/* 23*/ _T("3 GB")
+};
+
+static const unsigned long memsizes[] = {
+	/* 0 */ 0,
+	/* 1 */ 0x00010000, /*  64K */
+	/* 2 */ 0x00020000, /* 128K */
+	/* 3 */ 0x00040000, /* 256K */
+	/* 4 */ 0x00080000, /* 512K */
+	/* 5 */ 0x00100000, /* 1M */
+	/* 6 */ 0x00200000, /* 2M */
+	/* 7 */ 0x00400000, /* 4M */
+	/* 8 */ 0x00800000, /* 8M */
+	/* 9 */ 0x01000000, /* 16M */
+	/* 10*/ 0x02000000, /* 32M */
+	/* 11*/ 0x04000000, /* 64M */
+	/* 12*/ 0x08000000, //128M
+	/* 13*/ 0x10000000, //256M
+	/* 14*/ 0x20000000, //512M
+	/* 15*/ 0x40000000, //1GB
+	/* 16*/ 0x00180000, //1.5MB
+	/* 17*/ 0x001C0000, //1.8MB
+	/* 18*/ 0x80000000, //2GB
+	/* 19*/ 0x18000000, //384M
+	/* 20*/ 0x30000000, //768M
+	/* 21*/ 0x60000000, //1.5GB
+	/* 22*/ 0xA8000000, //2.5GB
+	/* 23*/ 0xC0000000, //3GB
+};
+
+static const int msi_chip[] = { 3, 4, 5, 16, 6, 7, 8 };
+static const int msi_bogo[] = { 0, 4, 5, 16, 17 };
+static const int msi_fast[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
+static const int msi_z3fast[] = { 0, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+static const int msi_z3chip[] = { 0, 9, 10, 11, 12, 13, 19, 14, 20, 15 };
+static const int msi_gfx[] = { 0, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+static const int msi_cpuboard[] = { 0, 5, 6, 7, 8, 9, 10, 11, 12, 13 };
+static const int msi_mb[] = { 0, 5, 6, 7, 8, 9, 10, 11, 12 };
+
+#define MIN_CHIP_MEM 0
+#define MAX_CHIP_MEM 6
+#define MIN_FAST_MEM 0
+#define MAX_FAST_MEM 8
+#define MIN_SLOW_MEM 0
+#define MAX_SLOW_MEM 4
+#define MIN_Z3_MEM 0
+#define MAX_Z3_MEM 11
+#define MAX_Z3_CHIPMEM 9
+#define MIN_P96_MEM 0
+#define MAX_P96_MEM_Z3 ((max_z3fastmem >> 20) < 512 ? 8 : ((max_z3fastmem >> 20) < 1024 ? 9 : ((max_z3fastmem >> 20) < 2048) ? 10 : 11))
+#define MAX_P96_MEM_Z2 4
+#define MIN_MB_MEM 0
+#define MAX_MBL_MEM 7
+#define MAX_MBH_MEM 8
+#define MIN_CB_MEM 0
+#define MAX_CB_MEM_Z2 4
+#define MAX_CB_MEM_16M 5
+#define MAX_CB_MEM_32M 6
+#define MAX_CB_MEM_64M 7
+#define MAX_CB_MEM_128M 8
+#define MAX_CB_MEM_256M 9
+
+#define MIN_M68K_PRIORITY 1
+#define MAX_M68K_PRIORITY 16
+#define MIN_CACHE_SIZE 0
+#define MAX_CACHE_SIZE 5
+#define MIN_REFRESH_RATE 1
+#define MAX_REFRESH_RATE 10
+#define MIN_SOUND_MEM 0
+#define MAX_SOUND_MEM 10
+
 typedef struct _ConfigCategory
 {
 	const char* category;
@@ -121,6 +216,11 @@ void ExitPanelHD(void);
 void RefreshPanelHD(void);
 bool HelpPanelHD(std::vector<std::string>& helptext);
 
+void InitPanelRTG(const struct _ConfigCategory& category);
+void ExitPanelRTG(void);
+void RefreshPanelRTG(void);
+bool HelpPanelRTG(std::vector<std::string>& helptext);
+
 void InitPanelDisplay(const struct _ConfigCategory& category);
 void ExitPanelDisplay(void);
 void RefreshPanelDisplay(void);
@@ -205,7 +305,7 @@ extern int currentStateNum;
 extern int delay_savestate_frame;
 
 extern void update_gui_screen();
-extern void cap_fps(Uint64 start, int fps);
+extern void cap_fps(Uint64 start);
 extern long get_file_size(const std::string& filename);
 extern bool download_file(const std::string& source, std::string destination);
 extern void download_rtb(std::string filename);

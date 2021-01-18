@@ -25,6 +25,8 @@
 #include "memory.h"
 #include "amiberry_gfx.h"
 #include "disk.h"
+#include "xwin.h"
+#include "drawing.h"
 
 #ifdef AMIBERRY
 #include <linux/kd.h>
@@ -406,7 +408,7 @@ static void gui_to_prefs(void)
 	currprefs.mountitems = changed_prefs.mountitems;
 	memcpy(&currprefs.mountconfig, &changed_prefs.mountconfig, MOUNT_CONFIG_SIZE * sizeof(struct uaedev_config_info));
 	fixup_prefs(&changed_prefs, true);
-	update_win_fs_mode(&changed_prefs);
+	update_win_fs_mode(0, &changed_prefs);
 }
 
 static void after_leave_gui()
@@ -525,7 +527,7 @@ void gui_display(int shortcut)
 		inputdevice_unacquire();
 		wait_keyrelease();
 		clearallkeys();
-		setmouseactive(0);
+		setmouseactive(0, 0);
 	}
 
 	if (shortcut == -1)
@@ -536,7 +538,7 @@ void gui_display(int shortcut)
 		run_gui();
 		gui_to_prefs();
 
-		black_screen_now();
+		clearscreen();
 
 		gui_update();
 		gui_purge_events();
@@ -557,7 +559,7 @@ void gui_display(int shortcut)
 	update_display(&changed_prefs);
 	if (resumepaused(7)) {
 		inputdevice_acquire(TRUE);
-		setmouseactive(1);
+		setmouseactive(0, 1);
 	}
 	
 	fpscounter_reset();

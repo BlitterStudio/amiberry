@@ -331,7 +331,7 @@ void do_leave_program (void)
 	memory_cleanup ();
 	free_shm ();
 	cfgfile_addcfgparam (0);
-	machdep_free ();
+	//machdep_free ();
 #ifdef DRIVESOUND
 	driveclick_free();
 #endif

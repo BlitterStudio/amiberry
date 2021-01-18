@@ -72,7 +72,7 @@ int debug_sprite_mask = 0xff;
 
 STATIC_INLINE bool nocustom (void)
 {
-	struct amigadisplay *ad = &adisplays;
+	struct amigadisplay *ad = &adisplays[0];
 	if (ad->picasso_on && currprefs.picasso96_nocustom)
 		return true;
 	return false;
@@ -507,7 +507,7 @@ STATIC_INLINE int ecsshres(void)
 
 STATIC_INLINE int nodraw(void)
 {
-	struct amigadisplay *ad = &adisplays;
+	struct amigadisplay *ad = &adisplays[0];
 	return !currprefs.cpu_memory_cycle_exact && ad->framecnt != 0;
 }
 
@@ -4303,7 +4303,7 @@ static int color_changes_differ (struct draw_info *dip, struct draw_info *dip_ol
 * made yet. */
 static void finish_decisions(void)
 {
-	struct amigadisplay *ad = &adisplays;
+	struct amigadisplay *ad = &adisplays[0];
 	struct draw_info *dip;
 	struct draw_info *dip_old;
 	struct decision *dp;
@@ -4555,8 +4555,8 @@ void compute_vsynctime (void)
 		vblank_hz = currprefs.chipset_refreshrate;
 		if (isvsync_chipset() && !currprefs.gfx_variable_sync) {
 			int mult = 0;
-			if (getvsyncrate(vblank_hz, &mult) != vblank_hz) {
-				vblank_hz = getvsyncrate(vblank_hz, &vblank_hz_mult);
+			if (getvsyncrate(0, vblank_hz, &mult) != vblank_hz) {
+				vblank_hz = getvsyncrate(0, vblank_hz, &vblank_hz_mult);
 				if (vblank_hz_mult > 0)
 					vblank_hz_state = 0;
 			}
@@ -4658,7 +4658,7 @@ static void checklacecount (bool lace)
 
 struct chipset_refresh *get_chipset_refresh(struct uae_prefs *p)
 {
-	struct amigadisplay *ad = &adisplays;
+	struct amigadisplay *ad = &adisplays[0];
 	int islace = interlace_seen ? 1 : 0;
 	int isntsc = (beamcon0 & 0x20) ? 0 : 1;
 	int custom = (beamcon0 & 0x80) ? 1 : 0;
@@ -4695,8 +4695,8 @@ static bool changed_chipset_refresh (void)
 
 void compute_framesync(void)
 {
-	struct vidbuf_description* vidinfo = &adisplays.gfxvidinfo;
-	struct amigadisplay* ad = &adisplays;
+	struct vidbuf_description *vidinfo = &adisplays[0].gfxvidinfo;
+	struct amigadisplay *ad = &adisplays[0];
 	int islace = interlace_seen ? 1 : 0;
 	int isntsc = (beamcon0 & 0x20) ? 0 : 1;
 	bool found = false;
@@ -4709,7 +4709,7 @@ void compute_framesync(void)
 		vblank_hz = vblank_hz_shf;
 	}
 
-	vblank_hz = target_adjust_vblank_hz(vblank_hz);
+	vblank_hz = target_adjust_vblank_hz(0, vblank_hz);
 
 	struct chipset_refresh *cr = get_chipset_refresh(&currprefs);
 	while (cr) {
@@ -4719,13 +4719,13 @@ void compute_framesync(void)
 				if (!currprefs.gfx_variable_sync) {
 					if (cr->index == CHIPSET_REFRESH_PAL || cr->index == CHIPSET_REFRESH_NTSC) {
 						if ((fabs(vblank_hz - 50) < 1 || fabs(vblank_hz - 60) < 1 || fabs(vblank_hz - 100) < 1 || fabs(vblank_hz - 120) < 1) && currprefs.gfx_apmode[0].gfx_vsync == 2 && currprefs.gfx_apmode[0].gfx_fullscreen > 0) {
-							vsync_switchmode((int)vblank_hz);
+							vsync_switchmode(0, (int)vblank_hz);
 						}
 					}
 					if (isvsync_chipset() < 0) {
 
 						double v2;
-						v2 = target_getcurrentvblankrate();
+						v2 = target_getcurrentvblankrate(0);
 						if (!cr->locked)
 							v = v2;
 					} else if (isvsync_chipset() > 0) {
@@ -4875,7 +4875,10 @@ void compute_framesync(void)
 
 	set_config_changed ();
 
-	if (target_graphics_buffer_update()) {
+	//if (currprefs.monitoremu_mon != 0) {
+	//	target_graphics_buffer_update(currprefs.monitoremu_mon);
+	//}
+	if (target_graphics_buffer_update(0)) {
 		reset_drawing ();
 	}
 }
@@ -5088,11 +5091,16 @@ static void init_hz (bool checkvposw)
 	devices_syncchange();
 
 #ifdef PICASSO96
-	init_hz_p96();
+	init_hz_p96(0);
 #endif
 	if (vblank_hz != ovblank)
-		updatedisplayarea();
+		updatedisplayarea(0);
 	inputdevice_tablet_strobe ();
+
+	//if (varsync_changed) {
+	//	varsync_changed = false;
+	//	dumpsync ();
+	//}
 }
 
 static void init_hz_vposw (void)
@@ -5952,7 +5960,7 @@ static void BEAMCON0 (uae_u16 v)
 
 static void varsync (void)
 {
-	struct amigadisplay *ad = &adisplays;
+	struct amigadisplay *ad = &adisplays[0];
 	if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS))
 		return;
 #ifdef PICASSO96
@@ -5969,7 +5977,7 @@ static void varsync (void)
 #ifdef PICASSO96
 void set_picasso_hack_rate (int hz)
 {
-	struct amigadisplay *ad = &adisplays;
+	struct amigadisplay *ad = &adisplays[0];
 	if (!ad->picasso_on)
 		return;
 	vpos_count = 0;
@@ -8442,7 +8450,7 @@ static int mavg (struct mavg_data *md, int newval, int size)
 extern int log_vsync, debug_vsync_min_delay, debug_vsync_forced_delay;
 static bool framewait (void)
 {
-	struct amigadisplay *ad = &adisplays;
+	struct amigadisplay *ad = &adisplays[0];
 	frame_time_t curr_time;
 	frame_time_t start;
 	int vs = isvsync_chipset ();
@@ -8465,17 +8473,17 @@ static bool framewait (void)
 		vsyncwaittime = vsyncmaxtime = curr_time + vsynctimebase;
 		if (!nodraw()) {
 			if (!frame_rendered && !ad->picasso_on)
-				frame_rendered = render_screen(false);
+				frame_rendered = render_screen(0, 1, false);
 
-			start = read_processor_time();
+			start = read_processor_time ();
 			t = 0;
 			if ((int)start - (int)vsync_time >= 0 && (int)start - (int)vsync_time < vsynctimebase)
 				t += (int)start - (int)vsync_time;
 
 			if (!frame_shown) {
-				show_screen(1);
+				show_screen(0, 1);
 				if (currprefs.gfx_apmode[0].gfx_strobo)
-					show_screen(4);
+					show_screen(0, 4);
 			}
 		}
 
@@ -8524,7 +8532,7 @@ static bool framewait (void)
 	if (currprefs.m68k_speed < 0 && !cpu_sleepmode && !currprefs.cpu_memory_cycle_exact) {
 
 		if (!frame_rendered && !ad->picasso_on)
-			frame_rendered = render_screen(false);
+			frame_rendered = render_screen(0, 1, false);
 
 		if (currprefs.m68k_speed_throttle) {
 			// this delay can safely overshoot frame time by 1-2 ms, following code will compensate for it.
@@ -8567,7 +8575,7 @@ static bool framewait (void)
 
 		start = read_processor_time();
 		if (!frame_rendered && !ad->picasso_on) {
-			frame_rendered = render_screen(false);
+			frame_rendered = render_screen(0, 1, false);
 			t = read_processor_time () - start;
 		}
 		if (!currprefs.cpu_thread) {
@@ -8589,7 +8597,7 @@ static bool framewait (void)
 		vsyncmintime = curr_time;
 		vsyncmaxtime = vsyncwaittime = curr_time + vstb;
 		if (frame_rendered) {
-			show_screen(0);
+			show_screen(0, 0);
 			t += read_processor_time () - curr_time;
 		}
 		t += frameskipt_avg;
@@ -8672,7 +8680,7 @@ static void fpscounter (bool frameok)
 // vsync functions that are not hardware timing related
 static void vsync_handler_pre (void)
 {
-	struct amigadisplay *ad = &adisplays;
+	struct amigadisplay *ad = &adisplays[0];
 
 	if (currprefs.m68k_speed < 0) {
 		if (regs.stopped) {
@@ -8731,10 +8739,10 @@ static void vsync_handler_pre (void)
 
 	if (!ad->picasso_on && !nodraw()) {
 		if (!frame_rendered && vblank_hz_state) {
-			frame_rendered = render_screen(false);
+			frame_rendered = render_screen(0, 1, false);
 		}
 		if (frame_rendered && !frame_shown) {
-			frame_shown = show_screen_maybe(isvsync_chipset () >= 0);
+			frame_shown = show_screen_maybe(0, isvsync_chipset () >= 0);
 		}
 	}
 
@@ -8747,15 +8755,15 @@ static void vsync_handler_pre (void)
 	bool waspaused = false;
 	while (handle_events()) {
 		if (!waspaused) {
-			render_screen(true);
-			show_screen(0);
+			render_screen(0, 1, true);
+			show_screen(0, 0);
 			waspaused = true;
 		}
 		// we are paused, do all config checks but don't do any emulation
 		if (vsync_handle_check()) {
 			redraw_frame();
-			render_screen(true);
-			show_screen(0);
+			render_screen(0, 1, true);
+			show_screen(0, 0);
 		}
 		config_check_vsync();
 	}
@@ -8783,6 +8791,16 @@ static void vsync_handler_pre (void)
 // emulated hardware vsync
 static void vsync_handler_post (void)
 {
+	int monid = 0;
+	static frame_time_t prevtime;
+
+	//write_log (_T("%d %d %d\n"), vsynctimebase, read_processor_time () - vsyncmintime, read_processor_time () - prevtime);
+	prevtime = read_processor_time ();
+
+#if CUSTOM_DEBUG > 1
+	if ((intreq & 0x0020) && (intena & 0x0020))
+		write_log (_T("vblank interrupt not cleared\n"));
+#endif
 	DISK_vsync ();
 
 #ifdef WITH_LUA
@@ -8821,12 +8839,12 @@ static void vsync_handler_post (void)
 	if (lof_togglecnt_lace >= LOF_TOGGLES_NEEDED) {
 		interlace_changed = notice_interlace_seen (true);
 		if (interlace_changed) {
-			notice_screen_contents_lost();
+			notice_screen_contents_lost(monid);
 		}
 	} else if (lof_togglecnt_nlace >= LOF_TOGGLES_NEEDED) {
 		interlace_changed = notice_interlace_seen (false);
 		if (interlace_changed) {
-			notice_screen_contents_lost();
+			notice_screen_contents_lost(monid);
 		}
 	}
 	if (lof_changing) {
@@ -9157,19 +9175,19 @@ static bool is_custom_vsync (void)
 	return false;
 }
 
-//static bool do_render_slice(int mode, int slicecnt, int lastline)
-//{
-//	draw_lines(lastline, slicecnt);
-//	render_screen(true);
-//	return true;
-//}
-//
-//static bool do_display_slice(void)
-//{
-//	show_screen(-1);
-//	inputdevice_hsync(true);
-//	return true;
-//}
+static bool do_render_slice(int mode, int slicecnt, int lastline)
+{
+	draw_lines(lastline, slicecnt);
+	render_screen(0, mode, true);
+	return true;
+}
+
+static bool do_display_slice(void)
+{
+	show_screen(0, -1);
+	inputdevice_hsync(true);
+	return true;
+}
 
 static void set_hpos (void)
 {

@@ -16,7 +16,7 @@ extern int gfxboard_get_vram_max (struct rtgboardconfig*);
 extern bool gfxboard_need_byteswap (struct rtgboardconfig*);
 extern int gfxboard_get_autoconfig_size(struct rtgboardconfig*);
 extern double gfxboard_get_vsync (void);
-//extern void gfxboard_refresh ();
+//extern void gfxboard_refresh (int monid);
 extern int gfxboard_toggle (int monid, int mode, int msg);
 extern int gfxboard_num_boards (struct rtgboardconfig*);
 extern uae_u32 gfxboard_get_romtype(struct rtgboardconfig*);
@@ -24,6 +24,8 @@ extern const TCHAR *gfxboard_get_name(int);
 extern const TCHAR *gfxboard_get_manufacturername(int);
 extern const TCHAR *gfxboard_get_configname(int);
 extern struct gfxboard_func *gfxboard_get_func(struct rtgboardconfig *rbc);
+extern int gfxboard_get_index_from_id(int);
+extern int gfxboard_get_id_from_index(int);
 
 extern bool gfxboard_allocate_slot(int, int);
 extern void gfxboard_free_slot(int);
@@ -68,6 +70,10 @@ extern bool gfxboard_set(bool rtg);
 #define GFXBOARD_ID_CV643D_Z2 15
 #define GFXBOARD_ID_CV643D_Z3 16
 #define GFXBOARD_ID_CV64_Z3 17
+#define GFXBOARD_ID_VOODOO3_PCI 18
+#define GFXBOARD_ID_S3VIRGE_PCI 19
+#define GFXBOARD_ID_VOODOO5_PCI 20
+
 
 struct gfxboard_mode
 {

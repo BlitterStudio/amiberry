@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include <guisan.hpp>
+#include <SDL_image.h>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
@@ -22,8 +23,6 @@
 
 #if defined(ANDROID)
 #include "androidsdl_event.h"
-//#include <SDL_screenkeyboard.h>
-//#include <SDL_android.h>
 #include <android/log.h>
 #endif
 
@@ -72,6 +71,10 @@ ConfigCategory categories[] = {
 		HelpPanelFloppy
 	},
 	{"Hard drives/CD", "data/drive.ico", nullptr, nullptr, InitPanelHD, ExitPanelHD, RefreshPanelHD, HelpPanelHD},
+	{
+		"RTG board", "data/expansion.ico", nullptr, nullptr, InitPanelRTG, ExitPanelRTG,
+		RefreshPanelRTG, HelpPanelRTG
+	},
 	{
 		"Display", "data/screen.ico", nullptr, nullptr, InitPanelDisplay, ExitPanelDisplay, RefreshPanelDisplay,
 		HelpPanelDisplay
@@ -125,7 +128,6 @@ SDL_GameController* gui_controller;
 SDL_Surface* gui_screen;
 SDL_Event gui_event;
 SDL_Event touch_event;
-SDL_Window* sdl_window;
 #ifdef USE_DISPMANX
 DISPMANX_RESOURCE_HANDLE_T gui_resource;
 DISPMANX_RESOURCE_HANDLE_T black_gui_resource;
@@ -223,13 +225,19 @@ static void show_help_requested()
 	}
 }
 
-void cap_fps(Uint64 start, int fps)
+void cap_fps(Uint64 start)
 {
+	int refresh_rate;
 	const auto end = SDL_GetPerformanceCounter();
 	const auto elapsed_ms = static_cast<float>(end - start) / static_cast<float>(SDL_GetPerformanceFrequency()) * 1000.0f;
-	if (fps == 60)
+#ifdef USE_DISPMANX
+	refresh_rate = 60;
+#else
+	refresh_rate = sdlMode.refresh_rate;
+#endif
+	if (refresh_rate < 60)
 		SDL_Delay(floor(16.666f - elapsed_ms));
-	else if (fps == 50)
+	else
 		SDL_Delay(floor(20.000f - elapsed_ms));
 }
 
@@ -241,15 +249,14 @@ void update_gui_screen()
 	vc_dispmanx_element_change_source(updateHandle, gui_element, gui_resource);
 	vc_dispmanx_update_submit_sync(updateHandle);
 #else
-	SDL_RenderClear(renderer);
 	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 	if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
 		renderQuad = { 0, 0, gui_screen->w, gui_screen->h };
 	else
 		renderQuad = { -(GUI_WIDTH - GUI_HEIGHT) / 2, (GUI_WIDTH - GUI_HEIGHT) / 2, gui_screen->w, gui_screen->h };
 	
-	SDL_RenderCopyEx(renderer, gui_texture, nullptr, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
-	SDL_RenderPresent(renderer);
+	SDL_RenderCopyEx(gui_renderer, gui_texture, nullptr, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
+	SDL_RenderPresent(gui_renderer);
 #endif
 }
 
@@ -270,6 +277,12 @@ void setup_cursor()
 	{
 		SDL_FreeSurface(cursor_surface);
 
+		if (cursor != nullptr)
+		{
+			SDL_FreeCursor(cursor);
+			cursor = nullptr;
+		}
+		
 		// Create new cursor with surface
 		cursor = SDL_CreateColorCursor(formatted_surface, 0, 0);
 		SDL_FreeSurface(formatted_surface);
@@ -291,6 +304,12 @@ void setup_cursor()
 
 void amiberry_gui_init()
 {
+	struct AmigaMonitor* mon = &AMonitors[0];
+	sdl_video_driver = SDL_GetCurrentVideoDriver();
+#ifndef USE_DISPMANX
+	SDL_GetCurrentDisplayMode(0, &sdlMode);
+#endif
+	
 	//-------------------------------------------------
 	// Create new screen for GUI
 	//-------------------------------------------------
@@ -365,26 +384,54 @@ void amiberry_gui_init()
 #else
 	setup_cursor();
 
-	if (sdl_window)
+	if (!mon->hMainWnd)
+	{
+		Uint32 flags = SDL_WINDOW_ALWAYS_ON_TOP;
+		if (strcmpi(sdl_video_driver, "KMSDRM") == 0)
+			flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+		
+		mon->hMainWnd = SDL_CreateWindow("Amiberry GUI",
+			SDL_WINDOWPOS_CENTERED,
+			SDL_WINDOWPOS_CENTERED,
+			GUI_WIDTH,
+			GUI_HEIGHT,
+			flags);
+
+		auto* const icon_surface = IMG_Load("data/amiberry.png");
+		if (icon_surface != nullptr)
+		{
+			SDL_SetWindowIcon(mon->hMainWnd, icon_surface);
+			SDL_FreeSurface(icon_surface);
+		}
+	}
+	
+	if (mon->hMainWnd)
 	{
 		if (amiberry_options.rotation_angle != 0 && amiberry_options.rotation_angle != 180)
-			SDL_SetWindowSize(sdl_window, GUI_HEIGHT, GUI_WIDTH);
+			SDL_SetWindowSize(mon->hMainWnd, GUI_HEIGHT, GUI_WIDTH);
 		else
-			SDL_SetWindowSize(sdl_window, GUI_WIDTH, GUI_HEIGHT);
+			SDL_SetWindowSize(mon->hMainWnd, GUI_WIDTH, GUI_HEIGHT);
+		SDL_ShowWindow(mon->hMainWnd);
 	}
 
+	if (gui_renderer == nullptr)
+	{
+		gui_renderer = SDL_CreateRenderer(mon->hMainWnd, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+		check_error_sdl(gui_renderer == nullptr, "Unable to create a renderer:");
+	}
+	
 	// make the scaled rendering look smoother (linear scaling).
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 
-	gui_texture = SDL_CreateTexture(renderer, gui_screen->format->format, SDL_TEXTUREACCESS_STREAMING, gui_screen->w,
+	gui_texture = SDL_CreateTexture(gui_renderer, gui_screen->format->format, SDL_TEXTUREACCESS_STREAMING, gui_screen->w,
 									gui_screen->h);
 	check_error_sdl(gui_texture == nullptr, "Unable to create GUI texture:");
 #endif
 	
 	if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
-		SDL_RenderSetLogicalSize(renderer, GUI_WIDTH, GUI_HEIGHT);
+		SDL_RenderSetLogicalSize(gui_renderer, GUI_WIDTH, GUI_HEIGHT);
 	else
-		SDL_RenderSetLogicalSize(renderer, GUI_HEIGHT, GUI_WIDTH);
+		SDL_RenderSetLogicalSize(gui_renderer, GUI_HEIGHT, GUI_WIDTH);
 	
 	SDL_SetRelativeMouseMode(SDL_FALSE);
 	SDL_ShowCursor(SDL_ENABLE);
@@ -395,7 +442,7 @@ void amiberry_gui_init()
 	gui_imageLoader = new gcn::SDLImageLoader();
 	// The ImageLoader in use is static and must be set to be
 	// able to load images
-	gui_imageLoader->setRenderer(renderer);
+	gui_imageLoader->setRenderer(gui_renderer);
 	gcn::Image::setImageLoader(gui_imageLoader);
 	gui_graphics = new gcn::SDLGraphics();
 	// Set the target for the graphics object to be the screen.
@@ -410,6 +457,8 @@ void amiberry_gui_init()
 
 void amiberry_gui_halt()
 {
+	struct AmigaMonitor* mon = &AMonitors[0];
+	
 	delete uae_gui;
 	uae_gui = nullptr;
 	delete gui_imageLoader;
@@ -460,10 +509,16 @@ void amiberry_gui_halt()
 		SDL_FreeCursor(cursor);
 		cursor = nullptr;
 	}
-
-	// Clear the screen
-	SDL_RenderClear(renderer);
-	SDL_RenderPresent(renderer);
+	if (gui_renderer)
+	{
+		SDL_DestroyRenderer(gui_renderer);
+		gui_renderer = nullptr;
+	}
+	if (mon->hMainWnd != nullptr)
+	{
+		SDL_DestroyWindow(mon->hMainWnd);
+		mon->hMainWnd = nullptr;
+	}
 #endif
 }
 
@@ -778,9 +833,9 @@ void check_input()
 	{
 		// Now we let the Gui object perform its logic.
 		uae_gui->logic();
+		SDL_RenderClear(gui_renderer);
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
-
 		update_gui_screen();
 	}
 }
@@ -811,6 +866,7 @@ void amiberry_gui_run()
 
 	// Prepare the screen once
 	uae_gui->logic();
+	SDL_RenderClear(gui_renderer);
 	uae_gui->draw();
 	update_gui_screen();
 	
@@ -832,7 +888,7 @@ void amiberry_gui_run()
 			currFunc();
 		}
 
-		cap_fps(start, 60);
+		cap_fps(start);
 	}
 
 	if (gui_controller)
@@ -1146,12 +1202,6 @@ void disable_resume()
 
 void run_gui()
 {
-#if 0
-#ifdef ANDROID
-	SDL_ANDROID_SetScreenKeyboardShown(0);
-	SDL_ANDROID_SetSystemMousePointerVisible(1);
-#endif
-#endif
 	gui_running = true;
 	gui_rtarea_flags_onenter = gui_create_rtarea_flag(&currprefs);
 
@@ -1171,15 +1221,6 @@ void run_gui()
 		amiberry_gui_run();
 		gui_widgets_halt();
 		amiberry_gui_halt();
-#if 0
-#ifdef ANDROID
-		if (currprefs.onScreen != 0)
-		{
-			SDL_ANDROID_SetScreenKeyboardShown(1);
-			SDL_ANDROID_SetSystemMousePointerVisible(0);
-		}
-#endif
-#endif
 	}
 
 	// Catch all GUI framework exceptions.

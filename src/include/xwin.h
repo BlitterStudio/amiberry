@@ -27,20 +27,20 @@ extern bool handle_events (void);
 extern int handle_msgpump (void);
 extern void setup_brkhandler (void);
 extern int isfullscreen (void);
-extern void toggle_fullscreen(int);
-extern bool toggle_rtg(int);
-extern void close_rtg();
+extern void toggle_fullscreen(int monid, int);
+extern bool toggle_rtg(int monid, int);
+extern void close_rtg(int monid);
 
 extern void toggle_mousegrab (void);
-void setmouseactivexy(int x, int y, int dir);
+void setmouseactivexy(int monid, int x, int y, int dir);
 
-extern void desktop_coords(int *dw, int *dh, int *x, int *y, int *w, int *h);
-extern bool vsync_switchmode(int hz);
+extern void desktop_coords(int monid, int *dw, int *dh, int *x, int *y, int *w, int *h);
+extern bool vsync_switchmode(int monid, int hz);
 extern void vsync_clear(void);
 extern int vsync_isdone(frame_time_t*);
 extern void doflashscreen (void);
 extern int flashscreen;
-extern void updatedisplayarea();
+extern void updatedisplayarea(int monid);
 extern int isvsync_chipset(void);
 extern int isvsync_rtg (void);
 extern int isvsync (void);
@@ -49,33 +49,33 @@ extern void flush_line(struct vidbuffer*, int);
 extern void flush_block(struct vidbuffer*, int, int);
 extern void flush_screen(struct vidbuffer*, int, int);
 extern void flush_clear_screen(struct vidbuffer*);
-extern bool render_screen(bool);
-extern void show_screen(int mode);
-extern bool show_screen_maybe(bool);
+extern bool render_screen(int monid, int, bool);
+extern void show_screen(int monid, int mode);
+extern bool show_screen_maybe(int monid, bool);
 
 extern int lockscr(struct vidbuffer*, bool, bool);
 extern void unlockscr(struct vidbuffer*, int, int);
-extern bool target_graphics_buffer_update();
-extern float target_adjust_vblank_hz(float);
+extern bool target_graphics_buffer_update(int monid);
+extern float target_adjust_vblank_hz(int monid, float);
 extern int target_get_display_scanline(int displayindex);
 extern void target_spin(int);
 
-void getgfxoffset(float *dxp, float *dyp, float *mxp, float *myp);
-float target_getcurrentvblankrate();
+void getgfxoffset(int monid, float* dxp, float* dyp, float* mxp, float* myp);
+float target_getcurrentvblankrate(int monid);
 
 extern int debuggable (void);
-extern void screenshot(int,int);
+extern void screenshot(int monid, int, int);
 void refreshtitle (void);
 
 extern int bits_in_mask (unsigned long mask);
 extern int mask_shift (unsigned long mask);
 extern unsigned int doMask (int p, int bits, int shift);
 extern unsigned int doMask256 (int p, int bits, int shift);
-extern void alloc_colors64k (int, int, int, int, int, int, int, int, int, int, bool);
+extern void alloc_colors64k(int monid, int, int, int, int, int, int, int, int, int, int, bool);
 extern void alloc_colors_rgb (int rw, int gw, int bw, int rs, int gs, int bs, int aw, int as, int alpha, int byte_swap,
 			      uae_u32 *rc, uae_u32 *gc, uae_u32 *bc);
 extern void alloc_colors_picasso (int rw, int gw, int bw, int rs, int gs, int bs, int rgbfmt, uae_u32 *rgbx16);
-extern float getvsyncrate(float hz, int *mult);
+extern float getvsyncrate(int monid, float hz, int* mult);
 
     /* The graphics code has a choice whether it wants to use a large buffer
      * for the whole display, or only a small buffer for a single line.
@@ -133,7 +133,8 @@ struct vidbuffer
 
 	int inxoffset; /* positive if sync positioning */
 	int inyoffset;
-	
+
+	int monitor_id;
 	int last_drawn_line;
 };
 
@@ -171,6 +172,6 @@ struct amigadisplay
 	struct vidbuf_description gfxvidinfo;
 };
 
-extern struct amigadisplay adisplays;
+extern struct amigadisplay adisplays[MAX_AMIGADISPLAYS];
 
 #endif /* UAE_XWIN_H */

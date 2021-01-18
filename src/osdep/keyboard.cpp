@@ -476,7 +476,7 @@ bool my_kbd_handler(int keyboard, int scancode, int newstate, bool alwaysrelease
 				&& !minimize_key.modifiers.lgui
 				&& !minimize_key.modifiers.rgui)
 			{
-				minimizewindow();
+				minimizewindow(0);
 				scancode = 0;
 			}
 		}

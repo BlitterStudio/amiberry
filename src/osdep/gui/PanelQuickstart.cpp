@@ -242,8 +242,8 @@ static void AdjustPrefs(void)
 		changed_prefs.floppyslots[1].dfxtype = DRV_NONE;
 		changed_prefs.cdslots[0].inuse = true;
 		changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
-		changed_prefs.gfx_monitor.gfx_size.width = 720;
-		changed_prefs.gfx_monitor.gfx_size.height = 284;
+		changed_prefs.gfx_monitor[0].gfx_size.width = 720;
+		changed_prefs.gfx_monitor[0].gfx_size.height = 568;
 		break;
 	default:
 		break;

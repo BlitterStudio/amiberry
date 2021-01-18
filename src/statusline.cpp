@@ -19,9 +19,9 @@
 * Some code to put status information on the screen.
 */
 
-void statusline_getpos(int *x, int *y, int width, int height)
+void statusline_getpos(int monid, int *x, int *y, int width, int height)
 {
-	int mx = statusline_get_multiplier();
+	int mx = statusline_get_multiplier(monid);
 	int total_height = TD_TOTAL_HEIGHT * mx;
 	if (currprefs.osd_pos.x >= 20000) {
 		if (currprefs.osd_pos.x >= 30000)
@@ -94,9 +94,9 @@ static uae_u32 rgbmuldiv(uae_u32 rgb, int mul, int div)
 
 static int statusline_mult[2];
 
-int statusline_set_multiplier(int width, int height)
+int statusline_set_multiplier(int monid, int width, int height)
 {
-	struct amigadisplay *ad = &adisplays;
+	struct amigadisplay *ad = &adisplays[monid];
 	int idx = ad->picasso_on ? 1 : 0;
 	int mult = currprefs.leds_on_screen_multiplier[idx];
 	if (!mult) {
@@ -109,23 +109,23 @@ int statusline_set_multiplier(int width, int height)
 	return mult;
 }
 
-int statusline_get_multiplier()
+int statusline_get_multiplier(int monid)
 {
-	struct amigadisplay *ad = &adisplays;
+	struct amigadisplay *ad = &adisplays[monid];
 	int idx = ad->picasso_on ? 1 : 0;
 	if (statusline_mult[idx] <= 0)
 		return 1;
 	return statusline_mult[idx];
 }
 
-void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u32 *rc, uae_u32 *gc, uae_u32 *bc, uae_u32 *alpha)
+void draw_status_line_single(int monid, uae_u8 *buf, int bpp, int y, int totalwidth, uae_u32 *rc, uae_u32 *gc, uae_u32 *bc, uae_u32 *alpha)
 {
-	struct amigadisplay *ad = &adisplays;
+	struct amigadisplay *ad = &adisplays[monid];
 	int x_start, j, led, border;
 	uae_u32 c1, c2, cb;
 
-	c1 = ledcolor(0x00ffffff, rc, gc, bc, alpha);
-	c2 = ledcolor(0x00000000, rc, gc, bc, alpha);
+	c1 = ledcolor (0x00ffffff, rc, gc, bc, alpha);
+	c2 = ledcolor (0x00000000, rc, gc, bc, alpha);
 
 	if (td_pos & TD_RIGHT)
 		x_start = totalwidth - TD_PADX - VISIBLE_LEDS * TD_WIDTH;
@@ -260,6 +260,9 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 				num1 %= 10;
 				num2 %= 10;
 				num4 = num1 == 0 ? 13 : -1;
+				if (!num1 && !num2) {
+					num2 = -2;
+				}
 				am = 3;
 			}
 		} else if (led == LED_SND && gui_data.sndbuf_avail) {
@@ -491,7 +494,7 @@ void statusline_vsync(void)
 	statusline_update_notification();
 }
 
-void statusline_single_erase(uae_u8* buf, int bpp, int y, int totalwidth)
+void statusline_single_erase(int monid, uae_u8 *buf, int bpp, int y, int totalwidth)
 {
 	memset(buf, 0, bpp * totalwidth);
 }

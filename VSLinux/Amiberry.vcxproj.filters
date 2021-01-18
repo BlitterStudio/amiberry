@@ -987,6 +987,9 @@
     <ClCompile Include="..\src\osdep\ahi_v1.cpp">
       <Filter>src\osdep</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\osdep\gui\PanelRTG.cpp">
+      <Filter>src\osdep\gui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\archivers\7z\7zBuf.h">

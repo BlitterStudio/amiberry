@@ -929,8 +929,8 @@ int flashscreen = 0;
 void doflashscreen (void)
 {
 	flashscreen = 10;
-	init_colors ();
-	picasso_refresh ();
+	init_colors (0);
+	picasso_refresh (0);
 	reset_drawing ();
 }
 

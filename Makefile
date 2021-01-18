@@ -432,6 +432,7 @@ OBJS =	\
 	src/osdep/gui/PanelRAM.o \
 	src/osdep/gui/PanelFloppy.o \
 	src/osdep/gui/PanelHD.o \
+	src/osdep/gui/PanelRTG.o \
 	src/osdep/gui/PanelInput.o \
 	src/osdep/gui/PanelDisplay.o \
 	src/osdep/gui/PanelSound.o \

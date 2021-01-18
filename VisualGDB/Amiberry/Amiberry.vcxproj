@@ -343,6 +343,7 @@
     <ClCompile Include="..\..\src\osdep\gui\PanelQuickstart.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelRAM.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelROM.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\PanelRTG.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelSavestate.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelSound.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\SelectFile.cpp" />

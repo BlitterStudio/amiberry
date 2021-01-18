@@ -69,6 +69,7 @@ static gcn::TextField* txtAmigaHeight;
 static gcn::Slider* sldAmigaHeight;
 
 static gcn::CheckBox* chkAutoHeight;
+static gcn::CheckBox* chkBorderless;
 
 static gcn::Label* lblScreenmode;
 static gcn::DropDown* cboScreenmode;
@@ -112,22 +113,25 @@ public:
 	{
 		if (actionEvent.getSource() == sldAmigaWidth)
 		{
-			if (changed_prefs.gfx_monitor.gfx_size_win.width != amigawidth_values[static_cast<int>(sldAmigaWidth->getValue())])
-				changed_prefs.gfx_monitor.gfx_size_win.width = amigawidth_values[static_cast<int>(sldAmigaWidth->getValue())];
+			if (changed_prefs.gfx_monitor[0].gfx_size_win.width != amigawidth_values[static_cast<int>(sldAmigaWidth->getValue())])
+				changed_prefs.gfx_monitor[0].gfx_size_win.width = amigawidth_values[static_cast<int>(sldAmigaWidth->getValue())];
 		}
 		else if (actionEvent.getSource() == sldAmigaHeight)
 		{
-			if (changed_prefs.gfx_monitor.gfx_size_win.height != amigaheight_values[static_cast<int>(sldAmigaHeight->getValue())])
-				changed_prefs.gfx_monitor.gfx_size_win.height = amigaheight_values[static_cast<int>(sldAmigaHeight->getValue())];
+			if (changed_prefs.gfx_monitor[0].gfx_size_win.height != amigaheight_values[static_cast<int>(sldAmigaHeight->getValue())])
+				changed_prefs.gfx_monitor[0].gfx_size_win.height = amigaheight_values[static_cast<int>(sldAmigaHeight->getValue())];
 		}
 		else if (actionEvent.getSource() == txtAmigaWidth)
-			changed_prefs.gfx_monitor.gfx_size_win.width = std::stoi(txtAmigaWidth->getText());
+			changed_prefs.gfx_monitor[0].gfx_size_win.width = std::stoi(txtAmigaWidth->getText());
 		else if (actionEvent.getSource() == txtAmigaHeight)
-			changed_prefs.gfx_monitor.gfx_size_win.height = std::stoi(txtAmigaHeight->getText());
-		
+			changed_prefs.gfx_monitor[0].gfx_size_win.height = std::stoi(txtAmigaHeight->getText());
+
 		else if (actionEvent.getSource() == chkAutoHeight)
 			changed_prefs.gfx_auto_height = chkAutoHeight->isSelected();
 
+		else if (actionEvent.getSource() == chkBorderless)
+			changed_prefs.borderless = chkBorderless->isSelected();
+		
 		else if (actionEvent.getSource() == chkFrameskip)
 		{
 			changed_prefs.gfx_framerate = chkFrameskip->isSelected() ? 2 : 1;
@@ -168,7 +172,7 @@ public:
 			const auto idx = cboFullscreen->getSelected();
 			if (idx >= 0 && idx <= fullscreen_resolutions_list.getNumberOfElements())
 			{
-				auto* mon = &changed_prefs.gfx_monitor;
+				auto* mon = &changed_prefs.gfx_monitor[0];
 				mon->gfx_size_fs.width = fullscreen_width_values[idx];
 				mon->gfx_size_fs.height = fullscreen_height_values[idx];
 			}
@@ -339,6 +343,10 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	chkAutoHeight = new gcn::CheckBox("Auto Height");
 	chkAutoHeight->setId("chkAutoHeight");
 	chkAutoHeight->addActionListener(amigaScreenActionListener);
+
+	chkBorderless = new gcn::CheckBox("Borderless");
+	chkBorderless->setId("chkBorderless");
+	chkBorderless->addActionListener(amigaScreenActionListener);
 	
 	chkHorizontal = new gcn::CheckBox("Horizontal");
 	chkHorizontal->setId("chkHorizontal");
@@ -416,6 +424,7 @@ void InitPanelDisplay(const struct _ConfigCategory& category)
 	
 	posY += sldAmigaHeight->getHeight() + DISTANCE_NEXT_Y;
 	grpAmigaScreen->add(chkAutoHeight, DISTANCE_BORDER, posY);
+	grpAmigaScreen->add(chkBorderless, chkAutoHeight->getX() + chkAutoHeight->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += chkAutoHeight->getHeight() + DISTANCE_NEXT_Y;
 
 	grpAmigaScreen->setMovable(false);
@@ -541,6 +550,7 @@ void ExitPanelDisplay()
 	delete sldAmigaHeight;
 	delete txtAmigaHeight;
 	delete chkAutoHeight;
+	delete chkBorderless;
 	delete grpAmigaScreen;
 
 	delete chkHorizontal;
@@ -587,34 +597,35 @@ void RefreshPanelDisplay()
 
 	for (i = 0; i < AMIGAWIDTH_COUNT; ++i)
 	{
-		if (changed_prefs.gfx_monitor.gfx_size_win.width == amigawidth_values[i])
+		if (changed_prefs.gfx_monitor[0].gfx_size_win.width == amigawidth_values[i])
 		{
 			sldAmigaWidth->setValue(i);
-			txtAmigaWidth->setText(std::to_string(changed_prefs.gfx_monitor.gfx_size_win.width));
+			txtAmigaWidth->setText(std::to_string(changed_prefs.gfx_monitor[0].gfx_size_win.width));
 			break;
 		}
 		if (i == AMIGAWIDTH_COUNT - 1)
 		{
-			txtAmigaWidth->setText(std::to_string(changed_prefs.gfx_monitor.gfx_size_win.width));
+			txtAmigaWidth->setText(std::to_string(changed_prefs.gfx_monitor[0].gfx_size_win.width));
 			break;
 		}
 	}
 
 	for (i = 0; i < AMIGAHEIGHT_COUNT; ++i)
 	{
-		if (changed_prefs.gfx_monitor.gfx_size_win.height == amigaheight_values[i])
+		if (changed_prefs.gfx_monitor[0].gfx_size_win.height == amigaheight_values[i])
 		{
 			sldAmigaHeight->setValue(i);
-			txtAmigaHeight->setText(std::to_string(changed_prefs.gfx_monitor.gfx_size_win.height));
+			txtAmigaHeight->setText(std::to_string(changed_prefs.gfx_monitor[0].gfx_size_win.height));
 			break;
 		}
 		if (i == AMIGAHEIGHT_COUNT - 1)
 		{
-			txtAmigaHeight->setText(std::to_string(changed_prefs.gfx_monitor.gfx_size_win.height));
+			txtAmigaHeight->setText(std::to_string(changed_prefs.gfx_monitor[0].gfx_size_win.height));
 			break;
 		}
 	}
 	chkAutoHeight->setSelected(changed_prefs.gfx_auto_height);
+	chkBorderless->setSelected(changed_prefs.borderless);
 	
 	chkHorizontal->setSelected(changed_prefs.gfx_xcenter == 2);
 	chkVertical->setSelected(changed_prefs.gfx_ycenter == 2);
@@ -649,13 +660,13 @@ void RefreshPanelDisplay()
 		txtAmigaHeight->setEnabled(!chkAutoHeight->isSelected());
 	}
 
-	if (changed_prefs.gfx_monitor.gfx_size_fs.width && changed_prefs.gfx_monitor.gfx_size_fs.height)
+	if (changed_prefs.gfx_monitor[0].gfx_size_fs.width && changed_prefs.gfx_monitor[0].gfx_size_fs.height)
 	{
 		auto found = false;
 		for (auto idx = 0; idx <= fullscreen_resolutions_list.getNumberOfElements(); idx++)
 		{
-			if (changed_prefs.gfx_monitor.gfx_size_fs.width == fullscreen_width_values[idx]
-				&& changed_prefs.gfx_monitor.gfx_size_fs.height == fullscreen_height_values[idx])
+			if (changed_prefs.gfx_monitor[0].gfx_size_fs.width == fullscreen_width_values[idx]
+				&& changed_prefs.gfx_monitor[0].gfx_size_fs.height == fullscreen_height_values[idx])
 			{
 				cboFullscreen->setSelected(idx);
 				found = true;
@@ -664,8 +675,8 @@ void RefreshPanelDisplay()
 		if (!found)
 		{
 			cboFullscreen->setSelected(2);
-			changed_prefs.gfx_monitor.gfx_size_fs.width = fullscreen_width_values[2];
-			changed_prefs.gfx_monitor.gfx_size_fs.height = fullscreen_height_values[2];
+			changed_prefs.gfx_monitor[0].gfx_size_fs.width = fullscreen_width_values[2];
+			changed_prefs.gfx_monitor[0].gfx_size_fs.height = fullscreen_height_values[2];
 		}
 	}
 	

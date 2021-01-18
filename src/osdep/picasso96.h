@@ -8,63 +8,9 @@
 #ifndef __PICASSO96_H__
 #define __PICASSO96_H__
 
-#include "uae/types.h"
-#include "traps.h"
-#include "rtgmodes.h"
-
-void picasso96_alloc (TrapContext* ctx);
-uae_u32 picasso_demux (uae_u32 arg, TrapContext *ctx);
-
-struct ScreenResolution
-{
-    uae_u32 width;  /* in pixels */
-    uae_u32 height; /* in pixels */
-};
-
-#define MAX_PICASSO_MODES 100
-#define MAX_REFRESH_RATES 10
-
-#define REFRESH_RATE_RAW 1
-#define REFRESH_RATE_LACE 2
-
-struct PicassoResolution
-{
-	struct ScreenResolution res;
-	int depth;   /* depth in bytes-per-pixel */
-	int residx;
-	int refresh[MAX_REFRESH_RATES]; /* refresh-rates in Hz */
-	int refreshtype[MAX_REFRESH_RATES]; /* 0=normal,1=raw,2=lace */
-	TCHAR name[25];
-	/* Bit mask of RGBFF_xxx values.  */
-	uae_u32 colormodes;
-	int rawmode;
-	bool lace; // all modes lace
-};
-extern struct PicassoResolution *DisplayModes;
-
-typedef struct _RECT
-{
-  uae_s32 left;
-  uae_s32 top;
-  uae_s32 right;
-  uae_s32 bottom;
-} RECT;
-
-#define MAX_DISPLAYS 1
-struct MultiDisplay {
-    int primary;
-	TCHAR* adaptername, * adapterid, * adapterkey;
-	TCHAR* monitorname, * monitorid;
-	TCHAR* fullname;
-    struct PicassoResolution *DisplayModes;
-    SDL_Rect rect;
-	SDL_Rect workrect;
-};
-extern struct MultiDisplay Displays[MAX_DISPLAYS];
-
-extern void picasso_init_resolutions (void);
-
 #ifdef PICASSO96
+
+#include "amiberry_gfx.h"
 
 #define NOSIGNAL 0xFFFFFFFF
 
@@ -653,7 +599,7 @@ enum {
 struct picasso96_state_struct
 {
     RGBFTYPE            RGBFormat;   /* true-colour, CLUT, hi-colour, etc.*/
-    struct MyCLUTEntry  CLUT[256 * 2];   /* Duh! */
+    struct MyCLUTEntry  CLUT[2 * 256];   /* Duh! */
     uaecptr             Address;     /* Active screen address (Amiga-side)*/
     uaecptr             Extent;      /* End address of screen (Amiga-side)*/
     uae_u16             Width;       /* Active display width  (From SetGC)*/
@@ -679,23 +625,23 @@ struct picasso96_state_struct
     long		XYOffset;
 };
 
-extern void InitPicasso96 (void);
+extern void InitPicasso96 (int monid);
 
-extern struct picasso96_state_struct picasso96_state;
+extern struct picasso96_state_struct picasso96_state[MAX_AMIGAMONITORS];
 
-extern void picasso_enablescreen(int on);
-extern void picasso_refresh();
-extern void init_hz_p96();
+extern void picasso_enablescreen(int monid, int on);
+extern void picasso_refresh(int monid);
+extern void init_hz_p96(int monid);
 extern void picasso_handle_vsync(void);
-//extern void picasso_trigger_vblank(void);
-extern bool picasso_is_active();
-extern int picasso_setwincursor();
+extern void picasso_trigger_vblank(void);
+extern bool picasso_is_active(int monid);
+extern int picasso_setwincursor(int monid);
 extern int picasso_palette(struct MyCLUTEntry* MCLUT, uae_u32* clut);
 extern void picasso_allocatewritewatch(int index, int gfxmemsize);
 extern void picasso_getwritewatch(int index, int offset);
 extern bool picasso_is_vram_dirty(int index, uaecptr addr, int size);
-extern void picasso_statusline(uae_u8* dst);
-extern void picasso_invalidate(int x, int y, int w, int h);
+extern void picasso_statusline(int monid, uae_u8* dst);
+extern void picasso_invalidate(int monid, int x, int y, int w, int h);
 
 /* This structure describes the UAE-side framebuffer for the Picasso
  * screen.  */
@@ -717,13 +663,19 @@ struct picasso_vidbuf_description {
 	uae_atomic picasso_state_change;
 };
 
-extern struct picasso_vidbuf_description picasso_vidinfo;
+extern struct picasso_vidbuf_description picasso_vidinfo[MAX_AMIGAMONITORS];
 
-extern void gfx_set_picasso_modeinfo (uae_u32 w, uae_u32 h, uae_u32 d, RGBFTYPE rgbfmt);
-extern void gfx_set_picasso_colors(RGBFTYPE rgbfmt);
-extern void gfx_set_picasso_state (int on);
-extern uae_u8 *gfx_lock_picasso (bool, bool);
-extern void gfx_unlock_picasso (bool);
+extern void gfx_set_picasso_modeinfo(int monid, uae_u32 w, uae_u32 h, uae_u32 d, RGBFTYPE rgbfmt);
+extern void gfx_set_picasso_colors(int monid, RGBFTYPE rgbfmt);
+extern void gfx_set_picasso_state(int monid, int on);
+extern uae_u8* gfx_lock_picasso(int monid, bool, bool);
+extern void gfx_unlock_picasso(int monid, bool);
+extern int createwindowscursor(int monid, uaecptr src, int w, int h, int hiressprite, int doubledsprite, int chipset);
+
+void lockrtg(void);
+void unlockrtg(void);
+
+void fb_copyrow(int monid, uae_u8* src, uae_u8* dst, int x, int y, int width, int srcpixbytes, int dy);
 
 extern int p96refresh_active;
 
@@ -762,5 +714,8 @@ extern int p96refresh_active;
 #endif
 
 #endif
+
+void picasso96_alloc(TrapContext* ctx);
+uae_u32 picasso_demux(uae_u32 arg, TrapContext* ctx);
 
 #endif /* __PICASSO96_H__ */

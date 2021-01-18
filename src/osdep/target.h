@@ -36,13 +36,17 @@ STATIC_INLINE FILE* uae_tfopen(const TCHAR* path, const TCHAR* mode)
 	return fopen(path, mode);
 }
 
+extern int mouseactive;
+extern int minimized;
+extern int monitor_off;
+
 extern void logging_init();
-extern int generic_main(int argc, char* argv[]);
 
 extern bool my_kbd_handler(int, int, int, bool);
 extern void clearallkeys();
 extern int getcapslock();
-extern void releasecapture();
+
+void releasecapture(struct AmigaMonitor*);
 extern void disablecapture();
 
 extern amiberry_hotkey enter_gui_key;
@@ -68,11 +72,10 @@ void amiberry_gui_halt();
 void init_max_signals(void);
 void wait_for_vsync(void);
 unsigned long target_lastsynctime(void);
-extern int screen_is_picasso;
 
 void save_amiberry_settings(void);
 void update_display(struct uae_prefs*);
-void black_screen_now(void);
+void clearscreen(void);
 void graphics_subshutdown(void);
 
 extern void wait_keyrelease(void);
@@ -108,11 +111,19 @@ extern void ReadConfigFileList(void);
 extern void RescanROMs(void);
 extern void SymlinkROMs(void);
 extern void ClearAvailableROMList(void);
-extern void setpriority(int prio);
-extern bool setpaused(int priority);
+
+extern void minimizewindow(int monid);
+extern void updatewinrect(struct AmigaMonitor*, bool);
+
 extern bool resumepaused(int priority);
-extern void init_colors();
-extern void minimizewindow();
+extern bool setpaused(int priority);
+extern void unsetminimized(int monid);
+extern void setminimized(int monid);
+
+
+extern void setpriority(int prio);
+void init_colors(int monid);
+
 
 #include <vector>
 #include <string>
@@ -140,6 +151,7 @@ extern void AddFileToWHDLoadList(const char* file, int moveToTop);
 
 int count_HDs(struct uae_prefs* p);
 extern void gui_force_rtarea_hdchange(void);
+extern int isfocus(void);
 extern void gui_restart(void);
 extern bool hardfile_testrdb(const char* filename);
 

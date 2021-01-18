@@ -17,6 +17,7 @@
 #include <switch.h>
 #endif
 
+void uae_time_calibrate(void);
 typedef unsigned long frame_time_t;
 
 extern int64_t g_uae_epoch;

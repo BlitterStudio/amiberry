@@ -16,9 +16,9 @@
 
 #include <math.h>
 
-float getvsyncrate(float hz, int *mult)
+float getvsyncrate(int monid, float hz, int *mult)
 {
-	struct amigadisplay *ad = &adisplays;
+	struct amigadisplay *ad = &adisplays[monid];
 	struct apmode *ap = ad->picasso_on ? &currprefs.gfx_apmode[1] : &currprefs.gfx_apmode[0];
 
 	if (hz < 0)
@@ -137,7 +137,7 @@ static int lf, hf;
 
 static void video_calc_gammatable(int monid)
 {
-	struct amigadisplay* ad = &adisplays;
+	struct amigadisplay *ad = &adisplays[monid];
 	float bri, con, gam, gams[3];
 
 	bri = ((float)(currprefs.gfx_luminance)) * (128.0f / 1000.0f);
@@ -182,7 +182,7 @@ static void video_calc_gammatable(int monid)
 
 static uae_u32 limit256(int monid, double v)
 {
-	struct amigadisplay* ad = &adisplays;
+	struct amigadisplay *ad = &adisplays[monid];
 	v = v * (double)(currprefs.gf[ad->picasso_on].gfx_filter_contrast + 1000) / 1000.0 + currprefs.gf[ad->picasso_on].gfx_filter_luminance / 10.0;
 	if (v < 0)
 		v = 0;
@@ -192,7 +192,7 @@ static uae_u32 limit256(int monid, double v)
 }
 static uae_u32 limit256rb(int monid, double v)
 {
-	struct amigadisplay* ad = &adisplays;
+	struct amigadisplay *ad = &adisplays[monid];
 	v *= (double)(currprefs.gf[ad->picasso_on].gfx_filter_saturation + 1000) / 1000.0;
 	if (v < -128)
 		v = -128;
@@ -368,12 +368,12 @@ void alloc_colors_rgb (int rw, int gw, int bw, int rs, int gs, int bs, int aw, i
 	}
 }
 
-void alloc_colors64k(int rw, int gw, int bw, int rs, int gs, int bs, int aw, int as, int alpha, int byte_swap, bool yuv)
+void alloc_colors64k(int monid, int rw, int gw, int bw, int rs, int gs, int bs, int aw, int as, int alpha, int byte_swap, bool yuv)
 {
 	int bpp = rw + gw + bw + aw;
 	int i, j;
 
-	video_calc_gammatable(0);
+	video_calc_gammatable(monid);
 	j = 256;
 	for (i = 0; i < 4096; i++) {
 		int r = ((i >> 8) << 4) | (i >> 8);

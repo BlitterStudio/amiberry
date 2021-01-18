@@ -159,6 +159,7 @@ add_executable(amiberry
         src/osdep/gui/PanelRAM.cpp
         src/osdep/gui/PanelFloppy.cpp
         src/osdep/gui/PanelHD.cpp
+        src/osdep/gui/PanelRTG.cpp
         src/osdep/gui/PanelInput.cpp
         src/osdep/gui/PanelDisplay.cpp
         src/osdep/gui/PanelSound.cpp

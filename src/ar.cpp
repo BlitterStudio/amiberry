@@ -264,12 +264,12 @@ static int stored_picasso_on = -1;
 
 static void cartridge_enter(void)
 {
-	stored_picasso_on = gfxboard_set(false) ? 1 : 0;
+	stored_picasso_on = gfxboard_set(0, false) ? 1 : 0;
 }
 static void cartridge_exit (void)
 {
 	if (stored_picasso_on > 0)
-		gfxboard_set(true);
+		gfxboard_set(0, true);
 	stored_picasso_on = -1;
 }
 

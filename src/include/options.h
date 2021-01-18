@@ -19,6 +19,8 @@
 #define UAEMINOR 5
 #define UAESUBREV 0
 
+#define MAX_AMIGADISPLAYS 4
+
 typedef enum { KBD_LANG_US, KBD_LANG_DK, KBD_LANG_DE, KBD_LANG_SE, KBD_LANG_FR, KBD_LANG_IT, KBD_LANG_ES } KbdLang;
 
 extern long int version;
@@ -593,7 +595,7 @@ struct uae_prefs
 	bool fpu_strict;
 	int fpu_mode;
 
-	struct monconfig gfx_monitor;
+	struct monconfig gfx_monitor[MAX_AMIGADISPLAYS];
 	int gfx_framerate, gfx_autoframerate;
 	bool gfx_autoresolution_vga;
 	int gfx_autoresolution;
@@ -1099,7 +1101,6 @@ struct amiberry_options
 #else
 	bool use_sdl2_render_thread = false;
 #endif
-	bool use_drawing_thread = false;
 	int default_line_mode = 0;
 	int input_default_mouse_speed = 100;
 	bool input_keyboard_as_joystick_stop_keypresses = false;
