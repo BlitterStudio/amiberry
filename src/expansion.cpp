@@ -3708,6 +3708,7 @@ void expansion_init (void)
 	if (savestate_state != STATE_RESTORE) {
 
 		for (int i = 0; i < MAX_RAM_BOARDS; i++) {
+			mapped_free(&fastmem_bank[i]);
 			fastmem_bank[i].reserved_size = 0;
 			fastmem_bank[i].mask = 0;
 			fastmem_bank[i].baseaddr = NULL;
@@ -3715,6 +3716,7 @@ void expansion_init (void)
 
 #ifdef PICASSO96
 		for (int i = 0; i < MAX_RTG_BOARDS; i++) {
+			mapped_free(gfxmem_banks[i]);
 			gfxmem_banks[i]->reserved_size = 0;
 			gfxmem_banks[i]->mask = 0;
 			gfxmem_banks[i]->baseaddr = NULL;
@@ -3726,11 +3728,13 @@ void expansion_init (void)
 #endif
 
 		for (int i = 0; i < MAX_RAM_BOARDS; i++) {
+			mapped_free(&z3fastmem_bank[i]);
 			z3fastmem_bank[i].reserved_size = 0;
 			z3fastmem_bank[i].mask = 0;
 			z3fastmem_bank[i].baseaddr = NULL;
 		}
 
+		mapped_free(&z3chipmem_bank);
 		z3chipmem_bank.reserved_size = 0;
 		z3chipmem_bank.mask = z3chipmem_bank.start = 0;
 		z3chipmem_bank.baseaddr = NULL;
