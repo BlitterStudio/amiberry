@@ -41,7 +41,6 @@ static const int COLUMN_SIZE[] =
 	40 // Bootpri
 };
 
-static const char* cdfile_filter[] = {".cue", ".ccd", ".iso", ".mds", ".nrg", "\0"};
 static void AdjustDropDownControls();
 static bool bIgnoreListChange = false;
 
