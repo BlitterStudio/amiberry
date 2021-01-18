@@ -918,6 +918,7 @@ static void parse_cmdline (int argc, TCHAR **argv)
 			}
 		}
 	}
+	config_loaded = loaded;
 }
 
 static void parse_cmdline_and_init_file (int argc, TCHAR **argv)
@@ -930,6 +931,10 @@ static void parse_cmdline_and_init_file (int argc, TCHAR **argv)
 
 	if (! target_cfgfile_load (&currprefs, optionsfile, CONFIG_TYPE_DEFAULT, default_config)) {
 		write_log (_T("failed to load config '%s'\n"), optionsfile);
+	}
+	else
+	{
+		config_loaded = true;
 	}
 	fixup_prefs (&currprefs, false);
 
@@ -1082,7 +1087,6 @@ static int real_main2 (int argc, TCHAR **argv)
 
 	if (restart_config[0]) {
 		parse_cmdline_and_init_file(argc, argv);
-		config_loaded = true;
 	}
 	else
 		copy_prefs(&changed_prefs, &currprefs);
