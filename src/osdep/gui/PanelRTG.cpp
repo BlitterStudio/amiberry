@@ -224,18 +224,22 @@ void InitPanelRTG(const struct _ConfigCategory& category)
 	chkRtgMatchDepth = new gcn::CheckBox("Match host and RTG color depth if possible");
 	chkRtgMatchDepth->setId("chkRtgMatchDepth");
 	chkRtgMatchDepth->addActionListener(rtg_action_listener);
+	chkRtgMatchDepth->setEnabled(false); // Not implemented yet
 
 	chkRtgAutoscale = new gcn::CheckBox("Scale if smaller than display size setting");
 	chkRtgAutoscale->setId("chkRtgAutoscale");
 	chkRtgAutoscale->addActionListener(rtg_action_listener);
+	chkRtgAutoscale->setEnabled(false); // Not implemented yet
 	
 	chkRtgAllowScaling = new gcn::CheckBox("Always scale in windowed mode");
 	chkRtgAllowScaling->setId("chkRtgAllowScaling");
 	chkRtgAllowScaling->addActionListener(rtg_action_listener);
+	chkRtgAllowScaling->setEnabled(false); // Not implemented yet
 	
 	chkRtgAlwaysCenter = new gcn::CheckBox("Always center");
 	chkRtgAlwaysCenter->setId("chkRtgAlwaysCenter");
 	chkRtgAlwaysCenter->addActionListener(rtg_action_listener);
+	chkRtgAlwaysCenter->setEnabled(false); // Not implemented yet
 	
 	chkRtgHardwareInterrupt = new gcn::CheckBox("Hardware vertical blank interrupt");
 	chkRtgHardwareInterrupt->setId("chkRtgHardwareInterrupt");
@@ -244,6 +248,7 @@ void InitPanelRTG(const struct _ConfigCategory& category)
 	chkRtgHardwareSprite = new gcn::CheckBox("Hardware sprite emulation");
 	chkRtgHardwareSprite->setId("chkRtgHardwareSprite");
 	chkRtgHardwareSprite->addActionListener(rtg_action_listener);
+	chkRtgHardwareSprite->setEnabled(false); // Not implemented yet
 
 	lblRtgRefreshRate = new gcn::Label("Refresh rate:");
 	lblRtgRefreshRate->setAlignment(gcn::Graphics::LEFT);
@@ -262,6 +267,7 @@ void InitPanelRTG(const struct _ConfigCategory& category)
 	cboRtgBufferMode->setBackgroundColor(colTextboxBackground);
 	cboRtgBufferMode->setId("cboRtgBufferMode");
 	cboRtgBufferMode->addActionListener(rtg_action_listener);
+	cboRtgBufferMode->setEnabled(false); // Not implemented yet
 
 	lblRtgAspectRatio = new gcn::Label("Aspect Ratio:");
 	lblRtgAspectRatio->setAlignment(gcn::Graphics::LEFT);
@@ -271,6 +277,7 @@ void InitPanelRTG(const struct _ConfigCategory& category)
 	cboRtgAspectRatio->setBackgroundColor(colTextboxBackground);
 	cboRtgAspectRatio->setId("cboRtgAspectRatio");
 	cboRtgAspectRatio->addActionListener(rtg_action_listener);
+	cboRtgAspectRatio->setEnabled(false); // Not implemented yet
 
 	lblRtgColorModes = new gcn::Label("Color modes:");
 	lblRtgColorModes->setAlignment(gcn::Graphics::LEFT);
