@@ -1922,17 +1922,24 @@ void graphics_leave()
 	struct AmigaMonitor* mon = &AMonitors[0];
 	graphics_subshutdown();
 
-	if (display_tid != nullptr) {
-		write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_QUIT, 1);
-		while (display_tid != nullptr) {
-			sleep_millis(10);
+#ifndef USE_DISPMANX
+	if (amiberry_options.use_sdl2_render_thread)
+	{
+#endif
+		if (display_tid != nullptr) {
+			write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_QUIT, 1);
+			while (display_tid != nullptr) {
+				sleep_millis(10);
+			}
+			destroy_comm_pipe(display_pipe);
+			xfree(display_pipe);
+			display_pipe = nullptr;
+			uae_sem_destroy(&display_sem);
+			display_sem = nullptr;
 		}
-		destroy_comm_pipe(display_pipe);
-		xfree(display_pipe);
-		display_pipe = nullptr;
-		uae_sem_destroy(&display_sem);
-		display_sem = nullptr;
+#ifndef USE_DISPMANX
 	}
+#endif
 #ifdef USE_DISPMANX
 	bcm_host_deinit();
 #else
