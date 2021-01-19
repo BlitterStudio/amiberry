@@ -312,7 +312,7 @@ void do_leave_program (void)
 #endif
 	if (! no_gui)
 		gui_exit ();
-	SDL_Quit();
+	//SDL_Quit();
 #ifdef AUTOCONFIG
 	expansion_cleanup ();
 #endif

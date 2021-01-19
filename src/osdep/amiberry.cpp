@@ -2893,6 +2893,7 @@ int main(int argc, char* argv[])
 		write_log("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
 		abort();
 	}
+	atexit(SDL_Quit);
 	write_log(_T("Sorting devices and modes..\n"));
 	sortdisplays();
 	
