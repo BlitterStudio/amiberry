@@ -466,6 +466,7 @@ static int display_thread(void* unused)
 			}
 			vc_dispmanx_update_submit(updateHandle, nullptr, nullptr);
 #else
+			SDL_RenderClear(sdl_renderer);
 			SDL_UpdateTexture(amiga_texture, nullptr, sdl_surface->pixels, sdl_surface->pitch);
 			SDL_RenderCopyEx(sdl_renderer, amiga_texture, nullptr, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
 #endif
@@ -868,9 +869,6 @@ static void open_screen(struct uae_prefs* p)
 	vsync_counter = 0;
 	current_vsync_frame = 2;
 #else
-	
-	SDL_SetRenderDrawColor(sdl_renderer, 0, 0, 0, 0xFF);
-	SDL_RenderClear(sdl_renderer);
 	
 	int width, height;
 	if (mon->screen_is_picasso)
@@ -1604,6 +1602,7 @@ void show_screen(int monid, int mode)
 	else 
 	{
 		flip_in_progess = true;
+		SDL_RenderClear(sdl_renderer);
 		SDL_UpdateTexture(amiga_texture, nullptr, sdl_surface->pixels, sdl_surface->pitch);
 		SDL_RenderCopyEx(sdl_renderer, amiga_texture, nullptr, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
 		SDL_RenderPresent(sdl_renderer);
