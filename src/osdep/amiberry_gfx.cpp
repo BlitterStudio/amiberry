@@ -341,7 +341,7 @@ static int display_thread(void* unused)
 				else
 				{
 					display_depth = 32;
-					rgb_mode = VC_IMAGE_RGBA32;
+					rgb_mode = VC_IMAGE_ARGB8888;
 					pixel_format = SDL_PIXELFORMAT_BGRA32;
 				}
 			}
@@ -350,7 +350,7 @@ static int display_thread(void* unused)
 				//display_depth = 16;
 				//rgb_mode = VC_IMAGE_RGB565;
 				display_depth = 32;
-				rgb_mode = VC_IMAGE_RGBA32;
+				rgb_mode = VC_IMAGE_ARGB8888;
 				pixel_format = SDL_PIXELFORMAT_BGRA32;
 			}
 
@@ -466,7 +466,6 @@ static int display_thread(void* unused)
 			}
 			vc_dispmanx_update_submit(updateHandle, nullptr, nullptr);
 #else
-			SDL_RenderClear(sdl_renderer);
 			SDL_UpdateTexture(amiga_texture, nullptr, sdl_surface->pixels, sdl_surface->pitch);
 			SDL_RenderCopyEx(sdl_renderer, amiga_texture, nullptr, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
 #endif
@@ -507,7 +506,7 @@ void change_layer_number(int layer)
 int graphics_setup(void)
 {
 #ifdef PICASSO96
-	sortdisplays();
+	//sortdisplays(); //we already run this earlier on startup
 	InitPicasso96(0);
 #endif
 
@@ -1617,7 +1616,6 @@ void show_screen(int monid, int mode)
 	else 
 	{
 		flip_in_progess = true;
-		SDL_RenderClear(sdl_renderer);
 		SDL_UpdateTexture(amiga_texture, nullptr, sdl_surface->pixels, sdl_surface->pitch);
 		SDL_RenderCopyEx(sdl_renderer, amiga_texture, nullptr, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
 		SDL_RenderPresent(sdl_renderer);
@@ -1810,7 +1808,6 @@ int graphics_init(bool mousecapture)
 {
 	struct AmigaMonitor* mon = &AMonitors[0];
 #ifdef USE_DISPMANX
-
 	if (!mon->sdl_window)
 	{
 		mon->sdl_window = SDL_CreateWindow("Amiberry",
@@ -1821,7 +1818,6 @@ int graphics_init(bool mousecapture)
 			SDL_WINDOW_FULLSCREEN_DESKTOP);
 		check_error_sdl(mon->sdl_window == nullptr, "Unable to create window");
 	}
-
 #else
 	write_log("Trying to get Current Video Driver...\n");
 	sdl_video_driver = SDL_GetCurrentVideoDriver();
@@ -2469,9 +2465,9 @@ void sortdisplays()
 {
 	struct MultiDisplay* md;
 	int i, idx;
-
-#ifdef USE_DISPMANX
 	char tmp[200];
+	
+#ifdef USE_DISPMANX	
 	int w = 800;
 	int h = 600;
 	int wv = w;
@@ -2505,7 +2501,6 @@ void sortdisplays()
 		return;
 	}
 
-	char tmp[200];
 	Displays[0].primary = 1;
 	Displays[0].rect.x = bounds.x;
 	Displays[0].rect.y = bounds.y;
@@ -2530,8 +2525,7 @@ void sortdisplays()
 			const auto bit_unit = bitdepth + 1 & 0xF8;
 			const auto rgbFormat =
 				bitdepth == 8 ? RGBFB_CLUT :
-				bitdepth == 16 ? RGBFB_R5G6B5 :
-				bitdepth == 24 ? RGBFB_R8G8B8 : RGBFB_R8G8B8A8;
+				bitdepth == 16 ? RGBFB_R5G6B5 : RGBFB_R8G8B8A8;
 			auto pixelFormat = 1 << rgbFormat;
 			pixelFormat |= RGBFF_CHUNKY;
 			md->DisplayModes[count].res.width = x_size_table[i];
@@ -2587,7 +2581,7 @@ void sortdisplays()
 	}
 #endif	
 	sortmodes(md);
-	modesList(md);	
+	modesList(md);
 	i = 0;
 	while (md->DisplayModes[i].depth > 0)
 		i++;
