@@ -535,18 +535,6 @@ int graphics_setup(void)
 			vchi_disconnect(vchi_instance);
 		}
 	}
-
-	if (display_pipe == nullptr) {
-		display_pipe = xmalloc(smp_comm_pipe, 1);
-		init_comm_pipe(display_pipe, 20, 1);
-	}
-	if (display_sem == nullptr) {
-		uae_sem_init(&display_sem, 0, 0);
-	}
-	if (display_tid == nullptr && display_pipe != nullptr && display_sem != nullptr) {
-		uae_start_thread(_T("display thread"), display_thread, nullptr, &display_tid);
-	}
-	write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SETUP, 1);
 #endif
 	return 1;
 }
@@ -1906,6 +1894,7 @@ int graphics_init(bool mousecapture)
 #ifndef USE_DISPMANX
 	if (amiberry_options.use_sdl2_render_thread)
 	{
+#endif
 		if (display_pipe == nullptr) {
 			display_pipe = xmalloc(smp_comm_pipe, 1);
 			init_comm_pipe(display_pipe, 20, 1);
@@ -1917,6 +1906,7 @@ int graphics_init(bool mousecapture)
 			uae_start_thread(_T("display thread"), display_thread, nullptr, &display_tid);
 		}
 		write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SETUP, 1);
+#ifndef USE_DISPMANX
 	}
 #endif
 	
