@@ -342,7 +342,7 @@ static int display_thread(void* unused)
 				{
 					display_depth = 32;
 					rgb_mode = VC_IMAGE_RGBA32;
-					pixel_format = SDL_PIXELFORMAT_RGBA32;
+					pixel_format = SDL_PIXELFORMAT_BGRA32;
 				}
 			}
 			else
@@ -351,7 +351,7 @@ static int display_thread(void* unused)
 				//rgb_mode = VC_IMAGE_RGB565;
 				display_depth = 32;
 				rgb_mode = VC_IMAGE_RGBA32;
-				pixel_format = SDL_PIXELFORMAT_RGBA32;
+				pixel_format = SDL_PIXELFORMAT_BGRA32;
 			}
 
 			if (!sdl_surface)
@@ -836,8 +836,6 @@ void graphics_subshutdown()
 	}
 }
 
-
-
 static void updatepicasso96(struct AmigaMonitor* mon)
 {
 #ifdef PICASSO96
@@ -900,7 +898,7 @@ static void open_screen(struct uae_prefs* p)
 		else
 		{
 			display_depth = 32;
-			pixel_format = SDL_PIXELFORMAT_RGBA32;
+			pixel_format = SDL_PIXELFORMAT_BGRA32;
 		}
 
 		if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
@@ -922,7 +920,7 @@ static void open_screen(struct uae_prefs* p)
 		//display_depth = 16;
 		//pixel_format = SDL_PIXELFORMAT_RGB565;
 		display_depth = 32;
-		pixel_format = SDL_PIXELFORMAT_RGBA32;
+		pixel_format = SDL_PIXELFORMAT_BGRA32;
 
 		if (changed_prefs.gfx_correct_aspect == 0)
 		{
