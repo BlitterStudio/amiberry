@@ -1960,7 +1960,7 @@ void graphics_leave()
 void close_windows(struct AmigaMonitor* mon)
 {
 	reset_sound();
-	graphics_leave();
+	graphics_subshutdown();
 }
 
 static int save_png(SDL_Surface* surface, char* path)
