@@ -645,7 +645,7 @@ static void mouseupdate(struct AmigaMonitor *mon)
 	//if (!currprefs.gfx_api)
 		//return;
 #ifdef AMIBERRY
-	SDL_WarpMouseInWindow(mon->hAmigaWnd, x, y);
+	SDL_WarpMouseInWindow(mon->sdl_window, x, y);
 #else
 	if (currprefs.gf[1].gfx_filter_autoscale == RTG_MODE_CENTER) {
 		D3D_setcursor(mon->monitor_id, x, y, WIN32GFX_GetWidth(mon), WIN32GFX_GetHeight(mon), cursorvisible, mon->scalepicasso == 2);

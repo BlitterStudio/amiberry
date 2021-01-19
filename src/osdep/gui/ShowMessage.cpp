@@ -49,26 +49,26 @@ static ShowMessageActionListener* showMessageActionListener;
 static void InitShowMessage()
 {
 	struct AmigaMonitor* mon = &AMonitors[0];
-	if (mon->hMainWnd == nullptr)
+	if (mon->sdl_window == nullptr)
 	{
-		mon->hMainWnd = SDL_CreateWindow("Amiberry",
+		mon->sdl_window = SDL_CreateWindow("Amiberry",
 			SDL_WINDOWPOS_UNDEFINED,
 			SDL_WINDOWPOS_UNDEFINED,
 			0,
 			0,
 			SDL_WINDOW_FULLSCREEN_DESKTOP);
-		check_error_sdl(mon->hMainWnd == nullptr, "Unable to create window:");
+		check_error_sdl(mon->sdl_window == nullptr, "Unable to create window:");
 	}
 	if (gui_screen == nullptr)
 	{
 		gui_screen = SDL_CreateRGBSurface(0, GUI_WIDTH, GUI_HEIGHT, 16, 0, 0, 0, 0);
 		check_error_sdl(gui_screen == nullptr, "Unable to create SDL surface:");
 	}
-	if (gui_renderer == nullptr)
+	if (sdl_renderer == nullptr)
 	{
-		gui_renderer = SDL_CreateRenderer(mon->hMainWnd, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-		check_error_sdl(gui_renderer == nullptr, "Unable to create a renderer:");
-		SDL_RenderSetLogicalSize(gui_renderer, GUI_WIDTH, GUI_HEIGHT);
+		sdl_renderer = SDL_CreateRenderer(mon->sdl_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+		check_error_sdl(sdl_renderer == nullptr, "Unable to create a renderer:");
+		SDL_RenderSetLogicalSize(sdl_renderer, GUI_WIDTH, GUI_HEIGHT);
 	}
 
 #ifdef USE_DISPMANX
@@ -135,12 +135,12 @@ static void InitShowMessage()
 }
 #else
 
-	if (mon->hMainWnd)
+	if (mon->sdl_window)
 	{
 		if (amiberry_options.rotation_angle != 0 && amiberry_options.rotation_angle != 180)
-			SDL_SetWindowSize(mon->hMainWnd, GUI_HEIGHT, GUI_WIDTH);
+			SDL_SetWindowSize(mon->sdl_window, GUI_HEIGHT, GUI_WIDTH);
 		else
-			SDL_SetWindowSize(mon->hMainWnd, GUI_WIDTH, GUI_HEIGHT);
+			SDL_SetWindowSize(mon->sdl_window, GUI_WIDTH, GUI_HEIGHT);
 	}
 	
 	// make the scaled rendering look smoother (linear scaling).
@@ -148,16 +148,16 @@ static void InitShowMessage()
 
 	if (gui_texture == nullptr)
 	{
-		gui_texture = SDL_CreateTexture(gui_renderer, gui_screen->format->format, SDL_TEXTUREACCESS_STREAMING,
+		gui_texture = SDL_CreateTexture(sdl_renderer, gui_screen->format->format, SDL_TEXTUREACCESS_STREAMING,
 			gui_screen->w, gui_screen->h);
 		check_error_sdl(gui_texture == nullptr, "Unable to create texture from Surface");
 	}
 #endif
 
 	if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
-		SDL_RenderSetLogicalSize(gui_renderer, GUI_WIDTH, GUI_HEIGHT);
+		SDL_RenderSetLogicalSize(sdl_renderer, GUI_WIDTH, GUI_HEIGHT);
 	else
-		SDL_RenderSetLogicalSize(gui_renderer, GUI_HEIGHT, GUI_WIDTH);
+		SDL_RenderSetLogicalSize(sdl_renderer, GUI_HEIGHT, GUI_WIDTH);
 
 	SDL_SetRelativeMouseMode(SDL_FALSE);
 	SDL_ShowCursor(SDL_ENABLE);
@@ -303,8 +303,8 @@ static void ExitShowMessage()
 		}
 
 		// Clear the screen
-		SDL_RenderClear(gui_renderer);
-		SDL_RenderPresent(gui_renderer);
+		SDL_RenderClear(sdl_renderer);
+		SDL_RenderPresent(sdl_renderer);
 #endif
 	}
 }
@@ -495,7 +495,7 @@ static void ShowMessageWaitInputLoop()
 	{
 		// Now we let the Gui object perform its logic.
 		uae_gui->logic();
-		SDL_RenderClear(gui_renderer);
+		SDL_RenderClear(sdl_renderer);
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
 		// Finally we update the screen.
@@ -633,7 +633,7 @@ static void ShowMessageLoop()
 	{
 		// Now we let the Gui object perform its logic.
 		uae_gui->logic();
-		SDL_RenderClear(gui_renderer);
+		SDL_RenderClear(sdl_renderer);
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
 		// Finally we update the screen.
@@ -663,7 +663,7 @@ bool ShowMessage(const char* title, const char* line1, const char* line2, const 
 
 	// Prepare the screen once
 	uae_gui->logic();
-	SDL_RenderClear(gui_renderer);
+	SDL_RenderClear(sdl_renderer);
 	uae_gui->draw();
 	update_gui_screen();
 
@@ -692,7 +692,7 @@ amiberry_hotkey ShowMessageForInput(const char* title, const char* line1, const 
 
 	// Prepare the screen once
 	uae_gui->logic();
-	SDL_RenderClear(gui_renderer);
+	SDL_RenderClear(sdl_renderer);
 	uae_gui->draw();
 	update_gui_screen();
 

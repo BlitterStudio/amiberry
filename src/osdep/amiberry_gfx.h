@@ -70,8 +70,7 @@ struct winuae_currentmode {
 #define MAX_AMIGAMONITORS 4
 struct AmigaMonitor {
 	int monitor_id;
-	SDL_Window* hAmigaWnd;
-	SDL_Window* hMainWnd;
+	SDL_Window* sdl_window;
 	struct MultiDisplay* md;
 
 	SDL_Rect amigawin_rect, mainwin_rect;
@@ -105,12 +104,12 @@ struct AmigaMonitor {
 extern struct AmigaMonitor* amon;
 extern struct AmigaMonitor AMonitors[MAX_AMIGAMONITORS];
 
-#define  SYSTEM_RED_SHIFT      (screen->format->Rshift)
-#define  SYSTEM_GREEN_SHIFT    (screen->format->Gshift)
-#define  SYSTEM_BLUE_SHIFT     (screen->format->Bshift)
-#define  SYSTEM_RED_MASK       (screen->format->Rmask)
-#define  SYSTEM_GREEN_MASK     (screen->format->Gmask)
-#define  SYSTEM_BLUE_MASK      (screen->format->Bmask)
+#define  SYSTEM_RED_SHIFT      (sdl_surface->format->Rshift)
+#define  SYSTEM_GREEN_SHIFT    (sdl_surface->format->Gshift)
+#define  SYSTEM_BLUE_SHIFT     (sdl_surface->format->Bshift)
+#define  SYSTEM_RED_MASK       (sdl_surface->format->Rmask)
+#define  SYSTEM_GREEN_MASK     (sdl_surface->format->Gmask)
+#define  SYSTEM_BLUE_MASK      (sdl_surface->format->Bmask)
 
 #ifdef USE_DISPMANX
 #include <bcm_host.h>
@@ -129,10 +128,9 @@ extern SDL_Texture* amiga_texture;
 extern SDL_Cursor* cursor;
 extern SDL_DisplayMode sdlMode;
 #endif
-extern SDL_Surface* screen;
+extern SDL_Surface* sdl_surface;
 extern const char* sdl_video_driver;
-extern SDL_Renderer* amiga_renderer;
-extern SDL_Renderer* gui_renderer;
+extern SDL_Renderer* sdl_renderer;
 extern SDL_Rect renderQuad;
 extern SDL_Cursor* normalcursor;
 

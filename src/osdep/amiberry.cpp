@@ -345,7 +345,7 @@ void releasecapture(struct AmigaMonitor* mon)
 {
 	if (!mon_cursorclipped)
 		return;
-	SDL_SetWindowGrab(mon->hAmigaWnd, SDL_FALSE);
+	SDL_SetWindowGrab(mon->sdl_window, SDL_FALSE);
 	SDL_SetRelativeMouseMode(SDL_FALSE);
 	int c = SDL_ShowCursor(SDL_ENABLE);
 	write_log(_T("ShowCursor %d\n"), c);
@@ -357,10 +357,10 @@ void updatewinrect(struct AmigaMonitor* mon, bool allowfullscreen)
 	int f = isfullscreen();
 	if (!allowfullscreen && f > 0)
 		return;
-	SDL_GetWindowPosition(mon->hAmigaWnd, &mon->amigawin_rect.x, &mon->amigawin_rect.y);
-	SDL_GetWindowSize(mon->hAmigaWnd, &mon->amigawin_rect.w, &mon->amigawin_rect.h);
-	SDL_GetWindowPosition(mon->hAmigaWnd, &mon->amigawinclip_rect.x, &mon->amigawinclip_rect.y);
-	SDL_GetWindowSize(mon->hAmigaWnd, &mon->amigawinclip_rect.w, &mon->amigawinclip_rect.h);
+	SDL_GetWindowPosition(mon->sdl_window, &mon->amigawin_rect.x, &mon->amigawin_rect.y);
+	SDL_GetWindowSize(mon->sdl_window, &mon->amigawin_rect.w, &mon->amigawin_rect.h);
+	SDL_GetWindowPosition(mon->sdl_window, &mon->amigawinclip_rect.x, &mon->amigawinclip_rect.y);
+	SDL_GetWindowSize(mon->sdl_window, &mon->amigawinclip_rect.w, &mon->amigawinclip_rect.h);
 #if MOUSECLIP_LOG
 	write_log(_T("GetWindowRect mon=%d %dx%d %dx%d %d\n"), mon->monitor_id, mon->amigawin_rect.left, mon->amigawin_rect.top, mon->amigawin_rect.right, mon->amigawin_rect.bottom, f);
 #endif
@@ -421,7 +421,7 @@ static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpaus
 		if (focus) {
 			if (!mon_cursorclipped) {
 				SDL_ShowCursor(SDL_DISABLE);
-				SDL_SetWindowGrab(mon->hAmigaWnd, SDL_TRUE);
+				SDL_SetWindowGrab(mon->sdl_window, SDL_TRUE);
 				SDL_SetRelativeMouseMode(SDL_TRUE);
 				mon_cursorclipped = mon->monitor_id + 1;
 			}
@@ -455,7 +455,7 @@ void setmouseactive(int monid, int active)
 	struct AmigaMonitor* mon = &AMonitors[monid];
 	monitor_off = 0;
 	if (active > 1)
-		SDL_RaiseWindow(mon->hAmigaWnd);
+		SDL_RaiseWindow(mon->sdl_window);
 	setmouseactive2(mon, active, true);
 }
 
@@ -564,7 +564,7 @@ void minimizewindow(int monid)
 {
 	struct AmigaMonitor* mon = &AMonitors[monid];
 	if (mon->screen_is_initialized)
-		SDL_MinimizeWindow(mon->hAmigaWnd);
+		SDL_MinimizeWindow(mon->sdl_window);
 }
 
 void enablecapture(int monid)
@@ -1209,7 +1209,7 @@ void process_event(SDL_Event event)
 	case SDL_MOUSEMOTION:
 	{
 		monitor_off = 0;
-		if (!(SDL_GetWindowFlags(mon->hAmigaWnd) & SDL_WINDOW_MOUSE_CAPTURE) && currprefs.input_tablet > 0 && currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC && isfullscreen() <= 0)
+		if (!(SDL_GetWindowFlags(mon->sdl_window) & SDL_WINDOW_MOUSE_CAPTURE) && currprefs.input_tablet > 0 && currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC && isfullscreen() <= 0)
 		{
 			if (mousehack_alive())
 				setcursorshape(0);
