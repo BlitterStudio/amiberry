@@ -48,10 +48,12 @@ void events_reset_syncline(void)
 
 void events_schedule (void)
 {
+	int i;
+
 	unsigned long int mintime = ~0L;
-	for (auto& i : eventtab) {
-		if (i.active) {
-			auto eventtime = i.evtime - currcycle;
+	for (i = 0; i < ev_max; i++) {
+		if (eventtab[i].active) {
+			unsigned long int eventtime = eventtab[i].evtime - currcycle;
 			if (eventtime < mintime)
 				mintime = eventtime;
 		}
@@ -249,7 +251,7 @@ static bool event_check_vsync(void)
 	return false;
 }
 
-void do_cycles_cpu_fastest(uae_u32 cycles_to_add)
+void do_cycles_slow(unsigned long cycles_to_add)
 {
 	if (!currprefs.cpu_thread) {
 		if ((pissoff -= cycles_to_add) >= 0)
@@ -268,43 +270,25 @@ void do_cycles_cpu_fastest(uae_u32 cycles_to_add)
 				return;
 		}
 
-		cycles_to_add -= (nextevent - currcycle);
+		cycles_to_add -= nextevent - currcycle;
 		currcycle = nextevent;
 
-		for (auto& i : eventtab) {
-			if (i.active && i.evtime == currcycle) {
-				if (i.handler == nullptr)
-					i.active = false;
-				else
-					(*i.handler)();
+		for (int i = 0; i < ev_max; i++) {
+			if (eventtab[i].active && eventtab[i].evtime == currcycle) {
+				if (eventtab[i].handler == NULL) {
+					gui_message(_T("eventtab[%d].handler is null!\n"), i);
+					eventtab[i].active = 0;
+				} else {
+					(*eventtab[i].handler)();
+				}
 			}
 		}
 		events_schedule ();
 
+
 	}
 	currcycle += cycles_to_add;
 }
-
-void do_cycles_cpu_norm(uae_u32 cycles_to_add)
-{
-	while ((nextevent - currcycle) <= cycles_to_add)
-	{
-		cycles_to_add -= (nextevent - currcycle);
-		currcycle = nextevent;
-
-		for (auto& i : eventtab)
-		{
-			if (i.active && i.evtime == currcycle)
-			{
-				(*i.handler)();
-			}
-		}
-		events_schedule();
-	}
-	currcycle += cycles_to_add;
-}
-
-do_cycles_func do_cycles = do_cycles_cpu_norm;
 
 void MISC_handler (void)
 {

@@ -37,8 +37,7 @@ typedef void (*evfunc2)(uae_u32);
 
 typedef void (*do_cycles_func)(uae_u32);
 extern do_cycles_func do_cycles;
-void do_cycles_cpu_fastest (uae_u32 cycles_to_add);
-void do_cycles_cpu_norm (uae_u32 cycles_to_add);
+void do_cycles_slow(unsigned long cycles_to_add);
 
 typedef unsigned long int evt;
 
@@ -72,6 +71,7 @@ extern int pissoff_value;
 extern uae_s32 pissoff;
 
 #define countdown pissoff
+#define do_cycles do_cycles_slow
 
 extern struct ev eventtab[ev_max];
 extern struct ev2 eventtab2[ev2_max];

@@ -31,11 +31,11 @@ static __inline__ frame_time_t read_processor_time (void)
 #elif defined(__SWITCH__)
 time = (int64_t) ((svcGetSystemTick() * 1000000) / 19200000);
 #else
-  struct timespec ts;
+  struct timespec ts{};
 
   clock_gettime (CLOCK_MONOTONIC, &ts);
 
-  time = (((int64_t) ts.tv_sec) * 1000000) + (ts.tv_nsec / 1000);
+  time = (int64_t) ts.tv_sec * 1000000 + ts.tv_nsec / 1000;
 #endif
   return time - g_uae_epoch;
 }
@@ -49,11 +49,11 @@ static __inline__ int64_t read_processor_time_ns (void)
 #elif defined(__SWITCH__)
 time = (int64_t) ((svcGetSystemTick() * 1000000) / 19200000);
 #else
-  struct timespec ts;
+  struct timespec ts{};
   
   clock_gettime (CLOCK_MONOTONIC, &ts);
 
-  time = (((int64_t) ts.tv_sec) * 1000000 * 1000) + (ts.tv_nsec);
+  time = (int64_t) ts.tv_sec * 1000000000LL + ts.tv_nsec;
 #endif
   return time;
 }
