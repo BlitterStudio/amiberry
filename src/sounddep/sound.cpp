@@ -77,8 +77,6 @@ static uae_u8* extrasndbuf;
 static int extrasndbufsize;
 static int extrasndbuffered;
 
-static int sound_pull = 0;
-
 int setup_sound(void)
 {
 	sound_available = 1;
@@ -311,7 +309,7 @@ static int open_audio_sdl2(struct sound_data* sd, int index)
 	if (sd->sndbufsize > SND_MAX_BUFFER)
 		sd->sndbufsize = SND_MAX_BUFFER;
 	sd->samplesize = ch * 16 / 8;
-	s->pullmode = sound_pull;
+	s->pullmode = currprefs.sound_pullmode;
 
 	SDL_AudioSpec want, have;
 	memset(&want, 0, sizeof want);

@@ -932,6 +932,7 @@ struct uae_prefs
 	int input_device_match_mask;
 
 #ifdef AMIBERRY
+	int sound_pullmode;
 	bool input_analog_remap;
 	bool use_retroarch_quit;
 	bool use_retroarch_menu;

@@ -263,14 +263,16 @@ static NavigationMap navMap[] =
 	{ "cboFilter", "cboStereoDelay", "Sound", "cboInterpol", "sldSoundBufferSize" },
 	{ "cboSeparation", "cboChannelMode", "cboInterpol", "sndEmuBest", "cboStereoDelay" },
 	{ "cboStereoDelay", "cboFrequency", "cboFilter", "cboSeparation", "chkFloppySound" },
-	{ "sldMasterVol", "", "", "sldSoundBufferSize", "sldPaulaVol"},
+	{ "sldMasterVol", "", "", "optSoundPush", "sldPaulaVol"},
 	{ "sldPaulaVol", "", "", "sldMasterVol", "sldCDVol" },
 	{ "sldCDVol", "", "", "sldPaulaVol", "sldAHIVol" },
 	{ "sldAHIVol", "", "", "sldCDVol", "cboInterpol"},
 	{ "chkFloppySound", "Sound", "sldSoundBufferSize", "cboFrequency", "sldFloppySoundEmpty"},
 	{ "sldFloppySoundEmpty", "", "", "chkFloppySound", "sldFloppySoundDisk"},
 	{ "sldFloppySoundDisk", "", "", "sldFloppySoundEmpty", "sndDisable"},
-	{ "sldSoundBufferSize", "", "", "cboFilter", "sldMasterVol"},
+	{ "sldSoundBufferSize", "", "", "cboFilter", "optSoundPull"},
+	{ "optSoundPull", "sldFloppySoundEmpty", "Sound", "sldSoundBufferSize", "optSoundPush"},
+	{ "optSoundPush", "sldFloppySoundDisk", "Sound", "optSoundPull", "sldMasterVol"},
 
 	//  active            move left           move right          move up           move down
 	// PanelInput
