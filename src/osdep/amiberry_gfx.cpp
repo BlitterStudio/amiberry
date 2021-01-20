@@ -1816,26 +1816,31 @@ int graphics_init(bool mousecapture)
 		vsync_vblank = sdlMode.refresh_rate;
 	}
 
-	Uint32 sdl_window_mode;
-	if (sdlMode.w >= 800 && sdlMode.h >= 600 && strcmpi(sdl_video_driver, "KMSDRM") != 0)
-	{
-		// Only enable Windowed mode if we're running under x11 and the resolution is at least 800x600
-		sdl_window_mode = SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
-		if (currprefs.borderless)
-			sdl_window_mode |= SDL_WINDOW_BORDERLESS;
-		if (currprefs.main_alwaysontop)
-			sdl_window_mode |= SDL_WINDOW_ALWAYS_ON_TOP;
-	}
-	else
-	{
-		// otherwise go for Full-window
-		sdl_window_mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
-	}
-
 	write_log("Trying to create window...\n");
 
 	if (!mon->sdl_window)
 	{
+		Uint32 sdl_window_mode;
+		if (sdlMode.w >= 800 && sdlMode.h >= 600 && strcmpi(sdl_video_driver, "KMSDRM") != 0)
+		{
+			// Only enable Windowed mode if we're running under x11 and the resolution is at least 800x600
+			if (currprefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLWINDOW)
+				sdl_window_mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
+			else if (currprefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN)
+				sdl_window_mode = SDL_WINDOW_FULLSCREEN;
+			else
+				sdl_window_mode = SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
+			if (currprefs.borderless)
+				sdl_window_mode |= SDL_WINDOW_BORDERLESS;
+			if (currprefs.main_alwaysontop)
+				sdl_window_mode |= SDL_WINDOW_ALWAYS_ON_TOP;
+		}
+		else
+		{
+			// otherwise go for Full-window
+			sdl_window_mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
+		}
+		
 		if (amiberry_options.rotation_angle != 0 && amiberry_options.rotation_angle != 180)
 		{
 			mon->sdl_window = SDL_CreateWindow("Amiberry",
@@ -1855,14 +1860,15 @@ int graphics_init(bool mousecapture)
 				sdl_window_mode);
 		}
 		check_error_sdl(mon->sdl_window == nullptr, "Unable to create window:");
+
+		auto* const icon_surface = IMG_Load("data/amiberry.png");
+		if (icon_surface != nullptr)
+		{
+			SDL_SetWindowIcon(mon->sdl_window, icon_surface);
+			SDL_FreeSurface(icon_surface);
+		}
 	}
 
-	auto* const icon_surface = IMG_Load("data/amiberry.png");
-	if (icon_surface != nullptr)
-	{
-		SDL_SetWindowIcon(mon->sdl_window, icon_surface);
-		SDL_FreeSurface(icon_surface);
-	}
 #endif
 
 	if (sdl_renderer == nullptr)
