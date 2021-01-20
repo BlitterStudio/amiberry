@@ -3471,7 +3471,7 @@ static Key *new_key (Unit *unit)
 	return k;
 }
 
-static a_inode *find_aino(TrapContext *ctx, Unit *unit, uaecptr lock, const TCHAR *name, int *err)
+static a_inode *find_aino(TrapContext* ctx, Unit *unit, uaecptr lock, const TCHAR *name, int *err)
 {
 	a_inode *a;
 
@@ -7065,16 +7065,16 @@ void filesys_reset (void)
 	shell_execute_process = 0;
 }
 
-static void filesys_prepare_reset2 (void)
+static void filesys_prepare_reset2(void)
 {
-	UnitInfo *uip;
+	UnitInfo* uip;
 	int i;
 
 	uip = mountinfo.ui;
 #ifdef UAE_FILESYS_THREADS
 	for (i = 0; i < MAX_FILESYSTEM_UNITS; i++) {
 		if (uip[i].open > 0 && uip[i].unit_pipe != 0) {
-			uae_sem_init (&uip[i].reset_sync_sem, 0, 0);
+			uae_sem_init(&uip[i].reset_sync_sem, 0, 0);
 			uip[i].reset_state = FS_GO_DOWN;
 			/* send death message */
 			write_comm_pipe_pvoid(uip[i].unit_pipe, NULL, 0);
@@ -7084,14 +7084,14 @@ static void filesys_prepare_reset2 (void)
 #ifdef AMIBERRY
 			if (uae_deterministic_mode()) {
 				while (comm_pipe_has_data(uip[i].unit_pipe)) {
-	            	// process remaining packets until all are done
-	            	filesys_hsync();
-	            }
+					// process remaining packets until all are done
+					filesys_hsync();
+				}
 			}
 			else {
 #endif
-			uae_sem_wait (&uip[i].reset_sync_sem);
-			uae_end_thread (&uip[i].tid);
+				uae_sem_wait(&uip[i].reset_sync_sem);
+				uae_end_thread(&uip[i].tid);
 #ifdef AMIBERRY
 			}
 #endif
@@ -7821,6 +7821,133 @@ static const TCHAR *dostypes(TCHAR *dt, uae_u32 dostype)
 	return dt;
 }
 
+static void dump_partinfo (struct hardfiledata *hfd, uae_u8 *pp)
+{
+	TCHAR *s;
+	uae_u32 dostype;
+	uae_u64 size;
+	int blocksize, surfaces, spb, spt, reserved;
+	int lowcyl, highcyl;
+	uae_u32 block, flags;
+	uae_u8 buf[512];
+	TCHAR dt[32];
+
+	flags = rl (pp + 20);
+	pp[37 + pp[36]] = 0;
+	s = au ((char*)pp + 37);
+	pp += 128;
+	dostype = rl (pp + 64);
+	spb = rl (pp + 16);
+	blocksize = rl (pp + 4) * 4;
+	surfaces = rl (pp + 12);
+	spt = rl (pp + 20);
+	reserved = rl (pp + 24);
+	lowcyl = rl (pp + 36);
+	highcyl = rl (pp + 40);
+	size = ((uae_u64)blocksize) * surfaces * spt * (highcyl - lowcyl + 1);
+
+	write_log (_T("Partition '%s' Dostype=%08X (%s) Flags: %08X\n"), s[0] ? s : _T("_NULL_"), dostype, dostypes (dt, dostype), flags);
+	write_log (_T("BlockSize: %d, Surfaces: %d, SectorsPerBlock %d\n"),
+		blocksize, surfaces, spb);
+	write_log (_T("SectorsPerTrack: %d, Reserved: %d, LowCyl %d, HighCyl %d, Size %dM\n"),
+		spt, reserved, lowcyl, highcyl, (uae_u32)(size >> 20));
+	write_log (_T("Buffers: %d, BufMemType: %08x, MaxTransfer: %08x, Mask: %08x, BootPri: %d\n"),
+		rl (pp + 44), rl (pp + 48), rl (pp + 52), rl (pp + 56), rl (pp + 60));
+	write_log (_T("Total blocks: %lld, Total disk blocks: %lld\n"), (uae_s64)surfaces * spt * (highcyl - lowcyl + 1), hfd->virtsize / blocksize);
+
+	if (hfd->drive_empty) {
+		write_log (_T("Empty drive\n"));
+	} else {
+		block = lowcyl * surfaces * spt;
+		if (hdf_read (hfd, buf, (uae_u64)blocksize * block, sizeof buf)) {
+			write_log (_T("First block %d dostype: %08X (%s)\n"), block, rl (buf), dostypes (dt, rl (buf)));
+		} else {
+			write_log (_T("First block %d read failed!\n"), block);
+		}
+		xfree (s);
+		if ((uae_u64)highcyl * spt * surfaces * blocksize > hfd->virtsize) {
+			write_log (_T("RDB: WARNING: end of partition > size of disk! (%llu > %llu)\n"),
+				(uae_u64)highcyl * spt * surfaces * blocksize, hfd->virtsize);
+		}
+	}
+}
+
+static void dumprdbblock(const uae_u8 *buf, int block)
+{
+	int w = 16;
+	write_log(_T("RDB block %d:\n"), block);
+	for (int i = 0; i < 512; i += w) {
+		TCHAR outbuf[81];
+		for (int j = 0; j < w; j++) {
+			uae_u8 v = buf[i + j];
+			_stprintf(outbuf + 2 * j, _T("%02X"), v);
+			outbuf[2 * w + 1 + j] = (v >= 32 && v <= 126) ? v : '.';
+		}
+		outbuf[2 * w] = ' ';
+		outbuf[2 * w + 1 + w] = 0;
+		write_log(_T("%s\n"), outbuf);
+	}
+}
+
+static void dump_rdb (UnitInfo *uip, struct hardfiledata *hfd, uae_u8 *bufrdb, uae_u8 *buf, int readblocksize)
+{
+	TCHAR dt[32];
+
+	write_log (_T("RDB: HostID: %08x Flags: %08x\n"),
+		rl (bufrdb + 3 * 4), rl (bufrdb + 5 * 4));
+	write_log (_T("RDB: BL: %d BH: %d LC: %d HC: %d CB: %d HB: %d\n"),
+		rl (bufrdb + 128), rl (bufrdb + 132), rl (bufrdb + 136), rl (bufrdb + 140), rl (bufrdb + 144), rl (bufrdb + 152));
+	for (int i = 0; i < 100; i++) {
+		int partblock;
+		if (i == 0)
+			partblock = rl (bufrdb + 28);
+		else
+			partblock = rl (buf + 4 * 4);
+		if (partblock == 0xffffffff)
+			break;
+		write_log (_T("RDB: PART block %d:\n"), partblock);
+		if (!legalrdbblock (uip, partblock)) {
+			write_log (_T("RDB: corrupt PART pointer %d\n"), partblock);
+			dumprdbblock(i == 0 ? bufrdb : buf, partblock);
+			break;
+		}
+		memset (buf, 0, readblocksize);
+		hdf_read (hfd, buf, partblock * hfd->ci.blocksize, readblocksize);
+		if (!rdb_checksum ("PART", buf, partblock)) {
+			write_log (_T("RDB: checksum error PART block %d\n"), partblock);
+			dumprdbblock(buf, partblock);
+			break;
+		}
+		dump_partinfo (hfd, buf);
+	}
+	for (int i = 0; i < 100; i++) {
+		int fileblock;
+		if (i == 0)
+			fileblock = rl (bufrdb + 32);
+		else
+			fileblock = rl (buf + 4 * 4);
+		if (fileblock == 0xffffffff)
+			break;
+		write_log (_T("RDB: LSEG block %d:\n"), fileblock);
+		if (!legalrdbblock (uip, fileblock)) {
+			write_log (_T("RDB: corrupt FSHD pointer %d\n"), fileblock);
+			dumprdbblock(i == 0 ? bufrdb : buf, fileblock);
+			break;
+		}
+		memset (buf, 0, readblocksize);
+		hdf_read (hfd, buf, fileblock * hfd->ci.blocksize, readblocksize);
+		if (!rdb_checksum ("FSHD", buf, fileblock)) {
+			write_log (_T("RDB: checksum error FSHD block %d\n"), fileblock);
+			dumprdbblock(buf, fileblock);
+			break;
+		}
+		uae_u32 dostype = rl (buf + 32);
+		int version = (buf[36] << 8) | buf[37];
+		int revision = (buf[38] << 8) | buf[39];
+		write_log (_T("LSEG: %08x (%s) %d.%d\n"), dostype, dostypes (dt, dostype), version, revision);
+	}
+}
+
 static void get_new_device (TrapContext *ctx, int type, uaecptr parmpacket, TCHAR **devname, uaecptr *devname_amiga, int unit_no)
 {
 	TCHAR buffer[80];
@@ -7956,11 +8083,13 @@ static int pt_rdsk (TrapContext *ctx, uae_u8 *bufrdb, int rdblock, UnitInfo *uip
 	badblock = rl (bufrdb + 24);
 	if (badblock != -1) {
 		write_log (_T("RDB: badblock list %08x\n"), badblock);
+		dumprdbblock(bufrdb, rdblock);
 	}
 
 	driveinitblock = rl (bufrdb + 36);
 	if (driveinitblock != -1) {
 		write_log (_T("RDB: driveinit = %08x\n"), driveinitblock);
+		dumprdbblock(bufrdb, rdblock);
 	}
 
 	hfd->rdbcylinders = rl (bufrdb + 64);
@@ -7969,6 +8098,17 @@ static int pt_rdsk (TrapContext *ctx, uae_u8 *bufrdb, int rdblock, UnitInfo *uip
 	fileblock = rl (bufrdb + 32);
 
 	buf = xmalloc (uae_u8, readblocksize);
+
+	if (showdebug) {
+		if ((uae_u64)hfd->rdbcylinders * hfd->rdbsectors * hfd->rdbheads * blocksize > hfd->virtsize)
+			write_log (_T("RDB: WARNING: RDSK header disk size > disk size! (%llu > %llu)\n"),
+				(uae_u64)hfd->rdbcylinders * hfd->rdbsectors * hfd->rdbheads * blocksize, hfd->virtsize);
+		write_log (_T("RDSK dump start\n"));
+		write_log (_T("RDSK at %d, C=%d S=%d H=%d\n"),
+			rdblock, hfd->rdbcylinders, hfd->rdbsectors, hfd->rdbheads);
+		dump_rdb (uip, hfd, bufrdb, buf, readblocksize);
+		write_log (_T("RDSK dump end\n"));
+	}
 
 	for (int i = 0; i <= partnum; i++) {
 		if (i == 0)
@@ -7984,6 +8124,7 @@ static int pt_rdsk (TrapContext *ctx, uae_u8 *bufrdb, int rdblock, UnitInfo *uip
 		if (!rdb_checksum ("PART", buf, partblock)) {
 			err = -2;
 			write_log(_T("RDB: checksum error in PART block %d\n"), partblock);
+			dumprdbblock(buf, partblock);
 			goto error;
 		}
 	}
@@ -8060,6 +8201,7 @@ static int pt_rdsk (TrapContext *ctx, uae_u8 *bufrdb, int rdblock, UnitInfo *uip
 		hdf_read (hfd, buf, fileblock * hfd->ci.blocksize, readblocksize);
 		if (!rdb_checksum ("FSHD", buf, fileblock)) {
 			write_log (_T("RDB: checksum error in FSHD block %d\n"), fileblock);
+			dumprdbblock(buf, fileblock);
 			goto error;
 		}
 		fileblock = rl (buf + 16);
@@ -8093,6 +8235,7 @@ static int pt_rdsk (TrapContext *ctx, uae_u8 *bufrdb, int rdblock, UnitInfo *uip
 		hdf_read (hfd, buf, lsegblock * hfd->ci.blocksize, readblocksize);
 		if (!rdb_checksum("LSEG", buf, lsegblock)) {
 			write_log(_T("RDB: checksum error in LSEG block %d\n"), lsegblock);
+			dumprdbblock(buf, lsegblock);
 			goto error;
 		}
 		lsegblock = rl (buf + 16);
@@ -8516,6 +8659,7 @@ static uae_u32 REGPARAM2 filesys_dev_storeinfo (TrapContext *ctx)
 			xfree(s);
 			for (int i = 0; i < 80; i++)
 				buf[i + 128] = trap_get_byte(ctx, parmpacket + 16 + i);
+			dump_partinfo (&uip[unit_no].hf, buf);
 		}
 		if (type == FILESYS_HARDFILE)
 			type = dofakefilesys(ctx, &uip[unit_no], parmpacket, ci);

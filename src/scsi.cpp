@@ -79,7 +79,8 @@
 #define OMTI_ALF2 44
 #define NCR5380_SYNTHESIS 45 // clone of ICD AdSCSI
 #define NCR5380_FIREBALL 46
-#define NCR_LAST 47
+#define OMTI_HD20 47
+#define NCR_LAST 48
 
 extern int log_scsiemu;
 
@@ -3449,7 +3450,7 @@ static uae_u32 ncr80_bget2(struct soft_scsi *ncr, uaecptr addr, int size)
 		if (reg >= 0)
 			v = omti_bget(ncr, reg);
 
-	} else if (ncr->type == OMTI_ALF2) {
+	} else if (ncr->type == OMTI_ALF2 || ncr->type == OMTI_HD20) {
 
 		reg = alf2_reg(ncr, origaddr, false);
 		if (reg >= 0) {
@@ -3918,7 +3919,7 @@ static void ncr80_bput2(struct soft_scsi *ncr, uaecptr addr, uae_u32 val, int si
 		if (reg >= 0)
 			omti_bput(ncr, reg, val);
 
-	} else if (ncr->type == OMTI_ALF2) {
+	} else if (ncr->type == OMTI_ALF2 || ncr->type == OMTI_HD20) {
 
 		reg = alf2_reg(ncr, origaddr, true);
 		if (reg >= 0)

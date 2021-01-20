@@ -49,7 +49,7 @@ void consolehook_config (struct uae_prefs *p)
 	p->gfx_monitor[0].gfx_size_win.height = 256;
 	p->turbo_emulation = 0;
 	//p->automount_drives = 2;
-	p->automount_cddrives = 2;
+	//p->automount_cddrives = 2;
 
 	_tcscpy (ci.rootdir, _T("."));
 	_tcscpy (ci.volname, _T("CLIBOOT"));

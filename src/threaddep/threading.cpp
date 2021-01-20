@@ -27,9 +27,6 @@ int uae_start_thread(const char* name, uae_thread_function fn, void* arg, uae_th
 	if (tid) {
 		*tid = thread_id;
 	}
-	/*else if (thread_id) {
-		SDL_WaitThread(thread_id, NULL);
-	}*/
 	return result;
 }
 
