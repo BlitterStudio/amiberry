@@ -659,7 +659,7 @@ static int p96_framecnt;
 int p96skipmode = -1;
 static int doskip (void)
 {
-	if (p96_framecnt >= currprefs.gfx_framerate)
+	if (p96_framecnt > currprefs.gfx_framerate)
 		p96_framecnt = 0;
 	return p96_framecnt > 0;
 }
@@ -692,9 +692,7 @@ static void rtg_render(void)
 	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[monid];
 	struct amigadisplay *ad = &adisplays[monid];
 
-	if (doskip () && p96skipmode == 0) {
-		;
-	} else {
+	if (!doskip ()) {
 		bool full = vidinfo->full_refresh > 0;
 		if (uaegfx_active) {
 			if (!currprefs.rtg_multithread) {
