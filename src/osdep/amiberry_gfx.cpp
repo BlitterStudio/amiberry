@@ -1898,6 +1898,12 @@ int graphics_init(bool mousecapture)
 		currprefs.gfx_apmode[1].gfx_refreshrate = currprefs.rtgvblankrate;
 	}
 
+	if (strcmpi(sdl_video_driver, "KMSDRM") == 0)
+	{
+		// Disable the render thread under KMSDRM (not supported)
+		amiberry_options.use_sdl2_render_thread = false;
+	}
+	
 #ifndef USE_DISPMANX
 	if (amiberry_options.use_sdl2_render_thread)
 	{
