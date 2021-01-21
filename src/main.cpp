@@ -918,7 +918,6 @@ static void parse_cmdline (int argc, TCHAR **argv)
 			}
 		}
 	}
-	config_loaded = loaded;
 }
 
 static void parse_cmdline_and_init_file (int argc, TCHAR **argv)
