@@ -1111,11 +1111,5 @@ MIDFUNC(2,fp_fscc_ri,(RW4 d, int cc))
 }
 MENDFUNC(2,fp_fscc_ri,(RW4 d, int cc))
 
-MIDFUNC(1,roundingmode,(IM32 mode))
-{
-	raw_roundingmode(mode);
-}
-MENDFUNC(1,roundingmode,(IM32 mode))
-
 
 #endif // USE_JIT_FPU

@@ -67,7 +67,7 @@ STATIC_INLINE int comp_fp_get (uae_u32 opcode, uae_u16 extra, int treg)
 		break;
 	case 5: /* (d16,An)  */
 		{
-			uae_u32 off = static_cast<uae_s32>(static_cast<uae_s16>(comp_get_iword((m68k_pc_offset += 2) - 2)));
+			uae_u32 off = (uae_s32) (uae_s16) comp_get_iword ((m68k_pc_offset += 2) - 2);
 			mov_l_rr(S1, reg + 8);
 			lea_l_brr(S1, S1, off);
 			break;
@@ -79,11 +79,10 @@ STATIC_INLINE int comp_fp_get (uae_u32 opcode, uae_u16 extra, int treg)
 			break;
 		}
 	case 7:
-		switch (reg)
-		{
+  		switch (reg) {
 		case 0: /* (xxx).W */
 			{
-				uae_u32 off = static_cast<uae_s32>(static_cast<uae_s16>(comp_get_iword((m68k_pc_offset += 2) - 2)));
+  				uae_u32 off = (uae_s32) (uae_s16) comp_get_iword ((m68k_pc_offset += 2) - 2);
 				mov_l_ri(S1, off);
 				break;
 			}
@@ -96,7 +95,7 @@ STATIC_INLINE int comp_fp_get (uae_u32 opcode, uae_u16 extra, int treg)
 		case 2: /* (d16,PC) */
 			{
 				uae_u32 address = start_pc + ((uae_char*)comp_pc_p - (uae_char*)start_pc_p) + m68k_pc_offset;
-				uae_s32 PC16off = static_cast<uae_s32>(static_cast<uae_s16>(comp_get_iword((m68k_pc_offset += 2) - 2)));
+  				uae_s32 PC16off = (uae_s32) (uae_s16) comp_get_iword ((m68k_pc_offset += 2) - 2);
 				mov_l_ri(S1, address + PC16off);
 				break;
 			}
@@ -104,15 +103,13 @@ STATIC_INLINE int comp_fp_get (uae_u32 opcode, uae_u16 extra, int treg)
 			return -1; /* rarely used, fallback to non-JIT */
 		case 4: /* # < data >; Constants should be converted just once by the JIT */
 			m68k_pc_offset += sz2[size];
-			switch (size)
-			{
+    			switch (size) {
 			case 0:
 				{
 					uae_s32 li = comp_get_ilong(m68k_pc_offset - 4);
-					float si = static_cast<float>(li);
+    					float si = (float)li;
 
-					if (li == static_cast<int>(si))
-					{
+    					if (li == (int)si) {
 						//write_log ("converted immediate LONG constant to SINGLE\n");
 						fmov_s_ri(treg, *(uae_u32 *)&si);
 						return 1;
@@ -141,7 +138,7 @@ STATIC_INLINE int comp_fp_get (uae_u32 opcode, uae_u16 extra, int treg)
 				}
 			case 4:
 				{
-					float si = static_cast<float>(static_cast<uae_s16>(comp_get_iword(m68k_pc_offset-2)));
+    					float si = (float)(uae_s16)comp_get_iword(m68k_pc_offset-2);
 
 					//write_log (_T("converted immediate WORD constant %f to SINGLE\n"), si);
 					fmov_s_ri(treg, *(uae_u32 *)&si);
@@ -157,7 +154,7 @@ STATIC_INLINE int comp_fp_get (uae_u32 opcode, uae_u16 extra, int treg)
 				}
 			case 6:
 				{
-					float si = static_cast<float>(static_cast<uae_s8>(comp_get_ibyte(m68k_pc_offset - 2)));
+    					float si = (float)(uae_s8)comp_get_ibyte(m68k_pc_offset - 2);
 
 					//write_log (_T("converted immediate BYTE constant to SINGLE\n"));
 					fmov_s_ri(treg, *(uae_u32 *)&si);
@@ -171,8 +168,7 @@ STATIC_INLINE int comp_fp_get (uae_u32 opcode, uae_u16 extra, int treg)
 		}
 	}
 
-	switch (size)
-	{
+	switch (size) {
 	case 0: /* Long */
 		readlong(S1, S2);
 		fmov_l_rr(treg, S2);
@@ -211,11 +207,9 @@ STATIC_INLINE int comp_fp_put(uae_u32 opcode, uae_u16 extra)
 
 	if (size == 3 || size == 7) /* 3 = packed decimal, 7 is not defined */
 		return -1;
-	switch (mode)
-	{
+	switch (mode) {
 	case 0: /* Dn */
-		switch (size)
-		{
+  		switch (size) {
 		case 0: /* FMOVE.L FPx, Dn */
 			fmov_to_l_rr(reg, sreg);
 			return 0;
@@ -246,7 +240,7 @@ STATIC_INLINE int comp_fp_put(uae_u32 opcode, uae_u16 extra)
 		break;
 	case 5: /* (d16,An) */
 		{
-			uae_u32 off = static_cast<uae_s32>(static_cast<uae_s16>(comp_get_iword((m68k_pc_offset += 2) - 2)));
+			uae_u32 off = (uae_s32) (uae_s16) comp_get_iword ((m68k_pc_offset += 2) - 2);
 			mov_l_rr(S1, reg + 8);
 			arm_ADD_l_ri(S1, off);
 			break;
@@ -258,11 +252,10 @@ STATIC_INLINE int comp_fp_put(uae_u32 opcode, uae_u16 extra)
 			break;
 		}
 	case 7:
-		switch (reg)
-		{
+		  switch (reg) {
 		case 0: /* (xxx).W */
 			{
-				uae_u32 off = static_cast<uae_s32>(static_cast<uae_s16>(comp_get_iword((m68k_pc_offset += 2) - 2)));
+				  uae_u32 off = (uae_s32) (uae_s16) comp_get_iword ((m68k_pc_offset += 2) - 2);
 				mov_l_ri(S1, off);
 				break;
 			}
@@ -277,8 +270,7 @@ STATIC_INLINE int comp_fp_put(uae_u32 opcode, uae_u16 extra)
 			return -1;
 		}
 	}
-	switch (size)
-	{
+	switch (size) {
 	case 0: /* Long */
 		fmov_to_l_rr(S2, sreg);
 		writelong_clobber(S1, S2);
@@ -314,23 +306,21 @@ STATIC_INLINE int comp_fp_adr(uae_u32 opcode)
 	int mode = (opcode >> 3) & 7;
 	int reg = opcode & 7;
 
-	switch (mode)
-	{
+	switch (mode) {
 	case 2:
 	case 3:
 	case 4:
 		mov_l_rr(S1, 8 + reg);
 		return S1;
 	case 5:
-		off = static_cast<uae_s32>(static_cast<uae_s16>(comp_get_iword((m68k_pc_offset += 2) - 2)));
+		  off = (uae_s32) (uae_s16) comp_get_iword ((m68k_pc_offset += 2) - 2);
 		mov_l_rr(S1, 8 + reg);
 		arm_ADD_l_ri(S1, off);
 		return S1;
 	case 7:
-		switch (reg)
-		{
+		  switch (reg) {
 		case 0:
-			off = static_cast<uae_s32>(static_cast<uae_s16>(comp_get_iword((m68k_pc_offset += 2) - 2)));
+			    off = (uae_s32) (uae_s16) comp_get_iword ((m68k_pc_offset += 2) - 2);
 			mov_l_ri(S1, off);
 			return S1;
 		case 1:
@@ -347,21 +337,16 @@ void comp_fscc_opp(uae_u32 opcode, uae_u16 extra)
 {
 	int reg;
 
-	if (!currprefs.compfpu)
-	{
+	if (!currprefs.compfpu) {
 		FAIL(1);
 		return;
 	}
 
-	if (extra & 0x20)
-	{
-		/* only cc from 00 to 1f are defined */
+	if (extra & 0x20) {  /* only cc from 00 to 1f are defined */
 		FAIL(1);
 		return;
 	}
-	if ((opcode & 0x38) != 0)
-	{
-		/* We can only do to integer register */
+	if ((opcode & 0x38) != 0) { /* We can only do to integer register */
 		FAIL(1);
 		return;
 	}
@@ -369,43 +354,24 @@ void comp_fscc_opp(uae_u32 opcode, uae_u16 extra)
 	fflags_into_flags();
 	reg = (opcode & 7);
 
-	if (!(opcode & 0x38))
-	{
-		switch (extra & 0x0f)
-		{
-			/* according to fpp.c, the 0x10 bit is ignored */
-		case 0: fp_fscc_ri(reg, NATIVE_CC_F_NEVER);
-			break;
-		case 1: fp_fscc_ri(reg, NATIVE_CC_EQ);
-			break;
-		case 2: fp_fscc_ri(reg, NATIVE_CC_F_OGT);
-			break;
-		case 3: fp_fscc_ri(reg, NATIVE_CC_F_OGE);
-			break;
-		case 4: fp_fscc_ri(reg, NATIVE_CC_F_OLT);
-			break;
-		case 5: fp_fscc_ri(reg, NATIVE_CC_F_OLE);
-			break;
-		case 6: fp_fscc_ri(reg, NATIVE_CC_F_OGL);
-			break;
-		case 7: fp_fscc_ri(reg, NATIVE_CC_F_OR);
-			break;
-		case 8: fp_fscc_ri(reg, NATIVE_CC_F_UN);
-			break;
-		case 9: fp_fscc_ri(reg, NATIVE_CC_F_UEQ);
-			break;
-		case 10: fp_fscc_ri(reg, NATIVE_CC_F_UGT);
-			break;
-		case 11: fp_fscc_ri(reg, NATIVE_CC_F_UGE);
-			break;
-		case 12: fp_fscc_ri(reg, NATIVE_CC_F_ULT);
-			break;
-		case 13: fp_fscc_ri(reg, NATIVE_CC_F_ULE);
-			break;
-		case 14: fp_fscc_ri(reg, NATIVE_CC_NE);
-			break;
-		case 15: fp_fscc_ri(reg, NATIVE_CC_AL);
-			break;
+	if (!(opcode & 0x38)) {
+	  switch (extra & 0x0f) { /* according to fpp.c, the 0x10 bit is ignored */
+		  case 0: fp_fscc_ri(reg, NATIVE_CC_F_NEVER); break;
+		  case 1: fp_fscc_ri(reg, NATIVE_CC_EQ); break;
+		  case 2: fp_fscc_ri(reg, NATIVE_CC_F_OGT); break;
+		  case 3: fp_fscc_ri(reg, NATIVE_CC_F_OGE); break;
+		  case 4: fp_fscc_ri(reg, NATIVE_CC_F_OLT); break;
+		  case 5: fp_fscc_ri(reg, NATIVE_CC_F_OLE); break;
+		  case 6: fp_fscc_ri(reg, NATIVE_CC_F_OGL); break;
+		  case 7: fp_fscc_ri(reg, NATIVE_CC_F_OR); break;
+		  case 8: fp_fscc_ri(reg, NATIVE_CC_F_UN); break;
+		  case 9: fp_fscc_ri(reg, NATIVE_CC_F_UEQ); break;
+		  case 10: fp_fscc_ri(reg, NATIVE_CC_F_UGT); break;
+		  case 11: fp_fscc_ri(reg, NATIVE_CC_F_UGE); break;
+		  case 12: fp_fscc_ri(reg, NATIVE_CC_F_ULT); break;
+		  case 13: fp_fscc_ri(reg, NATIVE_CC_F_ULE); break;
+		  case 14: fp_fscc_ri(reg, NATIVE_CC_NE); break;
+		  case 15: fp_fscc_ri(reg, NATIVE_CC_AL); break;
 		}
 	}
 }
@@ -416,24 +382,19 @@ void comp_fbcc_opp(uae_u32 opcode)
 	uae_u32 off, v1, v2;
 	int cc;
 
-	if (!currprefs.compfpu)
-	{
+	if (!currprefs.compfpu) {
 		FAIL(1);
 		return;
 	}
 
-	if (opcode & 0x20)
-	{
-		/* only cc from 00 to 1f are defined */
+	if (opcode & 0x20) {  /* only cc from 00 to 1f are defined */
 		FAIL(1);
 		return;
 	}
-	if (!(opcode & 0x40))
-	{
-		off = static_cast<uae_s32>(static_cast<uae_s16>(comp_get_iword((m68k_pc_offset += 2) - 2)));
+	if (!(opcode & 0x40)) {
+		off = (uae_s32) (uae_s16) comp_get_iword ((m68k_pc_offset += 2) - 2);
 	}
-	else
-	{
+	else {
 		off = comp_get_ilong((m68k_pc_offset += 4) - 4);
 	}
 
@@ -460,38 +421,22 @@ void comp_fbcc_opp(uae_u32 opcode)
 	v2 = get_const(S1);
 	fflags_into_flags();
 
-	switch (cc)
-	{
-	case 1: register_branch(v1, v2, NATIVE_CC_EQ);
-		break;
-	case 2: register_branch(v1, v2, NATIVE_CC_F_OGT);
-		break;
-	case 3: register_branch(v1, v2, NATIVE_CC_F_OGE);
-		break;
-	case 4: register_branch(v1, v2, NATIVE_CC_F_OLT);
-		break;
-	case 5: register_branch(v1, v2, NATIVE_CC_F_OLE);
-		break;
-	case 6: register_branch(v1, v2, NATIVE_CC_F_OGL);
-		break;
-	case 7: register_branch(v1, v2, NATIVE_CC_F_OR);
-		break;
-	case 8: register_branch(v1, v2, NATIVE_CC_F_UN);
-		break;
-	case 9: register_branch(v1, v2, NATIVE_CC_F_UEQ);
-		break;
-	case 10: register_branch(v1, v2, NATIVE_CC_F_UGT);
-		break;
-	case 11: register_branch(v1, v2, NATIVE_CC_F_UGE);
-		break;
-	case 12: register_branch(v1, v2, NATIVE_CC_F_ULT);
-		break;
-	case 13: register_branch(v1, v2, NATIVE_CC_F_ULE);
-		break;
-	case 14: register_branch(v1, v2, NATIVE_CC_NE);
-		break;
-	case 15: register_branch(v2, v2, NATIVE_CC_AL);
-		break;
+	switch (cc) {
+		case 1: register_branch (v1, v2, NATIVE_CC_EQ); break;
+		case 2: register_branch (v1, v2, NATIVE_CC_F_OGT); break;
+		case 3: register_branch (v1, v2, NATIVE_CC_F_OGE); break;
+		case 4: register_branch (v1, v2, NATIVE_CC_F_OLT); break;
+		case 5: register_branch (v1, v2, NATIVE_CC_F_OLE); break;
+		case 6: register_branch (v1, v2, NATIVE_CC_F_OGL); break;
+		case 7: register_branch (v1, v2, NATIVE_CC_F_OR); break;
+		case 8: register_branch (v1, v2, NATIVE_CC_F_UN); break;
+		case 9: register_branch (v1, v2, NATIVE_CC_F_UEQ); break;
+		case 10: register_branch (v1, v2, NATIVE_CC_F_UGT); break;
+		case 11: register_branch (v1, v2, NATIVE_CC_F_UGE); break;
+		case 12: register_branch (v1, v2, NATIVE_CC_F_ULT); break;
+		case 13: register_branch (v1, v2, NATIVE_CC_F_ULE); break;
+		case 14: register_branch (v1, v2, NATIVE_CC_NE); break;
+		case 15: register_branch (v2, v2, NATIVE_CC_AL); break;
 	}
 }
 
@@ -517,85 +462,61 @@ void comp_fpp_opp(uae_u32 opcode, uae_u16 extra)
 	int source = (extra >> 13) & 7;
 	int opmode = extra & 0x7f;
 
-	if (special_mem)
-	{
+  if (special_mem) {
 		FAIL(1);
 		return;
 	}
 
-	if (!currprefs.compfpu)
-	{
+	if (!currprefs.compfpu) {
 		FAIL(1);
 		return;
 	}
-	switch (source)
-	{
+	switch (source) {
 	case 3: /* FMOVE FPx, <EA> */
 		if (comp_fp_put(opcode, extra) < 0)
 			FAIL(1);
 		return;
 	case 4: /* FMOVE.L  <EA>, ControlReg */
-		if (!(opcode & 0x30))
-		{
-			/* Dn or An */
-			if (extra & 0x1000)
-			{
-				/* FPCR */
-				mov_l_mr((uintptr)&regs.fpcr, opcode & 15);
+			if ((opcode & 0x38) == 0) {
+				// Dn
+				// Only single selected control register is allowed
+				// All control register bits unset = FPIAR
+				uae_u16 bits = extra & (0x1000 | 0x0800 | 0x0400);
+				if (bits && bits != 0x1000 && bits != 0x0800 && bits != 0x400) {
+					FAIL(1);
 				return;
 			}
-			if (extra & 0x0800)
-			{
-				/* FPSR */
+				if (extra & 0x1000) { /* FPCR */
+				  FAIL (1);
+				}
+				if (extra & 0x0800) { /* FPSR */
+				  FAIL (1);
+				}
+				if ((extra & 0x0400) || !bits) /* FPIAR */
+				  mov_l_mr ((uintptr)&regs.fpiar, opcode & 15);
+				return;
+			} else if ((opcode & 0x38) == 0x08) {
+				// An
+				// Only FPIAR can be moved to/from address register
+				// All bits unset = FPIAR
+				uae_u16 bits = extra & (0x1000 | 0x0800 | 0x0400);
+				if (bits && bits != 0x0400) {
 				FAIL(1);
 				return;
-				// set_fpsr(m68k_dreg (regs, opcode & 15));
 			}
-			if (extra & 0x0400)
-			{
-				/* FPIAR */
 				mov_l_mr((uintptr)&regs.fpiar, opcode & 15);
 				return;
 			}
-		}
-		else if ((opcode & 0x3f) == 0x3c)
-		{
-			if (extra & 0x1000)
-			{
-				/* FPCR */
-				uae_u32 val = comp_get_ilong((m68k_pc_offset += 4) - 4);
-				mov_l_mi((uintptr)&regs.fpcr, val);
-				switch (val & 0x30)
-				{
-				case 0x00:
-					// round to nearest
-					roundingmode(0x00000000);
-					break;
-				case 0x10:
-					// round toward minus infinity
-					roundingmode(0x00800000);
-					break;
-				case 0x01:
-					// round toward plus infinity
-					roundingmode(0x00400000);
-					break;
-				case 0x11:
-				default:
-					// round towards zero
-					roundingmode(0x00c00000);
-					break;
-				}
+		  else if ((opcode & 0x3f) == 0x3c) {
+			  if (extra & 0x1000) { /* FPCR */
+          FAIL(1);
 				return;
 			}
-			if (extra & 0x0800)
-			{
-				/* FPSR */
+			  if (extra & 0x0800) { /* FPSR */
 				FAIL(1);
 				return;
 			}
-			if (extra & 0x0400)
-			{
-				/* FPIAR */
+			  if (extra & 0x0400) { /* FPIAR */
 				uae_u32 val = comp_get_ilong((m68k_pc_offset += 4) - 4);
 				mov_l_mi((uintptr)&regs.fpiar, val);
 				return;
@@ -604,28 +525,35 @@ void comp_fpp_opp(uae_u32 opcode, uae_u16 extra)
 		FAIL(1);
 		return;
 	case 5: /* FMOVE.L  ControlReg, <EA> */
-		if (!(opcode & 0x30))
-		{
-			/* Dn or An */
-			if (extra & 0x1000)
-			{
-				/* FPCR */
-				mov_l_rm(opcode & 15, (uintptr)&regs.fpcr);
+			if ((opcode & 0x38) == 0) {
+				// Dn
+				// Only single selected control register is allowed
+				// All control register bits unset = FPIAR
+				uae_u16 bits = extra & (0x1000 | 0x0800 | 0x0400);
+				if (bits && bits != 0x1000 && bits != 0x0800 && bits != 0x400) {
+					FAIL(1);
 				return;
 			}
-			if (extra & 0x0800)
-			{
-				/* FPSR */
+				if (extra & 0x1000) /* FPCR */
+				  mov_l_rm (opcode & 15, (uintptr)&regs.fpcr);
+				if (extra & 0x0800) { /* FPSR */
+				  FAIL (1);
+				}
+				if ((extra & 0x0400) || !bits) /* FPIAR */
+				  mov_l_rm (opcode & 15, (uintptr)&regs.fpiar);
+				return;
+			} else if ((opcode & 0x38) == 0x08) {
+				// An
+				// Only FPIAR can be moved to/from address register
+				// All bits unset = FPIAR
+				uae_u16 bits = extra & (0x1000 | 0x0800 | 0x0400);
+				if (bits && bits != 0x0400) {
 				FAIL(1);
 				return;
 			}
-			if (extra & 0x0400)
-			{
-				/* FPIAR */
 				mov_l_rm(opcode & 15, (uintptr)&regs.fpiar);
 				return;
 			}
-		}
 		FAIL(1);
 		return;
 #ifndef ANDROID
@@ -634,14 +562,11 @@ void comp_fpp_opp(uae_u32 opcode, uae_u16 extra)
 		{
 			uae_u32 list = 0;
 			int incr = 0;
-			if (extra & 0x2000)
-			{
+			if (extra & 0x2000) {
 				int ad;
 
 				/* FMOVEM FPP->memory */
-				switch ((extra >> 11) & 3)
-				{
-					/* Get out early if failure */
+				switch ((extra >> 11) & 3) { /* Get out early if failure */
 				case 0:
 				case 2:
 					break;
@@ -652,14 +577,12 @@ void comp_fpp_opp(uae_u32 opcode, uae_u16 extra)
 					return;
 				}
 				ad = comp_fp_adr(opcode);
-				if (ad < 0)
-				{
+				if (ad < 0) {
 					m68k_setpc(m68k_getpc() - 4);
 					op_illg(opcode);
 					return;
 				}
-				switch ((extra >> 11) & 3)
-				{
+				switch ((extra >> 11) & 3) {
 				case 0: /* static pred */
 					list = extra & 0xff;
 					incr = -1;
@@ -672,26 +595,17 @@ void comp_fpp_opp(uae_u32 opcode, uae_u16 extra)
 				case 3: /* dynamic postinc */
 					abort();
 				}
-				if (incr < 0)
-				{
-					/* Predecrement */
-					for (reg = 7; reg >= 0; reg--)
-					{
-						if (list & 0x80)
-						{
+				if (incr < 0) { /* Predecrement */
+					for (reg = 7; reg >= 0; reg--) {
+						if (list & 0x80) {
 							sub_l_ri(ad, 12);
 							fp_from_exten_mr(ad, reg);
 						}
 						list <<= 1;
 					}
-				}
-				else
-				{
-					/* Postincrement */
-					for (reg = 0; reg <= 7; reg++)
-					{
-						if (list & 0x80)
-						{
+				} else { /* Postincrement */
+					for (reg = 0; reg <= 7; reg++) {
+						if (list & 0x80) {
 							fp_from_exten_mr(ad, reg);
 							arm_ADD_l_ri(ad, 12);
 						}
@@ -702,14 +616,10 @@ void comp_fpp_opp(uae_u32 opcode, uae_u16 extra)
 					mov_l_rr((opcode & 7) + 8, ad);
 				if ((opcode & 0x38) == 0x20)
 					mov_l_rr((opcode & 7) + 8, ad);
-			}
-			else
-			{
+			} else {
 				/* FMOVEM memory->FPP */
 				int ad;
-				switch ((extra >> 11) & 3)
-				{
-					/* Get out early if failure */
+				switch ((extra >> 11) & 3) { /* Get out early if failure */
 				case 0:
 				case 2:
 					break;
@@ -720,14 +630,12 @@ void comp_fpp_opp(uae_u32 opcode, uae_u16 extra)
 					return;
 				}
 				ad = comp_fp_adr(opcode);
-				if (ad < 0)
-				{
+				if (ad < 0) {
 					m68k_setpc(m68k_getpc() - 4);
 					op_illg(opcode);
 					return;
 				}
-				switch ((extra >> 11) & 3)
-				{
+				switch ((extra >> 11) & 3) {
 				case 0: /* static pred */
 					list = extra & 0xff;
 					incr = -1;
@@ -741,25 +649,18 @@ void comp_fpp_opp(uae_u32 opcode, uae_u16 extra)
 					abort();
 				}
 
-				if (incr < 0)
-				{
+				if (incr < 0) {
 					// not reached
-					for (reg = 7; reg >= 0; reg--)
-					{
-						if (list & 0x80)
-						{
+					for (reg = 7; reg >= 0; reg--) {
+						if (list & 0x80) {
 							sub_l_ri(ad, 12);
 							fp_to_exten_rm(reg, ad);
 						}
 						list <<= 1;
 					}
-				}
-				else
-				{
-					for (reg = 0; reg <= 7; reg++)
-					{
-						if (list & 0x80)
-						{
+				} else {
+					for (reg = 0; reg <= 7; reg++) {
+						if (list & 0x80) {
 							fp_to_exten_rm(reg, ad);
 							arm_ADD_l_ri(ad, 12);
 						}
@@ -776,12 +677,9 @@ void comp_fpp_opp(uae_u32 opcode, uae_u16 extra)
 #endif
 	case 2: /* from <EA> to FPx */
 		dont_care_fflags();
-		if ((extra & 0xfc00) == 0x5c00)
-		{
-			/* FMOVECR */
+		  if ((extra & 0xfc00) == 0x5c00) { /* FMOVECR */
 			//write_log (_T("JIT FMOVECR %x\n"), opmode);
-			switch (opmode)
-			{
+			  switch (opmode) {
 			case 0x00:
 				fmov_d_rm(dreg, (uintptr)&dhex_pi);
 				break;
@@ -847,33 +745,26 @@ void comp_fpp_opp(uae_u32 opcode, uae_u16 extra)
 			sreg = FS1;
 		else /* one operand only, thus we can load the argument into dreg */
 			sreg = dreg;
-		if (opmode >= 0x30 && opmode <= 0x37)
-		{
+		  if(opmode >= 0x30 && opmode <= 0x37) {
 			// get out early for unsupported ops
 			FAIL(1);
 			return;
 		}
-		if ((prec = comp_fp_get(opcode, extra, sreg)) < 0)
-		{
+		  if ((prec = comp_fp_get (opcode, extra, sreg)) < 0) {
 			FAIL(1);
 			return;
 		}
-		if (!opmode)
-		{
-			/* FMOVE  <EA>,FPx */
+		  if (!opmode) { /* FMOVE  <EA>,FPx */
 			fmov_rr(FP_RESULT, dreg);
 			return;
 		}
 		/* no break here for <EA> to dreg */
 	case 0: /* directly from sreg to dreg */
-		if (!source)
-		{
-			/* no <EA> */
+		  if (!source) { /* no <EA> */
 			dont_care_fflags();
 			sreg = (extra >> 10) & 7;
 		}
-		switch (opmode)
-		{
+		  switch (opmode) {
 		case 0x00: /* FMOVE */
 			fmov_rr(dreg, sreg);
 			break;
@@ -1000,13 +891,11 @@ void comp_fpp_opp(uae_u32 opcode, uae_u16 extra)
 			fmov_rr(FP_RESULT, sreg);
 			return;
 		case 0x40: /* FSMOVE */
-			if (prec == 1 || !currprefs.fpu_strict)
-			{
+			    if (prec == 1 || !currprefs.fpu_strict) {
 				if (sreg != dreg) /* no <EA> */
 					fmov_rr(dreg, sreg);
 			}
-			else
-			{
+			    else {
 				fmovs_rr(dreg, sreg);
 			}
 			break;
@@ -1072,6 +961,7 @@ void comp_fpp_opp(uae_u32 opcode, uae_u16 extra)
 	default:
 		write_log(_T("Unsupported JIT-FPU instruction: 0x%04x %04x\n"), opcode, extra);
 		FAIL(1);
+		  return;
 	}
 }
 #endif
