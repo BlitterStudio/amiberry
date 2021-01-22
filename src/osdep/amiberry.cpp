@@ -563,7 +563,7 @@ static void amiberry_inactive(struct AmigaMonitor* mon, int minimized)
 void minimizewindow(int monid)
 {
 	struct AmigaMonitor* mon = &AMonitors[monid];
-	if (mon->screen_is_initialized)
+	if (mon->sdl_window)
 		SDL_MinimizeWindow(mon->sdl_window);
 }
 
