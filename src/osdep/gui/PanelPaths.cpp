@@ -220,8 +220,8 @@ public:
 		get_configuration_path(destination, MAX_DPATH);
 		strcat(destination, "gamecontrollerdb.txt");
 		write_log("Downloading % ...\n", destination);
-		//TODO change this to master
-		const auto result = download_file("https://github.com/midwan/amiberry/blob/dev/conf/gamecontrollerdb.txt?raw=true", destination);
+		const auto* const url = "https://raw.githubusercontent.com/gabomdq/SDL_GameControllerDB/master/gamecontrollerdb.txt";
+		const auto result = download_file(url, destination);
 
 		if (result)
 		{
