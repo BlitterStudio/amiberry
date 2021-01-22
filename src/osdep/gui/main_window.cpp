@@ -432,16 +432,14 @@ void amiberry_gui_init()
 			SDL_FreeSurface(icon_surface);
 		}
 	}
-	
-	if (mon->sdl_window)
+	else if (mon->sdl_window)
 	{
 		if (amiberry_options.rotation_angle != 0 && amiberry_options.rotation_angle != 180)
 			SDL_SetWindowSize(mon->sdl_window, GUI_HEIGHT, GUI_WIDTH);
 		else
-			SDL_SetWindowSize(mon->sdl_window, GUI_WIDTH, GUI_HEIGHT);
-		SDL_ShowWindow(mon->sdl_window);
+			SDL_SetWindowSize(mon->sdl_window, GUI_WIDTH, GUI_HEIGHT);		
 	}
-
+	
 	if (sdl_renderer == nullptr)
 	{
 		sdl_renderer = SDL_CreateRenderer(mon->sdl_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
