@@ -3990,14 +3990,14 @@ void inputdevice_hsync (bool forceread)
 			handle_msgpump ();
 	}
 	if (!input_record && !input_play) {
+#endif		
 		if (forceread) {
 			inputread = maxvpos + 1;
 			inputdevice_read();
 		} else {
-#endif
 		maybe_read_input();
+		}
 	//}
-//}
 }
 
 static uae_u16 POTDAT (int joy)
