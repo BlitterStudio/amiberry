@@ -416,7 +416,7 @@ static void check_channel_mods (int hpos, int ch)
 // (or cycle where last D write would have been if
 // ONEDOT was active)
 
-static void blitter_interrupt (int hpos, int done)
+static void blitter_interrupt(int hpos, int done)
 {
 	blt_info.blit_main = 0;
 	if (blt_info.blit_interrupt)
@@ -427,7 +427,7 @@ static void blitter_interrupt (int hpos, int done)
 	send_interrupt (6, (4 + 1) * CYCLE_UNIT);
 	//if (debug_dma)
 	//	record_dma_event (DMA_EVENT_BLITIRQ, hpos, vpos);
-	blitter_done_notify(hpos);
+	blitter_done_notify(blitline);
 }
 
 static void blitter_done (int hpos)
@@ -439,7 +439,7 @@ static void blitter_done (int hpos)
 	}
 	blt_info.blit_finald = 0;
 	blitter_interrupt (hpos, 1);
-	blitter_done_notify (hpos);
+	blitter_done_notify(blitline);
 	event2_remevent (ev2_blitter);
 	unset_special (SPCFLAG_BLTNASTY);
 	if (log_blitter & 1)
@@ -465,8 +465,7 @@ static void blitter_maybe_done_early(int hpos)
 		if (ddat1use) {
 			blt_info.blit_finald = 1 + 2;
 			blitter_interrupt(hpos, 0);
-		}
-		else {
+		} else {
 			blitter_done(hpos);
 		}
 	}
