@@ -18,7 +18,6 @@ CodeDB
 *.sdf
 *.suo
 *.old
-*.vgdbsettings
 
 ### NetBeans ###
 nbproject*

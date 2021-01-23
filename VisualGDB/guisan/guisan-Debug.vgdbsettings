@@ -28,8 +28,12 @@
         <Revision>3</Revision>
       </Version>
     </ToolchainID>
-    <ProjectFile>Amiberry.vcxproj</ProjectFile>
-    <ParallelJobCount>0</ParallelJobCount>
+    <ProjectFile>guisan.vcxproj</ProjectFile>
+    <RemoteBuildEnvironment>
+      <Records />
+      <EnvironmentSetupFiles />
+    </RemoteBuildEnvironment>
+    <ParallelJobCount>1</ParallelJobCount>
     <SuppressDirectoryChangeMessages>true</SuppressDirectoryChangeMessages>
   </Build>
   <CustomBuild>
