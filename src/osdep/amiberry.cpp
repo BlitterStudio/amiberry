@@ -1731,8 +1731,8 @@ void target_default_options(struct uae_prefs* p, int type)
 		p->start_minimized = false;
 		p->start_uncaptured = false;
 		p->active_capture_priority = 1;
-		p->inactive_priority = 2;
-		p->minimized_priority = 3;
+		p->inactive_priority = 0;
+		p->minimized_priority = 0;
 		//p->notaskbarbutton = false;
 		//p->nonotificationicon = false;
 		p->main_alwaysontop = false;
