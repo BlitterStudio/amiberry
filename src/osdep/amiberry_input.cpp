@@ -491,10 +491,7 @@ void init_sdl2_game_controller(const int cpt)
 	{
 		SDL_GameControllerClose(controllers[cpt]);
 		controllers[cpt] = nullptr;
-		return;
 	}
-	joystick_name[cpt] = SDL_GameControllerNameForIndex(cpt);
-	write_log("Controller Detection for Device: %s\n", joystick_name[cpt].c_str());
 }
 
 void init_sdl2_joystick(const int cpt)
@@ -508,12 +505,7 @@ void init_sdl2_joystick(const int cpt)
 		write_log("Joystick %s has no Axes or Buttons - Skipping... \n", joystick_name[cpt]);
 		SDL_JoystickClose(joysticktable[cpt]);
 		joysticktable[cpt] = nullptr;
-		return;
 	}
-
-	if (SDL_JoystickNameForIndex(cpt) != nullptr)
-		joystick_name[cpt] = SDL_JoystickNameForIndex(cpt);
-	write_log("Joystick Detection for Device: %s \n", joystick_name[cpt]);
 }
 
 static int init_joystick()
@@ -546,6 +538,10 @@ static int init_joystick()
 			log_joystick_info(cpt);
 			init_sdl2_joystick(cpt);
 		}
+
+		if (SDL_JoystickNameForIndex(cpt) != nullptr)
+			joystick_name[cpt] = SDL_JoystickNameForIndex(cpt);
+		write_log("Joystick Detection for Device: %s \n", joystick_name[cpt]);
 		
 		//this now uses controllers path
 		char control_config[255];
@@ -556,14 +552,14 @@ static int init_joystick()
 
 		if (my_existsfile(control_config))
 		{
-			// retroarch controller cfg file found, we use that for mapping
+			write_log("Retroarch controller cfg file found, using that for mapping\n");
 			fill_blank_controller();
 			host_input_buttons[cpt] = default_controller_map;
 			map_from_retroarch(cpt, control_config);
 		}
 		else
 		{
-			// no retroarch controller cfg file found, use the default mapping
+			write_log("No Retroarch controller cfg file found, using the default mapping\n");
 			fill_default_controller();
 			host_input_buttons[cpt] = default_controller_map;
 		}
