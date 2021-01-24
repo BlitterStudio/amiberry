@@ -289,6 +289,7 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 
 	grpPort = new gcn::Window("Joystick Port");
 	grpPort->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
+	grpPort->setMovable(false);
 	grpPort->add(optPort0, 10, 10);
 	grpPort->add(optPort1, optPort0->getX() + optPort0->getWidth() + DISTANCE_NEXT_X, optPort0->getY());
 	grpPort->add(optPort2, optPort1->getX() + optPort1->getWidth() + DISTANCE_NEXT_X, optPort0->getY());
@@ -301,6 +302,7 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 
 	grpFunction = new gcn::Window("Function Key");
 	grpFunction->setPosition(DISTANCE_BORDER, grpPort->getY() + grpPort->getHeight() + DISTANCE_NEXT_Y);
+	grpFunction->setMovable(false);
 	grpFunction->add(optMultiNone, 10, 10);
 	grpFunction->add(optMultiSelect, optMultiNone->getX() + optMultiNone->getWidth() + DISTANCE_NEXT_X, optMultiNone->getY());
 
@@ -433,19 +435,19 @@ void RefreshPanelCustom()
 	if (changed_prefs.jports[SelectedPort].id >= JSEM_JOYS
 		&& changed_prefs.jports[SelectedPort].id < JSEM_MICE - 1)
 	{
-		const auto hostjoyid = changed_prefs.jports[SelectedPort].id - JSEM_JOYS;
-		strncpy(tmp, SDL_JoystickNameForIndex(hostjoyid), 255);
-
+		const auto host_joy_id = changed_prefs.jports[SelectedPort].id - JSEM_JOYS;
+		strncpy(tmp, SDL_JoystickNameForIndex(host_joy_id), 255);
+		
 		for (auto n = 0; n < 15; ++n)
 		{
-			const auto temp_button = host_input_buttons[hostjoyid].button[n];
+			auto temp_button = host_input_buttons[host_joy_id].button[n];
 
 			// disable unmapped buttons
 			cboCustomAction[n]->setEnabled(temp_button > -1);
 			lblCustomAction[n]->setEnabled(temp_button > -1);
 
 			// set hotkey/quit/reset/menu on NONE field (and disable hotkey)
-			if (temp_button == host_input_buttons[hostjoyid].hotkey_button
+			if (temp_button == host_input_buttons[host_joy_id].hotkey_button
 				&& temp_button != -1)
 			{
 				cboCustomAction[n]->setListModel(&CustomEventList_HotKey);
@@ -454,7 +456,7 @@ void RefreshPanelCustom()
 				lblCustomAction[n]->setEnabled(false);
 			}
 
-			else if (temp_button == host_input_buttons[hostjoyid].quit_button
+			else if (temp_button == host_input_buttons[host_joy_id].quit_button
 				&& temp_button != -1
 				&& SelectedFunction == 1
 				&& changed_prefs.use_retroarch_quit)
@@ -465,7 +467,7 @@ void RefreshPanelCustom()
 				lblCustomAction[n]->setEnabled(false);
 			}
 
-			else if (temp_button == host_input_buttons[hostjoyid].button[SDL_CONTROLLER_BUTTON_GUIDE]
+			else if (temp_button == host_input_buttons[host_joy_id].button[SDL_CONTROLLER_BUTTON_GUIDE]
 				&& temp_button != -1
 				&& SelectedFunction == 1
 				&& changed_prefs.use_retroarch_menu)
@@ -476,7 +478,7 @@ void RefreshPanelCustom()
 				lblCustomAction[n]->setEnabled(false);
 			}
 
-			else if (temp_button == host_input_buttons[hostjoyid].reset_button
+			else if (temp_button == host_input_buttons[host_joy_id].reset_button
 				&& temp_button != -1
 				&& SelectedFunction == 1
 				&& changed_prefs.use_retroarch_reset)
@@ -491,7 +493,7 @@ void RefreshPanelCustom()
 				cboCustomAction[n]->setListModel(&CustomEventList);
 		}
 
-		if (changed_prefs.input_analog_remap == true)
+		if (host_input_buttons[host_joy_id].number_of_hats > 0 || changed_prefs.input_analog_remap == true)
 		{
 			for (auto i = 0; i < 4; i++)
 			{
@@ -500,7 +502,7 @@ void RefreshPanelCustom()
 			}
 		}
 
-		if (host_input_buttons[hostjoyid].is_retroarch)
+		if (host_input_buttons[host_joy_id].is_retroarch)
 			lblRetroarch->setCaption("[R]");
 		else
 			lblRetroarch->setCaption("[N]");
