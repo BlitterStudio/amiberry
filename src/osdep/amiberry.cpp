@@ -1551,7 +1551,8 @@ void replace(std::string& str, const std::string& from, const std::string& to)
 
 void target_execute(const char* command)
 {
-	releasecapture(0);
+	struct AmigaMonitor* mon = &AMonitors[0];
+	releasecapture(mon);
 
 	write_log("Target_execute received: %s\n", command);
 	const std::string cmd_string = command;
