@@ -22,7 +22,7 @@ static NavigationMap navMap[] =
 	//  active              move left         move right        move up             move down
 	// main_window
 	{"About", "", "", "Shutdown", "Paths"},
-	{"Paths", "SystemROMs", "SystemROMs", "About", "Quickstart"},
+	{"Paths", "cmdSystemROMs", "cmdSystemROMs", "About", "Quickstart"},
 	{"Quickstart", "qsNTSC", "cboAModel", "Paths", "Configurations"},
 	{"Configurations", "ConfigList", "ConfigList", "Quickstart", "CPU and FPU"},
 	{"CPU and FPU", "7 Mhz", "68000", "Configurations", "Chipset"},
