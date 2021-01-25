@@ -743,15 +743,6 @@ void read_sdl2_controller(const int host_joy_id)
 	}
 	if (joy == nullptr) return;
 
-	if (current_map.hotkey_button != -1)
-	{
-		for (auto i = 0; i < SDL_CONTROLLER_BUTTON_MAX; i++)
-		{
-			if (current_map.button[i] == current_map.hotkey_button)
-				current_map.button[i] = SDL_CONTROLLER_BUTTON_INVALID;
-		}
-	}
-	
 	// detect standalone retroarch hotkeys
 	if (current_map.hotkey_button == SDL_CONTROLLER_BUTTON_INVALID)
 	{
