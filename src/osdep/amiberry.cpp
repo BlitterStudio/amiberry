@@ -1364,8 +1364,7 @@ void logging_init()
 {
 	if (amiberry_options.write_logfile)
 	{
-		static int started;
-		static int first;
+		static int first = 0;
 		char debug_filename[MAX_DPATH];
 
 		if (first > 1)
@@ -1385,7 +1384,7 @@ void logging_init()
 			debugfile = fopen(debug_filename, "wt");
 
 		first++;
-		write_log("AMIBERRY Logfile\n\n");
+		write_log("%s Logfile\n\n", get_version_string().c_str());
 	}
 }
 
