@@ -541,7 +541,7 @@ static int init_joystick()
 
 		if (SDL_JoystickNameForIndex(cpt) != nullptr)
 			joystick_name[cpt] = SDL_JoystickNameForIndex(cpt);
-		write_log("Joystick Detection for Device: %s \n", joystick_name[cpt]);
+		write_log("Joystick Detection for Device: %s \n", joystick_name[cpt].c_str());
 		
 		//this now uses controllers path
 		char control_config[255];
