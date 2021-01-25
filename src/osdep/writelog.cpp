@@ -84,7 +84,7 @@ void write_log(const char* format, ...)
 
 		TCHAR buffer[WRITE_LOG_BUF_SIZE];
 
-		va_list parms;
+		va_list parms{};
 		va_start(parms, format);
 		auto count = vsnprintf(buffer, WRITE_LOG_BUF_SIZE - 1, format, parms);
 		if (debugfile)
@@ -102,7 +102,7 @@ void jit_abort(const TCHAR* format, ...)
 {
 	static int happened;
 	TCHAR buffer[WRITE_LOG_BUF_SIZE];
-	va_list parms;
+	va_list parms{};
 	va_start(parms, format);
 
 	auto count = vsnprintf(buffer, WRITE_LOG_BUF_SIZE - 1, format, parms);
