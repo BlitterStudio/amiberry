@@ -28,8 +28,8 @@
 
 //Analog joystick dead zone
 const int joystick_dead_zone = 8000;
-auto last_x = 0;
-auto last_y = 0;
+int last_x = 0;
+int last_y = 0;
 
 bool gui_running = false;
 static int last_active_panel = 3;
@@ -124,7 +124,7 @@ enum
 /*
 * SDL Stuff we need
 */
-SDL_GameController* gui_controller;
+SDL_Joystick* gui_joystick;
 SDL_Surface* gui_screen;
 SDL_Event gui_event;
 SDL_Event touch_event;
@@ -552,11 +552,14 @@ void check_input()
 			gui_running = false;
 			break;
 
-		case SDL_CONTROLLERBUTTONDOWN:
-			if (gui_controller)
+		case SDL_JOYHATMOTION:
+		case SDL_JOYBUTTONDOWN:
+			if (gui_joystick)
 			{
 				got_event = 1;
-				if (gui_event.cbutton.button == button_for_gui)
+				const int hat = SDL_JoystickGetHat(gui_joystick, 0);
+				
+				if (gui_event.jbutton.button == static_cast<Uint8>(button_for_gui))
 				{
 					if (emulating && cmdStart->isEnabled())
 					{
@@ -574,14 +577,14 @@ void check_input()
 						gui_running = false;
 					}
 				}
-				if (SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_DPAD_UP))
+				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].button[SDL_CONTROLLER_BUTTON_DPAD_UP]) || hat & SDL_HAT_UP)
 				{
 					if (HandleNavigation(DIRECTION_UP))
 						continue; // Don't change value when enter Slider -> don't send event to control
 					PushFakeKey(SDLK_UP);
 					break;
 				}
-				if (SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_DPAD_DOWN))
+				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].button[SDL_CONTROLLER_BUTTON_DPAD_DOWN]) || hat & SDL_HAT_DOWN)
 				{
 					if (HandleNavigation(DIRECTION_DOWN))
 						continue; // Don't change value when enter Slider -> don't send event to control
@@ -589,14 +592,14 @@ void check_input()
 					break;
 				}
 
-				if (SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_LEFTSHOULDER))
+				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].button[SDL_CONTROLLER_BUTTON_LEFTSHOULDER]))
 				{
 					for (auto z = 0; z < 10; ++z)
 					{
 						PushFakeKey(SDLK_UP);
 					}
 				}
-				if (SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER))
+				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].button[SDL_CONTROLLER_BUTTON_RIGHTSHOULDER]))
 				{
 					for (auto z = 0; z < 10; ++z)
 					{
@@ -604,29 +607,29 @@ void check_input()
 					}
 				}
 
-				if (SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_DPAD_RIGHT))
+				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].button[SDL_CONTROLLER_BUTTON_DPAD_RIGHT]) || hat & SDL_HAT_RIGHT)
 				{
 					if (HandleNavigation(DIRECTION_RIGHT))
 						continue; // Don't change value when enter Slider -> don't send event to control
 					PushFakeKey(SDLK_RIGHT);
 					break;
 				}
-				if (SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_DPAD_LEFT))
+				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].button[SDL_CONTROLLER_BUTTON_DPAD_LEFT]) || hat & SDL_HAT_LEFT)
 				{
 					if (HandleNavigation(DIRECTION_LEFT))
 						continue; // Don't change value when enter Slider -> don't send event to control
 					PushFakeKey(SDLK_LEFT);
 					break;
 				}
-				if (SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_A) ||
-					SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_B))
+				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].button[SDL_CONTROLLER_BUTTON_A]) ||
+					SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].button[SDL_CONTROLLER_BUTTON_B]))
 				{
 					PushFakeKey(SDLK_RETURN);
 					continue;
 				}
 
-				if (SDL_GameControllerGetButton(gui_controller, static_cast<SDL_GameControllerButton>(host_input_buttons[0].quit_button)) &&
-					SDL_GameControllerGetButton(gui_controller, static_cast<SDL_GameControllerButton>(host_input_buttons[0].hotkey_button)))
+				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].quit_button) &&
+					SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].hotkey_button))
 				{
 					// use the HOTKEY button
 					uae_quit();
@@ -634,7 +637,7 @@ void check_input()
 					break;
 				}
 
-				if (SDL_GameControllerGetButton(gui_controller, static_cast<SDL_GameControllerButton>(host_input_buttons[0].button[SDL_CONTROLLER_BUTTON_GUIDE])))
+				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].button[SDL_CONTROLLER_BUTTON_GUIDE]))
 				{
 					// use the HOTKEY button
 					gui_running = false;
@@ -642,13 +645,13 @@ void check_input()
 			}
 			break;
 
-		case SDL_CONTROLLERAXISMOTION:
-			if (gui_controller)
+		case SDL_JOYAXISMOTION:
+			if (gui_joystick)
 			{
 				got_event = 1;
-				if (gui_event.caxis.axis == SDL_CONTROLLER_AXIS_LEFTX)
+				if (gui_event.jaxis.axis == SDL_CONTROLLER_AXIS_LEFTX)
 				{
-					if (gui_event.caxis.value > joystick_dead_zone && last_x != 1)
+					if (gui_event.jaxis.value > joystick_dead_zone && last_x != 1)
 					{
 						last_x = 1;
 						if (HandleNavigation(DIRECTION_RIGHT))
@@ -656,7 +659,7 @@ void check_input()
 						PushFakeKey(SDLK_RIGHT);
 						break;
 					}
-					if (gui_event.caxis.value < -joystick_dead_zone && last_x != -1)
+					if (gui_event.jaxis.value < -joystick_dead_zone && last_x != -1)
 					{
 						last_x = -1;
 						if (HandleNavigation(DIRECTION_LEFT))
@@ -664,12 +667,12 @@ void check_input()
 						PushFakeKey(SDLK_LEFT);
 						break;
 					}
-					if (gui_event.caxis.value > -joystick_dead_zone && gui_event.caxis.value < joystick_dead_zone)
+					if (gui_event.jaxis.value > -joystick_dead_zone && gui_event.jaxis.value < joystick_dead_zone)
 						last_x = 0;
 				}
-				else if (gui_event.caxis.axis == SDL_CONTROLLER_AXIS_LEFTY)
+				else if (gui_event.jaxis.axis == SDL_CONTROLLER_AXIS_LEFTY)
 				{
-					if (gui_event.caxis.value < -joystick_dead_zone && last_y != -1)
+					if (gui_event.jaxis.value < -joystick_dead_zone && last_y != -1)
 					{
 						last_y = -1;
 						if (HandleNavigation(DIRECTION_UP))
@@ -677,7 +680,7 @@ void check_input()
 						PushFakeKey(SDLK_UP);
 						break;
 					}
-					if (gui_event.caxis.value > joystick_dead_zone && last_y != 1)
+					if (gui_event.jaxis.value > joystick_dead_zone && last_y != 1)
 					{
 						last_y = 1;
 						if (HandleNavigation(DIRECTION_DOWN))
@@ -685,10 +688,10 @@ void check_input()
 						PushFakeKey(SDLK_DOWN);
 						break;
 					}
-					if (gui_event.caxis.value > -joystick_dead_zone && gui_event.caxis.value < joystick_dead_zone)
+					if (gui_event.jaxis.value > -joystick_dead_zone && gui_event.jaxis.value < joystick_dead_zone)
 						last_y = 0;
 				}
-				else if (gui_event.caxis.axis == SDL_CONTROLLER_AXIS_TRIGGERLEFT)
+				else if (gui_event.jaxis.axis == SDL_CONTROLLER_AXIS_TRIGGERLEFT)
 				{
 					show_help_requested();
 					cmdHelp->requestFocus();
@@ -857,21 +860,17 @@ void amiberry_gui_run()
 	{
 		for (auto j = 0; j < SDL_NumJoysticks(); j++)
 		{
-			if (SDL_IsGameController(j))
-			{
-				gui_controller = SDL_GameControllerOpen(j);
-				auto* joy = SDL_GameControllerGetJoystick(gui_controller);
 
+				gui_joystick = SDL_JoystickOpen(j);
 				// Some controllers (e.g. PS4) report a second instance with only axes and no buttons.
 				// We ignore these and move on.
-				if (SDL_JoystickNumButtons(joy) < 1)
+				if (SDL_JoystickNumButtons(gui_joystick) < 1)
 				{
-					SDL_GameControllerClose(gui_controller);
+					SDL_JoystickClose(gui_joystick);
 					continue;
 				}
-				if (gui_controller)
+				if (gui_joystick)
 					break;
-			}
 		}
 	}
 
@@ -902,10 +901,10 @@ void amiberry_gui_run()
 		cap_fps(start);
 	}
 
-	if (gui_controller)
+	if (gui_joystick)
 	{
-		SDL_GameControllerClose(gui_controller);
-		gui_controller = nullptr;
+		SDL_JoystickClose(gui_joystick);
+		gui_joystick = nullptr;
 	}
 }
 

@@ -140,7 +140,7 @@ extern gcn::Color colSelectorActive;
 extern gcn::SDLInput* gui_input;
 extern gcn::SDLTrueTypeFont* gui_font;
 extern SDL_Surface* gui_screen;
-extern SDL_GameController* gui_controller;
+extern SDL_Joystick* gui_joystick;
 extern gcn::SDLGraphics* gui_graphics;
 
 #ifdef USE_DISPMANX
@@ -307,6 +307,9 @@ extern int tweakbootpri(int bp, int ab, int dnm);
 extern char* screenshot_filename;
 extern int currentStateNum;
 extern int delay_savestate_frame;
+extern const int joystick_dead_zone;
+extern int last_x;
+extern int last_y;
 
 extern void update_gui_screen();
 extern void cap_fps(Uint64 start);
