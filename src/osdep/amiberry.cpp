@@ -661,7 +661,7 @@ void setmouseactivexy(int monid, int x, int y, int dir)
 	//}
 	if (mouseactive) {
 		disablecapture();
-		//SetCursorPos(x, y);
+		SDL_WarpMouseInWindow(mon->sdl_window, x, y);
 		if (dir) {
 			recapture = 1;
 		}
