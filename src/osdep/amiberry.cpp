@@ -230,6 +230,44 @@ int sleep_millis_main(int ms)
 	return 0;
 }
 
+static void setcursor(struct AmigaMonitor* mon, int oldx, int oldy)
+{
+	int dx = (mon->amigawinclip_rect.x - mon->amigawin_rect.x) + (mon->amigawinclip_rect.w - mon->amigawinclip_rect.x) / 2;
+	int dy = (mon->amigawinclip_rect.y - mon->amigawin_rect.y) + (mon->amigawinclip_rect.h - mon->amigawinclip_rect.y) / 2;
+	mon->mouseposx = oldx - dx;
+	mon->mouseposy = oldy - dy;
+
+	mon->windowmouse_max_w = (mon->amigawinclip_rect.w - mon->amigawinclip_rect.x) / 2 - 50;
+	mon->windowmouse_max_h = (mon->amigawinclip_rect.h - mon->amigawinclip_rect.y) / 2 - 50;
+	if (mon->windowmouse_max_w < 10)
+		mon->windowmouse_max_w = 10;
+	if (mon->windowmouse_max_h < 10)
+		mon->windowmouse_max_h = 10;
+
+	if ((currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_tablet > 0 && mousehack_alive() && isfullscreen() <= 0) {
+		mon->mouseposx = mon->mouseposy = 0;
+		return;
+	}
+
+	if (oldx >= 30000 || oldy >= 30000 || oldx <= -30000 || oldy <= -30000) {
+		oldx = oldy = 0;
+	}
+	else {
+		if (abs(mon->mouseposx) < mon->windowmouse_max_w && abs(mon->mouseposy) < mon->windowmouse_max_h)
+			return;
+	}
+	mon->mouseposx = mon->mouseposy = 0;
+	if (oldx < 0 || oldy < 0 || oldx > mon->amigawin_rect.w - mon->amigawin_rect.x || oldy > mon->amigawin_rect.h - mon->amigawin_rect.y) {
+		write_log(_T("Mouse out of range: mon=%d %dx%d (%dx%d %dx%d)\n"), mon->monitor_id, oldx, oldy,
+			mon->amigawin_rect.x, mon->amigawin_rect.y, mon->amigawin_rect.w, mon->amigawin_rect.h);
+		return;
+	}
+	int cx = (mon->amigawinclip_rect.w - mon->amigawinclip_rect.x) / 2 + mon->amigawin_rect.x + (mon->amigawinclip_rect.x - mon->amigawin_rect.x);
+	int cy = (mon->amigawinclip_rect.h - mon->amigawinclip_rect.y) / 2 + mon->amigawin_rect.y + (mon->amigawinclip_rect.y - mon->amigawin_rect.y);
+
+	SDL_WarpMouseGlobal(cx, cy);
+}
+
 static int mon_cursorclipped;
 static int pausemouseactive;
 void resumesoundpaused(void)
@@ -347,8 +385,6 @@ void releasecapture(struct AmigaMonitor* mon)
 		return;
 	SDL_SetWindowGrab(mon->sdl_window, SDL_FALSE);
 	SDL_SetRelativeMouseMode(SDL_FALSE);
-	int c = SDL_ShowCursor(SDL_ENABLE);
-	write_log(_T("ShowCursor %d\n"), c);
 	mon_cursorclipped = 0;
 }
 
@@ -411,20 +447,21 @@ static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpaus
 		if (mousehack_alive())
 			return;
 		SDL_SetCursor(normalcursor);
-		SDL_ShowCursor(SDL_ENABLE);
 	}
 
 	if (mouseactive > 0)
-		focus = 1;
+		focus = mon->monitor_id + 1;
 
 	if (mouseactive) {
 		if (focus) {
 			if (!mon_cursorclipped) {
 				SDL_ShowCursor(SDL_DISABLE);
 				SDL_SetWindowGrab(mon->sdl_window, SDL_TRUE);
+				updatewinrect(mon, false);
 				SDL_SetRelativeMouseMode(SDL_TRUE);
 				mon_cursorclipped = mon->monitor_id + 1;
 			}
+			setcursor(mon, -30000, -30000);
 		}
 		wait_keyrelease();
 		inputdevice_acquire(TRUE);
@@ -977,20 +1014,20 @@ void process_event(SDL_Event event)
 		{
 		case SDL_WINDOWEVENT_FOCUS_GAINED:
 			amiberry_active(mon, minimized);
-			unsetminimized(0);
-			break;
+			unsetminimized(mon->monitor_id);
+			return;
 		case SDL_WINDOWEVENT_MINIMIZED:
 			if (!minimized)
 			{
 				write_log(_T("SIZE_MINIMIZED\n"));
-				setminimized(0);
+				setminimized(mon->monitor_id);
 				amiberry_inactive(mon, minimized);
 			}
-			break;			
+			return;
 		case SDL_WINDOWEVENT_RESTORED:
 			amiberry_active(mon, minimized);
-			unsetminimized(0);
-			break;
+			unsetminimized(mon->monitor_id);
+			return;
 		case SDL_WINDOWEVENT_MOVED:
 			if (isfullscreen() <= 0)
 			{
@@ -1003,18 +1040,18 @@ void process_event(SDL_Event event)
 			if (currprefs.input_tablet > 0 && currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC && isfullscreen() <= 0)
 			{
 				if (mousehack_alive())
-					setcursorshape(0);
+					setcursorshape(mon->monitor_id);
 			}
-			break;
+			return;
 		case SDL_WINDOWEVENT_LEAVE:
 			mouseinside = false;
-			break;	
+			return;
 		case SDL_WINDOWEVENT_FOCUS_LOST:
 			focus = 0;
 			amiberry_inactive(mon, minimized);
 			if (isfullscreen() <= 0 && currprefs.minimize_inactive)
-				minimizewindow(0);
-			break;
+				minimizewindow(mon->monitor_id);
+			return;
 		case SDL_WINDOWEVENT_CLOSE:
 			if (device_change_timer)
 				SDL_RemoveTimer(device_change_timer);
@@ -1022,7 +1059,7 @@ void process_event(SDL_Event event)
 			wait_keyrelease();
 			inputdevice_unacquire();
 			uae_quit();
-			break;
+			return;
 		case SDL_WINDOWEVENT_EXPOSED:
 			notice_screen_contents_lost(mon->monitor_id);
 			updatedisplayarea(mon->monitor_id);
@@ -1036,7 +1073,7 @@ void process_event(SDL_Event event)
 	{
 	case SDL_QUIT:
 		uae_quit();
-		break;
+		return;
 
 	case SDL_CLIPBOARDUPDATE:
 		if (currprefs.clipboard_sharing && SDL_HasClipboardText() == SDL_TRUE)
@@ -1045,7 +1082,7 @@ void process_event(SDL_Event event)
 			uae_clipboard_put_text(clipboard_host);
 			SDL_free(clipboard_host);	
 		}
-		break;
+		return;
 		
 	case SDL_JOYDEVICEADDED:
 	case SDL_CONTROLLERDEVICEADDED:
@@ -1056,7 +1093,7 @@ void process_event(SDL_Event event)
 		if (device_change_timer)
 			SDL_RemoveTimer(device_change_timer);
 		device_change_timer = SDL_AddTimer(2000, timer_callbackfunc, (void*)4);	
-		break;
+		return;
 
 	case SDL_CONTROLLERBUTTONDOWN:
 		if (event.cbutton.button == enter_gui_button)
@@ -1064,7 +1101,7 @@ void process_event(SDL_Event event)
 			inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
 			break;
 		}
-		break;
+		return;
 
 	case SDL_KEYDOWN:
 		// if the key belongs to a "retro arch joystick" ignore it
@@ -1093,7 +1130,7 @@ void process_event(SDL_Event event)
 
 			my_kbd_handler(0, scancode, pressed, false);
 		}
-		break;
+		return;
 
 	case SDL_KEYUP:
 		//const auto ok_to_use = !key_used_by_retroarch_joy(event.key.keysym.scancode);
@@ -1124,7 +1161,7 @@ void process_event(SDL_Event event)
 			if (event.button.clicks == 2)
 				setmousebuttonstate(0, 0, 1);
 		}
-		break;
+		return;
 
 	case SDL_MOUSEBUTTONDOWN:
 		if (event.button.button == SDL_BUTTON_LEFT
@@ -1136,7 +1173,7 @@ void process_event(SDL_Event event)
 				|| isfullscreen() > 0))
 		{
 			if (!pause_emulation || currprefs.active_nocapture_pause)
-				setmouseactive(0, (event.button.clicks == 1 || isfullscreen() > 0) ? 2 : 1);
+				setmouseactive(mon->monitor_id, (event.button.clicks == 1 || isfullscreen() > 0) ? 2 : 1);
 		}
 		else if (isfocus())
 		{
@@ -1163,14 +1200,14 @@ void process_event(SDL_Event event)
 			default: break;
 			}
 		}
-		break;
+		return;
 
 	case SDL_FINGERUP:
 		if (isfocus())
 		{
 			setmousebuttonstate(0, 0, 0);
 		}
-		break;
+		return;
 
 	case SDL_MOUSEBUTTONUP:
 		if (isfocus())
@@ -1196,7 +1233,7 @@ void process_event(SDL_Event event)
 			default: break;
 			}
 		}
-		break;
+		return;
 
 	case SDL_FINGERMOTION:
 		if (isfocus())
@@ -1204,38 +1241,55 @@ void process_event(SDL_Event event)
 			setmousestate(0, 0, event.motion.x, 1);
 			setmousestate(0, 1, event.motion.y, 1);
 		}
-		break;
+		return;
 
 	case SDL_MOUSEMOTION:
 	{
+		int wm = event.motion.which;
+
 		monitor_off = 0;
-		if (!(SDL_GetWindowFlags(mon->sdl_window) & SDL_WINDOW_MOUSE_CAPTURE) && currprefs.input_tablet > 0 && currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC && isfullscreen() <= 0)
-		{
-			if (mousehack_alive())
-				setcursorshape(0);
-		}
 		if (!mouseinside)
 			mouseinside = true;
 
+#if 0
+		write_log(_T("WM_MOUSEMOVE MON=%d NUM=%d ACT=%d FOCUS=%d CLIP=%d FS=%d %dx%d %dx%d\n"),
+				mon->monitor_id, 0, mouseactive, focus, mon_cursorclipped, isfullscreen(), mx, my, mon->mouseposx, mon->mouseposy);
+#endif
+			
 		if (recapture && isfullscreen() <= 0) {
-			enablecapture(0);
-			break;
+			enablecapture(mon->monitor_id);
+			return;
 		}
 
-		if (currprefs.input_tablet >= TABLET_MOUSEHACK)
+		if (wm == SDL_TOUCH_MOUSEID && currprefs.input_tablet >= TABLET_MOUSEHACK)
 		{
 			/* absolute */
 			setmousestate(0, 0, event.motion.x, 1);
 			setmousestate(0, 1, event.motion.y, 1);
-			break;
+			return;
 		}
 
-		if (!focus || !mouseactive)
-			break;
-
-		/* relative */
-		setmousestate(0, 0, event.motion.xrel, 0);
-		setmousestate(0, 1, event.motion.yrel, 0);
+		if (wm >= 0)
+		{
+			if (currprefs.input_tablet >= TABLET_MOUSEHACK)
+			{
+				/* absolute */
+				setmousestate(event.motion.which, 0, event.motion.x, 1);
+				setmousestate(event.motion.which, 1, event.motion.y, 1);
+				return;
+			}
+			if (!focus || !mouseactive)
+				return;
+			/* relative */
+			setmousestate(event.motion.which, 0, event.motion.xrel, 0);
+			setmousestate(event.motion.which, 1, event.motion.yrel, 0);
+		}
+		else if (isfocus() < 0 && currprefs.input_tablet >= TABLET_MOUSEHACK) {
+			setmousestate(0, 0, event.motion.x, 1);
+			setmousestate(0, 1, event.motion.y, 1);
+		}
+		if (mon_cursorclipped || mouseactive)
+			setcursor(mon, event.motion.x, event.motion.y);
 	}
 	break;
 
@@ -1256,7 +1310,7 @@ void process_event(SDL_Event event)
 			else if (val_x > 0)
 				setmousebuttonstate(0, 3 + 3, -1);
 		}
-		break;
+		return;
 
 	default:
 		break;
@@ -2836,7 +2890,7 @@ int main(int argc, char* argv[])
 
 	// Get startup path
 #ifdef ANDROID
-    strncpy(start_path_data, getenv("EXTERNAL_FILES_DIR"), MAX_DPATH - 1);
+	strncpy(start_path_data, getenv("EXTERNAL_FILES_DIR"), MAX_DPATH - 1);
 #else
 	getcwd(start_path_data, MAX_DPATH);
 #endif

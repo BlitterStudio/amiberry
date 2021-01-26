@@ -965,10 +965,17 @@ static void open_screen(struct uae_prefs* p)
 			init_row_map();
 		}
 	}
-	init_colors(0);
-	picasso_refresh(0);
+	init_colors(mon->monitor_id);
 
-	setmouseactive(0, -1);
+	target_graphics_buffer_update(mon->monitor_id);
+	updatewinrect(mon, true);
+
+	mon->screen_is_initialized = 1;
+	
+	picasso_refresh(mon->monitor_id);
+
+	if (isfullscreen() != 0)
+		setmouseactive(mon->monitor_id, -1);
 }
 
 extern int vstrt; // vertical start
@@ -1678,37 +1685,12 @@ const TCHAR* target_get_display_name(int num, bool friendlyname)
 
 void getgfxoffset(int monid, float* dxp, float* dyp, float* mxp, float* myp)
 {
-	struct AmigaMonitor* mon = &AMonitors[monid];
-	struct amigadisplay* ad = &adisplays[monid];
-	//struct uae_filter* usedfilter = mon->usedfilter;
 	float dx = 0, dy = 0, mx = 1.0, my = 1.0;
-
-	//getfilteroffset(&dx, &dy, &mx, &my);
-	//if (ad->picasso_on) {
-	//	dx = picasso_offset_x * picasso_offset_mx;
-	//	dy = picasso_offset_y * picasso_offset_my;
-	//	mx = picasso_offset_mx;
-	//	my = picasso_offset_my;
-	//}
-
-	//if (mon->currentmode.flags & DM_W_FULLSCREEN) {
-	//	for (;;) {
-	//		if (mon->scalepicasso && mon->screen_is_picasso)
-	//			break;
-	//		if (usedfilter && !mon->screen_is_picasso)
-	//			break;
-	//		if (mon->currentmode.fullfill && (mon->currentmode.current_width > mon->currentmode.native_width || mon->currentmode.current_height > mon->currentmode.native_height))
-	//			break;
-	//		dx += (mon->currentmode.native_width - mon->currentmode.current_width) / 2;
-	//		dy += (mon->currentmode.native_height - mon->currentmode.current_height) / 2;
-	//		break;
-	//	}
-	//}
 
 	*dxp = dx;
 	*dyp = dy;
-	*mxp = 1.0 / mx;
-	*myp = 1.0 / my;
+	*mxp = 1.0f / mx;
+	*myp = 1.0f / my;
 }
 
 void DX_Fill(struct AmigaMonitor* mon, int dstx, int dsty, int width, int height, uae_u32 color)
@@ -1808,7 +1790,7 @@ int graphics_init(bool mousecapture)
 		check_error_sdl(mon->sdl_window == nullptr, "Unable to create window");
 	}
 #else
-	write_log("Trying to get Current Video Driver...\n");
+	write_log("Getting Current Video Driver...\n");
 	sdl_video_driver = SDL_GetCurrentVideoDriver();
 
 	const auto should_be_zero = SDL_GetCurrentDisplayMode(0, &sdlMode);
@@ -1818,7 +1800,7 @@ int graphics_init(bool mousecapture)
 		vsync_vblank = sdlMode.refresh_rate;
 	}
 
-	write_log("Trying to create window...\n");
+	write_log("Creating Amiberry window...\n");
 
 	if (!mon->sdl_window)
 	{
@@ -1925,7 +1907,6 @@ int graphics_init(bool mousecapture)
 	
 	inputdevice_unacquire();
 	graphics_subinit();
-	init_colors(0);
 
 	inputdevice_acquire(TRUE);
 	return 1;
@@ -2249,15 +2230,28 @@ int vsync_isdone(frame_time_t* dt)
 	return vsync_active ? 1 : 0;
 }
 
+static int oldtex_w[MAX_AMIGAMONITORS], oldtex_h[MAX_AMIGAMONITORS], oldtex_rtg[MAX_AMIGAMONITORS];
 bool target_graphics_buffer_update(int monid)
 {
 	struct AmigaMonitor* mon = &AMonitors[monid];
 	struct picasso_vidbuf_description* vidinfo = &picasso_vidinfo[monid];
 	struct vidbuf_description* avidinfo = &adisplays[monid].gfxvidinfo;
 	struct picasso96_state_struct* state = &picasso96_state[monid];
-	
+
+	int w, h;
 	auto rate_changed = false;
 
+	if (mon->screen_is_picasso) {
+		w = state->Width > vidinfo->width ? state->Width : vidinfo->width;
+		h = state->Height > vidinfo->height ? state->Height : vidinfo->height;
+	}
+	else {
+		struct vidbuffer* vb = avidinfo->drawbuffer.tempbufferinuse ? &avidinfo->tempbuffer : &avidinfo->drawbuffer;
+		avidinfo->outbuffer = vb;
+		w = vb->outwidth;
+		h = vb->outheight;
+	}
+	
 	if (currprefs.gfx_monitor[monid].gfx_size.height != changed_prefs.gfx_monitor[monid].gfx_size.height)
 	{
 		update_display(&changed_prefs);
@@ -2271,6 +2265,22 @@ bool target_graphics_buffer_update(int monid)
 		time_per_frame = 1000 * 1000 / currprefs.chipset_refreshrate;
 #endif
 	}
+
+	if (oldtex_w[monid] == w && oldtex_h[monid] == h && oldtex_rtg[monid] == mon->screen_is_picasso)
+		return false;
+
+	if (!w || !h) {
+		oldtex_w[monid] = w;
+		oldtex_h[monid] = h;
+		oldtex_rtg[monid] = mon->screen_is_picasso;
+		return false;
+	}
+
+	oldtex_w[monid] = w;
+	oldtex_h[monid] = h;
+	oldtex_rtg[monid] = mon->screen_is_picasso;
+
+	write_log(_T("Buffer %d size (%d*%d) %s\n"), monid, w, h, mon->screen_is_picasso ? _T("RTG") : _T("Native"));
 
 	return true;
 }

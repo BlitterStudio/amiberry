@@ -382,12 +382,23 @@ int coord_native_to_amiga_x (int x)
 	return x + 2 * DISPLAY_LEFT_SHIFT - 2 * DIW_DDF_OFFSET;
 }
 
+#ifdef AMIBERRY
 int coord_native_to_amiga_y (int y)
+{
+	if (!native2amiga_line_map || y < 0)
+		return -1;
+	if (y >= native2amiga_line_map_height) 
+		return native2amiga_line_map_height;
+	return native2amiga_line_map[y] + thisframe_y_adjust - minfirstline;
+}
+#else
+int coord_native_to_amiga_y(int y)
 {
 	if (!native2amiga_line_map || y < 0 || y >= native2amiga_line_map_height)
 		return -1;
 	return native2amiga_line_map[y] + thisframe_y_adjust - minfirstline;
 }
+#endif
 
 STATIC_INLINE int res_shift_from_window (int x)
 {
@@ -410,6 +421,16 @@ void notice_screen_contents_lost(int monid)
 	ad->frame_redraw_necessary = 2;
 }
 
+bool isnativevidbuf(int monid)
+{
+	struct vidbuf_description *vidinfo = &adisplays[monid].gfxvidinfo;
+	if (vidinfo->outbuffer == NULL)
+		return false;
+	if (vidinfo->outbuffer == &vidinfo->drawbuffer)
+		return true;
+	return vidinfo->outbuffer->nativepositioning;
+}
+
 extern int plffirstline_total, plflastline_total;
 extern int first_planes_vpos, last_planes_vpos;
 extern int diwfirstword_total, diwlastword_total;
@@ -428,7 +449,7 @@ static int stored_left_start, stored_top_start, stored_width, stored_height;
 
 void get_custom_topedge (int *xp, int *yp, bool max)
 {
-	if (!max) {
+	if (isnativevidbuf(0) && !max) {
 		int x, y;
 		x = visible_left_border + (DISPLAY_LEFT_SHIFT << currprefs.gfx_resolution);
 		y = minfirstline << currprefs.gfx_vresolution;
@@ -575,6 +596,15 @@ int get_custom_limits (int *pw, int *ph, int *pdx, int *pdy, int *prealh)
 	if (!pw || !ph || !pdx || !pdy) {
 		reset_custom_limits ();
 		return 0;
+	}
+
+	if (!isnativevidbuf(0)) {
+		*pw = vidinfo->outbuffer->outwidth;
+		*ph = vidinfo->outbuffer->outheight;
+		*pdx = 0;
+		*pdy = 0;
+		*prealh = -1;
+		return 1;
 	}
 
 	*pw = gclow;
