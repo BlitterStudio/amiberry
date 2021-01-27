@@ -1261,7 +1261,7 @@ void process_event(SDL_Event event)
 			return;
 		}
 
-		if (wm == SDL_TOUCH_MOUSEID && currprefs.input_tablet >= TABLET_MOUSEHACK)
+		if (wm < 0 && currprefs.input_tablet >= TABLET_MOUSEHACK)
 		{
 			/* absolute */
 			setmousestate(0, 0, event.motion.x, 1);
