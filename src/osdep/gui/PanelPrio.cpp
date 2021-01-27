@@ -1,5 +1,3 @@
-#include <cstring>
-
 #include <guisan.hpp>
 #include <guisan/sdl.hpp>
 #include "SelectorEntry.hpp"

@@ -1,6 +1,5 @@
-#include <stdbool.h>
-#include <stdio.h>
-#include <string.h>
+#include <cstdio>
+#include <cstring>
 
 #include <guisan.hpp>
 #include <SDL_ttf.h>
@@ -13,7 +12,6 @@
 #include "gui_handling.h"
 
 #include "options.h"
-#include "inputdevice.h"
 #include "amiberry_gfx.h"
 #include "amiberry_input.h"
 

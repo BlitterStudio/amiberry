@@ -1,5 +1,3 @@
-#include <stdbool.h>
-
 #include "SelectorEntry.hpp"
 #include "guisan/widgets/container.hpp"
 #include "guisan/widgets/icon.hpp"

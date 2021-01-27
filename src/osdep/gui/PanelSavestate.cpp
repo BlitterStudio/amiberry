@@ -1,6 +1,5 @@
-#include <string.h>
-#include <stdio.h>
-#include <stdbool.h>
+#include <cstring>
+#include <cstdio>
 
 #include <guisan.hpp>
 #include <SDL_ttf.h>
@@ -10,7 +9,6 @@
 #include "SelectorEntry.hpp"
 
 #include "sysdeps.h"
-#include "xwin.h"
 #include "gui.h"
 #include "savestate.h"
 #include "gui_handling.h"

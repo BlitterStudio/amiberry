@@ -1,6 +1,5 @@
 #include <string.h>
 #include <stdio.h>
-#include <stdbool.h>
 
 #include <guisan.hpp>
 #include <SDL_ttf.h>

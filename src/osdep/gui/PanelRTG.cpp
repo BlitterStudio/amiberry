@@ -1,5 +1,5 @@
 #include <cstdio>
-#include <stdlib.h>
+#include <cstdlib>
 
 #include <guisan.hpp>
 #include <SDL_ttf.h>

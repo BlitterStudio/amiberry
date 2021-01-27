@@ -1,9 +1,8 @@
-#include <stdbool.h>
-#include <string.h>
+#include <cstring>
+#include <cstdlib>
+#include <cstdio>
 #include <sys/types.h>
 #include <dirent.h>
-#include <stdlib.h>
-#include <stdio.h>
 
 #include <guisan.hpp>
 #include <SDL_ttf.h>

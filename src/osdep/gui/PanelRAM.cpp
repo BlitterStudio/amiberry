@@ -6,7 +6,6 @@
 #include "sysdeps.h"
 #include "options.h"
 #include "memory.h"
-#include "gfxboard.h"
 #include "gui_handling.h"
 #include "target.h"
 
