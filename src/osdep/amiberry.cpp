@@ -1362,6 +1362,7 @@ int handle_msgpump()
 
 bool handle_events()
 {
+	struct AmigaMonitor* mon = &AMonitors[0];
 	static auto was_paused = 0;
 	static int cnt1, cnt2;
 
@@ -1395,7 +1396,7 @@ bool handle_events()
 	}
 	if (was_paused && (!pause_emulation || quit_program))
 	{
-		updatedisplayarea(0);
+		updatedisplayarea(mon->monitor_id);
 		pause_emulation = was_paused;
 		resumepaused(was_paused);
 		sound_closed = 0;
