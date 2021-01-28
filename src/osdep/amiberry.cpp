@@ -385,6 +385,7 @@ void releasecapture(struct AmigaMonitor* mon)
 		return;
 	SDL_SetWindowGrab(mon->sdl_window, SDL_FALSE);
 	SDL_SetRelativeMouseMode(SDL_FALSE);
+	SDL_ShowCursor(SDL_ENABLE);
 	mon_cursorclipped = 0;
 }
 
@@ -461,7 +462,7 @@ static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpaus
 				SDL_SetRelativeMouseMode(SDL_TRUE);
 				mon_cursorclipped = mon->monitor_id + 1;
 			}
-			setcursor(mon, -30000, -30000);
+			//setcursor(mon, -30000, -30000);
 		}
 		wait_keyrelease();
 		inputdevice_acquire(TRUE);
@@ -1288,8 +1289,6 @@ void process_event(SDL_Event event)
 			setmousestate(0, 0, event.motion.x, 1);
 			setmousestate(0, 1, event.motion.y, 1);
 		}
-		if (mon_cursorclipped || mouseactive)
-			setcursor(mon, event.motion.x, event.motion.y);
 	}
 	break;
 
