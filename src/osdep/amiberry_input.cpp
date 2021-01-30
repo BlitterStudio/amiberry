@@ -479,33 +479,14 @@ void init_sdl2_game_controller(const int cpt)
 {
 	controllers[cpt] = SDL_GameControllerOpen(cpt);
 	if (controllers[cpt] == nullptr)
-	{
 		write_log("Warning: Unable to open game controller! SDL Error: %s\n", SDL_GetError());
-		return;
-	}
-	auto* joy = SDL_GameControllerGetJoystick(controllers[cpt]);
-
-	// Some controllers (e.g. PS4) report a second instance with only axes and no buttons.
-	// We ignore these and move on.
-	if (SDL_JoystickNumButtons(joy) < 1)
-	{
-		SDL_GameControllerClose(controllers[cpt]);
-		controllers[cpt] = nullptr;
-	}
 }
 
 void init_sdl2_joystick(const int cpt)
 {
 	joysticktable[cpt] = SDL_JoystickOpen(cpt);
-	if (SDL_JoystickNumAxes(joysticktable[cpt]) == 0
-		&& SDL_JoystickNumButtons(joysticktable[cpt]) == 0)
-	{
-		if (SDL_JoystickNameForIndex(cpt) != nullptr)
-			joystick_name[cpt]= SDL_JoystickNameForIndex(cpt);
-		write_log("Joystick %s has no Axes or Buttons - Skipping... \n", joystick_name[cpt]);
-		SDL_JoystickClose(joysticktable[cpt]);
-		joysticktable[cpt] = nullptr;
-	}
+	if (joysticktable[cpt] == nullptr)
+		write_log("Warning: Unable to open Joystick! SDL Error: %s\n", SDL_GetError());
 }
 
 static int init_joystick()
@@ -513,6 +494,10 @@ static int init_joystick()
 	if (joystick_inited)
 		return 1;
 	joystick_inited = 1;
+	
+	// This disables the use of gyroscopes as axis device
+	SDL_SetHint(SDL_HINT_ACCELEROMETER_AS_JOYSTICK, "0");
+	
 	num_joystick = SDL_NumJoysticks();
 	if (num_joystick > MAX_INPUT_DEVICES)
 		num_joystick = MAX_INPUT_DEVICES;
