@@ -381,15 +381,9 @@ void alloc_colors64k(int monid, int rw, int gw, int bw, int rs, int gs, int bs, 
 		int b = ((i & 0xf) << 4) | (i & 0x0f);
 
 		if (currprefs.gfx_blackerthanblack) {
-			r += 10;
-			g += 10;
-			b += 10;
-			if (r > 255)
-				r = 255;
-			if (g > 255)
-				g = 255;
-			if (b > 255)
-				b = 255;
+			r = (r * (255 - 10) / 255) + 10;
+			g = (g * (255 - 10) / 255) + 10;
+			b = (g * (255 - 10) / 255) + 10;
 		}
 		
 		r = uae_gamma[r + j][0];
