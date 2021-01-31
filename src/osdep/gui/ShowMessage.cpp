@@ -49,20 +49,26 @@ static ShowMessageActionListener* showMessageActionListener;
 static void InitShowMessage()
 {
 	struct AmigaMonitor* mon = &AMonitors[0];
-	if (mon->sdl_window == nullptr)
-	{
-		mon->sdl_window = SDL_CreateWindow("Amiberry",
-			SDL_WINDOWPOS_UNDEFINED,
-			SDL_WINDOWPOS_UNDEFINED,
-			0,
-			0,
-			SDL_WINDOW_FULLSCREEN_DESKTOP);
-		check_error_sdl(mon->sdl_window == nullptr, "Unable to create window:");
-	}
-	if (gui_screen == nullptr)
+	
+	if (!gui_screen)
 	{
 		gui_screen = SDL_CreateRGBSurface(0, GUI_WIDTH, GUI_HEIGHT, 16, 0, 0, 0, 0);
 		check_error_sdl(gui_screen == nullptr, "Unable to create SDL surface:");
+	}
+
+#ifdef USE_DISPMANX
+	if (!displayHandle)
+		init_dispmanx_gui();
+
+	if (!mon->sdl_window)
+	{
+		mon->sdl_window = SDL_CreateWindow("Amiberry",
+			SDL_WINDOWPOS_CENTERED,
+			SDL_WINDOWPOS_CENTERED,
+			GUI_WIDTH,
+			GUI_HEIGHT,
+			SDL_WINDOW_FULLSCREEN_DESKTOP);
+		check_error_sdl(mon->sdl_window == nullptr, "Unable to create window:");
 	}
 	if (sdl_renderer == nullptr)
 	{
@@ -70,71 +76,23 @@ static void InitShowMessage()
 		check_error_sdl(sdl_renderer == nullptr, "Unable to create a renderer:");
 		SDL_RenderSetLogicalSize(sdl_renderer, GUI_WIDTH, GUI_HEIGHT);
 	}
-
-#ifdef USE_DISPMANX
-	displayHandle = vc_dispmanx_display_open(0);
-	rgb_mode = VC_IMAGE_RGB565;
-	uint32_t vc_gui_image_ptr;
-	if (!gui_resource)
-		gui_resource = vc_dispmanx_resource_create(rgb_mode, GUI_WIDTH, GUI_HEIGHT, &vc_gui_image_ptr);
-	if (!black_gui_resource)
-		black_gui_resource = vc_dispmanx_resource_create(rgb_mode, GUI_WIDTH, GUI_HEIGHT, &vc_gui_image_ptr);
-
-	vc_dispmanx_rect_set(&blit_rect, 0, 0, GUI_WIDTH, GUI_HEIGHT);
-	vc_dispmanx_resource_write_data(gui_resource, rgb_mode, gui_screen->pitch, gui_screen->pixels, &blit_rect);
-	vc_dispmanx_resource_write_data(black_gui_resource, rgb_mode, gui_screen->pitch, gui_screen->pixels, &blit_rect);
-	vc_dispmanx_rect_set(&src_rect, 0, 0, GUI_WIDTH << 16, GUI_HEIGHT << 16);
-	vc_dispmanx_rect_set(&black_rect, 0, 0, modeInfo.width, modeInfo.height);
-	// Full screen destination rectangle
-	//vc_dispmanx_rect_set(&dst_rect, 0, 0, modeInfo.width, modeInfo.height);
-
-	// Scaled display with correct Aspect Ratio
-	const auto want_aspect = static_cast<float>(GUI_WIDTH) / static_cast<float>(GUI_HEIGHT);
-	const auto real_aspect = static_cast<float>(modeInfo.width) / static_cast<float>(modeInfo.height);
-
-	SDL_Rect viewport;
-	if (want_aspect > real_aspect)
-	{
-		const auto scale = static_cast<float>(modeInfo.width) / static_cast<float>(GUI_WIDTH);
-		viewport.x = 0;
-		viewport.w = modeInfo.width;
-		viewport.h = static_cast<int>(std::ceil(GUI_HEIGHT * scale));
-		viewport.y = (modeInfo.height - viewport.h) / 2;
-	}
-	else
-	{
-		const auto scale = static_cast<float>(modeInfo.height) / static_cast<float>(GUI_HEIGHT);
-		viewport.y = 0;
-		viewport.h = modeInfo.height;
-		viewport.w = static_cast<int>(std::ceil(GUI_WIDTH * scale));
-		viewport.x = (modeInfo.width - viewport.w) / 2;
-	}
-	vc_dispmanx_rect_set(&dst_rect, viewport.x, viewport.y, viewport.w, viewport.h);
-
-	if (!element_present)
-	{
-		element_present = 1;
-		updateHandle = vc_dispmanx_update_start(0);
-
-		VC_DISPMANX_ALPHA_T alpha;
-		alpha.flags = DISPMANX_FLAGS_ALPHA_FROM_SOURCE;
-		alpha.opacity = 255;
-		alpha.mask = 0;
-
-		if (!blackscreen_element)
-			blackscreen_element = vc_dispmanx_element_add(updateHandle, displayHandle, 0,
-				&black_rect, black_gui_resource, &src_rect, DISPMANX_PROTECTION_NONE, &alpha,
-				nullptr, DISPMANX_NO_ROTATE);
-
-		if (!gui_element)
-			gui_element = vc_dispmanx_element_add(updateHandle, displayHandle, 1,
-				&dst_rect, gui_resource, &src_rect, DISPMANX_PROTECTION_NONE, &alpha,
-				nullptr, DISPMANX_NO_ROTATE);
-
-		vc_dispmanx_update_submit_sync(updateHandle);
-}
 #else
-
+	if (!mon->sdl_window)
+	{
+		mon->sdl_window = SDL_CreateWindow("Amiberry",
+			SDL_WINDOWPOS_CENTERED,
+			SDL_WINDOWPOS_CENTERED,
+			GUI_WIDTH,
+			GUI_HEIGHT,
+			SDL_WINDOW_FULLSCREEN_DESKTOP);
+		check_error_sdl(mon->sdl_window == nullptr, "Unable to create window:");
+	}
+	if (sdl_renderer == nullptr)
+	{
+		sdl_renderer = SDL_CreateRenderer(mon->sdl_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+		check_error_sdl(sdl_renderer == nullptr, "Unable to create a renderer:");
+		SDL_RenderSetLogicalSize(sdl_renderer, GUI_WIDTH, GUI_HEIGHT);
+	}
 	if (mon->sdl_window)
 	{
 		if (amiberry_options.rotation_angle != 0 && amiberry_options.rotation_angle != 180)
@@ -152,12 +110,12 @@ static void InitShowMessage()
 			gui_screen->w, gui_screen->h);
 		check_error_sdl(gui_texture == nullptr, "Unable to create texture from Surface");
 	}
-#endif
 
 	if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
 		SDL_RenderSetLogicalSize(sdl_renderer, GUI_WIDTH, GUI_HEIGHT);
 	else
 		SDL_RenderSetLogicalSize(sdl_renderer, GUI_HEIGHT, GUI_WIDTH);
+#endif
 
 	SDL_SetRelativeMouseMode(SDL_FALSE);
 	SDL_ShowCursor(SDL_ENABLE);

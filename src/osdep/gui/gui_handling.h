@@ -311,6 +311,7 @@ extern const int joystick_dead_zone;
 extern int last_x;
 extern int last_y;
 
+extern void init_dispmanx_gui();
 extern void update_gui_screen();
 extern void cap_fps(Uint64 start);
 extern long get_file_size(const std::string& filename);

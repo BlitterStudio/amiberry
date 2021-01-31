@@ -302,25 +302,10 @@ void setup_cursor()
 }
 #endif
 
-void amiberry_gui_init()
+void init_dispmanx_gui()
 {
-	struct AmigaMonitor* mon = &AMonitors[0];
-	sdl_video_driver = SDL_GetCurrentVideoDriver();
-#ifndef USE_DISPMANX
-	SDL_GetCurrentDisplayMode(0, &sdlMode);
-#endif
-	
-	//-------------------------------------------------
-	// Create new screen for GUI
-	//-------------------------------------------------
-	if (!gui_screen)
-	{
-		gui_screen = SDL_CreateRGBSurface(0, GUI_WIDTH, GUI_HEIGHT, 16, 0, 0, 0, 0);
-	}
-	check_error_sdl(gui_screen == nullptr, "Unable to create GUI surface:");
-
-#ifdef USE_DISPMANX
-	displayHandle = vc_dispmanx_display_open(0);
+	if (!displayHandle)
+		displayHandle = vc_dispmanx_display_open(0);
 	rgb_mode = VC_IMAGE_RGB565;
 	uint32_t vc_gui_image_ptr;
 	if (!gui_resource)
@@ -381,6 +366,28 @@ void amiberry_gui_init()
 
 		vc_dispmanx_update_submit_sync(updateHandle);
 	}
+}
+
+void amiberry_gui_init()
+{
+	struct AmigaMonitor* mon = &AMonitors[0];
+	sdl_video_driver = SDL_GetCurrentVideoDriver();
+#ifndef USE_DISPMANX
+	SDL_GetCurrentDisplayMode(0, &sdlMode);
+#endif
+	
+	//-------------------------------------------------
+	// Create new screen for GUI
+	//-------------------------------------------------
+	if (!gui_screen)
+	{
+		gui_screen = SDL_CreateRGBSurface(0, GUI_WIDTH, GUI_HEIGHT, 16, 0, 0, 0, 0);
+		check_error_sdl(gui_screen == nullptr, "Unable to create GUI surface:");
+	}
+
+#ifdef USE_DISPMANX
+	init_dispmanx_gui();
+	
 	if (!mon->sdl_window)
 	{
 		mon->sdl_window = SDL_CreateWindow("Amiberry GUI",
@@ -389,11 +396,13 @@ void amiberry_gui_init()
 			GUI_WIDTH,
 			GUI_HEIGHT,
 			SDL_WINDOW_FULLSCREEN_DESKTOP);
+		check_error_sdl(mon->sdl_window == nullptr, "Unable to create window:");
 	}
 	if (sdl_renderer == nullptr)
 	{
 		sdl_renderer = SDL_CreateRenderer(mon->sdl_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 		check_error_sdl(sdl_renderer == nullptr, "Unable to create a renderer:");
+		SDL_RenderSetLogicalSize(sdl_renderer, GUI_WIDTH, GUI_HEIGHT);
 	}
 #else
 	setup_cursor();
@@ -444,13 +453,13 @@ void amiberry_gui_init()
 	gui_texture = SDL_CreateTexture(sdl_renderer, gui_screen->format->format, SDL_TEXTUREACCESS_STREAMING, gui_screen->w,
 									gui_screen->h);
 	check_error_sdl(gui_texture == nullptr, "Unable to create GUI texture:");
-#endif
-	
+
 	if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
 		SDL_RenderSetLogicalSize(sdl_renderer, GUI_WIDTH, GUI_HEIGHT);
 	else
 		SDL_RenderSetLogicalSize(sdl_renderer, GUI_HEIGHT, GUI_WIDTH);
-	
+#endif
+
 	SDL_SetRelativeMouseMode(SDL_FALSE);
 	SDL_ShowCursor(SDL_ENABLE);
 
