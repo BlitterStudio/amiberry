@@ -475,20 +475,6 @@ void log_joystick_info(int index)
 	SDL_JoystickClose(js);
 }
 
-void init_sdl2_game_controller(const int cpt)
-{
-	controllers[cpt] = SDL_GameControllerOpen(cpt);
-	if (controllers[cpt] == nullptr)
-		write_log("Warning: Unable to open game controller! SDL Error: %s\n", SDL_GetError());
-}
-
-void init_sdl2_joystick(const int cpt)
-{
-	joysticktable[cpt] = SDL_JoystickOpen(cpt);
-	if (joysticktable[cpt] == nullptr)
-		write_log("Warning: Unable to open Joystick! SDL Error: %s\n", SDL_GetError());
-}
-
 static int init_joystick()
 {
 	if (joystick_inited)
@@ -503,50 +489,113 @@ static int init_joystick()
 		num_joystick = MAX_INPUT_DEVICES;
 
 	// set up variables / paths etc.
-	char tmp[MAX_DPATH];
-	get_controllers_path(tmp, MAX_DPATH);
+	char controllers_path[MAX_DPATH];
+	get_controllers_path(controllers_path, MAX_DPATH);
 
 	char cfg[MAX_DPATH];
 	get_configuration_path(cfg, MAX_DPATH);
 	strcat(cfg, "gamecontrollerdb.txt");
 	SDL_GameControllerAddMappingsFromFile(cfg);
 	
+	// Possible scenarios:
+	// 1 - Controller is an SDL2 Game Controller, no retroarch file: we use the default mapping
+	// 2 - Controller is an SDL2 Game Controller, but there's a retroarch file: retroarch overrides default mapping
+	// 3 - Controller is not an SDL2 Game Controller, but there's a retroarch file: open it as Joystick, use retroarch mapping
+	// 4 - Controller is not an SDL2 Game Controller, no retroarch file: open as Joystick with default map
+	
+	char guid_str[33];
 	// do the loop
 	for (auto cpt = 0; cpt < num_joystick; cpt++)
 	{
+		// Check if joystick supports SDL's game controller interface (a mapping is available)
 		if (SDL_IsGameController(cpt))
 		{
-			init_sdl2_game_controller(cpt);
+			controllers[cpt] = SDL_GameControllerOpen(cpt);
+			if (controllers[cpt] == nullptr)
+			{
+				write_log("Warning: Unable to open game controller! SDL Error: %s\n", SDL_GetError());
+				continue;
+			}
+
+			const auto instance_id = SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(controllers[cpt]));
+			SDL_JoystickGetGUIDString(SDL_JoystickGetGUID(SDL_GameControllerGetJoystick(controllers[cpt])), guid_str, 33);
+			
+			if (SDL_GameControllerNameForIndex(cpt) != nullptr)
+				joystick_name[cpt] = SDL_GameControllerNameForIndex(cpt);
+			write_log("Controller #%i: %s\n      GUID: %s\n", instance_id, SDL_GameControllerName(controllers[cpt]), guid_str);
+
+			auto* const mapping = SDL_GameControllerMapping(controllers[cpt]);
+			write_log("Controller %i is mapped as \"%s\".\n", cpt, mapping);
+			SDL_free(mapping);
 		}
-		else if (controllers[cpt] == nullptr)
+		// Controller interface not supported, try to open as joystick
+		else
 		{
-			log_joystick_info(cpt);
-			init_sdl2_joystick(cpt);
+			joysticktable[cpt] = SDL_JoystickOpen(cpt);
+			if (joysticktable[cpt] == nullptr)
+			{
+				write_log("Warning: Unable to open Joystick! SDL Error: %s\n", SDL_GetError());
+				continue;
+			}
+
+			const auto instance_id = SDL_JoystickInstanceID(joysticktable[cpt]);
+			SDL_JoystickGetGUIDString(SDL_JoystickGetGUID(joysticktable[cpt]), guid_str, 33);
+			
+			if (SDL_JoystickNameForIndex(cpt) != nullptr)
+				joystick_name[cpt] = SDL_JoystickNameForIndex(cpt);
+			write_log("Controller #%i: %s\n      GUID: %s\n      Axes: %d\n      Buttons: %d\n      Balls: %d",
+									instance_id, SDL_JoystickName(joysticktable[cpt]), guid_str, SDL_JoystickNumAxes(joysticktable[cpt]),
+									SDL_JoystickNumButtons(joysticktable[cpt]), SDL_JoystickNumBalls(joysticktable[cpt]));
+			write_log("Controller #%i does not have a mapping available\n", instance_id);
 		}
 
-		if (SDL_JoystickNameForIndex(cpt) != nullptr)
-			joystick_name[cpt] = SDL_JoystickNameForIndex(cpt);
-		write_log("Joystick Detection for Device: %s \n", joystick_name[cpt].c_str());
-		
-		//this now uses controllers path
-		char control_config[255];
-		strcpy(control_config, tmp);
-		const auto sanitized_name = sanitize_retroarch_name(joystick_name[cpt]);
-		strcat(control_config, sanitized_name.c_str());
-		strcat(control_config, ".cfg");
+		const string retroarch_joy_name = SDL_JoystickNameForIndex(cpt);
 
-		if (my_existsfile(control_config))
+		char retroarch_config_file[255];
+		strcpy(retroarch_config_file, controllers_path);
+		const auto sanitized_name = sanitize_retroarch_name(retroarch_joy_name);
+		strcat(retroarch_config_file, sanitized_name.c_str());
+		strcat(retroarch_config_file, ".cfg");
+
+		//fill_default_controller();
+		//host_input_buttons[cpt] = default_controller_map;
+		
+		if (my_existsfile(retroarch_config_file))
 		{
 			write_log("Retroarch controller cfg file found, using that for mapping\n");
 			fill_blank_controller();
 			host_input_buttons[cpt] = default_controller_map;
-			map_from_retroarch(cpt, control_config);
+			map_from_retroarch(cpt, retroarch_config_file);
+
+			// WIP - not fully functional yet
+			//
+			//std::string binding;
+			//binding.assign(guid_str);
+			//binding += ",";
+			//binding += joystick_name[cpt];
+			//binding += ",platform:Linux";
+
+			//const auto map = binding_from_retroarch(cpt, retroarch_config_file);
+			//binding += map;
+
+			//// examples:
+			//// 341a3608000000000000504944564944,Afterglow PS3 Controller,a:b1,b:b2,y:b3,x:b0,start:b9,guide:b12,back:b8,dpup:h0.1,dpleft:h0.8,dpdown:h0.4,dpright:h0.2,leftshoulder:b4,rightshoulder:b5,leftstick:b10,rightstick:b11,leftx:a0,lefty:a1,rightx:a2,righty:a3,lefttrigger:b6,righttrigger:b7
+			//// 03000000c0160000dc27000001010000,OnyxSoft Dual JoyDivision,platform:Linux,a:b0,b:b1,x:b2,y:b3,start:b6,leftshoulder:b4,rightshoulder:b5,dpup:-a1,dpdown:+a1,dpleft:-a0,dpright:+a0,
+			//// 030000005e0400008e02000014010000,Xbox 360 Controller,platform:Linux,a:b0,b:b1,x:b2,y:b3,back:b6,start:b7,leftshoulder:b4,rightshoulder:b5,dpup:h0.1,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,
+
+			//const auto success = SDL_GameControllerAddMapping(binding.c_str());
+			//if (success == 1)
+			//	write_log("Game Controller binding added as \"%s\".\n", binding.c_str());
+			//else if (success == 0)
+			//	write_log("Game Controller binding updated as \"%s\".\n", binding.c_str());
+			//else if (success == -1)
+			//	write_log("Failed to add/update Game Controller binding! SDL Error: %s\n", SDL_GetError());
 		}
 		else
 		{
-			write_log("No Retroarch controller cfg file found, using the default mapping\n");
 			fill_default_controller();
 			host_input_buttons[cpt] = default_controller_map;
+			write_log("No Retroarch controller cfg file found, using the default mapping\n");			
 		}
 
 		if (host_input_buttons[cpt].hotkey_button != SDL_CONTROLLER_BUTTON_INVALID)

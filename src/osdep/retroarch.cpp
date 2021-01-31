@@ -10,20 +10,34 @@
 #include <fstream>
 #include <algorithm>
 
+// Retroarch mapping reference: https://docs.libretro.com/guides/joypad-autoconfiguration/
+
 const string retroarch_kb_button_list[] = {
-	//"b", "a", "x", "y", "select", "menu", "start", "l3", "r3", "l", "r", "up", "down", "left", "right"
 	"left", "right", "up", "down", "a", "b", "x", "y", "l", "r", "start"
 };
 
 const string retroarch_button_list[] = {
-	"input_b_btn", "input_a_btn", "input_x_btn", "input_y_btn", "input_select_btn", "input_menu_toggle_btn",
-	"input_start_btn", "input_l2_btn", "input_r2_btn", "input_l_btn", "input_r_btn", "input_up_btn",
-	"input_down_btn", "input_left_btn", "input_right_btn"
+	"input_b_btn", "input_a_btn", "input_x_btn", "input_y_btn",
+	"input_select_btn", "input_menu_toggle_btn",	"input_start_btn",
+	"input_l3_btn", "input_r3_btn", "input_l_btn", "input_r_btn",
+	"input_up_btn",	"input_down_btn", "input_left_btn", "input_right_btn"
 };
 
 const string retroarch_axis_list[] = {
 	"input_l_x_plus_axis", "input_l_y_plus_axis", "input_r_x_plus_axis", "input_r_y_plus_axis",
-	"input_l2_btn", "input_r2_btn"
+	"input_l2_axis", "input_r2_axis"
+};
+
+const string controller_button_list[] = {
+	"a", "b", "x", "y",
+	"back", "guide", "start",
+	"leftstick", "rightstick", "leftshoulder", "rightshoulder",
+	"dpup", "dpdown",  "dpleft", "dpright"
+};
+
+const string controller_axis_list[] = {
+	"leftx", "lefty", "rightx", "righty",
+	"lefttrigger", "righttrigger"
 };
 
 int find_retroarch(const TCHAR* find_setting, char* retroarch_file)
@@ -289,7 +303,7 @@ void map_from_retroarch(int cpt, char* control_config)
 
 	for (auto a = 0; a < SDL_CONTROLLER_AXIS_MAX; a++)
 	{
-		host_input_buttons[cpt].axis[a] = find_retroarch(retroarch_button_list[a].c_str(), control_config);
+		host_input_buttons[cpt].axis[a] = find_retroarch(retroarch_axis_list[a].c_str(), control_config);
 	}
 	
 	if (host_input_buttons[cpt].axis[SDL_CONTROLLER_AXIS_LEFTX] == -1)
@@ -321,4 +335,40 @@ void map_from_retroarch(int cpt, char* control_config)
 	          host_input_buttons[cpt].rstick_axis_y_invert);
 	write_log("Controller Detection: invert right x axis: %d\n",
 	          host_input_buttons[cpt].rstick_axis_x_invert);
+}
+
+std::string binding_from_retroarch(int cpt, char* control_config)
+{
+	string result;
+	
+	host_input_buttons[cpt].is_retroarch = true;
+	host_input_buttons[cpt].hotkey_button = find_retroarch("input_enable_hotkey_btn", control_config);
+	host_input_buttons[cpt].quit_button = find_retroarch("input_exit_emulator_btn", control_config);
+	host_input_buttons[cpt].reset_button = find_retroarch("input_reset_btn", control_config);
+
+	for (auto button = 0; button < SDL_CONTROLLER_BUTTON_MAX; button++)
+	{
+		//TODO fix hat detection!
+		const auto retroarch_button = find_retroarch(retroarch_button_list[button].c_str(), control_config);
+		if (retroarch_button != -1)
+		{
+			result += ",";
+			result += controller_button_list[button];
+			result += ":b";
+			result += to_string(retroarch_button);
+		}
+	}
+	for (auto axis = 0; axis < SDL_CONTROLLER_AXIS_MAX; axis++)
+	{
+		const auto retroarch_axis = find_retroarch(retroarch_axis_list[axis].c_str(), control_config);
+		if (retroarch_axis != -1)
+		{
+			result += ",";
+			result += controller_axis_list[axis];
+			result += ":b";
+			result += to_string(retroarch_axis);
+		}
+	}
+
+	return result;
 }
