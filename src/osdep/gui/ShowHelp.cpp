@@ -22,7 +22,7 @@
 #define DIALOG_WIDTH 760
 #define DIALOG_HEIGHT 420
 
-static bool dialogFinished = false;
+static bool dialog_finished = false;
 
 static gcn::Window* wndShowHelp;
 static gcn::Button* cmdOK;
@@ -60,7 +60,7 @@ class ShowHelpActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		dialogFinished = true;
+		dialog_finished = true;
 	}
 };
 
@@ -140,7 +140,7 @@ static void ShowHelpLoop(void)
 			switch (event.key.keysym.sym)
 			{
 			case VK_ESCAPE:
-				dialogFinished = true;
+				dialog_finished = true;
 				break;
 
 			case VK_Blue:
@@ -169,7 +169,7 @@ static void ShowHelpLoop(void)
 					SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].button[SDL_CONTROLLER_BUTTON_Y]) ||
 					SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].button[SDL_CONTROLLER_BUTTON_START]))
 				{
-					dialogFinished = true;
+					dialog_finished = true;
 					break;
 				}
 			}
@@ -246,7 +246,7 @@ static void ShowHelpLoop(void)
 
 void ShowHelp(const char* title, const std::vector<std::string>& text)
 {
-	dialogFinished = false;
+	dialog_finished = false;
 
 	InitShowHelp(text);
 
@@ -259,7 +259,7 @@ void ShowHelp(const char* title, const std::vector<std::string>& text)
 	uae_gui->draw();
 	update_gui_screen();
 
-	while (!dialogFinished)
+	while (!dialog_finished)
 	{
 		const auto start = SDL_GetPerformanceCounter();
 		ShowHelpLoop();
