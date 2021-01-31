@@ -17,7 +17,7 @@ const string retroarch_kb_button_list[] = {
 };
 
 const string retroarch_button_list[] = {
-	"input_b_btn", "input_a_btn", "input_x_btn", "input_y_btn",
+	"input_b_btn", "input_a_btn", "input_y_btn", "input_x_btn",
 	"input_select_btn", "input_menu_toggle_btn",	"input_start_btn",
 	"input_l3_btn", "input_r3_btn", "input_l_btn", "input_r_btn",
 	"input_up_btn",	"input_down_btn", "input_left_btn", "input_right_btn"
