@@ -1781,7 +1781,7 @@ void target_default_options(struct uae_prefs* p, int type)
 		//p->soundcard = 0;
 		//p->samplersoundcard = -1;
 		p->minimize_inactive = 0;
-		p->capture_always = false;
+		p->capture_always = true;
 		p->start_minimized = false;
 		p->start_uncaptured = false;
 		p->active_capture_priority = 1;
