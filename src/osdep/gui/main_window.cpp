@@ -304,6 +304,7 @@ void setup_cursor()
 
 void init_dispmanx_gui()
 {
+#ifdef USE_DISPMANX
 	if (!displayHandle)
 		displayHandle = vc_dispmanx_display_open(0);
 	rgb_mode = VC_IMAGE_RGB565;
@@ -366,6 +367,7 @@ void init_dispmanx_gui()
 
 		vc_dispmanx_update_submit_sync(updateHandle);
 	}
+#endif
 }
 
 void amiberry_gui_init()
