@@ -404,8 +404,8 @@ void amiberry_gui_init()
 	{
 		sdl_renderer = SDL_CreateRenderer(mon->sdl_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 		check_error_sdl(sdl_renderer == nullptr, "Unable to create a renderer:");
-		SDL_RenderSetLogicalSize(sdl_renderer, GUI_WIDTH, GUI_HEIGHT);
 	}
+	SDL_RenderSetLogicalSize(sdl_renderer, GUI_WIDTH, GUI_HEIGHT);
 #else
 	setup_cursor();
 
