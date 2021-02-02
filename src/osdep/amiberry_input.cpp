@@ -543,7 +543,7 @@ static int init_joystick()
 			
 			if (SDL_JoystickNameForIndex(cpt) != nullptr)
 				joystick_name[cpt] = SDL_JoystickNameForIndex(cpt);
-			write_log("Controller #%i: %s\n      GUID: %s\n      Axes: %d\n      Buttons: %d\n      Balls: %d",
+			write_log("Controller #%i: %s\n      GUID: %s\n      Axes: %d\n      Buttons: %d\n      Balls: %d\n",
 									instance_id, SDL_JoystickName(joysticktable[cpt]), guid_str, SDL_JoystickNumAxes(joysticktable[cpt]),
 									SDL_JoystickNumButtons(joysticktable[cpt]), SDL_JoystickNumBalls(joysticktable[cpt]));
 			write_log("Controller #%i does not have a mapping available\n", instance_id);
