@@ -1081,7 +1081,7 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 
 	// ASSIGN ALL INPUT EVENT ACTIONS, EITHER CUSTOM OR DEFAULT
 	//
-	std::array<int, 15> thismap[4]{};
+	std::array<int, SDL_CONTROLLER_BUTTON_MAX> thismap[4]{};
 	thismap[0] = currprefs.jports[port].amiberry_custom_none;
 
 	if (port < 2) // ports 0, 1 ... 

@@ -108,8 +108,8 @@ struct jport
 	bool changed{};
 #ifdef AMIBERRY
 	int mousemap{};
-	std::array<int, 15> amiberry_custom_none;
-	std::array<int, 15> amiberry_custom_hotkey;
+	std::array<int, SDL_CONTROLLER_BUTTON_MAX> amiberry_custom_none;
+	std::array<int, SDL_CONTROLLER_BUTTON_MAX> amiberry_custom_hotkey;
 #endif
 };
 

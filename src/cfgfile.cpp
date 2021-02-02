@@ -2074,7 +2074,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 		// custom options SAVING
 		if (i < 4)
 		{
-			std::array<int, 15> tempcustom{};
+			std::array<int, SDL_CONTROLLER_BUTTON_MAX> tempcustom{};
 			const TCHAR* namecustom;
 
 			// this allows us to go through the available function keys
@@ -2098,9 +2098,9 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 				}
 
 				// get all of the custom actions
-				for (auto n = 0; n < 15; ++n) // loop through all buttons
+				for (auto n = 0; n < SDL_CONTROLLER_BUTTON_MAX; ++n) // loop through all buttons
 				{
-					auto b = tempcustom[n];
+					const auto b = tempcustom[n];
 
 					if (b > 0) { _tcscpy(tmp2, _T(find_inputevent_name(b))); }
 					else { snprintf(tmp2, 1, "%s", ""); }
@@ -3209,7 +3209,7 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 	// custom options LOADING
 	for (i = 0; i < 4; ++i) // Loop 1 ... all 4 joyports
 	{
-		std::array<int, 15>tempcustom{};
+		std::array<int, SDL_CONTROLLER_BUTTON_MAX>tempcustom{};
 
 		for (auto m = 0; m < 2; ++m) // Loop 2 ... none/hotkey function keys
 		{
@@ -3224,12 +3224,12 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 				tempcustom = p->jports[i].amiberry_custom_hotkey;
 			}
 
-			for (auto n = 0; n < 15; ++n) // Loop 3 ... all 14 buttons
+			for (auto n = 0; n < SDL_CONTROLLER_BUTTON_MAX; ++n) // Loop 3 ... all controller buttons
 			{
 				_stprintf(tmpbuf, "joyport%d_amiberry_custom_%s_%s", i, tmp1, button_remap_name[n]);
 
 				// this is where we need to check if we have this particular option!!
-				if (!_tcsncmp(option, _T(tmpbuf), sizeof(tmpbuf) / sizeof(TCHAR)))
+				if (!_tcsncmp(option, _T(tmpbuf), sizeof tmpbuf / sizeof(TCHAR)))
 				{
 					auto b = 0;
 					if (find_inputevent(value) > -1) { b = RemapEventList[find_inputevent(value)]; }
