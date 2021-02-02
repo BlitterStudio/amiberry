@@ -327,7 +327,7 @@ static int open_audio_sdl2(struct sound_data* sd, int index)
 	s->dev = SDL_OpenAudioDevice(nullptr, 0, &want, &have, SDL_AUDIO_ALLOW_FORMAT_CHANGE);
 	if (s->dev == 0)
 	{
-		write_log("Failed to open audio: %s", SDL_GetError());
+		write_log("Failed to open audio: %s\n", SDL_GetError());
 		return 0;
 	}
 
