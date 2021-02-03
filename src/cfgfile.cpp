@@ -247,10 +247,12 @@ static const TCHAR *debugfeatures[] = { _T("segtracker"), _T("fsdebug"), 0 };
 
 #ifdef AMIBERRY
 static const TCHAR* button_remap_name[] = {
+	_T("south"), _T("east"), _T("west"), _T("north"),
+	_T("select"), _T("menu"), _T("start"),
+	_T("left_stick"), _T("right_stick"), _T("left_shoulder"), _T("right_shoulder"),
 	_T("dpad_up"), _T("dpad_down"), _T("dpad_left"), _T("dpad_right"),
-	_T("select"), _T("left_shoulder"), _T("left_stick"),
-	_T("north"), _T("south"), _T("east"), _T("west"),
-	_T("start"), _T("right_shoulder"), _T("right_stick"), nullptr
+	_T("misc1"), _T("paddle1"), _T("paddle2"), _T("paddle3"), _T("paddle4"), _T("touchpad"),
+	nullptr
 };
 
 const TCHAR* find_inputevent_name(int key)
@@ -2072,42 +2074,33 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 		}
 #ifdef AMIBERRY
 		// custom options SAVING
-		if (i < 4)
+		std::array<int, SDL_CONTROLLER_BUTTON_MAX> tempcustom{};
+		const TCHAR* namecustom;
+		
+		// get all of the custom actions
+		for (auto n = 0; n < SDL_CONTROLLER_BUTTON_MAX; ++n) // loop through all buttons
 		{
-			std::array<int, SDL_CONTROLLER_BUTTON_MAX> tempcustom{};
-			const TCHAR* namecustom;
-
-			// this allows us to go through the available function keys
-			// currently only 'none' and 'hotkey'
-			for (auto m = 0; m < 2; ++m)
+			for (auto m = 0; m < 2; m++)
 			{
-				switch (m)
-				{
-				case 0:
+				// this allows us to go through the available function keys
+				// currently only 'none' and 'hotkey'
+				if (m == 0)
 				{
 					tempcustom = jp->amiberry_custom_none;
 					namecustom = _T("_amiberry_custom_none_");
-					break;
 				}
-				case 1:
+				else
 				{
 					tempcustom = jp->amiberry_custom_hotkey;
 					namecustom = _T("_amiberry_custom_hotkey_");
-					break;
 				}
-				}
+				const auto b = tempcustom[n];
 
-				// get all of the custom actions
-				for (auto n = 0; n < SDL_CONTROLLER_BUTTON_MAX; ++n) // loop through all buttons
-				{
-					const auto b = tempcustom[n];
+				if (b > 0) { _tcscpy(tmp2, _T(find_inputevent_name(b))); }
+				else { snprintf(tmp2, 1, "%s", ""); }
 
-					if (b > 0) { _tcscpy(tmp2, _T(find_inputevent_name(b))); }
-					else { snprintf(tmp2, 1, "%s", ""); }
-
-					_stprintf(tmp1, "joyport%d%s%s", i, namecustom, button_remap_name[n]);
-					cfgfile_dwrite_str(f, tmp1, tmp2);
-				}
+				_stprintf(tmp1, "joyport%d%s%s", i, namecustom, button_remap_name[n]);
+				cfgfile_dwrite_str(f, tmp1, tmp2);
 			}
 		}
 #endif
@@ -3207,25 +3200,24 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 
 #ifdef AMIBERRY
 	// custom options LOADING
-	for (i = 0; i < 4; ++i) // Loop 1 ... all 4 joyports
+	for (i = 0; i < MAX_JPORTS; ++i)
 	{
 		std::array<int, SDL_CONTROLLER_BUTTON_MAX>tempcustom{};
 
-		for (auto m = 0; m < 2; ++m) // Loop 2 ... none/hotkey function keys
+		for (auto n = 0; n < SDL_CONTROLLER_BUTTON_MAX; ++n)
 		{
-			if (m == 0)
+			for (auto m = 0; m < 2; ++m)
 			{
-				tmp1 = "none";
-				tempcustom = p->jports[i].amiberry_custom_none;
-			}
-			else if (m == 1)
-			{
-				tmp1 = "hotkey";
-				tempcustom = p->jports[i].amiberry_custom_hotkey;
-			}
-
-			for (auto n = 0; n < SDL_CONTROLLER_BUTTON_MAX; ++n) // Loop 3 ... all controller buttons
-			{
+				if (m == 0)
+				{
+					tmp1 = "none";
+					tempcustom = p->jports[i].amiberry_custom_none;
+				}
+				else if (m == 1)
+				{
+					tmp1 = "hotkey";
+					tempcustom = p->jports[i].amiberry_custom_hotkey;
+				}
 				_stprintf(tmpbuf, "joyport%d_amiberry_custom_%s_%s", i, tmp1, button_remap_name[n]);
 
 				// this is where we need to check if we have this particular option!!
@@ -3242,10 +3234,10 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 						p->jports[i].amiberry_custom_hotkey = tempcustom;
 
 					return 1;
-				} // close the IF check
-			} // close loop 3
-		} // close loop 2
-	} // close loop 1
+				}
+			}
+		}
+	}
 
 	/* Read in WHDLoad Options  */
 	if (cfgfile_string(option, value, _T("whdload_slave"), p->whdbootprefs.slave, sizeof p->whdbootprefs.slave / sizeof(TCHAR))
