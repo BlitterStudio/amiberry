@@ -465,8 +465,6 @@ bool SelectFolder(const char* title, char* value)
 	if (dialogResult)
 	{
 		strncpy(value, workingDir, MAX_DPATH);
-		if (value[strlen(value) - 1] != '/')
-			strncat(value, "/", MAX_DPATH - 1);
 	}
 	return dialogResult;
 }
