@@ -496,7 +496,7 @@ void RefreshPanelCustom()
 
 		if (host_input_buttons[host_joy_id].number_of_hats > 0 || changed_prefs.input_analog_remap == true)
 		{
-			for (auto i = int(SDL_CONTROLLER_BUTTON_DPAD_UP); i <= int(SDL_CONTROLLER_BUTTON_DPAD_RIGHT); i++)
+			for (int i = SDL_CONTROLLER_BUTTON_DPAD_UP; i <= SDL_CONTROLLER_BUTTON_DPAD_RIGHT; i++)
 			{
 				cboCustomAction[i]->setEnabled(true);
 				lblCustomAction[i]->setEnabled(true);
@@ -528,7 +528,7 @@ void RefreshPanelCustom()
 	txtPortInput->setText(tmp);
 
 	// now select which items in drop-down are 'done'
-	for (auto z = 0; z < 15; ++z)
+	for (auto z = 0; z < SDL_CONTROLLER_BUTTON_MAX; ++z)
 	{	
 		const auto x = find_in_array(RemapEventList, RemapEventListSize, tempmap[z]);
 		cboCustomAction[z]->setSelected(x + 1);
