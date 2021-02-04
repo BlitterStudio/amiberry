@@ -610,6 +610,12 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 			whd_bootscript << " SPLASHDELAY=0";
 		}
 
+		// CONFIGDELAY
+		if (currprefs.whdbootprefs.configdelay != 0)
+		{
+			whd_bootscript << " CONFIGDELAY=" << currprefs.whdbootprefs.configdelay;
+		}
+
 		// SPECIAL SAVE PATH
 		whd_bootscript << " SAVEPATH=Saves:Savegames/ SAVEDIR=\"" << subpath << "\"";
 		whd_bootscript << '\n';

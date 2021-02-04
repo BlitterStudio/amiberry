@@ -1924,6 +1924,7 @@ void target_default_options(struct uae_prefs* p, int type)
 
 	p->whdbootprefs.buttonwait = amiberry_options.default_whd_buttonwait;
 	p->whdbootprefs.showsplash = amiberry_options.default_whd_showsplash;
+	p->whdbootprefs.configdelay = amiberry_options.default_whd_configdelay;
 }
 
 static const TCHAR* scsimode[] = { _T("SCSIEMU"), _T("SPTI"), _T("SPTI+SCSISCAN"), NULL };
@@ -2557,6 +2558,10 @@ void save_amiberry_settings(void)
 	// WHDLoad Show Splash screen
 	snprintf(buffer, MAX_DPATH, "default_whd_showsplash=%s\n", amiberry_options.default_whd_showsplash ? "yes" : "no");
 	fputs(buffer, f);
+
+	// WHDLoad Config Delay
+	snprintf(buffer, MAX_DPATH, "default_whd_configdelay=%d\n", amiberry_options.default_whd_configdelay);
+	fputs(buffer, f);
 	
 	// Paths
 	snprintf(buffer, MAX_DPATH, "path=%s\n", current_dir);
@@ -2778,6 +2783,7 @@ void load_amiberry_settings(void)
 					cfgfile_string(option, value, "default_mouse2", amiberry_options.default_mouse2, sizeof amiberry_options.default_mouse2);
 					cfgfile_yesno(option, value, "default_whd_buttonwait", &amiberry_options.default_whd_buttonwait);
 					cfgfile_yesno(option, value, "default_whd_showsplash", &amiberry_options.default_whd_showsplash);
+					cfgfile_intval(option, value, "default_whd_configdelay", &amiberry_options.default_whd_configdelay, 1);
 				}
 			}
 		}

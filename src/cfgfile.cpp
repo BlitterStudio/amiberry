@@ -2742,6 +2742,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_write_str(f, _T("whdload_slave"), p->whdbootprefs.slave);
 	cfgfile_write_bool(f, _T("whdload_showsplash"), p->whdbootprefs.showsplash);
 	cfgfile_write_bool(f, _T("whdload_buttonwait"), p->whdbootprefs.buttonwait);
+	cfgfile_dwrite(f, _T("whdload_configdelay"), _T("%d"), p->whdbootprefs.configdelay);
 	cfgfile_write(f, _T("whdload_custom1"), _T("%d"), p->whdbootprefs.custom1);
 	cfgfile_write(f, _T("whdload_custom2"), _T("%d"), p->whdbootprefs.custom2);
 	cfgfile_write(f, _T("whdload_custom3"), _T("%d"), p->whdbootprefs.custom3);
@@ -3249,6 +3250,7 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		|| cfgfile_intval(option, value, _T("whdload_custom5"), &p->whdbootprefs.custom5, 1)
 		|| cfgfile_yesno(option, value, _T("whdload_buttonwait"), &p->whdbootprefs.buttonwait)
 		|| cfgfile_yesno(option, value, _T("whdload_showsplash"), &p->whdbootprefs.showsplash)
+		|| cfgfile_intval(option, value, _T("whdload_configdelay"), &p->whdbootprefs.configdelay, 1)
 		)
 	{
 		return 1;

@@ -510,10 +510,11 @@ struct whdbooter
 	int custom3 = 0;
 	int custom4 = 0;
 	int custom5 = 0;
-	TCHAR custom[256];
-	bool buttonwait;
-	TCHAR slave[4096];
-	bool showsplash;
+	TCHAR custom[256]{};
+	bool buttonwait{};
+	TCHAR slave[4096]{};
+	bool showsplash{};
+	int configdelay = 0;
 };
 #endif
 
@@ -1133,6 +1134,7 @@ struct amiberry_options
 	char default_mouse2[128] = "joy0";
 	bool default_whd_buttonwait = false;
 	bool default_whd_showsplash = true;
+	int default_whd_configdelay = 0;
 };
 
 extern struct amiberry_options amiberry_options;
