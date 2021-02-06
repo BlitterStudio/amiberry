@@ -549,7 +549,8 @@ void check_input()
 	const auto key_for_gui = SDL_GetKeyFromName(currprefs.open_gui);
 	const auto button_for_gui = SDL_GameControllerGetButtonFromString(currprefs.open_gui);
 	auto got_event = 0;
-
+	struct didata* did = &di_joystick[0];
+	
 	while (SDL_PollEvent(&gui_event))
 	{
 		switch (gui_event.type)
@@ -588,14 +589,14 @@ void check_input()
 						gui_running = false;
 					}
 				}
-				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].button[SDL_CONTROLLER_BUTTON_DPAD_UP]) || hat & SDL_HAT_UP)
+				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_DPAD_UP]) || hat & SDL_HAT_UP)
 				{
 					if (HandleNavigation(DIRECTION_UP))
 						continue; // Don't change value when enter Slider -> don't send event to control
 					PushFakeKey(SDLK_UP);
 					break;
 				}
-				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].button[SDL_CONTROLLER_BUTTON_DPAD_DOWN]) || hat & SDL_HAT_DOWN)
+				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_DPAD_DOWN]) || hat & SDL_HAT_DOWN)
 				{
 					if (HandleNavigation(DIRECTION_DOWN))
 						continue; // Don't change value when enter Slider -> don't send event to control
@@ -603,14 +604,14 @@ void check_input()
 					break;
 				}
 
-				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].button[SDL_CONTROLLER_BUTTON_LEFTSHOULDER]))
+				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_LEFTSHOULDER]))
 				{
 					for (auto z = 0; z < 10; ++z)
 					{
 						PushFakeKey(SDLK_UP);
 					}
 				}
-				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].button[SDL_CONTROLLER_BUTTON_RIGHTSHOULDER]))
+				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_RIGHTSHOULDER]))
 				{
 					for (auto z = 0; z < 10; ++z)
 					{
@@ -618,29 +619,29 @@ void check_input()
 					}
 				}
 
-				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].button[SDL_CONTROLLER_BUTTON_DPAD_RIGHT]) || hat & SDL_HAT_RIGHT)
+				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_DPAD_RIGHT]) || hat & SDL_HAT_RIGHT)
 				{
 					if (HandleNavigation(DIRECTION_RIGHT))
 						continue; // Don't change value when enter Slider -> don't send event to control
 					PushFakeKey(SDLK_RIGHT);
 					break;
 				}
-				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].button[SDL_CONTROLLER_BUTTON_DPAD_LEFT]) || hat & SDL_HAT_LEFT)
+				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_DPAD_LEFT]) || hat & SDL_HAT_LEFT)
 				{
 					if (HandleNavigation(DIRECTION_LEFT))
 						continue; // Don't change value when enter Slider -> don't send event to control
 					PushFakeKey(SDLK_LEFT);
 					break;
 				}
-				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].button[SDL_CONTROLLER_BUTTON_A]) ||
-					SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].button[SDL_CONTROLLER_BUTTON_B]))
+				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_A]) ||
+					SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_B]))
 				{
 					PushFakeKey(SDLK_RETURN);
 					continue;
 				}
 
-				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].quit_button) &&
-					SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].hotkey_button))
+				if (SDL_JoystickGetButton(gui_joystick, did->mapping.quit_button) &&
+					SDL_JoystickGetButton(gui_joystick, did->mapping.hotkey_button))
 				{
 					// use the HOTKEY button
 					uae_quit();
@@ -648,7 +649,7 @@ void check_input()
 					break;
 				}
 
-				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].button[SDL_CONTROLLER_BUTTON_GUIDE]))
+				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_GUIDE]))
 				{
 					// use the HOTKEY button
 					gui_running = false;
@@ -701,12 +702,6 @@ void check_input()
 					}
 					if (gui_event.jaxis.value > -joystick_dead_zone && gui_event.jaxis.value < joystick_dead_zone)
 						last_y = 0;
-				}
-				else if (gui_event.jaxis.axis == SDL_CONTROLLER_AXIS_TRIGGERLEFT)
-				{
-					show_help_requested();
-					cmdHelp->requestFocus();
-					break;
 				}
 			}
 			break;

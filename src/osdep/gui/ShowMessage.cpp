@@ -477,6 +477,7 @@ static void ShowMessageLoop()
 	auto got_event = 0;
 	SDL_Event event;
 	SDL_Event touch_event;
+	struct didata* did = &di_joystick[0];
 	while (SDL_PollEvent(&event))
 	{
 		switch (event.type)
@@ -513,21 +514,21 @@ static void ShowMessageLoop()
 				got_event = 1;
 				const int hat = SDL_JoystickGetHat(gui_joystick, 0);
 				
-				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].button[SDL_CONTROLLER_BUTTON_A]) ||
-					SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].button[SDL_CONTROLLER_BUTTON_B]))
+				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_A]) ||
+					SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_B]))
 				{
 					PushFakeKey(SDLK_RETURN);
 					break;
 				}
-				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].button[SDL_CONTROLLER_BUTTON_X]) ||
-					SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].button[SDL_CONTROLLER_BUTTON_Y]) ||
-					SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].button[SDL_CONTROLLER_BUTTON_START]))
+				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_X]) ||
+					SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_Y]) ||
+					SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_START]))
 				{
 					dialogFinished = true;
 					break;
 				}
-				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].button[SDL_CONTROLLER_BUTTON_DPAD_LEFT]) ||
-					SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].button[SDL_CONTROLLER_BUTTON_DPAD_RIGHT]) ||
+				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_DPAD_LEFT]) ||
+					SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_DPAD_RIGHT]) ||
 					hat & SDL_HAT_LEFT ||
 					hat & SDL_HAT_RIGHT)
 				{

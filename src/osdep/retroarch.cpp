@@ -289,62 +289,64 @@ bool init_kb_from_retroarch(int index, char* retroarch_file)
 	return valid;
 }
 
-void map_from_retroarch(int cpt, char* control_config)
+host_input_button map_from_retroarch(host_input_button mapping, char* control_config)
 {
-	host_input_buttons[cpt].is_retroarch = true;
-	host_input_buttons[cpt].hotkey_button = find_retroarch("input_enable_hotkey_btn", control_config);
-	host_input_buttons[cpt].quit_button = find_retroarch("input_exit_emulator_btn", control_config);
-	host_input_buttons[cpt].reset_button = find_retroarch("input_reset_btn", control_config);
+	mapping.is_retroarch = true;
+	mapping.hotkey_button = find_retroarch("input_enable_hotkey_btn", control_config);
+	mapping.quit_button = find_retroarch("input_exit_emulator_btn", control_config);
+	mapping.reset_button = find_retroarch("input_reset_btn", control_config);
 
 	for (auto b = 0; b < SDL_CONTROLLER_BUTTON_MAX; b++)
 	{
-		host_input_buttons[cpt].button[b] = find_retroarch(retroarch_button_list[b].c_str(), control_config);
+		mapping.button[b] = find_retroarch(retroarch_button_list[b].c_str(), control_config);
 	}
 
 	for (auto a = 0; a < SDL_CONTROLLER_AXIS_MAX; a++)
 	{
-		host_input_buttons[cpt].axis[a] = find_retroarch(retroarch_axis_list[a].c_str(), control_config);
+		mapping.axis[a] = find_retroarch(retroarch_axis_list[a].c_str(), control_config);
 	}
 	
-	if (host_input_buttons[cpt].axis[SDL_CONTROLLER_AXIS_LEFTX] == -1)
-		host_input_buttons[cpt].axis[SDL_CONTROLLER_AXIS_LEFTX] = find_retroarch("input_right_axis", control_config);
+	if (mapping.axis[SDL_CONTROLLER_AXIS_LEFTX] == -1)
+		mapping.axis[SDL_CONTROLLER_AXIS_LEFTX] = find_retroarch("input_right_axis", control_config);
 
-	if (host_input_buttons[cpt].axis[SDL_CONTROLLER_AXIS_LEFTY] == -1)
-		host_input_buttons[cpt].axis[SDL_CONTROLLER_AXIS_LEFTY] = find_retroarch("input_down_axis", control_config);
+	if (mapping.axis[SDL_CONTROLLER_AXIS_LEFTY] == -1)
+		mapping.axis[SDL_CONTROLLER_AXIS_LEFTY] = find_retroarch("input_down_axis", control_config);
 
 	// hats
-	host_input_buttons[cpt].number_of_hats = find_retroarch("count_hats", control_config);
+	mapping.number_of_hats = find_retroarch("count_hats", control_config);
 	
 	// invert on axes
-	host_input_buttons[cpt].lstick_axis_y_invert = find_retroarch_polarity("input_down_axis", control_config);
-	if (!host_input_buttons[cpt].lstick_axis_y_invert)
-		host_input_buttons[cpt].lstick_axis_y_invert = find_retroarch_polarity("input_l_y_plus_axis", control_config);
+	mapping.lstick_axis_y_invert = find_retroarch_polarity("input_down_axis", control_config);
+	if (!mapping.lstick_axis_y_invert)
+		mapping.lstick_axis_y_invert = find_retroarch_polarity("input_l_y_plus_axis", control_config);
 
-	host_input_buttons[cpt].lstick_axis_x_invert = find_retroarch_polarity("input_right_axis", control_config);
-	if (!host_input_buttons[cpt].lstick_axis_x_invert)
-		host_input_buttons[cpt].lstick_axis_x_invert = find_retroarch_polarity("input_l_x_plus_axis", control_config);
+	mapping.lstick_axis_x_invert = find_retroarch_polarity("input_right_axis", control_config);
+	if (!mapping.lstick_axis_x_invert)
+		mapping.lstick_axis_x_invert = find_retroarch_polarity("input_l_x_plus_axis", control_config);
 
-	host_input_buttons[cpt].rstick_axis_x_invert = find_retroarch_polarity("input_r_x_plus_axis", control_config);
-	host_input_buttons[cpt].rstick_axis_y_invert = find_retroarch_polarity("input_r_y_plus_axis", control_config);
+	mapping.rstick_axis_x_invert = find_retroarch_polarity("input_r_x_plus_axis", control_config);
+	mapping.rstick_axis_y_invert = find_retroarch_polarity("input_r_y_plus_axis", control_config);
 
 	write_log("Controller Detection: invert left  y axis: %d\n",
-	          host_input_buttons[cpt].lstick_axis_y_invert);
+		mapping.lstick_axis_y_invert);
 	write_log("Controller Detection: invert left  x axis: %d\n",
-	          host_input_buttons[cpt].lstick_axis_x_invert);
+		mapping.lstick_axis_x_invert);
 	write_log("Controller Detection: invert right y axis: %d\n",
-	          host_input_buttons[cpt].rstick_axis_y_invert);
+		mapping.rstick_axis_y_invert);
 	write_log("Controller Detection: invert right x axis: %d\n",
-	          host_input_buttons[cpt].rstick_axis_x_invert);
+		mapping.rstick_axis_x_invert);
+
+	return mapping;
 }
 
-std::string binding_from_retroarch(int cpt, char* control_config)
+std::string binding_from_retroarch(host_input_button mapping, char* control_config)
 {
 	string result;
 	
-	host_input_buttons[cpt].is_retroarch = true;
-	host_input_buttons[cpt].hotkey_button = find_retroarch("input_enable_hotkey_btn", control_config);
-	host_input_buttons[cpt].quit_button = find_retroarch("input_exit_emulator_btn", control_config);
-	host_input_buttons[cpt].reset_button = find_retroarch("input_reset_btn", control_config);
+	mapping.is_retroarch = true;
+	mapping.hotkey_button = find_retroarch("input_enable_hotkey_btn", control_config);
+	mapping.quit_button = find_retroarch("input_exit_emulator_btn", control_config);
+	mapping.reset_button = find_retroarch("input_reset_btn", control_config);
 
 	for (auto button = 0; button < SDL_CONTROLLER_BUTTON_MAX; button++)
 	{

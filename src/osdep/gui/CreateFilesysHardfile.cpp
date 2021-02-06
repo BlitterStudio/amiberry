@@ -203,6 +203,7 @@ static void CreateFilesysHardfileLoop()
 	int got_event = 0;
 	SDL_Event event;
 	SDL_Event touch_event;
+	struct didata* did = &di_joystick[0];
 	while (SDL_PollEvent(&event))
 	{
 		switch (event.type)
@@ -254,43 +255,43 @@ static void CreateFilesysHardfileLoop()
 				got_event = 1;
 				const int hat = SDL_JoystickGetHat(gui_joystick, 0);
 				
-				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].button[SDL_CONTROLLER_BUTTON_DPAD_UP]) || hat & SDL_HAT_UP)
+				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_DPAD_UP]) || hat & SDL_HAT_UP)
 				{
 					if (HandleNavigation(DIRECTION_UP))
 						continue; // Don't change value when enter Slider -> don't send event to control
 					PushFakeKey(SDLK_UP);
 					break;
 				}
-				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].button[SDL_CONTROLLER_BUTTON_DPAD_DOWN]) || hat & SDL_HAT_DOWN)
+				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_DPAD_DOWN]) || hat & SDL_HAT_DOWN)
 				{
 					if (HandleNavigation(DIRECTION_DOWN))
 						continue; // Don't change value when enter Slider -> don't send event to control
 					PushFakeKey(SDLK_DOWN);
 					break;
 				}
-				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].button[SDL_CONTROLLER_BUTTON_DPAD_RIGHT]) || hat & SDL_HAT_RIGHT)
+				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_DPAD_RIGHT]) || hat & SDL_HAT_RIGHT)
 				{
 					if (HandleNavigation(DIRECTION_RIGHT))
 						continue; // Don't change value when enter Slider -> don't send event to control
 					PushFakeKey(SDLK_RIGHT);
 					break;
 				}
-				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].button[SDL_CONTROLLER_BUTTON_DPAD_LEFT]) || hat & SDL_HAT_LEFT)
+				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_DPAD_LEFT]) || hat & SDL_HAT_LEFT)
 				{
 					if (HandleNavigation(DIRECTION_LEFT))
 						continue; // Don't change value when enter Slider -> don't send event to control
 					PushFakeKey(SDLK_LEFT);
 					break;
 				}
-				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].button[SDL_CONTROLLER_BUTTON_A]) ||
-					SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].button[SDL_CONTROLLER_BUTTON_B]))
+				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_A]) ||
+					SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_B]))
 				{
 					PushFakeKey(SDLK_RETURN);
 					continue;
 				}
-				if (SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].button[SDL_CONTROLLER_BUTTON_X]) ||
-					SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].button[SDL_CONTROLLER_BUTTON_Y]) ||
-					SDL_JoystickGetButton(gui_joystick, host_input_buttons[0].button[SDL_CONTROLLER_BUTTON_START]))
+				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_X]) ||
+					SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_Y]) ||
+					SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_START]))
 				{
 					dialogFinished = true;
 					break;

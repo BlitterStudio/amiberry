@@ -2275,9 +2275,9 @@ void input_mousehack_mouseoffset(uaecptr pointerprefs)
 static bool get_mouse_position(int *xp, int *yp, int inx, int iny)
 {
 	int monid = 0;
-	struct vidbuf_description* vidinfo = &adisplays[monid].gfxvidinfo;
-	struct amigadisplay* ad = &adisplays[monid];
-	struct picasso96_state_struct* state = &picasso96_state[monid];
+	struct vidbuf_description *vidinfo = &adisplays[monid].gfxvidinfo;
+	struct amigadisplay *ad = &adisplays[monid];
+	struct picasso96_state_struct *state = &picasso96_state[monid];
 	int x, y;
 	float fdy, fdx, fmx, fmy;
 	bool ob = false;
@@ -2402,8 +2402,8 @@ int inputdevice_get_lightpen_id(void)
 void tablet_lightpen(int tx, int ty, int tmaxx, int tmaxy, int touch, int buttonmask, bool touchmode, int devid, int lpnum)
 {
 	int monid = 0;
-	struct vidbuf_description* vidinfo = &adisplays[monid].gfxvidinfo;
-	struct amigadisplay* ad = &adisplays[monid];
+	struct vidbuf_description *vidinfo = &adisplays[monid].gfxvidinfo;
+	struct amigadisplay *ad = &adisplays[monid];
 	int dw, dh, ax, ay, aw, ah;
 	float fx, fy;
 	float xmult, ymult;
@@ -2490,7 +2490,9 @@ end:
 void inputdevice_tablet (int x, int y, int z, int pressure, uae_u32 buttonbits, int inproximity, int ax, int ay, int az, int devid)
 {
 	if (is_touch_lightpen()) {
+
 		tablet_lightpen(x, y, tablet_maxx, tablet_maxy, inproximity ? 1 : -1, buttonbits, false, devid, -1);
+
 	} else {
 		uae_u8 *p;
 		uae_u8 tmp[MH_END];
@@ -2888,7 +2890,7 @@ static int mouseedge_x, mouseedge_y, mouseedge_time;
 
 static int mouseedge(int monid)
 {
-	struct amigadisplay* ad = &adisplays[monid];
+	struct amigadisplay *ad = &adisplays[monid];
 	int x, y, dir;
 	uaecptr ib;
 	static int melast_x, melast_y;
@@ -3995,7 +3997,7 @@ void inputdevice_hsync (bool forceread)
 			inputread = maxvpos + 1;
 			inputdevice_read();
 		} else {
-		maybe_read_input();
+			maybe_read_input();
 		}
 	//}
 }
@@ -4816,7 +4818,7 @@ static uae_u64 isqual (int evt)
 
 static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 {
-	struct vidbuf_description* vidinfo = &adisplays[0].gfxvidinfo;
+	struct vidbuf_description *vidinfo = &adisplays[0].gfxvidinfo;
 	const struct inputevent *ie;
 	int joy;
 	bool isaks = false;

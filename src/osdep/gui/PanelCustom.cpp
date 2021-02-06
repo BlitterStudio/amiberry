@@ -431,24 +431,22 @@ void RefreshPanelCustom()
 	}
 
 	// update the joystick port and disable those not available
-	char tmp[255];
-
 	if (changed_prefs.jports[SelectedPort].id >= JSEM_JOYS
 		&& changed_prefs.jports[SelectedPort].id < JSEM_MICE - 1)
 	{
 		const auto host_joy_id = changed_prefs.jports[SelectedPort].id - JSEM_JOYS;
-		strncpy(tmp, SDL_JoystickNameForIndex(host_joy_id), 255);
+		struct didata* did = &di_joystick[host_joy_id];
 		
 		for (auto n = 0; n < SDL_CONTROLLER_BUTTON_MAX; ++n)
 		{
-			const auto temp_button = host_input_buttons[host_joy_id].button[n];
+			const auto temp_button = did->mapping.button[n];
 
 			// disable unmapped buttons
 			cboCustomAction[n]->setEnabled(temp_button > -1);
 			lblCustomAction[n]->setEnabled(temp_button > -1);
 
 			// set hotkey/quit/reset/menu on NONE field (and disable hotkey)
-			if (temp_button == host_input_buttons[host_joy_id].hotkey_button
+			if (temp_button == did->mapping.hotkey_button
 				&& temp_button != -1)
 			{
 				cboCustomAction[n]->setListModel(&CustomEventList_HotKey);
@@ -457,7 +455,7 @@ void RefreshPanelCustom()
 				lblCustomAction[n]->setEnabled(false);
 			}
 
-			else if (temp_button == host_input_buttons[host_joy_id].quit_button
+			else if (temp_button == did->mapping.quit_button
 				&& temp_button != -1
 				&& SelectedFunction == 1
 				&& changed_prefs.use_retroarch_quit)
@@ -468,7 +466,7 @@ void RefreshPanelCustom()
 				lblCustomAction[n]->setEnabled(false);
 			}
 
-			else if (temp_button == host_input_buttons[host_joy_id].button[SDL_CONTROLLER_BUTTON_GUIDE]
+			else if (temp_button == did->mapping.button[SDL_CONTROLLER_BUTTON_GUIDE]
 				&& temp_button != -1
 				&& SelectedFunction == 1
 				&& changed_prefs.use_retroarch_menu)
@@ -479,7 +477,7 @@ void RefreshPanelCustom()
 				lblCustomAction[n]->setEnabled(false);
 			}
 
-			else if (temp_button == host_input_buttons[host_joy_id].reset_button
+			else if (temp_button == did->mapping.reset_button
 				&& temp_button != -1
 				&& SelectedFunction == 1
 				&& changed_prefs.use_retroarch_reset)
@@ -494,7 +492,7 @@ void RefreshPanelCustom()
 				cboCustomAction[n]->setListModel(&CustomEventList);
 		}
 
-		if (host_input_buttons[host_joy_id].number_of_hats > 0 || changed_prefs.input_analog_remap == true)
+		if (did->mapping.number_of_hats > 0 || changed_prefs.input_analog_remap == true)
 		{
 			for (int i = SDL_CONTROLLER_BUTTON_DPAD_UP; i <= SDL_CONTROLLER_BUTTON_DPAD_RIGHT; i++)
 			{
@@ -503,15 +501,16 @@ void RefreshPanelCustom()
 			}
 		}
 
-		if (host_input_buttons[host_joy_id].is_retroarch)
+		if (did->mapping.is_retroarch)
 			lblRetroarch->setCaption("[R]");
 		else
 			lblRetroarch->setCaption("[N]");
+		
+		txtPortInput->setText(did->name);
 	}
 
 	else
 	{
-		_stprintf(tmp, _T("%s"), "Not a valid Input Controller for Joystick Emulation.");
 		for (auto& n : cboCustomAction)
 		{
 			n->setListModel(&CustomEventList);
@@ -523,9 +522,9 @@ void RefreshPanelCustom()
 		}
 
 		lblRetroarch->setCaption("[_]");
+		const std::string text = "Not a valid Input Controller for Joystick Emulation.";
+		txtPortInput->setText(text);
 	}
-
-	txtPortInput->setText(tmp);
 
 	// now select which items in drop-down are 'done'
 	for (auto z = 0; z < SDL_CONTROLLER_BUTTON_MAX; ++z)
