@@ -7,6 +7,8 @@
 #include "inputdevice.h"
 #include "amiberry_input.h"
 
+
+#include "amiberry_gfx.h"
 #include "fsdb.h"
 #include "uae.h"
 #include "xwin.h"
@@ -251,7 +253,10 @@ static int acquire_mouse(const int num, int flags)
 		return 1;
 	}
 
+	struct AmigaMonitor* mon = &AMonitors[0];
 	struct didata* did = &di_mouse[num];
+	SDL_SetWindowGrab(mon->sdl_window, SDL_TRUE);
+	SDL_ShowCursor(SDL_DISABLE);
 	did->acquired = 1;
 	return did->acquired > 0 ? 1 : 0;
 }
@@ -263,6 +268,8 @@ static void unacquire_mouse(int num)
 	}
 
 	struct didata* did = &di_mouse[num];
+	struct AmigaMonitor* mon = &AMonitors[0];
+	SDL_SetWindowGrab(mon->sdl_window, SDL_FALSE);
 	did->acquired = 0;
 }
 
@@ -516,7 +523,9 @@ static void release_keys(void)
 
 static int acquire_kb(int num, int flags)
 {
+	struct AmigaMonitor* mon = &AMonitors[0];
 	struct didata* did = &di_keyboard[num];
+	SDL_SetWindowGrab(mon->sdl_window, SDL_TRUE);
 	did->acquired = 1;
 	return did->acquired > 0 ? 1 : 0;
 }
@@ -524,6 +533,8 @@ static int acquire_kb(int num, int flags)
 static void unacquire_kb(int num)
 {
 	struct didata* did = &di_keyboard[num];
+	struct AmigaMonitor* mon = &AMonitors[0];
+	SDL_SetWindowGrab(mon->sdl_window, SDL_FALSE);
 	did->acquired = 0;
 }
 
