@@ -78,6 +78,7 @@ extern const char* remap_key_map_list_strings[];
 extern const int remap_key_map_list_size;
 
 //extern bool key_used_by_retroarch_joy(int scancode);
+extern int keyhack(int scancode, int pressed, int num);
 extern int get_retroarch_kb_num();
 extern bool init_kb_from_retroarch(int index, char* retroarch_file);
 extern std::string sanitize_retroarch_name(std::string s);

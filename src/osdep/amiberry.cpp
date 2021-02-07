@@ -1126,9 +1126,9 @@ void process_event(SDL_Event event)
 			if ((amiberry_options.rctrl_as_ramiga || currprefs.right_control_is_right_win_key)
 				&& scancode == SDL_SCANCODE_RCTRL)
 			{
-					scancode = SDL_SCANCODE_RGUI;
+				scancode = SDL_SCANCODE_RGUI;
 			}
-
+			scancode = keyhack(scancode, pressed, 0);
 			my_kbd_handler(0, scancode, pressed, false);
 		}
 		return;
@@ -1151,7 +1151,7 @@ void process_event(SDL_Event event)
 			{
 				scancode = SDL_SCANCODE_RGUI;
 			}
-
+			scancode = keyhack(scancode, pressed, 0);
 			my_kbd_handler(0, scancode, pressed, true);
 		}
 		break;

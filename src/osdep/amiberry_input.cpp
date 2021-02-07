@@ -176,6 +176,75 @@ const char* remap_key_map_list_strings[] = {
 const int remap_key_map_list_size = sizeof remap_key_map_list / sizeof remap_key_map_list[0];
 static int keyboard_german;
 
+int keyhack (int scancode, int pressed, int num)
+{
+	static unsigned char backslashstate, apostrophstate;
+	const Uint8* state = SDL_GetKeyboardState(NULL);
+	
+	// release mouse if TAB and ALT is pressed
+	if (pressed && state[SDL_SCANCODE_LALT] && scancode == SDL_SCANCODE_TAB) {
+		disablecapture();
+		return -1;
+	}
+
+	if (!keyboard_german)
+		return scancode;
+
+	if (scancode == SDL_SCANCODE_BACKSLASH)
+	{
+		if (state[SDL_SCANCODE_LSHIFT] || state[SDL_SCANCODE_RSHIFT] || apostrophstate)
+		{
+			if (pressed)
+			{
+				apostrophstate = 1;
+				inputdevice_translatekeycode(num, SDL_SCANCODE_RSHIFT, 0, false);
+				inputdevice_translatekeycode(num, SDL_SCANCODE_LSHIFT, 0, false);
+				return SDL_SCANCODE_APOSTROPHE;           // the german ' key
+			}
+			else
+			{
+				apostrophstate = 0;
+				inputdevice_translatekeycode(num, SDL_SCANCODE_LALT, 0, true);
+				inputdevice_translatekeycode(num, SDL_SCANCODE_LSHIFT, 0, true);
+				inputdevice_translatekeycode(num, SDL_SCANCODE_3, 0, true);  // release also the # key
+				return SDL_SCANCODE_APOSTROPHE;
+			}
+
+		}
+		if (pressed)
+		{
+			inputdevice_translatekeycode(num, SDL_SCANCODE_LALT, 1, false);
+			inputdevice_translatekeycode(num, SDL_SCANCODE_LSHIFT, 1, false);
+			return SDL_SCANCODE_3;           // the german # key
+		}
+		else
+		{
+			inputdevice_translatekeycode(num, SDL_SCANCODE_LALT, 0, true);
+			inputdevice_translatekeycode(num, SDL_SCANCODE_LSHIFT, 0, true);
+			return SDL_SCANCODE_3;           // the german # key
+
+		}
+	}
+	if (state[SDL_SCANCODE_RALT] || backslashstate) {
+		switch (scancode)
+		{
+		case SDL_SCANCODE_BACKSLASH: // WinUAE had 12 here -> is this the correct scancode?
+			if (pressed)
+			{
+				backslashstate = 1;
+				inputdevice_translatekeycode(num, SDL_SCANCODE_LALT, 0, true);
+				return SDL_SCANCODE_BACKSLASH;
+			}
+			else
+			{
+				backslashstate = 0;
+				return SDL_SCANCODE_BACKSLASH;
+			}
+		}
+	}
+	return scancode;
+}
+
 static void cleardid(struct didata* did)
 {
 	memset(did, 0, sizeof(*did));
