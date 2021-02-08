@@ -974,9 +974,7 @@ static void open_screen(struct uae_prefs* p)
 	
 	picasso_refresh(mon->monitor_id);
 
-	// We want to grab the mouse always, not just in Fullscreen mode!
-	//if (isfullscreen() != 0)
-		setmouseactive(mon->monitor_id, -1);
+	setmouseactive(mon->monitor_id, -1);
 }
 
 extern int vstrt; // vertical start

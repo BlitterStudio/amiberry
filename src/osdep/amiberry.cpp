@@ -265,7 +265,7 @@ static void setcursor(struct AmigaMonitor* mon, int oldx, int oldy)
 	int cx = (mon->amigawinclip_rect.w - mon->amigawinclip_rect.x) / 2 + mon->amigawin_rect.x + (mon->amigawinclip_rect.x - mon->amigawin_rect.x);
 	int cy = (mon->amigawinclip_rect.h - mon->amigawinclip_rect.y) / 2 + mon->amigawin_rect.y + (mon->amigawinclip_rect.y - mon->amigawin_rect.y);
 
-	SDL_WarpMouseGlobal(cx, cy);
+	SDL_WarpMouseInWindow(mon->sdl_window, cx, cy);
 }
 
 static int mon_cursorclipped;
@@ -446,7 +446,10 @@ static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpaus
 
 	if (isfullscreen() <= 0 && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_tablet > 0) {
 		if (mousehack_alive())
+		{
+			setcursorshape(mon->monitor_id);
 			return;
+		}
 		SDL_SetCursor(normalcursor);
 	}
 
@@ -455,6 +458,7 @@ static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpaus
 
 	if (mouseactive) {
 		if (focus) {
+			SDL_RaiseWindow(mon->sdl_window);
 			if (!mon_cursorclipped) {
 				SDL_ShowCursor(SDL_DISABLE);
 				SDL_SetWindowGrab(mon->sdl_window, SDL_TRUE);
@@ -462,7 +466,7 @@ static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpaus
 				SDL_SetRelativeMouseMode(SDL_TRUE);
 				mon_cursorclipped = mon->monitor_id + 1;
 			}
-			//setcursor(mon, -30000, -30000);
+			setcursor(mon, -30000, -30000);
 		}
 		wait_keyrelease();
 		inputdevice_acquire(TRUE);
