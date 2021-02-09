@@ -990,6 +990,9 @@
     <ClCompile Include="..\src\osdep\gui\PanelRTG.cpp">
       <Filter>src\osdep\gui</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\osdep\gui\ControllerMap.cpp">
+      <Filter>src\osdep\gui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\archivers\7z\7zBuf.h">
