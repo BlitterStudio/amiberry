@@ -19,9 +19,9 @@
 * Some code to put status information on the screen.
 */
 
-void statusline_getpos(int *x, int *y, int width, int height)
+void statusline_getpos(int monid, int *x, int *y, int width, int height)
 {
-	int mx = statusline_get_multiplier();
+	int mx = statusline_get_multiplier(monid);
 	int total_height = TD_TOTAL_HEIGHT * mx;
 	if (currprefs.osd_pos.x >= 20000) {
 		if (currprefs.osd_pos.x >= 30000)
@@ -55,7 +55,7 @@ static const char* numbers = { /* ugly  0123456789CHD%+-PNKV */
 	"+x+++x+---+x+-+x++++++++++x++++++x++++++x++x+++x+--+x+--+x+++x++++++x++x++++-+x++x+-+x++x+---+x+x+--+x+----+++--+x++++++x+x+x++x+x++  +xx+  "
 	"+xxxxx+---+x+-+xxxxx++xxxxx+----+x++xxxxx++xxxxx+--+x+--+xxxxx++xxxxx++xxxx+-+x++x+-+xxx+---+x++xx--------------+x+----+x++xx++x++x+  +xx+  "
 	"+++++++---+++-++++++++++++++----+++++++++++++++++--+++--++++++++++++++++++++-++++++-++++------------------------+++----+++++++++++++  ++++  "
-	//   x      x      x      x      x      x      x      x      x      x      x      x      x      x      x      x      x      x      x      x      x  
+//   x      x      x      x      x      x      x      x      x      x      x      x      x      x      x      x      x      x      x      x      x  
 };
 
 STATIC_INLINE uae_u32 ledcolor(uae_u32 c, uae_u32 *rc, uae_u32 *gc, uae_u32 *bc, uae_u32 *a)
@@ -94,9 +94,9 @@ static uae_u32 rgbmuldiv(uae_u32 rgb, int mul, int div)
 
 static int statusline_mult[2];
 
-int statusline_set_multiplier(int width, int height)
+int statusline_set_multiplier(int monid, int width, int height)
 {
-	struct amigadisplay *ad = &adisplays;
+	struct amigadisplay *ad = &adisplays[monid];
 	int idx = ad->picasso_on ? 1 : 0;
 	int mult = currprefs.leds_on_screen_multiplier[idx];
 	if (!mult) {
@@ -109,31 +109,30 @@ int statusline_set_multiplier(int width, int height)
 	return mult;
 }
 
-int statusline_get_multiplier()
+int statusline_get_multiplier(int monid)
 {
-	struct amigadisplay *ad = &adisplays;
+	struct amigadisplay *ad = &adisplays[monid];
 	int idx = ad->picasso_on ? 1 : 0;
 	if (statusline_mult[idx] <= 0)
 		return 1;
 	return statusline_mult[idx];
 }
 
-void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u32 *rc, uae_u32 *gc, uae_u32 *bc, uae_u32 *alpha)
+void draw_status_line_single(int monid, uae_u8 *buf, int bpp, int y, int totalwidth, uae_u32 *rc, uae_u32 *gc, uae_u32 *bc, uae_u32 *alpha)
 {
-	struct amigadisplay *ad = &adisplays;
+	struct amigadisplay *ad = &adisplays[monid];
 	int x_start, j, led, border;
 	uae_u32 c1, c2, cb;
 
-	c1 = ledcolor(0x00ffffff, rc, gc, bc, alpha);
-	c2 = ledcolor(0x00000000, rc, gc, bc, alpha);
+	c1 = ledcolor (0x00ffffff, rc, gc, bc, alpha);
+	c2 = ledcolor (0x00000000, rc, gc, bc, alpha);
 
 	if (td_pos & TD_RIGHT)
 		x_start = totalwidth - TD_PADX - VISIBLE_LEDS * TD_WIDTH;
 	else
 		x_start = TD_PADX;
 
-	for (led = 0; led < LED_MAX; led++)
-	{
+	for (led = 0; led < LED_MAX; led++) {
 		int pos, num1 = -1, num2 = -1, num3 = -1, num4 = -1;
 		int x, c, on = 0, am = 2;
 		xcolnr on_rgb = 0, on_rgb2 = 0, off_rgb = 0, pen_rgb = 0;
@@ -145,22 +144,19 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 			continue;
 
 		pen_rgb = c1;
-		if (led >= LED_DF0 && led <= LED_DF3)
-		{
+		if (led >= LED_DF0 && led <= LED_DF3) {
 			int pled = led - LED_DF0;
-			struct floppyslot* fs = &currprefs.floppyslots[pled];
-			struct gui_info_drive* gid = &gui_data.drives[pled];
+			struct floppyslot *fs = &currprefs.floppyslots[pled];
+			struct gui_info_drive *gid = &gui_data.drives[pled];
 			int track = gid->drive_track;
 			pos = 7 + pled;
 			on_rgb = 0x00cc00;
-			if (!gid->drive_disabled)
-			{
+			if (!gid->drive_disabled) {
 				num1 = -1;
 				num2 = track / 10;
 				num3 = track % 10;
 				on = gid->drive_motor;
-				if (gid->drive_writing)
-				{
+				if (gid->drive_writing) {
 					on_rgb = bpp == 2 ? 0xcc0000 : 0x0000cc;
 				}
 				half = gui_data.drive_side ? 1 : -1;
@@ -174,23 +170,17 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 			on_rgb &= 0xffffff;
 			off_rgb = rgbmuldiv(on_rgb, 2, 4);
 			on_rgb2 = rgbmuldiv(on_rgb, 2, 3);
-		}
-		else if (led == LED_POWER)
-		{
+		} else if (led == LED_POWER) {
 			pos = 3;
 			on_rgb = bpp == 2 ? ((gui_data.powerled_brightness * 10 / 16) + 0x330000) << 16 : ((gui_data.powerled_brightness * 10 / 16) + 0x000033) << 16;
 			on = 1;
 			off_rgb = bpp == 2 ? 0x330000 : 0x000033;
-		}
-		else if (led == LED_CD)
-		{
+		} else if (led == LED_CD) {
 			pos = 5;
-			if (gui_data.cd >= 0)
-			{
+			if (gui_data.cd >= 0) {
 				on = gui_data.cd & (LED_CD_AUDIO | LED_CD_ACTIVE);
 				on_rgb = (on & LED_CD_AUDIO) ? 0x00cc00 : bpp == 2 ? 0x0000cc : 0xcc0000;
-				if ((gui_data.cd & LED_CD_ACTIVE2) && !(gui_data.cd & LED_CD_AUDIO))
-				{
+				if ((gui_data.cd & LED_CD_ACTIVE2) && !(gui_data.cd & LED_CD_AUDIO)) {
 					on_rgb &= 0xfefefe;
 					on_rgb >>= 1;
 				}
@@ -199,12 +189,9 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 				num2 = 10;
 				num3 = 12;
 			}
-		}
-		else if (led == LED_HD)
-		{
+		} else if (led == LED_HD) {
 			pos = 4;
-			if (gui_data.hd >= 0)
-			{
+			if (gui_data.hd >= 0) {
 				on = gui_data.hd;
 				on_rgb = on == 2 ? (bpp == 2 ? 0xcc0000 : 0x0000cc) : (bpp == 2 ? 0x0000cc : 0xcc0000);
 				off_rgb = bpp == 2 ? 0x000033 : 0x330000;
@@ -212,90 +199,79 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 				num2 = 11;
 				num3 = 12;
 			}
-		}
-		else if (led == LED_FPS)
-		{
+		} else if (led == LED_FPS) {
 			pos = 2;
-			if (pause_emulation)
-			{
+			if (pause_emulation) {
 				num1 = -1;
 				num2 = -1;
 				num3 = 16;
 				on_rgb = 0xcccccc;
 				off_rgb = 0x000000;
 				am = 2;
-			}
-			else
-			{
+			} else {
 				int fps = (gui_data.fps + 5) / 10;
 				on_rgb = 0x000000;
 				off_rgb = gui_data.fps_color ? 0xcccc00 : 0x000000;
 				am = 3;
-				if (fps > 999)
-				{
+				if (fps > 999) {
 					fps += 50;
 					fps /= 10;
 					if (fps > 999)
 						fps = 999;
 					num1 = fps / 100;
+					num1 %= 10;
 					num2 = 18;
 					num3 = (fps - num1 * 100) / 10;
-				}
-				else
-				{
+				} else {
 					num1 = fps / 100;
 					num2 = (fps - num1 * 100) / 10;
 					num3 = fps % 10;
+					num1 %= 10;
+					num2 %= 10;
 					if (num1 == 0)
 						am = 2;
 				}
 			}
-		}
-		else if (led == LED_CPU)
-		{
+		} else if (led == LED_CPU) {
 			int idle = (gui_data.idle + 5) / 10;
 			pos = 1;
 			on_rgb = bpp == 2 ? 0xcc0000 : 0x0000cc;
 			off_rgb = 0x000000;
-			if (gui_data.cpu_halted)
-			{
+			if (gui_data.cpu_halted) {
 				idle = 0;
 				on = 1;
-				if (gui_data.cpu_halted < 0)
-				{
+				if (gui_data.cpu_halted < 0) {
 					on_rgb = 0x000000;
 					num1 = 16; // PPC
 					num2 = 16;
 					num3 = 10;
 					am = 3;
-				}
-				else
-				{
+				} else {
 					on_rgb = 0xcccc00;
 					num1 = gui_data.cpu_halted >= 10 ? 11 : -1;
 					num2 = gui_data.cpu_halted >= 10 ? (gui_data.cpu_halted / 10) % 10 : 11;
 					num3 = gui_data.cpu_halted % 10;
 					am = 2;
 				}
-			}
-			else
-			{
+			} else {
 				num1 = idle / 100;
 				num2 = (idle - num1 * 100) / 10;
 				num3 = idle % 10;
+				num1 %= 10;
+				num2 %= 10;
 				num4 = num1 == 0 ? 13 : -1;
+				if (!num1 && !num2) {
+					num2 = -2;
+				}
 				am = 3;
 			}
-		}
-		else if (led == LED_SND && gui_data.sndbuf_avail)
-		{
+		} else if (led == LED_SND && gui_data.sndbuf_avail) {
 			int snd = abs(gui_data.sndbuf + 5) / 10;
 			if (snd > 99)
 				snd = 99;
 			pos = 0;
 			on = gui_data.sndbuf_status;
-			if (on < 3)
-			{
+			if (on < 3) {
 				num1 = gui_data.sndbuf < 0 ? 15 : 14;
 				num2 = snd / 10;
 				num3 = snd % 10;
@@ -309,9 +285,7 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 				on_rgb = bpp == 2 ? 0x0000cc : 0xcc0000; // "normal" overflow
 			off_rgb = 0x000000;
 			am = 3;
-		}
-		else if (led == LED_MD)
-		{
+		} else if (led == LED_MD) {
 			// DF3 reused as internal non-volatile ram led (cd32/cdtv)
 			if (gui_data.drives[3].drive_disabled && gui_data.md >= 0) {
 				pos = 7 + 3;
@@ -323,16 +297,12 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 				num1 = -1;
 				num2 = 17;
 				num3 = 19;
-			}
-			else {
+			} else {
 				continue;
 			}
-		}
-		else if (led == LED_NET)
-		{
+		} else if (led == LED_NET) {
 			pos = 6;
-			if (gui_data.net >= 0)
-			{
+			if (gui_data.net >= 0) {
 				on = gui_data.net;
 				on_rgb = 0;
 				if (on & 1)
@@ -345,9 +315,7 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 				num3 = 17;
 				am = 1;
 			}
-		}
-		else
-		{
+		} else {
 			continue;
 		}
 		on_rgb |= 0x33000000;
@@ -403,11 +371,11 @@ void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u3
 #define MAX_STATUSLINE_QUEUE 8
 struct statusline_struct
 {
-	TCHAR* text;
+	TCHAR *text;
 	int type;
 };
 struct statusline_struct statusline_data[MAX_STATUSLINE_QUEUE];
-static TCHAR* statusline_text_active;
+static TCHAR *statusline_text_active;
 static int statusline_delay;
 static bool statusline_had_changed;
 
@@ -425,17 +393,16 @@ static void statusline_update_notification(void)
 
 void statusline_clear(void)
 {
-	statusline_text_active = nullptr;
+	statusline_text_active = NULL;
 	statusline_delay = 0;
-	for (auto& i : statusline_data)
-	{
-		xfree(i.text);
-		i.text = nullptr;
+	for (int i = 0; i < MAX_STATUSLINE_QUEUE; i++) {
+		xfree(statusline_data[i].text);
+		statusline_data[i].text = NULL;
 	}
 	statusline_update_notification();
 }
 
-const TCHAR* statusline_fetch(void)
+const TCHAR *statusline_fetch(void)
 {
 	return statusline_text_active;
 }
@@ -517,18 +484,17 @@ void statusline_vsync(void)
 	statusline_delay--;
 	if (statusline_delay)
 		return;
-	statusline_text_active = nullptr;
+	statusline_text_active = NULL;
 	xfree(statusline_data[0].text);
-	for (int i = 1; i < MAX_STATUSLINE_QUEUE; i++)
-	{
+	for (int i = 1; i < MAX_STATUSLINE_QUEUE; i++) {
 		statusline_data[i - 1].text = statusline_data[i].text;
 	}
-	statusline_data[MAX_STATUSLINE_QUEUE - 1].text = nullptr;
+	statusline_data[MAX_STATUSLINE_QUEUE - 1].text = NULL;
 	statusline_text_active = statusline_data[0].text;
 	statusline_update_notification();
 }
 
-void statusline_single_erase(uae_u8* buf, int bpp, int y, int totalwidth)
+void statusline_single_erase(int monid, uae_u8 *buf, int bpp, int y, int totalwidth)
 {
 	memset(buf, 0, bpp * totalwidth);
 }

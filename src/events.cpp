@@ -48,10 +48,12 @@ void events_reset_syncline(void)
 
 void events_schedule (void)
 {
+	int i;
+
 	unsigned long int mintime = ~0L;
-	for (auto& i : eventtab) {
-		if (i.active) {
-			auto eventtime = i.evtime - currcycle;
+	for (i = 0; i < ev_max; i++) {
+		if (eventtab[i].active) {
+			unsigned long int eventtime = eventtab[i].evtime - currcycle;
 			if (eventtime < mintime)
 				mintime = eventtime;
 		}
@@ -65,11 +67,7 @@ extern int vsync_activeheight;
 static bool event_check_vsync(void)
 {
 	/* Keep only CPU emulation running while waiting for sync point. */
-	if (is_syncline == -1
-		|| is_syncline == -2
-		|| is_syncline == -3
-		|| is_syncline > 0
-		|| is_syncline <= -100) {
+	if (is_syncline == -1) {
 
 		if (!isvsync_chipset()) {
 			events_reset_syncline();
@@ -272,19 +270,20 @@ void do_cycles_cpu_fastest(uae_u32 cycles_to_add)
 				return;
 		}
 
-		cycles_to_add -= (nextevent - currcycle);
+		cycles_to_add -= nextevent - currcycle;
 		currcycle = nextevent;
 
-		for (auto& i : eventtab) {
-			if (i.active && i.evtime == currcycle) {
-				if (i.handler == nullptr)
-					i.active = false;
-				else
-					(*i.handler)();
+		for (int i = 0; i < ev_max; i++) {
+			if (eventtab[i].active && eventtab[i].evtime == currcycle) {
+				if (eventtab[i].handler == NULL) {
+					gui_message(_T("eventtab[%d].handler is null!\n"), i);
+					eventtab[i].active = 0;
+				} else {
+					(*eventtab[i].handler)();
+				}
 			}
 		}
 		events_schedule ();
-
 	}
 	currcycle += cycles_to_add;
 }
@@ -401,3 +400,15 @@ void event2_newevent_x_replace(evt t, uae_u32 data, evfunc2 func)
 	}
 	event2_newevent_xx(-1, t * CYCLE_UNIT, data, func);
 }
+
+
+int current_hpos (void)
+{
+	int hp = current_hpos_safe ();
+	if (hp < 0 || hp > 256) {
+		gui_message(_T("hpos = %d!?\n"), hp);
+		hp = 0;
+	}
+	return hp;
+}
+

@@ -1,6 +1,5 @@
-#include <stdbool.h>
-#include <string.h>
-#include <stdio.h>
+#include <cstring>
+#include <cstdio>
 
 #include <guisan.hpp>
 #include <SDL_ttf.h>
@@ -28,7 +27,6 @@ static gcn::Button* cmdSaveForDisk;
 static gcn::Button* cmdCreateDDDisk;
 static gcn::Button* cmdCreateHDDisk;
 
-static const char* diskfile_filter[] = {".adf", ".adz", ".fdi", ".ipf", ".zip", ".dms", ".gz", ".xz", "\0"};
 static const char* drive_speed_list[] = {"Turbo", "100% (compatible)", "200%", "400%", "800%"};
 static const int drive_speed_values[] = {0, 100, 200, 400, 800};
 

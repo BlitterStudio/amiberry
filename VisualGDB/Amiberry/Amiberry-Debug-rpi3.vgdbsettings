@@ -8,10 +8,19 @@
       <LocalDirForAbsolutePaths>$(ToolchainDir)</LocalDirForAbsolutePaths>
     </CustomSourceDirectories>
     <DeploymentHost>
-      <HostName>rpi4.midlair</HostName>
+      <HostName>rpi3-2</HostName>
       <Transport>SSH</Transport>
       <UserName>pi</UserName>
     </DeploymentHost>
+    <MainSourceTransferCommand>
+      <SkipWhenRunningCommandList>false</SkipWhenRunningCommandList>
+      <LocalDirectory>$(ProjectDir)</LocalDirectory>
+      <RemoteDirectory>/tmp/VisualGDB/$(ProjectDirUnixStyle)</RemoteDirectory>
+      <TransferNewFilesOnly>true</TransferNewFilesOnly>
+      <IncludeSubdirectories>true</IncludeSubdirectories>
+      <DeleteDisappearedFiles>false</DeleteDisappearedFiles>
+      <ApplyGlobalExclusionList>true</ApplyGlobalExclusionList>
+    </MainSourceTransferCommand>
     <AllowChangingHostForMainCommands>false</AllowChangingHostForMainCommands>
     <SkipBuildIfNoSourceFilesChanged>false</SkipBuildIfNoSourceFilesChanged>
     <IgnoreFileTransferErrors>false</IgnoreFileTransferErrors>
@@ -25,7 +34,7 @@
       <Version>
         <GCC>8.3.0</GCC>
         <GDB>8.2.1</GDB>
-        <Revision>3</Revision>
+        <Revision>2</Revision>
       </Version>
     </ToolchainID>
     <ProjectFile>Amiberry.vcxproj</ProjectFile>

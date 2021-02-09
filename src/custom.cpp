@@ -72,7 +72,7 @@ int debug_sprite_mask = 0xff;
 
 STATIC_INLINE bool nocustom (void)
 {
-	struct amigadisplay *ad = &adisplays;
+	struct amigadisplay *ad = &adisplays[0];
 	if (ad->picasso_on && currprefs.picasso96_nocustom)
 		return true;
 	return false;
@@ -379,6 +379,7 @@ struct copper {
 	int strobe; /* COPJMP1 / COPJMP2 accessed */
 	int last_strobe;
 	int moveaddr, movedata, movedelay;
+	uaecptr moveptr;
 };
 
 #ifdef AMIBERRY
@@ -506,7 +507,7 @@ STATIC_INLINE int ecsshres(void)
 
 STATIC_INLINE int nodraw(void)
 {
-	struct amigadisplay *ad = &adisplays;
+	struct amigadisplay *ad = &adisplays[0];
 	return !currprefs.cpu_memory_cycle_exact && ad->framecnt != 0;
 }
 
@@ -609,10 +610,13 @@ static int expand_sprres(uae_u16 con0, uae_u16 con3)
 
 STATIC_INLINE uae_u8 *pfield_xlateptr (uaecptr plpt, int bytecount)
 {
-	plpt &= chipmem_bank.mask;
-	if((plpt + bytecount) > chipmem_bank.reserved_size)
+	if (!chipmem_check_indirect (plpt, bytecount)) {
+		static int count = 0;
+		if (!count)
+			count++, write_log (_T("Warning: Bad playfield pointer %08x\n"), plpt);
 		return NULL;
-	return chipmem_bank.baseaddr + plpt;
+	}
+	return chipmem_xlate_indirect (plpt);
 }
 static void docols (struct color_entry *colentry)
 {
@@ -4299,7 +4303,7 @@ static int color_changes_differ (struct draw_info *dip, struct draw_info *dip_ol
 * made yet. */
 static void finish_decisions(void)
 {
-	struct amigadisplay *ad = &adisplays;
+	struct amigadisplay *ad = &adisplays[0];
 	struct draw_info *dip;
 	struct draw_info *dip_old;
 	struct decision *dp;
@@ -4551,8 +4555,8 @@ void compute_vsynctime (void)
 		vblank_hz = currprefs.chipset_refreshrate;
 		if (isvsync_chipset() && !currprefs.gfx_variable_sync) {
 			int mult = 0;
-			if (getvsyncrate(vblank_hz, &mult) != vblank_hz) {
-				vblank_hz = getvsyncrate(vblank_hz, &vblank_hz_mult);
+			if (getvsyncrate(0, vblank_hz, &mult) != vblank_hz) {
+				vblank_hz = getvsyncrate(0, vblank_hz, &vblank_hz_mult);
 				if (vblank_hz_mult > 0)
 					vblank_hz_state = 0;
 			}
@@ -4654,7 +4658,7 @@ static void checklacecount (bool lace)
 
 struct chipset_refresh *get_chipset_refresh(struct uae_prefs *p)
 {
-	struct amigadisplay *ad = &adisplays;
+	struct amigadisplay *ad = &adisplays[0];
 	int islace = interlace_seen ? 1 : 0;
 	int isntsc = (beamcon0 & 0x20) ? 0 : 1;
 	int custom = (beamcon0 & 0x80) ? 1 : 0;
@@ -4691,8 +4695,8 @@ static bool changed_chipset_refresh (void)
 
 void compute_framesync(void)
 {
-	struct vidbuf_description* vidinfo = &adisplays.gfxvidinfo;
-	struct amigadisplay* ad = &adisplays;
+	struct vidbuf_description *vidinfo = &adisplays[0].gfxvidinfo;
+	struct amigadisplay *ad = &adisplays[0];
 	int islace = interlace_seen ? 1 : 0;
 	int isntsc = (beamcon0 & 0x20) ? 0 : 1;
 	bool found = false;
@@ -4705,9 +4709,9 @@ void compute_framesync(void)
 		vblank_hz = vblank_hz_shf;
 	}
 
-	//	vblank_hz = target_adjust_vblank_hz(0, vblank_hz);
+	vblank_hz = target_adjust_vblank_hz(0, vblank_hz);
 
-	struct chipset_refresh* cr = get_chipset_refresh(&currprefs);
+	struct chipset_refresh *cr = get_chipset_refresh(&currprefs);
 	while (cr) {
 		double v = -1;
 		if (!ad->picasso_on && !ad->picasso_requested_on) {
@@ -4715,13 +4719,13 @@ void compute_framesync(void)
 				if (!currprefs.gfx_variable_sync) {
 					if (cr->index == CHIPSET_REFRESH_PAL || cr->index == CHIPSET_REFRESH_NTSC) {
 						if ((fabs(vblank_hz - 50) < 1 || fabs(vblank_hz - 60) < 1 || fabs(vblank_hz - 100) < 1 || fabs(vblank_hz - 120) < 1) && currprefs.gfx_apmode[0].gfx_vsync == 2 && currprefs.gfx_apmode[0].gfx_fullscreen > 0) {
-							vsync_switchmode((int)vblank_hz);
+							vsync_switchmode(0, (int)vblank_hz);
 						}
 					}
 					if (isvsync_chipset() < 0) {
 
 						double v2;
-						v2 = target_getcurrentvblankrate();
+						v2 = target_getcurrentvblankrate(0);
 						if (!cr->locked)
 							v = v2;
 					} else if (isvsync_chipset() > 0) {
@@ -4845,9 +4849,8 @@ void compute_framesync(void)
 
 	memset (line_decisions, 0, sizeof line_decisions);
 	memset (line_drawinfo, 0, sizeof line_drawinfo);
-	for (auto& line_decision : line_decisions)
-	{
-		line_decision.plfleft = -2;
+	for (int i = 0; i < sizeof (line_decisions) / sizeof *line_decisions; i++) {
+		line_decisions[i].plfleft = -2;
 	}
 
 	compute_vsynctime ();
@@ -4871,7 +4874,10 @@ void compute_framesync(void)
 
 	set_config_changed ();
 
-	if (target_graphics_buffer_update()) {
+	//if (currprefs.monitoremu_mon != 0) {
+	//	target_graphics_buffer_update(currprefs.monitoremu_mon);
+	//}
+	if (target_graphics_buffer_update(0)) {
 		reset_drawing ();
 	}
 }
@@ -5081,14 +5087,19 @@ static void init_hz (bool checkvposw)
 #endif
 
 	compute_framesync ();
-	//devices_syncchange();
+	devices_syncchange();
 
 #ifdef PICASSO96
-	init_hz_p96();
+	init_hz_p96(0);
 #endif
 	if (vblank_hz != ovblank)
-		updatedisplayarea();
+		updatedisplayarea(0);
 	inputdevice_tablet_strobe ();
+
+	//if (varsync_changed) {
+	//	varsync_changed = false;
+	//	dumpsync ();
+	//}
 }
 
 static void init_hz_vposw (void)
@@ -5410,7 +5421,7 @@ static void VHPOSW (uae_u16 v)
 
 	if (currprefs.cpu_memory_cycle_exact && currprefs.cpu_model == 68000) {
 		/* Special hack for Smooth Copper in CoolFridge / Upfront demo */
-		int chp = current_hpos();
+		int chp = current_hpos_safe();
 		int hp = v & 0xff;
 		if (chp >= 0x21 && chp <= 0x29 && hp == 0x2d) {
 			hack_delay_shift = 4;
@@ -5755,7 +5766,7 @@ static void DMACON (int hpos, uae_u16 v)
 	if ((dmacon & DMA_BLITPRI) > (oldcon & DMA_BLITPRI) && (blt_info.blit_main || blt_info.blit_finald))
 		set_special (SPCFLAG_BLTNASTY);
 
-	if (dmaen (DMA_BLITTER) && (blt_info.blit_pending || blt_info.blit_main || blt_info.blit_finald)) {
+	if (dmaen (DMA_BLITTER) && blt_info.blit_pending) {
 		blitter_check_start ();
 	}
 
@@ -5948,7 +5959,7 @@ static void BEAMCON0 (uae_u16 v)
 
 static void varsync (void)
 {
-	struct amigadisplay *ad = &adisplays;
+	struct amigadisplay *ad = &adisplays[0];
 	if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS))
 		return;
 #ifdef PICASSO96
@@ -5965,7 +5976,7 @@ static void varsync (void)
 #ifdef PICASSO96
 void set_picasso_hack_rate (int hz)
 {
-	struct amigadisplay *ad = &adisplays;
+	struct amigadisplay *ad = &adisplays[0];
 	if (!ad->picasso_on)
 		return;
 	vpos_count = 0;
@@ -6387,6 +6398,8 @@ static void DDFSTOP (int hpos, uae_u16 v)
 static void FMODE (int hpos, uae_u16 v)
 {
 	if (!(currprefs.chipset_mask & CSMASK_AGA)) {
+		//if (currprefs.monitoremu)
+		//	specialmonitor_store_fmode(vpos, hpos, v);
 		v = 0;
 	}
 	v &= 0xC00F;
@@ -7235,7 +7248,7 @@ static void predict_copper(void)
 }
 #endif
 
-static int custom_wput_copper (int hpos, uaecptr addr, uae_u32 value, int noget)
+static int custom_wput_copper (int hpos, uaecptr pt, uaecptr addr, uae_u32 value, int noget)
 {
 	int v;
 
@@ -7283,11 +7296,6 @@ static int customdelay[]= {
 	/* RESERVED */
 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 };
-
-static void copper_write (uae_u32 v)
-{
-	custom_wput_copper (current_hpos (), v >> 16, v & 0xffff, 0);
-}
 
 /*
 	CPU write COPJMP wakeup sequence when copper is waiting:
@@ -7352,7 +7360,7 @@ static void update_copper (int until_hpos)
 		if (cop_state.movedelay > 0) {
 			cop_state.movedelay--;
 			if (cop_state.movedelay == 0) {
-				custom_wput_copper (c_hpos, cop_state.moveaddr, cop_state.movedata, 0);
+				custom_wput_copper (c_hpos, cop_state.moveptr, cop_state.moveaddr, cop_state.movedata, 0);
 			}
 #ifdef AMIBERRY
 			if (!copper_enabled_thisline)
@@ -7594,12 +7602,13 @@ static void update_copper (int until_hpos)
 					cop_state.state = COP_wait_in2;
 
 			} else { // MOVE
+				unsigned int reg = cop_state.i1 & 0x1FE;
 #ifdef DEBUGGER
 				if (debug_dma) {
-					record_dma_read(0x8c, cop_state.ip - 2, old_hpos, vpos, DMARECORD_COPPER, 0);
+					record_dma_read(reg, cop_state.ip, old_hpos, vpos, DMARECORD_COPPER, 0);
 				}
 				if (memwatch_enabled) {
-					debug_getpeekdma_chipram(cop_state.ip - 2, MW_MASK_COPPER, 0x8c, cop_state.last_strobe == 2 ? 0x84 : 0x80);
+					debug_getpeekdma_chipram(cop_state.ip, MW_MASK_COPPER, 0x8c, cop_state.last_strobe == 2 ? 0x84 : 0x80);
 				}
 #endif
 				cop_state.i2 = chipmem_wget_indirect(cop_state.ip);
@@ -7622,7 +7631,6 @@ static void update_copper (int until_hpos)
 #ifdef DEBUGGER
 				uaecptr debugip = cop_state.ip;
 #endif
-				unsigned int reg = cop_state.i1 & 0x1FE;
 				uae_u16 data = cop_state.i2;
 				cop_state.state = COP_read1;
 
@@ -7630,8 +7638,9 @@ static void update_copper (int until_hpos)
 				if (! copper_enabled_thisline)
 					goto out; // was "dangerous" register -> copper stopped
 
-				if (cop_state.ignore_next)
+				if (cop_state.ignore_next) {
 					reg = 0x1fe;
+				}
 
 				if (reg == 0x88) {
 					cop_state.strobe = 1;
@@ -7650,8 +7659,9 @@ static void update_copper (int until_hpos)
 						cop_state.moveaddr = reg;
 						cop_state.movedata = data;
 						cop_state.movedelay = customdelay[cop_state.moveaddr / 2];
+						cop_state.moveptr = cop_state.ip;
 					} else {
-						custom_wput_copper (old_hpos, reg, data, 0);
+						custom_wput_copper (old_hpos, cop_state.ip, reg, data, 0);
 					}
 #endif
 				}
@@ -7875,7 +7885,7 @@ static void copper_handler(void)
 }
 #endif
 
-void blitter_done_notify (int hpos)
+static void blitter_done_notify_wakeup(uae_u32 temp)
 {
 	if (cop_state.state != COP_bltwait)
 		return;
@@ -7883,12 +7893,9 @@ void blitter_done_notify (int hpos)
 	int vp_wait = vpos & (((cop_state.saved_i2 >> 8) & 0x7F) | 0x80);
 	int vp = vpos;
 
-	hpos++;
+	int hpos = current_hpos() + 1;
 	hpos &= ~1;
-	if (hpos >= maxhpos) {
-		hpos -= maxhpos;
-		vp++;
-	}
+
 	cop_state.hpos = hpos;
 	cop_state.vpos = vp;
 	cop_state.state = COP_wait;
@@ -7906,8 +7913,19 @@ void blitter_done_notify (int hpos)
 		copper_enabled_thisline = 1;
 		set_special(SPCFLAG_COPPER);
 	} else {
-		unset_special (SPCFLAG_COPPER);
+		unset_special(SPCFLAG_COPPER);
 	}
+}
+
+
+void blitter_done_notify(int blitline)
+{
+	if (cop_state.state != COP_bltwait)
+		return;
+
+	// Blitline check is a hack!
+	// Copper emulation is not correct and new blitter emulation needs this workaround.
+	event2_newevent_xx(-1, (blitline ? 4 : 2) * CYCLE_UNIT, 0, blitter_done_notify_wakeup);
 }
 
 void do_copper (void)
@@ -8415,7 +8433,7 @@ static int mavg (struct mavg_data *md, int newval, int size)
 extern int log_vsync, debug_vsync_min_delay, debug_vsync_forced_delay;
 static bool framewait (void)
 {
-	struct amigadisplay *ad = &adisplays;
+	struct amigadisplay *ad = &adisplays[0];
 	frame_time_t curr_time;
 	frame_time_t start;
 	int vs = isvsync_chipset ();
@@ -8438,15 +8456,17 @@ static bool framewait (void)
 		vsyncwaittime = vsyncmaxtime = curr_time + vsynctimebase;
 		if (!nodraw()) {
 			if (!frame_rendered && !ad->picasso_on)
-				frame_rendered = render_screen(false);
+				frame_rendered = render_screen(0, 1, false);
 
-			start = read_processor_time();
+			start = read_processor_time ();
 			t = 0;
 			if ((int)start - (int)vsync_time >= 0 && (int)start - (int)vsync_time < vsynctimebase)
 				t += (int)start - (int)vsync_time;
-			
+
 			if (!frame_shown) {
-				show_screen(1);
+				show_screen(0, 1);
+				if (currprefs.gfx_apmode[0].gfx_strobo)
+					show_screen(0, 4);
 			}
 		}
 
@@ -8495,7 +8515,7 @@ static bool framewait (void)
 	if (currprefs.m68k_speed < 0 && !cpu_sleepmode && !currprefs.cpu_memory_cycle_exact) {
 
 		if (!frame_rendered && !ad->picasso_on)
-			frame_rendered = render_screen(false);
+			frame_rendered = render_screen(0, 1, false);
 
 		if (currprefs.m68k_speed_throttle) {
 			// this delay can safely overshoot frame time by 1-2 ms, following code will compensate for it.
@@ -8538,7 +8558,7 @@ static bool framewait (void)
 
 		start = read_processor_time();
 		if (!frame_rendered && !ad->picasso_on) {
-			frame_rendered = render_screen(false);
+			frame_rendered = render_screen(0, 1, false);
 			t = read_processor_time () - start;
 		}
 		if (!currprefs.cpu_thread) {
@@ -8560,7 +8580,7 @@ static bool framewait (void)
 		vsyncmintime = curr_time;
 		vsyncmaxtime = vsyncwaittime = curr_time + vstb;
 		if (frame_rendered) {
-			show_screen(0);
+			show_screen(0, 0);
 			t += read_processor_time () - curr_time;
 		}
 		t += frameskipt_avg;
@@ -8643,7 +8663,7 @@ static void fpscounter (bool frameok)
 // vsync functions that are not hardware timing related
 static void vsync_handler_pre (void)
 {
-	struct amigadisplay *ad = &adisplays;
+	struct amigadisplay *ad = &adisplays[0];
 
 	if (currprefs.m68k_speed < 0) {
 		if (regs.stopped) {
@@ -8685,7 +8705,7 @@ static void vsync_handler_pre (void)
 		timehack_alive--;
 
 #ifdef PICASSO96
-	if (isvsync_rtg() >= 0)
+	if (isvsync_rtg () >= 0)
 		rtg_vsync ();
 #endif
 
@@ -8702,10 +8722,10 @@ static void vsync_handler_pre (void)
 
 	if (!ad->picasso_on && !nodraw()) {
 		if (!frame_rendered && vblank_hz_state) {
-			frame_rendered = render_screen(false);
+			frame_rendered = render_screen(0, 1, false);
 		}
 		if (frame_rendered && !frame_shown) {
-			frame_shown = show_screen_maybe(isvsync_chipset () >= 0);
+			frame_shown = show_screen_maybe(0, isvsync_chipset () >= 0);
 		}
 	}
 
@@ -8718,15 +8738,15 @@ static void vsync_handler_pre (void)
 	bool waspaused = false;
 	while (handle_events()) {
 		if (!waspaused) {
-			render_screen(true);
-			show_screen(0);
+			render_screen(0, 1, true);
+			show_screen(0, 0);
 			waspaused = true;
 		}
 		// we are paused, do all config checks but don't do any emulation
 		if (vsync_handle_check()) {
 			redraw_frame();
-			render_screen(true);
-			show_screen(0);
+			render_screen(0, 1, true);
+			show_screen(0, 0);
 		}
 		config_check_vsync();
 	}
@@ -8754,6 +8774,16 @@ static void vsync_handler_pre (void)
 // emulated hardware vsync
 static void vsync_handler_post (void)
 {
+	int monid = 0;
+	static frame_time_t prevtime;
+
+	//write_log (_T("%d %d %d\n"), vsynctimebase, read_processor_time () - vsyncmintime, read_processor_time () - prevtime);
+	prevtime = read_processor_time ();
+
+#if CUSTOM_DEBUG > 1
+	if ((intreq & 0x0020) && (intena & 0x0020))
+		write_log (_T("vblank interrupt not cleared\n"));
+#endif
 	DISK_vsync ();
 
 #ifdef WITH_LUA
@@ -8792,12 +8822,12 @@ static void vsync_handler_post (void)
 	if (lof_togglecnt_lace >= LOF_TOGGLES_NEEDED) {
 		interlace_changed = notice_interlace_seen (true);
 		if (interlace_changed) {
-			notice_screen_contents_lost();
+			notice_screen_contents_lost(monid);
 		}
 	} else if (lof_togglecnt_nlace >= LOF_TOGGLES_NEEDED) {
 		interlace_changed = notice_interlace_seen (false);
 		if (interlace_changed) {
-			notice_screen_contents_lost();
+			notice_screen_contents_lost(monid);
 		}
 	}
 	if (lof_changing) {
@@ -9067,7 +9097,9 @@ static void events_dmal(int hp)
 {
 	if (!dmal)
 		return;
-	if (currprefs.cpu_compatible) {
+	if (currprefs.cachesize) {
+		dmal_func2(0);
+	} else if (currprefs.cpu_compatible) {
 		while (dmal) {
 			if (dmal & 3)
 				break;
@@ -9077,8 +9109,6 @@ static void events_dmal(int hp)
 		}
 		event2_newevent2(hp, dmal_hpos + ((dmal & 2) ? 1 : 0), dmal_func);
 		dmal &= ~3;
-	} else if (currprefs.cachesize) {
-		dmal_func2(0);
 	} else {
 		event2_newevent2(hp, 13, dmal_func2);
 	}
@@ -9128,19 +9158,19 @@ static bool is_custom_vsync (void)
 	return false;
 }
 
-//static bool do_render_slice(int mode, int slicecnt, int lastline)
-//{
-//	draw_lines(lastline, slicecnt);
-//	render_screen(true);
-//	return true;
-//}
-//
-//static bool do_display_slice(void)
-//{
-//	show_screen(-1);
-//	inputdevice_hsync(true);
-//	return true;
-//}
+static bool do_render_slice(int mode, int slicecnt, int lastline)
+{
+	draw_lines(lastline, slicecnt);
+	render_screen(0, mode, true);
+	return true;
+}
+
+static bool do_display_slice(void)
+{
+	show_screen(0, -1);
+	inputdevice_hsync(true);
+	return true;
+}
 
 static void set_hpos (void)
 {
@@ -9155,7 +9185,7 @@ static void hsync_handler_pre (bool onvsync)
 {
 	int hpos = current_hpos ();
 
-	if (!nocustom()) {
+	if (!nocustom ()) {
 		/* Using 0x8A makes sure that we don't accidentally trip over the
 			modified_regtypes check.  */
 		sync_copper_with_cpu (maxhpos, 0, 0x8A);
@@ -10505,7 +10535,8 @@ void custom_reset (bool hardreset, bool keyboardreset)
 
 	target_reset ();
 	devices_reset(hardreset);
-	write_log(_T("Reset at %08X. Chipset mask = %08X\n"), M68K_GETPC, currprefs.chipset_mask);
+	write_log (_T("Reset at %08X. Chipset mask = %08X\n"), M68K_GETPC, currprefs.chipset_mask);
+	//memory_map_dump ();
 
 	lightpen_active = 0;
 	lightpen_triggered = 0;
@@ -10585,6 +10616,8 @@ void custom_reset (bool hardreset, bool keyboardreset)
 		blt_info.blit_interrupt = 1;
 		init_sprites ();
 	}
+
+	//specialmonitor_reset();
 
 	unset_special (~(SPCFLAG_BRK | SPCFLAG_MODE_CHANGE));
 
@@ -11658,7 +11691,7 @@ uae_u8 *save_custom (int *len, uae_u8 *dstptr, int full)
 	return dstbak;
 }
 
-uae_u8 *restore_custom_agacolors(uae_u8 *src)
+uae_u8 *restore_custom_agacolors (uae_u8 *src)
 {
 	int i;
 
@@ -12089,11 +12122,15 @@ static int dma_cycle(uaecptr addr, uae_u16 v, int *mode)
 				}
 				break;
 			}
+#if 0
+			decide_blitter(hpos);
+#else
 			// CPU write must be done at the same time with blitter idle cycles
 			if (decide_blitter_maybe_write(hpos, addr, v)) {
 				// inform caller that write was already done
 				*mode = -2;
 			}
+#endif
 			// copper may have been waiting for the blitter
 			sync_copper (hpos);
 		}
@@ -12101,7 +12138,7 @@ static int dma_cycle(uaecptr addr, uae_u16 v, int *mode)
 			alloc_cycle (hpos_old, CYCLE_CPU);
 			break;
 		}
-		if (debug_dma && blt_info.nasty_cnt >= BLIT_NASTY_CPU_STEAL_CYCLE_COUNT) {
+		if (debug_dma && !blitpri && blt_info.nasty_cnt >= BLIT_NASTY_CPU_STEAL_CYCLE_COUNT) {
 			record_dma_event(DMA_EVENT_CPUBLITTERSTEAL, hpos_old, vpos);
 		}
 
@@ -12111,12 +12148,6 @@ static int dma_cycle(uaecptr addr, uae_u16 v, int *mode)
 	}
 	blt_info.nasty_cnt = 0;
 	return hpos_old;
-}
-
-STATIC_INLINE void checknasty (int hpos, int vpos)
-{
-	if (blt_info.blitter_nasty >= BLIT_NASTY_CPU_STEAL_CYCLE_COUNT && !(dmacon & DMA_BLITPRI))
-		record_dma_event (DMA_EVENT_BLITNASTY, hpos, vpos);
 }
 
 static void sync_ce020 (void)
@@ -12154,10 +12185,10 @@ uae_u32 wait_cpu_cycle_read (uaecptr addr, int mode)
 		else
 			reg |= 1;
 		record_dma_read(reg, addr, hpos, vpos, DMARECORD_CPU, mode == -2 || mode == 2 ? 0 : 1);
-		checknasty (hpos, vpos);
 	}
 	peekdma_data.mask = 0;
 #endif
+
 	switch(mode)
 	{
 		case -1:
@@ -12209,7 +12240,6 @@ uae_u32 wait_cpu_cycle_read_ce020 (uaecptr addr, int mode)
 		else
 			reg |= 1;
 		record_dma_read(reg, addr, hpos, vpos, DMARECORD_CPU, mode == -2 || mode == 2 ? 0 : 1);
-		checknasty (hpos, vpos);
 	}
 	peekdma_data.mask = 0;
 #endif
@@ -12261,7 +12291,6 @@ void wait_cpu_cycle_write (uaecptr addr, int mode, uae_u32 v)
 		else
 			reg |= 1;
 		record_dma_write(reg, v, addr, hpos, vpos, DMARECORD_CPU, 1);
-		checknasty (hpos, vpos);
 	}
 	peekdma_data.mask = 0;
 #endif
@@ -12299,7 +12328,6 @@ void wait_cpu_cycle_write_ce020 (uaecptr addr, int mode, uae_u32 v)
 		else
 			reg |= 1;
 		record_dma_write(reg, v, addr, hpos, vpos, DMARECORD_CPU, 1);
-		checknasty (hpos, vpos);
 	}
 	peekdma_data.mask = 0;
 #endif

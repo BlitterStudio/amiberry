@@ -1,6 +1,5 @@
-#include <string.h>
-#include <stdio.h>
-#include <stdbool.h>
+#include <cstring>
+#include <cstdio>
 
 #include <guisan.hpp>
 #include <SDL_ttf.h>
@@ -10,7 +9,6 @@
 #include "SelectorEntry.hpp"
 
 #include "sysdeps.h"
-#include "xwin.h"
 #include "gui.h"
 #include "savestate.h"
 #include "gui_handling.h"
@@ -91,10 +89,14 @@ public:
 		}
 		else if (actionEvent.getSource() == cmdSaveState)
 		{
+			if (changed_prefs.mountitems)
+			{
+				ShowMessage("Error: Cannot create Savestate", "Savestates do not currently work with HDDs!", "", "Ok", "");
+			}
 			//------------------------------------------
 			// Save current state
 			//------------------------------------------
-			if (emulating)
+			else if (emulating)
 			{
 				savestate_initsave(savestate_fname, 1, true, true);
 				save_state(savestate_fname, "...");

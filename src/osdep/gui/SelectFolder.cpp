@@ -1,9 +1,8 @@
-#include <stdbool.h>
 #include <sys/types.h>
 #include <dirent.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
+#include <cstdlib>
+#include <cstring>
+#include <cstdio>
 
 #include <guisan.hpp>
 #include <SDL_ttf.h>
@@ -19,6 +18,7 @@
 #include "options.h"
 #include "inputdevice.h"
 #include "amiberry_gfx.h"
+#include "amiberry_input.h"
 
 #ifdef ANDROID
 #include "androidsdl_event.h"
@@ -249,6 +249,7 @@ static void SelectFolderLoop()
 	auto got_event = 0;
 	SDL_Event event;
 	SDL_Event touch_event;
+	struct didata* did = &di_joystick[0];
 	while (SDL_PollEvent(&event))
 	{
 		switch (event.type)
@@ -280,47 +281,91 @@ static void SelectFolderLoop()
 			}
 			break;
 
-		case SDL_CONTROLLERBUTTONDOWN:
-			if (gui_controller)
+		case SDL_JOYBUTTONDOWN:
+		case SDL_JOYHATMOTION:
+			if (gui_joystick)
 			{
 				got_event = 1;
-				if (SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_A) ||
-					SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_B))
+				const int hat = SDL_JoystickGetHat(gui_joystick, 0);
+				
+				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_A]) ||
+					SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_B]))
 				{
 					PushFakeKey(SDLK_RETURN);
 					break;
 				}
 
-				if (SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_X) ||
-					SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_Y) ||
-					SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_START))
+				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_X]) ||
+					SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_Y]) ||
+					SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_START]))
 				{
 					dialogFinished = true;
 					break;
 				}
 
-				if (SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_DPAD_LEFT))
+				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_DPAD_LEFT]) || hat & SDL_HAT_LEFT)
 				{
 					navigate_left();
 					break;
 				}
 
-				if (SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_DPAD_RIGHT))
+				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_DPAD_RIGHT]) || hat & SDL_HAT_RIGHT)
 				{
 					navigate_right();
 					break;
 				}
 
-				if (SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_DPAD_UP))
+				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_DPAD_UP]) || hat & SDL_HAT_UP)
 				{
 					PushFakeKey(SDLK_UP);
 					break;
 				}
 
-				if (SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_DPAD_DOWN))
+				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_DPAD_DOWN]) || hat & SDL_HAT_DOWN)
 				{
 					PushFakeKey(SDLK_DOWN);
 					break;
+				}
+			}
+			break;
+
+		case SDL_JOYAXISMOTION:
+			if (gui_joystick)
+			{
+				got_event = 1;
+				if (event.jaxis.axis == SDL_CONTROLLER_AXIS_LEFTX)
+				{
+					if (event.jaxis.value > joystick_dead_zone && last_x != 1)
+					{
+						last_x = 1;
+						navigate_right();
+						break;
+					}
+					if (event.jaxis.value < -joystick_dead_zone && last_x != -1)
+					{
+						last_x = -1;
+						navigate_left();
+						break;
+					}
+					if (event.jaxis.value > -joystick_dead_zone && event.jaxis.value < joystick_dead_zone)
+						last_x = 0;
+				}
+				else if (event.jaxis.axis == SDL_CONTROLLER_AXIS_LEFTY)
+				{
+					if (event.jaxis.value < -joystick_dead_zone && last_y != -1)
+					{
+						last_y = -1;
+						PushFakeKey(SDLK_UP);
+						break;
+					}
+					if (event.jaxis.value > joystick_dead_zone && last_y != 1)
+					{
+						last_y = 1;
+						PushFakeKey(SDLK_DOWN);
+						break;
+					}
+					if (event.jaxis.value > -joystick_dead_zone && event.jaxis.value < joystick_dead_zone)
+						last_y = 0;
 				}
 			}
 			break;
@@ -387,6 +432,7 @@ static void SelectFolderLoop()
 	{
 		// Now we let the Gui object perform its logic.
 		uae_gui->logic();
+		SDL_RenderClear(sdl_renderer);
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
 		// Finally we update the screen.
@@ -405,6 +451,7 @@ bool SelectFolder(const char* title, char* value)
 
 	// Prepare the screen once
 	uae_gui->logic();
+	SDL_RenderClear(sdl_renderer);
 	uae_gui->draw();
 	update_gui_screen();
 
@@ -412,15 +459,13 @@ bool SelectFolder(const char* title, char* value)
 	{
 		const auto start = SDL_GetPerformanceCounter();
 		SelectFolderLoop();
-		cap_fps(start, 60);
+		cap_fps(start);
 	}
 
 	ExitSelectFolder();
 	if (dialogResult)
 	{
 		strncpy(value, workingDir, MAX_DPATH);
-		if (value[strlen(value) - 1] != '/')
-			strncat(value, "/", MAX_DPATH - 1);
 	}
 	return dialogResult;
 }

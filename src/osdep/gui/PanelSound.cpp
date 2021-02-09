@@ -54,6 +54,8 @@ static gcn::Slider* sldFloppySoundDisk;
 static gcn::Window* grpSoundBufferSize;
 static gcn::Slider* sldSoundBufferSize;
 static gcn::Label* lblSoundBufferSize;
+static gcn::RadioButton* optSoundPull;
+static gcn::RadioButton* optSoundPush;
 
 static int curr_separation_idx;
 static int curr_stereodelay_idx;
@@ -398,6 +400,11 @@ public:
 					changed_prefs.sound_maxbsiz = sndbufsizes[v - 1];
 			}
 		}
+
+		else if (actionEvent.getSource() == optSoundPull)
+			changed_prefs.sound_pullmode = 1;
+		else if (actionEvent.getSource() == optSoundPush)
+			changed_prefs.sound_pullmode = 0;
 		
 		RefreshPanelSound();
 	}
@@ -555,6 +562,14 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	sldSoundBufferSize->setId("sldSoundBufferSize");
 	sldSoundBufferSize->addActionListener(sound_action_listener);
 	lblSoundBufferSize = new gcn::Label("Min");
+
+	optSoundPull = new gcn::RadioButton("Pull audio", "radioaudiomethod");
+	optSoundPull->setId("optSoundPull");
+	optSoundPull->addActionListener(sound_action_listener);
+
+	optSoundPush = new gcn::RadioButton("Push audio", "radioaudiomethod");
+	optSoundPush->setId("optSoundPush");
+	optSoundPush->addActionListener(sound_action_listener);
 	
 	grpSound = new gcn::Window("Sound Emulation");
 	grpSound->add(optSoundDisabled, 10, 10);
@@ -616,6 +631,8 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	grpSoundBufferSize = new gcn::Window("Sound Buffer Size");
 	grpSoundBufferSize->add(sldSoundBufferSize, DISTANCE_BORDER * 2, 10);
 	grpSoundBufferSize->add(lblSoundBufferSize, sldSoundBufferSize->getX() + sldSoundBufferSize->getWidth() + DISTANCE_NEXT_X, sldSoundBufferSize->getY());
+	grpSoundBufferSize->add(optSoundPull, DISTANCE_BORDER * 2, sldSoundBufferSize->getY() + sldSoundBufferSize->getHeight() + DISTANCE_NEXT_Y);
+	grpSoundBufferSize->add(optSoundPush, optSoundPull->getX(), optSoundPull->getY() + optSoundPull->getHeight() + DISTANCE_NEXT_Y);
 	grpSoundBufferSize->setMovable(false);
 	grpSoundBufferSize->setSize(category.panel->getWidth() - grpFloppySound->getWidth() - DISTANCE_NEXT_X - DISTANCE_BORDER * 2, grpFloppySound->getHeight());
 	grpSoundBufferSize->setTitleBarHeight(TITLEBAR_HEIGHT);
@@ -677,6 +694,8 @@ void ExitPanelSound()
 	delete grpFloppySound;
 	delete sldSoundBufferSize;
 	delete lblSoundBufferSize;
+	delete optSoundPull;
+	delete optSoundPush;
 	delete grpSoundBufferSize;
 	delete sound_action_listener;
 }
@@ -815,6 +834,11 @@ void RefreshPanelSound()
 		sldSoundBufferSize->setValue(bufsize);
 	}
 
+	if (changed_prefs.sound_pullmode)
+		optSoundPull->setSelected(true);
+	else
+		optSoundPush->setSelected(true);
+	
 	const auto enabled = changed_prefs.produce_sound > 0;
 	cboChannelMode->setEnabled(enabled);
 	lblFrequency->setEnabled(enabled);

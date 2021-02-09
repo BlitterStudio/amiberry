@@ -1,5 +1,3 @@
-#include <stdbool.h>
-
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>

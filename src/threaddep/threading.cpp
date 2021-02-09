@@ -11,8 +11,8 @@ int uae_start_thread_fast(uae_thread_function fn, void* arg, uae_thread_id* thre
 int uae_start_thread(const char* name, uae_thread_function fn, void* arg, uae_thread_id* tid)
 {
 	auto result = 1;
-	if (name != NULL) {
-		write_log("uae_start_tread \"%s\" function at %p arg %p\n", name,
+	if (name != nullptr) {
+		write_log("uae_start_thread \"%s\" function at %p arg %p\n", name,
 			fn, arg);
 	}
 	else
@@ -27,30 +27,34 @@ int uae_start_thread(const char* name, uae_thread_function fn, void* arg, uae_th
 	if (tid) {
 		*tid = thread_id;
 	}
-	/*else if (thread_id) {
-		SDL_WaitThread(thread_id, NULL);
-	}*/
 	return result;
 }
 
 int uae_wait_thread(uae_thread_id* thread)
 {
-	SDL_WaitThread(*thread, NULL);
+	if (thread)
+	{
+		SDL_WaitThread(*thread, nullptr);
+		*thread = nullptr;
+	}
 	return 0;
 }
 
 void uae_end_thread(uae_thread_id* thread)
 {
-	if (thread)
-	{
-		SDL_WaitThread(*thread, NULL);
-		*thread = NULL;
-	}
+	uae_wait_thread(thread);
 }
 
-int uae_sem_init(uae_sem_t* sem, int dummy, int init)
+int uae_sem_init(uae_sem_t* sem, int dummy, int initial_state)
 {
-	*sem = SDL_CreateSemaphore(init);
+	if(*sem)
+	{
+		SDL_SemPost(*sem);
+	}
+	else
+	{
+		*sem = SDL_CreateSemaphore(initial_state);
+	}
 	return *sem == nullptr;
 }
 

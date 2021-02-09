@@ -575,7 +575,7 @@ static bool cdda_play_func2 (struct cdunit *cdu, int *outpos)
 				diff = 0;
 #endif
 				if (idleframes >= 0 && diff < 0 && cdu->cdda_play > 0)
-				sleep_millis(-diff);
+					sleep_millis(-diff);
 				setstate (cdu, AUDIO_STATUS_IN_PROGRESS, cdda_pos);
 			}
 

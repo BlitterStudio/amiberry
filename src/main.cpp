@@ -112,32 +112,38 @@ void discard_prefs(struct uae_prefs *p, int type)
 #endif
 }
 
-static void fixup_prefs_dim2(struct wh* wh)
+static void fixup_prefs_dim2(int monid, struct wh* wh)
 {
 	if (wh->special)
 		return;
 	if (wh->width < 160) {
-		error_log (_T("Width (%d) must be at least 160."), wh->width);
+		if (!monid)
+			error_log(_T("Width (%d) must be at least 160."), wh->width);
 		wh->width = 160;
 	}
 	if (wh->height < 128) {
-		error_log (_T("Height (%d) must be at least 128."), wh->height);
+		if (!monid)
+			error_log(_T("Height (%d) must be at least 128."), wh->height);
 		wh->height = 128;
 	}
-	if (wh->width > 1920) {
-		error_log (_T("Width (%d) max is %d."), wh->width, max_uae_width);
-		wh->width = 1920;
+	if (wh->width > max_uae_width) {
+		if (!monid)
+			error_log(_T("Width (%d) max is %d."), wh->width, max_uae_width);
+		wh->width = max_uae_width;
 	}
-	if (wh->height > 1080) {
-		error_log (_T("Height (%d) max is %d."), wh->height, max_uae_height);
-		wh->height = 1080;
+	if (wh->height > max_uae_height) {
+		if (!monid)
+			error_log(_T("Height (%d) max is %d."), wh->height, max_uae_height);
+		wh->height = max_uae_height;
 	}
 }
 
 void fixup_prefs_dimensions (struct uae_prefs *prefs)
 {
-	fixup_prefs_dim2(&prefs->gfx_monitor.gfx_size_fs);
-	fixup_prefs_dim2(&prefs->gfx_monitor.gfx_size_win);
+	for (int i = 0; i < MAX_AMIGADISPLAYS; i++) {
+		fixup_prefs_dim2(i, &prefs->gfx_monitor[i].gfx_size_fs);
+		fixup_prefs_dim2(i, &prefs->gfx_monitor[i].gfx_size_win);
+	}
 	
 	if (prefs->gfx_apmode[1].gfx_vsync > 0)
 		prefs->gfx_apmode[1].gfx_vsyncmode = 1;
@@ -925,6 +931,10 @@ static void parse_cmdline_and_init_file (int argc, TCHAR **argv)
 	if (! target_cfgfile_load (&currprefs, optionsfile, CONFIG_TYPE_DEFAULT, default_config)) {
 		write_log (_T("failed to load config '%s'\n"), optionsfile);
 	}
+	else
+	{
+		config_loaded = true;
+	}
 	fixup_prefs (&currprefs, false);
 
 	parse_cmdline (argc, argv);
@@ -1063,22 +1073,6 @@ void check_error_sdl(const bool check, const char* message)
 
 static int real_main2 (int argc, TCHAR **argv)
 {
-	if (
-#ifdef USE_DISPMANX
-		SDL_Init(SDL_INIT_TIMER
-			| SDL_INIT_AUDIO
-			| SDL_INIT_JOYSTICK
-			| SDL_INIT_HAPTIC
-			| SDL_INIT_GAMECONTROLLER
-			| SDL_INIT_EVENTS) != 0
-#else
-		SDL_Init(SDL_INIT_EVERYTHING) != 0
-#endif
-		)
-	{
-		printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
-		abort();
-	}
 	keyboard_settrans();
 	set_config_changed();
 	if (restart_config[0]) {
@@ -1092,7 +1086,6 @@ static int real_main2 (int argc, TCHAR **argv)
 
 	if (restart_config[0]) {
 		parse_cmdline_and_init_file(argc, argv);
-		config_loaded = true;
 	}
 	else
 		copy_prefs(&changed_prefs, &currprefs);

@@ -2,21 +2,20 @@
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
+
 #include "SelectorEntry.hpp"
 
 #include "sysdeps.h"
 #include "options.h"
 #include "gui_handling.h"
 #include "inputdevice.h"
-
-#if 0
-#ifdef ANDROID
-#include <SDL_android.h>
-#endif
-#endif
+#include "amiberry_input.h"
 
 #define MAX_PORTSUBMODES 16
 static int portsubmodes[MAX_PORTSUBMODES];
+static int retroarch_kb = 0;
+static int joysticks = 0;
+static int mice = 0;
 
 static const int mousespeed_values[] = { 50, 75, 100, 125, 150 };
 static const int digital_joymousespeed_values[] = { 2, 5, 10, 15, 20 };
@@ -143,14 +142,11 @@ public:
 			auto v = id->getSelected();
 			if (v >= 0)
 			{
-				auto max = JSEM_LASTKBD + inputdevice_get_device_total(IDTYPE_JOYSTICK);
+				auto max = JSEM_LASTKBD + joysticks;
 				if (i < 2)
-					max += inputdevice_get_device_total(IDTYPE_MOUSE);
+					max += mice;
 				v -= 1;
-				if (v < 0) {
-					*port = JPORT_NONE;
-				}
-				else if (v >= max + MAX_JPORTS_CUSTOM) {
+				if (v < 0 || v >= max + MAX_JPORTS_CUSTOM) {
 					*port = JPORT_NONE;
 				}
 				else if (v >= max) {
@@ -159,8 +155,8 @@ public:
 				else if (v < JSEM_LASTKBD) {
 					*port = JSEM_KBDLAYOUT + (int)v;
 				}
-				else if (v >= JSEM_LASTKBD + inputdevice_get_device_total(IDTYPE_JOYSTICK)) {
-					*port = JSEM_MICE + (int)v - inputdevice_get_device_total(IDTYPE_JOYSTICK) - JSEM_LASTKBD;
+				else if (v >= JSEM_LASTKBD + joysticks) {
+					*port = JSEM_MICE + (int)v - joysticks - JSEM_LASTKBD;
 				}
 				else {
 					*port = JSEM_JOYS + (int)v - JSEM_LASTKBD;
@@ -282,6 +278,10 @@ static InputActionListener* inputActionListener;
 
 void InitPanelInput(const struct _ConfigCategory& category)
 {
+	retroarch_kb = get_retroarch_kb_num();
+	joysticks = inputdevice_get_device_total(IDTYPE_JOYSTICK);
+	mice = inputdevice_get_device_total(IDTYPE_MOUSE);
+	
 	if (ctrlPortList.getNumberOfElements() == 0)
 	{
 		auto idx = 0;
@@ -304,18 +304,22 @@ void InitPanelInput(const struct _ConfigCategory& category)
 		ctrlPortList.add_element("Keyrah Layout (Cursor, Space/RAlt=Fire, RShift=2nd Fire)");
 		portListIDs[idx] = JSEM_KBDLAYOUT + 3;
 
-		idx++;
-		ctrlPortList.add_element("iPac Layout (Cursor, LAlt/LCtrl=Fire, Space=2nd Fire)");
-		portListIDs[idx] = JSEM_KBDLAYOUT + 4;
+		for (auto j = 0; j < 4; j++)
+		{
+			auto element = "Retroarch KBD as Joystick Player" + std::to_string(j + 1);
+			ctrlPortList.add_element(element.c_str());
+			idx++;
+			portListIDs[idx] = JSEM_KBDLAYOUT + j + 4;
+		}
 		
-		for (auto j = 0; j < inputdevice_get_device_total(IDTYPE_JOYSTICK); j++)
+		for (auto j = 0; j < joysticks; j++)
 		{
 			ctrlPortList.add_element(inputdevice_get_device_name(IDTYPE_JOYSTICK, j));
 			idx++;
 			portListIDs[idx] = JSEM_JOYS + j;
 		}
 
-		for (auto j = 0; j < inputdevice_get_device_total(IDTYPE_MOUSE); j++)
+		for (auto j = 0; j < mice; j++)
 		{
 			ctrlPortList.add_element(inputdevice_get_device_name(IDTYPE_MOUSE, j));
 			idx++;

@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <VisualGDBProjectSettings2 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
-  <ConfigurationName>Debug</ConfigurationName>
+  <ConfigurationName>Release</ConfigurationName>
   <Project xsi:type="com.visualgdb.project.linux">
     <CustomSourceDirectories>
       <Directories />
@@ -25,13 +25,12 @@
       <Version>
         <GCC>8.3.0</GCC>
         <GDB>8.2.1</GDB>
-        <Revision>3</Revision>
+        <Revision>2</Revision>
       </Version>
     </ToolchainID>
-    <ProjectFile>Amiberry.vcxproj</ProjectFile>
+    <ProjectFile>guisan.vcxproj</ProjectFile>
     <RemoteBuildEnvironment>
       <Records />
-      <EnvironmentSetupFiles />
     </RemoteBuildEnvironment>
     <ParallelJobCount>1</ParallelJobCount>
     <SuppressDirectoryChangeMessages>true</SuppressDirectoryChangeMessages>

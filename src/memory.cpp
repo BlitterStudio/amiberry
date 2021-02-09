@@ -53,7 +53,7 @@ addrbank* get_mem_bank_real(uaecptr addr)
 }
 #endif
 
-bool canbang;
+bool canbang = true;
 static bool rom_write_enabled;
 #ifdef JIT
 /* Set by each memory handler that does not simply access real memory. */
@@ -2968,7 +2968,7 @@ static void ppc_generate_map_banks(addrbank *bank, int start, int size)
 			baseaddr += bankaddr - bank->start;
 		}
 		// ABFLAG_PPCIOSPACE = map as indirect even if baseaddr is non-NULL
-		ppc_map_banks(bankaddr, banksize, bank->name, (bank->flags & ABFLAG_PPCIOSPACE) ? NULL: baseaddr, bank == &dummy_bank);
+		ppc_map_banks(bankaddr, banksize, bank->name, (bank->flags & ABFLAG_PPCIOSPACE) ? NULL : baseaddr, bank == &dummy_bank);
 	}
 }
 #endif
@@ -3064,7 +3064,7 @@ bool validate_banks_z2(addrbank *bank, int start, int size)
 	}
 	for (int i = start; i < start + size; i++) {
 		addrbank *ab = &get_mem_bank(start << 16);
-		if (ab != &dummy_bank) {
+		if (ab != &dummy_bank && bank != &dummy_bank) {
 			error_log(_T("Z2 map_banks(%s) attempting to override existing memory bank '%s' at %08x!\n"), bank->name, ab->name, i << 16);
 			return false;
 		}

@@ -5,10 +5,6 @@
       <Configuration>Debug</Configuration>
       <Platform>VisualGDB</Platform>
     </ProjectConfiguration>
-    <ProjectConfiguration Include="Release-Strip|VisualGDB">
-      <Configuration>Release-Strip</Configuration>
-      <Platform>VisualGDB</Platform>
-    </ProjectConfiguration>
     <ProjectConfiguration Include="Release|VisualGDB">
       <Configuration>Release</Configuration>
       <Platform>VisualGDB</Platform>
@@ -23,7 +19,6 @@
   </PropertyGroup>
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Strip|VisualGDB'" Label="Configuration" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
@@ -33,21 +28,14 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
     <GNUConfigurationType>Debug</GNUConfigurationType>
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
-    <ToolchainVersion>8.3.0/8.2.1/r2</ToolchainVersion>
+    <ToolchainVersion>8.3.0/8.2.1/r3</ToolchainVersion>
     <GNUTargetType>StaticLibrary</GNUTargetType>
-    <OutDir>$(SolutionDir)..\..\external\libguisan\lib\</OutDir>
+    <OutDir>..\..\external\libguisan\lib</OutDir>
     <TargetName>lib$(ProjectName)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
-    <ToolchainVersion>8.3.0/8.2.1/r2</ToolchainVersion>
-    <GNUTargetType>StaticLibrary</GNUTargetType>
-    <OutDir>$(SolutionDir)..\..\external\libguisan\lib\</OutDir>
-    <TargetName>lib$(ProjectName)</TargetName>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Strip|VisualGDB'">
-    <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
-    <ToolchainVersion>8.3.0/8.2.1/r2</ToolchainVersion>
+    <ToolchainVersion>8.3.0/8.2.1/r3</ToolchainVersion>
     <GNUTargetType>StaticLibrary</GNUTargetType>
     <OutDir>$(SolutionDir)..\..\external\libguisan\lib\</OutDir>
     <TargetName>lib$(ProjectName)</TargetName>
@@ -78,21 +66,6 @@
       <LibrarySearchDirectories>=/usr/local/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
       <AdditionalLibraryNames>SDL2;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript />
-    </Link>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Strip|VisualGDB'">
-    <ClCompile>
-      <CPPLanguageStandard>GNUPP14</CPPLanguageStandard>
-      <AdditionalIncludeDirectories>=/usr/local/include/SDL2;=/usr/include/SDL2;../../external/libguisan/include;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;_REENTRANT;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>-march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard %(AdditionalOptions)</AdditionalOptions>
-    </ClCompile>
-    <Link>
-      <AdditionalLinkerInputs>;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
-      <LibrarySearchDirectories>=/usr/local/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
-      <AdditionalLibraryNames>SDL2;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
-      <LinkerScript>
-      </LinkerScript>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

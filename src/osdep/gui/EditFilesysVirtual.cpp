@@ -1,6 +1,5 @@
-#include <stdbool.h>
-#include <string.h>
-#include <stdio.h>
+#include <cstring>
+#include <cstdio>
 
 #include <guisan.hpp>
 #include <SDL_ttf.h>
@@ -15,8 +14,8 @@
 #include "autoconf.h"
 #include "gui_handling.h"
 
-#include "inputdevice.h"
 #include "amiberry_gfx.h"
+#include "amiberry_input.h"
 
 #ifdef ANDROID
 #include "androidsdl_event.h"
@@ -212,15 +211,16 @@ static void EditFilesysVirtualLoop()
 {
 	//FocusBugWorkaround(wndEditFilesysVirtual);
 
-	int gotEvent = 0;
+	int got_event = 0;
 	SDL_Event event;
 	SDL_Event touch_event;
+	struct didata* did = &di_joystick[0];
 	while (SDL_PollEvent(&event))
 	{
 		switch (event.type)
 		{
 		case SDL_KEYDOWN:
-			gotEvent = 1;
+			got_event = 1;
 			switch (event.key.keysym.sym)
 			{
 			case VK_ESCAPE:
@@ -258,47 +258,50 @@ static void EditFilesysVirtualLoop()
 			}
 			break;
 
-		case SDL_CONTROLLERBUTTONDOWN:
-			if (gui_controller)
+		case SDL_JOYBUTTONDOWN:
+		case SDL_JOYHATMOTION:
+			if (gui_joystick)
 			{
-				gotEvent = 1;
-				if (SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_DPAD_UP)) // dpad
+				got_event = 1;
+				const int hat = SDL_JoystickGetHat(gui_joystick, 0);
+				
+				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_DPAD_UP]) || (hat & SDL_HAT_UP)) // dpad
 				{
 					if (HandleNavigation(DIRECTION_UP))
 						continue; // Don't change value when enter Slider -> don't send event to control
 					PushFakeKey(SDLK_UP);
 					break;
 				}
-				if (SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_DPAD_DOWN)) // dpad
+				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_DPAD_DOWN]) || (hat & SDL_HAT_DOWN)) // dpad
 				{
 					if (HandleNavigation(DIRECTION_DOWN))
 						continue; // Don't change value when enter Slider -> don't send event to control
 					PushFakeKey(SDLK_DOWN);
 					break;
 				}
-				if (SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_DPAD_RIGHT)) // dpad
+				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_DPAD_RIGHT]) || (hat & SDL_HAT_RIGHT)) // dpad
 				{
 					if (HandleNavigation(DIRECTION_RIGHT))
 						continue; // Don't change value when enter Slider -> don't send event to control
 					PushFakeKey(SDLK_RIGHT);
 					break;
 				}
-				if (SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_DPAD_LEFT)) // dpad
+				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_DPAD_LEFT]) || (hat & SDL_HAT_LEFT)) // dpad
 				{
 					if (HandleNavigation(DIRECTION_LEFT))
 						continue; // Don't change value when enter Slider -> don't send event to control
 					PushFakeKey(SDLK_LEFT);
 					break;
 				}
-				if (SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_A) ||
-					SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_B))
+				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_A]) ||
+					SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_B]))
 				{
 					PushFakeKey(SDLK_RETURN);
 					break;
 				}
-				if (SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_X) ||
-					SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_Y) ||
-					SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_START))
+				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_X]) ||
+					SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_Y]) ||
+					SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_START]))
 				{
 					dialogFinished = true;
 					break;
@@ -306,8 +309,57 @@ static void EditFilesysVirtualLoop()
 			}
 			break;
 
+		case SDL_JOYAXISMOTION:
+			if (gui_joystick)
+			{
+				got_event = 1;
+				if (event.jaxis.axis == SDL_CONTROLLER_AXIS_LEFTX)
+				{
+					if (event.jaxis.value > joystick_dead_zone && last_x != 1)
+					{
+						last_x = 1;
+						if (HandleNavigation(DIRECTION_RIGHT))
+							continue; // Don't change value when enter Slider -> don't send event to control
+						PushFakeKey(SDLK_RIGHT);
+						break;
+					}
+					if (event.jaxis.value < -joystick_dead_zone && last_x != -1)
+					{
+						last_x = -1;
+						if (HandleNavigation(DIRECTION_LEFT))
+							continue; // Don't change value when enter Slider -> don't send event to control
+						PushFakeKey(SDLK_LEFT);
+						break;
+					}
+					if (event.jaxis.value > -joystick_dead_zone && event.jaxis.value < joystick_dead_zone)
+						last_x = 0;
+				}
+				else if (event.jaxis.axis == SDL_CONTROLLER_AXIS_LEFTY)
+				{
+					if (event.jaxis.value < -joystick_dead_zone && last_y != -1)
+					{
+						last_y = -1;
+						if (HandleNavigation(DIRECTION_UP))
+							continue; // Don't change value when enter Slider -> don't send event to control
+						PushFakeKey(SDLK_UP);
+						break;
+					}
+					if (event.jaxis.value > joystick_dead_zone && last_y != 1)
+					{
+						last_y = 1;
+						if (HandleNavigation(DIRECTION_DOWN))
+							continue; // Don't change value when enter Slider -> don't send event to control
+						PushFakeKey(SDLK_DOWN);
+						break;
+					}
+					if (event.jaxis.value > -joystick_dead_zone && event.jaxis.value < joystick_dead_zone)
+						last_y = 0;
+				}
+			}
+			break;
+			
 		case SDL_FINGERDOWN:
-			gotEvent = 1;
+			got_event = 1;
 			memcpy(&touch_event, &event, sizeof event);
 			touch_event.type = SDL_MOUSEBUTTONDOWN;
 			touch_event.button.which = 0;
@@ -319,7 +371,7 @@ static void EditFilesysVirtualLoop()
 			break;
 
 		case SDL_FINGERUP:
-			gotEvent = 1;
+			got_event = 1;
 			memcpy(&touch_event, &event, sizeof event);
 			touch_event.type = SDL_MOUSEBUTTONUP;
 			touch_event.button.which = 0;
@@ -331,7 +383,7 @@ static void EditFilesysVirtualLoop()
 			break;
 
 		case SDL_FINGERMOTION:
-			gotEvent = 1;
+			got_event = 1;
 			memcpy(&touch_event, &event, sizeof event);
 			touch_event.type = SDL_MOUSEMOTION;
 			touch_event.motion.which = 0;
@@ -347,7 +399,7 @@ static void EditFilesysVirtualLoop()
 		case SDL_MOUSEBUTTONUP:
 		case SDL_MOUSEMOTION:
 		case SDL_MOUSEWHEEL:
-			gotEvent = 1;
+			got_event = 1;
 			break;
 			
 		default:
@@ -364,10 +416,11 @@ static void EditFilesysVirtualLoop()
 #endif
 	}
 	
-	if (gotEvent)
+	if (got_event)
 	{
 		// Now we let the Gui object perform its logic.
 		uae_gui->logic();
+		SDL_RenderClear(sdl_renderer);
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
 		// Finally we update the screen.
@@ -418,6 +471,7 @@ bool EditFilesysVirtual(const int unit_no)
 
 	// Prepare the screen once
 	uae_gui->logic();
+	SDL_RenderClear(sdl_renderer);
 	uae_gui->draw();
 	update_gui_screen();
 
@@ -425,7 +479,7 @@ bool EditFilesysVirtual(const int unit_no)
 	{
 		const auto start = SDL_GetPerformanceCounter();
 		EditFilesysVirtualLoop();
-		cap_fps(start, 60);
+		cap_fps(start);
 	}
 
 	if (dialogResult)

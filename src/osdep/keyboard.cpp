@@ -290,16 +290,29 @@ static int kb_arcadia[] = { SDL_SCANCODE_F2, -1, SDL_SCANCODE_1, -1, SDL_SCANCOD
 static int kb_keyrah[] = { SDL_SCANCODE_LEFT, -1, SDL_SCANCODE_RIGHT, -1, SDL_SCANCODE_UP, -1, SDL_SCANCODE_DOWN, -1, SDL_SCANCODE_SPACE, SDL_SCANCODE_RALT, -1, SDL_SCANCODE_RSHIFT, -1, -1 };
 static int kb_keyrah3[] = { SDL_SCANCODE_LEFT, -1, SDL_SCANCODE_RIGHT, -1, SDL_SCANCODE_UP, -1, SDL_SCANCODE_DOWN, -1, SDL_SCANCODE_SPACE, -1, SDL_SCANCODE_RSHIFT, -1, SDL_SCANCODE_RALT, -1, -1 };
 static int kb_cd32_keyrah[] = { SDL_SCANCODE_LEFT, -1, SDL_SCANCODE_RIGHT, -1, SDL_SCANCODE_UP, -1, SDL_SCANCODE_DOWN, -1, SDL_SCANCODE_SPACE, -1, SDL_SCANCODE_RALT, -1, SDL_SCANCODE_KP_7, -1, SDL_SCANCODE_KP_9, -1, SDL_SCANCODE_KP_DIVIDE, -1, SDL_SCANCODE_KP_MINUS, -1, SDL_SCANCODE_KP_MULTIPLY, -1, -1 };
-static int kb_ipac[] = { SDL_SCANCODE_LEFT, -1, SDL_SCANCODE_RIGHT, -1, SDL_SCANCODE_UP, -1, SDL_SCANCODE_DOWN, -1, SDL_SCANCODE_LALT, SDL_SCANCODE_LCTRL, -1, SDL_SCANCODE_SPACE, -1, -1 };
-static int kb_ipac3[] = { SDL_SCANCODE_LEFT, -1, SDL_SCANCODE_RIGHT, -1, SDL_SCANCODE_UP, -1, SDL_SCANCODE_DOWN, -1, SDL_SCANCODE_LALT, -1, SDL_SCANCODE_LCTRL, -1, SDL_SCANCODE_SPACE, -1, -1 };
-static int kb_cd32_ipac[] = { SDL_SCANCODE_LEFT, -1, SDL_SCANCODE_RIGHT, -1, SDL_SCANCODE_UP, -1, SDL_SCANCODE_DOWN, -1, SDL_SCANCODE_LALT, -1, SDL_SCANCODE_LCTRL, -1, SDL_SCANCODE_SPACE, -1, SDL_SCANCODE_LSHIFT, -1, SDL_SCANCODE_Z, -1, SDL_SCANCODE_X, -1, SDL_SCANCODE_2, -1, -1 };
+int kb_retroarch_player1[] = { SDL_SCANCODE_LEFT, -1, SDL_SCANCODE_RIGHT, -1, SDL_SCANCODE_UP, -1, SDL_SCANCODE_DOWN, -1, SDL_SCANCODE_LALT, SDL_SCANCODE_LCTRL, -1, SDL_SCANCODE_SPACE, -1, -1 };
+int kb_retroarch_player1_3[] = { SDL_SCANCODE_LEFT, -1, SDL_SCANCODE_RIGHT, -1, SDL_SCANCODE_UP, -1, SDL_SCANCODE_DOWN, -1, SDL_SCANCODE_LALT, -1, SDL_SCANCODE_LCTRL, -1, SDL_SCANCODE_SPACE, -1, -1 };
+int kb_cd32_retroarch_player1[] = { SDL_SCANCODE_LEFT, -1, SDL_SCANCODE_RIGHT, -1, SDL_SCANCODE_UP, -1, SDL_SCANCODE_DOWN, -1, SDL_SCANCODE_LALT, -1, SDL_SCANCODE_LCTRL, -1, SDL_SCANCODE_SPACE, -1, SDL_SCANCODE_LSHIFT, -1, SDL_SCANCODE_Z, -1, SDL_SCANCODE_X, -1, SDL_SCANCODE_2, -1, -1 };
+int kb_retroarch_player2[] = { SDL_SCANCODE_LEFT, -1, SDL_SCANCODE_RIGHT, -1, SDL_SCANCODE_UP, -1, SDL_SCANCODE_DOWN, -1, SDL_SCANCODE_LALT, SDL_SCANCODE_LCTRL, -1, SDL_SCANCODE_SPACE, -1, -1 };
+int kb_retroarch_player2_3[] = { SDL_SCANCODE_LEFT, -1, SDL_SCANCODE_RIGHT, -1, SDL_SCANCODE_UP, -1, SDL_SCANCODE_DOWN, -1, SDL_SCANCODE_LALT, -1, SDL_SCANCODE_LCTRL, -1, SDL_SCANCODE_SPACE, -1, -1 };
+int kb_cd32_retroarch_player2[] = { SDL_SCANCODE_LEFT, -1, SDL_SCANCODE_RIGHT, -1, SDL_SCANCODE_UP, -1, SDL_SCANCODE_DOWN, -1, SDL_SCANCODE_LALT, -1, SDL_SCANCODE_LCTRL, -1, SDL_SCANCODE_SPACE, -1, SDL_SCANCODE_LSHIFT, -1, SDL_SCANCODE_Z, -1, SDL_SCANCODE_X, -1, SDL_SCANCODE_2, -1, -1 };
+int kb_retroarch_player3[] = { SDL_SCANCODE_LEFT, -1, SDL_SCANCODE_RIGHT, -1, SDL_SCANCODE_UP, -1, SDL_SCANCODE_DOWN, -1, SDL_SCANCODE_LALT, SDL_SCANCODE_LCTRL, -1, SDL_SCANCODE_SPACE, -1, -1 };
+int kb_retroarch_player3_3[] = { SDL_SCANCODE_LEFT, -1, SDL_SCANCODE_RIGHT, -1, SDL_SCANCODE_UP, -1, SDL_SCANCODE_DOWN, -1, SDL_SCANCODE_LALT, -1, SDL_SCANCODE_LCTRL, -1, SDL_SCANCODE_SPACE, -1, -1 };
+int kb_cd32_retroarch_player3[] = { SDL_SCANCODE_LEFT, -1, SDL_SCANCODE_RIGHT, -1, SDL_SCANCODE_UP, -1, SDL_SCANCODE_DOWN, -1, SDL_SCANCODE_LALT, -1, SDL_SCANCODE_LCTRL, -1, SDL_SCANCODE_SPACE, -1, SDL_SCANCODE_LSHIFT, -1, SDL_SCANCODE_Z, -1, SDL_SCANCODE_X, -1, SDL_SCANCODE_2, -1, -1 };
+int kb_retroarch_player4[] = { SDL_SCANCODE_LEFT, -1, SDL_SCANCODE_RIGHT, -1, SDL_SCANCODE_UP, -1, SDL_SCANCODE_DOWN, -1, SDL_SCANCODE_LALT, SDL_SCANCODE_LCTRL, -1, SDL_SCANCODE_SPACE, -1, -1 };
+int kb_retroarch_player4_3[] = { SDL_SCANCODE_LEFT, -1, SDL_SCANCODE_RIGHT, -1, SDL_SCANCODE_UP, -1, SDL_SCANCODE_DOWN, -1, SDL_SCANCODE_LALT, -1, SDL_SCANCODE_LCTRL, -1, SDL_SCANCODE_SPACE, -1, -1 };
+int kb_cd32_retroarch_player4[] = { SDL_SCANCODE_LEFT, -1, SDL_SCANCODE_RIGHT, -1, SDL_SCANCODE_UP, -1, SDL_SCANCODE_DOWN, -1, SDL_SCANCODE_LALT, -1, SDL_SCANCODE_LCTRL, -1, SDL_SCANCODE_SPACE, -1, SDL_SCANCODE_LSHIFT, -1, SDL_SCANCODE_Z, -1, SDL_SCANCODE_X, -1, SDL_SCANCODE_2, -1, -1 };
 #endif
 
 static int* kbmaps[] = {
 	kb_np, kb_ck, kb_se, kb_np3, kb_ck3, kb_se3,
-	kb_keyrah, kb_keyrah3, kb_ipac, kb_ipac3,
+	kb_keyrah, kb_keyrah3, kb_retroarch_player1, kb_retroarch_player1_3,
+	kb_retroarch_player2, kb_retroarch_player2_3, kb_retroarch_player3, kb_retroarch_player3_3,
+	kb_retroarch_player4, kb_retroarch_player4_3,
 	kb_cd32_np, kb_cd32_ck, kb_cd32_se,
-	kb_cd32_keyrah, kb_cd32_ipac,
+	kb_cd32_keyrah, kb_cd32_retroarch_player1,
+	kb_cd32_retroarch_player2, kb_cd32_retroarch_player3,
+	kb_cd32_retroarch_player4,
 	kb_arcadia, kb_cdtv
 };
 
@@ -369,7 +382,7 @@ bool my_kbd_handler(int keyboard, int scancode, int newstate, bool alwaysrelease
 	bool special = false;
 	static int swapperdrive = 0;
 
-	if (amode && quit_key && scancode == quit_key) {
+	if (amode && quit_key.scancode && scancode == quit_key.scancode) {
 		uae_quit();
 		return true;
 	}
@@ -385,31 +398,95 @@ bool my_kbd_handler(int keyboard, int scancode, int newstate, bool alwaysrelease
 	//}
 
 	scancode_new = scancode;
-	if (!specialpressed() && inputdevice_iskeymapped(keyboard, scancode))
-		scancode = 0;
 
 	if (newstate) {
-		if (enter_gui_key && scancode == enter_gui_key)
+		if (enter_gui_key.scancode && scancode == enter_gui_key.scancode)
 		{
-			inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
-			scancode = 0;
-		}
-		
-		if (action_replay_button && scancode == action_replay_button)
-		{
-			inputdevice_add_inputcode(AKS_FREEZEBUTTON, 1, nullptr);
-			scancode = 0;
+			if ((enter_gui_key.modifiers.lctrl || enter_gui_key.modifiers.rctrl) && ctrlpressed()
+				|| (enter_gui_key.modifiers.lshift || enter_gui_key.modifiers.rshift) && shiftpressed()
+				|| (enter_gui_key.modifiers.lalt || enter_gui_key.modifiers.ralt) && altpressed()
+				|| (enter_gui_key.modifiers.lgui || enter_gui_key.modifiers.rgui) && specialpressed()
+				|| !enter_gui_key.modifiers.lctrl
+				&& !enter_gui_key.modifiers.rctrl
+				&& !enter_gui_key.modifiers.lshift
+				&& !enter_gui_key.modifiers.rshift
+				&& !enter_gui_key.modifiers.lalt
+				&& !enter_gui_key.modifiers.ralt
+				&& !enter_gui_key.modifiers.lgui
+				&& !enter_gui_key.modifiers.rgui)
+			{
+				inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
+				scancode = 0;
+			}
+			
 		}
 
-		if (fullscreen_key && scancode == fullscreen_key)
+		if (action_replay_key.scancode && scancode == action_replay_key.scancode)
 		{
-			inputdevice_add_inputcode(AKS_TOGGLEWINDOWEDFULLSCREEN, 1, nullptr);
-			scancode = 0;
+			if ((action_replay_key.modifiers.lctrl || action_replay_key.modifiers.rctrl) && ctrlpressed()
+				|| (action_replay_key.modifiers.lshift || action_replay_key.modifiers.rshift) && shiftpressed()
+				|| (action_replay_key.modifiers.lalt || action_replay_key.modifiers.ralt) && altpressed()
+				|| (action_replay_key.modifiers.lgui || action_replay_key.modifiers.rgui) && specialpressed()
+				|| !action_replay_key.modifiers.lctrl
+				&& !action_replay_key.modifiers.rctrl
+				&& !action_replay_key.modifiers.lshift
+				&& !action_replay_key.modifiers.rshift
+				&& !action_replay_key.modifiers.lalt
+				&& !action_replay_key.modifiers.ralt
+				&& !action_replay_key.modifiers.lgui
+				&& !action_replay_key.modifiers.rgui)
+			{
+				inputdevice_add_inputcode(AKS_FREEZEBUTTON, 1, nullptr);
+				scancode = 0;
+			}
+		}
+
+		if (fullscreen_key.scancode && scancode == fullscreen_key.scancode)
+		{
+			if ((fullscreen_key.modifiers.lctrl || fullscreen_key.modifiers.rctrl) && ctrlpressed()
+				|| (fullscreen_key.modifiers.lshift || fullscreen_key.modifiers.rshift) && shiftpressed()
+				|| (fullscreen_key.modifiers.lalt || fullscreen_key.modifiers.ralt) && altpressed()
+				|| (fullscreen_key.modifiers.lgui || fullscreen_key.modifiers.rgui) && specialpressed()
+				|| !fullscreen_key.modifiers.lctrl
+				&& !fullscreen_key.modifiers.rctrl
+				&& !fullscreen_key.modifiers.lshift
+				&& !fullscreen_key.modifiers.rshift
+				&& !fullscreen_key.modifiers.lalt
+				&& !fullscreen_key.modifiers.ralt
+				&& !fullscreen_key.modifiers.lgui
+				&& !fullscreen_key.modifiers.rgui)
+			{
+				inputdevice_add_inputcode(AKS_TOGGLEWINDOWEDFULLSCREEN, 1, nullptr);
+				scancode = 0;
+			}
+		}
+
+		if (minimize_key.scancode && scancode == minimize_key.scancode)
+		{
+			if ((minimize_key.modifiers.lctrl || minimize_key.modifiers.rctrl) && ctrlpressed()
+				|| (minimize_key.modifiers.lshift || minimize_key.modifiers.rshift) && shiftpressed()
+				|| (minimize_key.modifiers.lalt || minimize_key.modifiers.ralt) && altpressed()
+				|| (minimize_key.modifiers.lgui || minimize_key.modifiers.rgui) && specialpressed()
+				|| !minimize_key.modifiers.lctrl
+				&& !minimize_key.modifiers.rctrl
+				&& !minimize_key.modifiers.lshift
+				&& !minimize_key.modifiers.rshift
+				&& !minimize_key.modifiers.lalt
+				&& !minimize_key.modifiers.ralt
+				&& !minimize_key.modifiers.lgui
+				&& !minimize_key.modifiers.rgui)
+			{
+				minimizewindow(0);
+				scancode = 0;
+			}
 		}
 
 		if (scancode == SDL_SCANCODE_SYSREQ)
 			clipboard_disable(true);
 	}
+	
+	if (!specialpressed() && inputdevice_iskeymapped(keyboard, scancode))
+		scancode = 0;
 
 	if (newstate && code == 0 && amode) {
 		switch (scancode)

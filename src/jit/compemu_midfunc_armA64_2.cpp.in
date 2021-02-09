@@ -3388,7 +3388,7 @@ MIDFUNC(3,jff_DIVLS32,(RW4 d, RR4 s1, W4 rem))
 	MOV_wi(REG_WORK1, 5);
   uintptr idx = (uintptr)(&regs.jit_exception) - (uintptr)(&regs);
   STR_wXi(REG_WORK1, R_REGSTRUCT, idx);
-	B_i(7);        // end_of_op
+	B_i(8);        // end_of_op
 
 	// src is not 0  
 	SDIV_www(REG_WORK1, d, s1);
@@ -3401,6 +3401,7 @@ MIDFUNC(3,jff_DIVLS32,(RW4 d, RR4 s1, W4 rem))
 	NEG_ww(REG_WORK2, REG_WORK2);
 	
   MOV_ww(d, REG_WORK1);
+  TST_ww(d, d);
 
   // end_of_op
 	

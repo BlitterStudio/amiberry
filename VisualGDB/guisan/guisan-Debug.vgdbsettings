@@ -28,7 +28,7 @@
         <Revision>3</Revision>
       </Version>
     </ToolchainID>
-    <ProjectFile>Amiberry.vcxproj</ProjectFile>
+    <ProjectFile>guisan.vcxproj</ProjectFile>
     <RemoteBuildEnvironment>
       <Records />
       <EnvironmentSetupFiles />

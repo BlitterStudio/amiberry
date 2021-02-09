@@ -195,6 +195,9 @@ extern int decode_cloanto_rom_do (uae_u8 *mem, int size, int real_size);
 #define ROMTYPE_MASTERCARD	0x00100083
 #define ROMTYPE_DOTTO		0x00100084
 #define ROMTYPE_ALF2		0x00100085
+#define ROMTYPE_SYNTHESIS	0x00100086
+#define ROMTYPE_MASTFB		0x00100087
+#define ROMTYPE_VOODOO3		0x00100088
 
 #define ROMTYPE_NOT			0x00800000
 #define ROMTYPE_QUAD		0x01000000

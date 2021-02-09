@@ -24,7 +24,7 @@
 #include "cia.h"
 #include "inputdevice.h"
 #include "blkdev.h"
-//#include "parallel.h"
+#include "parallel.h"
 #include "autoconf.h"
 //#include "sampler.h"
 #include "newcpu.h"
@@ -215,7 +215,7 @@ void devices_reset(int hardreset)
 	uaeserialdev_reset();
 	uaeserialdev_start_threads();
 #endif
-#if defined (PARALLEL_PORT)
+#if defined (PARALLEL_PORT) || defined (AHI)
 	initparallel();
 #endif
 	//dongle_reset();
@@ -232,10 +232,10 @@ void devices_reset(int hardreset)
 
 void devices_vsync_pre(void)
 {
-	//audio_vsync (); // this is a no-op!
-	blkdev_vsync();
-	CIA_vsync_prehandler();
-	inputdevice_vsync();
+	audio_vsync ();
+	blkdev_vsync ();
+	CIA_vsync_prehandler ();
+	inputdevice_vsync ();
 	filesys_vsync ();
 	//sampler_vsync ();
 	clipboard_vsync ();
@@ -253,7 +253,7 @@ void devices_hsync(void)
 {
 	DISK_hsync();
 	audio_hsync();
-	//CIA_hsync_prehandler(); // This is a no-op!
+	CIA_hsync_prehandler();
 
 	decide_blitter (-1);
 #ifdef SERIAL_PORT
@@ -282,7 +282,9 @@ void devices_rethink(void)
 void devices_update_sound(double clk, double syncadjust)
 {
 	update_sound (clk);
+	//update_sndboard_sound (clk / syncadjust);
 	update_cda_sound(clk / syncadjust);
+	//x86_update_sound(clk / syncadjust);
 }
 
 void devices_update_sync(double svpos, double syncadjust)
@@ -310,7 +312,7 @@ void do_leave_program (void)
 #endif
 	if (! no_gui)
 		gui_exit ();
-	SDL_Quit();
+	//SDL_Quit();
 #ifdef AUTOCONFIG
 	expansion_cleanup ();
 #endif
@@ -329,7 +331,7 @@ void do_leave_program (void)
 	memory_cleanup ();
 	free_shm ();
 	cfgfile_addcfgparam (0);
-	machdep_free ();
+	//machdep_free ();
 #ifdef DRIVESOUND
 	driveclick_free();
 #endif
@@ -396,6 +398,11 @@ void devices_restore_start(void)
 	changed_prefs.mbresmem_low.size = 0;
 	changed_prefs.mbresmem_high.size = 0;
 	restore_expansion_boards(NULL);
+}
+
+void devices_syncchange(void)
+{
+	//x86_bridge_sync_change();
 }
 
 void devices_pause(void)

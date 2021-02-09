@@ -40,7 +40,7 @@ extern void dumpcustom (void);
 extern void do_copper (void);
 
 extern void notice_new_xcolors (void);
-extern void notice_screen_contents_lost();
+extern void notice_screen_contents_lost(int monid);
 extern void init_row_map (void);
 extern void init_hz_normal (void);
 extern void init_custom (void);

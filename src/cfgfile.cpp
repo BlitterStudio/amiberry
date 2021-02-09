@@ -18,6 +18,7 @@
 #include "events.h"
 #include "custom.h"
 #include "inputdevice.h"
+//#include "gfxfilter.h"
 #include "savestate.h"
 #include "memory.h"
 #include "autoconf.h"
@@ -33,6 +34,8 @@
 //#include "debug.h"
 #include "calc.h"
 #include "gfxboard.h"
+//#include "cpuboard.h"
+//#include "luascript.h"
 #include "ethernet.h"
 #include "native2amiga_api.h"
 #include "ini.h"
@@ -244,10 +247,12 @@ static const TCHAR *debugfeatures[] = { _T("segtracker"), _T("fsdebug"), 0 };
 
 #ifdef AMIBERRY
 static const TCHAR* button_remap_name[] = {
+	_T("south"), _T("east"), _T("west"), _T("north"),
+	_T("select"), _T("menu"), _T("start"),
+	_T("left_stick"), _T("right_stick"), _T("left_shoulder"), _T("right_shoulder"),
 	_T("dpad_up"), _T("dpad_down"), _T("dpad_left"), _T("dpad_right"),
-	_T("select"), _T("left_shoulder"), _T("left_stick"),
-	_T("north"), _T("south"), _T("east"), _T("west"),
-	_T("start"), _T("right_shoulder"), _T("right_stick"), nullptr
+	_T("misc1"), _T("paddle1"), _T("paddle2"), _T("paddle3"), _T("paddle4"), _T("touchpad"),
+	nullptr
 };
 
 const TCHAR* find_inputevent_name(int key)
@@ -2069,42 +2074,33 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 		}
 #ifdef AMIBERRY
 		// custom options SAVING
-		if (i < 4)
+		std::array<int, SDL_CONTROLLER_BUTTON_MAX> tempcustom{};
+		const TCHAR* namecustom;
+		
+		// get all of the custom actions
+		for (auto n = 0; n < SDL_CONTROLLER_BUTTON_MAX; ++n) // loop through all buttons
 		{
-			std::array<int, 15> tempcustom{};
-			const TCHAR* namecustom;
-
-			// this allows us to go through the available function keys
-			// currently only 'none' and 'hotkey'
-			for (auto m = 0; m < 2; ++m)
+			for (auto m = 0; m < 2; m++)
 			{
-				switch (m)
-				{
-				case 0:
+				// this allows us to go through the available function keys
+				// currently only 'none' and 'hotkey'
+				if (m == 0)
 				{
 					tempcustom = jp->amiberry_custom_none;
 					namecustom = _T("_amiberry_custom_none_");
-					break;
 				}
-				case 1:
+				else
 				{
 					tempcustom = jp->amiberry_custom_hotkey;
 					namecustom = _T("_amiberry_custom_hotkey_");
-					break;
 				}
-				}
+				const auto b = tempcustom[n];
 
-				// get all of the custom actions
-				for (auto n = 0; n < 15; ++n) // loop through all buttons
-				{
-					auto b = tempcustom[n];
+				if (b > 0) { _tcscpy(tmp2, _T(find_inputevent_name(b))); }
+				else { snprintf(tmp2, 1, "%s", ""); }
 
-					if (b > 0) { _tcscpy(tmp2, _T(find_inputevent_name(b))); }
-					else { snprintf(tmp2, 1, "%s", ""); }
-
-					_stprintf(tmp1, "joyport%d%s%s", i, namecustom, button_remap_name[n]);
-					cfgfile_dwrite_str(f, tmp1, tmp2);
-				}
+				_stprintf(tmp1, "joyport%d%s%s", i, namecustom, button_remap_name[n]);
+				cfgfile_dwrite_str(f, tmp1, tmp2);
 			}
 		}
 #endif
@@ -2120,7 +2116,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 
 #ifndef AMIBERRY
 	if (p->dongle) {
-		if (p->dongle + 1 >= sizeof(dongles) / sizeof(TCHAR*))
+		if (p->dongle + 1 >= sizeof (dongles) / sizeof (TCHAR*))
 			cfgfile_write (f, _T("dongle"), _T("%d"), p->dongle);
 		else
 			cfgfile_write_str (f, _T("dongle"), dongles[p->dongle]);
@@ -2192,12 +2188,12 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_write_str (f, _T("gfx_display_name_rtg"), target_get_display_name (p->gfx_apmode[APMODE_RTG].gfx_display, false));
 
 	cfgfile_write(f, _T("gfx_framerate"), _T("%d"), p->gfx_framerate);
-	write_resolution(f, _T("gfx_width"), _T("gfx_height"), &p->gfx_monitor.gfx_size_win); /* compatibility with old versions */
-	cfgfile_write (f, _T("gfx_top_windowed"), _T("%d"), p->gfx_monitor.gfx_size_win.y); //WinUAE has these inversed (bug?)
-	cfgfile_write(f, _T("gfx_left_windowed"), _T("%d"), p->gfx_monitor.gfx_size_win.x); //WinUAE has these inversed (bug?)
+	write_resolution(f, _T("gfx_width"), _T("gfx_height"), &p->gfx_monitor[0].gfx_size_win); /* compatibility with old versions */
+	cfgfile_write (f, _T("gfx_top_windowed"), _T("%d"), p->gfx_monitor[0].gfx_size_win.y); //WinUAE has these inversed (bug?)
+	cfgfile_write(f, _T("gfx_left_windowed"), _T("%d"), p->gfx_monitor[0].gfx_size_win.x); //WinUAE has these inversed (bug?)
 	cfgfile_dwrite_bool(f, _T("gfx_resize_windowed"), p->gfx_windowed_resize);
-	write_resolution(f, _T("gfx_width_windowed"), _T("gfx_height_windowed"), &p->gfx_monitor.gfx_size_win);
-	write_resolution(f, _T("gfx_width_fullscreen"), _T("gfx_height_fullscreen"), &p->gfx_monitor.gfx_size_fs);
+	write_resolution(f, _T("gfx_width_windowed"), _T("gfx_height_windowed"), &p->gfx_monitor[0].gfx_size_win);
+	write_resolution(f, _T("gfx_width_fullscreen"), _T("gfx_height_fullscreen"), &p->gfx_monitor[0].gfx_size_fs);
 	cfgfile_write(f, _T("gfx_refreshrate"), _T("%d"), p->gfx_apmode[0].gfx_refreshrate);
 	cfgfile_dwrite(f, _T("gfx_refreshrate_rtg"), _T("%d"), p->gfx_apmode[1].gfx_refreshrate);
 
@@ -2746,6 +2742,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_write_str(f, _T("whdload_slave"), p->whdbootprefs.slave);
 	cfgfile_write_bool(f, _T("whdload_showsplash"), p->whdbootprefs.showsplash);
 	cfgfile_write_bool(f, _T("whdload_buttonwait"), p->whdbootprefs.buttonwait);
+	cfgfile_dwrite(f, _T("whdload_configdelay"), _T("%d"), p->whdbootprefs.configdelay);
 	cfgfile_write(f, _T("whdload_custom1"), _T("%d"), p->whdbootprefs.custom1);
 	cfgfile_write(f, _T("whdload_custom2"), _T("%d"), p->whdbootprefs.custom2);
 	cfgfile_write(f, _T("whdload_custom3"), _T("%d"), p->whdbootprefs.custom3);
@@ -3204,29 +3201,28 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 
 #ifdef AMIBERRY
 	// custom options LOADING
-	for (i = 0; i < 4; ++i) // Loop 1 ... all 4 joyports
+	for (i = 0; i < MAX_JPORTS; ++i)
 	{
-		std::array<int, 15>tempcustom{};
+		std::array<int, SDL_CONTROLLER_BUTTON_MAX>tempcustom{};
 
-		for (auto m = 0; m < 2; ++m) // Loop 2 ... none/hotkey function keys
+		for (auto n = 0; n < SDL_CONTROLLER_BUTTON_MAX; ++n)
 		{
-			if (m == 0)
+			for (auto m = 0; m < 2; ++m)
 			{
-				tmp1 = "none";
-				tempcustom = p->jports[i].amiberry_custom_none;
-			}
-			else if (m == 1)
-			{
-				tmp1 = "hotkey";
-				tempcustom = p->jports[i].amiberry_custom_hotkey;
-			}
-
-			for (auto n = 0; n < 15; ++n) // Loop 3 ... all 14 buttons
-			{
+				if (m == 0)
+				{
+					tmp1 = "none";
+					tempcustom = p->jports[i].amiberry_custom_none;
+				}
+				else if (m == 1)
+				{
+					tmp1 = "hotkey";
+					tempcustom = p->jports[i].amiberry_custom_hotkey;
+				}
 				_stprintf(tmpbuf, "joyport%d_amiberry_custom_%s_%s", i, tmp1, button_remap_name[n]);
 
 				// this is where we need to check if we have this particular option!!
-				if (!_tcsncmp(option, _T(tmpbuf), sizeof(tmpbuf) / sizeof(TCHAR)))
+				if (!_tcsncmp(option, _T(tmpbuf), sizeof tmpbuf / sizeof(TCHAR)))
 				{
 					auto b = 0;
 					if (find_inputevent(value) > -1) { b = RemapEventList[find_inputevent(value)]; }
@@ -3239,10 +3235,10 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 						p->jports[i].amiberry_custom_hotkey = tempcustom;
 
 					return 1;
-				} // close the IF check
-			} // close loop 3
-		} // close loop 2
-	} // close loop 1
+				}
+			}
+		}
+	}
 
 	/* Read in WHDLoad Options  */
 	if (cfgfile_string(option, value, _T("whdload_slave"), p->whdbootprefs.slave, sizeof p->whdbootprefs.slave / sizeof(TCHAR))
@@ -3254,6 +3250,7 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		|| cfgfile_intval(option, value, _T("whdload_custom5"), &p->whdbootprefs.custom5, 1)
 		|| cfgfile_yesno(option, value, _T("whdload_buttonwait"), &p->whdbootprefs.buttonwait)
 		|| cfgfile_yesno(option, value, _T("whdload_showsplash"), &p->whdbootprefs.showsplash)
+		|| cfgfile_intval(option, value, _T("whdload_configdelay"), &p->whdbootprefs.configdelay, 1)
 		)
 	{
 		return 1;
@@ -3413,8 +3410,8 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 
 		|| cfgfile_intval(option, value, _T("gfx_frame_slices"), &p->gfx_display_sections, 1)
 		|| cfgfile_intval(option, value, _T("gfx_framerate"), &p->gfx_framerate, 1)
-		|| cfgfile_intval(option, value, _T("gfx_top_windowed"), &p->gfx_monitor.gfx_size_win.y, 1)
-		|| cfgfile_intval(option, value, _T("gfx_left_windowed"), &p->gfx_monitor.gfx_size_win.x, 1)
+		|| cfgfile_intval(option, value, _T("gfx_top_windowed"), &p->gfx_monitor[0].gfx_size_win.y, 1)
+		|| cfgfile_intval(option, value, _T("gfx_left_windowed"), &p->gfx_monitor[0].gfx_size_win.x, 1)
 		|| cfgfile_intval(option, value, _T("gfx_refreshrate"), &p->gfx_apmode[APMODE_NATIVE].gfx_refreshrate, 1)
 		|| cfgfile_intval(option, value, _T("gfx_refreshrate_rtg"), &p->gfx_apmode[APMODE_RTG].gfx_refreshrate, 1)
 		|| cfgfile_intval(option, value, _T("gfx_autoresolution_delay"), &p->gfx_autoresolution_delay, 1)
@@ -3595,41 +3592,41 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 
 	if (_tcscmp (option, _T("gfx_width_windowed")) == 0) {
 		if (!_tcscmp (value, _T("native"))) {
-			p->gfx_monitor.gfx_size_win.width = 0;
-			p->gfx_monitor.gfx_size_win.height = 0;
+			p->gfx_monitor[0].gfx_size_win.width = 0;
+			p->gfx_monitor[0].gfx_size_win.height = 0;
 		} else {
-			cfgfile_intval (option, value, _T("gfx_width_windowed"), &p->gfx_monitor.gfx_size_win.width, 1);
+			cfgfile_intval (option, value, _T("gfx_width_windowed"), &p->gfx_monitor[0].gfx_size_win.width, 1);
 		}
 		return 1;
 	}
 	if (_tcscmp (option, _T("gfx_height_windowed")) == 0) {
 		if (!_tcscmp (value, _T("native"))) {
-			p->gfx_monitor.gfx_size_win.width = 0;
-			p->gfx_monitor.gfx_size_win.height = 0;
+			p->gfx_monitor[0].gfx_size_win.width = 0;
+			p->gfx_monitor[0].gfx_size_win.height = 0;
 		} else {
-			cfgfile_intval (option, value, _T("gfx_height_windowed"), &p->gfx_monitor.gfx_size_win.height, 1);
+			cfgfile_intval (option, value, _T("gfx_height_windowed"), &p->gfx_monitor[0].gfx_size_win.height, 1);
 		}
 		return 1;
 	}
 	if (_tcscmp (option, _T("gfx_width_fullscreen")) == 0) {
 		if (!_tcscmp (value, _T("native"))) {
-			p->gfx_monitor.gfx_size_fs.width = 0;
-			p->gfx_monitor.gfx_size_fs.height = 0;
-			p->gfx_monitor.gfx_size_fs.special = WH_NATIVE;
+			p->gfx_monitor[0].gfx_size_fs.width = 0;
+			p->gfx_monitor[0].gfx_size_fs.height = 0;
+			p->gfx_monitor[0].gfx_size_fs.special = WH_NATIVE;
 		} else {
-			cfgfile_intval (option, value, _T("gfx_width_fullscreen"), &p->gfx_monitor.gfx_size_fs.width, 1);
-			p->gfx_monitor.gfx_size_fs.special = 0;
+			cfgfile_intval (option, value, _T("gfx_width_fullscreen"), &p->gfx_monitor[0].gfx_size_fs.width, 1);
+			p->gfx_monitor[0].gfx_size_fs.special = 0;
 		}
 		return 1;
 	}
 	if (_tcscmp (option, _T("gfx_height_fullscreen")) == 0) {
 		if (!_tcscmp (value, _T("native"))) {
-			p->gfx_monitor.gfx_size_fs.width = 0;
-			p->gfx_monitor.gfx_size_fs.height = 0;
-			p->gfx_monitor.gfx_size_fs.special = WH_NATIVE;
+			p->gfx_monitor[0].gfx_size_fs.width = 0;
+			p->gfx_monitor[0].gfx_size_fs.height = 0;
+			p->gfx_monitor[0].gfx_size_fs.special = WH_NATIVE;
 		} else {
-			cfgfile_intval (option, value, _T("gfx_height_fullscreen"), &p->gfx_monitor.gfx_size_fs.height, 1);
-			p->gfx_monitor.gfx_size_fs.special = 0;
+			cfgfile_intval (option, value, _T("gfx_height_fullscreen"), &p->gfx_monitor[0].gfx_size_fs.height, 1);
+			p->gfx_monitor[0].gfx_size_fs.special = 0;
 		}
 		return 1;
 	}
@@ -3925,18 +3922,18 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 #endif
 
 	if (_tcscmp (option, _T("gfx_width")) == 0 || _tcscmp (option, _T("gfx_height")) == 0) {
-		cfgfile_intval (option, value, _T("gfx_width"), &p->gfx_monitor.gfx_size_win.width, 1);
-		cfgfile_intval (option, value, _T("gfx_height"), &p->gfx_monitor.gfx_size_win.height, 1);
-		p->gfx_monitor.gfx_size_fs.width = p->gfx_monitor.gfx_size_win.width;
-		p->gfx_monitor.gfx_size_fs.height = p->gfx_monitor.gfx_size_win.height;
+		cfgfile_intval (option, value, _T("gfx_width"), &p->gfx_monitor[0].gfx_size_win.width, 1);
+		cfgfile_intval (option, value, _T("gfx_height"), &p->gfx_monitor[0].gfx_size_win.height, 1);
+		p->gfx_monitor[0].gfx_size_fs.width = p->gfx_monitor[0].gfx_size_win.width;
+		p->gfx_monitor[0].gfx_size_fs.height = p->gfx_monitor[0].gfx_size_win.height;
 		return 1;
 	}
 
 	if (_tcscmp (option, _T("gfx_fullscreen_multi")) == 0 || _tcscmp (option, _T("gfx_windowed_multi")) == 0) {
 		TCHAR tmp[256], *tmpp, *tmpp2;
-		struct wh *wh = p->gfx_monitor.gfx_size_win_xtra;
+		struct wh *wh = p->gfx_monitor[0].gfx_size_win_xtra;
 		if (_tcscmp (option, _T("gfx_fullscreen_multi")) == 0)
-			wh = p->gfx_monitor.gfx_size_fs_xtra;
+			wh = p->gfx_monitor[0].gfx_size_fs_xtra;
 		_stprintf (tmp, _T(",%s,"), value);
 		tmpp2 = tmp;
 		for (i = 0; i < 4; i++) {
@@ -6796,6 +6793,9 @@ int cfgfile_load (struct uae_prefs *p, const TCHAR *filename, int *type, int ign
 	}
 end:
 	recursive--;
+	for (int i = 1; i < MAX_AMIGADISPLAYS; i++) {
+		memcpy(&p->gfx_monitor[i], &p->gfx_monitor[0], sizeof(struct monconfig));
+	}
 	fixup_prefs (p, userconfig != 0);
 	return v;
 }
@@ -6933,9 +6933,9 @@ static void parse_gfx_specs (struct uae_prefs *p, const TCHAR *spec)
 		goto argh;
 	*x1++ = 0; *x2++ = 0;
 
-	p->gfx_monitor.gfx_size_win.width = p->gfx_monitor.gfx_size_fs.width = _tstoi(x0);
-	p->gfx_monitor.gfx_size_win.height = p->gfx_monitor.gfx_size_fs.height = _tstoi(x1);
-	p->gfx_resolution = _tcschr(x2, 'l') != 0 ? 1 : 0;
+	p->gfx_monitor[0].gfx_size_win.width = p->gfx_monitor[0].gfx_size_fs.width = _tstoi (x0);
+	p->gfx_monitor[0].gfx_size_win.height = p->gfx_monitor[0].gfx_size_fs.height = _tstoi (x1);
+	p->gfx_resolution = _tcschr (x2, 'l') != 0 ? 1 : 0;
 	p->gfx_xcenter = _tcschr (x2, 'x') != 0 ? 1 : _tcschr (x2, 'X') != 0 ? 2 : 0;
 	p->gfx_ycenter = _tcschr (x2, 'y') != 0 ? 1 : _tcschr (x2, 'Y') != 0 ? 2 : 0;
 	p->gfx_vresolution = _tcschr (x2, 'd') != 0 ? VRES_DOUBLE : VRES_NONDOUBLE;
@@ -7827,7 +7827,7 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 	p->jports[3].id = -1;
 	if (reset) {
 		inputdevice_joyport_config_store(p, _T("mouse"), 0, -1, -1, 0);
-		inputdevice_joyport_config_store(p, _T("kbd1"), 1, -1, -1, 0);
+		inputdevice_joyport_config_store(p, _T("joy0"), 1, -1, -1, 0);
 	}
 	p->keyboard_lang = KBD_LANG_US;
 	p->keyboard_connected = true;
@@ -7866,15 +7866,15 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 
 	p->gfx_framerate = 1;
 	p->gfx_autoframerate = 50;
-	p->gfx_monitor.gfx_size_fs.width = 800;
-	p->gfx_monitor.gfx_size_fs.height = 600;
-	p->gfx_monitor.gfx_size_win.width = 720;
-	p->gfx_monitor.gfx_size_win.height = 568;
-	for (auto i = 0; i < 4; i++) {
-		p->gfx_monitor.gfx_size_fs_xtra[i].width = 0;
-		p->gfx_monitor.gfx_size_fs_xtra[i].height = 0;
-		p->gfx_monitor.gfx_size_win_xtra[i].width = 0;
-		p->gfx_monitor.gfx_size_win_xtra[i].height = 0;
+	p->gfx_monitor[0].gfx_size_fs.width = 800;
+	p->gfx_monitor[0].gfx_size_fs.height = 600;
+	p->gfx_monitor[0].gfx_size_win.width = 720;
+	p->gfx_monitor[0].gfx_size_win.height = 568;
+	for (int i = 0; i < 4; i++) {
+		p->gfx_monitor[0].gfx_size_fs_xtra[i].width = 0;
+		p->gfx_monitor[0].gfx_size_fs_xtra[i].height = 0;
+		p->gfx_monitor[0].gfx_size_win_xtra[i].width = 0;
+		p->gfx_monitor[0].gfx_size_win_xtra[i].height = 0;
 	}
 	p->gfx_resolution = RES_HIRES;
 	p->gfx_vresolution = VRES_NONDOUBLE;

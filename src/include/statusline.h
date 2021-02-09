@@ -27,9 +27,9 @@ static int td_pos = (TD_RIGHT | TD_BOTTOM);
 #define STATUSLINE_RTG 2
 #define STATUSLINE_TARGET 0x80
 
-void draw_status_line_single(uae_u8 *buf, int bpp, int y, int totalwidth, uae_u32 *rc, uae_u32 *gc, uae_u32 *bc, uae_u32 *alpha);
-void statusline_single_erase(uae_u8 *buf, int bpp, int y, int totalwidth);
-void statusline_getpos(int* x, int* y, int width, int height);
+void draw_status_line_single(int monid, uae_u8 *buf, int bpp, int y, int totalwidth, uae_u32 *rc, uae_u32 *gc, uae_u32 *bc, uae_u32 *alpha);
+void statusline_single_erase(int monid, uae_u8 *buf, int bpp, int y, int totalwidth);
+void statusline_getpos(int monid, int *x, int *y, int width, int height);
 bool softstatusline(void);
 
 #define STATUSTYPE_FLOPPY 1
@@ -40,14 +40,15 @@ bool softstatusline(void);
 
 bool createstatusline(int);
 void deletestatusline(int);
-void statusline_render(uae_u8 *buf, int bpp, int pitch, int width, int height, uae_u32 *rc, uae_u32 *gc, uae_u32 *bc, uae_u32 *alpha);
+void statusline_render(int, uae_u8 *buf, int bpp, int pitch, int width, int height, uae_u32 *rc, uae_u32 *gc, uae_u32 *bc, uae_u32 *alpha);
 void statusline_add_message(int statustype, const TCHAR *format, ...);
 void statusline_clear(void);
 void statusline_vsync(void);
-void statusline_updated();
+void statusline_updated(int);
 bool has_statusline_updated(void);
 const TCHAR *statusline_fetch(void);
-int statusline_set_multiplier(int, int);
-int statusline_get_multiplier();
+int statusline_set_multiplier(int, int, int);
+int statusline_get_multiplier(int monid);
+void statusline_set_font(const char *newnumbers, int width, int height);
 
 #endif /* UAE_STATUSLINE_H */

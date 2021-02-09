@@ -1126,14 +1126,5 @@ LOWFUNC(NONE,NONE,2,raw_fp_fscc_ri,(RW4 d, int cc))
 }
 LENDFUNC(NONE,NONE,2,raw_fp_fscc_ri,(RW4 d, int cc))
 
-LOWFUNC(NONE,NONE,1,raw_roundingmode,(IM32 mode))
-{
-  MOV_xi(REG_WORK2, (mode >> 22));
-  MRS_FPCR_x(REG_WORK1);
-  BFI_xxii(REG_WORK1, REG_WORK2, 22, 2);
-  MSR_FPCR_x(REG_WORK1);
-}
-LENDFUNC(NONE,NONE,1,raw_roundingmode,(IM32 mode))
-
 #endif // USE_JIT_FPU
 

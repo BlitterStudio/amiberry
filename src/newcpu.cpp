@@ -496,7 +496,7 @@ static void update_68k_cycles(void)
 		do_cycles = do_cycles_cpu_fastest;
 	else
 		do_cycles = do_cycles_cpu_norm;
-
+	
 	set_config_changed();
 }
 

@@ -2756,7 +2756,7 @@ bool alloc_expansion_bank(addrbank *bank, struct autoconfig_info *aci)
 void free_expansion_bank(addrbank *bank)
 {
 	mapped_free(bank);
-	bank->start = NULL;
+	bank->start = 0;
 	bank->reserved_size = 0;
 }
 
@@ -3708,6 +3708,7 @@ void expansion_init (void)
 	if (savestate_state != STATE_RESTORE) {
 
 		for (int i = 0; i < MAX_RAM_BOARDS; i++) {
+			mapped_free(&fastmem_bank[i]);
 			fastmem_bank[i].reserved_size = 0;
 			fastmem_bank[i].mask = 0;
 			fastmem_bank[i].baseaddr = NULL;
@@ -3715,6 +3716,7 @@ void expansion_init (void)
 
 #ifdef PICASSO96
 		for (int i = 0; i < MAX_RTG_BOARDS; i++) {
+			mapped_free(gfxmem_banks[i]);
 			gfxmem_banks[i]->reserved_size = 0;
 			gfxmem_banks[i]->mask = 0;
 			gfxmem_banks[i]->baseaddr = NULL;
@@ -3726,11 +3728,13 @@ void expansion_init (void)
 #endif
 
 		for (int i = 0; i < MAX_RAM_BOARDS; i++) {
+			mapped_free(&z3fastmem_bank[i]);
 			z3fastmem_bank[i].reserved_size = 0;
 			z3fastmem_bank[i].mask = 0;
 			z3fastmem_bank[i].baseaddr = NULL;
 		}
 
+		mapped_free(&z3chipmem_bank);
 		z3chipmem_bank.reserved_size = 0;
 		z3chipmem_bank.mask = z3chipmem_bank.start = 0;
 		z3chipmem_bank.baseaddr = NULL;
@@ -4853,7 +4857,7 @@ static struct expansionboardsettings *netsettings[] = {
 
 static void fastlane_memory_callback(struct romconfig *rc, uae_u8 *ac, int size)
 {
-	struct zfile *z = read_device_from_romconfig(rc, NULL);
+	struct zfile *z = read_device_from_romconfig(rc, 0);
 	if (z) {
 		// load autoconfig data from rom file
 		uae_u8 act[16] = { 0 };
@@ -5381,6 +5385,7 @@ const struct expansionromtype expansionroms[] = {
 	//	NULL, dotto_init, NULL, dotto_add_ide_unit, ROMTYPE_DOTTO, 0, 0, BOARD_AUTOCONFIG_Z2, false,
 	//	NULL, 0,
 	//	true, EXPANSIONTYPE_IDE
+	//	256, 0, 0
 	//},
 	//{
 	//	_T("vector"), _T("Vector Falcon 8000"), _T("HK-Computer"),
@@ -5807,6 +5812,12 @@ const struct expansionromtype expansionroms[] = {
 		false, EXPANSIONTYPE_RTG
 	},
 	{
+		_T("vooodoo3_3k"), _T("Voodoo 3 3000"), _T("3dfx"),
+		NULL, NULL, NULL, NULL, ROMTYPE_VOODOO3 | ROMTYPE_NONE, 0, 0, BOARD_IGNORE, false,
+		NULL, 0,
+		false, EXPANSIONTYPE_RTG
+	},
+	{
 		_T("x86vga"), _T("x86 VGA"), NULL,
 		NULL, NULL, NULL, NULL, ROMTYPE_x86_VGA | ROMTYPE_NONE, 0, 0, BOARD_IGNORE, true,
 		NULL, 0,
@@ -6128,6 +6139,16 @@ static const struct cpuboardsubtype gvpboard_sub[] = {
 	//	_T("G-Force 030"),
 	//	_T("GVPGFORCE030"),
 	//	ROMTYPE_GVPS2, ROMTYPE_GVPS12, 3,
+	//	gvp_s2_add_accelerator_scsi_unit, EXPANSIONTYPE_SCSI,
+	//	BOARD_MEMORY_25BITMEM,
+	//	128 * 1024 * 1024,
+	//	0,
+	//	gvp_init_accelerator, NULL, BOARD_AUTOCONFIG_Z2, 1
+	//},
+    //	{
+	//	_T("G-Force 040"),
+	//	_T("GVPGFORCE040"),
+	//	ROMTYPE_GVPS2, ROMTYPE_GVPS12, 4,
 	//	gvp_s2_add_accelerator_scsi_unit, EXPANSIONTYPE_SCSI,
 	//	BOARD_MEMORY_25BITMEM,
 	//	128 * 1024 * 1024,
@@ -6713,7 +6734,7 @@ const struct cpuboardtype cpuboards[] = {
 	//	harms_sub, 0
 	//},
 	{
-		NULL
+		0
 	}
 };
 

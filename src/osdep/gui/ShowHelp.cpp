@@ -1,6 +1,5 @@
-#include <stdbool.h>
-#include <stdio.h>
-#include <string.h>
+#include <cstdio>
+#include <cstring>
 
 #include <guisan.hpp>
 #include <SDL_ttf.h>
@@ -13,8 +12,8 @@
 #include "gui_handling.h"
 
 #include "options.h"
-#include "inputdevice.h"
 #include "amiberry_gfx.h"
+#include "amiberry_input.h"
 
 #ifdef ANDROID
 #include "androidsdl_event.h"
@@ -23,7 +22,7 @@
 #define DIALOG_WIDTH 760
 #define DIALOG_HEIGHT 420
 
-static bool dialogFinished = false;
+static bool dialog_finished = false;
 
 static gcn::Window* wndShowHelp;
 static gcn::Button* cmdOK;
@@ -61,7 +60,7 @@ class ShowHelpActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		dialogFinished = true;
+		dialog_finished = true;
 	}
 };
 
@@ -132,6 +131,7 @@ static void ShowHelpLoop(void)
 	auto got_event = 0;
 	SDL_Event event;
 	SDL_Event touch_event;
+	struct didata* did = &di_joystick[0];
 	while (SDL_PollEvent(&event))
 	{
 		switch (event.type)
@@ -141,7 +141,7 @@ static void ShowHelpLoop(void)
 			switch (event.key.keysym.sym)
 			{
 			case VK_ESCAPE:
-				dialogFinished = true;
+				dialog_finished = true;
 				break;
 
 			case VK_Blue:
@@ -156,21 +156,21 @@ static void ShowHelpLoop(void)
 			}
 			break;
 
-		case SDL_CONTROLLERBUTTONDOWN:
-			if (gui_controller)
+		case SDL_JOYBUTTONDOWN:
+			if (gui_joystick)
 			{
 				got_event = 1;
-				if (SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_A) ||
-					SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_B))
+				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_A]) ||
+					SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_B]))
 				{
 					PushFakeKey(SDLK_RETURN);
 					break;
 				}
-				if (SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_X) ||
-					SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_Y) ||
-					SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_START))
+				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_X]) ||
+					SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_Y]) ||
+					SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_START]))
 				{
-					dialogFinished = true;
+					dialog_finished = true;
 					break;
 				}
 			}
@@ -237,6 +237,7 @@ static void ShowHelpLoop(void)
 	{
 		// Now we let the Gui object perform its logic.
 		uae_gui->logic();
+		SDL_RenderClear(sdl_renderer);
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
 		// Finally we update the screen.
@@ -246,7 +247,7 @@ static void ShowHelpLoop(void)
 
 void ShowHelp(const char* title, const std::vector<std::string>& text)
 {
-	dialogFinished = false;
+	dialog_finished = false;
 
 	InitShowHelp(text);
 
@@ -255,14 +256,15 @@ void ShowHelp(const char* title, const std::vector<std::string>& text)
 
 	// Prepare the screen once
 	uae_gui->logic();
+	SDL_RenderClear(sdl_renderer);
 	uae_gui->draw();
 	update_gui_screen();
 
-	while (!dialogFinished)
+	while (!dialog_finished)
 	{
 		const auto start = SDL_GetPerformanceCounter();
 		ShowHelpLoop();
-		cap_fps(start, 60);
+		cap_fps(start);
 	}
 
 	ExitShowHelp();

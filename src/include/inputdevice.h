@@ -204,7 +204,7 @@ extern int send_input_event (int nr, int state, int max, int autofire);
 
 extern int input_get_default_mouse (struct uae_input_device *uid, int num, int port, int af, bool gp, bool wheel, bool joymouseswap);
 extern int input_get_default_lightpen (struct uae_input_device *uid, int num, int port, int af, bool gp, bool joymouseswap, int submode);
-extern int input_get_default_joystick (struct uae_input_device *uid, int i, int port, int af, int mode, bool gp, bool joymouseswap);
+extern int input_get_default_joystick (struct uae_input_device *uid, int num, int port, int af, int mode, bool gp, bool joymouseswap);
 extern int input_get_default_joystick_analog (struct uae_input_device *uid, int num, int port, int af, bool gp, bool joymouseswap);
 extern int input_get_default_keyboard (int num);
 
@@ -235,7 +235,7 @@ extern void input_mousehack_mouseoffset (uaecptr pointerprefs);
 extern int mousehack_alive (void);
 extern void mousehack_wakeup(void);
 extern void mousehack_write(int reg, uae_u16 val);
-extern void setmouseactive(int);
+extern void setmouseactive(int monid, int);
 extern bool ismouseactive(void);
 
 extern void setmousebuttonstateall (int mouse, uae_u32 buttonbits, uae_u32 buttonmask);
@@ -347,10 +347,14 @@ extern void setsystime (void);
 #define JSEM_ISCURSOR(port,p) (jsem_iskbdjoy(port,p) == JSEM_KBDLAYOUT + 1)
 #define JSEM_ISSOMEWHEREELSE(port,p) (jsem_iskbdjoy(port,p) == JSEM_KBDLAYOUT + 2)
 #define JSEM_ISKEYRAH(port,p) (jsem_iskbdjoy(port,p) == JSEM_KBDLAYOUT + 3)
-#define JSEM_ISIPAC(port,p) (jsem_iskbdjoy(port,p) == JSEM_KBDLAYOUT + 4)
+#define JSEM_ISRAPLAYER1(port,p) (jsem_iskbdjoy(port,p) == JSEM_KBDLAYOUT + 4)
+#define JSEM_ISRAPLAYER2(port,p) (jsem_iskbdjoy(port,p) == JSEM_KBDLAYOUT + 5)
+#define JSEM_ISRAPLAYER3(port,p) (jsem_iskbdjoy(port,p) == JSEM_KBDLAYOUT + 6)
+#define JSEM_ISRAPLAYER4(port,p) (jsem_iskbdjoy(port,p) == JSEM_KBDLAYOUT + 7)
+
 #define JSEM_ISCUSTOM(port,p) ((p)->jports[port].id >= JSEM_CUSTOM && (p)->jports[port].id < JSEM_CUSTOM + MAX_JPORTS_CUSTOM)
 #define JSEM_GETCUSTOMIDX(port,p) ((p)->jports[port].id - JSEM_CUSTOM)
-#define JSEM_LASTKBD 5
+#define JSEM_LASTKBD 8
 #define JSEM_ISANYKBD(port,p) (jsem_iskbdjoy(port,p) >= JSEM_KBDLAYOUT && jsem_iskbdjoy(port,p) < JSEM_KBDLAYOUT + JSEM_LASTKBD)
 
 extern int jsem_isjoy (int port, const struct uae_prefs *p);

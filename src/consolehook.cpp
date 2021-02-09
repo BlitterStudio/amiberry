@@ -45,10 +45,10 @@ void consolehook_config (struct uae_prefs *p)
 	p->floppyslots[1].dfxtype = DRV_NONE;
 	p->floppy_speed = 0;
 	p->start_gui = 0;
-	p->gfx_monitor.gfx_size_win.width = 320;
-	p->gfx_monitor.gfx_size_win.height = 256;
+	p->gfx_monitor[0].gfx_size_win.width = 320;
+	p->gfx_monitor[0].gfx_size_win.height = 256;
 	p->turbo_emulation = 0;
-	//p->win32_automount_drives = 2;
+	//p->automount_drives = 2;
 	//p->automount_cddrives = 2;
 
 	_tcscpy (ci.rootdir, _T("."));

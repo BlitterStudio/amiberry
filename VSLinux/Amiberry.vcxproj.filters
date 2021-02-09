@@ -167,9 +167,6 @@
     <Image Include="..\data\cursor.bmp">
       <Filter>data</Filter>
     </Image>
-    <Image Include="..\data\cursor-x2.bmp">
-      <Filter>data</Filter>
-    </Image>
     <Image Include="..\data\quickstart.ico">
       <Filter>data</Filter>
     </Image>
@@ -990,6 +987,8 @@
     <ClCompile Include="..\src\osdep\ahi_v1.cpp">
       <Filter>src\osdep</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\osdep\gui\PanelRTG.cpp">
+      <Filter>src\osdep\gui</Filter>
     <ClCompile Include="..\src\uaeserial.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -1682,6 +1681,7 @@
     <ClInclude Include="..\src\osdep\ahi_v2.h">
       <Filter>src\osdep</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\include\parallel.h">
     <ClInclude Include="..\src\include\uaeserial.h">
       <Filter>src\include</Filter>
     </ClInclude>

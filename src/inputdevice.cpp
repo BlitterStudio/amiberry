@@ -362,9 +362,9 @@ static int default_keyboard_layout[MAX_JPORTS];
 
 #define KBR_DEFAULT_MAP_FIRST 0
 #ifdef AMIBERRY
-#define KBR_DEFAULT_MAP_LAST 9
-#define KBR_DEFAULT_MAP_CD32_FIRST 10
-#define KBR_DEFAULT_MAP_CD32_LAST 13
+#define KBR_DEFAULT_MAP_LAST 15
+#define KBR_DEFAULT_MAP_CD32_FIRST 16
+#define KBR_DEFAULT_MAP_CD32_LAST 23
 #else
 #define KBR_DEFAULT_MAP_LAST 5
 #define KBR_DEFAULT_MAP_CD32_FIRST 6
@@ -380,15 +380,24 @@ static int default_keyboard_layout[MAX_JPORTS];
 #ifdef AMIBERRY
 #define KBR_DEFAULT_MAP_KEYRAH 6
 #define KBR_DEFAULT_MAP_KEYRAH3 7
-#define KBR_DEFAULT_MAP_IPAC 8
-#define KBR_DEFAULT_MAP_IPAC3 9
-#define KBR_DEFAULT_MAP_CD32_NP 9
-#define KBR_DEFAULT_MAP_CD32_CK 10
-#define KBR_DEFAULT_MAP_CD32_SE 11
-#define KBR_DEFAULT_MAP_CD32_KEYRAH 12
-#define KBR_DEFAULT_MAP_CD32_IPAC 13
-#define KBR_DEFAULT_MAP_ARCADIA 14
-#define KBR_DEFAULT_MAP_CDTV 15
+#define KBR_DEFAULT_MAP_RAPLAYER1 8
+#define KBR_DEFAULT_MAP_RAPLAYER1_3 9
+#define KBR_DEFAULT_MAP_RAPLAYER2 10
+#define KBR_DEFAULT_MAP_RAPLAYER2_3 11
+#define KBR_DEFAULT_MAP_RAPLAYER3 12
+#define KBR_DEFAULT_MAP_RAPLAYER3_3 13
+#define KBR_DEFAULT_MAP_RAPLAYER4 14
+#define KBR_DEFAULT_MAP_RAPLAYER4_3 15
+#define KBR_DEFAULT_MAP_CD32_NP 16
+#define KBR_DEFAULT_MAP_CD32_CK 17
+#define KBR_DEFAULT_MAP_CD32_SE 18
+#define KBR_DEFAULT_MAP_CD32_KEYRAH 19
+#define KBR_DEFAULT_MAP_CD32_RAPLAYER1 20
+#define KBR_DEFAULT_MAP_CD32_RAPLAYER2 21
+#define KBR_DEFAULT_MAP_CD32_RAPLAYER3 22
+#define KBR_DEFAULT_MAP_CD32_RAPLAYER4 23
+#define KBR_DEFAULT_MAP_ARCADIA 24
+#define KBR_DEFAULT_MAP_CDTV 25
 #else
 #define KBR_DEFAULT_MAP_CD32_NP 6
 #define KBR_DEFAULT_MAP_CD32_CK 7
@@ -2265,9 +2274,10 @@ void input_mousehack_mouseoffset(uaecptr pointerprefs)
 
 static bool get_mouse_position(int *xp, int *yp, int inx, int iny)
 {
-	struct vidbuf_description *vidinfo = &adisplays.gfxvidinfo;
-	struct amigadisplay *ad = &adisplays;
-	struct picasso96_state_struct *state = &picasso96_state;
+	int monid = 0;
+	struct vidbuf_description *vidinfo = &adisplays[monid].gfxvidinfo;
+	struct amigadisplay *ad = &adisplays[monid];
+	struct picasso96_state_struct *state = &picasso96_state[monid];
 	int x, y;
 	float fdy, fdx, fmx, fmy;
 	bool ob = false;
@@ -2275,7 +2285,7 @@ static bool get_mouse_position(int *xp, int *yp, int inx, int iny)
 	x = inx;
 	y = iny;
 
-	getgfxoffset(&fdx, &fdy, &fmx, &fmy);
+	getgfxoffset(0, &fdx, &fdy, &fmx, &fmy);
 
 	//write_log("%.2f*%.2f %.2f*%.2f\n", fdx, fdy, fmx, fmy);
 
@@ -2300,10 +2310,12 @@ static bool get_mouse_position(int *xp, int *yp, int inx, int iny)
 		x -= (int)(fdx * fmx) - 1;
 		y -= (int)(fdy * fmy) - 2;
 		x = coord_native_to_amiga_x(x);
-		if (y >= 0)
+		if (y >= 0) {
 			y = coord_native_to_amiga_y(y) * 2;
-		if (x < 0 || y < 0 || x >= vidinfo->outbuffer->outwidth || y >= vidinfo->outbuffer->outheight)
+		}
+		if (x < 0 || y < 0 || x >= vidinfo->outbuffer->outwidth || y >= vidinfo->outbuffer->outheight) {
 			ob = true;
+		}
 	}
 	*xp = x;
 	*yp = y;
@@ -2390,8 +2402,8 @@ int inputdevice_get_lightpen_id(void)
 void tablet_lightpen(int tx, int ty, int tmaxx, int tmaxy, int touch, int buttonmask, bool touchmode, int devid, int lpnum)
 {
 	int monid = 0;
-	struct vidbuf_description *vidinfo = &adisplays.gfxvidinfo;
-	struct amigadisplay *ad = &adisplays;
+	struct vidbuf_description *vidinfo = &adisplays[monid].gfxvidinfo;
+	struct amigadisplay *ad = &adisplays[monid];
 	int dw, dh, ax, ay, aw, ah;
 	float fx, fy;
 	float xmult, ymult;
@@ -2410,7 +2422,7 @@ void tablet_lightpen(int tx, int ty, int tmaxx, int tmaxy, int touch, int button
 	fx = (float)tx;
 	fy = (float)ty;
 
-	desktop_coords (&dw, &dh, &ax, &ay, &aw, &ah);
+	desktop_coords (0, &dw, &dh, &ax, &ay, &aw, &ah);
 
 	if (tmaxx < 0 || tmaxy < 0) {
 		tmaxx = dw;
@@ -2436,7 +2448,7 @@ void tablet_lightpen(int tx, int ty, int tmaxx, int tmaxy, int touch, int button
 	fx -= ax;
 	fy -= ay;
 
-	getgfxoffset(&fdx, &fdy, &fmx, &fmy);
+	getgfxoffset(0, &fdx, &fdy, &fmx, &fmy);
 
 	x = (int)(fx * fmx);
 	y = (int)(fy * fmy);
@@ -2478,7 +2490,9 @@ end:
 void inputdevice_tablet (int x, int y, int z, int pressure, uae_u32 buttonbits, int inproximity, int ax, int ay, int az, int devid)
 {
 	if (is_touch_lightpen()) {
+
 		tablet_lightpen(x, y, tablet_maxx, tablet_maxy, inproximity ? 1 : -1, buttonbits, false, devid, -1);
+
 	} else {
 		uae_u8 *p;
 		uae_u8 tmp[MH_END];
@@ -2874,9 +2888,9 @@ static int mouseedge_x, mouseedge_y, mouseedge_time;
 #define MOUSEEDGE_RANGE 100
 #define MOUSEEDGE_TIME 2
 
-static int mouseedge()
+static int mouseedge(int monid)
 {
-	struct amigadisplay *ad = &adisplays;
+	struct amigadisplay *ad = &adisplays[monid];
 	int x, y, dir;
 	uaecptr ib;
 	static int melast_x, melast_y;
@@ -2957,9 +2971,9 @@ end:
 			y += dy;
 		}
 		if (!dmaen (DMA_SPRITE))
-			setmouseactivexy(x, y, 0);
+			setmouseactivexy(0, x, y, 0);
 		else
-			setmouseactivexy(x, y, dir);
+			setmouseactivexy(0, x, y, dir);
 	}
 	return 1;
 }
@@ -3978,14 +3992,14 @@ void inputdevice_hsync (bool forceread)
 			handle_msgpump ();
 	}
 	if (!input_record && !input_play) {
+#endif		
 		if (forceread) {
 			inputread = maxvpos + 1;
 			inputdevice_read();
 		} else {
-#endif
-		maybe_read_input();
+			maybe_read_input();
+		}
 	//}
-//}
 }
 
 static uae_u16 POTDAT (int joy)
@@ -4242,7 +4256,7 @@ static bool needcputrace (int code)
 
 void target_paste_to_keyboard(void);
 
-static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
+static bool inputdevice_handle_inputcode2(int monid, int code, int state, const TCHAR* s)
 {
 	//static int swapperslot;
 	//static int tracer_enable;
@@ -4484,7 +4498,7 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 		warpmode (newstate);
 		break;
 	case AKS_INHIBITSCREEN:
-		toggle_inhibit_frame(IHF_SCROLLLOCK);
+		toggle_inhibit_frame(monid, IHF_SCROLLLOCK);
 		break;
 	case AKS_STATEREWIND:
 		savestate_dorewind (-2);
@@ -4547,16 +4561,16 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 		savestate_quick ((code - AKS_STATERESTOREQUICK) / 2, 0);
 		break;
 	case AKS_TOGGLEDEFAULTSCREEN:
-		toggle_fullscreen(-1);
+		toggle_fullscreen(0, -1);
 		break;
 	case AKS_TOGGLEWINDOWEDFULLSCREEN:
-		toggle_fullscreen(0);
+		toggle_fullscreen(0, 0);
 		break;
 	case AKS_TOGGLEFULLWINDOWFULLSCREEN:
-		toggle_fullscreen(1);
+		toggle_fullscreen(0, 1);
 		break;
 	case AKS_TOGGLEWINDOWFULLWINDOW:
-		toggle_fullscreen(2);
+		toggle_fullscreen(0, 2);
 		break;
 	case AKS_TOGGLEMOUSEGRAB:
 		toggle_mousegrab();
@@ -4639,8 +4653,8 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 	case AKS_INPUT_CONFIG_2:
 	case AKS_INPUT_CONFIG_3:
 	case AKS_INPUT_CONFIG_4:
-		//changed_prefs.input_selected_setting = currprefs.input_selected_setting = code - AKS_INPUT_CONFIG_1;
-		//inputdevice_updateconfig (&changed_prefs, &currprefs);
+		changed_prefs.input_selected_setting = currprefs.input_selected_setting = code - AKS_INPUT_CONFIG_1;
+		inputdevice_updateconfig (&changed_prefs, &currprefs);
 		break;
 	case AKS_DISK_PREV0:
 	case AKS_DISK_PREV1:
@@ -4655,17 +4669,17 @@ static bool inputdevice_handle_inputcode2(int code, int state, const TCHAR *s)
 		//disk_prevnext (code - AKS_DISK_NEXT0, 1);
 		break;
 	case AKS_RTG_PREV:
-		//toggle_rtg(0, -1);
+		toggle_rtg(0, -1);
 		break;
 	case AKS_RTG_NEXT:
-		//toggle_rtg(0, MAX_RTG_BOARDS + 1);
+		toggle_rtg(0, MAX_RTG_BOARDS + 1);
 		break;
 	case AKS_RTG_C:
 	case AKS_RTG_0:
 	case AKS_RTG_1:
 	case AKS_RTG_2:
 	case AKS_RTG_3:
-		//toggle_rtg(0, code - AKS_RTG_C);
+		toggle_rtg(0, code - AKS_RTG_C);
 		break;
 	case AKS_VIDEOGRAB_RESTART:
 		//getsetpositionvideograb(0);
@@ -4759,6 +4773,7 @@ end:
 
 void inputdevice_handle_inputcode(void)
 {
+	int monid = 0;
 	bool got = false;
 	for (auto & i : inputcode_pending) {
 		int code = i.code;
@@ -4774,7 +4789,7 @@ void inputdevice_handle_inputcode(void)
 				continue;
 			}
 #endif
-			if (!inputdevice_handle_inputcode2(code, state, s)) {
+			if (!inputdevice_handle_inputcode2(monid, code, state, s)) {
 				xfree(i.s);
 				i.code = 0;
 			}
@@ -4782,7 +4797,7 @@ void inputdevice_handle_inputcode(void)
 		}
 	}
 	if (!got)
-		inputdevice_handle_inputcode2(0, 0, NULL);
+		inputdevice_handle_inputcode2(monid, 0, 0, NULL);
 }
 
 
@@ -4803,7 +4818,7 @@ static uae_u64 isqual (int evt)
 
 static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 {
-	struct vidbuf_description* vidinfo = &adisplays.gfxvidinfo;
+	struct vidbuf_description *vidinfo = &adisplays[0].gfxvidinfo;
 	const struct inputevent *ie;
 	int joy;
 	bool isaks = false;
@@ -5244,6 +5259,7 @@ static void inputdevice_checkconfig (void)
 
 void inputdevice_vsync (void)
 {
+	int monid = 0;
 	if (autopause > 0 && pause_emulation == 0) {
 		autopause--;
 		if (!autopause) {
@@ -5258,18 +5274,18 @@ void inputdevice_vsync (void)
 	inputdevice_handle_inputcode ();
 	if (mouseedge_alive > 0)
 		mouseedge_alive--;
-	if (mouseedge())
+	if (mouseedge(monid))
 		mouseedge_alive = 10;
 	if (mousehack_alive_cnt > 0) {
 		mousehack_alive_cnt--;
 		if (mousehack_alive_cnt == 0)
-			setmouseactive(-1);
+			setmouseactive(0, -1);
 	} else if (mousehack_alive_cnt < 0) {
 		mousehack_alive_cnt++;
 		if (mousehack_alive_cnt == 0) {
 			mousehack_alive_cnt = 100;
-			setmouseactive(0);
-			setmouseactive(1);
+			setmouseactive(0, 0);
+			setmouseactive(0, 1);
 		}
 	}
 	inputdevice_checkconfig ();
@@ -6996,14 +7012,41 @@ static void compatibility_copy (struct uae_prefs *prefs, bool gameports)
 					else
 						kb = keyboard_default_kbmaps[KBR_DEFAULT_MAP_KEYRAH];
 				}
-				else if (JSEM_ISIPAC(i, prefs))
+				else if (JSEM_ISRAPLAYER1(i, prefs))
 				{
 					if (cd32)
-						kb = keyboard_default_kbmaps[KBR_DEFAULT_MAP_CD32_IPAC];
+						kb = keyboard_default_kbmaps[KBR_DEFAULT_MAP_CD32_RAPLAYER1];
 					else if (mode == JSEM_MODE_GAMEPAD)
-						kb = keyboard_default_kbmaps[KBR_DEFAULT_MAP_IPAC3];
+						kb = keyboard_default_kbmaps[KBR_DEFAULT_MAP_RAPLAYER1_3];
 					else
-						kb = keyboard_default_kbmaps[KBR_DEFAULT_MAP_IPAC];
+						kb = keyboard_default_kbmaps[KBR_DEFAULT_MAP_RAPLAYER1];
+				}
+				else if (JSEM_ISRAPLAYER2(i, prefs))
+				{
+					if (cd32)
+						kb = keyboard_default_kbmaps[KBR_DEFAULT_MAP_CD32_RAPLAYER2];
+					else if (mode == JSEM_MODE_GAMEPAD)
+						kb = keyboard_default_kbmaps[KBR_DEFAULT_MAP_RAPLAYER2_3];
+					else
+						kb = keyboard_default_kbmaps[KBR_DEFAULT_MAP_RAPLAYER2];
+				}
+				else if (JSEM_ISRAPLAYER3(i, prefs))
+				{
+					if (cd32)
+						kb = keyboard_default_kbmaps[KBR_DEFAULT_MAP_CD32_RAPLAYER3];
+					else if (mode == JSEM_MODE_GAMEPAD)
+						kb = keyboard_default_kbmaps[KBR_DEFAULT_MAP_RAPLAYER3_3];
+					else
+						kb = keyboard_default_kbmaps[KBR_DEFAULT_MAP_RAPLAYER3];
+				}
+				else if (JSEM_ISRAPLAYER4(i, prefs))
+				{
+					if (cd32)
+						kb = keyboard_default_kbmaps[KBR_DEFAULT_MAP_CD32_RAPLAYER4];
+					else if (mode == JSEM_MODE_GAMEPAD)
+						kb = keyboard_default_kbmaps[KBR_DEFAULT_MAP_RAPLAYER4_3];
+					else
+						kb = keyboard_default_kbmaps[KBR_DEFAULT_MAP_RAPLAYER4];
 				}
 #endif
 				if (kb) {

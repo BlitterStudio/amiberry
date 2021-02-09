@@ -1,6 +1,5 @@
-#include <stdbool.h>
-#include <stdio.h>
-#include <string.h>
+#include <cstdio>
+#include <cstring>
 
 #include <guisan.hpp>
 #include <SDL_ttf.h>
@@ -12,13 +11,10 @@
 #include "config.h"
 #include "gui_handling.h"
 
-#ifdef ANDROID
-#include "androidsdl_event.h"
-#endif
-
 #include "options.h"
 #include "inputdevice.h"
 #include "amiberry_gfx.h"
+#include "amiberry_input.h"
 #include "fsdb_host.h"
 
 #define DIALOG_WIDTH 600
@@ -26,7 +22,7 @@
 
 static bool dialogResult = false;
 static bool dialogFinished = false;
-static const char* dialogControlPressed;
+static amiberry_hotkey hotkey = {};
 static bool halt_gui = false;
 
 static gcn::Window* wndShowMessage;
@@ -42,6 +38,8 @@ public:
 	{
 		if (actionEvent.getSource() == cmdOK)
 			dialogResult = true;
+		else if (actionEvent.getSource() == cmdCancel)
+			dialogResult = false;
 		dialogFinished = true;
 	}
 };
@@ -50,98 +48,57 @@ static ShowMessageActionListener* showMessageActionListener;
 
 static void InitShowMessage()
 {
-	if (sdl_window == nullptr)
-	{
-		sdl_window = SDL_CreateWindow("Amiberry",
-			SDL_WINDOWPOS_UNDEFINED,
-			SDL_WINDOWPOS_UNDEFINED,
-			0,
-			0,
-			SDL_WINDOW_FULLSCREEN_DESKTOP);
-		check_error_sdl(sdl_window == nullptr, "Unable to create window:");
-	}
-	if (gui_screen == nullptr)
+	struct AmigaMonitor* mon = &AMonitors[0];
+	
+	if (!gui_screen)
 	{
 		gui_screen = SDL_CreateRGBSurface(0, GUI_WIDTH, GUI_HEIGHT, 16, 0, 0, 0, 0);
 		check_error_sdl(gui_screen == nullptr, "Unable to create SDL surface:");
 	}
-	if (renderer == nullptr)
-	{
-		renderer = SDL_CreateRenderer(sdl_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-		check_error_sdl(renderer == nullptr, "Unable to create a renderer:");
-		SDL_RenderSetLogicalSize(renderer, GUI_WIDTH, GUI_HEIGHT);
-	}
 
 #ifdef USE_DISPMANX
-	displayHandle = vc_dispmanx_display_open(0);
-	rgb_mode = VC_IMAGE_RGB565;
-	uint32_t vc_gui_image_ptr;
-	if (!gui_resource)
-		gui_resource = vc_dispmanx_resource_create(rgb_mode, GUI_WIDTH, GUI_HEIGHT, &vc_gui_image_ptr);
-	if (!black_gui_resource)
-		black_gui_resource = vc_dispmanx_resource_create(rgb_mode, GUI_WIDTH, GUI_HEIGHT, &vc_gui_image_ptr);
+	if (!displayHandle)
+		init_dispmanx_gui();
 
-	vc_dispmanx_rect_set(&blit_rect, 0, 0, GUI_WIDTH, GUI_HEIGHT);
-	vc_dispmanx_resource_write_data(gui_resource, rgb_mode, gui_screen->pitch, gui_screen->pixels, &blit_rect);
-	vc_dispmanx_resource_write_data(black_gui_resource, rgb_mode, gui_screen->pitch, gui_screen->pixels, &blit_rect);
-	vc_dispmanx_rect_set(&src_rect, 0, 0, GUI_WIDTH << 16, GUI_HEIGHT << 16);
-	vc_dispmanx_rect_set(&black_rect, 0, 0, modeInfo.width, modeInfo.height);
-	// Full screen destination rectangle
-	//vc_dispmanx_rect_set(&dst_rect, 0, 0, modeInfo.width, modeInfo.height);
-
-	// Scaled display with correct Aspect Ratio
-	const auto want_aspect = static_cast<float>(GUI_WIDTH) / static_cast<float>(GUI_HEIGHT);
-	const auto real_aspect = static_cast<float>(modeInfo.width) / static_cast<float>(modeInfo.height);
-
-	SDL_Rect viewport;
-	if (want_aspect > real_aspect)
+	if (!mon->sdl_window)
 	{
-		const auto scale = static_cast<float>(modeInfo.width) / static_cast<float>(GUI_WIDTH);
-		viewport.x = 0;
-		viewport.w = modeInfo.width;
-		viewport.h = static_cast<int>(std::ceil(GUI_HEIGHT * scale));
-		viewport.y = (modeInfo.height - viewport.h) / 2;
+		mon->sdl_window = SDL_CreateWindow("Amiberry",
+			SDL_WINDOWPOS_CENTERED,
+			SDL_WINDOWPOS_CENTERED,
+			GUI_WIDTH,
+			GUI_HEIGHT,
+			SDL_WINDOW_FULLSCREEN_DESKTOP);
+		check_error_sdl(mon->sdl_window == nullptr, "Unable to create window:");
 	}
-	else
+	if (sdl_renderer == nullptr)
 	{
-		const auto scale = static_cast<float>(modeInfo.height) / static_cast<float>(GUI_HEIGHT);
-		viewport.y = 0;
-		viewport.h = modeInfo.height;
-		viewport.w = static_cast<int>(std::ceil(GUI_WIDTH * scale));
-		viewport.x = (modeInfo.width - viewport.w) / 2;
+		sdl_renderer = SDL_CreateRenderer(mon->sdl_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+		check_error_sdl(sdl_renderer == nullptr, "Unable to create a renderer:");
+		SDL_RenderSetLogicalSize(sdl_renderer, GUI_WIDTH, GUI_HEIGHT);
 	}
-	vc_dispmanx_rect_set(&dst_rect, viewport.x, viewport.y, viewport.w, viewport.h);
-
-	if (!element_present)
-	{
-		element_present = 1;
-		updateHandle = vc_dispmanx_update_start(0);
-
-		VC_DISPMANX_ALPHA_T alpha;
-		alpha.flags = DISPMANX_FLAGS_ALPHA_FROM_SOURCE;
-		alpha.opacity = 255;
-		alpha.mask = 0;
-
-		if (!blackscreen_element)
-			blackscreen_element = vc_dispmanx_element_add(updateHandle, displayHandle, 0,
-				&black_rect, black_gui_resource, &src_rect, DISPMANX_PROTECTION_NONE, &alpha,
-				nullptr, DISPMANX_NO_ROTATE);
-
-		if (!gui_element)
-			gui_element = vc_dispmanx_element_add(updateHandle, displayHandle, 1,
-				&dst_rect, gui_resource, &src_rect, DISPMANX_PROTECTION_NONE, &alpha,
-				nullptr, DISPMANX_NO_ROTATE);
-
-		vc_dispmanx_update_submit_sync(updateHandle);
-}
 #else
-
-	if (sdl_window)
+	if (!mon->sdl_window)
+	{
+		mon->sdl_window = SDL_CreateWindow("Amiberry",
+			SDL_WINDOWPOS_CENTERED,
+			SDL_WINDOWPOS_CENTERED,
+			GUI_WIDTH,
+			GUI_HEIGHT,
+			SDL_WINDOW_FULLSCREEN_DESKTOP);
+		check_error_sdl(mon->sdl_window == nullptr, "Unable to create window:");
+	}
+	if (sdl_renderer == nullptr)
+	{
+		sdl_renderer = SDL_CreateRenderer(mon->sdl_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+		check_error_sdl(sdl_renderer == nullptr, "Unable to create a renderer:");
+		SDL_RenderSetLogicalSize(sdl_renderer, GUI_WIDTH, GUI_HEIGHT);
+	}
+	if (mon->sdl_window)
 	{
 		if (amiberry_options.rotation_angle != 0 && amiberry_options.rotation_angle != 180)
-			SDL_SetWindowSize(sdl_window, GUI_HEIGHT, GUI_WIDTH);
+			SDL_SetWindowSize(mon->sdl_window, GUI_HEIGHT, GUI_WIDTH);
 		else
-			SDL_SetWindowSize(sdl_window, GUI_WIDTH, GUI_HEIGHT);
+			SDL_SetWindowSize(mon->sdl_window, GUI_WIDTH, GUI_HEIGHT);
 	}
 	
 	// make the scaled rendering look smoother (linear scaling).
@@ -149,16 +106,16 @@ static void InitShowMessage()
 
 	if (gui_texture == nullptr)
 	{
-		gui_texture = SDL_CreateTexture(renderer, gui_screen->format->format, SDL_TEXTUREACCESS_STREAMING,
+		gui_texture = SDL_CreateTexture(sdl_renderer, gui_screen->format->format, SDL_TEXTUREACCESS_STREAMING,
 			gui_screen->w, gui_screen->h);
 		check_error_sdl(gui_texture == nullptr, "Unable to create texture from Surface");
 	}
-#endif
 
 	if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
-		SDL_RenderSetLogicalSize(renderer, GUI_WIDTH, GUI_HEIGHT);
+		SDL_RenderSetLogicalSize(sdl_renderer, GUI_WIDTH, GUI_HEIGHT);
 	else
-		SDL_RenderSetLogicalSize(renderer, GUI_HEIGHT, GUI_WIDTH);
+		SDL_RenderSetLogicalSize(sdl_renderer, GUI_HEIGHT, GUI_WIDTH);
+#endif
 
 	SDL_SetRelativeMouseMode(SDL_FALSE);
 	SDL_ShowCursor(SDL_ENABLE);
@@ -304,8 +261,8 @@ static void ExitShowMessage()
 		}
 
 		// Clear the screen
-		SDL_RenderClear(renderer);
-		SDL_RenderPresent(renderer);
+		SDL_RenderClear(sdl_renderer);
+		SDL_RenderPresent(sdl_renderer);
 #endif
 	}
 }
@@ -313,31 +270,176 @@ static void ExitShowMessage()
 static void ShowMessageWaitInputLoop()
 {
 	auto got_event = 0;
+	std::string caption;
+	std::string delimiter;
+	size_t pos;
 	SDL_Event event;
 	while (SDL_PollEvent(&event))
 	{
-		if (event.type == SDL_KEYDOWN)
+		switch (event.type)
 		{
-			got_event = 1;
-			switch (event.key.keysym.sym)
+		case SDL_KEYDOWN:
+			if (event.key.repeat == 0)
 			{
-			case VK_ESCAPE:
-				dialogFinished = true;
-				break;
+				got_event = 1;
+				switch (event.key.keysym.sym)
+				{
+				case VK_ESCAPE:
+					dialogFinished = true;
+					break;
 
-			default:
-				dialogControlPressed = SDL_GetKeyName(event.key.keysym.sym);
-				dialogFinished = true;
-				break;
+				case SDLK_LCTRL:
+					hotkey.modifiers.lctrl = true;
+					delimiter = SDL_GetKeyName(event.key.keysym.sym);
+					caption = lblText2->getCaption();
+					lblText2->setCaption(caption + " " + delimiter);
+					break;
+				case SDLK_RCTRL:
+					hotkey.modifiers.rctrl = true;
+					delimiter = SDL_GetKeyName(event.key.keysym.sym);
+					caption = lblText2->getCaption();
+					lblText2->setCaption(caption + " " + delimiter);
+					break;
+				case SDLK_LALT:
+					hotkey.modifiers.lalt = true;
+					delimiter = SDL_GetKeyName(event.key.keysym.sym);
+					caption = lblText2->getCaption();
+					lblText2->setCaption(caption + " " + delimiter);
+					break;
+				case SDLK_RALT:
+					hotkey.modifiers.ralt = true;
+					delimiter = SDL_GetKeyName(event.key.keysym.sym);
+					caption = lblText2->getCaption();
+					lblText2->setCaption(caption + " " + delimiter);
+					break;
+				case SDLK_LSHIFT:
+					hotkey.modifiers.lshift = true;
+					delimiter = SDL_GetKeyName(event.key.keysym.sym);
+					caption = lblText2->getCaption();
+					lblText2->setCaption(caption + " " + delimiter);
+					break;
+				case SDLK_RSHIFT:
+					hotkey.modifiers.rshift = true;
+					delimiter = SDL_GetKeyName(event.key.keysym.sym);
+					caption = lblText2->getCaption();
+					lblText2->setCaption(caption + " " + delimiter);
+					break;
+				case SDLK_LGUI:
+					hotkey.modifiers.lgui = true;
+					delimiter = SDL_GetKeyName(event.key.keysym.sym);
+					caption = lblText2->getCaption();
+					lblText2->setCaption(caption + " " + delimiter);
+					break;
+				case SDLK_RGUI:
+					hotkey.modifiers.rgui = true;
+					delimiter = SDL_GetKeyName(event.key.keysym.sym);
+					caption = lblText2->getCaption();
+					lblText2->setCaption(caption + " " + delimiter);
+					break;
+
+				default:
+					hotkey.scancode = event.key.keysym.scancode;
+					hotkey.key_name = delimiter = SDL_GetKeyName(event.key.keysym.sym);
+					caption = lblText2->getCaption();
+					lblText2->setCaption(caption + " " + delimiter);
+					break;
+				}
 			}
-		}
+			break;
 
-		if (event.type == SDL_CONTROLLERBUTTONDOWN || event.type == SDL_JOYBUTTONDOWN)
-		{
+		case SDL_CONTROLLERBUTTONDOWN:
+		case SDL_JOYBUTTONDOWN:
 			got_event = 1;
-			dialogControlPressed = SDL_GameControllerGetStringForButton(
+			hotkey.key_name = SDL_GameControllerGetStringForButton(
 				SDL_GameControllerButton(event.cbutton.button));
 			dialogFinished = true;
+			break;
+
+		case SDL_KEYUP:
+			if (event.key.repeat == 0)
+			{
+				got_event = 1;
+				switch (event.key.keysym.sym)
+				{
+				case SDLK_LCTRL:
+					hotkey.modifiers.lctrl = false;
+					delimiter = SDL_GetKeyName(event.key.keysym.sym);
+					caption = lblText2->getCaption();
+					if ((pos = caption.find(delimiter)) != std::string::npos)
+						caption.erase(0, pos + delimiter.length());
+					lblText2->setCaption(caption);
+					break;
+				case SDLK_RCTRL:
+					hotkey.modifiers.rctrl = false;
+					delimiter = SDL_GetKeyName(event.key.keysym.sym);
+					caption = lblText2->getCaption();
+					if ((pos = caption.find(delimiter)) != std::string::npos)
+						caption.erase(0, pos + delimiter.length());
+					lblText2->setCaption(caption);
+					break;
+				case SDLK_LALT:
+					hotkey.modifiers.lalt = false;
+					delimiter = SDL_GetKeyName(event.key.keysym.sym);
+					caption = lblText2->getCaption();
+					if ((pos = caption.find(delimiter)) != std::string::npos)
+						caption.erase(0, pos + delimiter.length());
+					lblText2->setCaption(caption);
+					break;
+				case SDLK_RALT:
+					hotkey.modifiers.ralt = false;
+					delimiter = SDL_GetKeyName(event.key.keysym.sym);
+					caption = lblText2->getCaption();
+					if ((pos = caption.find(delimiter)) != std::string::npos)
+						caption.erase(0, pos + delimiter.length());
+					lblText2->setCaption(caption);
+					break;
+				case SDLK_LSHIFT:
+					hotkey.modifiers.lshift = false;
+					delimiter = SDL_GetKeyName(event.key.keysym.sym);
+					caption = lblText2->getCaption();
+					if ((pos = caption.find(delimiter)) != std::string::npos)
+						caption.erase(0, pos + delimiter.length());
+					lblText2->setCaption(caption);
+					break;
+				case SDLK_RSHIFT:
+					hotkey.modifiers.rshift = false;
+					delimiter = SDL_GetKeyName(event.key.keysym.sym);
+					caption = lblText2->getCaption();
+					if ((pos = caption.find(delimiter)) != std::string::npos)
+						caption.erase(0, pos + delimiter.length());
+					lblText2->setCaption(caption);
+					break;
+				case SDLK_LGUI:
+					hotkey.modifiers.lgui = false;
+					delimiter = SDL_GetKeyName(event.key.keysym.sym);
+					caption = lblText2->getCaption();
+					if ((pos = caption.find(delimiter)) != std::string::npos)
+						caption.erase(0, pos + delimiter.length());
+					lblText2->setCaption(caption);
+					break;
+				case SDLK_RGUI:
+					hotkey.modifiers.rgui = false;
+					delimiter = SDL_GetKeyName(event.key.keysym.sym);
+					caption = lblText2->getCaption();
+					if ((pos = caption.find(delimiter)) != std::string::npos)
+						caption.erase(0, pos + delimiter.length());
+					lblText2->setCaption(caption);
+					break;
+				default:
+					dialogFinished = true;
+					break;
+				}
+			}			
+			break;
+		case SDL_JOYBUTTONUP:
+		case SDL_MOUSEBUTTONDOWN:
+		case SDL_MOUSEBUTTONUP:
+		case SDL_MOUSEMOTION:
+		case SDL_MOUSEWHEEL:
+			got_event = 1;
+			break;
+			
+		default:
 			break;
 		}
 
@@ -351,6 +453,7 @@ static void ShowMessageWaitInputLoop()
 	{
 		// Now we let the Gui object perform its logic.
 		uae_gui->logic();
+		SDL_RenderClear(sdl_renderer);
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
 		// Finally we update the screen.
@@ -374,6 +477,7 @@ static void ShowMessageLoop()
 	auto got_event = 0;
 	SDL_Event event;
 	SDL_Event touch_event;
+	struct didata* did = &di_joystick[0];
 	while (SDL_PollEvent(&event))
 	{
 		switch (event.type)
@@ -404,28 +508,56 @@ static void ShowMessageLoop()
 			break;
 
 		case SDL_JOYBUTTONDOWN:
-		case SDL_CONTROLLERBUTTONDOWN:
-			if (gui_controller)
+		case SDL_JOYHATMOTION:
+			if (gui_joystick)
 			{
 				got_event = 1;
-				if (SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_A) ||
-					SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_B))
+				const int hat = SDL_JoystickGetHat(gui_joystick, 0);
+				
+				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_A]) ||
+					SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_B]))
 				{
 					PushFakeKey(SDLK_RETURN);
 					break;
 				}
-				if (SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_X) ||
-					SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_Y) ||
-					SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_START))
+				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_X]) ||
+					SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_Y]) ||
+					SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_START]))
 				{
 					dialogFinished = true;
 					break;
 				}
-				if (SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_DPAD_LEFT) ||
-					SDL_GameControllerGetButton(gui_controller, SDL_CONTROLLER_BUTTON_DPAD_RIGHT))
+				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_DPAD_LEFT]) ||
+					SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_DPAD_RIGHT]) ||
+					hat & SDL_HAT_LEFT ||
+					hat & SDL_HAT_RIGHT)
 				{
 					navigate_left_right();
 					break;
+				}
+			}
+			break;
+
+		case SDL_JOYAXISMOTION:
+			if (gui_joystick)
+			{
+				got_event = 1;
+				if (event.jaxis.axis == SDL_CONTROLLER_AXIS_LEFTX)
+				{
+					if (event.jaxis.value > joystick_dead_zone && last_x != 1)
+					{
+						last_x = 1;
+						navigate_left_right();
+						break;
+					}
+					if (event.jaxis.value < -joystick_dead_zone && last_x != -1)
+					{
+						last_x = -1;
+						navigate_left_right();
+						break;
+					}
+					if (event.jaxis.value > -joystick_dead_zone && event.jaxis.value < joystick_dead_zone)
+						last_x = 0;
 				}
 			}
 			break;
@@ -481,17 +613,14 @@ static void ShowMessageLoop()
 		//-------------------------------------------------
 		// Send event to guisan-controls
 		//-------------------------------------------------
-#ifdef ANDROID
-		androidsdl_event(event, gui_input);
-#else
 		gui_input->pushInput(event);
-#endif
 	}
 
 	if (got_event)
 	{
 		// Now we let the Gui object perform its logic.
 		uae_gui->logic();
+		SDL_RenderClear(sdl_renderer);
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
 		// Finally we update the screen.
@@ -521,6 +650,7 @@ bool ShowMessage(const char* title, const char* line1, const char* line2, const 
 
 	// Prepare the screen once
 	uae_gui->logic();
+	SDL_RenderClear(sdl_renderer);
 	uae_gui->draw();
 	update_gui_screen();
 
@@ -528,14 +658,14 @@ bool ShowMessage(const char* title, const char* line1, const char* line2, const 
 	{
 		const auto start = SDL_GetPerformanceCounter();
 		ShowMessageLoop();
-		cap_fps(start, 60);
+		cap_fps(start);
 	}
 
 	ExitShowMessage();
 	return dialogResult;
 }
 
-const char* ShowMessageForInput(const char* title, const char* line1, const char* button1)
+amiberry_hotkey ShowMessageForInput(const char* title, const char* line1, const char* button1)
 {
 	dialogResult = false;
 	dialogFinished = false;
@@ -549,16 +679,41 @@ const char* ShowMessageForInput(const char* title, const char* line1, const char
 
 	// Prepare the screen once
 	uae_gui->logic();
+	SDL_RenderClear(sdl_renderer);
 	uae_gui->draw();
 	update_gui_screen();
 
+	hotkey.modifiers.lctrl = hotkey.modifiers.rctrl = 
+		hotkey.modifiers.lalt = hotkey.modifiers.ralt = 
+		hotkey.modifiers.lshift = hotkey.modifiers.rshift = 
+		hotkey.modifiers.lgui = hotkey.modifiers.rgui = false;
+	
 	while (!dialogFinished)
 	{
 		const auto start = SDL_GetPerformanceCounter();
 		ShowMessageWaitInputLoop();
-		cap_fps(start, 60);
+		cap_fps(start);
 	}
 
 	ExitShowMessage();
-	return dialogControlPressed;
+
+	hotkey.modifiers_string = "";
+	if (hotkey.modifiers.lctrl)
+		hotkey.modifiers_string = "LCtrl+";
+	if (hotkey.modifiers.rctrl)
+		hotkey.modifiers_string = "RCtrl+";
+	if (hotkey.modifiers.lalt)
+		hotkey.modifiers_string = hotkey.modifiers_string + "LAlt+";
+	if (hotkey.modifiers.ralt)
+		hotkey.modifiers_string = hotkey.modifiers_string + "RAlt+";
+	if (hotkey.modifiers.lshift)
+		hotkey.modifiers_string = hotkey.modifiers_string + "LShift+";
+	if (hotkey.modifiers.rshift)
+		hotkey.modifiers_string = hotkey.modifiers_string + "RShift+";
+	if (hotkey.modifiers.lgui)
+		hotkey.modifiers_string = hotkey.modifiers_string + "LGUI+";
+	if (hotkey.modifiers.rgui)
+		hotkey.modifiers_string = hotkey.modifiers_string + "RGUI+";
+	
+	return hotkey;
 }

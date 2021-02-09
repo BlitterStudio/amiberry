@@ -220,8 +220,8 @@ public:
 		get_configuration_path(destination, MAX_DPATH);
 		strcat(destination, "gamecontrollerdb.txt");
 		write_log("Downloading % ...\n", destination);
-		//TODO change this to master
-		const auto result = download_file("https://github.com/midwan/amiberry/blob/dev/conf/gamecontrollerdb.txt?raw=true", destination);
+		const auto* const url = "https://raw.githubusercontent.com/gabomdq/SDL_GameControllerDB/master/gamecontrollerdb.txt";
+		const auto result = download_file(url, destination);
 
 		if (result)
 		{
@@ -248,7 +248,7 @@ void InitPanelPaths(const struct _ConfigCategory& category)
 	txtSystemROMs->setBackgroundColor(colTextboxBackground);
 
 	cmdSystemROMs = new gcn::Button("...");
-	cmdSystemROMs->setId("SystemROMs");
+	cmdSystemROMs->setId("cmdSystemROMs");
 	cmdSystemROMs->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdSystemROMs->setBaseColor(gui_baseCol);
 	cmdSystemROMs->addActionListener(folderButtonActionListener);
@@ -259,7 +259,7 @@ void InitPanelPaths(const struct _ConfigCategory& category)
 	txtConfigPath->setBackgroundColor(colTextboxBackground);
 
 	cmdConfigPath = new gcn::Button("...");
-	cmdConfigPath->setId("ConfigPath");
+	cmdConfigPath->setId("cmdConfigPath");
 	cmdConfigPath->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdConfigPath->setBaseColor(gui_baseCol);
 	cmdConfigPath->addActionListener(folderButtonActionListener);
@@ -270,7 +270,7 @@ void InitPanelPaths(const struct _ConfigCategory& category)
 	txtControllersPath->setBackgroundColor(colTextboxBackground);
 
 	cmdControllersPath = new gcn::Button("...");
-	cmdControllersPath->setId("ControllersPath");
+	cmdControllersPath->setId("cmdControllersPath");
 	cmdControllersPath->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdControllersPath->setBaseColor(gui_baseCol);
 	cmdControllersPath->addActionListener(folderButtonActionListener);
@@ -281,7 +281,7 @@ void InitPanelPaths(const struct _ConfigCategory& category)
 	txtRetroArchFile->setBackgroundColor(colTextboxBackground);
 
 	cmdRetroArchFile = new gcn::Button("...");
-	cmdRetroArchFile->setId("RetroArchFile");
+	cmdRetroArchFile->setId("cmdRetroArchFile");
 	cmdRetroArchFile->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdRetroArchFile->setBaseColor(gui_baseCol);
 	cmdRetroArchFile->addActionListener(folderButtonActionListener);
@@ -338,14 +338,14 @@ void InitPanelPaths(const struct _ConfigCategory& category)
 	cmdRescanROMs = new gcn::Button("Rescan Paths");
 	cmdRescanROMs->setSize(cmdRescanROMs->getWidth() + DISTANCE_BORDER, BUTTON_HEIGHT);
 	cmdRescanROMs->setBaseColor(gui_baseCol);
-	cmdRescanROMs->setId("RescanROMs");
+	cmdRescanROMs->setId("cmdRescanROMs");
 	cmdRescanROMs->addActionListener(rescanROMsButtonActionListener);
 
 	downloadXMLButtonActionListener = new DownloadXMLButtonActionListener();
 	cmdDownloadXML = new gcn::Button("Update WHDLoad XML");
 	cmdDownloadXML->setSize(cmdDownloadXML->getWidth() + DISTANCE_BORDER, BUTTON_HEIGHT);
 	cmdDownloadXML->setBaseColor(gui_baseCol);
-	cmdDownloadXML->setId("DownloadXML");
+	cmdDownloadXML->setId("cmdDownloadXML");
 	cmdDownloadXML->addActionListener(downloadXMLButtonActionListener);
 
 	downloadControllerDbActionListener = new DownloadControllerDbActionListener();

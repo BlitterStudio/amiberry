@@ -7,6 +7,8 @@
 #pragma once
 #include <SDL.h>
 
+#include "options.h"
+
 #define TARGET_NAME _T("amiberry")
 
 #define NO_MAIN_IN_MAIN_C
@@ -22,8 +24,8 @@
 #define GETBDM(x) (((x) - (((x) / 10000) * 10000)) / 100)
 #define GETBDD(x) ((x) % 100)
 
-#define AMIBERRYVERSION _T("Amiberry v3.4 beta (2020-12-21)")
-#define AMIBERRYDATE MAKEBD(2020, 12, 21)
+#define AMIBERRYVERSION _T("Amiberry BETA (2021-02-08)")
+#define AMIBERRYDATE MAKEBD(2021, 2, 8)
 
 #define IHF_WINDOWHIDDEN 6
 
@@ -34,19 +36,24 @@ STATIC_INLINE FILE* uae_tfopen(const TCHAR* path, const TCHAR* mode)
 	return fopen(path, mode);
 }
 
+extern int mouseactive;
+extern int minimized;
+extern int monitor_off;
+
 extern void logging_init();
-extern int generic_main(int argc, char* argv[]);
 
 extern bool my_kbd_handler(int, int, int, bool);
 extern void clearallkeys();
 extern int getcapslock();
-extern void releasecapture();
+
+void releasecapture(struct AmigaMonitor*);
 extern void disablecapture();
 
-extern int enter_gui_key;
-extern int quit_key;
-extern int action_replay_button;
-extern int fullscreen_key;
+extern amiberry_hotkey enter_gui_key;
+extern amiberry_hotkey quit_key;
+extern amiberry_hotkey action_replay_key;
+extern amiberry_hotkey fullscreen_key;
+extern amiberry_hotkey minimize_key;
 
 extern int emulating;
 extern bool config_loaded;
@@ -54,8 +61,9 @@ extern bool config_loaded;
 extern int z3_base_adr;
 #ifdef USE_DISPMANX
 extern unsigned long time_per_frame;
-extern bool volatile flip_in_progess;
 #endif
+extern bool volatile flip_in_progess;
+
 void amiberry_gui_init();
 void gui_widgets_init();
 void run_gui(void);
@@ -64,11 +72,10 @@ void amiberry_gui_halt();
 void init_max_signals(void);
 void wait_for_vsync(void);
 unsigned long target_lastsynctime(void);
-extern int screen_is_picasso;
 
 void save_amiberry_settings(void);
 void update_display(struct uae_prefs*);
-void black_screen_now(void);
+void clearscreen(void);
 void graphics_subshutdown(void);
 
 extern void wait_keyrelease(void);
@@ -104,10 +111,19 @@ extern void ReadConfigFileList(void);
 extern void RescanROMs(void);
 extern void SymlinkROMs(void);
 extern void ClearAvailableROMList(void);
-extern void setpriority(int prio);
-extern bool setpaused(int priority);
+
+extern void minimizewindow(int monid);
+extern void updatewinrect(struct AmigaMonitor*, bool);
+
 extern bool resumepaused(int priority);
-extern void init_colors();
+extern bool setpaused(int priority);
+extern void unsetminimized(int monid);
+extern void setminimized(int monid);
+
+
+extern void setpriority(int prio);
+void init_colors(int monid);
+
 
 #include <vector>
 #include <string>
@@ -135,6 +151,7 @@ extern void AddFileToWHDLoadList(const char* file, int moveToTop);
 
 int count_HDs(struct uae_prefs* p);
 extern void gui_force_rtarea_hdchange(void);
+extern int isfocus(void);
 extern void gui_restart(void);
 extern bool hardfile_testrdb(const char* filename);
 

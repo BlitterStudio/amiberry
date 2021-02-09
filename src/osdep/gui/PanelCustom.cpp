@@ -24,8 +24,8 @@ static gcn::Window* grpFunction;
 static gcn::RadioButton* optMultiNone;
 static gcn::RadioButton* optMultiSelect;
 
-static gcn::Label* lblCustomAction[15];
-static gcn::DropDown* cboCustomAction[15];
+static gcn::Label* lblCustomAction[SDL_CONTROLLER_BUTTON_MAX];
+static gcn::DropDown* cboCustomAction[SDL_CONTROLLER_BUTTON_MAX];
 
 static gcn::Label* lblPortInput;
 static gcn::TextField* txtPortInput;
@@ -82,11 +82,12 @@ static StringListModel CustomEventList_Reset(nullptr, 0);
 
 const string label_button_list[] = {
 	"South:", "East:", "West:", "North:", "Select:", "Menu:", "Start:", "L.Stick:", "R.Stick:",
-	"L.Shoulder:", "R.Shoulder:", "DPad Up:", "DPad Down:", "DPad Left:", "DPad Right:"
+	"L.Shoulder:", "R.Shoulder:", "DPad Up:", "DPad Down:", "DPad Left:", "DPad Right:",
+	"Misc1:", "Paddle1:", "Paddle2:", "Paddle3:", "Paddle4:", "Touchpad:"
 };
 
 const string label_axis_list[] = {
-	"Left X:", "Left Y:", "Right X:", "Right Y:", "L.Trigger:", "R.Trigger"
+	"Left X:", "Left Y:", "Right X:", "Right Y:", "L.Trigger:", "R.Trigger:"
 };
 
 const int RemapEventList[] = {
@@ -184,7 +185,7 @@ public:
 	{
 		if (actionEvent.getSource())
 		{
-			std::array<int, 15> tempmap{};
+			std::array<int, SDL_CONTROLLER_BUTTON_MAX> tempmap{};
 
 			// get map
 			switch (SelectedFunction)
@@ -201,7 +202,7 @@ public:
 
 			//  get the selected action from the drop-down, and 
 			//    push it into the 'temp map' 
-			for (auto t = 0; t < 15; t++)
+			for (auto t = 0; t < SDL_CONTROLLER_BUTTON_MAX; t++)
 			{
 				if (actionEvent.getSource() == cboCustomAction[t])
 				{
@@ -289,11 +290,12 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 
 	grpPort = new gcn::Window("Joystick Port");
 	grpPort->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
+	grpPort->setMovable(false);
 	grpPort->add(optPort0, 10, 10);
 	grpPort->add(optPort1, optPort0->getX() + optPort0->getWidth() + DISTANCE_NEXT_X, optPort0->getY());
 	grpPort->add(optPort2, optPort1->getX() + optPort1->getWidth() + DISTANCE_NEXT_X, optPort0->getY());
 	grpPort->add(optPort3, optPort2->getX() + optPort2->getWidth() + DISTANCE_NEXT_X, optPort0->getY());
-	grpPort->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, TITLEBAR_HEIGHT + optPort0->getHeight() * 3);
+	grpPort->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, TITLEBAR_HEIGHT + optPort0->getHeight() * 2 + 5);
 	grpPort->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpPort->setBaseColor(gui_baseCol);
 
@@ -301,6 +303,7 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 
 	grpFunction = new gcn::Window("Function Key");
 	grpFunction->setPosition(DISTANCE_BORDER, grpPort->getY() + grpPort->getHeight() + DISTANCE_NEXT_Y);
+	grpFunction->setMovable(false);
 	grpFunction->add(optMultiNone, 10, 10);
 	grpFunction->add(optMultiSelect, optMultiNone->getX() + optMultiNone->getWidth() + DISTANCE_NEXT_X, optMultiNone->getY());
 
@@ -326,10 +329,10 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 		grpFunction->getWidth() - (lblPortInput->getWidth() + DISTANCE_NEXT_X * 2 + lblRetroarch->getWidth()),
 		TEXTFIELD_HEIGHT);
 
-	for (i = 0; i < 15; ++i)
+	for (i = 0; i < SDL_CONTROLLER_BUTTON_MAX; ++i)
 		lblCustomAction[i] = new gcn::Label(label_button_list[i]);
 	
-	for (i = 0; i < 15; ++i)
+	for (i = 0; i < SDL_CONTROLLER_BUTTON_MAX; ++i)
 	{
 		lblCustomAction[i]->setSize(lblCustomAction[14]->getWidth(), lblCustomAction[14]->getHeight());
 		lblCustomAction[i]->setAlignment(gcn::Graphics::RIGHT);
@@ -348,18 +351,18 @@ void InitPanelCustom(const struct _ConfigCategory& category)
 	category.panel->add(lblPortInput, DISTANCE_BORDER, posY);
 	category.panel->add(txtPortInput, lblPortInput->getX() + lblPortInput->getWidth() + DISTANCE_NEXT_X, posY);
 	category.panel->add(lblRetroarch, txtPortInput->getX() + txtPortInput->getWidth() + DISTANCE_NEXT_X, posY);
-	posY = txtPortInput->getY() + txtPortInput->getHeight() + DISTANCE_NEXT_Y * 2;
+	posY = txtPortInput->getY() + txtPortInput->getHeight() + DISTANCE_NEXT_Y;
 	
-	for (i = 0; i < 7; i++)
+	for (i = 0; i < SDL_CONTROLLER_BUTTON_MAX / 2; i++)
 	{
 		category.panel->add(lblCustomAction[i], 5, posY);
 		category.panel->add(cboCustomAction[i], lblCustomAction[i]->getX() + lblCustomAction[i]->getWidth() + 4, posY);
 		posY = posY + DROPDOWN_HEIGHT + 6;
 	}
 
-	posY = txtPortInput->getY() + txtPortInput->getHeight() + DISTANCE_NEXT_Y * 2;
+	posY = txtPortInput->getY() + txtPortInput->getHeight() + DISTANCE_NEXT_Y;
 	auto posX = cboCustomAction[0]->getX() + cboCustomAction[0]->getWidth() + 4;
-	for (i = 7; i < 15; i++)
+	for (i = SDL_CONTROLLER_BUTTON_MAX / 2; i < SDL_CONTROLLER_BUTTON_MAX; i++)
 	{
 		category.panel->add(lblCustomAction[i], posX, posY);
 		category.panel->add(cboCustomAction[i], lblCustomAction[i]->getX() + lblCustomAction[i]->getWidth() + 4, posY);
@@ -414,7 +417,7 @@ void RefreshPanelCustom()
 
 	// you'll want to refresh the drop-down section here
 	// get map
-	std::array<int, 15> tempmap{};
+	std::array<int, SDL_CONTROLLER_BUTTON_MAX> tempmap{};
 	switch (SelectedFunction)
 	{
 	case 0:
@@ -428,24 +431,22 @@ void RefreshPanelCustom()
 	}
 
 	// update the joystick port and disable those not available
-	char tmp[255];
-
 	if (changed_prefs.jports[SelectedPort].id >= JSEM_JOYS
 		&& changed_prefs.jports[SelectedPort].id < JSEM_MICE - 1)
 	{
-		const auto hostjoyid = changed_prefs.jports[SelectedPort].id - JSEM_JOYS;
-		strncpy(tmp, SDL_JoystickNameForIndex(hostjoyid), 255);
-
-		for (auto n = 0; n < 15; ++n)
+		const auto host_joy_id = changed_prefs.jports[SelectedPort].id - JSEM_JOYS;
+		struct didata* did = &di_joystick[host_joy_id];
+		
+		for (auto n = 0; n < SDL_CONTROLLER_BUTTON_MAX; ++n)
 		{
-			const auto temp_button = host_input_buttons[hostjoyid].button[n];
+			const auto temp_button = did->mapping.button[n];
 
 			// disable unmapped buttons
 			cboCustomAction[n]->setEnabled(temp_button > -1);
 			lblCustomAction[n]->setEnabled(temp_button > -1);
 
 			// set hotkey/quit/reset/menu on NONE field (and disable hotkey)
-			if (temp_button == host_input_buttons[hostjoyid].hotkey_button
+			if (temp_button == did->mapping.hotkey_button
 				&& temp_button != -1)
 			{
 				cboCustomAction[n]->setListModel(&CustomEventList_HotKey);
@@ -454,7 +455,7 @@ void RefreshPanelCustom()
 				lblCustomAction[n]->setEnabled(false);
 			}
 
-			else if (temp_button == host_input_buttons[hostjoyid].quit_button
+			else if (temp_button == did->mapping.quit_button
 				&& temp_button != -1
 				&& SelectedFunction == 1
 				&& changed_prefs.use_retroarch_quit)
@@ -465,7 +466,7 @@ void RefreshPanelCustom()
 				lblCustomAction[n]->setEnabled(false);
 			}
 
-			else if (temp_button == host_input_buttons[hostjoyid].button[SDL_CONTROLLER_BUTTON_GUIDE]
+			else if (temp_button == did->mapping.button[SDL_CONTROLLER_BUTTON_GUIDE]
 				&& temp_button != -1
 				&& SelectedFunction == 1
 				&& changed_prefs.use_retroarch_menu)
@@ -476,7 +477,7 @@ void RefreshPanelCustom()
 				lblCustomAction[n]->setEnabled(false);
 			}
 
-			else if (temp_button == host_input_buttons[hostjoyid].reset_button
+			else if (temp_button == did->mapping.reset_button
 				&& temp_button != -1
 				&& SelectedFunction == 1
 				&& changed_prefs.use_retroarch_reset)
@@ -491,24 +492,25 @@ void RefreshPanelCustom()
 				cboCustomAction[n]->setListModel(&CustomEventList);
 		}
 
-		if (changed_prefs.input_analog_remap == true)
+		if (did->mapping.number_of_hats > 0 || changed_prefs.input_analog_remap == true)
 		{
-			for (auto i = 0; i < 4; i++)
+			for (int i = SDL_CONTROLLER_BUTTON_DPAD_UP; i <= SDL_CONTROLLER_BUTTON_DPAD_RIGHT; i++)
 			{
 				cboCustomAction[i]->setEnabled(true);
 				lblCustomAction[i]->setEnabled(true);
 			}
 		}
 
-		if (host_input_buttons[hostjoyid].is_retroarch)
+		if (did->mapping.is_retroarch)
 			lblRetroarch->setCaption("[R]");
 		else
 			lblRetroarch->setCaption("[N]");
+		
+		txtPortInput->setText(did->name);
 	}
 
 	else
 	{
-		_stprintf(tmp, _T("%s"), "Not a valid Input Controller for Joystick Emulation.");
 		for (auto& n : cboCustomAction)
 		{
 			n->setListModel(&CustomEventList);
@@ -520,12 +522,12 @@ void RefreshPanelCustom()
 		}
 
 		lblRetroarch->setCaption("[_]");
+		const std::string text = "Not a valid Input Controller for Joystick Emulation.";
+		txtPortInput->setText(text);
 	}
 
-	txtPortInput->setText(tmp);
-
 	// now select which items in drop-down are 'done'
-	for (auto z = 0; z < 15; ++z)
+	for (auto z = 0; z < SDL_CONTROLLER_BUTTON_MAX; ++z)
 	{	
 		const auto x = find_in_array(RemapEventList, RemapEventListSize, tempmap[z]);
 		cboCustomAction[z]->setSelected(x + 1);

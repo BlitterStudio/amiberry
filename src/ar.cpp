@@ -264,12 +264,12 @@ static int stored_picasso_on = -1;
 
 static void cartridge_enter(void)
 {
-	stored_picasso_on = gfxboard_set(false) ? 1 : 0;
+	stored_picasso_on = gfxboard_set(0, false) ? 1 : 0;
 }
 static void cartridge_exit (void)
 {
 	if (stored_picasso_on > 0)
-		gfxboard_set(true);
+		gfxboard_set(0, true);
 	stored_picasso_on = -1;
 }
 
@@ -680,6 +680,7 @@ static uae_u32 REGPARAM2 arram_lget (uaecptr addr)
 	addr -= arram_start;
 	addr &= arram_mask;
 	m = (uae_u32 *)(armemory_ram + addr);
+
 	return do_get_mem_long (m);
 }
 
@@ -712,6 +713,7 @@ void REGPARAM2 arram_lput (uaecptr addr, uae_u32 l)
 	addr -= arram_start;
 	addr &= arram_mask;
 	m = (uae_u32 *)(armemory_ram + addr);
+
 	do_put_mem_long (m, l);
 }
 

@@ -79,7 +79,8 @@
 #define OMTI_ALF2 44
 #define NCR5380_SYNTHESIS 45 // clone of ICD AdSCSI
 #define NCR5380_FIREBALL 46
-#define NCR_LAST 47
+#define OMTI_HD20 47
+#define NCR_LAST 48
 
 extern int log_scsiemu;
 
@@ -2131,6 +2132,7 @@ void ncr5380_bput(struct soft_scsi *scsi, int reg, uae_u8 v)
 						scsi->dma_active = true;
 						scsi->dma_started = true;
 						dma_check(scsi);
+						scsi->dmac_address = 0xffffffff;
 #if NCR5380_DEBUG
 						write_log(_T("DMA8490 initiator recv PC=%08x\n"), M68K_GETPC);
 #endif
@@ -3448,7 +3450,7 @@ static uae_u32 ncr80_bget2(struct soft_scsi *ncr, uaecptr addr, int size)
 		if (reg >= 0)
 			v = omti_bget(ncr, reg);
 
-	} else if (ncr->type == OMTI_ALF2) {
+	} else if (ncr->type == OMTI_ALF2 || ncr->type == OMTI_HD20) {
 
 		reg = alf2_reg(ncr, origaddr, false);
 		if (reg >= 0) {
@@ -3917,7 +3919,7 @@ static void ncr80_bput2(struct soft_scsi *ncr, uaecptr addr, uae_u32 val, int si
 		if (reg >= 0)
 			omti_bput(ncr, reg, val);
 
-	} else if (ncr->type == OMTI_ALF2) {
+	} else if (ncr->type == OMTI_ALF2 || ncr->type == OMTI_HD20) {
 
 		reg = alf2_reg(ncr, origaddr, true);
 		if (reg >= 0)
@@ -4027,6 +4029,56 @@ static void ncr80_bput2(struct soft_scsi *ncr, uaecptr addr, uae_u32 val, int si
 			else
 				ncr5380_bput(ncr, reg, val);
 		}
+	
+	} else if (ncr->type == NCR5380_FIREBALL) {
+
+		if ((addr & 0xc000) == 0x8000) {
+			// this is strange way to set up DMA address..
+			if (val & 0x40) {
+				ncr->dmac_address = 0x00777777;
+				ncr->dmac_length = 1;
+				ncr->dmac_active = 1;
+			} else if (ncr->dmac_length == 1) {
+				ncr->dmac_length++;
+				return;
+			}
+			if (!(val & 0xc0) && ncr->dmac_length > 1 && ncr->dmac_length <= 9 && !(addr & 2)) {
+				// nybbles, value 0 to 6
+				for (int i = 0; i < 6; i++) {
+					int shift = i * 4;
+					int bm = 1 << i;
+					if (!(val & bm)) {
+						uae_u8 n = (ncr->dmac_length - 2) & 0x0f;
+						uae_u8 v = (ncr->dmac_address >> shift) & 0x0f;
+						if (v > n)
+							v = n;
+						ncr->dmac_address &= ~(0x0f << shift);
+						ncr->dmac_address |= (v & 0x0f) << shift;
+					}
+				}
+				ncr->dmac_length++;
+			}
+			if (ncr->dmac_length > 9 && !(val & 0xc0) && !(addr & 2)) {
+				// nybbles, value 8 to 15..
+				for (int i = 0; i < 6; i++) {
+					int bm = 1 << i;
+					if (val & bm) {
+						int shift = i * 4;
+						uae_u8 v = (ncr->dmac_address >> shift) & 0x0f;
+						v++;
+						ncr->dmac_address &= ~(0x0f << shift);
+						ncr->dmac_address |= (v & 0x0f) << shift;
+					}
+				}
+			}
+			ncr->dmac_direction = (val & 0x80) != 0;
+		} else {
+			reg = fireball_reg(ncr, addr);
+			if (reg >= 0) {
+				ncr5380_bput(ncr, reg, val);
+			}
+		}
+
 	}
 
 #if NCR5380_DEBUG > 1
@@ -4557,6 +4609,61 @@ void adscsi_add_scsi_unit(int ch, struct uaedev_config_info *ci, struct romconfi
 {
 	generic_soft_scsi_add(ch, ci, rc, NCR5380_ADSCSI, 65536, 65536, ROMTYPE_ADSCSI);
 }
+
+bool synthesis_init(struct autoconfig_info* aci)
+{
+	scsi_add_reset();
+	if (!aci->doinit) {
+		load_rom_rc(aci->rc, ROMTYPE_SYNTHESIS, 32768, 0, aci->autoconfig_raw, 128, LOADROM_EVENONLY_ODDONE | LOADROM_FILL);
+		return true;
+	}
+
+	struct soft_scsi* scsi = getscsi(aci->rc);
+	if (!scsi)
+		return false;
+
+	load_rom_rc(aci->rc, ROMTYPE_SYNTHESIS, 32768, 0, scsi->rom, 65536, LOADROM_EVENONLY_ODDONE | LOADROM_FILL);
+	memcpy(scsi->acmemory, scsi->rom, sizeof scsi->acmemory);
+	aci->addrbank = scsi->bank;
+	return true;
+}
+
+void synthesis_add_scsi_unit(int ch, struct uaedev_config_info* ci, struct romconfig* rc)
+{
+	generic_soft_scsi_add(ch, ci, rc, NCR5380_SYNTHESIS, 65536, 65536, ROMTYPE_SYNTHESIS);
+}
+
+bool fireball_init(struct autoconfig_info* aci)
+{
+	const struct expansionromtype* ert = get_device_expansion_rom(ROMTYPE_MASTFB);
+	scsi_add_reset();
+	aci->autoconfigp = ert->autoconfig;
+	if (!aci->doinit)
+		return true;
+
+	struct soft_scsi* scsi = getscsi(aci->rc);
+	if (!scsi)
+		return false;
+
+	scsi->dp8490v = true;
+	scsi->intena = true;
+	scsi->dma_controller = true;
+
+	load_rom_rc(aci->rc, ROMTYPE_MASTFB, 8192, 0, scsi->rom, 16384, LOADROM_EVENONLY_ODDONE | LOADROM_FILL);
+
+	for (int i = 0; i < 16; i++) {
+		uae_u8 b = ert->autoconfig[i];
+		ew(scsi, i * 4, b);
+	}
+	aci->addrbank = scsi->bank;
+	return true;
+}
+
+void fireball_add_scsi_unit(int ch, struct uaedev_config_info* ci, struct romconfig* rc)
+{
+	generic_soft_scsi_add(ch, ci, rc, NCR5380_FIREBALL, 65536, 32768, ROMTYPE_MASTFB);
+}
+
 
 bool trumpcardpro_init(struct autoconfig_info *aci)
 {

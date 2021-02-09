@@ -61,7 +61,7 @@ extern void raise_in_cl_list(blockinfo* bi);
 
 #define SHOW_DETAILS 2
 
-#define output_log SDL_Log
+#define output_log write_log
 
 enum transfer_type_t {
 	TYPE_UNKNOWN,

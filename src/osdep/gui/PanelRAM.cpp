@@ -6,7 +6,6 @@
 #include "sysdeps.h"
 #include "options.h"
 #include "memory.h"
-#include "gfxboard.h"
 #include "gui_handling.h"
 #include "target.h"
 
@@ -38,9 +37,6 @@ static gcn::Slider* sldFastmem;
 static gcn::Label* lblZ3mem;
 static gcn::Label* lblZ3size;
 static gcn::Slider* sldZ3mem;
-static gcn::Label* lblGfxmem;
-static gcn::Label* lblGfxsize;
-static gcn::Slider* sldGfxmem;
 static gcn::Label* lblA3000Lowmem;
 static gcn::Label* lblA3000Lowsize;
 static gcn::Slider* sldA3000Lowmem;
@@ -78,12 +74,6 @@ public:
 			changed_prefs.z3fastmem[0].size = FastMem_values[static_cast<int>(sldZ3mem->getValue())];
 			if (changed_prefs.z3fastmem[0].size > max_z3fastmem)
 				changed_prefs.z3fastmem[0].size = max_z3fastmem;
-		}
-
-		if (actionEvent.getSource() == sldGfxmem)
-		{
-			changed_prefs.rtgboards[0].rtgmem_size = FastMem_values[static_cast<int>(sldGfxmem->getValue())];
-			changed_prefs.rtgboards[0].rtgmem_type = GFXBOARD_UAE_Z3;
 		}
 
 		if (actionEvent.getSource() == sldA3000Lowmem)
@@ -163,16 +153,6 @@ void InitPanelRAM(const struct _ConfigCategory& category)
 	sldZ3mem->addActionListener(memorySliderActionListener);
 	lblZ3size = new gcn::Label("None    ");
 
-	lblGfxmem = new gcn::Label("RTG board:");
-	sldGfxmem = new gcn::Slider(0, 8);
-	sldGfxmem->setSize(sld_width, SLIDER_HEIGHT);
-	sldGfxmem->setBaseColor(gui_baseCol);
-	sldGfxmem->setMarkerLength(marker_length);
-	sldGfxmem->setStepLength(1);
-	sldGfxmem->setId("Gfxmem");
-	sldGfxmem->addActionListener(memorySliderActionListener);
-	lblGfxsize = new gcn::Label("None   ");
-
 	lblA3000Lowmem = new gcn::Label("A4000 Motherb. slot:");
 	sldA3000Lowmem = new gcn::Slider(0, 2);
 	sldA3000Lowmem->setSize(sld_width, SLIDER_HEIGHT);
@@ -217,11 +197,6 @@ void InitPanelRAM(const struct _ConfigCategory& category)
 	grpRAM->add(lblZ3size, lblA3000Lowmem->getWidth() + DISTANCE_NEXT_Y + sldZ3mem->getWidth() + 12, posY);
 	posY += sldZ3mem->getHeight() + DISTANCE_NEXT_Y;
 
-	grpRAM->add(lblGfxmem, 10, posY);
-	grpRAM->add(sldGfxmem, lblA3000Lowmem->getWidth() + DISTANCE_NEXT_Y, posY);
-	grpRAM->add(lblGfxsize, lblA3000Lowmem->getWidth() + DISTANCE_NEXT_Y + sldGfxmem->getWidth() + 12, posY);
-	posY += sldGfxmem->getHeight() + DISTANCE_NEXT_Y;
-
 	grpRAM->add(lblA3000Lowmem, 10, posY);
 	grpRAM->add(sldA3000Lowmem, lblA3000Lowmem->getWidth() + DISTANCE_NEXT_Y, posY);
 	grpRAM->add(lblA3000Lowsize, lblA3000Lowmem->getWidth() + DISTANCE_NEXT_Y + sldA3000Lowmem->getWidth() + 12, posY);
@@ -258,9 +233,6 @@ void ExitPanelRAM()
 	delete lblZ3mem;
 	delete sldZ3mem;
 	delete lblZ3size;
-	delete lblGfxmem;
-	delete sldGfxmem;
-	delete lblGfxsize;
 	delete lblA3000Lowmem;
 	delete sldA3000Lowmem;
 	delete lblA3000Lowsize;
@@ -313,11 +285,6 @@ void RefreshPanelRAM()
 		lblZ3mem->setEnabled(false);
 		lblZ3size->setEnabled(false);
 		lblZ3size->setCaption("N/A");
-
-		sldGfxmem->setEnabled(false);
-		lblGfxmem->setEnabled(false);
-		lblGfxsize->setEnabled(false);
-		lblGfxsize->setCaption("N/A");
 	}
 	else
 	{
@@ -335,21 +302,6 @@ void RefreshPanelRAM()
 			{
 				sldZ3mem->setValue(i);
 				lblZ3size->setCaption(FastMem_list[i]);
-				break;
-			}
-		}
-
-		sldGfxmem->setEnabled(true);
-		lblGfxmem->setEnabled(true);
-		lblGfxsize->setEnabled(true);
-		lblGfxsize->setCaption("None");
-		
-		for (i = 0; i < 9; ++i)
-		{
-			if (changed_prefs.rtgboards[0].rtgmem_size == FastMem_values[i])
-			{
-				sldGfxmem->setValue(i);
-				lblGfxsize->setCaption(FastMem_list[i]);
 				break;
 			}
 		}
@@ -386,9 +338,6 @@ bool HelpPanelRAM(std::vector<std::string>& helptext)
 	helptext.emplace_back("\"Z2 Fast\" is real fast memory in 24 bit address space.");
 	helptext.emplace_back("\"Z3 Fast\" is real fast memory in 32 bit address space and only available if");
 	helptext.emplace_back("a 32 bit CPU is selected.");
-	helptext.emplace_back("\"RTG board\" is the graphics memory used by Picasso96 and only available if");
-	helptext.emplace_back("a 32 bit CPU is selected. If you select some memory for this type,");
-	helptext.emplace_back("the Z3 RTG board will be activated.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("A4000 motherboard and processor board memory is only detected by the Amiga if");
 	helptext.emplace_back("you choose the correct Kickstart ROM (A4000).");

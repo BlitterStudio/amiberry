@@ -682,6 +682,9 @@
     <ClCompile Include="..\..\src\osdep\ahi_v2.cpp">
       <Filter>Source files\osdep</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\osdep\gui\PanelRTG.cpp">
+      <Filter>Source files\osdep\gui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\threaddep\thread.h">
@@ -1151,6 +1154,9 @@
     </ClInclude>
     <ClInclude Include="..\..\src\osdep\ahi_v2.h">
       <Filter>Source files\osdep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\parallel.h">
+      <Filter>Source files\include</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

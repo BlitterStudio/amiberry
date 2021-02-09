@@ -19,6 +19,8 @@
 #define UAEMINOR 5
 #define UAESUBREV 0
 
+#define MAX_AMIGADISPLAYS 4
+
 typedef enum { KBD_LANG_US, KBD_LANG_DK, KBD_LANG_DE, KBD_LANG_SE, KBD_LANG_FR, KBD_LANG_IT, KBD_LANG_ES } KbdLang;
 
 extern long int version;
@@ -106,8 +108,8 @@ struct jport
 	bool changed{};
 #ifdef AMIBERRY
 	int mousemap{};
-	std::array<int, 15> amiberry_custom_none;
-	std::array<int, 15> amiberry_custom_hotkey;
+	std::array<int, SDL_CONTROLLER_BUTTON_MAX> amiberry_custom_none;
+	std::array<int, SDL_CONTROLLER_BUTTON_MAX> amiberry_custom_hotkey;
 #endif
 };
 
@@ -508,10 +510,11 @@ struct whdbooter
 	int custom3 = 0;
 	int custom4 = 0;
 	int custom5 = 0;
-	TCHAR custom[256];
-	bool buttonwait;
-	TCHAR slave[4096];
-	bool showsplash;
+	TCHAR custom[256]{};
+	bool buttonwait{};
+	TCHAR slave[4096]{};
+	bool showsplash{};
+	int configdelay = 0;
 };
 #endif
 
@@ -593,7 +596,7 @@ struct uae_prefs
 	bool fpu_strict;
 	int fpu_mode;
 
-	struct monconfig gfx_monitor;
+	struct monconfig gfx_monitor[MAX_AMIGADISPLAYS];
 	int gfx_framerate, gfx_autoframerate;
 	bool gfx_autoresolution_vga;
 	int gfx_autoresolution;
@@ -863,8 +866,12 @@ struct uae_prefs
 	int gfx_correct_aspect;
 	int scaling_method;
 
+	bool gui_alwaysontop;
+	bool main_alwaysontop;
 	bool minimize_inactive;
 	bool capture_always;
+	bool start_minimized;
+	bool start_uncaptured;
 	
 	int active_capture_priority;
 	bool active_nocapture_pause;
@@ -878,9 +885,15 @@ struct uae_prefs
 	bool minimized_nosound;
 	int minimized_input;
 
+	bool rtgmatchdepth;
+	bool rtgallowscaling;
+	int rtgscaleaspectratio;
+	int rtgvblankrate;
+	bool borderless;
 	bool automount_removable;
 	bool automount_cddrives;
 	int uaescsimode;
+	bool blankmonitors;
 	bool right_control_is_right_win_key;
 
 	int statecapturerate, statecapturebuffersize;
@@ -920,6 +933,7 @@ struct uae_prefs
 	int input_device_match_mask;
 
 #ifdef AMIBERRY
+	int sound_pullmode;
 	bool input_analog_remap;
 	bool use_retroarch_quit;
 	bool use_retroarch_menu;
@@ -932,40 +946,6 @@ struct uae_prefs
 
 	struct whdbooter whdbootprefs;
 
-#endif
-
-	/* ANDROID */
-#ifdef ANDROID
-	int onScreen;
-	int onScreen_textinput;
-	int onScreen_dpad;
-	int onScreen_button1;
-	int onScreen_button2;
-	int onScreen_button3;
-	int onScreen_button4;
-	int onScreen_button5;
-	int onScreen_button6;
-	int custom_position;
-	int pos_x_textinput;
-	int pos_y_textinput;
-	int pos_x_dpad;
-	int pos_y_dpad;
-	int pos_x_button1;
-	int pos_y_button1;
-	int pos_x_button2;
-	int pos_y_button2;
-	int pos_x_button3;
-	int pos_y_button3;
-	int pos_x_button4;
-	int pos_y_button4;
-	int pos_x_button5;
-	int pos_y_button5;
-	int pos_x_button6;
-	int pos_y_button6;
-	int extfilter;
-	int quickSwitch;
-	int floatingJoystick;
-	int disableMenuVKeyb;
 #endif
 };
 
@@ -1092,6 +1072,25 @@ struct amiberry_customised_layout
 	std::array<int, 15> select;
 };
 
+struct hotkey_modifiers
+{
+	bool lctrl;
+	bool rctrl;
+	bool lalt;
+	bool ralt;
+	bool lshift;
+	bool rshift;
+	bool lgui;
+	bool rgui;
+};
+struct amiberry_hotkey
+{
+	int scancode;
+	std::string key_name;
+	std::string modifiers_string;
+	hotkey_modifiers modifiers;
+};
+
 struct amiberry_options
 {
 	bool quickstart_start = true;
@@ -1133,6 +1132,9 @@ struct amiberry_options
 	char default_controller4[128]{};
 	char default_mouse1[128] = "mouse";
 	char default_mouse2[128] = "joy0";
+	bool default_whd_buttonwait = false;
+	bool default_whd_showsplash = true;
+	int default_whd_configdelay = 0;
 };
 
 extern struct amiberry_options amiberry_options;

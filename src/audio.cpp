@@ -1432,7 +1432,7 @@ static void setirq (int nr, int which)
 		write_log (_T("SETIRQ%d (%d,%d) PC=%08X\n"), nr, which, isirq (nr) ? 1 : 0, M68K_GETPC);
 #endif
 	// audio interrupts are delayed by 2 cycles
-	if (currprefs.cpu_compatible) {
+	if (!currprefs.cachesize && currprefs.cpu_compatible) {
 		event2_newevent_xx (-1, 2 * CYCLE_UNIT + CYCLE_UNIT / 2, nr, audio_setirq_event);
 	} else {
 		audio_setirq_event(nr);
@@ -2340,7 +2340,7 @@ void AUDxDAT (int nr, uae_u16 v, uaecptr addr)
 	cdp->have_dat = true;
 #endif
 	// AUDxLEN is processed after 2 cycle delay
-	if (cdp->per < 124 * CYCLE_UNIT || currprefs.cpu_compatible) {
+	if (!currprefs.cachesize && (cdp->per < 124 * CYCLE_UNIT || currprefs.cpu_compatible)) {
 		event2_newevent_xx(-1, 2 * CYCLE_UNIT, nr | (chan_ena ? 0x100 : 0), audxdat_func);
 	} else {
 		audxdat_func(nr | (chan_ena ? 0x100 : 0));
@@ -2399,7 +2399,6 @@ void AUDxLCL (int nr, uae_u16 v)
 	if (usehacks() && ((cdp->ptx_tofetch && cdp->state == 1) || cdp->ptx_written)) {
 		static int warned = 100;
 		cdp->ptx = cdp->lc;
-		cdp->ptx_written = true;
 		cdp->ptx_written = true;
 		if (warned > 0) {
 			write_log(_T("AUD%dLCL HACK: %04X %08X (%d) (%d %d %08x)\n"), nr, v, M68K_GETPC, cdp->state, cdp->dsr, cdp->ptx_written, cdp->ptx);

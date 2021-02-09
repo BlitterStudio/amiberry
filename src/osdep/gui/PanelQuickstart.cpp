@@ -1,6 +1,5 @@
-#include <stdbool.h>
-#include <string.h>
-#include <stdio.h>
+#include <cstring>
+#include <cstdio>
 
 #include <guisan.hpp>
 #include <SDL_ttf.h>
@@ -146,10 +145,6 @@ static int numModelConfigs = 0;
 static bool bIgnoreListChange = true;
 static char whdload_file[MAX_DPATH];
 
-static const char* diskfile_filter[] = {".adf", ".adz", ".fdi", ".ipf", ".zip", ".dms", ".gz", ".xz", "\0"};
-static const char* cdfile_filter[] = {".cue", ".ccd", ".iso", "\0"};
-static const char* whdload_filter[] = { ".lha", "\0" };
-
 static void AdjustDropDownControls(void);
 
 static void CountModelConfigs(void)
@@ -242,8 +237,8 @@ static void AdjustPrefs(void)
 		changed_prefs.floppyslots[1].dfxtype = DRV_NONE;
 		changed_prefs.cdslots[0].inuse = true;
 		changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
-		changed_prefs.gfx_monitor.gfx_size.width = 720;
-		changed_prefs.gfx_monitor.gfx_size.height = 284;
+		changed_prefs.gfx_monitor[0].gfx_size.width = 720;
+		changed_prefs.gfx_monitor[0].gfx_size.height = 568;
 		break;
 	default:
 		break;

@@ -1,4 +1,4 @@
-#include <string.h>
+#include <cstring>
 
 #include <guisan.hpp>
 #include <SDL_ttf.h>
