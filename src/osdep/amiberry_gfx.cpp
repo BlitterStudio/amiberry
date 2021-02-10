@@ -967,7 +967,6 @@ static void open_screen(struct uae_prefs* p)
 	}
 	init_colors(mon->monitor_id);
 
-	target_graphics_buffer_update(mon->monitor_id);
 	updatewinrect(mon, true);
 
 	mon->screen_is_initialized = 1;
