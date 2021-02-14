@@ -1479,23 +1479,23 @@ static int akiko_thread (void *null)
 			switch (b)
 			{
 			case 0x0102: // pause
-				sys_command_cd_pause (unitnum, 1);
+				sys_command_cd_pause(unitnum, 1);
 				break;
 			case 0x0103: // unpause
-				sys_command_cd_pause (unitnum, 0);
+				sys_command_cd_pause(unitnum, 0);
 				break;
 			case 0x0104: // stop
 				cdaudiostop_do ();
 				break;
 			case 0x0105: // mute change
-				sys_command_cd_volume (unitnum, cdrom_muted ? 0 : 0x7fff, cdrom_muted ? 0 : 0x7fff);
+				sys_command_cd_volume(unitnum, cdrom_muted ? 0 : 0x7fff, cdrom_muted ? 0 : 0x7fff);
 				break;
 			case 0x0111: // instant play
 				sys_command_cd_volume(unitnum, cdrom_muted ? 0 : 0x7fff, cdrom_muted ? 0 : 0x7fff);
 				cdaudioplay_do(true);
 				break;
 			case 0x0110: // do_play!
-				sys_command_cd_volume (unitnum, cdrom_muted ? 0 : 0x7fff, cdrom_muted ? 0 : 0x7fff);
+				sys_command_cd_volume(unitnum, cdrom_muted ? 0 : 0x7fff, cdrom_muted ? 0 : 0x7fff);
 				cdaudioplay_do(false);
 				break;
 			}
@@ -2275,6 +2275,7 @@ void restore_akiko_final(void)
 	if (!currprefs.cs_cd32cd)
 		return;
 	write_comm_pipe_u32(&requests, 0x0102, 1); // pause
+	write_comm_pipe_u32(&requests, 0x0105, 1); // set mute
 	write_comm_pipe_u32(&requests, 0x0104, 1); // stop
 	write_comm_pipe_u32(&requests, 0x0103, 1); // unpause
 	if (cdrom_playing && isaudiotrack(last_play_pos)) {
@@ -2282,7 +2283,11 @@ void restore_akiko_final(void)
 		write_comm_pipe_u32(&requests, last_play_pos, 0);
 		write_comm_pipe_u32(&requests, last_play_end, 0);
 		write_comm_pipe_u32(&requests, 0, 1);
-		uae_sem_wait(&cda_sem);
+		if (!cdrom_paused) {
+			uae_sem_wait(&cda_sem);
+		} else {
+			write_comm_pipe_u32(&requests, 0x0102, 1); // pause
+		}
 	}
 	cd_initialized = 2;
 }
@@ -2291,8 +2296,11 @@ void restore_akiko_final(void)
 
 void akiko_mute (int muted)
 {
-	cdrom_muted = muted;
-	if (unitnum >= 0)
-		write_comm_pipe_u32 (&requests, 0x0105, 1);
+	if (muted != cdrom_muted) {
+		cdrom_muted = muted;
+		if (currprefs.cs_cd32cd && unitnum >= 0) {
+			write_comm_pipe_u32(&requests, 0x0105, 1);
+		}
+	}
 }
 

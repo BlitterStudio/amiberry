@@ -1945,7 +1945,11 @@ void restore_cdtv_final(void)
 		write_comm_pipe_u32(&requests, last_play_pos, 0);
 		write_comm_pipe_u32(&requests, last_play_end, 0);
 		write_comm_pipe_u32(&requests, 0, 1);
-		uae_sem_wait(&cda_sem);
+		if (cd_paused) {
+			write_comm_pipe_u32(&requests, 0x0105, 1); // paused
+		} else {
+			uae_sem_wait(&cda_sem);
+		}
 	}
 }
 
