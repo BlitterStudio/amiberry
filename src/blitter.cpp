@@ -462,7 +462,7 @@ static void blitter_maybe_done_early(int hpos)
 	if (blitline) {
 		blitter_done(hpos);
 	} else {
-		if (ddat1use) {
+		if (ddat1use && (bltcon0 & 0x100)) {
 			blt_info.blit_finald = 1 + 2;
 			blitter_interrupt(hpos, 0);
 		} else {
@@ -1077,7 +1077,9 @@ static void blitter_next_cycle(void)
 	if (shifter_out) {
 		if (!blitline) {
 			ddat1 = blitter_doblit();
-			ddat1use = true;
+			if (bltcon0 & 0x100) {
+				ddat1use = true;
+			}
 		}
 		blitter_hcounter++;
 		if (blitter_hcounter == blt_info.hblitsize) {
@@ -1118,8 +1120,8 @@ static void blitter_next_cycle(void)
 static void blitter_doddma_new(int hpos)
 {
 	record_dma_blit(0x00, ddat1, bltdpt, hpos);
-	chipmem_agnus_wput2 (bltdpt, ddat1);
-	alloc_cycle_blitter (hpos, &bltdpt, 4);
+	chipmem_agnus_wput2(bltdpt, ddat1);
+	alloc_cycle_blitter(hpos, &bltdpt, 4);
 
 	if (!blitline) {
 		bltdpt += blit_add;
@@ -1989,7 +1991,7 @@ uae_u8 *save_blitter_new (int *len, uae_u8 *dstptr)
 	save_u16(0x1234);
 
 	save_u8(blt_info.blitter_nasty);
-	save_u8(shifter[0] | (shifter[1] << 1) | (shifter[2] << 2) | (shifter[3] << 3));
+	save_u8((shifter[0] ? 1 : 0) | (shifter[1] ? 2 : 0) | (shifter[2] ? 4 : 0) | (shifter[3] ? 8 : 0));
 	save_u8(blt_info.blit_finald);
 	save_u8(blit_ovf);
 
