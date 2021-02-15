@@ -1066,10 +1066,6 @@ void process_event(SDL_Event event)
 			inputdevice_unacquire();
 			uae_quit();
 			return;
-		case SDL_WINDOWEVENT_EXPOSED:
-			notice_screen_contents_lost(mon->monitor_id);
-			updatedisplayarea(mon->monitor_id);
-			break;
 		default:
 			break;
 		}
