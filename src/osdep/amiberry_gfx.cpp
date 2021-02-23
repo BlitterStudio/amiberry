@@ -2500,7 +2500,7 @@ void sortdisplays()
 #else
 	SDL_DisplayMode desktop_dm;
 	if (SDL_GetDesktopDisplayMode(0, &desktop_dm) != 0) {
-		write_log("SDL_GetDesktopDisplayMode failed: %s", SDL_GetError());
+		write_log("SDL_GetDesktopDisplayMode failed: %s\n", SDL_GetError());
 		return;
 	}
 
@@ -2515,7 +2515,7 @@ void sortdisplays()
 	SDL_Rect bounds;
 	if (SDL_GetDisplayUsableBounds(0, &bounds) != 0)
 	{
-		write_log("SDL_GetDisplayUsableBounds failed: %s", SDL_GetError());
+		write_log("SDL_GetDisplayUsableBounds failed: %s\n", SDL_GetError());
 		return;
 	}
 
@@ -2568,7 +2568,7 @@ void sortdisplays()
 		for (idx = 0; idx <= numDispModes; idx++)
 		{
 			if (SDL_GetDisplayMode(0, idx, &dm) != 0) {
-				write_log("SDL_GetDisplayMode failed: %s", SDL_GetError());
+				write_log("SDL_GetDisplayMode failed: %s\n", SDL_GetError());
 				return;
 			}
 			int found = 0;

@@ -2960,7 +2960,7 @@ int main(int argc, char* argv[])
 		abort();
 	}
 	atexit(SDL_Quit);
-	write_log(_T("Sorting devices and modes..\n"));
+	write_log(_T("Sorting devices and modes...\n"));
 	sortdisplays();
 	
 	normalcursor = SDL_GetDefaultCursor();
