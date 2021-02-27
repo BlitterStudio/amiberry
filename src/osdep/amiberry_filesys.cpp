@@ -410,9 +410,12 @@ int my_unlink(const TCHAR* path)
 int my_rename(const TCHAR* oldname, const TCHAR* newname)
 {
 	errno = 0;
-	auto input = string(oldname);
-	auto output = iso_8859_1_to_utf8(input);
-	return rename(output.c_str(), newname);
+	auto old_input = string(oldname);
+	auto old_output = iso_8859_1_to_utf8(old_input);
+	auto new_input = string(newname);
+	auto new_output = iso_8859_1_to_utf8(new_input);
+
+	return rename(old_output.c_str(), new_output.c_str());
 }
 
 uae_s64 my_lseek(struct my_openfile_s* mos, uae_s64 offset, int whence)
