@@ -29,6 +29,6 @@ struct fs_stat {
 };
 
 extern bool fs_path_exists(const std::string& s);
-extern int my_errno;
-extern int host_errno_to_dos_errno(int err);
+extern std::string iso_8859_1_to_utf8(std::string& str);
+extern void utf8_to_latin1_string(std::string& input, std::string& output);
 extern string prefix_with_application_directory_path(string currentpath);

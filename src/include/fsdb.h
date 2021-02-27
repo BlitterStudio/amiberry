@@ -178,10 +178,6 @@ extern bool my_issamepath(const TCHAR *path1, const TCHAR *path2);
 extern bool my_createsoftlink(const TCHAR *path, const TCHAR *target);
 extern bool my_createshortcut(const TCHAR *source, const TCHAR *target, const TCHAR *description);
 
-extern a_inode *custom_fsdb_lookup_aino_aname (a_inode *base, const TCHAR *aname);
-extern a_inode *custom_fsdb_lookup_aino_nname (a_inode *base, const TCHAR *nname);
-extern int custom_fsdb_used_as_nname (a_inode *base, const TCHAR *nname);
-
 #define MYVOLUMEINFO_READONLY 1
 #define MYVOLUMEINFO_STREAMS 2
 #define MYVOLUMEINFO_ARCHIVE 4
