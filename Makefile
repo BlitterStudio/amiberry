@@ -237,7 +237,7 @@ $(error Unknown platform:$(PLATFORM))
 endif
 
 RM     = rm -f
-AS     = as
+AS     ?= as
 CC     ?= gcc
 CXX    ?= g++
 STRIP  ?= strip
