@@ -181,12 +181,14 @@ int keyhack (int scancode, int pressed, int num)
 	static unsigned char backslashstate, apostrophstate;
 	const Uint8* state = SDL_GetKeyboardState(NULL);
 
-	// Disabled: https://github.com/midwan/amiberry/issues/776
-	// release mouse if TAB and ALT is pressed
-	//if (pressed && state[SDL_SCANCODE_LALT] && scancode == SDL_SCANCODE_TAB) {
-	//	disablecapture();
-	//	return -1;
-	//}
+	// release mouse if TAB and ALT is pressed (but only if option is enabled)
+	if (currprefs.alt_tab_release)
+	{
+		if (pressed && state[SDL_SCANCODE_LALT] && scancode == SDL_SCANCODE_TAB) {
+			disablecapture();
+			return -1;
+		}
+	}
 
 	if (!keyboard_german)
 		return scancode;

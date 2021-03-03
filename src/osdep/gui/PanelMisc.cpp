@@ -14,6 +14,7 @@
 static gcn::ScrollArea* scrollArea;
 static gcn::Window* grpMiscOptions;
 
+static gcn::CheckBox* chkAltTabRelease;
 static gcn::CheckBox* chkRetroArchQuit;
 static gcn::CheckBox* chkRetroArchMenu;
 static gcn::CheckBox* chkRetroArchReset;
@@ -147,7 +148,12 @@ public:
 			else
 				changed_prefs.input_mouse_untrap &= ~MOUSEUNTRAP_MIDDLEBUTTON;
 		}
-	
+
+		else if (actionEvent.getSource() == chkAltTabRelease)
+		{
+			changed_prefs.alt_tab_release = chkAltTabRelease->isSelected();
+		}
+		
 		else if (actionEvent.getSource() == chkRetroArchQuit)
 		{
 			changed_prefs.use_retroarch_quit = chkRetroArchQuit->isSelected();
@@ -360,6 +366,10 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	chkMouseUntrap->setId("chkMouseUntrap");
 	chkMouseUntrap->addActionListener(miscActionListener);
 
+	chkAltTabRelease = new gcn::CheckBox("Alt-Tab releases control");
+	chkAltTabRelease->setId("chkAltTabRelease");
+	chkAltTabRelease->addActionListener(miscActionListener);
+	
 	chkRetroArchQuit = new gcn::CheckBox("Use RetroArch Quit Button");
 	chkRetroArchQuit->setId("chkRetroArchQuit");
 	chkRetroArchQuit->addActionListener(miscActionListener);
@@ -600,6 +610,8 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	grpMiscOptions->add(chkCaptureAlways, DISTANCE_BORDER, posY);
 	posY += chkCaptureAlways->getHeight() + DISTANCE_NEXT_Y;
 	// Debug memory space
+	grpMiscOptions->add(chkAltTabRelease, DISTANCE_BORDER, posY);
+	posY += chkAltTabRelease->getHeight() + DISTANCE_NEXT_X;
 	grpMiscOptions->add(chkRetroArchQuit, DISTANCE_BORDER, posY);
 	posY += chkRetroArchQuit->getHeight() + DISTANCE_NEXT_Y;
 	grpMiscOptions->add(chkRetroArchMenu, DISTANCE_BORDER, posY);
@@ -684,6 +696,7 @@ void ExitPanelMisc()
 	delete chkStatusLineRtg;
 	delete chkShowGUI;
 	delete chkMouseUntrap;
+	delete chkAltTabRelease;
 	delete chkRetroArchQuit;
 	delete chkRetroArchMenu;
 	delete chkRetroArchReset;
@@ -751,6 +764,7 @@ void RefreshPanelMisc()
 	chkStatusLineRtg->setSelected(changed_prefs.leds_on_screen & STATUSLINE_RTG);
 	chkShowGUI->setSelected(changed_prefs.start_gui);
 	chkMouseUntrap->setSelected(changed_prefs.input_mouse_untrap & MOUSEUNTRAP_MIDDLEBUTTON);
+	chkAltTabRelease->setSelected(changed_prefs.alt_tab_release);
 	chkRetroArchQuit->setSelected(changed_prefs.use_retroarch_quit);
 	chkRetroArchMenu->setSelected(changed_prefs.use_retroarch_menu);
 	chkRetroArchReset->setSelected(changed_prefs.use_retroarch_reset);

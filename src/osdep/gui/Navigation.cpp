@@ -351,8 +351,9 @@ static NavigationMap navMap[] =
 	{ "chkHDRO", "Miscellaneous", "", "chkMasterWP", "chkHideAutoconfig"},
 	{ "chkHideAutoconfig", "Miscellaneous", "", "chkHDRO", "chkRCtrlIsRAmiga"},
 	{ "chkRCtrlIsRAmiga", "Miscellaneous", "", "chkHideAutoconfig", "chkCaptureAlways" },
-	{ "chkCaptureAlways", "Miscellaneous", "", "chkRCtrlIsRAmiga", "chkRetroArchQuit"},
-	{ "chkRetroArchQuit", "Miscellaneous", "", "chkCaptureAlways", "chkRetroArchMenu" },
+	{ "chkCaptureAlways", "Miscellaneous", "", "chkRCtrlIsRAmiga", "chkAltTabRelease"},
+	{ "chkAltTabRelease", "Miscellaneous", "", "chkCaptureAlways", "chkRetroArchQuit"},
+	{ "chkRetroArchQuit", "Miscellaneous", "", "chkAltTabRelease", "chkRetroArchMenu" },
 	{ "chkRetroArchMenu", "Miscellaneous", "", "chkRetroArchQuit", "chkRetroArchReset" },
 	{ "chkRetroArchReset", "Miscellaneous", "", "chkRetroArchMenu", "cboNumlock" },
 	
