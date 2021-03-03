@@ -2546,11 +2546,15 @@ void sortdisplays()
 				bitdepth == 16 ? RGBFB_R5G6B5 : RGBFB_R8G8B8A8;
 			auto pixelFormat = 1 << rgbFormat;
 			pixelFormat |= RGBFF_CHUNKY;
+			md->DisplayModes[count].rawmode = 0;
+			md->DisplayModes[count].lace = false;
 			md->DisplayModes[count].res.width = x_size_table[i];
 			md->DisplayModes[count].res.height = y_size_table[i];
 			md->DisplayModes[count].depth = bit_unit >> 3;
 			md->DisplayModes[count].refresh[0] = 50;
+			md->DisplayModes[count].refreshtype[0] = 0;
 			md->DisplayModes[count].refresh[1] = 60;
+			md->DisplayModes[count].refreshtype[1] = 0;
 			md->DisplayModes[count].refresh[2] = 0;
 			md->DisplayModes[count].colormodes = pixelFormat;
 			sprintf(md->DisplayModes[count].name, "%dx%d, %d-bit",
