@@ -171,6 +171,7 @@ LOCAL_SRC_FILES := src/archivers/7z/BraIA64.c \
                     src/osdep/gui/SelectorEntry.cpp \
                     src/osdep/gui/ShowHelp.cpp \
                     src/osdep/gui/ShowMessage.cpp \
+					src/osdep/gui/ShowDiskInfo.cpp \
                     src/osdep/gui/SelectFolder.cpp \
                     src/osdep/gui/SelectFile.cpp \
                     src/osdep/gui/CreateFilesysHardfile.cpp \
@@ -188,6 +189,7 @@ LOCAL_SRC_FILES := src/archivers/7z/BraIA64.c \
                     src/osdep/gui/PanelFloppy.cpp \
                     src/osdep/gui/PanelHD.cpp \
                     src/osdep/gui/PanelRTG.cpp \
+					src/osdep/gui/PanelHWInfo.cpp \
                     src/osdep/gui/PanelInput.cpp \
                     src/osdep/gui/PanelDisplay.cpp \
                     src/osdep/gui/PanelSound.cpp \
@@ -212,6 +214,7 @@ LOCAL_SRC_FILES += src/newcpu.cpp \
                     src/cpuemu_0.cpp \
                     src/cpuemu_4.cpp \
                     src/cpuemu_11.cpp \
+					src/cpuemu_13.cpp \
                     src/cpuemu_40.cpp \
                     src/cpuemu_44.cpp \
                     src/jit/compemu.cpp \

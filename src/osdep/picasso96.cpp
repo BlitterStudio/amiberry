@@ -4857,7 +4857,7 @@ static void copyall (int monid, uae_u8 *src, uae_u8 *dst, int pwidth, int pheigh
 		for (auto y = 0; y < pheight; y++)
 		{
 			if (y == vidinfo->splitypos) {
-				src = gfxmem_banks[0]->start + regs.natmem_offset;
+				src = gfxmem_banks[monid]->start + regs.natmem_offset;
 			}
 			memcpy(dst, src, w);
 			dst += dstbytesperrow;

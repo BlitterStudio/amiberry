@@ -503,13 +503,13 @@ static int handle_exception(unsigned long* pregs, long fault_addr)
 
 #ifdef JIT
 	for (;;) {
-		// We analyse only exceptions from JIT
+		// We analyze only exceptions from JIT
 		if (currprefs.cachesize == 0) {
 			output_log(_T("JIT not in use.\n"));
 			break;
 		}
 
-		// Did the error happens in compiled code?
+		// Did the error happen in compiled code?
 		if ((uae_u8*)fault_pc >= compiled_code && (uae_u8*)fault_pc < current_compile_p)
 			output_log(_T("Error in compiled code.\n"));
 		else if ((uae_u8*)fault_pc >= popallspace && (uae_u8*)fault_pc < popallspace + POPALLSPACE_SIZE)

@@ -1,41 +1,35 @@
-#include <cstdio>
-#include <cstring>
-
+#include <algorithm>
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
+#include <iostream>
+#include <sstream>
+
 #include "SelectorEntry.hpp"
 
+#include "sysconfig.h"
 #include "sysdeps.h"
 #include "config.h"
 #include "gui_handling.h"
-
-#include "options.h"
-#include "amiberry_gfx.h"
 #include "amiberry_input.h"
 
-#ifdef ANDROID
-#include "androidsdl_event.h"
-#endif
-
-#define DIALOG_WIDTH 760
-#define DIALOG_HEIGHT 440
+#define DIALOG_WIDTH 600
+#define DIALOG_HEIGHT 460
 
 static bool dialog_finished = false;
 
-static gcn::Window* wndShowHelp;
+static gcn::Window* wndShowDiskInfo;
 static gcn::Button* cmdOK;
-static gcn::ListBox* lstHelp;
-static gcn::ScrollArea* scrAreaHelp;
+static gcn::ListBox* lstInfo;
+static gcn::ScrollArea* scrAreaInfo;
 
-
-class HelpListModel : public gcn::ListModel
+class InfoListModel : public gcn::ListModel
 {
 	std::vector<std::string> lines;
 
 public:
-	HelpListModel(const std::vector<std::string>& helptext)
+	InfoListModel(const std::vector<std::string>& helptext)
 	{
 		lines = helptext;
 	}
@@ -53,9 +47,9 @@ public:
 	}
 };
 
-static HelpListModel* helpList;
+static InfoListModel* infoList;
 
-class ShowHelpActionListener : public gcn::ActionListener
+class ShowDiskInfoActionListener : public gcn::ActionListener
 {
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
@@ -64,74 +58,78 @@ public:
 	}
 };
 
-static ShowHelpActionListener* showHelpActionListener;
+static ShowDiskInfoActionListener* showDiskInfoActionListener;
 
-static void InitShowHelp(const std::vector<std::string>& helptext)
+
+static void InitShowDiskInfo(const std::vector<std::string>& infotext)
 {
-	wndShowHelp = new gcn::Window("Help");
-	wndShowHelp->setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
-	wndShowHelp->setPosition((GUI_WIDTH - DIALOG_WIDTH) / 2, (GUI_HEIGHT - DIALOG_HEIGHT) / 2);
-	wndShowHelp->setBaseColor(gui_baseCol);
-	wndShowHelp->setTitleBarHeight(TITLEBAR_HEIGHT);
+	wndShowDiskInfo = new gcn::Window("DiskInfo");
+	wndShowDiskInfo->setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
+	wndShowDiskInfo->setPosition((GUI_WIDTH - DIALOG_WIDTH) / 2, (GUI_HEIGHT - DIALOG_HEIGHT) / 2);
+	wndShowDiskInfo->setBaseColor(gui_baseCol);
+	wndShowDiskInfo->setTitleBarHeight(TITLEBAR_HEIGHT);
 
-	showHelpActionListener = new ShowHelpActionListener();
+	showDiskInfoActionListener = new ShowDiskInfoActionListener();
 
-	helpList = new HelpListModel(helptext);
+	infoList = new InfoListModel(infotext);
 
-	lstHelp = new gcn::ListBox(helpList);
-	lstHelp->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4,
+	lstInfo = new gcn::ListBox(infoList);
+	lstInfo->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4 - 20,
 	                 DIALOG_HEIGHT - 3 * DISTANCE_BORDER - BUTTON_HEIGHT - DISTANCE_NEXT_Y - 10);
-	lstHelp->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
-	lstHelp->setBaseColor(gui_baseCol);
-	lstHelp->setBackgroundColor(gui_baseCol);
-	lstHelp->setWrappingEnabled(true);
+	lstInfo->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
+	lstInfo->setBaseColor(gui_baseCol);
+	lstInfo->setBackgroundColor(gui_baseCol);
+	lstInfo->setWrappingEnabled(true);
 
-	scrAreaHelp = new gcn::ScrollArea(lstHelp);
-	scrAreaHelp->setBorderSize(1);
-	scrAreaHelp->setPosition(DISTANCE_BORDER, 10 + TEXTFIELD_HEIGHT + 10);
-	scrAreaHelp->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4,
+	scrAreaInfo = new gcn::ScrollArea(lstInfo);
+	scrAreaInfo->setBorderSize(1);
+	scrAreaInfo->setPosition(DISTANCE_BORDER, 10 + TEXTFIELD_HEIGHT + 10);
+	scrAreaInfo->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4,
 	                     DIALOG_HEIGHT - 3 * DISTANCE_BORDER - BUTTON_HEIGHT - DISTANCE_NEXT_Y - 10);
-	scrAreaHelp->setScrollbarWidth(20);
-	scrAreaHelp->setBaseColor(gui_baseCol);
-	scrAreaHelp->setBackgroundColor(gui_baseCol);
+	scrAreaInfo->setScrollbarWidth(20);
+	scrAreaInfo->setBaseColor(gui_baseCol);
+	scrAreaInfo->setBackgroundColor(gui_baseCol);
 
 	cmdOK = new gcn::Button("Ok");
 	cmdOK->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
 	cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH,
 	                   DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
 	cmdOK->setBaseColor(gui_baseCol);
-	cmdOK->addActionListener(showHelpActionListener);
+	cmdOK->addActionListener(showDiskInfoActionListener);
 
-	wndShowHelp->add(scrAreaHelp, DISTANCE_BORDER, DISTANCE_BORDER);
-	wndShowHelp->add(cmdOK);
+	wndShowDiskInfo->add(scrAreaInfo, DISTANCE_BORDER, DISTANCE_BORDER);
+	wndShowDiskInfo->add(cmdOK);
 
-	gui_top->add(wndShowHelp);
+	gui_top->add(wndShowDiskInfo);
 
 	cmdOK->requestFocus();
-	wndShowHelp->requestModalFocus();
+	wndShowDiskInfo->requestModalFocus();
 }
 
-static void ExitShowHelp(void)
-{
-	wndShowHelp->releaseModalFocus();
-	gui_top->remove(wndShowHelp);
 
-	delete lstHelp;
-	delete scrAreaHelp;
+static void ExitShowDiskInfo(void)
+{
+	wndShowDiskInfo->releaseModalFocus();
+	gui_top->remove(wndShowDiskInfo);
+
+	delete lstInfo;
+	delete scrAreaInfo;
 	delete cmdOK;
 
-	delete helpList;
-	delete showHelpActionListener;
+	delete infoList;
+	delete showDiskInfoActionListener;
 
-	delete wndShowHelp;
+	delete wndShowDiskInfo;
 }
 
-static void ShowHelpLoop(void)
+
+static void ShowDiskInfoLoop(void)
 {
 	auto got_event = 0;
 	SDL_Event event;
 	SDL_Event touch_event;
 	struct didata* did = &di_joystick[0];
+
 	while (SDL_PollEvent(&event))
 	{
 		switch (event.type)
@@ -154,7 +152,6 @@ static void ShowHelpLoop(void)
 			default:
 				break;
 			}
-			break;
 
 		case SDL_JOYBUTTONDOWN:
 			if (gui_joystick)
@@ -245,13 +242,14 @@ static void ShowHelpLoop(void)
 	}
 }
 
-void ShowHelp(const char* title, const std::vector<std::string>& text)
+
+void ShowDiskInfo(const char* title, const std::vector<std::string>& text)
 {
 	dialog_finished = false;
 
-	InitShowHelp(text);
+	InitShowDiskInfo(text);
 
-	wndShowHelp->setCaption(title);
+	wndShowDiskInfo->setCaption(title);
 	cmdOK->setCaption("Ok");
 
 	// Prepare the screen once
@@ -263,9 +261,9 @@ void ShowHelp(const char* title, const std::vector<std::string>& text)
 	while (!dialog_finished)
 	{
 		const auto start = SDL_GetPerformanceCounter();
-		ShowHelpLoop();
+		ShowDiskInfoLoop();
 		cap_fps(start);
 	}
 
-	ExitShowHelp();
+	ExitShowDiskInfo();
 }

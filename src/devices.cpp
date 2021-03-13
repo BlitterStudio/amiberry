@@ -306,7 +306,6 @@ void do_leave_program (void)
 	inputdevice_close ();
 	DISK_free ();
 	close_sound ();
-	dump_counts ();
 #ifdef SERIAL_PORT
 	serial_exit ();
 #endif

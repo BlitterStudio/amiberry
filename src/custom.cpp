@@ -273,9 +273,9 @@ static int sprite_width, sprres;
 static int sprite_sprctlmask;
 int sprite_buffer_res;
 
-//#ifdef CPUEMU_13
+#ifdef CPUEMU_13
 uae_u8 cycle_line[256 + 1];
-//#endif
+#endif
 
 static bool bpl1dat_written, bpl1dat_written_at_least_once;
 static bool bpldmawasactive;
@@ -547,9 +547,9 @@ STATIC_INLINE void setclr (uae_u16 *p, uae_u16 val)
 
 STATIC_INLINE void alloc_cycle (int hpos, int type)
 {
-//#ifdef CPUEMU_13
+#ifdef CPUEMU_13
 	cycle_line[hpos] = type;
-//#endif
+#endif
 }
 STATIC_INLINE void alloc_cycle_maybe (int hpos, int type)
 {
@@ -9961,11 +9961,11 @@ void vsync_event_done(void)
 static void hsync_handler_post (bool onvsync)
 {
 	last_copper_hpos = 0;
-//#ifdef CPUEMU_13
+#ifdef CPUEMU_13
 	if (currprefs.cpu_memory_cycle_exact || currprefs.blitter_cycle_exact) {
 		memset (cycle_line, 0, sizeof cycle_line);
 	}
-//#endif
+#endif
 
 	// genlock active:
 	// vertical: interlaced = toggles every other field, non-interlaced = both fields (normal)
@@ -12117,29 +12117,19 @@ static int dma_cycle(uaecptr addr, uae_u16 v, int *mode)
 		if (blt_info.blit_main || blt_info.blit_finald) {
 			if (blt_info.blit_main && !blitpri && blt_info.nasty_cnt >= BLIT_NASTY_CPU_STEAL_CYCLE_COUNT && (cycle_line[hpos_old] & CYCLE_MASK) == 0 && !bpldma) {
 				alloc_cycle (hpos_old, CYCLE_CPUNASTY);
-				if (debug_dma && blt_info.nasty_cnt >= BLIT_NASTY_CPU_STEAL_CYCLE_COUNT) {
-					record_dma_event(DMA_EVENT_CPUBLITTERSTOLEN, hpos_old, vpos);
-				}
 				break;
 			}
-#if 0
-			decide_blitter(hpos);
-#else
 			// CPU write must be done at the same time with blitter idle cycles
 			if (decide_blitter_maybe_write(hpos, addr, v)) {
 				// inform caller that write was already done
 				*mode = -2;
 			}
-#endif
 			// copper may have been waiting for the blitter
 			sync_copper (hpos);
 		}
 		if ((cycle_line[hpos_old] & CYCLE_MASK) == 0 && !bpldma) {
 			alloc_cycle (hpos_old, CYCLE_CPU);
 			break;
-		}
-		if (debug_dma && !blitpri && blt_info.nasty_cnt >= BLIT_NASTY_CPU_STEAL_CYCLE_COUNT) {
-			record_dma_event(DMA_EVENT_CPUBLITTERSTEAL, hpos_old, vpos);
 		}
 
 		blt_info.nasty_cnt++;
@@ -12148,19 +12138,6 @@ static int dma_cycle(uaecptr addr, uae_u16 v, int *mode)
 	}
 	blt_info.nasty_cnt = 0;
 	return hpos_old;
-}
-
-static void sync_ce020 (void)
-{
-	unsigned long c;
-	int extra;
-
-	c = get_cycles ();
-	extra = c & (CYCLE_UNIT - 1);
-	if (extra) {
-		extra = CYCLE_UNIT - extra;
-		do_cycles (extra);
-	}
 }
 
 #define SETIFCHIP \
@@ -12174,20 +12151,6 @@ uae_u32 wait_cpu_cycle_read (uaecptr addr, int mode)
 
 	hpos = dma_cycle(0xffffffff, 0xffff, NULL);
 	x_do_cycles_pre (CYCLE_UNIT);
-
-#ifdef DEBUGGER
-	if (debug_dma) {
-		int reg = 0x1000;
-		if (mode < 0)
-			reg |= 4;
-		else if (mode > 0)
-			reg |= 2;
-		else
-			reg |= 1;
-		record_dma_read(reg, addr, hpos, vpos, DMARECORD_CPU, mode == -2 || mode == 2 ? 0 : 1);
-	}
-	peekdma_data.mask = 0;
-#endif
 
 	switch(mode)
 	{
@@ -12208,68 +12171,9 @@ uae_u32 wait_cpu_cycle_read (uaecptr addr, int mode)
 		break;
 	}
 
-#ifdef DEBUGGER
-	if (debug_dma) {
-		record_dma_read_value(v);
-	}
-#endif
-
 	x_do_cycles_post (CYCLE_UNIT, v);
 
-	regs.chipset_latch_rw = regs.chipset_latch_read = v;
-	SETIFCHIP
-	return v;
-}
-
-uae_u32 wait_cpu_cycle_read_ce020 (uaecptr addr, int mode)
-{
-	uae_u32 v = 0;
-	int hpos;
-
-	sync_ce020 ();
-	hpos = dma_cycle(0xffffffff, 0xffff, NULL);
-	x_do_cycles_pre (CYCLE_UNIT);
-
-#ifdef DEBUGGER
-	if (debug_dma) {
-		int reg = 0x1000;
-		if (mode < 0)
-			reg |= 4;
-		else if (mode > 0)
-			reg |= 2;
-		else
-			reg |= 1;
-		record_dma_read(reg, addr, hpos, vpos, DMARECORD_CPU, mode == -2 || mode == 2 ? 0 : 1);
-	}
-	peekdma_data.mask = 0;
-#endif
-	switch (mode) {
-		case -1:
-		v = get_long(addr);
-		break;
-		case -2:
-		v = get_longi(addr);
-		break;
-		case 1:
-		v = get_word(addr);
-		break;
-		case 2:
-		v = get_wordi(addr);
-		break;
-		case 0:
-		v = get_byte(addr);
-		break;
-	}
-
-#ifdef DEBUGGER
-	if (debug_dma) {
-		record_dma_read_value(v);
-	}
-#endif
-	
-	x_do_cycles_post (CYCLE_UNIT, v);
-
-	regs.chipset_latch_rw = regs.chipset_latch_read = v;
+	regs.chipset_latch_rw = v;
 	SETIFCHIP
 	return v;
 }
@@ -12280,20 +12184,6 @@ void wait_cpu_cycle_write (uaecptr addr, int mode, uae_u32 v)
 
 	hpos = dma_cycle(addr, v, &mode);
 	x_do_cycles_pre (CYCLE_UNIT);
-
-#ifdef DEBUGGER
-	if (debug_dma) {
-		int reg = 0x1100;
-		if (mode < 0)
-			reg |= 4;
-		else if (mode > 0)
-			reg |= 2;
-		else
-			reg |= 1;
-		record_dma_write(reg, v, addr, hpos, vpos, DMARECORD_CPU, 1);
-	}
-	peekdma_data.mask = 0;
-#endif
 
 	if (mode > -2) {
 		if (mode < 0)
@@ -12306,44 +12196,7 @@ void wait_cpu_cycle_write (uaecptr addr, int mode, uae_u32 v)
 
 	x_do_cycles_post (CYCLE_UNIT, v);
 
-	regs.chipset_latch_rw = regs.chipset_latch_write = v;
-	SETIFCHIP
-}
-
-void wait_cpu_cycle_write_ce020 (uaecptr addr, int mode, uae_u32 v)
-{
-	int hpos;
-
-	sync_ce020 ();
-	hpos = dma_cycle(0xffffffff, 0xffff, NULL);
-	x_do_cycles_pre (CYCLE_UNIT);
-
-#ifdef DEBUGGER
-	if (debug_dma) {
-		int reg = 0x1100;
-		if (mode < 0)
-			reg |= 4;
-		else if (mode > 0)
-			reg |= 2;
-		else
-			reg |= 1;
-		record_dma_write(reg, v, addr, hpos, vpos, DMARECORD_CPU, 1);
-	}
-	peekdma_data.mask = 0;
-#endif
-
-	if (mode < 0)
-		put_long (addr, v);
-	else if (mode > 0)
-		put_word (addr, v);
-	else if (mode == 0)
-		put_byte (addr, v);
-
-	// chipset buffer latches the write, CPU does
-	// not need to wait for the chipset cycle to finish.
-	x_do_cycles_post (cpucycleunit, v);
-
-	regs.chipset_latch_rw = regs.chipset_latch_write = v;
+	regs.chipset_latch_rw = v;
 	SETIFCHIP
 }
 
@@ -12364,45 +12217,9 @@ void do_cycles_ce (unsigned long cycles)
 	extra_cycle = cycles;
 }
 
-void do_cycles_ce020 (unsigned long cycles)
-{
-	unsigned long c;
-	int extra;
-
-	if (!cycles)
-		return;
-	c = get_cycles ();
-	extra = c & (CYCLE_UNIT - 1);
-	if (extra) {
-		extra = CYCLE_UNIT - extra;
-		if (extra >= cycles) {
-			do_cycles (cycles);
-			return;
-		}
-		do_cycles (extra);
-		cycles -= extra;
-	}
-	c = cycles;
-	while (c) {
-		int hpos = current_hpos () + 1;
-		decide_line (hpos);
-		sync_copper (hpos);
-		decide_fetch_ce (hpos);
-		if (blt_info.blit_main || blt_info.blit_finald)
-			decide_blitter (hpos);
-		if (c < CYCLE_UNIT)
-			break;
-		do_cycles (1 * CYCLE_UNIT);
-		c -= CYCLE_UNIT;
-	}
-	if (c > 0)
-		do_cycles (c);
-}
-
-
 bool is_cycle_ce(uaecptr addr)
 {
-	addrbank *ab = get_mem_bank_real(addr);
+	addrbank *ab = &get_mem_bank(addr);
 	if (!ab || (ab->flags & ABFLAG_CHIPRAM) || ab == &custom_bank) {
 		int hpos = current_hpos();
 		return (cycle_line[hpos] & CYCLE_MASK) != 0;

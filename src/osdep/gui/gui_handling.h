@@ -225,6 +225,11 @@ void ExitPanelRTG(void);
 void RefreshPanelRTG(void);
 bool HelpPanelRTG(std::vector<std::string>& helptext);
 
+void InitPanelHWInfo(const struct _ConfigCategory& category);
+void ExitPanelHWInfo();
+void RefreshPanelHWInfo();
+bool HelpPanelHWInfo(std::vector<std::string>& helptext);
+
 void InitPanelDisplay(const struct _ConfigCategory& category);
 void ExitPanelDisplay(void);
 void RefreshPanelDisplay(void);
@@ -280,6 +285,7 @@ bool EditFilesysVirtual(int unit_no);
 bool EditFilesysHardfile(int unit_no);
 bool CreateFilesysHardfile(void);
 void ShowHelp(const char* title, const std::vector<std::string>& text);
+void ShowDiskInfo(const char* title, const std::vector<std::string>& text);
 
 bool LoadConfigByName(const char* name);
 ConfigFileInfo* SearchConfigInList(const char* name);

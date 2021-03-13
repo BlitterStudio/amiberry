@@ -416,6 +416,7 @@ OBJS =	\
 	src/osdep/gui/SelectorEntry.o \
 	src/osdep/gui/ShowHelp.o \
 	src/osdep/gui/ShowMessage.o \
+	src/osdep/gui/ShowDiskInfo.o \
 	src/osdep/gui/SelectFolder.o \
 	src/osdep/gui/SelectFile.o \
 	src/osdep/gui/CreateFilesysHardfile.o \
@@ -433,6 +434,7 @@ OBJS =	\
 	src/osdep/gui/PanelFloppy.o \
 	src/osdep/gui/PanelHD.o \
 	src/osdep/gui/PanelRTG.o \
+	src/osdep/gui/PanelHWInfo.o \
 	src/osdep/gui/PanelInput.o \
 	src/osdep/gui/PanelDisplay.o \
 	src/osdep/gui/PanelSound.o \
@@ -469,6 +471,7 @@ OBJS += src/newcpu.o \
 	src/cpuemu_0.o \
 	src/cpuemu_4.o \
 	src/cpuemu_11.o \
+	src/cpuemu_13.o \
 	src/cpuemu_40.o \
 	src/cpuemu_44.o \
 	src/jit/compemu.o \

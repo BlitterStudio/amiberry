@@ -682,6 +682,15 @@
     <ClCompile Include="..\..\src\osdep\gui\PanelRTG.cpp">
       <Filter>Source files\osdep\gui</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\osdep\gui\PanelHWInfo.cpp">
+      <Filter>Source files\osdep\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\osdep\gui\ShowDiskInfo.cpp">
+      <Filter>Source files\osdep\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\cpuemu_13.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\threaddep\thread.h">

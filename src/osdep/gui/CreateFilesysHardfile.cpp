@@ -22,7 +22,7 @@
 #define DIALOG_WIDTH 620
 #define DIALOG_HEIGHT 202
 
-static const char *harddisk_filter[] = {".hdf", "\0"};
+static const char *harddisk_filter[] = { ".hdf", ".vhd", "\0" };
 
 static bool dialogResult = false;
 static bool dialogFinished = false;
@@ -41,6 +41,7 @@ static gcn::TextField *txtPath;
 static gcn::Button *cmdPath;
 static gcn::Label *lblSize;
 static gcn::TextField *txtSize;
+static gcn::CheckBox* chkDynamic;
 
 class CreateFilesysHardfileActionListener : public gcn::ActionListener
 {
@@ -128,6 +129,9 @@ static void InitCreateFilesysHardfile()
 	txtSize = new gcn::TextField();
 	txtSize->setSize(60, TEXTFIELD_HEIGHT);
 
+	chkDynamic = new gcn::CheckBox("Dynamic VHD", true);
+	chkDynamic->setId("chkDynamic");
+
 	lblPath = new gcn::Label("Path:");
 	lblPath->setAlignment(gcn::Graphics::RIGHT);
 	txtPath = new gcn::TextField();
@@ -163,6 +167,7 @@ static void InitCreateFilesysHardfile()
 
 	wndCreateFilesysHardfile->add(lblSize, lblDevice->getX(), posY);
 	wndCreateFilesysHardfile->add(txtSize, txtDevice->getX(), posY);
+	wndCreateFilesysHardfile->add(chkDynamic, txtSize->getX() + txtSize->getWidth() + DISTANCE_NEXT_X, posY);
 
 	wndCreateFilesysHardfile->add(cmdOK);
 	wndCreateFilesysHardfile->add(cmdCancel);
@@ -188,6 +193,7 @@ static void ExitCreateFilesysHardfile()
 	delete cmdPath;
 	delete lblSize;
 	delete txtSize;
+	delete chkDynamic;
 
 	delete cmdOK;
 	delete cmdCancel;
@@ -437,6 +443,7 @@ bool CreateFilesysHardfile()
 
 	txtBootPri->setText("0");
 	txtSize->setText("100");
+	chkDynamic->setSelected(false);
 
 	// Prepare the screen once
 	uae_gui->logic();
@@ -459,24 +466,38 @@ bool CreateFilesysHardfile()
 
 		const auto bp = tweakbootpri(atoi(txtBootPri->getText().c_str()), 1, 0);
 
-		auto* const newFile = fopen(txtPath->getText().c_str(), "wbe");
-		if (!newFile)
-		{
-			write_log("Unable to create new file.");
-			ExitCreateFilesysHardfile();
-			return false;
+		char init_path[MAX_DPATH];
+		_tcsncpy(init_path, txtPath->getText().c_str(), MAX_DPATH - 1);
+		if (chkDynamic->isSelected()) {
+			if (_tcslen(init_path) > 4 && !_tcsicmp(init_path + _tcslen(init_path) - 4, _T(".hdf")))
+				_tcscpy(init_path + _tcslen(init_path) - 4, _T(".vhd"));
+			const bool result = vhd_create(init_path, size * 1024 * 1024, 0);
+			if (!result) {
+				ShowMessage("Create Hardfile", "Unable to create new VHD file.", "", "Ok", "");
+				ExitCreateFilesysHardfile();
+				return false;
+			}
 		}
-		if (_fseeki64(newFile, size * 1024 * 1024 - 1, SEEK_SET) == 0)
-		{
-			fwrite(&zero, 1, 1, newFile);
-			fclose(newFile);
-		}
-		else
-		{
-			write_log("Unable to create new file size.");
-			fclose(newFile);
-			ExitCreateFilesysHardfile();
-			return false;
+		else {
+			FILE* newFile = fopen(init_path, "wb");
+			if (!newFile)
+			{
+				ShowMessage("Create Hardfile", "Unable to create new file.", "", "Ok", "");
+				ExitCreateFilesysHardfile();
+				return false;
+			}
+			if (_fseeki64(newFile, size * 1024 * 1024 - 1, SEEK_SET) == 0)
+			{
+				fwrite(&zero, 1, 1, newFile);
+				fclose(newFile);
+			}
+			else
+			{
+				fclose(newFile);
+				ShowMessage("Create Hardfile", "Unable to create new file size.", "", "Ok", "");
+				ExitCreateFilesysHardfile();
+				return false;
+			}
 		}
 		
 		struct uaedev_config_info ci
@@ -485,7 +506,7 @@ bool CreateFilesysHardfile()
 
 		uci_set_defaults(&ci, false);
 		strncpy(ci.devname, const_cast<char *>(txtDevice->getText().c_str()), MAX_DPATH);
-		strncpy(ci.rootdir, const_cast<char *>(txtPath->getText().c_str()), MAX_DPATH);
+		strncpy(ci.rootdir, const_cast<char *>(init_path), MAX_DPATH);
 		ci.type = UAEDEV_HDF;
 		ci.surfaces = (size / 1024) + 1;
 		ci.bootpri = bp;

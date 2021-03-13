@@ -46,49 +46,41 @@ void target_startup_msg(const TCHAR* title, const TCHAR* msg)
 }
 
 ConfigCategory categories[] = {
-	{
-		"About", "data/amigainfo.ico", nullptr, nullptr, InitPanelAbout, ExitPanelAbout, RefreshPanelAbout,
+	{"About", "data/amigainfo.ico", nullptr, nullptr, InitPanelAbout, ExitPanelAbout, RefreshPanelAbout,
 		HelpPanelAbout
 	},
 	{"Paths", "data/paths.ico", nullptr, nullptr, InitPanelPaths, ExitPanelPaths, RefreshPanelPaths, HelpPanelPaths},
-	{
-		"Quickstart", "data/quickstart.ico", nullptr, nullptr, InitPanelQuickstart, ExitPanelQuickstart,
+	{"Quickstart", "data/quickstart.ico", nullptr, nullptr, InitPanelQuickstart, ExitPanelQuickstart,
 		RefreshPanelQuickstart, HelpPanelQuickstart
 	},
-	{
-		"Configurations", "data/file.ico", nullptr, nullptr, InitPanelConfig, ExitPanelConfig, RefreshPanelConfig,
+	{"Configurations", "data/file.ico", nullptr, nullptr, InitPanelConfig, ExitPanelConfig, RefreshPanelConfig,
 		HelpPanelConfig
 	},
 	{"CPU and FPU", "data/cpu.ico", nullptr, nullptr, InitPanelCPU, ExitPanelCPU, RefreshPanelCPU, HelpPanelCPU},
-	{
-		"Chipset", "data/cpu.ico", nullptr, nullptr, InitPanelChipset, ExitPanelChipset, RefreshPanelChipset,
+	{"Chipset", "data/cpu.ico", nullptr, nullptr, InitPanelChipset, ExitPanelChipset, RefreshPanelChipset,
 		HelpPanelChipset
 	},
 	{"ROM", "data/chip.ico", nullptr, nullptr, InitPanelROM, ExitPanelROM, RefreshPanelROM, HelpPanelROM},
 	{"RAM", "data/chip.ico", nullptr, nullptr, InitPanelRAM, ExitPanelRAM, RefreshPanelRAM, HelpPanelRAM},
-	{
-		"Floppy drives", "data/35floppy.ico", nullptr, nullptr, InitPanelFloppy, ExitPanelFloppy, RefreshPanelFloppy,
+	{"Floppy drives", "data/35floppy.ico", nullptr, nullptr, InitPanelFloppy, ExitPanelFloppy, RefreshPanelFloppy,
 		HelpPanelFloppy
 	},
 	{"Hard drives/CD", "data/drive.ico", nullptr, nullptr, InitPanelHD, ExitPanelHD, RefreshPanelHD, HelpPanelHD},
-	{
-		"RTG board", "data/expansion.ico", nullptr, nullptr, InitPanelRTG, ExitPanelRTG,
+	{"RTG board", "data/expansion.ico", nullptr, nullptr, InitPanelRTG, ExitPanelRTG,
 		RefreshPanelRTG, HelpPanelRTG
 	},
-	{
-		"Display", "data/screen.ico", nullptr, nullptr, InitPanelDisplay, ExitPanelDisplay, RefreshPanelDisplay,
+	{"Hardware info", "data/expansion.ico", nullptr, nullptr, InitPanelHWInfo, ExitPanelHWInfo, RefreshPanelHWInfo, HelpPanelHWInfo},
+	{"Display", "data/screen.ico", nullptr, nullptr, InitPanelDisplay, ExitPanelDisplay, RefreshPanelDisplay,
 		HelpPanelDisplay
 	},
 	{"Sound", "data/sound.ico", nullptr, nullptr, InitPanelSound, ExitPanelSound, RefreshPanelSound, HelpPanelSound},
 	{"Input", "data/joystick.ico", nullptr, nullptr, InitPanelInput, ExitPanelInput, RefreshPanelInput, HelpPanelInput},
-	{
-		"Custom controls", "data/controller.png", nullptr, nullptr, InitPanelCustom, ExitPanelCustom,
+	{"Custom controls", "data/controller.png", nullptr, nullptr, InitPanelCustom, ExitPanelCustom,
 		RefreshPanelCustom, HelpPanelCustom
 	},
 	{"Miscellaneous", "data/misc.ico", nullptr, nullptr, InitPanelMisc, ExitPanelMisc, RefreshPanelMisc, HelpPanelMisc},
 	{ "Priority", "data/misc.ico", nullptr, nullptr, InitPanelPrio, ExitPanelPrio, RefreshPanelPrio, HelpPanelPrio},
-	{
-		"Savestates", "data/savestate.png", nullptr, nullptr, InitPanelSavestate, ExitPanelSavestate,
+	{"Savestates", "data/savestate.png", nullptr, nullptr, InitPanelSavestate, ExitPanelSavestate,
 		RefreshPanelSavestate, HelpPanelSavestate
 	},
 #ifdef ANDROID
@@ -109,6 +101,8 @@ enum
 	PANEL_RAM,
 	PANEL_FLOPPY,
 	PANEL_HD,
+	PANEL_RTG,
+	PANEL_HWINFO,
 	PANEL_DISPLAY,
 	PANEL_SOUND,
 	PANEL_INPUT,

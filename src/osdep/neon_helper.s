@@ -171,7 +171,7 @@ copy_screen_16bit_to_32bit_loop:
 @ copy_screen_32bit_to_16bit
 @
 @ r0: uae_u8   *dst - Format (bits): rrrr rggg gggb bbbb
-@ r1: uae_u8   *src - Format (bytes) in memory rgba
+@ r1: uae_u8   *src - Format (bytes) in memory bgra
 @ r2: int      bytes
 @
 @ void copy_screen_32bit_to_16bit(uae_u8 *dst, uae_u8 *src, int bytes);
@@ -182,15 +182,15 @@ copy_screen_32bit_to_16bit:
   vld4.8    {d18-d21}, [r1]!
   vld4.8    {d22-d25}, [r1]!
   vswp      d19, d22
-  vswp      d21, d24         @ -> q9=r, q10=b, q11=g, q12=a
-  vsri.i8   q9, q11, #5      @ q9:  rrrr rggg
-  vshr.u8   q8, q10, #3      @ q8:  000b bbbb
-  vshr.u8   q11, q11, #2     @ q11: 00gg gggg
-  vsli.i8   q8, q11, #5      @ q8:  gggb bbbb
-  vswp      d17, d18
+  vswp      d21, d24
+  vsri.i8   q11, q10, #5
+  vshr.u8   q8, q10, #2
+  vshr.u8   q10, q12, #3
+  vsli.i8   q10, q8, #5
+  vswp      d21, d22
   subs      r2, r2, #64      @ processd 4 (bytes per pixel) * 16 (pixel)
-  vst2.8    {d16-d17}, [r0]!
-  vst2.8    {d18-d19}, [r0]!
+  vst2.8    {d20-d21}, [r0]!
+  vst2.8    {d22-d23}, [r0]!
   bne       copy_screen_32bit_to_16bit
   bx        lr
 
@@ -198,8 +198,8 @@ copy_screen_32bit_to_16bit:
 @----------------------------------------------------------------
 @ copy_screen_32bit_to_32bit
 @
-@ r0: uae_u8   *dst - Format (bytes): in memory rgba
-@ r1: uae_u8   *src - Format (bytes): in memory rgba
+@ r0: uae_u8   *dst - Format (bytes): in memory argb
+@ r1: uae_u8   *src - Format (bytes): in memory bgra
 @ r2: int      bytes
 @
 @ void copy_screen_32bit_to_32bit(uae_u8 *dst, uae_u8 *src, int bytes);
@@ -207,11 +207,9 @@ copy_screen_32bit_to_16bit:
 @----------------------------------------------------------------
 copy_screen_32bit_to_32bit:
   vld1.64   {d18-d19}, [r1]!
-  vrev32.8  d18, d18
-  vshr.u32  d18, d18, #8
-  vrev32.8  d19, d19
-  vshr.u32  d19, d19, #8
   subs      r2, r2, #16
+  vrev32.8  d18, d18
+  vrev32.8  d19, d19
   vst1.64   {d18-d19}, [r0]!
   bne       copy_screen_32bit_to_32bit
   bx        lr

@@ -1869,14 +1869,11 @@ extern const struct comptbl op_smalltbl_0_comp_ff[] = {
 { NULL, 0x00000001, 62744 }, /* PFLUSHA */
 { NULL, 0x00000001, 62792 }, /* PTESTW */
 { NULL, 0x00000001, 62824 }, /* PTESTR */
-{ NULL, 0x00000001, 62856 }, /* PLPAW */
-{ NULL, 0x00000001, 62920 }, /* PLPAR */
 { op_f600_0_comp_ff, 0x00000002, 62976 }, /* MOVE16 */
 { op_f608_0_comp_ff, 0x00000002, 62984 }, /* MOVE16 */
 { op_f610_0_comp_ff, 0x00000002, 62992 }, /* MOVE16 */
 { op_f618_0_comp_ff, 0x00000002, 63000 }, /* MOVE16 */
 { op_f620_0_comp_ff, 0x00000002, 63008 }, /* MOVE16 */
-{ NULL, 0x00000001, 63488 }, /* LPSTOP */
 { 0, 0,65536 }};
 extern const struct comptbl op_smalltbl_0_comp_nf[] = {
 { op_0_0_comp_nf, 0x00000002, 0 }, /* OR */
@@ -3741,13 +3738,10 @@ extern const struct comptbl op_smalltbl_0_comp_nf[] = {
 { NULL, 0x00000001, 62744 }, /* PFLUSHA */
 { NULL, 0x00000001, 62792 }, /* PTESTW */
 { NULL, 0x00000001, 62824 }, /* PTESTR */
-{ NULL, 0x00000001, 62856 }, /* PLPAW */
-{ NULL, 0x00000001, 62920 }, /* PLPAR */
 { op_f600_0_comp_nf, 0x00000002, 62976 }, /* MOVE16 */
 { op_f608_0_comp_nf, 0x00000002, 62984 }, /* MOVE16 */
 { op_f610_0_comp_nf, 0x00000002, 62992 }, /* MOVE16 */
 { op_f618_0_comp_nf, 0x00000002, 63000 }, /* MOVE16 */
 { op_f620_0_comp_nf, 0x00000002, 63008 }, /* MOVE16 */
-{ NULL, 0x00000001, 63488 }, /* LPSTOP */
 { 0, 0,65536 }};
 #endif

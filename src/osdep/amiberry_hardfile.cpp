@@ -649,6 +649,11 @@ int hdf_resize_target(struct hardfiledata* hfd, uae_u64 newsize)
 	return 1;
 }
 
+int get_guid_target(uae_u8* out)
+{
+	return 0;
+}
+
 static int num_drives;
 
 static int hdf_init2(int force)

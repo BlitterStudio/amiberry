@@ -251,7 +251,7 @@ static bool event_check_vsync(void)
 	return false;
 }
 
-void do_cycles_cpu_fastest(uae_u32 cycles_to_add)
+void do_cycles_cpu_fastest(unsigned long cycles_to_add)
 {
 	if (!currprefs.cpu_thread) {
 		if ((pissoff -= cycles_to_add) >= 0)
@@ -288,7 +288,7 @@ void do_cycles_cpu_fastest(uae_u32 cycles_to_add)
 	currcycle += cycles_to_add;
 }
 
-void do_cycles_cpu_norm(uae_u32 cycles_to_add)
+void do_cycles_cpu_norm(unsigned long cycles_to_add)
 {
 	while ((nextevent - currcycle) <= cycles_to_add)
 	{

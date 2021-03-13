@@ -472,6 +472,7 @@
     <ClCompile Include="..\src\cpuemu_11.cpp">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
+    <ClCompile Include="..\src\cpuemu_13.cpp" />
     <ClCompile Include="..\src\cpuemu_4.cpp">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
@@ -596,6 +597,7 @@
     <ClCompile Include="..\src\osdep\gui\PanelDisplay.cpp" />
     <ClCompile Include="..\src\osdep\gui\PanelFloppy.cpp" />
     <ClCompile Include="..\src\osdep\gui\PanelHD.cpp" />
+    <ClCompile Include="..\src\osdep\gui\PanelHWInfo.cpp" />
     <ClCompile Include="..\src\osdep\gui\PanelInput.cpp" />
     <ClCompile Include="..\src\osdep\gui\PanelMisc.cpp" />
     <ClCompile Include="..\src\osdep\gui\PanelPaths.cpp" />
@@ -609,6 +611,7 @@
     <ClCompile Include="..\src\osdep\gui\SelectFile.cpp" />
     <ClCompile Include="..\src\osdep\gui\SelectFolder.cpp" />
     <ClCompile Include="..\src\osdep\gui\SelectorEntry.cpp" />
+    <ClCompile Include="..\src\osdep\gui\ShowDiskInfo.cpp" />
     <ClCompile Include="..\src\osdep\gui\ShowHelp.cpp" />
     <ClCompile Include="..\src\osdep\gui\ShowMessage.cpp" />
     <ClCompile Include="..\src\osdep\amiberry_hardfile.cpp" />
@@ -897,6 +900,14 @@
     <ClInclude Include="..\src\osdep\target.h" />
     <ClInclude Include="..\src\sounddep\sound.h" />
     <ClInclude Include="..\src\threaddep\thread.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Xml Include="..\abr\brainfile.xml">
+      <DeploymentContent>true</DeploymentContent>
+    </Xml>
+    <Xml Include="..\abr\catlist.xml">
+      <DeploymentContent>true</DeploymentContent>
+    </Xml>
   </ItemGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <RemotePostBuildEvent>

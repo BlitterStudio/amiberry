@@ -1927,6 +1927,15 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->whdbootprefs.buttonwait = amiberry_options.default_whd_buttonwait;
 	p->whdbootprefs.showsplash = amiberry_options.default_whd_showsplash;
 	p->whdbootprefs.configdelay = amiberry_options.default_whd_configdelay;
+
+	// Disable Cycle-Exact modes that are not yet implemented
+	if (changed_prefs.cpu_cycle_exact || changed_prefs.cpu_memory_cycle_exact)
+	{
+		if (changed_prefs.cpu_model > 68010)
+		{
+			changed_prefs.cpu_cycle_exact = changed_prefs.cpu_memory_cycle_exact = false;
+		}
+	}
 }
 
 static const TCHAR* scsimode[] = { _T("SCSIEMU"), _T("SPTI"), _T("SPTI+SCSISCAN"), NULL };
@@ -3025,9 +3034,11 @@ bool get_plugin_path(TCHAR* out, int len, const TCHAR* path)
 		out[len - 1] = '\0';
 	}
 	else {
-		write_log("\n-----------------> STUB: get_plugin_path, "
-			"size: %d, path: %s\n", len, path);
-		out[0] = '\0';
+		strncpy(out, start_path_data, len - 1);
+		strncat(out, "/", len - 1);
+		strncat(out, path, len - 1);
+		strncat(out, "/", len - 1);
+		return my_existsfile(out);
 	}
 	return TRUE;
 }

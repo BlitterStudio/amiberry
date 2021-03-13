@@ -106,6 +106,9 @@
     <Filter Include="external\libguisan\src\widgets">
       <UniqueIdentifier>{7e937be4-82dd-473a-8771-4297ecb71d9f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="abr">
+      <UniqueIdentifier>{0237defb-6fd3-462b-9161-eef347184a72}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\conf\dir.txt">
@@ -990,6 +993,15 @@
     <ClCompile Include="..\src\osdep\gui\PanelRTG.cpp">
       <Filter>src\osdep\gui</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\cpuemu_13.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\osdep\gui\PanelHWInfo.cpp">
+      <Filter>src\osdep\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\osdep\gui\ShowDiskInfo.cpp">
+      <Filter>src\osdep\gui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\archivers\7z\7zBuf.h">
@@ -1682,5 +1694,13 @@
     <ClInclude Include="..\src\include\parallel.h">
       <Filter>src\include</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Xml Include="..\abr\brainfile.xml">
+      <Filter>abr</Filter>
+    </Xml>
+    <Xml Include="..\abr\catlist.xml">
+      <Filter>abr</Filter>
+    </Xml>
   </ItemGroup>
 </Project>

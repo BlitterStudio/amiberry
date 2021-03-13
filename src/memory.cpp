@@ -289,7 +289,7 @@ void dummy_put (uaecptr addr, int size, uae_u32 val)
 		if (gary_timeout)
 			gary_wait(addr, size, true);
 		if (gary_toenb && currprefs.mmu_model)
-			exception2(addr, true, size, regs.s ? 4 : 0);
+			hardware_exception2(addr, val, false, false, size);
 	}
 }
 
@@ -380,7 +380,7 @@ uae_u32 dummy_get (uaecptr addr, int size, bool inst, uae_u32 defvalue)
 		if (gary_timeout)
 			gary_wait(addr, size, false);
 		if (gary_toenb)
-			exception2(addr, false, size, (regs.s ? 4 : 0) | (inst ? 0 : 1));
+			hardware_exception2(addr, 0, true, false, size);
 		return v;
 	}
 
@@ -541,7 +541,7 @@ static uae_u8 *REGPARAM3 chipmem_xlate (uaecptr addr) REGPARAM;
 static void ce2_timeout (void)
 {
 #ifdef CPUEMU_13
-	wait_cpu_cycle_read(0, -1);
+	wait_cpu_cycle_read (0, -1);
 #endif
 }
 
@@ -1124,7 +1124,7 @@ uae_u8 *REGPARAM2 default_xlate (uaecptr addr)
 				//memory_map_dump ();
 			}
 			if (gary_toenb && (gary_nonrange(addr) || (size > 1 && gary_nonrange(addr + size - 1)))) {
-				exception2(addr, false, size, regs.s ? 4 : 0);
+				hardware_exception2(addr, 0, true, true, size);
 			} else {
 				cpu_halt(CPU_HALT_OPCODE_FETCH_FROM_NON_EXISTING_ADDRESS);
 			}

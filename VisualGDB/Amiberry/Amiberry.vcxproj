@@ -267,6 +267,7 @@
     <ClCompile Include="..\..\src\cpudefs.cpp" />
     <ClCompile Include="..\..\src\cpuemu_0.cpp" />
     <ClCompile Include="..\..\src\cpuemu_11.cpp" />
+    <ClCompile Include="..\..\src\cpuemu_13.cpp" />
     <ClCompile Include="..\..\src\cpuemu_4.cpp" />
     <ClCompile Include="..\..\src\cpuemu_40.cpp" />
     <ClCompile Include="..\..\src\cpuemu_44.cpp" />
@@ -336,6 +337,7 @@
     <ClCompile Include="..\..\src\osdep\gui\PanelDisplay.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelFloppy.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelHD.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\PanelHWInfo.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelInput.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelMisc.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\PanelPaths.cpp" />
@@ -349,6 +351,7 @@
     <ClCompile Include="..\..\src\osdep\gui\SelectFile.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\SelectFolder.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\SelectorEntry.cpp" />
+    <ClCompile Include="..\..\src\osdep\gui\ShowDiskInfo.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\ShowHelp.cpp" />
     <ClCompile Include="..\..\src\osdep\gui\ShowMessage.cpp" />
     <ClCompile Include="..\..\src\osdep\keyboard.cpp" />

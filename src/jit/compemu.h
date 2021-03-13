@@ -186,6 +186,7 @@ STATIC_INLINE int end_block(uae_u16 opcode)
 	return (prop[opcode].cflow & fl_end_block);
 }
 
+#define SP_REG 15
 #define PC_P 16
 #define FLAGX 17
 #define FLAGTMP 18
@@ -364,11 +365,7 @@ typedef struct blockinfo_t {
 #define BI_COMPILING 5
 #define BI_FINALIZING 6
 
-#if defined(CPU_arm) && !defined(ARMV6T2) && !defined(CPU_AARCH64)
-const int POPALLSPACE_SIZE = 2048; /* That should be enough space */
-#else
-const int POPALLSPACE_SIZE = 512; /* That should be enough space */
-#endif
+extern const int POPALLSPACE_SIZE;
 
 void execute_normal(void);
 void exec_nostats(void);
@@ -376,6 +373,9 @@ void do_nothing(void);
 void execute_exception(uae_u32 cycles);
 
 typedef fptype fpu_register;
+
+/* Flags for Bernie during development/debugging. Should go away eventually */
+#define DISTRUST_CONSISTENT_MEM 0
 
 void jit_abort(const TCHAR *format,...);
 

@@ -185,7 +185,7 @@ public:
 				changed_prefs.cachesize = 0;
 			}
 		}
-		
+		RefreshPanelCPU();
 		RefreshPanelQuickstart();
 	}
 };
@@ -460,6 +460,8 @@ void RefreshPanelChipset()
 	chkNTSC->setSelected(changed_prefs.ntscmode);
 	chkCycleExact->setSelected(changed_prefs.cpu_cycle_exact);
 	chkMemoryCycleExact->setSelected(changed_prefs.cpu_memory_cycle_exact);
+	chkCycleExact->setEnabled(changed_prefs.cpu_model <= 68010);
+	chkMemoryCycleExact->setEnabled(changed_prefs.cpu_model <= 68010);
 
 	if (changed_prefs.immediate_blits)
 		optBlitImmed->setSelected(true);

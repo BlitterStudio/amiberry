@@ -67,7 +67,7 @@
     <RemoteDebuggerWorkingDirectory>~/projects/amiberry</RemoteDebuggerWorkingDirectory>
     <DebuggerFlavor>LinuxDebugger</DebuggerFlavor>
     <PreLaunchCommand>export DISPLAY=:0.0</PreLaunchCommand>
-    <RemoteTarget>402471865;pi400 (username=, port=22, authentication=Password)</RemoteTarget>
+    <RemoteTarget>-18943540;argon (username=, port=22, authentication=Password)</RemoteTarget>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-DMX|ARM64'">
     <RemoteDebuggerCommand>~/projects/amiberry/Amiberry-Release</RemoteDebuggerCommand>

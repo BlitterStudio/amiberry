@@ -1564,43 +1564,17 @@ static void audio_state_channel2 (int nr, bool perfin)
 		if (!chan_ena && old_dma) {
 			// DMA switched off, state=2/3 and "too fast CPU": set flag
 			cdp->dmaofftime_active = true;
-			cdp->dmaofftime_cpu_cnt = regs.instruction_cnt;
-			cdp->dmaofftime_pc = M68K_GETPC;
 		}
-		// check if CPU executed at least 60 instructions (if JIT is off), there are stupid code that
-		// disable audio DMA, then set new sample, then re-enable without actually wanting to start
-		// new sample immediately.
 		if (cdp->dmaofftime_active && !old_dma && chan_ena) {
-			static int warned = 100;
 			// We are still in state=2/3 and program is going to re-enable
 			// DMA. Force state to zero to prevent CPU timed DMA wait
 			// routines in common tracker players to lose notes.
-			if (usehacks() && (currprefs.cachesize || (regs.instruction_cnt - cdp->dmaofftime_cpu_cnt) >= 60)) {
-				if (warned >= 0) {
-					warned--;
-					write_log(_T("Audio %d DMA wait hack: ENABLED. OFF=%08x, ON=%08x\n"), nr, cdp->dmaofftime_pc, M68K_GETPC);
-				}
-#if DEBUG_AUDIO_HACK > 0
-				if (debugchannel(nr))
-					write_log(_T("%d: INSTADMAOFF\n"), nr, M68K_GETPC);
-#endif
 				newsample(nr, (cdp->dat2 >> 0) & 0xff);
 				zerostate(nr);
-			} else {
-				if (warned >= 0) {
-					warned--;
-					write_log(_T("Audio %d DMA wait hack: DISABLED. OFF=%08x, ON=%08x\n"), nr, cdp->dmaofftime_pc, M68K_GETPC);
-				}
-			}
 			cdp->dmaofftime_active = false;
 		}
 	}
 
-#if DEBUG_AUDIO > 0
-	if (debugchannel (nr) && old_dma != chan_ena) {
-		write_log (_T("%d:DMA=%d IRQ=%d PC=%08x\n"), nr, chan_ena, isirq (nr) ? 1 : 0, M68K_GETPC);
-	}
-#endif
 	switch (cdp->state)
 	{
 	case 0:
@@ -1616,27 +1590,14 @@ static void audio_state_channel2 (int nr, bool perfin)
 			if (cdp->wlen > 2)
 				cdp->ptx_tofetch = true;
 			cdp->dsr = true;
-#if TEST_AUDIO > 0
-			cdp->have_dat = false;
-#endif
-#if DEBUG_AUDIO > 0
-			if (debugchannel (nr)) {
-				write_log (_T("%d:0>1: LEN=%d PC=%08x\n"), nr, cdp->wlen, M68K_GETPC);
-			}
-#endif
 		} else if (cdp->dat_written && !isirq (nr)) {
 			cdp->state = 2;
 			setirq (nr, 0);
 			loaddat (nr);
 			if (usehacks() && cdp->per < 10 * CYCLE_UNIT) {
-				static int warned = 100;
 				// make sure audio.device AUDxDAT startup returns to idle state before DMA is enabled
 				newsample (nr, (cdp->dat2 >> 0) & 0xff);
 				zerostate (nr);
-				if (warned > 0) {
-					write_log(_T("AUD%d: forced idle state PER=%d PC=%08x\n"), nr, cdp->per, M68K_GETPC);
-					warned--;
-				}
 			} else {
 				cdp->pbufldl = true;
 				audio_state_channel2 (nr, false);

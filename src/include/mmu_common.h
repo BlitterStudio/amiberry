@@ -3,17 +3,11 @@
 
 #include "uae/types.h"
 
-struct m68k_exception
-{
+struct m68k_exception {
 	int prb;
-
-	explicit m68k_exception(int exc) : prb(exc)
-	{
-	}
-
-	explicit operator int() const { return prb; }
+	m68k_exception (int exc) : prb (exc) {}
+	operator int() { return prb; }
 };
-
 #define TRY(var) try
 #define CATCH(var) catch(m68k_exception var)
 #define THROW(n) throw m68k_exception(n)

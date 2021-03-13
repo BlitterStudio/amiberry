@@ -1,7 +1,7 @@
 /*
 * UAE - The Un*x Amiga Emulator
 *
-* MC68881/68882/68040/68060 FPU emulation
+* MC68881/68882/68040 FPU emulation
 *
 * Copyright 1996 Herman ten Brugge
 * Modified 2005 Peter Keunecke
@@ -13,10 +13,6 @@
 */
 
 #define __USE_ISOC9X  /* We might be able to pick up a NaN */
-
-#include <math.h>
-#include <float.h>
-#include <fenv.h>
 
 #define USE_HOST_ROUNDING 1
 
@@ -129,23 +125,13 @@ static uae_u32 fpp_from_single(fpdata *fpd)
 
 static void fpp_to_double(fpdata *fpd, uae_u32 wrd1, uae_u32 wrd2)
 {
-#ifdef WORDS_BIGENDIAN
-	((uae_u32*)&(fpd->fp))[0] = wrd1;
-	((uae_u32*)&(fpd->fp))[1] = wrd2;
-#else
 	((uae_u32*)&(fpd->fp))[1] = wrd1;
 	((uae_u32*)&(fpd->fp))[0] = wrd2;
-#endif
 }
 static void fpp_from_double(fpdata *fpd, uae_u32 *wrd1, uae_u32 *wrd2)
 {
-#ifdef WORDS_BIGENDIAN
-  *wrd1 = ((uae_u32*)&(fpd->fp))[0];
-  *wrd2 = ((uae_u32*)&(fpd->fp))[1];
-#else
   *wrd1 = ((uae_u32*)&(fpd->fp))[1];
   *wrd2 = ((uae_u32*)&(fpd->fp))[0];
-#endif
 }
 void fpp_to_exten(fpdata *fpd, uae_u32 wrd1, uae_u32 wrd2, uae_u32 wrd3)
 {

@@ -68,8 +68,8 @@ STATIC_INLINE uae_u32 ledcolor(uae_u32 c, uae_u32 *rc, uae_u32 *gc, uae_u32 *bc,
 
 static void write_tdnumber(uae_u8 *buf, int bpp, int x, int y, int num, uae_u32 c1, uae_u32 c2)
 {
-	const char* numptr = numbers + num * TD_NUM_WIDTH + NUMBERS_NUM * TD_NUM_WIDTH * y;
-	for (int j = 0; j < TD_NUM_WIDTH; j++)
+	const char* numptr = numbers + num * TD_DEFAULT_NUM_WIDTH + NUMBERS_NUM * TD_DEFAULT_NUM_WIDTH * y;
+	for (int j = 0; j < TD_DEFAULT_NUM_WIDTH; j++)
 	{
 		if (*numptr == 'x')
 			putpixel(buf, nullptr, bpp, x + j, c1, 1);
@@ -128,7 +128,7 @@ void draw_status_line_single(int monid, uae_u8 *buf, int bpp, int y, int totalwi
 	c2 = ledcolor (0x00000000, rc, gc, bc, alpha);
 
 	if (td_pos & TD_RIGHT)
-		x_start = totalwidth - TD_PADX - VISIBLE_LEDS * TD_WIDTH;
+		x_start = totalwidth - TD_PADX - VISIBLE_LEDS * TD_DEFAULT_WIDTH;
 	else
 		x_start = TD_PADX;
 
@@ -340,27 +340,27 @@ void draw_status_line_single(int monid, uae_u8 *buf, int bpp, int y, int totalwi
 			border = 1;
 		}
 
-		x = x_start + pos * TD_WIDTH;
+		x = x_start + pos * TD_DEFAULT_WIDTH;
 		if (!border)
 			putpixel(buf, NULL, bpp, x - 1, cb, 0);
-		for (j = 0; j < TD_LED_WIDTH; j++)
+		for (j = 0; j < TD_DEFAULT_LED_WIDTH; j++)
 			putpixel(buf, NULL, bpp, x + j, c, 0);
 		if (!border)
 			putpixel(buf, NULL, bpp, x + j, cb, 0);
 
-		if (y >= TD_PADY && y - TD_PADY < TD_NUM_HEIGHT) {
+		if (y >= TD_PADY && y - TD_PADY < TD_DEFAULT_NUM_HEIGHT) {
 			if (num3 >= 0) {
-				x += (TD_LED_WIDTH - am * TD_NUM_WIDTH) / 2;
+				x += (TD_DEFAULT_LED_WIDTH - am * TD_DEFAULT_NUM_WIDTH) / 2;
 				if (num1 > 0) {
 					write_tdnumber(buf, bpp, x, y - TD_PADY, num1, pen_rgb, c2);
-					x += TD_NUM_WIDTH;
+					x += TD_DEFAULT_NUM_WIDTH;
 				}
 				if (num2 >= 0) {
 					write_tdnumber(buf, bpp, x, y - TD_PADY, num2, pen_rgb, c2);
-					x += TD_NUM_WIDTH;
+					x += TD_DEFAULT_NUM_WIDTH;
 				}
 				write_tdnumber(buf, bpp, x, y - TD_PADY, num3, pen_rgb, c2);
-				x += TD_NUM_WIDTH;
+				x += TD_DEFAULT_NUM_WIDTH;
 				if (num4 > 0)
 					write_tdnumber(buf, bpp, x, y - TD_PADY, num4, pen_rgb, c2);
 			}

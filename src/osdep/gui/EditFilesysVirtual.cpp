@@ -59,9 +59,24 @@ public:
 			{
 				txtPath->setText(tmp);
 				txtVolume->setText(volName);
+				default_fsvdlg(&current_fsvdlg);
+				CreateDefaultDevicename(current_fsvdlg.ci.devname);
+				_tcscpy(current_fsvdlg.ci.volname, current_fsvdlg.ci.devname);
+				_tcscpy(current_fsvdlg.ci.rootdir, tmp);
 			}
 			wndEditFilesysVirtual->requestModalFocus();
 			cmdPath->requestFocus();
+		}
+		else if (actionEvent.getSource() == chkAutoboot) {
+			char tmp[32];
+			if (chkAutoboot->isSelected()) {
+				current_fsvdlg.ci.bootpri = 0;
+			}
+			else {
+				current_fsvdlg.ci.bootpri = BOOTPRI_NOAUTOBOOT;
+			}
+			snprintf(tmp, sizeof(tmp) - 1, "%d", current_fsvdlg.ci.bootpri);
+			txtBootPri->setText(tmp);
 		}
 		else
 		{
@@ -140,6 +155,7 @@ static void InitEditFilesysVirtual()
 
 	chkAutoboot = new gcn::CheckBox("Bootable", true);
 	chkAutoboot->setId("virtAutoboot");
+	chkAutoboot->addActionListener(filesysVirtualActionListener);
 
 	lblBootPri = new gcn::Label("Boot priority:");
 	lblBootPri->setAlignment(gcn::Graphics::RIGHT);
@@ -444,31 +460,26 @@ bool EditFilesysVirtual(const int unit_no)
 	if (unit_no >= 0)
 	{
 		uci = &changed_prefs.mountconfig[unit_no];
-		const auto ci = &uci->ci;
 		get_filesys_unitconfig(&changed_prefs, unit_no, &mi);
-
-		strdevname.assign(ci->devname);
-		txtDevice->setText(strdevname);
-		strvolname.assign(ci->volname);
-		txtVolume->setText(strvolname);
-		strroot.assign(ci->rootdir);
-		txtPath->setText(strroot);
-		chkReadWrite->setSelected(!ci->readonly);
-		chkAutoboot->setSelected(ci->bootpri != BOOTPRI_NOAUTOBOOT);
-		snprintf(tmp, 32, "%d", ci->bootpri >= -127 ? ci->bootpri : -127);
-		txtBootPri->setText(tmp);
+		memcpy(&current_fsvdlg.ci, uci, sizeof(struct uaedev_config_info));
 	}
 	else
 	{
-		CreateDefaultDevicename(tmp);
-		txtDevice->setText(tmp);
-		txtVolume->setText(tmp);
-		strroot.assign(current_dir);
-		txtPath->setText(strroot);
-		chkReadWrite->setSelected(true);
-		txtBootPri->setText("0");
+		default_fsvdlg(&current_fsvdlg);
+		CreateDefaultDevicename(current_fsvdlg.ci.devname);
+		_tcscpy(current_fsvdlg.ci.volname, current_fsvdlg.ci.devname);
 	}
-
+	strdevname.assign(current_fsvdlg.ci.devname);
+	txtDevice->setText(strdevname);
+	strvolname.assign(current_fsvdlg.ci.volname);
+	txtVolume->setText(strvolname);
+	strroot.assign(current_fsvdlg.ci.rootdir);
+	txtPath->setText(strroot);
+	chkReadWrite->setSelected(!current_fsvdlg.ci.readonly);
+	chkAutoboot->setSelected(current_fsvdlg.ci.bootpri != BOOTPRI_NOAUTOBOOT);
+	snprintf(tmp, sizeof(tmp) - 1, "%d", current_fsvdlg.ci.bootpri >= -127 ? current_fsvdlg.ci.bootpri : -127);
+	txtBootPri->setText(tmp);
+	
 	// Prepare the screen once
 	uae_gui->logic();
 	SDL_RenderClear(sdl_renderer);
@@ -485,17 +496,13 @@ bool EditFilesysVirtual(const int unit_no)
 	if (dialogResult)
 	{
 		struct uaedev_config_info ci{};
-		const auto bp = tweakbootpri(atoi(txtBootPri->getText().c_str()), chkAutoboot->isSelected() ? 1 : 0, 0);
-		extract_path(const_cast<char *>(txtPath->getText().c_str()), current_dir);
+		
+		strncpy(current_fsvdlg.ci.devname, (char*)txtDevice->getText().c_str(), MAX_DPATH - 1);
+		strncpy(current_fsvdlg.ci.volname, (char*)txtVolume->getText().c_str(), MAX_DPATH - 1);
+		current_fsvdlg.ci.readonly = !chkReadWrite->isSelected();
+		current_fsvdlg.ci.bootpri = tweakbootpri(atoi(txtBootPri->getText().c_str()), chkAutoboot->isSelected() ? 1 : 0, 0);
 
-		uci_set_defaults(&ci, false);
-		strncpy(ci.devname, const_cast<char *>(txtDevice->getText().c_str()), MAX_DPATH);
-		strncpy(ci.volname, const_cast<char *>(txtVolume->getText().c_str()), MAX_DPATH);
-		strncpy(ci.rootdir, const_cast<char *>(txtPath->getText().c_str()), MAX_DPATH);
-		ci.type = UAEDEV_DIR;
-		ci.readonly = !chkReadWrite->isSelected();
-		ci.bootpri = bp;
-
+		memcpy(&ci, &current_fsvdlg.ci, sizeof(struct uaedev_config_info));
 		uci = add_filesys_config(&changed_prefs, unit_no, &ci);
 		if (uci)
 		{
@@ -504,6 +511,8 @@ bool EditFilesysVirtual(const int unit_no)
 			else if (uci->configoffset >= 0)
 				filesys_eject(uci->configoffset);
 		}
+
+		extract_path((char*)txtPath->getText().c_str(), current_dir);
 	}
 
 	ExitEditFilesysVirtual();

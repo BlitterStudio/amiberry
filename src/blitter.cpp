@@ -73,12 +73,12 @@ static int blit_cyclecounter, blit_waitcyclecounter;
 static int blit_maxcyclecounter, blit_slowdown, blit_totalcyclecounter;
 static int blit_misscyclecounter;
 
-//#ifdef CPUEMU_13
+#ifdef CPUEMU_13
 extern uae_u8 cycle_line[256];
 static int blitter_cyclecounter;
 static int blitter_hcounter;
 static int blitter_vcounter;
-//#endif
+#endif
 
 static long blit_firstline_cycles;
 static long blit_first_cycle;
@@ -850,7 +850,7 @@ void blitter_handler (uae_u32 data)
 	blitter_doit();
 }
 
-//#ifdef CPUEMU_13
+#ifdef CPUEMU_13
 
 static void blit_bltset(int con)
 {
@@ -1371,9 +1371,9 @@ end:
 
 	return written;
 }
-//#else
-//void decide_blitter (int hpos) { }
-//#endif
+#else
+void decide_blitter (int hpos) { }
+#endif
 
 static void blitter_force_finish(bool state)
 {
