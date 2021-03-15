@@ -638,6 +638,19 @@ void REGPARAM2 chipmem_lput (uaecptr addr, uae_u32 l)
 	do_put_mem_long (m, l);
 }
 
+#ifdef AMIBERRY
+void REGPARAM2 chipmem_lput_fc(uaecptr addr, uae_u32 l)
+{
+	uae_u32* m;
+
+	addr &= chipmem_bank.mask;
+	if (eventtab[ev_copper].active)
+		check_copperlist_write(addr);
+	m = (uae_u32*)(chipmem_bank.baseaddr + addr);
+	do_put_mem_long(m, l);
+}
+#endif
+
 void REGPARAM2 chipmem_wput (uaecptr addr, uae_u32 w)
 {
 	uae_u16 *m;
@@ -647,11 +660,34 @@ void REGPARAM2 chipmem_wput (uaecptr addr, uae_u32 w)
 	do_put_mem_word (m, w);
 }
 
+#ifdef AMIBERRY
+void REGPARAM2 chipmem_wput_fc(uaecptr addr, uae_u32 w)
+{
+	uae_u16* m;
+
+	addr &= chipmem_bank.mask;
+	if (eventtab[ev_copper].active)
+		check_copperlist_write(addr);
+	m = (uae_u16*)(chipmem_bank.baseaddr + addr);
+	do_put_mem_word(m, w);
+}
+#endif
+
 void REGPARAM2 chipmem_bput (uaecptr addr, uae_u32 b)
 {
 	addr &= chipmem_bank.mask;
 	chipmem_bank.baseaddr[addr] = b;
 }
+
+#ifdef AMIBERRY
+void REGPARAM2 chipmem_bput_fc(uaecptr addr, uae_u32 b)
+{
+	addr &= chipmem_bank.mask;
+	if (eventtab[ev_copper].active)
+		check_copperlist_write(addr);
+	chipmem_bank.baseaddr[addr] = b;
+}
+#endif
 
 /* cpu chipmem access inside agnus addressable ram but no ram available */
 static uae_u32 chipmem_dummy (void)
@@ -729,6 +765,10 @@ void REGPARAM2 chipmem_agnus_wput (uaecptr addr, uae_u32 w)
 	uae_u16 *m;
 
 	addr &= chipmem_full_mask;
+#ifdef AMIBERRY
+	if (eventtab[ev_copper].active)
+		check_copperlist_write(addr);
+#endif
 	if (addr >= chipmem_full_size - 1)
 		return;
 	m = (uae_u16 *)(chipmem_bank.baseaddr + addr);

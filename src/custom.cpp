@@ -7100,6 +7100,9 @@ static int copper_cant_read (int hpos, int alloc)
    it subtly wrong; and it would also be more expensive - we want this code
    to be fast.  */
 
+static uaecptr fc_ip_start = 0;
+static uaecptr fc_ip_end = 0;
+
 static void predict_copper(void)
 {
 	uaecptr ip = cop_state.ip;
@@ -7110,14 +7113,16 @@ static void predict_copper(void)
 	unsigned int vcmp;
 	int vp;
 
+	fc_ip_end = 0;
+	
 	if (cop_state.ignore_next || cop_state.movedelay)
 		return;
 
 	int until_hpos = maxhpos - 3;
 	int force_exit = 0;
 
-	w1 = cop_state.saved_i1;
-	w2 = cop_state.saved_i2;
+	w1 = cop_state.i1;
+	w2 = cop_state.i2;
 
 	switch (state) {
 	case COP_stop:
@@ -7128,6 +7133,8 @@ static void predict_copper(void)
 		return;
 
 	case COP_wait:
+		if ((w2 & 0x8000) == 0)
+			return; // wait for blitter
 		vcmp = (w1 & (w2 | 0x8000)) >> 8;
 		vp = vpos & (((w2 >> 8) & 0x7F) | 0x80);
 		if (vp < cop_state.vcmp)
@@ -7135,8 +7142,9 @@ static void predict_copper(void)
 		break;
 	}
 
+	fc_ip_start = ip;
+	
 	while (c_hpos < until_hpos && !force_exit) {
-		c_hpos += 2;
 
 		switch (state) {
 		case COP_wait_in2:
@@ -7166,6 +7174,7 @@ static void predict_copper(void)
 				ip = cop1lc;
 			else
 				ip = cop2lc;
+			fc_ip_start = ip;
 			break;
 
 		case COP_start_delay:
@@ -7196,7 +7205,10 @@ static void predict_copper(void)
 					force_exit = 1;
 					break;
 				}
-				if (reg == 0x88 || reg == 0x8a) { // next is strobe
+				if (reg == 0x88 || reg == 0x8a || reg == 0x2e || reg == 0x9a || reg == 0x9c) {
+					// 0x88, 0x8a: Copper triggers strobe
+					// 0x2e: Copper changes copper control
+					// 0x9a, 0x9c: maybe copper triggers interupt
 					force_exit = 1;
 					break;
 				}
@@ -7217,10 +7229,16 @@ static void predict_copper(void)
 
 			if (vp < vcmp)
 				c_hpos = until_hpos; // run till end of line
-			break;
 
+			/* fall through */
 		case COP_wait:
 		{
+			if ((w2 & 0x8000) == 0) {
+				// wait for blitter
+				force_exit = 1;
+				break;
+			}
+
 			unsigned int hcmp = (w1 & w2 & 0xFE);
 
 			int hp = c_hpos & (w2 & 0xFE);
@@ -7235,6 +7253,8 @@ static void predict_copper(void)
 			force_exit = 1;
 			break;
 		}
+		if (!force_exit && c_hpos < until_hpos)
+			c_hpos += 2;
 	}
 
 	cycle_count = c_hpos - cop_state.hpos;
@@ -7244,6 +7264,7 @@ static void predict_copper(void)
 		eventtab[ev_copper].active = 1;
 		eventtab[ev_copper].evtime = get_cycles() + cycle_count * CYCLE_UNIT;
 		events_schedule();
+		fc_ip_end = ip;
 	}
 }
 #endif
@@ -7819,16 +7840,28 @@ static void update_copper (int until_hpos)
 out:
 	cop_state.hpos = c_hpos;
 	last_copper_hpos = until_hpos;
-#ifdef AMIBERRY	
+#ifdef AMIBERRY
 	if (currprefs.fast_copper) {
 		/* The test against maxhpos also prevents us from calling predict_copper
 		   when we are being called from hsync_handler, which would not only be
 		   stupid, but actively harmful.  */
-		if ((regs.spcflags & SPCFLAG_COPPER) && (c_hpos + 8 < maxhpos))
+		if ((regs.spcflags & SPCFLAG_COPPER) && (c_hpos + 10 < maxhpos))
 			predict_copper();
 	}
 #endif //AMIBERRY
 }
+
+#ifdef AMIBERRY
+void check_copperlist_write(uaecptr addr)
+{
+	if (addr >= fc_ip_start && addr < fc_ip_end) {
+		// Write to copperlist area detected
+		eventtab[ev_copper].active = 0;
+		if (copper_enabled_thisline)
+			update_copper(current_hpos());
+	}
+}
+#endif
 
 static void compute_spcflag_copper (int hpos)
 {
@@ -12006,6 +12039,20 @@ void check_prefs_changed_custom (void)
 	currprefs.collision_level = changed_prefs.collision_level;
 #ifdef AMIBERRY
 	currprefs.fast_copper = changed_prefs.fast_copper;
+	if (currprefs.cachesize && currprefs.fast_copper)
+		chipmem_bank.jit_write_flag = S_WRITE;
+	else
+		chipmem_bank.jit_write_flag = 0;
+	if (currprefs.fast_copper) {
+		chipmem_bank.lput = chipmem_lput_fc;
+		chipmem_bank.wput = chipmem_wput_fc;
+		chipmem_bank.bput = chipmem_bput_fc;
+	}
+	else {
+		chipmem_bank.lput = chipmem_lput;
+		chipmem_bank.wput = chipmem_wput;
+		chipmem_bank.bput = chipmem_bput;
+	}
 #endif
 	currprefs.cs_ciaatod = changed_prefs.cs_ciaatod;
 	currprefs.cs_rtc = changed_prefs.cs_rtc;

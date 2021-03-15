@@ -470,7 +470,16 @@ void RefreshPanelChipset()
 	else
 		optBlitNormal->setSelected(true);
 
-	chkFastCopper->setSelected(changed_prefs.fast_copper);
+	if (changed_prefs.cpu_memory_cycle_exact)
+	{
+		chkFastCopper->setEnabled(false);
+		chkFastCopper->setSelected(false);
+	}
+	else
+	{
+		chkFastCopper->setEnabled(true);
+		chkFastCopper->setSelected(changed_prefs.fast_copper);
+	}
 
 	if (changed_prefs.collision_level == 0)
 		optCollNone->setSelected(true);

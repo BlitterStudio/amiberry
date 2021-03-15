@@ -838,7 +838,11 @@ extern int addr_valid (const TCHAR*, uaecptr,uae_u32);
 extern void REGPARAM3 chipmem_lput (uaecptr, uae_u32) REGPARAM;
 extern void REGPARAM3 chipmem_wput (uaecptr, uae_u32) REGPARAM;
 extern void REGPARAM3 chipmem_bput (uaecptr, uae_u32) REGPARAM;
-
+#ifdef AMIBERRY
+extern void REGPARAM3 chipmem_lput_fc(uaecptr, uae_u32) REGPARAM;
+extern void REGPARAM3 chipmem_wput_fc(uaecptr, uae_u32) REGPARAM;
+extern void REGPARAM3 chipmem_bput_fc(uaecptr, uae_u32) REGPARAM;
+#endif
 extern uae_u32 REGPARAM3 chipmem_agnus_wget (uaecptr) REGPARAM;
 extern void REGPARAM3 chipmem_agnus_wput (uaecptr, uae_u32) REGPARAM;
 
