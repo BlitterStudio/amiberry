@@ -187,6 +187,7 @@ public:
 		}
 		RefreshPanelCPU();
 		RefreshPanelQuickstart();
+		RefreshPanelChipset();
 	}
 };
 static CycleExactActionListener* cycleExactActionListener;
