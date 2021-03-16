@@ -3137,8 +3137,9 @@ MIDFUNC(2,jnf_DIVS,(RW4 d, RR4 s))
 	int init_regs_used = 0;
   int targetIsReg;
   int s_is_d;
+  uae_s16 tmp;
   if (isconst(s) && (uae_s16)live.state[s].val != 0) {
-    uae_s16 tmp = (uae_s16)live.state[s].val;
+    tmp = (uae_s16)live.state[s].val;
     d = rmw(d);
     SIGNED16_IMM_2_REG(REG_WORK3, tmp);
   } else {
@@ -3173,7 +3174,10 @@ MIDFUNC(2,jnf_DIVS,(RW4 d, RR4 s))
 	BNE_i(8);															// overflow -> end_of_op
 	
   // Here we have to calc remainder
-  SIGNED16_REG_2_REG(REG_WORK3, s);
+  if (init_regs_used)
+    SIGNED16_REG_2_REG(REG_WORK3, s);
+  else
+    SIGNED16_IMM_2_REG(REG_WORK3, tmp);
   MSUB_wwww(REG_WORK2, REG_WORK1, REG_WORK3, d);		// REG_WORK2 contains remainder
 	
 	EOR_www(REG_WORK3, REG_WORK2, d);	  // If sign of remainder and first operand differs, change sign of remainder
@@ -3199,8 +3203,9 @@ MIDFUNC(2,jff_DIVS,(RW4 d, RR4 s))
 	int init_regs_used = 0;
   int targetIsReg;
   int s_is_d;
+  uae_s16 tmp;
   if (isconst(s) && (uae_s16)live.state[s].val != 0) {
-    uae_s16 tmp = (uae_s16)live.state[s].val;
+    tmp = (uae_s16)live.state[s].val;
     d = rmw(d);
     SIGNED16_IMM_2_REG(REG_WORK3, tmp);
   } else {
@@ -3259,7 +3264,10 @@ MIDFUNC(2,jff_DIVS,(RW4 d, RR4 s))
   TST_ww(REG_WORK2, REG_WORK2);         // N and Z ok, C and V cleared
   
   // calc remainder
-  SIGNED16_REG_2_REG(REG_WORK3, s);
+  if (init_regs_used)
+    SIGNED16_REG_2_REG(REG_WORK3, s);
+  else
+    SIGNED16_IMM_2_REG(REG_WORK3, tmp);
 	MSUB_wwww(REG_WORK2, REG_WORK1, REG_WORK3, d);		// REG_WORK2 contains remainder
 
 	EOR_www(REG_WORK3, REG_WORK2, d);	  // If sign of remainder and first operand differs, change sign of remainder
@@ -3402,7 +3410,7 @@ MIDFUNC(3,jff_DIVLS32,(RW4 d, RR4 s1, W4 rem))
 	
   MOV_ww(d, REG_WORK1);
   TST_ww(d, d);
-
+    
   // end_of_op
 	
   flags_carry_inverted = false;
