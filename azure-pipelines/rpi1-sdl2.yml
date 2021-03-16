@@ -23,7 +23,9 @@ steps:
      Contents: |
         amiberry
         capsimg.so
+        abr/**
         conf/**
+        controllers/**
         data/**
         kickstarts/**
         savestates/**
