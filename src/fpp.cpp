@@ -2820,7 +2820,7 @@ uae_u8 *save_fpu (int *len, uae_u8 *dstptr)
 	if (dstptr)
 		dstbak = dst = dstptr;
 	else
-		dstbak = dst = xmalloc (uae_u8, 4+4+8*10+4+4+4+4+4+2*10+3*(4+2));
+		dstbak = dst = xmalloc(uae_u8, 4 + 4 + 8 * 10 + 4 + 4 + 4 + 4 + 4 + 4 + 2 + 4 + 4 * 4 + 20 * 4 + 16);
 	save_u32 (currprefs.fpu_model);
 	save_u32 (0x80000000 | 0x20000000 | (regs.fp_ea_set ? 0x00000001 : 0x00000000));
 	for (i = 0; i < 8; i++) {

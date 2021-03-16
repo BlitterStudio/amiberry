@@ -4112,6 +4112,7 @@ void restore_expansion_finish(void)
 			ec->aci.doinit = true;
 		}
 	}
+	restore_cardno = 0;
 }
 
 

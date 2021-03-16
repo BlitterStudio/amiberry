@@ -2596,7 +2596,8 @@ uae_u8 *restore_cia (int num, uae_u8 *src)
 		div10 = CYCLE_UNIT * b;
 	b = restore_u8 ();
 	if (num) ciabsdr_cnt = b; else ciaasdr_cnt = b;
-	if (num) ciabsdr_buf = b;
+	b = restore_u8();
+	if (num) ciabsdr_buf = b; else ciaasdr_buf = b;
 	return src;
 }
 

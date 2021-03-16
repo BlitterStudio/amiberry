@@ -3023,7 +3023,7 @@ void m68k_go(int may_quit)
 
 uae_u8* restore_cpu(uae_u8* src)
 {
-	int flags, model;
+	uae_u32 flags, model;
 	uae_u32 l;
 
 	currprefs.cpu_model = changed_prefs.cpu_model = model = restore_u32();
@@ -3045,22 +3045,23 @@ uae_u8* restore_cpu(uae_u8* src)
 	regs.isp = restore_u32();
 	regs.sr = restore_u16();
 	l = restore_u32();
-  if (l & CPUMODE_HALT) {
+	if (l & CPUMODE_HALT) {
 		regs.stopped = 1;
-  } else {
+	}
+	else {
 		regs.stopped = 0;
 	}
-  if (model >= 68010) {
+	if (model >= 68010) {
 		regs.dfc = restore_u32();
 		regs.sfc = restore_u32();
 		regs.vbr = restore_u32();
 	}
-  if (model >= 68020) {
+	if (model >= 68020) {
 		regs.caar = restore_u32();
 		regs.cacr = restore_u32();
 		regs.msp = restore_u32();
 	}
-  if (model >= 68030) {
+	if (model >= 68030) {
 		fake_crp_030 = restore_u64();
 		fake_srp_030 = restore_u64();
 		fake_tt0_030 = restore_u32();
@@ -3068,7 +3069,7 @@ uae_u8* restore_cpu(uae_u8* src)
 		fake_tc_030 = restore_u32();
 		fake_mmusr_030 = restore_u16();
 	}
-  if (model >= 68040) {
+	if (model >= 68040) {
 		regs.itt0 = restore_u32();
 		regs.itt1 = restore_u32();
 		regs.dtt0 = restore_u32();
@@ -3077,9 +3078,11 @@ uae_u8* restore_cpu(uae_u8* src)
 		regs.urp = restore_u32();
 		regs.srp = restore_u32();
 	}
-  if (flags & 0x80000000) {
+	if (flags & 0x80000000) {
 		int khz = restore_u32();
-		if (khz > 0 && khz < 800000)
+		if (khz < 0)
+			currprefs.m68k_speed = changed_prefs.m68k_speed = -1;
+		else if (khz > 0 && khz < 800000)
 			currprefs.m68k_speed = changed_prefs.m68k_speed = 0;
 	}
 	set_cpu_caches(true);
@@ -3091,11 +3094,11 @@ uae_u8* restore_cpu(uae_u8* src)
 		regs.read_buffer = restore_u16();
 		regs.write_buffer = restore_u16();
 	}
-	
+
 	m68k_reset_sr();
 
 	write_log(_T("CPU: %d%s%03d, PC=%08X\n"),
-	          model / 1000, flags & 1 ? _T("EC") : _T(""), model % 1000, regs.pc);
+		model / 1000, flags & 1 ? _T("EC") : _T(""), model % 1000, regs.pc);
 
 	return src;
 }
@@ -3281,6 +3284,7 @@ uae_u8* save_cpu(int* len, uae_u8* dstptr)
 {
 	uae_u8 *dstbak, *dst;
 	int model, khz;
+	uae_u32 flags;
 
 	if (dstptr)
 		dstbak = dst = dstptr;
@@ -3288,7 +3292,8 @@ uae_u8* save_cpu(int* len, uae_u8* dstptr)
 		dstbak = dst = xmalloc(uae_u8, 1000);
 	model = currprefs.cpu_model;
 	save_u32(model); /* MODEL */
-	save_u32(0x80000000 | 0x40000000 | 0x20000000 | 0x10000000 | 0x8000000 | 0x4000000 | 0x2000000 | (currprefs.address_space_24 ? 1 : 0)); /* FLAGS */
+	flags = 0x80000000 | 0x40000000 | 0x20000000 | 0x10000000 | 0x8000000 | 0x4000000 | (currprefs.cpu_model <= 68010 ? 0x2000000 : 0) | (currprefs.address_space_24 ? 1 : 0);
+	save_u32(flags); /* FLAGS */
 	for (int i = 0; i < 15; i++)
 		save_u32(regs.regs[i]);		/* D0-D7 A0-A6 */
 	save_u32(m68k_getpc ()); /* PC */
