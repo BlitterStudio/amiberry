@@ -9504,7 +9504,7 @@ static bool linesync_beam_single_single(void)
 			while (!currprefs.turbo_emulation && sync_timeout_check(maxtime)) {
 				maybe_process_pull_audio();
 				vp = target_get_display_scanline(-1);
-				if (vp >= 0 && vp < vp < vsync_activeheight / 2)
+				if (vp >= 0 && vp < vsync_activeheight / 2)
 					break;
 				if (currprefs.m68k_speed < 0 && !was_syncline) {
 					is_syncline = -3;
