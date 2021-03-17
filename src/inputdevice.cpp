@@ -4536,6 +4536,9 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 	case AKS_HARDRESET:
 		uae_reset (1, 1);
 		break;
+	case AKS_RESTART:
+		uae_restart(-1, NULL);
+		break;
 	case AKS_STATESAVEQUICK:
 	case AKS_STATESAVEQUICK1:
 	case AKS_STATESAVEQUICK2:
