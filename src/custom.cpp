@@ -551,8 +551,6 @@ enum plfstate
 	plf_wait,
 	// ddfstop passed
 	plf_passed_stop,
-	// before ddfstop+4 passed
-	plf_passed_stop_pre_act,
 	// ddfstop+4 passed
 	plf_passed_stop_act,
 	// last block finished
@@ -3066,14 +3064,6 @@ STATIC_INLINE int one_fetch_cycle_0 (int pos, int dma, int fm)
 		// 4+ stage shift register that causes these delays.
 		if (plf_state == plf_active || plf_state == plf_passed_stop || plf_state == plf_passed_stop_act) {
 			bpl_dma_off_when_active = 1;
-			if (!dma) {
-				// if DMA ends just before next BPL1DAT fetch: do one block only.
-				// otherwise: do two blocks.
-				if (is_bitplane_dma(pos + 2) != 1) {
-					bpl_dma_off_when_active = 2;
-				}
-				bpl_dma_off_when_active |= 4;
-			}
 			if (bitplane_off_delay <= 0)
 				bitplane_off_delay = !dma ? 4 : 5;
 		}
@@ -3083,12 +3073,6 @@ STATIC_INLINE int one_fetch_cycle_0 (int pos, int dma, int fm)
 			if (bitplane_off_delay == 0) {
 				bplactive = false;
 				plf_state = plf_wait;
-			}
-		}
-		if (bpl_dma_off_when_active) {
-			// check if passed DDFSTOP
-			if (pos == plfstop && ddfstop_written_hpos != pos) {
-				bpl_dma_off_when_active |= 8;
 			}
 		}
 	}
@@ -3114,9 +3098,7 @@ STATIC_INLINE int one_fetch_cycle_0 (int pos, int dma, int fm)
 			finish_last_fetch(pos, fm, false);
 			return 1;
 		}
-		if (plf_state == plf_passed_stop_pre_act) {
-			plf_state = plf_passed_stop_act;
-		} else if (plf_state == plf_passed_stop_act) {
+		if (plf_state == plf_passed_stop_act) {
 			plf_state = plf_passed_stop2;
 		}
 	}
@@ -3661,7 +3643,7 @@ static void decide_line (int hpos)
 				// if ECS: pre-set plf_end_hpos if we have already passed virtual ddfstop
 				if (ecs) {
 					// DDFSTRT=$18: always skip this condition. For some unknown reason.
-					if (last_decide_line_hpos < hstart && hstart >= plfstop && hstart - plfstop <= DDF_OFFSET && hstart != HARD_DDF_START_REAL + DDF_OFFSET) {
+					if (last_decide_line_hpos < hstart && hstart >= plfstop && hstart - plfstop <= DDF_OFFSET) {
 						plf_end_hpos = plfstop + DDF_OFFSET;
 						nextstate = plf_passed_stop;
 					}
@@ -3669,15 +3651,8 @@ static void decide_line (int hpos)
 						plf_end_hpos = HARD_DDF_STOP + DDF_OFFSET;
 						nextstate = plf_passed_stop;
 					}
-					// if DMA was switched off, DDFSTOP was passed during off period and DMA got re-enabled: state machine continues from DDFSTOP passed state.
-					if (bpl_dma_off_when_active & 8) {
-						nextstate = (bpl_dma_off_when_active & 1) ? plf_passed_stop_act : plf_passed_stop_pre_act;
-						ddfstop_matched = true;
-					}
-				} else {
-					if ((bpl_dma_off_when_active & 8) && (bpl_dma_off_when_active & 4)) {
-						nextstate = (bpl_dma_off_when_active & 1) ? plf_passed_stop_act : plf_passed_stop_pre_act;
-						ddfstop_matched = true;
+					if (bpl_dma_off_when_active) {
+						nextstate = plf_passed_stop_act;
 					}
 				}
 				bpl_dma_off_when_active = 0;
