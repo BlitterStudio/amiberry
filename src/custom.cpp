@@ -6283,7 +6283,11 @@ static void BPLxDAT_next(uae_u32 v)
 
 static void BPLxDAT (int hpos, int num, uae_u16 v)
 {
-	event2_newevent2(1, (num << 16) | v, BPLxDAT_next);
+	if (num == 0) {
+		event2_newevent2(1, (num << 16) | v, BPLxDAT_next);
+	} else {
+		BPLxDAT_next(v);
+	}
 
 	if (num == 0 && hpos >= 8) {
 		bpl1dat_written = true;
