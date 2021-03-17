@@ -246,7 +246,7 @@ static bool fp_exception_pending(bool pre)
 {
 	// no arithmetic exceptions pending, check for unimplemented datatype
 	if (regs.fp_unimp_pend) {
-		if (fpu_mmu_fixup) {
+		if (currprefs.cpu_model == 68060 && fpu_mmu_fixup) {
 			m68k_areg(regs, mmufixup[0].reg) = mmufixup[0].value;
 			mmufixup[0].reg = -1;
 		}
@@ -262,7 +262,7 @@ static bool fp_exception_pending(bool pre)
 static void fp_unimp_instruction_exception_pending(void)
 {
 	if (regs.fp_unimp_ins) {
-		if (fpu_mmu_fixup) {
+		if (currprefs.cpu_model == 68060 && fpu_mmu_fixup) {
 			m68k_areg(regs, mmufixup[0].reg) = mmufixup[0].value;
 			mmufixup[0].reg = -1;
 		}
