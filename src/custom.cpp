@@ -770,7 +770,8 @@ STATIC_INLINE int get_equ_vblank_endline (void)
 }
 
 #define DDF_OFFSET 4
-#define HARD_DDF_LIMITS_DISABLED ((beamcon0 & 0x80) || (beamcon0 & 0x4000) || (bplcon0 & 0x40))
+// VARBEAMEN, HARDDIS, SHRES, UHRES
+#define HARD_DDF_LIMITS_DISABLED ((beamcon0 & 0x80) || (beamcon0 & 0x4000) || (bplcon0 & 0x40) || (bplcon0 & 0x80))
 /* The HRM says 0xD8, but that can't work... */
 #define HARD_DDF_STOP (HARD_DDF_LIMITS_DISABLED ? maxhpos : 0xd4)
 #define HARD_DDF_START_REAL 0x14
