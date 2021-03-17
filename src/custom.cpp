@@ -1539,17 +1539,22 @@ static int fetch_warn (int nr, int hpos)
 		}
 		add = refptr_val;
 	}
-	bitplane_line_crossing = hpos;
-#if 0
-	line_cyclebased = vpos;
-	corrupt_offset = (vpos ^ (timeframes << 12)) & 0xff00;
-	for (int i = 0; i < bplcon0_planes_limit; i++) {
-		uae_u16 v;
-		v = bplpt[i] & 0xffff;
-		v += corrupt_offset;
-		bplpt[i] = (bplpt[i] & 0xffff0000) | v;
+	if (beamcon0 & 0x80) {
+		add = fetchmode_bytes;
 	}
+	else {
+		bitplane_line_crossing = hpos;
+#if 0
+		line_cyclebased = vpos;
+		corrupt_offset = (vpos ^ (timeframes << 12)) & 0xff00;
+		for (int i = 0; i < bplcon0_planes_limit; i++) {
+			uae_u16 v;
+			v = bplpt[i] & 0xffff;
+			v += corrupt_offset;
+			bplpt[i] = (bplpt[i] & 0xffff0000) | v;
+		}
 #endif
+	}
 	return add;
 }
 
@@ -1559,7 +1564,7 @@ static void fetch (int nr, int fm, bool modulo, int hpos)
 		int add = fetchmode_bytes;
 
 		// refresh conflict?
-		if ((hpos > maxhpos - HPOS_SHIFT || hpos == 1 || hpos == 3 || hpos == 5) && !(beamcon0 & 0x80)) {
+		if (hpos > maxhpos - 1 || hpos == 1 || hpos == 3 || hpos == 5) {
 			add = fetch_warn (nr, hpos);
 		}
 
