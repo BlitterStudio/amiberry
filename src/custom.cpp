@@ -4146,6 +4146,7 @@ static void decide_sprites(int hpos, bool usepointx, bool quick)
 	int point;
 	int sscanmask = 0x100 << sprite_buffer_res;
 	int gotdata = 0;
+	int extrahpos = 13; // hpos 0 to this value is visible in right border
 
 	if (thisline_decision.plfleft < 0 && !brdspractive() && !quick)
 		return;
@@ -4153,8 +4154,9 @@ static void decide_sprites(int hpos, bool usepointx, bool quick)
 	// let sprite shift register empty completely
 	// if sprite is at the very edge of right border
 	point = hpos * 2;
-	if (hpos >= maxhpos)
-		point += (9 - 2) * 2;
+	if (hpos >= maxhpos) {
+		point += (extrahpos - 2) * 2;
+	}
 
 	if (nodraw () || hpos < 0x14 || nr_armed == 0 || point == last_sprite_point)
 		return;
@@ -4182,7 +4184,8 @@ static void decide_sprites(int hpos, bool usepointx, bool quick)
 		if (! spr[i].armed)
 			continue;
 
-		if (hw_xp > last_sprite_point && hw_xp <= point + pointx) {
+		int end = 0x1d4;
+		if (hw_xp > last_sprite_point && hw_xp <= point + pointx && hw_xp <= maxhpos * 2 + 1) {
 			add_sprite (&count, i, sprxp, posns, nrs);
 		}
 
@@ -4193,7 +4196,8 @@ static void decide_sprites(int hpos, bool usepointx, bool quick)
 			if (hw_xp > last_sprite_point && hw_xp <= point + pointx) {
 				add_sprite (&count, MAX_SPRITES + i, sprxp, posns, nrs);
 			}
-		} else if (!(fmode & 0x80) && xpos >= (2 << sprite_buffer_res) && xpos <= (9 << sprite_buffer_res)) {
+		}
+		else if (!(fmode & 0x80) && xpos >= (2 << sprite_buffer_res) && xpos <= (extrahpos << sprite_buffer_res)) {
 			// right border wrap around. SPRxCTL horizontal bits do not matter.
 			sprxp += (maxhpos * 2) << sprite_buffer_res;
 			hw_xp = sprxp >> sprite_buffer_res;
