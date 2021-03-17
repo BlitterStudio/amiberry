@@ -197,6 +197,85 @@ uae_u16 last_custom_value2;
 
 static uae_u32 cop1lc, cop2lc, copcon;
 
+/*
+* horizontal defaults
+* 0x00   0 HCB
+* 0x01   1 HC1 (HSTART)
+* 0x09   9 VR1
+* 0x12  18 SHS (Horizontal blank start)
+* 0x1a  26 VER1 PAL
+* 0x1b  27 VER1 NTSC
+* 0x23  35 RHS (Horizontal blank end)
+* 0x73 115 VR2
+* 0x84 132 CEN (HCENTER)
+* 0x8c 140 VER2 PAL
+* 0x8d 141 VER2 NTSC
+* 0xe2 226 HC226 (short line, selected if LOL=1, NTSC only)
+* 0xe3 227 HC227 (NTSC long line/PAL)
+*
+* vertical defaults
+*
+* PAL
+*
+* 0    SVB
+* 2    VC2
+* 3    VC3
+* 5    VC5
+* 7    VC7
+* 8    VC8
+* 25   RVB (Vertical blank end)
+* 311  VC311 short field (Vertical blank start)
+* 312  VC312 long field (Vertical blank start)
+*
+* Odd field:
+*
+* HSYNC SHS to RHS
+* VSYNC VC2/CEN to VC5/SHS
+* CSYNC HSYNC + if VSYNC active: SHS to VER1 and CEN to VER2
+*
+* Vertical blank = VC312 + HC1 to RVB + HC1
+* Vertical equalization = SVB + VR1 to VC7 + VR2
+*
+* Even field:
+*
+* HSYNC SHS to RHS
+* VSYNC VC3/SHS to VC5/CEN
+* CSYNC HSYNC + if VSYNC active: SHS to VER1 and CEN to VER2
+*
+* Vertical blank = VC311 + HC1 to RVB + HC1
+* Vertical equalization start = SVB + VR2 to VC8 + VR1
+*
+*
+* NTSC
+*
+* 0    SVB
+* 3    VC3
+* 6    VC6
+* 9    VC9
+* 20   RVB (Vertical blank end)
+* 261  VC261 short field (Vertical blank start)
+* 262  VC262 long field (Vertical blank start)
+*
+* Odd field:
+*
+* HSYNC SHS to RHS
+* VSYNC VC3/SHS to VC6/SHS
+* CSYNC HSYNC + if VSYNC active: SHS to VER1 and CEN to VER2
+*
+* Vertical blank = VC262/HC1 to RVB/HC1
+* Vertical equalization = SVB/VR1 to VC9/VR1
+*
+* Even field:
+*
+* HSYNC SHS to RHS
+* VSYNC VC3/CEN to VC6/CEN
+* CSYNC HSYNC + if VSYNC active: SHS to VER1 and CEN to VER2
+*
+* Vertical blank = VC261/HC1 to RVB/HC1
+* Vertical equalization = SVB/VR2 to VC9/VR2
+*
+*/
+
 int maxhpos = MAXHPOS_PAL;
 int maxhpos_short = MAXHPOS_PAL;
 int maxvpos = MAXVPOS_PAL;
