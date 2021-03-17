@@ -33,6 +33,7 @@ static gcn::RadioButton* opt25Mhz;
 static gcn::RadioButton* optFastest;
 static gcn::Label* lblCpuIdle;
 static gcn::Slider* sldCpuIdle;
+static gcn::Label* lblCpuIdleInfo;
 static gcn::CheckBox* chkCPUCycleExact;
 
 class CPUButtonActionListener : public gcn::ActionListener
@@ -384,6 +385,7 @@ void InitPanelCPU(const struct _ConfigCategory& category)
 	sldCpuIdle->setStepLength(1);
 	sldCpuIdle->setId("sldCpuIdle");
 	sldCpuIdle->addActionListener(cpuIdleActionListener);
+	lblCpuIdleInfo = new gcn::Label("000");
 
 	grpCPUSpeed = new gcn::Window("CPU Speed");
 	grpCPUSpeed->setPosition(grpFPU->getX() + grpFPU->getWidth() + DISTANCE_NEXT_X, DISTANCE_BORDER);
@@ -393,9 +395,10 @@ void InitPanelCPU(const struct _ConfigCategory& category)
 	grpCPUSpeed->add(optFastest, 10, 100);
 	grpCPUSpeed->add(chkCPUCycleExact, 10, 160);
 	grpCPUSpeed->add(lblCpuIdle, 10, 190);
-	grpCPUSpeed->add(sldCpuIdle, lblCpuIdle->getWidth() + 20, 190);
+	grpCPUSpeed->add(sldCpuIdle, lblCpuIdle->getX() + lblCpuIdle->getWidth() + DISTANCE_NEXT_X/2, 190);
+	grpCPUSpeed->add(lblCpuIdleInfo, sldCpuIdle->getX() + sldCpuIdle->getWidth() + DISTANCE_NEXT_X / 2, 190);
 	grpCPUSpeed->setMovable(false);
-	grpCPUSpeed->setSize(175, 285);
+	grpCPUSpeed->setSize(190, 285);
 	grpCPUSpeed->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpCPUSpeed->setBaseColor(gui_baseCol);
 
@@ -437,6 +440,7 @@ void ExitPanelCPU()
 	delete optFastest;
 	delete lblCpuIdle;
 	delete sldCpuIdle;
+	delete lblCpuIdleInfo;
 	delete chkCPUCycleExact;
 	delete cpuIdleActionListener;
 	
@@ -509,6 +513,8 @@ void RefreshPanelCPU()
 		optFastest->setSelected(true);
 
 	sldCpuIdle->setValue(changed_prefs.cpu_idle == 0 ? 0 : 12 - changed_prefs.cpu_idle / 15);
+	const auto cpu_idle = to_string((changed_prefs.cpu_idle == 0 ? 0 : 12 - changed_prefs.cpu_idle / 15) * 10);
+	lblCpuIdleInfo->setCaption(cpu_idle);
 }
 
 bool HelpPanelCPU(std::vector<std::string>& helptext)
