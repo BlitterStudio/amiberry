@@ -2067,7 +2067,7 @@ struct zfile *zfile_fopen_data (const TCHAR *name, uae_u64 size, const uae_u8 *d
 	l->data = xmalloc (uae_u8, size);
 	l->size = size;
 	l->datasize = size;
-	memcpy (l->data, data, static_cast<size_t>(size));
+	memcpy (l->data, data, size);
 	return l;
 }
 
@@ -2106,7 +2106,7 @@ uae_u8 *zfile_load_file(const TCHAR *name, int *outlen)
 	zf = zfile_fopen(name, _T("rb"));
 	if (!zf)
 		return NULL;
-	size = static_cast<int>(zfile_size(zf));
+	size = zfile_size(zf);
 	out = xmalloc (uae_u8, size);
 	zfile_fread(out, 1, size, zf);
 	zfile_fclose(zf);
