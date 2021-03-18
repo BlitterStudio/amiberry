@@ -5,7 +5,7 @@
     <RemoteDebuggerWorkingDirectory>~/projects/amiberry</RemoteDebuggerWorkingDirectory>
     <DebuggerFlavor>LinuxDebugger</DebuggerFlavor>
     <PreLaunchCommand>export DISPLAY=:0.0</PreLaunchCommand>
-    <RemoteTarget>1721017924;rpi4.midlair (username=, port=22, authentication=Password)</RemoteTarget>
+    <RemoteTarget>1721017924;rpi4 (username=, port=22, authentication=Password)</RemoteTarget>
     <RemoteDebuggerCommandArguments>
     </RemoteDebuggerCommandArguments>
   </PropertyGroup>
@@ -14,7 +14,7 @@
     <RemoteDebuggerWorkingDirectory>~/projects/amiberry</RemoteDebuggerWorkingDirectory>
     <DebuggerFlavor>LinuxDebugger</DebuggerFlavor>
     <PreLaunchCommand>export DISPLAY=:0.0</PreLaunchCommand>
-    <RemoteTarget>1721017924;rpi4.midlair (username=, port=22, authentication=Password)</RemoteTarget>
+    <RemoteTarget>1721017924;rpi4 (username=, port=22, authentication=Password)</RemoteTarget>
     <RemoteDebuggerCommandArguments />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
@@ -53,14 +53,14 @@
     <RemoteDebuggerWorkingDirectory>~/projects/amiberry</RemoteDebuggerWorkingDirectory>
     <DebuggerFlavor>LinuxDebugger</DebuggerFlavor>
     <PreLaunchCommand>export DISPLAY=:0.0</PreLaunchCommand>
-    <RemoteTarget>1721017924;rpi4.midlair (username=, port=22, authentication=Password)</RemoteTarget>
+    <RemoteTarget>1721017924;rpi4 (username=, port=22, authentication=Password)</RemoteTarget>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-DMX|ARM'">
     <RemoteDebuggerCommand>~/projects/amiberry/Amiberry-Release-dmx</RemoteDebuggerCommand>
     <RemoteDebuggerWorkingDirectory>~/projects/amiberry</RemoteDebuggerWorkingDirectory>
     <DebuggerFlavor>LinuxDebugger</DebuggerFlavor>
     <PreLaunchCommand>export DISPLAY=:0.0</PreLaunchCommand>
-    <RemoteTarget>1721017924;rpi4.midlair (username=, port=22, authentication=Password)</RemoteTarget>
+    <RemoteTarget>1721017924;rpi4 (username=, port=22, authentication=Password)</RemoteTarget>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
     <RemoteDebuggerCommand>~/projects/amiberry/Amiberry-Release</RemoteDebuggerCommand>
