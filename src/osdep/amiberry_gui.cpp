@@ -857,7 +857,7 @@ void hardfile_testrdb (struct hfdlg_vals* hdf)
 				hdf->ci.surfaces = 0;
 				hdf->ci.reserved = 0;
 				hdf->ci.bootpri = 0;
-				hdf->ci.devname[0] = 0;
+				//hdf->ci.devname[0] = 0;
 				if (blocksize >= 512)
 					hdf->ci.blocksize = blocksize;
 				break;
