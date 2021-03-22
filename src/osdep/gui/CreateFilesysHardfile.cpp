@@ -464,8 +464,6 @@ bool CreateFilesysHardfile()
 		if (size < 1)
 			size = 1;
 
-		const auto bp = tweakbootpri(atoi(txtBootPri->getText().c_str()), 1, 0);
-
 		char init_path[MAX_DPATH];
 		_tcsncpy(init_path, txtPath->getText().c_str(), MAX_DPATH - 1);
 		if (chkDynamic->isSelected()) {
@@ -475,7 +473,7 @@ bool CreateFilesysHardfile()
 			if (!result) {
 				ShowMessage("Create Hardfile", "Unable to create new VHD file.", "", "Ok", "");
 				ExitCreateFilesysHardfile();
-				return false;
+				dialogResult = false;
 			}
 		}
 		else {
@@ -496,32 +494,48 @@ bool CreateFilesysHardfile()
 				fclose(newFile);
 				ShowMessage("Create Hardfile", "Unable to create new file size.", "", "Ok", "");
 				ExitCreateFilesysHardfile();
-				return false;
+				dialogResult = false;
 			}
 		}
 		
-		struct uaedev_config_info ci
-		{
-		};
+		if (dialogResult) {
+			struct uaedev_config_data* uci;
+			struct uaedev_config_info ci;
 
-		uci_set_defaults(&ci, false);
-		strncpy(ci.devname, const_cast<char *>(txtDevice->getText().c_str()), MAX_DPATH);
-		strncpy(ci.rootdir, const_cast<char *>(init_path), MAX_DPATH);
-		ci.type = UAEDEV_HDF;
-		ci.surfaces = (size / 1024) + 1;
-		ci.bootpri = bp;
+			uci_set_defaults(&ci, false);
+			strncpy(ci.devname, (char*)txtDevice->getText().c_str(), MAX_DPATH - 1);
+			strncpy(ci.rootdir, (char*)init_path, MAX_DPATH - 1);
+			ci.type = UAEDEV_HDF;
+			ci.surfaces = (size / 1024) + 1;
 
-		ci.controller_type = 0;
-		ci.controller_type_unit = 0;
-		ci.controller_unit = 0;
-		ci.unit_feature_level = 1;
-		ci.readonly = false;
-		auto* const uci = add_filesys_config(&changed_prefs, -1, &ci);
-		if (uci)
-		{
-			auto* const hfd = get_hardfile_data(uci->configoffset);
-			if (hfd)
-				hardfile_media_change(hfd, &ci, true, false);
+			ci.bootpri = atoi(txtBootPri->getText().c_str());
+			if (ci.bootpri < -127)
+				ci.bootpri = -127;
+			if (ci.bootpri > 127)
+				ci.bootpri = 127;
+			if (!chkAutoboot->isSelected()) {
+				ci.bootpri = BOOTPRI_NOAUTOBOOT;
+			}
+
+			ci.controller_type = 0;
+			ci.controller_type_unit = 0;
+			ci.controller_unit = 0;
+			ci.unit_feature_level = 1;
+			ci.readonly = 0;
+
+			int blocksize = 512;
+			uae_u64 bsize = size * 1024 * 1024;
+			bsize &= ~(blocksize - 1);
+
+			getchspgeometry(bsize, &ci.pcyls, &ci.pheads, &ci.psecs, false);
+			gethdfgeometry(bsize, &ci);
+
+			uci = add_filesys_config(&changed_prefs, -1, &ci);
+			if (uci) {
+				struct hardfiledata* hfd = get_hardfile_data(uci->configoffset);
+				if (hfd)
+					hardfile_media_change(hfd, &ci, true, false);
+			}
 		}
 	}
 
