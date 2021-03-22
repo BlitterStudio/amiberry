@@ -7189,8 +7189,8 @@ static void predict_copper(void)
 	int until_hpos = maxhpos - 3;
 	int force_exit = 0;
 
-	w1 = cop_state.i1;
-	w2 = cop_state.i2;
+	w1 = cop_state.saved_i1;
+	w2 = cop_state.saved_i2;
 
 	switch (state) {
 	case COP_stop:
@@ -7199,6 +7199,11 @@ static void predict_copper(void)
 	case COP_skip_in2:
 	case COP_skip1:
 		return;
+
+	case COP_read1:
+	case COP_read2:
+		w1 = cop_state.i1;
+		break;
 
 	case COP_wait:
 		if ((w2 & 0x8000) == 0)
@@ -7433,6 +7438,9 @@ static void update_copper (int until_hpos)
 	if (until_hpos > (maxhpos & ~1))
 		until_hpos = maxhpos & ~1;
 
+	bool never_blocked = currprefs.fast_copper &&
+		((toscr_nr_planes2 < 5 && toscr_res == RES_LORES) || (toscr_nr_planes2 < 3 && toscr_res != RES_LORES));
+	
 	for (;;) {
 		int old_hpos = c_hpos;
 		int hp;
@@ -7441,10 +7449,12 @@ static void update_copper (int until_hpos)
 			break;
 
 
+		if (!never_blocked) { // copper never blocked by bitplane dma
 		/* So we know about the fetch state.  */
-		decide_line (c_hpos);
-		// bitplane only, don't want blitter to steal our cycles.
-		decide_fetch (c_hpos);
+			decide_line(c_hpos);
+			// bitplane only, don't want blitter to steal our cycles.
+			decide_fetch(c_hpos);
+		}
 
 		if (cop_state.movedelay > 0) {
 			cop_state.movedelay--;

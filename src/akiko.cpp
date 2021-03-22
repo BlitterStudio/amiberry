@@ -217,6 +217,7 @@ static void nvram_read (void)
 	if (!cd32_nvram || cd32_nvram_size != maxlen) {
 		xfree(cd32_nvram);
 		cd32_nvram = xmalloc(uae_u8, maxlen);
+		cd32_nvram_size = maxlen;
 	}
 	memset(cd32_nvram, 0, maxlen);
 	//if (is_board_enabled(&currprefs, ROMTYPE_CUBO, 0)) {

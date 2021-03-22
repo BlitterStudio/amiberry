@@ -7407,7 +7407,7 @@ int cfgfile_searchconfig(const TCHAR *in, int index, TCHAR *out, int outsize)
 			goto end;
 		}
 		if (b == '\n') {
-			if (!_tcsncmp (tmp, in, inlen) && ((inlen > 0 && _tcslen (tmp) > inlen && tmp[inlen] == '=') || (joker))) {
+			if (inlen >= 0 && !_tcsncmp (tmp, in, inlen) && ((inlen > 0 && _tcslen (tmp) > inlen && tmp[inlen] == '=') || (joker))) {
 				if (index <= 0) {
 					TCHAR *p;
 					if (joker)
