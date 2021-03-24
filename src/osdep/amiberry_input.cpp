@@ -663,6 +663,10 @@ static int init_joystick()
 	get_configuration_path(cfg, MAX_DPATH);
 	strcat(cfg, "gamecontrollerdb.txt");
 	SDL_GameControllerAddMappingsFromFile(cfg);
+
+	get_controllers_path(cfg, MAX_DPATH);
+	strcat(cfg, "gamecontrollerdb_user.txt");
+	SDL_GameControllerAddMappingsFromFile(cfg);
 	
 	// Possible scenarios:
 	// 1 - Controller is an SDL2 Game Controller, no retroarch file: we use the default mapping
