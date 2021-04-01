@@ -57,7 +57,7 @@
 #include <sys/ioctl.h>
 #include "keyboard.h"
 
-static const char __ver[40] = "$VER: Amiberry 4.0 RC (2021-03-24)";
+static const char __ver[40] = "$VER: Amiberry 4.0 (2021-04-01)";
 long int version = 256 * 65536L * UAEMAJOR + 65536L * UAEMINOR + UAESUBREV;
 
 struct uae_prefs currprefs, changed_prefs;
