@@ -81,7 +81,7 @@ static uae_u32 raw_cputbl_count[65536] = { 0, };
 static uae_u16 opcode_nums[65536];
 
 
-static int __cdecl untranslated_compfn(const void* e1, const void* e2)
+static int untranslated_compfn(const void *e1, const void *e2)
 {
     return raw_cputbl_count[*(const uae_u16*)e1] < raw_cputbl_count[*(const uae_u16*)e2];
     int v1 = *(const uae_u16*)e1;
@@ -885,6 +885,17 @@ STATIC_INLINE void set_const(int r, uae_u32 val)
     set_status(r, ISCONST);
 }
 
+bool has_free_reg(void)
+{
+  for (int i = N_REGS - 1; i >= 0; i--) {
+    if(!live.nat[i].locked) {
+      if (live.nat[i].nholds == 0)
+        return true;
+    }
+  }
+  return false;
+}
+
 static int alloc_reg_hinted(int r, int willclobber, int hint)
 {
     int bestreg = -1;
@@ -1329,6 +1340,8 @@ static void init_comp(void)
         live.state[i].val = 0;
         set_status(i, UNDEF);
     }
+  for (i = 0; i < SCRATCH_REGS; ++i)
+    live.scratch_in_use[i] = 0;
 
     for (i = 0; i < VFREGS; i++) {
         live.fate[i].status = UNDEF;
@@ -1440,6 +1453,30 @@ static void flush(int save_regs)
     }
 }
 
+int alloc_scratch(void)
+{
+	for(int i = 0; i < SCRATCH_REGS; ++i) {
+		if (live.scratch_in_use[i] == 0) {
+			live.scratch_in_use[i] = 1;
+			return S1 + i;
+		}
+	}
+	jit_log("Running out of scratch register.");
+	abort();
+}
+
+void release_scratch(int i)
+{
+	if (i < S1 || i >= S1 + SCRATCH_REGS)
+		jit_log("release_scratch(): %d is not a scratch reg.", i);
+	if(live.scratch_in_use[i - S1]) {
+		forget_about(i);
+		live.scratch_in_use[i - S1] = 0;
+	} else {
+		jit_log("release_scratch(): %d not in use.", i);
+	}
+}
+
 static void freescratch(void)
 {
     int i;
@@ -1457,6 +1494,8 @@ static void freescratch(void)
 
     for (i = S1; i < VREGS; i++)
         forget_about(i);
+  for (i = 0; i < SCRATCH_REGS; ++i)
+    live.scratch_in_use[i] = 0;
 
 #ifdef USE_JIT_FPU
     f_forget_about(FS1);
