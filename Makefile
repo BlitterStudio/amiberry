@@ -14,7 +14,7 @@ CFLAGS=-pipe -Wno-shift-overflow -Wno-narrowing
 LDFLAGS = $(SDL_LDFLAGS) -lSDL2_image -lSDL2_ttf -lguisan -Lexternal/libguisan/lib -fuse-ld=gold -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed -lpthread -lz -lpng -lrt -lFLAC -lmpg123 -ldl -lmpeg2convert -lmpeg2
 
 ifndef DEBUG
-	CFLAGS += -Ofast
+	CFLAGS += -O3
 else
 	CFLAGS += -g -rdynamic -funwind-tables -DDEBUG -Wl,--export-dynamic
 endif
