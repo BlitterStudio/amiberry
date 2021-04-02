@@ -701,7 +701,6 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 		prefs->cs_compatible = CP_A600;
 		built_in_chipset_prefs(prefs);
 		prefs->chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
-		prefs->m68k_speed = 0;
 	}
 		// A1200
 	else
