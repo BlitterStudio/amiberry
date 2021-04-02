@@ -321,9 +321,9 @@ extern void gui_message (const TCHAR *,...);
 #define NORETURN
 #elif __GNUC__ - 1 > 1 && __GNUC_MINOR__ - 1 >= 0
 #ifdef AMIBERRY
-#define STATIC_INLINE static __inline__
+#define STATIC_INLINE static //__inline__
 #else
-#define STATIC_INLINE static __inline__ __attribute__ ((always_inline))
+#define STATIC_INLINE static //__inline__ __attribute__ ((always_inline))
 #endif
 #define NOINLINE __attribute__ ((noinline))
 #define NORETURN __attribute__ ((noreturn))
@@ -332,7 +332,7 @@ extern void gui_message (const TCHAR *,...);
 #define NOINLINE __declspec(noinline)
 #define NORETURN __declspec(noreturn)
 #else
-#define STATIC_INLINE static __inline__
+#define STATIC_INLINE static
 #define NOINLINE
 #define NORETURN
 #endif
