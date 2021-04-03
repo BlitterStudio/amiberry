@@ -383,9 +383,9 @@ void alloc_colors64k(int monid, int rw, int gw, int bw, int rs, int gs, int bs, 
 		if (currprefs.gfx_blackerthanblack) {
 			r = (r * (255 - 8) / 255) + 8;
 			g = (g * (255 - 8) / 255) + 8;
-			b = (g * (255 - 8) / 255) + 8;
+			b = (b * (255 - 8) / 255) + 8;
 		}
-		
+
 		r = uae_gamma[r + j][0];
 		g = uae_gamma[g + j][1];
 		b = uae_gamma[b + j][2];
@@ -446,7 +446,7 @@ void alloc_colors64k(int monid, int rw, int gw, int bw, int rs, int gs, int bs, 
 				g = (g * (255 - 8) / 255) + 8;
 				b = (b * (255 - 8) / 255) + 8;
 			}
-			
+
 			xcolors[i] = doMask(r, 5, 11) | doMask(g, 6, 5) | doMask(b, 5, 0);
 			if (byte_swap) {
 				if (bpp <= 16)
