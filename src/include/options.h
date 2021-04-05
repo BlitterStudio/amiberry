@@ -100,7 +100,7 @@ struct inputdevconfig
 struct jport
 {
 	int id{};
-	int mode{}; // 0=def,1=mouse,2=joy,3=anajoy,4=lightpen
+	int mode{}; // 0=default,1=wheel mouse,2=mouse,3=joystick,4=gamepad,5=analog joystick,6=cdtv,7=cd32
 	int submode;
 	int autofire{};
 	struct inputdevconfig idc{};
