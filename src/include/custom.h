@@ -38,9 +38,6 @@ extern int intlev (void);
 extern void dumpcustom (void);
 
 extern void do_copper (void);
-#ifdef AMIBERRY
-extern void check_copperlist_write(uaecptr addr);
-#endif
 
 extern void notice_new_xcolors (void);
 extern void notice_screen_contents_lost(int monid);
@@ -148,14 +145,15 @@ extern bool programmedmode;
 #define DMA_MASTER    0x0200
 #define DMA_BLITPRI   0x0400
 
-#define CYCLE_REFRESH	1
-#define CYCLE_STROBE	2
-#define CYCLE_MISC		3
-#define CYCLE_SPRITE	4
-#define CYCLE_COPPER	5
-#define CYCLE_BLITTER	6
-#define CYCLE_CPU		7
-#define CYCLE_CPUNASTY	8
+#define CYCLE_BITPLANE  1
+#define CYCLE_REFRESH	2
+#define CYCLE_STROBE	3
+#define CYCLE_MISC		4
+#define CYCLE_SPRITE	5
+#define CYCLE_COPPER	6
+#define CYCLE_BLITTER	7
+#define CYCLE_CPU		8
+#define CYCLE_CPUNASTY	9
 #define CYCLE_COPPER_SPECIAL 0x10
 
 #define CYCLE_MASK 0x0f

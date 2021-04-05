@@ -738,6 +738,7 @@ struct uae_prefs
 	bool cs_color_burst;
 	bool cs_romisslow;
 	bool cs_toshibagary;
+	bool cs_bkpthang;
 	int cs_unmapped_space;
 	int cs_hacks;
 	int cs_ciatype[2];

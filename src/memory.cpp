@@ -255,6 +255,12 @@ static void gary_wait(uaecptr addr, int size, bool write)
 {
 	static int cnt = 50;
 
+#if 0
+	int lines = 313 * 12;
+	while (lines-- > 0)
+		x_do_cycles(228 * CYCLE_UNIT);
+#endif
+
 	if (cnt > 0) {
 		write_log (_T("Gary timeout: %08x %d %c PC=%08x\n"), addr, size, write ? 'W' : 'R', M68K_GETPC);
 		cnt--;
@@ -644,8 +650,6 @@ void REGPARAM2 chipmem_lput_fc(uaecptr addr, uae_u32 l)
 	uae_u32* m;
 
 	addr &= chipmem_bank.mask;
-	if (eventtab[ev_copper].active)
-		check_copperlist_write(addr);
 	m = (uae_u32*)(chipmem_bank.baseaddr + addr);
 	do_put_mem_long(m, l);
 }
@@ -666,8 +670,6 @@ void REGPARAM2 chipmem_wput_fc(uaecptr addr, uae_u32 w)
 	uae_u16* m;
 
 	addr &= chipmem_bank.mask;
-	if (eventtab[ev_copper].active)
-		check_copperlist_write(addr);
 	m = (uae_u16*)(chipmem_bank.baseaddr + addr);
 	do_put_mem_word(m, w);
 }
@@ -683,8 +685,6 @@ void REGPARAM2 chipmem_bput (uaecptr addr, uae_u32 b)
 void REGPARAM2 chipmem_bput_fc(uaecptr addr, uae_u32 b)
 {
 	addr &= chipmem_bank.mask;
-	if (eventtab[ev_copper].active)
-		check_copperlist_write(addr);
 	chipmem_bank.baseaddr[addr] = b;
 }
 #endif
@@ -765,10 +765,6 @@ void REGPARAM2 chipmem_agnus_wput (uaecptr addr, uae_u32 w)
 	uae_u16 *m;
 
 	addr &= chipmem_full_mask;
-#ifdef AMIBERRY
-	if (eventtab[ev_copper].active)
-		check_copperlist_write(addr);
-#endif
 	if (addr >= chipmem_full_size - 1)
 		return;
 	m = (uae_u16 *)(chipmem_bank.baseaddr + addr);
@@ -986,6 +982,12 @@ static void REGPARAM2 kickmem_lput (uaecptr addr, uae_u32 b)
 		addr &= kickmem_bank.mask;
 		m = (uae_u32 *)(kickmem_bank.baseaddr + addr);
 		do_put_mem_long (m, b);
+#if 0
+		if (addr == ROM_SIZE_512-4) {
+			rom_write_enabled = false;
+			write_log (_T("ROM write disabled\n"));
+		}
+#endif
 	} else if (a1000_kickstart_mode) {
 		if (addr >= 0xfc0000) {
 			addr &= kickmem_bank.mask;
@@ -1161,7 +1163,8 @@ uae_u8 *REGPARAM2 default_xlate (uaecptr addr)
 					}
 					write_log (_T("\n"));
 				}
-				//memory_map_dump ();
+				//memory_map_dump();
+				//m68k_dumpstate(NULL, 0xffffffff);
 			}
 			if (gary_toenb && (gary_nonrange(addr) || (size > 1 && gary_nonrange(addr + size - 1)))) {
 				hardware_exception2(addr, 0, true, true, size);
@@ -1446,6 +1449,12 @@ static int read_kickstart (struct zfile *f, uae_u8 *mem, int size, int dochecksu
 	if (!memcmp (buffer, "KICK", 4)) {
 		zfile_fseek (f, 512, SEEK_SET);
 		kickdisk = 1;
+#if 0
+	} else if (size >= ROM_SIZE_512 && !memcmp (buffer, "AMIG", 4)) {
+		/* ReKick */
+		zfile_fseek (f, oldpos + 0x6c, SEEK_SET);
+		cr = 2;
+#endif
 	} else if (memcmp ((uae_char*)buffer, "AMIROMTYPE1", 11) != 0) {
 		zfile_fseek (f, oldpos, SEEK_SET);
 	} else {
@@ -1468,6 +1477,12 @@ static int read_kickstart (struct zfile *f, uae_u8 *mem, int size, int dochecksu
 
 	if (kickdisk && i > ROM_SIZE_256)
 		i = ROM_SIZE_256;
+#if 0
+	if (i >= ROM_SIZE_256 && (i != ROM_SIZE_256 && i != ROM_SIZE_512 && i != ROM_SIZE_512 * 2 && i != ROM_SIZE_512 * 4)) {
+		notify_user (NUMSG_KSROMREADERROR);
+		return 0;
+	}
+#endif
 	if (i < size - 20)
 		kickstart_fix_checksum (mem, size);
 	j = 1;
@@ -2271,6 +2286,12 @@ void map_overlay (int chip)
 	if (bogomem_aliasing)
 		size = 8;
 	cb = &chipmem_bank;
+#ifdef AGA
+#if 0
+	if (currprefs.cpu_cycle_exact && currprefs.cpu_model >= 68020)
+		cb = &chipmem_bank_ce2;
+#endif
+#endif
 	if (chip) {
 		map_banks (&dummy_bank, 0, size, 0);
 		if (!isdirectjit ()) {
