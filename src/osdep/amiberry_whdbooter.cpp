@@ -244,7 +244,7 @@ void symlink_roms(struct uae_prefs* prefs)
 void cd_auto_prefs(struct uae_prefs* prefs, char* filepath)
 {
 	TCHAR game_name[MAX_DPATH];
-	TCHAR* txt2 = nullptr;
+	TCHAR* txt2;
 	TCHAR tmp[MAX_DPATH];
 	char config_path[MAX_DPATH];
 	char whd_config[255];
@@ -782,9 +782,9 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 
 	// JOY
 	if (strcmpi(game_detail.port0, "joy") == 0)
-		prefs->jports[0].mode = 3;
+		prefs->jports[0].mode = 0;
 	if (strcmpi(game_detail.port1, "joy") == 0)
-		prefs->jports[1].mode = 3;
+		prefs->jports[1].mode = 0;
 
 	// MOUSE
 	if (strcmpi(game_detail.port0, "mouse") == 0)
