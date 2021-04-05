@@ -796,7 +796,6 @@ bool EditFilesysHardfile(const int unit_no)
 	};
 	struct uaedev_config_data *uci;
 	std::string strdevname, strroot;
-	char tmp[32];
 
 	dialogResult = false;
 	dialogFinished = false;
