@@ -4439,7 +4439,8 @@ static void init_hz (bool checkvposw)
 				minfirstline = 0;
 			firstblankedline = vbstrt;
 		}
-		
+		minfirstline++;
+
 		if (minfirstline < 2)
 			minfirstline = 2;
 		if (minfirstline >= maxvpos)
@@ -4448,7 +4449,7 @@ static void init_hz (bool checkvposw)
 		if (firstblankedline < minfirstline)
 			firstblankedline = maxvpos + 1;
 
-		sprite_vblank_endline = minfirstline - 2;
+		sprite_vblank_endline = minfirstline - 1;
 		maxvpos_nom = maxvpos;
 		maxvpos_display = maxvpos;
 		equ_vblank_endline = -1;
@@ -4476,19 +4477,20 @@ static void init_hz (bool checkvposw)
 	if (vblank_hz > 300)
 		vblank_hz = 300;
 	maxhpos_short = maxhpos;
-	set_delay_lastcycle ();
+	set_delay_lastcycle();
 	updateextblk();
-	eventtab[ev_hsync].oldcycles = get_cycles ();
-	eventtab[ev_hsync].evtime = get_cycles () + HSYNCTIME;
-	events_schedule ();
+	eventtab[ev_hsync].oldcycles = get_cycles();
+	eventtab[ev_hsync].evtime = get_cycles() + HSYNCTIME;
+	events_schedule();
 	if (hzc) {
 		interlace_seen = islace;
-		reset_drawing ();
+		reset_drawing();
 	}
 
 	maxvpos_total = ecs_agnus ? (MAXVPOS_LINES_ECS - 1) : (MAXVPOS_LINES_OCS - 1);
-	if (maxvpos_total > MAXVPOS)
+	if (maxvpos_total > MAXVPOS) {
 		maxvpos_total = MAXVPOS;
+	}
 #ifdef PICASSO96
 	if (!p96refresh_active) {
 		maxvpos_stored = maxvpos;
@@ -4497,19 +4499,20 @@ static void init_hz (bool checkvposw)
 	}
 #endif
 
-	compute_framesync ();
+	compute_framesync();
 	devices_syncchange();
 
 #ifdef PICASSO96
 	init_hz_p96(0);
 #endif
-	if (vblank_hz != ovblank)
+	if (vblank_hz != ovblank) {
 		updatedisplayarea(0);
-	inputdevice_tablet_strobe ();
+	}
+	inputdevice_tablet_strobe();
 
 	if (varsync_changed) {
 		varsync_changed = false;
-		dumpsync ();
+		dumpsync();
 	}
 }
 
@@ -5287,34 +5290,36 @@ bool INTREQ_0 (uae_u16 v)
 	return true;
 }
 
-void INTREQ (uae_u16 data)
+void INTREQ(uae_u16 data)
 {
 	if (INTREQ_0(data)) {
 		rethink_intreq();
 	}
 }
 
-static void ADKCON (int hpos, uae_u16 v)
+static void ADKCON(int hpos, uae_u16 v)
 {
-	if (currprefs.produce_sound > 0)
-		update_audio ();
-	DISK_update (hpos);
-	DISK_update_adkcon (hpos, v);
-	setclr (&adkcon, v);
-	audio_update_adkmasks ();
+	if (currprefs.produce_sound > 0) {
+		update_audio();
+	}
+	DISK_update(hpos);
+	DISK_update_adkcon(hpos, v);
+	setclr(&adkcon, v);
+	audio_update_adkmasks();
 #ifdef SERIAL_PORT
-	if ((v >> 11) & 1)
-		serial_uartbreak ((adkcon >> 11) & 1);
+	if ((v >> 11) & 1) {
+		serial_uartbreak((adkcon >> 11) & 1);
+	}
 #endif
 }
 
-static void BEAMCON0 (uae_u16 v)
+static void BEAMCON0(uae_u16 v)
 {
 	if (ecs_agnus) {
 		if (v != new_beamcon0) {
 			new_beamcon0 = v;
 			if (v & ~0x20) {
-				write_log (_T("warning: %04X written to BEAMCON0 PC=%08X\n"), v, M68K_GETPC);
+				write_log(_T("warning: %04X written to BEAMCON0 PC=%08X\n"), v, M68K_GETPC);
 				dumpsync();
 			}
 		}
@@ -5323,7 +5328,7 @@ static void BEAMCON0 (uae_u16 v)
 	}
 }
 
-static void varsync (void)
+static void varsync(void)
 {
 	struct amigadisplay *ad = &adisplays[0];
 	if (!ecs_agnus)
@@ -5340,7 +5345,7 @@ static void varsync (void)
 }
 
 #ifdef PICASSO96
-void set_picasso_hack_rate (int hz)
+void set_picasso_hack_rate(int hz)
 {
 	struct amigadisplay *ad = &adisplays[0];
 	if (!ad->picasso_on)
@@ -5433,18 +5438,21 @@ static void BPLCON0_Denise(int hpos, uae_u16 v, bool immediate)
 
 static void BPLCON0(int hpos, uae_u16 v)
 {
+	uae_u16 old = bplcon0;
 	bplcon0_saved = v;
-	if (!ecs_denise)
+	if (!ecs_denise) {
 		v &= ~0x00F1;
-	else if (!aga_mode)
+	} else if (!aga_mode) {
 		v &= ~0x00B0;
+	}
 	v &= ~0x0080;
 
 #if SPRBORDER
 	v |= 1;
 #endif
-	if (bplcon0 == v)
+	if (bplcon0 == v) {
 		return;
+	}
 
 	SET_LINE_CYCLEBASED;
 	decide_diw(hpos);
@@ -5453,10 +5461,6 @@ static void BPLCON0(int hpos, uae_u16 v)
 	if (!issyncstopped()) {
 		vpos_previous = vpos;
 		hpos_previous = hpos;
-	}
-
-	if ((v & 1) != (bplcon0 & 1)) {
-		updateextblk();
 	}
 
 	if (v & 4) {
@@ -5476,6 +5480,10 @@ static void BPLCON0(int hpos, uae_u16 v)
 	}
 	
 	bplcon0 = v;
+
+	if ((old & 1) != (bplcon0 & 1)) {
+		updateextblk();
+	}
 
 	bpldmainitdelay(hpos);
 
@@ -5516,6 +5524,7 @@ static void BPLCON2(int hpos, uae_u16 v)
 #ifdef ECS_DENISE
 static void BPLCON3(int hpos, uae_u16 v)
 {
+	uae_u16 old = bplcon3;
 	bplcon3_saved = v;
 	if (!ecs_denise)
 		return;
@@ -5530,10 +5539,10 @@ static void BPLCON3(int hpos, uae_u16 v)
 		return;
 	decide_vline(hpos);
 	decide_sprites(hpos);
-	if ((bplcon3 & 1) != (v & 1)) {
+	bplcon3 = v;
+	if ((bplcon3 & 1) != (old & 1)) {
 		updateextblk();
 	}
-	bplcon3 = v;
 	sprres = expand_sprres(bplcon0, bplcon3);
 	record_register_change(hpos, 0x106, v);
 }
@@ -6313,69 +6322,6 @@ static void COLOR_WRITE(int hpos, uae_u16 v, int num)
 	}
 #endif
 }
-
-/* The copper code.  The biggest nightmare in the whole emulator.
-
-Alright.  The current theory:
-1. Copper moves happen 2 cycles after state READ2 is reached.
-It can't happen immediately when we reach READ2, because the
-data needs time to get back from the bus.  An additional 2
-cycles are needed for non-Agnus registers, to take into account
-the delay for moving data from chip to chip.
-2. As stated in the HRM, a WAIT really does need an extra cycle
-to wake up.  This is implemented by _not_ falling through from
-a successful wait to READ1, but by starting the next cycle.
-(Note: the extra cycle for the WAIT apparently really needs a
-free cycle; i.e. contention with the bitplane fetch can slow
-it down).
-3. Apparently, to compensate for the extra wake up cycle, a WAIT
-will use the _incremented_ horizontal position, so the WAIT
-cycle normally finishes two clocks earlier than the position
-it was waiting for.  The extra cycle then takes us to the
-position that was waited for.
-If the earlier cycle is busy with a bitplane, things change a bit.
-E.g., waiting for position 0x50 in a 6 plane display: In cycle
-0x4e, we fetch BPL5, so the wait wakes up in 0x50, the extra cycle
-takes us to 0x54 (since 0x52 is busy), then we have READ1/READ2,
-and the next register write is at 0x5c.
-4. The last cycle in a line is not usable for the copper.
-5. A 4 cycle delay also applies to the WAIT instruction.  This means
-that the second of two back-to-back WAITs (or a WAIT whose
-condition is immediately true) takes 8 cycles.
-6. This also applies to a SKIP instruction.  The copper does not
-fetch the next instruction while waiting for the second word of
-a WAIT or a SKIP to arrive.
-7. A SKIP also seems to need an unexplained additional two cycles
-after its second word arrives; this is _not_ a memory cycle (I
-think, the documentation is pretty clear on this).
-8. Two additional cycles are inserted when writing to COPJMP1/2.  */
-
-/* Determine which cycles are available for the copper in a display
-* with a agiven number of planes.  */
-
-#if 0
-STATIC_INLINE int copper_cant_read2 (int hpos, int alloc)
-{
-//	if (hpos + 1 >= maxhpos) // first refresh slot
-//		return 1;
-	if ((hpos == 0) && (maxhpos & 1) && alloc >= 0) {
-		if (alloc) {
-			alloc_cycle (hpos, CYCLE_COPPER);
-#ifdef DEBUGGER
-			if (debug_dma) {
-				record_dma_event(DMA_EVENT_NOONEGETS, hpos, vpos);
-				record_dma_read(0x1fe, cop_state.ip, hpos, vpos, DMARECORD_COPPER, 2);
-				uae_u16 v = chipmem_wget_indirect(cop_state.ip);
-				record_dma_read_value(v);
-			}
-#endif
-		}
-		return -1;
-	}
-	return is_bitplane_dma_inline (hpos);
-}
-#endif
-
 static bool copper_cant_read(uae_u16 *cp, uae_u16 alloc)
 {
 	if (!dmaen(DMA_COPPER)) {
@@ -6384,14 +6330,6 @@ static bool copper_cant_read(uae_u16 *cp, uae_u16 alloc)
 	if (*cp != 0) {
 		return true;
 	}
-#if 0
-	int cant = copper_cant_read2 (hpos, alloc);
-#ifdef DEBUGGER
-	if (cant && debug_dma)
-		record_dma_event (DMA_EVENT_COPPERWANTED, hpos, vpos);
-#endif
-	return cant;
-#endif
 	if (alloc) {
 		*cp = alloc;
 	}
@@ -6521,7 +6459,7 @@ static void decide_line_decision(int endhpos)
 			if (!bprun && dma && diw && hwi && !hwi_old) {
 				// Bitplane sequencer activated
 				bprun = -1;
-				plfstrt_sprite = hpos + 3;
+				plfstrt_sprite = hpos + 4;
 			}
 
 			hwi_old = hwi;
@@ -6921,14 +6859,18 @@ static void copper_ff(int hpos)
 	last_copper_hpos = hpos;
 }
 
-static int getcoppercomp(int hpos, bool blitwait)
+static int coppercomp(int hpos, bool blitwait)
 {
-	int hpos_cmp = hpos + 1;
+	int hpos_cmp = hpos;
 	int vpos_cmp = vpos;
+
+	// Copper internal operations use mostly odd cycles
+	hpos_cmp += 1;
 	if (hpos_cmp >= maxhpos) {
 		hpos_cmp -= maxhpos;
 		vpos_cmp++;
 	}
+
 	int vp = vpos_cmp & (((cop_state.ir[1] >> 8) & 0x7F) | 0x80);
 	int hp = hpos_cmp & (cop_state.ir[1] & 0xFE);
 
@@ -6958,21 +6900,11 @@ static void update_copper(int until_hpos)
 {
 	int hpos = last_copper_hpos;
 
-	if (0 && (nocustom() || !copper_enabled_thisline)) {
+	if (1 && (nocustom() || !copper_enabled_thisline)) {
 		copper_ff(until_hpos);
 		decide_line_decision(until_hpos);
 		return;
 	}
-
-#if 0
-	if (cop_state.state == COP_wait && vp < cop_state.vcmp) {
-		dump_copper (_T("error2"), until_hpos);
-		copper_enabled_thisline = 0;
-		cop_state.state = COP_stop;
-		unset_special (SPCFLAG_COPPER);
-		return;
-	}
-#endif
 
 	while (hpos < until_hpos) {
 		uae_u16 *cp;
@@ -6991,11 +6923,9 @@ static void update_copper(int until_hpos)
 			rga_pipeline[rpos] = 0;
 		}
 
-#if 1
 		if (!copper_enabled_thisline) {
 			goto next;
 		}
-#endif
 
 		if ((hpos & 1) != COPPER_CYCLE_POLARITY) {
 			goto next;
@@ -7071,23 +7001,34 @@ static void update_copper(int until_hpos)
 			copper_cant_read(cp, 0x81);
 			break;
 
+			// Request IR1
 		case COP_read1:
 			copper_cant_read(cp, 0x82);
 			break;
 
+			// Request IR2
 		case COP_read2:
 			copper_cant_read(cp, 0x83);
 			break;
 
+			// WAIT: Got IR2, first idle cycle.
+			// Need free cycle, cycle allocated.
 		case COP_wait_in2:
 			{
 				if (copper_cant_read(cp, 0x8f)) {
 					goto next;
 				}
 				cop_state.state = COP_wait1;
+			}
+			break;
 
-				int comp = getcoppercomp(hpos, true);
+			// WAIT: Second idle cycle. Wait until comparison matches.
+			// Need free cycle, cycle allocated.
+		case COP_wait1:
+			{
+				int comp = coppercomp(hpos, true);
 				if (comp < 0) {
+					// If we need to wait for later scanline or blitter: no need to emulate copper cycle-by-cycle
 					if (cop_state.ir[0] == 0xFFFF && cop_state.ir[1] == 0xFFFE) {
 						cop_state.state = COP_waitforever;
 					}
@@ -7095,18 +7036,12 @@ static void update_copper(int until_hpos)
 					unset_special(SPCFLAG_COPPER);
 					goto next;
 				}
-
-			}
-			break;
-
-		case COP_wait1:
-			{
-				if (copper_cant_read(cp, 0)) {
+			
+				if (comp) {
 					goto next;
 				}
 
-				int comp = getcoppercomp(hpos, true);
-				if (comp) {
+				if (copper_cant_read(cp, 0)) {
 					goto next;
 				}
 
@@ -7115,6 +7050,7 @@ static void update_copper(int until_hpos)
 			}
 			break;
 
+			// Wait finished, request IR1.
 		case COP_wait:
 			{
 				if (copper_cant_read(cp, 0x84)) {
@@ -7133,6 +7069,8 @@ static void update_copper(int until_hpos)
 			}
 			break;
 
+			// SKIP: Got IR2. First idle cycle.
+			// Free cycle needed, cycle allocated.
 		case COP_skip_in2:
 
 			if (copper_cant_read(cp, 0x8f)) {
@@ -7141,28 +7079,34 @@ static void update_copper(int until_hpos)
 			cop_state.state = COP_skip1;
 			break;
 
+			// SKIP: Second idle cycle. Check comparison.
+			// Free cycle needed, cycle allocated.
 		case COP_skip1:
 			if (copper_cant_read(cp, 0)) {
 				goto next;
 			}
 			cop_state.state = COP_skip;
 
-			if (!getcoppercomp(hpos, false)) {
+			if (copper_cant_read(cp, 0x8f)) {
+				goto next;
+			}
+
+			if (!coppercomp(hpos, false)) {
 				cop_state.ignore_next = 1;
 			} else {
 				cop_state.ignore_next = -1;
 			}
 
-			if (copper_cant_read(cp, 0x8f)) {
-				goto next;
-			}
 			break;
 
+			// SKIP finished. Request IR1.
 		case COP_skip:
 			{
 
+				if (copper_cant_read(cp, 0x85)) {
+					goto next;
+				}
 				cop_state.state = COP_read1;
-				copper_cant_read(cp, 0x85);
 
 #ifdef DEBUGGER
 				if (debug_dma && cop_state.ignore_next > 0)
@@ -7198,7 +7142,7 @@ static void compute_spcflag_copper(void)
 {
 	if (!dmaen(DMA_COPPER) || cop_state.state == COP_stop || cop_state.state == COP_waitforever || cop_state.state == COP_bltwait || nocustom())
 		return;
-	if (cop_state.state == COP_wait) {
+	if (cop_state.state == COP_wait1) {
 		int vp = vpos & (((cop_state.ir[1] >> 8) & 0x7F) | 0x80);
 		if (vp < cop_state.vcmp)
 			return;
@@ -7766,6 +7710,11 @@ static bool framewait (void)
 			legacy_avg = t;
 		t = legacy_avg;
 
+		if (debug_vsync_min_delay && t < debug_vsync_min_delay * vsynctimebase / 100)
+			t = debug_vsync_min_delay * vsynctimebase / 100;
+		if (debug_vsync_forced_delay > 0)
+			t = debug_vsync_forced_delay * vsynctimebase / 100;
+
 		vsync_time = read_processor_time ();
 		if (t > vsynctimebase * 2 / 3)
 			t = vsynctimebase * 2 / 3;
@@ -7779,9 +7728,9 @@ static bool framewait (void)
 		if (vsynctimeperline < 1)
 			vsynctimeperline = 1;
 
-		//if (0 || (log_vsync & 2)) {
-			//write_log (_T("%06d %06d/%06d %03d%%\n"), t, vsynctimeperline, vsynctimebase, t * 100 / vsynctimebase);
-		//}
+		if (0 || (log_vsync & 2)) {
+			write_log (_T("%06d %06d/%06d %03d%%\n"), t, vsynctimeperline, vsynctimebase, t * 100 / vsynctimebase);
+		}
 
 		frame_shown = true;
 		return 1;
@@ -9918,7 +9867,7 @@ void custom_reset (bool hardreset, bool keyboardreset)
 			for(int i = 0 ; i < 32 ; i++)  {
 				vv = current_colors.color_regs_ecs[i];
 				current_colors.color_regs_ecs[i] = (unsigned short)-1;
-				record_color_change (0, i, vv);
+				record_color_change(0, i, vv);
 				remembered_color_entry = -1;
 				current_colors.color_regs_ecs[i] = vv;
 				current_colors.acolors[i] = xcolors[vv];
@@ -10111,6 +10060,12 @@ static uae_u32 REGPARAM2 custom_wget_1(int hpos, uaecptr addr, int noput, bool i
 {
 	uae_u16 v;
 	int missing;
+#if CUSTOM_DEBUG > 2
+	write_log (_T("%d:%d:wget: %04X=%04X pc=%p\n"), current_hpos(), vpos, addr, addr & 0x1fe, m68k_getpc ());
+#endif
+	//if (memwatch_access_validator)
+	//	debug_check_reg(addr, 0, 0);
+
 	addr &= 0xfff;
 
 	switch (addr & 0x1fe) {
@@ -10252,6 +10207,7 @@ static uae_u32 REGPARAM2 custom_wget(uaecptr addr)
 	if ((addr & 0xffff) < 0x8000 && currprefs.cs_fatgaryrev >= 0)
 		return dummy_get(addr, 2, false, 0);
 	if (addr & 1) {
+		//debug_invalid_reg(addr, 2, 0);
 		/* think about move.w $dff005,d0.. (68020+ only) */
 		addr &= ~1;
 		v = custom_wget2(addr, false) << 8;
@@ -10266,6 +10222,7 @@ static uae_u32 REGPARAM2 custom_bget(uaecptr addr)
 	uae_u32 v;
 	if ((addr & 0xffff) < 0x8000 && currprefs.cs_fatgaryrev >= 0)
 		return dummy_get(addr, 1, false, 0);
+	//debug_invalid_reg(addr, 1, 0);
 	v = custom_wget2 (addr & ~1, true);
 	v >>= (addr & 1 ? 0 : 8);
 	return v;
@@ -10290,6 +10247,9 @@ static int REGPARAM2 custom_wput_1 (int hpos, uaecptr addr, uae_u32 value, int n
 	ar_custom[addr + 1]=(uae_u8)(value);
 #endif
 #endif
+	//if (memwatch_access_validator) {
+	//	debug_check_reg(oaddr, 1, value);
+	//}
 
 	switch (addr) {
 	case 0x00E: CLXDAT(); break;

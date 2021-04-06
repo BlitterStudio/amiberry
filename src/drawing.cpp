@@ -477,27 +477,27 @@ void get_custom_topedge (int *xp, int *yp, bool max)
 	}
 }
 
-static void reset_custom_limits (void)
+static void reset_custom_limits(void)
 {
 	gclow = gcloh = gclox = gcloy = 0;
 	gclorealh = -1;
 	center_reset = true;
 }
 
-static void set_blanking_limits (void)
+static void set_blanking_limits(void)
 {
 	hblank_left_start = visible_left_start;
 	hblank_right_stop = visible_right_stop;
 
 	if (programmedmode) {
-		if (hblank_left_start < coord_hw_to_window_x (hsyncendpos * 2))
-			hblank_left_start = coord_hw_to_window_x (hsyncendpos * 2);
-		if (hblank_right_stop > coord_hw_to_window_x (hsyncstartpos * 2))
-			hblank_right_stop = coord_hw_to_window_x (hsyncstartpos * 2);
+		if (hblank_left_start < coord_hw_to_window_x(hsyncendpos * 2 + 1))
+			hblank_left_start = coord_hw_to_window_x(hsyncendpos * 2 + 1);
+		if (hblank_right_stop > coord_hw_to_window_x(hsyncstartpos * 2 + 1))
+			hblank_right_stop = coord_hw_to_window_x(hsyncstartpos * 2 + 1);
 	}
 }
 
-void get_custom_raw_limits (int *pw, int *ph, int *pdx, int *pdy)
+void get_custom_raw_limits(int *pw, int *ph, int *pdx, int *pdy)
 {
 	if (stored_width > 0) {
 		*pw = stored_width;
