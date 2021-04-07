@@ -7663,7 +7663,7 @@ static int mavg (struct mavg_data *md, int newval, int size)
 
 #define MAVG_VSYNC_SIZE 128
 
-extern int log_vsync, debug_vsync_min_delay, debug_vsync_forced_delay;
+//extern int log_vsync, debug_vsync_min_delay, debug_vsync_forced_delay;
 static bool framewait (void)
 {
 	struct amigadisplay *ad = &adisplays[0];
@@ -7710,10 +7710,10 @@ static bool framewait (void)
 			legacy_avg = t;
 		t = legacy_avg;
 
-		if (debug_vsync_min_delay && t < debug_vsync_min_delay * vsynctimebase / 100)
-			t = debug_vsync_min_delay * vsynctimebase / 100;
-		if (debug_vsync_forced_delay > 0)
-			t = debug_vsync_forced_delay * vsynctimebase / 100;
+		//if (debug_vsync_min_delay && t < debug_vsync_min_delay * vsynctimebase / 100)
+		//	t = debug_vsync_min_delay * vsynctimebase / 100;
+		//if (debug_vsync_forced_delay > 0)
+		//	t = debug_vsync_forced_delay * vsynctimebase / 100;
 
 		vsync_time = read_processor_time ();
 		if (t > vsynctimebase * 2 / 3)
@@ -7728,9 +7728,9 @@ static bool framewait (void)
 		if (vsynctimeperline < 1)
 			vsynctimeperline = 1;
 
-		if (0 || (log_vsync & 2)) {
-			write_log (_T("%06d %06d/%06d %03d%%\n"), t, vsynctimeperline, vsynctimebase, t * 100 / vsynctimebase);
-		}
+		//if (0 || (log_vsync & 2)) {
+		//	write_log (_T("%06d %06d/%06d %03d%%\n"), t, vsynctimeperline, vsynctimebase, t * 100 / vsynctimebase);
+		//}
 
 		frame_shown = true;
 		return 1;
