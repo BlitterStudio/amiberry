@@ -37,17 +37,13 @@ before it appears on-screen. (TW: display emulation now does this automatically)
 #define DISPLAY_LEFT_SHIFT 0x3c
 #define DISPLAY_LEFT_SHIFT_SHRES (DISPLAY_LEFT_SHIFT << 2)
 
-#define PIXEL_XPOS(HPOS) (((HPOS) - DISPLAY_LEFT_SHIFT + DIW_DDF_OFFSET - 1) << lores_shift)
-
-extern int hsynctotal;
-
-#define min_diwlastword (0)
-#define max_diwlastword (PIXEL_XPOS(hsynctotal * 2 + 1))
+#define CCK_SHRES_SHIFT 3
 
 extern int lores_shift, shres_shift, interlace_seen;
 extern bool aga_mode, ecs_agnus, ecs_denise, direct_rgb;
 extern int visible_left_border, visible_right_border;
 extern int detected_screen_resolution;
+extern int hsynctotal;
 
 STATIC_INLINE int shres_coord_hw_to_window_x(int x)
 {
@@ -57,11 +53,43 @@ STATIC_INLINE int shres_coord_hw_to_window_x(int x)
 	return x;
 }
 
-STATIC_INLINE int coord_hw_to_window_x(int x)
+STATIC_INLINE int coord_hw_to_window_x_shres(int xx)
+{
+	int x = xx >> (CCK_SHRES_SHIFT - 1);
+	x -= DISPLAY_LEFT_SHIFT;
+	if (lores_shift == 1) {
+		x <<= 1;
+		x |= (xx >> 1) & 1;
+	} else if (lores_shift == 2) {
+		x <<= 2;
+		x |= xx & 3;
+	}
+	return x;
+}
+STATIC_INLINE int coord_hw_to_window_x_lores(int x)
 {
 	x -= DISPLAY_LEFT_SHIFT;
 	return x << lores_shift;
 }
+
+STATIC_INLINE int PIXEL_XPOS(int xx)
+{
+	int x = xx >> (CCK_SHRES_SHIFT - 1);
+	x -= DISPLAY_LEFT_SHIFT;
+	x += DIW_DDF_OFFSET;
+	x -= 1;
+	if (lores_shift == 1) {
+		x <<= 1;
+		x |= (xx >> 1) & 1;
+	} else if (lores_shift == 2) {
+		x <<= 2;
+		x |= xx & 3;
+	}
+	return x;
+}
+
+#define min_diwlastword (0)
+#define max_diwlastword (PIXEL_XPOS(hsynctotal))
 
 STATIC_INLINE int coord_window_to_hw_x(int x)
 {
@@ -213,7 +241,7 @@ struct color_change {
 #ifdef UAE_MINI
 #define MAX_PIXELS_PER_LINE 880
 #else
-#define MAX_PIXELS_PER_LINE 1760
+#define MAX_PIXELS_PER_LINE 2048
 #endif
 
 /* No divisors for MAX_PIXELS_PER_LINE; we support AGA and SHRES sprites */

@@ -490,10 +490,11 @@ static void set_blanking_limits(void)
 	hblank_right_stop = visible_right_stop;
 
 	if (programmedmode) {
-		if (hblank_left_start < coord_hw_to_window_x(hsyncendpos * 2 + 1))
-			hblank_left_start = coord_hw_to_window_x(hsyncendpos * 2 + 1);
-		if (hblank_right_stop > coord_hw_to_window_x(hsyncstartpos * 2 + 1))
-			hblank_right_stop = coord_hw_to_window_x(hsyncstartpos * 2 + 1);
+		// has hires pixel offset
+		if (hblank_left_start < coord_hw_to_window_x_shres(hsyncendpos - 2))
+			hblank_left_start = coord_hw_to_window_x_shres(hsyncendpos - 2);
+		if (hblank_right_stop > coord_hw_to_window_x_shres(hsyncstartpos - 1))
+			hblank_right_stop = coord_hw_to_window_x_shres(hsyncstartpos - 1);
 	}
 }
 
@@ -661,8 +662,8 @@ int get_custom_limits (int *pw, int *ph, int *pdx, int *pdy, int *prealh)
 	if (plflastline_total < 4)
 		plflastline_total = last_planes_vpos;
 
-	ddffirstword_total = coord_hw_to_window_x (ddffirstword_total * 2 + DIW_DDF_OFFSET);
-	ddflastword_total = coord_hw_to_window_x (ddflastword_total * 2 + DIW_DDF_OFFSET);
+	ddffirstword_total = coord_hw_to_window_x_lores(ddffirstword_total * 2 + DIW_DDF_OFFSET);
+	ddflastword_total = coord_hw_to_window_x_lores(ddflastword_total * 2 + DIW_DDF_OFFSET);
 
 	if (doublescan <= 0 && !programmedmode) {
 		int min = coord_diw_lores_to_window_x (92);
@@ -941,8 +942,8 @@ static void pfield_init_linetoscr (bool border)
 		ddf_left = DISPLAY_LEFT_SHIFT;
 
 	/* Compute datafetch start/stop in pixels; native display coordinates.  */
-	native_ddf_left = coord_hw_to_window_x(ddf_left);
-	native_ddf_right = coord_hw_to_window_x(ddf_right);
+	native_ddf_left = coord_hw_to_window_x_lores(ddf_left);
+	native_ddf_right = coord_hw_to_window_x_lores(ddf_right);
 
 	// Blerkenwiegel/Scoopex workaround
 	native_ddf_left2 = native_ddf_left;
@@ -995,7 +996,7 @@ static void pfield_init_linetoscr (bool border)
 			if (playfield_end < linetoscr_diw_end && hblank_right_stop > playfield_end) {
 				playfield_end = linetoscr_diw_end;
 			}
-			int left = coord_hw_to_window_x(dp_for_drawing->plfleft * 2 - DDF_OFFSET);
+			int left = coord_hw_to_window_x_lores(dp_for_drawing->plfleft * 2 - DDF_OFFSET);
 			if (left < visible_left_border)
 				left = visible_left_border;
 			if (left < playfield_start && left >= linetoscr_diw_start) {
@@ -1038,7 +1039,7 @@ static void pfield_init_linetoscr (bool border)
 		if (playfield_start < visible_left_border)
 			playfield_start = visible_left_border;
 #endif
-		max = coord_hw_to_window_x(max >> sprite_buffer_res) + (DIW_DDF_OFFSET << lores_shift);
+		max = coord_hw_to_window_x_lores(max >> sprite_buffer_res) + (DIW_DDF_OFFSET << lores_shift);
 		if (max > playfield_end)
 			playfield_end = max;
 		if (playfield_end > visible_right_border)
