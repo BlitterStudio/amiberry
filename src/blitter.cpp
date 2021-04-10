@@ -350,11 +350,11 @@ void blitter_debugdump(void)
 	//blitter_dump();
 }
 
-static int canblit (int hpos)
+static int canblit(int hpos)
 {
-	if (!dmaen (DMA_BLITTER))
+	if (!dmaen(DMA_BLITTER))
 		return -1;
-	if (is_bitplane_dma (hpos))
+	if (is_bitplane_dma(hpos))
 		return 0;
 	if (cycle_line[hpos] & CYCLE_MASK) {
 		return 0;
@@ -1810,13 +1810,13 @@ uae_u8 *save_blitter (int *len, uae_u8 *dstptr)
 
 // totally non-real-blitter-like state save but better than nothing..
 
-uae_u8 *restore_blitter_new (uae_u8 *src)
+uae_u8 *restore_blitter_new(uae_u8 *src)
 {
 	uae_u8 state, tmp;
 
 	blt_statefile_type = 1;
 	blitter_cycle_exact = restore_u8();
-	if (blitter_cycle_exact == 3) {
+	if (blitter_cycle_exact & 2) {
 		blt_statefile_type = 2;
 		blitter_cycle_exact = 1;
 	}
@@ -1875,41 +1875,54 @@ uae_u8 *restore_blitter_new (uae_u8 *src)
 	restore_u8();
 	restore_u8();
 
-	if (restore_u16() != 0x1234)
-		write_log (_T("error\n"));
+	if (restore_u16() != 0x1234) {
+		write_log(_T("blitter state restore error\n"));
+	}
 
 	blt_info.blitter_nasty = restore_u8();
 	tmp = restore_u8();
-	shifter[0] = (tmp & 1) != 0;
-	shifter[1] = (tmp & 2) != 0;
-	shifter[2] = (tmp & 4) != 0;
-	shifter[3] = (tmp & 8) != 0;
-	blt_info.blit_finald = restore_u8();
-	blit_ovf = restore_u8();
+	if (blt_statefile_type < 2) {
+		tmp = 0;
+		blt_info.blit_finald = 0;
+	} else {
+		shifter[0] = (tmp & 1) != 0;
+		shifter[1] = (tmp & 2) != 0;
+		shifter[2] = (tmp & 4) != 0;
+		shifter[3] = (tmp & 8) != 0;
+		blt_info.blit_finald = restore_u8();
+		blit_ovf = restore_u8();
+	}
 
 	blt_info.blit_main = 0;
-	blt_info.blit_finald = 0;
 	blt_info.blit_pending = 0;
 
 	if (!blitter_cycle_exact) {
 		if (state > 0)
 			do_blitter(0, 0, 0);
 	} else {
-		if (state == 1)
-			blt_info.blit_pending = 1;
-		else if (state == 2)
-			blt_info.blit_main = 1;
-		if (blt_info.blit_finald) {
+		// if old blitter active state file:
+		// stop blitter. We can't support them anymore.
+		if (state == 2 && blt_statefile_type < 2) {
+			blt_info.blit_pending = 0;
 			blt_info.blit_main = 0;
-		}
-		if (blt_statefile_type == 2) {
-			blit_bltset(0);
+		} else {
+			if (state == 1) {
+				blt_info.blit_pending = 1;
+			} else if (state == 2) {
+				blt_info.blit_main = 1;
+			}
+			if (blt_info.blit_finald) {
+				blt_info.blit_main = 0;
+			}
+			if (blt_statefile_type == 2) {
+				blit_bltset(0);
+			}
 		}
 	}
 	return src;
 }
 
-uae_u8 *save_blitter_new (int *len, uae_u8 *dstptr)
+uae_u8 *save_blitter_new(int *len, uae_u8 *dstptr)
 {
 	uae_u8 *dstbak,*dst;
 	if (dstptr)
@@ -1918,17 +1931,18 @@ uae_u8 *save_blitter_new (int *len, uae_u8 *dstptr)
 		dstbak = dst = xmalloc (uae_u8, 1000);
 
 	uae_u8 state;
-	save_u8 (blitter_cycle_exact ? 3 : 0);
-	if (!blt_info.blit_main && !blt_info.blit_finald)
+	save_u8(blitter_cycle_exact ? 3 : 0);
+	if (!blt_info.blit_main && !blt_info.blit_finald) {
 		state = 0;
-	else if (blt_info.blit_pending)
+	} else if (blt_info.blit_pending) {
 		state = 1;
-	else
+	} else {
 		state = 2;
-	save_u8 (state);
+	}
+	save_u8(state);
 
 	if (blt_info.blit_main || blt_info.blit_finald) {
-		write_log (_T("BLITTER active while saving state\n"));
+		write_log(_T("BLITTER active while saving state\n"));
 		if (log_blitter)
 			blitter_dump();
 	}
