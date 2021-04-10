@@ -8230,7 +8230,7 @@ static void dmal_emu(uae_u32 v)
 			}
 #endif
 		}
-		uae_u16 dat = chipmem_wget_indirect (pt);
+		uae_u16 dat = chipmem_wget_indirect(pt);
 #ifdef DEBUGGER
 		if (dmal_ce) {
 			if (debug_dma) {
@@ -8239,8 +8239,8 @@ static void dmal_emu(uae_u32 v)
 			if (memwatch_enabled) {
 				debug_getpeekdma_value(dat);
 			}
-#endif
 		}
+#endif
 		last_custom_value1 = last_custom_value2 = dat;
 		AUDxDAT (nr, dat, pt);
 	} else {
