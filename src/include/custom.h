@@ -162,10 +162,11 @@ extern unsigned long frametime, timeframes;
 extern uae_u16 htotal, vtotal, beamcon0;
 
 // 100 words give you 1600 horizontal pixels. Should be more than enough for superhires. 
+// must be divisible by 8
 #ifdef CUSTOM_SIMPLE
-#define MAX_WORDS_PER_LINE 50
+#define MAX_WORDS_PER_LINE 56
 #else
-#define MAX_WORDS_PER_LINE 100
+#define MAX_WORDS_PER_LINE 104
 #endif
 
 extern uae_u32 hirestab_h[256][2];
@@ -238,8 +239,20 @@ extern int current_maxvpos(void);
 extern struct chipset_refresh *get_chipset_refresh(struct uae_prefs*);
 extern void compute_framesync(void);
 extern void getsyncregisters(uae_u16 *phsstrt, uae_u16 *phsstop, uae_u16 *pvsstrt, uae_u16 *pvsstop);
-int is_bitplane_dma(int hpos);
+bool blitter_cant_access(int hpos);
 void custom_cpuchange(void);
+
+struct chipsetslot
+{
+	uae_u16 cycle;
+	uae_u16 pipeline;
+};
+#define MAX_CHIPSETSLOTS 256
+extern struct chipsetslot cycle_line[MAX_CHIPSETSLOTS + 1];
+
+#define RGA_PIPELINE_MASK 255
+
+extern int rga_pipeline_blitter;
 
 struct custom_store
 {

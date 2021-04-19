@@ -74,7 +74,6 @@ static int blit_maxcyclecounter, blit_slowdown, blit_totalcyclecounter;
 static int blit_misscyclecounter;
 
 #ifdef CPUEMU_13
-extern uae_u8 cycle_line[256];
 static int blitter_cyclecounter;
 static int blitter_hcounter;
 static int blitter_vcounter;
@@ -354,11 +353,8 @@ static int canblit(int hpos)
 {
 	if (!dmaen(DMA_BLITTER))
 		return -1;
-	if (is_bitplane_dma(hpos))
+	if (blitter_cant_access(hpos))
 		return 0;
-	if (cycle_line[hpos] & CYCLE_MASK) {
-		return 0;
-	}
 	return 1;
 }
 
@@ -1232,16 +1228,18 @@ bool decide_blitter_maybe_write(int until_hpos, uaecptr addr, uae_u16 value)
 		}
 	}
 
-	if (immediate_blits) {
-		if (!blt_info.blit_main)
-			return false;
-		if (dmaen(DMA_BLITTER))
-			blitter_doit();
-		return false;
-	}
-
 	if (until_hpos < 0) {
 		until_hpos = maxhpos;
+	}
+
+	if (immediate_blits) {
+		if (!blt_info.blit_main) {
+			return false;
+		}
+		if (dmaen(DMA_BLITTER)) {
+			blitter_doit();
+		}
+		return false;
 	}
 
 	if (!blt_info.blit_main && !blt_info.blit_finald) {
@@ -1500,7 +1498,6 @@ void do_blitter(int hpos, int copper, uaecptr pc)
 	blitter_cycle_exact = currprefs.blitter_cycle_exact;
 	immediate_blits = currprefs.immediate_blits;
 	blt_info.got_cycle = 0;
-	last_blitter_hpos = hpos;
 	blit_firstline_cycles = blit_first_cycle = get_cycles();
 	blit_misscyclecounter = 0;
 	blit_last_cycle = 0;
@@ -1617,8 +1614,10 @@ void maybe_blit (int hpos, int hack)
 
 	reset_channel_mods();
 
-	if (!blt_info.blit_main)
+	if (!blt_info.blit_main) {
+		decide_blitter(hpos);
 		return;
+	}
 
 	if (savestate_state)
 		return;
@@ -1656,14 +1655,14 @@ void maybe_blit (int hpos, int hack)
 	}
 
 	if (blitter_cycle_exact) {
-		decide_blitter (hpos);
+		decide_blitter(hpos);
 		goto end;
 	}
 
 	if (hack == 1 && (int)get_cycles() - (int)blit_firstline_cycles < 0)
 		goto end;
 
-	blitter_handler (0);
+	blitter_handler(0);
 end:;
 	if (log_blitter)
 		blitter_delayed_debug = 1;
