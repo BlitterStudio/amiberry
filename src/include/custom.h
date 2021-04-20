@@ -242,13 +242,14 @@ extern void getsyncregisters(uae_u16 *phsstrt, uae_u16 *phsstop, uae_u16 *pvsstr
 bool blitter_cant_access(int hpos);
 void custom_cpuchange(void);
 
+#define RGA_PIPELINE_ADJUST 4
 struct chipsetslot
 {
 	uae_u16 cycle;
 	uae_u16 pipeline;
 };
 #define MAX_CHIPSETSLOTS 256
-extern struct chipsetslot cycle_line[MAX_CHIPSETSLOTS + 1];
+extern struct chipsetslot cycle_line[MAX_CHIPSETSLOTS + RGA_PIPELINE_ADJUST];
 
 #define RGA_PIPELINE_MASK 255
 
