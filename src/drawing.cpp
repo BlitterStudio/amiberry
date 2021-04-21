@@ -2698,7 +2698,7 @@ static void pfield_doline (int lineno)
 
 	switch (bplplanecnt) {
 	default: break;
-	case 0: memset (data, 0, wordcount * 32); break;
+	case 0: memset(data, 0, wordcount * 32); break;
 	case 1: pfield_doline32_n1(data, wordcount); break;
 	case 2: pfield_doline32_n2(data, wordcount); break;
 	case 3: pfield_doline32_n3(data, wordcount); break;

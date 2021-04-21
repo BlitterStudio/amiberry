@@ -412,18 +412,22 @@ static void check_channel_mods (int hpos, int ch)
 // (or cycle where last D write would have been if
 // ONEDOT was active)
 
-static void blitter_interrupt(int hpos, int done)
+static bool blitter_interrupt(int hpos, int done)
 {
 	blt_info.blit_main = 0;
-	if (blt_info.blit_interrupt)
-		return;
-	if (!done && (!blitter_cycle_exact || immediate_blits || currprefs.cpu_model >= 68030 || currprefs.cachesize || currprefs.m68k_speed < 0))
-		return;
+	if (blt_info.blit_interrupt) {
+		return false;
+	}
+	if (!done && (!blitter_cycle_exact || immediate_blits || currprefs.cpu_model >= 68030 || currprefs.cachesize || currprefs.m68k_speed < 0)) {
+		return false;
+	}
 	blt_info.blit_interrupt = 1;
-	send_interrupt (6, (4 + 1) * CYCLE_UNIT);
-	//if (debug_dma)
-	//	record_dma_event (DMA_EVENT_BLITIRQ, hpos, vpos);
+	send_interrupt(6, (4 + 1) * CYCLE_UNIT);
+	//if (debug_dma) {
+	//	record_dma_event(DMA_EVENT_BLITIRQ, hpos, vpos);
+	//}
 	blitter_done_notify(blitline);
+	return true;
 }
 
 static void blitter_done (int hpos)
@@ -434,13 +438,15 @@ static void blitter_done (int hpos)
 			//record_dma_event(DMA_EVENT_BLITFINALD, hpos, vpos);
 	}
 	blt_info.blit_finald = 0;
-	blitter_interrupt (hpos, 1);
-	blitter_done_notify(blitline);
-	event2_remevent (ev2_blitter);
-	unset_special (SPCFLAG_BLTNASTY);
-	if (log_blitter & 1)
-		write_log (_T("cycles %d, missed %d, total %d\n"),
+	if (!blitter_interrupt(hpos, 1)) {
+		blitter_done_notify(blitline);
+	}
+	event2_remevent(ev2_blitter);
+	unset_special(SPCFLAG_BLTNASTY);
+	if (log_blitter & 1) {
+		write_log(_T("cycles %d, missed %d, total %d\n"),
 			blit_totalcyclecounter, blit_misscyclecounter, blit_totalcyclecounter + blit_misscyclecounter);
+	}
 	blt_info.blitter_dangerous_bpl = 0;
 }
 
@@ -1386,7 +1392,7 @@ static void blitter_force_finish(bool state)
 	if (blitter_cycle_exact && !immediate_blits) {
 		int rounds = 10000;
 		while (blt_info.blit_main || blt_info.blit_finald && rounds > 0) {
-			memset(cycle_line, 0, sizeof cycle_line);
+			memset(cycle_line, 0, sizeof(cycle_line));
 			decide_blitter(-1);
 			rounds--;
 		}
