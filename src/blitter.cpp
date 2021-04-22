@@ -430,7 +430,7 @@ static bool blitter_interrupt(int hpos, int done)
 	return true;
 }
 
-static void blitter_done (int hpos)
+static void blitter_done(int hpos)
 {
 	ddat1use = 0;
 	if (blt_info.blit_finald) {
@@ -1392,7 +1392,7 @@ static void blitter_force_finish(bool state)
 	if (blitter_cycle_exact && !immediate_blits) {
 		int rounds = 10000;
 		while (blt_info.blit_main || blt_info.blit_finald && rounds > 0) {
-			memset(cycle_line, 0, sizeof(cycle_line));
+			memset(cycle_line_slot, 0, sizeof(cycle_line_slot));
 			decide_blitter(-1);
 			rounds--;
 		}

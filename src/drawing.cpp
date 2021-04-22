@@ -489,12 +489,15 @@ static void set_blanking_limits(void)
 	hblank_left_start = visible_left_start;
 	hblank_right_stop = visible_right_stop;
 
-	if (programmedmode) {
+	if (beamcon0 & 0x0110) {
 		// has hires pixel offset
-		if (hblank_left_start < coord_hw_to_window_x_shres(hsyncendpos - 2))
-			hblank_left_start = coord_hw_to_window_x_shres(hsyncendpos - 2);
-		if (hblank_right_stop > coord_hw_to_window_x_shres(hsyncstartpos - 1))
-			hblank_right_stop = coord_hw_to_window_x_shres(hsyncstartpos - 1);
+		int offset = 4;
+		if (hblank_left_start < coord_hw_to_window_x_shres(hsyncendpos - offset)) {
+			hblank_left_start = coord_hw_to_window_x_shres(hsyncendpos - offset);
+		}
+		if (hblank_right_stop > coord_hw_to_window_x_shres(hsyncstartpos - offset)) {
+			hblank_right_stop = coord_hw_to_window_x_shres(hsyncstartpos - offset);
+		}
 	}
 }
 

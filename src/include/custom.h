@@ -243,13 +243,9 @@ bool blitter_cant_access(int hpos);
 void custom_cpuchange(void);
 
 #define RGA_PIPELINE_ADJUST 4
-struct chipsetslot
-{
-	uae_u16 cycle;
-	uae_u16 pipeline;
-};
 #define MAX_CHIPSETSLOTS 256
-extern struct chipsetslot cycle_line[MAX_CHIPSETSLOTS + RGA_PIPELINE_ADJUST];
+extern uae_u8 cycle_line_slot[MAX_CHIPSETSLOTS + RGA_PIPELINE_ADJUST];
+extern uae_u8 cycle_line_pipe[MAX_CHIPSETSLOTS + RGA_PIPELINE_ADJUST];
 
 #define RGA_PIPELINE_MASK 255
 
