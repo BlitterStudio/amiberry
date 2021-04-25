@@ -2507,38 +2507,6 @@ Don't touch this if you don't know what you are doing.  */
 #define GETLONG32(P) (*(uae_u32*)P)
 #define GETLONG64(P) (*(uae_u64*)P)
 
-#if (defined(CPU_AARCH64) || defined(USE_ARMNEON)) && !defined(ANDROID)
-
-#ifdef __cplusplus
-  extern "C" {
-#endif
-    void ARM_doline_n1(uae_u32 *pixels, int wordcount, int lineno);
-    void NEON_doline_n2(uae_u32 *pixels, int wordcount, int lineno);
-    void NEON_doline_n3(uae_u32 *pixels, int wordcount, int lineno);
-    void NEON_doline_n4(uae_u32 *pixels, int wordcount, int lineno);
-    void NEON_doline_n5(uae_u32 *pixels, int wordcount, int lineno);
-    void NEON_doline_n6(uae_u32 *pixels, int wordcount, int lineno);
-    void NEON_doline_n7(uae_u32 *pixels, int wordcount, int lineno);
-    void NEON_doline_n8(uae_u32 *pixels, int wordcount, int lineno);
-#ifdef __cplusplus
-  }
-#endif
-
-static void pfield_doline_n0 (uae_u32 *pixels, int wordcount, int lineno)
-{
-	memset(pixels, 0, wordcount << 5);
-}
-
-typedef void (*pfield_doline_func)(uae_u32 *, int, int);
-
-static pfield_doline_func pfield_doline_n[9]={
-	pfield_doline_n0, ARM_doline_n1, NEON_doline_n2, NEON_doline_n3,
-	NEON_doline_n4, NEON_doline_n5, NEON_doline_n6, NEON_doline_n7,
-	NEON_doline_n8
-};
-
-#else
-
 STATIC_INLINE void pfield_doline32_1(uae_u32 *pixels, int wordcount, int planes)
 {
 	while (wordcount-- > 0) {
@@ -2594,62 +2562,61 @@ STATIC_INLINE void pfield_doline32_1(uae_u32 *pixels, int wordcount, int planes)
 	}
 }
 
-#ifndef AMIBERRY
-STATIC_INLINE void pfield_doline64_1(uae_u64 *pixels, int wordcount, int planes)
-{
-	while (wordcount-- > 0) {
-		uae_u64 b0, b1, b2, b3, b4, b5, b6, b7;
 
-		b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0, b7 = 0;
-		switch (planes) {
-#ifdef AGA
-		case 8: b0 = GETLONG64(real_bplpt[7]); real_bplpt[7] += 8;
-		case 7: b1 = GETLONG64(real_bplpt[6]); real_bplpt[6] += 8;
-#endif
-		case 6: b2 = GETLONG64(real_bplpt[5]); real_bplpt[5] += 8;
-		case 5: b3 = GETLONG64(real_bplpt[4]); real_bplpt[4] += 8;
-		case 4: b4 = GETLONG64(real_bplpt[3]); real_bplpt[3] += 8;
-		case 3: b5 = GETLONG64(real_bplpt[2]); real_bplpt[2] += 8;
-		case 2: b6 = GETLONG64(real_bplpt[1]); real_bplpt[1] += 8;
-		case 1: b7 = GETLONG64(real_bplpt[0]); real_bplpt[0] += 8;
-		}
-
-		MERGE64(b0, b1, 0x5555555555555555, 1);
-		MERGE64(b2, b3, 0x5555555555555555, 1);
-		MERGE64(b4, b5, 0x5555555555555555, 1);
-		MERGE64(b6, b7, 0x5555555555555555, 1);
-
-		MERGE64(b0, b2, 0x3333333333333333, 2);
-		MERGE64(b1, b3, 0x3333333333333333, 2);
-		MERGE64(b4, b6, 0x3333333333333333, 2);
-		MERGE64(b5, b7, 0x3333333333333333, 2);
-
-		MERGE64(b0, b4, 0x0f0f0f0f0f0f0f0f, 4);
-		MERGE64(b1, b5, 0x0f0f0f0f0f0f0f0f, 4);
-		MERGE64(b2, b6, 0x0f0f0f0f0f0f0f0f, 4);
-		MERGE64(b3, b7, 0x0f0f0f0f0f0f0f0f, 4);
-
-		MERGE64(b0, b1, 0x00ff00ff00ff00ff, 8);
-		MERGE64(b2, b3, 0x00ff00ff00ff00ff, 8);
-		MERGE64(b4, b5, 0x00ff00ff00ff00ff, 8);
-		MERGE64(b6, b7, 0x00ff00ff00ff00ff, 8);
-
-		MERGE64(b0, b2, 0x0000ffff0000ffff, 16);
-		do_put_mem_quad(pixels + 0, b0);
-		do_put_mem_quad(pixels + 4, b2);
-		MERGE64(b1, b3, 0x0000ffff0000ffff, 16);
-		do_put_mem_quad(pixels + 2, b1);
-		do_put_mem_quad(pixels + 6, b3);
-		MERGE64(b4, b6, 0x0000ffff0000ffff, 16);
-		do_put_mem_quad(pixels + 1, b4);
-		do_put_mem_quad(pixels + 5, b6);
-		MERGE64(b5, b7, 0x0000ffff0000ffff, 16);
-		do_put_mem_quad(pixels + 3, b5);
-		do_put_mem_quad(pixels + 7, b7);
-		pixels += 8;
-	}
-}
-#endif
+//STATIC_INLINE void pfield_doline64_1(uae_u64 *pixels, int wordcount, int planes)
+//{
+//	while (wordcount-- > 0) {
+//		uae_u64 b0, b1, b2, b3, b4, b5, b6, b7;
+//
+//		b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0, b7 = 0;
+//		switch (planes) {
+//#ifdef AGA
+//		case 8: b0 = GETLONG64(real_bplpt[7]); real_bplpt[7] += 8;
+//		case 7: b1 = GETLONG64(real_bplpt[6]); real_bplpt[6] += 8;
+//#endif
+//		case 6: b2 = GETLONG64(real_bplpt[5]); real_bplpt[5] += 8;
+//		case 5: b3 = GETLONG64(real_bplpt[4]); real_bplpt[4] += 8;
+//		case 4: b4 = GETLONG64(real_bplpt[3]); real_bplpt[3] += 8;
+//		case 3: b5 = GETLONG64(real_bplpt[2]); real_bplpt[2] += 8;
+//		case 2: b6 = GETLONG64(real_bplpt[1]); real_bplpt[1] += 8;
+//		case 1: b7 = GETLONG64(real_bplpt[0]); real_bplpt[0] += 8;
+//		}
+//
+//		MERGE64(b0, b1, 0x5555555555555555, 1);
+//		MERGE64(b2, b3, 0x5555555555555555, 1);
+//		MERGE64(b4, b5, 0x5555555555555555, 1);
+//		MERGE64(b6, b7, 0x5555555555555555, 1);
+//
+//		MERGE64(b0, b2, 0x3333333333333333, 2);
+//		MERGE64(b1, b3, 0x3333333333333333, 2);
+//		MERGE64(b4, b6, 0x3333333333333333, 2);
+//		MERGE64(b5, b7, 0x3333333333333333, 2);
+//
+//		MERGE64(b0, b4, 0x0f0f0f0f0f0f0f0f, 4);
+//		MERGE64(b1, b5, 0x0f0f0f0f0f0f0f0f, 4);
+//		MERGE64(b2, b6, 0x0f0f0f0f0f0f0f0f, 4);
+//		MERGE64(b3, b7, 0x0f0f0f0f0f0f0f0f, 4);
+//
+//		MERGE64(b0, b1, 0x00ff00ff00ff00ff, 8);
+//		MERGE64(b2, b3, 0x00ff00ff00ff00ff, 8);
+//		MERGE64(b4, b5, 0x00ff00ff00ff00ff, 8);
+//		MERGE64(b6, b7, 0x00ff00ff00ff00ff, 8);
+//
+//		MERGE64(b0, b2, 0x0000ffff0000ffff, 16);
+//		do_put_mem_quad(pixels + 0, b0);
+//		do_put_mem_quad(pixels + 4, b2);
+//		MERGE64(b1, b3, 0x0000ffff0000ffff, 16);
+//		do_put_mem_quad(pixels + 2, b1);
+//		do_put_mem_quad(pixels + 6, b3);
+//		MERGE64(b4, b6, 0x0000ffff0000ffff, 16);
+//		do_put_mem_quad(pixels + 1, b4);
+//		do_put_mem_quad(pixels + 5, b6);
+//		MERGE64(b5, b7, 0x0000ffff0000ffff, 16);
+//		do_put_mem_quad(pixels + 3, b5);
+//		do_put_mem_quad(pixels + 7, b7);
+//		pixels += 8;
+//	}
+//}
 
 /* See above for comments on inlining.  These functions should _not_
 be inlined themselves.  */
@@ -2664,30 +2631,54 @@ static void NOINLINE pfield_doline32_n7(uae_u32 *data, int count) { pfield_dolin
 static void NOINLINE pfield_doline32_n8(uae_u32 *data, int count) { pfield_doline32_1(data, count, 8); }
 #endif
 
-#ifndef AMIBERRY
-static void NOINLINE pfield_doline64_n1(uae_u64 *data, int count) { pfield_doline64_1(data, count, 1); }
-static void NOINLINE pfield_doline64_n2(uae_u64 *data, int count) { pfield_doline64_1(data, count, 2); }
-static void NOINLINE pfield_doline64_n3(uae_u64 *data, int count) { pfield_doline64_1(data, count, 3); }
-static void NOINLINE pfield_doline64_n4(uae_u64 *data, int count) { pfield_doline64_1(data, count, 4); }
-static void NOINLINE pfield_doline64_n5(uae_u64 *data, int count) { pfield_doline64_1(data, count, 5); }
-static void NOINLINE pfield_doline64_n6(uae_u64 *data, int count) { pfield_doline64_1(data, count, 6); }
-#ifdef AGA
-static void NOINLINE pfield_doline64_n7(uae_u64 *data, int count) { pfield_doline64_1(data, count, 7); }
-static void NOINLINE pfield_doline64_n8(uae_u64 *data, int count) { pfield_doline64_1(data, count, 8); }
-#endif
-#endif
-#endif /* USE_ARMNEON */
+//static void NOINLINE pfield_doline64_n1(uae_u64 *data, int count) { pfield_doline64_1(data, count, 1); }
+//static void NOINLINE pfield_doline64_n2(uae_u64 *data, int count) { pfield_doline64_1(data, count, 2); }
+//static void NOINLINE pfield_doline64_n3(uae_u64 *data, int count) { pfield_doline64_1(data, count, 3); }
+//static void NOINLINE pfield_doline64_n4(uae_u64 *data, int count) { pfield_doline64_1(data, count, 4); }
+//static void NOINLINE pfield_doline64_n5(uae_u64 *data, int count) { pfield_doline64_1(data, count, 5); }
+//static void NOINLINE pfield_doline64_n6(uae_u64 *data, int count) { pfield_doline64_1(data, count, 6); }
+//#ifdef AGA
+//static void NOINLINE pfield_doline64_n7(uae_u64 *data, int count) { pfield_doline64_1(data, count, 7); }
+//static void NOINLINE pfield_doline64_n8(uae_u64 *data, int count) { pfield_doline64_1(data, count, 8); }
+//#endif
 
-static void pfield_doline (int lineno)
+static void pfield_doline(int lineno)
 {
+#if 0
+	int wordcount = (dp_for_drawing->plflinelen + 1) / 2;
+	uae_u64 *data = pixdata.apixels_q + MAX_PIXELS_PER_LINE / sizeof(uae_u64);
+
+#define DATA_POINTER(n) ((debug_bpl_mask & (1 << n)) ? (line_data[lineno] + (n) * MAX_WORDS_PER_LINE * 2) : (debug_bpl_mask_one ? all_ones : all_zeros))
+	real_bplpt[0] = DATA_POINTER(0);
+	real_bplpt[1] = DATA_POINTER(1);
+	real_bplpt[2] = DATA_POINTER(2);
+	real_bplpt[3] = DATA_POINTER(3);
+	real_bplpt[4] = DATA_POINTER(4);
+	real_bplpt[5] = DATA_POINTER(5);
+#ifdef AGA
+	real_bplpt[6] = DATA_POINTER(6);
+	real_bplpt[7] = DATA_POINTER(7);
+#endif
+
+	switch (bplplanecnt) {
+	default: break;
+	case 0: memset(data, 0, wordcount * 64); break;
+	case 1: pfield_doline64_n1(data, wordcount); break;
+	case 2: pfield_doline64_n2(data, wordcount); break;
+	case 3: pfield_doline64_n3(data, wordcount); break;
+	case 4: pfield_doline64_n4(data, wordcount); break;
+	case 5: pfield_doline64_n5(data, wordcount); break;
+	case 6: pfield_doline64_n6(data, wordcount); break;
+#ifdef AGA
+	case 7: pfield_doline64_n7(data, wordcount); break;
+	case 8: pfield_doline64_n8(data, wordcount); break;
+#endif
+	}
+#else
 	int wordcount = dp_for_drawing->plflinelen;
 	uae_u32 *data = pixdata.apixels_l + MAX_PIXELS_PER_LINE / sizeof(uae_u32);
 
 #define DATA_POINTER(n) ((debug_bpl_mask & (1 << n)) ? (line_data[lineno] + (n) * MAX_WORDS_PER_LINE * 2) : (debug_bpl_mask_one ? all_ones : all_zeros))
-
-#if (defined(CPU_AARCH64) || defined(USE_ARMNEON)) && !defined(ANDROID)
-	pfield_doline_n[bplplanecnt](data, wordcount, lineno);
-#else
 	real_bplpt[0] = DATA_POINTER(0);
 	real_bplpt[1] = DATA_POINTER(1);
 	real_bplpt[2] = DATA_POINTER(2);
@@ -2713,7 +2704,7 @@ static void pfield_doline (int lineno)
 	case 8: pfield_doline32_n8(data, wordcount); break;
 #endif
 	}
-#endif /* USE_ARMNEON */
+#endif
 
 	if (refresh_indicator_buffer && refresh_indicator_height > lineno) {
 		uae_u8 *opline = refresh_indicator_buffer + lineno * MAX_PIXELS_PER_LINE * 2;
