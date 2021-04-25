@@ -4088,6 +4088,7 @@ uae_u8 *restore_expansion_info_old(uae_u8 *src)
 void restore_expansion_finish(void)
 {
 	cardno = restore_cardno;
+	restore_cardno = 0;
 	for (int i = 0; i < cardno; i++) {
 		struct card_data *ec = &cards_set[i];
 		cards[i] = ec;
@@ -4112,7 +4113,6 @@ void restore_expansion_finish(void)
 			ec->aci.doinit = true;
 		}
 	}
-	restore_cardno = 0;
 }
 
 
@@ -4135,6 +4135,15 @@ static const struct expansionsubromtype a2090_sub[] = {
 	}
 };
 #endif
+
+static const struct expansionboardsettings voodoo_settings[] = {
+	{
+		_T("Direct VRAM access in little endian modes"), _T("directvram")
+	},
+	{
+		NULL
+	}
+};
 
 static const struct expansionsubromtype a2091_sub[] = {
 	{
@@ -5066,6 +5075,25 @@ static const struct expansionboardsettings alf3_settings[] = {
 		NULL
 	}
 };
+static const struct expansionboardsettings dev_hd_settings[] = {
+	{
+		_T("Base address"),
+		_T("base")
+	},
+	{
+		_T("Register spacing"),
+		_T("spacing")
+	},
+	{
+		_T("Data port address"),
+		_T("dataport")
+	},
+	{
+		_T("Alternate register base address"),
+		_T("altbase")
+	}
+};
+
 static const struct expansionboardsettings cdtvsram_settings[] = {
 	{
 		_T("SRAM size\0") _T("64k\0") _T("128k\0") _T("256k\0"),
@@ -5815,6 +5843,24 @@ const struct expansionromtype expansionroms[] = {
 	{
 		_T("vooodoo3_3k"), _T("Voodoo 3 3000"), _T("3dfx"),
 		NULL, NULL, NULL, NULL, ROMTYPE_VOODOO3 | ROMTYPE_NONE, 0, 0, BOARD_IGNORE, false,
+		NULL, 0,
+		false, EXPANSIONTYPE_RTG,
+		0, 0, 0, false, NULL,
+		false, 0, voodoo_settings
+	},
+#if 0
+	{
+		_T("vooodoo5_5k"), _T("Voodoo 5 5500"), _T("3dfx"),
+		NULL, NULL, NULL, NULL, ROMTYPE_VOODOO5 | ROMTYPE_NONE, 0, 0, BOARD_IGNORE, false,
+		NULL, 0,
+		false, EXPANSIONTYPE_RTG,
+		0, 0, 0, false, NULL,
+		false, 0, voodoo_settings
+	},
+#endif
+	{
+		_T("s3virge"), _T("Virge"), _T("S3"),
+		NULL, NULL, NULL, NULL, ROMTYPE_S3VIRGE | ROMTYPE_NONE, 0, 0, BOARD_IGNORE, false,
 		NULL, 0,
 		false, EXPANSIONTYPE_RTG
 	},

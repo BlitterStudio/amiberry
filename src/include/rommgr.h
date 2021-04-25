@@ -198,6 +198,10 @@ extern int decode_cloanto_rom_do (uae_u8 *mem, int size, int real_size);
 #define ROMTYPE_SYNTHESIS	0x00100086
 #define ROMTYPE_MASTFB		0x00100087
 #define ROMTYPE_VOODOO3		0x00100088
+#define ROMTYPE_S3VIRGE		0x00100089
+#define ROMTYPE_VOODOO5		0x0010008a
+#define ROMTYPE_HD20A		0x0010008b
+#define ROMTYPE_DEVHD		0x0010008c
 
 #define ROMTYPE_NOT			0x00800000
 #define ROMTYPE_QUAD		0x01000000
