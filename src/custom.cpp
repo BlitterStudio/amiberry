@@ -389,7 +389,6 @@ static int diwhigh_written;
 static int ddfstrt, ddfstop, plfstop_prev;
 static int ddfstrt_hpos, ddfstop_hpos;
 static int line_cyclebased, diw_change;
-static int bplcon1_fetch;
 
 #define SET_LINE_CYCLEBASED line_cyclebased = 1;
 
@@ -3724,8 +3723,9 @@ static void decide_sprites(int hpos, bool usepointx, bool quick)
 		point += (extrahpos >> 2) - 2;
 	}
 
-	if (nodraw () || hpos < 0x14 || nr_armed == 0 || point == last_sprite_point)
+	if (nodraw() || hpos < 0x14 || nr_armed == 0 || point == last_sprite_point) {
 		return;
+	}
 
 	if (!quick) {
 		decide_diw(hpos);
@@ -3741,14 +3741,17 @@ static void decide_sprites(int hpos, bool usepointx, bool quick)
 		int hw_xp = sprxp >> sprite_buffer_res;
 		int pointx = usepointx && (s->ctl & sprite_sprctlmask) ? 0 : 1;
 
-		if (xpos < 0)
+		if (xpos < 0) {
 			continue;
+		}
 
-		if (!((debug_sprite_mask & magic_sprite_mask) & (1 << i)))
+		if (!((debug_sprite_mask & magic_sprite_mask) & (1 << i))) {
 			continue;
+		}
 
-		if (! spr[i].armed)
+		if (!spr[i].armed) {
 			continue;
+		}
 
 		int end = 0x1d4;
 		if (hw_xp > last_sprite_point && hw_xp <= point + pointx && hw_xp <= maxhpos * 2 + 1) {
@@ -3784,10 +3787,12 @@ static void decide_sprites(int hpos, bool usepointx, bool quick)
 			for (j = 0, jj = 0; j < sprite_width; j+= 16, jj++) {
 				int nx = fromspritexdiw (posns[i] + j);
 				if (s->data[jj] || s->datb[jj]) {
-					if (diwfirstword_total > nx && nx >= (48 << currprefs.gfx_resolution))
+					if (diwfirstword_total > nx && nx >= (48 << currprefs.gfx_resolution)) {
 						diwfirstword_total = nx;
-					if (diwlastword_total < nx + 16 && nx <= (448 << currprefs.gfx_resolution))
+					}
+					if (diwlastword_total < nx + 16 && nx <= (448 << currprefs.gfx_resolution)) {
 						diwlastword_total = nx + 16;
+					}
 				}
 			}
 			gotdata = 1;
@@ -3799,14 +3804,18 @@ static void decide_sprites(int hpos, bool usepointx, bool quick)
 #if AUTOSCALE_SPRITES
 	/* get upper and lower sprite position if brdsprt enabled */
 	if (gotdata) {
-		if (vpos < first_planes_vpos)
+		if (vpos < first_planes_vpos) {
 			first_planes_vpos = vpos;
-		if (vpos < plffirstline_total)
+		}
+		if (vpos < plffirstline_total) {
 			plffirstline_total = vpos;
-		if (vpos > last_planes_vpos)
+		}
+		if (vpos > last_planes_vpos) {
 			last_planes_vpos = vpos;
-		if (vpos > plflastline_total)
+		}
+		if (vpos > plflastline_total) {
 			plflastline_total = vpos;
+		}
 	}
 #endif
 }
@@ -4026,7 +4035,6 @@ static void reset_decisions_hsync_start(void)
 	toscr_nr_planes = toscr_nr_planes2 = 0;
 	thisline_decision.bplres = output_res(bplcon0_res);
 	thisline_decision.nr_planes = 0;
-	toscr_nr_planes_shifter_new = toscr_nr_planes_shifter = bplcon0_planes;
 
 	thisline_decision.plfleft = -1;
 	thisline_decision.plflinelen = -1;
@@ -4195,8 +4203,9 @@ void getsyncregisters(uae_u16 *phsstrt, uae_u16 *phsstop, uae_u16 *pvsstrt, uae_
 static void dumpsync(void)
 {
 	static int cnt = 100;
-	if (cnt < 0)
+	if (cnt < 0) {
 		return;
+	}
 	cnt--;
 	write_log(_T("BEAMCON0=%04X VTOTAL=%04X  HTOTAL=%04X\n"), new_beamcon0, vtotal, htotal);
 	write_log(_T("  HSSTOP=%04X HBSTRT=%04X  HBSTOP=%04X\n"), hsstop, hbstrt, hbstop);
@@ -5272,7 +5281,7 @@ static void COPJMP(int num, int vblank)
 	if (!oldstrobe) {
 		cop_state.state_prev = cop_state.state;
 	}
-	if ((cop_state.state == COP_wait || cop_state.state == COP_waitforever) && !vblank && dmaen(DMA_COPPER)) {
+	if ((cop_state.state == COP_wait1 || cop_state.state == COP_waitforever) && !vblank && dmaen(DMA_COPPER)) {
 		if (blt_info.blit_main) {
 			static int warned = 100;
 			if (warned > 0) {
@@ -5300,7 +5309,7 @@ static void COPJMP(int num, int vblank)
 
 	if (dmaen(DMA_COPPER)) {
 		compute_spcflag_copper();
-	} else if (wasstopped || (oldstrobe > 0 && oldstrobe != num && cop_state.state_prev == COP_wait)) {
+	} else if (wasstopped || (oldstrobe > 0 && oldstrobe != num && cop_state.state_prev == COP_wait1)) {
 		/* dma disabled, copper idle and accessed both COPxJMPs -> copper stops! */
 		cop_state.state = COP_stop;
 	}
@@ -5697,6 +5706,26 @@ static void bpldmainitdelay(int hpos)
 	setup_fmodes(hpos);
 }
 
+static void bplcon0_denise_change(int hpos, uae_u16 con0)
+{
+	int np = GET_PLANES(con0);
+	if (np == toscr_nr_planes_shifter_new) {
+		toscr_nr_planes_shifter = np;
+		return;
+	}
+	SET_LINE_CYCLEBASED;
+	decide_diw(hpos);
+	decide_line(hpos);
+	decide_fetch_safe(hpos);
+	toscr_nr_planes_shifter_new = np;
+	bplcon0_planes_changed = true;
+	if (isocs7planes()) {
+		if (toscr_nr_planes_shifter_new < 6) {
+			toscr_nr_planes_shifter_new = 6;
+		}
+	}
+}
+
 static void BPLCON0(int hpos, uae_u16 v)
 {
 	uae_u16 old = bplcon0;
@@ -5750,6 +5779,10 @@ static void BPLCON0(int hpos, uae_u16 v)
 	}
 
 	bpldmainitdelay(hpos);
+
+	if (!copper_access) {
+		bplcon0_denise_change(hpos, bplcon0);
+	}
 }
 
 static void BPLCON1(int hpos, uae_u16 v)
@@ -6951,26 +6984,6 @@ static void decide_line(int endhpos)
 	last_decide_line_hpos = endhpos;
 }
 
-static void bplcon0_denise_change(int hpos, uae_u16 con0)
-{
-	int np = GET_PLANES(con0);
-	if (np == toscr_nr_planes_shifter_new) {
-		toscr_nr_planes_shifter = toscr_nr_planes_shifter_new;
-		return;
-	}
-	SET_LINE_CYCLEBASED;
-	decide_diw(hpos);
-	decide_line(hpos);
-	decide_fetch_safe(hpos);
-	toscr_nr_planes_shifter_new = np;
-	bplcon0_planes_changed = true;
-	if (isocs7planes()) {
-		if (toscr_nr_planes_shifter_new < 6) {
-			toscr_nr_planes_shifter_new = 6;
-		}
-	}
-}
-
 /*
 	CPU write COPJMP wakeup sequence when copper is waiting:
 	- Idle cycle (can be used by other DMA channel)
@@ -7489,9 +7502,6 @@ static void update_copper(int until_hpos)
 			// Wait finished, request IR1.
 		case COP_wait:
 			{
-				if (hpos == 2 - COPPER_CYCLE_POLARITY) {
-					goto next;
-				}
 				if (copper_cant_read(hpos, 0x84)) {
 					goto next;
 				}
@@ -7530,10 +7540,6 @@ static void update_copper(int until_hpos)
 
 			// SKIP finished. Request IR1.
 		case COP_skip:
-
-			if (hpos == 2 - COPPER_CYCLE_POLARITY) {
-				goto next;
-			}
 			if (copper_cant_read(hpos, 0x85)) {
 				goto next;
 			}
@@ -11081,9 +11087,10 @@ uae_u8 *restore_custom(uae_u8 *src)
 	bpl2mod = RW;			/* 10A BPL2MOD */
 	bplcon4 = RW;			/* 10C BPLCON4 */
 	clxcon2 = RW;			/* 10E CLXCON2* */
-	for(i = 0; i < 8; i++)
+	for (i = 0; i < 8; i++) {
 		fetched[i] = RW;	/*     BPLXDAT */
-	for(i = 0; i < 32; i++) {
+	}
+	for (i = 0; i < 32; i++) {
 		uae_u16 v = RW;
 		color_regs_genlock[i] = (v & 0x8000) != 0;
 		current_colors.color_regs_ecs[i] = v & 0xfff; /* 180 COLORxx */
@@ -11121,8 +11128,9 @@ uae_u8 *restore_custom(uae_u8 *src)
 	RW;						/* 1F6 ? */
 	RW;						/* 1F8 ? */
 	i = RW;					/* 1FA ? */
-	if (i & 0x8000)
+	if (i & 0x8000) {
 		currprefs.ntscmode = changed_prefs.ntscmode = i & 1;
+	}
 	fmode = RW;				/* 1FC FMODE */
 	last_custom_value1 = last_custom_value2 = RW;/* 1FE ? */
 
@@ -11133,15 +11141,20 @@ uae_u8 *restore_custom(uae_u8 *src)
 	bplcon4_saved = bplcon4;
 	fmode_saved = fmode;
 	beamcon0_saved = new_beamcon0;
+	bplcon0d = bplcon0;
+	bplcon0d_old = 0;
 	DMACON_vars();
 
 	current_colors.extra = 0;
-	if (isbrdblank(-1, bplcon0, bplcon3))
+	if (isbrdblank(-1, bplcon0, bplcon3)) {
 		current_colors.extra |= 1 << CE_BORDERBLANK;
-	if (issprbrd(-1, bplcon0, bplcon3))
+	}
+	if (issprbrd(-1, bplcon0, bplcon3)) {
 		current_colors.extra |= 1 << CE_BORDERSPRITE;
-	if (ecs_denise && (bplcon0 & 1) && (bplcon3 & 0x10))
+	}
+	if (ecs_denise && (bplcon0 & 1) && (bplcon3 & 0x10)) {
 		current_colors.extra |= 1 << CE_BORDERNTRANS;
+	}
 
 	DISK_restore_custom(dskpt, dsklen, dskbytr);
 
@@ -11166,10 +11179,11 @@ uae_u8 *save_custom(int *len, uae_u8 *dstptr, int full)
 
 	DISK_save_custom(&dskpt, &dsklen, &dsksync, &dskbytr);
 
-	if (dstptr)
+	if (dstptr) {
 		dstbak = dst = dstptr;
-	else
-		dstbak = dst = xmalloc (uae_u8, 8 + 256 * 2);
+	} else {
+		dstbak = dst = xmalloc(uae_u8, 8 + 256 * 2);
+	}
 
 	SL(currprefs.chipset_mask);
 	SW(0);					/* 000 BLTDDAT */
