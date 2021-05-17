@@ -1511,8 +1511,8 @@ static uae_u32 REGPARAM2 picasso_SetSpritePosition (TrapContext *ctx)
 	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[monid];
 	uaecptr bi = trap_get_areg(ctx, 0);
 	boardinfo = bi;
-	int x = (uae_s16)trap_get_word(ctx, bi + PSSO_BoardInfo_MouseX) - state->XOffset;
-	int y = (uae_s16)trap_get_word(ctx, bi + PSSO_BoardInfo_MouseY) - state->YOffset;
+	int x = (uae_s16)trap_get_dreg(ctx, 0) - state->XOffset;
+	int y = (uae_s16)trap_get_dreg(ctx, 1) - state->YOffset;
 	if (vidinfo->splitypos >= 0) {
 		y += vidinfo->splitypos;
 	}
