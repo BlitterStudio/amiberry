@@ -1,6 +1,14 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug-DMX-Pi3|ARM">
+      <Configuration>Debug-DMX-Pi3</Configuration>
+      <Platform>ARM</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug-DMX-Pi3|ARM64">
+      <Configuration>Debug-DMX-Pi3</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Debug|ARM">
       <Configuration>Debug</Configuration>
       <Platform>ARM</Platform>
@@ -55,11 +63,20 @@
     <ConfigurationType>Makefile</ConfigurationType>
     <PlatformToolset>Remote_GCC_1_0</PlatformToolset>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-DMX-Pi3|ARM'" Label="Configuration">
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <ConfigurationType>Makefile</ConfigurationType>
+    <PlatformToolset>Remote_GCC_1_0</PlatformToolset>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
     <ConfigurationType>Makefile</ConfigurationType>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debux-DMX|ARM64'" Label="Configuration">
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <ConfigurationType>Makefile</ConfigurationType>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-DMX-Pi3|ARM64'" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
     <ConfigurationType>Makefile</ConfigurationType>
   </PropertyGroup>
@@ -108,6 +125,17 @@
     <IncrementalBuild>true</IncrementalBuild>
     <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-Debug-dmx</RemoteProjectDir>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-DMX-Pi3|ARM'">
+    <RemoteBuildCommandLine>cd ~/projects/Amiberry-Debug-dmx; make -j2 DEBUG=1 PLATFORM=rpi3</RemoteBuildCommandLine>
+    <RemoteReBuildCommandLine>cd ~/projects/Amiberry-Debug-dmx; make clean; make -j2 DEBUG=1 PLATFORM=rpi3</RemoteReBuildCommandLine>
+    <RemoteCleanCommandLine>cd ~/projects/Amiberry-Debug-dmx; make clean</RemoteCleanCommandLine>
+    <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\archivers;..\external\libguisan\include;C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\6\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\6;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\arm-linux-gnueabihf;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\local\include\SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;C:\sysgcc\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
+    <NMakePreprocessorDefinitions>DEBUG;USE_DISPMANX;ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;CPU_arm;ARM_HAS_DIV;USE_SDL2;_REENTRANT;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+    <RemoteBuildOutputs />
+    <AdditionalSourcesToCopyMapping />
+    <IncrementalBuild>true</IncrementalBuild>
+    <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-Debug-dmx</RemoteProjectDir>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
     <RemoteBuildCommandLine>cd ~/projects/Amiberry-Debug; make -j4 DEBUG=1 PLATFORM=pi64</RemoteBuildCommandLine>
     <RemoteReBuildCommandLine>cd ~/projects/Amiberry-Debug; make clean; make -j4 DEBUG=1 PLATFORM=pi64</RemoteReBuildCommandLine>
@@ -119,6 +147,16 @@
     <IncrementalBuild>true</IncrementalBuild>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debux-DMX|ARM64'">
+    <RemoteBuildCommandLine>cd ~/projects/Amiberry-Debug; make -j4 DEBUG=1 PLATFORM=pi64</RemoteBuildCommandLine>
+    <RemoteReBuildCommandLine>cd ~/projects/Amiberry-Debug; make clean; make -j4 DEBUG=1 PLATFORM=pi64</RemoteReBuildCommandLine>
+    <RemoteCleanCommandLine>cd ~/projects/Amiberry-Debug; make clean</RemoteCleanCommandLine>
+    <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\archivers;..\external\libguisan\include;C:\sysgcc\raspberry-64\usr\include;C:\sysgcc\raspberry-64\usr\include\SDL2;C:\sysgcc\raspberry-64\usr\include\libpng16;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
+    <NMakePreprocessorDefinitions>DEBUG;CPU_AARCH64;AMIBERRY;USE_SDL2;_REENTRANT;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+    <RemoteBuildOutputs />
+    <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-Debug</RemoteProjectDir>
+    <IncrementalBuild>true</IncrementalBuild>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-DMX-Pi3|ARM64'">
     <RemoteBuildCommandLine>cd ~/projects/Amiberry-Debug; make -j4 DEBUG=1 PLATFORM=pi64</RemoteBuildCommandLine>
     <RemoteReBuildCommandLine>cd ~/projects/Amiberry-Debug; make clean; make -j4 DEBUG=1 PLATFORM=pi64</RemoteReBuildCommandLine>
     <RemoteCleanCommandLine>cd ~/projects/Amiberry-Debug; make clean</RemoteCleanCommandLine>
@@ -919,12 +957,22 @@
       <Command>cp ~/projects/Amiberry-Debug-dmx/amiberry ~/projects/amiberry/Amiberry-Debug-dmx</Command>
     </RemotePostBuildEvent>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-DMX-Pi3|ARM'">
+    <RemotePostBuildEvent>
+      <Command>cp ~/projects/Amiberry-Debug-dmx/amiberry ~/projects/amiberry/Amiberry-Debug-dmx</Command>
+    </RemotePostBuildEvent>
+  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
     <RemotePostBuildEvent>
       <Command>cp ~/projects/Amiberry-Debug/amiberry ~/projects/amiberry/Amiberry-Debug</Command>
     </RemotePostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debux-DMX|ARM64'">
+    <RemotePostBuildEvent>
+      <Command>cp ~/projects/Amiberry-Debug/amiberry ~/projects/amiberry/Amiberry-Debug</Command>
+    </RemotePostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-DMX-Pi3|ARM64'">
     <RemotePostBuildEvent>
       <Command>cp ~/projects/Amiberry-Debug/amiberry ~/projects/amiberry/Amiberry-Debug</Command>
     </RemotePostBuildEvent>
@@ -971,6 +1019,17 @@
       <CppLanguageStandard>gnu++1y</CppLanguageStandard>
     </ClCompile>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-DMX-Pi3|ARM'">
+    <RemotePostBuildEvent>
+      <Message>Copy binary to launch location</Message>
+    </RemotePostBuildEvent>
+    <ClCompile>
+      <CLanguageStandard>gnu11</CLanguageStandard>
+    </ClCompile>
+    <ClCompile>
+      <CppLanguageStandard>gnu++1y</CppLanguageStandard>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
     <RemotePostBuildEvent>
       <Message>Copy binary to launch location</Message>
@@ -983,6 +1042,17 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debux-DMX|ARM64'">
+    <RemotePostBuildEvent>
+      <Message>Copy binary to launch location</Message>
+    </RemotePostBuildEvent>
+    <ClCompile>
+      <CLanguageStandard>gnu11</CLanguageStandard>
+    </ClCompile>
+    <ClCompile>
+      <CppLanguageStandard>gnu++1y</CppLanguageStandard>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-DMX-Pi3|ARM64'">
     <RemotePostBuildEvent>
       <Message>Copy binary to launch location</Message>
     </RemotePostBuildEvent>
