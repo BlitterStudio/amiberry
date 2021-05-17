@@ -49,6 +49,7 @@ int bltptxpos, bltptxc;
 static int blinea_shift;
 static uae_u16 blinea, blineb;
 static int blitline, blitfc, blitfill, blitife, blitsing, blitdesc, blit_ovf;
+static bool blitfill_idle;
 static int blitline_started;
 static int blitonedot, blitsign, blitlinepixel;
 static int blit_add;
@@ -86,7 +87,7 @@ static int blit_linecycles, blit_extracycles;
 static int blit_faulty;
 static int blt_delayed_irq;
 static uae_u16 ddat1;
-static int ddat1use;
+static int ddat1use, ddat2use;
 
 static int last_blitter_hpos;
 
@@ -99,7 +100,10 @@ static int debug_bltcop;
 static uae_u16 debug_bltsizev, debug_bltsizeh;
 static uae_u16 debug_bltadat, debug_bltbdat, debug_bltcdat;
 
-#define BLITTER_STARTUP_CYCLES 2
+#define BLITTER_MAX_PIPELINED_CYCLES 4
+
+#define CYCLECOUNT_FINISHED -1000
+#define CYCLECOUNT_START 3
 
 /*
 Blitter Idle Cycle:
@@ -349,19 +353,11 @@ void blitter_debugdump(void)
 	//blitter_dump();
 }
 
-static int canblit(int hpos)
+static void markidlecycle(int hpos)
 {
-	if (!dmaen(DMA_BLITTER))
-		return -1;
-	if (blitter_cant_access(hpos))
-		return 0;
-	return 1;
-}
-
-static void markidlecycle (int hpos)
-{
-	//if (debug_dma)
-		//record_dma_event (DMA_EVENT_BLITSTARTFINISH, hpos, vpos);
+	//if (debug_dma) {
+	//	record_dma_event(DMA_EVENT_BLITSTARTFINISH, hpos, vpos);
+	//}
 }
 
 static void reset_channel_mods (void)
@@ -412,7 +408,7 @@ static void check_channel_mods (int hpos, int ch)
 // (or cycle where last D write would have been if
 // ONEDOT was active)
 
-static bool blitter_interrupt(int hpos, int done)
+static bool blitter_interrupt(int done)
 {
 	blt_info.blit_main = 0;
 	if (blt_info.blit_interrupt) {
@@ -430,15 +426,10 @@ static bool blitter_interrupt(int hpos, int done)
 	return true;
 }
 
-static void blitter_done(int hpos)
+static void blitter_done(void)
 {
-	ddat1use = 0;
-	if (blt_info.blit_finald) {
-		//if (debug_dma)
-			//record_dma_event(DMA_EVENT_BLITFINALD, hpos, vpos);
-	}
 	blt_info.blit_finald = 0;
-	if (!blitter_interrupt(hpos, 1)) {
+	if (!blitter_interrupt(1)) {
 		blitter_done_notify(blitline);
 	}
 	event2_remevent(ev2_blitter);
@@ -450,35 +441,17 @@ static void blitter_done(int hpos)
 	blt_info.blitter_dangerous_bpl = 0;
 }
 
-static void blitter_maybe_done_early(int hpos)
+static void blitter_done_except_d(void)
 {
-	if (currprefs.chipset_mask & CSMASK_AGA) {
-		if (!(bltcon0 & 0x100) || blitline) {
-			// immediately done if D disabled or line mode.
-			blitter_done(hpos);
-			return;
-		}
-	}
-	// busy cleared, interrupt generated.
-	// last D write still pending if not linemode and D channel active
-	if (blitline) {
-		blitter_done(hpos);
-	} else {
-		if (ddat1use && (bltcon0 & 0x100)) {
-			blt_info.blit_finald = 1 + 2;
-			blitter_interrupt(hpos, 0);
-		} else {
-			blitter_done(hpos);
-		}
-	}
+	blitter_interrupt(1);
 }
 
 STATIC_INLINE void chipmem_agnus_wput2 (uaecptr addr, uae_u32 w)
 {
-	//last_custom_value1 = w; blitter writes are not stored
 	if (!(log_blitter & 4)) {
 		//debug_putpeekdma_chipram(addr, w, MW_MASK_BLITTER_D_N, 0x000, 0x054);
 		chipmem_wput_indirect (addr, w);
+		last_custom_value1 = w;
 	}
 }
 
@@ -692,6 +665,7 @@ static void blitter_write (void)
 	/* D-channel state has no effect on linedraw, but C must be enabled or nothing is drawn! */
 	if (bltcon0 & 0x200) {
 		chipmem_wput_indirect(bltdpt, blt_info.bltddat);
+		last_custom_value1 = blt_info.bltddat;
 	}
 }
 
@@ -808,11 +782,11 @@ static void actually_do_blit (void)
 static void blitter_doit (void)
 {
 	if (blt_info.vblitsize == 0 || (blitline && blt_info.hblitsize != 2)) {
-		blitter_done (current_hpos());
+		blitter_done();
 		return;
 	}
 	actually_do_blit();
-	blitter_done (current_hpos());
+	blitter_done();
 }
 
 static int makebliteventtime(int delay)
@@ -850,9 +824,29 @@ void blitter_handler (uae_u32 data)
 
 #ifdef CPUEMU_13
 
+static bool blitshifterdebug(uae_u16 con0, bool check)
+{
+	int cnt = 0;
+	for (int i = 0; i < 4; i++) {
+		if (shifter[i]) {
+			cnt++;
+		}
+	}
+	if (cnt != 1 || !check) {
+		write_log(_T("Blitter shifter bits %d: CH=%c%c%c%c (%d-%d-%d-%d O=%d) PC=%08x\n"),
+			cnt,
+			((con0 >> 11) & 1) ? 'A' : '-', ((con0 >> 10) & 1) ? 'B' : '-', ((con0 >> 9) & 1) ? 'C' : '-', ((con0 >> 8) & 1) ? 'D' : '-',
+			shifter[0], shifter[1], shifter[2], shifter[3], shifter_out, M68K_GETPC);
+		return true;
+	}
+	return false;
+}
+
 static void blit_bltset(int con)
 {
 	static int blit_warned = 100;
+	bool blit_changed = false;
+	uae_u16 con0_old = bltcon0_old;
 
 	if (con & 2) {
 		blitdesc = bltcon1 & 2;
@@ -860,11 +854,19 @@ static void blit_bltset(int con)
 		blt_info.blitdownbshift = 16 - blt_info.blitbshift;
 		if (blit_warned > 0) {
 			if ((bltcon1 & 1) && !blitline_started) {
-				write_log(_T("BLITTER: linedraw enabled when blitter was already active! %08x\n"), M68K_GETPC);
+				write_log(_T("BLITTER: linedraw enabled when blitter is active! %08x\n"), M68K_GETPC);
+				blit_warned--;
 			} else if (!(bltcon1 & 1) && blitline_started) {
-				write_log(_T("BLITTER: linedraw disabled when blitter was already active! %08x\n"), M68K_GETPC);
+				write_log(_T("BLITTER: linedraw disabled when blitter is active! %08x\n"), M68K_GETPC);
+				blit_warned--;
 			}
-			blit_warned--;
+			if ((bltcon1 & 0x18) && !(bltcon1_old & 0x18)) {
+				write_log(_T("BLITTER: fill enabled when blitter is active! %08x\n"), M68K_GETPC);
+				blit_warned--;
+			} else if (!(bltcon1 & 0x18) && (bltcon1_old & 0x18)) {
+				write_log(_T("BLITTER: fill disabled when blitter is active! %08x\n"), M68K_GETPC);
+				blit_warned--;
+			}
 		}
 	}
 
@@ -874,23 +876,30 @@ static void blit_bltset(int con)
 	}
 
 	if (!savestate_state && blt_info.blit_main && (bltcon0_old != bltcon0 || bltcon1_old != bltcon1)) {
+		blit_changed = true;
 		if (blit_warned > 0) {
-			write_log(_T("BLITTER: BLTCON0 %04x -> %04x BLTCON1 %04x -> %04x PC=%08x\n"), bltcon0_old, bltcon0, bltcon1_old, bltcon1, M68K_GETPC);
+			write_log(_T("BLITTER: BLTCON0 %04x -> %04x BLTCON1 %04x -> %04x PC=%08x (%d %d)\n"), bltcon0_old, bltcon0, bltcon1_old, bltcon1, M68K_GETPC, current_hpos(), vpos);
+			blitshifterdebug(bltcon0_old, false);
 			blit_warned--;
+			//activate_debugger();
 		}
 		bltcon0_old = bltcon0;
 		bltcon1_old = bltcon1;
+		//activate_debugger();
 	}
 
 	blit_ch = (bltcon0 & 0x0f00) >> 8;
 	blitline = bltcon1 & 1;
 	blit_ovf = (bltcon1 & 0x20) != 0;
 
+	blitfill_idle = false;
 	shifter_skip_b = (bltcon0 & 0x400) == 0;
 	if (blitline) {
 		shifter_skip_y = true;
 		blitfill = 0;
+		shifter_out = shifter_skip_y ? shifter[2] : shifter[3];
 	} else {
+		int oldfill = blitfill;
 		blitfill = (bltcon1 & 0x18) != 0;
 		blitfc = !!(bltcon1 & 0x4);
 		blitife = !!(bltcon1 & 0x8);
@@ -903,56 +912,47 @@ static void blit_bltset(int con)
 			//if (log_blitter & 16)
 			//	activate_debugger();
 		}
+
 		shifter_skip_y = (bltcon0 & (0x100 | 0x200)) != 0x300;
-		// fill mode idle cycle needed?
+		// fill mode idle cycle needed? (D enabled but C not enabled)
 		if (blitfill && (bltcon0 & (0x100 | 0x200)) == 0x100) {
 			shifter_skip_y = false;
+			blitfill_idle = true;
 		}
+
+		shifter_out = shifter_skip_y ? shifter[2] : shifter[3];
 	}
-	shifter_out = shifter_skip_y ? shifter[2] : shifter[3];
 
 	blit_cyclecount = 4 - (shifter_skip_b + shifter_skip_y);
 	blit_dmacount = ((bltcon0 & 0x800) ? 1 : 0) + ((bltcon0 & 0x400) ? 1 : 0) +
 		((bltcon0 & 0x200) ? 1 : 0) + ((bltcon0 & 0x100) ? 1 : 0);
 
 	//if ((bltcon1 & 0x80) && (currprefs.chipset_mask & CSMASK_ECS_AGNUS)) {
-		//debugtest(DEBUGTEST_BLITTER, _T("ECS BLTCON1 DOFF-bit set\n"));
-		//if (log_blitter & 16)
-			//activate_debugger();
+	//	debugtest(DEBUGTEST_BLITTER, _T("ECS BLTCON1 DOFF-bit set\n"));
+	//	if (log_blitter & 16)
+	//		activate_debugger();
 	//}
+
+	if (blit_changed && blit_warned > 0) {
+		blitshifterdebug(bltcon0, false);
+	}
+
 }
+
+#define BLITTER_PIPELINE_BLIT 0x0008
+#define BLITTER_PIPELINE_ADDMOD 0x0010
+#define BLITTER_PIPELINE_LINE 0x0020
+#define BLITTER_PIPELINE_PROCESS 0x0200
+#define BLITTER_PIPELINE_FINISHED 0x0400
+#define BLITTER_PIPELINE_LASTDTODO 0x0800
+#define BLITTER_PIPELINE_LASTD 0x1000
+#define BLITTER_PIPELINE_FIRST 0x2000
+#define BLITTER_PIPELINE_LAST 0x4000
 
 static int get_current_channel(void)
 {
-	static int blit_warned = 100;
-
 	if (blit_cyclecounter < 0) {
 		return 0;
-	}
-
-	if (!blit_faulty && blit_cyclecounter > 0) {
-		int cnt = 0;
-		for (int i = 0; i < 4; i++) {
-			if (shifter[i])
-				cnt++;
-		}
-		if (cnt == 0) {
-			if (blit_warned > 0) {
-				write_log(_T("Blitter stopped. Shift register empty! PC=%08x\n"), M68K_GETPC);
-				blit_warned--;
-			}
-			blit_faulty = 1;
-		}
-		if (cnt > 1) {
-			if (blit_warned > 0) {
-				write_log(_T("Blitter shifter register number of bits %d! CH=%c%c%c%c (%d-%d-%d-%d) PC=%08x\n"),
-					cnt,
-					((bltcon0 >> 11) & 1) ? 'A' : '-', ((bltcon0 >> 10) & 1) ? 'B' : '-', ((bltcon0 >> 9) & 1) ? 'C' : '-', ((bltcon0 >> 8) & 1) ? 'D' : '-',
-					shifter[0], shifter[1], shifter[2], shifter[3], M68K_GETPC);
-				blit_warned--;
-			}
-			blit_faulty = 1;
-		}
 	}
 
 	if (blitline) {
@@ -995,34 +995,49 @@ static int get_current_channel(void)
 		}
 		// D only if A, B and C is not currently active
 		if (ddat1use) {
-			// if stage 3 and C disabled and D enabled: D
-			if (shifter[2] && !(bltcon0 & 0x200) && (bltcon0 & 0x100)) {
-				return 4;
-			}
-			// if stage 4 and C enabled and D enabled: D
-			if (shifter[3] && (bltcon0 & 0x200) && (bltcon0 & 0x100)) {
-				return 4;
+			// idle fill cycle: 3 = D, 4 = idle
+			if (blitfill_idle) {
+				// if stage 4: idle
+				if (shifter[3]) {
+					return 0;
+				}
+				// if stage 3: D
+				if (shifter[2] && (bltcon0 & 0x100)) {
+					return 4;
+				}
+			} else {
+				// if stage 3 and C disabled and D enabled: D
+				if (shifter[2] && !(bltcon0 & 0x200) && (bltcon0 & 0x100)) {
+					return 4;
+				}
+				// if stage 4 and C enabled and D enabled: D
+				if (shifter[3] && (bltcon0 & 0x200) && (bltcon0 & 0x100)) {
+					return 4;
+				}
 			}
 		}
 	}
 	return 0;
 }
 
-static uae_u16 blitter_doblit (void)
+static uae_u16 blitter_doblit(uae_u16 dat)
 {
 	uae_u32 blitahold;
 	uae_u16 bltadat, ddat;
 	uae_u8 mt = bltcon0 & 0xFF;
 
 	bltadat = blt_info.bltadat;
-	if (blitter_hcounter == 0)
+	if (dat & BLITTER_PIPELINE_FIRST) {
 		bltadat &= blt_info.bltafwm;
-	if (blitter_hcounter == blt_info.hblitsize - 1)
+	}
+	if (dat & BLITTER_PIPELINE_LAST) {
 		bltadat &= blt_info.bltalwm;
-	if (blitdesc)
+	}
+	if (blitdesc) {
 		blitahold = (((uae_u32)bltadat << 16) | blt_info.bltaold) >> blt_info.blitdownashift;
-	else
+	} else {
 		blitahold = (((uae_u32)blt_info.bltaold << 16) | bltadat) >> blt_info.blitashift;
+	}
 	blt_info.bltaold = bltadat;
 
 	ddat = blit_func (blitahold, blt_info.bltbhold, blt_info.bltcdat, mt) & 0xFFFF;
@@ -1036,16 +1051,19 @@ static uae_u16 blitter_doblit (void)
 		blitfc = blit_filltable[d >> 8][ifemode + fc1][1];
 	}
 
-	if (ddat)
+	if (ddat) {
 		blt_info.blitzero = 0;
+	}
 
 	return ddat;
 }
 
-static void blitter_next_cycle(void)
+static int blitter_next_cycle(void)
 {
 	bool tmp[4];
 	bool out = false;
+	bool blitchanged = false;
+	bool dodat = false;
 
 	memcpy(tmp, shifter, sizeof(shifter));
 	memset(shifter, 0, sizeof(shifter));
@@ -1055,26 +1073,30 @@ static void blitter_next_cycle(void)
 		tmp[1] = tmp[0];
 		tmp[2] = tmp[0];
 		shifter_skip_b_old = shifter_skip_b;
+		blitchanged = true;
 	} else if (!shifter_skip_b_old && shifter_skip_b) {
 		// if B skip was enabled: A goes nowhere
 		tmp[0] = false;
 		shifter_skip_b_old = shifter_skip_b;
+		blitchanged = true;
 	}
 
 	if (shifter_skip_y_old && !shifter_skip_y) {
-		// if Y skip was disbled: X goes both to Y and OUT
+		// if Y skip was disabled: X goes both to Y and OUT
 		tmp[3] = tmp[2];
 		shifter_skip_y_old = shifter_skip_y;
+		blitchanged = true;
 	} else if (!shifter_skip_y_old && shifter_skip_y) {
 		// if Y skip was enabled: X goes nowhere
 		tmp[2] = false;
 		shifter_out = false;
 		shifter_skip_y_old = shifter_skip_y;
+		blitchanged = true;
 	}
 
 	if (shifter_out) {
+		dodat = true;
 		if (!blitline) {
-			ddat1 = blitter_doblit();
 			if (bltcon0 & 0x100) {
 				ddat1use = true;
 			}
@@ -1083,11 +1105,19 @@ static void blitter_next_cycle(void)
 		if (blitter_hcounter == blt_info.hblitsize) {
 			blitter_hcounter = 0;
 			blitter_vcounter++;
-			blitfc = !!(bltcon1 & 0x4);
 			if (blitter_vcounter == blt_info.vblitsize) {
 				shifter_out = false;
-				blit_cyclecounter = 0;
-				blitter_maybe_done_early(last_blitter_hpos);
+				blit_cyclecounter = CYCLECOUNT_FINISHED;
+				if (!blitline) {
+					// do we need final D write?
+					if (ddat1use && (bltcon0 & 0x0100)) {
+						if (blt_info.blit_finald) {
+							write_log(_T("blit finald already set!?\n"));
+						}
+						blt_info.blit_finald = 1 + 2;
+						blt_info.blit_queued = BLITTER_MAX_PIPELINED_CYCLES;
+					}
+				}
 			}
 		}
 		shifter[0] = shifter_out;
@@ -1112,10 +1142,21 @@ static void blitter_next_cycle(void)
 		}
 	}
 	shifter_out = out;
+
+	if (blit_cyclecounter > 0 && blitchanged) {
+		static int blit_warned = 100;
+		if (blit_warned > 0) {
+			if (blitshifterdebug(bltcon0, true)) {
+				blit_faulty = 1;
+			}
+			blit_warned--;
+		}
+	}
+	return dodat;
 }
 
 
-static void blitter_doddma_new(int hpos)
+static void blitter_doddma_new(int hpos, bool addmod)
 {
 	record_dma_blit(0x00, ddat1, bltdpt, hpos);
 	chipmem_agnus_wput2(bltdpt, ddat1);
@@ -1123,13 +1164,13 @@ static void blitter_doddma_new(int hpos)
 
 	if (!blitline) {
 		bltdpt += blit_add;
-		if (blitter_hcounter == 0) {
+		if (addmod) {
 			bltdpt += blit_modaddd;
 		}
 	}
 }
 
-static void blitter_dodma_new(int ch, int hpos)
+static void blitter_dodma_new(int ch, int hpos, bool addmod)
 {
 	uae_u16 dat, reg;
 	uae_u32 *addr;
@@ -1137,7 +1178,7 @@ static void blitter_dodma_new(int ch, int hpos)
 
 	switch (ch)
 	{
-	case 1:
+	case 1: // A
 		reg = 0x74;
 		record_dma_blit(reg, 0, bltapt, hpos);
 		blt_info.bltadat = dat = chipmem_wget_indirect(bltapt);
@@ -1147,7 +1188,7 @@ static void blitter_dodma_new(int ch, int hpos)
 		mod = blit_modadda;
 		alloc_cycle_blitter(hpos, &bltapt, 1);
 		break;
-	case 2:
+	case 2: // B
 		reg = 0x72;
 		record_dma_blit(reg, 0, bltbpt, hpos);
 		blt_info.bltbdat = dat = chipmem_wget_indirect(bltbpt);
@@ -1162,7 +1203,7 @@ static void blitter_dodma_new(int ch, int hpos)
 		blt_info.bltbold = blt_info.bltbdat;
 		alloc_cycle_blitter(hpos, &bltbpt, 2);
 		break;
-	case 3:
+	case 3: // C
 		reg = 0x70;
 		record_dma_blit(reg, 0, bltcpt, hpos);
 		blt_info.bltcdat = dat = chipmem_wget_indirect(bltcpt);
@@ -1178,19 +1219,22 @@ static void blitter_dodma_new(int ch, int hpos)
 
 	if (!blitline) {
 		(*addr) += blit_add;
-		if (blitter_hcounter + 1 == blt_info.hblitsize) {
+		if (addmod) {
 			(*addr) += mod;
 		}
 	}
 }
 
 
-static bool blitter_idle_cycle_register_write(uaecptr addr, uae_u16 v)
+static bool blitter_idle_cycle_register_write(uaecptr addr, uae_u32 v)
 {
 	addrbank *ab = &get_mem_bank(addr);
 	if (ab != &custom_bank)
 		return false;
 	addr &= 0x1fe;
+	if (v == 0xffffffff) {
+		v = last_custom_value1;
+	}
 	if (addr == 0x40) {
 		bltcon0 = v;
 		blit_bltset(1);
@@ -1203,7 +1247,7 @@ static bool blitter_idle_cycle_register_write(uaecptr addr, uae_u16 v)
 	return false;
 }
 
-static bool decide_blitter_idle(int lasthpos, int hpos, uaecptr addr, uae_u16 value)
+static bool decide_blitter_idle(int lasthpos, int hpos, uaecptr addr, uae_u32 value)
 {
 	markidlecycle(last_blitter_hpos);
 	if (addr != 0xffffffff && lasthpos + 1 == hpos) {
@@ -1214,12 +1258,9 @@ static bool decide_blitter_idle(int lasthpos, int hpos, uaecptr addr, uae_u16 va
 	return false;
 }
 
-void decide_blitter(int until_hpos)
-{
-	decide_blitter_maybe_write(until_hpos, 0xffffffff, 0xffff);
-}
+uae_u16 blitter_pipe[256];
 
-bool decide_blitter_maybe_write(int until_hpos, uaecptr addr, uae_u16 value)
+static bool decide_blitter_maybe_write2(int until_hpos, uaecptr addr, uae_u32 value)
 {
 	bool written = false;
 	int hsync = until_hpos < 0;
@@ -1248,10 +1289,6 @@ bool decide_blitter_maybe_write(int until_hpos, uaecptr addr, uae_u16 value)
 		return false;
 	}
 
-	if (!blt_info.blit_main && !blt_info.blit_finald) {
-		goto end;
-	}
-
 	if (log_blitter && blitter_delayed_debug) {
 		blitter_delayed_debug = 0;
 		blitter_dump();
@@ -1261,12 +1298,143 @@ bool decide_blitter_maybe_write(int until_hpos, uaecptr addr, uae_u16 value)
 		return false;
 	}
 
+
 	while (hpos < until_hpos) {
+		bool cycle_allocated = false;
 
-		int c = get_current_channel();
-
+		// dma transfers and processing
 		for (;;) {
-			int v = canblit(hpos);
+			if (blt_info.blit_queued > 0) {
+				blt_info.blit_queued--;
+			}
+			uae_u16 dat = blitter_pipe[hpos];
+			if (dat) {
+				blitter_pipe[hpos] = 0;
+			}
+			if (!(dat & CYCLE_PIPE_BLITTER)) {
+				break;
+			}
+			cycle_line_pipe[hpos] = 0;
+
+			if (dat & CYCLE_PIPE_CPUSTEAL) {
+				//if (debug_dma) {
+				//	record_dma_event(DMA_EVENT_CPUBLITTERSTOLEN, hpos, vpos);
+				//}
+				break;
+			}
+
+			int c = dat & 7;
+			bool line = (dat & BLITTER_PIPELINE_LINE) != 0;
+
+			// last D write?
+			if (dat & BLITTER_PIPELINE_LASTD) {
+				//if (debug_dma) {
+				//	record_dma_event(DMA_EVENT_BLITFINALD, hpos, vpos);
+				//}
+				if (cycle_line_slot[hpos]) {
+					write_log("Blitter cycle allocated by %d!?\n", cycle_line_slot[hpos]);
+				}
+				//activate_debugger();
+			}
+
+			// finished?
+			if (dat & BLITTER_PIPELINE_FINISHED) {
+				if (line) {
+					//if (debug_dma) {
+						//record_dma_event(DMA_EVENT_BLITFINALD, hpos, vpos);
+						//activate_debugger();
+					//}
+				}
+			}
+
+			bool addmod = (dat & BLITTER_PIPELINE_ADDMOD) != 0;
+
+			blit_totalcyclecounter++;
+
+			if (c == 0) {
+
+				written = decide_blitter_idle(hpos, until_hpos, addr, value);
+
+			} else if (c == 1 && line) { // line 1/4 (A, free)
+
+				written = decide_blitter_idle(hpos, until_hpos, addr, value);
+
+			} else if (c == 3 && line) { // line 2/4 (C)
+
+				record_dma_blit(0x70, 0, bltcpt, hpos);
+				blt_info.bltcdat = chipmem_wget_indirect(bltcpt);
+				last_custom_value1 = blt_info.bltcdat;
+				record_dma_blit_val(blt_info.bltcdat);
+				alloc_cycle_blitter(hpos, &bltcpt, 3);
+
+			} else if (c == 5 && line) { // line 3/4 (free)
+
+				blitter_line();
+
+				written = decide_blitter_idle(hpos, until_hpos, addr, value);
+
+			} else if (c == 4 && line) { // line 4/4 (D)
+
+				if (ddat2use) {
+					bltdpt = bltcpt;
+				}
+				ddat2use = 1;
+
+				blitter_line_proc();
+				blitter_nxline();
+
+				/* onedot mode and no pixel = bus write access is skipped */
+				if (blitlinepixel) {
+					record_dma_blit(0x00, blt_info.bltddat, bltdpt, hpos);
+					if (blt_info.bltddat) {
+						blt_info.blitzero = 0;
+					}
+					chipmem_wput_indirect(bltdpt, blt_info.bltddat);
+					last_custom_value1 = blt_info.bltddat;
+					alloc_cycle_blitter(hpos, &bltdpt, 4);
+					blitlinepixel = 0;
+				} else {
+					markidlecycle(hpos);
+				}
+				bltdpt = bltcpt;
+
+			} else {
+
+				// normal mode channels
+				if (c == 4) {
+					blitter_doddma_new(hpos, addmod);
+				} else {
+					if (c == 5) {
+						c = 1;
+					}
+					blitter_dodma_new(c, hpos, addmod);
+				}
+			}
+
+			if ((dat & BLITTER_PIPELINE_BLIT) && !blitline) {
+				ddat1 = blitter_doblit(dat);
+			}
+
+			if (dat & BLITTER_PIPELINE_PROCESS) {
+				blitfc = !!(bltcon1 & 0x4);
+			}
+
+			// check this after end check because last D write won't cause any problems.
+			check_channel_mods(hpos, c);
+			break;
+		}
+
+		if (blt_info.blit_finald || blt_info.blit_main) {
+
+			blt_info.blit_queued++;
+
+			// copper bltsize write needs one cycle (any cycle) delay
+			// does not need free bus
+			if (blit_waitcyclecounter > 0) {
+				blit_waitcyclecounter--;
+				markidlecycle(hpos);
+				break;
+			}
 
 			// final D idle cycle
 			// does not need free bus
@@ -1274,97 +1442,108 @@ bool decide_blitter_maybe_write(int until_hpos, uaecptr addr, uae_u16 value)
 				blt_info.blit_finald--;
 			}
 
-			// copper bltsize write needs one cycle (any cycle) delay
-			// does not need free bus
-			if (blit_waitcyclecounter) {
-				blit_waitcyclecounter = 0;
-				break;
-			}
-
-			if (v <= 0) {
-				blit_misscyclecounter++;
-				break;
-			}
-
-			if (blt_info.blit_finald == 1) {
-				// final D write
-				blitter_doddma_new(hpos);
-				blitter_done(hpos);
-				break;
-			}
-
-			if (blt_info.blit_main) {
-				blit_totalcyclecounter++;
-				blit_cyclecounter++;
-				if (blit_cyclecounter == 0) {
-					shifter_first = true;
+			// cycle allocations
+			for (;;) {
+				bool cant = blitter_cant_access(hpos);
+				if (cant) {
+					blit_misscyclecounter++;
+					break;
 				}
 
-				blt_info.got_cycle = 1;
-
-				if (c == 0) {
-
-					written = decide_blitter_idle(hpos, until_hpos, addr, value);
-
-				} else if (c == 1 && blitline) { // line 1/4 (A, free)
-
-					written = decide_blitter_idle(hpos, until_hpos, addr, value);
-
-				} else if (c == 3 && blitline) { // line 2/4 (C)
-
-					record_dma_blit(0x70, 0, bltcpt, hpos);
-					blt_info.bltcdat = chipmem_wget_indirect(bltcpt);
-					last_custom_value1 = blt_info.bltcdat;
-					record_dma_blit_val(blt_info.bltcdat);
-					alloc_cycle_blitter(hpos, &bltcpt, 3);
-
-				} else if (c == 5 && blitline) { // line 3/4 (free)
-
-					blitter_line();
-
-					written = decide_blitter_idle(hpos, until_hpos, addr, value);
-
-				} else if (c == 4 && blitline) { // line 4/4 (D)
-
-					if (ddat1use)
-						bltdpt = bltcpt;
-					ddat1use = 1;
-
-					blitter_line_proc();
-					blitter_nxline();
-
-					/* onedot mode and no pixel = bus write access is skipped */
-					if (blitlinepixel) {
-						record_dma_blit(0x00, blt_info.bltddat, bltdpt, hpos);
-						if (blt_info.bltddat)
-							blt_info.blitzero = 0;
-						chipmem_wput_indirect(bltdpt, blt_info.bltddat);
-						alloc_cycle_blitter(hpos, &bltdpt, 4);
-						blitlinepixel = 0;
-					}
-					bltdpt = bltcpt;
-
-				} else {
-					// normal mode A to D
-
-					if (c == 4) {
-						blitter_doddma_new(hpos);
-					} else {
-						blitter_dodma_new(c, hpos);
-					}
+				// CPU steals the cycle if CPU has waited long enough and current cyle is not free.
+				if (!(dmacon & DMA_BLITPRI) && blt_info.nasty_cnt >= BLIT_NASTY_CPU_STEAL_CYCLE_COUNT && ((cycle_line_slot[hpos] & CYCLE_MASK) != 0 || bitplane_dma_access(hpos, 0) != 0)) {
+					int offset = get_rga_pipeline(hpos, RGA_PIPELINE_OFFSET_BLITTER);
+					cycle_line_pipe[offset] = CYCLE_PIPE_BLITTER | CYCLE_PIPE_CPUSTEAL;
+					blitter_pipe[offset] = cycle_line_pipe[offset];
+					blt_info.nasty_cnt = -1;
+					break;
 				}
 
-				blitter_next_cycle();
+				if (blt_info.blit_finald == 1) {
+					// final D write
+					int offset = get_rga_pipeline(hpos, RGA_PIPELINE_OFFSET_BLITTER);
+					cycle_line_pipe[offset] = CYCLE_PIPE_BLITTER;
+					blitter_pipe[offset] = cycle_line_pipe[offset] | 4 | BLITTER_PIPELINE_ADDMOD | BLITTER_PIPELINE_LASTD;
+					blitter_done();
+					break;
+				}
 
-				// check this after end check because last D write won't cause any problems.
-				check_channel_mods(hpos, c);
+				if (blt_info.blit_main) {
+					blit_cyclecounter++;
+					if (blit_cyclecounter == 0) {
+						shifter_first = true;
+						blitter_next_cycle();
+					}
+					int c = get_current_channel();
+					blt_info.got_cycle = 1;
+
+					bool addmod = false;
+					if (c == 1 || c == 2 || c == 3) {
+						if (blitter_hcounter + 1 == blt_info.hblitsize) {
+							addmod = true;
+						}
+					} else if (c == 4) {
+						if (blitter_hcounter == 0) {
+							addmod = true;
+						}
+					}
+
+					uae_u16 v = CYCLE_PIPE_BLITTER | c | (addmod ? BLITTER_PIPELINE_ADDMOD : 0);
+
+					if (blitter_hcounter == 0) {
+						v |= BLITTER_PIPELINE_FIRST;
+					}
+					if (blitter_hcounter == blt_info.hblitsize - 1) {
+						v |= BLITTER_PIPELINE_LAST;
+					}
+					if (blitline) {
+						v |= BLITTER_PIPELINE_LINE;
+					}
+
+					bool doddat = false;
+					if (blit_cyclecounter >= 0) {
+						doddat = blitter_next_cycle();
+					}
+
+					int offset = get_rga_pipeline(hpos, RGA_PIPELINE_OFFSET_BLITTER);
+					if (cycle_line_pipe[offset]) {
+						write_log("Blitter cycle conflict %d\n", cycle_line_pipe[offset]);
+					}
+
+					if (doddat) {
+						v |= BLITTER_PIPELINE_BLIT;
+						if (blitter_hcounter == 0) {
+							v |= BLITTER_PIPELINE_PROCESS;
+						}
+					}
+
+					// finished?
+					uae_u16 clv = CYCLE_PIPE_BLITTER;
+					if (blit_cyclecounter < -CYCLECOUNT_START) {
+						v |= BLITTER_PIPELINE_FINISHED;
+						if (!blt_info.blit_main) {
+							write_log(_T("blitter blit_main already cleared!?\n"));
+						}
+						// has final D write?
+						if (blt_info.blit_finald) {
+							v |= BLITTER_PIPELINE_LASTDTODO;
+							blitter_done_except_d();
+						} else {
+							blitter_done();
+						}
+					}
+
+					cycle_line_pipe[offset] = clv;
+					blitter_pipe[offset] = v;
+				}
+				break;
 			}
-			break;
+
 		}
 
 		hpos++;
 	}
-end:
+
 	last_blitter_hpos = until_hpos;
 	reset_channel_mods();
 	if (hsync) {
@@ -1373,6 +1552,25 @@ end:
 
 	return written;
 }
+
+bool decide_blitter_maybe_write(int until_hpos, uaecptr addr, uae_u32 value)
+{
+	int reg = addr & 0x1fe;
+	// early exit check
+	if (reg != 0x40 && reg != 0x42) {
+		addr = 0xffffffff;
+	} else {
+		return decide_blitter_maybe_write2(until_hpos, addr, value);
+	}
+	return decide_blitter_maybe_write2(until_hpos, addr, value);
+}
+
+void decide_blitter(int until_hpos)
+{
+	decide_blitter_maybe_write2(until_hpos, 0xffffffff, 0xffffffff);
+}
+
+
 #else
 void decide_blitter (int hpos) { }
 #endif
@@ -1401,7 +1599,7 @@ static void blitter_force_finish(bool state)
 	} else {
 		actually_do_blit();
 	}
-	blitter_done(current_hpos());
+	blitter_done();
 	dmacon = odmacon;
 }
 
@@ -1459,6 +1657,7 @@ static bool waitingblits (void)
 
 static void blitter_start_init (void)
 {
+	blt_info.blit_queued = 0;
 	blit_faulty = 0;
 	blt_info.blitzero = 1;
 	blitline_started = bltcon1 & 1;
@@ -1468,6 +1667,7 @@ static void blitter_start_init (void)
 	shifter_skip_y_old = shifter_skip_y;
 	blit_modset();
 	ddat1use = 0;
+	ddat2use = 0;
 	blt_info.blit_interrupt = 0;
 
 	blt_info.bltaold = 0;
@@ -1571,18 +1771,23 @@ void do_blitter(int hpos, int copper, uaecptr pc)
 		} else {
 			blitter_hcounter = 0;
 			blitter_vcounter = 0;
-			blit_cyclecounter = -BLITTER_STARTUP_CYCLES;
-			blit_waitcyclecounter = copper;
+			blit_cyclecounter = -CYCLECOUNT_START;
+			if (copper) {
+				blit_waitcyclecounter = 2;
+			} else {
+				blit_waitcyclecounter = 0;
+			}
 			blit_maxcyclecounter = blt_info.hblitsize * blt_info.vblitsize + 2;
 			blt_info.blit_pending = 0;
 			blt_info.blit_main = 1;
+			blt_info.blit_queued = BLITTER_MAX_PIPELINED_CYCLES;
 		}
 		return;
 	}
 
 	if (blt_info.vblitsize == 0 || (blitline && blt_info.hblitsize != 2)) {
 		if (dmaen(DMA_BLITTER)) {
-			blitter_done(hpos);
+			blitter_done();
 		}
 		return;
 	}
@@ -1749,6 +1954,8 @@ void restore_blitter_finish (void)
 {
 	//record_dma_reset();
 	//record_dma_reset();
+	blitter_cycle_exact = currprefs.blitter_cycle_exact;
+	immediate_blits = currprefs.immediate_blits;
 	if (blt_statefile_type == 0) {
 		blt_info.blit_interrupt = 1;
 		if (blt_info.blit_pending) {

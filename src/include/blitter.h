@@ -24,6 +24,7 @@ struct bltinfo {
     // blitter is active and D may write to visible bitplane addresses
     int blitter_dangerous_bpl;
     int blit_main, blit_finald, blit_pending;
+    int blit_queued;
 };
 
 extern struct bltinfo blt_info;
@@ -43,12 +44,15 @@ extern void blitter_handler (uae_u32);
 extern void build_blitfilltable (void);
 extern void do_blitter (int, int, uaecptr);
 extern void decide_blitter(int hpos);
-extern bool decide_blitter_maybe_write(int hpos, uaecptr addr, uae_u16 v);
-extern void blitter_done_notify (int hpos);
+extern bool decide_blitter_maybe_write(int hpos, uaecptr addr, uae_u32 v);
+extern void blitter_done_notify (int);
 extern void blitter_slowdown (int, int, int, int);
 extern void blitter_check_start (void);
 extern void blitter_reset (void);
 extern void blitter_debugdump(void);
+extern bool blit_steal_cycle(int hpos);
+
+extern uae_u16 blitter_pipe[256];
 
 typedef void blitter_func(uaecptr, uaecptr, uaecptr, uaecptr, struct bltinfo *);
 

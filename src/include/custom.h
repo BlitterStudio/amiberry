@@ -27,7 +27,7 @@
 #define MAXVPOS_LINES_OCS 512
 #define HPOS_SHIFT 3
 
-#define BLIT_NASTY_CPU_STEAL_CYCLE_COUNT 4
+#define BLIT_NASTY_CPU_STEAL_CYCLE_COUNT 3
 
 uae_u32 get_copper_address(int copno);
 
@@ -153,7 +153,6 @@ extern bool programmedmode;
 #define CYCLE_COPPER	6
 #define CYCLE_BLITTER	7
 #define CYCLE_CPU		8
-#define CYCLE_CPUNASTY	9
 #define CYCLE_COPPER_SPECIAL 0x10
 
 #define CYCLE_MASK 0x0f
@@ -241,15 +240,30 @@ extern void compute_framesync(void);
 extern void getsyncregisters(uae_u16 *phsstrt, uae_u16 *phsstop, uae_u16 *pvsstrt, uae_u16 *pvsstop);
 bool blitter_cant_access(int hpos);
 void custom_cpuchange(void);
+bool bitplane_dma_access(int hpos, int offset);
 
 #define RGA_PIPELINE_ADJUST 4
 #define MAX_CHIPSETSLOTS 256
 extern uae_u8 cycle_line_slot[MAX_CHIPSETSLOTS + RGA_PIPELINE_ADJUST];
-extern uae_u8 cycle_line_pipe[MAX_CHIPSETSLOTS + RGA_PIPELINE_ADJUST];
+extern uae_u16 cycle_line_pipe[MAX_CHIPSETSLOTS + RGA_PIPELINE_ADJUST];
+
+#define CYCLE_PIPE_CPUSTEAL 0x8000
+#define CYCLE_PIPE_BLITTER 0x100
+#define CYCLE_PIPE_COPPER 0x80
+#define CYCLE_PIPE_SPRITE 0x40
+#define CYCLE_PIPE_BITPLANE 0x20
+#define CYCLE_PIPE_MODULO 0x10
 
 #define RGA_PIPELINE_MASK 255
 
+#define RGA_PIPELINE_OFFSET_BLITTER 1
+
 extern int rga_pipeline_blitter;
+
+STATIC_INLINE int get_rga_pipeline(int hpos, int off)
+{
+	return (hpos + off) % maxhpos;
+}
 
 struct custom_store
 {
