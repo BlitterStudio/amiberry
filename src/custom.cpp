@@ -1342,9 +1342,9 @@ int get_bitplane_dma_rel(int hpos, int off)
 static int islinetoggle(void)
 {
 	int linetoggle = 0;
-	if (!(beamcon0 & 0x0800) && !(beamcon0 & 0x0020) && aga_mode) {
+	if (!(beamcon0 & 0x0800) && !(beamcon0 & 0x0020) && ecs_agnus) {
 		linetoggle = 1; // NTSC and !LOLDIS -> LOL toggles every line
-	} else if (!aga_mode && currprefs.ntscmode) {
+	} else if (!ecs_agnus && currprefs.ntscmode) {
 		linetoggle = 1; // hardwired NTSC Agnus
 	}
 	return linetoggle;
