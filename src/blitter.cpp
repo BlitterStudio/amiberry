@@ -965,9 +965,9 @@ static void blit_bltset(int con)
 	blit_dof = 0;
 	if ((bltcon1 & 0x80) && (currprefs.chipset_mask & CSMASK_ECS_AGNUS)) {
 		blit_dof = 1;
-		debugtest(DEBUGTEST_BLITTER, _T("ECS BLTCON1 DOFF-bit set\n"));
-		if (log_blitter & 16)
-			activate_debugger();
+		//debugtest(DEBUGTEST_BLITTER, _T("ECS BLTCON1 DOFF-bit set\n"));
+		//if (log_blitter & 16)
+		//	activate_debugger();
 	}
 
 	if (blit_changed && blit_warned > 0) {
