@@ -561,10 +561,12 @@ STATIC_INLINE bool ciab_checkalarm (bool inc, bool irq)
 	// modes. Real hardware value written to ciabtod by KS is always
 	// at least 1 or larger due to bus cycle delays when reading
 	// old value.
+#if 1
 	if ((munge24 (m68k_getpc ()) & 0xFFF80000) != 0xF80000) {
 		if (ciabtod == 0 && ciabalarm == 0)
 			return false;
 	}
+#endif
 	if (checkalarm (ciabtod, ciabalarm, inc, 1)) {
 #if CIAB_DEBUG_IRQ
 		write_log (_T("CIAB tod %08x %08x\n"), ciabtod, ciabalarm);
@@ -1095,6 +1097,12 @@ static uae_u8 ReadCIAA (unsigned int addr, uae_u32 *flags)
 			write_log (_T("BFE001 R %02X %s\n"), v, debuginfo(0));
 #endif
 
+		//if (inputrecord_debug & 2) {
+		//	if (input_record > 0)
+		//		inprec_recorddebug_cia (v, div10, m68k_getpc ());
+		//	else if (input_play > 0)
+		//		inprec_playdebug_cia (v, div10, m68k_getpc ());
+		//}
 
 		return v;
 	}
@@ -1907,7 +1915,7 @@ addrbank cia_bank = {
 	ABFLAG_IO | ABFLAG_CIA, S_READ, S_WRITE, NULL, 0x3f01, 0xbfc000
 };
 
-static void cia_wait_pre (int cianummask)
+static void cia_wait_pre(int cianummask)
 {
 	if (currprefs.cachesize || currprefs.cpu_thread)
 		return;
@@ -1920,24 +1928,16 @@ static void cia_wait_pre (int cianummask)
 		cia_interrupt_disabled |= cianummask;
 	}
 
-	int div = (get_cycles () - eventtab[ev_cia].oldcycles) % DIV10;
-	int cycles;
-
-	if (div >= DIV10 * ECLOCK_DATA_CYCLE / 10) {
-		cycles = DIV10 - div;
-		cycles += DIV10 * ECLOCK_DATA_CYCLE / 10;
-	} else if (div) {
-		cycles = DIV10 + DIV10 * ECLOCK_DATA_CYCLE / 10 - div;
-	} else {
-		cycles = DIV10 * ECLOCK_DATA_CYCLE / 10 - div;
-	}
-
+#ifndef CUSTOM_SIMPLE
+	int div = get_cycles() % DIV10;
+	int cycles = DIV10 - div;
 	if (cycles) {
 		//if (currprefs.cpu_memory_cycle_exact)
 			//x_do_cycles_pre (cycles);
 		//else
-			do_cycles (cycles);
+			do_cycles(cycles);
 	}
+#endif
 }
 
 static void cia_wait_post (int cianummask, uae_u32 value)

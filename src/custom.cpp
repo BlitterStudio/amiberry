@@ -4687,13 +4687,16 @@ static void init_hz(bool checkvposw)
 
 	sprite_vblank_endline = minfirstline - 1;
 
+	if (firstblankedline < minfirstline) {
+		firstblankedline = maxvpos + 1;
+	}
+
 	if (beamcon0 & 0x80) {
 		// programmable scanrates (ECS Agnus)
 		if (vtotal >= MAXVPOS) {
 			vtotal = MAXVPOS - 1;
 		}
 		maxvpos = vtotal + 1;
-		firstblankedline = maxvpos + 1;
 		if (htotal >= MAXHPOS) {
 			htotal = MAXHPOS - 1;
 		}
@@ -4702,10 +4705,6 @@ static void init_hz(bool checkvposw)
 		vblank_hz_shf = vblank_hz;
 		vblank_hz_lof = clk / ((maxvpos + 1) * maxhpos);
 		vblank_hz_lace = clk / ((maxvpos + 0.5) * maxhpos);
-
-		if (firstblankedline < minfirstline) {
-			firstblankedline = maxvpos + 1;
-		}
 
 		maxvpos_nom = maxvpos;
 		maxvpos_display = maxvpos;
@@ -4921,31 +4920,30 @@ static uae_u16 DENISEID(int *missing)
 
 static bool blit_busy(void)
 {
-	if (!blt_info.blit_main && !blt_info.blit_finald)
+	if (!blt_info.blit_main && !blt_info.blit_finald) {
 		return false;
+	}
 	// AGA apparently fixes both bugs.
 	if (currprefs.cs_agnusbltbusybug) {
 		// Blitter busy bug: A1000 Agnus only sets busy-bit when blitter gets first DMA slot.
-		if (!blt_info.got_cycle)
+		if (!blt_info.got_cycle) {
 			return false;
-		if (blt_info.blit_pending)
+		}
+		if (blt_info.blit_pending) {
 			return true;
+		}
 		// Blitter is considered finished even if last D has not yet been written
-		if (!blt_info.blit_main && blt_info.blit_finald < 2)
+		if (!blt_info.blit_main) {
 			return false;
+		}
 	} else if (!aga_mode) {
-		if (blt_info.blit_pending)
+		if (blt_info.blit_pending) {
 			return true;
+		}
 		// Blitter is considered finished even if last D has not yet been written
-		if (!blt_info.blit_main && blt_info.blit_finald < 2)
+		if (!blt_info.blit_main) {
 			return false;
-#if 0
-		// Blitter busy bug: Blitter nasty off, CPU attempting to steal cycle, Copper started blitter,
-		// Copper WAITing for blitter finished: busy is not set until CPU gets the cycle.
-		// NOT CORRECT YET
-		if (!(dmacon & DMA_BLITPRI) && blt_info.wait_nasty && blt_info.nasty_cnt >= BLIT_NASTY_CPU_STEAL_CYCLE_COUNT)
-			return false;
-#endif
+		}
 	}
 	return true;
 }
@@ -5992,15 +5990,10 @@ static void BPLxDAT_next(uae_u32 v)
 	}
 }
 
-
 static void BPLxDAT(int hpos, int num, uae_u16 v)
 {
 	uae_u32 vv = (num << 16) | v;
-	if (num == 0) {
-		event2_newevent2(1, vv, BPLxDAT_next);
-	} else {
-		BPLxDAT_next(vv);
-	}
+	BPLxDAT_next(vv);
 
 	if (num == 0 && hpos >= (hsyncstartpos_start >> CCK_SHRES_SHIFT)) {
 		if (thisline_decision.plfleft < 0) {
@@ -6008,6 +6001,7 @@ static void BPLxDAT(int hpos, int num, uae_u16 v)
 		}
 		beginning_of_plane_block(hpos, fetchmode);
 		bprun_pipeline_flush_delay = -1;
+		SET_LINE_CYCLEBASED;
 	}
 }
 
@@ -6289,6 +6283,9 @@ static void BLTSIZV(int hpos, uae_u16 v)
 	}
 	maybe_blit(hpos, 0);
 	blt_info.vblitsize = v & 0x7FFF;
+	if (!blt_info.vblitsize) {
+		blt_info.vblitsize = 0x8000;
+	}
 }
 
 static void BLTSIZH(int hpos, uae_u16 v)
@@ -6305,6 +6302,7 @@ static void BLTSIZH(int hpos, uae_u16 v)
 		blt_info.hblitsize = 0x0800;
 	}
 	do_blitter(hpos, copper_access, copper_access ? cop_state.ip : M68K_GETPC);
+	dcheck_is_blit_dangerous();
 }
 
 static void spr_arm(int num, int state)
@@ -7450,7 +7448,7 @@ static int coppercomp(int hpos, bool blitwait)
 	}
 
 	if ((cop_state.ir[1] & 0x8000) == 0) {
-		decide_blitter(hpos + 1);
+		decide_blitter(hpos);
 		if (blit_busy()) {
 			if (blitwait) {
 				/* We need to wait for the blitter.  */
@@ -7709,6 +7707,12 @@ static void blitter_done_notify_wakeup(uae_u32 temp)
 	if (cop_state.state != COP_bltwait) {
 		return;
 	}
+	// blitter_done_notify() might be called too early, wait a bit if blitter is still busy.
+	if (blit_busy()) {
+		event2_newevent_xx(-1, 1 * CYCLE_UNIT, 0, blitter_done_notify_wakeup);
+		return;
+	}
+
 	cop_state.state = COP_wait1;
 	compute_spcflag_copper();
 #ifdef DEBUGGER
@@ -7729,8 +7733,7 @@ void blitter_done_notify(int blitline)
 	if (cop_state.state != COP_bltwait) {
 		return;
 	}
-	int wait = 1;
-	event2_newevent_xx(-1, wait * CYCLE_UNIT, 0, blitter_done_notify_wakeup);
+	event2_newevent_xx(-1, 1 * CYCLE_UNIT, 0, blitter_done_notify_wakeup);
 }
 
 void do_copper(void)
