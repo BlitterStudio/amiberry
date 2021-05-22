@@ -320,6 +320,12 @@ uae_u32 dummy_get_safe(uaecptr addr, int size, bool inst, uae_u32 defvalue)
 	if (currprefs.cs_unmapped_space == 2)
 		return 0xffffffff & mask;
 	if ((currprefs.cpu_model <= 68010) || (currprefs.cpu_model == 68020 && (currprefs.chipset_mask & CSMASK_AGA) && currprefs.address_space_24)) {
+		// if executed from ROM: always return zero
+		uaecptr pc = m68k_getpc();
+		addrbank *ab = &get_mem_bank(pc);
+		if (ab->flags & ABFLAG_ROM) {
+			return 0;
+		}
 		if (size == sz_long) {
 			v = regs.irc & 0xffff;
 			if (addr & 1)
