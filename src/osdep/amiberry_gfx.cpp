@@ -236,7 +236,7 @@ static char screenshot_filename_default[MAX_DPATH] =
 {
 	'/', 't', 'm', 'p', '/', 'n', 'u', 'l', 'l', '.', 'p', 'n', 'g', '\0'
 };
-char* screenshot_filename = static_cast<char *>(&screenshot_filename_default[0]);
+char* screenshot_filename = &screenshot_filename_default[0];
 FILE* screenshot_file = nullptr;
 static void create_screenshot();
 static int save_thumb(char* path);
@@ -276,7 +276,7 @@ static int display_thread(void* unused)
 	struct AmigaMonitor* mon = &AMonitors[0];
 #ifdef USE_DISPMANX
 	VC_DISPMANX_ALPHA_T alpha = {
-		DISPMANX_FLAGS_ALPHA_T(DISPMANX_FLAGS_ALPHA_FROM_SOURCE | DISPMANX_FLAGS_ALPHA_FIXED_ALL_PIXELS),
+		static_cast<DISPMANX_FLAGS_ALPHA_T>(DISPMANX_FLAGS_ALPHA_FROM_SOURCE | DISPMANX_FLAGS_ALPHA_FIXED_ALL_PIXELS),
 		255, 0
 	};
 	uint32_t vc_image_ptr;
@@ -291,8 +291,6 @@ static int display_thread(void* unused)
 		case DISPLAY_SIGNAL_SETUP:
 #ifdef USE_DISPMANX
 			vc_dispmanx_vsync_callback(displayHandle, vsync_callback, nullptr);
-#else
-
 #endif
 			break;
 
@@ -300,11 +298,13 @@ static int display_thread(void* unused)
 #ifdef USE_DISPMANX
 			if (DispManXElementpresent == 1)
 			{
-				DispManXElementpresent = 0;
 				updateHandle = vc_dispmanx_update_start(0);
 				vc_dispmanx_element_remove(updateHandle, elementHandle);
-				elementHandle = 0;
+				vc_dispmanx_element_remove(updateHandle, blackscreen_element);
 				vc_dispmanx_update_submit_sync(updateHandle);
+				elementHandle = 0;
+				blackscreen_element = 0;
+				DispManXElementpresent = 0;
 			}
 
 			if (amigafb_resource_1) {
@@ -320,8 +320,6 @@ static int display_thread(void* unused)
 				vc_dispmanx_resource_delete(blackfb_resource);
 				blackfb_resource = 0;
 			}
-#else
-
 #endif
 			uae_sem_post(&display_sem);
 			break;
@@ -357,7 +355,8 @@ static int display_thread(void* unused)
 			if (!sdl_surface)
 				sdl_surface = SDL_CreateRGBSurfaceWithFormat(0, display_width, display_height, display_depth, pixel_format);
 
-			displayHandle = vc_dispmanx_display_open(0);
+			if (!displayHandle)
+				displayHandle = vc_dispmanx_display_open(0);
 
 			if (!amigafb_resource_1)
 				amigafb_resource_1 = vc_dispmanx_resource_create(rgb_mode, display_width, display_height, &vc_image_ptr);
@@ -421,10 +420,12 @@ static int display_thread(void* unused)
 			{
 				DispManXElementpresent = 1;
 				updateHandle = vc_dispmanx_update_start(0);
+				
 				if (!blackscreen_element)
 					blackscreen_element = vc_dispmanx_element_add(updateHandle, displayHandle, 0,
 						&black_rect, blackfb_resource, &src_rect, DISPMANX_PROTECTION_NONE, &alpha,
 						nullptr, DISPMANX_NO_ROTATE);
+
 				if (!elementHandle)
 					elementHandle = vc_dispmanx_element_add(updateHandle, displayHandle, 1,
 						&dst_rect, amigafb_resource_1, &src_rect, DISPMANX_PROTECTION_NONE, &alpha,
@@ -476,12 +477,24 @@ static int display_thread(void* unused)
 		case DISPLAY_SIGNAL_QUIT:
 #ifdef USE_DISPMANX
 			updateHandle = vc_dispmanx_update_start(0);
-			vc_dispmanx_element_remove(updateHandle, blackscreen_element);
-			blackscreen_element = 0;
+			if (blackscreen_element)
+			{
+				vc_dispmanx_element_remove(updateHandle, blackscreen_element);
+				blackscreen_element = 0;
+			}
+			if (elementHandle)
+			{
+				updateHandle = vc_dispmanx_update_start(0);
+				vc_dispmanx_element_remove(updateHandle, elementHandle);
+				elementHandle = 0;
+			}
 			vc_dispmanx_update_submit_sync(updateHandle);
-
-			vc_dispmanx_vsync_callback(displayHandle, nullptr, nullptr);
-			vc_dispmanx_display_close(displayHandle);
+			
+			if (displayHandle)
+			{
+				vc_dispmanx_vsync_callback(displayHandle, nullptr, nullptr);
+				vc_dispmanx_display_close(displayHandle);
+			}
 #else
 
 #endif
@@ -513,7 +526,8 @@ int graphics_setup(void)
 
 #ifdef USE_DISPMANX
 	bcm_host_init();
-	displayHandle = vc_dispmanx_display_open(0);
+	if (!displayHandle)
+		displayHandle = vc_dispmanx_display_open(0);
 	vc_dispmanx_display_get_info(displayHandle, &modeInfo);
 
 	VCHI_INSTANCE_T vchi_instance;
@@ -550,7 +564,7 @@ void update_win_fs_mode(int monid, struct uae_prefs* p)
 	struct AmigaMonitor* mon = &AMonitors[0];
 	auto* avidinfo = &adisplays[0].gfxvidinfo;
 #ifdef USE_DISPMANX
-	// Dispmanx modes use configurable width/height and are fullwindow always
+	// Dispmanx modes use configurable width/height and are full-window always
 	p->gfx_monitor[monid].gfx_size = p->gfx_monitor[monid].gfx_size_win;
 #else
 	if (mon->sdl_window)
