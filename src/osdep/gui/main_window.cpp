@@ -537,9 +537,6 @@ void amiberry_gui_halt()
 		cursor = nullptr;
 	}
 #endif	
-	// Clear the screen
-	SDL_RenderClear(sdl_renderer);
-	SDL_RenderPresent(sdl_renderer);
 }
 
 void check_input()
