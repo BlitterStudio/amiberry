@@ -389,6 +389,13 @@ OBJS =	\
 	src/archivers/zip/unzip.o \
 	src/caps/caps_amiberry.o \
 	src/machdep/support.o \
+	src/floppybridge/ArduinoFloppyBridge.o \
+	src/floppybridge/ArduinoInterface.o \
+	src/floppybridge/CommonBridgeTemplate.o \
+	src/floppybridge/GreaseWeazleBridge.o \
+	src/floppybridge/GreaseWeazleInterface.o \
+	src/floppybridge/RotationExtractor.o \
+	src/floppybridge/SerialIO.o \
 	src/osdep/ahi_v1.o \
 	src/osdep/bsdsocket_host.o \
 	src/osdep/cda_play.o \

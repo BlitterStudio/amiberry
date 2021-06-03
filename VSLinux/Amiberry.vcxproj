@@ -552,6 +552,13 @@
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
     <ClCompile Include="..\src\flashrom.cpp" />
+    <ClCompile Include="..\src\floppybridge\ArduinoFloppyBridge.cpp" />
+    <ClCompile Include="..\src\floppybridge\ArduinoInterface.cpp" />
+    <ClCompile Include="..\src\floppybridge\CommonBridgeTemplate.cpp" />
+    <ClCompile Include="..\src\floppybridge\GreaseWeazleBridge.cpp" />
+    <ClCompile Include="..\src\floppybridge\GreaseWeazleInterface.cpp" />
+    <ClCompile Include="..\src\floppybridge\RotationExtractor.cpp" />
+    <ClCompile Include="..\src\floppybridge\SerialIO.cpp" />
     <ClCompile Include="..\src\fpp.cpp">
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
@@ -822,6 +829,15 @@
     <ClInclude Include="..\src\archivers\zip\unzip.h" />
     <ClInclude Include="..\src\caps\CapsAPI.h" />
     <ClInclude Include="..\src\caps\Comtype.h" />
+    <ClInclude Include="..\src\floppybridge\ArduinoFloppyBridge.h" />
+    <ClInclude Include="..\src\floppybridge\ArduinoInterface.h" />
+    <ClInclude Include="..\src\floppybridge\CommonBridgeTemplate.h" />
+    <ClInclude Include="..\src\floppybridge\floppybridge_abstract.h" />
+    <ClInclude Include="..\src\floppybridge\floppybridge_config.h" />
+    <ClInclude Include="..\src\floppybridge\GreaseWeazleBridge.h" />
+    <ClInclude Include="..\src\floppybridge\GreaseWeazleInterface.h" />
+    <ClInclude Include="..\src\floppybridge\RotationExtractor.h" />
+    <ClInclude Include="..\src\floppybridge\SerialIO.h" />
     <ClInclude Include="..\src\include\akiko.h" />
     <ClInclude Include="..\src\include\ar.h" />
     <ClInclude Include="..\src\include\audio.h" />
