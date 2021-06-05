@@ -1,6 +1,6 @@
 #ifndef GREASEWEAZLE_INTERFACE
 #define GREASEWEAZLE_INTERFACE
-/* GreaseWeazle C++ Interface for reading and writing Amiga Disks
+/* Greaseweazle C++ Interface for reading and writing Amiga Disks
 *
 * By Robert Smith (@RobSmithDev)
 * https://amiga.robsmithdev.co.uk

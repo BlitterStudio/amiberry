@@ -1,6 +1,6 @@
 #ifndef GREASEWEAZLE_FLOPPY_BRIDGE
 #define GREASEWEAZLE_FLOPPY_BRIDGE
-/* WinUAE GreaseWeazle Interface for *UAE
+/* WinUAE Greaseweazle Interface for *UAE
 *
 * By Robert Smith (@RobSmithDev)
 * https://amiga.robsmithdev.co.uk

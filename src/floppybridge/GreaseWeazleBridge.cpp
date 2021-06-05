@@ -1,4 +1,4 @@
-/* WinUAE GreaseWeazle Interface for *UAE
+/* WinUAE Greaseweazle Interface for *UAE
 *
 * By Robert Smith (@RobSmithDev)
 * https://amiga.robsmithdev.co.uk
@@ -21,7 +21,7 @@
 using namespace GreaseWeazle;
 
 
-static const TCHAR* DriverName = _T("GreaseWeazle Keir Fraser (UAE driver by Rob Smith)");
+static const TCHAR* DriverName = _T("Greaseweazle by Keir Fraser (UAE driver by Rob Smith)");
 
 
 

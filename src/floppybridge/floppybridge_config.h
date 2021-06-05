@@ -72,7 +72,7 @@
 		NULL, NULL, NULL, NULL, ROMTYPE_ARDUINOREADER_WRITER | ROMTYPE_NOT, 0, 0, BOARD_IGNORE, true,															\
 		bridge_drive_selection_config, 0, false, EXPANSIONTYPE_FLOPPY,																							\
 		0, 0, 0, false, NULL, false, 0, arduino_reader_writer_options },																						\
-	{	_T("greaseweazlewriter"), _T("GreaseWeazle"), _T("Keir Fraser/RobSmithDev"),																			\
+	{	_T("greaseweazlewriter"), _T("Greaseweazle"), _T("Keir Fraser"),																			\
 		NULL, NULL, NULL, NULL, ROMTYPE_GREASEWEAZLEREADER_WRITER | ROMTYPE_NOT, 0, 0, BOARD_IGNORE, true,														\
 		bridge_drive_selection_config, 0, false, EXPANSIONTYPE_FLOPPY,																							\
 		0, 0, 0, false, NULL, false, 0, greaseweazle_reader_writer_options },																					\
@@ -95,8 +95,8 @@
 // And the options to add to the hardware extensions
 #define FLOPPY_BRIDGE_CONFIG_OPTIONS																															\
 	static const struct expansionboardsettings arduino_reader_writer_options[] = {{																				\
-		_T("COM Port\0")  _T("Auto Detect\0"),																												\
-		_T("port\0") _T("AUTO\0"),																															\
+		_T("COM Port\0")  _T("Auto Detect\0"),																													\
+		_T("port\0") _T("AUTO\0"),																																\
 		true,false,0 }, { NULL }};																																\
 	static const struct expansionboardsettings greaseweazle_reader_writer_options[] = {{																		\
 		_T("Drive on Cable\0") _T("Drive A\0") _T("Drive B\0") ,																								\
