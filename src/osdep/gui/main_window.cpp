@@ -519,11 +519,11 @@ void amiberry_gui_halt()
 		vc_dispmanx_resource_delete(black_gui_resource);
 		black_gui_resource = 0;
 	}
-	if (displayHandle)
-	{
-		vc_dispmanx_display_close(displayHandle);
-		displayHandle = 0;
-	}
+	//if (displayHandle)
+	//{
+	//	vc_dispmanx_display_close(displayHandle);
+	//	displayHandle = 0;
+	//}
 #else
 	if (gui_texture != nullptr)
 	{
