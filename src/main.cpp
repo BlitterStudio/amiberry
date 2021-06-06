@@ -643,7 +643,7 @@ void uae_restart (int opengui, const TCHAR *cfgfile)
 
 void usage()
 {
-	std::cout << get_version_string() << std::endl;
+	std::cout << __ver << std::endl;
 	std::cout << "Usage:" << std::endl;
 	std::cout << " -h                         Show this help." << std::endl;
 	std::cout << " --help                     \n" << std::endl;
