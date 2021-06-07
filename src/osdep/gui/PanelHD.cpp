@@ -419,7 +419,7 @@ void InitPanelHD(const struct _ConfigCategory& category)
 	chkScsi->setId("chkSCSI");
 	chkScsi->addActionListener(genericActionListener);
 	
-	chkCD = new gcn::CheckBox("CD drive");
+	chkCD = new gcn::CheckBox("CD drive/image");
 	chkCD->setId("chkCD");
 	chkCD->addActionListener(cdCheckActionListener);
 
