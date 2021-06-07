@@ -206,18 +206,20 @@ static NavigationMap navMap[] =
 	{"cmdDel3", "cmdProp3", "Hard drives/CD", "cmdDel2", "cmdDel4"},
 	{"cmdProp4", "Hard drives/CD", "cmdDel4", "cmdProp3", "cmdAddDir"},
 	{"cmdDel4", "cmdProp4", "Hard drives/CD", "cmdDel3", "cmdAddHDF"},
-	{"cmdAddDir", "Hard drives/CD", "cmdAddHDF", "cmdProp4", "chkSCSI"},
-	{"cmdAddHDF", "cmdAddDir", "cmdCreateHDF", "cmdDel4", "chkSCSI"},
-	{"cmdCreateHDF", "cmdAddHDF", "Hard drives / CD", "cmdDel4", "chkSCSI" },
-	{"chkSCSI", "Hard drives/CD", "Hard drives / CD", "cmdAddDir", "chkCD" },
-	{"chkCD", "Hard drives/CD", "cdEject", "chkSCSI", "cboCD"},
-	{"cdEject", "chkCD", "CDSelect", "chkSCSI", "cboCD" },
+	{"cmdAddDir", "Hard drives/CD", "cmdAddHDF", "cmdProp4", "chkCD"},
+	{"cmdAddHDF", "cmdAddDir", "cmdCreateHDF", "cmdDel4", "chkCD"},
+	{"cmdCreateHDF", "cmdAddHDF", "Hard drives / CD", "cmdDel4", "chkCD" },
+	{"chkCD", "Hard drives/CD", "cdEject", "cmdAddDir", "cboCD"},
+	{"cdEject", "chkCD", "CDSelect", "cmdCreateHDF", "cboCD" },
 	{"CDSelect", "cdEject", "Hard drives/CD", "cmdCreateHDF", "cboCD"},
 	{"cboCD", "Hard drives/CD", "Hard drives/CD", "chkCD", "chkCDTurbo"},
 	{ "chkCDTurbo", "Hard drives/CD", "Hard drives/CD", "cboCD", "cmdProp0" },
 
 	// PanelExpansions
-	{ "chkBSDSocket", "PanelExpansions", "PanelExpansions", "", "" },
+	{ "chkBSDSocket", "Expansions", "chkSana2", "", "chkSCSI" },
+	{ "chkSCSI", "Expansions", "chkCD32Fmv", "chkBSDSocket", "" },
+	{ "chkSana2", "chkBSDSocket", "Expansions", "", "chkCD32Fmv" },
+	{ "chkCD32Fmv", "chkSCSI", "Expansions", "chkSana2", "" },
 	
 	// PanelRTG
 	{"cboBoard", "RTG board", "cboRtg16bitModes", "cboRtgRefreshRate", "sldGfxmem"},

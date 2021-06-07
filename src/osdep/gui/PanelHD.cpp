@@ -53,7 +53,6 @@ static gcn::Button* cmdAddDirectory;
 static gcn::Button* cmdAddHardfile;
 static gcn::Button* cmdCreateHardfile;
 
-static gcn::CheckBox* chkScsi;
 static gcn::CheckBox* chkCD;
 static gcn::DropDown* cboCDFile;
 static gcn::Button* cmdCDEject;
@@ -220,7 +219,6 @@ public:
 					&& changed_prefs.scsi)
 				{
 					changed_prefs.scsi = 0;
-					chkScsi->setSelected(false);
 				}
 			}
 			else
@@ -233,7 +231,6 @@ public:
 					&& !changed_prefs.scsi)
 				{
 					changed_prefs.scsi = 1;
-					chkScsi->setSelected(true);
 				}
 			}
 		}
@@ -242,6 +239,7 @@ public:
 
 		RefreshPanelHD();
 		RefreshPanelQuickstart();
+		RefreshPanelExpansions();
 	}
 };
 
@@ -292,20 +290,6 @@ public:
 };
 
 CDButtonActionListener* cdButtonActionListener;
-
-class GenericActionListener : public gcn::ActionListener
-{
-public:
-	void action(const gcn::ActionEvent& actionEvent) override
-	{
-		if (actionEvent.getSource() == chkScsi) 
-		{
-			changed_prefs.scsi = chkScsi->isSelected();
-		}
-	}
-};
-
-GenericActionListener* genericActionListener;
 
 class CDFileActionListener : public gcn::ActionListener
 {
@@ -413,12 +397,7 @@ void InitPanelHD(const struct _ConfigCategory& category)
 	cdCheckActionListener = new CDCheckActionListener();
 	cdButtonActionListener = new CDButtonActionListener();
 	cdFileActionListener = new CDFileActionListener();
-	genericActionListener = new GenericActionListener();
 
-	chkScsi = new gcn::CheckBox("scsi.device emulation");
-	chkScsi->setId("chkSCSI");
-	chkScsi->addActionListener(genericActionListener);
-	
 	chkCD = new gcn::CheckBox("CD drive/image");
 	chkCD->setId("chkCD");
 	chkCD->addActionListener(cdCheckActionListener);
@@ -476,9 +455,6 @@ void InitPanelHD(const struct _ConfigCategory& category)
 	category.panel->add(cmdCreateHardfile, cmdAddHardfile->getX() + cmdAddHardfile->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += cmdAddDirectory->getHeight() + DISTANCE_NEXT_Y;
 
-	category.panel->add(chkScsi, DISTANCE_BORDER, posY);
-	posY += chkScsi->getHeight() + DISTANCE_NEXT_Y;
-
 	category.panel->add(chkCD, DISTANCE_BORDER, posY + 2);
 	category.panel->add(cmdCDEject,
 	                    category.panel->getWidth() - cmdCDEject->getWidth() - DISTANCE_NEXT_X - cmdCDSelect->getWidth()
@@ -515,7 +491,6 @@ void ExitPanelHD()
 	delete cmdAddDirectory;
 	delete cmdAddHardfile;
 	delete cmdCreateHardfile;
-	delete chkScsi;
 
 	delete chkCD;
 	delete cmdCDEject;
@@ -526,7 +501,6 @@ void ExitPanelHD()
 	delete cdCheckActionListener;
 	delete cdButtonActionListener;
 	delete cdFileActionListener;
-	delete genericActionListener;
 
 	delete hdRemoveActionListener;
 	delete hdEditActionListener;
@@ -623,8 +597,6 @@ void RefreshPanelHD()
 		}
 	}
 
-	
-	chkScsi->setSelected(changed_prefs.scsi);
 	chkCD->setSelected(changed_prefs.cdslots[0].inuse);
 	cmdCDEject->setEnabled(changed_prefs.cdslots[0].inuse);
 	cmdCDSelect->setEnabled(changed_prefs.cdslots[0].inuse);
