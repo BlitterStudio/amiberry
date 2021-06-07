@@ -438,6 +438,7 @@ OBJS =	\
 	src/osdep/gui/PanelROM.o \
 	src/osdep/gui/PanelRAM.o \
 	src/osdep/gui/PanelFloppy.o \
+	src/osdep/gui/PanelExpansions.o \
 	src/osdep/gui/PanelHD.o \
 	src/osdep/gui/PanelRTG.o \
 	src/osdep/gui/PanelHWInfo.o \

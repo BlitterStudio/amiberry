@@ -640,6 +640,7 @@
     <ClCompile Include="..\src\osdep\gui\PanelCPU.cpp" />
     <ClCompile Include="..\src\osdep\gui\PanelCustom.cpp" />
     <ClCompile Include="..\src\osdep\gui\PanelDisplay.cpp" />
+    <ClCompile Include="..\src\osdep\gui\PanelExpansions.cpp" />
     <ClCompile Include="..\src\osdep\gui\PanelFloppy.cpp" />
     <ClCompile Include="..\src\osdep\gui\PanelHD.cpp" />
     <ClCompile Include="..\src\osdep\gui\PanelHWInfo.cpp" />

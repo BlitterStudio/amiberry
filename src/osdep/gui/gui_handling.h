@@ -220,6 +220,11 @@ void ExitPanelHD(void);
 void RefreshPanelHD(void);
 bool HelpPanelHD(std::vector<std::string>& helptext);
 
+void InitPanelExpansions(const struct _ConfigCategory& category);
+void ExitPanelExpansions();
+void RefreshPanelExpansions();
+bool HelpPanelExpansions(std::vector<std::string>& helptext);
+
 void InitPanelRTG(const struct _ConfigCategory& category);
 void ExitPanelRTG(void);
 void RefreshPanelRTG(void);

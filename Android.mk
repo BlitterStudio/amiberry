@@ -195,6 +195,7 @@ LOCAL_SRC_FILES := src/archivers/7z/BraIA64.c \
                     src/osdep/gui/PanelRAM.cpp \
                     src/osdep/gui/PanelFloppy.cpp \
                     src/osdep/gui/PanelHD.cpp \
+					src/osdep/gui/PanelExpansions.cpp \
                     src/osdep/gui/PanelRTG.cpp \
 					src/osdep/gui/PanelHWInfo.cpp \
                     src/osdep/gui/PanelInput.cpp \

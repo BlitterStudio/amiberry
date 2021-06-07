@@ -28,8 +28,9 @@ static NavigationMap navMap[] =
 	{"ROM", "MainROM", "cboMainROM", "Chipset", "RAM"},
 	{"RAM", "Chipmem", "Chipmem", "ROM", "Floppy drives"},
 	{"Floppy drives", "cmdSel0", "DF0:", "RAM", "Hard drives/CD"},
-	{"Hard drives/CD", "cmdCreateHDF", "cmdAddDir", "Floppy drives", "RTG board"},
-	{"RTG board", "cboBoard", "cboBoard", "Hard drives/CD", "Hardware info"},
+	{"Hard drives/CD", "cmdCreateHDF", "cmdAddDir", "Floppy drives", "Expansions"},
+	{"Expansions", "chkBSDSocket", "chkBSDSocket", "Hard drives/CD", "RTG board"},
+	{"RTG board", "cboBoard", "cboBoard", "Expansions", "Hardware info"},
 	{"Hardware info", "", "", "RTG board", "Display"},
 	{"Display", "cboScreenmode", "cboScreenmode", "Hardware info", "Sound"},
 	{"Sound", "sndDisable", "sndDisable", "Display", "Input"},
@@ -215,6 +216,9 @@ static NavigationMap navMap[] =
 	{"cboCD", "Hard drives/CD", "Hard drives/CD", "chkCD", "chkCDTurbo"},
 	{ "chkCDTurbo", "Hard drives/CD", "Hard drives/CD", "cboCD", "cmdProp0" },
 
+	// PanelExpansions
+	{ "chkBSDSocket", "PanelExpansions", "PanelExpansions", "", "" },
+	
 	// PanelRTG
 	{"cboBoard", "RTG board", "cboRtg16bitModes", "cboRtgRefreshRate", "sldGfxmem"},
 	{"cboRtg16bitModes", "cboBoard", "RTG board", "cboRtgAspectRatio", "cboRtg32bitModes"},
