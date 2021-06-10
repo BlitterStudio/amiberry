@@ -86,12 +86,12 @@ static ROMListModel* mainROMList;
 static ROMListModel* extROMList;
 static ROMListModel* cartROMList;
 
-class StringListModel : public gcn::ListModel
+class string_list_model : public gcn::ListModel
 {
 private:
 	std::vector<std::string> values;
 public:
-	StringListModel(const char* entries[], const int count)
+	string_list_model(const char* entries[], const int count)
 	{
 		for (auto i = 0; i < count; ++i)
 			values.emplace_back(entries[i]);
@@ -117,7 +117,7 @@ public:
 };
 
 const char* uaeValues[] = { "ROM disabled", "Original UAE (FS + F0 ROM)", "New UAE (64k + F0 ROM)" };
-StringListModel uaeList(uaeValues, 3);
+string_list_model uaeList(uaeValues, 3);
 
 class MainROMActionListener : public gcn::ActionListener
 {

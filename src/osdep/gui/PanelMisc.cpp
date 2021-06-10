@@ -73,11 +73,11 @@ static gcn::CheckBox* chkRTSCTS;
 static gcn::CheckBox* chkUaeSerial;
 #endif
 
-class StringListModel : public gcn::ListModel
+class string_list_model : public gcn::ListModel
 {
 	std::vector<std::string> values;
 public:
-	StringListModel(const char* entries[], const int count)
+	string_list_model(const char* entries[], const int count)
 	{
 		for (auto i = 0; i < count; ++i)
 			values.emplace_back(entries[i]);
@@ -97,7 +97,7 @@ public:
 };
 
 static const char* listValues[] = { "none", "POWER", "DF0", "DF1", "DF2", "DF3", "HD", "CD" };
-static StringListModel KBDLedList(listValues, 8);
+static string_list_model KBDLedList(listValues, 8);
 
 #ifdef SERIAL_PORT
 class MiscKeyListener : public gcn::KeyListener
