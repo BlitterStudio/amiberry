@@ -89,7 +89,9 @@ OUTPUT_TIME_IN_NS should not be set (revolution extractor)
 #ifdef _WIN32
 #include <windows.h>
 #else
+#include <unistd.h>
 #include <pthread.h>
+#include <sched.h>
 #endif
 
 // Flags from WINUAE
@@ -215,6 +217,7 @@ void CommonBridgeTemplate::mainThread() {
 		bool lastDiskState = m_diskInDrive;
 
 		bool queueReady = false;
+
 		{
 			const auto queuePause = std::chrono::milliseconds(m_motorIsReady ? 1 : 250);
 
@@ -234,7 +237,7 @@ void CommonBridgeTemplate::mainThread() {
 		}
 		else {
 			// Trigger background reading if we're not busy
-			if (m_motorIsReady && m_diskInDrive) {
+			if (m_motorIsReady) {
 				const auto timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - m_delayStreamingStart).count();
 				if ((!m_delayStreaming) || ((m_delayStreaming) && (timePassed > 100)))
 					handleBackgroundDiskRead();
@@ -242,15 +245,15 @@ void CommonBridgeTemplate::mainThread() {
 
 			// If the queue is empty, the motor isnt on, and we think theres a disk in the drive we periodically check as we dont have any other way to find out
 			if ((isReadyForManualDiskCheck()) && (m_queue.size() < 1)) {
-
 				// Monitor for disk
-				m_lastDiskCheckTime = std::chrono::steady_clock::now();
 				if (!supportsDiskChange()) {
 					m_diskInDrive = attemptToDetectDiskChange();
 				}
 				else {
+					// This may cause the drive to temporarly step
 					m_diskInDrive = getDiskChangeStatus(true);
 				}
+				m_lastDiskCheckTime = std::chrono::steady_clock::now();
 
 				m_writeProtected = checkWriteProtectStatus(false);
 			}
@@ -330,7 +333,7 @@ void CommonBridgeTemplate::saveNextBuffer(const int cylinder, const DiskSurface 
 // Handle reading the disk data in the background while the queue is idle
 void CommonBridgeTemplate::handleBackgroundDiskRead() {
 	// Dont do anythign until the motor is ready.  The flag that checks for disk change will also report spin ready status if the drive hasnt spun up properly yet
-	if (!((m_motorIsReady) && (!m_motorSpinningUp) && (m_diskInDrive))) return;
+	if (!((m_motorIsReady) && (!m_motorSpinningUp))) return;
 
 	// If we already have the next buffer full then stop
 	if (m_mfmRead[m_actualCurrentCylinder][(int)m_actualFloppySide].next.ready) {
@@ -351,8 +354,8 @@ void CommonBridgeTemplate::handleBackgroundDiskRead() {
 
 		m_driveStreamingData = true;
 
-		// Grab full revolutions if possible. 
-		if (readData(m_extractor, MFM_BUFFER_MAX_TRACK_LENGTH, trackData.mfmBuffer, m_mfmRead[m_actualCurrentCylinder][(int)m_actualFloppySide].startBitPatterns,
+		// Grab full revolutions if possible.
+		ReadResponse r =  readData(m_extractor, MFM_BUFFER_MAX_TRACK_LENGTH, trackData.mfmBuffer, m_mfmRead[m_actualCurrentCylinder][(int)m_actualFloppySide].startBitPatterns,
 			[this, &trackData, &flipSide](RotationExtractor::MFMSample* mfmData, const unsigned int dataLengthInBits) -> bool {
 				trackData.amountReadInBits = dataLengthInBits;
 
@@ -377,13 +380,27 @@ void CommonBridgeTemplate::handleBackgroundDiskRead() {
 				// Else read another revolution
 				return m_queue.size() < 1;
 
-			}) == ReadResponse::rrNoDiskInDrive) {
-			m_diskInDrive = false;
+			});
+		switch (r) {
+			case ReadResponse::rrNoDiskInDrive:
+				 m_diskInDrive = false;
+				 m_delayStreaming = true;
+				 m_delayStreamingStart = std::chrono::steady_clock::now();
+				 resetMFMCache();
+				 break;
+
+			case ReadResponse::rrOK:
+				if (!m_diskInDrive) {
+					m_diskInDrive = true;
+					m_delayStreaming = false;
+					m_lastDiskCheckTime = std::chrono::steady_clock::now();
+				}
+				break;
 		}
 	}
 
 	// Did the reader want us to flip sides?
-	if (flipSide) {
+	if (flipSide && m_diskInDrive) {
 		DiskSurface flipSurface = m_actualFloppySide == DiskSurface::dsLower ? DiskSurface::dsUpper : DiskSurface::dsLower;
 		MFMCache& trackData = m_mfmRead[m_actualCurrentCylinder][(int)flipSurface].next;
 
@@ -402,7 +419,7 @@ void CommonBridgeTemplate::handleBackgroundDiskRead() {
 				bool trackWasRead = false;
 
 				// and go for it
-				if (readData(m_extractor, MFM_BUFFER_MAX_TRACK_LENGTH, trackData.mfmBuffer, m_mfmRead[m_actualCurrentCylinder][(int)flipSurface].startBitPatterns,
+				ReadResponse r = readData(m_extractor, MFM_BUFFER_MAX_TRACK_LENGTH, trackData.mfmBuffer, m_mfmRead[m_actualCurrentCylinder][(int)flipSurface].startBitPatterns,
 					[this, flipSurface, &trackData, &trackWasRead](RotationExtractor::MFMSample* mfmData, const unsigned int dataLengthInBits) -> bool {
 						trackData.amountReadInBits = dataLengthInBits;
 
@@ -411,8 +428,22 @@ void CommonBridgeTemplate::handleBackgroundDiskRead() {
 						// We only want an intial one.
 						return false;
 
-					}) == ReadResponse::rrNoDiskInDrive) {
+					});
+				switch (r) {
+				case ReadResponse::rrNoDiskInDrive:
 					m_diskInDrive = false;
+					m_delayStreaming = true;
+					m_delayStreamingStart = std::chrono::steady_clock::now();
+					resetMFMCache();
+					break;
+
+				case ReadResponse::rrOK:
+					if (!m_diskInDrive) {
+						m_diskInDrive = true;
+						m_delayStreaming = false;
+						m_lastDiskCheckTime = std::chrono::steady_clock::now();
+					}
+					break;
 				}
 
 				if (m_firstTrackMode) {
@@ -592,6 +623,16 @@ void CommonBridgeTemplate::processCommand(const QueueInfo& info) {
 		m_motorSpinningUpStart = std::chrono::steady_clock::now();
 		break;
 
+	case QueueCommand::qcNoClickSeek:
+		if (m_actualCurrentCylinder == 0) {
+			// If it fails, simulate it
+			if (!performNoClickSeek()) {
+				setCurrentCylinder(1);
+				setCurrentCylinder(0);
+			}
+		}
+		break;
+
 	case QueueCommand::qcGotoToTrack:
 		setCurrentCylinder(info.option.i);
 		m_actualCurrentCylinder = info.option.i;
@@ -682,6 +723,7 @@ bool CommonBridgeTemplate::initialise() {
 	m_diskInDrive = false;
 	m_actualFloppySide = DiskSurface::dsLower;
 	m_floppySide = DiskSurface::dsLower;
+	m_actualCurrentCylinder = m_currentTrack;
 
 	// Clear down the queue
 	{
@@ -700,7 +742,6 @@ bool CommonBridgeTemplate::initialise() {
 	if (result) {
 		setMotorStatus(false);
 		setActiveSurface(m_actualFloppySide);
-		setCurrentCylinder(m_currentTrack);
 
 		// Get some real disk status values
 		if (supportsDiskChange()) {
@@ -719,7 +760,8 @@ bool CommonBridgeTemplate::initialise() {
 			struct sched_param sch;
 			int policy;
 			pthread_getschedparam(pthread_self(), &policy, &sch);
-			sch.sched_priority = 10; // slight boost in priority
+			sch.sched_priority = 2; // slight boost in priority
+			policy = SCHED_FIFO;
 			pthread_setschedparam(pthread_self(), policy, &sch);
 #endif
 			this->mainThread();
@@ -731,6 +773,8 @@ bool CommonBridgeTemplate::initialise() {
 
 	return false;
 }
+
+// make -j4 PLATFORM=rpi4
 
 // Call to get the last error message.  Length is the size of the buffer in TCHARs, the function returns the size actually needed
 unsigned int CommonBridgeTemplate::getLastErrorMessage(TCHAR* errorMessage, unsigned int length) {
@@ -787,6 +831,13 @@ void CommonBridgeTemplate::setMotorStatus(bool side, bool turnOn) {
 	m_motorIsReady = false;
 	m_motorSpinningUp = false;
 	queueCommand(turnOn ? QueueCommand::qcMotorOn : QueueCommand::qcMotorOff);
+}
+
+// Handle the drive stepping to track -1 - this is used to 'no-click' detect the disk
+void CommonBridgeTemplate::handleNoClickStep(bool side) {
+	switchDiskSide(side);
+
+	queueCommand(QueueCommand::qcNoClickSeek);
 }
 
 // Seek to a specific track

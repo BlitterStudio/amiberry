@@ -344,7 +344,7 @@ static void createrootblock (uae_u8 *sector, const TCHAR *disk_name)
 	sector[12+3] = 0x48;
 	sector[312] = sector[313] = sector[314] = sector[315] = (uae_u8)0xff;
 	sector[316+2] = 881 >> 8; sector[316+3] = 881 & 255;
-	sector[432] = (uae_u8)strlen(dn2);
+	sector[432] = (uae_u8)strlen (dn2);
 	strcpy ((char*)sector + 433, dn2);
 	sector[508 + 3] = 1;
 	disk_date (sector + 420);
@@ -392,7 +392,7 @@ static int createdirheaderblock (uae_u8 *sector, int parent, const char *filenam
 	pl (sector, 0, 2);
 	pl (sector, 4, block);
 	disk_date (sector + 512 - 92);
-	sector[512 - 80] = (uae_u8)strlen(filename);
+	sector[512 - 80] = (uae_u8)strlen (filename);
 	strcpy ((char*)sector + 512 - 79, filename);
 	pl (sector, 512 - 12, parent);
 	pl (sector, 512 - 4, 2);
@@ -411,7 +411,7 @@ static int createfileheaderblock (struct zfile *z,uae_u8 *sector, int parent, co
 	int size;
 
 	zfile_fseek (src, 0, SEEK_END);
-	size = (int)zfile_ftell(src);
+	size = (int)zfile_ftell (src);
 	zfile_fseek (src, 0, SEEK_SET);
 	extensions = (size + FS_OFS_DATABLOCKSIZE - 1) / FS_OFS_DATABLOCKSIZE;
 
@@ -422,7 +422,7 @@ static int createfileheaderblock (struct zfile *z,uae_u8 *sector, int parent, co
 	pl (sector, 16, datablock);
 	pl (sector, FS_FLOPPY_BLOCKSIZE - 188, size);
 	disk_date (sector + FS_FLOPPY_BLOCKSIZE - 92);
-	sector[FS_FLOPPY_BLOCKSIZE - 80] = (uae_u8)strlen(filename);
+	sector[FS_FLOPPY_BLOCKSIZE - 80] = (uae_u8)strlen (filename);
 	strcpy ((char*)sector + FS_FLOPPY_BLOCKSIZE - 79, filename);
 	pl (sector, FS_FLOPPY_BLOCKSIZE - 12, parent);
 	pl (sector, FS_FLOPPY_BLOCKSIZE - 4, -3);
@@ -520,7 +520,7 @@ static int createimagefromexe (struct zfile *src, struct zfile *dst)
 
 	memset (bitmap, 0, sizeof bitmap);
 	zfile_fseek (src, 0, SEEK_END);
-	exesize = (int)zfile_ftell(src);
+	exesize = (int)zfile_ftell (src);
 	blocks = (exesize + blocksize - 1) / blocksize;
 	extensionblocks = (blocks + FS_EXTENSION_BLOCKS - 1) / FS_EXTENSION_BLOCKS;
 	/* bootblock=2, root=1, bitmap=1, startup-sequence=1+1, exefileheader=1 */
@@ -1238,7 +1238,7 @@ static int drive_insert (drive * drv, struct uae_prefs *p, int dnum, const TCHAR
 	if (drv->diskfile) {
 		zfile_fread (buffer, sizeof (char), 8, drv->diskfile);
 		zfile_fseek (drv->diskfile, 0, SEEK_END);
-		size = (int)zfile_ftell(drv->diskfile);
+		size = (int)zfile_ftell (drv->diskfile);
 		zfile_fseek (drv->diskfile, 0, SEEK_SET);
 	}
 
@@ -1630,9 +1630,14 @@ static void drive_step (drive * drv, int step_direction)
 	if (drv->bridge) {
 		int dir = step_direction ? -1 : 1;
 		drv->cyl += dir;
-		if (drv->cyl < 0) drv->cyl = 0;
-		if (drv->cyl >= drv->bridge->getMaxCylinder()) drv->cyl = drv->bridge->getMaxCylinder() - 1;
-		drv->bridge->gotoCylinder(drv->cyl, side);
+		if (drv->cyl < 0) {
+			drv->cyl = 0;
+			drv->bridge->handleNoClickStep(side);
+		}
+		else {
+			if (drv->cyl >= drv->bridge->getMaxCylinder()) drv->cyl = drv->bridge->getMaxCylinder() - 1;
+			drv->bridge->gotoCylinder(drv->cyl, side);
+		}
 		return;
 	}
 
@@ -2743,7 +2748,7 @@ static void floppy_get_rootblock (uae_u8 *dst, int block, const TCHAR *disk_name
 	dst[312] = dst[313] = dst[314] = dst[315] = (uae_u8)0xff; // bitmap valid
 	dst[316+2] = (block + 1) >> 8; dst[316+3] = (block + 1) & 255; // bitmap pointer
 	char *s = ua ((disk_name && _tcslen (disk_name) > 0) ? disk_name : _T("empty"));
-	dst[432] = (uae_u8)strlen(s); // name length
+	dst[432] = (uae_u8)strlen (s); // name length
 	strcpy ((char*)dst + 433, s); // name
 	xfree (s);
 	dst[508 + 3] = 1; // secondary type
@@ -4220,7 +4225,7 @@ void DISK_update (int tohpos)
 		} else {
 			disk_doupdate_read(drv, drv->floppybitcounter);
 		}
-		
+
 		drv->floppybitcounter %= drv->trackspeed;
 		didaccess = 1;
 	}
@@ -4961,7 +4966,7 @@ static uae_u32 getadfcrc (drive *drv)
 	if (!drv->diskfile)
 		return 0;
 	zfile_fseek (drv->diskfile, 0, SEEK_END);
-	size = (int)zfile_ftell(drv->diskfile);
+	size = (int)zfile_ftell (drv->diskfile);
 	b = xmalloc (uae_u8, size);
 	if (!b)
 		return 0;
@@ -5121,7 +5126,7 @@ uae_u8 *save_disk (int num, int *len, uae_u8 *dstptr, bool usepath)
 	if (dstptr)
 		dstbak = dst = dstptr;
 	else
-		dstbak = dst = xmalloc (uae_u8, 4 + 1 + 1 + 1 + 1 + 4 + 4 + MAX_DPATH + 2 + 2 + 4 + 2 * MAX_DPATH);
+		dstbak = dst = xmalloc (uae_u8, 2 + 1 + 1 + 1 + 1 + 4 + 4 + MAX_DPATH + 2 + 2 + 4 + 2 * MAX_DPATH);
 	save_u32 (drv->drive_id);	    /* drive type ID */
 	save_u8 ((drv->motoroff ? 0 : 1) | ((disabled & (1 << num)) ? 2 : 0) | (drv->idbit ? 4 : 0) | (drv->dskchange ? 8 : 0) | (side ? 16 : 0) | (drv->wrprot ? 32 : 0));
 	save_u8 (drv->cyl);				/* cylinder */

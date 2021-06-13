@@ -33,6 +33,9 @@ private:
 	// Hardware connection
 	GreaseWeazle::GreaseWeazleInterface m_io;
 
+	// Remember where we are
+	int m_currentCylinder = 0;
+
 protected:
 	// This is called by the main thread incase you need to do anything specific at regular intervals
 	virtual void poll() override;
@@ -71,6 +74,11 @@ protected:
 
 	// Trigger a seek to the requested cylinder, this can block until complete
 	virtual bool setCurrentCylinder(const unsigned int cylinder) override;
+
+	// If we're on track 0, this is the emulator trying to seek to track -1.  We catch this as a special case.  
+	// Should perform the same operations as setCurrentCylinder in terms of diskchange etc but without changing the current cylinder
+	// Return FALSE if this is not supported by the bridge
+	virtual bool performNoClickSeek() override;
 
 	// Called when data should be read from the drive.
 	//		rotationExtractor: supplied if you use it

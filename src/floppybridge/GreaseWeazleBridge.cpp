@@ -134,6 +134,14 @@ bool GreaseWeazleDiskBridge::checkWriteProtectStatus(const bool forceCheck) {
 // If the above is TRUE then this is called to get the status of the DiskChange line.  Basically, this is TRUE if there is a disk in the drive.
 // If force is true you should re-check, if false, then you are allowed to return a cached value from the last disk operation (eg: seek)
 bool GreaseWeazleDiskBridge::getDiskChangeStatus(const bool forceCheck) {
+	// We actually trigger a SEEK operation to ensure this is right
+	if (forceCheck) {
+		if (m_io.checkForDisk(forceCheck) == GWResponse::drNoDiskInDrive) {
+			if (m_io.selectTrack((m_currentCylinder > 40) ? m_currentCylinder + 1 : m_currentCylinder - 1, GreaseWeazle::TrackSearchSpeed::tssNormal, true) != GreaseWeazle::GWResponse::drOK) return isDiskInDrive();
+			if (m_io.selectTrack(m_currentCylinder, GreaseWeazle::TrackSearchSpeed::tssNormal, true) != GreaseWeazle::GWResponse::drOK) return isDiskInDrive();
+		}
+	}
+
 	switch (m_io.checkForDisk(forceCheck)) {
 	case GWResponse::drOK: return true;
 	case GWResponse::drNoDiskInDrive: return false;
@@ -141,8 +149,26 @@ bool GreaseWeazleDiskBridge::getDiskChangeStatus(const bool forceCheck) {
 	}
 }
 
+// If we're on track 0, this is the emulator trying to seek to track -1.  We catch this as a special case.  
+// Should perform the same operations as setCurrentCylinder in terms of diskchange etc but without changing the current cylinder
+// Return FALSE if this is not supported by the bridge
+bool GreaseWeazleDiskBridge::performNoClickSeek() {
+	// Claim we did it anyway
+	if (!m_io.supportsDiskChange()) return true;
+
+	if (m_io.performNoClickSeek() == GWResponse::drOK) {
+		bool ignoreDiskCheck = (isMotorRunning()) && (!isReady());
+		updateLastManualCheckTime();
+		return true;
+	}
+	return false;
+}
+
+
 // Trigger a seek to the requested cylinder, this can block until complete
 bool GreaseWeazleDiskBridge::setCurrentCylinder(const unsigned int cylinder) {
+	m_currentCylinder = cylinder;
+
 	// No need if its busy
 	bool ignoreDiskCheck = (isMotorRunning()) && (!isReady());
 

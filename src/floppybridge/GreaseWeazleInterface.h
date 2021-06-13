@@ -67,7 +67,9 @@ namespace GreaseWeazle {
 		EraseFlux = 17,
 		SourceBytes = 18,
 		SinkBytes = 19,
-		GetPin = 20
+		GetPin = 20,
+		TestMode = 21,
+		NoClickStep = 22
 	};
 
 	// Command responses/acknowledgements
@@ -207,6 +209,9 @@ namespace GreaseWeazle {
 
 		// Select the track, this makes the motor seek to this position. Can return drRewindFailure, drSelectTrackError, drOK, drTrackRangeError
 		GWResponse selectTrack(const unsigned char trackIndex, const TrackSearchSpeed searchSpeed = TrackSearchSpeed::tssNormal, bool ignoreDiskInsertCheck = false);
+
+		// Special command that asks GW to do a 'seek to track -1' which isnt allowed but can be used for disk detection
+		GWResponse performNoClickSeek();
 
 		// Choose which surface of the disk to read from.  Can return drError or drOK
 		GWResponse selectSurface(const DiskSurface side);

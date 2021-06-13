@@ -42,7 +42,7 @@
 #include "RotationExtractor.h"
 
 // Maximum data we can receive.  
-#define MFM_BUFFER_MAX_TRACK_LENGTH			0x3800
+#define MFM_BUFFER_MAX_TRACK_LENGTH			0x3A00
 
 // Max number of cylinders we can offer
 #define MAX_CYLINDER_BRIDGE 82
@@ -52,7 +52,7 @@
 class CommonBridgeTemplate : public FloppyDiskBridge {
 protected:
 	// Type of queue message
-	enum class QueueCommand { qcTerminate, qcMotorOn, qcMotorOff, writeMFMData, qcGotoToTrack, qcSelectDiskSide, qcResetDrive };
+	enum class QueueCommand { qcTerminate, qcMotorOn, qcMotorOff, writeMFMData, qcGotoToTrack, qcSelectDiskSide, qcResetDrive, qcNoClickSeek};
 
 	// Represent which side of the disk we're looking at.  
 	enum class DiskSurface {
@@ -310,6 +310,11 @@ protected:
 	// Trigger a seek to the requested cylinder, this can block until complete
 	virtual bool setCurrentCylinder(const unsigned int cylinder)  = 0;
 
+	// If we're on track 0, this is the emulator trying to seek to track -1.  We catch this as a special case.  
+	// Should perform the same operations as setCurrentCylinder in terms of diskchange etc but without changing the current cylinder
+	// Return FALSE if this is not supported by the bridge
+	virtual bool performNoClickSeek() = 0;
+
 	// Called when data should be read from the drive.
 	//		rotationExtractor: supplied if you use it
 	//		maxBufferSize: Maximum number of RotationExtractor::MFMSample in the buffer.  If we're trying to detect a disk, this might be set VERY LOW
@@ -400,6 +405,9 @@ public:
 
 	// Seek to a specific track
 	virtual void gotoCylinder(int trackNumber, bool side) override final;
+
+	// Handle the drive stepping to track -1 - this is used to 'no-click' detect the disk
+	virtual void handleNoClickStep(bool side) override final;
 
 	// Submits a single WORD of data received during a DMA transfer to the disk buffer.  This needs to be saved.  It is usually flushed when commitWriteBuffer is called
 	// You should reset this buffer if side or track changes.  mfmPosition is provided purely for any index sync you may wish to do

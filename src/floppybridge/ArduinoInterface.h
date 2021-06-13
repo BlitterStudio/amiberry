@@ -232,6 +232,9 @@ namespace ArduinoFloppyReader {
 		// Select the track, this makes the motor seek to this position
 		DiagnosticResponse  selectTrack(const unsigned char trackIndex, const TrackSearchSpeed searchSpeed = TrackSearchSpeed::tssNormal, bool ignoreDiskInsertCheck = false);
 
+		// If the drive is on track 0, this does a test seek to -1 if supported
+		DiagnosticResponse performNoClickSeek();
+
 		// Choose which surface of the disk to read from
 		DiagnosticResponse  selectSurface(const DiskSurface side);
 

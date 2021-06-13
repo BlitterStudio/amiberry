@@ -86,6 +86,9 @@ public:
 	// Seek to a specific cylinder
 	virtual void gotoCylinder(int cylinderNumber, bool side)  = 0;
 
+	// Handle the drive stepping to track -1 - this is used to 'no-click' detect the disk
+	virtual void handleNoClickStep(bool side) = 0;
+
 	// Return the current cylinder number we're on
 	virtual unsigned char getCurrentCylinderNumber()  = 0;
 

@@ -280,6 +280,21 @@ GWResponse GreaseWeazleInterface::enableMotor(const bool enable, const bool dont
 	return (response == Ack::Okay) ? GWResponse::drOK : GWResponse::drError;
 }
 
+GWResponse GreaseWeazleInterface::performNoClickSeek() {
+	Ack response = Ack::Okay;
+
+	selectDrive(true);
+	sendCommand(Cmd::NoClickStep, nullptr, 0, response);
+	selectDrive(false);
+
+	if (response == Ack::Okay) {
+		checkPins();
+
+		return GWResponse::drOK;
+	} 
+	else return GWResponse::drOldFirmware;
+}
+
 // Select the track, this makes the motor seek to this position
 GWResponse GreaseWeazleInterface::selectTrack(const unsigned char trackIndex, const TrackSearchSpeed searchSpeed, bool ignoreDiskInsertCheck) {
 	if (trackIndex > 81) {
@@ -288,10 +303,10 @@ GWResponse GreaseWeazleInterface::selectTrack(const unsigned char trackIndex, co
 
 	unsigned short newSpeed = m_gwDriveDelays.step_delay;
 	switch (searchSpeed) {
-		case TrackSearchSpeed::tssSlow:		newSpeed = 8000;  break;
-		case TrackSearchSpeed::tssNormal:	newSpeed = 7000;  break;
-		case TrackSearchSpeed::tssFast:		newSpeed = 6000;  break;
-		case TrackSearchSpeed::tssVeryFast: newSpeed = 5000;  break;
+		case TrackSearchSpeed::tssSlow:		newSpeed = 90000;  break;
+		case TrackSearchSpeed::tssNormal:	newSpeed = 8000;  break;
+		case TrackSearchSpeed::tssFast:		newSpeed = 7000;  break;
+		case TrackSearchSpeed::tssVeryFast: newSpeed = 6000;  break;
 	}
 	if (newSpeed != m_gwDriveDelays.step_delay) {
 		m_gwDriveDelays.step_delay = newSpeed;
@@ -308,7 +323,6 @@ GWResponse GreaseWeazleInterface::selectTrack(const unsigned char trackIndex, co
 	if (!ignoreDiskInsertCheck) {
 		checkForDisk(true);
 	}
-
 
 	switch (response) {
 	case Ack::NoTrk0: return GWResponse::drRewindFailure;

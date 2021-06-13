@@ -63,6 +63,7 @@ using namespace ArduinoFloppyReader;
 #define COMMAND_ISWRITEPROTECTED   '$'    // Requires Firmware V1.8
 #define COMMAND_ENABLE_NOWAIT      '*'    // Requires Firmware V1.8
 #define COMMAND_GOTOTRACK_REPORT   '='	  // Requires Firmware V1.8
+#define COMMAND_DO_NOCLICK_SEEK    'O'    // Requires Firmware V1.8a
 
 #define SPECIAL_ABORT_CHAR		   'x'
 
@@ -627,6 +628,36 @@ DiagnosticResponse ArduinoInterface::setDiskCapacity(bool switchToHD_Disk) {
 	return m_lastError;
 }
 
+// If the drive is on track 0, this does a test seek to -1 if supported
+DiagnosticResponse ArduinoInterface::performNoClickSeek() {
+	// And send the command and track.  This is sent as ASCII text as a result of terminal testing.  Easier to see whats going on
+	bool isV18 = (m_version.major > 1) || ((m_version.major == 1) && (m_version.minor >= 8));
+	if (!isV18) return DiagnosticResponse::drOldFirmware;
+	if (!m_version.fullControlMod) return DiagnosticResponse::drOldFirmware;
+
+	m_lastError = runCommand(COMMAND_DO_NOCLICK_SEEK);
+	if (m_lastError == DiagnosticResponse::drOK) {
+		// Read extended data
+		char status;
+		if (!deviceRead(&status, 1, true)) {
+			m_lastError = DiagnosticResponse::drReadResponseFailed;
+			return m_lastError;
+		}
+		// 'x' means we didnt check it
+		if (status != 'x') m_diskInDrive = status == '1';
+
+		// Also read the write protect status
+		if (!deviceRead(&status, 1, true)) {
+			m_lastError = DiagnosticResponse::drReadResponseFailed;
+			return m_lastError;
+		}
+		m_isWriteProtected = status == '1';
+	}
+
+	return m_lastError;
+}
+
+
 // Select the track, this makes the motor seek to this position
 DiagnosticResponse ArduinoInterface::selectTrack(const unsigned char trackIndex, const TrackSearchSpeed searchSpeed, bool ignoreDiskInsertCheck) {
 	if (trackIndex > 81) {
@@ -911,6 +942,8 @@ DiagnosticResponse ArduinoInterface::readRotation(RotationExtractor& extractor, 
 					unsigned int bits = 0;
 					// Go!
 					if (extractor.extractRotation(firstOutputBuffer, bits, maxOutputSize)) {
+						m_diskInDrive = true;
+
 						if (!onRotation(&firstOutputBuffer, bits)) {
 							// And if the callback says so we stop.
 							abortReadStreaming();
@@ -924,6 +957,7 @@ DiagnosticResponse ArduinoInterface::readRotation(RotationExtractor& extractor, 
 						abortReadStreaming();
 						noDataCounter = 0;
 						timeout = true;
+						m_diskInDrive = false; // probably no disk
 					}
 			}
 		}
