@@ -2229,7 +2229,8 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_write_str(f, _T("gfx_api"), filterapi[p->gfx_api]);
 	cfgfile_write_str(f, _T("gfx_api_options"), filterapiopts[p->gfx_api_options]);
 	cfgfile_dwrite_bool(f, _T("gfx_hdr"), p->gfx_hdr);
-	cfgfile_dwrite(f, _T("gfx_horizontal_tweak"), _T("%d"), p->gfx_extrawidth);
+	cfgfile_dwrite(f, _T("gfx_horizontal_extra"), _T("%d"), p->gfx_extrawidth);
+	cfgfile_dwrite(f, _T("gfx_vertical_extra"), _T("%d"), p->gfx_extraheight);
 	cfgfile_dwrite(f, _T("gfx_frame_slices"), _T("%d"), p->gfx_display_sections);
 	cfgfile_dwrite_bool(f, _T("gfx_vrr_monitor"), p->gfx_variable_sync != 0);
 
@@ -2487,14 +2488,13 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_dwrite_bool(f, _T("resetwarning"), p->cs_resetwarning);
 	cfgfile_dwrite_bool(f, _T("denise_noehb"), p->cs_denisenoehb);
 	cfgfile_dwrite_bool(f, _T("agnus_bltbusybug"), p->cs_agnusbltbusybug);
-#ifndef AMIBERRY
 	cfgfile_dwrite_bool(f, _T("bkpt_halt"), p->cs_bkpthang);
-#endif
 	cfgfile_dwrite_bool(f, _T("ics_agnus"), p->cs_dipagnus);
 	cfgfile_dwrite_bool(f, _T("cia_todbug"), p->cs_ciatodbug);
 	cfgfile_dwrite_bool(f, _T("z3_autoconfig"), p->cs_z3autoconfig);
 	cfgfile_dwrite_bool(f, _T("1mchipjumper"), p->cs_1mchipjumper);
 	cfgfile_dwrite_bool(f, _T("color_burst"), p->cs_color_burst);
+	cfgfile_dwrite_bool(f, _T("hblank_glitch"), p->cs_ocshblankbug);
 	cfgfile_dwrite_bool(f, _T("toshiba_gary"), p->cs_toshibagary);
 	cfgfile_dwrite_bool(f, _T("rom_is_slow"), p->cs_romisslow);
 	cfgfile_dwrite_str(f, _T("ciaa_type"), ciatype[p->cs_ciatype[0]]);
@@ -3436,15 +3436,16 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		|| cfgfile_string (option, value, _T("filesys_inject_icons_project"), p->filesys_inject_icons_project, sizeof p->filesys_inject_icons_project / sizeof (TCHAR))
 		|| cfgfile_string (option, value, _T("filesys_inject_icons_tool"), p->filesys_inject_icons_tool, sizeof p->filesys_inject_icons_tool / sizeof (TCHAR))
 
-		|| cfgfile_intval (option, value, _T("gfx_luminance"), &p->gfx_luminance, 1)
-		|| cfgfile_intval (option, value, _T("gfx_contrast"), &p->gfx_contrast, 1)
-		|| cfgfile_intval (option, value, _T("gfx_gamma"), &p->gfx_gamma, 1)
-		|| cfgfile_intval (option, value, _T("gfx_gamma_r"), &p->gfx_gamma_ch[0], 1)
-		|| cfgfile_intval (option, value, _T("gfx_gamma_g"), &p->gfx_gamma_ch[1], 1)
-		|| cfgfile_intval (option, value, _T("gfx_gamma_b"), &p->gfx_gamma_ch[2], 1)
-		|| cfgfile_floatval (option, value, _T("rtg_vert_zoom_multf"), &p->rtg_vert_zoom_mult)
-		|| cfgfile_floatval (option, value, _T("rtg_horiz_zoom_multf"), &p->rtg_horiz_zoom_mult)
-		|| cfgfile_intval (option, value, _T("gfx_horizontal_tweak"), &p->gfx_extrawidth, 1)
+		|| cfgfile_intval(option, value, _T("gfx_luminance"), &p->gfx_luminance, 1)
+		|| cfgfile_intval(option, value, _T("gfx_contrast"), &p->gfx_contrast, 1)
+		|| cfgfile_intval(option, value, _T("gfx_gamma"), &p->gfx_gamma, 1)
+		|| cfgfile_intval(option, value, _T("gfx_gamma_r"), &p->gfx_gamma_ch[0], 1)
+		|| cfgfile_intval(option, value, _T("gfx_gamma_g"), &p->gfx_gamma_ch[1], 1)
+		|| cfgfile_intval(option, value, _T("gfx_gamma_b"), &p->gfx_gamma_ch[2], 1)
+		|| cfgfile_floatval(option, value, _T("rtg_vert_zoom_multf"), &p->rtg_vert_zoom_mult)
+		|| cfgfile_floatval(option, value, _T("rtg_horiz_zoom_multf"), &p->rtg_horiz_zoom_mult)
+		|| cfgfile_intval(option, value, _T("gfx_horizontal_extra"), &p->gfx_extrawidth, 1)
+		|| cfgfile_intval(option, value, _T("gfx_vertical_extra"), &p->gfx_extraheight, 1)
 
 		|| cfgfile_intval (option, value, _T("floppy0sound"), &p->floppyslots[0].dfxclick, 1)
 		|| cfgfile_intval (option, value, _T("floppy1sound"), &p->floppyslots[1].dfxclick, 1)
@@ -5543,11 +5544,12 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		|| cfgfile_yesno(option, value, _T("ics_agnus"), &p->cs_dipagnus)
 		|| cfgfile_yesno(option, value, _T("z3_autoconfig"), &p->cs_z3autoconfig)
 		|| cfgfile_yesno(option, value, _T("color_burst"), &p->cs_color_burst)
+		|| cfgfile_yesno(option, value, _T("hblank_glitch"), &p->cs_ocshblankbug)
 		|| cfgfile_yesno(option, value, _T("toshiba_gary"), &p->cs_toshibagary)
 		|| cfgfile_yesno(option, value, _T("rom_is_slow"), &p->cs_romisslow)
 		|| cfgfile_yesno(option, value, _T("1mchipjumper"), &p->cs_1mchipjumper)
 		|| cfgfile_yesno(option, value, _T("agnus_bltbusybug"), &p->cs_agnusbltbusybug)
-		//|| cfgfile_yesno(option, value, _T("bkpt_halt"), &p->cs_bkpthang)
+		|| cfgfile_yesno(option, value, _T("bkpt_halt"), &p->cs_bkpthang)
 		|| cfgfile_yesno(option, value, _T("gfxcard_hardware_vblank"), &p->rtg_hardwareinterrupt)
 		|| cfgfile_yesno(option, value, _T("gfxcard_hardware_sprite"), &p->rtg_hardwaresprite)
 		|| cfgfile_yesno(option, value, _T("gfxcard_multithread"), &p->rtg_multithread)
@@ -7948,6 +7950,7 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 	p->cs_ciatodbug = false;
 	p->cs_unmapped_space = 0;
 	p->cs_color_burst = false;
+	p->cs_ocshblankbug = false;
 	p->cs_ciatype[0] = 0;
 	p->cs_ciatype[1] = 0;
 
@@ -8908,7 +8911,7 @@ int built_in_chipset_prefs (struct uae_prefs *p)
 	p->cs_denisenoehb = false;
 	p->cs_dipagnus = false;
 	p->cs_agnusbltbusybug = false;
-	//p->cs_bkpthang = 0;
+	p->cs_bkpthang = 0;
 	p->cs_mbdmac = 0;
 	p->cs_pcmcia = false;
 	p->cs_ksmirror_e0 = true;
@@ -8926,6 +8929,7 @@ int built_in_chipset_prefs (struct uae_prefs *p)
 	p->cs_1mchipjumper = false;
 	p->cs_unmapped_space = 0;
 	p->cs_color_burst = false;
+	p->cs_ocshblankbug = false;
 	p->cs_romisslow = false;
 	p->cs_toshibagary = false;
 	p->cs_ciatype[0] = p->cs_ciatype[1] = 0;

@@ -22,11 +22,18 @@
 #define MAX_PLANES 6
 #endif
 
-#define AMIGA_WIDTH_MAX (752 / 2)
+extern int lores_shift, shres_shift, interlace_seen;
+extern int visible_left_border, visible_right_border;
+extern int detected_screen_resolution;
+extern int hsync_end_left_border, hsynctotal;
+
+#define AMIGA_WIDTH_MAX (754 / 2)
 #define AMIGA_HEIGHT_MAX (576 / 2)
 
 // Cycles * 2 from start of scanline to first refresh slot (hsync strobe slot)
 #define DDF_OFFSET (2 * 4)
+
+#define RECORDED_REGISTER_CHANGE_OFFSET 0x1000
 
 /* According to the HRM, pixel data spends a couple of cycles somewhere in the chips
 before it appears on-screen. (TW: display emulation now does this automatically)  */
@@ -34,16 +41,10 @@ before it appears on-screen. (TW: display emulation now does this automatically)
 #define DIW_DDF_OFFSET_SHRES (DIW_DDF_OFFSET << 2)
 /* We ignore that many lores pixels at the start of the display. These are
 * invisible anyway due to hardware DDF limits. */
-#define DISPLAY_LEFT_SHIFT 0x3c
+#define DISPLAY_LEFT_SHIFT 0
 #define DISPLAY_LEFT_SHIFT_SHRES (DISPLAY_LEFT_SHIFT << 2)
 
 #define CCK_SHRES_SHIFT 3
-
-extern int lores_shift, shres_shift, interlace_seen;
-extern bool aga_mode, ecs_agnus, ecs_denise, direct_rgb;
-extern int visible_left_border, visible_right_border;
-extern int detected_screen_resolution;
-extern int hsynctotal;
 
 STATIC_INLINE int shres_coord_hw_to_window_x(int x)
 {
@@ -121,11 +122,21 @@ STATIC_INLINE int coord_window_to_diw_x(int x)
 #define CE_BORDERBLANK 0
 #define CE_BORDERNTRANS 1
 #define CE_BORDERSPRITE 2
-#define CE_SHRES_DELAY 4
+#define CE_EXTBLANKSET 3
+#define CE_EXTBLANKMODE 4
+#define CE_SHRES_DELAY_SHIFT 8
 
 STATIC_INLINE bool ce_is_borderblank(uae_u8 data)
 {
 	return (data & (1 << CE_BORDERBLANK)) != 0;
+}
+STATIC_INLINE bool ce_is_extblankset(uae_u8 data)
+{
+	return (data & (1 << CE_EXTBLANKSET)) != 0;
+}
+STATIC_INLINE bool ce_is_extblankmode(uae_u8 data)
+{
+	return (data & (1 << CE_EXTBLANKMODE)) != 0;
 }
 STATIC_INLINE bool ce_is_bordersprite(uae_u8 data)
 {
@@ -144,7 +155,7 @@ struct color_entry {
 	xcolnr acolors[256];
 	uae_u32 color_regs_aga[256];
 #endif
-	uae_u8 extra;
+	uae_u16 extra;
 };
 
 #ifdef AGA
@@ -302,6 +313,7 @@ struct decision {
 #ifdef AGA
 	bool bordersprite_seen;
 	bool xor_seen;
+	uae_u8 vb;
 #endif
 };
 

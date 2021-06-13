@@ -12,6 +12,8 @@
 #include "uae/types.h"
 #include "machdep/rpt.h"
 
+extern bool aga_mode, ecs_agnus, ecs_denise, direct_rgb;
+
 /* These are the masks that are ORed together in the chipset_mask option.
 * If CSMASK_AGA is set, the ECS bits are guaranteed to be set as well.  */
 #define CSMASK_ECS_AGNUS 1
@@ -50,7 +52,7 @@ extern void set_picasso_hack_rate(int hz);
 /* Set to 1 to leave out the current frame in average frame time calculation.
 * Useful if the debugger was active.  */
 extern int bogusframe;
-extern unsigned long int hsync_counter;
+extern unsigned long int hsync_counter, vsync_counter;
 
 extern uae_u16 dmacon;
 extern uae_u16 intena, intreq, intreqr;
@@ -115,8 +117,8 @@ extern uae_u16 INTREQR(void);
 #define VBLANK_ENDLINE_PAL 26
 #define VBLANK_ENDLINE_NTSC 21
 // line when sprite DMA fetches first control words
-#define VBLANK_SPRITE_PAL 25
-#define VBLANK_SPRITE_NTSC 20
+#define VBLANK_STOP_PAL 25
+#define VBLANK_STOP_NTSC 20
 #define VBLANK_HZ_PAL 50
 #define VBLANK_HZ_NTSC 60
 #define VSYNC_ENDLINE_PAL 5
@@ -125,8 +127,9 @@ extern uae_u16 INTREQR(void);
 #define EQU_ENDLINE_NTSC 10
 
 extern int maxhpos, maxhpos_short;
-extern int maxvpos, maxvpos_nom, maxvpos_display;
+extern int maxvpos, maxvpos_nom, maxvpos_display, maxvpos_display_vsync;
 extern int hsyncstartpos, hsyncendpos;
+extern int hsyncstartpos_hw, hsyncendpos_hw;
 extern int minfirstline, vblank_endline, numscrlines;
 extern float vblank_hz, fake_vblank_hz;
 extern float hblank_hz;
@@ -197,14 +200,16 @@ extern int xbluecolor_s, xbluecolor_b, xbluecolor_m;
 /* get resolution from bplcon0 */
 STATIC_INLINE int GET_RES_DENISE(uae_u16 con0)
 {
-	if (!(currprefs.chipset_mask & CSMASK_ECS_DENISE))
+	if (!ecs_denise) {
 		con0 &= ~0x40; // SUPERHIRES
+	}
 	return ((con0) & 0x40) ? RES_SUPERHIRES : ((con0) & 0x8000) ? RES_HIRES : RES_LORES;
 }
 STATIC_INLINE int GET_RES_AGNUS(uae_u16 con0)
 {
-	if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS))
+	if (!ecs_agnus) {
 		con0 &= ~0x40; // SUPERHIRES
+	}
 	return ((con0) & 0x40) ? RES_SUPERHIRES : ((con0) & 0x8000) ? RES_HIRES : RES_LORES;
 }
 /* get sprite width from FMODE */

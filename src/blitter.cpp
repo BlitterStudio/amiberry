@@ -385,15 +385,23 @@ static void reset_channel_mods (void)
 	}
 }
 
-static void check_channel_mods (int hpos, int ch)
+static void check_channel_mods(int hpos, int ch, uaecptr *pt)
 {
 	static int blit_warned = 100;
+
+	if (bltptxpos < 0)
+		return;
+	hpos--;
+	if (hpos < 0) {
+		hpos += maxhpos;
+	}
 	if (bltptxpos != hpos)
 		return;
 	if (ch == bltptxc) {
 		bltptxpos = -1;
+		*pt = bltptx;
 		if (blit_warned > 0) {
-			write_log(_T("BLITTER: %08X write to %cPT ignored! %08x\n"), bltptx, ch + 'A' - 1, m68k_getpc());
+			write_log(_T("BLITTER: %08X -> %08X write to %cPT ignored! %08x\n"), bltptx, *pt, ch + 'A' - 1, m68k_getpc());
 			blit_warned--;
 		}
 	}
@@ -955,7 +963,7 @@ static void blit_bltset(int con)
 
 	blit_cyclecount = 4 - (shifter_skip_b + shifter_skip_y);
 	blit_dmacount = ((bltcon0 & 0x800) ? 1 : 0) + ((bltcon0 & 0x400) ? 1 : 0) +
-		((bltcon0 & 0x200) ? 1 : 0) + ((bltcon0 & 0x100) ? 1 : 0);
+		((bltcon0 & 0x200) ? 1 : 0) + (((bltcon0 & 0x100) && !blitline) ? 1 : 0);
 
 	if (blt_info.blit_main || blt_info.blit_pending) {
 		blitfill_c = blitfill;
@@ -1194,6 +1202,8 @@ static int blitter_next_cycle(void)
 
 static void blitter_doddma_new(int hpos, bool addmod)
 {
+	check_channel_mods(hpos, 4, &bltdpt);
+
 	record_dma_blit(0x00, ddat1, bltdpt, hpos);
 	chipmem_agnus_wput2(bltdpt, ddat1);
 	alloc_cycle_blitter(hpos, &bltdpt, 4);
@@ -1215,6 +1225,7 @@ static void blitter_dodma_new(int ch, int hpos, bool addmod)
 	switch (ch)
 	{
 	case 1: // A
+		check_channel_mods(hpos, 1, &bltapt);
 		reg = 0x74;
 		record_dma_blit(reg, 0, bltapt, hpos);
 		blt_info.bltadat = dat = chipmem_wget_indirect(bltapt);
@@ -1225,6 +1236,7 @@ static void blitter_dodma_new(int ch, int hpos, bool addmod)
 		alloc_cycle_blitter(hpos, &bltapt, 1);
 		break;
 	case 2: // B
+		check_channel_mods(hpos, 2, &bltbpt);
 		reg = 0x72;
 		record_dma_blit(reg, 0, bltbpt, hpos);
 		blt_info.bltbdat = dat = chipmem_wget_indirect(bltbpt);
@@ -1242,6 +1254,7 @@ static void blitter_dodma_new(int ch, int hpos, bool addmod)
 		break;
 	case 3: // C
 		reg = 0x70;
+		check_channel_mods(hpos, 3, &bltcpt);
 		record_dma_blit(reg, 0, bltcpt, hpos);
 		blt_info.bltcdat = dat = chipmem_wget_indirect(bltcpt);
 		record_dma_blit_val(dat);
@@ -1461,9 +1474,6 @@ static bool decide_blitter_maybe_write2(int until_hpos, uaecptr addr, uae_u32 va
 			if (dat & BLITTER_PIPELINE_PROCESS) {
 				blitfc = !!(bltcon1 & 0x4);
 			}
-
-			// check this after end check because last D write won't cause any problems.
-			check_channel_mods(hpos, c);
 			break;
 		}
 
@@ -1592,10 +1602,10 @@ static bool decide_blitter_maybe_write2(int until_hpos, uaecptr addr, uae_u32 va
 		}
 
 		hpos++;
+		bltptxpos = -1;
 	}
 
 	last_blitter_hpos = until_hpos;
-	reset_channel_mods();
 	if (hsync) {
 		last_blitter_hpos = 0;
 	}
@@ -1873,8 +1883,6 @@ void blitter_check_start (void)
 void maybe_blit (int hpos, int hack)
 {
 	static int warned = 10;
-
-	reset_channel_mods();
 
 	if (!blt_info.blit_main) {
 		decide_blitter(hpos);

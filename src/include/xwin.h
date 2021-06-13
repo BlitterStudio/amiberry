@@ -41,7 +41,7 @@ extern int vsync_isdone(frame_time_t*);
 extern void doflashscreen (void);
 extern int flashscreen;
 extern void updatedisplayarea(int monid);
-extern int isvsync_chipset(void);
+extern int isvsync_chipset (void);
 extern int isvsync_rtg (void);
 extern int isvsync (void);
 
@@ -60,22 +60,22 @@ extern float target_adjust_vblank_hz(int monid, float);
 extern int target_get_display_scanline(int displayindex);
 extern void target_spin(int);
 
-void getgfxoffset(int monid, float* dxp, float* dyp, float* mxp, float* myp);
+void getgfxoffset(int monid, float *dxp, float *dyp, float *mxp, float *myp);
 float target_getcurrentvblankrate(int monid);
 
 extern int debuggable (void);
-extern void screenshot(int monid, int, int);
+extern void screenshot(int monid, int,int);
 void refreshtitle (void);
 
 extern int bits_in_mask (unsigned long mask);
 extern int mask_shift (unsigned long mask);
 extern unsigned int doMask (int p, int bits, int shift);
 extern unsigned int doMask256 (int p, int bits, int shift);
-extern void alloc_colors64k(int monid, int, int, int, int, int, int, int, int, int, int, bool);
+extern void alloc_colors64k (int monid, int, int, int, int, int, int, int, int, int, int, bool);
 extern void alloc_colors_rgb (int rw, int gw, int bw, int rs, int gs, int bs, int aw, int as, int alpha, int byte_swap,
 			      uae_u32 *rc, uae_u32 *gc, uae_u32 *bc);
 extern void alloc_colors_picasso (int rw, int gw, int bw, int rs, int gs, int bs, int rgbfmt, uae_u32 *rgbx16);
-extern float getvsyncrate(int monid, float hz, int* mult);
+extern float getvsyncrate(int monid, float hz, int *mult);
 
     /* The graphics code has a choice whether it wants to use a large buffer
      * for the whole display, or only a small buffer for a single line.
@@ -126,12 +126,12 @@ struct vidbuffer
 	/* tempbuffer in use */
 	bool tempbufferinuse;
 	/* extra width, chipset hpos extra in right border */
-	int extrawidth;
+	int extrawidth, extraheight;
 
 	int xoffset; /* superhires pixels from left edge */
 	int yoffset; /* lines from top edge */
 
-	int inxoffset; /* positive if sync positioning */
+	int inxoffset; /* sync positioning */
 	int inyoffset;
 
 	int monitor_id;
