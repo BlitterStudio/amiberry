@@ -303,7 +303,7 @@ GWResponse GreaseWeazleInterface::selectTrack(const unsigned char trackIndex, co
 
 	unsigned short newSpeed = m_gwDriveDelays.step_delay;
 	switch (searchSpeed) {
-		case TrackSearchSpeed::tssSlow:		newSpeed = 90000;  break;
+		case TrackSearchSpeed::tssSlow:		newSpeed = 9000;  break;
 		case TrackSearchSpeed::tssNormal:	newSpeed = 8000;  break;
 		case TrackSearchSpeed::tssFast:		newSpeed = 7000;  break;
 		case TrackSearchSpeed::tssVeryFast: newSpeed = 6000;  break;
