@@ -52,7 +52,7 @@ extern void set_picasso_hack_rate(int hz);
 /* Set to 1 to leave out the current frame in average frame time calculation.
 * Useful if the debugger was active.  */
 extern int bogusframe;
-extern unsigned long int hsync_counter, vsync_counter;
+extern unsigned long int hsync_counter;
 
 extern uae_u16 dmacon;
 extern uae_u16 intena, intreq, intreqr;
