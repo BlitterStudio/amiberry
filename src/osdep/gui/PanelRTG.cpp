@@ -26,12 +26,17 @@ public:
 		return values.size();
 	}
 
-	int add_element(const char* elem)
+	int add_element(const char* elem) override
 	{
 		values.emplace_back(elem);
 		return 0;
 	}
 
+	void clear_elements() override
+	{
+		values.clear();
+	}
+	
 	std::string getElementAt(const int i) override
 	{
 		if (i < 0 || i >= static_cast<int>(values.size()))

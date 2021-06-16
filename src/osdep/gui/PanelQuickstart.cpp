@@ -256,6 +256,15 @@ public:
 		return numModels;
 	}
 
+	int add_element(const char* elem) override
+	{
+		return 0;
+	}
+
+	void clear_elements() override
+	{
+	}
+	
 	std::string getElementAt(int i) override
 	{
 		if (i < 0 || i >= numModels)
@@ -276,7 +285,16 @@ public:
 	{
 		return numModelConfigs;
 	}
+	
+	int add_element(const char* elem) override
+	{
+		return 0;
+	}
 
+	void clear_elements() override
+	{
+	}
+	
 	std::string getElementAt(const int i) override
 	{
 		if (quickstart_model < 0 || i < 0 || i >= numModelConfigs)
@@ -298,6 +316,15 @@ public:
 		return lstMRUDiskList.size();
 	}
 
+	int add_element(const char* elem) override
+	{
+		return 0;
+	}
+
+	void clear_elements() override
+	{
+	}
+	
 	std::string getElementAt(const int i) override
 	{
 		if (i < 0 || i >= static_cast<int>(lstMRUDiskList.size()))
@@ -319,6 +346,15 @@ public:
 		return lstMRUCDList.size();
 	}
 
+	int add_element(const char* elem) override
+	{
+		return 0;
+	}
+
+	void clear_elements() override
+	{
+	}
+	
 	std::string getElementAt(const int i) override
 	{
 		if (i < 0 || i >= static_cast<int>(lstMRUCDList.size()))
@@ -340,6 +376,15 @@ public:
 		return lstMRUWhdloadList.size();
 	}
 
+	int add_element(const char* elem) override
+	{
+		return 0;
+	}
+
+	void clear_elements() override
+	{
+	}
+	
 	std::string getElementAt(const int i) override
 	{
 		if (i < 0 || i >= static_cast<int>(lstMRUWhdloadList.size()))

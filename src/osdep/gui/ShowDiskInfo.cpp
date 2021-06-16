@@ -26,7 +26,7 @@ static gcn::ScrollArea* scrAreaInfo;
 
 class InfoListModel : public gcn::ListModel
 {
-	std::vector<std::string> lines;
+	std::vector<std::string> lines{};
 
 public:
 	InfoListModel(const std::vector<std::string>& helptext)
@@ -39,6 +39,17 @@ public:
 		return lines.size();
 	}
 
+	int add_element(const char* elem) override
+	{
+		lines.emplace_back(elem);
+		return 0;
+	}
+
+	void clear_elements() override
+	{
+		lines.clear();
+	}
+	
 	std::string getElementAt(const int i) override
 	{
 		if (i >= 0 && i < lines.size())

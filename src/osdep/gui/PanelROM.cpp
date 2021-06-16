@@ -41,6 +41,17 @@ public:
 		return roms.size();
 	}
 
+	int add_element(const char* elem) override
+	{
+		roms.emplace_back(elem);
+		return 0;
+	}
+
+	void clear_elements() override
+	{
+		roms.clear();
+	}
+	
 	std::string getElementAt(const int i) override
 	{
 		if (i < 0 || i >= static_cast<int>(roms.size()))

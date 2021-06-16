@@ -178,6 +178,15 @@ public:
 		return 2;
 	}
 
+	int add_element(const char* elem) override
+	{
+		return 0;
+	}
+
+	void clear_elements() override
+	{
+	}
+	
 	std::string getElementAt(const int i) override
 	{
 		if (i < 0 || i >= 2)
@@ -198,6 +207,15 @@ public:
 		return 4;
 	}
 
+	int add_element(const char* elem) override
+	{
+		return 0;
+	}
+
+	void clear_elements() override
+	{
+	}
+	
 	std::string getElementAt(const int i) override
 	{
 		char num[8];

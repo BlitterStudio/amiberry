@@ -84,6 +84,15 @@ public:
 		return lstMRUCDList.size();
 	}
 
+	int add_element(const char* elem) override
+	{
+		return 0;
+	}
+
+	void clear_elements() override
+	{
+	}
+	
 	string getElementAt(const int i) override
 	{
 		if (i < 0 || i >= static_cast<int>(lstMRUCDList.size()))

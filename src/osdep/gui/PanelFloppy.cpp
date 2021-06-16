@@ -36,7 +36,6 @@ static bool bIgnoreListChange = false;
 
 class DriveTypeListModel : public gcn::ListModel
 {
-private:
 	std::vector<std::string> types{};
 
 public:
@@ -49,6 +48,17 @@ public:
 		types.emplace_back("3.5'' ESCOM");
 	}
 
+	int add_element(const char* elem) override
+	{
+		types.emplace_back(elem);
+		return 0;
+	}
+
+	void clear_elements() override
+	{
+		types.clear();
+	}
+	
 	int getNumberOfElements() override
 	{
 		return types.size();
@@ -75,6 +85,15 @@ public:
 		return lstMRUDiskList.size();
 	}
 
+	int add_element(const char* elem) override
+	{
+		return 0;
+	}
+
+	void clear_elements() override
+	{
+	}
+	
 	std::string getElementAt(int i) override
 	{
 		if (i < 0 || i >= static_cast<int>(lstMRUDiskList.size()))

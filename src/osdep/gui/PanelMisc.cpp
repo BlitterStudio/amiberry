@@ -75,7 +75,7 @@ static gcn::CheckBox* chkUaeSerial;
 
 class string_list_model : public gcn::ListModel
 {
-	std::vector<std::string> values;
+	std::vector<std::string> values{};
 public:
 	string_list_model(const char* entries[], const int count)
 	{
@@ -88,6 +88,17 @@ public:
 		return values.size();
 	}
 
+	int add_element(const char* elem) override
+	{
+		values.emplace_back(elem);
+		return 0;
+	}
+
+	void clear_elements() override
+	{
+		values.clear();
+	}
+	
 	std::string getElementAt(int i) override
 	{
 		if (i < 0 || i >= static_cast<int>(values.size()))
