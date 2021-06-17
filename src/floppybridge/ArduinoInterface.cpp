@@ -52,6 +52,7 @@ using namespace ArduinoFloppyReader;
 #define COMMAND_WRITETRACK         '>'
 #define COMMAND_ENABLEWRITE        '~'
 #define COMMAND_DIAGNOSTICS        '&'
+#define COMMAND_ERASETRACK		   'X'
 #define COMMAND_SWITCHTO_DD		   'D'   // Requires Firmware V1.6
 #define COMMAND_SWITCHTO_HD		   'H'   // Requires Firmware V1.6
 #define COMMAND_DETECT_DISK_TYPE   'M'	 // currently not implemented here
@@ -85,6 +86,7 @@ std::string lastCommandToName(LastCommand cmd) {
 	case LastCommand::lcReadTrackStream: return "ReadTrackStream";
 	case LastCommand::lcCheckDiskInDrive: return "CheckDiskInDrive";
 	case LastCommand::lcCheckDiskWriteProtected: return "CheckDiskWriteProtected";
+	case LastCommand::lcEraseTrack: return "EraseTrack";
 
 	default:							return "Unknown";
 	}
@@ -734,6 +736,43 @@ DiagnosticResponse ArduinoInterface::selectTrack(const unsigned char trackIndex,
 	default:	m_lastCommand = LastCommand::lcGotoTrack;
 		m_lastError = DiagnosticResponse::drStatusError;
 		break;
+	}
+
+	return m_lastError;
+}
+
+// Erases the current track by writing 0xAA to it
+DiagnosticResponse ArduinoInterface::eraseCurrentTrack() {
+	m_lastError = runCommand(COMMAND_ERASETRACK);
+	if (m_lastError != DiagnosticResponse::drOK) {
+		m_lastCommand = LastCommand::lcEraseTrack;
+		return m_lastError;
+	}
+
+	char result;
+	if (!deviceRead(&result, 1, true)) {
+		m_lastCommand = LastCommand::lcEraseTrack;
+		m_lastError = DiagnosticResponse::drReadResponseFailed;
+		return m_lastError;
+	}
+
+	if (result == 'N') {
+		m_lastCommand = LastCommand::lcEraseTrack;
+		m_lastError = DiagnosticResponse::drWriteProtected;
+		return m_lastError;
+	}
+
+	// Check result
+	if (!deviceRead(&result, 1, true)) {
+		m_lastCommand = LastCommand::lcEraseTrack;
+		m_lastError = DiagnosticResponse::drReadResponseFailed;
+		return m_lastError;
+	}
+
+	if (result != '1') {
+		m_lastCommand = LastCommand::lcEraseTrack;
+		m_lastError = DiagnosticResponse::drError;
+		return m_lastError;
 	}
 
 	return m_lastError;

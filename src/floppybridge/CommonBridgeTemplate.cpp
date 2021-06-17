@@ -760,7 +760,7 @@ bool CommonBridgeTemplate::initialise() {
 			struct sched_param sch;
 			int policy;
 			pthread_getschedparam(pthread_self(), &policy, &sch);
-			sch.sched_priority = 2; // slight boost in priority
+			sch.sched_priority = 10; // slight boost in priority
 			policy = SCHED_FIFO;
 			pthread_setschedparam(pthread_self(), policy, &sch);
 #endif
