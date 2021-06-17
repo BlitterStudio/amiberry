@@ -202,6 +202,7 @@ static const TCHAR *vsyncmodes[] = { _T("false"), _T("true"), _T("autoswitch"), 
 static const TCHAR *vsyncmodes2[] = { _T("normal"), _T("busywait"), 0 };
 static const TCHAR *filterapi[] = { _T("directdraw"), _T("direct3d"), _T("direct3d11"), 0 };
 static const TCHAR *filterapiopts[] = { _T("hardware"), _T("software"), 0 };
+static const TCHAR *overscanmodes[] = { _T("tv_narrow"), _T("tv_standard"), _T("tv_wide"), _T("overscan"), _T("broadcast"), _T("extreme"), NULL };
 static const TCHAR *dongles[] =
 {
 	_T("none"),
@@ -2233,6 +2234,8 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_dwrite(f, _T("gfx_vertical_extra"), _T("%d"), p->gfx_extraheight);
 	cfgfile_dwrite(f, _T("gfx_frame_slices"), _T("%d"), p->gfx_display_sections);
 	cfgfile_dwrite_bool(f, _T("gfx_vrr_monitor"), p->gfx_variable_sync != 0);
+	cfgfile_dwrite_str(f, _T("gfx_overscanmode"), overscanmodes[p->gfx_overscanmode]);
+	
 
 #ifdef GFXFILTER
 	for (int j = 0; j < 2; j++) {
@@ -3529,6 +3532,7 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		|| cfgfile_strval(option, value, _T("gfx_api"), &p->gfx_api, filterapi, 0)
 		|| cfgfile_strval(option, value, _T("gfx_api_options"), &p->gfx_api_options, filterapiopts, 0)
 		|| cfgfile_strval(option, value, _T("gfx_atari_palette_fix"), &p->gfx_threebitcolors, threebitcolors, 0)
+		|| cfgfile_strval(option, value, _T("gfx_overscanmode"), &p->gfx_overscanmode, overscanmodes, 0)
 		|| cfgfile_strval(option, value, _T("magic_mousecursor"), &p->input_magic_mouse_cursor, magiccursors, 0)
 		|| cfgfile_strval (option, value, _T("absolute_mouse"), &p->input_tablet, abspointers, 0))
 		return 1;
@@ -7900,6 +7904,7 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 	p->gfx_display_sections = 4;
 	p->gfx_variable_sync = 0;
 	p->gfx_windowed_resize = true;
+	p->gfx_overscanmode = 3;
 
 	p->immediate_blits = false;
 	p->waiting_blits = 0;

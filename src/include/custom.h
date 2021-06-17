@@ -135,6 +135,7 @@ extern float vblank_hz, fake_vblank_hz;
 extern float hblank_hz;
 extern int vblank_skip, doublescan;
 extern bool programmedmode;
+extern int vblank_firstline_hw, vblank_lastline_hw;
 
 #define DMA_AUD0      0x0001
 #define DMA_AUD1      0x0002
@@ -161,7 +162,7 @@ extern bool programmedmode;
 #define CYCLE_MASK 0x0f
 
 extern unsigned long frametime, timeframes;
-extern uae_u16 htotal, vtotal, beamcon0;
+extern uae_u16 htotal, vtotal, beamcon0, new_beamcon0;
 
 // 100 words give you 1600 horizontal pixels. Should be more than enough for superhires. 
 // must be divisible by 8

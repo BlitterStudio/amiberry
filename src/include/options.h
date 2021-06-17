@@ -320,13 +320,16 @@ enum
 #define MONITOREMU_OPALVISION 11
 #define MONITOREMU_COLORBURST 12
 
+#define OVERSCANMODE_OVERSCAN 3
+#define OVERSCANMODE_BROADCAST 4
+#define OVERSCANMODE_EXTREME 5
+
 #define MAX_FILTERSHADERS 4
 
 #define MAX_CHIPSET_REFRESH 10
 #define MAX_CHIPSET_REFRESH_TOTAL (MAX_CHIPSET_REFRESH + 2)
 #define CHIPSET_REFRESH_PAL (MAX_CHIPSET_REFRESH + 0)
 #define CHIPSET_REFRESH_NTSC (MAX_CHIPSET_REFRESH + 1)
-
 struct chipset_refresh
 {
 	bool inuse;
@@ -405,7 +408,6 @@ struct gfx_filterdata
 #define MAX_EXPANSION_BOARDS 20
 #define ROMCONFIG_CONFIGTEXT_LEN 256
 struct boardromconfig;
-
 struct romconfig
 {
 	TCHAR romfile[MAX_DPATH];
@@ -417,16 +419,14 @@ struct romconfig
 	int device_id;
 	int device_settings;
 	int subtype;
-	void* unitdata;
+	void *unitdata;
 	TCHAR configtext[ROMCONFIG_CONFIGTEXT_LEN];
 	uae_u16 manufacturer;
 	uae_u8 product;
 	uae_u8 autoconfig[16];
-	struct boardromconfig* back;
+	struct boardromconfig *back;
 };
-
 #define MAX_BOARD_ROMS 2
-
 struct boardromconfig
 {
 	int device_type;
@@ -445,16 +445,13 @@ struct rtgboardconfig
 	int device_order;
 	int monitor_id;
 };
-
 struct boardloadfile
 {
 	uae_u32 loadoffset;
 	uae_u32 fileoffset, filesize;
 	TCHAR loadfile[MAX_DPATH];
 };
-
 #define MAX_ROM_BOARDS 4
-
 struct romboard
 {
 	uae_u32 size;
@@ -462,9 +459,7 @@ struct romboard
 	uae_u32 end_address;
 	struct boardloadfile lf;
 };
-
 #define MAX_RAM_BOARDS 4
-
 struct ramboard
 {
 	uae_u32 size;
@@ -483,7 +478,6 @@ struct ramboard
 	bool force16bit;
 	struct boardloadfile lf;
 };
-
 struct expansion_params
 {
 	int device_order;
@@ -629,6 +623,7 @@ struct uae_prefs
 	int gfx_display_sections;
 	int gfx_variable_sync;
 	bool gfx_windowed_resize;
+	int gfx_overscanmode;
 
 	struct gfx_filterdata gf[2];
 
