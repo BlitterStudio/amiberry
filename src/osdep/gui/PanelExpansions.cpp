@@ -18,6 +18,8 @@ static gcn::Window* grpExpansionBoard;
 static gcn::Window* grpAcceleratorBoard;
 static gcn::Window* grpMiscExpansions;
 
+static int scsiromselect_table[300];
+
 class string_list_model : public gcn::ListModel
 {
 	std::vector<std::string> values{};
@@ -98,7 +100,6 @@ static gcn::CheckBox* chkScsi;
 static gcn::CheckBox* chkCD32Fmv;
 static gcn::CheckBox* chkSana2;
 
-
 int scsiromselected = 0;
 static int scsiromselectednum = 0;
 static int scsiromselectedcatnum = 0;
@@ -124,6 +125,34 @@ struct expansionrom_gui
 };
 static struct expansionrom_gui expansion_gui_item;
 static struct expansionrom_gui accelerator_gui_item;
+
+static void gui_add_string(int *table, string_list_model item, int id, const TCHAR *str)
+{
+	while (*table >= 0)
+		table++;
+	*table++ = id;
+	*table = -1;
+	item.add_element(str); //SendDlgItemMessage(hDlg, item, CB_ADDSTRING, 0, (LPARAM)str);
+}
+static void gui_set_string_cursor(int* table, gcn::DropDown* item, int id)
+{
+	int idx = 0;
+	while (*table >= 0) {
+		if (*table == id) {
+			item->setSelected(idx); //SendDlgItemMessage(item, CB_SETCURSEL, idx, 0);
+			return;
+		}
+		idx++;
+		table++;
+	}
+}
+static int gui_get_string_cursor(int* table, gcn::DropDown* item)
+{
+	int posn = item->getSelected(); //SendDlgItemMessage(item, CB_GETCURSEL, 0, 0);
+	if (posn < 0)
+		return -1;
+	return table[posn];
+}
 
 static void reset_expansionrom_gui(struct expansionrom_gui* eg, gcn::DropDown* itemselector, gcn::DropDown* selector, gcn::CheckBox* checkbox, gcn::TextBox* stringbox)
 {
@@ -367,6 +396,7 @@ static void init_expansion2(bool init)
 		int total = 0;
 		
 		scsirom_select_list.clear_elements(); //SendDlgItemMessage(hDlg, IDC_SCSIROMSELECT, CB_RESETCONTENT, 0, 0);
+		scsiromselect_table[0] = -1;
 		for (int i = 0; expansionroms[i].name; i++)
 		{
 			total++;
@@ -428,8 +458,7 @@ static void init_expansion2(bool init)
 					ididx = i;
 				}
 			}
-			//gui_add_string(scsiromselect_table, hDlg, IDC_SCSIROMSELECT, idtab[ididx], nameval);
-			scsirom_select_list.add_element(nameval);
+			gui_add_string(scsiromselect_table, scsirom_select_list, idtab[ididx], nameval);			
 			idtab[ididx] = -1;
 			xfree(nameval);
 			xfree(cnameval);
@@ -471,8 +500,7 @@ static void init_expansion2(bool init)
 	}
 
 	if (scsiromselected > 0)
-		cboScsiRomSelect->setSelected(scsiromselected);
-
+		gui_set_string_cursor(scsiromselect_table, cboScsiRomSelect, scsiromselected);
 	cboScsiRomSelectCat->setSelected(scsiromselectedcatnum); //SendDlgItemMessage(hDlg, IDC_SCSIROMSELECTCAT, CB_SETCURSEL, scsiromselectedcatnum, 0);
 
 	scsi_romid_list.clear_elements(); //SendDlgItemMessage(hDlg, IDC_SCSIROMID, CB_RESETCONTENT, 0, 0);
@@ -656,8 +684,7 @@ static void getromfile(gcn::DropDown* d, TCHAR* path, int size)
 	auto val = d->getSelected();
 
 	struct romdata* rd;
-	auto tmp1 = d->getListModel()->getElementAt(val);
-	//SendDlgItemMessage(d, CB_GETLBTEXT, (WPARAM)val, (LPARAM)tmp1);
+	auto tmp1 = d->getListModel()->getElementAt(val);	//SendDlgItemMessage(d, CB_GETLBTEXT, (WPARAM)val, (LPARAM)tmp1);
 	path[0] = 0;
 	rd = getromdatabyname(tmp1.c_str());
 	if (rd) {
@@ -697,7 +724,7 @@ static void values_from_expansion2dlg()
 		brc->roms[index].inserted = false; //ischecked(hDlg, IDC_SCSIROMFILEPCMCIA);
 		brc->roms[index].dma24bit = false; //ischecked(hDlg, IDC_SCSIROM24BITDMA);
 
-		int v = 0; //SendDlgItemMessage(IDC_SCSIROMID, CB_GETCURSEL, 0, 0L);
+		int v = cboScsiRomId->getSelected(); //SendDlgItemMessage(IDC_SCSIROMID, CB_GETCURSEL, 0, 0L);
 		if (!isnew)
 			brc->roms[index].device_id = v;
 
@@ -824,7 +851,7 @@ public:
 		else if (action_event.getSource() == cboScsiRomSelectCat)
 		{
 			auto val = cboScsiRomSelectCat->getSelected();
-			if (val != scsiromselectedcatnum)
+			if (val != -1 && val != scsiromselectedcatnum)
 			{
 				scsiromselectedcatnum = val;
 				scsiromselected = 0;
@@ -837,11 +864,17 @@ public:
 		else if (action_event.getSource() == cboScsiRomSelectNum
 			|| action_event.getSource() == cboScsiRomSelect)
 		{
-			scsiromselectednum = cboScsiRomSelectNum->getSelected();
-			scsiromselected = cboScsiRomSelect->getSelected();
-			values_to_expansion2_expansion_roms();
-			values_to_expansion2_expansion_settings();
-			values_to_expansion2dlg_sub();
+			auto val = cboScsiRomSelectNum->getSelected();
+			if (val != -1)
+				scsiromselectednum = val;
+			val = gui_get_string_cursor(scsiromselect_table, cboScsiRomSelect);
+			if (val != -1)
+			{
+				scsiromselected = val;
+				values_to_expansion2_expansion_roms();
+				values_to_expansion2_expansion_settings();
+				values_to_expansion2dlg_sub();
+			}
 		}
 		
 		else if (action_event.getSource() == cboCpuBoardType)
@@ -862,7 +895,7 @@ public:
 			//cpuboard_set_cpu(&changed_prefs);
 			setcpuboardmemsize();
 			RefreshPanelExpansions();
-		}
+		}	
 	}
 };
 
@@ -1135,7 +1168,8 @@ void RefreshPanelExpansions()
 		auto list_model = cboCpuBoardRomFile->getListModel();
 		list_model->clear_elements(); //SendDlgItemMessage(hDlg, IDC_CPUBOARDROMFILE, CB_RESETCONTENT, 0, 0);
 	}
-	cboScsiRomSelect->setSelected(scsiromselected); //gui_set_string_cursor(scsiromselect_table, hDlg, IDC_SCSIROMSELECT, scsiromselected);
+
+	gui_set_string_cursor(scsiromselect_table, cboScsiRomSelect, scsiromselected);
 	values_to_expansion2dlg_sub();
 
 	// enable_for_expansion2dlg is covered here
