@@ -296,6 +296,9 @@ void CommonBridgeTemplate::resetMFMCache() {
 	
 	std::lock_guard<std::mutex> lockbuff(m_readBufferAvailableLock);
 	m_readBufferAvailable = false;
+
+	m_writePending = false;
+	m_writeComplete = false;
 }
 
 // Save a new disk side and switch it in if it can be
@@ -362,7 +365,7 @@ void CommonBridgeTemplate::handleBackgroundDiskRead() {
 				saveNextBuffer(m_actualCurrentCylinder, m_actualFloppySide);
 
 				// This is a littls cache prediction, but could cause issues with things needing to re-read the same track over and over.  However eventually it will continue anyway
-				if (((!m_canStall) && (!m_useIndex)) || (m_firstTrackMode)) {
+				if ((((!m_canStall) && (!m_useIndex)) || (m_firstTrackMode))) {
 					// So, as a little speed up.  Is the other side of this track in memory?
 					if (!m_mfmRead[m_actualCurrentCylinder][1 - (int)m_actualFloppySide].current.ready) {
 						// No.  Is anything else going on?
@@ -521,6 +524,11 @@ void CommonBridgeTemplate::internalSwitchCylinder(const int cylinder, const Disk
 		if (m_mfmRead[cylinder][(int)side].last.ready) {
 			std::swap(m_mfmRead[cylinder][(int)side].current,m_mfmRead[cylinder][(int)side].last);
 		}
+
+	if (m_writeCompletePending) {
+		m_writeCompletePending = false;
+		m_writeComplete = true;
+	}
 }
 
 // Get the speed at this position.  1000=100%.  
@@ -545,6 +553,12 @@ int CommonBridgeTemplate::getMFMSpeed(const int mfmPositionBits) {
 	return DRIVE_GARBAGE_SPEED;
 }
 
+// Returns TRUE if data is ready and available
+bool CommonBridgeTemplate::isMFMDataAvailable() {
+	if (m_canStall) return true;
+	return m_mfmRead[m_currentTrack][(int)m_floppySide].current.ready;
+}
+
 // Read a single bit from the data stream.   this should call triggerReadWriteAtIndex where appropriate
 bool CommonBridgeTemplate::getMFMBit(const int mfmPositionBits) {
 	if (!isReady()) return DRIVE_GARBAGE_VALUE;
@@ -564,7 +578,7 @@ bool CommonBridgeTemplate::getMFMBit(const int mfmPositionBits) {
 	// Average should be 300ms based on starting to read when the head is at least half way from the index.
 	const unsigned int DelayBetweenChecksMS = 5;
 	const auto DelayBetweenChecks = std::chrono::milliseconds(DelayBetweenChecksMS);
-	for (unsigned int a = 0; a < 600 / DelayBetweenChecksMS; a++) {
+	for (unsigned int a = 0; a < 450 / DelayBetweenChecksMS; a++) {
 		// Causes a delay of 5ms or until a buffer is made live
 		{
 			std::unique_lock<std::mutex> lck(m_readBufferAvailableLock);
@@ -603,9 +617,12 @@ void CommonBridgeTemplate::processCommand(const QueueInfo& info) {
 			std::lock_guard<std::mutex> lock(m_pendingWriteLock);
 			m_pendingTrackWrites.clear();
 		}
+		m_writePending = false;
+		m_writeComplete = false;
 		setMotorStatus(false);
 		m_firstTrackMode = false;
 		m_motorSpinningUp = false;
+		m_writeCompletePending = false;
 		m_motorIsReady = false;
 		m_isMotorRunning = false;
 		resetMFMCache();
@@ -658,7 +675,6 @@ void CommonBridgeTemplate::processCommand(const QueueInfo& info) {
 			track = m_pendingTrackWrites.front();
 			m_pendingTrackWrites.erase(m_pendingTrackWrites.begin());
 		}
-
 		// Is there data to write?
 		if (track.floppyBufferSizeBits) {
 			if (m_actualCurrentCylinder != track.trackNumber) {
@@ -669,16 +685,18 @@ void CommonBridgeTemplate::processCommand(const QueueInfo& info) {
 				m_actualFloppySide = track.side;
 				setActiveSurface(track.side);
 			}
-
 			// This isnt great.  IF this fails it might be hard for WinUAE to know.
-			int numBytes = track.floppyBufferSizeBits / 8;
-			if (track.floppyBufferSizeBits & 7) numBytes++;
 			writeData(track.mfmBuffer, track.floppyBufferSizeBits, track.writeFromIndex, m_actualCurrentCylinder >= WRITE_PRECOMP_START);				
 			// Wipe the copies of the previous version of this
 			m_mfmRead[m_actualCurrentCylinder][(int)m_actualFloppySide].current.ready = false; 
 			m_mfmRead[m_actualCurrentCylinder][(int)m_actualFloppySide].last.ready = false;  
 			m_mfmRead[m_actualCurrentCylinder][(int)m_actualFloppySide].next.ready = false; 
+			m_mfmRead[m_actualCurrentCylinder][(int)m_actualFloppySide].startBitPatterns.valid = false;
 			m_delayStreaming = false;
+			// Delay the completion until we've read a track back
+			m_writeCompletePending = true;
+			//m_writeComplete = true;
+			m_writePending = false;
 		}
 
 		break;
@@ -760,7 +778,7 @@ bool CommonBridgeTemplate::initialise() {
 			struct sched_param sch;
 			int policy;
 			pthread_getschedparam(pthread_self(), &policy, &sch);
-			sch.sched_priority = 10; // slight boost in priority
+			sch.sched_priority = 15; // slight boost in priority
 			policy = SCHED_FIFO;
 			pthread_setschedparam(pthread_self(), policy, &sch);
 #endif
@@ -897,6 +915,10 @@ void CommonBridgeTemplate::writeShortToBuffer(bool side, unsigned int track, uns
 	// Check there is enough space left.  Bytes to bits, then 16 bits for the next block of data
 	if (m_currentWriteTrack.floppyBufferSizeBits < (MFM_BUFFER_MAX_TRACK_LENGTH * 8) - 16) {
 		if (m_currentWriteTrack.floppyBufferSizeBits == 0) {
+			m_writePending = false;
+			m_writeComplete = false;
+			m_writeCompletePending = false;
+
 			m_currentWriteTrack.trackNumber = track;
 			m_currentWriteTrack.side = side ? DiskSurface::dsUpper : DiskSurface::dsLower;
 			m_currentWriteStartMfmPosition = mfmPosition;
@@ -906,6 +928,12 @@ void CommonBridgeTemplate::writeShortToBuffer(bool side, unsigned int track, uns
 		m_currentWriteTrack.floppyBufferSizeBits += 16;
 	}
 }
+
+// Return TRUE if there is data ready to be committed to disk
+bool CommonBridgeTemplate::isReadyToWrite() {
+	return (m_currentWriteTrack.floppyBufferSizeBits);
+}
+
 
 // Requests that any data received via writeShortToBuffer be saved to disk. The side and track should match against what you have been collected
 // and the buffer should be reset upon completion.  You should return the new tracklength (maxMFMBitPosition) with optional padding if needed
@@ -921,11 +949,20 @@ unsigned int CommonBridgeTemplate::commitWriteBuffer(bool side, unsigned int tra
 	// If there was data?
 	if ((m_currentWriteTrack.floppyBufferSizeBits) && (m_currentWriteTrack.trackNumber == track) && (m_currentWriteTrack.side == (side ? DiskSurface::dsUpper : DiskSurface::dsLower))) {
 		// Roughly accurate	
-		m_currentWriteTrack.writeFromIndex = (m_currentWriteStartMfmPosition <= 10) || (m_currentWriteStartMfmPosition >= maxMFMBitPosition() - 10);
+		m_currentWriteTrack.writeFromIndex = (m_currentWriteStartMfmPosition <= 30) || (m_currentWriteStartMfmPosition >= maxMFMBitPosition() - 30);
+
+		// Add a small amount of data to the end
+		if (m_currentWriteTrack.floppyBufferSizeBits < (MFM_BUFFER_MAX_TRACK_LENGTH * 8) - 16) {
+			m_currentWriteTrack.mfmBuffer[m_currentWriteTrack.floppyBufferSizeBits >> 3] = 0x55;
+			m_currentWriteTrack.mfmBuffer[(m_currentWriteTrack.floppyBufferSizeBits >> 3) + 1] = 0x55;
+			m_currentWriteTrack.floppyBufferSizeBits += 16;
+		}
+
 
 		{
 			std::lock_guard<std::mutex> lock(m_pendingWriteLock);
 			m_pendingTrackWrites.push_back(m_currentWriteTrack);
+			m_writePending = true;
 			queueCommand(QueueCommand::writeMFMData);
 			{
 				std::lock_guard<std::mutex> lock2(m_switchBufferLock);
@@ -934,8 +971,8 @@ unsigned int CommonBridgeTemplate::commitWriteBuffer(bool side, unsigned int tra
 				MFMCaches* cache = &m_mfmRead[track][(int)m_floppySide];
 				cache->current.ready = false;
 				cache->last.ready = false;
-				cache->next.amountReadInBits = 0;
 				cache->next.ready = false;
+				cache->startBitPatterns.valid = false;
 			}
 		}
 	}
@@ -943,6 +980,19 @@ unsigned int CommonBridgeTemplate::commitWriteBuffer(bool side, unsigned int tra
 	resetWriteBuffer();
 
 	return maxMFMBitPosition();
+}
+
+
+// Returns TRUE if commitWriteBuffer has been called but not written to disk yet
+bool CommonBridgeTemplate::isWritePending() {
+	return m_writePending;
+}
+
+// Returns TRUE if a write is no longer pending.  This shoudl only return TRUE the first time, and then should reset
+bool CommonBridgeTemplate::isWriteComplete() {
+	bool ret = m_writeComplete;
+	m_writeComplete = false;
+	return ret;
 }
 
 

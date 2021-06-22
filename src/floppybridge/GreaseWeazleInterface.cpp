@@ -231,12 +231,21 @@ bool GreaseWeazleInterface::updateDriveDelays() {
 bool GreaseWeazleInterface::selectDrive(bool select) {
 	Ack response = Ack::Okay;
 
+	if (select == m_selectStatus) return true;
+
 	if (select) {
-		return sendCommand(Cmd::Select, m_currentDriveIndex, response);
+		if (sendCommand(Cmd::Select, m_currentDriveIndex, response)) {
+			m_selectStatus = select;
+			return true;
+		}
 	}
 	else {
-		return sendCommand(Cmd::Deselect, nullptr, 0, response);
+		if (sendCommand(Cmd::Deselect, nullptr, 0, response)) {
+			m_selectStatus = select;
+			return true;
+		}
 	}
+	return false;
 }
 
 // Apply and change the timeouts on the com port
@@ -285,7 +294,7 @@ GWResponse GreaseWeazleInterface::performNoClickSeek() {
 
 	selectDrive(true);
 	sendCommand(Cmd::NoClickStep, nullptr, 0, response);
-	selectDrive(false);
+	if (!m_motorIsEnabled) selectDrive(false);
 
 	if (response == Ack::Okay) {
 		checkPins();
@@ -317,7 +326,7 @@ GWResponse GreaseWeazleInterface::selectTrack(const unsigned char trackIndex, co
 
 	Ack response = Ack::Okay;
 	sendCommand(Cmd::Seek, trackIndex, response);
-	selectDrive(false);
+	if (!m_motorIsEnabled) selectDrive(false);
 
 	// We have to check for a disk manually
 	if (!ignoreDiskInsertCheck) {
@@ -360,7 +369,7 @@ void GreaseWeazleInterface::checkPins() {
 		}
 	}
 
-	selectDrive(false);
+	if (!m_motorIsEnabled) selectDrive(false);
 }
 
 // Search for track 0
@@ -397,13 +406,19 @@ bool GreaseWeazleInterface::sendCommand(Cmd command, void* params, unsigned int 
 		response = Ack::BadCommand;
 		return false;
 	}
-
+	
 	// Read response
 	unsigned char responseMsg[2];
 	unsigned long read = m_comPort.read(&responseMsg, 2);
 	if (read != 2) {
-		response = Ack::BadCommand;
-		return false;
+		if (read == 0) {
+			// Try again
+			read = m_comPort.read(&responseMsg, 2);
+		}
+		if (read != 2) {
+			response = Ack::BadCommand;
+			return false;
+		}
 	}
 
 	response = (Ack)responseMsg[1];
@@ -530,11 +545,12 @@ GWResponse GreaseWeazleInterface::writeCurrentTrackPrecomp(const unsigned char* 
 	unsigned char sequence = 0xAA;  // start at 10101010
 
 	const int nfa_thresh = (int)((float)150e-6 * (float)m_gwVersionInformation.sample_freq);
+	const int nfa_period = (int)((float)1.25e-6 * (float)m_gwVersionInformation.sample_freq);
 	const int precompTime = 140;   // Amiga default precomp amount (140ns)
 	int extraTimeFromPrevious = 0;
 
-	// Re-encode the data into our format and apply precomp.  The +1 is to ensure theres some padding around the edge 
-	while (pos < numBytes + 1) {
+	// Re-encode the data into our format and apply precomp. 
+	while (pos < numBytes+8) {
 		int b, count = 0;
 
 		// See how many zero bits there are before we hit a 1
@@ -542,7 +558,7 @@ GWResponse GreaseWeazleInterface::writeCurrentTrackPrecomp(const unsigned char* 
 			b = readBit(mfmData, numBytes, pos, bit);
 			sequence = ((sequence << 1) & 0x7F) | b;
 			count++;
-		} while (((sequence & 0x08) == 0) && (pos < numBytes + 8));
+		} while (((sequence & 0x08) == 0) && (pos < numBytes + 8));  // the +8 is for safety
 
 		// Validate range
 		if (count < 2) count = 2;  // <2 would be a 11 sequence, not allowed
@@ -586,7 +602,8 @@ GWResponse GreaseWeazleInterface::writeCurrentTrackPrecomp(const unsigned char* 
 					outputBuffer.push_back((unsigned char)FluxOp::Space);   // Space
 					write28bit(ticks, outputBuffer);
 					outputBuffer.push_back(255);
-					outputBuffer.push_back((unsigned char)FluxOp::Space);   // Space
+					outputBuffer.push_back((unsigned char)FluxOp::Astable);   // Space
+					outputBuffer.push_back(nfa_period);
 				}
 				else {
 					unsigned int high = (ticks - 250) / 255;
@@ -617,30 +634,33 @@ GWResponse GreaseWeazleInterface::writeCurrentTrackPrecomp(const unsigned char* 
 	// Write request
 	Ack response = Ack::Okay;
 	if (!sendCommand(Cmd::WriteFlux, (void*)&header, sizeof(header), response)) {
-		selectDrive(false);
+		if (!m_motorIsEnabled) selectDrive(false);
 		return GWResponse::drReadResponseFailed;
 	}
 
-	if (response == Ack::Wrprot) {
-		selectDrive(false);
-		return GWResponse::drWriteProtected;
-	}
+	switch (response) {
+		case Ack::Wrprot:
+			if (!m_motorIsEnabled) selectDrive(false);
+			return GWResponse::drWriteProtected;
 
-	if (response != Ack::Okay) {
-		selectDrive(false);
-		return GWResponse::drReadResponseFailed;
+		case Ack::Okay: 
+			break;
+
+		default:
+			if (!m_motorIsEnabled) selectDrive(false);
+			return GWResponse::drReadResponseFailed;
 	}
 
 	// Write it
 	unsigned long write = m_comPort.write(outputBuffer.data(), (unsigned int)outputBuffer.size());
 	if (write != outputBuffer.size()) {
-		selectDrive(false);
+		if (!m_motorIsEnabled) selectDrive(false);
 		return GWResponse::drReadResponseFailed;
 	}
 
 	// Sync with GW
 	unsigned char sync;
-	unsigned long read = m_comPort.write(&sync, 1);
+	unsigned long read = m_comPort.read(&sync, 1);
 	if (read != 1) {
 		selectDrive(false);
 		return GWResponse::drReadResponseFailed;
@@ -653,10 +673,10 @@ GWResponse GreaseWeazleInterface::writeCurrentTrackPrecomp(const unsigned char* 
 	selectDrive(false);
 
 	switch (response) {
-		case Ack::FluxUnderflow: return GWResponse::drSerialOverrun;
-		case Ack::Wrprot: m_isWriteProtected = true;  return GWResponse::drWriteProtected;
-		case Ack::Okay: return GWResponse::drOK;
-		default: return GWResponse::drReadResponseFailed;
+	case Ack::FluxUnderflow: return GWResponse::drSerialOverrun;
+	case Ack::Wrprot: m_isWriteProtected = true;  return GWResponse::drWriteProtected;
+	case Ack::Okay: return GWResponse::drOK;
+	default: return GWResponse::drReadResponseFailed;
 	}
 }
 
@@ -788,7 +808,7 @@ GWResponse GreaseWeazleInterface::readRotation(RotationExtractor& extractor, con
 	// Write request
 	Ack response = Ack::Okay;
 	if (!sendCommand(Cmd::ReadFlux, (void*)&header, sizeof(header), response)) {
-		selectDrive(false);
+		if (!m_motorIsEnabled) selectDrive(false);
 		return GWResponse::drReadResponseFailed;
 	}
 	int failCount = 0;
@@ -849,7 +869,7 @@ GWResponse GreaseWeazleInterface::readRotation(RotationExtractor& extractor, con
 	response = Ack::Okay;
 	sendCommand(Cmd::GetFluxStatus, nullptr, 0, response);
 
-	selectDrive(false);
+	if (!m_motorIsEnabled) selectDrive(false);
 
 	// Update this flag
 	m_diskInDrive = response != Ack::NoIndex;

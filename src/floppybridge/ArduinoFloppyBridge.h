@@ -1,6 +1,6 @@
 #ifndef ARDUINO_FLOPPY_BRIDGE
 #define ARDUINO_FLOPPY_BRIDGE
-/* ArduinoFloppyBridge (and writer) for *UAE
+/* DrawBridge (Arduino Reader/Writer) Bridge for *UAE
 *
 * Copyright (C) 2021 Robert Smith (@RobSmithDev)
 * https://amiga.robsmithdev.co.uk
@@ -25,9 +25,9 @@
 * https://github.com/RobSmithDev/FloppyDriveBridge
 */
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// This class provides an interface between WinUAE and the Arduino Floppy Reader/Writer //
-//////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+// This class provides an interface between WinUAE and the Arduino Floppy Reader/Writer aka DrawBridge //
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // ROMTYPE_ARDUINOREADER_WRITER must be defined for this to work
 

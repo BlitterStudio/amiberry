@@ -119,6 +119,9 @@ public:
 	// Return TRUE if we're at the INDEX marker/sensor.  mfmPositionBits is in BITS
 	virtual bool isMFMPositionAtIndex(int mfmPositionBits)  = 0;
 
+	// Returns TRUE if data is ready and available
+	virtual bool isMFMDataAvailable() = 0;
+
 	// This returns a single MFM bit at the position provided
 	virtual bool getMFMBit(const int mfmPositionBits)  = 0;
 
@@ -149,6 +152,14 @@ public:
 	// and the buffer should be reset upon completion.  You should return the new tracklength (maxMFMBitPosition) with optional padding if needed
 	virtual unsigned int commitWriteBuffer(bool side, unsigned int track)  = 0;
 
+	// Returns TRUE if commitWriteBuffer has been called but not written to disk yet
+	virtual bool isWritePending() = 0;
+
+	// Returns TRUE if a write is no longer pending.  This should only return TRUE the first time, and then should reset
+	virtual bool isWriteComplete() = 0;
+
+	// Return TRUE if there is data ready to be committed to disk
+	virtual bool isReadyToWrite() = 0;
 };
 
 

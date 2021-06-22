@@ -1,6 +1,6 @@
 #ifndef ARDUINO_FLOPPY_READER_WRITER_INTERFACE
 #define ARDUINO_FLOPPY_READER_WRITER_INTERFACE
-/* ArduinoFloppyReader (and writer)
+/* ArduinoFloppyReaderWriter aka DrawBridge
 *
 * Copyright (C) 2017-2021 Robert Smith (@RobSmithDev)
 * https://amiga.robsmithdev.co.uk

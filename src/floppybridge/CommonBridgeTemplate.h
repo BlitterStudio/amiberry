@@ -171,6 +171,15 @@ private:
 	// For reporting to WinUAE if the disk is write protected
 	bool m_writeProtected;
 
+	// True if a write has been committed but hasn't completed yet
+	bool m_writePending;
+
+	// True if a write has completed.  
+	bool m_writeComplete;
+
+	// When we're about to say its completed
+	bool m_writeCompletePending;
+
 	// For reporting to WinUAE if theres a disk in the drive
 	bool m_diskInDrive;
 
@@ -270,7 +279,7 @@ protected:
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	// Return the number of milliseconds required for the disk to spin up.  You *may* need to override this
-	virtual const unsigned int getDriveSpinupTime() { return 600; };
+	virtual const unsigned int getDriveSpinupTime() { return 500; };
 
 	// If your device supports being able to abort a disk read, mid-read then implement this
 	virtual void abortDiskReading() {};
@@ -388,6 +397,9 @@ public:
 	// Get the speed at this position.  1000=100%.  
 	virtual int getMFMSpeed(const int mfmPositionBits) override final;
 
+	// Returns TRUE if data is ready and available
+	virtual bool isMFMDataAvailable() override final;
+
 	// While not doing anything else, the library should be continuously streaming the current track if the motor is on.  mfmBufferPosition is in BITS 
 	virtual bool getMFMBit(const int mfmPositionBits) override final;
 
@@ -416,6 +428,15 @@ public:
 	// Requests that any data received via writeShortToBuffer be saved to disk. The side and track should match against what you have been collected
 	// and the buffer should be reset upon completion.  You should return the new tracklength (maxMFMBitPosition) with optional padding if needed
 	virtual unsigned int commitWriteBuffer(bool side, unsigned int track) override final;
+
+	// Returns TRUE if commitWriteBuffer has been called but not written to disk yet
+	virtual bool isWritePending() override final;
+
+	// Returns TRUE if a write is no longer pending.  This should only return TRUE the first time, and then should reset
+	virtual bool isWriteComplete() override final;
+
+	// Return TRUE if there is data ready to be committed to disk
+	virtual bool isReadyToWrite() override final;
 
 	// Return TRUE if we're at the INDEX marker
 	virtual bool isMFMPositionAtIndex(int mfmPositionBits) override final;

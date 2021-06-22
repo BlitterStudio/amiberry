@@ -137,8 +137,8 @@ bool GreaseWeazleDiskBridge::getDiskChangeStatus(const bool forceCheck) {
 	// We actually trigger a SEEK operation to ensure this is right
 	if (forceCheck) {
 		if (m_io.checkForDisk(forceCheck) == GWResponse::drNoDiskInDrive) {
-			if (m_io.selectTrack((m_currentCylinder > 40) ? m_currentCylinder + 1 : m_currentCylinder - 1, GreaseWeazle::TrackSearchSpeed::tssNormal, true) != GreaseWeazle::GWResponse::drOK) return isDiskInDrive();
-			if (m_io.selectTrack(m_currentCylinder, GreaseWeazle::TrackSearchSpeed::tssNormal, true) != GreaseWeazle::GWResponse::drOK) return isDiskInDrive();
+			m_io.selectTrack((m_currentCylinder > 40) ? m_currentCylinder + 1 : m_currentCylinder - 1, GreaseWeazle::TrackSearchSpeed::tssNormal, true);
+			m_io.selectTrack(m_currentCylinder, GreaseWeazle::TrackSearchSpeed::tssNormal, true);
 		}
 	}
 
@@ -198,13 +198,14 @@ CommonBridgeTemplate::ReadResponse GreaseWeazleDiskBridge::readData(RotationExtr
 		[&onRotation](RotationExtractor::MFMSample** mfmData, const unsigned int dataLengthInBits) -> bool {
 			return onRotation(*mfmData, dataLengthInBits);
 		});
+	m_motorTurnOnTime = std::chrono::steady_clock::now();
 
 	switch (result) {
 	case GreaseWeazle::GWResponse::drOK: return ReadResponse::rrOK;
 	case GreaseWeazle::GWResponse::drNoDiskInDrive: return ReadResponse::rrNoDiskInDrive;
 	default:  return ReadResponse::rrError;
 	}
-	m_motorTurnOnTime = std::chrono::steady_clock::now();
+	
 }
 
 // Called when a cylinder revolution should be written to the disk.
@@ -214,12 +215,14 @@ CommonBridgeTemplate::ReadResponse GreaseWeazleDiskBridge::readData(RotationExtr
 //					suggestUsingPrecompensation		A suggestion that you might want to use write precompensation, optional
 // Returns TRUE if success, or false if it fails.  Largely doesnt matter as most stuff should verify with a read straight after
 bool GreaseWeazleDiskBridge::writeData(const unsigned char* rawMFMData, const unsigned int numBits, const bool writeFromIndex, const bool suggestUsingPrecompensation) {
-	switch (m_io.writeCurrentTrackPrecomp(rawMFMData, (numBits + 7) / 8, writeFromIndex, suggestUsingPrecompensation)) {
+	GreaseWeazle::GWResponse response = m_io.writeCurrentTrackPrecomp(rawMFMData, (numBits + 7) / 8, writeFromIndex, suggestUsingPrecompensation);
+	m_motorTurnOnTime = std::chrono::steady_clock::now();
+
+	switch (response) {
 	case GreaseWeazle::GWResponse::drOK: return true;
 	case GreaseWeazle::GWResponse::drWriteProtected: setWriteProtectStatus(true); return false;
-	default: return false;
+	default:  return false;
 	}
-	m_motorTurnOnTime = std::chrono::steady_clock::now();
 }
 
 // This is called by the main thread incase you need to do anything specific at regulat intervals

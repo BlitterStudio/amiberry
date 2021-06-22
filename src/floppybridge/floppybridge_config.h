@@ -43,7 +43,7 @@
 
 
 
-// Arduino floppy reader/writer
+// DrawBridge aka Arduino floppy reader/writer
 #define ROMTYPE_ARDUINOREADER_WRITER			ROMTYPE_FLOPYBRDGE0
 #include "ArduinoFloppyBridge.h"
 
@@ -68,7 +68,7 @@
 
 // This builds up the config options shown in in WinUAE.  
 #define FLOPPY_BRIDGE_CONFIG																																	\
-	{	_T("arduinoreaderwriter"), _T("Arduino Reader/Writer"), _T("RobSmithDev"),																				\
+	{	_T("arduinoreaderwriter"), _T("Arduino R/W [DrawBridge]"), _T("RobSmithDev"),																				\
 		NULL, NULL, NULL, NULL, ROMTYPE_ARDUINOREADER_WRITER | ROMTYPE_NOT, 0, 0, BOARD_IGNORE, true,															\
 		bridge_drive_selection_config, 0, false, EXPANSIONTYPE_FLOPPY,																							\
 		0, 0, 0, false, NULL, false, 0, arduino_reader_writer_options },																						\

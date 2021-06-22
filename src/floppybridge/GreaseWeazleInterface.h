@@ -155,6 +155,7 @@ namespace GreaseWeazle {
 		bool			m_pinDskChangeAvailable = false;
 		bool			m_pinWrProtectAvailable = false;
 		bool			m_isWriteProtected = false;
+		bool			m_selectStatus = false;
 
 		// Version information read during openPort
 		GWVersionInformation m_gwVersionInformation;

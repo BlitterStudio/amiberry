@@ -2663,7 +2663,7 @@ static void drive_write_data (drive * drv)
 	switch (drv->filetype) {
 	case ADF_FLOPPYBRIDGE:
 		if (drv->bridge) {
-			// Request to commit the buffer we have collected to disk
+			// Request to commit the buffer we have collected to disk - this should hardly ever be triggered
 			drv->tracklen = drv->bridge->commitWriteBuffer(side, drv->cyl);
 		}
 		break;
@@ -3620,44 +3620,72 @@ static void disk_doupdate_write(int floppybits, int trackspeed)
 				}
 			}
 		}
-		if (dmaen(DMA_DISK) && dmaen(DMA_MASTER) && dskdmaen == DSKDMA_WRITE && dsklength > 0 && fifo_filled) {
-			bitoffset++;
-			bitoffset &= 15;
-			if (!bitoffset) {
-				// fast disk modes, fill the fifo instantly
-				if (currprefs.floppy_speed > 100 && !fifo_inuse[0] && !fifo_inuse[1] && !fifo_inuse[2]) {
-					while (!fifo_inuse[2]) {
-						uae_u16 w = chipmem_wget_indirect (dskpt);
-						DSKDAT (w);
-						dskpt += 2;
-					}
-				}
-				if (disk_fifostatus () >= 0) {
-					uae_u16 w = DSKDATR ();
-					for (dr = 0; dr < MAX_FLOPPY_DRIVES; dr++) {
-						drive *drv2 = &floppy[dr];
-						if (drives[dr]) {
-							drv2->bigmfmbuf[drv2->mfmpos >> 4] = w;
-							drv2->bigmfmbuf[(drv2->mfmpos >> 4) + 1] = 0x5555;
-							drv2->writtento = 1;
-							if (drv2->bridge) drv2->bridge->writeShortToBuffer(side, drv2->cyl, w, drv2->mfmpos);
+		if (dmaen(DMA_DISK) && dmaen(DMA_MASTER) && dskdmaen == DSKDMA_WRITE) {
+			if (dsklength > 0 && fifo_filled) {
+				bitoffset++;
+				bitoffset &= 15;
+				if (!bitoffset) {
+					// fast disk modes, fill the fifo instantly
+					if (currprefs.floppy_speed > 100 && !fifo_inuse[0] && !fifo_inuse[1] && !fifo_inuse[2]) {
+						while (!fifo_inuse[2]) {
+							uae_u16 w = chipmem_wget_indirect(dskpt);
+							DSKDAT(w);
+							dskpt += 2;
 						}
+					}
+					if (disk_fifostatus() >= 0) {
+						bool wasBridge = false;
+						uae_u16 w = DSKDATR();
+						for (dr = 0; dr < MAX_FLOPPY_DRIVES; dr++) {
+							drive* drv2 = &floppy[dr];
+							if (drives[dr]) {
+								drv2->bigmfmbuf[drv2->mfmpos >> 4] = w;
+								drv2->bigmfmbuf[(drv2->mfmpos >> 4) + 1] = 0x5555;
+								drv2->writtento = 1;
+								if (drv2->bridge) {
+									wasBridge = true;
+									drv2->bridge->writeShortToBuffer(side, drv2->cyl, w, drv2->mfmpos);
+								}
+							}
 #ifdef AMAX
 						if (amax_enabled)
 							amax_diskwrite (w);
 #endif
+						}
+
+						dsklength--;
+						if (dsklength <= 0) {
+							if (!wasBridge) disk_dmafinished();
+
+							for (int dr = 0; dr < MAX_FLOPPY_DRIVES; dr++) {
+								drive* drv = &floppy[dr];
+								drv->writtento = 0;
+								if (drv->motoroff)
+									continue;
+								if ((selected | disabled) & (1 << dr))
+									continue;
+
+								drive_write_data(drv);
+							}
+						}
 					}
-					dsklength--;
-					if (dsklength <= 0) {
-						disk_dmafinished ();
-						for (int dr = 0; dr < MAX_FLOPPY_DRIVES ; dr++) {
-							drive *drv = &floppy[dr];
-							drv->writtento = 0;
-							if (drv->motoroff)
-								continue;
-							if ((selected | disabled) & (1 << dr))
-								continue;
-							drive_write_data (drv);
+				}
+			}
+
+			// Bridge pass check
+			if (dsklength <= 0) {
+				for (int dr = 0; dr < MAX_FLOPPY_DRIVES; dr++) {
+					drive* drv = &floppy[dr];
+					if ((drv->bridge) && (drives[dr])) {
+						drv->writtento = 0;
+						if (drv->motoroff)
+							continue;
+						if ((selected | disabled) & (1 << dr))
+							continue;
+
+						// With bridge we wait for the disk to commit the data before fireing the DMA
+						if (drv->bridge->isWriteComplete()) {
+							disk_dmafinished();
 						}
 					}
 				}
@@ -4102,9 +4130,13 @@ static void DISK_start (void)
 				bitoffset = 0;
 				word = 0;
 			}
-			if (drv->catweasel || drv->bridge) {
+			if (drv->catweasel) {
 				word = 0;
 				drive_fill_bigbuf (drv, 1);
+			}
+			if ((drv->bridge) && (dskdmaen != DSKDMA_WRITE)) {
+				word = 0;
+				drive_fill_bigbuf(drv, 1);
 			}
 		}
 		drv->floppybitcounter = 0;
@@ -4383,7 +4415,13 @@ void DSKLEN (uae_u16 v, int hpos)
 		drive *drv = &floppy[dr];
 		if (selected & (1 << dr))
 			continue;
-		if (drv->bridge) break;
+		if (drv->bridge) {
+			if (dskdmaen == DSKDMA_WRITE) {
+				continue;
+				// In write mode we allow a special version of 'turbo' to happen.  We only complete the DMA response when we have actually written to disk
+			}
+			else break;
+		}
 		if (drv->filetype != ADF_NORMAL && drv->filetype != ADF_KICK && drv->filetype != ADF_SKICK && drv->filetype != ADF_NORMAL_HEADER)
 			break;
 	}
@@ -4398,13 +4436,15 @@ void DSKLEN (uae_u16 v, int hpos)
 
 			if (drv->motoroff)
 				continue;
-			if (!drv->useturbo && currprefs.floppy_speed > 0)
+			if (!drv->useturbo && currprefs.floppy_speed > 0 && (!drv->bridge))
 				continue;
 			if (selected & (1 << dr))
 				continue;
 
 			pos = drv->mfmpos & ~15;
-			drive_fill_bigbuf (drv, 0);
+
+			// Bridge only supports special version of turbo write
+			if (!drv->bridge) drive_fill_bigbuf(drv, 0);
 
 			if (dskdmaen == DSKDMA_READ) { /* TURBO read */
 
@@ -4441,11 +4481,30 @@ void DSKLEN (uae_u16 v, int hpos)
 
 			} else if (dskdmaen == DSKDMA_WRITE) { /* TURBO write */
 
+				if (drv->bridge) {
+					if (!drv->bridge->isWritePending()) {
+						for (i = 0; i < dsklength; i++) {
+							uae_u16 w = chipmem_wget_indirect(dskpt + i * 2);
+							drv->bigmfmbuf[pos >> 4] = w;
+							drv->bridge->writeShortToBuffer(side, drv->cyl, w, drv->mfmpos);
+							pos += 16;
+							pos %= drv->tracklen;
+						}
+						drv->mfmpos = pos;
+						if (drv->bridge->isReadyToWrite()) {
+							drv->bridge->commitWriteBuffer(side, drv->cyl);
+						}
+					}
+					else
+						if (drv->bridge->isWriteComplete()) {
+							done = 2;
+						}
+				}
+				else
 				if (floppysupported) {
 					for (i = 0; i < dsklength; i++) {
 						uae_u16 w = chipmem_wget_indirect (dskpt + i * 2);
 						drv->bigmfmbuf[pos >> 4] = w;
-						if (drv->bridge) drv->bridge->writeShortToBuffer(side, drv->cyl, w, drv->mfmpos);  // this will probably not happen
 #ifdef AMAX
 						if (amax_enabled)
 							amax_diskwrite (w);

@@ -1,4 +1,4 @@
-/* ArduinoFloppyReader (and writer)
+/* ArduinoFloppyReaderWriter aka DrawBridge
 *
 * Copyright (C) 2017-2021 Robert Smith (@RobSmithDev)
 * https://amiga.robsmithdev.co.uk
@@ -216,7 +216,7 @@ DiagnosticResponse ArduinoInterface::checkForDisk(bool forceCheck) {
 			m_diskInDrive = false;
 		}
 		else {
-			if (response == '1') m_diskInDrive = true; 
+			if (response == '1') m_diskInDrive = true;
 		}
 
 		// Also read the write protect status
@@ -361,7 +361,7 @@ DiagnosticResponse ArduinoInterface::attemptToSync(std::string& versionString, S
 			if ((buffer[0] == '1') && (buffer[1] == 'V') && ((buffer[2] >= '1') && (buffer[2] <= '9')) && ((buffer[3] == ',') || (buffer[3] == '.')) && ((buffer[4] >= '0') && (buffer[4] <= '9'))) {
 
 				// Success
-				port.purgeBuffers(); 
+				port.purgeBuffers();
 				std::this_thread::sleep_for(std::chrono::milliseconds(1));
 				port.purgeBuffers();
 				versionString = &buffer[1];
@@ -464,7 +464,7 @@ DiagnosticResponse ArduinoInterface::openPort(const std::wstring& portName, bool
 	for (;;) {
 		unsigned long size = m_comPort.read(buffer, 1);
 		if (size < 1)
-			if (counter++>=10) break;
+			if (counter++ >= 10) break;
 	}
 
 	// Possibly a bit overkill
@@ -990,7 +990,8 @@ DiagnosticResponse ArduinoInterface::readRotation(RotationExtractor& extractor, 
 						// Always save this back
 						extractor.getIndexSequence(startBitPatterns);
 					}
-				} else
+				}
+				else
 					if ((extractor.totalTimeReceived() > 300000000) && (noDataCounter > 100)) {
 						// No data, stop
 						abortReadStreaming();
@@ -1074,9 +1075,9 @@ inline int readBit(const unsigned char* buffer, const unsigned int maxLength, in
 	0	0	0    	1	   0	1	0       Early			0x0A
 	0	1	0    	1	   0	0	0       Late			0x28
 	0	1	0    	1	   0	0	1       Late			0x29
-	0	1	0    	1	   0	1	0       Normal	
-	1	0	0    	1	   0	0	0       Late			0x48	
-	1	0	0    	1	   0	0	1       Normal	
+	0	1	0    	1	   0	1	0       Normal
+	1	0	0    	1	   0	0	0       Late			0x48
+	1	0	0    	1	   0	0	1       Normal
 	1	0	0    	1	   0	1	0       Early			0x4A
 */
 
@@ -1108,7 +1109,7 @@ DiagnosticResponse ArduinoInterface::writeCurrentTrackPrecomp(const unsigned cha
 	int lastCount = 2;
 
 	// Re-encode the data into our format and apply precomp.  The +8 is to ensure theres some padding around the edge which will come out as 010101 etc
-	while (pos < numBytes + 8) {
+	while (pos < numBytes) {
 		*output = 0;
 
 		for (int i = 0; i < 2; i++) {
