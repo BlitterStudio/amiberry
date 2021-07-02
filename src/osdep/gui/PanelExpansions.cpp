@@ -126,13 +126,13 @@ struct expansionrom_gui
 static struct expansionrom_gui expansion_gui_item;
 static struct expansionrom_gui accelerator_gui_item;
 
-static void gui_add_string(int *table, string_list_model item, int id, const TCHAR *str)
+static void gui_add_string(int *table, string_list_model *item, int id, const TCHAR *str)
 {
 	while (*table >= 0)
 		table++;
 	*table++ = id;
 	*table = -1;
-	item.add_element(str); //SendDlgItemMessage(hDlg, item, CB_ADDSTRING, 0, (LPARAM)str);
+	item->add_element(str); //SendDlgItemMessage(hDlg, item, CB_ADDSTRING, 0, (LPARAM)str);
 }
 static void gui_set_string_cursor(int* table, gcn::DropDown* item, int id)
 {
@@ -393,8 +393,7 @@ static void init_expansion2(bool init)
 	{
 		bool matched = false;
 		int* idtab;
-		int total = 0;
-		
+		int total = 0;		
 		scsirom_select_list.clear_elements(); //SendDlgItemMessage(hDlg, IDC_SCSIROMSELECT, CB_RESETCONTENT, 0, 0);
 		scsiromselect_table[0] = -1;
 		for (int i = 0; expansionroms[i].name; i++)
@@ -458,7 +457,7 @@ static void init_expansion2(bool init)
 					ididx = i;
 				}
 			}
-			gui_add_string(scsiromselect_table, scsirom_select_list, idtab[ididx], nameval);			
+			gui_add_string(scsiromselect_table, &scsirom_select_list, idtab[ididx], nameval);			
 			idtab[ididx] = -1;
 			xfree(nameval);
 			xfree(cnameval);
@@ -769,6 +768,39 @@ static void values_from_expansion2dlg()
 	}
 }
 
+static void expansion2dlgproc()
+{
+	//Populate CPU boards list
+	cpuboards_list.clear_elements();
+	for (int i = 0; cpuboards[i].name; i++)
+	{
+		cpuboards_list.add_element(cpuboards[i].name);
+	}
+
+	//Populate Expansion Categories
+	scsirom_select_cat_list.clear_elements();
+	scsirom_select_cat_list.add_element("Built-in expansions");
+	scsirom_select_cat_list.add_element("SCSI controllers");
+	scsirom_select_cat_list.add_element("IDE controllers");
+	scsirom_select_cat_list.add_element("SASI controllers");
+	scsirom_select_cat_list.add_element("Custom controllers");
+	scsirom_select_cat_list.add_element("PCI bridgeboards");
+	scsirom_select_cat_list.add_element("x86 Bridgeboards");
+	scsirom_select_cat_list.add_element("Graphics boards");
+	scsirom_select_cat_list.add_element("Sound cards");
+	scsirom_select_cat_list.add_element("Network adapters");
+	scsirom_select_cat_list.add_element("Disk controllers");
+	scsirom_select_cat_list.add_element("x86 bridgeboard expansions");
+
+	reset_expansionrom_gui(&expansion_gui_item, cboExpansionBoardItemSelector, cboExpansionBoardSelector, chkExpansionBoardCheckbox, txtExpansionBoardStringBox);
+	reset_expansionrom_gui(&accelerator_gui_item, cboAcceleratorBoardItemSelector, cboAcceleratorBoardSelector, chkAcceleratorBoardCheckbox, nullptr);
+
+	chkScsiRomSelected->setVisible(false); //hide(IDC_SCSIROMSELECTED, 1);
+	init_expansion2(true);
+	updatecpuboardsubtypes();
+	setcpuboardmemsize();
+}
+
 class ExpansionsActionListener : public gcn::ActionListener
 {
 public:
@@ -903,27 +935,6 @@ ExpansionsActionListener* expansions_action_listener;
 
 void InitPanelExpansions(const struct _ConfigCategory& category)
 {
-	//Populate CPU boards list
-	for (int i = 0; cpuboards[i].name; i++)
-	{
-		cpuboards_list.add_element(cpuboards[i].name);
-	}
-
-	//Populate Expansion Categories
-	scsirom_select_cat_list.clear_elements();
-	scsirom_select_cat_list.add_element("Built-in expansions");
-	scsirom_select_cat_list.add_element("SCSI controllers");
-	scsirom_select_cat_list.add_element("IDE controllers");
-	scsirom_select_cat_list.add_element("SASI controllers");
-	scsirom_select_cat_list.add_element("Custom controllers");
-	scsirom_select_cat_list.add_element("PCI bridgeboards");
-	scsirom_select_cat_list.add_element("x86 Bridgeboards");
-	scsirom_select_cat_list.add_element("Graphics boards");
-	scsirom_select_cat_list.add_element("Sound cards");
-	scsirom_select_cat_list.add_element("Network adapters");
-	scsirom_select_cat_list.add_element("Disk controllers");
-	scsirom_select_cat_list.add_element("x86 bridgeboard expansions");
-
 	expansions_action_listener = new ExpansionsActionListener();
 
 	cboScsiRomSelectCat = new gcn::DropDown(&scsirom_select_cat_list);
@@ -952,27 +963,39 @@ void InitPanelExpansions(const struct _ConfigCategory& category)
 	chkScsiRomSelected->addActionListener(expansions_action_listener);
 
 	cboScsiRomFile = new gcn::DropDown(&scsirom_file_list);
-	cboScsiRomFile->setSize(250, cboScsiRomFile->getHeight());
+	cboScsiRomFile->setSize(200, cboScsiRomFile->getHeight());
+	cboScsiRomFile->setBaseColor(gui_baseCol);
+	cboScsiRomFile->setBackgroundColor(colTextboxBackground);
 	cboScsiRomFile->setId("cboScsiRomFile");
 	cboScsiRomFile->addActionListener(expansions_action_listener);
 
 	cboScsiRomId = new gcn::DropDown(&scsi_romid_list);
-	cboScsiRomId->setSize(50, cboScsiRomId->getHeight());
+	cboScsiRomId->setSize(30, cboScsiRomId->getHeight());
+	cboScsiRomId->setBaseColor(gui_baseCol);
+	cboScsiRomId->setBackgroundColor(colTextboxBackground);
 	cboScsiRomId->setId("cboScsiRomId");
 	cboScsiRomId->addActionListener(expansions_action_listener);
 
 	cboScsiRomSelectNum = new gcn::DropDown(&scsirom_selectnum_list);
-	cboScsiRomSelectNum->setSize(50, cboScsiRomSelectNum->getHeight());
+	cboScsiRomSelectNum->setSize(30, cboScsiRomSelectNum->getHeight());
+	cboScsiRomSelectNum->setBaseColor(gui_baseCol);
+	cboScsiRomSelectNum->setBackgroundColor(colTextboxBackground);
 	cboScsiRomSelectNum->setId("cboScsiRomSelectNum");
 	cboScsiRomSelectNum->addActionListener(expansions_action_listener);
 	
 	btnScsiRomChooser = new gcn::Button("...");
+	btnScsiRomChooser->setBaseColor(gui_baseCol);
+	btnScsiRomChooser->setBackgroundColor(colTextboxBackground);
+	btnScsiRomChooser->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	btnScsiRomChooser->setId("btnScsiRomChooser");
 	btnScsiRomChooser->addActionListener(expansions_action_listener);
 
 	chkScsiRomFileAutoboot = new gcn::CheckBox("Autoboot disabled");
+	chkScsiRomFileAutoboot->setId("chkScsiRomFileAutoboot");
 	chkScsiRomFileAutoboot->addActionListener(expansions_action_listener);
 
 	chkScsiRomFilePcmcia = new gcn::CheckBox("PCMCIA inserted");
+	chkScsiRomFilePcmcia->setId("chkScsiRomFilePcmcia");
 	chkScsiRomFilePcmcia->addActionListener(expansions_action_listener);
 	
 	cboExpansionBoardItemSelector = new gcn::DropDown(&expansionboard_itemselector_list);
@@ -982,6 +1005,7 @@ void InitPanelExpansions(const struct _ConfigCategory& category)
 	cboExpansionBoardItemSelector->setId("cboExpansionBoardItemSelector");
 	cboExpansionBoardItemSelector->addActionListener(expansions_action_listener);
 
+	//TODO this one is probably not correct
 	cboExpansionBoardSelector = new gcn::DropDown(&expansionboard_itemselector_list);
 	cboExpansionBoardSelector->setSize(250, cboExpansionBoardSelector->getHeight());
 	cboExpansionBoardSelector->setBaseColor(gui_baseCol);
@@ -994,6 +1018,7 @@ void InitPanelExpansions(const struct _ConfigCategory& category)
 	chkExpansionBoardCheckbox->addActionListener(expansions_action_listener);
 
 	txtExpansionBoardStringBox = new gcn::TextBox();
+	txtExpansionBoardStringBox->setSize(200, txtExpansionBoardStringBox->getHeight());
 	txtExpansionBoardStringBox->setId("txtExpansionBoardStringBox");
 	
 	cboCpuBoardType = new gcn::DropDown(&cpuboards_list);
@@ -1013,6 +1038,12 @@ void InitPanelExpansions(const struct _ConfigCategory& category)
 	cboCpuBoardSubType->setEnabled(false); //TODO enable this when implemented
 
 	cboCpuBoardRomFile = new gcn::DropDown(&cpuboard_romfile_list);
+	cboCpuBoardRomFile->setSize(250, cboCpuBoardRomFile->getHeight());
+	cboCpuBoardRomFile->setBaseColor(gui_baseCol);
+	cboCpuBoardRomFile->setBackgroundColor(colTextboxBackground);
+	cboCpuBoardRomFile->setId("cboCpuBoardRomFile");
+	cboCpuBoardRomFile->addActionListener(expansions_action_listener);
+	cboCpuBoardRomFile->setEnabled(false); //TODO Enable this when implemented
 
 	cboAcceleratorBoardItemSelector = new gcn::DropDown(&acceleratorboard_itemselector_list);
 	cboAcceleratorBoardItemSelector->setSize(250, cboAcceleratorBoardItemSelector->getHeight());
@@ -1055,11 +1086,19 @@ void InitPanelExpansions(const struct _ConfigCategory& category)
 	grpExpansionBoard = new gcn::Window("Expansion Board Settings");
 	grpExpansionBoard->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
 	grpExpansionBoard->add(cboScsiRomSelectCat, posX, posY);
+	grpExpansionBoard->add(cboScsiRomId, cboScsiRomSelectCat->getX() + cboScsiRomSelectCat->getWidth() + DISTANCE_NEXT_X * 15, cboScsiRomSelectCat->getY());
 	grpExpansionBoard->add(cboScsiRomSelect, posX, posY + cboScsiRomSelectCat->getHeight() + DISTANCE_NEXT_Y);
-	grpExpansionBoard->add(chkScsiRomSelected, posX + cboScsiRomSelect->getWidth() + DISTANCE_NEXT_X, cboScsiRomSelect->getY());
+	grpExpansionBoard->add(cboScsiRomSelectNum, cboScsiRomSelect->getX() + cboScsiRomSelect->getWidth() + DISTANCE_NEXT_X, cboScsiRomSelect->getY());
+	grpExpansionBoard->add(chkScsiRomSelected, cboScsiRomSelectNum->getX() + cboScsiRomSelectNum->getWidth() + DISTANCE_NEXT_X, cboScsiRomSelectNum->getY());
+	grpExpansionBoard->add(cboScsiRomFile, chkScsiRomSelected->getX(), chkScsiRomSelected->getY());
+	grpExpansionBoard->add(btnScsiRomChooser, cboScsiRomFile->getX() + cboScsiRomFile->getWidth() + DISTANCE_NEXT_X, cboScsiRomFile->getY());
 	grpExpansionBoard->add(cboScsiRomSubSelect, posX, cboScsiRomSelect->getY() + cboScsiRomSelect->getHeight() + DISTANCE_NEXT_Y);
+	grpExpansionBoard->add(chkScsiRomFileAutoboot, chkScsiRomSelected->getX(), cboScsiRomSubSelect->getY());
+	grpExpansionBoard->add(chkScsiRomFilePcmcia, chkScsiRomFileAutoboot->getX() + chkScsiRomFileAutoboot->getWidth(), chkScsiRomFileAutoboot->getY());
+	grpExpansionBoard->add(txtExpansionBoardStringBox, chkScsiRomFileAutoboot->getX(), chkScsiRomFileAutoboot->getY());
+	grpExpansionBoard->add(chkExpansionBoardCheckbox, chkScsiRomFileAutoboot->getX(), chkScsiRomFileAutoboot->getY() + DISTANCE_NEXT_Y);
 	grpExpansionBoard->add(cboExpansionBoardItemSelector, posX, cboScsiRomSubSelect->getY() + cboScsiRomSubSelect->getHeight() + DISTANCE_NEXT_Y);
-	grpExpansionBoard->add(cboExpansionBoardSelector, chkScsiRomSelected->getX(), cboExpansionBoardItemSelector->getY());
+	//grpExpansionBoard->add(cboExpansionBoardSelector, chkScsiRomSelected->getX(), cboExpansionBoardItemSelector->getY());
 	//TODO add items here
 	grpExpansionBoard->setMovable(false);
 	grpExpansionBoard->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, 200);
@@ -1071,6 +1110,7 @@ void InitPanelExpansions(const struct _ConfigCategory& category)
 	grpAcceleratorBoard->setPosition(DISTANCE_BORDER, grpExpansionBoard->getY() + grpExpansionBoard->getHeight() + DISTANCE_NEXT_Y);
 	grpAcceleratorBoard->add(cboCpuBoardType, posX, posY);
 	grpAcceleratorBoard->add(cboCpuBoardSubType, posX, posY + cboCpuBoardType->getHeight() + DISTANCE_NEXT_Y);
+	grpAcceleratorBoard->add(cboCpuBoardRomFile, cboCpuBoardType->getX() + cboCpuBoardType->getWidth() + DISTANCE_NEXT_X * 3, cboCpuBoardType->getY());
 	//TODO add items here
 	grpAcceleratorBoard->setMovable(false);
 	grpAcceleratorBoard->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, 150);
@@ -1086,23 +1126,12 @@ void InitPanelExpansions(const struct _ConfigCategory& category)
 	posY += chkBSDSocket->getHeight() + DISTANCE_NEXT_Y;
 	grpMiscExpansions->add(chkScsi, DISTANCE_BORDER, posY);
 	grpMiscExpansions->add(chkCD32Fmv, posX, posY);
-	posY += chkScsi->getHeight() + DISTANCE_NEXT_Y;
-	//TODO add items here
 	grpMiscExpansions->setMovable(false);
 	grpMiscExpansions->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, 110);
 	grpMiscExpansions->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpMiscExpansions->setBaseColor(gui_baseCol);
 	category.panel->add(grpMiscExpansions);
 
-	//TODO
-	reset_expansionrom_gui(&expansion_gui_item, cboExpansionBoardItemSelector, cboExpansionBoardSelector, chkExpansionBoardCheckbox, txtExpansionBoardStringBox);
-	reset_expansionrom_gui(&accelerator_gui_item, cboAcceleratorBoardItemSelector, cboAcceleratorBoardSelector, chkAcceleratorBoardCheckbox, nullptr);
-
-	chkScsiRomSelected->setVisible(false); //hide(IDC_SCSIROMSELECTED, 1);
-	init_expansion2(true);
-	updatecpuboardsubtypes();
-	setcpuboardmemsize();
-	
 	RefreshPanelExpansions();
 }
 
@@ -1146,6 +1175,8 @@ void ExitPanelExpansions()
 
 void RefreshPanelExpansions()
 {
+	expansion2dlgproc();
+	
 	// values_to_expansion2dlg is covered here
 	chkBSDSocket->setEnabled(!emulating);
 	chkBSDSocket->setSelected(changed_prefs.socket_emu);
