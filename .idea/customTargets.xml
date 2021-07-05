@@ -11,5 +11,15 @@
         </clean>
       </configuration>
     </target>
+    <target id="30a3bc5c-3dbf-4299-9c4c-3df597af999f" name="rpi4-dmx" defaultType="MAKE">
+      <configuration id="2595e496-dc54-4f9d-8e20-3500e258f23a" name="rpi4-dmx" toolchainName="RPI4 (32-bit)">
+        <build type="MAKE">
+          <make targetName="PLATFORM=rpi4 DEBUG=1" />
+        </build>
+        <clean type="MAKE">
+          <make targetName="clean" />
+        </clean>
+      </configuration>
+    </target>
   </component>
 </project>

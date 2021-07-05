@@ -5,7 +5,7 @@
       <paths name="RPI4 (32-bit) (cf80550b-53f8-4070-874a-fd3fc8269567)">
         <serverdata>
           <mappings>
-            <mapping deploy="projects/amiberry-rpi4-sdl2" local="$PROJECT_DIR$" />
+            <mapping deploy="projects/amiberry-rpi4" local="$PROJECT_DIR$" />
           </mappings>
           <excludedPaths>
             <excludedPath local="true" path="$PROJECT_DIR$/VSLinux" />
