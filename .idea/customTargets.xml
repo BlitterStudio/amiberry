@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CLionExternalBuildManager">
+    <target id="9821eed6-961e-4c65-9d13-689205ec9d21" name="rpi4-sdl2" defaultType="MAKE">
+      <configuration id="fd46c317-78a7-4841-b62d-380cd0fec3f9" name="rpi4-sdl2" toolchainName="RPI4 (32-bit)">
+        <build type="MAKE">
+          <make targetName="PLATFORM=rpi4-sdl2 DEBUG=1" />
+        </build>
+        <clean type="MAKE">
+          <make targetName="clean" />
+        </clean>
+      </configuration>
+    </target>
+  </component>
+</project>

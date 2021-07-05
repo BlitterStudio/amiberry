@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PublishConfigData" remoteFilesAllowedToDisappearOnAutoupload="false">
+    <serverData>
+      <paths name="RPI4 (32-bit) (cf80550b-53f8-4070-874a-fd3fc8269567)">
+        <serverdata>
+          <mappings>
+            <mapping deploy="projects/amiberry-rpi4-sdl2" local="$PROJECT_DIR$" />
+          </mappings>
+          <excludedPaths>
+            <excludedPath local="true" path="$PROJECT_DIR$/VSLinux" />
+            <excludedPath local="true" path="$PROJECT_DIR$/.vs" />
+          </excludedPaths>
+        </serverdata>
+      </paths>
+      <paths name="RPI4 (64-bit) (adefad8d-b2b0-4c87-85c3-ff357b9c07f6)">
+        <serverdata>
+          <mappings>
+            <mapping local="$PROJECT_DIR$" web="/" />
+          </mappings>
+          <excludedPaths>
+            <excludedPath local="true" path="$PROJECT_DIR$/.vs" />
+            <excludedPath local="true" path="$PROJECT_DIR$/VSLinux" />
+          </excludedPaths>
+        </serverdata>
+      </paths>
+    </serverData>
+  </component>
+</project>

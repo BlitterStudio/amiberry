@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="MakefileBuildTargetsManager">
+    <user-build-targets>
+      <build-target name="PLATFORM=rpi4-sdl2 DEBUG=1">
+        <build-configurations>
+          <build-configuration toolchainName="RPI4 (32-bit)">
+            <make-targets>
+              <make-target>PLATFORM=rpi4-sdl2</make-target>
+              <make-target>DEBUG=1</make-target>
+            </make-targets>
+          </build-configuration>
+        </build-configurations>
+      </build-target>
+      <build-target name="clean">
+        <build-configurations>
+          <build-configuration toolchainName="RPI4 (32-bit)">
+            <make-targets>
+              <make-target>clean</make-target>
+            </make-targets>
+          </build-configuration>
+        </build-configurations>
+      </build-target>
+    </user-build-targets>
+  </component>
+</project>
