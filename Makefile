@@ -1,5 +1,5 @@
 # Specify "make PLATFORM=<platform>" to compile for a specific target.
-# Check the supported list of platforms below for a ful list
+# Check the supported list of platforms below for a full list
 
 #
 ## Common options for all targets
