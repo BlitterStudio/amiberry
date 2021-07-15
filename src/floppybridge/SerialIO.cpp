@@ -406,8 +406,8 @@ SerialIO::Response SerialIO::configurePort(const Configuration& configuration) {
 	term.c_oflag &= ~OFILL;
 #endif
 
-	term.c_cc[VMIN] = 0;
-	term.c_cc[VTIME] = 0;
+	term.c_cc[VMIN] = 3;
+	term.c_cc[VTIME] = 3;
 
 	int ctsRtsFlags = 0;
 #ifdef CRTSCTS
