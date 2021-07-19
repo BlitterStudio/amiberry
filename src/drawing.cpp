@@ -261,6 +261,7 @@ static int visible_top_start, visible_bottom_stop;
 static int vblank_top_start, vblank_bottom_stop;
 static int hblank_left_start, hblank_right_stop;
 static bool exthblank;
+static bool extborder;
 
 static int linetoscr_x_adjust_pixbytes, linetoscr_x_adjust_pixels;
 static int thisframe_y_adjust;
@@ -510,28 +511,36 @@ static void set_blanking_limits(void)
 		vblank_bottom_stop = visible_bottom_stop;
 	}
 
-	if (!dp_for_drawing || !ce_is_extblankset(colors_for_drawing.extra) || !ce_is_extblankmode(colors_for_drawing.extra) || (currprefs.gfx_overscanmode <= OVERSCANMODE_OVERSCAN && !(new_beamcon0 & 0x80))) {
-		// hardwired blanking
-		int hbstrt = (235 << CCK_SHRES_SHIFT) - 3;
-		int hbstop = (47 << CCK_SHRES_SHIFT) - 7;
+	// horizontal blanking
+	bool hardwired = !dp_for_drawing || !ce_is_extblankset(colors_for_drawing.extra) || !ce_is_extblankmode(colors_for_drawing.extra);
+	bool doblank = false;
+	int hbstrt = (235 << CCK_SHRES_SHIFT) - 3;
+	int hbstop = (47 << CCK_SHRES_SHIFT) - 7;
 
-		if (currprefs.gfx_overscanmode < OVERSCANMODE_OVERSCAN) {
-			int mult = (OVERSCANMODE_OVERSCAN - currprefs.gfx_overscanmode) * 4;
-			hbstrt -= mult << CCK_SHRES_SHIFT;
-			hbstop += mult << CCK_SHRES_SHIFT;
-			if (currprefs.gfx_overscanmode == 0) {
-				hbstrt += 2 << CCK_SHRES_SHIFT;
-				hbstop -= 2 << CCK_SHRES_SHIFT;
-			}
+	if (currprefs.gfx_overscanmode < OVERSCANMODE_OVERSCAN) {
+		int mult = (OVERSCANMODE_OVERSCAN - currprefs.gfx_overscanmode) * 4;
+		hbstrt -= mult << CCK_SHRES_SHIFT;
+		hbstop += mult << CCK_SHRES_SHIFT;
+		if (currprefs.gfx_overscanmode == 0) {
+			hbstrt += 2 << CCK_SHRES_SHIFT;
+			hbstop -= 2 << CCK_SHRES_SHIFT;
 		}
-		if (!dp_for_drawing || !ce_is_extblankset(colors_for_drawing.extra) || !ce_is_extblankmode(colors_for_drawing.extra)) {
-			exthblank = false;
-		} else if (currprefs.gfx_overscanmode <= OVERSCANMODE_OVERSCAN) {
-			if ((new_beamcon0 & 0x0110) && !(new_beamcon0 & 0x80)) {
-				extern uae_u16 hsstrt;
-				hbstrt += (hsstrt - 13) << CCK_SHRES_SHIFT;
-				hbstop += (hsstrt - 13) << CCK_SHRES_SHIFT;
-			}
+	}
+	if (hardwired) {
+		exthblank = false;
+		doblank = true;
+	} else if (currprefs.gfx_overscanmode <= OVERSCANMODE_OVERSCAN) {
+		doblank = true;
+	} else if (currprefs.gfx_overscanmode == OVERSCANMODE_BROADCAST) {
+		hbstrt = (239 << CCK_SHRES_SHIFT) - 3;
+		hbstop = (47 << CCK_SHRES_SHIFT) - 3;
+		doblank = true;
+	}
+	if (doblank && !(new_beamcon0 & 0x80)) {
+		if (new_beamcon0 & 0x0110) {
+			extern uae_u16 hsstrt;
+			hbstrt += (hsstrt - 17) << CCK_SHRES_SHIFT;
+			hbstop += (hsstrt - 17) << CCK_SHRES_SHIFT;
 		}
 		if (currprefs.chipset_hr) {
 			hbstrt &= ~(3 >> currprefs.gfx_resolution);
@@ -547,7 +556,9 @@ static void set_blanking_limits(void)
 			hblank_right_stop = coord_hw_to_window_x_shres(hbstrt);
 		}
 	}
-	if (!(new_beamcon0 & 0x1000) || (currprefs.gfx_overscanmode <= OVERSCANMODE_OVERSCAN && !(new_beamcon0 & 0x80))) {
+
+	hardwired = (new_beamcon0 & 0x1000) == 0;
+	if (hardwired) {
 		int vbstrt = vblank_firstline_hw;
 		int vbstop = vblank_lastline_hw;
 
@@ -566,6 +577,7 @@ static void set_blanking_limits(void)
 			vblank_bottom_stop = vbstop;
 		}
 	}
+
 }
 
 void get_custom_raw_limits(int *pw, int *ph, int *pdx, int *pdy)
@@ -787,7 +799,7 @@ int get_custom_limits (int *pw, int *ph, int *pdx, int *pdy, int *prealh)
 		dx = 0;
 
 	*prealh = -1;
-	if (!programmedmode && first_planes_vpos) {
+	if (programmedmode <= 1 && first_planes_vpos) {
 		int th = (maxvpos - minfirstline) * 95 / 100;
 		if (th > h) {
 			th = xshift (th, dbl1);
@@ -801,7 +813,7 @@ int get_custom_limits (int *pw, int *ph, int *pdx, int *pdy, int *prealh)
 	if (w == 0 || h == 0)
 		return 0;
 
-	if (doublescan <= 0 && !programmedmode) {
+	if (doublescan <= 0 && programmedmode <= 1) {
 		if ((w >> currprefs.gfx_resolution) < MIN_DISPLAY_W) {
 			dx += (w - (MIN_DISPLAY_W << currprefs.gfx_resolution)) / 2;
 			w = MIN_DISPLAY_W << currprefs.gfx_resolution;
@@ -825,7 +837,7 @@ int get_custom_limits (int *pw, int *ph, int *pdx, int *pdy, int *prealh)
 
 	if (w <= 0 || h <= 0 || dx < 0 || dy < 0)
 		return ret;
-	if (doublescan <= 0 && !programmedmode) {
+	if (doublescan <= 0 && programmedmode <= 1) {
 		if (dx > vidinfo->outbuffer->inwidth / 3)
 			return ret;
 		if (dy > vidinfo->outbuffer->inheight / 3)
@@ -1020,8 +1032,8 @@ static void set_res_shift(void)
 static void pfield_init_linetoscr (bool border)
 {
 	/* First, get data fetch start/stop in DIW coordinates.  */
-	int ddf_left = dp_for_drawing->plfleft * 2 + DIW_DDF_OFFSET - DDF_OFFSET;
-	int ddf_right = dp_for_drawing->plfright * 2 + DIW_DDF_OFFSET - DDF_OFFSET;
+	int ddf_left = dp_for_drawing->plfleft + DIW_DDF_OFFSET - DDF_OFFSET;
+	int ddf_right = dp_for_drawing->plfright + DIW_DDF_OFFSET - DDF_OFFSET;
 	int leftborderhidden;
 	int native_ddf_left2;
 	bool expanded = false;
@@ -1095,7 +1107,7 @@ static void pfield_init_linetoscr (bool border)
 			if (playfield_end < linetoscr_diw_end && hblank_right_stop > playfield_end) {
 				playfield_end = linetoscr_diw_end;
 			}
-			int left = coord_hw_to_window_x_lores(dp_for_drawing->plfleft * 2 - DDF_OFFSET);
+			int left = coord_hw_to_window_x_lores(dp_for_drawing->plfleft - DDF_OFFSET);
 			if (left < visible_left_border)
 				left = visible_left_border;
 			if (left < playfield_start && left >= linetoscr_diw_start) {
@@ -1887,19 +1899,6 @@ static int linetoscr_16_shrink2f_sh(int spix, int dpix, int stoppos)
 }
 #endif
 
-static int pfield_do_linetoscr_blank(int spix, int dpix, int dpix_end)
-{
-	uae_u32 *buf = (uae_u32 *)xlinebuffer;
-	if (res_shift == 1) {
-		while (dpix < dpix_end) {
-			spix++;
-			buf[dpix++] = 0;
-			buf[dpix++] = 0;
-		}
-	}
-	return spix;
-}
-
 typedef int(*call_linetoscr)(int spix, int dpix, int dpix_end);
 
 static call_linetoscr pfield_do_linetoscr_normal, pfield_do_linetoscr_normal2;
@@ -1911,14 +1910,22 @@ static void pfield_do_linetoscr(int start, int stop, int blank)
 	int pixel = pfield_do_linetoscr_normal(src_pixel, start, stop);
 	if (exthblank) {
 		pfield_do_fill_line(start, stop, 1);
+	} else if (extborder) {
+		pfield_do_fill_line(start, stop, ce_is_borderblank(colors_for_drawing.extra) ? 1 : 0);
 	}
 	src_pixel = pixel;
 }
 static void pfield_do_linetoscr_spr(int start, int stop, int blank)
 {
-	int pixel = pfield_do_linetoscr_sprite(src_pixel, start, stop);
-	if (exthblank) {
-		pfield_do_fill_line(start, stop, 1);
+	int pixel;
+	if (extborder) {
+		pfield_do_fill_line(start, stop, ce_is_borderblank(colors_for_drawing.extra) ? 1 : 0);
+		pixel = pfield_do_linetoscr_spriteonly(src_pixel, start, stop);
+	} else {
+		pixel = pfield_do_linetoscr_sprite(src_pixel, start, stop);
+		if (exthblank) {
+			pfield_do_fill_line(start, stop, 1);
+		}
 	}
 	src_pixel = pixel;
 }
@@ -3099,7 +3106,6 @@ static void pfield_expand_dp_bplconx (int regno, int v, int vp, int hp)
 		break;
 	case 0x200: // hblank
 		exthblank = v != 0;
-		//write_log("%d,%d=%d ", hp, vp, v);
 		return;
 #endif
 	}
@@ -3301,7 +3307,13 @@ static void do_color_changes(line_draw_func worker_border, line_draw_func worker
 				color_reg_set(&colors_for_drawing, regno, value);
 				colors_for_drawing.acolors[regno] = getxcolor(value);
 			} else if (regno == 0 && (value & COLOR_CHANGE_MASK)) {
-				if (value & COLOR_CHANGE_BLANK) {
+				if ((value & COLOR_CHANGE_MASK) == COLOR_CHANGE_ACTBORDER) {
+					if (value & 1) {
+						extborder = true;
+					} else {
+						extborder = false;
+					}
+				} else if (value & COLOR_CHANGE_BLANK) {
 					if (value & 1) {
 						hposblank = 1;
 					} else {
@@ -3627,6 +3639,9 @@ static void center_image (void)
 	} else if (vidinfo->drawbuffer.extrawidth > 0 || ew == -1 || currprefs.gfx_overscanmode == OVERSCANMODE_EXTREME) {
 		// wide mode
 		visible_left_border = (hsync_end_left_border * 2) << currprefs.gfx_resolution;
+	} else if (vidinfo->drawbuffer.extrawidth > 0 || ew == -1) {
+		// wide mode
+		visible_left_border = (hsync_end_left_border * 2) << currprefs.gfx_resolution;
 		if (visible_left_border + w < max_diwlastword) {
 			visible_left_border += (max_diwlastword - (visible_left_border + w)) / 2;
 		}
@@ -3737,7 +3752,7 @@ static void init_drawing_frame (void)
 
 	if (currprefs.gfx_resolution == changed_prefs.gfx_resolution && lines_count > 0) {
 
-		if (currprefs.gfx_autoresolution_vga && programmedmode && vidinfo->gfx_resolution_reserved >= RES_HIRES && vidinfo->gfx_vresolution_reserved >= VRES_DOUBLE) {
+		if (currprefs.gfx_autoresolution_vga && programmedmode > 1 && vidinfo->gfx_resolution_reserved >= RES_HIRES && vidinfo->gfx_vresolution_reserved >= VRES_DOUBLE) {
 			if (largest_res == RES_SUPERHIRES && (vidinfo->gfx_resolution_reserved < RES_SUPERHIRES || vidinfo->gfx_vresolution_reserved < 1)) {
 				// enable full doubling/superhires support if programmed mode. It may be "half-width" only and may fit in normal display window.
 				vidinfo->gfx_resolution_reserved = RES_SUPERHIRES;
@@ -4461,6 +4476,7 @@ void check_prefs_picasso(void)
 
 		if (!ad->picasso_requested_on && monid > 0) {
 			ad->picasso_requested_on = ad->picasso_on;
+			ad->picasso_requested_forced_on = false;
 			continue;
 		}
 

@@ -134,7 +134,7 @@ extern int minfirstline, vblank_endline, numscrlines;
 extern float vblank_hz, fake_vblank_hz;
 extern float hblank_hz;
 extern int vblank_skip, doublescan;
-extern bool programmedmode;
+extern int programmedmode;
 extern int vblank_firstline_hw, vblank_lastline_hw;
 
 #define DMA_AUD0      0x0001

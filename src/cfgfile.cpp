@@ -7876,7 +7876,7 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 	p->gfx_monitor[0].gfx_size_fs.height = 600;
 	p->gfx_monitor[0].gfx_size_win.width = 720;
 	p->gfx_monitor[0].gfx_size_win.height = 568;
-	for (int i = 0; i < 4; i++) {
+	for (int i = 0; i < GFX_SIZE_EXTRA_NUM; i++) {
 		p->gfx_monitor[0].gfx_size_fs_xtra[i].width = 0;
 		p->gfx_monitor[0].gfx_size_fs_xtra[i].height = 0;
 		p->gfx_monitor[0].gfx_size_win_xtra[i].width = 0;

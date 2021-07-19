@@ -487,13 +487,14 @@ struct expansion_params
 #define Z3MAPPING_UAE 1
 #define Z3MAPPING_REAL 2
 
+#define GFX_SIZE_EXTRA_NUM 6
 struct monconfig
 {
 	struct wh gfx_size_win;
 	struct wh gfx_size_fs;
 	struct wh gfx_size;
-	struct wh gfx_size_win_xtra[6];
-	struct wh gfx_size_fs_xtra[6];
+	struct wh gfx_size_win_xtra[GFX_SIZE_EXTRA_NUM];
+	struct wh gfx_size_fs_xtra[GFX_SIZE_EXTRA_NUM];
 };
 
 #ifdef AMIBERRY
