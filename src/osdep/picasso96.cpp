@@ -1526,8 +1526,13 @@ static uae_u32 REGPARAM2 picasso_SetSpritePosition (TrapContext *ctx)
 	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[monid];
 	uaecptr bi = trap_get_areg(ctx, 0);
 	boardinfo = bi;
+#if 1
+	int x = (uae_s16)trap_get_word(ctx, bi + PSSO_BoardInfo_MouseX) - state->XOffset;
+	int y = (uae_s16)trap_get_word(ctx, bi + PSSO_BoardInfo_MouseY) - state->YOffset;
+#else
 	int x = (uae_s16)trap_get_dreg(ctx, 0) - state->XOffset;
 	int y = (uae_s16)trap_get_dreg(ctx, 1) - state->YOffset;
+#endif
 	if (vidinfo->splitypos >= 0) {
 		y += vidinfo->splitypos;
 	}
@@ -2424,9 +2429,12 @@ static void inituaegfx(TrapContext *ctx, uaecptr ABI)
 	}
 	if (currprefs.rtg_hardwareinterrupt && !uaegfx_old)
 		flags |= BIF_VBLANKINTERRUPT;
+	// force INDISPLAYCHAIN if no multiple monitors emulated
 	if (!(flags & BIF_INDISPLAYCHAIN)) {
-		write_log (_T("P96: BIF_INDISPLAYCHAIN force-enabled!\n"));
-		flags |= BIF_INDISPLAYCHAIN;
+		if (currprefs.rtgboards[0].monitor_id == 0) {
+			write_log(_T("P96: BIF_INDISPLAYCHAIN force-enabled!\n"));
+			flags |= BIF_INDISPLAYCHAIN;
+		}
 	}
 #if OVERLAY
 	flags |= BIF_VIDEOWINDOW;
@@ -5260,7 +5268,9 @@ void InitPicasso96(int monid)
 	oldscr = 0;
 	//fastscreen
 	memset (state, 0, sizeof (struct picasso96_state_struct));
-
+	state->Width = 640;
+	state->Height = 480;
+	
 	for (int i = 0; i < 256; i++) {
 		p2ctab[i][0] = (((i & 128) ? 0x01000000 : 0)
 			| ((i & 64) ? 0x010000 : 0)
