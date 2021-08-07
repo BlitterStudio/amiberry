@@ -29,7 +29,7 @@ extern void setup_brkhandler (void);
 extern int isfullscreen (void);
 extern void toggle_fullscreen(int monid, int);
 extern bool toggle_rtg(int monid, int);
-extern void close_rtg(int monid);
+extern void close_rtg(int monid, bool reset);
 
 extern void toggle_mousegrab (void);
 void setmouseactivexy(int monid, int x, int y, int dir);

@@ -158,6 +158,7 @@ static int overlay_occlusion;
 static struct MyCLUTEntry overlay_clutc[256 * 2];
 static uae_u32 overlay_clut[256 * 2];
 static uae_u32* p96_rgbx16_ovl;
+static bool delayed_set_switch;
 
 static int uaegfx_old, uaegfx_active;
 static uae_u32 reserved_gfxmem;
@@ -1005,6 +1006,12 @@ static void picasso_handle_vsync2(struct AmigaMonitor *mon)
 		vidinfo->picasso_changed = true;
 		init_picasso_screen(mon->monitor_id);
 		init_hz_p96(mon->monitor_id);
+		if (delayed_set_switch) {
+			delayed_set_switch = false;
+			atomic_or(&vidinfo->picasso_state_change, PICASSO_STATE_SETSWITCH);
+			ad->picasso_requested_on = 1;
+			set_config_changed();
+		}
 	}
 	if (state & PICASSO_STATE_SETSWITCH) {
 		atomic_and(&vidinfo->picasso_state_change, ~PICASSO_STATE_SETSWITCH);
@@ -1099,7 +1106,8 @@ void picasso_handle_vsync(void)
 			createwindowscursor(mon->monitor_id, 0, 0, 0, 0, 0, 1);
 		}
 		picasso_trigger_vblank();
-		return;
+		if (!delayed_set_switch)
+			return;
 	}
 
 	int vsync = isvsync_rtg();
@@ -2587,17 +2595,31 @@ static uae_u32 REGPARAM2 picasso_SetSwitch (TrapContext *ctx)
 	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[monid];
 	uae_u16 flag = trap_get_dreg(ctx, 0) & 0xFFFF;
 
-	atomic_or(&vidinfo->picasso_state_change, PICASSO_STATE_SETSWITCH);
-	ad->picasso_requested_on = flag != 0;
-	set_config_changed();
-
 	TCHAR p96text[100];
 	p96text[0] = 0;
+	if (flag && (state->BytesPerPixel == 0 || state->Width == 0 || state->Height == 0) && monid > 0) {
+		state->Width = 640;
+		state->VirtualWidth = state->Width;
+		state->Height = 480;
+		state->VirtualHeight = state->Height;
+		state->GC_Depth = 8;
+		state->GC_Flags = 0;
+		state->BytesPerPixel = 1;
+		state->HostAddress = NULL;
+		delayed_set_switch = true;
+		atomic_or(&vidinfo->picasso_state_change, PICASSO_STATE_SETGC);
+	}
+	else {
+		delayed_set_switch = false;
+		atomic_or(&vidinfo->picasso_state_change, PICASSO_STATE_SETSWITCH);
+		ad->picasso_requested_on = flag != 0;
+		set_config_changed();
+	}
 	if (flag)
 		_stprintf(p96text, _T("Picasso96 %dx%dx%d (%dx%dx%d)"),
 			state->Width, state->Height, state->BytesPerPixel * 8,
 			vidinfo->width, vidinfo->height, vidinfo->pixbytes * 8);
-	write_log(_T("SetSwitch() - %s. Monitor=%d\n"), flag ? p96text : _T("amiga"), monid);
+	write_log(_T("SetSwitch() - %s - %s. Monitor=%d\n"), flag ? p96text : _T("amiga"), delayed_set_switch ? _T("delayed") : _T("immediate"), monid);
 
 	/* Put old switch-state in D0 */
 	unlockrtg();
@@ -5008,7 +5030,6 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 	struct picasso96_state_struct *state = &picasso96_state[monid];
 	uae_u8 *src_start[2];
 	uae_u8 *src_end[2];
-	uae_u8 *dst = NULL;
 	int pwidth = state->Width > state->VirtualWidth ? state->VirtualWidth : state->Width;
 	int pheight = state->Height > state->VirtualHeight ? state->VirtualHeight : state->Height;
 	int maxy = -1;
@@ -5016,12 +5037,6 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 	int flushlines = 0, matchcount = 0;
 	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[monid];
 	bool overlay_updated = false;
-
-	// safety check
-	if (pwidth > vidinfo->rowbytes / vidinfo->pixbytes)
-		pwidth = vidinfo->rowbytes / vidinfo->pixbytes;
-	if (pheight > vidinfo->height)
-		pheight = vidinfo->height;
 
 	src_start[0] = src + off;
 	src_end[0] = src + (off + state->BytesPerRow * pheight);
@@ -5043,7 +5058,9 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 	if (vidinfo->full_refresh || vidinfo->rtg_clear_flag)
 		vidinfo->full_refresh = -1;
 
+	uae_u8* dstp = NULL;
 	for (;;) {
+		uae_u8* dst = NULL;
 		if (doskip() && p96skipmode == 1) {
 			break;
 		}
@@ -5070,12 +5087,34 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 #endif
 			}
 
-			dst = gfx_lock_picasso(monid, true, vidinfo->rtg_clear_flag != 0);
-			if (vidinfo->rtg_clear_flag)
-				vidinfo->rtg_clear_flag--;
-			if (dst == NULL) {
+			if (!dstp) {
+				dstp = gfx_lock_picasso(monid, true);
+			}
+			if (dstp == NULL) {
 				continue;
 			}
+			dst = dstp;
+
+			// safety check
+			if (pwidth > vidinfo->rowbytes / vidinfo->pixbytes) {
+				pwidth = vidinfo->rowbytes / vidinfo->pixbytes;
+			}
+			if (pheight > vidinfo->height) {
+				pheight = vidinfo->height;
+			}
+
+			if (!split && vidinfo->rtg_clear_flag) {
+				uae_u8* p2 = dst;
+				for (int h = 0; h < pheight; h++) {
+					memset(p2, 0, pwidth * vidinfo->pixbytes);
+					p2 += vidinfo->rowbytes;
+				}
+			}
+
+			if (vidinfo->rtg_clear_flag) {
+				vidinfo->rtg_clear_flag--;
+			}
+
 			dst += vidinfo->offset;
 
 			if (doskip() && p96skipmode == 2) {
@@ -5158,18 +5197,20 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 	}
 
 	if (!index && overlay_vram && overlay_active && (flushlines || overlay_updated)) {
-		if (dst == NULL) {
-			dst = gfx_lock_picasso(monid, false, false);
+		if (dstp == NULL) {
+			dstp = gfx_lock_picasso(monid, false);
 		}
-		if (dst)
-			picasso_flushoverlay(index, src, off, dst);
+		if (dstp)
+			picasso_flushoverlay(index, src, off, dstp);
 	}
 
 	if (currprefs.leds_on_screen & STATUSLINE_RTG) {
-		if (dst == NULL) {
-			dst = gfx_lock_picasso(monid, false, false);
+		if (dstp == NULL) {
+			dstp = gfx_lock_picasso(monid, false);
 		}
-		picasso_statusline(monid, dst);
+		if (dstp) {
+			picasso_statusline(monid, dstp);
+		}
 		maxy = vidinfo->height;
 		if (miny > vidinfo->height - TD_TOTAL_HEIGHT)
 			miny = vidinfo->height - TD_TOTAL_HEIGHT;
@@ -5182,11 +5223,11 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 		}
 	}
 
-	if (dst || render) {
+	if (dstp || render) {
 		gfx_unlock_picasso(monid, render);
 	}
 
-	if (dst) {
+	if (dstp) {
 		vidinfo->full_refresh = 0;
 	}
 }
@@ -5268,8 +5309,6 @@ void InitPicasso96(int monid)
 	oldscr = 0;
 	//fastscreen
 	memset (state, 0, sizeof (struct picasso96_state_struct));
-	state->Width = 640;
-	state->Height = 480;
 	
 	for (int i = 0; i < 256; i++) {
 		p2ctab[i][0] = (((i & 128) ? 0x01000000 : 0)
@@ -5974,7 +6013,7 @@ static void picasso_reset2(int monid)
 	}
 
 	if (is_uaegfx_active() && currprefs.rtgboards[0].monitor_id > 0) {
-		close_rtg(currprefs.rtgboards[0].monitor_id);
+		close_rtg(currprefs.rtgboards[0].monitor_id, true);
 	}
 
 	for (int i = 0; i < MAX_AMIGADISPLAYS; i++) {

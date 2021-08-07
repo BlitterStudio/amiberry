@@ -682,7 +682,7 @@ extern struct picasso_vidbuf_description picasso_vidinfo[MAX_AMIGAMONITORS];
 extern void gfx_set_picasso_modeinfo(int monid, uae_u32 w, uae_u32 h, uae_u32 d, RGBFTYPE rgbfmt);
 extern void gfx_set_picasso_colors(int monid, RGBFTYPE rgbfmt);
 extern void gfx_set_picasso_state(int monid, int on);
-extern uae_u8* gfx_lock_picasso(int monid, bool, bool);
+extern uae_u8* gfx_lock_picasso(int monid, bool);
 extern void gfx_unlock_picasso(int monid, bool);
 extern int createwindowscursor(int monid, uaecptr src, int w, int h, int hiressprite, int doubledsprite, int chipset);
 
