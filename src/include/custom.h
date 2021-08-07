@@ -238,7 +238,7 @@ void customhack_put(struct customhack *ch, uae_u16 v, int hpos);
 uae_u16 customhack_get(struct customhack *ch, int hpos);
 extern void alloc_cycle_ext(int, int);
 extern void alloc_cycle_blitter(int hpos, uaecptr *ptr, int);
-extern bool ispal(void);
+extern bool ispal(int* lines);
 extern bool isvga(void);
 extern int current_maxvpos(void);
 extern struct chipset_refresh *get_chipset_refresh(struct uae_prefs*);

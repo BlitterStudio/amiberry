@@ -391,10 +391,6 @@ static void check_channel_mods(int hpos, int ch, uaecptr *pt)
 
 	if (bltptxpos < 0)
 		return;
-	hpos--;
-	if (hpos < 0) {
-		hpos += maxhpos;
-	}
 	if (bltptxpos != hpos)
 		return;
 	if (ch == bltptxc) {

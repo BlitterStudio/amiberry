@@ -404,7 +404,7 @@ void event2_newevent_x_replace(evt t, uae_u32 data, evfunc2 func)
 
 int current_hpos (void)
 {
-	int hp = current_hpos_safe ();
+	int hp = current_hpos_safe();
 	if (hp < 0 || hp > 256) {
 		gui_message(_T("hpos = %d!?\n"), hp);
 		hp = 0;

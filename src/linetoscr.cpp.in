@@ -6308,7 +6308,7 @@ static int NOINLINE linetoscr_16_shrink2f_spr_genlock(int spix, int dpix, int dp
 }
 
 #ifdef AGA
-static int NOINLINE linetoscr_16_aga_spronly(int spix, int dpix, int dpix_end)
+static int NOINLINE linetoscr_16_aga_spronly(int spix, int dpix, int dpix_end, int blank)
 {
     uae_u16 *buf = (uae_u16 *) xlinebuffer;
     uae_u8 sprcol;
@@ -6320,7 +6320,7 @@ static int NOINLINE linetoscr_16_aga_spronly(int spix, int dpix, int dpix_end)
         
             sprpix_val = 0;
             spix++;
-            out_val = p_acolors[0];
+            out_val = blank ? 0 : p_acolors[0];
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix + 0, 0, sprpix_val, 1);
                 if (sprcol) {
@@ -6336,7 +6336,7 @@ static int NOINLINE linetoscr_16_aga_spronly(int spix, int dpix, int dpix_end)
 #endif
 
 #ifdef AGA
-static int NOINLINE linetoscr_16_stretch1_aga_spronly(int spix, int dpix, int dpix_end)
+static int NOINLINE linetoscr_16_stretch1_aga_spronly(int spix, int dpix, int dpix_end, int blank)
 {
     uae_u16 *buf = (uae_u16 *) xlinebuffer;
     uae_u8 sprcol;
@@ -6348,7 +6348,7 @@ static int NOINLINE linetoscr_16_stretch1_aga_spronly(int spix, int dpix, int dp
         
             sprpix_val = 0;
             spix++;
-            out_val = p_acolors[0];
+            out_val = blank ? 0 : p_acolors[0];
             {
             uae_u32 out_val1 = out_val;
             uae_u32 out_val2 = out_val;
@@ -6375,7 +6375,7 @@ static int NOINLINE linetoscr_16_stretch1_aga_spronly(int spix, int dpix, int dp
 #endif
 
 #ifdef AGA
-static int NOINLINE linetoscr_16_stretch2_aga_spronly(int spix, int dpix, int dpix_end)
+static int NOINLINE linetoscr_16_stretch2_aga_spronly(int spix, int dpix, int dpix_end, int blank)
 {
     uae_u16 *buf = (uae_u16 *) xlinebuffer;
     uae_u8 sprcol;
@@ -6387,7 +6387,7 @@ static int NOINLINE linetoscr_16_stretch2_aga_spronly(int spix, int dpix, int dp
         
             sprpix_val = 0;
             spix++;
-            out_val = p_acolors[0];
+            out_val = blank ? 0 : p_acolors[0];
             {
             uae_u32 out_val1 = out_val;
             uae_u32 out_val2 = out_val;
@@ -6430,7 +6430,7 @@ static int NOINLINE linetoscr_16_stretch2_aga_spronly(int spix, int dpix, int dp
 #endif
 
 #ifdef AGA
-static int NOINLINE linetoscr_16_shrink1_aga_spronly(int spix, int dpix, int dpix_end)
+static int NOINLINE linetoscr_16_shrink1_aga_spronly(int spix, int dpix, int dpix_end, int blank)
 {
     uae_u16 *buf = (uae_u16 *) xlinebuffer;
     uae_u8 sprcol;
@@ -6442,7 +6442,7 @@ static int NOINLINE linetoscr_16_shrink1_aga_spronly(int spix, int dpix, int dpi
         
             sprpix_val = 0;
             spix++;
-            out_val = p_acolors[0];
+            out_val = blank ? 0 : p_acolors[0];
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix + 0, 0, sprpix_val, 1);
                 if (sprcol) {
@@ -6458,7 +6458,7 @@ static int NOINLINE linetoscr_16_shrink1_aga_spronly(int spix, int dpix, int dpi
 #endif
 
 #ifdef AGA
-static int NOINLINE linetoscr_16_shrink1f_aga_spronly(int spix, int dpix, int dpix_end)
+static int NOINLINE linetoscr_16_shrink1f_aga_spronly(int spix, int dpix, int dpix_end, int blank)
 {
     uae_u16 *buf = (uae_u16 *) xlinebuffer;
     uae_u8 sprcol;
@@ -6470,7 +6470,7 @@ static int NOINLINE linetoscr_16_shrink1f_aga_spronly(int spix, int dpix, int dp
         
             sprpix_val = 0;
             spix++;
-            out_val = p_acolors[0];
+            out_val = blank ? 0 : p_acolors[0];
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix + 0, 0, sprpix_val, 1);
                 if (sprcol) {
@@ -6486,7 +6486,7 @@ static int NOINLINE linetoscr_16_shrink1f_aga_spronly(int spix, int dpix, int dp
 #endif
 
 #ifdef AGA
-static int NOINLINE linetoscr_16_shrink2_aga_spronly(int spix, int dpix, int dpix_end)
+static int NOINLINE linetoscr_16_shrink2_aga_spronly(int spix, int dpix, int dpix_end, int blank)
 {
     uae_u16 *buf = (uae_u16 *) xlinebuffer;
     uae_u8 sprcol;
@@ -6498,7 +6498,7 @@ static int NOINLINE linetoscr_16_shrink2_aga_spronly(int spix, int dpix, int dpi
         
             sprpix_val = 0;
             spix++;
-            out_val = p_acolors[0];
+            out_val = blank ? 0 : p_acolors[0];
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix + 0, 0, sprpix_val, 1);
                 if (sprcol) {
@@ -6514,7 +6514,7 @@ static int NOINLINE linetoscr_16_shrink2_aga_spronly(int spix, int dpix, int dpi
 #endif
 
 #ifdef AGA
-static int NOINLINE linetoscr_16_shrink2f_aga_spronly(int spix, int dpix, int dpix_end)
+static int NOINLINE linetoscr_16_shrink2f_aga_spronly(int spix, int dpix, int dpix_end, int blank)
 {
     uae_u16 *buf = (uae_u16 *) xlinebuffer;
     uae_u8 sprcol;
@@ -6526,7 +6526,7 @@ static int NOINLINE linetoscr_16_shrink2f_aga_spronly(int spix, int dpix, int dp
         
             sprpix_val = 0;
             spix++;
-            out_val = p_acolors[0];
+            out_val = blank ? 0 : p_acolors[0];
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix + 0, 0, sprpix_val, 1);
                 if (sprcol) {
@@ -16785,7 +16785,7 @@ static int NOINLINE linetoscr_32_shrink2f_spr_genlock(int spix, int dpix, int dp
 }
 
 #ifdef AGA
-static int NOINLINE linetoscr_32_aga_spronly(int spix, int dpix, int dpix_end)
+static int NOINLINE linetoscr_32_aga_spronly(int spix, int dpix, int dpix_end, int blank)
 {
     uae_u32 *buf = (uae_u32 *) xlinebuffer;
     uae_u8 sprcol;
@@ -16797,7 +16797,7 @@ static int NOINLINE linetoscr_32_aga_spronly(int spix, int dpix, int dpix_end)
         
             sprpix_val = 0;
             spix++;
-            out_val = p_acolors[0];
+            out_val = blank ? 0 : p_acolors[0];
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix + 0, 0, sprpix_val, 1);
                 if (sprcol) {
@@ -16813,7 +16813,7 @@ static int NOINLINE linetoscr_32_aga_spronly(int spix, int dpix, int dpix_end)
 #endif
 
 #ifdef AGA
-static int NOINLINE linetoscr_32_stretch1_aga_spronly(int spix, int dpix, int dpix_end)
+static int NOINLINE linetoscr_32_stretch1_aga_spronly(int spix, int dpix, int dpix_end, int blank)
 {
     uae_u32 *buf = (uae_u32 *) xlinebuffer;
     uae_u8 sprcol;
@@ -16825,7 +16825,7 @@ static int NOINLINE linetoscr_32_stretch1_aga_spronly(int spix, int dpix, int dp
         
             sprpix_val = 0;
             spix++;
-            out_val = p_acolors[0];
+            out_val = blank ? 0 : p_acolors[0];
             {
             uae_u32 out_val1 = out_val;
             uae_u32 out_val2 = out_val;
@@ -16852,7 +16852,7 @@ static int NOINLINE linetoscr_32_stretch1_aga_spronly(int spix, int dpix, int dp
 #endif
 
 #ifdef AGA
-static int NOINLINE linetoscr_32_stretch2_aga_spronly(int spix, int dpix, int dpix_end)
+static int NOINLINE linetoscr_32_stretch2_aga_spronly(int spix, int dpix, int dpix_end, int blank)
 {
     uae_u32 *buf = (uae_u32 *) xlinebuffer;
     uae_u8 sprcol;
@@ -16864,7 +16864,7 @@ static int NOINLINE linetoscr_32_stretch2_aga_spronly(int spix, int dpix, int dp
         
             sprpix_val = 0;
             spix++;
-            out_val = p_acolors[0];
+            out_val = blank ? 0 : p_acolors[0];
             {
             uae_u32 out_val1 = out_val;
             uae_u32 out_val2 = out_val;
@@ -16907,7 +16907,7 @@ static int NOINLINE linetoscr_32_stretch2_aga_spronly(int spix, int dpix, int dp
 #endif
 
 #ifdef AGA
-static int NOINLINE linetoscr_32_shrink1_aga_spronly(int spix, int dpix, int dpix_end)
+static int NOINLINE linetoscr_32_shrink1_aga_spronly(int spix, int dpix, int dpix_end, int blank)
 {
     uae_u32 *buf = (uae_u32 *) xlinebuffer;
     uae_u8 sprcol;
@@ -16919,7 +16919,7 @@ static int NOINLINE linetoscr_32_shrink1_aga_spronly(int spix, int dpix, int dpi
         
             sprpix_val = 0;
             spix++;
-            out_val = p_acolors[0];
+            out_val = blank ? 0 : p_acolors[0];
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix + 0, 0, sprpix_val, 1);
                 if (sprcol) {
@@ -16935,7 +16935,7 @@ static int NOINLINE linetoscr_32_shrink1_aga_spronly(int spix, int dpix, int dpi
 #endif
 
 #ifdef AGA
-static int NOINLINE linetoscr_32_shrink1f_aga_spronly(int spix, int dpix, int dpix_end)
+static int NOINLINE linetoscr_32_shrink1f_aga_spronly(int spix, int dpix, int dpix_end, int blank)
 {
     uae_u32 *buf = (uae_u32 *) xlinebuffer;
     uae_u8 sprcol;
@@ -16947,7 +16947,7 @@ static int NOINLINE linetoscr_32_shrink1f_aga_spronly(int spix, int dpix, int dp
         
             sprpix_val = 0;
             spix++;
-            out_val = p_acolors[0];
+            out_val = blank ? 0 : p_acolors[0];
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix + 0, 0, sprpix_val, 1);
                 if (sprcol) {
@@ -16963,7 +16963,7 @@ static int NOINLINE linetoscr_32_shrink1f_aga_spronly(int spix, int dpix, int dp
 #endif
 
 #ifdef AGA
-static int NOINLINE linetoscr_32_shrink2_aga_spronly(int spix, int dpix, int dpix_end)
+static int NOINLINE linetoscr_32_shrink2_aga_spronly(int spix, int dpix, int dpix_end, int blank)
 {
     uae_u32 *buf = (uae_u32 *) xlinebuffer;
     uae_u8 sprcol;
@@ -16975,7 +16975,7 @@ static int NOINLINE linetoscr_32_shrink2_aga_spronly(int spix, int dpix, int dpi
         
             sprpix_val = 0;
             spix++;
-            out_val = p_acolors[0];
+            out_val = blank ? 0 : p_acolors[0];
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix + 0, 0, sprpix_val, 1);
                 if (sprcol) {
@@ -16991,7 +16991,7 @@ static int NOINLINE linetoscr_32_shrink2_aga_spronly(int spix, int dpix, int dpi
 #endif
 
 #ifdef AGA
-static int NOINLINE linetoscr_32_shrink2f_aga_spronly(int spix, int dpix, int dpix_end)
+static int NOINLINE linetoscr_32_shrink2f_aga_spronly(int spix, int dpix, int dpix_end, int blank)
 {
     uae_u32 *buf = (uae_u32 *) xlinebuffer;
     uae_u8 sprcol;
@@ -17003,7 +17003,7 @@ static int NOINLINE linetoscr_32_shrink2f_aga_spronly(int spix, int dpix, int dp
         
             sprpix_val = 0;
             spix++;
-            out_val = p_acolors[0];
+            out_val = blank ? 0 : p_acolors[0];
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix + 0, 0, sprpix_val, 1);
                 if (sprcol) {
