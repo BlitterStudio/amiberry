@@ -89,9 +89,16 @@ public:
 		}
 		else if (actionEvent.getSource() == cmdSaveState)
 		{
-			if (changed_prefs.mountitems)
+			struct AmigaMonitor* mon = &AMonitors[0];
+			// Check if we have RTG, then it might fail saving
+			if (mon->screen_is_picasso)
 			{
-				ShowMessage("Error: Cannot create Savestate", "Savestates do not currently work with HDDs!", "", "Ok", "");
+				ShowMessage("Error: Cannot create Savestate", "Savestates do not currently work with RTG!", "", "Ok", "");
+			}
+			// Check if we have JIT enabled
+			else if (changed_prefs.cachesize > 0)
+			{
+				ShowMessage("Error: Cannot create Savestate", "Savestates do not currently work with JIT!", "", "Ok", "");
 			}
 			//------------------------------------------
 			// Save current state
