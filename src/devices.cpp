@@ -327,7 +327,7 @@ void do_leave_program (void)
 	uae_lua_free ();
 #endif
 	//gfxboard_free();
-	//savestate_free ();
+	savestate_free ();
 	memory_cleanup ();
 	free_shm ();
 	cfgfile_addcfgparam (0);

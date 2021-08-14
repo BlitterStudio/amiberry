@@ -1172,7 +1172,7 @@ uae_u8 *REGPARAM2 default_xlate (uaecptr addr)
 				//memory_map_dump();
 				//m68k_dumpstate(NULL, 0xffffffff);
 			}
-			if (gary_toenb && (gary_nonrange(addr) || (size > 1 && gary_nonrange(addr + size - 1)))) {
+			if (0 || (gary_toenb && (gary_nonrange(addr) || (size > 1 && gary_nonrange(addr + size - 1))))) {
 				hardware_exception2(addr, 0, true, true, size);
 			} else {
 				cpu_halt(CPU_HALT_OPCODE_FETCH_FROM_NON_EXISTING_ADDRESS);
