@@ -264,10 +264,10 @@ VC_IMAGE_TYPE_T rgb_mode = VC_IMAGE_RGB565;
 static int DispManXElementpresent = 0;
 static unsigned char current_resource_amigafb = 0;
 
-static volatile uae_atomic vsync_counter = 0;
+static volatile uae_atomic dmx_vsync_counter = 0;
 void vsync_callback(unsigned int a, void* b)
 {
-	atomic_inc(&vsync_counter);
+	atomic_inc(&dmx_vsync_counter);
 }
 #endif
 
@@ -880,7 +880,7 @@ static void open_screen(struct uae_prefs* p)
 	write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_OPEN, 1);
 	uae_sem_wait(&display_sem);
 
-	vsync_counter = 0;
+	dmx_vsync_counter = 0;
 	current_vsync_frame = 2;
 #else
 	
@@ -1565,7 +1565,7 @@ void show_screen(int monid, int mode)
 		do
 		{
 			usleep(10);
-			current_vsync_frame = vsync_counter;
+			current_vsync_frame = dmx_vsync_counter;
 		} while (wait_till >= current_vsync_frame && read_processor_time() - start < 40000);
 		if (wait_till + 1 != current_vsync_frame)
 		{
@@ -1583,11 +1583,11 @@ void show_screen(int monid, int mode)
 			if (start < wait_till_time)
 			{
 				// We are in time, wait for vsync
-				atomic_set(&vsync_counter, current_vsync_frame);
+				atomic_set(&dmx_vsync_counter, current_vsync_frame);
 				do
 				{
 					usleep(10);
-					current_vsync_frame = vsync_counter;
+					current_vsync_frame = dmx_vsync_counter;
 				} while (wait_till >= current_vsync_frame && read_processor_time() - start < 40000);
 			}
 			else

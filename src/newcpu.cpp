@@ -2900,6 +2900,7 @@ void m68k_go(int may_quit)
 				break;
 
 			hsync_counter = 0;
+			vsync_counter = 0;
 			quit_program = 0;
 			hardboot = 0;
 

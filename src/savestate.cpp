@@ -1323,7 +1323,7 @@ int savestate_dorewind (int pos)
 		pos = replaycounter - 1;
 	if (canrewind (pos)) {
 		savestate_state = STATE_DOREWIND;
-		//write_log (_T("dorewind %d (%010ld/%03ld) -> %d\n"), replaycounter - 1, hsync_counter, vsync_counter, pos);
+		write_log (_T("dorewind %d (%010ld/%03ld) -> %d\n"), replaycounter - 1, hsync_counter, vsync_counter, pos);
 		return 1;
 	}
 	return 0;
@@ -1379,7 +1379,7 @@ void savestate_rewind (void)
 	p2 = st->end;
 	write_log (_T("rewinding %d -> %d\n"), replaycounter - 1, pos);
 	hsync_counter = restore_u32_func (&p);
-	//vsync_counter = restore_u32_func (&p);
+	vsync_counter = restore_u32_func (&p);
 	p = restore_cpu (p);
 	p = restore_cycles (p);
 	p = restore_cpu_extra (p);
@@ -1548,7 +1548,7 @@ retry2:
 	p = p2 = st->data;
 	tlen = 0;
 	save_u32_func (&p, hsync_counter);
-	//save_u32_func (&p, vsync_counter);
+	save_u32_func (&p, vsync_counter);
 	tlen += 8;
 
 	if (bufcheck (st, p, 0))
@@ -1854,10 +1854,10 @@ retry2:
 			staterecords_first -= staterecords_max;
 	}
 
-	//write_log (_T("state capture %d (%010ld/%03ld,%ld/%d) (%ld bytes, alloc %d)\n"),
-	//	replaycounter, hsync_counter, vsync_counter,
-	//	hsync_counter % current_maxvpos (), current_maxvpos (),
-	//	st->end - st->data, statefile_alloc);
+	write_log (_T("state capture %d (%010ld/%03ld,%ld/%d) (%ld bytes, alloc %d)\n"),
+		replaycounter, hsync_counter, vsync_counter,
+		hsync_counter % current_maxvpos (), current_maxvpos (),
+		st->end - st->data, statefile_alloc);
 
 	//if (firstcapture) {
 	//	savestate_memorysave ();
