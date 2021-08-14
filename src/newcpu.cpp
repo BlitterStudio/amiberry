@@ -2886,13 +2886,13 @@ void m68k_go(int may_quit)
 
 	cpu_prefs_changed_flag = 0;
 	in_m68k_go++;
-  for (;;) {
+	for (;;) {
 		int restored = 0;
 		void (*run_func)(void);
 
 		cputrace.state = -1;
 
-  	if (quit_program > 0) {
+		if (quit_program > 0) {
 			cpu_keyboardreset = quit_program == UAE_RESET_KEYBOARD;
 			cpu_hardreset = ((quit_program == UAE_RESET_HARD ? 1 : 0) | hardboot) != 0;
 
@@ -2909,22 +2909,24 @@ void m68k_go(int may_quit)
 				savestate_state = STATE_RESTORE;
 			if (savestate_state == STATE_RESTORE)
 				restore_state(savestate_fname);
+			else if (savestate_state == STATE_REWIND)
+				savestate_rewind();
 #endif
 			prefs_changed_cpu();
 			build_cpufunctbl();
 			set_x_funcs();
-			set_cycles (start_cycles);
+			set_cycles(start_cycles);
 			custom_reset(cpu_hardreset != 0, cpu_keyboardreset);
 			m68k_reset(cpu_hardreset != 0);
-	    if (cpu_hardreset) {
+			if (cpu_hardreset) {
 				memory_clear();
 				write_log(_T("hardreset, memory cleared\n"));
 			}
 			cpu_hardreset = false;
 #ifdef SAVESTATE
 			/* We may have been restoring state, but we're done now.  */
-	    if (isrestore ()) {
-		    restored = savestate_restore_finish ();
+			if (isrestore()) {
+				restored = savestate_restore_finish();
 				startup = 1;
 			}
 #endif
@@ -2938,7 +2940,7 @@ void m68k_go(int may_quit)
 			statusline_clear();
 		}
 
-		set_cpu_tracer (false);
+		set_cpu_tracer(false);
 
 		if (regs.spcflags & SPCFLAG_MODE_CHANGE) {
 			if (cpu_prefs_changed_flag & 1) {
@@ -2961,7 +2963,7 @@ void m68k_go(int may_quit)
 		}
 
 		set_x_funcs();
-	  if (startup) {
+		if (startup) {
 			custom_prepare();
 			protect_roms(true);
 		}
@@ -2989,9 +2991,9 @@ void m68k_go(int may_quit)
 		}
 
 		run_func = currprefs.cpu_cycle_exact && currprefs.cpu_model <= 68010 ? m68k_run_1_ce :
-      currprefs.cpu_compatible && currprefs.cpu_model <= 68010 ? m68k_run_1 :
+			currprefs.cpu_compatible && currprefs.cpu_model <= 68010 ? m68k_run_1 :
 #ifdef JIT
-      currprefs.cpu_model >= 68020 && currprefs.cachesize ? m68k_run_jit :
+			currprefs.cpu_model >= 68020 && currprefs.cachesize ? m68k_run_jit :
 #endif
 			currprefs.cpu_model < 68020 ? m68k_run_2_000 : m68k_run_2_020;
 		run_func();
