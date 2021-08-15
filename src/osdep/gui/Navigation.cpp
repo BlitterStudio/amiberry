@@ -261,10 +261,10 @@ static NavigationMap navMap[] =
 
 	//  active            move left           move right          move up           move down
 	//PanelSound
-	{ "sndDisable", "Sound", "sldMasterVol", "sldFloppySoundDisk", "sndDisEmu" },
-	{ "sndDisEmu", "Sound", "sldMasterVol", "sndDisable", "sndEmulate" },
-	{ "sndEmulate", "Sound", "sldMasterVol", "sndDisEmu", "sndEmuBest" },
-	{ "sndEmuBest", "Sound", "sldMasterVol", "sndEmulate", "cboChannelMode" },
+	{ "sndDisable", "Sound", "sldPaulaVol", "sldFloppySoundDisk", "sndDisEmu" },
+	{ "sndDisEmu", "Sound", "sldPaulaVol", "sndDisable", "sndEmulate" },
+	{ "sndEmulate", "Sound", "sldPaulaVol", "sndDisEmu", "sndEmuBest" },
+	{ "sndEmuBest", "Sound", "sldPaulaVol", "sndEmulate", "cboChannelMode" },
 	{ "cboChannelMode", "Sound", "cboSeparation", "sndEmuBest", "cboFrequency" },
 	{ "cboFrequency", "Sound", "cboStereoDelay", "cboChannelMode", "chkFloppySound" },
 	{ "cboInterpol", "cboSeparation", "Sound", "sldAHIVol", "cboFilter" },
