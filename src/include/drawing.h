@@ -296,7 +296,6 @@ struct decision {
 	int plfleft, plfright, plflinelen;
 	/* Display window: native coordinates, depend on lores state.  */
 	int diwfirstword, diwlastword;
-	bool diwfull;
 	int ctable;
 
 	uae_u16 bplcon0, bplcon2;
