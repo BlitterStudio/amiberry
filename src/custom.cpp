@@ -1838,7 +1838,7 @@ static bool fetch(int nr, int fm, int hpos, bool addmodulo)
 {
 	int add = fetchmode_bytes;
 
-	if (cycle_line_slot[hpos] == CYCLE_REFRESH) {
+	if (cycle_line_slot[hpos] == CYCLE_REFRESH || cycle_line_slot[hpos] == CYCLE_STROBE) {
 		// refresh conflict
 		add = fetch_warn(nr, hpos);
 	} else if (cycle_line_slot[hpos] == CYCLE_MISC) {

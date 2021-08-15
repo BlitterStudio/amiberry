@@ -3939,7 +3939,7 @@ uae_u8 *save_expansion_boards(int *len, uae_u8 *dstptr, int cardnum)
 		save_u8(ec->aci.autoconfig_bytes[j]);
 	}
 	struct romconfig *rc = ec->rc;
-	if (rc) {
+	if (rc && rc->back) {
 		save_u32(rc->back->device_type);
 		save_u32(rc->back->device_num);
 		save_string(rc->romfile);
