@@ -9389,6 +9389,8 @@ static void reset_scandoubler_sync(int hpos)
 	last_decide_sprite_hpos = hpos;
 	last_fetch_hpos = hpos;
 	last_copper_hpos = hpos;
+	last_diw_hpos = 0;
+	last_diw_hpos2 = 0;
 	sprites_enabled_this_line = false;
 	plfstrt_sprite = 0x100;
 }
