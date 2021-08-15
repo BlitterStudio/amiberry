@@ -624,7 +624,7 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	sldSoundBufferSize->setSize(170, SLIDER_HEIGHT);
 	sldSoundBufferSize->setBaseColor(gui_baseCol);
 	sldSoundBufferSize->setMarkerLength(20);
-	sldSoundBufferSize->setStepLength(10);
+	sldSoundBufferSize->setStepLength(1);
 	sldSoundBufferSize->setId("sldSoundBufferSize");
 	sldSoundBufferSize->addActionListener(sound_action_listener);
 	lblSoundBufferSize = new gcn::Label("Min");
