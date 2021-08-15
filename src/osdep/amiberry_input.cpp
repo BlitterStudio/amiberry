@@ -1385,6 +1385,16 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 			event++;
 		}
 
+		event = port ? INPUTEVENT_PAR_JOY2_2ND_BUTTON : INPUTEVENT_PAR_JOY1_2ND_BUTTON;
+		for (int x = SDL_CONTROLLER_BUTTON_X; x <= SDL_CONTROLLER_BUTTON_Y; x++)
+		{
+			if (!thismap[0][x])
+			{
+				thismap[0][x] = event;
+			}
+			event++;
+		}
+
 		event = INPUTEVENT_KEY_P;
 		if (!thismap[0][SDL_CONTROLLER_BUTTON_START])
 		{
