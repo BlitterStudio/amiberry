@@ -508,7 +508,7 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 		if (i == 0)
 		{
 			chkLoadConfig = new gcn::CheckBox("Load config with same name as disk");
-			chkLoadConfig->setId("LoadDiskCfg");
+			chkLoadConfig->setId("chkLoadDiskCfg");
 			chkLoadConfig->addActionListener(dfxCheckActionListener);
 		}
 	}
@@ -519,26 +519,26 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 	sldDriveSpeed->setBaseColor(gui_baseCol);
 	sldDriveSpeed->setMarkerLength(20);
 	sldDriveSpeed->setStepLength(1);
-	sldDriveSpeed->setId("DriveSpeed");
+	sldDriveSpeed->setId("sldDriveSpeed");
 	sldDriveSpeed->addActionListener(driveSpeedSliderActionListener);
 	lblDriveSpeedInfo = new gcn::Label(drive_speed_list[1]);
 
 	cmdSaveForDisk = new gcn::Button("Save config for disk");
 	cmdSaveForDisk->setSize(cmdSaveForDisk->getWidth() + 10, BUTTON_HEIGHT);
 	cmdSaveForDisk->setBaseColor(gui_baseCol);
-	cmdSaveForDisk->setId("SaveForDisk");
+	cmdSaveForDisk->setId("cmdSaveForDisk");
 	cmdSaveForDisk->addActionListener(saveForDiskActionListener);
 
 	cmdCreateDDDisk = new gcn::Button("Create 3.5'' DD disk");
 	cmdCreateDDDisk->setSize(cmdCreateDDDisk->getWidth() + 10, BUTTON_HEIGHT);
 	cmdCreateDDDisk->setBaseColor(gui_baseCol);
-	cmdCreateDDDisk->setId("CreateDD");
+	cmdCreateDDDisk->setId("cmdCreateDDDisk");
 	cmdCreateDDDisk->addActionListener(createDiskActionListener);
 
 	cmdCreateHDDisk = new gcn::Button("Create 3.5'' HD disk");
 	cmdCreateHDDisk->setSize(cmdCreateHDDisk->getWidth() + 10, BUTTON_HEIGHT);
 	cmdCreateHDDisk->setBaseColor(gui_baseCol);
-	cmdCreateHDDisk->setId("CreateHD");
+	cmdCreateHDDisk->setId("cmdCreateHDDisk");
 	cmdCreateHDDisk->addActionListener(createDiskActionListener);
 
 	for (i = 0; i < 4; ++i)
