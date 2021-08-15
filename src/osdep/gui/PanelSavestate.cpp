@@ -89,21 +89,25 @@ public:
 		}
 		else if (actionEvent.getSource() == cmdSaveState)
 		{
+			bool unsafe = false;
+			bool unsafe_confirmed = false;
 			struct AmigaMonitor* mon = &AMonitors[0];
 			// Check if we have RTG, then it might fail saving
 			if (mon->screen_is_picasso)
 			{
-				ShowMessage("Error: Cannot create Savestate", "Savestates do not currently work with RTG!", "", "Ok", "");
+				unsafe = true;
+				unsafe_confirmed = ShowMessage("Warning: P96 detected", "P96 is enabled. Savestates might be unsafe! Proceed anyway?", "", "Proceed", "Cancel");
 			}
 			// Check if we have JIT enabled
-			else if (changed_prefs.cachesize > 0)
+			if (changed_prefs.cachesize > 0)
 			{
-				ShowMessage("Error: Cannot create Savestate", "Savestates do not currently work with JIT!", "", "Ok", "");
+				unsafe = true;
+				unsafe_confirmed = ShowMessage("Warning: JIT detected", "JIT is enabled. Savestates might be unsafe! Proceed anyway?", "", "Proceed", "Cancel");
 			}
 			//------------------------------------------
 			// Save current state
 			//------------------------------------------
-			else if (emulating)
+			if (emulating && (!unsafe || unsafe && unsafe_confirmed))
 			{
 				savestate_initsave(savestate_fname, 1, true, true);
 				save_state(savestate_fname, "...");
