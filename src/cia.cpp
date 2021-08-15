@@ -1238,7 +1238,13 @@ static uae_u8 ReadCIAB (unsigned int addr, uae_u32 *flags)
 			tmp |= serial_readstatus(ciabdra) & 0xf8;
 		}
 #endif
-		tmp |= handle_parport_joystick(1, tmp);
+		// serial port in output mode
+			if (ciabcra & 0x40) {
+				tmp &= ~3;
+				tmp |= (ciabsdr_cnt & 1) ? 2 : 0; // clock
+				tmp |= (ciabsdr_buf & 0x80) ? 1 : 0; // data
+			}
+			tmp = handle_parport_joystick(1, tmp);
 
 		if (currprefs.cs_ciatype[1]) {
 			tmp &= ~ciabdra;
