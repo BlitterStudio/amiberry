@@ -159,20 +159,20 @@ static NavigationMap navMap[] =
 	{"A3000High", "", "", "A3000Low", "Chipmem"},
 
 	//PanelFloppy
-	{"DF0:", "Floppy drives", "cboType0", "SaveForDisk", "cboDisk0"},
-	{"cboType0", "DF0:", "chkWP0", "SaveForDisk", "cboDisk0"},
-	{"chkWP0", "cboType0", "cmdInfo0", "SaveForDisk", "cboDisk0" },
-	{"cmdInfo0", "chkWP0", "cmdEject0", "SaveForDisk", "cboDisk0"},
-	{"cmdEject0", "chkWP0", "cmdSel0", "CreateHD", "cboDisk0"},
-	{"cmdSel0", "cmdEject0", "Floppy drives", "CreateHD", "cboDisk0"},
-	{"cboDisk0", "Floppy drives", "Floppy drives", "DF0:", "LoadDiskCfg"},
-	{"LoadDiskCfg", "Floppy drives", "Floppy drives", "cboDisk0", "DF1:"},
-	{"DF1:", "Floppy drives", "cboType1", "LoadDiskCfg", "cboDisk1"},
-	{"cboType1", "DF1:", "chkWP1", "LoadDiskCfg", "cboDisk1"},
-	{"chkWP1", "cboType1", "cmdInfo1", "LoadDiskCfg", "cboDisk1" },
-	{"cmdInfo1", "chkWP1", "cmdEject1", "LoadDiskCfg", "cboDisk1" },
-	{"cmdEject1", "cmdInfo1", "cmdSel1", "LoadDiskCfg", "cboDisk1"},
-	{"cmdSel1", "cmdEject1", "Floppy drives", "LoadDiskCfg", "cboDisk1"},
+	{"DF0:", "Floppy drives", "cboType0", "cmdSaveForDisk", "cboDisk0"},
+	{"cboType0", "DF0:", "chkWP0", "cmdSaveForDisk", "cboDisk0"},
+	{"chkWP0", "cboType0", "cmdInfo0", "cmdSaveForDisk", "cboDisk0" },
+	{"cmdInfo0", "chkWP0", "cmdEject0", "cmdSaveForDisk", "cboDisk0"},
+	{"cmdEject0", "chkWP0", "cmdSel0", "cmdCreateHDDisk", "cboDisk0"},
+	{"cmdSel0", "cmdEject0", "Floppy drives", "cmdCreateHDDisk", "cboDisk0"},
+	{"cboDisk0", "Floppy drives", "Floppy drives", "DF0:", "chkLoadDiskCfg"},
+	{"chkLoadDiskCfg", "Floppy drives", "Floppy drives", "cboDisk0", "DF1:"},
+	{"DF1:", "Floppy drives", "cboType1", "chkLoadDiskCfg", "cboDisk1"},
+	{"cboType1", "DF1:", "chkWP1", "chkLoadDiskCfg", "cboDisk1"},
+	{"chkWP1", "cboType1", "cmdInfo1", "chkLoadDiskCfg", "cboDisk1" },
+	{"cmdInfo1", "chkWP1", "cmdEject1", "chkLoadDiskCfg", "cboDisk1" },
+	{"cmdEject1", "cmdInfo1", "cmdSel1", "chkLoadDiskCfg", "cboDisk1"},
+	{"cmdSel1", "cmdEject1", "Floppy drives", "chkLoadDiskCfg", "cboDisk1"},
 	{"cboDisk1", "Floppy drives", "Floppy drives", "DF1:", "DF2:"},
 	{"DF2:", "Floppy drives", "cboType2", "cboDisk1", "cboDisk2"},
 	{"cboType2", "DF2:", "chkWP2", "cboDisk1", "cboDisk2"},
@@ -187,11 +187,11 @@ static NavigationMap navMap[] =
 	{"cmdInfo3", "chkWP3", "cmdEject3", "cboDisk2", "cboDisk3" },
 	{"cmdEject3", "cmdInfo3", "cmdSel3", "cboDisk2", "cboDisk3"},
 	{"cmdSel3", "cmdEject3", "Floppy drives", "cboDisk2", "cboDisk3"},
-	{"cboDisk3", "Floppy drives", "Floppy drives", "DF3:", "DriveSpeed"},
-	{"DriveSpeed", "", "", "cboDisk3", "CreateDD"},
-	{"SaveForDisk", "Floppy drives", "CreateDD", "DriveSpeed", "DF0:"},
-	{"CreateDD", "SaveForDisk", "CreateHD", "DriveSpeed", "cboType0"},
-	{"CreateHD", "CreateDD", "Floppy drives", "DriveSpeed", "cmdEject0"},
+	{"cboDisk3", "Floppy drives", "Floppy drives", "DF3:", "sldDriveSpeed"},
+	{"sldDriveSpeed", "", "", "cboDisk3", "cmdCreateDDDisk"},
+	{"cmdSaveForDisk", "Floppy drives", "cmdCreateDDDisk", "sldDriveSpeed", "DF0:"},
+	{"cmdCreateDDDisk", "cmdSaveForDisk", "cmdCreateHDDisk", "sldDriveSpeed", "cboType0"},
+	{"cmdCreateHDDisk", "cmdCreateDDDisk", "Floppy drives", "sldDriveSpeed", "cmdEject0"},
 
 	//  active            move left           move right          move up           move down
 	// PanelHD
@@ -539,9 +539,9 @@ void PushFakeKey(const SDL_Keycode inKey)
 {
 	SDL_Event event;
 
-	event.type = SDL_KEYDOWN; // and the key up
+	event.type = SDL_KEYDOWN;
 	event.key.keysym.sym = inKey;
 	gui_input->pushInput(event); // Fire key down
-	event.type = SDL_KEYUP; // and the key up
-	gui_input->pushInput(event); // Fire key down
+	event.type = SDL_KEYUP; 
+	gui_input->pushInput(event); // and the key up
 }
