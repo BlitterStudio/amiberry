@@ -13,6 +13,7 @@ void devices_update_sound(double clk, double syncadjust);
 void devices_update_sync(double svpos, double syncadjust);
 void do_leave_program(void);
 void virtualdevice_init(void);
+void virtualdevice_free(void);
 void devices_restore_start(void);
 void device_check_config(void);
 void devices_pause(void);

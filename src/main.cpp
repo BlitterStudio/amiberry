@@ -629,11 +629,11 @@ void uae_quit (void)
 	target_quit ();
 }
 
-/* 0 = normal, 1 = nogui, -1 = disable nogui */
+/* 0 = normal, 1 = nogui, -1 = disable nogui, -2 = autorestart */
 void uae_restart (int opengui, const TCHAR *cfgfile)
 {
 	uae_quit ();
-	restart_program = opengui > 0 ? 1 : (opengui == 0 ? 2 : 3);
+	restart_program = opengui == -2 ? 4 : (opengui > 0 ? 1 : (opengui == 0 ? 2 : 3));
 	restart_config[0] = 0;
 	default_config = 0;
 	if (cfgfile)
@@ -1119,7 +1119,7 @@ static int real_main2 (int argc, TCHAR **argv)
 	copy_prefs(&currprefs, &changed_prefs);
 
 	no_gui = ! currprefs.start_gui;
-	if (restart_program == 2)
+	if (restart_program == 2 || restart_program == 4)
 		no_gui = true;
 	else if (restart_program == 3)
 		no_gui = false;
