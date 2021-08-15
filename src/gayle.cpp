@@ -395,10 +395,15 @@ static int get_gayle_ide_reg (uaecptr addr, struct ide_hdf **ide)
 			addr &= ~IDE_SECONDARY;
 		}
 	}
+	if (idedrive[ide2] == NULL) {
+		return -1;
+	}
 	*ide = idedrive[ide2 + idedrive[ide2]->ide_drv];
+	if (*ide == NULL) {
+		return -1;
+	}
 	return addr;
 }
-
 
 static uae_u32 gayle_read2 (uaecptr addr)
 {
