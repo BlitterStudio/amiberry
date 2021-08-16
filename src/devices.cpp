@@ -345,7 +345,7 @@ void do_leave_program(void)
 #ifdef USE_SDL
 	SDL_Quit();
 #endif
-	machdep_free();
+	//machdep_free();
 }
 
 void virtualdevice_init (void)
