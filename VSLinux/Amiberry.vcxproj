@@ -150,8 +150,8 @@
     <RemoteBuildCommandLine>cd ~/projects/Amiberry-Debug; make -j4 DEBUG=1 PLATFORM=pi64</RemoteBuildCommandLine>
     <RemoteReBuildCommandLine>cd ~/projects/Amiberry-Debug; make clean; make -j4 DEBUG=1 PLATFORM=pi64</RemoteReBuildCommandLine>
     <RemoteCleanCommandLine>cd ~/projects/Amiberry-Debug; make clean</RemoteCleanCommandLine>
-    <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\archivers;..\external\libguisan\include;C:\sysgcc\raspberry-64\usr\include;C:\sysgcc\raspberry-64\usr\include\SDL2;C:\sysgcc\raspberry-64\usr\include\libpng16;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
-    <NMakePreprocessorDefinitions>DEBUG;CPU_AARCH64;AMIBERRY;USE_SDL2;_REENTRANT;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+    <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\archivers;..\external\libguisan\include;C:\sysgcc\raspberry-64\usr\include;C:\sysgcc\raspberry-64\usr\include\SDL2;C:\sysgcc\raspberry-64\usr\include\libpng16;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;C:\sysgcc\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
+    <NMakePreprocessorDefinitions>DEBUG;USE_DISPMANX;CPU_AARCH64;AMIBERRY;USE_SDL2;_REENTRANT;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <RemoteBuildOutputs />
     <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-Debug</RemoteProjectDir>
     <IncrementalBuild>true</IncrementalBuild>
