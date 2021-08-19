@@ -147,9 +147,9 @@
     <IncrementalBuild>true</IncrementalBuild>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debux-DMX|ARM64'">
-    <RemoteBuildCommandLine>cd ~/projects/Amiberry-Debug; make -j4 DEBUG=1 PLATFORM=pi64</RemoteBuildCommandLine>
-    <RemoteReBuildCommandLine>cd ~/projects/Amiberry-Debug; make clean; make -j4 DEBUG=1 PLATFORM=pi64</RemoteReBuildCommandLine>
-    <RemoteCleanCommandLine>cd ~/projects/Amiberry-Debug; make clean</RemoteCleanCommandLine>
+    <RemoteBuildCommandLine>cd ~/projects/Amiberry-Debug-dmx; make -j4 DEBUG=1 PLATFORM=pi64-dispmanx</RemoteBuildCommandLine>
+    <RemoteReBuildCommandLine>cd ~/projects/Amiberry-Debug-dmx; make clean; make -j4 DEBUG=1 PLATFORM=pi64-dispmanx</RemoteReBuildCommandLine>
+    <RemoteCleanCommandLine>cd ~/projects/Amiberry-Debug-dmx; make clean</RemoteCleanCommandLine>
     <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\archivers;..\external\libguisan\include;C:\sysgcc\raspberry-64\usr\include;C:\sysgcc\raspberry-64\usr\include\SDL2;C:\sysgcc\raspberry-64\usr\include\libpng16;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;C:\sysgcc\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
     <NMakePreprocessorDefinitions>DEBUG;USE_DISPMANX;CPU_AARCH64;AMIBERRY;USE_SDL2;_REENTRANT;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <RemoteBuildOutputs />
@@ -230,11 +230,11 @@
     <IncrementalBuild>true</IncrementalBuild>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-DMX|ARM64'">
-    <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\archivers;..\external\libguisan\include;C:\sysgcc\raspberry-64\usr\include;C:\sysgcc\raspberry-64\usr\include\SDL2;C:\sysgcc\raspberry-64\usr\include\libpng16;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
-    <RemoteBuildCommandLine>cd ~/projects/Amiberry-Release; make -j4 PLATFORM=pi64</RemoteBuildCommandLine>
-    <RemoteReBuildCommandLine>cd ~/projects/Amiberry-Release; make clean; make -j4 PLATFORM=pi64</RemoteReBuildCommandLine>
-    <RemoteCleanCommandLine>cd ~/projects/Amiberry-Release; make clean</RemoteCleanCommandLine>
-    <NMakePreprocessorDefinitions>CPU_AARCH64;AMIBERRY;USE_SDL2;_REENTRANT;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+    <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\archivers;..\external\libguisan\include;C:\sysgcc\raspberry-64\usr\include;C:\sysgcc\raspberry-64\usr\include\SDL2;C:\sysgcc\raspberry-64\usr\include\libpng16;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;C:\sysgcc\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
+    <RemoteBuildCommandLine>cd ~/projects/Amiberry-Release-dmx; make -j4 PLATFORM=pi64-dispmanx</RemoteBuildCommandLine>
+    <RemoteReBuildCommandLine>cd ~/projects/Amiberry-Release-dmx; make clean; make -j4 PLATFORM=pi64-dispmanx</RemoteReBuildCommandLine>
+    <RemoteCleanCommandLine>cd ~/projects/Amiberry-Release-dmx; make clean</RemoteCleanCommandLine>
+    <NMakePreprocessorDefinitions>USE_DISPMANX;CPU_AARCH64;AMIBERRY;USE_SDL2;_REENTRANT;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-Release</RemoteProjectDir>
     <IncrementalBuild>true</IncrementalBuild>
   </PropertyGroup>
@@ -986,7 +986,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debux-DMX|ARM64'">
     <RemotePostBuildEvent>
-      <Command>cp ~/projects/Amiberry-Debug/amiberry ~/projects/amiberry/Amiberry-Debug</Command>
+      <Command>cp ~/projects/Amiberry-Debug-dmx/amiberry ~/projects/amiberry/Amiberry-Debug-dmx</Command>
     </RemotePostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-DMX-Pi3|ARM64'">
@@ -1138,7 +1138,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-DMX|ARM64'">
     <RemotePostBuildEvent>
-      <Command>cp ~/projects/Amiberry-Release/amiberry ~/projects/amiberry/Amiberry-Release</Command>
+      <Command>cp ~/projects/Amiberry-Release-dmx/amiberry ~/projects/amiberry/Amiberry-Release-dmx</Command>
       <Message>Copy binary to launch location</Message>
     </RemotePostBuildEvent>
     <ClCompile>

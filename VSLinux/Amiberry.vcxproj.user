@@ -35,7 +35,7 @@
     </RemoteDebuggerCommandArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debux-DMX|ARM64'">
-    <RemoteDebuggerCommand>~/projects/amiberry/Amiberry-Debug</RemoteDebuggerCommand>
+    <RemoteDebuggerCommand>~/projects/amiberry/Amiberry-Debug-dmx</RemoteDebuggerCommand>
     <RemoteDebuggerWorkingDirectory>~/projects/amiberry</RemoteDebuggerWorkingDirectory>
     <DebuggerFlavor>LinuxDebugger</DebuggerFlavor>
     <PreLaunchCommand>export DISPLAY=:0.0</PreLaunchCommand>
@@ -86,7 +86,7 @@
     <RemoteTarget>-18943540;argon (username=, port=22, authentication=Password)</RemoteTarget>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-DMX|ARM64'">
-    <RemoteDebuggerCommand>~/projects/amiberry/Amiberry-Release</RemoteDebuggerCommand>
+    <RemoteDebuggerCommand>~/projects/amiberry/Amiberry-Release-dmx</RemoteDebuggerCommand>
     <RemoteDebuggerWorkingDirectory>~/projects/amiberry</RemoteDebuggerWorkingDirectory>
     <DebuggerFlavor>LinuxDebugger</DebuggerFlavor>
     <PreLaunchCommand>export DISPLAY=:0.0</PreLaunchCommand>
