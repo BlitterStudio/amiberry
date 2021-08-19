@@ -2927,11 +2927,16 @@ int main(int argc, char* argv[])
 	max_uae_height = 8192;
 
 	// Get startup path
-#ifdef ANDROID
-	strncpy(start_path_data, getenv("EXTERNAL_FILES_DIR"), MAX_DPATH - 1);
-#else
-	getcwd(start_path_data, MAX_DPATH);
-#endif
+	auto env_dir = getenv("EXTERNAL_FILES_DIR");
+	if (env_dir != nullptr)
+	{
+		strncpy(start_path_data, getenv("EXTERNAL_FILES_DIR"), MAX_DPATH - 1);
+	}
+	else
+	{
+		getcwd(start_path_data, MAX_DPATH);
+	}
+
 	rename_old_adfdir();
 	load_amiberry_settings();
 
