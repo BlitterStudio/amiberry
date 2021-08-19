@@ -302,7 +302,6 @@ static int display_thread(void* unused)
 				vc_dispmanx_element_remove(updateHandle, elementHandle);
 				vc_dispmanx_update_submit_sync(updateHandle);
 				elementHandle = 0;
-				blackscreen_element = 0;
 				DispManXElementpresent = 0;
 			}
 
