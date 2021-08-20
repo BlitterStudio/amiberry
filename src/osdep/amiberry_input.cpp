@@ -780,16 +780,18 @@ static int init_joystick()
 					if (pindex == i) {
 						foundPlayer = p;
 						break;
-
 					}
-
 				}
 				if (foundPlayer != -1) {
 					write_log("Controller index found in retroarch cfg, using that for mapping\n");
 					fill_blank_controller();
 					did->mapping = default_controller_map;
 					did->mapping = map_from_retroarch(did->mapping, retroarch_file, foundPlayer);
-
+				}
+				else {
+					fill_default_controller();
+					did->mapping = default_controller_map;
+					write_log("No controller index found in retroarch cfg, using the default mapping\n");
 				}
 			}
 			else
