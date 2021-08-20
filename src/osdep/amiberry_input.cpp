@@ -741,7 +741,7 @@ static int init_joystick()
 			write_log("Retroarch controller cfg file found, using that for mapping\n");
 			fill_blank_controller();
 			did->mapping = default_controller_map;
-			did->mapping = map_from_retroarch(did->mapping, retroarch_config_file);
+			did->mapping = map_from_retroarch(did->mapping, retroarch_config_file, -1);
 
 			// WIP - not fully functional yet
 			//
@@ -769,9 +769,35 @@ static int init_joystick()
 		}
 		else
 		{
-			fill_default_controller();
-			did->mapping = default_controller_map;
-			write_log("No Retroarch controller cfg file found, using the default mapping\n");			
+			// Check if values are in retroarch.cfg
+			char retroarch_file[MAX_DPATH];
+			get_retroarch_file(retroarch_file, MAX_DPATH);
+			if (my_existsfile(retroarch_file))
+			{
+				int foundPlayer = -1;
+				for (auto p = 1; p < 5; p++) {
+					int pindex = find_retroarch(("input_player" + to_string(p) + "_joypad_index").c_str(), retroarch_file);
+					if (pindex == i) {
+						foundPlayer = p;
+						break;
+
+					}
+
+				}
+				if (foundPlayer != -1) {
+					write_log("Controller index found in retroarch cfg, using that for mapping\n");
+					fill_blank_controller();
+					did->mapping = default_controller_map;
+					did->mapping = map_from_retroarch(did->mapping, retroarch_file, foundPlayer);
+
+				}
+			}
+			else
+			{
+				fill_default_controller();
+				did->mapping = default_controller_map;
+				write_log("No Retroarch controller cfg file found, using the default mapping\n");
+			}
 		}
 
 		if (did->mapping.hotkey_button != SDL_CONTROLLER_BUTTON_INVALID)
