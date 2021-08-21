@@ -1,9 +1,9 @@
-# RPI2, SDL2, 32-bit
+# RPI4, SDL2, 64-bit
 steps:
   - checkout: self
     submodules: true
     clean: true
-    
+  
   - script: VERSION_TAG=`git describe --abbrev=0` && echo "##vso[task.setvariable variable=VERSION_TAG]$VERSION_TAG"
     displayName: Set the tag name as an environment variable
 
@@ -14,9 +14,9 @@ steps:
       make -f Makefile.fs
       cp capsimg.so $(Build.SourcesDirectory)
       cd $(Build.SourcesDirectory)
-      make -j4 PLATFORM=rpi2-sdl2
-      mkdir amiberry-rpi2-sdl2-32bit
-    displayName: 'Compile for RPI2 (SDL2) 32-bit'
+      make -j4 PLATFORM=pi64-dispmanx
+      mkdir amiberry-rpi4-dmx-64bit
+    displayName: 'Compile for RPI4 DMX 64-bit'
   
   - task: CopyFiles@2
     inputs:
@@ -31,16 +31,16 @@ steps:
         savestates/**
         screenshots/**
         whdboot/**
-     TargetFolder: amiberry-rpi2-sdl2-32bit
-
+     TargetFolder: amiberry-rpi4-dmx-64bit
+  
   - task: ArchiveFiles@2
-    displayName: 'Archive rpi2_sdl2_release'
+    displayName: 'Archive pi64_dmx_release'
     inputs:
-      rootFolderOrFile: 'amiberry-rpi2-sdl2-32bit'
+      rootFolderOrFile: 'amiberry-rpi4-dmx-64bit'
       includeRootFolder: true
-      archiveFile: '$(Build.ArtifactStagingDirectory)/amiberry-$(VERSION_TAG)-rpi2-sdl2-32bit.zip'
- 
+      archiveFile: '$(Build.ArtifactStagingDirectory)/amiberry-$(VERSION_TAG)-rpi4-dmx-64bit.zip'
+
   - task: PublishBuildArtifacts@1
     inputs:
      PathtoPublish: $(Build.ArtifactStagingDirectory)
-     ArtifactName: rpi2_sdl2_release
+     ArtifactName: pi64_dmx_release
