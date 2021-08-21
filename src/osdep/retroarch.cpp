@@ -289,43 +289,52 @@ bool init_kb_from_retroarch(int index, char* retroarch_file)
 	return valid;
 }
 
-host_input_button map_from_retroarch(host_input_button mapping, char* control_config)
+string ra_player_input(std::string retroarch_string, int player)
+{
+	if (player != -1 && retroarch_string.find("input_") == 0)
+		retroarch_string.replace(0, 6, "input_player" + to_string(player) + "_");
+
+	return retroarch_string;
+}
+
+host_input_button map_from_retroarch(host_input_button mapping, char* control_config, int player)
 {
 	mapping.is_retroarch = true;
 	mapping.hotkey_button = find_retroarch("input_enable_hotkey_btn", control_config);
 	mapping.quit_button = find_retroarch("input_exit_emulator_btn", control_config);
 	mapping.reset_button = find_retroarch("input_reset_btn", control_config);
+	mapping.menu_button = find_retroarch("input_menu_toggle_btn", control_config);
 
 	for (auto b = 0; b < SDL_CONTROLLER_BUTTON_MAX; b++)
 	{
-		mapping.button[b] = find_retroarch(retroarch_button_list[b].c_str(), control_config);
+		mapping.button[b] = find_retroarch(ra_player_input(retroarch_button_list[b], player).c_str(), control_config);
 	}
 
 	for (auto a = 0; a < SDL_CONTROLLER_AXIS_MAX; a++)
 	{
-		mapping.axis[a] = find_retroarch(retroarch_axis_list[a].c_str(), control_config);
+		mapping.axis[a] = find_retroarch(ra_player_input(retroarch_axis_list[a], player).c_str(), control_config);
 	}
 	
 	if (mapping.axis[SDL_CONTROLLER_AXIS_LEFTX] == -1)
-		mapping.axis[SDL_CONTROLLER_AXIS_LEFTX] = find_retroarch("input_right_axis", control_config);
+		mapping.axis[SDL_CONTROLLER_AXIS_LEFTX] = find_retroarch(ra_player_input("input_right_axis", player).c_str(), control_config);
 
 	if (mapping.axis[SDL_CONTROLLER_AXIS_LEFTY] == -1)
-		mapping.axis[SDL_CONTROLLER_AXIS_LEFTY] = find_retroarch("input_down_axis", control_config);
+		mapping.axis[SDL_CONTROLLER_AXIS_LEFTY] = find_retroarch(ra_player_input("input_down_axis", player).c_str(), control_config);
 
 	// hats
-	mapping.number_of_hats = find_retroarch("count_hats", control_config);
+	mapping.number_of_hats = find_retroarch(ra_player_input("count_hats", player).c_str(), control_config);
 	
 	// invert on axes
-	mapping.lstick_axis_y_invert = find_retroarch_polarity("input_down_axis", control_config);
+	mapping.lstick_axis_y_invert = find_retroarch_polarity(ra_player_input("input_down_axis", player).c_str(), control_config);
 	if (!mapping.lstick_axis_y_invert)
-		mapping.lstick_axis_y_invert = find_retroarch_polarity("input_l_y_plus_axis", control_config);
+		mapping.lstick_axis_y_invert = find_retroarch_polarity(ra_player_input("input_l_y_plus_axis", player).c_str(), control_config);
 
-	mapping.lstick_axis_x_invert = find_retroarch_polarity("input_right_axis", control_config);
+	mapping.lstick_axis_x_invert = find_retroarch_polarity(ra_player_input("input_right_axis", player).c_str(), control_config);
 	if (!mapping.lstick_axis_x_invert)
-		mapping.lstick_axis_x_invert = find_retroarch_polarity("input_l_x_plus_axis", control_config);
+		mapping.lstick_axis_x_invert = find_retroarch_polarity(ra_player_input("input_l_x_plus_axis", player).c_str(), control_config);
 
-	mapping.rstick_axis_x_invert = find_retroarch_polarity("input_r_x_plus_axis", control_config);
-	mapping.rstick_axis_y_invert = find_retroarch_polarity("input_r_y_plus_axis", control_config);
+	mapping.rstick_axis_x_invert = find_retroarch_polarity(ra_player_input("input_r_x_plus_axis", player).c_str(), control_config);
+	mapping.rstick_axis_y_invert = find_retroarch_polarity(ra_player_input("input_r_y_plus_axis", player).c_str(), control_config);
 
 	write_log("Controller Detection: invert left  y axis: %d\n",
 		mapping.lstick_axis_y_invert);

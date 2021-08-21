@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.29324.140
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31612.314
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Amiberry", "Amiberry.vcxproj", "{7B9A67B2-3F13-4E7B-A875-AAB6CAAE63D7}"
 EndProject
@@ -9,8 +9,6 @@ Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|ARM = Debug|ARM
 		Debug|ARM64 = Debug|ARM64
-		Debug-DMX-Pi3|ARM = Debug-DMX-Pi3|ARM
-		Debug-DMX-Pi3|ARM64 = Debug-DMX-Pi3|ARM64
 		Debux-DMX|ARM = Debux-DMX|ARM
 		Debux-DMX|ARM64 = Debux-DMX|ARM64
 		Release|ARM = Release|ARM
@@ -25,12 +23,6 @@ Global
 		{7B9A67B2-3F13-4E7B-A875-AAB6CAAE63D7}.Debug|ARM64.ActiveCfg = Debug|ARM64
 		{7B9A67B2-3F13-4E7B-A875-AAB6CAAE63D7}.Debug|ARM64.Build.0 = Debug|ARM64
 		{7B9A67B2-3F13-4E7B-A875-AAB6CAAE63D7}.Debug|ARM64.Deploy.0 = Debug|ARM64
-		{7B9A67B2-3F13-4E7B-A875-AAB6CAAE63D7}.Debug-DMX-Pi3|ARM.ActiveCfg = Debug-DMX-Pi3|ARM
-		{7B9A67B2-3F13-4E7B-A875-AAB6CAAE63D7}.Debug-DMX-Pi3|ARM.Build.0 = Debug-DMX-Pi3|ARM
-		{7B9A67B2-3F13-4E7B-A875-AAB6CAAE63D7}.Debug-DMX-Pi3|ARM.Deploy.0 = Debug-DMX-Pi3|ARM
-		{7B9A67B2-3F13-4E7B-A875-AAB6CAAE63D7}.Debug-DMX-Pi3|ARM64.ActiveCfg = Debug-DMX-Pi3|ARM64
-		{7B9A67B2-3F13-4E7B-A875-AAB6CAAE63D7}.Debug-DMX-Pi3|ARM64.Build.0 = Debug-DMX-Pi3|ARM64
-		{7B9A67B2-3F13-4E7B-A875-AAB6CAAE63D7}.Debug-DMX-Pi3|ARM64.Deploy.0 = Debug-DMX-Pi3|ARM64
 		{7B9A67B2-3F13-4E7B-A875-AAB6CAAE63D7}.Debux-DMX|ARM.ActiveCfg = Debux-DMX|ARM
 		{7B9A67B2-3F13-4E7B-A875-AAB6CAAE63D7}.Debux-DMX|ARM.Build.0 = Debux-DMX|ARM
 		{7B9A67B2-3F13-4E7B-A875-AAB6CAAE63D7}.Debux-DMX|ARM.Deploy.0 = Debux-DMX|ARM

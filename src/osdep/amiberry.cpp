@@ -90,6 +90,7 @@ amiberry_hotkey minimize_key;
 
 bool lctrl, rctrl, lalt, ralt, lshift, rshift, lgui, rgui;
 
+bool hotkey_pressed = false;
 bool mouse_grabbed = false;
 
 std::string get_version_string()
@@ -1012,6 +1013,7 @@ static void touch_event(unsigned long id, int pressrel, int x, int y, const SDL_
 void process_event(SDL_Event event)
 {
 	struct AmigaMonitor* mon = &AMonitors[0];
+	struct didata* did = &di_joystick[0];
 	
 	if (event.type == SDL_WINDOWEVENT)
 	{
@@ -1099,6 +1101,21 @@ void process_event(SDL_Event event)
 
 	case SDL_CONTROLLERBUTTONDOWN:
 		if (event.cbutton.button == enter_gui_button)
+		{
+			inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
+			break;
+		}
+		return;
+
+	case SDL_JOYBUTTONDOWN:
+	case SDL_JOYBUTTONUP:
+		if (event.jbutton.button == did->mapping.hotkey_button)
+		{
+			hotkey_pressed = (event.jbutton.state == SDL_PRESSED);
+			break;
+		}
+
+		if (event.jbutton.button == did->mapping.menu_button && hotkey_pressed && event.jbutton.state == SDL_PRESSED)
 		{
 			inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
 			break;
@@ -2909,11 +2926,16 @@ int main(int argc, char* argv[])
 	max_uae_height = 8192;
 
 	// Get startup path
-#ifdef ANDROID
-	strncpy(start_path_data, getenv("EXTERNAL_FILES_DIR"), MAX_DPATH - 1);
-#else
-	getcwd(start_path_data, MAX_DPATH);
-#endif
+	auto env_dir = getenv("EXTERNAL_FILES_DIR");
+	if (env_dir != nullptr)
+	{
+		strncpy(start_path_data, getenv("EXTERNAL_FILES_DIR"), MAX_DPATH - 1);
+	}
+	else
+	{
+		getcwd(start_path_data, MAX_DPATH);
+	}
+
 	rename_old_adfdir();
 	load_amiberry_settings();
 

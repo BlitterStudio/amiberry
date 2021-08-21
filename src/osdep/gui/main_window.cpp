@@ -566,7 +566,9 @@ void check_input()
 				got_event = 1;
 				const int hat = SDL_JoystickGetHat(gui_joystick, 0);
 				
-				if (gui_event.jbutton.button == static_cast<Uint8>(button_for_gui))
+				if (gui_event.jbutton.button == static_cast<Uint8>(button_for_gui) || (
+					SDL_JoystickGetButton(gui_joystick, did->mapping.menu_button) &&
+					SDL_JoystickGetButton(gui_joystick, did->mapping.hotkey_button)))
 				{
 					if (emulating && cmdStart->isEnabled())
 					{

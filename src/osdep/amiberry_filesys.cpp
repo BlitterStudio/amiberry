@@ -74,11 +74,12 @@ std::string iso_8859_1_to_utf8(std::string& str)
 
 string prefix_with_application_directory_path(string currentpath)
 {
-#ifdef ANDROID
-	return getenv("EXTERNAL_FILES_DIR") + ("/" + currentpath);
-#else
+	auto env_dir = getenv("EXTERNAL_FILES_DIR");
+	if (env_dir != nullptr)
+	{
+		return getenv("EXTERNAL_FILES_DIR") + ("/" + currentpath);
+	}
 	return currentpath;
-#endif
 }
 
 int my_setcurrentdir(const TCHAR* curdir, TCHAR* oldcur)

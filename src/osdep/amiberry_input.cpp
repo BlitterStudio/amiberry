@@ -71,6 +71,7 @@ static void fill_default_controller()
 	default_controller_map.hotkey_button = SDL_CONTROLLER_BUTTON_INVALID;
 	default_controller_map.quit_button = SDL_CONTROLLER_BUTTON_INVALID;
 	default_controller_map.reset_button = SDL_CONTROLLER_BUTTON_INVALID;
+	default_controller_map.menu_button = SDL_CONTROLLER_BUTTON_INVALID;
 
 	default_controller_map.lstick_axis_y_invert = false;
 	default_controller_map.lstick_axis_x_invert = false;
@@ -93,6 +94,7 @@ static void fill_blank_controller()
 	default_controller_map.hotkey_button = SDL_CONTROLLER_BUTTON_INVALID;
 	default_controller_map.quit_button = SDL_CONTROLLER_BUTTON_INVALID;
 	default_controller_map.reset_button = SDL_CONTROLLER_BUTTON_INVALID;
+	default_controller_map.menu_button = SDL_CONTROLLER_BUTTON_INVALID;
 
 	default_controller_map.lstick_axis_y_invert = false;
 	default_controller_map.lstick_axis_x_invert = false;
@@ -741,37 +743,41 @@ static int init_joystick()
 			write_log("Retroarch controller cfg file found, using that for mapping\n");
 			fill_blank_controller();
 			did->mapping = default_controller_map;
-			did->mapping = map_from_retroarch(did->mapping, retroarch_config_file);
-
-			// WIP - not fully functional yet
-			//
-			//std::string binding;
-			//binding.assign(guid_str);
-			//binding += ",";
-			//binding += joystick_name[cpt];
-			//binding += ",platform:Linux";
-
-			//const auto map = binding_from_retroarch(cpt, retroarch_config_file);
-			//binding += map;
-
-			//// examples:
-			//// 341a3608000000000000504944564944,Afterglow PS3 Controller,a:b1,b:b2,y:b3,x:b0,start:b9,guide:b12,back:b8,dpup:h0.1,dpleft:h0.8,dpdown:h0.4,dpright:h0.2,leftshoulder:b4,rightshoulder:b5,leftstick:b10,rightstick:b11,leftx:a0,lefty:a1,rightx:a2,righty:a3,lefttrigger:b6,righttrigger:b7
-			//// 03000000c0160000dc27000001010000,OnyxSoft Dual JoyDivision,platform:Linux,a:b0,b:b1,x:b2,y:b3,start:b6,leftshoulder:b4,rightshoulder:b5,dpup:-a1,dpdown:+a1,dpleft:-a0,dpright:+a0,
-			//// 030000005e0400008e02000014010000,Xbox 360 Controller,platform:Linux,a:b0,b:b1,x:b2,y:b3,back:b6,start:b7,leftshoulder:b4,rightshoulder:b5,dpup:h0.1,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,
-
-			//const auto success = SDL_GameControllerAddMapping(binding.c_str());
-			//if (success == 1)
-			//	write_log("Game Controller binding added as \"%s\".\n", binding.c_str());
-			//else if (success == 0)
-			//	write_log("Game Controller binding updated as \"%s\".\n", binding.c_str());
-			//else if (success == -1)
-			//	write_log("Failed to add/update Game Controller binding! SDL Error: %s\n", SDL_GetError());
+			did->mapping = map_from_retroarch(did->mapping, retroarch_config_file, -1);
 		}
 		else
 		{
-			fill_default_controller();
-			did->mapping = default_controller_map;
-			write_log("No Retroarch controller cfg file found, using the default mapping\n");			
+			// Check if values are in retroarch.cfg
+			char retroarch_file[MAX_DPATH];
+			get_retroarch_file(retroarch_file, MAX_DPATH);
+			if (my_existsfile(retroarch_file))
+			{
+				int foundPlayer = -1;
+				for (auto p = 1; p < 5; p++) {
+					int pindex = find_retroarch(("input_player" + to_string(p) + "_joypad_index").c_str(), retroarch_file);
+					if (pindex == i) {
+						foundPlayer = p;
+						break;
+					}
+				}
+				if (foundPlayer != -1) {
+					write_log("Controller index found in retroarch cfg, using that for mapping\n");
+					fill_blank_controller();
+					did->mapping = default_controller_map;
+					did->mapping = map_from_retroarch(did->mapping, retroarch_file, foundPlayer);
+				}
+				else {
+					fill_default_controller();
+					did->mapping = default_controller_map;
+					write_log("No controller index found in retroarch cfg, using the default mapping\n");
+				}
+			}
+			else
+			{
+				fill_default_controller();
+				did->mapping = default_controller_map;
+				write_log("No Retroarch controller cfg file found, using the default mapping\n");
+			}
 		}
 
 		if (did->mapping.hotkey_button != SDL_CONTROLLER_BUTTON_INVALID)
