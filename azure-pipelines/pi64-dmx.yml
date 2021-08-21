@@ -1,4 +1,4 @@
-# RPI4, SDL2, 64-bit
+# RPI4, DMX, 64-bit
 steps:
   - checkout: self
     submodules: true
