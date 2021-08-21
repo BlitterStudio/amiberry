@@ -76,3 +76,12 @@ jobs:
   pool: RPI-64
   steps:
     - template: pi64-dmx.yml
+
+- job: RK3399_64bit
+  strategy:
+    matrix:
+      rockpro64-64bit:
+        platform: 'RK3399'
+  pool: RockPro64
+  steps:
+    - template: rk3399.yml
