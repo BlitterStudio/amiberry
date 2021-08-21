@@ -289,7 +289,7 @@ bool init_kb_from_retroarch(int index, char* retroarch_file)
 	return valid;
 }
 
-string ra_player_input(std::string retroarch_string, int player)
+std::string ra_player_input(std::string retroarch_string, int player)
 {
 	if (player != -1 && retroarch_string.find("input_") == 0)
 		retroarch_string.replace(0, 6, "input_player" + to_string(player) + "_");
@@ -346,40 +346,4 @@ host_input_button map_from_retroarch(host_input_button mapping, char* control_co
 		mapping.rstick_axis_x_invert);
 
 	return mapping;
-}
-
-std::string binding_from_retroarch(host_input_button mapping, char* control_config)
-{
-	string result;
-	
-	mapping.is_retroarch = true;
-	mapping.hotkey_button = find_retroarch("input_enable_hotkey_btn", control_config);
-	mapping.quit_button = find_retroarch("input_exit_emulator_btn", control_config);
-	mapping.reset_button = find_retroarch("input_reset_btn", control_config);
-
-	for (auto button = 0; button < SDL_CONTROLLER_BUTTON_MAX; button++)
-	{
-		//TODO fix hat detection!
-		const auto retroarch_button = find_retroarch(retroarch_button_list[button].c_str(), control_config);
-		if (retroarch_button != -1)
-		{
-			result += ",";
-			result += controller_button_list[button];
-			result += ":b";
-			result += to_string(retroarch_button);
-		}
-	}
-	for (auto axis = 0; axis < SDL_CONTROLLER_AXIS_MAX; axis++)
-	{
-		const auto retroarch_axis = find_retroarch(retroarch_axis_list[axis].c_str(), control_config);
-		if (retroarch_axis != -1)
-		{
-			result += ",";
-			result += controller_axis_list[axis];
-			result += ":b";
-			result += to_string(retroarch_axis);
-		}
-	}
-
-	return result;
 }
