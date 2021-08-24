@@ -1117,6 +1117,7 @@ void process_event(SDL_Event event)
 
 		if (event.jbutton.button == did->mapping.menu_button && hotkey_pressed && event.jbutton.state == SDL_PRESSED)
 		{
+			hotkey_pressed = false;
 			inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
 			break;
 		}
