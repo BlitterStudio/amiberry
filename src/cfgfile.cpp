@@ -9185,6 +9185,11 @@ int bip_cd32(struct uae_prefs* p, int rom)
 	return bip_cd32(p, 0, 0, 0);
 }
 
+int bip_cdtv(struct uae_prefs* p, int rom)
+{
+	return bip_cdtv(p, 0, 0, 0);
+}
+
 int bip_a1200(struct uae_prefs* p, int rom)
 {
 	int roms[4];

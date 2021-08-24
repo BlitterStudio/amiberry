@@ -990,6 +990,7 @@ extern int bip_a1200(struct uae_prefs* p, int rom);
 extern int bip_a2000(struct uae_prefs* p, int rom);
 extern int bip_a4000(struct uae_prefs* p, int rom);
 extern int bip_cd32(struct uae_prefs* p, int rom);
+extern int bip_cdtv(struct uae_prefs* p, int rom);
 
 int parse_cmdline_option(struct uae_prefs*, TCHAR, const TCHAR*);
 
