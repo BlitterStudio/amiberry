@@ -650,7 +650,7 @@ void usage()
 	std::cout << " -f <file>                  Load a configuration file." << std::endl;
 	std::cout << " --config <file>            \n" << std::endl;
 	std::cout << " -m <Amiga Model>           Amiga model to emulate, from the QuickStart options." << std::endl;
-	std::cout << " --model <Amiga Model>      Available options are: A500, A500P, A1200, A4000 and CD32.\n" << std::endl;
+	std::cout << " --model <Amiga Model>      Available options are: A500, A500P, A1200, A4000, CD32 and CDTV.\n" << std::endl;
 	std::cout << " --autoload <file>          Load a WHDLoad game or .CUE CD32 image using the WHDBooter." << std::endl;
 	std::cout << " --cdimage <file>           Load the CD image provided when starting emulation (for CD32)." << std::endl;
 	std::cout << " --statefile <file>         Load a save state file." << std::endl;
@@ -824,6 +824,10 @@ static void parse_cmdline (int argc, TCHAR **argv)
 				else if (_tcscmp(txt, _T("CD32")) == 0)
 				{
 					bip_cd32(&currprefs, -1);
+				}
+				else if (_tcscmp(txt, _T("CDTV")) == 0)
+				{
+					bip_cdtv(&currprefs, -1);
 				}
 			}
 		} else if (_tcscmp(argv[i], _T("--statefile")) == 0) {
