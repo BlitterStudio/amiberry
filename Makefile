@@ -167,7 +167,7 @@ else ifneq (,$(findstring AMLSM1,$(PLATFORM)))
     AARCH64 = 1
 
 # Odroid Go Advance target (SDL2, 64-bit)
-else ifeq ($(PLATFORM),go-advance)
+else ifeq ($(PLATFORM),oga)
     CPUFLAGS = -mcpu=cortex-a35
     CPPFLAGS += $(CPPFLAGS64)
     AARCH64 = 1
