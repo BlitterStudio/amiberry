@@ -135,7 +135,7 @@ extern float vblank_hz, fake_vblank_hz;
 extern float hblank_hz;
 extern int vblank_skip, doublescan;
 extern int programmedmode;
-extern int vblank_firstline_hw, vblank_lastline_hw;
+extern int vblank_firstline_hw;
 
 #define DMA_AUD0      0x0001
 #define DMA_AUD1      0x0002
@@ -165,11 +165,12 @@ extern unsigned long frametime, timeframes;
 extern uae_u16 htotal, vtotal, beamcon0, new_beamcon0;
 
 // 100 words give you 1600 horizontal pixels. Should be more than enough for superhires. 
+// Extreme overscan superhires needs more.
 // must be divisible by 8
 #ifdef CUSTOM_SIMPLE
 #define MAX_WORDS_PER_LINE 56
 #else
-#define MAX_WORDS_PER_LINE 104
+#define MAX_WORDS_PER_LINE 112
 #endif
 
 extern uae_u32 hirestab_h[256][2];
@@ -238,7 +239,7 @@ void customhack_put(struct customhack *ch, uae_u16 v, int hpos);
 uae_u16 customhack_get(struct customhack *ch, int hpos);
 extern void alloc_cycle_ext(int, int);
 extern void alloc_cycle_blitter(int hpos, uaecptr *ptr, int);
-extern bool ispal(int* lines);
+extern bool ispal(int *lines);
 extern bool isvga(void);
 extern int current_maxvpos(void);
 extern struct chipset_refresh *get_chipset_refresh(struct uae_prefs*);

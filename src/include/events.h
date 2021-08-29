@@ -14,6 +14,8 @@
 
 #include "uae/types.h"
 
+#undef EVENT_DEBUG
+
 #include "machdep/rpt.h"
 
 extern frame_time_t vsyncmintime, vsyncmintimepre;
@@ -110,6 +112,7 @@ STATIC_INLINE void set_cycles (unsigned long int x)
 {
 	currcycle = x;
 	eventtab[ev_hsync].oldcycles = x;
+    eventtab[ev_hsynch].active = 0;
 }
 
 STATIC_INLINE int current_hpos_safe (void)

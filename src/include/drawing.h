@@ -248,7 +248,7 @@ struct color_change {
 #ifdef UAE_MINI
 #define MAX_PIXELS_PER_LINE 880
 #else
-#define MAX_PIXELS_PER_LINE 2048
+#define MAX_PIXELS_PER_LINE 2304
 #endif
 
 #define MAXVPOS_WRAPLINES 10

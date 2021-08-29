@@ -394,12 +394,12 @@ static void check_channel_mods(int hpos, int ch, uaecptr *pt)
 	if (bltptxpos != hpos)
 		return;
 	if (ch == bltptxc) {
-		bltptxpos = -1;
-		*pt = bltptx;
 		if (blit_warned > 0) {
 			write_log(_T("BLITTER: %08X -> %08X write to %cPT ignored! %08x\n"), bltptx, *pt, ch + 'A' - 1, m68k_getpc());
 			blit_warned--;
 		}
+		bltptxpos = -1;
+		*pt = bltptx;
 	}
 }
 
@@ -913,6 +913,7 @@ static void blit_bltset(int con)
 		blit_changed = true;
 		if (blit_warned > 0) {
 			write_log(_T("BLITTER: BLTCON0 %04x -> %04x BLTCON1 %04x -> %04x PC=%08x (%d %d)\n"), bltcon0_old, bltcon0, bltcon1_old, bltcon1, M68K_GETPC, current_hpos(), vpos);
+			blitter_dump();
 			blitshifterdebug(bltcon0_old, false);
 			blit_warned--;
 			//activate_debugger();
