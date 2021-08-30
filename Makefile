@@ -231,6 +231,12 @@ else ifeq ($(PLATFORM),mali-drm-gles2-sdl2)
     CPPFLAGS += $(CPPFLAGS64)
     AARCH64 = 1
 
+# Generic Cortex-A9 32-bit
+else ifeq ($(PLATFORM),s812)
+    CPUFLAGS = -mcpu=cortex-a9 -mfpu=neon-vfpv3 -mfloat-abi=hard
+    CPPFLAGS += $(CPPFLAGS32) $(NEON_FLAGS) -DUSE_RENDER_THREAD
+    HAVE_NEON = 1 
+
 else
 $(error Unknown platform:$(PLATFORM))
 endif
