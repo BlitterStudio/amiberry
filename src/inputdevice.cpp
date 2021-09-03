@@ -7764,7 +7764,11 @@ void inputdevice_default_prefs (struct uae_prefs *p)
 #endif
 	p->input_autofire_linecnt = 600;
 	p->input_keyboard_type = 0;
+#ifdef AMIBERRY
+	p->input_autoswitch = false;
+#else
 	p->input_autoswitch = true;
+#endif
 	p->input_device_match_mask = -1;
 	keyboard_default = keyboard_default_table[p->input_keyboard_type];
 	inputdevice_default_kb_all (p);
