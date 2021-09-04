@@ -1176,7 +1176,7 @@ static void read_joystick()
 				else
 					state = SDL_GameControllerGetButton(did->controller,
 						static_cast<SDL_GameControllerButton>(did->mapping.button[SDL_CONTROLLER_BUTTON_BACK])) & 1;
-				setjoybuttonstate(i + 1, 13 + held_offset, state);
+				setjoybuttonstate(i, 13 + held_offset, state);
 			}
 		}
 	}
