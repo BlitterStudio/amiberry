@@ -6935,8 +6935,19 @@ static void compatibility_copy (struct uae_prefs *prefs, bool gameports)
 					break;
 				case JSEM_MODE_MOUSE:
 				case JSEM_MODE_WHEELMOUSE:
-					input_get_default_mouse (joysticks, joy, i, af, !gameports, mode == JSEM_MODE_WHEELMOUSE, true);
-					joymodes[i] = JSEM_MODE_WHEELMOUSE;
+#ifdef AMIBERRY
+					// This allows us to use Retroarch hotkeys when having a controller in Mouse mode
+					if (currprefs.jports[i].id >= JSEM_MICE && currprefs.jports[i].id < JSEM_END)
+					{
+						input_get_default_mouse(joysticks, joy, i, af, !gameports, mode == JSEM_MODE_WHEELMOUSE, true);
+						joymodes[i] = JSEM_MODE_WHEELMOUSE;
+					}
+					else
+					{
+						input_get_default_joystick(joysticks, joy, i, af, mode, !gameports, false);
+						joymodes[i] = JSEM_MODE_WHEELMOUSE;
+					}
+#endif
 					break;
 				case JSEM_MODE_LIGHTPEN:
 					input_get_default_lightpen (joysticks, joy, i, af, !gameports, true, submode);
