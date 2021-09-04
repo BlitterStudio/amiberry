@@ -932,6 +932,8 @@ static void read_joystick()
 		struct didata* did = &di_joystick[i];
 		//if (!did->acquired)
 		//	continue;
+		if (did->name == "")
+			continue;
 		if (isfocus() || currprefs.inactive_input & 4)
 		{
 			auto held_offset = 0;
