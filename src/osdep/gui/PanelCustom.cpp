@@ -81,7 +81,7 @@ static StringListModel CustomEventList_Quit(nullptr, 0);
 static StringListModel CustomEventList_Reset(nullptr, 0);
 
 const string label_button_list[] = {
-	"South:", "East:", "West:", "North:", "Select:", "Menu:", "Start:", "L.Stick:", "R.Stick:",
+	"South:", "East:", "West:", "North:", "Select:", "Guide:", "Start:", "L.Stick:", "R.Stick:",
 	"L.Shoulder:", "R.Shoulder:", "DPad Up:", "DPad Down:", "DPad Left:", "DPad Right:",
 	"Misc1:", "Paddle1:", "Paddle2:", "Paddle3:", "Paddle4:", "Touchpad:"
 };
@@ -200,8 +200,8 @@ public:
 				break;
 			}
 
-			//  get the selected action from the drop-down, and 
-			//    push it into the 'temp map' 
+			// get the selected action from the drop-down, and 
+			// push it into the 'temp map' 
 			for (auto t = 0; t < SDL_CONTROLLER_BUTTON_MAX; t++)
 			{
 				if (actionEvent.getSource() == cboCustomAction[t])
