@@ -559,7 +559,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 
 	auto posY = DISTANCE_BORDER;
 	grpMiscOptions->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
-	grpMiscOptions->setSize(category.panel->getWidth() - category.panel->getWidth() / 3 - DISTANCE_BORDER, 700);
+	grpMiscOptions->setSize(category.panel->getWidth() - category.panel->getWidth() / 3 - 50, 700);
 	grpMiscOptions->setBaseColor(gui_baseCol);
 	grpMiscOptions->add(chkMouseUntrap, DISTANCE_BORDER, posY);
 	posY += chkMouseUntrap->getHeight() + DISTANCE_NEXT_Y;
@@ -621,7 +621,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	scrollArea = new gcn::ScrollArea(grpMiscOptions);
 	scrollArea->setBackgroundColor(gui_baseCol);
 	scrollArea->setBaseColor(gui_baseCol);
-	scrollArea->setWidth(category.panel->getWidth() - (category.panel->getWidth() / 3) - SMALL_BUTTON_WIDTH - 8);
+	scrollArea->setWidth(category.panel->getWidth() - (category.panel->getWidth() / 3) - 35);
 	scrollArea->setHeight(300);
 	scrollArea->setBorderSize(1);
 
