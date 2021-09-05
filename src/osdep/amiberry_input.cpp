@@ -13,7 +13,6 @@
 #include "uae.h"
 #include "xwin.h"
 
-const int remap_buttons = 16;
 #define REMAP_BUTTONS        16
 #define MAX_MOUSE_BUTTONS	  3
 #define MAX_MOUSE_AXES        4
@@ -1082,7 +1081,7 @@ static void read_joystick()
 				}
 			}
 
-			// cd32 red, blue, green, yellow
+			// A/B/X/Y --> CD32 red, blue, green, yellow
 			for (auto button = 0; button <= SDL_CONTROLLER_BUTTON_Y; button++)
 			{
 				if (did->mapping.button[button] != SDL_CONTROLLER_BUTTON_INVALID)
@@ -1097,7 +1096,7 @@ static void read_joystick()
 				}
 			}
 
-			// cd32  rwd, ffw
+			// LShoulder/RShoulder --> CD32 rwd, ffw
 			for (int button = SDL_CONTROLLER_BUTTON_LEFTSHOULDER; button <= SDL_CONTROLLER_BUTTON_RIGHTSHOULDER; button++)
 			{
 				if (did->mapping.button[button] != SDL_CONTROLLER_BUTTON_INVALID)
@@ -1112,7 +1111,19 @@ static void read_joystick()
 				}
 			}
 
-			// start
+			// Guide button
+			if (did->mapping.button[SDL_CONTROLLER_BUTTON_GUIDE] != SDL_CONTROLLER_BUTTON_INVALID)
+			{
+				int state;
+				if (did->mapping.is_retroarch || !did->is_controller)
+					state = SDL_JoystickGetButton(did->joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_GUIDE]) & 1;
+				else
+					state = SDL_GameControllerGetButton(did->controller,
+						static_cast<SDL_GameControllerButton>(did->mapping.button[SDL_CONTROLLER_BUTTON_GUIDE])) & 1;
+				setjoybuttonstate(i, 31, state);
+			}
+
+			// Start button
 			if (did->mapping.button[SDL_CONTROLLER_BUTTON_START] != SDL_CONTROLLER_BUTTON_INVALID)
 			{
 				int state;
@@ -1124,7 +1135,7 @@ static void read_joystick()
 				setjoybuttonstate(i, 6 + held_offset, state);
 			}
 
-			// up down left right
+			// D-pad Up, Down, Left, Right
 			for (int button = SDL_CONTROLLER_BUTTON_DPAD_UP; button <= SDL_CONTROLLER_BUTTON_DPAD_RIGHT; button++)
 			{
 				int state;
@@ -1152,7 +1163,7 @@ static void read_joystick()
 				setjoybuttonstate(i, button - 4 + held_offset, state);
 			}
 
-			// stick left/right
+			// Left/Right Stick buttons
 			for (int button = SDL_CONTROLLER_BUTTON_LEFTSTICK; button <= SDL_CONTROLLER_BUTTON_RIGHTSTICK; button++)
 			{
 				if (did->mapping.button[button] != -1)
@@ -1167,7 +1178,7 @@ static void read_joystick()
 				}
 			}
 
-			// select button
+			// Select button
 			if (did->mapping.button[SDL_CONTROLLER_BUTTON_BACK] != SDL_CONTROLLER_BUTTON_INVALID)
 			{
 				int state;
@@ -1432,20 +1443,22 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 		for (int x = SDL_CONTROLLER_BUTTON_A; x <= SDL_CONTROLLER_BUTTON_Y; x++)
 			setid(uid, i, ID_BUTTON_OFFSET + x + function_offset, 0, port, thismap[n][x], af, gp);
 
-		// left shoulder / right shoulder / start  
+		// Left/Right shoulder 
 		for (int x = SDL_CONTROLLER_BUTTON_LEFTSHOULDER; x <= SDL_CONTROLLER_BUTTON_RIGHTSHOULDER; x++)
 			setid(uid, i, ID_BUTTON_OFFSET + (x - 5) + function_offset, 0, port, thismap[n][x], af, gp);
 
+		// Start button
 		setid(uid, i, ID_BUTTON_OFFSET + 6 + function_offset, 0, port, thismap[n][SDL_CONTROLLER_BUTTON_START], gp);
 
-		// directions
+		// D-pad Up/Down/Left/Right
 		for (int x = SDL_CONTROLLER_BUTTON_DPAD_UP; x <= SDL_CONTROLLER_BUTTON_DPAD_RIGHT; x++)
 			setid(uid, i, ID_BUTTON_OFFSET + (x - 4) + function_offset, 0, port, thismap[n][x], af, gp);
 
-		// stick buttons
+		// Left/Right Stick buttons
 		for (int x = SDL_CONTROLLER_BUTTON_LEFTSTICK; x <= SDL_CONTROLLER_BUTTON_RIGHTSTICK; x++)
 			setid(uid, i, ID_BUTTON_OFFSET + (x + 4) + function_offset, 0, port, thismap[n][x], af, gp);
 		
+		// Back/Select button
 		setid(uid, i, ID_BUTTON_OFFSET + 13 + function_offset, 0, port, thismap[n][SDL_CONTROLLER_BUTTON_BACK], gp);
 	}
 
@@ -1458,6 +1471,9 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 	
 	if (currprefs.use_retroarch_reset)
 		setid(uid, i, ID_BUTTON_OFFSET + 30, 0, port, INPUTEVENT_SPC_SOFTRESET, gp);
+
+	// Guide button
+	setid(uid, i, ID_BUTTON_OFFSET + 31, 0, port, thismap[0][SDL_CONTROLLER_BUTTON_GUIDE], gp);
 
 	if (i >= 0 && i < num_joystick)
 		return 1;
