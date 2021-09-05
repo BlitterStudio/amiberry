@@ -100,7 +100,7 @@ static void InitCreateFilesysHardfile()
 	cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 2 * BUTTON_WIDTH - DISTANCE_NEXT_X,
 					   DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
 	cmdOK->setBaseColor(gui_baseCol);
-	cmdOK->setId("createHdfOK");
+	cmdOK->setId("cmdCreateHdfOK");
 	cmdOK->addActionListener(createFilesysHardfileActionListener);
 
 	cmdCancel = new gcn::Button("Cancel");
@@ -108,20 +108,22 @@ static void InitCreateFilesysHardfile()
 	cmdCancel->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH,
 						   DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
 	cmdCancel->setBaseColor(gui_baseCol);
-	cmdCancel->setId("createHdfCancel");
+	cmdCancel->setId("cmdCreateHdfCancel");
 	cmdCancel->addActionListener(createFilesysHardfileActionListener);
 
 	lblDevice = new gcn::Label("Device Name:");
 	lblDevice->setAlignment(gcn::Graphics::RIGHT);
 	txtDevice = new gcn::TextField();
+	txtDevice->setId("txtCreateDevice");
 	txtDevice->setSize(80, TEXTFIELD_HEIGHT);
 
 	chkAutoboot = new gcn::CheckBox("Bootable", true);
-	chkAutoboot->setId("createHdfAutoboot");
+	chkAutoboot->setId("chkCreateHdfAutoboot");
 
 	lblBootPri = new gcn::Label("Boot priority:");
 	lblBootPri->setAlignment(gcn::Graphics::RIGHT);
 	txtBootPri = new gcn::TextField();
+	txtBootPri->setId("txtCreateBootPri");
 	txtBootPri->setSize(40, TEXTFIELD_HEIGHT);
 
 	lblSize = new gcn::Label("Size (MB):");
@@ -135,12 +137,13 @@ static void InitCreateFilesysHardfile()
 	lblPath = new gcn::Label("Path:");
 	lblPath->setAlignment(gcn::Graphics::RIGHT);
 	txtPath = new gcn::TextField();
+	txtPath->setId("txtCreatePath");
 	txtPath->setSize(500, TEXTFIELD_HEIGHT);
 
 	cmdPath = new gcn::Button("...");
 	cmdPath->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdPath->setBaseColor(gui_baseCol);
-	cmdPath->setId("createHdfPath");
+	cmdPath->setId("cmdCreateHdfPath");
 	cmdPath->addActionListener(createFilesysHardfileActionListener);
 
 	int posY = DISTANCE_BORDER;

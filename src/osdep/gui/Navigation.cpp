@@ -142,77 +142,77 @@ static NavigationMap navMap[] =
 
 	//  active            move left         move right        move up           move down
 	// PanelROM
-	{"cboMainROM", "ROM", "MainROM", "cboCartROM", "cboExtROM"},
-	{"MainROM", "cboMainROM", "ROM", "CartROM", "ExtROM"},
-	{"cboExtROM", "ROM", "ExtROM", "cboMainROM", "cboCartROM"},
-	{"ExtROM", "cboExtROM", "ROM", "MainROM", "CartROM"},
-	{"cboCartROM", "ROM", "CartROM", "cboExtROM", "cboUAEROM"},
-	{"CartROM", "cboCartROM", "ROM", "ExtROM", "cboUAEROM"},
-	{"cboUAEROM", "ROM", "ROM", "cboCartROM", "chkShapeShifter"},
-	{"chkShapeShifter", "ROM", "ROM", "cboUAEROM", "cboMainROM"},
+	{ "cboMainROM", "ROM", "MainROM", "cboCartROM", "cboExtROM" },
+	{ "MainROM", "cboMainROM", "ROM", "CartROM", "ExtROM" },
+	{ "cboExtROM", "ROM", "ExtROM", "cboMainROM", "cboCartROM" },
+	{ "ExtROM", "cboExtROM", "ROM", "MainROM", "CartROM" },
+	{ "cboCartROM", "ROM", "CartROM", "cboExtROM", "cboUAEROM" },
+	{ "CartROM", "cboCartROM", "ROM", "ExtROM", "cboUAEROM" },
+	{ "cboUAEROM", "ROM", "ROM", "cboCartROM", "chkShapeShifter" },
+	{ "chkShapeShifter", "ROM", "ROM", "cboUAEROM", "cboMainROM" },
 
 	//PanelRAM
-	{"Chipmem", "", "", "RAM", "Slowmem"},
-	{"Slowmem", "", "", "Chipmem", "Fastmem"},
-	{"Fastmem", "", "", "Slowmem", "Z3mem"},
-	{"Z3mem", "", "", "Fastmem", "A3000Low"},
-	{"A3000Low", "", "", "Z3mem", "A3000High"},
-	{"A3000High", "", "", "A3000Low", "Chipmem"},
+	{ "Chipmem", "", "", "RAM", "Slowmem" },
+	{ "Slowmem", "", "", "Chipmem", "Fastmem" },
+	{ "Fastmem", "", "", "Slowmem", "Z3mem" },
+	{ "Z3mem", "", "", "Fastmem", "A3000Low" },
+	{ "A3000Low", "", "", "Z3mem", "A3000High" },
+	{ "A3000High", "", "", "A3000Low", "Chipmem" },
 
 	//PanelFloppy
-	{"DF0:", "Floppy drives", "cboType0", "cmdSaveForDisk", "cboDisk0"},
-	{"cboType0", "DF0:", "chkWP0", "cmdSaveForDisk", "cboDisk0"},
-	{"chkWP0", "cboType0", "cmdInfo0", "cmdSaveForDisk", "cboDisk0" },
-	{"cmdInfo0", "chkWP0", "cmdEject0", "cmdSaveForDisk", "cboDisk0"},
-	{"cmdEject0", "chkWP0", "cmdSel0", "cmdCreateHDDisk", "cboDisk0"},
-	{"cmdSel0", "cmdEject0", "Floppy drives", "cmdCreateHDDisk", "cboDisk0"},
-	{"cboDisk0", "Floppy drives", "Floppy drives", "DF0:", "chkLoadDiskCfg"},
-	{"chkLoadDiskCfg", "Floppy drives", "Floppy drives", "cboDisk0", "DF1:"},
-	{"DF1:", "Floppy drives", "cboType1", "chkLoadDiskCfg", "cboDisk1"},
-	{"cboType1", "DF1:", "chkWP1", "chkLoadDiskCfg", "cboDisk1"},
-	{"chkWP1", "cboType1", "cmdInfo1", "chkLoadDiskCfg", "cboDisk1" },
-	{"cmdInfo1", "chkWP1", "cmdEject1", "chkLoadDiskCfg", "cboDisk1" },
-	{"cmdEject1", "cmdInfo1", "cmdSel1", "chkLoadDiskCfg", "cboDisk1"},
-	{"cmdSel1", "cmdEject1", "Floppy drives", "chkLoadDiskCfg", "cboDisk1"},
-	{"cboDisk1", "Floppy drives", "Floppy drives", "DF1:", "DF2:"},
-	{"DF2:", "Floppy drives", "cboType2", "cboDisk1", "cboDisk2"},
-	{"cboType2", "DF2:", "chkWP2", "cboDisk1", "cboDisk2"},
-	{"chkWP2", "cboType2", "cmdInfo2", "cboDisk1", "cboDisk2" },
-	{"cmdInfo2", "chkWP2", "cmdEject2", "cboDisk1", "cboDisk2" },
-	{"cmdEject2", "cmdInfo2", "cmdSel2", "cboDisk1", "cboDisk2"},
-	{"cmdSel2", "cmdEject2", "Floppy drives", "cboDisk1", "cboDisk2"},
-	{"cboDisk2", "Floppy drives", "Floppy drives", "DF2:", "DF3:"},
-	{"DF3:", "Floppy drives", "cboType3", "cboDisk2", "cboDisk3"},
-	{"cboType3", "DF3:", "chkWP3", "cboDisk2", "cboDisk3"},
-	{"chkWP3", "cboType3", "cmdInfo3", "cboDisk2", "cboDisk3" },
-	{"cmdInfo3", "chkWP3", "cmdEject3", "cboDisk2", "cboDisk3" },
-	{"cmdEject3", "cmdInfo3", "cmdSel3", "cboDisk2", "cboDisk3"},
-	{"cmdSel3", "cmdEject3", "Floppy drives", "cboDisk2", "cboDisk3"},
-	{"cboDisk3", "Floppy drives", "Floppy drives", "DF3:", "sldDriveSpeed"},
-	{"sldDriveSpeed", "", "", "cboDisk3", "cmdCreateDDDisk"},
-	{"cmdSaveForDisk", "Floppy drives", "cmdCreateDDDisk", "sldDriveSpeed", "DF0:"},
-	{"cmdCreateDDDisk", "cmdSaveForDisk", "cmdCreateHDDisk", "sldDriveSpeed", "cboType0"},
-	{"cmdCreateHDDisk", "cmdCreateDDDisk", "Floppy drives", "sldDriveSpeed", "cmdEject0"},
+	{ "DF0:", "Floppy drives", "cboType0", "cmdSaveForDisk", "cboDisk0" },
+	{ "cboType0", "DF0:", "chkWP0", "cmdSaveForDisk", "cboDisk0" },
+	{ "chkWP0", "cboType0", "cmdInfo0", "cmdSaveForDisk", "cboDisk0" },
+	{ "cmdInfo0", "chkWP0", "cmdEject0", "cmdSaveForDisk", "cboDisk0" },
+	{ "cmdEject0", "chkWP0", "cmdSel0", "cmdCreateHDDisk", "cboDisk0" },
+	{ "cmdSel0", "cmdEject0", "Floppy drives", "cmdCreateHDDisk", "cboDisk0" },
+	{ "cboDisk0", "Floppy drives", "Floppy drives", "DF0:", "chkLoadDiskCfg" },
+	{ "chkLoadDiskCfg", "Floppy drives", "Floppy drives", "cboDisk0", "DF1:" },
+	{ "DF1:", "Floppy drives", "cboType1", "chkLoadDiskCfg", "cboDisk1" },
+	{ "cboType1", "DF1:", "chkWP1", "chkLoadDiskCfg", "cboDisk1" },
+	{ "chkWP1", "cboType1", "cmdInfo1", "chkLoadDiskCfg", "cboDisk1" },
+	{ "cmdInfo1", "chkWP1", "cmdEject1", "chkLoadDiskCfg", "cboDisk1" },
+	{ "cmdEject1", "cmdInfo1", "cmdSel1", "chkLoadDiskCfg", "cboDisk1" },
+	{ "cmdSel1", "cmdEject1", "Floppy drives", "chkLoadDiskCfg", "cboDisk1" },
+	{ "cboDisk1", "Floppy drives", "Floppy drives", "DF1:", "DF2:" },
+	{ "DF2:", "Floppy drives", "cboType2", "cboDisk1", "cboDisk2" },
+	{ "cboType2", "DF2:", "chkWP2", "cboDisk1", "cboDisk2" },
+	{ "chkWP2", "cboType2", "cmdInfo2", "cboDisk1", "cboDisk2" },
+	{ "cmdInfo2", "chkWP2", "cmdEject2", "cboDisk1", "cboDisk2" },
+	{ "cmdEject2", "cmdInfo2", "cmdSel2", "cboDisk1", "cboDisk2" },
+	{ "cmdSel2", "cmdEject2", "Floppy drives", "cboDisk1", "cboDisk2" },
+	{ "cboDisk2", "Floppy drives", "Floppy drives", "DF2:", "DF3:" },
+	{ "DF3:", "Floppy drives", "cboType3", "cboDisk2", "cboDisk3" },
+	{ "cboType3", "DF3:", "chkWP3", "cboDisk2", "cboDisk3" },
+	{ "chkWP3", "cboType3", "cmdInfo3", "cboDisk2", "cboDisk3" },
+	{ "cmdInfo3", "chkWP3", "cmdEject3", "cboDisk2", "cboDisk3" },
+	{ "cmdEject3", "cmdInfo3", "cmdSel3", "cboDisk2", "cboDisk3" },
+	{ "cmdSel3", "cmdEject3", "Floppy drives", "cboDisk2", "cboDisk3" },
+	{ "cboDisk3", "Floppy drives", "Floppy drives", "DF3:", "sldDriveSpeed" },
+	{ "sldDriveSpeed", "", "", "cboDisk3", "cmdCreateDDDisk" },
+	{ "cmdSaveForDisk", "Floppy drives", "cmdCreateDDDisk", "sldDriveSpeed", "DF0:" },
+	{ "cmdCreateDDDisk", "cmdSaveForDisk", "cmdCreateHDDisk", "sldDriveSpeed", "cboType0" },
+	{ "cmdCreateHDDisk", "cmdCreateDDDisk", "Floppy drives", "sldDriveSpeed", "cmdEject0" },
 
 	//  active            move left           move right          move up           move down
 	// PanelHD
-	{"cmdProp0", "Hard drives/CD", "cmdDel0", "chkCDTurbo", "cmdProp1"},
-	{"cmdDel0", "cmdProp0", "Hard drives/CD", "chkCDTurbo", "cmdDel1"},
-	{"cmdProp1", "Hard drives/CD", "cmdDel1", "cmdProp0", "cmdProp2"},
-	{"cmdDel1", "cmdProp1", "Hard drives/CD", "cmdDel0", "cmdDel2"},
-	{"cmdProp2", "Hard drives/CD", "cmdDel2", "cmdProp1", "cmdProp3"},
-	{"cmdDel2", "cmdProp2", "Hard drives/CD", "cmdDel1", "cmdDel3"},
-	{"cmdProp3", "Hard drives/CD", "cmdDel3", "cmdProp2", "cmdProp4"},
-	{"cmdDel3", "cmdProp3", "Hard drives/CD", "cmdDel2", "cmdDel4"},
-	{"cmdProp4", "Hard drives/CD", "cmdDel4", "cmdProp3", "cmdAddDir"},
-	{"cmdDel4", "cmdProp4", "Hard drives/CD", "cmdDel3", "cmdAddHDF"},
-	{"cmdAddDir", "Hard drives/CD", "cmdAddHDF", "cmdProp4", "chkCD"},
-	{"cmdAddHDF", "cmdAddDir", "cmdCreateHDF", "cmdDel4", "chkCD"},
-	{"cmdCreateHDF", "cmdAddHDF", "Hard drives / CD", "cmdDel4", "chkCD" },
-	{"chkCD", "Hard drives/CD", "cdEject", "cmdAddDir", "cboCD"},
-	{"cdEject", "chkCD", "CDSelect", "cmdCreateHDF", "cboCD" },
-	{"CDSelect", "cdEject", "Hard drives/CD", "cmdCreateHDF", "cboCD"},
-	{"cboCD", "Hard drives/CD", "Hard drives/CD", "chkCD", "chkCDTurbo"},
+	{ "cmdProp0", "Hard drives/CD", "cmdDel0", "chkCDTurbo", "cmdProp1" },
+	{ "cmdDel0", "cmdProp0", "Hard drives/CD", "chkCDTurbo", "cmdDel1" },
+	{ "cmdProp1", "Hard drives/CD", "cmdDel1", "cmdProp0", "cmdProp2" },
+	{ "cmdDel1", "cmdProp1", "Hard drives/CD", "cmdDel0", "cmdDel2" },
+	{ "cmdProp2", "Hard drives/CD", "cmdDel2", "cmdProp1", "cmdProp3" },
+	{ "cmdDel2", "cmdProp2", "Hard drives/CD", "cmdDel1", "cmdDel3" },
+	{ "cmdProp3", "Hard drives/CD", "cmdDel3", "cmdProp2", "cmdProp4" },
+	{ "cmdDel3", "cmdProp3", "Hard drives/CD", "cmdDel2", "cmdDel4" },
+	{ "cmdProp4", "Hard drives/CD", "cmdDel4", "cmdProp3", "cmdAddDir" },
+	{ "cmdDel4", "cmdProp4", "Hard drives/CD", "cmdDel3", "cmdAddHDF" },
+	{ "cmdAddDir", "Hard drives/CD", "cmdAddHDF", "cmdProp4", "chkCD" },
+	{ "cmdAddHDF", "cmdAddDir", "cmdCreateHDF", "cmdDel4", "chkCD" },
+	{ "cmdCreateHDF", "cmdAddHDF", "Hard drives / CD", "cmdDel4", "chkCD" },
+	{ "chkCD", "Hard drives/CD", "cdEject", "cmdAddDir", "cboCD" },
+	{ "cdEject", "chkCD", "CDSelect", "cmdCreateHDF", "cboCD" },
+	{ "CDSelect", "cdEject", "Hard drives/CD", "cmdCreateHDF", "cboCD" },
+	{ "cboCD", "Hard drives/CD", "Hard drives/CD", "chkCD", "chkCDTurbo" },
 	{ "chkCDTurbo", "Hard drives/CD", "Hard drives/CD", "cboCD", "cmdProp0" },
 
 	// PanelExpansions
@@ -222,19 +222,19 @@ static NavigationMap navMap[] =
 	{ "chkCD32Fmv", "chkSCSI", "Expansions", "chkSana2", "" },
 	
 	// PanelRTG
-	{"cboBoard", "RTG board", "cboRtg16bitModes", "cboRtgRefreshRate", "sldGfxmem"},
-	{"cboRtg16bitModes", "cboBoard", "RTG board", "cboRtgAspectRatio", "cboRtg32bitModes"},
-	{"cboRtg32bitModes", "sldGfxmem", "RTG board", "cboRtg16bitModes", "chkRtgMatchDepth"},
-	{"sldGfxmem", "", "", "cboBoard", "chkRtgMatchDepth"},
-	{"chkRtgMatchDepth", "RTG board", "", "sldGfxmem", "chkRtgAutoscale"},
-	{"chkRtgAutoscale", "RTG board", "", "chkRtgMatchDepth", "chkRtgAllowScaling"},
-	{"chkRtgAllowScaling", "RTG board", "", "chkRtgAutoscale", "chkRtgAlwaysCenter"},
-	{"chkRtgAlwaysCenter", "RTG board", "", "chkRtgAllowScaling", "chkRtgHardwareInterrupt"},
-	{"chkRtgHardwareInterrupt", "RTG board", "", "chkRtgAlwaysCenter", "chkRtgHardwareSprite"},
-	{"chkRtgHardwareSprite", "RTG board", "", "chkRtgHardwareInterrupt", "cboRtgRefreshRate"},
-	{"cboRtgRefreshRate", "RTG board", "cboRtgBufferMode", "chkRtgHardwareSprite", "cboBoard"},
-	{"cboRtgBufferMode", "cboRtgRefreshRate", "cboRtgAspectRatio", "chkRtgHardwareSprite", "cboBoard"},
-	{"cboRtgAspectRatio", "cboRtgBufferMode", "RTG board", "chkRtgHardwareSprite", "cboBoard"},
+	{ "cboBoard", "RTG board", "cboRtg16bitModes", "cboRtgRefreshRate", "sldGfxmem" },
+	{ "cboRtg16bitModes", "cboBoard", "RTG board", "cboRtgAspectRatio", "cboRtg32bitModes" },
+	{ "cboRtg32bitModes", "sldGfxmem", "RTG board", "cboRtg16bitModes", "chkRtgMatchDepth" },
+	{ "sldGfxmem", "", "", "cboBoard", "chkRtgMatchDepth" },
+	{ "chkRtgMatchDepth", "RTG board", "", "sldGfxmem", "chkRtgAutoscale" },
+	{ "chkRtgAutoscale", "RTG board", "", "chkRtgMatchDepth", "chkRtgAllowScaling" },
+	{ "chkRtgAllowScaling", "RTG board", "", "chkRtgAutoscale", "chkRtgAlwaysCenter" },
+	{ "chkRtgAlwaysCenter", "RTG board", "", "chkRtgAllowScaling", "chkRtgHardwareInterrupt" },
+	{ "chkRtgHardwareInterrupt", "RTG board", "", "chkRtgAlwaysCenter", "chkRtgHardwareSprite" },
+	{ "chkRtgHardwareSprite", "RTG board", "", "chkRtgHardwareInterrupt", "cboRtgRefreshRate" },
+	{ "cboRtgRefreshRate", "RTG board", "cboRtgBufferMode", "chkRtgHardwareSprite", "cboBoard" },
+	{ "cboRtgBufferMode", "cboRtgRefreshRate", "cboRtgAspectRatio", "chkRtgHardwareSprite", "cboBoard" },
+	{ "cboRtgAspectRatio", "cboRtgBufferMode", "RTG board", "chkRtgHardwareSprite", "cboBoard" },
 	
 	//  active            move left           move right          move up           move down
 	// PanelDisplay
@@ -415,43 +415,48 @@ static NavigationMap navMap[] =
 	{ "SaveState", "LoadState", "Savestates", "State9", "State0" },
 
 #ifdef ANDROID
-// PanelOnScreen
-{ "OnScrCtrl",      "OnScreen",       "OnScrButton3", "DisableMenuVKeyb", "OnScrTextInput" },
-{ "OnScrButton3",   "OnScrCtrl",      "OnScreen",     "CustomPos",     "OnScrButton4" },
-{ "OnScrTextInput", "OnScreen",       "OnScrButton4", "OnScrCtrl",      "OnScrDpad" },
-{ "OnScrButton4",   "OnScrTextInput", "OnScreen",     "OnScrButton3",   "OnScrButton5" },
-{ "OnScrDpad",      "OnScreen",       "OnScrButton5", "OnScrTextInput", "OnScrButton1" },
-{ "OnScrButton5",   "OnScrDpad",      "OnScreen",     "OnScrButton4",   "OnScrButton6" },
-{ "OnScrButton1",   "OnScreen",       "OnScrButton6", "OnScrDpad",      "OnScrButton2" },
-{ "OnScrButton6",   "OnScrButton1",   "OnScreen",     "OnScrButton5",   "CustomPos" },
-{ "OnScrButton2",   "OnScreen",       "CustomPos",    "OnScrButton1",   "FloatJoy" },
-{ "CustomPos",      "OnScrButton2",   "OnScreen",     "OnScrButton6",   "Reset" },
-{ "FloatJoy",       "OnScreen",       "CustomPos",    "OnScrButton2",   "DisableMenuVKeyb" },
-{ "DisableMenuVKeyb","OnScreen",       "CustomPos",    "FloatJoy",       "Shutdown" },
+	// PanelOnScreen
+	{ "OnScrCtrl",      "OnScreen",       "OnScrButton3", "DisableMenuVKeyb", "OnScrTextInput" },
+	{ "OnScrButton3",   "OnScrCtrl",      "OnScreen",     "CustomPos",     "OnScrButton4" },
+	{ "OnScrTextInput", "OnScreen",       "OnScrButton4", "OnScrCtrl",      "OnScrDpad" },
+	{ "OnScrButton4",   "OnScrTextInput", "OnScreen",     "OnScrButton3",   "OnScrButton5" },
+	{ "OnScrDpad",      "OnScreen",       "OnScrButton5", "OnScrTextInput", "OnScrButton1" },
+	{ "OnScrButton5",   "OnScrDpad",      "OnScreen",     "OnScrButton4",   "OnScrButton6" },
+	{ "OnScrButton1",   "OnScreen",       "OnScrButton6", "OnScrDpad",      "OnScrButton2" },
+	{ "OnScrButton6",   "OnScrButton1",   "OnScreen",     "OnScrButton5",   "CustomPos" },
+	{ "OnScrButton2",   "OnScreen",       "CustomPos",    "OnScrButton1",   "FloatJoy" },
+	{ "CustomPos",      "OnScrButton2",   "OnScreen",     "OnScrButton6",   "Reset" },
+	{ "FloatJoy",       "OnScreen",       "CustomPos",    "OnScrButton2",   "DisableMenuVKeyb" },
+	{ "DisableMenuVKeyb","OnScreen",       "CustomPos",    "FloatJoy",       "Shutdown" },
 #endif
 
 	//  active            move left         move right        move up           move down
 	// EditFilesysVirtual
-	{"virtPath", "", "", "txtVirtBootPri", "virtCancel"},
-	{"virtRW", "txtVirtDev", "txtVirtDev", "virtOK", "virtAutoboot"},
-	{"virtAutoboot", "txtVirtVol", "txtVirtBootPri", "virtRW", "virtPath"},
-	{"virtOK", "virtCancel", "virtCancel", "virtPath", "virtRW"},
-	{"virtCancel", "virtOK", "virtOK", "virtPath", "virtRW"},
+	{ "virtPath", "", "", "txtVirtBootPri", "virtCancel" },
+	{ "virtRW", "txtVirtDev", "txtVirtDev", "virtOK", "virtAutoboot" },
+	{ "virtAutoboot", "txtVirtVol", "txtVirtBootPri", "virtRW", "virtPath" },
+	{ "virtOK", "virtCancel", "virtCancel", "virtPath", "virtRW" },
+	{ "virtCancel", "virtOK", "virtOK", "virtPath", "virtRW" },
 
 	// EditFilesysHardfile
-	{"hdfRW", "txtHdfDev", "hdfAutoboot", "hdfOK", "hdfPath"},
-	{"hdfAutoboot", "hdfRW", "txtHdfBootPri", "hdfOK", "hdfPath"},
-	{"hdfPath", "txtHdfPath", "txtHdfPath", "txtHdfBootPri", "txtHdfReserved"},
-	{"hdfController", "hdfUnit", "hdfUnit", "txtHdfSectors", "hdfOK"},
-	{"hdfUnit", "hdfController", "hdfController", "hdfBlocksize", "hdfOK"},
-	{"hdfOK", "hdfCancel", "hdfCancel", "hdfUnit", "txtHdfBootPri"},
-	{"hdfCancel", "hdfOK", "hdfOK", "hdfUnit", "txtHdfBootPri"},
+	{ "txtHdfDev", "", "", "cmdHdfOK", "chkHdfRW" },
+	{ "chkHdfRW", "txtHdfDev", "", "cmdHdfOK", "hdfAutoboot" },
+	{ "hdfAutoboot", "txtHdfDev", "txtHdfBootPri", "chkHdfRW", "cmdHdfPath" },
+	{ "txtHdfBootPri", "", "", "hdfAutoboot", "cmdHdfPath"},
+	{ "cmdHdfPath", "txtHdfPath", "txtHdfPath", "txtHdfBootPri", "hdfController" },
+	{ "hdfController", "cboHdfUnit", "cboHdfUnit", "cmdHdfPath", "cmdHdfOK" },
+	{ "cboHdfUnit", "hdfController", "hdfController", "cmdHdfPath", "cmdHdfOK" },
+	{ "cmdHdfOK", "cmdHdfCancel", "cmdHdfCancel", "cboHdfUnit", "chkHdfRW" },
+	{ "cmdHdfCancel", "cmdHdfOK", "cmdHdfOK", "cboHdfUnit", "chkHdfRW" },
 
 	// CreateFilesysHardfile
-	{"createHdfAutoboot", "createHdfPath", "createHdfPath", "createHdfOK", "createHdfOK"},
-	{"createHdfPath", "createHdfAutoboot", "createHdfOK", "createHdfAutoboot", "createHdfOK"},
-	{"createHdfOK", "createHdfCancel", "createHdfCancel", "createHdfPath", "createHdfAutoboot"},
-	{"createHdfCancel", "createHdfOK", "createHdfOK", "createHdfPath", "createHdfAutoboot"},
+	{ "txtCreateDevice", "", "", "cmdCreateHdfOK", "chkCreateHdfAutoboot" },
+	{ "chkCreateHdfAutoboot", "txtCreateDevice", "txtCreateBootPri", "cmdCreateHdfOK", "cmdCreateHdfPath" },
+	{ "txtCreateBootPri", "", "", "chkCreateHdfAutoboot", "cmdCreateHdfPath" },
+	{ "cmdCreateHdfPath", "txtCreatePath", "txtCreatePath", "txtCreateBootPri", "chkDynamic" },
+	{ "chkDynamic", "", "", "cmdCreateHdfPath", "cmdCreateHdfOK" },
+	{ "cmdCreateHdfOK", "cmdCreateHdfCancel", "cmdCreateHdfCancel", "chkDynamic", "txtCreateDevice" },
+	{ "cmdCreateHdfCancel", "cmdCreateHdfOK", "cmdCreateHdfOK", "chkDynamic", "txtCreateDevice" },
 
 	{"END", "", "", "", ""}
 };
@@ -466,9 +471,7 @@ bool HandleNavigation(int direction)
 	{
 		gcn::Widget* activeWidget = focusHdl->getFocused();
 
-		if (activeWidget != nullptr 
-			&& activeWidget->getId().length() > 0 
-			&& activeWidget->getId().substr(0, 3) != "txt")
+		if (activeWidget != nullptr && activeWidget->getId().length() > 0)
 		{
 			std::string activeName = activeWidget->getId();
 			auto bFoundEnabled = false;
@@ -485,10 +488,12 @@ bool HandleNavigation(int direction)
 						switch (direction)
 						{
 						case DIRECTION_LEFT:
-							searchFor = navMap[i].leftWidget;
+							if (activeWidget->getId().substr(0, 3) != "txt")
+								searchFor = navMap[i].leftWidget;
 							break;
 						case DIRECTION_RIGHT:
-							searchFor = navMap[i].rightWidget;
+							if (activeWidget->getId().substr(0, 3) != "txt")
+								searchFor = navMap[i].rightWidget;
 							break;
 						case DIRECTION_UP:
 							searchFor = navMap[i].upWidget;
