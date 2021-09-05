@@ -620,11 +620,13 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	grpMiscOptions->add(chkRetroArchReset, DISTANCE_BORDER, posY);
 	
 	scrollArea = new gcn::ScrollArea(grpMiscOptions);
+	scrollArea->setId("scrlMisc");
 	scrollArea->setBackgroundColor(gui_baseCol);
 	scrollArea->setBaseColor(gui_baseCol);
 	scrollArea->setWidth(category.panel->getWidth() - (category.panel->getWidth() / 3) - 35);
 	scrollArea->setHeight(300);
 	scrollArea->setBorderSize(1);
+	scrollArea->setFocusable(true);
 
 	category.panel->add(scrollArea, DISTANCE_BORDER, DISTANCE_BORDER);
 

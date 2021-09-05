@@ -346,28 +346,27 @@ static NavigationMap navMap[] =
 
 	// PanelMisc
 	//  active            move left           move right          move up           move down
-
-	{ "chkMouseUntrap", "Miscellaneous", "cmdKeyOpenGUI", "chkRTSCTS", "chkShowGUI" },
-	{ "chkShowGUI", "Miscellaneous", "cmdKeyForQuit", "chkMouseUntrap", "chkBSDSocket" },
-	{ "chkBSDSocket", "Miscellaneous", "cmdKeyForQuit", "chkShowGUI", "chkSyncClock" },
-	{ "chkSyncClock", "Miscellaneous", "cmdKeyActionReplay", "chkBSDSocket", "chkResetDelay"},
-	{ "chkResetDelay", "Miscellaneous", "cmdKeyActionReplay", "chkSyncClock", "chkFasterRTG"},
-	{ "chkFasterRTG", "Miscellaneous", "cmdKeyFullScreen", "chkResetDelay", "chkClipboardSharing"},
-	{ "chkClipboardSharing", "Miscellaneous", "cmdKeyFullScreen", "chkFasterRTG", "chkAllowNativeCode" },
-	{ "chkAllowNativeCode", "Miscellaneous", "", "chkClipboardSharing", "chkStatusLineNative" },
-	{ "chkStatusLineNative", "Miscellaneous", "", "chkAllowNativeCode", "chkStatusLineRtg" },
-	{ "chkStatusLineRtg", "Miscellaneous", "", "chkStatusLineNative", "chkIllegalMem" },
-	{ "chkIllegalMem", "Miscellaneous", "", "chkStatusLineRtg", "chkMinimizeInactive"},
-	{ "chkMinimizeInactive", "Miscellaneous", "", "chkIllegalMem", "chkMasterWP"},
-	{ "chkMasterWP", "Miscellaneous", "", "chkMinimizeInactive", "chkHDRO" },
-	{ "chkHDRO", "Miscellaneous", "", "chkMasterWP", "chkHideAutoconfig"},
-	{ "chkHideAutoconfig", "Miscellaneous", "", "chkHDRO", "chkRCtrlIsRAmiga"},
-	{ "chkRCtrlIsRAmiga", "Miscellaneous", "", "chkHideAutoconfig", "chkCaptureAlways" },
-	{ "chkCaptureAlways", "Miscellaneous", "", "chkRCtrlIsRAmiga", "chkAltTabRelease"},
-	{ "chkAltTabRelease", "Miscellaneous", "", "chkCaptureAlways", "chkRetroArchQuit"},
-	{ "chkRetroArchQuit", "Miscellaneous", "", "chkAltTabRelease", "chkRetroArchMenu" },
-	{ "chkRetroArchMenu", "Miscellaneous", "", "chkRetroArchQuit", "chkRetroArchReset" },
-	{ "chkRetroArchReset", "Miscellaneous", "", "chkRetroArchMenu", "cboNumlock" },
+	{ "scrlMisc", "chkMouseUntrap", "cmdKeyOpenGUI", "", "" },
+	{ "chkMouseUntrap", "Miscellaneous", "scrlMisc", "chkRTSCTS", "chkShowGUI" },
+	{ "chkShowGUI", "Miscellaneous", "scrlMisc", "chkMouseUntrap", "chkSyncClock" },
+	{ "chkSyncClock", "Miscellaneous", "scrlMisc", "chkBSDSocket", "chkResetDelay"},
+	{ "chkResetDelay", "Miscellaneous", "scrlMisc", "chkSyncClock", "chkFasterRTG"},
+	{ "chkFasterRTG", "Miscellaneous", "scrlMisc", "chkResetDelay", "chkClipboardSharing"},
+	{ "chkClipboardSharing", "Miscellaneous", "scrlMisc", "chkFasterRTG", "chkAllowNativeCode" },
+	{ "chkAllowNativeCode", "Miscellaneous", "scrlMisc", "chkClipboardSharing", "chkStatusLineNative" },
+	{ "chkStatusLineNative", "Miscellaneous", "scrlMisc", "chkAllowNativeCode", "chkStatusLineRtg" },
+	{ "chkStatusLineRtg", "Miscellaneous", "scrlMisc", "chkStatusLineNative", "chkIllegalMem" },
+	{ "chkIllegalMem", "Miscellaneous", "scrlMisc", "chkStatusLineRtg", "chkMinimizeInactive"},
+	{ "chkMinimizeInactive", "Miscellaneous", "scrlMisc", "chkIllegalMem", "chkMasterWP"},
+	{ "chkMasterWP", "Miscellaneous", "scrlMisc", "chkMinimizeInactive", "chkHDRO" },
+	{ "chkHDRO", "Miscellaneous", "scrlMisc", "chkMasterWP", "chkHideAutoconfig"},
+	{ "chkHideAutoconfig", "Miscellaneous", "scrlMisc", "chkHDRO", "chkRCtrlIsRAmiga"},
+	{ "chkRCtrlIsRAmiga", "Miscellaneous", "scrlMisc", "chkHideAutoconfig", "chkCaptureAlways" },
+	{ "chkCaptureAlways", "Miscellaneous", "scrlMisc", "chkRCtrlIsRAmiga", "chkAltTabRelease"},
+	{ "chkAltTabRelease", "Miscellaneous", "scrlMisc", "chkCaptureAlways", "chkRetroArchQuit"},
+	{ "chkRetroArchQuit", "Miscellaneous", "scrlMisc", "chkAltTabRelease", "chkRetroArchMenu" },
+	{ "chkRetroArchMenu", "Miscellaneous", "scrlMisc", "chkRetroArchQuit", "chkRetroArchReset" },
+	{ "chkRetroArchReset", "Miscellaneous", "scrlMisc", "chkRetroArchMenu", "cboNumlock" },
 	
 	{ "cboNumlock", "Miscellaneous", "cboScrolllock", "chkRetroArchReset", "chkRTSCTS" },
 	{ "cboScrolllock", "cboNumlock", "Miscellaneous", "chkRetroArchReset", "chkRTSCTS" },
@@ -377,15 +376,15 @@ static NavigationMap navMap[] =
 	{ "chkSerialDirect", "chkRTSCTS", "chkUaeSerial", "txtSerialDevice", "chkMouseUntrap" },
 	{ "chkUaeSerial", "chkSerialDirect", "Miscellaneous", "txtSerialDevice", "chkMouseUntrap" },
 	
-	{ "cmdKeyOpenGUI", "chkMouseUntrap", "cmdKeyOpenGUIClear", "cmdKeyFullScreen", "cmdKeyForQuit" },
+	{ "cmdKeyOpenGUI", "scrlMisc", "cmdKeyOpenGUIClear", "cmdKeyFullScreen", "cmdKeyForQuit" },
 	{ "cmdKeyOpenGUIClear", "cmdKeyOpenGUI", "Miscellaneous", "cmdKeyFullScreenClear", "cmdKeyForQuitClear" },
-	{ "cmdKeyForQuit", "chkBSDSocket", "cmdKeyForQuitClear", "cmdKeyOpenGUI", "cmdKeyActionReplay" },
+	{ "cmdKeyForQuit", "scrlMisc", "cmdKeyForQuitClear", "cmdKeyOpenGUI", "cmdKeyActionReplay" },
 	{ "cmdKeyForQuitClear", "cmdKeyForQuit", "Miscellaneous", "cmdKeyOpenGUIClear", "cmdKeyActionReplayClear" },
-	{ "cmdKeyActionReplay", "chkResetDelay", "cmdKeyActionReplayClear", "cmdKeyForQuit", "cmdKeyFullScreen" },
+	{ "cmdKeyActionReplay", "scrlMisc", "cmdKeyActionReplayClear", "cmdKeyForQuit", "cmdKeyFullScreen" },
 	{ "cmdKeyActionReplayClear", "cmdKeyActionReplay", "Miscellaneous", "cmdKeyForQuitClear", "cmdKeyFullScreenClear" },
-	{ "cmdKeyFullScreen", "chkClipboardSharing", "cmdKeyFullScreenClear", "cmdKeyActionReplay", "cmdKeyMinimize" },
+	{ "cmdKeyFullScreen", "scrlMisc", "cmdKeyFullScreenClear", "cmdKeyActionReplay", "cmdKeyMinimize" },
 	{ "cmdKeyFullScreenClear", "cmdKeyFullScreen", "Miscellaneous", "cmdKeyActionReplayClear", "cmdKeyMinimizeClear"},
-	{ "cmdKeyMinimize", "chkAllowNativeCode", "cmdKeyMinimizeClear", "cmdKeyFullScreen", "cmdKeyOpenGUI" },
+	{ "cmdKeyMinimize", "scrlMisc", "cmdKeyMinimizeClear", "cmdKeyFullScreen", "cmdKeyOpenGUI" },
 	{ "cmdKeyMinimizeClear", "cmdKeyMinimize", "Miscellaneous", "cmdKeyFullScreenClear", "cmdKeyOpenGUIClear" },
 	
 	// PanelPrio
@@ -522,6 +521,22 @@ bool HandleNavigation(int direction)
 				if (searchFor.empty())
 					bFoundEnabled = true; // No entry to navigate to -> exit loop
 				--tries;
+			}
+
+			if (activeWidget->getId().substr(0, 4) == "scrl")
+			{
+				// Scroll area detected
+				auto* scrollarea = dynamic_cast<gcn::ScrollArea*>(activeWidget);
+				if (direction == DIRECTION_UP)
+				{
+					auto scroll = scrollarea->getVerticalScrollAmount();
+					scrollarea->setVerticalScrollAmount(scroll - 30);
+				}
+				else if (direction == DIRECTION_DOWN)
+				{
+					auto scroll = scrollarea->getVerticalScrollAmount();
+					scrollarea->setVerticalScrollAmount(scroll + 30);
+				}
 			}
 
 			if (focusTarget != nullptr)
