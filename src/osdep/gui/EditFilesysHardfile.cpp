@@ -392,7 +392,7 @@ static void InitEditFilesysHardfile()
 	cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 2 * BUTTON_WIDTH - DISTANCE_NEXT_X,
 					   DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
 	cmdOK->setBaseColor(gui_baseCol);
-	cmdOK->setId("hdfOK");
+	cmdOK->setId("cmdHdfOK");
 	cmdOK->addActionListener(filesysHardfileActionListener);
 
 	cmdCancel = new gcn::Button("Cancel");
@@ -400,59 +400,53 @@ static void InitEditFilesysHardfile()
 	cmdCancel->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH,
 						   DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
 	cmdCancel->setBaseColor(gui_baseCol);
-	cmdCancel->setId("hdfCancel");
+	cmdCancel->setId("cmdHdfCancel");
 	cmdCancel->addActionListener(filesysHardfileActionListener);
 
 	lblDevice = new gcn::Label("Device Name:");
 	lblDevice->setAlignment(gcn::Graphics::RIGHT);
 	txtDevice = new gcn::TextField();
+	txtDevice->setId("txtHdfDev");
 	txtDevice->setSize(60, TEXTFIELD_HEIGHT);
-
 	txtDevice->addFocusListener(filesysHardfileFocusListener);
 
 	chkReadWrite = new gcn::CheckBox("Read/Write", true);
-	chkReadWrite->setId("hdfRW");
-
+	chkReadWrite->setId("chkHdfRW");
 	chkReadWrite->addActionListener(filesysHardfileActionListener);
 
 	chkAutoboot = new gcn::CheckBox("Bootable", true);
 	chkAutoboot->setId("hdfAutoboot");
-
 	chkAutoboot->addActionListener(filesysHardfileActionListener);
 
 	lblBootPri = new gcn::Label("Boot priority:");
 	lblBootPri->setAlignment(gcn::Graphics::RIGHT);
 	txtBootPri = new gcn::TextField();
+	txtBootPri->setId("txtHdfBootPri");
 	txtBootPri->setSize(40, TEXTFIELD_HEIGHT);
-
 	txtBootPri->addFocusListener(filesysHardfileFocusListener);
 	
 	lblSurfaces = new gcn::Label("Surfaces:");
 	lblSurfaces->setAlignment(gcn::Graphics::RIGHT);
 	txtSurfaces = new gcn::TextField();
 	txtSurfaces->setSize(40, TEXTFIELD_HEIGHT);
-
 	txtSurfaces->addFocusListener(filesysHardfileFocusListener);
 	
 	lblReserved = new gcn::Label("Reserved:");
 	lblReserved->setAlignment(gcn::Graphics::RIGHT);
 	txtReserved = new gcn::TextField();
 	txtReserved->setSize(40, TEXTFIELD_HEIGHT);
-
 	txtReserved->addFocusListener(filesysHardfileFocusListener);
 	
 	lblSectors = new gcn::Label("Sectors:");
 	lblSectors->setAlignment(gcn::Graphics::RIGHT);
 	txtSectors = new gcn::TextField();
 	txtSectors->setSize(40, TEXTFIELD_HEIGHT);
-
 	txtSectors->addFocusListener(filesysHardfileFocusListener);
 	
 	lblBlocksize = new gcn::Label("Blocksize:");
 	lblBlocksize->setAlignment(gcn::Graphics::RIGHT);
 	txtBlocksize = new gcn::TextField();
 	txtBlocksize->setSize(40, TEXTFIELD_HEIGHT);
-
 	txtBlocksize->addFocusListener(filesysHardfileFocusListener);
 	
 	lblPath = new gcn::Label("Path:");
@@ -463,7 +457,7 @@ static void InitEditFilesysHardfile()
 	cmdPath = new gcn::Button("...");
 	cmdPath->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdPath->setBaseColor(gui_baseCol);
-	cmdPath->setId("hdfPath");
+	cmdPath->setId("cmdHdfPath");
 	cmdPath->addActionListener(filesysHardfileActionListener);
 
 	lblController = new gcn::Label("Controller:");
@@ -477,8 +471,7 @@ static void InitEditFilesysHardfile()
 	cboUnit = new gcn::DropDown(&unitListModel);
 	cboUnit->setSize(60, DROPDOWN_HEIGHT);
 	cboUnit->setBaseColor(gui_baseCol);
-	cboUnit->setId("hdfUnit");
-
+	cboUnit->setId("cboHdfUnit");
 	cboUnit->addActionListener(filesysHardfileActionListener);
 	
 	int posY = DISTANCE_BORDER;
