@@ -160,8 +160,6 @@ void set_key_configs(struct uae_prefs* p)
 	enter_gui_button = SDL_GameControllerGetButtonFromString(p->open_gui);
 	if (enter_gui_button == SDL_CONTROLLER_BUTTON_INVALID)
 		enter_gui_button = SDL_GameControllerGetButtonFromString(amiberry_options.default_open_gui_key);
-	if (enter_gui_button == SDL_CONTROLLER_BUTTON_INVALID)
-		enter_gui_button = SDL_CONTROLLER_BUTTON_GUIDE;
 	
 	if (strncmp(p->quit_amiberry, "", 1) != 0)
 		quit_key = get_hotkey_from_config(p->quit_amiberry);
