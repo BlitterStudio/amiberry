@@ -455,7 +455,6 @@ void RefreshPanelCustom()
 				&& temp_button != -1)
 			{
 				cboCustomAction[n]->setListModel(&CustomEventList_HotKey);
-				//cboCustomAction[n]->setSelected(0);
 				cboCustomAction[n]->setEnabled(false);
 				lblCustomAction[n]->setEnabled(false);
 			}
@@ -466,18 +465,16 @@ void RefreshPanelCustom()
 				&& changed_prefs.use_retroarch_quit)
 			{
 				cboCustomAction[n]->setListModel(&CustomEventList_Quit);
-				//cboCustomAction[n]->setSelected(0);
 				cboCustomAction[n]->setEnabled(false);
 				lblCustomAction[n]->setEnabled(false);
 			}
 
-			else if (temp_button == did->mapping.button[SDL_CONTROLLER_BUTTON_GUIDE]
+			else if (temp_button == did->mapping.menu_button
 				&& temp_button != -1
 				&& SelectedFunction == 1
 				&& changed_prefs.use_retroarch_menu)
 			{
 				cboCustomAction[n]->setListModel(&CustomEventList_Menu);
-				//cboCustomAction[n]->setSelected(0);
 				cboCustomAction[n]->setEnabled(false);
 				lblCustomAction[n]->setEnabled(false);
 			}
@@ -488,7 +485,6 @@ void RefreshPanelCustom()
 				&& changed_prefs.use_retroarch_reset)
 			{
 				cboCustomAction[n]->setListModel(&CustomEventList_Reset);
-				//cboCustomAction[n]->setSelected(0);
 				cboCustomAction[n]->setEnabled(false);
 				lblCustomAction[n]->setEnabled(false);
 			}
