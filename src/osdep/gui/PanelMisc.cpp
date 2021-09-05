@@ -677,10 +677,10 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 
 #ifdef SERIAL_PORT
 	grpSerialDevice->setPosition(DISTANCE_BORDER, posY);
-	grpSerialDevice->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, TITLEBAR_HEIGHT + chkSerialDirect->getHeight() * 5);
+	grpSerialDevice->setSize(cboKBDLed_scr->getX() + cboKBDLed_scr->getWidth(), TITLEBAR_HEIGHT + chkSerialDirect->getHeight() * 5);
 	grpSerialDevice->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpSerialDevice->setBaseColor(gui_baseCol);
-	txtSerialDevice->setSize(grpSerialDevice->getWidth() - chkSerialDirect->getWidth() - chkRTSCTS->getWidth() - DISTANCE_BORDER * 4, TEXTFIELD_HEIGHT);
+	txtSerialDevice->setSize(grpSerialDevice->getWidth() - DISTANCE_BORDER * 3, TEXTFIELD_HEIGHT);
 	txtSerialDevice->setBackgroundColor(colTextboxBackground);
 	grpSerialDevice->add(txtSerialDevice, DISTANCE_BORDER, DISTANCE_BORDER);
 	grpSerialDevice->add(chkRTSCTS, DISTANCE_BORDER, DISTANCE_BORDER * 3);
