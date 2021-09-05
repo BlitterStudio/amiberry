@@ -941,18 +941,18 @@ static void read_joystick()
 			// detect standalone retroarch hotkeys
 			if (did->mapping.hotkey_button == SDL_CONTROLLER_BUTTON_INVALID)
 			{
-				if (did->mapping.button[SDL_CONTROLLER_BUTTON_GUIDE] != SDL_CONTROLLER_BUTTON_INVALID)
+				if (did->mapping.menu_button != SDL_CONTROLLER_BUTTON_INVALID)
 				{
 					if (did->mapping.is_retroarch || !did->is_controller)
 					{
 						setjoybuttonstate(i, 14,
-							SDL_JoystickGetButton(did->joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_GUIDE]) & 1);
+							SDL_JoystickGetButton(did->joystick, did->mapping.menu_button) & 1);
 					}
 					else
 					{
 						setjoybuttonstate(i, 14,
 							SDL_GameControllerGetButton(did->controller,
-								static_cast<SDL_GameControllerButton>(did->mapping.button[SDL_CONTROLLER_BUTTON_GUIDE])) & 1);
+								static_cast<SDL_GameControllerButton>(did->mapping.menu_button)) & 1);
 					}
 				}
 				if (did->mapping.quit_button != SDL_CONTROLLER_BUTTON_INVALID)
@@ -991,7 +991,7 @@ static void read_joystick()
 				{
 					held_offset = REMAP_BUTTONS;
 					setjoybuttonstate(i, 14,
-						SDL_JoystickGetButton(did->joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_GUIDE]) & 1);
+						SDL_JoystickGetButton(did->joystick, did->mapping.menu_button) & 1);
 					setjoybuttonstate(i, 15,
 						SDL_JoystickGetButton(did->joystick, did->mapping.quit_button) & 1);
 					setjoybuttonstate(i, 30,
@@ -1002,7 +1002,7 @@ static void read_joystick()
 			{
 				held_offset = REMAP_BUTTONS;
 				setjoybuttonstate(i, 14,
-					SDL_GameControllerGetButton(did->controller, static_cast<SDL_GameControllerButton>(did->mapping.button[SDL_CONTROLLER_BUTTON_GUIDE])) & 1);
+					SDL_GameControllerGetButton(did->controller, static_cast<SDL_GameControllerButton>(did->mapping.menu_button)) & 1);
 				setjoybuttonstate(i, 15,
 					SDL_GameControllerGetButton(did->controller, static_cast<SDL_GameControllerButton>(did->mapping.quit_button)) & 1);
 				setjoybuttonstate(i, 30,
