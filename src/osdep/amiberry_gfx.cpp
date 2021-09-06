@@ -505,16 +505,6 @@ static int display_thread(void* unused)
 	return 0;
 }
 
-#ifdef USE_DISPMANX
-void change_layer_number(int layer)
-{
-	updateHandle = vc_dispmanx_update_start(0);
-	vc_dispmanx_element_change_layer(updateHandle, blackscreen_element, layer - 1);
-	vc_dispmanx_element_change_layer(updateHandle, elementHandle, layer);
-	vc_dispmanx_update_submit_sync(updateHandle);
-}
-#endif
-
 int graphics_setup(void)
 {
 #ifdef PICASSO96
