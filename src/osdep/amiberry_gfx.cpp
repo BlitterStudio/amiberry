@@ -528,7 +528,7 @@ int graphics_setup(void)
 			vc_vchi_tv_init(vchi_instance, &vchi_connection, 1);
 			if (vc_tv_get_display_state(&tvstate) == 0)
 			{
-				HDMI_PROPERTY_PARAM_T property;
+				HDMI_PROPERTY_PARAM_T property{};
 				property.property = HDMI_PROPERTY_PIXEL_CLOCK_TYPE;
 				vc_tv_hdmi_get_property(&property);
 				const auto frame_rate = property.param1 == HDMI_PIXEL_CLOCK_TYPE_NTSC ? static_cast<float>(tvstate.display.hdmi.frame_rate) * (1000.0f / 1001.0f) : static_cast<float>(tvstate.display.hdmi.frame_rate);
