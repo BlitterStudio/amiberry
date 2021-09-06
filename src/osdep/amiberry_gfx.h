@@ -122,7 +122,6 @@ extern VC_RECT_T dst_rect;
 extern VC_RECT_T blit_rect;
 extern VC_RECT_T black_rect;
 extern VC_IMAGE_TYPE_T rgb_mode;
-extern void change_layer_number(int layer);
 #else
 extern SDL_Texture* amiga_texture;
 extern SDL_Cursor* cursor;
