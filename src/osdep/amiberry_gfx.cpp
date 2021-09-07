@@ -99,6 +99,7 @@ static float SDL2_getrefreshrate(int monid)
 	return static_cast<float>(mode.refresh_rate);
 }
 
+#if 0
 static int SDL2_GetCurrentDepth()
 {
 	SDL_DisplayMode dm;
@@ -220,6 +221,7 @@ void SDL2_getpixelformat(int depth, int* rb, int* gb, int* bb, int* rs, int* gs,
 		break;
 	}
 }
+#endif
 
 struct PicassoResolution* DisplayModes;
 struct MultiDisplay Displays[MAX_DISPLAYS];
@@ -434,7 +436,6 @@ static int display_thread(void* unused)
 #else
 
 #endif
-
 			uae_sem_post(&display_sem);
 			break;
 
@@ -553,7 +554,8 @@ void update_win_fs_mode(int monid, struct uae_prefs* p)
 	auto* avidinfo = &adisplays[0].gfxvidinfo;
 #ifdef USE_DISPMANX
 	// Dispmanx modes use configurable width/height and are full-window always
-	p->gfx_monitor[monid].gfx_size = p->gfx_monitor[monid].gfx_size_win;
+	p->gfx_monitor[0].gfx_size = p->gfx_monitor[0].gfx_size_win;
+    set_config_changed();
 #else
 	if (mon->sdl_window)
 	{
