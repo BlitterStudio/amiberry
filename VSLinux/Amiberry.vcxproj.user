@@ -39,7 +39,7 @@
     <RemoteDebuggerWorkingDirectory>$(RemoteRootDir)/amiberry</RemoteDebuggerWorkingDirectory>
     <DebuggerFlavor>LinuxDebugger</DebuggerFlavor>
     <PreLaunchCommand>export DISPLAY=:0.0</PreLaunchCommand>
-    <RemoteTarget>-1593321521;retropie (username=, port=22, authentication=Password)</RemoteTarget>
+    <RemoteTarget>402471865;pi400 (username=, port=22, authentication=Password)</RemoteTarget>
     <RemoteDebuggerCommandArguments />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-DMX-Pi3|ARM64'">
