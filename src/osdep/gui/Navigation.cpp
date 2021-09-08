@@ -404,9 +404,14 @@ static NavigationMap navMap[] =
 	{ "State6", "Savestates", "Savestates", "State5", "State7" },
 	{ "State7", "Savestates", "Savestates", "State6", "State8" },
 	{ "State8", "Savestates", "Savestates", "State7", "State9" },
-	{ "State9", "Savestates", "Savestates", "State8", "LoadState" },
-	{ "LoadState", "Savestates", "SaveState", "State9", "State0" },
-	{ "SaveState", "LoadState", "Savestates", "State9", "State0" },
+	{ "State9", "Savestates", "Savestates", "State8", "State10" },
+    { "State10", "Savestates", "Savestates", "State9", "State11" },
+    { "State11", "Savestates", "Savestates", "State10", "State12" },
+    { "State12", "Savestates", "Savestates", "State11", "State13" },
+    { "State13", "Savestates", "Savestates", "State12", "State14" },
+    { "State14", "Savestates", "Savestates", "State13", "LoadState" },
+	{ "LoadState", "Savestates", "SaveState", "State14", "State0" },
+	{ "SaveState", "LoadState", "Savestates", "State14", "State0" },
 
 #ifdef ANDROID
 	// PanelOnScreen

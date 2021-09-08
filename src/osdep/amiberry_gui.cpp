@@ -456,64 +456,84 @@ void gui_purge_events()
 
 int gui_update()
 {
-	char tmp[MAX_DPATH];
+    char tmp[MAX_DPATH];
 
-	get_savestate_path(savestate_fname, MAX_DPATH - 1);
-	get_screenshot_path(screenshot_filename, MAX_DPATH - 1);
+    get_savestate_path(savestate_fname, MAX_DPATH - 1);
+    get_screenshot_path(screenshot_filename, MAX_DPATH - 1);
 
-	if (strlen(currprefs.floppyslots[0].df) > 0)
-		extract_filename(currprefs.floppyslots[0].df, tmp);
-	else
-		strncpy(tmp, last_loaded_config, MAX_DPATH - 1);
+    if (strlen(currprefs.floppyslots[0].df) > 0)
+        extract_filename(currprefs.floppyslots[0].df, tmp);
+    else
+        strncpy(tmp, last_loaded_config, MAX_DPATH - 1);
 
-	strncat(savestate_fname, tmp, MAX_DPATH - 1);
-	strncat(screenshot_filename, tmp, MAX_DPATH - 1);
-	remove_file_extension(savestate_fname);
-	remove_file_extension(screenshot_filename);
+    strncat(savestate_fname, tmp, MAX_DPATH - 1);
+    strncat(screenshot_filename, tmp, MAX_DPATH - 1);
+    remove_file_extension(savestate_fname);
+    remove_file_extension(screenshot_filename);
 
-  switch(currentStateNum)
-  {
-    case 1:
-  		strncat(savestate_fname,"-1.uss", MAX_DPATH - 1);
-	    strncat(screenshot_filename,"-1.png", MAX_DPATH - 1);
-	    break;
-    case 2:
-  		strncat(savestate_fname,"-2.uss", MAX_DPATH - 1);
-  		strncat(screenshot_filename,"-2.png", MAX_DPATH - 1);
-  		break;
-    case 3:
-  		strncat(savestate_fname,"-3.uss", MAX_DPATH - 1);
-  		strncat(screenshot_filename,"-3.png", MAX_DPATH - 1);
-  		break;
-	case 4:
-		strncat(savestate_fname, "-4.uss", MAX_DPATH - 1);
-		strncat(screenshot_filename, "-4.png", MAX_DPATH - 1);
-		break;
-	case 5:
-		strncat(savestate_fname, "-5.uss", MAX_DPATH - 1);
-		strncat(screenshot_filename, "-5.png", MAX_DPATH - 1);
-		break;
-	case 6:
-		strncat(savestate_fname, "-6.uss", MAX_DPATH - 1);
-		strncat(screenshot_filename, "-6.png", MAX_DPATH - 1);
-		break;
-	case 7:
-		strncat(savestate_fname, "-7.uss", MAX_DPATH - 1);
-		strncat(screenshot_filename, "-7.png", MAX_DPATH - 1);
-		break;
-	case 8:
-		strncat(savestate_fname, "-8.uss", MAX_DPATH - 1);
-		strncat(screenshot_filename, "-8.png", MAX_DPATH - 1);
-		break;
-	case 9:
-		strncat(savestate_fname, "-9.uss", MAX_DPATH - 1);
-		strncat(screenshot_filename, "-9.png", MAX_DPATH - 1);
-		break;
-    default: 
-	   	strncat(savestate_fname,".uss", MAX_DPATH - 1);
-  		strncat(screenshot_filename,".png", MAX_DPATH - 1);
-  }
-  return 0;
+    switch(currentStateNum)
+    {
+        case 1:
+            strncat(savestate_fname,"-1.uss", MAX_DPATH - 1);
+            strncat(screenshot_filename,"-1.png", MAX_DPATH - 1);
+            break;
+        case 2:
+            strncat(savestate_fname,"-2.uss", MAX_DPATH - 1);
+            strncat(screenshot_filename,"-2.png", MAX_DPATH - 1);
+            break;
+        case 3:
+            strncat(savestate_fname,"-3.uss", MAX_DPATH - 1);
+            strncat(screenshot_filename,"-3.png", MAX_DPATH - 1);
+            break;
+        case 4:
+            strncat(savestate_fname, "-4.uss", MAX_DPATH - 1);
+            strncat(screenshot_filename, "-4.png", MAX_DPATH - 1);
+            break;
+        case 5:
+            strncat(savestate_fname, "-5.uss", MAX_DPATH - 1);
+            strncat(screenshot_filename, "-5.png", MAX_DPATH - 1);
+            break;
+        case 6:
+            strncat(savestate_fname, "-6.uss", MAX_DPATH - 1);
+            strncat(screenshot_filename, "-6.png", MAX_DPATH - 1);
+            break;
+        case 7:
+            strncat(savestate_fname, "-7.uss", MAX_DPATH - 1);
+            strncat(screenshot_filename, "-7.png", MAX_DPATH - 1);
+            break;
+        case 8:
+            strncat(savestate_fname, "-8.uss", MAX_DPATH - 1);
+            strncat(screenshot_filename, "-8.png", MAX_DPATH - 1);
+            break;
+        case 9:
+            strncat(savestate_fname, "-9.uss", MAX_DPATH - 1);
+            strncat(screenshot_filename, "-9.png", MAX_DPATH - 1);
+            break;
+        case 10:
+            strncat(savestate_fname, "-10.uss", MAX_DPATH - 1);
+            strncat(screenshot_filename, "-10.png", MAX_DPATH - 1);
+            break;
+        case 11:
+            strncat(savestate_fname, "-11.uss", MAX_DPATH - 1);
+            strncat(screenshot_filename, "-11.png", MAX_DPATH - 1);
+            break;
+        case 12:
+            strncat(savestate_fname, "-12.uss", MAX_DPATH - 1);
+            strncat(screenshot_filename, "-12.png", MAX_DPATH - 1);
+            break;
+        case 13:
+            strncat(savestate_fname, "-13.uss", MAX_DPATH - 1);
+            strncat(screenshot_filename, "-13.png", MAX_DPATH - 1);
+            break;
+        case 14:
+            strncat(savestate_fname, "-14.uss", MAX_DPATH - 1);
+            strncat(screenshot_filename, "-14.png", MAX_DPATH - 1);
+            break;
+        default:
+            strncat(savestate_fname,".uss", MAX_DPATH - 1);
+            strncat(screenshot_filename,".png", MAX_DPATH - 1);
+    }
+    return 0;
 }
 
 /* if drive is -1, show the full GUI, otherwise file-requester for DF[drive] */
