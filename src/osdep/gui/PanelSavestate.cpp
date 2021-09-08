@@ -31,12 +31,24 @@ static gcn::RadioButton* optState11;
 static gcn::RadioButton* optState12;
 static gcn::RadioButton* optState13;
 static gcn::RadioButton* optState14;
+static gcn::Label* lblTimestamp;
 
 static gcn::Window* grpScreenshot;
 static gcn::Icon* icoSavestate = nullptr;
 static gcn::Image* imgSavestate = nullptr;
 static gcn::Button* cmdLoadState;
 static gcn::Button* cmdSaveState;
+
+char* getts(char *filename1, char *date_string, size_t date_string_size)
+{
+    struct stat st;
+    struct tm tm;
+
+    stat(filename1, &st);
+    localtime_r(&st.st_mtime, &tm);
+    strftime(date_string, date_string_size,"%c" , &tm);
+    return date_string;
+}
 
 class SavestateActionListener : public gcn::ActionListener
 {
@@ -139,7 +151,6 @@ public:
 
 static SavestateActionListener* savestateActionListener;
 
-
 void InitPanelSavestate(const struct _ConfigCategory& category)
 {
 	savestateActionListener = new SavestateActionListener();
@@ -204,6 +215,8 @@ void InitPanelSavestate(const struct _ConfigCategory& category)
     optState14->setId("State14");
     optState14->addActionListener(savestateActionListener);
 
+    lblTimestamp = new gcn::Label("Thu Aug 23 14:55:02 2001");
+
 	grpNumber = new gcn::Window("Number");
 	grpNumber->add(optState0, 10, 10);
 	grpNumber->add(optState1, optState0->getX(), optState0->getY() + optState0->getHeight() + DISTANCE_NEXT_Y);
@@ -245,13 +258,13 @@ void InitPanelSavestate(const struct _ConfigCategory& category)
 
 	category.panel->add(grpNumber, DISTANCE_BORDER, DISTANCE_BORDER);
 	category.panel->add(grpScreenshot, grpNumber->getX() + grpNumber->getWidth() + DISTANCE_NEXT_X, DISTANCE_BORDER);
+    category.panel->add(lblTimestamp, grpScreenshot->getX(), grpScreenshot->getY() + grpScreenshot->getHeight() + DISTANCE_NEXT_Y);
 	const auto posY = category.panel->getHeight() - DISTANCE_BORDER - BUTTON_HEIGHT;
 	category.panel->add(cmdLoadState, grpScreenshot->getX(), posY);
 	category.panel->add(cmdSaveState, cmdLoadState->getX() + cmdLoadState->getWidth() + DISTANCE_NEXT_X, posY);
 
 	RefreshPanelSavestate();
 }
-
 
 void ExitPanelSavestate()
 {
@@ -271,6 +284,7 @@ void ExitPanelSavestate()
     delete optState13;
     delete optState14;
 	delete grpNumber;
+    delete lblTimestamp;
 
 	delete imgSavestate;
 	imgSavestate = nullptr;
@@ -283,7 +297,6 @@ void ExitPanelSavestate()
 
 	delete savestateActionListener;
 }
-
 
 void RefreshPanelSavestate()
 {
@@ -351,6 +364,21 @@ void RefreshPanelSavestate()
     }
 
 	gui_update();
+    if (strlen(savestate_fname) > 0)
+    {
+        auto* const f = fopen(savestate_fname, "rbe");
+        if (f) {
+            fclose(f);
+            char date_string[256];
+            getts(savestate_fname, date_string, sizeof(date_string));
+            lblTimestamp->setCaption(date_string);
+        }
+        else
+        {
+            lblTimestamp->setCaption("No savestate found");
+        }
+    }
+
 	if (strlen(screenshot_filename) > 0)
 	{
 		auto* const f = fopen(screenshot_filename, "rbe");
