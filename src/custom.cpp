@@ -152,6 +152,7 @@ static bool graphicsbuffer_retry;
 static int cia_hsync;
 static bool toscr_scanline_complex_bplcon1, toscr_scanline_complex_bplcon1_off;
 static int toscr_hend;
+int display_reset;
 
 #define LOF_TOGGLES_NEEDED 3
 //#define NLACE_CNT_NEEDED 50
@@ -336,7 +337,7 @@ static int maxvpos_stored, maxhpos_stored;
 uae_u16 hsstop, hsstop_detect, hsstrt;
 static uae_u16 hbstop, hbstrt;
 static uae_u16 vsstop, vsstrt;
-static uae_u16 vbstop, vbstopm1, vbstrt;
+static uae_u16 vbstop, vbstrt;
 static uae_u16 hcenter, hcenter_v2, hcenter_v2_end;
 static uae_u16 hbstop_v, hbstrt_v, hbstop_v2, hbstrt_v2, hbstrt_v2o, hbstop_v2o;
 static int vsstrt_m, vsstop_m, vbstrt_m, vbstop_m;
@@ -1708,9 +1709,9 @@ static void update_mirrors(void)
 	ecs_agnus = (currprefs.chipset_mask & CSMASK_ECS_AGNUS) != 0;
 	ecs_denise = (currprefs.chipset_mask & CSMASK_ECS_DENISE) != 0;
 	direct_rgb = aga_mode;
-	if (currprefs.chipset_mask & CSMASK_AGA) {
+	if (aga_mode) {
 		sprite_sprctlmask = 0x01 | 0x08 | 0x10;
-	} else if (currprefs.chipset_mask & CSMASK_ECS_DENISE) {
+	} else if (ecs_denise) {
 		sprite_sprctlmask = 0x01 | 0x10;
 	} else {
 		sprite_sprctlmask = 0x01;
@@ -1943,19 +1944,20 @@ static int fetch_warn(int nr, int hpos, bool *addmodulop)
 {
 	static int warned1 = 30, warned2 = 30;
 	int add = fetchmode_bytes;
+	// fake add value must not be large enough for high word to change
 	if (cycle_line_slot[hpos] == CYCLE_STROBE) {
 		if (warned1 >= 0) {
 			write_log(_T("WARNING: BPL strobe refresh conflict, hpos %02X!\n"), hpos);
 			warned1--;
 		}
 		*addmodulop = false;
-		add = refptr_val;
+		add = refptr_val & 0x0ffe;
 	} else {
 		if (warned2 >= 0) {
 			warned2--;
 			write_log(_T("WARNING: BPL refresh conflict, hpos %02X!\n"), hpos);
 		}
-		add = refptr_val;
+		add = refptr_val & 0x0ffe;
 		*addmodulop = false;
 	}
 	return add;
@@ -4619,9 +4621,15 @@ static void reset_decisions_scanline_start(void)
 		}
 	}
 
-	if (!ecs_denise && currprefs.cs_ocshblankbug) {
-		if (vb_start_line == 2 + vblank_extraline) {
-			record_color_change2(0, 0, COLOR_CHANGE_BLANK | 1);
+	if (!ecs_denise) {
+		if (currprefs.cs_dipagnus || !ecs_agnus) {
+			if (vb_start_line == 2 + vblank_extraline) {
+				record_color_change2(0, 0, COLOR_CHANGE_BLANK | 1);
+			}
+		} else {
+			if (vb_start_line == 1 + vblank_extraline) {
+				record_color_change2(0, 0, COLOR_CHANGE_BLANK | 1);
+			}
 		}
 		if (vb_end_next_line) {
 			record_color_change2(0, 0, COLOR_CHANGE_BLANK | 0);
@@ -4690,12 +4698,17 @@ static void reset_decisions_hsync_start(void)
 	thisline_decision.fmode = fmode;
 	// 0 = vb, 1 = vb off, 3 = vb off, previous line was bitplane + vb on
 	//bool t = thisline_decision.plfleft >= 0 && (thisline_decision.vb & 1) == 0 && !vb_state && !vb_end_line;
-	thisline_decision.vb = vb_start_line > 1 + vblank_extraline ? 0 : 1;
+	if (!aga_mode && ecs_denise && exthblank) {
+		// ECS Denise + EXTHBLANK: VBLANK blanking is always disabled
+		thisline_decision.vb = 1;
+	} else {
+		thisline_decision.vb = vb_start_line > 1 + vblank_extraline ? 0 : 1;
+	}
 	// if programmed vblank
 	if (!thisline_decision.vb && (beamcon0 & 0x1000) && ecs_agnus) {
 		thisline_decision.vb |= 2;
 	}
-	if (!ecs_denise && vb_end_line && currprefs.cs_ocshblankbug) {
+	if (!ecs_denise && vb_end_line) {
 		thisline_decision.vb = 1;
 	}
 #endif
@@ -4851,26 +4864,20 @@ void compute_vsynctime(void)
 	}
 	vsynctimebase_orig = vsynctimebase;
 
-#if 0
-if (!picasso_on) {
-	updatedisplayarea();
-}
-#endif
-
-if (islinetoggle()) {
-	shpos += 0.5;
-}
-if (interlace_seen) {
-	svpos += 0.5;
-} else if (lof_current) {
-	svpos += 1.0;
-}
-if (currprefs.produce_sound > 1) {
-	double clk = svpos * shpos * fake_vblank_hz;
-	write_log(_T("SNDRATE %.1f*%.1f*%.6f=%.6f\n"), svpos, shpos, fake_vblank_hz, clk);
-	devices_update_sound(clk, syncadjust);
-}
-devices_update_sync(svpos, syncadjust);
+	if (islinetoggle()) {
+		shpos += 0.5;
+	}
+	if (interlace_seen) {
+		svpos += 0.5;
+	} else if (lof_current) {
+		svpos += 1.0;
+	}
+	if (currprefs.produce_sound > 1) {
+		double clk = svpos * shpos * fake_vblank_hz;
+		write_log(_T("SNDRATE %.1f*%.1f*%.6f=%.6f\n"), svpos, shpos, fake_vblank_hz, clk);
+		devices_update_sound(clk, syncadjust);
+	}
+	devices_update_sync(svpos, syncadjust);
 }
 
 void getsyncregisters(uae_u16 *phsstrt, uae_u16 *phsstop, uae_u16 *pvsstrt, uae_u16 *pvsstop)
@@ -4937,7 +4944,7 @@ static void checklacecount(bool lace)
 
 static void set_hcenter(void)
 {
-	if (!aga_mode && ecs_denise && (bplcon0 & 1)) {
+	if (!aga_mode && ecs_denise && (bplcon0 & 1) && (bplcon3 & 1)) {
 		if (beamcon0 & 0x0210) {
 			hcenter_v2 = (hcenter & 0xff) << CCK_SHRES_SHIFT;
 		} else {
@@ -5407,6 +5414,12 @@ static void init_hz(bool checkvposw)
 		maxhpos = htotal + 1;
 	}
 
+	// after vsync, it seems earlier possible visible line is vsync+3.
+	int vsync_startline = vsstrt + 3;
+	if (vsync_startline >= maxvpos) {
+		vsync_startline -= maxvpos;
+	}
+
 	maxhpos_display = AMIGA_WIDTH_MAX;
 	maxvpos_nom = maxvpos;
 	maxvpos_display = maxvpos;
@@ -5474,9 +5487,9 @@ static void init_hz(bool checkvposw)
 	}
 
 	if ((beamcon0 & 0x1000) && (beamcon0 & (0x0200 | 0x0010))) { // VARVBEN + VARVSYEN|VARCSYEN
-		minfirstline = vsstop;
+		minfirstline = vsync_startline;
 		if (minfirstline > maxvpos / 2) {
-			minfirstline = vsstop;
+			minfirstline = vsync_startline;
 		}
 		minfirstline++;
 		firstblankedline = vbstrt;
@@ -5506,9 +5519,6 @@ static void init_hz(bool checkvposw)
 		} else {
 			maxvpos_display_vsync = 3;
 			minfirstline -= eh / 2;
-			if (minfirstline < 8) {
-				minfirstline = 8;
-			}
 		}
 	}
 
@@ -5518,9 +5528,6 @@ static void init_hz(bool checkvposw)
 
 	if (minfirstline < 1) {
 		minfirstline = 1;
-	}
-	if (!(beamcon0 & 0x80) && minfirstline < 8 && !eh) {
-		minfirstline = 8;
 	}
 
 	if (minfirstline >= maxvpos) {
@@ -5536,20 +5543,15 @@ static void init_hz(bool checkvposw)
 	}
 
 	if (beamcon0 & (0x0200 | 0x0010)) {
-		if (maxvpos_display_vsync >= vsstop - 3) {
-			maxvpos_display_vsync = vsstop - (3 + 1);
+		if (maxvpos_display_vsync >= vsstrt) {
+			maxvpos_display_vsync = vsstrt;
 		}
 		if (maxvpos_display_vsync < 0) {
 			maxvpos_display_vsync = 0;
 		}
-		if (minfirstline <= vsstop) {
-			minfirstline = vsstop + 1;
+		if (minfirstline <= vsync_startline) {
+			minfirstline = vsync_startline;
 		}
-	}
-
-	vbstopm1 = vbstop - 1;
-	if (vbstopm1 < 0) {
-		vbstopm1 += maxvpos;
 	}
 
 	if (beamcon0 & 0x80) {
@@ -5557,17 +5559,6 @@ static void init_hz(bool checkvposw)
 		vblank_hz_shf = vblank_hz;
 		vblank_hz_lof = clk / ((maxvpos + 1) * maxhpos);
 		vblank_hz_lace = clk / ((maxvpos + 0.5) * maxhpos);
-
-		if (beamcon0 & (0x0200 | 0x0010)) {
-			minfirstline = vsstop;
-			if (minfirstline > vtotal / 2) {
-				minfirstline = 1;
-			}
-			firstblankedline = vsstrt;
-			if (firstblankedline < vtotal / 2) {
-				firstblankedline = maxvpos + 1;
-			}
-		}
 
 		maxvpos_nom = maxvpos;
 		maxvpos_display = maxvpos;
@@ -5632,6 +5623,7 @@ static void init_hz(bool checkvposw)
 
 	compute_framesync();
 	devices_syncchange();
+	display_reset = 2;
 
 #ifdef PICASSO96
 	init_hz_p96(0);
@@ -5672,8 +5664,14 @@ static void calcdiw(void)
 
 	// ECS Agnus/AGA: DIWHIGH vertical high bits.
 	if (diwhigh_written && ecs_agnus) {
-		vstrt |= (diwhigh & 7) << 8;
-		vstop |= ((diwhigh >> 8) & 7) << 8;
+		if (aga_mode) {
+			vstrt |= (diwhigh & 7) << 8;
+			vstop |= ((diwhigh >> 8) & 7) << 8;
+		} else {
+			// ECS Agnus has undocumented V11!
+			vstrt |= (diwhigh & 15) << 8;
+			vstop |= ((diwhigh >> 8) & 15) << 8;
+		}
 	} else {
 		if ((vstop & 0x80) == 0)
 			vstop |= 0x100;
@@ -5872,8 +5870,6 @@ static bool hsyncdelay(void)
 
 #define CPU_ACCURATE (currprefs.cpu_model < 68020 || (currprefs.cpu_model == 68020 && currprefs.cpu_memory_cycle_exact))
 
-#define VPOS_INC_DELAY (CPU_ACCURATE ? 1 : 0)
-
 static void vb_check(void)
 {
 	// A1000 Agnus VBSTRT=first line, OCS and later: VBSTRT=last line
@@ -5894,6 +5890,18 @@ static void vb_check(void)
 	}
 }
 
+static void vhpos_adj(uae_u16 *hpp, uae_u16 *vpp)
+{
+	uae_u16 hp = *hpp;
+	uae_u16 vp = *vpp;
+	if (hp == 0) {
+		// HP=0: VP = previous line.
+		vp = vpos_prev;
+	}
+	*hpp = hp;
+	*vpp = vp;
+}
+
 static uae_u16 VPOSR(void)
 {
 	unsigned int csbit = 0;
@@ -5907,12 +5915,8 @@ static uae_u16 VPOSR(void)
 			lof = lof ? 0 : 1;
 		}
 	}
-	if (hp >= maxhpos + VPOS_INC_DELAY) {
-		vp++;
-		if (vp >= maxvpos + lof_store) {
-			vp = 0;
-		}
-	}
+	vhpos_adj(&hp, &vp);
+
 	vp = (vp >> 8) & 7;
 
 	if (currprefs.cs_agnusrev >= 0) {
@@ -6017,26 +6021,17 @@ static void VHPOSW(uae_u16 v)
 #endif
 }
 
-static uae_u16 VHPOSR (void)
+static uae_u16 VHPOSR(void)
 {
 	static uae_u16 oldhp;
 	uae_u16 vp = GETVPOS();
 	uae_u16 hp = GETHPOS();
 
-	if (hp >= maxhpos) {
-		hp -= maxhpos;
-		// vpos increases when hp==1, not when hp==0
-		if (hp >= VPOS_INC_DELAY) {
-			vp++;
-			if (vp >= maxvpos + lof_store) {
-				vp = 0;
-			}
-		}
-	}
+	vhpos_adj(&hp, &vp);
 
 	vp <<= 8;
 
-	if (hsyncdelay ()) {
+	if (hsyncdelay()) {
 		// fake continuously changing hpos in fastest possible modes
 		hp = oldhp % maxhpos;
 		oldhp++;
@@ -6491,7 +6486,7 @@ bool INTREQ_0(uae_u16 v)
 	}
 #endif
 
-	if ((v & 0x8000) && old != v) {
+	if (old != v) {
 		doint_delay();
 	}
 	return true;
@@ -6523,9 +6518,9 @@ static void ADKCON(int hpos, uae_u16 v)
 static void check_harddis(void)
 {
 	// VARBEAMEN, HARDDIS, SHRES, UHRES
-	harddis_h = ecs_agnus && ((new_beamcon0 & 0x80) || (new_beamcon0 & 0x4000) || (bplcon0 & 0x40) || (bplcon0 & 0x80));
+	harddis_h = ecs_agnus && ((new_beamcon0 & 0x0080) || (new_beamcon0 & 0x4000) || (bplcon0 & 0x0040) || (bplcon0 & 0x0080));
 	// VARBEAMEN, VARVBEN, HARDDIS
-	harddis_v = ecs_agnus && ((new_beamcon0 & 0x80) || (new_beamcon0 & 0x1000) || (new_beamcon0 & 0x4000));
+	harddis_v = ecs_agnus && ((new_beamcon0 & 0x0080) || (new_beamcon0 & 0x1000) || (new_beamcon0 & 0x4000));
 }
 
 static void BEAMCON0(int hpos, uae_u16 v)
@@ -6957,7 +6952,7 @@ static void DIWHIGH(int hpos, uae_u16 v)
 		return;
 	}
 	if (!aga_mode) {
-		v &= ~(0x0008 | 0x0010 | 0x1000 | 0x0800);
+		v &= ~(0x0010 | 0x1000);
 	}
 	v &= ~(0x8000 | 0x4000 | 0x0080 | 0x0040);
 	if (diwhigh_written && diwhigh == v) {
@@ -8248,6 +8243,9 @@ static void do_copper_fetch(int hpos, uae_u8 id)
 			alloc_cycle(hpos, CYCLE_COPPER);
 			cop_state.ip += 2;
 
+#ifdef DEBUGGER
+			uaecptr debugip = cop_state.ip;
+#endif
 			cop_state.ignore_next = 0;
 			if (cop_state.ir[1] & 1) {
 				cop_state.state = COP_skip_in2;
@@ -8257,6 +8255,8 @@ static void do_copper_fetch(int hpos, uae_u8 id)
 
 			cop_state.vcmp = (cop_state.ir[0] & (cop_state.ir[1] | 0x8000)) >> 8;
 			cop_state.hcmp = (cop_state.ir[0] & cop_state.ir[1] & 0xFE);
+
+			//record_copper(debugip - 4, debugip, cop_state.ir[0], cop_state.ir[1], hpos, vpos);
 
 		} else {
 			// MOVE
@@ -9055,6 +9055,15 @@ static void maybe_process_pull_audio(void)
 	audio_finish_pull();
 }
 
+static bool crender_screen(int monid, int mode, bool immediate)
+{
+	bool v = render_screen(monid, mode, immediate);
+	if (display_reset > 0) {
+		display_reset--;
+	}
+	return v;
+}
+
 // moving average algorithm
 #define MAVG_MAX_SIZE 128
 struct mavg_data
@@ -9185,7 +9194,7 @@ static bool framewait(void)
 	if (currprefs.m68k_speed < 0 && !cpu_sleepmode && !currprefs.cpu_memory_cycle_exact) {
 
 		if (!frame_rendered && !ad->picasso_on)
-			frame_rendered = render_screen(0, 1, false);
+			frame_rendered = crender_screen(0, 1, false);
 
 		if (currprefs.m68k_speed_throttle) {
 			// this delay can safely overshoot frame time by 1-2 ms, following code will compensate for it.
@@ -9231,7 +9240,7 @@ static bool framewait(void)
 
 		start = read_processor_time();
 		if (!frame_rendered && !ad->picasso_on) {
-			frame_rendered = render_screen(0, 1, false);
+			frame_rendered = crender_screen(0, 1, false);
 			t = read_processor_time() - start;
 		}
 		if (!currprefs.cpu_thread) {
@@ -9337,7 +9346,8 @@ static void fpscounter(bool frameok)
 }
 
 // vsync functions that are not hardware timing related
-// called when display is blanked, not necessarily last line but line 0 or later.
+// called when vsync starts which is not necessarily last line
+// it can line 0 or even later.
 static void vsync_handler_render(void)
 {
 	struct amigadisplay *ad = &adisplays[0];
@@ -9377,15 +9387,6 @@ static void vsync_handler_render(void)
 	cpu_stopped_lines = 0;
 #endif
 
-	if (bogusframe > 0) {
-		bogusframe--;
-	}
-
-	config_check_vsync();
-	if (timehack_alive > 0) {
-		timehack_alive--;
-	}
-
 #ifdef PICASSO96
 	if (isvsync_rtg() >= 0) {
 		rtg_vsync();
@@ -9405,7 +9406,7 @@ static void vsync_handler_render(void)
 	
 	if (!ad->picasso_on) {
 		if (!frame_rendered && vblank_hz_state) {
-			frame_rendered = render_screen(0, 1, false);
+			frame_rendered = crender_screen(0, 1, false);
 		}
 		if (frame_rendered && !frame_shown) {
 			frame_shown = show_screen_maybe(0, isvsync_chipset () >= 0);
@@ -9417,15 +9418,17 @@ static void vsync_handler_render(void)
 	bool waspaused = false;
 	while (handle_events()) {
 		if (!waspaused) {
-			render_screen(0, 1, true);
-			show_screen(0, 0);
+			if (crender_screen(0, 1, true)) {
+				show_screen(0, 0);
+			}
 			waspaused = true;
 		}
 		// we are paused, do all config checks but don't do any emulation
 		if (vsync_handle_check()) {
 			redraw_frame();
-			render_screen(0, 1, true);
-			show_screen(0, 0);
+			if (crender_screen(0, 1, true)) {
+				show_screen(0, 0);
+			}
 		}
 		config_check_vsync();
 	}
@@ -9450,7 +9453,6 @@ static void vsync_handler_render(void)
 
 	nextline_how = nln_normal;
 
-	vsync_handle_check();
 	//checklacecount (bplcon0_interlace_seen || lof_lace);
 }
 
@@ -9468,15 +9470,12 @@ static void vsync_display_render(void)
 static void vsync_check_vsyncmode(void)
 {
 	if (varsync_changed == 1) {
-		// render screen (minus extra lines) because mode is going to change and we don't want black screen flash
-		vsync_display_render();
 		init_hz_normal();
 	} else if (vpos_count > 0 && abs(vpos_count - vpos_count_diff) > 1 && vposw_change < 4) {
-		vsync_display_render();
 		init_hz_vposw();
 	} else if (interlace_changed || changed_chipset_refresh() || lof_changed) {
-		vsync_display_render();
 		compute_framesync();
+		display_reset = 2;
 	}
 	if (varsync_changed > 0) {
 		varsync_changed--;
@@ -9590,13 +9589,25 @@ static void vsync_handler_post(void)
 			varsync_changed = 2;
 		}
 	}
+
 	vsync_check_vsyncmode();
+
+	if (bogusframe > 0) {
+		bogusframe--;
+	}
+
+	config_check_vsync();
+	if (timehack_alive > 0) {
+		timehack_alive--;
+	}
 
 	lof_changed = 0;
 	vposw_change = 0;
 	bplcon0_interlace_seen = false;
 
 	COPJMP(1, 1);
+
+	vsync_handle_check();
 
 	init_hardware_frame();
 
@@ -9903,7 +9914,7 @@ static bool is_custom_vsync (void)
 static bool do_render_slice(int mode, int slicecnt, int lastline)
 {
 	draw_lines(lastline, slicecnt);
-	render_screen(0, mode, true);
+	crender_screen(0, mode, true);
 	return true;
 }
 
@@ -10078,7 +10089,7 @@ static void hsync_handlerh(bool onvsync)
 	hpos_hsync_extra = 0;
 	estimate_last_fetch_cycle(hpos);
 
-	if (vb_end_line && !ecs_denise && currprefs.cs_ocshblankbug) {
+	if (vb_end_line && !ecs_denise) {
 		record_color_change2(hpos, 0, COLOR_CHANGE_BLANK | 1);
 	}
 
@@ -10960,7 +10971,8 @@ static void hsync_handler_post (bool onvsync)
 	}
 	// vblank interrupt = next line after VBSTRT
 	if (vb_start_line == 1) {
-		send_interrupt(5, 1 * CYCLE_UNIT);
+		// first refresh (strobe) slot triggers vblank interrupt
+		send_interrupt(5, REFRESH_FIRST_HPOS * CYCLE_UNIT);
 	}
 	// lastline - 1?
 	if (vpos + 1 == maxvpos + lof_store || vpos + 1 == maxvpos + lof_store + 1) {
@@ -11007,7 +11019,11 @@ static void hsync_handler_post (bool onvsync)
 				vb_start_line = 1;
 				vb_state = true;
 			}
-			if (vbstopm1 == vpos) {
+			int vbs = vbstop - 1;
+			if (vbs < 0) {
+				vbs += maxvpos;
+			}
+			if (vbs == vpos) {
 				vbstop_m = vpos;
 				vb_end_line = true;
 				vb_state = false;
@@ -11061,6 +11077,7 @@ static void hsync_handler_post (bool onvsync)
 			vs_state_hw = false;
 		}
 	}
+
 	if (new_beamcon0 & (0x0200 | 0x0010)) {
 		vs_state_on = vs_state;
 	} else {
@@ -11279,7 +11296,7 @@ static void hsync_handler_post (bool onvsync)
 		vsync_rendered = true;
 		vsync_handle_redraw (lof_store, lof_changed, bplcon0, bplcon3);
 		if (vblank_hz_state) {
-			frame_rendered = render_screen(1, true);
+			frame_rendered = crender_screen(1, true);
 		}
 		end = read_processor_time ();
 		frameskiptime += end - start;
@@ -11425,8 +11442,10 @@ void custom_reset(bool hardreset, bool keyboardreset)
 	hbstop_v2 = 0;
 	hcenter_v2 = 0;
 	set_hcenter();
+	display_reset = 1;
 
 	if (!savestate_state) {
+		refptr_val = 0;
 		cia_hsync = 0;
 		extra_cycle = 0;
 		hsync_counter = 0;
@@ -12168,18 +12187,14 @@ static int REGPARAM2 custom_wput_1 (int hpos, uaecptr addr, uae_u32 value, int n
 		break;
 	case 0x1C4:
 		if (hbstrt != value) {
-			if (exthblank) {
-				//record_color_change2(hpos, 0xffff, 0);
-			}
+			sync_color_changes(hpos);
 			hbstrt = value & 0x7ff;
 			varsync(addr, 0);
 		}
 		break;
 	case 0x1C6:
 		if (hbstop != value) {
-			if (exthblank) {
-				//record_color_change2(hpos, 0xffff, 0);
-			}
+			sync_color_changes(hpos);
 			hbstop = value & 0x7ff;
 			varsync(addr, 0);
 		}
@@ -13036,7 +13051,6 @@ void check_prefs_changed_custom (void)
 	currprefs.cs_z3autoconfig = changed_prefs.cs_z3autoconfig;
 	currprefs.cs_bytecustomwritebug = changed_prefs.cs_bytecustomwritebug;
 	currprefs.cs_color_burst = changed_prefs.cs_color_burst;
-	currprefs.cs_ocshblankbug = changed_prefs.cs_ocshblankbug;
 	currprefs.cs_romisslow = changed_prefs.cs_romisslow;
 	currprefs.cs_toshibagary = changed_prefs.cs_toshibagary;
 	currprefs.cs_unmapped_space = changed_prefs.cs_unmapped_space;

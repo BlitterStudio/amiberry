@@ -136,6 +136,7 @@ extern float hblank_hz;
 extern int vblank_skip, doublescan;
 extern int programmedmode;
 extern int vblank_firstline_hw;
+extern int display_reset;
 
 #define DMA_AUD0      0x0001
 #define DMA_AUD1      0x0002

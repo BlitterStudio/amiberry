@@ -913,7 +913,7 @@ static void blit_bltset(int con)
 		blit_changed = true;
 		if (blit_warned > 0) {
 			write_log(_T("BLITTER: BLTCON0 %04x -> %04x BLTCON1 %04x -> %04x PC=%08x (%d %d)\n"), bltcon0_old, bltcon0, bltcon1_old, bltcon1, M68K_GETPC, current_hpos(), vpos);
-			blitter_dump();
+			//blitter_dump();
 			blitshifterdebug(bltcon0_old, false);
 			blit_warned--;
 			//activate_debugger();
@@ -968,7 +968,7 @@ static void blit_bltset(int con)
 	}
 
 	blit_dof = 0;
-	if ((bltcon1 & 0x80) && (currprefs.chipset_mask & CSMASK_ECS_AGNUS)) {
+	if ((bltcon1 & 0x80) && ecs_agnus) {
 		blit_dof = 1;
 		//debugtest(DEBUGTEST_BLITTER, _T("ECS BLTCON1 DOFF-bit set\n"));
 		//if (log_blitter & 16)
