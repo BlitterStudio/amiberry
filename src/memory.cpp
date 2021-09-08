@@ -1933,7 +1933,7 @@ static void init_mem_banks (void)
 {
 	// unsigned so i << 16 won't overflow to negative when i >= 32768
 	for (unsigned int i = 0; i < MEMORY_BANKS; i++)
-		put_mem_bank(i << 16, &dummy_bank, 0);
+		put_mem_bank (i << 16, &dummy_bank, 0);
 #ifdef NATMEM_OFFSET
 	//delete_shmmaps(0, 0xFFFF0000);
 #endif
@@ -1962,7 +1962,7 @@ static void allocate_memory (void)
 	/* emulate 0.5M+0.5M with 1M Agnus chip ram aliasing */
 	if (currprefs.chipmem.size == 0x80000 && currprefs.bogomem.size >= 0x80000 &&
 		(currprefs.chipset_mask & CSMASK_ECS_AGNUS) && !(currprefs.chipset_mask & CSMASK_AGA) && currprefs.cpu_model < 68020) {
-			if ((chipmem_bank.reserved_size != currprefs.chipmem.size || bogomem_bank.reserved_size != currprefs.bogomem.size)) {
+			if ((chipmem_bank.reserved_size != currprefs.chipmem.size || bogomem_bank.reserved_size != currprefs.bogomem.size || chipmem_full_size != 0x80000 * 2)) {
 				int memsize1, memsize2;
 				mapped_free (&chipmem_bank);
 				mapped_free (&bogomem_bank);
@@ -1992,7 +1992,7 @@ static void allocate_memory (void)
 			bogomem_aliasing = 1;
 	} else if (currprefs.chipmem.size == 0x80000 && currprefs.bogomem.size >= 0x80000 &&
 		!(currprefs.chipset_mask & CSMASK_ECS_AGNUS) && currprefs.cs_1mchipjumper && currprefs.cpu_model < 68020) {
-			if ((chipmem_bank.reserved_size != currprefs.chipmem.size || bogomem_bank.reserved_size != currprefs.bogomem.size)) {
+			if ((chipmem_bank.reserved_size != currprefs.chipmem.size || bogomem_bank.reserved_size != currprefs.bogomem.size || chipmem_full_size != chipmem_bank.reserved_size)) {
 				int memsize1, memsize2;
 				mapped_free (&chipmem_bank);
 				mapped_free (&bogomem_bank);
@@ -2942,7 +2942,7 @@ static void map_banks2 (addrbank *bank, int start, int size, int realsize, int q
 					//add_shmmaps(realstart << 16, bank);
 #endif
 			}
-			put_mem_bank(bnr << 16, bank, realstart << 16);
+			put_mem_bank (bnr << 16, bank, realstart << 16);
 			set_memory_cacheable(bnr, bank);
 #ifdef WITH_THREADED_CPU
 			if (currprefs.cpu_thread) {
@@ -2974,7 +2974,7 @@ static void map_banks2 (addrbank *bank, int start, int size, int realsize, int q
 					//add_shmmaps(realstart << 16, bank);
 #endif
 			}
-			put_mem_bank((bnr + hioffs) << 16, bank, realstart << 16);
+			put_mem_bank ((bnr + hioffs) << 16, bank, realstart << 16);
 			set_memory_cacheable(bnr + hioffs, bank);
 #ifdef WITH_THREADED_CPU
 			if (currprefs.cpu_thread) {
