@@ -185,8 +185,7 @@ static uae_u16 cregs[256];
 uae_u16 intena, intreq;
 uae_u16 dmacon;
 uae_u16 adkcon; /* used by audio code */
-uae_u32 last_custom_value1;
-uae_u16 last_custom_value2;
+uae_u16 last_custom_value;
 static bool dmacon_bpl;
 
 static uae_u32 cop1lc, cop2lc, copcon;
@@ -196,10 +195,10 @@ static uae_u32 cop1lc, cop2lc, copcon;
 * 0x00   0 HCB
 * 0x01   1 HC1 (HSTART)
 * 0x09   9 VR1
-* 0x12  18 SHS (Horizontal blank start)
+* 0x12  18 SHS (Horizontal sync start)
 * 0x1a  26 VER1 PAL
 * 0x1b  27 VER1 NTSC
-* 0x23  35 RHS (Horizontal blank end)
+* 0x23  35 RHS (Horizontal sync end)
 * 0x73 115 VR2
 * 0x84 132 CEN (HCENTER)
 * 0x8c 140 VER2 PAL
@@ -463,6 +462,7 @@ enum copper_states {
 	COP_read1,
 	COP_read2,
 	COP_bltwait,
+	COP_bltwait2,
 	COP_wait_in2,
 	COP_skip_in2,
 	COP_wait1,
@@ -594,6 +594,7 @@ static bool speedup_first;
 
 static void events_dmal(int);
 static uae_u16 dmal, dmal_hpos;
+static uae_u16 dmal_htotal_mask;
 static bool dmal_ce;
 
 /* The number of bits left from the last fetched words.
@@ -2050,8 +2051,8 @@ static bool fetch(int nr, int fm, int hpos, bool addmodulo)
 		}
 #endif
 		fetched_aga[nr] = fetched[nr] = v;
-		last_custom_value1 = v;
-		last_custom_value2 = (uae_u16)last_custom_value1;
+		regs.chipset_latch_rw = v;
+		last_custom_value = (uae_u16)regs.chipset_latch_rw;
 		break;
 	}
 #ifdef AGA
@@ -2075,8 +2076,8 @@ static bool fetch(int nr, int fm, int hpos, bool addmodulo)
 			record_dma_read_value_wide(fetched_aga[nr], false);
 		}
 #endif
-		last_custom_value1 = (uae_u32)fetched_aga[nr];
-		last_custom_value2 = (uae_u16)last_custom_value1;
+		regs.chipset_latch_rw = (uae_u32)fetched_aga[nr];
+		last_custom_value = (uae_u16)regs.chipset_latch_rw;
 		fetched[nr] = (uae_u16)fetched_aga[nr];
 		break;
 	}
@@ -2110,8 +2111,8 @@ static bool fetch(int nr, int fm, int hpos, bool addmodulo)
 			record_dma_read_value_wide(fetched_aga[nr], true);
 		}
 #endif
-		last_custom_value1 = (uae_u32)fetched_aga[nr];
-		last_custom_value2 = (uae_u16)last_custom_value1;
+		regs.chipset_latch_rw = (uae_u32)fetched_aga[nr];
+		last_custom_value = (uae_u16)regs.chipset_latch_rw;
 		fetched[nr] = (uae_u16)fetched_aga[nr];
 		break;
 	}
@@ -4609,6 +4610,7 @@ static void reset_decisions_scanline_start(void)
 	ddfstop_hpos = -1;
 	last_diw_hpos = 0;
 	last_diw_hpos2 = 0;
+	blt_info.finishhpos = -1;
 
 	/* Default to no bitplane DMA overriding sprite DMA */
 	plfstrt_sprite = 0x100;
@@ -5402,7 +5404,8 @@ static void init_hz(bool checkvposw)
 		vblank_hz_lace = clk / ((maxvpos + 0.5) * (maxhpos + 0.5));
 	}
 
-	if (beamcon0 & 0x80) {
+	dmal_htotal_mask = 0xffff;
+	if (beamcon0 & 0x0080) {
 		// programmable scanrates (ECS Agnus)
 		if (vtotal >= MAXVPOS) {
 			vtotal = MAXVPOS - 1;
@@ -5412,6 +5415,13 @@ static void init_hz(bool checkvposw)
 			htotal = MAXHPOS - 1;
 		}
 		maxhpos = htotal + 1;
+
+		if (maxhpos < DMAL_FIRST_HPOS) {
+			dmal_htotal_mask = 0;
+		} else 	if (maxhpos < DMAL_FIRST_HPOS + 6 * 2) {
+			int cnt = (maxhpos - DMAL_FIRST_HPOS) / 2;
+			dmal_htotal_mask = (1 << cnt) - 1;
+		}
 	}
 
 	// after vsync, it seems earlier possible visible line is vsync+3.
@@ -5782,8 +5792,12 @@ static uae_u16 DENISEID(int *missing)
 	return 0xFFFF;
 }
 
-static bool blit_busy(void)
+static bool blit_busy(int hpos, bool dmaconr)
 {
+	// DMACONR latch load takes 1 cycle. Copper sees it immediately.
+	if (dmaconr && blt_info.finishhpos == hpos) {
+		return true;
+	}
 	if (!blt_info.blit_main && !blt_info.blit_finald) {
 		return false;
 	}
@@ -5817,7 +5831,7 @@ STATIC_INLINE uae_u16 DMACONR(int hpos)
 	decide_line(hpos);
 	decide_fetch_safe(hpos);
 	dmacon &= ~(0x4000 | 0x2000);
-	dmacon |= (blit_busy() ? 0x4000 : 0x0000) | (blt_info.blitzero ? 0x2000 : 0);
+	dmacon |= (blit_busy(hpos, true) ? 0x4000 : 0x0000) | (blt_info.blitzero ? 0x2000 : 0);
 	return dmacon;
 }
 STATIC_INLINE uae_u16 INTENAR(void)
@@ -5986,7 +6000,6 @@ static void VPOSW(uae_u16 v)
 static void VHPOSW(uae_u16 v)
 {
 	int oldvpos = vpos;
-	bool changed = false;
 #if 0
 	if (M68K_GETPC < 0xf00000 || 1)
 		write_log (_T("VHPOSW %04X PC=%08x\n"), v, M68K_GETPC);
@@ -5997,7 +6010,7 @@ static void VHPOSW(uae_u16 v)
 		int chp = current_hpos_safe() - 4;
 		int hp = v & 0xff;
 		if (chp >= 0x21 && chp <= 0x29 && hp == 0x2d) {
-			hack_delay_shift = 4;
+			hack_delay_shift = 0;
 			record_color_change(chp, 0, COLOR_CHANGE_HSYNC_HACK | 6);
 			thisline_changed = 1;
 		}
@@ -6006,7 +6019,7 @@ static void VHPOSW(uae_u16 v)
 	v >>= 8;
 	vpos &= 0xff00;
 	vpos |= v;
-	if (vpos != oldvpos && !changed) {
+	if (vpos != oldvpos) {
 		vposw_change++;
 	}
 	if (vpos < oldvpos) {
@@ -6890,9 +6903,9 @@ static void BPLxDAT_next(uae_u32 v)
 	flush_display(fetchmode);
 	fetched[num] = vv;
 	if ((fmode & 3) == 3) {
-		fetched_aga[num] = ((uae_u64)last_custom_value2 << 48) | ((uae_u64)vv << 32) | (vv << 16) | vv;
+		fetched_aga[num] = ((uae_u64)last_custom_value << 48) | ((uae_u64)vv << 32) | (vv << 16) | vv;
 	} else if ((fmode & 3) == 2) {
-		fetched_aga[num] = (last_custom_value2 << 16) | vv;
+		fetched_aga[num] = (last_custom_value << 16) | vv;
 	} else if ((fmode & 3) == 1) {
 		fetched_aga[num] = (vv << 16) | vv;
 	} else {
@@ -7026,7 +7039,6 @@ static void FNULL(uae_u16 v)
 static void BLTADAT(int hpos, uae_u16 v)
 {
 	maybe_blit(hpos, 0);
-
 	blt_info.bltadat = v;
 }
 /*
@@ -7037,25 +7049,51 @@ static void BLTADAT(int hpos, uae_u16 v)
 static void BLTBDAT(int hpos, uae_u16 v)
 {
 	maybe_blit(hpos, 0);
-
 	int shift = bltcon1 >> 12;
-
-	if (bltcon1 & 2)
+	if (bltcon1 & 2) {
 		blt_info.bltbhold = (((uae_u32)v << 16) | blt_info.bltbold) >> (16 - shift);
-	else
+	} else {
 		blt_info.bltbhold = (((uae_u32)blt_info.bltbold << 16) | v) >> shift;
-
+	}
 	blt_info.bltbdat = v;
 	blt_info.bltbold = v;
 }
-static void BLTCDAT(int hpos, uae_u16 v) { maybe_blit(hpos, 0); blt_info.bltcdat = v; reset_blit(0); }
-
-static void BLTAMOD(int hpos, uae_u16 v) { maybe_blit(hpos, 1); blt_info.bltamod = (uae_s16)(v & 0xFFFE); reset_blit(0); }
-static void BLTBMOD(int hpos, uae_u16 v) { maybe_blit(hpos, 1); blt_info.bltbmod = (uae_s16)(v & 0xFFFE); reset_blit(0); }
-static void BLTCMOD(int hpos, uae_u16 v) { maybe_blit(hpos, 1); blt_info.bltcmod = (uae_s16)(v & 0xFFFE); reset_blit(0); }
-static void BLTDMOD(int hpos, uae_u16 v) { maybe_blit(hpos, 1); blt_info.bltdmod = (uae_s16)(v & 0xFFFE); reset_blit(0); }
-
-static void BLTCON0(int hpos, uae_u16 v) { maybe_blit (hpos, 2); bltcon0 = v; reset_blit(1); }
+static void BLTCDAT(int hpos, uae_u16 v)
+{
+	maybe_blit(hpos, 0);
+	blt_info.bltcdat = v;
+	reset_blit(0);
+}
+static void BLTAMOD(int hpos, uae_u16 v)
+{
+	maybe_blit(hpos, 1);
+	blt_info.bltamod = (uae_s16)(v & 0xFFFE);
+	reset_blit(0);
+}
+static void BLTBMOD(int hpos, uae_u16 v)
+{
+	maybe_blit(hpos, 1);
+	blt_info.bltbmod = (uae_s16)(v & 0xFFFE);
+	reset_blit(0);
+}
+static void BLTCMOD(int hpos, uae_u16 v)
+{
+	maybe_blit(hpos, 1);
+	blt_info.bltcmod = (uae_s16)(v & 0xFFFE);
+	reset_blit(0);
+}
+static void BLTDMOD(int hpos, uae_u16 v)
+{
+	maybe_blit(hpos, 1);
+	blt_info.bltdmod = (uae_s16)(v & 0xFFFE);
+	reset_blit(0);
+}
+static void BLTCON0(int hpos, uae_u16 v)
+{
+	maybe_blit (hpos, 2);
+	bltcon0 = v;
+	reset_blit(1);
+}
 /* The next category is "Most useless hardware register".
 * And the winner is... */
 static void BLTCON0L(int hpos, uae_u16 v)
@@ -7070,7 +7108,6 @@ static void BLTCON1(int hpos, uae_u16 v) {
 	bltcon1 = v;
 	reset_blit(2);
 }
-
 static void BLTAFWM(int hpos, uae_u16 v) {
 	maybe_blit(hpos, 2);
 	blt_info.bltafwm = v;
@@ -7081,7 +7118,6 @@ static void BLTALWM(int hpos, uae_u16 v) {
 	blt_info.bltalwm = v;
 	reset_blit(0);
 }
-
 static void BLTAPTH(int hpos, uae_u16 v)
 {
 	maybe_blit(hpos, 0);
@@ -7374,7 +7410,7 @@ static void SPRxDATA(int hpos, uae_u16 v, int num)
 		if ((fmode & 4) && get_bitplane_dma_rel(hpos, -1)) {
 			sprite_get_bpl_data(hpos, s, &s->data[0]);
 		} else {
-			s->data[0] = last_custom_value2;
+			s->data[0] = last_custom_value;
 		}
 	}
 }
@@ -7388,7 +7424,7 @@ static void SPRxDATB(int hpos, uae_u16 v, int num)
 		if ((fmode & 4) && get_bitplane_dma_rel(hpos, -1)) {
 			sprite_get_bpl_data(hpos, s, &s->datb[0]);
 		} else {
-			s->datb[0] = last_custom_value2;
+			s->datb[0] = last_custom_value;
 		}
 	}
 }
@@ -8103,7 +8139,7 @@ static void do_copper_fetch(int hpos, uae_u8 id)
 			debug_getpeekdma_chipram(cop_state.ip, MW_MASK_COPPER, 0x8c, cop_state.last_strobe == 2 ? 0x84 : 0x80);
 		}
 #endif
-		cop_state.ir[0] = last_custom_value1 = last_custom_value2 = chipmem_wget_indirect(cop_state.ip);
+		cop_state.ir[0] = regs.chipset_latch_rw = last_custom_value = chipmem_wget_indirect(cop_state.ip);
 #ifdef DEBUGGER
 		if (debug_dma) {
 			record_dma_read_value(cop_state.ir[0]);
@@ -8186,7 +8222,7 @@ static void do_copper_fetch(int hpos, uae_u8 id)
 			debug_getpeekdma_chipram(cop_state.ip, MW_MASK_COPPER, 0x1fe, 0x1fe);
 		}
 #endif
-		cop_state.ir[0] = last_custom_value1 = last_custom_value2 = chipmem_wget_indirect(cop_state.ip);
+		cop_state.ir[0] = regs.chipset_latch_rw = last_custom_value = chipmem_wget_indirect(cop_state.ip);
 #ifdef DEBUGGER
 		if (debug_dma) {
 			record_dma_read_value(cop_state.ir[0]);
@@ -8207,7 +8243,7 @@ static void do_copper_fetch(int hpos, uae_u8 id)
 			debug_getpeekdma_chipram(cop_state.ip, MW_MASK_COPPER, 0x8c, cop_state.last_strobe == 2 ? 0x84 : 0x80);
 		}
 #endif
-		cop_state.ir[0] = last_custom_value1 = last_custom_value2 = chipmem_wget_indirect(cop_state.ip);
+		cop_state.ir[0] = regs.chipset_latch_rw = last_custom_value = chipmem_wget_indirect(cop_state.ip);
 #ifdef DEBUGGER
 		if (debug_dma) {
 			record_dma_read_value(cop_state.ir[0]);
@@ -8333,7 +8369,7 @@ static void do_copper_fetch(int hpos, uae_u8 id)
 #endif
 			cop_state.ignore_next = 0;
 		}
-		last_custom_value1 = last_custom_value2 = cop_state.ir[1];
+		regs.chipset_latch_rw = last_custom_value = cop_state.ir[1];
 		check_copper_stop();
 		break;
 
@@ -8382,7 +8418,7 @@ static int coppercomp(int hpos, bool blitwait)
 
 	if ((cop_state.ir[1] & 0x8000) == 0) {
 		decide_blitter(hpos);
-		if (blit_busy()) {
+		if (blit_busy(-1, false)) {
 			if (blitwait) {
 				/* We need to wait for the blitter.  */
 				cop_state.state = COP_bltwait;
@@ -8619,7 +8655,7 @@ next:
 
 static void compute_spcflag_copper(void)
 {
-	if (!dmaen(DMA_COPPER) || cop_state.state == COP_stop || cop_state.state == COP_waitforever || cop_state.state == COP_bltwait || nocustom())
+	if (!dmaen(DMA_COPPER) || cop_state.state == COP_stop || cop_state.state == COP_waitforever || cop_state.state == COP_bltwait || cop_state.state == COP_bltwait2 || nocustom())
 		return;
 	if (cop_state.state == COP_wait1) {
 		int vp = vpos & (((cop_state.ir[1] >> 8) & 0x7F) | 0x80);
@@ -8634,11 +8670,11 @@ static void compute_spcflag_copper(void)
 
 static void blitter_done_notify_wakeup(uae_u32 temp)
 {
-	if (cop_state.state != COP_bltwait) {
+	if (cop_state.state != COP_bltwait2) {
 		return;
 	}
 	// blitter_done_notify() might be called too early, wait a bit if blitter is still busy.
-	if (blit_busy()) {
+	if (blit_busy(-1, false)) {
 		event2_newevent_xx(-1, 1 * CYCLE_UNIT, 0, blitter_done_notify_wakeup);
 		return;
 	}
@@ -8663,6 +8699,7 @@ void blitter_done_notify(int blitline)
 	if (cop_state.state != COP_bltwait) {
 		return;
 	}
+	cop_state.state = COP_bltwait2;
 	event2_newevent_xx(-1, 1 * CYCLE_UNIT, 0, blitter_done_notify_wakeup);
 }
 
@@ -8707,7 +8744,7 @@ static void cursorsprite(void)
 
 static uae_u16 sprite_fetch(struct sprite *s, uaecptr pt, int hpos, int slot, int mode)
 {
-	uae_u16 data = last_custom_value1;
+	uae_u16 data = regs.chipset_latch_rw;
 
 #if CYCLE_CONFLICT_LOGGING
 	if ((hpos & 1) != (SPR_FIRST_HPOS & 1)) {
@@ -8724,7 +8761,7 @@ static uae_u16 sprite_fetch(struct sprite *s, uaecptr pt, int hpos, int slot, in
 		debug_getpeekdma_chipram(pt, MW_MASK_SPR_0 << num, num * 8 + 0x140 + mode * 4 + slot * 2, num * 4 + 0x120);
 	}
 #endif
-	data = last_custom_value1 = chipmem_wget_indirect(pt);
+	data = regs.chipset_latch_rw = chipmem_wget_indirect(pt);
 	alloc_cycle(hpos, CYCLE_SPRITE);
 	return data;
 }
@@ -9433,6 +9470,10 @@ static void vsync_handler_render(void)
 		config_check_vsync();
 	}
 
+	vsync_rendered = false;
+	frame_shown = false;
+	frame_rendered = false;
+
 	if (quit_program > 0) {
 		/* prevent possible infinite loop at wait_cycles().. */
 		ad->framecnt = 0;
@@ -9440,10 +9481,6 @@ static void vsync_handler_render(void)
 		reset_decisions_hsync_start();
 		return;
 	}
-
-	vsync_rendered = false;
-	frame_shown = false;
-	frame_rendered = false;
 
 	if (vblank_hz_mult > 0) {
 		vblank_hz_state ^= 1;
@@ -9774,7 +9811,7 @@ static void dmal_emu(uae_u32 v)
 			}
 #endif
 		}
-		last_custom_value1 = last_custom_value2 = dat;
+		regs.chipset_latch_rw = last_custom_value = dat;
 		AUDxDAT(nr, dat, pt);
 	} else {
 		uae_u16 dat = 0;
@@ -9805,7 +9842,7 @@ static void dmal_emu(uae_u32 v)
 					}
 #endif
 				}
-				last_custom_value1 = last_custom_value2 = dat;
+				regs.chipset_latch_rw = last_custom_value = dat;
 				DSKDAT(dat);
 			}
 		} else {
@@ -9837,8 +9874,9 @@ static void dmal_func(uae_u32 v)
 static void dmal_func2(uae_u32 v)
 {
 	while (dmal) {
-		if (dmal & 3)
+		if (dmal & 3) {
 			dmal_emu(dmal_hpos + ((dmal & 2) ? 1 : 0));
+		}
 		dmal_hpos += 2;
 		dmal >>= 2;
 	}
@@ -9867,26 +9905,40 @@ static void events_dmal(int hpos)
 	}
 }
 
-static void events_dmal_hsync(void)
+static void events_dmal_hsync2(uae_u32 v)
 {
+	int dmal_first = DMAL_FIRST_HPOS - v;
 	// 3 disk + 4 audio
-	if (dmal)
-		write_log (_T("DMAL error!? %04x\n"), dmal);
+	if (dmal) {
+		write_log(_T("DMAL error!? %04x\n"), dmal);
+	}
 	dmal = audio_dmal();
 	dmal <<= (3 * 2);
 	dmal |= disk_dmal();
+	dmal &= dmal_htotal_mask;
 	dmal_alloc_mask = dmal;
-	if (!dmal)
+	if (!dmal) {
 		return;
+	}
 	dmal_hpos = 0;
 	if (currprefs.cpu_memory_cycle_exact) {
 		for (int i = 0; i < 3 * 2 + 4 * 2; i += 2) {
 			if (dmal & (3 << i)) {
-				alloc_cycle_ext(i + DMAL_FIRST_HPOS, CYCLE_MISC);
+				alloc_cycle_ext(DMAL_FIRST_HPOS + i, CYCLE_MISC);
 			}
 		}
 	}
-	events_dmal(DMAL_FIRST_HPOS);
+	events_dmal(dmal_first);
+}
+
+static void events_dmal_hsync(void)
+{
+	if (currprefs.cpu_compatible) {
+		int delay = REFRESH_FIRST_HPOS + 1;
+		event2_newevent2(delay, delay, events_dmal_hsync2);
+	} else {
+		events_dmal_hsync2(0);
+	}
 }
 
 static void lightpen_trigger_func(uae_u32 v)
@@ -10880,7 +10932,7 @@ void vsync_event_done(void)
 }
 
 // this prepares for new line
-static void hsync_handler_post (bool onvsync)
+static void hsync_handler_post(bool onvsync)
 {
 #ifdef CPUEMU_13
 	if (1 || currprefs.cpu_memory_cycle_exact || currprefs.blitter_cycle_exact) {
@@ -10901,12 +10953,12 @@ static void hsync_handler_post (bool onvsync)
 		CIAB_tod_handler(18);
 	} else if (ciahsyncs) {
 		CIA_hsync_posthandler(true, ciahsyncs);
-		if (beamcon0 & (0x80 | 0x100)) {
+		if (beamcon0 & 0x0100) {
 			if (hsstop < (maxhpos & ~1) && hsstrt < maxhpos) {
-				CIAB_tod_handler(hsstop);
+				CIAB_tod_handler(hsstrt);
 			}
 		} else {
-			CIAB_tod_handler(18);
+			CIAB_tod_handler(18); // hsync start
 		}
 	}
 
@@ -11136,7 +11188,7 @@ static void hsync_handler_post (bool onvsync)
 	//}
 
 
-	events_dmal_hsync ();
+	events_dmal_hsync();
 #if 0
 	// AF testing stuff
 	static int cnt = 0;
@@ -11428,6 +11480,7 @@ void custom_reset(bool hardreset, bool keyboardreset)
 	vs_state = false;
 	vs_state_hw = false;
 	vs_state_on = false;
+	dmal_htotal_mask = 0xffff;
 	memset(custom_storage, 0, sizeof(custom_storage));
 	if (!currprefs.cs_dipagnus) {
 		vb_start_line = 1;
@@ -11869,9 +11922,9 @@ writeonly:
 		*
 		* AGA:
 		* Can also return last CPU accessed value
-		* Remembers old last_custom_value1
+		* Remembers old regs.chipset_latch_rw
 		*/
-		v = last_custom_value1;
+		v = regs.chipset_latch_rw;
 		SET_LINE_CYCLEBASED;
 		if (!noput) {
 			int r, c, bmdma;
@@ -11904,18 +11957,18 @@ writeonly:
 			bmdma = bitplane_dma_access(hpos, 0);
 			if (aga_mode) {
 				if (bmdma || (c > CYCLE_REFRESH && c < CYCLE_CPU)) {
-					v = last_custom_value1;
+					v = regs.chipset_latch_rw;
 				} else if (c == CYCLE_CPU) {
 					v = regs.db;
 				} else {
-					v = last_custom_value1 >> ((addr & 2) ? 0 : 16);
+					v = regs.chipset_latch_rw >> ((addr & 2) ? 0 : 16);
 				}
 			} else {
 				if (bmdma || (c > CYCLE_REFRESH && c < CYCLE_CPU)) {
-					v = last_custom_value1;
+					v = regs.chipset_latch_rw;
 				} else {
 					// refresh checked because refresh cycles do not always
-					// set last_custom_value1 for performance reasons.
+					// set regs.chipset_latch_rw for performance reasons.
 					v = 0xffff;
 				}
 			}
@@ -12490,7 +12543,7 @@ uae_u8 *restore_custom(uae_u8 *src)
 		currprefs.ntscmode = changed_prefs.ntscmode = i & 1;
 	}
 	fmode = RW;				/* 1FC FMODE */
-	last_custom_value1 = last_custom_value2 = RW;/* 1FE ? */
+	last_custom_value = RW; /* 1FE ? */
 
 	bplcon0_saved = bplcon0;
 	bplcon1_saved = bplcon1;
@@ -12701,7 +12754,7 @@ uae_u8 *save_custom(int *len, uae_u8 *dstptr, int full)
 	SW(0);				/* 1F8 */
 	SW(0x8000 | (currprefs.ntscmode ? 1 : 0));			/* 1FA (re-used for NTSC) */
 	SW(fmode);			/* 1FC FMODE */
-	SW (last_custom_value1);	/* 1FE */
+	SW (last_custom_value);	/* 1FE */
 
 	*len = dst - dstbak;
 	return dstbak;
@@ -13182,10 +13235,6 @@ void do_copper(void)
 	update_copper(hpos);
 }
 
-#define SETIFCHIP \
-	if (addr < 0xd80000) \
-		last_custom_value1 = v;
-
 uae_u32 wait_cpu_cycle_read(uaecptr addr, int mode)
 {
 	uae_u32 v = 0;
@@ -13199,7 +13248,7 @@ uae_u32 wait_cpu_cycle_read(uaecptr addr, int mode)
 		int reg = 0x1000;
 		if (mode == -3) {
 			reg |= 2;
-			v = last_custom_value1;
+			v = regs.chipset_latch_rw;
 		} else if (mode < 0) {
 			reg |= 4;
 		} else if (mode > 0) {
@@ -13240,7 +13289,6 @@ uae_u32 wait_cpu_cycle_read(uaecptr addr, int mode)
 #endif
 
 	regs.chipset_latch_rw = v;
-	SETIFCHIP;
 		
 	x_do_cycles_post(CYCLE_UNIT, v);
 
@@ -13297,7 +13345,6 @@ uae_u32 wait_cpu_cycle_read_ce020(uaecptr addr, int mode)
 #endif
 
 	regs.chipset_latch_rw = v;
-	SETIFCHIP;
 		
 	x_do_cycles_post(CYCLE_UNIT, v);
 
@@ -13341,7 +13388,6 @@ void wait_cpu_cycle_write(uaecptr addr, int mode, uae_u32 v)
 	}
 
 	regs.chipset_latch_rw = v;
-	SETIFCHIP;
 		
 	x_do_cycles_post(CYCLE_UNIT, v);
 
@@ -13379,7 +13425,6 @@ void wait_cpu_cycle_write_ce020(uaecptr addr, int mode, uae_u32 v)
 	}
 
 	regs.chipset_latch_rw = v;
-	SETIFCHIP;
 		
 	// chipset buffer latches the write, CPU does
 	// not need to wait for the chipset cycle to finish.

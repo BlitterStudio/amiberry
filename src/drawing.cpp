@@ -3406,7 +3406,7 @@ static void do_color_changes(line_draw_func worker_border, line_draw_func worker
 		int shift = (hsync_shift_hack << lores_shift) * vidinfo->drawbuffer.pixbytes;
 		if (shift) {
 			int firstpos = visible_left_border * vidinfo->drawbuffer.pixbytes;
-			int lastpos = (visible_right_border - visible_left_border) * vidinfo->drawbuffer.pixbytes;
+			int lastpos = (visible_left_border + vidinfo->drawbuffer.inwidth) * vidinfo->drawbuffer.pixbytes;
 			memmove(xlinebuffer + firstpos, xlinebuffer + firstpos + shift, lastpos - firstpos - shift);
 			memset(xlinebuffer + lastpos - shift, 0, shift);
 		}
@@ -3686,20 +3686,21 @@ static void center_image (void)
 			}
 		}
 #endif
-	} else if (vidinfo->drawbuffer.extrawidth > 0 || currprefs.gfx_overscanmode == OVERSCANMODE_EXTREME) {
-		// extreme wide mode
-		visible_left_border = (hsync_end_left_border * 2 + 1) << currprefs.gfx_resolution;
 	} else if (ew == -1) {
 		// wide mode
-		visible_left_border = (hsync_end_left_border * 2) << currprefs.gfx_resolution;
+		int hs = hsync_end_left_border * 2;
+		if (currprefs.gfx_overscanmode >= OVERSCANMODE_BROADCAST) {
+			hs++;
+		}
+		visible_left_border = hs << currprefs.gfx_resolution;
 		if (visible_left_border + w < max_diwlastword) {
 			visible_left_border += (max_diwlastword - (visible_left_border + w) - 1) / 2;
 		}
 		if (ew > 0) {
 			visible_left_border -= (ew / 2) << currprefs.gfx_resolution;
 		}
-		if (visible_left_border < ((hsync_end_left_border * 2) << currprefs.gfx_resolution)) {
-			visible_left_border = (hsync_end_left_border * 2) << currprefs.gfx_resolution;
+		if (visible_left_border < (hs << currprefs.gfx_resolution)) {
+			visible_left_border = hs << currprefs.gfx_resolution;
 		}
 	} else if (ew < -1) {
 		// normal

@@ -459,8 +459,6 @@ extern uaecptr expamem_z3_pointer_real, expamem_z3_pointer_uae;
 extern uae_u32 expamem_z3_highram_real, expamem_z3_highram_uae;
 extern uae_u32 expamem_board_size;
 
-extern uae_u32 last_custom_value1;
-
 /* Default memory access functions */
 
 extern void dummy_put (uaecptr addr, int size, uae_u32 val);
@@ -530,8 +528,8 @@ extern void set_roms_modified (void);
 extern void reload_roms(void);
 extern bool read_kickstart_version(struct uae_prefs *p);
 extern void chipmem_setindirect(void);
-extern void initramboard(addrbank* ab, struct ramboard* rb);
-extern void loadboardfile(addrbank* ab, struct boardloadfile* lf);
+extern void initramboard(addrbank *ab, struct ramboard *rb);
+extern void loadboardfile(addrbank *ab, struct boardloadfile *lf);
 
 uae_u32 memory_get_long(uaecptr);
 uae_u32 memory_get_word(uaecptr);

@@ -74,6 +74,8 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <ConfigurationType>Makefile</ConfigurationType>
     <RemoteProjectRelDir>$(MSBuildProjectName)-Debug</RemoteProjectRelDir>
+    <RemoteCopyExcludeDirectories>D:\Github\amiberry\VSLinux;$(RemoteCopyExcludeDirectories)</RemoteCopyExcludeDirectories>
+    <RemoteRootDir>/home/midwan/projects</RemoteRootDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debux-DMX|ARM64'" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
