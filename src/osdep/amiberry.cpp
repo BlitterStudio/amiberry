@@ -1933,7 +1933,7 @@ void target_default_options(struct uae_prefs* p, int type)
 	_tcscpy(p->fullscreen_toggle, amiberry_options.default_fullscreen_toggle_key);
 
 	p->alt_tab_release = false;
-	p->sound_pullmode = 0;
+	p->sound_pullmode = amiberry_options.default_sound_pull;
 	p->input_analog_remap = false;
 
 	p->use_retroarch_quit = amiberry_options.default_retroarch_quit;
@@ -2559,6 +2559,10 @@ void save_amiberry_settings(void)
 	snprintf(buffer, MAX_DPATH, "default_sound_buffer=%d\n", amiberry_options.default_sound_buffer);
 	fputs(buffer, f);
 
+	// Default Sound Mode (Pull/Push)
+	snprintf(buffer, MAX_DPATH, "default_sound_pull=%s\n", amiberry_options.default_sound_pull ? "yes" : "no");
+	fputs(buffer, f);
+
 	// Default Joystick Deadzone
 	snprintf(buffer, MAX_DPATH, "default_joystick_deadzone=%d\n", amiberry_options.default_joystick_deadzone);
 	fputs(buffer, f);
@@ -2819,6 +2823,7 @@ void load_amiberry_settings(void)
 					cfgfile_yesno(option, value, "default_fullscreen", &amiberry_options.default_fullscreen);
 					cfgfile_intval(option, value, "default_stereo_separation", &amiberry_options.default_stereo_separation, 1);
 					cfgfile_intval(option, value, "default_sound_buffer", &amiberry_options.default_sound_buffer, 1);
+					cfgfile_yesno(option, value, "default_sound_pull", &amiberry_options.default_sound_pull);
 					cfgfile_intval(option, value, "default_joystick_deadzone", &amiberry_options.default_joystick_deadzone, 1);
 					cfgfile_yesno(option, value, "default_retroarch_quit", &amiberry_options.default_retroarch_quit);
 					cfgfile_yesno(option, value, "default_retroarch_menu", &amiberry_options.default_retroarch_menu);
