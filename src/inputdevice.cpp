@@ -8970,6 +8970,9 @@ void warpmode (int mode)
 	rp_turbo_cpu (currprefs.turbo_emulation);
 #endif
 	changed_prefs.turbo_emulation = currprefs.turbo_emulation;
+#ifdef AMIBERRY
+	SDL2_toggle_vsync(!currprefs.turbo_emulation);
+#endif
 	set_config_changed ();
 	setsystime ();
 }

@@ -73,6 +73,7 @@ bool isModeAspectRatioExact(SDL_DisplayMode* mode, const int width, const int he
 	return mode->w % width == 0 && mode->h % height == 0;
 }
 
+#if 0
 static bool SDL2_renderframe(int monid, int mode, bool immediate)
 {
 	SDL_RenderCopyEx(sdl_renderer, amiga_texture, nullptr, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
@@ -87,6 +88,7 @@ static void SDL2_free()
 		amiga_texture = nullptr;
 	}
 }
+#endif
 
 static float SDL2_getrefreshrate(int monid)
 {
@@ -978,6 +980,31 @@ static void open_screen(struct uae_prefs* p)
 	picasso_refresh(mon->monitor_id);
 
 	setmouseactive(mon->monitor_id, -1);
+}
+
+void SDL2_toggle_vsync(bool vsync)
+{
+	struct AmigaMonitor* mon = &AMonitors[0];
+
+	if (sdl_renderer)
+	{
+		SDL_DestroyRenderer(sdl_renderer);
+		sdl_renderer = nullptr;
+	}
+
+	Uint32 flags;
+	if (vsync)
+	{
+		flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
+	}
+	else
+	{
+		flags = SDL_RENDERER_ACCELERATED;
+	}
+	sdl_renderer = SDL_CreateRenderer(mon->sdl_window, -1, flags);
+	check_error_sdl(sdl_renderer == nullptr, "Unable to create a renderer:");
+
+	open_screen(&currprefs);
 }
 
 extern int vstrt; // vertical start
