@@ -493,6 +493,7 @@ bool mapped_malloc(addrbank* ab)
 			// fill end of ram with ILLEGAL to catch direct PC falling out of RAM.
 			put_long_host(ab->baseaddr + ab->reserved_size, 0x4afc4afc);
 		}
+		ab->startaccessmask = ab->start & ab->mask;
 		ab->allocated_size = ab->reserved_size;
 		write_log("mapped_malloc(): 0x%08x - 0x%08x (0x%08x - 0x%08x) -> %s (%s)\n",
 			ab->baseaddr - regs.natmem_offset, ab->baseaddr - regs.natmem_offset + ab->allocated_size,

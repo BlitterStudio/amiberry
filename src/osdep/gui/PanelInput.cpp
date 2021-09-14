@@ -71,12 +71,11 @@ static gcn::DropDown* joysm[] = { cboPort0mode, cboPort1mode, nullptr, nullptr }
 static gcn::DropDown* joysaf[] = { cboPort0Autofire, cboPort1Autofire, cboPort2Autofire, cboPort3Autofire };
 static gcn::DropDown* joysmm[] = { cboPort0mousemode, cboPort1mousemode, nullptr, nullptr };
 
-class StringListModel : public gcn::ListModel
+class string_list_model : public gcn::ListModel
 {
-private:
-	std::vector<std::string> values;
+	std::vector<std::string> values{};
 public:
-	StringListModel(const char* entries[], const int count)
+	string_list_model(const char* entries[], const int count)
 	{
 		for (auto i = 0; i < count; ++i)
 			values.emplace_back(entries[i]);
@@ -87,12 +86,17 @@ public:
 		return values.size();
 	}
 
-	int add_element(const char* Elem)
+	int add_element(const char* elem) override
 	{
-		values.emplace_back(Elem);
+		values.emplace_back(elem);
 		return 0;
 	}
 
+	void clear_elements() override
+	{
+		values.clear();
+	}
+	
 	std::string getElementAt(const int i) override
 	{
 		if (i < 0 || i >= static_cast<int>(values.size()))
@@ -101,20 +105,20 @@ public:
 	}
 };
 
-static StringListModel ctrlPortList(nullptr, 0);
+static string_list_model ctrlPortList(nullptr, 0);
 static int portListIDs[MAX_INPUT_DEVICES + JSEM_LASTKBD + 1];
 
 const char* autoFireValues[] = { "No autofire", "Autofire", "Autofire (toggle)", "Autofire (always)" };
-StringListModel autoFireList(autoFireValues, 4);
+string_list_model autoFireList(autoFireValues, 4);
 
 const char* autoFireRateValues[] = { "Off", "Slow", "Medium", "Fast" };
-StringListModel autoFireRateList(autoFireRateValues, 4);
+string_list_model autoFireRateList(autoFireRateValues, 4);
 
 const char* mousemapValues[] = { "None", "Left", "Right", "Both" };
-StringListModel ctrlPortMouseModeList(mousemapValues, 4);
+string_list_model ctrlPortMouseModeList(mousemapValues, 4);
 
 const char* joyportmodes[] = { "Default", "Wheel Mouse", "Mouse", "Joystick", "Gamepad", "Analog Joystick", "CDTV remote mouse", "CD32 pad"};
-StringListModel ctrlPortModeList(joyportmodes, 8);
+string_list_model ctrlPortModeList(joyportmodes, 8);
 
 class InputPortsActionListener : public gcn::ActionListener
 {

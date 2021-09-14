@@ -78,6 +78,17 @@ public:
 		return mode.size();
 	}
 
+	int add_element(const char* elem) override
+	{
+		mode.emplace_back(elem);
+		return 0;
+	}
+
+	void clear_elements() override
+	{
+		mode.clear();
+	}
+	
 	std::string getElementAt(int i) override
 	{
 		if (i < 0 || i >= static_cast<int>(mode.size()))
@@ -108,6 +119,17 @@ public:
 		mode.emplace_back("0%");
 	}
 
+	int add_element(const char* elem) override
+	{
+		mode.emplace_back(elem);
+		return 0;
+	}
+
+	void clear_elements() override
+	{
+		mode.clear();
+	}
+	
 	int getNumberOfElements() override
 	{
 		return mode.size();
@@ -143,6 +165,17 @@ public:
 		mode.emplace_back("10");
 	}
 
+	int add_element(const char* elem) override
+	{
+		mode.emplace_back(elem);
+		return 0;
+	}
+
+	void clear_elements() override
+	{
+		mode.clear();
+	}
+	
 	int getNumberOfElements() override
 	{
 		return mode.size();
@@ -177,6 +210,17 @@ public:
 		return freq.size();
 	}
 
+	int add_element(const char* elem) override
+	{
+		freq.emplace_back(elem);
+		return 0;
+	}
+
+	void clear_elements() override
+	{
+		freq.clear();
+	}
+	
 	std::string getElementAt(const int i) override
 	{
 		if (i < 0 || i >= static_cast<int>(freq.size()))
@@ -206,6 +250,17 @@ public:
 		return entry.size();
 	}
 
+	int add_element(const char* elem) override
+	{
+		entry.emplace_back(elem);
+		return 0;
+	}
+
+	void clear_elements() override
+	{
+		entry.clear();
+	}
+	
 	std::string getElementAt(const int i) override
 	{
 		if (i < 0 || i >= static_cast<int>(entry.size()))
@@ -230,6 +285,17 @@ public:
 		entry.emplace_back("Always on (A1200)");
 	}
 
+	int add_element(const char* elem) override
+	{
+		entry.emplace_back(elem);
+		return 0;
+	}
+
+	void clear_elements() override
+	{
+		entry.clear();
+	}
+	
 	int getNumberOfElements() override
 	{
 		return entry.size();
@@ -558,7 +624,7 @@ void InitPanelSound(const struct _ConfigCategory& category)
 	sldSoundBufferSize->setSize(170, SLIDER_HEIGHT);
 	sldSoundBufferSize->setBaseColor(gui_baseCol);
 	sldSoundBufferSize->setMarkerLength(20);
-	sldSoundBufferSize->setStepLength(10);
+	sldSoundBufferSize->setStepLength(1);
 	sldSoundBufferSize->setId("sldSoundBufferSize");
 	sldSoundBufferSize->addActionListener(sound_action_listener);
 	lblSoundBufferSize = new gcn::Label("Min");

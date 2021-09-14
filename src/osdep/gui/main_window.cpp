@@ -46,49 +46,43 @@ void target_startup_msg(const TCHAR* title, const TCHAR* msg)
 }
 
 ConfigCategory categories[] = {
-	{
-		"About", "data/amigainfo.ico", nullptr, nullptr, InitPanelAbout, ExitPanelAbout, RefreshPanelAbout,
+	{"About", "data/amigainfo.ico", nullptr, nullptr, InitPanelAbout, ExitPanelAbout, RefreshPanelAbout,
 		HelpPanelAbout
 	},
 	{"Paths", "data/paths.ico", nullptr, nullptr, InitPanelPaths, ExitPanelPaths, RefreshPanelPaths, HelpPanelPaths},
-	{
-		"Quickstart", "data/quickstart.ico", nullptr, nullptr, InitPanelQuickstart, ExitPanelQuickstart,
+	{"Quickstart", "data/quickstart.ico", nullptr, nullptr, InitPanelQuickstart, ExitPanelQuickstart,
 		RefreshPanelQuickstart, HelpPanelQuickstart
 	},
-	{
-		"Configurations", "data/file.ico", nullptr, nullptr, InitPanelConfig, ExitPanelConfig, RefreshPanelConfig,
+	{"Configurations", "data/file.ico", nullptr, nullptr, InitPanelConfig, ExitPanelConfig, RefreshPanelConfig,
 		HelpPanelConfig
 	},
 	{"CPU and FPU", "data/cpu.ico", nullptr, nullptr, InitPanelCPU, ExitPanelCPU, RefreshPanelCPU, HelpPanelCPU},
-	{
-		"Chipset", "data/cpu.ico", nullptr, nullptr, InitPanelChipset, ExitPanelChipset, RefreshPanelChipset,
+	{"Chipset", "data/cpu.ico", nullptr, nullptr, InitPanelChipset, ExitPanelChipset, RefreshPanelChipset,
 		HelpPanelChipset
 	},
 	{"ROM", "data/chip.ico", nullptr, nullptr, InitPanelROM, ExitPanelROM, RefreshPanelROM, HelpPanelROM},
 	{"RAM", "data/chip.ico", nullptr, nullptr, InitPanelRAM, ExitPanelRAM, RefreshPanelRAM, HelpPanelRAM},
-	{
-		"Floppy drives", "data/35floppy.ico", nullptr, nullptr, InitPanelFloppy, ExitPanelFloppy, RefreshPanelFloppy,
+	{"Floppy drives", "data/35floppy.ico", nullptr, nullptr, InitPanelFloppy, ExitPanelFloppy, RefreshPanelFloppy,
 		HelpPanelFloppy
 	},
 	{"Hard drives/CD", "data/drive.ico", nullptr, nullptr, InitPanelHD, ExitPanelHD, RefreshPanelHD, HelpPanelHD},
-	{
-		"RTG board", "data/expansion.ico", nullptr, nullptr, InitPanelRTG, ExitPanelRTG,
+	{"Expansions", "data/expansion.ico", nullptr, nullptr, InitPanelExpansions, ExitPanelExpansions,
+		RefreshPanelExpansions, HelpPanelExpansions},
+	{"RTG board", "data/expansion.ico", nullptr, nullptr, InitPanelRTG, ExitPanelRTG,
 		RefreshPanelRTG, HelpPanelRTG
 	},
-	{
-		"Display", "data/screen.ico", nullptr, nullptr, InitPanelDisplay, ExitPanelDisplay, RefreshPanelDisplay,
+	{"Hardware info", "data/expansion.ico", nullptr, nullptr, InitPanelHWInfo, ExitPanelHWInfo, RefreshPanelHWInfo, HelpPanelHWInfo},
+	{"Display", "data/screen.ico", nullptr, nullptr, InitPanelDisplay, ExitPanelDisplay, RefreshPanelDisplay,
 		HelpPanelDisplay
 	},
 	{"Sound", "data/sound.ico", nullptr, nullptr, InitPanelSound, ExitPanelSound, RefreshPanelSound, HelpPanelSound},
 	{"Input", "data/joystick.ico", nullptr, nullptr, InitPanelInput, ExitPanelInput, RefreshPanelInput, HelpPanelInput},
-	{
-		"Custom controls", "data/controller.png", nullptr, nullptr, InitPanelCustom, ExitPanelCustom,
+	{"Custom controls", "data/controller.png", nullptr, nullptr, InitPanelCustom, ExitPanelCustom,
 		RefreshPanelCustom, HelpPanelCustom
 	},
 	{"Miscellaneous", "data/misc.ico", nullptr, nullptr, InitPanelMisc, ExitPanelMisc, RefreshPanelMisc, HelpPanelMisc},
 	{ "Priority", "data/misc.ico", nullptr, nullptr, InitPanelPrio, ExitPanelPrio, RefreshPanelPrio, HelpPanelPrio},
-	{
-		"Savestates", "data/savestate.png", nullptr, nullptr, InitPanelSavestate, ExitPanelSavestate,
+	{"Savestates", "data/savestate.png", nullptr, nullptr, InitPanelSavestate, ExitPanelSavestate,
 		RefreshPanelSavestate, HelpPanelSavestate
 	},
 #ifdef ANDROID
@@ -109,6 +103,9 @@ enum
 	PANEL_RAM,
 	PANEL_FLOPPY,
 	PANEL_HD,
+	PANEL_EXPANSIONS,
+	PANEL_RTG,
+	PANEL_HWINFO,
 	PANEL_DISPLAY,
 	PANEL_SOUND,
 	PANEL_INPUT,
@@ -132,6 +129,7 @@ SDL_Event touch_event;
 DISPMANX_RESOURCE_HANDLE_T gui_resource;
 DISPMANX_RESOURCE_HANDLE_T black_gui_resource;
 DISPMANX_ELEMENT_HANDLE_T gui_element;
+DISPMANX_ELEMENT_HANDLE_T gui_black_element;
 int element_present = 0;
 #else
 SDL_Texture* gui_texture;
@@ -355,8 +353,8 @@ void init_dispmanx_gui()
 		alpha.opacity = 255;
 		alpha.mask = 0;
 
-		if (!blackscreen_element)
-			blackscreen_element = vc_dispmanx_element_add(updateHandle, displayHandle, 0,
+		if (!gui_black_element)
+			gui_black_element = vc_dispmanx_element_add(updateHandle, displayHandle, 0,
 				&black_rect, black_gui_resource, &src_rect, DISPMANX_PROTECTION_NONE, &alpha,
 				nullptr, DISPMANX_NO_ROTATE);
 
@@ -372,9 +370,9 @@ void init_dispmanx_gui()
 
 void amiberry_gui_init()
 {
-	struct AmigaMonitor* mon = &AMonitors[0];
-	sdl_video_driver = SDL_GetCurrentVideoDriver();
+	struct AmigaMonitor* mon = &AMonitors[0];	
 #ifndef USE_DISPMANX
+	sdl_video_driver = SDL_GetCurrentVideoDriver();
 	SDL_GetCurrentDisplayMode(0, &sdlMode);
 #endif
 	
@@ -448,7 +446,7 @@ void amiberry_gui_init()
 		sdl_renderer = SDL_CreateRenderer(mon->sdl_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 		check_error_sdl(sdl_renderer == nullptr, "Unable to create a renderer:");
 	}
-	
+
 	// make the scaled rendering look smoother (linear scaling).
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 
@@ -504,13 +502,13 @@ void amiberry_gui_halt()
 #ifdef USE_DISPMANX
 	if (element_present == 1)
 	{
-		element_present = 0;
 		updateHandle = vc_dispmanx_update_start(0);
 		vc_dispmanx_element_remove(updateHandle, gui_element);
-		gui_element = 0;
-		vc_dispmanx_element_remove(updateHandle, blackscreen_element);
-		blackscreen_element = 0;
+		vc_dispmanx_element_remove(updateHandle, gui_black_element);
 		vc_dispmanx_update_submit_sync(updateHandle);
+		gui_element = 0;
+		gui_black_element = 0;
+		element_present = 0;
 	}
 	
 	if (gui_resource)
@@ -524,8 +522,11 @@ void amiberry_gui_halt()
 		vc_dispmanx_resource_delete(black_gui_resource);
 		black_gui_resource = 0;
 	}
-	if (displayHandle)
-		vc_dispmanx_display_close(displayHandle);
+	//if (displayHandle)
+	//{
+	//	vc_dispmanx_display_close(displayHandle);
+	//	displayHandle = 0;
+	//}
 #else
 	if (gui_texture != nullptr)
 	{
@@ -539,9 +540,6 @@ void amiberry_gui_halt()
 		cursor = nullptr;
 	}
 #endif	
-	// Clear the screen
-	SDL_RenderClear(sdl_renderer);
-	SDL_RenderPresent(sdl_renderer);
 }
 
 void check_input()
@@ -571,7 +569,9 @@ void check_input()
 				got_event = 1;
 				const int hat = SDL_JoystickGetHat(gui_joystick, 0);
 				
-				if (gui_event.jbutton.button == static_cast<Uint8>(button_for_gui))
+				if (gui_event.jbutton.button == static_cast<Uint8>(button_for_gui) || (
+					SDL_JoystickGetButton(gui_joystick, did->mapping.menu_button) &&
+					SDL_JoystickGetButton(gui_joystick, did->mapping.hotkey_button)))
 				{
 					if (emulating && cmdStart->isEnabled())
 					{

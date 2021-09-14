@@ -13,7 +13,6 @@
 #include "uae.h"
 #include "xwin.h"
 
-const int remap_buttons = 16;
 #define REMAP_BUTTONS        16
 #define MAX_MOUSE_BUTTONS	  3
 #define MAX_MOUSE_AXES        4
@@ -71,6 +70,7 @@ static void fill_default_controller()
 	default_controller_map.hotkey_button = SDL_CONTROLLER_BUTTON_INVALID;
 	default_controller_map.quit_button = SDL_CONTROLLER_BUTTON_INVALID;
 	default_controller_map.reset_button = SDL_CONTROLLER_BUTTON_INVALID;
+	default_controller_map.menu_button = SDL_CONTROLLER_BUTTON_INVALID;
 
 	default_controller_map.lstick_axis_y_invert = false;
 	default_controller_map.lstick_axis_x_invert = false;
@@ -93,6 +93,7 @@ static void fill_blank_controller()
 	default_controller_map.hotkey_button = SDL_CONTROLLER_BUTTON_INVALID;
 	default_controller_map.quit_button = SDL_CONTROLLER_BUTTON_INVALID;
 	default_controller_map.reset_button = SDL_CONTROLLER_BUTTON_INVALID;
+	default_controller_map.menu_button = SDL_CONTROLLER_BUTTON_INVALID;
 
 	default_controller_map.lstick_axis_y_invert = false;
 	default_controller_map.lstick_axis_x_invert = false;
@@ -180,11 +181,14 @@ int keyhack (int scancode, int pressed, int num)
 {
 	static unsigned char backslashstate, apostrophstate;
 	const Uint8* state = SDL_GetKeyboardState(NULL);
-	
-	// release mouse if TAB and ALT is pressed
-	if (pressed && state[SDL_SCANCODE_LALT] && scancode == SDL_SCANCODE_TAB) {
-		disablecapture();
-		return -1;
+
+	// release mouse if TAB and ALT is pressed (but only if option is enabled)
+	if (currprefs.alt_tab_release)
+	{
+		if (pressed && state[SDL_SCANCODE_LALT] && scancode == SDL_SCANCODE_TAB) {
+			disablecapture();
+			return -1;
+		}
 	}
 
 	if (!keyboard_german)
@@ -660,6 +664,10 @@ static int init_joystick()
 	get_configuration_path(cfg, MAX_DPATH);
 	strcat(cfg, "gamecontrollerdb.txt");
 	SDL_GameControllerAddMappingsFromFile(cfg);
+
+	get_controllers_path(cfg, MAX_DPATH);
+	strcat(cfg, "gamecontrollerdb_user.txt");
+	SDL_GameControllerAddMappingsFromFile(cfg);
 	
 	// Possible scenarios:
 	// 1 - Controller is an SDL2 Game Controller, no retroarch file: we use the default mapping
@@ -734,37 +742,41 @@ static int init_joystick()
 			write_log("Retroarch controller cfg file found, using that for mapping\n");
 			fill_blank_controller();
 			did->mapping = default_controller_map;
-			did->mapping = map_from_retroarch(did->mapping, retroarch_config_file);
-
-			// WIP - not fully functional yet
-			//
-			//std::string binding;
-			//binding.assign(guid_str);
-			//binding += ",";
-			//binding += joystick_name[cpt];
-			//binding += ",platform:Linux";
-
-			//const auto map = binding_from_retroarch(cpt, retroarch_config_file);
-			//binding += map;
-
-			//// examples:
-			//// 341a3608000000000000504944564944,Afterglow PS3 Controller,a:b1,b:b2,y:b3,x:b0,start:b9,guide:b12,back:b8,dpup:h0.1,dpleft:h0.8,dpdown:h0.4,dpright:h0.2,leftshoulder:b4,rightshoulder:b5,leftstick:b10,rightstick:b11,leftx:a0,lefty:a1,rightx:a2,righty:a3,lefttrigger:b6,righttrigger:b7
-			//// 03000000c0160000dc27000001010000,OnyxSoft Dual JoyDivision,platform:Linux,a:b0,b:b1,x:b2,y:b3,start:b6,leftshoulder:b4,rightshoulder:b5,dpup:-a1,dpdown:+a1,dpleft:-a0,dpright:+a0,
-			//// 030000005e0400008e02000014010000,Xbox 360 Controller,platform:Linux,a:b0,b:b1,x:b2,y:b3,back:b6,start:b7,leftshoulder:b4,rightshoulder:b5,dpup:h0.1,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,
-
-			//const auto success = SDL_GameControllerAddMapping(binding.c_str());
-			//if (success == 1)
-			//	write_log("Game Controller binding added as \"%s\".\n", binding.c_str());
-			//else if (success == 0)
-			//	write_log("Game Controller binding updated as \"%s\".\n", binding.c_str());
-			//else if (success == -1)
-			//	write_log("Failed to add/update Game Controller binding! SDL Error: %s\n", SDL_GetError());
+			did->mapping = map_from_retroarch(did->mapping, retroarch_config_file, -1);
 		}
 		else
 		{
-			fill_default_controller();
-			did->mapping = default_controller_map;
-			write_log("No Retroarch controller cfg file found, using the default mapping\n");			
+			// Check if values are in retroarch.cfg
+			char retroarch_file[MAX_DPATH];
+			get_retroarch_file(retroarch_file, MAX_DPATH);
+			if (my_existsfile(retroarch_file))
+			{
+				int foundPlayer = -1;
+				for (auto p = 1; p < 5; p++) {
+					int pindex = find_retroarch(("input_player" + to_string(p) + "_joypad_index").c_str(), retroarch_file);
+					if (pindex == i) {
+						foundPlayer = p;
+						break;
+					}
+				}
+				if (foundPlayer != -1) {
+					write_log("Controller index found in retroarch cfg, using that for mapping\n");
+					fill_blank_controller();
+					did->mapping = default_controller_map;
+					did->mapping = map_from_retroarch(did->mapping, retroarch_file, foundPlayer);
+				}
+				else {
+					fill_default_controller();
+					did->mapping = default_controller_map;
+					write_log("No controller index found in retroarch cfg, using the default mapping\n");
+				}
+			}
+			else
+			{
+				fill_default_controller();
+				did->mapping = default_controller_map;
+				write_log("No Retroarch controller cfg file found, using the default mapping\n");
+			}
 		}
 
 		if (did->mapping.hotkey_button != SDL_CONTROLLER_BUTTON_INVALID)
@@ -917,7 +929,9 @@ static void read_joystick()
 	for (auto i = 0; i < MAX_INPUT_DEVICES; i++)
 	{
 		struct didata* did = &di_joystick[i];
-		if (!did->acquired)
+		//if (!did->acquired)
+		//	continue;
+		if (did->name == "")
 			continue;
 		if (isfocus() || currprefs.inactive_input & 4)
 		{
@@ -926,18 +940,18 @@ static void read_joystick()
 			// detect standalone retroarch hotkeys
 			if (did->mapping.hotkey_button == SDL_CONTROLLER_BUTTON_INVALID)
 			{
-				if (did->mapping.button[SDL_CONTROLLER_BUTTON_GUIDE] != SDL_CONTROLLER_BUTTON_INVALID)
+				if (did->mapping.menu_button != SDL_CONTROLLER_BUTTON_INVALID)
 				{
 					if (did->mapping.is_retroarch || !did->is_controller)
 					{
 						setjoybuttonstate(i, 14,
-							SDL_JoystickGetButton(did->joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_GUIDE]) & 1);
+							SDL_JoystickGetButton(did->joystick, did->mapping.menu_button) & 1);
 					}
 					else
 					{
 						setjoybuttonstate(i, 14,
 							SDL_GameControllerGetButton(did->controller,
-								static_cast<SDL_GameControllerButton>(did->mapping.button[SDL_CONTROLLER_BUTTON_GUIDE])) & 1);
+								static_cast<SDL_GameControllerButton>(did->mapping.menu_button)) & 1);
 					}
 				}
 				if (did->mapping.quit_button != SDL_CONTROLLER_BUTTON_INVALID)
@@ -976,7 +990,7 @@ static void read_joystick()
 				{
 					held_offset = REMAP_BUTTONS;
 					setjoybuttonstate(i, 14,
-						SDL_JoystickGetButton(did->joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_GUIDE]) & 1);
+						SDL_JoystickGetButton(did->joystick, did->mapping.menu_button) & 1);
 					setjoybuttonstate(i, 15,
 						SDL_JoystickGetButton(did->joystick, did->mapping.quit_button) & 1);
 					setjoybuttonstate(i, 30,
@@ -987,7 +1001,7 @@ static void read_joystick()
 			{
 				held_offset = REMAP_BUTTONS;
 				setjoybuttonstate(i, 14,
-					SDL_GameControllerGetButton(did->controller, static_cast<SDL_GameControllerButton>(did->mapping.button[SDL_CONTROLLER_BUTTON_GUIDE])) & 1);
+					SDL_GameControllerGetButton(did->controller, static_cast<SDL_GameControllerButton>(did->mapping.menu_button)) & 1);
 				setjoybuttonstate(i, 15,
 					SDL_GameControllerGetButton(did->controller, static_cast<SDL_GameControllerButton>(did->mapping.quit_button)) & 1);
 				setjoybuttonstate(i, 30,
@@ -1067,7 +1081,7 @@ static void read_joystick()
 				}
 			}
 
-			// cd32 red, blue, green, yellow
+			// A/B/X/Y --> CD32 red, blue, green, yellow
 			for (auto button = 0; button <= SDL_CONTROLLER_BUTTON_Y; button++)
 			{
 				if (did->mapping.button[button] != SDL_CONTROLLER_BUTTON_INVALID)
@@ -1082,7 +1096,7 @@ static void read_joystick()
 				}
 			}
 
-			// cd32  rwd, ffw
+			// LShoulder/RShoulder --> CD32 rwd, ffw
 			for (int button = SDL_CONTROLLER_BUTTON_LEFTSHOULDER; button <= SDL_CONTROLLER_BUTTON_RIGHTSHOULDER; button++)
 			{
 				if (did->mapping.button[button] != SDL_CONTROLLER_BUTTON_INVALID)
@@ -1097,7 +1111,19 @@ static void read_joystick()
 				}
 			}
 
-			// start
+			// Guide button
+			if (did->mapping.button[SDL_CONTROLLER_BUTTON_GUIDE] != SDL_CONTROLLER_BUTTON_INVALID)
+			{
+				int state;
+				if (did->mapping.is_retroarch || !did->is_controller)
+					state = SDL_JoystickGetButton(did->joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_GUIDE]) & 1;
+				else
+					state = SDL_GameControllerGetButton(did->controller,
+						static_cast<SDL_GameControllerButton>(did->mapping.button[SDL_CONTROLLER_BUTTON_GUIDE])) & 1;
+				setjoybuttonstate(i, 31, state);
+			}
+
+			// Start button
 			if (did->mapping.button[SDL_CONTROLLER_BUTTON_START] != SDL_CONTROLLER_BUTTON_INVALID)
 			{
 				int state;
@@ -1109,7 +1135,7 @@ static void read_joystick()
 				setjoybuttonstate(i, 6 + held_offset, state);
 			}
 
-			// up down left right
+			// D-pad Up, Down, Left, Right
 			for (int button = SDL_CONTROLLER_BUTTON_DPAD_UP; button <= SDL_CONTROLLER_BUTTON_DPAD_RIGHT; button++)
 			{
 				int state;
@@ -1137,7 +1163,7 @@ static void read_joystick()
 				setjoybuttonstate(i, button - 4 + held_offset, state);
 			}
 
-			// stick left/right
+			// Left/Right Stick buttons
 			for (int button = SDL_CONTROLLER_BUTTON_LEFTSTICK; button <= SDL_CONTROLLER_BUTTON_RIGHTSTICK; button++)
 			{
 				if (did->mapping.button[button] != -1)
@@ -1152,7 +1178,7 @@ static void read_joystick()
 				}
 			}
 
-			// select button
+			// Select button
 			if (did->mapping.button[SDL_CONTROLLER_BUTTON_BACK] != SDL_CONTROLLER_BUTTON_INVALID)
 			{
 				int state;
@@ -1161,7 +1187,7 @@ static void read_joystick()
 				else
 					state = SDL_GameControllerGetButton(did->controller,
 						static_cast<SDL_GameControllerButton>(did->mapping.button[SDL_CONTROLLER_BUTTON_BACK])) & 1;
-				setjoybuttonstate(i + 1, 13 + held_offset, state);
+				setjoybuttonstate(i, 13 + held_offset, state);
 			}
 		}
 	}
@@ -1378,6 +1404,16 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 			event++;
 		}
 
+		event = port ? INPUTEVENT_PAR_JOY2_2ND_BUTTON : INPUTEVENT_PAR_JOY1_2ND_BUTTON;
+		for (int x = SDL_CONTROLLER_BUTTON_X; x <= SDL_CONTROLLER_BUTTON_Y; x++)
+		{
+			if (!thismap[0][x])
+			{
+				thismap[0][x] = event;
+			}
+			event++;
+		}
+
 		event = INPUTEVENT_KEY_P;
 		if (!thismap[0][SDL_CONTROLLER_BUTTON_START])
 		{
@@ -1407,20 +1443,22 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 		for (int x = SDL_CONTROLLER_BUTTON_A; x <= SDL_CONTROLLER_BUTTON_Y; x++)
 			setid(uid, i, ID_BUTTON_OFFSET + x + function_offset, 0, port, thismap[n][x], af, gp);
 
-		// left shoulder / right shoulder / start  
+		// Left/Right shoulder 
 		for (int x = SDL_CONTROLLER_BUTTON_LEFTSHOULDER; x <= SDL_CONTROLLER_BUTTON_RIGHTSHOULDER; x++)
 			setid(uid, i, ID_BUTTON_OFFSET + (x - 5) + function_offset, 0, port, thismap[n][x], af, gp);
 
+		// Start button
 		setid(uid, i, ID_BUTTON_OFFSET + 6 + function_offset, 0, port, thismap[n][SDL_CONTROLLER_BUTTON_START], gp);
 
-		// directions
+		// D-pad Up/Down/Left/Right
 		for (int x = SDL_CONTROLLER_BUTTON_DPAD_UP; x <= SDL_CONTROLLER_BUTTON_DPAD_RIGHT; x++)
 			setid(uid, i, ID_BUTTON_OFFSET + (x - 4) + function_offset, 0, port, thismap[n][x], af, gp);
 
-		// stick buttons
+		// Left/Right Stick buttons
 		for (int x = SDL_CONTROLLER_BUTTON_LEFTSTICK; x <= SDL_CONTROLLER_BUTTON_RIGHTSTICK; x++)
 			setid(uid, i, ID_BUTTON_OFFSET + (x + 4) + function_offset, 0, port, thismap[n][x], af, gp);
 		
+		// Back/Select button
 		setid(uid, i, ID_BUTTON_OFFSET + 13 + function_offset, 0, port, thismap[n][SDL_CONTROLLER_BUTTON_BACK], gp);
 	}
 
@@ -1433,6 +1471,9 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 	
 	if (currprefs.use_retroarch_reset)
 		setid(uid, i, ID_BUTTON_OFFSET + 30, 0, port, INPUTEVENT_SPC_SOFTRESET, gp);
+
+	// Guide button
+	setid(uid, i, ID_BUTTON_OFFSET + 31, 0, port, thismap[0][SDL_CONTROLLER_BUTTON_GUIDE], gp);
 
 	if (i >= 0 && i < num_joystick)
 		return 1;

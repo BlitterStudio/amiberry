@@ -67,7 +67,7 @@ struct winuae_currentmode {
 	int freq;
 };
 
-#define MAX_AMIGAMONITORS 4
+#define MAX_AMIGAMONITORS 1
 struct AmigaMonitor {
 	int monitor_id;
 	SDL_Window* sdl_window;
@@ -122,7 +122,6 @@ extern VC_RECT_T dst_rect;
 extern VC_RECT_T blit_rect;
 extern VC_RECT_T black_rect;
 extern VC_IMAGE_TYPE_T rgb_mode;
-extern void change_layer_number(int layer);
 #else
 extern SDL_Texture* amiga_texture;
 extern SDL_Cursor* cursor;
@@ -154,3 +153,4 @@ void DX_Blit(int x, int y, int w, int h);
 struct MultiDisplay* getdisplay(struct uae_prefs* p, int monid);
 extern int getrefreshrate(int monid, int width, int height);
 void SDL2_guimode(int monid, int guion);
+void SDL2_toggle_vsync(bool vsync);

@@ -11,11 +11,11 @@
 #include "custom.h"
 #include "gui_handling.h"
 
-class StringListModel : public gcn::ListModel
+class string_list_model : public gcn::ListModel
 {
-	std::vector<std::string> values;
+	std::vector<std::string> values{};
 public:
-	StringListModel(const char* entries[], const int count)
+	string_list_model(const char* entries[], const int count)
 	{
 		for (auto i = 0; i < count; ++i)
 			values.emplace_back(entries[i]);
@@ -26,12 +26,17 @@ public:
 		return values.size();
 	}
 
-	int add_element(const char* Elem)
+	int add_element(const char* Elem) override
 	{
 		values.emplace_back(Elem);
 		return 0;
 	}
 
+	void clear_elements() override
+	{
+		values.clear();
+	}
+	
 	std::string getElementAt(const int i) override
 	{
 		if (i < 0 || i >= static_cast<int>(values.size()))
@@ -48,16 +53,16 @@ const int amigaheight_values[] = { 400, 480, 512, 568 };
 const int fullscreen_width_values[] = { 640, 720, 800, 1024, 1280, 1280, 1920 };
 const int fullscreen_height_values[] = { 480, 576, 600, 768, 720, 1024, 1080 };
 const char* fullscreen_resolutions[] = { "640x480", "720x576", "800x600", "1024x768", "1280x720", "1280x1024", "1920x1080" };
-StringListModel fullscreen_resolutions_list(fullscreen_resolutions, 7);
+string_list_model fullscreen_resolutions_list(fullscreen_resolutions, 7);
 
 const char* fullscreen_modes[] = { "Windowed", "Fullscreen", "Full-window" };
-StringListModel fullscreen_modes_list(fullscreen_modes, 3);
+string_list_model fullscreen_modes_list(fullscreen_modes, 3);
 
 const char* resolution[] = { "LowRes", "HighRes (normal)", "SuperHighRes" };
-StringListModel resolution_list(resolution, 3);
+string_list_model resolution_list(resolution, 3);
 
 const char* scaling_method[] = { "Auto", "Pixelated", "Smooth" };
-StringListModel scaling_method_list(scaling_method, 3);
+string_list_model scaling_method_list(scaling_method, 3);
 
 static gcn::Window* grpAmigaScreen;
 static gcn::Label* lblAmigaWidth;

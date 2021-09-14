@@ -1,5 +1,5 @@
 # Specify "make PLATFORM=<platform>" to compile for a specific target.
-# Check the supported list of platforms below for a ful list
+# Check the supported list of platforms below for a full list
 
 #
 ## Common options for all targets
@@ -8,13 +8,12 @@ SDL_CONFIG ?= sdl2-config
 export SDL_CFLAGS := $(shell $(SDL_CONFIG) --cflags)
 export SDL_LDFLAGS := $(shell $(SDL_CONFIG) --libs)
 
-CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -DAMIBERRY
-#CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -DAMIBERRY -D_FILE_OFFSET_BITS=64
+CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -DAMIBERRY -D_FILE_OFFSET_BITS=64
 CFLAGS=-pipe -Wno-shift-overflow -Wno-narrowing
 LDFLAGS = $(SDL_LDFLAGS) -lSDL2_image -lSDL2_ttf -lguisan -Lexternal/libguisan/lib -fuse-ld=gold -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed -lpthread -lz -lpng -lrt -lFLAC -lmpg123 -ldl -lmpeg2convert -lmpeg2
 
 ifndef DEBUG
-	CFLAGS += -Ofast
+	CFLAGS += -O3
 else
 	CFLAGS += -g -rdynamic -funwind-tables -DDEBUG -Wl,--export-dynamic
 endif
@@ -168,7 +167,7 @@ else ifneq (,$(findstring AMLSM1,$(PLATFORM)))
     AARCH64 = 1
 
 # Odroid Go Advance target (SDL2, 64-bit)
-else ifeq ($(PLATFORM),go-advance)
+else ifeq ($(PLATFORM),oga)
     CPUFLAGS = -mcpu=cortex-a35
     CPPFLAGS += $(CPPFLAGS64)
     AARCH64 = 1
@@ -232,12 +231,18 @@ else ifeq ($(PLATFORM),mali-drm-gles2-sdl2)
     CPPFLAGS += $(CPPFLAGS64)
     AARCH64 = 1
 
+# Generic Cortex-A9 32-bit
+else ifeq ($(PLATFORM),s812)
+    CPUFLAGS = -mcpu=cortex-a9 -mfpu=neon-vfpv3 -mfloat-abi=hard
+    CPPFLAGS += $(CPPFLAGS32) $(NEON_FLAGS) -DUSE_RENDER_THREAD
+    HAVE_NEON = 1 
+
 else
 $(error Unknown platform:$(PLATFORM))
 endif
 
 RM     = rm -f
-AS     = as
+AS     ?= as
 CC     ?= gcc
 CXX    ?= g++
 STRIP  ?= strip
@@ -391,6 +396,13 @@ OBJS =	\
 	src/archivers/zip/unzip.o \
 	src/caps/caps_amiberry.o \
 	src/machdep/support.o \
+	src/floppybridge/ArduinoFloppyBridge.o \
+	src/floppybridge/ArduinoInterface.o \
+	src/floppybridge/CommonBridgeTemplate.o \
+	src/floppybridge/GreaseWeazleBridge.o \
+	src/floppybridge/GreaseWeazleInterface.o \
+	src/floppybridge/RotationExtractor.o \
+	src/floppybridge/SerialIO.o \
 	src/osdep/ahi_v1.o \
 	src/osdep/bsdsocket_host.o \
 	src/osdep/cda_play.o \
@@ -417,6 +429,7 @@ OBJS =	\
 	src/osdep/gui/SelectorEntry.o \
 	src/osdep/gui/ShowHelp.o \
 	src/osdep/gui/ShowMessage.o \
+	src/osdep/gui/ShowDiskInfo.o \
 	src/osdep/gui/SelectFolder.o \
 	src/osdep/gui/SelectFile.o \
 	src/osdep/gui/CreateFilesysHardfile.o \
@@ -432,8 +445,10 @@ OBJS =	\
 	src/osdep/gui/PanelROM.o \
 	src/osdep/gui/PanelRAM.o \
 	src/osdep/gui/PanelFloppy.o \
+	src/osdep/gui/PanelExpansions.o \
 	src/osdep/gui/PanelHD.o \
 	src/osdep/gui/PanelRTG.o \
+	src/osdep/gui/PanelHWInfo.o \
 	src/osdep/gui/PanelInput.o \
 	src/osdep/gui/PanelDisplay.o \
 	src/osdep/gui/PanelSound.o \
@@ -470,6 +485,7 @@ OBJS += src/newcpu.o \
 	src/cpuemu_0.o \
 	src/cpuemu_4.o \
 	src/cpuemu_11.o \
+	src/cpuemu_13.o \
 	src/cpuemu_40.o \
 	src/cpuemu_44.o \
 	src/jit/compemu.o \

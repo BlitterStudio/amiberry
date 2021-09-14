@@ -304,9 +304,10 @@ static int trap_thread (void *arg)
 	uae_sem_post (&context->switch_to_emu_sem);
 
 	/* Good bye, cruel world... */
+
+  /* dummy return value */
 	return 0;
 }
-
 
 /*
 * Set up extended trap context and call handler function

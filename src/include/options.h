@@ -16,10 +16,10 @@
 #include "traps.h"
 
 #define UAEMAJOR 4
-#define UAEMINOR 5
+#define UAEMINOR 2
 #define UAESUBREV 0
 
-#define MAX_AMIGADISPLAYS 4
+#define MAX_AMIGADISPLAYS 1
 
 typedef enum { KBD_LANG_US, KBD_LANG_DK, KBD_LANG_DE, KBD_LANG_SE, KBD_LANG_FR, KBD_LANG_IT, KBD_LANG_ES } KbdLang;
 
@@ -100,7 +100,7 @@ struct inputdevconfig
 struct jport
 {
 	int id{};
-	int mode{}; // 0=def,1=mouse,2=joy,3=anajoy,4=lightpen
+	int mode{}; // 0=default,1=wheel mouse,2=mouse,3=joystick,4=gamepad,5=analog joystick,6=cdtv,7=cd32
 	int submode;
 	int autofire{};
 	struct inputdevconfig idc{};
@@ -320,13 +320,16 @@ enum
 #define MONITOREMU_OPALVISION 11
 #define MONITOREMU_COLORBURST 12
 
+#define OVERSCANMODE_OVERSCAN 3
+#define OVERSCANMODE_BROADCAST 4
+#define OVERSCANMODE_EXTREME 5
+
 #define MAX_FILTERSHADERS 4
 
 #define MAX_CHIPSET_REFRESH 10
 #define MAX_CHIPSET_REFRESH_TOTAL (MAX_CHIPSET_REFRESH + 2)
 #define CHIPSET_REFRESH_PAL (MAX_CHIPSET_REFRESH + 0)
 #define CHIPSET_REFRESH_NTSC (MAX_CHIPSET_REFRESH + 1)
-
 struct chipset_refresh
 {
 	bool inuse;
@@ -405,7 +408,6 @@ struct gfx_filterdata
 #define MAX_EXPANSION_BOARDS 20
 #define ROMCONFIG_CONFIGTEXT_LEN 256
 struct boardromconfig;
-
 struct romconfig
 {
 	TCHAR romfile[MAX_DPATH];
@@ -417,16 +419,14 @@ struct romconfig
 	int device_id;
 	int device_settings;
 	int subtype;
-	void* unitdata;
+	void *unitdata;
 	TCHAR configtext[ROMCONFIG_CONFIGTEXT_LEN];
 	uae_u16 manufacturer;
 	uae_u8 product;
 	uae_u8 autoconfig[16];
-	struct boardromconfig* back;
+	struct boardromconfig *back;
 };
-
 #define MAX_BOARD_ROMS 2
-
 struct boardromconfig
 {
 	int device_type;
@@ -445,16 +445,13 @@ struct rtgboardconfig
 	int device_order;
 	int monitor_id;
 };
-
 struct boardloadfile
 {
 	uae_u32 loadoffset;
 	uae_u32 fileoffset, filesize;
 	TCHAR loadfile[MAX_DPATH];
 };
-
 #define MAX_ROM_BOARDS 4
-
 struct romboard
 {
 	uae_u32 size;
@@ -462,9 +459,7 @@ struct romboard
 	uae_u32 end_address;
 	struct boardloadfile lf;
 };
-
 #define MAX_RAM_BOARDS 4
-
 struct ramboard
 {
 	uae_u32 size;
@@ -483,7 +478,6 @@ struct ramboard
 	bool force16bit;
 	struct boardloadfile lf;
 };
-
 struct expansion_params
 {
 	int device_order;
@@ -493,13 +487,14 @@ struct expansion_params
 #define Z3MAPPING_UAE 1
 #define Z3MAPPING_REAL 2
 
+#define GFX_SIZE_EXTRA_NUM 6
 struct monconfig
 {
 	struct wh gfx_size_win;
 	struct wh gfx_size_fs;
 	struct wh gfx_size;
-	struct wh gfx_size_win_xtra[6];
-	struct wh gfx_size_fs_xtra[6];
+	struct wh gfx_size_win_xtra[GFX_SIZE_EXTRA_NUM];
+	struct wh gfx_size_fs_xtra[GFX_SIZE_EXTRA_NUM];
 };
 
 #ifdef AMIBERRY
@@ -620,6 +615,7 @@ struct uae_prefs
 	int gfx_api_options;
 	int color_mode;
 	int gfx_extrawidth;
+	int gfx_extraheight;
 	bool lightboost_strobo;
 	int lightboost_strobo_ratio;
 	bool gfx_grayscale;
@@ -628,6 +624,7 @@ struct uae_prefs
 	int gfx_display_sections;
 	int gfx_variable_sync;
 	bool gfx_windowed_resize;
+	int gfx_overscanmode;
 
 	struct gfx_filterdata gf[2];
 
@@ -738,6 +735,7 @@ struct uae_prefs
 	bool cs_color_burst;
 	bool cs_romisslow;
 	bool cs_toshibagary;
+	bool cs_bkpthang;
 	int cs_unmapped_space;
 	int cs_hacks;
 	int cs_ciatype[2];
@@ -933,6 +931,7 @@ struct uae_prefs
 	int input_device_match_mask;
 
 #ifdef AMIBERRY
+	bool alt_tab_release;
 	int sound_pullmode;
 	bool input_analog_remap;
 	bool use_retroarch_quit;
@@ -990,6 +989,7 @@ extern int bip_a1200(struct uae_prefs* p, int rom);
 extern int bip_a2000(struct uae_prefs* p, int rom);
 extern int bip_a4000(struct uae_prefs* p, int rom);
 extern int bip_cd32(struct uae_prefs* p, int rom);
+extern int bip_cdtv(struct uae_prefs* p, int rom);
 
 int parse_cmdline_option(struct uae_prefs*, TCHAR, const TCHAR*);
 
@@ -1064,6 +1064,33 @@ extern struct uae_prefs currprefs, changed_prefs;
 extern int machdep_init(void);
 extern void machdep_free(void);
 
+struct fsvdlg_vals
+{
+	struct uaedev_config_info ci;
+	int rdb;
+};
+
+struct hfdlg_vals
+{
+	struct uaedev_config_info ci;
+	bool original;
+	uae_u64 size;
+	uae_u32 dostype;
+	int forcedcylinders;
+	bool rdb;
+};
+extern struct fsvdlg_vals current_fsvdlg;
+extern struct hfdlg_vals current_hfdlg;
+
+extern void hardfile_testrdb (struct hfdlg_vals *hdf);
+extern void default_fsvdlg (struct fsvdlg_vals *f);
+extern void default_hfdlg (struct hfdlg_vals *f);
+STATIC_INLINE bool is_hdf_rdb (void)
+{
+	return current_hfdlg.ci.sectors == 0 && current_hfdlg.ci.surfaces == 0 && current_hfdlg.ci.reserved == 0;
+}
+extern void updatehdfinfo (bool force, bool defaults);
+
 #ifdef AMIBERRY
 struct amiberry_customised_layout
 {
@@ -1121,7 +1148,8 @@ struct amiberry_options
 	int default_height = 512;
 	bool default_fullscreen = false;
 	int default_stereo_separation = 7;
-	int default_sound_buffer = 16384;
+	int default_sound_buffer = 8192;
+	bool default_sound_pull = true;
 	int default_joystick_deadzone = 33;
 	bool default_retroarch_quit = true;
 	bool default_retroarch_menu = true;

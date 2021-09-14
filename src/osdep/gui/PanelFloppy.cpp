@@ -36,7 +36,6 @@ static bool bIgnoreListChange = false;
 
 class DriveTypeListModel : public gcn::ListModel
 {
-private:
 	std::vector<std::string> types{};
 
 public:
@@ -49,6 +48,17 @@ public:
 		types.emplace_back("3.5'' ESCOM");
 	}
 
+	int add_element(const char* elem) override
+	{
+		types.emplace_back(elem);
+		return 0;
+	}
+
+	void clear_elements() override
+	{
+		types.clear();
+	}
+	
 	int getNumberOfElements() override
 	{
 		return types.size();
@@ -75,6 +85,15 @@ public:
 		return lstMRUDiskList.size();
 	}
 
+	int add_element(const char* elem) override
+	{
+		return 0;
+	}
+
+	void clear_elements() override
+	{
+	}
+	
 	std::string getElementAt(int i) override
 	{
 		if (i < 0 || i >= static_cast<int>(lstMRUDiskList.size()))
@@ -85,6 +104,64 @@ public:
 
 static DiskfileListModel diskfileList;
 
+static void DisplayDiskInfo(int num)
+{
+	struct diskinfo di{};
+	char tmp1[MAX_DPATH];
+	std::vector<std::string> infotext;
+	char title[MAX_DPATH];
+	char nameonly[MAX_DPATH];
+	char linebuffer[512];
+
+	DISK_examine_image(&changed_prefs, num, &di, true);
+	DISK_validate_filename(&changed_prefs, changed_prefs.floppyslots[num].df, tmp1, 0, NULL, NULL, NULL);
+	extract_filename(tmp1, nameonly);
+	snprintf(title, MAX_DPATH - 1, "Info for %s", nameonly);
+
+	snprintf(linebuffer, sizeof(linebuffer) - 1, "Disk readable: %s", di.unreadable ? _T("No") : _T("Yes"));
+	infotext.push_back(linebuffer);
+	snprintf(linebuffer, sizeof(linebuffer) - 1, "Disk CRC32: %08X", di.imagecrc32);
+	infotext.push_back(linebuffer);
+	snprintf(linebuffer, sizeof(linebuffer) - 1, "Boot block CRC32: %08X", di.bootblockcrc32);
+	infotext.push_back(linebuffer);
+	snprintf(linebuffer, sizeof(linebuffer) - 1, "Boot block checksum valid: %s", di.bb_crc_valid ? _T("Yes") : _T("No"));
+	infotext.push_back(linebuffer);
+	snprintf(linebuffer, sizeof(linebuffer) - 1, "Boot block type: %s", di.bootblocktype == 0 ? _T("Custom") : (di.bootblocktype == 1 ? _T("Standard 1.x") : _T("Standard 2.x+")));
+	infotext.push_back(linebuffer);
+	if (di.diskname[0]) {
+		snprintf(linebuffer, sizeof(linebuffer) - 1, "Label: '%s'", di.diskname);
+		infotext.push_back(linebuffer);
+	}
+	infotext.push_back("");
+
+	if (di.bootblockinfo[0]) {
+		infotext.push_back("Amiga Bootblock Reader database detected:");
+		snprintf(linebuffer, sizeof(linebuffer) - 1, "Name: '%s'", di.bootblockinfo);
+		infotext.push_back(linebuffer);
+		if (di.bootblockclass[0]) {
+			snprintf(linebuffer, sizeof(linebuffer) - 1, "Class: '%s'", di.bootblockclass);
+			infotext.push_back(linebuffer);
+		}
+		infotext.push_back("");
+	}
+	
+	int w = 16;
+	for (int i = 0; i < 1024; i += w) {
+		for (int j = 0; j < w; j++) {
+			uae_u8 b = di.bootblock[i + j];
+			sprintf(linebuffer + j * 3, _T("%02X "), b);
+			if (b >= 32 && b < 127)
+				linebuffer[w * 3 + 1 + j] = (char)b;
+			else
+				linebuffer[w * 3 + 1 + j] = '.';
+		}
+		linebuffer[w * 3] = ' ';
+		linebuffer[w * 3 + 1 + w] = 0;
+		infotext.push_back(linebuffer);
+	}
+
+	ShowDiskInfo(title, infotext);
+}
 
 class DriveTypeActionListener : public gcn::ActionListener
 {
@@ -167,8 +244,8 @@ public:
 				//---------------------------------------
 				// Show info about current disk-image
 				//---------------------------------------
-				//if (changed_prefs.floppyslots[i].dfxtype != DRV_NONE && strlen(changed_prefs.floppyslots[i].df) > 0)
-				//ToDo: Show info dialog
+				if (changed_prefs.floppyslots[i].dfxtype != DRV_NONE && strlen(changed_prefs.floppyslots[i].df) > 0)
+					DisplayDiskInfo(i);
 			}
 			else if (actionEvent.getSource() == cmdDFxEject[i])
 			{
@@ -402,6 +479,8 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 		cmdDFxInfo[i] = new gcn::Button("?");
 		cmdDFxInfo[i]->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 		cmdDFxInfo[i]->setBaseColor(gui_baseCol);
+		snprintf(tmp, 20, "cmdInfo%d", i);
+		cmdDFxInfo[i]->setId(tmp);
 		cmdDFxInfo[i]->addActionListener(dfxButtonActionListener);
 
 		cmdDFxEject[i] = new gcn::Button("Eject");
@@ -429,7 +508,7 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 		if (i == 0)
 		{
 			chkLoadConfig = new gcn::CheckBox("Load config with same name as disk");
-			chkLoadConfig->setId("LoadDiskCfg");
+			chkLoadConfig->setId("chkLoadDiskCfg");
 			chkLoadConfig->addActionListener(dfxCheckActionListener);
 		}
 	}
@@ -440,26 +519,26 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 	sldDriveSpeed->setBaseColor(gui_baseCol);
 	sldDriveSpeed->setMarkerLength(20);
 	sldDriveSpeed->setStepLength(1);
-	sldDriveSpeed->setId("DriveSpeed");
+	sldDriveSpeed->setId("sldDriveSpeed");
 	sldDriveSpeed->addActionListener(driveSpeedSliderActionListener);
 	lblDriveSpeedInfo = new gcn::Label(drive_speed_list[1]);
 
 	cmdSaveForDisk = new gcn::Button("Save config for disk");
 	cmdSaveForDisk->setSize(cmdSaveForDisk->getWidth() + 10, BUTTON_HEIGHT);
 	cmdSaveForDisk->setBaseColor(gui_baseCol);
-	cmdSaveForDisk->setId("SaveForDisk");
+	cmdSaveForDisk->setId("cmdSaveForDisk");
 	cmdSaveForDisk->addActionListener(saveForDiskActionListener);
 
 	cmdCreateDDDisk = new gcn::Button("Create 3.5'' DD disk");
 	cmdCreateDDDisk->setSize(cmdCreateDDDisk->getWidth() + 10, BUTTON_HEIGHT);
 	cmdCreateDDDisk->setBaseColor(gui_baseCol);
-	cmdCreateDDDisk->setId("CreateDD");
+	cmdCreateDDDisk->setId("cmdCreateDDDisk");
 	cmdCreateDDDisk->addActionListener(createDiskActionListener);
 
 	cmdCreateHDDisk = new gcn::Button("Create 3.5'' HD disk");
 	cmdCreateHDDisk->setSize(cmdCreateHDDisk->getWidth() + 10, BUTTON_HEIGHT);
 	cmdCreateHDDisk->setBaseColor(gui_baseCol);
-	cmdCreateHDDisk->setId("CreateHD");
+	cmdCreateHDDisk->setId("cmdCreateHDDisk");
 	cmdCreateHDDisk->addActionListener(createDiskActionListener);
 
 	for (i = 0; i < 4; ++i)
@@ -470,9 +549,9 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 		category.panel->add(cboDFxType[i], posX, posY);
 		posX += cboDFxType[i]->getWidth() + DISTANCE_NEXT_X * 2;
 		category.panel->add(chkDFxWriteProtect[i], posX, posY);
-		posX += 3 + chkDFxWriteProtect[i]->getWidth() + 7 * DISTANCE_NEXT_X;
-		//category.panel->add(cmdDFxInfo[i], posX, posY); //TODO disabled?
-		//posX += cmdDFxInfo[i]->getWidth() + DISTANCE_NEXT_X;
+		posX += 3 + chkDFxWriteProtect[i]->getWidth() + 4 * DISTANCE_NEXT_X;
+		category.panel->add(cmdDFxInfo[i], posX, posY);
+		posX += cmdDFxInfo[i]->getWidth() + DISTANCE_NEXT_X;
 		category.panel->add(cmdDFxEject[i], posX, posY);
 		posX += cmdDFxEject[i]->getWidth() + DISTANCE_NEXT_X;
 		category.panel->add(cmdDFxSelect[i], posX, posY);
@@ -611,6 +690,7 @@ bool HelpPanelFloppy(std::vector<std::string>& helptext)
 	helptext.emplace_back("on the host filesystem.");
 	helptext.emplace_back("The button \"...\" opens a dialog to select the required disk file.");
 	helptext.emplace_back("With the dropdown control, you can select one of the disks you recently used.");
+	helptext.emplace_back("Details of the current floppy can be displayed with \"?\".");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("You can reduce the loading time for lot of games by increasing the floppy drive");
 	helptext.emplace_back("emulation speed. A few games will not load with higher drive speed and you have");

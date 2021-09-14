@@ -13,7 +13,6 @@
 #include "savestate.h"
 #include "gui_handling.h"
 
-
 int currentStateNum = 0;
 
 static gcn::Window* grpNumber;
@@ -27,14 +26,29 @@ static gcn::RadioButton* optState6;
 static gcn::RadioButton* optState7;
 static gcn::RadioButton* optState8;
 static gcn::RadioButton* optState9;
+static gcn::RadioButton* optState10;
+static gcn::RadioButton* optState11;
+static gcn::RadioButton* optState12;
+static gcn::RadioButton* optState13;
+static gcn::RadioButton* optState14;
+static gcn::Label* lblTimestamp;
 
 static gcn::Window* grpScreenshot;
 static gcn::Icon* icoSavestate = nullptr;
 static gcn::Image* imgSavestate = nullptr;
 static gcn::Button* cmdLoadState;
 static gcn::Button* cmdSaveState;
-static gcn::Label* lblWarningHDDon;
 
+char* getts(char *filename1, char *date_string, size_t date_string_size)
+{
+    struct stat st;
+    struct tm tm;
+
+    stat(filename1, &st);
+    localtime_r(&st.st_mtime, &tm);
+    strftime(date_string, date_string_size,"%c" , &tm);
+    return date_string;
+}
 
 class SavestateActionListener : public gcn::ActionListener
 {
@@ -61,6 +75,16 @@ public:
 			currentStateNum = 8;
 		else if (actionEvent.getSource() == optState9)
 			currentStateNum = 9;
+        else if (actionEvent.getSource() == optState10)
+            currentStateNum = 10;
+        else if (actionEvent.getSource() == optState11)
+            currentStateNum = 11;
+        else if (actionEvent.getSource() == optState12)
+            currentStateNum = 12;
+        else if (actionEvent.getSource() == optState13)
+            currentStateNum = 13;
+        else if (actionEvent.getSource() == optState14)
+            currentStateNum = 14;
 		else if (actionEvent.getSource() == cmdLoadState)
 		{
 			//------------------------------------------
@@ -89,14 +113,25 @@ public:
 		}
 		else if (actionEvent.getSource() == cmdSaveState)
 		{
-			if (changed_prefs.mountitems)
+			bool unsafe = false;
+			bool unsafe_confirmed = false;
+			struct AmigaMonitor* mon = &AMonitors[0];
+			// Check if we have RTG, then it might fail saving
+			if (mon->screen_is_picasso)
 			{
-				ShowMessage("Error: Cannot create Savestate", "Savestates do not currently work with HDDs!", "", "Ok", "");
+				unsafe = true;
+				unsafe_confirmed = ShowMessage("Warning: P96 detected", "P96 is enabled. Savestates might be unsafe! Proceed anyway?", "", "Proceed", "Cancel");
+			}
+			// Check if we have JIT enabled
+			if (changed_prefs.cachesize > 0)
+			{
+				unsafe = true;
+				unsafe_confirmed = ShowMessage("Warning: JIT detected", "JIT is enabled. Savestates might be unsafe! Proceed anyway?", "", "Proceed", "Cancel");
 			}
 			//------------------------------------------
 			// Save current state
 			//------------------------------------------
-			else if (emulating)
+			if (emulating && (!unsafe || unsafe && unsafe_confirmed))
 			{
 				savestate_initsave(savestate_fname, 1, true, true);
 				save_state(savestate_fname, "...");
@@ -115,7 +150,6 @@ public:
 };
 
 static SavestateActionListener* savestateActionListener;
-
 
 void InitPanelSavestate(const struct _ConfigCategory& category)
 {
@@ -161,6 +195,28 @@ void InitPanelSavestate(const struct _ConfigCategory& category)
 	optState9->setId("State9");
 	optState9->addActionListener(savestateActionListener);
 
+    optState10 = new gcn::RadioButton("10", "radiostategroup");
+    optState10->setId("State10");
+    optState10->addActionListener(savestateActionListener);
+
+    optState11 = new gcn::RadioButton("11", "radiostategroup");
+    optState11->setId("State11");
+    optState11->addActionListener(savestateActionListener);
+
+    optState12 = new gcn::RadioButton("12", "radiostategroup");
+    optState12->setId("State12");
+    optState12->addActionListener(savestateActionListener);
+
+    optState13 = new gcn::RadioButton("13", "radiostategroup");
+    optState13->setId("State13");
+    optState13->addActionListener(savestateActionListener);
+
+    optState14 = new gcn::RadioButton("14", "radiostategroup");
+    optState14->setId("State14");
+    optState14->addActionListener(savestateActionListener);
+
+    lblTimestamp = new gcn::Label("Thu Aug 23 14:55:02 2001");
+
 	grpNumber = new gcn::Window("Number");
 	grpNumber->add(optState0, 10, 10);
 	grpNumber->add(optState1, optState0->getX(), optState0->getY() + optState0->getHeight() + DISTANCE_NEXT_Y);
@@ -172,8 +228,13 @@ void InitPanelSavestate(const struct _ConfigCategory& category)
 	grpNumber->add(optState7, optState0->getX(), optState6->getY() + optState6->getHeight() + DISTANCE_NEXT_Y);
 	grpNumber->add(optState8, optState0->getX(), optState7->getY() + optState7->getHeight() + DISTANCE_NEXT_Y);
 	grpNumber->add(optState9, optState0->getX(), optState8->getY() + optState8->getHeight() + DISTANCE_NEXT_Y);
+    grpNumber->add(optState10, optState0->getX(), optState9->getY() + optState9->getHeight() + DISTANCE_NEXT_Y);
+    grpNumber->add(optState11, optState0->getX(), optState10->getY() + optState10->getHeight() + DISTANCE_NEXT_Y);
+    grpNumber->add(optState12, optState0->getX(), optState11->getY() + optState11->getHeight() + DISTANCE_NEXT_Y);
+    grpNumber->add(optState13, optState0->getX(), optState12->getY() + optState12->getHeight() + DISTANCE_NEXT_Y);
+    grpNumber->add(optState14, optState0->getX(), optState13->getY() + optState13->getHeight() + DISTANCE_NEXT_Y);
 	grpNumber->setMovable(false);
-	grpNumber->setSize(BUTTON_WIDTH, BUTTON_WIDTH * 4);
+	grpNumber->setSize(BUTTON_WIDTH, optState14->getY() + TITLEBAR_HEIGHT * 2 + DISTANCE_NEXT_Y);
 	grpNumber->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpNumber->setBaseColor(gui_baseCol);
 
@@ -195,18 +256,15 @@ void InitPanelSavestate(const struct _ConfigCategory& category)
 	cmdSaveState->setId("SaveState");
 	cmdSaveState->addActionListener(savestateActionListener);
 
-	lblWarningHDDon = new gcn::Label("State saves do not support hard drive emulation.");
-
 	category.panel->add(grpNumber, DISTANCE_BORDER, DISTANCE_BORDER);
 	category.panel->add(grpScreenshot, grpNumber->getX() + grpNumber->getWidth() + DISTANCE_NEXT_X, DISTANCE_BORDER);
+    category.panel->add(lblTimestamp, grpScreenshot->getX(), grpScreenshot->getY() + grpScreenshot->getHeight() + DISTANCE_NEXT_Y);
 	const auto posY = category.panel->getHeight() - DISTANCE_BORDER - BUTTON_HEIGHT;
-	category.panel->add(cmdLoadState, DISTANCE_BORDER, posY);
-	category.panel->add(cmdSaveState, DISTANCE_BORDER + BUTTON_WIDTH + DISTANCE_NEXT_X, posY);
-	category.panel->add(lblWarningHDDon, DISTANCE_BORDER + 100, DISTANCE_BORDER + 50);
+	category.panel->add(cmdLoadState, grpScreenshot->getX(), posY);
+	category.panel->add(cmdSaveState, cmdLoadState->getX() + cmdLoadState->getWidth() + DISTANCE_NEXT_X, posY);
 
 	RefreshPanelSavestate();
 }
-
 
 void ExitPanelSavestate()
 {
@@ -220,7 +278,13 @@ void ExitPanelSavestate()
 	delete optState7;
 	delete optState8;
 	delete optState9;
+    delete optState10;
+    delete optState11;
+    delete optState12;
+    delete optState13;
+    delete optState14;
 	delete grpNumber;
+    delete lblTimestamp;
 
 	delete imgSavestate;
 	imgSavestate = nullptr;
@@ -230,11 +294,9 @@ void ExitPanelSavestate()
 
 	delete cmdLoadState;
 	delete cmdSaveState;
-	delete lblWarningHDDon;
 
 	delete savestateActionListener;
 }
-
 
 void RefreshPanelSavestate()
 {
@@ -250,43 +312,73 @@ void RefreshPanelSavestate()
 		imgSavestate = nullptr;
 	}
 
-	switch (currentStateNum)
-	{
-	case 0:
-		optState0->setSelected(true);
-		break;
-	case 1:
-		optState1->setSelected(true);
-		break;
-	case 2:
-		optState2->setSelected(true);
-		break;
-	case 3:
-		optState3->setSelected(true);
-		break;
-	case 4:
-		optState4->setSelected(true);
-		break;
-	case 5:
-		optState5->setSelected(true);
-		break;
-	case 6:
-		optState6->setSelected(true);
-		break;
-	case 7:
-		optState7->setSelected(true);
-		break;
-	case 8:
-		optState8->setSelected(true);
-		break;
-	case 9:
-		optState9->setSelected(true);
-		break;
-	default:
-		break;
-	}
+    switch (currentStateNum)
+    {
+        case 0:
+            optState0->setSelected(true);
+            break;
+        case 1:
+            optState1->setSelected(true);
+            break;
+        case 2:
+            optState2->setSelected(true);
+            break;
+        case 3:
+            optState3->setSelected(true);
+            break;
+        case 4:
+            optState4->setSelected(true);
+            break;
+        case 5:
+            optState5->setSelected(true);
+            break;
+        case 6:
+            optState6->setSelected(true);
+            break;
+        case 7:
+            optState7->setSelected(true);
+            break;
+        case 8:
+            optState8->setSelected(true);
+            break;
+        case 9:
+            optState9->setSelected(true);
+            break;
+        case 10:
+            optState10->setSelected(true);
+            break;
+        case 11:
+            optState11->setSelected(true);
+            break;
+        case 12:
+            optState12->setSelected(true);
+            break;
+        case 13:
+            optState13->setSelected(true);
+            break;
+        case 14:
+            optState14->setSelected(true);
+            break;
+        default:
+            break;
+    }
 
 	gui_update();
+    if (strlen(savestate_fname) > 0)
+    {
+        auto* const f = fopen(savestate_fname, "rbe");
+        if (f) {
+            fclose(f);
+            char date_string[256];
+            getts(savestate_fname, date_string, sizeof(date_string));
+            lblTimestamp->setCaption(date_string);
+        }
+        else
+        {
+            lblTimestamp->setCaption("No savestate found");
+        }
+    }
+
 	if (strlen(screenshot_filename) > 0)
 	{
 		auto* const f = fopen(screenshot_filename, "rbe");
@@ -328,10 +420,14 @@ void RefreshPanelSavestate()
 	optState7->setEnabled(enabled);
 	optState8->setEnabled(enabled);
 	optState9->setEnabled(enabled);
+    optState10->setEnabled(enabled);
+    optState11->setEnabled(enabled);
+    optState12->setEnabled(enabled);
+    optState13->setEnabled(enabled);
+    optState14->setEnabled(enabled);
 	grpScreenshot->setVisible(enabled);
 	cmdLoadState->setEnabled(enabled);
 	cmdSaveState->setEnabled(enabled);
-	lblWarningHDDon->setVisible(!enabled);
 }
 
 bool HelpPanelSavestate(std::vector<std::string>& helptext)
@@ -344,6 +440,6 @@ bool HelpPanelSavestate(std::vector<std::string>& helptext)
 	helptext.emplace_back("the state of the last active number will be loaded. Hold left shoulder ");
 	helptext.emplace_back("button and press 's' to save the current state in the last active slot.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("Note: Savestates will not work with HDDs.");
+	helptext.emplace_back("Note: Savestates might not work with HDDs, JIT or RTG.");
 	return true;
 }

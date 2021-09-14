@@ -340,29 +340,33 @@ STATIC_INLINE void m68k_do_rts_ce030 (void)
 STATIC_INLINE uae_u32 get_word_000_prefetch(int o)
 {
 	uae_u32 v = regs.irc;
-	regs.irc = regs.ird = get_wordi (m68k_getpci () + o);
+	regs.irc = regs.read_buffer = regs.db = get_wordi (m68k_getpci () + o);
 	return v;
 }
 STATIC_INLINE uae_u32 get_byte_000(uaecptr addr)
 {
 	uae_u32 v = get_byte (addr);
-	regs.ird = (v << 8) | v;
+	regs.db = (v << 8) | v;
+	regs.read_buffer = v;
 	return v;
 }
 STATIC_INLINE uae_u32 get_word_000(uaecptr addr)
 {
 	uae_u32 v = get_word (addr);
-	regs.ird = v;
+	regs.db = v;
+	regs.read_buffer = v;
 	return v;
 }
 STATIC_INLINE void put_byte_000(uaecptr addr, uae_u32 v)
 {
-	regs.ird = (v << 8) | v;
+	regs.db = (v << 8) | v;
+	regs.write_buffer = v;
 	put_byte (addr, v);
 }
 STATIC_INLINE void put_word_000(uaecptr addr, uae_u32 v)
 {
-	regs.ird = v;
+	regs.db = v;
+	regs.write_buffer = v;
 	put_word (addr, v);
 }
 #endif
@@ -373,11 +377,11 @@ STATIC_INLINE void do_cycles_ce000_internal(int clocks)
 {
 	if (currprefs.m68k_speed < 0)
 		return;
-	x_do_cycles (clocks * cpucycleunit);
+	x_do_cycles (clocks * CYCLE_UNIT / 2);
 }
 STATIC_INLINE void do_cycles_ce000 (int clocks)
 {
-	x_do_cycles (clocks * cpucycleunit);
+	x_do_cycles (clocks * CYCLE_UNIT / 2);
 }
 
 STATIC_INLINE void ipl_fetch (void)

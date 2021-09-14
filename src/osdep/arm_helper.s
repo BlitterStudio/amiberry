@@ -167,10 +167,10 @@ stmdb sp!, {r4-r6, lr}
 copy_screen_32bit_to_16bit_loop:
 ldr r3, [r1], #4
 rev r3, r3
-lsr r4, r3, #27
-lsr r5, r3, #18
+lsr r4, r3, #19
+lsr r5, r3, #10
 and r5, r5, #63
-lsr r6, r3, #11
+lsr r6, r3, #3
 and r6, r6, #31
 orr r6, r6, r5, lsl #5
 orr r6, r6, r4, lsl #11
@@ -192,9 +192,8 @@ ldmia sp!, {r4-r6, pc}
 @----------------------------------------------------------------
 copy_screen_32bit_to_32bit:
   ldr       r3, [r1], #4
-  rev       r3, r3
-  lsr       r3, r3, #8
   subs      r2, r2, #4
+  rev       r3, r3
   str       r3, [r0], #4
   bne       copy_screen_32bit_to_32bit
   bx        lr

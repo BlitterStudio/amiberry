@@ -1,0 +1,79 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<Categories>
+  <Category>
+    <Name>Standard</Name>
+    <abbrev>s</abbrev>
+    <Colour>Black</Colour>
+  </Category>
+  <Category>
+    <Name>Utility</Name>
+    <abbrev>u</abbrev>
+    <Colour>Blue</Colour>
+  </Category>
+  <Category>
+    <Name>Virus</Name>
+    <abbrev>v</abbrev>
+    <Colour>Red</Colour>
+  </Category>
+  <Category>
+    <Name>Boot Game</Name>
+    <abbrev>g</abbrev>
+    <Colour>Green</Colour>
+  </Category>
+  <Category>
+    <Name>Boot loader</Name>
+    <abbrev>bl</abbrev>
+    <Colour>Orange</Colour>
+  </Category>
+  <Category>
+    <Name>Logo</Name>
+    <abbrev>l</abbrev>
+    <Colour>DarkBlue</Colour>
+  </Category>
+  <Category>
+    <Name>Bootintro</Name>
+    <abbrev>i</abbrev>
+    <Colour>Brown</Colour>
+  </Category>
+  <Category>
+    <Name>Copy protection</Name>
+    <abbrev>p</abbrev>
+    <Colour>YellowGreen</Colour>
+  </Category>
+  <Category>
+    <Name>X-Copy Bootblock</Name>
+    <abbrev>xc</abbrev>
+    <Colour>Purple</Colour>
+  </Category>
+  <Category>
+    <Name>Scroller</Name>
+    <abbrev>sc</abbrev>
+    <Colour>Fuchsia</Colour>
+  </Category>
+  <Category>
+    <Name>Boot Menu</Name>
+    <abbrev>bm</abbrev>
+    <Colour>Lime</Colour>
+  </Category>
+  <Category>
+    <Name>RAM Switch</Name>
+    <abbrev>rs</abbrev>
+    <Colour>Aqua</Colour>
+  </Category>
+   <Category>
+    <Name>Virus Free Message</Name>
+    <abbrev>vfm</abbrev>
+    <Colour>Fuchsia</Colour>
+   </Category>
+   <Category>
+    <Name>Demoscene</Name>
+    <abbrev>ds</abbrev>
+    <Colour>Brown</Colour>
+   </Category>
+    <Category>
+    <Name>Game</Name>
+    <abbrev>ga</abbrev>
+    <Colour>Green</Colour>
+   </Category>
+  
+</Categories>

@@ -22,6 +22,7 @@ struct host_input_button {
 	int hotkey_button{};
 	int quit_button{};
 	int reset_button{};
+	int menu_button{};
 	int load_state_button{};
 	int save_state_button{};
 
@@ -84,5 +85,4 @@ extern bool init_kb_from_retroarch(int index, char* retroarch_file);
 extern std::string sanitize_retroarch_name(std::string s);
 extern int find_retroarch(const TCHAR* find_setting, char* retroarch_file);
 extern bool find_retroarch_polarity(const TCHAR* find_setting, char* retroarch_file);
-extern std::string binding_from_retroarch(int cpt, char* control_config);
-extern host_input_button map_from_retroarch(host_input_button mapping, char* control_config);
+extern host_input_button map_from_retroarch(host_input_button mapping, char* control_config, int player);

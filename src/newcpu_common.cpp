@@ -1,72 +1,23 @@
-
-
 #include "sysconfig.h"
 #include "sysdeps.h"
 
 #include "options.h"
 #include "memory.h"
 #include "newcpu.h"
+#include "cpummu.h"
 #include "cpummu030.h"
+#include "cpu_prefetch.h"
 
 int get_cpu_model(void)
 {
 	return currprefs.cpu_model;
 }
 
-void val_move2c2 (int regno, uae_u32 val)
-{
-	switch (regno) {
-	case 0: regs.sfc = val; break;
-	case 1: regs.dfc = val; break;
-	case 2: regs.cacr = val; break;
-	case 3: regs.tcr = val; break;
-	case 4: regs.itt0 = val; break;
-	case 5: regs.itt1 = val; break;
-	case 6: regs.dtt0 = val; break;
-	case 7: regs.dtt1 = val; break;
-	case 8: regs.buscr = val; break;
-	case 0x800: regs.usp = val; break;
-	case 0x801: regs.vbr = val; break;
-	case 0x802: regs.caar = val; break;
-	case 0x803: regs.msp = val; break;
-	case 0x804: regs.isp = val; break;
-	case 0x805: regs.mmusr = val; break;
-	case 0x806: regs.urp = val; break;
-	case 0x807: regs.srp = val; break;
-	case 0x808: regs.pcr = val; break;
-	}
-}
-
-uae_u32 val_move2c (int regno)
-{
-	switch (regno) {
-	case 0: return regs.sfc;
-	case 1: return regs.dfc;
-	case 2: return regs.cacr;
-	case 3: return regs.tcr;
-	case 4: return regs.itt0;
-	case 5: return regs.itt1;
-	case 6: return regs.dtt0;
-	case 7: return regs.dtt1;
-	case 8: return regs.buscr;
-	case 0x800: return regs.usp;
-	case 0x801: return regs.vbr;
-	case 0x802: return regs.caar;
-	case 0x803: return regs.msp;
-	case 0x804: return regs.isp;
-	case 0x805: return regs.mmusr;
-	case 0x806: return regs.urp;
-	case 0x807: return regs.srp;
-	case 0x808: return regs.pcr;
-	default: return 0;
-	}
-}
-
-static int movec_illg(int regno)
+static int movec_illg (int regno)
 {
 	int regno2 = regno & 0x7ff;
 
-	if (currprefs.cpu_model == 68010) {
+  if (currprefs.cpu_model == 68010) {
 		if (regno2 < 2)
 			return 0;
 		return 1;
@@ -95,7 +46,7 @@ static int movec_illg(int regno)
 int m68k_move2c (int regno, uae_u32 *regp)
 {
 	if (movec_illg(regno)) {
-		if (!regs.s) {
+		if (currprefs.cpu_model < 68060 && !regs.s) {
 			Exception(8);
 			return 0;
 		}
@@ -110,22 +61,22 @@ int m68k_move2c (int regno, uae_u32 *regp)
 		case 0: regs.sfc = *regp & 7; break;
 		case 1: regs.dfc = *regp & 7; break;
 		case 2:
-		{
-			uae_u32 cacr_mask = 0;
-			if (currprefs.cpu_model == 68020)
-				cacr_mask = 0x0000000f;
-			else if (currprefs.cpu_model == 68030)
-				cacr_mask = 0x00003f1f;
-			else if (currprefs.cpu_model == 68040)
-				cacr_mask = 0x80008000;
-			regs.cacr = *regp & cacr_mask;
-			set_cpu_caches(false);
-		}
-		break;
+			{
+				uae_u32 cacr_mask = 0;
+				if (currprefs.cpu_model == 68020)
+					cacr_mask = 0x0000000f;
+				else if (currprefs.cpu_model == 68030)
+					cacr_mask = 0x00003f1f;
+				else if (currprefs.cpu_model == 68040)
+					cacr_mask = 0x80008000;
+				regs.cacr = *regp & cacr_mask;
+				set_cpu_caches (false);
+			}
+			break;
 		/* 68040 only */
 		case 3:
-			regs.tcr = *regp & 0xc000;
-			break;
+				regs.tcr = *regp & 0xc000;
+				break;
 
 		case 4: regs.itt0 = *regp & 0xffffe364; break;
 		case 5: regs.itt1 = *regp & 0xffffe364; break;
@@ -135,11 +86,11 @@ int m68k_move2c (int regno, uae_u32 *regp)
 		case 0x800: regs.usp = *regp; break;
 		case 0x801: regs.vbr = *regp; break;
 		case 0x802: regs.caar = *regp; break;
-		case 0x803: regs.msp = *regp; if (regs.m == 1) m68k_areg(regs, 7) = regs.msp; break;
-		case 0x804: regs.isp = *regp; if (regs.m == 0) m68k_areg(regs, 7) = regs.isp; break;
+		case 0x803: regs.msp = *regp; if (regs.m == 1) m68k_areg (regs, 7) = regs.msp; break;
+		case 0x804: regs.isp = *regp; if (regs.m == 0) m68k_areg (regs, 7) = regs.isp; break;
 			/* 68040 only */
 		case 0x805: regs.mmusr = *regp; break;
-			/* 68040 stores all bits */
+	  /* 68040 stores all bits */
 		case 0x806: regs.urp = *regp & 0xffffffff; break;
 		case 0x807: regs.srp = *regp & 0xffffffff; break;
 		default:
@@ -153,7 +104,7 @@ int m68k_move2c (int regno, uae_u32 *regp)
 int m68k_movec2 (int regno, uae_u32 *regp)
 {
 	if (movec_illg(regno)) {
-		if (!regs.s) {
+		if (currprefs.cpu_model < 68060 && !regs.s) {
 			Exception(8);
 			return 0;
 		}
@@ -168,30 +119,30 @@ int m68k_movec2 (int regno, uae_u32 *regp)
 		case 0: *regp = regs.sfc; break;
 		case 1: *regp = regs.dfc; break;
 		case 2:
-		{
-			uae_u32 v = regs.cacr;
-			uae_u32 cacr_mask = 0;
-			if (currprefs.cpu_model == 68020)
-				cacr_mask = 0x00000003;
-			else if (currprefs.cpu_model == 68030)
-				cacr_mask = 0x00003313;
-			else if (currprefs.cpu_model == 68040)
-				cacr_mask = 0x80008000;
-			*regp = v & cacr_mask;
-		}
-		break;
+			{
+				uae_u32 v = regs.cacr;
+				uae_u32 cacr_mask = 0;
+				if (currprefs.cpu_model == 68020)
+					cacr_mask = 0x00000003;
+				else if (currprefs.cpu_model == 68030)
+					cacr_mask = 0x00003313;
+				else if (currprefs.cpu_model == 68040)
+					cacr_mask = 0x80008000;
+				*regp = v & cacr_mask;
+			}
+			break;
 		case 3: *regp = regs.tcr; break;
 		case 4: *regp = regs.itt0; break;
 		case 5: *regp = regs.itt1; break;
 		case 6: *regp = regs.dtt0; break;
 		case 7: *regp = regs.dtt1; break;
-		case 8: *regp = regs.buscr; break;
+		case 8: *regp = 0; break;
 
 		case 0x800: *regp = regs.usp; break;
 		case 0x801: *regp = regs.vbr; break;
 		case 0x802: *regp = regs.caar; break;
-		case 0x803: *regp = regs.m == 1 ? m68k_areg(regs, 7) : regs.msp; break;
-		case 0x804: *regp = regs.m == 0 ? m68k_areg(regs, 7) : regs.isp; break;
+		case 0x803: *regp = regs.m == 1 ? m68k_areg (regs, 7) : regs.msp; break;
+		case 0x804: *regp = regs.m == 0 ? m68k_areg (regs, 7) : regs.isp; break;
 		case 0x805: *regp = regs.mmusr; break;
 		case 0x806: *regp = regs.urp; break;
 		case 0x807: *regp = regs.srp; break;
@@ -286,9 +237,9 @@ void REGPARAM2 put_bitfield (uae_u32 dst, uae_u32 bdata[2], uae_u32 val, uae_s32
 	}
 }
 
-uae_u32 REGPARAM2 _get_disp_ea_020(uae_u32 base)
+uae_u32 REGPARAM2 get_disp_ea_020 (uae_u32 base)
 {
-	uae_u16 dp = next_diword();
+	uae_u16 dp = next_diword ();
 	int reg = (dp >> 12) & 15;
 	uae_s32 regd = regs.regs[reg];
 	if ((dp & 0x800) == 0)
@@ -300,27 +251,82 @@ uae_u32 REGPARAM2 _get_disp_ea_020(uae_u32 base)
 		if (dp & 0x40) regd = 0;
 
 		if ((dp & 0x30) == 0x20)
-			base += (uae_s32)(uae_s16)next_diword();
+			base += (uae_s32)(uae_s16) next_diword ();
 		if ((dp & 0x30) == 0x30)
-			base += next_dilong();
+			base += next_dilong ();
 
 		if ((dp & 0x3) == 0x2)
-			outer = (uae_s32)(uae_s16)next_diword();
+			outer = (uae_s32)(uae_s16) next_diword ();
 		if ((dp & 0x3) == 0x3)
-			outer = next_dilong();
+			outer = next_dilong ();
 
 		if ((dp & 0x4) == 0)
 			base += regd;
 		if (dp & 0x3)
-			base = get_long(base);
+			base = get_long (base);
 		if (dp & 0x4)
 			base += regd;
 
 		return base + outer;
-	}
-	else {
+	} else {
 		return base + (uae_s32)((uae_s8)dp) + regd;
 	}
+}
+
+uae_u32 REGPARAM2 x_get_disp_ea_020 (uae_u32 base)
+{
+	uae_u16 dp = x_next_iword ();
+	int reg = (dp >> 12) & 15;
+	int cycles = 0;
+	uae_u32 v;
+
+	uae_s32 regd = regs.regs[reg];
+	if ((dp & 0x800) == 0)
+		regd = (uae_s32)(uae_s16)regd;
+	regd <<= (dp >> 9) & 3;
+	if (dp & 0x100) {
+
+		uae_s32 outer = 0;
+		if (dp & 0x80)
+			base = 0;
+		if (dp & 0x40)
+			regd = 0;
+
+		if ((dp & 0x30) == 0x20) {
+			base += (uae_s32)(uae_s16) x_next_iword ();
+			cycles++;
+		}
+		if ((dp & 0x30) == 0x30) {
+			base += x_next_ilong ();
+			cycles++;
+		}
+
+		if ((dp & 0x3) == 0x2) {
+			outer = (uae_s32)(uae_s16) x_next_iword ();
+			cycles++;
+		}
+		if ((dp & 0x3) == 0x3) {
+			outer = x_next_ilong ();
+			cycles++;
+		}
+
+		if ((dp & 0x4) == 0) {
+			base += regd;
+			cycles++;
+		}
+		if (dp & 0x3) {
+			base = x_get_long (base);
+			cycles++;
+		}
+		if (dp & 0x4) {
+			base += regd;
+			cycles++;
+		}
+		v = base + outer;
+	} else {
+		v = base + (uae_s32)((uae_s8)dp) + regd;
+	}
+	return v;
 }
 
 int getMulu68kCycles(uae_u16 src)
@@ -357,6 +363,7 @@ int getMuls68kCycles(uae_u16 src)
 	}
 	return cycles;
 }
+
 
 /*
 * Compute exact number of CPU cycles taken
@@ -572,7 +579,7 @@ void divbyzero_special (bool issigned, uae_s32 dst)
 			SET_VFLG(1);
 		}
 	} else if (currprefs.cpu_model == 68040) {
-		SET_CFLG (0);
+		SET_CFLG(0);
 	} else {
 		// 68000/010
 		CLEAR_CZNV ();
@@ -870,7 +877,7 @@ static void divul_overflow(uae_u16 extra, uae_s64 a)
 	}
 }
 
-static void divsl_divbyzero(uae_u16 extra, uae_s64 a)
+static void divsl_divbyzero(uae_u16 extra, uae_s64 a, uaecptr oldpc)
 {
 	if (currprefs.cpu_model >= 68040) {
 		SET_CFLG(0);
@@ -879,10 +886,10 @@ static void divsl_divbyzero(uae_u16 extra, uae_s64 a)
 		SET_ZFLG(1);
 		SET_CFLG(0);
 	}
-	Exception_cpu(5);
+	Exception_cpu_oldpc(5, oldpc);
 }
 
-static void divul_divbyzero(uae_u16 extra, uae_s64 a)
+static void divul_divbyzero(uae_u16 extra, uae_s64 a, uaecptr oldpc)
 {
 	if (currprefs.cpu_model >= 68040) {
 		SET_CFLG(0);
@@ -894,10 +901,10 @@ static void divul_divbyzero(uae_u16 extra, uae_s64 a)
 		SET_VFLG(1);
 		SET_CFLG(0);
 	}
-	Exception_cpu(5);
+	Exception_cpu_oldpc(5, oldpc);
 }
 
-bool m68k_divl(uae_u32 opcode, uae_u32 src, uae_u16 extra)
+int m68k_divl(uae_u32 opcode, uae_u32 src, uae_u16 extra, uaecptr oldpc)
 {
 	if (extra & 0x800) {
 		/* signed variant */
@@ -906,12 +913,12 @@ bool m68k_divl(uae_u32 opcode, uae_u32 src, uae_u16 extra)
 
 		if (extra & 0x400) {
 			a &= 0xffffffffu;
-			a |= (uae_s64)m68k_dreg(regs, extra & 7) << 32;
+			a |= (uae_s64)m68k_dreg (regs, extra & 7) << 32;
 		}
 
 		if (src == 0) {
-			divsl_divbyzero(extra, a);
-			return false;
+			divsl_divbyzero(extra, a, oldpc);
+			return 0;
 		}
 
 		if ((uae_u64)a == 0x8000000000000000UL && src == ~0u) {
@@ -944,8 +951,8 @@ bool m68k_divl(uae_u32 opcode, uae_u32 src, uae_u16 extra)
 		}
 
 		if (src == 0) {
-			divul_divbyzero(extra, a);
-			return false;
+			divul_divbyzero(extra, a, oldpc);
+			return 0;
 		}
 
 		rem = a % (uae_u64)src;
@@ -961,10 +968,10 @@ bool m68k_divl(uae_u32 opcode, uae_u32 src, uae_u16 extra)
 			m68k_dreg (regs, (extra >> 12) & 7) = (uae_u32)quot;
 		}
 	}
-	return true;
+	return 1;
 }
 
-bool m68k_mull(uae_u32 opcode, uae_u32 src, uae_u16 extra)
+int m68k_mull (uae_u32 opcode, uae_u32 src, uae_u16 extra)
 {
 	if (extra & 0x800) {
 		/* signed */
@@ -1027,7 +1034,7 @@ bool m68k_mull(uae_u32 opcode, uae_u32 src, uae_u16 extra)
 			SET_NFLG(b < 0);
 		}
 	}
-	return true;
+	return 1;
 }
 
 uae_u32 exception_pc(int nr)
@@ -1035,7 +1042,7 @@ uae_u32 exception_pc(int nr)
 	// bus error, address error, illegal instruction, privilege violation, a-line, f-line
 	if (nr == 2 || nr == 3 || nr == 4 || nr == 8 || nr == 10 || nr == 11)
 		return regs.instruction_pc;
-	return m68k_getpc ();
+	return m68k_getpc();
 }
 
 void Exception_build_stack_frame(uae_u32 oldpc, uae_u32 currpc, uae_u32 ssw, int nr, int format)
@@ -1138,7 +1145,7 @@ void Exception_build_stack_frame(uae_u32 oldpc, uae_u32 currpc, uae_u32 ssw, int
 			m68k_areg(regs, 7) -= 4;
 			x_put_long(m68k_areg(regs, 7), 0);
 		}
-		while (i < MAX_MMU030_ACCESS) {
+		while (i < 9) {
 			uae_u32 v = 0;
 			m68k_areg(regs, 7) -= 4;
 			x_put_long(m68k_areg(regs, 7), v);
@@ -1159,8 +1166,11 @@ void Exception_build_stack_frame(uae_u32 oldpc, uae_u32 currpc, uae_u32 ssw, int
 		x_put_long(m68k_areg(regs, 7), regs.mmu_fault_addr);
 		// 2xinternal
 		{
+			uae_u32 ps = 0;
+			ps |= (7 << 8);
+			ps |= (7 << 11);
 			m68k_areg(regs, 7) -= 4;
-			x_put_long(m68k_areg(regs, 7), 0);
+			x_put_long(m68k_areg(regs, 7), ps);
 		}
 		// stage b address
 		m68k_areg(regs, 7) -= 4;
@@ -1173,25 +1183,31 @@ void Exception_build_stack_frame(uae_u32 oldpc, uae_u32 currpc, uae_u32 ssw, int
 		// short bus cycle fault stack frame (68020, 68030)
 		// used when instruction's last write causes bus fault
 		m68k_areg(regs, 7) -= 4;
-		x_put_long(m68k_areg(regs, 7), 0);
+		if (format == 0xb) {
+			  x_put_long(m68k_areg(regs, 7), 0); // 28 0x1c
+		  } else {
+			  uae_u32 ps = 0;
+			ps |= (7 << 8);
+			ps |= (7 << 11);
+			x_put_long(m68k_areg(regs, 7), ps); // 28 0x1c
+		}
 		m68k_areg(regs, 7) -= 4;
 		// Data output buffer = value that was going to be written
-		x_put_long(m68k_areg(regs, 7), 0);
+		x_put_long(m68k_areg(regs, 7), 0); // 24 0x18
 		m68k_areg(regs, 7) -= 4;
 		if (format == 0xb) {
-			x_put_long(m68k_areg(regs, 7), 0);  // Internal register (opcode storage)
-		}
-		else {
-			x_put_long(m68k_areg(regs, 7), regs.irc);  // Internal register (opcode storage)
+			x_put_long(m68k_areg(regs, 7), 0);  // Internal register (opcode storage) 20 0x14
+		} else {
+			x_put_long(m68k_areg(regs, 7), regs.irc);  // Internal register (opcode storage)  20 0x14
 		}
 		m68k_areg(regs, 7) -= 4;
-		x_put_long(m68k_areg(regs, 7), regs.mmu_fault_addr); // data cycle fault address
+		x_put_long(m68k_areg(regs, 7), regs.mmu_fault_addr); // data cycle fault address 16 0x10
 		m68k_areg(regs, 7) -= 2;
-		x_put_word(m68k_areg(regs, 7), 0);  // Instr. pipe stage B
+		x_put_word(m68k_areg(regs, 7), 0);  // Instr. pipe stage B 14 0x0e
 		m68k_areg(regs, 7) -= 2;
-		x_put_word(m68k_areg(regs, 7), 0);  // Instr. pipe stage C
+		x_put_word(m68k_areg(regs, 7), 0);  // Instr. pipe stage C 12 0x0c
 		m68k_areg(regs, 7) -= 2;
-		x_put_word(m68k_areg(regs, 7), ssw);
+		x_put_word(m68k_areg(regs, 7), ssw); // 10 0x0a
 		m68k_areg(regs, 7) -= 2;
 		x_put_word(m68k_areg(regs, 7), 0);
 		break;
@@ -1210,32 +1226,28 @@ void Exception_build_stack_frame(uae_u32 oldpc, uae_u32 currpc, uae_u32 ssw, int
 void Exception_build_stack_frame_common(uae_u32 oldpc, uae_u32 currpc, int nr)
 {
 	if (nr == 5 || nr == 6 || nr == 7 || nr == 9) {
+		if (nr == 9)
+			oldpc = regs.trace_pc;
 		if (currprefs.cpu_model <= 68010)
 			Exception_build_stack_frame(oldpc, currpc, 0, nr, 0x0);
 		else
 			Exception_build_stack_frame(oldpc, currpc, 0, nr, 0x2);
-	}
-	else if (nr == 60 || nr == 61) {
+	} else if (nr == 60 || nr == 61) {
 		Exception_build_stack_frame(oldpc, regs.instruction_pc, 0, nr, 0x0);
-	}
-	else if (nr >= 48 && nr <= 55) {
+	} else if (nr >= 48 && nr <= 55) {
 		if (regs.fpu_exp_pre) {
 			Exception_build_stack_frame(oldpc, regs.instruction_pc, 0, nr, 0x0);
-		}
-		else { /* post-instruction */
+		} else { /* post-instruction */
 			Exception_build_stack_frame(oldpc, currpc, 0, nr, 0x3);
 		}
-	}
-	else if (nr == 11 && regs.fp_unimp_ins) {
+	} else if (nr == 11 && regs.fp_unimp_ins) {
 		regs.fp_unimp_ins = false;
 		if (currprefs.cpu_model == 68040 && currprefs.fpu_model == 0) {
 			Exception_build_stack_frame(regs.fp_ea, currpc, regs.instruction_pc, nr, 0x4);
-		}
-		else {
+		} else {
 			Exception_build_stack_frame(regs.fp_ea, currpc, 0, nr, 0x2);
 		}
-	}
-	else {
+	} else {
 		Exception_build_stack_frame(oldpc, currpc, 0, nr, 0x0);
 	}
 }
@@ -1250,14 +1262,6 @@ void Exception_build_68000_address_error_stack_frame(uae_u16 mode, uae_u16 opcod
 	x_put_word(m68k_areg(regs, 7) + 6, opcode);
 	x_put_word(m68k_areg(regs, 7) + 8, regs.sr);
 	x_put_long(m68k_areg(regs, 7) + 10, pc);
-}
-
-void cpu_restore_fixup(void)
-{
-	if (mmufixup[0].reg >= 0) {
-		m68k_areg(regs, mmufixup[0].reg & 15) = mmufixup[0].value;
-		mmufixup[0].reg = -1;
-	}
 }
 
 // Low word: Clear + Z and N
@@ -1317,6 +1321,7 @@ void areg_68000_long_replace_low(int reg, uae_u16 v)
 }
 
 // Change F-line to privilege violation if missing co-pro
+// 68040 always return F-line
 bool privileged_copro_instruction(uae_u16 opcode)
 {
 	if (currprefs.cpu_model >= 68020 && !regs.s) {
@@ -1331,8 +1336,7 @@ bool privileged_copro_instruction(uae_u16 opcode)
 				if (currprefs.cpu_model < 68040 || (currprefs.cpu_model >= 68040 && id == 1))
 					return true;
 			}
-		}
-		else if ((opcode & 0xf1c0) == 0xf140) {
+		} else if ((opcode & 0xf1c0) == 0xf140) {
 			// cpRESTORE
 			// check if valid EA
 			if (mode == 2 || mode == 3 || (mode >= 5 && mode <= 6) || (mode == 7 && reg <= 3)) {
@@ -1346,7 +1350,7 @@ bool privileged_copro_instruction(uae_u16 opcode)
 
 bool generates_group1_exception(uae_u16 opcode)
 {
-	struct instr* table = &table68k[opcode];
+	struct instr *table = &table68k[opcode];
 	// illegal/a-line/f-line?
 	if (table->mnemo == i_ILLG)
 		return true;

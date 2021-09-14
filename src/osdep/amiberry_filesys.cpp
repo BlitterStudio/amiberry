@@ -9,11 +9,10 @@
 #include <unistd.h>
 #include <list>
 #include <dirent.h>
+#include <iconv.h>
 
 #include "fsdb_host.h"
 #include "uae.h"
-
-int my_errno = 0;
 
 struct my_opendir_s {
 	DIR* dir{};
@@ -24,13 +23,63 @@ struct my_openfile_s {
 	char* path;
 };
 
+#ifdef AMIBERRY
+void utf8_to_latin1_string(std::string& input, std::string& output)
+{
+	std::vector<char> in_buf(input.begin(), input.end());
+	char* src_ptr = &in_buf[0];
+	size_t src_size = input.size();
+	std::vector<char> buf(1024);
+	std::string dst;
+	
+	auto* iconv_ = iconv_open("ISO-8859-1", "UTF-8");
+	
+	while (0 < src_size) {
+		char* dst_ptr = &buf[0];
+		size_t dst_size = buf.size();
+		size_t res = ::iconv(iconv_, &src_ptr, &src_size, &dst_ptr, &dst_size);
+		if (res == (size_t)-1) {
+			if (errno == E2BIG) {
+				// ignore this error
+			}
+			else {
+				// skip character
+				++src_ptr;
+				--src_size;
+			}
+		}
+		dst.append(&buf[0], buf.size() - dst_size);
+	}
+	dst.swap(output);
+	iconv_close(iconv_);
+}
+
+std::string iso_8859_1_to_utf8(std::string& str)
+{
+	string str_out;
+	for (auto it = str.begin(); it != str.end(); ++it)
+	{
+		uint8_t ch = *it;
+		if (ch < 0x80) {
+			str_out.push_back(ch);
+		}
+		else {
+			str_out.push_back(0xc0 | ch >> 6);
+			str_out.push_back(0x80 | (ch & 0x3f));
+		}
+	}
+	return str_out;
+}
+#endif
+
 string prefix_with_application_directory_path(string currentpath)
 {
-#ifdef ANDROID
-	return getenv("EXTERNAL_FILES_DIR") + ("/" + currentpath);
-#else
+	auto env_dir = getenv("EXTERNAL_FILES_DIR");
+	if (env_dir != nullptr)
+	{
+		return getenv("EXTERNAL_FILES_DIR") + ("/" + currentpath);
+	}
 	return currentpath;
-#endif
 }
 
 int my_setcurrentdir(const TCHAR* curdir, TCHAR* oldcur)
@@ -49,8 +98,10 @@ bool my_chmod(const TCHAR* name, uae_u32 mode)
 
 	// get current state
 	struct stat st{};
-	if (stat(name, &st) == -1) {
-		write_log("my_chmod: stat on file %s failed\n", name);
+	auto input = string(name);
+	auto output = iso_8859_1_to_utf8(input);
+	if (stat(output.c_str(), &st) == -1) {
+		write_log("my_chmod: stat on file %s failed\n", output.c_str());
 		return false;
 	}
 
@@ -60,9 +111,9 @@ bool my_chmod(const TCHAR* name, uae_u32 mode)
 	else
 		// clear write permission
 		st.st_mode &= ~(S_IWUSR);
-	chmod(name, st.st_mode);
+	chmod(output.c_str(), st.st_mode);
 
-	stat(name, &st);
+	stat(output.c_str(), &st);
 	auto newmode = 0;
 	if (st.st_mode & S_IRUSR) {
 		newmode |= FILEFLAG_READ;
@@ -78,8 +129,10 @@ bool my_stat(const TCHAR* name, struct mystat* statbuf)
 {
 	struct stat st{};
 
-	if (stat(name, &st) == -1) {
-		write_log("my_stat: stat on file %s failed\n", name);
+	auto input = string(name);
+	auto output = iso_8859_1_to_utf8(input);
+	if (stat(output.c_str(), &st) == -1) {
+		write_log("my_stat: stat on file %s failed\n", output.c_str());
 		return false;
 	}
 
@@ -111,17 +164,11 @@ bool compare_nocase(const std::string& first, const std::string& second)
 
 struct my_opendir_s* my_opendir(const TCHAR* name, const TCHAR* mask)
 {
-	// mask is ignored
-	if (mask && strcmp(mask, "*.*") != 0) {
-		write_log("WARNING: directory mask was not *.*");
-	}
-
 	auto* mod = xmalloc(struct my_opendir_s, 1);
 	if (!mod)
 		return NULL;
 	mod->dir = opendir(name);
 	if (!mod->dir) {
-		my_errno = errno;
 		write_log("my_opendir %s failed\n", name);
 		xfree(mod);
 		return NULL;
@@ -135,7 +182,6 @@ struct my_opendir_s* my_opendir(const TCHAR* name) {
 
 void my_closedir(struct my_opendir_s* mod)
 {
-	my_errno = 0;
 	if (mod) {
 		closedir(mod->dir);
 		xfree(mod);
@@ -173,7 +219,12 @@ int my_readdir(struct my_opendir_s* mod, TCHAR* name)
 			continue;
 		}
 
-		_tcscpy(name, result);
+		auto string_input = string(result);
+		string string_output;
+		utf8_to_latin1_string(string_input, string_output);
+		//write_log("Original: %s - Converted: %s\n", string_input.c_str(), string_output.c_str());
+		_tcscpy(name, string_output.c_str());
+
 		return 1;
 	}
 }
@@ -181,7 +232,9 @@ int my_readdir(struct my_opendir_s* mod, TCHAR* name)
 int my_existsfile(const char* name)
 {
 	struct stat st {};
-	if (lstat(name, &st) == -1)
+	auto input = string(name);
+	auto output = iso_8859_1_to_utf8(input);
+	if (lstat(output.c_str(), &st) == -1)
 	{
 		return 0;
 	}
@@ -193,7 +246,9 @@ int my_existsfile(const char* name)
 int my_existsdir(const char* name)
 {
 	struct stat st {};
-	if (lstat(name, &st) == -1)
+	auto input = string(name);
+	auto output = iso_8859_1_to_utf8(input);	
+	if (lstat(output.c_str(), &st) == -1)
 	{
 		return 0;
 	}
@@ -230,67 +285,39 @@ int my_getvolumeinfo(const char* root)
 bool fs_path_exists(const std::string& s)
 {
 	struct stat buffer{};
-	return (stat(s.c_str(), &buffer) == 0);
+	auto input = string(s);
+	auto output = iso_8859_1_to_utf8(input);
+	return stat(output.c_str(), &buffer) == 0;
 }
 
-struct my_openfile_s* my_open(const TCHAR* name, const int flags)
+struct my_openfile_s* my_open(const TCHAR* name, int flags)
 {
-	int open_flags = O_BINARY;
-	if (flags & O_TRUNC) {
-		open_flags = open_flags | O_TRUNC; //write_log("  O_TRUNC\n");
-	}
-	if (flags & O_CREAT) {
-		open_flags = open_flags | O_CREAT; //write_log("  O_CREAT\n");
-	}
-	if (flags & O_RDWR) {
-		open_flags = open_flags | O_RDWR; //write_log("  O_RDRW\n");
-	}
-	else if (flags & O_RDONLY) {
-		open_flags = open_flags | O_RDONLY; //write_log("  O_RDONLY\n");
-	}
-	else if (flags & O_WRONLY) {
-		open_flags = open_flags | O_WRONLY; //write_log("  O_WRONLY\n");
-	}
-	char* path = my_strdup(name);
+	struct my_openfile_s* mos;
 
-	int file = open(path, open_flags, 0644);
-	if (file == -1) {
-		my_errno = errno;
-		write_log("WARNING: my_open could not open (%s, %d)\n", name,
-			open_flags);
-		if (open_flags & O_TRUNC) {
-			write_log("  O_TRUNC\n");
-		}
-		if (open_flags & O_CREAT) {
-			write_log("  O_CREAT\n");
-		}
-		if (open_flags & O_RDWR) {
-			write_log("  O_RDWR\n");
-		}
-		else if (open_flags & O_RDONLY) {
-			write_log("  O_RDONLY\n");
-		}
-		else if (open_flags & O_WRONLY) {
-			write_log("  O_WRONLY\n");
-		}
-		xfree(path);
+	mos = xmalloc(struct my_openfile_s, 1);
+	if (!mos)
 		return NULL;
+	auto input = string(name);
+	auto output = iso_8859_1_to_utf8(input);
+	if (flags & O_CREAT)
+	{		
+		mos->fd = open(output.c_str(), flags, 0660);
 	}
-	xfree(path);
-
-	auto* mos = new struct my_openfile_s;
-	mos->fd = file;
-	mos->path = my_strdup(name);
-	my_errno = 0;
+	else
+	{
+		mos->fd = open(output.c_str(), flags);
+	}
+	if (!mos->fd) {
+		xfree(mos);
+		mos = NULL;
+	}
 	return mos;
 }
 
 void my_close(struct my_openfile_s* mos)
 {
-	xfree(mos->path);
-	int result = close(mos->fd);
-	if (result != 0)
-		write_log("error closing file\n");
+	if (mos)
+		close(mos->fd);
 	xfree(mos);
 }
 
@@ -321,12 +348,12 @@ unsigned int my_write(struct my_openfile_s* mos, void* b, unsigned int size)
 
 int my_mkdir(const TCHAR* path)
 {
-	int error = mkdir(path, 0755);
+	auto input = string(path);
+	auto output = iso_8859_1_to_utf8(input);
+	int error = mkdir(output.c_str(), 0755);
 	if (error) {
-		my_errno = errno;
 		return -1;
 	}
-	my_errno = 0;
 	return 0;
 }
 
@@ -335,7 +362,6 @@ int my_truncate(const TCHAR* name, uae_u64 len)
 	int int_len = (int)len;
 	struct my_openfile_s* mos = my_open(name, O_WRONLY);
 	if (mos == NULL) {
-		my_errno = errno;
 		write_log("WARNING: opening file for truncation failed\n");
 		return -1;
 	}
@@ -345,7 +371,6 @@ int my_truncate(const TCHAR* name, uae_u64 len)
 	int result = ftruncate(mos->fd, int_len);
 #endif
 	my_close(mos);
-	my_errno = 0;
 	return result;
 }
 
@@ -366,8 +391,9 @@ int my_rmdir(const TCHAR* path)
 	remove_extra_file(path, ".DS_Store");
 
 	errno = 0;
-	int result = rmdir(path);
-	my_errno = errno;
+	auto input = string(path);
+	auto output = iso_8859_1_to_utf8(input);
+	int result = rmdir(output.c_str());
 
 	return result;
 }
@@ -375,51 +401,35 @@ int my_rmdir(const TCHAR* path)
 int my_unlink(const TCHAR* path)
 {
 	errno = 0;
-	int result = unlink(path);
-	my_errno = errno;
+	auto input = string(path);
+	auto output = iso_8859_1_to_utf8(input);
+	int result = unlink(output.c_str());
 
-	return result;
-}
-
-static int rename_file(const char* oldname, const char* newname) {
-	int result = 0;
-	for (int i = 0; i < 10; i++) {
-		result = rename(oldname, newname);
-		my_errno = errno;
-		if (result == 0) {
-			break;
-		}
-#ifdef WINDOWS
-		write_log("Could not rename \"%s\" to \"%s\": Windows error"
-			"code %lu\n", oldname, newname, GetLastError());
-#endif
-		sleep_millis(10);
-	}
 	return result;
 }
 
 int my_rename(const TCHAR* oldname, const TCHAR* newname)
 {
 	errno = 0;
-	int result = rename_file(oldname, newname);
-	if (result != 0) {
-		// could not rename file
-		return result;
-	}
-	return result;
+	auto old_input = string(oldname);
+	auto old_output = iso_8859_1_to_utf8(old_input);
+	auto new_input = string(newname);
+	auto new_output = iso_8859_1_to_utf8(new_input);
+
+	return rename(old_output.c_str(), new_output.c_str());
 }
 
 uae_s64 my_lseek(struct my_openfile_s* mos, uae_s64 offset, int whence)
 {
 	errno = 0;
-	off_t result = lseek(mos->fd, offset, whence);
-	my_errno = errno;
-	return result;
+	return lseek(mos->fd, offset, whence);
 }
 
 FILE* my_opentext(const TCHAR* name)
 {
-	return fopen(name, "rb");
+	auto input = string(name);
+	auto output = iso_8859_1_to_utf8(input);
+	return fopen(output.c_str(), "rb");
 }
 
 bool my_createshortcut(const char* source, const char* target, const char* description)
@@ -526,7 +536,33 @@ int my_issamevolume(const TCHAR* path1, const TCHAR* path2, TCHAR* path)
 
 int dos_errno(void)
 {
-	return host_errno_to_dos_errno(my_errno);
+	const auto e = errno;
+
+	switch (e) {
+	case ENOMEM:	return ERROR_NO_FREE_STORE;
+	case EEXIST:	return ERROR_OBJECT_EXISTS;
+	case EACCES:	return ERROR_WRITE_PROTECTED;
+	case ENOENT:	return ERROR_OBJECT_NOT_AROUND;
+	case ENOTDIR:	return ERROR_OBJECT_WRONG_TYPE;
+	case ENOSPC:	return ERROR_DISK_IS_FULL;
+	case EBUSY:       	return ERROR_OBJECT_IN_USE;
+	case EISDIR:	return ERROR_OBJECT_WRONG_TYPE;
+#if defined(ETXTBSY)
+	case ETXTBSY:	return ERROR_OBJECT_IN_USE;
+#endif
+#if defined(EROFS)
+	case EROFS:       	return ERROR_DISK_WRITE_PROTECTED;
+#endif
+#if defined(ENOTEMPTY)
+#if ENOTEMPTY != EEXIST
+	case ENOTEMPTY:	return ERROR_DIRECTORY_NOT_EMPTY;
+#endif
+#endif
+
+	default:
+		write_log(("Unimplemented error %s\n", strerror(e)));
+		return ERROR_NOT_IMPLEMENTED;
+	}
 }
 
 void filesys_host_init()

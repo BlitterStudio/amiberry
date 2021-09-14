@@ -34,8 +34,100 @@
 
 #define NUM_EVILCHARS 9
 static TCHAR evilchars[NUM_EVILCHARS] = { '%', '\\', '*', '?', '\"', '/', '|', '<', '>' };
-
+static char hex_chars[] = "0123456789abcdef";
 #define UAEFSDB_BEGINS _T("__uae___")
+
+static char* aname_to_nname(const char* aname, int ascii)
+{
+    size_t len = strlen(aname);
+    unsigned int repl_1 = UINT_MAX;
+    unsigned int repl_2 = UINT_MAX;
+
+    TCHAR a = aname[0];
+    TCHAR b = (a == '\0' ? a : aname[1]);
+    TCHAR c = (b == '\0' ? b : aname[2]);
+    TCHAR d = (c == '\0' ? c : aname[3]);
+
+    if (a >= 'a' && a <= 'z') a -= 32;
+    if (b >= 'a' && b <= 'z') b -= 32;
+    if (c >= 'a' && c <= 'z') c -= 32;
+
+    // reserved dos devices in Windows
+    size_t ll = 0;
+    if (a == 'A' && b == 'U' && c == 'X') ll = 3; // AUX
+    if (a == 'C' && b == 'O' && c == 'N') ll = 3; // CON
+    if (a == 'P' && b == 'R' && c == 'N') ll = 3; // PRN
+    if (a == 'N' && b == 'U' && c == 'L') ll = 3; // NUL
+    if (a == 'L' && b == 'P' && c == 'T' && (d >= '0' && d <= '9')) ll = 4; // LPT#
+    if (a == 'C' && b == 'O' && c == 'M' && (d >= '0' && d <= '9')) ll = 4; // COM#
+    // AUX.anything, CON.anything etc.. are also illegal names in Windows
+    if (ll && (len == ll || (len > ll && aname[ll] == '.'))) {
+        repl_1 = 2;
+    }
+
+    // spaces and periods at the end are a no-no in Windows
+    int ei = len - 1;
+    if (aname[ei] == '.' || aname[ei] == ' ') {
+        repl_2 = ei;
+    }
+
+    // allocating for worst-case scenario here (max replacements)
+    char* buf = (char*)malloc(len * 3 + 1);
+    char* p = buf;
+
+    int repl, j;
+    unsigned char x;
+    for (unsigned int i = 0; i < len; i++) {
+        x = (unsigned char)aname[i];
+        repl = 0;
+        if (i == repl_1) {
+            repl = 1;
+        }
+        else if (i == repl_2) {
+            repl = 2;
+        }
+        else if (x < 32) {
+            // these are not allowed on Windows
+            repl = 1;
+        }
+        else if (ascii && x > 127) {
+            repl = 1;
+        }
+        for (j = 0; j < NUM_EVILCHARS; j++) {
+            if (x == evilchars[j]) {
+                repl = 1;
+                break;
+            }
+        }
+        if (i == len - 1) {
+            // last character, we can now check the file ending
+            if (len >= 5 && strncasecmp(aname + len - 5, ".uaem", 5) == 0) {
+                // we don't allow Amiga files ending with .uaem, so we replace
+                // the last character
+                repl = 1;
+            }
+        }
+        if (repl) {
+            *p++ = '%';
+            *p++ = hex_chars[(x & 0xf0) >> 4];
+            *p++ = hex_chars[x & 0xf];
+        }
+        else {
+            *p++ = x;
+        }
+    }
+    *p++ = '\0';
+
+    if (ascii) {
+        return buf;
+    }
+
+    auto string_buf = string(buf);
+    auto result = iso_8859_1_to_utf8(string_buf);
+    free(buf);
+    char* char_result = strdup(result.c_str());
+    return char_result;
+}
 
 /* Return nonzero for any name we can't create on the native filesystem.  */
 static int fsdb_name_invalid_2(a_inode* aino, const TCHAR* n, int dir)
@@ -79,11 +171,6 @@ int fsdb_name_invalid_dir(a_inode* aino, const TCHAR* n)
         return v;
     write_log(_T("FILESYS: '%s' illegal filename\n"), n);
     return v;
-}
-
-static uae_u32 filesys_parse_mask(uae_u32 mask)
-{
-    return mask ^ 0xf;
 }
 
 int fsdb_exists(const TCHAR* nname)
@@ -132,7 +219,10 @@ int fsdb_fill_file_attrs(a_inode* base, a_inode* aino)
 {
     struct stat statbuf{};
     /* This really shouldn't happen...  */
-    if (stat(aino->nname, &statbuf) == -1)
+    auto input = string(aino->nname);
+    auto output = iso_8859_1_to_utf8(input);
+	
+    if (stat(output.c_str(), &statbuf) == -1)
         return 0;
     aino->dir = S_ISDIR(statbuf.st_mode) ? 1 : 0;
     aino->amigaos_mode = ((S_IXUSR & statbuf.st_mode ? 0 : A_FIBF_EXECUTE)
@@ -154,7 +244,10 @@ int fsdb_set_file_attrs(a_inode* aino)
     int mode;
     uae_u32 mask = aino->amigaos_mode;
 
-    if (stat(aino->nname, &statbuf) == -1)
+    auto input = string(aino->nname);
+    auto output = iso_8859_1_to_utf8(input);
+	
+    if (stat(output.c_str(), &statbuf) == -1)
         return ERROR_OBJECT_NOT_AROUND;
 
     mode = statbuf.st_mode;
@@ -174,7 +267,7 @@ int fsdb_set_file_attrs(a_inode* aino)
     else
         mode |= S_IXUSR;
 
-    chmod(aino->nname, mode);
+    chmod(output.c_str(), mode);
 
     aino->dirty = 1;
     return 0;
@@ -210,35 +303,10 @@ int fsdb_mode_representable_p(const a_inode* aino, int amigaos_mode)
 
 TCHAR* fsdb_create_unique_nname(a_inode* base, const TCHAR* suggestion)
 {
-    TCHAR* c;
-    TCHAR tmp[256] = UAEFSDB_BEGINS;
-    int i;
-
-    _tcsncat(tmp, suggestion, 240);
-
-    /* replace the evil ones... */
-    for (i = 0; i < NUM_EVILCHARS; i++)
-        while ((c = _tcschr(tmp, evilchars[i])) != 0)
-            *c = '_';
-
-    while ((c = _tcschr(tmp, '.')) != 0)
-        *c = '_';
-    while ((c = _tcschr(tmp, ' ')) != 0)
-        *c = '_';
-
-    for (;;) {
-        TCHAR* p = build_nname(base->nname, tmp);
-        if (access(p, R_OK) < 0 && errno == ENOENT) {
-            write_log(_T("unique name: %s\n"), p);
-            return p;
-        }
-        xfree(p);
-        /* tmpnam isn't reentrant and I don't really want to hack configure
-         * right now to see whether tmpnam_r is available...  */
-        for (i = 0; i < 8; i++) {
-            tmp[i + 8] = "_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[uaerand() % 63];
-        }
-    }
+    char* nname = aname_to_nname(suggestion, 0);
+    TCHAR* p = build_nname(base->nname, nname);
+    free(nname);
+    return p;
 }
 
 // Get local time in secs, starting from 01.01.1970

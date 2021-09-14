@@ -81,7 +81,7 @@ static uae_u32 raw_cputbl_count[65536] = { 0, };
 static uae_u16 opcode_nums[65536];
 
 
-static int __cdecl untranslated_compfn(const void* e1, const void* e2)
+static int untranslated_compfn(const void *e1, const void *e2)
 {
     return raw_cputbl_count[*(const uae_u16*)e1] < raw_cputbl_count[*(const uae_u16*)e2];
     int v1 = *(const uae_u16*)e1;
@@ -129,7 +129,8 @@ static int branch_cc;
 uae_u8* current_compile_p = NULL;
 static uae_u8* max_compile_start;
 uae_u8* compiled_code = NULL;
-uae_u8 *popallspace = NULL;
+const int POPALLSPACE_SIZE = 2048; /* That should be enough space */
+uae_u8* popallspace = NULL;
 
 void* pushall_call_handler = NULL;
 static void* popall_execute_normal = NULL;
@@ -175,6 +176,9 @@ static uae_u8 *cache_alloc (int size)
 }
 
 #endif
+
+extern const struct comptbl op_smalltbl_0_comp_nf[];
+extern const struct comptbl op_smalltbl_0_comp_ff[];
 
 static bigstate live;
 
@@ -570,6 +574,10 @@ bool check_prefs_changed_comp(bool checkonly)
             changed_prefs.comptrustnaddr = currprefs.comptrustnaddr = comptrust_prev;
         }
         currprefs.cachesize = changed_prefs.cachesize;
+        if (currprefs.cachesize && currprefs.fast_copper)
+            chipmem_bank.jit_write_flag = S_WRITE;
+        else
+            chipmem_bank.jit_write_flag = 0;
         alloc_cache();
         changed = 1;
     }
@@ -877,6 +885,17 @@ STATIC_INLINE void set_const(int r, uae_u32 val)
     set_status(r, ISCONST);
 }
 
+bool has_free_reg(void)
+{
+  for (int i = N_REGS - 1; i >= 0; i--) {
+    if(!live.nat[i].locked) {
+      if (live.nat[i].nholds == 0)
+        return true;
+    }
+  }
+  return false;
+}
+
 static int alloc_reg_hinted(int r, int willclobber, int hint)
 {
     int bestreg = -1;
@@ -911,18 +930,15 @@ static int alloc_reg_hinted(int r, int willclobber, int hint)
                 compemu_raw_mov_l_ri(bestreg, live.state[r].val);
                 live.state[r].val = 0;
                 set_status(r, DIRTY);
-            }
-            else {
+            } else {
                 do_load_reg(bestreg, r);
                 set_status(r, CLEAN);
             }
-        }
-        else {
+        } else {
             live.state[r].val = 0;
             set_status(r, CLEAN);
         }
-    }
-    else { /* this is the easiest way, but not optimal. */
+    } else { /* this is the easiest way, but not optimal. */
         live.state[r].val = 0;
         set_status(r, DIRTY);
     }
@@ -1011,8 +1027,7 @@ STATIC_INLINE int readreg_general(int r, int spec)
 
     if (isinreg(r)) {
         answer = live.state[r].realreg;
-    }
-    else {
+    } else {
         /* the value is in memory to start with */
         answer = alloc_reg_hinted(r, 0, spec);
     }
@@ -1053,8 +1068,7 @@ static int writereg(int r)
     make_exclusive(r, 0);
     if (isinreg(r)) {
         answer = live.state[r].realreg;
-    }
-    else {
+    } else {
         /* the value is in memory to start with */
         answer = alloc_reg_hinted(r, 1, -1);
     }
@@ -1077,8 +1091,7 @@ static int rmw(int r)
 
     if (isinreg(r)) {
         answer = live.state[r].realreg;
-    }
-    else {
+    } else {
         /* the value is in memory to start with */
         answer = alloc_reg_hinted(r, 0, -1);
     }
@@ -1161,8 +1174,7 @@ static int f_alloc_reg(int r, int willclobber)
             compemu_raw_fmov_rm(bestreg, (uintptr)live.fate[r].mem);
             live.fate[r].status = CLEAN;
         }
-    }
-    else {
+    } else {
         live.fate[r].status = DIRTY;
     }
     live.fate[r].realreg = bestreg;
@@ -1182,8 +1194,7 @@ STATIC_INLINE int f_readreg(int r)
 
     if (f_isinreg(r)) {
         answer = live.fate[r].realreg;
-    }
-    else {
+    } else {
         /* the value is in memory to start with */
         answer = f_alloc_reg(r, 0);
     }
@@ -1197,8 +1208,7 @@ STATIC_INLINE int f_writereg(int r)
 
     if (f_isinreg(r)) {
         answer = live.fate[r].realreg;
-    }
-    else {
+    }  else {
         answer = f_alloc_reg(r, 1);
     }
     live.fate[r].status = DIRTY;
@@ -1211,8 +1221,7 @@ STATIC_INLINE int f_rmw(int r)
 
     if (f_isinreg(r)) {
         n = live.fate[r].realreg;
-    }
-    else {
+    } else {
         n = f_alloc_reg(r, 0);
     }
     live.fate[r].status = DIRTY;
@@ -1317,6 +1326,8 @@ void compiler_exit(void)
         jit_log(_T("%03d: %04x %10u %s\n"), i, opcode_nums[i], count, lookup->name);
     }
 #endif
+
+	exit_table68k();
 }
 
 static void init_comp(void)
@@ -1329,6 +1340,8 @@ static void init_comp(void)
         live.state[i].val = 0;
         set_status(i, UNDEF);
     }
+  for (i = 0; i < SCRATCH_REGS; ++i)
+    live.scratch_in_use[i] = 0;
 
     for (i = 0; i < VFREGS; i++) {
         live.fate[i].status = UNDEF;
@@ -1340,8 +1353,7 @@ static void init_comp(void)
         if (i < 16) { /* First 16 registers map to 68k registers */
             live.state[i].mem = &regs.regs[i];
             set_status(i, INMEM);
-        }
-        else if (i >= S1) {
+        } else if (i >= S1) {
             live.state[i].mem = &regs.scratchregs[i - S1];
         }
     }
@@ -1364,13 +1376,11 @@ static void init_comp(void)
             live.fate[i].mem = (uae_u32*)(&regs.fp[i].fp);
             live.fate[i].needflush = NF_TOMEM;
             live.fate[i].status = INMEM;
-        }
-        else if (i == FP_RESULT) {
+        } else if (i == FP_RESULT) {
             live.fate[i].mem = (uae_u32*)(&regs.fp_result.fp);
             live.fate[i].needflush = NF_TOMEM;
             live.fate[i].status = INMEM;
-        }
-        else {
+        } else {
             live.fate[i].mem = (uae_u32*)(&regs.scratchfregs[i - 8]);
         }
     }
@@ -1443,6 +1453,30 @@ static void flush(int save_regs)
     }
 }
 
+int alloc_scratch(void)
+{
+	for(int i = 0; i < SCRATCH_REGS; ++i) {
+		if (live.scratch_in_use[i] == 0) {
+			live.scratch_in_use[i] = 1;
+			return S1 + i;
+		}
+	}
+	jit_log("Running out of scratch register.");
+	abort();
+}
+
+void release_scratch(int i)
+{
+	if (i < S1 || i >= S1 + SCRATCH_REGS)
+		jit_log("release_scratch(): %d is not a scratch reg.", i);
+	if(live.scratch_in_use[i - S1]) {
+		forget_about(i);
+		live.scratch_in_use[i - S1] = 0;
+	} else {
+		jit_log("release_scratch(): %d not in use.", i);
+	}
+}
+
 static void freescratch(void)
 {
     int i;
@@ -1460,6 +1494,8 @@ static void freescratch(void)
 
     for (i = S1; i < VREGS; i++)
         forget_about(i);
+  for (i = 0; i < SCRATCH_REGS; ++i)
+    live.scratch_in_use[i] = 0;
 
 #ifdef USE_JIT_FPU
     f_forget_about(FS1);
@@ -1564,8 +1600,7 @@ static void writemem_real(int address, int source, int size)
         case 2: jnf_MEM_WRITE24_OFF_w(address, source); break;
         case 4: jnf_MEM_WRITE24_OFF_l(address, source); break;
         }
-    }
-    else {
+    } else {
         switch (size) {
         case 1: jnf_MEM_WRITE_OFF_b(address, source); break;
         case 2: jnf_MEM_WRITE_OFF_w(address, source); break;
@@ -1635,8 +1670,7 @@ static void readmem_real(int address, int dest, int size)
         case 2: jnf_MEM_READ24_OFF_w(dest, address); break;
         case 4: jnf_MEM_READ24_OFF_l(dest, address); break;
         }
-    }
-    else {
+    } else {
         switch (size) {
         case 1: jnf_MEM_READ_OFF_b(dest, address); break;
         case 2: jnf_MEM_READ_OFF_w(dest, address); break;
@@ -1732,8 +1766,7 @@ void calc_disp_ea_020(int base, uae_u32 dp, int target)
         if ((dp & 0x4) == 0) {  /* add regd *before* the get_long */
             if (!ignorereg) {
                 disp_ea20_target_mov(target, reg, regd_shift, ((dp & 0x800) == 0));
-            }
-            else {
+            } else {
                 mov_l_ri(target, 0);
             }
 
@@ -1743,13 +1776,11 @@ void calc_disp_ea_020(int base, uae_u32 dp, int target)
             arm_ADD_l_ri(target, addbase);
             if (dp & 0x03)
                 readlong(target, target);
-        }
-        else { /* do the getlong first, then add regd */
+        } else { /* do the getlong first, then add regd */
             if (!ignorebase) {
                 mov_l_rr(target, base);
                 arm_ADD_l_ri(target, addbase);
-            }
-            else {
+            } else {
                 mov_l_ri(target, addbase);
             }
             if (dp & 0x03)
@@ -1760,13 +1791,11 @@ void calc_disp_ea_020(int base, uae_u32 dp, int target)
             }
         }
         arm_ADD_l_ri(target, outer);
-    }
-    else { /* 68000 version */
+    } else { /* 68000 version */
         if ((dp & 0x800) == 0) { /* Sign extend */
             sign_extend_16_rr(target, reg);
             lea_l_brr_indexed(target, base, target, 1 << regd_shift, (uae_s8)dp);
-        }
-        else {
+        } else {
             lea_l_brr_indexed(target, base, reg, 1 << regd_shift, (uae_s8)dp);
         }
     }
@@ -1906,8 +1935,7 @@ STATIC_INLINE int block_check_checksum(blockinfo* bi)
         add_to_active(bi);
         raise_in_cl_list(bi);
         bi->status = BI_ACTIVE;
-    }
-    else {
+    } else {
         /* This block actually changed. We need to invalidate it,
            and set it up to be recompiled */
         invalidate_block(bi);
@@ -2109,6 +2137,9 @@ void build_comp(void)
     unsigned long opcode;
     const struct comptbl* tbl = op_smalltbl_0_comp_ff;
     const struct comptbl* nftbl = op_smalltbl_0_comp_nf;
+    unsigned int cpu_level = (currprefs.cpu_model - 68000) / 10;
+    if (cpu_level > 4)
+        cpu_level--;
 
 #ifdef PROFILE_UNTRANSLATED_INSNS
     regs.raw_cputbl_count = raw_cputbl_count;
@@ -2118,14 +2149,14 @@ void build_comp(void)
 
     for (opcode = 0; opcode < 65536; opcode++) {
         reset_compop(opcode);
-        prop[opcode].use_flags = 0x1f;
-        prop[opcode].set_flags = 0x1f;
+    prop[opcode].use_flags = FLAG_ALL;
+    prop[opcode].set_flags = FLAG_ALL;
         prop[opcode].cflow = fl_jump | fl_trap; // ILLEGAL instructions do trap
     }
 
     for (i = 0; tbl[i].opcode < 65536; i++) {
         int cflow = table68k[tbl[i].opcode].cflow;
-        if (follow_const_jumps && (tbl[i].specific & 16))
+        if (follow_const_jumps && (tbl[i].specific & COMP_OPCODE_ISCJUMP))
             cflow = fl_const_jump;
         else
             cflow &= ~fl_const_jump;
@@ -2139,7 +2170,7 @@ void build_comp(void)
     }
 
     for (i = 0; nftbl[i].opcode < 65536; i++) {
-        int uses_fpu = tbl[i].specific & COMP_OPCODE_USES_FPU;
+		bool uses_fpu = (tbl[i].specific & COMP_OPCODE_USES_FPU) != 0;
         if (uses_fpu && avoid_fpu)
             nfcompfunctbl[nftbl[i].opcode] = NULL;
         else
@@ -2151,19 +2182,16 @@ void build_comp(void)
         compop_func* nff;
         int isaddx, cflow;
 
-        int cpu_level = (currprefs.cpu_model - 68000) / 10;
-        if (cpu_level > 4)
-            cpu_level--;
         if (table68k[opcode].mnemo == i_ILLG || table68k[opcode].clev > cpu_level)
             continue;
 
         if (table68k[opcode].handler != -1) {
             f = compfunctbl[table68k[opcode].handler];
             nff = nfcompfunctbl[table68k[opcode].handler];
-            cflow = prop[table68k[opcode].handler].cflow;
             isaddx = prop[table68k[opcode].handler].is_addx;
-            prop[opcode].cflow = cflow;
             prop[opcode].is_addx = isaddx;
+            cflow = prop[table68k[opcode].handler].cflow;
+            prop[opcode].cflow = cflow;
             compfunctbl[opcode] = f;
             nfcompfunctbl[opcode] = nff;
         }
@@ -2254,8 +2282,7 @@ void flush_icache(int n)
             bi->handler_to_use = (cpuop_func*)popall_execute_normal;
             set_dhtu(bi, bi->direct_pen);
             bi->status = BI_INVALID;
-        }
-        else {
+        } else {
             if (bi == cache_tags[cl + 1].bi)
                 cache_tags[cl].handler = (cpuop_func*)popall_check_checksum;
             bi->handler_to_use = (cpuop_func*)popall_check_checksum;
@@ -2323,7 +2350,7 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
         free_checksum_info_chain(bi->csi);
         bi->csi = NULL;
 
-        liveflags[blocklen] = 0x1f; /* All flags needed afterwards */
+        liveflags[blocklen] = FLAG_ALL; /* All flags needed afterwards */
         i = blocklen;
         while (i--) {
             uae_u16* currpcp = pc_hist[i].location;
@@ -2369,8 +2396,7 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
         if (optlev == 0) { /* No need to actually translate */
           /* Execute normally without keeping stats */
             compemu_raw_exec_nostats((uintptr)pc_hist[0].location);
-        }
-        else {
+        } else {
             next_pc_p = 0;
             taken_pc_p = 0;
             branch_cc = 0; // Only to be initialized. Will be set together with next_pc_p
@@ -2392,8 +2418,7 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
                 if (!needed_flags) {
                     cputbl = cpufunctbl;
                     comptbl = nfcompfunctbl;
-                }
-                else {
+                } else {
                     cputbl = cpufunctbl;
                     comptbl = compfunctbl;
                 }
@@ -2435,8 +2460,7 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
 #endif
                         compemu_raw_maybe_do_nothing(scaled_cycles(totcycles));
                     }
-                }
-                else if (may_raise_exception) {
+                } else if (may_raise_exception) {
 #if defined(CPU_arm) && !defined(ARMV6T2) && !defined(CPU_AARCH64)
                     data_check_end(8, 64);
 #endif
@@ -2493,8 +2517,7 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
                 tba = compemu_raw_endblock_pc_isconst(scaled_cycles(totcycles), t2);
                 write_jmp_target(tba, get_handler(t2));
                 create_jmpdep(bi, 1, tba, t2);
-            }
-            else {
+            } else {
                 if (was_comp) {
                     flush(1);
                 }
@@ -2506,8 +2529,7 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
 #endif
                     r = live.state[PC_P].realreg;
                     compemu_raw_endblock_pc_inreg(r, scaled_cycles(totcycles));
-                }
-                else if (was_comp && isconst(PC_P)) {
+                } else if (was_comp && isconst(PC_P)) {
                     uintptr v = live.state[PC_P].val;
                     uae_u32* tba;
                     blockinfo* tbi;
@@ -2521,8 +2543,7 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
                     tba = compemu_raw_endblock_pc_isconst(scaled_cycles(totcycles), v);
                     write_jmp_target(tba, get_handler(v));
                     create_jmpdep(bi, 0, tba, v);
-                }
-                else {
+                } else {
                     r = REG_PC_TMP;
                     compemu_raw_mov_l_rm(r, (uintptr)&regs.pc_p);
 #if defined(CPU_arm) && !defined(ARMV6T2) && !defined(CPU_AARCH64)
@@ -2539,8 +2560,7 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
             free_checksum_info_chain(bi->csi);
             bi->csi = NULL;
             add_to_dormant(bi);
-        }
-        else {
+        } else {
             calc_checksum(bi, &(bi->c1), &(bi->c2));
             add_to_active(bi);
         }

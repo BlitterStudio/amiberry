@@ -33,6 +33,8 @@ static gcn::RadioButton* opt25Mhz;
 static gcn::RadioButton* optFastest;
 static gcn::Label* lblCpuIdle;
 static gcn::Slider* sldCpuIdle;
+static gcn::Label* lblCpuIdleInfo;
+static gcn::CheckBox* chkCPUCycleExact;
 
 class CPUButtonActionListener : public gcn::ActionListener
 {
@@ -64,6 +66,10 @@ public:
 			changed_prefs.cpu_model = 68020;
 			if (changed_prefs.fpu_model == 68040)
 				changed_prefs.fpu_model = 68881;
+
+			changed_prefs.cpu_cycle_exact = false;
+			changed_prefs.blitter_cycle_exact = false;
+			changed_prefs.cpu_memory_cycle_exact = false;
 		}
 		else if (actionEvent.getSource() == optCPU68030)
 		{
@@ -71,15 +77,22 @@ public:
 			if (changed_prefs.fpu_model == 68040)
 				changed_prefs.fpu_model = 68881;
 			changed_prefs.address_space_24 = false;
+			changed_prefs.cpu_cycle_exact = false;
+			changed_prefs.blitter_cycle_exact = false;
+			changed_prefs.cpu_memory_cycle_exact = false;
 		}
 		else if (actionEvent.getSource() == optCPU68040)
 		{
 			changed_prefs.cpu_model = 68040;
 			changed_prefs.fpu_model = 68040;
 			changed_prefs.address_space_24 = false;
+			changed_prefs.cpu_cycle_exact = false;
+			changed_prefs.blitter_cycle_exact = false;
+			changed_prefs.cpu_memory_cycle_exact = false;
 		}
 		RefreshPanelCPU();
 		RefreshPanelRAM();
+		RefreshPanelChipset();
 	}
 };
 
@@ -127,6 +140,20 @@ public:
 			changed_prefs.m68k_speed = M68K_SPEED_25MHZ_CYCLES;
 		else if (actionEvent.getSource() == optFastest)
 			changed_prefs.m68k_speed = -1;
+		else if (actionEvent.getSource() == chkCPUCycleExact) {
+			if (chkCPUCycleExact->isSelected()) {
+				changed_prefs.cpu_cycle_exact = true;
+				changed_prefs.blitter_cycle_exact = true;
+				changed_prefs.cpu_memory_cycle_exact = true;
+				changed_prefs.cachesize = 0;
+			}
+			else {
+				changed_prefs.cpu_cycle_exact = false;
+				changed_prefs.blitter_cycle_exact = false;
+				changed_prefs.cpu_memory_cycle_exact = false;
+			}
+			RefreshPanelChipset();
+		}
 	}
 };
 
@@ -322,7 +349,7 @@ void InitPanelCPU(const struct _ConfigCategory& category)
 	grpFPU->add(chkFPUstrict, 10, 140);
 	grpFPU->add(chkFPUJIT, 10, 170);
 	grpFPU->setMovable(false);
-	grpFPU->setSize(175, 225);
+	grpFPU->setSize(175, 285);
 	grpFPU->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpFPU->setBaseColor(gui_baseCol);
 
@@ -346,6 +373,10 @@ void InitPanelCPU(const struct _ConfigCategory& category)
 	optFastest->setId("Fastest");
 	optFastest->addActionListener(cpuSpeedButtonActionListener);
 
+	chkCPUCycleExact = new gcn::CheckBox("Cycle exact", true);
+	chkCPUCycleExact->setId("chkCPUCycleExact");
+	chkCPUCycleExact->addActionListener(cpuSpeedButtonActionListener);
+	
 	lblCpuIdle = new gcn::Label("CPU Idle");
 	sldCpuIdle = new gcn::Slider(0, 10);
 	sldCpuIdle->setSize(70, SLIDER_HEIGHT);
@@ -354,6 +385,7 @@ void InitPanelCPU(const struct _ConfigCategory& category)
 	sldCpuIdle->setStepLength(1);
 	sldCpuIdle->setId("sldCpuIdle");
 	sldCpuIdle->addActionListener(cpuIdleActionListener);
+	lblCpuIdleInfo = new gcn::Label("000");
 
 	grpCPUSpeed = new gcn::Window("CPU Speed");
 	grpCPUSpeed->setPosition(grpFPU->getX() + grpFPU->getWidth() + DISTANCE_NEXT_X, DISTANCE_BORDER);
@@ -361,10 +393,12 @@ void InitPanelCPU(const struct _ConfigCategory& category)
 	grpCPUSpeed->add(opt14Mhz, 10, 40);
 	grpCPUSpeed->add(opt25Mhz, 10, 70);
 	grpCPUSpeed->add(optFastest, 10, 100);
-	grpCPUSpeed->add(lblCpuIdle, 10, 160);
-	grpCPUSpeed->add(sldCpuIdle, lblCpuIdle->getWidth() + 20, 160);
+	grpCPUSpeed->add(chkCPUCycleExact, 10, 160);
+	grpCPUSpeed->add(lblCpuIdle, 10, 190);
+	grpCPUSpeed->add(sldCpuIdle, lblCpuIdle->getX() + lblCpuIdle->getWidth() + DISTANCE_NEXT_X/2, 190);
+	grpCPUSpeed->add(lblCpuIdleInfo, sldCpuIdle->getX() + sldCpuIdle->getWidth() + DISTANCE_NEXT_X / 2, 190);
 	grpCPUSpeed->setMovable(false);
-	grpCPUSpeed->setSize(175, 225);
+	grpCPUSpeed->setSize(190, 285);
 	grpCPUSpeed->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpCPUSpeed->setBaseColor(gui_baseCol);
 
@@ -406,6 +440,8 @@ void ExitPanelCPU()
 	delete optFastest;
 	delete lblCpuIdle;
 	delete sldCpuIdle;
+	delete lblCpuIdleInfo;
+	delete chkCPUCycleExact;
 	delete cpuIdleActionListener;
 	
 	delete grpCPUSpeed;
@@ -428,8 +464,13 @@ void RefreshPanelCPU()
 
 	chk24Bit->setSelected(changed_prefs.address_space_24);
 	chk24Bit->setEnabled(changed_prefs.cpu_model == 68020 && changed_prefs.cachesize == 0);
+	
 	chkCPUCompatible->setSelected(changed_prefs.cpu_compatible > 0);
 	chkCPUCompatible->setEnabled(changed_prefs.cachesize == 0);
+	
+	chkCPUCycleExact->setSelected(changed_prefs.cpu_cycle_exact > 0);
+	chkCPUCycleExact->setEnabled(changed_prefs.cpu_model <= 68010);
+	
 	chkJIT->setEnabled(changed_prefs.cpu_model >= 68020);
 	chkJIT->setSelected(changed_prefs.cachesize > 0);
 
@@ -472,6 +513,8 @@ void RefreshPanelCPU()
 		optFastest->setSelected(true);
 
 	sldCpuIdle->setValue(changed_prefs.cpu_idle == 0 ? 0 : 12 - changed_prefs.cpu_idle / 15);
+	const auto cpu_idle = to_string((changed_prefs.cpu_idle == 0 ? 0 : 12 - changed_prefs.cpu_idle / 15) * 10);
+	lblCpuIdleInfo->setCaption(cpu_idle);
 }
 
 bool HelpPanelCPU(std::vector<std::string>& helptext)
@@ -492,6 +535,7 @@ bool HelpPanelCPU(std::vector<std::string>& helptext)
 	helptext.emplace_back("Use 7MHz for A500 or 14MHz for A1200 speed. Fastest Possible will give only the minimum time");
 	helptext.emplace_back("to the Chipset, using as much as possible for the CPU, which might result in dropping");
 	helptext.emplace_back("frames also.");
+	helptext.emplace_back("\"Cycle exact\" emulates 68000 and chipset cycle accurate. This is very slow and only required in few situations.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("You can use the CPU Idle slider to set how much the CPU emulation should sleep when idle.");
 	helptext.emplace_back("This is useful to keep the system temperature down.");

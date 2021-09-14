@@ -59,25 +59,7 @@ jobs:
   steps:
     - template: rpi3-sdl2.yml
 
-- job: RPI2_sdl2_32bit
-  strategy:
-    matrix:
-      rpi2-sdl2:
-        platform: 'rpi2-sdl2'
-  pool: RPI-32
-  steps:
-    - template: rpi2-sdl2.yml
-
-- job: RPI1_sdl2_32bit
-  strategy:
-    matrix:
-      rpi1-sdl2:
-        platform: 'rpi1-sdl2'
-  pool: RPI-32
-  steps:
-    - template: rpi1-sdl2.yml
-
-- job: RPI4_64bit
+- job: RPI4_sdl2_64bit
   strategy:
     matrix:
       rpi4-sdl2-64bit:
@@ -85,3 +67,21 @@ jobs:
   pool: RPI-64
   steps:
     - template: pi64.yml
+
+- job: RPI4_dmx_64bit
+  strategy:
+    matrix:
+      rpi4-dmx-64bit:
+        platform: 'pi64-dispmanx'
+  pool: RPI-64
+  steps:
+    - template: pi64-dmx.yml
+
+- job: RK3399_64bit
+  strategy:
+    matrix:
+      rockpro64-64bit:
+        platform: 'RK3399'
+  pool: RockPro64
+  steps:
+    - template: rk3399.yml

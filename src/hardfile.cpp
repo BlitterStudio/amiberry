@@ -951,7 +951,7 @@ static uae_u64 vhd_write (struct hardfiledata *hfd, void *v, uae_u64 offset, uae
 	return written;
 }
 
-#ifndef AMIBERRY
+
 int vhd_create (const TCHAR *name, uae_u64 size, uae_u32 dostype)
 {
 	struct hardfiledata hfd;
@@ -1086,7 +1086,6 @@ end:
 	zfile_fclose (zf);
 	return ret;
 }
-#endif
 
 static int hdf_read2 (struct hardfiledata *hfd, void *buffer, uae_u64 offset, int len)
 {

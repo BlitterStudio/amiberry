@@ -27,11 +27,11 @@ static gcn::CheckBox* chkMinimizedPauseEmulation;
 static gcn::CheckBox* chkMinimizedDisableSound;
 static gcn::CheckBox* chkMinimizedDisableControllers;
 
-class StringListModel : public gcn::ListModel
+class string_list_model : public gcn::ListModel
 {
-	std::vector<std::string> values;
+	std::vector<std::string> values{};
 public:
-	StringListModel(const char* entries[], const int count)
+	string_list_model(const char* entries[], const int count)
 	{
 		for (auto i = 0; i < count; ++i)
 			values.emplace_back(entries[i]);
@@ -42,6 +42,17 @@ public:
 		return values.size();
 	}
 
+	int add_element(const char* elem) override
+	{
+		values.emplace_back(elem);
+		return 0;
+	}
+
+	void clear_elements() override
+	{
+		values.clear();
+	}
+	
 	std::string getElementAt(int i) override
 	{
 		if (i < 0 || i >= static_cast<int>(values.size()))
@@ -51,7 +62,7 @@ public:
 };
 
 static const char* prio_values[] = { "Low", "Normal", "High" };
-static StringListModel prio_values_list(prio_values, 3);
+static string_list_model prio_values_list(prio_values, 3);
 
 class PrioActionListener : public gcn::ActionListener
 {

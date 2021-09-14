@@ -20,7 +20,7 @@
 #endif
 
 #define DIALOG_WIDTH 760
-#define DIALOG_HEIGHT 420
+#define DIALOG_HEIGHT 440
 
 static bool dialog_finished = false;
 
@@ -32,7 +32,7 @@ static gcn::ScrollArea* scrAreaHelp;
 
 class HelpListModel : public gcn::ListModel
 {
-	std::vector<std::string> lines;
+	std::vector<std::string> lines{};
 
 public:
 	HelpListModel(const std::vector<std::string>& helptext)
@@ -45,6 +45,17 @@ public:
 		return lines.size();
 	}
 
+	int add_element(const char* elem) override
+	{
+		lines.emplace_back(elem);
+		return 0;
+	}
+
+	void clear_elements() override
+	{
+		lines.clear();
+	}
+	
 	std::string getElementAt(const int i) override
 	{
 		if (i >= 0 && i < lines.size())

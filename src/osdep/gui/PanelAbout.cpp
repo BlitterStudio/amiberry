@@ -10,6 +10,7 @@
 #include "fsdb_host.h"
 
 static gcn::Label* lblEmulatorVersion;
+static gcn::Label* lblCopyright;
 static gcn::Label* lblSDL_compiled_version;
 static gcn::Icon* icon;
 static gcn::Image* amiberryLogoImage;
@@ -26,21 +27,37 @@ void InitPanelAbout(const struct _ConfigCategory& category)
 	amiberryLogoImage = gcn::Image::load(prefix_with_application_directory_path("data/amiberry-logo.png"));
 	icon = new gcn::Icon(amiberryLogoImage);
 	lblEmulatorVersion = new gcn::Label(get_version_string());
+	lblCopyright = new gcn::Label("Copyright (C) 2016-2021 Dimitris Panokostas");
 	std::ostringstream sdl_compiled;
 	sdl_compiled << "Compiled against SDL2 v" << int(compiled.major) << "." << int(compiled.minor) << "." << int(compiled.patch);
 	sdl_compiled << ", Linked against SDL2 v" << int(linked.major) << "." << int(linked.minor) << "." << int(linked.patch);
 	lblSDL_compiled_version = new gcn::Label(sdl_compiled.str());
 	
 	textBox = new gcn::TextBox(
+		"This program is free software: you can redistribute it and/or modify\n"
+		"it under the terms of the GNU General Public License as published by\n"
+		"the Free Software Foundation, either version 3 of the License, or\n"
+		"any later version.\n\n"
+
+		"This program is distributed in the hope that it will be useful,\n"
+		"but WITHOUT ANY WARRANTY; without even the implied warranty of\n"
+		"MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the\n"
+		"GNU General Public License for more details.\n\n"
+
+		"You should have received a copy of the GNU General Public License\n"
+		"along with this program.If not, see https://www.gnu.org/licenses\n\n"
+
+		"Credits:\n"
 		"Dimitris Panokostas (MiDWaN) - Amiberry author\n"
 		"Toni Wilen - WinUAE author\n"
 		"TomB - Original ARM port of UAE, JIT ARM updates\n"
-		"Chips - Original RPI port\n"
+        "Rob Smith, Drawbridge floppy controller\n"
 		"Gareth Fare - Serial port implementation\n"
 		"Dom Cresswell (Horace & The Spider) - Controller and WHDBooter updates\n"
 		"Christer Solskogen - Makefile and testing\n"
 		"Gunnar Kristjansson - Amibian and inspiration\n"
 		"Thomas Navarro Garcia - Original Amiberry logo\n"
+        "Chips - Original RPI port\n"
 		"Vasiliki Soufi - Amiberry name\n"
 		"\n"
 		"Dedicated to HeZoR - R.I.P. little brother (1978-2017)\n"
@@ -52,7 +69,7 @@ void InitPanelAbout(const struct _ConfigCategory& category)
 	textBoxScrollArea->setBackgroundColor(gui_baseCol);
 	textBoxScrollArea->setBaseColor(gui_baseCol);
 	textBoxScrollArea->setWidth(category.panel->getWidth() - DISTANCE_BORDER * 2);
-	textBoxScrollArea->setHeight(220);
+	textBoxScrollArea->setHeight(180);
 	textBoxScrollArea->setBorderSize(1);
 	
 	auto pos_y = DISTANCE_BORDER;
@@ -61,6 +78,8 @@ void InitPanelAbout(const struct _ConfigCategory& category)
 
 	category.panel->add(lblEmulatorVersion, DISTANCE_BORDER, pos_y);
 	pos_y += lblEmulatorVersion->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(lblCopyright, DISTANCE_BORDER, pos_y);
+	pos_y += lblCopyright->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(lblSDL_compiled_version, DISTANCE_BORDER, pos_y);
 	pos_y += lblSDL_compiled_version->getHeight() + DISTANCE_NEXT_Y;
 
@@ -72,6 +91,7 @@ void InitPanelAbout(const struct _ConfigCategory& category)
 void ExitPanelAbout()
 {
 	delete lblEmulatorVersion;
+	delete lblCopyright;
 	delete lblSDL_compiled_version;
 	delete icon;
 	delete amiberryLogoImage;

@@ -37,12 +37,12 @@ static int SelectedPort = 1;
 static int SelectedFunction = 0;
 
 
-class StringListModel : public gcn::ListModel
+class string_list_model : public gcn::ListModel
 {
 private:
-	std::vector<std::string> values;
+	std::vector<std::string> values{};
 public:
-	StringListModel(const char* entries[], const int count)
+	string_list_model(const char* entries[], const int count)
 	{
 		for (auto i = 0; i < count; ++i)
 			values.emplace_back(entries[i]);
@@ -53,10 +53,15 @@ public:
 		return values.size();
 	}
 
-	int add_element(const char* Elem)
+	int add_element(const char* elem) override
 	{
-		values.emplace_back(Elem);
+		values.emplace_back(elem);
 		return 0;
+	}
+
+	void clear_elements() override
+	{
+		values.clear();
 	}
 
 	int swap_first_element(const char* Elem)
@@ -74,14 +79,14 @@ public:
 	}
 };
 
-static StringListModel CustomEventList(nullptr, 0);
-static StringListModel CustomEventList_HotKey(nullptr, 0);
-static StringListModel CustomEventList_Menu(nullptr, 0);
-static StringListModel CustomEventList_Quit(nullptr, 0);
-static StringListModel CustomEventList_Reset(nullptr, 0);
+static string_list_model CustomEventList(nullptr, 0);
+static string_list_model CustomEventList_HotKey(nullptr, 0);
+static string_list_model CustomEventList_Menu(nullptr, 0);
+static string_list_model CustomEventList_Quit(nullptr, 0);
+static string_list_model CustomEventList_Reset(nullptr, 0);
 
 const string label_button_list[] = {
-	"South:", "East:", "West:", "North:", "Select:", "Menu:", "Start:", "L.Stick:", "R.Stick:",
+	"South:", "East:", "West:", "North:", "Select:", "Guide:", "Start:", "L.Stick:", "R.Stick:",
 	"L.Shoulder:", "R.Shoulder:", "DPad Up:", "DPad Down:", "DPad Left:", "DPad Right:",
 	"Misc1:", "Paddle1:", "Paddle2:", "Paddle3:", "Paddle4:", "Touchpad:"
 };
@@ -142,11 +147,13 @@ const int RemapEventList[] = {
 	// Emulator and machine events
 	INPUTEVENT_SPC_ENTERGUI, INPUTEVENT_SPC_QUIT, INPUTEVENT_SPC_PAUSE,
 	INPUTEVENT_SPC_SOFTRESET, INPUTEVENT_SPC_HARDRESET, INPUTEVENT_SPC_FREEZEBUTTON,
+	INPUTEVENT_SPC_STATESAVE, INPUTEVENT_SPC_STATERESTORE,
 	INPUTEVENT_SPC_STATESAVEDIALOG, INPUTEVENT_SPC_STATERESTOREDIALOG,
 	INPUTEVENT_SPC_SWAPJOYPORTS,
 	INPUTEVENT_SPC_MOUSEMAP_PORT0_LEFT, INPUTEVENT_SPC_MOUSEMAP_PORT0_RIGHT,
 	INPUTEVENT_SPC_MOUSEMAP_PORT1_LEFT, INPUTEVENT_SPC_MOUSEMAP_PORT1_RIGHT,
-	INPUTEVENT_SPC_MOUSE_SPEED_DOWN, INPUTEVENT_SPC_MOUSE_SPEED_UP, INPUTEVENT_SPC_SHUTDOWN
+	INPUTEVENT_SPC_MOUSE_SPEED_DOWN, INPUTEVENT_SPC_MOUSE_SPEED_UP, INPUTEVENT_SPC_SHUTDOWN,
+	INPUTEVENT_SPC_WARP
 };
 
 const int RemapEventListSize = sizeof RemapEventList / sizeof RemapEventList[0];
@@ -200,8 +207,8 @@ public:
 				break;
 			}
 
-			//  get the selected action from the drop-down, and 
-			//    push it into the 'temp map' 
+			// get the selected action from the drop-down, and 
+			// push it into the 'temp map' 
 			for (auto t = 0; t < SDL_CONTROLLER_BUTTON_MAX; t++)
 			{
 				if (actionEvent.getSource() == cboCustomAction[t])
@@ -450,7 +457,6 @@ void RefreshPanelCustom()
 				&& temp_button != -1)
 			{
 				cboCustomAction[n]->setListModel(&CustomEventList_HotKey);
-				//cboCustomAction[n]->setSelected(0);
 				cboCustomAction[n]->setEnabled(false);
 				lblCustomAction[n]->setEnabled(false);
 			}
@@ -461,18 +467,16 @@ void RefreshPanelCustom()
 				&& changed_prefs.use_retroarch_quit)
 			{
 				cboCustomAction[n]->setListModel(&CustomEventList_Quit);
-				//cboCustomAction[n]->setSelected(0);
 				cboCustomAction[n]->setEnabled(false);
 				lblCustomAction[n]->setEnabled(false);
 			}
 
-			else if (temp_button == did->mapping.button[SDL_CONTROLLER_BUTTON_GUIDE]
+			else if (temp_button == did->mapping.menu_button
 				&& temp_button != -1
 				&& SelectedFunction == 1
 				&& changed_prefs.use_retroarch_menu)
 			{
 				cboCustomAction[n]->setListModel(&CustomEventList_Menu);
-				//cboCustomAction[n]->setSelected(0);
 				cboCustomAction[n]->setEnabled(false);
 				lblCustomAction[n]->setEnabled(false);
 			}
@@ -483,7 +487,6 @@ void RefreshPanelCustom()
 				&& changed_prefs.use_retroarch_reset)
 			{
 				cboCustomAction[n]->setListModel(&CustomEventList_Reset);
-				//cboCustomAction[n]->setSelected(0);
 				cboCustomAction[n]->setEnabled(false);
 				lblCustomAction[n]->setEnabled(false);
 			}

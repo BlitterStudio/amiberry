@@ -21,6 +21,7 @@
 #include "audio.h"
 #include "sounddep/sound.h"
 #include "savestate.h"
+#include "filesys.h"
 #include "blkdev.h"
 #include "memory.h"
 #include "amiberry_gfx.h"
@@ -455,64 +456,84 @@ void gui_purge_events()
 
 int gui_update()
 {
-	char tmp[MAX_DPATH];
+    char tmp[MAX_DPATH];
 
-	get_savestate_path(savestate_fname, MAX_DPATH - 1);
-	get_screenshot_path(screenshot_filename, MAX_DPATH - 1);
+    get_savestate_path(savestate_fname, MAX_DPATH - 1);
+    get_screenshot_path(screenshot_filename, MAX_DPATH - 1);
 
-	if (strlen(currprefs.floppyslots[0].df) > 0)
-		extract_filename(currprefs.floppyslots[0].df, tmp);
-	else
-		strncpy(tmp, last_loaded_config, MAX_DPATH - 1);
+    if (strlen(currprefs.floppyslots[0].df) > 0)
+        extract_filename(currprefs.floppyslots[0].df, tmp);
+    else
+        strncpy(tmp, last_loaded_config, MAX_DPATH - 1);
 
-	strncat(savestate_fname, tmp, MAX_DPATH - 1);
-	strncat(screenshot_filename, tmp, MAX_DPATH - 1);
-	remove_file_extension(savestate_fname);
-	remove_file_extension(screenshot_filename);
+    strncat(savestate_fname, tmp, MAX_DPATH - 1);
+    strncat(screenshot_filename, tmp, MAX_DPATH - 1);
+    remove_file_extension(savestate_fname);
+    remove_file_extension(screenshot_filename);
 
-  switch(currentStateNum)
-  {
-    case 1:
-  		strncat(savestate_fname,"-1.uss", MAX_DPATH - 1);
-	    strncat(screenshot_filename,"-1.png", MAX_DPATH - 1);
-	    break;
-    case 2:
-  		strncat(savestate_fname,"-2.uss", MAX_DPATH - 1);
-  		strncat(screenshot_filename,"-2.png", MAX_DPATH - 1);
-  		break;
-    case 3:
-  		strncat(savestate_fname,"-3.uss", MAX_DPATH - 1);
-  		strncat(screenshot_filename,"-3.png", MAX_DPATH - 1);
-  		break;
-	case 4:
-		strncat(savestate_fname, "-4.uss", MAX_DPATH - 1);
-		strncat(screenshot_filename, "-4.png", MAX_DPATH - 1);
-		break;
-	case 5:
-		strncat(savestate_fname, "-5.uss", MAX_DPATH - 1);
-		strncat(screenshot_filename, "-5.png", MAX_DPATH - 1);
-		break;
-	case 6:
-		strncat(savestate_fname, "-6.uss", MAX_DPATH - 1);
-		strncat(screenshot_filename, "-6.png", MAX_DPATH - 1);
-		break;
-	case 7:
-		strncat(savestate_fname, "-7.uss", MAX_DPATH - 1);
-		strncat(screenshot_filename, "-7.png", MAX_DPATH - 1);
-		break;
-	case 8:
-		strncat(savestate_fname, "-8.uss", MAX_DPATH - 1);
-		strncat(screenshot_filename, "-8.png", MAX_DPATH - 1);
-		break;
-	case 9:
-		strncat(savestate_fname, "-9.uss", MAX_DPATH - 1);
-		strncat(screenshot_filename, "-9.png", MAX_DPATH - 1);
-		break;
-    default: 
-	   	strncat(savestate_fname,".uss", MAX_DPATH - 1);
-  		strncat(screenshot_filename,".png", MAX_DPATH - 1);
-  }
-  return 0;
+    switch(currentStateNum)
+    {
+        case 1:
+            strncat(savestate_fname,"-1.uss", MAX_DPATH - 1);
+            strncat(screenshot_filename,"-1.png", MAX_DPATH - 1);
+            break;
+        case 2:
+            strncat(savestate_fname,"-2.uss", MAX_DPATH - 1);
+            strncat(screenshot_filename,"-2.png", MAX_DPATH - 1);
+            break;
+        case 3:
+            strncat(savestate_fname,"-3.uss", MAX_DPATH - 1);
+            strncat(screenshot_filename,"-3.png", MAX_DPATH - 1);
+            break;
+        case 4:
+            strncat(savestate_fname, "-4.uss", MAX_DPATH - 1);
+            strncat(screenshot_filename, "-4.png", MAX_DPATH - 1);
+            break;
+        case 5:
+            strncat(savestate_fname, "-5.uss", MAX_DPATH - 1);
+            strncat(screenshot_filename, "-5.png", MAX_DPATH - 1);
+            break;
+        case 6:
+            strncat(savestate_fname, "-6.uss", MAX_DPATH - 1);
+            strncat(screenshot_filename, "-6.png", MAX_DPATH - 1);
+            break;
+        case 7:
+            strncat(savestate_fname, "-7.uss", MAX_DPATH - 1);
+            strncat(screenshot_filename, "-7.png", MAX_DPATH - 1);
+            break;
+        case 8:
+            strncat(savestate_fname, "-8.uss", MAX_DPATH - 1);
+            strncat(screenshot_filename, "-8.png", MAX_DPATH - 1);
+            break;
+        case 9:
+            strncat(savestate_fname, "-9.uss", MAX_DPATH - 1);
+            strncat(screenshot_filename, "-9.png", MAX_DPATH - 1);
+            break;
+        case 10:
+            strncat(savestate_fname, "-10.uss", MAX_DPATH - 1);
+            strncat(screenshot_filename, "-10.png", MAX_DPATH - 1);
+            break;
+        case 11:
+            strncat(savestate_fname, "-11.uss", MAX_DPATH - 1);
+            strncat(screenshot_filename, "-11.png", MAX_DPATH - 1);
+            break;
+        case 12:
+            strncat(savestate_fname, "-12.uss", MAX_DPATH - 1);
+            strncat(screenshot_filename, "-12.png", MAX_DPATH - 1);
+            break;
+        case 13:
+            strncat(savestate_fname, "-13.uss", MAX_DPATH - 1);
+            strncat(screenshot_filename, "-13.png", MAX_DPATH - 1);
+            break;
+        case 14:
+            strncat(savestate_fname, "-14.uss", MAX_DPATH - 1);
+            strncat(screenshot_filename, "-14.png", MAX_DPATH - 1);
+            break;
+        default:
+            strncat(savestate_fname,".uss", MAX_DPATH - 1);
+            strncat(screenshot_filename,".png", MAX_DPATH - 1);
+    }
+    return 0;
 }
 
 /* if drive is -1, show the full GUI, otherwise file-requester for DF[drive] */
@@ -829,29 +850,60 @@ int tweakbootpri(int bp, int ab, int dnm)
 	return bp;
 }
 
+struct fsvdlg_vals current_fsvdlg;
+struct hfdlg_vals current_hfdlg;
 
-bool hardfile_testrdb(const TCHAR* filename)
+void hardfile_testrdb (struct hfdlg_vals* hdf) 
 {
-	auto isrdb = false;
-	auto* f = zfile_fopen(filename, _T("rb"), ZFD_NORMAL);
-	uae_u8 tmp[8];
+	uae_u8 id[512];
+	struct hardfiledata hfd{};
 
-	if (!f)
-		return false;
-	for (auto i = 0; i < 16; i++)
-	{
-		zfile_fseek(f, i * 512, SEEK_SET);
-		memset(tmp, 0, sizeof tmp);
-		zfile_fread(tmp, 1, sizeof tmp, f);
-		if (!memcmp(tmp, "RDSK\0\0\0", 7) || !memcmp(tmp, "DRKS\0\0", 6) || (tmp[0] == 0x53 && tmp[1] == 0x10 && tmp[2] == 0x9b && tmp[3] == 0x13 && tmp[4] == 0 && tmp[5] == 0))
-		{
-			// RDSK or ADIDE "encoded" RDSK
-			isrdb = true;
-			break;
+	memset(id, 0, sizeof id);
+	memset(&hfd, 0, sizeof hfd);
+	hfd.ci.readonly = true;
+	hfd.ci.blocksize = 512;
+	if (hdf_open(&hfd, hdf->ci.rootdir) > 0) {
+		for (auto i = 0; i < 16; i++) {
+			hdf_read_rdb(&hfd, id, i * 512, 512);
+			auto babe = id[0] == 0xBA && id[1] == 0xBE; // A2090
+			if (!memcmp(id, "RDSK\0\0\0", 7) || !memcmp(id, "CDSK\0\0\0", 7) || !memcmp(id, "DRKS\0\0", 6) ||
+				(id[0] == 0x53 && id[1] == 0x10 && id[2] == 0x9b && id[3] == 0x13 && id[4] == 0 && id[5] == 0) || babe) {
+				// RDSK or ADIDE "encoded" RDSK
+				auto blocksize = 512;
+				if (!babe)
+					blocksize = (id[16] << 24) | (id[17] << 16) | (id[18] << 8) | (id[19] << 0);
+				hdf->ci.cyls = hdf->ci.highcyl = hdf->forcedcylinders = 0;
+				hdf->ci.sectors = 0;
+				hdf->ci.surfaces = 0;
+				hdf->ci.reserved = 0;
+				hdf->ci.bootpri = 0;
+				//hdf->ci.devname[0] = 0;
+				if (blocksize >= 512)
+					hdf->ci.blocksize = blocksize;
+				break;
+			}
 		}
+		hdf_close(&hfd);
 	}
-	zfile_fclose(f);
-	return isrdb;
+}
+
+void default_fsvdlg(struct fsvdlg_vals* f)
+{
+	memset(f, 0, sizeof(struct fsvdlg_vals));
+	f->ci.type = UAEDEV_DIR;
+}
+
+void default_hfdlg(struct hfdlg_vals* f)
+{
+	auto ctrl = f->ci.controller_type;
+	auto unit = f->ci.controller_unit;
+	memset(f, 0, sizeof(struct hfdlg_vals));
+	uci_set_defaults(&f->ci, false);
+	f->original = true;
+	f->ci.type = UAEDEV_HDF;
+	f->ci.controller_type = ctrl;
+	f->ci.controller_unit = unit;
+	f->ci.unit_feature_level = 1;
 }
 
 bool isguiactive(void)

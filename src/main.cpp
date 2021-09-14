@@ -57,6 +57,7 @@
 #include <sys/ioctl.h>
 #include "keyboard.h"
 
+static const char __ver[40] = "$VER: Amiberry 4.2 beta (2021-09-13)";
 long int version = 256 * 65536L * UAEMAJOR + 65536L * UAEMINOR + UAESUBREV;
 
 struct uae_prefs currprefs, changed_prefs;
@@ -299,6 +300,11 @@ void fixup_cpu (struct uae_prefs *p)
 	if (p->cpu_data_cache && (p->uaeboard != 3 && need_uae_boot_rom(p))) {
 		p->cpu_data_cache = false;
 		error_log(_T("Data cache emulation requires Indirect UAE Boot ROM."));
+	}
+
+	if (p->cpu_memory_cycle_exact && p->fast_copper != 0) {
+		p->fast_copper = 0;
+		error_log(_T("Cycle-exact mode not compatible with fast copper."));
 	}
 }
 
@@ -623,11 +629,11 @@ void uae_quit (void)
 	target_quit ();
 }
 
-/* 0 = normal, 1 = nogui, -1 = disable nogui */
+/* 0 = normal, 1 = nogui, -1 = disable nogui, -2 = autorestart */
 void uae_restart (int opengui, const TCHAR *cfgfile)
 {
 	uae_quit ();
-	restart_program = opengui > 0 ? 1 : (opengui == 0 ? 2 : 3);
+	restart_program = opengui == -2 ? 4 : (opengui > 0 ? 1 : (opengui == 0 ? 2 : 3));
 	restart_config[0] = 0;
 	default_config = 0;
 	if (cfgfile)
@@ -637,14 +643,14 @@ void uae_restart (int opengui, const TCHAR *cfgfile)
 
 void usage()
 {
-	std::cout << get_version_string() << std::endl;
+	std::cout << __ver << std::endl;
 	std::cout << "Usage:" << std::endl;
 	std::cout << " -h                         Show this help." << std::endl;
 	std::cout << " --help                     \n" << std::endl;
 	std::cout << " -f <file>                  Load a configuration file." << std::endl;
 	std::cout << " --config <file>            \n" << std::endl;
 	std::cout << " -m <Amiga Model>           Amiga model to emulate, from the QuickStart options." << std::endl;
-	std::cout << " --model <Amiga Model>      Available options are: A500, A500P, A1200, A4000 and CD32.\n" << std::endl;
+	std::cout << " --model <Amiga Model>      Available options are: A500, A500P, A1200, A4000, CD32 and CDTV.\n" << std::endl;
 	std::cout << " --autoload <file>          Load a WHDLoad game or .CUE CD32 image using the WHDBooter." << std::endl;
 	std::cout << " --cdimage <file>           Load the CD image provided when starting emulation (for CD32)." << std::endl;
 	std::cout << " --statefile <file>         Load a save state file." << std::endl;
@@ -818,6 +824,10 @@ static void parse_cmdline (int argc, TCHAR **argv)
 				else if (_tcscmp(txt, _T("CD32")) == 0)
 				{
 					bip_cd32(&currprefs, -1);
+				}
+				else if (_tcscmp(txt, _T("CDTV")) == 0)
+				{
+					bip_cdtv(&currprefs, -1);
 				}
 			}
 		} else if (_tcscmp(argv[i], _T("--statefile")) == 0) {
@@ -1113,7 +1123,7 @@ static int real_main2 (int argc, TCHAR **argv)
 	copy_prefs(&currprefs, &changed_prefs);
 
 	no_gui = ! currprefs.start_gui;
-	if (restart_program == 2)
+	if (restart_program == 2 || restart_program == 4)
 		no_gui = true;
 	else if (restart_program == 3)
 		no_gui = false;

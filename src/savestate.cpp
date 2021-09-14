@@ -295,8 +295,8 @@ static TCHAR *state_resolve_path(TCHAR *s, int type, bool newmode)
 	} else {
 		get_file_part (tmp, sizeof tmp / sizeof (TCHAR), s);
 		if (state_path_exists(tmp, type)) {
-			xfree (s);
-			return my_strdup (tmp);
+			xfree(s);
+			return my_strdup(tmp);
 		}
 	}
 	for (int i = 0; i < MAX_PATHS; i++) {
@@ -650,8 +650,8 @@ void restore_state (const TCHAR *filename)
 			end = restore_cpu (chunk);
 		} else if (!_tcscmp (name, _T("CPUX")))
 			end = restore_cpu_extra (chunk);
-		//else if (!_tcscmp (name, _T("CPUT")))
-		//	end = restore_cpu_trace (chunk);
+		else if (!_tcscmp (name, _T("CPUT")))
+			end = restore_cpu_trace (chunk);
 #ifdef FPUEMU
 		else if (!_tcscmp (name, _T("FPU ")))
 			end = restore_fpu (chunk);
@@ -948,9 +948,9 @@ static int save_state_internal (struct zfile *f, const TCHAR *description, int c
 	save_chunk (f, dst, len, _T("CPUX"), 0);
 	xfree (dst);
 
-	//dst = save_cpu_trace (&len, 0);
-	//save_chunk (f, dst, len, _T("CPUT"), 0);
-	//xfree (dst);
+	dst = save_cpu_trace (&len, 0);
+	save_chunk (f, dst, len, _T("CPUT"), 0);
+	xfree (dst);
 
 #ifdef FPUEMU
 	dst = save_fpu (&len,0 );
@@ -1323,7 +1323,7 @@ int savestate_dorewind (int pos)
 		pos = replaycounter - 1;
 	if (canrewind (pos)) {
 		savestate_state = STATE_DOREWIND;
-		//write_log (_T("dorewind %d (%010ld/%03ld) -> %d\n"), replaycounter - 1, hsync_counter, vsync_counter, pos);
+		write_log (_T("dorewind %d (%010ld/%03ld) -> %d\n"), replaycounter - 1, hsync_counter, vsync_counter, pos);
 		return 1;
 	}
 	return 0;
@@ -1379,7 +1379,7 @@ void savestate_rewind (void)
 	p2 = st->end;
 	write_log (_T("rewinding %d -> %d\n"), replaycounter - 1, pos);
 	hsync_counter = restore_u32_func (&p);
-	//vsync_counter = restore_u32_func (&p);
+	vsync_counter = restore_u32_func (&p);
 	p = restore_cpu (p);
 	p = restore_cycles (p);
 	p = restore_cpu_extra (p);
@@ -1467,7 +1467,7 @@ void savestate_rewind (void)
 		return;
 	}
 	//inprec_setposition (st->inprecoffset, pos);
-	//write_log (_T("state %d restored.  (%010ld/%03ld)\n"), pos, hsync_counter, vsync_counter);
+	write_log (_T("state %d restored.  (%010ld/%03ld)\n"), pos, hsync_counter, vsync_counter);
 	if (rewind) {
 		replaycounter--;
 		if (replaycounter < 0)
@@ -1548,7 +1548,7 @@ retry2:
 	p = p2 = st->data;
 	tlen = 0;
 	save_u32_func (&p, hsync_counter);
-	//save_u32_func (&p, vsync_counter);
+	save_u32_func (&p, vsync_counter);
 	tlen += 8;
 
 	if (bufcheck (st, p, 0))
@@ -1854,10 +1854,10 @@ retry2:
 			staterecords_first -= staterecords_max;
 	}
 
-	//write_log (_T("state capture %d (%010ld/%03ld,%ld/%d) (%ld bytes, alloc %d)\n"),
-	//	replaycounter, hsync_counter, vsync_counter,
-	//	hsync_counter % current_maxvpos (), current_maxvpos (),
-	//	st->end - st->data, statefile_alloc);
+	write_log (_T("state capture %d (%010ld/%03ld,%ld/%d) (%ld bytes, alloc %d)\n"),
+		replaycounter, hsync_counter, vsync_counter,
+		hsync_counter % current_maxvpos (), current_maxvpos (),
+		st->end - st->data, statefile_alloc);
 
 	//if (firstcapture) {
 	//	savestate_memorysave ();

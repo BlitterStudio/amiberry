@@ -90,6 +90,7 @@ amiberry_hotkey minimize_key;
 
 bool lctrl, rctrl, lalt, ralt, lshift, rshift, lgui, rgui;
 
+bool hotkey_pressed = false;
 bool mouse_grabbed = false;
 
 std::string get_version_string()
@@ -159,8 +160,6 @@ void set_key_configs(struct uae_prefs* p)
 	enter_gui_button = SDL_GameControllerGetButtonFromString(p->open_gui);
 	if (enter_gui_button == SDL_CONTROLLER_BUTTON_INVALID)
 		enter_gui_button = SDL_GameControllerGetButtonFromString(amiberry_options.default_open_gui_key);
-	if (enter_gui_button == SDL_CONTROLLER_BUTTON_INVALID)
-		enter_gui_button = SDL_CONTROLLER_BUTTON_GUIDE;
 	
 	if (strncmp(p->quit_amiberry, "", 1) != 0)
 		quit_key = get_hotkey_from_config(p->quit_amiberry);
@@ -1012,6 +1011,7 @@ static void touch_event(unsigned long id, int pressrel, int x, int y, const SDL_
 void process_event(SDL_Event event)
 {
 	struct AmigaMonitor* mon = &AMonitors[0];
+	struct didata* did = &di_joystick[0];
 	
 	if (event.type == SDL_WINDOWEVENT)
 	{
@@ -1066,10 +1066,6 @@ void process_event(SDL_Event event)
 			inputdevice_unacquire();
 			uae_quit();
 			return;
-		case SDL_WINDOWEVENT_EXPOSED:
-			notice_screen_contents_lost(mon->monitor_id);
-			updatedisplayarea(mon->monitor_id);
-			break;
 		default:
 			break;
 		}
@@ -1104,6 +1100,22 @@ void process_event(SDL_Event event)
 	case SDL_CONTROLLERBUTTONDOWN:
 		if (event.cbutton.button == enter_gui_button)
 		{
+			inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
+			break;
+		}
+		return;
+
+	case SDL_JOYBUTTONDOWN:
+	case SDL_JOYBUTTONUP:
+		if (event.jbutton.button == did->mapping.hotkey_button)
+		{
+			hotkey_pressed = (event.jbutton.state == SDL_PRESSED);
+			break;
+		}
+
+		if (event.jbutton.button == did->mapping.menu_button && hotkey_pressed && event.jbutton.state == SDL_PRESSED)
+		{
+			hotkey_pressed = false;
 			inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
 			break;
 		}
@@ -1920,7 +1932,8 @@ void target_default_options(struct uae_prefs* p, int type)
 	_tcscpy(p->action_replay, amiberry_options.default_ar_key);
 	_tcscpy(p->fullscreen_toggle, amiberry_options.default_fullscreen_toggle_key);
 
-	p->sound_pullmode = 0;
+	p->alt_tab_release = false;
+	p->sound_pullmode = amiberry_options.default_sound_pull;
 	p->input_analog_remap = false;
 
 	p->use_retroarch_quit = amiberry_options.default_retroarch_quit;
@@ -1930,11 +1943,22 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->whdbootprefs.buttonwait = amiberry_options.default_whd_buttonwait;
 	p->whdbootprefs.showsplash = amiberry_options.default_whd_showsplash;
 	p->whdbootprefs.configdelay = amiberry_options.default_whd_configdelay;
+
+	// Disable Cycle-Exact modes that are not yet implemented
+	if (changed_prefs.cpu_cycle_exact || changed_prefs.cpu_memory_cycle_exact)
+	{
+		if (changed_prefs.cpu_model > 68010)
+		{
+			changed_prefs.cpu_cycle_exact = changed_prefs.cpu_memory_cycle_exact = false;
+		}
+	}
 }
 
 static const TCHAR* scsimode[] = { _T("SCSIEMU"), _T("SPTI"), _T("SPTI+SCSISCAN"), NULL };
 static const TCHAR* statusbarmode[] = { _T("none"), _T("normal"), _T("extended"), NULL };
 static const TCHAR* configmult[] = { _T("1x"), _T("2x"), _T("3x"), _T("4x"), _T("5x"), _T("6x"), _T("7x"), _T("8x"), NULL };
+
+extern int scsiromselected;
 
 void target_save_options(struct zfile* f, struct uae_prefs* p)
 {
@@ -1988,13 +2012,17 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_target_dwrite_str(f, _T("action_replay"), p->action_replay);
 	cfgfile_target_dwrite_str(f, _T("fullscreen_toggle"), p->fullscreen_toggle);
 	cfgfile_target_dwrite_str(f, _T("minimize"), p->minimize);
-	
+
+	cfgfile_target_dwrite_bool(f, _T("alt_tab_release"), p->alt_tab_release);
 	cfgfile_target_dwrite(f, _T("sound_pullmode"), _T("%d"), p->sound_pullmode);
 	cfgfile_target_dwrite_bool(f, _T("use_analogue_remap"), p->input_analog_remap);
 
 	cfgfile_target_dwrite_bool(f, _T("use_retroarch_quit"), p->use_retroarch_quit);
 	cfgfile_target_dwrite_bool(f, _T("use_retroarch_menu"), p->use_retroarch_menu);
 	cfgfile_target_dwrite_bool(f, _T("use_retroarch_reset"), p->use_retroarch_reset);
+
+	if (scsiromselected > 0)
+		cfgfile_target_write(f, _T("expansion_gui_page"), expansionroms[scsiromselected].name);
 }
 
 void target_restart(void)
@@ -2027,6 +2055,8 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 	if (cfgfile_yesno(option, value, _T("map_drives_auto"), &p->automount_removable))
 		return 1;
 	if (cfgfile_yesno(option, value, _T("map_cd_drives"), &p->automount_cddrives))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("alt_tab_release"), &p->alt_tab_release))
 		return 1;
 	if (cfgfile_yesno(option, value, _T("use_retroarch_quit"), &p->use_retroarch_quit))
 		return 1;
@@ -2134,6 +2164,19 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 		return 1;
 	}
 
+	if (cfgfile_string(option, value, _T("expansion_gui_page"), tmpbuf, sizeof tmpbuf / sizeof(TCHAR))) {
+		TCHAR* p = _tcschr(tmpbuf, ',');
+		if (p != NULL)
+			*p = 0;
+		for (int i = 0; expansionroms[i].name; i++) {
+			if (!_tcsicmp(tmpbuf, expansionroms[i].name)) {
+				scsiromselected = i;
+				break;
+			}
+		}
+		return 1;
+	}
+	
 	if (cfgfile_yesno(option, value, _T("rtg_match_depth"), &p->rtgmatchdepth))
 		return 1;
 
@@ -2516,6 +2559,10 @@ void save_amiberry_settings(void)
 	snprintf(buffer, MAX_DPATH, "default_sound_buffer=%d\n", amiberry_options.default_sound_buffer);
 	fputs(buffer, f);
 
+	// Default Sound Mode (Pull/Push)
+	snprintf(buffer, MAX_DPATH, "default_sound_pull=%s\n", amiberry_options.default_sound_pull ? "yes" : "no");
+	fputs(buffer, f);
+
 	// Default Joystick Deadzone
 	snprintf(buffer, MAX_DPATH, "default_joystick_deadzone=%d\n", amiberry_options.default_joystick_deadzone);
 	fputs(buffer, f);
@@ -2776,6 +2823,7 @@ void load_amiberry_settings(void)
 					cfgfile_yesno(option, value, "default_fullscreen", &amiberry_options.default_fullscreen);
 					cfgfile_intval(option, value, "default_stereo_separation", &amiberry_options.default_stereo_separation, 1);
 					cfgfile_intval(option, value, "default_sound_buffer", &amiberry_options.default_sound_buffer, 1);
+					cfgfile_yesno(option, value, "default_sound_pull", &amiberry_options.default_sound_pull);
 					cfgfile_intval(option, value, "default_joystick_deadzone", &amiberry_options.default_joystick_deadzone, 1);
 					cfgfile_yesno(option, value, "default_retroarch_quit", &amiberry_options.default_retroarch_quit);
 					cfgfile_yesno(option, value, "default_retroarch_menu", &amiberry_options.default_retroarch_menu);
@@ -2900,11 +2948,16 @@ int main(int argc, char* argv[])
 	max_uae_height = 8192;
 
 	// Get startup path
-#ifdef ANDROID
-	strncpy(start_path_data, getenv("EXTERNAL_FILES_DIR"), MAX_DPATH - 1);
-#else
-	getcwd(start_path_data, MAX_DPATH);
-#endif
+	auto env_dir = getenv("EXTERNAL_FILES_DIR");
+	if (env_dir != nullptr)
+	{
+		strncpy(start_path_data, getenv("EXTERNAL_FILES_DIR"), MAX_DPATH - 1);
+	}
+	else
+	{
+		getcwd(start_path_data, MAX_DPATH);
+	}
+
 	rename_old_adfdir();
 	load_amiberry_settings();
 
@@ -2964,7 +3017,7 @@ int main(int argc, char* argv[])
 		abort();
 	}
 	atexit(SDL_Quit);
-	write_log(_T("Sorting devices and modes..\n"));
+	write_log(_T("Sorting devices and modes...\n"));
 	sortdisplays();
 	
 	normalcursor = SDL_GetDefaultCursor();
@@ -3025,9 +3078,11 @@ bool get_plugin_path(TCHAR* out, int len, const TCHAR* path)
 		out[len - 1] = '\0';
 	}
 	else {
-		write_log("\n-----------------> STUB: get_plugin_path, "
-			"size: %d, path: %s\n", len, path);
-		out[0] = '\0';
+		strncpy(out, start_path_data, len - 1);
+		strncat(out, "/", len - 1);
+		strncat(out, path, len - 1);
+		strncat(out, "/", len - 1);
+		return my_existsfile(out);
 	}
 	return TRUE;
 }

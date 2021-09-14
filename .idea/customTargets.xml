@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CLionExternalBuildManager">
+    <target id="9821eed6-961e-4c65-9d13-689205ec9d21" name="rpi4-sdl2 (32-bit)" defaultType="MAKE">
+      <configuration id="fd46c317-78a7-4841-b62d-380cd0fec3f9" name="rpi4-sdl2 (32-bit)" toolchainName="RPI4 (32-bit)">
+        <build type="MAKE">
+          <make targetName="PLATFORM=rpi4-sdl2 DEBUG=1" />
+        </build>
+        <clean type="MAKE">
+          <make targetName="clean" />
+        </clean>
+      </configuration>
+    </target>
+    <target id="30a3bc5c-3dbf-4299-9c4c-3df597af999f" name="rpi4-dmx (32-bit)" defaultType="MAKE">
+      <configuration id="2595e496-dc54-4f9d-8e20-3500e258f23a" name="rpi4-dmx (32-bit)" toolchainName="RPI4 (32-bit)">
+        <build type="MAKE">
+          <make targetName="PLATFORM=rpi4 DEBUG=1" />
+        </build>
+        <clean type="MAKE">
+          <make targetName="clean" />
+        </clean>
+      </configuration>
+    </target>
+    <target id="0a1e1ec1-b2fa-4f4b-aec7-275d9d3cc655" name="rpi4-sdl2 (64-bit)" defaultType="MAKE">
+      <configuration id="63053bec-f801-4acc-937d-bc71da9f0311" name="rpi4-sdl2 (64-bit)" toolchainName="RPI4 (64-bit)">
+        <build type="MAKE">
+          <make targetName="PLATFORM=pi64 DEBUG=1" />
+        </build>
+        <clean type="MAKE">
+          <make targetName="clean" />
+        </clean>
+      </configuration>
+    </target>
+    <target id="4e2e8931-278f-4bc7-aedc-d81ce4b58125" name="rpi4-dmx (64-bit)" defaultType="MAKE">
+      <configuration id="12866d7a-bc42-4f22-ad0e-9014148f49a0" name="rpi4-dmx (64-bit)" toolchainName="RPI4 (64-bit)">
+        <build type="MAKE">
+          <make targetName="PLATFORM=pi64-dispmanx DEBUG=1" />
+        </build>
+        <clean type="MAKE">
+          <make targetName="clean" />
+        </clean>
+      </configuration>
+    </target>
+    <target id="d253fd68-6d98-4c15-a41f-42fec3df725c" name="pi400-sdl2 (64-bit)" defaultType="MAKE">
+      <configuration id="1228c7f9-aedd-432d-accd-091db9398466" name="pi400-sdl2 (64-bit)" toolchainName="Pi400 (64-bit)">
+        <build type="MAKE">
+          <make targetName="PLATFORM=pi64 DEBUG=1" />
+        </build>
+        <clean type="MAKE">
+          <make targetName="clean" />
+        </clean>
+      </configuration>
+    </target>
+    <target id="6045b4f0-f3de-48b4-9cb2-d6f4c7d80838" name="pi400-dmx (64-bit)" defaultType="MAKE">
+      <configuration id="3ca22e48-cf4e-4ff1-85a9-b5e99d39c06b" name="pi400-dmx (64-bit)" toolchainName="Pi400 (64-bit)">
+        <build type="MAKE">
+          <make targetName="PLATFORM=pi64-dispmanx DEBUG=1" />
+        </build>
+        <clean type="MAKE">
+          <make targetName="clean" />
+        </clean>
+      </configuration>
+    </target>
+  </component>
+</project>

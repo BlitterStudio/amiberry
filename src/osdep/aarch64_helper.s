@@ -157,7 +157,7 @@ copy_screen_16bit_to_32bit:
 // copy_screen_32bit_to_16bit
 //
 // x0: uae_u8   *dst - Format (bits): rrrr rggg gggb bbbb
-// x1: uae_u8   *src - Format (bytes) in memory abgr
+// x1: uae_u8   *src - Format (bytes) in memory bgra
 // x2: int      bytes
 //
 // void copy_screen_32bit_to_16bit(uae_u8 *dst, uae_u8 *src, int bytes);
@@ -168,14 +168,13 @@ copy_screen_32bit_to_16bit:
   ld2r      {v0.4S-v1.4S}, [x3]
 copy_screen_32bit_to_16bit_loop:
   ld1       {v3.4S}, [x1], #16
-  rev64     v3.16B, v3.16B
-  ushr      v4.4S, v3.4S, #16
-  ushr      v5.4S, v3.4S, #13
-  ushr      v3.4S, v3.4S, #11
+  rev32     v3.16B, v3.16B
+  ushr      v4.4S, v3.4S, #8
+  ushr      v5.4S, v3.4S, #5
+  ushr      v3.4S, v3.4S, #3
   bit       v3.16B, v4.16B, v0.16B
   bit       v3.16B, v5.16B, v1.16B
   xtn       v3.4H, v3.4S
-  rev32     v3.4H, v3.4H
   subs      w2, w2, #16
   st1       {v3.4H}, [x0], #8
   bne       copy_screen_32bit_to_16bit_loop
@@ -186,7 +185,7 @@ copy_screen_32bit_to_16bit_loop:
 // copy_screen_32bit_to_32bit
 //
 // r0: uae_u8   *dst - Format (bytes): in memory argb
-// r1: uae_u8   *src - Format (bytes): in memory abgr
+// r1: uae_u8   *src - Format (bytes): in memory bgra
 // r2: int      bytes
 //
 // void copy_screen_32bit_to_32bit(uae_u8 *dst, uae_u8 *src, int bytes);
@@ -196,7 +195,6 @@ copy_screen_32bit_to_32bit:
   ld1       {v3.4S}, [x1], #16
   subs      w2, w2, #16
   rev32     v3.16B, v3.16B
-  ushr      v3.4S, v3.4S, #8
   st1       {v3.4S}, [x0], #16
   bne       copy_screen_32bit_to_32bit
   ret

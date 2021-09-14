@@ -47,8 +47,8 @@ static gcn::TextField* txtFilename;
 
 class SelectFileListModel : public gcn::ListModel
 {
-	std::vector<std::string> dirs;
-	std::vector<std::string> files;
+	std::vector<std::string> dirs{};
+	std::vector<std::string> files{};
 
 public:
 	SelectFileListModel(const char* path)
@@ -58,14 +58,25 @@ public:
 
 	int getNumberOfElements() override
 	{
-		return int(dirs.size() + files.size());
+		return static_cast<int>(dirs.size() + files.size());
 	}
 
+	int add_element(const char* elem) override
+	{
+		dirs.emplace_back(elem);
+		return 0;
+	}
+
+	void clear_elements() override
+	{
+		dirs.clear();
+	}
+	
 	std::string getElementAt(const int i) override
 	{
-		if (i >= int(dirs.size() + files.size()) || i < 0)
+		if (i >= static_cast<int>(dirs.size() + files.size()) || i < 0)
 			return "---";
-		if (i < int(dirs.size()))
+		if (i < static_cast<int>(dirs.size()))
 			return dirs[i];
 		return files[i - dirs.size()];
 	}

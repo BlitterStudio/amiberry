@@ -115,7 +115,7 @@ typedef union {
 #if defined(CPU_AARCH64)
 #define N_REGS 18   /* really 32, but 29 to 31 are FP, LR, SP; 18 has special meaning; 27 holds memstart and 28 holds regs-struct */
 #else
-#define N_REGS 10  /* really 16, but 13 to 15 are SP, LR, PC; 12 is scratch reg, 10 holds memstart and 11 holds regs-struct */
+#define N_REGS 11  /* really 16, but 13 to 15 are SP, LR, PC; 11 holds memstart and 12 is scratch register */
 #endif
 
 #else
@@ -148,7 +148,7 @@ extern uae_u32 needed_flags;
 extern uae_u8* comp_pc_p;
 extern void* pushall_call_handler;
 
-#define VREGS 23
+#define VREGS 22
 #define VFREGS 10
 
 #define INMEM 1
@@ -186,6 +186,7 @@ STATIC_INLINE int end_block(uae_u16 opcode)
 	return (prop[opcode].cflow & fl_end_block);
 }
 
+#define SP_REG 15
 #define PC_P 16
 #define FLAGX 17
 #define FLAGTMP 18
@@ -193,7 +194,7 @@ STATIC_INLINE int end_block(uae_u16 opcode)
 #define S1 19
 #define S2 20
 #define S3 21
-#define S4 22
+#define SCRATCH_REGS 3
 
 #define FP_RESULT 8
 #define FS1 9
@@ -234,6 +235,7 @@ typedef struct {
   uae_u32 flags_on_stack;
   uae_u32 flags_in_flags;
   uae_u32 flags_are_important;
+  uae_u32 scratch_in_use[SCRATCH_REGS];
   /* FPU part */
   freg_status fate[VFREGS];
   fn_status   fat[N_FREGS];
@@ -308,6 +310,9 @@ extern void register_possible_exception(void);
 #define comp_get_iword(o) do_get_mem_word((uae_u16 *)(comp_pc_p + (o)))
 #define comp_get_ilong(o) do_get_mem_long((uae_u32 *)(comp_pc_p + (o)))
 
+extern int alloc_scratch(void);
+extern void release_scratch(int i);
+
 struct blockinfo_t;
 
 typedef struct dep_t {
@@ -364,11 +369,7 @@ typedef struct blockinfo_t {
 #define BI_COMPILING 5
 #define BI_FINALIZING 6
 
-#if defined(CPU_arm) && !defined(ARMV6T2) && !defined(CPU_AARCH64)
-const int POPALLSPACE_SIZE = 2048; /* That should be enough space */
-#else
-const int POPALLSPACE_SIZE = 512; /* That should be enough space */
-#endif
+extern const int POPALLSPACE_SIZE;
 
 void execute_normal(void);
 void exec_nostats(void);
@@ -376,6 +377,9 @@ void do_nothing(void);
 void execute_exception(uae_u32 cycles);
 
 typedef fptype fpu_register;
+
+/* Flags for Bernie during development/debugging. Should go away eventually */
+#define DISTRUST_CONSISTENT_MEM 0
 
 void jit_abort(const TCHAR *format,...);
 

@@ -50,6 +50,7 @@
 #include "sana2.h"
 //#include "arcadia.h"
 #include "devices.h"
+#include "floppybridge/floppybridge_config.h"
 
 
 #define CARD_FLAG_CAN_Z3 1
@@ -403,7 +404,7 @@ static void expamem_init_clear2 (void)
 static addrbank *expamem_init_last (void)
 {
 	expamem_init_clear2 ();
-	write_log (_T("Memory map after autoconfig:\n"));
+	//write_log (_T("Memory map after autoconfig:\n"));
 	//memory_map_dump ();
 	return NULL;
 }
@@ -3938,7 +3939,7 @@ uae_u8 *save_expansion_boards(int *len, uae_u8 *dstptr, int cardnum)
 		save_u8(ec->aci.autoconfig_bytes[j]);
 	}
 	struct romconfig *rc = ec->rc;
-	if (rc) {
+	if (rc && rc->back) {
 		save_u32(rc->back->device_type);
 		save_u32(rc->back->device_num);
 		save_string(rc->romfile);
@@ -4088,6 +4089,7 @@ uae_u8 *restore_expansion_info_old(uae_u8 *src)
 void restore_expansion_finish(void)
 {
 	cardno = restore_cardno;
+	restore_cardno = 0;
 	for (int i = 0; i < cardno; i++) {
 		struct card_data *ec = &cards_set[i];
 		cards[i] = ec;
@@ -4134,6 +4136,15 @@ static const struct expansionsubromtype a2090_sub[] = {
 	}
 };
 #endif
+
+static const struct expansionboardsettings voodoo_settings[] = {
+	{
+		_T("Direct VRAM access in little endian modes"), _T("directvram")
+	},
+	{
+		NULL
+	}
+};
 
 static const struct expansionsubromtype a2091_sub[] = {
 	{
@@ -5065,6 +5076,25 @@ static const struct expansionboardsettings alf3_settings[] = {
 		NULL
 	}
 };
+static const struct expansionboardsettings dev_hd_settings[] = {
+	{
+		_T("Base address"),
+		_T("base")
+	},
+	{
+		_T("Register spacing"),
+		_T("spacing")
+	},
+	{
+		_T("Data port address"),
+		_T("dataport")
+	},
+	{
+		_T("Alternate register base address"),
+		_T("altbase")
+	}
+};
+
 static const struct expansionboardsettings cdtvsram_settings[] = {
 	{
 		_T("SRAM size\0") _T("64k\0") _T("128k\0") _T("256k\0"),
@@ -5076,6 +5106,25 @@ static const struct expansionboardsettings cdtvsram_settings[] = {
 	}
 };
 
+/* floppy drive bridge interface */
+static const struct expansionsubromtype bridge_drive_selection_config[] = { 
+	{ _T("Replace Drive DF0: Fast"), _T("drivesel0"), 0, 0, 0, 0, false, 0 },
+	{ _T("Replace Drive DF1: Fast"), _T("drivesel1"), 0, 0, 0, 0, false, 0 },
+	{ _T("Replace Drive DF2: Fast"), _T("drivesel2"), 0, 0, 0, 0, false, 0 },
+	{ _T("Replace Drive DF3: Fast"), _T("drivesel3"), 0, 0, 0, 0, false, 0 },
+	{ _T("Replace Drive DF0: More Compatible"), _T("drivesel4"), 0, 0, 0, 0, false, 0 },
+	{ _T("Replace Drive DF1: More Compatible"), _T("drivesel5"), 0, 0, 0, 0, false, 0 },
+	{ _T("Replace Drive DF2: More Compatible"), _T("drivesel6"), 0, 0, 0, 0, false, 0 },
+	{ _T("Replace Drive DF3: More Compatible"), _T("drivesel7"), 0, 0, 0, 0, false, 0 },
+	{ _T("Replace Drive DF0: Accurate, but Stalling"), _T("drivesel8"), 0, 0, 0, 0, false, 0 },
+	{ _T("Replace Drive DF1: Accurate, but Stalling"), _T("drivesel9"), 0, 0, 0, 0, false, 0 },
+	{ _T("Replace Drive DF2: Accurate, but Stalling"), _T("drivesela"), 0, 0, 0, 0, false, 0 },
+	{ _T("Replace Drive DF3: Accurate, but Stalling"), _T("driveselb"), 0, 0, 0, 0, false, 0 },
+	{ NULL }
+};
+
+/* Support for the floppy disk bridge interface options */
+FLOPPY_BRIDGE_CONFIG_OPTIONS
 
 const struct expansionromtype expansionroms[] = {
 	{
@@ -5815,6 +5864,24 @@ const struct expansionromtype expansionroms[] = {
 		_T("vooodoo3_3k"), _T("Voodoo 3 3000"), _T("3dfx"),
 		NULL, NULL, NULL, NULL, ROMTYPE_VOODOO3 | ROMTYPE_NONE, 0, 0, BOARD_IGNORE, false,
 		NULL, 0,
+		false, EXPANSIONTYPE_RTG,
+		0, 0, 0, false, NULL,
+		false, 0, voodoo_settings
+	},
+#if 0
+	{
+		_T("vooodoo5_5k"), _T("Voodoo 5 5500"), _T("3dfx"),
+		NULL, NULL, NULL, NULL, ROMTYPE_VOODOO5 | ROMTYPE_NONE, 0, 0, BOARD_IGNORE, false,
+		NULL, 0,
+		false, EXPANSIONTYPE_RTG,
+		0, 0, 0, false, NULL,
+		false, 0, voodoo_settings
+	},
+#endif
+	{
+		_T("s3virge"), _T("Virge"), _T("S3"),
+		NULL, NULL, NULL, NULL, ROMTYPE_S3VIRGE | ROMTYPE_NONE, 0, 0, BOARD_IGNORE, false,
+		NULL, 0,
 		false, EXPANSIONTYPE_RTG
 	},
 	{
@@ -6018,6 +6085,9 @@ const struct expansionromtype expansionroms[] = {
 	//	NULL, 0,
 	//	false, EXPANSIONTYPE_FLOPPY
 	//},
+
+	/* Support for the floppy disk bridge interface */
+	FLOPPY_BRIDGE_CONFIG
 
 	// misc
 
