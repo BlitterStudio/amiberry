@@ -574,33 +574,32 @@ static int serial_read_thread(void* data)
 	return(0);
 }
 
-static int serial_write_thread( void *data )
+static int serial_write_thread(void* data)
 {
-	struct uaeserialdata *sd = (struct uaeserialdata*)data;
+	struct uaeserialdata* sd = (struct uaeserialdata*)data;
 	int total_written = 0, written = 0;
 
 	while (1)
 	{
-		uae_sem_wait (&sd->write_start);
+		uae_sem_wait(&sd->write_start);
 
 		sd->writeactive = 1;
 
 		do {
-			written = write (sd->fd, sd->writedata, sd->writedatasize);
-			if( written < 0 )
+			written = write(sd->fd, sd->writedata, sd->writedatasize);
+			if (written < 0)
 				break;
 
 			total_written += written;
-		}
-		while (total_written < sd->writedatasize);
+		} 		while (total_written < sd->writedatasize);
 
-		tcdrain (sd->fd);
+		tcdrain(sd->fd);
 
 		sd->writeactive = 0;
 		written = 0;
 		total_written = 0;
 
-	  uae_sem_post (&sd->evtt);
+		uae_sem_post(&sd->evtt);
 	}
 
 	return 0;
