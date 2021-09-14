@@ -995,6 +995,7 @@
     </ClCompile>
     <ClCompile Include="..\src\osdep\gui\PanelRTG.cpp">
       <Filter>src\osdep\gui</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\uaeserial.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -1721,6 +1722,8 @@
       <Filter>src\osdep</Filter>
     </ClInclude>
     <ClInclude Include="..\src\include\parallel.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\include\uaeserial.h">
       <Filter>src\include</Filter>
     </ClInclude>
