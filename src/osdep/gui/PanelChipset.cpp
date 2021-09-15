@@ -26,6 +26,7 @@ static gcn::RadioButton* optBlitImmed;
 static gcn::RadioButton* optBlitWait;
 static gcn::Window* grpCopper;
 static gcn::CheckBox* chkFastCopper;
+static gcn::CheckBox* chkMultithreadedDrawing;
 static gcn::Window* grpCollisionLevel;
 static gcn::RadioButton* optCollNone;
 static gcn::RadioButton* optCollSprites;
@@ -218,6 +219,7 @@ public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		changed_prefs.fast_copper = chkFastCopper->isSelected();
+		changed_prefs.multithreaded_drawing = chkMultithreadedDrawing->isSelected();
 	}
 };
 static FastCopperActionListener* fastCopperActionListener;
@@ -350,6 +352,11 @@ void InitPanelChipset(const struct _ConfigCategory& category)
 	chkFastCopper->setId("Fast copper");
 	chkFastCopper->addActionListener(fastCopperActionListener);
 
+	chkMultithreadedDrawing = new gcn::CheckBox("Multithreaded Drawing");
+	chkMultithreadedDrawing->setId("chkMultithreadedDrawing");
+	chkMultithreadedDrawing->addActionListener(fastCopperActionListener);
+	grpChipset->add(chkMultithreadedDrawing, 10, 250);
+
 	grpCopper = new gcn::Window("Copper");
 	grpCopper->setPosition(DISTANCE_BORDER + grpChipset->getWidth() + DISTANCE_NEXT_X,
 	                       grpBlitter->getY() + grpBlitter->getHeight() + DISTANCE_NEXT_Y);
@@ -421,6 +428,7 @@ void ExitPanelChipset()
 	delete blitterButtonActionListener;
 
 	delete chkFastCopper;
+	delete chkMultithreadedDrawing;
 	delete grpCopper;
 	delete fastCopperActionListener;
 	delete optCollNone;
@@ -482,6 +490,9 @@ void RefreshPanelChipset()
 		chkFastCopper->setSelected(changed_prefs.fast_copper);
 	}
 
+	chkMultithreadedDrawing->setSelected(changed_prefs.multithreaded_drawing);
+	chkMultithreadedDrawing->setEnabled(!emulating);
+	
 	if (changed_prefs.collision_level == 0)
 		optCollNone->setSelected(true);
 	else if (changed_prefs.collision_level == 1)

@@ -658,6 +658,7 @@ struct uae_prefs
 	int leds_on_screen;
 #ifdef AMIBERRY
 	int fast_copper;
+	int multithreaded_drawing;
 #endif
 	int leds_on_screen_mask[2];
 	int leds_on_screen_multiplier[2];
@@ -1132,6 +1133,7 @@ struct amiberry_options
 #else
 	bool use_sdl2_render_thread = false;
 #endif
+	bool default_multithreaded_drawing = true;
 	int default_line_mode = 0;
 	int input_default_mouse_speed = 100;
 	bool input_keyboard_as_joystick_stop_keypresses = false;
