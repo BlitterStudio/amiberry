@@ -71,6 +71,16 @@ typedef enum
 	CMODE_HAM
 } CMODE_T;
 
+#ifdef AMIBERRY
+#define RENDER_SIGNAL_PARTIAL 1
+#define RENDER_SIGNAL_FRAME_DONE 2
+#define RENDER_SIGNAL_QUIT 3
+static uae_thread_id render_tid = nullptr;
+static smp_comm_pipe *volatile render_pipe = nullptr;
+static uae_sem_t render_sem = nullptr;
+static bool volatile render_thread_busy = false;
+#endif
+
 extern int sprite_buffer_res;
 static int lores_factor;
 int lores_shift, shres_shift;
@@ -238,6 +248,11 @@ typedef void (*line_draw_func)(int, int, int);
 #define LINE_REMEMBERED_AS_PREVIOUS 9
 
 #define LINESTATE_SIZE ((MAXVPOS + MAXVPOS_WRAPLINES) * 2 + 1)
+
+#ifdef AMIBERRY
+static int next_line_to_render = 0;
+static int linestate_first_undecided = 0;
+#endif
 
 static uae_u8 linestate[LINESTATE_SIZE];
 
@@ -3935,6 +3950,10 @@ static void init_drawing_frame (void)
 
 	init_hardware_for_drawing_frame ();
 
+#ifdef AMIBERRY
+	linestate_first_undecided = 0;
+#endif
+
 	if (thisframe_first_drawn_line < 0)
 		thisframe_first_drawn_line = minfirstline;
 	if (thisframe_first_drawn_line > thisframe_last_drawn_line)
@@ -4225,7 +4244,11 @@ static void draw_frame2(struct vidbuffer *vbin, struct vidbuffer *vbout)
 		int whereline = amiga2aspect_line_map[i1];
 		int wherenext = amiga2aspect_line_map[i1 + 1];
 
+#ifdef AMIBERRY
+		if (whereline >= vbin->inheight || line >= linestate_first_undecided)
+#else
 		if (whereline >= vbin->inheight)
+#endif
 			break;
 		if (whereline < 0) {
 			lastline = line;
@@ -4344,7 +4367,11 @@ void draw_lines(int end, int section)
 		int whereline = amiga2aspect_line_map[i1];
 		int wherenext = amiga2aspect_line_map[i1 + 1];
 
+#ifdef AMIBERRY
+		if (whereline >= vb->inheight || line >= linestate_first_undecided) {
+#else
 		if (whereline >= vb->inheight) {
+#endif
 			y_end = vb->inheight - 1;
 			break;
 		}
@@ -4697,7 +4724,17 @@ void vsync_handle_redraw(int long_field, int lof_changed, uae_u16 bplcon0p, uae_
 		last_redraw_point = 0;
 
 		if (ad->framecnt == 0) {
+#ifdef AMIBERRY
+			if (render_tid) 
+			{
+				while (render_thread_busy)
+					sleep_micros(10);
+				write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_FRAME_DONE, 1);
+				uae_sem_wait(&render_sem);
+			}
+#else
 			finish_drawing_frame(drawlines);
+#endif
 #ifdef AVIOUTPUT
 			if (!ad->picasso_on) {
 				frame_drawn(monid);
@@ -4716,6 +4753,22 @@ void vsync_handle_redraw(int long_field, int lof_changed, uae_u16 bplcon0p, uae_
 #endif
 
 		if (quit_program < 0) {
+#ifdef AMIBERRY
+			if (render_tid) 
+			{
+				while (render_thread_busy)
+					sleep_micros(1);
+				write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_QUIT, 1);
+				while (render_tid != nullptr) {
+					sleep_micros(10);
+				}
+				destroy_comm_pipe(render_pipe);
+				xfree(render_pipe);
+				render_pipe = nullptr;
+				uae_sem_destroy(&render_sem);
+				render_sem = nullptr;
+			}
+#endif
 #ifdef SAVESTATE
 			if (!savestate_state) {
 				if (currprefs.quitstatefile[0]) {
@@ -4823,6 +4876,17 @@ void hsync_record_line_state (int lineno, enum nln_how how, int changed)
 		}
 		break;
 	}
+#ifdef AMIBERRY
+	linestate_first_undecided = lineno + 1;
+	if (render_tid && linestate_first_undecided > 3 && !render_thread_busy) {
+		if (currprefs.gfx_vresolution) {
+			if (!(linestate_first_undecided & 0x3e))
+				write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_PARTIAL, 1);
+		}
+		else if (!(linestate_first_undecided & 0x1f))
+			write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_PARTIAL, 1);
+	}
+#endif
 }
 
 static void dummy_flush_line(struct vidbuf_description *gfxinfo, struct vidbuffer *vb, int line_no)
@@ -4933,6 +4997,10 @@ void reset_drawing(void)
 
 	lores_reset ();
 
+#ifdef AMIBERRY
+	linestate_first_undecided = 0;
+#endif
+
 	reset_decision_table();
 
 	init_aspect_maps ();
@@ -4976,11 +5044,44 @@ static void gen_direct_drawing_table(void)
 #endif
 }
 
-void drawing_init (void)
+static int render_thread(void *unused)
+{
+	for (;;) {
+		render_thread_busy = false;
+		auto signal = read_comm_pipe_u32_blocking(render_pipe);
+		render_thread_busy = true;
+		switch (signal) {
+
+		case RENDER_SIGNAL_PARTIAL:
+#ifdef USE_DISPMANX
+			if (!flip_in_progess)
+#endif
+				draw_lines(0, 0);
+			break;
+
+		case RENDER_SIGNAL_FRAME_DONE:
+#ifdef USE_DISPMANX
+			while (flip_in_progess)
+				sleep_micros(1);
+#endif
+			finish_drawing_frame(true);
+			uae_sem_post(&render_sem);
+			break;
+
+		case RENDER_SIGNAL_QUIT:
+			render_tid = nullptr;
+			return 0;
+		default:
+			break;
+		}
+	}
+}
+
+void drawing_init(void)
 {
 	int monid = 0;
-	struct amigadisplay *ad = &adisplays[monid];
-	struct vidbuf_description *vidinfo = &ad->gfxvidinfo;
+	struct amigadisplay* ad = &adisplays[monid];
+	struct vidbuf_description* vidinfo = &ad->gfxvidinfo;
 
 	refresh_indicator_init();
 
@@ -4988,7 +5089,23 @@ void drawing_init (void)
 
 	gen_direct_drawing_table();
 
-	uae_sem_init (&gui_sem, 0, 1);
+	uae_sem_init(&gui_sem, 0, 1);
+#ifdef AMIBERRY
+	if (currprefs.multithreaded_drawing)
+	{
+		if (render_pipe == nullptr) {
+			render_pipe = xmalloc(smp_comm_pipe, 1);
+			init_comm_pipe(render_pipe, 20, 1);
+		}
+		if (render_sem == nullptr) {
+			uae_sem_init(&render_sem, 0, 0);
+		}
+		if (render_tid == nullptr && render_pipe != nullptr && render_sem != nullptr) {
+			uae_start_thread(_T("render"), render_thread, nullptr, &render_tid);
+		}
+	}
+#endif
+
 #ifdef PICASSO96
 	if (!isrestore ()) {
 		ad->picasso_on = 0;

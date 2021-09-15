@@ -1857,6 +1857,8 @@ void target_default_options(struct uae_prefs* p, int type)
 	}
 	
 	p->fast_copper = 0;
+	p->multithreaded_drawing = amiberry_options.default_multithreaded_drawing;
+
 	p->kbd_led_num = -1; // No status on numlock
 	p->kbd_led_scr = -1; // No status on scrollock
 
@@ -1915,7 +1917,9 @@ void target_default_options(struct uae_prefs* p, int type)
 
 	if (amiberry_options.default_frameskip)
 		p->gfx_framerate = 2;
+
 	
+
 	if (amiberry_options.default_stereo_separation >= 0 && amiberry_options.default_stereo_separation <= 10)
 		p->sound_stereo_separation = amiberry_options.default_stereo_separation;
 
@@ -2489,6 +2493,11 @@ void save_amiberry_settings(void)
 	snprintf(buffer, MAX_DPATH, "use_sdl2_render_thread=%s\n", amiberry_options.use_sdl2_render_thread ? "yes" : "no");
 	fputs(buffer, f);
 
+	// Use a separate thread for drawing native chipset output
+	// This helps with performance, but may cause glitches in some cases
+	snprintf(buffer, MAX_DPATH, "default_multithreaded_drawing=%s\n", amiberry_options.default_multithreaded_drawing ? "yes" : "no");
+	fputs(buffer, f);
+
 	// Default mouse input speed
 	snprintf(buffer, MAX_DPATH, "input_default_mouse_speed=%d\n", amiberry_options.input_default_mouse_speed);
 	fputs(buffer, f);
@@ -2808,6 +2817,7 @@ void load_amiberry_settings(void)
 					cfgfile_yesno(option, value, "rctrl_as_ramiga", &amiberry_options.rctrl_as_ramiga);
 					cfgfile_yesno(option, value, "gui_joystick_control", &amiberry_options.gui_joystick_control);
 					cfgfile_yesno(option, value, "use_sdl2_render_thread", &amiberry_options.use_sdl2_render_thread);
+					cfgfile_yesno(option, value, "default_multithreaded_drawing", &amiberry_options.default_multithreaded_drawing);
 					cfgfile_intval(option, value, "input_default_mouse_speed", &amiberry_options.input_default_mouse_speed, 1);
 					cfgfile_yesno(option, value, "input_keyboard_as_joystick_stop_keypresses", &amiberry_options.input_keyboard_as_joystick_stop_keypresses);
 					cfgfile_string(option, value, "default_open_gui_key", amiberry_options.default_open_gui_key, sizeof amiberry_options.default_open_gui_key);

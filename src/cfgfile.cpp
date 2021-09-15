@@ -2343,6 +2343,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_dwrite (f, _T("blitter_throttle"), _T("%.8f"), p->blitter_speed_throttle);
 #ifdef AMIBERRY
 	cfgfile_write_bool (f, _T("fast_copper"), p->fast_copper);
+	cfgfile_write_bool(f, _T("multithreaded_drawing"), p->multithreaded_drawing);
 #endif
 	cfgfile_write_bool (f, _T("ntsc"), p->ntscmode);
 	cfgfile_write_bool(f, _T("genlock"), p->genlock);
@@ -5529,6 +5530,7 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 	if (cfgfile_yesno(option, value, _T("immediate_blits"), &p->immediate_blits)
 #ifdef AMIBERRY
 		|| cfgfile_yesno(option, value, _T("fast_copper"), &p->fast_copper)
+		|| cfgfile_yesno(option, value, _T("multithreaded_drawing"), &p->multithreaded_drawing)
 #endif
 		|| cfgfile_yesno(option, value, _T("fpu_no_unimplemented"), &p->fpu_no_unimplemented)
 		|| cfgfile_yesno(option, value, _T("cpu_no_unimplemented"), &p->int_no_unimplemented)
