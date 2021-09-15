@@ -1866,10 +1866,13 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->gfx_auto_height = amiberry_options.default_auto_height;
 	p->gfx_correct_aspect = amiberry_options.default_correct_aspect_ratio;
 
-	if (amiberry_options.default_fullscreen)
+	// GFX_WINDOW = 0
+	// GFX_FULLSCREEN = 1
+	// GFX_FULLWINDOW = 2
+	if (amiberry_options.default_fullscreen_mode >= 0 && amiberry_options.default_fullscreen_mode <= 2)
 	{
-		p->gfx_apmode[0].gfx_fullscreen = GFX_FULLSCREEN;
-		p->gfx_apmode[1].gfx_fullscreen = GFX_FULLSCREEN;
+		p->gfx_apmode[0].gfx_fullscreen = amiberry_options.default_fullscreen_mode;
+		p->gfx_apmode[1].gfx_fullscreen = amiberry_options.default_fullscreen_mode;
 	}
 	else
 	{
@@ -2529,8 +2532,8 @@ void save_amiberry_settings(void)
 	snprintf(buffer, MAX_DPATH, "default_height=%d\n", amiberry_options.default_height);
 	fputs(buffer, f);
 
-	// Full screen by default?
-	snprintf(buffer, MAX_DPATH, "default_fullscreen=%s\n", amiberry_options.default_fullscreen ? "yes" : "no");
+	// Full screen mode (0, 1, 2)
+	snprintf(buffer, MAX_DPATH, "default_fullscreen_mode=%d\n", amiberry_options.default_fullscreen_mode);
 	fputs(buffer, f);
 	
 	// Default Stereo Separation
@@ -2802,7 +2805,7 @@ void load_amiberry_settings(void)
 					cfgfile_yesno(option, value, "default_auto_height", &amiberry_options.default_auto_height);
 					cfgfile_intval(option, value, "default_width", &amiberry_options.default_width, 1);
 					cfgfile_intval(option, value, "default_height", &amiberry_options.default_height, 1);
-					cfgfile_yesno(option, value, "default_fullscreen", &amiberry_options.default_fullscreen);
+					cfgfile_intval(option, value, "default_fullscreen_mode", &amiberry_options.default_fullscreen_mode, 1);
 					cfgfile_intval(option, value, "default_stereo_separation", &amiberry_options.default_stereo_separation, 1);
 					cfgfile_intval(option, value, "default_sound_buffer", &amiberry_options.default_sound_buffer, 1);
 					cfgfile_yesno(option, value, "default_sound_pull", &amiberry_options.default_sound_pull);

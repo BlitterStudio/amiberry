@@ -1148,7 +1148,7 @@ struct amiberry_options
 	bool default_auto_height = false;
 	int default_width = 640;
 	int default_height = 512;
-	bool default_fullscreen = false;
+	int default_fullscreen_mode = false;
 	int default_stereo_separation = 7;
 	int default_sound_buffer = 8192;
 	bool default_sound_pull = true;
