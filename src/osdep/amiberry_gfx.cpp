@@ -564,6 +564,7 @@ void update_win_fs_mode(int monid, struct uae_prefs* p)
 		const auto window_flags = SDL_GetWindowFlags(mon->sdl_window);
 		const bool is_fullwindow = window_flags & SDL_WINDOW_FULLSCREEN_DESKTOP;
 		const bool is_fullscreen = window_flags & SDL_WINDOW_FULLSCREEN;
+		const bool is_maximized = window_flags & SDL_WINDOW_MAXIMIZED;
 
 		if (p->gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN)
 		{
@@ -581,7 +582,7 @@ void update_win_fs_mode(int monid, struct uae_prefs* p)
 			if (!is_fullwindow)
 				SDL_SetWindowFullscreen(mon->sdl_window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 		}
-		else
+		else if (!is_maximized)
 		{
 			p->gfx_monitor[0].gfx_size = p->gfx_monitor[0].gfx_size_win;
 			// Switch to Window mode, if we don't have it already - but not for KMSDRM
@@ -875,7 +876,10 @@ static void open_screen(struct uae_prefs* p)
 	vsync_counter = 0;
 	current_vsync_frame = 2;
 #else
-	
+
+	const auto window_flags = SDL_GetWindowFlags(mon->sdl_window);
+	const bool is_maximized = window_flags & SDL_WINDOW_MAXIMIZED;
+
 	int width, height;
 	if (mon->screen_is_picasso)
 	{
@@ -903,7 +907,7 @@ static void open_screen(struct uae_prefs* p)
 			renderQuad = { -(display_width - display_height) / 2, (display_width - display_height) / 2, display_width, display_height };
 		}
 		
-		if (isfullscreen() == 0)
+		if (isfullscreen() == 0 && !is_maximized)
 			SDL_SetWindowSize(mon->sdl_window, display_width, display_height);
 	}
 	else
@@ -935,7 +939,7 @@ static void open_screen(struct uae_prefs* p)
 			renderQuad = { -(width - height) / 2, (width - height) / 2, width, height };
 		}
 		
-		if (isfullscreen() == 0)
+		if (isfullscreen() == 0 && !is_maximized)
 			SDL_SetWindowSize(mon->sdl_window, width, height);
 	}
 
