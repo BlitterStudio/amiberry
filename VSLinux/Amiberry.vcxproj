@@ -1,14 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="Debug-DMX-Pi3|ARM">
-      <Configuration>Debug-DMX-Pi3</Configuration>
-      <Platform>ARM</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Debug-DMX-Pi3|ARM64">
-      <Configuration>Debug-DMX-Pi3</Configuration>
-      <Platform>ARM64</Platform>
-    </ProjectConfiguration>
     <ProjectConfiguration Include="Debug|ARM">
       <Configuration>Debug</Configuration>
       <Platform>ARM</Platform>
@@ -65,11 +57,6 @@
     <PlatformToolset>Remote_GCC_1_0</PlatformToolset>
     <RemoteProjectRelDir>$(MSBuildProjectName)-Debug-dmx</RemoteProjectRelDir>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-DMX-Pi3|ARM'" Label="Configuration">
-    <UseDebugLibraries>true</UseDebugLibraries>
-    <ConfigurationType>Makefile</ConfigurationType>
-    <PlatformToolset>Remote_GCC_1_0</PlatformToolset>
-  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
     <ConfigurationType>Makefile</ConfigurationType>
@@ -81,10 +68,6 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <ConfigurationType>Makefile</ConfigurationType>
     <RemoteProjectRelDir>$(MSBuildProjectName)-Debug-dmx</RemoteProjectRelDir>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-DMX-Pi3|ARM64'" Label="Configuration">
-    <UseDebugLibraries>true</UseDebugLibraries>
-    <ConfigurationType>Makefile</ConfigurationType>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
@@ -137,17 +120,6 @@
     <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-Debug-dmx</RemoteProjectDir>
     <RemoteDeployDir>$(RemoteRootDir)/$(ProjectName)-Debug-dmx</RemoteDeployDir>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-DMX-Pi3|ARM'">
-    <RemoteBuildCommandLine>cd ~/projects/Amiberry-Debug-dmx; make -j2 DEBUG=1 PLATFORM=rpi3</RemoteBuildCommandLine>
-    <RemoteReBuildCommandLine>cd ~/projects/Amiberry-Debug-dmx; make clean; make -j2 DEBUG=1 PLATFORM=rpi3</RemoteReBuildCommandLine>
-    <RemoteCleanCommandLine>cd ~/projects/Amiberry-Debug-dmx; make clean</RemoteCleanCommandLine>
-    <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\archivers;..\external\libguisan\include;C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\6\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\6;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\arm-linux-gnueabihf;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\local\include\SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;C:\sysgcc\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
-    <NMakePreprocessorDefinitions>DEBUG;USE_DISPMANX;ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;CPU_arm;ARM_HAS_DIV;USE_SDL2;_REENTRANT;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
-    <RemoteBuildOutputs />
-    <AdditionalSourcesToCopyMapping />
-    <IncrementalBuild>true</IncrementalBuild>
-    <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-Debug-dmx</RemoteProjectDir>
-  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
     <RemoteBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug; make -j4 DEBUG=1 PLATFORM=pi64</RemoteBuildCommandLine>
     <RemoteReBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug; make clean; make -j4 DEBUG=1 PLATFORM=pi64</RemoteReBuildCommandLine>
@@ -170,52 +142,6 @@
     <IncrementalBuild>true</IncrementalBuild>
     <RemoteDeployDir>$(RemoteRootDir)/$(ProjectName)-Debug-dmx</RemoteDeployDir>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-DMX-Pi3|ARM64'">
-    <RemoteBuildCommandLine>cd ~/projects/Amiberry-Debug; make -j4 DEBUG=1 PLATFORM=pi64</RemoteBuildCommandLine>
-    <RemoteReBuildCommandLine>cd ~/projects/Amiberry-Debug; make clean; make -j4 DEBUG=1 PLATFORM=pi64</RemoteReBuildCommandLine>
-    <RemoteCleanCommandLine>cd ~/projects/Amiberry-Debug; make clean</RemoteCleanCommandLine>
-    <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\archivers;..\external\libguisan\include;C:\sysgcc\raspberry-64\usr\include;C:\sysgcc\raspberry-64\usr\include\SDL2;C:\sysgcc\raspberry-64\usr\include\libpng16;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
-    <NMakePreprocessorDefinitions>DEBUG;CPU_AARCH64;AMIBERRY;USE_SDL2;_REENTRANT;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
-    <RemoteBuildOutputs />
-    <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-Debug</RemoteProjectDir>
-    <IncrementalBuild>true</IncrementalBuild>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-xu4|ARM'">
-    <RemoteBuildCommandLine>cd ~/projects/Amiberry; make -j4 PLATFORM=xu4</RemoteBuildCommandLine>
-    <RemoteReBuildCommandLine>cd ~/projects/Amiberry; make clean; make -j4 PLATFORM=xu4</RemoteReBuildCommandLine>
-    <RemoteCleanCommandLine>cd ~/projects/Amiberry; make clean</RemoteCleanCommandLine>
-    <NMakeIncludeSearchPath>C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\6\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\6;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\arm-linux-gnueabihf;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\local\include\SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;..\src;..\src\include;..\src\osdep;..\src\archivers;..\guisan\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
-    <NMakePreprocessorDefinitions>DEBUG;ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;CPU_arm;USE_SDL2;_REENTRANT;ARM_HAS_DIV;MALI_GPU;USE_RENDER_THREAD;FASTERCYCLES;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
-    <RemoteBuildOutputs />
-    <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)</RemoteProjectDir>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-xu4|ARM64'">
-    <RemoteBuildCommandLine>cd ~/projects/Amiberry; make -j4 PLATFORM=xu4</RemoteBuildCommandLine>
-    <RemoteReBuildCommandLine>cd ~/projects/Amiberry; make clean; make -j4 PLATFORM=xu4</RemoteReBuildCommandLine>
-    <RemoteCleanCommandLine>cd ~/projects/Amiberry; make clean</RemoteCleanCommandLine>
-    <NMakeIncludeSearchPath>C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\6\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\6;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\arm-linux-gnueabihf;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\local\include\SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;..\src;..\src\include;..\src\osdep;..\src\archivers;..\guisan\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
-    <NMakePreprocessorDefinitions>DEBUG;ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;CPU_arm;USE_SDL2;_REENTRANT;ARM_HAS_DIV;MALI_GPU;USE_RENDER_THREAD;FASTERCYCLES;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
-    <RemoteBuildOutputs />
-    <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)</RemoteProjectDir>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-rockpro64|ARM'">
-    <RemoteBuildCommandLine>cd ~/projects/Amiberry; make -j6 PLATFORM=rockpro64</RemoteBuildCommandLine>
-    <RemoteReBuildCommandLine>cd ~/projects/Amiberry; make clean; make -j6 PLATFORM=rockpro64</RemoteReBuildCommandLine>
-    <RemoteCleanCommandLine>cd ~/projects/Amiberry; make clean</RemoteCleanCommandLine>
-    <NMakePreprocessorDefinitions>DEBUG;ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;CPU_arm;USE_SDL2;_REENTRANT;ARM_HAS_DIV;MALI_GPU;USE_RENDER_THREAD;FASTERCYCLES;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
-    <RemoteBuildOutputs />
-    <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)</RemoteProjectDir>
-    <NMakeIncludeSearchPath>..\src\include;..\src\osdep;..\src\archivers;..\guisan-dev\include;..\src</NMakeIncludeSearchPath>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-rockpro64|ARM64'">
-    <RemoteBuildCommandLine>cd ~/projects/Amiberry; make -j6 PLATFORM=rockpro64</RemoteBuildCommandLine>
-    <RemoteReBuildCommandLine>cd ~/projects/Amiberry; make clean; make -j6 PLATFORM=rockpro64</RemoteReBuildCommandLine>
-    <RemoteCleanCommandLine>cd ~/projects/Amiberry; make clean</RemoteCleanCommandLine>
-    <NMakePreprocessorDefinitions>DEBUG;ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;CPU_arm;USE_SDL2;_REENTRANT;ARM_HAS_DIV;MALI_GPU;USE_RENDER_THREAD;FASTERCYCLES;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
-    <RemoteBuildOutputs />
-    <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)</RemoteProjectDir>
-    <NMakeIncludeSearchPath>..\src\include;..\src\osdep;..\src\archivers;..\guisan-dev\include;..\src</NMakeIncludeSearchPath>
-  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
     <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\archivers;..\external\libguisan\include;C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\6\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\6;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\arm-linux-gnueabihf;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\local\include\SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vmcs_host\linux;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\opt\vc\include\interface\vcos\pthreads;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
     <RemoteBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Release; make -j4 PLATFORM=rpi4-sdl2</RemoteBuildCommandLine>
@@ -237,11 +163,12 @@
     <RemoteDeployDir>$(RemoteRootDir)/$(ProjectName)-Release-dmx</RemoteDeployDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
-    <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\archivers;..\external\libguisan\include;C:\sysgcc\raspberry-64\usr\include;C:\sysgcc\raspberry-64\usr\include\SDL2;C:\sysgcc\raspberry-64\usr\include\libpng16;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
     <RemoteBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Release; make -j4 PLATFORM=pi64</RemoteBuildCommandLine>
     <RemoteReBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Release; make clean; make -j4 PLATFORM=pi64</RemoteReBuildCommandLine>
     <RemoteCleanCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Release; make clean</RemoteCleanCommandLine>
+    <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\archivers;..\external\libguisan\include;C:\sysgcc\raspberry-64\usr\include;C:\sysgcc\raspberry-64\usr\include\SDL2;C:\sysgcc\raspberry-64\usr\include\libpng16;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
     <NMakePreprocessorDefinitions>CPU_AARCH64;AMIBERRY;USE_SDL2;_REENTRANT;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+    <RemoteBuildOutputs />
     <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-Release</RemoteProjectDir>
     <IncrementalBuild>true</IncrementalBuild>
     <RemoteDeployDir>$(RemoteRootDir)/$(ProjectName)-Release</RemoteDeployDir>
@@ -255,22 +182,6 @@
     <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-Release</RemoteProjectDir>
     <IncrementalBuild>true</IncrementalBuild>
     <RemoteDeployDir>$(RemoteRootDir)/$(ProjectName)-Release-dmx</RemoteDeployDir>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-xu4|ARM'">
-    <NMakeIncludeSearchPath>C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\6\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\6;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\arm-linux-gnueabihf;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;..\src;..\src\include;..\src\osdep;..\src\archivers;..\guisan\include;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
-    <RemoteBuildCommandLine>cd ~/projects/Amiberry; make -j4 PLATFORM=xu4</RemoteBuildCommandLine>
-    <RemoteReBuildCommandLine>cd ~/projects/Amiberry; make clean; make -j4 PLATFORM=xu4</RemoteReBuildCommandLine>
-    <RemoteCleanCommandLine>cd ~/projects/Amiberry; make clean</RemoteCleanCommandLine>
-    <NMakePreprocessorDefinitions>ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;CPU_arm;ARM_HAS_DIV;USE_SDL2;MALI_GPU;USE_RENDER_THREAD;FASTERCYCLES;_REENTRANT;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
-    <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)</RemoteProjectDir>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-xu4|ARM64'">
-    <NMakeIncludeSearchPath>C:\SysGCC\raspberry\lib\gcc\arm-linux-gnueabihf\6\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\include\c++\6;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\arm-linux-gnueabihf;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\SDL2;C:\SysGCC\raspberry\arm-linux-gnueabihf\sysroot\usr\include\libxml2;..\src;..\src\include;..\src\osdep;..\src\archivers;..\guisan\include;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
-    <RemoteBuildCommandLine>cd ~/projects/Amiberry; make -j4 PLATFORM=xu4</RemoteBuildCommandLine>
-    <RemoteReBuildCommandLine>cd ~/projects/Amiberry; make clean; make -j4 PLATFORM=xu4</RemoteReBuildCommandLine>
-    <RemoteCleanCommandLine>cd ~/projects/Amiberry; make clean</RemoteCleanCommandLine>
-    <NMakePreprocessorDefinitions>ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;CPU_arm;ARM_HAS_DIV;USE_SDL2;MALI_GPU;USE_RENDER_THREAD;FASTERCYCLES;_REENTRANT;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
-    <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)</RemoteProjectDir>
   </PropertyGroup>
   <ItemGroup>
     <Text Include="..\conf\dir.txt">
@@ -288,55 +199,25 @@
     </Text>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="..\data\35floppy.ico">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
+    <Image Include="..\data\35floppy.ico"/>
     <Image Include="..\data\amiberry-logo.png" />
     <Image Include="..\data\amiberry.png" />
     <Image Include="..\data\amigainfo.ico" />
-    <Image Include="..\data\chip.ico">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
+    <Image Include="..\data\chip.ico"/>
     <Image Include="..\data\controller.png" />
-    <Image Include="..\data\cpu.ico">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\data\cursor.bmp">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\data\delete.png">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\data\drive.ico">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\data\expansion.ico">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\data\file.ico">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\data\joystick.ico">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\data\misc.ico">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\data\paths.ico">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\data\quickstart.ico">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\data\savestate.png">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\data\screen.ico">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="..\data\sound.ico">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
+    <Image Include="..\data\cpu.ico"/>
+    <Image Include="..\data\cursor.bmp"/>
+    <Image Include="..\data\delete.png"/>
+    <Image Include="..\data\drive.ico"/>
+    <Image Include="..\data\expansion.ico"/>
+    <Image Include="..\data\file.ico"/>
+    <Image Include="..\data\joystick.ico"/>
+    <Image Include="..\data\misc.ico"/>
+    <Image Include="..\data\paths.ico"/>
+    <Image Include="..\data\quickstart.ico"/>
+    <Image Include="..\data\savestate.png"/>
+    <Image Include="..\data\screen.ico"/>
+    <Image Include="..\data\sound.ico"/>
   </ItemGroup>
   <ItemGroup>
     <Font Include="..\data\AmigaTopaz.ttf" />
@@ -418,9 +299,7 @@
     <ClCompile Include="..\external\libguisan\src\widgets\textfield.cpp" />
     <ClCompile Include="..\external\libguisan\src\widgets\togglebutton.cpp" />
     <ClCompile Include="..\external\libguisan\src\widgets\window.cpp" />
-    <ClCompile Include="..\src\akiko.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
+    <ClCompile Include="..\src\akiko.cpp"/>
     <ClCompile Include="..\src\ar.cpp" />
     <ClCompile Include="..\src\archivers\7z\7zAlloc.cpp" />
     <ClCompile Include="..\src\archivers\7z\7zBuf.cpp" />
@@ -477,99 +356,48 @@
     <ClCompile Include="..\src\archivers\mp2\kjmp2.cpp" />
     <ClCompile Include="..\src\archivers\wrp\warp.cpp" />
     <ClCompile Include="..\src\archivers\zip\unzip.cpp" />
-    <ClCompile Include="..\src\audio.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
-    <ClCompile Include="..\src\autoconf.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
-    <ClCompile Include="..\src\blitfunc.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
-    <ClCompile Include="..\src\blittable.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
-    <ClCompile Include="..\src\blitter.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
-    <ClCompile Include="..\src\blkdev.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
-    <ClCompile Include="..\src\blkdev_cdimage.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
-    <ClCompile Include="..\src\bsdsocket.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
-    <ClCompile Include="..\src\calc.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
+    <ClCompile Include="..\src\audio.cpp"/>
+    <ClCompile Include="..\src\autoconf.cpp"/>
+    <ClCompile Include="..\src\blitfunc.cpp"/>
+    <ClCompile Include="..\src\blittable.cpp"/>
+    <ClCompile Include="..\src\blitter.cpp"/>
+    <ClCompile Include="..\src\blkdev.cpp"/>
+    <ClCompile Include="..\src\blkdev_cdimage.cpp"/>
+    <ClCompile Include="..\src\bsdsocket.cpp"/>
+    <ClCompile Include="..\src\calc.cpp"/>
     <ClCompile Include="..\src\caps\caps_amiberry.cpp" />
     <ClCompile Include="..\src\cd32_fmv.cpp" />
     <ClCompile Include="..\src\cd32_fmv_genlock.cpp" />
-    <ClCompile Include="..\src\cdrom.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
+    <ClCompile Include="..\src\cdrom.cpp"/>
     <ClCompile Include="..\src\cdtv.cpp" />
     <ClCompile Include="..\src\cdtvcr.cpp" />
-    <ClCompile Include="..\src\cfgfile.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
-    <ClCompile Include="..\src\cia.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
+    <ClCompile Include="..\src\cfgfile.cpp"/>
+    <ClCompile Include="..\src\cia.cpp"/>
     <ClCompile Include="..\src\consolehook.cpp" />
-    <ClCompile Include="..\src\cpudefs.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
-    <ClCompile Include="..\src\cpuemu_0.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
-    <ClCompile Include="..\src\cpuemu_11.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
+    <ClCompile Include="..\src\cpudefs.cpp"/>
+    <ClCompile Include="..\src\cpuemu_0.cpp"/>
+    <ClCompile Include="..\src\cpuemu_11.cpp"/>
     <ClCompile Include="..\src\cpuemu_13.cpp" />
-    <ClCompile Include="..\src\cpuemu_4.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
+    <ClCompile Include="..\src\cpuemu_4.cpp"/>
     <ClCompile Include="..\src\cpuemu_40.cpp" />
     <ClCompile Include="..\src\cpuemu_44.cpp" />
-    <ClCompile Include="..\src\cpustbl.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
-    <ClCompile Include="..\src\crc32.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
-    <ClCompile Include="..\src\custom.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
+    <ClCompile Include="..\src\cpustbl.cpp"/>
+    <ClCompile Include="..\src\crc32.cpp"/>
+    <ClCompile Include="..\src\custom.cpp"/>
     <ClCompile Include="..\src\def_icons.cpp" />
     <ClCompile Include="..\src\devices.cpp" />
-    <ClCompile Include="..\src\disk.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
-    <ClCompile Include="..\src\diskutil.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
+    <ClCompile Include="..\src\disk.cpp"/>
+    <ClCompile Include="..\src\diskutil.cpp"/>
     <ClCompile Include="..\src\dlopen.cpp" />
-    <ClCompile Include="..\src\drawing.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
+    <ClCompile Include="..\src\drawing.cpp"/>
     <ClCompile Include="..\src\driveclick.cpp" />
-    <ClCompile Include="..\src\events.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
-    <ClCompile Include="..\src\expansion.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
+    <ClCompile Include="..\src\events.cpp"/>
+    <ClCompile Include="..\src\expansion.cpp"/>
     <ClCompile Include="..\src\fdi2raw.cpp" />
-    <ClCompile Include="..\src\filesys.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
-    <ClCompile Include="..\src\filesys_bootrom.cpp.in">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
+    <ClCompile Include="..\src\filesys.cpp"/>
+    <ClCompile Include="..\src\filesys_bootrom.cpp.in"/>
     <ClCompile Include="..\src\flashrom.cpp" />
+    <ClCompile Include="..\src\fpp.cpp"/>
     <ClCompile Include="..\src\floppybridge\ArduinoFloppyBridge.cpp" />
     <ClCompile Include="..\src\floppybridge\ArduinoInterface.cpp" />
     <ClCompile Include="..\src\floppybridge\CommonBridgeTemplate.cpp" />
@@ -581,28 +409,16 @@
       <DeploymentContent>false</DeploymentContent>
     </ClCompile>
     <ClCompile Include="..\src\fpp_native.cpp.in" />
-    <ClCompile Include="..\src\fsdb.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
-    <ClCompile Include="..\src\fsusage.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
+    <ClCompile Include="..\src\fsdb.cpp"/>
+    <ClCompile Include="..\src\fsusage.cpp"/>
     <ClCompile Include="..\src\gayle.cpp" />
-    <ClCompile Include="..\src\gfxboard.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
-    <ClCompile Include="..\src\gfxutil.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
-    <ClCompile Include="..\src\hardfile.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
+    <ClCompile Include="..\src\gfxboard.cpp"/>
+    <ClCompile Include="..\src\gfxutil.cpp"/>
+    <ClCompile Include="..\src\hardfile.cpp"/>
     <ClCompile Include="..\src\hrtmon.rom.cpp" />
     <ClCompile Include="..\src\ide.cpp" />
     <ClCompile Include="..\src\ini.cpp" />
-    <ClCompile Include="..\src\inputdevice.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
+    <ClCompile Include="..\src\inputdevice.cpp"/>
     <ClCompile Include="..\src\isofs.cpp" />
     <ClCompile Include="..\src\jit\codegen_arm.cpp.in" />
     <ClCompile Include="..\src\jit\compemu.cpp" />
@@ -611,28 +427,14 @@
     <ClCompile Include="..\src\jit\compemu_midfunc_arm2.cpp.in" />
     <ClCompile Include="..\src\jit\compemu_support.cpp" />
     <ClCompile Include="..\src\jit\compstbl.cpp" />
-    <ClCompile Include="..\src\keybuf.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
-    <ClCompile Include="..\src\linetoscr.cpp.in">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
+    <ClCompile Include="..\src\keybuf.cpp"/>
+    <ClCompile Include="..\src\linetoscr.cpp.in"/>
     <ClCompile Include="..\src\machdep\support.cpp" />
-    <ClCompile Include="..\src\main.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
-    <ClCompile Include="..\src\memory.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
-    <ClCompile Include="..\src\native2amiga.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
-    <ClCompile Include="..\src\newcpu.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
-    <ClCompile Include="..\src\newcpu_common.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
+    <ClCompile Include="..\src\main.cpp"/>
+    <ClCompile Include="..\src\memory.cpp"/>
+    <ClCompile Include="..\src\native2amiga.cpp"/>
+    <ClCompile Include="..\src\newcpu.cpp"/>
+    <ClCompile Include="..\src\newcpu_common.cpp"/>
     <ClCompile Include="..\src\osdep\ahi_v1.cpp" />
     <ClCompile Include="..\src\osdep\amiberry.cpp" />
     <ClCompile Include="..\src\osdep\ahi_v2.cpp" />
@@ -685,53 +487,31 @@
     <ClCompile Include="..\src\osdep\retroarch.cpp" />
     <ClCompile Include="..\src\osdep\sigsegv_handler.cpp" />
     <ClCompile Include="..\src\osdep\writelog.cpp" />
-    <ClCompile Include="..\src\p96_blit.cpp.in">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
+    <ClCompile Include="..\src\p96_blit.cpp.in"/>
     <ClCompile Include="..\src\parser.cpp" />
-    <ClCompile Include="..\src\readcpu.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
-    <ClCompile Include="..\src\rommgr.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
+    <ClCompile Include="..\src\readcpu.cpp"/>
+    <ClCompile Include="..\src\rommgr.cpp"/>
     <ClCompile Include="..\src\rtc.cpp" />
-    <ClCompile Include="..\src\savestate.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
+    <ClCompile Include="..\src\savestate.cpp"/>
     <ClCompile Include="..\src\scp.cpp" />
     <ClCompile Include="..\src\scsi.cpp" />
     <ClCompile Include="..\src\scsiemul.cpp" />
     <ClCompile Include="..\src\scsitape.cpp" />
     <ClCompile Include="..\src\serial_win32.cpp" />
-    <ClCompile Include="..\src\sinctable.cpp.in">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
+    <ClCompile Include="..\src\sinctable.cpp.in"/>
     <ClCompile Include="..\src\sounddep\sound.cpp" />
-    <ClCompile Include="..\src\statusline.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
+    <ClCompile Include="..\src\statusline.cpp"/>
     <ClCompile Include="..\src\tabletlibrary.cpp" />
     <ClCompile Include="..\src\threaddep\threading.cpp" />
     <ClCompile Include="..\src\tinyxml2.cpp" />
-    <ClCompile Include="..\src\traps.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
+    <ClCompile Include="..\src\traps.cpp"/>
     <ClCompile Include="..\src\uaeexe.cpp" />
-    <ClCompile Include="..\src\uaelib.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
+    <ClCompile Include="..\src\uaelib.cpp"/>
     <ClCompile Include="..\src\uaenative.cpp" />
-    <ClCompile Include="..\src\uaeresource.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
+    <ClCompile Include="..\src\uaeresource.cpp"/>
     <ClCompile Include="..\src\vm.cpp" />
-    <ClCompile Include="..\src\zfile.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
-    <ClCompile Include="..\src\zfile_archive.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
+    <ClCompile Include="..\src\zfile.cpp"/>
+    <ClCompile Include="..\src\zfile_archive.cpp"/>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\external\libguisan\include\guisan.hpp" />
@@ -992,11 +772,6 @@
       <Command>cp $(RemoteRootDir)/$(ProjectName)/amiberry $(RemoteRootDir)/amiberry/$(MSBuildProjectName)-Debug-dmx</Command>
     </RemotePostBuildEvent>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-DMX-Pi3|ARM'">
-    <RemotePostBuildEvent>
-      <Command>cp ~/projects/Amiberry-Debug-dmx/amiberry ~/projects/amiberry/Amiberry-Debug-dmx</Command>
-    </RemotePostBuildEvent>
-  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
     <RemotePostBuildEvent>
       <Command>cp $(RemoteRootDir)/$(ProjectName)-Debug/amiberry $(RemoteRootDir)/amiberry/$(MSBuildProjectName)-Debug</Command>
@@ -1005,31 +780,6 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debux-DMX|ARM64'">
     <RemotePostBuildEvent>
       <Command>cp $(RemoteRootDir)/$(ProjectName)/amiberry $(RemoteRootDir)/amiberry/$(MSBuildProjectName)-Debug-dmx</Command>
-    </RemotePostBuildEvent>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-DMX-Pi3|ARM64'">
-    <RemotePostBuildEvent>
-      <Command>cp ~/projects/Amiberry-Debug/amiberry ~/projects/amiberry/Amiberry-Debug</Command>
-    </RemotePostBuildEvent>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-xu4|ARM'">
-    <RemotePostBuildEvent>
-      <Command>cp ~/projects/Amiberry/amiberry ~/projects/amiberry/</Command>
-    </RemotePostBuildEvent>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-xu4|ARM64'">
-    <RemotePostBuildEvent>
-      <Command>cp ~/projects/Amiberry/amiberry ~/projects/amiberry/</Command>
-    </RemotePostBuildEvent>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-rockpro64|ARM'">
-    <RemotePostBuildEvent>
-      <Command>cp ~/projects/Amiberry/amiberry ~/projects/amiberry/</Command>
-    </RemotePostBuildEvent>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-rockpro64|ARM64'">
-    <RemotePostBuildEvent>
-      <Command>cp ~/projects/Amiberry/amiberry ~/projects/amiberry/</Command>
     </RemotePostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
@@ -1054,17 +804,6 @@
       <CppLanguageStandard>gnu++1y</CppLanguageStandard>
     </ClCompile>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-DMX-Pi3|ARM'">
-    <RemotePostBuildEvent>
-      <Message>Copy binary to launch location</Message>
-    </RemotePostBuildEvent>
-    <ClCompile>
-      <CLanguageStandard>gnu11</CLanguageStandard>
-    </ClCompile>
-    <ClCompile>
-      <CppLanguageStandard>gnu++1y</CppLanguageStandard>
-    </ClCompile>
-  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
     <RemotePostBuildEvent>
       <Message>Copy binary to launch location</Message>
@@ -1086,37 +825,6 @@
     <ClCompile>
       <CppLanguageStandard>gnu++1y</CppLanguageStandard>
     </ClCompile>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-DMX-Pi3|ARM64'">
-    <RemotePostBuildEvent>
-      <Message>Copy binary to launch location</Message>
-    </RemotePostBuildEvent>
-    <ClCompile>
-      <CLanguageStandard>gnu11</CLanguageStandard>
-    </ClCompile>
-    <ClCompile>
-      <CppLanguageStandard>gnu++1y</CppLanguageStandard>
-    </ClCompile>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-xu4|ARM'">
-    <RemotePostBuildEvent>
-      <Message>Copy binary to launch location</Message>
-    </RemotePostBuildEvent>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-xu4|ARM64'">
-    <RemotePostBuildEvent>
-      <Message>Copy binary to launch location</Message>
-    </RemotePostBuildEvent>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-rockpro64|ARM'">
-    <RemotePostBuildEvent>
-      <Message>Copy binary to launch location</Message>
-    </RemotePostBuildEvent>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-rockpro64|ARM64'">
-    <RemotePostBuildEvent>
-      <Message>Copy binary to launch location</Message>
-    </RemotePostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
     <RemotePostBuildEvent>
@@ -1165,18 +873,6 @@
     <ClCompile>
       <CppLanguageStandard>gnu++1y</CppLanguageStandard>
     </ClCompile>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-xu4|ARM'">
-    <RemotePostBuildEvent>
-      <Command>cp ~/projects/Amiberry/amiberry ~/projects/amiberry/</Command>
-      <Message>Copy binary to launch location</Message>
-    </RemotePostBuildEvent>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-xu4|ARM64'">
-    <RemotePostBuildEvent>
-      <Command>cp ~/projects/Amiberry/amiberry ~/projects/amiberry/</Command>
-      <Message>Copy binary to launch location</Message>
-    </RemotePostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
