@@ -131,7 +131,7 @@ static NavigationMap navMap[] =
 	{ "optECSDenise", "optECSAgnus", "Immediate", "optAGA", "chkNTSC" },
 	{ "chkNTSC", "Chipset", "BlitWait", "optECSDenise", "chkCycleExact" },
 	{ "ChipsetExtra", "Chipset", "Fast copper", "", "" },
-	{ "chkMultithreadedDrawing", "Chipset", "ChipsetExtra", "chkMemoryCycleExact", "CollNone"},
+	{ "chkMultithreadedDrawing", "Chipset", "ChipsetExtra", "chkMemoryCycleExact", "CollNone" },
 	{ "BlitNormal", "optAGA", "Chipset", "Fast copper", "Immediate" },
 	{ "Immediate", "optECSDenise", "Chipset", "BlitNormal", "BlitWait" },
 	{ "BlitWait", "chkNTSC", "Chipset", "Immediate", "Fast copper" },
@@ -152,7 +152,7 @@ static NavigationMap navMap[] =
 	{ "cboUAEROM", "ROM", "ROM", "cboCartROM", "chkShapeShifter" },
 	{ "chkShapeShifter", "ROM", "ROM", "cboUAEROM", "cboMainROM" },
 
-	//PanelRAM
+		//PanelRAM
 	{ "Chipmem", "", "", "RAM", "Slowmem" },
 	{ "Slowmem", "", "", "Chipmem", "Fastmem" },
 	{ "Fastmem", "", "", "Slowmem", "Z3mem" },
@@ -160,7 +160,7 @@ static NavigationMap navMap[] =
 	{ "A3000Low", "", "", "Z3mem", "A3000High" },
 	{ "A3000High", "", "", "A3000Low", "Chipmem" },
 
-	//PanelFloppy
+		//PanelFloppy
 	{ "DF0:", "Floppy drives", "cboType0", "cmdSaveForDisk", "cboDisk0" },
 	{ "cboType0", "DF0:", "chkWP0", "cmdSaveForDisk", "cboDisk0" },
 	{ "chkWP0", "cboType0", "cmdInfo0", "cmdSaveForDisk", "cboDisk0" },
@@ -197,32 +197,32 @@ static NavigationMap navMap[] =
 
 	//  active            move left           move right          move up           move down
 	// PanelHD
-	{"cmdProp0", "Hard drives/CD", "cmdDel0", "chkCDTurbo", "cmdProp1"},
-	{"cmdDel0", "cmdProp0", "Hard drives/CD", "chkCDTurbo", "cmdDel1"},
-	{"cmdProp1", "Hard drives/CD", "cmdDel1", "cmdProp0", "cmdProp2"},
-	{"cmdDel1", "cmdProp1", "Hard drives/CD", "cmdDel0", "cmdDel2"},
-	{"cmdProp2", "Hard drives/CD", "cmdDel2", "cmdProp1", "cmdProp3"},
-	{"cmdDel2", "cmdProp2", "Hard drives/CD", "cmdDel1", "cmdDel3"},
-	{"cmdProp3", "Hard drives/CD", "cmdDel3", "cmdProp2", "cmdProp4"},
-	{"cmdDel3", "cmdProp3", "Hard drives/CD", "cmdDel2", "cmdDel4"},
-	{"cmdProp4", "Hard drives/CD", "cmdDel4", "cmdProp3", "cmdAddDir"},
-	{"cmdDel4", "cmdProp4", "Hard drives/CD", "cmdDel3", "cmdAddHDF"},
-	{"cmdAddDir", "Hard drives/CD", "cmdAddHDF", "cmdProp4", "chkCD"},
-	{"cmdAddHDF", "cmdAddDir", "cmdCreateHDF", "cmdDel4", "chkCD"},
-	{"cmdCreateHDF", "cmdAddHDF", "Hard drives / CD", "cmdDel4", "chkCD" },
-	{"chkCD", "Hard drives/CD", "cdEject", "cmdAddDir", "cboCD"},
-	{"cdEject", "chkCD", "CDSelect", "cmdCreateHDF", "cboCD" },
-	{"CDSelect", "cdEject", "Hard drives/CD", "cmdCreateHDF", "cboCD"},
-	{"cboCD", "Hard drives/CD", "Hard drives/CD", "chkCD", "chkCDTurbo"},
+	{ "cmdProp0", "Hard drives/CD", "cmdDel0", "chkCDTurbo", "cmdProp1" },
+	{ "cmdDel0", "cmdProp0", "Hard drives/CD", "chkCDTurbo", "cmdDel1" },
+	{ "cmdProp1", "Hard drives/CD", "cmdDel1", "cmdProp0", "cmdProp2" },
+	{ "cmdDel1", "cmdProp1", "Hard drives/CD", "cmdDel0", "cmdDel2" },
+	{ "cmdProp2", "Hard drives/CD", "cmdDel2", "cmdProp1", "cmdProp3" },
+	{ "cmdDel2", "cmdProp2", "Hard drives/CD", "cmdDel1", "cmdDel3" },
+	{ "cmdProp3", "Hard drives/CD", "cmdDel3", "cmdProp2", "cmdProp4" },
+	{ "cmdDel3", "cmdProp3", "Hard drives/CD", "cmdDel2", "cmdDel4" },
+	{ "cmdProp4", "Hard drives/CD", "cmdDel4", "cmdProp3", "cmdAddDir" },
+	{ "cmdDel4", "cmdProp4", "Hard drives/CD", "cmdDel3", "cmdAddHDF" },
+	{ "cmdAddDir", "Hard drives/CD", "cmdAddHDF", "cmdProp4", "chkCD" },
+	{ "cmdAddHDF", "cmdAddDir", "cmdCreateHDF", "cmdDel4", "chkCD" },
+	{ "cmdCreateHDF", "cmdAddHDF", "Hard drives / CD", "cmdDel4", "chkCD" },
+	{ "chkCD", "Hard drives/CD", "cdEject", "cmdAddDir", "cboCD" },
+	{ "cdEject", "chkCD", "CDSelect", "cmdCreateHDF", "cboCD" },
+	{ "CDSelect", "cdEject", "Hard drives/CD", "cmdCreateHDF", "cboCD" },
+	{ "cboCD", "Hard drives/CD", "Hard drives/CD", "chkCD", "chkCDTurbo" },
 	{ "chkCDTurbo", "Hard drives/CD", "Hard drives/CD", "cboCD", "cmdProp0" },
 
-	// PanelExpansions
+		// PanelExpansions
 	{ "chkBSDSocket", "Expansions", "chkSana2", "", "chkSCSI" },
 	{ "chkSCSI", "Expansions", "chkCD32Fmv", "chkBSDSocket", "" },
 	{ "chkSana2", "chkBSDSocket", "Expansions", "", "chkCD32Fmv" },
 	{ "chkCD32Fmv", "chkSCSI", "Expansions", "chkSana2", "" },
-	
-	// PanelRTG
+
+		// PanelRTG
 	{ "cboBoard", "RTG board", "cboRtg16bitModes", "cboRtgRefreshRate", "sldGfxmem" },
 	{ "cboRtg16bitModes", "cboBoard", "RTG board", "cboRtgAspectRatio", "cboRtg32bitModes" },
 	{ "cboRtg32bitModes", "sldGfxmem", "RTG board", "cboRtg16bitModes", "chkRtgMatchDepth" },
@@ -236,15 +236,15 @@ static NavigationMap navMap[] =
 	{ "cboRtgRefreshRate", "RTG board", "cboRtgBufferMode", "chkRtgHardwareSprite", "cboBoard" },
 	{ "cboRtgBufferMode", "cboRtgRefreshRate", "cboRtgAspectRatio", "chkRtgHardwareSprite", "cboBoard" },
 	{ "cboRtgAspectRatio", "cboRtgBufferMode", "RTG board", "chkRtgHardwareSprite", "cboBoard" },
-	
+
 	//  active            move left           move right          move up           move down
 	// PanelDisplay
-	{ "cboFullscreen", "Display", "chkHorizontal", "chkFrameskip", "cboScreenmode"},
+	{ "cboFullscreen", "Display", "chkHorizontal", "chkFrameskip", "cboScreenmode" },
 	{ "cboScreenmode", "Display", "chkVertical", "cboFullscreen", "sldWidth" },
 	{ "sldWidth", "", "", "cboScreenmode", "sldHeight" },
 	{ "sldHeight", "", "", "sldWidth", "chkAutoHeight" },
 	{ "chkAutoHeight", "Display", "chkBorderless", "sldHeight", "cboScalingMethod" },
-	{ "chkBorderless", "chkAutoHeight", "optSingle", "sldHeight", "cboScalingMethod"},
+	{ "chkBorderless", "chkAutoHeight", "optSingle", "sldHeight", "cboScalingMethod" },
 	{ "cboScalingMethod", "Display", "optScanlines", "chkAutoHeight", "cboResolution" },
 	{ "cboResolution", "Display", "optDouble2", "cboScalingMethod", "chkFilterLowRes" },
 	{ "chkFilterLowRes", "Display", "optDouble3", "cboResolution", "chkBlackerThanBlack" },
@@ -278,42 +278,42 @@ static NavigationMap navMap[] =
 	{ "cboFilter", "cboStereoDelay", "Sound", "cboInterpol", "sldSoundBufferSize" },
 	{ "cboSeparation", "cboChannelMode", "cboInterpol", "sndEmuBest", "cboStereoDelay" },
 	{ "cboStereoDelay", "cboFrequency", "cboFilter", "cboSeparation", "chkFloppySound" },
-	{ "sldMasterVol", "", "", "optSoundPush", "sldPaulaVol"},
+	{ "sldMasterVol", "", "", "optSoundPush", "sldPaulaVol" },
 	{ "sldPaulaVol", "", "", "sldMasterVol", "sldCDVol" },
 	{ "sldCDVol", "", "", "sldPaulaVol", "sldAHIVol" },
-	{ "sldAHIVol", "", "", "sldCDVol", "cboInterpol"},
-	{ "chkFloppySound", "Sound", "sldSoundBufferSize", "cboFrequency", "sldFloppySoundEmpty"},
-	{ "sldFloppySoundEmpty", "", "", "chkFloppySound", "sldFloppySoundDisk"},
-	{ "sldFloppySoundDisk", "", "", "sldFloppySoundEmpty", "sndDisable"},
-	{ "sldSoundBufferSize", "", "", "cboFilter", "optSoundPull"},
-	{ "optSoundPull", "sldFloppySoundEmpty", "Sound", "sldSoundBufferSize", "optSoundPush"},
-	{ "optSoundPush", "sldFloppySoundDisk", "Sound", "optSoundPull", "sldMasterVol"},
+	{ "sldAHIVol", "", "", "sldCDVol", "cboInterpol" },
+	{ "chkFloppySound", "Sound", "sldSoundBufferSize", "cboFrequency", "sldFloppySoundEmpty" },
+	{ "sldFloppySoundEmpty", "", "", "chkFloppySound", "sldFloppySoundDisk" },
+	{ "sldFloppySoundDisk", "", "", "sldFloppySoundEmpty", "sndDisable" },
+	{ "sldSoundBufferSize", "", "", "cboFilter", "optSoundPull" },
+	{ "optSoundPull", "sldFloppySoundEmpty", "Sound", "sldSoundBufferSize", "optSoundPush" },
+	{ "optSoundPush", "sldFloppySoundDisk", "Sound", "optSoundPull", "sldMasterVol" },
 
-	//  active            move left           move right          move up           move down
-	// PanelInput
-	{"cboPort0", "Input", "Input", "optBoth", "cboPort0Autofire"},
-	{"cboPort0Autofire", "Input", "cboPort0mode", "cboPort0", "cboPort1"},
-	{"cboPort0mode", "cboPort0Autofire", "Input", "cboPort0", "cboPort1"},
-	{"cboPort1", "Input", "Input", "cboPort0Autofire", "cboPort1Autofire"},
-	{"cboPort1Autofire", "Input", "cboPort1mode", "cboPort1", "cmdSwapPorts"},
-	{"cboPort1mode", "cboPort1Autofire", "Input", "cboPort1", "chkInputAutoswitch"},
-	{"cmdSwapPorts", "Input", "chkInputAutoswitch", "cboPort1Autofire", "cboPort2"},
-	{"chkInputAutoswitch", "Input", "", "cboPort1mode", "cboPort2"},
-	{"cboPort2", "Input", "Input", "cmdSwapPorts", "cboPort2Autofire"},
-	{"cboPort2Autofire", "Input", "Input", "cboPort2", "cboPort3"},
-	{"cboPort3", "Input", "Input", "cboPort2Autofire", "cboPort3Autofire"},
-	{"cboPort3Autofire", "Input", "Input", "cboPort3", "cboPort0mousemode"},
-	{"cboPort0mousemode", "Input", "sldDigitalJoyMouseSpeed", "cboPort3Autofire", "cboPort1mousemode"},
-	{"cboPort1mousemode", "Input", "sldAnalogJoyMouseSpeed", "cboPort0mousemode", "cboAutofireRate"},
-	{"cboAutofireRate", "Input", "sldMouseSpeed", "cboPort1mousemode", "chkMouseHack" },
-	{"sldDigitalJoyMouseSpeed", "", "", "cboPort3Autofire", "sldAnalogJoyMouseSpeed"},
-	{"sldAnalogJoyMouseSpeed", "", "", "sldDigitalJoyMouseSpeed", "sldMouseSpeed"},
-	{"sldMouseSpeed", "", "", "sldAnalogJoyMouseSpeed", "chkMagicMouseUntrap"},
-	{"chkMagicMouseUntrap", "chkMouseHack", "", "sldMouseSpeed", "optHost"},
-	{"chkMouseHack", "Input", "chkMagicMouseUntrap", "cboAutofireRate", "optBoth"},
-	{"optBoth", "Input", "optNative", "chkMouseHack", "cboPort0"},
-	{"optNative", "optBoth", "optHost", "chkMouseHack", "cboPort0"},
-	{"optHost", "optNative", "", "chkMouseHack", "cboPort0"},
+		//  active            move left           move right          move up           move down
+		// PanelInput
+	{ "cboPort0", "Input", "Input", "optBoth", "cboPort0Autofire" },
+	{ "cboPort0Autofire", "Input", "cboPort0mode", "cboPort0", "cboPort1" },
+	{ "cboPort0mode", "cboPort0Autofire", "Input", "cboPort0", "cboPort1" },
+	{ "cboPort1", "Input", "Input", "cboPort0Autofire", "cboPort1Autofire" },
+	{ "cboPort1Autofire", "Input", "cboPort1mode", "cboPort1", "cmdSwapPorts" },
+	{ "cboPort1mode", "cboPort1Autofire", "Input", "cboPort1", "chkInputAutoswitch" },
+	{ "cmdSwapPorts", "Input", "chkInputAutoswitch", "cboPort1Autofire", "cboPort2" },
+	{ "chkInputAutoswitch", "Input", "", "cboPort1mode", "cboPort2" },
+	{ "cboPort2", "Input", "Input", "cmdSwapPorts", "cboPort2Autofire" },
+	{ "cboPort2Autofire", "Input", "Input", "cboPort2", "cboPort3" },
+	{ "cboPort3", "Input", "Input", "cboPort2Autofire", "cboPort3Autofire" },
+	{ "cboPort3Autofire", "Input", "Input", "cboPort3", "cboPort0mousemode" },
+	{ "cboPort0mousemode", "Input", "sldDigitalJoyMouseSpeed", "cboPort3Autofire", "cboPort1mousemode" },
+	{ "cboPort1mousemode", "Input", "sldAnalogJoyMouseSpeed", "cboPort0mousemode", "cboAutofireRate" },
+	{ "cboAutofireRate", "Input", "sldMouseSpeed", "cboPort1mousemode", "chkMouseHack" },
+	{ "sldDigitalJoyMouseSpeed", "", "", "cboPort3Autofire", "sldAnalogJoyMouseSpeed" },
+	{ "sldAnalogJoyMouseSpeed", "", "", "sldDigitalJoyMouseSpeed", "sldMouseSpeed" },
+	{ "sldMouseSpeed", "", "", "sldAnalogJoyMouseSpeed", "chkMagicMouseUntrap" },
+	{ "chkMagicMouseUntrap", "chkMouseHack", "", "sldMouseSpeed", "optHost" },
+	{ "chkMouseHack", "Input", "chkMagicMouseUntrap", "cboAutofireRate", "optBoth" },
+	{ "optBoth", "Input", "optNative", "chkMouseHack", "cboPort0" },
+	{ "optNative", "optBoth", "optHost", "chkMouseHack", "cboPort0" },
+	{ "optHost", "optNative", "", "chkMouseHack", "cboPort0" },
 
 	// PanelCustom
 	{ "0: Mouse", "Custom controls", "1: Joystick", "chkAnalogRemap", "None" },
@@ -350,25 +350,25 @@ static NavigationMap navMap[] =
 	{ "scrlMisc", "chkMouseUntrap", "cmdKeyOpenGUI", "", "" },
 	{ "chkMouseUntrap", "Miscellaneous", "scrlMisc", "chkRTSCTS", "chkShowGUI" },
 	{ "chkShowGUI", "Miscellaneous", "scrlMisc", "chkMouseUntrap", "chkSyncClock" },
-	{ "chkSyncClock", "Miscellaneous", "scrlMisc", "chkBSDSocket", "chkResetDelay"},
-	{ "chkResetDelay", "Miscellaneous", "scrlMisc", "chkSyncClock", "chkFasterRTG"},
-	{ "chkFasterRTG", "Miscellaneous", "scrlMisc", "chkResetDelay", "chkClipboardSharing"},
+	{ "chkSyncClock", "Miscellaneous", "scrlMisc", "chkBSDSocket", "chkResetDelay" },
+	{ "chkResetDelay", "Miscellaneous", "scrlMisc", "chkSyncClock", "chkFasterRTG" },
+	{ "chkFasterRTG", "Miscellaneous", "scrlMisc", "chkResetDelay", "chkClipboardSharing" },
 	{ "chkClipboardSharing", "Miscellaneous", "scrlMisc", "chkFasterRTG", "chkAllowNativeCode" },
 	{ "chkAllowNativeCode", "Miscellaneous", "scrlMisc", "chkClipboardSharing", "chkStatusLineNative" },
 	{ "chkStatusLineNative", "Miscellaneous", "scrlMisc", "chkAllowNativeCode", "chkStatusLineRtg" },
 	{ "chkStatusLineRtg", "Miscellaneous", "scrlMisc", "chkStatusLineNative", "chkIllegalMem" },
-	{ "chkIllegalMem", "Miscellaneous", "scrlMisc", "chkStatusLineRtg", "chkMinimizeInactive"},
-	{ "chkMinimizeInactive", "Miscellaneous", "scrlMisc", "chkIllegalMem", "chkMasterWP"},
+	{ "chkIllegalMem", "Miscellaneous", "scrlMisc", "chkStatusLineRtg", "chkMinimizeInactive" },
+	{ "chkMinimizeInactive", "Miscellaneous", "scrlMisc", "chkIllegalMem", "chkMasterWP" },
 	{ "chkMasterWP", "Miscellaneous", "scrlMisc", "chkMinimizeInactive", "chkHDRO" },
-	{ "chkHDRO", "Miscellaneous", "scrlMisc", "chkMasterWP", "chkHideAutoconfig"},
-	{ "chkHideAutoconfig", "Miscellaneous", "scrlMisc", "chkHDRO", "chkRCtrlIsRAmiga"},
+	{ "chkHDRO", "Miscellaneous", "scrlMisc", "chkMasterWP", "chkHideAutoconfig" },
+	{ "chkHideAutoconfig", "Miscellaneous", "scrlMisc", "chkHDRO", "chkRCtrlIsRAmiga" },
 	{ "chkRCtrlIsRAmiga", "Miscellaneous", "scrlMisc", "chkHideAutoconfig", "chkCaptureAlways" },
-	{ "chkCaptureAlways", "Miscellaneous", "scrlMisc", "chkRCtrlIsRAmiga", "chkAltTabRelease"},
-	{ "chkAltTabRelease", "Miscellaneous", "scrlMisc", "chkCaptureAlways", "chkRetroArchQuit"},
+	{ "chkCaptureAlways", "Miscellaneous", "scrlMisc", "chkRCtrlIsRAmiga", "chkAltTabRelease" },
+	{ "chkAltTabRelease", "Miscellaneous", "scrlMisc", "chkCaptureAlways", "chkRetroArchQuit" },
 	{ "chkRetroArchQuit", "Miscellaneous", "scrlMisc", "chkAltTabRelease", "chkRetroArchMenu" },
 	{ "chkRetroArchMenu", "Miscellaneous", "scrlMisc", "chkRetroArchQuit", "chkRetroArchReset" },
 	{ "chkRetroArchReset", "Miscellaneous", "scrlMisc", "chkRetroArchMenu", "cboNumlock" },
-	
+
 	{ "cboNumlock", "Miscellaneous", "cboScrolllock", "chkRetroArchReset", "chkRTSCTS" },
 	{ "cboScrolllock", "cboNumlock", "Miscellaneous", "chkRetroArchReset", "chkRTSCTS" },
 
@@ -376,7 +376,7 @@ static NavigationMap navMap[] =
 	{ "chkRTSCTS", "Miscellaneous", "chkSerialDirect", "txtSerialDevice", "chkMouseUntrap" },
 	{ "chkSerialDirect", "chkRTSCTS", "chkUaeSerial", "txtSerialDevice", "chkMouseUntrap" },
 	{ "chkUaeSerial", "chkSerialDirect", "Miscellaneous", "txtSerialDevice", "chkMouseUntrap" },
-	
+
 	{ "cmdKeyOpenGUI", "scrlMisc", "cmdKeyOpenGUIClear", "cmdKeyFullScreen", "cmdKeyForQuit" },
 	{ "cmdKeyOpenGUIClear", "cmdKeyOpenGUI", "Miscellaneous", "cmdKeyFullScreenClear", "cmdKeyForQuitClear" },
 	{ "cmdKeyForQuit", "scrlMisc", "cmdKeyForQuitClear", "cmdKeyOpenGUI", "cmdKeyActionReplay" },
@@ -384,10 +384,10 @@ static NavigationMap navMap[] =
 	{ "cmdKeyActionReplay", "scrlMisc", "cmdKeyActionReplayClear", "cmdKeyForQuit", "cmdKeyFullScreen" },
 	{ "cmdKeyActionReplayClear", "cmdKeyActionReplay", "Miscellaneous", "cmdKeyForQuitClear", "cmdKeyFullScreenClear" },
 	{ "cmdKeyFullScreen", "scrlMisc", "cmdKeyFullScreenClear", "cmdKeyActionReplay", "cmdKeyMinimize" },
-	{ "cmdKeyFullScreenClear", "cmdKeyFullScreen", "Miscellaneous", "cmdKeyActionReplayClear", "cmdKeyMinimizeClear"},
+	{ "cmdKeyFullScreenClear", "cmdKeyFullScreen", "Miscellaneous", "cmdKeyActionReplayClear", "cmdKeyMinimizeClear" },
 	{ "cmdKeyMinimize", "scrlMisc", "cmdKeyMinimizeClear", "cmdKeyFullScreen", "cmdKeyOpenGUI" },
 	{ "cmdKeyMinimizeClear", "cmdKeyMinimize", "Miscellaneous", "cmdKeyFullScreenClear", "cmdKeyOpenGUIClear" },
-	
+
 	// PanelPrio
 	{ "cboActiveRunAtPrio", "Priority", "cboInactiveRunAtPrio", "chkActiveDisableSound", "chkActivePauseEmulation" },
 	{ "chkActivePauseEmulation", "Priority", "chkInactivePauseEmulation", "cboActiveRunAtPrio", "chkActiveDisableSound" },
@@ -400,7 +400,7 @@ static NavigationMap navMap[] =
 	{ "chkMinimizedPauseEmulation", "chkInactivePauseEmulation", "Priority", "cboMinimizedRunAtPrio", "chkMinimizedDisableSound" },
 	{ "chkMinimizedDisableSound", "chkInactiveDisableSound", "Priority", "chkMinimizedPauseEmulation", "chkMinimizedDisableControllers" },
 	{ "chkMinimizedDisableControllers", "chkInactiveDisableControllers", "Priority", "chkMinimizedDisableSound", "cboMinimizedRunAtPrio" },
-	
+
 	// PanelSavestate
 	{ "State0", "Savestates", "Savestates", "LoadState", "State1" },
 	{ "State1", "Savestates", "Savestates", "State0", "State2" },
@@ -412,11 +412,11 @@ static NavigationMap navMap[] =
 	{ "State7", "Savestates", "Savestates", "State6", "State8" },
 	{ "State8", "Savestates", "Savestates", "State7", "State9" },
 	{ "State9", "Savestates", "Savestates", "State8", "State10" },
-    { "State10", "Savestates", "Savestates", "State9", "State11" },
-    { "State11", "Savestates", "Savestates", "State10", "State12" },
-    { "State12", "Savestates", "Savestates", "State11", "State13" },
-    { "State13", "Savestates", "Savestates", "State12", "State14" },
-    { "State14", "Savestates", "Savestates", "State13", "LoadState" },
+	{ "State10", "Savestates", "Savestates", "State9", "State11" },
+	{ "State11", "Savestates", "Savestates", "State10", "State12" },
+	{ "State12", "Savestates", "Savestates", "State11", "State13" },
+	{ "State13", "Savestates", "Savestates", "State12", "State14" },
+	{ "State14", "Savestates", "Savestates", "State13", "LoadState" },
 	{ "LoadState", "Savestates", "SaveState", "State14", "State0" },
 	{ "SaveState", "LoadState", "Savestates", "State14", "State0" },
 
@@ -448,7 +448,7 @@ static NavigationMap navMap[] =
 	{ "txtHdfDev", "", "", "cmdHdfOK", "chkHdfRW" },
 	{ "chkHdfRW", "txtHdfDev", "", "cmdHdfOK", "hdfAutoboot" },
 	{ "hdfAutoboot", "txtHdfDev", "txtHdfBootPri", "chkHdfRW", "cmdHdfPath" },
-	{ "txtHdfBootPri", "", "", "hdfAutoboot", "cmdHdfPath"},
+	{ "txtHdfBootPri", "", "", "hdfAutoboot", "cmdHdfPath" },
 	{ "cmdHdfPath", "txtHdfPath", "txtHdfPath", "txtHdfBootPri", "hdfController" },
 	{ "hdfController", "cboHdfUnit", "cboHdfUnit", "cmdHdfPath", "cmdHdfOK" },
 	{ "cboHdfUnit", "hdfController", "hdfController", "cmdHdfPath", "cmdHdfOK" },
@@ -464,7 +464,7 @@ static NavigationMap navMap[] =
 	{ "cmdCreateHdfOK", "cmdCreateHdfCancel", "cmdCreateHdfCancel", "chkDynamic", "txtCreateDevice" },
 	{ "cmdCreateHdfCancel", "cmdCreateHdfOK", "cmdCreateHdfOK", "chkDynamic", "txtCreateDevice" },
 
-	{"END", "", "", "", ""}
+	{ "END", "", "", "", "" }
 };
 
 
