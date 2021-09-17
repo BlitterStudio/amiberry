@@ -95,10 +95,15 @@ static void InitShowMessage()
 	}
 	if (mon->sdl_window)
 	{
-		if (amiberry_options.rotation_angle != 0 && amiberry_options.rotation_angle != 180)
-			SDL_SetWindowSize(mon->sdl_window, GUI_HEIGHT, GUI_WIDTH);
-		else
-			SDL_SetWindowSize(mon->sdl_window, GUI_WIDTH, GUI_HEIGHT);
+		const auto window_flags = SDL_GetWindowFlags(mon->sdl_window);
+		const bool is_maximized = window_flags & SDL_WINDOW_MAXIMIZED;
+		if (!is_maximized)
+		{
+			if (amiberry_options.rotation_angle != 0 && amiberry_options.rotation_angle != 180)
+				SDL_SetWindowSize(mon->sdl_window, GUI_HEIGHT, GUI_WIDTH);
+			else
+				SDL_SetWindowSize(mon->sdl_window, GUI_WIDTH, GUI_HEIGHT);
+		}
 	}
 	
 	// make the scaled rendering look smoother (linear scaling).
