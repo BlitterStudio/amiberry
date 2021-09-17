@@ -22,7 +22,6 @@ static gcn::CheckBox* chkStatusLine;
 static gcn::CheckBox* chkStatusLineRtg;
 static gcn::CheckBox* chkShowGUI;
 static gcn::CheckBox* chkMouseUntrap;
-static gcn::CheckBox* chkBSDSocket;
 static gcn::CheckBox* chkMasterWP;
 static gcn::CheckBox* chkHDReadOnly;
 static gcn::CheckBox* chkClipboardSharing;
@@ -74,11 +73,11 @@ static gcn::CheckBox* chkRTSCTS;
 static gcn::CheckBox* chkUaeSerial;
 #endif
 
-class StringListModel : public gcn::ListModel
+class string_list_model : public gcn::ListModel
 {
-	std::vector<std::string> values;
+	std::vector<std::string> values{};
 public:
-	StringListModel(const char* entries[], const int count)
+	string_list_model(const char* entries[], const int count)
 	{
 		for (auto i = 0; i < count; ++i)
 			values.emplace_back(entries[i]);
@@ -89,6 +88,17 @@ public:
 		return values.size();
 	}
 
+	int add_element(const char* elem) override
+	{
+		values.emplace_back(elem);
+		return 0;
+	}
+
+	void clear_elements() override
+	{
+		values.clear();
+	}
+	
 	std::string getElementAt(int i) override
 	{
 		if (i < 0 || i >= static_cast<int>(values.size()))
@@ -98,7 +108,7 @@ public:
 };
 
 static const char* listValues[] = { "none", "POWER", "DF0", "DF1", "DF2", "DF3", "HD", "CD" };
-static StringListModel KBDLedList(listValues, 8);
+static string_list_model KBDLedList(listValues, 8);
 
 #ifdef SERIAL_PORT
 class MiscKeyListener : public gcn::KeyListener
@@ -171,9 +181,6 @@ public:
 			changed_prefs.use_retroarch_reset = chkRetroArchReset->isSelected();
 			RefreshPanelCustom();
 		}
-
-		else if (actionEvent.getSource() == chkBSDSocket)
-			changed_prefs.socket_emu = chkBSDSocket->isSelected();
 
 		else if (actionEvent.getSource() == chkMasterWP)
 		{
@@ -382,10 +389,6 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	chkRetroArchReset->setId("chkRetroArchReset");
 	chkRetroArchReset->addActionListener(miscActionListener);
 
-	chkBSDSocket = new gcn::CheckBox("bsdsocket.library");
-	chkBSDSocket->setId("chkBSDSocket");
-	chkBSDSocket->addActionListener(miscActionListener);
-
 	chkMasterWP = new gcn::CheckBox("Master floppy write protection");
 	chkMasterWP->setId("chkMasterWP");
 	chkMasterWP->addActionListener(miscActionListener);
@@ -565,8 +568,6 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	posY += chkMouseUntrap->getHeight() + DISTANCE_NEXT_Y;
 	grpMiscOptions->add(chkShowGUI, DISTANCE_BORDER, posY);
 	posY += chkShowGUI->getHeight() + DISTANCE_NEXT_Y;
-	grpMiscOptions->add(chkBSDSocket, DISTANCE_BORDER, posY);
-	posY += chkBSDSocket->getHeight() + DISTANCE_NEXT_Y;
 	// Use CTRL-F11 to quit
 	// Don't show taskbar button
 	// Don't show notification icon
@@ -701,8 +702,7 @@ void ExitPanelMisc()
 	delete chkAltTabRelease;
 	delete chkRetroArchQuit;
 	delete chkRetroArchMenu;
-	delete chkRetroArchReset;
-	delete chkBSDSocket;
+	delete chkRetroArchReset;	
 	delete chkMasterWP;
 	delete chkHDReadOnly;
 	delete chkClipboardSharing;
@@ -770,8 +770,6 @@ void RefreshPanelMisc()
 	chkRetroArchQuit->setSelected(changed_prefs.use_retroarch_quit);
 	chkRetroArchMenu->setSelected(changed_prefs.use_retroarch_menu);
 	chkRetroArchReset->setSelected(changed_prefs.use_retroarch_reset);
-	chkBSDSocket->setEnabled(!emulating);
-	chkBSDSocket->setSelected(changed_prefs.socket_emu);
 	chkMasterWP->setSelected(changed_prefs.floppy_read_only);
 	chkHDReadOnly->setSelected(changed_prefs.harddrive_read_only);
 	chkClipboardSharing->setSelected(changed_prefs.clipboard_sharing);
@@ -823,9 +821,6 @@ bool HelpPanelMisc(std::vector<std::string>& helptext)
 	helptext.emplace_back("When you deactivate the option \"Show GUI on startup\" and use this configuration");
 	helptext.emplace_back("by specifying it with the command line parameter \"-config=<file>\", ");
 	helptext.emplace_back("the emulation starts directly without showing the GUI.");
-	helptext.emplace_back(" ");
-	helptext.emplace_back("\"bsdsocket.library\" enables network functions (i.e. for web browsers in OS3.9).");
-	helptext.emplace_back("You don't need to use a TCP stack (e.g. AmiTCP/Genesis/Roadshow) when this option is enabled.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("\"Master floppy drive protection\" will disable all write access to floppy disks.");
 	helptext.emplace_back(" ");

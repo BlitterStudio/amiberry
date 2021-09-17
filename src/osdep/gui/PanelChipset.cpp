@@ -73,6 +73,15 @@ public:
 		return numChipsets;
 	}
 
+	int add_element(const char* elem) override
+	{
+		return 0;
+	}
+
+	void clear_elements() override
+	{
+	}
+	
 	std::string getElementAt(int i) override
 	{
 		if (i < 0 || i >= numChipsets)

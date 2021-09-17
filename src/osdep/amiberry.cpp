@@ -1965,6 +1965,8 @@ static const TCHAR* scsimode[] = { _T("SCSIEMU"), _T("SPTI"), _T("SPTI+SCSISCAN"
 static const TCHAR* statusbarmode[] = { _T("none"), _T("normal"), _T("extended"), NULL };
 static const TCHAR* configmult[] = { _T("1x"), _T("2x"), _T("3x"), _T("4x"), _T("5x"), _T("6x"), _T("7x"), _T("8x"), NULL };
 
+extern int scsiromselected;
+
 void target_save_options(struct zfile* f, struct uae_prefs* p)
 {
 	cfgfile_target_write_bool(f, _T("middle_mouse"), (p->input_mouse_untrap & MOUSEUNTRAP_MIDDLEBUTTON) != 0);
@@ -2025,6 +2027,9 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_target_dwrite_bool(f, _T("use_retroarch_quit"), p->use_retroarch_quit);
 	cfgfile_target_dwrite_bool(f, _T("use_retroarch_menu"), p->use_retroarch_menu);
 	cfgfile_target_dwrite_bool(f, _T("use_retroarch_reset"), p->use_retroarch_reset);
+
+	if (scsiromselected > 0)
+		cfgfile_target_write(f, _T("expansion_gui_page"), expansionroms[scsiromselected].name);
 }
 
 void target_restart(void)
@@ -2166,6 +2171,19 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 		return 1;
 	}
 
+	if (cfgfile_string(option, value, _T("expansion_gui_page"), tmpbuf, sizeof tmpbuf / sizeof(TCHAR))) {
+		TCHAR* p = _tcschr(tmpbuf, ',');
+		if (p != NULL)
+			*p = 0;
+		for (int i = 0; expansionroms[i].name; i++) {
+			if (!_tcsicmp(tmpbuf, expansionroms[i].name)) {
+				scsiromselected = i;
+				break;
+			}
+		}
+		return 1;
+	}
+	
 	if (cfgfile_yesno(option, value, _T("rtg_match_depth"), &p->rtgmatchdepth))
 		return 1;
 

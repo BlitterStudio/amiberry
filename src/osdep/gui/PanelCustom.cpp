@@ -37,12 +37,12 @@ static int SelectedPort = 1;
 static int SelectedFunction = 0;
 
 
-class StringListModel : public gcn::ListModel
+class string_list_model : public gcn::ListModel
 {
 private:
-	std::vector<std::string> values;
+	std::vector<std::string> values{};
 public:
-	StringListModel(const char* entries[], const int count)
+	string_list_model(const char* entries[], const int count)
 	{
 		for (auto i = 0; i < count; ++i)
 			values.emplace_back(entries[i]);
@@ -53,10 +53,15 @@ public:
 		return values.size();
 	}
 
-	int add_element(const char* Elem)
+	int add_element(const char* elem) override
 	{
-		values.emplace_back(Elem);
+		values.emplace_back(elem);
 		return 0;
+	}
+
+	void clear_elements() override
+	{
+		values.clear();
 	}
 
 	int swap_first_element(const char* Elem)
@@ -74,11 +79,11 @@ public:
 	}
 };
 
-static StringListModel CustomEventList(nullptr, 0);
-static StringListModel CustomEventList_HotKey(nullptr, 0);
-static StringListModel CustomEventList_Menu(nullptr, 0);
-static StringListModel CustomEventList_Quit(nullptr, 0);
-static StringListModel CustomEventList_Reset(nullptr, 0);
+static string_list_model CustomEventList(nullptr, 0);
+static string_list_model CustomEventList_HotKey(nullptr, 0);
+static string_list_model CustomEventList_Menu(nullptr, 0);
+static string_list_model CustomEventList_Quit(nullptr, 0);
+static string_list_model CustomEventList_Reset(nullptr, 0);
 
 const string label_button_list[] = {
 	"South:", "East:", "West:", "North:", "Select:", "Guide:", "Start:", "L.Stick:", "R.Stick:",

@@ -6746,9 +6746,9 @@ static int cfgfile_load_2 (struct uae_prefs *p, const TCHAR *filename, bool real
 	subst (p->path_rom.path[0], p->romextfile, sizeof p->romextfile / sizeof (TCHAR));
 	subst (p->path_rom.path[0], p->romextfile2, sizeof p->romextfile2 / sizeof(TCHAR));
 
-	for (auto& i : p->expansionboard) {
-		for (auto& rom : i.roms) {
-			subst(p->path_rom.path[0], rom.romfile, MAX_DPATH / sizeof(TCHAR));
+	for (auto i = 0; i < MAX_EXPANSION_BOARDS; i++) {
+		for (int j = 0; j < MAX_BOARD_ROMS; j++) {
+			subst(p->path_rom.path[0], p->expansionboard[i].roms[j].romfile, MAX_DPATH / sizeof(TCHAR));
 		}
 	}
 

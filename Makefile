@@ -1,5 +1,5 @@
 # Specify "make PLATFORM=<platform>" to compile for a specific target.
-# Check the supported list of platforms below for a ful list
+# Check the supported list of platforms below for a full list
 
 #
 ## Common options for all targets
@@ -395,6 +395,13 @@ OBJS =	\
 	src/archivers/zip/unzip.o \
 	src/caps/caps_amiberry.o \
 	src/machdep/support.o \
+	src/floppybridge/ArduinoFloppyBridge.o \
+	src/floppybridge/ArduinoInterface.o \
+	src/floppybridge/CommonBridgeTemplate.o \
+	src/floppybridge/GreaseWeazleBridge.o \
+	src/floppybridge/GreaseWeazleInterface.o \
+	src/floppybridge/RotationExtractor.o \
+	src/floppybridge/SerialIO.o \
 	src/osdep/ahi_v1.o \
 	src/osdep/bsdsocket_host.o \
 	src/osdep/cda_play.o \
@@ -437,6 +444,7 @@ OBJS =	\
 	src/osdep/gui/PanelROM.o \
 	src/osdep/gui/PanelRAM.o \
 	src/osdep/gui/PanelFloppy.o \
+	src/osdep/gui/PanelExpansions.o \
 	src/osdep/gui/PanelHD.o \
 	src/osdep/gui/PanelRTG.o \
 	src/osdep/gui/PanelHWInfo.o \

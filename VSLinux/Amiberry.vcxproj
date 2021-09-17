@@ -395,7 +395,16 @@
     <ClCompile Include="..\src\filesys.cpp"/>
     <ClCompile Include="..\src\filesys_bootrom.cpp.in"/>
     <ClCompile Include="..\src\flashrom.cpp" />
-    <ClCompile Include="..\src\fpp.cpp"/>
+    <ClCompile Include="..\src\floppybridge\ArduinoFloppyBridge.cpp" />
+    <ClCompile Include="..\src\floppybridge\ArduinoInterface.cpp" />
+    <ClCompile Include="..\src\floppybridge\CommonBridgeTemplate.cpp" />
+    <ClCompile Include="..\src\floppybridge\GreaseWeazleBridge.cpp" />
+    <ClCompile Include="..\src\floppybridge\GreaseWeazleInterface.cpp" />
+    <ClCompile Include="..\src\floppybridge\RotationExtractor.cpp" />
+    <ClCompile Include="..\src\floppybridge\SerialIO.cpp" />
+    <ClCompile Include="..\src\fpp.cpp">
+      <DeploymentContent>false</DeploymentContent>
+    </ClCompile>
     <ClCompile Include="..\src\fpp_native.cpp.in" />
     <ClCompile Include="..\src\fsdb.cpp"/>
     <ClCompile Include="..\src\fsusage.cpp"/>
@@ -448,6 +457,7 @@
     <ClCompile Include="..\src\osdep\gui\PanelCPU.cpp" />
     <ClCompile Include="..\src\osdep\gui\PanelCustom.cpp" />
     <ClCompile Include="..\src\osdep\gui\PanelDisplay.cpp" />
+    <ClCompile Include="..\src\osdep\gui\PanelExpansions.cpp" />
     <ClCompile Include="..\src\osdep\gui\PanelFloppy.cpp" />
     <ClCompile Include="..\src\osdep\gui\PanelHD.cpp" />
     <ClCompile Include="..\src\osdep\gui\PanelHWInfo.cpp" />
@@ -615,6 +625,15 @@
     <ClInclude Include="..\src\archivers\zip\unzip.h" />
     <ClInclude Include="..\src\caps\CapsAPI.h" />
     <ClInclude Include="..\src\caps\Comtype.h" />
+    <ClInclude Include="..\src\floppybridge\ArduinoFloppyBridge.h" />
+    <ClInclude Include="..\src\floppybridge\ArduinoInterface.h" />
+    <ClInclude Include="..\src\floppybridge\CommonBridgeTemplate.h" />
+    <ClInclude Include="..\src\floppybridge\floppybridge_abstract.h" />
+    <ClInclude Include="..\src\floppybridge\floppybridge_config.h" />
+    <ClInclude Include="..\src\floppybridge\GreaseWeazleBridge.h" />
+    <ClInclude Include="..\src\floppybridge\GreaseWeazleInterface.h" />
+    <ClInclude Include="..\src\floppybridge\RotationExtractor.h" />
+    <ClInclude Include="..\src\floppybridge\SerialIO.h" />
     <ClInclude Include="..\src\include\akiko.h" />
     <ClInclude Include="..\src\include\ar.h" />
     <ClInclude Include="..\src\include\audio.h" />

@@ -41,6 +41,17 @@ public:
 		return roms.size();
 	}
 
+	int add_element(const char* elem) override
+	{
+		roms.emplace_back(elem);
+		return 0;
+	}
+
+	void clear_elements() override
+	{
+		roms.clear();
+	}
+	
 	std::string getElementAt(const int i) override
 	{
 		if (i < 0 || i >= static_cast<int>(roms.size()))
@@ -86,12 +97,12 @@ static ROMListModel* mainROMList;
 static ROMListModel* extROMList;
 static ROMListModel* cartROMList;
 
-class StringListModel : public gcn::ListModel
+class string_list_model : public gcn::ListModel
 {
 private:
 	std::vector<std::string> values;
 public:
-	StringListModel(const char* entries[], const int count)
+	string_list_model(const char* entries[], const int count)
 	{
 		for (auto i = 0; i < count; ++i)
 			values.emplace_back(entries[i]);
@@ -117,7 +128,7 @@ public:
 };
 
 const char* uaeValues[] = { "ROM disabled", "Original UAE (FS + F0 ROM)", "New UAE (64k + F0 ROM)" };
-StringListModel uaeList(uaeValues, 3);
+string_list_model uaeList(uaeValues, 3);
 
 class MainROMActionListener : public gcn::ActionListener
 {

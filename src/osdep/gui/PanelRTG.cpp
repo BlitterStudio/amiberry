@@ -11,11 +11,11 @@
 #include "gfxboard.h"
 #include "gui_handling.h"
 
-class StringListModel : public gcn::ListModel
+class string_list_model : public gcn::ListModel
 {
-	std::vector<std::string> values;
+	std::vector<std::string> values{};
 public:
-	StringListModel(const char* entries[], const int count)
+	string_list_model(const char* entries[], const int count)
 	{
 		for (auto i = 0; i < count; ++i)
 			values.emplace_back(entries[i]);
@@ -26,12 +26,17 @@ public:
 		return values.size();
 	}
 
-	int add_element(const char* Elem)
+	int add_element(const char* elem) override
 	{
-		values.emplace_back(Elem);
+		values.emplace_back(elem);
 		return 0;
 	}
 
+	void clear_elements() override
+	{
+		values.clear();
+	}
+	
 	std::string getElementAt(const int i) override
 	{
 		if (i < 0 || i >= static_cast<int>(values.size()))
@@ -41,22 +46,22 @@ public:
 };
 
 const char* rtg_boards[] = { "-", "UAE Zorro III" };
-StringListModel rtg_boards_list(rtg_boards, 2);
+string_list_model rtg_boards_list(rtg_boards, 2);
 
 const char* rtg_refreshrates[] = { "Chipset", "Default", "50", "60", "70", "75" };
-StringListModel rtg_refreshrates_list(rtg_refreshrates, 6);
+string_list_model rtg_refreshrates_list(rtg_refreshrates, 6);
 
 const char* rtg_buffermodes[] = { "Double buffering", "Triple buffering" };
-StringListModel rtg_buffermodes_list(rtg_buffermodes, 2);
+string_list_model rtg_buffermodes_list(rtg_buffermodes, 2);
 
 const char* rtg_aspectratios[] = { "Disabled", "Automatic" };
-StringListModel rtg_aspectratios_list(rtg_aspectratios, 2);
+string_list_model rtg_aspectratios_list(rtg_aspectratios, 2);
 
 const char* rtg_16bit_modes[] = { "(15/16bit)", "All", "R5G6B5PC (*)", "R5G5B5PC", "R5G6B5", "R5G5B5", "B5G6R5PC", "B5G5R5PC" };
-StringListModel rtg_16bit_modes_list(rtg_16bit_modes, 8);
+string_list_model rtg_16bit_modes_list(rtg_16bit_modes, 8);
 
 const char* rtg_32bit_modes[] = { "(32bit)", "All", "A8R8G8B8", "A8B8G8R8", "R8G8B8A8", "B8G8R8A8 (*)" };
-StringListModel rtg_32bit_modes_list(rtg_32bit_modes, 6);
+string_list_model rtg_32bit_modes_list(rtg_32bit_modes, 6);
 
 
 static gcn::Label* lblBoard;

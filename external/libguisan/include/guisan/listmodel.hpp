@@ -92,6 +92,13 @@ namespace gcn
 		 * @return an element as a string.
 		 */
 		virtual std::string getElementAt(int i) = 0;
+
+		// Add a new element
+		virtual int add_element(const char* elem) = 0;
+
+		// Clear all elements
+		virtual void clear_elements()
+		{}
 	};
 }
 

@@ -66,6 +66,8 @@ ConfigCategory categories[] = {
 		HelpPanelFloppy
 	},
 	{"Hard drives/CD", "data/drive.ico", nullptr, nullptr, InitPanelHD, ExitPanelHD, RefreshPanelHD, HelpPanelHD},
+	{"Expansions", "data/expansion.ico", nullptr, nullptr, InitPanelExpansions, ExitPanelExpansions,
+		RefreshPanelExpansions, HelpPanelExpansions},
 	{"RTG board", "data/expansion.ico", nullptr, nullptr, InitPanelRTG, ExitPanelRTG,
 		RefreshPanelRTG, HelpPanelRTG
 	},
@@ -101,6 +103,7 @@ enum
 	PANEL_RAM,
 	PANEL_FLOPPY,
 	PANEL_HD,
+	PANEL_EXPANSIONS,
 	PANEL_RTG,
 	PANEL_HWINFO,
 	PANEL_DISPLAY,

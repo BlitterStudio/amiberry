@@ -145,6 +145,13 @@ LOCAL_SRC_FILES := src/archivers/7z/BraIA64.c \
                     src/archivers/zip/unzip.cpp \
                     src/caps/caps_amiberry.cpp \
                     src/machdep/support.cpp \
+					src/floppybridge/ArduinoFloppyBridge.cpp \
+                    src/floppybridge/ArduinoInterface.cpp \
+                    src/floppybridge/CommonBridgeTemplate.cpp \
+                    src/floppybridge/GreaseWeazleBridge.cpp \
+                    src/floppybridge/GreaseWeazleInterface.cpp \
+                    src/floppybridge/RotationExtractor.cpp \
+                    src/floppybridge/SerialIO.cpp \
                     src/osdep/ahi_v1.cpp \
                     src/osdep/bsdsocket_host.cpp \
                     src/osdep/cda_play.cpp \
@@ -188,6 +195,7 @@ LOCAL_SRC_FILES := src/archivers/7z/BraIA64.c \
                     src/osdep/gui/PanelRAM.cpp \
                     src/osdep/gui/PanelFloppy.cpp \
                     src/osdep/gui/PanelHD.cpp \
+					src/osdep/gui/PanelExpansions.cpp \
                     src/osdep/gui/PanelRTG.cpp \
 					src/osdep/gui/PanelHWInfo.cpp \
                     src/osdep/gui/PanelInput.cpp \

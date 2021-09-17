@@ -58,7 +58,7 @@ static FolderRequesterButtonActionListener* folderButtonActionListener;
 
 class SelectDirListModel : public gcn::ListModel
 {
-	std::vector<std::string> dirs;
+	std::vector<std::string> dirs{};
 
 public:
 	SelectDirListModel(const char* path)
@@ -71,6 +71,17 @@ public:
 		return dirs.size();
 	}
 
+	int add_element(const char* elem) override
+	{
+		dirs.emplace_back(elem);
+		return 0;
+	}
+
+	void clear_elements() override
+	{
+		dirs.clear();
+	}
+	
 	std::string getElementAt(const int i) override
 	{
 		if (i >= int(dirs.size()) || i < 0)
