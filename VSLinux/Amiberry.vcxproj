@@ -405,9 +405,6 @@
     <ClCompile Include="..\src\floppybridge\GreaseWeazleInterface.cpp" />
     <ClCompile Include="..\src\floppybridge\RotationExtractor.cpp" />
     <ClCompile Include="..\src\floppybridge\SerialIO.cpp" />
-    <ClCompile Include="..\src\fpp.cpp">
-      <DeploymentContent>false</DeploymentContent>
-    </ClCompile>
     <ClCompile Include="..\src\fpp_native.cpp.in" />
     <ClCompile Include="..\src\fsdb.cpp"/>
     <ClCompile Include="..\src\fsusage.cpp"/>
