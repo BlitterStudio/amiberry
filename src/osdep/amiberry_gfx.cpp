@@ -582,9 +582,13 @@ void update_win_fs_mode(int monid, struct uae_prefs* p)
 			if (!is_fullwindow)
 				SDL_SetWindowFullscreen(mon->sdl_window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 		}
-		else if (!is_maximized)
+		else
 		{
 			p->gfx_monitor[0].gfx_size = p->gfx_monitor[0].gfx_size_win;
+		}
+
+		if (!is_maximized)
+		{
 			// Switch to Window mode, if we don't have it already - but not for KMSDRM
 			if ((is_fullscreen || is_fullwindow) && strcmpi(sdl_video_driver, "KMSDRM") != 0)
 				SDL_SetWindowFullscreen(mon->sdl_window, 0);
