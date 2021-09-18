@@ -564,7 +564,6 @@ void update_win_fs_mode(int monid, struct uae_prefs* p)
 		const auto window_flags = SDL_GetWindowFlags(mon->sdl_window);
 		const bool is_fullwindow = window_flags & SDL_WINDOW_FULLSCREEN_DESKTOP;
 		const bool is_fullscreen = window_flags & SDL_WINDOW_FULLSCREEN;
-		const bool is_maximized = window_flags & SDL_WINDOW_MAXIMIZED;
 
 		if (p->gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN)
 		{
@@ -585,12 +584,9 @@ void update_win_fs_mode(int monid, struct uae_prefs* p)
 		else
 		{
 			p->gfx_monitor[0].gfx_size = p->gfx_monitor[0].gfx_size_win;
-		}
-
-		if (!is_maximized)
-		{
 			// Switch to Window mode, if we don't have it already - but not for KMSDRM
-			if ((is_fullscreen || is_fullwindow) && strcmpi(sdl_video_driver, "KMSDRM") != 0)
+			if ((is_fullscreen || is_fullwindow) 
+				&& strcmpi(sdl_video_driver, "KMSDRM") != 0)
 				SDL_SetWindowFullscreen(mon->sdl_window, 0);
 		}
 		
