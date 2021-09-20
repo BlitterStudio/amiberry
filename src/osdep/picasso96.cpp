@@ -733,7 +733,7 @@ static void rtg_render(void)
 static void rtg_clear(int monid)
 {
 	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[monid];
-	vidinfo->rtg_clear_flag = 4;
+	vidinfo->rtg_clear_flag = 2;
 }
 
 enum {
@@ -5105,13 +5105,11 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 
 			if (!split && vidinfo->rtg_clear_flag) {
 				uae_u8* p2 = dst;
-				for (int h = 0; h < pheight; h++) {
-					memset(p2, 0, pwidth * vidinfo->pixbytes);
+				for (int h = 0; h < vidinfo->height; h++) {
+					memset(p2, 0, vidinfo->width * vidinfo->pixbytes);
 					p2 += vidinfo->rowbytes;
 				}
-			}
 
-			if (vidinfo->rtg_clear_flag) {
 				vidinfo->rtg_clear_flag--;
 			}
 
