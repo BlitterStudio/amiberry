@@ -27,7 +27,6 @@ extern bool aga_mode, ecs_agnus, ecs_denise, direct_rgb;
 #define MAXHPOS_ROWS 256
 #define MAXVPOS_LINES_ECS 2048
 #define MAXVPOS_LINES_OCS 512
-#define HPOS_SHIFT 3
 
 #define BLIT_NASTY_CPU_STEAL_CYCLE_COUNT 3
 
@@ -236,8 +235,6 @@ struct customhack {
 	uae_u16 v;
 	int vpos, hpos;
 };
-void customhack_put(struct customhack *ch, uae_u16 v, int hpos);
-uae_u16 customhack_get(struct customhack *ch, int hpos);
 extern void alloc_cycle_ext(int, int);
 extern void alloc_cycle_blitter(int hpos, uaecptr *ptr, int);
 extern bool ispal(int *lines);

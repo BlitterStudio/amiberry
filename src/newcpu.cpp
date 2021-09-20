@@ -2521,6 +2521,7 @@ static void m68k_run_1(void)
 				cpu_cycles = (*cpufunctbl[r->opcode])(r->opcode);
 				cpu_cycles = adjust_cycles(cpu_cycles);
 				do_cycles(cpu_cycles);
+				regs.instruction_cnt++;
 				if (r->spcflags) {
 					if (do_specialties(cpu_cycles))
 						exit = true;
@@ -2618,6 +2619,7 @@ static void m68k_run_1_ce(void)
 
 				r->instruction_pc = m68k_getpc();
 				(*cpufunctbl[r->opcode])(r->opcode);
+				regs.instruction_cnt++;
 				if (cpu_tracer) {
 					cputrace.state = 0;
 				}

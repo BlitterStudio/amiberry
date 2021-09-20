@@ -50,6 +50,9 @@
 #include "rommgr.h"
 //#include "specialmonitors.h"
 
+#define FRAMEWAIT_MIN_MS 2
+#define FRAMEWAIT_SPLIT 4
+
 #define CYCLE_CONFLICT_LOGGING 0
 
 #define SPEEDUP 1
@@ -866,6 +869,11 @@ static void reset_bpl_vars()
 	thisline_decision.bplres = output_res(bplcon0_res);
 }
 
+STATIC_INLINE bool line_hidden(void)
+{
+	return vpos >= maxvpos_display_vsync && vpos < minfirstline - 1;
+}
+
 // hblank start = enable border (bitplane not visible until next BPL1DAT)..
 static void hblank_reset(int hblankpos)
 {
@@ -882,7 +890,7 @@ static void record_color_change2(int hpos, int regno, uae_u32 value)
 	color_change *cc;
 	int pos = hpos < 0 ? -hpos : hpos_to_diw(hpos);
 
-	if (scandoubled_line) {
+	if (scandoubled_line || line_hidden()) {
 		return;
 	}
 
@@ -1052,7 +1060,7 @@ static void sync_color_changes(int hpos)
 // erase (color0 or bblank) area between previous end and new start
 static void hdiw_restart(int diw_last, int diw_current)
 {
-	if (diw_last >= diw_current) {
+	if (diw_last >= diw_current || line_hidden()) {
 		return;
 	}
 	// update state
@@ -3786,7 +3794,7 @@ static void record_color_change(int hpos, int regno, uae_u32 value)
 	if (regno < RECORDED_REGISTER_CHANGE_OFFSET && nodraw())
 		return;
 	/* vsync period don't appear on-screen. */
-	if (vpos >= maxvpos_display_vsync && vpos < minfirstline - 1)
+	if (line_hidden())
 		return;
 
 	decide_diw(hpos);
@@ -3795,6 +3803,8 @@ static void record_color_change(int hpos, int regno, uae_u32 value)
 	if (thisline_decision.ctable < 0) {
 		remember_ctable();
 	}
+
+	hpos += hack_delay_shift;
 
 	record_color_change2(hpos, regno, value);
 }
@@ -4611,6 +4621,7 @@ static void reset_decisions_scanline_start(void)
 	last_diw_hpos = 0;
 	last_diw_hpos2 = 0;
 	blt_info.finishhpos = -1;
+	hack_delay_shift = 0;
 
 	/* Default to no bitplane DMA overriding sprite DMA */
 	plfstrt_sprite = 0x100;
@@ -4671,8 +4682,6 @@ static void reset_decisions_hsync_start(void)
 	last_recorded_diw_hpos = 0;
 
 	compute_toscr_delay(bplcon1);
-
-	hack_delay_shift = 0;
 
 	last_diwlastword = -1;
 	hb_last_diwlastword = -1;
@@ -6010,7 +6019,7 @@ static void VHPOSW(uae_u16 v)
 		int chp = current_hpos_safe() - 4;
 		int hp = v & 0xff;
 		if (chp >= 0x21 && chp <= 0x29 && hp == 0x2d) {
-			hack_delay_shift = 0;
+			hack_delay_shift = 4;
 			record_color_change(chp, 0, COLOR_CHANGE_HSYNC_HACK | 6);
 			thisline_changed = 1;
 		}
@@ -6227,7 +6236,6 @@ STATIC_INLINE void COP2LCL(uae_u16 v)
 
 static void compute_spcflag_copper(void);
 
-// vblank = copper starts at hpos=2
 // normal COPJMP write: takes 2 more cycles
 static void COPJMP(int num, int vblank)
 {
@@ -6254,7 +6262,7 @@ static void COPJMP(int num, int vblank)
 			cop_state.state = COP_strobe_delay1;
 		}
 	} else {
-		cop_state.state = vblank ? COP_start_delay : (copper_access ? COP_strobe_delay1 : COP_strobe_extra);
+		cop_state.state = vblank ? COP_strobe_delay2 : (copper_access ? COP_strobe_delay1 : COP_strobe_extra);
 	}
 	cop_state.vblankip = cop1lc;
 	copper_enabled_thisline = 0;
@@ -6440,7 +6448,7 @@ static void send_interrupt_do(uae_u32 v)
 // external delayed interrupt (4 CCKs minimum)
 void send_interrupt(int num, int delay)
 {
-	if (delay > 0 && (currprefs.cpu_cycle_exact || currprefs.cpu_compatible)) {
+	if (delay > 0 && currprefs.cpu_compatible) {
 		event2_newevent_xx(-1, delay, num, send_interrupt_do);
 	} else {
 		send_interrupt_do(num);
@@ -7786,7 +7794,6 @@ static int custom_wput_copper(int hpos, uaecptr pt, uaecptr addr, uae_u32 value,
 {
 	int v;
 
-	hpos += hack_delay_shift;
 	//value = debug_putpeekdma_chipset(0xdff000 + addr, value, MW_MASK_COPPER, 0x08c);
 	copper_access = 1;
 	v = custom_wput_1(hpos, addr, value, noget);
@@ -8077,12 +8084,12 @@ static void decide_line(int endhpos)
 // "emulate" chip internal delays, not the right place but fast and 99.9% programs
 // use only copper to write BPLCON1 etc.. (exception is HulkaMania/TSP..)
 // this table should be filled with zeros and done somewhere else..
-static int customdelay[]= {
+static const int customdelay[]= {
 	1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,1,1,1,1,0,0,0,0,0,0,0,0, /* 32 0x00 - 0x3e */
 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, /* 0x40 - 0x5e */
 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, /* 0x60 - 0x7e */
 	0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0, /* 0x80 - 0x9e */
-	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1, /* 32 0xa0 - 0xde */
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, /* 32 0xa0 - 0xde */
 	/* BPLxPTH/BPLxPTL */
 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, /* 16 */
 	/* BPLCON0-3,BPLMOD1-2 */
@@ -8471,9 +8478,8 @@ static void update_copper(int until_hpos)
 			goto next;
 		}
 
-		// 226 -> 0 (even to even cycle transition) skip.
-		// Copper clock signal is low bit of hpos counter.
-		if (hpos == 0 && maxhposeven == COPPER_CYCLE_POLARITY && cop_state.state != COP_start_delay) {
+		// cycle 0 is not available
+		if (hpos == 0 && cop_state.state != COP_start_delay) {
 			goto next;
 		}
 
@@ -9012,6 +9018,52 @@ static void init_hardware_frame(void)
 	}
 }
 
+static int calculate_lineno(int vp)
+{
+	int lineno = vp;
+	if (lineno >= MAXVPOS) {
+		lineno %= MAXVPOS;
+	}
+	nextline_how = nln_normal;
+	if (doflickerfix() && interlace_seen > 0) {
+		lineno *= 2;
+	}
+	else if (!interlace_seen && doublescan <= 0 && currprefs.gfx_vresolution && currprefs.gfx_pscanlines > 1) {
+		lineno *= 2;
+		if (timeframes & 1) {
+			lineno++;
+			nextline_how = currprefs.gfx_pscanlines == 3 ? nln_lower_black_always : nln_lower_black;
+		} else {
+			nextline_how = currprefs.gfx_pscanlines == 3 ? nln_upper_black_always : nln_upper_black;
+		}
+	} else if ((doublescan <= 0 || interlace_seen > 0) && currprefs.gfx_vresolution && currprefs.gfx_iscanlines) {
+		lineno *= 2;
+		if (interlace_seen) {
+			if (!lof_current) {
+				lineno++;
+				nextline_how = currprefs.gfx_iscanlines == 2 ? nln_lower_black_always : nln_lower_black;
+			} else {
+				nextline_how = currprefs.gfx_iscanlines == 2 ? nln_upper_black_always : nln_upper_black;
+			}
+		} else {
+			nextline_how = currprefs.gfx_vresolution > VRES_NONDOUBLE && currprefs.gfx_pscanlines == 1 ? nln_nblack : nln_doubled;
+		}
+	} else if (currprefs.gfx_vresolution && (doublescan <= 0 || interlace_seen > 0)) {
+		lineno *= 2;
+		if (interlace_seen) {
+			if (!lof_current) {
+				lineno++;
+				nextline_how = nln_lower;
+			} else {
+				nextline_how = nln_upper;
+			}
+		} else {
+			nextline_how = currprefs.gfx_vresolution > VRES_NONDOUBLE && currprefs.gfx_pscanlines == 1 ? nln_nblack : nln_doubled;
+		}
+	}
+	return lineno;
+}
+
 // vsync start
 void init_hardware_for_drawing_frame(void)
 {
@@ -9029,7 +9081,7 @@ void init_hardware_for_drawing_frame(void)
 	}
 	prev_next_sprite_entry = next_sprite_entry;
 
-	next_lineno = 0;
+	next_lineno = calculate_lineno(vpos);
 	last_color_change = 0;
 	next_color_change = 0;
 	next_sprite_entry = 0;
@@ -9283,7 +9335,7 @@ static bool framewait(void)
 		if (!currprefs.cpu_thread) {
 			while (!currprefs.turbo_emulation) {
 				float v = rpt_vsync(clockadjust) / (syncbase / 1000.0);
-				if (v >= -3)
+				if (v >= -FRAMEWAIT_MIN_MS)
 					break;
 				//rtg_vsynccheck();
 				maybe_process_pull_audio();
@@ -9292,7 +9344,10 @@ static bool framewait(void)
 			}
 			while (rpt_vsync(clockadjust) < 0) {
 				//rtg_vsynccheck();
-				maybe_process_pull_audio();
+				if (audio_is_pull_event()) {
+					maybe_process_pull_audio();
+					break;
+				}
 			}
 		}
 		idletime += read_processor_time() - start;
@@ -9305,11 +9360,11 @@ static bool framewait(void)
 		}
 		t += frameskipt_avg;
 
-		vsynctimeperline = (vstb - t) / 4;
+		vsynctimeperline = (vstb - t) / FRAMEWAIT_SPLIT;
 		if (vsynctimeperline < 1) {
 			vsynctimeperline = 1;
-		} else if (vsynctimeperline > vstb / 4) {
-			vsynctimeperline = vstb / 4;
+		} else if (vsynctimeperline > vstb / FRAMEWAIT_SPLIT) {
+			vsynctimeperline = vstb / FRAMEWAIT_SPLIT;
 		}
 
 		frame_shown = true;
@@ -10093,46 +10148,7 @@ static void hsync_handlerh(bool onvsync)
 
 		hautoscale_check();
 
-		int lineno = vposh;
-		if (lineno >= MAXVPOS) {
-			lineno %= MAXVPOS;
-		}
-		nextline_how = nln_normal;
-		if (doflickerfix() && interlace_seen > 0) {
-			lineno *= 2;
-		} else if (!interlace_seen && doublescan <= 0 && currprefs.gfx_vresolution && currprefs.gfx_pscanlines > 1) {
-			lineno *= 2;
-			if (timeframes & 1) {
-				lineno++;
-				nextline_how = currprefs.gfx_pscanlines == 3 ? nln_lower_black_always : nln_lower_black;
-			} else {
-				nextline_how = currprefs.gfx_pscanlines == 3 ? nln_upper_black_always : nln_upper_black;
-			}
-		} else if ((doublescan <= 0 || interlace_seen > 0) && currprefs.gfx_vresolution && currprefs.gfx_iscanlines) {
-			lineno *= 2;
-			if (interlace_seen) {
-				if (!lof_current) {
-					lineno++;
-					nextline_how = currprefs.gfx_iscanlines == 2 ? nln_lower_black_always : nln_lower_black;
-				} else {
-					nextline_how = currprefs.gfx_iscanlines == 2 ? nln_upper_black_always : nln_upper_black;
-				}
-			} else {
-				nextline_how = currprefs.gfx_vresolution > VRES_NONDOUBLE && currprefs.gfx_pscanlines == 1 ? nln_nblack : nln_doubled;
-			}
-		} else if (currprefs.gfx_vresolution && (doublescan <= 0 || interlace_seen > 0)) {
-			lineno *= 2;
-			if (interlace_seen) {
-				if (!lof_current) {
-					lineno++;
-					nextline_how = nln_lower;
-				} else {
-					nextline_how = nln_upper;
-				}
-			} else {
-				nextline_how = currprefs.gfx_vresolution > VRES_NONDOUBLE && currprefs.gfx_pscanlines == 1 ? nln_nblack : nln_doubled;
-			}
-		}
+		int lineno = calculate_lineno(vposh);
 		next_lineno = lineno;
 		reset_decisions_hsync_start();
 	}
@@ -11024,7 +11040,7 @@ static void hsync_handler_post(bool onvsync)
 	// vblank interrupt = next line after VBSTRT
 	if (vb_start_line == 1) {
 		// first refresh (strobe) slot triggers vblank interrupt
-		send_interrupt(5, REFRESH_FIRST_HPOS * CYCLE_UNIT);
+		send_interrupt(5, (REFRESH_FIRST_HPOS - 1) * CYCLE_UNIT);
 	}
 	// lastline - 1?
 	if (vpos + 1 == maxvpos + lof_store || vpos + 1 == maxvpos + lof_store + 1) {
@@ -11411,6 +11427,15 @@ static void hsync_handlerh(void)
 	hsync_handlerh(vsync_line);
 }
 
+static void audio_evhandler2(void)
+{
+	// update copper first
+	// if copper had written to audio registers
+	int hpos = current_hpos();
+	sync_copper(hpos);
+	audio_evhandler();
+}
+
 void init_eventtab (void)
 {
 	int i;
@@ -11432,7 +11457,7 @@ void init_eventtab (void)
 	eventtab[ev_hsynch].evtime = get_cycles() + HSYNCTIME;
 	eventtab[ev_hsynch].active = 0;
 	eventtab[ev_misc].handler = MISC_handler;
-	eventtab[ev_audio].handler = audio_evhandler;
+	eventtab[ev_audio].handler = audio_evhandler2;
 
 	eventtab2[ev2_blitter].handler = blitter_handler;
 	eventtab2[ev2_disk].handler = DISK_handler;

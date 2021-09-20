@@ -94,6 +94,7 @@ struct regstruct
 	volatile uae_atomic spcflags;
 	uae_u32 chipset_latch_rw;
 	uae_u16 db, write_buffer, read_buffer;
+	int instruction_cnt;
 
 	uaecptr usp, isp, msp;
 	uae_u16 sr;

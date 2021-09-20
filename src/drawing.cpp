@@ -534,7 +534,7 @@ static void set_vblanking_limits(void)
 		if (!ecs_denise) {
 			vbstrt--;
 		}
-		int vbstop = maxvpos + lof_store;
+		int vbstop = maxvpos;
 		if (!ecs_denise && !ecs_agnus) {
 			vbstop++;
 		} else if (ecs_agnus && !ecs_denise) {
@@ -3260,6 +3260,7 @@ static void do_color_changes(line_draw_func worker_border, line_draw_func worker
 	int i;
 	int lastpos = visible_left_border;
 	int endpos = visible_left_border + vidinfo->drawbuffer.inwidth;
+	bool vbarea = vp < vblank_top_start || vp >= vblank_bottom_stop;
 
 	extborder = false; // reset here because it always have start and end in same scanline
 	for (i = dip_for_drawing->first_color_change; i <= dip_for_drawing->last_color_change; i++) {
@@ -3286,8 +3287,8 @@ static void do_color_changes(line_draw_func worker_border, line_draw_func worker
 				lastpos = t;
 			}
 
-			// vblank + programmed vblank: blanked (hardwired is handled separately)
-			if (vb_state == 2 || vp < vblank_top_start || vp >= vblank_bottom_stop) {
+			// vblank + programmed vblank / hardwired vblank
+			if (vb_state == 2 || vbarea) {
 
 				if (nextpos_in_range > lastpos && lastpos < playfield_end) {
 					int t = nextpos_in_range <= playfield_end ? nextpos_in_range : playfield_end;
@@ -3408,14 +3409,6 @@ static void do_color_changes(line_draw_func worker_border, line_draw_func worker
 			}
 		}
 	}
-#if 1
-	if (vp >= 0 && (vp < visible_top_start || vp >= visible_bottom_stop || vp < vblank_top_start || vp >= vblank_bottom_stop)) {
-		// outside of visible area
-		// Just overwrite with black. Above code needs to run because of custom registers,
-		// not worth the trouble for separate code path just for max 10 lines or so
-		(*worker_border)(visible_left_border, visible_right_border, 1);
-	}
-#endif
 	if (vp >= 0 && hsync_shift_hack > 0) {
 		// hpos shift hack
 		int shift = (hsync_shift_hack << lores_shift) * vidinfo->drawbuffer.pixbytes;
@@ -5044,6 +5037,7 @@ static void gen_direct_drawing_table(void)
 #endif
 }
 
+#ifdef AMIBERRY
 static int render_thread(void *unused)
 {
 	for (;;) {
@@ -5076,12 +5070,13 @@ static int render_thread(void *unused)
 		}
 	}
 }
+#endif
 
-void drawing_init(void)
+void drawing_init (void)
 {
 	int monid = 0;
-	struct amigadisplay* ad = &adisplays[monid];
-	struct vidbuf_description* vidinfo = &ad->gfxvidinfo;
+	struct amigadisplay *ad = &adisplays[monid];
+	struct vidbuf_description *vidinfo = &ad->gfxvidinfo;
 
 	refresh_indicator_init();
 
@@ -5089,7 +5084,7 @@ void drawing_init(void)
 
 	gen_direct_drawing_table();
 
-	uae_sem_init(&gui_sem, 0, 1);
+	uae_sem_init (&gui_sem, 0, 1);
 #ifdef AMIBERRY
 	if (currprefs.multithreaded_drawing)
 	{
