@@ -97,7 +97,8 @@ static void InitShowMessage()
 	{
 		const auto window_flags = SDL_GetWindowFlags(mon->sdl_window);
 		const bool is_maximized = window_flags & SDL_WINDOW_MAXIMIZED;
-		if (!is_maximized)
+		const bool is_fullscreen = window_flags & SDL_WINDOW_FULLSCREEN;
+		if (!is_maximized && !is_fullscreen)
 		{
 			if (amiberry_options.rotation_angle != 0 && amiberry_options.rotation_angle != 180)
 				SDL_SetWindowSize(mon->sdl_window, GUI_HEIGHT, GUI_WIDTH);
