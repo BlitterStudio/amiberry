@@ -34,7 +34,7 @@ steps:
      TargetFolder: amiberry-rpi4-dmx-32bit
 
   - task: ArchiveFiles@2
-    displayName: 'Archive rpi4_dmx_release'
+    displayName: 'Archive rpi4-32-dmx_release'
     inputs:
       rootFolderOrFile: 'amiberry-rpi4-dmx-32bit'
       includeRootFolder: true
@@ -43,4 +43,4 @@ steps:
   - task: PublishBuildArtifacts@1
     inputs:
      PathtoPublish: $(Build.ArtifactStagingDirectory)
-     ArtifactName: rpi4_dmx_release
+     ArtifactName: rpi4-32-dmx_release

@@ -34,7 +34,7 @@ steps:
      TargetFolder: amiberry-rpi3-sdl2-32bit
 
   - task: ArchiveFiles@2
-    displayName: 'Archive rpi3_sdl2_release'
+    displayName: 'Archive rpi3-32-sdl2_release'
     inputs:
       rootFolderOrFile: 'amiberry-rpi3-sdl2-32bit'
       includeRootFolder: true
@@ -43,4 +43,4 @@ steps:
   - task: PublishBuildArtifacts@1
     inputs:
      PathtoPublish: $(Build.ArtifactStagingDirectory)
-     ArtifactName: rpi3_sdl2_release
+     ArtifactName: rpi3-32-sdl2_release
