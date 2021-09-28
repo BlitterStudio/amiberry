@@ -52,77 +52,9 @@ Amiberry's Makefile includes several targets, to cover various platforms. For th
 ## Compiling a target
 
 You must specify the Platform you want to build as a parameter to the `make` command. The process will abort if you use an incorrect platform or no platform at all.
-Some example platforms are shown below, but feel free to explore the full list within the Makefile.
 
-### Raspberry Pi with SDL2 + DispmanX
-
-Use the following command line options for compiling the special RPI-specific versions with Dispmanx:
-
-For the Raspberry Pi 4
-
-      make -j2 PLATFORM=rpi4
-
-For the Raspberry Pi 3(B+)
-
-      make -j2 PLATFORM=rpi3
-
-For the Raspberry Pi 2
-
-      make -j2 PLATFORM=rpi2
-
-For the Raspberry Pi 1/Zero
-
-      make PLATFORM=rpi1
-
-### SDL2 Platforms
-
-Below is an example list of several available targets in the Makefile, and what command line option to use when compiling for them:
-
-For the Raspberry Pi 4
-
-      make -j2 PLATFORM=rpi4-sdl2
-
-For the Raspberry Pi 4 64-bit
-
-      make -j2 PLATFORM=pi64
-
-For the Raspberry Pi 3(B+)
-
-      make -j2 PLATFORM=rpi3-sdl2
-
-For the Raspberry Pi 2
-
-      make -j2 PLATFORM=rpi2-sdl2
-
-For the Raspberry Pi 1/Zero
-
-      make PLATFORM=rpi1-sdl2
-
-For the Odroid XU4
-
-      make -j6 PLATFORM=xu4
-
-For the ASUS Tinker board (Supported distro: Armbian)
-
-      make -j6 PLATFORM=RK3288
-
-For the Odroid C1
-
-      make -j4 PLATFORM=c1
-
-For the Vero 4k
-
-      make -j4 PLATFORM=vero4k
-
-For the OrangePi PC
-
-      make -j2 PLATFORM=orangepi-pc
-
-For the Odroid N2/RockPro64
-
-      make -j2 PLATFORM=n2
-
-You can check the Makefile for a full list of supported platforms!
+Please consult the [relevant Wiki page](https://github.com/midwan/amiberry/wiki/Available-Platforms) for the full list of available platforms.
+You can also check the Makefile for a full list of supported platforms!
 
 For more documentation subjects, please check the [Wiki page](https://github.com/midwan/amiberry/wiki)
 
