@@ -123,26 +123,26 @@ else ifeq ($(PLATFORM),n2)
     AARCH64 = 1
 
 # Raspberry Pi 3 (SDL2 64-bit)
-else ifeq ($(PLATFORM),pi3-64)
+else ifeq ($(PLATFORM),rpi3-64-sdl2)
     CPUFLAGS = -mcpu=cortex-a53
     CPPFLAGS += $(CPPFLAGS64)
     AARCH64 = 1
 
 # Raspberry Pi 4 (SDL2 64-bit)
-else ifeq ($(PLATFORM),pi4-64)
+else ifeq ($(PLATFORM),rpi4-64-sdl2)
     CPUFLAGS = -mcpu=cortex-a72+crc+simd+fp
     CPPFLAGS += $(CPPFLAGS64)
     AARCH64 = 1
 
 # Raspberry Pi 3 (SDL2 64-bit with DispmanX)
-else ifeq ($(PLATFORM),pi3-64-dispmanx)
+else ifeq ($(PLATFORM),rpi3-64-dmx)
     CPUFLAGS = -mcpu=cortex-a53
     CPPFLAGS += $(CPPFLAGS64) $(DISPMANX_FLAGS)
     LDFLAGS += $(DISPMANX_LDFLAGS)
     AARCH64 = 1
 
 # Raspberry Pi 4 (SDL2 64-bit with DispmanX)
-else ifeq ($(PLATFORM),pi4-64-dispmanx)
+else ifeq ($(PLATFORM),rpi4-64-dmx)
     CPUFLAGS = -mcpu=cortex-a72+crc+simd+fp
     CPPFLAGS += $(CPPFLAGS64) $(DISPMANX_FLAGS)
     LDFLAGS += $(DISPMANX_LDFLAGS)
