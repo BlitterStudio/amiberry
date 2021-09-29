@@ -3564,57 +3564,65 @@ void exception2_fetch(uae_u32 opcode, int offset, int pcoffset)
 }
 
 
-void cpureset(void)
+bool cpureset (void)
 {
-	/* RESET hasn't increased PC yet, 1 word offset */
+    /* RESET hasn't increased PC yet, 1 word offset */
 	uaecptr pc;
 	uaecptr ksboot = 0xf80002 - 2;
 	uae_u16 ins;
-	addrbank* ab;
+	addrbank *ab;
+	bool extreset = false;
 
 	maybe_disable_fpu();
 	m68k_reset_delay = currprefs.reset_delay;
 	set_special(SPCFLAG_CHECK);
 	send_internalevent(INTERNALEVENT_CPURESET);
-  if ((currprefs.cpu_compatible || currprefs.cpu_memory_cycle_exact) && currprefs.cpu_model <= 68020) {
+	//if (cpuboard_forced_hardreset()) {
+	//	custom_reset(false, false);
+	//	m68k_reset();
+	//	return true;
+	//}
+	if ((currprefs.cpu_compatible || currprefs.cpu_memory_cycle_exact) && currprefs.cpu_model <= 68020) {
 		custom_reset(false, false);
-		return;
+		return false;
 	}
-	pc = m68k_getpc() + 2;
-	ab = &get_mem_bank(pc);
+	pc = m68k_getpc () + 2;
+	ab = &get_mem_bank (pc);
 	if (ab->check (pc, 2)) {
-		write_log(_T("CPU reset PC=%x (%s)..\n"), pc - 2, ab->name);
-		ins = get_word(pc);
+		write_log (_T("CPU reset PC=%x (%s)..\n"), pc - 2, ab->name);
+		ins = get_word (pc);
 		custom_reset(false, false);
 		// did memory disappear under us?
-		if (ab == &get_mem_bank(pc))
-			return;
+		if (ab == &get_mem_bank (pc))
+			return false;
 		// it did
-    if ((ins & ~7) == 0x4ed0) {
+		if ((ins & ~7) == 0x4ed0) {
 			int reg = ins & 7;
-			uae_u32 addr = m68k_areg(regs, reg);
+			uae_u32 addr = m68k_areg (regs, reg);
 			if (addr < 0x80000)
 				addr += 0xf80000;
-			write_log(_T("reset/jmp (ax) combination at %08x emulated -> %x\n"), pc, addr);
-			m68k_setpc_normal(addr - 2);
-			return;
+			write_log (_T("reset/jmp (ax) combination at %08x emulated -> %x\n"), pc, addr);
+			m68k_setpc_normal (addr - 2);
+			return false;
 		}
 	}
 	// the best we can do, jump directly to ROM entrypoint
 	// (which is probably what program wanted anyway)
-	write_log(_T("CPU Reset PC=%x (%s), invalid memory -> %x.\n"), pc, ab->name, ksboot + 2);
+	write_log (_T("CPU Reset PC=%x (%s), invalid memory -> %x.\n"), pc, ab->name, ksboot + 2);
 	custom_reset(false, false);
-	m68k_setpc_normal(ksboot);
+	m68k_setpc_normal (ksboot);
+	return false;
 }
 
-void m68k_setstopped(void)
+
+void m68k_setstopped (void)
 {
 	/* A traced STOP instruction drops through immediately without
-actually stopping.  */
+	actually stopping.  */
 	if ((regs.spcflags & SPCFLAG_DOTRACE) == 0) {
 		m68k_set_stop();
 	} else {
-		m68k_resumestopped();
+		m68k_resumestopped ();
 	}
 }
 
@@ -3625,7 +3633,7 @@ void m68k_resumestopped (void)
 	if (currprefs.cpu_cycle_exact && currprefs.cpu_model == 68000) {
 		x_do_cycles (6 * CYCLE_UNIT / 2);
 	}
-	fill_prefetch();
+	fill_prefetch ();
 	m68k_unset_stop();
 }
 

@@ -446,7 +446,7 @@ extern void exception2_write(uae_u32 opcode, uaecptr addr, int size, uae_u32 val
 extern void exception2_fetch_opcode(uae_u32 opcode, int offset, int pcoffset);
 extern void exception2_fetch(uae_u32 opcode, int offset, int pcoffset);
 extern void m68k_reset (void);
-extern void cpureset (void);
+extern bool cpureset (void);
 extern void cpu_halt (int id);
 extern int cpu_sleep_millis(int ms);
 extern void cpu_change(int newmodel);
