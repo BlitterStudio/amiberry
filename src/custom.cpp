@@ -4824,8 +4824,8 @@ static void init_hz (bool checkvposw)
 #ifdef PICASSO96
 	init_hz_p96(0);
 #endif
-	if (vblank_hz != ovblank)
-		updatedisplayarea(0);
+	//if (vblank_hz != ovblank)
+	//	updatedisplayarea(0);
 	inputdevice_tablet_strobe ();
 }
 
@@ -6496,8 +6496,8 @@ static uae_u16 COLOR_READ (int num)
 		cval = ((cr & 15) << 8) | ((cg & 15) << 4) | ((cb & 15) << 0);
 	} else {
 		cval = ((cr >> 4) << 8) | ((cg >> 4) << 4) | ((cb >> 4) << 0);
-		if (color_regs_genlock[num])
-			cval |= 0x8000;
+		//if (color_regs_genlock[num])
+		//	cval |= 0x8000;
 	}
 	return cval;
 }
@@ -6556,9 +6556,9 @@ static void COLOR_WRITE (int hpos, uae_u16 v, int num)
 			cr = r + (r << 4);
 			cg = g + (g << 4);
 			cb = b + (b << 4);
-			color_regs_genlock[colreg] = v >> 15;
+			//color_regs_genlock[colreg] = v >> 15;
 		}
-		cval = (cr << 16) | (cg << 8) | cb | (color_regs_genlock[colreg] ? 0x80000000 : 0);
+		cval = (cr << 16) | (cg << 8) | cb; //| (color_regs_genlock[colreg] ? 0x80000000 : 0);
 		if (cval && colreg == 0)
 			colzero = true;
 
@@ -6579,7 +6579,7 @@ static void COLOR_WRITE (int hpos, uae_u16 v, int num)
 		v &= 0x8fff;
 		if (!(currprefs.chipset_mask & CSMASK_ECS_DENISE))
 			v &= 0xfff;
-		color_regs_genlock[num] = v >> 15;
+		//color_regs_genlock[num] = v >> 15;
 		if (num && v == 0)
 			colzero = true;
 		if (current_colors.color_regs_ecs[num] == v)
@@ -8153,10 +8153,6 @@ static void vsync_handler_pre (void)
 static void vsync_handler_post (void)
 {
 	int monid = 0;
-	static frame_time_t prevtime;
-
-	//write_log (_T("%d %d %d\n"), vsynctimebase, read_processor_time () - vsyncmintime, read_processor_time () - prevtime);
-	prevtime = read_processor_time ();
 	DISK_vsync ();
 
 	if (bplcon0 & 4) {
@@ -8722,21 +8718,6 @@ static void hsync_handler_post (bool onvsync)
 		int hp = maxhpos - 1, i;
 		for (i = 0; i < 4; i++) {
 			alloc_cycle (hp, i == 0 ? CYCLE_STROBE : CYCLE_REFRESH); /* strobe */
-#ifdef DEBUGGER
-			if (debug_dma) {
-				uae_u16 strobe = 0x3c;
-				if (vpos < equ_vblank_endline)
-					strobe = 0x38;
-				else if (vpos < minfirstline)
-					strobe = 0x3a;
-				else if (vpos + 1 == maxvpos + lof_store)
-					strobe = 0x38;
-				else if ((currprefs.chipset_mask & CSMASK_ECS_AGNUS) && lol)
-					strobe = 0x3e;
-				record_dma_read(i == 0 ? strobe : 0x1fe, 0xffffffff, hp, vpos, DMARECORD_REFRESH, i);
-				record_dma_read_value(0xffff);
-			}
-#endif
 			hp += 2;
 			if (hp >= maxhpos)
 				hp -= maxhpos;

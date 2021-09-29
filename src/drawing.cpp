@@ -27,7 +27,6 @@ resolution.
 To prevent extremely bad things (think pixels cut in half by window borders) from
 happening, all ports should restrict window widths to be multiples of 16 pixels.  */
 
-#define SPRITE_DEBUG_HIDE 0
 
 #include "sysconfig.h"
 #include "sysdeps.h"
@@ -49,16 +48,11 @@ happening, all ports should restrict window widths to be multiples of 16 pixels.
 #include "savestate.h"
 #include "statusline.h"
 #include "inputdevice.h"
-//#include "debug.h"
 #ifdef CD32
 #include "cd32_fmv.h"
 #endif
-//#include "specialmonitors.h"
 #include "devices.h"
 #include "gfxboard.h"
-
-#define BG_COLOR_DEBUG 0
-//#define XLINECHECK
 
 struct amigadisplay adisplays[MAX_AMIGADISPLAYS];
 
@@ -1188,9 +1182,9 @@ static void pfield_do_fill_line (int start, int stop, int blank)
 	case 2: fill_line_16 (xlinebuffer, start, stop, blank); break;
 	case 4: fill_line_32 (xlinebuffer, start, stop, blank); break;
 	}
-	if (need_genlock_data) {
-		memset(xlinebuffer_genlock + start, 0, stop - start);
-	}
+	//if (need_genlock_data) {
+	//	memset(xlinebuffer_genlock + start, 0, stop - start);
+	//}
 }
 
 static void fill_line2 (int startpos, int len)
@@ -1251,9 +1245,9 @@ static void fill_line_border (int lineno)
 		int b = hposblank;
 		hposblank = 3;
 		fill_line2(lastpos, vidinfo->drawbuffer.inwidth);
-		if (need_genlock_data) {
-			memset(xlinebuffer_genlock + lastpos, 0, vidinfo->drawbuffer.inwidth);
-		}
+		//if (need_genlock_data) {
+		//	memset(xlinebuffer_genlock + lastpos, 0, vidinfo->drawbuffer.inwidth);
+		//}
 		hposblank = b;
 		return;
 	}
@@ -1262,17 +1256,17 @@ static void fill_line_border (int lineno)
 	if (hposblank) {
 		hposblank = 3;
 		fill_line2(lastpos, vidinfo->drawbuffer.inwidth);
-		if (need_genlock_data) {
-			memset(xlinebuffer_genlock + lastpos, 0, vidinfo->drawbuffer.inwidth);
-		}
+		//if (need_genlock_data) {
+		//	memset(xlinebuffer_genlock + lastpos, 0, vidinfo->drawbuffer.inwidth);
+		//}
 		return;
 	}
 	// hblank not visible
 	if (hblank_left_start <= lastpos && hblank_right_stop >= endpos) {
 		fill_line2(lastpos, vidinfo->drawbuffer.inwidth);
-		if (need_genlock_data) {
-			memset(xlinebuffer_genlock + lastpos, 0, vidinfo->drawbuffer.inwidth);
-		}
+		//if (need_genlock_data) {
+		//	memset(xlinebuffer_genlock + lastpos, 0, vidinfo->drawbuffer.inwidth);
+		//}
 		return;
 	}
 
@@ -1822,39 +1816,39 @@ static void pfield_set_linetoscr (void)
 		if (res_shift == 0) {
 			switch (vidinfo->drawbuffer.pixbytes) {
 				case 2:
-				pfield_do_linetoscr_normal = need_genlock_data ? linetoscr_16_aga_genlock : linetoscr_16_aga;
-				pfield_do_linetoscr_sprite = need_genlock_data ? linetoscr_16_aga_spr_genlock : linetoscr_16_aga_spr;
+				pfield_do_linetoscr_normal = linetoscr_16_aga;
+				pfield_do_linetoscr_sprite = linetoscr_16_aga_spr;
 				pfield_do_linetoscr_spriteonly = linetoscr_16_aga_spronly;
 				break;
 				case 4:
-				pfield_do_linetoscr_normal = need_genlock_data ? linetoscr_32_aga_genlock : linetoscr_32_aga;
-				pfield_do_linetoscr_sprite = need_genlock_data ? linetoscr_32_aga_spr_genlock : linetoscr_32_aga_spr;
+				pfield_do_linetoscr_normal = linetoscr_32_aga;
+				pfield_do_linetoscr_sprite = linetoscr_32_aga_spr;
 				pfield_do_linetoscr_spriteonly = linetoscr_32_aga_spronly;
 				break;
 			}
 		} else if (res_shift == 2) {
 			switch (vidinfo->drawbuffer.pixbytes) {
 				case 2:
-				pfield_do_linetoscr_normal = need_genlock_data ? linetoscr_16_stretch2_aga_genlock : linetoscr_16_stretch2_aga;
-				pfield_do_linetoscr_sprite = need_genlock_data ? linetoscr_16_stretch2_aga_spr_genlock : linetoscr_16_stretch2_aga_spr;
+				pfield_do_linetoscr_normal = linetoscr_16_stretch2_aga;
+				pfield_do_linetoscr_sprite = linetoscr_16_stretch2_aga_spr;
 				pfield_do_linetoscr_spriteonly = linetoscr_16_stretch2_aga_spronly;
 				break;
 				case 4:
-				pfield_do_linetoscr_normal = need_genlock_data ? linetoscr_32_stretch2_aga_genlock : linetoscr_32_stretch2_aga;
-				pfield_do_linetoscr_sprite = need_genlock_data ? linetoscr_32_stretch2_aga_spr_genlock : linetoscr_32_stretch2_aga_spr;
+				pfield_do_linetoscr_normal = linetoscr_32_stretch2_aga;
+				pfield_do_linetoscr_sprite = linetoscr_32_stretch2_aga_spr;
 				pfield_do_linetoscr_spriteonly = linetoscr_32_stretch2_aga_spronly;
 				break;
 			}
 		} else if (res_shift == 1) {
 			switch (vidinfo->drawbuffer.pixbytes) {
 				case 2:
-				pfield_do_linetoscr_normal = need_genlock_data ? linetoscr_16_stretch1_aga_genlock : linetoscr_16_stretch1_aga;
-				pfield_do_linetoscr_sprite = need_genlock_data ? linetoscr_16_stretch1_aga_spr_genlock : linetoscr_16_stretch1_aga_spr;
+				pfield_do_linetoscr_normal = linetoscr_16_stretch1_aga;
+				pfield_do_linetoscr_sprite = linetoscr_16_stretch1_aga_spr;
 				pfield_do_linetoscr_spriteonly = linetoscr_16_stretch1_aga_spronly;
 				break;
 				case 4:
-				pfield_do_linetoscr_normal = need_genlock_data ? linetoscr_32_stretch1_aga_genlock : linetoscr_32_stretch1_aga;
-				pfield_do_linetoscr_sprite = need_genlock_data ? linetoscr_32_stretch1_aga_spr_genlock : linetoscr_32_stretch1_aga_spr;
+				pfield_do_linetoscr_normal = linetoscr_32_stretch1_aga;
+				pfield_do_linetoscr_sprite = linetoscr_32_stretch1_aga_spr;
 				pfield_do_linetoscr_spriteonly = linetoscr_32_stretch1_aga_spronly;
 				break;
 			}
@@ -1862,26 +1856,26 @@ static void pfield_set_linetoscr (void)
 			if (currprefs.gfx_lores_mode) {
 				switch (vidinfo->drawbuffer.pixbytes) {
 					case 2:
-					pfield_do_linetoscr_normal = need_genlock_data ? linetoscr_16_shrink1f_aga_genlock : linetoscr_16_shrink1f_aga;
-					pfield_do_linetoscr_sprite = need_genlock_data ? linetoscr_16_shrink1f_aga_spr_genlock : linetoscr_16_shrink1f_aga_spr;
+					pfield_do_linetoscr_normal = linetoscr_16_shrink1f_aga;
+					pfield_do_linetoscr_sprite = linetoscr_16_shrink1f_aga_spr;
 					pfield_do_linetoscr_spriteonly = linetoscr_16_shrink1f_aga_spronly;
 					break;
 					case 4:
-					pfield_do_linetoscr_normal = need_genlock_data ? linetoscr_32_shrink1f_aga_genlock : linetoscr_32_shrink1f_aga;
-					pfield_do_linetoscr_sprite = need_genlock_data ? linetoscr_32_shrink1f_aga_spr_genlock : linetoscr_32_shrink1f_aga_spr;
+					pfield_do_linetoscr_normal = linetoscr_32_shrink1f_aga;
+					pfield_do_linetoscr_sprite = linetoscr_32_shrink1f_aga_spr;
 					pfield_do_linetoscr_spriteonly = linetoscr_32_shrink1f_aga_spronly;
 					break;
 				}
 			} else {
 				switch (vidinfo->drawbuffer.pixbytes) {
 					case 2:
-					pfield_do_linetoscr_normal = need_genlock_data ? linetoscr_16_shrink1_aga_genlock : linetoscr_16_shrink1_aga;
-					pfield_do_linetoscr_sprite = need_genlock_data ? linetoscr_16_shrink1_aga_spr_genlock : linetoscr_16_shrink1_aga_spr;
+					pfield_do_linetoscr_normal = linetoscr_16_shrink1_aga;
+					pfield_do_linetoscr_sprite = linetoscr_16_shrink1_aga_spr;
 					pfield_do_linetoscr_spriteonly = linetoscr_16_shrink1_aga_spronly;
 					break;
 					case 4:
-					pfield_do_linetoscr_normal = need_genlock_data ? linetoscr_32_shrink1_aga_genlock : linetoscr_32_shrink1_aga;
-					pfield_do_linetoscr_sprite = need_genlock_data ? linetoscr_32_shrink1_aga_spr_genlock : linetoscr_32_shrink1_aga_spr;
+					pfield_do_linetoscr_normal = linetoscr_32_shrink1_aga;
+					pfield_do_linetoscr_sprite = linetoscr_32_shrink1_aga_spr;
 					pfield_do_linetoscr_spriteonly = linetoscr_32_shrink1_aga_spronly;
 					break;
 				}
@@ -1890,26 +1884,26 @@ static void pfield_set_linetoscr (void)
 			if (currprefs.gfx_lores_mode) {
 				switch (vidinfo->drawbuffer.pixbytes) {
 					case 2:
-					pfield_do_linetoscr_normal = need_genlock_data ? linetoscr_16_shrink2f_aga_genlock : linetoscr_16_shrink2f_aga;
-					pfield_do_linetoscr_sprite = need_genlock_data ? linetoscr_16_shrink2f_aga_spr_genlock : linetoscr_16_shrink2f_aga_spr;
+					pfield_do_linetoscr_normal = linetoscr_16_shrink2f_aga;
+					pfield_do_linetoscr_sprite = linetoscr_16_shrink2f_aga_spr;
 					pfield_do_linetoscr_spriteonly = linetoscr_16_shrink2f_aga_spronly;
 					break;
 					case 4:
-					pfield_do_linetoscr_normal = need_genlock_data ? linetoscr_32_shrink2f_aga_genlock : linetoscr_32_shrink2f_aga;
-					pfield_do_linetoscr_sprite = need_genlock_data ? linetoscr_32_shrink2f_aga_spr_genlock : linetoscr_32_shrink2f_aga_spr;
+					pfield_do_linetoscr_normal = linetoscr_32_shrink2f_aga;
+					pfield_do_linetoscr_sprite = linetoscr_32_shrink2f_aga_spr;
 					pfield_do_linetoscr_spriteonly = linetoscr_32_shrink2f_aga_spronly;
 					break;
 				}
 			} else {
 				switch (vidinfo->drawbuffer.pixbytes) {
 					case 2:
-					pfield_do_linetoscr_normal = need_genlock_data ? linetoscr_16_shrink2_aga_genlock : linetoscr_16_shrink2_aga;
-					pfield_do_linetoscr_sprite = need_genlock_data ? linetoscr_16_shrink2_aga_spr_genlock : linetoscr_16_shrink2_aga_spr;
+					pfield_do_linetoscr_normal = linetoscr_16_shrink2_aga;
+					pfield_do_linetoscr_sprite = linetoscr_16_shrink2_aga_spr;
 					pfield_do_linetoscr_spriteonly = linetoscr_16_shrink2_aga_spronly;
 					break;
 					case 4:
-					pfield_do_linetoscr_normal = need_genlock_data ? linetoscr_32_shrink2_aga_genlock : linetoscr_32_shrink2_aga;
-					pfield_do_linetoscr_sprite = need_genlock_data ? linetoscr_32_shrink2_aga_spr_genlock : linetoscr_32_shrink2_aga_spr;
+					pfield_do_linetoscr_normal = linetoscr_32_shrink2_aga;
+					pfield_do_linetoscr_sprite = linetoscr_32_shrink2_aga_spr;
 					pfield_do_linetoscr_spriteonly = linetoscr_32_shrink2_aga_spronly;
 					break;
 				}
@@ -1992,57 +1986,57 @@ static void pfield_set_linetoscr (void)
 		if (res_shift == 0) {
 			switch (vidinfo->drawbuffer.pixbytes) {
 				case 2:
-				pfield_do_linetoscr_normal = need_genlock_data ? linetoscr_16_genlock : linetoscr_16;
-				pfield_do_linetoscr_sprite = need_genlock_data ? linetoscr_16_spr_genlock : linetoscr_16_spr;
+				pfield_do_linetoscr_normal = linetoscr_16;
+				pfield_do_linetoscr_sprite = linetoscr_16_spr;
 				break;
 				case 4:
-				pfield_do_linetoscr_normal = need_genlock_data ? linetoscr_32_genlock : linetoscr_32;
-				pfield_do_linetoscr_sprite = need_genlock_data ? linetoscr_32_spr_genlock : linetoscr_32_spr;
+				pfield_do_linetoscr_normal = linetoscr_32;
+				pfield_do_linetoscr_sprite = linetoscr_32_spr;
 				break;
 			}
 		} else if (res_shift == 2) {
 			switch (vidinfo->drawbuffer.pixbytes) {
 				case 2:
-				pfield_do_linetoscr_normal = need_genlock_data ? linetoscr_16_stretch2_genlock : linetoscr_16_stretch2;
-				pfield_do_linetoscr_sprite = need_genlock_data ? linetoscr_16_stretch2_spr_genlock : linetoscr_16_stretch2_spr;
+				pfield_do_linetoscr_normal = linetoscr_16_stretch2;
+				pfield_do_linetoscr_sprite = linetoscr_16_stretch2_spr;
 				break;
 				case 4:
-				pfield_do_linetoscr_normal = need_genlock_data ? linetoscr_32_stretch2_genlock : linetoscr_32_stretch2;
-				pfield_do_linetoscr_sprite = need_genlock_data ? linetoscr_32_stretch2_spr_genlock : linetoscr_32_stretch2_spr;
+				pfield_do_linetoscr_normal = linetoscr_32_stretch2;
+				pfield_do_linetoscr_sprite = linetoscr_32_stretch2_spr;
 				break;
 			}
 		} else if (res_shift == 1) {
 			switch (vidinfo->drawbuffer.pixbytes) {
 				case 2:
-				pfield_do_linetoscr_normal = need_genlock_data ? linetoscr_16_stretch1_genlock : linetoscr_16_stretch1;
-				pfield_do_linetoscr_sprite = need_genlock_data ? linetoscr_16_stretch1_spr_genlock : linetoscr_16_stretch1_spr;
+				pfield_do_linetoscr_normal = linetoscr_16_stretch1;
+				pfield_do_linetoscr_sprite = linetoscr_16_stretch1_spr;
 				break;
 				case 4:
-				pfield_do_linetoscr_normal = need_genlock_data ? linetoscr_32_stretch1_genlock : linetoscr_32_stretch1;
-				pfield_do_linetoscr_sprite = need_genlock_data ? linetoscr_32_stretch1_spr_genlock : linetoscr_32_stretch1_spr;
+				pfield_do_linetoscr_normal = linetoscr_32_stretch1;
+				pfield_do_linetoscr_sprite = linetoscr_32_stretch1_spr;
 				break;
 			}
 		} else if (res_shift == -1) {
 				if (currprefs.gfx_lores_mode) {
 				switch (vidinfo->drawbuffer.pixbytes) {
 					case 2:
-					pfield_do_linetoscr_normal = need_genlock_data ? linetoscr_16_shrink1f_genlock : linetoscr_16_shrink1f;
-					pfield_do_linetoscr_sprite = need_genlock_data ? linetoscr_16_shrink1f_spr_genlock : linetoscr_16_shrink1f_spr;
+					pfield_do_linetoscr_normal = linetoscr_16_shrink1f;
+					pfield_do_linetoscr_sprite = linetoscr_16_shrink1f_spr;
 					break;
 					case 4:
-					pfield_do_linetoscr_normal = need_genlock_data ? linetoscr_32_shrink1f_genlock : linetoscr_32_shrink1f;
-					pfield_do_linetoscr_sprite = need_genlock_data ? linetoscr_32_shrink1f_spr_genlock : linetoscr_32_shrink1f_spr;
+					pfield_do_linetoscr_normal = linetoscr_32_shrink1f;
+					pfield_do_linetoscr_sprite = linetoscr_32_shrink1f_spr;
 					break;
 				}
 			} else {
 				switch (vidinfo->drawbuffer.pixbytes) {
 					case 2:
-					pfield_do_linetoscr_normal = need_genlock_data ? linetoscr_16_shrink1_genlock : linetoscr_16_shrink1;
-					pfield_do_linetoscr_sprite = need_genlock_data ? linetoscr_16_shrink1_spr_genlock : linetoscr_16_shrink1_spr;
+					pfield_do_linetoscr_normal = linetoscr_16_shrink1;
+					pfield_do_linetoscr_sprite = linetoscr_16_shrink1_spr;
 					break;
 					case 4:
-					pfield_do_linetoscr_normal = need_genlock_data ? linetoscr_32_shrink1_genlock : linetoscr_32_shrink1;
-					pfield_do_linetoscr_sprite = need_genlock_data ? linetoscr_32_shrink1_spr_genlock : linetoscr_32_shrink1_spr;
+					pfield_do_linetoscr_normal = linetoscr_32_shrink1;
+					pfield_do_linetoscr_sprite = linetoscr_32_shrink1_spr;
 					break;
 				}
 			}
@@ -2686,20 +2680,20 @@ void init_row_map(void)
 	}
 	if (!row_map) {
 		row_map = xmalloc(uae_u8*, max_uae_height + 1);
-		row_map_genlock = xmalloc(uae_u8*, max_uae_height + 1);
+		//row_map_genlock = xmalloc(uae_u8*, max_uae_height + 1);
 	}
 
 	if (oldbufmem && oldbufmem == vidinfo->drawbuffer.bufmem &&
 		oldheight == vidinfo->drawbuffer.height_allocated &&
 		oldpitch == vidinfo->drawbuffer.rowbytes &&
-		oldgenlock == init_genlock_data &&
+		//oldgenlock == init_genlock_data &&
 		oldburst == (row_map_color_burst_buffer ? 1 : 0))
 		return;
-	xfree(row_map_genlock_buffer);
-	row_map_genlock_buffer = NULL;
-	if (init_genlock_data) {
-		row_map_genlock_buffer = xcalloc(uae_u8, vidinfo->drawbuffer.width_allocated * (vidinfo->drawbuffer.height_allocated + 2));
-	}
+	//xfree(row_map_genlock_buffer);
+	//row_map_genlock_buffer = NULL;
+	//if (init_genlock_data) {
+	//	row_map_genlock_buffer = xcalloc(uae_u8, vidinfo->drawbuffer.width_allocated * (vidinfo->drawbuffer.height_allocated + 2));
+	//}
 	xfree(row_map_color_burst_buffer);
 	row_map_color_burst_buffer = NULL;
 	if (currprefs.cs_color_burst) {
@@ -2708,20 +2702,20 @@ void init_row_map(void)
 	j = oldheight == 0 ? max_uae_height : oldheight;
 	for (i = vidinfo->drawbuffer.height_allocated; i < max_uae_height + 1 && i < j + 1; i++) {
 		row_map[i] = row_tmp;
-		row_map_genlock[i] = row_tmp;
+		//row_map_genlock[i] = row_tmp;
 	}
 	for (i = 0, j = 0; i < vidinfo->drawbuffer.height_allocated; i++, j += vidinfo->drawbuffer.rowbytes) {
 		row_map[i] = vidinfo->drawbuffer.bufmem + j;
-		if (init_genlock_data) {
-			row_map_genlock[i] = row_map_genlock_buffer + vidinfo->drawbuffer.width_allocated * (i + 1);
-		} else {
-			row_map_genlock[i] = NULL;
-		}
+		//if (init_genlock_data) {
+		//	row_map_genlock[i] = row_map_genlock_buffer + vidinfo->drawbuffer.width_allocated * (i + 1);
+		//} else {
+		//	row_map_genlock[i] = NULL;
+		//}
 	}
 	oldbufmem = vidinfo->drawbuffer.bufmem;
 	oldheight = vidinfo->drawbuffer.height_allocated;
 	oldpitch = vidinfo->drawbuffer.rowbytes;
-	oldgenlock = init_genlock_data;
+	//oldgenlock = init_genlock_data;
 	oldburst = row_map_color_burst_buffer ? 1 : 0;
 }
 
@@ -2862,17 +2856,17 @@ static void pfield_expand_dp_bplcon (void)
 		sprite_smaller_than_64_inuse = true;
 	sprite_smaller_than_64 = (dp_for_drawing->fmode & 0x0c) != 0x0c;
 #endif
-	ecs_genlock_features_active = (currprefs.chipset_mask & CSMASK_ECS_DENISE) && ((dp_for_drawing->bplcon2 & 0x0c00) || ce_is_borderntrans(colors_for_drawing.extra)) ? 1 : 0;
-	if (ecs_genlock_features_active) {
-		ecs_genlock_features_colorkey = false;
-		ecs_genlock_features_mask = 0;
-		if (dp_for_drawing->bplcon3 & 0x0800) {
-			ecs_genlock_features_mask = 1 << ((dp_for_drawing->bplcon2 >> 12) & 7);
-		} 
-		if (dp_for_drawing->bplcon3 & 0x0400) {
-			ecs_genlock_features_colorkey = true;
-		}
-	}
+	//ecs_genlock_features_active = (currprefs.chipset_mask & CSMASK_ECS_DENISE) && ((dp_for_drawing->bplcon2 & 0x0c00) || ce_is_borderntrans(colors_for_drawing.extra)) ? 1 : 0;
+	//if (ecs_genlock_features_active) {
+	//	ecs_genlock_features_colorkey = false;
+	//	ecs_genlock_features_mask = 0;
+	//	if (dp_for_drawing->bplcon3 & 0x0800) {
+	//		ecs_genlock_features_mask = 1 << ((dp_for_drawing->bplcon2 >> 12) & 7);
+	//	} 
+	//	if (dp_for_drawing->bplcon3 & 0x0400) {
+	//		ecs_genlock_features_colorkey = true;
+	//	}
+	//}
 	if (pfield_mode_changed)
 		pfield_set_linetoscr();
 	
@@ -3245,7 +3239,7 @@ static void pfield_draw_line (struct vidbuffer *vb, int lineno, int gfx_ypos, in
 	if (xlinebuffer == 0)
 		xlinebuffer = row_map[gfx_ypos], dh = dh_buf;
 	xlinebuffer -= linetoscr_x_adjust_pixbytes;
-	xlinebuffer_genlock = row_map_genlock[gfx_ypos] - linetoscr_x_adjust_pixels;
+	//xlinebuffer_genlock = row_map_genlock[gfx_ypos] - linetoscr_x_adjust_pixels;
 
 	if (row_map_color_burst_buffer)
 		row_map_color_burst_buffer[gfx_ypos] = bplcolorburst;
@@ -3317,8 +3311,8 @@ static void pfield_draw_line (struct vidbuffer *vb, int lineno, int gfx_ypos, in
 				memcpy (row_map[follow_ypos], xlinebuffer + linetoscr_x_adjust_pixbytes, vidinfo->drawbuffer.pixbytes * vidinfo->drawbuffer.inwidth);
 			else if (dh == dh_buf)
 				memcpy (row_map[follow_ypos], row_map[gfx_ypos], vidinfo->drawbuffer.pixbytes * vidinfo->drawbuffer.inwidth);
-			if (need_genlock_data)
-				memcpy(row_map_genlock[follow_ypos], row_map_genlock[gfx_ypos], vidinfo->drawbuffer.inwidth);
+			//if (need_genlock_data)
+				//memcpy(row_map_genlock[follow_ypos], row_map_genlock[gfx_ypos], vidinfo->drawbuffer.inwidth);
 		}
 
 		if (dip_for_drawing->nr_sprites)
@@ -3354,7 +3348,7 @@ static void pfield_draw_line (struct vidbuffer *vb, int lineno, int gfx_ypos, in
 			if (do_double) {
 				if (dh == dh_buf) {
 					xlinebuffer = row_map[follow_ypos] - linetoscr_x_adjust_pixbytes;
-					xlinebuffer_genlock = row_map_genlock[follow_ypos] - linetoscr_x_adjust_pixels;
+					//xlinebuffer_genlock = row_map_genlock[follow_ypos] - linetoscr_x_adjust_pixels;
 					fill_line_border(lineno);
 				}
 				/* If dh == dh_line, do_flush_line will re-use the rendered line
@@ -3390,8 +3384,8 @@ static void pfield_draw_line (struct vidbuffer *vb, int lineno, int gfx_ypos, in
 				memcpy (row_map[follow_ypos], xlinebuffer + linetoscr_x_adjust_pixbytes, vidinfo->drawbuffer.pixbytes * vidinfo->drawbuffer.inwidth);
 			else if (dh == dh_buf)
 				memcpy (row_map[follow_ypos], row_map[gfx_ypos], vidinfo->drawbuffer.pixbytes * vidinfo->drawbuffer.inwidth);
-			if (need_genlock_data)
-				memcpy(row_map_genlock[follow_ypos], row_map_genlock[gfx_ypos], vidinfo->drawbuffer.inwidth);
+			//if (need_genlock_data)
+			//	memcpy(row_map_genlock[follow_ypos], row_map_genlock[gfx_ypos], vidinfo->drawbuffer.inwidth);
 		}
 
 	} else {
@@ -3574,15 +3568,7 @@ static void init_drawing_frame (void)
 				frame_res_detected = largest_count_res - 1;
 			if (frame_res_detected < 0)
 				frame_res_detected = 0;
-	#if 0
-			static int delay;
-			delay--;
-			if (delay < 0) {
-				delay = 50;
-				write_log (_T("%d %d, %d %d %d, %d %d, %d %d\n"), currprefs.gfx_autoresolution, lines_count, resolution_count[0], resolution_count[1], resolution_count[2],
-					largest_count, largest_count_res, frame_res_detected, frame_res_lace_detected);
-			}
-	#endif
+
 			if (frame_res_detected >= 0 && frame_res_lace_detected >= 0) {
 				if (frame_res_cnt > 0 && frame_res_old == frame_res_detected * 2 + frame_res_lace_detected) {
 					frame_res_cnt--;
@@ -3761,7 +3747,7 @@ static uae_u8 *status_line_ptr(int monid, int line)
 	xlinebuffer = vidinfo->drawbuffer.linemem;
 	if (xlinebuffer == 0)
 		xlinebuffer = row_map[line];
-	xlinebuffer_genlock = row_map_genlock[line];
+	//xlinebuffer_genlock = row_map_genlock[line];
 	return xlinebuffer;
 }
 
@@ -3938,9 +3924,7 @@ static void refresh_indicator_update(struct vidbuffer *vb)
 	}
 }
 
-#define LARGEST_LINE_DEBUG 0
-
-static void draw_frame2(struct vidbuffer *vbin, struct vidbuffer *vbout)
+static void draw_frame2(struct vidbuffer* vbin, struct vidbuffer* vbout)
 {
 #ifdef AMIBERRY
 	for (int i = next_line_to_render; i < max_ypos_thisframe; i++) {
@@ -3961,18 +3945,9 @@ static void draw_frame2(struct vidbuffer *vbin, struct vidbuffer *vbout)
 		if (whereline < 0)
 			continue;
 
-#if LARGEST_LINE_DEBUG
-		if (largest < whereline)
-			largest = whereline;
-#endif
-
 		hposblank = 0;
 		pfield_draw_line(vbout, line, whereline, wherenext);
 	}
-
-#if LARGEST_LINE_DEBUG
-	write_log (_T("%d\n"), largest);
-#endif
 }
 
 static void draw_frame_extras(struct vidbuffer *vb, int y_start, int y_end)
@@ -4365,11 +4340,6 @@ void vsync_handle_redraw(int long_field, int lof_changed, uae_u16 bplcon0p, uae_
 #else
 			finish_drawing_frame(drawlines);
 #endif
-#ifdef AVIOUTPUT
-			if (!ad->picasso_on) {
-				frame_drawn(monid);
-			}
-#endif
 		}
 
 		if (quit_program < 0) {
@@ -4410,12 +4380,6 @@ void vsync_handle_redraw(int long_field, int lof_changed, uae_u16 bplcon0p, uae_
 		} else if (currprefs.cpu_memory_cycle_exact) {
 			init_hardware_for_drawing_frame();
 		}
-	} else {
-#if 0
-		if (isvsync_chipset()) {
-			flush_screen(vidinfo->inbuffer, 0, 0); /* vsync mode */
-		}
-#endif
 	}
 
 	gui_flicker_led (-1, 0, 0);
@@ -4562,13 +4526,11 @@ bool notice_interlace_seen (bool lace)
 	if (lace) {
 		if (interlace_seen == 0) {
 			changed = true;
-			//write_log (_T("->lace PC=%x\n"), m68k_getpc ());
 		}
 		interlace_seen = currprefs.gfx_vresolution ? 1 : -1;
 	} else {
 		if (interlace_seen) {
 			changed = true;
-			//write_log (_T("->non-lace PC=%x\n"), m68k_getpc ());
 		}
 		interlace_seen = 0;
 	}
@@ -4628,7 +4590,7 @@ void reset_drawing(void)
 	memset (&spixstate, 0, sizeof spixstate);
 
 	init_hardware_for_drawing_frame();
-		
+
 	notice_screen_contents_lost(monid);
 	init_drawing_frame ();
 	pfield_set_linetoscr();
