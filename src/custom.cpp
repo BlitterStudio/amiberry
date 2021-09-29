@@ -4249,6 +4249,13 @@ static void reset_decisions (void)
 	hack_delay_shift = 0;
 	toscr_scanline_complex_bplcon1 = false;
 
+	if (line_cyclebased) {
+		line_cyclebased--;
+		if (!line_cyclebased) {
+			bpl_dma_off_when_active = 0;
+		}
+	}
+
 	memset(outword, 0, sizeof outword);
 	// fetched[] must not be cleared (Sony VX-90 / Royal Amiga Force)
 	todisplay_fetched[0] = todisplay_fetched[1] = false;
