@@ -4437,7 +4437,7 @@ void compute_framesync(void)
 		vblank_hz = vblank_hz_shf;
 	}
 
-	vblank_hz = target_adjust_vblank_hz(0, vblank_hz);
+	//vblank_hz = target_adjust_vblank_hz(0, vblank_hz);
 
 	struct chipset_refresh *cr = get_chipset_refresh(&currprefs);
 	while (cr) {
@@ -4602,9 +4602,6 @@ void compute_framesync(void)
 
 	set_config_changed ();
 
-	//if (currprefs.monitoremu_mon != 0) {
-	//	target_graphics_buffer_update(currprefs.monitoremu_mon);
-	//}
 	if (target_graphics_buffer_update(0)) {
 		reset_drawing ();
 	}
@@ -6846,7 +6843,6 @@ static int custom_wput_copper (int hpos, uaecptr pt, uaecptr addr, uae_u32 value
 	int v;
 
 	hpos += hack_delay_shift;
-	//value = debug_putpeekdma_chipset(0xdff000 + addr, value, MW_MASK_COPPER, 0x08c);
 	copper_access = 1;
 	v = custom_wput_1 (hpos, addr, value, noget);
 	copper_access = 0;
@@ -7813,7 +7809,6 @@ static int mavg (struct mavg_data *md, int newval, int size)
 
 #define MAVG_VSYNC_SIZE 128
 
-extern int log_vsync, debug_vsync_min_delay, debug_vsync_forced_delay;
 static bool framewait (void)
 {
 	struct amigadisplay *ad = &adisplays[0];
@@ -7888,7 +7883,6 @@ static bool framewait (void)
 
 	status = 1;
 
-	int clockadjust = 0;
 	int vstb = vsynctimebase;
 
 	if (currprefs.m68k_speed < 0 && !cpu_sleepmode && !currprefs.cpu_memory_cycle_exact) {
@@ -7915,7 +7909,6 @@ static bool framewait (void)
 		int adjust = 0;
 		if (int(curr_time) - int(vsyncwaittime) > 0 && int(curr_time) - int(vsyncwaittime) < vstb / 2)
 			adjust += curr_time - vsyncwaittime;
-		adjust += clockadjust;
 		max = (int)(vstb * (1000.0 + currprefs.m68k_speed_throttle) / 1000.0 - adjust);
 		vsyncwaittime = curr_time + vstb - adjust;
 		vsyncmintime = curr_time;
@@ -7942,7 +7935,7 @@ static bool framewait (void)
 		}
 		if (!currprefs.cpu_thread) {
 			while (!currprefs.turbo_emulation) {
-				float v = rpt_vsync(clockadjust) / (syncbase / 1000.0);
+				float v = rpt_vsync(0) / (syncbase / 1000.0);
 				if (v >= -3)
 					break;
 
@@ -7950,7 +7943,7 @@ static bool framewait (void)
 				if (cpu_sleep_millis(1) < 0)
 					break;
 			}
-			while (rpt_vsync(clockadjust) < 0) {
+			while (rpt_vsync(0) < 0) {
 				maybe_process_pull_audio();
 			}
 		}
