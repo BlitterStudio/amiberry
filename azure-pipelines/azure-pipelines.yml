@@ -30,7 +30,7 @@ jobs:
         platform: 'rpi4-32-sdl2'
   pool: RPI-32
   steps:
-    - template: rpi4-sdl2-rpios.yml
+    - template: rpi4-32-sdl2-rpios.yml
 
 - job: RPI3_sdl2_32bit
   strategy:
