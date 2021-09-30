@@ -12,7 +12,7 @@ jobs:
         platform: 'rpi4'
   pool: RPI-32
   steps:
-    - template: rpi4-32-dmx.yml
+    - template: rpi4-32-dmx-rpios.yml
 
 - job: RPI3_dmx_32bit
   strategy:
@@ -21,7 +21,7 @@ jobs:
         platform: 'rpi3'
   pool: RPI-32
   steps:
-    - template: rpi3-32-dmx.yml
+    - template: rpi3-32-dmx-rpios.yml
 
 - job: RPI4_sdl2_32bit
   strategy:
@@ -30,7 +30,7 @@ jobs:
         platform: 'rpi4-32-sdl2'
   pool: RPI-32
   steps:
-    - template: rpi4-sdl2.yml
+    - template: rpi4-sdl2-rpios.yml
 
 - job: RPI3_sdl2_32bit
   strategy:
@@ -39,31 +39,67 @@ jobs:
         platform: 'rpi3-sdl2'
   pool: RPI-32
   steps:
-    - template: rpi3-32-sdl2.yml
+    - template: rpi3-32-sdl2-rpios.yml
 
-- job: RPI4_sdl2_64bit
+- job: RPI3_sdl2_64bit_rpios
+  strategy:
+    matrix:
+      rpi3-sdl2-64bit:
+        platform: 'rpi3-64-sdl2'
+  pool: RPI-64-RPIOS
+  steps:
+    - template: rpi3-64-sdl2-rpios.yml
+
+- job: RPI3_dmx_64bit_rpios
+  strategy:
+    matrix:
+      rpi3-dmx-64bit:
+        platform: 'rpi3-64-dmx'
+  pool: RPI-64-RPIOS
+  steps:
+    - template: rpi3-64-dmx-rpios.yml
+
+- job: RPI4_sdl2_64bit_rpios
+  strategy:
+    matrix:
+      rpi4-sdl2-64bit:
+        platform: 'rpi4-64-sdl2'
+  pool: RPI-64-RPIOS
+  steps:
+    - template: rpi4-64-sdl2-rpios.yml
+
+- job: RPI4_dmx_64bit_rpios
+  strategy:
+    matrix:
+      rpi4-dmx-64bit:
+        platform: 'rpi4-64-dmx'
+  pool: RPI-64-RPIOS
+  steps:
+    - template: rpi4-64-dmx-rpios.yml
+  
+- job: RPI4_sdl2_64bit_manjaro
   strategy:
     matrix:
       rpi4-sdl2-64bit:
         platform: 'rpi4-64-sdl2'
   pool: RPI-64
   steps:
-    - template: rpi4-64-sdl2.yml
+    - template: rpi4-64-sdl2-manjaro.yml
 
-- job: RPI4_dmx_64bit
+- job: RPI4_dmx_64bit_manjaro
   strategy:
     matrix:
       rpi4-dmx-64bit:
         platform: 'rpi4-64-dmx'
   pool: RPI-64
   steps:
-    - template: rpi4-64-dmx.yml
+    - template: rpi4-64-dmx-manjaro.yml
 
-- job: RK3399_64bit
+- job: RK3399_64bit_manjaro
   strategy:
     matrix:
       rockpro64-64bit:
         platform: 'RK3399'
   pool: RockPro64
   steps:
-    - template: rk3399.yml
+    - template: rk3399-manjaro.yml

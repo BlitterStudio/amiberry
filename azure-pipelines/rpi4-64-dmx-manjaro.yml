@@ -1,4 +1,4 @@
-# RK3399, SDL2, 64-bit
+# RPI4, DMX, 64-bit
 steps:
   - checkout: self
     submodules: true
@@ -14,9 +14,9 @@ steps:
       make -f Makefile.fs
       cp capsimg.so $(Build.SourcesDirectory)
       cd $(Build.SourcesDirectory)
-      make -j4 PLATFORM=n2
-      mkdir amiberry-RK3399-sdl2-64bit
-    displayName: 'Compile for RK3399 SDL2 64-bit'
+      make -j4 PLATFORM=rpi4-64-dmx
+      mkdir amiberry-rpi4-dmx-64bit
+    displayName: 'Compile for RPI4 DMX 64-bit'
   
   - task: CopyFiles@2
     inputs:
@@ -31,16 +31,16 @@ steps:
         savestates/**
         screenshots/**
         whdboot/**
-     TargetFolder: amiberry-RK3399-sdl2-64bit
+     TargetFolder: amiberry-rpi4-dmx-64bit
   
   - task: ArchiveFiles@2
-    displayName: 'Archive RK3399_release'
+    displayName: 'Archive rpi4-64-dmx_release'
     inputs:
-      rootFolderOrFile: 'amiberry-RK3399-sdl2-64bit'
+      rootFolderOrFile: 'amiberry-rpi4-dmx-64bit'
       includeRootFolder: true
-      archiveFile: '$(Build.ArtifactStagingDirectory)/amiberry-$(VERSION_TAG)-rk3399-sdl2-64bit.zip'
+      archiveFile: '$(Build.ArtifactStagingDirectory)/amiberry-$(VERSION_TAG)-rpi4-dmx-64bit-manjaro.zip'
 
   - task: PublishBuildArtifacts@1
     inputs:
      PathtoPublish: $(Build.ArtifactStagingDirectory)
-     ArtifactName: RK3399_sdl2_release
+     ArtifactName: rpi4-64-dmx_release
