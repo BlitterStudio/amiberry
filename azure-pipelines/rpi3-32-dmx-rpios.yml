@@ -1,9 +1,9 @@
-# RPI1, Dispmanx, 32-bit
+# RPI3, Dispmanx, 32-bit
 steps:
   - checkout: self
     submodules: true
     clean: true
-
+    
   - script: VERSION_TAG=`git describe --abbrev=0` && echo "##vso[task.setvariable variable=VERSION_TAG]$VERSION_TAG"
     displayName: Set the tag name as an environment variable
 
@@ -14,9 +14,9 @@ steps:
       make -f Makefile.fs
       cp capsimg.so $(Build.SourcesDirectory)
       cd $(Build.SourcesDirectory)
-      make -j4 PLATFORM=rpi1
-      mkdir amiberry-rpi1-dmx-32bit
-    displayName: 'Compile for RPI1 (Dispmanx) 32-bit'
+      make -j4 PLATFORM=rpi3
+      mkdir amiberry-rpi3-dmx-32bit
+    displayName: 'Compile for RPI3 (Dispmanx) 32-bit'
   
   - task: CopyFiles@2
     inputs:
@@ -31,16 +31,16 @@ steps:
         savestates/**
         screenshots/**
         whdboot/**
-     TargetFolder: amiberry-rpi1-dmx-32bit
+     TargetFolder: amiberry-rpi3-dmx-32bit
 
   - task: ArchiveFiles@2
-    displayName: 'Archive rpi1_dmx_release'
+    displayName: 'Archive rpi3-32-dmx_release'
     inputs:
-      rootFolderOrFile: 'amiberry-rpi1-dmx-32bit'
+      rootFolderOrFile: 'amiberry-rpi3-dmx-32bit'
       includeRootFolder: true
-      archiveFile: '$(Build.ArtifactStagingDirectory)/amiberry-$(VERSION_TAG)-rpi1-dmx-32bit-rpios.zip' 
-
+      archiveFile: '$(Build.ArtifactStagingDirectory)/amiberry-$(VERSION_TAG)-rpi3-dmx-32bit-rpios.zip'
+ 
   - task: PublishBuildArtifacts@1
     inputs:
      PathtoPublish: $(Build.ArtifactStagingDirectory)
-     ArtifactName: rpi1_dmx_release
+     ArtifactName: rpi3-32-dmx_release

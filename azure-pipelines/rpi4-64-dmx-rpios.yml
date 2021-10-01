@@ -38,7 +38,7 @@ steps:
     inputs:
       rootFolderOrFile: 'amiberry-rpi4-dmx-64bit'
       includeRootFolder: true
-      archiveFile: '$(Build.ArtifactStagingDirectory)/amiberry-$(VERSION_TAG)-rpi4-dmx-64bit.zip'
+      archiveFile: '$(Build.ArtifactStagingDirectory)/amiberry-$(VERSION_TAG)-rpi4-dmx-64bit-rpios.zip'
 
   - task: PublishBuildArtifacts@1
     inputs:
