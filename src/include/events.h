@@ -22,32 +22,32 @@ extern frame_time_t vsyncmintime, vsyncmintimepre;
 extern frame_time_t vsyncmaxtime, vsyncwaittime;
 extern int vsynctimebase, syncbase;
 extern void reset_frame_rate_hack (void);
-extern uae_u32 vsync_cycles;
-extern uae_u32 start_cycles;
+extern unsigned long int vsync_cycles;
+extern unsigned long start_cycles;
 extern int event2_count;
 extern bool event_wait;
 
 extern void compute_vsynctime (void);
 extern void init_eventtab (void);
-extern void do_cycles_ce (uae_u32 cycles);
-extern void do_cycles_ce020 (uae_u32 cycles);
+extern void do_cycles_ce (unsigned long cycles);
+extern void do_cycles_ce020 (unsigned long cycles);
 extern void events_schedule (void);
-extern void do_cycles_slow (uae_u32 cycles_to_add);
+extern void do_cycles_slow (unsigned long cycles_to_add);
 extern void events_reset_syncline(void);
 
 extern bool is_cycle_ce(uaecptr);
 
-extern uae_u32 currcycle, nextevent;
+extern unsigned long currcycle, nextevent;
 extern int is_syncline, is_syncline_end;
 typedef void (*evfunc)(void);
 typedef void (*evfunc2)(uae_u32);
 
-typedef void (*do_cycles_func)(uae_u32);
+typedef void (*do_cycles_func)(unsigned long);
 extern do_cycles_func do_cycles;
-void do_cycles_cpu_fastest(uae_u32 cycles_to_add);
-void do_cycles_cpu_norm(uae_u32 cycles_to_add);
+void do_cycles_cpu_fastest(unsigned long cycles_to_add);
+void do_cycles_cpu_norm(unsigned long cycles_to_add);
 
-typedef unsigned int evt;
+typedef unsigned long int evt;
 
 struct ev
 {
@@ -98,17 +98,17 @@ STATIC_INLINE void cycles_do_special (void)
 	}
 }
 
-STATIC_INLINE void do_extra_cycles (uae_u32 cycles_to_add)
+STATIC_INLINE void do_extra_cycles (unsigned long cycles_to_add)
 {
 	pissoff -= cycles_to_add;
 }
 
-STATIC_INLINE uae_u32 get_cycles (void)
+STATIC_INLINE unsigned long int get_cycles (void)
 {
 	return currcycle;
 }
 
-STATIC_INLINE void set_cycles (uae_u32 x)
+STATIC_INLINE void set_cycles (unsigned long int x)
 {
 	currcycle = x;
 	eventtab[ev_hsync].oldcycles = x;
@@ -123,10 +123,10 @@ STATIC_INLINE int current_hpos_safe (void)
 
 extern int current_hpos(void);
 
-STATIC_INLINE bool cycles_in_range (uae_u32 endcycles)
+STATIC_INLINE bool cycles_in_range (unsigned long endcycles)
 {
-	uae_s32 c = get_cycles ();
-	return (uae_s32)endcycles - c > 0;
+	const signed long c = get_cycles ();
+	return static_cast<signed long>(endcycles) - c > 0;
 }
 
 extern void MISC_handler (void);
@@ -135,7 +135,7 @@ extern void event2_newevent_x_replace(evt t, uae_u32 data, evfunc2 func);
 
 STATIC_INLINE void event2_newevent_x (int no, evt t, uae_u32 data, evfunc2 func)
 {
-	if (((int)t) <= 0) {
+	if (static_cast<int>(t) <= 0) {
 		func (data);
 		return;
 	}
@@ -153,7 +153,7 @@ STATIC_INLINE void event2_newevent2 (evt t, uae_u32 data, evfunc2 func)
 
 STATIC_INLINE void event2_remevent (int no)
 {
-	eventtab2[no].active = 0;
+	eventtab2[no].active = false;
 }
 
 #endif /* UAE_EVENTS_H */

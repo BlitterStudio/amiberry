@@ -114,7 +114,7 @@ static void uae_abort (const TCHAR *format,...)
 	nomore = 1;
 }
 
-static uae_u32 total_skipped = 0;
+static unsigned int total_skipped = 0;
 
 extern int cpu_last_stop_vpos, cpu_stopped_lines;
 static int cpu_sleepmode, cpu_sleepmode_cnt;
@@ -124,8 +124,8 @@ extern float vsync_vblank, vsync_hblank;
 
 /* Events */
 
-uae_u32 vsync_cycles;
-static uae_u32 extra_cycle;
+unsigned long int vsync_cycles;
+static int extra_cycle;
 
 static int rpt_did_reset;
 struct ev eventtab[ev_max];
@@ -11046,7 +11046,7 @@ static void hsync_handler_post(bool onvsync)
 	// vblank interrupt = next line after VBSTRT
 	if (vb_start_line == 1) {
 		// first refresh (strobe) slot triggers vblank interrupt
-		send_interrupt(5, (REFRESH_FIRST_HPOS + 1) * CYCLE_UNIT);
+		send_interrupt(5, (REFRESH_FIRST_HPOS - 1) * CYCLE_UNIT);
 	}
 	// lastline - 1?
 	if (vpos + 1 == maxvpos + lof_store || vpos + 1 == maxvpos + lof_store + 1) {
@@ -13081,7 +13081,7 @@ uae_u8 *restore_cycles (uae_u8 *src)
 	restore_u32 ();
 	start_cycles = restore_u64 ();
 	extra_cycle = restore_u32 ();
-	if (extra_cycle >= 2 * CYCLE_UNIT)
+	if (extra_cycle < 0 || extra_cycle >= 2 * CYCLE_UNIT)
 		extra_cycle = 0;
 	write_log (_T("RESTORECYCLES %08lX\n"), start_cycles);
 	return src;
@@ -13463,7 +13463,7 @@ void wait_cpu_cycle_write_ce020(uaecptr addr, int mode, uae_u32 v)
 
 }
 
-void do_cycles_ce(uae_u32 cycles)
+void do_cycles_ce(unsigned long cycles)
 {
 	cycles += extra_cycle;
 	while (cycles >= CYCLE_UNIT) {
@@ -13480,10 +13480,10 @@ void do_cycles_ce(uae_u32 cycles)
 	extra_cycle = cycles;
 }
 
-void do_cycles_ce020(uae_u32 cycles)
+void do_cycles_ce020(unsigned long cycles)
 {
-	uae_u32 c;
-	uae_u32 extra;
+	unsigned long c;
+	int extra;
 
 	if (!cycles) {
 		return;
@@ -13514,7 +13514,7 @@ void do_cycles_ce020(uae_u32 cycles)
 		do_cycles(1 * CYCLE_UNIT);
 		c -= CYCLE_UNIT;
 	}
-	if (c) {
+	if (c > 0) {
 		do_cycles(c);
 	}
 }

@@ -2395,7 +2395,7 @@ void AUDxDAT (int nr, uae_u16 v, uaecptr addr)
 #endif
 
 #if DEBUG_AUDIO > 0
-	if (debugchannel (nr) && (DEBUG_AUDIO > 1 || (!chan_ena || addr == 0xffffffff || ((cdp->state & 15) != 2 && (cdp->state & 15) != 3)))) {
+	if (debugchannel (nr) && (DEBUG_AUDIO > 1 || (!chan_ena || addr == 0xffffffff || ((cdp->state & 15) != 2 && (cdp->state & 15) != 3))))) {
 		write_log (_T("AUD%dDAT: %04X ADDR=%08X LEN=%d/%d %d,%d,%d %06X\n"), nr,
 		v, addr, cdp->wlen, cdp->len, cdp->state, chan_ena, isirq (nr) ? 1 : 0, M68K_GETPC);
 	}

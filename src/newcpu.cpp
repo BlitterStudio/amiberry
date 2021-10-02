@@ -140,9 +140,9 @@ static uae_u32 (*x2_get_byte)(uaecptr);
 static void (*x2_put_long)(uaecptr,uae_u32);
 static void (*x2_put_word)(uaecptr,uae_u32);
 static void (*x2_put_byte)(uaecptr,uae_u32);
-static void (*x2_do_cycles)(uae_u32);
-static void (*x2_do_cycles_pre)(uae_u32);
-static void (*x2_do_cycles_post)(uae_u32, uae_u32);
+static void (*x2_do_cycles)(unsigned long);
+static void (*x2_do_cycles_pre)(unsigned long);
+static void (*x2_do_cycles_post)(unsigned long, uae_u32);
 
 uae_u32 (*x_next_iword)(void);
 uae_u32 (*x_next_ilong)(void);
@@ -163,9 +163,9 @@ void (*x_cp_put_long)(uaecptr,uae_u32);
 void (*x_cp_put_word)(uaecptr,uae_u32);
 void (*x_cp_put_byte)(uaecptr,uae_u32);
 
-void (*x_do_cycles)(uae_u32);
-void (*x_do_cycles_pre)(uae_u32);
-void (*x_do_cycles_post)(uae_u32, uae_u32);
+void (*x_do_cycles)(unsigned long);
+void (*x_do_cycles_pre)(unsigned long);
+void (*x_do_cycles_post)(unsigned long, uae_u32);
 
 static void set_x_cp_funcs(void)
 {
@@ -237,7 +237,7 @@ static bool check_trace (void)
 		return true;
 	if (!cputrace.readcounter && !cputrace.writecounter && !cputrace.cyclecounter) {
 		if (cpu_tracer != -2) {
-			write_log (_T("CPU trace: dma_cycle() enabled. %08x %08x NOW=%08x\n"),
+			write_log (_T("CPU trace: dma_cycle() enabled. %08x %08x NOW=%08lx\n"),
 				cputrace.cyclecounter_pre, cputrace.cyclecounter_post, get_cycles ());
 			cpu_tracer = -2; // dma_cycle() allowed to work now
 		}
@@ -258,7 +258,7 @@ static bool check_trace (void)
 	x_do_cycles_pre = x2_do_cycles_pre;
 	x_do_cycles_post = x2_do_cycles_post;
 	set_x_cp_funcs();
-	write_log(_T("CPU tracer playback complete. STARTCYCLES=%08x NOWCYCLES=%08x\n"), cputrace.startcycles, get_cycles());
+	write_log (_T("CPU tracer playback complete. STARTCYCLES=%08x NOWCYCLES=%08lx\n"), cputrace.startcycles, get_cycles ());
 	cputrace.needendcycles = 1;
 	cpu_tracer = 0;
 	return true;
@@ -271,7 +271,7 @@ static bool get_trace (uaecptr addr, int accessmode, int size, uae_u32 *data)
 		struct cputracememory *ctm = &cputrace.ctm[i];
 		if (ctm->addr == addr && ctm->mode == mode) {
 			ctm->mode = 0;
-			write_log (_T("CPU trace: GET %d: PC=%08x %08x=%08x %d %d %08x/%08x/%08x %d/%d (%08x)\n"),
+			write_log (_T("CPU trace: GET %d: PC=%08x %08x=%08x %d %d %08x/%08x/%08x %d/%d (%08lx)\n"),
 				i, cputrace.pc, addr, ctm->data, accessmode, size,
 				cputrace.cyclecounter, cputrace.cyclecounter_pre, cputrace.cyclecounter_post,
 				cputrace.readcounter, cputrace.writecounter, get_cycles ());
@@ -450,7 +450,7 @@ static void cputracefunc2_x_put_byte (uaecptr o, uae_u32 val)
 		write_log (_T("cputracefunc2_x_put_byte %d <> %d\n"), v, val);
 }
 
-static void cputracefunc_x_do_cycles (uae_u32 cycles)
+static void cputracefunc_x_do_cycles (unsigned long cycles)
 {
 	while (cycles >= CYCLE_UNIT) {
 		cputrace.cyclecounter += CYCLE_UNIT;
@@ -463,7 +463,7 @@ static void cputracefunc_x_do_cycles (uae_u32 cycles)
 	}
 }
 
-static void cputracefunc2_x_do_cycles (uae_u32 cycles)
+static void cputracefunc2_x_do_cycles (unsigned long cycles)
 {
 	if (cputrace.cyclecounter > cycles) {
 		cputrace.cyclecounter -= cycles;
@@ -477,7 +477,7 @@ static void cputracefunc2_x_do_cycles (uae_u32 cycles)
 		x_do_cycles (cycles);
 }
 
-static void cputracefunc_x_do_cycles_pre (uae_u32 cycles)
+static void cputracefunc_x_do_cycles_pre (unsigned long cycles)
 {
 	cputrace.cyclecounter_post = 0;
 	cputrace.cyclecounter_pre = 0;
@@ -494,7 +494,7 @@ static void cputracefunc_x_do_cycles_pre (uae_u32 cycles)
 }
 // cyclecounter_pre = how many cycles we need to SWALLOW
 // -1 = rerun whole access
-static void cputracefunc2_x_do_cycles_pre (uae_u32 cycles)
+static void cputracefunc2_x_do_cycles_pre (unsigned long cycles)
 {
 	if (cputrace.cyclecounter_pre == -1) {
 		cputrace.cyclecounter_pre = 0;
@@ -513,7 +513,7 @@ static void cputracefunc2_x_do_cycles_pre (uae_u32 cycles)
 		x_do_cycles (cycles);
 }
 
-static void cputracefunc_x_do_cycles_post (uae_u32 cycles, uae_u32 v)
+static void cputracefunc_x_do_cycles_post (unsigned long cycles, uae_u32 v)
 {
 	if (cputrace.memoryoffset < 1) {
 		return;
@@ -534,7 +534,7 @@ static void cputracefunc_x_do_cycles_post (uae_u32 cycles, uae_u32 v)
 	cputrace.cyclecounter_post = 0;
 }
 // cyclecounter_post = how many cycles we need to WAIT
-static void cputracefunc2_x_do_cycles_post (uae_u32 cycles, uae_u32 v)
+static void cputracefunc2_x_do_cycles_post (unsigned long cycles, uae_u32 v)
 {
 	uae_u32 c;
 	if (cputrace.cyclecounter_post) {
@@ -548,11 +548,11 @@ static void cputracefunc2_x_do_cycles_post (uae_u32 cycles, uae_u32 v)
 		x_do_cycles (c);
 }
 
-static void do_cycles_post (uae_u32 cycles, uae_u32 v)
+static void do_cycles_post (unsigned long cycles, uae_u32 v)
 {
 	do_cycles (cycles);
 }
-static void do_cycles_ce_post (uae_u32 cycles, uae_u32 v)
+static void do_cycles_ce_post (unsigned long cycles, uae_u32 v)
 {
 	do_cycles_ce (cycles);
 }
@@ -794,7 +794,7 @@ static const struct cputbl *cputbls[5][4] =
 static void build_cpufunctbl (void)
 {
 	int i, opcnt;
-	uae_u32 opcode;
+	unsigned long opcode;
 	const struct cputbl *tbl = NULL;
 	int lvl, mode;
 
@@ -1246,7 +1246,7 @@ static int iack_cycle(int nr)
 
 	// non-autovectored
 	vector = x_get_byte(0x00fffff1 | ((nr - 24) << 1));
-	if (currprefs.cpu_compatible)
+	if (currprefs.cpu_cycle_exact)
 		x_do_cycles(4 * CYCLE_UNIT / 2);
 	return vector;
 }
@@ -2309,16 +2309,15 @@ STATIC_INLINE bool time_for_interrupt(void)
 void doint(void)
 {
 	if (m68k_interrupt_delay) {
-		int il = intlev();
-		regs.ipl_pin = il;
+		regs.ipl_pin = intlev();
 		if (regs.ipl_pin > regs.intmask || regs.ipl_pin == 7)
 			set_special(SPCFLAG_INT);
 		return;
 	}
 	if (currprefs.cpu_compatible && currprefs.cpu_model < 68020)
-		set_special (SPCFLAG_INT);
+		set_special(SPCFLAG_INT);
 	else
-		set_special (SPCFLAG_DOINT);
+		set_special(SPCFLAG_DOINT);
 }
 
 static int do_specialties(int cycles)
@@ -2436,6 +2435,11 @@ static int do_specialties(int cycles)
 			cputrace.cyclecounter = cputrace.cyclecounter_pre = cputrace.cyclecounter_post = 0;
 			cputrace.readcounter = cputrace.writecounter = 0;
 		}
+		if (!first)
+			x_do_cycles(currprefs.cpu_cycle_exact ? 2 * CYCLE_UNIT : 4 * CYCLE_UNIT);
+		first = false;
+		if (regs.spcflags & SPCFLAG_COPPER)
+			do_copper();
 
 		if (m68k_interrupt_delay) {
 			unset_special(SPCFLAG_INT);
@@ -2451,12 +2455,6 @@ static int do_specialties(int cycles)
 						do_interrupt(intr);
 			}
 		}
-
-		if (!first)
-			x_do_cycles(currprefs.cpu_cycle_exact ? 2 * CYCLE_UNIT : 4 * CYCLE_UNIT);
-		first = false;
-		if (regs.spcflags & SPCFLAG_COPPER)
-			do_copper();
 
 		if (regs.spcflags & SPCFLAG_MODE_CHANGE) {
 			m68k_resumestopped();
@@ -3571,65 +3569,57 @@ void exception2_fetch(uae_u32 opcode, int offset, int pcoffset)
 }
 
 
-bool cpureset (void)
+void cpureset(void)
 {
-    /* RESET hasn't increased PC yet, 1 word offset */
+	/* RESET hasn't increased PC yet, 1 word offset */
 	uaecptr pc;
 	uaecptr ksboot = 0xf80002 - 2;
 	uae_u16 ins;
-	addrbank *ab;
-	bool extreset = false;
+	addrbank* ab;
 
 	maybe_disable_fpu();
 	m68k_reset_delay = currprefs.reset_delay;
 	set_special(SPCFLAG_CHECK);
 	send_internalevent(INTERNALEVENT_CPURESET);
-	//if (cpuboard_forced_hardreset()) {
-	//	custom_reset(false, false);
-	//	m68k_reset();
-	//	return true;
-	//}
-	if ((currprefs.cpu_compatible || currprefs.cpu_memory_cycle_exact) && currprefs.cpu_model <= 68020) {
+  if ((currprefs.cpu_compatible || currprefs.cpu_memory_cycle_exact) && currprefs.cpu_model <= 68020) {
 		custom_reset(false, false);
-		return false;
+		return;
 	}
-	pc = m68k_getpc () + 2;
-	ab = &get_mem_bank (pc);
+	pc = m68k_getpc() + 2;
+	ab = &get_mem_bank(pc);
 	if (ab->check (pc, 2)) {
-		write_log (_T("CPU reset PC=%x (%s)..\n"), pc - 2, ab->name);
-		ins = get_word (pc);
+		write_log(_T("CPU reset PC=%x (%s)..\n"), pc - 2, ab->name);
+		ins = get_word(pc);
 		custom_reset(false, false);
 		// did memory disappear under us?
-		if (ab == &get_mem_bank (pc))
-			return false;
+		if (ab == &get_mem_bank(pc))
+			return;
 		// it did
-		if ((ins & ~7) == 0x4ed0) {
+    if ((ins & ~7) == 0x4ed0) {
 			int reg = ins & 7;
-			uae_u32 addr = m68k_areg (regs, reg);
+			uae_u32 addr = m68k_areg(regs, reg);
 			if (addr < 0x80000)
 				addr += 0xf80000;
-			write_log (_T("reset/jmp (ax) combination at %08x emulated -> %x\n"), pc, addr);
-			m68k_setpc_normal (addr - 2);
-			return false;
+			write_log(_T("reset/jmp (ax) combination at %08x emulated -> %x\n"), pc, addr);
+			m68k_setpc_normal(addr - 2);
+			return;
 		}
 	}
 	// the best we can do, jump directly to ROM entrypoint
 	// (which is probably what program wanted anyway)
-	write_log (_T("CPU Reset PC=%x (%s), invalid memory -> %x.\n"), pc, ab->name, ksboot + 2);
+	write_log(_T("CPU Reset PC=%x (%s), invalid memory -> %x.\n"), pc, ab->name, ksboot + 2);
 	custom_reset(false, false);
-	m68k_setpc_normal (ksboot);
-	return false;
+	m68k_setpc_normal(ksboot);
 }
 
-
-void m68k_setstopped (void)
+void m68k_setstopped(void)
 {
 	/* A traced STOP instruction drops through immediately without
-	actually stopping.  */
+actually stopping.  */
 	if ((regs.spcflags & SPCFLAG_DOTRACE) == 0) {
 		m68k_set_stop();
 	} else {
-		m68k_resumestopped ();
+		m68k_resumestopped();
 	}
 }
 
@@ -3640,7 +3630,7 @@ void m68k_resumestopped (void)
 	if (currprefs.cpu_cycle_exact && currprefs.cpu_model == 68000) {
 		x_do_cycles (6 * CYCLE_UNIT / 2);
 	}
-	fill_prefetch ();
+	fill_prefetch();
 	m68k_unset_stop();
 }
 

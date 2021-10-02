@@ -22,12 +22,12 @@
 
 static const int pissoff_nojit_value = 256 * CYCLE_UNIT;
 
-uae_u32 event_cycles, nextevent, currcycle;
+unsigned long int event_cycles, nextevent, currcycle;
 int is_syncline, is_syncline_end;
-int cycles_to_next_event;
-int max_cycles_to_next_event;
-int cycles_to_hsync_event;
-uae_u32 start_cycles;
+long cycles_to_next_event;
+long max_cycles_to_next_event;
+long cycles_to_hsync_event;
+unsigned long start_cycles;
 bool event_wait;
 
 frame_time_t vsyncmintime, vsyncmintimepre;
@@ -50,10 +50,10 @@ void events_schedule (void)
 {
 	int i;
 
-	uae_u32 mintime = ~0L;
+	unsigned long int mintime = ~0L;
 	for (i = 0; i < ev_max; i++) {
 		if (eventtab[i].active) {
-			uae_u32 eventtime = eventtab[i].evtime - currcycle;
+			unsigned long int eventtime = eventtab[i].evtime - currcycle;
 			if (eventtime < mintime)
 				mintime = eventtime;
 		}
@@ -251,7 +251,7 @@ static bool event_check_vsync(void)
 	return false;
 }
 
-void do_cycles_cpu_fastest(uae_u32 cycles_to_add)
+void do_cycles_cpu_fastest(unsigned long cycles_to_add)
 {
 	if (!currprefs.cpu_thread) {
 		if ((pissoff -= cycles_to_add) >= 0)
@@ -288,7 +288,7 @@ void do_cycles_cpu_fastest(uae_u32 cycles_to_add)
 	currcycle += cycles_to_add;
 }
 
-void do_cycles_cpu_norm(uae_u32 cycles_to_add)
+void do_cycles_cpu_norm(unsigned long cycles_to_add)
 {
 	while ((nextevent - currcycle) <= cycles_to_add)
 	{

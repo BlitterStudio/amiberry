@@ -357,9 +357,9 @@ STATIC_INLINE void m68k_setpc_normal(uaecptr pc)
 extern void check_t0_trace(void);
 
 
-extern void (*x_do_cycles)(uae_u32);
-extern void (*x_do_cycles_pre)(uae_u32);
-extern void (*x_do_cycles_post)(uae_u32, uae_u32);
+extern void (*x_do_cycles)(unsigned long);
+extern void (*x_do_cycles_pre)(unsigned long);
+extern void (*x_do_cycles_post)(unsigned long, uae_u32);
 
 extern uae_u32 REGPARAM3 x_get_disp_ea_020 (uae_u32 base) REGPARAM;
 
@@ -447,7 +447,7 @@ extern void exception2_write(uae_u32 opcode, uaecptr addr, int size, uae_u32 val
 extern void exception2_fetch_opcode(uae_u32 opcode, int offset, int pcoffset);
 extern void exception2_fetch(uae_u32 opcode, int offset, int pcoffset);
 extern void m68k_reset (void);
-extern bool cpureset (void);
+extern void cpureset (void);
 extern void cpu_halt (int id);
 extern int cpu_sleep_millis(int ms);
 extern void cpu_change(int newmodel);
