@@ -9221,7 +9221,7 @@ static bool framewait(void)
 		vsyncwaittime = vsyncmaxtime = curr_time + vsynctimebase;
 		if (!nodraw()) {
 			if (!frame_rendered && !ad->picasso_on) {
-				frame_rendered = render_screen(0, 1, false);
+				frame_rendered = crender_screen(0, 1, false);
 			}
 
 			start = read_processor_time();
@@ -9246,10 +9246,12 @@ static bool framewait(void)
 		}
 		t = legacy_avg;
 
-		//if (debug_vsync_min_delay && t < debug_vsync_min_delay * vsynctimebase / 100)
+		//if (debug_vsync_min_delay && t < debug_vsync_min_delay * vsynctimebase / 100) {
 		//	t = debug_vsync_min_delay * vsynctimebase / 100;
-		//if (debug_vsync_forced_delay > 0)
+		//}
+		//if (debug_vsync_forced_delay > 0) {
 		//	t = debug_vsync_forced_delay * vsynctimebase / 100;
+		//}
 
 		vsync_time = read_processor_time();
 		if (t > vsynctimebase * 2 / 3) {
