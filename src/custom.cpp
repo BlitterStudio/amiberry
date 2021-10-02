@@ -6927,9 +6927,6 @@ static void update_copper (int until_hpos)
 	if (until_hpos > (maxhpos & ~1))
 		until_hpos = maxhpos & ~1;
 
-	bool never_blocked = currprefs.fast_copper &&
-		((toscr_nr_planes2 < 5 && toscr_res == RES_LORES) || (toscr_nr_planes2 < 3 && toscr_res != RES_LORES));
-	
 	for (;;) {
 		int old_hpos = c_hpos;
 		int hp;
@@ -6938,12 +6935,10 @@ static void update_copper (int until_hpos)
 			break;
 
 
-		if (!never_blocked) { // copper never blocked by bitplane dma
 		/* So we know about the fetch state.  */
 			decide_line(c_hpos);
 			// bitplane only, don't want blitter to steal our cycles.
 			decide_fetch(c_hpos);
-		}
 
 		if (cop_state.movedelay > 0) {
 			cop_state.movedelay--;
