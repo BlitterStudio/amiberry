@@ -125,7 +125,7 @@ extern float vsync_vblank, vsync_hblank;
 /* Events */
 
 uae_u32 vsync_cycles;
-static int extra_cycle;
+static uae_u32 extra_cycle;
 
 static int rpt_did_reset;
 struct ev eventtab[ev_max];
@@ -13075,7 +13075,7 @@ uae_u8 *restore_cycles (uae_u8 *src)
 	restore_u32 ();
 	start_cycles = restore_u64 ();
 	extra_cycle = restore_u32 ();
-	if (extra_cycle < 0 || extra_cycle >= 2 * CYCLE_UNIT)
+	if (extra_cycle >= 2 * CYCLE_UNIT)
 		extra_cycle = 0;
 	write_log (_T("RESTORECYCLES %08lX\n"), start_cycles);
 	return src;
@@ -13477,7 +13477,7 @@ void do_cycles_ce(uae_u32 cycles)
 void do_cycles_ce020(uae_u32 cycles)
 {
 	uae_u32 c;
-	int extra;
+	uae_u32 extra;
 
 	if (!cycles) {
 		return;
@@ -13508,7 +13508,7 @@ void do_cycles_ce020(uae_u32 cycles)
 		do_cycles(1 * CYCLE_UNIT);
 		c -= CYCLE_UNIT;
 	}
-	if (c > 0) {
+	if (c) {
 		do_cycles(c);
 	}
 }
