@@ -677,19 +677,25 @@ static void setclr(uae_u16 *p, uae_u16 val)
 
 static int adjust_hr(int v)
 {
-	if (currprefs.chipset_hr) {
-		v &= ~(3 >> currprefs.gfx_resolution);
+	if (currprefs.gfx_resolution >= RES_HIRES) {
+		if (currprefs.chipset_hr) {
+			v &= ~(3 >> currprefs.gfx_resolution);
+		} else {
+			v &= ~3;
+		}
 	} else {
-		v &= ~3;
+		v &= ~1;
 	}
 	return v;
 }
 static int adjust_hr2(int v)
 {
-	if (currprefs.chipset_hr) {
-		v &= ~(1 >> currprefs.gfx_resolution);
-	} else {
-		v &= ~1;
+	if (currprefs.gfx_resolution >= RES_HIRES) {
+		if (currprefs.chipset_hr) {
+			v &= ~(1 >> currprefs.gfx_resolution);
+		} else {
+			v &= ~1;
+		}
 	}
 	return v;
 }
