@@ -114,7 +114,7 @@ static void uae_abort (const TCHAR *format,...)
 	nomore = 1;
 }
 
-static unsigned int total_skipped = 0;
+static uae_u32 total_skipped = 0;
 
 extern int cpu_last_stop_vpos, cpu_stopped_lines;
 static int cpu_sleepmode, cpu_sleepmode_cnt;
@@ -125,7 +125,7 @@ extern float vsync_vblank, vsync_hblank;
 /* Events */
 
 unsigned long int vsync_cycles;
-static int extra_cycle;
+static uae_u32 extra_cycle;
 
 static int rpt_did_reset;
 struct ev eventtab[ev_max];
@@ -9220,18 +9220,21 @@ static bool framewait(void)
 		curr_time = read_processor_time();
 		vsyncwaittime = vsyncmaxtime = curr_time + vsynctimebase;
 		if (!nodraw()) {
-			if (!frame_rendered && !ad->picasso_on)
+			if (!frame_rendered && !ad->picasso_on) {
 				frame_rendered = render_screen(0, 1, false);
+			}
 
 			start = read_processor_time();
 			t = 0;
-			if ((int)start - (int)vsync_time >= 0 && (int)start - (int)vsync_time < vsynctimebase)
+			if ((int)start - (int)vsync_time >= 0 && (int)start - (int)vsync_time < vsynctimebase) {
 				t += (int)start - (int)vsync_time;
+			}
 
 			if (!frame_shown) {
 				show_screen(0, 1);
-				if (currprefs.gfx_apmode[0].gfx_strobo)
+				if (currprefs.gfx_apmode[0].gfx_strobo) {
 					show_screen(0, 4);
+				}
 			}
 		}
 
@@ -11046,7 +11049,7 @@ static void hsync_handler_post(bool onvsync)
 	// vblank interrupt = next line after VBSTRT
 	if (vb_start_line == 1) {
 		// first refresh (strobe) slot triggers vblank interrupt
-		send_interrupt(5, (REFRESH_FIRST_HPOS - 1) * CYCLE_UNIT);
+		send_interrupt(5, (REFRESH_FIRST_HPOS + 1) * CYCLE_UNIT);
 	}
 	// lastline - 1?
 	if (vpos + 1 == maxvpos + lof_store || vpos + 1 == maxvpos + lof_store + 1) {
@@ -13081,7 +13084,7 @@ uae_u8 *restore_cycles (uae_u8 *src)
 	restore_u32 ();
 	start_cycles = restore_u64 ();
 	extra_cycle = restore_u32 ();
-	if (extra_cycle < 0 || extra_cycle >= 2 * CYCLE_UNIT)
+	if (extra_cycle >= 2 * CYCLE_UNIT)
 		extra_cycle = 0;
 	write_log (_T("RESTORECYCLES %08lX\n"), start_cycles);
 	return src;
@@ -13514,7 +13517,7 @@ void do_cycles_ce020(unsigned long cycles)
 		do_cycles(1 * CYCLE_UNIT);
 		c -= CYCLE_UNIT;
 	}
-	if (c > 0) {
+	if (c) {
 		do_cycles(c);
 	}
 }

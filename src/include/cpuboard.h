@@ -23,6 +23,7 @@ void cpuboard_setboard(struct uae_prefs *p, int type, int subtype);
 uaecptr cpuboard_get_reset_pc(uaecptr *stack);
 void cpuboard_set_flash_unlocked(bool unlocked);
 void cpuboard_set_cpu(struct uae_prefs *p);
+bool cpuboard_forced_hardreset(void);
 
 bool ppc_interrupt(int new_m68k_ipl);
 

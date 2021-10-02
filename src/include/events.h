@@ -135,7 +135,7 @@ extern void event2_newevent_x_replace(evt t, uae_u32 data, evfunc2 func);
 
 STATIC_INLINE void event2_newevent_x (int no, evt t, uae_u32 data, evfunc2 func)
 {
-	if (static_cast<int>(t) <= 0) {
+	if (((int)t) <= 0) {
 		func (data);
 		return;
 	}
@@ -153,7 +153,7 @@ STATIC_INLINE void event2_newevent2 (evt t, uae_u32 data, evfunc2 func)
 
 STATIC_INLINE void event2_remevent (int no)
 {
-	eventtab2[no].active = false;
+	eventtab2[no].active = 0;
 }
 
 #endif /* UAE_EVENTS_H */
