@@ -8356,6 +8356,8 @@ static uae_u16 dmal, dmal_hpos;
 static void dmal_emu(uae_u32 v)
 {
 	// Disk and Audio DMA bits are ignored by Agnus. Including DMA master bit.
+    if (!(dmacon & DMA_MASTER))
+		return;
 	int hpos = current_hpos ();
 	if (v >= 6) {
 		v -= 6;
