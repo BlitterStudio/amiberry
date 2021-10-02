@@ -2320,7 +2320,7 @@ void doint(void)
 		set_special(SPCFLAG_DOINT);
 }
 
-static int do_specialties(int cycles)
+static int do_specialties (int cycles)
 {
 	if (regs.spcflags & SPCFLAG_MODE_CHANGE)
 		return 1;
@@ -2351,13 +2351,15 @@ static int do_specialties(int cycles)
 #ifdef ACTION_REPLAY
 #ifdef ACTION_REPLAY_HRTMON
 	if ((regs.spcflags & SPCFLAG_ACTION_REPLAY) && hrtmon_flag != ACTION_REPLAY_INACTIVE) {
-		int isinhrt = (m68k_getpc() >= hrtmem_start && m68k_getpc() < hrtmem_start + hrtmem_size);
+		int isinhrt = (m68k_getpc () >= hrtmem_start && m68k_getpc () < hrtmem_start + hrtmem_size);
 		/* exit from HRTMon? */
 		if (hrtmon_flag == ACTION_REPLAY_ACTIVE && !isinhrt)
-			hrtmon_hide();
+			hrtmon_hide ();
 		/* HRTMon breakpoint? (not via IRQ7) */
+		if (hrtmon_flag == ACTION_REPLAY_IDLE && isinhrt)
+			hrtmon_breakenter ();
 		if (hrtmon_flag == ACTION_REPLAY_ACTIVATE)
-			hrtmon_enter();
+			hrtmon_enter ();
 	}
 #endif
 	if ((regs.spcflags & SPCFLAG_ACTION_REPLAY) && action_replay_flag != ACTION_REPLAY_INACTIVE) {
@@ -2365,10 +2367,10 @@ static int do_specialties(int cycles)
 		/*	write_log (_T("PC:%p\n"), m68k_getpc ());*/
 
 		if (action_replay_flag == ACTION_REPLAY_ACTIVATE || action_replay_flag == ACTION_REPLAY_DORESET)
-			action_replay_enter();
+			action_replay_enter ();
 		if ((action_replay_flag == ACTION_REPLAY_HIDE || action_replay_flag == ACTION_REPLAY_ACTIVE) && !is_ar_pc_in_rom ()) {
-			action_replay_hide();
-			unset_special(SPCFLAG_ACTION_REPLAY);
+			action_replay_hide ();
+			unset_special (SPCFLAG_ACTION_REPLAY);
 		}
 		if (action_replay_flag == ACTION_REPLAY_WAIT_PC) {
 			/*write_log (_T("Waiting for PC: %p, current PC= %p\n"), wait_for_pc, m68k_getpc ());*/
@@ -2380,36 +2382,43 @@ static int do_specialties(int cycles)
 #endif
 
 	if (regs.spcflags & SPCFLAG_COPPER)
-		do_copper();
+		do_copper ();
 
 #ifdef JIT
-	unset_special(SPCFLAG_END_COMPILE); /* has done its job */
+	unset_special (SPCFLAG_END_COMPILE);   /* has done its job */
 #endif
 
 	while ((regs.spcflags & SPCFLAG_BLTNASTY) && dmaen (DMA_BLITTER) && cycles > 0 && ((currprefs.waiting_blits && currprefs.cpu_model >= 68020) || !currprefs.blitter_cycle_exact)) {
-		int c = blitnasty();
+		int c = blitnasty ();
 		if (c < 0) {
 			break;
 		} else if (c > 0) {
 			cycles -= c * CYCLE_UNIT * 2;
 			if (cycles < CYCLE_UNIT)
 				cycles = 0;
-	  } else {
+		} else {
 			c = 4;
 		}
-		x_do_cycles(c * CYCLE_UNIT);
+		x_do_cycles (c * CYCLE_UNIT);
 		if (regs.spcflags & SPCFLAG_COPPER)
-			do_copper();
+			do_copper ();
+#ifdef WITH_PPC
+		if (ppc_state)  {
+			if (uae_ppc_poll_check_halt())
+				return true;
+			uae_ppc_execute_check();
+		}
+#endif
 	}
 
 	if (regs.spcflags & SPCFLAG_DOTRACE)
-		Exception(9);
+		Exception (9);
 
 	if (regs.spcflags & SPCFLAG_TRAP) {
-		unset_special(SPCFLAG_TRAP);
-		Exception(3);
+		unset_special (SPCFLAG_TRAP);
+		Exception (3);
 	}
-	
+
 	if ((regs.spcflags & SPCFLAG_STOP) && regs.s == 0 && currprefs.cpu_model <= 68010) {
 		// 68000/68010 undocumented special case:
 		// if STOP clears S-bit and T was not set:
@@ -2421,10 +2430,13 @@ static int do_specialties(int cycles)
 
 	bool first = true;
 	while ((regs.spcflags & SPCFLAG_STOP) && !(regs.spcflags & SPCFLAG_BRK)) {
+	isstopped:
 		check_uae_int_request();
-		if (bsd_int_requested)
-			bsdsock_fake_int_handler();
-		
+		{
+			if (bsd_int_requested)
+				bsdsock_fake_int_handler ();
+		}
+
 		if (cpu_tracer > 0) {
 			cputrace.stopped = regs.stopped;
 			cputrace.intmask = regs.intmask;
@@ -2435,58 +2447,77 @@ static int do_specialties(int cycles)
 			cputrace.cyclecounter = cputrace.cyclecounter_pre = cputrace.cyclecounter_post = 0;
 			cputrace.readcounter = cputrace.writecounter = 0;
 		}
+
+		if (m68k_interrupt_delay) {
+			unset_special(SPCFLAG_INT);
+			ipl_fetch ();
+			if (time_for_interrupt ()) {
+				do_interrupt (regs.ipl);
+			}
+		} else {
+			if (regs.spcflags & (SPCFLAG_INT | SPCFLAG_DOINT)) {
+				int intr = intlev ();
+				unset_special (SPCFLAG_INT | SPCFLAG_DOINT);
+#ifdef WITH_PPC
+				bool m68kint = true;
+				if (ppc_state) {
+					m68kint = ppc_interrupt(intr);
+				}
+				if (m68kint) {
+#endif
+					if (intr > 0 && intr > regs.intmask)
+						do_interrupt (intr);
+#ifdef WITH_PPC
+				}
+#endif
+			}
+		}
+
 		if (!first)
 			x_do_cycles(currprefs.cpu_cycle_exact ? 2 * CYCLE_UNIT : 4 * CYCLE_UNIT);
 		first = false;
 		if (regs.spcflags & SPCFLAG_COPPER)
 			do_copper();
 
-		if (m68k_interrupt_delay) {
-			unset_special(SPCFLAG_INT);
-			ipl_fetch ();
-			if (time_for_interrupt()) {
-				do_interrupt(regs.ipl);
-			}
-		} else {
-			if (regs.spcflags & (SPCFLAG_INT | SPCFLAG_DOINT)) {
-				int intr = intlev();
-				unset_special(SPCFLAG_INT | SPCFLAG_DOINT);
-					if (intr > 0 && intr > regs.intmask)
-						do_interrupt(intr);
-			}
-		}
-
 		if (regs.spcflags & SPCFLAG_MODE_CHANGE) {
 			m68k_resumestopped();
 			return 1;
 		}
+
+#ifdef WITH_PPC
+		if (ppc_state) {
+			uae_ppc_execute_check();
+			uae_ppc_poll_check_halt();
+		}
+#endif
+
 	}
 
 	if (regs.spcflags & SPCFLAG_TRACE)
-		do_trace();
+		do_trace ();
 
 	if (regs.spcflags & SPCFLAG_UAEINT) {
 		check_uae_int_request();
 		unset_special(SPCFLAG_UAEINT);
 	}
-	
+
 	if (m68k_interrupt_delay) {
-		if (time_for_interrupt()) {
+		if (time_for_interrupt ()) {
 			unset_special(SPCFLAG_INT);
-			do_interrupt(regs.ipl);
+			do_interrupt (regs.ipl);
 		}
 	} else {
 		if (regs.spcflags & SPCFLAG_INT) {
-			int intr = intlev();
-			unset_special(SPCFLAG_INT | SPCFLAG_DOINT);
+			int intr = intlev ();
+			unset_special (SPCFLAG_INT | SPCFLAG_DOINT);
 			if (intr > 0 && (intr > regs.intmask || intr == 7))
-				do_interrupt(intr);
+				do_interrupt (intr);
 		}
 	}
 
-  if (regs.spcflags & SPCFLAG_DOINT) {
-		unset_special(SPCFLAG_DOINT);
-		set_special(SPCFLAG_INT);
+	if (regs.spcflags & SPCFLAG_DOINT) {
+		unset_special (SPCFLAG_DOINT);
+		set_special (SPCFLAG_INT);
 	}
 
   if (regs.spcflags & SPCFLAG_BRK) {
