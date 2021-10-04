@@ -191,6 +191,7 @@ STATIC_INLINE uae_u32 munge24 (uae_u32 x)
 
 extern int cpu_cycles;
 extern int m68k_pc_indirect;
+extern bool m68k_interrupt_delay;
 
 extern void safe_interrupt_set(int, int, bool);
 

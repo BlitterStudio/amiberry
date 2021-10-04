@@ -6454,7 +6454,7 @@ static void send_interrupt_do(uae_u32 v)
 // external delayed interrupt (4 CCKs minimum)
 void send_interrupt(int num, int delay)
 {
-	if (delay > 0 && currprefs.cpu_compatible) {
+	if (delay > 0 && m68k_interrupt_delay) {
 		event2_newevent_xx(-1, delay, num, send_interrupt_do);
 	} else {
 		send_interrupt_do(num);
@@ -6468,7 +6468,7 @@ static void doint_delay_do(uae_u32 v)
 
 static void doint_delay(void)
 {
-	if (currprefs.cpu_compatible) {
+	if (m68k_interrupt_delay) {
 		event2_newevent_xx(-1, CYCLE_UNIT + CYCLE_UNIT / 2, 0, doint_delay_do);
 	} else {
 		doint_delay_do(0);
@@ -9852,7 +9852,7 @@ static void dmal_emu(uae_u32 v)
 		}
 	}
 
-	if (v >= 6) {
+	if (v >= 6 && v < 14) {
 		v -= 6;
 		int nr = v / 2;
 		uaecptr pt = audio_getpt(nr, (v & 1) != 0);
@@ -9879,14 +9879,14 @@ static void dmal_emu(uae_u32 v)
 		}
 		regs.chipset_latch_rw = last_custom_value = dat;
 		AUDxDAT(nr, dat, pt);
-	} else {
+	} else if (v >= 0 && v < 6) {
 		uae_u16 dat = 0;
 		int w = v & 1;
-		uaecptr pt = disk_getpt();
 		// disk_fifostatus() needed in >100% disk speed modes
 		if (w) {
 			// write to disk
 			if (disk_fifostatus() <= 0) {
+				uaecptr pt = disk_getpt();
 				if (dmal_ce) {
 #ifdef DEBUGGER
 					if (debug_dma) {
@@ -9914,6 +9914,7 @@ static void dmal_emu(uae_u32 v)
 		} else {
 			// read from disk
 			if (disk_fifostatus() >= 0) {
+				uaecptr pt = disk_getpt();
 				dat = DSKDATR();
 				if (dmal_ce) {
 #ifdef DEBUGGER
@@ -9926,8 +9927,11 @@ static void dmal_emu(uae_u32 v)
 #endif
 				}
 				chipmem_wput_indirect(pt, dat);
+				regs.chipset_latch_rw = last_custom_value = dat;
 			}
 		}
+	} else {
+		write_log(_T("invalid DMAL position %d\n"), v);
 	}
 }
 

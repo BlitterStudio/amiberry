@@ -446,7 +446,11 @@ static void blitter_done_all(int hpos)
 {
 	blt_info.blit_main = 0;
 	blt_info.blit_finald = 0;
-	blt_info.finishhpos = (hpos + 1) % maxhpos;
+	if (m68k_interrupt_delay && hpos >= 0) {
+		blt_info.finishhpos = (hpos + 1) % maxhpos;
+	} else {
+		blt_info.finishhpos = -1;
+	}
 	blitter_interrupt();
 	blitter_done_notify(blitline);
 	if (!blt_info.blit_queued && !blt_info.blit_finald) {
