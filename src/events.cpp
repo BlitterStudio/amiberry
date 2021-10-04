@@ -376,7 +376,24 @@ void event2_newevent_xx (int no, evt t, uae_u32 data, evfunc2 func)
 				no = ev2_misc;
 			if (no == next) {
 				write_log (_T("out of event2's!\n"));
-				return;
+				// execute most recent event immediately
+				evt mintime = ~0L;
+				int minevent = -1;
+				evt ct = get_cycles();
+				for (int i = 0; i < ev2_max; i++) {
+					if (eventtab2[i].active) {
+						evt eventtime = eventtab2[i].evtime - ct;
+						if (eventtime < mintime) {
+							mintime = eventtime;
+							minevent = i;
+						}
+					}
+				}
+				if (minevent >= 0) {
+					eventtab2[minevent].active = false;
+					eventtab2[minevent].handler(eventtab2[minevent].data);
+				}
+				continue;
 			}
 		}
 		next = no;
