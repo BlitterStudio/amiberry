@@ -3884,7 +3884,7 @@ static bool issprbrd(int hpos, uae_u16 bplcon0, uae_u16 bplcon3)
 
 static void record_register_change(int hpos, int regno, uae_u16 value)
 {
-	if (regno == 0x100) { // BPLCON0
+	if (regno == 0x0100 || regno == 0x0101) { // BPLCON0
 		if (value & 0x800)
 			thisline_decision.ham_seen = 1;
 		thisline_decision.ehb_seen = isehb(value, bplcon2);
@@ -6680,15 +6680,15 @@ static void BPLCON0_Denise(int hpos, uae_u16 v)
 		return;
 	}
 
-	bplcon0d_old = -1;
 	// fake unused 0x0080 bit as an EHB bit (see below)
 	if (isehb(bplcon0d, bplcon2)) {
-		v |= 0x80;
+		v |= 0x0080;
 	}
 
-	record_register_change(hpos, 0x100, (bplcon0d & ~(0x800 | 0x400 | 0x80 | 0x01)) | (v & (0x0800 | 0x400 | 0x80 | 0x01)));
+	record_register_change(hpos, 0x101, v);
 
-	bplcon0d = v & ~0x80;
+	bplcon0d = v & ~0x0080;
+	bplcon0d_old = -1;
 
 #ifdef ECS_DENISE
 	if (ecs_denise) {

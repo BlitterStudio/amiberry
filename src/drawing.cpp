@@ -3136,6 +3136,12 @@ static void pfield_expand_dp_bplconx (int regno, int v, int hp, int vp)
 			dp_for_drawing->bplres = currprefs.gfx_resolution;
 		extblankcheck();
 		break;
+	case 0x101: // BPLCON0 partial
+		dp_for_drawing->bplcon0 &= ~(0x0800 | 0x0400 | 0x0080 | 0x0001);
+		dp_for_drawing->bplcon0 |= v & (0x0800 | 0x0400 | 0x0080 | 0x0001);
+		dp_for_drawing->ham_seen = isham(v);
+		extblankcheck();
+		break;
 	case 0x104: // BPLCON2
 		dp_for_drawing->bplcon2 = v;
 		break;
@@ -3540,7 +3546,14 @@ static void pfield_draw_line(struct vidbuffer *vb, int lineno, int gfx_ypos, int
 				dp_for_drawing->bplcon4bm = b4bm;
 				dp_for_drawing->bplcon4bm = b4sp;
 				dp_for_drawing->fmode = fm;
+				dp_for_drawing->bplres = GET_RES_DENISE(dp_for_drawing->bplcon0);
+				dp_for_drawing->nr_planes = GET_PLANES(dp_for_drawing->bplcon0);
+				dp_for_drawing->ham_seen = isham(dp_for_drawing->bplcon0);
+				if (currprefs.chipset_hr && dp_for_drawing->bplres < currprefs.gfx_resolution) {
+					dp_for_drawing->bplres = currprefs.gfx_resolution;
+				}
 				pfield_expand_dp_bplcon();
+				set_res_shift();
 			}
 			hposblank = ohposblank;
 			ham_decode_pixel = src_pixel;
