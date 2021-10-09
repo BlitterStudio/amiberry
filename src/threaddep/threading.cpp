@@ -71,3 +71,8 @@ void uae_set_thread_priority(uae_thread_id* id, int pri)
 {
 	SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH);
 }
+
+SDL_threadID uae_thread_get_id()
+{
+	return SDL_GetThreadID(nullptr);
+}

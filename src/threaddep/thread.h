@@ -33,6 +33,7 @@ void uae_end_thread(uae_thread_id* thread);
 int uae_start_thread(const char* name, uae_thread_function fn, void* arg, uae_thread_id* thread);
 int uae_start_thread_fast(uae_thread_function fn, void* arg, uae_thread_id* thread);
 int uae_wait_thread(uae_thread_id* thread);
+SDL_threadID uae_thread_get_id();
 
 /* Do nothing; thread exits if thread function returns.  */
 #define UAE_THREAD_EXIT do {} while (0)

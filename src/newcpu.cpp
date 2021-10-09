@@ -2681,6 +2681,286 @@ static void m68k_run_1_ce(void)
 
 #endif
 
+#ifdef WITH_THREADED_CPU
+static volatile int cpu_thread_active;
+static uae_sem_t cpu_in_sema, cpu_out_sema, cpu_wakeup_sema;
+
+static volatile int cpu_thread_ilvl;
+static volatile uae_u32 cpu_thread_indirect_mode;
+static volatile uae_u32 cpu_thread_indirect_addr;
+static volatile uae_u32 cpu_thread_indirect_val;
+static volatile uae_u32 cpu_thread_indirect_size;
+static volatile uae_u32 cpu_thread_reset;
+static SDL_threadID cpu_thread_tid;
+
+static bool m68k_cs_initialized;
+
+static int do_specialties_thread(void)
+{
+	if (regs.spcflags & SPCFLAG_MODE_CHANGE)
+		return 1;
+
+#ifdef JIT
+	unset_special(SPCFLAG_END_COMPILE);   /* has done its job */
+#endif
+
+	if (regs.spcflags & SPCFLAG_DOTRACE)
+		Exception(9);
+
+	if (regs.spcflags & SPCFLAG_TRAP) {
+		unset_special(SPCFLAG_TRAP);
+		Exception(3);
+	}
+
+	if (regs.spcflags & SPCFLAG_TRACE)
+		do_trace();
+
+	for (;;) {
+
+		if (regs.spcflags & (SPCFLAG_BRK | SPCFLAG_MODE_CHANGE)) {
+			return 1;
+		}
+
+		int ilvl = cpu_thread_ilvl;
+		if (ilvl > 0 && (ilvl > regs.intmask || ilvl == 7)) {
+			do_interrupt(ilvl);
+		}
+
+		if (!(regs.spcflags & SPCFLAG_STOP))
+			break;
+
+		uae_sem_wait(&cpu_wakeup_sema);
+	}
+
+	return 0;
+}
+
+static void init_cpu_thread(void)
+{
+	if (!currprefs.cpu_thread)
+		return;
+	if (m68k_cs_initialized)
+		return;
+	uae_sem_init(&cpu_in_sema, 0, 0);
+	uae_sem_init(&cpu_out_sema, 0, 0);
+	uae_sem_init(&cpu_wakeup_sema, 0, 0);
+	m68k_cs_initialized = true;
+}
+
+extern addrbank* thread_mem_banks[MEMORY_BANKS];
+
+uae_u32 process_cpu_indirect_memory_read(uae_u32 addr, int size)
+{
+	// Do direct access if call is from filesystem etc thread 
+	if (cpu_thread_tid != uae_thread_get_id()) {
+		uae_u32 data = 0;
+		addrbank* ab = thread_mem_banks[bankindex(addr)];
+		switch (size)
+		{
+		case 0:
+			data = ab->bget(addr) & 0xff;
+			break;
+		case 1:
+			data = ab->wget(addr) & 0xffff;
+			break;
+		case 2:
+			data = ab->lget(addr);
+			break;
+		}
+		return data;
+	}
+
+	cpu_thread_indirect_mode = 2;
+	cpu_thread_indirect_addr = addr;
+	cpu_thread_indirect_size = size;
+	uae_sem_post(&cpu_out_sema);
+	uae_sem_wait(&cpu_in_sema);
+	cpu_thread_indirect_mode = 0xfe;
+	return cpu_thread_indirect_val;
+}
+
+void process_cpu_indirect_memory_write(uae_u32 addr, uae_u32 data, int size)
+{
+	if (cpu_thread_tid != uae_thread_get_id()) {
+		addrbank* ab = thread_mem_banks[bankindex(addr)];
+		switch (size)
+		{
+		case 0:
+			ab->bput(addr, data & 0xff);
+			break;
+		case 1:
+			ab->wput(addr, data & 0xffff);
+			break;
+		case 2:
+			ab->lput(addr, data);
+			break;
+		}
+		return;
+	}
+	cpu_thread_indirect_mode = 1;
+	cpu_thread_indirect_addr = addr;
+	cpu_thread_indirect_size = size;
+	cpu_thread_indirect_val = data;
+	uae_sem_post(&cpu_out_sema);
+	uae_sem_wait(&cpu_in_sema);
+	cpu_thread_indirect_mode = 0xff;
+}
+
+static void run_cpu_thread(int (*f)(void*))
+{
+	int framecnt = -1;
+	int vp = 0;
+	int intlev_prev = 0;
+
+	cpu_thread_active = 0;
+	uae_sem_init(&cpu_in_sema, 0, 0);
+	uae_sem_init(&cpu_out_sema, 0, 0);
+	uae_sem_init(&cpu_wakeup_sema, 0, 0);
+
+	if (!uae_start_thread(_T("cpu"), f, NULL, NULL))
+		return;
+	while (!cpu_thread_active) {
+		sleep_millis(1);
+	}
+
+	while (!(regs.spcflags & SPCFLAG_MODE_CHANGE)) {
+		int maxperloop = 10;
+
+		while (!uae_sem_trywait(&cpu_out_sema)) {
+			uae_u32 addr, data, size, mode;
+
+			addr = cpu_thread_indirect_addr;
+			data = cpu_thread_indirect_val;
+			size = cpu_thread_indirect_size;
+			mode = cpu_thread_indirect_mode;
+
+			switch (mode)
+			{
+			case 1:
+			{
+				addrbank* ab = thread_mem_banks[bankindex(addr)];
+				switch (size)
+				{
+				case 0:
+					ab->bput(addr, data & 0xff);
+					break;
+				case 1:
+					ab->wput(addr, data & 0xffff);
+					break;
+				case 2:
+					ab->lput(addr, data);
+					break;
+				}
+				uae_sem_post(&cpu_in_sema);
+				break;
+			}
+			case 2:
+			{
+				addrbank* ab = thread_mem_banks[bankindex(addr)];
+				switch (size)
+				{
+				case 0:
+					data = ab->bget(addr) & 0xff;
+					break;
+				case 1:
+					data = ab->wget(addr) & 0xffff;
+					break;
+				case 2:
+					data = ab->lget(addr);
+					break;
+				}
+				cpu_thread_indirect_val = data;
+				uae_sem_post(&cpu_in_sema);
+				break;
+			}
+			default:
+				write_log(_T("cpu_thread_indirect_mode=%08x!\n"), mode);
+				break;
+			}
+
+			if (maxperloop-- < 0)
+				break;
+		}
+
+		if (framecnt != timeframes) {
+			framecnt = timeframes;
+		}
+
+		if (cpu_thread_reset) {
+			bool hardreset = cpu_thread_reset & 2;
+			bool keyboardreset = cpu_thread_reset & 4;
+			custom_reset(hardreset, keyboardreset);
+			cpu_thread_reset = 0;
+			uae_sem_post(&cpu_in_sema);
+		}
+
+		if (regs.spcflags & SPCFLAG_BRK) {
+			unset_special(SPCFLAG_BRK);
+#ifdef DEBUGGER
+			if (debugging) {
+				debug();
+			}
+#endif
+		}
+
+		if (vp == vpos) {
+
+			do_cycles((maxhpos / 2) * CYCLE_UNIT);
+
+			if (regs.spcflags & SPCFLAG_COPPER) {
+				do_copper();
+			}
+
+			check_uae_int_request();
+			if (regs.spcflags & (SPCFLAG_INT | SPCFLAG_DOINT)) {
+				int intr = intlev();
+				unset_special(SPCFLAG_INT | SPCFLAG_DOINT);
+				if (intr > 0) {
+					cpu_thread_ilvl = intr;
+					cycles_do_special();
+					uae_sem_post(&cpu_wakeup_sema);
+				}
+				else {
+					cpu_thread_ilvl = 0;
+				}
+			}
+			continue;
+		}
+
+		frame_time_t next = vsyncmintimepre + (vsynctimebase * vpos / (maxvpos + 1));
+		frame_time_t c = read_processor_time();
+		if ((int)next - (int)c > 0 && (int)next - (int)c < vsyncmaxtime * 2)
+			continue;
+
+		vp = vpos;
+
+	}
+
+	while (cpu_thread_active) {
+		uae_sem_post(&cpu_in_sema);
+		uae_sem_post(&cpu_wakeup_sema);
+		sleep_millis(1);
+	}
+
+}
+
+#endif
+
+void custom_reset_cpu(bool hardreset, bool keyboardreset)
+{
+#ifdef WITH_THREADED_CPU
+	if (cpu_thread_tid != uae_thread_get_id()) {
+		custom_reset(hardreset, keyboardreset);
+		return;
+	}
+	cpu_thread_reset = 1 | (hardreset ? 2 : 0) | (keyboardreset ? 4 : 0);
+	uae_sem_post(&cpu_wakeup_sema);
+	uae_sem_wait(&cpu_in_sema);
+#else
+	custom_reset(hardreset, keyboardreset);
+#endif
+}
+
 #ifdef JIT  /* Completely different run_2 replacement */
 
 void execute_exception(uae_u32 cycles)
@@ -2695,9 +2975,11 @@ void execute_exception(uae_u32 cycles)
 
 void do_nothing(void)
 {
-	/* What did you expect this to do? */
-	do_cycles(0);
-	/* I bet you didn't expect *that* ;-) */
+	if (!currprefs.cpu_thread) {
+		/* What did you expect this to do? */
+		do_cycles(0);
+		/* I bet you didn't expect *that* ;-) */
+	}
 }
 
 static uae_u32 get_jit_opcode(void)
@@ -2717,7 +2999,14 @@ void exec_nostats(void)
 		cpu_cycles = (*cpufunctbl[r->opcode])(r->opcode);
 		cpu_cycles = adjust_cycles(cpu_cycles);
 
-		do_cycles(cpu_cycles);
+		if (!currprefs.cpu_thread) {
+			do_cycles(cpu_cycles);
+
+#ifdef WITH_PPC
+			if (ppc_state)
+				ppc_interrupt(intlev());
+#endif
+		}
 
 		if (end_block(r->opcode) || r->spcflags || uae_int_requested)
 			return; /* We will deal with the spcflags in the caller */
@@ -2747,7 +3036,9 @@ void execute_normal(void)
 
 		cpu_cycles = (*cpufunctbl[r->opcode])(r->opcode);
 		cpu_cycles = adjust_cycles(cpu_cycles);
-		do_cycles(cpu_cycles);
+		if (!currprefs.cpu_thread) {
+			do_cycles(cpu_cycles);
+		}
 		total_cycles += cpu_cycles;
 
 		pc_hist[blocklen].specmem = special_mem;
@@ -2757,27 +3048,68 @@ void execute_normal(void)
 			return; /* We will deal with the spcflags in the caller */
 		}
 		/* No need to check regs.spcflags, because if they were set,
-we'd have ended up inside that "if" */
+			we'd have ended up inside that "if" */
 	}
 }
 
 typedef void compiled_handler(void);
 
-static void m68k_run_jit (void)
+#ifdef WITH_THREADED_CPU
+static int cpu_thread_run_jit(void* v)
+{
+	cpu_thread_tid = uae_thread_get_id();
+	cpu_thread_active = 1;
+#ifdef USE_STRUCTURED_EXCEPTION_HANDLING
+	__try
+#endif
 	{
 		for (;;) {
 			((compiled_handler*)(pushall_call_handler))();
 			/* Whenever we return from that, we should check spcflags */
+			if (regs.spcflags || cpu_thread_ilvl > 0) {
+				if (do_specialties_thread()) {
+					break;
+				}
+			}
+		}
+	}
+#ifdef USE_STRUCTURED_EXCEPTION_HANDLING
+#ifdef JIT
+	__except (EvalException(GetExceptionInformation()))
+#else
+	__except (DummyException(GetExceptionInformation(), GetExceptionCode()))
+#endif
+	{
+		// EvalException does the good stuff...
+	}
+#endif
+	cpu_thread_active = 0;
+	return 0;
+}
+#endif
+
+static void m68k_run_jit(void)
+{
+#ifdef WITH_THREADED_CPU
+	if (currprefs.cpu_thread) {
+		run_cpu_thread(cpu_thread_run_jit);
+		return;
+	}
+#endif
+
+	for (;;) {
+		((compiled_handler*)(pushall_call_handler))();
+		/* Whenever we return from that, we should check spcflags */
 		check_uae_int_request();
-  	if (regs.spcflags) {
-	    if (do_specialties (0)) {
+		if (regs.spcflags) {
+			if (do_specialties(0)) {
 				return;
 			}
 		}
 		// If T0, T1 or M got set: run normal emulation loop
 		if (regs.t0 || regs.t1 || regs.m) {
 			flush_icache(3);
-			struct regstruct *r = &regs;
+			struct regstruct* r = &regs;
 			bool exit = false;
 			while (!exit && (regs.t0 || regs.t1 || regs.m)) {
 				r->instruction_pc = m68k_getpc();
@@ -2809,6 +3141,45 @@ void cpu_halt(int id)
 	}
 	set_special(SPCFLAG_CHECK);
 }
+
+#ifdef WITH_THREADED_CPU
+static int cpu_thread_run_2(void* v)
+{
+	bool exit = false;
+	struct regstruct* r = &regs;
+
+	cpu_thread_tid = uae_thread_get_id();
+
+	cpu_thread_active = 1;
+	while (!exit) {
+		TRY(prb)
+		{
+			while (!exit) {
+				r->instruction_pc = m68k_getpc();
+
+				r->opcode = x_get_iword(0);
+
+				(*cpufunctbl[r->opcode])(r->opcode);
+
+				if (regs.spcflags || cpu_thread_ilvl > 0) {
+					if (do_specialties_thread())
+						exit = true;
+				}
+
+			}
+		} CATCH(prb)
+		{
+			bus_error();
+			if (r->spcflags) {
+				if (do_specialties_thread())
+					exit = true;
+			}
+		} ENDTRY
+	}
+	cpu_thread_active = 0;
+	return 0;
+}
+#endif
 
 /* Same thing, but don't use prefetch to get opcode.  */
 static void m68k_run_2_000(void)
@@ -2843,33 +3214,40 @@ static void m68k_run_2_000(void)
 }
 
 static void m68k_run_2_020(void)
-			{
-	struct regstruct *r = &regs;
+{
+#ifdef WITH_THREADED_CPU
+	if (currprefs.cpu_thread) {
+		run_cpu_thread(cpu_thread_run_2);
+		return;
+	}
+#endif
+
+	struct regstruct* r = &regs;
 	bool exit = false;
 
 	while (!exit) {
-	  TRY(prb) {
+		TRY(prb) {
 			while (!exit) {
-		    r->instruction_pc = m68k_getpc ();
-  
+				r->instruction_pc = m68k_getpc();
+
 				r->opcode = get_diword(0);
 
-	      cpu_cycles = (*cpufunctbl[r->opcode])(r->opcode);
-	      cpu_cycles = adjust_cycles(cpu_cycles);
+				cpu_cycles = (*cpufunctbl[r->opcode])(r->opcode);
+				cpu_cycles = adjust_cycles(cpu_cycles);
 				do_cycles(cpu_cycles);
 
-		    if (r->spcflags) {
-				if (do_specialties(cpu_cycles))
-					exit = true;
+				if (r->spcflags) {
+					if (do_specialties(cpu_cycles))
+						exit = true;
+				}
 			}
-		}
-	  } CATCH(prb) {
-		  bus_error();
+		} CATCH(prb) {
+			bus_error();
 			if (r->spcflags) {
 				if (do_specialties(cpu_cycles))
 					exit = true;
 			}
-	  } ENDTRY
+		} ENDTRY
 	}
 }
 
