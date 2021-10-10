@@ -50,13 +50,14 @@ extern bool no_gui, quit_to_gui;
 #define LED_MAX 12
 
 struct gui_info_drive {
-	bool drive_motor;        /* motor on off */
-	uae_u8 drive_track;        /* rw-head track */
-	bool drive_writing;        /* drive is writing */
-	bool drive_disabled;    /* drive is disabled */
-	TCHAR df[256];            /* inserted image */
-	uae_u32 crc32;            /* crc32 of image */
-	bool floppy_protected;    /* image is write protected */
+	bool drive_motor;		/* motor on off */
+	uae_u8 drive_track;		/* rw-head track */
+	bool drive_writing;		/* drive is writing */
+	bool drive_disabled;	/* drive is disabled */
+	TCHAR df[256];			/* inserted image */
+	uae_u32 crc32;			/* crc32 of image */
+	bool floppy_protected;	/* image is write protected */
+	bool floppy_inserted;   /* disk inserted */
 };
 
 struct gui_info

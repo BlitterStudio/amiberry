@@ -67,6 +67,17 @@ struct strlist
 
 #define INTERNALEVENT_COUNT 1
 
+#if 0
+struct uae_input_device_event
+{
+	uae_s16 eventid[MAX_INPUT_SUB_EVENT_ALL];
+	TCHAR *custom[MAX_INPUT_SUB_EVENT_ALL];
+	uae_u64 flags[MAX_INPUT_SUB_EVENT_ALL];
+	uae_u8 port[MAX_INPUT_SUB_EVENT_ALL];
+	uae_s16 extra;
+};
+#endif
+
 struct uae_input_device
 {
 	TCHAR* name;
@@ -170,6 +181,7 @@ struct floppyslot
 	int dfxclick;
 	TCHAR dfxclickexternal[256];
 	bool forcedwriteprotect;
+	TCHAR config[256];
 };
 
 #define ASPECTMULT 1024
@@ -950,36 +962,39 @@ struct uae_prefs
 };
 
 extern int config_changed;
-extern void config_check_vsync(void);
-extern void set_config_changed(void);
+extern void config_check_vsync (void);
+extern void set_config_changed (void);
 
 /* Contains the filename of .uaerc */
 //extern TCHAR optionsfile[];
 extern void save_options(struct zfile*, struct uae_prefs*, int);
 
-extern void cfgfile_write(struct zfile*, const TCHAR* option, const TCHAR* format, ...);
-extern void cfgfile_dwrite(struct zfile*, const TCHAR* option, const TCHAR* format, ...);
-extern void cfgfile_target_write(struct zfile*, const TCHAR* option, const TCHAR* format, ...);
-extern void cfgfile_target_dwrite(struct zfile*, const TCHAR* option, const TCHAR* format, ...);
+extern void cfgfile_write (struct zfile *, const TCHAR *option, const TCHAR *format,...);
+extern void cfgfile_dwrite (struct zfile *, const TCHAR *option, const TCHAR *format,...);
+extern void cfgfile_target_write (struct zfile *, const TCHAR *option, const TCHAR *format,...);
+extern void cfgfile_target_dwrite (struct zfile *, const TCHAR *option, const TCHAR *format,...);
 
-extern void cfgfile_write_bool(struct zfile* f, const TCHAR* option, bool b);
-extern void cfgfile_dwrite_bool(struct zfile* f, const TCHAR* option, bool b);
-extern void cfgfile_target_write_bool(struct zfile* f, const TCHAR* option, bool b);
-extern void cfgfile_target_dwrite_bool(struct zfile* f, const TCHAR* option, bool b);
+extern void cfgfile_write_bool (struct zfile *f, const TCHAR *option, bool b);
+extern void cfgfile_dwrite_bool (struct zfile *f,const  TCHAR *option, bool b);
+extern void cfgfile_target_write_bool (struct zfile *f, const TCHAR *option, bool b);
+extern void cfgfile_target_dwrite_bool (struct zfile *f, const TCHAR *option, bool b);
 
-extern void cfgfile_write_str(struct zfile* f, const TCHAR* option, const TCHAR* value);
-extern void cfgfile_dwrite_str(struct zfile* f, const TCHAR* option, const TCHAR* value);
-extern void cfgfile_target_write_str(struct zfile* f, const TCHAR* option, const TCHAR* value);
-extern void cfgfile_target_dwrite_str(struct zfile* f, const TCHAR* option, const TCHAR* value);
+extern void cfgfile_write_str(struct zfile *f, const TCHAR *option, const TCHAR *value);
+extern void cfgfile_write_str_escape(struct zfile *f, const TCHAR *option, const TCHAR *value);
+extern void cfgfile_dwrite_str(struct zfile *f, const TCHAR *option, const TCHAR *value);
+extern void cfgfile_dwrite_str_escape(struct zfile *f, const TCHAR *option, const TCHAR *value);
+extern void cfgfile_target_write_str(struct zfile *f, const TCHAR *option, const TCHAR *value);
+extern void cfgfile_target_dwrite_str(struct zfile *f, const TCHAR *option, const TCHAR *value);
+extern void cfgfile_target_dwrite_str_escape(struct zfile *f, const TCHAR *option, const TCHAR *value);
 
-extern void cfgfile_backup(const TCHAR* path);
-extern struct uaedev_config_data* add_filesys_config(struct uae_prefs* p, int index, struct uaedev_config_info*);
-extern bool get_hd_geometry(struct uaedev_config_info*);
-extern void uci_set_defaults(struct uaedev_config_info* uci, bool rdb);
+extern void cfgfile_backup (const TCHAR *path);
+extern struct uaedev_config_data *add_filesys_config (struct uae_prefs *p, int index, struct uaedev_config_info*);
+extern bool get_hd_geometry (struct uaedev_config_info *);
+extern void uci_set_defaults (struct uaedev_config_info *uci, bool rdb);
 
-extern void error_log(const TCHAR*, ...);
-extern TCHAR* get_error_log(void);
-extern bool is_error_log(void);
+extern void error_log (const TCHAR*, ...);
+extern TCHAR *get_error_log (void);
+extern bool is_error_log (void);
 
 extern void default_prefs(struct uae_prefs*, bool, int);
 extern void discard_prefs(struct uae_prefs*, int);
@@ -992,14 +1007,14 @@ extern int bip_a4000(struct uae_prefs* p, int rom);
 extern int bip_cd32(struct uae_prefs* p, int rom);
 extern int bip_cdtv(struct uae_prefs* p, int rom);
 
-int parse_cmdline_option(struct uae_prefs*, TCHAR, const TCHAR*);
+int parse_cmdline_option (struct uae_prefs*, TCHAR, const TCHAR*);
 
 extern int cfgfile_separate_linea(const TCHAR* filename, char* line, TCHAR* line1b, TCHAR* line2b);
 extern int cfgfile_yesno(const TCHAR* option, const TCHAR* value, const TCHAR* name, bool* location);
 extern int cfgfile_intval(const TCHAR* option, const TCHAR* value, const TCHAR* name, int* location, int scale);
-extern int cfgfile_strval(const TCHAR* option, const TCHAR* value, const TCHAR* name, int* location,
-                          const TCHAR* table[], int more);
+extern int cfgfile_strval(const TCHAR *option, const TCHAR *value, const TCHAR *name, int *location, const TCHAR *table[], int more);
 extern int cfgfile_string(const TCHAR* option, const TCHAR* value, const TCHAR* name, TCHAR* location, int maxsz);
+extern int cfgfile_string_escape(const TCHAR *option, const TCHAR *value, const TCHAR *name, TCHAR *location, int maxsz);
 extern bool cfgfile_option_find(const TCHAR* s, const TCHAR* option);
 extern TCHAR* cfgfile_option_get(const TCHAR* s, const TCHAR* option);
 extern TCHAR* cfgfile_subst_path(const TCHAR* path, const TCHAR* subst, const TCHAR* file);
@@ -1030,8 +1045,7 @@ extern int cfgfile_get_description(struct uae_prefs* p, const TCHAR* filename, T
 extern void cfgfile_show_usage(void);
 extern int cfgfile_searchconfig(const TCHAR* in, int index, TCHAR* out, int outsize);
 extern uae_u32 cfgfile_uaelib(TrapContext* ctx, int mode, uae_u32 name, uae_u32 dst, uae_u32 maxlen);
-extern uae_u32 cfgfile_uaelib_modify(TrapContext* ctx, uae_u32 mode, uae_u32 parms, uae_u32 size, uae_u32 out,
-                                     uae_u32 outsize);
+extern uae_u32 cfgfile_uaelib_modify(TrapContext *ctx, uae_u32 mode, uae_u32 parms, uae_u32 size, uae_u32 out, uae_u32 outsize);
 extern uae_u32 cfgfile_modify(uae_u32 index, const TCHAR* parms, uae_u32 size, TCHAR* out, uae_u32 outsize);
 extern void cfgfile_addcfgparam(TCHAR*);
 extern int built_in_prefs(struct uae_prefs* p, int model, int config, int compa, int romcheck);

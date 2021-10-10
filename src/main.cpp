@@ -44,7 +44,7 @@
 //#include "luascript.h"
 //#include "uaenative.h"
 #include "tabletlibrary.h"
-//#include "cpuboard.h"
+#include "cpuboard.h"
 //#include "uae/ppc.h"
 #include "devices.h"
 #include "jit/compemu.h"
@@ -202,6 +202,10 @@ void fixup_cpu (struct uae_prefs *p)
 	if (p->cpu_frequency == 1000000)
 		p->cpu_frequency = 0;
 
+	//if (p->cpu_model >= 68020 && p->cpuboard_type && p->address_space_24 && cpuboard_32bit(p)) {
+	//	error_log (_T("24-bit address space is not supported with selected accelerator board configuration."));
+	//	p->address_space_24 = 0;
+	//}
 	if (p->cpu_model >= 68040 && p->address_space_24) {
 		error_log (_T("24-bit address space is not supported with 68040/060 configurations."));
 		p->address_space_24 = false;
@@ -285,6 +289,12 @@ void fixup_cpu (struct uae_prefs *p)
 		error_log (_T("Immediate blitter and waiting blits can't be enabled simultaneously.\n"));
 		p->waiting_blits = 0;
 	}
+
+	if (p->blitter_cycle_exact && !p->cpu_memory_cycle_exact) {
+		error_log(_T("Blitter cycle-exact requires at least CPU memory cycle-exact.\n"));
+		p->blitter_cycle_exact = 0;
+	}
+
 	if (p->cpu_memory_cycle_exact)
 		p->cpu_compatible = true;
 

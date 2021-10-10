@@ -92,6 +92,7 @@
 /* #define WITH_PCI */
 /* #define WITH_X86 */
 #define WITH_THREADED_CPU
+#define FLOPPYBRIDGE
 
 /* #define CUSTOM_SIMPLE */ /* simplified custom chipset emulation */
 /* #define CPUEMU_68000_ONLY */ /* drop 68010+ commands from CPUEMU_0 */

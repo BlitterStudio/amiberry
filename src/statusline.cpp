@@ -160,7 +160,7 @@ void draw_status_line_single(int monid, uae_u8 *buf, int bpp, int y, int totalwi
 					on_rgb = bpp == 2 ? 0xcc0000 : 0x0000cc;
 				}
 				half = gui_data.drive_side ? 1 : -1;
-				if (gid->df[0] == 0) {
+				if (!gid->floppy_inserted) {
 					pen_rgb = ledcolor(0x00aaaaaa, rc, gc, bc, alpha);
 				} else if (gid->floppy_protected) {
 					cb = ledcolor(0x00cc00, rc, gc, bc, alpha);
