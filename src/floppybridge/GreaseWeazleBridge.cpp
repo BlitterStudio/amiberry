@@ -7,7 +7,7 @@
 * are maintained from by GitHub repo at
 * https://github.com/RobSmithDev/FloppyDriveBridge
 */
-
+ 
 #include "floppybridge_config.h"
 
 #ifdef ROMTYPE_GREASEWEAZLEREADER_WRITER
@@ -21,13 +21,20 @@
 using namespace GreaseWeazle;
 
 
-static const TCHAR* DriverName = _T("Greaseweazle by Keir Fraser (UAE driver by Rob Smith)");
-
-
+static const FloppyDiskBridge::BridgeDriver DriverGreaseweazleFloppy = {
+	"Greaseweazle", "https://github.com/keirf/Greaseweazle", "Keir Fraser", "RobSmithDev", CONFIG_OPTIONS_COMPORT | CONFIG_OPTIONS_COMPORT_AUTODETECT | CONFIG_OPTIONS_DRIVE_AB | CONFIG_OPTIONS_SMARTSPEED | CONFIG_OPTIONS_AUTOCACHE
+};
 
 // Flags from WINUAE
-GreaseWeazleDiskBridge::GreaseWeazleDiskBridge(const int device_settings, const bool canStall, const bool useIndex) : CommonBridgeTemplate(canStall, useIndex), m_useDriveA((device_settings & 0x0F) == 0) {
+GreaseWeazleDiskBridge::GreaseWeazleDiskBridge(BridgeMode bridgeMode, BridgeDensityMode bridgeDensity, bool enableAutoCache, bool useSmartSpeed, bool autoDetectComPort, char* comPort, bool driveOnB) :
+	CommonBridgeTemplate(bridgeMode, bridgeDensity, enableAutoCache, useSmartSpeed), m_useDriveA(!driveOnB), m_comPort(autoDetectComPort ? "" : comPort) {
 }
+
+// This is for the static version
+GreaseWeazleDiskBridge::GreaseWeazleDiskBridge(BridgeMode bridgeMode, BridgeDensityMode bridgeDensity, int uaeSettings) :
+	CommonBridgeTemplate(bridgeMode, bridgeDensity, false, false), m_useDriveA((uaeSettings & 0x0F) == 0), m_comPort("") {
+}
+
 
 GreaseWeazleDiskBridge::~GreaseWeazleDiskBridge() {
 }
@@ -61,10 +68,15 @@ void GreaseWeazleDiskBridge::closeInterface() {
 // Called to start the interface, you should update any error messages if it fails.  This needs to be ready to see to any cylinder and so should already know where cylinder 0 is
 bool GreaseWeazleDiskBridge::openInterface(std::string& errorMessage) {
 
-	GWResponse error = m_io.openPort(m_useDriveA);
+	GWResponse error = m_io.openPort(m_comPort, m_useDriveA);
 
 	if (error == GWResponse::drOK) {
-		m_io.findTrack0();
+		if (m_io.findTrack0() == GWResponse::drRewindFailure) {
+			errorMessage = "Failed to find track 0 (usually when Drive A and B are the wrong way around)";
+			m_io.closePort();
+			return false;
+		}
+		m_currentCylinder = 0;
 
 		if (!m_io.supportsDiskChange()) {
 #ifdef _WIN32			
@@ -78,7 +90,7 @@ bool GreaseWeazleDiskBridge::openInterface(std::string& errorMessage) {
 			if (!hasBeenSeen) {
 				hasBeenSeen = 1;
 				if (key) RegSetValueEx(key, L"GreaseWeazleSupport", NULL, REG_DWORD, (LPBYTE)&hasBeenSeen, sizeof(hasBeenSeen));
-				MessageBox(GetDesktopWindow(), _T("The Greaseweazle board you are using does not support access to the DISK CHANGE pin.\nThis is not optimal and will result in a higher amount of disk access.\nIf you are sure that it does, please update its firmware."), _T("Greaseweazle Note"), MB_OK | MB_ICONINFORMATION);
+				errorMessage = "The Greaseweazle board you are using does not support access to the DISK CHANGE pin.\nThis is not optimal and will result in a higher amount of disk access.\nIf you are sure that it does, please update its firmware.";
 			}
 			if (key) RegCloseKey(key);
 #endif			
@@ -103,15 +115,39 @@ bool GreaseWeazleDiskBridge::openInterface(std::string& errorMessage) {
 	return false;
 }
 
-// Duplicate of the one below, but here for consistancy - Returns the name of interface.  This pointer should remain valid after the class is destroyed
-const TCHAR* GreaseWeazleDiskBridge::_getDriveIDName() {
-	return DriverName;
+const FloppyDiskBridge::BridgeDriver* GreaseWeazleDiskBridge::staticBridgeInformation() {
+	return &DriverGreaseweazleFloppy;
+}
+
+// Get the name of the drive
+const FloppyDiskBridge::BridgeDriver* GreaseWeazleDiskBridge::_getDriverInfo() {
+	return staticBridgeInformation();
 }
 
 // Duplicate of the one below, but here for consistancy - Returns the name of interface.  This pointer should remain valid after the class is destroyed
 const FloppyDiskBridge::DriveTypeID GreaseWeazleDiskBridge::_getDriveTypeID() {
-	return FloppyDiskBridge::DriveTypeID::dti35DD;
+	return m_isHDDisk ? FloppyDiskBridge::DriveTypeID::dti35HD : FloppyDiskBridge::DriveTypeID::dti35DD;
 }
+
+// Called when a disk is inserted so that you can (re)populate the response to _getDriveTypeID()
+void GreaseWeazleDiskBridge::checkDiskType() {
+	bool capacity;
+	if (m_io.checkDiskCapacity(capacity) == GreaseWeazle::GWResponse::drOK) {
+		m_isHDDisk = capacity;
+		m_io.setDiskCapacity(m_isHDDisk);
+	}
+	else {
+		m_isHDDisk = false;
+		m_io.setDiskCapacity(m_isHDDisk);
+	}
+}
+
+// Called to force into DD or HD mode.  Overrides checkDiskType() until checkDiskType() is called again
+void GreaseWeazleDiskBridge::forceDiskDensity(bool forceHD) {
+	m_isHDDisk = forceHD;
+	m_io.setDiskCapacity(m_isHDDisk);
+}
+
 
 // Called to switch which head is being used right now.  Returns success or not
 bool GreaseWeazleDiskBridge::setActiveSurface(const DiskSurface activeSurface) {
@@ -137,7 +173,7 @@ bool GreaseWeazleDiskBridge::getDiskChangeStatus(const bool forceCheck) {
 	// We actually trigger a SEEK operation to ensure this is right
 	if (forceCheck) {
 		if (m_io.checkForDisk(forceCheck) == GWResponse::drNoDiskInDrive) {
-			m_io.selectTrack((m_currentCylinder > 40) ? m_currentCylinder + 1 : m_currentCylinder - 1, GreaseWeazle::TrackSearchSpeed::tssNormal, true);
+			m_io.selectTrack((m_currentCylinder > 40) ? m_currentCylinder - 1 : m_currentCylinder + 1, GreaseWeazle::TrackSearchSpeed::tssNormal, true);
 			m_io.selectTrack(m_currentCylinder, GreaseWeazle::TrackSearchSpeed::tssNormal, true);
 		}
 	}

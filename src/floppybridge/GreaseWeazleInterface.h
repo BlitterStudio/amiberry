@@ -19,17 +19,7 @@
 #include "RotationExtractor.h"
 #include "SerialIO.h"
 
-// Paula on the Amiga used to find the SYNC then read 1900 WORDS. (12868 bytes)
-// As the PC is doing the SYNC we need to read more than this to allow a further overlap
-// This number must match what the sketch in the Arduino is set to. 
-#define RAW_TRACKDATA_LENGTH    (0x1900*2+0x440)
-// With the disk spinning at 300rpm, and data rate of 500kbps, for a full revolution we should receive 12500 bytes of data (12.5k)
-// The above buffer assumes a full Paula data capture plsu the size of a sector.
-
 namespace GreaseWeazle {
-
-	// Array to hold data from a floppy disk read
-	typedef unsigned char RawTrackData[RAW_TRACKDATA_LENGTH];
 
 	// Represent which side of the disk we're looking at
 	enum class DiskSurface {
@@ -156,6 +146,7 @@ namespace GreaseWeazle {
 		bool			m_pinWrProtectAvailable = false;
 		bool			m_isWriteProtected = false;
 		bool			m_selectStatus = false;
+		bool			m_inHDMode = false;
 
 		// Version information read during openPort
 		GWVersionInformation m_gwVersionInformation;
@@ -194,8 +185,14 @@ namespace GreaseWeazle {
 		inline bool supportsDiskChange() const { return m_pinDskChangeAvailable; };
 		inline bool isWriteProtected() const { return m_isWriteProtected; };
 
-		// Attempts to open the reader running on the COM port number provided.  
-		GWResponse openPort(bool useDriveA);
+		// Change the disk capacity we're using
+		void setDiskCapacity(bool hd) { m_inHDMode = hd; };
+
+		// Test the inserted disk and see if its HD or not
+		GWResponse checkDiskCapacity(bool& isHD);
+
+		// Attempts to open the reader running on the COM port provided (or blank for auto-detect)
+		GWResponse openPort(const std::string& comPort, bool useDriveA);
 
 		// Reads a complete rotation of the disk, and returns it using the callback function whcih can return FALSE to stop
 		// An instance of RotationExtractor is required.  This is purely to save on re-allocations.  It is internally reset each time

@@ -117,14 +117,19 @@ std::wstring findPortNumber() {
 	return bestPort;
 }
 
-// Attempts to open the reader running on the COM port number provided.  Port MUST support 2M baud
-GWResponse GreaseWeazleInterface::openPort(bool useDriveA) {
+// Attempts to open the reader running on the COM port provided (or blank for auto-detect)
+GWResponse GreaseWeazleInterface::openPort(const std::string& comPort, bool useDriveA) {
 	closePort();
 
 	m_motorIsEnabled = false;
 
+	m_inHDMode = false;
+
+	std::wstring wComPort;
+	quicka2w(comPort, wComPort);
+
 	// Find and detect the port
-	std::wstring gwPortNumber = findPortNumber();
+	std::wstring gwPortNumber = wComPort.length() ? wComPort : findPortNumber();
 
 	// If no device detected?
 	if (gwPortNumber.empty()) return GWResponse::drPortNotFound;
@@ -284,7 +289,10 @@ GWResponse GreaseWeazleInterface::enableMotor(const bool enable, const bool dont
 		return GWResponse::drError;
 	}
 
-	if (response == Ack::Okay) m_motorIsEnabled = enable;
+	if (response == Ack::Okay) {
+		m_motorIsEnabled = enable;
+		if (m_motorIsEnabled) selectDrive(true);
+	}
 
 	return (response == Ack::Okay) ? GWResponse::drOK : GWResponse::drError;
 }
@@ -312,10 +320,10 @@ GWResponse GreaseWeazleInterface::selectTrack(const unsigned char trackIndex, co
 
 	unsigned short newSpeed = m_gwDriveDelays.step_delay;
 	switch (searchSpeed) {
-		case TrackSearchSpeed::tssSlow:		newSpeed = 9000;  break;
-		case TrackSearchSpeed::tssNormal:	newSpeed = 8000;  break;
-		case TrackSearchSpeed::tssFast:		newSpeed = 7000;  break;
-		case TrackSearchSpeed::tssVeryFast: newSpeed = 6000;  break;
+		case TrackSearchSpeed::tssSlow:		newSpeed = 5000;  break;
+		case TrackSearchSpeed::tssNormal:	newSpeed = 3000;  break;
+		case TrackSearchSpeed::tssFast:		newSpeed = 3000;  break;
+		case TrackSearchSpeed::tssVeryFast: newSpeed = 3000;  break;
 	}
 	if (newSpeed != m_gwDriveDelays.step_delay) {
 		m_gwDriveDelays.step_delay = newSpeed;
@@ -459,6 +467,124 @@ static unsigned int ticksToNSec(unsigned int ticks, unsigned int sampleFrequency
 	return ((unsigned long long)ticks * ONE_NANOSECOND) / (unsigned long long)sampleFrequency;
 }
 
+// Look at the stream and count up the types of data
+void countSampleTypes(PLLData& pllData, std::queue<unsigned char>& queue, unsigned int& hdBits, unsigned int& ddBits) {
+	while (queue.size()) {
+
+		unsigned char i = queue.front();
+		if (i == 255) {
+			if (queue.size() < 6) return;
+			queue.pop();
+
+			// Get opcode
+			switch ((FluxOp)queue.front()) {
+			case FluxOp::Index:
+				queue.pop();
+				read_28bit(queue);
+				break;
+
+			case FluxOp::Space:
+				queue.pop();
+				pllData.ticks += read_28bit(queue);
+				break;
+
+			default:
+				queue.pop();
+				break;
+			}
+		}
+		else {
+			if (i < 250) {
+				pllData.ticks += (int)i;
+				queue.pop();
+			}
+			else {
+				if (queue.size() < 2) return;
+				queue.pop();
+				pllData.ticks += (250 + (((unsigned int)i) - 250) * 255) + (queue.front() - 1);
+				queue.pop();
+			}
+
+			// Work out the actual time this tick took in nanoSeconds.
+			unsigned int tickInNS = ticksToNSec(pllData.ticks, pllData.freq);
+			if (tickInNS > BITCELL_SIZE_IN_NS) {
+				if (tickInNS < 3000) hdBits++; 
+				if ((tickInNS > 4500) && (tickInNS < 8000)) ddBits++;
+				pllData.ticks = 0;
+			}
+		}
+	}
+}
+
+// Test the inserted disk and see if its HD or not
+GWResponse GreaseWeazleInterface::checkDiskCapacity(bool& isHD) {
+	GWReadFlux header;
+	header.ticks = 0;
+	header.max_index = 1;
+	header.max_index_linger = nSecToTicks(50, m_gwVersionInformation.sample_freq);
+
+	bool alreadySpun = m_motorIsEnabled;
+	if (!alreadySpun)
+		if (enableMotor(true, false) != GWResponse::drOK) return GWResponse::drError;
+
+	selectDrive(true);
+
+	// Write request
+	Ack response = Ack::Okay;
+	if (!sendCommand(Cmd::ReadFlux, (void*)&header, sizeof(header), response)) {
+		selectDrive(false);
+		return GWResponse::drError;
+	}
+
+	// Buffer to read into
+	unsigned char tempReadBuffer[64] = { 0 };
+	bool zeroDetected = false;
+	unsigned int failCount = 0;
+
+	// Read the flux data
+	PLLData pllData;
+	pllData.freq = m_gwVersionInformation.sample_freq;
+	unsigned int hdBits = 0;
+	unsigned int ddBits = 0;
+
+	std::queue<unsigned char> queue;
+
+	do {
+		// More efficient to read several bytes in one go		
+		unsigned long bytesAvailable = m_comPort.getBytesWaiting();
+		if (bytesAvailable < 1) bytesAvailable = 1;
+		if (bytesAvailable > sizeof(tempReadBuffer)) bytesAvailable = sizeof(tempReadBuffer);
+		unsigned long bytesRead = m_comPort.read(tempReadBuffer, m_shouldAbortReading ? 1 : bytesAvailable);
+		if (bytesRead < 1) {
+			failCount++;
+			if (failCount > 10) break;
+		}
+		else failCount = 0;
+
+		if (bytesRead) {
+
+			for (unsigned int a = 0; a < bytesRead; a++) {
+				queue.push(tempReadBuffer[a]);
+				zeroDetected |= tempReadBuffer[a] == 0;
+			}
+
+			// Look at the stream and count up the types of data
+			countSampleTypes(pllData, queue, hdBits, ddBits);
+		}		
+	} while (!zeroDetected);
+
+	// Check for errors
+	response = Ack::Okay;
+	sendCommand(Cmd::GetFluxStatus, nullptr, 0, response);
+
+	selectDrive(false);
+
+	if (!alreadySpun) enableMotor(false, false);
+
+	isHD = (hdBits > ddBits);
+	return GWResponse::drOK;
+}
+
 // Read RAW data from the current track and surface 
 GWResponse GreaseWeazleInterface::checkForDisk(bool force) {
 	if (force) checkPins();
@@ -546,7 +672,7 @@ GWResponse GreaseWeazleInterface::writeCurrentTrackPrecomp(const unsigned char* 
 
 	const int nfa_thresh = (int)((float)150e-6 * (float)m_gwVersionInformation.sample_freq);
 	const int nfa_period = (int)((float)1.25e-6 * (float)m_gwVersionInformation.sample_freq);
-	const int precompTime = 140;   // Amiga default precomp amount (140ns)
+	const int precompTime = m_inHDMode ? 70 : 140;   // Amiga default precomp amount (140ns)
 	int extraTimeFromPrevious = 0;
 
 	// Re-encode the data into our format and apply precomp. 
@@ -565,7 +691,7 @@ GWResponse GreaseWeazleInterface::writeCurrentTrackPrecomp(const unsigned char* 
 		if (count > 5) count = 5;  // max we support 01, 001, 0001, 00001
 		
 		// Calculate the time for this in nanoseconds
-		int timeInNS = extraTimeFromPrevious + (count * 2000);     // 2=4000, 3=6000, 4=8000, (5=10000 although is isnt strictly allowed)
+		int timeInNS = extraTimeFromPrevious + (count * (m_inHDMode ? 1000 : 2000));     // 2=4000, 3=6000, 4=8000, (5=10000 although is isnt strictly allowed)
 
 		if (usePrecomp) {
 			switch (sequence) {
@@ -681,7 +807,7 @@ GWResponse GreaseWeazleInterface::writeCurrentTrackPrecomp(const unsigned char* 
 }
 
 // Process queue and work out whats going on
-inline void unpackStreamQueue(std::queue<unsigned char>& queue, PLLData& pllData, RotationExtractor& extractor) {
+inline void unpackStreamQueue(std::queue<unsigned char>& queue, PLLData& pllData, RotationExtractor& extractor, bool isHDMode) {
 	// Run until theres not enough data left to process
 	while (queue.size()) {
 
@@ -722,6 +848,9 @@ inline void unpackStreamQueue(std::queue<unsigned char>& queue, PLLData& pllData
 
 			// Work out the actual time this tick took in nanoSeconds.
 			unsigned int tickInNS = ticksToNSec(pllData.ticks, pllData.freq);
+
+			// This is how the Amiga expects it
+			if (isHDMode) tickInNS *= 2;
 
 			// Enough bit-cells?
 			if (tickInNS > BITCELL_SIZE_IN_NS) {
@@ -798,7 +927,7 @@ GWResponse GreaseWeazleInterface::readRotation(RotationExtractor& extractor, con
 	std::queue<unsigned char> queue;
 
 	// Reset ready for extraction
-	extractor.reset();
+	extractor.reset(m_inHDMode);
 
 	// Remind it if the 'index' data we want to sync to
 	extractor.setIndexSequence(startBitPatterns);
@@ -842,7 +971,7 @@ GWResponse GreaseWeazleInterface::readRotation(RotationExtractor& extractor, con
 				zeroDetected |= tempReadBuffer[a] == 0;
 			}
 
-			unpackStreamQueue(queue, pllData, extractor);
+			unpackStreamQueue(queue, pllData, extractor, m_inHDMode);
 
 			// Is it ready to extract?
 			if (extractor.canExtract()) {

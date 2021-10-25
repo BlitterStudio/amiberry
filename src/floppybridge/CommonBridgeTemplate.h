@@ -42,14 +42,40 @@
 #include "RotationExtractor.h"
 
 // Maximum data we can receive.  
-#define MFM_BUFFER_MAX_TRACK_LENGTH			0x3A00
+#define MFM_BUFFER_MAX_TRACK_LENGTH			(0x3A00 * 2)
 
 // Max number of cylinders we can offer
 #define MAX_CYLINDER_BRIDGE 82
 
 
+// Bit-mast of options that can be configured in BridgeDriver::configOptions
+#define CONFIG_OPTIONS_AUTOCACHE            1
+#define CONFIG_OPTIONS_COMPORT				2
+#define CONFIG_OPTIONS_COMPORT_AUTODETECT	4
+#define CONFIG_OPTIONS_DRIVE_AB				8
+#define CONFIG_OPTIONS_SMARTSPEED			16
+
+
 // Some of the functions in FloppyDiskBridge are implemented, some not.
 class CommonBridgeTemplate : public FloppyDiskBridge {
+public:
+	// Type of bridge mode
+	enum class BridgeMode : unsigned char {
+		bmFast = 0,
+		bmCompatiable = 1,
+		bmTurboAmigaDOS = 2,
+		bmStalling = 3,
+		bmMax = 3
+	};
+
+	// How to use disk density
+	enum class BridgeDensityMode : unsigned char {
+		bdmAuto = 0,
+		bdmDDOnly = 1,
+		bdmHDOnly = 2,
+		bdmMax = 2
+	};
+
 protected:
 	// Type of queue message
 	enum class QueueCommand { qcTerminate, qcMotorOn, qcMotorOff, writeMFMData, qcGotoToTrack, qcSelectDiskSide, qcResetDrive, qcNoClickSeek};
@@ -102,12 +128,16 @@ private:
 
 	// Protect the above vector in the multithreadded environment
 	std::mutex m_pendingWriteLock;
+	std::mutex m_writeLockCompleteFlag;
 
 	// A list of writes that still need to happen to a disk
 	std::vector<TrackToWrite> m_pendingTrackWrites;
 
 	// The current track being written to (or more accurately read from WinUAE)
 	TrackToWrite m_currentWriteTrack;
+
+	// The last track that was written to, this is cylinder*2 + side
+	int m_lastWroteTo = -1;
 
 	// For extracting rotations from disks
 	RotationExtractor m_extractor;
@@ -117,6 +147,7 @@ private:
 
 	// If we should pause streaming data from the disk
 	bool m_delayStreaming;
+
 
 	// When the above delay started
 	std::chrono::time_point<std::chrono::steady_clock> m_delayStreamingStart;
@@ -142,6 +173,9 @@ private:
 
 		// Size fo the mfm data we actually have (in bits) so far
 		int amountReadInBits;
+
+		// If the data on this track looks like it should support smart speed
+		bool supportsSmartSpeed;
 	};
 
 	// Current disk cache history
@@ -161,6 +195,23 @@ private:
 
 	// The main thread
 	std::thread* m_control;
+
+	// Current mode that the bridge operates in
+	BridgeMode m_bridgeMode;
+
+	// Hwo to handle HD and DD disks
+	BridgeDensityMode m_bridgeDensity;
+
+	// If we're currently in HD mode
+	bool m_inHDMode;
+
+	// Enables auto-caching in the background while the drive is idle
+	bool m_shouldAutoCache;
+
+	// Auto-cache data
+	std::chrono::time_point<std::chrono::steady_clock> m_autoCacheMotorStart;
+	bool m_autoCacheMotorStatus;
+	bool m_autocacheModifiedCurrentCylinder;
 
 	// The track we tell WinUAE we're on
 	int m_currentTrack;
@@ -186,11 +237,8 @@ private:
 	// This is set to TRUE to inform the system we're going to read the first cylinder (both sides) before we officially tell UAE the drive is ready.
 	bool m_firstTrackMode;
 
-	// Flag to specify if the interface is allowed to stall WinUAE
-	const bool m_canStall;
-
-	// Flag to specify if the interface MUST use the INDEX pulses to locate entire disk revolutions
-	const bool m_useIndex;
+	// If Smart Speed should be used
+	bool m_useSmartSpeed;
 
 	// Set to true while the motor is spinning up, but not there yet
 	bool m_motorSpinningUp;
@@ -228,13 +276,21 @@ private:
 
 	// Error messages
 	std::string m_lastError;
-	std::wstring m_lastErrorW;
 
 	// The side WinUAE think's we're on
 	DiskSurface m_floppySide;
 
 	// The side we're actually on
 	DiskSurface m_actualFloppySide;
+
+	// If it returns TRUE, this is the next cylinder and side that should be cached in the background
+	bool getNextTrackToAutoCache(int& cylinder, DiskSurface& side);
+
+	// Manage motor status
+	void internalSetMotorStatus(bool enabled);
+
+	// Handle caching track data in the background
+	void handleBackgroundCaching();
 
 	// The main thread
 	void mainThread();
@@ -272,14 +328,25 @@ private:
 	// Reset and clear out any data we have received thus far
 	void resetWriteBuffer();
 
-protected:
+	// Internally check the disk density
+	void internalCheckDiskDensity(bool newDiskInserted);
 
+	// Scans the MFM data to see if this track should allow smart speed or not based on timing data
+	void checkSmartSpeed(const int cylinder, const DiskSurface side, MFMCache& track);
+
+protected:
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Stuff that you need to implement in your derived class, a lot less than on the original bridge - These are all allowed to block as they're called from a thread
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	// Return the number of milliseconds required for the disk to spin up.  You *may* need to override this
 	virtual const unsigned int getDriveSpinupTime() { return 500; };
+
+	// Called when a disk is inserted so that you can (re)populate the response to _getDriveTypeID()
+	virtual void checkDiskType() {};
+
+	// Called to force into DD or HD mode.  Overrides checkDiskType() until checkDiskType() is called again
+	virtual void forceDiskDensity(bool forceHD) {};
 
 	// If your device supports being able to abort a disk read, mid-read then implement this
 	virtual void abortDiskReading() {};
@@ -304,10 +371,10 @@ protected:
 	// else use the last status checked which was probably from a SEEK setCurrentCylinder call.  If you can ONLY get this information here then you should always force check
 	virtual bool checkWriteProtectStatus(const bool forceCheck)  = 0;
 
-	// Duplicate of the one below, but here for consistancy - Returns the name of interface.  This pointer should remain valid after the class is destroyed
-	virtual const TCHAR* _getDriveIDName()  = 0;
+	// Get the name of the drive
+	virtual const BridgeDriver* _getDriverInfo()  = 0;
 
-	// Duplicate of the one below, but here for consistancy - Returns the name of interface.  This pointer should remain valid after the class is destroyed
+	// Return the type of the drive
 	virtual const DriveTypeID _getDriveTypeID()  = 0;
 
 	// Called to switch which head is being used right now.  Returns success or not
@@ -352,8 +419,14 @@ public:
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// 
 	// Flags from WINUAE
-	CommonBridgeTemplate(const bool canStall, const bool useIndex);
+	CommonBridgeTemplate(BridgeMode bridgeMode, BridgeDensityMode bridgeDensity, bool shouldAutoCache, bool useSmartSpeed);
 	virtual ~CommonBridgeTemplate();
+
+	// Change to a different bridge-mode (in real-time)
+	void changeBridgeMode(BridgeMode bridgeMode);
+
+	// Change to a different bridge-density (in real-time)
+	void changeBridgeDensity(BridgeDensityMode bridgeDensity);
 
 	// Call to start the system up
 	virtual bool initialise() override final;
@@ -362,13 +435,13 @@ public:
 	virtual void shutdown() override final;
 
 	// Returns the name of interface.  This pointer should remain valid after the class is destroyed
-	virtual const TCHAR* getDriveIDName() override final { return _getDriveIDName(); };
+	virtual const BridgeDriver* getDriverInfo() override final { return _getDriverInfo(); };
 
 	// Return the type of disk connected
 	virtual DriveTypeID getDriveTypeID() override final { return _getDriveTypeID(); };
 
-	// Call to get the last error message.  Length is the size of the buffer in TCHARs, the function returns the size actually needed
-	virtual unsigned int getLastErrorMessage(TCHAR* errorMessage, unsigned int length) override final;
+	// Call to get the last error message.  If the string is empty there was no error
+	virtual const char* getLastErrorMessage() override final;
 
 	// Return TRUE if the drive is currently on cylinder 0
 	virtual bool isAtCylinder0() override final { return m_currentTrack == 0; }
@@ -387,6 +460,9 @@ public:
 
 	// Check if the disk has changed.  Basically returns FALSE if theres no disk in the drive
 	virtual bool hasDiskChanged() override final { return !m_diskInDrive; };
+
+	// Returns the currently selected side
+	virtual bool getCurrentSide() override final { return m_floppySide == DiskSurface::dsUpper; };
 
 	// Return the current track number we're on
 	virtual unsigned char getCurrentCylinderNumber() override final { return m_currentTrack; };
@@ -443,6 +519,10 @@ public:
 
 	// Reset the drive.  This should reset it to the state it would be at powerup
 	virtual bool resetDrive(int trackNumber) override final;
+
+	// Set to TRUE if turbo writing is allowed (this is a sneaky DMA bypass trick)
+	virtual bool canTurboWrite() { return true; };
+
 };
 
 #endif

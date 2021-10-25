@@ -395,6 +395,11 @@
     <ClCompile Include="..\src\filesys.cpp" />
     <ClCompile Include="..\src\filesys_bootrom.cpp.in" />
     <ClCompile Include="..\src\flashrom.cpp" />
+    <ClCompile Include="..\src\floppybridge\floppybridge_lib.cpp" />
+    <ClCompile Include="..\src\floppybridge\ftdi.cpp" />
+    <ClCompile Include="..\src\floppybridge\SuperCardProBridge.cpp" />
+    <ClCompile Include="..\src\floppybridge\SuperCardProInterface.cpp" />
+    <ClCompile Include="..\src\fpp.cpp" />
     <ClCompile Include="..\src\floppybridge\ArduinoFloppyBridge.cpp" />
     <ClCompile Include="..\src\floppybridge\ArduinoInterface.cpp" />
     <ClCompile Include="..\src\floppybridge\CommonBridgeTemplate.cpp" />
@@ -630,10 +635,14 @@
     <ClInclude Include="..\src\floppybridge\CommonBridgeTemplate.h" />
     <ClInclude Include="..\src\floppybridge\floppybridge_abstract.h" />
     <ClInclude Include="..\src\floppybridge\floppybridge_config.h" />
+    <ClInclude Include="..\src\floppybridge\floppybridge_lib.h" />
+    <ClInclude Include="..\src\floppybridge\ftdi.h" />
     <ClInclude Include="..\src\floppybridge\GreaseWeazleBridge.h" />
     <ClInclude Include="..\src\floppybridge\GreaseWeazleInterface.h" />
     <ClInclude Include="..\src\floppybridge\RotationExtractor.h" />
     <ClInclude Include="..\src\floppybridge\SerialIO.h" />
+    <ClInclude Include="..\src\floppybridge\SuperCardProBridge.h" />
+    <ClInclude Include="..\src\floppybridge\SuperCardProInterface.h" />
     <ClInclude Include="..\src\include\akiko.h" />
     <ClInclude Include="..\src\include\ar.h" />
     <ClInclude Include="..\src\include\audio.h" />

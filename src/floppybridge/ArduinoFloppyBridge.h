@@ -41,8 +41,11 @@
 
 class ArduinoFloppyDiskBridge : public CommonBridgeTemplate {
 private:
-	// Com port selection, 0 is automatic
-	int m_comPort = 0;
+	// Which com port should we use? or blank for automatic
+	std::string m_comPort;
+
+	// type of disk inserted
+	bool m_isHDDisk = false;
 
 	// Hardware connection
 	ArduinoFloppyReader::ArduinoInterface m_io;
@@ -51,6 +54,12 @@ private:
 	std::wstring getComPort();
 
 protected:
+	// Called when a disk is inserted so that you can (re)populate the response to _getDriveTypeID()
+	virtual void checkDiskType() override;
+
+	// Called to force into DD or HD mode.  Overrides checkDiskType() until checkDiskType() is called again
+	virtual void forceDiskDensity(bool forceHD) override;
+
 	// If your device supports being able to abort a disk read, mid-read then implement this
 	virtual void abortDiskReading() override;
 
@@ -71,8 +80,8 @@ protected:
 	// else use the last status checked which was probably from a SEEK setCurrentCylinder call.  If you can ONLY get this information here then you should always force check
 	virtual bool checkWriteProtectStatus(const bool forceCheck) override;
 
-	// Duplicate of the one below, but here for consistancy - Returns the name of interface.  This pointer should remain valid after the class is destroyed
-	virtual const TCHAR* _getDriveIDName() override;
+	// Get the name of the drive
+	virtual const BridgeDriver* _getDriverInfo() override;
 
 	// Duplicate of the one below, but here for consistancy - Returns the name of interface.  This pointer should remain valid after the class is destroyed
 	virtual const DriveTypeID _getDriveTypeID() override;
@@ -114,9 +123,14 @@ protected:
 	virtual bool attemptToDetectDiskChange() override;
 
 public:
-	// Flags from WINUAE
-	ArduinoFloppyDiskBridge(const int device_settings, const bool canStall, const bool useIndex);
+	ArduinoFloppyDiskBridge(BridgeMode bridgeMode, BridgeDensityMode bridgeDensity, bool enableAutoCache, bool useSmartSpeed, bool autoDetectComPort, char* comPort);
+
+	// This is for the static version
+	ArduinoFloppyDiskBridge(BridgeMode bridgeMode, BridgeDensityMode bridgeDensity, int uaeSettings);
+
 	virtual ~ArduinoFloppyDiskBridge();
+
+	static const BridgeDriver* staticBridgeInformation();
 };
 
 

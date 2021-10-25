@@ -4,7 +4,7 @@
 *
 * Copyright 2021 Robert Smith (@RobSmithDev)
 * https://amiga.robsmithdev.co.uk
-*#pragma once
+*
 * This library defines which interfaces are enabled within *UAE
 * 
 * This file, along with currently active and supported interfaces
@@ -14,12 +14,6 @@
 * This is free and unencumbered released into the public domain.
 * See the file COPYING for more details, or visit <http://unlicense.org>.
 *
-*/
-
-/*
-* This file, along with currently active and supported interfaces
-* are maintained from by GitHub repo at
-* https://github.com/RobSmithDev/FloppyDriveBridge
 */
 
 /* rommgr.h has the following ROM TYPES reserved:  This is so that file does not need to be changed to support upto 16 new interfaces
@@ -42,7 +36,6 @@
 */
 
 
-
 // DrawBridge aka Arduino floppy reader/writer
 #define ROMTYPE_ARDUINOREADER_WRITER			ROMTYPE_FLOPYBRDGE0
 #include "ArduinoFloppyBridge.h"
@@ -51,31 +44,42 @@
 #define ROMTYPE_GREASEWEAZLEREADER_WRITER		ROMTYPE_FLOPYBRDGE1
 #include "GreaseWeazleBridge.h"
 
+// Supercard Pro floppy reader/writer
+#define ROMTYPE_SUPERCARDPRO_WRITER				ROMTYPE_FLOPYBRDGE2
+#include "SupercardProBridge.h"
+
 
 // Not the nicest way to do this, but here's how they get installed, for now
-#define FACTOR_BUILDER(romtype, classname, settings, canstall, useindex) case romtype: bridge = new classname(settings, canstall, useindex); break;
+#define FACTOR_BUILDER(romtype, classname, bridgemode, densitymode, settings) case romtype: bridge = new classname(bridgemode,densitymode,settings); break;
 
 
 // Build a list of what can be installed
 // Options are: setting:  The first bit-field relating to options below
 //				canstall: If true the reader is allowed to stall WinUAE to get the data in as required
 //				useindex: If true the reader shoudl use the index marker to sync revolutions rather than guessing by other means
-#define BRIDGE_FACTORY(settings, canstall, useindex)																											\
-		FACTOR_BUILDER(ROMTYPE_ARDUINOREADER_WRITER,ArduinoFloppyDiskBridge,settings,canstall,useindex)															\
-		FACTOR_BUILDER(ROMTYPE_GREASEWEAZLEREADER_WRITER,GreaseWeazleDiskBridge,settings,canstall,useindex)														\
+//              useturbo: Accelerates how fast the OS reads the data, this will break some copy protections
+//              enablehd: Enable HD floppy disk support
+#define BRIDGE_FACTORY(settings, bridgemode, densitymode)																									\
+		FACTOR_BUILDER(ROMTYPE_ARDUINOREADER_WRITER,ArduinoFloppyDiskBridge,bridgemode,densitymode,settings)												\
+		FACTOR_BUILDER(ROMTYPE_GREASEWEAZLEREADER_WRITER,GreaseWeazleDiskBridge,bridgemode,densitymode,settings)											\
+		FACTOR_BUILDER(ROMTYPE_SUPERCARDPRO_WRITER,SupercardProDiskBridge,bridgemode,densitymode,settings)													\
 
 
 
 // This builds up the config options shown in in WinUAE.  
 #define FLOPPY_BRIDGE_CONFIG																																	\
-	{	_T("arduinoreaderwriter"), _T("Arduino R/W [DrawBridge]"), _T("RobSmithDev"),																				\
+	{	_T("arduinoreaderwriter"), _T("DrawBridge (Arduino R/W)"), _T("RobSmithDev"),																			\
 		NULL, NULL, NULL, NULL, ROMTYPE_ARDUINOREADER_WRITER | ROMTYPE_NOT, 0, 0, BOARD_IGNORE, true,															\
 		bridge_drive_selection_config, 0, false, EXPANSIONTYPE_FLOPPY,																							\
 		0, 0, 0, false, NULL, false, 0, arduino_reader_writer_options },																						\
-	{	_T("greaseweazlewriter"), _T("Greaseweazle"), _T("Keir Fraser"),																			\
+	{	_T("greaseweazlewriter"), _T("Greaseweazle"), _T("Keir Fraser"),																						\
 		NULL, NULL, NULL, NULL, ROMTYPE_GREASEWEAZLEREADER_WRITER | ROMTYPE_NOT, 0, 0, BOARD_IGNORE, true,														\
 		bridge_drive_selection_config, 0, false, EXPANSIONTYPE_FLOPPY,																							\
 		0, 0, 0, false, NULL, false, 0, greaseweazle_reader_writer_options },																					\
+	{	_T("supercardprowriter"), _T("SuperCard Pro"), _T("Jim Drew"),																							\
+		NULL, NULL, NULL, NULL, ROMTYPE_SUPERCARDPRO_WRITER | ROMTYPE_NOT, 0, 0, BOARD_IGNORE, true,															\
+		bridge_drive_selection_config, 0, false, EXPANSIONTYPE_FLOPPY,																							\
+		0, 0, 0, false, NULL, false, 0, supercardpro_reader_writer_options },																					\
 
 
 #ifdef _WIN32
@@ -90,6 +94,10 @@
 		_T("Drive on Cable\0") _T("Drive A\0") _T("Drive B\0") ,																								\
 		_T("drive\0") _T("drva\0") _T("drvb\0"),																												\
 		true,false,0 }, { NULL }};																																\
+	static const struct expansionboardsettings supercardpro_reader_writer_options[] = {{																		\
+		_T("Drive on Cable\0") _T("Drive A\0") _T("Drive B\0") ,																								\
+		_T("drive\0") _T("drva\0") _T("drvb\0"),																												\
+		true,false,0 }, { NULL }};																																\
 
 #else
 // And the options to add to the hardware extensions
@@ -99,6 +107,10 @@
 		_T("port\0") _T("AUTO\0"),																																\
 		true,false,0 }, { NULL }};																																\
 	static const struct expansionboardsettings greaseweazle_reader_writer_options[] = {{																		\
+		_T("Drive on Cable\0") _T("Drive A\0") _T("Drive B\0") ,																								\
+		_T("drive\0") _T("drva\0") _T("drvb\0"),																												\
+		true,false,0 }, { NULL }};																																\
+	static const struct expansionboardsettings supercardpro_reader_writer_options[] = {{																		\
 		_T("Drive on Cable\0") _T("Drive A\0") _T("Drive B\0") ,																								\
 		_T("drive\0") _T("drva\0") _T("drvb\0"),																												\
 		true,false,0 }, { NULL }};																																\

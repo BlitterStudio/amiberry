@@ -11,7 +11,9 @@
 
 #include "uae/types.h"
 
-typedef enum { DRV_NONE = -1, DRV_35_DD = 0, DRV_35_HD, DRV_525_SD, DRV_35_DD_ESCOM, DRV_PC_525_ONLY_40, DRV_PC_35_ONLY_80, DRV_PC_525_40_80, DRV_525_DD } drive_type;
+typedef enum {
+	DRV_NONE = -1, DRV_35_DD = 0, DRV_35_HD, DRV_525_SD, DRV_35_DD_ESCOM, DRV_PC_525_ONLY_40, DRV_PC_35_ONLY_80, DRV_PC_525_40_80, DRV_525_DD, DRV_FB,
+} drive_type;
 
 #define HISTORY_FLOPPY 0
 #define HISTORY_CD 1
@@ -30,6 +32,7 @@ struct diskinfo
 {
 	uae_u8 bootblock[1024];
 	bool bb_crc_valid;
+	bool image_crc_value;
 	uae_u32 imagecrc32;
 	uae_u32 bootblockcrc32;
 	bool hd;
@@ -74,23 +77,24 @@ extern void disk_insert (int num, const TCHAR *name);
 extern void disk_insert (int num, const TCHAR *name, bool forcedwriteprotect);
 extern void disk_insert_force (int num, const TCHAR *name, bool forcedwriteprotect);
 extern void DISK_vsync (void);
-extern int DISK_validate_filename (struct uae_prefs *p, const TCHAR *fname, TCHAR *outfname, int leave_open, bool *wrprot, uae_u32 *crc32, struct zfile **zf);
+extern int DISK_validate_filename (struct uae_prefs *p, const TCHAR *fname, int num, TCHAR *outfname, int leave_open, bool *wrprot, uae_u32 *crc32, struct zfile **zf);
 extern void DISK_handler (uae_u32);
 extern void DISK_update (int hpos);
 extern void DISK_update_adkcon (int hpos, uae_u16 v);
 extern void DISK_hsync (void);
 extern void DISK_reset (void);
-extern int disk_getwriteprotect (struct uae_prefs *p, const TCHAR *name);
+extern int disk_getwriteprotect (struct uae_prefs *p, const TCHAR *name, int num);
 extern int disk_setwriteprotect (struct uae_prefs *p, int num, const TCHAR *name, bool writeprotected);
 extern bool disk_creatediskfile (struct uae_prefs *p, const TCHAR *name, int type, drive_type adftype, int hd, const TCHAR *disk_name, bool ffs, bool bootable, struct zfile *copyfrom);
 extern void dumpdisk (const TCHAR*);
 extern int DISK_history_add (const TCHAR *name, int idx, int type, int donotcheck);
 extern TCHAR *DISK_history_get (int idx, int type);
-int DISK_examine_image (struct uae_prefs *p, int num, struct diskinfo *di, bool deepcheck);
+int DISK_examine_image (struct uae_prefs *p, int num, struct diskinfo *di, bool deepcheck, TCHAR *info);
 extern TCHAR *DISK_get_saveimagepath(const TCHAR *name, int type);
 extern void DISK_reinsert (int num);
 extern int disk_prevnext (int drive, int dir);
 extern int disk_prevnext_name (TCHAR *img, int dir);
+extern void DISK_get_path_text(struct uae_prefs *p, int n, TCHAR *text);
 
 extern bool gui_ask_disk(int drv, TCHAR*);
 
@@ -113,5 +117,14 @@ extern int disk_debug_track;
 #define DISK_DEBUG_PIO 4
 
 #define MAX_PREVIOUS_IMAGES 50
+
+#ifdef FLOPPYBRIDGE
+bool floppybridge_has(void);
+bool DISK_isfloppybridge(struct uae_prefs*, int);
+void floppybridge_init(struct uae_prefs *p);
+void floppybridge_reload_profiles(void);
+void floppybridge_set_config(const char*);
+extern bool floppybridge_available;
+#endif
 
 #endif /* UAE_DISK_H */
