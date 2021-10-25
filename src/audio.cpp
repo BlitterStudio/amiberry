@@ -1306,7 +1306,7 @@ static void zerostate (int nr)
 		write_log (_T("%d: ZEROSTATE\n"), nr);
 #endif
 	cdp->state = 0;
-	cdp->irqcheck = false;
+	cdp->irqcheck = 0;
 	cdp->evtime = MAX_EV;
 	cdp->intreq2 = 0;
 	cdp->dmaenstore = false;
@@ -1620,7 +1620,7 @@ static bool audio_state_channel2 (int nr, bool perfin)
 			if (usehacks() && (currprefs.cachesize || (regs.instruction_cnt - cdp->dmaofftime_cpu_cnt) >= 60)) {
 				if (warned >= 0) {
 					warned--;
-					write_log(_T("Audio %d DMA wait hack: ENABLED. OFF=%08x, ON=%08x\n"), nr, cdp->dmaofftime_pc, M68K_GETPC);
+					write_log(_T("Audio %d DMA wait hack ENABLED. OFF=%08x, ON=%08x, PER=%d\n"), nr, cdp->dmaofftime_pc, M68K_GETPC, cdp->evtime / CYCLE_UNIT);
 				}
 #if DEBUG_AUDIO_HACK > 0
 				if (debugchannel(nr))
@@ -1631,7 +1631,7 @@ static bool audio_state_channel2 (int nr, bool perfin)
 			} else {
 				if (warned >= 0) {
 					warned--;
-					write_log(_T("Audio %d DMA wait hack: DISABLED. OFF=%08x, ON=%08x\n"), nr, cdp->dmaofftime_pc, M68K_GETPC);
+					write_log(_T("Audio %d DMA wait hack DISABLED. OFF=%08x, ON=%08x, PER=%d\n"), nr, cdp->dmaofftime_pc, M68K_GETPC, cdp->evtime / CYCLE_UNIT);
 				}
 			}
 			cdp->dmaofftime_active = false;
@@ -1773,7 +1773,7 @@ static bool audio_state_channel2 (int nr, bool perfin)
 				setirq (nr, 22);
 		}
 		cdp->pbufldl = true;
-		cdp->irqcheck = false;
+		cdp->irqcheck = 0;
 		cdp->state = 3;
 		audio_state_channel2 (nr, false);
 		break;
@@ -1785,7 +1785,9 @@ static bool audio_state_channel2 (int nr, bool perfin)
 		cdp->state = 3;
 		loadper1(nr);
 		if (!chan_ena && isirq(nr)) {
-			cdp->irqcheck = true;
+			cdp->irqcheck = 1;
+		} else {
+			cdp->irqcheck = -1;
 		}
 		return false;
 
@@ -1827,7 +1829,11 @@ static bool audio_state_channel2 (int nr, bool perfin)
 			if (napnav)
 				setdr(nr, false);
 		} else {
-			if (cdp->irqcheck) {
+			// cycle-accurate period check was not needed, do delayed check
+			if (!cdp->irqcheck) {
+				cdp->irqcheck = isirq(nr);
+			}
+			if (cdp->irqcheck > 0) {
 #if DEBUG_AUDIO > 0
 				if (debugchannel (nr))
 					write_log (_T("%d: IDLE\n"), nr);
