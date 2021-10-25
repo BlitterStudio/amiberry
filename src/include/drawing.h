@@ -375,6 +375,7 @@ extern void putpixel (uae_u8 *buf, uae_u8 *genlockbuf, int bpp, int x, xcolnr c8
 extern void allocvidbuffer(int monid, struct vidbuffer *buf, int width, int height, int depth);
 extern void freevidbuffer(int monid, struct vidbuffer *buf);
 extern void check_prefs_picasso(void);
+extern int get_vertical_visible_height(void);
 
 /* Finally, stuff that shouldn't really be shared.  */
 

@@ -511,6 +511,39 @@ static void reset_hblanking_limits(void)
 	}
 }
 
+static void get_vblanking_limits(int *vbstrtp, int *vbstopp, bool overscanonly)
+{
+	int vbstrt = vblank_firstline_hw;
+	if (!ecs_denise) {
+		vbstrt--;
+	}
+	int vbstop = maxvpos + lof_store;
+	if (!ecs_denise && !ecs_agnus) {
+		vbstop++;
+	} else if (ecs_agnus && !ecs_denise) {
+		// hide hblank bug by faking vblank start 1 line earlier
+		if (currprefs.gfx_overscanmode < OVERSCANMODE_BROADCAST) {
+			vbstrt++;
+			vbstop--;
+		}
+	}
+	if (currprefs.gfx_overscanmode < OVERSCANMODE_OVERSCAN && !overscanonly) {
+		int mult = (OVERSCANMODE_OVERSCAN - currprefs.gfx_overscanmode) * 5;
+		vbstrt += mult;
+		vbstop -= mult;
+	}
+	vbstrt <<= currprefs.gfx_vresolution;
+	vbstop <<= currprefs.gfx_vresolution;
+	if (vblank_top_start < vbstrt) {
+		vblank_top_start = vbstrt;
+	}
+	if (vblank_bottom_stop > vbstop) {
+		vblank_bottom_stop = vbstop;
+	}
+	*vbstrtp = vbstrt;
+	*vbstopp = vbstop;
+}
+
 // this handles hardwired vblank
 // vb_state in do_color_changes() handles programmed vblank
 static void set_vblanking_limits(void)
@@ -530,26 +563,8 @@ static void set_vblanking_limits(void)
 		hardwired = (new_beamcon0 & 0x1000) == 0;
 	}
 	if (hardwired) {
-		int vbstrt = vblank_firstline_hw;
-		if (!ecs_denise) {
-			vbstrt--;
-		}
-		int vbstop = maxvpos;
-		if (!ecs_denise && !ecs_agnus) {
-			vbstop++;
-		} else if (ecs_agnus && !ecs_denise) {
-			// hide hblank bug by faking vblank start 1 line earlier
-			if (currprefs.gfx_overscanmode < OVERSCANMODE_BROADCAST) {
-				vbstop--;
-			}
-		}
-		if (currprefs.gfx_overscanmode < OVERSCANMODE_OVERSCAN) {
-			int mult = (OVERSCANMODE_OVERSCAN - currprefs.gfx_overscanmode) * 5;
-			vbstrt += mult;
-			vbstop -= mult;
-		}
-		vbstrt <<= currprefs.gfx_vresolution;
-		vbstop <<= currprefs.gfx_vresolution;
+		int vbstrt, vbstop;
+		get_vblanking_limits(&vbstrt, &vbstop, false);
 		if (vblank_top_start < vbstrt) {
 			vblank_top_start = vbstrt;
 		}
@@ -557,6 +572,32 @@ static void set_vblanking_limits(void)
 			vblank_bottom_stop = vbstop;
 		}
 	}
+}
+
+int get_vertical_visible_height(void)
+{
+	struct vidbuf_description *vidinfo = &adisplays[0].gfxvidinfo;
+	int h = vidinfo->drawbuffer.inheight;
+	int vbstrt, vbstop;
+
+	if (programmedmode <= 1) {
+		h = (maxvpos_display + maxvpos_display_vsync - minfirstline) << currprefs.gfx_vresolution;
+	}
+	if (interlace_seen && currprefs.gfx_vresolution > 0) {
+		h -= 1 << (currprefs.gfx_vresolution - 1);
+	}
+	bool hardwired = true;
+	if (ecs_agnus) {
+		hardwired = (new_beamcon0 & 0x1000) == 0;
+	}
+	if (hardwired) {
+		get_vblanking_limits(&vbstrt, &vbstop, true);
+		int hh = vbstop - vbstrt;
+		if (h > hh) {
+			h = hh;
+		}
+	}
+	return h;
 }
 
 static void set_hblanking_limits(void)
@@ -4963,7 +5004,7 @@ bool notice_interlace_seen (bool lace)
 
 void allocvidbuffer(int monid, struct vidbuffer *buf, int width, int height, int depth)
 {
-	memset (buf, 0, sizeof (struct vidbuffer));
+	memset(buf, 0, sizeof (struct vidbuffer));
 	buf->monitor_id = monid;
 	buf->pixbytes = (depth + 7) / 8;
 	buf->width_allocated = (width + 7) & ~7;
@@ -4974,10 +5015,10 @@ void allocvidbuffer(int monid, struct vidbuffer *buf, int width, int height, int
 	buf->inwidth = buf->width_allocated;
 	buf->inheight = buf->height_allocated;
 
-	int size = width * height * buf->pixbytes;
-	buf->realbufmem = xcalloc (uae_u8, size);
+	buf->rowbytes = buf->width_allocated * buf->pixbytes;
+	int size = buf->rowbytes * buf->height_allocated;
+	buf->realbufmem = xcalloc(uae_u8, size);
 	buf->bufmem_allocated = buf->bufmem = buf->realbufmem;
-	buf->rowbytes = width * buf->pixbytes;
 	buf->bufmemend = buf->realbufmem + size - buf->rowbytes;
 	buf->bufmem_lockable = true;
 }
