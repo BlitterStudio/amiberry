@@ -1299,6 +1299,7 @@ static void zerostate (int nr)
 		write_log (_T("%d: ZEROSTATE\n"), nr);
 #endif
 	cdp->state = 0;
+	cdp->irqcheck = 0;
 	cdp->evtime = MAX_EV;
 	cdp->intreq2 = 0;
 	cdp->dmaenstore = false;
@@ -1569,8 +1570,23 @@ static void audio_state_channel2 (int nr, bool perfin)
 			// We are still in state=2/3 and program is going to re-enable
 			// DMA. Force state to zero to prevent CPU timed DMA wait
 			// routines in common tracker players to lose notes.
+			if (usehacks() && (currprefs.cachesize || (regs.instruction_cnt - cdp->dmaofftime_cpu_cnt) >= 60)) {
+				if (warned >= 0) {
+					warned--;
+					write_log(_T("Audio %d DMA wait hack ENABLED. OFF=%08x, ON=%08x, PER=%d\n"), nr, cdp->dmaofftime_pc, M68K_GETPC, cdp->evtime / CYCLE_UNIT);
+				}
+#if DEBUG_AUDIO_HACK > 0
+				if (debugchannel(nr))
+					write_log(_T("%d: INSTADMAOFF\n"), nr, M68K_GETPC);
+#endif
 				newsample(nr, (cdp->dat2 >> 0) & 0xff);
 				zerostate(nr);
+			} else {
+				if (warned >= 0) {
+					warned--;
+					write_log(_T("Audio %d DMA wait hack DISABLED. OFF=%08x, ON=%08x, PER=%d\n"), nr, cdp->dmaofftime_pc, M68K_GETPC, cdp->evtime / CYCLE_UNIT);
+				}
+			}
 			cdp->dmaofftime_active = false;
 		}
 	}
@@ -1692,9 +1708,24 @@ static void audio_state_channel2 (int nr, bool perfin)
 				setirq (nr, 22);
 		}
 		cdp->pbufldl = true;
+		cdp->irqcheck = 0;
 		cdp->state = 3;
 		audio_state_channel2 (nr, false);
 		break;
+
+	case 3 + 0x10: // manual audio period==1 cycle
+		if (!perfin) {
+			return true;
+		}
+		cdp->state = 3;
+		loadper1(nr);
+		if (!chan_ena && isirq(nr)) {
+			cdp->irqcheck = 1;
+		} else {
+			cdp->irqcheck = -1;
+		}
+		return false;
+
 	case 3:
 		if (cdp->pbufldl) {
 #if TEST_AUDIO > 0
@@ -1728,7 +1759,11 @@ static void audio_state_channel2 (int nr, bool perfin)
 			if (napnav)
 				setdr(nr, false);
 		} else {
-			if (isirq (nr)) {
+			// cycle-accurate period check was not needed, do delayed check
+			if (!cdp->irqcheck) {
+				cdp->irqcheck = isirq(nr);
+			}
+			if (cdp->irqcheck > 0) {
 #if DEBUG_AUDIO > 0
 				if (debugchannel (nr))
 					write_log (_T("%d: IDLE\n"), nr);
