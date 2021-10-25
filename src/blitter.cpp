@@ -1324,11 +1324,7 @@ static bool decide_blitter_maybe_write2(int until_hpos, uaecptr addr, uae_u32 va
 		until_hpos = maxhpos;
 	}
 
-	if (last_blitter_hpos > until_hpos) {
-		goto end;
-	}
-
-	if (last_blitter_hpos == until_hpos) {
+	if (last_blitter_hpos >= until_hpos) {
 		goto end;
 	}
 
@@ -1966,7 +1962,6 @@ int blitnasty (void)
 	if (!dmaen(DMA_BLITTER))
 		return 0;
 	if (blitter_cycle_exact) {
-		blitter_force_finish(false);
 		return -1;
 	}
 	if (blit_last_cycle >= blit_cyclecount && blit_dmacount == blit_cyclecount)
