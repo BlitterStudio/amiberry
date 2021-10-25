@@ -148,10 +148,14 @@ LOCAL_SRC_FILES := src/archivers/7z/BraIA64.c \
 					src/floppybridge/ArduinoFloppyBridge.cpp \
                     src/floppybridge/ArduinoInterface.cpp \
                     src/floppybridge/CommonBridgeTemplate.cpp \
+                    src/floppybridge/floppybridge_lib.cpp \
+	                src/floppybridge/ftdi.cpp \
                     src/floppybridge/GreaseWeazleBridge.cpp \
                     src/floppybridge/GreaseWeazleInterface.cpp \
                     src/floppybridge/RotationExtractor.cpp \
                     src/floppybridge/SerialIO.cpp \
+					src/floppybridge/SuperCardProBridge.cpp \
+					src/floppybridge/SuperCardProInterface.cpp \
                     src/osdep/ahi_v1.cpp \
                     src/osdep/bsdsocket_host.cpp \
                     src/osdep/cda_play.cpp \

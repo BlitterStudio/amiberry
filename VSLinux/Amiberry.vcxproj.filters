@@ -1029,6 +1029,18 @@
     <ClCompile Include="..\src\osdep\gui\PanelExpansions.cpp">
       <Filter>src\osdep\gui</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\floppybridge\SuperCardProBridge.cpp">
+      <Filter>src\floppybridge</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\floppybridge\SuperCardProInterface.cpp">
+      <Filter>src\floppybridge</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\floppybridge\ftdi.cpp">
+      <Filter>src\floppybridge</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\floppybridge\floppybridge_lib.cpp">
+      <Filter>src\floppybridge</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\archivers\7z\7zBuf.h">
@@ -1746,6 +1758,18 @@
       <Filter>src\floppybridge</Filter>
     </ClInclude>
     <ClInclude Include="..\src\floppybridge\SerialIO.h">
+      <Filter>src\floppybridge</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\floppybridge\SuperCardProBridge.h">
+      <Filter>src\floppybridge</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\floppybridge\SuperCardProInterface.h">
+      <Filter>src\floppybridge</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\floppybridge\ftdi.h">
+      <Filter>src\floppybridge</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\floppybridge\floppybridge_lib.h">
       <Filter>src\floppybridge</Filter>
     </ClInclude>
   </ItemGroup>

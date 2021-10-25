@@ -32,6 +32,17 @@
 
 #include "RotationExtractor.h"
 
+RotationExtractor::RotationExtractor() {
+	m_sequences = new MFMSequenceInfo[MAX_REVOLUTION_SEQUENCES];
+	m_initialSequences = new MFMSequenceInfo[OVERLAP_SEQUENCE_MATCHES * OVERLAP_EXTRA_BUFFER];
+
+}
+RotationExtractor::~RotationExtractor() {
+	delete[] m_sequences;
+	delete[] m_initialSequences;
+}
+
+
 // Finds the overlap between the start of the data and where we currently are.  The returned position is where the NEXT revolution starts
 unsigned int RotationExtractor::getOverlapPosition() const {
 	int bestScore = OVERLAP_SEQUENCE_MATCHES / 4;     // must have *some* kind of match to be worthy
@@ -167,16 +178,18 @@ inline void writeStreamBit(RotationExtractor::MFMSample* output, unsigned int& p
 }
 
 // Submit a single sequence to the list
-void RotationExtractor::submitSequence(const MFMSequenceInfo& sequence, const bool isIndex) {
+void RotationExtractor::submitSequence(const MFMSequenceInfo& sequence, const bool isIndex, const bool discardEarlySamples) {
 	// we reject the first 20uSec of data.  Makes things so much more stable
-	m_timeReceived += sequence.timeNS;
-	if (m_timeReceived < 20000) return;
+	if (discardEarlySamples) {
+		m_timeReceived += sequence.timeNS;
+		if (m_timeReceived < 20000) return;
+	}
 
 	// And stop if we have too much.  Shouldn't happen
 	if (m_sequencePos >= MAX_REVOLUTION_SEQUENCES) return;
 
 	// See if we can calculate the time it takes to get a single revolution from the disk
-	if ((m_revolutionTime == 0) && (!m_useIndex)) {
+	if ((m_revolutionTime == 0) && (!m_useIndex) && (!m_useSimpleMode)) {
 		if (isIndex) {
 			if (m_sequenceIndex == INDEX_NOT_FOUND) m_sequenceIndex = 0; else m_nextSequenceIndex = m_sequencePos;
 		}
@@ -214,8 +227,8 @@ void RotationExtractor::submitSequence(const MFMSequenceInfo& sequence, const bo
 		}
 		else {
 			// Was the FIRST index detected?
-			if ((isIndex) && (m_nextSequenceIndex == INDEX_NOT_FOUND) && (m_initialSequencesLength)) {
-				// Ok, shunt the buffer we have onto the output
+			if ((isIndex) && (m_nextSequenceIndex == INDEX_NOT_FOUND) && (m_initialSequencesLength == OVERLAP_SEQUENCE_MATCHES * OVERLAP_EXTRA_BUFFER)) {
+				// Ok, shunt the buffer we have onto the output, this is a short buffer of samples collected before INDEX was detected.
 				m_sequencePos = m_initialSequencesLength;
 				m_sequenceIndex = m_initialSequencesLength;
 
@@ -271,10 +284,10 @@ bool RotationExtractor::extractRotation(MFMSample* output, unsigned int& outputB
 		}
 
 		// Step 1: Find where the first index position is
-		const unsigned int revolutionStart = getTrueIndexPosition(INDEX_NOT_FOUND, m_sequenceIndex);
+		const unsigned int revolutionStart = m_useSimpleMode ? m_sequenceIndex : getTrueIndexPosition(INDEX_NOT_FOUND, m_sequenceIndex);
 
 		// Step 2: find out where the next one is
-		const unsigned int nextRevolutionStart = getTrueIndexPosition(INDEX_NOT_FOUND, m_nextSequenceIndex);
+		const unsigned int nextRevolutionStart = m_useSimpleMode ? m_nextSequenceIndex : getTrueIndexPosition(INDEX_NOT_FOUND, m_nextSequenceIndex);
 
 		// Markers
 		unsigned int outputStreamPos = 0;
@@ -317,6 +330,7 @@ bool RotationExtractor::extractRotation(MFMSample* output, unsigned int& outputB
 			m_revolutionTime = rTime;
 			m_revolutionTimeNearlyComplete = (unsigned int)(m_revolutionTime * 0.9f);
 		}
+		m_timeReceived -= rTime;
 
 		// Calculate how much we wrote
 		outputBits = (outputStreamPos * 8) + outputStreamBit;
@@ -349,6 +363,7 @@ bool RotationExtractor::extractRotation(MFMSample* output, unsigned int& outputB
 		for (unsigned int pos = 0; pos < nextRevolutionStart; pos++) {
 			const MFMSequenceInfo& sequence = m_sequences[(pos + indexPosition) % nextRevolutionStart];
 			m_currentTime -= (unsigned int)sequence.timeNS;
+			m_timeReceived -= (unsigned int)sequence.timeNS;
 
 #ifdef OUTPUT_TIME_IN_NS
 			const unsigned int bitTime = sequence.timeNS / ((unsigned int)sequence.mfm + 2);

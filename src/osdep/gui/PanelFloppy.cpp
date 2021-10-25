@@ -113,8 +113,8 @@ static void DisplayDiskInfo(int num)
 	char nameonly[MAX_DPATH];
 	char linebuffer[512];
 
-	DISK_examine_image(&changed_prefs, num, &di, true);
-	DISK_validate_filename(&changed_prefs, changed_prefs.floppyslots[num].df, tmp1, 0, NULL, NULL, NULL);
+	DISK_examine_image(&changed_prefs, num, &di, true, nullptr);
+	DISK_validate_filename(&changed_prefs, changed_prefs.floppyslots[num].df, num, tmp1, 0, NULL, NULL, NULL);
 	extract_filename(tmp1, nameonly);
 	snprintf(title, MAX_DPATH - 1, "Info for %s", nameonly);
 
@@ -211,7 +211,7 @@ public:
 					//---------------------------------------
 					disk_setwriteprotect(&changed_prefs, i, changed_prefs.floppyslots[i].df,
 					                     chkDFxWriteProtect[i]->isSelected());
-					if (disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df) != chkDFxWriteProtect[i]->
+					if (disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df, i) != chkDFxWriteProtect[i]->
 						isSelected())
 					{
 						// Failed to change write protection -> maybe filesystem doesn't support this
@@ -651,7 +651,7 @@ void RefreshPanelFloppy()
 		const auto driveEnabled = changed_prefs.floppyslots[i].dfxtype != DRV_NONE;
 		chkDFx[i]->setSelected(driveEnabled);
 		cboDFxType[i]->setSelected(changed_prefs.floppyslots[i].dfxtype + 1);
-		chkDFxWriteProtect[i]->setSelected(disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df));
+		chkDFxWriteProtect[i]->setSelected(disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df, i));
 		chkDFx[i]->setEnabled(prev_available);
 		cboDFxType[i]->setEnabled(prev_available);
 

@@ -29,23 +29,23 @@ NEON_FLAGS=-DUSE_ARMNEON -DARM_HAS_DIV
 
 # Raspberry Pi 1 CPU flags
 ifneq (,$(findstring rpi1,$(PLATFORM)))
-    CPUFLAGS = -mcpu=arm1176jzf-s -mfpu=vfp
+	CPUFLAGS = -mcpu=arm1176jzf-s -mfpu=vfp
 endif
 
 
 # Raspberry Pi 2 CPU flags
 ifneq (,$(findstring rpi2,$(PLATFORM)))
-    CPUFLAGS = -mcpu=cortex-a7 -mfpu=neon-vfpv4
+	CPUFLAGS = -mcpu=cortex-a7 -mfpu=neon-vfpv4
 endif
 
 # Raspberry Pi 3 CPU flags
 ifneq (,$(findstring rpi3,$(PLATFORM)))
-    CPUFLAGS = -mcpu=cortex-a53 -mfpu=neon-fp-armv8
+	CPUFLAGS = -mcpu=cortex-a53 -mfpu=neon-fp-armv8
 endif
 
 # Raspberry Pi 4 CPU flags
 ifneq (,$(findstring rpi4,$(PLATFORM)))
-    CPUFLAGS = -mcpu=cortex-a72 -mfpu=neon-fp-armv8
+	CPUFLAGS = -mcpu=cortex-a72 -mfpu=neon-fp-armv8
 endif
 #
 # DispmanX Common flags (RPI-specific)
@@ -65,165 +65,165 @@ DISPMANX_LDFLAGS = -lbcm_host -lvchiq_arm -L/opt/vc/lib -Wl,-rpath=/opt/vc/lib
 #
 # Raspberry Pi 1/2/3/4 (SDL2, DispmanX)
 ifeq ($(PLATFORM),$(filter $(PLATFORM),rpi1 rpi2 rpi3 rpi4))
-    CPPFLAGS += $(CPPFLAGS32) $(DISPMANX_FLAGS)
-    LDFLAGS += $(DISPMANX_LDFLAGS)
-    ifeq ($(PLATFORM),$(filter $(PLATFORM),rpi2 rpi3 rpi4))
-       CPPFLAGS += $(NEON_FLAGS)
-       HAVE_NEON = 1
-    endif    
+	CPPFLAGS += $(CPPFLAGS32) $(DISPMANX_FLAGS)
+	LDFLAGS += $(DISPMANX_LDFLAGS)
+	ifeq ($(PLATFORM),$(filter $(PLATFORM),rpi2 rpi3 rpi4))
+	   CPPFLAGS += $(NEON_FLAGS)
+	   HAVE_NEON = 1
+	endif    
 
 #
 # SDL2 targets
 #
 # Raspberry Pi 1/2/3/4 (SDL2)
 else ifeq ($(PLATFORM),$(filter $(PLATFORM),rpi1-sdl2 rpi2-sdl2 rpi3-sdl2 rpi4-sdl2))
-    CPPFLAGS += $(CPPFLAGS32)
-    ifeq ($(PLATFORM),$(filter $(PLATFORM), rpi2-sdl2 rpi3-sdl2 rpi4-sdl2))
-       CPPFLAGS += $(NEON_FLAGS)
-       HAVE_NEON = 1
-    endif
+	CPPFLAGS += $(CPPFLAGS32)
+	ifeq ($(PLATFORM),$(filter $(PLATFORM), rpi2-sdl2 rpi3-sdl2 rpi4-sdl2))
+	   CPPFLAGS += $(NEON_FLAGS)
+	   HAVE_NEON = 1
+	endif
 
 # OrangePi (SDL2)
 else ifeq ($(PLATFORM),orangepi-pc)
-    CPUFLAGS = -mcpu=cortex-a7 -mfpu=neon-vfpv4
-    CPPFLAGS += $(CPPFLAGS32) $(NEON_FLAGS) -DUSE_RENDER_THREAD
-    HAVE_NEON = 1
-    ifdef DEBUG
-	    # Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
-	    # quote: The assembly code in bn_mul.h is optimized for the ARM platform and uses some registers, including r7 to efficiently do an operation. GCC also uses r7 as the frame pointer under ARM Thumb assembly.
-        CFLAGS += -fomit-frame-pointer
-    endif
+	CPUFLAGS = -mcpu=cortex-a7 -mfpu=neon-vfpv4
+	CPPFLAGS += $(CPPFLAGS32) $(NEON_FLAGS) -DUSE_RENDER_THREAD
+	HAVE_NEON = 1
+	ifdef DEBUG
+		# Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
+		# quote: The assembly code in bn_mul.h is optimized for the ARM platform and uses some registers, including r7 to efficiently do an operation. GCC also uses r7 as the frame pointer under ARM Thumb assembly.
+		CFLAGS += -fomit-frame-pointer
+	endif
 
 # Odroid XU4 (SDL2)
 else ifeq ($(PLATFORM),xu4)
-    CPUFLAGS = -mcpu=cortex-a15 -mfpu=neon-vfpv4
-    CPPFLAGS += $(CPPFLAGS32) $(NEON_FLAGS) -DUSE_RENDER_THREAD
-    HAVE_NEON = 1
-    ifdef DEBUG
-	    # Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
-	    # quote: The assembly code in bn_mul.h is optimized for the ARM platform and uses some registers, including r7 to efficiently do an operation. GCC also uses r7 as the frame pointer under ARM Thumb assembly.
-        CFLAGS += -fomit-frame-pointer
-    endif
+	CPUFLAGS = -mcpu=cortex-a15 -mfpu=neon-vfpv4
+	CPPFLAGS += $(CPPFLAGS32) $(NEON_FLAGS) -DUSE_RENDER_THREAD
+	HAVE_NEON = 1
+	ifdef DEBUG
+		# Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
+		# quote: The assembly code in bn_mul.h is optimized for the ARM platform and uses some registers, including r7 to efficiently do an operation. GCC also uses r7 as the frame pointer under ARM Thumb assembly.
+		CFLAGS += -fomit-frame-pointer
+	endif
 
 # Odroid C1 (SDL2)
 else ifeq ($(PLATFORM),c1)
-    CPUFLAGS = -mcpu=cortex-a5 -mfpu=neon-vfpv4
-    CPPFLAGS += $(CPPFLAGS32) $(NEON_FLAGS) -DUSE_RENDER_THREAD
-    HAVE_NEON = 1
-    ifdef DEBUG
-	    # Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
-	    # quote: The assembly code in bn_mul.h is optimized for the ARM platform and uses some registers, including r7 to efficiently do an operation. GCC also uses r7 as the frame pointer under ARM Thumb assembly.
-        CFLAGS += -fomit-frame-pointer
-    endif
+	CPUFLAGS = -mcpu=cortex-a5 -mfpu=neon-vfpv4
+	CPPFLAGS += $(CPPFLAGS32) $(NEON_FLAGS) -DUSE_RENDER_THREAD
+	HAVE_NEON = 1
+	ifdef DEBUG
+		# Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
+		# quote: The assembly code in bn_mul.h is optimized for the ARM platform and uses some registers, including r7 to efficiently do an operation. GCC also uses r7 as the frame pointer under ARM Thumb assembly.
+		CFLAGS += -fomit-frame-pointer
+	endif
 
 # Odroid N1/N2, RockPro64 (SDL2 64-bit)
 else ifeq ($(PLATFORM),n2)
-    CPUFLAGS = -mcpu=cortex-a72
-    CPPFLAGS += $(CPPFLAGS64) -DUSE_RENDER_THREAD
-    AARCH64 = 1
+	CPUFLAGS = -mcpu=cortex-a72
+	CPPFLAGS += $(CPPFLAGS64) -DUSE_RENDER_THREAD
+	AARCH64 = 1
 
 # Raspberry Pi 3 (SDL2 64-bit)
 else ifeq ($(PLATFORM),rpi3-64-sdl2)
-    CPUFLAGS = -mcpu=cortex-a53
-    CPPFLAGS += $(CPPFLAGS64)
-    AARCH64 = 1
+	CPUFLAGS = -mcpu=cortex-a53
+	CPPFLAGS += $(CPPFLAGS64)
+	AARCH64 = 1
 
 # Raspberry Pi 4 (SDL2 64-bit)
 else ifeq ($(PLATFORM),rpi4-64-sdl2)
-    CPUFLAGS = -mcpu=cortex-a72+crc+simd+fp
-    CPPFLAGS += $(CPPFLAGS64)
-    AARCH64 = 1
+	CPUFLAGS = -mcpu=cortex-a72+crc+simd+fp
+	CPPFLAGS += $(CPPFLAGS64)
+	AARCH64 = 1
 
 # Raspberry Pi 3 (SDL2 64-bit with DispmanX)
 else ifeq ($(PLATFORM),rpi3-64-dmx)
-    CPUFLAGS = -mcpu=cortex-a53
-    CPPFLAGS += $(CPPFLAGS64) $(DISPMANX_FLAGS)
-    LDFLAGS += $(DISPMANX_LDFLAGS)
-    AARCH64 = 1
+	CPUFLAGS = -mcpu=cortex-a53
+	CPPFLAGS += $(CPPFLAGS64) $(DISPMANX_FLAGS)
+	LDFLAGS += $(DISPMANX_LDFLAGS)
+	AARCH64 = 1
 
 # Raspberry Pi 4 (SDL2 64-bit with DispmanX)
 else ifeq ($(PLATFORM),rpi4-64-dmx)
-    CPUFLAGS = -mcpu=cortex-a72+crc+simd+fp
-    CPPFLAGS += $(CPPFLAGS64) $(DISPMANX_FLAGS)
-    LDFLAGS += $(DISPMANX_LDFLAGS)
-    AARCH64 = 1
+	CPUFLAGS = -mcpu=cortex-a72+crc+simd+fp
+	CPPFLAGS += $(CPPFLAGS64) $(DISPMANX_FLAGS)
+	LDFLAGS += $(DISPMANX_LDFLAGS)
+	AARCH64 = 1
 
 # Vero 4k (SDL2)
 else ifeq ($(PLATFORM),vero4k)
-    CPUFLAGS = -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
-    CFLAGS += -ftree-vectorize -funsafe-math-optimizations
-    CPPFLAGS += -I/opt/vero3/include $(CPPFLAGS32) $(NEON_FLAGS) -DUSE_RENDER_THREAD
-    LDFLAGS += -L/opt/vero3/lib
-    HAVE_NEON = 1
+	CPUFLAGS = -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
+	CFLAGS += -ftree-vectorize -funsafe-math-optimizations
+	CPPFLAGS += -I/opt/vero3/include $(CPPFLAGS32) $(NEON_FLAGS) -DUSE_RENDER_THREAD
+	LDFLAGS += -L/opt/vero3/lib
+	HAVE_NEON = 1
 
 # Amlogic S905/S905X/S912 (AMLGXBB/AMLGXL/AMLGXM) e.g. Khadas VIM1/2 / S905X2 (AMLG12A) & S922X/A311D (AMLG12B) e.g. Khadas VIM3 - 32-bit userspace
 else ifneq (,$(findstring AMLG,$(PLATFORM)))
-    CPUFLAGS = -mfloat-abi=hard -mfpu=neon-fp-armv8
-    CPPFLAGS += $(CPPFLAGS32) $(NEON_FLAGS)
-    HAVE_NEON = 1
+	CPUFLAGS = -mfloat-abi=hard -mfpu=neon-fp-armv8
+	CPPFLAGS += $(CPPFLAGS32) $(NEON_FLAGS)
+	HAVE_NEON = 1
 
-    ifneq (,$(findstring AMLG12,$(PLATFORM)))
-      ifneq (,$(findstring AMLG12B,$(PLATFORM)))
-        CPUFLAGS = -mcpu=cortex-a73
-      else
-        CPUFLAGS = -mcpu=cortex-a53
-      endif
-    else ifneq (,$(findstring AMLGX,$(PLATFORM)))
-      CPUFLAGS = -mcpu=cortex-a53
-      CPPFLAGS += -DUSE_RENDER_THREAD
-    endif
+	ifneq (,$(findstring AMLG12,$(PLATFORM)))
+	  ifneq (,$(findstring AMLG12B,$(PLATFORM)))
+		CPUFLAGS = -mcpu=cortex-a73
+	  else
+		CPUFLAGS = -mcpu=cortex-a53
+	  endif
+	else ifneq (,$(findstring AMLGX,$(PLATFORM)))
+	  CPUFLAGS = -mcpu=cortex-a53
+	  CPPFLAGS += -DUSE_RENDER_THREAD
+	endif
 
 # Amlogic S905D3/S905X3/S905Y3 (AMLSM1) e.g. HardKernel ODroid C4 & Khadas VIM3L (SDL2 64-bit)
 else ifneq (,$(findstring AMLSM1,$(PLATFORM)))
-    CPUFLAGS = -mcpu=cortex-a55
-    CPPFLAGS += $(CPPFLAGS64)
-    AARCH64 = 1
+	CPUFLAGS = -mcpu=cortex-a55
+	CPPFLAGS += $(CPPFLAGS64)
+	AARCH64 = 1
 
 # Odroid Go Advance target (SDL2, 64-bit)
 else ifeq ($(PLATFORM),oga)
-    CPUFLAGS = -mcpu=cortex-a35
-    CPPFLAGS += $(CPPFLAGS64)
-    AARCH64 = 1
+	CPUFLAGS = -mcpu=cortex-a35
+	CPPFLAGS += $(CPPFLAGS64)
+	AARCH64 = 1
 
 # Generic Cortex A53 aarch64 target (SDL2, 64-bit)
 else ifeq ($(PLATFORM),a64)
-    CPUFLAGS = -mcpu=cortex-a53
-    CPPFLAGS += $(CPPFLAGS64)
-    AARCH64 = 1
+	CPUFLAGS = -mcpu=cortex-a53
+	CPPFLAGS += $(CPPFLAGS64)
+	AARCH64 = 1
 
 # RK3288 e.g. Asus Tinker Board
 # RK3328 e.g. PINE64 Rock64 
 # RK3399 e.g. PINE64 RockPro64 
 # RK3326 e.g. Odroid Go Advance - 32-bit userspace
 else ifneq (,$(findstring RK,$(PLATFORM)))
-    CPPFLAGS += $(CPPFLAGS32) $(NEON_FLAGS)
-    HAVE_NEON = 1
+	CPPFLAGS += $(CPPFLAGS32) $(NEON_FLAGS)
+	HAVE_NEON = 1
 
-    ifneq (,$(findstring RK33,$(PLATFORM)))
-      CPUFLAGS = -mfloat-abi=hard -mfpu=neon-fp-armv8
-      ifneq (,$(findstring RK3399,$(PLATFORM)))
-        CPUFLAGS += -mcpu=cortex-a72
-      else ifneq (,$(findstring RK3328,$(PLATFORM)))
-        CPUFLAGS += -mcpu=cortex-a53
-        CPPFLAGS += -DUSE_RENDER_THREAD
-      else ifneq (,$(findstring RK3326,$(PLATFORM)))
-        CPUFLAGS += -mcpu=cortex-a35
-        CPPFLAGS += -DUSE_RENDER_THREAD
+	ifneq (,$(findstring RK33,$(PLATFORM)))
+	  CPUFLAGS = -mfloat-abi=hard -mfpu=neon-fp-armv8
+	  ifneq (,$(findstring RK3399,$(PLATFORM)))
+		CPUFLAGS += -mcpu=cortex-a72
+	  else ifneq (,$(findstring RK3328,$(PLATFORM)))
+		CPUFLAGS += -mcpu=cortex-a53
+		CPPFLAGS += -DUSE_RENDER_THREAD
+	  else ifneq (,$(findstring RK3326,$(PLATFORM)))
+		CPUFLAGS += -mcpu=cortex-a35
+		CPPFLAGS += -DUSE_RENDER_THREAD
 	  endif
-    else ifneq (,$(findstring RK3288,$(PLATFORM)))
-      CPUFLAGS = -mcpu=cortex-a17 -mfloat-abi=hard -mfpu=neon-vfpv4
-      CPPFLAGS += -DUSE_RENDER_THREAD
-    endif
+	else ifneq (,$(findstring RK3288,$(PLATFORM)))
+	  CPUFLAGS = -mcpu=cortex-a17 -mfloat-abi=hard -mfpu=neon-vfpv4
+	  CPPFLAGS += -DUSE_RENDER_THREAD
+	endif
 
 # sun8i Allwinner H2+ / H3 like Orange PI, Nano PI, Banana PI, Tritium, AlphaCore2, MPCORE-HUB
 else ifeq ($(PLATFORM),sun8i)
-    CPUFLAGS = -mcpu=cortex-a7 -mfpu=neon-vfpv4
-    CPPFLAGS += $(CPPFLAGS32) $(NEON_FLAGS) -DUSE_RENDER_THREAD
-    HAVE_NEON = 1
-    ifdef DEBUG
-	    # Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
-	    # quote: The assembly code in bn_mul.h is optimized for the ARM platform and uses some registers, including r7 to efficiently do an operation. GCC also uses r7 as the frame pointer under ARM Thumb assembly.
-        CFLAGS += -fomit-frame-pointer
+	CPUFLAGS = -mcpu=cortex-a7 -mfpu=neon-vfpv4
+	CPPFLAGS += $(CPPFLAGS32) $(NEON_FLAGS) -DUSE_RENDER_THREAD
+	HAVE_NEON = 1
+	ifdef DEBUG
+		# Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
+		# quote: The assembly code in bn_mul.h is optimized for the ARM platform and uses some registers, including r7 to efficiently do an operation. GCC also uses r7 as the frame pointer under ARM Thumb assembly.
+		CFLAGS += -fomit-frame-pointer
 	endif
 
 # LePotato Libre Computer
@@ -234,21 +234,21 @@ else ifeq ($(PLATFORM),lePotato)
 
 # Nvidia Jetson Nano (SDL2 64-bit)
 else ifeq ($(PLATFORM),jetson-nano)
-    CPUFLAGS = -mcpu=cortex-a57
-    CPPFLAGS += $(CPPFLAGS64)
-    AARCH64 = 1
+	CPUFLAGS = -mcpu=cortex-a57
+	CPPFLAGS += $(CPPFLAGS64)
+	AARCH64 = 1
 
 # La Frite Libre Computer
 else ifeq ($(PLATFORM),mali-drm-gles2-sdl2)
-    CPUFLAGS = -mcpu=cortex-a53
-    CPPFLAGS += $(CPPFLAGS64)
-    AARCH64 = 1
+	CPUFLAGS = -mcpu=cortex-a53
+	CPPFLAGS += $(CPPFLAGS64)
+	AARCH64 = 1
 
 # Generic Cortex-A9 32-bit
 else ifeq ($(PLATFORM),s812)
-    CPUFLAGS = -mcpu=cortex-a9 -mfpu=neon-vfpv3 -mfloat-abi=hard
-    CPPFLAGS += $(CPPFLAGS32) $(NEON_FLAGS) -DUSE_RENDER_THREAD
-    HAVE_NEON = 1 
+	CPUFLAGS = -mcpu=cortex-a9 -mfpu=neon-vfpv3 -mfloat-abi=hard
+	CPPFLAGS += $(CPPFLAGS32) $(NEON_FLAGS) -DUSE_RENDER_THREAD
+	HAVE_NEON = 1 
 
 else
 $(error Unknown platform:$(PLATFORM))
@@ -267,23 +267,23 @@ PROG   = amiberry
 all: guisan $(PROG)
 
 ifdef GCC_PROFILE
-    CFLAGS += -pg
-    LDFLAGS += -pg
+	CFLAGS += -pg
+	LDFLAGS += -pg
 endif
 
 ifdef GEN_PROFILE
-    CFLAGS += -fprofile-generate -fprofile-arcs -fvpt
-    LDFLAGS += -lgcov
+	CFLAGS += -fprofile-generate -fprofile-arcs -fvpt
+	LDFLAGS += -lgcov
 endif
 
 ifdef USE_PROFILE
-    CFLAGS += -fprofile-use -fprofile-correction -fbranch-probabilities -fvpt
-    LDFLAGS += -lgcov
+	CFLAGS += -fprofile-use -fprofile-correction -fbranch-probabilities -fvpt
+	LDFLAGS += -lgcov
 endif
 
 ifdef SANITIZE
-    export LDFLAGS := -lasan $(LDFLAGS)
-    CFLAGS += -fsanitize=leak -fsanitize-recover=address
+	export LDFLAGS := -lasan $(LDFLAGS)
+	CFLAGS += -fsanitize=leak -fsanitize-recover=address
 endif
 
 
@@ -411,10 +411,14 @@ OBJS =	\
 	src/floppybridge/ArduinoFloppyBridge.o \
 	src/floppybridge/ArduinoInterface.o \
 	src/floppybridge/CommonBridgeTemplate.o \
+	src/floppybridge/floppybridge_lib.o \
+	src/floppybridge/ftdi.o \
 	src/floppybridge/GreaseWeazleBridge.o \
 	src/floppybridge/GreaseWeazleInterface.o \
 	src/floppybridge/RotationExtractor.o \
 	src/floppybridge/SerialIO.o \
+	src/floppybridge/SuperCardProBridge.o \
+	src/floppybridge/SuperCardProInterface.o \
 	src/osdep/ahi_v1.o \
 	src/osdep/bsdsocket_host.o \
 	src/osdep/cda_play.o \

@@ -1,6 +1,6 @@
 /* floppybridge_abstract
 *
-* Copyright 2021 Robert Smith (@RobSmithDev)
+* Copyright (C) 2021 Robert Smith (@RobSmithDev)
 * https://amiga.robsmithdev.co.uk
 *
 * This library defines a standard interface for connecting physical disk drives to *UAE
@@ -38,10 +38,24 @@
 #endif
 
 
+
 class FloppyDiskBridge {
 public:
+
+	// Driver information
+	struct BridgeDriver {
+		// Details about the driver
+		const char* name;
+		const char* url;
+		const char* manufacturer;
+		const char* driverAuthor;
+
+		// Which options in configuration it can support, aside from the standard ones
+		const unsigned int configOptions;
+	};
+
 	// Definition of the type of drive
-	enum class DriveTypeID { dti35DD, dti35HD, dti5255SD };
+	enum class DriveTypeID : unsigned char { dti35DD = 0, dti35HD = 1, dti5255SD = 2 };
 
 	FloppyDiskBridge() {};
 	// This is just to force this being virtual
@@ -53,17 +67,17 @@ public:
 	// This is called prior to closing down, but shoudl reverse initialise
 	virtual void shutdown() {};
 
-	// Returns the name of interface.  This pointer should remain valid after the class is destroyed
-	virtual const TCHAR* getDriveIDName()  = 0;
+	// Returns the name of interface.  This pointer should remain valid *after* the class is destroyed so should be static
+	virtual const BridgeDriver* getDriverInfo()  = 0;
 
 	// Return the 'bit cell' time in uSec.  Standard DD Amiga disks this would be 2uS, HD disks would be 1us I guess, but mainly used for =4 for SD I think
 	virtual unsigned char getBitSpeed() { return 2; };
 
-	// Return the type of disk connected.  This is used to tell WinUAE if we're DD or HD
+	// Return the type of disk connected.  This is used to tell WinUAE if we're DD or HD.  This must return INSTANTLY
 	virtual DriveTypeID getDriveTypeID()  = 0;
 
-	// Call to get the last error message.  Length is the size of the buffer in TCHARs, the function returns the size actually needed
-	virtual unsigned int getLastErrorMessage(TCHAR* errorMessage, unsigned int length) { return 0; };
+	// Call to get the last error message.  If the board initialised this may return a compatability warning instead
+	virtual const char* getLastErrorMessage() { return NULL; };
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -99,12 +113,13 @@ public:
 	virtual bool isMotorRunning()  = 0;
 
 	// Turn on and off the motor
-	virtual void setMotorStatus(bool turnOn, bool side)  = 0;
+	virtual void setMotorStatus(bool side, bool turnOn)  = 0;
 
 	// Returns TRUE if the drive is ready (ie: the motor has spun up to speed to speed)
 	virtual bool isReady()  = 0;
 
-
+	// Returns the currently selected side
+	virtual bool getCurrentSide() = 0;
 
 	/////////////////////// Disk Detection ///////////////////////////////////////////////////
 	// Return TRUE if there is a disk in the drive.  This is usually called after gotoCylinder
@@ -157,6 +172,9 @@ public:
 
 	// Returns TRUE if a write is no longer pending.  This should only return TRUE the first time, and then should reset
 	virtual bool isWriteComplete() = 0;
+
+	// Set to TRUE if turbo writing is allowed (this is a sneaky DMA bypass trick)
+	virtual bool canTurboWrite() = 0;
 
 	// Return TRUE if there is data ready to be committed to disk
 	virtual bool isReadyToWrite() = 0;

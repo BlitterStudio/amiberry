@@ -39,11 +39,31 @@
 #include "ArduinoInterface.h"
 
 
-static const TCHAR* DriverName = _T("Arduino Floppy Disk Reader/Writer, https://amiga.robsmithdev.co.uk");
+static const FloppyDiskBridge::BridgeDriver DriverArduinoFloppy = {
+	"DrawBridge aka Arduino Reader/Writer", "https://amiga.robsmithdev.co.uk", "RobSmithDev", "RobSmithDev", CONFIG_OPTIONS_COMPORT | CONFIG_OPTIONS_COMPORT_AUTODETECT | CONFIG_OPTIONS_SMARTSPEED | CONFIG_OPTIONS_AUTOCACHE
+};
 
 // Flags from WINUAE
-ArduinoFloppyDiskBridge::ArduinoFloppyDiskBridge(const int device_settings, const bool canStall, const bool useIndex) : CommonBridgeTemplate(canStall, useIndex), m_comPort(device_settings) {
+ArduinoFloppyDiskBridge::ArduinoFloppyDiskBridge(BridgeMode bridgeMode, BridgeDensityMode bridgeDensity, bool enableAutoCache, bool useSmartSpeed, bool autoDetectComPort, char* comPort) :
+	CommonBridgeTemplate(bridgeMode, bridgeDensity, enableAutoCache, useSmartSpeed), m_comPort(autoDetectComPort ? "" : comPort) {
 }
+
+// This is for the static version
+ArduinoFloppyDiskBridge::ArduinoFloppyDiskBridge(BridgeMode bridgeMode, BridgeDensityMode bridgeDensity, int uaeSettings) : 
+	CommonBridgeTemplate(bridgeMode, bridgeDensity, false, false) {
+
+	if (uaeSettings > 0) {
+		char buffer[20];
+#ifdef _WIN32
+		sprintf_s(buffer, "COM%i", uaeSettings);
+#else		
+		snprintf(buffer, 20, "COM%i", uaeSettings);
+#endif
+		m_comPort = buffer;
+	}
+	else m_comPort = "";
+}
+
 
 ArduinoFloppyDiskBridge::~ArduinoFloppyDiskBridge() {
 }
@@ -73,14 +93,10 @@ void ArduinoFloppyDiskBridge::closeInterface() {
 // Returns the COM port number to use
 std::wstring ArduinoFloppyDiskBridge::getComPort() {
 	// 0 means auto-detect.
-	if (m_comPort > 0) {
-		wchar_t buffer[20];
-#ifdef _WIN32
-		swprintf_s(buffer, L"COM%i", m_comPort);
-#else		
-		swprintf(buffer, 20, L"COM%i", m_comPort);
-#endif
-		return buffer;
+	if (m_comPort.length()) {
+		std::wstring widePort;
+		quicka2w(m_comPort, widePort);
+		return widePort;
 	}
 
 	// Returns a list of ports this could be available on
@@ -113,11 +129,11 @@ bool ArduinoFloppyDiskBridge::openInterface(std::string& errorMessage) {
 			// Must be at least V1.8
 			char buf[20];
 #ifdef _WIN32			
-			sprintf_s(buf, "%i.%i", fv.major, fv.minor);
+			sprintf_s(buf, "%i.%i.%i", fv.major, fv.minor, fv.buildNumber);
 #else
-			sprintf(buf, "%i.%i", fv.major, fv.minor);
+			sprintf(buf, "%i.%i.%i", fv.major, fv.minor, fv.buildNumber);
 #endif			
-			errorMessage = "Arduino Floppy Reader/Writer Firmware is Out Of Date\n\nWinUAE requires V1.8 (and ideally with the modded circuit design).\n\n";
+			errorMessage = "DrawBridge aka Arduino Floppy Reader/Writer Firmware is Out Of Date\n\nWinUAE requires V1.8 (and ideally with the modded circuit design).\n\n";
 			errorMessage += "You are currently using V" + std::string(buf) + ".  Please update the firmware.";
 		}
 		else {
@@ -134,7 +150,7 @@ bool ArduinoFloppyDiskBridge::openInterface(std::string& errorMessage) {
 				if (!hasBeenSeen) {
 					hasBeenSeen = 1;
 					if (key) RegSetValueEx(key, L"WarningShown", NULL, REG_DWORD, (LPBYTE)&hasBeenSeen, sizeof(hasBeenSeen));
-					MessageBox(GetDesktopWindow(), _T("The Arduino Reader/Writer hasn't had the 'hardware mod' applied for optimal WinUAE Support.\nThis mod is highly recommended for best experience and will reduce disk access."), _T("Arduino Reader/Writer"), MB_OK | MB_ICONINFORMATION);
+					errorMessage = "DrawBridge aka Arduino Reader / Writer hasn't had the 'hardware mod' applied for optimal WinUAE Support.\nThis mod is highly recommended for best experience and will reduce disk access.";
 				}
 				if (key) RegCloseKey(key);
 			}
@@ -150,14 +166,37 @@ bool ArduinoFloppyDiskBridge::openInterface(std::string& errorMessage) {
 	return false;
 }
 
-// Duplicate of the one below, but here for consistancy - Returns the name of interface.  This pointer should remain valid after the class is destroyed
-const TCHAR* ArduinoFloppyDiskBridge::_getDriveIDName() {
-	return DriverName;
+// Called when a disk is inserted so that you can (re)populate the response to _getDriveTypeID()
+void ArduinoFloppyDiskBridge::checkDiskType() {
+	bool capacity;
+	if (m_io.checkDiskCapacity(capacity) == ArduinoFloppyReader::DiagnosticResponse::drOK) {
+		m_isHDDisk = capacity;
+		m_io.setDiskCapacity(m_isHDDisk);
+	}
+	else {
+		m_isHDDisk = false;
+		m_io.setDiskCapacity(m_isHDDisk);
+	}
+}
+
+// Called to force into DD or HD mode.  Overrides checkDiskType() until checkDiskType() is called again
+void ArduinoFloppyDiskBridge::forceDiskDensity(bool forceHD) {
+	m_isHDDisk = forceHD;
+	m_io.setDiskCapacity(m_isHDDisk);
+}
+
+const FloppyDiskBridge::BridgeDriver* ArduinoFloppyDiskBridge::staticBridgeInformation() {
+	return &DriverArduinoFloppy;
+}
+
+// Get the name of the drive
+const FloppyDiskBridge::BridgeDriver* ArduinoFloppyDiskBridge::_getDriverInfo() {
+	return staticBridgeInformation();
 }
 
 // Duplicate of the one below, but here for consistancy - Returns the name of interface.  This pointer should remain valid after the class is destroyed
 const FloppyDiskBridge::DriveTypeID ArduinoFloppyDiskBridge::_getDriveTypeID() {
-	return FloppyDiskBridge::DriveTypeID::dti35DD;
+	return m_isHDDisk ? FloppyDiskBridge::DriveTypeID::dti35HD : FloppyDiskBridge::DriveTypeID::dti35DD;
 }
 
 // Called to switch which head is being used right now.  Returns success or not
@@ -234,6 +273,23 @@ CommonBridgeTemplate::ReadResponse ArduinoFloppyDiskBridge::readData(RotationExt
 		[&onRotation](RotationExtractor::MFMSample** mfmData, const unsigned int dataLengthInBits) -> bool {
 			return onRotation(*mfmData, dataLengthInBits);
 		});
+
+	// Retry
+	if (result == ArduinoFloppyReader::DiagnosticResponse::drError) {
+		result = m_io.readRotation(rotationExtractor, maxBufferSize, buffer, indexMarker,
+			[&onRotation](RotationExtractor::MFMSample** mfmData, const unsigned int dataLengthInBits) -> bool {
+				return onRotation(*mfmData, dataLengthInBits);
+			});
+	}
+
+	// Retry
+	if (result == ArduinoFloppyReader::DiagnosticResponse::drError) {
+		result = m_io.readRotation(rotationExtractor, maxBufferSize, buffer, indexMarker,
+			[&onRotation](RotationExtractor::MFMSample** mfmData, const unsigned int dataLengthInBits) -> bool {
+				return onRotation(*mfmData, dataLengthInBits);
+			});
+		if (result == ArduinoFloppyReader::DiagnosticResponse::drError) result = ArduinoFloppyReader::DiagnosticResponse::drNoDiskInDrive;
+	}
 
 	switch (result) {
 		case ArduinoFloppyReader::DiagnosticResponse::drOK: return ReadResponse::rrOK;

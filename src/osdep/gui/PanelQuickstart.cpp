@@ -648,7 +648,7 @@ public:
 					return;
 				disk_setwriteprotect(&changed_prefs, i, changed_prefs.floppyslots[i].df,
 				                     chkDFxWriteProtect[i]->isSelected());
-				if (disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df) != chkDFxWriteProtect[i]->
+				if (disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df, i) != chkDFxWriteProtect[i]->
 					isSelected())
 				{
 					// Failed to change write protection -> maybe filesystem doesn't support this
@@ -1079,7 +1079,7 @@ void RefreshPanelQuickstart(void)
 		if (i < 2)
 		{
 			chkDFx[i]->setSelected(drive_enabled);
-			chkDFxWriteProtect[i]->setSelected(disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df));
+			chkDFxWriteProtect[i]->setSelected(disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df, i));
 			if (i == 0)
 				chkDFx[i]->setEnabled(false);
 			else

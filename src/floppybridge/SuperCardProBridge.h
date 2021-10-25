@@ -1,6 +1,6 @@
-#ifndef GREASEWEAZLE_FLOPPY_BRIDGE
-#define GREASEWEAZLE_FLOPPY_BRIDGE
-/* WinUAE Greaseweazle Interface for *UAE
+#ifndef SUPERCARDPRO_FLOPPY_BRIDGE
+#define SUPERCARDPRO_FLOPPY_BRIDGE
+/* WinUAE Supercard Pro Interface for *UAE
 *
 * By Robert Smith (@RobSmithDev)
 * https://amiga.robsmithdev.co.uk
@@ -11,24 +11,23 @@
 */
 
 //
-// ROMTYPE_GREASEWEAZLEREADER_WRITER must be defined for this to work
+// ROMTYPE_SUPERCARDPRO_WRITER must be defined for this to work
 
-
-#ifdef ROMTYPE_GREASEWEAZLEREADER_WRITER
+#ifdef ROMTYPE_SUPERCARDPRO_WRITER
 
 #include "floppybridge_abstract.h"
 #include "CommonBridgeTemplate.h"
-#include "GreaseWeazleInterface.h"
+#include "SuperCardProInterface.h"
 
 
-class GreaseWeazleDiskBridge : public CommonBridgeTemplate {
+class SupercardProDiskBridge : public CommonBridgeTemplate {
 private:
-	// When the motor last switched on	
-	std::chrono::time_point<std::chrono::steady_clock> m_motorTurnOnTime;
-	bool m_motorIsEnabled = false;
 
 	// Which com port should we use? or blank for automatic
 	std::string m_comPort;
+
+	// IS motor running?
+	bool m_motorIsEnabled = false;
 
 	// Which drive to use
 	bool m_useDriveA = false;
@@ -37,7 +36,7 @@ private:
 	bool m_isHDDisk = false;
 
 	// Hardware connection
-	GreaseWeazle::GreaseWeazleInterface m_io;
+	SuperCardPro::SCPInterface m_io;
 
 	// Remember where we are
 	int m_currentCylinder = 0;
@@ -115,12 +114,13 @@ protected:
 	virtual bool attemptToDetectDiskChange() override;
 
 public:
-	GreaseWeazleDiskBridge(BridgeMode bridgeMode, BridgeDensityMode bridgeDensity, bool enableAutoCache, bool useSmartSpeed, bool autoDetectComPort, char* comPort, bool driveOnB);
+	SupercardProDiskBridge(BridgeMode bridgeMode, BridgeDensityMode bridgeDensity, bool enableAutoCache, bool useSmartSpeed, bool autoDetectComPort, char* comPort, bool driveOnB);
 
 	// This is for the static version
-	GreaseWeazleDiskBridge(BridgeMode bridgeMode, BridgeDensityMode bridgeDensity, int uaeSettings);
+	SupercardProDiskBridge(BridgeMode bridgeMode, BridgeDensityMode bridgeDensity, int uaeSettings);
 
-	virtual ~GreaseWeazleDiskBridge();
+
+	virtual ~SupercardProDiskBridge();
 
 	static const BridgeDriver* staticBridgeInformation();
 };

@@ -38,6 +38,10 @@
 #include <termios.h>
 #endif
 
+#include "ftdi.h"
+
+#define FTDI_PORT_PREFIX "FTDI:"
+
 extern void quickw2a(const std::wstring& wstr, std::string& str);
 extern void quicka2w(const std::string& str, std::wstring& wstr);
 
@@ -46,6 +50,9 @@ class SerialIO {
 private:
 	unsigned int m_readTimeout = 0, m_readTimeoutMultiplier = 0;
 	unsigned int m_writeTimeout = 0, m_writeTimeoutMultiplier = 0;
+#ifdef FTDI_D2XX_AVAILABLE
+	FTDI::FTDIInterface m_ftdi;
+#endif
 
 #ifdef _WIN32
 	HANDLE m_portHandle = INVALID_HANDLE_VALUE;
@@ -72,6 +79,10 @@ public:
 		std::wstring productName;
 		// Instance ID
 		std::wstring instanceID;
+#ifdef FTDI_D2XX_AVAILABLE
+		// Set if this is an FTDI device index
+		int ftdiIndex = -1;
+#endif
 	};
 
 	// Configuration settings for the port
@@ -89,6 +100,9 @@ public:
 	// Sets the status of the DTR line
 	void setDTR(bool enableDTR);
 
+	// Sets the status of the RTS line
+	void setRTS(bool enableRTS);
+
 	// Returns the status of the CTS pin
 	bool getCTSStatus();
 
@@ -103,6 +117,9 @@ public:
 
 	// Returns the number of bytes waiting to be read
 	unsigned int getBytesWaiting();
+
+	// Check if we wrre quick enough reading the data
+	bool checkForOverrun();
 
 	// Open a port by name
 	Response openPort(const std::wstring& portName);
@@ -129,6 +146,6 @@ public:
 	// Sets the write timeouts. The actual timeout is calculated as waitTimetimeout + (multiplier * num bytes)
 	void setWriteTimeouts(unsigned int waitTimetimeout, unsigned int multiplier);
 };
-
+ 
 
 #endif
