@@ -46,7 +46,7 @@
 
 // Supercard Pro floppy reader/writer
 #define ROMTYPE_SUPERCARDPRO_WRITER				ROMTYPE_FLOPYBRDGE2
-#include "SupercardProBridge.h"
+#include "SuperCardProBridge.h"
 
 
 // Not the nicest way to do this, but here's how they get installed, for now
