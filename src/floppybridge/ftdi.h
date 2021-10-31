@@ -69,7 +69,7 @@ namespace FTDI {
 #endif
 #endif
 
-	typedef ULONG FT_HANDLE;
+	typedef void* FT_HANDLE;
 
 	// Device status
 	enum class FT_STATUS : DWORD {
