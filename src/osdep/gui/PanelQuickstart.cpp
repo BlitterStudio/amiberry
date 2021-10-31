@@ -19,12 +19,13 @@ static gcn::Label* lblConfig;
 static gcn::DropDown* cboConfig;
 static gcn::CheckBox* chkNTSC;
 
-static gcn::CheckBox* chkDFx[2];
-static gcn::CheckBox* chkDFxWriteProtect[2];
-static gcn::Button* cmdDFxInfo[2];
-static gcn::Button* cmdDFxEject[2];
-static gcn::Button* cmdDFxSelect[2];
-static gcn::DropDown* cboDFxFile[2];
+static gcn::CheckBox* chkqsDFx[2];
+static gcn::DropDown* cboqsDFxType[2];
+static gcn::CheckBox* chkqsDFxWriteProtect[2];
+static gcn::Button* cmdqsDFxInfo[2];
+static gcn::Button* cmdqsDFxEject[2];
+static gcn::Button* cmdqsDFxSelect[2];
+static gcn::DropDown* cboqsDFxFile[2];
 
 static gcn::CheckBox* chkCD;
 static gcn::Button* cmdCDEject;
@@ -39,6 +40,51 @@ static gcn::DropDown* cboWhdload;
 static gcn::Button* cmdWhdloadEject;
 static gcn::Button* cmdWhdloadSelect;
 
+class QSDriveTypeListModel : public gcn::ListModel
+{
+	std::vector<std::string> types{};
+
+public:
+	QSDriveTypeListModel()
+	{
+		types.emplace_back("Disabled");
+		types.emplace_back("3.5'' DD");
+		types.emplace_back("3.5'' HD");
+		types.emplace_back("5.25'' (40)");
+		types.emplace_back("5.25'' (80)");
+		types.emplace_back("3.5'' ESCOM");
+		types.emplace_back("FB: Fast");
+		types.emplace_back("FB: Compatible");
+		types.emplace_back("FB: Turbo");
+		types.emplace_back("FB: Accurate");
+	}
+
+	int add_element(const char* elem) override
+	{
+		types.emplace_back(elem);
+		return 0;
+	}
+
+	void clear_elements() override
+	{
+		types.clear();
+	}
+
+	int getNumberOfElements() override
+	{
+		return types.size();
+	}
+
+	std::string getElementAt(int i) override
+	{
+		if (i < 0 || i >= static_cast<int>(types.size()))
+			return "---";
+		return types[i];
+	}
+};
+
+static QSDriveTypeListModel qsDriveTypeList;
+
 struct amigamodels
 {
 	int compalevels;
@@ -46,7 +92,7 @@ struct amigamodels
 	char configs[8][128];
 };
 
-static struct amigamodels amodels[] = {
+static amigamodels amodels[] = {
 	{
 		4, "Amiga 500", {
 			"1.3 ROM, OCS, 512 KB Chip + 512 KB Slow RAM (most common)",
@@ -64,7 +110,7 @@ static struct amigamodels amodels[] = {
 			"2 MB Chip RAM expanded configuration",
 			"4 MB Fast RAM expanded configuration",
 #ifdef ANDROID
-         " ", " ", " ",
+		 " ", " ", " ",
 #endif
 			"\0"
 		}
@@ -75,7 +121,7 @@ static struct amigamodels amodels[] = {
 			"2 MB Chip RAM expanded configuration",
 			"4 MB Fast RAM expanded configuration",
 #ifdef ANDROID
-         " ", " ", " ",
+		 " ", " ", " ",
 #endif
 			"\0"
 		}
@@ -91,7 +137,7 @@ static struct amigamodels amodels[] = {
 			"Basic non-expanded configuration",
 			"4 MB Fast RAM expanded configuration",
 #ifdef ANDROID
-         " ", " ", " ", " ",
+		 " ", " ", " ", " ",
 #endif
 			"\0"
 		}
@@ -109,7 +155,7 @@ static struct amigamodels amodels[] = {
 			"68030, 3.1 ROM, 2MB Chip + 8MB Fast",
 			"68040, 3.1 ROM, 2MB Chip + 8MB Fast",
 #ifdef ANDROID
-         " ", " ", " ", " ",
+		 " ", " ", " ", " ",
 #endif
 			"\0"
 		}
@@ -126,7 +172,7 @@ static struct amigamodels amodels[] = {
 			"CD32",
 			"CD32 with Full Motion Video cartridge",
 #ifdef ANDROID
-         " ", " ", " ", " ",
+		 " ", " ", " ", " ",
 #endif
 			"\0"
 		}
@@ -190,18 +236,18 @@ static void SetControlState(const int model)
 		break;
 	}
 
-	chkDFxWriteProtect[0]->setEnabled(df0_editable && !changed_prefs.floppy_read_only);
-	cmdDFxInfo[0]->setEnabled(df0_editable);
-	cmdDFxEject[0]->setEnabled(df0_editable);
-	cmdDFxSelect[0]->setEnabled(df0_editable);
-	cboDFxFile[0]->setEnabled(df0_editable);
+	chkqsDFxWriteProtect[0]->setEnabled(df0_editable && !changed_prefs.floppy_read_only);
+	cmdqsDFxInfo[0]->setEnabled(df0_editable);
+	cmdqsDFxEject[0]->setEnabled(df0_editable);
+	cmdqsDFxSelect[0]->setEnabled(df0_editable);
+	cboqsDFxFile[0]->setEnabled(df0_editable);
 
-	chkDFx[1]->setVisible(df1_visible);
-	chkDFxWriteProtect[1]->setVisible(df1_visible);
-	cmdDFxInfo[1]->setVisible(df1_visible);
-	cmdDFxEject[1]->setVisible(df1_visible);
-	cmdDFxSelect[1]->setVisible(df1_visible);
-	cboDFxFile[1]->setVisible(df1_visible);
+	chkqsDFx[1]->setVisible(df1_visible);
+	chkqsDFxWriteProtect[1]->setVisible(df1_visible);
+	cmdqsDFxInfo[1]->setVisible(df1_visible);
+	cmdqsDFxEject[1]->setVisible(df1_visible);
+	cmdqsDFxSelect[1]->setVisible(df1_visible);
+	cboqsDFxFile[1]->setVisible(df1_visible);
 
 	chkCD->setVisible(cd_visible);
 	cmdCDEject->setVisible(cd_visible);
@@ -629,17 +675,17 @@ public:
 	{
 		for (auto i = 0; i < 2; ++i)
 		{
-			if (actionEvent.getSource() == chkDFx[i])
+			if (actionEvent.getSource() == chkqsDFx[i])
 			{
 				//---------------------------------------
 				// Drive enabled/disabled
 				//---------------------------------------
-				if (chkDFx[i]->isSelected())
+				if (chkqsDFx[i]->isSelected())
 					changed_prefs.floppyslots[i].dfxtype = DRV_35_DD;
 				else
 					changed_prefs.floppyslots[i].dfxtype = DRV_NONE;
 			}
-			else if (actionEvent.getSource() == chkDFxWriteProtect[i])
+			else if (actionEvent.getSource() == chkqsDFxWriteProtect[i])
 			{
 				//---------------------------------------
 				// Write-protect changed
@@ -647,14 +693,14 @@ public:
 				if (strlen(changed_prefs.floppyslots[i].df) <= 0)
 					return;
 				disk_setwriteprotect(&changed_prefs, i, changed_prefs.floppyslots[i].df,
-				                     chkDFxWriteProtect[i]->isSelected());
-				if (disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df, i) != chkDFxWriteProtect[i]->
+									 chkqsDFxWriteProtect[i]->isSelected());
+				if (disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df, i) != chkqsDFxWriteProtect[i]->
 					isSelected())
 				{
 					// Failed to change write protection -> maybe filesystem doesn't support this
 					ShowMessage("Set/Clear write protect", "Failed to change write permission.",
-					            "Maybe underlying filesystem doesn't support this.", "Ok", "");
-					chkDFxWriteProtect[i]->requestFocus();
+								"Maybe underlying filesystem doesn't support this.", "Ok", "");
+					chkqsDFxWriteProtect[i]->requestFocus();
 				}
 				DISK_reinsert(i);
 			}
@@ -665,7 +711,30 @@ public:
 	}
 };
 
-static QSDFxCheckActionListener* dfxCheckActionListener;
+static QSDFxCheckActionListener* qsdfxCheckActionListener;
+
+class QSDriveTypeActionListener : public gcn::ActionListener
+{
+public:
+	void action(const gcn::ActionEvent& actionEvent) override
+	{
+		int sub;
+		for (auto i = 0; i < 2; ++i)
+		{
+			if (actionEvent.getSource() == cboqsDFxType[i])
+			{
+				const int dfxtype = todfxtype(i, cboqsDFxType[i]->getSelected() - 1, &sub);
+				changed_prefs.floppyslots[i].dfxtype = dfxtype;
+				changed_prefs.floppyslots[i].dfxsubtype = sub;
+				changed_prefs.floppyslots[i].dfxsubtypeid[0] = 0;
+			}
+		}
+		RefreshPanelFloppy();
+		RefreshPanelQuickstart();
+	}
+};
+
+static QSDriveTypeActionListener* qsDriveTypeActionListener;
 
 class QSDFxButtonActionListener : public gcn::ActionListener
 {
@@ -674,15 +743,15 @@ public:
 	{
 		for (auto i = 0; i < 2; ++i)
 		{
-			if (actionEvent.getSource() == cmdDFxInfo[i])
+			if (actionEvent.getSource() == cmdqsDFxInfo[i])
 			{
 				//---------------------------------------
 				// Show info about current disk-image
 				//---------------------------------------
-				//if (changed_prefs.floppyslots[i].dfxtype != DRV_NONE && strlen(changed_prefs.floppyslots[i].df) > 0);
-				// ToDo: Show info dialog
+				if (changed_prefs.floppyslots[i].dfxtype != DRV_NONE && strlen(changed_prefs.floppyslots[i].df) > 0)
+					DisplayDiskInfo(i);
 			}
-			else if (actionEvent.getSource() == cmdDFxEject[i])
+			else if (actionEvent.getSource() == cmdqsDFxEject[i])
 			{
 				//---------------------------------------
 				// Eject disk from drive
@@ -691,7 +760,7 @@ public:
 				strncpy(changed_prefs.floppyslots[i].df, "", MAX_DPATH);
 				AdjustDropDownControls();
 			}
-			else if (actionEvent.getSource() == cmdDFxSelect[i])
+			else if (actionEvent.getSource() == cmdqsDFxSelect[i])
 			{
 				//---------------------------------------
 				// Select disk for drive
@@ -714,7 +783,7 @@ public:
 						AdjustDropDownControls();
 					}
 				}
-				cmdDFxSelect[i]->requestFocus();
+				cmdqsDFxSelect[i]->requestFocus();
 			}
 		}
 
@@ -723,7 +792,7 @@ public:
 	}
 };
 
-static QSDFxButtonActionListener* dfxButtonActionListener;
+static QSDFxButtonActionListener* qsdfxButtonActionListener;
 
 class QSDiskFileActionListener : public gcn::ActionListener
 {
@@ -732,14 +801,14 @@ public:
 	{
 		for (auto i = 0; i < 2; ++i)
 		{
-			if (actionEvent.getSource() == cboDFxFile[i])
+			if (actionEvent.getSource() == cboqsDFxFile[i])
 			{
 				//---------------------------------------
 				// Disk image from list selected
 				//---------------------------------------
 				if (!bIgnoreListChange)
 				{
-					const auto idx = cboDFxFile[i]->getSelected();
+					const auto idx = cboqsDFxFile[i]->getSelected();
 
 					if (idx < 0)
 					{
@@ -756,7 +825,7 @@ public:
 							lstMRUDiskList.erase(lstMRUDiskList.begin() + idx);
 							lstMRUDiskList.insert(lstMRUDiskList.begin(), changed_prefs.floppyslots[i].df);
 							bIgnoreListChange = true;
-							cboDFxFile[i]->setSelected(0);
+							cboqsDFxFile[i]->setSelected(0);
 							bIgnoreListChange = false;
 						}
 					}
@@ -783,12 +852,14 @@ static QuickstartModeActionListener* quickstartModeActionListener;
 
 void InitPanelQuickstart(const struct _ConfigCategory& category)
 {
+	int posX;
 	auto posY = DISTANCE_BORDER;
 
 	amigaModelActionListener = new AmigaModelActionListener();
 	ntscButtonActionListener = new QSNTSCButtonActionListener();
-	dfxCheckActionListener = new QSDFxCheckActionListener();
-	dfxButtonActionListener = new QSDFxButtonActionListener();
+	qsdfxCheckActionListener = new QSDFxCheckActionListener();
+	qsDriveTypeActionListener = new QSDriveTypeActionListener();
+	qsdfxButtonActionListener = new QSDFxButtonActionListener();
 	diskFileActionListener = new QSDiskFileActionListener();
 	cdButtonActionListener = new QSCDButtonActionListener();
 	cdFileActionListener = new QSCDFileActionListener();
@@ -809,7 +880,7 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 	lblConfig->setAlignment(gcn::Graphics::RIGHT);
 	cboConfig = new gcn::DropDown(&amigaConfigList);
 	cboConfig->setSize(category.panel->getWidth() - lblConfig->getWidth() - 8 - 2 * DISTANCE_BORDER,
-	                   cboConfig->getHeight());
+					   cboConfig->getHeight());
 	cboConfig->setBaseColor(gui_baseCol);
 	cboConfig->setBackgroundColor(colTextboxBackground);
 	cboConfig->setId("cboAConfig");
@@ -823,45 +894,52 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 	{
 		char tmp[20];
 		snprintf(tmp, 20, "DF%d:", i);
-		chkDFx[i] = new gcn::CheckBox(tmp);
-		chkDFx[i]->setId(tmp);
-		chkDFx[i]->addActionListener(dfxCheckActionListener);
+		chkqsDFx[i] = new gcn::CheckBox(tmp);
 		snprintf(tmp, 20, "qsDF%d", i);
-		chkDFx[i]->setId(tmp);
+		chkqsDFx[i]->setId(tmp);
+		chkqsDFx[i]->addActionListener(qsdfxCheckActionListener);
 
-		chkDFxWriteProtect[i] = new gcn::CheckBox("Write-protected");
-		chkDFxWriteProtect[i]->addActionListener(dfxCheckActionListener);
+		cboqsDFxType[i] = new gcn::DropDown(&qsDriveTypeList);
+		cboqsDFxType[i]->setBaseColor(gui_baseCol);
+		cboqsDFxType[i]->setBackgroundColor(colTextboxBackground);
+		snprintf(tmp, 20, "cboqsType%d", i);
+		cboqsDFxType[i]->setId(tmp);
+		cboqsDFxType[i]->addActionListener(qsDriveTypeActionListener);
+
+		chkqsDFxWriteProtect[i] = new gcn::CheckBox("Write-protected");
 		snprintf(tmp, 20, "qsWP%d", i);
-		chkDFxWriteProtect[i]->setId(tmp);
+		chkqsDFxWriteProtect[i]->setId(tmp);
+		chkqsDFxWriteProtect[i]->addActionListener(qsdfxCheckActionListener);
+		
 
-		cmdDFxInfo[i] = new gcn::Button("?");
-		cmdDFxInfo[i]->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
-		cmdDFxInfo[i]->setBaseColor(gui_baseCol);
-		cmdDFxInfo[i]->addActionListener(dfxButtonActionListener);
+		cmdqsDFxInfo[i] = new gcn::Button("?");
 		snprintf(tmp, 20, "qsInfo%d", i);
-		cmdDFxInfo[i]->setId(tmp);
+		cmdqsDFxInfo[i]->setId(tmp);
+		cmdqsDFxInfo[i]->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+		cmdqsDFxInfo[i]->setBaseColor(gui_baseCol);
+		cmdqsDFxInfo[i]->addActionListener(qsdfxButtonActionListener);
 
-		cmdDFxEject[i] = new gcn::Button("Eject");
-		cmdDFxEject[i]->setSize(SMALL_BUTTON_WIDTH * 2, SMALL_BUTTON_HEIGHT);
-		cmdDFxEject[i]->setBaseColor(gui_baseCol);
+		cmdqsDFxEject[i] = new gcn::Button("Eject");
 		snprintf(tmp, 20, "qscmdEject%d", i);
-		cmdDFxEject[i]->setId(tmp);
-		cmdDFxEject[i]->addActionListener(dfxButtonActionListener);
+		cmdqsDFxEject[i]->setId(tmp);
+		cmdqsDFxEject[i]->setSize(SMALL_BUTTON_WIDTH * 2, SMALL_BUTTON_HEIGHT);
+		cmdqsDFxEject[i]->setBaseColor(gui_baseCol);
+		cmdqsDFxEject[i]->addActionListener(qsdfxButtonActionListener);
 
-		cmdDFxSelect[i] = new gcn::Button("Select file");
-		cmdDFxSelect[i]->setSize(BUTTON_WIDTH + 10, SMALL_BUTTON_HEIGHT);
-		cmdDFxSelect[i]->setBaseColor(gui_baseCol);
+		cmdqsDFxSelect[i] = new gcn::Button("Select file");
 		snprintf(tmp, 20, "qscmdSel%d", i);
-		cmdDFxSelect[i]->setId(tmp);
-		cmdDFxSelect[i]->addActionListener(dfxButtonActionListener);
+		cmdqsDFxSelect[i]->setId(tmp);
+		cmdqsDFxSelect[i]->setSize(BUTTON_WIDTH + 10, SMALL_BUTTON_HEIGHT);
+		cmdqsDFxSelect[i]->setBaseColor(gui_baseCol);
+		cmdqsDFxSelect[i]->addActionListener(qsdfxButtonActionListener);
 
-		cboDFxFile[i] = new gcn::DropDown(&diskfileList);
-		cboDFxFile[i]->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, cboDFxFile[i]->getHeight());
-		cboDFxFile[i]->setBaseColor(gui_baseCol);
-		cboDFxFile[i]->setBackgroundColor(colTextboxBackground);
-		snprintf(tmp, 20, "cboDisk%d", i);
-		cboDFxFile[i]->setId(tmp);
-		cboDFxFile[i]->addActionListener(diskFileActionListener);
+		cboqsDFxFile[i] = new gcn::DropDown(&diskfileList);
+		snprintf(tmp, 20, "cboqsDisk%d", i);
+		cboqsDFxFile[i]->setId(tmp);
+		cboqsDFxFile[i]->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, cboqsDFxFile[i]->getHeight());
+		cboqsDFxFile[i]->setBaseColor(gui_baseCol);
+		cboqsDFxFile[i]->setBackgroundColor(colTextboxBackground);
+		cboqsDFxFile[i]->addActionListener(diskFileActionListener);
 	}
 
 	chkCD = new gcn::CheckBox("CD drive");
@@ -927,25 +1005,31 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 
 	for (auto i = 0; i < 2; ++i)
 	{
-		category.panel->add(chkDFx[i], DISTANCE_BORDER, posY);
-		category.panel->add(chkDFxWriteProtect[i], DISTANCE_BORDER + DISTANCE_NEXT_X * 8, posY);
-		//	  category.panel->add(cmdDFxInfo[i], posX, posY);
-		//posX += cmdDFxInfo[i]->getWidth() + DISTANCE_NEXT_X;
-		category.panel->add(cmdDFxEject[i], DISTANCE_BORDER + DISTANCE_NEXT_X * 26, posY);
-		category.panel->add(cmdDFxSelect[i], cmdDFxEject[i]->getX() + cmdDFxEject[i]->getWidth() + DISTANCE_NEXT_X, posY);
-		posY += cmdDFxEject[i]->getHeight() + 8;
+		posX = DISTANCE_BORDER;
+		category.panel->add(chkqsDFx[i], posX, posY);
+		posX += chkqsDFx[i]->getWidth() + DISTANCE_NEXT_X;
+		category.panel->add(cboqsDFxType[i], posX, posY);
+		posX += cboqsDFxType[i]->getWidth() + DISTANCE_NEXT_X * 2;
+		category.panel->add(chkqsDFxWriteProtect[i], posX, posY);
+		posX += chkqsDFxWriteProtect[i]->getWidth() + DISTANCE_NEXT_X;
+		category.panel->add(cmdqsDFxInfo[i], posX, posY);
+		posX += cmdqsDFxInfo[i]->getWidth() + DISTANCE_NEXT_X;
+		category.panel->add(cmdqsDFxEject[i], posX, posY);
+		posX += cmdqsDFxEject[i]->getWidth() + DISTANCE_NEXT_X;
+		category.panel->add(cmdqsDFxSelect[i], posX, posY);
+		posY += cmdqsDFxEject[i]->getHeight() + 8;
 
-		category.panel->add(cboDFxFile[i], DISTANCE_BORDER, posY);
-		posY += cboDFxFile[i]->getHeight() + DISTANCE_NEXT_Y + 4;
+		category.panel->add(cboqsDFxFile[i], DISTANCE_BORDER, posY);
+		posY += cboqsDFxFile[i]->getHeight() + DISTANCE_NEXT_Y + 4;
 	}
 
-	category.panel->add(chkCD, chkDFx[1]->getX(), chkDFx[1]->getY());
-	category.panel->add(cmdCDEject, cmdDFxEject[1]->getX(), cmdDFxEject[1]->getY());
-	category.panel->add(cmdCDSelect, cmdDFxSelect[1]->getX(), cmdDFxSelect[1]->getY());
-	category.panel->add(cboCDFile, cboDFxFile[1]->getX(), cboDFxFile[1]->getY());
+	category.panel->add(chkCD, chkqsDFx[1]->getX(), chkqsDFx[1]->getY());
+	category.panel->add(cmdCDEject, cmdqsDFxEject[1]->getX(), cmdqsDFxEject[1]->getY());
+	category.panel->add(cmdCDSelect, cmdqsDFxSelect[1]->getX(), cmdqsDFxSelect[1]->getY());
+	category.panel->add(cboCDFile, cboqsDFxFile[1]->getX(), cboqsDFxFile[1]->getY());
 
 	category.panel->add(chkQuickstartMode, category.panel->getWidth() - chkQuickstartMode->getWidth() - DISTANCE_BORDER,
-	                    posY);
+						posY);
 	posY += chkQuickstartMode->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(cmdSetConfiguration, DISTANCE_BORDER, posY);
@@ -968,6 +1052,7 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 	CountModelConfigs();
 	cboConfig->setSelected(quickstart_conf);
 	SetControlState(quickstart_model);
+	floppybridge_init(&currprefs);
 
 	// Only change the current prefs if we're not already emulating
 	if (!emulating && !config_loaded)
@@ -985,12 +1070,13 @@ void ExitPanelQuickstart(void)
 	delete chkNTSC;
 	for (auto i = 0; i < 2; ++i)
 	{
-		delete chkDFx[i];
-		delete chkDFxWriteProtect[i];
-		delete cmdDFxInfo[i];
-		delete cmdDFxEject[i];
-		delete cmdDFxSelect[i];
-		delete cboDFxFile[i];
+		delete chkqsDFx[i];
+		delete cboqsDFxType[i];
+		delete chkqsDFxWriteProtect[i];
+		delete cmdqsDFxInfo[i];
+		delete cmdqsDFxEject[i];
+		delete cmdqsDFxSelect[i];
+		delete cboqsDFxFile[i];
 	}
 	delete chkCD;
 	delete cmdCDEject;
@@ -1006,8 +1092,8 @@ void ExitPanelQuickstart(void)
 
 	delete amigaModelActionListener;
 	delete ntscButtonActionListener;
-	delete dfxCheckActionListener;
-	delete dfxButtonActionListener;
+	delete qsdfxCheckActionListener;
+	delete qsdfxButtonActionListener;
 	delete diskFileActionListener;
 	delete cdButtonActionListener;
 	delete cdFileActionListener;
@@ -1020,7 +1106,7 @@ static void AdjustDropDownControls(void)
 
 	for (auto i = 0; i < 2; ++i)
 	{
-		cboDFxFile[i]->clearSelected();
+		cboqsDFxFile[i]->clearSelected();
 
 		if (changed_prefs.floppyslots[i].dfxtype != DRV_NONE && strlen(changed_prefs.floppyslots[i].df) > 0)
 		{
@@ -1028,7 +1114,7 @@ static void AdjustDropDownControls(void)
 			{
 				if (strcmp(lstMRUDiskList[j].c_str(), changed_prefs.floppyslots[i].df) == 0)
 				{
-					cboDFxFile[i]->setSelected(j);
+					cboqsDFxFile[i]->setSelected(j);
 					break;
 				}
 			}
@@ -1073,23 +1159,25 @@ void RefreshPanelQuickstart(void)
 	AdjustDropDownControls();
 
 	changed_prefs.nr_floppies = 0;
-	for (auto i = 0; i < 4; ++i)
+	for (auto i = 0; i < 2; ++i)
 	{
 		const auto drive_enabled = changed_prefs.floppyslots[i].dfxtype != DRV_NONE;
 		if (i < 2)
 		{
-			chkDFx[i]->setSelected(drive_enabled);
-			chkDFxWriteProtect[i]->setSelected(disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df, i));
+			chkqsDFx[i]->setSelected(drive_enabled);
+			const int nn = fromdfxtype(i, changed_prefs.floppyslots[i].dfxtype, changed_prefs.floppyslots[i].dfxsubtype);
+			cboqsDFxType[i]->setSelected(nn + 1);
+			chkqsDFxWriteProtect[i]->setSelected(disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df, i));
 			if (i == 0)
-				chkDFx[i]->setEnabled(false);
+				chkqsDFx[i]->setEnabled(false);
 			else
-				chkDFx[i]->setEnabled(prev_available);
+				chkqsDFx[i]->setEnabled(prev_available);
 
-			cmdDFxInfo[i]->setEnabled(drive_enabled);
-			chkDFxWriteProtect[i]->setEnabled(drive_enabled && !changed_prefs.floppy_read_only);
-			cmdDFxEject[i]->setEnabled(drive_enabled);
-			cmdDFxSelect[i]->setEnabled(drive_enabled);
-			cboDFxFile[i]->setEnabled(drive_enabled);
+			cmdqsDFxInfo[i]->setEnabled(drive_enabled && nn < 5);
+			chkqsDFxWriteProtect[i]->setEnabled(drive_enabled && !changed_prefs.floppy_read_only && nn < 5);
+			cmdqsDFxEject[i]->setEnabled(drive_enabled && nn < 5);
+			cmdqsDFxSelect[i]->setEnabled(drive_enabled && nn < 5);
+			cboqsDFxFile[i]->setEnabled(drive_enabled && nn < 5);
 		}
 		prev_available = drive_enabled;
 		if (drive_enabled)
