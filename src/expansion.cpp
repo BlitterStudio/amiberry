@@ -50,7 +50,6 @@
 #include "sana2.h"
 //#include "arcadia.h"
 #include "devices.h"
-#include "floppybridge/floppybridge_config.h"
 
 
 #define CARD_FLAG_CAN_Z3 1
@@ -5084,29 +5083,6 @@ static const struct expansionboardsettings cdtvsram_settings[] = {
 	}
 };
 
-/* floppy drive bridge interface */
-static const struct expansionsubromtype bridge_drive_selection_config[] = { 
-	{ _T("DF0: Fast"), _T("drivesel0"), 0, 0, 0, 0, false, 0 },
-	{ _T("DF1: Fast"), _T("drivesel1"), 0, 0, 0, 0, false, 0 },
-	{ _T("DF2: Fast"), _T("drivesel2"), 0, 0, 0, 0, false, 0 },
-	{ _T("DF3: Fast"), _T("drivesel3"), 0, 0, 0, 0, false, 0 },
-	{ _T("DF0: More Compatible"), _T("drivesel4"), 0, 0, 0, 0, false, 0 },
-	{ _T("DF1: More Compatible"), _T("drivesel5"), 0, 0, 0, 0, false, 0 },
-	{ _T("DF2: More Compatible"), _T("drivesel6"), 0, 0, 0, 0, false, 0 },
-	{ _T("DF3: More Compatible"), _T("drivesel7"), 0, 0, 0, 0, false, 0 },
-	{ _T("DF0: Turbo (copy protection may break)"), _T("driveselc"), 0, 0, 0, 0, false, 0 },
-	{ _T("DF1: Turbo (copy protection may break)"), _T("driveseld"), 0, 0, 0, 0, false, 0 },
-	{ _T("DF2: Turbo (copy protection may break)"), _T("drivesele"), 0, 0, 0, 0, false, 0 },
-	{ _T("DF3: Turbo (copy protection may break)"), _T("driveself"), 0, 0, 0, 0, false, 0 },
-	{ _T("DF0: Accurate, but Stalling"), _T("drivesel8"), 0, 0, 0, 0, false, 0 },
-	{ _T("DF1: Accurate, but Stalling"), _T("drivesel9"), 0, 0, 0, 0, false, 0 },
-	{ _T("DF2: Accurate, but Stalling"), _T("drivesela"), 0, 0, 0, 0, false, 0 },
-	{ _T("DF3: Accurate, but Stalling"), _T("driveselb"), 0, 0, 0, 0, false, 0 },
-	{ NULL }
-};
-
-/* Support for the floppy disk bridge interface options */
-FLOPPY_BRIDGE_CONFIG_OPTIONS
 
 const struct expansionromtype expansionroms[] = {
 	{
@@ -6050,9 +6026,6 @@ const struct expansionromtype expansionroms[] = {
 	//	false, EXPANSIONTYPE_FLOPPY
 	//},
 
-	/* Support for the floppy disk bridge interface */
-	FLOPPY_BRIDGE_CONFIG
-
 	// misc
 
 	//{
@@ -6179,7 +6152,7 @@ static const struct cpuboardsubtype gvpboard_sub[] = {
 	//	0,
 	//	gvp_init_accelerator, NULL, BOARD_AUTOCONFIG_Z2, 1
 	//},
-    //	{
+	//	{
 	//	_T("G-Force 040"),
 	//	_T("GVPGFORCE040"),
 	//	ROMTYPE_GVPS2, ROMTYPE_GVPS12, 4,
