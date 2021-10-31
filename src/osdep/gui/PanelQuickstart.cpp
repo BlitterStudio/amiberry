@@ -1052,7 +1052,7 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 	CountModelConfigs();
 	cboConfig->setSelected(quickstart_conf);
 	SetControlState(quickstart_model);
-	floppybridge_init(&currprefs);
+	floppybridge_init(&changed_prefs);
 
 	// Only change the current prefs if we're not already emulating
 	if (!emulating && !config_loaded)
