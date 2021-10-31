@@ -456,84 +456,84 @@ void gui_purge_events()
 
 int gui_update()
 {
-    char tmp[MAX_DPATH];
+	char tmp[MAX_DPATH];
 
-    get_savestate_path(savestate_fname, MAX_DPATH - 1);
-    get_screenshot_path(screenshot_filename, MAX_DPATH - 1);
+	get_savestate_path(savestate_fname, MAX_DPATH - 1);
+	get_screenshot_path(screenshot_filename, MAX_DPATH - 1);
 
-    if (strlen(currprefs.floppyslots[0].df) > 0)
-        extract_filename(currprefs.floppyslots[0].df, tmp);
-    else
-        strncpy(tmp, last_loaded_config, MAX_DPATH - 1);
+	if (strlen(currprefs.floppyslots[0].df) > 0)
+		extract_filename(currprefs.floppyslots[0].df, tmp);
+	else
+		strncpy(tmp, last_loaded_config, MAX_DPATH - 1);
 
-    strncat(savestate_fname, tmp, MAX_DPATH - 1);
-    strncat(screenshot_filename, tmp, MAX_DPATH - 1);
-    remove_file_extension(savestate_fname);
-    remove_file_extension(screenshot_filename);
+	strncat(savestate_fname, tmp, MAX_DPATH - 1);
+	strncat(screenshot_filename, tmp, MAX_DPATH - 1);
+	remove_file_extension(savestate_fname);
+	remove_file_extension(screenshot_filename);
 
-    switch(currentStateNum)
-    {
-        case 1:
-            strncat(savestate_fname,"-1.uss", MAX_DPATH - 1);
-            strncat(screenshot_filename,"-1.png", MAX_DPATH - 1);
-            break;
-        case 2:
-            strncat(savestate_fname,"-2.uss", MAX_DPATH - 1);
-            strncat(screenshot_filename,"-2.png", MAX_DPATH - 1);
-            break;
-        case 3:
-            strncat(savestate_fname,"-3.uss", MAX_DPATH - 1);
-            strncat(screenshot_filename,"-3.png", MAX_DPATH - 1);
-            break;
-        case 4:
-            strncat(savestate_fname, "-4.uss", MAX_DPATH - 1);
-            strncat(screenshot_filename, "-4.png", MAX_DPATH - 1);
-            break;
-        case 5:
-            strncat(savestate_fname, "-5.uss", MAX_DPATH - 1);
-            strncat(screenshot_filename, "-5.png", MAX_DPATH - 1);
-            break;
-        case 6:
-            strncat(savestate_fname, "-6.uss", MAX_DPATH - 1);
-            strncat(screenshot_filename, "-6.png", MAX_DPATH - 1);
-            break;
-        case 7:
-            strncat(savestate_fname, "-7.uss", MAX_DPATH - 1);
-            strncat(screenshot_filename, "-7.png", MAX_DPATH - 1);
-            break;
-        case 8:
-            strncat(savestate_fname, "-8.uss", MAX_DPATH - 1);
-            strncat(screenshot_filename, "-8.png", MAX_DPATH - 1);
-            break;
-        case 9:
-            strncat(savestate_fname, "-9.uss", MAX_DPATH - 1);
-            strncat(screenshot_filename, "-9.png", MAX_DPATH - 1);
-            break;
-        case 10:
-            strncat(savestate_fname, "-10.uss", MAX_DPATH - 1);
-            strncat(screenshot_filename, "-10.png", MAX_DPATH - 1);
-            break;
-        case 11:
-            strncat(savestate_fname, "-11.uss", MAX_DPATH - 1);
-            strncat(screenshot_filename, "-11.png", MAX_DPATH - 1);
-            break;
-        case 12:
-            strncat(savestate_fname, "-12.uss", MAX_DPATH - 1);
-            strncat(screenshot_filename, "-12.png", MAX_DPATH - 1);
-            break;
-        case 13:
-            strncat(savestate_fname, "-13.uss", MAX_DPATH - 1);
-            strncat(screenshot_filename, "-13.png", MAX_DPATH - 1);
-            break;
-        case 14:
-            strncat(savestate_fname, "-14.uss", MAX_DPATH - 1);
-            strncat(screenshot_filename, "-14.png", MAX_DPATH - 1);
-            break;
-        default:
-            strncat(savestate_fname,".uss", MAX_DPATH - 1);
-            strncat(screenshot_filename,".png", MAX_DPATH - 1);
-    }
-    return 0;
+	switch(currentStateNum)
+	{
+		case 1:
+			strncat(savestate_fname,"-1.uss", MAX_DPATH - 1);
+			strncat(screenshot_filename,"-1.png", MAX_DPATH - 1);
+			break;
+		case 2:
+			strncat(savestate_fname,"-2.uss", MAX_DPATH - 1);
+			strncat(screenshot_filename,"-2.png", MAX_DPATH - 1);
+			break;
+		case 3:
+			strncat(savestate_fname,"-3.uss", MAX_DPATH - 1);
+			strncat(screenshot_filename,"-3.png", MAX_DPATH - 1);
+			break;
+		case 4:
+			strncat(savestate_fname, "-4.uss", MAX_DPATH - 1);
+			strncat(screenshot_filename, "-4.png", MAX_DPATH - 1);
+			break;
+		case 5:
+			strncat(savestate_fname, "-5.uss", MAX_DPATH - 1);
+			strncat(screenshot_filename, "-5.png", MAX_DPATH - 1);
+			break;
+		case 6:
+			strncat(savestate_fname, "-6.uss", MAX_DPATH - 1);
+			strncat(screenshot_filename, "-6.png", MAX_DPATH - 1);
+			break;
+		case 7:
+			strncat(savestate_fname, "-7.uss", MAX_DPATH - 1);
+			strncat(screenshot_filename, "-7.png", MAX_DPATH - 1);
+			break;
+		case 8:
+			strncat(savestate_fname, "-8.uss", MAX_DPATH - 1);
+			strncat(screenshot_filename, "-8.png", MAX_DPATH - 1);
+			break;
+		case 9:
+			strncat(savestate_fname, "-9.uss", MAX_DPATH - 1);
+			strncat(screenshot_filename, "-9.png", MAX_DPATH - 1);
+			break;
+		case 10:
+			strncat(savestate_fname, "-10.uss", MAX_DPATH - 1);
+			strncat(screenshot_filename, "-10.png", MAX_DPATH - 1);
+			break;
+		case 11:
+			strncat(savestate_fname, "-11.uss", MAX_DPATH - 1);
+			strncat(screenshot_filename, "-11.png", MAX_DPATH - 1);
+			break;
+		case 12:
+			strncat(savestate_fname, "-12.uss", MAX_DPATH - 1);
+			strncat(screenshot_filename, "-12.png", MAX_DPATH - 1);
+			break;
+		case 13:
+			strncat(savestate_fname, "-13.uss", MAX_DPATH - 1);
+			strncat(screenshot_filename, "-13.png", MAX_DPATH - 1);
+			break;
+		case 14:
+			strncat(savestate_fname, "-14.uss", MAX_DPATH - 1);
+			strncat(screenshot_filename, "-14.png", MAX_DPATH - 1);
+			break;
+		default:
+			strncat(savestate_fname,".uss", MAX_DPATH - 1);
+			strncat(screenshot_filename,".png", MAX_DPATH - 1);
+	}
+	return 0;
 }
 
 /* if drive is -1, show the full GUI, otherwise file-requester for DF[drive] */
@@ -909,4 +909,141 @@ void default_hfdlg(struct hfdlg_vals* f)
 bool isguiactive(void)
 {
 	return gui_active > 0;
+}
+
+int fromdfxtype(int num, int dfx, int subtype)
+{
+	switch (dfx)
+	{
+	case DRV_35_DD:
+		return 0;
+	case DRV_35_HD:
+		return 1;
+	case DRV_525_SD:
+		return 2;
+	case DRV_525_DD:
+		return 3;
+	case DRV_35_DD_ESCOM:
+		return 4;
+	}
+	//if (num < 2) {
+		if (dfx == DRV_FB) {
+			return 5 + subtype;
+		}
+	//}
+	//else {
+	//	switch (dfx)
+	//	{
+	//	case DRV_PC_525_ONLY_40:
+	//		return 5;
+	//	case DRV_PC_525_40_80:
+	//		return 6;
+	//	case DRV_PC_35_ONLY_80:
+	//		return 7;
+	//	}
+	//	if (dfx == DRV_FB) {
+	//		return 8 + subtype;
+	//	}
+	//}
+	return -1;
+}
+
+int todfxtype(int num, int dfx, int* subtype)
+{
+	*subtype = 0;
+
+	switch (dfx)
+	{
+	case 0:
+		return DRV_35_DD;
+	case 1:
+		return DRV_35_HD;
+	case 2:
+		return DRV_525_SD;
+	case 3:
+		return DRV_525_DD;
+	case 4:
+		return DRV_35_DD_ESCOM;
+	}
+	//if (num < 2) {
+		if (dfx >= 5) {
+			*subtype = dfx - 5;
+			return DRV_FB;
+		}
+	//}
+	//else {
+	//	switch (dfx)
+	//	{
+	//	case 5:
+	//		return DRV_PC_525_ONLY_40;
+	//	case 6:
+	//		return DRV_PC_525_40_80;
+	//	case 7:
+	//		return DRV_PC_35_ONLY_80;
+	//	}
+	//	if (dfx >= 8) {
+	//		*subtype = dfx - 8;
+	//		return DRV_FB;
+	//	}
+	//}
+	return -1;
+}
+
+void DisplayDiskInfo(int num)
+{
+	struct diskinfo di {};
+	char tmp1[MAX_DPATH];
+	std::vector<std::string> infotext;
+	char title[MAX_DPATH];
+	char nameonly[MAX_DPATH];
+	char linebuffer[512];
+
+	DISK_examine_image(&changed_prefs, num, &di, true, nullptr);
+	DISK_validate_filename(&changed_prefs, changed_prefs.floppyslots[num].df, num, tmp1, 0, NULL, NULL, NULL);
+	extract_filename(tmp1, nameonly);
+	snprintf(title, MAX_DPATH - 1, "Info for %s", nameonly);
+
+	snprintf(linebuffer, sizeof(linebuffer) - 1, "Disk readable: %s", di.unreadable ? _T("No") : _T("Yes"));
+	infotext.push_back(linebuffer);
+	snprintf(linebuffer, sizeof(linebuffer) - 1, "Disk CRC32: %08X", di.imagecrc32);
+	infotext.push_back(linebuffer);
+	snprintf(linebuffer, sizeof(linebuffer) - 1, "Boot block CRC32: %08X", di.bootblockcrc32);
+	infotext.push_back(linebuffer);
+	snprintf(linebuffer, sizeof(linebuffer) - 1, "Boot block checksum valid: %s", di.bb_crc_valid ? _T("Yes") : _T("No"));
+	infotext.push_back(linebuffer);
+	snprintf(linebuffer, sizeof(linebuffer) - 1, "Boot block type: %s", di.bootblocktype == 0 ? _T("Custom") : (di.bootblocktype == 1 ? _T("Standard 1.x") : _T("Standard 2.x+")));
+	infotext.push_back(linebuffer);
+	if (di.diskname[0]) {
+		snprintf(linebuffer, sizeof(linebuffer) - 1, "Label: '%s'", di.diskname);
+		infotext.push_back(linebuffer);
+	}
+	infotext.push_back("");
+
+	if (di.bootblockinfo[0]) {
+		infotext.push_back("Amiga Bootblock Reader database detected:");
+		snprintf(linebuffer, sizeof(linebuffer) - 1, "Name: '%s'", di.bootblockinfo);
+		infotext.push_back(linebuffer);
+		if (di.bootblockclass[0]) {
+			snprintf(linebuffer, sizeof(linebuffer) - 1, "Class: '%s'", di.bootblockclass);
+			infotext.push_back(linebuffer);
+		}
+		infotext.push_back("");
+	}
+
+	int w = 16;
+	for (int i = 0; i < 1024; i += w) {
+		for (int j = 0; j < w; j++) {
+			uae_u8 b = di.bootblock[i + j];
+			sprintf(linebuffer + j * 3, _T("%02X "), b);
+			if (b >= 32 && b < 127)
+				linebuffer[w * 3 + 1 + j] = (char)b;
+			else
+				linebuffer[w * 3 + 1 + j] = '.';
+		}
+		linebuffer[w * 3] = ' ';
+		linebuffer[w * 3 + 1 + w] = 0;
+		infotext.push_back(linebuffer);
+	}
+
+	ShowDiskInfo(title, infotext);
 }

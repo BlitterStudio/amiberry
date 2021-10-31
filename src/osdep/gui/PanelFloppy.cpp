@@ -44,8 +44,13 @@ public:
 		types.emplace_back("Disabled");
 		types.emplace_back("3.5'' DD");
 		types.emplace_back("3.5'' HD");
-		types.emplace_back("5.25'' SD");
+		types.emplace_back("5.25'' (40)");
+		types.emplace_back("5.25'' (80)");
 		types.emplace_back("3.5'' ESCOM");
+		types.emplace_back("FB: Fast");
+		types.emplace_back("FB: Compatible");
+		types.emplace_back("FB: Turbo");
+		types.emplace_back("FB: Accurate");
 	}
 
 	int add_element(const char* elem) override
@@ -104,77 +109,21 @@ public:
 
 static DiskfileListModel diskfileList;
 
-static void DisplayDiskInfo(int num)
-{
-	struct diskinfo di{};
-	char tmp1[MAX_DPATH];
-	std::vector<std::string> infotext;
-	char title[MAX_DPATH];
-	char nameonly[MAX_DPATH];
-	char linebuffer[512];
-
-	DISK_examine_image(&changed_prefs, num, &di, true, nullptr);
-	DISK_validate_filename(&changed_prefs, changed_prefs.floppyslots[num].df, num, tmp1, 0, NULL, NULL, NULL);
-	extract_filename(tmp1, nameonly);
-	snprintf(title, MAX_DPATH - 1, "Info for %s", nameonly);
-
-	snprintf(linebuffer, sizeof(linebuffer) - 1, "Disk readable: %s", di.unreadable ? _T("No") : _T("Yes"));
-	infotext.push_back(linebuffer);
-	snprintf(linebuffer, sizeof(linebuffer) - 1, "Disk CRC32: %08X", di.imagecrc32);
-	infotext.push_back(linebuffer);
-	snprintf(linebuffer, sizeof(linebuffer) - 1, "Boot block CRC32: %08X", di.bootblockcrc32);
-	infotext.push_back(linebuffer);
-	snprintf(linebuffer, sizeof(linebuffer) - 1, "Boot block checksum valid: %s", di.bb_crc_valid ? _T("Yes") : _T("No"));
-	infotext.push_back(linebuffer);
-	snprintf(linebuffer, sizeof(linebuffer) - 1, "Boot block type: %s", di.bootblocktype == 0 ? _T("Custom") : (di.bootblocktype == 1 ? _T("Standard 1.x") : _T("Standard 2.x+")));
-	infotext.push_back(linebuffer);
-	if (di.diskname[0]) {
-		snprintf(linebuffer, sizeof(linebuffer) - 1, "Label: '%s'", di.diskname);
-		infotext.push_back(linebuffer);
-	}
-	infotext.push_back("");
-
-	if (di.bootblockinfo[0]) {
-		infotext.push_back("Amiga Bootblock Reader database detected:");
-		snprintf(linebuffer, sizeof(linebuffer) - 1, "Name: '%s'", di.bootblockinfo);
-		infotext.push_back(linebuffer);
-		if (di.bootblockclass[0]) {
-			snprintf(linebuffer, sizeof(linebuffer) - 1, "Class: '%s'", di.bootblockclass);
-			infotext.push_back(linebuffer);
-		}
-		infotext.push_back("");
-	}
-	
-	int w = 16;
-	for (int i = 0; i < 1024; i += w) {
-		for (int j = 0; j < w; j++) {
-			uae_u8 b = di.bootblock[i + j];
-			sprintf(linebuffer + j * 3, _T("%02X "), b);
-			if (b >= 32 && b < 127)
-				linebuffer[w * 3 + 1 + j] = (char)b;
-			else
-				linebuffer[w * 3 + 1 + j] = '.';
-		}
-		linebuffer[w * 3] = ' ';
-		linebuffer[w * 3 + 1 + w] = 0;
-		infotext.push_back(linebuffer);
-	}
-
-	ShowDiskInfo(title, infotext);
-}
-
 class DriveTypeActionListener : public gcn::ActionListener
 {
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		//---------------------------------------
-		// New drive type selected
-		//---------------------------------------
+		int sub;
 		for (auto i = 0; i < 4; ++i)
 		{
 			if (actionEvent.getSource() == cboDFxType[i])
-				changed_prefs.floppyslots[i].dfxtype = cboDFxType[i]->getSelected() - 1;
+			{
+				const int dfxtype = todfxtype(i, cboDFxType[i]->getSelected() - 1, &sub);
+				changed_prefs.floppyslots[i].dfxtype = dfxtype;
+				changed_prefs.floppyslots[i].dfxsubtype = sub;
+				changed_prefs.floppyslots[i].dfxsubtypeid[0] = 0;
+			}
 		}
 		RefreshPanelFloppy();
 		RefreshPanelQuickstart();
@@ -472,37 +421,38 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 		cboDFxType[i]->addActionListener(driveTypeActionListener);
 
 		chkDFxWriteProtect[i] = new gcn::CheckBox("Write-protected");
-		chkDFxWriteProtect[i]->addActionListener(dfxCheckActionListener);
 		snprintf(tmp, 20, "chkWP%d", i);
 		chkDFxWriteProtect[i]->setId(tmp);
+		chkDFxWriteProtect[i]->addActionListener(dfxCheckActionListener);
+		
 
 		cmdDFxInfo[i] = new gcn::Button("?");
-		cmdDFxInfo[i]->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
-		cmdDFxInfo[i]->setBaseColor(gui_baseCol);
 		snprintf(tmp, 20, "cmdInfo%d", i);
 		cmdDFxInfo[i]->setId(tmp);
+		cmdDFxInfo[i]->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+		cmdDFxInfo[i]->setBaseColor(gui_baseCol);
 		cmdDFxInfo[i]->addActionListener(dfxButtonActionListener);
 
 		cmdDFxEject[i] = new gcn::Button("Eject");
-		cmdDFxEject[i]->setSize(SMALL_BUTTON_WIDTH * 2, SMALL_BUTTON_HEIGHT);
-		cmdDFxEject[i]->setBaseColor(gui_baseCol);
 		snprintf(tmp, 20, "cmdEject%d", i);
 		cmdDFxEject[i]->setId(tmp);
+		cmdDFxEject[i]->setSize(SMALL_BUTTON_WIDTH * 2, SMALL_BUTTON_HEIGHT);
+		cmdDFxEject[i]->setBaseColor(gui_baseCol);
 		cmdDFxEject[i]->addActionListener(dfxButtonActionListener);
 
 		cmdDFxSelect[i] = new gcn::Button("...");
-		cmdDFxSelect[i]->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
-		cmdDFxSelect[i]->setBaseColor(gui_baseCol);
 		snprintf(tmp, 20, "cmdSel%d", i);
 		cmdDFxSelect[i]->setId(tmp);
+		cmdDFxSelect[i]->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+		cmdDFxSelect[i]->setBaseColor(gui_baseCol);
 		cmdDFxSelect[i]->addActionListener(dfxButtonActionListener);
 
 		cboDFxFile[i] = new gcn::DropDown(&diskfileList);
+		snprintf(tmp, 20, "cboDisk%d", i);
+		cboDFxFile[i]->setId(tmp);
 		cboDFxFile[i]->setSize(textFieldWidth, cboDFxFile[i]->getHeight());
 		cboDFxFile[i]->setBaseColor(gui_baseCol);
 		cboDFxFile[i]->setBackgroundColor(colTextboxBackground);
-		snprintf(tmp, 20, "cboDisk%d", i);
-		cboDFxFile[i]->setId(tmp);
 		cboDFxFile[i]->addActionListener(diskFileActionListener);
 
 		if (i == 0)
@@ -579,6 +529,8 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 	category.panel->add(cmdCreateDDDisk, cmdSaveForDisk->getX() + cmdSaveForDisk->getWidth() + DISTANCE_NEXT_X, posY);
 	category.panel->add(cmdCreateHDDisk, cmdCreateDDDisk->getX() + cmdCreateDDDisk->getWidth() + DISTANCE_NEXT_X, posY);
 
+	floppybridge_init(&currprefs);
+
 	RefreshPanelFloppy();
 }
 
@@ -650,16 +602,17 @@ void RefreshPanelFloppy()
 	{
 		const auto driveEnabled = changed_prefs.floppyslots[i].dfxtype != DRV_NONE;
 		chkDFx[i]->setSelected(driveEnabled);
-		cboDFxType[i]->setSelected(changed_prefs.floppyslots[i].dfxtype + 1);
+		const int nn = fromdfxtype(i, changed_prefs.floppyslots[i].dfxtype, changed_prefs.floppyslots[i].dfxsubtype);
+		cboDFxType[i]->setSelected(nn + 1);
 		chkDFxWriteProtect[i]->setSelected(disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df, i));
 		chkDFx[i]->setEnabled(prev_available);
 		cboDFxType[i]->setEnabled(prev_available);
 
-		chkDFxWriteProtect[i]->setEnabled(driveEnabled && !changed_prefs.floppy_read_only);
-		cmdDFxInfo[i]->setEnabled(driveEnabled);
-		cmdDFxEject[i]->setEnabled(driveEnabled);
-		cmdDFxSelect[i]->setEnabled(driveEnabled);
-		cboDFxFile[i]->setEnabled(driveEnabled);
+		chkDFxWriteProtect[i]->setEnabled(driveEnabled && !changed_prefs.floppy_read_only && nn < 5);
+		cmdDFxInfo[i]->setEnabled(driveEnabled && nn < 5);
+		cmdDFxEject[i]->setEnabled(driveEnabled && nn < 5);
+		cmdDFxSelect[i]->setEnabled(driveEnabled && nn < 5);
+		cboDFxFile[i]->setEnabled(driveEnabled && nn < 5);
 
 		prev_available = driveEnabled;
 		if (driveEnabled)

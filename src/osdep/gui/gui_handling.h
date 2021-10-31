@@ -329,4 +329,8 @@ extern long get_file_size(const std::string& filename);
 extern bool download_file(const std::string& source, std::string destination);
 extern void download_rtb(std::string filename);
 
+extern int fromdfxtype(int num, int dfx, int subtype);
+extern int todfxtype(int num, int dfx, int* subtype);
+extern void DisplayDiskInfo(int num);
+
 #endif // GUI_HANDLING_H

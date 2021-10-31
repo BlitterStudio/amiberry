@@ -61,17 +61,17 @@ struct gui_info_drive {
 
 struct gui_info
 {
-    bool powerled;				/* state of power led */
-    uae_u8 powerled_brightness;	/* 0 to 255 */
-    uae_s8 drive_side;			/* floppy side */
-    uae_s8 hd;					/* harddrive */
-    uae_s8 cd;					/* CD */
+	bool powerled;				/* state of power led */
+	uae_u8 powerled_brightness;	/* 0 to 255 */
+	uae_s8 drive_side;			/* floppy side */
+	uae_s8 hd;					/* harddrive */
+	uae_s8 cd;					/* CD */
 	uae_s8 md;					/* CD32 or CDTV internal storage */
 	uae_s8 net;					/* network */
-    int cpu_halted;
+	int cpu_halted;
 	int fps, idle;
 	int fps_color;
-    int sndbuf, sndbuf_status;
+	int sndbuf, sndbuf_status;
 	bool sndbuf_avail;
 	struct gui_info_drive drives[4];
 };

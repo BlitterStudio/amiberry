@@ -41,13 +41,13 @@ static gcn::Button* cmdSaveState;
 
 char* getts(char *filename1, char *date_string, size_t date_string_size)
 {
-    struct stat st;
-    struct tm tm;
+	struct stat st;
+	struct tm tm;
 
-    stat(filename1, &st);
-    localtime_r(&st.st_mtime, &tm);
-    strftime(date_string, date_string_size,"%c" , &tm);
-    return date_string;
+	stat(filename1, &st);
+	localtime_r(&st.st_mtime, &tm);
+	strftime(date_string, date_string_size,"%c" , &tm);
+	return date_string;
 }
 
 class SavestateActionListener : public gcn::ActionListener
@@ -75,16 +75,16 @@ public:
 			currentStateNum = 8;
 		else if (actionEvent.getSource() == optState9)
 			currentStateNum = 9;
-        else if (actionEvent.getSource() == optState10)
-            currentStateNum = 10;
-        else if (actionEvent.getSource() == optState11)
-            currentStateNum = 11;
-        else if (actionEvent.getSource() == optState12)
-            currentStateNum = 12;
-        else if (actionEvent.getSource() == optState13)
-            currentStateNum = 13;
-        else if (actionEvent.getSource() == optState14)
-            currentStateNum = 14;
+		else if (actionEvent.getSource() == optState10)
+			currentStateNum = 10;
+		else if (actionEvent.getSource() == optState11)
+			currentStateNum = 11;
+		else if (actionEvent.getSource() == optState12)
+			currentStateNum = 12;
+		else if (actionEvent.getSource() == optState13)
+			currentStateNum = 13;
+		else if (actionEvent.getSource() == optState14)
+			currentStateNum = 14;
 		else if (actionEvent.getSource() == cmdLoadState)
 		{
 			//------------------------------------------
@@ -195,27 +195,27 @@ void InitPanelSavestate(const struct _ConfigCategory& category)
 	optState9->setId("State9");
 	optState9->addActionListener(savestateActionListener);
 
-    optState10 = new gcn::RadioButton("10", "radiostategroup");
-    optState10->setId("State10");
-    optState10->addActionListener(savestateActionListener);
+	optState10 = new gcn::RadioButton("10", "radiostategroup");
+	optState10->setId("State10");
+	optState10->addActionListener(savestateActionListener);
 
-    optState11 = new gcn::RadioButton("11", "radiostategroup");
-    optState11->setId("State11");
-    optState11->addActionListener(savestateActionListener);
+	optState11 = new gcn::RadioButton("11", "radiostategroup");
+	optState11->setId("State11");
+	optState11->addActionListener(savestateActionListener);
 
-    optState12 = new gcn::RadioButton("12", "radiostategroup");
-    optState12->setId("State12");
-    optState12->addActionListener(savestateActionListener);
+	optState12 = new gcn::RadioButton("12", "radiostategroup");
+	optState12->setId("State12");
+	optState12->addActionListener(savestateActionListener);
 
-    optState13 = new gcn::RadioButton("13", "radiostategroup");
-    optState13->setId("State13");
-    optState13->addActionListener(savestateActionListener);
+	optState13 = new gcn::RadioButton("13", "radiostategroup");
+	optState13->setId("State13");
+	optState13->addActionListener(savestateActionListener);
 
-    optState14 = new gcn::RadioButton("14", "radiostategroup");
-    optState14->setId("State14");
-    optState14->addActionListener(savestateActionListener);
+	optState14 = new gcn::RadioButton("14", "radiostategroup");
+	optState14->setId("State14");
+	optState14->addActionListener(savestateActionListener);
 
-    lblTimestamp = new gcn::Label("Thu Aug 23 14:55:02 2001");
+	lblTimestamp = new gcn::Label("Thu Aug 23 14:55:02 2001");
 
 	grpNumber = new gcn::Window("Number");
 	grpNumber->add(optState0, 10, 10);
@@ -228,11 +228,11 @@ void InitPanelSavestate(const struct _ConfigCategory& category)
 	grpNumber->add(optState7, optState0->getX(), optState6->getY() + optState6->getHeight() + DISTANCE_NEXT_Y);
 	grpNumber->add(optState8, optState0->getX(), optState7->getY() + optState7->getHeight() + DISTANCE_NEXT_Y);
 	grpNumber->add(optState9, optState0->getX(), optState8->getY() + optState8->getHeight() + DISTANCE_NEXT_Y);
-    grpNumber->add(optState10, optState0->getX(), optState9->getY() + optState9->getHeight() + DISTANCE_NEXT_Y);
-    grpNumber->add(optState11, optState0->getX(), optState10->getY() + optState10->getHeight() + DISTANCE_NEXT_Y);
-    grpNumber->add(optState12, optState0->getX(), optState11->getY() + optState11->getHeight() + DISTANCE_NEXT_Y);
-    grpNumber->add(optState13, optState0->getX(), optState12->getY() + optState12->getHeight() + DISTANCE_NEXT_Y);
-    grpNumber->add(optState14, optState0->getX(), optState13->getY() + optState13->getHeight() + DISTANCE_NEXT_Y);
+	grpNumber->add(optState10, optState0->getX(), optState9->getY() + optState9->getHeight() + DISTANCE_NEXT_Y);
+	grpNumber->add(optState11, optState0->getX(), optState10->getY() + optState10->getHeight() + DISTANCE_NEXT_Y);
+	grpNumber->add(optState12, optState0->getX(), optState11->getY() + optState11->getHeight() + DISTANCE_NEXT_Y);
+	grpNumber->add(optState13, optState0->getX(), optState12->getY() + optState12->getHeight() + DISTANCE_NEXT_Y);
+	grpNumber->add(optState14, optState0->getX(), optState13->getY() + optState13->getHeight() + DISTANCE_NEXT_Y);
 	grpNumber->setMovable(false);
 	grpNumber->setSize(BUTTON_WIDTH, optState14->getY() + TITLEBAR_HEIGHT * 2 + DISTANCE_NEXT_Y);
 	grpNumber->setTitleBarHeight(TITLEBAR_HEIGHT);
@@ -258,7 +258,7 @@ void InitPanelSavestate(const struct _ConfigCategory& category)
 
 	category.panel->add(grpNumber, DISTANCE_BORDER, DISTANCE_BORDER);
 	category.panel->add(grpScreenshot, grpNumber->getX() + grpNumber->getWidth() + DISTANCE_NEXT_X, DISTANCE_BORDER);
-    category.panel->add(lblTimestamp, grpScreenshot->getX(), grpScreenshot->getY() + grpScreenshot->getHeight() + DISTANCE_NEXT_Y);
+	category.panel->add(lblTimestamp, grpScreenshot->getX(), grpScreenshot->getY() + grpScreenshot->getHeight() + DISTANCE_NEXT_Y);
 	const auto posY = category.panel->getHeight() - DISTANCE_BORDER - BUTTON_HEIGHT;
 	category.panel->add(cmdLoadState, grpScreenshot->getX(), posY);
 	category.panel->add(cmdSaveState, cmdLoadState->getX() + cmdLoadState->getWidth() + DISTANCE_NEXT_X, posY);
@@ -278,13 +278,13 @@ void ExitPanelSavestate()
 	delete optState7;
 	delete optState8;
 	delete optState9;
-    delete optState10;
-    delete optState11;
-    delete optState12;
-    delete optState13;
-    delete optState14;
+	delete optState10;
+	delete optState11;
+	delete optState12;
+	delete optState13;
+	delete optState14;
 	delete grpNumber;
-    delete lblTimestamp;
+	delete lblTimestamp;
 
 	delete imgSavestate;
 	imgSavestate = nullptr;
@@ -312,72 +312,72 @@ void RefreshPanelSavestate()
 		imgSavestate = nullptr;
 	}
 
-    switch (currentStateNum)
-    {
-        case 0:
-            optState0->setSelected(true);
-            break;
-        case 1:
-            optState1->setSelected(true);
-            break;
-        case 2:
-            optState2->setSelected(true);
-            break;
-        case 3:
-            optState3->setSelected(true);
-            break;
-        case 4:
-            optState4->setSelected(true);
-            break;
-        case 5:
-            optState5->setSelected(true);
-            break;
-        case 6:
-            optState6->setSelected(true);
-            break;
-        case 7:
-            optState7->setSelected(true);
-            break;
-        case 8:
-            optState8->setSelected(true);
-            break;
-        case 9:
-            optState9->setSelected(true);
-            break;
-        case 10:
-            optState10->setSelected(true);
-            break;
-        case 11:
-            optState11->setSelected(true);
-            break;
-        case 12:
-            optState12->setSelected(true);
-            break;
-        case 13:
-            optState13->setSelected(true);
-            break;
-        case 14:
-            optState14->setSelected(true);
-            break;
-        default:
-            break;
-    }
+	switch (currentStateNum)
+	{
+		case 0:
+			optState0->setSelected(true);
+			break;
+		case 1:
+			optState1->setSelected(true);
+			break;
+		case 2:
+			optState2->setSelected(true);
+			break;
+		case 3:
+			optState3->setSelected(true);
+			break;
+		case 4:
+			optState4->setSelected(true);
+			break;
+		case 5:
+			optState5->setSelected(true);
+			break;
+		case 6:
+			optState6->setSelected(true);
+			break;
+		case 7:
+			optState7->setSelected(true);
+			break;
+		case 8:
+			optState8->setSelected(true);
+			break;
+		case 9:
+			optState9->setSelected(true);
+			break;
+		case 10:
+			optState10->setSelected(true);
+			break;
+		case 11:
+			optState11->setSelected(true);
+			break;
+		case 12:
+			optState12->setSelected(true);
+			break;
+		case 13:
+			optState13->setSelected(true);
+			break;
+		case 14:
+			optState14->setSelected(true);
+			break;
+		default:
+			break;
+	}
 
 	gui_update();
-    if (strlen(savestate_fname) > 0)
-    {
-        auto* const f = fopen(savestate_fname, "rbe");
-        if (f) {
-            fclose(f);
-            char date_string[256];
-            getts(savestate_fname, date_string, sizeof(date_string));
-            lblTimestamp->setCaption(date_string);
-        }
-        else
-        {
-            lblTimestamp->setCaption("No savestate found");
-        }
-    }
+	if (strlen(savestate_fname) > 0)
+	{
+		auto* const f = fopen(savestate_fname, "rbe");
+		if (f) {
+			fclose(f);
+			char date_string[256];
+			getts(savestate_fname, date_string, sizeof(date_string));
+			lblTimestamp->setCaption(date_string);
+		}
+		else
+		{
+			lblTimestamp->setCaption("No savestate found");
+		}
+	}
 
 	if (strlen(screenshot_filename) > 0)
 	{
@@ -392,9 +392,9 @@ void RefreshPanelSavestate()
 				SDL_Rect source = {0, 0, 0, 0};
 				SDL_Rect target = {0, 0, 0, 0};
 				auto* scaled = SDL_CreateRGBSurface(loadedImage->flags, rect.width, rect.height,
-				                                    loadedImage->format->BitsPerPixel,
-				                                    loadedImage->format->Rmask, loadedImage->format->Gmask,
-				                                    loadedImage->format->Bmask, loadedImage->format->Amask);
+													loadedImage->format->BitsPerPixel,
+													loadedImage->format->Rmask, loadedImage->format->Gmask,
+													loadedImage->format->Bmask, loadedImage->format->Amask);
 				source.w = loadedImage->w;
 				source.h = loadedImage->h;
 				target.w = rect.width;
@@ -420,11 +420,11 @@ void RefreshPanelSavestate()
 	optState7->setEnabled(enabled);
 	optState8->setEnabled(enabled);
 	optState9->setEnabled(enabled);
-    optState10->setEnabled(enabled);
-    optState11->setEnabled(enabled);
-    optState12->setEnabled(enabled);
-    optState13->setEnabled(enabled);
-    optState14->setEnabled(enabled);
+	optState10->setEnabled(enabled);
+	optState11->setEnabled(enabled);
+	optState12->setEnabled(enabled);
+	optState13->setEnabled(enabled);
+	optState14->setEnabled(enabled);
 	grpScreenshot->setVisible(enabled);
 	cmdLoadState->setEnabled(enabled);
 	cmdSaveState->setEnabled(enabled);
