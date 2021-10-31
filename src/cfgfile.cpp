@@ -1903,8 +1903,16 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 		cfgfile_write_path2(f, tmp, p->floppyslots[i].df, PATH_FLOPPY);
 		_stprintf (tmp, _T("floppy%dwp"), i);
 		cfgfile_dwrite_bool (f, tmp, p->floppyslots[i].forcedwriteprotect);
-		_stprintf (tmp, _T("floppy%dtype"), i);
-		cfgfile_dwrite (f, tmp, _T("%d"), p->floppyslots[i].dfxtype);
+		_stprintf(tmp, _T("floppy%dtype"), i);
+		cfgfile_dwrite(f, tmp, _T("%d"), p->floppyslots[i].dfxtype);
+		if (p->floppyslots[i].dfxsubtype) {
+			_stprintf(tmp, _T("floppy%dsubtype"), i);
+			cfgfile_dwrite(f, tmp, _T("%d"), p->floppyslots[i].dfxsubtype);
+			if (p->floppyslots[i].dfxsubtypeid) {
+				_stprintf(tmp, _T("floppy%dsubtypeid"), i);
+				cfgfile_dwrite_escape(f, tmp, _T("%s"), p->floppyslots[i].dfxsubtypeid);
+			}
+		}
 		_stprintf (tmp, _T("floppy%dsound"), i);
 		cfgfile_dwrite (f, tmp, _T("%d"), p->floppyslots[i].dfxclick);
 		if (p->floppyslots[i].dfxclick < 0 && p->floppyslots[i].dfxclickexternal[0]) {
@@ -2947,7 +2955,18 @@ static int cfgfile_strboolval (const TCHAR *option, const TCHAR *value, const TC
 	return 1;
 }
 
-int cfgfile_string (const TCHAR *option, const TCHAR *value, const TCHAR *name, TCHAR *location, int maxsz)
+int cfgfile_string_escape(const TCHAR *option, const TCHAR *value, const TCHAR *name, TCHAR *location, int maxsz)
+{
+	if (_tcscmp(option, name) != 0)
+		return 0;
+	TCHAR *s = cfgfile_unescape_min(value);
+	_tcsncpy(location, s, maxsz - 1);
+	xfree(s);
+	location[maxsz - 1] = '\0';
+	return 1;
+}
+
+int cfgfile_string(const TCHAR *option, const TCHAR *value, const TCHAR *name, TCHAR *location, int maxsz)
 {
 	if (_tcscmp (option, name) != 0)
 		return 0;
@@ -5632,6 +5651,10 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		|| cfgfile_intval(option, value, _T("floppy1type"), &p->floppyslots[1].dfxtype, 1)
 		|| cfgfile_intval(option, value, _T("floppy2type"), &p->floppyslots[2].dfxtype, 1)
 		|| cfgfile_intval(option, value, _T("floppy3type"), &p->floppyslots[3].dfxtype, 1)
+		|| cfgfile_intval(option, value, _T("floppy0subtype"), &p->floppyslots[0].dfxsubtype, 1)
+		|| cfgfile_intval(option, value, _T("floppy1subtype"), &p->floppyslots[1].dfxsubtype, 1)
+		|| cfgfile_intval(option, value, _T("floppy2subtype"), &p->floppyslots[2].dfxsubtype, 1)
+		|| cfgfile_intval(option, value, _T("floppy3subtype"), &p->floppyslots[3].dfxsubtype, 1)
 		|| cfgfile_intval(option, value, _T("maprom"), &p->maprom, 1)
 		|| cfgfile_intval(option, value, _T("parallel_autoflush"), &p->parallel_autoflush_time, 1)
 		|| cfgfile_intval(option, value, _T("uae_hide"), &p->uae_hide, 1)
@@ -5929,6 +5952,10 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		if (cfgfile_string(option, value, tmpbuf, p->floppyslots[i].df, sizeof p->floppyslots[i].df / sizeof(TCHAR))) {
 			if (!_tcscmp(p->floppyslots[i].df, _T(".")))
 				p->floppyslots[i].df[0] = 0;
+			return 1;
+		}
+		_stprintf(tmpbuf, _T("floppy%dsubtypeid"), i);
+		if (cfgfile_string_escape(option, value, tmpbuf, p->floppyslots[i].dfxsubtypeid, sizeof p->floppyslots[i].dfxsubtypeid / sizeof(TCHAR))) {
 			return 1;
 		}
 	}
@@ -8357,7 +8384,7 @@ static int bip_a3000 (struct uae_prefs *p, int config, int compa, int romcheck)
 #ifdef AMIBERRY
 	p->z3fastmem[0].size = 8 * 1024 * 1024;
 #else
-    p->mbresmem_low_size = 8 * 1024 * 1024;
+	p->mbresmem_low_size = 8 * 1024 * 1024;
 #endif
 	built_in_chipset_prefs (p);
 	p->cs_ciaatod = p->ntscmode ? 2 : 1;
@@ -8378,7 +8405,7 @@ static int bip_a4000 (struct uae_prefs *p, int config, int compa, int romcheck)
 #ifdef AMIBERRY
 	p->z3fastmem[0].size = 8 * 1024 * 1024;
 #else
-    p->mbresmem_low_size = 8 * 1024 * 1024;
+	p->mbresmem_low_size = 8 * 1024 * 1024;
 #endif
 	p->cpu_model = 68030;
 	p->fpu_model = 68882;
@@ -8418,7 +8445,7 @@ static int bip_a4000t (struct uae_prefs *p, int config, int compa, int romcheck)
 #ifdef AMIBERRY
 	p->z3fastmem[0].size = 8 * 1024 * 1024;
 #else
-    p->mbresmem_low_size = 8 * 1024 * 1024;
+	p->mbresmem_low_size = 8 * 1024 * 1024;
 #endif
 	p->cpu_model = 68030;
 	p->fpu_model = 68882;
