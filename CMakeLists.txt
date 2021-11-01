@@ -117,7 +117,7 @@ add_executable(amiberry
         src/archivers/wrp/warp.cpp
         src/archivers/zip/unzip.cpp
         src/machdep/support.cpp
-        external/FloppyDriveBridge/floppybridge/floppybridge_lib.cpp
+        src/floppybridge/floppybridge_lib.cpp
         src/osdep/ahi_v1.cpp
         src/osdep/bsdsocket_host.cpp
         src/osdep/cda_play.cpp
