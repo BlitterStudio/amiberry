@@ -4,3 +4,6 @@
 [submodule "external/capsimg"]
 	path = external/capsimg
 	url = https://github.com/FrodeSolheim/capsimg
+[submodule "external/FloppyDriveBridge"]
+	path = external/FloppyDriveBridge
+	url = https://github.com/RobSmithDev/FloppyDriveBridge
