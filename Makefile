@@ -408,7 +408,7 @@ OBJS =	\
 	src/archivers/zip/unzip.o \
 	src/caps/caps_amiberry.o \
 	src/machdep/support.o \
-	external/FloppyDriveBridge/floppybridge/floppybridge_lib.o \
+	src/floppybridge/floppybridge_lib.o \
 	src/osdep/ahi_v1.o \
 	src/osdep/bsdsocket_host.o \
 	src/osdep/cda_play.o \
