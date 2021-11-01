@@ -112,6 +112,9 @@
     <Filter Include="external\FloppyDriveBridge">
       <UniqueIdentifier>{2031a2a9-2eac-4897-9bc7-034e1ba0e07e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\floppybridge">
+      <UniqueIdentifier>{0c9afcef-7d45-402e-94e6-7b0cc7955672}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\conf\dir.txt">
@@ -1011,6 +1014,12 @@
     <ClCompile Include="..\external\FloppyDriveBridge\floppybridge\floppybridge_lib.cpp">
       <Filter>external\FloppyDriveBridge</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\osdep\floppybridge_lib.cpp">
+      <Filter>src\osdep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\floppybridge\floppybridge_lib.cpp">
+      <Filter>src\floppybridge</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\archivers\7z\7zBuf.h">
@@ -1708,6 +1717,18 @@
     </ClInclude>
     <ClInclude Include="..\external\FloppyDriveBridge\floppybridge\floppybridge_abstract.h">
       <Filter>external\FloppyDriveBridge</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\osdep\floppybridge_abstract.h">
+      <Filter>src\osdep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\osdep\floppybridge_lib.h">
+      <Filter>src\osdep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\floppybridge\floppybridge_abstract.h">
+      <Filter>src\floppybridge</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\floppybridge\floppybridge_lib.h">
+      <Filter>src\floppybridge</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

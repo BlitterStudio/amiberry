@@ -207,7 +207,7 @@ find_package(sdl2-ttf CONFIG REQUIRED)
 target_link_libraries(amiberry PRIVATE SDL2::SDL2_ttf)
 
 target_link_libraries(amiberry PRIVATE guisan)
-target_include_directories(amiberry PRIVATE ./external/libguisan/include ./external/FloppyDriveBridge)
+target_include_directories(amiberry PRIVATE ./external/libguisan/include)
 
 find_package(flac CONFIG REQUIRED)
 target_link_libraries(amiberry PRIVATE FLAC::FLAC FLAC::FLAC++)
