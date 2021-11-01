@@ -18,6 +18,7 @@ LOCAL_C_INCLUDES := $(LOCAL_PATH)/src \
                     $(LOCAL_PATH)/src/include \
                     $(LOCAL_PATH)/src/archivers \
                     $(LOCAL_PATH)/external/libguisan/include \
+					$(LOCAL_PATH)/external/FloppyDriveBridge \
                     $(SDL_PATH)/include \
                     $(LIBPNG_PATH) \
 
