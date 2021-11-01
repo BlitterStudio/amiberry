@@ -109,8 +109,8 @@
     <Filter Include="abr">
       <UniqueIdentifier>{0237defb-6fd3-462b-9161-eef347184a72}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\floppybridge">
-      <UniqueIdentifier>{528300a3-cc11-49f4-884b-15a013d4955e}</UniqueIdentifier>
+    <Filter Include="external\FloppyDriveBridge">
+      <UniqueIdentifier>{2031a2a9-2eac-4897-9bc7-034e1ba0e07e}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -1005,41 +1005,11 @@
     <ClCompile Include="..\src\osdep\gui\ShowDiskInfo.cpp">
       <Filter>src\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\floppybridge\ArduinoFloppyBridge.cpp">
-      <Filter>src\floppybridge</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\floppybridge\ArduinoInterface.cpp">
-      <Filter>src\floppybridge</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\floppybridge\CommonBridgeTemplate.cpp">
-      <Filter>src\floppybridge</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\floppybridge\GreaseWeazleBridge.cpp">
-      <Filter>src\floppybridge</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\floppybridge\GreaseWeazleInterface.cpp">
-      <Filter>src\floppybridge</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\floppybridge\RotationExtractor.cpp">
-      <Filter>src\floppybridge</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\floppybridge\SerialIO.cpp">
-      <Filter>src\floppybridge</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\osdep\gui\PanelExpansions.cpp">
       <Filter>src\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\floppybridge\SuperCardProBridge.cpp">
-      <Filter>src\floppybridge</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\floppybridge\SuperCardProInterface.cpp">
-      <Filter>src\floppybridge</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\floppybridge\ftdi.cpp">
-      <Filter>src\floppybridge</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\floppybridge\floppybridge_lib.cpp">
-      <Filter>src\floppybridge</Filter>
+    <ClCompile Include="..\external\FloppyDriveBridge\floppybridge\floppybridge_lib.cpp">
+      <Filter>external\FloppyDriveBridge</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1733,44 +1703,11 @@
     <ClInclude Include="..\src\include\parallel.h">
       <Filter>src\include</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\floppybridge\ArduinoFloppyBridge.h">
-      <Filter>src\floppybridge</Filter>
+    <ClInclude Include="..\external\FloppyDriveBridge\floppybridge\floppybridge_lib.h">
+      <Filter>external\FloppyDriveBridge</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\floppybridge\ArduinoInterface.h">
-      <Filter>src\floppybridge</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\floppybridge\CommonBridgeTemplate.h">
-      <Filter>src\floppybridge</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\floppybridge\floppybridge_abstract.h">
-      <Filter>src\floppybridge</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\floppybridge\floppybridge_config.h">
-      <Filter>src\floppybridge</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\floppybridge\GreaseWeazleBridge.h">
-      <Filter>src\floppybridge</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\floppybridge\GreaseWeazleInterface.h">
-      <Filter>src\floppybridge</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\floppybridge\RotationExtractor.h">
-      <Filter>src\floppybridge</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\floppybridge\SerialIO.h">
-      <Filter>src\floppybridge</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\floppybridge\SuperCardProBridge.h">
-      <Filter>src\floppybridge</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\floppybridge\SuperCardProInterface.h">
-      <Filter>src\floppybridge</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\floppybridge\ftdi.h">
-      <Filter>src\floppybridge</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\floppybridge\floppybridge_lib.h">
-      <Filter>src\floppybridge</Filter>
+    <ClInclude Include="..\external\FloppyDriveBridge\floppybridge\floppybridge_abstract.h">
+      <Filter>external\FloppyDriveBridge</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
