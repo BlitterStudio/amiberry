@@ -4,8 +4,6 @@ We'd be really happy to get more people involved in the project! If you want to 
 
 If you haven't already, come find us in one of these platforms:
 
-* [Amiberry MeWe page](https://mewe.com/p/amiberry)
-
 * [Amiberry Facebook page](https://fb.me/amiberry.emulator)
 
 ## If you found a bug
