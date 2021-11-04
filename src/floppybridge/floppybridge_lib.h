@@ -91,7 +91,7 @@ public:
 		// Unique ID of this profile
 		unsigned int profileID;
 
-		// Driver Index, incase it's shown on the GUI
+		// Driver Index, in case it's shown on the GUI
 		unsigned int driverIndex;
 
 		// Some basic information
