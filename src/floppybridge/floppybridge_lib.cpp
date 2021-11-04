@@ -512,7 +512,7 @@ FloppyBridgeAPI* FloppyBridgeAPI::createDriverFromProfileID(unsigned int profile
 	return new FloppyBridgeAPI(driverIndex, driverHandle);
 }
 
-// Retreive a list of all of the profiles currently loaded that can be used.
+// Retrieve a list of all of the profiles currently loaded that can be used.
 bool FloppyBridgeAPI::getAllProfiles(std::vector<FloppyBridgeProfileInformation>& profileList) {
 	if (!isAvailable()) return false;
 
@@ -539,7 +539,7 @@ bool FloppyBridgeAPI::getAllProfiles(std::vector<FloppyBridgeProfileInformation>
 		profile++;
 	}
 
-	// Just populate the strings.. This was incase vector resizes etc changed memory locations
+	// Just populate the strings.. This was in case vector resizes etc changed memory locations
 	for (size_t pos = 0; pos < profileList.size(); pos++)
 		profileList[pos].profileConfig = stringListsForProfiles[pos].c_str();
 
@@ -609,7 +609,7 @@ bool FloppyBridgeAPI::showProfileConfigDialog(HWND hwndParent, unsigned int* pro
 
 /*********** CLASS FUNCTIONS ************************/
 
-// Dont call this. You should use the static createDriver member to create it.
+// Don't call this. You should use the static createDriver member to create it.
 FloppyBridgeAPI::FloppyBridgeAPI(unsigned int driverIndex, BridgeDriverHandle handle) : FloppyDiskBridge(), m_handle(handle), m_driverIndex(driverIndex) {
 }
 

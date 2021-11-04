@@ -34,8 +34,8 @@ public:
 	// Type of bridge mode
 	enum class BridgeMode : unsigned char {
 		bmFast = 0,							// Fast mode.				This is suitable for most disks and games
-		bmCompatiable = 1,					// More compatiable mode.	Some games require this.
-		bmTurboAmigaDOS = 2,				// Very fast mode.			This will break all copy protcetion, but is great for AmigaDOS disks in Workbench
+		bmCompatible = 1,					// More compatible mode.	Some games require this.
+		bmTurboAmigaDOS = 2,				// Very fast mode.			This will break all copy protection, but is great for AmigaDOS disks in Workbench
 		bmStalling = 3,						// Very slow.				Will cause the emulator to freeze and stall while disk access occurs.
 		bmMax = 3
 	};
@@ -114,7 +114,7 @@ public:
 	// Returns TRUE if the floppy bridge library has been loaded and is ready to be queried.  All functions are safe to call regardless the return value
 	static const bool isAvailable();
 
-	// Populares bridgeInformation with information about the Bridge DLL. This should be called and shown somewhere
+	// Populates bridgeInformation with information about the Bridge DLL. This should be called and shown somewhere
 	// As it contains update and support information too.  If this returns FALSE it will still contain basic information such as a URL to get the DLL from.
 	static bool getBridgeDriverInformation(bool allowCheckForUpdates, BridgeInformation& bridgeInformation);
 
@@ -254,7 +254,7 @@ public:
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Functions required by UAE - see floppybridge_abstract for more details
-	FloppyBridgeAPI(unsigned int driverIndex, BridgeDriverHandle handle); // Dont call this. You should use the static createDriver member to create it.
+	FloppyBridgeAPI(unsigned int driverIndex, BridgeDriverHandle handle); // Don't call this. You should use the static createDriver member to create it.
 	virtual ~FloppyBridgeAPI();
 	virtual bool initialise() override;
 	virtual void shutdown() override;
@@ -300,7 +300,7 @@ private:
 	unsigned int m_driverIndex;					// Index of that driver
 	TCharString m_error = { 0 };				// Last error
 	TCharString m_warning = { 0 };				// Last warning
-	BridgeDriver* m_driverInfo;					// Pointer to the driver info if retreived
+	BridgeDriver* m_driverInfo;					// Pointer to the driver info if retrieved
 #ifdef _UNICODE
 	std::string m_lastErrorAnsi;				// Non-unicode version of the last error
 #endif
