@@ -242,7 +242,6 @@
     <None Include="..\src\osdep\neon_helper.s" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\external\FloppyDriveBridge\floppybridge\floppybridge_lib.cpp" />
     <ClCompile Include="..\external\libguisan\src\actionevent.cpp" />
     <ClCompile Include="..\external\libguisan\src\basiccontainer.cpp" />
     <ClCompile Include="..\external\libguisan\src\cliprectangle.cpp" />
@@ -438,7 +437,6 @@
     <ClCompile Include="..\src\osdep\cda_play.cpp" />
     <ClCompile Include="..\src\osdep\charset.cpp" />
     <ClCompile Include="..\src\osdep\clipboard.cpp" />
-    <ClCompile Include="..\src\osdep\floppybridge_lib.cpp" />
     <ClCompile Include="..\src\osdep\fsdb_host.cpp" />
     <ClCompile Include="..\src\osdep\gui\CreateFilesysHardfile.cpp" />
     <ClCompile Include="..\src\osdep\gui\EditFilesysHardfile.cpp" />
@@ -505,8 +503,6 @@
     <ClCompile Include="..\src\zfile_archive.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\external\FloppyDriveBridge\floppybridge\floppybridge_abstract.h" />
-    <ClInclude Include="..\external\FloppyDriveBridge\floppybridge\floppybridge_lib.h" />
     <ClInclude Include="..\external\libguisan\include\guisan.hpp" />
     <ClInclude Include="..\external\libguisan\include\guisan\actionevent.hpp" />
     <ClInclude Include="..\external\libguisan\include\guisan\actionlistener.hpp" />
@@ -730,8 +726,6 @@
     <ClInclude Include="..\src\osdep\amiberry_input.h" />
     <ClInclude Include="..\src\osdep\cda_play.h" />
     <ClInclude Include="..\src\osdep\config.h" />
-    <ClInclude Include="..\src\osdep\floppybridge_abstract.h" />
-    <ClInclude Include="..\src\osdep\floppybridge_lib.h" />
     <ClInclude Include="..\src\osdep\fsdb_host.h" />
     <ClInclude Include="..\src\osdep\gui\gui_handling.h" />
     <ClInclude Include="..\src\osdep\gui\SelectorEntry.hpp" />
