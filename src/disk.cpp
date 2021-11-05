@@ -328,12 +328,29 @@ static void disk_date (uae_u8 *p)
 	p[8] = ticks >> 24; p[9] = ticks >> 16; p[10] = ticks >> 8; p[11] = ticks >> 0;
 }
 
-static void createbootblock (uae_u8 *sector, int bootable)
+static void createbootblock (uae_u8 *sector, int bootable, bool ffs)
 {
 	memset (sector, 0, FS_FLOPPY_BLOCKSIZE);
 	memcpy (sector, "DOS", 3);
-	if (bootable)
-		memcpy (sector, bootblock_ofs, sizeof bootblock_ofs);
+	if (ffs) {
+		sector[3] = 1;
+	}
+	if (bootable) {
+		memcpy(sector + 8, bootblock_ofs + 8, sizeof(bootblock_ofs) - 8);
+		uae_u32 crc = 0;
+		for (int i = 0; i < FS_FLOPPY_BLOCKSIZE; i += 4) {
+			uae_u32 v = (sector[i] << 24) | (sector[i + 1] << 16) | (sector[i + 2] << 8) | sector[i + 3];
+			if (crc + v < crc) {
+				crc++;
+			}
+			crc += v;
+		}
+		crc ^= 0xffffffff;
+		sector[4] = crc >> 24;
+		sector[5] = crc >> 16;
+		sector[6] = crc >> 8;
+		sector[7] = crc >> 0;
+	}
 }
 
 static void createrootblock (uae_u8 *sector, const TCHAR *disk_name)
@@ -404,7 +421,7 @@ static int createdirheaderblock (uae_u8 *sector, int parent, const char *filenam
 	return block;
 }
 
-static int createfileheaderblock (struct zfile *z,uae_u8 *sector, int parent, const char *filename, struct zfile *src, uae_u8 *bitmap, int *prevblock)
+static int createfileheaderblock (struct zfile *z,uae_u8 *sector, int parent, const char *filename, struct zfile *src, uae_u8 *bitmap, bool ffs, int *prevblock)
 {
 	uae_u8 sector2[FS_FLOPPY_BLOCKSIZE];
 	uae_u8 sector3[FS_FLOPPY_BLOCKSIZE];
@@ -414,11 +431,12 @@ static int createfileheaderblock (struct zfile *z,uae_u8 *sector, int parent, co
 	int extensions;
 	int extensionblock, extensioncounter, headerextension = 1;
 	int size;
+	int blocksize = ffs ? FS_FLOPPY_BLOCKSIZE : FS_OFS_DATABLOCKSIZE;
 
 	zfile_fseek (src, 0, SEEK_END);
 	size = (int)zfile_ftell (src);
 	zfile_fseek (src, 0, SEEK_SET);
-	extensions = (size + FS_OFS_DATABLOCKSIZE - 1) / FS_OFS_DATABLOCKSIZE;
+	extensions = (size + blocksize - 1) / blocksize;
 
 	memset (sector, 0, FS_FLOPPY_BLOCKSIZE);
 	pl (sector, 0, 2);
@@ -455,16 +473,25 @@ static int createfileheaderblock (struct zfile *z,uae_u8 *sector, int parent, co
 			pl (sector3, FS_FLOPPY_BLOCKSIZE - 4, -3);
 		}
 		memset (sector2, 0, FS_FLOPPY_BLOCKSIZE);
-		pl (sector2, 0, 8);
-		pl (sector2, 4, block);
-		pl (sector2, 8, datasec++);
-		pl (sector2, 12, size > FS_OFS_DATABLOCKSIZE ? FS_OFS_DATABLOCKSIZE : size);
-		zfile_fread (sector2 + 24, size > FS_OFS_DATABLOCKSIZE ? FS_OFS_DATABLOCKSIZE : size, 1, src);
-		size -= FS_OFS_DATABLOCKSIZE;
+		if (!ffs) {
+			pl(sector2, 0, 8);
+			pl(sector2, 4, block);
+			pl(sector2, 8, datasec);
+			pl(sector2, 12, size > FS_OFS_DATABLOCKSIZE ? FS_OFS_DATABLOCKSIZE : size);
+			zfile_fread(sector2 + 24, size > FS_OFS_DATABLOCKSIZE ? FS_OFS_DATABLOCKSIZE : size, 1, src);
+		} else {
+			zfile_fread(sector2, size > FS_FLOPPY_BLOCKSIZE ? FS_FLOPPY_BLOCKSIZE : size, 1, src);
+		}
+		datasec++;
+		size -= blocksize;
 		datablock = 0;
-		if (size > 0) datablock = getblock (bitmap, prevblock);
-		pl (sector2, 16, datablock);
-		disk_checksum(sector2, sector2 + 20);
+		if (size > 0) {
+			datablock = getblock(bitmap, prevblock);
+		}
+		if (!ffs) {
+			pl(sector2, 16, datablock);
+			disk_checksum(sector2, sector2 + 20);
+		}
 		writeimageblock (z, sector2, datablock2 * FS_FLOPPY_BLOCKSIZE);
 		if (datasec <= FS_EXTENSION_BLOCKS + 1)
 			pl (sector, 512 - 204 - extensioncounter * 4, datablock2);
@@ -507,12 +534,12 @@ static void createbitmapblock (uae_u8 *sector, uae_u8 *bitmap)
 	disk_checksum(sector, sector + 0);
 }
 
-static int createimagefromexe (struct zfile *src, struct zfile *dst)
+static int createimagefromexe(struct zfile *src, struct zfile *dst, int hd, bool ffs)
 {
 	uae_u8 sector1[FS_FLOPPY_BLOCKSIZE], sector2[FS_FLOPPY_BLOCKSIZE];
-	uae_u8 bitmap[FS_FLOPPY_TOTALBLOCKS + 8];
+	uae_u8 bitmap[FS_FLOPPY_TOTALBLOCKS * 2 + 8];
 	int exesize;
-	int blocksize = FS_OFS_DATABLOCKSIZE;
+	int blocksize = ffs ? FS_FLOPPY_BLOCKSIZE : FS_OFS_DATABLOCKSIZE;
 	int blocks, extensionblocks;
 	int totalblocks;
 	int fblock1, dblock1;
@@ -530,37 +557,37 @@ static int createimagefromexe (struct zfile *src, struct zfile *dst)
 	extensionblocks = (blocks + FS_EXTENSION_BLOCKS - 1) / FS_EXTENSION_BLOCKS;
 	/* bootblock=2, root=1, bitmap=1, startup-sequence=1+1, exefileheader=1 */
 	totalblocks = 2 + 1 + 1 + 2 + 1 + blocks + extensionblocks;
-	if (totalblocks > FS_FLOPPY_TOTALBLOCKS)
+	if (totalblocks > FS_FLOPPY_TOTALBLOCKS * hd)
 		return 0;
 
-	bitmap[880] = 1;
-	bitmap[881] = 1;
+	bitmap[880 * hd + 0] = 1;
+	bitmap[880 * hd + 1] = 1;
 	bitmap[0] = 1;
 	bitmap[1] = 1;
-	bitmap[1760] = -1;
-	prevblock = 880;
+	bitmap[1760 * hd] = -1;
+	prevblock = 880 * hd;
 
-	dblock1 = createdirheaderblock (sector2, 880, dirname1, bitmap, &prevblock);
+	dblock1 = createdirheaderblock (sector2, 880 * hd, dirname1, bitmap, &prevblock);
 	ss = zfile_fopen_empty (src, fname1b, strlen (fname1));
 	zfile_fwrite (fname1, strlen(fname1), 1, ss);
-	fblock1 = createfileheaderblock (dst, sector1,  dblock1, fname2, ss, bitmap, &prevblock);
+	fblock1 = createfileheaderblock (dst, sector1,  dblock1, fname2, ss, bitmap, ffs, &prevblock);
 	zfile_fclose (ss);
 	pl (sector2, 24 + dirhash (fname2) * 4, fblock1);
 	disk_checksum(sector2, sector2 + 20);
 	writeimageblock (dst, sector2, dblock1 * FS_FLOPPY_BLOCKSIZE);
 
-	fblock1 = createfileheaderblock (dst, sector1, 880, fname1, src, bitmap, &prevblock);
+	fblock1 = createfileheaderblock (dst, sector1, 880 * hd, fname1, src, bitmap, ffs, &prevblock);
 
 	createrootblock (sector1, zfile_getfilename (src));
 	pl (sector1, 24 + dirhash (fname1) * 4, fblock1);
 	pl (sector1, 24 + dirhash (dirname1) * 4, dblock1);
 	disk_checksum(sector1, sector1 + 20);
-	writeimageblock (dst, sector1, 880 * FS_FLOPPY_BLOCKSIZE);
+	writeimageblock (dst, sector1, 880 * hd * FS_FLOPPY_BLOCKSIZE);
 
 	createbitmapblock (sector1, bitmap);
-	writeimageblock (dst, sector1, 881 * FS_FLOPPY_BLOCKSIZE);
+	writeimageblock (dst, sector1, (880 * hd + 1) * FS_FLOPPY_BLOCKSIZE);
 
-	createbootblock (sector1, 1);
+	createbootblock (sector1, 1, ffs);
 	writeimageblock (dst, sector1, 0 * FS_FLOPPY_BLOCKSIZE);
 
 	return 1;
@@ -1252,13 +1279,14 @@ static void update_disk_statusline(int num)
 	//	statusline_add_message(STATUSTYPE_FLOPPY, _T("DF%d: %s"), num, my_getfilepart(fname));
 }
 
-static int drive_insert (drive * drv, struct uae_prefs *p, int dnum, const TCHAR *fname_in, bool fake, bool forcedwriteprotect)
+static int drive_insert (drive *drv, struct uae_prefs *p, int dnum, const TCHAR *fname_in, bool fake, bool forcedwriteprotect)
 {
 	uae_u8 buffer[2 + 2 + 4 + 4];
 	trackid *tid;
 	int num_tracks, size;
 	int canauto;
 	TCHAR outname[MAX_DPATH];
+	int dfxtype = p->floppyslots[dnum].dfxtype;
 
 	drive_image_free (drv);
 	if (!fake && !drv->bridge) {
@@ -1271,7 +1299,7 @@ static int drive_insert (drive * drv, struct uae_prefs *p, int dnum, const TCHAR
 	drv->ddhd = 1;
 	drv->num_heads = 2;
 	drv->num_secs = 0;
-	drv->hard_num_cyls = p->floppyslots[dnum].dfxtype == DRV_525_SD ? 40 : 80;
+	drv->hard_num_cyls = dfxtype == DRV_525_SD ? 40 : 80;
 	drv->tracktiming[0] = 0;
 	drv->useturbo = 0;
 	drv->indexoffset = 0;
@@ -1401,7 +1429,6 @@ static int drive_insert (drive * drv, struct uae_prefs *p, int dnum, const TCHAR
 
 	} else if (strncmp ((char*)buffer, "UAE--ADF", 8) == 0) {
 		int offs = 160 * 4 + 8;
-		int i;
 
 		drv->wrprot = true;
 		drv->filetype = ADF_EXT1;
@@ -1409,7 +1436,7 @@ static int drive_insert (drive * drv, struct uae_prefs *p, int dnum, const TCHAR
 		drv->num_secs = 11;
 
 		zfile_fseek (drv->diskfile, 8, SEEK_SET);
-		for (i = 0; i < 160; i++) {
+		for (int i = 0; i < 160; i++) {
 			tid = &drv->trackdata[i];
 			zfile_fread (buffer, 4, 1, drv->diskfile);
 			tid->sync = buffer[0] * 256 + buffer[1];
@@ -1426,24 +1453,44 @@ static int drive_insert (drive * drv, struct uae_prefs *p, int dnum, const TCHAR
 			offs += tid->len;
 		}
 
-	} else if (memcmp (exeheader, buffer, sizeof exeheader) == 0 && size <= 512 * (1760 - 7) && !canauto) {
-		int i;
-		struct zfile *z = zfile_fopen_empty (NULL, _T(""), 512 * 1760);
-		createimagefromexe (drv->diskfile, z);
-		drv->filetype = ADF_NORMAL;
-		zfile_fclose (drv->diskfile);
-		drv->diskfile = z;
-		drv->num_tracks = 160;
-		drv->num_secs = 11;
-		for (i = 0; i < drv->num_tracks; i++) {
-			tid = &drv->trackdata[i];
-			tid->type = TRACK_AMIGADOS;
-			tid->len = 512 * drv->num_secs;
-			tid->bitlen = 0;
-			tid->offs = i * 512 * drv->num_secs;
-			tid->revolutions = 1;
+	} else if (memcmp (exeheader, buffer, sizeof exeheader) == 0 && !canauto && size <= 512 * (1760 * 2 - 7)) {
+		bool ffs = false;
+		int hd = 1;
+		int freeblocks = 1760 - 7;
+		int blocks_ofs = (size + FS_OFS_DATABLOCKSIZE - 1) / FS_OFS_DATABLOCKSIZE;
+		int extensionblocks_ofs = (blocks_ofs + FS_EXTENSION_BLOCKS - 1) / FS_EXTENSION_BLOCKS;
+		int blocks_ffs = (size + FS_FLOPPY_BLOCKSIZE - 1) / FS_FLOPPY_BLOCKSIZE;
+		int extensionblocks_ffs = (blocks_ffs + FS_EXTENSION_BLOCKS - 1) / FS_EXTENSION_BLOCKS;
+		// select DD+FFS if file larger than DD+OFS
+		if (size > FS_OFS_DATABLOCKSIZE * (freeblocks - extensionblocks_ofs)) {
+			ffs = true;
+			// select HD+FFS if file larger than DD+FFS
+			if (size > FS_FLOPPY_BLOCKSIZE * (freeblocks - extensionblocks_ffs)) {
+				hd = 2;
+			}
 		}
-		drv->useturbo = 1;
+		if (dfxtype == DRV_35_DD) {
+			hd = 1;
+		}
+		if (size <= 512 * (1760 * hd - 7)) {
+			struct zfile *z = zfile_fopen_empty(NULL, _T(""), 512 * 1760 * hd);
+			createimagefromexe(drv->diskfile, z, hd, ffs);
+			drv->filetype = ADF_NORMAL;
+			zfile_fclose(drv->diskfile);
+			drv->diskfile = z;
+			drv->num_tracks = 160;
+			drv->num_secs = 11 * hd;
+			for (int i = 0; i < drv->num_tracks; i++) {
+				tid = &drv->trackdata[i];
+				tid->type = TRACK_AMIGADOS;
+				tid->len = 512 * drv->num_secs;
+				tid->bitlen = 0;
+				tid->offs = i * 512 * drv->num_secs;
+				tid->revolutions = 1;
+			}
+			drv->ddhd = hd;
+			drv->useturbo = 1;
+		}
 
 	} else if (canauto && (
 
@@ -1470,7 +1517,6 @@ static int drive_insert (drive * drv, struct uae_prefs *p, int dnum, const TCHAR
 		size == 9 * 82 * 1 * 512 || size == 18 * 82 * 1 * 512 || size == 10 * 82 * 1 * 512 || size == 20 * 82 * 1 * 512)) {
 			/* PC formatted image */
 			int side, sd;
-			int dfxtype = p->floppyslots[dnum].dfxtype;
 
 			drv->num_secs = 9;
 			drv->ddhd = 1;
@@ -1526,7 +1572,7 @@ static int drive_insert (drive * drv, struct uae_prefs *p, int dnum, const TCHAR
 			drv->num_tracks = size / (drv->num_secs * 512);
 
 			// SD disk in 5.25 drive = duplicate each track
-			if (sd && p->floppyslots[dnum].dfxtype == DRV_525_DD) {
+			if (sd && dfxtype == DRV_525_DD) {
 				drv->num_tracks *= 2;
 			} else {
 				sd = 0;
@@ -2915,6 +2961,7 @@ bool disk_creatediskfile (struct uae_prefs *p, const TCHAR *name, int type, driv
 	if (adftype == DRV_35_HD || hd > 0) {
 		file_size *= 2;
 		track_len *= 2;
+		data_size *= 2;
 		ddhd = 2;
 		if (adftype == DRV_PC_525_40_80) {
 			file_size = 15 * 512 * 80 * 2;
@@ -2922,6 +2969,7 @@ bool disk_creatediskfile (struct uae_prefs *p, const TCHAR *name, int type, driv
 	} else if (adftype == DRV_PC_525_ONLY_40) {
 		file_size /= 2;
 		tracks /= 2;
+		data_size /= 2;
 	}
 
 	if (copyfrom) {
