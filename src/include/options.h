@@ -936,6 +936,8 @@ struct uae_prefs
 	int input_device_match_mask;
 
 #ifdef AMIBERRY
+	bool drawbridge_smartspeed;
+	bool drawbridge_autocache;
 	bool alt_tab_release;
 	int sound_pullmode;
 	bool input_analog_remap;
