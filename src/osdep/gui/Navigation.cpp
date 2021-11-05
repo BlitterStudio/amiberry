@@ -154,7 +154,7 @@ static NavigationMap navMap[] =
 	{ "cboUAEROM", "ROM", "ROM", "cboCartROM", "chkShapeShifter" },
 	{ "chkShapeShifter", "ROM", "ROM", "cboUAEROM", "cboMainROM" },
 
-		//PanelRAM
+	//PanelRAM
 	{ "Chipmem", "", "", "RAM", "Slowmem" },
 	{ "Slowmem", "", "", "Chipmem", "Fastmem" },
 	{ "Fastmem", "", "", "Slowmem", "Z3mem" },
@@ -162,7 +162,7 @@ static NavigationMap navMap[] =
 	{ "A3000Low", "", "", "Z3mem", "A3000High" },
 	{ "A3000High", "", "", "A3000Low", "Chipmem" },
 
-		//PanelFloppy
+	//PanelFloppy
 	{ "DF0:", "Floppy drives", "cboType0", "cmdSaveForDisk", "cboDisk0" },
 	{ "cboType0", "DF0:", "chkWP0", "cmdSaveForDisk", "cboDisk0" },
 	{ "chkWP0", "cboType0", "cmdInfo0", "cmdSaveForDisk", "cboDisk0" },
@@ -192,10 +192,12 @@ static NavigationMap navMap[] =
 	{ "cmdEject3", "cmdInfo3", "cmdSel3", "cboDisk2", "cboDisk3" },
 	{ "cmdSel3", "cmdEject3", "Floppy drives", "cboDisk2", "cboDisk3" },
 	{ "cboDisk3", "Floppy drives", "Floppy drives", "DF3:", "sldDriveSpeed" },
-	{ "sldDriveSpeed", "", "", "cboDisk3", "cmdCreateDDDisk" },
-	{ "cmdSaveForDisk", "Floppy drives", "cmdCreateDDDisk", "sldDriveSpeed", "DF0:" },
-	{ "cmdCreateDDDisk", "cmdSaveForDisk", "cmdCreateHDDisk", "sldDriveSpeed", "cboType0" },
-	{ "cmdCreateHDDisk", "cmdCreateDDDisk", "Floppy drives", "sldDriveSpeed", "cmdEject0" },
+	{ "sldDriveSpeed", "", "", "cboDisk3", "chkDBSmartSpeed" },
+	{ "chkDBSmartSpeed", "", "", "sldDriveSpeed", "chkDBAutoCache"},
+	{ "chkDBAutoCache", "", "", "chkDBSmartSpeed", "cmdCreateDDDisk" },
+	{ "cmdSaveForDisk", "Floppy drives", "cmdCreateDDDisk", "chkDBAutoCache", "DF0:" },
+	{ "cmdCreateDDDisk", "cmdSaveForDisk", "cmdCreateHDDisk", "chkDBAutoCache", "cboType0" },
+	{ "cmdCreateHDDisk", "cmdCreateDDDisk", "Floppy drives", "chkDBAutoCache", "cmdEject0" },
 
 	//  active            move left           move right          move up           move down
 	// PanelHD
@@ -218,13 +220,13 @@ static NavigationMap navMap[] =
 	{ "cboCD", "Hard drives/CD", "Hard drives/CD", "chkCD", "chkCDTurbo" },
 	{ "chkCDTurbo", "Hard drives/CD", "Hard drives/CD", "cboCD", "cmdProp0" },
 
-		// PanelExpansions
+	// PanelExpansions
 	{ "chkBSDSocket", "Expansions", "chkSana2", "", "chkSCSI" },
 	{ "chkSCSI", "Expansions", "chkCD32Fmv", "chkBSDSocket", "" },
 	{ "chkSana2", "chkBSDSocket", "Expansions", "", "chkCD32Fmv" },
 	{ "chkCD32Fmv", "chkSCSI", "Expansions", "chkSana2", "" },
 
-		// PanelRTG
+	// PanelRTG
 	{ "cboBoard", "RTG board", "cboRtg16bitModes", "cboRtgRefreshRate", "sldGfxmem" },
 	{ "cboRtg16bitModes", "cboBoard", "RTG board", "cboRtgAspectRatio", "cboRtg32bitModes" },
 	{ "cboRtg32bitModes", "sldGfxmem", "RTG board", "cboRtg16bitModes", "chkRtgMatchDepth" },
@@ -291,8 +293,8 @@ static NavigationMap navMap[] =
 	{ "optSoundPull", "sldFloppySoundEmpty", "Sound", "sldSoundBufferSize", "optSoundPush" },
 	{ "optSoundPush", "sldFloppySoundDisk", "Sound", "optSoundPull", "sldMasterVol" },
 
-		//  active            move left           move right          move up           move down
-		// PanelInput
+	//  active            move left           move right          move up           move down
+	// PanelInput
 	{ "cboPort0", "Input", "Input", "optBoth", "cboPort0Autofire" },
 	{ "cboPort0Autofire", "Input", "cboPort0mode", "cboPort0", "cboPort1" },
 	{ "cboPort0mode", "cboPort0Autofire", "Input", "cboPort0", "cboPort1" },
