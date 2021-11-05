@@ -173,6 +173,8 @@ struct autoconfig_info
 	uae_u32 start;
 	uae_u32 size;
 	int zorro;
+	// never direct maps RAM
+	bool indirect;
 	const TCHAR *label;
 	addrbank_t *addrbank;
 	uaecptr write_bank_address;

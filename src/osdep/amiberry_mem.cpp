@@ -237,8 +237,12 @@ bool uae_mman_info(addrbank* ab, struct uae_mman_data* md)
 	{
 		start = ab->start;
 		got = true;
-		if (expansion_get_autoconfig_by_address(&currprefs, ab->start, 0) && !expansion_get_autoconfig_by_address(&currprefs, ab->start + size, 0))
-			barrier = true;
+		if (expansion_get_autoconfig_by_address(&currprefs, ab->start, 0)) {
+			struct autoconfig_info* aci = expansion_get_autoconfig_by_address(&currprefs, ab->start + size, 0);
+			if (!aci || aci->indirect) {
+				barrier = true;
+			}
+		}
 	}
 	else if (!_tcscmp(ab->label, _T("*B")))
 	{
