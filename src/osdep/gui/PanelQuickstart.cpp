@@ -85,6 +85,14 @@ public:
 
 static QSDriveTypeListModel qsDriveTypeList;
 
+static string drivebridgeModes[] =
+{
+	"Fast",
+	"Compatible",
+	"Turbo",
+	"Accurate"
+};
+
 struct amigamodels
 {
 	int compalevels;
@@ -723,10 +731,20 @@ public:
 		{
 			if (actionEvent.getSource() == cboqsDFxType[i])
 			{
-				const int dfxtype = todfxtype(i, cboqsDFxType[i]->getSelected() - 1, &sub);
+				auto selectedType = cboqsDFxType[i]->getSelected();
+				const int dfxtype = todfxtype(i, selectedType - 1, &sub);
 				changed_prefs.floppyslots[i].dfxtype = dfxtype;
 				changed_prefs.floppyslots[i].dfxsubtype = sub;
-				changed_prefs.floppyslots[i].dfxsubtypeid[0] = 0;
+				if (dfxtype == DRV_FB)
+				{
+					TCHAR tmp[32];
+					_stprintf(tmp, _T("%d:%s"), selectedType - 5, drivebridgeModes[selectedType - 6].data());
+					_tcscpy(changed_prefs.floppyslots[i].dfxsubtypeid, tmp);
+				}
+				else
+				{
+					changed_prefs.floppyslots[i].dfxsubtypeid[0] = 0;
+				}
 			}
 		}
 		RefreshPanelFloppy();
@@ -1052,7 +1070,11 @@ void InitPanelQuickstart(const struct _ConfigCategory& category)
 	CountModelConfigs();
 	cboConfig->setSelected(quickstart_conf);
 	SetControlState(quickstart_model);
+
+#ifdef FLOPPYBRIDGE
 	floppybridge_init(&changed_prefs);
+	floppybridge_set_config("1|Fast[0|0|COM0|0|0]2|Compatible[0|0|COM0|1|0]3|Turbo[0|0|COM0|2|0]4|Accurate[0|0|COM0|3|0]");
+#endif
 
 	// Only change the current prefs if we're not already emulating
 	if (!emulating && !config_loaded)

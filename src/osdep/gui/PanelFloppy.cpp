@@ -11,6 +11,7 @@
 #include "options.h"
 #include "disk.h"
 #include "gui_handling.h"
+#include "floppybridge/floppybridge_lib.h"
 
 static gcn::CheckBox* chkDFx[4];
 static gcn::DropDown* cboDFxType[4];
@@ -26,6 +27,8 @@ static gcn::CheckBox* chkLoadConfig;
 static gcn::Button* cmdSaveForDisk;
 static gcn::Button* cmdCreateDDDisk;
 static gcn::Button* cmdCreateHDDisk;
+static gcn::CheckBox* chkDBSmartSpeed;
+static gcn::CheckBox* chkDBAutoCache;
 
 static const char* drive_speed_list[] = {"Turbo", "100% (compatible)", "200%", "400%", "800%"};
 static const int drive_speed_values[] = {0, 100, 200, 400, 800};
@@ -79,6 +82,14 @@ public:
 
 static DriveTypeListModel driveTypeList;
 
+static string drivebridgeModes[] =
+{
+	"Fast",
+	"Compatible",
+	"Turbo",
+	"Accurate"
+};
+
 class DiskfileListModel : public gcn::ListModel
 {
 public:
@@ -119,10 +130,20 @@ public:
 		{
 			if (actionEvent.getSource() == cboDFxType[i])
 			{
-				const int dfxtype = todfxtype(i, cboDFxType[i]->getSelected() - 1, &sub);
+				auto selectedType = cboDFxType[i]->getSelected();
+				const int dfxtype = todfxtype(i, selectedType - 1, &sub);
 				changed_prefs.floppyslots[i].dfxtype = dfxtype;
 				changed_prefs.floppyslots[i].dfxsubtype = sub;
-				changed_prefs.floppyslots[i].dfxsubtypeid[0] = 0;
+				if (dfxtype == DRV_FB)
+				{
+					TCHAR tmp[32];
+					_stprintf(tmp, _T("%d:%s"), selectedType - 5, drivebridgeModes[selectedType - 6].data());
+					_tcscpy(changed_prefs.floppyslots[i].dfxsubtypeid, tmp);
+				}
+				else
+				{
+					changed_prefs.floppyslots[i].dfxsubtypeid[0] = 0;
+				}
 			}
 		}
 		RefreshPanelFloppy();
@@ -139,6 +160,14 @@ public:
 	{
 		if (actionEvent.getSource() == chkLoadConfig)
 			bLoadConfigForDisk = chkLoadConfig->isSelected();
+		else if (actionEvent.getSource() == chkDBSmartSpeed)
+		{
+			changed_prefs.drawbridge_smartspeed = chkDBSmartSpeed->isSelected();
+		}
+		else if (actionEvent.getSource() == chkDBAutoCache)
+		{
+			changed_prefs.drawbridge_autocache = chkDBAutoCache->isSelected();
+		}
 		else
 		{
 			for (auto i = 0; i < 4; ++i)
@@ -491,6 +520,14 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 	cmdCreateHDDisk->setId("cmdCreateHDDisk");
 	cmdCreateHDDisk->addActionListener(createDiskActionListener);
 
+	chkDBSmartSpeed = new gcn::CheckBox("DrawBridge: Smart Speed (Dynamically switch on Turbo)");
+	chkDBSmartSpeed->setId("chkDBSmartSpeed");
+	chkDBSmartSpeed->addActionListener(dfxCheckActionListener);
+
+	chkDBAutoCache = new gcn::CheckBox("DrawBridge: Auto-Cache (Cache disk data while drive is idle)");
+	chkDBAutoCache->setId("chkDBAutoCache");
+	chkDBAutoCache->addActionListener(dfxCheckActionListener);
+
 	for (i = 0; i < 4; ++i)
 	{
 		posX = DISTANCE_BORDER;
@@ -524,12 +561,20 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 	category.panel->add(lblDriveSpeedInfo, posX, posY);
 	posY += sldDriveSpeed->getHeight() + DISTANCE_NEXT_Y;
 
+	posX = DISTANCE_BORDER;
+	category.panel->add(chkDBSmartSpeed, posX, posY);
+	posY += chkDBSmartSpeed->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(chkDBAutoCache, posX, posY);
+
 	posY = category.panel->getHeight() - DISTANCE_BORDER - BUTTON_HEIGHT;
 	category.panel->add(cmdSaveForDisk, DISTANCE_BORDER, posY);
 	category.panel->add(cmdCreateDDDisk, cmdSaveForDisk->getX() + cmdSaveForDisk->getWidth() + DISTANCE_NEXT_X, posY);
 	category.panel->add(cmdCreateHDDisk, cmdCreateDDDisk->getX() + cmdCreateDDDisk->getWidth() + DISTANCE_NEXT_X, posY);
 
+#ifdef FLOPPYBRIDGE
 	floppybridge_init(&changed_prefs);
+	floppybridge_set_config("1|Fast[0|0|COM0|0|0]2|Compatible[0|0|COM0|1|0]3|Turbo[0|0|COM0|2|0]4|Accurate[0|0|COM0|3|0]");
+#endif
 
 	RefreshPanelFloppy();
 }
@@ -554,6 +599,8 @@ void ExitPanelFloppy()
 	delete cmdSaveForDisk;
 	delete cmdCreateDDDisk;
 	delete cmdCreateHDDisk;
+	delete chkDBSmartSpeed;
+	delete chkDBAutoCache;
 
 	delete dfxCheckActionListener;
 	delete driveTypeActionListener;
@@ -630,6 +677,21 @@ void RefreshPanelFloppy()
 			break;
 		}
 	}
+
+	chkDBAutoCache->setEnabled(false);
+	chkDBSmartSpeed->setEnabled(false);
+	for (i = 0; i <= 4; ++i)
+	{
+		// is DrawBridge selected?
+		if (changed_prefs.floppyslots[i].dfxtype == DRV_FB)
+		{
+			chkDBAutoCache->setEnabled(true);
+			chkDBSmartSpeed->setEnabled(true);
+			break;
+		}
+	}
+	chkDBAutoCache->setSelected(changed_prefs.drawbridge_autocache);
+	chkDBSmartSpeed->setSelected(changed_prefs.drawbridge_smartspeed);
 }
 
 bool HelpPanelFloppy(std::vector<std::string>& helptext)
