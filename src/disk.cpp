@@ -4961,6 +4961,9 @@ static void floppybridge_init2(struct uae_prefs *p)
 					bridge = FloppyBridgeAPI::createDriverFromProfileID(id);
 				}
 				if (bridge) {
+#ifdef AMIBERRY
+					bridge->setComPortAutoDetect(true);
+#endif
 					if (!bridge->initialise()) {
 						const char *errorMessage = bridge->getLastErrorMessage();
 						const char *name = bridge->getDriverInfo()->name;
