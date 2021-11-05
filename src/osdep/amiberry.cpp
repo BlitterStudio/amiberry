@@ -1939,6 +1939,8 @@ void target_default_options(struct uae_prefs* p, int type)
 	_tcscpy(p->action_replay, amiberry_options.default_ar_key);
 	_tcscpy(p->fullscreen_toggle, amiberry_options.default_fullscreen_toggle_key);
 
+	p->drawbridge_smartspeed = false;
+	p->drawbridge_autocache = false;
 	p->alt_tab_release = false;
 	p->sound_pullmode = amiberry_options.default_sound_pull;
 	p->input_analog_remap = false;
@@ -2020,6 +2022,9 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_target_dwrite_str(f, _T("fullscreen_toggle"), p->fullscreen_toggle);
 	cfgfile_target_dwrite_str(f, _T("minimize"), p->minimize);
 
+	cfgfile_target_dwrite_bool(f, _T("drawbridge_smartspeed"), p->drawbridge_smartspeed);
+	cfgfile_target_dwrite_bool(f, _T("drawbridge_autocache"), p->drawbridge_autocache);
+
 	cfgfile_target_dwrite_bool(f, _T("alt_tab_release"), p->alt_tab_release);
 	cfgfile_target_dwrite(f, _T("sound_pullmode"), _T("%d"), p->sound_pullmode);
 	cfgfile_target_dwrite_bool(f, _T("use_analogue_remap"), p->input_analog_remap);
@@ -2062,6 +2067,10 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 	if (cfgfile_yesno(option, value, _T("map_drives_auto"), &p->automount_removable))
 		return 1;
 	if (cfgfile_yesno(option, value, _T("map_cd_drives"), &p->automount_cddrives))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("drawbridge_smartspeed"), &p->drawbridge_smartspeed))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("drawbridge_autocache"), &p->drawbridge_autocache))
 		return 1;
 	if (cfgfile_yesno(option, value, _T("alt_tab_release"), &p->alt_tab_release))
 		return 1;

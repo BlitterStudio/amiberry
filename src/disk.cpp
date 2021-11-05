@@ -4963,6 +4963,8 @@ static void floppybridge_init2(struct uae_prefs *p)
 				if (bridge) {
 #ifdef AMIBERRY
 					bridge->setComPortAutoDetect(true);
+					bridge->setAutoCacheMode(currprefs.drawbridge_autocache);
+					bridge->setSmartSpeedEnabled(currprefs.drawbridge_smartspeed);
 #endif
 					if (!bridge->initialise()) {
 						const char *errorMessage = bridge->getLastErrorMessage();
