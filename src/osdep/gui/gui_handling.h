@@ -117,6 +117,13 @@ static const int msi_mb[] = { 0, 5, 6, 7, 8, 9, 10, 11, 12 };
 static const char* diskfile_filter[] = { ".adf", ".adz", ".fdi", ".ipf", ".zip", ".dms", ".gz", ".xz", ".scp", "\0" };
 static const char* cdfile_filter[] = { ".cue", ".ccd", ".iso", ".mds", ".nrg", "\0" };
 static const char* whdload_filter[] = { ".lha", "\0" };
+static string drivebridgeModes[] =
+{
+	"Fast",
+	"Compatible",
+	"Turbo",
+	"Accurate"
+};
 
 typedef struct _ConfigCategory
 {

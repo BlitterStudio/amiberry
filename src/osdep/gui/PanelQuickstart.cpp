@@ -85,14 +85,6 @@ public:
 
 static QSDriveTypeListModel qsDriveTypeList;
 
-static string drivebridgeModes[] =
-{
-	"Fast",
-	"Compatible",
-	"Turbo",
-	"Accurate"
-};
-
 struct amigamodels
 {
 	int compalevels;
