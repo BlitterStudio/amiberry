@@ -563,11 +563,6 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 	category.panel->add(cmdCreateDDDisk, cmdSaveForDisk->getX() + cmdSaveForDisk->getWidth() + DISTANCE_NEXT_X, posY);
 	category.panel->add(cmdCreateHDDisk, cmdCreateDDDisk->getX() + cmdCreateDDDisk->getWidth() + DISTANCE_NEXT_X, posY);
 
-#ifdef FLOPPYBRIDGE
-	floppybridge_init(&changed_prefs);
-	floppybridge_set_config("1|Fast[0|0|COM0|0|0]2|Compatible[0|0|COM0|1|0]3|Turbo[0|0|COM0|2|0]4|Accurate[0|0|COM0|3|0]");
-#endif
-
 	RefreshPanelFloppy();
 }
 
