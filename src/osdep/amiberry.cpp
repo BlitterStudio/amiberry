@@ -1961,6 +1961,11 @@ void target_default_options(struct uae_prefs* p, int type)
 			changed_prefs.cpu_cycle_exact = changed_prefs.cpu_memory_cycle_exact = false;
 		}
 	}
+
+#ifdef FLOPPYBRIDGE
+	floppybridge_set_config("1|Fast[0|0|COM0|0|0]2|Compatible[0|0|COM0|1|0]3|Turbo[0|0|COM0|2|0]4|Accurate[0|0|COM0|3|0]");
+	floppybridge_init(&changed_prefs);
+#endif
 }
 
 static const TCHAR* scsimode[] = { _T("SCSIEMU"), _T("SPTI"), _T("SPTI+SCSISCAN"), NULL };
