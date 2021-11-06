@@ -82,14 +82,6 @@ public:
 
 static DriveTypeListModel driveTypeList;
 
-static string drivebridgeModes[] =
-{
-	"Fast",
-	"Compatible",
-	"Turbo",
-	"Accurate"
-};
-
 class DiskfileListModel : public gcn::ListModel
 {
 public:
