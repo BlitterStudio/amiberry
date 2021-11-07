@@ -192,6 +192,7 @@ int xgreencolor_s, xgreencolor_b, xgreencolor_m;
 int xbluecolor_s, xbluecolor_b, xbluecolor_m;
 
 struct color_entry colors_for_drawing;
+xcolnr fullblack;
 static struct color_entry direct_colors_for_drawing;
 
 static xcolnr *p_acolors;
@@ -574,14 +575,20 @@ static void set_vblanking_limits(void)
 	}
 }
 
-int get_vertical_visible_height(void)
+int get_vertical_visible_height(bool useoldsize)
 {
 	struct vidbuf_description *vidinfo = &adisplays[0].gfxvidinfo;
 	int h = vidinfo->drawbuffer.inheight;
 	int vbstrt, vbstop;
 
 	if (programmedmode <= 1) {
-		h = (maxvpos_display + maxvpos_display_vsync - minfirstline) << currprefs.gfx_vresolution;
+		h = maxvpos_display + maxvpos_display_vsync - minfirstline;
+		if (useoldsize) {
+			if (h == 288 || h == 243) {
+				h--;
+			}
+		}
+		h <<= currprefs.gfx_vresolution;
 	}
 	if (interlace_seen && currprefs.gfx_vresolution > 0) {
 		h -= 1 << (currprefs.gfx_vresolution - 1);
