@@ -122,6 +122,7 @@ extern int disk_debug_track;
 bool floppybridge_has(void);
 bool DISK_isfloppybridge(struct uae_prefs*, int);
 void floppybridge_init(struct uae_prefs *p);
+void floppybridge_modified(int);
 void floppybridge_reload_profiles(void);
 void floppybridge_set_config(const char*);
 extern bool floppybridge_available;

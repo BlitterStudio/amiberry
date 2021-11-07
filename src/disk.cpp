@@ -5050,6 +5050,17 @@ void floppybridge_init(struct uae_prefs *p)
 	floppybridge_reload_profiles();
 }
 
+void floppybridge_modified(int num)
+{
+	if (num < 0) {
+		for (int i = 0; i < MAX_FLOPPY_DRIVES; i++) {
+			bridge_type[i] = -1;
+		}
+	} else {
+		bridge_type[num] = -1;
+	}
+}
+
 void DISK_init (void)
 {
 	for (int dr = MAX_FLOPPY_DRIVES - 1; dr >= 0; dr--) {
