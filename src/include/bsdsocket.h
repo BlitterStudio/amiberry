@@ -33,75 +33,75 @@ extern void deinit_socket_layer (void);
 
 /* allocated and maintained on a per-task basis */
 struct socketbase {
-    struct socketbase *next;
-    struct socketbase *nextsig;	/* queue for tasks to signal */
+	struct socketbase *next;
+	struct socketbase *nextsig;	/* queue for tasks to signal */
 
-    uaecptr sysbase;
+	uaecptr sysbase;
 	int dosignal;		/* signal flag */
-    uae_u32 ownertask;		/* task that opened the library */
-    int signal;			/* signal allocated for that task */
-    int sb_errno, sb_herrno;	/* errno and herrno variables */
-    uae_u32 errnoptr, herrnoptr;	/* pointers */
-    uae_u32 errnosize, herrnosize;	/* pinter sizes */
-    int dtablesize;		/* current descriptor/flag etc. table size */
-    SOCKET_TYPE *dtable;	/* socket descriptor table */
-    int *ftable;		/* socket flags */
-    int resultval;
-    uae_u32 hostent;		/* pointer to the current hostent structure (Amiga mem) */
-    uae_u32 hostentsize;
-    uae_u32 protoent;		/* pointer to the current protoent structure (Amiga mem) */
-    uae_u32 protoentsize;
-    uae_u32 servent;		/* pointer to the current servent structure (Amiga mem) */
-    uae_u32 serventsize;
-    uae_u32 sigstosend;
-    uae_u32 eventsigs;		/* EVENT sigmask */
-    uae_u32 eintrsigs;		/* EINTR sigmask */
-    int eintr;			/* interrupted by eintrsigs? */
-    int eventindex;		/* current socket looked at by GetSocketEvents() to prevent starvation */
+	uae_u32 ownertask;		/* task that opened the library */
+	int signal;			/* signal allocated for that task */
+	int sb_errno, sb_herrno;	/* errno and herrno variables */
+	uae_u32 errnoptr, herrnoptr;	/* pointers */
+	uae_u32 errnosize, herrnosize;	/* pinter sizes */
+	int dtablesize;		/* current descriptor/flag etc. table size */
+	SOCKET_TYPE *dtable;	/* socket descriptor table */
+	int *ftable;		/* socket flags */
+	int resultval;
+	uae_u32 hostent;		/* pointer to the current hostent structure (Amiga mem) */
+	uae_u32 hostentsize;
+	uae_u32 protoent;		/* pointer to the current protoent structure (Amiga mem) */
+	uae_u32 protoentsize;
+	uae_u32 servent;		/* pointer to the current servent structure (Amiga mem) */
+	uae_u32 serventsize;
+	uae_u32 sigstosend;
+	uae_u32 eventsigs;		/* EVENT sigmask */
+	uae_u32 eintrsigs;		/* EINTR sigmask */
+	int eintr;			/* interrupted by eintrsigs? */
+	int eventindex;		/* current socket looked at by GetSocketEvents() to prevent starvation */
 	uae_u32 logstat;
 	uae_u32 logptr;
 	uae_u32 logmask;
 	uae_u32 logfacility;
 	uaecptr fdcallback;
-    uae_u64 bytestransmitted, bytesreceived;
+	uae_u64 bytestransmitted, bytesreceived;
 
-    unsigned int *mtable;	/* window messages allocated for asynchronous event notification */
-    /* host-specific fields below */
+	unsigned int *mtable;	/* window messages allocated for asynchronous event notification */
+	/* host-specific fields below */
 #ifdef _WIN32
-    SOCKET_TYPE sockAbort;	/* for aborting WinSock2 select() (damn Microsoft) */
-    SOCKET_TYPE sockAsync;	/* for aborting WSBAsyncSelect() in window message handler */
-    int needAbort;		/* abort flag */
-    void *hAsyncTask;		/* async task handle */
-    void *hEvent;		/* thread event handle */
+	SOCKET_TYPE sockAbort;	/* for aborting WinSock2 select() (damn Microsoft) */
+	SOCKET_TYPE sockAsync;	/* for aborting WSBAsyncSelect() in window message handler */
+	int needAbort;		/* abort flag */
+	void *hAsyncTask;		/* async task handle */
+	void *hEvent;		/* thread event handle */
 #else
-    uae_sem_t sem;		/* semaphore to notify the socket thread of work */
-    uae_thread_id thread;	/* socket thread */
-    int  sockabort[2];		/* pipe used to tell the thread to abort a select */
-    int action;
-    int s;			/* for accept */
-    uae_u32 name;		/* For gethostbyname */
-    uae_u32 a_addr;		/* gethostbyaddr, accept */
-    uae_u32 a_addrlen;		/* for gethostbyaddr, accept */
-    uae_u32 flags;
-    void *buf;
-    uae_u32 len;
-    uae_u32 to, tolen, from, fromlen;
-    int nfds;
-    uae_u32 sets [3];
-    uae_u32 timeout;
-    uae_u32 sigmp;
+	uae_sem_t sem;		/* semaphore to notify the socket thread of work */
+	uae_thread_id thread;	/* socket thread */
+	int  sockabort[2];		/* pipe used to tell the thread to abort a select */
+	int action;
+	int s;			/* for accept */
+	uae_u32 name;		/* For gethostbyname */
+	uae_u32 a_addr;		/* gethostbyaddr, accept */
+	uae_u32 a_addrlen;		/* for gethostbyaddr, accept */
+	uae_u32 flags;
+	void *buf;
+	uae_u32 len;
+	uae_u32 to, tolen, from, fromlen;
+	int nfds;
+	uae_u32 sets [3];
+	uae_u32 timeout;
+	uae_u32 sigmp;
 #endif
 #ifdef AMIBERRY
-    TrapContext *context;
+	TrapContext *context;
 #endif
 };
 
 #define LIBRARY_SIZEOF 36
 
 struct UAEBSDBase {
-    uae_u8 dummy[LIBRARY_SIZEOF];
-    struct socketbase *sb;
-    uae_u8 scratchbuf[SCRATCHBUFSIZE];
+	uae_u8 dummy[LIBRARY_SIZEOF];
+	struct socketbase *sb;
+	uae_u8 scratchbuf[SCRATCHBUFSIZE];
 };
 
 /* socket flags */

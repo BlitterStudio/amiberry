@@ -19,6 +19,7 @@ void uae_Signal(uaecptr task, uae_u32 mask);
 void uae_Signal_with_Func(uaecptr task, uae_u32 mask, UAE_PROCESSED state);
 void uae_NotificationHack(uaecptr, uaecptr);
 void uae_ShellExecute(TCHAR *command);
+void uae_ShellExecute2(uae_u32 id);
 #endif
 int native2amiga_isfree(void);
 void uae_nativesem_wait(void);
