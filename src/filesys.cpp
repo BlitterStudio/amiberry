@@ -465,7 +465,6 @@ typedef struct _unit {
 
 } Unit;
 
-
 int nr_units (void)
 {
 	int cnt = 0;
@@ -6539,6 +6538,8 @@ static void action_free_record64(TrapContext *ctx, Unit *unit, dpacket *packet)
 	PUT_PCK_RES2 (packet, ERROR_RECORD_NOT_LOCKED);
 }
 
+static int filesys_shellexecute2_process(int mode, TrapContext *ctx);
+
 /* We don't want multiple interrupts to be active at the same time. I don't
 * know whether AmigaOS takes care of that, but this does. */
 static uae_sem_t singlethread_int_sem;
@@ -6583,6 +6584,8 @@ static uae_u32 REGPARAM2 exter_int_helper(TrapContext *ctx)
 	} else if (n == 22) {
 		// ack
 		return 0;
+	} else if (n >= 30 && n <= 39) {
+		return filesys_shellexecute2_process(n, ctx);
 	}
 
 	if (n == 1) {
@@ -6688,6 +6691,12 @@ static uae_u32 REGPARAM2 exter_int_helper(TrapContext *ctx)
 					}
 					shell_execute_data = uaeboard_alloc_ram(SHELLEXEC_MAX_CMD_LEN);
 					return 6; // create process
+				}
+
+				case 6: /* shell execute 2 */
+				{
+					trap_set_areg(ctx, 0, read_comm_pipe_u32_blocking(&native2amiga_pending));
+					return 7;
 				}
 
 				default:
@@ -7067,16 +7076,16 @@ void filesys_reset (void)
 	shell_execute_process = 0;
 }
 
-static void filesys_prepare_reset2(void)
+static void filesys_prepare_reset2 (void)
 {
-	UnitInfo* uip;
+	UnitInfo *uip;
 	int i;
 
 	uip = mountinfo.ui;
 #ifdef UAE_FILESYS_THREADS
 	for (i = 0; i < MAX_FILESYSTEM_UNITS; i++) {
 		if (uip[i].open > 0 && uip[i].unit_pipe != 0) {
-			uae_sem_init(&uip[i].reset_sync_sem, 0, 0);
+			uae_sem_init (&uip[i].reset_sync_sem, 0, 0);
 			uip[i].reset_state = FS_GO_DOWN;
 			/* send death message */
 			write_comm_pipe_pvoid(uip[i].unit_pipe, NULL, 0);
@@ -9892,4 +9901,237 @@ int save_filesys_cando (void)
 	if (nr_units () == 0)
 		return -1;
 	return filesys_in_interrupt ? 0 : 1;
+}
+
+#define SE2_MIN_FILE_LENGTH 32
+
+struct ShellExecute2
+{
+	uae_u32 size;
+	char *file, *parms, *currentdir;
+	char *fileparms;
+	uae_u32 stack;
+	uae_s32 priority;
+	uae_u32 flags;
+	uae_u32 id;
+	uae_u32 binsize;
+	uae_u8 *bin;
+	char *tmpout;
+	uaecptr aoutbuf;
+	char *binname;
+
+	int aoutlen;
+	uaecptr process;
+	uaecptr buffer;
+	uae_u32 exitcode;
+	shellexecute2_callback cb;
+	char *outbuf;
+	int outlen;
+	void *userdata;
+};
+
+#define SHELLEXEC_MAX 2
+static struct ShellExecute2 shellexecute2[SHELLEXEC_MAX];
+
+static void shellexecute2_free(struct ShellExecute2 *se2)
+{
+	xfree(se2->file);
+	xfree(se2->currentdir);
+	xfree(se2->parms);
+	xfree(se2->bin);
+	xfree(se2->outbuf);
+	memset(se2, 0, sizeof(struct ShellExecute2));
+}
+
+#define ShellExecute2_Struct_Start (5 * 4)
+#define ShellExecute2_Struct_Start2 (9 * 4)
+
+static int filesys_shellexecute2_process(int mode, TrapContext *ctx)
+{
+	struct ShellExecute2 *se2 = &shellexecute2[0];
+	char tmp[256];
+
+	write_log(_T("filesys_shellexecute2_process %d\n"), mode);
+
+	if (mode == 30) {
+		// request Amiga side buffer size
+		if (se2->bin) {
+			xfree(se2->file);
+			sprintf(tmp, "T:__uae_bin_%08X_%08x", se2->process, se2->id);
+			se2->file = strdup(tmp);
+		}
+		int size = ShellExecute2_Struct_Start + ShellExecute2_Struct_Start2;
+		size += 2 * (strlen(se2->file) + 1);
+		size += strlen(se2->currentdir) + 1;
+		size += 2 * (strlen(se2->parms) + 1);
+		size += 32; // space for tmp_out
+		size += 256; // space for out buffer
+		size++;
+		size += se2->binsize + 4;
+		if (se2->binsize) {
+			size += 32; // space for bin name
+		}
+		return size;
+	}
+	if (mode == 31) {
+		// a0 = buffer
+		// d1 = process pointer
+		se2->buffer = trap_get_areg(ctx, 0);
+		se2->process = trap_get_dreg(ctx, 1);
+		if (!se2->buffer) {
+			// amiga side out of memory
+			shellexecute2_free(se2);
+			return 0;
+		}
+
+		uaecptr dptr = se2->buffer + ShellExecute2_Struct_Start + ShellExecute2_Struct_Start2;
+		trap_put_long(ctx, se2->buffer + 4, dptr);
+		if (se2->bin) {
+			xfree(se2->file);
+			sprintf(tmp, "T:__uae_bin_%08X_%08x", se2->process, se2->id);
+			se2->file = strdup(tmp);
+			trap_put_long(ctx, se2->buffer + 52, dptr);
+		}
+		dptr += trap_put_string(ctx, se2->file, dptr, -1) + 1;
+		trap_put_long(ctx, se2->buffer + 8, dptr);
+		dptr += trap_put_string(ctx, se2->parms, dptr, -1) + 1;
+		trap_put_long(ctx, se2->buffer + 12, dptr);
+		dptr += trap_put_string(ctx, se2->currentdir, dptr, -1) + 1;
+
+		trap_put_long(ctx, se2->buffer + 16, dptr);
+		dptr += trap_put_string(ctx, se2->file, dptr, -1) + 1;
+		if (se2->parms[0]) {
+			trap_put_byte(ctx, dptr - 1, ' ');
+			dptr += trap_put_string(ctx, se2->parms, dptr, -1) + 1;
+		}
+
+		if (se2->flags & 2) {
+			trap_put_long(ctx, se2->buffer + 44, dptr);
+			sprintf(tmp, "T:__uae_out_%08X_%08x", se2->process, se2->id);
+			dptr += trap_put_string(ctx, tmp, dptr, -1) + 1;
+			se2->aoutbuf = dptr;
+			trap_put_long(ctx, se2->buffer + 48, dptr);
+			dptr += 128 + 1;
+		} else {
+			trap_put_long(ctx, se2->buffer + 44, 0);
+		}
+
+		dptr += 3;
+		dptr &= ~3;
+
+		uaecptr ptr = se2->buffer + ShellExecute2_Struct_Start;
+		trap_put_long(ctx, ptr, se2->stack);
+		ptr += 4;
+		trap_put_long(ctx, ptr, se2->priority);
+		ptr += 4;
+		trap_put_long(ctx, ptr, se2->flags);
+		ptr += 4;
+		trap_put_long(ctx, ptr, se2->id);
+		ptr += 4;
+
+		if (se2->bin) {
+			trap_put_long(ctx, ptr, se2->binsize);
+			ptr += 4;
+			trap_put_long(ctx, ptr, dptr);
+			ptr += 4;
+			trap_put_bytes(ctx, se2->bin, dptr, se2->binsize);
+			dptr += se2->binsize;
+		} else {
+			trap_put_long(ctx, ptr, 0);
+			ptr += 4;
+			trap_put_long(ctx, ptr, 0);
+			ptr += 4;
+		}
+		return 1;
+	}
+	if (mode == 32) {
+		// called by new process, requests buffer
+		return se2->buffer;
+	}
+	if (mode == 34) {
+		// collect output
+		if (se2->aoutbuf) {
+			int len = trap_get_dreg(ctx, 1);
+			if (len > 0 && len <= 128) {
+				int outoffset = se2->aoutlen;
+				trap_get_bytes(ctx, tmp, se2->aoutbuf, 128);
+				tmp[len] = 0;
+				se2->aoutlen += len;
+				if (se2->aoutlen + 1 >= se2->outlen) {
+					se2->outlen += 1000;
+					if (!se2->outbuf) {
+						se2->outbuf = xmalloc(char, se2->outlen);
+					} else {
+						se2->outbuf = xrealloc(char, se2->outbuf, se2->outlen);
+					}
+				}
+				strcpy(se2->outbuf + outoffset, tmp);
+			}
+		}
+		return 1;
+	}
+
+	if (mode == 33) {
+		// exit status
+		// d0 = status
+		// a1 = buffer
+		se2->exitcode = trap_get_dreg(ctx, 1);
+		if (se2->cb) {
+			se2->cb(se2->id, se2->exitcode, se2->flags, se2->outbuf, se2->userdata);
+		}
+		shellexecute2_free(se2);
+	}
+
+	return 0;
+}
+
+static void shellexec2_boot(struct ShellExecute2 *se2)
+{
+	if (kickstart_version >= 36) {
+		uae_ShellExecute2(se2->id);
+	} else {
+		Unit *u;
+		TrapContext *ctx = NULL;
+
+		for (u = units; u; u = u->next) {
+			if (is_virtual(u->unit) && filesys_isvolume(u)) {
+				put_byte(u->volume + 173 - 32, get_byte(u->volume + 173 - 32) | 4);
+				uae_Signal(get_long(u->volume + 176 - 32), 1 << 13);
+				break;
+			}
+		}
+	}
+}
+
+int filesys_shellexecute2(TCHAR *file, TCHAR *currentdir, TCHAR *parms, uae_u32 stack, uae_s32 priority, uae_u32 id, uae_u32 flags, uae_u8 *bin, uae_u32 binsize, shellexecute2_callback cb, void *userdata)
+{
+	struct ShellExecute2 *se2 = &shellexecute2[0];
+
+	if (uae_boot_rom_type <= 0) {
+		return 0;
+	}
+	if (se2->file) {
+		return 0;
+	}
+
+	se2->file = file ? ua(file) : "";
+	se2->currentdir = currentdir ? ua(currentdir) : "";
+	se2->parms = parms ? ua(parms) : "";
+
+	se2->id = id;
+	se2->stack = stack;
+	se2->priority = priority;
+	se2->flags = flags;
+	if (bin && binsize > 0) {
+		se2->bin = xmalloc(uae_u8, binsize);
+		memcpy(se2->bin, bin, binsize);
+		se2->binsize = binsize;
+	}
+
+	se2->cb = cb;
+	se2->userdata = userdata;
+
+	shellexec2_boot(se2);
+
+	return 1;
 }

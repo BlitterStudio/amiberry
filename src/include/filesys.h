@@ -163,4 +163,8 @@ extern void gethdfgeometry(uae_u64 size, struct uaedev_config_info*);
 
 void add_cpuboard_unit(int unit, struct uaedev_config_info *uci, struct romconfig *rc);
 
+typedef void (*shellexecute2_callback)(uae_u32, uae_u32, uae_u32, const char*, void*);
+
+int filesys_shellexecute2(TCHAR *file, TCHAR *currentdir, TCHAR *parms, uae_u32 stack, uae_s32 priority, uae_u32 id, uae_u32 flags, uae_u8 *bin, uae_u32 binsize, shellexecute2_callback cb, void*);
+
 #endif /* UAE_FILESYS_H */
