@@ -36,9 +36,8 @@ FreeMem = -210
 TRAP_DATA_NUM = 4
 TRAP_DATA_SEND_NUM = 1
 
-TRAP_DATA = $4000
-TRAP_DATA_SIZE = $8000
-TRAP_DATA_SLOT_SIZE = 8192
+TRAP_DATA = $8000
+TRAP_DATA_SLOT_SIZE = 4096
 TRAP_DATA_SECOND = 80
 TRAP_DATA_TASKWAIT = (TRAP_DATA_SECOND-4)
 TRAP_DATA_EXTRA = 144
@@ -53,12 +52,12 @@ TRAP_STATUS_STATUS = 3
 
 TRAP_DATA_DATA = 4
 
-RTAREA_SYSBASE = $3FFC
-RTAREA_GFXBASE = $3FF8
-RTAREA_INTBASE = $3FF4
-RTAREA_INTXY = $3FF0
+RTAREA_SYSBASE = $7FFC
+RTAREA_GFXBASE = $7FF8
+RTAREA_INTBASE = $7FF4
+RTAREA_INTXY = $7FF0
 
-RTAREA_MOUSEHACK = $3E00
+RTAREA_MOUSEHACK = $7E00
 
 RTAREA_TRAPTASK = $FFF4
 RTAREA_EXTERTASK = $FFF8
@@ -508,6 +507,8 @@ FSIN_chip_done
 	rts
 	EREM
 
+	; d1 = stacksize
+	; d2 = priority
 createproc
 	movem.l d2-d5/a2/a6,-(sp)
 	moveq #0,d5
@@ -605,7 +606,7 @@ trap_task_check:
 	move.b #2,TRAP_STATUS_STATUS(a5)
 .next
 	add.w #TRAP_DATA_SLOT_SIZE,a0
-	add.w #TRAP_STATUS_SLOT_SIZE,a1
+	addq.w #TRAP_STATUS_SLOT_SIZE,a1
 	dbf d6,.nexttrap
 	tst.l d7
 	beq.w trap_task_wait
@@ -674,7 +675,16 @@ EXTT_notificationhack:
 	bra.w EXTT_loop
 EXTT_shellexec
 	cmp.w #6,d0
+	bgt.s EXTT_shellexec2
+	bsr.s doshellexecute
+	bra.w EXTT_loop
+EXTT_shellexec2
+	cmp.w #7,d0
 	bgt.w EXTT_loop
+	bsr.s doshellexecute2
+	bra.w EXTT_loop
+
+doshellexecute
 	lea shellexecname(pc),a0
 	lea shellexecproc(pc),a1
 	moveq #1,d0
@@ -685,7 +695,329 @@ EXTT_shellexec
 	bsr.w getrtbaselocal
 	moveq #20,d0
 	jsr (a0)
-	bra.w EXTT_loop
+	rts
+
+doshellexecute2
+	movem.l d2-d4/a2-a4,-(sp)	
+	sub.l a4,a4
+	moveq #0,d3
+	move.w #$FF50,d0 ; exter_int_helper
+	bsr.w getrtbaselocal
+	move.l a0,a3
+	moveq #30,d0
+	jsr (a3)
+	; returns requested data size in D0
+	move.l d0,d2
+	beq.s .end1
+	move.l #65536+1,d1
+	jsr AllocMem(a6)
+	move.l d0,a4
+	tst.l d0
+	beq.s .she1
+	move.l d2,(a4)
+	lea shellexecname(pc),a0
+	lea shellexecproc2(pc),a1
+	moveq #1,d0
+	move.l #4096,d1
+	bsr.w createproc
+	move.l d0,d3
+	beq.s .she1
+	sub.l #92,d3
+.she1
+	moveq #31,d0
+	move.l a4,a0
+	; send process struct and data
+	move.l d3,d1
+	jsr (a3)
+	tst.l d3
+	beq.s .end2
+	move.l a4,d0
+	beq.s .end2
+	move.l d3,a1 ; Task
+	moveq #0,d0	
+	bset #13,d0 ; SIGBREAK_CTRL_D
+	jsr -$144(a6) ; Signal
+	bra.s .end1
+.end2
+	move.l a4,d0
+	beq.s .end1
+	move.l a4,a1
+	move.l (a4),d0
+	jsr FreeMem(a6)
+.end1
+	movem.l (sp)+,d2-d4/a2-a4
+	rts
+	
+	cnop 0,4
+	dc.l 16
+shellexecproc2
+	dc.l 0
+
+	move.l 4.w,a6
+	lea doslibname(pc),a1
+	moveq #0,d0
+	jsr -$228(a6) ; OpenLibrary
+	move.l d0,d6
+	
+	moveq #0,d0	
+	bset #13,d0 ; SIGBREAK_CTRL_D
+	jsr -$013e(a6) ;Wait
+
+	move.w #$FF50,d0 ; exter_int_helper
+	bsr.w getrtbaselocal
+	moveq #32,d0
+	; get data
+	jsr (a0)
+	move.l d0,a4 ;data
+	
+	;  0 L size (including this field)
+	;  4 PT command
+	;  8 PT params
+	; 12 PT dir
+	; 16 PT command + params
+	; 20 L stack size
+	; 24 L priority
+	; 28 L flags
+	; 32 L id
+	; 36 L datasize
+	; 40 PT data
+	; 44 PT tmpout
+	; 48 PT out buffer (128)
+	; 52 PT tmpbinname
+
+	move.l d6,a0
+	cmp.w #36,20(a0)
+	bcc.s .fstask1
+	jsr -$0084(a6) ; Forbid
+	sub.l a1,a1
+	jsr -$126(a6) ; FindTask
+	move.l d0,a0
+	moveq #0,d2
+	; empty pr_FileSystemTask, find SYS: assign
+	move.l d6,a1
+	move.l 34(a1),a1 ;dl_Root
+	move.l 24(a1),a1 ; rn_Info
+	add.l a1,a1
+	add.l a1,a1
+	move.l 4(a1),a1 ;di_DevInfo
+	add.l a1,a1
+	add.l a1,a1
+.nextdi
+	moveq #1,d0
+	cmp.l 4(a1),d0
+	bne.s .noassign
+	move.l 40(a1),a2
+	add.l a2,a2
+	add.l a2,a2
+	move.l (a2),d0
+	cmp.l #$03535953,d0 ;\03SYS
+	bne.s .nosys
+	tst.l 168(a0)
+	bne.s .noassign
+	move.l 8(a1),168(a0) ;pr_FileSystemTask
+	bra.s .noassign
+.nosys
+	swap d0
+	cmp.w #$0154,d0 ;\01T
+	bne.s .noassign
+	moveq #1,d2
+.noassign
+	move.l (a1),d0
+	lsl.l #2,d0
+	move.l d0,a1
+	bne.s .nextdi
+.nextdi0
+	jsr -$008a(a6) ;Permit
+	moveq #-2,d5
+	tst.w d2
+	beq .seproc6
+.fstask1
+
+	exg d6,a6
+
+	move.l sp,a3
+	lea -8*8(sp),sp
+	move.l sp,d5
+	move.l d5,a2
+
+	; SYS_Input
+	move.l #$80000000+32+1,(a2)+
+	lea nil_name(pc),a0
+	move.l a0,d1
+	move.l #1005,d2
+	jsr -$1e(a6) ;Open
+	move.l d0,(a2)+
+
+	; SYS_Output
+	move.l #$80000000+32+2,(a2)+
+	move.l #1006,d2
+	move.l 44(a4),d1
+	bne.s .outfile
+	move.l #1005,d2
+	lea nil_name(pc),a0
+	move.l a0,d1
+.outfile
+	jsr -$1e(a6) ;Open
+	move.l d0,(a2)+
+
+	; NP_CurrentDir
+	moveq #1,d0 ; TAG_IGNORE
+	move.l d0,(a2)+
+	moveq #0,d0
+	move.l d0,(a2)+
+	move.l 12(a4),a0
+	tst.b (a0)
+	beq.s .nodir1
+	move.l a0,d1
+	moveq #-2,d2
+	jsr -$0054(a6) ;Lock
+	tst.l d0
+	beq.s .nodir1
+	subq.l #8,a2
+	move.l #$80000000+1000+10,(a2)+
+	move.l d0,(a2)+
+.nodir1
+
+	; NP_StackSize
+	move.l 20(a4),d0
+	beq.s .stk1
+	move.l #$80000000+1000+11,(a2)+
+	move.l d0,(a2)+
+.stk1
+
+	; NP_Priority
+	move.l #$80000000+1000+13,(a2)+
+	move.l 24(a4),(a2)+
+
+	; NP_WindowPtr
+	moveq #1,d0 ; TAG_IGNORE
+	move.l d0,(a2)+
+	moveq #0,d0
+	move.l d0,(a2)+
+	move.l 28(a4),d0
+	btst #2,d0
+	beq.s .nowp1
+	subq.l #8,a2
+	move.l #$80000000+1000+15,(a2)+
+	moveq #-1,d0
+	move.l d0,(a2)+
+.nowp1
+
+	clr.l (a2)+
+	clr.l (a2)
+	move.l d5,a2
+
+	tst.l 40(a4)
+	beq.s .nobin
+	move.l #1006,d2
+	move.l 52(a4),d1
+	jsr -$1e(a6) ;Open
+	move.l d0,d4
+	beq.s .nobin
+	move.l d4,d1
+	move.l 40(a4),d2
+	move.l 36(a4),d3
+	jsr -$30(a6) ;Write
+	move.l d4,d1
+	jsr -$24(a6)
+.nobin
+
+	cmp.w #36,20(a6)
+	bcc.s .seproc5
+
+	sub.l a1,a1
+	exg d6,a6
+	jsr -$126(a6) ; FindTask
+	exg d6,a6
+	move.l d0,a0
+	move.l 2*8+4(a2),d0
+	beq.s .ncur
+	move.l d0,152(a0) ; pr_CurrentDir
+.ncur
+
+	move.l 16(a4),d1 ; Command
+	moveq #0,d2 ; Input
+	move.l 1*8+4(a2),d3 ; Output
+	jsr -$de(a6) ; Execute
+
+	bra.s .seproc4
+
+.seproc5
+	move.l 16(a4),d1
+	move.l a2,d2
+	jsr -$25e(a6) ; SystemTagList	
+
+.seproc4
+	move.l d0,d5
+
+	move.l 0*8+4(a2),d1
+	beq.s .nof2
+	jsr -$24(a6) ;Close
+.nof2
+	move.l 1*8+4(a2),d4
+	beq.s .nof3
+	tst.l 44(a4)
+	beq.s .nof21
+	move.l d4,d1
+	moveq #0,d2
+	moveq #-1,d3
+	jsr -$42(a6) ;Seek
+.nof23
+	move.l d4,d1
+	move.l 48(a4),d2
+	move.l #128,d3
+	jsr -$2a(a6) ;Read
+	move.l d0,d1
+	move.w #$FF50,d0 ; exter_int_helper
+	bsr.w getrtbaselocal
+	moveq #34,d0
+	; return output
+	jsr (a0)
+	cmp.l d1,d3
+	beq.s .nof23
+	moveq #34,d0
+	moveq #-1,d1
+	jsr (a0)
+.nof21
+	move.l d4,d1
+	jsr -$24(a6) ;Close
+	move.l 44(a4),d1
+	beq.s .nof22
+	jsr -$48(a6) ;DeleteFile
+.nof22
+.nof3
+	move.l 52(a4),d1
+	beq.s .nobinf
+	jsr -$48(a6) ;DeleteFile
+.nobinf
+
+	cmp.l #-1,d5
+	bne.s .nof1
+	move.l 2*8+4(a2),d1
+	beq.s .nof1
+	jsr -$5a(a6) ;Unlock
+.nof1
+
+	move.l a3,sp
+.seproc6
+	exg d6,a6
+
+	move.w #$FF50,d0 ; exter_int_helper
+	bsr.w getrtbaselocal
+	moveq #33,d0
+	move.l d5,d1
+	move.l a4,a1
+	; return status
+	jsr (a0)
+
+	move.l d6,a1
+	jsr -$19e(a6)
+
+	move.l a4,a1
+	move.l (a4),d0
+	jsr FreeMem(a6)
+	moveq #0,d0
+	rts
 
 exter_server_new:
 	moveq #0,d0
@@ -917,6 +1249,10 @@ setup_exter:
 	lea.l exter_server_new(pc),a0
 	move.l a0,18(a1)
 	move.w #$0214,8(a1)
+	cmp.w #35,20(a6)
+	bcc.s .high
+	move.w #$02ff,8(a1)
+.high
 	moveq #3,d0
 	jsr -168(a6) ; AddIntServer
 
@@ -1873,6 +2209,11 @@ FSML_loop:
 	bsr.w debuggerstart
 	bclr #1,173(a3)
 .nodebug
+	btst #2,173(a3)
+	beq.s .nose2
+	bsr.w doshellexecute2
+	bclr #2,173(a3)
+.nose2
 	; disk change notification from native code
 	tst.b 172(a3)
 	beq.s .nodc
@@ -3475,7 +3816,7 @@ hwtrap_entry:
 	beq.s .foundfree
 .nexttrap2
 	add.w #TRAP_DATA_SLOT_SIZE,a0
-	add.w #TRAP_STATUS_SLOT_SIZE,a1
+	addq.w #TRAP_STATUS_SLOT_SIZE,a1
 	dbf d0,.nexttrap
 	bra.s .retry
 .foundfree
@@ -3603,7 +3944,7 @@ hwtrap_interrupt:
 	bra.s .checkagain
 .next
 	add.w #TRAP_DATA_SLOT_SIZE,a0
-	add.w #TRAP_STATUS_SLOT_SIZE,a1
+	addq.w #TRAP_STATUS_SLOT_SIZE,a1
 	dbf d1,.nexttrap
 .notrapint
 
@@ -3631,7 +3972,7 @@ hwtrap_interrupt:
 	jsr -$144(a6) ; Signal
 .esn1
 	add.w #TRAP_DATA_SLOT_SIZE,a2
-	add.w #TRAP_STATUS_SLOT_SIZE,a3
+	addq.w #TRAP_STATUS_SLOT_SIZE,a3
 	dbf d2,.esn2
 .notrapackint
 
