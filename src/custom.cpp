@@ -3601,7 +3601,7 @@ static void update_fetch(int until, int fm)
 	/* First, a loop that prepares us for the speedup code.  We want to enter
 	the SPEEDUP case with fetch_state == plane0 or it is the very
 	first fetch cycle (which equals to same state as fetch_was_plane0)
-	and then unroll whole blocks, so that we end on the same fetch_state again.  */
+    and then unroll whole blocks, so that we end on the same fetch_state again.  */
 	for(;;) {
 		if (hpos == until || hpos >= maxhpos) {
 			if (until >= maxhpos) {
@@ -3756,6 +3756,11 @@ static void decide_bpl_fetch(int endhpos)
 static void decide_vline(void)
 {
 	bool forceoff = (vb_start_line == 1 && !harddis_v);
+
+	// if scandoubler mode: stop display before possible last non-paired line
+	if (doflickerfix() && interlace_seen > 0 && vpos + 1 >= maxvpos && lof_current && diwstate == DIW_waiting_stop) {
+		forceoff = true;
+	}
 
 	/* Take care of the vertical DIW.  */
 	if (vpos == plffirstline && !forceoff) {
@@ -4483,7 +4488,7 @@ static int sprites_differ(struct draw_info *dip, struct draw_info *dip_old)
 		}
 	}
 
-	npixels = this_last->first_pixel + (this_last->max - this_last->pos) - this_first->first_pixel;
+    npixels = this_last->first_pixel + (this_last->max - this_last->pos) - this_first->first_pixel;
 	if (memcmp(spixels + this_first->first_pixel, spixels + prev_first->first_pixel, npixels * sizeof(uae_u16)) != 0) {
 		return 1;
 	}
@@ -6479,7 +6484,7 @@ static void doint_delay_do(uae_u32 v)
 static void doint_delay(void)
 {
 	if (m68k_interrupt_delay) {
-		event2_newevent_xx(-1, CYCLE_UNIT + CYCLE_UNIT / 2, 0, doint_delay_do);
+		event2_newevent_xx(-1, 3 * CYCLE_UNIT + CYCLE_UNIT / 2, 0, doint_delay_do);
 	} else {
 		doint_delay_do(0);
 	}
@@ -6912,35 +6917,30 @@ static void BPL2MOD(int hpos, uae_u16 v)
 /* Needed in special OCS/ECS "7-plane" mode,
  * also handles CPU generated bitplane data
  */
-static void BPLxDAT_next(uae_u32 v)
+static void BPLxDAT_next(int hpos, int num, uae_u16 data)
 {
-	int num = v >> 16;
-	uae_u16 vv = (uae_u16)v;
-	uae_u16 data = (uae_u16)v;
-	int hpos = current_hpos();
-
 	// only BPL1DAT access can do anything visible
 	if (num == 0 && hpos >= hsyncstartpos_start_cycles) {
 		decide_line(hpos);
 		decide_fetch_safe(hpos);
 	}
 	flush_display(fetchmode);
-	fetched[num] = vv;
+	fetched[num] = data;
 	if ((fmode & 3) == 3) {
-		fetched_aga[num] = ((uae_u64)last_custom_value << 48) | ((uae_u64)vv << 32) | (vv << 16) | vv;
+		fetched_aga[num] = ((uae_u64)last_custom_value << 48) | ((uae_u64)data << 32) | (data << 16) | data;
 	} else if ((fmode & 3) == 2) {
-		fetched_aga[num] = (last_custom_value << 16) | vv;
+		fetched_aga[num] = (last_custom_value << 16) | data;
 	} else if ((fmode & 3) == 1) {
-		fetched_aga[num] = (vv << 16) | vv;
+		fetched_aga[num] = (data << 16) | data;
 	} else {
-		fetched_aga[num] = vv;
+		fetched_aga[num] = data;
 	}
 }
 
 static void BPLxDAT(int hpos, int num, uae_u16 v)
 {
 	uae_u32 vv = (num << 16) | v;
-	BPLxDAT_next(vv);
+	BPLxDAT_next(hpos, num, v);
 
 	if (num == 0 && hpos >= hsyncstartpos_start_cycles) {
 		if (thisline_decision.plfleft < 0) {
@@ -9800,13 +9800,12 @@ static void hsync_scandoubler(int hpos)
 	last_hdiw = 0 - 1;
 
 	for (int i = 0; i < MAX_PLANES; i++) {
-		int diff;
 		bpltmp[i] = bplpt[i];
 		bpltmpx[i] = bplptx[i];
 		uaecptr pb1 = prevbpl[lof][vpos][i];
 		uaecptr pb2 = prevbpl[1 - lof][vpos][i];
 		if (pb1 && pb2) {
-			diff = pb1 - pb2;
+			int diff = pb1 - pb2;
 			if (lof) {
 				if (bplcon0 & 4) {
 					bplpt[i] = pb1 - diff;
@@ -9828,11 +9827,6 @@ static void hsync_scandoubler(int hpos)
 
 	// Bitplane only
 	dmacon = odmacon & (DMA_MASTER | DMA_BITPLANE);
-	// Blank last line
-	if (vpos >= maxvpos - 1) {
-		dmacon = 0;
-	}
-
 	copper_enabled_thisline = 0;
 
 	// copy color changes
