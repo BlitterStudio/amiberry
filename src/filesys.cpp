@@ -3405,7 +3405,7 @@ static void	do_info(TrapContext *ctx, Unit *unit, dpacket *packet, uaecptr info,
 static void action_disk_info(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
 #ifdef AMIBERRY
-    g_packet_delay = 10;
+	g_packet_delay = 10;
 #endif
 	do_info(ctx, unit, packet, GET_PCK_ARG1 (packet) << 2, true);
 }
@@ -3413,7 +3413,7 @@ static void action_disk_info(TrapContext *ctx, Unit *unit, dpacket *packet)
 static void action_info(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
 #ifdef AMIBERRY
-    g_packet_delay = 10;
+	g_packet_delay = 10;
 #endif
 	do_info(ctx, unit, packet, GET_PCK_ARG2 (packet) << 2, false);
 }
@@ -5119,7 +5119,7 @@ static void updatedirtime (a_inode *a1, int now)
 		return;
 #ifdef AMIBERRY
 	if (!a1->parent->parent) {
-	    return;
+		return;
 	}
 #endif
 	if (!now) {
@@ -5165,7 +5165,7 @@ static void	action_read(TrapContext *ctx, Unit *unit, dpacket *packet)
 		return;
 	}
 #ifdef AMIBERRY
-    g_packet_delay = 100;
+	g_packet_delay = 100;
 #endif
 
 	gui_flicker_led (UNIT_LED(unit), unit->unit, 1);
@@ -5294,7 +5294,7 @@ static void action_write(TrapContext *ctx, Unit *unit, dpacket *packet)
 
 	gui_flicker_led (UNIT_LED(unit), unit->unit, 2);
 #ifdef AMIBERRY
-    g_packet_delay = 320;
+	g_packet_delay = 320;
 #endif
 
 	if (is_writeprotected(unit) || k->aino->vfso) {
@@ -8936,55 +8936,55 @@ void filesys_vsync (void)
 #ifdef UAE_FILESYS_THREADS
 
 static void run_filesys_iterations(int max_count) {
-    UnitInfo *ui;
-    int count = 0;
-    while (count < max_count) {
-        int last_count = count;
-        for (int i = 0; i < MAX_FILESYSTEM_UNITS; i++) {
-            ui = mountinfo.ui + i;
-            if (!ui->unit_pipe) {
-                continue;
-            }
-            if (!comm_pipe_has_data(ui->unit_pipe)) {
-                continue;
-            }
-            count++;
-            filesys_iteration(ui);
-        }
-        if (count == last_count) {
-            // no more packets were processed
-            break;
-        }
-    }
+	UnitInfo *ui;
+	int count = 0;
+	while (count < max_count) {
+		int last_count = count;
+		for (int i = 0; i < MAX_FILESYSTEM_UNITS; i++) {
+			ui = mountinfo.ui + i;
+			if (!ui->unit_pipe) {
+				continue;
+			}
+			if (!comm_pipe_has_data(ui->unit_pipe)) {
+				continue;
+			}
+			count++;
+			filesys_iteration(ui);
+		}
+		if (count == last_count) {
+			// no more packets were processed
+			break;
+		}
+	}
 }
 
 void filesys_hsync() {
-    if (!uae_deterministic_mode()) {
-        return;
-    }
-    //printf("%d\n", g_hsync_line++);
-    static uint64_t counter = 0;
-    static uint64_t next = 0;
-    while (counter == next) {
-        // set packet delay to default value of 10, which means to process
-        // one packet every other hsync.
-        g_packet_delay = 10;
-        run_filesys_iterations(1);
-        // g_packet_delay was possibly modified by packet handlers
+	if (!uae_deterministic_mode()) {
+		return;
+	}
+	//printf("%d\n", g_hsync_line++);
+	static uint64_t counter = 0;
+	static uint64_t next = 0;
+	while (counter == next) {
+		// set packet delay to default value of 10, which means to process
+		// one packet every other hsync.
+		g_packet_delay = 10;
+		run_filesys_iterations(1);
+		// g_packet_delay was possibly modified by packet handlers
 
-        if (g_packet_delay >= 100) {
-            // ok, for testing, if g_packet_delay is large we try to wait
-            // approximately one frame until processing next package
-            g_packet_delay = 320;
-        }
+		if (g_packet_delay >= 100) {
+			// ok, for testing, if g_packet_delay is large we try to wait
+			// approximately one frame until processing next package
+			g_packet_delay = 320;
+		}
 
-        if (g_packet_delay < 0) {
-            // should not happen..
-            g_packet_delay = 1;
-        }
-        next = counter + g_packet_delay;
-    }
-    counter++;
+		if (g_packet_delay < 0) {
+			// should not happen..
+			g_packet_delay = 1;
+		}
+		next = counter + g_packet_delay;
+	}
+	counter++;
 }
 
 #endif // UAE_FILESYS_THREADS
@@ -10114,9 +10114,9 @@ int filesys_shellexecute2(TCHAR *file, TCHAR *currentdir, TCHAR *parms, uae_u32 
 		return 0;
 	}
 
-	se2->file = file ? ua(file) : "";
-	se2->currentdir = currentdir ? ua(currentdir) : "";
-	se2->parms = parms ? ua(parms) : "";
+	se2->file = file ? ua(file) : (char*)"";
+	se2->currentdir = currentdir ? ua(currentdir) : (char*)"";
+	se2->parms = parms ? ua(parms) : (char*)"";
 
 	se2->id = id;
 	se2->stack = stack;
