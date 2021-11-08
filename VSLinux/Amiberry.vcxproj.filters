@@ -1011,6 +1011,9 @@
     <ClCompile Include="..\src\floppybridge\floppybridge_lib.cpp">
       <Filter>src\floppybridge</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\dongle.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\archivers\7z\7zBuf.h">
@@ -1708,6 +1711,9 @@
     </ClInclude>
     <ClInclude Include="..\src\floppybridge\floppybridge_lib.h">
       <Filter>src\floppybridge</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\dongle.h">
+      <Filter>src\include</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

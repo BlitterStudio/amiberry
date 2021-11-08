@@ -330,6 +330,7 @@ OBJS =	\
 	src/disk.o \
 	src/diskutil.o \
 	src/dlopen.o \
+	src/dongle.o \
 	src/drawing.o \
 	src/driveclick.o \
 	src/events.o \

@@ -2126,14 +2126,12 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 		}
 	}
 
-#ifndef AMIBERRY
 	if (p->dongle) {
 		if (p->dongle + 1 >= sizeof (dongles) / sizeof (TCHAR*))
 			cfgfile_write (f, _T("dongle"), _T("%d"), p->dongle);
 		else
 			cfgfile_write_str (f, _T("dongle"), dongles[p->dongle]);
 	}
-#endif
 
 	cfgfile_write_bool (f, _T("bsdsocket_emu"), p->socket_emu);
 
