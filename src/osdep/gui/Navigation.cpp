@@ -34,7 +34,8 @@ static NavigationMap navMap[] =
 	{"Hardware info", "", "", "RTG board", "Display"},
 	{"Display", "cboScreenmode", "cboScreenmode", "Hardware info", "Sound"},
 	{"Sound", "sndDisable", "sndDisable", "Display", "Input"},
-	{"Input", "cboPort0mode", "cboPort0", "Sound", "Custom controls"},
+	{"Input", "cboPort0mode", "cboPort0", "Sound", "IO Ports"},
+	{"IO Ports", "txtSerialDevice", "txtSerialDevice", "Input", "Custom controls"},
 	{"Custom controls", "Right Trigger", "0: Mouse", "Input", "Miscellaneous"},
 	{"Miscellaneous", "chkMouseUntrap", "chkMouseUntrap", "Custom controls", "Priority"},
 #ifdef ANDROID
@@ -319,6 +320,14 @@ static NavigationMap navMap[] =
 	{ "optNative", "optBoth", "optHost", "chkMouseHack", "cboPort0" },
 	{ "optHost", "optNative", "", "chkMouseHack", "cboPort0" },
 
+	// active		move left				move right			move up			move down
+	// PanelIO
+	{ "txtSerialDevice", "", "", "cboProtectionDongle", "chkRTSCTS" },
+	{ "chkRTSCTS", "IO Ports", "chkSerialDirect", "txtSerialDevice", "cboProtectionDongle" },
+	{ "chkSerialDirect", "chkRTSCTS", "chkUaeSerial", "txtSerialDevice", "cboProtectionDongle" },
+	{ "chkUaeSerial", "chkSerialDirect", "IO Ports", "txtSerialDevice", "cboProtectionDongle" },
+	{ "cboProtectionDongle", "IO Ports", "IO Ports", "chkRTSCTS", "txtSerialDevice" },
+
 	// PanelCustom
 	{ "0: Mouse", "Custom controls", "1: Joystick", "chkAnalogRemap", "None" },
 	{ "1: Joystick", "0: Mouse", "2: Parallel 1", "chkAnalogRemap", "HotKey" },
@@ -373,15 +382,10 @@ static NavigationMap navMap[] =
 	{ "chkRetroArchQuit", "Miscellaneous", "scrlMisc", "chkAltTabRelease", "chkRetroArchMenu" },
 	{ "chkRetroArchMenu", "Miscellaneous", "scrlMisc", "chkRetroArchQuit", "chkRetroArchReset" },
 	{ "chkRetroArchReset", "Miscellaneous", "scrlMisc", "chkRetroArchMenu", "cboNumlock" },
-	
-	{ "cboNumlock", "Miscellaneous", "cboScrolllock", "chkRetroArchReset", "chkRTSCTS" },
-	{ "cboScrolllock", "cboNumlock", "Miscellaneous", "chkRetroArchReset", "chkRTSCTS" },
 
-	{ "txtSerialDevice", "", "", "cboNumlock", "chkRTSCTS" },
-	{ "chkRTSCTS", "Miscellaneous", "chkSerialDirect", "txtSerialDevice", "chkMouseUntrap" },
-	{ "chkSerialDirect", "chkRTSCTS", "chkUaeSerial", "txtSerialDevice", "chkMouseUntrap" },
-	{ "chkUaeSerial", "chkSerialDirect", "Miscellaneous", "txtSerialDevice", "chkMouseUntrap" },
-	
+	{ "cboNumlock", "Miscellaneous", "cboScrolllock", "chkRetroArchReset", "chkMouseUntrap" },
+	{ "cboScrolllock", "cboNumlock", "Miscellaneous", "chkRetroArchReset", "chkMouseUntrap" },
+
 	{ "cmdKeyOpenGUI", "scrlMisc", "cmdKeyOpenGUIClear", "cmdKeyFullScreen", "cmdKeyForQuit" },
 	{ "cmdKeyOpenGUIClear", "cmdKeyOpenGUI", "Miscellaneous", "cmdKeyFullScreenClear", "cmdKeyForQuitClear" },
 	{ "cmdKeyForQuit", "scrlMisc", "cmdKeyForQuitClear", "cmdKeyOpenGUI", "cmdKeyActionReplay" },

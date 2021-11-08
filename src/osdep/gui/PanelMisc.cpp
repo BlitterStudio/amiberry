@@ -65,14 +65,6 @@ static gcn::TextField* txtKeyMinimize;
 static gcn::Button* cmdKeyMinimize;
 static gcn::ImageButton* cmdKeyMinimizeClear;
 
-#ifdef SERIAL_PORT
-static gcn::Window* grpSerialDevice;
-static gcn::TextField* txtSerialDevice;
-static gcn::CheckBox* chkSerialDirect;
-static gcn::CheckBox* chkRTSCTS;
-static gcn::CheckBox* chkUaeSerial;
-#endif
-
 class string_list_model : public gcn::ListModel
 {
 	std::vector<std::string> values{};
@@ -109,24 +101,6 @@ public:
 
 static const char* listValues[] = { "none", "POWER", "DF0", "DF1", "DF2", "DF3", "HD", "CD" };
 static string_list_model KBDLedList(listValues, 8);
-
-#ifdef SERIAL_PORT
-class MiscKeyListener : public gcn::KeyListener
-{
-public:
-	void keyPressed(gcn::KeyEvent& keyEvent) override
-	{
-		if (keyEvent.getSource() == txtSerialDevice)
-		{
-			snprintf(changed_prefs.sername, 256, "%s", txtSerialDevice->getText().c_str());
-			if (changed_prefs.sername[0])
-				changed_prefs.use_serial = true;
-			else
-				changed_prefs.use_serial = false;
-		}
-	}
-};
-#endif
 
 class MiscActionListener : public gcn::ActionListener
 {
@@ -324,35 +298,14 @@ public:
 			strcpy(currprefs.minimize, hotkey.c_str());
 			RefreshPanelMisc();
 		}
-		
-#ifdef SERIAL_PORT
-		else if (actionEvent.getSource() == txtSerialDevice)
-			snprintf(changed_prefs.sername, 256, "%s", txtSerialDevice->getText().c_str());
-
-		else if (actionEvent.getSource() == chkSerialDirect)
-			changed_prefs.serial_direct = chkSerialDirect->isSelected();
-
-		else if (actionEvent.getSource() == chkRTSCTS)
-			changed_prefs.serial_hwctsrts = chkRTSCTS->isSelected();
-
-		else if (actionEvent.getSource() == chkUaeSerial)
-			changed_prefs.uaeserial = chkUaeSerial->isSelected();
-#endif
 	}
 };
 
 MiscActionListener* miscActionListener;
-#ifdef SERIAL_PORT
-MiscKeyListener* miscKeyListener;
-#endif
-
 
 void InitPanelMisc(const struct _ConfigCategory& category)
 {
 	miscActionListener = new MiscActionListener();
-#ifdef SERIAL_PORT
-	miscKeyListener = new MiscKeyListener();
-#endif
 
 	grpMiscOptions = new gcn::Window();
 	grpMiscOptions->setId("grpMiscOptions");
@@ -538,28 +491,6 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	cmdKeyMinimizeClear->setId("cmdKeyMinimizeClear");
 	cmdKeyMinimizeClear->addActionListener(miscActionListener);
 
-#ifdef SERIAL_PORT
-	grpSerialDevice = new gcn::Window("Serial Port");
-	grpSerialDevice->setId("grpSerialDevice");
-
-	txtSerialDevice = new gcn::TextField();
-	txtSerialDevice->setId("txtSerialDevice");
-	txtSerialDevice->addActionListener(miscActionListener);
-	txtSerialDevice->addKeyListener(miscKeyListener);
-
-	chkSerialDirect = new gcn::CheckBox("Direct");
-	chkSerialDirect->setId("chkSerialDirect");
-	chkSerialDirect->addActionListener(miscActionListener);
-
-	chkRTSCTS = new gcn::CheckBox("RTS/CTS");
-	chkRTSCTS->setId("chkRTSCTS");
-	chkRTSCTS->addActionListener(miscActionListener);
-
-	chkUaeSerial = new gcn::CheckBox("uaeserial.device");
-	chkUaeSerial->setId("chkUaeSerial");
-	chkUaeSerial->addActionListener(miscActionListener);
-#endif
-
 	auto posY = DISTANCE_BORDER;
 	grpMiscOptions->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
 	grpMiscOptions->setSize(category.panel->getWidth() - category.panel->getWidth() / 3 - 50, 700);
@@ -624,7 +555,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	scrollArea->setBackgroundColor(gui_baseCol);
 	scrollArea->setBaseColor(gui_baseCol);
 	scrollArea->setWidth(category.panel->getWidth() - (category.panel->getWidth() / 3) - 35);
-	scrollArea->setHeight(300);
+	scrollArea->setHeight(450);
 	scrollArea->setBorderSize(1);
 	scrollArea->setFocusable(true);
 
@@ -675,21 +606,6 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	category.panel->add(lblScrLock, cboKBDLed_num->getX() + cboKBDLed_num->getWidth() + DISTANCE_NEXT_X, posY);
 	category.panel->add(cboKBDLed_scr, lblScrLock->getX() + lblScrLock->getWidth() + 8, posY);
 
-	posY += cboKBDLed_scr->getHeight() + DISTANCE_NEXT_Y * 2;
-
-#ifdef SERIAL_PORT
-	grpSerialDevice->setPosition(DISTANCE_BORDER, posY);
-	grpSerialDevice->setSize(cboKBDLed_scr->getX() + cboKBDLed_scr->getWidth(), TITLEBAR_HEIGHT + chkSerialDirect->getHeight() * 5);
-	grpSerialDevice->setTitleBarHeight(TITLEBAR_HEIGHT);
-	grpSerialDevice->setBaseColor(gui_baseCol);
-	txtSerialDevice->setSize(grpSerialDevice->getWidth() - DISTANCE_BORDER * 3, TEXTFIELD_HEIGHT);
-	txtSerialDevice->setBackgroundColor(colTextboxBackground);
-	grpSerialDevice->add(txtSerialDevice, DISTANCE_BORDER, DISTANCE_BORDER);
-	grpSerialDevice->add(chkRTSCTS, DISTANCE_BORDER, DISTANCE_BORDER * 3);
-	grpSerialDevice->add(chkSerialDirect, chkRTSCTS->getWidth() + chkRTSCTS->getX() + DISTANCE_NEXT_X, DISTANCE_BORDER * 3);
-	grpSerialDevice->add(chkUaeSerial, chkSerialDirect->getWidth() + chkSerialDirect->getX() + DISTANCE_NEXT_X, DISTANCE_BORDER * 3);
-	category.panel->add(grpSerialDevice);
-#endif
 	RefreshPanelMisc();
 }
 
@@ -747,15 +663,7 @@ void ExitPanelMisc()
 	delete cmdKeyMinimizeClear;
 
 	delete miscActionListener;
-#ifdef SERIAL_PORT
-	delete miscKeyListener;
 
-	delete grpSerialDevice;
-	delete txtSerialDevice;
-	delete chkRTSCTS;
-	delete chkSerialDirect;
-	delete chkUaeSerial;
-#endif
 	delete grpMiscOptions;
 	delete scrollArea;
 }
@@ -799,13 +707,6 @@ void RefreshPanelMisc()
 	txtKeyMinimize->setText(strncmp(changed_prefs.minimize, "", 1) != 0
 		? changed_prefs.minimize
 		: "Click to map");
-	
-#ifdef SERIAL_PORT
-	chkRTSCTS->setSelected(changed_prefs.serial_hwctsrts);
-	chkSerialDirect->setSelected(changed_prefs.serial_direct);
-	txtSerialDevice->setText(changed_prefs.sername);
-	chkUaeSerial->setSelected(changed_prefs.uaeserial);
-#endif
 }
 
 bool HelpPanelMisc(std::vector<std::string>& helptext)
@@ -826,16 +727,8 @@ bool HelpPanelMisc(std::vector<std::string>& helptext)
 	helptext.emplace_back(" ");
 	helptext.emplace_back("You can set some of the keyboard LEDs to react on drive activity, using the relevant options.");
 	helptext.emplace_back(" ");
-#ifndef SERIAL_PORT
 	helptext.emplace_back("Finally, you can assign the desired hotkeys to Open the GUI, Quit the emulator,");
 	helptext.emplace_back("open Action Replay/HRTMon or toggle Fullscreen mode ON/OFF.");
-#else
-	helptext.emplace_back("You can assign the desired hotkeys to Open the GUI, Quit the emulator,");
-	helptext.emplace_back("open Action Replay/HRTMon or toggle Fullscreen mode ON/OFF.");
-	helptext.emplace_back(" ");
-	helptext.emplace_back("Serial Port emulates the Amiga UART through a hardware based UART device on the host.");
-	helptext.emplace_back("For example /dev/ttyUSB0. For use on emulator to emulator use Direct ON and RTS/CTS OFF.");
-	helptext.emplace_back("For emulator to physical device configurations the opposite should apply.");
-#endif
+
 	return true;
 }

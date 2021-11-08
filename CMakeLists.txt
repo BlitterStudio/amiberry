@@ -166,6 +166,7 @@ add_executable(amiberry
         src/osdep/gui/PanelRTG.cpp
 		src/osdep/gui/PanelHWInfo.cpp
         src/osdep/gui/PanelInput.cpp
+        src/osdep/gui/PanelIOPorts.cpp
         src/osdep/gui/PanelDisplay.cpp
         src/osdep/gui/PanelSound.cpp
         src/osdep/gui/PanelMisc.cpp
