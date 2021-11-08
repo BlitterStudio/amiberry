@@ -188,6 +188,9 @@
     <Image Include="..\data\amiberry.png">
       <Filter>data</Filter>
     </Image>
+    <Image Include="..\data\port.ico">
+      <Filter>data</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <Font Include="..\data\AmigaTopaz.ttf">
@@ -1013,6 +1016,9 @@
     </ClCompile>
     <ClCompile Include="..\src\dongle.cpp">
       <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\osdep\gui\PanelIOPorts.cpp">
+      <Filter>src\osdep\gui</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

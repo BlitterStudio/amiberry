@@ -457,6 +457,7 @@ OBJS =	\
 	src/osdep/gui/PanelRTG.o \
 	src/osdep/gui/PanelHWInfo.o \
 	src/osdep/gui/PanelInput.o \
+	src/osdep/gui/PanelIOPorts.o \
 	src/osdep/gui/PanelDisplay.o \
 	src/osdep/gui/PanelSound.o \
 	src/osdep/gui/PanelMisc.o \

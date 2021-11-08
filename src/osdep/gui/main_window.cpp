@@ -77,6 +77,7 @@ ConfigCategory categories[] = {
 	},
 	{"Sound", "data/sound.ico", nullptr, nullptr, InitPanelSound, ExitPanelSound, RefreshPanelSound, HelpPanelSound},
 	{"Input", "data/joystick.ico", nullptr, nullptr, InitPanelInput, ExitPanelInput, RefreshPanelInput, HelpPanelInput},
+	{"IO Ports", "data/port.ico", nullptr, nullptr, InitPanelIO, ExitPanelIO, RefreshPanelIO, HelpPanelIO},
 	{"Custom controls", "data/controller.png", nullptr, nullptr, InitPanelCustom, ExitPanelCustom,
 		RefreshPanelCustom, HelpPanelCustom
 	},
@@ -109,6 +110,7 @@ enum
 	PANEL_DISPLAY,
 	PANEL_SOUND,
 	PANEL_INPUT,
+	PANEL_IO,
 	PANEL_CUSTOM,
 	PANEL_MISC,
 	PANEL_SAVESTATES,

@@ -257,6 +257,11 @@ void ExitPanelInput(void);
 void RefreshPanelInput(void);
 bool HelpPanelInput(std::vector<std::string>& helptext);
 
+void InitPanelIO(const struct _ConfigCategory& category);
+void ExitPanelIO(void);
+void RefreshPanelIO(void);
+bool HelpPanelIO(std::vector<std::string>& helptext);
+
 void InitPanelCustom(const struct _ConfigCategory& category);
 void ExitPanelCustom(void);
 void RefreshPanelCustom(void);

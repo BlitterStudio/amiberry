@@ -214,6 +214,7 @@
     <Image Include="..\data\joystick.ico" />
     <Image Include="..\data\misc.ico" />
     <Image Include="..\data\paths.ico" />
+    <Image Include="..\data\port.ico" />
     <Image Include="..\data\quickstart.ico" />
     <Image Include="..\data\savestate.png" />
     <Image Include="..\data\screen.ico" />
@@ -457,6 +458,7 @@
     <ClCompile Include="..\src\osdep\gui\PanelHD.cpp" />
     <ClCompile Include="..\src\osdep\gui\PanelHWInfo.cpp" />
     <ClCompile Include="..\src\osdep\gui\PanelInput.cpp" />
+    <ClCompile Include="..\src\osdep\gui\PanelIOPorts.cpp" />
     <ClCompile Include="..\src\osdep\gui\PanelMisc.cpp" />
     <ClCompile Include="..\src\osdep\gui\PanelPaths.cpp" />
     <ClCompile Include="..\src\osdep\gui\PanelPrio.cpp" />
