@@ -38,7 +38,7 @@
 //#include "uaeserial.h"
 #include "uaeresource.h"
 #include "native2amiga.h"
-//#include "dongle.h"
+#include "dongle.h"
 #include "gensound.h"
 #include "gui.h"
 #include "savestate.h"
@@ -218,7 +218,7 @@ void devices_reset(int hardreset)
 #if defined (PARALLEL_PORT) || defined (AHI)
 	initparallel();
 #endif
-	//dongle_reset();
+	dongle_reset();
 	//sampler_init();
 	device_func_reset();
 #ifdef AUTOCONFIG

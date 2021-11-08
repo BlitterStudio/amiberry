@@ -31,6 +31,7 @@ add_executable(amiberry
         src/disk.cpp
         src/diskutil.cpp
         src/dlopen.cpp
+        src/dongle.cpp
         src/drawing.cpp
         src/driveclick.cpp
         src/events.cpp

@@ -39,7 +39,7 @@
 #include "uae.h"
 //#include "amax.h"
 //#include "sampler.h"
-//#include "dongle.h"
+#include "dongle.h"
 //#include "inputrecord.h"
 #include "autoconf.h"
 //#include "uae/ppc.h"
@@ -1083,7 +1083,7 @@ static uae_u8 ReadCIAA (uae_u32 addr, uae_u32 *flags)
 		uae_u8 v = DISK_status_ciaa() & 0x3c;
 		v |= handle_joystick_buttons (ciaapra, ciaadra);
 		v |= (ciaapra | (ciaadra ^ 3)) & 0x03;
-		//v = dongle_cia_read (0, reg, ciaadra, v);
+		v = dongle_cia_read (0, reg, ciaadra, v);
 		//v = alg_joystick_buttons(ciaapra, ciaadra, v);
 
 		// 391078-01 CIA: output mode bits always return PRA contents
@@ -1108,7 +1108,23 @@ static uae_u8 ReadCIAA (uae_u32 addr, uae_u32 *flags)
 	}
 	case 1:
 		tmp = (ciaaprb & ciaadrb) | (ciaadrb ^ 0xff);
+#ifdef PARALLEL_PORT
+		if (isprinter() > 0) {
+			tmp = ciaaprb;
+		} else if (isprinter() < 0) {
+			uae_u8 v;
+			parallel_direct_read_data(&v);
+			tmp = v;
+#ifdef ARCADIA
+		} else if (arcadia_bios) {
+			tmp = arcadia_parport(0, ciaaprb, ciaadrb);
+#endif
+		} else if (currprefs.win32_samplersoundcard >= 0)
+
+			tmp = sampler_getsample((ciabpra & 4) ? 1 : 0);
+#endif
 		tmp = handle_parport_joystick (0, tmp);
+		tmp = dongle_cia_read (1, reg, ciaadrb, tmp);
 		// PBON
 		if (ciaacrb & 2) {
 			int pb7 = 0;
@@ -1246,6 +1262,8 @@ static uae_u8 ReadCIAB (uae_u32 addr, uae_u32 *flags)
 			}
 			tmp = handle_parport_joystick(1, tmp);
 
+			tmp = dongle_cia_read(1, reg, ciabpra, tmp);
+
 		if (currprefs.cs_ciatype[1]) {
 			tmp &= ~ciabdra;
 			tmp |= ciabpra & ciabdra;
@@ -1259,7 +1277,7 @@ static uae_u8 ReadCIAB (uae_u32 addr, uae_u32 *flags)
 #endif
 		tmp = ciabprb;
 		tmp = DISK_status_ciab(tmp);
-		//tmp = dongle_cia_read (1, reg, ciabprb, tmp);
+		tmp = dongle_cia_read (1, reg, ciabprb, tmp);
 		// A PBON
 		if (ciabcrb & 2) {
 			int pb7 = 0;
@@ -1381,7 +1399,7 @@ static void WriteCIAA (uae_u16 addr, uae_u8 val, uae_u32 *flags)
 		ciaapra = (ciaapra & ~0xc3) | (val & 0xc3);
 		bfe001_change ();
 		handle_cd32_joystick_cia (ciaapra, ciaadra);
-		//dongle_cia_write (0, reg, ciaadra, val);
+		dongle_cia_write (0, reg, ciaadra, val);
 #ifdef AMAX
 		if (is_device_rom(&currprefs, ROMTYPE_AMAX, 0) > 0)
 			amax_bfe001_write (val, ciaadra);
@@ -1393,7 +1411,7 @@ static void WriteCIAA (uae_u16 addr, uae_u8 val, uae_u32 *flags)
 			write_log (_T("BFE101 W %02X %s\n"), val, debuginfo(0));
 #endif
 		ciaaprb = val;
-		//dongle_cia_write (0, reg, ciaadrb, val);
+		dongle_cia_write (0, reg, ciaadrb, val);
 #ifdef PARALLEL_PORT
 		if (isprinter()) {
 			if (isprinter() > 0) {
@@ -1420,12 +1438,12 @@ static void WriteCIAA (uae_u16 addr, uae_u8 val, uae_u32 *flags)
 			write_log (_T("BFE201 W %02X %s\n"), val, debuginfo(0));
 #endif
 		ciaadra = val;
-		//dongle_cia_write (0, reg, ciaapra, val);
+		dongle_cia_write (0, reg, ciaapra, val);
 		bfe001_change ();
 		break;
 	case 3:
 		ciaadrb = val;
-		//dongle_cia_write (0, reg, ciaaprb, val);
+		dongle_cia_write (0, reg, ciaaprb, val);
 #if DONGLE_DEBUG > 0
 		if (notinrom ())
 			write_log (_T("BFE301 W %02X %s\n"), val, debuginfo(0));
@@ -1656,7 +1674,7 @@ static void WriteCIAB (uae_u16 addr, uae_u8 val, uae_u32 *flags)
 		if (notinrom ())
 			write_log (_T("BFD000 W %02X %s\n"), val, debuginfo(0));
 #endif
-		//dongle_cia_write (1, reg, ciabdra, val);
+		dongle_cia_write (1, reg, ciabdra, val);
 #ifdef SERIAL_PORT
 		write_ciab_serial(val, ciabpra, ciabdra, ciabdra);
 #endif
@@ -1679,7 +1697,7 @@ static void WriteCIAB (uae_u16 addr, uae_u8 val, uae_u32 *flags)
 		if (notinrom ())
 			write_log (_T("BFD100 W %02X %s\n"), val, debuginfo(0));
 #endif
-		//dongle_cia_write (1, ciabdrb, reg, val);
+		dongle_cia_write (1, ciabdrb, reg, val);
 		ciabprb = val;
 		// PBON overrides PB6 and PB7
 		if (ciabcrb & 2) {
@@ -1707,7 +1725,7 @@ static void WriteCIAB (uae_u16 addr, uae_u8 val, uae_u32 *flags)
 		if (notinrom ())
 			write_log (_T("BFD200 W %02X %s\n"), val, debuginfo(0));
 #endif
-		//dongle_cia_write (1, reg, ciabpra, val);
+		dongle_cia_write (1, reg, ciabpra, val);
 #ifdef SERIAL_PORT
 		write_ciab_serial(ciabpra, ciabpra, val, ciabdra);
 #endif
@@ -1722,7 +1740,7 @@ static void WriteCIAB (uae_u16 addr, uae_u8 val, uae_u32 *flags)
 		if (notinrom ())
 			write_log (_T("BFD300 W %02X %s\n"), val, debuginfo(0));
 #endif
-		//dongle_cia_write (1, reg, ciabprb, val);
+		dongle_cia_write (1, reg, ciabprb, val);
 		ciabdrb = val;
 		break;
 	case 4:

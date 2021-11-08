@@ -64,6 +64,7 @@ LOCAL_SRC_FILES := src/archivers/7z/BraIA64.c \
                     src/disk.cpp \
                     src/diskutil.cpp \
                     src/dlopen.cpp \
+                    src/dongle.cpp \
                     src/drawing.cpp \
 					src/driveclick.cpp \
                     src/events.cpp \

@@ -53,7 +53,7 @@
 #ifdef RETROPLATFORM
 #include "rp.h"
 #endif
-//#include "dongle.h"
+#include "dongle.h"
 #include "amiberry_gfx.h"
 #include "cdtv.h"
 #ifdef AVIOUTPUT
@@ -3277,8 +3277,8 @@ uae_u16 JOY0DAT (void)
 	uae_u16 v;
 	readinput ();
 	v = getjoystate (0);
-#ifndef AMIBERRY
 	v = dongle_joydat (0, v);
+#ifndef AMIBERRY
 	v = alg_joydat(0, v);
 #endif
 	return v;
@@ -3289,8 +3289,8 @@ uae_u16 JOY1DAT (void)
 	uae_u16 v;
 	readinput ();
 	v = getjoystate (1);
-#ifndef AMIBERRY
 	v = dongle_joydat (1, v);
+#ifndef AMIBERRY
 	v = alg_joydat(1, v);
 
 	if (inputrecord_debug & 2) {
@@ -3307,9 +3307,7 @@ uae_u16 JOYGET (int num)
 {
 	uae_u16 v;
 	v = getjoystate (num);
-#ifndef AMIBERRY
 	v = dongle_joydat (num, v);
-#endif
 	return v;
 }
 
@@ -3335,9 +3333,7 @@ void JOYTEST (uae_u16 v)
 	mouse_frame_y[0] = mouse_y[0];
 	mouse_frame_x[1] = mouse_x[1];
 	mouse_frame_y[1] = mouse_y[1];
-#ifndef AMIBERRY
 	dongle_joytest (v);
-#endif
 	if (inputdevice_logging & 2)
 		write_log (_T("JOYTEST: %04X PC=%x\n"), v , M68K_GETPC);
 }
@@ -3441,19 +3437,19 @@ static void cap_check(bool hsync)
 			if (lightpen_enabled2 && lightpen_port_number() == joy)
 				continue;
 
-			//dong = dongle_analogjoy (joy, i);
-			//if (dong >= 0) {
-			//	isbutton = 0;
-			//	joypot = dong;
-			//	if (pot_cap[joy][i] < joypot)
-			//		charge = 1; // slow charge via dongle resistor
-			//} else {
+			dong = dongle_analogjoy (joy, i);
+			if (dong >= 0) {
+				isbutton = 0;
+				joypot = dong;
+				if (pot_cap[joy][i] < joypot)
+					charge = 1; // slow charge via dongle resistor
+			} else {
 				joypot = joydirpot[joy][i];
 				if (analog_port[joy][i] && pot_cap[joy][i] < joypot)
 					charge = 1; // slow charge via pot variable resistor
 				if ((is_joystick_pullup (joy) && digital_port[joy][i]) || (is_mouse_pullup (joy) && mouse_port[joy]))
 					charge = 1; // slow charge via pull-up resistor
-			//}
+			}
 			if (!(potgo_value & pdir)) { // input?
 				if (pot_dat_act[joy][i] && hsync) {
 					pot_dat[joy][i]++;
@@ -4037,9 +4033,7 @@ void POTGO (uae_u16 v)
 	if (notinrom ())
 		write_log (_T("POTGO %04X %s\n"), v, debuginfo(0));
 #endif
-#ifndef AMIBERRY
 	dongle_potgo (v);
-#endif
 	potgo_value = potgo_value & 0x5500; /* keep state of data bits */
 	potgo_value |= v & 0xaa00; /* get new direction bits */
 	for (i = 0; i < 8; i += 2) {
@@ -4065,9 +4059,7 @@ uae_u16 POTGOR (void)
 	uae_u16 v;
 
 	v = handle_joystick_potgor (potgo_value) & 0x5500;
-#ifndef AMIBERRY
 	v = dongle_potgor (v);
-#endif
 #if DONGLE_DEBUG
 	if (notinrom ())
 		write_log (_T("POTGOR %04X %s\n"), v, debuginfo(0));
@@ -4214,14 +4206,14 @@ int find_in_array(const int arr[], int n, int key)
 {
   int index = -1;
 
-    for(int i=0; i<n; i++)
-    {
-       if(arr[i]==key)
-       {
-         index=i;
-         break;
-       }
-    }
+	for(int i=0; i<n; i++)
+	{
+	   if(arr[i]==key)
+	   {
+		 index=i;
+		 break;
+	   }
+	}
    return index;
  }
 
@@ -4257,7 +4249,7 @@ static bool needcputrace (int code)
 
 void target_paste_to_keyboard(void);
 
-static bool inputdevice_handle_inputcode2(int monid, int code, int state, const TCHAR* s)
+static bool inputdevice_handle_inputcode2(int monid, int code, int state, const TCHAR *s)
 {
 	static int swapperslot;
 	static int tracer_enable;
@@ -5307,12 +5299,10 @@ static void inputdevice_checkconfig (void)
 
 			inputdevice_updateconfig (&changed_prefs, &currprefs);
 	}
-#ifndef AMIBERRY
 	if (currprefs.dongle != changed_prefs.dongle) {
 		currprefs.dongle = changed_prefs.dongle;
 		dongle_reset ();
 	}
-#endif
 }
 
 void inputdevice_vsync (void)

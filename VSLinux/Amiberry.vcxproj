@@ -389,6 +389,7 @@
     <ClCompile Include="..\src\disk.cpp" />
     <ClCompile Include="..\src\diskutil.cpp" />
     <ClCompile Include="..\src\dlopen.cpp" />
+    <ClCompile Include="..\src\dongle.cpp" />
     <ClCompile Include="..\src\drawing.cpp" />
     <ClCompile Include="..\src\driveclick.cpp" />
     <ClCompile Include="..\src\events.cpp" />
@@ -648,6 +649,7 @@
     <ClInclude Include="..\src\include\devices.h" />
     <ClInclude Include="..\src\include\disk.h" />
     <ClInclude Include="..\src\include\diskutil.h" />
+    <ClInclude Include="..\src\include\dongle.h" />
     <ClInclude Include="..\src\include\drawing.h" />
     <ClInclude Include="..\src\include\driveclick.h" />
     <ClInclude Include="..\src\include\ethernet.h" />
