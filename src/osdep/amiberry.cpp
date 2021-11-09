@@ -2711,6 +2711,121 @@ static void trim_wsa(char* s)
 		s[--len] = '\0';
 }
 
+static int parse_amiberry_settings_line(const char *path, char *linea)
+{
+	TCHAR option[CONFIG_BLEN], value[CONFIG_BLEN];
+	int numROMs, numDisks, numCDs;
+	auto romType = -1;
+	char romName[MAX_DPATH] = {'\0'};
+	char romPath[MAX_DPATH] = {'\0'};
+	char tmpFile[MAX_DPATH];
+	int ret = 0;
+
+	if (!cfgfile_separate_linea(path, linea, option, value))
+		return 0;
+
+	if (cfgfile_string(option, value, "ROMName", romName, sizeof romName)
+		|| cfgfile_string(option, value, "ROMPath", romPath, sizeof romPath)
+		|| cfgfile_intval(option, value, "ROMType", &romType, 1))
+	{
+		if (strlen(romName) > 0 && strlen(romPath) > 0 && romType != -1)
+		{
+			auto* tmp = new AvailableROM();
+			strncpy(tmp->Name, romName, sizeof tmp->Name - 1);
+			strncpy(tmp->Path, romPath, sizeof tmp->Path - 1);
+			tmp->ROMType = romType;
+			lstAvailableROMs.emplace_back(tmp);
+			strncpy(romName, "", sizeof romName);
+			strncpy(romPath, "", sizeof romPath);
+			romType = -1;
+			ret = 1;
+		}
+	}
+	else if (cfgfile_string(option, value, "Diskfile", tmpFile, sizeof tmpFile))
+	{
+		auto* const f = fopen(tmpFile, "rbe");
+		if (f != nullptr)
+		{
+			fclose(f);
+			lstMRUDiskList.emplace_back(tmpFile);
+			ret = 1;
+		}
+	}
+	else if (cfgfile_string(option, value, "CDfile", tmpFile, sizeof tmpFile))
+	{
+		auto* const f = fopen(tmpFile, "rbe");
+		if (f != nullptr)
+		{
+			fclose(f);
+			lstMRUCDList.emplace_back(tmpFile);
+			ret = 1;
+		}
+	}
+	else if (cfgfile_string(option, value, "WHDLoadfile", tmpFile, sizeof tmpFile))
+	{
+		auto* const f = fopen(tmpFile, "rbe");
+		if (f != nullptr)
+		{
+			fclose(f);
+			lstMRUWhdloadList.emplace_back(tmpFile);
+			ret = 1;
+		}
+	}
+	else
+	{
+		ret |= cfgfile_string(option, value, "path", current_dir, sizeof current_dir);
+		ret |= cfgfile_string(option, value, "config_path", config_path, sizeof config_path);
+		ret |= cfgfile_string(option, value, "controllers_path", controllers_path, sizeof controllers_path);
+		ret |= cfgfile_string(option, value, "retroarch_config", retroarch_file, sizeof retroarch_file);
+		ret |= cfgfile_string(option, value, "logfile_path", logfile_path, sizeof logfile_path);
+		ret |= cfgfile_string(option, value, "rom_path", rom_path, sizeof rom_path);
+		ret |= cfgfile_intval(option, value, "ROMs", &numROMs, 1);
+		ret |= cfgfile_intval(option, value, "MRUDiskList", &numDisks, 1);
+		ret |= cfgfile_intval(option, value, "MRUCDList", &numCDs, 1);
+		ret |= cfgfile_yesno(option, value, "Quickstart", &amiberry_options.quickstart_start);
+		ret |= cfgfile_yesno(option, value, "read_config_descriptions", &amiberry_options.read_config_descriptions);
+		ret |= cfgfile_yesno(option, value, "write_logfile", &amiberry_options.write_logfile);
+		ret |= cfgfile_intval(option, value, "default_line_mode", &amiberry_options.default_line_mode, 1);
+		ret |= cfgfile_yesno(option, value, "rctrl_as_ramiga", &amiberry_options.rctrl_as_ramiga);
+		ret |= cfgfile_yesno(option, value, "gui_joystick_control", &amiberry_options.gui_joystick_control);
+		ret |= cfgfile_yesno(option, value, "use_sdl2_render_thread", &amiberry_options.use_sdl2_render_thread);
+		ret |= cfgfile_yesno(option, value, "default_multithreaded_drawing", &amiberry_options.default_multithreaded_drawing);
+		ret |= cfgfile_intval(option, value, "input_default_mouse_speed", &amiberry_options.input_default_mouse_speed, 1);
+		ret |= cfgfile_yesno(option, value, "input_keyboard_as_joystick_stop_keypresses", &amiberry_options.input_keyboard_as_joystick_stop_keypresses);
+		ret |= cfgfile_string(option, value, "default_open_gui_key", amiberry_options.default_open_gui_key, sizeof amiberry_options.default_open_gui_key);
+		ret |= cfgfile_string(option, value, "default_quit_key", amiberry_options.default_quit_key, sizeof amiberry_options.default_quit_key);
+		ret |= cfgfile_string(option, value, "default_ar_key", amiberry_options.default_ar_key, sizeof amiberry_options.default_ar_key);
+		ret |= cfgfile_string(option, value, "default_fullscreen_toggle_key", amiberry_options.default_fullscreen_toggle_key, sizeof amiberry_options.default_fullscreen_toggle_key);
+		ret |= cfgfile_intval(option, value, "rotation_angle", &amiberry_options.rotation_angle, 1);
+		ret |= cfgfile_yesno(option, value, "default_horizontal_centering", &amiberry_options.default_horizontal_centering);
+		ret |= cfgfile_yesno(option, value, "default_vertical_centering", &amiberry_options.default_vertical_centering);
+		ret |= cfgfile_intval(option, value, "default_scaling_method", &amiberry_options.default_scaling_method, 1);
+		ret |= cfgfile_yesno(option, value, "default_frameskip", &amiberry_options.default_frameskip);
+		ret |= cfgfile_yesno(option, value, "default_correct_aspect_ratio", &amiberry_options.default_correct_aspect_ratio);
+		ret |= cfgfile_yesno(option, value, "default_auto_height", &amiberry_options.default_auto_height);
+		ret |= cfgfile_intval(option, value, "default_width", &amiberry_options.default_width, 1);
+		ret |= cfgfile_intval(option, value, "default_height", &amiberry_options.default_height, 1);
+		ret |= cfgfile_intval(option, value, "default_fullscreen_mode", &amiberry_options.default_fullscreen_mode, 1);
+		ret |= cfgfile_intval(option, value, "default_stereo_separation", &amiberry_options.default_stereo_separation, 1);
+		ret |= cfgfile_intval(option, value, "default_sound_buffer", &amiberry_options.default_sound_buffer, 1);
+		ret |= cfgfile_yesno(option, value, "default_sound_pull", &amiberry_options.default_sound_pull);
+		ret |= cfgfile_intval(option, value, "default_joystick_deadzone", &amiberry_options.default_joystick_deadzone, 1);
+		ret |= cfgfile_yesno(option, value, "default_retroarch_quit", &amiberry_options.default_retroarch_quit);
+		ret |= cfgfile_yesno(option, value, "default_retroarch_menu", &amiberry_options.default_retroarch_menu);
+		ret |= cfgfile_yesno(option, value, "default_retroarch_reset", &amiberry_options.default_retroarch_reset);
+		ret |= cfgfile_string(option, value, "default_controller1", amiberry_options.default_controller1, sizeof amiberry_options.default_controller1);
+		ret |= cfgfile_string(option, value, "default_controller2", amiberry_options.default_controller2, sizeof amiberry_options.default_controller2);
+		ret |= cfgfile_string(option, value, "default_controller3", amiberry_options.default_controller3, sizeof amiberry_options.default_controller3);
+		ret |= cfgfile_string(option, value, "default_controller4", amiberry_options.default_controller4, sizeof amiberry_options.default_controller4);
+		ret |= cfgfile_string(option, value, "default_mouse1", amiberry_options.default_mouse1, sizeof amiberry_options.default_mouse1);
+		ret |= cfgfile_string(option, value, "default_mouse2", amiberry_options.default_mouse2, sizeof amiberry_options.default_mouse2);
+		ret |= cfgfile_yesno(option, value, "default_whd_buttonwait", &amiberry_options.default_whd_buttonwait);
+		ret |= cfgfile_yesno(option, value, "default_whd_showsplash", &amiberry_options.default_whd_showsplash);
+		ret |= cfgfile_intval(option, value, "default_whd_configdelay", &amiberry_options.default_whd_configdelay, 1);
+	}
+	return ret;
+}
+
 void load_amiberry_settings(void)
 {
 	char path[MAX_DPATH];
@@ -2741,117 +2856,12 @@ void load_amiberry_settings(void)
 	if (fh)
 	{
 		char linea[CONFIG_BLEN];
-		TCHAR option[CONFIG_BLEN], value[CONFIG_BLEN];
-		int numROMs, numDisks, numCDs;
-		auto romType = -1;
-		char romName[MAX_DPATH] = {'\0'};
-		char romPath[MAX_DPATH] = {'\0'};
-		char tmpFile[MAX_DPATH];
 
 		while (zfile_fgetsa(linea, sizeof linea, fh) != nullptr)
 		{
 			trim_wsa(linea);
 			if (strlen(linea) > 0)
-			{
-				if (!cfgfile_separate_linea(path, linea, option, value))
-					continue;
-
-				if (cfgfile_string(option, value, "ROMName", romName, sizeof romName)
-					|| cfgfile_string(option, value, "ROMPath", romPath, sizeof romPath)
-					|| cfgfile_intval(option, value, "ROMType", &romType, 1))
-				{
-					if (strlen(romName) > 0 && strlen(romPath) > 0 && romType != -1)
-					{
-						auto* tmp = new AvailableROM();
-						strncpy(tmp->Name, romName, sizeof tmp->Name - 1);
-						strncpy(tmp->Path, romPath, sizeof tmp->Path - 1);
-						tmp->ROMType = romType;
-						lstAvailableROMs.emplace_back(tmp);
-						strncpy(romName, "", sizeof romName);
-						strncpy(romPath, "", sizeof romPath);
-						romType = -1;
-					}
-				}
-				else if (cfgfile_string(option, value, "Diskfile", tmpFile, sizeof tmpFile))
-				{
-					auto* const f = fopen(tmpFile, "rbe");
-					if (f != nullptr)
-					{
-						fclose(f);
-						lstMRUDiskList.emplace_back(tmpFile);
-					}
-				}
-				else if (cfgfile_string(option, value, "CDfile", tmpFile, sizeof tmpFile))
-				{
-					auto* const f = fopen(tmpFile, "rbe");
-					if (f != nullptr)
-					{
-						fclose(f);
-						lstMRUCDList.emplace_back(tmpFile);
-					}
-				}
-				else if (cfgfile_string(option, value, "WHDLoadfile", tmpFile, sizeof tmpFile))
-				{
-					auto* const f = fopen(tmpFile, "rbe");
-					if (f != nullptr)
-					{
-						fclose(f);
-						lstMRUWhdloadList.emplace_back(tmpFile);
-					}
-				}
-				else
-				{
-					cfgfile_string(option, value, "path", current_dir, sizeof current_dir);
-					cfgfile_string(option, value, "config_path", config_path, sizeof config_path);
-					cfgfile_string(option, value, "controllers_path", controllers_path, sizeof controllers_path);
-					cfgfile_string(option, value, "retroarch_config", retroarch_file, sizeof retroarch_file);
-					cfgfile_string(option, value, "logfile_path", logfile_path, sizeof logfile_path);
-					cfgfile_string(option, value, "rom_path", rom_path, sizeof rom_path);
-					cfgfile_intval(option, value, "ROMs", &numROMs, 1);
-					cfgfile_intval(option, value, "MRUDiskList", &numDisks, 1);
-					cfgfile_intval(option, value, "MRUCDList", &numCDs, 1);
-					cfgfile_yesno(option, value, "Quickstart", &amiberry_options.quickstart_start);
-					cfgfile_yesno(option, value, "read_config_descriptions", &amiberry_options.read_config_descriptions);
-					cfgfile_yesno(option, value, "write_logfile", &amiberry_options.write_logfile);
-					cfgfile_intval(option, value, "default_line_mode", &amiberry_options.default_line_mode, 1);
-					cfgfile_yesno(option, value, "rctrl_as_ramiga", &amiberry_options.rctrl_as_ramiga);
-					cfgfile_yesno(option, value, "gui_joystick_control", &amiberry_options.gui_joystick_control);
-					cfgfile_yesno(option, value, "use_sdl2_render_thread", &amiberry_options.use_sdl2_render_thread);
-					cfgfile_yesno(option, value, "default_multithreaded_drawing", &amiberry_options.default_multithreaded_drawing);
-					cfgfile_intval(option, value, "input_default_mouse_speed", &amiberry_options.input_default_mouse_speed, 1);
-					cfgfile_yesno(option, value, "input_keyboard_as_joystick_stop_keypresses", &amiberry_options.input_keyboard_as_joystick_stop_keypresses);
-					cfgfile_string(option, value, "default_open_gui_key", amiberry_options.default_open_gui_key, sizeof amiberry_options.default_open_gui_key);
-					cfgfile_string(option, value, "default_quit_key", amiberry_options.default_quit_key, sizeof amiberry_options.default_quit_key);
-					cfgfile_string(option, value, "default_ar_key", amiberry_options.default_ar_key, sizeof amiberry_options.default_ar_key);
-					cfgfile_string(option, value, "default_fullscreen_toggle_key", amiberry_options.default_fullscreen_toggle_key, sizeof amiberry_options.default_fullscreen_toggle_key);
-					cfgfile_intval(option, value, "rotation_angle", &amiberry_options.rotation_angle, 1);
-					cfgfile_yesno(option, value, "default_horizontal_centering", &amiberry_options.default_horizontal_centering);
-					cfgfile_yesno(option, value, "default_vertical_centering", &amiberry_options.default_vertical_centering);
-					cfgfile_intval(option, value, "default_scaling_method", &amiberry_options.default_scaling_method, 1);
-					cfgfile_yesno(option, value, "default_frameskip", &amiberry_options.default_frameskip);
-					cfgfile_yesno(option, value, "default_correct_aspect_ratio", &amiberry_options.default_correct_aspect_ratio);
-					cfgfile_yesno(option, value, "default_auto_height", &amiberry_options.default_auto_height);
-					cfgfile_intval(option, value, "default_width", &amiberry_options.default_width, 1);
-					cfgfile_intval(option, value, "default_height", &amiberry_options.default_height, 1);
-					cfgfile_intval(option, value, "default_fullscreen_mode", &amiberry_options.default_fullscreen_mode, 1);
-					cfgfile_intval(option, value, "default_stereo_separation", &amiberry_options.default_stereo_separation, 1);
-					cfgfile_intval(option, value, "default_sound_buffer", &amiberry_options.default_sound_buffer, 1);
-					cfgfile_yesno(option, value, "default_sound_pull", &amiberry_options.default_sound_pull);
-					cfgfile_intval(option, value, "default_joystick_deadzone", &amiberry_options.default_joystick_deadzone, 1);
-					cfgfile_yesno(option, value, "default_retroarch_quit", &amiberry_options.default_retroarch_quit);
-					cfgfile_yesno(option, value, "default_retroarch_menu", &amiberry_options.default_retroarch_menu);
-					cfgfile_yesno(option, value, "default_retroarch_reset", &amiberry_options.default_retroarch_reset);
-					cfgfile_string(option, value, "default_controller1", amiberry_options.default_controller1, sizeof amiberry_options.default_controller1);
-					cfgfile_string(option, value, "default_controller2", amiberry_options.default_controller2, sizeof amiberry_options.default_controller2);
-					cfgfile_string(option, value, "default_controller3", amiberry_options.default_controller3, sizeof amiberry_options.default_controller3);
-					cfgfile_string(option, value, "default_controller4", amiberry_options.default_controller4, sizeof amiberry_options.default_controller4);
-					cfgfile_string(option, value, "default_mouse1", amiberry_options.default_mouse1, sizeof amiberry_options.default_mouse1);
-					cfgfile_string(option, value, "default_mouse2", amiberry_options.default_mouse2, sizeof amiberry_options.default_mouse2);
-					cfgfile_yesno(option, value, "default_whd_buttonwait", &amiberry_options.default_whd_buttonwait);
-					cfgfile_yesno(option, value, "default_whd_showsplash", &amiberry_options.default_whd_showsplash);
-					cfgfile_intval(option, value, "default_whd_configdelay", &amiberry_options.default_whd_configdelay, 1);
-				}
-			}
+				parse_amiberry_settings_line(path, linea);
 		}
 		zfile_fclose(fh);
 	}
