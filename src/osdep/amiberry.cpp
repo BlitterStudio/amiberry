@@ -2826,6 +2826,39 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 	return ret;
 }
 
+static int parse_amiberry_cmd_line(int *argc, char* argv[])
+{
+	int i, j;
+
+	for (i = 0; i < *argc; i++)
+	{
+		if (strncmp(argv[i], "-o", 3) == 0)
+		{
+			if (i >= *argc - 1)
+			{
+				// fail because option arg is missing
+				return 0;
+			}
+			if (!parse_amiberry_settings_line("<command line>", argv[i + 1]))
+			{
+				// fail because on cmd line we require correctly formatted setting in option arg
+				return 0;
+			}
+			// shift all args after the found one by 2
+			for (j = i + 2; j < *argc; j++)
+			{
+				argv[j - 2] = argv[j];
+			}
+			// argc is now 2 items shorter ...
+			*argc -= 2;
+			// .. and we must read this index again because of the shifting we did
+			i--;
+		}
+	}
+
+	return 1;
+}
+
 void load_amiberry_settings(void)
 {
 	char path[MAX_DPATH];
@@ -2983,6 +3016,14 @@ int main(int argc, char* argv[])
 
 	rename_old_adfdir();
 	load_amiberry_settings();
+	// parse_amiberry_cmd_line will remove amiberry specific configs if found
+	// and modify both argc & argv accordingly
+	if (!parse_amiberry_cmd_line(&argc, argv))
+	{
+		printf("Error in Amiberry command line option parsing.\n");
+		usage();
+		abort();
+	}
 
 	snprintf(savestate_fname, sizeof savestate_fname, "%s/savestates/default.ads", start_path_data);
 	logging_init();
