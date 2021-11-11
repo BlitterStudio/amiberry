@@ -577,7 +577,7 @@ bool HandleNavigation(int direction)
 
 void PushFakeKey(const SDL_Keycode inKey)
 {
-	SDL_Event event;
+	SDL_Event event{};
 
 	event.type = SDL_KEYDOWN;
 	event.key.keysym.sym = inKey;
