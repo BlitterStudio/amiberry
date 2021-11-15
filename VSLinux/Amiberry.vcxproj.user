@@ -5,7 +5,7 @@
     <RemoteDebuggerWorkingDirectory>$(RemoteRootDir)/amiberry</RemoteDebuggerWorkingDirectory>
     <DebuggerFlavor>LinuxDebugger</DebuggerFlavor>
     <PreLaunchCommand>export DISPLAY=:0.0</PreLaunchCommand>
-    <RemoteTarget>1721017924;rpi4 (username=, port=22, authentication=Password)</RemoteTarget>
+    <RemoteTarget>1721017924;rpios32 (username=, port=22, authentication=Password)</RemoteTarget>
     <RemoteDebuggerCommandArguments>
     </RemoteDebuggerCommandArguments>
   </PropertyGroup>
