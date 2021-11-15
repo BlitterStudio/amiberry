@@ -380,21 +380,20 @@ static NavigationMap navMap[] =
 	{ "chkAltTabRelease", "Miscellaneous", "scrlMisc", "chkCaptureAlways", "chkRetroArchQuit" },
 	{ "chkRetroArchQuit", "Miscellaneous", "scrlMisc", "chkAltTabRelease", "chkRetroArchMenu" },
 	{ "chkRetroArchMenu", "Miscellaneous", "scrlMisc", "chkRetroArchQuit", "chkRetroArchReset" },
-	{ "chkRetroArchReset", "Miscellaneous", "scrlMisc", "chkRetroArchMenu", "cboNumlock" },
+	{ "chkRetroArchReset", "Miscellaneous", "scrlMisc", "chkRetroArchMenu", "cmdKeyOpenGUI" },
 
-	{ "cboNumlock", "Miscellaneous", "cboScrolllock", "chkRetroArchReset", "chkMouseUntrap" },
-	{ "cboScrolllock", "cboNumlock", "Miscellaneous", "chkRetroArchReset", "chkMouseUntrap" },
-
-	{ "cmdKeyOpenGUI", "scrlMisc", "cmdKeyOpenGUIClear", "cmdKeyFullScreen", "cmdKeyForQuit" },
-	{ "cmdKeyOpenGUIClear", "cmdKeyOpenGUI", "Miscellaneous", "cmdKeyFullScreenClear", "cmdKeyForQuitClear" },
+	{ "cmdKeyOpenGUI", "scrlMisc", "cmdKeyOpenGUIClear", "cboScrolllock", "cmdKeyForQuit" },
+	{ "cmdKeyOpenGUIClear", "cmdKeyOpenGUI", "Miscellaneous", "cboScrolllock", "cmdKeyForQuitClear" },
 	{ "cmdKeyForQuit", "scrlMisc", "cmdKeyForQuitClear", "cmdKeyOpenGUI", "cmdKeyActionReplay" },
 	{ "cmdKeyForQuitClear", "cmdKeyForQuit", "Miscellaneous", "cmdKeyOpenGUIClear", "cmdKeyActionReplayClear" },
 	{ "cmdKeyActionReplay", "scrlMisc", "cmdKeyActionReplayClear", "cmdKeyForQuit", "cmdKeyFullScreen" },
 	{ "cmdKeyActionReplayClear", "cmdKeyActionReplay", "Miscellaneous", "cmdKeyForQuitClear", "cmdKeyFullScreenClear" },
 	{ "cmdKeyFullScreen", "scrlMisc", "cmdKeyFullScreenClear", "cmdKeyActionReplay", "cmdKeyMinimize" },
 	{ "cmdKeyFullScreenClear", "cmdKeyFullScreen", "Miscellaneous", "cmdKeyActionReplayClear", "cmdKeyMinimizeClear" },
-	{ "cmdKeyMinimize", "scrlMisc", "cmdKeyMinimizeClear", "cmdKeyFullScreen", "cmdKeyOpenGUI" },
-	{ "cmdKeyMinimizeClear", "cmdKeyMinimize", "Miscellaneous", "cmdKeyFullScreenClear", "cmdKeyOpenGUIClear" },
+	{ "cmdKeyMinimize", "scrlMisc", "cmdKeyMinimizeClear", "cmdKeyFullScreen", "cboNumlock" },
+	{ "cmdKeyMinimizeClear", "cmdKeyMinimize", "Miscellaneous", "cmdKeyFullScreenClear", "cboNumlock" },
+	{ "cboNumlock", "chkMouseUntrap", "Miscellaneous", "cmdKeyMinimize", "cboScrolllock" },
+	{ "cboScrolllock", "chkMouseUntrap", "Miscellaneous", "cboNumlock", "cmdKeyOpenGUI" },
 
 	// PanelPrio
 	{ "cboActiveRunAtPrio", "Priority", "cboInactiveRunAtPrio", "chkActiveDisableSound", "chkActivePauseEmulation" },

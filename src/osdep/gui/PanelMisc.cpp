@@ -493,7 +493,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 
 	auto posY = DISTANCE_BORDER;
 	grpMiscOptions->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
-	grpMiscOptions->setSize(category.panel->getWidth() - category.panel->getWidth() / 3 - 50, 700);
+	grpMiscOptions->setSize(category.panel->getWidth() - category.panel->getWidth() / 3 - 50, 670);
 	grpMiscOptions->setBaseColor(gui_baseCol);
 	grpMiscOptions->add(chkMouseUntrap, DISTANCE_BORDER, posY);
 	posY += chkMouseUntrap->getHeight() + DISTANCE_NEXT_Y;
@@ -555,7 +555,7 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	scrollArea->setBackgroundColor(gui_baseCol);
 	scrollArea->setBaseColor(gui_baseCol);
 	scrollArea->setWidth(category.panel->getWidth() - (category.panel->getWidth() / 3) - 35);
-	scrollArea->setHeight(450);
+	scrollArea->setHeight(490);
 	scrollArea->setBorderSize(1);
 	scrollArea->setFocusable(true);
 
@@ -597,14 +597,16 @@ void InitPanelMisc(const struct _ConfigCategory& category)
 	category.panel->add(txtKeyMinimize, lblKeyMinimize->getX(), posY);
 	category.panel->add(cmdKeyMinimize, txtKeyMinimize->getX() + txtKeyMinimize->getWidth() + 8, posY);
 	category.panel->add(cmdKeyMinimizeClear, cmdKeyMinimize->getX() + cmdKeyMinimize->getWidth() + 8, posY);
-	
-	posY = scrollArea->getHeight() + DISTANCE_NEXT_Y * 2;	
+	posY += cmdKeyMinimizeClear->getHeight() + DISTANCE_NEXT_Y;
 
-	category.panel->add(lblNumLock, DISTANCE_BORDER, posY);
-	category.panel->add(cboKBDLed_num, DISTANCE_BORDER + lblNumLock->getWidth() + 8, posY);
+	category.panel->add(lblNumLock, column2_x, posY);
+	posY += lblNumLock->getHeight() + 8;
+	category.panel->add(cboKBDLed_num, lblNumLock->getX(), posY);
+	posY += cboKBDLed_num->getHeight() + DISTANCE_NEXT_Y;
 
-	category.panel->add(lblScrLock, cboKBDLed_num->getX() + cboKBDLed_num->getWidth() + DISTANCE_NEXT_X, posY);
-	category.panel->add(cboKBDLed_scr, lblScrLock->getX() + lblScrLock->getWidth() + 8, posY);
+	category.panel->add(lblScrLock, column2_x, posY);
+	posY += lblScrLock->getHeight() + 8;
+	category.panel->add(cboKBDLed_scr, lblScrLock->getX(), posY);
 
 	RefreshPanelMisc();
 }
