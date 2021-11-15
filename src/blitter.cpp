@@ -1556,10 +1556,12 @@ static bool decide_blitter_maybe_write2(int until_hpos, uaecptr addr, uae_u32 va
 				}
 
 				if (blt_info.blit_finald == 1) {
-					// final D write
-					int offset = get_rga_pipeline(hpos, RGA_PIPELINE_OFFSET_BLITTER);
-					cycle_line_pipe[offset] = CYCLE_PIPE_BLITTER;
-					blitter_pipe[offset] = CYCLE_PIPE_BLITTER | 4 | BLITTER_PIPELINE_ADDMOD | BLITTER_PIPELINE_LASTD;
+					// final D write. Only if BLTCON D and line mode is off.
+					if ((bltcon0 & 0x0100) && !(bltcon1 & 1)) {
+						int offset = get_rga_pipeline(hpos, RGA_PIPELINE_OFFSET_BLITTER);
+						cycle_line_pipe[offset] = CYCLE_PIPE_BLITTER;
+						blitter_pipe[offset] = CYCLE_PIPE_BLITTER | 4 | BLITTER_PIPELINE_ADDMOD | BLITTER_PIPELINE_LASTD;
+					}
 					if (currprefs.chipset_mask & CSMASK_AGA) {
 						blitter_done_all(hpos);
 					}
@@ -1809,6 +1811,8 @@ void do_blitter(int hpos, int copper, uaecptr pc)
 	blit_cyclecounter = 0;
 	blit_totalcyclecounter = 0;
 	blt_info.blit_pending = 1;
+	// pending finald gets cleared when new blit starts
+	blt_info.blit_finald = 0;
 
 	blitter_start_init();
 
