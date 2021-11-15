@@ -127,7 +127,6 @@ extern uae_u16 INTREQR(void);
 
 extern int maxhpos, maxhpos_short;
 extern int maxvpos, maxvpos_nom, maxvpos_display, maxvpos_display_vsync;
-extern int hsyncstartpos, hsyncendpos;
 extern int hsyncstartpos_hw, hsyncendpos_hw;
 extern int minfirstline, vblank_endline, numscrlines;
 extern float vblank_hz, fake_vblank_hz;
