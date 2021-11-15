@@ -10240,9 +10240,9 @@ int filesys_shellexecute2(TCHAR *file, TCHAR *currentdir, TCHAR *parms, uae_u32 
 	for (int i = 0; i < SHELLEXEC_MAX; i++) {
 		struct ShellExecute2 *se2 = &shellexecute2[i];
 		if (!se2->state) {
-			se2->file = file ? ua(file) : "";
-			se2->currentdir = currentdir ? ua(currentdir) : "";
-			se2->parms = parms ? ua(parms) : "";
+			se2->file = file ? ua(file) : (char*)"";
+			se2->currentdir = currentdir ? ua(currentdir) : (char*)"";
+			se2->parms = parms ? ua(parms) : (char*)"";
 			se2->id = id;
 			se2->stack = stack;
 			se2->priority = priority;
