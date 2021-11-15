@@ -558,7 +558,7 @@ void update_win_fs_mode(int monid, struct uae_prefs* p)
 #ifdef USE_DISPMANX
 	// Dispmanx modes use configurable width/height and are full-window always
 	p->gfx_monitor[0].gfx_size = p->gfx_monitor[0].gfx_size_win;
-    set_config_changed();
+	set_config_changed();
 #else
 	if (mon->sdl_window)
 	{
