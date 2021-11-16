@@ -936,6 +936,8 @@ struct uae_prefs
 	int input_device_match_mask;
 
 #ifdef AMIBERRY
+	int drawbridge_driver;
+	bool drawbridge_connected_drive_b;
 	bool drawbridge_smartspeed;
 	bool drawbridge_autocache;
 	bool alt_tab_release;
@@ -1058,6 +1060,7 @@ extern void cfgfile_get_shader_config(struct uae_prefs* p, int rtg);
 extern void whdload_auto_prefs(struct uae_prefs* prefs, char* filename);
 extern void cd_auto_prefs(struct uae_prefs* prefs, char* filename);
 extern void symlink_roms(struct uae_prefs* prefs);
+extern void drawbridge_update_profiles(struct uae_prefs* prefs);
 #endif
 
 extern void check_prefs_changed_custom(void);

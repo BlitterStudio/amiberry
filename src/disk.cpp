@@ -5013,6 +5013,7 @@ static void floppybridge_init2(struct uae_prefs *p)
 					bridge->setComPortAutoDetect(true);
 					bridge->setAutoCacheMode(currprefs.drawbridge_autocache);
 					bridge->setSmartSpeedEnabled(currprefs.drawbridge_smartspeed);
+					bridge->setDriveCableSelection(currprefs.drawbridge_connected_drive_b);
 #endif
 					if (!bridge->initialise()) {
 						const char *errorMessage = bridge->getLastErrorMessage();
