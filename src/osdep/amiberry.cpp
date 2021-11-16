@@ -203,6 +203,10 @@ static char controllers_path[MAX_DPATH];
 static char retroarch_file[MAX_DPATH];
 static char logfile_path[MAX_DPATH];
 static char floppy_sounds_dir[MAX_DPATH];
+static char data_dir[MAX_DPATH];
+static char saveimage_dir[MAX_DPATH];
+static char savestate_dir[MAX_DPATH];
+static char screenshot_dir[MAX_DPATH];
 
 char last_loaded_config[MAX_DPATH] = {'\0'};
 
@@ -2214,14 +2218,14 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 
 void get_data_path(char* out, int size)
 {
-	strncpy(out, start_path_data, size - 1);
-	strncat(out, "/", size - 1);
+	fix_trailing(data_dir);
+	strncpy(out, data_dir, size - 1);
 }
 
 void get_saveimage_path(char* out, int size, int dir)
 {
-	strncpy(out, start_path_data, size - 1);
-	strncat(out, "/savestates/", size - 1);
+	fix_trailing(saveimage_dir);
+	strncpy(out, saveimage_dir, size - 1);
 }
 
 void get_configuration_path(char* out, int size)
@@ -2295,14 +2299,14 @@ void get_rp9_path(char* out, int size)
 
 void get_savestate_path(char* out, int size)
 {
-	strncpy(out, start_path_data, size - 1);
-	strncat(out, "/savestates/", size - 1);
+	fix_trailing(savestate_dir);
+	strncpy(out, savestate_dir, size - 1);
 }
 
 void get_screenshot_path(char* out, int size)
 {
-	strncpy(out, start_path_data, size - 1);
-	strncat(out, "/screenshots/", size - 1);
+	fix_trailing(screenshot_dir);
+	strncpy(out, screenshot_dir, size - 1);
 }
 
 int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int isdefault)
@@ -2646,6 +2650,24 @@ void save_amiberry_settings(void)
 	snprintf(buffer, MAX_DPATH, "rom_path=%s\n", rom_path);
 	fputs(buffer, f);
 
+	snprintf(buffer, MAX_DPATH, "rp9_path=%s\n", rp9_path);
+	fputs(buffer, f);
+
+	snprintf(buffer, MAX_DPATH, "floppy_sounds_dir=%s\n", floppy_sounds_dir);
+	fputs(buffer, f);
+
+	snprintf(buffer, MAX_DPATH, "data_dir=%s\n", rom_path);
+	fputs(buffer, f);
+
+	snprintf(buffer, MAX_DPATH, "saveimage_dir=%s\n", rom_path);
+	fputs(buffer, f);
+
+	snprintf(buffer, MAX_DPATH, "savestate_dir=%s\n", rom_path);
+	fputs(buffer, f);
+
+	snprintf(buffer, MAX_DPATH, "screenshot_dir=%s\n", rom_path);
+	fputs(buffer, f);
+
 	// The number of ROMs in the last scan
 	snprintf(buffer, MAX_DPATH, "ROMs=%zu\n", lstAvailableROMs.size());
 	fputs(buffer, f);
@@ -2779,6 +2801,12 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_string(option, value, "retroarch_config", retroarch_file, sizeof retroarch_file);
 		ret |= cfgfile_string(option, value, "logfile_path", logfile_path, sizeof logfile_path);
 		ret |= cfgfile_string(option, value, "rom_path", rom_path, sizeof rom_path);
+		ret |= cfgfile_string(option, value, "rp9_path", rp9_path, sizeof rp9_path);
+		ret |= cfgfile_string(option, value, "floppy_sounds_dir", floppy_sounds_dir, sizeof floppy_sounds_dir);
+		ret |= cfgfile_string(option, value, "data_dir", data_dir, sizeof data_dir);
+		ret |= cfgfile_string(option, value, "saveimage_dir", saveimage_dir, sizeof saveimage_dir);
+		ret |= cfgfile_string(option, value, "savestate_dir", savestate_dir, sizeof savestate_dir);
+		ret |= cfgfile_string(option, value, "screenshot_dir", screenshot_dir, sizeof screenshot_dir);
 		ret |= cfgfile_intval(option, value, "ROMs", &numROMs, 1);
 		ret |= cfgfile_intval(option, value, "MRUDiskList", &numDisks, 1);
 		ret |= cfgfile_intval(option, value, "MRUCDList", &numCDs, 1);
@@ -2884,6 +2912,10 @@ void load_amiberry_settings(void)
 	snprintf(rp9_path, MAX_DPATH, "%s/rp9/", start_path_data);
 	snprintf(path, MAX_DPATH, "%s/conf/amiberry.conf", start_path_data);
 	snprintf(floppy_sounds_dir, MAX_DPATH, "%s/data/floppy_sounds/", start_path_data);
+	snprintf(data_dir, MAX_DPATH, "%s/", start_path_data);
+	snprintf(saveimage_dir, MAX_DPATH, "%s/savestates/", start_path_data);
+	snprintf(savestate_dir, MAX_DPATH, "%s/savestates/", start_path_data);
+	snprintf(screenshot_dir, MAX_DPATH, "%s/screenshots/", start_path_data);
 
 	auto* const fh = zfile_fopen(path, _T("r"), ZFD_NORMAL);
 	if (fh)
@@ -3025,7 +3057,8 @@ int main(int argc, char* argv[])
 		abort();
 	}
 
-	snprintf(savestate_fname, sizeof savestate_fname, "%s/savestates/default.ads", start_path_data);
+	fix_trailing(savestate_dir);
+	snprintf(savestate_fname, sizeof savestate_fname, "%s/default.ads", savestate_dir);
 	logging_init();
 
 	memset(&action, 0, sizeof action);
