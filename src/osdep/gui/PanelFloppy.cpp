@@ -27,8 +27,11 @@ static gcn::CheckBox* chkLoadConfig;
 static gcn::Button* cmdSaveForDisk;
 static gcn::Button* cmdCreateDDDisk;
 static gcn::Button* cmdCreateHDDisk;
+static gcn::Label* lblDBDriver;
+static gcn::DropDown* cboDBDriver;
 static gcn::CheckBox* chkDBSmartSpeed;
 static gcn::CheckBox* chkDBAutoCache;
+static gcn::CheckBox* chkDBCableDriveB;
 
 static const char* drive_speed_list[] = {"Turbo", "100% (compatible)", "200%", "400%", "800%"};
 static const int drive_speed_values[] = {0, 100, 200, 400, 800};
@@ -81,6 +84,44 @@ public:
 };
 
 static DriveTypeListModel driveTypeList;
+
+class DriverListModel : public gcn::ListModel
+{
+	std::vector<std::string> types{};
+
+public:
+	DriverListModel()
+	{
+		types.emplace_back("Arduino");
+		types.emplace_back("GreaseWeazle");
+		types.emplace_back("SuperCardPro");
+	}
+
+	int add_element(const char* elem) override
+	{
+		types.emplace_back(elem);
+		return 0;
+	}
+
+	void clear_elements() override
+	{
+		types.clear();
+	}
+
+	int getNumberOfElements() override
+	{
+		return types.size();
+	}
+
+	std::string getElementAt(int i) override
+	{
+		if (i < 0 || i >= static_cast<int>(types.size()))
+			return "---";
+		return types[i];
+	}
+};
+
+static DriverListModel driverList;
 
 class DiskfileListModel : public gcn::ListModel
 {
@@ -145,6 +186,23 @@ public:
 
 static DriveTypeActionListener* driveTypeActionListener;
 
+class DriverActionListener : public gcn::ActionListener
+{
+public:
+	void action(const gcn::ActionEvent& actionEvent) override
+	{
+		if (actionEvent.getSource() == cboDBDriver)
+		{
+			changed_prefs.drawbridge_driver = cboDBDriver->getSelected();
+			drawbridge_update_profiles(&changed_prefs);
+		}
+		RefreshPanelFloppy();
+		RefreshPanelQuickstart();
+	}
+};
+
+static DriverActionListener* driverActionListener;
+
 class DFxCheckActionListener : public gcn::ActionListener
 {
 public:
@@ -159,6 +217,10 @@ public:
 		else if (actionEvent.getSource() == chkDBAutoCache)
 		{
 			changed_prefs.drawbridge_autocache = chkDBAutoCache->isSelected();
+		}
+		else if (actionEvent.getSource() == chkDBCableDriveB)
+		{
+			changed_prefs.drawbridge_connected_drive_b = chkDBCableDriveB->isSelected();
 		}
 		else
 		{
@@ -420,6 +482,7 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 
 	dfxCheckActionListener = new DFxCheckActionListener();
 	driveTypeActionListener = new DriveTypeActionListener();
+	driverActionListener = new DriverActionListener();
 	dfxButtonActionListener = new DFxButtonActionListener();
 	diskFileActionListener = new DiskFileActionListener();
 	driveSpeedSliderActionListener = new DriveSpeedSliderActionListener();
@@ -512,6 +575,13 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 	cmdCreateHDDisk->setId("cmdCreateHDDisk");
 	cmdCreateHDDisk->addActionListener(createDiskActionListener);
 
+	lblDBDriver = new gcn::Label("DrawBridge driver:");
+	cboDBDriver = new gcn::DropDown(&driverList);
+	cboDBDriver->setId("cboDBDriver");
+	cboDBDriver->setBaseColor(gui_baseCol);
+	cboDBDriver->setBackgroundColor(colTextboxBackground);
+	cboDBDriver->addActionListener(driverActionListener);
+
 	chkDBSmartSpeed = new gcn::CheckBox("DrawBridge: Smart Speed (Dynamically switch on Turbo)");
 	chkDBSmartSpeed->setId("chkDBSmartSpeed");
 	chkDBSmartSpeed->addActionListener(dfxCheckActionListener);
@@ -519,6 +589,10 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 	chkDBAutoCache = new gcn::CheckBox("DrawBridge: Auto-Cache (Cache disk data while drive is idle)");
 	chkDBAutoCache->setId("chkDBAutoCache");
 	chkDBAutoCache->addActionListener(dfxCheckActionListener);
+
+	chkDBCableDriveB = new gcn::CheckBox("DrawBridge: Connected as Drive B");
+	chkDBCableDriveB->setId("chkDBCableDriveB");
+	chkDBCableDriveB->addActionListener(dfxCheckActionListener);
 
 	for (i = 0; i < 4; ++i)
 	{
@@ -554,9 +628,14 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 	posY += sldDriveSpeed->getHeight() + DISTANCE_NEXT_Y;
 
 	posX = DISTANCE_BORDER;
+	category.panel->add(lblDBDriver, posX, posY);
+	category.panel->add(cboDBDriver, lblDBDriver->getX() + lblDBDriver->getWidth() + 8, posY);
+	posY += cboDBDriver->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(chkDBSmartSpeed, posX, posY);
 	posY += chkDBSmartSpeed->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(chkDBAutoCache, posX, posY);
+	posY += chkDBAutoCache->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(chkDBCableDriveB, posX, posY);
 
 	posY = category.panel->getHeight() - DISTANCE_BORDER - BUTTON_HEIGHT;
 	category.panel->add(cmdSaveForDisk, DISTANCE_BORDER, posY);
@@ -586,11 +665,15 @@ void ExitPanelFloppy()
 	delete cmdSaveForDisk;
 	delete cmdCreateDDDisk;
 	delete cmdCreateHDDisk;
+	delete lblDBDriver;
+	delete cboDBDriver;
 	delete chkDBSmartSpeed;
 	delete chkDBAutoCache;
+	delete chkDBCableDriveB;
 
 	delete dfxCheckActionListener;
 	delete driveTypeActionListener;
+	delete driverActionListener;
 	delete dfxButtonActionListener;
 	delete diskFileActionListener;
 	delete driveSpeedSliderActionListener;
@@ -665,20 +748,28 @@ void RefreshPanelFloppy()
 		}
 	}
 
+	lblDBDriver->setEnabled(false);
+	cboDBDriver->setEnabled(false);
 	chkDBAutoCache->setEnabled(false);
 	chkDBSmartSpeed->setEnabled(false);
+	chkDBCableDriveB->setEnabled(false);
 	for (i = 0; i <= 4; ++i)
 	{
 		// is DrawBridge selected?
 		if (changed_prefs.floppyslots[i].dfxtype == DRV_FB)
 		{
+			lblDBDriver->setEnabled(true);
+			cboDBDriver->setEnabled(true);
 			chkDBAutoCache->setEnabled(true);
 			chkDBSmartSpeed->setEnabled(true);
+			chkDBCableDriveB->setEnabled(true);
 			break;
 		}
 	}
+	cboDBDriver->setSelected(changed_prefs.drawbridge_driver);
 	chkDBAutoCache->setSelected(changed_prefs.drawbridge_autocache);
 	chkDBSmartSpeed->setSelected(changed_prefs.drawbridge_smartspeed);
+	chkDBCableDriveB->setSelected(changed_prefs.drawbridge_connected_drive_b);
 }
 
 bool HelpPanelFloppy(std::vector<std::string>& helptext)

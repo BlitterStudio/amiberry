@@ -58,6 +58,8 @@
 #endif
 #endif
 
+std::string drawbridge_profiles = "1|Fast[0|0|COM0|0|0]2|Compatible[0|0|COM0|1|0]3|Turbo[0|0|COM0|2|0]4|Accurate[0|0|COM0|3|0]";
+
 int log_scsi;
 int uaelib_debug;
 int pissoff_value = 15000 * CYCLE_UNIT;
@@ -1941,6 +1943,11 @@ void target_default_options(struct uae_prefs* p, int type)
 
 	p->drawbridge_smartspeed = false;
 	p->drawbridge_autocache = false;
+	p->drawbridge_connected_drive_b = false;
+	p->drawbridge_driver = 0;
+
+	drawbridge_update_profiles(p);
+
 	p->alt_tab_release = false;
 	p->sound_pullmode = amiberry_options.default_sound_pull;
 	p->input_analog_remap = false;
@@ -1961,11 +1968,6 @@ void target_default_options(struct uae_prefs* p, int type)
 			changed_prefs.cpu_cycle_exact = changed_prefs.cpu_memory_cycle_exact = false;
 		}
 	}
-
-#ifdef FLOPPYBRIDGE
-	floppybridge_set_config("1|Fast[0|0|COM0|0|0]2|Compatible[0|0|COM0|1|0]3|Turbo[0|0|COM0|2|0]4|Accurate[0|0|COM0|3|0]");
-	floppybridge_init(&changed_prefs);
-#endif
 }
 
 static const TCHAR* scsimode[] = { _T("SCSIEMU"), _T("SPTI"), _T("SPTI+SCSISCAN"), NULL };
@@ -2027,8 +2029,10 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_target_dwrite_str(f, _T("fullscreen_toggle"), p->fullscreen_toggle);
 	cfgfile_target_dwrite_str(f, _T("minimize"), p->minimize);
 
+	cfgfile_target_dwrite(f, _T("drawbridge_driver"), _T("%d"), p->drawbridge_driver);
 	cfgfile_target_dwrite_bool(f, _T("drawbridge_smartspeed"), p->drawbridge_smartspeed);
 	cfgfile_target_dwrite_bool(f, _T("drawbridge_autocache"), p->drawbridge_autocache);
+	cfgfile_target_dwrite_bool(f, _T("drawbridge_connected_drive_b"), p->drawbridge_connected_drive_b);
 
 	cfgfile_target_dwrite_bool(f, _T("alt_tab_release"), p->alt_tab_release);
 	cfgfile_target_dwrite(f, _T("sound_pullmode"), _T("%d"), p->sound_pullmode);
@@ -2073,9 +2077,13 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 		return 1;
 	if (cfgfile_yesno(option, value, _T("map_cd_drives"), &p->automount_cddrives))
 		return 1;
+	if (cfgfile_intval(option, value, _T("drawbridge_driver"), &p->drawbridge_driver, 1))
+		return 1;
 	if (cfgfile_yesno(option, value, _T("drawbridge_smartspeed"), &p->drawbridge_smartspeed))
 		return 1;
 	if (cfgfile_yesno(option, value, _T("drawbridge_autocache"), &p->drawbridge_autocache))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("drawbridge_connected_drive_b"), &p->drawbridge_connected_drive_b))
 		return 1;
 	if (cfgfile_yesno(option, value, _T("alt_tab_release"), &p->alt_tab_release))
 		return 1;
@@ -3112,4 +3120,17 @@ bool get_plugin_path(TCHAR* out, int len, const TCHAR* path)
 		return my_existsfile(out);
 	}
 	return TRUE;
+}
+
+void drawbridge_update_profiles(struct uae_prefs* p)
+{
+	char driver = '0' + p->drawbridge_driver;
+	drawbridge_profiles[7] = driver;
+	drawbridge_profiles[33] = driver;
+	drawbridge_profiles[54] = driver;
+	drawbridge_profiles[78] = driver;
+#ifdef FLOPPYBRIDGE
+	floppybridge_set_config(drawbridge_profiles.c_str());
+	floppybridge_init(&changed_prefs);
+#endif
 }

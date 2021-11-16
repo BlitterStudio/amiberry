@@ -193,12 +193,16 @@ static NavigationMap navMap[] =
 	{ "cmdEject3", "cmdInfo3", "cmdSel3", "cboDisk2", "cboDisk3" },
 	{ "cmdSel3", "cmdEject3", "Floppy drives", "cboDisk2", "cboDisk3" },
 	{ "cboDisk3", "Floppy drives", "Floppy drives", "DF3:", "sldDriveSpeed" },
-	{ "sldDriveSpeed", "", "", "cboDisk3", "chkDBSmartSpeed" },
-	{ "chkDBSmartSpeed", "", "", "sldDriveSpeed", "chkDBAutoCache"},
-	{ "chkDBAutoCache", "", "", "chkDBSmartSpeed", "cmdCreateDDDisk" },
-	{ "cmdSaveForDisk", "Floppy drives", "cmdCreateDDDisk", "chkDBAutoCache", "DF0:" },
-	{ "cmdCreateDDDisk", "cmdSaveForDisk", "cmdCreateHDDisk", "chkDBAutoCache", "cboType0" },
-	{ "cmdCreateHDDisk", "cmdCreateDDDisk", "Floppy drives", "chkDBAutoCache", "cmdEject0" },
+	{ "sldDriveSpeed", "", "", "cboDisk3", "cboDBDriver" },
+	
+	{ "cboDBDriver", "Floppy drives", "", "sldDriveSpeed", "chkDBSmartSpeed" },
+	{ "chkDBSmartSpeed", "Floppy drives", "", "cboDBDriver", "chkDBAutoCache" },
+	{ "chkDBAutoCache", "Floppy drives", "", "chkDBSmartSpeed", "chkDBCableDriveB" },
+	{ "chkDBCableDriveB", "Floppy drives", "", "chkDBAutoCache", "cmdSaveForDisk"},
+
+	{ "cmdSaveForDisk", "Floppy drives", "cmdCreateDDDisk", "chkDBCableDriveB", "DF0:" },
+	{ "cmdCreateDDDisk", "cmdSaveForDisk", "cmdCreateHDDisk", "chkDBCableDriveB", "cboType0" },
+	{ "cmdCreateHDDisk", "cmdCreateDDDisk", "Floppy drives", "chkDBCableDriveB", "cmdEject0" },
 
 	//  active            move left           move right          move up           move down
 	// PanelHD

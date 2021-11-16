@@ -1452,8 +1452,10 @@ int check_prefs_changed_gfx()
 		currprefs.minimized_pause != changed_prefs.minimized_pause ||
 		currprefs.minimized_input != changed_prefs.minimized_input ||
 		currprefs.native_code != changed_prefs.native_code ||
+		currprefs.drawbridge_driver != changed_prefs.drawbridge_driver ||
 		currprefs.drawbridge_smartspeed != changed_prefs.drawbridge_smartspeed ||
 		currprefs.drawbridge_autocache != changed_prefs.drawbridge_autocache ||
+		currprefs.drawbridge_connected_drive_b != changed_prefs.drawbridge_connected_drive_b ||
 		currprefs.alt_tab_release != changed_prefs.alt_tab_release ||
 		currprefs.use_retroarch_quit != changed_prefs.use_retroarch_quit ||
 		currprefs.use_retroarch_menu != changed_prefs.use_retroarch_menu ||
@@ -1482,8 +1484,11 @@ int check_prefs_changed_gfx()
 		currprefs.minimized_pause = changed_prefs.minimized_pause;
 		currprefs.minimized_input = changed_prefs.minimized_input;
 		currprefs.native_code = changed_prefs.native_code;
+		currprefs.drawbridge_driver = changed_prefs.drawbridge_driver;
 		currprefs.drawbridge_smartspeed = changed_prefs.drawbridge_smartspeed;
 		currprefs.drawbridge_autocache = changed_prefs.drawbridge_autocache;
+		currprefs.drawbridge_connected_drive_b = changed_prefs.drawbridge_connected_drive_b;
+		drawbridge_update_profiles(&currprefs);
 		currprefs.alt_tab_release = changed_prefs.alt_tab_release;
 		currprefs.use_retroarch_quit = changed_prefs.use_retroarch_quit;
 		currprefs.use_retroarch_menu = changed_prefs.use_retroarch_menu;
