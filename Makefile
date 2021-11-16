@@ -185,9 +185,9 @@ else ifeq ($(PLATFORM),go-advance)
     CPPFLAGS += $(CPPFLAGS64)
     AARCH64 = 1
 
-# Generic Cortex A53 aarch64 target (SDL2, 64-bit)
+# Generic aarch64 target defaulting to Cortex A53 CPU (SDL2, 64-bit)
 else ifeq ($(PLATFORM),a64)
-    CPUFLAGS = -mcpu=cortex-a53
+    CPUFLAGS ?= -mcpu=cortex-a53
     CPPFLAGS += $(CPPFLAGS64)
     AARCH64 = 1
 
