@@ -207,6 +207,7 @@ static char data_dir[MAX_DPATH];
 static char saveimage_dir[MAX_DPATH];
 static char savestate_dir[MAX_DPATH];
 static char screenshot_dir[MAX_DPATH];
+static char amiberry_conf_file[MAX_DPATH];
 
 char last_loaded_config[MAX_DPATH] = {'\0'};
 
@@ -2453,10 +2454,7 @@ void read_directory(const char* path, std::vector<std::string>* dirs, std::vecto
 
 void save_amiberry_settings(void)
 {
-	char path[MAX_DPATH];
-
-	snprintf(path, MAX_DPATH, "%s/conf/amiberry.conf", start_path_data);
-	auto* const f = fopen(path, "we");
+	auto* const f = fopen(amiberry_conf_file, "we");
 	if (!f)
 		return;
 
@@ -2807,6 +2805,10 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_string(option, value, "saveimage_dir", saveimage_dir, sizeof saveimage_dir);
 		ret |= cfgfile_string(option, value, "savestate_dir", savestate_dir, sizeof savestate_dir);
 		ret |= cfgfile_string(option, value, "screenshot_dir", screenshot_dir, sizeof screenshot_dir);
+		// NOTE: amiberry_config is a "read only", ie. it's not written in
+		// save_amiberry_settings(). It's purpose is to provide -o amiberry_config=path
+		// command line option.
+		ret |= cfgfile_string(option, value, "amiberry_config", amiberry_conf_file, sizeof amiberry_conf_file);
 		ret |= cfgfile_intval(option, value, "ROMs", &numROMs, 1);
 		ret |= cfgfile_intval(option, value, "MRUDiskList", &numDisks, 1);
 		ret |= cfgfile_intval(option, value, "MRUCDList", &numCDs, 1);
@@ -2854,9 +2856,10 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 	return ret;
 }
 
-static int parse_amiberry_cmd_line(int *argc, char* argv[])
+static int parse_amiberry_cmd_line(int *argc, char* argv[], int remove_used_args)
 {
 	int i, j;
+	char arg_copy[CONFIG_BLEN];
 
 	for (i = 0; i < *argc; i++)
 	{
@@ -2867,11 +2870,17 @@ static int parse_amiberry_cmd_line(int *argc, char* argv[])
 				// fail because option arg is missing
 				return 0;
 			}
+			// Keep a copy to restore after parsing because settings parsing is destructive.
+			strncpy(arg_copy, argv[i + 1], CONFIG_BLEN);
+			arg_copy[CONFIG_BLEN - 1] = '\0';
 			if (!parse_amiberry_settings_line("<command line>", argv[i + 1]))
 			{
 				// fail because on cmd line we require correctly formatted setting in option arg
 				return 0;
 			}
+			strcpy(argv[i + 1], arg_copy);
+			if (!remove_used_args)
+				continue;
 			// shift all args after the found one by 2
 			for (j = i + 2; j < *argc; j++)
 			{
@@ -2887,9 +2896,8 @@ static int parse_amiberry_cmd_line(int *argc, char* argv[])
 	return 1;
 }
 
-void load_amiberry_settings(void)
+static void init_amiberry_paths(void)
 {
-	char path[MAX_DPATH];
 	strncpy(current_dir, start_path_data, MAX_DPATH - 1);
 	snprintf(config_path, MAX_DPATH, "%s/conf/", start_path_data);
 	snprintf(controllers_path, MAX_DPATH, "%s/controllers/", start_path_data);
@@ -2910,14 +2918,17 @@ void load_amiberry_settings(void)
 	snprintf(rom_path, MAX_DPATH, "%s/kickstarts/", start_path_data);
 #endif
 	snprintf(rp9_path, MAX_DPATH, "%s/rp9/", start_path_data);
-	snprintf(path, MAX_DPATH, "%s/conf/amiberry.conf", start_path_data);
+	snprintf(amiberry_conf_file, MAX_DPATH, "%s/conf/amiberry.conf", start_path_data);
 	snprintf(floppy_sounds_dir, MAX_DPATH, "%s/data/floppy_sounds/", start_path_data);
 	snprintf(data_dir, MAX_DPATH, "%s/", start_path_data);
 	snprintf(saveimage_dir, MAX_DPATH, "%s/savestates/", start_path_data);
 	snprintf(savestate_dir, MAX_DPATH, "%s/savestates/", start_path_data);
 	snprintf(screenshot_dir, MAX_DPATH, "%s/screenshots/", start_path_data);
+}
 
-	auto* const fh = zfile_fopen(path, _T("r"), ZFD_NORMAL);
+void load_amiberry_settings(void)
+{
+	auto* const fh = zfile_fopen(amiberry_conf_file, _T("r"), ZFD_NORMAL);
 	if (fh)
 	{
 		char linea[CONFIG_BLEN];
@@ -2926,7 +2937,7 @@ void load_amiberry_settings(void)
 		{
 			trim_wsa(linea);
 			if (strlen(linea) > 0)
-				parse_amiberry_settings_line(path, linea);
+				parse_amiberry_settings_line(amiberry_conf_file, linea);
 		}
 		zfile_fclose(fh);
 	}
@@ -3047,10 +3058,19 @@ int main(int argc, char* argv[])
 	}
 
 	rename_old_adfdir();
+	init_amiberry_paths();
+	// Parse command line to get possibly set amiberry_config.
+	// Do not remove used args yet.
+	if (!parse_amiberry_cmd_line(&argc, argv, 0))
+	{
+		printf("Error in Amiberry command line option parsing.\n");
+		usage();
+		abort();
+	}
 	load_amiberry_settings();
-	// parse_amiberry_cmd_line will remove amiberry specific configs if found
+	// Parse command line and remove used amiberry specific args
 	// and modify both argc & argv accordingly
-	if (!parse_amiberry_cmd_line(&argc, argv))
+	if (!parse_amiberry_cmd_line(&argc, argv, 1))
 	{
 		printf("Error in Amiberry command line option parsing.\n");
 		usage();
