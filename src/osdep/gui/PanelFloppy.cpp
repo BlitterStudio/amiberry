@@ -88,13 +88,16 @@ static DriveTypeListModel driveTypeList;
 class DriverListModel : public gcn::ListModel
 {
 	std::vector<std::string> types{};
+	std::vector<FloppyBridgeAPI::DriverInformation> driverList{};
 
 public:
 	DriverListModel()
 	{
-		types.emplace_back("Arduino");
-		types.emplace_back("GreaseWeazle");
-		types.emplace_back("SuperCardPro");
+		FloppyBridgeAPI::getDriverList(driverList);
+		for (auto &i : driverList)
+		{
+			types.emplace_back(i.name);
+		}
 	}
 
 	int add_element(const char* elem) override
@@ -578,6 +581,7 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 	lblDBDriver = new gcn::Label("DrawBridge driver:");
 	cboDBDriver = new gcn::DropDown(&driverList);
 	cboDBDriver->setId("cboDBDriver");
+	cboDBDriver->setSize(350, cboDBDriver->getHeight());
 	cboDBDriver->setBaseColor(gui_baseCol);
 	cboDBDriver->setBackgroundColor(colTextboxBackground);
 	cboDBDriver->addActionListener(driverActionListener);
