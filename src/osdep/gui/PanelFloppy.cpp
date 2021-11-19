@@ -33,6 +33,7 @@ static gcn::CheckBox* chkDBSmartSpeed;
 static gcn::CheckBox* chkDBAutoCache;
 static gcn::CheckBox* chkDBCableDriveB;
 
+std::vector<FloppyBridgeAPI::DriverInformation> driver_list{};
 static const char* drive_speed_list[] = {"Turbo", "100% (compatible)", "200%", "400%", "800%"};
 static const int drive_speed_values[] = {0, 100, 200, 400, 800};
 
@@ -88,13 +89,12 @@ static DriveTypeListModel driveTypeList;
 class DriverListModel : public gcn::ListModel
 {
 	std::vector<std::string> types{};
-	std::vector<FloppyBridgeAPI::DriverInformation> driverList{};
 
 public:
 	DriverListModel()
 	{
-		FloppyBridgeAPI::getDriverList(driverList);
-		for (auto &i : driverList)
+		FloppyBridgeAPI::getDriverList(driver_list);
+		for (auto &i : driver_list)
 		{
 			types.emplace_back(i.name);
 		}
@@ -124,7 +124,7 @@ public:
 	}
 };
 
-static DriverListModel driverList;
+static DriverListModel driverNameList;
 
 class DiskfileListModel : public gcn::ListModel
 {
@@ -579,7 +579,7 @@ void InitPanelFloppy(const struct _ConfigCategory& category)
 	cmdCreateHDDisk->addActionListener(createDiskActionListener);
 
 	lblDBDriver = new gcn::Label("DrawBridge driver:");
-	cboDBDriver = new gcn::DropDown(&driverList);
+	cboDBDriver = new gcn::DropDown(&driverNameList);
 	cboDBDriver->setId("cboDBDriver");
 	cboDBDriver->setSize(350, cboDBDriver->getHeight());
 	cboDBDriver->setBaseColor(gui_baseCol);
@@ -764,16 +764,22 @@ void RefreshPanelFloppy()
 		{
 			lblDBDriver->setEnabled(true);
 			cboDBDriver->setEnabled(true);
-			chkDBAutoCache->setEnabled(true);
-			chkDBSmartSpeed->setEnabled(true);
-			chkDBCableDriveB->setEnabled(true);
+			cboDBDriver->setSelected(changed_prefs.drawbridge_driver);
+			chkDBAutoCache->setSelected(changed_prefs.drawbridge_autocache);
+			chkDBSmartSpeed->setSelected(changed_prefs.drawbridge_smartspeed);
+			chkDBCableDriveB->setSelected(changed_prefs.drawbridge_connected_drive_b);
+
+			unsigned int config_options = driver_list[cboDBDriver->getSelected()].configOptions;
+
+			if (config_options & FloppyBridgeAPI::ConfigOption_AutoCache)
+				chkDBAutoCache->setEnabled(true);
+			if (config_options & FloppyBridgeAPI::ConfigOption_SmartSpeed)
+				chkDBSmartSpeed->setEnabled(true);
+			if (config_options & FloppyBridgeAPI::ConfigOption_DriveABCable)
+				chkDBCableDriveB->setEnabled(true);
 			break;
 		}
 	}
-	cboDBDriver->setSelected(changed_prefs.drawbridge_driver);
-	chkDBAutoCache->setSelected(changed_prefs.drawbridge_autocache);
-	chkDBSmartSpeed->setSelected(changed_prefs.drawbridge_smartspeed);
-	chkDBCableDriveB->setSelected(changed_prefs.drawbridge_connected_drive_b);
 }
 
 bool HelpPanelFloppy(std::vector<std::string>& helptext)

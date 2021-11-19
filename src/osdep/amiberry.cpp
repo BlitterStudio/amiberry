@@ -48,6 +48,7 @@
 #include "clipboard.h"
 #include "fsdb.h"
 #include "scsidev.h"
+#include "floppybridge/floppybridge_lib.h"
 #include "threaddep/thread.h"
 #include "uae/uae.h"
 
@@ -3122,9 +3123,9 @@ bool get_plugin_path(TCHAR* out, int len, const TCHAR* path)
 	return TRUE;
 }
 
-void drawbridge_update_profiles(struct uae_prefs* p)
+void drawbridge_update_profiles(uae_prefs* p)
 {
-	char driver = '0' + p->drawbridge_driver;
+	const char driver = '0' + p->drawbridge_driver;
 	drawbridge_profiles[7] = driver;
 	drawbridge_profiles[33] = driver;
 	drawbridge_profiles[54] = driver;
