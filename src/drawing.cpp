@@ -5063,8 +5063,11 @@ void reset_drawing(void)
 
 	last_redraw_point = 0;
 
-	memset (spixels, 0, sizeof spixels);
-	memset (&spixstate, 0, sizeof spixstate);
+	memset(spixels, 0, sizeof spixels);
+	memset(&spixstate, 0, sizeof spixstate);
+	memset(spritepixels_buffer, 0, sizeof(spritepixels_buffer));
+	memset(line_data, 0, sizeof(line_data));
+	memset(ham_linebuf, 0, sizeof(ham_linebuf));
 
 	init_hardware_for_drawing_frame();
 		
