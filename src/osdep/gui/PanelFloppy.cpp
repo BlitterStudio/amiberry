@@ -33,7 +33,7 @@ static gcn::CheckBox* chkDBSmartSpeed;
 static gcn::CheckBox* chkDBAutoCache;
 static gcn::CheckBox* chkDBCableDriveB;
 
-std::vector<FloppyBridgeAPI::DriverInformation> driver_list{};
+static std::vector<FloppyBridgeAPI::DriverInformation> driver_list{};
 static const char* drive_speed_list[] = {"Turbo", "100% (compatible)", "200%", "400%", "800%"};
 static const int drive_speed_values[] = {0, 100, 200, 400, 800};
 
@@ -769,14 +769,17 @@ void RefreshPanelFloppy()
 			chkDBSmartSpeed->setSelected(changed_prefs.drawbridge_smartspeed);
 			chkDBCableDriveB->setSelected(changed_prefs.drawbridge_connected_drive_b);
 
-			unsigned int config_options = driver_list[cboDBDriver->getSelected()].configOptions;
+			if (!driver_list.empty())
+			{
+				unsigned int config_options = driver_list[cboDBDriver->getSelected()].configOptions;
 
-			if (config_options & FloppyBridgeAPI::ConfigOption_AutoCache)
-				chkDBAutoCache->setEnabled(true);
-			if (config_options & FloppyBridgeAPI::ConfigOption_SmartSpeed)
-				chkDBSmartSpeed->setEnabled(true);
-			if (config_options & FloppyBridgeAPI::ConfigOption_DriveABCable)
-				chkDBCableDriveB->setEnabled(true);
+				if (config_options & FloppyBridgeAPI::ConfigOption_AutoCache)
+					chkDBAutoCache->setEnabled(true);
+				if (config_options & FloppyBridgeAPI::ConfigOption_SmartSpeed)
+					chkDBSmartSpeed->setEnabled(true);
+				if (config_options & FloppyBridgeAPI::ConfigOption_DriveABCable)
+					chkDBCableDriveB->setEnabled(true);
+			}
 			break;
 		}
 	}
