@@ -136,7 +136,7 @@ int vpos, vpos_prev, vposh;
 static int hpos_hsync_extra;
 static int vpos_count, vpos_count_diff;
 int lof_store; // real bit in custom registers
-static int lof_current; // what display device thinks
+int lof_display; // what display device thinks
 static bool lof_lastline, lof_prev_lastline;
 static int lol, lol_prev;
 static int next_lineno;
