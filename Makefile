@@ -10,7 +10,12 @@ export SDL_LDFLAGS := $(shell $(SDL_CONFIG) --libs)
 
 CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -DAMIBERRY -D_FILE_OFFSET_BITS=64
 CFLAGS=-pipe -Wno-shift-overflow -Wno-narrowing
-LDFLAGS = $(SDL_LDFLAGS) -lSDL2_image -lSDL2_ttf -lguisan -Lexternal/libguisan/lib -fuse-ld=gold -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed -lpthread -lz -lpng -lrt -lFLAC -lmpg123 -ldl -lmpeg2convert -lmpeg2
+USE_LD ?= gold
+LDFLAGS = $(SDL_LDFLAGS) -lSDL2_image -lSDL2_ttf -lguisan -Lexternal/libguisan/lib
+ifneq ($(strip $(USE_LD)),)
+	LDFLAGS += -fuse-ld=$(USE_LD)
+endif
+LDFLAGS += -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed -lpthread -lz -lpng -lrt -lFLAC -lmpg123 -ldl -lmpeg2convert -lmpeg2
 
 ifndef DEBUG
 	CFLAGS += -O3
@@ -185,9 +190,9 @@ else ifeq ($(PLATFORM),go-advance)
     CPPFLAGS += $(CPPFLAGS64)
     AARCH64 = 1
 
-# Generic Cortex A53 aarch64 target (SDL2, 64-bit)
+# Generic aarch64 target defaulting to Cortex A53 CPU (SDL2, 64-bit)
 else ifeq ($(PLATFORM),a64)
-    CPUFLAGS = -mcpu=cortex-a53
+    CPUFLAGS ?= -mcpu=cortex-a53
     CPPFLAGS += $(CPPFLAGS64)
     AARCH64 = 1
 
