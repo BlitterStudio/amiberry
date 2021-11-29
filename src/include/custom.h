@@ -56,7 +56,7 @@ extern unsigned long int hsync_counter, vsync_counter;
 extern uae_u16 dmacon;
 extern uae_u16 intena, intreq, intreqr;
 
-extern int vpos, lof_store;
+extern int vpos, lof_store, lof_display;
 
 extern int n_frames;
 

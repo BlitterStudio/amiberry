@@ -725,13 +725,19 @@ static uae_u32 REGPARAM2 chipmem_dummy_lget (uaecptr addr)
 	return (chipmem_dummy () << 16) | chipmem_dummy ();
 }
 
+static uae_u32 chipmem_noise(uae_u32 addr)
+{
+	// not yet implemented
+	return 0;
+}
+
 static uae_u32 REGPARAM2 chipmem_agnus_lget (uaecptr addr)
 {
 	uae_u32 *m;
 
 	addr &= chipmem_full_mask;
 	if (addr >= chipmem_full_size - 3)
-		return 0;
+		return chipmem_noise(addr);
 	m = (uae_u32 *)(chipmem_bank.baseaddr + addr);
 	return do_get_mem_long (m);
 }
@@ -742,7 +748,7 @@ uae_u32 REGPARAM2 chipmem_agnus_wget (uaecptr addr)
 
 	addr &= chipmem_full_mask;
 	if (addr >= chipmem_full_size - 1)
-		return 0;
+		return chipmem_noise(addr);
 	m = (uae_u16 *)(chipmem_bank.baseaddr + addr);
 	return do_get_mem_word (m);
 }
@@ -751,7 +757,7 @@ static uae_u32 REGPARAM2 chipmem_agnus_bget (uaecptr addr)
 {
 	addr &= chipmem_full_mask;
 	if (addr >= chipmem_full_size)
-		return 0;
+		return chipmem_noise(addr);
 	return chipmem_bank.baseaddr[addr];
 }
 
@@ -787,6 +793,10 @@ static void REGPARAM2 chipmem_agnus_bput (uaecptr addr, uae_u32 b)
 
 static int REGPARAM2 chipmem_check (uaecptr addr, uae_u32 size)
 {
+	// Check if chip ram is in two "banks" (ECS 0.5m+0.5m config)
+	if (((addr & ~chipmem_bank.mask) & chipmem_full_mask) || (((addr + size) & ~chipmem_bank.mask) & chipmem_full_mask)) {
+		return 0;
+	}
 	addr &= chipmem_bank.mask;
 	return (addr + size) <= chipmem_full_size;
 }
