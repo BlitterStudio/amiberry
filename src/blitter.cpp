@@ -721,13 +721,17 @@ static void blitter_line_decx(void)
 
 static void blitter_line_decy(void)
 {
-	bltcpt -= blt_info.bltcmod;
+	if (bltcon0 & 0x0200) {
+		bltcpt -= blt_info.bltcmod;
+	}
 	blitonedot = 0;
 }
 
 static void blitter_line_incy(void)
 {
-	bltcpt += blt_info.bltcmod;
+	if (bltcon0 & 0x0200) {
+		bltcpt += blt_info.bltcmod;
+	}
 	blitonedot = 0;
 }
 
