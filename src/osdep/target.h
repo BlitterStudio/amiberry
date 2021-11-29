@@ -24,8 +24,8 @@
 #define GETBDM(x) (((x) - (((x) / 10000) * 10000)) / 100)
 #define GETBDD(x) ((x) % 100)
 
-#define AMIBERRYVERSION _T("Amiberry v4.2 beta (2021-11-25)")
-#define AMIBERRYDATE MAKEBD(2021, 11, 25)
+#define AMIBERRYVERSION _T("Amiberry v4.2 beta (2021-11-29)")
+#define AMIBERRYDATE MAKEBD(2021, 11, 29)
 
 #define IHF_WINDOWHIDDEN 6
 
