@@ -140,7 +140,7 @@ int detected_screen_resolution;
 #define AUTO_LORES_FRAMES 10
 static int can_use_lores = 0, frame_res, frame_res_lace;
 static int resolution_count[RES_MAX + 1], lines_count;
-static bool center_reset;
+static int center_reset;
 static bool init_genlock_data;
 bool need_genlock_data;
 
@@ -496,7 +496,7 @@ static void reset_custom_limits(void)
 {
 	gclow = gcloh = gclox = gcloy = 0;
 	gclorealh = -1;
-	center_reset = true;
+	center_reset = 1;
 }
 
 static void reset_hblanking_limits(void)
@@ -940,7 +940,7 @@ int get_custom_limits (int *pw, int *ph, int *pdx, int *pdy, int *prealh)
 		plffirstline_total, plflastline_total,
 		first_planes_vpos, last_planes_vpos, minfirstline);
 #endif
-	center_reset = true;
+	center_reset = 1;
 	return 1;
 }
 
@@ -3753,7 +3753,7 @@ static void center_image (void)
 		else
 			visible_left_border = max_diwstop - w - (max_diwstop - min_diwstart - w) / 2;
 		visible_left_border &= ~((xshift (1, lores_shift)) - 1);
-#if 1
+
 		if (!center_reset && !vertical_changed) {
 			/* Would the old value be good enough? If so, leave it as it is if we want to be clever. */
 			if (currprefs.gfx_xcenter == 2) {
@@ -3761,7 +3761,7 @@ static void center_image (void)
 					visible_left_border = prev_x_adjust;
 			}
 		}
-#endif
+
 	} else if (ew == -1) {
 		// wide mode
 		int hs = hsync_end_left_border * 2;
@@ -3810,21 +3810,28 @@ static void center_image (void)
 	max_drawn_amiga_line_tmp >>= linedbl;
 	
 	thisframe_y_adjust = minfirstline;
-	if (currprefs.gfx_ycenter && thisframe_first_drawn_line >= 0 && !currprefs.gf[0].gfx_filter_autoscale) {
+	if (currprefs.gfx_ycenter && !currprefs.gf[0].gfx_filter_autoscale) {
 
-		if (thisframe_last_drawn_line - thisframe_first_drawn_line < max_drawn_amiga_line_tmp && currprefs.gfx_ycenter == 2)
-			thisframe_y_adjust = (thisframe_last_drawn_line - thisframe_first_drawn_line - max_drawn_amiga_line_tmp) / 2 + thisframe_first_drawn_line;
-		else
-			thisframe_y_adjust = thisframe_first_drawn_line;
-#if 1
-		/* Would the old value be good enough? If so, leave it as it is if we want to be clever. */
-		if (!center_reset && !horizontal_changed) {
-			if (currprefs.gfx_ycenter == 2 && thisframe_y_adjust != prev_y_adjust) {
-				if (prev_y_adjust <= thisframe_first_drawn_line && prev_y_adjust + max_drawn_amiga_line_tmp > thisframe_last_drawn_line)
-					thisframe_y_adjust = prev_y_adjust;
+		if (thisframe_first_drawn_line >= 0 && thisframe_last_drawn_line > thisframe_first_drawn_line) {
+
+			if (thisframe_last_drawn_line - thisframe_first_drawn_line < max_drawn_amiga_line_tmp && currprefs.gfx_ycenter == 2)
+				thisframe_y_adjust = (thisframe_last_drawn_line - thisframe_first_drawn_line - max_drawn_amiga_line_tmp) / 2 + thisframe_first_drawn_line;
+			else
+				thisframe_y_adjust = thisframe_first_drawn_line;
+
+			/* Would the old value be good enough? If so, leave it as it is if we want to be clever. */
+			if (!center_reset && !horizontal_changed) {
+				if (currprefs.gfx_ycenter == 2 && thisframe_y_adjust != prev_y_adjust && abs(thisframe_y_adjust - prev_y_adjust) < 16) {
+					if (prev_y_adjust <= thisframe_first_drawn_line && prev_y_adjust + max_drawn_amiga_line_tmp > thisframe_last_drawn_line)
+						thisframe_y_adjust = prev_y_adjust;
+				}
 			}
+
+		} else {
+
+			center_reset = 2;
+
 		}
-#endif
 	}
 
 	/* Make sure the value makes sense */
@@ -3848,7 +3855,9 @@ static void center_image (void)
 	vidinfo->drawbuffer.xoffset = (DISPLAY_LEFT_SHIFT << RES_MAX) + (visible_left_border << (RES_MAX - currprefs.gfx_resolution));
 	vidinfo->drawbuffer.yoffset = thisframe_y_adjust << VRES_MAX;
 
-	center_reset = false;
+	if (center_reset > 0) {
+		center_reset--;
+	}
 	horizontal_changed = false;
 	vertical_changed = false;
 }
@@ -5081,7 +5090,7 @@ void reset_drawing(void)
 	clearbuffer (&vidinfo->drawbuffer);
 	clearbuffer (&vidinfo->tempbuffer);
 
-	center_reset = true;
+	center_reset = 1;
 	ad->specialmonitoron = false;
 	bplcolorburst_field = 1;
 	hsync_shift_hack = 0;
