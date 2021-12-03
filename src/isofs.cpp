@@ -2386,7 +2386,7 @@ static int do_isofs_readdir(struct inode *inode, struct file *filp, char *tmpnam
 				else {
 					char t = p[len];
 					p[len] = 0;
-					au_copy (outname, MAX_DPATH, p);
+					au_fs_copy (outname, MAX_DPATH, p);
 					p[len] = t;
 				}
 			} else {
@@ -2559,7 +2559,7 @@ bool isofs_exists(void *sbp, uae_u64 parent, const TCHAR *name, uae_u64 *uniq)
 
 	if (!inode)
 		return false;
-	ua_copy(tmp3, sizeof tmp3, name);
+	ua_fs_copy(tmp3, sizeof tmp3, name, '_');
 	inode = isofs_find_entry(inode, tmp1, tmp1x, (struct iso_directory_record*)tmp2, tmp3, name);
 	if (inode) {
 		*uniq = inode->i_ino;
