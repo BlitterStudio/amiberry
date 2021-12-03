@@ -697,6 +697,10 @@ void check_custom_limits(void)
 	int top = fd->gfx_filter_top_border < 0 ? 0 : fd->gfx_filter_top_border;
 	int bottom = fd->gfx_filter_bottom_border < 0 ? 0 : fd->gfx_filter_bottom_border;
 
+	// backwards compatibility, old 0x38 start is gone.
+	left += (0x38 * 4) >> (RES_MAX - currprefs.gfx_resolution);
+	right += (0x38 * 4) >> (RES_MAX - currprefs.gfx_resolution);
+
 	if (left > visible_left_start)
 		visible_left_start = left;
 	if (right > left && right < visible_right_stop)
