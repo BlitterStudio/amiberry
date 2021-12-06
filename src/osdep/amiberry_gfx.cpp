@@ -547,6 +547,7 @@ int graphics_setup(void)
 
 void updatedisplayarea(int monid)
 {
+	set_custom_limits(-1, -1, -1, -1);
 	show_screen(monid, 0);
 }
 
