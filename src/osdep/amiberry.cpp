@@ -2654,16 +2654,16 @@ void save_amiberry_settings(void)
 	snprintf(buffer, MAX_DPATH, "floppy_sounds_dir=%s\n", floppy_sounds_dir);
 	fputs(buffer, f);
 
-	snprintf(buffer, MAX_DPATH, "data_dir=%s\n", rom_path);
+	snprintf(buffer, MAX_DPATH, "data_dir=%s\n", data_dir);
 	fputs(buffer, f);
 
-	snprintf(buffer, MAX_DPATH, "saveimage_dir=%s\n", rom_path);
+	snprintf(buffer, MAX_DPATH, "saveimage_dir=%s\n", saveimage_dir);
 	fputs(buffer, f);
 
-	snprintf(buffer, MAX_DPATH, "savestate_dir=%s\n", rom_path);
+	snprintf(buffer, MAX_DPATH, "savestate_dir=%s\n", savestate_dir);
 	fputs(buffer, f);
 
-	snprintf(buffer, MAX_DPATH, "screenshot_dir=%s\n", rom_path);
+	snprintf(buffer, MAX_DPATH, "screenshot_dir=%s\n", screenshot_dir);
 	fputs(buffer, f);
 
 	// The number of ROMs in the last scan
