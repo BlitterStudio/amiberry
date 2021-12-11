@@ -323,7 +323,7 @@ void MISC_handler (void)
 		return;
 	}
 	recursive++;
-	eventtab[ev_misc].active = false;
+	eventtab[ev_misc].active = 0;
 	recheck = true;
 	while (recheck) {
 		recheck = false;
@@ -339,7 +339,7 @@ void MISC_handler (void)
 						dorecheck = false;
 					}
 				} else {
-					auto eventtime = eventtab2[i].evtime - ct;
+					evt eventtime = eventtab2[i].evtime - ct;
 					if (eventtime < mintime)
 						mintime = eventtime;
 				}
@@ -358,9 +358,10 @@ void MISC_handler (void)
 
 void event2_newevent_xx (int no, evt t, uae_u32 data, evfunc2 func)
 {
+	evt et;
 	static int next = ev2_misc;
 
-	auto et = t + get_cycles ();
+	et = t + get_cycles ();
 	if (no < 0) {
 		no = next;
 		for (;;) {
@@ -421,7 +422,7 @@ void event2_newevent_x_replace(evt t, uae_u32 data, evfunc2 func)
 
 int current_hpos (void)
 {
-	int hp = current_hpos_safe ();
+	int hp = current_hpos_safe();
 	if (hp < 0 || hp > 256) {
 		gui_message(_T("hpos = %d!?\n"), hp);
 		hp = 0;

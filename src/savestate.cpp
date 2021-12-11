@@ -295,8 +295,8 @@ static TCHAR *state_resolve_path(TCHAR *s, int type, bool newmode)
 	} else {
 		get_file_part (tmp, sizeof tmp / sizeof (TCHAR), s);
 		if (state_path_exists(tmp, type)) {
-			xfree (s);
-			return my_strdup (tmp);
+			xfree(s);
+			return my_strdup(tmp);
 		}
 	}
 	for (int i = 0; i < MAX_PATHS; i++) {
@@ -650,8 +650,8 @@ void restore_state (const TCHAR *filename)
 			end = restore_cpu (chunk);
 		} else if (!_tcscmp (name, _T("CPUX")))
 			end = restore_cpu_extra (chunk);
-		//else if (!_tcscmp (name, _T("CPUT")))
-		//	end = restore_cpu_trace (chunk);
+		else if (!_tcscmp (name, _T("CPUT")))
+			end = restore_cpu_trace (chunk);
 #ifdef FPUEMU
 		else if (!_tcscmp (name, _T("FPU ")))
 			end = restore_fpu (chunk);
@@ -948,9 +948,9 @@ static int save_state_internal (struct zfile *f, const TCHAR *description, int c
 	save_chunk (f, dst, len, _T("CPUX"), 0);
 	xfree (dst);
 
-	//dst = save_cpu_trace (&len, 0);
-	//save_chunk (f, dst, len, _T("CPUT"), 0);
-	//xfree (dst);
+	dst = save_cpu_trace (&len, 0);
+	save_chunk (f, dst, len, _T("CPUT"), 0);
+	xfree (dst);
 
 #ifdef FPUEMU
 	dst = save_fpu (&len,0 );
@@ -1864,7 +1864,7 @@ retry2:
 	//	input_record++;
 	//	for (i = 0; i < 4; i++) {
 	//		bool wp = true;
-	//		DISK_validate_filename (&currprefs, currprefs.floppyslots[i].df, NULL, false, &wp, NULL, NULL);
+	//		DISK_validate_filename (&currprefs, currprefs.floppyslots[i].df, i, NULL, false, &wp, NULL, NULL);
 	//		inprec_recorddiskchange (i, currprefs.floppyslots[i].df, wp);
 	//	}
 	//	input_record--;

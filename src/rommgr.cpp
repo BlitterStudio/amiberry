@@ -19,6 +19,8 @@
 #include "autoconf.h"
 #include "filesys.h"
 
+#define SAVE_ROM 0
+
 static struct romlist *rl;
 static int romlist_cnt;
 
@@ -971,6 +973,12 @@ static void romlist_cleanup (void)
 		}
 		i++;
 	}
+#if 0
+	for (i = 0; i < romlist_cnt; i++) {
+		struct romlist *rll = &rl[i];
+		write_log (_T("%d: %08x %s (%s)\n"), rll->rd->id, rll->rd->group, rll->rd->name, rll->path);
+	}
+#endif
 }
 
 struct romlist **getromlistbyident (int ver, int rev, int subver, int subrev, const TCHAR *model, int romflags, bool all)
@@ -1482,7 +1490,9 @@ int decode_rom (uae_u8 *mem, int size, int mode, int real_size)
 {
 	if (mode == 1) {
 		if (!decode_cloanto_rom_do (mem, size, real_size)) {
+#ifndef SINGLEFILE
 			notify_user (NUMSG_NOROMKEY);
+#endif
 			return 0;
 		}
 		return 1;
@@ -1508,6 +1518,16 @@ struct romdata *getromdatabydata (uae_u8 *rom, int size)
 		rom = tmpbuf;
 		size = tmpsize;
 	}
+#if 0
+	if (size > 0x6c + 524288 && !memcmp (rom, "AMIG", 4)) {
+		uae_u8 *tmpbuf = (uae_u8*)xmalloc (uae_u8, size);
+		int tmpsize = size - 0x6c;
+		memcpy (tmpbuf, rom + 0x6c, tmpsize);
+		decode_rom (tmpbuf, tmpsize, 2, tmpsize);
+		rom = tmpbuf;
+		size = tmpsize;
+	}
+#endif
 	get_sha1 (rom, size, sha1);
 	ret = checkromdata(sha1, size, -1);
 	if (!ret) {
@@ -1630,7 +1650,6 @@ struct romlist *getromlistbyids (const int *ids, const TCHAR *romname)
 	return NULL;
 }
 
-static
 struct romdata *getromdatabyids (const int *ids)
 {
 	struct romdata *rd;
@@ -1736,6 +1755,14 @@ static void mergecd32 (uae_u8 *dst, uae_u8 *src, int size)
 		dst[k + 2] = src[j + 1];
 		k += 4;
 	}
+#if 0
+	{
+		struct zfile *f;
+		f = zfile_fopen ("c:\\d\\1.rom","wb", ZFD_NORMAL);
+		zfile_fwrite (dst, 1, size, f);
+		zfile_fclose(f);
+	}
+#endif
 }
 
 static void descramble (const struct romdata *rd, uae_u8 *data, int size, int odd)
@@ -1769,6 +1796,16 @@ static int read_rom_file (uae_u8 *buf, const struct romdata *rd)
 	zfile_fclose (zf);
 	return 1;
 }
+
+#if SAVE_ROM
+static void save_rom(uae_u8 *rom, int size)
+{
+	struct zfile *f;
+	f = zfile_fopen (_T("c:\\temp\\1.rom"), _T("wb"));
+	zfile_fwrite (rom, 1, size, f);
+	zfile_fclose(f);
+}
+#endif
 
 struct zfile *read_rom (struct romdata *prd)
 {
@@ -1881,6 +1918,10 @@ struct zfile *read_rom (struct romdata *prd)
 				add = 2;
 			}
 
+#if SAVE_ROM
+			save_rom(buf, size);
+#endif
+
 			if (notcrc32(crc32) || get_crc32(buf, size) == crc32) {
 				ok = 1;
 			}
@@ -1901,6 +1942,32 @@ struct zfile *read_rom (struct romdata *prd)
 					ok = 1;
 				if (!ok)
 					byteswap(buf, size);
+			}
+			if (ok) {
+				if (rd->id == 197) {
+					// ALG Platoon
+					uae_u8 *tmp = xmalloc(uae_u8, size);
+					if (tmp) {
+						memcpy(tmp, buf, size);
+						static const int platoon[] = { 0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15,16,24,20,28,18,26,22,30,17,25,21,29,19,27,23,31 };
+						for (int i = 0; i < 32; i++) {
+							memcpy(buf + i * 0x2000, tmp + platoon[i] * 0x2000, 0x2000);
+						}
+						xfree(tmp);
+					}
+				} else if (rd->id == 182) {
+					// ALG Space Pirates
+					uae_u8 *tmp = xmalloc(uae_u8, size);
+					if (tmp) {
+						memcpy(tmp, buf, size);
+						static const int sp[] = { 33,32,34,35,49,48,50,51,45,44,46,47,61,60,62,63,37,36,38,39,53,52,54,55,41,40,42,43,57,56,58,59,
+						33,32,34,35,49,48,50,51,45,44,46,47,61,60,62,63,37,36,38,39,53,52,54,55,41,40,42,43,57,56,58,59 };
+						for (int i = 0; i < 64; i++) {
+							memcpy(buf + i * 0x1000, tmp + sp[i] * 0x1000, 0x1000);
+						}
+						xfree(tmp);
+					}
+				}
 			}
 			if (ok) {
 				struct zfile *zf = zfile_fopen_empty (NULL, name, size);
@@ -2092,7 +2159,9 @@ void kickstart_fix_checksum (uae_u8 *mem, int size)
 int kickstart_checksum (uae_u8 *mem, int size)
 {
 	if (!kickstart_checksum_do (mem, size)) {
+#ifndef	SINGLEFILE
 		notify_user (NUMSG_KSROMCRCERROR);
+#endif
 		return 0;
 	}
 	return 1;
@@ -2405,6 +2474,60 @@ struct boardromconfig *get_boardromconfig(struct uae_prefs *p, int romtype, int 
 	return NULL;
 }
 
+static struct zfile *parse_trumpcard_driver(struct zfile *z)
+{
+	int size;
+	uae_u8 *dp = zfile_getdata(z, 0, -1, &size);
+	if (!dp)
+		return z;
+	if (dp[0] != 0x00 || dp[1] != 0x00 || dp[2] != 0x03 || dp[3] != 0xf3) {
+		xfree(dp);
+		return z;
+	}
+	uae_u8 *d = dp + 0x1c + dp[11] * 4;
+	if (dp >= dp + size) {
+		xfree(dp);
+		return z;
+	}
+	struct zfile *zd = zfile_fopen_empty(NULL, zfile_getname(z), 16384);
+	int i, out;
+	out = 0;
+	for (i = 0; i < size - 4; i++) {
+		if (d[i] == 0x4e && d[i + 1] == 0x71 && d[i + 2] == 0x4e && d[i + 3] == 0x71)
+			break;
+		uae_u8 v;
+		v = (d[i] & 0xf0) | 0x0f;
+		zfile_fwrite(&v, 1, 1, zd);
+		v = (d[i] << 4) | 0x0f;
+		zfile_fwrite(&v, 1, 1, zd);
+		out += 2;
+	}
+	int datastart = i;
+	for (; i < size - 4; i += 2) {
+		if (d[i] == 0x66 && d[i + 1] == 0x66 && d[i + 2] == 0x99 && d[i + 3] == 0x99) {
+			zfile_fwrite(&d[datastart], i - datastart + 4, 1, zd);
+			out += i - datastart + 4;
+			break;
+		}
+	}
+	uae_u8 zero = 0;
+	while (out & 15) {
+		zfile_fwrite(&zero, 1, 1, zd);
+		out++;
+	}
+	for (i = 0; i < 16; i++)  {
+		zfile_fwrite(&zero, 1, 1, zd);
+		out++;
+	}
+	zero = 0xff;
+	while (out < 16384) {
+		zfile_fwrite(&zero, 1, 1, zd);
+		out++;
+	}
+	xfree(dp);
+	return zd;
+}
+
 bool load_rom_rc(struct romconfig *rc, uae_u32 romtype, int maxfilesize, int fileoffset, uae_u8 *rom, int maxromsize, int flags)
 {
 	if (flags & LOADROM_ONEFILL)
@@ -2415,6 +2538,9 @@ bool load_rom_rc(struct romconfig *rc, uae_u32 romtype, int maxfilesize, int fil
 	if (!f)
 		return false;
 	TCHAR *ext = _tcsrchr(zfile_getname(f), '.');
+	if ((romtype == ROMTYPE_IVSTPRO || romtype == ROMTYPE_IVSTC || romtype == ROMTYPE_IVST500AT) && ext && !_tcsicmp(ext, _T(".driver"))) {
+		f = parse_trumpcard_driver(f);
+	}
 	zfile_fseek(f, fileoffset, SEEK_SET);
 	int cnt = 0;
 	int pos = 0;

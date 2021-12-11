@@ -255,6 +255,12 @@ static void gary_wait(uaecptr addr, int size, bool write)
 {
 	static int cnt = 50;
 
+#if 0
+	int lines = 313 * 12;
+	while (lines-- > 0)
+		x_do_cycles(228 * CYCLE_UNIT);
+#endif
+
 	if (cnt > 0) {
 		write_log (_T("Gary timeout: %08x %d %c PC=%08x\n"), addr, size, write ? 'W' : 'R', M68K_GETPC);
 		cnt--;
@@ -725,13 +731,19 @@ static uae_u32 REGPARAM2 chipmem_dummy_lget (uaecptr addr)
 	return (chipmem_dummy () << 16) | chipmem_dummy ();
 }
 
+static uae_u32 chipmem_noise(uae_u32 addr)
+{
+	// not yet implemented
+	return 0;
+}
+
 static uae_u32 REGPARAM2 chipmem_agnus_lget (uaecptr addr)
 {
 	uae_u32 *m;
 
 	addr &= chipmem_full_mask;
 	if (addr >= chipmem_full_size - 3)
-		return 0;
+		return chipmem_noise(addr);
 	m = (uae_u32 *)(chipmem_bank.baseaddr + addr);
 	return do_get_mem_long (m);
 }
@@ -742,7 +754,7 @@ uae_u32 REGPARAM2 chipmem_agnus_wget (uaecptr addr)
 
 	addr &= chipmem_full_mask;
 	if (addr >= chipmem_full_size - 1)
-		return 0;
+		return chipmem_noise(addr);
 	m = (uae_u16 *)(chipmem_bank.baseaddr + addr);
 	return do_get_mem_word (m);
 }
@@ -751,7 +763,7 @@ static uae_u32 REGPARAM2 chipmem_agnus_bget (uaecptr addr)
 {
 	addr &= chipmem_full_mask;
 	if (addr >= chipmem_full_size)
-		return 0;
+		return chipmem_noise(addr);
 	return chipmem_bank.baseaddr[addr];
 }
 
@@ -791,6 +803,10 @@ static void REGPARAM2 chipmem_agnus_bput (uaecptr addr, uae_u32 b)
 
 static int REGPARAM2 chipmem_check (uaecptr addr, uae_u32 size)
 {
+	// Check if chip ram is in two "banks" (ECS 0.5m+0.5m config)
+	if (((addr & ~chipmem_bank.mask) & chipmem_full_mask) || (((addr + size) & ~chipmem_bank.mask) & chipmem_full_mask)) {
+		return 0;
+	}
 	addr &= chipmem_bank.mask;
 	return (addr + size) <= chipmem_full_size;
 }
@@ -992,6 +1008,12 @@ static void REGPARAM2 kickmem_lput (uaecptr addr, uae_u32 b)
 		addr &= kickmem_bank.mask;
 		m = (uae_u32 *)(kickmem_bank.baseaddr + addr);
 		do_put_mem_long (m, b);
+#if 0
+		if (addr == ROM_SIZE_512-4) {
+			rom_write_enabled = false;
+			write_log (_T("ROM write disabled\n"));
+		}
+#endif
 	} else if (a1000_kickstart_mode) {
 		if (addr >= 0xfc0000) {
 			addr &= kickmem_bank.mask;
@@ -1167,9 +1189,10 @@ uae_u8 *REGPARAM2 default_xlate (uaecptr addr)
 					}
 					write_log (_T("\n"));
 				}
-				//memory_map_dump ();
+				//memory_map_dump();
+				//m68k_dumpstate(NULL, 0xffffffff);
 			}
-			if (gary_toenb && (gary_nonrange(addr) || (size > 1 && gary_nonrange(addr + size - 1)))) {
+			if (0 || (gary_toenb && (gary_nonrange(addr) || (size > 1 && gary_nonrange(addr + size - 1))))) {
 				hardware_exception2(addr, 0, true, true, size);
 			} else {
 				cpu_halt(CPU_HALT_OPCODE_FETCH_FROM_NON_EXISTING_ADDRESS);
@@ -1452,6 +1475,12 @@ static int read_kickstart (struct zfile *f, uae_u8 *mem, int size, int dochecksu
 	if (!memcmp (buffer, "KICK", 4)) {
 		zfile_fseek (f, 512, SEEK_SET);
 		kickdisk = 1;
+#if 0
+	} else if (size >= ROM_SIZE_512 && !memcmp (buffer, "AMIG", 4)) {
+		/* ReKick */
+		zfile_fseek (f, oldpos + 0x6c, SEEK_SET);
+		cr = 2;
+#endif
 	} else if (memcmp ((uae_char*)buffer, "AMIROMTYPE1", 11) != 0) {
 		zfile_fseek (f, oldpos, SEEK_SET);
 	} else {
@@ -1474,6 +1503,12 @@ static int read_kickstart (struct zfile *f, uae_u8 *mem, int size, int dochecksu
 
 	if (kickdisk && i > ROM_SIZE_256)
 		i = ROM_SIZE_256;
+#if 0
+	if (i >= ROM_SIZE_256 && (i != ROM_SIZE_256 && i != ROM_SIZE_512 && i != ROM_SIZE_512 * 2 && i != ROM_SIZE_512 * 4)) {
+		notify_user (NUMSG_KSROMREADERROR);
+		return 0;
+	}
+#endif
 	if (i < size - 20)
 		kickstart_fix_checksum (mem, size);
 	j = 1;
@@ -2277,6 +2312,12 @@ void map_overlay (int chip)
 	if (bogomem_aliasing)
 		size = 8;
 	cb = &chipmem_bank;
+#ifdef AGA
+#if 0
+	if (currprefs.cpu_cycle_exact && currprefs.cpu_model >= 68020)
+		cb = &chipmem_bank_ce2;
+#endif
+#endif
 	if (chip) {
 		map_banks (&dummy_bank, 0, size, 0);
 		if (!isdirectjit ()) {
@@ -2868,7 +2909,7 @@ static addrbank *get_bank_cpu_thread(addrbank *bank)
 		at = xcalloc(addrbank_thread, 1);
 	thread_banks[thread_banks_used++] = at;
 	at->orig = bank;
-	memcpy(&at->ab, bank, sizeof addrbank);
+	memcpy(&at->ab, bank, sizeof at->ab);
 	addrbank *tb = &at->ab;
 	tb->jit_read_flag = S_READ;
 	tb->jit_write_flag = S_WRITE;

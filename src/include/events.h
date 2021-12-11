@@ -14,6 +14,8 @@
 
 #include "uae/types.h"
 
+#undef EVENT_DEBUG
+
 #include "machdep/rpt.h"
 
 extern frame_time_t vsyncmintime, vsyncmintimepre;
@@ -64,7 +66,7 @@ struct ev2
 
 enum {
     ev_copper, 
-    ev_cia, ev_audio, ev_misc, ev_hsync,
+    ev_cia, ev_audio, ev_misc, ev_hsync, ev_hsynch,
     ev_max
 };
 
@@ -111,6 +113,7 @@ STATIC_INLINE void set_cycles (unsigned long int x)
 {
 	currcycle = x;
 	eventtab[ev_hsync].oldcycles = x;
+    eventtab[ev_hsynch].active = 0;
 }
 
 STATIC_INLINE int current_hpos_safe (void)
@@ -151,7 +154,7 @@ STATIC_INLINE void event2_newevent2 (evt t, uae_u32 data, evfunc2 func)
 
 STATIC_INLINE void event2_remevent (int no)
 {
-	eventtab2[no].active = false;
+	eventtab2[no].active = 0;
 }
 
 #endif /* UAE_EVENTS_H */

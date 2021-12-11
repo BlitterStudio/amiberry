@@ -12,6 +12,8 @@
 #include "uae/types.h"
 #include "machdep/rpt.h"
 
+extern bool aga_mode, ecs_agnus, ecs_denise, direct_rgb;
+
 /* These are the masks that are ORed together in the chipset_mask option.
 * If CSMASK_AGA is set, the ECS bits are guaranteed to be set as well.  */
 #define CSMASK_ECS_AGNUS 1
@@ -27,7 +29,7 @@
 #define MAXVPOS_LINES_OCS 512
 #define HPOS_SHIFT 3
 
-#define BLIT_NASTY_CPU_STEAL_CYCLE_COUNT 4
+#define BLIT_NASTY_CPU_STEAL_CYCLE_COUNT 3
 
 uae_u32 get_copper_address (int copno);
 
@@ -53,7 +55,7 @@ extern void set_picasso_hack_rate(int hz);
 /* Set to 1 to leave out the current frame in average frame time calculation.
 * Useful if the debugger was active.  */
 extern int bogusframe;
-extern unsigned long int hsync_counter;
+extern unsigned long int hsync_counter, vsync_counter;
 
 extern uae_u16 dmacon;
 extern uae_u16 intena, intreq, intreqr;

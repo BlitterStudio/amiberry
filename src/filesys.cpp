@@ -1904,8 +1904,10 @@ bool filesys_heartbeat(void)
 // This uses filesystem process to reduce resource usage
 void setsystime (void)
 {
+	write_log("SETSYSTIME\n");
 	if (!currprefs.tod_hack || !rtarea_bank.baseaddr)
 		return;
+	write_log("SETSYSTIME2\n");
 	heartbeat = get_long_host(rtarea_bank.baseaddr + RTAREA_HEARTBEAT);
 	heartbeat_task = 1;
 	heartbeat_count = 10;

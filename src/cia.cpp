@@ -1946,24 +1946,17 @@ static void cia_wait_pre (int cianummask)
 		cia_interrupt_disabled |= cianummask;
 	}
 
-	int div = (get_cycles () - eventtab[ev_cia].oldcycles) % DIV10;
-	int cycles;
-
-	if (div >= DIV10 * ECLOCK_DATA_CYCLE / 10) {
-		cycles = DIV10 - div;
-		cycles += DIV10 * ECLOCK_DATA_CYCLE / 10;
-	} else if (div) {
-		cycles = DIV10 + DIV10 * ECLOCK_DATA_CYCLE / 10 - div;
-	} else {
-		cycles = DIV10 * ECLOCK_DATA_CYCLE / 10 - div;
-	}
-
+#ifndef CUSTOM_SIMPLE
+	uae_u32 diff = get_cycles() - eventtab[ev_cia].oldcycles;
+	int div = diff % DIV10;
+	int cycles = DIV10 - div;
 	if (cycles) {
 		//if (currprefs.cpu_memory_cycle_exact)
 			//x_do_cycles_pre (cycles);
 		//else
-			do_cycles (cycles);
+			do_cycles(cycles);
 	}
+#endif
 }
 
 static void cia_wait_post (int cianummask, uae_u32 value)
@@ -2122,10 +2115,10 @@ static uae_u32 REGPARAM2 cia_bget (uaecptr addr)
 			v = (addr & 1) ? regs.irc : regs.irc >> 8;
 			cia_wait_post (0, v);
 		}
-		//if (warned > 0 || currprefs.illegal_mem) {
-		//	write_log (_T("cia_bget: unknown CIA address %08X=%02X PC=%08X\n"), addr, v & 0xff, M68K_GETPC);
-		//	warned--;
-		//}
+		if (warned > 0 || currprefs.illegal_mem) {
+			write_log (_T("cia_bget: unknown CIA address %08X=%02X PC=%08X\n"), addr, v & 0xff, M68K_GETPC);
+			warned--;
+		}
 		break;
 	}
 #ifdef ACTION_REPLAY
@@ -2181,10 +2174,10 @@ static uae_u32 REGPARAM2 cia_wget (uaecptr addr)
 			v = regs.irc;
 			cia_wait_post (0, v);
 		}
-		//if (warned > 0 || currprefs.illegal_mem) {
-		//	write_log (_T("cia_wget: unknown CIA address %08X=%04X PC=%08X\n"), addr, v & 0xffff, M68K_GETPC);
-		//	warned--;
-		//}
+		if (warned > 0 || currprefs.illegal_mem) {
+			write_log (_T("cia_wget: unknown CIA address %08X=%04X PC=%08X\n"), addr, v & 0xffff, M68K_GETPC);
+			warned--;
+		}
 		break;
 	}
 	if (addr & 1)
