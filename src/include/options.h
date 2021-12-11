@@ -16,8 +16,8 @@
 #include "traps.h"
 
 #define UAEMAJOR 4
-#define UAEMINOR 1
-#define UAESUBREV 5
+#define UAEMINOR 2
+#define UAESUBREV 0
 
 #define MAX_AMIGADISPLAYS 1
 
@@ -47,7 +47,7 @@ struct multipath
 struct strlist
 {
 	struct strlist* next;
-	TCHAR *option, *value;
+	TCHAR* option, * value;
 	int unknown;
 };
 
@@ -66,6 +66,17 @@ struct strlist
 #define SPARE_SUB_EVENT 8
 
 #define INTERNALEVENT_COUNT 1
+
+#if 0
+struct uae_input_device_event
+{
+	uae_s16 eventid[MAX_INPUT_SUB_EVENT_ALL];
+	TCHAR* custom[MAX_INPUT_SUB_EVENT_ALL];
+	uae_u64 flags[MAX_INPUT_SUB_EVENT_ALL];
+	uae_u8 port[MAX_INPUT_SUB_EVENT_ALL];
+	uae_s16 extra;
+};
+#endif
 
 struct uae_input_device
 {
@@ -103,7 +114,7 @@ struct jport
 	int mode{}; // 0=default,1=wheel mouse,2=mouse,3=joystick,4=gamepad,5=analog joystick,6=cdtv,7=cd32
 	int submode;
 	int autofire{};
-	struct inputdevconfig idc{};
+	struct inputdevconfig idc {};
 	bool nokeyboardoverride{};
 	bool changed{};
 #ifdef AMIBERRY
@@ -172,6 +183,7 @@ struct floppyslot
 	int dfxclick;
 	TCHAR dfxclickexternal[256];
 	bool forcedwriteprotect;
+	TCHAR config[256];
 };
 
 #define ASPECTMULT 1024
@@ -322,13 +334,16 @@ enum
 #define MONITOREMU_OPALVISION 11
 #define MONITOREMU_COLORBURST 12
 
+#define OVERSCANMODE_OVERSCAN 3
+#define OVERSCANMODE_BROADCAST 4
+#define OVERSCANMODE_EXTREME 5
+
 #define MAX_FILTERSHADERS 4
 
 #define MAX_CHIPSET_REFRESH 10
 #define MAX_CHIPSET_REFRESH_TOTAL (MAX_CHIPSET_REFRESH + 2)
 #define CHIPSET_REFRESH_PAL (MAX_CHIPSET_REFRESH + 0)
 #define CHIPSET_REFRESH_NTSC (MAX_CHIPSET_REFRESH + 1)
-
 struct chipset_refresh
 {
 	bool inuse;
@@ -407,7 +422,6 @@ struct gfx_filterdata
 #define MAX_EXPANSION_BOARDS 20
 #define ROMCONFIG_CONFIGTEXT_LEN 256
 struct boardromconfig;
-
 struct romconfig
 {
 	TCHAR romfile[MAX_DPATH];
@@ -426,9 +440,7 @@ struct romconfig
 	uae_u8 autoconfig[16];
 	struct boardromconfig* back;
 };
-
 #define MAX_BOARD_ROMS 2
-
 struct boardromconfig
 {
 	int device_type;
@@ -447,16 +459,13 @@ struct rtgboardconfig
 	int device_order;
 	int monitor_id;
 };
-
 struct boardloadfile
 {
 	uae_u32 loadoffset;
 	uae_u32 fileoffset, filesize;
 	TCHAR loadfile[MAX_DPATH];
 };
-
 #define MAX_ROM_BOARDS 4
-
 struct romboard
 {
 	uae_u32 size;
@@ -464,9 +473,7 @@ struct romboard
 	uae_u32 end_address;
 	struct boardloadfile lf;
 };
-
 #define MAX_RAM_BOARDS 4
-
 struct ramboard
 {
 	uae_u32 size;
@@ -485,7 +492,6 @@ struct ramboard
 	bool force16bit;
 	struct boardloadfile lf;
 };
-
 struct expansion_params
 {
 	int device_order;
@@ -495,13 +501,14 @@ struct expansion_params
 #define Z3MAPPING_UAE 1
 #define Z3MAPPING_REAL 2
 
+#define GFX_SIZE_EXTRA_NUM 6
 struct monconfig
 {
 	struct wh gfx_size_win;
 	struct wh gfx_size_fs;
 	struct wh gfx_size;
-	struct wh gfx_size_win_xtra[6];
-	struct wh gfx_size_fs_xtra[6];
+	struct wh gfx_size_win_xtra[GFX_SIZE_EXTRA_NUM];
+	struct wh gfx_size_fs_xtra[GFX_SIZE_EXTRA_NUM];
 };
 
 #ifdef AMIBERRY
@@ -622,6 +629,7 @@ struct uae_prefs
 	int gfx_api_options;
 	int color_mode;
 	int gfx_extrawidth;
+	int gfx_extraheight;
 	bool lightboost_strobo;
 	int lightboost_strobo_ratio;
 	bool gfx_grayscale;
@@ -630,6 +638,7 @@ struct uae_prefs
 	int gfx_display_sections;
 	int gfx_variable_sync;
 	bool gfx_windowed_resize;
+	int gfx_overscanmode;
 
 	struct gfx_filterdata gf[2];
 
@@ -741,6 +750,7 @@ struct uae_prefs
 	bool cs_color_burst;
 	bool cs_romisslow;
 	bool cs_toshibagary;
+	bool cs_bkpthang;
 	int cs_unmapped_space;
 	int cs_hacks;
 	int cs_ciatype[2];
@@ -875,7 +885,7 @@ struct uae_prefs
 	bool capture_always;
 	bool start_minimized;
 	bool start_uncaptured;
-	
+
 	int active_capture_priority;
 	bool active_nocapture_pause;
 	bool active_nocapture_nosound;
@@ -900,7 +910,7 @@ struct uae_prefs
 	bool right_control_is_right_win_key;
 
 	int statecapturerate, statecapturebuffersize;
-	
+
 	TCHAR open_gui[256];
 	TCHAR quit_amiberry[256];
 	TCHAR action_replay[256];
@@ -971,14 +981,17 @@ extern void cfgfile_target_write(struct zfile*, const TCHAR* option, const TCHAR
 extern void cfgfile_target_dwrite(struct zfile*, const TCHAR* option, const TCHAR* format, ...);
 
 extern void cfgfile_write_bool(struct zfile* f, const TCHAR* option, bool b);
-extern void cfgfile_dwrite_bool(struct zfile* f, const TCHAR* option, bool b);
+extern void cfgfile_dwrite_bool(struct zfile* f, const  TCHAR* option, bool b);
 extern void cfgfile_target_write_bool(struct zfile* f, const TCHAR* option, bool b);
 extern void cfgfile_target_dwrite_bool(struct zfile* f, const TCHAR* option, bool b);
 
 extern void cfgfile_write_str(struct zfile* f, const TCHAR* option, const TCHAR* value);
+extern void cfgfile_write_str_escape(struct zfile* f, const TCHAR* option, const TCHAR* value);
 extern void cfgfile_dwrite_str(struct zfile* f, const TCHAR* option, const TCHAR* value);
+extern void cfgfile_dwrite_str_escape(struct zfile* f, const TCHAR* option, const TCHAR* value);
 extern void cfgfile_target_write_str(struct zfile* f, const TCHAR* option, const TCHAR* value);
 extern void cfgfile_target_dwrite_str(struct zfile* f, const TCHAR* option, const TCHAR* value);
+extern void cfgfile_target_dwrite_str_escape(struct zfile* f, const TCHAR* option, const TCHAR* value);
 
 extern void cfgfile_backup(const TCHAR* path);
 extern struct uaedev_config_data* add_filesys_config(struct uae_prefs* p, int index, struct uaedev_config_info*);
@@ -1005,9 +1018,9 @@ int parse_cmdline_option(struct uae_prefs*, TCHAR, const TCHAR*);
 extern int cfgfile_separate_linea(const TCHAR* filename, char* line, TCHAR* line1b, TCHAR* line2b);
 extern int cfgfile_yesno(const TCHAR* option, const TCHAR* value, const TCHAR* name, bool* location);
 extern int cfgfile_intval(const TCHAR* option, const TCHAR* value, const TCHAR* name, int* location, int scale);
-extern int cfgfile_strval(const TCHAR* option, const TCHAR* value, const TCHAR* name, int* location,
-                          const TCHAR* table[], int more);
+extern int cfgfile_strval(const TCHAR* option, const TCHAR* value, const TCHAR* name, int* location, const TCHAR* table[], int more);
 extern int cfgfile_string(const TCHAR* option, const TCHAR* value, const TCHAR* name, TCHAR* location, int maxsz);
+extern int cfgfile_string_escape(const TCHAR* option, const TCHAR* value, const TCHAR* name, TCHAR* location, int maxsz);
 extern bool cfgfile_option_find(const TCHAR* s, const TCHAR* option);
 extern TCHAR* cfgfile_option_get(const TCHAR* s, const TCHAR* option);
 extern TCHAR* cfgfile_subst_path(const TCHAR* path, const TCHAR* subst, const TCHAR* file);
@@ -1038,8 +1051,7 @@ extern int cfgfile_get_description(struct uae_prefs* p, const TCHAR* filename, T
 extern void cfgfile_show_usage(void);
 extern int cfgfile_searchconfig(const TCHAR* in, int index, TCHAR* out, int outsize);
 extern uae_u32 cfgfile_uaelib(TrapContext* ctx, int mode, uae_u32 name, uae_u32 dst, uae_u32 maxlen);
-extern uae_u32 cfgfile_uaelib_modify(TrapContext* ctx, uae_u32 mode, uae_u32 parms, uae_u32 size, uae_u32 out,
-                                     uae_u32 outsize);
+extern uae_u32 cfgfile_uaelib_modify(TrapContext* ctx, uae_u32 mode, uae_u32 parms, uae_u32 size, uae_u32 out, uae_u32 outsize);
 extern uae_u32 cfgfile_modify(uae_u32 index, const TCHAR* parms, uae_u32 size, TCHAR* out, uae_u32 outsize);
 extern void cfgfile_addcfgparam(TCHAR*);
 extern int built_in_prefs(struct uae_prefs* p, int model, int config, int compa, int romcheck);
@@ -1092,14 +1104,14 @@ struct hfdlg_vals
 extern struct fsvdlg_vals current_fsvdlg;
 extern struct hfdlg_vals current_hfdlg;
 
-extern void hardfile_testrdb (struct hfdlg_vals *hdf);
-extern void default_fsvdlg (struct fsvdlg_vals *f);
-extern void default_hfdlg (struct hfdlg_vals *f);
-STATIC_INLINE bool is_hdf_rdb (void)
+extern void hardfile_testrdb(struct hfdlg_vals* hdf);
+extern void default_fsvdlg(struct fsvdlg_vals* f);
+extern void default_hfdlg(struct hfdlg_vals* f);
+STATIC_INLINE bool is_hdf_rdb(void)
 {
 	return current_hfdlg.ci.sectors == 0 && current_hfdlg.ci.surfaces == 0 && current_hfdlg.ci.reserved == 0;
 }
-extern void updatehdfinfo (bool force, bool defaults);
+extern void updatehdfinfo(bool force, bool defaults);
 
 #ifdef AMIBERRY
 struct amiberry_customised_layout
