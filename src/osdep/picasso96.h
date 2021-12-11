@@ -14,70 +14,70 @@
 
 #define NOSIGNAL 0xFFFFFFFF
 
-/************************************************************************/
-/* Types for BoardType Identification
- */
+ /************************************************************************/
+ /* Types for BoardType Identification
+  */
 typedef enum {
-	BT_NoBoard,
-	BT_oMniBus,
-	BT_Graffity,
-	BT_CyberVision,
-	BT_Domino,
-	BT_Merlin,
-	BT_PicassoII,
-	BT_Piccolo,
-	BT_RetinaBLT,
-	BT_Spectrum,
-	BT_PicassoIV,
-	BT_PiccoloSD64,
-	BT_A2410,
-	BT_Pixel64,
-	BT_uaegfx,
-	BT_CVision3D,
-	BT_Altais,
-	BT_Prototype1,
-	BT_Prototype2,
-	BT_Prototype3,
-	BT_Prototype4,
-	BT_Prototype5,
-	BT_MaxBoardTypes
+    BT_NoBoard,
+    BT_oMniBus,
+    BT_Graffity,
+    BT_CyberVision,
+    BT_Domino,
+    BT_Merlin,
+    BT_PicassoII,
+    BT_Piccolo,
+    BT_RetinaBLT,
+    BT_Spectrum,
+    BT_PicassoIV,
+    BT_PiccoloSD64,
+    BT_A2410,
+    BT_Pixel64,
+    BT_uaegfx,
+    BT_CVision3D,
+    BT_Altais,
+    BT_Prototype1,
+    BT_Prototype2,
+    BT_Prototype3,
+    BT_Prototype4,
+    BT_Prototype5,
+    BT_MaxBoardTypes
 } BTYPE;
 
 /************************************************************************/
 /* Types for PaletteChipType Identification
  */
 typedef enum {
-	PCT_Unknown,
-	PCT_S11483,			// Sierra S11483: HiColor 15 bit, oMniBus, Domino
-	PCT_S15025,			// Sierra S15025: TrueColor 32 bit, oMniBus
-	PCT_CirrusGD542x,		// Cirrus GD542x internal: TrueColor 24 bit
-	PCT_Domino,			// is in fact a Sierra S11483
-	PCT_BT482,			// BrookTree BT482: TrueColor 32 bit, Merlin
-	PCT_Music,			// Music MU9C4910: TrueColor 24 bit, oMniBus
-	PCT_ICS5300,			// ICS 5300: ...., Retina BLT Z3
-	PCT_CirrusGD5446,		// Cirrus GD5446 internal: TrueColor 24 bit
-	PCT_CirrusGD5434,		// Cirrus GD5434 internal: TrueColor 32 bit
-	PCT_S3Trio64,			// S3 Trio64 internal: TrueColor 32 bit
-	PCT_A2410_xxx,			// A2410 DAC, *type unknown*
-	PCT_S3ViRGE,			// S3 ViRGE internal: TrueColor 32 bit
-	PCT_MaxPaletteChipTypes
+    PCT_Unknown,
+    PCT_S11483,			// Sierra S11483: HiColor 15 bit, oMniBus, Domino
+    PCT_S15025,			// Sierra S15025: TrueColor 32 bit, oMniBus
+    PCT_CirrusGD542x,		// Cirrus GD542x internal: TrueColor 24 bit
+    PCT_Domino,			// is in fact a Sierra S11483
+    PCT_BT482,			// BrookTree BT482: TrueColor 32 bit, Merlin
+    PCT_Music,			// Music MU9C4910: TrueColor 24 bit, oMniBus
+    PCT_ICS5300,			// ICS 5300: ...., Retina BLT Z3
+    PCT_CirrusGD5446,		// Cirrus GD5446 internal: TrueColor 24 bit
+    PCT_CirrusGD5434,		// Cirrus GD5434 internal: TrueColor 32 bit
+    PCT_S3Trio64,			// S3 Trio64 internal: TrueColor 32 bit
+    PCT_A2410_xxx,			// A2410 DAC, *type unknown*
+    PCT_S3ViRGE,			// S3 ViRGE internal: TrueColor 32 bit
+    PCT_MaxPaletteChipTypes
 } PCTYPE;
 
 /************************************************************************/
 /* Types for GraphicsControllerType Identification
  */
 typedef enum {
-	GCT_Unknown,
-	GCT_ET4000,
-	GCT_ETW32,
-	GCT_CirrusGD542x,
-	GCT_NCR77C32BLT,
-	GCT_CirrusGD5446,
-	GCT_CirrusGD5434,
-	GCT_S3Trio64,
-	GCT_TI34010,
-	GCT_S3ViRGE,
-	GCT_MaxGraphicsControllerTypes
+    GCT_Unknown,
+    GCT_ET4000,
+    GCT_ETW32,
+    GCT_CirrusGD542x,
+    GCT_NCR77C32BLT,
+    GCT_CirrusGD5446,
+    GCT_CirrusGD5434,
+    GCT_S3Trio64,
+    GCT_TI34010,
+    GCT_S3ViRGE,
+    GCT_MaxGraphicsControllerTypes
 } GCTYPE;
 
 #define JAM1 0
@@ -125,12 +125,12 @@ struct CLUTEntry {
 
 struct BitMap
 {
-	uae_u16 BytesPerRow;
-	uae_u16 Rows;
-	uae_u8 Flags;
-	uae_u8 Depth;
-	uae_u16 pad;
-	uae_u8* Planes[8];
+    uae_u16 BytesPerRow;
+    uae_u16 Rows;
+    uae_u8 Flags;
+    uae_u8 Depth;
+    uae_u16 pad;
+    uae_u8* Planes[8];
     uaecptr APlanes[8];
 };
 
@@ -213,7 +213,7 @@ struct LibResolution {
 #define PSSO_RenderInfo_sizeof	    12
 
 struct RenderInfo {
-    uae_u8 *Memory;
+    uae_u8* Memory;
     uae_s16 BytesPerRow;
     uae_s16 pad;
     RGBFTYPE RGBFormat;
@@ -229,8 +229,8 @@ struct RenderInfo {
 #define PSSO_Pattern_DrawMode 17
 #define PSSO_Pattern_sizeof 18
 struct Pattern {
-    uae_u8 *Memory;
-	uaecptr AMemory;
+    uae_u8* Memory;
+    uaecptr AMemory;
     uae_u16 XOffset, YOffset;
     uae_u32 FgPen, BgPen;
     uae_u8 Size;					/* Width: 16, Height: (1<<pat_Size) */
@@ -246,8 +246,8 @@ struct Pattern {
 #define PSSO_Template_sizeof 16
 
 struct Template {
-    uae_u8 *Memory;
-	uaecptr AMemory;
+    uae_u8* Memory;
+    uaecptr AMemory;
     uae_s16 BytesPerRow;
     uae_u8 XOffset;
     uae_u8 DrawMode;
@@ -274,17 +274,17 @@ struct Template {
 #define PSSO_Line_Yorigin 34
 
 struct Line {
-	uae_u16			X, Y;
-	uae_u16			Length;
-	uae_s16			dX, dY;
-	uae_s16			sDelta, lDelta, twoSDminusLD;
-	uae_u16			LinePtrn;
-	uae_u16			PatternShift;
-	uae_u32			FgPen, BgPen;
-	uae_u16			Horizontal;
-	uae_u8			DrawMode;
-	uae_s8			pad;
-	uae_u16			Xorigin, Yorigin;
+    uae_u16			X, Y;
+    uae_u16			Length;
+    uae_s16			dX, dY;
+    uae_s16			sDelta, lDelta, twoSDminusLD;
+    uae_u16			LinePtrn;
+    uae_u16			PatternShift;
+    uae_u32			FgPen, BgPen;
+    uae_u16			Horizontal;
+    uae_u8			DrawMode;
+    uae_s8			pad;
+    uae_u16			Xorigin, Yorigin;
 };
 
 #define PSSO_BitMapExtra_BoardNode        0
@@ -303,7 +303,7 @@ struct Line {
 #define PSSO_BitMapExtra_Last            54
 
 enum {
-	SFT_INVALID, SFT_FLICKERFIXER, SFT_VIDEOCAPTURE, SFT_VIDEOWINDOW, SFT_MEMORYWINDOW
+    SFT_INVALID, SFT_FLICKERFIXER, SFT_VIDEOCAPTURE, SFT_VIDEOWINDOW, SFT_MEMORYWINDOW
 };
 
 #ifndef TAG_USER
@@ -504,10 +504,10 @@ enum {
 #define PSSO_BoardInfo_Depth			    PSSO_BoardInfo_YOffset + 2
 #define PSSO_BoardInfo_ClearMask		    PSSO_BoardInfo_Depth + 1
 #define PSSO_BoardInfo_Border			    PSSO_BoardInfo_ClearMask + 1
-#define PSSO_BoardInfo_Mask			    PSSO_BoardInfo_Border + 2 /* BOOL type is only 2-bytes! */
-#define PSSO_BoardInfo_CLUT			    PSSO_BoardInfo_Mask + 4
+#define PSSO_BoardInfo_Mask		    	    PSSO_BoardInfo_Border + 2 /* BOOL type is only 2-bytes! */
+#define PSSO_BoardInfo_CLUT	    		    PSSO_BoardInfo_Mask + 4
 #define PSSO_BoardInfo_ViewPort			    PSSO_BoardInfo_CLUT + 3*256
-#define PSSO_BoardInfo_VisibleBitMap		    PSSO_BoardInfo_ViewPort + 4
+#define PSSO_BoardInfo_VisibleBitMap		PSSO_BoardInfo_ViewPort + 4
 #define PSSO_BoardInfo_BitMapExtra		    PSSO_BoardInfo_VisibleBitMap + 4
 #define PSSO_BoardInfo_BitMapList		    PSSO_BoardInfo_BitMapExtra + 4
 #define PSSO_BoardInfo_MemList			    PSSO_BoardInfo_BitMapList + 12 /* BitMapList is 12-bytes */
@@ -521,18 +521,29 @@ enum {
 #define PSSO_BoardInfo_MousePens		    PSSO_BoardInfo_MouseImage + 4
 #define PSSO_BoardInfo_MouseRect		    PSSO_BoardInfo_MousePens + 4
 #define PSSO_BoardInfo_MouseChunky		    PSSO_BoardInfo_MouseRect + 8 /* MouseRect is 8-bytes */
-#define PSSO_BoardInfo_MouseRendered		    PSSO_BoardInfo_MouseChunky + 4
-#define PSSO_BoardInfo_MouseSaveBuffer		    PSSO_BoardInfo_MouseRendered + 4
+#define PSSO_BoardInfo_MouseRendered		PSSO_BoardInfo_MouseChunky + 4
+#define PSSO_BoardInfo_MouseSaveBuffer		PSSO_BoardInfo_MouseRendered + 4
 
 #define PSSO_BoardInfo_ChipData			    PSSO_BoardInfo_MouseSaveBuffer + 4
 #define PSSO_BoardInfo_CardData			    PSSO_BoardInfo_ChipData + 16 * 4
-#define PSSO_BoardInfo_MemorySpaceBase		    PSSO_BoardInfo_CardData + 16 * 4
-#define PSSO_BoardInfo_MemorySpaceSize		    PSSO_BoardInfo_MemorySpaceBase + 4
-#define PSSO_BoardInfo_DoubleBufferList		    PSSO_BoardInfo_MemorySpaceSize + 4
+#define PSSO_BoardInfo_MemorySpaceBase		PSSO_BoardInfo_CardData + 16 * 4
+#define PSSO_BoardInfo_MemorySpaceSize		PSSO_BoardInfo_MemorySpaceBase + 4
+#define PSSO_BoardInfo_DoubleBufferList		PSSO_BoardInfo_MemorySpaceSize + 4
 #define PSSO_BoardInfo_SyncTime			    PSSO_BoardInfo_DoubleBufferList + 4
-#define PSSO_BoardInfo_SyncPeriod		    PSSO_BoardInfo_SyncTime + 4
-#define PSSO_BoardInfo_SoftVBlankPort		    PSSO_BoardInfo_SyncPeriod + 8
-#define PSSO_BoardInfo_SizeOf			    PSSO_BoardInfo_SoftVBlankPort + 34
+#define PSSO_BoardInfo_SyncPeriod		    PSSO_BoardInfo_SyncTime + 8
+#define PSSO_BoardInfo_SoftVBlankPort		PSSO_BoardInfo_SyncPeriod + 4
+#define PSSO_BoardInfo_WaitQ                PSSO_BoardInfo_SoftVBlankPort + 34
+#define PSSO_BoardInfo_EssentialFormats     PSSO_BoardInfo_WaitQ + 3 * 4
+#define PSSO_BoardInfo_MouseImageBuffer     PSSO_BoardInfo_EssentialFormats + 4
+#define PSSO_BoardInfo_BackViewPort         PSSO_BoardInfo_MouseImageBuffer + 4
+#define PSSO_BoardInfo_BackBitMap           PSSO_BoardInfo_BackViewPort + 4
+#define PSSO_BoardInfo_BackBitMapExtra      PSSO_BoardInfo_BackBitMap + 4
+#define PSSO_BoardInfo_YSplit               PSSO_BoardInfo_BackBitMapExtra + 4
+#define PSSO_BoardInfo_MaxPlanarMemory      PSSO_BoardInfo_YSplit + 2
+#define PSSO_BoardInfo_MaxBMWidth           PSSO_BoardInfo_MaxPlanarMemory + 4
+#define PSSO_BoardInfo_MaxBMHeight          PSSO_BoardInfo_MaxBMWidth + 4
+#define PSSO_BoardInfo_SecondaryCLUT        PSSO_BoardInfo_MaxBMHeight + 4
+#define PSSO_BoardInfo_SizeOf			    PSSO_BoardInfo_SecondaryCLUT + 3 * 256
 
 /* BoardInfo flags */
 /*  0-15: hardware flags */
@@ -562,6 +573,7 @@ enum {
 #define BIB_NOBLITTER			24	/* disable all blitter functions */
 #define BIB_SYSTEM2SCREENBLITS	25	/* allow data to be written to screen memory for cpu as blitter source */
 #define BIB_GRANTDIRECTACCESS	26	/* all data on the board can be accessed at any time without bi->SetMemoryMode() */
+#define BIB_PALETTESWITCH		27
 #define BIB_OVERCLOCK			31	/* enable overclocking for some boards */
 
 #define BIB_IGNOREMASK	BIB_NOMASKBLITS
@@ -591,9 +603,10 @@ enum {
 #define BIF_NOBLITTER			(1 << BIB_NOBLITTER)
 #define BIF_SYSTEM2SCREENBLITS	(1 << BIB_SYSTEM2SCREENBLITS)
 #define BIF_GRANTDIRECTACCESS	(1 << BIB_GRANTDIRECTACCESS)
+#define BIF_PALETTESWITCH		(1 << BIB_PALETTESWITCH)
 #define BIF_OVERCLOCK			(1 << BIB_OVERCLOCK)
 
-#define BIF_IGNOREMASK	BIF_NOMASKBLITS
+#define BIF_IGNOREMASK 	BIF_NOMASKBLITS
 
 /************************************************************************/
 struct picasso96_state_struct
@@ -617,15 +630,16 @@ struct picasso96_state_struct
     //here follow winuae additional entrys
     uae_u8		BigAssBitmap; /* Set to 1 when our Amiga screen is bigger than the displayable area */
     unsigned int	Version;
-    uae_u8		*HostAddress; /* Active screen address (PC-side) */
+    uae_u8* HostAddress; /* Active screen address (PC-side) */
     // host address is need because Windows
     // support NO direct access all the time to gfx Card
-    // everytime windows can remove your surface from card so the mainrender place
+    // every time windows can remove your surface from card so the mainrender place
     // must be in memory
     long		XYOffset;
+    bool        dualclut;
 };
 
-extern void InitPicasso96 (int monid);
+extern void InitPicasso96(int monid);
 
 extern struct picasso96_state_struct picasso96_state[MAX_AMIGAMONITORS];
 
@@ -646,21 +660,21 @@ extern void picasso_invalidate(int monid, int x, int y, int w, int h);
 /* This structure describes the UAE-side framebuffer for the Picasso
  * screen.  */
 struct picasso_vidbuf_description {
-	int width, height, depth;
-	int rowbytes, pixbytes, offset;
+    int width, height, depth;
+    int rowbytes, pixbytes, offset;
     int extra_mem; /* nonzero if there's a second buffer that must be updated */
     uae_u32 rgbformat;
     RGBFTYPE selected_rgbformat;
     uae_u32 clut[256 * 2];
-	int picasso_convert, host_mode;
-	int ohost_mode, orgbformat;
-	int full_refresh;
-	int set_panning_called;
-	int rtg_clear_flag;
-	bool picasso_active;
-	bool picasso_changed;
-	uae_s16 splitypos;
-	uae_atomic picasso_state_change;
+    int picasso_convert, host_mode;
+    int ohost_mode, orgbformat;
+    int full_refresh;
+    int set_panning_called;
+    int rtg_clear_flag;
+    bool picasso_active;
+    bool picasso_changed;
+    uae_s16 splitypos;
+    uae_atomic picasso_state_change;
 };
 
 extern struct picasso_vidbuf_description picasso_vidinfo[MAX_AMIGAMONITORS];
@@ -668,7 +682,7 @@ extern struct picasso_vidbuf_description picasso_vidinfo[MAX_AMIGAMONITORS];
 extern void gfx_set_picasso_modeinfo(int monid, uae_u32 w, uae_u32 h, uae_u32 d, RGBFTYPE rgbfmt);
 extern void gfx_set_picasso_colors(int monid, RGBFTYPE rgbfmt);
 extern void gfx_set_picasso_state(int monid, int on);
-extern uae_u8* gfx_lock_picasso(int monid, bool, bool);
+extern uae_u8* gfx_lock_picasso(int monid, bool);
 extern void gfx_unlock_picasso(int monid, bool);
 extern int createwindowscursor(int monid, uaecptr src, int w, int h, int hiressprite, int doubledsprite, int chipset);
 
@@ -700,16 +714,16 @@ extern int p96refresh_active;
 
 #ifndef ANDROID
 #ifdef __cplusplus
-  extern "C" {
+extern "C" {
 #endif
-  void copy_screen_8bit_to_16bit(uae_u8 *dst, uae_u8 *src, int bytes, uae_u32 *clut);
-  void copy_screen_8bit_to_32bit(uae_u8 *dst, uae_u8 *src, int bytes, uae_u32 *clut);
-  void copy_screen_16bit_swap(uae_u8 *dst, uae_u8 *src, int bytes);
-  void copy_screen_16bit_to_32bit(uae_u8 *dst, uae_u8 *src, int bytes);
-  void copy_screen_32bit_to_16bit(uae_u8 *dst, uae_u8 *src, int bytes);
-  void copy_screen_32bit_to_32bit(uae_u8 *dst, uae_u8 *src, int bytes);
+    void copy_screen_8bit_to_16bit(uae_u8* dst, uae_u8* src, int bytes, uae_u32* clut);
+    void copy_screen_8bit_to_32bit(uae_u8* dst, uae_u8* src, int bytes, uae_u32* clut);
+    void copy_screen_16bit_swap(uae_u8* dst, uae_u8* src, int bytes);
+    void copy_screen_16bit_to_32bit(uae_u8* dst, uae_u8* src, int bytes);
+    void copy_screen_32bit_to_16bit(uae_u8* dst, uae_u8* src, int bytes);
+    void copy_screen_32bit_to_32bit(uae_u8* dst, uae_u8* src, int bytes);
 #ifdef __cplusplus
-  }
+}
 #endif
 #endif
 

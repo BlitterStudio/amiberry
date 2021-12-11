@@ -547,6 +547,7 @@ int graphics_setup(void)
 
 void updatedisplayarea(int monid)
 {
+	set_custom_limits(-1, -1, -1, -1);
 	show_screen(monid, 0);
 }
 
@@ -2693,7 +2694,7 @@ void gfx_set_picasso_colors(int monid, RGBFTYPE rgbfmt)
 	alloc_colors_picasso(red_bits, green_bits, blue_bits, red_shift, green_shift, blue_shift, rgbfmt, p96_rgbx16);
 }
 
-uae_u8* gfx_lock_picasso(int monid, bool fullupdate, bool doclear)
+uae_u8* gfx_lock_picasso(int monid, bool fullupdate)
 {
 	struct AmigaMonitor* mon = &AMonitors[0];
 	struct picasso_vidbuf_description* vidinfo = &picasso_vidinfo[0];
@@ -2713,15 +2714,7 @@ uae_u8* gfx_lock_picasso(int monid, bool fullupdate, bool doclear)
 	}
 	else
 	{
-		if (doclear)
-		{
-			auto* p2 = p;
-			for (auto h = 0; h < vidinfo->height; h++)
-			{
-				memset(p2, 0, vidinfo->width * vidinfo->pixbytes);
-				p2 += vidinfo->rowbytes;
-			}
-		}
+		mon->rtg_locked = true;
 	}
 	return p;
 }
@@ -2837,7 +2830,11 @@ bool toggle_rtg(int monid, int mode)
 	return false;
 }
 
-void close_rtg(int monid)
+void close_rtg(int monid, bool reset)
 {
+	struct AmigaMonitor* mon = &AMonitors[monid];
 	close_windows(&AMonitors[monid]);
+	if (reset) {
+		mon->screen_is_picasso = false;
+	}
 }
