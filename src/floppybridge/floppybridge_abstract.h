@@ -22,6 +22,7 @@
 #pragma once
 
 #include <functional>
+#include <cstddef>
 
 #ifdef _WIN32
 #include <tchar.h>
