@@ -167,7 +167,9 @@ struct my_opendir_s* my_opendir(const TCHAR* name, const TCHAR* mask)
 	auto* mod = xmalloc(struct my_opendir_s, 1);
 	if (!mod)
 		return NULL;
-	mod->dir = opendir(name);
+	auto input = string(name);
+	auto output = iso_8859_1_to_utf8(input);
+	mod->dir = opendir(output.c_str());
 	if (!mod->dir) {
 		write_log("my_opendir %s failed\n", name);
 		xfree(mod);
@@ -571,7 +573,7 @@ void filesys_host_init()
 
 /* Returns 1 if an actual volume-name was found, 2 if no volume-name (so uses some defaults) */
 int target_get_volume_name(struct uaedev_mount_info* mtinf, struct uaedev_config_info* ci, bool inserted,
-                           bool fullcheck, int cnt)
+						   bool fullcheck, int cnt)
 {
 	sprintf(ci->volname, "DH_%c", ci->rootdir[0]);
 	return 2;
