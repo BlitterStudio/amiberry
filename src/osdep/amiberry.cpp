@@ -206,6 +206,11 @@ static char controllers_path[MAX_DPATH];
 static char retroarch_file[MAX_DPATH];
 static char logfile_path[MAX_DPATH];
 static char floppy_sounds_dir[MAX_DPATH];
+static char data_dir[MAX_DPATH];
+static char saveimage_dir[MAX_DPATH];
+static char savestate_dir[MAX_DPATH];
+static char screenshot_dir[MAX_DPATH];
+static char amiberry_conf_file[MAX_DPATH];
 
 char last_loaded_config[MAX_DPATH] = {'\0'};
 
@@ -2237,14 +2242,14 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 
 void get_data_path(char* out, int size)
 {
-	strncpy(out, start_path_data, size - 1);
-	strncat(out, "/", size - 1);
+	fix_trailing(data_dir);
+	strncpy(out, data_dir, size - 1);
 }
 
 void get_saveimage_path(char* out, int size, int dir)
 {
-	strncpy(out, start_path_data, size - 1);
-	strncat(out, "/savestates/", size - 1);
+	fix_trailing(saveimage_dir);
+	strncpy(out, saveimage_dir, size - 1);
 }
 
 void get_configuration_path(char* out, int size)
@@ -2318,14 +2323,14 @@ void get_rp9_path(char* out, int size)
 
 void get_savestate_path(char* out, int size)
 {
-	strncpy(out, start_path_data, size - 1);
-	strncat(out, "/savestates/", size - 1);
+	fix_trailing(savestate_dir);
+	strncpy(out, savestate_dir, size - 1);
 }
 
 void get_screenshot_path(char* out, int size)
 {
-	strncpy(out, start_path_data, size - 1);
-	strncat(out, "/screenshots/", size - 1);
+	fix_trailing(screenshot_dir);
+	strncpy(out, screenshot_dir, size - 1);
 }
 
 int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int isdefault)
@@ -2472,10 +2477,7 @@ void read_directory(const char* path, std::vector<std::string>* dirs, std::vecto
 
 void save_amiberry_settings(void)
 {
-	char path[MAX_DPATH];
-
-	snprintf(path, MAX_DPATH, "%s/conf/amiberry.conf", start_path_data);
-	auto* const f = fopen(path, "we");
+	auto* const f = fopen(amiberry_conf_file, "we");
 	if (!f)
 		return;
 
@@ -2669,6 +2671,24 @@ void save_amiberry_settings(void)
 	snprintf(buffer, MAX_DPATH, "rom_path=%s\n", rom_path);
 	fputs(buffer, f);
 
+	snprintf(buffer, MAX_DPATH, "rp9_path=%s\n", rp9_path);
+	fputs(buffer, f);
+
+	snprintf(buffer, MAX_DPATH, "floppy_sounds_dir=%s\n", floppy_sounds_dir);
+	fputs(buffer, f);
+
+	snprintf(buffer, MAX_DPATH, "data_dir=%s\n", data_dir);
+	fputs(buffer, f);
+
+	snprintf(buffer, MAX_DPATH, "saveimage_dir=%s\n", saveimage_dir);
+	fputs(buffer, f);
+
+	snprintf(buffer, MAX_DPATH, "savestate_dir=%s\n", savestate_dir);
+	fputs(buffer, f);
+
+	snprintf(buffer, MAX_DPATH, "screenshot_dir=%s\n", screenshot_dir);
+	fputs(buffer, f);
+
 	// The number of ROMs in the last scan
 	snprintf(buffer, MAX_DPATH, "ROMs=%zu\n", lstAvailableROMs.size());
 	fputs(buffer, f);
@@ -2734,9 +2754,173 @@ static void trim_wsa(char* s)
 		s[--len] = '\0';
 }
 
-void load_amiberry_settings(void)
+static int parse_amiberry_settings_line(const char *path, char *linea)
 {
-	char path[MAX_DPATH];
+	TCHAR option[CONFIG_BLEN], value[CONFIG_BLEN];
+	int numROMs, numDisks, numCDs;
+	auto romType = -1;
+	char romName[MAX_DPATH] = {'\0'};
+	char romPath[MAX_DPATH] = {'\0'};
+	char tmpFile[MAX_DPATH];
+	int ret = 0;
+
+	if (!cfgfile_separate_linea(path, linea, option, value))
+		return 0;
+
+	if (cfgfile_string(option, value, "ROMName", romName, sizeof romName)
+		|| cfgfile_string(option, value, "ROMPath", romPath, sizeof romPath)
+		|| cfgfile_intval(option, value, "ROMType", &romType, 1))
+	{
+		if (strlen(romName) > 0 && strlen(romPath) > 0 && romType != -1)
+		{
+			auto* tmp = new AvailableROM();
+			strncpy(tmp->Name, romName, sizeof tmp->Name - 1);
+			strncpy(tmp->Path, romPath, sizeof tmp->Path - 1);
+			tmp->ROMType = romType;
+			lstAvailableROMs.emplace_back(tmp);
+			strncpy(romName, "", sizeof romName);
+			strncpy(romPath, "", sizeof romPath);
+			romType = -1;
+			ret = 1;
+		}
+	}
+	else if (cfgfile_string(option, value, "Diskfile", tmpFile, sizeof tmpFile))
+	{
+		auto* const f = fopen(tmpFile, "rbe");
+		if (f != nullptr)
+		{
+			fclose(f);
+			lstMRUDiskList.emplace_back(tmpFile);
+			ret = 1;
+		}
+	}
+	else if (cfgfile_string(option, value, "CDfile", tmpFile, sizeof tmpFile))
+	{
+		auto* const f = fopen(tmpFile, "rbe");
+		if (f != nullptr)
+		{
+			fclose(f);
+			lstMRUCDList.emplace_back(tmpFile);
+			ret = 1;
+		}
+	}
+	else if (cfgfile_string(option, value, "WHDLoadfile", tmpFile, sizeof tmpFile))
+	{
+		auto* const f = fopen(tmpFile, "rbe");
+		if (f != nullptr)
+		{
+			fclose(f);
+			lstMRUWhdloadList.emplace_back(tmpFile);
+			ret = 1;
+		}
+	}
+	else
+	{
+		ret |= cfgfile_string(option, value, "path", current_dir, sizeof current_dir);
+		ret |= cfgfile_string(option, value, "config_path", config_path, sizeof config_path);
+		ret |= cfgfile_string(option, value, "controllers_path", controllers_path, sizeof controllers_path);
+		ret |= cfgfile_string(option, value, "retroarch_config", retroarch_file, sizeof retroarch_file);
+		ret |= cfgfile_string(option, value, "logfile_path", logfile_path, sizeof logfile_path);
+		ret |= cfgfile_string(option, value, "rom_path", rom_path, sizeof rom_path);
+		ret |= cfgfile_string(option, value, "rp9_path", rp9_path, sizeof rp9_path);
+		ret |= cfgfile_string(option, value, "floppy_sounds_dir", floppy_sounds_dir, sizeof floppy_sounds_dir);
+		ret |= cfgfile_string(option, value, "data_dir", data_dir, sizeof data_dir);
+		ret |= cfgfile_string(option, value, "saveimage_dir", saveimage_dir, sizeof saveimage_dir);
+		ret |= cfgfile_string(option, value, "savestate_dir", savestate_dir, sizeof savestate_dir);
+		ret |= cfgfile_string(option, value, "screenshot_dir", screenshot_dir, sizeof screenshot_dir);
+		// NOTE: amiberry_config is a "read only", ie. it's not written in
+		// save_amiberry_settings(). It's purpose is to provide -o amiberry_config=path
+		// command line option.
+		ret |= cfgfile_string(option, value, "amiberry_config", amiberry_conf_file, sizeof amiberry_conf_file);
+		ret |= cfgfile_intval(option, value, "ROMs", &numROMs, 1);
+		ret |= cfgfile_intval(option, value, "MRUDiskList", &numDisks, 1);
+		ret |= cfgfile_intval(option, value, "MRUCDList", &numCDs, 1);
+		ret |= cfgfile_yesno(option, value, "Quickstart", &amiberry_options.quickstart_start);
+		ret |= cfgfile_yesno(option, value, "read_config_descriptions", &amiberry_options.read_config_descriptions);
+		ret |= cfgfile_yesno(option, value, "write_logfile", &amiberry_options.write_logfile);
+		ret |= cfgfile_intval(option, value, "default_line_mode", &amiberry_options.default_line_mode, 1);
+		ret |= cfgfile_yesno(option, value, "rctrl_as_ramiga", &amiberry_options.rctrl_as_ramiga);
+		ret |= cfgfile_yesno(option, value, "gui_joystick_control", &amiberry_options.gui_joystick_control);
+		ret |= cfgfile_yesno(option, value, "use_sdl2_render_thread", &amiberry_options.use_sdl2_render_thread);
+		ret |= cfgfile_yesno(option, value, "default_multithreaded_drawing", &amiberry_options.default_multithreaded_drawing);
+		ret |= cfgfile_intval(option, value, "input_default_mouse_speed", &amiberry_options.input_default_mouse_speed, 1);
+		ret |= cfgfile_yesno(option, value, "input_keyboard_as_joystick_stop_keypresses", &amiberry_options.input_keyboard_as_joystick_stop_keypresses);
+		ret |= cfgfile_string(option, value, "default_open_gui_key", amiberry_options.default_open_gui_key, sizeof amiberry_options.default_open_gui_key);
+		ret |= cfgfile_string(option, value, "default_quit_key", amiberry_options.default_quit_key, sizeof amiberry_options.default_quit_key);
+		ret |= cfgfile_string(option, value, "default_ar_key", amiberry_options.default_ar_key, sizeof amiberry_options.default_ar_key);
+		ret |= cfgfile_string(option, value, "default_fullscreen_toggle_key", amiberry_options.default_fullscreen_toggle_key, sizeof amiberry_options.default_fullscreen_toggle_key);
+		ret |= cfgfile_intval(option, value, "rotation_angle", &amiberry_options.rotation_angle, 1);
+		ret |= cfgfile_yesno(option, value, "default_horizontal_centering", &amiberry_options.default_horizontal_centering);
+		ret |= cfgfile_yesno(option, value, "default_vertical_centering", &amiberry_options.default_vertical_centering);
+		ret |= cfgfile_intval(option, value, "default_scaling_method", &amiberry_options.default_scaling_method, 1);
+		ret |= cfgfile_yesno(option, value, "default_frameskip", &amiberry_options.default_frameskip);
+		ret |= cfgfile_yesno(option, value, "default_correct_aspect_ratio", &amiberry_options.default_correct_aspect_ratio);
+		ret |= cfgfile_yesno(option, value, "default_auto_height", &amiberry_options.default_auto_height);
+		ret |= cfgfile_intval(option, value, "default_width", &amiberry_options.default_width, 1);
+		ret |= cfgfile_intval(option, value, "default_height", &amiberry_options.default_height, 1);
+		ret |= cfgfile_intval(option, value, "default_fullscreen_mode", &amiberry_options.default_fullscreen_mode, 1);
+		ret |= cfgfile_intval(option, value, "default_stereo_separation", &amiberry_options.default_stereo_separation, 1);
+		ret |= cfgfile_intval(option, value, "default_sound_buffer", &amiberry_options.default_sound_buffer, 1);
+		ret |= cfgfile_yesno(option, value, "default_sound_pull", &amiberry_options.default_sound_pull);
+		ret |= cfgfile_intval(option, value, "default_joystick_deadzone", &amiberry_options.default_joystick_deadzone, 1);
+		ret |= cfgfile_yesno(option, value, "default_retroarch_quit", &amiberry_options.default_retroarch_quit);
+		ret |= cfgfile_yesno(option, value, "default_retroarch_menu", &amiberry_options.default_retroarch_menu);
+		ret |= cfgfile_yesno(option, value, "default_retroarch_reset", &amiberry_options.default_retroarch_reset);
+		ret |= cfgfile_string(option, value, "default_controller1", amiberry_options.default_controller1, sizeof amiberry_options.default_controller1);
+		ret |= cfgfile_string(option, value, "default_controller2", amiberry_options.default_controller2, sizeof amiberry_options.default_controller2);
+		ret |= cfgfile_string(option, value, "default_controller3", amiberry_options.default_controller3, sizeof amiberry_options.default_controller3);
+		ret |= cfgfile_string(option, value, "default_controller4", amiberry_options.default_controller4, sizeof amiberry_options.default_controller4);
+		ret |= cfgfile_string(option, value, "default_mouse1", amiberry_options.default_mouse1, sizeof amiberry_options.default_mouse1);
+		ret |= cfgfile_string(option, value, "default_mouse2", amiberry_options.default_mouse2, sizeof amiberry_options.default_mouse2);
+		ret |= cfgfile_yesno(option, value, "default_whd_buttonwait", &amiberry_options.default_whd_buttonwait);
+		ret |= cfgfile_yesno(option, value, "default_whd_showsplash", &amiberry_options.default_whd_showsplash);
+		ret |= cfgfile_intval(option, value, "default_whd_configdelay", &amiberry_options.default_whd_configdelay, 1);
+	}
+	return ret;
+}
+
+static int parse_amiberry_cmd_line(int *argc, char* argv[], int remove_used_args)
+{
+	int i, j;
+	char arg_copy[CONFIG_BLEN];
+
+	for (i = 0; i < *argc; i++)
+	{
+		if (strncmp(argv[i], "-o", 3) == 0)
+		{
+			if (i >= *argc - 1)
+			{
+				// fail because option arg is missing
+				return 0;
+			}
+			// Keep a copy to restore after parsing because settings parsing is destructive.
+			strncpy(arg_copy, argv[i + 1], CONFIG_BLEN);
+			arg_copy[CONFIG_BLEN - 1] = '\0';
+			if (!parse_amiberry_settings_line("<command line>", argv[i + 1]))
+			{
+				// fail because on cmd line we require correctly formatted setting in option arg
+				return 0;
+			}
+			strcpy(argv[i + 1], arg_copy);
+			if (!remove_used_args)
+				continue;
+			// shift all args after the found one by 2
+			for (j = i + 2; j < *argc; j++)
+			{
+				argv[j - 2] = argv[j];
+			}
+			// argc is now 2 items shorter ...
+			*argc -= 2;
+			// .. and we must read this index again because of the shifting we did
+			i--;
+		}
+	}
+
+	return 1;
+}
+
+static void init_amiberry_paths(void)
+{
 	strncpy(current_dir, start_path_data, MAX_DPATH - 1);
 	snprintf(config_path, MAX_DPATH, "%s/conf/", start_path_data);
 	snprintf(controllers_path, MAX_DPATH, "%s/controllers/", start_path_data);
@@ -2757,124 +2941,26 @@ void load_amiberry_settings(void)
 	snprintf(rom_path, MAX_DPATH, "%s/kickstarts/", start_path_data);
 #endif
 	snprintf(rp9_path, MAX_DPATH, "%s/rp9/", start_path_data);
-	snprintf(path, MAX_DPATH, "%s/conf/amiberry.conf", start_path_data);
+	snprintf(amiberry_conf_file, MAX_DPATH, "%s/conf/amiberry.conf", start_path_data);
 	snprintf(floppy_sounds_dir, MAX_DPATH, "%s/data/floppy_sounds/", start_path_data);
+	snprintf(data_dir, MAX_DPATH, "%s/", start_path_data);
+	snprintf(saveimage_dir, MAX_DPATH, "%s/savestates/", start_path_data);
+	snprintf(savestate_dir, MAX_DPATH, "%s/savestates/", start_path_data);
+	snprintf(screenshot_dir, MAX_DPATH, "%s/screenshots/", start_path_data);
+}
 
-	auto* const fh = zfile_fopen(path, _T("r"), ZFD_NORMAL);
+void load_amiberry_settings(void)
+{
+	auto* const fh = zfile_fopen(amiberry_conf_file, _T("r"), ZFD_NORMAL);
 	if (fh)
 	{
 		char linea[CONFIG_BLEN];
-		TCHAR option[CONFIG_BLEN], value[CONFIG_BLEN];
-		int numROMs, numDisks, numCDs;
-		auto romType = -1;
-		char romName[MAX_DPATH] = {'\0'};
-		char romPath[MAX_DPATH] = {'\0'};
-		char tmpFile[MAX_DPATH];
 
 		while (zfile_fgetsa(linea, sizeof linea, fh) != nullptr)
 		{
 			trim_wsa(linea);
 			if (strlen(linea) > 0)
-			{
-				if (!cfgfile_separate_linea(path, linea, option, value))
-					continue;
-
-				if (cfgfile_string(option, value, "ROMName", romName, sizeof romName)
-					|| cfgfile_string(option, value, "ROMPath", romPath, sizeof romPath)
-					|| cfgfile_intval(option, value, "ROMType", &romType, 1))
-				{
-					if (strlen(romName) > 0 && strlen(romPath) > 0 && romType != -1)
-					{
-						auto* tmp = new AvailableROM();
-						strncpy(tmp->Name, romName, sizeof tmp->Name - 1);
-						strncpy(tmp->Path, romPath, sizeof tmp->Path - 1);
-						tmp->ROMType = romType;
-						lstAvailableROMs.emplace_back(tmp);
-						strncpy(romName, "", sizeof romName);
-						strncpy(romPath, "", sizeof romPath);
-						romType = -1;
-					}
-				}
-				else if (cfgfile_string(option, value, "Diskfile", tmpFile, sizeof tmpFile))
-				{
-					auto* const f = fopen(tmpFile, "rbe");
-					if (f != nullptr)
-					{
-						fclose(f);
-						lstMRUDiskList.emplace_back(tmpFile);
-					}
-				}
-				else if (cfgfile_string(option, value, "CDfile", tmpFile, sizeof tmpFile))
-				{
-					auto* const f = fopen(tmpFile, "rbe");
-					if (f != nullptr)
-					{
-						fclose(f);
-						lstMRUCDList.emplace_back(tmpFile);
-					}
-				}
-				else if (cfgfile_string(option, value, "WHDLoadfile", tmpFile, sizeof tmpFile))
-				{
-					auto* const f = fopen(tmpFile, "rbe");
-					if (f != nullptr)
-					{
-						fclose(f);
-						lstMRUWhdloadList.emplace_back(tmpFile);
-					}
-				}
-				else
-				{
-					cfgfile_string(option, value, "path", current_dir, sizeof current_dir);
-					cfgfile_string(option, value, "config_path", config_path, sizeof config_path);
-					cfgfile_string(option, value, "controllers_path", controllers_path, sizeof controllers_path);
-					cfgfile_string(option, value, "retroarch_config", retroarch_file, sizeof retroarch_file);
-					cfgfile_string(option, value, "logfile_path", logfile_path, sizeof logfile_path);
-					cfgfile_string(option, value, "rom_path", rom_path, sizeof rom_path);
-					cfgfile_intval(option, value, "ROMs", &numROMs, 1);
-					cfgfile_intval(option, value, "MRUDiskList", &numDisks, 1);
-					cfgfile_intval(option, value, "MRUCDList", &numCDs, 1);
-					cfgfile_yesno(option, value, "Quickstart", &amiberry_options.quickstart_start);
-					cfgfile_yesno(option, value, "read_config_descriptions", &amiberry_options.read_config_descriptions);
-					cfgfile_yesno(option, value, "write_logfile", &amiberry_options.write_logfile);
-					cfgfile_intval(option, value, "default_line_mode", &amiberry_options.default_line_mode, 1);
-					cfgfile_yesno(option, value, "rctrl_as_ramiga", &amiberry_options.rctrl_as_ramiga);
-					cfgfile_yesno(option, value, "gui_joystick_control", &amiberry_options.gui_joystick_control);
-					cfgfile_yesno(option, value, "use_sdl2_render_thread", &amiberry_options.use_sdl2_render_thread);
-					cfgfile_yesno(option, value, "default_multithreaded_drawing", &amiberry_options.default_multithreaded_drawing);
-					cfgfile_intval(option, value, "input_default_mouse_speed", &amiberry_options.input_default_mouse_speed, 1);
-					cfgfile_yesno(option, value, "input_keyboard_as_joystick_stop_keypresses", &amiberry_options.input_keyboard_as_joystick_stop_keypresses);
-					cfgfile_string(option, value, "default_open_gui_key", amiberry_options.default_open_gui_key, sizeof amiberry_options.default_open_gui_key);
-					cfgfile_string(option, value, "default_quit_key", amiberry_options.default_quit_key, sizeof amiberry_options.default_quit_key);
-					cfgfile_string(option, value, "default_ar_key", amiberry_options.default_ar_key, sizeof amiberry_options.default_ar_key);
-					cfgfile_string(option, value, "default_fullscreen_toggle_key", amiberry_options.default_fullscreen_toggle_key, sizeof amiberry_options.default_fullscreen_toggle_key);
-					cfgfile_intval(option, value, "rotation_angle", &amiberry_options.rotation_angle, 1);
-					cfgfile_yesno(option, value, "default_horizontal_centering", &amiberry_options.default_horizontal_centering);
-					cfgfile_yesno(option, value, "default_vertical_centering", &amiberry_options.default_vertical_centering);
-					cfgfile_intval(option, value, "default_scaling_method", &amiberry_options.default_scaling_method, 1);
-					cfgfile_yesno(option, value, "default_frameskip", &amiberry_options.default_frameskip);
-					cfgfile_yesno(option, value, "default_correct_aspect_ratio", &amiberry_options.default_correct_aspect_ratio);
-					cfgfile_yesno(option, value, "default_auto_height", &amiberry_options.default_auto_height);
-					cfgfile_intval(option, value, "default_width", &amiberry_options.default_width, 1);
-					cfgfile_intval(option, value, "default_height", &amiberry_options.default_height, 1);
-					cfgfile_intval(option, value, "default_fullscreen_mode", &amiberry_options.default_fullscreen_mode, 1);
-					cfgfile_intval(option, value, "default_stereo_separation", &amiberry_options.default_stereo_separation, 1);
-					cfgfile_intval(option, value, "default_sound_buffer", &amiberry_options.default_sound_buffer, 1);
-					cfgfile_yesno(option, value, "default_sound_pull", &amiberry_options.default_sound_pull);
-					cfgfile_intval(option, value, "default_joystick_deadzone", &amiberry_options.default_joystick_deadzone, 1);
-					cfgfile_yesno(option, value, "default_retroarch_quit", &amiberry_options.default_retroarch_quit);
-					cfgfile_yesno(option, value, "default_retroarch_menu", &amiberry_options.default_retroarch_menu);
-					cfgfile_yesno(option, value, "default_retroarch_reset", &amiberry_options.default_retroarch_reset);
-					cfgfile_string(option, value, "default_controller1", amiberry_options.default_controller1, sizeof amiberry_options.default_controller1);
-					cfgfile_string(option, value, "default_controller2", amiberry_options.default_controller2, sizeof amiberry_options.default_controller2);
-					cfgfile_string(option, value, "default_controller3", amiberry_options.default_controller3, sizeof amiberry_options.default_controller3);
-					cfgfile_string(option, value, "default_controller4", amiberry_options.default_controller4, sizeof amiberry_options.default_controller4);
-					cfgfile_string(option, value, "default_mouse1", amiberry_options.default_mouse1, sizeof amiberry_options.default_mouse1);
-					cfgfile_string(option, value, "default_mouse2", amiberry_options.default_mouse2, sizeof amiberry_options.default_mouse2);
-					cfgfile_yesno(option, value, "default_whd_buttonwait", &amiberry_options.default_whd_buttonwait);
-					cfgfile_yesno(option, value, "default_whd_showsplash", &amiberry_options.default_whd_showsplash);
-					cfgfile_intval(option, value, "default_whd_configdelay", &amiberry_options.default_whd_configdelay, 1);
-				}
-			}
+				parse_amiberry_settings_line(amiberry_conf_file, linea);
 		}
 		zfile_fclose(fh);
 	}
@@ -2995,9 +3081,27 @@ int main(int argc, char* argv[])
 	}
 
 	rename_old_adfdir();
+	init_amiberry_paths();
+	// Parse command line to get possibly set amiberry_config.
+	// Do not remove used args yet.
+	if (!parse_amiberry_cmd_line(&argc, argv, 0))
+	{
+		printf("Error in Amiberry command line option parsing.\n");
+		usage();
+		abort();
+	}
 	load_amiberry_settings();
+	// Parse command line and remove used amiberry specific args
+	// and modify both argc & argv accordingly
+	if (!parse_amiberry_cmd_line(&argc, argv, 1))
+	{
+		printf("Error in Amiberry command line option parsing.\n");
+		usage();
+		abort();
+	}
 
-	snprintf(savestate_fname, sizeof savestate_fname, "%s/savestates/default.ads", start_path_data);
+	fix_trailing(savestate_dir);
+	snprintf(savestate_fname, sizeof savestate_fname, "%s/default.ads", savestate_dir);
 	logging_init();
 
 	memset(&action, 0, sizeof action);

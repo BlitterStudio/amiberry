@@ -675,6 +675,8 @@ void usage()
 	std::cout << " -G                         Start directly into emulation." << std::endl;
 	std::cout << " -c <value>                 Size of chip memory (in number of 512 KBytes chunks)." << std::endl;
 	std::cout << " -F <value>                 Size of fast memory (in number of 1024 KBytes chunks)." << std::endl;
+	std::cout << " -o <amiberry cnf>=<value>  Set Amiberry configuration parameter with value." << std::endl;
+	std::cout << "                            See: https://github.com/midwan/amiberry/wiki/Amiberry.conf-options" << std::endl;
 	std::cout << "\nNotes:" << std::endl;
 	std::cout << "File names should be with absolute path." << std::endl;
 	std::cout << "\nExample 1:" << std::endl;
