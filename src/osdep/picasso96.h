@@ -14,70 +14,70 @@
 
 #define NOSIGNAL 0xFFFFFFFF
 
- /************************************************************************/
- /* Types for BoardType Identification
-  */
+/************************************************************************/
+/* Types for BoardType Identification
+ */
 typedef enum {
-    BT_NoBoard,
-    BT_oMniBus,
-    BT_Graffity,
-    BT_CyberVision,
-    BT_Domino,
-    BT_Merlin,
-    BT_PicassoII,
-    BT_Piccolo,
-    BT_RetinaBLT,
-    BT_Spectrum,
-    BT_PicassoIV,
-    BT_PiccoloSD64,
-    BT_A2410,
-    BT_Pixel64,
-    BT_uaegfx,
-    BT_CVision3D,
-    BT_Altais,
-    BT_Prototype1,
-    BT_Prototype2,
-    BT_Prototype3,
-    BT_Prototype4,
-    BT_Prototype5,
-    BT_MaxBoardTypes
+	BT_NoBoard,
+	BT_oMniBus,
+	BT_Graffity,
+	BT_CyberVision,
+	BT_Domino,
+	BT_Merlin,
+	BT_PicassoII,
+	BT_Piccolo,
+	BT_RetinaBLT,
+	BT_Spectrum,
+	BT_PicassoIV,
+	BT_PiccoloSD64,
+	BT_A2410,
+	BT_Pixel64,
+	BT_uaegfx,
+	BT_CVision3D,
+	BT_Altais,
+	BT_Prototype1,
+	BT_Prototype2,
+	BT_Prototype3,
+	BT_Prototype4,
+	BT_Prototype5,
+	BT_MaxBoardTypes
 } BTYPE;
 
 /************************************************************************/
 /* Types for PaletteChipType Identification
  */
 typedef enum {
-    PCT_Unknown,
-    PCT_S11483,			// Sierra S11483: HiColor 15 bit, oMniBus, Domino
-    PCT_S15025,			// Sierra S15025: TrueColor 32 bit, oMniBus
-    PCT_CirrusGD542x,		// Cirrus GD542x internal: TrueColor 24 bit
-    PCT_Domino,			// is in fact a Sierra S11483
-    PCT_BT482,			// BrookTree BT482: TrueColor 32 bit, Merlin
-    PCT_Music,			// Music MU9C4910: TrueColor 24 bit, oMniBus
-    PCT_ICS5300,			// ICS 5300: ...., Retina BLT Z3
-    PCT_CirrusGD5446,		// Cirrus GD5446 internal: TrueColor 24 bit
-    PCT_CirrusGD5434,		// Cirrus GD5434 internal: TrueColor 32 bit
-    PCT_S3Trio64,			// S3 Trio64 internal: TrueColor 32 bit
-    PCT_A2410_xxx,			// A2410 DAC, *type unknown*
-    PCT_S3ViRGE,			// S3 ViRGE internal: TrueColor 32 bit
-    PCT_MaxPaletteChipTypes
+	PCT_Unknown,
+	PCT_S11483,			// Sierra S11483: HiColor 15 bit, oMniBus, Domino
+	PCT_S15025,			// Sierra S15025: TrueColor 32 bit, oMniBus
+	PCT_CirrusGD542x,		// Cirrus GD542x internal: TrueColor 24 bit
+	PCT_Domino,			// is in fact a Sierra S11483
+	PCT_BT482,			// BrookTree BT482: TrueColor 32 bit, Merlin
+	PCT_Music,			// Music MU9C4910: TrueColor 24 bit, oMniBus
+	PCT_ICS5300,			// ICS 5300: ...., Retina BLT Z3
+	PCT_CirrusGD5446,		// Cirrus GD5446 internal: TrueColor 24 bit
+	PCT_CirrusGD5434,		// Cirrus GD5434 internal: TrueColor 32 bit
+	PCT_S3Trio64,			// S3 Trio64 internal: TrueColor 32 bit
+	PCT_A2410_xxx,			// A2410 DAC, *type unknown*
+	PCT_S3ViRGE,			// S3 ViRGE internal: TrueColor 32 bit
+	PCT_MaxPaletteChipTypes
 } PCTYPE;
 
 /************************************************************************/
 /* Types for GraphicsControllerType Identification
  */
 typedef enum {
-    GCT_Unknown,
-    GCT_ET4000,
-    GCT_ETW32,
-    GCT_CirrusGD542x,
-    GCT_NCR77C32BLT,
-    GCT_CirrusGD5446,
-    GCT_CirrusGD5434,
-    GCT_S3Trio64,
-    GCT_TI34010,
-    GCT_S3ViRGE,
-    GCT_MaxGraphicsControllerTypes
+	GCT_Unknown,
+	GCT_ET4000,
+	GCT_ETW32,
+	GCT_CirrusGD542x,
+	GCT_NCR77C32BLT,
+	GCT_CirrusGD5446,
+	GCT_CirrusGD5434,
+	GCT_S3Trio64,
+	GCT_TI34010,
+	GCT_S3ViRGE,
+	GCT_MaxGraphicsControllerTypes
 } GCTYPE;
 
 #define JAM1 0
@@ -88,31 +88,31 @@ typedef enum {
 /************************************************************************/
 
 enum {
-    PLANAR,
-    CHUNKY,
-    HICOLOR,
-    TRUECOLOR,
-    TRUEALPHA,
-    MAXMODES
+	PLANAR,
+	CHUNKY,
+	HICOLOR,
+	TRUECOLOR,
+	TRUEALPHA,
+	MAXMODES
 };
 
 /************************************************************************/
 struct MyCLUTEntry {
-    uae_u8 Red;
-    uae_u8 Green;
-    uae_u8 Blue;
-    uae_u8 Pad;
+	uae_u8 Red;
+	uae_u8 Green;
+	uae_u8 Blue;
+	uae_u8 Pad;
 };
 
 struct ColorIndexMapping {
-    uae_u32 ColorMask;
-    uae_u32 Colors[256];
+	uae_u32 ColorMask;
+	uae_u32 Colors[256];
 };
 
 struct CLUTEntry {
-    uae_u8 Red;
-    uae_u8 Green;
-    uae_u8 Blue;
+	uae_u8 Red;
+	uae_u8 Green;
+	uae_u8 Blue;
 };
 
 #define PSSO_BitMap_BytesPerRow	     0
@@ -125,13 +125,13 @@ struct CLUTEntry {
 
 struct BitMap
 {
-    uae_u16 BytesPerRow;
-    uae_u16 Rows;
-    uae_u8 Flags;
-    uae_u8 Depth;
-    uae_u16 pad;
-    uae_u8* Planes[8];
-    uaecptr APlanes[8];
+	uae_u16 BytesPerRow;
+	uae_u16 Rows;
+	uae_u8 Flags;
+	uae_u8 Depth;
+	uae_u16 pad;
+	uae_u8 *Planes[8];
+	uaecptr APlanes[8];
 };
 
 /************************************************************************/
@@ -140,14 +140,14 @@ struct BitMap
 #define	BOARDNAMEMAXCHARS	30
 
 struct Settings {
-    uae_u32			BoardType;
-    /* a value describing assignment to nth board local to boardtype
-     * to be used for reassignment when boards are added or removed.  */
-    uae_u16			LocalOrdering;
-    uae_s16			LastSelected;
-    char			NameField[SETTINGSNAMEMAXCHARS];
-    /* neu! */
-    char* BoardName;
+	uae_u32			BoardType;
+	/* a value describing assignment to nth board local to boardtype
+	 * to be used for reassignment when boards are added or removed.  */
+	uae_u16			LocalOrdering;
+	uae_s16			LastSelected;
+	char			NameField[SETTINGSNAMEMAXCHARS];
+	/* neu! */
+	char			*BoardName;
 };
 
 #define MAXRESOLUTIONNAMELENGTH 22
@@ -167,14 +167,14 @@ struct Settings {
 #define PSSO_LibResolution_sizeof	(60 + MAXMODES * 4)
 
 struct LibResolution {
-    char P96ID[6];
-    char Name[MAXRESOLUTIONNAMELENGTH];
-    uae_u32 DisplayID;
-    uae_u16 Width;
-    uae_u16 Height;
-    uae_u16 Flags;
-    uaecptr Modes[MAXMODES];
-    uaecptr BoardInfo;
+	char P96ID[6];
+	char Name[MAXRESOLUTIONNAMELENGTH];
+	uae_u32 DisplayID;
+	uae_u16 Width;
+	uae_u16 Height;
+	uae_u16 Flags;
+	uaecptr Modes[MAXMODES];
+	uaecptr BoardInfo;
 };
 
 #define	P96B_FAMILY	0			/* obsolete (Resolution is an entire family) */
@@ -213,11 +213,11 @@ struct LibResolution {
 #define PSSO_RenderInfo_sizeof	    12
 
 struct RenderInfo {
-    uae_u8* Memory;
-    uae_s16 BytesPerRow;
-    uae_s16 pad;
-    RGBFTYPE RGBFormat;
-    uaecptr AMemory;
+	uae_u8 *Memory;
+	uae_s16 BytesPerRow;
+	uae_s16 pad;
+	RGBFTYPE RGBFormat;
+	uaecptr AMemory;
 };
 
 #define PSSO_Pattern_Memory 0
@@ -229,12 +229,12 @@ struct RenderInfo {
 #define PSSO_Pattern_DrawMode 17
 #define PSSO_Pattern_sizeof 18
 struct Pattern {
-    uae_u8* Memory;
-    uaecptr AMemory;
-    uae_u16 XOffset, YOffset;
-    uae_u32 FgPen, BgPen;
-    uae_u8 Size;					/* Width: 16, Height: (1<<pat_Size) */
-    uae_u8 DrawMode;
+	uae_u8 *Memory;
+	uaecptr AMemory;
+	uae_u16 XOffset, YOffset;
+	uae_u32 FgPen, BgPen;
+	uae_u8 Size;					/* Width: 16, Height: (1<<pat_Size) */
+	uae_u8 DrawMode;
 };
 
 #define PSSO_Template_Memory 0
@@ -246,13 +246,13 @@ struct Pattern {
 #define PSSO_Template_sizeof 16
 
 struct Template {
-    uae_u8* Memory;
-    uaecptr AMemory;
-    uae_s16 BytesPerRow;
-    uae_u8 XOffset;
-    uae_u8 DrawMode;
-    uae_u32 FgPen;
-    uae_u32 BgPen;
+	uae_u8 *Memory;
+	uaecptr AMemory;
+	uae_s16 BytesPerRow;
+	uae_u8 XOffset;
+	uae_u8 DrawMode;
+	uae_u32 FgPen;
+	uae_u32 BgPen;
 };
 
 #define PSSO_Line_X 0
@@ -274,17 +274,17 @@ struct Template {
 #define PSSO_Line_Yorigin 34
 
 struct Line {
-    uae_u16			X, Y;
-    uae_u16			Length;
-    uae_s16			dX, dY;
-    uae_s16			sDelta, lDelta, twoSDminusLD;
-    uae_u16			LinePtrn;
-    uae_u16			PatternShift;
-    uae_u32			FgPen, BgPen;
-    uae_u16			Horizontal;
-    uae_u8			DrawMode;
-    uae_s8			pad;
-    uae_u16			Xorigin, Yorigin;
+	uae_u16			X, Y;
+	uae_u16			Length;
+	uae_s16			dX, dY;
+	uae_s16			sDelta, lDelta, twoSDminusLD;
+	uae_u16			LinePtrn;
+	uae_u16			PatternShift;
+	uae_u32			FgPen, BgPen;
+	uae_u16			Horizontal;
+	uae_u8			DrawMode;
+	uae_s8			pad;
+	uae_u16			Xorigin, Yorigin;
 };
 
 #define PSSO_BitMapExtra_BoardNode        0
@@ -303,7 +303,7 @@ struct Line {
 #define PSSO_BitMapExtra_Last            54
 
 enum {
-    SFT_INVALID, SFT_FLICKERFIXER, SFT_VIDEOCAPTURE, SFT_VIDEOWINDOW, SFT_MEMORYWINDOW
+	SFT_INVALID, SFT_FLICKERFIXER, SFT_VIDEOCAPTURE, SFT_VIDEOWINDOW, SFT_MEMORYWINDOW
 };
 
 #ifndef TAG_USER
@@ -611,35 +611,37 @@ enum {
 /************************************************************************/
 struct picasso96_state_struct
 {
-    RGBFTYPE            RGBFormat;   /* true-colour, CLUT, hi-colour, etc.*/
-    struct MyCLUTEntry  CLUT[2 * 256];   /* Duh! */
-    uaecptr             Address;     /* Active screen address (Amiga-side)*/
-    uaecptr             Extent;      /* End address of screen (Amiga-side)*/
-    uae_u16             Width;       /* Active display width  (From SetGC)*/
-    uae_u16             VirtualWidth;/* Total screen width (From SetPanning)*/
-    uae_u16             BytesPerRow; /* Total screen width in bytes (FromSetGC) */
-    uae_u16             Height;      /* Active display height (From SetGC)*/
-    uae_u16             VirtualHeight; /* Total screen height */
-    uae_u8              GC_Depth;    /* From SetGC() */
-    uae_u8              GC_Flags;    /* From SetGC() */
-    long                XOffset;     /* From SetPanning() */
-    long                YOffset;     /* From SetPanning() */
-    uae_u8              SwitchState; /* From SetSwitch() - 0 is Amiga, 1 isPicasso */
-    uae_u8              BytesPerPixel;
-    uae_u8              CardFound;
-    //here follow winuae additional entrys
-    uae_u8		BigAssBitmap; /* Set to 1 when our Amiga screen is bigger than the displayable area */
-    unsigned int	Version;
-    uae_u8* HostAddress; /* Active screen address (PC-side) */
-    // host address is need because Windows
-    // support NO direct access all the time to gfx Card
-    // every time windows can remove your surface from card so the mainrender place
-    // must be in memory
-    long		XYOffset;
-    bool        dualclut;
+	RGBFTYPE            RGBFormat;   /* true-colour, CLUT, hi-colour, etc.*/
+	struct MyCLUTEntry  CLUT[2 * 256];   /* Duh! */
+	uaecptr             Address;     /* Active screen address (Amiga-side)*/
+	uaecptr             Extent;      /* End address of screen (Amiga-side)*/
+	uae_u16             Width;       /* Active display width  (From SetGC)*/
+	uae_u16             VirtualWidth;/* Total screen width (From SetPanning)*/
+	uae_u16             BytesPerRow; /* Total screen width in bytes (FromSetGC) */
+	uae_u16             Height;      /* Active display height (From SetGC)*/
+	uae_u16             VirtualHeight; /* Total screen height */
+	uae_u8              GC_Depth;    /* From SetGC() */
+	uae_u8              GC_Flags;    /* From SetGC() */
+	long                XOffset;     /* From SetPanning() */
+	long                YOffset;     /* From SetPanning() */
+	uae_u8              SwitchState; /* From SetSwitch() - 0 is Amiga, 1 isPicasso */
+	uae_u8              BytesPerPixel;
+	uae_u8              CardFound;
+	//here follow winuae additional entrys
+	uae_u8		BigAssBitmap; /* Set to 1 when our Amiga screen is bigger than the displayable area */
+	unsigned int	Version;
+	uae_u8		*HostAddress; /* Active screen address (PC-side) */
+	// host address is need because Windows
+	// support NO direct access all the time to gfx Card
+	// every time windows can remove your surface from card so the mainrender place
+	// must be in memory
+	long		XYOffset;
+	bool        dualclut;
 };
 
 extern void InitPicasso96(int monid);
+
+extern int uaegfx_card_found;
 
 extern struct picasso96_state_struct picasso96_state[MAX_AMIGAMONITORS];
 
@@ -650,31 +652,31 @@ extern void picasso_handle_vsync(void);
 extern void picasso_trigger_vblank(void);
 extern bool picasso_is_active(int monid);
 extern int picasso_setwincursor(int monid);
-extern int picasso_palette(struct MyCLUTEntry* MCLUT, uae_u32* clut);
-extern void picasso_allocatewritewatch(int index, int gfxmemsize);
-extern void picasso_getwritewatch(int index, int offset);
-extern bool picasso_is_vram_dirty(int index, uaecptr addr, int size);
-extern void picasso_statusline(int monid, uae_u8* dst);
+extern int picasso_palette(struct MyCLUTEntry *MCLUT, uae_u32 *clut);
+extern void picasso_allocatewritewatch (int index, int gfxmemsize);
+extern int picasso_getwritewatch(int index, int offset, uae_u8 ***gwwbufp, uae_u8 **startp);
+extern bool picasso_is_vram_dirty (int index, uaecptr addr, int size);
+extern void picasso_statusline (int monid, uae_u8 *dst);
 extern void picasso_invalidate(int monid, int x, int y, int w, int h);
 
 /* This structure describes the UAE-side framebuffer for the Picasso
  * screen.  */
 struct picasso_vidbuf_description {
-    int width, height, depth;
-    int rowbytes, pixbytes, offset;
-    int extra_mem; /* nonzero if there's a second buffer that must be updated */
-    uae_u32 rgbformat;
-    RGBFTYPE selected_rgbformat;
-    uae_u32 clut[256 * 2];
-    int picasso_convert, host_mode;
-    int ohost_mode, orgbformat;
-    int full_refresh;
-    int set_panning_called;
-    int rtg_clear_flag;
-    bool picasso_active;
-    bool picasso_changed;
-    uae_s16 splitypos;
-    uae_atomic picasso_state_change;
+	int width, height, depth;
+	int rowbytes, pixbytes, offset;
+	int extra_mem; /* nonzero if there's a second buffer that must be updated */
+	uae_u32 rgbformat;
+	RGBFTYPE selected_rgbformat;
+	uae_u32 clut[256 * 2];
+	int picasso_convert, host_mode;
+	int ohost_mode, orgbformat;
+	int full_refresh;
+	int set_panning_called;
+	int rtg_clear_flag;
+	bool picasso_active;
+	bool picasso_changed;
+	uae_s16 splitypos;
+	uae_atomic picasso_state_change;
 };
 
 extern struct picasso_vidbuf_description picasso_vidinfo[MAX_AMIGAMONITORS];
@@ -689,7 +691,7 @@ extern int createwindowscursor(int monid, uaecptr src, int w, int h, int hiressp
 void lockrtg(void);
 void unlockrtg(void);
 
-void fb_copyrow(int monid, uae_u8* src, uae_u8* dst, int x, int y, int width, int srcpixbytes, int dy);
+void fb_copyrow(int monid, uae_u8 *src, uae_u8 *dst, int x, int y, int width, int srcpixbytes, int dy);
 
 extern int p96refresh_active;
 
@@ -714,16 +716,16 @@ extern int p96refresh_active;
 
 #ifndef ANDROID
 #ifdef __cplusplus
-extern "C" {
+  extern "C" {
 #endif
-    void copy_screen_8bit_to_16bit(uae_u8* dst, uae_u8* src, int bytes, uae_u32* clut);
-    void copy_screen_8bit_to_32bit(uae_u8* dst, uae_u8* src, int bytes, uae_u32* clut);
-    void copy_screen_16bit_swap(uae_u8* dst, uae_u8* src, int bytes);
-    void copy_screen_16bit_to_32bit(uae_u8* dst, uae_u8* src, int bytes);
-    void copy_screen_32bit_to_16bit(uae_u8* dst, uae_u8* src, int bytes);
-    void copy_screen_32bit_to_32bit(uae_u8* dst, uae_u8* src, int bytes);
+  void copy_screen_8bit_to_16bit(uae_u8 *dst, uae_u8 *src, int bytes, uae_u32 *clut);
+  void copy_screen_8bit_to_32bit(uae_u8 *dst, uae_u8 *src, int bytes, uae_u32 *clut);
+  void copy_screen_16bit_swap(uae_u8 *dst, uae_u8 *src, int bytes);
+  void copy_screen_16bit_to_32bit(uae_u8 *dst, uae_u8 *src, int bytes);
+  void copy_screen_32bit_to_16bit(uae_u8 *dst, uae_u8 *src, int bytes);
+  void copy_screen_32bit_to_32bit(uae_u8 *dst, uae_u8 *src, int bytes);
 #ifdef __cplusplus
-}
+  }
 #endif
 #endif
 
