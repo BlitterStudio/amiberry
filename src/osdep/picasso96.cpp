@@ -3423,7 +3423,7 @@ static uae_u32 REGPARAM2 picasso_BlitPattern(TrapContext * ctx)
 							int bit_set = data & 0x8000;
 							data <<= 1;
 							if (inversion)
-								bit_set = !bit_set;
+								bit_set = ~bit_set;
 							if (bit_set)
 								PixelWrite(uae_mem2, bits, fgpen, Bpp, Mask);
 						}
@@ -3435,7 +3435,7 @@ static uae_u32 REGPARAM2 picasso_BlitPattern(TrapContext * ctx)
 							int bit_set = data & 0x8000;
 							data <<= 1;
 							if (inversion)
-								bit_set = !bit_set;
+								bit_set = ~bit_set;
 							PixelWrite(uae_mem2, bits, bit_set ? fgpen : bgpen, Bpp, Mask);
 						}
 						break;
@@ -3604,7 +3604,7 @@ static uae_u32 REGPARAM2 picasso_BlitTemplate(TrapContext * ctx)
 							int bit_set = (byte & 0x80);
 							byte <<= 1;
 							if (inversion)
-								bit_set = !bit_set;
+								bit_set = ~bit_set;
 							if (bit_set)
 								PixelWrite(uae_mem2, bits, fgpen, Bpp, Mask);
 						}
@@ -3616,7 +3616,7 @@ static uae_u32 REGPARAM2 picasso_BlitTemplate(TrapContext * ctx)
 							int bit_set = (byte & 0x80);
 							byte <<= 1;
 							if (inversion)
-								bit_set = !bit_set;
+								bit_set = ~bit_set;
 							PixelWrite(uae_mem2, bits, bit_set ? fgpen : bgpen, Bpp, Mask);
 						}
 						break;
