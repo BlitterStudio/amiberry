@@ -157,7 +157,7 @@ static int overlay_convert;
 static int overlay_occlusion;
 static struct MyCLUTEntry overlay_clutc[256 * 2];
 static uae_u32 overlay_clut[256 * 2];
-static uae_u32* p96_rgbx16_ovl;
+static uae_u32 *p96_rgbx16_ovl;
 static bool delayed_set_switch;
 
 static int uaegfx_old, uaegfx_active;
@@ -985,14 +985,6 @@ static void picasso_handle_vsync2(struct AmigaMonitor *mon)
 	bool uaegfx = currprefs.rtgboards[0].rtgmem_type < GFXBOARD_HARDWARE;
 	bool uaegfx_active = is_uaegfx_active();
 
-	if (currprefs.rtgboards[0].rtgmem_size == 0)
-		return;
-
-	if (!ad->picasso_on) {
-		picasso_trigger_vblank();
-		return;
-	}
-
 	int state = vidinfo->picasso_state_change;
 	if (state)
 		lockrtg();
@@ -1173,7 +1165,7 @@ static void picasso_handle_hsync(void)
 #define BLT_FUNC(s,d) *d = 0
 #include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOR_32
-#define BLT_FUNC(s,d) *d = ((*s) | (*d))
+#define BLT_FUNC(s,d) *d = ~((*s) | (*d))
 #include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_ONLYDST_32
 #define BLT_FUNC(s,d) *d = (*d) & ~(*s)
@@ -2608,8 +2600,7 @@ static uae_u32 REGPARAM2 picasso_SetSwitch (TrapContext *ctx)
 		state->HostAddress = NULL;
 		delayed_set_switch = true;
 		atomic_or(&vidinfo->picasso_state_change, PICASSO_STATE_SETGC);
-	}
-	else {
+	} else {
 		delayed_set_switch = false;
 		atomic_or(&vidinfo->picasso_state_change, PICASSO_STATE_SETSWITCH);
 		ad->picasso_requested_on = flag != 0;
@@ -3388,7 +3379,7 @@ static uae_u32 REGPARAM2 picasso_BlitPattern (TrapContext *ctx)
 								int bit_set = data & 0x8000;
 								data <<= 1;
 								if (inversion)
-									bit_set = !bit_set;
+								bit_set = ~bit_set;
 								if (bit_set)
 									PixelWrite (uae_mem2, bits, fgpen, Bpp, Mask);
 							}
@@ -3400,7 +3391,7 @@ static uae_u32 REGPARAM2 picasso_BlitPattern (TrapContext *ctx)
 								int bit_set = data & 0x8000;
 								data <<= 1;
 								if (inversion)
-									bit_set = !bit_set;
+								bit_set = ~bit_set;
 								PixelWrite (uae_mem2, bits, bit_set ? fgpen : bgpen, Bpp, Mask);
 							}
 							break;
@@ -3566,7 +3557,7 @@ static uae_u32 REGPARAM2 picasso_BlitTemplate(TrapContext *ctx)
 								int bit_set = (byte & 0x80);
 								byte <<= 1;
 								if (inversion)
-									bit_set = !bit_set;
+								bit_set = ~bit_set;
 								if (bit_set)
 									PixelWrite(uae_mem2, bits, fgpen, Bpp, Mask);
 							}
@@ -3578,7 +3569,7 @@ static uae_u32 REGPARAM2 picasso_BlitTemplate(TrapContext *ctx)
 								int bit_set = (byte & 0x80);
 								byte <<= 1;
 								if (inversion)
-									bit_set = !bit_set;
+								bit_set = ~bit_set;
 								PixelWrite(uae_mem2, bits, bit_set ? fgpen : bgpen, Bpp, Mask);
 							}
 							break;
@@ -4961,8 +4952,8 @@ static void copyall (int monid, uae_u8 *src, uae_u8 *dst, int pwidth, int pheigh
 
 uae_u8 *uaegfx_getrtgbuffer(int monid, int *widthp, int *heightp, int *pitch, int *depth, uae_u8 *palette)
 {
-	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[monid];
-	struct picasso96_state_struct *state = &picasso96_state[monid];
+	struct picasso_vidbuf_description* vidinfo = &picasso_vidinfo[monid];
+	struct picasso96_state_struct* state = &picasso96_state[monid];
 	uae_u8 *src = gfxmem_banks[monid]->start + regs.natmem_offset;
 	int off = state->XYOffset - gfxmem_banks[monid]->start;
 	int width, height, pixbytes;
@@ -5024,18 +5015,18 @@ void picasso_invalidate(int monid, int x, int y, int w, int h)
 	DX_Invalidate(&AMonitors[monid], x, y, w, h);
 }
 
-static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
+static void picasso_flushpixels(int index, uae_u8* src, int off, bool render)
 {
 	int monid = currprefs.rtgboards[index].monitor_id;
-	struct picasso96_state_struct *state = &picasso96_state[monid];
-	uae_u8 *src_start[2];
-	uae_u8 *src_end[2];
+	struct picasso96_state_struct* state = &picasso96_state[monid];
+	uae_u8* src_start[2];
+	uae_u8* src_end[2];
 	int pwidth = state->Width > state->VirtualWidth ? state->VirtualWidth : state->Width;
 	int pheight = state->Height > state->VirtualHeight ? state->VirtualHeight : state->Height;
 	int maxy = -1;
 	int miny = pheight - 1;
 	int flushlines = 0, matchcount = 0;
-	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[monid];
+	struct picasso_vidbuf_description* vidinfo = &picasso_vidinfo[monid];
 	bool overlay_updated = false;
 
 	src_start[0] = src + off;
@@ -5044,7 +5035,8 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 		src_end[0] = src + (off + state->BytesPerRow * vidinfo->splitypos);
 		src_start[1] = src;
 		src_end[1] = src + state->BytesPerRow * (pheight - vidinfo->splitypos);
-	} else {
+	}
+	else {
 		src_start[1] = src_end[1] = 0;
 	}
 
@@ -5076,13 +5068,14 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 				vidinfo->full_refresh = 1;
 				//for (int i = 0; i < gwwcnt; i++)
 				//	gwwbuf[index][i] = src_start[split] + i * gwwpagesize[index];
-			} else {
+			}
+			else {
 				//unsigned long ps;
 				//gwwcnt = gwwbufsize[index];
 #ifdef AMIBERRY
 #else
 				if (GetWriteWatch(WRITE_WATCH_FLAG_RESET, src_start[split], regionsize, gwwbuf[index], &gwwcnt, &ps))
-				//if (mman_GetWriteWatch(src_start[split], regionsize, gwwbuf[index], &gwwcnt, &ps))
+					//if (mman_GetWriteWatch(src_start[split], regionsize, gwwbuf[index], &gwwcnt, &ps))
 					continue;
 #endif
 			}
@@ -5109,7 +5102,6 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 					memset(p2, 0, vidinfo->width * vidinfo->pixbytes);
 					p2 += vidinfo->rowbytes;
 				}
-
 				vidinfo->rtg_clear_flag--;
 			}
 
@@ -5125,7 +5117,8 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 						state->BytesPerRow, state->BytesPerPixel,
 						vidinfo->rowbytes, vidinfo->pixbytes,
 						state->RGBFormat == vidinfo->host_mode, vidinfo->picasso_convert);
-				} else {
+				}
+				else {
 					copyall(monid, src + off, dst, pwidth, pheight,
 						state->BytesPerRow, state->BytesPerPixel,
 						vidinfo->rowbytes, vidinfo->pixbytes,
@@ -5214,7 +5207,7 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 			miny = vidinfo->height - TD_TOTAL_HEIGHT;
 	}
 	if (maxy >= 0) {
-		if (doskip () && p96skipmode == 4) {
+		if (doskip() && p96skipmode == 4) {
 			;
 		} else {
 			picasso_invalidate(monid, 0, miny, pwidth, maxy - miny);
@@ -6187,25 +6180,25 @@ uae_u32 picasso_demux (uae_u32 arg, TrapContext *ctx)
 	}
 	switch (num)
 	{
-     case 16: return picasso_FindCard (ctx);
-     case 17: return picasso_FillRect (ctx);
-     case 18: return picasso_SetSwitch (ctx);
-     case 19: return picasso_SetColorArray (ctx);
-     case 20: return picasso_SetDAC (ctx);
-     case 21: return picasso_SetGC (ctx);
-     case 22: return picasso_SetPanning (ctx);
-     case 23: return picasso_CalculateBytesPerRow (ctx);
-     case 24: return picasso_BlitPlanar2Chunky (ctx);
-     case 25: return picasso_BlitRect (ctx);
-     case 26: return picasso_SetDisplay (ctx);
-     case 27: return picasso_BlitTemplate (ctx);
-     case 28: return picasso_BlitRectNoMaskComplete (ctx);
-     case 29: return picasso_InitCard (ctx);
-     case 30: return picasso_BlitPattern (ctx);
-     case 31: return picasso_InvertRect (ctx);
-     case 32: return picasso_BlitPlanar2Direct (ctx);
-     //case 34: return picasso_WaitVerticalSync (ctx);
-     case 35: return gfxmem_bank.allocated_size ? 1 : 0;
+	 case 16: return picasso_FindCard (ctx);
+	 case 17: return picasso_FillRect (ctx);
+	 case 18: return picasso_SetSwitch (ctx);
+	 case 19: return picasso_SetColorArray (ctx);
+	 case 20: return picasso_SetDAC (ctx);
+	 case 21: return picasso_SetGC (ctx);
+	 case 22: return picasso_SetPanning (ctx);
+	 case 23: return picasso_CalculateBytesPerRow (ctx);
+	 case 24: return picasso_BlitPlanar2Chunky (ctx);
+	 case 25: return picasso_BlitRect (ctx);
+	 case 26: return picasso_SetDisplay (ctx);
+	 case 27: return picasso_BlitTemplate (ctx);
+	 case 28: return picasso_BlitRectNoMaskComplete (ctx);
+	 case 29: return picasso_InitCard (ctx);
+	 case 30: return picasso_BlitPattern (ctx);
+	 case 31: return picasso_InvertRect (ctx);
+	 case 32: return picasso_BlitPlanar2Direct (ctx);
+	 //case 34: return picasso_WaitVerticalSync (ctx);
+	 case 35: return gfxmem_bank.allocated_size ? 1 : 0;
 	 case 36: return picasso_SetSprite (ctx);
 	 case 37: return picasso_SetSpritePosition (ctx);
 	 case 38: return picasso_SetSpriteImage (ctx);

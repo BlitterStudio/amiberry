@@ -1,30 +1,30 @@
- /*
-  * UAE - The Un*x Amiga Emulator
-  *
-  * Interface to the Tcl/Tk GUI
-  *
-  * Copyright 1996 Bernd Schmidt
-  */
+/*
+ * UAE - The Un*x Amiga Emulator
+ *
+ * Interface to the Tcl/Tk GUI
+ *
+ * Copyright 1996 Bernd Schmidt
+ */
 
 #ifndef UAE_GUI_H
 #define UAE_GUI_H
 
 #include "uae/types.h"
 
-extern int gui_init (void);
-extern int gui_update (void);
-extern void gui_exit (void);
-extern void gui_led (int, int, int);
-extern void gui_handle_events (void);
-extern void gui_filename (int, const TCHAR *);
-extern void gui_fps (int fps, int idle, int color);
-extern void gui_changesettings (void);
-extern void gui_lock (void);
-extern void gui_unlock (void);
-extern void gui_flicker_led (int, int, int);
-extern void gui_disk_image_change (int, const TCHAR *, bool writeprotected);
+extern int gui_init(void);
+extern int gui_update(void);
+extern void gui_exit(void);
+extern void gui_led(int, int, int);
+extern void gui_handle_events(void);
+extern void gui_filename(int, const TCHAR*);
+extern void gui_fps(int fps, int idle, int color);
+extern void gui_changesettings(void);
+extern void gui_lock(void);
+extern void gui_unlock(void);
+extern void gui_flicker_led(int, int, int);
+extern void gui_disk_image_change(int, const TCHAR*, bool writeprotected);
 extern unsigned int gui_ledstate;
-extern void gui_display (int shortcut);
+extern void gui_display(int shortcut);
 
 //extern void gui_gameport_button_change (int port, int button, int onoff);
 //extern void gui_gameport_axis_change (int port, int axis, int state, int max);
@@ -82,11 +82,11 @@ struct gui_info
 extern struct gui_info gui_data;
 
 /* Functions to be called when prefs are changed by non-gui code.  */
-extern void gui_update_gfx (void);
+extern void gui_update_gfx(void);
 
-void notify_user (int msg);
-void notify_user_parms (int msg, const TCHAR *parms, ...);
-int translate_message (int msg, TCHAR *out);
+void notify_user(int msg);
+void notify_user_parms(int msg, const TCHAR* parms, ...);
+int translate_message(int msg, TCHAR* out);
 
 typedef enum {
 	NUMSG_NEEDEXT2, // 0
