@@ -807,6 +807,11 @@ void master_sound_volume(int dir)
 // Audio callback function
 void sdl2_audio_callback(void* userdata, Uint8* stream, int len)
 {
+	/* SDL 2.0 will require the application to clear the buffer */
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+	memset(stream, 0, len);
+#endif
+
 	auto* sd = static_cast<sound_data*>(userdata);
 	auto* s = sd->data;
 
