@@ -1509,9 +1509,6 @@ static void setdr(int nr, bool startup)
 		} else {
 			cdp->dr = true;
 		}
-		else {
-			cdp->dr = true;
-		}
 	}
 	else {
 #if DEBUG_AUDIO > 0
@@ -1573,23 +1570,6 @@ static void loaddat(int nr)
 
 static void loadper1(int nr)
 {
-	struct audio_channel_data *cdp = audio_channel + nr;
-	cdp->evtime = 1 * CYCLE_UNIT;
-}
-
-static void loadperm1(int nr)
-{
-	struct audio_channel_data *cdp = audio_channel + nr;
-
-	if (cdp->per > CYCLE_UNIT) {
-		cdp->evtime = cdp->per - 1 * CYCLE_UNIT;
-	} else {
-		cdp->evtime = 65536 * CYCLE_UNIT + cdp->per;
-	}
-}
-
-static void loadper (int nr)
-{
 	struct audio_channel_data* cdp = audio_channel + nr;
 	cdp->evtime = 1 * CYCLE_UNIT;
 }
@@ -1617,7 +1597,7 @@ static void loadper(int nr)
 }
 
 
-static bool audio_state_channel2 (int nr, bool perfin)
+static bool audio_state_channel2(int nr, bool perfin)
 {
 	struct audio_channel_data* cdp = audio_channel + nr;
 	bool chan_ena = (dmacon & DMA_MASTER) && (dmacon & (1 << nr));
@@ -1630,7 +1610,7 @@ static bool audio_state_channel2 (int nr, bool perfin)
 	cdp->dmaenstore = chan_ena;
 
 	if (currprefs.produce_sound == 0) {
-		zerostate (nr);
+		zerostate(nr);
 		return true;
 	}
 	audio_activate();

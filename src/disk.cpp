@@ -4426,16 +4426,6 @@ void DISK_hsync(void)
 		}
 #endif
 
-#ifdef FLOPPYBRIDGE
-		if (drv->bridge && drv->writepending) {
-			// With bridge we wait for the disk to commit the data before fireing the DMA
-			if (drv->bridge->isWriteComplete()) {
-				disk_dmafinished();
-				drv->writepending = false;
-			}
-		}
-#endif
-
 
 	}
 	if (indexdecay)
@@ -5121,14 +5111,6 @@ static void floppybridge_init2(struct uae_prefs* p)
 				bridges[dr] = bridge;
 				floppy[dr].bridge = bridge;
 			}
-		} else {
-			if (bridges[dr]) {
-				bridges[dr]->shutdown();
-				delete bridges[dr];
-				bridges[dr] = NULL;
-			}
-			floppy[dr].bridge = NULL;
-			bridge_driver[dr] = NULL;
 		}
 		else {
 			if (bridges[dr]) {
