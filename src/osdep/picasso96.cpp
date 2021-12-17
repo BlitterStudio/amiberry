@@ -195,7 +195,6 @@ static int set_gc_called = 0, init_picasso_screen_called = 0;
 static uaecptr oldscr = 0;
 
 extern addrbank gfxmem_bank;
-extern addrbank *gfxmem_banks[MAX_RTG_BOARDS];
 extern int rtg_index;
 
 void lockrtg(void)
@@ -210,7 +209,7 @@ void unlockrtg(void)
 		uae_sem_post(&render_cs);
 }
 
-STATIC_INLINE void endianswap (uae_u32* vp, int bpp)
+STATIC_INLINE void endianswap(uae_u32* vp, int bpp)
 {
 	uae_u32 v = *vp;
 	switch (bpp)
@@ -224,8 +223,6 @@ STATIC_INLINE void endianswap (uae_u32* vp, int bpp)
 	}
 }
 
-static void** gwwbuf[MAX_RTG_BOARDS];
-static int gwwbufsize[MAX_RTG_BOARDS], gwwpagesize[MAX_RTG_BOARDS], gwwpagemask[MAX_RTG_BOARDS];
 //extern uae_u8* natmem_offset;
 
 static uae_u8 GetBytesPerPixel (uae_u32 RGBfmt)
@@ -943,7 +940,7 @@ void picasso_refresh(int monid)
 	}
 
 	/* Make sure that the first time we show a Picasso video mode, we don't blit any crap.
-	* We can do this by checking if we have an Address yet. 
+	* We can do this by checking if we have an Address yet.
 	*/
 	if (state->Address) {
 		unsigned int width, height;
@@ -4026,9 +4023,9 @@ static uae_u32 REGPARAM2 picasso_BlitPlanar2Direct (TrapContext *ctx)
 #include "statusline.h"
 void picasso_statusline(int monid, uae_u8 *dst)
 {
-	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[monid];
-	struct picasso96_state_struct *state = &picasso96_state[monid];
-	int y, slx, sly;
+	struct picasso_vidbuf_description* vidinfo = &picasso_vidinfo[monid];
+	struct picasso96_state_struct* state = &picasso96_state[monid];
+	int y;
 	int dst_height, dst_width, pitch;
 
 	dst_height = state->Height;
@@ -4943,7 +4940,7 @@ static void copyall (int monid, uae_u8 *src, uae_u8 *dst, int pwidth, int pheigh
 			if (y == vidinfo->splitypos) {
 				src = gfxmem_banks[monid]->start + regs.natmem_offset;
 			}
-			memcpy (dst, src, w);
+			memcpy(dst, src, w);
 			dst += dstbytesperrow;
 			src += srcbytesperrow;
 		}
@@ -5247,39 +5244,11 @@ static int render_thread(void* v)
 	return 0;
 }
 
-extern addrbank gfxmem_bank;
 MEMORY_FUNCTIONS(gfxmem);
 addrbank gfxmem_bank = {
 	gfxmem_lget, gfxmem_wget, gfxmem_bget,
 	gfxmem_lput, gfxmem_wput, gfxmem_bput,
 	gfxmem_xlate, gfxmem_check, NULL, NULL, _T("RTG RAM"),
-	dummy_lgeti, dummy_wgeti,
-	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS, 0, 0
-};
-extern addrbank gfxmem2_bank;
-MEMORY_FUNCTIONS(gfxmem2);
-addrbank gfxmem2_bank = {
-	gfxmem2_lget, gfxmem2_wget, gfxmem2_bget,
-	gfxmem2_lput, gfxmem2_wput, gfxmem2_bput,
-	gfxmem2_xlate, gfxmem2_check, NULL, NULL, _T("RTG RAM #2"),
-	dummy_lgeti, dummy_wgeti,
-	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS, 0, 0
-};
-extern addrbank gfxmem3_bank;
-MEMORY_FUNCTIONS(gfxmem3);
-addrbank gfxmem3_bank = {
-	gfxmem3_lget, gfxmem3_wget, gfxmem3_bget,
-	gfxmem3_lput, gfxmem3_wput, gfxmem3_bput,
-	gfxmem3_xlate, gfxmem3_check, NULL, NULL, _T("RTG RAM #3"),
-	dummy_lgeti, dummy_wgeti,
-	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS, 0, 0
-};
-extern addrbank gfxmem4_bank;
-MEMORY_FUNCTIONS(gfxmem4);
-addrbank gfxmem4_bank = {
-	gfxmem4_lget, gfxmem4_wget, gfxmem4_bget,
-	gfxmem4_lput, gfxmem4_wput, gfxmem4_bput,
-	gfxmem4_xlate, gfxmem4_check, NULL, NULL, _T("RTG RAM #4"),
 	dummy_lgeti, dummy_wgeti,
 	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS, 0, 0
 };
@@ -5292,15 +5261,12 @@ void InitPicasso96(int monid)
 {
 	struct picasso96_state_struct* state = &picasso96_state[monid];
 	gfxmem_banks[0] = &gfxmem_bank;
-	gfxmem_banks[1] = &gfxmem2_bank;
-	gfxmem_banks[2] = &gfxmem3_bank;
-	gfxmem_banks[3] = &gfxmem4_bank;
 
 	//fastscreen
 	oldscr = 0;
 	//fastscreen
 	memset (state, 0, sizeof (struct picasso96_state_struct));
-	
+
 	for (int i = 0; i < 256; i++) {
 		p2ctab[i][0] = (((i & 128) ? 0x01000000 : 0)
 			| ((i & 64) ? 0x010000 : 0)
