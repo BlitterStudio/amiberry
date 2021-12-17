@@ -1490,28 +1490,20 @@ void fix_trailing(TCHAR* p)
 	_tcscat(p, "/");
 }
 
-// convert path to absolute or relative
+// convert path to absolute
 void fullpath(TCHAR* path, int size, bool userelative)
 {
-	if (path[0] == 0 || (path[0] == '\\' && path[1] == '\\') || path[0] == ':' || path[0] == '/')
-		return;
-	// has one or more environment variables? do nothing.
-	if (_tcschr(path, '%'))
-		return;
-	if (_tcslen(path) >= 2 && path[_tcslen(path) - 1] == '.')
-		return;
-
-	// Relative path
+	// Resolve absolute path
 	TCHAR tmp1[MAX_DPATH];
 	tmp1[0] = 0;
 	if (realpath(path, tmp1) != NULL)
 	{
-		_tcscpy(path, tmp1);
-		write_log("Relative path detected, resolved to %s\n", tmp1);
+		if (_tcsnicmp(path, tmp1, _tcslen(tmp1)) != 0)
+			_tcscpy(path, tmp1);
 	}
 }
 
-// convert path to absolute or relative
+// convert path to absolute
 void fullpath(TCHAR* path, int size)
 {
 	fullpath(path, size, relativepaths);
