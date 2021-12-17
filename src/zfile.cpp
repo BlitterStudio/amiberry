@@ -1912,7 +1912,9 @@ static struct zfile *zfile_fopenx2 (const TCHAR *name, const TCHAR *mode, int ma
 static struct zfile *zfile_fopenx (const TCHAR *name, const TCHAR *mode, int mask, int index)
 {
 	struct zfile *zf;
+	//write_log (_T("zfile_fopen('%s','%s',%08x,%d)\n"), name, mode, mask, index);
 	zf = zfile_fopenx2 (name, mode, mask, index);
+	//write_log (_T("=%p\n"), zf);
 	return zf;
 }
 
@@ -2319,14 +2321,30 @@ TCHAR *zfile_fgets (TCHAR *s, int size, struct zfile *z)
 		au_copy (s, size, s2);
 		return s + size;
 	} else {
-		char s2[MAX_DPATH];
+		bool alloc = false;
+		char s2t[MAX_DPATH + 1];
+		char *s2 = s2t;
 		char *s1;
+		if (size >= MAX_DPATH + 1) {
+			s2 = xmalloc(char, size + 1);
+			if (!s2) {
+				return NULL;
+			}
+			alloc = true;
+		}
 		s1 = fgets (s2, size, z->f);
-		if (!s1)
+		if (!s1) {
+			if (alloc) {
+				xfree(s2);
+			}
 			return NULL;
+		}
 		if (size > strlen (s2) + 1)
 			size = strlen (s2) + 1;
 		au_copy (s, size, s2);
+		if (alloc) {
+			xfree(s2);
+		}
 		return s + size;
 	}
 }
