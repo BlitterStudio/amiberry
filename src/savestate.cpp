@@ -291,9 +291,9 @@ static TCHAR *state_resolve_path(TCHAR *s, int type, bool newmode)
 			xfree(s);
 			return my_strdup(tmp);
 		}
-		get_file_part(tmp, sizeof tmp / sizeof(TCHAR), s);
+		getfilepart(tmp, sizeof tmp / sizeof(TCHAR), s);
 	} else {
-		get_file_part (tmp, sizeof tmp / sizeof (TCHAR), s);
+		getfilepart (tmp, sizeof tmp / sizeof (TCHAR), s);
 		if (state_path_exists(tmp, type)) {
 			xfree(s);
 			return my_strdup(tmp);
@@ -318,7 +318,7 @@ static TCHAR *state_resolve_path(TCHAR *s, int type, bool newmode)
 			return my_strdup (tmp2);
 		}
 	}
-	get_path_part (tmp2, sizeof tmp2 / sizeof (TCHAR), savestate_fname);
+	getpathpart (tmp2, sizeof tmp2 / sizeof (TCHAR), savestate_fname);
 	_tcscat (tmp2, tmp);
 	if (state_path_exists(tmp2, type)) {
 		xfree (s);

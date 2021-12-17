@@ -708,11 +708,11 @@ static TCHAR *cfgfile_get_multipath2 (struct multipath *mp, const TCHAR *path, c
 				s = cfgfile_subst_path2 (path, i, file);
 			if (!s) {
 				TCHAR np[MAX_DPATH];
-				_tcscpy (np, i);
-				fix_trailing (np);
-				_tcscat (np, file);
-				//fullpath (np, sizeof np / sizeof (TCHAR));
-				s = my_strdup (np);
+				_tcscpy(np, i);
+				fix_trailing(np);
+				_tcscat(np, file);
+				fullpath (np, sizeof np / sizeof (TCHAR));
+				s = my_strdup(np);
 			}
 			if (dir) {
 				if (my_existsdir (s))
@@ -1100,7 +1100,7 @@ static void cfgfile_adjust_path(TCHAR *path, int maxsz, struct multipath *mp)
 				_tcscpy(np, i);
 				fix_trailing(np);
 				_tcscat(np, s);
-				//fullpath(np, sizeof np / sizeof(TCHAR));
+				fullpath(np, sizeof np / sizeof(TCHAR));
 				if (zfile_exists(np)) {
 					_tcsncpy(path, np, maxsz - 1);
 					path[maxsz - 1] = 0;
@@ -1110,7 +1110,7 @@ static void cfgfile_adjust_path(TCHAR *path, int maxsz, struct multipath *mp)
 			}
 		}
 	}
-	//fullpath(path, maxsz);
+	fullpath(path, maxsz);
 	xfree(s);
 }
 

@@ -986,7 +986,7 @@ static int set_filesys_unit_1 (int nr, struct uaedev_config_info *ci, bool custo
 	for (i = 0; i < MAX_FILESYSTEM_UNITS; i++) {
 		if (nr == i || !mountinfo.ui[i].open || mountinfo.ui[i].rootdir == NULL || is_hardfile (i) == FILESYS_CD)
 			continue;
-		if (_tcslen(c.rootdir) > 0 && same_path(mountinfo.ui[i].rootdir, c.rootdir)) {
+		if (_tcslen(c.rootdir) > 0 && samepath(mountinfo.ui[i].rootdir, c.rootdir)) {
 			error_log (_T("directory/hardfile '%s' already added."), c.rootdir);
 			return -1;
 		}
