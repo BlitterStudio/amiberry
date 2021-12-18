@@ -727,11 +727,11 @@ bool HelpPanelInput(std::vector<std::string>& helptext)
 	helptext.emplace_back(" ");
 	helptext.emplace_back("You can use the Swap Ports button to swap the devices between port 0 and 1.");
 	helptext.emplace_back("Auto-switching enables you to switch Port 0 between Mouse-Joystick based on");
-	helptext.emplace_back("which device's Fire was pressed.");
+	helptext.emplace_back("which device is being used. Only works if type is left to Default.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("Mouse Stick 0/1: This allows you to use an analog stick on your controller");
-	helptext.emplace_back("to emulate a mouse (0 is left stick, 1 is right stick). Only works when type");
-	helptext.emplace_back("is set to something other than Default.");
+	helptext.emplace_back("to emulate a mouse (0/1 being the port the controller is assigned to).");
+	helptext.emplace_back("Only works when type is set to something other than Default.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("You can set the Autofire Rate, and choose if a device should have Autofire");
 	helptext.emplace_back("as well as what kind of autofire (normal, toggle, always-on).");
@@ -741,6 +741,7 @@ bool HelpPanelInput(std::vector<std::string>& helptext)
 	helptext.emplace_back("which mouse pointer(s) will be visible during emulation.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("Magic Mouse untrap will free the mouse if it's moved outside the emulator window");
-	helptext.emplace_back("and re-capture it when it's moved back in.");
+	helptext.emplace_back("and re-capture it when it's moved back in. Only useful when running under a");
+	helptext.emplace_back("windowed environment.");
 	return true;
 }
