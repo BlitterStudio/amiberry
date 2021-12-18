@@ -554,5 +554,7 @@ bool HelpPanelCustom(std::vector<std::string>& helptext)
 	helptext.emplace_back("Pre-defined functions such as Quit/Reset/Menu will be displayed as the 'default' option.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("The Function of the individual buttons are selectable via the marked drop-down boxes.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("You can also remap the game controllers D-Pad to act like the Left Analog stick.");
 	return true;
 }
