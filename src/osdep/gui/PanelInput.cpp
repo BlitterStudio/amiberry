@@ -720,14 +720,27 @@ void RefreshPanelInput()
 bool HelpPanelInput(std::vector<std::string>& helptext)
 {
 	helptext.clear();
-	helptext.emplace_back("You can select the control type for both ports and the rate for autofire.");
+	helptext.emplace_back("Here you can select the devices connected to the various input ports.");
+	helptext.emplace_back("Port 0 is normally used by a Mouse, while Port 1 is usually for a Joystick.");
+	helptext.emplace_back("Ports 2 and 3 are emulating the Parallel port adapter, and are only supported");
+	helptext.emplace_back("in some games.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("Set the emulated mouse speed to .25x, .5x, 1x, 2x and 4x to slow down or ");
-	helptext.emplace_back("speed up the mouse.");
+	helptext.emplace_back("You can use the Swap Ports button to swap the devices between port 0 and 1.");
+	helptext.emplace_back("Auto-switching enables you to switch Port 0 between Mouse-Joystick based on");
+	helptext.emplace_back("which device's Fire was pressed.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("When \"Enable mousehack\" is activated, you can use touch input to set");
-	helptext.emplace_back("the mouse pointer to the exact position. This works very well on Workbench, ");
-	helptext.emplace_back("but many games using their own mouse handling and will not profit from this mode.");
+	helptext.emplace_back("Mouse Stick 0/1: This allows you to use an analog stick on your controller");
+	helptext.emplace_back("to emulate a mouse (0 is left stick, 1 is right stick). Only works when type");
+	helptext.emplace_back("is set to something other than Default.");
 	helptext.emplace_back(" ");
+	helptext.emplace_back("You can set the Autofire Rate, and choose if a device should have Autofire");
+	helptext.emplace_back("as well as what kind of autofire (normal, toggle, always-on).");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("If you enable Virtual Mouse driver, mouse input events will be read as absolute");
+	helptext.emplace_back("instead of relative. This may not work with all apps. Below that you can select");
+	helptext.emplace_back("which mouse pointer(s) will be visible during emulation.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("Magic Mouse untrap will free the mouse if it's moved outside the emulator window");
+	helptext.emplace_back("and re-capture it when it's moved back in.");
 	return true;
 }
