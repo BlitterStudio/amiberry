@@ -616,14 +616,20 @@ void check_input()
 					break;
 				}
 
-				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_LEFTSHOULDER]))
+				if ((did->mapping.is_retroarch || !did->is_controller)
+					&& SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_LEFTSHOULDER])
+					|| SDL_GameControllerGetButton(did->controller,
+						static_cast<SDL_GameControllerButton>(did->mapping.button[SDL_CONTROLLER_BUTTON_LEFTSHOULDER])))
 				{
 					for (auto z = 0; z < 10; ++z)
 					{
 						PushFakeKey(SDLK_UP);
 					}
 				}
-				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_RIGHTSHOULDER]))
+				if ((did->mapping.is_retroarch || !did->is_controller)
+					&& SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_RIGHTSHOULDER])
+					|| SDL_GameControllerGetButton(did->controller,
+						static_cast<SDL_GameControllerButton>(did->mapping.button[SDL_CONTROLLER_BUTTON_RIGHTSHOULDER])))
 				{
 					for (auto z = 0; z < 10; ++z)
 					{
@@ -645,8 +651,13 @@ void check_input()
 					PushFakeKey(SDLK_LEFT);
 					break;
 				}
-				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_A]) ||
-					SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_B]))
+				if ((did->mapping.is_retroarch || !did->is_controller)
+					&& (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_A])
+						|| SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_B]))
+					|| SDL_GameControllerGetButton(did->controller,
+						static_cast<SDL_GameControllerButton>(did->mapping.button[SDL_CONTROLLER_BUTTON_A]))
+					|| SDL_GameControllerGetButton(did->controller,
+						static_cast<SDL_GameControllerButton>(did->mapping.button[SDL_CONTROLLER_BUTTON_B])))
 				{
 					PushFakeKey(SDLK_RETURN);
 					continue;
@@ -661,7 +672,10 @@ void check_input()
 					break;
 				}
 
-				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_GUIDE]))
+				if ((did->mapping.is_retroarch || !did->is_controller)
+					&& SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_GUIDE])
+					|| SDL_GameControllerGetButton(did->controller,
+						static_cast<SDL_GameControllerButton>(did->mapping.button[SDL_CONTROLLER_BUTTON_GUIDE])))
 				{
 					// use the HOTKEY button
 					gui_running = false;
@@ -878,17 +892,16 @@ void amiberry_gui_run()
 	{
 		for (auto j = 0; j < SDL_NumJoysticks(); j++)
 		{
-
-				gui_joystick = SDL_JoystickOpen(j);
-				// Some controllers (e.g. PS4) report a second instance with only axes and no buttons.
-				// We ignore these and move on.
-				if (SDL_JoystickNumButtons(gui_joystick) < 1)
-				{
-					SDL_JoystickClose(gui_joystick);
-					continue;
-				}
-				if (gui_joystick)
-					break;
+			gui_joystick = SDL_JoystickOpen(j);
+			// Some controllers (e.g. PS4) report a second instance with only axes and no buttons.
+			// We ignore these and move on.
+			if (SDL_JoystickNumButtons(gui_joystick) < 1)
+			{
+				SDL_JoystickClose(gui_joystick);
+				continue;
+			}
+			if (gui_joystick)
+				break;
 		}
 	}
 
