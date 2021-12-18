@@ -1191,6 +1191,8 @@ void gui_widgets_init()
 	//--------------------------------------------------
 	if (!emulating && amiberry_options.quickstart_start)
 		last_active_panel = 2;
+	if (amiberry_options.disable_shutdown_button)
+		cmdShutdown->setEnabled(false);
 	categories[last_active_panel].selector->requestFocus();
 	cmdHelp->setVisible(categories[last_active_panel].HelpFunc != nullptr);
 }

@@ -1186,6 +1186,7 @@ struct amiberry_options
 	bool default_whd_buttonwait = false;
 	bool default_whd_showsplash = true;
 	int default_whd_configdelay = 0;
+	bool disable_shutdown_button = false;
 };
 
 extern struct amiberry_options amiberry_options;

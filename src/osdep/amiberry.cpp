@@ -2593,6 +2593,10 @@ void save_amiberry_settings(void)
 	// WHDLoad Config Delay
 	snprintf(buffer, MAX_DPATH, "default_whd_configdelay=%d\n", amiberry_options.default_whd_configdelay);
 	fputs(buffer, f);
+
+	// Disable Shutdown button in GUI
+	snprintf(buffer, MAX_DPATH, "disable_shutdown_button=%s\n", amiberry_options.disable_shutdown_button ? "yes" : "no");
+	fputs(buffer, f);
 	
 	// Paths
 	snprintf(buffer, MAX_DPATH, "path=%s\n", current_dir);
@@ -2817,6 +2821,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_yesno(option, value, "default_whd_buttonwait", &amiberry_options.default_whd_buttonwait);
 		ret |= cfgfile_yesno(option, value, "default_whd_showsplash", &amiberry_options.default_whd_showsplash);
 		ret |= cfgfile_intval(option, value, "default_whd_configdelay", &amiberry_options.default_whd_configdelay, 1);
+		ret |= cfgfile_yesno(option, value, "disable_shutdown_button", &amiberry_options.disable_shutdown_button);
 	}
 	return ret;
 }
