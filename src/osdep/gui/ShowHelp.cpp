@@ -222,12 +222,29 @@ static void ShowHelpLoop(void)
 			gui_input->pushInput(touch_event);
 			break;
 
+		case SDL_MOUSEWHEEL:
+			got_event = 1;
+			if (event.wheel.y > 0)
+			{
+				for (auto z = 0; z < event.wheel.y; ++z)
+				{
+					PushFakeKey(SDLK_UP);
+				}
+			}
+			else if (event.wheel.y < 0)
+			{
+				for (auto z = 0; z > event.wheel.y; --z)
+				{
+					PushFakeKey(SDLK_DOWN);
+				}
+			}
+			break;
+
 		case SDL_KEYUP:
 		case SDL_JOYBUTTONUP:
 		case SDL_MOUSEBUTTONDOWN:
 		case SDL_MOUSEBUTTONUP:
 		case SDL_MOUSEMOTION:
-		case SDL_MOUSEWHEEL:
 			got_event = 1;
 			break;
 
