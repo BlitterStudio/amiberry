@@ -140,12 +140,12 @@ static ListBoxActionListener* listBoxActionListener;
 class EditDirPathActionListener : public gcn::ActionListener
 {
   public:
-    void action(const gcn::ActionEvent& actionEvent)
-    {
-       char tmp[MAX_DPATH];
-       strncpy(tmp, txtCurrent->getText().c_str(), MAX_DPATH - 1);
-       checkfoldername(tmp);
-    }
+	void action(const gcn::ActionEvent& actionEvent)
+	{
+	   char tmp[MAX_DPATH];
+	   strncpy(tmp, txtCurrent->getText().c_str(), MAX_DPATH - 1);
+	   checkfoldername(tmp);
+	}
 };
 static EditDirPathActionListener* editDirPathActionListener;
 #endif
@@ -164,14 +164,14 @@ static void InitSelectFolder(const char* title)
 	cmdOK = new gcn::Button("Ok");
 	cmdOK->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
 	cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 2 * BUTTON_WIDTH - DISTANCE_NEXT_X,
-	                   DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
+					   DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
 	cmdOK->setBaseColor(gui_baseCol);
 	cmdOK->addActionListener(folderButtonActionListener);
 
 	cmdCancel = new gcn::Button("Cancel");
 	cmdCancel->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
 	cmdCancel->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH,
-	                       DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
+						   DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
 	cmdCancel->setBaseColor(gui_baseCol);
 	cmdCancel->addActionListener(folderButtonActionListener);
 
@@ -287,6 +287,18 @@ static void SelectFolderLoop()
 				gui_input->pushInput(event); // Fire key down
 				event.type = SDL_KEYUP; // and the key up
 				break;
+			case SDLK_PAGEDOWN:
+				for (auto z = 0; z < 10; ++z)
+				{
+					PushFakeKey(SDLK_DOWN);
+				}
+				break;
+			case SDLK_PAGEUP:
+				for (auto z = 0; z < 10; ++z)
+				{
+					PushFakeKey(SDLK_UP);
+				}
+				break;
 			default:
 				break;
 			}
@@ -336,6 +348,26 @@ static void SelectFolderLoop()
 				{
 					PushFakeKey(SDLK_DOWN);
 					break;
+				}
+				if ((did->mapping.is_retroarch || !did->is_controller)
+					&& SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_LEFTSHOULDER])
+					|| SDL_GameControllerGetButton(did->controller,
+						static_cast<SDL_GameControllerButton>(did->mapping.button[SDL_CONTROLLER_BUTTON_LEFTSHOULDER])))
+				{
+					for (auto z = 0; z < 10; ++z)
+					{
+						PushFakeKey(SDLK_UP);
+					}
+				}
+				if ((did->mapping.is_retroarch || !did->is_controller)
+					&& SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_RIGHTSHOULDER])
+					|| SDL_GameControllerGetButton(did->controller,
+						static_cast<SDL_GameControllerButton>(did->mapping.button[SDL_CONTROLLER_BUTTON_RIGHTSHOULDER])))
+				{
+					for (auto z = 0; z < 10; ++z)
+					{
+						PushFakeKey(SDLK_DOWN);
+					}
 				}
 			}
 			break;
@@ -416,12 +448,28 @@ static void SelectFolderLoop()
 			gui_input->pushInput(touch_event);
 			break;
 
+		case SDL_MOUSEWHEEL:
+			got_event = 1;
+			if (event.wheel.y > 0)
+			{
+				for (auto z = 0; z < event.wheel.y; ++z)
+				{
+					PushFakeKey(SDLK_UP);
+				}
+			}
+			else if (event.wheel.y < 0)
+			{
+				for (auto z = 0; z > event.wheel.y; --z)
+				{
+					PushFakeKey(SDLK_DOWN);
+				}
+			}
+			break;
 		case SDL_KEYUP:
 		case SDL_JOYBUTTONUP:
 		case SDL_MOUSEBUTTONDOWN:
 		case SDL_MOUSEBUTTONUP:
 		case SDL_MOUSEMOTION:
-		case SDL_MOUSEWHEEL:
 			got_event = 1;
 			break;
 

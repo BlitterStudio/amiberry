@@ -851,13 +851,30 @@ void check_input()
 			gui_input->pushInput(touch_event);
 			break;
 
+		case SDL_MOUSEWHEEL:
+			got_event = 1;
+			if (gui_event.wheel.y > 0)
+			{
+				for (auto z = 0; z < gui_event.wheel.y; ++z)
+				{
+					PushFakeKey(SDLK_UP);
+				}
+			}
+			else if (gui_event.wheel.y < 0)
+			{
+				for (auto z = 0; z > gui_event.wheel.y; --z)
+				{
+					PushFakeKey(SDLK_DOWN);
+				}
+			}
+			break;
+
 		case SDL_KEYUP:
 		case SDL_JOYBUTTONUP:
 		case SDL_CONTROLLERBUTTONUP:
 		case SDL_MOUSEBUTTONDOWN:
 		case SDL_MOUSEBUTTONUP:
 		case SDL_MOUSEMOTION:
-		case SDL_MOUSEWHEEL:
 			got_event = 1;
 			break;
 			

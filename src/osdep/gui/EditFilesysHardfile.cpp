@@ -678,6 +678,26 @@ static void EditFilesysHardfileLoop()
 					dialogFinished = true;
 					break;
 				}
+				if ((did->mapping.is_retroarch || !did->is_controller)
+					&& SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_LEFTSHOULDER])
+					|| SDL_GameControllerGetButton(did->controller,
+						static_cast<SDL_GameControllerButton>(did->mapping.button[SDL_CONTROLLER_BUTTON_LEFTSHOULDER])))
+				{
+					for (auto z = 0; z < 10; ++z)
+					{
+						PushFakeKey(SDLK_UP);
+					}
+				}
+				if ((did->mapping.is_retroarch || !did->is_controller)
+					&& SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_RIGHTSHOULDER])
+					|| SDL_GameControllerGetButton(did->controller,
+						static_cast<SDL_GameControllerButton>(did->mapping.button[SDL_CONTROLLER_BUTTON_RIGHTSHOULDER])))
+				{
+					for (auto z = 0; z < 10; ++z)
+					{
+						PushFakeKey(SDLK_DOWN);
+					}
+				}
 			}
 			break;
 
@@ -765,12 +785,29 @@ static void EditFilesysHardfileLoop()
 			gui_input->pushInput(touch_event);
 			break;
 
+		case SDL_MOUSEWHEEL:
+			got_event = 1;
+			if (event.wheel.y > 0)
+			{
+				for (auto z = 0; z < event.wheel.y; ++z)
+				{
+					PushFakeKey(SDLK_UP);
+				}
+			}
+			else if (event.wheel.y < 0)
+			{
+				for (auto z = 0; z > event.wheel.y; --z)
+				{
+					PushFakeKey(SDLK_DOWN);
+				}
+			}
+			break;
+
 		case SDL_KEYUP:
 		case SDL_JOYBUTTONUP:
 		case SDL_MOUSEBUTTONDOWN:
 		case SDL_MOUSEBUTTONUP:
 		case SDL_MOUSEMOTION:
-		case SDL_MOUSEWHEEL:
 			got_event = 1;
 			break;
 			
