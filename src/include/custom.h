@@ -12,6 +12,22 @@
 #include "uae/types.h"
 #include "machdep/rpt.h"
 
+#define BEAMCON0_HARDDIS	0x4000
+#define BEAMCON0_LPENDIS	0x2000
+#define BEAMCON0_VARVBEN	0x1000
+#define BEAMCON0_LOLDIS		0x0800
+#define BEAMCON0_CSCBEN		0x0400
+#define BEAMCON0_VARVSYEN	0x0200
+#define BEAMCON0_VARHSYEN	0x0100
+#define BEAMCON0_VARBEAMEN	0x0080
+#define BEAMCON0_DUAL		0x0040
+#define BEAMCON0_PAL		0x0020
+#define BEAMCON0_VARCSYEN	0x0010
+#define BEAMCON0_BLANKEN	0x0008
+#define BEAMCON0_CSYTRUE	0x0004
+#define BEAMCON0_VSYTRUE	0x0002
+#define BEAMCON0_HSYTRUE	0x0001
+
 extern bool aga_mode, ecs_agnus, ecs_denise, direct_rgb;
 
 /* These are the masks that are ORed together in the chipset_mask option.

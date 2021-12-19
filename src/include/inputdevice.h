@@ -237,6 +237,7 @@ extern void mousehack_wakeup(void);
 extern void mousehack_write(int reg, uae_u16 val);
 extern void setmouseactive(int monid, int);
 extern bool ismouseactive(void);
+extern void inputdevice_read_msg(bool);
 
 extern void setmousebuttonstateall (int mouse, uae_u32 buttonbits, uae_u32 buttonmask);
 extern void setjoybuttonstateall (int joy, uae_u32 buttonbits, uae_u32 buttonmask);
