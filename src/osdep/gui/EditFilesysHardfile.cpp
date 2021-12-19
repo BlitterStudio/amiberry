@@ -245,15 +245,6 @@ public:
 				fileSelected = true;
 				default_hfdlg(&current_hfdlg);
 				CreateDefaultDevicename(current_hfdlg.ci.devname);
-				_tcscpy(current_hfdlg.ci.rootdir, tmp);
-				// Set RDB mode if IDE or SCSI
-				if (current_hfdlg.ci.controller_type > 0) {
-					current_hfdlg.ci.sectors = current_hfdlg.ci.reserved = current_hfdlg.ci.surfaces = 0;
-				}
-				hardfile_testrdb(&current_hfdlg);
-				updatehdfinfo(true, true);
-				updatehdfinfo(false, false);
-				sethardfile();
 			}
 			wndEditFilesysHardfile->requestModalFocus();
 			cmdPath->requestFocus();
@@ -302,13 +293,27 @@ public:
 					wndEditFilesysHardfile->setCaption("Please enter a device name.");
 					return;
 				}
-				if (!fileSelected)
+				if (txtPath->getText().length() <= 0)
 				{
 					wndEditFilesysHardfile->setCaption("Please select a filename.");
 					return;
 				}
 				dialogResult = true;
 			}
+			char tmp[MAX_DPATH];
+			strncpy(tmp, txtPath->getText().c_str(), MAX_DPATH);
+			default_hfdlg(&current_hfdlg);
+			CreateDefaultDevicename(current_hfdlg.ci.devname);
+			_tcscpy(current_hfdlg.ci.rootdir, tmp);
+			// Set RDB mode if IDE or SCSI
+			if (current_hfdlg.ci.controller_type > 0) {
+				current_hfdlg.ci.sectors = current_hfdlg.ci.reserved = current_hfdlg.ci.surfaces = 0;
+			}
+			hardfile_testrdb(&current_hfdlg);
+			updatehdfinfo(true, true);
+			updatehdfinfo(false, false);
+			sethardfile();
+
 			dialogFinished = true;
 		}
 	}
