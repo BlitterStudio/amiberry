@@ -632,7 +632,7 @@ bool HelpPanelHD(std::vector<std::string>& helptext)
 	helptext.emplace_back(" ");
 	helptext.emplace_back("If \"Master harddrive write protection\" is activated, you can't write to any HD.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back(R"(Activate "CD drive" to emulate CD for CD32. Use "Eject" to remove current CD)");
+	helptext.emplace_back(R"(Activate "CD drive" to emulate a CD drive. Use "Eject" to remove current CD)");
 	helptext.emplace_back("and click on \"...\" to open a dialog to select the iso/cue file for CD emulation.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("In the current version, WAV, MP3 and FLAC files are supported for audio tracks.");
