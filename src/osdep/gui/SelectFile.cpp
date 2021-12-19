@@ -193,19 +193,18 @@ public:
 
 static SelectFileActionListener* selectFileActionListener;
 
-#ifdef ANDROID
 class EditFilePathActionListener : public gcn::ActionListener
 {
-  public:
+public:
 	void action(const gcn::ActionEvent& actionEvent)
 	{
-	   char tmp[MAX_DPATH];
-	   strncpy(tmp, txtCurrent->getText().c_str(), MAX_DPATH - 1);
-	   checkfoldername(tmp);
+		char tmp[MAX_DPATH];
+		strncpy(tmp, txtCurrent->getText().c_str(), MAX_DPATH - 1);
+		checkfoldername(tmp);
 	}
 };
 static EditFilePathActionListener* editFilePathActionListener;
-#endif
+
 
 static void InitSelectFile(const char* title)
 {
@@ -235,13 +234,10 @@ static void InitSelectFile(const char* title)
 	txtCurrent = new gcn::TextField();
 	txtCurrent->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, TEXTFIELD_HEIGHT);
 	txtCurrent->setPosition(DISTANCE_BORDER, 10);
-#ifdef ANDROID
+
 	txtCurrent->setEnabled(true);
 	editFilePathActionListener =  new EditFilePathActionListener();
 	txtCurrent->addActionListener(editFilePathActionListener);
-#else
-	txtCurrent->setEnabled(false);
-#endif
 
 	selectFileActionListener = new SelectFileActionListener();
 	fileList = new SelectFileListModel(".");
@@ -301,9 +297,8 @@ static void ExitSelectFile()
 	delete lstFiles;
 	delete scrAreaFiles;
 	delete selectFileActionListener;
-#ifdef ANDROID
-  delete editFilePathActionListener;
-#endif
+	delete editFilePathActionListener;
+
 	delete fileList;
 	if (createNew)
 	{
