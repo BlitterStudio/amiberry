@@ -1204,7 +1204,7 @@ struct inputdevice_functions inputdevicefunc_joystick = {
 int input_get_default_joystick(struct uae_input_device* uid, int i, int port, int af, int mode, bool gp, bool joymouseswap)
 {
 	struct didata* did = NULL;
-	int h, v;
+	int h = 0, v = 0;
 
 	if (joymouseswap) {
 		if (i >= num_mouse)
@@ -1229,6 +1229,11 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 		{
 			h = port ? INPUTEVENT_MOUSE2_HORIZ : INPUTEVENT_MOUSE1_HORIZ;
 			v = port ? INPUTEVENT_MOUSE2_VERT : INPUTEVENT_MOUSE1_VERT;
+		}
+		else if (currprefs.jports[port].mousemap > 0)
+		{
+			h = INPUTEVENT_MOUSE1_HORIZ;
+			v = INPUTEVENT_MOUSE1_VERT;
 		}
 		else
 		{
