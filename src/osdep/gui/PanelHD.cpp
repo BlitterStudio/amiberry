@@ -385,13 +385,13 @@ void InitPanelHD(const config_category& category)
 		}
 	}
 
-	cmdAddDirectory = new gcn::Button("Add Directory");
+	cmdAddDirectory = new gcn::Button("Add Directory or Archive");
 	cmdAddDirectory->setBaseColor(gui_baseCol);
 	cmdAddDirectory->setSize(cmdAddDirectory->getWidth() + 10, BUTTON_HEIGHT);
 	cmdAddDirectory->setId("cmdAddDir");
 	cmdAddDirectory->addActionListener(addVirtualHDActionListener);
 
-	cmdAddHardfile = new gcn::Button("Add Hardfile");
+	cmdAddHardfile = new gcn::Button("Add Hardfile or Hard Drive");
 	cmdAddHardfile->setBaseColor(gui_baseCol);
 	cmdAddHardfile->setSize(cmdAddHardfile->getWidth() + 10, BUTTON_HEIGHT);
 	cmdAddHardfile->setId("cmdAddHDF");
@@ -399,7 +399,7 @@ void InitPanelHD(const config_category& category)
 
 	cmdCreateHardfile = new gcn::Button("Create Hardfile");
 	cmdCreateHardfile->setBaseColor(gui_baseCol);
-	cmdCreateHardfile->setSize(cmdCreateHardfile->getWidth() + 10, BUTTON_HEIGHT);
+	cmdCreateHardfile->setSize(cmdAddDirectory->getWidth(), BUTTON_HEIGHT);
 	cmdCreateHardfile->setId("cmdCreateHDF");
 	cmdCreateHardfile->addActionListener(createHardfileActionListener);
 
@@ -461,14 +461,16 @@ void InitPanelHD(const config_category& category)
 	posY += DISTANCE_NEXT_Y / 2;
 	category.panel->add(cmdAddDirectory, DISTANCE_BORDER, posY);
 	category.panel->add(cmdAddHardfile, DISTANCE_BORDER + cmdAddDirectory->getWidth() + DISTANCE_NEXT_X, posY);
-	category.panel->add(cmdCreateHardfile, cmdAddHardfile->getX() + cmdAddHardfile->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += cmdAddDirectory->getHeight() + DISTANCE_NEXT_Y;
+
+	category.panel->add(cmdCreateHardfile, cmdAddDirectory->getX(), posY);
+	posY += cmdCreateHardfile->getHeight() + DISTANCE_NEXT_Y * 2;
 
 	category.panel->add(chkCD, DISTANCE_BORDER, posY + 2);
 	category.panel->add(cmdCDEject,
-	                    category.panel->getWidth() - cmdCDEject->getWidth() - DISTANCE_NEXT_X - cmdCDSelect->getWidth()
-	                    -
-	                    DISTANCE_BORDER, posY);
+		category.panel->getWidth() - cmdCDEject->getWidth() - DISTANCE_NEXT_X - cmdCDSelect->getWidth()
+		-
+		DISTANCE_BORDER, posY);
 	category.panel->add(cmdCDSelect, category.panel->getWidth() - cmdCDSelect->getWidth() - DISTANCE_BORDER, posY);
 	posY += cmdCDSelect->getHeight() + DISTANCE_NEXT_Y;
 
