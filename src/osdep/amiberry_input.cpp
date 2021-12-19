@@ -1273,6 +1273,18 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 				event++;
 			}
 		}
+		else if (currprefs.jports[port].mousemap > 0)
+		{
+			int event = INPUTEVENT_JOY1_FIRE_BUTTON;
+			for (int x = SDL_CONTROLLER_BUTTON_LEFTSHOULDER; x <= SDL_CONTROLLER_BUTTON_RIGHTSHOULDER; x++)
+			{
+				if (!thismap[0][x])
+				{
+					thismap[0][x] = event;
+				}
+				event++;
+			}
+		}
 		else
 		{
 			int event = port ? INPUTEVENT_JOY2_UP : INPUTEVENT_JOY1_UP;

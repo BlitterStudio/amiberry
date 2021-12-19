@@ -114,8 +114,8 @@ string_list_model autoFireList(autoFireValues, 4);
 const char* autoFireRateValues[] = { "Off", "Slow", "Medium", "Fast" };
 string_list_model autoFireRateList(autoFireRateValues, 4);
 
-const char* mousemapValues[] = { "None", "Left", "Right", "Both" };
-string_list_model ctrlPortMouseModeList(mousemapValues, 4);
+const char* mousemapValues[] = { "None", "LStick" };
+string_list_model ctrlPortMouseModeList(mousemapValues, 2);
 
 const char* joyportmodes[] = { "Default", "Wheel Mouse", "Mouse", "Joystick", "Gamepad", "Analog Joystick", "CDTV remote mouse", "CD32 pad"};
 string_list_model ctrlPortModeList(joyportmodes, 8);
@@ -409,10 +409,10 @@ void InitPanelInput(const struct _ConfigCategory& category)
 	cmdSwapPorts->setBaseColor(gui_baseCol);
 	cmdSwapPorts->addActionListener(inputActionListener);
 
-	lblPort0mousemode = new gcn::Label("Mouse Stick 0:");
+	lblPort0mousemode = new gcn::Label("Mouse Map Port0:");
 	lblPort0mousemode->setAlignment(gcn::Graphics::RIGHT);
 
-	lblPort1mousemode = new gcn::Label("Mouse Stick 1:");
+	lblPort1mousemode = new gcn::Label("Mouse Map Port1:");
 	lblPort1mousemode->setAlignment(gcn::Graphics::RIGHT);
 
 	lblAutofireRate = new gcn::Label("Autofire Rate:");
@@ -729,8 +729,10 @@ bool HelpPanelInput(std::vector<std::string>& helptext)
 	helptext.emplace_back("Auto-switching enables you to switch Port 0 between Mouse-Joystick based on");
 	helptext.emplace_back("which device is being used. Only works if type is left to Default.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("Mouse Stick 0/1: This allows you to use an analog stick on your controller");
-	helptext.emplace_back("to emulate a mouse (0/1 being the port the controller is assigned to).");
+	helptext.emplace_back("Mouse Map: This allows you to use the Left analog stick on your controller");
+	helptext.emplace_back("to emulate a mouse in Port 0, with the Shoulder buttons acting as Mouse buttons.");
+	helptext.emplace_back("Useful if you don't have a real mouse connected and only a controller with");
+	helptext.emplace_back("analog sticks (e.g. PS4, XBox).");
 	helptext.emplace_back("Only works when type is set to something other than Default.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("You can set the Autofire Rate, and choose if a device should have Autofire");
