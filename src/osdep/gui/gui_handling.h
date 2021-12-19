@@ -125,13 +125,13 @@ static string drivebridgeModes[] =
 	"Accurate"
 };
 
-typedef struct _ConfigCategory
+typedef struct config_category
 {
 	const char* category;
 	const char* imagepath;
 	gcn::SelectorEntry* selector;
 	gcn::Container* panel;
-	void (*InitFunc)(const struct _ConfigCategory& category);
+	void (*InitFunc)(const config_category& category);
 	void (*ExitFunc)();
 	void (*RefreshFunc)();
 	bool (*HelpFunc)(std::vector<std::string>&);
@@ -177,107 +177,107 @@ typedef struct
 
 extern vector<ConfigFileInfo*> ConfigFilesList;
 
-void InitPanelAbout(const struct _ConfigCategory& category);
+void InitPanelAbout(const struct config_category& category);
 void ExitPanelAbout();
 void RefreshPanelAbout();
 bool HelpPanelAbout(std::vector<std::string>& helptext);
 
-void InitPanelPaths(const struct _ConfigCategory& category);
+void InitPanelPaths(const struct config_category& category);
 void ExitPanelPaths(void);
 void RefreshPanelPaths(void);
 bool HelpPanelPaths(std::vector<std::string>& helptext);
 
-void InitPanelQuickstart(const struct _ConfigCategory& category);
+void InitPanelQuickstart(const struct config_category& category);
 void ExitPanelQuickstart(void);
 void RefreshPanelQuickstart(void);
 bool HelpPanelQuickstart(std::vector<std::string>& helptext);
 
-void InitPanelConfig(const struct _ConfigCategory& category);
+void InitPanelConfig(const struct config_category& category);
 void ExitPanelConfig(void);
 void RefreshPanelConfig(void);
 bool HelpPanelConfig(std::vector<std::string>& helptext);
 
-void InitPanelCPU(const struct _ConfigCategory& category);
+void InitPanelCPU(const struct config_category& category);
 void ExitPanelCPU(void);
 void RefreshPanelCPU(void);
 bool HelpPanelCPU(std::vector<std::string>& helptext);
 
-void InitPanelChipset(const struct _ConfigCategory& category);
+void InitPanelChipset(const struct config_category& category);
 void ExitPanelChipset(void);
 void RefreshPanelChipset(void);
 bool HelpPanelChipset(std::vector<std::string>& helptext);
 
-void InitPanelROM(const struct _ConfigCategory& category);
+void InitPanelROM(const struct config_category& category);
 void ExitPanelROM(void);
 void RefreshPanelROM(void);
 bool HelpPanelROM(std::vector<std::string>& helptext);
 
-void InitPanelRAM(const struct _ConfigCategory& category);
+void InitPanelRAM(const struct config_category& category);
 void ExitPanelRAM(void);
 void RefreshPanelRAM(void);
 bool HelpPanelRAM(std::vector<std::string>& helptext);
 
-void InitPanelFloppy(const struct _ConfigCategory& category);
+void InitPanelFloppy(const struct config_category& category);
 void ExitPanelFloppy(void);
 void RefreshPanelFloppy(void);
 bool HelpPanelFloppy(std::vector<std::string>& helptext);
 
-void InitPanelHD(const struct _ConfigCategory& category);
+void InitPanelHD(const struct config_category& category);
 void ExitPanelHD(void);
 void RefreshPanelHD(void);
 bool HelpPanelHD(std::vector<std::string>& helptext);
 
-void InitPanelExpansions(const struct _ConfigCategory& category);
+void InitPanelExpansions(const struct config_category& category);
 void ExitPanelExpansions();
 void RefreshPanelExpansions();
 bool HelpPanelExpansions(std::vector<std::string>& helptext);
 
-void InitPanelRTG(const struct _ConfigCategory& category);
+void InitPanelRTG(const struct config_category& category);
 void ExitPanelRTG(void);
 void RefreshPanelRTG(void);
 bool HelpPanelRTG(std::vector<std::string>& helptext);
 
-void InitPanelHWInfo(const struct _ConfigCategory& category);
+void InitPanelHWInfo(const struct config_category& category);
 void ExitPanelHWInfo();
 void RefreshPanelHWInfo();
 bool HelpPanelHWInfo(std::vector<std::string>& helptext);
 
-void InitPanelDisplay(const struct _ConfigCategory& category);
+void InitPanelDisplay(const struct config_category& category);
 void ExitPanelDisplay(void);
 void RefreshPanelDisplay(void);
 bool HelpPanelDisplay(std::vector<std::string>& helptext);
 
-void InitPanelSound(const struct _ConfigCategory& category);
+void InitPanelSound(const struct config_category& category);
 void ExitPanelSound(void);
 void RefreshPanelSound(void);
 bool HelpPanelSound(std::vector<std::string>& helptext);
 
-void InitPanelInput(const struct _ConfigCategory& category);
+void InitPanelInput(const struct config_category& category);
 void ExitPanelInput(void);
 void RefreshPanelInput(void);
 bool HelpPanelInput(std::vector<std::string>& helptext);
 
-void InitPanelIO(const struct _ConfigCategory& category);
+void InitPanelIO(const struct config_category& category);
 void ExitPanelIO(void);
 void RefreshPanelIO(void);
 bool HelpPanelIO(std::vector<std::string>& helptext);
 
-void InitPanelCustom(const struct _ConfigCategory& category);
+void InitPanelCustom(const struct config_category& category);
 void ExitPanelCustom(void);
 void RefreshPanelCustom(void);
 bool HelpPanelCustom(std::vector<std::string>& helptext);
 
-void InitPanelMisc(const struct _ConfigCategory& category);
+void InitPanelMisc(const struct config_category& category);
 void ExitPanelMisc(void);
 void RefreshPanelMisc(void);
 bool HelpPanelMisc(std::vector<std::string>& helptext);
 
-void InitPanelPrio(const struct _ConfigCategory& category);
+void InitPanelPrio(const struct config_category& category);
 void ExitPanelPrio(void);
 void RefreshPanelPrio(void);
 bool HelpPanelPrio(std::vector<std::string>& helptext);
 
-void InitPanelSavestate(const struct _ConfigCategory& category);
+void InitPanelSavestate(const struct config_category& category);
 void ExitPanelSavestate(void);
 void RefreshPanelSavestate(void);
 bool HelpPanelSavestate(std::vector<std::string>& helptext);

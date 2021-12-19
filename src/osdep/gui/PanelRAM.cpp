@@ -97,7 +97,7 @@ public:
 static MemorySliderActionListener* memorySliderActionListener;
 
 
-void InitPanelRAM(const struct _ConfigCategory& category)
+void InitPanelRAM(const config_category& category)
 {
 	memorySliderActionListener = new MemorySliderActionListener();
 	int sld_width;

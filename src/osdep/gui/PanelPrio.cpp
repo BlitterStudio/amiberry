@@ -170,7 +170,7 @@ public:
 
 PrioActionListener* prioActionListener;
 
-void InitPanelPrio(const struct _ConfigCategory& category)
+void InitPanelPrio(const config_category& category)
 {
 	prioActionListener = new PrioActionListener();
 

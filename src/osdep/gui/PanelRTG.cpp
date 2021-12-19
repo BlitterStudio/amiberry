@@ -193,7 +193,7 @@ public:
 
 RTGActionListener* rtg_action_listener;
 
-void InitPanelRTG(const struct _ConfigCategory& category)
+void InitPanelRTG(const config_category& category)
 {
 	int sld_width;
 	int marker_length;
@@ -376,7 +376,7 @@ void ExitPanelRTG()
 
 void RefreshPanelRTG()
 {
-	struct rtgboardconfig* rbc = &changed_prefs.rtgboards[0];
+	rtgboardconfig* rbc = &changed_prefs.rtgboards[0];
 
 	if (rbc->rtgmem_size == 0)
 		cboBoard->setSelected(0);

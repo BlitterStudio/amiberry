@@ -61,7 +61,7 @@ static gcn::CheckBox* chkCDTurbo;
 
 static int GetHDType(const int index)
 {
-	struct mountedinfo mi{};
+	mountedinfo mi{};
 
 	auto type = get_filesys_unitconfig(&changed_prefs, index, &mi);
 	if (type < 0)
@@ -340,7 +340,7 @@ public:
 static CDFileActionListener* cdFileActionListener;
 
 
-void InitPanelHD(const struct _ConfigCategory& category)
+void InitPanelHD(const config_category& category)
 {
 	int row, col;
 	auto posY = DISTANCE_BORDER / 2;
@@ -541,7 +541,7 @@ static void AdjustDropDownControls()
 void RefreshPanelHD()
 {
 	char tmp[32];
-	struct mountedinfo mi{};
+	mountedinfo mi{};
 	auto nosize = 0;
 
 	AdjustDropDownControls();
@@ -614,7 +614,7 @@ void RefreshPanelHD()
 }
 
 
-int count_HDs(struct uae_prefs* p)
+int count_HDs(uae_prefs* p)
 {
 	return p->mountitems;
 }

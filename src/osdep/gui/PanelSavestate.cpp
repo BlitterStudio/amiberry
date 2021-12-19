@@ -41,8 +41,8 @@ static gcn::Button* cmdSaveState;
 
 char* getts(char *filename1, char *date_string, size_t date_string_size)
 {
-	struct stat st;
-	struct tm tm;
+	struct stat st{};
+	tm tm{};
 
 	stat(filename1, &st);
 	localtime_r(&st.st_mtime, &tm);
@@ -115,7 +115,7 @@ public:
 		{
 			bool unsafe = false;
 			bool unsafe_confirmed = false;
-			struct AmigaMonitor* mon = &AMonitors[0];
+			AmigaMonitor* mon = &AMonitors[0];
 			// Check if we have RTG, then it might fail saving
 			if (mon->screen_is_picasso)
 			{
@@ -151,7 +151,7 @@ public:
 
 static SavestateActionListener* savestateActionListener;
 
-void InitPanelSavestate(const struct _ConfigCategory& category)
+void InitPanelSavestate(const config_category& category)
 {
 	savestateActionListener = new SavestateActionListener();
 

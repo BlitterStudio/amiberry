@@ -280,7 +280,7 @@ public:
 
 static InputActionListener* inputActionListener;
 
-void InitPanelInput(const struct _ConfigCategory& category)
+void InitPanelInput(const config_category& category)
 {
 	retroarch_kb = get_retroarch_kb_num();
 	joysticks = inputdevice_get_device_total(IDTYPE_JOYSTICK);

@@ -240,7 +240,7 @@ public:
 
 static CustomActionListener* customActionListener;
 
-void InitPanelCustom(const struct _ConfigCategory& category)
+void InitPanelCustom(const config_category& category)
 {
 	int i;
 	char tmp[255];
@@ -442,7 +442,7 @@ void RefreshPanelCustom()
 		&& changed_prefs.jports[SelectedPort].id < JSEM_MICE - 1)
 	{
 		const auto host_joy_id = changed_prefs.jports[SelectedPort].id - JSEM_JOYS;
-		struct didata* did = &di_joystick[host_joy_id];
+		didata* did = &di_joystick[host_joy_id];
 		
 		for (auto n = 0; n < SDL_CONTROLLER_BUTTON_MAX; ++n)
 		{

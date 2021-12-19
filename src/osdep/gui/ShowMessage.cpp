@@ -48,7 +48,7 @@ static ShowMessageActionListener* showMessageActionListener;
 
 static void InitShowMessage()
 {
-	struct AmigaMonitor* mon = &AMonitors[0];
+	AmigaMonitor* mon = &AMonitors[0];
 	
 	if (!gui_screen)
 	{
@@ -483,7 +483,7 @@ static void ShowMessageLoop()
 	auto got_event = 0;
 	SDL_Event event;
 	SDL_Event touch_event;
-	struct didata* did = &di_joystick[0];
+	didata* did = &di_joystick[0];
 	while (SDL_PollEvent(&event))
 	{
 		switch (event.type)

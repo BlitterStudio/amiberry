@@ -476,7 +476,7 @@ public:
 static CreateDiskActionListener* createDiskActionListener;
 
 
-void InitPanelFloppy(const struct _ConfigCategory& category)
+void InitPanelFloppy(const config_category& category)
 {
 	int posX;
 	auto posY = DISTANCE_BORDER;

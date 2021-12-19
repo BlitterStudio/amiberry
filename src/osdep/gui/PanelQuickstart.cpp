@@ -860,7 +860,7 @@ public:
 
 static QuickstartModeActionListener* quickstartModeActionListener;
 
-void InitPanelQuickstart(const struct _ConfigCategory& category)
+void InitPanelQuickstart(const config_category& category)
 {
 	int posX;
 	auto posY = DISTANCE_BORDER;
