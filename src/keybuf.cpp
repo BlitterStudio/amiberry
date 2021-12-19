@@ -239,6 +239,14 @@ int get_next_key (void)
 	key = keybuf[kpb_last];
 	if (++kpb_last == KEYBUF_SIZE)
 		kpb_last = 0;
+
+	// send release immediately in warp mode if not qualifier key
+	if (currprefs.turbo_emulation && !(key & 0x01) && (key >> 1) < 0x60) {
+		if (!keys_available()) {
+			record_key(key | 0x01);
+		}
+	}
+
 	//write_log (_T("%02x:%d\n"), key >> 1, key & 1);
 	return key;
 }
