@@ -192,9 +192,6 @@ static const TCHAR* autoscale_rtg[] = { _T("resize"), _T("scale"), _T("center"),
 static const TCHAR* autoscalelimit[] = { _T("1/1"), _T("1/2"), _T("1/4"), _T("1/8"), 0 };
 static const TCHAR* joyportmodes[] = { _T(""), _T("mouse"), _T("mousenowheel"), _T("djoy"), _T("gamepad"), _T("ajoy"), _T("cdtvjoy"), _T("cd32joy"), _T("lightpen"), 0 };
 static const TCHAR* joyportsubmodes_lightpen[] = { _T(""), _T("trojan"), 0 };
-#ifdef AMIBERRY
-static const TCHAR* mousemaps[] = { _T(""), _T("left"), _T("right"), _T("both"), 0 };
-#endif
 static const TCHAR* joyaf[] = { _T("none"), _T("normal"), _T("toggle"), _T("always"), 0 };
 static const TCHAR* epsonprinter[] = { _T("none"), _T("ascii"), _T("epson_matrix_9pin"), _T("epson_matrix_24pin"), _T("epson_matrix_48pin"), 0 };
 static const TCHAR* aspects[] = { _T("none"), _T("vga"), _T("tv"), 0 };
@@ -2175,7 +2172,7 @@ void cfgfile_save_options(struct zfile* f, struct uae_prefs* p, int type)
 #ifdef AMIBERRY
 			if (jp->mousemap > 0) {
 				_stprintf(tmp1, _T("joyport%dmousemap"), i);
-				cfgfile_dwrite_str(f, tmp1, mousemaps[jp->mousemap]);
+				cfgfile_write(f, tmp1, _T("%d"), jp->mousemap);
 			}
 #endif
 			if (jp->idc.name[0]) {
@@ -4177,7 +4174,14 @@ static int cfgfile_parse_host(struct uae_prefs* p, TCHAR* option, TCHAR* value)
 		return 1;
 	if (cfgfile_strval(option, value, _T("joyport3autofire"), &p->jports[3].autofire, joyaf, 0))
 		return 1;
-
+#ifdef AMIBERRY
+	if (cfgfile_intval(option, value, _T("joyport0mousemap"), &p->jports[0].mousemap, 1)) {
+		return 1;
+	}
+	if (cfgfile_intval(option, value, _T("joyport1mousemap"), &p->jports[1].mousemap, 1)) {
+		return 1;
+	}
+#endif
 	if (cfgfile_yesno(option, value, _T("joyport0keyboardoverride"), &vb)) {
 		p->jports[0].nokeyboardoverride = !vb;
 		return 1;
