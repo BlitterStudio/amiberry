@@ -139,7 +139,7 @@ static void ShowDiskInfoLoop(void)
 	auto got_event = 0;
 	SDL_Event event;
 	SDL_Event touch_event;
-	struct didata* did = &di_joystick[0];
+	didata* did = &di_joystick[0];
 
 	while (SDL_PollEvent(&event))
 	{

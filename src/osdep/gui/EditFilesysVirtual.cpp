@@ -230,7 +230,7 @@ static void EditFilesysVirtualLoop()
 	int got_event = 0;
 	SDL_Event event;
 	SDL_Event touch_event;
-	struct didata* did = &di_joystick[0];
+	didata* did = &di_joystick[0];
 	while (SDL_PollEvent(&event))
 	{
 		switch (event.type)
@@ -484,8 +484,8 @@ static void EditFilesysVirtualLoop()
 
 bool EditFilesysVirtual(const int unit_no)
 {
-	struct mountedinfo mi{};
-	struct uaedev_config_data* uci;
+	mountedinfo mi{};
+	uaedev_config_data* uci;
 	std::string strdevname, strvolname, strroot;
 	char tmp[32];
 
@@ -498,7 +498,7 @@ bool EditFilesysVirtual(const int unit_no)
 	{
 		uci = &changed_prefs.mountconfig[unit_no];
 		get_filesys_unitconfig(&changed_prefs, unit_no, &mi);
-		memcpy(&current_fsvdlg.ci, uci, sizeof(struct uaedev_config_info));
+		memcpy(&current_fsvdlg.ci, uci, sizeof(uaedev_config_info));
 	}
 	else
 	{
@@ -532,14 +532,14 @@ bool EditFilesysVirtual(const int unit_no)
 
 	if (dialogResult)
 	{
-		struct uaedev_config_info ci{};
+		uaedev_config_info ci{};
 		
 		strncpy(current_fsvdlg.ci.devname, (char*)txtDevice->getText().c_str(), MAX_DPATH - 1);
 		strncpy(current_fsvdlg.ci.volname, (char*)txtVolume->getText().c_str(), MAX_DPATH - 1);
 		current_fsvdlg.ci.readonly = !chkReadWrite->isSelected();
 		current_fsvdlg.ci.bootpri = tweakbootpri(atoi(txtBootPri->getText().c_str()), chkAutoboot->isSelected() ? 1 : 0, 0);
 
-		memcpy(&ci, &current_fsvdlg.ci, sizeof(struct uaedev_config_info));
+		memcpy(&ci, &current_fsvdlg.ci, sizeof(uaedev_config_info));
 		uci = add_filesys_config(&changed_prefs, unit_no, &ci);
 		if (uci)
 		{

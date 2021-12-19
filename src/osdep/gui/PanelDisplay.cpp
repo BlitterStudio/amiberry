@@ -300,7 +300,7 @@ public:
 
 static LineModeActionListener* lineModeActionListener;
 
-void InitPanelDisplay(const struct _ConfigCategory& category)
+void InitPanelDisplay(const config_category& category)
 {
 	amigaScreenActionListener = new AmigaScreenActionListener();
 	scalingMethodActionListener = new ScalingMethodActionListener();

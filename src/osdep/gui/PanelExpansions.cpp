@@ -112,7 +112,7 @@ static const int scsiromselectedmask[] = {
 
 struct expansionrom_gui
 {
-	const struct expansionboardsettings* expansionrom_gui_ebs;
+	const expansionboardsettings* expansionrom_gui_ebs;
 	int expansionrom_gui_item;
 	gcn::DropDown* expansionrom_gui_itemselector;
 	gcn::DropDown* expansionrom_gui_selector;
@@ -123,8 +123,8 @@ struct expansionrom_gui
 	int expansionrom_gui_settings;
 	TCHAR expansionrom_gui_string[ROMCONFIG_CONFIGTEXT_LEN];
 };
-static struct expansionrom_gui expansion_gui_item;
-static struct expansionrom_gui accelerator_gui_item;
+static expansionrom_gui expansion_gui_item;
+static expansionrom_gui accelerator_gui_item;
 
 static void gui_add_string(int *table, string_list_model *item, int id, const TCHAR *str)
 {
@@ -154,7 +154,7 @@ static int gui_get_string_cursor(int* table, gcn::DropDown* item)
 	return table[posn];
 }
 
-static void reset_expansionrom_gui(struct expansionrom_gui* eg, gcn::DropDown* itemselector, gcn::DropDown* selector, gcn::CheckBox* checkbox, gcn::TextBox* stringbox)
+static void reset_expansionrom_gui(expansionrom_gui* eg, gcn::DropDown* itemselector, gcn::DropDown* selector, gcn::CheckBox* checkbox, gcn::TextBox* stringbox)
 {
 	eg->expansionrom_gui_settings = 0;
 	eg->expansionrom_gui_ebs = nullptr;
@@ -165,13 +165,13 @@ static void reset_expansionrom_gui(struct expansionrom_gui* eg, gcn::DropDown* i
 	if (stringbox != nullptr) stringbox->setVisible(false);
 }
 
-static void create_expansionrom_gui(struct expansionrom_gui* eg, const struct expansionboardsettings* ebs,
+static void create_expansionrom_gui(expansionrom_gui* eg, const expansionboardsettings* ebs,
 	int settings, const TCHAR* settingsstring,
 	gcn::DropDown* itemselector, gcn::DropDown* selector, gcn::CheckBox* checkbox, gcn::TextBox* stringbox)
 {
 	bool reset = false;
 	static int recursive;
-	const struct expansionboardsettings* eb;
+	const expansionboardsettings* eb;
 	if (eg->expansionrom_gui_ebs != ebs) {
 		if (eg->expansionrom_gui_ebs)
 			eg->expansionrom_gui_item = 0;
@@ -202,7 +202,7 @@ retry:
 	itemselector->setVisible(true);
 	int bitcnt = 0;
 	for (int i = 0; i < item; i++) {
-		const struct expansionboardsettings* eb = &ebs[i];
+		const expansionboardsettings* eb = &ebs[i];
 		if (eb->name == NULL) {
 			eg->expansionrom_gui_item = 0;
 			goto retry;
@@ -235,7 +235,7 @@ retry:
 		auto list_model = itemselector->getListModel();
 		list_model->clear_elements();
 		for (int i = 0; ebs[i].name; i++) {
-			const struct expansionboardsettings* eb = &ebs[i];
+			const expansionboardsettings* eb = &ebs[i];
 			list_model->add_element(eb->name);
 		}
 		itemselector->setSelected(item);
@@ -290,7 +290,7 @@ retry:
 	recursive--;
 }
 
-static void get_expansionrom_gui(struct expansionrom_gui* eg)
+static void get_expansionrom_gui(expansionrom_gui* eg)
 {
 	if (!eg->expansionrom_gui_ebs)
 		return;
@@ -305,7 +305,7 @@ static void get_expansionrom_gui(struct expansionrom_gui* eg)
 			eg->expansionrom_gui_itemselector, eg->expansionrom_gui_selector, eg->expansionrom_gui_checkbox, eg->expansionrom_gui_stringbox);
 		return;
 	}
-	const struct expansionboardsettings* eb = &eg->expansionrom_gui_ebs[eg->expansionrom_gui_item];
+	const expansionboardsettings* eb = &eg->expansionrom_gui_ebs[eg->expansionrom_gui_item];
 	if (eb->type == EXPANSIONBOARD_STRING) {
 		_tcscpy(eg->expansionrom_gui_string, eg->expansionrom_gui_stringbox->getText().c_str());
 	}
@@ -504,8 +504,8 @@ static void init_expansion2(bool init)
 
 	scsi_romid_list.clear_elements(); //SendDlgItemMessage(hDlg, IDC_SCSIROMID, CB_RESETCONTENT, 0, 0);
 	int index;
-	struct boardromconfig* brc = get_device_rom(&changed_prefs, expansionroms[scsiromselected].romtype, scsiromselectednum, &index);
-	const struct expansionromtype* ert = &expansionroms[scsiromselected];
+	boardromconfig* brc = get_device_rom(&changed_prefs, expansionroms[scsiromselected].romtype, scsiromselectednum, &index);
+	const expansionromtype* ert = &expansionroms[scsiromselected];
 	if (brc && ert && ert->id_jumper) {
 		for (int i = 0; i < 8; i++) {
 			TCHAR tmp[10];
@@ -528,7 +528,7 @@ static void updatecpuboardsubtypes()
 		cpuboards_subtype_list.add_element(cpuboards[changed_prefs.cpuboard_type].subtypes[i].name);
 	}
 
-	const struct expansionboardsettings* cbs = cpuboards[changed_prefs.cpuboard_type].subtypes[changed_prefs.cpuboard_subtype].settings;
+	const expansionboardsettings* cbs = cpuboards[changed_prefs.cpuboard_type].subtypes[changed_prefs.cpuboard_subtype].settings;
 	create_expansionrom_gui(&accelerator_gui_item, cbs, changed_prefs.cpuboard_settings, NULL,
 		cboAcceleratorBoardItemSelector, cboAcceleratorBoardSelector, chkAcceleratorBoardCheckbox, nullptr);
 }
@@ -541,17 +541,17 @@ static void addromfiles(gcn::DropDown* d, const TCHAR* path, int type1, int type
 static void values_to_expansion2_expansion_roms()
 {
 	int index;
-	struct boardromconfig* brc;
+	boardromconfig* brc;
 
 	if (scsiromselected) {
-		const struct expansionromtype* ert = &expansionroms[scsiromselected];
+		const expansionromtype* ert = &expansionroms[scsiromselected];
 		int romtype = ert->romtype;
 		int romtype_extra = ert->romtype_extra;
 		int deviceflags = ert->deviceflags;
 
 		brc = get_device_rom(&changed_prefs, romtype, scsiromselectednum, &index);
 		if (brc && ert->subtypes) {
-			const struct expansionsubromtype* esrt = &ert->subtypes[brc->roms[index].subtype];
+			const expansionsubromtype* esrt = &ert->subtypes[brc->roms[index].subtype];
 			if (esrt->romtype) {
 				romtype = esrt->romtype;
 				romtype_extra = 0;
@@ -609,9 +609,9 @@ static void values_to_expansion2_expansion_roms()
 static void values_to_expansion2_expansion_settings()
 {
 	int index;
-	struct boardromconfig* brc;
+	boardromconfig* brc;
 	if (scsiromselected) {
-		const struct expansionromtype* ert = &expansionroms[scsiromselected];
+		const expansionromtype* ert = &expansionroms[scsiromselected];
 		brc = get_device_rom(&changed_prefs, expansionroms[scsiromselected].romtype, scsiromselectednum, &index);
 		if (brc) {
 			if (brc->roms[index].romfile[0])
@@ -622,7 +622,7 @@ static void values_to_expansion2_expansion_settings()
 			chkScsiRomFileAutoboot->setSelected(false); //setchecked(hDlg, IDC_SCSIROMFILEAUTOBOOT, false);
 		}
 		cboScsiRomId->setEnabled(ert->id_jumper); //ew(hDlg, IDC_SCSIROMID, ert->id_jumper);
-		const struct expansionboardsettings* cbs = ert->settings;
+		const expansionboardsettings* cbs = ert->settings;
 		create_expansionrom_gui(&expansion_gui_item, cbs,
 			brc ? brc->roms[index].device_settings : 0,
 			brc ? brc->roms[index].configtext : NULL,
@@ -640,8 +640,8 @@ static void values_to_expansion2dlg_sub()
 	cboCpuBoardSubType->setEnabled(false); //ew(hDlg, IDC_CPUBOARDROMSUBSELECT, false);
 
 	scsirom_subselect_list.clear_elements(); //SendDlgItemMessage(hDlg, IDC_SCSIROMSUBSELECT, CB_RESETCONTENT, 0, 0);
-	const struct expansionromtype* er = &expansionroms[scsiromselected];
-	const struct expansionsubromtype* srt = er->subtypes;
+	const expansionromtype* er = &expansionroms[scsiromselected];
+	const expansionsubromtype* srt = er->subtypes;
 	int deviceflags = er->deviceflags;
 	cboScsiRomSubSelect->setEnabled(srt != nullptr); //ew(hDlg, IDC_SCSIROMSUBSELECT, srt != NULL);
 	while (srt && srt->name) {
@@ -649,7 +649,7 @@ static void values_to_expansion2dlg_sub()
 		srt++;
 	}
 	int index;
-	struct boardromconfig* brc = get_device_rom(&changed_prefs, expansionroms[scsiromselected].romtype, scsiromselectednum, &index);
+	boardromconfig* brc = get_device_rom(&changed_prefs, expansionroms[scsiromselected].romtype, scsiromselectednum, &index);
 	if (brc && er->subtypes) {
 		cboScsiRomSubSelect->setSelected(brc->roms[index].subtype); //SendDlgItemMessage(hDlg, IDC_SCSIROMSUBSELECT, CB_SETCURSEL, brc->roms[index].subtype, 0);
 		cboScsiRomId->setSelected(brc->roms[index].device_id); //SendDlgItemMessage(hDlg, IDC_SCSIROMID, CB_SETCURSEL, brc->roms[index].device_id, 0);
@@ -682,12 +682,12 @@ static void getromfile(gcn::DropDown* d, TCHAR* path, int size)
 {
 	auto val = d->getSelected();
 
-	struct romdata* rd;
+	romdata* rd;
 	auto tmp1 = d->getListModel()->getElementAt(val);	//SendDlgItemMessage(d, CB_GETLBTEXT, (WPARAM)val, (LPARAM)tmp1);
 	path[0] = 0;
 	rd = getromdatabyname(tmp1.c_str());
 	if (rd) {
-		struct romlist* rl = getromlistbyromdata(rd);
+		romlist* rl = getromlistbyromdata(rd);
 		if (rd->configname)
 			_stprintf(path, _T(":%s"), rd->configname);
 		else if (rl)
@@ -698,7 +698,7 @@ static void getromfile(gcn::DropDown* d, TCHAR* path, int size)
 static void values_from_expansion2dlg()
 {
 	int index;
-	struct boardromconfig* brc;
+	boardromconfig* brc;
 	TCHAR tmp[MAX_DPATH];
 	bool changed = false;
 	bool isnew = false;
@@ -706,7 +706,7 @@ static void values_from_expansion2dlg()
 	int checked = chkScsiRomSelected->isSelected();
 	getromfile(cboScsiRomSelect, tmp, MAX_DPATH / sizeof(TCHAR));
 	if (tmp[0] || checked) {
-		const struct expansionromtype* ert = &expansionroms[scsiromselected];
+		const expansionromtype* ert = &expansionroms[scsiromselected];
 		if (!get_device_rom(&changed_prefs, expansionroms[scsiromselected].romtype, scsiromselectednum, &index))
 			isnew = true;
 		brc = get_device_rom_new(&changed_prefs, expansionroms[scsiromselected].romtype, scsiromselectednum, &index);
@@ -727,7 +727,7 @@ static void values_from_expansion2dlg()
 		if (!isnew)
 			brc->roms[index].device_id = v;
 
-		const struct expansionboardsettings* cbs = ert->settings;
+		const expansionboardsettings* cbs = ert->settings;
 		if (cbs) {
 			brc->roms[index].device_settings = expansion_gui_item.expansionrom_gui_settings;
 			_tcscpy(brc->roms[index].configtext, expansion_gui_item.expansionrom_gui_string);
@@ -933,7 +933,7 @@ public:
 
 ExpansionsActionListener* expansions_action_listener;
 
-void InitPanelExpansions(const struct _ConfigCategory& category)
+void InitPanelExpansions(const config_category& category)
 {
 	expansions_action_listener = new ExpansionsActionListener();
 
@@ -1188,9 +1188,9 @@ void RefreshPanelExpansions()
 	values_to_expansion2_expansion_settings();
 
 	int index;
-	struct boardromconfig* brc;
+	boardromconfig* brc;
 	if (changed_prefs.cpuboard_type) {
-		const struct cpuboardsubtype* cst = &cpuboards[changed_prefs.cpuboard_type].subtypes[changed_prefs.cpuboard_subtype];
+		const cpuboardsubtype* cst = &cpuboards[changed_prefs.cpuboard_type].subtypes[changed_prefs.cpuboard_subtype];
 		brc = get_device_rom(&changed_prefs, ROMTYPE_CPUBOARD, 0, &index);
 		addromfiles(cboCpuBoardRomFile, brc ? brc->roms[index].romfile : NULL,
 			cst->romtype, cst->romtype_extra);

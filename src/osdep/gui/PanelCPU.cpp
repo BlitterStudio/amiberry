@@ -260,7 +260,7 @@ public:
 
 static CPUIdleSliderActionListener* cpuIdleActionListener;
 
-void InitPanelCPU(const struct _ConfigCategory& category)
+void InitPanelCPU(const struct config_category& category)
 {
 	cpuButtonActionListener = new CPUButtonActionListener();
 	cpu24BitActionListener = new CPU24BitActionListener();

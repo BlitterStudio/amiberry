@@ -579,7 +579,8 @@ static int hdf_init2(int force)
 	return num_drives;
 }
 
-int hdf_init_target(void) {
+int hdf_init_target(void)
+{
 	return hdf_init2(0);
 }
 

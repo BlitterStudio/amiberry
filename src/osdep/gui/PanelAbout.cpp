@@ -19,7 +19,7 @@ static gcn::ScrollArea* textBoxScrollArea;
 static SDL_version compiled;
 static SDL_version linked;
 
-void InitPanelAbout(const struct _ConfigCategory& category)
+void InitPanelAbout(const config_category& category)
 {
 	SDL_VERSION(&compiled);
 	SDL_GetVersion(&linked);

@@ -39,7 +39,7 @@ struct chipset
 	char name[32];
 };
 
-static struct chipset chipsets[] = {
+static chipset chipsets[] = {
 	{CP_GENERIC, "Generic"},
 	{CP_CDTV, "CDTV"},
 	{CP_CDTVCR, "CDTV-CR"},
@@ -261,7 +261,7 @@ public:
 };
 static CollisionButtonActionListener* collisionButtonActionListener;
 
-void InitPanelChipset(const struct _ConfigCategory& category)
+void InitPanelChipset(const struct config_category& category)
 {
 	chipsetActionListener = new ChipsetActionListener();
 	chipsetButtonActionListener = new ChipsetButtonActionListener();

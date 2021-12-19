@@ -110,7 +110,7 @@ void RefreshPanelHWInfo(void)
 }
 
 
-void InitPanelHWInfo(const struct _ConfigCategory& category)
+void InitPanelHWInfo(const config_category& category)
 {
 	int row, col;
 	int posX;

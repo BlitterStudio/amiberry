@@ -181,7 +181,7 @@ gcn::Button* cmdShutdown;
 */
 static int gui_rtarea_flags_onenter;
 
-static int gui_create_rtarea_flag(struct uae_prefs* p)
+static int gui_create_rtarea_flag(uae_prefs* p)
 {
 	auto flag = 0;
 
@@ -372,7 +372,7 @@ void init_dispmanx_gui()
 
 void amiberry_gui_init()
 {
-	struct AmigaMonitor* mon = &AMonitors[0];	
+	AmigaMonitor* mon = &AMonitors[0];	
 #ifndef USE_DISPMANX
 	sdl_video_driver = SDL_GetCurrentVideoDriver();
 	SDL_GetCurrentDisplayMode(0, &sdlMode);
@@ -496,7 +496,7 @@ void amiberry_gui_init()
 
 void amiberry_gui_halt()
 {
-	struct AmigaMonitor* mon = &AMonitors[0];
+	AmigaMonitor* mon = &AMonitors[0];
 	
 	delete uae_gui;
 	uae_gui = nullptr;
@@ -559,7 +559,7 @@ void check_input()
 	const auto key_for_gui = SDL_GetKeyFromName(currprefs.open_gui);
 	const auto button_for_gui = SDL_GameControllerGetButtonFromString(currprefs.open_gui);
 	auto got_event = 0;
-	struct didata* did = &di_joystick[0];
+	didata* did = &di_joystick[0];
 	
 	while (SDL_PollEvent(&gui_event))
 	{

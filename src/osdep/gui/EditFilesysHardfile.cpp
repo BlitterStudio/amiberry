@@ -131,7 +131,7 @@ void updatehdfinfo(bool force, bool defaults)
 		current_hfdlg.dostype = 0;
 		if (hdf_open(&hfd, current_hfdlg.ci.rootdir) > 0) {
 			for (i = 0; i < 16; i++) {
-				hdf_read(&hfd, id, i * 512, 512);
+				hdf_read(&hfd, id, static_cast<uae_u64>(i) * 512, 512);
 				bsize = hfd.virtsize;
 				current_hfdlg.size = hfd.virtsize;
 				if (!memcmp(id, "RDSK", 4) || !memcmp(id, "CDSK", 4)) {
@@ -586,7 +586,7 @@ static void EditFilesysHardfileLoop()
 	int got_event = 0;
 	SDL_Event event;
 	SDL_Event touch_event;
-	struct didata* did = &di_joystick[0];
+	didata* did = &di_joystick[0];
 	while (SDL_PollEvent(&event))
 	{
 		switch (event.type)
@@ -839,10 +839,8 @@ static void EditFilesysHardfileLoop()
 
 bool EditFilesysHardfile(const int unit_no)
 {
-	struct mountedinfo mi
-	{
-	};
-	struct uaedev_config_data *uci;
+	mountedinfo mi{};
+	uaedev_config_data *uci;
 	std::string strdevname, strroot;
 
 	dialogResult = false;
@@ -856,7 +854,7 @@ bool EditFilesysHardfile(const int unit_no)
 		get_filesys_unitconfig(&changed_prefs, unit_no, &mi);
 
 		current_hfdlg.forcedcylinders = uci->ci.highcyl;
-		memcpy(&current_hfdlg.ci, uci, sizeof(struct uaedev_config_info));
+		memcpy(&current_hfdlg.ci, uci, sizeof(uaedev_config_info));
 		fileSelected = true;
 	}
 	else
@@ -886,8 +884,8 @@ bool EditFilesysHardfile(const int unit_no)
 	{
 		extract_path(const_cast<char *>(txtPath->getText().c_str()), current_dir);
 
-		struct uaedev_config_info ci{};
-		memcpy(&ci, &current_hfdlg.ci, sizeof(struct uaedev_config_info));
+		uaedev_config_info ci{};
+		memcpy(&ci, &current_hfdlg.ci, sizeof(uaedev_config_info));
 		uci = add_filesys_config(&changed_prefs, unit_no, &ci);
 		if (uci) {
 			auto* const hfd = get_hardfile_data(uci->configoffset);

@@ -236,7 +236,7 @@ public:
 };
 static DownloadControllerDbActionListener* downloadControllerDbActionListener;
 
-void InitPanelPaths(const struct _ConfigCategory& category)
+void InitPanelPaths(const config_category& category)
 {
 	const auto textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER - SMALL_BUTTON_WIDTH - DISTANCE_NEXT_X;
 	auto yPos = DISTANCE_BORDER;

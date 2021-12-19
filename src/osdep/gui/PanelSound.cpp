@@ -478,7 +478,7 @@ public:
 
 static SoundActionListener* sound_action_listener;
 
-void InitPanelSound(const struct _ConfigCategory& category)
+void InitPanelSound(const config_category& category)
 {
 	sound_action_listener = new SoundActionListener();
 

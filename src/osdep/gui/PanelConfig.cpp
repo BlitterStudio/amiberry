@@ -212,7 +212,7 @@ public:
 
 static ConfigsListActionListener* configsListActionListener;
 
-void InitPanelConfig(const struct _ConfigCategory& category)
+void InitPanelConfig(const struct config_category& category)
 {
 	configButtonActionListener = new ConfigButtonActionListener();
 

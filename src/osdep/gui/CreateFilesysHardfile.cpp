@@ -212,7 +212,7 @@ static void CreateFilesysHardfileLoop()
 	int got_event = 0;
 	SDL_Event event;
 	SDL_Event touch_event;
-	struct didata* did = &di_joystick[0];
+	didata* did = &di_joystick[0];
 	while (SDL_PollEvent(&event))
 	{
 		switch (event.type)
@@ -539,8 +539,8 @@ bool CreateFilesysHardfile()
 		}
 		
 		if (dialogResult) {
-			struct uaedev_config_data* uci;
-			struct uaedev_config_info ci;
+			uaedev_config_data* uci;
+			uaedev_config_info ci{};
 
 			uci_set_defaults(&ci, false);
 			strncpy(ci.devname, (char*)txtDevice->getText().c_str(), MAX_DPATH - 1);
@@ -572,7 +572,7 @@ bool CreateFilesysHardfile()
 
 			uci = add_filesys_config(&changed_prefs, -1, &ci);
 			if (uci) {
-				struct hardfiledata* hfd = get_hardfile_data(uci->configoffset);
+				hardfiledata* hfd = get_hardfile_data(uci->configoffset);
 				if (hfd)
 					hardfile_media_change(hfd, &ci, true, false);
 			}

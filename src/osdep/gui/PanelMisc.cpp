@@ -303,7 +303,7 @@ public:
 
 MiscActionListener* miscActionListener;
 
-void InitPanelMisc(const struct _ConfigCategory& category)
+void InitPanelMisc(const config_category& category)
 {
 	miscActionListener = new MiscActionListener();
 

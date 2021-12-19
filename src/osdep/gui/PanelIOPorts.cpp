@@ -103,7 +103,7 @@ IOActionListener* ioActionListener;
 IOKeyListener* ioKeyListener;
 #endif
 
-void InitPanelIO(const struct _ConfigCategory& category)
+void InitPanelIO(const config_category& category)
 {
 	ioActionListener = new IOActionListener();
 #ifdef SERIAL_PORT
