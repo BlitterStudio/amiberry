@@ -116,4 +116,10 @@ typedef enum {
 	NUMSG_LAST
 } notify_user_msg;
 
+#ifdef USE_GPIOD
+#include <gpiod.h>
+extern struct gpiod_line* lineRed;    // Red LED
+extern struct gpiod_line* lineGreen;  // Green LED
+extern struct gpiod_line* lineYellow; // Yellow LED
+#endif
 #endif /* UAE_GUI_H */

@@ -17,6 +17,11 @@ ifneq ($(strip $(USE_LD)),)
 endif
 LDFLAGS += -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed -lpthread -lz -lpng -lrt -lFLAC -lmpg123 -ldl -lmpeg2convert -lmpeg2
 
+# Use libgpiod to control GPIO LEDs?
+ifdef USE_GPIOD
+LDFLAGS += -lgpiod
+endif
+
 ifndef DEBUG
 	CFLAGS += -O3
 else

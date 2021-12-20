@@ -688,6 +688,9 @@ void gui_led(int led, int on, int brightness)
 			if (on) kbd_led_status |= LED_SCR;
 			else kbd_led_status &= ~LED_SCR;
 		}
+#ifdef USE_GPIOD
+		gpiod_line_set_value(lineRed, on);
+#endif
 	}
 
 	// Handle power, hd/cd led status
@@ -703,6 +706,12 @@ void gui_led(int led, int on, int brightness)
 			if (on) kbd_led_status |= LED_SCR;
 			else kbd_led_status &= ~LED_SCR;
 		}
+#ifdef USE_GPIOD
+		if (led == LED_HD)
+			gpiod_line_set_value(lineYellow, on);
+		if (led == LED_POWER)
+			gpiod_line_set_value(lineGreen, on);
+#endif
 	}
 
 	ioctl(0, KDSETLED, kbd_led_status);
