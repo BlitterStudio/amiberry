@@ -59,6 +59,15 @@
 #endif
 #endif
 
+#ifdef USE_GPIOD
+#include <gpiod.h>
+const char* chipname = "gpiochip0";
+struct gpiod_chip* chip;
+struct gpiod_line* lineRed;    // Red LED
+struct gpiod_line* lineGreen;  // Green LED
+struct gpiod_line* lineYellow; // Yellow LED
+#endif
+
 std::string drawbridge_profiles = "1|Fast[0|0|COM0|0|0]2|Compatible[0|0|COM0|1|0]3|Turbo[0|0|COM0|2|0]4|Accurate[0|0|COM0|3|0]";
 
 int log_scsi;
@@ -3127,8 +3136,31 @@ int main(int argc, char* argv[])
 	}
 	ioctl(0, KDSETLED, kbd_led_status);
 
+#ifdef USE_GPIOD
+	// Open GPIO chip
+	chip = gpiod_chip_open_by_name(chipname);
+
+	// Open GPIO lines
+	lineRed = gpiod_chip_get_line(chip, 18);
+	lineGreen = gpiod_chip_get_line(chip, 24);
+	lineYellow = gpiod_chip_get_line(chip, 23);
+
+	// Open LED lines for output
+	gpiod_line_request_output(lineRed, "amiberry", 0);
+	gpiod_line_request_output(lineGreen, "amiberry", 0);
+	gpiod_line_request_output(lineYellow, "amiberry", 0);
+#endif
+
 	real_main(argc, argv);
 
+#ifdef USE_GPIOD
+	// Release lines and chip
+	gpiod_line_release(lineRed);
+	gpiod_line_release(lineGreen);
+	gpiod_line_release(lineYellow);
+
+	gpiod_chip_close(chip);
+#endif
 	// restore keyboard LEDs to normal state
 	ioctl(0, KDSETLED, 0xFF);
 
