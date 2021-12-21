@@ -418,7 +418,7 @@ void InitPanelHD(const config_category& category)
 	cmdCDEject = new gcn::Button("Eject");
 	cmdCDEject->setSize(SMALL_BUTTON_WIDTH * 2, SMALL_BUTTON_HEIGHT);
 	cmdCDEject->setBaseColor(gui_baseCol);
-	cmdCDEject->setId("cdEject");
+	cmdCDEject->setId("cmdCDEject");
 	cmdCDEject->addActionListener(cdButtonActionListener);
 
 	cmdCDSelectFile = new gcn::Button("Select Image");
