@@ -302,7 +302,6 @@ static bool ecs_genlock_features_colorkey;
 static int hsync_shift_hack;
 static bool sprite_smaller_than_64, sprite_smaller_than_64_inuse;
 static bool full_blank;
-static int borderblank_blank;
 static uae_u8 vb_state;
 
 uae_sem_t gui_sem;
@@ -504,12 +503,7 @@ static void reset_custom_limits(void)
 
 static void expand_vb_state(void)
 {
-	full_blank = (vb_state & 15) == VB_PRGVB || (vb_state & 15) >= VB_XBLANK;
-	if ((vb_state & VB_BRDBLANKBUG) && ce_is_borderblank(colors_for_drawing.extra)) {
-		borderblank_blank = 4;
-	} else {
-		borderblank_blank = 0;
-	}
+	full_blank = vb_state == VB_PRGVB || vb_state >= VB_XBLANK;
 }
 
 static void extblankcheck(void)
@@ -3383,7 +3377,7 @@ static void do_color_changes(line_draw_func worker_border, line_draw_func worker
 					// normal left border (hblank end to playfield start)
 					if (nextpos_in_range > lastpos && lastpos < playfield_start) {
 						int t = nextpos_in_range <= playfield_start ? nextpos_in_range : playfield_start;
-						(*worker_border)(lastpos, t, borderblank_blank);
+						(*worker_border)(lastpos, t, 0);
 						lastpos = t;
 					}
 
@@ -3407,7 +3401,7 @@ static void do_color_changes(line_draw_func worker_border, line_draw_func worker
 					// borderblank left border (hblank end to playfield_start_pre)
 					if (nextpos_in_range > lastpos && lastpos < playfield_start_pre) {
 						int t = nextpos_in_range <= playfield_start_pre ? nextpos_in_range : playfield_start_pre;
-						(*worker_border)(lastpos, t, borderblank_blank);
+						(*worker_border)(lastpos, t, 0);
 						lastpos = t;
 					}
 					// AGA "buggy" borderblank, real background color visible, single shres pixel wide.
