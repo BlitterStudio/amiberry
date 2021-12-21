@@ -56,7 +56,7 @@ static gcn::Button* cmdCreateHardfile;
 static gcn::CheckBox* chkCD;
 static gcn::DropDown* cboCDFile;
 static gcn::Button* cmdCDEject;
-static gcn::Button* cmdCDSelect;
+static gcn::Button* cmdCDSelectFile;
 static gcn::CheckBox* chkCDTurbo;
 
 static int GetHDType(const int index)
@@ -269,7 +269,7 @@ public:
 			changed_prefs.cdslots[0].inuse = false;
 			AdjustDropDownControls();
 		}
-		else if (actionEvent.getSource() == cmdCDSelect)
+		else if (actionEvent.getSource() == cmdCDSelectFile)
 		{
 			char tmp[MAX_DPATH];
 
@@ -291,8 +291,9 @@ public:
 					AdjustDropDownControls();
 				}
 			}
-			cmdCDSelect->requestFocus();
+			cmdCDSelectFile->requestFocus();
 		}
+
 		RefreshPanelHD();
 		RefreshPanelQuickstart();
 	}
@@ -338,7 +339,6 @@ public:
 };
 
 static CDFileActionListener* cdFileActionListener;
-
 
 void InitPanelHD(const config_category& category)
 {
@@ -421,11 +421,11 @@ void InitPanelHD(const config_category& category)
 	cmdCDEject->setId("cdEject");
 	cmdCDEject->addActionListener(cdButtonActionListener);
 
-	cmdCDSelect = new gcn::Button("...");
-	cmdCDSelect->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
-	cmdCDSelect->setBaseColor(gui_baseCol);
-	cmdCDSelect->setId("CDSelect");
-	cmdCDSelect->addActionListener(cdButtonActionListener);
+	cmdCDSelectFile = new gcn::Button("Select Image");
+	cmdCDSelectFile->setSize(SMALL_BUTTON_WIDTH * 4, SMALL_BUTTON_HEIGHT);
+	cmdCDSelectFile->setBaseColor(gui_baseCol);
+	cmdCDSelectFile->setId("cmdCDSelectFile");
+	cmdCDSelectFile->addActionListener(cdButtonActionListener);
 
 	cboCDFile = new gcn::DropDown(&cdfileList);
 	cboCDFile->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, cboCDFile->getHeight());
@@ -467,12 +467,9 @@ void InitPanelHD(const config_category& category)
 	posY += cmdCreateHardfile->getHeight() + DISTANCE_NEXT_Y * 2;
 
 	category.panel->add(chkCD, DISTANCE_BORDER, posY + 2);
-	category.panel->add(cmdCDEject,
-		category.panel->getWidth() - cmdCDEject->getWidth() - DISTANCE_NEXT_X - cmdCDSelect->getWidth()
-		-
-		DISTANCE_BORDER, posY);
-	category.panel->add(cmdCDSelect, category.panel->getWidth() - cmdCDSelect->getWidth() - DISTANCE_BORDER, posY);
-	posY += cmdCDSelect->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(cmdCDEject, category.panel->getWidth() - cmdCDEject->getWidth() - DISTANCE_BORDER, posY);
+	category.panel->add(cmdCDSelectFile, cmdCDEject->getX() - DISTANCE_NEXT_X - cmdCDSelectFile->getWidth(), posY);
+	posY += cmdCDSelectFile->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(cboCDFile, DISTANCE_BORDER, posY);
 	posY += cboCDFile->getHeight() + DISTANCE_NEXT_Y;
@@ -505,7 +502,7 @@ void ExitPanelHD()
 
 	delete chkCD;
 	delete cmdCDEject;
-	delete cmdCDSelect;
+	delete cmdCDSelectFile;
 	delete cboCDFile;
 	delete chkCDTurbo;
 
@@ -610,7 +607,7 @@ void RefreshPanelHD()
 
 	chkCD->setSelected(changed_prefs.cdslots[0].inuse);
 	cmdCDEject->setEnabled(changed_prefs.cdslots[0].inuse);
-	cmdCDSelect->setEnabled(changed_prefs.cdslots[0].inuse);
+	cmdCDSelectFile->setEnabled(changed_prefs.cdslots[0].inuse);
 	cboCDFile->setEnabled(changed_prefs.cdslots[0].inuse);
 	chkCDTurbo->setSelected(changed_prefs.cd_speed == 0);
 }
