@@ -971,6 +971,7 @@ void CIA_vsync_prehandler (void)
 
 	led_vsync ();
 	CIA_handler ();
+	keybuf_vsync();
 	if (kblostsynccnt > 0) {
 		kblostsynccnt -= maxvpos;
 		if (kblostsynccnt <= 0) {
@@ -1910,7 +1911,7 @@ void CIA_reset (void)
 	}
 }
 
-void dumpcia (void)
+void dumpcia(void)
 {
 	//console_out_f (_T("A: CRA %02x CRB %02x ICR %02x IM %02x TA %04x (%04x) TB %04x (%04x)\n"),
 	//	ciaacra, ciaacrb, ciaaicr, ciaaimask, ciaata, ciaala, ciaatb, ciaalb);
@@ -1933,7 +1934,7 @@ addrbank cia_bank = {
 	ABFLAG_IO | ABFLAG_CIA, S_READ, S_WRITE, NULL, 0x3f01, 0xbfc000
 };
 
-static void cia_wait_pre (int cianummask)
+static void cia_wait_pre(int cianummask)
 {
 	if (currprefs.cachesize || currprefs.cpu_thread)
 		return;
