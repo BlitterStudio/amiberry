@@ -243,6 +243,7 @@ static void SetControlState(const int model)
 	cboqsDFxFile[0]->setEnabled(df0_editable);
 
 	chkqsDFx[1]->setVisible(df1_visible);
+	cboqsDFxType[1]->setVisible(df1_visible);
 	chkqsDFxWriteProtect[1]->setVisible(df1_visible);
 	cmdqsDFxInfo[1]->setVisible(df1_visible);
 	cmdqsDFxEject[1]->setVisible(df1_visible);
