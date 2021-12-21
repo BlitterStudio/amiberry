@@ -1,6 +1,15 @@
 # Specify "make PLATFORM=<platform>" to compile for a specific target.
 # Check the supported list of platforms below for a full list
 
+# Optional parameters
+#DEBUG=1
+#GCC_PROFILE=1
+#GEN_PROFILE=1
+#USE_PROFILE=1
+#USE_LTO=1
+#SANITIZE=1
+#USE_GPIOD=1
+
 #
 ## Common options for all targets
 #
@@ -43,7 +52,6 @@ ifneq (,$(findstring rpi1,$(PLATFORM)))
 	CPUFLAGS = -mcpu=arm1176jzf-s -mfpu=vfp
 endif
 
-
 # Raspberry Pi 2 CPU flags
 ifneq (,$(findstring rpi2,$(PLATFORM)))
 	CPUFLAGS = -mcpu=cortex-a7 -mfpu=neon-vfpv4
@@ -63,13 +71,6 @@ endif
 #
 DISPMANX_FLAGS = -DUSE_DISPMANX -I/opt/vc/include
 DISPMANX_LDFLAGS = -lbcm_host -lvchiq_arm -L/opt/vc/lib -Wl,-rpath=/opt/vc/lib
-
-#DEBUG=1
-#GCC_PROFILE=1
-#GEN_PROFILE=1
-#USE_PROFILE=1
-#USE_LTO=1
-#SANITIZE=1
 
 #
 # SDL2 with DispmanX targets (RPI only)
