@@ -19,7 +19,8 @@ LDFLAGS += -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed -lpthread -lz -lpng -lrt
 
 # Use libgpiod to control GPIO LEDs?
 ifdef USE_GPIOD
-LDFLAGS += -lgpiod
+	CFLAGS += -DUSE_GPIOD
+	LDFLAGS += -lgpiod
 endif
 
 ifndef DEBUG
@@ -197,9 +198,9 @@ else ifeq ($(PLATFORM),oga)
 
 # Generic aarch64 target defaulting to Cortex A53 CPU (SDL2, 64-bit)
 else ifeq ($(PLATFORM),a64)
-    CPUFLAGS ?= -mcpu=cortex-a53
-    CPPFLAGS += $(CPPFLAGS64)
-    AARCH64 = 1
+	CPUFLAGS ?= -mcpu=cortex-a53
+	CPPFLAGS += $(CPPFLAGS64)
+	AARCH64 = 1
 
 # RK3288 e.g. Asus Tinker Board
 # RK3328 e.g. PINE64 Rock64 
