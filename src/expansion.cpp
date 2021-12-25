@@ -53,7 +53,7 @@
 
 #ifdef AMIBERRY
 #include "crc32.h"
-// This is originall in debug.cpp, but since that is not implemented yet...
+// This is original in debug.cpp, but since that is not implemented yet...
 static uae_u8* dump_xlate(uae_u32 addr)
 {
 	if (!mem_banks[addr >> 16]->check(addr, 1))
