@@ -930,7 +930,7 @@ static int save_state_internal (struct zfile *f, const TCHAR *description, int c
 	write_log (_T("STATESAVE (%s):\n"), f ? zfile_getname (f) : _T("<internal>"));
 	dst = header;
 	save_u32 (0);
-	save_string (_T("UAE"));
+	save_string (_T("Amiberry"));
 	_stprintf (tmp, _T("%d.%d.%d"), UAEMAJOR, UAEMINOR, UAESUBREV);
 	save_string (tmp);
 	save_string (description);
