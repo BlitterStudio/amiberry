@@ -41,7 +41,7 @@
 #include "ar.h"
 #include "gayle.h"
 #include "cia.h"
-//#include "inputrecord.h"
+#include "inputrecord.h"
 #include "inputdevice.h"
 #include "audio.h"
 #include "fpp.h"
@@ -714,6 +714,8 @@ bool set_cpu_tracer (bool state)
 	if (cpu_tracer < 0)
 		return false;
 	int old = cpu_tracer;
+	if (input_record)
+		state = true;
 	cpu_tracer = 0;
 	if (state && can_cpu_tracer ()) {
 		cpu_tracer = 1;
@@ -1990,6 +1992,16 @@ static void bus_error(void)
 
 static void do_interrupt (int nr)
 {
+	//if (debug_dma)
+	//	record_dma_event (DMA_EVENT_CPUIRQ, current_hpos (), vpos);
+
+	if (inputrecord_debug & 2) {
+		if (input_record > 0)
+			inprec_recorddebug_cpu (2);
+		else if (input_play > 0)
+			inprec_playdebug_cpu (2);
+	}
+
 	m68k_unset_stop();
 
 	for (;;) {
@@ -2994,6 +3006,17 @@ static void m68k_run_1_ce (void)
 					cputrace.readcounter = cputrace.writecounter = 0;
 				}
 
+				if (inputrecord_debug & 4) {
+					if (input_record > 0)
+						inprec_recorddebug_cpu (1);
+					else if (input_play > 0)
+						inprec_playdebug_cpu (1);
+				}
+
+				//if (debug_opcode_watch) {
+				//	debug_trainer_match();
+				//}
+
 				r->instruction_pc = m68k_getpc ();
 				(*cpufunctbl[r->opcode])(r->opcode);
 				regs.instruction_cnt++;
@@ -3659,6 +3682,14 @@ void m68k_go (int may_quit)
 
 		cputrace.state = -1;
 
+		if (currprefs.inprecfile[0] && input_play) {
+			inprec_open (currprefs.inprecfile, NULL);
+			changed_prefs.inprecfile[0] = currprefs.inprecfile[0] = 0;
+			quit_program = UAE_RESET;
+		}
+		if (input_play || input_record)
+			inprec_startup ();
+
 		if (quit_program > 0) {
 			cpu_keyboardreset = quit_program == UAE_RESET_KEYBOARD;
 			cpu_hardreset = ((quit_program == UAE_RESET_HARD ? 1 : 0) | hardboot) != 0;
@@ -3705,8 +3736,24 @@ void m68k_go (int may_quit)
 
 			if (!restored || hsync_counter == 0)
 				savestate_check ();
+			if (input_record == INPREC_RECORD_START)
+				input_record = INPREC_RECORD_NORMAL;
 			statusline_clear();
+		} else {
+			if (input_record == INPREC_RECORD_START) {
+				input_record = INPREC_RECORD_NORMAL;
+				savestate_init ();
+				hsync_counter = 0;
+				vsync_counter = 0;
+				savestate_check ();
+			}
 		}
+
+		if (changed_prefs.inprecfile[0] && input_record)
+			inprec_prepare_record (savestate_fname[0] ? savestate_fname : NULL);
+
+		//if (changed_prefs.trainerfile[0])
+		//	debug_init_trainer(changed_prefs.trainerfile);
 
 		set_cpu_tracer (false);
 

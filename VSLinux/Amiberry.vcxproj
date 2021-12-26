@@ -411,7 +411,9 @@
     <ClCompile Include="..\src\hrtmon.rom.cpp" />
     <ClCompile Include="..\src\ide.cpp" />
     <ClCompile Include="..\src\ini.cpp" />
+    <ClCompile Include="..\src\inprec.cpp" />
     <ClCompile Include="..\src\inputdevice.cpp" />
+    <ClCompile Include="..\src\inputrecord.cpp" />
     <ClCompile Include="..\src\isofs.cpp" />
     <ClCompile Include="..\src\jit\codegen_arm.cpp.in" />
     <ClCompile Include="..\src\jit\compemu.cpp" />
@@ -672,6 +674,7 @@
     <ClInclude Include="..\src\include\ide.h" />
     <ClInclude Include="..\src\include\ini.h" />
     <ClInclude Include="..\src\include\inputdevice.h" />
+    <ClInclude Include="..\src\include\inputrecord.h" />
     <ClInclude Include="..\src\include\isofs.h" />
     <ClInclude Include="..\src\include\isofs_api.h" />
     <ClInclude Include="..\src\include\keyboard.h" />

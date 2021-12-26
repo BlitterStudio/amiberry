@@ -40,7 +40,7 @@
 //#include "amax.h"
 //#include "sampler.h"
 #include "dongle.h"
-//#include "inputrecord.h"
+#include "inputrecord.h"
 #include "autoconf.h"
 //#include "uae/ppc.h"
 #include "rommgr.h"
@@ -1098,12 +1098,12 @@ static uae_u8 ReadCIAA (uae_u32 addr, uae_u32 *flags)
 			write_log (_T("BFE001 R %02X %s\n"), v, debuginfo(0));
 #endif
 
-		//if (inputrecord_debug & 2) {
-		//	if (input_record > 0)
-		//		inprec_recorddebug_cia (v, div10, m68k_getpc ());
-		//	else if (input_play > 0)
-		//		inprec_playdebug_cia (v, div10, m68k_getpc ());
-		//}
+		if (inputrecord_debug & 2) {
+			if (input_record > 0)
+				inprec_recorddebug_cia (v, div10, m68k_getpc ());
+			else if (input_play > 0)
+				inprec_playdebug_cia (v, div10, m68k_getpc ());
+		}
 
 		return v;
 	}

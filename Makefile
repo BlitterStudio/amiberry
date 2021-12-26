@@ -356,6 +356,7 @@ OBJS =	\
 	src/ide.o \
 	src/ini.o \
 	src/inputdevice.o \
+	src/inputrecord.o \
 	src/isofs.o \
 	src/keybuf.o \
 	src/main.o \
