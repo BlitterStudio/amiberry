@@ -760,73 +760,73 @@ static int is_in_media_queue(const TCHAR* drvname)
 
 static void start_media_insert_timer();
 
-Uint32 timer_callbackfunc(Uint32 interval, void* param)
-{
-	if ((*(int*)&param) == 2) {
-		bool restart = false;
-		SDL_RemoveTimer(media_change_timer);
-		media_change_timer = 0;
-
-		for (int i = 0; i < MEDIA_INSERT_QUEUE_SIZE; i++) {
-			if (media_insert_queue[i]) {
-				TCHAR* drvname = media_insert_queue[i];
-				int r = my_getvolumeinfo(drvname);
-				if (r < 0) {
-					if (media_insert_queue_type[i] > 0) {
-						write_log(_T("Mounting %s but drive is not ready, %d.. retrying %d..\n"), drvname, r, media_insert_queue_type[i]);
-						media_insert_queue_type[i]--;
-						restart = true;
-						continue;
-					}
-					else {
-						write_log(_T("Mounting %s but drive is not ready, %d.. aborting..\n"), drvname, r);
-					}
-				}
-				else {
-					int inserted = 1;
-					//DWORD type = GetDriveType(drvname);
-					//if (type == DRIVE_CDROM)
-					//	inserted = -1;
-					r = filesys_media_change(drvname, inserted, NULL);
-					if (r < 0) {
-						write_log(_T("Mounting %s but previous media change is still in progress..\n"), drvname);
-						restart = true;
-						break;
-					}
-					else if (r > 0) {
-						write_log(_T("%s mounted\n"), drvname);
-					}
-					else {
-						write_log(_T("%s mount failed\n"), drvname);
-					}
-				}
-				xfree(media_insert_queue[i]);
-				media_insert_queue[i] = NULL;
-			}
-		}
-
-		if (restart)
-			start_media_insert_timer();
-	}
-	else if ((*(int*)&param) == 4) {
-		SDL_RemoveTimer(device_change_timer);
-		device_change_timer = 0;
-		inputdevice_devicechange(&changed_prefs);
-		inputdevice_copyjports(&changed_prefs, &currprefs);
-	}
-	else if ((*(int*)&param) == 1) {
-#ifdef PARALLEL_PORT
-		finishjob();
-#endif
-	}
-	return 0;
-}
+//Uint32 timer_callbackfunc(Uint32 interval, void* param)
+//{
+//	if ((*(int*)&param) == 2) {
+//		bool restart = false;
+//		SDL_RemoveTimer(media_change_timer);
+//		media_change_timer = 0;
+//
+//		for (int i = 0; i < MEDIA_INSERT_QUEUE_SIZE; i++) {
+//			if (media_insert_queue[i]) {
+//				TCHAR* drvname = media_insert_queue[i];
+//				int r = my_getvolumeinfo(drvname);
+//				if (r < 0) {
+//					if (media_insert_queue_type[i] > 0) {
+//						write_log(_T("Mounting %s but drive is not ready, %d.. retrying %d..\n"), drvname, r, media_insert_queue_type[i]);
+//						media_insert_queue_type[i]--;
+//						restart = true;
+//						continue;
+//					}
+//					else {
+//						write_log(_T("Mounting %s but drive is not ready, %d.. aborting..\n"), drvname, r);
+//					}
+//				}
+//				else {
+//					int inserted = 1;
+//					//DWORD type = GetDriveType(drvname);
+//					//if (type == DRIVE_CDROM)
+//					//	inserted = -1;
+//					r = filesys_media_change(drvname, inserted, NULL);
+//					if (r < 0) {
+//						write_log(_T("Mounting %s but previous media change is still in progress..\n"), drvname);
+//						restart = true;
+//						break;
+//					}
+//					else if (r > 0) {
+//						write_log(_T("%s mounted\n"), drvname);
+//					}
+//					else {
+//						write_log(_T("%s mount failed\n"), drvname);
+//					}
+//				}
+//				xfree(media_insert_queue[i]);
+//				media_insert_queue[i] = NULL;
+//			}
+//		}
+//
+//		if (restart)
+//			start_media_insert_timer();
+//	}
+//	else if ((*(int*)&param) == 4) {
+//		SDL_RemoveTimer(device_change_timer);
+//		device_change_timer = 0;
+//		inputdevice_devicechange(&changed_prefs);
+//		inputdevice_copyjports(&changed_prefs, &currprefs);
+//	}
+//	else if ((*(int*)&param) == 1) {
+//#ifdef PARALLEL_PORT
+//		finishjob();
+//#endif
+//	}
+//	return 0;
+//}
 
 static void start_media_insert_timer()
 {
-	if (!media_change_timer) {
-		media_change_timer = SDL_AddTimer(1000, timer_callbackfunc, (void*)2);
-	}
+	//if (!media_change_timer) {
+	//	media_change_timer = SDL_AddTimer(1000, timer_callbackfunc, (void*)2);
+	//}
 }
 
 static void add_media_insert_queue(const TCHAR* drvname, int retrycnt)
@@ -1089,9 +1089,9 @@ void process_event(SDL_Event event)
 				minimizewindow(mon->monitor_id);
 			return;
 		case SDL_WINDOWEVENT_CLOSE:
-			if (device_change_timer)
-				SDL_RemoveTimer(device_change_timer);
-			device_change_timer = 0;
+			//if (device_change_timer)
+			//	SDL_RemoveTimer(device_change_timer);
+			//device_change_timer = 0;
 			wait_keyrelease();
 			inputdevice_unacquire();
 			uae_quit();
@@ -1122,9 +1122,9 @@ void process_event(SDL_Event event)
 	case SDL_CONTROLLERDEVICEREMOVED:
 		write_log("SDL Controller/Joystick device added or removed! Re-running import joysticks...\n");
 		import_joysticks();
-		if (device_change_timer)
-			SDL_RemoveTimer(device_change_timer);
-		device_change_timer = SDL_AddTimer(2000, timer_callbackfunc, (void*)4);	
+		//if (device_change_timer)
+		//	SDL_RemoveTimer(device_change_timer);
+		//device_change_timer = SDL_AddTimer(2000, timer_callbackfunc, (void*)4);	
 		return;
 
 	case SDL_CONTROLLERBUTTONDOWN:
