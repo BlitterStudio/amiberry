@@ -1089,9 +1089,6 @@ void process_event(SDL_Event event)
 				minimizewindow(mon->monitor_id);
 			return;
 		case SDL_WINDOWEVENT_CLOSE:
-			//if (device_change_timer)
-			//	SDL_RemoveTimer(device_change_timer);
-			//device_change_timer = 0;
 			wait_keyrelease();
 			inputdevice_unacquire();
 			uae_quit();
@@ -1122,9 +1119,10 @@ void process_event(SDL_Event event)
 	case SDL_CONTROLLERDEVICEREMOVED:
 		write_log("SDL Controller/Joystick device added or removed! Re-running import joysticks...\n");
 		import_joysticks();
-		//if (device_change_timer)
-		//	SDL_RemoveTimer(device_change_timer);
-		//device_change_timer = SDL_AddTimer(2000, timer_callbackfunc, (void*)4);	
+		if (inputdevice_devicechange(&currprefs))
+		{
+			joystick_refresh_needed = true;
+		}
 		return;
 
 	case SDL_CONTROLLERBUTTONDOWN:

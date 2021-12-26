@@ -20,6 +20,7 @@
 #include "fsdb_host.h"
 #include "autoconf.h"
 #include "amiberry_input.h"
+#include "inputdevice.h"
 
 #if defined(ANDROID)
 #include "androidsdl_event.h"
@@ -33,6 +34,7 @@ int last_y = 0;
 
 bool gui_running = false;
 static int last_active_panel = 3;
+bool joystick_refresh_needed = false;
 
 #define MAX_STARTUP_TITLE 64
 #define MAX_STARTUP_MESSAGE 256
@@ -573,6 +575,19 @@ void check_input()
 			uae_quit();
 			gui_running = false;
 			break;
+
+		case SDL_JOYDEVICEADDED:
+		case SDL_CONTROLLERDEVICEADDED:
+		case SDL_JOYDEVICEREMOVED:
+		case SDL_CONTROLLERDEVICEREMOVED:
+			write_log("SDL Controller/Joystick device added or removed! Re-running import joysticks...\n");
+			if (inputdevice_devicechange(&currprefs))
+			{
+				import_joysticks();
+				joystick_refresh_needed = true;
+				RefreshPanelInput();
+			}
+			return;
 
 		case SDL_JOYHATMOTION:
 		case SDL_JOYBUTTONDOWN:

@@ -39,6 +39,7 @@ STATIC_INLINE FILE* uae_tfopen(const TCHAR* path, const TCHAR* mode)
 extern int mouseactive;
 extern int minimized;
 extern int monitor_off;
+extern bool joystick_refresh_needed;
 
 extern void logging_init();
 
