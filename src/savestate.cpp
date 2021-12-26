@@ -61,7 +61,7 @@
 #include "gui.h"
 #include "audio.h"
 #include "filesys.h"
-//#include "inputrecord.h"
+#include "inputrecord.h"
 #include "disk.h"
 #include "threaddep/thread.h"
 //#include "a2091.h"
@@ -293,7 +293,7 @@ static TCHAR *state_resolve_path(TCHAR *s, int type, bool newmode)
 		}
 		getfilepart(tmp, sizeof tmp / sizeof(TCHAR), s);
 	} else {
-		getfilepart (tmp, sizeof tmp / sizeof (TCHAR), s);
+		getfilepart(tmp, sizeof tmp / sizeof(TCHAR), s);
 		if (state_path_exists(tmp, type)) {
 			xfree(s);
 			return my_strdup(tmp);
@@ -879,7 +879,7 @@ void savestate_initsave (const TCHAR *filename, int mode, int nodialogs, bool sa
 	new_blitter = false;
 	if (save) {
 		savestate_free ();
-		//inprec_close (true);
+		inprec_close (true);
 	}
 }
 
@@ -1284,8 +1284,8 @@ void savestate_quick (int slot, int save)
 bool savestate_check (void)
 {
 	if (vpos == 0 && !savestate_state) {
-		//if (hsync_counter == 0 && input_play == INPREC_PLAY_NORMAL)
-		//	savestate_memorysave ();
+		if (hsync_counter == 0 && input_play == INPREC_PLAY_NORMAL)
+			savestate_memorysave ();
 		savestate_capture (0);
 	}
 	if (savestate_state == STATE_DORESTORE) {
@@ -1323,7 +1323,7 @@ int savestate_dorewind (int pos)
 		pos = replaycounter - 1;
 	if (canrewind (pos)) {
 		savestate_state = STATE_DOREWIND;
-		//write_log (_T("dorewind %d (%010ld/%03ld) -> %d\n"), replaycounter - 1, hsync_counter, vsync_counter, pos);
+		write_log (_T("dorewind %d (%010ld/%03ld) -> %d\n"), replaycounter - 1, hsync_counter, vsync_counter, pos);
 		return 1;
 	}
 	return 0;
@@ -1379,12 +1379,12 @@ void savestate_rewind (void)
 	p2 = st->end;
 	write_log (_T("rewinding %d -> %d\n"), replaycounter - 1, pos);
 	hsync_counter = restore_u32_func (&p);
-	//vsync_counter = restore_u32_func (&p);
+	vsync_counter = restore_u32_func (&p);
 	p = restore_cpu (p);
 	p = restore_cycles (p);
 	p = restore_cpu_extra (p);
-	//if (restore_u32_func (&p))
-	//	p = restore_cpu_trace (p);
+	if (restore_u32_func (&p))
+		p = restore_cpu_trace (p);
 #ifdef FPUEMU
 	if (restore_u32_func (&p))
 		p = restore_fpu (p);
@@ -1410,7 +1410,7 @@ void savestate_rewind (void)
 	p = restore_cia (0, p);
 	p = restore_cia (1, p);
 	p = restore_keyboard (p);
-	//p = restore_inputstate (p);
+	p = restore_inputstate (p);
 #ifdef AUTOCONFIG
 	p = restore_expansion (p);
 #endif
@@ -1466,8 +1466,8 @@ void savestate_rewind (void)
 		uae_reset (0, 0);
 		return;
 	}
-	//inprec_setposition (st->inprecoffset, pos);
-	//write_log (_T("state %d restored.  (%010ld/%03ld)\n"), pos, hsync_counter, vsync_counter);
+	inprec_setposition (st->inprecoffset, pos);
+	write_log (_T("state %d restored.  (%010ld/%03ld)\n"), pos, hsync_counter, vsync_counter);
 	if (rewind) {
 		replaycounter--;
 		if (replaycounter < 0)
@@ -1510,16 +1510,16 @@ void savestate_capture (int force)
 #endif
 	if (!staterecords)
 		return;
-	//if (!input_record)
+	if (!input_record)
 		return;
-	//if (currprefs.statecapturerate && hsync_counter == 0 && input_record == INPREC_RECORD_START && savestate_first_capture > 0) {
-	//	// first capture
-	//	force = true;
-	//	firstcapture = true;
-	//} else if (savestate_first_capture < 0) {
-	//	force = true;
-	//	firstcapture = false;
-	//}
+	if (currprefs.statecapturerate && hsync_counter == 0 && input_record == INPREC_RECORD_START && savestate_first_capture > 0) {
+		// first capture
+		force = true;
+		firstcapture = true;
+	} else if (savestate_first_capture < 0) {
+		force = true;
+		firstcapture = false;
+	}
 	if (!force) {
 		if (currprefs.statecapturerate <= 0)
 			return;
@@ -1548,7 +1548,7 @@ retry2:
 	p = p2 = st->data;
 	tlen = 0;
 	save_u32_func (&p, hsync_counter);
-	//save_u32_func (&p, vsync_counter);
+	save_u32_func (&p, vsync_counter);
 	tlen += 8;
 
 	if (bufcheck (st, p, 0))
@@ -1843,7 +1843,7 @@ retry2:
 	save_u32_func (&p, tlen);
 	st->end = p;
 	st->inuse = 1;
-	//st->inprecoffset = inprec_getposition ();
+	st->inprecoffset = inprec_getposition ();
 
 	replaycounter++;
 	if (replaycounter >= staterecords_max)
@@ -1854,21 +1854,21 @@ retry2:
 			staterecords_first -= staterecords_max;
 	}
 
-	//write_log (_T("state capture %d (%010ld/%03ld,%ld/%d) (%ld bytes, alloc %d)\n"),
-	//	replaycounter, hsync_counter, vsync_counter,
-	//	hsync_counter % current_maxvpos (), current_maxvpos (),
-	//	st->end - st->data, statefile_alloc);
+	write_log (_T("state capture %d (%010ld/%03ld,%ld/%d) (%ld bytes, alloc %d)\n"),
+		replaycounter, hsync_counter, vsync_counter,
+		hsync_counter % current_maxvpos (), current_maxvpos (),
+		st->end - st->data, statefile_alloc);
 
-	//if (firstcapture) {
-	//	savestate_memorysave ();
-	//	input_record++;
-	//	for (i = 0; i < 4; i++) {
-	//		bool wp = true;
-	//		DISK_validate_filename (&currprefs, currprefs.floppyslots[i].df, i, NULL, false, &wp, NULL, NULL);
-	//		inprec_recorddiskchange (i, currprefs.floppyslots[i].df, wp);
-	//	}
-	//	input_record--;
-	//}
+	if (firstcapture) {
+		savestate_memorysave ();
+		input_record++;
+		for (i = 0; i < 4; i++) {
+			bool wp = true;
+			DISK_validate_filename (&currprefs, currprefs.floppyslots[i].df, i, NULL, false, &wp, NULL, NULL);
+			inprec_recorddiskchange (i, currprefs.floppyslots[i].df, wp);
+		}
+		input_record--;
+	}
 
 
 	return;
@@ -1897,13 +1897,13 @@ void savestate_init (void)
 	staterecords_max = currprefs.statecapturebuffersize;
 	staterecords = xcalloc (struct staterecord*, staterecords_max);
 	statefile_alloc = STATEFILE_ALLOC_SIZE;
-	//if (input_record && savestate_state != STATE_DORESTORE) {
-	//	zfile_fclose (staterecord_statefile);
-	//	staterecord_statefile = NULL;
-	//	inprec_close (false);
-	//	inprec_open (NULL, NULL);
-	//	savestate_first_capture = 1;
-	//}
+	if (input_record && savestate_state != STATE_DORESTORE) {
+		zfile_fclose (staterecord_statefile);
+		staterecord_statefile = NULL;
+		inprec_close (false);
+		inprec_open (NULL, NULL);
+		savestate_first_capture = 1;
+	}
 }
 
 

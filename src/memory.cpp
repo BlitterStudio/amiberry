@@ -46,6 +46,7 @@
 extern uae_u8* natmem_offset, * natmem_offset_end;
 
 #ifdef AMIBERRY
+extern void memory_map_dump(void);
 addrbank* get_mem_bank_real(uaecptr addr)
 {
 	addrbank* ab = &get_mem_bank(addr);
@@ -1189,7 +1190,7 @@ uae_u8 *REGPARAM2 default_xlate (uaecptr addr)
 					}
 					write_log (_T("\n"));
 				}
-				//memory_map_dump();
+				memory_map_dump();
 				//m68k_dumpstate(NULL, 0xffffffff);
 			}
 			if (0 || (gary_toenb && (gary_nonrange(addr) || (size > 1 && gary_nonrange(addr + size - 1))))) {
@@ -2357,7 +2358,7 @@ void map_overlay (int chip)
 			rb = &kickmem_bank;
 		map_banks (rb, 0, size, 0x80000);
 	}
-	//initramboard(&chipmem_bank, &currprefs.chipmem);
+	initramboard(&chipmem_bank, &currprefs.chipmem);
 	overlay_state = chip;
 	fill_ce_banks ();
 	//cpuboard_overlay_override();

@@ -70,6 +70,7 @@ struct gpiod_line* lineYellow; // Yellow LED
 
 std::string drawbridge_profiles = "1|Fast[0|0|COM0|0|0]2|Compatible[0|0|COM0|1|0]3|Turbo[0|0|COM0|2|0]4|Accurate[0|0|COM0|3|0]";
 
+static int logging_started;
 int log_scsi;
 int uaelib_debug;
 int pissoff_value = 15000 * CYCLE_UNIT;
@@ -219,6 +220,7 @@ static char floppy_sounds_dir[MAX_DPATH];
 static char data_dir[MAX_DPATH];
 static char saveimage_dir[MAX_DPATH];
 static char savestate_dir[MAX_DPATH];
+static char input_dir[MAX_DPATH];
 static char screenshot_dir[MAX_DPATH];
 static char amiberry_conf_file[MAX_DPATH];
 
@@ -358,6 +360,16 @@ void unsetminimized(int monid)
 		full_redraw_all();
 	minimized = 0;
 	clear_inhibit_frame(monid, IHF_WINDOWHIDDEN);
+}
+
+void refreshtitle(void)
+{
+	//for (int i = 0; i < MAX_AMIGAMONITORS; i++) {
+	//	struct AmigaMonitor* mon = &AMonitors[i];
+	//	if (mon->sdl_window && isfullscreen() == 0) {
+	//		setmaintitle(mon->monitor_id);
+	//	}
+	//}
 }
 
 void setpriority(int prio)
@@ -1472,6 +1484,7 @@ void logging_init()
 		if (!debugfile)
 			debugfile = fopen(debug_filename, "wt");
 
+		logging_started = 1;
 		first++;
 		write_log("%s Logfile\n\n", get_version_string().c_str());
 	}
@@ -1482,6 +1495,32 @@ void logging_cleanup(void)
 	if (debugfile)
 		fclose(debugfile);
 	debugfile = nullptr;
+}
+
+uae_u8* save_log(int bootlog, int* len)
+{
+	FILE* f;
+	uae_u8* dst = NULL;
+	int size;
+
+	if (!logging_started)
+		return NULL;
+	f = fopen(logfile_path, _T("rb"));
+	if (!f)
+		return NULL;
+	fseek(f, 0, SEEK_END);
+	size = ftell(f);
+	fseek(f, 0, SEEK_SET);
+	if (*len > 0 && size > *len)
+		size = *len;
+	if (size > 0) {
+		dst = xcalloc(uae_u8, size + 1);
+		if (dst)
+			fread(dst, 1, size, f);
+		fclose(f);
+		*len = size + 1;
+	}
+	return dst;
 }
 
 void strip_slashes(TCHAR* p)
@@ -2278,6 +2317,12 @@ void get_savestate_path(char* out, int size)
 	strncpy(out, savestate_dir, size - 1);
 }
 
+void fetch_inputfilepath(TCHAR *out, int size)
+{
+	fix_trailing(input_dir);
+	strncpy(out, input_dir, size - 1);
+}
+
 void get_screenshot_path(char* out, int size)
 {
 	fix_trailing(screenshot_dir);
@@ -2641,6 +2686,9 @@ void save_amiberry_settings(void)
 	snprintf(buffer, MAX_DPATH, "savestate_dir=%s\n", savestate_dir);
 	fputs(buffer, f);
 
+	snprintf(buffer, MAX_DPATH, "inputrecordings_dir=%s\n", input_dir);
+	fputs(buffer, f);
+
 	snprintf(buffer, MAX_DPATH, "screenshot_dir=%s\n", screenshot_dir);
 	fputs(buffer, f);
 
@@ -2782,6 +2830,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_string(option, value, "data_dir", data_dir, sizeof data_dir);
 		ret |= cfgfile_string(option, value, "saveimage_dir", saveimage_dir, sizeof saveimage_dir);
 		ret |= cfgfile_string(option, value, "savestate_dir", savestate_dir, sizeof savestate_dir);
+		ret |= cfgfile_string(option, value, "inputrecordings_dir", input_dir, sizeof input_dir);
 		ret |= cfgfile_string(option, value, "screenshot_dir", screenshot_dir, sizeof screenshot_dir);
 		// NOTE: amiberry_config is a "read only", ie. it's not written in
 		// save_amiberry_settings(). It's purpose is to provide -o amiberry_config=path
@@ -2902,6 +2951,7 @@ static void init_amiberry_paths(void)
 	snprintf(data_dir, MAX_DPATH, "%s/", start_path_data);
 	snprintf(saveimage_dir, MAX_DPATH, "%s/savestates/", start_path_data);
 	snprintf(savestate_dir, MAX_DPATH, "%s/savestates/", start_path_data);
+	snprintf(input_dir, MAX_DPATH, "%s/inputrecordings/", start_path_data);
 	snprintf(screenshot_dir, MAX_DPATH, "%s/screenshots/", start_path_data);
 }
 

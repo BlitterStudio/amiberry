@@ -72,6 +72,32 @@ struct gui_info gui_data;
 
 static TCHAR optionsfile[MAX_DPATH];
 
+static uae_u32 randseed;
+static int oldhcounter;
+
+uae_u32 uaesrand(uae_u32 seed)
+{
+	oldhcounter = -1;
+	randseed = seed;
+	//randseed = 0x12345678;
+	//write_log (_T("seed=%08x\n"), randseed);
+	return randseed;
+}
+uae_u32 uaerand(void)
+{
+	if (oldhcounter != hsync_counter) {
+		srand(hsync_counter ^ randseed);
+		oldhcounter = hsync_counter;
+	}
+	uae_u32 r = rand();
+	//write_log (_T("rand=%08x\n"), r);
+	return r;
+}
+uae_u32 uaerandgetseed(void)
+{
+	return randseed;
+}
+
 void my_trim (TCHAR *s)
 {
 	while (_tcslen (s) > 0 && _tcscspn (s, _T("\t \r\n")) == 0)
