@@ -120,6 +120,55 @@ string_list_model ctrlPortMouseModeList(mousemapValues, 2);
 const char* joyportmodes[] = { "Default", "Wheel Mouse", "Mouse", "Joystick", "Gamepad", "Analog Joystick", "CDTV remote mouse", "CD32 pad"};
 string_list_model ctrlPortModeList(joyportmodes, 8);
 
+void update_joystick_list()
+{
+	retroarch_kb = get_retroarch_kb_num();
+	joysticks = inputdevice_get_device_total(IDTYPE_JOYSTICK);
+	mice = inputdevice_get_device_total(IDTYPE_MOUSE);
+
+	auto idx = 0;
+	ctrlPortList.add_element("<none>");
+	portListIDs[idx] = JPORT_NONE;
+
+	idx++;
+	ctrlPortList.add_element("Keyboard Layout A (Numpad, 0/5=Fire, Decimal/DEL=2nd Fire)");
+	portListIDs[idx] = JSEM_KBDLAYOUT;
+
+	idx++;
+	ctrlPortList.add_element("Keyboard Layout B (Cursor, RCtrl/RAlt=Fire, RShift=2nd Fire)");
+	portListIDs[idx] = JSEM_KBDLAYOUT + 1;
+
+	idx++;
+	ctrlPortList.add_element("Keyboard Layout C (WSAD, LAlt=Fire, LShift=2nd Fire)");
+	portListIDs[idx] = JSEM_KBDLAYOUT + 2;
+
+	idx++;
+	ctrlPortList.add_element("Keyrah Layout (Cursor, Space/RAlt=Fire, RShift=2nd Fire)");
+	portListIDs[idx] = JSEM_KBDLAYOUT + 3;
+
+	for (auto j = 0; j < 4; j++)
+	{
+		auto element = "Retroarch KBD as Joystick Player" + std::to_string(j + 1);
+		ctrlPortList.add_element(element.c_str());
+		idx++;
+		portListIDs[idx] = JSEM_KBDLAYOUT + j + 4;
+	}
+
+	for (auto j = 0; j < joysticks; j++)
+	{
+		ctrlPortList.add_element(inputdevice_get_device_name(IDTYPE_JOYSTICK, j));
+		idx++;
+		portListIDs[idx] = JSEM_JOYS + j;
+	}
+
+	for (auto j = 0; j < mice; j++)
+	{
+		ctrlPortList.add_element(inputdevice_get_device_name(IDTYPE_MOUSE, j));
+		idx++;
+		portListIDs[idx] = JSEM_MICE + j;
+	}
+}
+
 class InputPortsActionListener : public gcn::ActionListener
 {
 public:
@@ -282,53 +331,9 @@ static InputActionListener* inputActionListener;
 
 void InitPanelInput(const config_category& category)
 {
-	retroarch_kb = get_retroarch_kb_num();
-	joysticks = inputdevice_get_device_total(IDTYPE_JOYSTICK);
-	mice = inputdevice_get_device_total(IDTYPE_MOUSE);
-	
 	if (ctrlPortList.getNumberOfElements() == 0)
 	{
-		auto idx = 0;
-		ctrlPortList.add_element("<none>");
-		portListIDs[idx] = JPORT_NONE;
-		
-		idx++;
-		ctrlPortList.add_element("Keyboard Layout A (Numpad, 0/5=Fire, Decimal/DEL=2nd Fire)");
-		portListIDs[idx] = JSEM_KBDLAYOUT;
-		
-		idx++;
-		ctrlPortList.add_element("Keyboard Layout B (Cursor, RCtrl/RAlt=Fire, RShift=2nd Fire)");
-		portListIDs[idx] = JSEM_KBDLAYOUT + 1;
-		
-		idx++;
-		ctrlPortList.add_element("Keyboard Layout C (WSAD, LAlt=Fire, LShift=2nd Fire)");
-		portListIDs[idx] = JSEM_KBDLAYOUT + 2;
-
-		idx++;
-		ctrlPortList.add_element("Keyrah Layout (Cursor, Space/RAlt=Fire, RShift=2nd Fire)");
-		portListIDs[idx] = JSEM_KBDLAYOUT + 3;
-
-		for (auto j = 0; j < 4; j++)
-		{
-			auto element = "Retroarch KBD as Joystick Player" + std::to_string(j + 1);
-			ctrlPortList.add_element(element.c_str());
-			idx++;
-			portListIDs[idx] = JSEM_KBDLAYOUT + j + 4;
-		}
-		
-		for (auto j = 0; j < joysticks; j++)
-		{
-			ctrlPortList.add_element(inputdevice_get_device_name(IDTYPE_JOYSTICK, j));
-			idx++;
-			portListIDs[idx] = JSEM_JOYS + j;
-		}
-
-		for (auto j = 0; j < mice; j++)
-		{
-			ctrlPortList.add_element(inputdevice_get_device_name(IDTYPE_MOUSE, j));
-			idx++;
-			portListIDs[idx] = JSEM_MICE + j;
-		}
+		update_joystick_list();
 	}
 
 	inputPortsActionListener = new InputPortsActionListener();
@@ -607,6 +612,12 @@ void ExitPanelInput()
 
 void RefreshPanelInput()
 {
+	if (joystick_refresh_needed)
+	{
+		ctrlPortList.clear_elements();
+		update_joystick_list();
+	}
+
 	for (auto i = 0; i < MAX_JPORTS; i++) 
 	{
 		const auto* id = joys[i];
