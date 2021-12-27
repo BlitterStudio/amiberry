@@ -227,7 +227,7 @@ extern uae_u8 handle_joystick_buttons (uae_u8, uae_u8);
 #define MAGICMOUSE_HOST_ONLY 2
 
 extern int magicmouse_alive (void);
-//extern int is_tablet (void);
+extern int is_tablet (void);
 extern int is_touch_lightpen (void);
 extern int inputdevice_is_tablet (void);
 extern int input_mousehack_status(TrapContext *ctx, int mode, uaecptr diminfo, uaecptr dispinfo, uaecptr vp, uae_u32 moffset);
