@@ -473,6 +473,7 @@ OBJS =	\
 	src/osdep/gui/PanelIOPorts.o \
 	src/osdep/gui/PanelDisplay.o \
 	src/osdep/gui/PanelSound.o \
+	src/osdep/gui/PanelDiskSwapper.o \
 	src/osdep/gui/PanelMisc.o \
 	src/osdep/gui/PanelPrio.o \
 	src/osdep/gui/PanelSavestate.o \
