@@ -332,6 +332,10 @@ static bool ctrlpressed()
 {
 	return (input_getqualifiers() & ID_FLAG_QUALIFIER_CONTROL) != 0;
 }
+static bool winpressed()
+{
+	return (input_getqualifiers() & ID_FLAG_QUALIFIER_WIN) != 0;
+}
 
 static int capslockstate;
 static int host_capslockstate, host_numlockstate, host_scrolllockstate;
@@ -405,7 +409,7 @@ bool my_kbd_handler(int keyboard, int scancode, int newstate, bool alwaysrelease
 			if ((enter_gui_key.modifiers.lctrl || enter_gui_key.modifiers.rctrl) && ctrlpressed()
 				|| (enter_gui_key.modifiers.lshift || enter_gui_key.modifiers.rshift) && shiftpressed()
 				|| (enter_gui_key.modifiers.lalt || enter_gui_key.modifiers.ralt) && altpressed()
-				|| (enter_gui_key.modifiers.lgui || enter_gui_key.modifiers.rgui) && specialpressed()
+				|| (enter_gui_key.modifiers.lgui || enter_gui_key.modifiers.rgui) && winpressed()
 				|| !enter_gui_key.modifiers.lctrl
 				&& !enter_gui_key.modifiers.rctrl
 				&& !enter_gui_key.modifiers.lshift
@@ -426,7 +430,7 @@ bool my_kbd_handler(int keyboard, int scancode, int newstate, bool alwaysrelease
 			if ((action_replay_key.modifiers.lctrl || action_replay_key.modifiers.rctrl) && ctrlpressed()
 				|| (action_replay_key.modifiers.lshift || action_replay_key.modifiers.rshift) && shiftpressed()
 				|| (action_replay_key.modifiers.lalt || action_replay_key.modifiers.ralt) && altpressed()
-				|| (action_replay_key.modifiers.lgui || action_replay_key.modifiers.rgui) && specialpressed()
+				|| (action_replay_key.modifiers.lgui || action_replay_key.modifiers.rgui) && winpressed()
 				|| !action_replay_key.modifiers.lctrl
 				&& !action_replay_key.modifiers.rctrl
 				&& !action_replay_key.modifiers.lshift
@@ -446,7 +450,7 @@ bool my_kbd_handler(int keyboard, int scancode, int newstate, bool alwaysrelease
 			if ((fullscreen_key.modifiers.lctrl || fullscreen_key.modifiers.rctrl) && ctrlpressed()
 				|| (fullscreen_key.modifiers.lshift || fullscreen_key.modifiers.rshift) && shiftpressed()
 				|| (fullscreen_key.modifiers.lalt || fullscreen_key.modifiers.ralt) && altpressed()
-				|| (fullscreen_key.modifiers.lgui || fullscreen_key.modifiers.rgui) && specialpressed()
+				|| (fullscreen_key.modifiers.lgui || fullscreen_key.modifiers.rgui) && winpressed()
 				|| !fullscreen_key.modifiers.lctrl
 				&& !fullscreen_key.modifiers.rctrl
 				&& !fullscreen_key.modifiers.lshift
@@ -466,7 +470,7 @@ bool my_kbd_handler(int keyboard, int scancode, int newstate, bool alwaysrelease
 			if ((minimize_key.modifiers.lctrl || minimize_key.modifiers.rctrl) && ctrlpressed()
 				|| (minimize_key.modifiers.lshift || minimize_key.modifiers.rshift) && shiftpressed()
 				|| (minimize_key.modifiers.lalt || minimize_key.modifiers.ralt) && altpressed()
-				|| (minimize_key.modifiers.lgui || minimize_key.modifiers.rgui) && specialpressed()
+				|| (minimize_key.modifiers.lgui || minimize_key.modifiers.rgui) && winpressed()
 				|| !minimize_key.modifiers.lctrl
 				&& !minimize_key.modifiers.rctrl
 				&& !minimize_key.modifiers.lshift
