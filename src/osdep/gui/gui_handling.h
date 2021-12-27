@@ -267,6 +267,11 @@ void ExitPanelCustom(void);
 void RefreshPanelCustom(void);
 bool HelpPanelCustom(std::vector<std::string>& helptext);
 
+void InitPanelDiskSwapper(const struct config_category& category);
+void ExitPanelDiskSwapper(void);
+void RefreshPanelDiskSwapper(void);
+bool HelpPanelDiskSwapper(std::vector<std::string>& helptext);
+
 void InitPanelMisc(const struct config_category& category);
 void ExitPanelMisc(void);
 void RefreshPanelMisc(void);

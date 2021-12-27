@@ -36,8 +36,9 @@ static NavigationMap navMap[] =
 	{"Sound", "sndDisable", "sndDisable", "Display", "Input"},
 	{"Input", "cboPort0mode", "cboPort0", "Sound", "IO Ports"},
 	{"IO Ports", "txtSerialDevice", "txtSerialDevice", "Input", "Custom controls"},
-	{"Custom controls", "Right Trigger", "0: Mouse", "Input", "Miscellaneous"},
-	{"Miscellaneous", "chkMouseUntrap", "chkMouseUntrap", "Custom controls", "Priority"},
+	{"Custom controls", "Right Trigger", "0: Mouse", "Input", "Disk swapper"},
+	{"Disk swapper", "cmdDiskSwapperDrv0", "cmdDiskSwapperAdd0", "Custom controls", "Miscellaneous"},
+	{"Miscellaneous", "chkMouseUntrap", "chkMouseUntrap", "Disk swapper", "Priority"},
 #ifdef ANDROID
 	{ "Savestates",       "State0",         "State0",         "Miscellaneous",  "OnScreen" },
 	{ "OnScreen",         "OnScrButton3",   "OnScrCtrl",      "Savestates",     "Shutdown" },
@@ -361,6 +362,51 @@ static NavigationMap navMap[] =
 	{ "cboCustomAction14", "cboCustomAction6", "Custom controls", "cboCustomAction13", "chkAnalogRemap" },
 
 	{ "chkAnalogRemap", "Custom controls", "Custom controls", "cboCustomAction13", "0: Mouse" },
+
+	// PanelDiskSwapper
+	// active				move left			move right			move up			move down
+	// row 0
+	{ "cmdDiskSwapperAdd0", "Disk swapper", "cmdDiskSwapperDel0", "cmdDiskSwapperRemoveAll", "cmdDiskSwapperAdd1"},
+	{ "cmdDiskSwapperDel0", "cmdDiskSwapperAdd0", "cmdDiskSwapperDrv0", "cmdDiskSwapperRemoveAll", "cmdDiskSwapperDel1" },
+	{ "cmdDiskSwapperDrv0", "cmdDiskSwapperDel0", "Disk swapper", "cmdDiskSwapperRemoveAll", "cmdDiskSwapperDrv1" },
+	// row 1
+	{ "cmdDiskSwapperAdd1", "Disk swapper", "cmdDiskSwapperDel1", "cmdDiskSwapperAdd0", "cmdDiskSwapperAdd2" },
+	{ "cmdDiskSwapperDel1", "cmdDiskSwapperAdd1", "cmdDiskSwapperDrv1", "cmdDiskSwapperDel0", "cmdDiskSwapperDel2" },
+	{ "cmdDiskSwapperDrv1", "cmdDiskSwapperDel1", "Disk swapper", "cmdDiskSwapperDrv0", "cmdDiskSwapperDrv2" },
+	// row 2
+	{ "cmdDiskSwapperAdd2", "Disk swapper", "cmdDiskSwapperDel2", "cmdDiskSwapperAdd1", "cmdDiskSwapperAdd3" },
+	{ "cmdDiskSwapperDel2", "cmdDiskSwapperAdd2", "cmdDiskSwapperDrv2", "cmdDiskSwapperDel1", "cmdDiskSwapperDel3" },
+	{ "cmdDiskSwapperDrv2", "cmdDiskSwapperDel2", "Disk swapper", "cmdDiskSwapperDrv1", "cmdDiskSwapperDrv3" },
+	// row 3
+	{ "cmdDiskSwapperAdd3", "Disk swapper", "cmdDiskSwapperDel3", "cmdDiskSwapperAdd2", "cmdDiskSwapperAdd4" },
+	{ "cmdDiskSwapperDel3", "cmdDiskSwapperAdd3", "cmdDiskSwapperDrv3", "cmdDiskSwapperDel2", "cmdDiskSwapperDel4" },
+	{ "cmdDiskSwapperDrv3", "cmdDiskSwapperDel3", "Disk swapper", "cmdDiskSwapperDrv2", "cmdDiskSwapperDrv4" },
+	// row 4
+	{ "cmdDiskSwapperAdd4", "Disk swapper", "cmdDiskSwapperDel4", "cmdDiskSwapperAdd3", "cmdDiskSwapperAdd5" },
+	{ "cmdDiskSwapperDel4", "cmdDiskSwapperAdd4", "cmdDiskSwapperDrv4", "cmdDiskSwapperDel3", "cmdDiskSwapperDel5" },
+	{ "cmdDiskSwapperDrv4", "cmdDiskSwapperDel4", "Disk swapper", "cmdDiskSwapperDrv3", "cmdDiskSwapperDrv5" },
+	// row 5
+	{ "cmdDiskSwapperAdd5", "Disk swapper", "cmdDiskSwapperDel5", "cmdDiskSwapperAdd4", "cmdDiskSwapperAdd6" },
+	{ "cmdDiskSwapperDel5", "cmdDiskSwapperAdd5", "cmdDiskSwapperDrv5", "cmdDiskSwapperDel4", "cmdDiskSwapperDel6" },
+	{ "cmdDiskSwapperDrv5", "cmdDiskSwapperDel5", "Disk swapper", "cmdDiskSwapperDrv4", "cmdDiskSwapperDrv6" },
+	// row 6
+	{ "cmdDiskSwapperAdd6", "Disk swapper", "cmdDiskSwapperDel6", "cmdDiskSwapperAdd5", "cmdDiskSwapperAdd7" },
+	{ "cmdDiskSwapperDel6", "cmdDiskSwapperAdd6", "cmdDiskSwapperDrv6", "cmdDiskSwapperDel5", "cmdDiskSwapperDel7" },
+	{ "cmdDiskSwapperDrv6", "cmdDiskSwapperDel6", "Disk swapper", "cmdDiskSwapperDrv5", "cmdDiskSwapperDrv7" },
+	// row 7
+	{ "cmdDiskSwapperAdd7", "Disk swapper", "cmdDiskSwapperDel7", "cmdDiskSwapperAdd6", "cmdDiskSwapperAdd8" },
+	{ "cmdDiskSwapperDel7", "cmdDiskSwapperAdd7", "cmdDiskSwapperDrv7", "cmdDiskSwapperDel6", "cmdDiskSwapperDel8" },
+	{ "cmdDiskSwapperDrv7", "cmdDiskSwapperDel7", "Disk swapper", "cmdDiskSwapperDrv6", "cmdDiskSwapperDrv8" },
+	// row 8
+	{ "cmdDiskSwapperAdd8", "Disk swapper", "cmdDiskSwapperDel8", "cmdDiskSwapperAdd7", "cmdDiskSwapperAdd9" },
+	{ "cmdDiskSwapperDel8", "cmdDiskSwapperAdd8", "cmdDiskSwapperDrv8", "cmdDiskSwapperDel7", "cmdDiskSwapperDel9" },
+	{ "cmdDiskSwapperDrv8", "cmdDiskSwapperDel8", "Disk swapper", "cmdDiskSwapperDrv7", "cmdDiskSwapperDrv9" },
+	// row 9
+	{ "cmdDiskSwapperAdd9", "Disk swapper", "cmdDiskSwapperDel9", "cmdDiskSwapperAdd8", "cmdDiskSwapperRemoveAll" },
+	{ "cmdDiskSwapperDel9", "cmdDiskSwapperAdd9", "cmdDiskSwapperDrv9", "cmdDiskSwapperDel8", "cmdDiskSwapperRemoveAll" },
+	{ "cmdDiskSwapperDrv9", "cmdDiskSwapperDel9", "Disk swapper", "cmdDiskSwapperDrv8", "cmdDiskSwapperRemoveAll" },
+
+	{ "cmdDiskSwapperRemoveAll", "Disk swapper", "Disk swapper", "cmdDiskSwapperAdd9", "cmdDiskSwapperAdd0" },
 
 	// PanelMisc
 	//  active            move left           move right          move up           move down
