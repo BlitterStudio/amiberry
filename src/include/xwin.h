@@ -24,7 +24,7 @@ extern int graphics_init(bool);
 extern void graphics_leave(void);
 extern void graphics_reset(bool);
 extern bool handle_events(void);
-extern int handle_msgpump(void);
+extern int handle_msgpump(bool);
 extern void setup_brkhandler(void);
 extern int isfullscreen(void);
 extern void toggle_fullscreen(int monid, int);

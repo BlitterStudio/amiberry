@@ -2191,7 +2191,7 @@ int inputdevice_is_tablet (void)
 		return 0;
 	if (currprefs.input_tablet == TABLET_MOUSEHACK)
 		return -1;
-	v = 0; // is_tablet();
+	v = is_tablet ();
 	if (!v)
 		return 0;
 	if (kickstart_version < 37)
@@ -3230,17 +3230,22 @@ static void joymousecounter (int joy)
 
 static int inputread;
 
-static void inputdevice_read(void)
+void inputdevice_read_msg(bool vblank)
 {
-//	if ((inputdevice_logging & (2 | 4)))
-//		write_log(_T("INPUTREAD\n"));
 	int got2 = 0;
 	for (;;) {
-		int got = handle_msgpump();
+		int got = handle_msgpump(vblank);
 		if (!got)
 			break;
 		got2 = 1;
 	}
+}
+
+static void inputdevice_read(void)
+{
+//	if ((inputdevice_logging & (2 | 4)))
+//		write_log(_T("INPUTREAD\n"));
+	inputdevice_read_msg(false);
 	if (inputread <= 0) {
 		idev[IDTYPE_MOUSE].read();
 		idev[IDTYPE_JOYSTICK].read();
@@ -3986,7 +3991,7 @@ void inputdevice_hsync (bool forceread)
 		while (inprec_playevent (&nr, &state, &max, &autofire))
 			handle_input_event (nr, state, max, (autofire ? HANDLE_IE_FLAG_AUTOFIRE : 0) | HANDLE_IE_FLAG_PLAYBACKEVENT);
 		if (vpos == 0)
-			handle_msgpump();
+			handle_msgpump(true);
 	}
 	if (!input_record && !input_play) {
 		if (forceread) {
@@ -4154,9 +4159,11 @@ void inputdevice_add_inputcode (int code, int state, const TCHAR *s)
 			if (!inputdevice_handle_inputcode_immediate(code, state)) {
 				inputcode_pending[i].code = code;
 				inputcode_pending[i].state = state;
+#ifdef AMIBERRY
 				if (s == NULL)
 					inputcode_pending[i].s = NULL;
 				else
+#endif
 					inputcode_pending[i].s = my_strdup(s);
 			}
 			return;
@@ -4377,6 +4384,13 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 	}
 #endif
 	if (!state) {
+		//switch(code)
+		//{
+		//	case AKS_SCREENSHOT_FILE:
+			// stop multiscreenshot
+		//	screenshot(-1, 4, 1);
+		//	break;
+		//}
 		return false;
 	}
 
@@ -4622,26 +4636,26 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 		}
 		break;
 	case AKS_DISKSWAPPER_NEXT:
-		//swapperslot++;
-		//if (swapperslot >= MAX_SPARE_DRIVES || currprefs.dfxlist[swapperslot][0] == 0)
-		//	swapperslot = 0;
+		swapperslot++;
+		if (swapperslot >= MAX_SPARE_DRIVES || currprefs.dfxlist[swapperslot][0] == 0)
+			swapperslot = 0;
 		break;
 	case AKS_DISKSWAPPER_PREV:
-		//swapperslot--;
-		//if (swapperslot < 0)
-		//	swapperslot = MAX_SPARE_DRIVES - 1;
-		//while (swapperslot > 0) {
-		//	if (currprefs.dfxlist[swapperslot][0])
-		//		break;
-		//	swapperslot--;
-		//}
+		swapperslot--;
+		if (swapperslot < 0)
+			swapperslot = MAX_SPARE_DRIVES - 1;
+		while (swapperslot > 0) {
+			if (currprefs.dfxlist[swapperslot][0])
+				break;
+			swapperslot--;
+		}
 		break;
 	case AKS_DISKSWAPPER_INSERT0:
 	case AKS_DISKSWAPPER_INSERT1:
 	case AKS_DISKSWAPPER_INSERT2:
 	case AKS_DISKSWAPPER_INSERT3:
-		//_tcscpy (changed_prefs.floppyslots[code - AKS_DISKSWAPPER_INSERT0].df, currprefs.dfxlist[swapperslot]);
-		//set_config_changed ();
+		_tcscpy (changed_prefs.floppyslots[code - AKS_DISKSWAPPER_INSERT0].df, currprefs.dfxlist[swapperslot]);
+		set_config_changed ();
 		break;
 	case AKS_INPUT_CONFIG_1:
 	case AKS_INPUT_CONFIG_2:
@@ -4654,13 +4668,13 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 	case AKS_DISK_PREV1:
 	case AKS_DISK_PREV2:
 	case AKS_DISK_PREV3:
-		//disk_prevnext (code - AKS_DISK_PREV0, -1);
+		disk_prevnext (code - AKS_DISK_PREV0, -1);
 		break;
 	case AKS_DISK_NEXT0:
 	case AKS_DISK_NEXT1:
 	case AKS_DISK_NEXT2:
 	case AKS_DISK_NEXT3:
-		//disk_prevnext (code - AKS_DISK_NEXT0, 1);
+		disk_prevnext (code - AKS_DISK_NEXT0, 1);
 		break;
 	case AKS_RTG_PREV:
 		toggle_rtg(0, -1);

@@ -1388,7 +1388,7 @@ static int canstretch(struct AmigaMonitor* mon)
 	return 0;
 }
 
-int handle_msgpump()
+int handle_msgpump(bool vblank)
 {
 	lctrl = rctrl = lalt = ralt = lshift = rshift = lgui = rgui = false;
 	auto got_event = 0;

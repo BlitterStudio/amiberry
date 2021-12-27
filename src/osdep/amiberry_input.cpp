@@ -288,6 +288,12 @@ int is_touch_lightpen(void)
 	return 0;
 }
 
+int is_tablet(void)
+{
+	//return (tablet || os_touch) ? 1 : 0;
+	return 0;
+}
+
 static int init_mouse()
 {
 	struct didata* did = di_mouse;
