@@ -63,6 +63,9 @@
 #include "statusline.h"
 #include "native2amiga_api.h"
 //#include "videograb.h"
+#ifdef AMIBERRY
+#include "amiberry_input.h"
+#endif
 
 // 01 = host events
 // 02 = joystick
@@ -4208,21 +4211,6 @@ void inputdevice_do_keyboard (int code, int state)
 }
 
 #ifdef AMIBERRY
-int find_in_array(const int arr[], int n, int key)
-{
-  int index = -1;
-
-	for(int i=0; i<n; i++)
-	{
-	   if(arr[i]==key)
-	   {
-		 index=i;
-		 break;
-	   }
-	}
-   return index;
- }
-
 static const int mousespeed_values[] = {2, 5, 10, 20, 40};
 
 int mousespeed;
