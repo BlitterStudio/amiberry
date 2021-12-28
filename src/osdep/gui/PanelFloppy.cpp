@@ -150,7 +150,9 @@ public:
 	{
 		if (i < 0 || i >= static_cast<int>(lstMRUDiskList.size()))
 			return "---";
-		return lstMRUDiskList[i];
+		const std::string full_path = lstMRUDiskList[i];
+		const std::string filename = full_path.substr(full_path.find_last_of("/\\") + 1);
+		return filename + " { " + full_path + " }";
 	}
 };
 
@@ -356,9 +358,10 @@ public:
 					}
 					else
 					{
-						if (diskfileList.getElementAt(idx) != changed_prefs.floppyslots[i].df)
+						auto element = get_full_path_from_disk_list(diskfileList.getElementAt(idx));
+						if (element != changed_prefs.floppyslots[i].df)
 						{
-							strncpy(changed_prefs.floppyslots[i].df, diskfileList.getElementAt(idx).c_str(), MAX_DPATH);
+							strncpy(changed_prefs.floppyslots[i].df, element.c_str(), MAX_DPATH);
 							disk_insert(i, changed_prefs.floppyslots[i].df);
 							lstMRUDiskList.erase(lstMRUDiskList.begin() + idx);
 							lstMRUDiskList.insert(lstMRUDiskList.begin(), changed_prefs.floppyslots[i].df);

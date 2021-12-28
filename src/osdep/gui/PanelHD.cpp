@@ -96,7 +96,9 @@ public:
 	{
 		if (i < 0 || i >= static_cast<int>(lstMRUCDList.size()))
 			return "---";
-		return lstMRUCDList[i];
+		const std::string full_path = lstMRUCDList[i];
+		const std::string filename = full_path.substr(full_path.find_last_of("/\\") + 1);
+		return filename + " { " + full_path + " }";
 	}
 };
 
@@ -319,9 +321,10 @@ public:
 			}
 			else
 			{
-				if (cdfileList.getElementAt(idx) != changed_prefs.cdslots[0].name)
+				const auto element = get_full_path_from_disk_list(cdfileList.getElementAt(idx));
+				if (element != changed_prefs.cdslots[0].name)
 				{
-					strncpy(changed_prefs.cdslots[0].name, cdfileList.getElementAt(idx).c_str(),
+					strncpy(changed_prefs.cdslots[0].name, element.c_str(),
 					        sizeof changed_prefs.cdslots[0].name);
 					changed_prefs.cdslots[0].inuse = true;
 					changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
