@@ -350,4 +350,6 @@ extern int fromdfxtype(int num, int dfx, int subtype);
 extern int todfxtype(int num, int dfx, int* subtype);
 extern void DisplayDiskInfo(int num);
 
+extern std::string get_full_path_from_disk_list(std::string element);
+
 #endif // GUI_HANDLING_H

@@ -72,6 +72,15 @@ std::vector<std::string> lstMRUDiskList;
 std::vector<std::string> lstMRUCDList;
 std::vector<std::string> lstMRUWhdloadList;
 
+std::string get_full_path_from_disk_list(std::string element)
+{
+	if (element.length() <= 0)
+		return element;
+	const std::string first = element.substr(element.find_first_of("{") + 2);
+	std::string full_path = first.substr(0, first.find_last_of("}") - 1);
+	return full_path;
+}
+
 void AddFileToDiskList(const char *file, int moveToTop)
 {
 	unsigned int i;

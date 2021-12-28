@@ -376,7 +376,9 @@ public:
 	{
 		if (i < 0 || i >= static_cast<int>(lstMRUDiskList.size()))
 			return "---";
-		return lstMRUDiskList[i];
+		const std::string full_path = lstMRUDiskList[i];
+		const std::string filename = full_path.substr(full_path.find_last_of("/\\") + 1);
+		return filename + " { " + full_path + " }";
 	}
 };
 
@@ -406,7 +408,9 @@ public:
 	{
 		if (i < 0 || i >= static_cast<int>(lstMRUCDList.size()))
 			return "---";
-		return lstMRUCDList[i];
+		const std::string full_path = lstMRUCDList[i];
+		const std::string filename = full_path.substr(full_path.find_last_of("/\\") + 1);
+		return filename + " { " + full_path + " }";
 	}
 };
 
@@ -436,7 +440,9 @@ public:
 	{
 		if (i < 0 || i >= static_cast<int>(lstMRUWhdloadList.size()))
 			return "---";
-		return lstMRUWhdloadList[i];
+		const std::string full_path = lstMRUWhdloadList[i];
+		const std::string filename = full_path.substr(full_path.find_last_of("/\\") + 1);
+		return filename + " { " + full_path + " }";
 	}
 };
 
@@ -507,9 +513,10 @@ public:
 				}
 				else
 				{
-					if (cdfileList.getElementAt(idx) != changed_prefs.cdslots[0].name)
+					const auto element = get_full_path_from_disk_list(cdfileList.getElementAt(idx));
+					if (element != changed_prefs.cdslots[0].name)
 					{
-						strncpy(changed_prefs.cdslots[0].name, cdfileList.getElementAt(idx).c_str(), MAX_DPATH);
+						strncpy(changed_prefs.cdslots[0].name, element.c_str(), MAX_DPATH);
 						changed_prefs.cdslots[0].inuse = true;
 						changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
 						lstMRUCDList.erase(lstMRUCDList.begin() + idx);
@@ -548,9 +555,10 @@ public:
 				}
 				else
 				{
-					if (whdloadFileList.getElementAt(idx) != whdload_file)
+					const auto element = get_full_path_from_disk_list(whdloadFileList.getElementAt(idx));
+					if (element != whdload_file)
 					{
-						strncpy(whdload_file, whdloadFileList.getElementAt(idx).c_str(), MAX_DPATH);
+						strncpy(whdload_file, element.c_str(), MAX_DPATH);
 						lstMRUWhdloadList.erase(lstMRUWhdloadList.begin() + idx);
 						lstMRUWhdloadList.insert(lstMRUWhdloadList.begin(), whdload_file);
 						bIgnoreListChange = true;
@@ -829,9 +837,10 @@ public:
 					}
 					else
 					{
-						if (diskfileList.getElementAt(idx) != changed_prefs.floppyslots[i].df)
+						auto element = get_full_path_from_disk_list(diskfileList.getElementAt(idx));
+						if (element != changed_prefs.floppyslots[i].df)
 						{
-							strncpy(changed_prefs.floppyslots[i].df, diskfileList.getElementAt(idx).c_str(), MAX_DPATH);
+							strncpy(changed_prefs.floppyslots[i].df, element.c_str(), MAX_DPATH);
 							disk_insert(i, changed_prefs.floppyslots[i].df);
 							lstMRUDiskList.erase(lstMRUDiskList.begin() + idx);
 							lstMRUDiskList.insert(lstMRUDiskList.begin(), changed_prefs.floppyslots[i].df);
