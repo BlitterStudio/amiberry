@@ -95,6 +95,13 @@ const string label_axis_list[] = {
 	"Left X:", "Left Y:", "Right X:", "Right Y:", "L.Trigger:", "R.Trigger:"
 };
 
+const int default_mapping[] = {
+	INPUTEVENT_JOY2_CD32_RED,  INPUTEVENT_JOY2_CD32_BLUE, INPUTEVENT_JOY2_CD32_GREEN, INPUTEVENT_JOY2_CD32_YELLOW,
+	0, 0, INPUTEVENT_JOY2_CD32_PLAY, 0, 0, INPUTEVENT_JOY2_CD32_RWD, INPUTEVENT_JOY2_CD32_FFW,
+	INPUTEVENT_JOY2_UP, INPUTEVENT_JOY2_DOWN, INPUTEVENT_JOY2_LEFT, INPUTEVENT_JOY2_RIGHT,
+	0, 0, 0, 0, 0, 0
+};
+
 const int RemapEventList[] = {
 	// joystick port 1
 	INPUTEVENT_JOY2_UP, INPUTEVENT_JOY2_DOWN, INPUTEVENT_JOY2_LEFT, INPUTEVENT_JOY2_RIGHT,
@@ -190,50 +197,47 @@ class CustomActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		if (actionEvent.getSource())
+		for (auto t = 0; t < SDL_CONTROLLER_BUTTON_MAX; t++)
 		{
-			std::array<int, SDL_CONTROLLER_BUTTON_MAX> tempmap{};
-
-			// get map
-			switch (SelectedFunction)
+			if (actionEvent.getSource() == cboCustomAction[t])
 			{
-			case 0:
-				tempmap = changed_prefs.jports[SelectedPort].amiberry_custom_none;
-				break;
-			case 1:
-				tempmap = changed_prefs.jports[SelectedPort].amiberry_custom_hotkey;
-				break;
-			default:
-				break;
-			}
+				std::array<int, SDL_CONTROLLER_BUTTON_MAX> tempmap{};
 
-			// get the selected action from the drop-down, and 
-			// push it into the 'temp map' 
-			for (auto t = 0; t < SDL_CONTROLLER_BUTTON_MAX; t++)
-			{
-				if (actionEvent.getSource() == cboCustomAction[t])
+				// get map
+				switch (SelectedFunction)
 				{
-					tempmap[t] = RemapEventList[cboCustomAction[t]->getSelected() - 1];
+				case 0:
+					tempmap = changed_prefs.jports[SelectedPort].amiberry_custom_none;
+					break;
+				case 1:
+					tempmap = changed_prefs.jports[SelectedPort].amiberry_custom_hotkey;
+					break;
+				default:
+					break;
 				}
-			}
 
-			// push map back into changed_prefs
-			switch (SelectedFunction)
-			{
-			case 0:
-				changed_prefs.jports[SelectedPort].amiberry_custom_none = tempmap;
-				break;
-			case 1:
-				changed_prefs.jports[SelectedPort].amiberry_custom_hotkey = tempmap;
-				break;
-			default:
-				break;
-			}
+				// get the selected action from the drop-down, and 
+				// push it into the 'temp map'
+				tempmap[t] = RemapEventList[cboCustomAction[t]->getSelected() - 1];
 
-			// and here, we will scroll through the custom-map and 
-			// push it into the currprefs config file
-			inputdevice_updateconfig(nullptr, &changed_prefs);
-			RefreshPanelCustom();
+				// push map back into changed_prefs
+				switch (SelectedFunction)
+				{
+				case 0:
+					changed_prefs.jports[SelectedPort].amiberry_custom_none = tempmap;
+					break;
+				case 1:
+					changed_prefs.jports[SelectedPort].amiberry_custom_hotkey = tempmap;
+					break;
+				default:
+					break;
+				}
+
+				// and here, we will scroll through the custom-map and 
+				// push it into the currprefs config file
+				inputdevice_updateconfig(nullptr, &changed_prefs);
+				RefreshPanelCustom();
+			}
 		}
 	}
 };
@@ -422,7 +426,7 @@ void RefreshPanelCustom()
 
 	chkAnalogRemap->setSelected(changed_prefs.input_analog_remap);
 
-	// you'll want to refresh the drop-down section here
+	// Refresh the drop-down section here
 	// get map
 	std::array<int, SDL_CONTROLLER_BUTTON_MAX> tempmap{};
 	switch (SelectedFunction)
@@ -493,6 +497,20 @@ void RefreshPanelCustom()
 
 			else
 				cboCustomAction[n]->setListModel(&CustomEventList);
+
+			if (tempmap[n] > 0)
+			{
+				// Custom mapping found
+				const auto x = find_in_array(RemapEventList, RemapEventListSize, tempmap[n]);
+				cboCustomAction[n]->setSelected(x + 1);
+			}
+			else
+			{
+				// Default mapping
+				const auto evt = default_mapping[temp_button];
+				const auto x = find_in_array(RemapEventList, RemapEventListSize, evt);
+				cboCustomAction[n]->setSelected(x + 1);
+			}
 		}
 
 		if (did->mapping.number_of_hats > 0 || changed_prefs.input_analog_remap == true)
@@ -527,13 +545,6 @@ void RefreshPanelCustom()
 		lblRetroarch->setCaption("[_]");
 		const std::string text = "Not a valid Input Controller for Joystick Emulation.";
 		txtPortInput->setText(text);
-	}
-
-	// now select which items in drop-down are 'done'
-	for (auto z = 0; z < SDL_CONTROLLER_BUTTON_MAX; ++z)
-	{	
-		const auto x = find_in_array(RemapEventList, RemapEventListSize, tempmap[z]);
-		cboCustomAction[z]->setSelected(x + 1);
 	}
 }
 

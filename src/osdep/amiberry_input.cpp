@@ -6,8 +6,6 @@
 #include "options.h"
 #include "inputdevice.h"
 #include "amiberry_input.h"
-
-
 #include "amiberry_gfx.h"
 #include "fsdb.h"
 #include "uae.h"
@@ -63,6 +61,21 @@ static void addplusminus(struct didata* did, int i)
 		did->buttonaxistype[did->buttons] = did->axistype[i];
 		did->buttons++;
 	}
+}
+
+int find_in_array(const int arr[], int n, int key)
+{
+	int index = -1;
+
+	for (int i = 0; i < n; i++)
+	{
+		if (arr[i] == key)
+		{
+			index = i;
+			break;
+		}
+	}
+	return index;
 }
 
 static void fill_default_controller()
@@ -1088,7 +1101,7 @@ static void read_joystick()
 			}
 
 			// A/B/X/Y --> CD32 red, blue, green, yellow
-			for (auto button = 0; button <= SDL_CONTROLLER_BUTTON_Y; button++)
+			for (int button = SDL_CONTROLLER_BUTTON_A; button <= SDL_CONTROLLER_BUTTON_Y; button++)
 			{
 				if (did->mapping.button[button] != SDL_CONTROLLER_BUTTON_INVALID)
 				{
