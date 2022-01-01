@@ -1937,11 +1937,10 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfg_write (_T("; common"), f);
 
 	cfgfile_write_str (f, _T("use_gui"), guimode1[p->start_gui]);
-#ifndef AMIBERRY
 	cfgfile_write_bool (f, _T("use_debugger"), p->start_debugger);
 	cfgfile_write_multichoice(f, _T("debugging_features"), debugfeatures, p->debugging_features);
 	cfgfile_dwrite_str(f, _T("debugging_options"), p->debugging_options);
-#endif
+
 	cfgfile_write_rom (f, &p->path_rom, p->romfile, _T("kickstart_rom_file"));
 	cfgfile_write_rom (f, &p->path_rom, p->romextfile, _T("kickstart_ext_rom_file"));
 	if (p->romextfile2addr) {
@@ -1968,8 +1967,9 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 		cfgfile_write_str (f, _T("cart"), p->cartident);
 	cfgfile_dwrite_path (f, &p->path_rom, _T("picassoiv_rom_file"), p->picassoivromfile);
 
-	cfgfile_write_bool (f, _T("kickshifter"), p->kickshifter);
-	cfgfile_dwrite_bool (f, _T("ks_write_enabled"), p->rom_readwrite);
+	cfgfile_write_bool(f, _T("kickshifter"), p->kickshifter);
+	cfgfile_write_bool(f, _T("scsidevice_disable"), p->scsidevicedisable);
+	cfgfile_dwrite_bool(f, _T("ks_write_enabled"), p->rom_readwrite);
 
 	cfgfile_write (f, _T("floppy_volume"), _T("%d"), p->dfxclickvolume_disk[0]);
 	p->nr_floppies = 4;
