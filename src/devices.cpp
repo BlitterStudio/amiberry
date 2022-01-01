@@ -335,12 +335,12 @@ void virtualdevice_free(void)
 	execute_device_items(device_leaves, device_leave_cnt);
 }
 
-void do_leave_program(void)
+void do_leave_program (void)
 {
 	virtualdevice_free();
 	graphics_leave();
 	close_sound();
-	if (!no_gui)
+	if (! no_gui)
 		gui_exit();
 #ifdef USE_SDL
 	SDL_Quit();
@@ -396,6 +396,7 @@ void devices_restore_start(void)
 {
 	restore_cia_start();
 	restore_blkdev_start();
+	restore_blitter_start();
 	changed_prefs.bogomem.size = 0;
 	changed_prefs.chipmem.size = 0;
 	for (int i = 0; i < MAX_RAM_BOARDS; i++) {

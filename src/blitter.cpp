@@ -913,7 +913,7 @@ static void blit_bltset(int con)
 
 	if (con & 2) {
 		blitdesc = bltcon1 & 2;
-		if (blit_warned > 0) {
+		if (!savestate_state && blit_warned > 0) {
 			if ((bltcon1 & 1) && !blitline_started) {
 				write_log(_T("BLITTER: linedraw enabled when blitter is active! %08x\n"), M68K_GETPC);
 				blit_warned--;
@@ -1001,7 +1001,7 @@ static void blit_bltset(int con)
 		//	activate_debugger();
 	}
 
-	if (blit_changed && blit_warned > 0) {
+	if (blit_changed && blit_warned > 0 && !savestate_state) {
 		blitshifterdebug(bltcon0, false);
 	}
 
@@ -1580,6 +1580,8 @@ static bool decide_blitter_maybe_write2(int until_hpos, uaecptr addr, uae_u32 va
 					blit_cyclecounter++;
 					if (blit_cyclecounter == 0) {
 						shifter_first = 1;
+						// clear possible still pending final D write
+						blt_info.blit_finald = 0;
 						blitter_next_cycle();
 					}
 					int c = get_current_channel();
@@ -1815,8 +1817,6 @@ void do_blitter(int hpos, int copper, uaecptr pc)
 	blit_cyclecounter = 0;
 	blit_totalcyclecounter = 0;
 	blt_info.blit_pending = 1;
-	// pending finald gets cleared when new blit starts
-	blt_info.blit_finald = 0;
 
 	blitter_start_init();
 
@@ -2052,9 +2052,20 @@ void blitter_reset (void)
 	bltptxpos = -1;
 	blitter_cycle_exact = currprefs.blitter_cycle_exact;
 	immediate_blits = currprefs.immediate_blits;
+	shifter[0] = shifter[1] = shifter[2] = shifter[3] = 0;
+	shifter_skip_b = false;
+	shifter_skip_y = false;
+	bltcon0 = 0;
+	bltcon1 = 0;
+	blitter_start_init();
 }
 
 #ifdef SAVESTATE
+
+void restore_blitter_start(void)
+{
+	blitter_reset();
+}
 
 void restore_blitter_finish (void)
 {
