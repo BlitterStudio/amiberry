@@ -1,4 +1,3 @@
-#include "chdtypes.h"
 // license:BSD-3-Clause
 // copyright-holders:Aaron Giles
 /***************************************************************************
@@ -97,11 +96,12 @@
 
 ***************************************************************************/
 
-#include <stdlib.h>
+#include <cstdlib>
+#include <cassert>
 
 #include "coretmpl.h"
 #include "huffman.h"
-
+#include <algorithm>
 
 
 //**************************************************************************
@@ -121,14 +121,14 @@
 //  decoding context
 //-------------------------------------------------
 
-huffman_context_base::huffman_context_base(int numcodes, int maxbits, lookup_value *lookup, UINT32 *histo, node_t *nodes)
+huffman_context_base::huffman_context_base(int numcodes, int maxbits, lookup_value* lookup, uint32_t* histo, node_t* nodes)
 	: m_numcodes(numcodes),
-		m_maxbits(maxbits),
-		m_prevdata(0),
-		m_rleremaining(0),
-		m_lookup(lookup),
-		m_datahisto(histo),
-		m_huffnode(nodes)
+	m_maxbits(maxbits),
+	m_prevdata(0),
+	m_rleremaining(0),
+	m_lookup(lookup),
+	m_datahisto(histo),
+	m_huffnode(nodes)
 {
 	// limit to 24 bits
 	if (maxbits > 24)
@@ -141,7 +141,7 @@ huffman_context_base::huffman_context_base(int numcodes, int maxbits, lookup_val
 //  huffman tree from a source data stream
 //-------------------------------------------------
 
-huffman_error huffman_context_base::import_tree_rle(bitstream_in &bitbuf)
+huffman_error huffman_context_base::import_tree_rle(bitstream_in& bitbuf)
 {
 	// bits per entry depends on the maxbits
 	int numbits;
@@ -201,7 +201,7 @@ huffman_error huffman_context_base::import_tree_rle(bitstream_in &bitbuf)
 //  RLE target data stream
 //-------------------------------------------------
 
-huffman_error huffman_context_base::export_tree_rle(bitstream_out &bitbuf)
+huffman_error huffman_context_base::export_tree_rle(bitstream_out& bitbuf)
 {
 	// bits per entry depends on the maxbits
 	int numbits;
@@ -243,7 +243,7 @@ huffman_error huffman_context_base::export_tree_rle(bitstream_out &bitbuf)
 //  huffman tree from a source data stream
 //-------------------------------------------------
 
-huffman_error huffman_context_base::import_tree_huffman(bitstream_in &bitbuf)
+huffman_error huffman_context_base::import_tree_huffman(bitstream_in& bitbuf)
 {
 	// start by parsing the lengths for the small tree
 	huffman_decoder<24, 6> smallhuff;
@@ -268,8 +268,8 @@ huffman_error huffman_context_base::import_tree_huffman(bitstream_in &bitbuf)
 	smallhuff.build_lookup_table();
 
 	// determine the maximum length of an RLE count
-	UINT32 temp = m_numcodes - 9;
-	UINT8 rlefullbits = 0;
+	uint32_t temp = m_numcodes - 9;
+	uint8_t rlefullbits = 0;
 	while (temp != 0)
 		temp >>= 1, rlefullbits++;
 
@@ -284,9 +284,9 @@ huffman_error huffman_context_base::import_tree_huffman(bitstream_in &bitbuf)
 		else
 		{
 			int count = bitbuf.read(3) + 2;
-			if (count == 7+2)
+			if (count == 7 + 2)
 				count += bitbuf.read(rlefullbits);
-			for ( ; count != 0 && curcode < m_numcodes; count--)
+			for (; count != 0 && curcode < m_numcodes; count--)
 				m_huffnode[curcode++].m_numbits = last;
 		}
 	}
@@ -313,13 +313,13 @@ huffman_error huffman_context_base::import_tree_huffman(bitstream_in &bitbuf)
 //  a huffman target data stream
 //-------------------------------------------------
 
-huffman_error huffman_context_base::export_tree_huffman(bitstream_out &bitbuf)
+huffman_error huffman_context_base::export_tree_huffman(bitstream_out& bitbuf)
 {
 	// first RLE compress the lengths of all the nodes
-	dynamic_buffer rle_data(m_numcodes);
-	UINT8 *dest = rle_data;
-	dynamic_array<UINT16> rle_lengths(m_numcodes/3);
-	UINT16 *lengths = rle_lengths;
+	std::vector<uint8_t> rle_data(m_numcodes);
+	uint8_t* dest = &rle_data[0];
+	std::vector<uint16_t> rle_lengths(m_numcodes / 3);
+	uint16_t* lengths = &rle_lengths[0];
 	int last = ~0;
 	int repcount = 0;
 
@@ -336,7 +336,7 @@ huffman_error huffman_context_base::export_tree_huffman(bitstream_out &bitbuf)
 			if (repcount == 1)
 				smallhuff.histo_one(*dest++ = last + 1);
 			else
-				smallhuff.histo_one(*dest++ = 0), *lengths++ = repcount - 2;
+				smallhuff.histo_one(*dest++ = 0), * lengths++ = repcount - 2;
 		}
 
 		// if same as last, just track repeats
@@ -358,7 +358,7 @@ huffman_error huffman_context_base::export_tree_huffman(bitstream_out &bitbuf)
 		if (repcount == 1)
 			smallhuff.histo_one(*dest++ = last + 1);
 		else
-			smallhuff.histo_one(*dest++ = 0), *lengths++ = repcount - 2;
+			smallhuff.histo_one(*dest++ = 0), * lengths++ = repcount - 2;
 	}
 
 	// compute an optimal tree
@@ -375,7 +375,7 @@ huffman_error huffman_context_base::export_tree_huffman(bitstream_out &bitbuf)
 		}
 
 	// clamp first non-zero to be 8 at a maximum
-	first_non_zero = MIN(first_non_zero, 8);
+	first_non_zero = std::min(first_non_zero, 8);
 
 	// output the lengths of the each small tree node, starting with the RLE
 	// token (0), followed by the first_non_zero value, followed by the data
@@ -387,17 +387,17 @@ huffman_error huffman_context_base::export_tree_huffman(bitstream_out &bitbuf)
 	bitbuf.write(7, 3);
 
 	// determine the maximum length of an RLE count
-	UINT32 temp = m_numcodes - 9;
-	UINT8 rlefullbits = 0;
+	uint32_t temp = m_numcodes - 9;
+	uint8_t rlefullbits = 0;
 	while (temp != 0)
 		temp >>= 1, rlefullbits++;
 
 	// now encode the RLE data
-	lengths = rle_lengths;
-	for (UINT8 *src = rle_data; src < dest; src++)
+	lengths = &rle_lengths[0];
+	for (uint8_t* src = &rle_data[0]; src < dest; src++)
 	{
 		// encode the data
-		UINT8 data = *src;
+		uint8_t data = *src;
 		smallhuff.encode_one(bitbuf, data);
 
 		// if this is an RLE token, encode the length following
@@ -424,17 +424,17 @@ huffman_error huffman_context_base::export_tree_huffman(bitstream_out &bitbuf)
 huffman_error huffman_context_base::compute_tree_from_histo()
 {
 	// compute the number of data items in the histogram
-	UINT32 sdatacount = 0;
+	uint32_t sdatacount = 0;
 	for (int i = 0; i < m_numcodes; i++)
 		sdatacount += m_datahisto[i];
 
 	// binary search to achieve the optimum encoding
-	UINT32 lowerweight = 0;
-	UINT32 upperweight = sdatacount * 2;
-	while (1)
+	uint32_t lowerweight = 0;
+	uint32_t upperweight = sdatacount * 2;
+	while (true)
 	{
 		// build a tree using the current weight
-		UINT32 curweight = (upperweight + lowerweight) / 2;
+		uint32_t curweight = (upperweight + lowerweight) / 2;
 		int curmaxbits = build_tree(sdatacount, curweight);
 
 		// apply binary search here
@@ -465,7 +465,7 @@ huffman_error huffman_context_base::compute_tree_from_histo()
 //  set of data to a target stream
 //-------------------------------------------------
 
-void huffman_context_base::write_rle_tree_bits(bitstream_out &bitbuf, int value, int repcount, int numbits)
+void huffman_context_base::write_rle_tree_bits(bitstream_out& bitbuf, int value, int repcount, int numbits)
 {
 	// loop until we have output all of the repeats
 	while (repcount > 0)
@@ -488,7 +488,7 @@ void huffman_context_base::write_rle_tree_bits(bitstream_out &bitbuf, int value,
 		// otherwise, write a triple using 1 as the escape code
 		else
 		{
-			int cur_reps = MIN(repcount - 3, (1 << numbits) - 1);
+			int cur_reps = std::min(repcount - 3, (1 << numbits) - 1);
 			bitbuf.write(1, numbits);
 			bitbuf.write(value, numbits);
 			bitbuf.write(cur_reps, numbits);
@@ -503,10 +503,10 @@ void huffman_context_base::write_rle_tree_bits(bitstream_out &bitbuf, int value,
 //  by weight
 //-------------------------------------------------
 
-int CLIB_DECL huffman_context_base::tree_node_compare(const void *item1, const void *item2)
+int CLIB_DECL huffman_context_base::tree_node_compare(const void* item1, const void* item2)
 {
-	const node_t *node1 = *(const node_t **)item1;
-	const node_t *node2 = *(const node_t **)item2;
+	const node_t* node1 = *(const node_t**)item1;
+	const node_t* node2 = *(const node_t**)item2;
 	if (node2->m_weight != node1->m_weight)
 		return node2->m_weight - node1->m_weight;
 	if (node2->m_bits - node1->m_bits == 0)
@@ -520,10 +520,10 @@ int CLIB_DECL huffman_context_base::tree_node_compare(const void *item1, const v
 //  data distribution
 //-------------------------------------------------
 
-int huffman_context_base::build_tree(UINT32 totaldata, UINT32 totalweight)
+int huffman_context_base::build_tree(uint32_t totaldata, uint32_t totalweight)
 {
 	// make a list of all non-zero nodes
-	dynamic_array<node_t *> list(m_numcodes * 2);
+	std::vector<node_t*> list(m_numcodes * 2);
 	int listitems = 0;
 	memset(m_huffnode, 0, m_numcodes * sizeof(m_huffnode[0]));
 	for (int curcode = 0; curcode < m_numcodes; curcode++)
@@ -534,36 +534,36 @@ int huffman_context_base::build_tree(UINT32 totaldata, UINT32 totalweight)
 			m_huffnode[curcode].m_bits = curcode;
 
 			// scale the weight by the current effective length, ensuring we don't go to 0
-			m_huffnode[curcode].m_weight = UINT64(m_datahisto[curcode]) * UINT64(totalweight) / UINT64(totaldata);
+			m_huffnode[curcode].m_weight = uint64_t(m_datahisto[curcode]) * uint64_t(totalweight) / uint64_t(totaldata);
 			if (m_huffnode[curcode].m_weight == 0)
 				m_huffnode[curcode].m_weight = 1;
 		}
-/*
-		fprintf(stderr, "Pre-sort:\n");
-		for (int i = 0; i < listitems; i++) {
-			fprintf(stderr, "weight: %d code: %d\n", list[i]->m_weight, list[i]->m_bits);
-		}
-*/
+	/*
+			fprintf(stderr, "Pre-sort:\n");
+			for (int i = 0; i < listitems; i++) {
+				fprintf(stderr, "weight: %d code: %d\n", list[i]->m_weight, list[i]->m_bits);
+			}
+	*/
 	// sort the list by weight, largest weight first
-	qsort(list, listitems, sizeof(list[0]), tree_node_compare);
-/*
-		fprintf(stderr, "Post-sort:\n");
-		for (int i = 0; i < listitems; i++) {
-			fprintf(stderr, "weight: %d code: %d\n", list[i]->m_weight, list[i]->m_bits);
-		}
-		fprintf(stderr, "===================\n");
-*/
+	qsort(&list[0], listitems, sizeof(list[0]), tree_node_compare);
+	/*
+			fprintf(stderr, "Post-sort:\n");
+			for (int i = 0; i < listitems; i++) {
+				fprintf(stderr, "weight: %d code: %d\n", list[i]->m_weight, list[i]->m_bits);
+			}
+			fprintf(stderr, "===================\n");
+	*/
 	// now build the tree
 	int nextalloc = m_numcodes;
 	while (listitems > 1)
 	{
 		// remove lowest two items
-		node_t &node1 = *list[--listitems];
-		node_t &node0 = *list[--listitems];
+		node_t& node1 = *list[--listitems];
+		node_t& node0 = *list[--listitems];
 
 		// create new node
-		node_t &newnode = m_huffnode[nextalloc++];
-		newnode.m_parent = NULL;
+		node_t& newnode = m_huffnode[nextalloc++];
+		newnode.m_parent = nullptr;
 		node0.m_parent = node1.m_parent = &newnode;
 		newnode.m_weight = node0.m_weight + node1.m_weight;
 
@@ -572,7 +572,7 @@ int huffman_context_base::build_tree(UINT32 totaldata, UINT32 totalweight)
 		for (curitem = 0; curitem < listitems; curitem++)
 			if (newnode.m_weight > list[curitem]->m_weight)
 			{
-				memmove(&list[curitem+1], &list[curitem], (listitems - curitem) * sizeof(list[0]));
+				memmove(&list[curitem + 1], &list[curitem], (listitems - curitem) * sizeof(list[0]));
 				break;
 			}
 		list[curitem] = &newnode;
@@ -583,7 +583,7 @@ int huffman_context_base::build_tree(UINT32 totaldata, UINT32 totalweight)
 	int maxbits = 0;
 	for (int curcode = 0; curcode < m_numcodes; curcode++)
 	{
-		node_t &node = m_huffnode[curcode];
+		node_t& node = m_huffnode[curcode];
 		node.m_numbits = 0;
 		node.m_bits = 0;
 
@@ -591,13 +591,13 @@ int huffman_context_base::build_tree(UINT32 totaldata, UINT32 totalweight)
 		if (node.m_weight > 0)
 		{
 			// determine the number of bits for this node
-			for (node_t *curnode = &node; curnode->m_parent != NULL; curnode = curnode->m_parent)
+			for (node_t* curnode = &node; curnode->m_parent != nullptr; curnode = curnode->m_parent)
 				node.m_numbits++;
 			if (node.m_numbits == 0)
 				node.m_numbits = 1;
 
 			// keep track of the max
-			maxbits = MAX(maxbits, node.m_numbits);
+			maxbits = std::max(maxbits, int(node.m_numbits));
 		}
 	}
 	return maxbits;
@@ -613,10 +613,10 @@ int huffman_context_base::build_tree(UINT32 totaldata, UINT32 totalweight)
 huffman_error huffman_context_base::assign_canonical_codes()
 {
 	// build up a histogram of bit lengths
-	UINT32 bithisto[33] = { 0 };
+	uint32_t bithisto[33] = { 0 };
 	for (int curcode = 0; curcode < m_numcodes; curcode++)
 	{
-		node_t &node = m_huffnode[curcode];
+		node_t& node = m_huffnode[curcode];
 		if (node.m_numbits > m_maxbits)
 			return HUFFERR_INTERNAL_INCONSISTENCY;
 		if (node.m_numbits <= 32)
@@ -624,10 +624,10 @@ huffman_error huffman_context_base::assign_canonical_codes()
 	}
 
 	// for each code length, determine the starting code number
-	UINT32 curstart = 0;
+	uint32_t curstart = 0;
 	for (int codelen = 32; codelen > 0; codelen--)
 	{
-		UINT32 nextstart = (curstart + bithisto[codelen]) >> 1;
+		uint32_t nextstart = (curstart + bithisto[codelen]) >> 1;
 		if (codelen != 1 && nextstart * 2 != (curstart + bithisto[codelen]))
 			return HUFFERR_INTERNAL_INCONSISTENCY;
 		bithisto[codelen] = curstart;
@@ -637,7 +637,7 @@ huffman_error huffman_context_base::assign_canonical_codes()
 	// now assign canonical codes
 	for (int curcode = 0; curcode < m_numcodes; curcode++)
 	{
-		node_t &node = m_huffnode[curcode];
+		node_t& node = m_huffnode[curcode];
 		if (node.m_numbits > 0)
 			node.m_bits = bithisto[node.m_numbits]++;
 	}
@@ -656,7 +656,7 @@ void huffman_context_base::build_lookup_table()
 	for (int curcode = 0; curcode < m_numcodes; curcode++)
 	{
 		// process all nodes which have non-zero bits
-		node_t &node = m_huffnode[curcode];
+		node_t& node = m_huffnode[curcode];
 		if (node.m_numbits > 0)
 		{
 			// set up the entry
@@ -664,8 +664,8 @@ void huffman_context_base::build_lookup_table()
 
 			// fill all matching entries
 			int shift = m_maxbits - node.m_numbits;
-			lookup_value *dest = &m_lookup[node.m_bits << shift];
-			lookup_value *destend = &m_lookup[((node.m_bits + 1) << shift) - 1];
+			lookup_value* dest = &m_lookup[node.m_bits << shift];
+			lookup_value* destend = &m_lookup[((node.m_bits + 1) << shift) - 1];
 			while (dest <= destend)
 				*dest++ = value;
 		}
@@ -691,11 +691,11 @@ huffman_8bit_encoder::huffman_8bit_encoder()
 //  encode - encode a full buffer
 //-------------------------------------------------
 
-huffman_error huffman_8bit_encoder::encode(const UINT8 *source, UINT32 slength, UINT8 *dest, UINT32 dlength, UINT32 &complength)
+huffman_error huffman_8bit_encoder::encode(const uint8_t* source, uint32_t slength, uint8_t* dest, uint32_t dlength, uint32_t& complength)
 {
 	// first compute the histogram
 	histo_reset();
-	for (UINT32 cur = 0; cur < slength; cur++)
+	for (uint32_t cur = 0; cur < slength; cur++)
 		histo_one(source[cur]);
 
 	// then compute the tree
@@ -710,7 +710,7 @@ huffman_error huffman_8bit_encoder::encode(const UINT8 *source, UINT32 slength, 
 		return err;
 
 	// then encode the data
-	for (UINT32 cur = 0; cur < slength; cur++)
+	for (uint32_t cur = 0; cur < slength; cur++)
 		encode_one(bitbuf, source[cur]);
 	complength = bitbuf.flush();
 	return bitbuf.overflow() ? HUFFERR_OUTPUT_BUFFER_TOO_SMALL : HUFFERR_NONE;
@@ -730,12 +730,22 @@ huffman_8bit_decoder::huffman_8bit_decoder()
 {
 }
 
+/**
+ * @fn  huffman_error huffman_8bit_decoder::decode(const uint8_t *source, uint32_t slength, uint8_t *dest, uint32_t dlength)
+ *
+ * @brief   -------------------------------------------------
+ *            decode - decode a full buffer
+ *          -------------------------------------------------.
+ *
+ * @param   source          Source for the.
+ * @param   slength         The slength.
+ * @param [in,out]  dest    If non-null, destination for the.
+ * @param   dlength         The dlength.
+ *
+ * @return  A huffman_error.
+ */
 
-//-------------------------------------------------
-//  decode - decode a full buffer
-//-------------------------------------------------
-
-huffman_error huffman_8bit_decoder::decode(const UINT8 *source, UINT32 slength, UINT8 *dest, UINT32 dlength)
+huffman_error huffman_8bit_decoder::decode(const uint8_t* source, uint32_t slength, uint8_t* dest, uint32_t dlength)
 {
 	// first import the tree
 	bitstream_in bitbuf(source, slength);
@@ -744,7 +754,7 @@ huffman_error huffman_8bit_decoder::decode(const UINT8 *source, UINT32 slength, 
 		return err;
 
 	// then decode the data
-	for (UINT32 cur = 0; cur < dlength; cur++)
+	for (uint32_t cur = 0; cur < dlength; cur++)
 		dest[cur] = decode_one(bitbuf);
 	bitbuf.flush();
 	return bitbuf.overflow() ? HUFFERR_INPUT_BUFFER_TOO_SMALL : HUFFERR_NONE;

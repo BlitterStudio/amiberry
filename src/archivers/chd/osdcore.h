@@ -1,226 +1,42 @@
 // license:BSD-3-Clause
 // copyright-holders:Aaron Giles
-/***************************************************************************
-
-	osdcore.h
-
-	Core OS-dependent code interface.
-
-****************************************************************************
-
-	The prototypes in this file describe the interfaces that the MAME core
-	and various tools rely upon to interact with the outside world. They are
-	broken out into several categories.
-
-***************************************************************************/
+/// \file
+/// \brief Core OS-dependent code interface
+///
+/// The prototypes in this file describe the interfaces that the MAME
+/// core and various tools rely on to interact with the outside world.
+/// They are broken out into several categories.
+#ifndef MAME_OSD_OSDCORE_H
+#define MAME_OSD_OSDCORE_H
 
 #pragma once
 
-#ifndef __OSDCORE_H__
-#define __OSDCORE_H__
 
 #include "osdcomm.h"
-#include "delegate.h"
 
-/***************************************************************************
-	FILE I/O INTERFACES
-***************************************************************************/
+#include "strformat.h"
 
-/* Make sure we have a path separator (default to /) */
-#ifndef PATH_SEPARATOR
-#define PATH_SEPARATOR          "/"
-#endif
+#include <cstdarg>
+#include <cstdint>
+#include <iosfwd>
+#include <string>
+#include <utility>
+#include <vector>
 
-/* flags controlling file access */
-#define OPEN_FLAG_READ          0x0001      /* open for read */
-#define OPEN_FLAG_WRITE         0x0002      /* open for write */
-#define OPEN_FLAG_CREATE        0x0004      /* create & truncate file */
-#define OPEN_FLAG_CREATE_PATHS  0x0008      /* create paths as necessary */
-#define OPEN_FLAG_NO_PRELOAD    0x0010      /* do not decompress on open */
 
-/* error codes returned by routines below */
-enum file_error
-{
-	FILERR_NONE,
-	FILERR_FAILURE,
-	FILERR_OUT_OF_MEMORY,
-	FILERR_NOT_FOUND,
-	FILERR_ACCESS_DENIED,
-	FILERR_ALREADY_OPEN,
-	FILERR_TOO_MANY_FILES,
-	FILERR_INVALID_DATA,
-	FILERR_INVALID_ACCESS
-};
+/// \brief Get environment variable value
+///
+/// \param [in] name Name of the environment variable as a
+///   NUL-terminated string.
+/// \return Pointer to environment variable value as a NUL-terminated
+///   string if found, or nullptr if not found.
+const char* osd_getenv(const char* name);
 
-/* osd_file is an opaque type which represents an open file */
-struct osd_file;
 
-/*-----------------------------------------------------------------------------
-	osd_open: open a new file.
-
-	Parameters:
-
-		path - path to the file to open
-
-		openflags - some combination of:
-
-			OPEN_FLAG_READ - open the file for read access
-			OPEN_FLAG_WRITE - open the file for write access
-			OPEN_FLAG_CREATE - create/truncate the file when opening
-			OPEN_FLAG_CREATE_PATHS - specifies that non-existant paths
-					should be created if necessary
-
-		file - pointer to an osd_file * to receive the newly-opened file
-			handle; this is only valid if the function returns FILERR_NONE
-
-		filesize - pointer to a UINT64 to receive the size of the opened
-			file; this is only valid if the function returns FILERR_NONE
-
-	Return value:
-
-		a file_error describing any error that occurred while opening
-		the file, or FILERR_NONE if no error occurred
-
-	Notes:
-
-		This function is called by core_fopen and several other places in
-		the core to access files. These functions will construct paths by
-		concatenating various search paths held in the options.c options
-		database with partial paths specified by the core. The core assumes
-		that the path separator is the first character of the string
-		PATH_SEPARATOR, but does not interpret any path separators in the
-		search paths, so if you use a different path separator in a search
-		path, you may get a mixture of PATH_SEPARATORs (from the core) and
-		alternate path separators (specified by users and placed into the
-		options database).
------------------------------------------------------------------------------*/
-file_error osd_open(const TCHAR *path, UINT32 openflags, osd_file **file, UINT64 *filesize);
-
-
-/*-----------------------------------------------------------------------------
-	osd_close: close an open file
-
-	Parameters:
-
-		file - handle to a file previously opened via osd_open
-
-	Return value:
-
-		a file_error describing any error that occurred while closing
-		the file, or FILERR_NONE if no error occurred
------------------------------------------------------------------------------*/
-file_error osd_close(osd_file *file);
-
-
-/*-----------------------------------------------------------------------------
-	osd_read: read from an open file
-
-	Parameters:
-
-		file - handle to a file previously opened via osd_open
-
-		buffer - pointer to memory that will receive the data read
-
-		offset - offset within the file to read from
-
-		length - number of bytes to read from the file
-
-		actual - pointer to a UINT32 to receive the number of bytes actually
-			read during the operation; valid only if the function returns
-			FILERR_NONE
-
-	Return value:
-
-		a file_error describing any error that occurred while reading
-		from the file, or FILERR_NONE if no error occurred
------------------------------------------------------------------------------*/
-file_error osd_read(osd_file *file, void *buffer, UINT64 offset, UINT32 length, UINT32 *actual);
-
-
-/*-----------------------------------------------------------------------------
-	osd_write: write to an open file
-
-	Parameters:
-
-		file - handle to a file previously opened via osd_open
-
-		buffer - pointer to memory that contains the data to write
-
-		offset - offset within the file to write to
-
-		length - number of bytes to write to the file
-
-		actual - pointer to a UINT32 to receive the number of bytes actually
-			written during the operation; valid only if the function returns
-			FILERR_NONE
-
-	Return value:
-
-		a file_error describing any error that occurred while writing to
-		the file, or FILERR_NONE if no error occurred
------------------------------------------------------------------------------*/
-file_error osd_write(osd_file *file, const void *buffer, UINT64 offset, UINT32 length, UINT32 *actual);
-
-
-/*-----------------------------------------------------------------------------
-	osd_truncate: change the size of an open file
-
-	Parameters:
-
-		file - handle to a file previously opened via osd_open
-
-		offset - future size of the file
-
-	Return value:
-
-		a file_error describing any error that occurred while writing to
-		the file, or FILERR_NONE if no error occurred
------------------------------------------------------------------------------*/
-file_error osd_truncate(osd_file *file, UINT64 offset);
-
-
-/*-----------------------------------------------------------------------------
-	osd_rmfile: deletes a file
-
-	Parameters:
-
-		filename - path to file to delete
-
-	Return value:
-
-		a file_error describing any error that occurred while deleting
-		the file, or FILERR_NONE if no error occurred
------------------------------------------------------------------------------*/
-file_error osd_rmfile(const TCHAR *filename);
-
-
-/*-----------------------------------------------------------------------------
-	osd_get_physical_drive_geometry: if the given path points to a physical
-		drive, return the geometry of that drive
-
-	Parameters:
-
-		filename - pointer to a path which might describe a physical drive
-
-		cylinders - pointer to a UINT32 to receive the number of cylinders
-			of the physical drive
-
-		heads - pointer to a UINT32 to receive the number of heads per
-			cylinder of the physical drive
-
-		sectors - pointer to a UINT32 to receive the number of sectors per
-			cylinder of the physical drive
-
-		bps - pointer to a UINT32 to receive the number of bytes per sector
-			of the physical drive
-
-	Return value:
-
-		TRUE if the filename points to a physical drive and if the values
-		pointed to by cylinders, heads, sectors, and bps are valid; FALSE in
-		any other case
------------------------------------------------------------------------------*/
-int osd_get_physical_drive_geometry(const char *filename, UINT32 *cylinders, UINT32 *heads, UINT32 *sectors, UINT32 *bps);
+/// \brief Get current process ID
+///
+/// \return The process ID of the current process.
+int osd_getpid();
 
 
 /*-----------------------------------------------------------------------------
@@ -229,7 +45,7 @@ int osd_get_physical_drive_geometry(const char *filename, UINT32 *cylinders, UIN
 
 	Parameters:
 
-		uchar - pointer to a UINT32 to receive the resulting unicode
+		uchar - pointer to a uint32_t to receive the resulting unicode
 			character
 
 		osdchar - pointer to one or more chars that are in the OS-default
@@ -241,97 +57,7 @@ int osd_get_physical_drive_geometry(const char *filename, UINT32 *cylinders, UIN
 
 		The number of characters required to form a Unicode character.
 -----------------------------------------------------------------------------*/
-int osd_uchar_from_osdchar(UINT32 /* unicode_char */ *uchar, const char *osdchar, size_t count);
-
-
-
-/***************************************************************************
-	DIRECTORY INTERFACES
-***************************************************************************/
-
-/* types of directory entries that can be returned */
-enum osd_dir_entry_type
-{
-	ENTTYPE_NONE,
-	ENTTYPE_FILE,
-	ENTTYPE_DIR,
-	ENTTYPE_OTHER
-};
-
-/* osd_directory is an opaque type which represents an open directory */
-struct osd_directory;
-
-/* osd_directory_entry contains basic information about a file when iterating through */
-/* a directory */
-struct osd_directory_entry
-{
-	const char *        name;           /* name of the entry */
-	osd_dir_entry_type  type;           /* type of the entry */
-	UINT64              size;           /* size of the entry */
-};
-
-
-/*-----------------------------------------------------------------------------
-	osd_opendir: open a directory for iteration
-
-	Parameters:
-
-		dirname - path to the directory in question
-
-	Return value:
-
-		upon success, this function should return an osd_directory pointer
-		which contains opaque data necessary to traverse the directory; on
-		failure, this function should return NULL
------------------------------------------------------------------------------*/
-osd_directory *osd_opendir(const char *dirname);
-
-
-/*-----------------------------------------------------------------------------
-	osd_readdir: return information about the next entry in the directory
-
-	Parameters:
-
-		dir - pointer to an osd_directory that was returned from a prior
-			call to osd_opendir
-
-	Return value:
-
-		a constant pointer to an osd_directory_entry representing the current item
-		in the directory, or NULL, indicating that no more entries are
-		present
------------------------------------------------------------------------------*/
-const osd_directory_entry *osd_readdir(osd_directory *dir);
-
-
-/*-----------------------------------------------------------------------------
-	osd_closedir: close an open directory for iteration
-
-	Parameters:
-
-		dir - pointer to an osd_directory that was returned from a prior
-			call to osd_opendir
-
-	Return value:
-
-		frees any allocated memory and resources associated with the open
-		directory
------------------------------------------------------------------------------*/
-void osd_closedir(osd_directory *dir);
-
-
-/*-----------------------------------------------------------------------------
-	osd_is_absolute_path: returns whether the specified path is absolute
-
-	Parameters:
-
-		path - the path in question
-
-	Return value:
-
-		non-zero if the path is absolute, zero otherwise
------------------------------------------------------------------------------*/
-int osd_is_absolute_path(const char *path);
+int osd_uchar_from_osdchar(char32_t* uchar, const char* osdchar, size_t count);
 
 
 
@@ -340,7 +66,7 @@ int osd_is_absolute_path(const char *path);
 ***************************************************************************/
 
 /* a osd_ticks_t is a 64-bit unsigned integer that is used as a core type in timing interfaces */
-typedef UINT64 osd_ticks_t;
+typedef uint64_t osd_ticks_t;
 
 
 /*-----------------------------------------------------------------------------
@@ -361,7 +87,7 @@ typedef UINT64 osd_ticks_t;
 		accurate. It is ok if this call is not ultra-fast, since it is
 		primarily used for once/frame synchronization.
 -----------------------------------------------------------------------------*/
-osd_ticks_t osd_ticks(void);
+osd_ticks_t osd_ticks();
 
 
 /*-----------------------------------------------------------------------------
@@ -376,7 +102,7 @@ osd_ticks_t osd_ticks(void);
 		an osd_ticks_t value which represents the number of ticks per
 		second
 -----------------------------------------------------------------------------*/
-osd_ticks_t osd_ticks_per_second(void);
+osd_ticks_t osd_ticks_per_second();
 
 
 /*-----------------------------------------------------------------------------
@@ -403,93 +129,6 @@ osd_ticks_t osd_ticks_per_second(void);
 -----------------------------------------------------------------------------*/
 void osd_sleep(osd_ticks_t duration);
 
-
-
-/***************************************************************************
-	SYNCHRONIZATION INTERFACES
-***************************************************************************/
-
-/* osd_lock is an opaque type which represents a recursive lock/mutex */
-struct osd_lock;
-
-
-/*-----------------------------------------------------------------------------
-	osd_lock_alloc: allocate a new lock
-
-	Parameters:
-
-		None.
-
-	Return value:
-
-		A pointer to the allocated lock.
------------------------------------------------------------------------------*/
-osd_lock *osd_lock_alloc(void);
-
-
-/*-----------------------------------------------------------------------------
-	osd_lock_acquire: acquire a lock, blocking until it can be acquired
-
-	Parameters:
-
-		lock - a pointer to a previously allocated osd_lock.
-
-	Return value:
-
-		None.
-
-	Notes:
-
-		osd_locks are defined to be recursive. If the current thread already
-		owns the lock, this function should return immediately.
------------------------------------------------------------------------------*/
-void osd_lock_acquire(osd_lock *lock);
-
-
-/*-----------------------------------------------------------------------------
-	osd_lock_try: attempt to acquire a lock
-
-	Parameters:
-
-		lock - a pointer to a previously allocated osd_lock.
-
-	Return value:
-
-		TRUE if the lock was available and was acquired successfully.
-		FALSE if the lock was already in used by another thread.
------------------------------------------------------------------------------*/
-int osd_lock_try(osd_lock *lock);
-
-
-/*-----------------------------------------------------------------------------
-	osd_lock_release: release control of a lock that has been acquired
-
-	Parameters:
-
-		lock - a pointer to a previously allocated osd_lock.
-
-	Return value:
-
-		None.
------------------------------------------------------------------------------*/
-void osd_lock_release(osd_lock *lock);
-
-
-/*-----------------------------------------------------------------------------
-	osd_lock_free: free the memory and resources associated with an osd_lock
-
-	Parameters:
-
-		lock - a pointer to a previously allocated osd_lock.
-
-	Return value:
-
-		None.
------------------------------------------------------------------------------*/
-void osd_lock_free(osd_lock *lock);
-
-
-
 /***************************************************************************
 	WORK ITEM INTERFACES
 ***************************************************************************/
@@ -504,18 +143,18 @@ void osd_lock_free(osd_lock *lock);
 #define WORK_QUEUE_FLAG_MULTI       0x0002
 #define WORK_QUEUE_FLAG_HIGH_FREQ   0x0004
 
-/* these flags can be set when queueing a work item to indicate how to handle
-   its deconstruction */
+   /* these flags can be set when queueing a work item to indicate how to handle
+	  its deconstruction */
 #define WORK_ITEM_FLAG_AUTO_RELEASE 0x0001
 
-/* osd_work_queue is an opaque type which represents a queue of work items */
+	  /* osd_work_queue is an opaque type which represents a queue of work items */
 struct osd_work_queue;
 
 /* osd_work_item is an opaque type which represents a single work item */
 struct osd_work_item;
 
 /* osd_work_callback is a callback function that does work */
-typedef void *(*osd_work_callback)(void *param, int threadid);
+typedef void* (*osd_work_callback)(void* param, int threadid);
 
 
 /*-----------------------------------------------------------------------------
@@ -549,7 +188,7 @@ typedef void *(*osd_work_callback)(void *param, int threadid);
 		can be performed. If no threading support is available, it is a
 		simple matter to execute the work items as they are queued.
 -----------------------------------------------------------------------------*/
-osd_work_queue *osd_work_queue_alloc(int flags);
+osd_work_queue* osd_work_queue_alloc(int flags);
 
 
 /*-----------------------------------------------------------------------------
@@ -564,7 +203,7 @@ osd_work_queue *osd_work_queue_alloc(int flags);
 
 		The number of incomplete items remaining in the queue.
 -----------------------------------------------------------------------------*/
-int osd_work_queue_items(osd_work_queue *queue);
+int osd_work_queue_items(osd_work_queue* queue);
 
 
 /*-----------------------------------------------------------------------------
@@ -579,10 +218,10 @@ int osd_work_queue_items(osd_work_queue *queue);
 
 	Return value:
 
-		TRUE if the queue is empty; FALSE if the wait timed out before the
+		true if the queue is empty; false if the wait timed out before the
 		queue was emptied.
 -----------------------------------------------------------------------------*/
-int osd_work_queue_wait(osd_work_queue *queue, osd_ticks_t timeout);
+bool osd_work_queue_wait(osd_work_queue* queue, osd_ticks_t timeout);
 
 
 /*-----------------------------------------------------------------------------
@@ -597,7 +236,7 @@ int osd_work_queue_wait(osd_work_queue *queue, osd_ticks_t timeout);
 
 		None.
 -----------------------------------------------------------------------------*/
-void osd_work_queue_free(osd_work_queue *queue);
+void osd_work_queue_free(osd_work_queue* queue);
 
 
 /*-----------------------------------------------------------------------------
@@ -634,11 +273,11 @@ void osd_work_queue_free(osd_work_queue *queue);
 		On single-threaded systems, this function may actually execute the
 		work item immediately before returning.
 -----------------------------------------------------------------------------*/
-osd_work_item *osd_work_item_queue_multiple(osd_work_queue *queue, osd_work_callback callback, INT32 numitems, void *parambase, INT32 paramstep, UINT32 flags);
+osd_work_item* osd_work_item_queue_multiple(osd_work_queue* queue, osd_work_callback callback, int32_t numitems, void* parambase, int32_t paramstep, uint32_t flags);
 
 
 /* inline helper to queue a single work item using the same interface */
-INLINE osd_work_item *osd_work_item_queue(osd_work_queue *queue, osd_work_callback callback, void *param, UINT32 flags)
+static inline osd_work_item* osd_work_item_queue(osd_work_queue* queue, osd_work_callback callback, void* param, uint32_t flags)
 {
 	return osd_work_item_queue_multiple(queue, callback, 1, param, 0, flags);
 }
@@ -656,10 +295,10 @@ INLINE osd_work_item *osd_work_item_queue(osd_work_queue *queue, osd_work_callba
 
 	Return value:
 
-		TRUE if the item completed; FALSE if the wait timed out before the
+		true if the item completed; false if the wait timed out before the
 		item completed.
 -----------------------------------------------------------------------------*/
-int osd_work_item_wait(osd_work_item *item, osd_ticks_t timeout);
+bool osd_work_item_wait(osd_work_item* item, osd_ticks_t timeout);
 
 
 /*-----------------------------------------------------------------------------
@@ -674,7 +313,7 @@ int osd_work_item_wait(osd_work_item *item, osd_ticks_t timeout);
 
 		A void * that represents the work item's result.
 -----------------------------------------------------------------------------*/
-void *osd_work_item_result(osd_work_item *item);
+void* osd_work_item_result(osd_work_item* item);
 
 
 /*-----------------------------------------------------------------------------
@@ -695,7 +334,7 @@ void *osd_work_item_result(osd_work_item *item);
 		long since completed. It is the queuer's responsibility to release
 		any work items it has queued.
 -----------------------------------------------------------------------------*/
-void osd_work_item_release(osd_work_item *item);
+void osd_work_item_release(osd_work_item* item);
 
 
 
@@ -703,209 +342,217 @@ void osd_work_item_release(osd_work_item *item);
 	MISCELLANEOUS INTERFACES
 ***************************************************************************/
 
-/*-----------------------------------------------------------------------------
-	osd_malloc: allocate memory
-
-	Parameters:
-
-		size - the number of bytes to allocate
-
-	Return value:
-
-		a pointer to the allocated memory
-
-	Notes:
-
-		This is just a hook to do OS-specific allocation trickery.
-		It can be safely written as a wrapper to malloc().
------------------------------------------------------------------------------*/
-void *osd_malloc(size_t size);
-
-
-/*-----------------------------------------------------------------------------
-	osd_malloc_array: allocate memory, hinting tha this memory contains an
-	array
-
-	Parameters:
-
-		size - the number of bytes to allocate
-
-	Return value:
-
-		a pointer to the allocated memory
-
-	Notes:
-
-		This is just a hook to do OS-specific allocation trickery.
-		It can be safely written as a wrapper to malloc().
------------------------------------------------------------------------------*/
-void *osd_malloc_array(size_t size);
-
-
-/*-----------------------------------------------------------------------------
-	osd_free: free memory allocated by osd_malloc
-
-	Parameters:
-
-		ptr - the pointer returned from osd_mallo
-
-	Return value:
-
-		None
------------------------------------------------------------------------------*/
-void osd_free(void *ptr);
-
-
-/*-----------------------------------------------------------------------------
-	osd_alloc_executable: allocate memory that can contain executable code
-
-	Parameters:
-
-		size - the number of bytes to allocate
-
-	Return value:
-
-		a pointer to the allocated memory
-
-	Notes:
-
-		On many systems, this call may acceptably map to malloc(). On systems
-		where pages are tagged with "no execute" privileges, it may be
-		necessary to perform some kind of special allocation to ensure that
-		code placed into this buffer can be executed.
------------------------------------------------------------------------------*/
-void *osd_alloc_executable(size_t size);
-
-
-/*-----------------------------------------------------------------------------
-	osd_free_executable: free memory allocated by osd_alloc_executable
-
-	Parameters:
-
-		ptr - the pointer returned from osd_alloc_executable
-
-		size - the number of bytes originally requested
-
-	Return value:
-
-		None
------------------------------------------------------------------------------*/
-void osd_free_executable(void *ptr, size_t size);
-
-
-/*-----------------------------------------------------------------------------
-	osd_break_into_debugger: break into the hosting system's debugger if one
-		is attached
-
-	Parameters:
-
-		message - pointer to string to output to the debugger
-
-	Return value:
-
-		None.
-
-	Notes:
-
-		This function is called when an assertion or other important error
-		occurs. If a debugger is attached to the current process, it should
-		break into the debugger and display the given message.
------------------------------------------------------------------------------*/
-void osd_break_into_debugger(const char *message);
-
-
-/*-----------------------------------------------------------------------------
-  MESS specific code below
------------------------------------------------------------------------------*/
-
-/*-----------------------------------------------------------------------------
-	osd_get_clipboard_text: retrieves text from the clipboard
-
-	Return value:
-
-		the returned string needs to be osd_free()-ed!
-
------------------------------------------------------------------------------*/
-char *osd_get_clipboard_text(void);
-
-
-/***************************************************************************
-	DIRECTORY INTERFACES
-***************************************************************************/
-
-/*-----------------------------------------------------------------------------
-	osd_stat: return a directory entry for a path
-
-	Parameters:
-
-		path - path in question
-
-	Return value:
-
-		an allocated pointer to an osd_directory_entry representing
-		info on the path; even if the file does not exist.
-		free with osd_free()
-
------------------------------------------------------------------------------*/
-osd_directory_entry *osd_stat(const char *path);
-
-/***************************************************************************
-	PATH INTERFACES
-***************************************************************************/
-
-/*-----------------------------------------------------------------------------
-	osd_get_full_path: retrieves the full path
-
-	Parameters:
-
-		path - the path in question
-		dst - pointer to receive new path; the returned string needs to be osd_free()-ed!
-
-	Return value:
-
-		file error
-
------------------------------------------------------------------------------*/
-file_error osd_get_full_path(char **dst, const char *path);
+/// \brief Break into host debugger if attached
+///
+/// This function is called when a fatal error occurs.  If a debugger is
+/// attached, it should break and display the specified message.
+/// \param [in] message Message to output to the debugger as a
+///   NUL-terminated string.
+void osd_break_into_debugger(const char* message);
+
+
+/// \brief Get clipboard text
+///
+/// Gets current clipboard content as UTF-8 text.  Returns an empty
+/// string if the clipboard contents cannot be converted to plain text.
+/// \return Clipboard contents or an empty string.
+std::string osd_get_clipboard_text();
 
 
 /***************************************************************************
 	MIDI I/O INTERFACES
 ***************************************************************************/
-struct osd_midi_device;
 
-void osd_list_midi_devices(void);
-// free result with osd_close_midi_channel()
-osd_midi_device *osd_open_midi_input(const char *devname);
-// free result with osd_close_midi_channel()
-osd_midi_device *osd_open_midi_output(const char *devname);
-void osd_close_midi_channel(osd_midi_device *dev);
-bool osd_poll_midi_channel(osd_midi_device *dev);
-int osd_read_midi_channel(osd_midi_device *dev, UINT8 *pOut);
-void osd_write_midi_channel(osd_midi_device *dev, UINT8 data);
+class osd_midi_device
+{
+public:
+	virtual ~osd_midi_device() { }
+	// free result with osd_close_midi_channel()
+	virtual bool open_input(const char* devname) = 0;
+	// free result with osd_close_midi_channel()
+	virtual bool open_output(const char* devname) = 0;
+	virtual void close() = 0;
+	virtual bool poll() = 0;
+	virtual int read(uint8_t* pOut) = 0;
+	virtual void write(uint8_t data) = 0;
+};
+
+//FIXME: really needed here?
+void osd_list_network_adapters();
+
 
 /***************************************************************************
 	UNCATEGORIZED INTERFACES
 ***************************************************************************/
 
 /*-----------------------------------------------------------------------------
-	osd_get_volume_name: retrieves the volume name
+	osd_subst_env: substitute environment variables with values
 
 	Parameters:
 
-		idx - order number of volume
-
-	Return value:
-
-		pointer to volume name
+		dst - result pointer
+		src - source string
 
 -----------------------------------------------------------------------------*/
-const char *osd_get_volume_name(int idx);
+void osd_subst_env(std::string& dst, std::string const& src);
 
-/* ----- output management ----- */
+class osd_gpu
+{
+public:
+	osd_gpu() { }
+	virtual ~osd_gpu() { }
+
+	typedef uint64_t handle_t;
+
+	class vertex_decl
+	{
+	public:
+		enum attr_type : uint32_t
+		{
+			FLOAT32,
+			FLOAT16,
+			UINT32,
+			UINT16,
+			UINT8,
+
+			MAX_TYPES
+		};
+
+		static constexpr size_t TYPE_SIZES[MAX_TYPES] = { 4, 2, 4, 2, 1 };
+
+		static constexpr uint32_t MAX_COLORS = 2;
+		static constexpr uint32_t MAX_TEXCOORDS = 8;
+
+		enum attr_usage : uint32_t
+		{
+			POSITION,
+			COLOR,
+			TEXCOORD = COLOR + MAX_COLORS,
+			NORMAL = TEXCOORD + MAX_TEXCOORDS,
+			BINORMAL,
+			TANGENT,
+
+			MAX_ATTRS
+		};
+
+		class attr_entry
+		{
+		public:
+			attr_entry() : m_usage(POSITION), m_type(FLOAT32), m_count(3), m_size(12) { }
+			attr_entry(attr_usage usage, attr_type type, size_t count) : m_usage(usage), m_type(type), m_count(count), m_size(TYPE_SIZES[type] * count) { }
+
+			attr_usage usage() const { return m_usage; }
+			attr_type type() const { return m_type; }
+			size_t count() const { return m_count; }
+			size_t size() const { return m_size; }
+
+		private:
+			attr_usage m_usage;
+			attr_type m_type;
+			size_t m_count;
+			size_t m_size;
+		};
+
+		vertex_decl()
+			: m_entry_count(0)
+			, m_size(0)
+		{
+		}
+
+		vertex_decl& add_attr(attr_usage usage, attr_type type, size_t count)
+		{
+			m_entries[m_entry_count] = attr_entry(usage, type, count);
+			m_size += m_entries[m_entry_count].size();
+			m_entry_count++;
+			return *this;
+		}
+
+		size_t entry_count() const { return m_entry_count; }
+		size_t size() const { return m_size; }
+		const attr_entry& entry(const uint32_t index) const { return m_entries[index]; }
+
+	protected:
+		attr_entry m_entries[MAX_ATTRS];
+		size_t m_entry_count;
+		size_t m_size;
+	};
+
+	class vertex_buffer_interface
+	{
+	public:
+		vertex_buffer_interface(vertex_decl& decl, uint32_t flags)
+			: m_decl(decl)
+			, m_flags(flags)
+		{
+		}
+		virtual ~vertex_buffer_interface() {}
+
+		const vertex_decl& decl() const { return m_decl; }
+		uint32_t flags() const { return m_flags; }
+		handle_t handle() { return m_handle; }
+
+		virtual size_t count() const = 0;
+		virtual size_t size() const = 0;
+		virtual void upload() = 0;
+
+	protected:
+		const vertex_decl& m_decl;
+		const uint32_t m_flags;
+		handle_t m_handle;
+	};
+
+	class static_vertex_buffer_interface : public vertex_buffer_interface
+	{
+	public:
+		enum vertex_buffer_flags : uint32_t
+		{
+			RETAIN_ON_CPU = 0x00000001
+		};
+
+		static_vertex_buffer_interface(vertex_decl& decl, size_t count, uint32_t flags)
+			: vertex_buffer_interface(decl, flags)
+			, m_count(count)
+			, m_size(decl.size()* count)
+		{
+		}
+
+		virtual ~static_vertex_buffer_interface()
+		{
+			if (m_data)
+				delete[] m_data;
+		}
+
+		size_t count() const override { return m_count; }
+		size_t size() const override { return m_size; }
+
+		void set_data(void* data)
+		{
+			allocate_if_needed();
+			memcpy(m_data, data, m_size);
+		}
+
+	protected:
+		void allocate_if_needed()
+		{
+			if ((m_flags & RETAIN_ON_CPU) != 0 && m_data == nullptr)
+				m_data = new uint8_t[m_size];
+		}
+
+		const size_t m_count;
+		const size_t m_size;
+		uint8_t* m_data;
+	};
+
+	virtual void bind_buffer(vertex_buffer_interface* vb) = 0;
+	virtual void unbind_buffer(vertex_buffer_interface* vb) = 0;
+};
+
+
+/// \defgroup osd_printf Diagnostic output functions
+/// \{
 
 // output channels
-enum output_channel
+enum osd_output_channel
 {
 	OSD_OUTPUT_CHANNEL_ERROR,
 	OSD_OUTPUT_CHANNEL_WARNING,
@@ -916,18 +563,105 @@ enum output_channel
 	OSD_OUTPUT_CHANNEL_COUNT
 };
 
-// output channel callback
-typedef delegate<void (const char *, va_list)> output_delegate;
+class osd_output
+{
+public:
+	osd_output() { }
+	virtual ~osd_output() { }
 
-/* set the output handler for a channel, returns the current one */
-output_delegate osd_set_output_channel(output_channel channel, output_delegate callback);
+	virtual void output_callback(osd_output_channel channel, util::format_argument_pack<std::ostream> const& args) = 0;
 
-/* calls to be used by the code */
-void CLIB_DECL osd_printf_error(const char *format, ...) ATTR_PRINTF(1,2);
-void CLIB_DECL osd_printf_warning(const char *format, ...) ATTR_PRINTF(1,2);
-void CLIB_DECL osd_printf_info(const char *format, ...) ATTR_PRINTF(1,2);
-void CLIB_DECL osd_printf_verbose(const char *format, ...) ATTR_PRINTF(1,2);
-void CLIB_DECL osd_printf_debug(const char *format, ...) ATTR_PRINTF(1,2);
+	static void push(osd_output* delegate);
+	static void pop(osd_output* delegate);
+
+protected:
+
+	void chain_output(osd_output_channel channel, util::format_argument_pack<std::ostream> const& args) const
+	{
+		if (m_chain)
+			m_chain->output_callback(channel, args);
+	}
+
+private:
+	osd_output* m_chain = nullptr;
+};
+
+void osd_vprintf_error(util::format_argument_pack<std::ostream> const& args);
+void osd_vprintf_warning(util::format_argument_pack<std::ostream> const& args);
+void osd_vprintf_info(util::format_argument_pack<std::ostream> const& args);
+void osd_vprintf_verbose(util::format_argument_pack<std::ostream> const& args);
+void osd_vprintf_debug(util::format_argument_pack<std::ostream> const& args);
+
+/// \brief Print error message
+///
+/// By default, error messages are sent to standard error.  The relaxed
+/// format rules used by util::string_format apply.
+/// \param [in] fmt Message format string.
+/// \param [in] args Optional message format arguments.
+/// \sa util::string_format
+template <typename Format, typename... Params> void osd_printf_error(Format&& fmt, Params &&...args)
+{
+	return osd_vprintf_error(util::make_format_argument_pack(std::forward<Format>(fmt), std::forward<Params>(args)...));
+}
+
+/// \brief Print warning message
+///
+/// By default, warning messages are sent to standard error.  The
+/// relaxed format rules used by util::string_format apply.
+/// \param [in] fmt Message format string.
+/// \param [in] args Optional message format arguments.
+/// \sa util::string_format
+template <typename Format, typename... Params> void osd_printf_warning(Format&& fmt, Params &&...args)
+{
+	return osd_vprintf_warning(util::make_format_argument_pack(std::forward<Format>(fmt), std::forward<Params>(args)...));
+}
+
+/// \brief Print informational message
+///
+/// By default, informational messages are sent to standard output.
+/// The relaxed format rules used by util::string_format apply.
+/// \param [in] fmt Message format string.
+/// \param [in] args Optional message format arguments.
+/// \sa util::string_format
+template <typename Format, typename... Params> void osd_printf_info(Format&& fmt, Params &&...args)
+{
+	return osd_vprintf_info(util::make_format_argument_pack(std::forward<Format>(fmt), std::forward<Params>(args)...));
+}
+
+/// \brief Print verbose diagnostic message
+///
+/// Verbose diagnostic messages are disabled by default.  If enabled,
+/// they are sent to standard output by default.  The relaxed format
+/// rules used by util::string_format apply.  Note that the format
+/// string and arguments will always be evaluated, even if verbose
+/// diagnostic messages are disabled.
+/// \param [in] fmt Message format string.
+/// \param [in] args Optional message format arguments.
+/// \sa util::string_format
+template <typename Format, typename... Params> void osd_printf_verbose(Format&& fmt, Params &&...args)
+{
+	return osd_vprintf_verbose(util::make_format_argument_pack(std::forward<Format>(fmt), std::forward<Params>(args)...));
+}
+
+/// \brief Print debug message
+///
+/// By default, debug messages are sent to standard output for debug
+/// builds only.  The relaxed format rules used by util::string_format
+/// apply.  Note that the format string and arguments will always be
+/// evaluated, even if debug messages are disabled.
+/// \param [in] fmt Message format string.
+/// \param [in] args Optional message format arguments.
+/// \sa util::string_format
+template <typename Format, typename... Params> void osd_printf_debug(Format&& fmt, Params &&...args)
+{
+	return osd_vprintf_debug(util::make_format_argument_pack(std::forward<Format>(fmt), std::forward<Params>(args)...));
+}
+
+/// \}
+
+
+// returns command line arguments as an std::vector<std::string> in UTF-8
+std::vector<std::string> osd_get_command_line(int argc, char* argv[]);
 
 /* discourage the use of printf directly */
 /* sadly, can't do this because of the ATTR_PRINTF under GCC */
@@ -936,4 +670,7 @@ void CLIB_DECL osd_printf_debug(const char *format, ...) ATTR_PRINTF(1,2);
 #define printf !MUST_USE_osd_printf_*_CALLS_WITHIN_THE_CORE!
 */
 
-#endif  /* __OSDEPEND_H__ */
+// specifies "aggressive focus" - should MAME capture input for any windows co-habiting a MAME window?
+void osd_set_aggressive_input_focus(bool aggressive_focus);
+
+#endif // MAME_OSD_OSDCORE_H

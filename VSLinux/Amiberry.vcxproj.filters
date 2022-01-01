@@ -115,9 +115,6 @@
     <Filter Include="src\archivers\chd">
       <UniqueIdentifier>{773bc666-0530-4c6c-b535-731656a7c957}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\archivers\chd\linux">
-      <UniqueIdentifier>{09098f3c-cda5-4329-a1e9-2d19c77a44d2}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\conf\dir.txt">
@@ -1035,22 +1032,13 @@
     <ClCompile Include="..\src\osdep\gui\PanelDiskSwapper.cpp">
       <Filter>src\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\archivers\chd\astring.cpp">
-      <Filter>src\archivers\chd</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\archivers\chd\chd.cpp">
       <Filter>src\archivers\chd</Filter>
     </ClCompile>
     <ClCompile Include="..\src\archivers\chd\chdcd.cpp">
       <Filter>src\archivers\chd</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\archivers\chd\chdcdrom.cpp">
-      <Filter>src\archivers\chd</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\archivers\chd\chdcodec.cpp">
-      <Filter>src\archivers\chd</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\archivers\chd\chdglue.cpp">
       <Filter>src\archivers\chd</Filter>
     </ClCompile>
     <ClCompile Include="..\src\archivers\chd\corealloc.cpp">
@@ -1071,14 +1059,23 @@
     <ClCompile Include="..\src\archivers\chd\md5.cpp">
       <Filter>src\archivers\chd</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\archivers\chd\sha1.cpp">
+    <ClCompile Include="..\src\archivers\chd\osdcore.cpp">
       <Filter>src\archivers\chd</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\archivers\chd\linux\linux_time.cpp">
-      <Filter>src\archivers\chd\linux</Filter>
+    <ClCompile Include="..\src\archivers\chd\osdsync.cpp">
+      <Filter>src\archivers\chd</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\archivers\chd\linux\linux_work.cpp">
-      <Filter>src\archivers\chd\linux</Filter>
+    <ClCompile Include="..\src\archivers\chd\strformat.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\corefile.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\chdglue.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\corestr.cpp">
+      <Filter>src\archivers\chd</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1784,9 +1781,6 @@
     <ClInclude Include="..\src\include\inputrecord.h">
       <Filter>src\include</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\archivers\chd\astring.h">
-      <Filter>src\archivers\chd</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\archivers\chd\avhuff.h">
       <Filter>src\archivers\chd</Filter>
     </ClInclude>
@@ -1802,13 +1796,7 @@
     <ClInclude Include="..\src\archivers\chd\chdcd.h">
       <Filter>src\archivers\chd</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\archivers\chd\chdcdrom.h">
-      <Filter>src\archivers\chd</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\archivers\chd\chdcodec.h">
-      <Filter>src\archivers\chd</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\archivers\chd\chdtypes.h">
       <Filter>src\archivers\chd</Filter>
     </ClInclude>
     <ClInclude Include="..\src\archivers\chd\corealloc.h">
@@ -1844,16 +1832,46 @@
     <ClInclude Include="..\src\archivers\chd\osdcomm.h">
       <Filter>src\archivers\chd</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\archivers\chd\osdcore.h">
-      <Filter>src\archivers\chd</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\archivers\chd\osinline.h">
+    <ClInclude Include="..\src\archivers\chd\osdfile.h">
       <Filter>src\archivers\chd</Filter>
     </ClInclude>
     <ClInclude Include="..\src\archivers\chd\palette.h">
       <Filter>src\archivers\chd</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\archivers\chd\sha1.h">
+    <ClInclude Include="..\src\archivers\chd\osdsync.h">
+      <Filter>src\archivers\chd</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\archivers\chd\osdcore.h">
+      <Filter>src\archivers\chd</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\archivers\chd\ioprocs.h">
+      <Filter>src\archivers\chd</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\archivers\chd\utilfwd.h">
+      <Filter>src\archivers\chd</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\archivers\chd\cdrom.h">
+      <Filter>src\archivers\chd</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\archivers\chd\eigcc.h">
+      <Filter>src\archivers\chd</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\archivers\chd\eigccarm.h">
+      <Filter>src\archivers\chd</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\archivers\chd\vecstream.h">
+      <Filter>src\archivers\chd</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\archivers\chd\strformat.h">
+      <Filter>src\archivers\chd</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\archivers\chd\path.h">
+      <Filter>src\archivers\chd</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\archivers\chd\unicode.h">
+      <Filter>src\archivers\chd</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\archivers\chd\corestr.h">
       <Filter>src\archivers\chd</Filter>
     </ClInclude>
   </ItemGroup>

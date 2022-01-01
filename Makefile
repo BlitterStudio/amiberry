@@ -300,7 +300,7 @@ endif
 
 
 export CFLAGS := $(CPUFLAGS) $(CFLAGS) $(EXTRA_CFLAGS)
-export CXXFLAGS = $(CFLAGS) -std=gnu++14
+export CXXFLAGS = $(CFLAGS) -std=gnu++17
 export CPPFLAGS
 
 C_OBJS= \
@@ -396,18 +396,21 @@ OBJS =	\
 	src/archivers/7z/Xz.o \
 	src/archivers/chd/astring.o \
 	src/archivers/chd/chd.o \
-	src/archivers/chd/chdcdrom.o \
+	src/archivers/chd/cdrom.o \
 	src/archivers/chd/chdcodec.o \
 	src/archivers/chd/chdglue.o \
 	src/archivers/chd/corealloc.o \
+	src/archivers/chd/corefile.o \
+	src/archivers/chd/corestr.o \
 	src/archivers/chd/flac.o \
 	src/archivers/chd/harddisk.o \
 	src/archivers/chd/hashing.o \
 	src/archivers/chd/huffman.o \
 	src/archivers/chd/md5.o \
 	src/archivers/chd/sha1.o \
-	src/archivers/chd/linux/linux_time.o \
-	src/archivers/chd/linux/linux_work.o \
+	src/archivers/chd/strformat.o \
+	src/archivers/chd/osdcore.o \
+	src/archivers/chd/osdsync.o \
 	src/archivers/dms/crc_csum.o \
 	src/archivers/dms/getbits.o \
 	src/archivers/dms/maketbl.o \

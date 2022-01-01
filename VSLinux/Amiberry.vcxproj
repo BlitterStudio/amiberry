@@ -331,21 +331,21 @@
     <ClCompile Include="..\src\archivers\7z\XzCrc64.c" />
     <ClCompile Include="..\src\archivers\7z\XzDec.c" />
     <ClCompile Include="..\src\archivers\7z\XzIn.c" />
-    <ClCompile Include="..\src\archivers\chd\astring.cpp" />
     <ClCompile Include="..\src\archivers\chd\chd.cpp" />
     <ClCompile Include="..\src\archivers\chd\chdcd.cpp" />
-    <ClCompile Include="..\src\archivers\chd\chdcdrom.cpp" />
     <ClCompile Include="..\src\archivers\chd\chdcodec.cpp" />
     <ClCompile Include="..\src\archivers\chd\chdglue.cpp" />
     <ClCompile Include="..\src\archivers\chd\corealloc.cpp" />
+    <ClCompile Include="..\src\archivers\chd\corefile.cpp" />
+    <ClCompile Include="..\src\archivers\chd\corestr.cpp" />
     <ClCompile Include="..\src\archivers\chd\flac.cpp" />
     <ClCompile Include="..\src\archivers\chd\harddisk.cpp" />
     <ClCompile Include="..\src\archivers\chd\hashing.cpp" />
     <ClCompile Include="..\src\archivers\chd\huffman.cpp" />
-    <ClCompile Include="..\src\archivers\chd\linux\linux_time.cpp" />
-    <ClCompile Include="..\src\archivers\chd\linux\linux_work.cpp" />
+    <ClCompile Include="..\src\archivers\chd\osdsync.cpp" />
     <ClCompile Include="..\src\archivers\chd\md5.cpp" />
-    <ClCompile Include="..\src\archivers\chd\sha1.cpp" />
+    <ClCompile Include="..\src\archivers\chd\osdcore.cpp" />
+    <ClCompile Include="..\src\archivers\chd\strformat.cpp" />
     <ClCompile Include="..\src\archivers\dms\crc_csum.cpp" />
     <ClCompile Include="..\src\archivers\dms\getbits.cpp" />
     <ClCompile Include="..\src\archivers\dms\maketbl.cpp" />
@@ -621,30 +621,37 @@
     <ClInclude Include="..\src\archivers\7z\Types.h" />
     <ClInclude Include="..\src\archivers\7z\Xz.h" />
     <ClInclude Include="..\src\archivers\7z\XzCrc64.h" />
-    <ClInclude Include="..\src\archivers\chd\astring.h" />
     <ClInclude Include="..\src\archivers\chd\avhuff.h" />
     <ClInclude Include="..\src\archivers\chd\bitmap.h" />
     <ClInclude Include="..\src\archivers\chd\bitstream.h" />
+    <ClInclude Include="..\src\archivers\chd\cdrom.h" />
     <ClInclude Include="..\src\archivers\chd\chd.h" />
     <ClInclude Include="..\src\archivers\chd\chdcd.h" />
-    <ClInclude Include="..\src\archivers\chd\chdcdrom.h" />
     <ClInclude Include="..\src\archivers\chd\chdcodec.h" />
-    <ClInclude Include="..\src\archivers\chd\chdtypes.h" />
     <ClInclude Include="..\src\archivers\chd\corealloc.h" />
     <ClInclude Include="..\src\archivers\chd\corefile.h" />
+    <ClInclude Include="..\src\archivers\chd\corestr.h" />
     <ClInclude Include="..\src\archivers\chd\coretmpl.h" />
     <ClInclude Include="..\src\archivers\chd\delegate.h" />
+    <ClInclude Include="..\src\archivers\chd\eigcc.h" />
+    <ClInclude Include="..\src\archivers\chd\eigccarm.h" />
     <ClInclude Include="..\src\archivers\chd\eminline.h" />
     <ClInclude Include="..\src\archivers\chd\flac.h" />
     <ClInclude Include="..\src\archivers\chd\harddisk.h" />
     <ClInclude Include="..\src\archivers\chd\hashing.h" />
     <ClInclude Include="..\src\archivers\chd\huffman.h" />
+    <ClInclude Include="..\src\archivers\chd\ioprocs.h" />
     <ClInclude Include="..\src\archivers\chd\md5.h" />
     <ClInclude Include="..\src\archivers\chd\osdcomm.h" />
     <ClInclude Include="..\src\archivers\chd\osdcore.h" />
-    <ClInclude Include="..\src\archivers\chd\osinline.h" />
+    <ClInclude Include="..\src\archivers\chd\osdfile.h" />
+    <ClInclude Include="..\src\archivers\chd\osdsync.h" />
     <ClInclude Include="..\src\archivers\chd\palette.h" />
-    <ClInclude Include="..\src\archivers\chd\sha1.h" />
+    <ClInclude Include="..\src\archivers\chd\path.h" />
+    <ClInclude Include="..\src\archivers\chd\strformat.h" />
+    <ClInclude Include="..\src\archivers\chd\unicode.h" />
+    <ClInclude Include="..\src\archivers\chd\utilfwd.h" />
+    <ClInclude Include="..\src\archivers\chd\vecstream.h" />
     <ClInclude Include="..\src\archivers\dms\cdata.h" />
     <ClInclude Include="..\src\archivers\dms\crc_csum.h" />
     <ClInclude Include="..\src\archivers\dms\getbits.h" />
@@ -843,7 +850,7 @@
       <CLanguageStandard>gnu11</CLanguageStandard>
     </ClCompile>
     <ClCompile>
-      <CppLanguageStandard>gnu++1y</CppLanguageStandard>
+      <CppLanguageStandard>c++17</CppLanguageStandard>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debux-DMX|ARM64'">

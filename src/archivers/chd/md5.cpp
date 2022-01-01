@@ -1,4 +1,5 @@
-#include "chdtypes.h"
+// license:Public Domain
+// copyright-holders:Colin Plumb
 /*
  * This code implements the MD5 message-digest algorithm.
  * The algorithm is due to Ron Rivest.  This code was
@@ -21,15 +22,15 @@
  * Still in the public domain.
  */
 
-#include <string.h>     /* for memcpy() */
+#include <cstring>     /* for memcpy() */
 
 #include "md5.h"
 
 #ifndef LSB_FIRST
 void
-byteSwap(UWORD32 *buf, unsigned words)
+byteSwap(UWORD32* buf, unsigned words)
 {
-	md5byte *p = (md5byte *)buf;
+	md5byte* p = (md5byte*)buf;
 
 	do {
 		*buf++ = (UWORD32)((unsigned)p[3] << 8 | p[2]) << 16 |
@@ -41,12 +42,12 @@ byteSwap(UWORD32 *buf, unsigned words)
 #define byteSwap(buf,words)
 #endif
 
-/*
- * Start MD5 accumulation.  Set bit count to 0 and buffer to mysterious
- * initialization constants.
- */
+ /*
+  * Start MD5 accumulation.  Set bit count to 0 and buffer to mysterious
+  * initialization constants.
+  */
 void
-MD5Init(struct MD5Context *ctx)
+MD5Init(struct MD5Context* ctx)
 {
 	ctx->buf[0] = 0x67452301;
 	ctx->buf[1] = 0xefcdab89;
@@ -62,7 +63,7 @@ MD5Init(struct MD5Context *ctx)
  * of bytes.
  */
 void
-MD5Update(struct MD5Context *ctx, md5byte const *buf, unsigned len)
+MD5Update(struct MD5Context* ctx, md5byte const* buf, unsigned len)
 {
 	UWORD32 t;
 
@@ -74,11 +75,11 @@ MD5Update(struct MD5Context *ctx, md5byte const *buf, unsigned len)
 
 	t = 64 - (t & 0x3f);    /* Space available in ctx->in (at least 1) */
 	if (t > len) {
-		memcpy((md5byte *)ctx->in + 64 - t, buf, len);
+		memcpy((md5byte*)ctx->in + 64 - t, buf, len);
 		return;
 	}
 	/* First chunk is an odd size */
-	memcpy((md5byte *)ctx->in + 64 - t, buf, t);
+	memcpy((md5byte*)ctx->in + 64 - t, buf, t);
 	byteSwap(ctx->in, 16);
 	MD5Transform(ctx->buf, ctx->in);
 	buf += t;
@@ -102,10 +103,10 @@ MD5Update(struct MD5Context *ctx, md5byte const *buf, unsigned len)
  * 1 0* (64-bit count of bits processed, MSB-first)
  */
 void
-MD5Final(md5byte digest[16], struct MD5Context *ctx)
+MD5Final(md5byte digest[16], struct MD5Context* ctx)
 {
 	int count = ctx->bytes[0] & 0x3f;   /* Number of bytes in ctx->in */
-	md5byte *p = (md5byte *)ctx->in + count;
+	md5byte* p = (md5byte*)ctx->in + count;
 
 	/* Set the first char of padding to 0x80.  There is always room. */
 	*p++ = 0x80;
@@ -117,7 +118,7 @@ MD5Final(md5byte digest[16], struct MD5Context *ctx)
 		memset(p, 0, count + 8);
 		byteSwap(ctx->in, 16);
 		MD5Transform(ctx->buf, ctx->in);
-		p = (md5byte *)ctx->in;
+		p = (md5byte*)ctx->in;
 		count = 56;
 	}
 	memset(p, 0, count);
@@ -152,10 +153,20 @@ MD5Final(md5byte digest[16], struct MD5Context *ctx)
  * reflect the addition of 16 longwords of new data.  MD5Update blocks
  * the data and converts bytes into longwords for this routine.
  */
+
+ /**
+  * @fn  void MD5Transform(UWORD32 buf[4], UWORD32 const in[16])
+  *
+  * @brief   Md 5 transform.
+  *
+  * @param   buf The buffer.
+  * @param   in  The in.
+  */
+
 void
 MD5Transform(UWORD32 buf[4], UWORD32 const in[16])
 {
-	register UWORD32 a, b, c, d;
+	UWORD32 a, b, c, d;
 
 	a = buf[0];
 	b = buf[1];

@@ -1,39 +1,40 @@
+// license:BSD-3-Clause
+// copyright-holders:R. Belmont
 /***************************************************************************
 
 	CDRDAO TOC parser for CHD compression frontend
 
-	Copyright Nicola Salmoria and the MAME Team.
-	Visit http://mamedev.org for licensing and usage restrictions.
-
 ***************************************************************************/
+#ifndef MAME_LIB_UTIL_CHDCD_H
+#define MAME_LIB_UTIL_CHDCD_H
 
 #pragma once
 
-#ifndef __CHDCD_H__
-#define __CHDCD_H__
+#include "cdrom.h"
 
-#include "chdcdrom.h"
+#include <system_error>
+
 
 struct chdcd_track_input_entry
 {
 	chdcd_track_input_entry() { reset(); }
-	void reset() { fname.reset(); offset = idx0offs = idx1offs = 0; swap = false; }
+	void reset() { fname.clear(); offset = idx0offs = idx1offs = 0; swap = false; }
 
-	astring fname;      // filename for each track
-	UINT32 offset;      // offset in the data file for each track
+	std::string fname;      // filename for each track
+	uint32_t offset;      // offset in the data file for each track
 	bool swap;          // data needs to be byte swapped
-	UINT32 idx0offs;
-	UINT32 idx1offs;
+	uint32_t idx0offs;
+	uint32_t idx1offs;
 };
 
 struct chdcd_track_input_info
 {
-	void reset() { for (int i = 0; i < CD_MAX_TRACKS; i++) track[i].reset(); }
+	void reset() { for (auto& elem : track) elem.reset(); }
 
 	chdcd_track_input_entry track[CD_MAX_TRACKS];
 };
 
 
-chd_error chdcd_parse_toc(const TCHAR *tocfname, cdrom_toc &outtoc, chdcd_track_input_info &outinfo);
+std::error_condition chdcd_parse_toc(const char* tocfname, cdrom_toc& outtoc, chdcd_track_input_info& outinfo);
 
-#endif  /* __CHDCD_H__ */
+#endif // MAME_LIB_UTIL_CHDCD_H
