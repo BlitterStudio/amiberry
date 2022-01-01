@@ -601,6 +601,7 @@ int get_vertical_visible_height(bool useoldsize)
 	if (programmedmode <= 1) {
 		h = maxvpos_display + maxvpos_display_vsync - minfirstline;
 		if (useoldsize) {
+			// 288/576 or 243/486
 			if (h == 288 || h == 243) {
 				h--;
 			}
@@ -1099,10 +1100,15 @@ static xcolnr getbgc(int blank)
 	if (!(vb_state & VB_NOVB) && extblken && aga_mode) {
 		return 0;
 	}
+	bool brdblank = ce_is_borderblank(colors_for_drawing.extra);
+	if (vb_state & VB_XBORDER) {
+		if (brdblank)
+			return fullblack;
+		return colors_for_drawing.acolors[0];
+	}
 	if (hposblank) {
 		return 0;
 	}
-	bool brdblank = ce_is_borderblank(colors_for_drawing.extra);
 #if 0
 	if (brdblank && blank == 4) {
 		return colors_for_drawing.acolors[0];
@@ -1203,7 +1209,19 @@ static void pfield_init_linetoscr (int lineno, bool border)
 			if (playfield_end < linetoscr_diw_end && hblank_right_stop > playfield_end) {
 				playfield_end = linetoscr_diw_end;
 			}
-			int left = coord_hw_to_window_x_lores(dp_for_drawing->plfleft - DDF_OFFSET);
+			int plfleft = dp_for_drawing->plfleft - DDF_OFFSET;
+			int left = coord_hw_to_window_x_lores(plfleft);
+			if (aga_mode) {
+				// If AGA: "bordersprite" starts 0.5 lores pixels earlier
+				if (currprefs.chipset_hr) {
+					left -= lores_shift > 0 ? 1 : 0;
+				} else {
+					left -= 1 << lores_shift;
+				}
+			} else if (ecs_denise) {
+				// If ECS Denise: "bordersprite" starts 1 lores pixel earlier
+				left -= 1 << lores_shift;
+			}
 			if (left < visible_left_border)
 				left = visible_left_border;
 			if (left < playfield_start && left >= linetoscr_diw_start) {
@@ -3762,6 +3780,7 @@ static void center_image (void)
 
 	int w = vidinfo->drawbuffer.inwidth;
 	int ew = vidinfo->drawbuffer.extrawidth;
+	int maxdiw = max_diwlastword;
 	if (currprefs.gfx_overscanmode <= OVERSCANMODE_OVERSCAN && currprefs.gfx_xcenter && !currprefs.gf[0].gfx_filter_autoscale && max_diwstop > 0) {
 
 		if (max_diwstop - min_diwstart < w && currprefs.gfx_xcenter == 2)
@@ -3769,7 +3788,7 @@ static void center_image (void)
 			visible_left_border = (max_diwstop - min_diwstart - w) / 2 + min_diwstart;
 		else
 			visible_left_border = max_diwstop - w - (max_diwstop - min_diwstart - w) / 2;
-		visible_left_border &= ~((xshift (1, lores_shift)) - 1);
+		visible_left_border &= ~((xshift(1, lores_shift)) - 1);
 
 		if (!center_reset && !vertical_changed) {
 			/* Would the old value be good enough? If so, leave it as it is if we want to be clever. */
@@ -3786,18 +3805,15 @@ static void center_image (void)
 			hs++;
 		}
 		visible_left_border = hs << currprefs.gfx_resolution;
-		if (visible_left_border + w < max_diwlastword) {
-			visible_left_border += (max_diwlastword - (visible_left_border + w) - 1) / 2;
-		}
-		if (ew > 0) {
-			visible_left_border -= (ew / 2) << currprefs.gfx_resolution;
+		if (visible_left_border + w > maxdiw) {
+			visible_left_border += (maxdiw - (visible_left_border + w) - 1) / 2;
 		}
 		if (visible_left_border < (hs << currprefs.gfx_resolution)) {
 			visible_left_border = hs << currprefs.gfx_resolution;
 		}
 	} else if (ew < -1) {
 		// normal
-		visible_left_border = max_diwlastword - w;
+		visible_left_border = maxdiw - w;
 	} else {
 		if (vidinfo->drawbuffer.inxoffset < 0) {
 			visible_left_border = 0;
@@ -3817,9 +3833,9 @@ static void center_image (void)
 	linetoscr_x_adjust_pixels = visible_left_border;
 	linetoscr_x_adjust_pixbytes = linetoscr_x_adjust_pixels * vidinfo->drawbuffer.pixbytes;
 
-	visible_right_border = visible_left_border + w + ((ew > 0 ? ew : 0) << currprefs.gfx_resolution);
-	if (visible_right_border > max_diwlastword + ((ew > 0 ? ew : 0) << currprefs.gfx_resolution))
-		visible_right_border = max_diwlastword + ((ew > 0 ? ew : 0) << currprefs.gfx_resolution);
+	visible_right_border = maxdiw + w + ((ew > 0 ? ew : 0) << currprefs.gfx_resolution);
+	if (visible_right_border > maxdiw + ((ew > 0 ? ew : 0) << currprefs.gfx_resolution))
+		visible_right_border = maxdiw + ((ew > 0 ? ew : 0) << currprefs.gfx_resolution);
 
 	int max_drawn_amiga_line_tmp = max_drawn_amiga_line;
 	if (max_drawn_amiga_line_tmp > vidinfo->drawbuffer.inheight)
@@ -3838,7 +3854,7 @@ static void center_image (void)
 
 			/* Would the old value be good enough? If so, leave it as it is if we want to be clever. */
 			if (!center_reset && !horizontal_changed) {
-				if (currprefs.gfx_ycenter == 2 && thisframe_y_adjust != prev_y_adjust && abs(thisframe_y_adjust - prev_y_adjust) < 16) {
+				if (currprefs.gfx_ycenter == 2 && thisframe_y_adjust != prev_y_adjust && abs(thisframe_y_adjust - prev_y_adjust) < 100) {
 					if (prev_y_adjust <= thisframe_first_drawn_line && prev_y_adjust + max_drawn_amiga_line_tmp > thisframe_last_drawn_line)
 						thisframe_y_adjust = prev_y_adjust;
 				}
