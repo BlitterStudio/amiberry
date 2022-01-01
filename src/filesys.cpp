@@ -172,6 +172,7 @@ static uaecptr ROM_filesys_putmsg_return;
 static uaecptr ROM_filesys_hack_remove;
 static smp_comm_pipe shellexecute_pipe;
 static uae_u32 segtrack_mode = 0;
+static bool gayle_ide_in_use;
 
 #define FS_STARTUP 0
 #define FS_GO_DOWN 1
@@ -1266,6 +1267,9 @@ static bool add_ide_unit(int type, int unit, struct uaedev_config_info *uci)
 						write_log(_T("Adding IDE %s '%s' unit %d ('%s')\n"), getunittype(uci),
 							ert->name, unit, uci->rootdir);
 						ert->add(unit, uci, rc);
+						if ((ert->romtype & ROMTYPE_MASK) == ROMTYPE_MB_IDE) {
+							gayle_ide_in_use = true;
+						}
 					}
 					if (cpuboard_hd)
 						added = true;
@@ -1308,6 +1312,7 @@ static void initialize_mountinfo (void)
 
 	cd_unit_offset = MAX_FILESYSTEM_UNITS;
 	autocreatedunit = 0;
+	gayle_ide_in_use = false;
 
 	for (nr = 0; nr < currprefs.mountitems; nr++) {
 		struct uaedev_config_data *uci = &currprefs.mountconfig[nr];
@@ -7322,6 +7327,60 @@ static uaecptr add_resident(TrapContext *ctx, uaecptr resaddr, uaecptr myres)
 	return resaddr;
 }
 
+static void kill_ide(TrapContext *ctx)
+{
+	if (!currprefs.scsidevicedisable) {
+		return;
+	}
+	if (gayle_ide_in_use) {
+		return;
+	}
+	if (kickstart_version < 36 || kickstart_version >= 50) {
+		return;
+	}
+	if (trap_is_indirect()) {
+		return;
+	}
+	uaecptr eb = trap_get_areg(ctx, 6);
+	uaecptr rm = trap_get_long(ctx, eb + 300);
+	for(;;) {
+		uaecptr addr = trap_get_long(ctx, rm);
+		if (!addr) {
+			break;
+		}
+		if (addr & 0x80000000) {
+			rm = addr & 0x7fffffff;
+			continue;
+		}
+		if ((addr >= 0x00a80000 && addr < 0x00b80000) || (addr >= 0x00f00000 && addr < 0x01000000)) {
+			uae_u8 res[22];
+			if (trap_valid_address(ctx, addr, sizeof(res))) {
+				trap_get_bytes(ctx, res, addr, sizeof(res));
+				if (res[0] == 0x4a && res[1] == 0xfc && res[10] == 0x01 && res[11] >= 36 && res[11] < 50 && res[12] == 0x03 && res[13] > 0 && res[13] < 128) {
+					static const char sd[] = { "scsi.device" };
+					uaecptr name = (res[14] << 24) | (res[15] << 16) | (res[16] << 8) | (res[17] << 0);
+					int i;
+					for (i = 0; i < strlen(sd) + 1; i++) {
+						uae_u8 c = trap_get_byte(ctx, name + i);
+						if (c != sd[i] || c == 0) {
+							break;
+						}
+					}
+					if (i == strlen(sd)) {
+						uaecptr desc = (res[18] << 24) | (res[19] << 16) | (res[20] << 8) | (res[21] << 0);
+						trap_get_bytes(ctx, res, desc, 4);
+						if (res[0] != 'S' && res[1] != 'C' && res[2] != 'S' && res[3] != 'I') {
+							write_log(_T("scsi.device resmodules entry disabled\n"));
+							trap_put_long(ctx, rm, 0x80000000 | (rm + 4));
+						}
+					}
+				}
+			}
+		}
+		rm += 4;
+	}
+}
+
 static uae_u32 REGPARAM2 filesys_diagentry (TrapContext *ctx)
 {
 	UnitInfo *uip = mountinfo.ui;
@@ -7564,6 +7623,8 @@ static uae_u32 REGPARAM2 filesys_diagentry (TrapContext *ctx)
 			}
 		}
 	}
+
+	kill_ide(ctx);
 
 	tmp = first_resident;
 	while (tmp < last_resident && tmp >= first_resident) {
