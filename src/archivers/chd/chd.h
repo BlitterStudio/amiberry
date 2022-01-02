@@ -263,6 +263,7 @@ public:
 	// error types
 	enum class error
 	{
+		NONE,
 		NO_INTERFACE = 1,
 		NOT_OPEN,
 		ALREADY_OPEN,

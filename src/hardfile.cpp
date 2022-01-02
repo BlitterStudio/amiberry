@@ -672,7 +672,7 @@ int hdf_open (struct hardfiledata *hfd, const TCHAR *pname)
 				chd_readonly = true;
 				err = cf->open(*zf, false, NULL);
 			}
-			if (err != 0) {
+			if (err != chd_file::error::NONE) {
 				zfile_fclose (zf);
 				delete cf;
 				goto end;
@@ -1110,7 +1110,7 @@ static int hdf_read2 (struct hardfiledata *hfd, void *buffer, uae_u64 offset, in
 #ifdef WITH_CHD
 	else if (hfd->hfd_type == HFD_CHD_OTHER) {
 		chd_file *cf = (chd_file*)hfd->chd_handle;
-		if (cf->read_bytes(offset, buffer, len) == 0)
+		if (cf->read_bytes(offset, buffer, len) == chd_file::error::NONE)
 			ret = len;
 		else
 			return 0;
@@ -1122,7 +1122,7 @@ static int hdf_read2 (struct hardfiledata *hfd, void *buffer, uae_u64 offset, in
 		int got = 0;
 		offset /= chdi->sectorbytes;
 		while (len > 0) {
-			if (cf->read_units(offset, buf) != 0)
+			if (cf->read_units(offset, buf) != chd_file::error::NONE)
 				break;
 			got += chdi->sectorbytes;
 			buf += chdi->sectorbytes;
@@ -1173,7 +1173,7 @@ static int hdf_write2 (struct hardfiledata *hfd, void *buffer, uae_u64 offset, i
 		int got = 0;
 		offset /= chdi->sectorbytes;
 		while (len > 0) {
-			if (cf->write_units(offset, buf) != 0)
+			if (cf->write_units(offset, buf) != chd_file::error::NONE)
 				break;
 			got += chdi->sectorbytes;
 			buf += chdi->sectorbytes;
