@@ -95,7 +95,7 @@ struct romdata *getromdatabypath (const TCHAR *path)
 	return NULL;
 }
 
-#define NEXT_ROM_ID 280
+#define NEXT_ROM_ID 285
 
 #define ALTROM(id,grp,num,size,flags,crc32,a,b,c,d,e) \
 { _T("X"), 0, 0, 0, 0, 0, size, id, 0, 0, flags, (grp << 16) | num, 0, NULL, crc32, a, b, c, d, e },
@@ -201,6 +201,16 @@ static struct romdata roms[] = {
 	0x9188A509, 0xEDE1748E, 0xB2CBB1E8, 0x6AC5BF7D, 0xC9B97246, 0xA4A54358 },
 	{ _T("KS ROM v3.2 (A500/A600/A2000/A1000/CDTV)"), 3, 2, 47, 96, _T("A500\0"), 524288, 279, 0, 0, ROMTYPE_KICK, 0, 0, NULL,
 	0x8173D7B6, 0xB88E364D, 0xAF23C9C9, 0x920E548B, 0x0D3D944E, 0x65B1031D },
+	{ _T("KS ROM v3.2.1 (A1200)"), 3, 2, 47, 102, _T("A1200\0"), 524288, 280, 1, 0, ROMTYPE_KICK, 0, 0, NULL,
+	0x2B653371, 0x0984fc0d, 0xf07dc058, 0x5db0923d, 0x580629f7, 0x0fca420d },
+	{ _T("KS ROM v3.2.1 (A3000)"), 3, 2, 47, 102, _T("A3000\0"), 524288, 281, 2, 0, ROMTYPE_KICK, 0, 0, NULL,
+	0x0078F607, 0xeb93508f, 0x0bb0cde8, 0x1d88bf22, 0xd0504556, 0x5d66ef74 },
+	{ _T("KS ROM v3.2.1 (A4000)"), 3, 2, 47, 102, _T("A4000\0"), 524288, 282, 2 | 4, 0, ROMTYPE_KICK, 0, 0, NULL,
+	0xF3CED3B8, 0x7db3c322, 0x6acc0bfe, 0x548c788c, 0xf1bc7c4c, 0x8774d66f },
+	{ _T("KS ROM v3.2.1 (A4000T)"), 3, 2, 47, 102, _T("A4000T\0"), 524288, 283, 2 | 4, 0, ROMTYPE_KICK, 0, 0, NULL,
+	0xAF3452EC, 0xa75fcd34, 0x9680cede, 0xab06e496, 0xc6338394, 0xe81788d7 },
+	{ _T("KS ROM v3.2.1 (A500/A600/A2000/A1000/CDTV)"), 3, 2, 47, 102, _T("A500\0"), 524288, 284, 0, 0, ROMTYPE_KICK, 0, 0, NULL,
+	0x4F078456, 0x8f64ada6, 0x8a7f128b, 0xa782e8dc, 0x9fa58334, 0x4171590a },
 #endif
 	{ _T("KS ROM v3.1 (A3000)"), 3, 1, 40, 68, _T("A3000\0"), 524288, 61, 2, 0, ROMTYPE_KICK, 0, 0, NULL,
 	0xefb239cc, 0xF8E210D7,0x2B4C4853,0xE0C9B85D,0x223BA20E,0x3D1B36EE },
