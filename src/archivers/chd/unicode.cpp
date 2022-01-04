@@ -16,7 +16,7 @@
 #include "strconv.h"
 #endif
 
-#include <utf8proc.h>
+#include "utf8proc.h"
 
 #include <codecvt>
 #include <locale>

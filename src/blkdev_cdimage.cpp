@@ -38,6 +38,7 @@
 #endif
 
 #define FLAC__NO_DLL
+#include "zarchive.h"
 #include "FLAC/stream_decoder.h"
 
 #ifdef WITH_CHD
@@ -1421,8 +1422,8 @@ static int parsechd (struct cdunit *cdu, struct zfile *zcue, const TCHAR *img, c
 	if (!f)
 		return 0;
 	chd_file *cf = new chd_file();
-	auto err = cf->open(*f, false, NULL);
-	if (err != chd_file::error::NONE) {
+	auto err = cf->open(f->name, false, NULL);
+	if (err != std::error_condition()) {
 		write_log (_T("CHD '%s' err=%d\n"), zfile_getname (zcue), err);
 		zfile_fclose (f);
 		return 0;
@@ -1480,7 +1481,7 @@ static int parsechd (struct cdunit *cdu, struct zfile *zcue, const TCHAR *img, c
 		dtrack->filesize = cf->logical_bytes ();
 		dtrack->track = i + 1;
 		dtrack[1].address = dtrack->address + strack->frames;
-		if (cf->hunk_info(dtrack->offset * CD_FRAME_SIZE / hunksize, compr, cbytes) == chd_file::error::NONE) {
+		if (cf->hunk_info(dtrack->offset * CD_FRAME_SIZE / hunksize, compr, cbytes) == std::error_condition()) {
 			TCHAR tmp[100];
 			uae_u32 c = (uae_u32)compr;
 			for (int j = 0; j < 4; j++) {

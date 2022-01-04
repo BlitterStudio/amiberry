@@ -147,7 +147,7 @@ static const unsigned char table_four[34]=
 
 static void crc_calc(struct lzxdata *d, unsigned char *memory, unsigned int length)
 {
- register unsigned int temp;
+	unsigned int temp;
 
  if(length)
  {
@@ -166,10 +166,10 @@ static void crc_calc(struct lzxdata *d, unsigned char *memory, unsigned int leng
 /* There is an alternate algorithm which is faster but also more complex. */
 
 static int make_decode_table(struct lzxdata *d, short number_symbols, short table_size,
-		      unsigned char *length, unsigned short *table)
+			  unsigned char *length, unsigned short *table)
 {
- register unsigned char bit_num = 0;
- register short symbol;
+	unsigned char bit_num = 0;
+	short symbol;
  unsigned short leaf; /* could be a register */
  unsigned short bit_mask, fill, next_symbol, reverse;
  unsigned int table_mask, pos;
@@ -190,29 +190,29 @@ static int make_decode_table(struct lzxdata *d, short number_symbols, short tabl
   {
    if(length[symbol] == bit_num)
    {
-    reverse = pos; /* reverse the order of the position's bits */
-    leaf = 0;
-    fill = table_size;
-    do /* reverse the position */
-    {
-     leaf = (leaf << 1) + (reverse & 1);
-     reverse >>= 1;
-    } while(--fill);
+	reverse = pos; /* reverse the order of the position's bits */
+	leaf = 0;
+	fill = table_size;
+	do /* reverse the position */
+	{
+	 leaf = (leaf << 1) + (reverse & 1);
+	 reverse >>= 1;
+	} while(--fill);
 	pos += bit_mask;
 #if LZX_ERROR_CHECK
 	if(pos > table_mask)
-    {
+	{
 	 /* we will overrun the table! abort! */
 	 return 1;
-    }
+	}
 #endif
 	fill = bit_mask;
-    next_symbol = 1 << bit_num;
-    do
-    {
-     table[leaf] = symbol;
-     leaf += next_symbol;
-    } while(--fill);
+	next_symbol = 1 << bit_num;
+	do
+	{
+	 table[leaf] = symbol;
+	 leaf += next_symbol;
+	} while(--fill);
    }
   }
   bit_mask >>= 1;
@@ -228,8 +228,8 @@ static int make_decode_table(struct lzxdata *d, short number_symbols, short tabl
    fill = table_size;
    do /* reverse the position */
    {
-    leaf = (leaf << 1) + (reverse & 1);
-    reverse >>= 1;
+	leaf = (leaf << 1) + (reverse & 1);
+	reverse >>= 1;
    } while(--fill);
    table[leaf] = 0;
   }
@@ -242,37 +242,37 @@ static int make_decode_table(struct lzxdata *d, short number_symbols, short tabl
   {
    for(symbol = 0; symbol < number_symbols; symbol++)
    {
-    if(length[symbol] == bit_num)
-    {
-     reverse = pos >> 16; /* reverse the order of the position's bits */
-     leaf = 0;
-     fill = table_size;
-     do /* reverse the position */
-     {
-      leaf = (leaf << 1) + (reverse & 1);
-      reverse >>= 1;
-     } while(--fill);
-     for(fill = 0; fill < bit_num - table_size; fill++)
-     {
-      if(table[leaf] == 0)
-      {
-       table[(next_symbol << 1)] = 0;
-       table[(next_symbol << 1) + 1] = 0;
-       table[leaf] = next_symbol++;
-      }
-      leaf = table[leaf] << 1;
-      leaf += (pos >> (15 - fill)) & 1;
-     }
-     table[leaf] = symbol;
+	if(length[symbol] == bit_num)
+	{
+	 reverse = pos >> 16; /* reverse the order of the position's bits */
+	 leaf = 0;
+	 fill = table_size;
+	 do /* reverse the position */
+	 {
+	  leaf = (leaf << 1) + (reverse & 1);
+	  reverse >>= 1;
+	 } while(--fill);
+	 for(fill = 0; fill < bit_num - table_size; fill++)
+	 {
+	  if(table[leaf] == 0)
+	  {
+	   table[(next_symbol << 1)] = 0;
+	   table[(next_symbol << 1) + 1] = 0;
+	   table[leaf] = next_symbol++;
+	  }
+	  leaf = table[leaf] << 1;
+	  leaf += (pos >> (15 - fill)) & 1;
+	 }
+	 table[leaf] = symbol;
 	 pos += bit_mask;
 #if LZX_ERROR_CHECK
 	 if(pos > table_mask)
-     {
-      /* we will overrun the table! abort! */
+	 {
+	  /* we will overrun the table! abort! */
 	  return 1;
-     }
+	 }
 #endif
-    }
+	}
    }
    bit_mask >>= 1;
    bit_num++;
@@ -291,8 +291,8 @@ static int make_decode_table(struct lzxdata *d, short number_symbols, short tabl
 
 static int read_literal_table(struct lzxdata *d)
 {
- register unsigned int control;
- register short shift;
+	unsigned int control;
+	short shift;
  unsigned short temp; /* could be a register */
  unsigned short symbol, pos, count, fix, max_symbol;
 #if LZX_ERROR_CHECK
@@ -330,9 +330,9 @@ static int read_literal_table(struct lzxdata *d)
    control >>= 3;
    if((shift -= 3) < 0)
    {
-    shift += 16;
-    control += *d->source++ << (8 + shift);
-    control += *d->source++ << shift;
+	shift += 16;
+	control += *d->source++ << (8 + shift);
+	control += *d->source++ << shift;
    }
   }
 #if LZX_ERROR_CHECK
@@ -383,14 +383,14 @@ static int read_literal_table(struct lzxdata *d)
   {
    for(temp = 0; temp < 20; temp++)
    {
-    d->huffman20_len[temp] = control & 15;
-    control >>= 4;
-    if((shift -= 4) < 0)
-    {
-     shift += 16;
-     control += *d->source++ << (8 + shift);
-     control += *d->source++ << shift;
-    }
+	d->huffman20_len[temp] = control & 15;
+	control >>= 4;
+	if((shift -= 4) < 0)
+	{
+	 shift += 16;
+	 control += *d->source++ << (8 + shift);
+	 control += *d->source++ << shift;
+	}
    }
 #if LZX_ERROR_CHECK
    abort = make_decode_table(d, 20, 6, d->huffman20_len, d->huffman20_table);
@@ -402,73 +402,73 @@ static int read_literal_table(struct lzxdata *d)
 
    do
    {
-    if((symbol = d->huffman20_table[control & 63]) >= 20)
-    {
-     do /* symbol is longer than 6 bits */
-     {
-      symbol = d->huffman20_table[((control >> 6) & 1) + (symbol << 1)];
-      if(!shift--)
-      {
-       shift += 16;
-       control += *d->source++ << 24;
-       control += *d->source++ << 16;
-      }
-      control >>= 1;
-     } while(symbol >= 20);
-     temp = 6;
-    }
-    else
-    {
-     temp = d->huffman20_len[symbol];
-    }
-    control >>= temp;
-    if((shift -= temp) < 0)
-    {
-     shift += 16;
-     control += *d->source++ << (8 + shift);
-     control += *d->source++ << shift;
-    }
-    switch(symbol)
-    {
-     case 17:
-     case 18:
-     {
-      if(symbol == 17)
-      {
-       temp = 4;
-       count = 3;
-      }
-      else /* symbol == 18 */
-      {
-       temp = 6 - fix;
-       count = 19;
-      }
-      count += (control & table_three[temp]) + fix;
-      control >>= temp;
-      if((shift -= temp) < 0)
-      {
-       shift += 16;
-       control += *d->source++ << (8 + shift);
-       control += *d->source++ << shift;
-      }
-      while((pos < max_symbol) && (count--))
-       d->literal_len[pos++] = 0;
-      break;
-     }
-     case 19:
-     {
-      count = (control & 1) + 3 + fix;
-      if(!shift--)
-      {
-       shift += 16;
-       control += *d->source++ << 24;
-       control += *d->source++ << 16;
-      }
-      control >>= 1;
-      if((symbol = d->huffman20_table[control & 63]) >= 20)
-      {
-       do /* symbol is longer than 6 bits */
-       {
+	if((symbol = d->huffman20_table[control & 63]) >= 20)
+	{
+	 do /* symbol is longer than 6 bits */
+	 {
+	  symbol = d->huffman20_table[((control >> 6) & 1) + (symbol << 1)];
+	  if(!shift--)
+	  {
+	   shift += 16;
+	   control += *d->source++ << 24;
+	   control += *d->source++ << 16;
+	  }
+	  control >>= 1;
+	 } while(symbol >= 20);
+	 temp = 6;
+	}
+	else
+	{
+	 temp = d->huffman20_len[symbol];
+	}
+	control >>= temp;
+	if((shift -= temp) < 0)
+	{
+	 shift += 16;
+	 control += *d->source++ << (8 + shift);
+	 control += *d->source++ << shift;
+	}
+	switch(symbol)
+	{
+	 case 17:
+	 case 18:
+	 {
+	  if(symbol == 17)
+	  {
+	   temp = 4;
+	   count = 3;
+	  }
+	  else /* symbol == 18 */
+	  {
+	   temp = 6 - fix;
+	   count = 19;
+	  }
+	  count += (control & table_three[temp]) + fix;
+	  control >>= temp;
+	  if((shift -= temp) < 0)
+	  {
+	   shift += 16;
+	   control += *d->source++ << (8 + shift);
+	   control += *d->source++ << shift;
+	  }
+	  while((pos < max_symbol) && (count--))
+	   d->literal_len[pos++] = 0;
+	  break;
+	 }
+	 case 19:
+	 {
+	  count = (control & 1) + 3 + fix;
+	  if(!shift--)
+	  {
+	   shift += 16;
+	   control += *d->source++ << 24;
+	   control += *d->source++ << 16;
+	  }
+	  control >>= 1;
+	  if((symbol = d->huffman20_table[control & 63]) >= 20)
+	  {
+	   do /* symbol is longer than 6 bits */
+	   {
 	symbol = d->huffman20_table[((control >> 6) & 1) + (symbol << 1)];
 	if(!shift--)
 	{
@@ -477,32 +477,32 @@ static int read_literal_table(struct lzxdata *d)
 	 control += *d->source++ << 16;
 	}
 	control >>= 1;
-       } while(symbol >= 20);
-       temp = 6;
-      }
-      else
-      {
-       temp = d->huffman20_len[symbol];
-      }
-      control >>= temp;
-      if((shift -= temp) < 0)
-      {
-       shift += 16;
-       control += *d->source++ << (8 + shift);
-       control += *d->source++ << shift;
-      }
-      symbol = table_four[d->literal_len[pos] + 17 - symbol];
-      while((pos < max_symbol) && (count--))
-       d->literal_len[pos++] = symbol;
-      break;
-     }
-     default:
-     {
-      symbol = table_four[d->literal_len[pos] + 17 - symbol];
-      d->literal_len[pos++] = symbol;
-      break;
-     }
-    }
+	   } while(symbol >= 20);
+	   temp = 6;
+	  }
+	  else
+	  {
+	   temp = d->huffman20_len[symbol];
+	  }
+	  control >>= temp;
+	  if((shift -= temp) < 0)
+	  {
+	   shift += 16;
+	   control += *d->source++ << (8 + shift);
+	   control += *d->source++ << shift;
+	  }
+	  symbol = table_four[d->literal_len[pos] + 17 - symbol];
+	  while((pos < max_symbol) && (count--))
+	   d->literal_len[pos++] = symbol;
+	  break;
+	 }
+	 default:
+	 {
+	  symbol = table_four[d->literal_len[pos] + 17 - symbol];
+	  d->literal_len[pos++] = symbol;
+	  break;
+	 }
+	}
    } while(pos < max_symbol);
    fix--;
    max_symbol += 512;
@@ -531,8 +531,8 @@ static int read_literal_table(struct lzxdata *d)
 
 static void decrunch(struct lzxdata *d)
 {
- register unsigned int control;
- register short shift;
+	unsigned int control;
+	short shift;
  unsigned short temp; /* could be a register */
  unsigned short symbol, count;
  unsigned char *string;
@@ -547,20 +547,20 @@ static void decrunch(struct lzxdata *d)
    control >>= 12;
    if((shift -= 12) < 0)
    {
-    shift += 16;
-    control |= *d->source++ << (8 + shift);
-    control |= *d->source++ << shift;
+	shift += 16;
+	control |= *d->source++ << (8 + shift);
+	control |= *d->source++ << shift;
    }
    do /* literal is longer than 12 bits */
    {
-    symbol = d->literal_table[(control & 1) + (symbol << 1)];
-    if(!shift--)
-    {
-     shift += 16;
-     control |= *d->source++ << 24;
-     control |= *d->source++ << 16;
-    }
-    control >>= 1;
+	symbol = d->literal_table[(control & 1) + (symbol << 1)];
+	if(!shift--)
+	{
+	 shift += 16;
+	 control |= *d->source++ << 24;
+	 control |= *d->source++ << 16;
+	}
+	control >>= 1;
    } while(symbol >= 768);
   }
   else
@@ -569,9 +569,9 @@ static void decrunch(struct lzxdata *d)
    control >>= temp;
    if((shift -= temp) < 0)
    {
-    shift += 16;
-    control |= *d->source++ << (8 + shift);
-    control |= *d->source++ << shift;
+	shift += 16;
+	control |= *d->source++ << (8 + shift);
+	control |= *d->source++ << shift;
    }
   }
   if(symbol < 256)
@@ -585,29 +585,29 @@ static void decrunch(struct lzxdata *d)
    temp = table_one[temp];
    if((temp >= 3) && (d->decrunch_method == 3))
    {
-    temp -= 3;
-    count += ((control & table_three[temp]) << 3);
-    control >>= temp;
-    if((shift -= temp) < 0)
-    {
-     shift += 16;
-     control |= *d->source++ << (8 + shift);
-     control |= *d->source++ << shift;
-    }
-    count += (temp = d->offset_table[control & 127]);
-    temp = d->offset_len[temp];
+	temp -= 3;
+	count += ((control & table_three[temp]) << 3);
+	control >>= temp;
+	if((shift -= temp) < 0)
+	{
+	 shift += 16;
+	 control |= *d->source++ << (8 + shift);
+	 control |= *d->source++ << shift;
+	}
+	count += (temp = d->offset_table[control & 127]);
+	temp = d->offset_len[temp];
    }
    else
    {
-    count += control & table_three[temp];
-    if(!count) count = d->last_offset;
+	count += control & table_three[temp];
+	if(!count) count = d->last_offset;
    }
    control >>= temp;
    if((shift -= temp) < 0)
    {
-    shift += 16;
-    control |= *d->source++ << (8 + shift);
-    control |= *d->source++ << shift;
+	shift += 16;
+	control |= *d->source++ << (8 + shift);
+	control |= *d->source++ << shift;
    }
    d->last_offset = count;
 
@@ -617,15 +617,15 @@ static void decrunch(struct lzxdata *d)
    control >>= temp;
    if((shift -= temp) < 0)
    {
-    shift += 16;
-    control |= *d->source++ << (8 + shift);
-    control |= *d->source++ << shift;
+	shift += 16;
+	control |= *d->source++ << (8 + shift);
+	control |= *d->source++ << shift;
    }
 
    string = d->destination - d->last_offset;
    do
    {
-    *d->destination++ = *string++;
+	*d->destination++ = *string++;
    } while(--count);
   }
  } while((d->destination < d->destination_end) && (d->source < d->source_end));
@@ -636,59 +636,59 @@ static void decrunch(struct lzxdata *d)
 
 struct zfile *archive_access_lzx (struct znode *zn)
 {
-    unsigned int startpos;
-    struct znode *znfirst, *znlast;
-    struct zfile *zf = zn->volume->archive;
-    struct zfile *dstf, *newzf;
-    uae_u8 *buf, *dbuf, *dbufend;
-    unsigned int compsize, unpsize;
+	unsigned int startpos;
+	struct znode *znfirst, *znlast;
+	struct zfile *zf = zn->volume->archive;
+	struct zfile *dstf, *newzf;
+	uae_u8 *buf, *dbuf, *dbufend;
+	unsigned int compsize, unpsize;
 	struct lzxdata d = { 0 };
 
-    dstf = NULL;
-    buf = dbuf = NULL;
-    newzf = NULL;
+	dstf = NULL;
+	buf = dbuf = NULL;
+	newzf = NULL;
 
-    /* find first file in compressed block */
-    unpsize = 0;
-    znfirst = zn;
-    while (znfirst->prev) {
+	/* find first file in compressed block */
+	unpsize = 0;
+	znfirst = zn;
+	while (znfirst->prev) {
 		struct znode *zt = znfirst->prev;
 		if (!zt || zt->offset != 0)
 			break;
 		znfirst = zt;
 		unpsize += znfirst->size;
-    }
-    /* find last file in compressed block */
-    znlast = zn;
-    while (znlast) {
+	}
+	/* find last file in compressed block */
+	znlast = zn;
+	while (znlast) {
 		unpsize += znlast->size;
 		if (znlast->offset != 0)
 			break;
 		znlast = znlast->next;
-    }
-    if (!znlast)
+	}
+	if (!znlast)
 		return NULL;
-    /* start offset to compressed block */
-    startpos = znlast->offset;
-    compsize = znlast->packedsize;
-    zfile_fseek (zf, startpos, SEEK_SET);
-    buf = xmalloc (uae_u8, compsize + 1);
+	/* start offset to compressed block */
+	startpos = znlast->offset;
+	compsize = znlast->packedsize;
+	zfile_fseek (zf, startpos, SEEK_SET);
+	buf = xmalloc (uae_u8, compsize + 1);
 	buf[compsize] = 0;
-    zfile_fread (buf, compsize, 1, zf);
-    dbuf = xcalloc (uae_u8, unpsize);
+	zfile_fread (buf, compsize, 1, zf);
+	dbuf = xcalloc (uae_u8, unpsize);
 
-    /* unpack complete block */
-    d.source = buf;
-    d.source_end = buf + compsize + 1;
-    d.global_control = 0;
-    d.global_shift = -16;
-    d.last_offset = 1;
-    d.destination = dbuf;
+	/* unpack complete block */
+	d.source = buf;
+	d.source_end = buf + compsize + 1;
+	d.global_control = 0;
+	d.global_shift = -16;
+	d.last_offset = 1;
+	d.destination = dbuf;
 	dbufend = dbuf + unpsize;
 	int outsize = 0;
-    if (compsize == unpsize) {
+	if (compsize == unpsize) {
 		memcpy (dbuf, buf, unpsize);
-    } else {
+	} else {
 		while (unpsize > 0) {
 			uae_u8 *pdest = d.destination;
 			if (!read_literal_table(&d)) {
@@ -704,9 +704,9 @@ struct zfile *archive_access_lzx (struct znode *zn)
 				goto end;
 			}
 		}
-    }
-    /* pre-cache all files we just decompressed */
-    for (;;) {
+	}
+	/* pre-cache all files we just decompressed */
+	for (;;) {
 		if (!znfirst->f) {
 			dstf = zfile_fopen_empty (zf, znfirst->name, znfirst->size);
 			if (znfirst->size) {
@@ -722,11 +722,11 @@ struct zfile *archive_access_lzx (struct znode *zn)
 		if (znfirst == znlast)
 			break;
 		znfirst = znfirst->next;
-    }
+	}
 end:
-    xfree(buf);
-    xfree(dbuf);
-    return newzf;
+	xfree(buf);
+	xfree(dbuf);
+	return newzf;
 }
 
 struct zvolume *archive_directory_lzx (struct zfile *in_file)
@@ -752,9 +752,9 @@ struct zvolume *archive_directory_lzx (struct zfile *in_file)
  struct lzxdata d = { 0 };
 
  if (zfile_fread(archive_header, 1, 10, in_file) != 10)
-     return 0;
+	 return 0;
  if (memcmp(archive_header, "LZX", 3))
-     return 0;
+	 return 0;
  zv = zvolume_alloc (in_file, ArchiveFormatLZX, NULL, NULL);
 
  do
@@ -765,27 +765,27 @@ struct zvolume *archive_directory_lzx (struct zfile *in_file)
   {
    if(actual) /* 0 is normal and means EOF */
    {
-    if(actual == 31)
-    {
-     d.sum = 0; /* reset CRC */
-     crc = (archive_header[29] << 24) + (archive_header[28] << 16) + (archive_header[27] << 8) + archive_header[26];
-     archive_header[29] = 0; /* Must set the field to 0 before calculating the crc */
-     archive_header[28] = 0;
-     archive_header[27] = 0;
-     archive_header[26] = 0;
-     crc_calc(&d, archive_header, 31);
-     temp = archive_header[30]; /* filename length */
-     actual = zfile_fread(header_filename, 1, temp, in_file);
-     if(!zfile_ferror(in_file))
-     {
-      if(actual == temp)
-      {
-       header_filename[temp] = 0;
-       crc_calc(&d, (unsigned char*)header_filename, temp);
-       temp = archive_header[14]; /* comment length */
-       actual = zfile_fread(header_comment, 1, temp, in_file);
-       if(!zfile_ferror(in_file))
-       {
+	if(actual == 31)
+	{
+	 d.sum = 0; /* reset CRC */
+	 crc = (archive_header[29] << 24) + (archive_header[28] << 16) + (archive_header[27] << 8) + archive_header[26];
+	 archive_header[29] = 0; /* Must set the field to 0 before calculating the crc */
+	 archive_header[28] = 0;
+	 archive_header[27] = 0;
+	 archive_header[26] = 0;
+	 crc_calc(&d, archive_header, 31);
+	 temp = archive_header[30]; /* filename length */
+	 actual = zfile_fread(header_filename, 1, temp, in_file);
+	 if(!zfile_ferror(in_file))
+	 {
+	  if(actual == temp)
+	  {
+	   header_filename[temp] = 0;
+	   crc_calc(&d, (unsigned char*)header_filename, temp);
+	   temp = archive_header[14]; /* comment length */
+	   actual = zfile_fread(header_comment, 1, temp, in_file);
+	   if(!zfile_ferror(in_file))
+	   {
 	if(actual == temp)
 	{
 	 header_comment[temp] = 0;
@@ -850,7 +850,7 @@ struct zvolume *archive_directory_lzx (struct zfile *in_file)
 	   }
 	   if(!zfile_fseek(in_file, pack_size, SEEK_CUR))
 	   {
-	    abort = 0; /* continue */
+		abort = 0; /* continue */
 	   }
 	  }
 	  else
@@ -861,14 +861,14 @@ struct zvolume *archive_directory_lzx (struct zfile *in_file)
 
 	 }
 	}
-       }
-      }
-     }
-    }
+	   }
+	  }
+	 }
+	}
    }
    else
    {
-    result = 0; /* normal termination */
+	result = 0; /* normal termination */
    }
   }
  } while(!abort);

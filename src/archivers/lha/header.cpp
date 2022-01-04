@@ -18,7 +18,7 @@ static char    *get_ptr;
 /* ------------------------------------------------------------------------ */
 int calc_sum(char *p, int len)
 {
-	register int    sum;
+	int    sum;
 
 	for (sum = 0; len; len--)
 		sum += *p++;
@@ -67,7 +67,7 @@ static void put_longword(long v)
 /* ------------------------------------------------------------------------ */
 static void msdos_to_unix_filename(char *name, int len)
 {
-	register int    i;
+	int    i;
 
 #ifdef MULTIBYTE_CHAR
 	for (i = 0; i < len; i++) {
@@ -92,7 +92,7 @@ static void msdos_to_unix_filename(char *name, int len)
 /* ------------------------------------------------------------------------ */
 static void generic_to_unix_filename(char *name, int len)
 {
-	register int    i;
+	int    i;
 	boolean         lower_case_used = FALSE;
 
 #ifdef MULTIBYTE_CHAR
@@ -133,7 +133,7 @@ static void generic_to_unix_filename(char *name, int len)
 static void
 macos_to_unix_filename(char *name, int len)
 {
-	register int    i;
+	int    i;
 
 	for (i = 0; i < len; i++) {
 		if (name[i] == ':')
@@ -147,7 +147,7 @@ macos_to_unix_filename(char *name, int len)
 static void
 unix_to_generic_filename(char *name, int len)
 {
-	register int    i;
+	int    i;
 
 	for (i = 0; i < len; i++) {
 		if (name[i] == '/')

@@ -308,7 +308,8 @@ C_OBJS= \
 	src/archivers/7z/Delta.o \
 	src/archivers/7z/Sha256.o \
 	src/archivers/7z/XzCrc64.o \
-	src/archivers/7z/XzDec.o
+	src/archivers/7z/XzDec.o \
+	src/archivers/chd/utf8proc.o
 
 OBJS =	\
 	src/akiko.o \
@@ -391,14 +392,17 @@ OBJS =	\
 	src/archivers/7z/Bcj2.o \
 	src/archivers/7z/Bra.o \
 	src/archivers/7z/Bra86.o \
+	src/archivers/7z/LzFind.o \
+	src/archivers/7z/LzmaEnc.o \
 	src/archivers/7z/LzmaDec.o \
 	src/archivers/7z/Lzma2Dec.o \
 	src/archivers/7z/Xz.o \
-	src/archivers/chd/astring.o \
-	src/archivers/chd/chd.o \
+	src/archivers/chd/avhuff.o \
+	src/archivers/chd/bitmap.o \
 	src/archivers/chd/cdrom.o \
+	src/archivers/chd/chd.o \
+	src/archivers/chd/chdcd.o \
 	src/archivers/chd/chdcodec.o \
-	src/archivers/chd/chdglue.o \
 	src/archivers/chd/corealloc.o \
 	src/archivers/chd/corefile.o \
 	src/archivers/chd/corestr.o \
@@ -407,10 +411,18 @@ OBJS =	\
 	src/archivers/chd/hashing.o \
 	src/archivers/chd/huffman.o \
 	src/archivers/chd/md5.o \
-	src/archivers/chd/sha1.o \
-	src/archivers/chd/strformat.o \
 	src/archivers/chd/osdcore.o \
+	src/archivers/chd/osdlib_unix.o \
 	src/archivers/chd/osdsync.o \
+	src/archivers/chd/palette.o \
+	src/archivers/chd/posixdir.o \
+	src/archivers/chd/posixfile.o \
+	src/archivers/chd/posixptty.o \
+	src/archivers/chd/posixsocket.o \
+	src/archivers/chd/strconv.o \
+	src/archivers/chd/strformat.o \
+	src/archivers/chd/unicode.o \
+	src/archivers/chd/vecstream.o \
 	src/archivers/dms/crc_csum.o \
 	src/archivers/dms/getbits.o \
 	src/archivers/dms/maketbl.o \

@@ -1071,10 +1071,52 @@
     <ClCompile Include="..\src\archivers\chd\corefile.cpp">
       <Filter>src\archivers\chd</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\archivers\chd\chdglue.cpp">
+    <ClCompile Include="..\src\archivers\chd\corestr.cpp">
       <Filter>src\archivers\chd</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\archivers\chd\corestr.cpp">
+    <ClCompile Include="..\src\archivers\chd\cdrom.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\7z\LzmaEnc.cpp">
+      <Filter>src\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\posixfile.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\avhuff.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\bitmap.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\palette.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\vecstream.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\strconv.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\unicode.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\osdlib_unix.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\posixsocket.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\posixptty.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\posixdir.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\utf8proc.c">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\utf8proc_data.c">
       <Filter>src\archivers\chd</Filter>
     </ClCompile>
   </ItemGroup>
@@ -1872,6 +1914,18 @@
       <Filter>src\archivers\chd</Filter>
     </ClInclude>
     <ClInclude Include="..\src\archivers\chd\corestr.h">
+      <Filter>src\archivers\chd</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\archivers\chd\posixfile.h">
+      <Filter>src\archivers\chd</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\archivers\chd\strconv.h">
+      <Filter>src\archivers\chd</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\archivers\chd\utf8proc.h">
+      <Filter>src\archivers\chd</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\archivers\chd\osdlib.h">
       <Filter>src\archivers\chd</Filter>
     </ClInclude>
   </ItemGroup>

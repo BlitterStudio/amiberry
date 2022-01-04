@@ -16,7 +16,7 @@ typedef struct _CLzmaEncProps
   UInt32 dictSize; /* (1 << 12) <= dictSize <= (1 << 27) for 32-bit version
                       (1 << 12) <= dictSize <= (1 << 30) for 64-bit version
                        default = (1 << 24) */
-  UInt32 reduceSize; /* estimated size of data that will be compressed. default = 0xFFFFFFFF.
+  UInt64 reduceSize; /* estimated size of data that will be compressed. default = 0xFFFFFFFF.
                         Encoder uses this value to reduce dictionary size */
   int lc;          /* 0 <= lc <= 8, default = 3 */
   int lp;          /* 0 <= lp <= 4, default = 0 */
