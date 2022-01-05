@@ -445,6 +445,7 @@
     <ClCompile Include="..\src\osdep\clipboard.cpp" />
     <ClCompile Include="..\src\osdep\fsdb_host.cpp" />
     <ClCompile Include="..\src\osdep\gui\CreateFilesysHardfile.cpp" />
+    <ClCompile Include="..\src\osdep\gui\EditFilesysHardDrive.cpp" />
     <ClCompile Include="..\src\osdep\gui\EditFilesysHardfile.cpp" />
     <ClCompile Include="..\src\osdep\gui\EditFilesysVirtual.cpp" />
     <ClCompile Include="..\src\osdep\gui\main_window.cpp" />
