@@ -1,8 +1,9 @@
 /* LzmaEnc.c -- LZMA Encoder
 2016-05-16 : Igor Pavlov : Public domain */
 
+#include "Precomp.h"
+
 #include <string.h>
-#define UNUSED_VAR(x) (void)x;
 
 /* #define SHOW_STAT */
 /* #define SHOW_STAT2 */
@@ -14,6 +15,9 @@
 #include "LzmaEnc.h"
 
 #include "LzFind.h"
+#ifndef _7ZIP_ST
+#include "LzFindMt.h"
+#endif
 
 #ifdef SHOW_STAT
 static unsigned g_STAT_OFFSET = 0;
@@ -332,6 +336,11 @@ typedef struct
     SRes result;
 
     CRangeEnc rc;
+
+#ifndef _7ZIP_ST
+    Bool mtMode;
+    CMatchFinderMt matchFinderMt;
+#endif
 
     CMatchFinder matchFinderBase;
 
@@ -1724,6 +1733,11 @@ void LzmaEnc_Construct(CLzmaEnc* p)
     RangeEnc_Construct(&p->rc);
     MatchFinder_Construct(&p->matchFinderBase);
 
+#ifndef _7ZIP_ST
+    MatchFinderMt_Construct(&p->matchFinderMt);
+    p->matchFinderMt.MatchFinder = &p->matchFinderBase;
+#endif
+
     {
         CLzmaEncProps props;
         LzmaEncProps_Init(&props);
@@ -1758,6 +1772,10 @@ void LzmaEnc_FreeLits(CLzmaEnc* p, ISzAlloc* alloc)
 
 void LzmaEnc_Destruct(CLzmaEnc* p, ISzAlloc* alloc, ISzAlloc* allocBig)
 {
+#ifndef _7ZIP_ST
+    MatchFinderMt_Destruct(&p->matchFinderMt, allocBig);
+#endif
+
     MatchFinder_Free(&p->matchFinderBase, allocBig);
     LzmaEnc_FreeLits(p, alloc);
     RangeEnc_Free(&p->rc, alloc);
@@ -1939,6 +1957,10 @@ static SRes LzmaEnc_Alloc(CLzmaEnc* p, UInt32 keepWindowSize, ISzAlloc* alloc, I
     if (!RangeEnc_Alloc(&p->rc, alloc))
         return SZ_ERROR_MEM;
 
+#ifndef _7ZIP_ST
+    p->mtMode = (p->multiThread && !p->fastMode && (p->matchFinderBase.btMode != 0));
+#endif
+
     {
         unsigned lclp = p->lc + p->lp;
         if (!p->litProbs || !p->saveState.litProbs || p->lclp != lclp)
@@ -1960,6 +1982,15 @@ static SRes LzmaEnc_Alloc(CLzmaEnc* p, UInt32 keepWindowSize, ISzAlloc* alloc, I
     if (beforeSize + p->dictSize < keepWindowSize)
         beforeSize = keepWindowSize - p->dictSize;
 
+#ifndef _7ZIP_ST
+    if (p->mtMode)
+    {
+        RINOK(MatchFinderMt_Create(&p->matchFinderMt, p->dictSize, beforeSize, p->numFastBytes, LZMA_MATCH_LEN_MAX, allocBig));
+        p->matchFinderObj = &p->matchFinderMt;
+        MatchFinderMt_CreateVTable(&p->matchFinderMt, &p->matchFinder);
+    }
+    else
+#endif
     {
         if (!MatchFinder_Create(&p->matchFinderBase, p->dictSize, beforeSize, p->numFastBytes, LZMA_MATCH_LEN_MAX, allocBig))
             return SZ_ERROR_MEM;
@@ -2100,7 +2131,13 @@ SRes LzmaEnc_MemPrepare(CLzmaEncHandle pp, const Byte* src, SizeT srcLen,
 
 void LzmaEnc_Finish(CLzmaEncHandle pp)
 {
+#ifndef _7ZIP_ST
+    CLzmaEnc* p = (CLzmaEnc*)pp;
+    if (p->mtMode)
+        MatchFinderMt_ReleaseStream(&p->matchFinderMt);
+#else
     UNUSED_VAR(pp);
+#endif
 }
 
 
