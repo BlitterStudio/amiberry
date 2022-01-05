@@ -31,9 +31,9 @@
 //#include "debug.h"
 #include "ini.h"
 #include "rommgr.h"
+#include "zarchive.h"
 
 #ifdef WITH_CHD
-#include "archivers/chd/chdtypes.h"
 #include "archivers/chd/chd.h"
 #include "archivers/chd/harddisk.h"
 #endif
@@ -664,16 +664,16 @@ int hdf_open (struct hardfiledata *hfd, const TCHAR *pname)
 			zf = zfile_fopen (nametmp, _T("rb"));
 		}
 		if (zf) {
-			int err = CHDERR_FILE_NOT_WRITEABLE;
+			std::error_condition err;
 			hard_disk_file *chdf;
 			chd_file *cf = new chd_file();
 			if (!chd_readonly)
-				err = cf->open(*zf, true, NULL);
-			if (err == CHDERR_FILE_NOT_WRITEABLE) {
+				err = cf->open(zf->name, true, NULL);
+			if (err == chd_file::error::FILE_NOT_WRITEABLE) {
 				chd_readonly = true;
-				err = cf->open(*zf, false, NULL);
+				err = cf->open(zf->name, false, NULL);
 			}
-			if (err != CHDERR_NONE) {
+			if (err != std::error_condition()) {
 				zfile_fclose (zf);
 				delete cf;
 				goto end;
@@ -1111,7 +1111,7 @@ static int hdf_read2 (struct hardfiledata *hfd, void *buffer, uae_u64 offset, in
 #ifdef WITH_CHD
 	else if (hfd->hfd_type == HFD_CHD_OTHER) {
 		chd_file *cf = (chd_file*)hfd->chd_handle;
-		if (cf->read_bytes(offset, buffer, len) == CHDERR_NONE)
+		if (cf->read_bytes(offset, buffer, len) == std::error_condition())
 			ret = len;
 		else
 			return 0;
@@ -1123,7 +1123,7 @@ static int hdf_read2 (struct hardfiledata *hfd, void *buffer, uae_u64 offset, in
 		int got = 0;
 		offset /= chdi->sectorbytes;
 		while (len > 0) {
-			if (cf->read_units(offset, buf) != CHDERR_NONE)
+			if (cf->read_units(offset, buf) != std::error_condition())
 				break;
 			got += chdi->sectorbytes;
 			buf += chdi->sectorbytes;
@@ -1174,7 +1174,7 @@ static int hdf_write2 (struct hardfiledata *hfd, void *buffer, uae_u64 offset, i
 		int got = 0;
 		offset /= chdi->sectorbytes;
 		while (len > 0) {
-			if (cf->write_units(offset, buf) != CHDERR_NONE)
+			if (cf->write_units(offset, buf) != std::error_condition())
 				break;
 			got += chdi->sectorbytes;
 			buf += chdi->sectorbytes;

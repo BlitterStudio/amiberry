@@ -22,8 +22,6 @@
 #define DIALOG_WIDTH 620
 #define DIALOG_HEIGHT 202
 
-static const char *harddisk_filter[] = { ".hdf", ".vhd", "\0" };
-
 static bool dialogResult = false;
 static bool dialogFinished = false;
 static bool fileSelected = false;

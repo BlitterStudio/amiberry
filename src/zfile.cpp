@@ -1192,7 +1192,7 @@ static struct zfile *xz (struct zfile *z, int *retcode)
 		for (;;) {
 			SizeT srclen = read;
 			SizeT outlen = XZ_OUT_SIZE;
-			if (XzUnpacker_Code (&cx, out, &outlen, inp, &srclen, LZMA_FINISH_ANY, &status) != SZ_OK) {
+			if (XzUnpacker_Code (&cx, out, &outlen, inp, &srclen, CODER_FINISH_ANY, &status) != SZ_OK) {
 				zfile_fclose (zo);
 				zo = NULL;
 				break;

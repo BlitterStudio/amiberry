@@ -300,15 +300,48 @@ endif
 
 
 export CFLAGS := $(CPUFLAGS) $(CFLAGS) $(EXTRA_CFLAGS)
-export CXXFLAGS = $(CFLAGS) -std=gnu++14
+export CXXFLAGS = $(CFLAGS) -std=gnu++17
 export CPPFLAGS
 
 C_OBJS= \
+	src/archivers/7z/7zAlloc.o \
+	src/archivers/7z/7zArcIn.o \
+	src/archivers/7z/7zBuf.o \
+	src/archivers/7z/7zBuf2.o \
+	src/archivers/7z/7zCrc.o \
+	src/archivers/7z/7zCrcOpt.o \
+	src/archivers/7z/7zDec.o \
+	src/archivers/7z/7zFile.o \
+	src/archivers/7z/7zStream.o \
+	src/archivers/7z/Aes.o \
+	src/archivers/7z/AesOpt.o \
+	src/archivers/7z/Alloc.o \
+	src/archivers/7z/Bcj2.o \
+	src/archivers/7z/Bra.o \
+	src/archivers/7z/Bra86.o \
 	src/archivers/7z/BraIA64.o \
+	src/archivers/7z/CpuArch.o \
 	src/archivers/7z/Delta.o \
+	src/archivers/7z/LzFind.o \
+	src/archivers/7z/Lzma2Dec.o \
+	src/archivers/7z/Lzma2Enc.o \
+	src/archivers/7z/Lzma86Dec.o \
+	src/archivers/7z/Lzma86Enc.o \
+	src/archivers/7z/LzmaDec.o \
+	src/archivers/7z/LzmaEnc.o \
+	src/archivers/7z/LzmaLib.o \
+	src/archivers/7z/Ppmd7.o \
+	src/archivers/7z/Ppmd7Dec.o \
+	src/archivers/7z/Ppmd7Enc.o \
 	src/archivers/7z/Sha256.o \
+	src/archivers/7z/Sort.o \
+	src/archivers/7z/Xz.o \
 	src/archivers/7z/XzCrc64.o \
-	src/archivers/7z/XzDec.o
+	src/archivers/7z/XzCrc64Opt.o \
+	src/archivers/7z/XzDec.o \
+	src/archivers/7z/XzEnc.o \
+	src/archivers/7z/XzIn.o \
+	src/archivers/chd/utf8proc.o
 
 OBJS =	\
 	src/akiko.o \
@@ -381,19 +414,32 @@ OBJS =	\
 	src/uaeresource.o \
 	src/zfile.o \
 	src/zfile_archive.o \
-	src/archivers/7z/7zAlloc.o \
-	src/archivers/7z/7zBuf.o \
-	src/archivers/7z/7zCrc.o \
-	src/archivers/7z/7zCrcOpt.o \
-	src/archivers/7z/7zDec.o \
-	src/archivers/7z/7zIn.o \
-	src/archivers/7z/7zStream.o \
-	src/archivers/7z/Bcj2.o \
-	src/archivers/7z/Bra.o \
-	src/archivers/7z/Bra86.o \
-	src/archivers/7z/LzmaDec.o \
-	src/archivers/7z/Lzma2Dec.o \
-	src/archivers/7z/Xz.o \
+	src/archivers/chd/avhuff.o \
+	src/archivers/chd/bitmap.o \
+	src/archivers/chd/cdrom.o \
+	src/archivers/chd/chd.o \
+	src/archivers/chd/chdcd.o \
+	src/archivers/chd/chdcodec.o \
+	src/archivers/chd/corealloc.o \
+	src/archivers/chd/corefile.o \
+	src/archivers/chd/corestr.o \
+	src/archivers/chd/flac.o \
+	src/archivers/chd/harddisk.o \
+	src/archivers/chd/hashing.o \
+	src/archivers/chd/huffman.o \
+	src/archivers/chd/md5.o \
+	src/archivers/chd/osdcore.o \
+	src/archivers/chd/osdlib_unix.o \
+	src/archivers/chd/osdsync.o \
+	src/archivers/chd/palette.o \
+	src/archivers/chd/posixdir.o \
+	src/archivers/chd/posixfile.o \
+	src/archivers/chd/posixptty.o \
+	src/archivers/chd/posixsocket.o \
+	src/archivers/chd/strconv.o \
+	src/archivers/chd/strformat.o \
+	src/archivers/chd/unicode.o \
+	src/archivers/chd/vecstream.o \
 	src/archivers/dms/crc_csum.o \
 	src/archivers/dms/getbits.o \
 	src/archivers/dms/maketbl.o \

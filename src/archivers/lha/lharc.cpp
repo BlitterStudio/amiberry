@@ -112,8 +112,8 @@ init_variable()		/* Added N.Watazaki */
 /* ------------------------------------------------------------------------ */
 static int sort_by_ascii(char **a, char **b)
 {
-	register char  *p, *q;
-	register int    c1, c2;
+	char  *p, *q;
+	int    c1, c2;
 
 	p = *a, q = *b;
 	if (generic_format) {
@@ -188,9 +188,9 @@ void add_sp(struct string_pool *sp, char *name, int len)
 /* ------------------------------------------------------------------------ */
 void finish_sp(struct string_pool *sp, int *v_count, char ***v_vector)
 {
-	int             i;
-	register char  *p;
-	char          **v;
+	int i;
+	char *p;
+	char **v;
 
 	v = (char **) xmalloc(char*, sp->n + 1);
 	*v++ = sp->buffer;
