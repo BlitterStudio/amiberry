@@ -455,6 +455,7 @@ OBJS =	\
 	src/osdep/gui/CreateFilesysHardfile.o \
 	src/osdep/gui/EditFilesysVirtual.o \
 	src/osdep/gui/EditFilesysHardfile.o \
+	src/osdep/gui/EditFilesysHardDrive.o \
 	src/osdep/gui/PanelAbout.o \
 	src/osdep/gui/PanelPaths.o \
 	src/osdep/gui/PanelQuickstart.o \

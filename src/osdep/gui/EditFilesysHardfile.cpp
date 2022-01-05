@@ -476,6 +476,7 @@ static void InitEditFilesysHardfile()
 	lblPath->setAlignment(gcn::Graphics::RIGHT);
 	txtPath = new gcn::TextField();
 	txtPath->setSize(500, TEXTFIELD_HEIGHT);
+	txtPath->setId("txtHdfPath");
 	
 	cmdPath = new gcn::Button("...");
 	cmdPath->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);

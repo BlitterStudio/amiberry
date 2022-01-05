@@ -305,6 +305,7 @@ bool SelectFolder(const char* title, char* value);
 bool SelectFile(const char* title, char* value, const char* filter[], bool create = false);
 bool EditFilesysVirtual(int unit_no);
 bool EditFilesysHardfile(int unit_no);
+bool EditFilesysHardDrive(int unit_no);
 bool CreateFilesysHardfile(void);
 void ShowHelp(const char* title, const std::vector<std::string>& text);
 void ShowDiskInfo(const char* title, const std::vector<std::string>& text);
@@ -327,7 +328,7 @@ enum
 bool HandleNavigation(int direction);
 void PushFakeKey(SDL_Keycode inKey);
 
-#define MAX_HD_DEVICES 6
+#define MAX_HD_DEVICES 8
 extern void CreateDefaultDevicename(char* name);
 extern bool DevicenameExists(const char* name);
 extern int tweakbootpri(int bp, int ab, int dnm);

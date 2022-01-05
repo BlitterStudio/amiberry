@@ -50,6 +50,7 @@ static gcn::Button* listCmdProps[MAX_HD_DEVICES];
 static gcn::ImageButton* listCmdDelete[MAX_HD_DEVICES];
 static gcn::Button* cmdAddDirectory;
 static gcn::Button* cmdAddHardfile;
+static gcn::Button* cmdAddHardDrive;
 static gcn::Button* cmdCreateHardfile;
 
 static gcn::CheckBox* chkCD;
@@ -140,9 +141,14 @@ public:
 					if (EditFilesysVirtual(i))
 						gui_force_rtarea_hdchange();
 				}
-				else
+				else if (GetHDType(i) == FILESYS_HARDFILE || GetHDType(i) == FILESYS_HARDFILE_RDB)
 				{
 					if (EditFilesysHardfile(i))
+						gui_force_rtarea_hdchange();
+				}
+				else if (GetHDType(i) == FILESYS_HARDDRIVE)
+				{
+					if (EditFilesysHardDrive(i))
 						gui_force_rtarea_hdchange();
 				}
 				listCmdProps[i]->requestFocus();
@@ -156,7 +162,7 @@ public:
 static HDEditActionListener* hdEditActionListener;
 
 
-class AddVirtualHDActionListener : public gcn::ActionListener
+class HDAddActionListener : public gcn::ActionListener
 {
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
@@ -168,36 +174,21 @@ public:
 			cmdAddDirectory->requestFocus();
 			RefreshPanelHD();
 		}
-	}
-};
-
-AddVirtualHDActionListener* addVirtualHDActionListener;
-
-
-class AddHardfileActionListener : public gcn::ActionListener
-{
-public:
-	void action(const gcn::ActionEvent& actionEvent) override
-	{
-		if (actionEvent.getSource() == cmdAddHardfile)
+		else if (actionEvent.getSource() == cmdAddHardfile)
 		{
 			if (EditFilesysHardfile(-1))
 				gui_force_rtarea_hdchange();
 			cmdAddHardfile->requestFocus();
 			RefreshPanelHD();
 		}
-	}
-};
-
-AddHardfileActionListener* addHardfileActionListener;
-
-
-class CreateHardfileActionListener : public gcn::ActionListener
-{
-public:
-	void action(const gcn::ActionEvent& actionEvent) override
-	{
-		if (actionEvent.getSource() == cmdCreateHardfile)
+		else if (actionEvent.getSource() == cmdAddHardDrive)
+		{
+			if (EditFilesysHardDrive(-1))
+				gui_force_rtarea_hdchange();
+			cmdAddHardDrive->requestFocus();
+			RefreshPanelHD();
+		}
+		else if (actionEvent.getSource() == cmdCreateHardfile)
 		{
 			if (CreateFilesysHardfile())
 				gui_force_rtarea_hdchange();
@@ -207,8 +198,7 @@ public:
 	}
 };
 
-CreateHardfileActionListener* createHardfileActionListener;
-
+HDAddActionListener* hdAddActionListener;
 
 class CDCheckActionListener : public gcn::ActionListener
 {
@@ -350,9 +340,7 @@ void InitPanelHD(const config_category& category)
 
 	hdRemoveActionListener = new HDRemoveActionListener();
 	hdEditActionListener = new HDEditActionListener();
-	addVirtualHDActionListener = new AddVirtualHDActionListener();
-	addHardfileActionListener = new AddHardfileActionListener();
-	createHardfileActionListener = new CreateHardfileActionListener();
+	hdAddActionListener = new HDAddActionListener();
 
 	for (col = 0; col < COL_COUNT; ++col)
 		lblList[col] = new gcn::Label(column_caption[col]);
@@ -387,23 +375,29 @@ void InitPanelHD(const config_category& category)
 		}
 	}
 
-	cmdAddDirectory = new gcn::Button("Add Directory or Archive");
+	cmdAddDirectory = new gcn::Button("Add Directory");
 	cmdAddDirectory->setBaseColor(gui_baseCol);
-	cmdAddDirectory->setSize(cmdAddDirectory->getWidth() + 10, BUTTON_HEIGHT);
+	cmdAddDirectory->setSize(cmdAddDirectory->getWidth() + 30, BUTTON_HEIGHT);
 	cmdAddDirectory->setId("cmdAddDir");
-	cmdAddDirectory->addActionListener(addVirtualHDActionListener);
+	cmdAddDirectory->addActionListener(hdAddActionListener);
 
-	cmdAddHardfile = new gcn::Button("Add Hardfile or Hard Drive");
+	cmdAddHardfile = new gcn::Button("Add Hardfile");
 	cmdAddHardfile->setBaseColor(gui_baseCol);
-	cmdAddHardfile->setSize(cmdAddHardfile->getWidth() + 10, BUTTON_HEIGHT);
+	cmdAddHardfile->setSize(cmdAddHardfile->getWidth() + 30, BUTTON_HEIGHT);
 	cmdAddHardfile->setId("cmdAddHDF");
-	cmdAddHardfile->addActionListener(addHardfileActionListener);
+	cmdAddHardfile->addActionListener(hdAddActionListener);
+
+	cmdAddHardDrive = new gcn::Button("Add Hard Drive");
+	cmdAddHardDrive->setBaseColor(gui_baseCol);
+	cmdAddHardDrive->setSize(cmdAddHardDrive->getWidth() + 30, BUTTON_HEIGHT);
+	cmdAddHardDrive->setId("cmdAddHardDrive");
+	cmdAddHardDrive->addActionListener(hdAddActionListener);
 
 	cmdCreateHardfile = new gcn::Button("Create Hardfile");
 	cmdCreateHardfile->setBaseColor(gui_baseCol);
 	cmdCreateHardfile->setSize(cmdAddDirectory->getWidth(), BUTTON_HEIGHT);
 	cmdCreateHardfile->setId("cmdCreateHDF");
-	cmdCreateHardfile->addActionListener(createHardfileActionListener);
+	cmdCreateHardfile->addActionListener(hdAddActionListener);
 
 	cdCheckActionListener = new CDCheckActionListener();
 	cdButtonActionListener = new CDButtonActionListener();
@@ -462,7 +456,8 @@ void InitPanelHD(const config_category& category)
 
 	posY += DISTANCE_NEXT_Y / 2;
 	category.panel->add(cmdAddDirectory, DISTANCE_BORDER, posY);
-	category.panel->add(cmdAddHardfile, DISTANCE_BORDER + cmdAddDirectory->getWidth() + DISTANCE_NEXT_X, posY);
+	category.panel->add(cmdAddHardfile, cmdAddDirectory->getX() + cmdAddDirectory->getWidth() + DISTANCE_NEXT_X, posY);
+	category.panel->add(cmdAddHardDrive, cmdAddHardfile->getX() + cmdAddHardfile->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += cmdAddDirectory->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(cmdCreateHardfile, cmdAddDirectory->getX(), posY);
@@ -500,6 +495,7 @@ void ExitPanelHD()
 
 	delete cmdAddDirectory;
 	delete cmdAddHardfile;
+	delete cmdAddHardDrive;
 	delete cmdCreateHardfile;
 
 	delete chkCD;
@@ -514,9 +510,7 @@ void ExitPanelHD()
 
 	delete hdRemoveActionListener;
 	delete hdEditActionListener;
-	delete addVirtualHDActionListener;
-	delete addHardfileActionListener;
-	delete createHardfileActionListener;
+	delete hdAddActionListener;
 }
 
 

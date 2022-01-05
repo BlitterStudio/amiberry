@@ -1029,6 +1029,123 @@
     <ClCompile Include="..\src\osdep\gui\PanelDiskSwapper.cpp">
       <Filter>src\osdep\gui</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\chd.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\chdcd.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\chdcodec.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\corealloc.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\flac.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\harddisk.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\hashing.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\huffman.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\md5.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\osdcore.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\osdsync.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\strformat.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\corefile.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\corestr.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\cdrom.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\7z\LzmaEnc.c">
+      <Filter>src\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\posixfile.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\avhuff.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\bitmap.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\palette.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\vecstream.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\strconv.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\unicode.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\osdlib_unix.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\posixsocket.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\posixptty.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\posixdir.cpp">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\utf8proc.c">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\chd\utf8proc_data.c">
+      <Filter>src\archivers\chd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\7z\Aes.c">
+      <Filter>src\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\7z\AesOpt.c">
+      <Filter>src\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\7z\Lzma2Enc.c">
+      <Filter>src\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\7z\LzmaDec.c">
+      <Filter>src\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\7z\Sort.c">
+      <Filter>src\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\7z\XzCrc64Opt.c">
+      <Filter>src\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\7z\XzEnc.c">
+      <Filter>src\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\7z\7zArcIn.c">
+      <Filter>src\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\archivers\7z\Lzma86Enc.c">
+      <Filter>src\archivers\7z</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\osdep\gui\EditFilesysHardDrive.cpp">
+      <Filter>src\osdep\gui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\archivers\7z\7zBuf.h">
