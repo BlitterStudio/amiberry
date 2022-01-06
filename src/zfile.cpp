@@ -1136,6 +1136,7 @@ static struct zfile *wrp (struct zfile *z, int *retcode)
 #include "7z/Xz.h"
 #include "7z/LzmaDec.h"
 #include "7z/7zCrc.h"
+#include "7z/XzCrc64.h"
 
 static void *SzAlloc (void *p, size_t size)
 {
@@ -1162,7 +1163,10 @@ static struct zfile *xz (struct zfile *z, int *retcode)
 	allocImp.Alloc = SzAlloc;
 	allocImp.Free = SzFree;
 	if (!iscrc)
-		CrcGenerateTable ();
+	{
+		CrcGenerateTable();
+		Crc64GenerateTable();
+	}
 	iscrc = true;
 //	if (XzUnpacker_Create (&cx, &allocImp) != SZ_OK)
 //		return NULL;
