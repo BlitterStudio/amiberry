@@ -283,7 +283,7 @@ static const struct quantizer_spec* FASTCALL read_allocation(int sb, int b2_tabl
 
 static void FASTCALL read_samples(const struct quantizer_spec *q, int scalefactor, int *sample) {
     int idx, adj, scale;
-    register int val;
+    int val;
     if (!q) {
         // no bits allocated for this subband
         sample[0] = sample[1] = sample[2] = 0;

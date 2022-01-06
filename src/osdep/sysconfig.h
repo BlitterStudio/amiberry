@@ -79,7 +79,7 @@
 /* #define SANA2 */ /* SANA2 network driver */
 /* #define AMAX */ /* A-Max ROM adapater emulation */
 /* #define RETROPLATFORM */ /* Cloanto RetroPlayer support */
-/* #define WITH_CHD */
+#define WITH_CHD
 /* #define WITH_LUA */ /* lua scripting */
 #define WITH_UAENATIVE
 /* #define WITH_SLIRP */
