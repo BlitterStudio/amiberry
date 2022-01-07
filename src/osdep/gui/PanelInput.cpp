@@ -704,7 +704,8 @@ void RefreshPanelInput()
 			break;
 		}
 	}
-	
+
+	chkMouseHack->setEnabled(!emulating);
 	chkMouseHack->setSelected(changed_prefs.input_tablet > 0);
 	optBoth->setEnabled(changed_prefs.input_tablet > 0);
 	optNative->setEnabled(changed_prefs.input_tablet > 0);
