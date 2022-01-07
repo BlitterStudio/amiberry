@@ -301,7 +301,6 @@ public:
 			char tmp[MAX_DPATH];
 			strncpy(tmp, txtPath->getText().c_str(), MAX_DPATH);
 			default_hfdlg(&current_hfdlg);
-			CreateDefaultDevicename(current_hfdlg.ci.devname);
 			_tcscpy(current_hfdlg.ci.rootdir, tmp);
 			// Set RDB mode if IDE or SCSI
 			if (current_hfdlg.ci.controller_type > 0) {
