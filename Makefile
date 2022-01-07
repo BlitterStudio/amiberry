@@ -343,7 +343,7 @@ C_OBJS= \
 	src/archivers/7z/XzIn.o \
 	src/archivers/chd/utf8proc.o
 
-OBJS =	\
+OBJS = \
 	src/akiko.o \
 	src/ar.o \
 	src/audio.o \
