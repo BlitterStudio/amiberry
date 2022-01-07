@@ -684,9 +684,9 @@ void usage()
 	std::cout << " -h                         Show this help." << std::endl;
 	std::cout << " --help                     \n" << std::endl;
 	std::cout << " -f <file>                  Load a configuration file." << std::endl;
-	std::cout << " --config <file>            \n" << std::endl;
+	std::cout << " --config <file>            " << std::endl;
 	std::cout << " --model <Amiga Model>      Amiga model to emulate, from the QuickStart options." << std::endl;
-	std::cout << "							  Available options are: A500, A500P, A1200, A4000, CD32 and CDTV.\n" << std::endl;
+	std::cout << "                            Available options are: A500, A500P, A1200, A4000, CD32 and CDTV.\n" << std::endl;
 	std::cout << " --autoload <file>          Load a WHDLoad game or .CUE CD32 image using the WHDBooter." << std::endl;
 	std::cout << " --cdimage <file>           Load the CD image provided when starting emulation (for CD32)." << std::endl;
 	std::cout << " --statefile <file>         Load a save state file." << std::endl;
@@ -694,8 +694,8 @@ void usage()
 	std::cout << "                            Edit a configuration file in order to know valid parameters and settings." << std::endl;
 	std::cout << "\nAdditional options:" << std::endl;
 	std::cout << " -0 <disk.adf>              Insert specified ADF image into emulated floppy drive 0-3." << std::endl;
-	std::cout << " -1 <disk.adf>              \n" << std::endl;
-	std::cout << " -2 <disk.adf>              \n" << std::endl;
+	std::cout << " -1 <disk.adf>              " << std::endl;
+	std::cout << " -2 <disk.adf>              " << std::endl;
 	std::cout << " -3 <disk.adf>              \n" << std::endl;
 	std::cout << " -diskswapper=d1.adf,d2.adf Comma-separated list of disk images to pre-load to the Disk Swapper." << std::endl;
 	std::cout << " -r <kick.rom>              Load main ROM from the specified path." << std::endl;
