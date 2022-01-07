@@ -716,7 +716,7 @@ void usage()
 	std::cout << " -F <value>                 Fastmem size, value in 1MB blocks, i.e. 2=2MB." << std::endl;
 	std::cout << " -b <value>                 Bogomem size, value in 256KB blocks, i.e. 2=512KB." << std::endl;
 	std::cout << " -c <value>                 Size of chip memory (in number of 512 KBytes chunks)." << std::endl;
-	std::cout << " -I <value>                 Set keyboard layout language. Posible values: de, dk, us, se, fr, it, es." << std::endl;
+	std::cout << " -I <value>                 Set keyboard layout language. Possible values: de, dk, us, se, fr, it, es." << std::endl;
 	std::cout << " -O <value>                 Set graphics specs." << std::endl;
 	std::cout << " -H <value>                 Color mode." << std::endl;
 	std::cout << " -o <amiberry cnf>=<value>  Set Amiberry configuration parameter with value." << std::endl;
