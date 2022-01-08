@@ -526,6 +526,7 @@
     <ClCompile Include="..\src\readcpu.cpp" />
     <ClCompile Include="..\src\rommgr.cpp" />
     <ClCompile Include="..\src\rtc.cpp" />
+    <ClCompile Include="..\src\sampler.cpp" />
     <ClCompile Include="..\src\savestate.cpp" />
     <ClCompile Include="..\src\scp.cpp" />
     <ClCompile Include="..\src\scsi.cpp" />
@@ -770,6 +771,7 @@
     <ClInclude Include="..\src\include\rommgr.h" />
     <ClInclude Include="..\src\include\rtc.h" />
     <ClInclude Include="..\src\include\rtgmodes.h" />
+    <ClInclude Include="..\src\include\sampler.h" />
     <ClInclude Include="..\src\include\sana2.h" />
     <ClInclude Include="..\src\include\savestate.h" />
     <ClInclude Include="..\src\include\scp.h" />

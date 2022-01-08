@@ -38,7 +38,7 @@
 #include "keyboard.h"
 #include "uae.h"
 //#include "amax.h"
-//#include "sampler.h"
+#include "sampler.h"
 #include "dongle.h"
 #include "inputrecord.h"
 #include "autoconf.h"
@@ -1118,10 +1118,12 @@ static uae_u8 ReadCIAA (unsigned int addr, uae_u32 *flags)
 		} else if (arcadia_bios) {
 			tmp = arcadia_parport(0, ciaaprb, ciaadrb);
 #endif
-		} else if (currprefs.win32_samplersoundcard >= 0)
+		} else
+#endif
+			if (currprefs.samplersoundcard >= 0)
 
 			tmp = sampler_getsample((ciabpra & 4) ? 1 : 0);
-#endif
+
 		tmp = handle_parport_joystick (0, tmp);
 		tmp = dongle_cia_read (1, reg, ciaadrb, tmp);
 		// PBON

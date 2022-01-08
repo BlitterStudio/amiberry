@@ -398,6 +398,7 @@ OBJS = \
 	src/parser.o \
 	src/rommgr.o \
 	src/rtc.o \
+	src/sampler.o \
 	src/savestate.o \
 	src/scp.o \
 	src/scsi.o \

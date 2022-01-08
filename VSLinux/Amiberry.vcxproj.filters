@@ -1143,6 +1143,9 @@
     <ClCompile Include="..\src\osdep\gui\EditFilesysHardDrive.cpp">
       <Filter>src\osdep\gui</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\sampler.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\archivers\7z\7zBuf.h">
@@ -1969,6 +1972,9 @@
     </ClInclude>
     <ClInclude Include="..\src\archivers\7z\XzEnc.h">
       <Filter>src\archivers\7z</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\sampler.h">
+      <Filter>src\include</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
