@@ -28,6 +28,8 @@
 #include <png.h>
 #include <SDL_image.h>
 
+#include "sampler.h"
+
 static uae_thread_id display_tid = nullptr;
 static smp_comm_pipe *volatile display_pipe = nullptr;
 static uae_sem_t display_sem = nullptr;
@@ -1506,6 +1508,13 @@ int check_prefs_changed_gfx()
 		inputdevice_acquire(TRUE);
 		setpriority(currprefs.active_capture_priority);
 		return 1;
+	}
+
+	if (currprefs.samplersoundcard != changed_prefs.samplersoundcard ||
+		currprefs.sampler_stereo != changed_prefs.sampler_stereo) {
+		currprefs.samplersoundcard = changed_prefs.samplersoundcard;
+		currprefs.sampler_stereo = changed_prefs.sampler_stereo;
+		sampler_free();
 	}
 
 	if (_tcscmp(currprefs.sername, changed_prefs.sername) ||

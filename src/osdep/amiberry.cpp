@@ -220,6 +220,7 @@ static char floppy_sounds_dir[MAX_DPATH];
 static char data_dir[MAX_DPATH];
 static char saveimage_dir[MAX_DPATH];
 static char savestate_dir[MAX_DPATH];
+static char ripper_path[MAX_DPATH];
 static char input_dir[MAX_DPATH];
 static char screenshot_dir[MAX_DPATH];
 static char amiberry_conf_file[MAX_DPATH];
@@ -1792,7 +1793,7 @@ void target_default_options(struct uae_prefs* p, int type)
 		p->inactive_input = 0;
 		//p->ctrl_F11_is_quit = 0;
 		//p->soundcard = 0;
-		//p->samplersoundcard = -1;
+		p->samplersoundcard = -1;
 		p->minimize_inactive = 0;
 		p->capture_always = true;
 		p->start_minimized = false;
@@ -2005,7 +2006,12 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_target_dwrite_bool(f, _T("borderless"), p->borderless);
 	cfgfile_target_dwrite_bool(f, _T("blank_monitors"), p->blankmonitors);
 	cfgfile_target_dwrite_str(f, _T("uaescsimode"), scsimode[p->uaescsimode]);
-	
+	if (p->samplersoundcard >= 0 && p->samplersoundcard < MAX_SOUND_DEVICES) {
+		cfgfile_target_write(f, _T("samplersoundcard"), _T("%d"), p->samplersoundcard);
+		if (record_devices[p->samplersoundcard])
+			cfgfile_target_write_str(f, _T("samplersoundcardname"), record_devices[p->samplersoundcard]->cfgname);
+	}
+
 	cfgfile_target_dwrite(f, _T("cpu_idle"), _T("%d"), p->cpu_idle);
 	cfgfile_target_dwrite_bool(f, _T("always_on_top"), p->main_alwaysontop);
 	cfgfile_target_dwrite_bool(f, _T("gui_always_on_top"), p->gui_alwaysontop);
@@ -2089,6 +2095,8 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 		return 1;
 	if (cfgfile_intval(option, value, _T("sound_pullmode"), &p->sound_pullmode, 1))
 		return 1;
+	if (cfgfile_intval(option, value, _T("samplersoundcard"), &p->samplersoundcard, 1))
+		return 1;
 	if (cfgfile_yesno(option, value, _T("use_analogue_remap"), &p->input_analog_remap))
 		return 1;
 	if (cfgfile_intval(option, value, "kbd_led_num", &p->kbd_led_num, 1))
@@ -2168,6 +2176,29 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 			p->use_serial = true;
 		else
 			p->use_serial = false;
+		return 1;
+	}
+	if (cfgfile_string(option, value, _T("samplersoundcardname"), tmpbuf, sizeof tmpbuf / sizeof(TCHAR))) {
+		int i, num;
+
+		num = p->samplersoundcard;
+		p->samplersoundcard = -1;
+		for (i = 0; i < MAX_SOUND_DEVICES && record_devices[i]; i++) {
+			if (i < num)
+				continue;
+			if (!_tcscmp(record_devices[i]->cfgname, tmpbuf)) {
+				p->samplersoundcard = i;
+				break;
+			}
+		}
+		if (p->samplersoundcard < 0) {
+			for (i = 0; i < MAX_SOUND_DEVICES && record_devices[i]; i++) {
+				if (!_tcscmp(record_devices[i]->cfgname, tmpbuf)) {
+					p->samplersoundcard = i;
+					break;
+				}
+			}
+		}
 		return 1;
 	}
 	if (cfgfile_string(option, value, _T("rtg_vblank"), tmpbuf, sizeof tmpbuf / sizeof(TCHAR))) {
@@ -2313,6 +2344,12 @@ void get_savestate_path(char* out, int size)
 {
 	fix_trailing(savestate_dir);
 	strncpy(out, savestate_dir, size - 1);
+}
+
+void fetch_ripperpath(TCHAR* out, int size)
+{
+	fix_trailing(ripper_path);
+	strncpy(out, ripper_path, size - 1);
 }
 
 void fetch_inputfilepath(TCHAR *out, int size)
@@ -2684,6 +2721,9 @@ void save_amiberry_settings(void)
 	snprintf(buffer, MAX_DPATH, "savestate_dir=%s\n", savestate_dir);
 	fputs(buffer, f);
 
+	snprintf(buffer, MAX_DPATH, "ripper_dir=%s\n", ripper_path);
+	fputs(buffer, f);
+
 	snprintf(buffer, MAX_DPATH, "inputrecordings_dir=%s\n", input_dir);
 	fputs(buffer, f);
 
@@ -2828,6 +2868,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_string(option, value, "data_dir", data_dir, sizeof data_dir);
 		ret |= cfgfile_string(option, value, "saveimage_dir", saveimage_dir, sizeof saveimage_dir);
 		ret |= cfgfile_string(option, value, "savestate_dir", savestate_dir, sizeof savestate_dir);
+		ret |= cfgfile_string(option, value, "ripper_path", ripper_path, sizeof ripper_path);
 		ret |= cfgfile_string(option, value, "inputrecordings_dir", input_dir, sizeof input_dir);
 		ret |= cfgfile_string(option, value, "screenshot_dir", screenshot_dir, sizeof screenshot_dir);
 		// NOTE: amiberry_config is a "read only", ie. it's not written in
@@ -2949,6 +2990,7 @@ static void init_amiberry_paths(void)
 	snprintf(data_dir, MAX_DPATH, "%s/", start_path_data);
 	snprintf(saveimage_dir, MAX_DPATH, "%s/savestates/", start_path_data);
 	snprintf(savestate_dir, MAX_DPATH, "%s/savestates/", start_path_data);
+	snprintf(ripper_path, MAX_DPATH, "%s/ripper/", start_path_data);
 	snprintf(input_dir, MAX_DPATH, "%s/inputrecordings/", start_path_data);
 	snprintf(screenshot_dir, MAX_DPATH, "%s/screenshots/", start_path_data);
 }

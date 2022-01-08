@@ -64,7 +64,7 @@ void pause_sound_device(struct sound_data* sd);
 void resume_sound_device(struct sound_data* sd);
 void set_volume_sound_device(struct sound_data* sd, int volume, int mute);
 
-static uae_u16* paula_sndbufpt_prev, * paula_sndbufpt_start;
+static uae_u16* paula_sndbufpt_prev, *paula_sndbufpt_start;
 
 STATIC_INLINE void set_sound_buffers(void)
 {
@@ -77,22 +77,22 @@ STATIC_INLINE void set_sound_buffers(void)
 STATIC_INLINE void check_sound_buffers()
 {
 	if (currprefs.sound_stereo == SND_4CH_CLONEDSTEREO) {
-		((uae_u16*)paula_sndbufpt)[0] = ((uae_u16*)paula_sndbufpt)[-2];
-		((uae_u16*)paula_sndbufpt)[1] = ((uae_u16*)paula_sndbufpt)[-1];
-		paula_sndbufpt = (uae_u16*)(((uae_u8*)paula_sndbufpt) + 2 * 2);
+		paula_sndbufpt[0] = paula_sndbufpt[-2];
+		paula_sndbufpt[1] = paula_sndbufpt[-1];
+		paula_sndbufpt = reinterpret_cast<uae_u16*>(reinterpret_cast<uae_u8*>(paula_sndbufpt) + 2 * 2);
 	}
 	else if (currprefs.sound_stereo == SND_6CH_CLONEDSTEREO) {
-		uae_s16* p = ((uae_s16*)paula_sndbufpt);
-		uae_s32 sum;
+		auto p = reinterpret_cast<uae_s16*>(paula_sndbufpt);
 		p[2] = p[-2];
 		p[3] = p[-1];
-		sum = (uae_s32)(p[-2]) + (uae_s32)(p[-1]) + (uae_s32)(p[2]) + (uae_s32)(p[3]);
+		const uae_s32 sum = static_cast<uae_s32>(p[-2]) + static_cast<uae_s32>(p[-1]) + static_cast<uae_s32>(p[2]) + static_cast<
+			uae_s32>(p[3]);
 		p[0] = sum / 8;
 		p[1] = sum / 8;
-		paula_sndbufpt = (uae_u16*)(((uae_u8*)paula_sndbufpt) + 4 * 2);
+		paula_sndbufpt = reinterpret_cast<uae_u16*>(reinterpret_cast<uae_u8*>(paula_sndbufpt) + 4 * 2);
 	}
 
-	if ((uae_u8*)paula_sndbufpt - (uae_u8*)paula_sndbuffer >= paula_sndbufsize) {
+	if (reinterpret_cast<uae_u8*>(paula_sndbufpt) - reinterpret_cast<uae_u8*>(paula_sndbuffer) >= paula_sndbufsize) {
 		finish_sound_buffer();
 	}
 }
