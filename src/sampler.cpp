@@ -57,19 +57,7 @@ static int capture_init (void)
 	if (currprefs.sampler_freq)
 		samplerate = currprefs.sampler_freq;
 
-	//Get capture device count
-	recording_device_count = SDL_GetNumAudioDevices(SDL_TRUE);
-
-	//No recording devices
-	if (recording_device_count < 1)
-	{
-		write_log("SAMPLER: Unable to get audio capture device! SDL Error: %s\n", SDL_GetError());
-		return 0;
-	}
-
-	//name = record_devices[currprefs.win32_samplersoundcard]->name;
-	const auto device_name = SDL_GetAudioDeviceName(0, SDL_TRUE);
-	strcpy(name, device_name);
+	name = record_devices[currprefs.samplersoundcard]->name;
 
 	//wavfmt.wFormatTag = WAVE_FORMAT_PCM;
 	//wavfmt.nChannels = 2;
@@ -99,7 +87,7 @@ static int capture_init (void)
 	rec_want.callback = audioRecordingCallback;
 
 	//Open recording device
-	dev_rec = SDL_OpenAudioDevice(SDL_GetAudioDeviceName(0, SDL_TRUE), SDL_TRUE, &rec_want, &rec_have, SDL_AUDIO_ALLOW_FORMAT_CHANGE);
+	dev_rec = SDL_OpenAudioDevice(SDL_GetAudioDeviceName(record_devices[currprefs.samplersoundcard]->id, SDL_TRUE), SDL_TRUE, &rec_want, &rec_have, SDL_AUDIO_ALLOW_FORMAT_CHANGE);
 	//Device failed to open
 	if (dev_rec == 0)
 	{

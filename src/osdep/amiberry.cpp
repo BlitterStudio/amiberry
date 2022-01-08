@@ -1775,6 +1775,12 @@ void target_fixup_options(struct uae_prefs* p)
 		}
 	}
 
+	if ((p->gfx_apmode[0].gfx_vsyncmode || p->gfx_apmode[1].gfx_vsyncmode)) {
+		if (p->produce_sound && sound_devices[p->soundcard]->type == SOUND_DEVICE_SDL2) {
+			p->soundcard = 0;
+		}
+	}
+
 	set_key_configs(p);
 }
 
@@ -1792,7 +1798,7 @@ void target_default_options(struct uae_prefs* p, int type)
 		p->inactive_pause = 0;
 		p->inactive_input = 0;
 		//p->ctrl_F11_is_quit = 0;
-		//p->soundcard = 0;
+		p->soundcard = 0;
 		p->samplersoundcard = -1;
 		p->minimize_inactive = 0;
 		p->capture_always = true;
@@ -2006,6 +2012,8 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_target_dwrite_bool(f, _T("borderless"), p->borderless);
 	cfgfile_target_dwrite_bool(f, _T("blank_monitors"), p->blankmonitors);
 	cfgfile_target_dwrite_str(f, _T("uaescsimode"), scsimode[p->uaescsimode]);
+	if (p->soundcard >= 0 && p->soundcard < MAX_SOUND_DEVICES && sound_devices[p->soundcard])
+		cfgfile_target_write_str(f, _T("soundcardname"), sound_devices[p->soundcard]->cfgname);
 	if (p->samplersoundcard >= 0 && p->samplersoundcard < MAX_SOUND_DEVICES) {
 		cfgfile_target_write(f, _T("samplersoundcard"), _T("%d"), p->samplersoundcard);
 		if (record_devices[p->samplersoundcard])
@@ -2178,6 +2186,73 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 			p->use_serial = false;
 		return 1;
 	}
+
+	if (cfgfile_string(option, value, _T("expansion_gui_page"), tmpbuf, sizeof tmpbuf / sizeof(TCHAR))) {
+		TCHAR* p = _tcschr(tmpbuf, ',');
+		if (p != NULL)
+			*p = 0;
+		for (int i = 0; expansionroms[i].name; i++) {
+			if (!_tcsicmp(tmpbuf, expansionroms[i].name)) {
+				scsiromselected = i;
+				break;
+			}
+		}
+		return 1;
+	}
+	
+	if (cfgfile_yesno(option, value, _T("rtg_match_depth"), &p->rtgmatchdepth))
+		return 1;
+
+	if (cfgfile_yesno(option, value, _T("rtg_scale_allow"), &p->rtgallowscaling))
+		return 1;
+
+	if (cfgfile_intval(option, value, _T("soundcard"), &p->soundcard, 1)) {
+		if (p->soundcard < 0 || p->soundcard >= MAX_SOUND_DEVICES || sound_devices[p->soundcard] == NULL)
+			p->soundcard = 0;
+		return 1;
+	}
+
+	if (cfgfile_string(option, value, _T("soundcardname"), tmpbuf, sizeof tmpbuf / sizeof(TCHAR))) {
+		int i, num;
+
+		num = p->soundcard;
+		p->soundcard = -1;
+		for (i = 0; i < MAX_SOUND_DEVICES && sound_devices[i]; i++) {
+			if (i < num)
+				continue;
+			if (!_tcscmp(sound_devices[i]->cfgname, tmpbuf)) {
+				p->soundcard = i;
+				break;
+			}
+		}
+		if (p->soundcard < 0) {
+			for (i = 0; i < MAX_SOUND_DEVICES && sound_devices[i]; i++) {
+				if (!_tcscmp(sound_devices[i]->cfgname, tmpbuf)) {
+					p->soundcard = i;
+					break;
+				}
+			}
+		}
+		if (p->soundcard < 0) {
+			for (i = 0; i < MAX_SOUND_DEVICES && sound_devices[i]; i++) {
+				if (!sound_devices[i]->prefix)
+					continue;
+				int prefixlen = _tcslen(sound_devices[i]->prefix);
+				int tmplen = _tcslen(tmpbuf);
+				if (prefixlen > 0 && tmplen >= prefixlen &&
+					!_tcsncmp(sound_devices[i]->prefix, tmpbuf, prefixlen) &&
+					((tmplen > prefixlen && tmpbuf[prefixlen] == ':')
+						|| tmplen == prefixlen)) {
+					p->soundcard = i;
+					break;
+				}
+			}
+
+		}
+		if (p->soundcard < 0)
+			p->soundcard = num;
+		return 1;
+	}
 	if (cfgfile_string(option, value, _T("samplersoundcardname"), tmpbuf, sizeof tmpbuf / sizeof(TCHAR))) {
 		int i, num;
 
@@ -2201,6 +2276,7 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 		}
 		return 1;
 	}
+
 	if (cfgfile_string(option, value, _T("rtg_vblank"), tmpbuf, sizeof tmpbuf / sizeof(TCHAR))) {
 		if (!_tcscmp(tmpbuf, _T("real"))) {
 			p->rtgvblankrate = -1;
@@ -2218,25 +2294,6 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 		return 1;
 	}
 
-	if (cfgfile_string(option, value, _T("expansion_gui_page"), tmpbuf, sizeof tmpbuf / sizeof(TCHAR))) {
-		TCHAR* p = _tcschr(tmpbuf, ',');
-		if (p != NULL)
-			*p = 0;
-		for (int i = 0; expansionroms[i].name; i++) {
-			if (!_tcsicmp(tmpbuf, expansionroms[i].name)) {
-				scsiromselected = i;
-				break;
-			}
-		}
-		return 1;
-	}
-	
-	if (cfgfile_yesno(option, value, _T("rtg_match_depth"), &p->rtgmatchdepth))
-		return 1;
-
-	if (cfgfile_yesno(option, value, _T("rtg_scale_allow"), &p->rtgallowscaling))
-		return 1;
-	
 	if (cfgfile_string(option, value, _T("rtg_scale_aspect_ratio"), tmpbuf, sizeof tmpbuf / sizeof(TCHAR))) {
 		int v1, v2;
 		TCHAR* s;
@@ -3205,7 +3262,18 @@ int main(int argc, char* argv[])
 	atexit(SDL_Quit);
 	write_log(_T("Sorting devices and modes...\n"));
 	sortdisplays();
-	
+	enumerate_sound_devices();
+	for (int i = 0; i < MAX_SOUND_DEVICES && sound_devices[i]; i++) {
+		int type = sound_devices[i]->type;
+		write_log(_T("%d:%s: %s\n"), i, type == SOUND_DEVICE_SDL2 ? _T("SDL2") : (type == SOUND_DEVICE_DS ? _T("DS") : (type == SOUND_DEVICE_AL ? _T("AL") : (type == SOUND_DEVICE_WASAPI ? _T("WA") : (type == SOUND_DEVICE_WASAPI_EXCLUSIVE ? _T("WX") : _T("PA"))))), sound_devices[i]->name);
+	}
+	write_log(_T("Enumerating recording devices:\n"));
+	for (int i = 0; i < MAX_SOUND_DEVICES && record_devices[i]; i++) {
+		int type = record_devices[i]->type;
+		write_log(_T("%d:%s: %s\n"), i, type == SOUND_DEVICE_SDL2 ? _T("SDL2") : (type == SOUND_DEVICE_DS ? _T("DS") : (type == SOUND_DEVICE_AL ? _T("AL") : (type == SOUND_DEVICE_WASAPI ? _T("WA") : (type == SOUND_DEVICE_WASAPI_EXCLUSIVE ? _T("WX") : _T("PA"))))), record_devices[i]->name);
+	}
+	write_log(_T("done\n"));
+
 	normalcursor = SDL_GetDefaultCursor();
 	clipboard_init();
 	

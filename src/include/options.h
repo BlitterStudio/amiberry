@@ -907,6 +907,7 @@ struct uae_prefs
 	bool automount_removable;
 	bool automount_cddrives;
 	int uaescsimode;
+	int soundcard;
 	int samplersoundcard;
 	bool blankmonitors;
 	bool right_control_is_right_win_key;

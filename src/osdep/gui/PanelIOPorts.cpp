@@ -8,6 +8,7 @@
 #include "sysdeps.h"
 #include "options.h"
 #include "gui_handling.h"
+#include "sounddep/sound.h"
 
 #ifdef SERIAL_PORT
 static gcn::Window* grpSerialDevice;
@@ -17,8 +18,12 @@ static gcn::CheckBox* chkRTSCTS;
 static gcn::CheckBox* chkUaeSerial;
 #endif
 
-static gcn::Window* grpProtectionDongle;
+static gcn::Label* lblProtectionDongle;
 static gcn::DropDown* cboProtectionDongle;
+
+static gcn::Label* lblSampler;
+static gcn::DropDown* cboSampler;
+static gcn::CheckBox* chkSamplerStereo;
 
 class string_list_model : public gcn::ListModel
 {
@@ -56,6 +61,8 @@ public:
 
 static const char* listValues[] = { "none", "RoboCop 3", "Leader Board", "B.A.T. II", "Italy '90 Soccer", "Dames Grand-Maître", "Rugby Coach", "Cricket Captain", "Leviathan", "Music Master", "Logistics/SuperBase", "Scala MM (Red)", "Scala MM (Green)"};
 static string_list_model dongle_list(listValues, 13);
+
+static string_list_model sampler_list(nullptr, 0);
 
 #ifdef SERIAL_PORT
 class IOKeyListener : public gcn::KeyListener
@@ -95,6 +102,17 @@ public:
 #endif
 		else if (actionEvent.getSource() == cboProtectionDongle)
 			changed_prefs.dongle = cboProtectionDongle->getSelected();
+		else if (actionEvent.getSource() == cboSampler)
+		{
+			auto item = cboSampler->getSelected();
+			changed_prefs.samplersoundcard = item - 1;
+			if (item > 0)
+				changed_prefs.prtname[0] = 0;
+		}
+		else if (actionEvent.getSource() == chkSamplerStereo)
+			changed_prefs.sampler_stereo = chkSamplerStereo->isSelected();
+
+		RefreshPanelIO();
 	}
 };
 
@@ -105,6 +123,18 @@ IOKeyListener* ioKeyListener;
 
 void InitPanelIO(const config_category& category)
 {
+	enumerate_sound_devices();
+	sampler_list.clear_elements();
+	for (int card = 0; card < MAX_SOUND_DEVICES && record_devices[card]; card++) {
+		int type = record_devices[card]->type;
+		TCHAR tmp[MAX_DPATH];
+		_stprintf(tmp, _T("%s: %s"),
+			type == SOUND_DEVICE_SDL2 ? _T("SDL2") : (type == SOUND_DEVICE_DS ? _T("DSOUND") : (type == SOUND_DEVICE_AL ? _T("OpenAL") : (type == SOUND_DEVICE_PA ? _T("PortAudio") : _T("WASAPI")))),
+			record_devices[card]->name);
+		if (type == SOUND_DEVICE_SDL2)
+			sampler_list.add_element(tmp);
+	}
+
 	ioActionListener = new IOActionListener();
 #ifdef SERIAL_PORT
 	ioKeyListener = new IOKeyListener();
@@ -132,15 +162,27 @@ void InitPanelIO(const config_category& category)
 	chkUaeSerial->addActionListener(ioActionListener);
 #endif
 
+	lblSampler = new gcn::Label("Sampler:");
+	lblSampler->setAlignment(gcn::Graphics::RIGHT);
+	cboSampler = new gcn::DropDown(&sampler_list);
+	cboSampler->setSize(350, cboSampler->getHeight());
+	cboSampler->setBaseColor(gui_baseCol);
+	cboSampler->setBackgroundColor(colTextboxBackground);
+	cboSampler->setId("cboSampler");
+	cboSampler->addActionListener(ioActionListener);
+
+	chkSamplerStereo = new gcn::CheckBox("Stereo sampler");
+	chkSamplerStereo->setId("chkSamplerStereo");
+	chkSamplerStereo->addActionListener(ioActionListener);
+
+	lblProtectionDongle = new gcn::Label("Protection Dongle:");
+	lblProtectionDongle->setAlignment(gcn::Graphics::RIGHT);
 	cboProtectionDongle = new gcn::DropDown(&dongle_list);
-	cboProtectionDongle->setSize(250, cboProtectionDongle->getHeight());
+	cboProtectionDongle->setSize(350, cboProtectionDongle->getHeight());
 	cboProtectionDongle->setBaseColor(gui_baseCol);
 	cboProtectionDongle->setBackgroundColor(colTextboxBackground);
 	cboProtectionDongle->setId("cboProtectionDongle");
 	cboProtectionDongle->addActionListener(ioActionListener);
-
-	grpProtectionDongle = new gcn::Window("Protection Dongle");
-	grpProtectionDongle->setId("grpProtectionDongle");
 
 	auto posY = DISTANCE_BORDER;
 #ifdef SERIAL_PORT
@@ -158,12 +200,14 @@ void InitPanelIO(const config_category& category)
 	posY += grpSerialDevice->getHeight() + DISTANCE_NEXT_Y * 2;
 #endif
 
-	grpProtectionDongle->setPosition(DISTANCE_BORDER, posY);
-	grpProtectionDongle->setSize(450, TITLEBAR_HEIGHT + 200);
-	grpProtectionDongle->setTitleBarHeight(TITLEBAR_HEIGHT);
-	grpProtectionDongle->setBaseColor(gui_baseCol);
-	grpProtectionDongle->add(cboProtectionDongle, DISTANCE_BORDER, DISTANCE_BORDER);
-	category.panel->add(grpProtectionDongle);
+	category.panel->add(lblSampler, DISTANCE_BORDER, posY);
+	category.panel->add(cboSampler, DISTANCE_BORDER + lblProtectionDongle->getWidth() + 8, posY);
+	posY += lblSampler->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(chkSamplerStereo, DISTANCE_BORDER, posY);
+	posY += chkSamplerStereo->getHeight() + DISTANCE_NEXT_Y * 2;
+
+	category.panel->add(lblProtectionDongle, DISTANCE_BORDER, posY);
+	category.panel->add(cboProtectionDongle, DISTANCE_BORDER + lblProtectionDongle->getWidth() + 8, posY);
 
 	RefreshPanelIO();
 }
@@ -181,8 +225,11 @@ void ExitPanelIO()
 	delete chkUaeSerial;
 #endif
 
+	delete lblProtectionDongle;
 	delete cboProtectionDongle;
-	delete grpProtectionDongle;
+	delete lblSampler;
+	delete cboSampler;
+	delete chkSamplerStereo;
 }
 
 void RefreshPanelIO()
@@ -195,6 +242,12 @@ void RefreshPanelIO()
 #endif
 
 	cboProtectionDongle->setSelected(changed_prefs.dongle);
+
+	if (changed_prefs.prtname[0])
+	{
+		changed_prefs.samplersoundcard = -1;
+	}
+	chkSamplerStereo->setSelected(changed_prefs.sampler_stereo);
 }
 
 bool HelpPanelIO(std::vector<std::string>& helptext)
