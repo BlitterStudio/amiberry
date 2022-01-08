@@ -249,7 +249,7 @@ static int ahi_init_sound(void)
 	if (ahi_dev)
 		return 0;
 
-	//enumerate_sound_devices();
+	enumerate_sound_devices();
 	//wavfmt.wFormatTag = WAVE_FORMAT_PCM;
 	//wavfmt.nChannels = sound_channels_ahi;
 	//wavfmt.nSamplesPerSec = sound_freq_ahi;

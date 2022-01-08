@@ -69,6 +69,7 @@ void sdl2_audio_callback(void* userdata, Uint8* stream, int len);
 
 struct sound_device* sound_devices[MAX_SOUND_DEVICES];
 struct sound_device* record_devices[MAX_SOUND_DEVICES];
+static int num_sound_devices, num_record_devices;
 
 static struct sound_data sdpaula;
 static struct sound_data* sdp = &sdpaula;
@@ -291,6 +292,7 @@ static int open_audio_sdl2(struct sound_data* sd, int index)
 	auto* const s = sd->data;
 	const auto freq = sd->freq;
 	const auto ch = sd->channels;
+	auto devname = sound_devices[index]->name;
 
 	sd->devicetype = SOUND_DEVICE_SDL2;
 	if (sd->sndbufsize < 0x80)
@@ -315,10 +317,11 @@ static int open_audio_sdl2(struct sound_data* sd, int index)
 		want.userdata = sd;
 	}
 
-	s->dev = SDL_OpenAudioDevice(nullptr, 0, &want, &have, 0);
+	s->dev = SDL_OpenAudioDevice(devname, 0, &want, &have, 0);
 	if (s->dev == 0)
 	{
-		write_log("Failed to open audio: %s\n", SDL_GetError());
+		write_log("Failed to open audio: %s, retrying with default device\n", SDL_GetError());
+		s->dev = SDL_OpenAudioDevice(nullptr, 0, &want, &have, 0);
 		return 0;
 	}
 
@@ -328,6 +331,8 @@ static int open_audio_sdl2(struct sound_data* sd, int index)
 		s->pullbuffer = xcalloc(uae_u8, s->pullbuffermaxlen);
 		s->pullbufferlen = 0;
 	}
+	write_log("SDL2: CH=%d, FREQ=%d '%s' buffer %d/%d (%s)\n", ch, freq, sound_devices[index]->name,
+		s->sndbufsize, s->framesperbuffer, !s->pullmode ? _T("push") : _T("pull"));
 	clearbuffer(sd);
 
 	return 1;
@@ -387,8 +392,13 @@ static int open_sound()
 	size &= ~63;
 
 	sdp->softvolume = -1;
+	int num = enumerate_sound_devices();
+	if (currprefs.soundcard >= num)
+		currprefs.soundcard = changed_prefs.soundcard = 0;
+	if (num == 0)
+		return 0;
 	const auto ch = get_audio_nativechannels(currprefs.sound_stereo);
-	const auto ret = open_sound_device(sdp, 0, size, currprefs.sound_freq, ch);
+	const auto ret = open_sound_device(sdp, currprefs.soundcard, size, currprefs.sound_freq, ch);
 	if (!ret)
 		return 0;
 	currprefs.sound_freq = changed_prefs.sound_freq = sdp->freq;
@@ -670,9 +680,18 @@ static void handle_reset()
 		if (sdp->resetcnt <= 0) {
 			write_log(_T("Reopen sound failed. Retrying with default device.\n"));
 			close_sound();
+			int type = sound_devices[currprefs.soundcard]->type;
+			int max = enumerate_sound_devices();
+			for (int i = 0; i < max; i++) {
+				if (sound_devices[i]->alname == NULL && sound_devices[i]->type == type) {
+					currprefs.soundcard = changed_prefs.soundcard = i;
+					if (open_sound())
+						return;
+					break;
+				}
+			}
 			currprefs.produce_sound = changed_prefs.produce_sound = 1;
-		}
-		else {
+		} else {
 			write_log(_T("Retrying sound.. %d..\n"), sdp->resetcnt);
 			sdp->resetcnt--;
 			sdp->reset = true;
@@ -742,6 +761,49 @@ void finish_sound_buffer()
 	} else {
 		send_sound(sdp, paula_sndbuffer);
 	}
+}
+
+int enumerate_sound_devices()
+{
+	if (!num_sound_devices) {
+
+		write_log("Enumerating SDL2 playback devices...\n");
+		num_sound_devices = SDL_GetNumAudioDevices(SDL_FALSE);
+
+		for (int i = 0; i < num_sound_devices && i < MAX_SOUND_DEVICES; i++)
+		{
+			const auto devname = SDL_GetAudioDeviceName(i, SDL_FALSE);
+			sound_devices[i] = xcalloc(struct sound_device, 1);
+			sound_devices[i]->id = i;
+			sound_devices[i]->cfgname = my_strdup(devname);
+			sound_devices[i]->type = SOUND_DEVICE_SDL2;
+			sound_devices[i]->name = my_strdup(devname);
+			sound_devices[i]->alname = my_strdup(std::to_string(i).c_str());
+		}
+
+		num_record_devices = SDL_GetNumAudioDevices(SDL_TRUE);
+		for (int i = 0; i < num_record_devices && i < MAX_SOUND_DEVICES; i++)
+		{
+			const auto devname = SDL_GetAudioDeviceName(i, SDL_TRUE);
+			record_devices[i] = xcalloc(struct sound_device, 1);
+			sound_devices[i]->id = i;
+			record_devices[i]->cfgname = my_strdup(devname);
+			record_devices[i]->type = SOUND_DEVICE_SDL2;
+			record_devices[i]->name = my_strdup(devname);
+			record_devices[i]->alname = my_strdup(std::to_string(i).c_str());
+		}
+
+		write_log(_T("Enumeration end\n"));
+		for (num_sound_devices = 0; num_sound_devices < MAX_SOUND_DEVICES; num_sound_devices++) {
+			if (sound_devices[num_sound_devices] == NULL)
+				break;
+		}
+		for (num_record_devices = 0; num_record_devices < MAX_SOUND_DEVICES; num_record_devices++) {
+			if (record_devices[num_record_devices] == NULL)
+				break;
+		}
+	}
+	return num_sound_devices;
 }
 
 static int set_master_volume(int volume, int mute)

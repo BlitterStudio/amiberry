@@ -284,6 +284,9 @@ typedef wchar_t* LPCWSTR;
 struct sound_device
 {
 	GUID guid;
+#ifdef AMIBERRY
+	int id;
+#endif
 	TCHAR* name;
 	TCHAR* alname;
 	TCHAR* cfgname;

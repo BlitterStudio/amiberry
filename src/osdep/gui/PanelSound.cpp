@@ -56,11 +56,50 @@ static gcn::Slider* sldSoundBufferSize;
 static gcn::Label* lblSoundBufferSize;
 static gcn::RadioButton* optSoundPull;
 static gcn::RadioButton* optSoundPush;
+static gcn::DropDown* cboSoundcard;
 
 static int curr_separation_idx;
 static int curr_stereodelay_idx;
 
+static int numdevs;
+
 static const int sndbufsizes[] = { 1024, 2048, 3072, 4096, 6144, 8192, 12288, 16384, 32768, 65536, -1 };
+
+class string_list_model : public gcn::ListModel
+{
+	std::vector<std::string> values{};
+public:
+	string_list_model(const char* entries[], const int count)
+	{
+		for (auto i = 0; i < count; ++i)
+			values.emplace_back(entries[i]);
+	}
+
+	int getNumberOfElements() override
+	{
+		return values.size();
+	}
+
+	int add_element(const char* elem) override
+	{
+		values.emplace_back(elem);
+		return 0;
+	}
+
+	void clear_elements() override
+	{
+		values.clear();
+	}
+
+	std::string getElementAt(int i) override
+	{
+		if (i < 0 || i >= static_cast<int>(values.size()))
+			return "---";
+		return values[i];
+	}
+};
+
+static string_list_model soundcard_list(nullptr, 0);
 
 class ChannelModeListModel : public gcn::ListModel
 {
@@ -316,7 +355,12 @@ class SoundActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		if (actionEvent.getSource() == optSoundDisabled)
+		if (actionEvent.getSource() == cboSoundcard)
+		{
+			if (const int soundcard = cboSoundcard->getSelected(); soundcard != changed_prefs.soundcard)
+				changed_prefs.soundcard = soundcard;
+		}
+		else if (actionEvent.getSource() == optSoundDisabled)
 			changed_prefs.produce_sound = 0;
 		else if (actionEvent.getSource() == optSoundDisabledEmu)
 			changed_prefs.produce_sound = 1;
@@ -480,7 +524,27 @@ static SoundActionListener* sound_action_listener;
 
 void InitPanelSound(const config_category& category)
 {
+	numdevs = enumerate_sound_devices();
+	soundcard_list.clear_elements();
+	for (int card = 0; card < numdevs; card++) {
+		TCHAR tmp[MAX_DPATH];
+		int type = sound_devices[card]->type;
+		_stprintf(tmp, _T("%s: %s"),
+			type == SOUND_DEVICE_SDL2 ? _T("SDL2") : (type == SOUND_DEVICE_DS ? _T("DSOUND") : (type == SOUND_DEVICE_AL ? _T("OpenAL") : (type == SOUND_DEVICE_PA ? _T("PortAudio") : (type == SOUND_DEVICE_WASAPI ? _T("WASAPI") : _T("WASAPI EX"))))),
+			sound_devices[card]->name);
+		soundcard_list.add_element(tmp);
+	}
+	if (numdevs == 0)
+		changed_prefs.produce_sound = 0; // No sound card in system
+
 	sound_action_listener = new SoundActionListener();
+
+	cboSoundcard = new gcn::DropDown(&soundcard_list);
+	cboSoundcard->setSize(400, cboSoundcard->getHeight());
+	cboSoundcard->setBaseColor(gui_baseCol);
+	cboSoundcard->setBackgroundColor(colTextboxBackground);
+	cboSoundcard->setId("cboSoundcard");
+	cboSoundcard->addActionListener(sound_action_listener);
 
 	optSoundDisabled = new gcn::RadioButton("Disabled", "radiosoundgroup");
 	optSoundDisabled->setId("sndDisable");
@@ -678,7 +742,7 @@ void InitPanelSound(const config_category& category)
 	grpSettings->add(cboInterpolation, lblInterpolation->getX(), lblInterpolation->getY() + lblInterpolation->getHeight() + 10);
 	grpSettings->add(lblFilter, lblInterpolation->getX(), lblFrequency->getY());
 	grpSettings->add(cboFilter, cboInterpolation->getX(), cboFrequency->getY());
-	grpSettings->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, cboFrequency->getY() + cboFrequency->getHeight() + 15 + DISTANCE_NEXT_Y * 2);
+	grpSettings->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, cboFrequency->getY() + cboFrequency->getHeight() + DISTANCE_NEXT_Y);
 	grpSettings->setBaseColor(gui_baseCol);
 
 	grpFloppySound = new gcn::Window("Floppy Drive Sound Emulation");
@@ -705,6 +769,8 @@ void InitPanelSound(const config_category& category)
 	grpSoundBufferSize->setBaseColor(gui_baseCol);
 	
 	auto posY = DISTANCE_BORDER;
+	category.panel->add(cboSoundcard, DISTANCE_BORDER, posY);
+	posY += cboSoundcard->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(grpSound, DISTANCE_BORDER, posY);
 	category.panel->add(grpVolume, grpSound->getX() + grpSound->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += grpSound->getHeight() + DISTANCE_NEXT_Y;
@@ -719,6 +785,7 @@ void InitPanelSound(const config_category& category)
 
 void ExitPanelSound()
 {
+	delete cboSoundcard;
 	delete optSoundDisabled;
 	delete optSoundDisabledEmu;
 	delete optSoundEmulated;
@@ -778,6 +845,15 @@ static int getsoundbufsizeindex(int size)
 void RefreshPanelSound()
 {
 	char tmp[10];
+
+	if (numdevs == 0)
+	{
+		cboSoundcard->setEnabled(false);
+	}
+	else
+	{
+		cboSoundcard->setEnabled(changed_prefs.produce_sound);
+	}
 
 	switch (changed_prefs.produce_sound)
 	{

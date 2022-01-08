@@ -1924,7 +1924,7 @@ static int sound_prefs_changed (void)
 	if (!config_changed)
 		return 0;
 	if (changed_prefs.produce_sound != currprefs.produce_sound
-		//|| changed_prefs.win32_soundcard != currprefs.win32_soundcard
+		|| changed_prefs.soundcard != currprefs.soundcard
 		|| changed_prefs.sound_stereo != currprefs.sound_stereo
 		|| changed_prefs.sound_maxbsiz != currprefs.sound_maxbsiz
 		|| changed_prefs.sound_freq != currprefs.sound_freq
@@ -2013,7 +2013,7 @@ void set_audio (void)
 		close_sound ();
 
 	currprefs.produce_sound = changed_prefs.produce_sound;
-	//currprefs.win32_soundcard = changed_prefs.win32_soundcard;
+	currprefs.soundcard = changed_prefs.soundcard;
 	currprefs.sound_stereo = changed_prefs.sound_stereo;
 	currprefs.sound_auto = changed_prefs.sound_auto;
 	currprefs.sound_freq = changed_prefs.sound_freq;
