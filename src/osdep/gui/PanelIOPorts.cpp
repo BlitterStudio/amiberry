@@ -125,6 +125,7 @@ void InitPanelIO(const config_category& category)
 {
 	enumerate_sound_devices();
 	sampler_list.clear_elements();
+	sampler_list.add_element("none");
 	for (int card = 0; card < MAX_SOUND_DEVICES && record_devices[card]; card++) {
 		int type = record_devices[card]->type;
 		TCHAR tmp[MAX_DPATH];
@@ -247,6 +248,8 @@ void RefreshPanelIO()
 	{
 		changed_prefs.samplersoundcard = -1;
 	}
+	const int sampler_idx = changed_prefs.samplersoundcard;
+	cboSampler->setSelected(sampler_idx + 1);
 	chkSamplerStereo->setSelected(changed_prefs.sampler_stereo);
 }
 
