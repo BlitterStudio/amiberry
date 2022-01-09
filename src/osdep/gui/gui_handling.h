@@ -298,6 +298,8 @@ bool HelpPanelOnScreen(std::vector<std::string> &helptext);
 void refresh_all_panels(void);
 void register_refresh_func(void (*func)(void));
 
+void focus_bug_workaround(gcn::Window* wnd);
+
 void disable_resume(void);
 
 bool ShowMessage(const char* title, const char* line1, const char* line2, const char* button1, const char* button2);

@@ -192,8 +192,9 @@ static void InitShowMessage()
 
 	gui_top->add(wndShowMessage);
 
-	cmdOK->requestFocus();
 	wndShowMessage->requestModalFocus();
+	focus_bug_workaround(wndShowMessage);
+	cmdOK->requestFocus();
 }
 
 static void ExitShowMessage()

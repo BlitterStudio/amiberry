@@ -175,8 +175,9 @@ static void InitCreateFilesysHardfile()
 
 	gui_top->add(wndCreateFilesysHardfile);
 
-	txtDevice->requestFocus();
 	wndCreateFilesysHardfile->requestModalFocus();
+	focus_bug_workaround(wndCreateFilesysHardfile);
+	txtDevice->requestFocus();
 }
 
 static void ExitCreateFilesysHardfile()
