@@ -1122,12 +1122,13 @@ static uae_u8 ReadCIAA (uae_u32 addr, uae_u32 *flags)
 #endif
 		} else
 #endif
-			if (currprefs.samplersoundcard >= 0)
+			if (currprefs.samplersoundcard >= 0) {
 
-			tmp = sampler_getsample((ciabpra & 4) ? 1 : 0);
-
-		tmp = handle_parport_joystick (0, tmp);
-		tmp = dongle_cia_read (1, reg, ciaadrb, tmp);
+				tmp = sampler_getsample((ciabpra & 4) ? 1 : 0);
+			} else {
+				tmp = handle_parport_joystick(0, tmp);
+				tmp = dongle_cia_read(1, reg, ciaadrb, tmp);
+			}
 		// PBON
 		if (ciaacrb & 2) {
 			int pb7 = 0;
