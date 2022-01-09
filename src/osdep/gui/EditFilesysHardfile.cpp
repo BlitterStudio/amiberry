@@ -541,8 +541,9 @@ static void InitEditFilesysHardfile()
 
 	gui_top->add(wndEditFilesysHardfile);
 
-	txtDevice->requestFocus();
 	wndEditFilesysHardfile->requestModalFocus();
+	focus_bug_workaround(wndEditFilesysHardfile);
+	txtDevice->requestFocus();
 }
 
 static void ExitEditFilesysHardfile()

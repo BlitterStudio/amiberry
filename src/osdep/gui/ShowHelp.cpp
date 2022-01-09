@@ -118,8 +118,9 @@ static void InitShowHelp(const std::vector<std::string>& helptext)
 
 	gui_top->add(wndShowHelp);
 
-	cmdOK->requestFocus();
 	wndShowHelp->requestModalFocus();
+	focus_bug_workaround(wndShowHelp);
+	cmdOK->requestFocus();
 }
 
 static void ExitShowHelp(void)

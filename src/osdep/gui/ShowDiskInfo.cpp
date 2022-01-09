@@ -113,8 +113,9 @@ static void InitShowDiskInfo(const std::vector<std::string>& infotext)
 
 	gui_top->add(wndShowDiskInfo);
 
-	cmdOK->requestFocus();
 	wndShowDiskInfo->requestModalFocus();
+	focus_bug_workaround(wndShowDiskInfo);
+	cmdOK->requestFocus();
 }
 
 

@@ -278,9 +278,10 @@ static void InitSelectFile(const char* title)
 
 	gui_top->add(wndSelectFile);
 
+	wndSelectFile->requestModalFocus();
+	focus_bug_workaround(wndSelectFile);
 	lstFiles->requestFocus();
 	lstFiles->setSelected(0);
-	wndSelectFile->requestModalFocus();
 }
 
 

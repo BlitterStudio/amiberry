@@ -203,9 +203,10 @@ static void InitSelectFolder(const char* title)
 
 	gui_top->add(wndSelectFolder);
 
+	wndSelectFolder->requestModalFocus();
+	focus_bug_workaround(wndSelectFolder);
 	lstFolders->requestFocus();
 	lstFolders->setSelected(0);
-	wndSelectFolder->requestModalFocus();
 }
 
 

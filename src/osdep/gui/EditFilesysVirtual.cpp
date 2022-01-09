@@ -196,8 +196,9 @@ static void InitEditFilesysVirtual()
 
 	gui_top->add(wndEditFilesysVirtual);
 
-	txtDevice->requestFocus();
 	wndEditFilesysVirtual->requestModalFocus();
+	focus_bug_workaround(wndEditFilesysVirtual);
+	txtDevice->requestFocus();
 }
 
 

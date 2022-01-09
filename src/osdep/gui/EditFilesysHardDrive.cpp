@@ -112,6 +112,7 @@ static void InitEditFilesysHardDrive()
 
 	gui_top->add(wndEditFilesysHardDrive);
 	wndEditFilesysHardDrive->requestModalFocus();
+	focus_bug_workaround(wndEditFilesysHardDrive);
 	txtPath->requestFocus();
 }
 
