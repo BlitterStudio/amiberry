@@ -3654,7 +3654,7 @@ static void update_fetch(int until, int fm)
 	/* First, a loop that prepares us for the speedup code.  We want to enter
 	the SPEEDUP case with fetch_state == plane0 or it is the very
 	first fetch cycle (which equals to same state as fetch_was_plane0)
-    and then unroll whole blocks, so that we end on the same fetch_state again.  */
+	and then unroll whole blocks, so that we end on the same fetch_state again.  */
 	for(;;) {
 		if (hpos == until || hpos >= maxhpos) {
 			if (until >= maxhpos) {
@@ -4536,7 +4536,7 @@ static int sprites_differ(struct draw_info *dip, struct draw_info *dip_old)
 		}
 	}
 
-    npixels = this_last->first_pixel + (this_last->max - this_last->pos) - this_first->first_pixel;
+	npixels = this_last->first_pixel + (this_last->max - this_last->pos) - this_first->first_pixel;
 	if (memcmp(spixels + this_first->first_pixel, spixels + prev_first->first_pixel, npixels * sizeof(uae_u16)) != 0) {
 		return 1;
 	}
@@ -11527,7 +11527,7 @@ static void hsync_handler_post(bool onvsync)
 			if (regs.stopped && currprefs.cpu_idle) {
 				// CPU in STOP state: sleep if enough time left.
 				frame_time_t rpt = read_processor_time();
-				while (vsync_isdone(NULL) <= 0 && (int)vsyncmintime - (int)(rpt + vsynctimebase / 10) > 0 && (int)vsyncmintime - (int)rpt < vsynctimebase) {
+				while (vsync_isdone(NULL) <= 0 && (int64_t)vsyncmintime - (int64_t)(rpt + vsynctimebase / 10) > 0 && (int64_t)vsyncmintime - (int64_t)rpt < vsynctimebase) {
 					maybe_process_pull_audio();
 //					if (!execute_other_cpu(rpt + vsynctimebase / 10)) {
 						if (cpu_sleep_millis(1) < 0)
@@ -11552,11 +11552,11 @@ static void hsync_handler_post(bool onvsync)
 			linecounter++;
 			events_reset_syncline();
 			if (vsync_isdone(NULL) <= 0 && !currprefs.turbo_emulation) {
-				if ((int)vsyncmaxtime - (int)vsyncmintime > 0) {
-					if ((int)vsyncwaittime - (int)vsyncmintime > 0) {
+				if ((int64_t)vsyncmaxtime - (int64_t)vsyncmintime > 0) {
+					if ((int64_t)vsyncwaittime - (int64_t)vsyncmintime > 0) {
 						frame_time_t rpt = read_processor_time();
 						/* Extra time left? Do some extra CPU emulation */
-						if ((int)vsyncmintime - (int)rpt > 0) {
+						if ((int64_t)vsyncmintime - (int64_t)rpt > 0) {
 							if (regs.stopped && currprefs.cpu_idle && sleeps_remaining > 0) {
 								// STOP STATE: sleep.
 								cpu_sleep_millis(1);
@@ -11592,7 +11592,7 @@ static void hsync_handler_post(bool onvsync)
 		if (audio_is_pull() > 0 && !currprefs.turbo_emulation) {
 			maybe_process_pull_audio();
 			frame_time_t rpt = read_processor_time();
-			while (audio_pull_buffer() > 1 && (!isvsync() || (vsync_isdone(NULL) <= 0 && (int)vsyncmintime - (int)(rpt + vsynctimebase / 10) > 0 && (int)vsyncmintime - (int)rpt < vsynctimebase))) {
+			while (audio_pull_buffer() > 1 && (!isvsync() || (vsync_isdone(NULL) <= 0 && (int64_t)vsyncmintime - (int64_t)(rpt + vsynctimebase / 10) > 0 && (int64_t)vsyncmintime - (int64_t)rpt < vsynctimebase))) {
 				cpu_sleep_millis(1);
 				maybe_process_pull_audio();
 				rpt = read_processor_time();
@@ -11604,7 +11604,7 @@ static void hsync_handler_post(bool onvsync)
 			if (vsync_isdone(NULL) <= 0 && !currprefs.turbo_emulation) {
 				frame_time_t rpt = read_processor_time();
 				// sleep if more than 2ms "free" time
-				while (vsync_isdone(NULL) <= 0 && (int)vsyncmintime - (int)(rpt + vsynctimebase / 10) > 0 && (int)vsyncmintime - (int)rpt < vsynctimebase) {
+				while (vsync_isdone(NULL) <= 0 && (int64_t)vsyncmintime - (int64_t)(rpt + vsynctimebase / 10) > 0 && (int64_t)vsyncmintime - (int64_t)rpt < vsynctimebase) {
 					maybe_process_pull_audio();
 //					if (!execute_other_cpu(rpt + vsynctimebase / 10)) {
 						if (cpu_sleep_millis(1) < 0)
