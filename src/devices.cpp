@@ -26,7 +26,7 @@
 #include "blkdev.h"
 #include "parallel.h"
 #include "autoconf.h"
-//#include "sampler.h"
+#include "sampler.h"
 #include "newcpu.h"
 #include "blitter.h"
 #include "xwin.h"
@@ -219,7 +219,7 @@ void devices_reset(int hardreset)
 	initparallel();
 #endif
 	dongle_reset();
-	//sampler_init();
+	sampler_init();
 	device_func_reset();
 #ifdef AUTOCONFIG
 	rtarea_reset();
@@ -232,13 +232,13 @@ void devices_reset(int hardreset)
 
 void devices_vsync_pre(void)
 {
-	audio_vsync ();
-	blkdev_vsync ();
-	CIA_vsync_prehandler ();
-	inputdevice_vsync ();
-	filesys_vsync ();
-	//sampler_vsync ();
-	clipboard_vsync ();
+	audio_vsync();
+	blkdev_vsync();
+	CIA_vsync_prehandler();
+	inputdevice_vsync();
+	filesys_vsync();
+	sampler_vsync();
+	clipboard_vsync();
 	statusline_vsync();
 
 	execute_device_items(device_vsyncs_pre, device_vsync_pre_cnt);
@@ -301,7 +301,7 @@ void virtualdevice_free(void)
 	uae_ppc_free();
 #endif
 	free_traps();
-	//sampler_free();
+	sampler_free();
 	inputdevice_close ();
 	DISK_free();
 	//dump_counts ();
