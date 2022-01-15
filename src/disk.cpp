@@ -1848,7 +1848,7 @@ static bool drive_diskready(drive *drv)
 	return drv->dskready;
 }
 
-static bool drive_at_index(drive *drv, int mfmBitPosition)
+static bool drive_at_index(drive *drv, int pmfmBitPosition, int mfmBitPosition)
 {
 #ifdef FLOPPYBRIDGE
 	if (drv->bridge) {
@@ -1856,7 +1856,17 @@ static bool drive_at_index(drive *drv, int mfmBitPosition)
 		return v;
 	}
 #endif
-	return mfmBitPosition == drv->indexoffset;
+	if (mfmBitPosition == drv->indexoffset) {
+		return true;
+	}
+	while (pmfmBitPosition != mfmBitPosition) {
+		pmfmBitPosition++;
+		pmfmBitPosition %= drv->tracklen;
+		if (pmfmBitPosition == drv->indexoffset) {
+			return true;
+		}
+	}
+	return false;
 }
 
 static bool drive_running (drive * drv)
@@ -3796,7 +3806,7 @@ static void disk_doupdate_write(int floppybits, int trackspeed)
 				drive *drv2 = &floppy[dr];
 				drv2->mfmpos++;
 				drv2->mfmpos %= drv2->tracklen;
-				if (drive_at_index(drv2, drv2->mfmpos)) {
+				if (drive_at_index(drv2, drv2->mfmpos, drv2->mfmpos)) {
 					do_disk_index();
 				}
 			}
@@ -3928,12 +3938,13 @@ static void disk_doupdate_predict (int startcycle)
 				if (dskdmaen != DSKDMA_READ && (tword & 0xffff) == dsksync && dsksync != 0)
 					diskevent_flag |= DISK_WORDSYNC;
 			}
+			int pmfmpos = mfmpos;
 			mfmpos += inc;
 			mfmpos %= drv->tracklen;
 			if (!dskdmaen) {
 				if (mfmpos == 0)
 					diskevent_flag |= DISK_REVOLUTION << (drv - floppy);
-				if (drive_at_index(drv, mfmpos))
+				if (drive_at_index(drv, pmfmpos, mfmpos))
 					diskevent_flag |= DISK_INDEXSYNC;
 			}
 			if (dskdmaen != DSKDMA_WRITE && mfmpos == drv->skipoffset) {
@@ -3944,7 +3955,7 @@ static void disk_doupdate_predict (int startcycle)
 					if (!dskdmaen) {
 						if (mfmpos == 0)
 							diskevent_flag |= DISK_REVOLUTION << (drv - floppy);
-						if (drive_at_index(drv, mfmpos))
+						if (drive_at_index(drv, mfmpos, mfmpos))
 							diskevent_flag |= DISK_INDEXSYNC;
 					}
 				}
@@ -4140,15 +4151,16 @@ static void disk_doupdate_read (drive * drv, int floppybits)
 			word >>= 1;
 			return;
 		}
+		int pmfmpos = drv->mfmpos;
 		drv->mfmpos += inc;
 		drv->mfmpos %= drv->tracklen;
-		if (drive_at_index(drv, drv->mfmpos)) {
+		if (drive_at_index(drv, pmfmpos, drv->mfmpos)) {
 			if (disk_debug_logging > 2 && drv->indexhack)
 				write_log (_T("indexhack cleared\n"));
 			drv->indexhack = 0;
 			do_disk_index ();
 		}
-		if (drv->mfmpos == 0) {
+		if (pmfmpos > drv->mfmpos || drv->mfmpos == 0) {
 			fetchnextrevolution (drv);
 			if (drv->tracktiming[0])
 				updatetrackspeed (drv, drv->mfmpos);
@@ -4158,7 +4170,7 @@ static void disk_doupdate_read (drive * drv, int floppybits)
 			while (skipcnt-- > 0) {
 				drv->mfmpos += nextbit(drv);
 				drv->mfmpos %= drv->tracklen;
-				if (drive_at_index(drv, drv->mfmpos)) {
+				if (drive_at_index(drv, drv->mfmpos, drv->mfmpos)) {
 					if (disk_debug_logging > 2 && drv->indexhack)
 						write_log (_T("indexhack cleared\n"));
 					drv->indexhack = 0;
