@@ -1324,7 +1324,7 @@ static void initialize_mountinfo (void)
 			allocuci (&currprefs, nr, idx);
 		}
 	}
-	//filesys_addexternals ();
+	filesys_addexternals ();
 	nr = nr_units ();
 	cd_unit_offset = nr;
 	cd_unit_number = 0;
@@ -7369,9 +7369,10 @@ static void kill_ide(TrapContext *ctx)
 					if (i == strlen(sd)) {
 						uaecptr desc = (res[18] << 24) | (res[19] << 16) | (res[20] << 8) | (res[21] << 0);
 						trap_get_bytes(ctx, res, desc, 4);
-						if (res[0] != 'S' && res[1] != 'C' && res[2] != 'S' && res[3] != 'I') {
+						if (res[0] != 'S' || res[1] != 'C' || res[2] != 'S' || res[3] != 'I') {
 							write_log(_T("scsi.device resmodules entry disabled\n"));
 							trap_put_long(ctx, rm, 0x80000000 | (rm + 4));
+							break;
 						}
 					}
 				}

@@ -577,3 +577,8 @@ int target_get_volume_name(struct uaedev_mount_info* mtinf, struct uaedev_config
 	sprintf(ci->volname, "DH_%c", ci->rootdir[0]);
 	return 2;
 }
+
+void filesys_addexternals(void)
+{
+	// this would mount system drives on Windows
+}

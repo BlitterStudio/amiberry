@@ -34,6 +34,7 @@ static gcn::CheckBox* chkIllegalMem;
 static gcn::CheckBox* chkMinimizeInactive;
 static gcn::CheckBox* chkCaptureAlways;
 static gcn::CheckBox* chkHideAutoconfig;
+static gcn::CheckBox* chkScsiDisable;
 
 static gcn::Label* lblNumLock;
 static gcn::DropDown* cboKBDLed_num;
@@ -137,7 +138,7 @@ public:
 		{
 			changed_prefs.alt_tab_release = chkAltTabRelease->isSelected();
 		}
-		
+
 		else if (actionEvent.getSource() == chkRetroArchQuit)
 		{
 			changed_prefs.use_retroarch_quit = chkRetroArchQuit->isSelected();
@@ -197,7 +198,10 @@ public:
 
 		else if (actionEvent.getSource() == chkHideAutoconfig)
 			changed_prefs.uae_hide_autoconfig = chkHideAutoconfig->isSelected();
-		
+
+		else if (actionEvent.getSource() == chkScsiDisable)
+			changed_prefs.scsidevicedisable = chkScsiDisable->isSelected();
+
 		else if (actionEvent.getSource() == cboKBDLed_num)
 			changed_prefs.kbd_led_num = cboKBDLed_num->getSelected() - 1;
 
@@ -389,6 +393,10 @@ void InitPanelMisc(const config_category& category)
 	chkHideAutoconfig = new gcn::CheckBox("Hide all UAE autoconfig boards");
 	chkHideAutoconfig->setId("chkHideAutoconfig");
 	chkHideAutoconfig->addActionListener(miscActionListener);
+
+	chkScsiDisable = new gcn::CheckBox("A600/A1200/A4000 IDE scsi.device disable");
+	chkScsiDisable->setId("chkScsiDisable");
+	chkScsiDisable->addActionListener(miscActionListener);
 	
 	lblNumLock = new gcn::Label("NumLock:");
 	lblNumLock->setAlignment(gcn::Graphics::RIGHT);
@@ -542,6 +550,8 @@ void InitPanelMisc(const config_category& category)
 	grpMiscOptions->add(chkCaptureAlways, DISTANCE_BORDER, posY);
 	posY += chkCaptureAlways->getHeight() + DISTANCE_NEXT_Y;
 	// Debug memory space
+	grpMiscOptions->add(chkScsiDisable, DISTANCE_BORDER, posY);
+	posY += chkScsiDisable->getHeight() + DISTANCE_NEXT_Y;
 	grpMiscOptions->add(chkAltTabRelease, DISTANCE_BORDER, posY);
 	posY += chkAltTabRelease->getHeight() + DISTANCE_NEXT_X;
 	grpMiscOptions->add(chkRetroArchQuit, DISTANCE_BORDER, posY);
@@ -633,6 +643,7 @@ void ExitPanelMisc()
 	delete chkMinimizeInactive;
 	delete chkCaptureAlways;
 	delete chkHideAutoconfig;
+	delete chkScsiDisable;
 	
 	delete lblScrLock;
 	delete lblNumLock;
@@ -692,6 +703,7 @@ void RefreshPanelMisc()
 	chkMinimizeInactive->setSelected(changed_prefs.minimize_inactive);
 	chkCaptureAlways->setSelected(changed_prefs.capture_always);
 	chkHideAutoconfig->setSelected(changed_prefs.uae_hide_autoconfig);
+	chkScsiDisable->setSelected(changed_prefs.scsidevicedisable);
 	
 	cboKBDLed_num->setSelected(changed_prefs.kbd_led_num + 1);
 	cboKBDLed_scr->setSelected(changed_prefs.kbd_led_scr + 1);
