@@ -289,7 +289,7 @@ static int first_drawn_line, last_drawn_line;
 each line that needs to be drawn.  These are basically extracted out of
 bit fields in the hardware registers.  */
 static int bplmode, bplehb, bplham, bpldualpf, bpldualpfpri;
-static int bpldualpf2of, bplplanecnt, ecsshres;
+static int bpldualpf2of, bplplanecnt, bplmaxplanecnt, ecsshres;
 static int bplbypass, bplcolorburst, bplcolorburst_field;
 static int bplres;
 static int plf1pri, plf2pri, bplxor, bplxorsp, bpland, bpldelay_sh;
@@ -651,6 +651,11 @@ static void set_hblanking_limits(void)
 		hbstrt = (239 << CCK_SHRES_SHIFT) - 3;
 		doblank = true;
 	}
+
+	if (currprefs.cs_dipagnus && hbstop < (48 << CCK_SHRES_SHIFT) - 3) {
+		hbstop = (48 << CCK_SHRES_SHIFT) - 3;
+	}
+
 	if (doblank && programmedmode != 1) {
 		// reposition to sync
 		// use hardwired hblank emulation as overscan blanking.
@@ -717,8 +722,10 @@ void check_custom_limits(void)
 	int bottom = fd->gfx_filter_bottom_border < 0 ? 0 : fd->gfx_filter_bottom_border;
 
 	// backwards compatibility, old 0x38 start is gone.
-	left += (0x38 * 4) >> (RES_MAX - currprefs.gfx_resolution);
-	right += (0x38 * 4) >> (RES_MAX - currprefs.gfx_resolution);
+	if (left > 0) {
+		left += (0x38 * 4) >> (RES_MAX - currprefs.gfx_resolution);
+		right += (0x38 * 4) >> (RES_MAX - currprefs.gfx_resolution);
+	}
 
 	if (left > visible_left_start)
 		visible_left_start = left;
@@ -1147,6 +1154,7 @@ static void pfield_init_linetoscr (int lineno, bool border)
 	bool expanded = false;
 
 	hsync_shift_hack = 0;
+	bplmaxplanecnt = dp_for_drawing->max_planes;
 	
 	if (border)
 		ddf_left = DISPLAY_LEFT_SHIFT;
@@ -2907,7 +2915,7 @@ static void pfield_doline(int lineno)
 	real_bplpt[7] = DATA_POINTER(7);
 #endif
 
-	switch (bplplanecnt) {
+	switch (bplmaxplanecnt) {
 	default: break;
 	case 0: memset(data, 0, wordcount * 64); break;
 	case 1: pfield_doline64_n1(data, wordcount, real_bplpt); break;
@@ -2937,7 +2945,7 @@ static void pfield_doline(int lineno)
 	real_bplpt[7] = DATA_POINTER(7);
 #endif
 
-	switch (bplplanecnt) {
+	switch (bplmaxplanecnt) {
 	default: break;
 	case 0: memset(data, 0, wordcount * 32); break;
 	case 1: pfield_doline32_n1(data, wordcount, real_bplpt); break;
@@ -3350,6 +3358,10 @@ static void do_color_changes(line_draw_func worker_border, line_draw_func worker
 	bool vbarea = vp < vblank_top_start || vp >= vblank_bottom_stop;
 
 	extborder = false; // reset here because it always have start and end in same scanline
+	if (!ecs_denise) {
+		// used for OCS Denise blanking bug when not ECS Denise or AGA.
+		exthblank = false;
+	}
 	for (i = dip_for_drawing->first_color_change; i <= dip_for_drawing->last_color_change; i++) {
 		int regno = curr_color_changes[i].regno;
 		uae_u32 value = curr_color_changes[i].value;
@@ -3478,9 +3490,9 @@ static void do_color_changes(line_draw_func worker_border, line_draw_func worker
 					}
 				} else if (value & COLOR_CHANGE_BLANK) {
 					if (value & 1) {
-						hposblank = 1;
+						exthblank = true;
 					} else {
-						hposblank = 0;
+						exthblank = false;
 					}
 				} else if (value & COLOR_CHANGE_BRDBLANK) {
 					colors_for_drawing.extra &= ~(1 << CE_BORDERBLANK);
@@ -3801,9 +3813,6 @@ static void center_image (void)
 	} else if (ew == -1) {
 		// wide mode
 		int hs = hsync_end_left_border * 2;
-		if (currprefs.gfx_overscanmode >= OVERSCANMODE_BROADCAST) {
-			hs++;
-		}
 		visible_left_border = hs << currprefs.gfx_resolution;
 		if (visible_left_border + w > maxdiw) {
 			visible_left_border += (maxdiw - (visible_left_border + w) - 1) / 2;

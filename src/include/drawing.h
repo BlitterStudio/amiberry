@@ -308,7 +308,7 @@ struct decision {
 	uae_u16 bplcon3, bplcon4bm, bplcon4sp;
 	uae_u16 fmode;
 #endif
-	uae_u8 nr_planes;
+	uae_u8 nr_planes, max_planes;
 	uae_u8 bplres;
 	bool ehb_seen;
 	bool ham_seen;
