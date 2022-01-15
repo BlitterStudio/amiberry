@@ -127,8 +127,8 @@ public:
 	}
 };
 
-const char* uaeValues[] = { "ROM disabled", "Original UAE (FS + F0 ROM)", "New UAE (64k + F0 ROM)" };
-string_list_model uaeList(uaeValues, 3);
+const char* uaeValues[] = { "ROM disabled", "Original UAE (FS + F0 ROM)", "New UAE (64k + F0 ROM)", "New UAE (128k, ROM, Direct)", "New UAE (128k, ROM, Indirect)" };
+string_list_model uaeList(uaeValues, 5);
 
 class MainROMActionListener : public gcn::ActionListener
 {
