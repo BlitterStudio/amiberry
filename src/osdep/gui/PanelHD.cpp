@@ -256,8 +256,6 @@ public:
 			// Eject CD from drive
 			//---------------------------------------
 			changed_prefs.cdslots[0].name[0] = 0;
-			changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
-			changed_prefs.cdslots[0].inuse = false;
 			AdjustDropDownControls();
 		}
 		else if (actionEvent.getSource() == cmdCDSelectFile)
