@@ -42,7 +42,7 @@ float getvsyncrate(int monid, float hz, int *mult)
 #define GRN	1
 #define BLU	2
 
-unsigned int doMask (int p, int bits, int shift)
+uae_u32 doMask(uae_u32 p, int bits, int shift)
 {
 	/* scale to 0..255, shift to align msb with mask, and apply mask */
 	uae_u32 val;
@@ -80,21 +80,22 @@ int mask_shift (unsigned long mask)
 	return n;
 }
 
-unsigned int doMask256 (int p, int bits, int shift)
+uae_u32 doMask256 (int p, int bits, int shift)
 {
 	/* p is a value from 0 to 255 (Amiga color value)
 	* shift to align msb with mask, and apply mask */
 
-	unsigned long val = p * 0x01010101UL;
+	uae_u32 val = p;
 	if (bits == 0)
 		return 0;
+	val <<= 24;
 	val >>= (32 - bits);
 	val <<= shift;
 
 	return val;
 }
 
-static unsigned int doColor (int i, int bits, int shift)
+static uae_u32 doColor (int i, int bits, int shift)
 {
 	int shift2;
 
@@ -107,7 +108,7 @@ static unsigned int doColor (int i, int bits, int shift)
 	return (i >> shift2) << shift;
 }
 
-static unsigned int doAlpha (int alpha, int bits, int shift)
+static uae_u32 doAlpha (int alpha, int bits, int shift)
 {
 	return (alpha & ((1 << bits) - 1)) << shift;
 }
@@ -139,6 +140,7 @@ static void video_calc_gammatable(int monid)
 {
 	struct amigadisplay *ad = &adisplays[monid];
 	float bri, con, gam, gams[3];
+	float max = 255;
 
 	bri = ((float)(currprefs.gfx_luminance)) * (128.0f / 1000.0f);
 	con = ((float)(currprefs.gfx_contrast + 1000)) / 1000.0f;
@@ -172,8 +174,8 @@ static void video_calc_gammatable(int monid)
 
 			if (v < 0.0)
 				v = 0.0;
-			if (v > 255.0)
-				v = 255.0;
+			if (v > max)
+				v = max;
 
 			uae_gamma[i][j] = (uae_u32)(v + 0.5);
 		}
@@ -339,7 +341,7 @@ void alloc_colors_rgb (int rw, int gw, int bw, int rs, int gs, int bs, int aw, i
 
 		if (currprefs.gfx_blackerthanblack) {
 			j = i * 15 / 16 + 15;
-		} else {  
+		} else {
 			j = i;
 		}
 		j += 256;
@@ -485,7 +487,7 @@ void alloc_colors64k(int monid, int rw, int gw, int bw, int rs, int gs, int bs, 
 	xredcolor_s = rs;
 	xgreencolor_s = gs;
 	xbluecolor_s = bs;
-	xredcolor_m = ((1 << rw) - 1) << xredcolor_s;
-	xgreencolor_m = ((1 << gw) - 1) << xgreencolor_s;
-	xbluecolor_m = ((1 << bw) - 1) << xbluecolor_s;
+	xredcolor_m = (1 << rw) - 1;
+	xgreencolor_m = (1 << gw) - 1;
+	xbluecolor_m = (1 << bw) - 1;
 }
