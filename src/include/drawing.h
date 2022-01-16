@@ -25,7 +25,7 @@
 extern int lores_shift, shres_shift, interlace_seen;
 extern int visible_left_border, visible_right_border;
 extern int detected_screen_resolution;
-extern int hsync_end_left_border, hsynctotal;
+extern int hsync_end_left_border, denisehtotal;
 
 #define AMIGA_WIDTH_MAX (754 / 2)
 #define AMIGA_HEIGHT_MAX (576 / 2)
@@ -90,7 +90,7 @@ STATIC_INLINE int PIXEL_XPOS(int xx)
 }
 
 #define min_diwlastword (0)
-#define max_diwlastword (PIXEL_XPOS(hsynctotal))
+#define max_diwlastword (PIXEL_XPOS(denisehtotal))
 
 STATIC_INLINE int coord_window_to_hw_x(int x)
 {

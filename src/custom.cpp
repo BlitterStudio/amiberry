@@ -50,6 +50,8 @@
 #include "rommgr.h"
 //#include "specialmonitors.h"
 
+#define BPL_ERASE_TEST 0
+
 #define FRAMEWAIT_MIN_MS 2
 #define FRAMEWAIT_SPLIT 4
 
@@ -315,7 +317,7 @@ static int hsyncstartpos_start_hw;
 int hsyncstartpos_hw;
 int hsyncendpos_hw;
 
-int hsynctotal;
+int denisehtotal;
 static int maxvpos_total = 511;
 int minfirstline = VBLANK_ENDLINE_PAL;
 static int firstblankedline;
@@ -911,7 +913,6 @@ static void hblank_reset(int hblankpos)
 	}
 	// border re-enable takes 1 lores pixel
 	hb_last_diwlastword = hblankpos + 4;
-	SET_LINE_CYCLEBASED;
 }
 
 static void record_color_change2(int hpos, int regno, uae_u32 value)
@@ -990,7 +991,7 @@ static void record_color_change2(int hpos, int regno, uae_u32 value)
 	if (exthblank) {
 		int chpos = pos;
 		// inject programmed hblank start and end in color changes
-		if (hbstrt_v2 < hbstop_v2) {
+		if (hbstrt_v2 <= hbstop_v2) {
 			if (hbstrt_v2 < chpos && hbstrt_v2 >= last_recorded_diw_hpos) {
 				cc = &curr_color_changes[next_color_change];
 				cc->linepos = hbstrt_v2;
@@ -1027,7 +1028,7 @@ static void record_color_change2(int hpos, int regno, uae_u32 value)
 				//	record_dma_event(DMA_EVENT_HBE, diw_to_hpos(cc->linepos), vpos);
 				//}
 			}
-		} else  if (hbstrt_v2 >= hbstop_v2) { // equal: blank enable wins
+		} else  if (hbstrt_v2 > hbstop_v2) { // equal: blank disable wins
 			if (hbstop_v2 < chpos && hbstop_v2 >= last_recorded_diw_hpos) {
 				if (next_color_change == last_color_change && exthblank_state) {
 					cc = &curr_color_changes[next_color_change];
@@ -1196,7 +1197,7 @@ static void decide_diw(int hpos)
 		return;
 	}
 	int start_diw_hpos = ((last_diw_hpos * 2 - DDF_OFFSET + 1) << 2) + 3;
-	int end_diw_hpos = (hpos * 2 + 1) << 2;
+	int end_diw_hpos = ((hpos * 2 + 1) << 2) + 3;
 	// should handle wrap around..
 	if (start_diw_hpos < ((1 << 2) + 3)) {
 		start_diw_hpos = (1 << 2) + 3;
@@ -3364,20 +3365,21 @@ static void long_fetch_64_1 (int hpos, int nwords) { long_fetch_64 (hpos, nwords
 
 static void do_long_fetch(int hpos, int nwords, int fm)
 {
+
 	beginning_of_plane_block(hpos);
 
 	// adjust to current resolution
-	nwords >>= 3 - toscr_res;
+	int rnwords = nwords >> (3 - toscr_res);
 
 	switch (fm) {
 	case 0:
 		if (out_nbits & 15) {
 			for (int i = 0; i < toscr_nr_planes; i++) {
-				long_fetch_16_1(i, nwords);
+				long_fetch_16_1(i, rnwords);
 			}
 		} else {
 			for (int i = 0; i < toscr_nr_planes; i++) {
-				long_fetch_16_0(i, nwords);
+				long_fetch_16_0(i, rnwords);
 			}
 		}
 		break;
@@ -3385,22 +3387,22 @@ static void do_long_fetch(int hpos, int nwords, int fm)
 	case 1:
 		if (out_nbits & 15) {
 			for (int i = 0; i < toscr_nr_planes; i++) {
-				long_fetch_32_1(i, nwords);
+				long_fetch_32_1(i, rnwords);
 			}
 		} else {
 			for (int i = 0; i < toscr_nr_planes; i++) {
-				long_fetch_32_0(i, nwords);
+				long_fetch_32_0(i, rnwords);
 			}
 		}
 		break;
 	case 2:
 		if (out_nbits & 15) {
 			for (int i = 0; i < toscr_nr_planes; i++) {
-				long_fetch_64_1(i, nwords);
+				long_fetch_64_1(i, rnwords);
 			}
 		} else {
 			for (int i = 0; i < toscr_nr_planes; i++) {
-				long_fetch_64_0(i, nwords);
+				long_fetch_64_0(i, rnwords);
 			}
 		}
 		break;
@@ -3413,16 +3415,19 @@ static void do_long_fetch(int hpos, int nwords, int fm)
 	while (exthblank) {
 		cnt -= fetchstart;
 		hpos += fetchstart;
-		hbstrt_bordercheck(hpos, false);
+		sync_color_changes(hpos);
+		if (hb_last_diwlastword >= 0) {
+			hbstrt_bordercheck(hpos, false);
+		}
 		if (cnt <= 0) {
 			break;
 		}
 	}
 
-	out_nbits += nwords * 16;
+	out_nbits += rnwords * 16;
 	out_offs += out_nbits >> 5;
 	out_nbits &= 31;
-	quick_add_delay_cycles((nwords * 16) << toscr_res_pixels_shift);
+	quick_add_delay_cycles((rnwords * 16) << toscr_res_pixels_shift);
 
 }
 
@@ -4764,6 +4769,22 @@ static void reset_decisions_hsync_start(void)
 		toscr_scanline_complex_bplcon1 = false;
 	}
 
+#if BPL_ERASE_TEST
+	for (int n = 0; n < 8; n++) {
+		static uae_u8 v;
+		v += 2;
+		uae_u8 *dataptr = line_data[next_lineno] + n * MAX_WORDS_PER_LINE * 2;
+		memset(dataptr, v ^ vpos, MAX_WORDS_PER_LINE * 2);
+	}
+#endif
+
+	if (toscr_nr_planes3 < toscr_nr_planes2 && toscr_nr_planes3 > 0 && out_offs > 0) {
+		for (int n = toscr_nr_planes3; n < toscr_nr_planes2; n++) {
+			uae_u8 *dataptr = line_data[next_lineno] + n * MAX_WORDS_PER_LINE * 2;
+			memset(dataptr, 0, out_offs * 4);
+		}
+	}
+
 	reset_bpl_vars();
 
 	/* These are for comparison. */
@@ -4884,6 +4905,12 @@ static void reset_decisions_hsync_start(void)
 			hblankstart = diw_to_hpos(last_hblank_start + 4);
 		} else if (exthblank_state) {
 			hblankstart = last_bpl1dat_hpos - 1;
+		} else {
+			// AGA only, ECS Denise sees HBLANK in CSYNC blank line which always opens border.
+			if (aga_mode) {
+				// no hblank start: Border stays in closed state
+				start_noborder(hpos);
+			}
 		}
 		if (hblankstart >= 0) {
 			int bpl1 = last_bpl1dat_hpos;
@@ -5158,9 +5185,9 @@ static void updateextblk(void)
 		hsyncstartpos_start = hsyncstartpos;
 		if (hsyncstartpos < maxhpos / 2) {
 			hsyncstartpos = maxhpos_short + hsyncstartpos_start;
-			hsynctotal = hsyncstartpos;
+			denisehtotal = hsyncstartpos;
 		} else {
-			hsynctotal = maxhpos + hsyncstartpos;
+			denisehtotal = maxhpos + hsyncstartpos;
 		}
 		// make sure possible BPL DMA cycles before first refresh slot are processed before hsync
 		if (hsyncstartpos_start < REFRESH_FIRST_HPOS + 1) {
@@ -5178,7 +5205,7 @@ static void updateextblk(void)
 		hsyncstartpos_start = hsyncstartpos_start_hw;
 		hsyncstartpos = hsyncstartpos_hw;
 		hsyncendpos2 = hsyncendpos = hsyncendpos_hw;
-		hsynctotal = 227 + 7;
+		denisehtotal = 227 + 7;
 		hsstop_detect2 = 35 + 9;
 
 	}
@@ -5241,11 +5268,12 @@ static void updateextblk(void)
 	hsyncstartpos <<= CCK_SHRES_SHIFT;
 	hsyncendpos <<= CCK_SHRES_SHIFT;
 	hsyncendpos2 <<= CCK_SHRES_SHIFT;
-	hsynctotal <<= CCK_SHRES_SHIFT;
+
+	denisehtotal <<= CCK_SHRES_SHIFT;
 
 	// ECS Denise has 1 extra lores pixel in right border
 	if (ecs_denise) {
-		hsynctotal += 1 << (CCK_SHRES_SHIFT - 1);
+		denisehtotal += 1 << (CCK_SHRES_SHIFT - 1);
 	}
 
 	set_hcenter();
@@ -5588,9 +5616,11 @@ static void init_hz(bool checkvposw)
 		if (currprefs.gfx_overscanmode == OVERSCANMODE_EXTREME) {
 			maxhpos_display = maxhpos - 2;
 			hsstop_detect = 18;
+			maxvpos_display_vsync += 2;
 		} else if (currprefs.gfx_overscanmode == OVERSCANMODE_BROADCAST) {
 			maxhpos_display = maxhpos - 10;
 			hsstop_detect = 22;
+			maxvpos_display_vsync++;
 		} else {
 			int hb = 0;
 			if (exthblank) {
@@ -5619,18 +5649,21 @@ static void init_hz(bool checkvposw)
 			}
 		}
 		maxhpos_display *= 2;
-		if (currprefs.gfx_extrawidth > 0) {
-			maxhpos_display += currprefs.gfx_extrawidth;
-		}
 
 	} else {
 
 		maxhpos_display = AMIGA_WIDTH_MAX;
 		hsstop_detect = hsstop_detect2;
 
-		if (currprefs.gfx_extrawidth > 0) {
-			maxhpos_display += currprefs.gfx_extrawidth;
-		} else if (currprefs.gfx_overscanmode < OVERSCANMODE_BROADCAST) {
+		if (beamcon0 & (BEAMCON0_VARHSYEN | BEAMCON0_VARCSYEN)) {
+			if (currprefs.gfx_overscanmode < OVERSCANMODE_BROADCAST) {
+				hsstop_detect += 7;
+			} else if (currprefs.gfx_overscanmode == OVERSCANMODE_BROADCAST) {
+				hsstop_detect += 5;
+			}
+		}
+
+		if (currprefs.gfx_overscanmode < OVERSCANMODE_BROADCAST) {
 			// one pixel row missing from right border if OCS
 			if (!ecs_denise) {
 				maxhpos_display--;
@@ -5646,6 +5679,11 @@ static void init_hz(bool checkvposw)
 			minfirstline--;
 			hsstop_detect -= 1;
 		}
+
+	}
+
+	if (currprefs.gfx_extrawidth > 0) {
+		maxhpos_display += currprefs.gfx_extrawidth;
 	}
 
 	if (hsstop_detect < 0) {
@@ -6959,17 +6997,18 @@ static void bplcon0_denise_change(int hpos, uae_u16 con0)
 #endif
 
 
+	if (isocs7planes()) {
+		if (toscr_nr_planes_shifter_new < 6) {
+			toscr_nr_planes_shifter_new = 6;
+		}
+	}
+
 	if (np > toscr_nr_planes2) {
 		update_toscr_planes(np, fetchmode);
 		toscr_nr_planes2 = np;
 		thisline_decision.max_planes = np;
 	}
 
-	if (isocs7planes()) {
-		if (toscr_nr_planes_shifter_new < 6) {
-			toscr_nr_planes_shifter_new = 6;
-		}
-	}
 }
 
 static void BPLCON0(int hpos, uae_u16 v)

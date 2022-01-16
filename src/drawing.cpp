@@ -652,17 +652,13 @@ static void set_hblanking_limits(void)
 		doblank = true;
 	}
 
-	if (currprefs.cs_dipagnus && hbstop < (48 << CCK_SHRES_SHIFT) - 3) {
-		hbstop = (48 << CCK_SHRES_SHIFT) - 3;
-	}
-
 	if (doblank && programmedmode != 1) {
 		// reposition to sync
 		// use hardwired hblank emulation as overscan blanking.
 		if ((new_beamcon0 & (BEAMCON0_VARHSYEN | BEAMCON0_VARCSYEN)) && !hardwired) {
 			extern uae_u16 hsstrt;
-			hbstrt += (hsstrt - 17) << CCK_SHRES_SHIFT;
-			hbstop += (hsstrt - 17) << CCK_SHRES_SHIFT;
+			hbstrt += (hsstrt - 18) << CCK_SHRES_SHIFT;
+			hbstop += (hsstrt - 18) << CCK_SHRES_SHIFT;
 		}
 
 		if (currprefs.chipset_hr) {
@@ -1095,7 +1091,7 @@ static xcolnr getbgc(int blank)
 	else if (hposblank == 3)
 		return xcolors[0x00f];
 	else if (ce_is_borderblank(colors_for_drawing.extra))
-		return xcolors[0x880];
+		return xcolors[0xc80];
 	//return colors_for_drawing.acolors[0];
 	return xcolors[0xf0f];
 #endif
@@ -1178,7 +1174,10 @@ static void pfield_init_linetoscr (int lineno, bool border)
 	if (linetoscr_diw_start < 0) {
 		linetoscr_diw_start = 0;
 	}
-
+	// OCS Denise shows only background until hpos 95.
+	if (!ecs_denise && linetoscr_diw_start < shres_coord_hw_to_window_x(95 << 2)) {
+		linetoscr_diw_start = shres_coord_hw_to_window_x(95 << 2);
+	}
 	/* Perverse cases happen. */
 	if (linetoscr_diw_end < linetoscr_diw_start)
 		linetoscr_diw_end = linetoscr_diw_start;
