@@ -5668,6 +5668,7 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		|| cfgfile_yesno(option, value, _T("lightpen_crosshair"), &p->lightpen_crosshair)
 
 		|| cfgfile_yesno (option, value, _T("kickshifter"), &p->kickshifter)
+		|| cfgfile_yesno(option, value, _T("scsidevice_disable"), &p->scsidevicedisable)
 		|| cfgfile_yesno (option, value, _T("ks_write_enabled"), &p->rom_readwrite)
 		|| cfgfile_yesno (option, value, _T("ntsc"), &p->ntscmode)
 		|| cfgfile_yesno (option, value, _T("sana2"), &p->sana2)
