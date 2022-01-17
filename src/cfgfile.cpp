@@ -2781,8 +2781,8 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 
 #ifndef AMIBERRY
 	cfgfile_write_bool(f, _T("debug_mem"), p->debug_mem);
-	cfgfile_write_bool(f, _T("log_illegal_mem"), p->illegal_mem);
 #endif
+	cfgfile_write_bool(f, _T("log_illegal_mem"), p->illegal_mem);
 
 	cfgfile_dwrite_bool(f, _T("keyboard_connected"), p->keyboard_connected);
 	cfgfile_write_str (f, _T("kbd_lang"), (p->keyboard_lang == KBD_LANG_DE ? _T("de")
