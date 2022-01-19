@@ -1,5 +1,5 @@
 TARGET  = lib/libguisan.a
-DYLIB_TARGET = lib/libguisan.dylib
+DYLIB_TARGET = dylib/libguisan.dylib
   
 AR      = ar
 
