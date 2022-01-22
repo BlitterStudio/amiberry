@@ -11,7 +11,7 @@ DEPS	= $(SOURCE:%.cpp=%.d)
 ifeq ($(PLATFORM),osx)
 	# Create DYLIB on OS X
         LDFLAGS += -lsdl2 -no_branch_islands
-        DYLIB=$(CXX) -dynamiclib  -std=c++14 -headerpad_max_install_names -current_version 1.0 -fvisibility=hidden -undefined dynamic_lookup -o $(DYLIB_TARGET) $(OBJS)
+        DYLIB=$(CXX) -dynamiclib  -std=c++14 -install_name libguisan.dylib -fvisibility=hidden -undefined dynamic_lookup -o $(DYLIB_TARGET) $(OBJS)
         CXX=/usr/bin/c++
 else
         DYLIB=
