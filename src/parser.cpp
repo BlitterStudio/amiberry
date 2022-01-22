@@ -60,7 +60,9 @@
 #include <sys/socket.h>
 #include <sys/select.h>
 #include <netdb.h>
+#ifndef __MACH__
 #include <linux/serial.h>
+#endif
 #endif
 
 #if !defined B300 || !defined B1200 || !defined B2400 || !defined B4800 || !defined B9600
@@ -434,7 +436,11 @@ static int opentcp (const TCHAR *sername)
 int openser (const TCHAR *sername)
 {
 	struct termios newtio;
+#ifndef __MACH__
 	struct serial_icounter_struct serial_counter;
+#else
+	char fd,retcode,flags;
+#endif
 
 #if SERIAL_ENET
 	if (_tcsnicmp(sername, _T("tcp:"), 4) == 0) {
@@ -466,10 +472,12 @@ int openser (const TCHAR *sername)
 	tcsetattr (ser_fd, TCSANOW, &newtio);
 
 	/* Initialise the break condition count */
+// TIOCGICOUNT is not available on OS x
+#ifndef __MACH__
 	memset (&serial_counter, 0, sizeof(serial_counter));
 	if (ioctl(ser_fd, TIOCGICOUNT, &serial_counter) >= 0)
 		brk_cond_count = serial_counter.brk;
-
+#endif
 	write_log("serial: open '%s' -> fd=%d\n", sername, ser_fd);
 	return (ser_fd >= 0);
 #else
@@ -625,7 +633,8 @@ int readseravail (bool *breakcond)
 		if (ser_fd < 0) {
 			return 0;
 		}
-
+// TIOCGICOUNT is not available on OS x
+#ifndef __MACH__
 		struct serial_icounter_struct serial_counter;
 		memset (&serial_counter, 0, sizeof(serial_counter));
 		if (ioctl (ser_fd, TIOCGICOUNT, &serial_counter) >= 0)
@@ -634,6 +643,9 @@ int readseravail (bool *breakcond)
 				*breakcond = true;
 				breakpending = false;
 			}
+#else
+	breakpending = false;
+#endif
 
 		/* poll if read data is available */
 		struct timeval tv;
@@ -709,7 +721,8 @@ int readser (int *buffer)
 		}
 
 		char b;
-
+// TIOCGICOUNT is not available on OS X
+#ifndef __MACH__
 		struct serial_icounter_struct serial_counter;
 		memset (&serial_counter, 0, sizeof(serial_counter));
 		if (ioctl (ser_fd, TIOCGICOUNT, &serial_counter) >= 0)
@@ -717,6 +730,9 @@ int readser (int *buffer)
 				brk_cond_count = serial_counter.brk;
 				breakpending = true;
 			}
+#else
+	breakpending=false;
+#endif
 
 		int num = read(ser_fd, &b, 1);
 		if (num == 1) {

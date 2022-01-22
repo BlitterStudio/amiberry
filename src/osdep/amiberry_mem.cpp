@@ -9,7 +9,9 @@
 #include "uae/mman.h"
 #include <sys/mman.h>
 #include "sys/types.h"
+#ifndef __MACH__
 #include "sys/sysinfo.h"
+#endif
 
 #ifdef ANDROID
 #define valloc(x) memalign(getpagesize(), x)
@@ -59,6 +61,7 @@ void free_AmigaMem(void)
 
 bool can_have_1gb()
 {
+	#ifndef __MACH__
 	struct sysinfo mem_info{};
 	sysinfo(&mem_info);
 	long long total_phys_mem = mem_info.totalram;
@@ -67,6 +70,10 @@ bool can_have_1gb()
 	if (total_phys_mem > 2147483648LL)
 		return true;
 	return false;
+	#else
+	// On OSX just return true, there's no M1 mac with less than 8G of RAM
+	return true;
+	#endif
 }
 
 void alloc_AmigaMem(void)

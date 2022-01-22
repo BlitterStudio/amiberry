@@ -36,6 +36,7 @@ STATIC_INLINE FILE* uae_tfopen(const TCHAR* path, const TCHAR* mode)
 	return fopen(path, mode);
 }
 
+// Expose prefix_with_application_directory from amiberry_filesys so we can use it to open the main confguration file on OS X
 extern int mouseactive;
 extern int minimized;
 extern int monitor_off;
@@ -85,6 +86,11 @@ extern void keyboard_settrans(void);
 extern void free_AmigaMem();
 extern void alloc_AmigaMem();
 extern bool can_have_1gb();
+
+#ifdef __MACH__
+// from amifilesys.cpp
+string prefix_with_application_directory_path(string currentpath);
+#endif
 
 extern void get_configuration_path(char* out, int size);
 extern void set_configuration_path(char* newpath);

@@ -66,6 +66,11 @@ endif
 ifneq (,$(findstring rpi4,$(PLATFORM)))
 	CPUFLAGS = -mcpu=cortex-a72 -mfpu=neon-fp-armv8
 endif
+
+# Mac OS X CPU flags
+ifneq (,$(findstring osx,$(PLATFORM)))
+	CPUFLAGS=-mcpu=apple-m1
+endif
 #
 # DispmanX Common flags (RPI-specific)
 #
@@ -196,6 +201,14 @@ else ifeq ($(PLATFORM),oga)
 	CPUFLAGS = -mcpu=cortex-a35
 	CPPFLAGS += $(CPPFLAGS64)
 	AARCH64 = 1
+
+# OS X (SDL2, 64-bit)
+else ifeq ($(PLATFORM),osx)
+        LDFLAGS = -L/usr/local/lib external/libguisan/dylib/libguisan.dylib -lSDL2_image -lSDL2_ttf -lpng -liconv -lz -lFLAC -L/opt/homebrew/lib/ -lmpg123 -lmpeg2 -lmpeg2convert $(SDL_LDFLAGS) -framework IOKit -framework Foundation
+	CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -I/opt/homebrew/include -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -DAMIBERRY -D_FILE_OFFSET_BITS=64 -DCPU_AARCH64 $(SDL_CFLAGS) 
+        CXX=/usr/bin/c++
+        DEBUG=1
+	APPBUNDLE=1
 
 # Generic aarch64 target defaulting to Cortex A53 CPU (SDL2, 64-bit)
 else ifeq ($(PLATFORM),a64)
@@ -541,6 +554,8 @@ else ifeq ($(PLATFORM),$(filter $(PLATFORM),rpi1 rpi1-sdl2))
 OBJS += src/osdep/arm_helper.o
 src/osdep/arm_helper.o: src/osdep/arm_helper.s
 	$(AS) $(CPUFLAGS) -o src/osdep/arm_helper.o -c src/osdep/arm_helper.s
+else ifeq ($(PLATFORM),$(filter $(PLATFORM),osx))
+OBJS += src/osdep/aarch64_helper_osx.o
 else
 OBJS += src/osdep/neon_helper.o
 src/osdep/neon_helper.o: src/osdep/neon_helper.s
@@ -571,6 +586,9 @@ ifndef DEBUG
 # want to keep a copy of the binary before stripping? Then enable the below line
 #	cp $(PROG) $(PROG)-debug
 	$(STRIP) $(PROG)
+endif
+ifdef	APPBUNDLE
+	sh make-bundle.sh
 endif
 
 clean:

@@ -14,6 +14,10 @@
 #include "fsdb_host.h"
 #include "uae.h"
 
+#ifdef __MACH__
+#include <CoreFoundation/CoreFoundation.h>
+#endif
+
 struct my_opendir_s {
 	DIR* dir{};
 };
@@ -74,11 +78,29 @@ std::string iso_8859_1_to_utf8(std::string& str)
 
 string prefix_with_application_directory_path(string currentpath)
 {
+#ifdef __MACH__
+// On OS X we return the path of the bundle
+	// Build full path to Resources directory where the data folder is located
+	CFURLRef appUrlRef;
+	// Get full path to current bundle + filename being fetched
+	appUrlRef = CFBundleCopyResourceURL(CFBundleGetMainBundle(), CFStringCreateWithCString(NULL,currentpath.c_str(),kCFStringEncodingASCII), NULL, NULL);
+	// Create filePathRef referencing the full path 
+	CFStringRef filePathRef = CFURLCopyPath(appUrlRef);
+	// Convert it into a c-string
+	const char* filePath = CFStringGetCStringPtr(filePathRef, kCFStringEncodingUTF8);
+	// Release both of our Ref objects
+	CFRelease(filePathRef);
+	CFRelease(appUrlRef);
+	write_log("Filepath: %s\n",filePath);
+	// Return correct filepath to application
+	return filePath;
+#else
 	if (const auto env_dir = getenv("EXTERNAL_FILES_DIR"); env_dir != nullptr)
 	{
 		return getenv("EXTERNAL_FILES_DIR") + ("/" + currentpath);
 	}
 	return currentpath;
+#endif
 }
 
 int my_setcurrentdir(const TCHAR* curdir, TCHAR* oldcur)

@@ -912,6 +912,8 @@ static void open_screen(struct uae_prefs* p)
 		
 		if (isfullscreen() == 0 && !is_maximized)
 			SDL_SetWindowSize(mon->sdl_window, display_width, display_height);
+			// Center window, sigurbjornl 20220122
+			SDL_SetWindowPosition(mon->sdl_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 	}
 	else
 	{
@@ -1843,6 +1845,37 @@ int graphics_init(bool mousecapture)
 			0,
 			0,
 			SDL_WINDOW_FULLSCREEN_DESKTOP);
+		check_error_sdl(mon->sdl_window == nullptr, "Unable to create window");
+	}
+#elif defined __MACH__
+// On OS X set the SDL_WINDOW_ALLOW_HIGHDPI on Mac OS X since monitor is likely to be high DPI but otherwise listen to prefs
+	// If window isn't open already
+	if (!mon->sdl_window)
+	{
+		// Variable to OR together the window mode settings
+		Uint32 sdl_window_mode;
+		// Obey prefs for fullscreen window or full screen mode
+		if (currprefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLWINDOW)
+			sdl_window_mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
+		else if (currprefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN)
+			sdl_window_mode = SDL_WINDOW_FULLSCREEN;
+		else
+			sdl_window_mode = SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
+		// Obey prefs for Borderless
+		if (currprefs.borderless)
+			sdl_window_mode |= SDL_WINDOW_BORDERLESS;
+		// And always on top
+		if (currprefs.main_alwaysontop)
+			sdl_window_mode |= SDL_WINDOW_ALWAYS_ON_TOP;
+		// Set Window allow high DPI by default on OS X
+		sdl_window_mode |= SDL_WINDOW_ALLOW_HIGHDPI;
+		// Open centered window with window mode settings
+		mon->sdl_window = SDL_CreateWindow("Amiberry",
+			SDL_WINDOWPOS_CENTERED,
+			SDL_WINDOWPOS_CENTERED,
+			0,
+			0,
+			sdl_window_mode);
 		check_error_sdl(mon->sdl_window == nullptr, "Unable to create window");
 	}
 #else

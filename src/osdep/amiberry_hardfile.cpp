@@ -30,6 +30,13 @@ struct uae_driveinfo {
 	int readonly;
 };
 
+#ifdef __MACH__
+#  define off64_t off_t
+#  define fopen64 fopen
+#  define fseeko64 fseeko
+#  define ftello64 ftello
+#endif
+
 #define HDF_HANDLE_WIN32  1
 #define HDF_HANDLE_ZFILE 2
 #define HDF_HANDLE_LINUX 3
