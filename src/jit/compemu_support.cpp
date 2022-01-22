@@ -44,6 +44,11 @@
 #include <SDL.h>
 
 
+#ifdef __MACH__
+// Needed for sys_cache_invalidate to on the JIT space region, Mac OS X specific
+#include <libkern/OSCacheControl.h>
+#endif
+
 #if DEBUG
 #define PROFILE_COMPILE_TIME        1
 #endif
@@ -165,11 +170,23 @@ static void cache_free (uae_u8 *cache, int size)
 static uae_u8 *cache_alloc (int size)
 {
   size = size < getpagesize() ? getpagesize() : size;
-
+// Mac OS sets MAP_FAILED if things fail so we need to check for that error code on Mac OS
+// In addition, the only way we get to have both WRITE and EXEC on the same process is by enabling MAP_JIT and there are further limitations as to how we can use that
+// Mainly that we're not allowed to have both WRITE and EXEC active at the same time, we need to call pthread_jit_write_protect with true/false to either enable WRITE
+// or Exec (but never both at the same time)
+#ifdef __MACH__
+  void *cache = mmap(0, size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_JIT | MAP_PRIVATE | MAP_ANON, -1, 0);
+  if (cache == MAP_FAILED) {
+#else
   void *cache = mmap(0, size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANON, -1, 0);
   if (!cache) {
+#endif
     printf ("Cache_Alloc of %d failed. ERR=%d\n", size, errno);
   } else {
+#ifdef __MACH__
+  // Disable write protect on the JIT before we memset it on OS X, this would work on x86-64 Mac OS x as well, but is a no-op
+  pthread_jit_write_protect_np(false);
+#endif
     memset(cache, 0, size);
   }
   return (uae_u8 *) cache;
@@ -526,6 +543,10 @@ STATIC_INLINE void alloc_blockinfos(void)
         if (hold_bi[i])
             return;
         bi = hold_bi[i] = alloc_blockinfo();
+#ifdef __MACH__
+        // Turn off write protect (which prevents execution) on JIT cache while the blocks are prepared, this is Mac OS X specific, it will work on x86-64, but as a noop
+        pthread_jit_write_protect_np(false);
+#endif
         prepare_block(bi);
     }
 }
@@ -1254,6 +1275,13 @@ static void fflags_into_flags_internal(void)
 /********************************************************************
  * Support functions exposed to gencomp. CREATE time                *
  ********************************************************************/
+
+#ifdef __MACH__
+void cache_invalidate(void) {
+        // Invalidate cache on the JIT cache
+        sys_icache_invalidate(popallspace, POPALLSPACE_SIZE + MAX_JIT_CACHE * 1024);
+}
+#endif
 
 uae_u32 get_const(int r)
 {
