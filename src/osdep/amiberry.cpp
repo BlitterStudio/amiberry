@@ -3350,7 +3350,7 @@ int main(int argc, char* argv[])
 	// restore keyboard LEDs to normal state
 	ioctl(0, KDSETLED, 0xFF);
 #else
-	// TODO
+	// Unsolved for OS X
 #endif
 
 	ClearAvailableROMList();
