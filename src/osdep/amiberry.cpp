@@ -205,7 +205,11 @@ extern void SetLastActiveConfig(const char* filename);
 char start_path_data[MAX_DPATH];
 char current_dir[MAX_DPATH];
 
+#ifndef __MACH__
 #include <linux/kd.h>
+#else
+#include <CoreFoundation/CoreFoundation.h>
+#endif
 #include <sys/ioctl.h>
 unsigned char kbd_led_status;
 char kbd_flags;
@@ -3042,7 +3046,13 @@ static void init_amiberry_paths(void)
 	snprintf(rom_path, MAX_DPATH, "%s/kickstarts/", start_path_data);
 #endif
 	snprintf(rp9_path, MAX_DPATH, "%s/rp9/", start_path_data);
+#ifdef __MACH__
+	// Open amiberry.conf from app bundle which provided reasonable OS X M1 defaults
+	snprintf(amiberry_conf_file, MAX_DPATH, "%s",prefix_with_application_directory_path("conf/amiberry.conf").c_str());
+	printf("%s\n",prefix_with_application_directory_path("conf/amiberry.conf").c_str());
+#else
 	snprintf(amiberry_conf_file, MAX_DPATH, "%s/conf/amiberry.conf", start_path_data);
+#endif
 	snprintf(floppy_sounds_dir, MAX_DPATH, "%s/data/floppy_sounds/", start_path_data);
 	snprintf(data_dir, MAX_DPATH, "%s/", start_path_data);
 	snprintf(saveimage_dir, MAX_DPATH, "%s/savestates/", start_path_data);
@@ -3276,7 +3286,8 @@ int main(int argc, char* argv[])
 
 	normalcursor = SDL_GetDefaultCursor();
 	clipboard_init();
-	
+
+#ifndef __MACH__
 	// set capslock state based upon current "real" state
 	ioctl(0, KDGKBLED, &kbd_flags);
 	ioctl(0, KDGETLED, &kbd_led_status);
@@ -3293,6 +3304,22 @@ int main(int argc, char* argv[])
 		inputdevice_do_keyboard(AK_CAPSLOCK, 0);
 	}
 	ioctl(0, KDSETLED, kbd_led_status);
+#else
+	// I tried to use Apple IO KIT to poll the status of the various leds but it requires a special input reading permission (that the user needs to explicitely allow 
+	// for the app on launch) and in addition to that it doesn't consistently work well enough, more often than not we'll get a permission denied from the IOKIT framework 
+	// which causes the app to silently fail anyway.  I can't find recent examples for Mac OS that work well enough and I feel it's not good to rely on a framework that
+	// doesn't work all the time
+
+	// We'll just call SDL and do a rudimentary state check instead
+	int caps = SDL_GetModState();
+        caps = caps & KMOD_CAPS;
+	if(caps == KMOD_CAPS)
+		// 0x04 is LED_CAP in the Linux file which is used here to trigger it
+		kbd_led_status |= ~0x04;
+	else
+		kbd_led_status &= ~0x04;
+#endif
+
 
 #ifdef USE_GPIOD
 	// Open GPIO chip
@@ -3319,8 +3346,12 @@ int main(int argc, char* argv[])
 
 	gpiod_chip_close(chip);
 #endif
+#ifndef __MACH__
 	// restore keyboard LEDs to normal state
 	ioctl(0, KDSETLED, 0xFF);
+#else
+	// Unsolved for OS X
+#endif
 
 	ClearAvailableROMList();
 	romlist_clear();

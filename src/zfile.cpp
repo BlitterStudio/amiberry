@@ -24,6 +24,13 @@
 #include "diskutil.h"
 #include "fdi2raw.h"
 #include "uae.h"
+// OS X does not have off64_t, fopen64, fseeko64 or ftello64, the functions are already 64bit
+#ifdef __MACH__
+#  define off64_t off_t
+#  define fopen64 fopen
+#  define fseeko64 fseeko
+#  define ftello64 ftello
+#endif
 
 #include "archivers/zip/unzip.h"
 #include "archivers/dms/pfile.h"

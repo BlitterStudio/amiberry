@@ -53,7 +53,9 @@
 #endif
 
 #include <iostream>
+#ifndef __MACH__
 #include <linux/kd.h>
+#endif
 #include <sys/ioctl.h>
 #include "keyboard.h"
 

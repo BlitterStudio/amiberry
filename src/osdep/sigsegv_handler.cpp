@@ -36,7 +36,11 @@
 #endif
 #include "uae.h"
 
+#ifndef __MACH__
 #include <asm/sigcontext.h>
+#else
+#include <sys/ucontext.h>
+#endif
 #include <signal.h>
 #include <dlfcn.h>
 #ifndef ANDROID
@@ -121,11 +125,19 @@ static int delete_trigger(blockinfo *bi, void *pc)
 
 
 typedef uae_u64 uintptr;
-
+#ifndef __MACH__
 static int handle_exception(mcontext_t* sigcont, long fault_addr)
+#else
+static int handle_exception(mcontext_t sigcont, long fault_addr)
+#endif
 {
 	int handled = HANDLE_EXCEPTION_NONE;
+// Mac OS X struct for this is different
+#ifndef __MACH__
 	uintptr fault_pc = uintptr(sigcont->pc);
+#else
+	uintptr fault_pc = uintptr(sigcont->__ss.__pc);
+#endif
 
 	if (fault_pc == 0) {
 		output_log(_T("PC is NULL.\n"));
@@ -163,7 +175,11 @@ static int handle_exception(mcontext_t* sigcont, long fault_addr)
 		// Check for stupid RAM detection of kickstart
 		if (a3000lmem_bank.allocated_size > 0 && amiga_addr >= a3000lmem_bank.start - 0x00100000 && amiga_addr < a3000lmem_bank.start - 0x00100000 + 8) {
 			output_log(_T("  Stupid kickstart detection for size of ramsey_low at 0x%08lx.\n"), amiga_addr);
+#ifndef __MACH__
 			sigcont->pc += 4;
+#else
+			sigcont->__ss.__pc += 4;
+#endif
 			handled = HANDLE_EXCEPTION_A4000RAM;
 			break;
 		}
@@ -171,7 +187,11 @@ static int handle_exception(mcontext_t* sigcont, long fault_addr)
 		// Check for stupid RAM detection of kickstart
 		if (a3000hmem_bank.allocated_size > 0 && amiga_addr >= a3000hmem_bank.start + a3000hmem_bank.allocated_size && amiga_addr < a3000hmem_bank.start + a3000hmem_bank.allocated_size + 8) {
 			output_log(_T("  Stupid kickstart detection for size of ramsey_high at 0x%08lx.\n"), amiga_addr);
+#ifndef __MACH__
 			sigcont->pc += 4;
+#else
+			sigcont->__ss.__pc += 4;
+#endif
 			handled = HANDLE_EXCEPTION_A4000RAM;
 			break;
 		}
@@ -238,35 +258,67 @@ static int handle_exception(mcontext_t* sigcont, long fault_addr)
 
 			if (transfer_type == TYPE_LOAD) {
 				// Perform load via indirect memory call
+#ifndef __MACH__
 				uae_u32 oldval = sigcont->regs[rd];
+#else
+				uae_u32 oldval = sigcont->__ss.__x[rd];
+#endif
 				switch (transfer_size) {
 				case SIZE_BYTE:
+#ifndef __MACH__
 					sigcont->regs[rd] = (uae_u8)get_byte(amiga_addr);
+#else
+					sigcont->__ss.__x[rd] = (uae_u8)get_byte(amiga_addr);
+#endif
 					break;
 
 				case SIZE_WORD:
+#ifndef __MACH__
 					sigcont->regs[rd] = bswap_16((uae_u16)get_word(amiga_addr));
+#else
+					sigcont->__ss.__x[rd] = bswap_16((uae_u16)get_word(amiga_addr));
+#endif
 					break;
 
 				case SIZE_INT:
+#ifndef __MACH__
 					sigcont->regs[rd] = bswap_32(get_long(amiga_addr));
+#else
+					sigcont->__ss.__x[rd] = bswap_32(get_long(amiga_addr));
+#endif
 					break;
 				}
+#ifndef __MACH__
 				output_log(_T("New value in x%d: 0x%08llx (old: 0x%08x)\n"), rd, sigcont->regs[rd], oldval);
+#else
+				output_log(_T("New value in x%d: 0x%08llx (old: 0x%08x)\n"), rd, sigcont->__ss.__x[rd], oldval);
+#endif
 			}
 			else {
 				// Perform store via indirect memory call
 				switch (transfer_size) {
 				case SIZE_BYTE: {
+#ifndef __MACH__
 					put_byte(amiga_addr, sigcont->regs[rd]);
+#else
+					put_byte(amiga_addr, sigcont->__ss.__x[rd]);
+#endif
 					break;
 				}
 				case SIZE_WORD: {
+#ifndef __MACH__
 					put_word(amiga_addr, bswap_16(sigcont->regs[rd]));
+#else
+					put_word(amiga_addr, bswap_16(sigcont->__ss.__x[rd]));
+#endif
 					break;
 				}
 				case SIZE_INT: {
+#ifndef __MACH__
 					put_long(amiga_addr, bswap_32(sigcont->regs[rd]));
+#else
+					put_long(amiga_addr, bswap_32(sigcont->__ss.__x[rd]));
+#endif
 					break;
 				}
 				}
@@ -274,7 +326,11 @@ static int handle_exception(mcontext_t* sigcont, long fault_addr)
 			}
 
 			// Go to next instruction
+#ifndef __MACH__
 			sigcont->pc += 4;
+#else
+			sigcont->__ss.__pc += 4;
+#endif
 			handled = HANDLE_EXCEPTION_OK;
 
 			if (!delete_trigger(active, (void*)fault_pc)) {
@@ -295,6 +351,7 @@ static int handle_exception(mcontext_t* sigcont, long fault_addr)
 void signal_segv(int signum, siginfo_t* info, void* ptr)
 {
 	int handled = HANDLE_EXCEPTION_NONE;
+		
 	ucontext_t* ucontext = (ucontext_t*)ptr;
 	Dl_info dlinfo;
 
@@ -304,9 +361,14 @@ void signal_segv(int signum, siginfo_t* info, void* ptr)
 	trace_end();
 #endif
 
+#ifndef __MACH__
 	mcontext_t* context = &(ucontext->uc_mcontext);
-
 	unsigned long long* regs = context->regs;
+#else
+	mcontext_t context = ucontext->uc_mcontext;
+	unsigned long long* regs = context->__ss.__x;
+#endif
+
 	uintptr addr = (uintptr)info->si_addr;
 
 	handled = handle_exception(context, addr);
@@ -326,13 +388,26 @@ void signal_segv(int signum, siginfo_t* info, void* ptr)
 			output_log(_T("       value = 0x%08x\n"), *((uae_u32*)(info->si_addr)));
 
 		for (int i = 0; i < 31; ++i)
+#ifndef __MACH__
 			output_log(_T("x%02d  = 0x%016llx\n"), i, ucontext->uc_mcontext.regs[i]);
+#else
+			output_log(_T("x%02d  = 0x%016llx\n"), i, context->__ss.__x[i]);
+#endif
+#ifndef __MACH__
 		output_log(_T("SP  = 0x%016llx\n"), ucontext->uc_mcontext.sp);
 		output_log(_T("PC  = 0x%016llx\n"), ucontext->uc_mcontext.pc);
 		output_log(_T("Fault Address = 0x%016llx\n"), ucontext->uc_mcontext.fault_address);
 		output_log(_T("pstate  = 0x%016llx\n"), ucontext->uc_mcontext.pstate);
-
 		void* getaddr = (void*)ucontext->uc_mcontext.regs[30];
+#else
+		output_log(_T("SP  = 0x%016llx\n"), context->__ss.__sp);
+		output_log(_T("PC  = 0x%016llx\n"), context->__ss.__pc);
+		// I can't find an obvious way to get at the fault address from the OS X side
+		//output_log(_T("Fault Address = 0x%016llx\n"), ucontext->uc_mcontext.fault_address);
+		output_log(_T("pstate  = 0x%016llx\n"), context->__ss.__cpsr);
+		void* getaddr = (void*)context->__ss.__x[30];
+#endif
+
 		if (dladdr(getaddr, &dlinfo))
 			output_log(_T("LR - 0x%08X: <%s> (%s)\n"), getaddr, dlinfo.dli_sname, dlinfo.dli_fname);
 		else
@@ -397,9 +472,14 @@ void signal_buserror(int signum, siginfo_t* info, void* ptr)
 	trace_end();
 #endif
 
+#ifndef __MACH__
 	mcontext_t* context = &(ucontext->uc_mcontext);
-
 	unsigned long long* regs = context->regs;
+#else
+	mcontext_t context = ucontext->uc_mcontext;
+	unsigned long long* regs = context->__ss.__x;
+#endif
+
 	uintptr_t addr = (uintptr_t)info->si_addr;
 
 	output_log(_T("info.si_signo = %d\n"), signum);
@@ -410,6 +490,7 @@ void signal_buserror(int signum, siginfo_t* info, void* ptr)
 		output_log(_T("       value = 0x%08x\n"), *((uae_u32*)(info->si_addr)));
 
 	for (int i = 0; i < 31; ++i)
+#ifndef __MACH__
 		output_log(_T("x%02d  = 0x%016llx\n"), i, ucontext->uc_mcontext.regs[i]);
 	output_log(_T("SP  = 0x%016llx\n"), ucontext->uc_mcontext.sp);
 	output_log(_T("PC  = 0x%016llx\n"), ucontext->uc_mcontext.pc);
@@ -417,6 +498,18 @@ void signal_buserror(int signum, siginfo_t* info, void* ptr)
 	output_log(_T("pstate  = 0x%016llx\n"), ucontext->uc_mcontext.pstate);
 
 	void* getaddr = (void*)ucontext->uc_mcontext.regs[30];
+#else
+		output_log(_T("x%02d  = 0x%016llx\n"), i, context->__ss.__x[i]);
+	output_log(_T("SP  = 0x%016llx\n"), context->__ss.__sp);
+	output_log(_T("PC  = 0x%016llx\n"), context->__ss.__pc);
+	// Can't find an obvious way to get at the fault address from the OS X side
+	//output_log(_T("Fault Address = 0x%016llx\n"), context->uc_mcontext.fault_address);
+	output_log(_T("pstate  = 0x%016llx\n"), context->__ss.__cpsr);
+
+	void* getaddr = (void*)context->__ss.__x[30];
+#endif
+
+
 	if (dladdr(getaddr, &dlinfo))
 		output_log(_T("LR - 0x%08X: <%s> (%s)\n"), getaddr, dlinfo.dli_sname, dlinfo.dli_fname);
 	else

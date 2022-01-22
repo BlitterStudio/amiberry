@@ -1020,7 +1020,7 @@ uae_u32 host_bind(TrapContext *ctx, SB, uae_u32 sd, uae_u32 name, uae_u32 namele
 	write_log("bind(%u[%d], 0x%x, %u) -> ", sd, s, name, namelen);
 	copysockaddr_a2n (&addr, name, namelen);
 	printSockAddr (&addr);
-	if ((success = bind (s, (struct sockaddr *)&addr, len)) != 0) {
+	if ((success = ::bind (s, (struct sockaddr *)&addr, len)) != (uae_u32)0) {
 		SETERRNO;
 		write_log("failed (%d)\n",sb->sb_errno);
 	} else {
