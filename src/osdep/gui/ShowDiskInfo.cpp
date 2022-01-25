@@ -184,7 +184,7 @@ static void ShowDiskInfoLoop(void)
 				}
 			}
 			break;
-
+#ifndef USE_OPENGL
 		case SDL_FINGERDOWN:
 			got_event = 1;
 			memcpy(&touch_event, &event, sizeof event);
@@ -219,7 +219,7 @@ static void ShowDiskInfoLoop(void)
 			touch_event.motion.y = gui_graphics->getTarget()->h * event.tfinger.y;
 			gui_input->pushInput(touch_event);
 			break;
-
+#endif
 		case SDL_KEYUP:
 		case SDL_JOYBUTTONUP:
 		case SDL_MOUSEBUTTONDOWN:
@@ -246,7 +246,9 @@ static void ShowDiskInfoLoop(void)
 	{
 		// Now we let the Gui object perform its logic.
 		uae_gui->logic();
+#ifndef USE_OPENGL
 		SDL_RenderClear(sdl_renderer);
+#endif
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
 		// Finally we update the screen.
@@ -266,7 +268,9 @@ void ShowDiskInfo(const char* title, const std::vector<std::string>& text)
 
 	// Prepare the screen once
 	uae_gui->logic();
+#ifndef USE_OPENGL
 	SDL_RenderClear(sdl_renderer);
+#endif
 	uae_gui->draw();
 	update_gui_screen();
 

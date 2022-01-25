@@ -9,6 +9,14 @@
     <RemoteDebuggerCommandArguments>
     </RemoteDebuggerCommandArguments>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-OpenGL|ARM'">
+    <RemoteDebuggerCommand>$(RemoteRootDir)/amiberry/$(MSBuildProjectName)-Debug</RemoteDebuggerCommand>
+    <RemoteDebuggerWorkingDirectory>$(RemoteRootDir)/amiberry</RemoteDebuggerWorkingDirectory>
+    <DebuggerFlavor>LinuxDebugger</DebuggerFlavor>
+    <PreLaunchCommand>export DISPLAY=:0.0</PreLaunchCommand>
+    <RemoteTarget>1721017924;rpios32 (username=, port=22, authentication=Password)</RemoteTarget>
+    <RemoteDebuggerCommandArguments />
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debux-DMX|ARM'">
     <RemoteDebuggerCommand>$(RemoteRootDir)/amiberry/$(MSBuildProjectName)-Debug-dmx</RemoteDebuggerCommand>
     <RemoteDebuggerWorkingDirectory>$(RemoteRootDir)/amiberry</RemoteDebuggerWorkingDirectory>
@@ -33,6 +41,14 @@
     <RemoteTarget>402471865;pi400 (username=, port=22, authentication=Password)</RemoteTarget>
     <RemoteDebuggerCommandArguments>
     </RemoteDebuggerCommandArguments>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-OpenGL|ARM64'">
+    <RemoteDebuggerCommand>$(RemoteRootDir)/amiberry/$(MSBuildProjectName)-Debug</RemoteDebuggerCommand>
+    <RemoteDebuggerWorkingDirectory>$(RemoteRootDir)/amiberry</RemoteDebuggerWorkingDirectory>
+    <DebuggerFlavor>LinuxDebugger</DebuggerFlavor>
+    <PreLaunchCommand>export DISPLAY=:0.0</PreLaunchCommand>
+    <RemoteTarget>402471865;pi400 (username=, port=22, authentication=Password)</RemoteTarget>
+    <RemoteDebuggerCommandArguments />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debux-DMX|ARM64'">
     <RemoteDebuggerCommand>$(RemoteRootDir)/amiberry/$(MSBuildProjectName)-Debug-dmx</RemoteDebuggerCommand>

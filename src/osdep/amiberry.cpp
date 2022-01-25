@@ -3269,6 +3269,12 @@ int main(int argc, char* argv[])
 		write_log("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
 		abort();
 	}
+#ifdef USE_OPENGL
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+	//SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+#endif
 	atexit(SDL_Quit);
 	write_log(_T("Sorting devices and modes...\n"));
 	sortdisplays();
@@ -3312,7 +3318,7 @@ int main(int argc, char* argv[])
 
 	// We'll just call SDL and do a rudimentary state check instead
 	int caps = SDL_GetModState();
-        caps = caps & KMOD_CAPS;
+		caps = caps & KMOD_CAPS;
 	if(caps == KMOD_CAPS)
 		// 0x04 is LED_CAP in the Linux file which is used here to trigger it
 		kbd_led_status |= ~0x04;

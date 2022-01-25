@@ -1,6 +1,14 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug-OpenGL|ARM">
+      <Configuration>Debug-OpenGL</Configuration>
+      <Platform>ARM</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug-OpenGL|ARM64">
+      <Configuration>Debug-OpenGL</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Debug|ARM">
       <Configuration>Debug</Configuration>
       <Platform>ARM</Platform>
@@ -51,6 +59,12 @@
     <PlatformToolset>Remote_GCC_1_0</PlatformToolset>
     <RemoteProjectRelDir>$(MSBuildProjectName)-Debug</RemoteProjectRelDir>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-OpenGL|ARM'" Label="Configuration">
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <ConfigurationType>Makefile</ConfigurationType>
+    <PlatformToolset>Remote_GCC_1_0</PlatformToolset>
+    <RemoteProjectRelDir>$(MSBuildProjectName)-Debug</RemoteProjectRelDir>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debux-DMX|ARM'" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
     <ConfigurationType>Makefile</ConfigurationType>
@@ -58,6 +72,13 @@
     <RemoteProjectRelDir>$(MSBuildProjectName)-Debug-dmx</RemoteProjectRelDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'" Label="Configuration">
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <ConfigurationType>Makefile</ConfigurationType>
+    <RemoteProjectRelDir>$(MSBuildProjectName)-Debug</RemoteProjectRelDir>
+    <RemoteCopyExcludeDirectories>D:\Github\amiberry\VSLinux;$(RemoteCopyExcludeDirectories)</RemoteCopyExcludeDirectories>
+    <RemoteRootDir>/home/midwan/projects</RemoteRootDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-OpenGL|ARM64'" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
     <ConfigurationType>Makefile</ConfigurationType>
     <RemoteProjectRelDir>$(MSBuildProjectName)-Debug</RemoteProjectRelDir>
@@ -108,6 +129,18 @@
     <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-Debug</RemoteProjectDir>
     <RemoteDeployDir>$(RemoteRootDir)/$(ProjectName)-Debug</RemoteDeployDir>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-OpenGL|ARM'">
+    <RemoteBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug; make -j4 DEBUG=1 PLATFORM=rpi4-sdl2</RemoteBuildCommandLine>
+    <RemoteReBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug; make clean; make -j4 DEBUG=1 PLATFORM=rpi4-sdl2</RemoteReBuildCommandLine>
+    <RemoteCleanCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug; make clean</RemoteCleanCommandLine>
+    <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\threaddep;..\src\archivers;..\external\libguisan\include;/usr/include/SDL2;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
+    <NMakePreprocessorDefinitions>DEBUG;ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;CPU_arm;ARM_HAS_DIV;USE_SDL2;_REENTRANT;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+    <RemoteBuildOutputs />
+    <AdditionalSourcesToCopyMapping />
+    <IncrementalBuild>true</IncrementalBuild>
+    <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-Debug</RemoteProjectDir>
+    <RemoteDeployDir>$(RemoteRootDir)/$(ProjectName)-Debug</RemoteDeployDir>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debux-DMX|ARM'">
     <RemoteBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug-dmx; make -j4 DEBUG=1 PLATFORM=rpi4</RemoteBuildCommandLine>
     <RemoteReBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug-dmx; make clean; make -j4 DEBUG=1 PLATFORM=rpi4</RemoteReBuildCommandLine>
@@ -126,6 +159,17 @@
     <RemoteCleanCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug; make clean</RemoteCleanCommandLine>
     <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\archivers;..\external\libguisan\include;/usr/include/SDL2;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
     <NMakePreprocessorDefinitions>DEBUG;CPU_AARCH64;AMIBERRY;USE_SDL2;_REENTRANT;_FILE_OFFSET_BITS=64;USE_GPIOD;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+    <RemoteBuildOutputs />
+    <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-Debug</RemoteProjectDir>
+    <IncrementalBuild>true</IncrementalBuild>
+    <RemoteDeployDir>$(RemoteRootDir)/$(ProjectName)-Debug</RemoteDeployDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-OpenGL|ARM64'">
+    <RemoteBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug; make -j4 DEBUG=1 PLATFORM=rpi4-64-opengl</RemoteBuildCommandLine>
+    <RemoteReBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug; make clean; make -j4 DEBUG=1 PLATFORM=rpi4-64-opengl</RemoteReBuildCommandLine>
+    <RemoteCleanCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug; make clean</RemoteCleanCommandLine>
+    <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\archivers;..\external\libguisan\include;/usr/include/SDL2;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
+    <NMakePreprocessorDefinitions>DEBUG;CPU_AARCH64;AMIBERRY;USE_SDL2;USE_OPENGL;_REENTRANT;_FILE_OFFSET_BITS=64;USE_GPIOD;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <RemoteBuildOutputs />
     <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-Debug</RemoteProjectDir>
     <IncrementalBuild>true</IncrementalBuild>
@@ -211,6 +255,7 @@
     <Image Include="..\data\drive.ico" />
     <Image Include="..\data\expansion.ico" />
     <Image Include="..\data\file.ico" />
+    <Image Include="..\data\fixedfont.bmp" />
     <Image Include="..\data\joystick.ico" />
     <Image Include="..\data\misc.ico" />
     <Image Include="..\data\paths.ico" />
@@ -839,12 +884,22 @@
       <Command>cp $(RemoteRootDir)/$(ProjectName)-Debug/amiberry $(RemoteRootDir)/amiberry/$(MSBuildProjectName)-Debug</Command>
     </RemotePostBuildEvent>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-OpenGL|ARM'">
+    <RemotePostBuildEvent>
+      <Command>cp $(RemoteRootDir)/$(ProjectName)-Debug/amiberry $(RemoteRootDir)/amiberry/$(MSBuildProjectName)-Debug</Command>
+    </RemotePostBuildEvent>
+  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debux-DMX|ARM'">
     <RemotePostBuildEvent>
       <Command>cp $(RemoteRootDir)/$(ProjectName)/amiberry $(RemoteRootDir)/amiberry/$(MSBuildProjectName)-Debug-dmx</Command>
     </RemotePostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
+    <RemotePostBuildEvent>
+      <Command>cp $(RemoteRootDir)/$(ProjectName)-Debug/amiberry $(RemoteRootDir)/amiberry/$(MSBuildProjectName)-Debug</Command>
+    </RemotePostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-OpenGL|ARM64'">
     <RemotePostBuildEvent>
       <Command>cp $(RemoteRootDir)/$(ProjectName)-Debug/amiberry $(RemoteRootDir)/amiberry/$(MSBuildProjectName)-Debug</Command>
     </RemotePostBuildEvent>
@@ -865,6 +920,17 @@
       <CppLanguageStandard>gnu++1y</CppLanguageStandard>
     </ClCompile>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-OpenGL|ARM'">
+    <RemotePostBuildEvent>
+      <Message>Copy binary to launch location</Message>
+    </RemotePostBuildEvent>
+    <ClCompile>
+      <CLanguageStandard>gnu11</CLanguageStandard>
+    </ClCompile>
+    <ClCompile>
+      <CppLanguageStandard>gnu++1y</CppLanguageStandard>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debux-DMX|ARM'">
     <RemotePostBuildEvent>
       <Message>Copy binary to launch location</Message>
@@ -877,6 +943,17 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
+    <RemotePostBuildEvent>
+      <Message>Copy binary to launch location</Message>
+    </RemotePostBuildEvent>
+    <ClCompile>
+      <CLanguageStandard>gnu11</CLanguageStandard>
+    </ClCompile>
+    <ClCompile>
+      <CppLanguageStandard>c++17</CppLanguageStandard>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-OpenGL|ARM64'">
     <RemotePostBuildEvent>
       <Message>Copy binary to launch location</Message>
     </RemotePostBuildEvent>

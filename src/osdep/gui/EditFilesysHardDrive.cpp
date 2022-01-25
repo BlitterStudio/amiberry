@@ -302,7 +302,7 @@ static void EditFilesysHardDriveLoop()
 				}
 			}
 			break;
-
+#ifndef USE_OPENGL
 		case SDL_FINGERDOWN:
 			got_event = 1;
 			memcpy(&touch_event, &event, sizeof event);
@@ -337,7 +337,7 @@ static void EditFilesysHardDriveLoop()
 			touch_event.motion.y = gui_graphics->getTarget()->h * event.tfinger.y;
 			gui_input->pushInput(touch_event);
 			break;
-
+#endif
 		case SDL_MOUSEWHEEL:
 			got_event = 1;
 			if (event.wheel.y > 0)
@@ -382,7 +382,9 @@ static void EditFilesysHardDriveLoop()
 	{
 		// Now we let the Gui object perform its logic.
 		uae_gui->logic();
+#ifndef USE_OPENGL
 		SDL_RenderClear(sdl_renderer);
+#endif
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
 		// Finally we update the screen.
@@ -421,7 +423,9 @@ bool EditFilesysHardDrive(const int unit_no)
 
 	// Prepare the screen once
 	uae_gui->logic();
+#ifndef USE_OPENGL
 	SDL_RenderClear(sdl_renderer);
+#endif
 	uae_gui->draw();
 	update_gui_screen();
 

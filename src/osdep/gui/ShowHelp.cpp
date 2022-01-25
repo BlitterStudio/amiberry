@@ -187,7 +187,7 @@ static void ShowHelpLoop(void)
 				}
 			}
 			break;
-
+#ifndef USE_OPENGL
 		case SDL_FINGERDOWN:
 			got_event = 1;
 			memcpy(&touch_event, &event, sizeof event);
@@ -222,7 +222,7 @@ static void ShowHelpLoop(void)
 			touch_event.motion.y = gui_graphics->getTarget()->h * event.tfinger.y;
 			gui_input->pushInput(touch_event);
 			break;
-
+#endif
 		case SDL_MOUSEWHEEL:
 			got_event = 1;
 			if (event.wheel.y > 0)
@@ -266,7 +266,9 @@ static void ShowHelpLoop(void)
 	{
 		// Now we let the Gui object perform its logic.
 		uae_gui->logic();
+#ifndef USE_OPENGL
 		SDL_RenderClear(sdl_renderer);
+#endif
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
 		// Finally we update the screen.
@@ -285,7 +287,9 @@ void ShowHelp(const char* title, const std::vector<std::string>& text)
 
 	// Prepare the screen once
 	uae_gui->logic();
+#ifndef USE_OPENGL
 	SDL_RenderClear(sdl_renderer);
+#endif
 	uae_gui->draw();
 	update_gui_screen();
 
