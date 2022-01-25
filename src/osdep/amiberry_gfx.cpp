@@ -155,7 +155,7 @@ static int SDL2_init(SDL_Window* ahwnd, int monid, int width, int height, int de
 
 	write_log(_T("SDL2 init start. (%d*%d) (%d*%d) RTG=%d Depth=%d.\n"), width, height, width, height, ad->picasso_on, depth);
 
-	pixel_format = depth == 32 ? SDL_PIXELFORMAT_BGRA32 : SDL_PIXELFORMAT_RGB565;
+	pixel_format = depth == 32 ? SDL_PIXELFORMAT_RGBA32 : SDL_PIXELFORMAT_RGB565;
 
 	if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
 	{
@@ -377,7 +377,7 @@ static int display_thread(void* unused)
 				{
 					display_depth = 32;
 					rgb_mode = VC_IMAGE_ARGB8888;
-					pixel_format = SDL_PIXELFORMAT_BGRA32;
+					pixel_format = SDL_PIXELFORMAT_RGBA32;
 				}
 			}
 			else
@@ -386,7 +386,7 @@ static int display_thread(void* unused)
 				//rgb_mode = VC_IMAGE_RGB565;
 				display_depth = 32;
 				rgb_mode = VC_IMAGE_ARGB8888;
-				pixel_format = SDL_PIXELFORMAT_BGRA32;
+				pixel_format = SDL_PIXELFORMAT_RGBA32;
 			}
 
 			if (!sdl_surface)
@@ -502,37 +502,12 @@ static int display_thread(void* unused)
 				vc_dispmanx_element_change_source(updateHandle, elementHandle, amigafb_resource_2);
 			}
 			vc_dispmanx_update_submit(updateHandle, nullptr, nullptr);
-#elif USE_OPENGL
-			//Initialize clear color
-			glClearColor(0.f, 0.f, 0.f, 1.f);
-			glClear(GL_COLOR_BUFFER_BIT);
-
-			if (sdl_surface->w != old_w || sdl_surface->h != old_h) {
-				float f_w = static_cast<float>(sdl_surface->w) / static_cast<float>(display_width);
-				float f_h = static_cast<float>(sdl_surface->h) / static_cast<float>(display_height);
-				texture_coords[1 * 2 + 0] = f_w;
-				texture_coords[2 * 2 + 1] = f_h;
-				texture_coords[3 * 2 + 0] = f_w;
-				texture_coords[3 * 2 + 1] = f_h;
-				old_w = sdl_surface->w;
-				old_h = sdl_surface->h;
-			}
-
-			glBindTexture(GL_TEXTURE_2D, gl_texture);
-			display_depth == 32
-				? glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sdl_surface->w, sdl_surface->h,
-					GL_BGRA, GL_UNSIGNED_BYTE, sdl_surface->pixels)
-				: glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sdl_surface->w, sdl_surface->h,
-					GL_RGB, GL_UNSIGNED_BYTE, sdl_surface->pixels);
-
-			glVertexPointer(3, GL_FLOAT, 0, vertex_coords);
-			glTexCoordPointer(2, GL_FLOAT, 0, texture_coords);
-			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-			SDL_GL_SwapWindow(mon->sdl_window);
 #else
+#ifndef USE_OPENGL
 			SDL_RenderClear(sdl_renderer);
 			SDL_UpdateTexture(amiga_texture, nullptr, sdl_surface->pixels, sdl_surface->pitch);
 			SDL_RenderCopyEx(sdl_renderer, amiga_texture, nullptr, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
+#endif
 #endif
 			flip_in_progress = false;
 			break;
@@ -959,7 +934,7 @@ static void open_screen(struct uae_prefs* p)
 		else
 		{
 			display_depth = 32;
-			pixel_format = SDL_PIXELFORMAT_BGRA32;
+			pixel_format = SDL_PIXELFORMAT_RGBA32;
 		}
 
 #ifdef USE_OPENGL
@@ -986,7 +961,7 @@ static void open_screen(struct uae_prefs* p)
 		//display_depth = 16;
 		//pixel_format = SDL_PIXELFORMAT_RGB565;
 		display_depth = 32;
-		pixel_format = SDL_PIXELFORMAT_BGRA32;
+		pixel_format = SDL_PIXELFORMAT_RGBA32;
 
 		if (changed_prefs.gfx_correct_aspect == 0)
 		{
@@ -1038,8 +1013,8 @@ static void open_screen(struct uae_prefs* p)
 
 	glBindTexture(GL_TEXTURE_2D, gl_texture);
 	display_depth == 32
-		? glTexImage2D(GL_TEXTURE_2D, 0, GL_BGRA,
-			display_width, display_height, 0, GL_BGRA,
+		? glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
+			display_width, display_height, 0, GL_RGBA,
 			GL_UNSIGNED_BYTE, sdl_surface->pixels)
 		: glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,
 			display_width, display_height, 0, GL_RGB,
@@ -1810,9 +1785,9 @@ void show_screen(int monid, int mode)
 		glBindTexture(GL_TEXTURE_2D, gl_texture);
 		display_depth == 32
 		? glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sdl_surface->w, sdl_surface->h,
-			GL_BGRA, GL_UNSIGNED_BYTE, sdl_surface->pixels)
+			GL_RGBA, GL_UNSIGNED_BYTE, sdl_surface->pixels)
 		: glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sdl_surface->w, sdl_surface->h,
-			GL_RGB, GL_UNSIGNED_BYTE, sdl_surface->pixels);
+			GL_RGB, GL_UNSIGNED_SHORT_5_6_5, sdl_surface->pixels);
 
 		glVertexPointer(3, GL_FLOAT, 0, vertex_coords);
 		glTexCoordPointer(2, GL_FLOAT, 0, texture_coords);
@@ -2157,7 +2132,7 @@ int graphics_init(bool mousecapture)
 #ifndef USE_DISPMANX
 	if (strcmpi(sdl_video_driver, "KMSDRM") == 0)
 	{
-		// Disable the render thread under KMSDRM (not supported)
+		// Disable the render thread under KMSDRM or OpenGL (not supported)
 		amiberry_options.use_sdl2_render_thread = false;
 	}
 	

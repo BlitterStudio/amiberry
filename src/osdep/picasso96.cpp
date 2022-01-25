@@ -4139,7 +4139,7 @@ static void copyrow(int monid, uae_u8 *src, uae_u8 *dst, int x, int y, int width
 			case RGBFB_A8R8G8B8_32:
 			case RGBFB_R5G6B5_16:
 #else
-			case RGBFB_B8G8R8A8_32:
+			case RGBFB_R8G8B8A8_32:
 			case RGBFB_R5G6B5PC_16:
 #endif
 				memcpy (dst2 + dx * dstpix, src2 + x * srcpix, width * dstpix);
@@ -4152,7 +4152,7 @@ static void copyrow(int monid, uae_u8 *src, uae_u8 *dst, int x, int y, int width
 			case RGBFB_A8R8G8B8_32:
 			case RGBFB_R5G6B5_16:
 #else
-			case RGBFB_B8G8R8A8_32:
+			case RGBFB_R8G8B8A8_32:
 			case RGBFB_R5G6B5PC_16:
 #endif
 				memcpy (dst2 + dx * dstpix, src2 + x * srcpix, width * dstpix);
