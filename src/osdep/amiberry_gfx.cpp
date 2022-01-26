@@ -376,7 +376,7 @@ static int display_thread(void* unused)
 				else
 				{
 					display_depth = 32;
-					rgb_mode = VC_IMAGE_ARGB8888;
+					rgb_mode = VC_IMAGE_RGBX32;
 					pixel_format = SDL_PIXELFORMAT_RGBA32;
 				}
 			}
@@ -385,7 +385,7 @@ static int display_thread(void* unused)
 				//display_depth = 16;
 				//rgb_mode = VC_IMAGE_RGB565;
 				display_depth = 32;
-				rgb_mode = VC_IMAGE_ARGB8888;
+				rgb_mode = VC_IMAGE_RGBX32;
 				pixel_format = SDL_PIXELFORMAT_RGBA32;
 			}
 
@@ -2088,8 +2088,6 @@ int graphics_init(bool mousecapture)
 #ifdef USE_OPENGL
 	if (gl_context == nullptr)
 		gl_context = SDL_GL_CreateContext(mon->sdl_window);
-	// Setup OpenGL
-	//glViewport(0, 0, GUI_WIDTH, GUI_HEIGHT);
 
 	// Enable vsync
 	if (SDL_GL_SetSwapInterval(-1) < 0)
