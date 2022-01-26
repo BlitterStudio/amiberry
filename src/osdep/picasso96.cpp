@@ -35,8 +35,6 @@
 
 #include <stdlib.h>
 
-#include "amiberry_gfx.h"
-
 #if defined(PICASSO96)
 
 #define MULTIDISPLAY 0
@@ -54,6 +52,7 @@
 #include "threaddep/thread.h"
 #include "memory.h"
 #include "custom.h"
+#include "events.h"
 #include "newcpu.h"
 #include "xwin.h"
 #include "savestate.h"
@@ -66,6 +65,8 @@
 #include "rp.h"
 #endif
 #include "picasso96.h"
+#include "amiberry_gfx.h"
+#include "clipboard.h"
 #include "gfxboard.h"
 #include "devices.h"
 
@@ -75,11 +76,6 @@
 
 #define CURSORMAXWIDTH 128
 #define CURSORMAXHEIGHT 128
-
-#ifdef AMIBERRY
-SDL_Cursor* p96_cursor;
-SDL_Surface* p96_cursor_surface;
-#endif
 
 static int hwsprite = 0;
 static int picasso96_BT = BT_uaegfx;
@@ -134,7 +130,10 @@ static uae_u8* cursordata;
 static uae_u32 cursorrgb[4], cursorrgbn[4];
 static int cursordeactivate, setupcursor_needed;
 static bool cursorvisible;
-
+#ifdef AMIBERRY
+SDL_Cursor* p96_cursor;
+SDL_Surface* p96_cursor_surface;
+#endif
 static int wincursor_shown;
 static uaecptr boardinfo, ABI_interrupt;
 static int interrupt_enabled;
@@ -586,7 +585,7 @@ static void do_fillrect_frame_buffer(struct RenderInfo *ri, int X, int Y, int Wi
 	}
 }
 
-static void setupcursor()
+static void setupcursor(void)
 {
 #ifdef AMIBERRY
 
@@ -623,7 +622,7 @@ static void setupcursor()
 #endif
 }
 
-static void disablemouse ()
+static void disablemouse (void)
 {
 	cursorok = FALSE;
 	cursordeactivate = 0;
@@ -4974,29 +4973,8 @@ static void copyallinvert(int monid, uae_u8 *src, uae_u8 *dst, int pwidth, int p
 
 static void copyall(int monid, uae_u8 *src, uae_u8 *dst, int pwidth, int pheight, int srcbytesperrow, int srcpixbytes, int dstbytesperrow, int dstpixbytes, int *mode_convert)
 {
-	struct picasso_vidbuf_description* vidinfo = &picasso_vidinfo[monid];
-	struct picasso96_state_struct* state = &picasso96_state[monid];
-	if (state->RGBFormat == RGBFB_CLUT) 
-	{
-		const auto pixels = state->Width * state->Height;
-		if (vidinfo->pixbytes == 2)
-			copy_screen_8bit_to_16bit(dst, src, pixels, vidinfo->clut);
-		else
-			copy_screen_8bit_to_32bit(dst, src, pixels, vidinfo->clut);
-	}
-	else
-	{
-		// 16-bit and 32-bit modes are direct
-		const auto w = pwidth * vidinfo->pixbytes;
-		for (auto y = 0; y < pheight; y++)
-		{
-			if (y == vidinfo->splitypos) {
-				src = gfxmem_banks[monid]->start + regs.natmem_offset;
-			}
-			memcpy(dst, src, w);
-			dst += dstbytesperrow;
-			src += srcbytesperrow;
-		}
+	for (int y = 0; y < pheight; y++) {
+		copyrow(monid, src, dst, 0, y, pwidth, srcbytesperrow, srcpixbytes, 0, y, dstbytesperrow, dstpixbytes, mode_convert, p96_rgbx16);
 	}
 }
 
@@ -5766,7 +5744,7 @@ static uae_u32 REGPARAM2 picasso_CreateFeature(TrapContext *ctx)
 		p96_rgbx16_ovl = xcalloc(uae_u32, 65536);
 	int of = overlay_format;
 	if (of == RGBFB_Y4U2V2 || of == RGBFB_Y4U1V1)
-		of = RGBFB_R5G5B5;
+		of = RGBFB_R5G5B5PC;
 	alloc_colors_picasso(8, 8, 8, SYSTEM_RED_SHIFT, SYSTEM_GREEN_SHIFT, SYSTEM_BLUE_SHIFT, of, p96_rgbx16_ovl);
 #if OVERLAY_DEBUG
 	write_log(_T("picasso_CreateFeature overlay bitmap %08x, vram %08x (%dx%d)\n"),
