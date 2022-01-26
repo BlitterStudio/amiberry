@@ -1733,6 +1733,8 @@ void target_fixup_options(struct uae_prefs* p)
 		p->z3_mapping_mode = Z3MAPPING_UAE;
 		p->z3autoconfig_start = z3_base_adr;
 	}
+	// Always use these pixel formats, for optimal performance
+	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5PC | RGBFF_R8G8B8A8;
 #endif
 	
 	if (p->rtgboards[0].rtgmem_type >= GFXBOARD_HARDWARE) {
@@ -1925,7 +1927,9 @@ void target_default_options(struct uae_prefs* p, int type)
 	if (amiberry_options.default_frameskip)
 		p->gfx_framerate = 2;
 
-	
+#ifdef USE_OPENGL
+	amiberry_options.use_sdl2_render_thread = false;
+#endif
 
 	if (amiberry_options.default_stereo_separation >= 0 && amiberry_options.default_stereo_separation <= 10)
 		p->sound_stereo_separation = amiberry_options.default_stereo_separation;

@@ -1751,6 +1751,7 @@ void show_screen(int monid, int mode)
 	flip_in_progress = true;
 	write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SHOW, 1);
 #else
+
 	if (amiberry_options.use_sdl2_render_thread)
 	{
 		wait_for_display_thread();
@@ -2127,10 +2128,14 @@ int graphics_init(bool mousecapture)
 		currprefs.gfx_apmode[1].gfx_refreshrate = currprefs.rtgvblankrate;
 	}
 
+#ifdef USE_OPENGL
+	// Disable the render thread under OpenGL (not supported)
+	amiberry_options.use_sdl2_render_thread = false;
+#endif
 #ifndef USE_DISPMANX
 	if (strcmpi(sdl_video_driver, "KMSDRM") == 0)
 	{
-		// Disable the render thread under KMSDRM or OpenGL (not supported)
+		// Disable the render thread under KMSDRM (not supported)
 		amiberry_options.use_sdl2_render_thread = false;
 	}
 	
