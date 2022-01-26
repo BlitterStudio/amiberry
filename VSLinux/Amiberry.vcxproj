@@ -76,19 +76,18 @@
     <ConfigurationType>Makefile</ConfigurationType>
     <RemoteProjectRelDir>$(MSBuildProjectName)-Debug</RemoteProjectRelDir>
     <RemoteCopyExcludeDirectories>D:\Github\amiberry\VSLinux;$(RemoteCopyExcludeDirectories)</RemoteCopyExcludeDirectories>
-    <RemoteRootDir>/home/midwan/projects</RemoteRootDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-OpenGL|ARM64'" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
     <ConfigurationType>Makefile</ConfigurationType>
-    <RemoteProjectRelDir>$(MSBuildProjectName)-Debug</RemoteProjectRelDir>
+    <RemoteProjectRelDir>$(MSBuildProjectName)-Debug-opengl</RemoteProjectRelDir>
     <RemoteCopyExcludeDirectories>D:\Github\amiberry\VSLinux;$(RemoteCopyExcludeDirectories)</RemoteCopyExcludeDirectories>
-    <RemoteRootDir>/home/midwan/projects</RemoteRootDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debux-DMX|ARM64'" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
     <ConfigurationType>Makefile</ConfigurationType>
     <RemoteProjectRelDir>$(MSBuildProjectName)-Debug-dmx</RemoteProjectRelDir>
+    <RemoteCopyExcludeDirectories>D:\Github\amiberry\VSLinux;$(RemoteCopyExcludeDirectories)</RemoteCopyExcludeDirectories>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
@@ -104,11 +103,13 @@
     <UseDebugLibraries>false</UseDebugLibraries>
     <ConfigurationType>Makefile</ConfigurationType>
     <RemoteProjectRelDir>$(MSBuildProjectName)-Release</RemoteProjectRelDir>
+    <RemoteCopyExcludeDirectories>D:\Github\amiberry\VSLinux;$(RemoteCopyExcludeDirectories)</RemoteCopyExcludeDirectories>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-DMX|ARM64'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
     <ConfigurationType>Makefile</ConfigurationType>
     <RemoteProjectRelDir>$(MSBuildProjectName)-Release-dmx</RemoteProjectRelDir>
+    <RemoteCopyExcludeDirectories>D:\Github\amiberry\VSLinux;$(RemoteCopyExcludeDirectories)</RemoteCopyExcludeDirectories>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings" />
@@ -165,15 +166,15 @@
     <RemoteDeployDir>$(RemoteRootDir)/$(ProjectName)-Debug</RemoteDeployDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-OpenGL|ARM64'">
-    <RemoteBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug; make -j4 DEBUG=1 PLATFORM=rpi4-64-opengl</RemoteBuildCommandLine>
-    <RemoteReBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug; make clean; make -j4 DEBUG=1 PLATFORM=rpi4-64-opengl</RemoteReBuildCommandLine>
-    <RemoteCleanCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug; make clean</RemoteCleanCommandLine>
+    <RemoteBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug-opengl; make -j4 DEBUG=1 PLATFORM=rpi4-64-opengl</RemoteBuildCommandLine>
+    <RemoteReBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug-opengl; make clean; make -j4 DEBUG=1 PLATFORM=rpi4-64-opengl</RemoteReBuildCommandLine>
+    <RemoteCleanCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug-opengl; make clean</RemoteCleanCommandLine>
     <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\archivers;..\external\libguisan\include;/usr/include/SDL2;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
     <NMakePreprocessorDefinitions>DEBUG;CPU_AARCH64;AMIBERRY;USE_SDL2;USE_OPENGL;_REENTRANT;_FILE_OFFSET_BITS=64;USE_GPIOD;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <RemoteBuildOutputs />
     <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-Debug</RemoteProjectDir>
     <IncrementalBuild>true</IncrementalBuild>
-    <RemoteDeployDir>$(RemoteRootDir)/$(ProjectName)-Debug</RemoteDeployDir>
+    <RemoteDeployDir>$(RemoteRootDir)/$(ProjectName)-Debug-opengl</RemoteDeployDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debux-DMX|ARM64'">
     <RemoteBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug-dmx; make -j4 DEBUG=1 PLATFORM=rpi4-64-dmx</RemoteBuildCommandLine>
@@ -901,12 +902,12 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-OpenGL|ARM64'">
     <RemotePostBuildEvent>
-      <Command>cp $(RemoteRootDir)/$(ProjectName)-Debug/amiberry $(RemoteRootDir)/amiberry/$(MSBuildProjectName)-Debug</Command>
+      <Command>cp $(RemoteRootDir)/$(ProjectName)-Debug-opengl/amiberry $(RemoteRootDir)/amiberry/$(MSBuildProjectName)-Debug-opengl</Command>
     </RemotePostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debux-DMX|ARM64'">
     <RemotePostBuildEvent>
-      <Command>cp $(RemoteRootDir)/$(ProjectName)/amiberry $(RemoteRootDir)/amiberry/$(MSBuildProjectName)-Debug-dmx</Command>
+      <Command>cp $(RemoteRootDir)/$(ProjectName)-Debug-dmx/amiberry $(RemoteRootDir)/amiberry/$(MSBuildProjectName)-Debug-dmx</Command>
     </RemotePostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">

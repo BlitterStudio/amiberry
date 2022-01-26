@@ -43,7 +43,7 @@
     </RemoteDebuggerCommandArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-OpenGL|ARM64'">
-    <RemoteDebuggerCommand>$(RemoteRootDir)/amiberry/$(MSBuildProjectName)-Debug</RemoteDebuggerCommand>
+    <RemoteDebuggerCommand>$(RemoteRootDir)/amiberry/$(MSBuildProjectName)-Debug-opengl</RemoteDebuggerCommand>
     <RemoteDebuggerWorkingDirectory>$(RemoteRootDir)/amiberry</RemoteDebuggerWorkingDirectory>
     <DebuggerFlavor>LinuxDebugger</DebuggerFlavor>
     <PreLaunchCommand>export DISPLAY=:0.0</PreLaunchCommand>
