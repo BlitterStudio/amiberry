@@ -390,12 +390,12 @@ void init_dispmanx_gui()
 
 void amiberry_gui_init()
 {
-	AmigaMonitor* mon = &AMonitors[0];	
+	AmigaMonitor* mon = &AMonitors[0];
 #ifndef USE_DISPMANX
 	sdl_video_driver = SDL_GetCurrentVideoDriver();
 	SDL_GetCurrentDisplayMode(0, &sdl_mode);
 #endif
-	
+
 	//-------------------------------------------------
 	// Create new screen for GUI
 	//-------------------------------------------------
@@ -1118,14 +1118,10 @@ void gui_widgets_init()
 	{
 		gui_font = new gcn::SDLTrueTypeFont(prefix_with_application_directory_path("data/AmigaTopaz.ttf"), 15);
 	}
-	catch (const std::exception& ex)
+	catch (exception& ex)
 	{
-		write_log("Could not open data/AmigaTopaz.ttf!\n");
-		abort();
-	}
-	catch (...)
-	{
-		write_log("An error occurred while trying to open data/AmigaTopaz.ttf!\n");
+		cout << ex.what() << '\n';
+		write_log("An error occurred while trying to open the GUI font! Exception: %s\n", ex.what());
 		abort();
 	}
 

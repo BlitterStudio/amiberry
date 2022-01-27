@@ -1861,7 +1861,7 @@ void target_default_options(struct uae_prefs* p, int type)
 		//p->automount_removabledrives = 0;
 		p->automount_cddrives = true;
 		//p->automount_netdrives = 0;
-		p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5PC | RGBFF_B8G8R8A8;
+		p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5PC | RGBFF_R8G8B8A8;
 		//p->filesystem_mangle_reserved_names = true;
 	}
 	
@@ -1927,7 +1927,9 @@ void target_default_options(struct uae_prefs* p, int type)
 	if (amiberry_options.default_frameskip)
 		p->gfx_framerate = 2;
 
-	
+#ifdef USE_OPENGL
+	amiberry_options.use_sdl2_render_thread = false;
+#endif
 
 	if (amiberry_options.default_stereo_separation >= 0 && amiberry_options.default_stereo_separation <= 10)
 		p->sound_stereo_separation = amiberry_options.default_stereo_separation;

@@ -469,10 +469,10 @@ enum {
 #define PSSO_BoardInfo_Reserved0Default		    PSSO_BoardInfo_Reserved0 + 4
 #define PSSO_BoardInfo_Reserved1		    PSSO_BoardInfo_Reserved0Default + 4
 #define PSSO_SetSplitPosition		    PSSO_BoardInfo_Reserved1 + 4
-#define PSSO_BoardInfo_Reserved2		    PSSO_SetSplitPosition + 4
-#define PSSO_BoardInfo_Reserved2Default		    PSSO_BoardInfo_Reserved2 + 4
-#define PSSO_BoardInfo_Reserved3		    PSSO_BoardInfo_Reserved2Default + 4
-#define PSSO_BoardInfo_Reserved3Default		    PSSO_BoardInfo_Reserved3 + 4
+#define PSSO_ReInitMemory		    PSSO_SetSplitPosition + 4
+#define PSSO_BoardInfo_GetCompatibleDACFormats		    PSSO_ReInitMemory + 4
+#define PSSO_BoardInfo_CoerceMode		    PSSO_BoardInfo_GetCompatibleDACFormats + 4
+#define PSSO_BoardInfo_Reserved3Default		    PSSO_BoardInfo_CoerceMode + 4
 #define PSSO_BoardInfo_Reserved4		    PSSO_BoardInfo_Reserved3Default + 4
 #define PSSO_BoardInfo_Reserved4Default		    PSSO_BoardInfo_Reserved4 + 4
 #define PSSO_BoardInfo_Reserved5		    PSSO_BoardInfo_Reserved4Default + 4
@@ -636,7 +636,8 @@ struct picasso96_state_struct
 	// every time windows can remove your surface from card so the mainrender place
 	// must be in memory
 	long		XYOffset;
-	bool        dualclut;
+    bool        dualclut, advDragging;
+    int         HLineDBL, VLineDBL;
 };
 
 extern void InitPicasso96(int monid);
@@ -668,15 +669,16 @@ struct picasso_vidbuf_description {
 	uae_u32 rgbformat;
 	RGBFTYPE selected_rgbformat;
 	uae_u32 clut[256 * 2];
-	int picasso_convert, host_mode;
+	int picasso_convert[2], host_mode;
 	int ohost_mode, orgbformat;
 	int full_refresh;
 	int set_panning_called;
 	int rtg_clear_flag;
 	bool picasso_active;
 	bool picasso_changed;
-	uae_s16 splitypos;
+    uae_s16 splitypos;
 	uae_atomic picasso_state_change;
+    uae_u32 dacrgbformat[2];
 };
 
 extern struct picasso_vidbuf_description picasso_vidinfo[MAX_AMIGAMONITORS];

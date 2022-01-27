@@ -60,7 +60,7 @@ extern float target_adjust_vblank_hz(int monid, float);
 extern int target_get_display_scanline(int displayindex);
 extern void target_spin(int);
 
-void getgfxoffset(int monid, float* dxp, float* dyp, float* mxp, float* myp);
+void getgfxoffset(int monid, float *dxp, float *dyp, float *mxp, float *myp);
 float target_getcurrentvblankrate(int monid);
 
 extern int debuggable(void);
@@ -69,8 +69,8 @@ void refreshtitle(void);
 
 extern int bits_in_mask(unsigned long mask);
 extern int mask_shift(unsigned long mask);
-extern unsigned int doMask(int p, int bits, int shift);
-extern unsigned int doMask256(int p, int bits, int shift);
+extern uae_u32 doMask(uae_u32 p, int bits, int shift);
+extern uae_u32 doMask256(int p, int bits, int shift);
 extern void alloc_colors64k(int monid, int, int, int, int, int, int, int, int, int, int, bool);
 extern void alloc_colors_rgb(int rw, int gw, int bw, int rs, int gs, int bs, int aw, int as, int alpha, int byte_swap,
 	uae_u32* rc, uae_u32* gc, uae_u32* bc);

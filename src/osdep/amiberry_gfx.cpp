@@ -1664,7 +1664,7 @@ void show_screen(int monid, int mode)
 		flip_in_progress = true;
 		// RenderPresent must be done in the main thread.
 		SDL_RenderPresent(sdl_renderer);
-		write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SHOW, 1);	
+		write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SHOW, 1);
 	}
 	else 
 	{
@@ -1969,6 +1969,10 @@ int graphics_init(bool mousecapture)
 		currprefs.gfx_apmode[1].gfx_refreshrate = currprefs.rtgvblankrate;
 	}
 
+#ifdef USE_OPENGL
+	// Disable the render thread under OpenGL (not supported)
+	amiberry_options.use_sdl2_render_thread = false;
+#endif
 #ifndef USE_DISPMANX
 	if (strcmpi(sdl_video_driver, "KMSDRM") == 0)
 	{
@@ -2033,7 +2037,7 @@ void graphics_leave()
 		amiga_texture = nullptr;
 	}
 #endif
-	
+
 	if (sdl_renderer)
 	{
 		SDL_DestroyRenderer(sdl_renderer);

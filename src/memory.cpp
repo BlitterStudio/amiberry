@@ -1182,6 +1182,10 @@ uae_u8 *REGPARAM2 default_xlate (uaecptr addr)
 				uaecptr a2 = addr - 32;
 				uaecptr a3 = m68k_getpc () - 32;
 				write_log (_T("Your Amiga program just did something terribly stupid %08X PC=%08X\n"), addr, M68K_GETPC);
+				//if (debugging || DEBUG_STUPID) {
+				//	activate_debugger ();
+				//	m68k_dumpstate(NULL, 0xffffffff);
+				//}
 				for (i = 0; i < 10; i++) {
 					write_log (_T("%08X "), i >= 5 ? a3 : a2);
 					for (j = 0; j < 16; j += 2) {
@@ -2762,7 +2766,9 @@ void memory_init (void)
 
 	kickmem_bank.reserved_size = ROM_SIZE_512;
 	mapped_malloc (&kickmem_bank);
-	memset (kickmem_bank.baseaddr, 0, ROM_SIZE_512);
+	if (kickmem_bank.baseaddr) {
+		memset(kickmem_bank.baseaddr, 0, ROM_SIZE_512);
+	}
 	_tcscpy (currprefs.romfile, _T("<none>"));
 	currprefs.romextfile[0] = 0;
 	//cpuboard_reset(1);

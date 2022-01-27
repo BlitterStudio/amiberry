@@ -60,7 +60,7 @@ string_list_model rtg_aspectratios_list(rtg_aspectratios, 2);
 const char* rtg_16bit_modes[] = { "(15/16bit)", "All", "R5G6B5PC (*)", "R5G5B5PC", "R5G6B5", "R5G5B5", "B5G6R5PC", "B5G5R5PC" };
 string_list_model rtg_16bit_modes_list(rtg_16bit_modes, 8);
 
-const char* rtg_32bit_modes[] = { "(32bit)", "All", "A8R8G8B8", "A8B8G8R8", "R8G8B8A8", "B8G8R8A8 (*)" };
+const char* rtg_32bit_modes[] = { "(32bit)", "All", "A8R8G8B8", "A8B8G8R8", "R8G8B8A8 (*)", "B8G8R8A8" };
 string_list_model rtg_32bit_modes_list(rtg_32bit_modes, 6);
 
 
