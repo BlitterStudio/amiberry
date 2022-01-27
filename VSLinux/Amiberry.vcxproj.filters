@@ -1146,6 +1146,9 @@
     <ClCompile Include="..\src\sampler.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\external\libguisan\src\widgets\adjustingcontainer.cpp">
+      <Filter>external\libguisan\src\widgets</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\archivers\7z\7zBuf.h">
@@ -1975,6 +1978,9 @@
     </ClInclude>
     <ClInclude Include="..\src\include\sampler.h">
       <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\libguisan\include\guisan\widgets\adjustingcontainer.hpp">
+      <Filter>external\libguisan\include\guisan\widgets</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
