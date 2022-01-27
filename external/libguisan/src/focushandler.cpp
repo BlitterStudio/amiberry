@@ -343,6 +343,7 @@ namespace gcn
 		if (mLastWidgetPressed == widget)
 		{
 			mLastWidgetPressed = nullptr;
+            return;
 		}
 	}
 
