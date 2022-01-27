@@ -904,7 +904,7 @@ void check_input()
 					break;
 				}
 			break;
-#ifndef USE_OPENGL
+
 		case SDL_FINGERDOWN:
 			got_event = 1;
 			memcpy(&touch_event, &gui_event, sizeof gui_event);
@@ -912,8 +912,13 @@ void check_input()
 			touch_event.button.which = 0;
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_PRESSED;
+#ifdef USE_OPENGL
+			touch_event.button.x = gui_graphics->getTargetPlaneWidth() * gui_event.tfinger.x;
+			touch_event.button.y = gui_graphics->getTargetPlaneHeight() * gui_event.tfinger.y;
+#else
 			touch_event.button.x = gui_graphics->getTarget()->w * gui_event.tfinger.x;
 			touch_event.button.y = gui_graphics->getTarget()->h * gui_event.tfinger.y;
+#endif
 			gui_input->pushInput(touch_event);
 			break;
 
@@ -924,8 +929,13 @@ void check_input()
 			touch_event.button.which = 0;
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_RELEASED;
+#ifdef USE_OPENGL
+			touch_event.button.x = gui_graphics->getTargetPlaneWidth() * gui_event.tfinger.x;
+			touch_event.button.y = gui_graphics->getTargetPlaneHeight() * gui_event.tfinger.y;
+#else
 			touch_event.button.x = gui_graphics->getTarget()->w * gui_event.tfinger.x;
 			touch_event.button.y = gui_graphics->getTarget()->h * gui_event.tfinger.y;
+#endif
 			gui_input->pushInput(touch_event);
 			break;
 
@@ -935,11 +945,16 @@ void check_input()
 			touch_event.type = SDL_MOUSEMOTION;
 			touch_event.motion.which = 0;
 			touch_event.motion.state = 0;
-			touch_event.motion.x = gui_graphics->getTarget()->w * gui_event.tfinger.x;
-			touch_event.motion.y = gui_graphics->getTarget()->h * gui_event.tfinger.y;
+#ifdef USE_OPENGL
+			touch_event.button.x = gui_graphics->getTargetPlaneWidth() * gui_event.tfinger.x;
+			touch_event.button.y = gui_graphics->getTargetPlaneHeight() * gui_event.tfinger.y;
+#else
+			touch_event.button.x = gui_graphics->getTarget()->w * gui_event.tfinger.x;
+			touch_event.button.y = gui_graphics->getTarget()->h * gui_event.tfinger.y;
+#endif
 			gui_input->pushInput(touch_event);
 			break;
-#endif
+
 		case SDL_MOUSEWHEEL:
 			got_event = 1;
 			if (gui_event.wheel.y > 0)
