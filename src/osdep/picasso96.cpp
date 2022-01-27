@@ -4050,7 +4050,7 @@ static void copyrow (int monid, uae_u8 *src, uae_u8 *dst, int x, int y, int widt
 			case RGBFB_A8R8G8B8_32:
 			case RGBFB_R5G6B5_16:
 #else
-			case RGBFB_B8G8R8A8_32:
+			case RGBFB_R8G8B8A8_32:
 			case RGBFB_R5G6B5PC_16:
 #endif
 				memcpy (dst2 + dx * dstpix, src2 + x * srcpix, width * dstpix);
@@ -4063,7 +4063,7 @@ static void copyrow (int monid, uae_u8 *src, uae_u8 *dst, int x, int y, int widt
 			case RGBFB_A8R8G8B8_32:
 			case RGBFB_R5G6B5_16:
 #else
-			case RGBFB_B8G8R8A8_32:
+			case RGBFB_R8G8B8A8_32:
 			case RGBFB_R5G6B5PC_16:
 #endif
 				memcpy (dst2 + dx * dstpix, src2 + x * srcpix, width * dstpix);
@@ -5700,7 +5700,7 @@ static uae_u32 REGPARAM2 picasso_CreateFeature(TrapContext *ctx)
 		p96_rgbx16_ovl = xcalloc(uae_u32, 65536);
 	int of = overlay_format;
 	if (of == RGBFB_Y4U2V2 || of == RGBFB_Y4U1V1)
-		of = RGBFB_R5G5B5;
+		of = RGBFB_R5G5B5PC;
 	alloc_colors_picasso(8, 8, 8, SYSTEM_RED_SHIFT, SYSTEM_GREEN_SHIFT, SYSTEM_BLUE_SHIFT, of, p96_rgbx16_ovl);
 #if OVERLAY_DEBUG
 	write_log(_T("picasso_CreateFeature overlay bitmap %08x, vram %08x (%dx%d)\n"),

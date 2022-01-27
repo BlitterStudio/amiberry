@@ -4631,14 +4631,14 @@ static int render_thread(void *unused)
 
 		case RENDER_SIGNAL_PARTIAL:
 #ifdef USE_DISPMANX
-			if (!flip_in_progess)
+			if (!flip_in_progress)
 #endif
 				draw_lines(0, 0);
 			break;
 
 		case RENDER_SIGNAL_FRAME_DONE:
 #ifdef USE_DISPMANX
-			while (flip_in_progess)
+			while (flip_in_progress)
 				sleep_micros(1);
 #endif
 			finish_drawing_frame(true);

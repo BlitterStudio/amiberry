@@ -1733,6 +1733,8 @@ void target_fixup_options(struct uae_prefs* p)
 		p->z3_mapping_mode = Z3MAPPING_UAE;
 		p->z3autoconfig_start = z3_base_adr;
 	}
+	// Always use these pixel formats, for optimal performance
+	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5PC | RGBFF_R8G8B8A8;
 #endif
 	
 	if (p->rtgboards[0].rtgmem_type >= GFXBOARD_HARDWARE) {
@@ -3312,7 +3314,7 @@ int main(int argc, char* argv[])
 
 	// We'll just call SDL and do a rudimentary state check instead
 	int caps = SDL_GetModState();
-        caps = caps & KMOD_CAPS;
+		caps = caps & KMOD_CAPS;
 	if(caps == KMOD_CAPS)
 		// 0x04 is LED_CAP in the Linux file which is used here to trigger it
 		kbd_led_status |= ~0x04;

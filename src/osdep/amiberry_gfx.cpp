@@ -39,10 +39,10 @@ static unsigned int current_vsync_frame = 0;
 unsigned long time_per_frame = 20000; // Default for PAL (50 Hz): 20000 microsecs
 static int vsync_modulo = 1;
 #endif
-bool volatile flip_in_progess = false;
+bool volatile flip_in_progress = false;
 
 /* SDL Surface for output of emulation */
-SDL_DisplayMode sdlMode;
+SDL_DisplayMode sdl_mode;
 SDL_Surface* sdl_surface = nullptr;
 SDL_Texture* amiga_texture;
 SDL_Rect renderQuad;
@@ -118,11 +118,11 @@ static int SDL2_init(SDL_Window* ahwnd, int monid, int width, int height, int de
 {
 	struct amigadisplay* ad = &adisplays[monid];
 	struct apmode* apm = ad->picasso_on ? &currprefs.gfx_apmode[APMODE_RTG] : &currprefs.gfx_apmode[APMODE_NATIVE];
-	SDL_DisplayMode sdlMode;
+	SDL_DisplayMode sdl_mode;
 
 	write_log(_T("SDL2 init start. (%d*%d) (%d*%d) RTG=%d Depth=%d.\n"), width, height, width, height, ad->picasso_on, depth);
 
-	pixel_format = depth == 32 ? SDL_PIXELFORMAT_BGRA32 : SDL_PIXELFORMAT_RGB565;
+	pixel_format = depth == 32 ? SDL_PIXELFORMAT_RGBA32 : SDL_PIXELFORMAT_RGB565;
 
 	if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
 	{
@@ -138,10 +138,10 @@ static int SDL2_init(SDL_Window* ahwnd, int monid, int width, int height, int de
 	if (isfullscreen() == 0)
 		SDL_SetWindowSize(ahwnd, width, height);
 
-	SDL_GetCurrentDisplayMode(0, &sdlMode);
+	SDL_GetCurrentDisplayMode(0, &sdl_mode);
 	if (currprefs.scaling_method == -1)
 	{
-		if (isModeAspectRatioExact(&sdlMode, width, height))
+		if (isModeAspectRatioExact(&sdl_mode, width, height))
 			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
 		else
 			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
@@ -343,8 +343,8 @@ static int display_thread(void* unused)
 				else
 				{
 					display_depth = 32;
-					rgb_mode = VC_IMAGE_ARGB8888;
-					pixel_format = SDL_PIXELFORMAT_BGRA32;
+					rgb_mode = VC_IMAGE_RGBX32;
+					pixel_format = SDL_PIXELFORMAT_RGBA32;
 				}
 			}
 			else
@@ -352,8 +352,8 @@ static int display_thread(void* unused)
 				//display_depth = 16;
 				//rgb_mode = VC_IMAGE_RGB565;
 				display_depth = 32;
-				rgb_mode = VC_IMAGE_ARGB8888;
-				pixel_format = SDL_PIXELFORMAT_BGRA32;
+				rgb_mode = VC_IMAGE_RGBX32;
+				pixel_format = SDL_PIXELFORMAT_RGBA32;
 			}
 
 			if (!sdl_surface)
@@ -474,7 +474,7 @@ static int display_thread(void* unused)
 			SDL_UpdateTexture(amiga_texture, nullptr, sdl_surface->pixels, sdl_surface->pitch);
 			SDL_RenderCopyEx(sdl_renderer, amiga_texture, nullptr, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
 #endif
-			flip_in_progess = false;
+			flip_in_progress = false;
 			break;
 
 		case DISPLAY_SIGNAL_QUIT:
@@ -896,7 +896,7 @@ static void open_screen(struct uae_prefs* p)
 		else
 		{
 			display_depth = 32;
-			pixel_format = SDL_PIXELFORMAT_BGRA32;
+			pixel_format = SDL_PIXELFORMAT_RGBA32;
 		}
 
 		if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
@@ -920,12 +920,12 @@ static void open_screen(struct uae_prefs* p)
 		//display_depth = 16;
 		//pixel_format = SDL_PIXELFORMAT_RGB565;
 		display_depth = 32;
-		pixel_format = SDL_PIXELFORMAT_BGRA32;
+		pixel_format = SDL_PIXELFORMAT_RGBA32;
 
 		if (changed_prefs.gfx_correct_aspect == 0)
 		{
-			width = sdlMode.w;
-			height = sdlMode.h;
+			width = sdl_mode.w;
+			height = sdl_mode.h;
 		}
 		else
 		{
@@ -950,7 +950,7 @@ static void open_screen(struct uae_prefs* p)
 
 	if (p->scaling_method == -1)
 	{
-		if (isModeAspectRatioExact(&sdlMode, display_width, display_height))
+		if (isModeAspectRatioExact(&sdl_mode, display_width, display_height))
 			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
 		else
 			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
@@ -1655,25 +1655,25 @@ void show_screen(int monid, int mode)
 
 #ifdef USE_DISPMANX
 	wait_for_display_thread();
-	flip_in_progess = true;
+	flip_in_progress = true;
 	write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SHOW, 1);
 #else
 	if (amiberry_options.use_sdl2_render_thread)
 	{
 		wait_for_display_thread();
-		flip_in_progess = true;
+		flip_in_progress = true;
 		// RenderPresent must be done in the main thread.
 		SDL_RenderPresent(sdl_renderer);
 		write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SHOW, 1);	
 	}
 	else 
 	{
-		flip_in_progess = true;
+		flip_in_progress = true;
 		SDL_RenderClear(sdl_renderer);
 		SDL_UpdateTexture(amiga_texture, nullptr, sdl_surface->pixels, sdl_surface->pitch);
 		SDL_RenderCopyEx(sdl_renderer, amiga_texture, nullptr, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
 		SDL_RenderPresent(sdl_renderer);
-		flip_in_progess = false;
+		flip_in_progress = false;
 	}
 #endif
 
@@ -1882,11 +1882,11 @@ int graphics_init(bool mousecapture)
 	write_log("Getting Current Video Driver...\n");
 	sdl_video_driver = SDL_GetCurrentVideoDriver();
 
-	const auto should_be_zero = SDL_GetCurrentDisplayMode(0, &sdlMode);
+	const auto should_be_zero = SDL_GetCurrentDisplayMode(0, &sdl_mode);
 	if (should_be_zero == 0)
 	{
-		write_log("Current Display mode: bpp %i\t%s\t%i x %i\t%iHz\n", SDL_BITSPERPIXEL(sdlMode.format), SDL_GetPixelFormatName(sdlMode.format), sdlMode.w, sdlMode.h, sdlMode.refresh_rate);
-		vsync_vblank = sdlMode.refresh_rate;
+		write_log("Current Display mode: bpp %i\t%s\t%i x %i\t%iHz\n", SDL_BITSPERPIXEL(sdl_mode.format), SDL_GetPixelFormatName(sdl_mode.format), sdl_mode.w, sdl_mode.h, sdl_mode.refresh_rate);
+		vsync_vblank = sdl_mode.refresh_rate;
 	}
 
 	write_log("Creating Amiberry window...\n");
@@ -1894,7 +1894,7 @@ int graphics_init(bool mousecapture)
 	if (!mon->sdl_window)
 	{
 		Uint32 sdl_window_mode;
-		if (sdlMode.w >= 800 && sdlMode.h >= 600 && strcmpi(sdl_video_driver, "KMSDRM") != 0)
+		if (sdl_mode.w >= 800 && sdl_mode.h >= 600 && strcmpi(sdl_video_driver, "KMSDRM") != 0)
 		{
 			// Only enable Windowed mode if we're running under x11 and the resolution is at least 800x600
 			if (currprefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLWINDOW)

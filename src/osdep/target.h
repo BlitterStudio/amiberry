@@ -24,8 +24,8 @@
 #define GETBDM(x) (((x) - (((x) / 10000) * 10000)) / 100)
 #define GETBDD(x) ((x) % 100)
 
-#define AMIBERRYVERSION _T("Amiberry v4.2.0 (2022-01-06)")
-#define AMIBERRYDATE MAKEBD(2022, 1, 6)
+#define AMIBERRYVERSION _T("Amiberry v4.2.0 (2022-01-27)")
+#define AMIBERRYDATE MAKEBD(2022, 1, 27)
 
 #define IHF_WINDOWHIDDEN 6
 
@@ -64,7 +64,7 @@ extern int z3_base_adr;
 #ifdef USE_DISPMANX
 extern unsigned long time_per_frame;
 #endif
-extern bool volatile flip_in_progess;
+extern bool volatile flip_in_progress;
 
 void amiberry_gui_init();
 void gui_widgets_init();

@@ -251,7 +251,7 @@ void cap_fps(Uint64 start)
 #ifdef USE_DISPMANX
 	refresh_rate = 60;
 #else
-	refresh_rate = sdlMode.refresh_rate;
+	refresh_rate = sdl_mode.refresh_rate;
 #endif
 	if (refresh_rate < 60)
 		SDL_Delay(floor(16.666f - elapsed_ms));
@@ -393,7 +393,7 @@ void amiberry_gui_init()
 	AmigaMonitor* mon = &AMonitors[0];	
 #ifndef USE_DISPMANX
 	sdl_video_driver = SDL_GetCurrentVideoDriver();
-	SDL_GetCurrentDisplayMode(0, &sdlMode);
+	SDL_GetCurrentDisplayMode(0, &sdl_mode);
 #endif
 	
 	//-------------------------------------------------
@@ -431,7 +431,7 @@ void amiberry_gui_init()
 	{
 		Uint32 flags = SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
 		if (strcmpi(sdl_video_driver, "KMSDRM") == 0
-			|| (sdlMode.w < 800 && sdlMode.h < 600))
+			|| (sdl_mode.w < 800 && sdl_mode.h < 600))
 			flags = SDL_WINDOW_FULLSCREEN_DESKTOP;
 
 		if (currprefs.borderless)

@@ -125,7 +125,7 @@ extern VC_IMAGE_TYPE_T rgb_mode;
 #else
 extern SDL_Texture* amiga_texture;
 extern SDL_Cursor* cursor;
-extern SDL_DisplayMode sdlMode;
+extern SDL_DisplayMode sdl_mode;
 #endif
 extern SDL_Surface* sdl_surface;
 extern const char* sdl_video_driver;
