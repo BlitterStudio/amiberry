@@ -321,6 +321,7 @@
     <ClCompile Include="..\external\libguisan\src\sdl\sdltruetypefont.cpp" />
     <ClCompile Include="..\external\libguisan\src\selectionevent.cpp" />
     <ClCompile Include="..\external\libguisan\src\widget.cpp" />
+    <ClCompile Include="..\external\libguisan\src\widgets\adjustingcontainer.cpp" />
     <ClCompile Include="..\external\libguisan\src\widgets\button.cpp" />
     <ClCompile Include="..\external\libguisan\src\widgets\checkbox.cpp" />
     <ClCompile Include="..\external\libguisan\src\widgets\container.cpp" />
@@ -639,6 +640,7 @@
     <ClInclude Include="..\external\libguisan\include\guisan\selectionlistener.hpp" />
     <ClInclude Include="..\external\libguisan\include\guisan\widget.hpp" />
     <ClInclude Include="..\external\libguisan\include\guisan\widgetlistener.hpp" />
+    <ClInclude Include="..\external\libguisan\include\guisan\widgets\adjustingcontainer.hpp" />
     <ClInclude Include="..\external\libguisan\include\guisan\widgets\button.hpp" />
     <ClInclude Include="..\external\libguisan\include\guisan\widgets\checkbox.hpp" />
     <ClInclude Include="..\external\libguisan\include\guisan\widgets\container.hpp" />
