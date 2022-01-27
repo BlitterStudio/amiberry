@@ -6,11 +6,11 @@
  * /______/ //______/ //_/ //_____/\ /_/ //_/ //_/ //_/ //_/ /|_/ /
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
- * Copyright (c) 2004, 2005, 2006, 2007 Olof NaessÃ©n and Per Larsson
+ * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
  *
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
- * Olof NaessÃ©n a.k.a jansem/yakslem                _asww7!uY`>  )\a//
+ * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
  *                                                 _Qhm`] _f "'c  1!5m
  * Visit: http://guichan.darkbits.org             )Qk<P ` _: :+' .'  "{[
  *                                               .)j(] .d_/ '-(  P .   S
@@ -66,7 +66,7 @@ namespace gcn
 	/**
 	 * OpenGL implementation of the Graphics.
 	 */
-	class GCN_EXTENSION_DECLSPEC OpenGLGraphics : public Graphics
+	class GCN_EXTENSION_DECLSPEC OpenGLGraphics: public Graphics
 	{
 	public:
 
@@ -104,32 +104,46 @@ namespace gcn
 		 */
 		virtual void setTargetPlane(int width, int height);
 
+		/**
+		* Gets the target plane width.
+		*
+		* @return The target plane width.
+		*/
+		virtual int getTargetPlaneWidth() const;
+
+		/**
+		 * Gets the target plane height.
+		 *
+		 * @return The target plane height.
+		 */
+		virtual int getTargetPlaneHeight() const;
+
 
 		// Inherited from Graphics
 
-		void _beginDraw() override;
+		virtual void _beginDraw();
 
-		void _endDraw() override;
+		virtual void _endDraw();
 
-		bool pushClipArea(Rectangle area) override;
+		virtual bool pushClipArea(Rectangle area);
 
-		void popClipArea() override;
+		virtual void popClipArea();
 
-		void drawImage(const Image* image, int srcX, int srcY,
-		               int dstX, int dstY, int width,
-		               int height) override;
+		virtual void drawImage(const Image* image, int srcX, int srcY,
+							   int dstX, int dstY, int width,
+							   int height);
 
-		void drawPoint(int x, int y) override;
+		virtual void drawPoint(int x, int y);
 
-		void drawLine(int x1, int y1, int x2, int y2) override;
+		virtual void drawLine(int x1, int y1, int x2, int y2);
 
-		void drawRectangle(const Rectangle& rectangle) override;
+		virtual void drawRectangle(const Rectangle& rectangle);
 
-		void fillRectangle(const Rectangle& rectangle) override;
+		virtual void fillRectangle(const Rectangle& rectangle);
 
-		void setColor(const Color& color) override;
+		virtual void setColor(const Color& color);
 
-		const Color& getColor() override;
+		virtual const Color& getColor();
 
 	protected:
 		int mWidth, mHeight;
