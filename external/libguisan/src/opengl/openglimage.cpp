@@ -6,11 +6,11 @@
  * /______/ //______/ //_/ //_____/\ /_/ //_/ //_/ //_/ //_/ /|_/ /
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
- * Copyright (c) 2004, 2005, 2006, 2007 Olof NaessÃ©n and Per Larsson
+ * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
  *
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
- * Olof NaessÃ©n a.k.a jansem/yakslem                _asww7!uY`>  )\a//
+ * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
  *                                                 _Qhm`] _f "'c  1!5m
  * Visit: http://guichan.darkbits.org             )Qk<P ` _: :+' .'  "{[
  *                                               .)j(] .d_/ '-(  P .   S
@@ -73,12 +73,12 @@ namespace gcn
 		mHeight = height;
 		mTextureWidth = 1, mTextureHeight = 1;
 
-		while (mTextureWidth < mWidth)
+		while(mTextureWidth < mWidth)
 		{
 			mTextureWidth *= 2;
 		}
 
-		while (mTextureHeight < mHeight)
+		while(mTextureHeight < mHeight)
 		{
 			mTextureHeight *= 2;
 		}
@@ -87,17 +87,18 @@ namespace gcn
 		mPixels = new unsigned int[mTextureWidth * mTextureHeight];
 
 #ifdef __BIG_ENDIAN__
-		const auto int magicPink = 0xff00ffff;
+		const unsigned int magicPink = 0xff00ffff;
 #else
-		const auto magicPink = 0xffff00ff;
+		const unsigned int magicPink = 0xffff00ff;
 #endif
-		for (auto y = 0; y < mTextureHeight; y++)
+		int x, y;
+		for (y = 0; y < mTextureHeight; y++)
 		{
-			for (auto x = 0; x < mTextureWidth; x++)
+			for (x = 0; x < mTextureWidth; x++)
 			{
 				if (x < mWidth && y < mHeight)
 				{
-					auto c = pixels[x + y * mWidth];
+					unsigned int c = pixels[x + y * mWidth];
 
 					// Magic pink to transparent
 					if (c == magicPink)
@@ -124,18 +125,18 @@ namespace gcn
 	{
 		mTextureHandle = textureHandle;
 		mAutoFree = autoFree;
-		mPixels = nullptr;
+		mPixels = NULL;
 
 		mWidth = width;
 		mHeight = height;
 		mTextureWidth = 1, mTextureHeight = 1;
 
-		while (mTextureWidth < mWidth)
+		while(mTextureWidth < mWidth)
 		{
 			mTextureWidth *= 2;
 		}
 
-		while (mTextureHeight < mHeight)
+		while(mTextureHeight < mHeight)
 		{
 			mTextureHeight *= 2;
 		}
@@ -145,7 +146,7 @@ namespace gcn
 	{
 		if (mAutoFree)
 		{
-			OpenGLImage::free();
+			free();
 		}
 	}
 
@@ -166,14 +167,14 @@ namespace gcn
 
 	void OpenGLImage::free()
 	{
-		if (mPixels == nullptr)
+		if (mPixels == NULL)
 		{
 			glDeleteTextures(1, &mTextureHandle);
 		}
 		else
 		{
 			delete[] mPixels;
-			mPixels = nullptr;
+			mPixels = NULL;
 		}
 	}
 
@@ -189,7 +190,7 @@ namespace gcn
 
 	Color OpenGLImage::getPixel(int x, int y)
 	{
-		if (mPixels == nullptr)
+		if (mPixels == NULL)
 		{
 			throw GCN_EXCEPTION("Image has been converted to display format");
 		}
@@ -199,18 +200,18 @@ namespace gcn
 			throw GCN_EXCEPTION("Coordinates outside of the image");
 		}
 
-		const auto c = mPixels[x + y * mTextureWidth];
+		unsigned int c = mPixels[x + y * mTextureWidth];
 
 #ifdef __BIG_ENDIAN__
-		const unsigned char r = c >> 24 & 0xff;
-		const unsigned char g = c >> 16 & 0xff;
-		const unsigned char b = c >> 8 & 0xff;
-		const unsigned char a = c & 0xff;
+		unsigned char r = (unsigned char)((c >> 24) & 0xff);
+		unsigned char g = (unsigned char)((c >> 16) & 0xff);
+		unsigned char b = (unsigned char)((c >> 8) & 0xff);
+		unsigned char a = (unsigned char)(c & 0xff);
 #else
-		const unsigned char a = c >> 24 & 0xff;
-		const unsigned char b = c >> 16 & 0xff;
-		const unsigned char g = c >> 8 & 0xff;
-		const unsigned char r = c & 0xff;
+		unsigned char a = (unsigned char)((c >> 24) & 0xff);
+		unsigned char b = (unsigned char)((c >> 16) & 0xff);
+		unsigned char g = (unsigned char)((c >> 8) & 0xff);
+		unsigned char r = (unsigned char)(c & 0xff);
 #endif
 
 		return Color(r, g, b, a);
@@ -218,7 +219,7 @@ namespace gcn
 
 	void OpenGLImage::putPixel(int x, int y, const Color& color)
 	{
-		if (mPixels == nullptr)
+		if (mPixels == NULL)
 		{
 			throw GCN_EXCEPTION("Image has been converted to display format");
 		}
@@ -229,9 +230,9 @@ namespace gcn
 		}
 
 #ifdef __BIG_ENDIAN__
-		const unsigned int c = color.a | color.b << 8 | color.g << 16 | color.r << 24;
+		unsigned int c = color.a | color.b << 8 | color.g << 16 | color.r << 24;
 #else
-		const unsigned int c = color.r | color.g << 8 | color.b << 16 | color.a << 24;
+		unsigned int c = color.r | color.g << 8 | color.b << 16 | color.a << 24;
 #endif
 
 		mPixels[x + y * mTextureWidth] = c;
@@ -239,7 +240,7 @@ namespace gcn
 
 	void OpenGLImage::convertToDisplayFormat()
 	{
-		if (mPixels == nullptr)
+		if (mPixels == NULL)
 		{
 			throw GCN_EXCEPTION("Image has already been converted to display format");
 		}
@@ -261,39 +262,37 @@ namespace gcn
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
 		delete[] mPixels;
-		mPixels = nullptr;
+		mPixels = NULL;
 
-		const auto error = glGetError();
+		GLenum error = glGetError();
 		if (error)
 		{
 			std::string errmsg;
 			switch (error)
 			{
-			case GL_INVALID_ENUM:
-				errmsg = "GL_INVALID_ENUM";
-				break;
+			  case GL_INVALID_ENUM:
+				  errmsg = "GL_INVALID_ENUM";
+				  break;
 
-			case GL_INVALID_VALUE:
-				errmsg = "GL_INVALID_VALUE";
-				break;
+			  case GL_INVALID_VALUE:
+				  errmsg = "GL_INVALID_VALUE";
+				  break;
 
-			case GL_INVALID_OPERATION:
-				errmsg = "GL_INVALID_OPERATION";
-				break;
+			  case GL_INVALID_OPERATION:
+				  errmsg = "GL_INVALID_OPERATION";
+				  break;
 
-			case GL_STACK_OVERFLOW:
-				errmsg = "GL_STACK_OVERFLOW";
-				break;
+			  case GL_STACK_OVERFLOW:
+				  errmsg = "GL_STACK_OVERFLOW";
+				  break;
 
-			case GL_STACK_UNDERFLOW:
-				errmsg = "GL_STACK_UNDERFLOW";
-				break;
+			  case GL_STACK_UNDERFLOW:
+				  errmsg = "GL_STACK_UNDERFLOW";
+				  break;
 
-			case GL_OUT_OF_MEMORY:
-				errmsg = "GL_OUT_OF_MEMORY";
-				break;
-			default:
-				break;
+			  case GL_OUT_OF_MEMORY:
+				  errmsg = "GL_OUT_OF_MEMORY";
+				  break;
 			}
 
 			throw GCN_EXCEPTION(std::string("Unable to convert to OpenGL display format, glGetError said: ") + errmsg);

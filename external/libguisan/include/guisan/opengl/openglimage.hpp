@@ -6,11 +6,11 @@
  * /______/ //______/ //_/ //_____/\ /_/ //_/ //_/ //_/ //_/ /|_/ /
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
- * Copyright (c) 2004, 2005, 2006, 2007 Olof NaessÃ©n and Per Larsson
+ * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
  *
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
- * Olof NaessÃ©n a.k.a jansem/yakslem                _asww7!uY`>  )\a//
+ * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
  *                                                 _Qhm`] _f "'c  1!5m
  * Visit: http://guichan.darkbits.org             )Qk<P ` _: :+' .'  "{[
  *                                               .)j(] .d_/ '-(  P .   S
@@ -65,10 +65,12 @@
 #endif
 #endif
 
-#if defined (__APPLE__)
+#if defined (__amigaos4__)
+#include <mgl/gl.h>
+#elif defined (__APPLE__)
 #include <OpenGL/gl.h>
 #else
-#include <SDL_opengl.h>
+#include <GL/gl.h>
 #endif
 
 #include <string>
@@ -125,36 +127,36 @@ namespace gcn
 		 * @return the OpenGL texture handle for the image.
 		 */
 
-		[[nodiscard]] virtual GLuint getTextureHandle() const;
+		virtual GLuint getTextureHandle() const;
 
 		/**
 		 * Gets the width of texture.
 		 *
 		 * @return the width of the texture.
 		 */
-		[[nodiscard]] virtual int getTextureWidth() const;
+		virtual int getTextureWidth() const;
 
 		/**
 		 * Gets the height of the texture.
 		 *
 		 * @return the height of the texture.
 		 */
-		[[nodiscard]] virtual int getTextureHeight() const;
+		virtual int getTextureHeight() const;
 
 
 		// Inherited from Image
 
-		void free() override;
+		virtual void free();
 
-		[[nodiscard]] int getWidth() const override;
+		virtual int getWidth() const;
 
-		[[nodiscard]] int getHeight() const override;
+		virtual int getHeight() const;
 
-		Color getPixel(int x, int y) override;
+		virtual Color getPixel(int x, int y);
 
-		void putPixel(int x, int y, const Color& color) override;
+		virtual void putPixel(int x, int y, const Color& color);
 
-		void convertToDisplayFormat() override;
+		virtual void convertToDisplayFormat();
 
 	protected:
 		GLuint mTextureHandle;
@@ -164,6 +166,7 @@ namespace gcn
 		int mHeight;
 		int mTextureWidth;
 		int mTextureHeight;
+
 	};
 }
 

@@ -6,11 +6,11 @@
  * /______/ //______/ //_/ //_____/\ /_/ //_/ //_/ //_/ //_/ /|_/ /
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
- * Copyright (c) 2004, 2005, 2006, 2007 Olof NaessÃ©n and Per Larsson
+ * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
  *
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
- * Olof NaessÃ©n a.k.a jansem/yakslem                _asww7!uY`>  )\a//
+ * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
  *                                                 _Qhm`] _f "'c  1!5m
  * Visit: http://guichan.darkbits.org             )Qk<P ` _: :+' .'  "{[
  *                                               .)j(] .d_/ '-(  P .   S
@@ -65,10 +65,13 @@
 #include <windows.h>
 #endif
 
-#if defined(__APPLE__)
+#if defined (__amigaos4__)
+#include <mgl/gl.h>
+#define glVertex3i glVertex3f
+#elif defined(__APPLE__)
 #include <OpenGL/gl.h>
 #else
-#include <SDL_opengl.h>
+#include <GL/gl.h>
 #endif
 
 #include "guisan/exception.hpp"
@@ -79,7 +82,7 @@ namespace gcn
 {
 	OpenGLGraphics::OpenGLGraphics()
 	{
-		OpenGLGraphics::setTargetPlane(640, 480);
+		setTargetPlane(640, 480);
 		mAlpha = false;
 	}
 
@@ -124,7 +127,7 @@ namespace gcn
 		glPushMatrix();
 		glLoadIdentity();
 
-		glOrtho(0.0, static_cast<double>(mWidth), static_cast<double>(mHeight), 0.0, -1.0, 1.0);
+		glOrtho(0.0, mWidth, mHeight, 0.0, -1.0, 1.0);
 
 		glDisable(GL_LIGHTING);
 		glDisable(GL_CULL_FACE);
@@ -163,9 +166,9 @@ namespace gcn
 		bool result = Graphics::pushClipArea(area);
 
 		glScissor(mClipStack.top().x,
-				  mHeight - mClipStack.top().y - mClipStack.top().height,
-				  mClipStack.top().width,
-				  mClipStack.top().height);
+		          mHeight - mClipStack.top().y - mClipStack.top().height,
+		          mClipStack.top().width,
+		          mClipStack.top().height);
 
 		return result;
 	}
@@ -180,9 +183,9 @@ namespace gcn
 		}
 
 		glScissor(mClipStack.top().x,
-				  mHeight - mClipStack.top().y - mClipStack.top().height,
-				  mClipStack.top().width,
-				  mClipStack.top().height);
+		          mHeight - mClipStack.top().y - mClipStack.top().height,
+		          mClipStack.top().width,
+		          mClipStack.top().height);
 	}
 
 	void OpenGLGraphics::setTargetPlane(int width, int height)
@@ -192,10 +195,10 @@ namespace gcn
 	}
 
 	void OpenGLGraphics::drawImage(const Image* image, int srcX, int srcY,
-								   int dstX, int dstY, int width,
-								   int height)
+	                               int dstX, int dstY, int width,
+	                               int height)
 	{
-		const OpenGLImage* srcImage = dynamic_cast<const OpenGLImage*>(image);
+		const auto srcImage = dynamic_cast<const OpenGLImage*>(image);
 
 		if (srcImage == nullptr)
 		{
@@ -208,16 +211,16 @@ namespace gcn
 				"called a draw funtion outside of _beginDraw() and _endDraw()?");
 		}
 
-		const auto& top = mClipStack.top();
+		const ClipRectangle& top = mClipStack.top();
 
 		dstX += top.xOffset;
 		dstY += top.yOffset;
 
 		// Find OpenGL texture coordinates
-		const auto texX1 = srcX / static_cast<float>(srcImage->getTextureWidth());
-		const auto texY1 = srcY / static_cast<float>(srcImage->getTextureHeight());
-		const auto texX2 = (srcX + width) / static_cast<float>(srcImage->getTextureWidth());
-		const auto texY2 = (srcY + height) / static_cast<float>(srcImage->getTextureHeight());
+		float texX1 = srcX / static_cast<float>(srcImage->getTextureWidth());
+		float texY1 = srcY / static_cast<float>(srcImage->getTextureHeight());
+		float texX2 = (srcX + width) / static_cast<float>(srcImage->getTextureWidth());
+		float texY2 = (srcY + height) / static_cast<float>(srcImage->getTextureHeight());
 
 		glBindTexture(GL_TEXTURE_2D, srcImage->getTextureHandle());
 
@@ -259,7 +262,7 @@ namespace gcn
 			throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
 				"called a draw funtion outside of _beginDraw() and _endDraw()?");
 		}
-		const auto& top = mClipStack.top();
+		const ClipRectangle& top = mClipStack.top();
 
 		x += top.xOffset;
 		y += top.yOffset;
@@ -276,7 +279,7 @@ namespace gcn
 			throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
 				"called a draw funtion outside of _beginDraw() and _endDraw()?");
 		}
-		const auto& top = mClipStack.top();
+		const ClipRectangle& top = mClipStack.top();
 
 		x1 += top.xOffset;
 		y1 += top.yOffset;
@@ -304,16 +307,16 @@ namespace gcn
 			throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
 				"called a draw funtion outside of _beginDraw() and _endDraw()?");
 		}
-		const auto& top = mClipStack.top();
+		const ClipRectangle& top = mClipStack.top();
 
 		glBegin(GL_LINE_LOOP);
 		glVertex2f(rectangle.x + top.xOffset, rectangle.y + top.yOffset);
 		glVertex2f(rectangle.x + rectangle.width + top.xOffset - 1.0f,
-				   rectangle.y + top.yOffset + 0.375f);
+		           rectangle.y + top.yOffset + 0.375f);
 		glVertex2f(rectangle.x + rectangle.width + top.xOffset - 1.0f,
-				   rectangle.y + rectangle.height + top.yOffset);
+		           rectangle.y + rectangle.height + top.yOffset);
 		glVertex2f(rectangle.x + top.xOffset,
-				   rectangle.y + rectangle.height + top.yOffset);
+		           rectangle.y + rectangle.height + top.yOffset);
 		glEnd();
 	}
 
@@ -324,16 +327,16 @@ namespace gcn
 			throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
 				"called a draw funtion outside of _beginDraw() and _endDraw()?");
 		}
-		const auto& top = mClipStack.top();
+		const ClipRectangle& top = mClipStack.top();
 
 		glBegin(GL_QUADS);
 		glVertex2i(rectangle.x + top.xOffset, rectangle.y + top.yOffset);
 		glVertex2i(rectangle.x + rectangle.width + top.xOffset,
-				   rectangle.y + top.yOffset);
+		           rectangle.y + top.yOffset);
 		glVertex2i(rectangle.x + rectangle.width + top.xOffset,
-				   rectangle.y + rectangle.height + top.yOffset);
+		           rectangle.y + rectangle.height + top.yOffset);
 		glVertex2i(rectangle.x + top.xOffset,
-				   rectangle.y + rectangle.height + top.yOffset);
+		           rectangle.y + rectangle.height + top.yOffset);
 		glEnd();
 	}
 
@@ -353,5 +356,15 @@ namespace gcn
 	const Color& OpenGLGraphics::getColor()
 	{
 		return mColor;
+	}
+
+	int OpenGLGraphics::getTargetPlaneWidth() const
+	{
+		return mWidth;
+	}
+
+	int OpenGLGraphics::getTargetPlaneHeight() const
+	{
+		return mHeight;
 	}
 }
