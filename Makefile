@@ -206,8 +206,8 @@ else ifeq ($(PLATFORM),oga)
 else ifeq ($(PLATFORM),osx)
         LDFLAGS = -L/usr/local/lib external/libguisan/dylib/libguisan.dylib -lSDL2_image -lSDL2_ttf -lpng -liconv -lz -lFLAC -L/opt/homebrew/lib/ -lmpg123 -lmpeg2 -lmpeg2convert $(SDL_LDFLAGS) -framework IOKit -framework Foundation
 	CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -I/opt/homebrew/include -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -DAMIBERRY -D_FILE_OFFSET_BITS=64 -DCPU_AARCH64 $(SDL_CFLAGS) 
-        CXX=/usr/bin/c++
-        DEBUG=1
+	CXX=/usr/bin/c++
+#	DEBUG=1
 	APPBUNDLE=1
 
 # Generic aarch64 target defaulting to Cortex A53 CPU (SDL2, 64-bit)
