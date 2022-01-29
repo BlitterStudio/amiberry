@@ -18,7 +18,7 @@
 #include "fsdb_host.h"
 
 #define DIALOG_WIDTH 600
-#define DIALOG_HEIGHT 140
+#define DIALOG_HEIGHT 200
 
 static bool dialogResult = false;
 static bool dialogFinished = false;
@@ -28,7 +28,7 @@ static bool halt_gui = false;
 static gcn::Window* wndShowMessage;
 static gcn::Button* cmdOK;
 static gcn::Button* cmdCancel;
-static gcn::Label* lblText1;
+static gcn::TextBox* txtMessageText;
 static gcn::Label* lblText2;
 
 class ShowMessageActionListener : public gcn::ActionListener
@@ -46,7 +46,7 @@ public:
 
 static ShowMessageActionListener* showMessageActionListener;
 
-static void InitShowMessage()
+static void InitShowMessage(std::string message)
 {
 	AmigaMonitor* mon = &AMonitors[0];
 	
@@ -166,8 +166,9 @@ static void InitShowMessage()
 
 	showMessageActionListener = new ShowMessageActionListener();
 
-	lblText1 = new gcn::Label("");
-	lblText1->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER, LABEL_HEIGHT);
+	txtMessageText = new gcn::TextBox(message);
+	txtMessageText->setBackgroundColor(gui_baseCol);
+	txtMessageText->setEditable(false);
 	lblText2 = new gcn::Label("");
 	lblText2->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER, LABEL_HEIGHT);
 
@@ -185,8 +186,8 @@ static void InitShowMessage()
 	cmdCancel->setBaseColor(gui_baseCol);
 	cmdCancel->addActionListener(showMessageActionListener);
 
-	wndShowMessage->add(lblText1, DISTANCE_BORDER, DISTANCE_BORDER);
-	wndShowMessage->add(lblText2, DISTANCE_BORDER, DISTANCE_BORDER + lblText1->getHeight() + 4);
+	wndShowMessage->add(txtMessageText, DISTANCE_BORDER, DISTANCE_BORDER);
+	wndShowMessage->add(lblText2, DISTANCE_BORDER, DISTANCE_BORDER + txtMessageText->getHeight() + 4);
 	wndShowMessage->add(cmdOK);
 	wndShowMessage->add(cmdCancel);
 
@@ -202,7 +203,7 @@ static void ExitShowMessage()
 	wndShowMessage->releaseModalFocus();
 	gui_top->remove(wndShowMessage);
 
-	delete lblText1;
+	delete txtMessageText;
 	delete lblText2;
 	delete cmdOK;
 	delete cmdCancel;
@@ -640,10 +641,10 @@ bool ShowMessage(const char* title, const char* line1, const char* line2, const 
 	dialogResult = false;
 	dialogFinished = false;
 
-	InitShowMessage();
+	InitShowMessage(line1);
 
 	wndShowMessage->setCaption(title);
-	lblText1->setCaption(line1);
+	txtMessageText->setText(line1);
 	lblText2->setCaption(line2);
 	cmdOK->setCaption(button1);
 	cmdCancel->setCaption(button2);
@@ -677,10 +678,10 @@ amiberry_hotkey ShowMessageForInput(const char* title, const char* line1, const 
 	dialogResult = false;
 	dialogFinished = false;
 
-	InitShowMessage();
+	InitShowMessage(line1);
 	
 	wndShowMessage->setCaption(title);
-	lblText1->setCaption(line1);
+	txtMessageText->setText(line1);
 	cmdOK->setVisible(false);
 	cmdCancel->setCaption(button1);
 
