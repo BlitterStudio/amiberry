@@ -11990,6 +11990,9 @@ void custom_reset(bool hardreset, bool keyboardreset)
 	check_harddis();
 
 	dmal = 0;
+#ifdef USE_DISPMANX
+	time_per_frame = 1000 * 1000 / (currprefs.ntscmode ? 60 : 50);
+#endif
 	init_hz_normal();
 	// init_hz sets vpos_count
 	vpos_count = 0;
