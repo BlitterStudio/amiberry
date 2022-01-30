@@ -117,8 +117,8 @@
     <RemoteCleanCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug; make clean</RemoteCleanCommandLine>
     <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\threaddep;..\src\archivers;..\external\libguisan\include;/usr/include/SDL2;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
     <NMakePreprocessorDefinitions>DEBUG;ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;CPU_arm;ARM_HAS_DIV;USE_SDL2;_REENTRANT;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
-    <RemoteBuildOutputs/>
-    <AdditionalSourcesToCopyMapping/>
+    <RemoteBuildOutputs />
+    <AdditionalSourcesToCopyMapping />
     <IncrementalBuild>true</IncrementalBuild>
     <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-Debug</RemoteProjectDir>
     <RemoteDeployDir>$(RemoteRootDir)/$(ProjectName)-Debug</RemoteDeployDir>
@@ -905,7 +905,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debux-DMX|ARM64'">
     <RemotePostBuildEvent>
-      <Command>cp $(RemoteRootDir)/$(ProjectName)-Debug/amiberry $(RemoteRootDir)/amiberry/$(MSBuildProjectName)-Debug-dmx</Command>
+      <Command>cp $(RemoteRootDir)/$(ProjectName)-Debug-dmx/amiberry $(RemoteRootDir)/amiberry/$(MSBuildProjectName)-Debug-dmx</Command>
     </RemotePostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
