@@ -4619,6 +4619,7 @@ static void gen_direct_drawing_table(void)
 #endif
 }
 
+#ifdef AMIBERRY
 static int render_thread(void *unused)
 {
 	for (;;) {
@@ -4651,6 +4652,7 @@ static int render_thread(void *unused)
 		}
 	}
 }
+#endif
 
 void drawing_init(void)
 {
