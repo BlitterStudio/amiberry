@@ -503,7 +503,7 @@ static void reset_custom_limits(void)
 
 static void expand_vb_state(void)
 {
-	full_blank = vb_state == VB_PRGVB || vb_state >= VB_XBLANK;
+	full_blank = vb_state == VB_PRGVB || (vb_state >= VB_XBLANK && vb_state < VB_XBORDER) || (vb_state == VB_XBORDER);
 }
 
 static void extblankcheck(void)
@@ -579,6 +579,10 @@ static void set_vblanking_limits(void)
 	bool hardwired = true;
 	if (ecs_agnus) {
 		hardwired = (new_beamcon0 & BEAMCON0_VARVBEN) == 0;
+		// ECS Denise with exhblank: always use thisline_decision.vb blanking method
+		if (ecs_denise && !aga_mode && exthblank) {
+			hardwired = false;
+		}
 	}
 	if (hardwired) {
 		int vbstrt, vbstop;
@@ -3382,9 +3386,7 @@ static void do_color_changes(line_draw_func worker_border, line_draw_func worker
 			if (full_blank || vbarea) {
 				// vblank + programmed vblank / hardwired vblank
 
-				if (vbarea || vb_state >= VB_XBLANK) {
-					hposblank = 3;
-				}
+				hposblank = 3;
 				if (nextpos_in_range > lastpos) {
 					int t = nextpos_in_range;
 					(*worker_border)(lastpos, t, 1);

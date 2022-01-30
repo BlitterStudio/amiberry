@@ -954,7 +954,7 @@ static void record_color_change2(int hpos, int regno, uae_u32 value)
 	}
 
 	// HCENTER blanking (ECS Denise only)
-	if (hcenter_v2 && vs_state_on && vpos < maxvpos_display_vsync && lof_display) {
+	if (hcenter_v2 && vs_state_on && lof_display) {
 		int chpos = pos;
 		if (!hcenterblank_state && hcenter_v2 < chpos && hcenter_v2 >= last_recorded_diw_hpos) {
 			hcenterblank_state = true;
@@ -969,6 +969,7 @@ static void record_color_change2(int hpos, int regno, uae_u32 value)
 				//if (debug_dma) {
 				//	record_dma_event(DMA_EVENT_HBS, diw_to_hpos(cc->linepos), vpos);
 				//}
+				thisline_changed = 1;
 			}
 		}
 		if (hcenterblank_state && hcenter_v2_end < chpos && hcenter_v2_end >= last_recorded_diw_hpos) {
@@ -984,6 +985,7 @@ static void record_color_change2(int hpos, int regno, uae_u32 value)
 				//if (debug_dma) {
 				//	record_dma_event(DMA_EVENT_HBE, diw_to_hpos(cc->linepos), vpos);
 				//}
+				thisline_changed = 1;
 			}
 		}
 	}
@@ -3997,7 +3999,7 @@ static void do_playfield_collisions(void)
 	if (minpos < hw_diwfirst) {
 		minpos = hw_diwfirst;
 	}
-	maxpos = thisline_decision.plfright * 2- DDF_OFFSET;
+	maxpos = thisline_decision.plfright - DDF_OFFSET;
 	if (maxpos > hw_diwlast) {
 		maxpos = hw_diwlast;
 	}
@@ -4066,12 +4068,14 @@ static void do_sprite_collisions(void)
 		hwres_t maxp1 = maxpos >> sprite_buffer_res;
 
 		if (maxp1 > hw_diwlast) {
+			maxp1 = hw_diwlast;
 			maxpos = hw_diwlast << sprite_buffer_res;
 		}
-		if (maxp1 > thisline_decision.plfright * 2 - DDF_OFFSET) {
-			maxpos = (thisline_decision.plfright * 2 - DDF_OFFSET) << sprite_buffer_res;
+		if (maxp1 > thisline_decision.plfright - DDF_OFFSET) {
+			maxpos = (thisline_decision.plfright - DDF_OFFSET) << sprite_buffer_res;
 		}
 		if (minp1 < hw_diwfirst) {
+			minp1 = hw_diwfirst;
 			minpos = hw_diwfirst << sprite_buffer_res;
 		}
 		if (minp1 < thisline_decision.plfleft - DDF_OFFSET) {
@@ -4798,17 +4802,19 @@ static void reset_decisions_hsync_start(void)
 	thisline_decision.bplcon4sp = bplcon4;
 	thisline_decision.fmode = fmode;
 
-	// 0 = vb, 1 = vb off, 3 = vb off, previous line was bitplane + vb on
-	//bool t = thisline_decision.plfleft >= 0 && (thisline_decision.vb & 1) == 0 && !vb_state && !vb_end_line;
 	if (!aga_mode && ecs_denise && exthblank) {
-		// ECS Denise + EXTHBLANK: VBLANK blanking is always disabled
+		// ECS Denise + EXTBLANK: VBLANK blanking is different
 		thisline_decision.vb = VB_NOVB;
+		if (new_beamcon0 & BEAMCON0_BLANKEN) {
+			// blanking working same as AGA
+			thisline_decision.vb = vb_start_line > 1 + vblank_extraline || vb_end_next_line ? 0 : VB_NOVB;
+		}
 	} else {
 		// Visible vblank end is delayed by 1 line
 		thisline_decision.vb = vb_start_line > 1 + vblank_extraline || vb_end_next_line ? 0 : VB_NOVB;
 	}
 	// if programmed vblank
-	if ((beamcon0 & BEAMCON0_VARVBEN) && ecs_agnus) {
+	if ((new_beamcon0 & BEAMCON0_VARVBEN) && ecs_agnus) {
 		if (!thisline_decision.vb) {
 			thisline_decision.vb |= VB_PRGVB;
 		}
@@ -4816,8 +4822,10 @@ static void reset_decisions_hsync_start(void)
 
 	// doublescan last line garbage workaround
 	if (doflickerfix_active()) {
-		if (vpos < maxvpos_display_vsync || (!lof_display && vpos >= maxvpos - 1) || (lof_display && vpos >= maxvpos - 1)) {
-			thisline_decision.vb |= VB_XBORDER;
+		if (!(thisline_decision.vb & VB_PRGVB)) {
+			if ((vpos < maxvpos_display_vsync) || (lof_display && vpos >= maxvpos - 1) || (!lof_display && vpos >= maxvpos - 1)) {
+				thisline_decision.vb = VB_XBORDER;
+			}
 		}
 	}
 
@@ -4838,7 +4846,6 @@ static void reset_decisions_hsync_start(void)
 	thisline_decision.bordersprite_seen = issprbrd(-1, bplcon0, bplcon3);
 	thisline_decision.xor_seen = (bplcon4 & 0xff00) != 0;
 	thisline_decision.nr_planes = toscr_nr_planes_agnus;
-	thisline_decision.max_planes = toscr_nr_planes_agnus;
 
 	toscr_nr_planes2 = GET_PLANES(bplcon0d);
 	if (isocs7planes()) {
@@ -4848,6 +4855,8 @@ static void reset_decisions_hsync_start(void)
 	}
 	toscr_nr_planes3 = toscr_nr_planes2;
 	toscr_nr_changed = false;
+
+	thisline_decision.max_planes = toscr_nr_planes2 > toscr_nr_planes_agnus ? toscr_nr_planes2 : toscr_nr_planes_agnus;
 
 	hpos_hsync_extra = 0;
 	int hpos = current_hpos();
@@ -5452,6 +5461,8 @@ void compute_framesync(void)
 	vidinfo->drawbuffer.inheight2 = vidinfo->drawbuffer.inheight;
 	vidinfo->drawbuffer.inxoffset = 0;
 
+	//write_log(_T("Width %d Height %d\n"), vidinfo->drawbuffer.inwidth, vidinfo->drawbuffer.inheight);
+
 	if (vidinfo->drawbuffer.inwidth < 16)
 		vidinfo->drawbuffer.inwidth = 16;
 	if (vidinfo->drawbuffer.inwidth2 < 16)
@@ -5622,12 +5633,17 @@ static void init_hz(bool checkvposw)
 			hsstop_detect = 22;
 			maxvpos_display_vsync++;
 		} else {
-			int hb = 0;
 			if (exthblank) {
-				if (hbstrt > maxhpos / 2 && hbstop < maxhpos / 2) {
-					hb = (maxhpos - hbstrt) + hbstop;
-				} else if (hbstop < maxhpos / 2 && hbstrt < hbstop) {
-					hb = hbstop - hbstrt;
+				int hb = 0;
+				int hbstrtx = hbstrt & 0xff;
+				int hbstopx = hbstop & 0xff;
+				if (hbstrtx > maxhpos / 2 && hbstopx < maxhpos / 2) {
+					hb = (maxhpos - hbstrtx) + hbstopx;
+				} else if (hbstopx < maxhpos / 2 && hbstrtx < hbstopx) {
+					hb = hbstopx - hbstrtx;
+				}
+				if (hb < 4) {
+					hb = 4;
 				}
 				maxhpos_display = maxhpos - (hb - 2);
 				int hsadj = 10;
@@ -5642,13 +5658,16 @@ static void init_hz(bool checkvposw)
 				if (hsz >= 12) {
 					hsadj = 15;
 				}
-				hsstop_detect = (hbstop - (hsstrt - hsadj));
+				hsstop_detect = (hbstopx - (hsstrt - hsadj));
 			} else {
 				maxhpos_display = maxhpos - 15;
 				hsstop_detect = 15;
 			}
 		}
 		maxhpos_display *= 2;
+		if (hsstop_detect2 > hsstop_detect + 5) {
+			hsstop_detect = hsstop_detect2;
+		}
 
 	} else {
 
@@ -8715,12 +8734,8 @@ static int coppercomp(int hpos, bool blitwait)
 	int hpos_cmp = hpos;
 	int vpos_cmp = vpos;
 
-	// Copper comparison can match both odd and even cycles
-	// Important when crossing scanlines.
-	hpos_cmp += 1;
-	if (hpos_cmp >= maxhpos) {
-		hpos_cmp -= maxhpos;
-		vpos_cmp++;
+	if (hpos_cmp == maxhposm1 && maxhposeven == COPPER_CYCLE_POLARITY) {
+		hpos_cmp = 0;
 	}
 
 	int vp = vpos_cmp & (((cop_state.ir[1] >> 8) & 0x7F) | 0x80);
@@ -8742,10 +8757,14 @@ static int coppercomp(int hpos, bool blitwait)
 		}
 	}
 
-	if (vp == cop_state.vcmp && hp < cop_state.hcmp) {
-		return 1;
+	if (vp > cop_state.vcmp) {
+		return 0;
 	}
-	return 0;
+	if (vp == cop_state.vcmp && hp >= cop_state.hcmp) {
+		return 0;
+	}
+
+	return 1;
 }
 
 static void update_copper(int until_hpos)
@@ -8922,10 +8941,20 @@ static void update_copper(int until_hpos)
 			cop_state.state = COP_skip1;
 			break;
 
-			// SKIP: Second idle cycle. Check comparison.
+			// SKIP: Second idle cycle. Do nothing.
 			// Free cycle needed, cycle not allocated.
 		case COP_skip1:
+
 			if (copper_cant_read(hpos, 0)) {
+				goto next;
+			}
+
+			cop_state.state = COP_skip;
+			break;
+
+			// Check comparison. SKIP finished. Request IR1.
+		case COP_skip:
+			if (copper_cant_read(hpos, CYCLE_PIPE_COPPER | 0x005)) {
 				goto next;
 			}
 
@@ -8943,14 +8972,6 @@ static void update_copper(int until_hpos)
 				cop_state.ignore_next = -1;
 			}
 
-			cop_state.state = COP_skip;
-			break;
-
-			// SKIP finished. Request IR1.
-		case COP_skip:
-			if (copper_cant_read(hpos, CYCLE_PIPE_COPPER | 0x005)) {
-				goto next;
-			}
 			cop_state.state = COP_read1;
 			break;
 
@@ -9250,6 +9271,7 @@ static void decide_sprites_fetch(int endhpos)
 		last_decide_sprite_hpos = endhpos;
 		return;
 	}
+
 	while (hpos < endhpos) {
 		if (hpos >= SPR_FIRST_HPOS - RGA_SPRITE_PIPELINE_DEPTH && hpos < SPR_FIRST_HPOS + MAX_SPRITES * 4) {
 
@@ -9341,8 +9363,8 @@ static int calculate_lineno(int vp)
 	nextline_how = nln_normal;
 	if (doflickerfix_active()) {
 		lineno *= 2;
-	}
-	else if (!interlace_seen && doublescan <= 0 && currprefs.gfx_vresolution && currprefs.gfx_pscanlines > 1) {
+		lineno++;
+	} else if (!interlace_seen && doublescan <= 0 && currprefs.gfx_vresolution && currprefs.gfx_pscanlines > 1) {
 		lineno *= 2;
 		if (timeframes & 1) {
 			lineno++;
@@ -10075,13 +10097,12 @@ static void hsync_scandoubler(int hpos)
 	uae_u16 odmacon = dmacon;
 	int ocop = copper_enabled_thisline;
 	uaecptr bpltmp[MAX_PLANES], bpltmpx[MAX_PLANES];
+	int lof = lof_display;
 
-	if (vb_start_line > 1) {
+	if (vb_start_line > 2) {
 		return;
 	}
 
-	int lof = lof_display;
-	next_lineno++;
 	scandoubled_line = 1;
 	line_disabled |= 8;
 	last_hdiw = 0 - 1;
@@ -10111,8 +10132,8 @@ static void hsync_scandoubler(int hpos)
 	reset_scandoubler_sync(hpos);
 	reset_decisions_hsync_start();
 
-	// Bitplane only
-	dmacon = odmacon & (DMA_MASTER | DMA_BITPLANE);
+	// Bitplane and sprites only
+	dmacon = odmacon & (DMA_MASTER | DMA_BITPLANE | DMA_SPRITE);
 	copper_enabled_thisline = 0;
 
 	// copy color changes
@@ -10459,6 +10480,7 @@ static void hsync_handlerh(bool onvsync)
 		if (doflickerfix_active()) {
 			finish_decisions(hpos);
 			hsync_record_line_state(next_lineno, nextline_how, thisline_changed);
+			next_lineno++;
 			hsync_scandoubler(hpos);
 		} else {
 			finish_decisions(hpos);
@@ -11968,9 +11990,6 @@ void custom_reset(bool hardreset, bool keyboardreset)
 	check_harddis();
 
 	dmal = 0;
-#ifdef USE_DISPMANX
-	time_per_frame = 1000 * 1000 / (currprefs.ntscmode ? 60 : 50);
-#endif
 	init_hz_normal();
 	// init_hz sets vpos_count
 	vpos_count = 0;

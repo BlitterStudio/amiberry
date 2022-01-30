@@ -750,7 +750,7 @@ static void resetwarning_check (void)
 			resetwarning_phase = 3;
 			write_log (_T("KB: reset warning SP = output\n"));
 			/* System won't reset until handshake signal becomes inactive or 10s has passed */
-			resetwarning_timer = 10 * maxvpos_nom * vblank_hz;
+			resetwarning_timer = (int)(10 * maxvpos_nom * vblank_hz);
 		}
 	} else if (resetwarning_phase == 3) {
 		if (!(ciaacra & 0x40)) { /* second AK_RESETWARNING handshake disabled */
