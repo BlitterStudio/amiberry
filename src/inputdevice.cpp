@@ -2987,15 +2987,6 @@ int magicmouse_alive (void)
 	return mouseedge_alive > 0;
 }
 
-STATIC_INLINE int adjust (int val)
-{
-	if (val > 127)
-		return 127;
-	else if (val < -127)
-		return -127;
-	return val;
-}
-
 static int getbuttonstate (int joy, int button)
 {
 	return (joybutton[joy] & (1 << button)) ? 1 : 0;
@@ -3005,13 +2996,13 @@ static int pc_mouse_buttons[MAX_JPORTS];
 
 static int getvelocity (int num, int subnum, int pct)
 {
-	int val;
-	int v;
-
 	if (pct > 1000)
 		pct = 1000;
-	val = mouse_delta[num][subnum];
-	v = val * pct / 1000;
+	if (pct < 0) {
+		pct = 0;
+	}
+	int val = mouse_delta[num][subnum];
+	int v = val * pct / 1000;
 	if (!v) {
 		if (val < -maxvpos / 2)
 			v = -2;
@@ -3139,10 +3130,14 @@ static void mouseupdate (int pct, bool vsync)
 				mouse_x[i] &= MOUSEXY_MAX - 1;
 			}
 
-			if (mouse_frame_y[i] - mouse_y[i] > max)
+			if (mouse_frame_y[i] - mouse_y[i] > max) {
 				mouse_y[i] = mouse_frame_y[i] - max;
-			if (mouse_frame_y[i] - mouse_y[i] < -max)
+				mouse_y[i] &= MOUSEXY_MAX - 1;
+			}
+			if (mouse_frame_y[i] - mouse_y[i] < -max) {
 				mouse_y[i] = mouse_frame_y[i] + max;
+				mouse_y[i] &= MOUSEXY_MAX - 1;
+			}
 		}
 
 		if (!vsync) {
@@ -3165,18 +3160,14 @@ static void mouseupdate (int pct, bool vsync)
 		}
 	}
 
-
 }
 
-static int input_vpos, input_frame;
+static uae_u32 prev_input_vpos, input_frame, prev_input_frame;
 extern int vpos;
 static void readinput (void)
 {
-	uae_u32 totalvpos;
-	int diff;
-
-	totalvpos = input_frame * current_maxvpos () + vpos;
-	diff = totalvpos - input_vpos;
+	int max = current_maxvpos();
+	int diff = (input_frame * max + vpos) - (prev_input_frame * max + prev_input_vpos);
 	if (diff > 0) {
 		if (diff < 10) {
 			mouseupdate (0, false);
@@ -3184,8 +3175,8 @@ static void readinput (void)
 			mouseupdate (diff * 1000 / current_maxvpos (), false);
 		}
 	}
-	input_vpos = totalvpos;
-
+	prev_input_frame = input_frame;
+	prev_input_vpos = vpos;
 }
 
 static void joymousecounter (int joy)
@@ -9211,6 +9202,10 @@ void setmousestate (int mouse, int axis, int data, int isabs)
 			return;
 		}
 	}
+
+	*mouse_p = (*mouse_p) - (*oldm_p);
+	*oldm_p = 0;
+
 	v = (int)d;
 	fract[mouse][axis] += d - v;
 	diff = (int)fract[mouse][axis];
