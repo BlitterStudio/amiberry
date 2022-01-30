@@ -9836,8 +9836,11 @@ static void vsync_handler_render(void)
 	}
 
 	bool frameok = framewait();
-	
+#ifdef AMIBERRY
+	if (!ad->picasso_on && !nodraw()) {
+#else
 	if (!ad->picasso_on) {
+#endif
 		if (!frame_rendered && vblank_hz_state) {
 			frame_rendered = crender_screen(0, 1, false);
 		}
@@ -9846,7 +9849,10 @@ static void vsync_handler_render(void)
 		}
 	}
 
-	fpscounter(frameok);
+#ifdef AMIBERRY
+	if (!nodraw() || ad->picasso_on)
+#endif
+		fpscounter(frameok);
 
 	bool waspaused = false;
 	while (handle_events()) {
