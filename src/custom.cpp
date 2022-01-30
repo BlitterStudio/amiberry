@@ -3651,6 +3651,11 @@ STATIC_INLINE void one_fetch_cycle(int pos, int fm)
 
 static void update_fetch(int until, int fm)
 {
+#ifdef AMIBERRY
+	if (nodraw())
+		return;
+#endif
+
 	int hpos = last_fetch_hpos;
 
 	if (hpos >= until) {
