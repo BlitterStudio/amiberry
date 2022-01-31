@@ -9,6 +9,7 @@
 #USE_LTO=1
 #SANITIZE=1
 #USE_GPIOD=1
+#USE_OPENGL=1
 
 #
 ## Common options for all targets
@@ -25,6 +26,11 @@ ifneq ($(strip $(USE_LD)),)
 	LDFLAGS += -fuse-ld=$(USE_LD)
 endif
 LDFLAGS += -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed -lpthread -lz -lpng -lrt -lFLAC -lmpg123 -ldl -lmpeg2convert -lmpeg2
+
+ifdef USE_OPENGL
+	CFLAGS += -DUSE_OPENGL
+	LDFLAGS += -lGL
+endif
 
 # Use libgpiod to control GPIO LEDs?
 ifdef USE_GPIOD
