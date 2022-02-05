@@ -953,6 +953,7 @@ int check_prefs_changed_gfx()
 		c2 |= ((currprefs.gfx_monitor[i].gfx_size_win.width + 7) & ~7) != ((changed_prefs.gfx_monitor[i].gfx_size_win.width + 7) & ~7) ? 16 : 0;
 		c2 |= currprefs.gfx_monitor[i].gfx_size_win.height != changed_prefs.gfx_monitor[i].gfx_size_win.height ? 16 : 0;
 #ifdef AMIBERRY
+		c2 |= currprefs.gfx_horizontal_offset != changed_prefs.gfx_horizontal_offset ? 16 : 0;
 		c2 |= currprefs.gfx_vertical_offset != changed_prefs.gfx_vertical_offset ? 16 : 0;
 		c2 |= currprefs.gfx_auto_height != changed_prefs.gfx_auto_height ? 16 : 0;
 		c2 |= currprefs.gfx_correct_aspect != changed_prefs.gfx_correct_aspect ? 16 : 0;
@@ -1129,6 +1130,7 @@ int check_prefs_changed_gfx()
 		currprefs.gfx_apmode[1].gfx_vsyncmode = changed_prefs.gfx_apmode[1].gfx_vsyncmode;
 		currprefs.gfx_apmode[0].gfx_refreshrate = changed_prefs.gfx_apmode[0].gfx_refreshrate;
 
+		currprefs.gfx_horizontal_offset = changed_prefs.gfx_horizontal_offset;
 		currprefs.gfx_vertical_offset = changed_prefs.gfx_vertical_offset;
 		currprefs.gfx_auto_height = changed_prefs.gfx_auto_height;
 		currprefs.gfx_correct_aspect = changed_prefs.gfx_correct_aspect;
