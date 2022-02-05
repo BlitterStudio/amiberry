@@ -1876,6 +1876,7 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->gfx_monitor[0].gfx_size_win.width = amiberry_options.default_width;
 	p->gfx_monitor[0].gfx_size_win.height = amiberry_options.default_height;
 
+	p->gfx_horizontal_offset = 0;
 	p->gfx_vertical_offset = 0;
 	p->gfx_auto_height = amiberry_options.default_auto_height;
 	p->gfx_correct_aspect = amiberry_options.default_correct_aspect_ratio;
@@ -2036,6 +2037,7 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_target_dwrite_bool(f, _T("gui_always_on_top"), p->gui_alwaysontop);
 	cfgfile_target_dwrite_bool(f, _T("right_control_is_right_win"), p->right_control_is_right_win_key);
 
+	cfgfile_target_dwrite(f, _T("gfx_horizontal_offset"), _T("%d"), p->gfx_horizontal_offset);
 	cfgfile_target_dwrite(f, _T("gfx_vertical_offset"), _T("%d"), p->gfx_vertical_offset);
 	cfgfile_target_dwrite_bool(f, _T("gfx_auto_height"), p->gfx_auto_height);
 	cfgfile_target_dwrite(f, _T("gfx_correct_aspect"), _T("%d"), p->gfx_correct_aspect);
@@ -2122,6 +2124,8 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 	if (cfgfile_intval(option, value, "kbd_led_num", &p->kbd_led_num, 1))
 		return 1;
 	if (cfgfile_intval(option, value, "kbd_led_scr", &p->kbd_led_scr, 1))
+		return 1;
+	if (cfgfile_intval(option, value, "gfx_horizontal_offset", &p->gfx_horizontal_offset, 1))
 		return 1;
 	if (cfgfile_intval(option, value, "gfx_vertical_offset", &p->gfx_vertical_offset, 1))
 		return 1;

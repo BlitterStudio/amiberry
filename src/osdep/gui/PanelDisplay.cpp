@@ -76,6 +76,9 @@ static gcn::Slider* sldAmigaHeight;
 static gcn::CheckBox* chkAutoHeight;
 static gcn::CheckBox* chkBorderless;
 
+static gcn::Label* lblHOffset;
+static gcn::Slider* sldHOffset;
+static gcn::Label* lblHOffsetValue;
 static gcn::Label* lblVOffset;
 static gcn::Slider* sldVOffset;
 static gcn::Label* lblVOffsetValue;
@@ -142,6 +145,12 @@ public:
 		else if (actionEvent.getSource() == chkBorderless)
 			changed_prefs.borderless = chkBorderless->isSelected();
 
+		else if (actionEvent.getSource() == sldHOffset)
+		{
+			changed_prefs.gfx_horizontal_offset = static_cast<int>(sldHOffset->getValue());
+			lblHOffsetValue->setCaption(std::to_string(changed_prefs.gfx_horizontal_offset));
+			lblHOffsetValue->adjustSize();
+		}
 		else if (actionEvent.getSource() == sldVOffset)
 		{
 			changed_prefs.gfx_vertical_offset = static_cast<int>(sldVOffset->getValue());
@@ -366,6 +375,18 @@ void InitPanelDisplay(const config_category& category)
 	chkBorderless->setId("chkBorderless");
 	chkBorderless->addActionListener(amigaScreenActionListener);
 
+	lblHOffset = new gcn::Label("H. Offset:");
+	lblHOffset->setAlignment(gcn::Graphics::LEFT);
+	sldHOffset = new gcn::Slider(-60, 60);
+	sldHOffset->setSize(135, SLIDER_HEIGHT);
+	sldHOffset->setBaseColor(gui_baseCol);
+	sldHOffset->setMarkerLength(20);
+	sldHOffset->setStepLength(1);
+	sldHOffset->setId("sldHOffset");
+	sldHOffset->addActionListener(amigaScreenActionListener);
+	lblHOffsetValue = new gcn::Label("-60");
+	lblHOffsetValue->setAlignment(gcn::Graphics::LEFT);
+
 	lblVOffset = new gcn::Label("V. Offset:");
 	lblVOffset->setAlignment(gcn::Graphics::LEFT);
 	sldVOffset = new gcn::Slider(-20, 20);
@@ -458,6 +479,10 @@ void InitPanelDisplay(const config_category& category)
 	grpAmigaScreen->add(chkAutoHeight, DISTANCE_BORDER, posY);
 	grpAmigaScreen->add(chkBorderless, chkAutoHeight->getX() + chkAutoHeight->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += chkAutoHeight->getHeight() + DISTANCE_NEXT_Y;
+	grpAmigaScreen->add(lblHOffset, DISTANCE_BORDER, posY);
+	grpAmigaScreen->add(sldHOffset, lblHOffset->getX() + lblHOffset->getWidth() + DISTANCE_NEXT_X, posY);
+	grpAmigaScreen->add(lblHOffsetValue, sldHOffset->getX() + sldHOffset->getWidth() + 8, posY + 2);
+	posY += sldVOffset->getHeight() + DISTANCE_NEXT_Y;
 	grpAmigaScreen->add(lblVOffset, DISTANCE_BORDER, posY);
 	grpAmigaScreen->add(sldVOffset, lblVOffset->getX() + lblVOffset->getWidth() + DISTANCE_NEXT_X, posY);
 	grpAmigaScreen->add(lblVOffsetValue, sldVOffset->getX() + sldVOffset->getWidth() + 8, posY + 2);
@@ -588,6 +613,9 @@ void ExitPanelDisplay()
 	delete txtAmigaHeight;
 	delete chkAutoHeight;
 	delete chkBorderless;
+	delete lblHOffset;
+	delete sldHOffset;
+	delete lblHOffsetValue;
 	delete lblVOffset;
 	delete sldVOffset;
 	delete lblVOffsetValue;
@@ -668,6 +696,10 @@ void RefreshPanelDisplay()
 	}
 	chkAutoHeight->setSelected(changed_prefs.gfx_auto_height);
 	chkBorderless->setSelected(changed_prefs.borderless);
+
+	sldHOffset->setValue(changed_prefs.gfx_horizontal_offset);
+	lblHOffsetValue->setCaption(std::to_string(changed_prefs.gfx_horizontal_offset));
+	lblHOffsetValue->adjustSize();
 
 	sldVOffset->setValue(changed_prefs.gfx_vertical_offset);
 	lblVOffsetValue->setCaption(std::to_string(changed_prefs.gfx_vertical_offset));

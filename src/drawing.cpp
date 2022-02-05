@@ -3836,6 +3836,10 @@ static void center_image (void)
 		}
 	}
 
+#ifdef AMIBERRY
+	visible_left_border += currprefs.gfx_horizontal_offset;
+#endif
+
 	if (visible_left_border > max_diwlastword - 32)
 		visible_left_border = max_diwlastword - 32;
 	if (visible_left_border < 0)
