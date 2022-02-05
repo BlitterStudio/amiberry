@@ -877,6 +877,7 @@ struct uae_prefs
 	int kbd_led_cap;
 
 	bool gfx_auto_height;
+	int gfx_vertical_offset;
 	int gfx_correct_aspect;
 	int scaling_method;
 

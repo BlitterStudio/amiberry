@@ -76,6 +76,10 @@ static gcn::Slider* sldAmigaHeight;
 static gcn::CheckBox* chkAutoHeight;
 static gcn::CheckBox* chkBorderless;
 
+static gcn::Label* lblVOffset;
+static gcn::Slider* sldVOffset;
+static gcn::Label* lblVOffsetValue;
+
 static gcn::Label* lblScreenmode;
 static gcn::DropDown* cboScreenmode;
 static gcn::Label* lblFullscreen;
@@ -108,6 +112,7 @@ static gcn::CheckBox* chkFilterLowRes;
 
 static gcn::CheckBox* chkFrameskip;
 static gcn::Slider* sldRefresh;
+static gcn::Label* lblFrameRate;
 static gcn::CheckBox* chkAspect;
 static gcn::CheckBox* chkBlackerThanBlack;
 
@@ -136,12 +141,20 @@ public:
 
 		else if (actionEvent.getSource() == chkBorderless)
 			changed_prefs.borderless = chkBorderless->isSelected();
-		
+
+		else if (actionEvent.getSource() == sldVOffset)
+		{
+			changed_prefs.gfx_vertical_offset = static_cast<int>(sldVOffset->getValue());
+			lblVOffsetValue->setCaption(std::to_string(changed_prefs.gfx_vertical_offset));
+			lblVOffsetValue->adjustSize();
+		}
 		else if (actionEvent.getSource() == chkFrameskip)
 		{
 			changed_prefs.gfx_framerate = chkFrameskip->isSelected() ? 2 : 1;
 			sldRefresh->setEnabled(chkFrameskip->isSelected());
 			sldRefresh->setValue(changed_prefs.gfx_framerate);
+			lblFrameRate->setCaption(std::to_string(changed_prefs.gfx_framerate));
+			lblFrameRate->adjustSize();
 		}
 
 		else if (actionEvent.getSource() == sldRefresh)
@@ -352,7 +365,19 @@ void InitPanelDisplay(const config_category& category)
 	chkBorderless = new gcn::CheckBox("Borderless");
 	chkBorderless->setId("chkBorderless");
 	chkBorderless->addActionListener(amigaScreenActionListener);
-	
+
+	lblVOffset = new gcn::Label("V. Offset:");
+	lblVOffset->setAlignment(gcn::Graphics::LEFT);
+	sldVOffset = new gcn::Slider(-20, 20);
+	sldVOffset->setSize(135, SLIDER_HEIGHT);
+	sldVOffset->setBaseColor(gui_baseCol);
+	sldVOffset->setMarkerLength(20);
+	sldVOffset->setStepLength(1);
+	sldVOffset->setId("sldVOffset");
+	sldVOffset->addActionListener(amigaScreenActionListener);
+	lblVOffsetValue = new gcn::Label("-20");
+	lblVOffsetValue->setAlignment(gcn::Graphics::LEFT);
+
 	chkHorizontal = new gcn::CheckBox("Horizontal");
 	chkHorizontal->setId("chkHorizontal");
 	chkHorizontal->addActionListener(amigaScreenActionListener);
@@ -387,6 +412,8 @@ void InitPanelDisplay(const config_category& category)
 	sldRefresh->setStepLength(1);
 	sldRefresh->setId("sldRefresh");
 	sldRefresh->addActionListener(amigaScreenActionListener);
+	lblFrameRate = new gcn::Label("50");
+	lblFrameRate->setAlignment(gcn::Graphics::LEFT);
 	
 	lblScreenmode = new gcn::Label("Screen mode:");
 	lblScreenmode->setAlignment(gcn::Graphics::RIGHT);
@@ -431,9 +458,12 @@ void InitPanelDisplay(const config_category& category)
 	grpAmigaScreen->add(chkAutoHeight, DISTANCE_BORDER, posY);
 	grpAmigaScreen->add(chkBorderless, chkAutoHeight->getX() + chkAutoHeight->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += chkAutoHeight->getHeight() + DISTANCE_NEXT_Y;
+	grpAmigaScreen->add(lblVOffset, DISTANCE_BORDER, posY);
+	grpAmigaScreen->add(sldVOffset, lblVOffset->getX() + lblVOffset->getWidth() + DISTANCE_NEXT_X, posY);
+	grpAmigaScreen->add(lblVOffsetValue, sldVOffset->getX() + sldVOffset->getWidth() + 8, posY + 2);
 
 	grpAmigaScreen->setMovable(false);
-	grpAmigaScreen->setSize(lblAmigaWidth->getX() + lblAmigaWidth->getWidth() + sldAmigaWidth->getWidth() + lblAmigaWidth->getWidth() + txtAmigaHeight->getWidth() + DISTANCE_BORDER, TITLEBAR_HEIGHT + chkAutoHeight->getY() + chkAutoHeight->getHeight() + DISTANCE_NEXT_Y);
+	grpAmigaScreen->setSize(lblAmigaWidth->getX() + lblAmigaWidth->getWidth() + sldAmigaWidth->getWidth() + lblAmigaWidth->getWidth() + txtAmigaHeight->getWidth() + DISTANCE_BORDER, TITLEBAR_HEIGHT + lblVOffset->getY() + lblVOffset->getHeight() + DISTANCE_NEXT_Y);
 	grpAmigaScreen->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpAmigaScreen->setBaseColor(gui_baseCol);
 	category.panel->add(grpAmigaScreen);
@@ -539,6 +569,7 @@ void InitPanelDisplay(const config_category& category)
 	
 	category.panel->add(chkFrameskip, DISTANCE_BORDER, posY);
 	category.panel->add(sldRefresh, chkFrameskip->getX() + chkFrameskip->getWidth() + DISTANCE_NEXT_X, posY);
+	category.panel->add(lblFrameRate, sldRefresh->getX() + sldRefresh->getWidth() + 8, posY + 2);
 
 	RefreshPanelDisplay();
 }
@@ -547,6 +578,7 @@ void ExitPanelDisplay()
 {
 	delete chkFrameskip;
 	delete sldRefresh;
+	delete lblFrameRate;
 	delete amigaScreenActionListener;
 	delete lblAmigaWidth;
 	delete sldAmigaWidth;
@@ -556,6 +588,9 @@ void ExitPanelDisplay()
 	delete txtAmigaHeight;
 	delete chkAutoHeight;
 	delete chkBorderless;
+	delete lblVOffset;
+	delete sldVOffset;
+	delete lblVOffsetValue;
 	delete grpAmigaScreen;
 
 	delete chkHorizontal;
@@ -597,6 +632,8 @@ void RefreshPanelDisplay()
 	chkFrameskip->setSelected(changed_prefs.gfx_framerate > 1);
 	sldRefresh->setEnabled(chkFrameskip->isSelected());
 	sldRefresh->setValue(changed_prefs.gfx_framerate);
+	lblFrameRate->setCaption(std::to_string(changed_prefs.gfx_framerate));
+	lblFrameRate->adjustSize();
 	
 	int i;
 
@@ -631,7 +668,11 @@ void RefreshPanelDisplay()
 	}
 	chkAutoHeight->setSelected(changed_prefs.gfx_auto_height);
 	chkBorderless->setSelected(changed_prefs.borderless);
-	
+
+	sldVOffset->setValue(changed_prefs.gfx_vertical_offset);
+	lblVOffsetValue->setCaption(std::to_string(changed_prefs.gfx_vertical_offset));
+	lblVOffsetValue->adjustSize();
+
 	chkHorizontal->setSelected(changed_prefs.gfx_xcenter == 2);
 	chkVertical->setSelected(changed_prefs.gfx_ycenter == 2);
 
