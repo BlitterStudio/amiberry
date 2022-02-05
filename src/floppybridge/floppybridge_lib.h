@@ -1,6 +1,6 @@
 /* floppybridge_lib
 *
-* Copyright (C) 2021 Robert Smith (@RobSmithDev)
+* Copyright (C) 2021-2022 Robert Smith (@RobSmithDev)
 * https://amiga.robsmithdev.co.uk
 *
 * This class connects to the external FloppyBridge DLL library rather than
@@ -23,22 +23,18 @@
 #include <vector>
 #include <string>
 
+#ifdef AMIBERRY
+#include "FloppyBridge.h"
+#endif
+
 #define BRIDGE_STRING_MAX_LENGTH 255
 typedef TCHAR TCharString[BRIDGE_STRING_MAX_LENGTH];
 
-typedef void* BridgeDriverHandle;
+typedef BridgeOpened* BridgeDriverHandle;
 
 // Class to access the 'floppybridge' via a DLL but using the same interface
 class FloppyBridgeAPI : public FloppyDiskBridge {
 public:
-	// Type of bridge mode
-	enum class BridgeMode : unsigned char {
-		bmFast = 0,							// Fast mode.				This is suitable for most disks and games
-		bmCompatible = 1,					// More compatible mode.	Some games require this.
-		bmTurboAmigaDOS = 2,				// Very fast mode.			This will break all copy protection, but is great for AmigaDOS disks in Workbench
-		bmStalling = 3,						// Very slow.				Will cause the emulator to freeze and stall while disk access occurs.
-		bmMax = 3
-	};
 
 	// How to use disk density
 	enum class BridgeDensityMode : unsigned char {
@@ -95,8 +91,8 @@ public:
 		unsigned int driverIndex;
 
 		// Some basic information
-		FloppyBridgeAPI::BridgeMode bridgeMode;
-		FloppyBridgeAPI::BridgeDensityMode bridgeDensityMode;
+		CommonBridgeTemplate::BridgeMode bridgeMode;
+		CommonBridgeTemplate::BridgeDensityMode bridgeDensityMode;
 
 		// Profile name
 		TCharString name;
@@ -112,7 +108,7 @@ public:
 	// Route is: choose driver, create driver, configure it, then set the "bridge" variable in UAE to the created instance and it will do the rest
 
 	// Returns TRUE if the floppy bridge library has been loaded and is ready to be queried.  All functions are safe to call regardless the return value
-	static const bool isAvailable();
+	static bool isAvailable();
 
 	// Populates bridgeInformation with information about the Bridge DLL. This should be called and shown somewhere
 	// As it contains update and support information too.  If this returns FALSE it will still contain basic information such as a URL to get the DLL from.
@@ -193,56 +189,56 @@ public:
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Functions for configuring the driver once it has been created.	
 	// Returns a pointer to a string containing the current config.  This can be used with setConfigFromString() or createDriverFromString()
-	bool getConfigAsString(char** config);
+	bool getConfigAsString(char** config) const;
 	// Applies the config to the currently driver.  Returns TRUE if successful.
-	bool setConfigFromString(char* config);
+	bool setConfigFromString(char* config) const;
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Return the current bridge mode selected
-	bool getBridgeMode(BridgeMode* mode);
+	bool getBridgeMode(CommonBridgeTemplate::BridgeMode* mode) const;
 	// Set the currently active bridge mode.  This can be set while the bridge is in use
-	bool setBridgeMode(BridgeMode newMode);
+	[[nodiscard]] bool setBridgeMode(CommonBridgeTemplate::BridgeMode newMode) const;
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Return the current bridge density mode selected
-	bool getBridgeDensityMode(BridgeDensityMode* mode);
+	bool getBridgeDensityMode(CommonBridgeTemplate::BridgeDensityMode* mode) const;
 	// Set the currently active bridge density mode.  This can be set while the bridge is in use
-	bool setBridgeDensityMode(BridgeDensityMode newMode);
+	[[nodiscard]] bool setBridgeDensityMode(CommonBridgeTemplate::BridgeDensityMode newMode) const;
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// These require ConfigOption_AutoCache bit set in DriverInformation::configOptions
 	// Returns if auto-disk caching (while the drive is idle) mode is enabled
-	bool getAutoCacheMode(bool* autoCacheMode);
+	bool getAutoCacheMode(bool* autoCacheMode) const;
 	// Sets if auto-disk caching (while the drive is idle) mode is enabled.  This can be set while the bridge is in use
-	bool setAutoCacheMode(bool autoCacheMode);
+	[[nodiscard]] bool setAutoCacheMode(bool autoCacheMode) const;
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// These require ConfigOption_ComPort bit set in DriverInformation::configOptions
 	// Returns the currently selected COM port.  This port is only used if auto detect com port is false
-	bool getComPort(TCharString* comPort);
+	bool getComPort(TCharString* comPort) const;
 	// Sets the com port to use.  This port is only used if auto detect com port is false.
-	bool setComPort(TCHAR* comPort);
+	bool setComPort(TCHAR* comPort) const;
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// These require ConfigOption_AutoDetectComport bit set in DriverInformation::configOptions
 	// Returns if com port auto-detect is enabled
-	bool getComPortAutoDetect(bool* autoDetect);
+	bool getComPortAutoDetect(bool* autoDetect) const;
 	// Sets if auto-detect com port should be used
-	bool setComPortAutoDetect(bool autoDetect);
+	[[nodiscard]] bool setComPortAutoDetect(bool autoDetect) const;
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// These require ConfigOption_DriveABCable bit set in DriverInformation::configOptions
 	// Returns if the driver should use a drive connected as Drive B (true) on the cable rather than Drive A (false)
-	bool getDriveCableSelection(bool* connectToDriveB);
+	bool getDriveCableSelection(bool* connectToDriveB) const;
 	// Sets if the driver should use a drive connected as Drive B (true) on the cable rather than Drive A (false)
-	bool setDriveCableSelection(bool connectToDriveB);
+	[[nodiscard]] bool setDriveCableSelection(bool connectToDriveB) const;
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// These require ConfigOption_SmartSpeed bit set in DriverInformation::configOptions
 	// Returns if the driver currently has Smart Speed enabled which can dynamically switch between normal and turbo disk speed without breaking copy protection
-	bool getSmartSpeedEnabled(bool* enabled);
+	bool getSmartSpeedEnabled(bool* enabled) const;
 	//  Sets if the driver can dynamically switch between normal and turbo disk speed without breaking copy protectionThis can be set while the bridge is in use
-	bool setSmartSpeedEnabled(bool enabled);
+	[[nodiscard]] bool setSmartSpeedEnabled(bool enabled) const;
 
 
 
@@ -260,7 +256,7 @@ public:
 	virtual void shutdown() override;
 	virtual const BridgeDriver* getDriverInfo() override;
 	virtual unsigned char getBitSpeed() override;
-	virtual FloppyDiskBridge::DriveTypeID getDriveTypeID() override;
+	virtual DriveTypeID getDriveTypeID() override;
 	virtual const char* getLastErrorMessage() override;
 	virtual bool resetDrive(int trackNumber) override;
 	virtual bool isAtCylinder0() override;
@@ -300,7 +296,7 @@ private:
 	unsigned int m_driverIndex;					// Index of that driver
 	TCharString m_error = { 0 };				// Last error
 	TCharString m_warning = { 0 };				// Last warning
-	BridgeDriver* m_driverInfo;					// Pointer to the driver info if retrieved
+	BridgeDriver* m_driverInfo{};					// Pointer to the driver info if retrieved
 #ifdef _UNICODE
 	std::string m_lastErrorAnsi;				// Non-unicode version of the last error
 #endif

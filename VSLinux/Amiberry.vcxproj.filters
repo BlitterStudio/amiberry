@@ -1149,6 +1149,42 @@
     <ClCompile Include="..\external\libguisan\src\widgets\adjustingcontainer.cpp">
       <Filter>external\libguisan\src\widgets</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\floppybridge\ArduinoFloppyBridge.cpp">
+      <Filter>src\floppybridge</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\floppybridge\ArduinoInterface.cpp">
+      <Filter>src\floppybridge</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\floppybridge\CommonBridgeTemplate.cpp">
+      <Filter>src\floppybridge</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\floppybridge\ftdi.cpp">
+      <Filter>src\floppybridge</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\floppybridge\GreaseWeazleBridge.cpp">
+      <Filter>src\floppybridge</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\floppybridge\GreaseWeazleInterface.cpp">
+      <Filter>src\floppybridge</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\floppybridge\pll.cpp">
+      <Filter>src\floppybridge</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\floppybridge\RotationExtractor.cpp">
+      <Filter>src\floppybridge</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\floppybridge\SerialIO.cpp">
+      <Filter>src\floppybridge</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\floppybridge\SuperCardProBridge.cpp">
+      <Filter>src\floppybridge</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\floppybridge\SuperCardProInterface.cpp">
+      <Filter>src\floppybridge</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\floppybridge\FloppyBridge.cpp">
+      <Filter>src\floppybridge</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\archivers\7z\7zBuf.h">
@@ -1981,6 +2017,48 @@
     </ClInclude>
     <ClInclude Include="..\external\libguisan\include\guisan\widgets\adjustingcontainer.hpp">
       <Filter>external\libguisan\include\guisan\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\floppybridge\ArduinoFloppyBridge.h">
+      <Filter>src\floppybridge</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\floppybridge\ArduinoInterface.h">
+      <Filter>src\floppybridge</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\floppybridge\CommonBridgeTemplate.h">
+      <Filter>src\floppybridge</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\floppybridge\floppybridge_config.h">
+      <Filter>src\floppybridge</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\floppybridge\ftdi.h">
+      <Filter>src\floppybridge</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\floppybridge\GreaseWeazleBridge.h">
+      <Filter>src\floppybridge</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\floppybridge\GreaseWeazleInterface.h">
+      <Filter>src\floppybridge</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\floppybridge\pll.h">
+      <Filter>src\floppybridge</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\floppybridge\RotationExtractor.h">
+      <Filter>src\floppybridge</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\floppybridge\SerialIO.h">
+      <Filter>src\floppybridge</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\floppybridge\SuperCardProBridge.h">
+      <Filter>src\floppybridge</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\floppybridge\SuperCardProInterface.h">
+      <Filter>src\floppybridge</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\floppybridge\FloppyBridge.h">
+      <Filter>src\floppybridge</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\floppybridge\resource.h">
+      <Filter>src\floppybridge</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

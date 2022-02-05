@@ -124,8 +124,8 @@
     <RemoteBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug; make -j4 DEBUG=1 PLATFORM=rpi4-64-sdl2</RemoteBuildCommandLine>
     <RemoteReBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug; make clean; make -j4 DEBUG=1 PLATFORM=rpi4-64-sdl2</RemoteReBuildCommandLine>
     <RemoteCleanCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug; make clean</RemoteCleanCommandLine>
-    <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\archivers;..\external\libguisan\include;/usr/include/SDL2;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
-    <NMakePreprocessorDefinitions>DEBUG;CPU_AARCH64;AMIBERRY;USE_SDL2;_REENTRANT;_FILE_OFFSET_BITS=64;USE_GPIOD;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+    <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\archivers;..\src\floppybridge;..\external\libguisan\include;/usr/include/SDL2;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
+    <NMakePreprocessorDefinitions>DEBUG;CPU_AARCH64;AMIBERRY;USE_SDL2;_REENTRANT;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <RemoteBuildOutputs />
     <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-Debug</RemoteProjectDir>
     <IncrementalBuild>true</IncrementalBuild>
@@ -436,7 +436,19 @@
     <ClCompile Include="..\src\filesys.cpp" />
     <ClCompile Include="..\src\filesys_bootrom.cpp.in" />
     <ClCompile Include="..\src\flashrom.cpp" />
+    <ClCompile Include="..\src\floppybridge\ArduinoFloppyBridge.cpp" />
+    <ClCompile Include="..\src\floppybridge\ArduinoInterface.cpp" />
+    <ClCompile Include="..\src\floppybridge\CommonBridgeTemplate.cpp" />
+    <ClCompile Include="..\src\floppybridge\FloppyBridge.cpp" />
     <ClCompile Include="..\src\floppybridge\floppybridge_lib.cpp" />
+    <ClCompile Include="..\src\floppybridge\ftdi.cpp" />
+    <ClCompile Include="..\src\floppybridge\GreaseWeazleBridge.cpp" />
+    <ClCompile Include="..\src\floppybridge\GreaseWeazleInterface.cpp" />
+    <ClCompile Include="..\src\floppybridge\pll.cpp" />
+    <ClCompile Include="..\src\floppybridge\RotationExtractor.cpp" />
+    <ClCompile Include="..\src\floppybridge\SerialIO.cpp" />
+    <ClCompile Include="..\src\floppybridge\SuperCardProBridge.cpp" />
+    <ClCompile Include="..\src\floppybridge\SuperCardProInterface.cpp" />
     <ClCompile Include="..\src\fpp.cpp" />
     <ClCompile Include="..\src\fpp_native.cpp.in" />
     <ClCompile Include="..\src\fsdb.cpp" />
@@ -706,8 +718,22 @@
     <ClInclude Include="..\src\archivers\zip\unzip.h" />
     <ClInclude Include="..\src\caps\CapsAPI.h" />
     <ClInclude Include="..\src\caps\Comtype.h" />
+    <ClInclude Include="..\src\floppybridge\ArduinoFloppyBridge.h" />
+    <ClInclude Include="..\src\floppybridge\ArduinoInterface.h" />
+    <ClInclude Include="..\src\floppybridge\CommonBridgeTemplate.h" />
+    <ClInclude Include="..\src\floppybridge\FloppyBridge.h" />
     <ClInclude Include="..\src\floppybridge\floppybridge_abstract.h" />
+    <ClInclude Include="..\src\floppybridge\floppybridge_config.h" />
     <ClInclude Include="..\src\floppybridge\floppybridge_lib.h" />
+    <ClInclude Include="..\src\floppybridge\ftdi.h" />
+    <ClInclude Include="..\src\floppybridge\GreaseWeazleBridge.h" />
+    <ClInclude Include="..\src\floppybridge\GreaseWeazleInterface.h" />
+    <ClInclude Include="..\src\floppybridge\pll.h" />
+    <ClInclude Include="..\src\floppybridge\resource.h" />
+    <ClInclude Include="..\src\floppybridge\RotationExtractor.h" />
+    <ClInclude Include="..\src\floppybridge\SerialIO.h" />
+    <ClInclude Include="..\src\floppybridge\SuperCardProBridge.h" />
+    <ClInclude Include="..\src\floppybridge\SuperCardProInterface.h" />
     <ClInclude Include="..\src\include\akiko.h" />
     <ClInclude Include="..\src\include\ar.h" />
     <ClInclude Include="..\src\include\audio.h" />

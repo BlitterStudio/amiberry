@@ -17,7 +17,7 @@ SDL_CONFIG ?= sdl2-config
 export SDL_CFLAGS := $(shell $(SDL_CONFIG) --cflags)
 export SDL_LDFLAGS := $(shell $(SDL_CONFIG) --libs)
 
-CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -DAMIBERRY -D_FILE_OFFSET_BITS=64
+CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -Isrc/floppybridge -DAMIBERRY -D_FILE_OFFSET_BITS=64
 CFLAGS=-pipe -Wno-shift-overflow -Wno-narrowing
 USE_LD ?= gold
 LDFLAGS = $(SDL_LDFLAGS) -lSDL2_image -lSDL2_ttf -lguisan -Lexternal/libguisan/lib
@@ -204,7 +204,7 @@ else ifeq ($(PLATFORM),oga)
 
 # OS X (SDL2, 64-bit)
 else ifeq ($(PLATFORM),osx)
-        LDFLAGS = -L/usr/local/lib external/libguisan/dylib/libguisan.dylib -lSDL2_image -lSDL2_ttf -lpng -liconv -lz -lFLAC -L/opt/homebrew/lib/ -lmpg123 -lmpeg2 -lmpeg2convert $(SDL_LDFLAGS) -framework IOKit -framework Foundation
+		LDFLAGS = -L/usr/local/lib external/libguisan/dylib/libguisan.dylib -lSDL2_image -lSDL2_ttf -lpng -liconv -lz -lFLAC -L/opt/homebrew/lib/ -lmpg123 -lmpeg2 -lmpeg2convert $(SDL_LDFLAGS) -framework IOKit -framework Foundation
 	CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -I/opt/homebrew/include -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -DAMIBERRY -D_FILE_OFFSET_BITS=64 -DCPU_AARCH64 $(SDL_CFLAGS) 
 	CXX=/usr/bin/c++
 #	DEBUG=1
@@ -482,7 +482,6 @@ OBJS = \
 	src/archivers/zip/unzip.o \
 	src/caps/caps_amiberry.o \
 	src/machdep/support.o \
-	src/floppybridge/floppybridge_lib.o \
 	src/osdep/ahi_v1.o \
 	src/osdep/bsdsocket_host.o \
 	src/osdep/cda_play.o \
@@ -577,6 +576,20 @@ OBJS += src/newcpu.o \
 	src/jit/compstbl.o \
 	src/jit/compemu_fpp.o \
 	src/jit/compemu_support.o
+
+OBJS += src/floppybridge/ArduinoFloppyBridge.o \
+		src/floppybridge/ArduinoInterface.o \
+		src/floppybridge/CommonBridgeTemplate.o \
+		src/floppybridge/floppybridge_lib.o \
+		src/floppybridge/ftdi.o \
+		src/floppybridge/GreaseWeazleBridge.o \
+		src/floppybridge/GreaseWeazleInterface.o \
+		src/floppybridge/pll.o \
+		src/floppybridge/RotationExtractor.o \
+		src/floppybridge/SerialIO.o \
+		src/floppybridge/SuperCardProBridge.o \
+		src/floppybridge/SuperCardProInterface.o \
+		src/floppybridge/FloppyBridge.o
 
 DEPS = $(OBJS:%.o=%.d) $(C_OBJS:%.o=%.d)
 
