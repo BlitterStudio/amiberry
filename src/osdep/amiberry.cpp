@@ -68,7 +68,9 @@ struct gpiod_line* lineGreen;  // Green LED
 struct gpiod_line* lineYellow; // Yellow LED
 #endif
 
+#ifdef FLOPPYBRIDGE
 std::string drawbridge_profiles = "1|Fast[0|0|COM0|0|0]2|Compatible[0|0|COM0|1|0]3|Turbo[0|0|COM0|2|0]4|Accurate[0|0|COM0|3|0]";
+#endif
 
 static int logging_started;
 int log_scsi;
@@ -3407,12 +3409,13 @@ bool get_plugin_path(TCHAR* out, int len, const TCHAR* path)
 
 void drawbridge_update_profiles(uae_prefs* p)
 {
+#ifdef FLOPPYBRIDGE
 	const char driver = '0' + p->drawbridge_driver;
 	drawbridge_profiles[7] = driver;
 	drawbridge_profiles[33] = driver;
 	drawbridge_profiles[54] = driver;
 	drawbridge_profiles[78] = driver;
-#ifdef FLOPPYBRIDGE
+
 	floppybridge_set_config(drawbridge_profiles.c_str());
 	floppybridge_init(&changed_prefs);
 #endif
