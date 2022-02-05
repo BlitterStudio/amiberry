@@ -1872,6 +1872,7 @@ void target_default_options(struct uae_prefs* p, int type)
 
 	p->kbd_led_num = -1; // No status on numlock
 	p->kbd_led_scr = -1; // No status on scrollock
+	p->kbd_led_cap = -1;
 
 	p->gfx_monitor[0].gfx_size_win.width = amiberry_options.default_width;
 	p->gfx_monitor[0].gfx_size_win.height = amiberry_options.default_height;
@@ -2043,6 +2044,7 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_target_dwrite(f, _T("gfx_correct_aspect"), _T("%d"), p->gfx_correct_aspect);
 	cfgfile_target_dwrite(f, _T("kbd_led_num"), _T("%d"), p->kbd_led_num);
 	cfgfile_target_dwrite(f, _T("kbd_led_scr"), _T("%d"), p->kbd_led_scr);
+	cfgfile_target_dwrite(f, _T("kbd_led_cap"), _T("%d"), p->kbd_led_cap);
 	cfgfile_target_dwrite(f, _T("scaling_method"), _T("%d"), p->scaling_method);
 
 	cfgfile_target_dwrite_str(f, _T("open_gui"), p->open_gui);
@@ -2124,6 +2126,8 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 	if (cfgfile_intval(option, value, "kbd_led_num", &p->kbd_led_num, 1))
 		return 1;
 	if (cfgfile_intval(option, value, "kbd_led_scr", &p->kbd_led_scr, 1))
+		return 1;
+	if (cfgfile_intval(option, value, "kbd_led_cap", &p->kbd_led_cap, 1))
 		return 1;
 	if (cfgfile_intval(option, value, "gfx_horizontal_offset", &p->gfx_horizontal_offset, 1))
 		return 1;

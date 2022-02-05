@@ -682,7 +682,7 @@ void gui_led(int led, int on, int brightness)
 	// Check current prefs/ update if changed
 	if (currprefs.kbd_led_num != changed_prefs.kbd_led_num) currprefs.kbd_led_num = changed_prefs.kbd_led_num;
 	if (currprefs.kbd_led_scr != changed_prefs.kbd_led_scr) currprefs.kbd_led_scr = changed_prefs.kbd_led_scr;
-	//if (currprefs.kbd_led_cap != changed_prefs.kbd_led_cap) currprefs.kbd_led_cap = changed_prefs.kbd_led_cap;
+	if (currprefs.kbd_led_cap != changed_prefs.kbd_led_cap) currprefs.kbd_led_cap = changed_prefs.kbd_led_cap;
 #ifndef __MACH__
 	ioctl(0, KDGETLED, &kbd_led_status);
 
@@ -699,6 +699,11 @@ void gui_led(int led, int on, int brightness)
 		{
 			if (on) kbd_led_status |= LED_SCR;
 			else kbd_led_status &= ~LED_SCR;
+		}
+		if (currprefs.kbd_led_cap == led)
+		{
+			if (on) kbd_led_status |= LED_CAP;
+			else kbd_led_status &= ~LED_CAP;
 		}
 #ifdef USE_GPIOD
 		gpiod_line_set_value(lineRed, on);
@@ -717,6 +722,11 @@ void gui_led(int led, int on, int brightness)
 		{
 			if (on) kbd_led_status |= LED_SCR;
 			else kbd_led_status &= ~LED_SCR;
+		}
+		if (currprefs.kbd_led_cap == led)
+		{
+			if (on) kbd_led_status |= LED_CAP;
+			else kbd_led_status &= ~LED_CAP;
 		}
 #ifdef USE_GPIOD
 		if (led == LED_HD)

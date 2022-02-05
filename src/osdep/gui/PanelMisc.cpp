@@ -40,6 +40,8 @@ static gcn::Label* lblNumLock;
 static gcn::DropDown* cboKBDLed_num;
 static gcn::Label* lblScrLock;
 static gcn::DropDown* cboKBDLed_scr;
+static gcn::Label* lblCapLock;
+static gcn::DropDown* cboKBDLed_cap;
 
 static gcn::Label* lblOpenGUI;
 static gcn::TextField* txtOpenGUI;
@@ -207,6 +209,9 @@ public:
 
 		else if (actionEvent.getSource() == cboKBDLed_scr)
 			changed_prefs.kbd_led_scr = cboKBDLed_scr->getSelected() - 1;
+
+		else if (actionEvent.getSource() == cboKBDLed_cap)
+			changed_prefs.kbd_led_cap = cboKBDLed_cap->getSelected() - 1;
 
 		else if (actionEvent.getSource() == cmdKeyOpenGUI)
 		{
@@ -414,6 +419,14 @@ void InitPanelMisc(const config_category& category)
 	cboKBDLed_scr->setId("cboScrolllock");
 	cboKBDLed_scr->addActionListener(miscActionListener);
 
+	lblCapLock = new gcn::Label("CapsLock:");
+	lblCapLock->setAlignment(gcn::Graphics::LEFT);
+	cboKBDLed_cap = new gcn::DropDown(&KBDLedList);
+	cboKBDLed_cap->setBaseColor(gui_baseCol);
+	cboKBDLed_cap->setBackgroundColor(colTextboxBackground);
+	cboKBDLed_cap->setId("cboCapsLock");
+	cboKBDLed_cap->addActionListener(miscActionListener);
+
 	lblOpenGUI = new gcn::Label("Open GUI:");
 	lblOpenGUI->setAlignment(gcn::Graphics::RIGHT);
 	txtOpenGUI = new gcn::TextField();
@@ -617,6 +630,11 @@ void InitPanelMisc(const config_category& category)
 	category.panel->add(lblScrLock, column2_x, posY);
 	posY += lblScrLock->getHeight() + 8;
 	category.panel->add(cboKBDLed_scr, lblScrLock->getX(), posY);
+	posY += cboKBDLed_scr->getHeight() + DISTANCE_NEXT_Y;
+
+	category.panel->add(lblCapLock, column2_x, posY);
+	posY += lblCapLock->getHeight() + 8;
+	category.panel->add(cboKBDLed_cap, lblCapLock->getX(), posY);
 
 	RefreshPanelMisc();
 }
@@ -647,8 +665,10 @@ void ExitPanelMisc()
 	
 	delete lblScrLock;
 	delete lblNumLock;
+	delete lblCapLock;
 	delete cboKBDLed_num;
 	delete cboKBDLed_scr;
+	delete cboKBDLed_cap;
 
 	delete lblOpenGUI;
 	delete txtOpenGUI;
@@ -707,6 +727,7 @@ void RefreshPanelMisc()
 	
 	cboKBDLed_num->setSelected(changed_prefs.kbd_led_num + 1);
 	cboKBDLed_scr->setSelected(changed_prefs.kbd_led_scr + 1);
+	cboKBDLed_cap->setSelected(changed_prefs.kbd_led_cap + 1);
 
 	txtOpenGUI->setText(strncmp(changed_prefs.open_gui, "", 1) != 0 ? changed_prefs.open_gui : "Click to map");
 	txtKeyForQuit->setText(strncmp(changed_prefs.quit_amiberry, "", 1) != 0
