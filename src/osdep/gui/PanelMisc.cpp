@@ -623,18 +623,15 @@ void InitPanelMisc(const config_category& category)
 	posY += cmdKeyMinimizeClear->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(lblNumLock, column2_x, posY);
-	posY += lblNumLock->getHeight() + 8;
-	category.panel->add(cboKBDLed_num, lblNumLock->getX(), posY);
+	category.panel->add(cboKBDLed_num, lblNumLock->getX() + lblScrLock->getWidth() + 8, posY);
 	posY += cboKBDLed_num->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(lblScrLock, column2_x, posY);
-	posY += lblScrLock->getHeight() + 8;
-	category.panel->add(cboKBDLed_scr, lblScrLock->getX(), posY);
+	category.panel->add(cboKBDLed_scr, lblScrLock->getX() + lblScrLock->getWidth() + 8, posY);
 	posY += cboKBDLed_scr->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(lblCapLock, column2_x, posY);
-	posY += lblCapLock->getHeight() + 8;
-	category.panel->add(cboKBDLed_cap, lblCapLock->getX(), posY);
+	category.panel->add(cboKBDLed_cap, lblCapLock->getX() + lblScrLock->getWidth() + 8, posY);
 
 	RefreshPanelMisc();
 }
