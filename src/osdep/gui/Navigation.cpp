@@ -442,8 +442,8 @@ static NavigationMap navMap[] =
 	{ "chkRetroArchMenu", "Miscellaneous", "scrlMisc", "chkRetroArchQuit", "chkRetroArchReset" },
 	{ "chkRetroArchReset", "Miscellaneous", "scrlMisc", "chkRetroArchMenu", "cmdKeyOpenGUI" },
 
-	{ "cmdKeyOpenGUI", "scrlMisc", "cmdKeyOpenGUIClear", "cboScrolllock", "cmdKeyForQuit" },
-	{ "cmdKeyOpenGUIClear", "cmdKeyOpenGUI", "Miscellaneous", "cboScrolllock", "cmdKeyForQuitClear" },
+	{ "cmdKeyOpenGUI", "scrlMisc", "cmdKeyOpenGUIClear", "cboCapsLock", "cmdKeyForQuit" },
+	{ "cmdKeyOpenGUIClear", "cmdKeyOpenGUI", "Miscellaneous", "cboCapsLock", "cmdKeyForQuitClear" },
 	{ "cmdKeyForQuit", "scrlMisc", "cmdKeyForQuitClear", "cmdKeyOpenGUI", "cmdKeyActionReplay" },
 	{ "cmdKeyForQuitClear", "cmdKeyForQuit", "Miscellaneous", "cmdKeyOpenGUIClear", "cmdKeyActionReplayClear" },
 	{ "cmdKeyActionReplay", "scrlMisc", "cmdKeyActionReplayClear", "cmdKeyForQuit", "cmdKeyFullScreen" },
@@ -453,7 +453,8 @@ static NavigationMap navMap[] =
 	{ "cmdKeyMinimize", "scrlMisc", "cmdKeyMinimizeClear", "cmdKeyFullScreen", "cboNumlock" },
 	{ "cmdKeyMinimizeClear", "cmdKeyMinimize", "Miscellaneous", "cmdKeyFullScreenClear", "cboNumlock" },
 	{ "cboNumlock", "chkMouseUntrap", "Miscellaneous", "cmdKeyMinimize", "cboScrolllock" },
-	{ "cboScrolllock", "chkMouseUntrap", "Miscellaneous", "cboNumlock", "cmdKeyOpenGUI" },
+	{ "cboScrolllock", "chkMouseUntrap", "Miscellaneous", "cboNumlock", "cboCapsLock" },
+	{ "cboCapsLock", "chkMouseUntrap", "Miscellaneous", "cboScrolllock", "cmdKeyOpenGUI"},
 
 	// PanelPrio
 	{ "cboActiveRunAtPrio", "Priority", "cboInactiveRunAtPrio", "chkActiveDisableSound", "chkActivePauseEmulation" },
