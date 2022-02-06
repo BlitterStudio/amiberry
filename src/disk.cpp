@@ -1293,7 +1293,7 @@ static int drive_insert (drive *drv, struct uae_prefs *p, int dnum, const TCHAR 
 	int dfxtype = p->floppyslots[dnum].dfxtype;
 
 	drive_image_free (drv);
-#ifdef gid->floppy_inserted = gid->df[0]
+#ifdef FLOPPYBRIDGE
 	if (!fake && !drv->bridge) {
 #else
 	if (!fake) {
@@ -1321,7 +1321,7 @@ static int drive_insert (drive *drv, struct uae_prefs *p, int dnum, const TCHAR 
 		drv->dskready_down_time = 0;
 	}
 
-#ifdef gid->floppy_inserted = gid->df[0]
+#ifdef FLOPPYBRIDGE
 	if (drv->diskfile == NULL && !drv->catweasel && !drv->bridge) {
 #else
 	if (drv->diskfile == NULL && !drv->catweasel) {
