@@ -4722,7 +4722,7 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 		break;
 
 	case AKS_MOUSE_SPEED_DOWN:
-		num_elements = sizeof mousespeed_values / sizeof mousespeed_values[0];
+		num_elements = std::size(mousespeed_values);
 		mousespeed = currprefs.input_joymouse_multiplier;
 
 		i = find_in_array(mousespeed_values, num_elements, mousespeed);
@@ -4733,7 +4733,7 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 		break;
 
 	case AKS_MOUSE_SPEED_UP:
-		num_elements = sizeof mousespeed_values / sizeof mousespeed_values[0];
+		num_elements = std::size(mousespeed_values);
 		mousespeed = currprefs.input_joymouse_multiplier;
 
 		i = find_in_array(mousespeed_values, num_elements, mousespeed);
@@ -4745,6 +4745,26 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 	case AKS_SHUTDOWN:
 		uae_quit();
 		host_poweroff = true;
+		break;
+	case AKS_TOGGLE_JIT:
+		if (currprefs.cachesize == 0)
+		{
+			currprefs.cpu_compatible = changed_prefs.cpu_compatible = false;
+			currprefs.cachesize = changed_prefs.cachesize = MAX_JIT_CACHE;
+			currprefs.cachesize = changed_prefs.compfpu = true;
+			currprefs.compfpu = changed_prefs.cpu_cycle_exact = false;
+			currprefs.cpu_memory_cycle_exact = changed_prefs.cpu_memory_cycle_exact = false;
+			currprefs.address_space_24 = changed_prefs.address_space_24 = false;
+		}
+		else
+		{
+			currprefs.cachesize = changed_prefs.cachesize = 0;
+			currprefs.compfpu = changed_prefs.compfpu = false;
+		}
+		fixup_prefs(&changed_prefs, true);
+		break;
+	case AKS_TOGGLE_JIT_FPU:
+		currprefs.compfpu = changed_prefs.compfpu = !currprefs.compfpu;
 		break;
 #endif
 	}
