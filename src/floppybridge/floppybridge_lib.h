@@ -197,20 +197,20 @@ public:
 	// Return the current bridge mode selected
 	bool getBridgeMode(CommonBridgeTemplate::BridgeMode* mode) const;
 	// Set the currently active bridge mode.  This can be set while the bridge is in use
-	[[nodiscard]] bool setBridgeMode(CommonBridgeTemplate::BridgeMode newMode) const;
+	bool setBridgeMode(CommonBridgeTemplate::BridgeMode newMode) const;
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Return the current bridge density mode selected
 	bool getBridgeDensityMode(CommonBridgeTemplate::BridgeDensityMode* mode) const;
 	// Set the currently active bridge density mode.  This can be set while the bridge is in use
-	[[nodiscard]] bool setBridgeDensityMode(CommonBridgeTemplate::BridgeDensityMode newMode) const;
+	bool setBridgeDensityMode(CommonBridgeTemplate::BridgeDensityMode newMode) const;
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// These require ConfigOption_AutoCache bit set in DriverInformation::configOptions
 	// Returns if auto-disk caching (while the drive is idle) mode is enabled
 	bool getAutoCacheMode(bool* autoCacheMode) const;
 	// Sets if auto-disk caching (while the drive is idle) mode is enabled.  This can be set while the bridge is in use
-	[[nodiscard]] bool setAutoCacheMode(bool autoCacheMode) const;
+	bool setAutoCacheMode(bool autoCacheMode) const;
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// These require ConfigOption_ComPort bit set in DriverInformation::configOptions
@@ -224,21 +224,21 @@ public:
 	// Returns if com port auto-detect is enabled
 	bool getComPortAutoDetect(bool* autoDetect) const;
 	// Sets if auto-detect com port should be used
-	[[nodiscard]] bool setComPortAutoDetect(bool autoDetect) const;
+	bool setComPortAutoDetect(bool autoDetect) const;
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// These require ConfigOption_DriveABCable bit set in DriverInformation::configOptions
 	// Returns if the driver should use a drive connected as Drive B (true) on the cable rather than Drive A (false)
 	bool getDriveCableSelection(bool* connectToDriveB) const;
 	// Sets if the driver should use a drive connected as Drive B (true) on the cable rather than Drive A (false)
-	[[nodiscard]] bool setDriveCableSelection(bool connectToDriveB) const;
+	bool setDriveCableSelection(bool connectToDriveB) const;
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// These require ConfigOption_SmartSpeed bit set in DriverInformation::configOptions
 	// Returns if the driver currently has Smart Speed enabled which can dynamically switch between normal and turbo disk speed without breaking copy protection
 	bool getSmartSpeedEnabled(bool* enabled) const;
 	//  Sets if the driver can dynamically switch between normal and turbo disk speed without breaking copy protectionThis can be set while the bridge is in use
-	[[nodiscard]] bool setSmartSpeedEnabled(bool enabled) const;
+	bool setSmartSpeedEnabled(bool enabled) const;
 
 
 
