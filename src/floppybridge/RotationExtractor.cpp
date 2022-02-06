@@ -34,11 +34,9 @@
 
 RotationExtractor::RotationExtractor() : m_sequences(new MFMSequenceInfo[MAX_REVOLUTION_SEQUENCES]),
 										 m_initialSequences(
-											 new MFMSequenceInfo[OVERLAP_SEQUENCE_MATCHES * OVERLAP_EXTRA_BUFFER]),
-										 m_indexSequence()
+											 new MFMSequenceInfo[OVERLAP_SEQUENCE_MATCHES * OVERLAP_EXTRA_BUFFER])
 {
 }
-
 RotationExtractor::~RotationExtractor() {
 	delete[] m_sequences;
 	delete[] m_initialSequences;
@@ -61,15 +59,26 @@ uint32_t RotationExtractor::getOverlapPosition(uint32_t& numberOfBadMatches) con
 		const int startPositionR = m_revolutionReadyAt + midPoint;
 		const int startPositionL = m_revolutionReadyAt - midPoint;
 
-		if (startPositionL >= 0) {
-			for (uint32_t pos = 0; pos < OVERLAP_SEQUENCE_MATCHES; pos++) {
-				if (m_sequences[pos].mfm == m_sequences[(startPositionR + pos) % m_sequencePos].mfm) scoreR++;
-				if (m_sequences[pos].mfm == m_sequences[(startPositionL + pos) % m_sequencePos].mfm) scoreL++;
+		if (startPositionL + OVERLAP_SEQUENCE_MATCHES >= m_sequencePos) continue;
+		if (startPositionR + OVERLAP_SEQUENCE_MATCHES >= m_sequencePos) {
+			if (startPositionL >= 0) {
+				for (uint32_t pos = 0; pos < OVERLAP_SEQUENCE_MATCHES; pos++) {
+					if (m_indexSequence.sequences[pos] == m_sequences[startPositionL + pos].mfm) scoreL++;
+				}
 			}
+			else continue;
 		}
 		else {
+			if (startPositionL >= 0) {
+				for (uint32_t pos = 0; pos < OVERLAP_SEQUENCE_MATCHES; pos++) {
+					if (m_sequences[pos].mfm == m_sequences[(startPositionR + pos) % m_sequencePos].mfm) scoreR++;
+					if (m_sequences[pos].mfm == m_sequences[(startPositionL + pos) % m_sequencePos].mfm) scoreL++;
+				}
+			}
+			else {
 			for (uint32_t pos = 0; pos < OVERLAP_SEQUENCE_MATCHES; pos++) {
-				if (m_sequences[pos].mfm == m_sequences[(startPositionR + pos) % m_sequencePos].mfm) scoreR++;
+					if (m_sequences[pos].mfm == m_sequences[(startPositionR + pos) % m_sequencePos].mfm) scoreR++;
+				}
 			}
 		}
 
@@ -97,8 +106,7 @@ uint32_t RotationExtractor::getOverlapPosition(uint32_t& numberOfBadMatches) con
 }
 
 // Finds the true start position of the INDEX pulse based on previous revolutions.  This is a lot like the above function
-uint32_t RotationExtractor::getTrueIndexPosition(const uint32_t nextRevolutionStart,
-													 const uint32_t startingPoint)
+uint32_t RotationExtractor::getTrueIndexPosition(const uint32_t nextRevolutionStart, const uint32_t startingPoint)
 {
 	// Where to start from
 	const uint32_t firstPoint = startingPoint == INDEX_NOT_FOUND ? m_sequenceIndex : startingPoint;
@@ -125,15 +133,27 @@ uint32_t RotationExtractor::getTrueIndexPosition(const uint32_t nextRevolutionSt
 		const int startPositionR = firstPoint + midPoint;
 		const int startPositionL = firstPoint - midPoint;
 
-		if (startPositionL >= 0) {
-			for (uint32_t pos = 0; pos < OVERLAP_SEQUENCE_MATCHES_INDEXMODE; pos++) {
-				if (m_indexSequence.sequences[pos] == m_sequences[(startPositionR + pos) % nextRevolutionStart].mfm) scoreR++;
-				if (m_indexSequence.sequences[pos] == m_sequences[(startPositionL + pos) % nextRevolutionStart].mfm) scoreL++;
+		// If this happens then nothing is going to work
+		if (startPositionL + OVERLAP_SEQUENCE_MATCHES_INDEXMODE >= m_sequencePos) continue;  
+		if (startPositionR + OVERLAP_SEQUENCE_MATCHES_INDEXMODE >= m_sequencePos) {
+			if (startPositionL >= 0) {
+				for (uint32_t pos = 0; pos < OVERLAP_SEQUENCE_MATCHES_INDEXMODE; pos++) {
+					if (m_indexSequence.sequences[pos] == m_sequences[startPositionL + pos].mfm) scoreL++;
+				}
 			}
+			else continue;
 		}
 		else {
-			for (uint32_t pos = 0; pos < OVERLAP_SEQUENCE_MATCHES_INDEXMODE; pos++) {
-				if (m_indexSequence.sequences[pos] == m_sequences[(startPositionR + pos) % nextRevolutionStart].mfm) scoreR++;
+			if (startPositionL >= 0) {
+				for (uint32_t pos = 0; pos < OVERLAP_SEQUENCE_MATCHES_INDEXMODE; pos++) {
+					if (m_indexSequence.sequences[pos] == m_sequences[startPositionR + pos].mfm) scoreR++;
+					if (m_indexSequence.sequences[pos] == m_sequences[startPositionL + pos].mfm) scoreL++;
+				}
+			}
+			else {
+				for (uint32_t pos = 0; pos < OVERLAP_SEQUENCE_MATCHES_INDEXMODE; pos++) {
+					if (m_indexSequence.sequences[pos] == m_sequences[startPositionR + pos].mfm) scoreR++;
+				}
 			}
 		}
 
