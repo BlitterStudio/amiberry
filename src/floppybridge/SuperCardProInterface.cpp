@@ -518,6 +518,12 @@ bool SCPInterface::selectDiskDensity(bool hdMode) {
 	return true;
 }
 
+
+#ifndef _WIN32
+#define USE_THREADDED_READER_SCP
+#endif
+
+
 // Test if its an HD disk
 bool SCPInterface::checkDiskCapacity(bool& isHD) {
 	SCPResponse response;
@@ -541,15 +547,54 @@ bool SCPInterface::checkDiskCapacity(bool& isHD) {
 	}
 
 
+
+#ifdef USE_THREADDED_READER_SCP
+	std::mutex safetyLock;
+	// I was using a deque, but its much faster to just keep switching between two vectors
+	std::vector<unsigned char> readBuffer;
+	readBuffer.reserve(4096);
+	std::vector<unsigned char> tempReadBuffer;
+	tempReadBuffer.reserve(4096);
+#ifdef _WIN32
+	m_comPort.setReadTimeouts(100, 0);  // match linux
+#endif
+	std::thread* backgroundReader = new std::thread([this, &readBuffer, &safetyLock]() {
+#ifdef _WIN32
+		SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+#else
+		struct sched_param sch;
+		int policy;
+		if (pthread_getschedparam(pthread_self(), &policy, &sch) == 0) {
+			policy = SCHED_FIFO;
+			sch.sched_priority = sched_get_priority_max(policy); // boost priority
+			pthread_setschedparam(pthread_self(), policy, &sch);
+		}
+#endif
+		unsigned char buffer[1024];  // the LINUX serial buffer is only 512 bytes anyway
+		while (m_isStreaming) {
+			uint32_t waiting = m_comPort.justRead(buffer, 1024);
+			if (waiting > 0) {
+				safetyLock.lock();
+				readBuffer.insert(readBuffer.end(), buffer, buffer + waiting);
+				safetyLock.unlock();
+			}
+			else
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		}
+		});
+
+
+#else
+	applyCommTimeouts(true);
+	unsigned char tempReadBuffer[2048] = { 0 };
+#endif
+
 	m_isStreaming = true;
 	m_abortStreaming = false;
 	m_abortSignalled = false;
 
 	// Number of times we failed to read anything
 	int readFail = 0;
-
-	// Buffer to read into
-	unsigned char tempReadBuffer[1024] = { 0 };
 
 	// Sliding window for abort
 	unsigned char slidingWindow[4] = { 0,0,0,0 };
@@ -564,20 +609,30 @@ bool SCPInterface::checkDiskCapacity(bool& isHD) {
 	unsigned int hdBits = 0;
 	unsigned int ddBits = 0;
 
-	applyCommTimeouts(true);
-
 	for (;;) {
 
 		// More efficient to read several bytes in one go		
-		unsigned long bytesAvailable = m_comPort.getBytesWaiting();
+#ifdef USE_THREADDED_READER_SCP
+		tempReadBuffer.resize(0); // should be just as fast as clear, but just incase
+		safetyLock.lock();
+		std::swap(tempReadBuffer, readBuffer);
+		safetyLock.unlock();
+
+		unsigned int bytesRead = tempReadBuffer.size();
+
+		if (bytesRead < 1) std::this_thread::sleep_for(std::chrono::milliseconds(20));
+		for (const unsigned char byteRead : tempReadBuffer) {
+#else
+		unsigned int bytesAvailable = m_comPort.getBytesWaiting();
 		if (bytesAvailable < 1) bytesAvailable = 1;
 		if (bytesAvailable > sizeof(tempReadBuffer)) bytesAvailable = sizeof(tempReadBuffer);
-		unsigned long bytesRead = m_comPort.read(tempReadBuffer, m_abortSignalled ? 1 : bytesAvailable);
-
+		unsigned int bytesRead = m_comPort.read(tempReadBuffer, m_abortSignalled ? 1 : bytesAvailable);
 		for (size_t a = 0; a < bytesRead; a++) {
+			const unsigned char byteRead = tempReadBuffer[a];
+#endif
 			if (m_abortSignalled) {
 				for (int s = 0; s < 3; s++) slidingWindow[s] = slidingWindow[s + 1];
-				slidingWindow[3] = tempReadBuffer[a];
+				slidingWindow[3] = byteRead;
 
 				// Watch the sliding window for the pattern we need
 				if ((slidingWindow[0] == 0xDE) && (slidingWindow[1] == 0xAD) && (slidingWindow[2] == (unsigned char)SCPCommand::DoCMD_STOPSTREAM)) {
@@ -588,14 +643,18 @@ bool SCPInterface::checkDiskCapacity(bool& isHD) {
 					if (!alreadySpun) enableMotor(false, false);
 
 					isHD = (hdBits > ddBits);
-
+#ifdef USE_THREADDED_READER_SCP
+					if (backgroundReader) {
+						if (backgroundReader->joinable()) backgroundReader->join();
+						delete backgroundReader;
+					}
+#endif
 					if (timeout) return false;
 					if (slidingWindow[3] == (unsigned char)SCPResponse::pr_Overrun) return false;
 					return true;
 				}
 			}
 			else {
-				unsigned char byteRead = tempReadBuffer[a];
 
 				switch (byteRead) {
 				case 0xFF:
@@ -619,7 +678,7 @@ bool SCPInterface::checkDiskCapacity(bool& isHD) {
 		}
 		if (bytesRead < 1) {
 			readFail++;
-			if (readFail > 10) {
+			if (readFail > 20) {
 				if (!m_abortStreaming) {
 					abortReadStreaming();
 					readFail = 0;
@@ -630,6 +689,12 @@ bool SCPInterface::checkDiskCapacity(bool& isHD) {
 					applyCommTimeouts(false);
 					if (!alreadySpun) enableMotor(false, false);
 					m_isStreaming = false;
+#ifdef USE_THREADDED_READER_SCP
+					if (backgroundReader) {
+						if (backgroundReader->joinable()) backgroundReader->join();
+						delete backgroundReader;
+					}
+#endif
 					return false;
 				}
 			}
@@ -667,34 +732,45 @@ SCPErr SCPInterface::readRotation(PLL::BridgePLL& pll, const unsigned int maxOut
 	}
 	
 
-#ifndef _WIN32
+#ifdef USE_THREADDED_READER_SCP
 	std::mutex safetyLock;
-	std::deque<unsigned char> readBuffer;
-
+	// I was using a deque, but its much faster to just keep switching between two vectors
+	std::vector<unsigned char> readBuffer;
+	readBuffer.reserve(4096);
+	std::vector<unsigned char> tempReadBuffer;
+	tempReadBuffer.reserve(4096);
+#ifdef _WIN32
+	m_comPort.setReadTimeouts(100, 0);  // match linux
+#endif
 	std::thread* backgroundReader = new std::thread([this, &readBuffer, &safetyLock]() {
+#ifdef _WIN32
+		SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+#else
 		struct sched_param sch;
 		int policy;
 		if (pthread_getschedparam(pthread_self(), &policy, &sch) == 0) {
-			sch.sched_priority = sched_get_priority_max(SCHED_RR); // boost priority
-			policy = SCHED_RR;
+			policy = SCHED_FIFO;
+			sch.sched_priority = sched_get_priority_max(policy); // boost priority
 			pthread_setschedparam(pthread_self(), policy, &sch);
 		}
-		unsigned char buffer[2048];
+#endif
+		unsigned char buffer[1024];  // the LINUX serial buffer is only 512 bytes anyway
 		while (m_isStreaming) {
-			uint32_t waiting = m_comPort.getBytesWaiting();
-			if (waiting > sizeof(buffer)) waiting = sizeof(buffer);
+			uint32_t waiting = m_comPort.justRead(buffer, 1024);
 			if (waiting > 0) {
-				waiting = m_comPort.justRead(buffer, waiting);
-				{
-					safetyLock.lock();
-					readBuffer.insert(readBuffer.end(), buffer, buffer + waiting);
-					safetyLock.unlock();
-				}
-			}
-			else std::this_thread::sleep_for(std::chrono::milliseconds(1));
+				safetyLock.lock();
+				readBuffer.insert(readBuffer.end(), buffer, buffer + waiting);
+				safetyLock.unlock();
+}
+			else
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
+	});
 
-		});
+
+#else
+	applyCommTimeouts(true);
+	unsigned char tempReadBuffer[2048] = { 0 };
 #endif
 
 	m_isStreaming = true;
@@ -704,9 +780,6 @@ SCPErr SCPInterface::readRotation(PLL::BridgePLL& pll, const unsigned int maxOut
 	// Number of times we failed to read anything
 	int readFail = 0;
 
-	// Buffer to read into
-	unsigned char tempReadBuffer[1024] = { 0 };
-
 	pll.prepareExtractor(m_isHDMode, startBitPatterns);
 
 	// Sliding window for abort
@@ -715,40 +788,38 @@ SCPErr SCPInterface::readRotation(PLL::BridgePLL& pll, const unsigned int maxOut
 	bool dataState = false;
 	bool isFirstByte = true;
 	unsigned char mfmSequences = 0;
-	applyCommTimeouts(true);
 	int hitIndex = 0;
 	uint32_t tickInNS = 0;
 
 	for (;;) {
 
 		// More efficient to read several bytes in one go	
-		unsigned int bytesAvailable, bytesRead = 0;
-#ifndef _WIN32
+#ifdef USE_THREADDED_READER_SCP
+		tempReadBuffer.resize(0); // should be just as fast as clear, but just incase
 		safetyLock.lock();
-		bytesRead = (unsigned int)readBuffer.size();
-		if (bytesRead > sizeof(tempReadBuffer)) bytesRead = sizeof(tempReadBuffer);
-		if (bytesRead > 0) {
-			std::copy(readBuffer.begin(), readBuffer.begin() + bytesRead, tempReadBuffer);
-			readBuffer.erase(readBuffer.begin(), readBuffer.begin() + bytesRead);
-		}
+		std::swap(tempReadBuffer, readBuffer);
 		safetyLock.unlock();
-		if (bytesRead < 1) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+
+		unsigned int bytesRead = tempReadBuffer.size();
+
+		if (bytesRead < 1) std::this_thread::sleep_for(std::chrono::milliseconds(20));
+		for (const unsigned char byteRead : tempReadBuffer) {
 #else
-		bytesAvailable = m_comPort.getBytesWaiting();
+		unsigned int bytesAvailable = m_comPort.getBytesWaiting();
 		if (bytesAvailable < 1) bytesAvailable = 1;
 		if (bytesAvailable > sizeof(tempReadBuffer)) bytesAvailable = sizeof(tempReadBuffer);
-		bytesRead = m_comPort.read(tempReadBuffer, m_abortSignalled ? 1 : bytesAvailable);
-#endif
-
+		unsigned int bytesRead = m_comPort.read(tempReadBuffer, m_abortSignalled ? 1 : bytesAvailable);
 		for (size_t a = 0; a < bytesRead; a++) {
+			const unsigned char byteRead = tempReadBuffer[a];
+#endif
 			if (m_abortSignalled) {
 				for (int s = 0; s < 3; s++) slidingWindow[s] = slidingWindow[s + 1];
-				slidingWindow[3] = tempReadBuffer[a];
+				slidingWindow[3] = byteRead;
 
 				// Watch the sliding window for the pattern we need
 				if ((slidingWindow[0] == 0xDE) && (slidingWindow[1] == 0xAD) && (slidingWindow[2] == (unsigned char)SCPCommand::DoCMD_STOPSTREAM)) {
 					m_isStreaming = false;
-#ifndef _WIN32
+#ifdef USE_THREADDED_READER_SCP
 					if (backgroundReader) {
 						if (backgroundReader->joinable()) backgroundReader->join();
 						delete backgroundReader;
@@ -763,8 +834,6 @@ SCPErr SCPInterface::readRotation(PLL::BridgePLL& pll, const unsigned int maxOut
 				}
 			}
 			else {
-				unsigned char byteRead = tempReadBuffer[a];
-
 				switch (byteRead) {
 				case 0xFF:
 					hitIndex = 1; 
@@ -808,7 +877,7 @@ SCPErr SCPInterface::readRotation(PLL::BridgePLL& pll, const unsigned int maxOut
 		}
 		if (bytesRead < 1) {
 			readFail++;
-			if (readFail > 10) {
+			if (readFail > 30) {
 				if (!m_abortStreaming) {
 					abortReadStreaming();
 					readFail = 0;
@@ -816,7 +885,7 @@ SCPErr SCPInterface::readRotation(PLL::BridgePLL& pll, const unsigned int maxOut
 				}
 				else {
 					m_isStreaming = false;
-#ifndef _WIN32
+#ifdef USE_THREADDED_READER_SCP
 					if (backgroundReader) {
 						if (backgroundReader->joinable()) backgroundReader->join();
 						delete backgroundReader;
