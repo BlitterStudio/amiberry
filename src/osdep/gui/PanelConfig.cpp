@@ -236,6 +236,7 @@ void InitPanelConfig(const struct config_category& category)
 	scrAreaConfigs->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER - 2, 252);
 	scrAreaConfigs->setScrollbarWidth(20);
 	scrAreaConfigs->setBackgroundColor(colTextboxBackground);
+	scrAreaConfigs->setBaseColor(gui_baseCol);
 
 	lblName = new gcn::Label("Name:");
 	lblName->setSize(lblName->getWidth(), lblName->getHeight());
