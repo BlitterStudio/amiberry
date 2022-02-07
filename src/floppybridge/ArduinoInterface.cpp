@@ -1218,7 +1218,8 @@ DiagnosticResponse ArduinoInterface::readRotation(RotationExtractor& extractor, 
 				safetyLock.lock();				
 				readBuffer.insert(readBuffer.end(), buffer, buffer+waiting);
 				safetyLock.unlock();
-			}
+			} else
+				std::this_thread::sleep_for(std::chrono::microseconds(200));
 		}
 	});
 
