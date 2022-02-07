@@ -128,7 +128,9 @@ static amigamodels amodels[] = {
 	},
 	{
 		4, "Amiga 1000", {
-			"Basic non-expanded configuration",
+			"512 KB Chip RAM",
+			"ICS Denise without EHB support",
+			"256 KB Chip RAM"
 			"\0"
 		}
 	},
