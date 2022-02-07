@@ -1202,14 +1202,6 @@ DiagnosticResponse ArduinoInterface::readRotation(RotationExtractor& extractor, 
 	std::thread* backgroundReader = new std::thread([this, &readBuffer, &safetyLock]() {
 #ifdef _WIN32
 		SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
-#else
-		struct sched_param sch;
-		int policy;
-		if (pthread_getschedparam(pthread_self(), &policy, &sch) == 0) {
-			policy = SCHED_FIFO;
-			sch.sched_priority = sched_get_priority_max(policy); // boost priority
-			pthread_setschedparam(pthread_self(), policy, &sch);
-		}
 #endif
 		unsigned char buffer[1024];  // the LINUX serial buffer is only 512 bytes anyway
 		while (m_isStreaming) {
