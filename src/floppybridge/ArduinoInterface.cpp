@@ -32,7 +32,6 @@
 #include "ArduinoInterface.h"
 #include <sstream>
 #include <vector>
-#include <deque>
 #include <thread>
 #include <chrono>
 #include "RotationExtractor.h"
@@ -1157,6 +1156,10 @@ DiagnosticResponse ArduinoInterface::readCurrentTrack(void* trackData, const int
 }
 
 
+#ifndef _WIN32
+#define USE_THREADDED_READER
+#endif
+
 // Reads a complete rotation of the disk, and returns it using the callback function whcih can return FALSE to stop
 // An instance of RotationExtractor is required.  This is purely to save on re-allocations.  It is internally reset each time
 DiagnosticResponse ArduinoInterface::readRotation(RotationExtractor& extractor, const unsigned int maxOutputSize, RotationExtractor::MFMSample* firstOutputBuffer, RotationExtractor::IndexSequenceMarker& startBitPatterns, std::function<bool(RotationExtractor::MFMSample** mfmData, const unsigned int dataLengthInBits)> onRotation, bool useHalfPLL) {
@@ -1185,34 +1188,45 @@ DiagnosticResponse ArduinoInterface::readRotation(RotationExtractor& extractor, 
 
 	m_isStreaming = true;
 
-#ifndef _WIN32
-	std::mutex safetyLock;
-	std::deque<unsigned char> readBuffer;
 
+#ifdef USE_THREADDED_READER
+	std::mutex safetyLock;
+	// I was using a deque, but its much faster to just keep switching between two vectors
+	std::vector<unsigned char> readBuffer;
+	readBuffer.reserve(4096);
+	std::vector<unsigned char> tempReadBuffer;
+	tempReadBuffer.reserve(4096);
+#ifdef _WIN32
+	m_comPort.setReadTimeouts(100, 0);  // match linux
+#endif
 	std::thread* backgroundReader = new std::thread([this, &readBuffer, &safetyLock]() {
+#ifdef _WIN32
+		SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+#else
 		struct sched_param sch;
 		int policy;
 		if (pthread_getschedparam(pthread_self(), &policy, &sch) == 0) {
-			sch.sched_priority = sched_get_priority_max(SCHED_RR); // boost priority
-			policy = SCHED_RR;
+			policy = SCHED_FIFO;
+			sch.sched_priority = sched_get_priority_max(policy); // boost priority
 			pthread_setschedparam(pthread_self(), policy, &sch);
 		}
-		unsigned char buffer[2048];
+#endif
+		unsigned char buffer[1024];  // the LINUX serial buffer is only 512 bytes anyway
 		while (m_isStreaming) {
-			uint32_t waiting = m_comPort.getBytesWaiting();
-			if (waiting > sizeof(buffer)) waiting = sizeof(buffer);
-			if (waiting > 0) {
-				waiting = m_comPort.justRead(buffer, waiting);
-				{
-					safetyLock.lock();
-					readBuffer.insert(readBuffer.end(), buffer, buffer+waiting);
-					safetyLock.unlock();
-				}
-			}
-			else std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			uint32_t waiting = m_comPort.justRead(buffer, 1024);
+			if (waiting>0) {
+				safetyLock.lock();				
+				readBuffer.insert(readBuffer.end(), buffer, buffer+waiting);
+				safetyLock.unlock();
+			} else 
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
-
 	});
+
+
+#else
+	applyCommTimeouts(true);
+	unsigned char tempReadBuffer[2048] = { 0 };
 #endif
 
 	// Let the class know we're doing some streaming stuff
@@ -1221,9 +1235,6 @@ DiagnosticResponse ArduinoInterface::readRotation(RotationExtractor& extractor, 
 
 	// Number of times we failed to read anything
 	int32_t readFail = 0;
-
-	// Buffer to read into
-	unsigned char tempReadBuffer[2048] = { 0 };
 
 	// Reset ready for extraction
 	extractor.reset(m_isHDMode);
@@ -1237,42 +1248,38 @@ DiagnosticResponse ArduinoInterface::readRotation(RotationExtractor& extractor, 
 	bool dataState = false;
 	bool isFirstByte = true;
 	unsigned char mfmSequences = 0;
-	applyCommTimeouts(true);
 
 	for (;;) {
 
 		// More efficient to read several bytes in one go		
-		unsigned int bytesAvailable, bytesRead = 0;
-
-#ifndef _WIN32
+#ifdef USE_THREADDED_READER
+		tempReadBuffer.resize(0); // should be just as fast as clear, but just incase
 		safetyLock.lock();
-		bytesRead = (unsigned int)readBuffer.size();
-		if (bytesRead > sizeof(tempReadBuffer)) bytesRead = sizeof(tempReadBuffer);
-		if (bytesRead > 0) {
-			std::copy(readBuffer.begin(), readBuffer.begin() + bytesRead, tempReadBuffer);
-			readBuffer.erase(readBuffer.begin(), readBuffer.begin() + bytesRead);
-		}
+		std::swap(tempReadBuffer, readBuffer);
 		safetyLock.unlock();
-		if (bytesRead <1) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+
+		unsigned int bytesRead = tempReadBuffer.size();
+		
+		if (bytesRead < 1) std::this_thread::sleep_for(std::chrono::milliseconds(20)); 
+		for (const unsigned char byteRead : tempReadBuffer) {
 #else
-		bytesAvailable = m_comPort.getBytesWaiting();
+		unsigned int bytesAvailable = m_comPort.getBytesWaiting();
 		if (bytesAvailable < 1) bytesAvailable = 1;
 		if (bytesAvailable > sizeof(tempReadBuffer)) bytesAvailable = sizeof(tempReadBuffer);
-		bytesRead = m_comPort.read(tempReadBuffer, m_abortSignalled ? 1 : bytesAvailable);
-#endif
-
-
+		unsigned int bytesRead = m_comPort.read(tempReadBuffer, m_abortSignalled ? 1 : bytesAvailable);
 		for (size_t a = 0; a < bytesRead; a++) {
+			const unsigned char byteRead = tempReadBuffer[a];
+#endif
 			if (m_abortSignalled) {
 				// Make space
 				for (int s = 0; s < 4; s++) slidingWindow[s] = slidingWindow[s + 1];
 				// Append the new byte
-				slidingWindow[4] = tempReadBuffer[a];
+				slidingWindow[4] = byteRead;
 
 				// Watch the sliding window for the pattern we need
 				if ((slidingWindow[0] == 'X') && (slidingWindow[1] == 'Y') && (slidingWindow[2] == 'Z') && (slidingWindow[3] == SPECIAL_ABORT_CHAR) && (slidingWindow[4] == '1')) {
 					m_isStreaming = false;
-#ifndef _WIN32
+#ifdef USE_THREADDED_READER
 					if (backgroundReader) {
 						if (backgroundReader->joinable()) backgroundReader->join();
 						delete backgroundReader;
@@ -1285,8 +1292,6 @@ DiagnosticResponse ArduinoInterface::readRotation(RotationExtractor& extractor, 
 				}
 			}
 			else {
-				unsigned char byteRead = tempReadBuffer[a];
-
 				unsigned char tmp;
 				RotationExtractor::MFMSequenceInfo sequence;
 				if (m_isHDMode) {
@@ -1391,7 +1396,7 @@ DiagnosticResponse ArduinoInterface::readRotation(RotationExtractor& extractor, 
 				abortReadStreaming();
 				m_lastError = DiagnosticResponse::drReadResponseFailed;
 				m_isStreaming = false;
-#ifndef _WIN32
+#ifdef USE_THREADDED_READER
 				if (backgroundReader) {
 					if (backgroundReader->joinable()) backgroundReader->join();
 					delete backgroundReader;

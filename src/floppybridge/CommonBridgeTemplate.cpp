@@ -1208,8 +1208,8 @@ bool CommonBridgeTemplate::initialise() {
 			struct sched_param sch;
 			int policy;
 			pthread_getschedparam(pthread_self(), &policy, &sch);
-			sch.sched_priority = sched_get_priority_max(SCHED_RR); // boost priority
 			policy = SCHED_RR;
+			sch.sched_priority = sched_get_priority_max(policy); // boost priority
 			pthread_setschedparam(pthread_self(), policy, &sch);
 #endif
 			this->mainThread();
