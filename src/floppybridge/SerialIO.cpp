@@ -460,7 +460,7 @@ SerialIO::Response SerialIO::openPort(const std::wstring& portName) {
 #else
 	std::string apath;
 	quickw2a(portName, apath);
-	m_portHandle = open(apath.c_str(), O_RDWR | O_NOCTTY | O_NDELAY);
+	m_portHandle = open(apath.c_str(), O_RDWR | O_NOCTTY);
 	if (m_portHandle == -1) {
 		switch (errno) {
 		case ENOENT: return Response::rNotFound;
