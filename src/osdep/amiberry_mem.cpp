@@ -558,6 +558,8 @@ void protect_roms(bool protect)
 
 static int doinit_shm(void)
 {
+	changed_prefs.z3autoconfig_start = currprefs.z3autoconfig_start = 0;
+	set_expamem_z3_hack_mode(0);
 	expansion_scan_autoconfig(&currprefs, true);
 
 	return 1;
@@ -565,6 +567,7 @@ static int doinit_shm(void)
 
 static uae_u32 oz3fastmem_size[MAX_RAM_BOARDS];
 static uae_u32 ofastmem_size[MAX_RAM_BOARDS];
+static uae_u32 oz3chipmem_size;
 static uae_u32 ortgmem_size[MAX_RTG_BOARDS];
 static int ortgmem_type[MAX_RTG_BOARDS];
 
@@ -586,7 +589,7 @@ bool init_shm(void)
 		if (ortgmem_type[i] != changed_prefs.rtgboards[i].rtgmem_type)
 			changed = true;
 	}
-	if (!changed)
+	if (!changed && oz3chipmem_size == changed_prefs.z3chipmem.size)
 		return true;
 
 	for (auto i = 0; i < MAX_RAM_BOARDS; i++)
@@ -599,6 +602,7 @@ bool init_shm(void)
 		ortgmem_size[i] = changed_prefs.rtgboards[i].rtgmem_size;
 		ortgmem_type[i] = changed_prefs.rtgboards[i].rtgmem_type;
 	}
+	oz3chipmem_size = changed_prefs.z3chipmem.size;
 
 	if (doinit_shm() < 0)
 		return false;
