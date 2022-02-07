@@ -959,7 +959,7 @@
       <CLanguageStandard>gnu11</CLanguageStandard>
     </ClCompile>
     <ClCompile>
-      <CppLanguageStandard>gnu++1y</CppLanguageStandard>
+      <CppLanguageStandard>c++17</CppLanguageStandard>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-DMX|ARM64'">
