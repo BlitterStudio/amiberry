@@ -103,7 +103,7 @@ static string_list_model soundcard_list(nullptr, 0);
 
 class ChannelModeListModel : public gcn::ListModel
 {
-	std::vector<std::string> mode;
+	std::vector<std::string> mode{};
 
 public:
 	ChannelModeListModel()
@@ -140,7 +140,7 @@ static ChannelModeListModel channel_mode_list;
 
 class SeparationListModel : public gcn::ListModel
 {
-	std::vector<std::string> mode;
+	std::vector<std::string> mode{};
 
 public:
 	SeparationListModel()
@@ -186,7 +186,7 @@ static SeparationListModel separation_list;
 
 class StereoDelayListModel : public gcn::ListModel
 {
-	std::vector<std::string> mode;
+	std::vector<std::string> mode{};
 
 public:
 	StereoDelayListModel()
@@ -232,7 +232,7 @@ static StereoDelayListModel stereo_delay_list;
 
 class FrequencyListModel : public gcn::ListModel
 {
-	std::vector<std::string> freq;
+	std::vector<std::string> freq{};
 
 public:
 	FrequencyListModel()
@@ -272,7 +272,7 @@ static FrequencyListModel frequency_type_list;
 
 class InterpolationListModel : public gcn::ListModel
 {
-	std::vector<std::string> entry;
+	std::vector<std::string> entry{};
 
 public:
 	InterpolationListModel()
@@ -312,7 +312,7 @@ static InterpolationListModel interpolation_type_list;
 
 class FilterListModel : public gcn::ListModel
 {
-	std::vector<std::string> entry;
+	std::vector<std::string> entry{};
 
 public:
 	FilterListModel()
@@ -429,20 +429,20 @@ public:
 
 		else if (actionEvent.getSource() == cboSeparation)
 		{
-			if (curr_separation_idx != static_cast<int>(cboSeparation->getSelected())
+			if (curr_separation_idx != cboSeparation->getSelected()
 				&& changed_prefs.sound_stereo > 0)
 			{
-				curr_separation_idx = static_cast<int>(cboSeparation->getSelected());
+				curr_separation_idx = cboSeparation->getSelected();
 				changed_prefs.sound_stereo_separation = 10 - curr_separation_idx;
 			}
 		}
 
 		else if (actionEvent.getSource() == cboStereoDelay)
 		{
-			if (curr_stereodelay_idx != static_cast<int>(cboStereoDelay->getSelected())
+			if (curr_stereodelay_idx != cboStereoDelay->getSelected()
 				&& changed_prefs.sound_stereo > 0)
 			{
-				curr_stereodelay_idx = static_cast<int>(cboStereoDelay->getSelected());
+				curr_stereodelay_idx = cboStereoDelay->getSelected();
 				if (curr_stereodelay_idx > 0)
 					changed_prefs.sound_mixed_stereo_delay = curr_stereodelay_idx;
 				else
@@ -540,7 +540,7 @@ void InitPanelSound(const config_category& category)
 	sound_action_listener = new SoundActionListener();
 
 	cboSoundcard = new gcn::DropDown(&soundcard_list);
-	cboSoundcard->setSize(400, cboSoundcard->getHeight());
+	cboSoundcard->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, cboSoundcard->getHeight());
 	cboSoundcard->setBaseColor(gui_baseCol);
 	cboSoundcard->setBackgroundColor(colTextboxBackground);
 	cboSoundcard->setId("cboSoundcard");
@@ -565,7 +565,7 @@ void InitPanelSound(const config_category& category)
 	lblFrequency = new gcn::Label("Frequency:");
 	lblFrequency->setAlignment(gcn::Graphics::RIGHT);
 	cboFrequency = new gcn::DropDown(&frequency_type_list);
-	cboFrequency->setSize(100, cboFrequency->getHeight());
+	cboFrequency->setSize(150, cboFrequency->getHeight());
 	cboFrequency->setBaseColor(gui_baseCol);
 	cboFrequency->setBackgroundColor(colTextboxBackground);
 	cboFrequency->setId("cboFrequency");
@@ -574,7 +574,7 @@ void InitPanelSound(const config_category& category)
 	lblChannelMode = new gcn::Label("Channel mode:");
 	lblChannelMode->setAlignment(gcn::Graphics::RIGHT);
 	cboChannelMode = new gcn::DropDown(&channel_mode_list);
-	cboChannelMode->setSize(100, cboChannelMode->getHeight());
+	cboChannelMode->setSize(150, cboChannelMode->getHeight());
 	cboChannelMode->setBaseColor(gui_baseCol);
 	cboChannelMode->setBackgroundColor(colTextboxBackground);
 	cboChannelMode->setId("cboChannelMode");
