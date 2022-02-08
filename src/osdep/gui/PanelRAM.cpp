@@ -109,7 +109,7 @@ void InitPanelRAM(const config_category& category)
 	sldChipmem->setBaseColor(gui_baseCol);
 	sldChipmem->setMarkerLength(marker_length);
 	sldChipmem->setStepLength(1);
-	sldChipmem->setId("Chipmem");
+	sldChipmem->setId("sldChipmem");
 	sldChipmem->addActionListener(memorySliderActionListener);
 	lblChipsize = new gcn::Label("None");
 
@@ -119,7 +119,7 @@ void InitPanelRAM(const config_category& category)
 	sldSlowmem->setBaseColor(gui_baseCol);
 	sldSlowmem->setMarkerLength(marker_length);
 	sldSlowmem->setStepLength(1);
-	sldSlowmem->setId("Slowmem");
+	sldSlowmem->setId("sldSlowmem");
 	sldSlowmem->addActionListener(memorySliderActionListener);
 	lblSlowsize = new gcn::Label("None");
 
@@ -129,7 +129,7 @@ void InitPanelRAM(const config_category& category)
 	sldFastmem->setBaseColor(gui_baseCol);
 	sldFastmem->setMarkerLength(marker_length);
 	sldFastmem->setStepLength(1);
-	sldFastmem->setId("Fastmem");
+	sldFastmem->setId("sldFastmem");
 	sldFastmem->addActionListener(memorySliderActionListener);
 	lblFastsize = new gcn::Label("None");
 
@@ -142,7 +142,7 @@ void InitPanelRAM(const config_category& category)
 	sldZ3mem->setBaseColor(gui_baseCol);
 	sldZ3mem->setMarkerLength(marker_length);
 	sldZ3mem->setStepLength(1);
-	sldZ3mem->setId("Z3mem");
+	sldZ3mem->setId("sldZ3mem");
 	sldZ3mem->addActionListener(memorySliderActionListener);
 	lblZ3size = new gcn::Label("None");
 
@@ -165,9 +165,9 @@ void InitPanelRAM(const config_category& category)
 	sldMbResLowmem->setBaseColor(gui_baseCol);
 	sldMbResLowmem->setMarkerLength(marker_length);
 	sldMbResLowmem->setStepLength(1);
-	sldMbResLowmem->setId("A3000Low");
+	sldMbResLowmem->setId("sldMbResLowmem");
 	sldMbResLowmem->addActionListener(memorySliderActionListener);
-	lblMbResLowsize = new gcn::Label("None   ");
+	lblMbResLowsize = new gcn::Label("None");
 
 	lblMbResHighmem = new gcn::Label("Processor slot Fast RAM:");
 	sldMbResHighmem = new gcn::Slider(0, 8);
@@ -175,7 +175,7 @@ void InitPanelRAM(const config_category& category)
 	sldMbResHighmem->setBaseColor(gui_baseCol);
 	sldMbResHighmem->setMarkerLength(marker_length);
 	sldMbResHighmem->setStepLength(1);
-	sldMbResHighmem->setId("A3000High");
+	sldMbResHighmem->setId("sldMbResHighmem");
 	sldMbResHighmem->addActionListener(memorySliderActionListener);
 	lblMbResHighsize = new gcn::Label("None");
 

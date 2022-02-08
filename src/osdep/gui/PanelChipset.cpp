@@ -306,7 +306,7 @@ void InitPanelChipset(const struct config_category& category)
 	cboChipset->setSize(120, cboChipset->getHeight());
 	cboChipset->setBaseColor(gui_baseCol);
 	cboChipset->setBackgroundColor(colTextboxBackground);
-	cboChipset->setId("ChipsetExtra");
+	cboChipset->setId("cboChipset");
 	cboChipset->addActionListener(chipsetActionListener);
 
 	grpChipset = new gcn::Window("Chipset");
@@ -332,15 +332,15 @@ void InitPanelChipset(const struct config_category& category)
 	blitterButtonActionListener = new BlitterButtonActionListener();
 
 	optBlitNormal = new gcn::RadioButton("Normal", "radiocblittergroup");
-	optBlitNormal->setId("BlitNormal");
+	optBlitNormal->setId("optBlitNormal");
 	optBlitNormal->addActionListener(blitterButtonActionListener);
 
 	optBlitImmed = new gcn::RadioButton("Immediate", "radiocblittergroup");
-	optBlitImmed->setId("Immediate");
+	optBlitImmed->setId("optBlitImmed");
 	optBlitImmed->addActionListener(blitterButtonActionListener);
 
 	optBlitWait = new gcn::RadioButton("Wait for blitter", "radiocblittergroup");
-	optBlitWait->setId("BlitWait");
+	optBlitWait->setId("optBlitWait");
 	optBlitWait->addActionListener(blitterButtonActionListener);
 
 	grpBlitter = new gcn::Window("Blitter");
@@ -358,7 +358,7 @@ void InitPanelChipset(const struct config_category& category)
 	fastCopperActionListener = new FastCopperActionListener();
 
 	chkFastCopper = new gcn::CheckBox("Fast copper");
-	chkFastCopper->setId("Fast copper");
+	chkFastCopper->setId("chkFastCopper");
 	chkFastCopper->addActionListener(fastCopperActionListener);
 
 	chkMultithreadedDrawing = new gcn::CheckBox("Multithreaded Drawing");
@@ -380,19 +380,19 @@ void InitPanelChipset(const struct config_category& category)
 	collisionButtonActionListener = new CollisionButtonActionListener();
 
 	optCollNone = new gcn::RadioButton("None", "radioccollisiongroup");
-	optCollNone->setId("CollNone");
+	optCollNone->setId("optCollNone");
 	optCollNone->addActionListener(collisionButtonActionListener);
 
 	optCollSprites = new gcn::RadioButton("Sprites only", "radioccollisiongroup");
-	optCollSprites->setId("Sprites only");
+	optCollSprites->setId("optCollSprites");
 	optCollSprites->addActionListener(collisionButtonActionListener);
 
 	optCollPlayfield = new gcn::RadioButton("Sprites and Sprites vs. Playfield", "radioccollisiongroup");
-	optCollPlayfield->setId("CollPlay");
+	optCollPlayfield->setId("optCollPlayfield");
 	optCollPlayfield->addActionListener(collisionButtonActionListener);
 
 	optCollFull = new gcn::RadioButton("Full (rarely needed)", "radioccollisiongroup");
-	optCollFull->setId("CollFull");
+	optCollFull->setId("optCollFull");
 	optCollFull->addActionListener(collisionButtonActionListener);
 
 	grpCollisionLevel = new gcn::Window("Collision Level");
@@ -410,7 +410,6 @@ void InitPanelChipset(const struct config_category& category)
 
 	RefreshPanelChipset();
 }
-
 
 void ExitPanelChipset()
 {
