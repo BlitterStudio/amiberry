@@ -1,6 +1,6 @@
 /* FloppyBridge DLL for *UAE
 *
-* Copyright (C) 2021 Robert Smith (@RobSmithDev)
+* Copyright (C) 2021-2022 Robert Smith (@RobSmithDev)
 * https://amiga.robsmithdev.co.uk
 *
 * This library is free software; you can redistribute it and/or
@@ -53,7 +53,7 @@ HINSTANCE hInstance;
 
 
 
-static BridgeAbout BridgeInformation = { "FloppyBridge, Copyright(C) 2021 Robert Smith (@RobSmithDev)", "https://amiga.robsmithdev.co.uk/winuae", 0, 10, 1, 0, 0};
+static BridgeAbout BridgeInformation = { "FloppyBridge, Copyright(C) 2021-2022 Robert Smith (@RobSmithDev)", "https://amiga.robsmithdev.co.uk/winuae", 0, 11, 1, 0, 0};
 static bool hasUpdateChecked = false;
 std::vector<SerialIO::SerialPortInformation> serialports;
 #ifdef _WIN32
