@@ -1,6 +1,6 @@
 /* FloppyBridge DLL for *UAE
 *
-* Copyright (C) 2021 Robert Smith (@RobSmithDev)
+* Copyright (C) 2021-2022 Robert Smith (@RobSmithDev)
 * https://amiga.robsmithdev.co.uk
 *
 * This library is free software; you can redistribute it and/or
@@ -49,7 +49,7 @@
 
 #include "CommonBridgeTemplate.h"
 
-#define MAX_NUM_DRIVERS     2
+#define MAX_NUM_DRIVERS     3
 
 // Used by BRIDGE_About
 struct BridgeAbout {
