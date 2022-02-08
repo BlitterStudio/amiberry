@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Amiberry Info.plist template file -->
 <!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-#!/bin/sh
 <plist version="1.0">
 	<dict>
 		<key>CFBundleGetInfoString</key>
@@ -14,7 +13,6 @@
 			<string>Amiberry.app</string>
 		<key>CFBundleIconName</key>
 			<string>AppIcon</string>
-TARGET  = lib/libguisan.a
 		<key>CFBundleIconFile</key>
 			<string>docs/resources/icon-mac.png</string>
 			<key>UIPrerenderedIcon</key>
