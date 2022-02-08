@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Amiberry Info.plist template file -->
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+	<dict>
+		<key>CFBundleGetInfoString</key>
+			<string>LONGVERSION</string>
+		<key>CFBundleExecutable</key>
+			<string>amiberry</string>
+		<key>CFBundleIdentifier</key>
+			<string>com.midwan.amiberry</string>
+		<key>CFBundleName</key>
+			<string>Amiberry.app</string>
+		<key>CFBundleIconName</key>
+			<string>AppIcon</string>
+		<key>CFBundleIconFile</key>
+			<string>docs/resources/icon.png</string>
+			<key>UIPrerenderedIcon</key>
+				<true/>
+		<key>CFBundleShortVersionString</key>
+			<string>VERSION</string>
+		<key>CFBundleInfoDictionaryVersion</key>
+			<string>6.0</string>
+		<key>CFBundlePackageType</key>
+			<string>APPL</string>
+		<key>IFMajorVersion</key>
+			<integer>MAJOR</integer>
+		<key>IFMinorVersion</key>
+			<integer>MINOR</integer>
+	</dict>
+</plist>

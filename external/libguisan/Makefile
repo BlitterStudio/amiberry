@@ -1,7 +1,7 @@
 TARGET  = lib/libguisan.a
-DYLIB_TARGET = dylib/libguisan.dylib
   
 AR      = ar
+ARARGS  = cr
 
 DIRS	=$(shell find ./src -maxdepth 3 -type d)
 SOURCE	= $(foreach dir,$(DIRS),$(wildcard $(dir)/*.cpp))
@@ -10,11 +10,10 @@ DEPS	= $(SOURCE:%.cpp=%.d)
 
 ifeq ($(PLATFORM),osx)
 	# Create DYLIB on OS X
+	TARGET=dylib/libguisan.dylib
         LDFLAGS += -lsdl2 -no_branch_islands
-        DYLIB=$(CXX) -dynamiclib  -std=c++14 -install_name libguisan.dylib -fvisibility=hidden -undefined dynamic_lookup -o $(DYLIB_TARGET) $(OBJS)
-        CXX=/usr/bin/c++
-else
-        DYLIB=
+        AR=$(CXX) -dynamiclib  -std=c++14 -install_name libguisan.dylib -fvisibility=hidden -undefined dynamic_lookup -o 
+	ARARGS=
 endif
 
 CPPFLAGS +=-I./include $(SDL_CFLAGS) -MD -MT $@ -MF $(@:%.o=%.d)
@@ -22,8 +21,7 @@ CPPFLAGS +=-I./include $(SDL_CFLAGS) -MD -MT $@ -MF $(@:%.o=%.d)
 .PHONY : all clean
   
 $(TARGET) : $(OBJS)
-	$(AR) cr $(TARGET) $(OBJS)
-	$(DYLIB)
+	$(AR) $(ARARGS) $(TARGET) $(OBJS)
 
 all : $(TARGET)
 

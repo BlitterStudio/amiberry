@@ -36,7 +36,8 @@ static const DEVPROPKEY DEVPKEY_Device_InstanceId2 = { {0x78c34fc8, 0x104a, 0x4a
 DEFINE_GUID(GUID_DEVINTERFACE_COMPORT,0x86e0d1e0, 0x8089, 0x11d0, 0x9c, 0xe4, 0x08, 0x00, 0x3e, 0x30, 0x1f, 0x73);
 #endif
 
-#else
+// OS X, sigurbjornl, 20220208
+#elif defined __MACH__
 
 #include <sys/stat.h>
 #include <dirent.h>
@@ -45,6 +46,20 @@ DEFINE_GUID(GUID_DEVINTERFACE_COMPORT,0x86e0d1e0, 0x8089, 0x11d0, 0x9c, 0xe4, 0x
 #include <sys/ioctl.h>
 #include <errno.h>
 #include <cstring>
+#include <term.h>
+#include <sys/termios.h>
+#include <sys/ioctl.h>
+#include <IOKit/serial/ioss.h>
+#ifndef TIOCINQ
+#ifdef FIONREAD
+#define TIOCINQ FIONREAD
+#else
+#define TIOCINQ 0x541B
+#endif
+#endif
+
+#else
+
 #include <linux/serial.h>
 
 #endif
@@ -627,10 +642,10 @@ SerialIO::Response SerialIO::configurePort(const Configuration& configuration) {
 #ifdef __APPLE__
 	if (ioctl(m_portHandle, IOSSIOSPEED, &baud) == -1) return Response::rUnknownError;
 #else
-if (baud == 9600) {
-	term.c_cflag &= ~CBAUD;
-	term.c_cflag |= B9600;
-} else {
+	if (baud == 9600) {
+		term.c_cflag &= ~CBAUD;
+		term.c_cflag |= B9600;
+	} else {
 #if defined(BOTHER) && defined(HAVE_STRUCT_TERMIOS2)
 	term.c_cflag &= ~CBAUD;
 	term.c_cflag |= BOTHER;
@@ -642,8 +657,8 @@ if (baud == 9600) {
 	term.c_cflag |= CBAUDEX;
 	if (cfsetspeed(&term, baud) < 0) return Response::rUnknownError;
 #endif
+	}
 #endif
-}
 	// Apply that nonsense
 	tcflush (m_portHandle, TCIFLUSH);
 	if (tcsetattr(m_portHandle, TCSANOW, &term) != 0) return Response::rUnknownError;
