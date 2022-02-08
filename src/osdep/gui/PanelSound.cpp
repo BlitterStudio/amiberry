@@ -17,7 +17,6 @@ static gcn::RadioButton* optSoundDisabled;
 static gcn::RadioButton* optSoundDisabledEmu;
 static gcn::RadioButton* optSoundEmulated;
 static gcn::RadioButton* optSoundEmulatedBest;
-static gcn::Container* grpSettings;
 static gcn::Label* lblChannelMode;
 static gcn::DropDown* cboChannelMode;
 static gcn::Label* lblFrequency;
@@ -728,22 +727,6 @@ void InitPanelSound(const config_category& category)
 	grpVolume->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2 - grpSound->getWidth() - DISTANCE_NEXT_X, grpSound->getHeight());
 	grpVolume->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpVolume->setBaseColor(gui_baseCol);
-	
-	grpSettings = new gcn::Container();
-	grpSettings->add(lblChannelMode, 10, 10);
-	grpSettings->add(cboChannelMode, lblChannelMode->getX(), lblChannelMode->getY() + lblChannelMode->getHeight() + 10);
-	grpSettings->add(lblFrequency, lblChannelMode->getX(), 70);
-	grpSettings->add(cboFrequency, lblChannelMode->getX(), lblFrequency->getY() + lblFrequency->getHeight() + 10);
-	grpSettings->add(lblSeparation, cboChannelMode->getX() + cboChannelMode->getWidth() + DISTANCE_NEXT_X * 3, 10);
-	grpSettings->add(cboSeparation, lblSeparation->getX(), lblSeparation->getY() + lblSeparation->getHeight() + 10);
-	grpSettings->add(lblStereoDelay, cboSeparation->getX(), lblFrequency->getY());
-	grpSettings->add(cboStereoDelay, lblStereoDelay->getX(), cboFrequency->getY());
-	grpSettings->add(lblInterpolation, cboSeparation->getX() + cboSeparation->getWidth() + DISTANCE_NEXT_X * 3, 10);
-	grpSettings->add(cboInterpolation, lblInterpolation->getX(), lblInterpolation->getY() + lblInterpolation->getHeight() + 10);
-	grpSettings->add(lblFilter, lblInterpolation->getX(), lblFrequency->getY());
-	grpSettings->add(cboFilter, cboInterpolation->getX(), cboFrequency->getY());
-	grpSettings->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, cboFrequency->getY() + cboFrequency->getHeight() + DISTANCE_NEXT_Y);
-	grpSettings->setBaseColor(gui_baseCol);
 
 	grpFloppySound = new gcn::Window("Floppy Drive Sound Emulation");
 	grpFloppySound->add(chkFloppySound, 10, 10);
@@ -774,8 +757,21 @@ void InitPanelSound(const config_category& category)
 	category.panel->add(grpSound, DISTANCE_BORDER, posY);
 	category.panel->add(grpVolume, grpSound->getX() + grpSound->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += grpSound->getHeight() + DISTANCE_NEXT_Y;
-	category.panel->add(grpSettings, DISTANCE_BORDER, posY);
-	posY += grpSettings->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(lblChannelMode, DISTANCE_BORDER, posY);
+	category.panel->add(cboChannelMode, lblChannelMode->getX(), lblChannelMode->getY() + lblChannelMode->getHeight() + 10);
+	posY = cboChannelMode->getY() + cboChannelMode->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(lblFrequency, lblChannelMode->getX(), posY);
+	category.panel->add(cboFrequency, lblChannelMode->getX(), lblFrequency->getY() + lblFrequency->getHeight() + 10);
+	category.panel->add(lblSeparation, cboChannelMode->getX() + cboChannelMode->getWidth() + DISTANCE_NEXT_X * 3, lblChannelMode->getY());
+	category.panel->add(cboSeparation, lblSeparation->getX(), lblSeparation->getY() + lblSeparation->getHeight() + 10);
+	category.panel->add(lblStereoDelay, cboSeparation->getX(), lblFrequency->getY());
+	category.panel->add(cboStereoDelay, lblStereoDelay->getX(), cboFrequency->getY());
+	category.panel->add(lblInterpolation, cboSeparation->getX() + cboSeparation->getWidth() + DISTANCE_NEXT_X * 3, lblSeparation->getY());
+	category.panel->add(cboInterpolation, lblInterpolation->getX(), lblInterpolation->getY() + lblInterpolation->getHeight() + 10);
+	category.panel->add(lblFilter, lblInterpolation->getX(), lblFrequency->getY());
+	category.panel->add(cboFilter, cboInterpolation->getX(), cboFrequency->getY());
+
+	posY = cboFrequency->getY() + cboFrequency->getHeight() + DISTANCE_NEXT_Y * 2;
 	category.panel->add(grpFloppySound, DISTANCE_BORDER, posY);
 	category.panel->add(grpSoundBufferSize, grpFloppySound->getX() + grpFloppySound->getWidth() + DISTANCE_NEXT_X, posY);
 
@@ -806,7 +802,6 @@ void ExitPanelSound()
 	delete grpVolume;
 	delete lblChannelMode;
 	delete cboChannelMode;
-	delete grpSettings;
 	delete lblFrequency;
 	delete cboFrequency;
 	delete lblInterpolation;
