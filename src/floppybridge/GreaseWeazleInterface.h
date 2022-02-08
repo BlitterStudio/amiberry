@@ -178,16 +178,16 @@ namespace GreaseWeazle {
 		// Free me
 		~GreaseWeazleInterface();
 
-		const bool isOpen() const { return m_comPort.isPortOpen(); };
+		const bool isOpen() const { return m_comPort.isPortOpen(); }
 
 		// Returns the timr before the motor switches back off
 		int getMotorTimeout() const { return m_gwDriveDelays.watchdog_delay; }
 
-		inline bool supportsDiskChange() const { return m_pinDskChangeAvailable; };
-		inline bool isWriteProtected() const { return m_isWriteProtected; };
+		bool supportsDiskChange() const { return m_pinDskChangeAvailable; }
+		bool isWriteProtected() const { return m_isWriteProtected; }
 
 		// Change the disk capacity we're using
-		void setDiskCapacity(bool hd) { m_inHDMode = hd; };
+		void setDiskCapacity(bool hd) { m_inHDMode = hd; }
 
 		// Test the inserted disk and see if its HD or not
 		GWResponse checkDiskCapacity(bool& isHD);

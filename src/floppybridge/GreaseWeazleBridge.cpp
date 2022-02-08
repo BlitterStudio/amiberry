@@ -60,7 +60,7 @@ bool GreaseWeazleDiskBridge::supportsDiskChange() {
 
 // Called when the class is about to shut down
 void GreaseWeazleDiskBridge::closeInterface() {
-	// Turn everythign off
+	// Turn everything off
 	m_io.enableMotor(false);
 	m_io.closePort();
 }
@@ -105,10 +105,10 @@ bool GreaseWeazleDiskBridge::openInterface(std::string& errorMessage) {
 		case GWResponse::drPortError: errorMessage = "Unknown error connecting to your Greaseweazle board."; break;
 		case GWResponse::drComportConfigError: errorMessage = "Error configuring communication with your Greaseweazle board."; break;
 		case GWResponse::drErrorMalformedVersion: errorMessage = "Error communicating with your Greaseweazle board. Please unplug it and re-connect it."; break;
-		case GWResponse::drOldFirmware: errorMessage = "Your Greaseweazle firware is too old. V0.27 or newer is required."; break;
+		case GWResponse::drOldFirmware: errorMessage = "Your Greaseweazle firmware is too old. V0.27 or newer is required."; break;
 		case GWResponse::drInUpdateMode: errorMessage = "Your Greaseweazle is currently in update mode.  Please restore it to normal mode."; break;
 		case GWResponse::drError: errorMessage = "Unable to select the drive on your Greaseweazle."; break;
-		default: errorMessage = "An unknown error occured connecting to your Greaseweazle."; break;
+		default: errorMessage = "An unknown error occurred connecting to your Greaseweazle."; break;
 		}
 	}
 
@@ -126,14 +126,14 @@ const FloppyDiskBridge::BridgeDriver* GreaseWeazleDiskBridge::_getDriverInfo() {
 
 // Duplicate of the one below, but here for consistency - Returns the name of interface.  This pointer should remain valid after the class is destroyed
 const FloppyDiskBridge::DriveTypeID GreaseWeazleDiskBridge::_getDriveTypeID() {
-	return m_isHDDisk ? FloppyDiskBridge::DriveTypeID::dti35HD : FloppyDiskBridge::DriveTypeID::dti35DD;
+	return m_isHDDisk ? DriveTypeID::dti35HD : DriveTypeID::dti35DD;
 }
 
 // Called when a disk is inserted so that you can (re)populate the response to _getDriveTypeID()
 void GreaseWeazleDiskBridge::checkDiskType() {
 	bool capacity;
 
-	if (m_io.checkDiskCapacity(capacity) == GreaseWeazle::GWResponse::drOK) {
+	if (m_io.checkDiskCapacity(capacity) == GWResponse::drOK) {
 		m_isHDDisk = capacity;
 		m_io.setDiskCapacity(m_isHDDisk);
 	}
@@ -152,14 +152,15 @@ void GreaseWeazleDiskBridge::forceDiskDensity(bool forceHD) {
 
 // Called to switch which head is being used right now.  Returns success or not
 bool GreaseWeazleDiskBridge::setActiveSurface(const DiskSurface activeSurface) {
-	return m_io.selectSurface(activeSurface == DiskSurface::dsUpper ? GreaseWeazle::DiskSurface::dsUpper : GreaseWeazle::DiskSurface::dsLower) == GreaseWeazle::GWResponse::drOK;
+	return m_io.selectSurface(activeSurface == DiskSurface::dsUpper ? GreaseWeazle::DiskSurface::dsUpper : GreaseWeazle::DiskSurface::dsLower) ==
+		GWResponse::drOK;
 }
 
 // Set the status of the motor on the drive. The motor should maintain this status until switched off or reset.  This should *NOT* wait for the motor to spin up
 bool GreaseWeazleDiskBridge::setMotorStatus(const bool switchedOn) {
 	m_motorIsEnabled = switchedOn;
 	m_motorTurnOnTime = std::chrono::steady_clock::now();
-	return m_io.enableMotor(switchedOn, true) == GreaseWeazle::GWResponse::drOK;
+	return m_io.enableMotor(switchedOn, true) == GWResponse::drOK;
 }
 
 // Called to ask the drive what the current write protect status is - return true if its write protected
@@ -173,8 +174,8 @@ bool GreaseWeazleDiskBridge::getDiskChangeStatus(const bool forceCheck) {
 	// We actually trigger a SEEK operation to ensure this is right
 	if (forceCheck) {
 		if (m_io.checkForDisk(forceCheck) == GWResponse::drNoDiskInDrive) {
-			m_io.selectTrack((m_currentCylinder > 40) ? m_currentCylinder - 1 : m_currentCylinder + 1, GreaseWeazle::TrackSearchSpeed::tssNormal, true);
-			m_io.selectTrack(m_currentCylinder, GreaseWeazle::TrackSearchSpeed::tssNormal, true);
+			m_io.selectTrack((m_currentCylinder > 40) ? m_currentCylinder - 1 : m_currentCylinder + 1, TrackSearchSpeed::tssNormal, true);
+			m_io.selectTrack(m_currentCylinder, TrackSearchSpeed::tssNormal, true);
 		}
 	}
 
@@ -186,7 +187,7 @@ bool GreaseWeazleDiskBridge::getDiskChangeStatus(const bool forceCheck) {
 }
 
 // If we're on track 0, this is the emulator trying to seek to track -1.  We catch this as a special case.  
-// Should perform the same operations as setCurrentCylinder in terms of diskchange etc but without changing the current cylinder
+// Should perform the same operations as setCurrentCylinder in terms of disk change etc but without changing the current cylinder
 // Return FALSE if this is not supported by the bridge
 bool GreaseWeazleDiskBridge::performNoClickSeek() {
 	// Claim we did it anyway
@@ -208,11 +209,11 @@ bool GreaseWeazleDiskBridge::setCurrentCylinder(const unsigned int cylinder) {
 	// No need if its busy
 	bool ignoreDiskCheck = (isMotorRunning()) && (!isReady());
 
-	// If we dont support diskchange then dont allow the hardware to check for a disk as it takes time, unless it's due anyway
+	// If we don't support disk change then don't allow the hardware to check for a disk as it takes time, unless it's due anyway
 	if (!supportsDiskChange()) ignoreDiskCheck |= !isReadyForManualDiskCheck();
 
 	// Go!
-	if (m_io.selectTrack(cylinder, GreaseWeazle::TrackSearchSpeed::tssNormal, ignoreDiskCheck) == GreaseWeazle::GWResponse::drOK) {
+	if (m_io.selectTrack(cylinder, TrackSearchSpeed::tssNormal, ignoreDiskCheck) == GWResponse::drOK) {
 		if (!ignoreDiskCheck) updateLastManualCheckTime();	
 		return true;
 	}
@@ -229,16 +230,15 @@ bool GreaseWeazleDiskBridge::setCurrentCylinder(const unsigned int cylinder) {
 // Returns: ReadResponse, explains its self
 CommonBridgeTemplate::ReadResponse GreaseWeazleDiskBridge::readData(PLL::BridgePLL& pll, const unsigned int maxBufferSize, RotationExtractor::MFMSample* buffer, RotationExtractor::IndexSequenceMarker& indexMarker,
 	std::function<bool(RotationExtractor::MFMSample* mfmData, const unsigned int dataLengthInBits)> onRotation) {
-
-	GreaseWeazle::GWResponse result = m_io.readRotation(pll, maxBufferSize, buffer, indexMarker,
-		[&onRotation](RotationExtractor::MFMSample** mfmData, const unsigned int dataLengthInBits) -> bool {
-			return onRotation(*mfmData, dataLengthInBits);
-		});
+	GWResponse result = m_io.readRotation(pll, maxBufferSize, buffer, indexMarker,
+	                                      [&onRotation](RotationExtractor::MFMSample** mfmData, const unsigned int dataLengthInBits) -> bool {
+		                                      return onRotation(*mfmData, dataLengthInBits);
+	                                      });
 	m_motorTurnOnTime = std::chrono::steady_clock::now();
 
 	switch (result) {
-	case GreaseWeazle::GWResponse::drOK: return ReadResponse::rrOK;
-	case GreaseWeazle::GWResponse::drNoDiskInDrive: return ReadResponse::rrNoDiskInDrive;
+	case GWResponse::drOK: return ReadResponse::rrOK;
+	case GWResponse::drNoDiskInDrive: return ReadResponse::rrNoDiskInDrive;
 	default:  return ReadResponse::rrError;
 	}
 	
@@ -251,12 +251,12 @@ CommonBridgeTemplate::ReadResponse GreaseWeazleDiskBridge::readData(PLL::BridgeP
 //					suggestUsingPrecompensation		A suggestion that you might want to use write pre-compensation, optional
 // Returns TRUE if success, or false if it fails.  Largely doesn't matter as most stuff should verify with a read straight after
 bool GreaseWeazleDiskBridge::writeData(const unsigned char* rawMFMData, const unsigned int numBits, const bool writeFromIndex, const bool suggestUsingPrecompensation) {
-	GreaseWeazle::GWResponse response = m_io.writeCurrentTrackPrecomp(rawMFMData, (numBits + 7) / 8, writeFromIndex, suggestUsingPrecompensation);
+	GWResponse response = m_io.writeCurrentTrackPrecomp(rawMFMData, (numBits + 7) / 8, writeFromIndex, suggestUsingPrecompensation);
 	m_motorTurnOnTime = std::chrono::steady_clock::now();
 
 	switch (response) {
-	case GreaseWeazle::GWResponse::drOK: return true;
-	case GreaseWeazle::GWResponse::drWriteProtected: setWriteProtectStatus(true); return false;
+	case GWResponse::drOK: return true;
+	case GWResponse::drWriteProtected: setWriteProtectStatus(true); return false;
 	default:  return false;
 	}
 }

@@ -118,7 +118,7 @@ public:
 	// Returns the number of bytes waiting to be read
 	unsigned int getBytesWaiting();
 
-	// Check if we wrre quick enough reading the data
+	// Check if we were quick enough reading the data
 	bool checkForOverrun();
 
 	// Open a port by name

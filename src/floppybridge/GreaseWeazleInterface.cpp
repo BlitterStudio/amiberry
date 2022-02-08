@@ -88,7 +88,7 @@ std::wstring findPortNumber() {
 	SerialIO::enumSerialPorts(portList);
 
 	// Scan for items
-	std::wstring bestPort = L"";
+	std::wstring bestPort;
 	int maxScore = 0;
 
 	for (const SerialIO::SerialPortInformation& port : portList) {
@@ -465,7 +465,7 @@ static unsigned int ticksToNSec(unsigned int ticks, unsigned int sampleFrequency
 
 // Look at the stream and count up the types of data
 void countSampleTypes(PLLData& pllData, std::queue<unsigned char>& queue, unsigned int& hdBits, unsigned int& ddBits) {
-	while (queue.size()) {
+	while (!queue.empty()) {
 
 		unsigned char i = queue.front();
 		if (i == 255) {
@@ -805,7 +805,7 @@ GWResponse GreaseWeazleInterface::writeCurrentTrackPrecomp(const unsigned char* 
 // Process queue and work out whats going on
 inline void unpackStreamQueue(std::queue<unsigned char>& queue, PLLData& pllData, PLL::BridgePLL& pll, bool isHDMode) {
 	// Run until theres not enough data left to process
-	while (queue.size()) {
+	while (!queue.empty()) {
 
 		unsigned char i = queue.front();
 		if (i == 255) {

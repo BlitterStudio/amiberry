@@ -48,8 +48,8 @@ void SupercardProDiskBridge::abortDiskReading() {
 // A manual way to detect a disk change event
 bool SupercardProDiskBridge::attemptToDetectDiskChange() {
 	switch (m_io.checkForDisk(true)) {
-	case SuperCardPro::SCPErr::scpOK: return true;
-	case SuperCardPro::SCPErr::scpNoDiskInDrive: return false;
+	case SCPErr::scpOK: return true;
+	case SCPErr::scpNoDiskInDrive: return false;
 	default: return isDiskInDrive();
 	}
 }
@@ -61,27 +61,26 @@ bool SupercardProDiskBridge::supportsDiskChange() {
 
 // Called when the class is about to shut down
 void SupercardProDiskBridge::closeInterface() {
-	// Turn everythign off
+	// Turn everything off
 	m_io.enableMotor(false);
 	m_io.closePort();
 }
 
 // Called to start the interface, you should update any error messages if it fails.  This needs to be ready to see to any cylinder and so should already know where cylinder 0 is
 bool SupercardProDiskBridge::openInterface(std::string& errorMessage) {
+	SCPErr error = m_io.openPort(m_useDriveA);
 
-	SuperCardPro::SCPErr error = m_io.openPort(m_useDriveA);
-
-	if (error == SuperCardPro::SCPErr::scpOK) {
+	if (error == SCPErr::scpOK) {
 		m_io.findTrack0();
 		m_currentCylinder = 0;
 		return true;
 	}
 	else {
 		switch (error) {
-		case SuperCardPro::SCPErr::scpFirmwareTooOld: errorMessage = "SuperCard Pro firmware must be updated to V1.3"; break;
-		case SuperCardPro::SCPErr::scpNotFound: errorMessage = "SuperCard Pro board was not detected."; break;
-		case SuperCardPro::SCPErr::scpInUse: errorMessage = "SuperCard Pro board is already in use."; break;
-		default: errorMessage = "An unknown error occured connecting to your SuperCard Pro."; break;
+		case SCPErr::scpFirmwareTooOld: errorMessage = "SuperCard Pro firmware must be updated to V1.3"; break;
+		case SCPErr::scpNotFound: errorMessage = "SuperCard Pro board was not detected."; break;
+		case SCPErr::scpInUse: errorMessage = "SuperCard Pro board is already in use."; break;
+		default: errorMessage = "An unknown error occurred connecting to your SuperCard Pro."; break;
 		}
 	}
 
@@ -100,7 +99,7 @@ const FloppyDiskBridge::BridgeDriver* SupercardProDiskBridge::_getDriverInfo() {
 
 // Duplicate of the one below, but here for consistency - Returns the name of interface.  This pointer should remain valid after the class is destroyed
 const FloppyDiskBridge::DriveTypeID SupercardProDiskBridge::_getDriveTypeID() {
-	return m_isHDDisk ? FloppyDiskBridge::DriveTypeID::dti35HD : FloppyDiskBridge::DriveTypeID::dti35DD;
+	return m_isHDDisk ? DriveTypeID::dti35HD : DriveTypeID::dti35DD;
 }
 
 // Called when a disk is inserted so that you can (re)populate the response to _getDriveTypeID()
@@ -148,21 +147,21 @@ bool SupercardProDiskBridge::checkWriteProtectStatus(const bool forceCheck) {
 bool SupercardProDiskBridge::getDiskChangeStatus(const bool forceCheck) {
 	// We actually trigger a SEEK operation to ensure this is right
 	if (forceCheck) {
-		if (m_io.checkForDisk(forceCheck) == SuperCardPro::SCPErr::scpNoDiskInDrive) {
+		if (m_io.checkForDisk(forceCheck) == SCPErr::scpNoDiskInDrive) {
 			m_io.selectTrack((m_currentCylinder > 40) ? m_currentCylinder - 1 : m_currentCylinder + 1, true);
 			m_io.selectTrack(m_currentCylinder, true);
 		}
 	}
 
 	switch (m_io.checkForDisk(forceCheck)) {
-	case SuperCardPro::SCPErr::scpOK: return true;
-	case SuperCardPro::SCPErr::scpNoDiskInDrive: return false;
+	case SCPErr::scpOK: return true;
+	case SCPErr::scpNoDiskInDrive: return false;
 	default: return isDiskInDrive();
 	}
 }
 
 // If we're on track 0, this is the emulator trying to seek to track -1.  We catch this as a special case.  
-// Should perform the same operations as setCurrentCylinder in terms of diskchange etc but without changing the current cylinder
+// Should perform the same operations as setCurrentCylinder in terms of disk change etc but without changing the current cylinder
 // Return FALSE if this is not supported by the bridge
 bool SupercardProDiskBridge::performNoClickSeek() {
 	if (m_io.performNoClickSeek()) {
@@ -198,16 +197,15 @@ bool SupercardProDiskBridge::setCurrentCylinder(const unsigned int cylinder) {
 // Returns: ReadResponse, explains its self
 CommonBridgeTemplate::ReadResponse SupercardProDiskBridge::readData(PLL::BridgePLL& pll, const unsigned int maxBufferSize, RotationExtractor::MFMSample* buffer, RotationExtractor::IndexSequenceMarker& indexMarker,
 	std::function<bool(RotationExtractor::MFMSample* mfmData, const unsigned int dataLengthInBits)> onRotation) {
-
-	SuperCardPro::SCPErr result = m_io.readRotation(pll, maxBufferSize, buffer, indexMarker,
-		[&onRotation](RotationExtractor::MFMSample** mfmData, const unsigned int dataLengthInBits) -> bool {
-			return onRotation(*mfmData, dataLengthInBits);
-		});
+	SCPErr result = m_io.readRotation(pll, maxBufferSize, buffer, indexMarker,
+	                                  [&onRotation](RotationExtractor::MFMSample** mfmData, const unsigned int dataLengthInBits) -> bool {
+		                                  return onRotation(*mfmData, dataLengthInBits);
+	                                  });
 	m_motorTurnOnTime = std::chrono::steady_clock::now();
 	
 	switch (result) {
-	case SuperCardPro::SCPErr::scpOK: return ReadResponse::rrOK;
-	case SuperCardPro::SCPErr::scpNoDiskInDrive: return ReadResponse::rrNoDiskInDrive;
+	case SCPErr::scpOK: return ReadResponse::rrOK;
+	case SCPErr::scpNoDiskInDrive: return ReadResponse::rrNoDiskInDrive;
 	default:  return ReadResponse::rrError;
 	}
 	
@@ -220,13 +218,13 @@ CommonBridgeTemplate::ReadResponse SupercardProDiskBridge::readData(PLL::BridgeP
 //					suggestUsingPrecompensation		A suggestion that you might want to use write pre-compensation, optional
 // Returns TRUE if success, or false if it fails.  Largely doesn't matter as most stuff should verify with a read straight after
 bool SupercardProDiskBridge::writeData(const unsigned char* rawMFMData, const unsigned int numBits, const bool writeFromIndex, const bool suggestUsingPrecompensation) {
-	SuperCardPro::SCPErr response = m_io.writeCurrentTrackPrecomp(rawMFMData, (numBits + 7) / 8, writeFromIndex, suggestUsingPrecompensation);
+	SCPErr response = m_io.writeCurrentTrackPrecomp(rawMFMData, (numBits + 7) / 8, writeFromIndex, suggestUsingPrecompensation);
 
 	m_motorTurnOnTime = std::chrono::steady_clock::now();
 
 	switch (response) {
-	case SuperCardPro::SCPErr::scpOK: return true;
-	case SuperCardPro::SCPErr::scpWriteProtected: setWriteProtectStatus(true); return false;
+	case SCPErr::scpOK: return true;
+	case SCPErr::scpWriteProtected: setWriteProtectStatus(true); return false;
 	default:  return false;
 	}
 }

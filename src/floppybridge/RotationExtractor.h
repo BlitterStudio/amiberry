@@ -189,34 +189,34 @@ public:
 	}
 
 	// Return the current revolution time
-	[[nodiscard]] inline uint32_t getRevolutionTime() const { return m_revolutionTime; }
+	[[nodiscard]] uint32_t getRevolutionTime() const { return m_revolutionTime; }
 
 	// Set the current revolution time
 	void setRevolutionTime(const uint32_t time) { m_revolutionTime = time; m_revolutionTimeNearlyComplete = (uint32_t)(time * 0.9f); }
 
 	// Return the total amount of time data received so far
-	[[nodiscard]] inline uint32_t totalTimeReceived() const { return m_timeReceived; }
+	[[nodiscard]] uint32_t totalTimeReceived() const { return m_timeReceived; }
 
 	// Returns TRUE if this has learnt the time of a disk revolution
-	[[nodiscard]] inline bool hasLearntRotationSpeed() const { return m_revolutionTime > (m_isHD ? 300000000U : 150000000U); }
+	[[nodiscard]] bool hasLearntRotationSpeed() const { return m_revolutionTime > (m_isHD ? 300000000U : 150000000U); }
 
 	// Returns TRUE if we're in INDEX mode
-	[[nodiscard]] inline bool isInIndexMode() const { return m_useIndex; }
+	[[nodiscard]] bool isInIndexMode() const { return m_useIndex; }
 
 	// Sets the code so it always uses the index marker when finding revolutions
-	void inline setAlwaysUseIndex(bool useIndex) { m_useIndex = useIndex; }
+	void setAlwaysUseIndex(bool useIndex) { m_useIndex = useIndex; }
 
 	// In simple mode, the rotation is matched purely on Index pulses alone, the data is not matched. Index mode must be enabled. This is fine for SCP reading etc
-	void inline setSimpleMode(bool simpleMode) { m_useSimpleMode = simpleMode; }
+	void setSimpleMode(bool simpleMode) { m_useSimpleMode = simpleMode; }
 
 	// If this is about to spit out a revolution in a very small amount of time
-	[[nodiscard]] inline bool isNearlyReady() const { return (m_revolutionTimeNearlyComplete) && (m_currentTime >= m_revolutionTimeNearlyComplete) && (!m_useIndex); }
+	[[nodiscard]] bool isNearlyReady() const { return (m_revolutionTimeNearlyComplete) && (m_currentTime >= m_revolutionTimeNearlyComplete) && (!m_useIndex); }
 
 	// Submit a single sequence to the list
 	void submitSequence(const MFMSequenceInfo& sequence, bool isIndex, bool discardEarlySamples = true);
 
 	// Returns TRUE if we should be able to extract a revolution
-	[[nodiscard]] inline bool canExtract() const { return (m_revolutionReadyAt != INDEX_NOT_FOUND) && (m_revolutionReady) && (m_sequencePos>100); }
+	[[nodiscard]] bool canExtract() const { return (m_revolutionReadyAt != INDEX_NOT_FOUND) && (m_revolutionReady) && (m_sequencePos>100); }
 
 	// Extracts a single rotation and updates the buffer to remove it.  Returns FALSE if no rotation is available
 	// If calculateSpeedFactor is true, we're in INDEX mode, and HIGH_RESOLUTION_MODE is defined then this will output time in NS rather than the speed factor value

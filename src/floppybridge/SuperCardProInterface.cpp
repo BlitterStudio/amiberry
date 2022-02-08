@@ -117,7 +117,7 @@ SCPErr SCPInterface::openPort(bool useDriveA) {
 	m_motorIsEnabled = false;
 
 	std::vector<SerialIO::SerialPortInformation> ports;
-	m_comPort.enumSerialPorts(ports);
+	SerialIO::enumSerialPorts(ports);
 
 	// Find the port
 	for (const SerialIO::SerialPortInformation& port : ports) {
@@ -242,7 +242,7 @@ void SCPInterface::closePort() {
 	m_comPort.closePort();
 }
 
-// Returns the motor iddle (auto switch off) time
+// Returns the motor idle (auto switch off) time
 unsigned int SCPInterface::getMotorIdleTimeoutTime() {
 	return MOTOR_AUTOOFF_DELAY;
 }
@@ -417,7 +417,7 @@ SCPErr SCPInterface::writeCurrentTrackPrecomp(const unsigned char* mfmData, cons
 	const int precompTime = 140;   // Amiga default precomp amount (140ns)
 	int extraTimeFromPrevious = 0;
 
-	// Re-encode the data into our format and apply precomp.  The +1 is to ensure theres some padding around the edge 
+	// Re-encode the data into our format and apply precomp.  The +1 is to ensure there's some padding around the edge 
 	while (pos < numBytes + 1) {
 		int b, count = 0;
 
@@ -433,7 +433,7 @@ SCPErr SCPInterface::writeCurrentTrackPrecomp(const unsigned char* mfmData, cons
 		if (count > 5) count = 5;  // max we support 01, 001, 0001, 00001
 		
 		// Calculate the time for this in nanoseconds
-		int timeInNS = extraTimeFromPrevious + (count * 2000);     // 2=4000, 3=6000, 4=8000, (5=10000 although is isnt strictly allowed)
+		int timeInNS = extraTimeFromPrevious + (count * 2000);     // 2=4000, 3=6000, 4=8000, (5=10000 although is isn't strictly allowed)
 
 		if (usePrecomp) {
 			switch (sequence) {
@@ -613,7 +613,7 @@ bool SCPInterface::checkDiskCapacity(bool& isHD) {
 
 		// More efficient to read several bytes in one go		
 #ifdef USE_THREADDED_READER_SCP
-		tempReadBuffer.resize(0); // should be just as fast as clear, but just incase
+		tempReadBuffer.resize(0); // should be just as fast as clear, but just in case
 		safetyLock.lock();
 		std::swap(tempReadBuffer, readBuffer);
 		safetyLock.unlock();
@@ -708,7 +708,7 @@ bool SCPInterface::checkDiskCapacity(bool& isHD) {
 	}
 }
 
-// Reads a complete rotation of the disk, and returns it using the callback function whcih can return FALSE to stop
+// Reads a complete rotation of the disk, and returns it using the callback function which can return FALSE to stop
 // An instance of PLL is required which contains a rotation extractor.  This is purely to save on re-allocations.  It is internally reset each time
 SCPErr SCPInterface::readRotation(PLL::BridgePLL& pll, const unsigned int maxOutputSize, RotationExtractor::MFMSample* firstOutputBuffer, RotationExtractor::IndexSequenceMarker& startBitPatterns,
 	std::function<bool(RotationExtractor::MFMSample** mfmData, const unsigned int dataLengthInBits)> onRotation) {
@@ -763,7 +763,7 @@ SCPErr SCPInterface::readRotation(PLL::BridgePLL& pll, const unsigned int maxOut
 				safetyLock.unlock();
 }
 			else
-				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+				std::this_thread::sleep_for(std::chrono::microseconds(200));
 		}
 	});
 
@@ -795,7 +795,7 @@ SCPErr SCPInterface::readRotation(PLL::BridgePLL& pll, const unsigned int maxOut
 
 		// More efficient to read several bytes in one go	
 #ifdef USE_THREADDED_READER_SCP
-		tempReadBuffer.resize(0); // should be just as fast as clear, but just incase
+		tempReadBuffer.resize(0); // should be just as fast as clear, but just in case
 		safetyLock.lock();
 		std::swap(tempReadBuffer, readBuffer);
 		safetyLock.unlock();

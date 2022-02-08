@@ -92,7 +92,7 @@ protected:
 	// Possible responses from the read command
 	enum class ReadResponse { rrOK, rrError, rrNoDiskInDrive };
 
-	// So you can change the status of this as you detect it, for example, after a seek, or surface change, or after diskchange effect
+	// So you can change the status of this as you detect it, for example, after a seek, or surface change, or after disk change effect
 	void setWriteProtectStatus(const bool isWriteProtected) { m_writeProtected = isWriteProtected; }
 
 	// Returns TRUE if we should be making a manual check for the presence of a disk
@@ -364,7 +364,7 @@ protected:
 	// If your device supports being able to abort a disk read, mid-read then implement this
 	virtual void abortDiskReading() {}
 
-	// This is called by the main thread incase you need to do anything specific at regulat intervals
+	// This is called by the main thread in case you need to do anything specific at regular intervals
 	virtual void poll() {}
 
 	// If your device supports the DiskChange option then return TRUE here.  If not, then the code will simulate it
@@ -400,7 +400,7 @@ protected:
 	virtual bool setCurrentCylinder(const unsigned int cylinder)  = 0;
 
 	// If we're on track 0, this is the emulator trying to seek to track -1.  We catch this as a special case.  
-	// Should perform the same operations as setCurrentCylinder in terms of diskchange etc but without changing the current cylinder
+	// Should perform the same operations as setCurrentCylinder in terms of disk change etc but without changing the current cylinder
 	// Return FALSE if this is not supported by the bridge
 	virtual bool performNoClickSeek() = 0;
 
@@ -422,7 +422,7 @@ protected:
 	// Returns TRUE if success, or false if it fails.  Largely doesn't matter as most stuff should verify with a read straight after
 	virtual bool writeData(const unsigned char* rawMFMData, const unsigned int numBits, const bool writeFromIndex, const bool suggestUsingPrecompensation)  = 0;
 
-	// A manual way to check for disk change.  This is simulated by issuing a read message and seeing if theres any data.  Returns TRUE if data or an INDEX pulse was detected
+	// A manual way to check for disk change.  This is simulated by issuing a read message and seeing if there's any data.  Returns TRUE if data or an INDEX pulse was detected
 	// It's virtual as the default method issues a read and looks for data.  If you have a better implementation then override this
 	virtual bool attemptToDetectDiskChange()  = 0;
 
@@ -515,7 +515,7 @@ public:
 	virtual void writeShortToBuffer(bool side, unsigned int track, unsigned short mfmData, int mfmPosition) override final;
 
 	// Requests that any data received via writeShortToBuffer be saved to disk. The side and track should match against what you have been collected
-	// and the buffer should be reset upon completion.  You should return the new tracklength (maxMFMBitPosition) with optional padding if needed
+	// and the buffer should be reset upon completion.  You should return the new track length (maxMFMBitPosition) with optional padding if needed
 	virtual unsigned int commitWriteBuffer(bool side, unsigned int track) override final;
 
 	// Returns TRUE if commitWriteBuffer has been called but not written to disk yet
@@ -530,7 +530,7 @@ public:
 	// Return TRUE if we're at the INDEX marker
 	virtual bool isMFMPositionAtIndex(int mfmPositionBits) override final;
 
-	// Reset the drive.  This should reset it to the state it would be at powerup
+	// Reset the drive.  This should reset it to the state it would be at power up
 	virtual bool resetDrive(int trackNumber) override final;
 
 	// Set to TRUE if turbo writing is allowed (this is a sneaky DMA bypass trick)

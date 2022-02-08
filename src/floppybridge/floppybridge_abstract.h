@@ -165,7 +165,7 @@ public:
 	virtual bool isWriteProtected()  = 0;
 
 	// Requests that any data received via writeShortToBuffer be saved to disk. The side and track should match against what you have been collected
-	// and the buffer should be reset upon completion.  You should return the new tracklength (maxMFMBitPosition) with optional padding if needed
+	// and the buffer should be reset upon completion.  You should return the new track length (maxMFMBitPosition) with optional padding if needed
 	virtual unsigned int commitWriteBuffer(bool side, unsigned int track)  = 0;
 
 	// Returns TRUE if commitWriteBuffer has been called but not written to disk yet

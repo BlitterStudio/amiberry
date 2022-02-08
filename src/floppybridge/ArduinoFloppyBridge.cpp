@@ -85,7 +85,7 @@ bool ArduinoFloppyDiskBridge::supportsDiskChange() {
 
 // Called when the class is about to shut down
 void ArduinoFloppyDiskBridge::closeInterface() {
-	// Turn everythign off
+	// Turn everything off
 	m_io.enableReading(false);
 	m_io.closePort();
 }
@@ -197,7 +197,7 @@ const FloppyDiskBridge::BridgeDriver* ArduinoFloppyDiskBridge::_getDriverInfo() 
 
 // Duplicate of the one below, but here for consistency - Returns the name of interface.  This pointer should remain valid after the class is destroyed
 const FloppyDiskBridge::DriveTypeID ArduinoFloppyDiskBridge::_getDriveTypeID() {
-	return m_isHDDisk ? FloppyDiskBridge::DriveTypeID::dti35HD : FloppyDiskBridge::DriveTypeID::dti35DD;
+	return m_isHDDisk ? DriveTypeID::dti35HD : DriveTypeID::dti35DD;
 }
 
 // Called to switch which head is being used right now.  Returns success or not
@@ -223,7 +223,7 @@ bool ArduinoFloppyDiskBridge::getDiskChangeStatus(const bool forceCheck) {
 }
 
 // If we're on track 0, this is the emulator trying to seek to track -1.  We catch this as a special case.  
-// Should perform the same operations as setCurrentCylinder in terms of diskchange etc but without changing the current cylinder
+// Should perform the same operations as setCurrentCylinder in terms of disk change etc but without changing the current cylinder
 // Return FALSE if this is not supported by the bridge
 bool ArduinoFloppyDiskBridge::performNoClickSeek() {
 	// Claim we did it anyway
@@ -240,9 +240,9 @@ bool ArduinoFloppyDiskBridge::performNoClickSeek() {
 // Trigger a seek to the requested cylinder, this can block until complete
 bool ArduinoFloppyDiskBridge::setCurrentCylinder(const unsigned int cylinder) {
 	// No need if its busy
-	bool ignoreDiskCheck = (isMotorRunning()) && (!isReady());
+	bool ignoreDiskCheck = isMotorRunning() && !isReady();
 
-	// If we don't support diskchange then dont allow the hardware to check for a disk as it takes time, unless it's due anyway
+	// If we don't support disk change then don't allow the hardware to check for a disk as it takes time, unless it's due anyway
 	if (!m_io.getFirwareVersion().fullControlMod) ignoreDiskCheck |= !isReadyForManualDiskCheck();
 
 	// Go! - and don't ask
