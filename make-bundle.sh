@@ -37,7 +37,7 @@ mkdir Amiberry.app/Contents/resources/conf
 cat conf/amiberry-osx.conf | sed -e "s#USERDIR#$USERDIR#g" >Amiberry.app/Contents/Resources/conf/amiberry.conf
 
 # Create application directories
-mkdir -p ~/Documents/Amiberry/Hard\ Drives ~/Documents/Amiberry/Configurations ~/Documents/Amiberry/Controllers ~/Documents/Amibery/Logfiles ~Documents/Amiberry/Kickstarts ~Documents/Amiberry/RP9 ~/Documents/Amiberry/Data/Floppy_Sounds ~/Documents/Amiberry/Savestates ~/Documents/Amiberry/Screenshots ~/Documents/Amiberry/Docs
+mkdir -p ~/Documents/Amiberry/Hard\ Drives ~/Documents/Amiberry/Configurations ~/Documents/Amiberry/Controllers ~/Documents/Amiberry/Logfiles ~/Documents/Amiberry/Kickstarts ~/Documents/Amiberry/RP9 ~/Documents/Amiberry/Data/Floppy_Sounds ~/Documents/Amiberry/Savestates ~/Documents/Amiberry/Screenshots ~/Documents/Amiberry/Docs
 
 # Copy files to their destination
 cp -a conf/* ~/Documents/Amiberry/Configurations
