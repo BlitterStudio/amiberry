@@ -208,23 +208,23 @@ namespace ArduinoFloppyReader {
 		// Free me
 		~ArduinoInterface();
 
-		const LastCommand getLastFailedCommand() const { return m_lastCommand; };
-		const DiagnosticResponse getLastError() const { return m_lastError; };
+		const LastCommand getLastFailedCommand() const { return m_lastCommand; }
+		const DiagnosticResponse getLastError() const { return m_lastError; }
 
 		// Uses the above fields to constructor a suitable error message, hopefully useful in diagnosing the issue
 		const std::string getLastErrorStr() const;
 
-		const bool isOpen() const { return m_comPort.isPortOpen(); };
-		const bool isInWriteMode() const { return m_inWriteMode; };
+		const bool isOpen() const { return m_comPort.isPortOpen(); }
+		const bool isInWriteMode() const { return m_inWriteMode; }
 
 		// Returns a list of ports this could be available on
 		static void enumeratePorts(std::vector<std::wstring>& portList);
 
 		// Returns TRUE if there is a disk in the drive.   This is ONLY updated by checkForDisk or checkIfDiskIsWriteProtected
-		inline bool isDiskInDrive() const { return m_diskInDrive; };
+		bool isDiskInDrive() const { return m_diskInDrive; }
 
 		// Get the current firmware version.  Only valid if openPort is successful
-		const FirmwareVersion getFirwareVersion() const { return m_version; };
+		const FirmwareVersion getFirwareVersion() const { return m_version; }
 
 		// Turns on and off the reading interface.  For the new modded firmware this also allows writing as such the function below is no longer needed
 		DiagnosticResponse enableReading(const bool enable, const bool reset = true, const bool dontWait = false);
@@ -257,8 +257,8 @@ namespace ArduinoFloppyReader {
 		// Stops the read streaming immediately and any data in the buffer will be discarded. The above function will exit when the Arduino has also stopped streaming data
 		bool abortReadStreaming();
 
-		// Returns TURE if the disk si currently streaming data
-		inline bool isStreaming() { return m_isStreaming; };
+		// Returns TRUE if the disk si currently streaming data
+		inline bool isStreaming() { return m_isStreaming; }
 
 		// Check if an index pulse can be detected from the drive
 		DiagnosticResponse testIndexPulse();

@@ -381,7 +381,7 @@ bool RotationExtractor::extractRotation(MFMSample* output, uint32_t& outputBits,
 		m_nextSequenceIndex = INDEX_NOT_FOUND;
 
 		// And account for the shift
-		if (nextRevolutionStart > m_sequencePos) // this IF shouldnt be needed
+		if (nextRevolutionStart > m_sequencePos) // this IF shouldn't be needed
 			m_sequencePos = 0;
 		else  m_sequencePos -= nextRevolutionStart;
 	}
@@ -393,7 +393,7 @@ bool RotationExtractor::extractRotation(MFMSample* output, uint32_t& outputBits,
 		uint32_t nextRevolutionStart = getOverlapPosition(numBadValues);
 		if (nextRevolutionStart < 1) return false;
 
-		// If the overlap is poor, switch to overlap detection using the indexes - if this is in the GAP its ok, but theres no way to tell
+		// If the overlap is poor, switch to overlap detection using the indexes - if this is in the GAP its ok, but there's no way to tell
 		if (numBadValues >= MAX_BAD_VALUES_BEFORE_SWITCH) {
 			m_useIndex = true;
 			if (m_nextSequenceIndex == INDEX_NOT_FOUND) m_revolutionReady = false;

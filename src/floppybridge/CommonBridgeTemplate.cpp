@@ -71,16 +71,16 @@ OUTPUT_TIME_IN_NS should not be set(revolution extractor)
 // The 'bit' to return during this garbage time.  
 #define DRIVE_GARBAGE_VALUE							1
 
-// Auto-sense the disk, just like Amiga OS will, be do this if it hasnt 
+// Auto-sense the disk, just like Amiga OS will, be do this if it hasn't 
 #define DISKCHANGE_BEFORE_INSERTED_CHECK_INTERVAL	3000
 
 // We need to poll the drive once theres a disk in there to know when it's been removed.  This is the poll interval
 #define DISKCHANGE_ONCE_INSERTED_CHECK_INTERVAL		500
 
-// Auto-sense the disk, just like Amiga OS will, be do this if it hasnt - this is for non dickchange hardware
+// Auto-sense the disk, just like Amiga OS will, be do this if it hasn't - this is for non dick change hardware
 #define DISKCHANGE_BEFORE_INSERTED_CHECK_INTERVAL_NODSKCHG 3000
 
-// We need to poll the drive once theres a disk in there to know when its been removed.   this is for diskchange compatible hardware
+// We need to poll the drive once theres a disk in there to know when its been removed.   this is for disk change compatible hardware
 #define DISKCHANGE_ONCE_INSERTED_CHECK_INTERVAL_NODSKCHG 3000
 
 // The cylinder number that precomp should begin at
@@ -173,7 +173,7 @@ bool CommonBridgeTemplate::getNextTrackToAutoCache(int& cylinder, DiskSurface& s
 
 // Handle disk side change
 void CommonBridgeTemplate::switchDiskSide(const bool side) {
-	// Jsut to be 100% sure this is working right
+	// Just to be 100% sure this is working right
 	DiskSurface incommingSide = side ? DiskSurface::dsUpper : DiskSurface::dsLower;
 
 	if (incommingSide != m_floppySide) {
@@ -217,11 +217,11 @@ void CommonBridgeTemplate::pushOntoQueue(const QueueInfo& info, const bool shoul
 		m_queueSemaphoreFlag.notify_one();
 	}
 
-	// A little sneaky trick.  If theres a command to move on, but we have like 90% of the data and we dont have a complete reading for that track yet, it makes sense to carry on and finish it.
+	// A little sneaky trick.  If there's a command to move on, but we have like 90% of the data and we don't have a complete reading for that track yet, it makes sense to carry on and finish it.
 	if ((m_driveStreamingData) && ((m_bridgeMode == BridgeMode::bmStalling) || m_extractor.isNearlyReady()) && (!m_mfmRead[m_actualCurrentCylinder][(int)m_actualFloppySide].current.ready)) return;
-	if (m_firstTrackMode) return;  // dont stop me now
+	if (m_firstTrackMode) return;  // don't stop me now
 
-	// Make it drop out of streaming if thats what its doing
+	// Make it drop out of streaming if that's what its doing
 	if (shouldAbortStreaming && (!m_writeCompletePending) && (!m_writePending)) abortDiskReading();
 }
 
@@ -313,8 +313,8 @@ void CommonBridgeTemplate::mainThread() {
 			else
 				handleBackgroundCaching();
 
-			// If the queue is empty, the motor isnt on, and we think there's a disk in the drive we periodically check as we don't have any other way to find out
-			if ((isReadyForManualDiskCheck()) && (m_queue.size() < 1)) {
+			// If the queue is empty, the motor isn't on, and we think there's a disk in the drive we periodically check as we don't have any other way to find out
+			if ((isReadyForManualDiskCheck()) && (m_queue.empty())) {
 				// Monitor for disk
 				if (!supportsDiskChange()) {
 					diskInDrive = attemptToDetectDiskChange();
@@ -388,7 +388,7 @@ void CommonBridgeTemplate::internalCheckDiskDensity(bool newDiskInserted) {
 		forceDiskDensity(true);
 		break;
 	}
-	m_inHDMode = _getDriveTypeID() == FloppyDiskBridge::DriveTypeID::dti35HD;
+	m_inHDMode = _getDriveTypeID() == DriveTypeID::dti35HD;
 }
 
 
@@ -473,7 +473,7 @@ void CommonBridgeTemplate::saveNextBuffer(const int cylinder, const DiskSurface 
 			m_mfmRead[cylinder][(int)side].next.ready = true;
 		}
 		else {
-			// Shouldnt be able to ever get here
+			// Shouldn't be able to ever get here
 			m_mfmRead[cylinder][(int)side].next.ready = false;
 		}
 	}
@@ -545,7 +545,7 @@ void CommonBridgeTemplate::handleBackgroundDiskRead() {
 				revolutionExtracted = true;
 
 				// This is a little cache prediction, but could cause issues with things needing to re-read the same track over and over.  However eventually it will continue anyway
-				if (((((m_bridgeMode != BridgeMode::bmStalling)) && (m_bridgeMode != BridgeMode::bmCompatible) && (!m_inHDMode)) || (m_firstTrackMode))) {
+				if (m_bridgeMode != BridgeMode::bmStalling && m_bridgeMode != BridgeMode::bmCompatible && !m_inHDMode || m_firstTrackMode) {
 					// So, as a little speed up.  Is the other side of this track in memory?
 					if (!m_mfmRead[m_actualCurrentCylinder][1 - (int)m_actualFloppySide].current.ready) {
 						// No.  Is anything else going on?
@@ -608,7 +608,7 @@ void CommonBridgeTemplate::handleBackgroundDiskRead() {
 		if ((!trackData.ready) && (setActiveSurface(flipSurface))) {
 
 			// If there still isn't any jobs to do, then start reading it.
-			if (m_queue.size() < 1) {
+			if (m_queue.empty()) {
 				trackData.amountReadInBits = 0;
 
 				// Let the world know what we're doing.
@@ -624,7 +624,7 @@ void CommonBridgeTemplate::handleBackgroundDiskRead() {
 						trackData.amountReadInBits = dataLengthInBits;
 						saveNextBuffer(m_actualCurrentCylinder, flipSurface);
 						trackWasRead = true;
-						// We only want an intial one.
+						// We only want an initial one.
 						return false;
 
 					});
@@ -796,7 +796,7 @@ bool CommonBridgeTemplate::isMFMDataAvailable() {
 // Read a single bit from the data stream.   this should call triggerReadWriteAtIndex where appropriate
 bool CommonBridgeTemplate::getMFMBit(const int mfmPositionBits) {
 	if (!isReady()) return DRIVE_GARBAGE_VALUE;
-	if (mfmPositionBits < 0) return false; // weird, but this shouldnt happen
+	if (mfmPositionBits < 0) return false; // weird, but this shouldn't happen
 
 	// This shouldn't happen
 	if (m_mfmRead[m_currentTrack][(int)m_floppySide].current.amountReadInBits < 1) return DRIVE_GARBAGE_VALUE;
@@ -874,7 +874,7 @@ void CommonBridgeTemplate::handleBackgroundCaching() {
 		// Nothing left to cache.
 		
 		if (m_motorIsReady || m_motorSpinningUp) return;
-		// Trun off the motor if its not needed and we started it
+		// Turn off the motor if its not needed and we started it
 		if (m_autoCacheMotorStatus) {
 			m_autoCacheMotorStatus = false;
 			setMotorStatus(false);
@@ -1093,7 +1093,7 @@ void CommonBridgeTemplate::processCommand(const QueueInfo& info) {
 		TrackToWrite track;
 		{
 			std::lock_guard<std::mutex> lock(m_pendingWriteLock);
-			if (m_pendingTrackWrites.size() < 1) return;
+			if (m_pendingTrackWrites.empty()) return;
 			track = m_pendingTrackWrites.front();
 			m_pendingTrackWrites.erase(m_pendingTrackWrites.begin());
 		}
@@ -1180,10 +1180,9 @@ bool CommonBridgeTemplate::initialise() {
 	}
 	
 	m_lastError = "";
-	bool result = openInterface(m_lastError);	
 
 	// Setup
-	if (result) {
+	if (openInterface(m_lastError)) {
 		setMotorStatus(false);
 		internalSetMotorStatus(false);
 		m_autoCacheMotorStatus = false;
@@ -1227,7 +1226,7 @@ const char* CommonBridgeTemplate::getLastErrorMessage() {
 	return m_lastError.c_str();
 }
 
-// Reset the drive.  This should reset it to the state it would be at powerup
+// Reset the drive.  This should reset it to the state it would be at power up
 bool CommonBridgeTemplate::resetDrive(int trackNumber) {
 	// Delete all future writes
 	{
@@ -1264,7 +1263,7 @@ void CommonBridgeTemplate::setMotorStatus(bool side, bool turnOn) {
 		{
 			// Remove any turn off commands in the queue
 			std::lock_guard<std::mutex> lock(m_queueProtect);
-			if (m_queue.size()) {
+			if (!m_queue.empty()) {
 				switch (m_queue.back().command) {
 				case QueueCommand::qcMotorOff:
 				case QueueCommand::qcMotorOffDelay:
@@ -1302,7 +1301,7 @@ void CommonBridgeTemplate::gotoCylinder(int trackNumber, bool side) {
 	// We want to see if there are other 'goto track' commands in the queue just before this one.  If there is, we can replace them
 	{
 		std::lock_guard<std::mutex> lock(m_queueProtect);
-		if (m_queue.size()) {
+		if (!m_queue.empty()) {
 			if (m_queue.back().command == QueueCommand::qcGotoToTrack) {
 				m_queue.back().option.i = trackNumber;
 				queueUpdated = true;
@@ -1367,7 +1366,7 @@ bool CommonBridgeTemplate::isReadyToWrite() {
 
 
 // Requests that any data received via writeShortToBuffer be saved to disk. The side and track should match against what you have been collected
-// and the buffer should be reset upon completion.  You should return the new tracklength (maxMFMBitPosition) with optional padding if needed
+// and the buffer should be reset upon completion.  You should return the new track length (maxMFMBitPosition) with optional padding if needed
 unsigned int CommonBridgeTemplate::commitWriteBuffer(bool side, unsigned int track) {
 	gotoCylinder(track, side);
 

@@ -274,7 +274,7 @@ extern "C" {
             auto f = profileList.find(*profileID);
             if (f == profileList.end()) return false;
 
-            // This doesnt modify whats passed unless it returns TRUE
+            // This doesn't modify whats passed unless it returns TRUE
             BridgeProfileEditor editor(hInstance, hwndParent, bridgeLogos, f->second);
             return editor.doModal();
         }
@@ -531,7 +531,7 @@ extern "C" {
         return true;
     }
 
-    // Opens the driver for this bridge selection.  If it returns false, errorMessage is a pointer to the error, if TRUE, then errorMessage may be set to a warning message for compatability issues
+    // Opens the driver for this bridge selection.  If it returns false, errorMessage is a pointer to the error, if TRUE, then errorMessage may be set to a warning message for compatibility issues
     FLOPPYBRIDGE_API bool CALLING_CONVENSION BRIDGE_Open(BridgeOpened* bridgeDriverHandle, char** errorMessage) {
         if (bridgeDriverHandle->config.bridgeIndex >= BRIDGE_NumDrivers()) return false;
 

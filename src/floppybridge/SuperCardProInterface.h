@@ -157,7 +157,7 @@ namespace SuperCardPro {
 
 		const bool isOpen() const { return m_comPort.isPortOpen(); };
 
-		inline bool isWriteProtected() const { return m_isWriteProtected; };
+		bool isWriteProtected() const { return m_isWriteProtected; };
 
 		// Attempts to open the reader running on the COM port number provided.  
 		SCPErr openPort(bool useDriveA);

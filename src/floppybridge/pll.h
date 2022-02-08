@@ -101,13 +101,13 @@ namespace PLL {
 			std::function<bool(RotationExtractor::MFMSample* mfmData, const unsigned int dataLengthInBits)> onRotation);
 
 		// Return the active rotation extractor
-		inline RotationExtractor* rotationExtractor() { return m_extractor; };
+		RotationExtractor* rotationExtractor() { return m_extractor; }
 
 		// Pass on some functions from the extractor
-		inline bool canExtract() { return m_extractor->canExtract(); };
-		inline bool extractRotation(RotationExtractor::MFMSample* output, unsigned int& outputBits, const unsigned int maxBufferSizeBytes, const bool usePLLTime = false) { return m_extractor->extractRotation(output, outputBits, maxBufferSizeBytes, usePLLTime); }
-		inline void getIndexSequence(RotationExtractor::IndexSequenceMarker& sequence) const { m_extractor->getIndexSequence(sequence); }
-		inline unsigned int totalTimeReceived() const { return m_extractor->totalTimeReceived(); };
+		bool canExtract() { return m_extractor->canExtract(); }
+		bool extractRotation(RotationExtractor::MFMSample* output, unsigned int& outputBits, const unsigned int maxBufferSizeBytes, const bool usePLLTime = false) { return m_extractor->extractRotation(output, outputBits, maxBufferSizeBytes, usePLLTime); }
+		void getIndexSequence(RotationExtractor::IndexSequenceMarker& sequence) const { m_extractor->getIndexSequence(sequence); }
+		unsigned int totalTimeReceived() const { return m_extractor->totalTimeReceived(); }
 	};
 };
 

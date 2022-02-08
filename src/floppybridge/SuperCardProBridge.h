@@ -88,7 +88,7 @@ protected:
 	virtual bool setCurrentCylinder(const unsigned int cylinder) override;
 
 	// If we're on track 0, this is the emulator trying to seek to track -1.  We catch this as a special case.  
-	// Should perform the same operations as setCurrentCylinder in terms of diskchange etc but without changing the current cylinder
+	// Should perform the same operations as setCurrentCylinder in terms of disk change etc but without changing the current cylinder
 	// Return FALSE if this is not supported by the bridge
 	virtual bool performNoClickSeek() override;
 
