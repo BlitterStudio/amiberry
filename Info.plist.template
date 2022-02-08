@@ -14,7 +14,7 @@
 		<key>CFBundleIconName</key>
 			<string>AppIcon</string>
 		<key>CFBundleIconFile</key>
-			<string>docs/resources/icon-mac.png</string>
+			<string>docs/resources/icon.png</string>
 			<key>UIPrerenderedIcon</key>
 				<true/>
 		<key>CFBundleShortVersionString</key>
