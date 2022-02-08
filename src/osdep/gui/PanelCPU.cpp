@@ -470,9 +470,15 @@ void RefreshPanelCPU()
 	
 	chkCPUCycleExact->setSelected(changed_prefs.cpu_cycle_exact > 0);
 	chkCPUCycleExact->setEnabled(changed_prefs.cpu_model <= 68010);
-	
+
+// Make JIT not selectable with OS X for now, sigurbjornl, 20220208
+#ifndef __MACH__	
 	chkJIT->setEnabled(changed_prefs.cpu_model >= 68020);
 	chkJIT->setSelected(changed_prefs.cachesize > 0);
+#else
+	chkJIT->setEnabled(false);
+	chkJIT->setSelected(false);
+#endif
 
 	switch (changed_prefs.fpu_model)
 	{
@@ -499,6 +505,11 @@ void RefreshPanelCPU()
 	chkFPUJIT->setEnabled(changed_prefs.cachesize > 0);
 	chkFPUJIT->setSelected(changed_prefs.compfpu);
 #else
+	chkFPUJIT->setSelected(false);
+	chkFPUJIT->setEnabled(false);
+#endif
+// Make FPU JIT not selectable with OS X for now, sigurbjornl, 20220208
+#ifdef __MACH__
 	chkFPUJIT->setSelected(false);
 	chkFPUJIT->setEnabled(false);
 #endif
