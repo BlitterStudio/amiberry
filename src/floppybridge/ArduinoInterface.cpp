@@ -261,7 +261,7 @@ DiagnosticResponse ArduinoInterface::checkForDisk(bool forceCheck) {
 DiagnosticResponse ArduinoInterface::testIndexPulse() {
 	m_lastCommand = LastCommand::lcRunDiagnostics;
 
-	// Port opned.  We need to check what happens as the pin is toggled
+	// Port opened.  We need to check what happens as the pin is toggled
 	m_lastError = runCommand(COMMAND_DIAGNOSTICS, '3');
 
 	return m_lastError;
@@ -285,7 +285,7 @@ DiagnosticResponse ArduinoInterface::guessPlusMode(bool& isProbablyPlus) {
 DiagnosticResponse ArduinoInterface::testDataPulse() {
 	m_lastCommand = LastCommand::lcRunDiagnostics;
 
-	// Port opned.  We need to check what happens as the pin is toggled
+	// Port opened.  We need to check what happens as the pin is toggled
 	m_lastError = runCommand(COMMAND_DIAGNOSTICS, '4');
 
 	return m_lastError;
@@ -345,7 +345,7 @@ DiagnosticResponse ArduinoInterface::testCTS() {
 		// This doesn't actually run a command, this switches the CTS line back to its default setting
 		m_lastError = runCommand(COMMAND_DIAGNOSTICS);
 
-		if (ctsStatus ^ (a & 1) != 0) {
+		if (ctsStatus ^ ((a & 1) != 0)) {
 			// If we get here then the CTS value isn't what it should be
 			closePort();
 			m_lastError = DiagnosticResponse::drCTSFailure;
@@ -1648,7 +1648,7 @@ DiagnosticResponse ArduinoInterface::writeCurrentTrackHD(const unsigned char* mf
 			// See how many zero bits there are before we hit a 1
 			do {
 				b = readBit(mfmData, numBytes, pos, bit);
-				sequence = sequence << 1 & 0x7F | b;
+				sequence = ((sequence << 1) & 0x7F) | b;
 				count++;
 			} while ((sequence & 0x08) == 0 && pos < numBytes + 8);
 
@@ -1658,13 +1658,13 @@ DiagnosticResponse ArduinoInterface::writeCurrentTrackHD(const unsigned char* mf
 			switch (i) {
 			case 1:
 			case 3:
-				*output |= count - 1 << i * 2;
+				*output |= (count - 1) << (i * 2);
 				break;
 			case 0:
-				*output |= count - 1 << 2 * 2;
+				*output |= (count - 1) << (2 * 2);
 				break;
 			case 2:
-				*output |= count - 1 << 0 * 2;
+				*output |= (count - 1) << (0 * 2);
 				break;
 			}
 
