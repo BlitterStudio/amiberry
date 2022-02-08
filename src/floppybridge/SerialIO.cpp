@@ -237,7 +237,7 @@ void SerialIO::enumSerialPorts(std::vector<SerialPortInformation>& serialPorts) 
 			tmp.resize(requiredSize);
 			if (!SetupDiClassGuidsFromNameA("Ports", (LPGUID)tmp.data(), requiredSize, &requiredSize)) requiredSize = 0;
 		}
-		// Dont add duplicates
+		// Don't add duplicates
 		for (size_t c = 0; c < requiredSize; c++)
 			if (std::find(toSearch.begin(), toSearch.end(), tmp[c]) == toSearch.end())
 				toSearch.push_back(tmp[c]);
@@ -250,7 +250,7 @@ void SerialIO::enumSerialPorts(std::vector<SerialPortInformation>& serialPorts) 
 			tmp.resize(requiredSize);
 			if (!SetupDiClassGuidsFromNameA("Modem", (LPGUID)tmp.data(), requiredSize, &requiredSize)) requiredSize = 0;
 		}
-		// Dont add duplicates
+		// Don't add duplicates
 		for (size_t c = 0; c < requiredSize; c++)
 			if (std::find(toSearch.begin(), toSearch.end(), tmp[c]) == toSearch.end())
 				toSearch.push_back(tmp[c]);
@@ -299,7 +299,7 @@ void SerialIO::enumSerialPorts(std::vector<SerialPortInformation>& serialPorts) 
 						// Instance
 						if (SetupDiGetDeviceProperty(hDevInfoSet, &devInfo, &DEVPKEY_Device_InstanceId2, &type, (PBYTE)name, 128, 0, 0)) port.instanceID = name;
 
-						// Dont add any duplicates
+						// Don't add any duplicates
 						if (std::find_if(serialPorts.begin(), serialPorts.end(), [&port](SerialPortInformation search)->bool {
 							return search.portName == port.portName;
 						}) == serialPorts.end()) serialPorts.push_back(port);
@@ -319,8 +319,8 @@ void SerialIO::enumSerialPorts(std::vector<SerialPortInformation>& serialPorts) 
 	DIR* dir = opendir("/sys/class/tty");
 	if (!dir) return;
 
-	struct dirent* entry;
-	struct stat statbuf;
+	dirent* entry;
+	struct stat statbuf{};
 
 	while ((entry = readdir(dir))) {
 		std::string deviceRoot = "/sys/class/tty/" + std::string(entry->d_name);
@@ -342,39 +342,43 @@ void SerialIO::enumSerialPorts(std::vector<SerialPortInformation>& serialPorts) 
 			quicka2w(name, prt.portName);
 
 			std::string dirName = "/sys/class/tty/" + std::string(entry->d_name) + "/device/";
-			std::string subDir = "";
+			std::string subDir;
 
-			for (int i=0; i<5; i++) {
+			for (int i = 0; i < 5; i++) {
 				subDir += "../";
-				std::string vidPath = dirName + "/"+subDir+"/idVendor";
+				std::string vidPath = dirName + "/";
+				vidPath.append(subDir + "/idVendor");
 
 				int file = open(vidPath.c_str(), O_RDONLY | O_CLOEXEC);
 				if (file == -1) continue;
 				FILE* fle = fdopen(file, "r");
 				int count = fscanf(fle, "%4x", &prt.vid);
 				fclose(fle);
-				if (count !=1) continue;
+				if (count != 1) continue;
 
-				vidPath = dirName + "/"+subDir+"/idProduct";
+				vidPath = dirName + "/";
+				vidPath.append(subDir + "/idProduct");
 				file = open(vidPath.c_str(), O_RDONLY | O_CLOEXEC);
 				if (file == -1) continue;
 				fle = fdopen(file, "r");
 				count = fscanf(fle, "%4x", &prt.pid);
 				fclose(fle);
-				if (count !=1) continue;
+				if (count != 1) continue;
 
-				vidPath = dirName + "/"+subDir+"/product";
+				vidPath = dirName + "/";
+				vidPath.append(subDir + "/product");
 				file = open(vidPath.c_str(), O_RDONLY | O_CLOEXEC);
 				if (file == -1) continue;
 				fle = fdopen(file, "r");
 				char* p;
 				if ((p = fgets(target, sizeof(target), fle))) {
-					if (p[strlen(p)-1] == '\n') p[strlen(p)-1] = '\0';
+					if (p[strlen(p) - 1] == '\n') p[strlen(p) - 1] = '\0';
 					quicka2w(target, prt.productName);
 				}
 				fclose(fle);
 
-				vidPath = dirName + "/"+subDir+"/serial";
+				vidPath = dirName + "/";
+				vidPath.append(subDir + "/serial");
 				file = open(vidPath.c_str(), O_RDONLY | O_CLOEXEC);
 				if (file == -1) continue;
 				fle = fdopen(file, "r");

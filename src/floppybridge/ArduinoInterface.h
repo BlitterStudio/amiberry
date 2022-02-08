@@ -258,7 +258,7 @@ namespace ArduinoFloppyReader {
 		bool abortReadStreaming();
 
 		// Returns TRUE if the disk si currently streaming data
-		inline bool isStreaming() { return m_isStreaming; }
+		bool isStreaming() { return m_isStreaming; }
 
 		// Check if an index pulse can be detected from the drive
 		DiagnosticResponse testIndexPulse();

@@ -96,7 +96,7 @@ protected:
 	virtual bool setCurrentCylinder(const unsigned int cylinder) override;
 
 	// If we're on track 0, this is the emulator trying to seek to track -1.  We catch this as a special case.  
-	// Should perform the same operations as setCurrentCylinder in terms of diskchange etc but without changing the current cylinder
+	// Should perform the same operations as setCurrentCylinder in terms of disk change etc but without changing the current cylinder
 	// Return FALSE if this is not supported by the bridge
 	virtual bool performNoClickSeek() override;
 
@@ -115,7 +115,7 @@ protected:
 	//					numBytes						Number of bits in the buffer to write
 	//					writeFromIndex					If an attempt should be made to write this from the INDEX pulse rather than just a random position
 	//					suggestUsingPrecompensation		A suggestion that you might want to use write precompensation, optional
-	// Returns TRUE if success, or false if it fails.  Largely doesnt matter as most stuff should verify with a read straight after
+	// Returns TRUE if success, or false if it fails.  Largely doesn't matter as most stuff should verify with a read straight after
 	virtual bool writeData(const unsigned char* rawMFMData, const unsigned int numBits, const bool writeFromIndex, const bool suggestUsingPrecompensation) override;
 
 	// A manual way to check for disk change.  This is simulated by issuing a read message and seeing if there's any data.  Returns TRUE if data or an INDEX pulse was detected
