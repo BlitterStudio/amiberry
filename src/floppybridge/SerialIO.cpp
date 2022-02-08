@@ -209,7 +209,7 @@ void SerialIO::enumSerialPorts(std::vector<SerialPortInformation>& serialPorts) 
 						info.ftdiIndex = index;
 
 						// Test if one with this name already exists
-					} while (std::ranges::find_if(serialPorts, [&info](const SerialPortInformation& port)->bool {
+					} while (std::find_if(serialPorts.begin(), serialPorts.end(), [&info](const SerialPortInformation& port)->bool {
 						return (info.portName == port.portName);
 					}) != serialPorts.end());
 
@@ -300,7 +300,7 @@ void SerialIO::enumSerialPorts(std::vector<SerialPortInformation>& serialPorts) 
 						if (SetupDiGetDeviceProperty(hDevInfoSet, &devInfo, &DEVPKEY_Device_InstanceId2, &type, (PBYTE)name, 128, 0, 0)) port.instanceID = name;
 
 						// Dont add any duplicates
-						if (std::ranges::find_if(serialPorts, [&port](SerialPortInformation search)->bool {
+						if (std::find_if(serialPorts.begin(), serialPorts.end(), [&port](SerialPortInformation search)->bool {
 							return search.portName == port.portName;
 						}) == serialPorts.end()) serialPorts.push_back(port);
 					}
@@ -425,7 +425,7 @@ SerialIO::Response SerialIO::openPort(const std::wstring& portName) {
 			enumSerialPorts(serialPorts);
 
 			// See if it exists
-			auto f = std::ranges::find_if(serialPorts, [&portName](const SerialPortInformation& serialport)-> bool {
+			auto f = std::find_if(serialPorts.begin(), serialPorts.end(), [&portName](const SerialPortInformation& serialport)-> bool {
 				return portName == serialport.portName;
 			});
 
