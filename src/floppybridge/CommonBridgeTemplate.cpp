@@ -180,7 +180,7 @@ void CommonBridgeTemplate::switchDiskSide(const bool side) {
 		resetWriteBuffer();
 		m_floppySide = incommingSide;
 		if (!m_mfmRead[m_currentTrack][(int)m_floppySide].current.ready) {
-			std::lock_guard<std::mutex> lock(m_readBufferAvailableLock);
+			std::lock_guard lock(m_readBufferAvailableLock);
 			m_readBufferAvailable = false;
 		}
 		queueCommand(QueueCommand::qcSelectDiskSide, side, !m_isCurrentlyHeadCheating);
@@ -189,7 +189,7 @@ void CommonBridgeTemplate::switchDiskSide(const bool side) {
 
 // Add a command for the thread to process
 void CommonBridgeTemplate::queueCommand(const QueueCommand command, const int optionI, const bool shouldAbortStreaming) {
-	QueueInfo info;
+	QueueInfo info{};
 	info.command = command;
 	info.option.i = optionI;
 
@@ -198,7 +198,7 @@ void CommonBridgeTemplate::queueCommand(const QueueCommand command, const int op
 
 // Add a command for the thread to process
 void CommonBridgeTemplate::queueCommand(const QueueCommand command, const bool optionB, const bool shouldAbortStreaming) {
-	QueueInfo info;
+	QueueInfo info{};
 	info.command = command;
 	info.option.b = optionB;
 
@@ -208,11 +208,11 @@ void CommonBridgeTemplate::queueCommand(const QueueCommand command, const bool o
 // Add to queue
 void CommonBridgeTemplate::pushOntoQueue(const QueueInfo& info, const bool shouldAbortStreaming, bool insertAtStart) {
 	{
-		std::lock_guard<std::mutex> lock(m_queueProtect);
+		std::lock_guard lock(m_queueProtect);
 		if (insertAtStart) m_queue.push_front(info); else m_queue.push_back(info);
 	}
 	{
-		std::lock_guard<std::mutex> lock(m_queueSemaphoreLock);
+		std::lock_guard lock(m_queueSemaphoreLock);
 		m_queueSemaphore++;
 		m_queueSemaphoreFlag.notify_one();
 	}
@@ -227,11 +227,11 @@ void CommonBridgeTemplate::pushOntoQueue(const QueueInfo& info, const bool shoul
 
 // Process the queue.  Return TRUE if the thread should quit
 bool CommonBridgeTemplate::processQueue() {
-	QueueInfo cmd;
+	QueueInfo cmd{};
 
 	{
-		std::lock_guard<std::mutex> lock(m_queueProtect);
-		if (!m_queue.size()) return false;
+		std::lock_guard lock(m_queueProtect);
+		if (m_queue.empty()) return false;
 
 		cmd = m_queue.front();
 		m_queue.pop_front();
@@ -290,13 +290,13 @@ void CommonBridgeTemplate::mainThread() {
 			const auto queuePause = std::chrono::milliseconds((m_motorIsReady || autoCachingRequired) ? 1 : 50);
 
 			{
-				std::unique_lock<std::mutex> lck(m_queueSemaphoreLock);
+				std::unique_lock lck(m_queueSemaphoreLock);
 				queueReady = m_driveResetStatusFlag.wait_for(lck, queuePause, [this] { return m_queueSemaphore > 0; });
 			}
 		}
 		if (queueReady) {
 			{
-				std::lock_guard<std::mutex> lck(m_queueSemaphoreLock);
+				std::lock_guard lck(m_queueSemaphoreLock);
 				m_queueSemaphore--;
 			}
 
@@ -394,7 +394,7 @@ void CommonBridgeTemplate::internalCheckDiskDensity(bool newDiskInserted) {
 
 // Reset the previously setup queue
 void CommonBridgeTemplate::resetMFMCache() {
-	std::lock_guard<std::mutex> lock(m_switchBufferLock);
+	std::lock_guard lock(m_switchBufferLock);
 
 	for (int a = 0; a < MAX_CYLINDER_BRIDGE; a++)
 		for (int c = 0; c < 2; c++) {
@@ -407,7 +407,7 @@ void CommonBridgeTemplate::resetMFMCache() {
 	m_extractor.newDisk(m_inHDMode);
 	m_pll.reset();
 	
-	std::lock_guard<std::mutex> lockbuff(m_readBufferAvailableLock);
+	std::lock_guard lockbuff(m_readBufferAvailableLock);
 	m_readBufferAvailable = false;
 
 	m_writePending = false;
@@ -468,7 +468,7 @@ void CommonBridgeTemplate::saveNextBuffer(const int cylinder, const DiskSurface 
 
 	// Save the new buffer
 	{
-		std::lock_guard<std::mutex> lock(m_switchBufferLock);
+		std::lock_guard lock(m_switchBufferLock);
 		if (m_mfmRead[cylinder][(int)side].next.amountReadInBits) {
 			m_mfmRead[cylinder][(int)side].next.ready = true;
 		}
@@ -493,7 +493,7 @@ void CommonBridgeTemplate::saveNextBuffer(const int cylinder, const DiskSurface 
 
 		// This test *should* always be true
 		if ((cylinder == m_currentTrack) && (side == m_floppySide)) {
-			std::lock_guard<std::mutex> lock(m_readBufferAvailableLock);
+			std::lock_guard lock(m_readBufferAvailableLock);
 			m_readBufferAvailable = true;
 			m_readBufferAvailableFlag.notify_one();
 		}
@@ -659,7 +659,7 @@ void CommonBridgeTemplate::handleBackgroundDiskRead() {
 
 						if (!m_mfmRead[m_actualCurrentCylinder][(int)flipSurface].next.ready) {
 							// Try for a re-play
-							MFMCache& trackData = m_mfmRead[m_actualCurrentCylinder][(int)flipSurface].next;
+							trackData = m_mfmRead[m_actualCurrentCylinder][(int)flipSurface].next;
 							trackData.amountReadInBits = 0;
 							trackData.ready = false;
 
@@ -712,15 +712,15 @@ int CommonBridgeTemplate::maxMFMBitPosition() {
 #endif
 }
 
-// This is called to switch to a different copy of the track so multiple revolutions can ve read
+// This is called to switch to a different copy of the track so multiple revolutions can be read
 void CommonBridgeTemplate::mfmSwitchBuffer(bool side) {
 	switchDiskSide(side);
 	internalSwitchCylinder(m_currentTrack, m_floppySide);
 }
 
-// This is called to switch to a different copy of the track so multiple revolutions can ve read
+// This is called to switch to a different copy of the track so multiple revolutions can be read
 void CommonBridgeTemplate::internalSwitchCylinder(const int cylinder, const DiskSurface side) {
-	std::lock_guard<std::mutex> lock(m_switchBufferLock);
+	std::lock_guard lock(m_switchBufferLock);
 
 	// Is there a new one?
 	if (m_mfmRead[cylinder][(int)side].next.ready) {
@@ -739,7 +739,7 @@ void CommonBridgeTemplate::internalSwitchCylinder(const int cylinder, const Disk
 		}
 
 	if (m_writeCompletePending) {
-		std::lock_guard<std::mutex> lock(m_writeLockCompleteFlag);
+		std::lock_guard write_lock(m_writeLockCompleteFlag);
 		m_writeCompletePending = false;
 		m_writeComplete = true;
 		m_lastWroteTo = (cylinder * 2) + ((int)side);
@@ -852,10 +852,10 @@ bool CommonBridgeTemplate::isReady() {
 // Handle caching track data in the background
 void CommonBridgeTemplate::handleBackgroundCaching() {
 	if (!m_shouldAutoCache) return;
-	if (m_queue.size()) return;
+	if (!m_queue.empty()) return;
 	if (m_lastWroteTo >= 0) return;  // don't do this if a write is happening
 	if (!m_diskInDrive) {
-		// Trun off the motor if its not needed and we started it
+		// Turn off the motor if its not needed and we started it
 		if (m_motorIsReady || m_motorSpinningUp) return;
 		if (m_autoCacheMotorStatus) {
 			m_autoCacheMotorStatus = false;
@@ -1006,7 +1006,7 @@ void CommonBridgeTemplate::checkMotorOff() {
 	if (timePassed >= getDriveSpinupTime()) {
 		m_motorTurnOffEnabled = false;
 
-		QueueInfo cmd;
+		QueueInfo cmd{};
 		cmd.command = QueueCommand::qcMotorOff;
 		cmd.option.b = false;
 		pushOntoQueue(cmd, true, true);
@@ -1021,7 +1021,7 @@ void CommonBridgeTemplate::processCommand(const QueueInfo& info) {
 	case QueueCommand::qcResetDrive:
 		// Delete all future writes
 		{
-			std::lock_guard<std::mutex> lock(m_pendingWriteLock);
+			std::lock_guard lock(m_pendingWriteLock);
 			m_pendingTrackWrites.clear();
 		}
 		m_writePending = false;
@@ -1038,7 +1038,7 @@ void CommonBridgeTemplate::processCommand(const QueueInfo& info) {
 		m_isMotorRunning = false;		
 		resetMFMCache();
 		{
-			std::lock_guard<std::mutex> lock(m_driveResetStatusFlagLock);
+			std::lock_guard lock(m_driveResetStatusFlagLock);
 			m_driveResetStatus = true;
 			m_driveResetStatusFlag.notify_one();
 		}
@@ -1092,7 +1092,7 @@ void CommonBridgeTemplate::processCommand(const QueueInfo& info) {
 		// Grab the item
 		TrackToWrite track;
 		{
-			std::lock_guard<std::mutex> lock(m_pendingWriteLock);
+			std::lock_guard lock(m_pendingWriteLock);
 			if (m_pendingTrackWrites.empty()) return;
 			track = m_pendingTrackWrites.front();
 			m_pendingTrackWrites.erase(m_pendingTrackWrites.begin());
@@ -1171,11 +1171,11 @@ bool CommonBridgeTemplate::initialise() {
 
 	// Clear down the queue
 	{
-		std::lock_guard<std::mutex> lock(m_queueProtect);
+		std::lock_guard lock(m_queueProtect);
 		m_queue.clear();
 	}
 	{
-		std::lock_guard<std::mutex> lock(m_queueSemaphoreLock);
+		std::lock_guard lock(m_queueSemaphoreLock);
 		m_queueSemaphore = 0;
 	}
 	
@@ -1230,19 +1230,19 @@ const char* CommonBridgeTemplate::getLastErrorMessage() {
 bool CommonBridgeTemplate::resetDrive(int trackNumber) {
 	// Delete all future writes
 	{
-		std::lock_guard<std::mutex> lock(m_pendingWriteLock);
+		std::lock_guard lock(m_pendingWriteLock);
 		m_pendingTrackWrites.clear();
 	} 
 
 	// Reset flag
 	{
-		std::lock_guard<std::mutex> lock(m_driveResetStatusFlagLock);
+		std::lock_guard lock(m_driveResetStatusFlagLock);
 		m_driveResetStatus = false;
 	}
 	queueCommand(QueueCommand::qcResetDrive);
 
 	// Wait for the reset to occur.  At this point we know the queue is also clear
-	std::unique_lock<std::mutex> lck(m_driveResetStatusFlagLock);
+	std::unique_lock lck(m_driveResetStatusFlagLock);
 	m_driveResetStatusFlag.wait(lck, [this] { return m_driveResetStatus; });
 
 	// Ready
@@ -1262,7 +1262,7 @@ void CommonBridgeTemplate::setMotorStatus(bool side, bool turnOn) {
 	if (turnOn) {
 		{
 			// Remove any turn off commands in the queue
-			std::lock_guard<std::mutex> lock(m_queueProtect);
+			std::lock_guard lock(m_queueProtect);
 			if (!m_queue.empty()) {
 				switch (m_queue.back().command) {
 				case QueueCommand::qcMotorOff:
@@ -1300,13 +1300,13 @@ void CommonBridgeTemplate::gotoCylinder(int trackNumber, bool side) {
 
 	// We want to see if there are other 'goto track' commands in the queue just before this one.  If there is, we can replace them
 	{
-		std::lock_guard<std::mutex> lock(m_queueProtect);
+		std::lock_guard lock(m_queueProtect);
 		if (!m_queue.empty()) {
 			if (m_queue.back().command == QueueCommand::qcGotoToTrack) {
 				m_queue.back().option.i = trackNumber;
 				queueUpdated = true;
 				if (!m_mfmRead[m_currentTrack][(int)m_floppySide].current.ready) {
-					std::lock_guard<std::mutex> lock(m_readBufferAvailableLock);
+					std::lock_guard lock(m_readBufferAvailableLock);
 					m_readBufferAvailable = false;
 				}
 			}
@@ -1316,7 +1316,7 @@ void CommonBridgeTemplate::gotoCylinder(int trackNumber, bool side) {
 	// Nope? Well we'll just add it then
 	if (!queueUpdated) {
 		if (!m_mfmRead[m_currentTrack][(int)m_floppySide].current.ready) {
-			std::lock_guard<std::mutex> lock(m_readBufferAvailableLock);
+			std::lock_guard lock(m_readBufferAvailableLock);
 			m_readBufferAvailable = false;
 		}
 
@@ -1388,12 +1388,12 @@ unsigned int CommonBridgeTemplate::commitWriteBuffer(bool side, unsigned int tra
 		}
 
 		{
-			std::lock_guard<std::mutex> lock(m_pendingWriteLock);
+			std::lock_guard lock(m_pendingWriteLock);
 			m_pendingTrackWrites.push_back(m_currentWriteTrack);
 			m_writePending = true;
 			queueCommand(QueueCommand::writeMFMData);
 			{
-				std::lock_guard<std::mutex> lock2(m_switchBufferLock);
+				std::lock_guard lock2(m_switchBufferLock);
 
 				// Prevent old data being read back by WinUAE
 				MFMCaches* cache = &m_mfmRead[track][(int)m_floppySide];
@@ -1418,7 +1418,7 @@ bool CommonBridgeTemplate::isWritePending() {
 
 // Returns TRUE if a write is no longer pending.  This should only return TRUE the first time, and then should reset
 bool CommonBridgeTemplate::isWriteComplete() {
-	std::lock_guard<std::mutex> lock(m_writeLockCompleteFlag);
+	std::lock_guard lock(m_writeLockCompleteFlag);
 
 	bool ret = m_writeComplete;
 	m_writeComplete = false;

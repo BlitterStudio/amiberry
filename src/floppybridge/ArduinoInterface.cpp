@@ -955,8 +955,7 @@ void unpack(const unsigned char* data, unsigned char* output, const int maxLengt
 		// Each byte contains four pairs of bits that identify an MFM sequence to be encoded
 
 		for (int b = 6; b >= 0; b -= 2) {
-			unsigned char value = data[index] >> b & 3;
-			switch (value) {
+			switch (unsigned char value = data[index] >> b & 3) {
 			case 0:
 				// This can't happen, its invalid data but we account for 4 '0' bits
 				writeBit(output, pos, p2, 0, maxLength);
@@ -1285,7 +1284,7 @@ DiagnosticResponse ArduinoInterface::readRotation(RotationExtractor& extractor, 
 			}
 			else {
 				unsigned char tmp;
-				RotationExtractor::MFMSequenceInfo sequence;
+				RotationExtractor::MFMSequenceInfo sequence{};
 				if (m_isHDMode) {
 					for (int i = 6; i >= 0; i -= 2) {
 						tmp = byteRead >> i & 0x03;
@@ -2042,7 +2041,7 @@ void appendToBlock(DWORD fluxTime, DWORD& timingsExtra, Times8& currentBlock, st
 		timingsExtra--;
 	}
 
-	// Dont forget the actual data
+	// Don't forget the actual data
 	currentBlock.times[currentBlock.numUsed++] = (uint8_t)fluxTime;
 	if (currentBlock.numUsed >= 8) {
 		timingsAdjusted += validateBlock(currentBlock);
@@ -2227,7 +2226,7 @@ DiagnosticResponse ArduinoInterface::writeFlux(const std::vector<DWORD>& fluxTim
 
 	// Hmm, this could be an issue
 	if (timingsOver >= FLUX_JITTER && compensateFluxTimings) {
-		// We'll look at the blocks of 8, and see if theres any we can shorten.  Its rare though
+		// We'll look at the blocks of 8, and see if there's any we can shorten.  Its rare though
 		for (Times8& block : fluxTimesGrouped) {
 			DWORD total = 0;
 			// See how long this block is
