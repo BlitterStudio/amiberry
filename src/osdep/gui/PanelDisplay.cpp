@@ -422,7 +422,7 @@ void InitPanelDisplay(const config_category& category)
 	chkAspect->setId("chkAspect");
 	chkAspect->addActionListener(amigaScreenActionListener);
 
-	chkFrameskip = new gcn::CheckBox("Frameskip");
+	chkFrameskip = new gcn::CheckBox("Refresh");
 	chkFrameskip->setId("chkFrameskip");
 	chkFrameskip->addActionListener(amigaScreenActionListener);
 
