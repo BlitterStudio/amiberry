@@ -672,7 +672,7 @@ static int p96_framecnt;
 int p96skipmode = -1;
 static int doskip (void)
 {
-	if (p96_framecnt > currprefs.gfx_framerate)
+	if (p96_framecnt >= currprefs.gfx_framerate)
 		p96_framecnt = 0;
 	return p96_framecnt > 0;
 }
