@@ -71,7 +71,7 @@
 #elif defined(__APPLE__)
 #include <OpenGL/gl.h>
 #else
-#include <GL/gl.h>
+#include <SDL_opengl.h>
 #endif
 
 #include "guisan/exception.hpp"
