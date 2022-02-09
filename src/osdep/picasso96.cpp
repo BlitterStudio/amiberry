@@ -4141,11 +4141,7 @@ static void copyrow(int monid, uae_u8 *src, uae_u8 *dst, int x, int y, int width
 			case RGBFB_R8G8B8A8_32:
 			case RGBFB_R5G6B5PC_16:
 #endif
-#ifdef AMIBERRY
-				copy_screen_32bit_to_32bit(dst2 + dx * dstpix, src2 + x * srcpix, width * dstpix);
-#else
 				memcpy (dst2 + dx * dstpix, src2 + x * srcpix, width * dstpix);
-#endif
 			return;
 		}
 	//} else {
