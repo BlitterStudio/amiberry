@@ -1737,6 +1737,12 @@ void target_fixup_options(struct uae_prefs* p)
 	}
 	// Always use these pixel formats, for optimal performance
 	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5PC | RGBFF_R8G8B8A8;
+
+#ifdef USE_DISPMANX
+	// Always disable Virtual Mouse mode on Dispmanx, as it doesn't work as expected in some cases
+	if (p->input_tablet > 0)
+		p->input_tablet = TABLET_OFF;
+#endif
 #endif
 	
 	if (p->rtgboards[0].rtgmem_type >= GFXBOARD_HARDWARE) {
