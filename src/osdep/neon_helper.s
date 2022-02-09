@@ -208,8 +208,6 @@ copy_screen_32bit_to_16bit:
 copy_screen_32bit_to_32bit:
   vld1.64   {d18-d19}, [r1]!
   subs      r2, r2, #16
-  vrev32.8  d18, d18
-  vrev32.8  d19, d19
   vst1.64   {d18-d19}, [r0]!
   bne       copy_screen_32bit_to_32bit
   bx        lr

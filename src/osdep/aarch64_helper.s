@@ -194,7 +194,6 @@ copy_screen_32bit_to_16bit_loop:
 copy_screen_32bit_to_32bit:
   ld1       {v3.4S}, [x1], #16
   subs      w2, w2, #16
-  rev32     v3.16B, v3.16B
   st1       {v3.4S}, [x0], #16
   bne       copy_screen_32bit_to_32bit
   ret
