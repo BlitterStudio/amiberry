@@ -193,7 +193,6 @@ ldmia sp!, {r4-r6, pc}
 copy_screen_32bit_to_32bit:
   ldr       r3, [r1], #4
   subs      r2, r2, #4
-  rev       r3, r3
   str       r3, [r0], #4
   bne       copy_screen_32bit_to_32bit
   bx        lr
