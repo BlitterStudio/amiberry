@@ -1263,9 +1263,9 @@ void gui_widgets_init()
 	//--------------------------------------------------
 	// Create selector entries
 	//--------------------------------------------------
-	const auto workAreaHeight = GUI_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - DISTANCE_NEXT_Y;
+	const auto workAreaHeight = GUI_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10;
 	selectors = new gcn::Container();
-	selectors->setSize(150, workAreaHeight - 2);
+	selectors->setSize(150, workAreaHeight);
 	selectors->setBaseColor(colSelectorInactive);
 	selectors->setBorderSize(1);
 	const auto panelStartX = DISTANCE_BORDER + selectors->getWidth() + 2 + 11;
@@ -1281,7 +1281,7 @@ void gui_widgets_init()
 
 		categories[i].panel = new gcn::Container();
 		categories[i].panel->setId(categories[i].category);
-		categories[i].panel->setSize(GUI_WIDTH - panelStartX - DISTANCE_BORDER - 1, workAreaHeight - 2);
+		categories[i].panel->setSize(GUI_WIDTH - panelStartX - DISTANCE_BORDER, workAreaHeight);
 		categories[i].panel->setBaseColor(gui_baseCol);
 		categories[i].panel->setBorderSize(1);
 		categories[i].panel->setVisible(false);
