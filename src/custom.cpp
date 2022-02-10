@@ -5562,6 +5562,11 @@ static void init_hz(bool checkvposw)
 	if (!ecs_agnus) {
 		isntsc = currprefs.ntscmode ? 1 : 0;
 	}
+#ifdef AMIBERRY // Don't change vblank_hz when opening P96 screens
+	if (picasso_is_active(0)) {
+		isntsc = currprefs.ntscmode ? 1 : 0;
+	}
+#endif
 	float clk = currprefs.ntscmode ? CHIPSET_CLOCK_NTSC : CHIPSET_CLOCK_PAL;
 	if (!isntsc) {
 		maxvpos = MAXVPOS_PAL;
