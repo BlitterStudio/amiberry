@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env sh
 
 USERDIR=`echo ~`
 
@@ -7,8 +7,6 @@ VERSION=`echo $LONGVER | awk -F v '{printf $2}' | awk '{print $1}'`
 MAJOR=`echo $VERSION | awk -F . '{printf $1}'`
 MINOR=`echo $VERSION | awk -F . '{printf $2}'`
 
-
-cat Info.plist.template | sed -e "s/LONGVERSION/$LONGVER/" | sed -e "s/VERSION/$VERSION/" | sed -e "s/MAJOR/$MAJOR/" | sed -e "s/MINOR/$MINOR/" >Info.plist
 echo "Removing old App directory"
 rm -Rf Amiberry.app
 echo "Creating App directory"
@@ -18,35 +16,27 @@ mkdir -p Amiberry.app/Contents/Frameworks
 mkdir -p Amiberry.app/Contents/Resources
 # Copy executable into App bundle
 cp amiberry Amiberry.app/Contents/MacOS/Amiberry
+# Copy launch script into the bundle
+cp run_amiberry.zsh Amiberry.app/Contents/MacOS
+chmod +x Amiberry.app/Contents/MacOS/run_amiberry.zsh
 # Copy parameter list into the bundle
-cp Info.plist Amiberry.app/Contents/Info.plist
+cat Info.plist.template | sed -e "s/LONGVERSION/$LONGVER/" | sed -e "s/VERSION/$VERSION/" | sed -e "s/MAJOR/$MAJOR/" | sed -e "s/MINOR/$MINOR/" > Amiberry.app/Contents/Info.plist
 # Self-sign binary
 export CODE_SIGN_ENTITLEMENTS=Entitlements.plist
 codesign --entitlements=Entitlements.plist --force -s - Amiberry.app
-# Copy Guisan library into the bundle
-cp external/libguisan/dylib/libguisan.dylib Amiberry.app/Contents/MacOS
-# Install libguisan lib into app bundle
-# Copy docs into the bundle
-cp -R docs Amiberry.app/Contents/Resources
-# Copy data into the bundle
-cp -R data Amiberry.app/Contents/Resources
+# Copy OSX specific conf template into the bundle
+cp -R conf Amiberry.app/Contents/Resources/Configurations
+# Copy controllers into the bundle
+cp -R controllers Amiberry.app/Contents/Resources/Controllers
 # Copy kickstarts into the bundle
-cp -R kickstarts Amiberry.app/Contents/Resources
-# Overwrite default conf with OSX specific one
-mkdir Amiberry.app/Contents/resources/conf
-cat conf/amiberry-osx.conf | sed -e "s#USERDIR#$USERDIR#g" >Amiberry.app/Contents/Resources/conf/amiberry.conf
+cp -R kickstarts Amiberry.app/Contents/Resources/Kickstarts
+# Copy data into the bundle
+cp -R data Amiberry.app/Contents/Resources/Data
+# Copy docs into the bundle
+cp -R docs Amiberry.app/Contents/Resources/Docs
+
 # Use dylibbundler to install into app if exists
 dylibbundler -od -b -x Amiberry.app/Contents/MacOS/Amiberry -d Amiberry.app/Contents/libs/ -s external/libguisan/dylib/
 if [ $? -gt 0 ]; then
-	echo "Can't find dylibbundler, use brew to install it, or manually copy external/libguisan/dylib/libguisan.dylib into /usr/local/lib (you'll need sudo)"
+	echo "Can't find dylibbundler, use brew to install it, or have users manually copy external/libguisan/dylib/libguisan.dylib into /usr/local/lib (needs sudo)"
 fi
-
-# Create application directories
-mkdir -p ~/Documents/Amiberry/Hard\ Drives ~/Documents/Amiberry/Configurations ~/Documents/Amiberry/Controllers ~/Documents/Amiberry/Logfiles ~/Documents/Amiberry/Kickstarts ~/Documents/Amiberry/RP9 ~/Documents/Amiberry/Data/Floppy_Sounds ~/Documents/Amiberry/Savestates ~/Documents/Amiberry/Screenshots ~/Documents/Amiberry/Docs
-
-# Copy files to their destination
-cp -a conf/* ~/Documents/Amiberry/Configurations
-cp -a controllers/* ~/Documents/Amiberry/Controllers
-cp -a kickstarts/* ~/Documents/Amiberry/Kickstarts
-cp -a data/* ~/Documents/Amiberry/Data
-cp -a docs/* ~/Documents/Amiberry/Docs
