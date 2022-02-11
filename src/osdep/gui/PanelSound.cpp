@@ -848,6 +848,7 @@ void RefreshPanelSound()
 	else
 	{
 		cboSoundcard->setEnabled(changed_prefs.produce_sound);
+		cboSoundcard->setSelected(changed_prefs.soundcard);
 	}
 
 	switch (changed_prefs.produce_sound)
