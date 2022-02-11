@@ -52,6 +52,10 @@
 #include "threaddep/thread.h"
 #include "uae/uae.h"
 
+#ifdef __MACH__
+#include <string>
+#endif
+
 #ifdef AHI
 #include "ahi_v1.h"
 #ifdef AHI_v2
@@ -3071,9 +3075,10 @@ static void init_amiberry_paths(void)
 #endif
 	snprintf(rp9_path, MAX_DPATH, "%s/rp9/", start_path_data);
 #ifdef __MACH__
-	// Open amiberry.conf from app bundle which provided reasonable OS X M1 defaults
-	snprintf(amiberry_conf_file, MAX_DPATH, "%s",prefix_with_application_directory_path("conf/amiberry.conf").c_str());
-	printf("%s\n",prefix_with_application_directory_path("conf/amiberry.conf").c_str());
+	// Open amiberry.conf from Application Data directory
+	string macos_home_directory = getenv("HOME");
+	snprintf(amiberry_conf_file, MAX_DPATH, "%s", (macos_home_directory + "/Documents/Amiberry/Configurations/amiberry.conf").c_str());
+	printf("Using configuration: %s\n", (macos_home_directory + "/Documents/Amiberry/Configurations/amiberry.conf").c_str());
 #else
 	snprintf(amiberry_conf_file, MAX_DPATH, "%s/conf/amiberry.conf", start_path_data);
 #endif

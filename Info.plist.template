@@ -6,7 +6,7 @@
 		<key>CFBundleGetInfoString</key>
 			<string>LONGVERSION</string>
 		<key>CFBundleExecutable</key>
-			<string>amiberry</string>
+			<string>run_amiberry.zsh</string>
 		<key>CFBundleIdentifier</key>
 			<string>com.midwan.amiberry</string>
 		<key>CFBundleName</key>
