@@ -434,6 +434,11 @@ void RefreshPanelCustom()
 				const auto x = find_in_array(remap_event_list, remap_event_list_size, tempmap[n]);
 				cboCustomAction[n]->setSelected(x + 1);
 			}
+			// Retroarch mapping is not the same, so we skip this to avoid incorrect actions showing in the GUI
+			else if (did->mapping.is_retroarch)
+			{
+				cboCustomAction[n]->setSelected(0);
+			}
 			else
 			{
 				// Default mapping
