@@ -1197,8 +1197,6 @@ struct amiberry_options
 extern struct amiberry_options amiberry_options;
 #endif
 
-extern const int RemapEventList[];
-extern const int RemapEventListSize;
 
 extern void import_joysticks(void);
 
