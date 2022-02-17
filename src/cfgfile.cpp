@@ -10,7 +10,7 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
-#include <ctype.h>
+#include <cctype>
 
 #include "options.h"
 #include "uae.h"
@@ -40,6 +40,10 @@
 #include "native2amiga_api.h"
 #include "ini.h"
 //#include "specialmonitors.h"
+
+#ifdef AMIBERRY
+#include "amiberry_input.h"
+#endif
 
 #define cfgfile_warning write_log
 #define cfgfile_warning_obsolete write_log
@@ -252,43 +256,6 @@ static const TCHAR* button_remap_name[] = {
 	_T("misc1"), _T("paddle1"), _T("paddle2"), _T("paddle3"), _T("paddle4"), _T("touchpad"),
 	nullptr
 };
-
-const TCHAR* find_inputevent_name(int key)
-{
-	const auto* output = "None";
-
-	for (auto i = 0; i < RemapEventListSize; ++i)
-	{
-		if (RemapEventList[i] == key)
-		{
-			const auto* tempevent = inputdevice_get_eventinfo(RemapEventList[i]);
-			output = _T(tempevent->name);
-			break;
-		}
-		output = "None";
-	}
-	return output;
-}
-
-static int find_inputevent(TCHAR* key)
-{
-	auto index = -1;
-	char tmp1[255], tmp2[255];
-
-	for (auto i = 0; i < RemapEventListSize; ++i)
-	{
-		const auto* tempevent = inputdevice_get_eventinfo(RemapEventList[i]);
-		snprintf(tmp1, 255, "%s", tempevent->name);
-		snprintf(tmp2, 255, "%s", key);
-
-		if (!_tcscmp(tmp1, tmp2))
-		{
-			index = i;
-			break;
-		}
-	}
-	return index;
-}
 #endif
 
 struct hdcontrollerconfig
@@ -3319,7 +3286,7 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 				if (!_tcsncmp(option, _T(tmpbuf), sizeof tmpbuf / sizeof(TCHAR)))
 				{
 					auto b = 0;
-					if (find_inputevent(value) > -1) { b = RemapEventList[find_inputevent(value)]; }
+					if (find_inputevent(value) > -1) { b = remap_event_list[find_inputevent(value)]; }
 					tempcustom[n] = b;
 
 					if (m == 0)

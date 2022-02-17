@@ -73,7 +73,13 @@ extern int kb_retroarch_player4[14];
 extern int kb_retroarch_player4_3[15];
 extern int kb_cd32_retroarch_player4[23];
 
+extern const TCHAR* find_inputevent_name(int key);
+extern int find_inputevent(TCHAR* key);
 extern int find_in_array(const int arr[], int n, int key);
+extern const int default_mapping[];
+extern const int remap_event_list[];
+extern const int remap_event_list_size;
+
 extern const int remap_key_map_list[];
 extern const char* remap_key_map_list_strings[];
 extern const int remap_key_map_list_size;
