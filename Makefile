@@ -291,6 +291,10 @@ PROG   = amiberry
 #
 all: guisan $(PROG)
 
+export CFLAGS := $(CPUFLAGS) $(CFLAGS) $(EXTRA_CFLAGS)
+export CXXFLAGS = $(CFLAGS) -std=gnu++17
+export CPPFLAGS
+
 ifdef GCC_PROFILE
 	CFLAGS += -pg
 	LDFLAGS += -pg
@@ -310,11 +314,6 @@ ifdef SANITIZE
 	export LDFLAGS := -lasan $(LDFLAGS)
 	CFLAGS += -fsanitize=leak -fsanitize-recover=address
 endif
-
-
-export CFLAGS := $(CPUFLAGS) $(CFLAGS) $(EXTRA_CFLAGS)
-export CXXFLAGS = $(CFLAGS) -std=gnu++17
-export CPPFLAGS
 
 C_OBJS= \
 	src/archivers/7z/7zAlloc.o \
