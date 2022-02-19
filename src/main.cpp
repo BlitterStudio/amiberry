@@ -863,7 +863,7 @@ static void parse_cmdline (int argc, TCHAR **argv)
 				auto* const txt = parsetextpath(argv[++i]);
 				if (_tcscmp(txt, _T("A500")) == 0)
 				{
-					bip_a500(&currprefs, -1);
+					bip_a500(&currprefs, 130);
 				}
 				else if (_tcscmp(txt, _T("A500P")) == 0)
 				{
