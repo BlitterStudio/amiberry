@@ -28,6 +28,10 @@ extern char last_loaded_config[MAX_DPATH];
 
 #include <fstream>
 
+// Use configs with 8MB Fast RAM, to make it likely
+// that WHDLoad preload will cache everything.
+#  define A600_CONFIG  3 // 8MB fast ram
+#  define A1200_CONFIG 2 // 8MB fast ram
 
 static const char *rtb_files[] = {
 	"kick33180.A500.RTB",
@@ -344,7 +348,7 @@ void cd_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	{
 		_tcscpy(prefs->description, _T("AutoBoot Configuration [A1200CD]"));
 		// SET THE BASE AMIGA (Expanded A1200)
-		built_in_prefs(prefs, 4, 1, 0, 0);
+		built_in_prefs(prefs, 4, A1200_CONFIG, 0, 0);
 	}
 
 	// enable CD
@@ -737,11 +741,11 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 
 	if ((strcmpi(game_detail.cpu, "68000") == 0 || strcmpi(game_detail.cpu, "68010") == 0) && a600_available != 0)
 		// SET THE BASE AMIGA (Expanded A600)
-		built_in_prefs(prefs, 2, 2, 0, 0);
+		built_in_prefs(prefs, 2, A600_CONFIG, 0, 0);
 	else
 		// SET THE BASE AMIGA (Expanded A1200)
 	{
-		built_in_prefs(prefs, 4, 1, 0, 0);
+		built_in_prefs(prefs, 4, A1200_CONFIG, 0, 0);
 		if (strcmpi(game_detail.fast, "nul") != 0 && (strcmpi(game_detail.cpu, "nul") == 0))
 			strcpy(game_detail.cpu, _T("68020"));
 	}
