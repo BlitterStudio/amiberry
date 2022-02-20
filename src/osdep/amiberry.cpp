@@ -2809,11 +2809,11 @@ void save_amiberry_settings(void)
 	fputs(buffer, f);
 
 	// WHDLoad WriteCache
-	snprintf(buffer, MAX_DPATH, "default_whd_writecache=%d\n", amiberry_options.default_whd_writecache);
+	snprintf(buffer, MAX_DPATH, "default_whd_writecache=%s\n", amiberry_options.default_whd_writecache ? "yes" : "no");
 	fputs(buffer, f);
 
 	// WHDLoad Quit emulator after game exits
-	snprintf(buffer, MAX_DPATH, "default_whd_quit_on_exit=%d\n", amiberry_options.default_whd_quit_on_exit);
+	snprintf(buffer, MAX_DPATH, "default_whd_quit_on_exit=%s\n", amiberry_options.default_whd_quit_on_exit ? "yes" : "no");
 	fputs(buffer, f);
 
 	// Disable Shutdown button in GUI
