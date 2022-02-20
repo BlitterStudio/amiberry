@@ -225,6 +225,7 @@ static char rom_path[MAX_DPATH];
 static char rp9_path[MAX_DPATH];
 static char controllers_path[MAX_DPATH];
 static char retroarch_file[MAX_DPATH];
+static char whdboot_path[MAX_DPATH];
 static char logfile_path[MAX_DPATH];
 static char floppy_sounds_dir[MAX_DPATH];
 static char data_dir[MAX_DPATH];
@@ -2402,6 +2403,39 @@ void set_logfile_enabled(bool enabled)
 	amiberry_options.write_logfile = enabled;
 }
 
+// Returns 1 if savedatapath is overridden
+// if force_internal == true, the non-overridden whdbootpath based save-data path will be returned
+int get_savedatapath(char* out, int size, const int force_internal)
+{
+	int ret = 0;
+
+	if (const char* ep = force_internal ? NULL : getenv("WHDBOOT_SAVE_DATA"); ep != NULL) {
+		strncpy(out, ep, static_cast<size_t>(size) - 1);
+		ret = 1;
+	}
+	else {
+		char tmp[MAX_DPATH];
+		get_whdbootpath(tmp, MAX_DPATH);
+		strncpy(out, tmp, static_cast<size_t>(size) - 1);
+		strncat(out, "save-data", static_cast<size_t>(size) - 1);
+	}
+
+	write_log("%s savedatapath [%s]\n", ret ? "external" : "internal", out);
+
+	return ret;
+}
+
+void get_whdbootpath(char* out, int size)
+{
+	fix_trailing(whdboot_path);
+	strncpy(out, whdboot_path, size - 1);
+}
+
+void set_whdbootpath(char* newpath)
+{
+	strncpy(whdboot_path, newpath, MAX_DPATH - 1);
+}
+
 void get_logfile_path(char* out, int size)
 {
 	strncpy(out, logfile_path, size - 1);
@@ -2789,6 +2823,9 @@ void save_amiberry_settings(void)
 	snprintf(buffer, MAX_DPATH, "retroarch_config=%s\n", retroarch_file);
 	fputs(buffer, f);
 
+	snprintf(buffer, MAX_DPATH, "whdboot_path=%s\n", whdboot_path);
+	fputs(buffer, f);
+
 	snprintf(buffer, MAX_DPATH, "logfile_path=%s\n", logfile_path);
 	fputs(buffer, f);
 
@@ -2950,6 +2987,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_string(option, value, "config_path", config_path, sizeof config_path);
 		ret |= cfgfile_string(option, value, "controllers_path", controllers_path, sizeof controllers_path);
 		ret |= cfgfile_string(option, value, "retroarch_config", retroarch_file, sizeof retroarch_file);
+		ret |= cfgfile_string(option, value, "whdboot_path", whdboot_path, sizeof whdboot_path);
 		ret |= cfgfile_string(option, value, "logfile_path", logfile_path, sizeof logfile_path);
 		ret |= cfgfile_string(option, value, "rom_path", rom_path, sizeof rom_path);
 		ret |= cfgfile_string(option, value, "rp9_path", rp9_path, sizeof rp9_path);
@@ -3050,6 +3088,21 @@ static int parse_amiberry_cmd_line(int *argc, char* argv[], int remove_used_args
 	}
 
 	return 1;
+}
+
+static int get_env_dir( char * path, const char *path_template, const char *envname )
+{
+	int ret = 0;
+	char *ep = getenv(envname);
+	if( ep != NULL ) {
+		snprintf(path, MAX_DPATH, path_template, ep );
+		DIR* tdir = opendir(path);
+		if (tdir) {
+			closedir(tdir);
+			ret = 1;
+		}
+	}
+	return ret;
 }
 
 static void init_amiberry_paths(void)
