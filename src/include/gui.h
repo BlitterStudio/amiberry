@@ -46,8 +46,14 @@ extern bool no_gui, quit_to_gui;
 #define LED_CPU 8
 #define LED_SND 9
 #define LED_MD 10
-#define LED_NET 11
+#define LED_NET 11 
+#ifdef AMIBERRY
+#define LED_TEMP 12 // Temperature sensor LED
+#define LED_MAX 13
+#else
 #define LED_MAX 12
+#endif
+
 
 struct gui_info_drive {
 	bool drive_motor;		/* motor on off */
