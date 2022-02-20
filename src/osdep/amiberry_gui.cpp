@@ -690,10 +690,6 @@ void gui_led(int led, int on, int brightness)
 
 #ifndef __MACH__
 	// Temperature sensor initialization
-	if (want_temp < 0) {
-		char* ep = getenv("MONITOR_TEMP");
-		want_temp = ep != NULL ? atoi(ep) : 0;
-	}
 	if (want_temp > 0 && temp_fd < 0) {
 		temp_fd = open(TEMPERATURE, O_RDONLY);
 
