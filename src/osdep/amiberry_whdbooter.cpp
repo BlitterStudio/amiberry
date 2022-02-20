@@ -178,7 +178,7 @@ struct game_options get_game_settings(const char* HW)
 void make_rom_symlink(const char* kick_short, char* kick_path, int kick_numb, struct uae_prefs* p)
 {
 	char kick_long[MAX_DPATH];
-	int roms[2];
+	int roms[2] = {-1,-1};
 
 	// do the checks...
 	snprintf(kick_long, MAX_DPATH, "%s/%s", kick_path, kick_short);
@@ -395,7 +395,7 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	symlink_roms(prefs);
 
 	// this allows A600HD to be used to slow games down
-	int roms[2];
+	int roms[2] = {-1,-1};
 	roms[0] = 15; // kickstart 2.05 A600HD  ..  10
 	const auto rom_test = configure_rom(prefs, roms, 0); // returns 0 or 1 if found or not found
 	const auto a600_available = rom_test;
@@ -558,6 +558,7 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	{
 		std::ostringstream whd_bootscript;
 		whd_bootscript << '\n';
+		whd_bootscript << "FAILAT 999\n";
 
 		if (use_slave_libs)
 		{
@@ -890,7 +891,7 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 		_stprintf(txt2, "finegrain_cpu_speed=1024");
 		cfgfile_parse_line(prefs, txt2, 0);
 	}
-	else if (strcmpi(game_detail.clock, "28") == 0)
+	else if (strcmpi(game_detail.clock, "28") == 0 || strcmpi(game_detail.clock, "25") == 0)
 	{
 		_stprintf(txt2, "finegrain_cpu_speed=128");
 		cfgfile_parse_line(prefs, txt2, 0);
