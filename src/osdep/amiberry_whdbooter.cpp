@@ -670,6 +670,9 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 		whd_bootscript << " SAVEPATH=Saves:Savegames/ SAVEDIR=\"" << subpath << "\"";
 		whd_bootscript << '\n';
 
+		// Launches utility program to quit the emulator (via UAE trap in RTAREA)
+		whd_bootscript << "DH0:C/AmiQuit\n";
+
 		write_log("WHDBooter - Created Startup-Sequence  \n\n%s\n", whd_bootscript.str().c_str());
 		write_log("WHDBooter - Saved Auto-Startup to %s\n", whd_startup);
 
@@ -687,6 +690,10 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 		// create a symlink to WHDLoad in /tmp/
 		snprintf(whd_path, MAX_DPATH, "%sWHDLoad", whdbootpath);
 		symlink(whd_path, "/tmp/c/WHDLoad");
+
+		// Create a symlink to AmiQuit in /tmp/
+		snprintf(whd_path, MAX_DPATH, "%sAmiQuit", whdbootpath);
+		symlink(whd_path, "/tmp/c/AmiQuit");
 
 		// create a symlink for DEVS in /tmp/
 		symlink(kick_path, "/tmp/devs/Kickstarts");
