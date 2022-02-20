@@ -437,6 +437,7 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	char subpath[4096];
 
 	auto use_slave_libs = false;
+	auto use_write_cache = false;
 
 	write_log("WHDBooter Launched\n");
 	strcpy(selected_slave, "");
@@ -624,7 +625,8 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 
 		whd_bootscript << "CD \"Games:" << subpath << "\"\n";
 		whd_bootscript << "WHDLoad SLAVE=\"Games:" << subpath << "/" << selected_slave << "\"";
-		whd_bootscript << " PRELOAD NOWRITECACHE NOREQ";
+		use_write_cache |= currprefs.whdbootprefs.writecache;
+		whd_bootscript << " PRELOAD NOREQ " << use_write_cache ? "" : "NOWRITECACHE ";
 
 		// CUSTOM options
 		if (currprefs.whdbootprefs.custom1 > 0)

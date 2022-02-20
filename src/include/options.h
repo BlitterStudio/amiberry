@@ -524,6 +524,7 @@ struct whdbooter
 	TCHAR slave[4096]{};
 	bool showsplash{};
 	int configdelay = 0;
+	bool writecache;
 };
 #endif
 
