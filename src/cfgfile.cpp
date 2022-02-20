@@ -2761,13 +2761,11 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 		: p->keyboard_lang == KBD_LANG_IT ? _T("it")
 		: _T("FOO")));
 
-	cfgfile_dwrite (f, _T("state_replay_rate"), _T("%d"), p->statecapturerate);
-	cfgfile_dwrite (f, _T("state_replay_buffers"), _T("%d"), p->statecapturebuffersize);
-#ifndef AMIBERRY	
-	cfgfile_dwrite_bool (f, _T("state_replay_autoplay"), p->inprec_autoplay);
-#endif
-	cfgfile_dwrite_bool (f, _T("warp"), p->turbo_emulation);
-	cfgfile_dwrite (f, _T("warp_limit"), _T("%d"), p->turbo_emulation_limit);
+	cfgfile_dwrite(f, _T("state_replay_rate"), _T("%d"), p->statecapturerate);
+	cfgfile_dwrite(f, _T("state_replay_buffers"), _T("%d"), p->statecapturebuffersize);
+	cfgfile_dwrite_bool(f, _T("state_replay_autoplay"), p->inprec_autoplay);
+	cfgfile_dwrite_bool(f, _T("warp"), p->turbo_emulation);
+	cfgfile_dwrite(f, _T("warp_limit"), _T("%d"), p->turbo_emulation_limit);
 
 #ifdef FILESYS
 	write_filesys_config (p, f);
@@ -8733,6 +8731,10 @@ static int bip_a1200 (struct uae_prefs *p, int config, int compa, int romcheck)
 		p->fastmem[0].size = 0x400000;
 		p->cs_rtc = 1;
 		break;
+	case 2:
+		p->fastmem[0].size = 0x800000;
+		p->cs_rtc = 1;
+		break;
 	}
 	set_68020_compa (p, compa, 0);
 #ifdef AMIBERRY
@@ -8760,6 +8762,8 @@ static int bip_a600 (struct uae_prefs *p, int config, int compa, int romcheck)
 		p->chipmem.size = 0x200000;
 	if (config == 2)
 		p->fastmem[0].size = 0x400000;
+	if (config == 3)
+		p->fastmem[0].size = 0x800000;
 	p->chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
 	return configure_rom (p, roms, romcheck);
 }
