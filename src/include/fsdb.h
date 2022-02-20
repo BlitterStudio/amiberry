@@ -161,6 +161,7 @@ extern unsigned int my_read (struct my_openfile_s*, void*, unsigned int);
 extern unsigned int my_write (struct my_openfile_s*, void*, unsigned int);
 extern int my_truncate (const TCHAR *name, uae_u64 len);
 extern int dos_errno (void);
+extern int my_existslink(const char* name);
 extern int my_existsfile (const TCHAR *name);
 extern int my_existsdir (const TCHAR *name);
 extern FILE *my_opentext (const TCHAR*);
@@ -191,6 +192,7 @@ char* fsdb_native_path(const char* root_dir, const char* amiga_path);
 void fsdb_get_file_time(a_inode* node, int* days, int* mins, int* ticks);
 int fsdb_set_file_time(a_inode* node, int days, int mins, int ticks);
 int host_errno_to_dos_errno(int err);
+int copyfile(const char* target, const char* source, int replace);
 #endif
 
 #endif /* UAE_FSDB_H */

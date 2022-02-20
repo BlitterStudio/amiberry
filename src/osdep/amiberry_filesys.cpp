@@ -10,6 +10,7 @@
 #include <list>
 #include <dirent.h>
 #include <iconv.h>
+#include <sys/sendfile.h>
 
 #include "fsdb_host.h"
 #include "uae.h"
@@ -250,6 +251,18 @@ int my_readdir(struct my_opendir_s* mod, TCHAR* name)
 
 		return 1;
 	}
+}
+
+int my_existslink(const char* name)
+{
+	struct stat st {};
+	if (lstat(name, &st) == -1)
+	{
+		return 0;
+	}
+	if (S_ISLNK(st.st_mode))
+		return 1;
+	return 0;
 }
 
 int my_existsfile(const char* name)
@@ -600,6 +613,35 @@ int target_get_volume_name(struct uaedev_mount_info* mtinf, struct uaedev_config
 	return 2;
 }
 
+// If replace is false, copyfile will fail if file already exists
+int copyfile(const char* target, const char* source, int replace)
+{
+	int tfd = -1;
+	int sfd = -1;
+	int ret = -1;
+	struct stat sb {};
+
+	const int rflag = replace ? 0 : O_EXCL;
+
+	while (!((tfd = open(target, O_WRONLY | O_CREAT | O_TRUNC | rflag, 0644)) < 0)) {
+		if ((sfd = open(source, O_RDONLY)) < 0)
+			break;
+
+		if (fstat(sfd, &sb) < 0)
+			break;
+
+		// Could use mmap and write to transfer file for better portability
+		off_t transferred = 0;
+		ret = sendfile(tfd, sfd, &transferred, sb.st_size);
+
+		break;
+	}
+
+	if (sfd >= 0) close(sfd);
+	if (tfd >= 0) close(tfd);
+
+	return ret;
+}
 void filesys_addexternals(void)
 {
 	// this would mount system drives on Windows
