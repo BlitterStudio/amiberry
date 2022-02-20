@@ -315,6 +315,17 @@ void draw_status_line_single(int monid, uae_u8 *buf, int bpp, int y, int totalwi
 				num3 = 17;
 				am = 1;
 			}
+		} else if (led == LED_TEMP) {
+			pos = 11;
+			int temp = gui_data.temperature;
+			on = 1;
+			off_rgb = 0x000000;
+			int range = 0xf0 / (100 - 20);
+			int v = range * abs(temp - 20);
+			on_rgb = bpp == 2 ? v : v << 16;
+			num1 = -1;
+			num2 = temp / 10;
+			num3 = temp % 10;
 		} else {
 			continue;
 		}
