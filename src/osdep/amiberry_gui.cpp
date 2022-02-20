@@ -28,6 +28,7 @@
 #include "disk.h"
 #include "xwin.h"
 #include "drawing.h"
+#include "fsdb.h"
 
 #ifdef AMIBERRY
 #ifndef __MACH__

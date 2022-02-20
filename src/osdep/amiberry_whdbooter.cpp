@@ -28,6 +28,17 @@ extern char last_loaded_config[MAX_DPATH];
 
 #include <fstream>
 
+
+static const char *rtb_files[] = {
+	"kick33180.A500.RTB",
+	"kick33192.A500.RTB",
+	"kick34005.A500.RTB",
+	"kick40063.A600.RTB",
+	"kick40068.A1200.RTB",
+	"kick40068.A4000.RTB",
+	"\0"
+};
+
 struct game_options
 {
 	TCHAR port0[256] = "nul\0";
@@ -183,18 +194,48 @@ void make_rom_symlink(const char* kick_short, char* kick_path, int kick_numb, st
 	// do the checks...
 	snprintf(kick_long, MAX_DPATH, "%s/%s", kick_path, kick_short);
 
-	// this should sort any broken links
+	// this should sort any broken links (only remove if a link, not a file.. see vfat handling of link below)
+	// Only remove file IF it is a symlink.
+	// On VFAT USB stick, the roms are copied not symlinked, which takes a long time, also the user
+	// may have provided their own rom files, so we do not want to remove and replace those.
+	//
+	if (my_existslink(kick_long)) {
 	my_unlink(kick_long);
+	}
 
 	if (!my_existsfile(kick_long))
 	{
 		roms[0] = kick_numb; // kickstart 1.2 A500
-		const auto rom_test = configure_rom(p, roms, 0); // returns 0 or 1 if found or not found
-		if (rom_test == 1)
+		if (const auto rom_test = configure_rom(p, roms, 0); rom_test == 1)
 		{
-			symlink(p->romfile, kick_long);
-			write_log("Making SymLink for Kickstart ROM: %s\n", kick_long);
+			int r = symlink(p->romfile, kick_long);
+			// VFAT filesystems do not support creation of symlinks.
+			// Fallback to copying file if filesystem does not support the generation of symlinks
+			if( r < 0 && errno == EPERM )
+				r = copyfile( kick_long, p->romfile, 1 );
+			write_log("Making SymLink for Kickstart ROM: %s  [%s]\n", kick_long, r < 0 ? "Fail" : "Ok");
 		}
+	}
+}
+
+static void symlink_rtb( const char * ext_path )
+{
+	char kick_path[MAX_DPATH];
+	char src[MAX_DPATH];
+	char dst[MAX_DPATH];
+
+	// Get non-external whdboot kickstarts dir, which contains master RTB files
+	get_savedatapath( src, MAX_DPATH, 1 );
+	snprintf(kick_path, MAX_DPATH, "%s/Kickstarts", src);
+
+	int i = 0;
+	while( *rtb_files[i] != '\0' ) {
+
+		snprintf(src, MAX_DPATH, "%s/%s", kick_path, rtb_files[i]);
+		snprintf(dst, MAX_DPATH, "%s/%s", ext_path,  rtb_files[i]);
+
+		if(!my_existsfile(dst)) symlink( src, dst);
+		i++;
 	}
 }
 
@@ -212,11 +253,15 @@ void symlink_roms(struct uae_prefs* prefs)
 	strncpy(current_dir, start_path_data, MAX_DPATH);
 
 	// are we using save-data/ ?
-	snprintf(kick_path, MAX_DPATH, "%s/whdboot/save-data/Kickstarts", start_path_data);
+	get_savedatapath( tmp, MAX_DPATH, 1 );
+	snprintf(kick_path, MAX_DPATH, "%s/Kickstarts", tmp);
 
+	if (!my_existsdir(kick_path)) {
 	// otherwise, use the old route
-	if (!my_existsdir(kick_path))
-		snprintf(kick_path, MAX_DPATH, "%s/whdboot/game-data/Devs/Kickstarts", start_path_data);
+		get_whdbootpath(tmp, MAX_DPATH);
+		snprintf(kick_path, MAX_DPATH, "%sgame-data/Devs/Kickstarts", tmp);
+	}
+	write_log("WHDBoot - using kickstarts from %s\n", kick_path );
 
 	// These are all the kickstart rom files found in skick346.lha
 	//   http://aminet.net/package/util/boot/skick346
@@ -237,8 +282,11 @@ void symlink_roms(struct uae_prefs* prefs)
 	// destination file (symlink)
 	snprintf(tmp2, MAX_DPATH, "%s/rom.key", kick_path);
 
-	if (my_existsfile(tmp))
-		symlink(tmp, tmp2);
+	if (my_existsfile(tmp)) {
+		int r = symlink(tmp, tmp2);
+		if( r < 0 && errno == EPERM )
+			copyfile( tmp2, tmp, 1 ); // copyfile in amiberry.cpp
+	}
 }
 
 void cd_auto_prefs(struct uae_prefs* prefs, char* filepath)
@@ -272,7 +320,7 @@ void cd_auto_prefs(struct uae_prefs* prefs, char* filepath)
 
 	// LOAD HOST OPTIONS
 	char whd_path[MAX_DPATH];
-	snprintf(whd_path, MAX_DPATH, "%s/whdboot/", start_path_data);
+	get_whdbootpath(whd_path, MAX_DPATH);
 
 	prefs->start_gui = false;
 
@@ -369,6 +417,7 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	TCHAR game_name[MAX_DPATH];
 	TCHAR* txt2 = nullptr;
 	TCHAR tmp[MAX_DPATH];
+	TCHAR whdbootpath[MAX_DPATH];
 	char boot_path[MAX_DPATH];
 	char save_path[MAX_DPATH];
 	char config_path[MAX_DPATH];
@@ -389,6 +438,9 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	strcpy(selected_slave, "");
 
 	get_configuration_path(config_path, MAX_DPATH);
+
+	get_whdbootpath(whdbootpath, MAX_DPATH);
+	get_savedatapath(save_path, MAX_DPATH, 0 );
 
 	//      *** KICKSTARTS ***
 
@@ -427,12 +479,11 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	strcpy(whd_startup, "/tmp/s/startup-sequence");
 	remove(whd_startup);
 
-
 	// LOAD HOST OPTIONS
-	snprintf(whd_path, MAX_DPATH, "%s/whdboot/WHDLoad", start_path_data);
+	snprintf(whd_path, MAX_DPATH, "%sWHDLoad", whdbootpath);
 
 	// are we using save-data/ ?
-	snprintf(kick_path, MAX_DPATH, "%s/whdboot/save-data/Kickstarts", start_path_data);
+	snprintf(kick_path, MAX_DPATH, "%s/Kickstarts", save_path);
 
 	// if we have a config file, we will use it
 	// we will need it for the WHDLoad options too.
@@ -442,11 +493,9 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 		target_cfgfile_load(&currprefs, uae_config, CONFIG_TYPE_ALL, 0);
 	}
 
-	//  this should be made into it's own routine!! 1 (see repeat, above)
-	snprintf(whd_path, MAX_DPATH, "%s/whdboot/", start_path_data);
 
 	// LOAD GAME SPECIFICS - USE SHA1 IF AVAILABLE
-	snprintf(whd_path, MAX_DPATH, "%s/whdboot/game-data/", start_path_data);
+	snprintf(whd_path, MAX_DPATH, "%sgame-data/", whdbootpath);
 	struct game_options game_detail;
 
 	// EDIT THE FILE NAME TO USE HERE
@@ -636,7 +685,7 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	if (my_existsfile(whd_startup))
 	{
 		// create a symlink to WHDLoad in /tmp/
-		snprintf(whd_path, MAX_DPATH, "%s/whdboot/WHDLoad", start_path_data);
+		snprintf(whd_path, MAX_DPATH, "%sWHDLoad", whdbootpath);
 		symlink(whd_path, "/tmp/c/WHDLoad");
 
 		// create a symlink for DEVS in /tmp/
@@ -720,9 +769,9 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 		txt2 = parse_text_path(_T(tmp));
 		cfgfile_parse_line(prefs, txt2, 0);
 
-		snprintf(boot_path, MAX_DPATH, "%s/whdboot/boot-data.zip", start_path_data);
+		snprintf(boot_path, MAX_DPATH, "%sboot-data.zip", whdbootpath);
 		if (!my_existsfile(boot_path))
-			snprintf(boot_path, MAX_DPATH, "%s/whdboot/boot-data/", start_path_data);
+			snprintf(boot_path, MAX_DPATH, "%sboot-data/", whdbootpath);
 
 		_stprintf(tmp, _T("filesystem2=rw,DH3:DH3:%s,-10"), boot_path);
 		txt2 = parse_text_path(_T(tmp));
@@ -735,9 +784,9 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 
 	else // revert to original booter is no slave was set
 	{
-		snprintf(boot_path, MAX_DPATH, "%s/whdboot/boot-data.zip", start_path_data);
+		snprintf(boot_path, MAX_DPATH, "%sboot-data.zip", whdbootpath);
 		if (!my_existsfile(boot_path))
-			snprintf(boot_path, MAX_DPATH, "%s/whdboot/boot-data/", start_path_data);
+			snprintf(boot_path, MAX_DPATH, "%sboot-data/", whdbootpath);
 
 		_stprintf(tmp, _T("filesystem2=rw,DH0:DH0:%s,10"), boot_path);
 		txt2 = parse_text_path(_T(tmp));
@@ -758,7 +807,7 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	cfgfile_parse_line(prefs, txt2, 0);
 
 	//set the third (save data) drive
-	snprintf(save_path, MAX_DPATH, "%s/whdboot/save-data/", start_path_data);
+	snprintf(whd_path, MAX_DPATH, "%s/", save_path);
 
 	if (my_existsdir(save_path))
 	{
