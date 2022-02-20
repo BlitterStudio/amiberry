@@ -18,7 +18,9 @@
 #define FILESYS /* filesys emulation */
 #define UAE_FILESYS_THREADS
 #define AUTOCONFIG /* autoconfig support, fast ram, harddrives etc.. */
+#if !defined (CPU_AMD64) || !defined (__x86_64__)
 #define JIT /* JIT compiler support */
+#endif
 #if defined(ARMV6T2) || defined(CPU_AARCH64)
 #define USE_JIT_FPU
 #endif
@@ -118,7 +120,7 @@
 
 #include <stdint.h>
 
-#if defined(__x86_64__) || defined(CPU_AARCH64)
+#if defined(__x86_64__) || defined(CPU_AARCH64) || defined CPU_AMD64
 #define CPU_64_BIT 1
 #else
 #undef CPU_64_BIT
