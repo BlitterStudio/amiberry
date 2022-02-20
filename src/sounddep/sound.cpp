@@ -43,6 +43,8 @@ struct sound_dp
 	int pullbuffermaxlen;
 	double avg_correct;
 	double cnt_correct;
+	int stream_initialised;
+	int silence_written;
 };
 
 #define SND_STATUSCNT 10
@@ -529,7 +531,11 @@ void restart_sound_buffer()
 
 static void finish_sound_buffer_sdl2_push(struct sound_data* sd, uae_u16* sndbuffer)
 {
-	const sound_dp* s = sd->data;
+	sound_dp* s = sd->data;
+	if (sd->mute) {
+		memset(sndbuffer, 0, sd->sndbufsize);
+		s->silence_written++; // In push mode no sound gen means no audio push so this might not incremented frequently
+	}
 	SDL_QueueAudio(s->dev, sndbuffer, sd->sndbufsize);
 }
 
@@ -865,13 +871,14 @@ void master_sound_volume(int dir)
 // Audio callback function
 void sdl2_audio_callback(void* userdata, Uint8* stream, int len)
 {
-	/* SDL 2.0 will require the application to clear the buffer */
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-	memset(stream, 0, len);
-#endif
-
 	const auto* sd = static_cast<sound_data*>(userdata);
 	auto* s = sd->data;
+
+	if (!s->stream_initialised || sd->mute) {
+		memset(stream, 0, len);
+		if( sd->mute ) s->silence_written++;
+		s->stream_initialised = 1;
+	}
 
 	if (!s->framesperbuffer || sdp->deactive)
 		return;
@@ -880,7 +887,7 @@ void sdl2_audio_callback(void* userdata, Uint8* stream, int len)
 		return;
 
 	const unsigned int bytes_to_copy = s->framesperbuffer * sd->samplesize;	
-	if (bytes_to_copy > 0) {
+	if (sd->mute == 0 && bytes_to_copy > 0) {
 		memcpy(stream, s->pullbuffer, bytes_to_copy);
 	}
 
@@ -888,4 +895,10 @@ void sdl2_audio_callback(void* userdata, Uint8* stream, int len)
 		memmove(s->pullbuffer, s->pullbuffer + bytes_to_copy, s->pullbufferlen - static_cast<size_t>(bytes_to_copy));
 	}
 	s->pullbufferlen -= bytes_to_copy;
+}
+
+int sound_get_silence()
+{
+	const auto* s = sdp->data;
+	return s->silence_written;
 }

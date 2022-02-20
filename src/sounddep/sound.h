@@ -64,6 +64,8 @@ void pause_sound_device(struct sound_data* sd);
 void resume_sound_device(struct sound_data* sd);
 void set_volume_sound_device(struct sound_data* sd, int volume, int mute);
 
+int sound_get_silence();
+
 static uae_u16* paula_sndbufpt_prev, *paula_sndbufpt_start;
 
 STATIC_INLINE void set_sound_buffers(void)
