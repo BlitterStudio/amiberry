@@ -36,7 +36,7 @@
 #endif
 #include "uae.h"
 
-#ifndef __MACH__
+#if !defined (__MACH__) && !defined (CPU_AMD64) && !defined (__x86_64__)
 #include <asm/sigcontext.h>
 #else
 #include <sys/ucontext.h>
@@ -762,6 +762,7 @@ void signal_segv(int signum, siginfo_t* info, void* ptr)
 	trace_end();
 #endif
 
+#if !defined (CPU_AMD64) && !defined (__x86_64__)
 	mcontext_t* context = &(ucontext->uc_mcontext);
 
 	unsigned long* regs = &context->arm_r0;
@@ -870,6 +871,7 @@ void signal_segv(int signum, siginfo_t* info, void* ptr)
 
 	if (handled != HANDLE_EXCEPTION_NONE)
 		return;
+#endif
 
 	SDL_Quit();
 	exit(1);
@@ -889,6 +891,7 @@ void signal_buserror(int signum, siginfo_t* info, void* ptr)
 
 	mcontext_t* context = &(ucontext->uc_mcontext);
 
+#if !defined (CPU_AMD64) && !defined (__x86_64__)
 	unsigned long* regs = &context->arm_r0;
 	uintptr_t addr = (uintptr_t)info->si_addr;
 
@@ -967,6 +970,7 @@ void signal_buserror(int signum, siginfo_t* info, void* ptr)
 		output_log(_T("%s\n"), strings[i]);
 	output_log(_T("End of stack trace.\n"));
 
+#endif
 	output_log(_T("--- end exception ---\n"));
 
 	SDL_Quit();
