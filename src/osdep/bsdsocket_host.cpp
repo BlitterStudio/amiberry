@@ -1462,8 +1462,7 @@ uae_u32 bsdthr_WaitSelect(SB)
 					write_log("WaitSelect: AmigaSide %d set. NativeSide %d.\n", i, s);
 					if (s == -1) {
 						write_log("BSDSOCK: WaitSelect() called with invalid descriptor %d in set %d.\n", i, set);
-					}
-					else {
+					} else {
 						FD_SET(s, &sets[set]);
 						if (max < s) max = s;
 					}
@@ -1511,8 +1510,7 @@ uae_u32 bsdthr_WaitSelect(SB)
 					}
 				}
 			}
-	}
-	else if (r == 0) {         /* Timeout. I think we're supposed to clear the sets.. */
+	} else if (r == 0) {         /* Timeout. I think we're supposed to clear the sets.. */
 		for (set = 0; set < 3; set++)
 			if (sb->sets[set] != 0)
 				bsd_amigaside_FD_ZERO(sb->sets[set]);
