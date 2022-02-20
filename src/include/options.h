@@ -524,7 +524,8 @@ struct whdbooter
 	TCHAR slave[4096]{};
 	bool showsplash{};
 	int configdelay = 0;
-	bool writecache;
+	bool writecache{};
+	bool quit_on_exit{};
 };
 #endif
 
@@ -1192,6 +1193,8 @@ struct amiberry_options
 	bool default_whd_buttonwait = false;
 	bool default_whd_showsplash = true;
 	int default_whd_configdelay = 0;
+	bool default_whd_writecache = false;
+	bool default_whd_quit_on_exit = false;
 	bool disable_shutdown_button = false;
 };
 
