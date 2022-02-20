@@ -2797,6 +2797,7 @@ void cfgfile_save_options(struct zfile* f, struct uae_prefs* p, int type)
 	cfgfile_write(f, _T("whdload_custom4"), _T("%d"), p->whdbootprefs.custom4);
 	cfgfile_write(f, _T("whdload_custom5"), _T("%d"), p->whdbootprefs.custom5);
 	cfgfile_write_str(f, _T("whdload_custom"), p->whdbootprefs.custom);
+	cfgfile_write_bool(f, _T("whdload_writecache"), p->whdbootprefs.writecache);
 #endif
 }
 
@@ -3310,6 +3311,7 @@ static int cfgfile_parse_host(struct uae_prefs* p, TCHAR* option, TCHAR* value)
 		|| cfgfile_yesno(option, value, _T("whdload_buttonwait"), &p->whdbootprefs.buttonwait)
 		|| cfgfile_yesno(option, value, _T("whdload_showsplash"), &p->whdbootprefs.showsplash)
 		|| cfgfile_intval(option, value, _T("whdload_configdelay"), &p->whdbootprefs.configdelay, 1)
+		|| cfgfile_yesno(option, value, _T("whdload_writecache"), &p->whdbootprefs.writecache)
 		)
 	{
 		return 1;
@@ -7958,6 +7960,7 @@ void default_prefs(struct uae_prefs* p, bool reset, int type)
 	p->sampler_freq = 0;
 #ifdef AMIBERRY
 	p->sound_volume_cd = 20;
+	p->whdbootprefs.writecache = false;
 #endif
 	p->comptrustbyte = 0;
 	p->comptrustword = 0;
