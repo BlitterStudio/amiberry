@@ -437,7 +437,6 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	char subpath[4096];
 
 	auto use_slave_libs = false;
-	auto use_write_cache = false;
 
 	write_log("WHDBooter Launched\n");
 	strcpy(selected_slave, "");
@@ -624,8 +623,16 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 
 		whd_bootscript << "CD \"Games:" << subpath << "\"\n";
 		whd_bootscript << "WHDLoad SLAVE=\"Games:" << subpath << "/" << selected_slave << "\"";
-		use_write_cache |= currprefs.whdbootprefs.writecache;
-		whd_bootscript << " PRELOAD NOREQ " << (use_write_cache ? "" : "NOWRITECACHE ");
+
+		// Write Cache
+		if (currprefs.whdbootprefs.writecache)
+		{
+			whd_bootscript << " PRELOAD NOREQ ";
+		}
+		else
+		{
+			whd_bootscript << " PRELOAD NOREQ NOWRITECACHE ";
+		}
 
 		// CUSTOM options
 		if (currprefs.whdbootprefs.custom1 > 0)
@@ -676,8 +683,10 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 		whd_bootscript << '\n';
 
 		// Launches utility program to quit the emulator (via UAE trap in RTAREA)
-		// Disabled for now, as in some cases at least the emulator quit too soon (before the game started)
-		//whd_bootscript << "DH0:C/AmiQuit\n";
+		if (currprefs.whdbootprefs.quit_on_exit)
+		{
+			whd_bootscript << "DH0:C/AmiQuit\n";
+		}
 
 		write_log("WHDBooter - Created Startup-Sequence  \n\n%s\n", whd_bootscript.str().c_str());
 		write_log("WHDBooter - Saved Auto-Startup to %s\n", whd_startup);

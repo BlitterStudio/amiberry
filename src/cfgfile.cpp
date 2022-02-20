@@ -2798,6 +2798,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_write(f, _T("whdload_custom5"), _T("%d"), p->whdbootprefs.custom5);
 	cfgfile_write_str(f, _T("whdload_custom"), p->whdbootprefs.custom);
 	cfgfile_write_bool(f, _T("whdload_writecache"), p->whdbootprefs.writecache);
+	cfgfile_write_bool(f, _T("whdload_quit_on_exit"), p->whdbootprefs.quit_on_exit);
 #endif
 }
 
@@ -3312,6 +3313,7 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		|| cfgfile_yesno(option, value, _T("whdload_showsplash"), &p->whdbootprefs.showsplash)
 		|| cfgfile_intval(option, value, _T("whdload_configdelay"), &p->whdbootprefs.configdelay, 1)
 		|| cfgfile_yesno(option, value, _T("whdload_writecache"), &p->whdbootprefs.writecache)
+		|| cfgfile_yesno(option, value, _T("whdload_quit_on_exit"), &p->whdbootprefs.quit_on_exit)
 		)
 	{
 		return 1;

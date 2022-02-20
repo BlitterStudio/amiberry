@@ -1984,6 +1984,8 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->whdbootprefs.buttonwait = amiberry_options.default_whd_buttonwait;
 	p->whdbootprefs.showsplash = amiberry_options.default_whd_showsplash;
 	p->whdbootprefs.configdelay = amiberry_options.default_whd_configdelay;
+	p->whdbootprefs.writecache = amiberry_options.default_whd_writecache;
+	p->whdbootprefs.quit_on_exit = amiberry_options.default_whd_quit_on_exit;
 
 	// Disable Cycle-Exact modes that are not yet implemented
 	if (changed_prefs.cpu_cycle_exact || changed_prefs.cpu_memory_cycle_exact)
@@ -2806,6 +2808,14 @@ void save_amiberry_settings(void)
 	snprintf(buffer, MAX_DPATH, "default_whd_configdelay=%d\n", amiberry_options.default_whd_configdelay);
 	fputs(buffer, f);
 
+	// WHDLoad WriteCache
+	snprintf(buffer, MAX_DPATH, "default_whd_writecache=%d\n", amiberry_options.default_whd_writecache);
+	fputs(buffer, f);
+
+	// WHDLoad Quit emulator after game exits
+	snprintf(buffer, MAX_DPATH, "default_whd_quit_on_exit=%d\n", amiberry_options.default_whd_quit_on_exit);
+	fputs(buffer, f);
+
 	// Disable Shutdown button in GUI
 	snprintf(buffer, MAX_DPATH, "disable_shutdown_button=%s\n", amiberry_options.disable_shutdown_button ? "yes" : "no");
 	fputs(buffer, f);
@@ -3045,6 +3055,8 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_yesno(option, value, "default_whd_buttonwait", &amiberry_options.default_whd_buttonwait);
 		ret |= cfgfile_yesno(option, value, "default_whd_showsplash", &amiberry_options.default_whd_showsplash);
 		ret |= cfgfile_intval(option, value, "default_whd_configdelay", &amiberry_options.default_whd_configdelay, 1);
+		ret |= cfgfile_yesno(option, value, "default_whd_writecache", &amiberry_options.default_whd_writecache);
+		ret |= cfgfile_yesno(option, value, "default_whd_quit_on_exit", &amiberry_options.default_whd_quit_on_exit);
 		ret |= cfgfile_yesno(option, value, "disable_shutdown_button", &amiberry_options.disable_shutdown_button);
 	}
 	return ret;
