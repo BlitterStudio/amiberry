@@ -284,9 +284,13 @@ static void finish_sound_buffer_pull(struct sound_data* sd, uae_u16* sndbuffer)
 	if (s->pullbufferlen + sd->sndbufsize > s->pullbuffermaxlen) {
 		write_log(_T("pull overflow! %d %d %d\n"), s->pullbufferlen, sd->sndbufsize, s->pullbuffermaxlen);
 		s->pullbufferlen = 0;
+		gui_data.sndbuf_status = 1;
 	}
+	else gui_data.sndbuf_status = 0;
 	memcpy(s->pullbuffer + s->pullbufferlen, sndbuffer, sd->sndbufsize);
 	s->pullbufferlen += sd->sndbufsize;
+
+	gui_data.sndbuf = (1000.0f * s->pullbufferlen) / s->pullbuffermaxlen;
 }
 
 static int open_audio_sdl2(struct sound_data* sd, int index)
@@ -417,7 +421,12 @@ static int open_sound()
 
 	have_sound = 1;
 	sound_available = 1;
+#ifdef AMIBERRY
+	// Always show sound buffer usage
+	gui_data.sndbuf_avail = true;
+#else
 	gui_data.sndbuf_avail = audio_is_pull() == 0;
+#endif
 	
 	paula_sndbufsize = sdp->sndbufsize;
 	paula_sndbufpt = paula_sndbuffer;
@@ -883,8 +892,10 @@ void sdl2_audio_callback(void* userdata, Uint8* stream, int len)
 	if (!s->framesperbuffer || sdp->deactive)
 		return;
 	
-	if (s->pullbufferlen <= 0)
+	if (s->pullbufferlen <= 0) {
+		gui_data.sndbuf_status = -1;
 		return;
+	}
 
 	const unsigned int bytes_to_copy = s->framesperbuffer * sd->samplesize;	
 	if (sd->mute == 0 && bytes_to_copy > 0) {
