@@ -675,6 +675,10 @@ void gui_fps(int fps, int idle, int color)
 	gui_led(LED_SND, (gui_data.sndbuf_status > 1 || gui_data.sndbuf_status < 0) ? 0 : 1, -1);
 }
 
+static int temp_fd = -1;
+static int want_temp = 1; // Make this a negative number to disable Temperature reading
+#define TEMPERATURE "/sys/class/thermal/thermal_zone0/temp"
+
 void gui_led(int led, int on, int brightness)
 {
 	unsigned char kbd_led_status;
@@ -683,7 +687,20 @@ void gui_led(int led, int on, int brightness)
 	if (currprefs.kbd_led_num != changed_prefs.kbd_led_num) currprefs.kbd_led_num = changed_prefs.kbd_led_num;
 	if (currprefs.kbd_led_scr != changed_prefs.kbd_led_scr) currprefs.kbd_led_scr = changed_prefs.kbd_led_scr;
 	if (currprefs.kbd_led_cap != changed_prefs.kbd_led_cap) currprefs.kbd_led_cap = changed_prefs.kbd_led_cap;
+
 #ifndef __MACH__
+	// Temperature sensor initialization
+	if (want_temp < 0) {
+		char* ep = getenv("MONITOR_TEMP");
+		want_temp = ep != NULL ? atoi(ep) : 0;
+	}
+	if (want_temp > 0 && temp_fd < 0) {
+		temp_fd = open(TEMPERATURE, O_RDONLY);
+
+		if (temp_fd < 0)
+			write_log("TEMPERATURE: Could not open %s for reading\n", TEMPERATURE);
+	}
+
 	ioctl(0, KDGETLED, &kbd_led_status);
 
 	// Handle floppy led status
@@ -737,6 +754,17 @@ void gui_led(int led, int on, int brightness)
 	}
 
 	ioctl(0, KDSETLED, kbd_led_status);
+
+	// Temperature reading
+	if (static unsigned int temp_count = 0; temp_fd >= 0 && ++temp_count % 25 == 0) {
+		static char tb[10] = { 0 };
+		lseek(temp_fd, 0, SEEK_SET);
+		if (int l = read(temp_fd, tb, sizeof tb - 1); l > 0) {
+			tb[l] = '\0';
+			gui_data.temperature = atoi(tb) / 1000;
+		}
+	}
+
 #else
 	// TODO
 #endif
