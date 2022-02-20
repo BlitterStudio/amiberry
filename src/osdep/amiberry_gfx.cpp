@@ -1448,18 +1448,6 @@ bool render_screen(int monid, int mode, bool immediate)
 	return true;
 }
 
-float target_adjust_vblank_hz(float hz)
-{
-	int maxrate;
-	if (!currprefs.lightboost_strobo)
-		return hz;
-	maxrate = deskhz;
-	double nhz = hz * 2.0;
-	if (nhz >= maxrate - 1 && nhz < maxrate + 1)
-		hz -= 0.5;
-	return hz;
-}
-
 void show_screen(int monid, int mode)
 {
 	const auto start = read_processor_time();
