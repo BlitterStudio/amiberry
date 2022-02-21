@@ -47,7 +47,9 @@
 #include "cpuboard.h"
 //#include "uae/ppc.h"
 #include "devices.h"
+#ifdef JIT
 #include "jit/compemu.h"
+#endif
 #ifdef RETROPLATFORM
 #include "rp.h"
 #endif
@@ -308,10 +310,14 @@ void fixup_cpu (struct uae_prefs *p)
 		error_log(_T("Bad value for comptrustnaddr parameter: value must be within 0..2."));
 		p->comptrustnaddr = 1;
 	}
+#ifdef JIT
 	if (p->cachesize < 0 || p->cachesize > MAX_JIT_CACHE || (p->cachesize > 0 && p->cachesize < MIN_JIT_CACHE)) {
 		error_log(_T("JIT Bad value for cachesize parameter: value must zero or within %d..%d."), MIN_JIT_CACHE, MAX_JIT_CACHE);
 		p->cachesize = 0;
 	}
+#else
+	p->cachesize = 0;
+#endif
 
 	if (p->immediate_blits && p->waiting_blits) {
 		error_log (_T("Immediate blitter and waiting blits can't be enabled simultaneously.\n"));

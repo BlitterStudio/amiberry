@@ -2490,7 +2490,9 @@ void memory_reset (void)
 	//alg_flag = 0;
 	need_hardreset = false;
 	rom_write_enabled = true;
+#ifdef JIT
 	jit_n_addr_unsafe = 0;
+#endif
 	/* Use changed_prefs, as m68k_reset is called later.  */
 	if (last_address_space_24 != changed_prefs.address_space_24)
 		need_hardreset = true;
@@ -3075,9 +3077,11 @@ void map_banks (addrbank *bank, int start, int size, int realsize)
 	if (start == 0xffffffff)
 		return;
 
+#ifdef JIT
 	if ((bank->jit_read_flag | bank->jit_write_flag) & S_N_ADDR) {
 		jit_n_addr_unsafe = 1;
 	}
+#endif
 
 	if (start >= 0x100) {
 		int real_left = 0;
