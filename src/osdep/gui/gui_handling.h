@@ -335,6 +335,10 @@ void PushFakeKey(SDL_Keycode inKey);
 extern void CreateDefaultDevicename(char* name);
 extern bool DevicenameExists(const char* name);
 extern int tweakbootpri(int bp, int ab, int dnm);
+STATIC_INLINE bool is_hdf_rdb(void)
+{
+	return current_hfdlg.ci.sectors == 0 && current_hfdlg.ci.surfaces == 0 && current_hfdlg.ci.reserved == 0;
+}
 
 extern char* screenshot_filename;
 extern int currentStateNum;
