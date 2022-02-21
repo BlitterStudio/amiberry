@@ -2949,7 +2949,7 @@ static uae_u32 picasso_SetSplitPosition(TrapContext *ctx)
 	return 1;
 }
 
-#ifdef CPU_AARCH64
+#if defined (CPU_AARCH64) || defined (__x86_64__)
 static void do_xor8 (uae_u8* p, int w, uae_u32 v)
 {
 	while (ALIGN_POINTER_TO32 (p) != 7 && w) {
