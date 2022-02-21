@@ -801,7 +801,7 @@ static uae_u32 opcode_swap(uae_u16 opcode)
 {
 	if (!need_opcode_swap)
 		return opcode;
-	return do_byteswap_16(opcode);
+	return bswap_16(opcode);
 }
 
 uae_u32 REGPARAM2 op_illg_1 (uae_u32 opcode)
