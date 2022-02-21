@@ -556,7 +556,7 @@ static void hardware_trap_ack(TrapContext *ctx)
 
 static int hardware_trap_thread(void *arg)
 {
-#ifdef CPU_AARCH64
+#if defined(__x86_64__) || defined(CPU_AARCH64) || defined CPU_AMD64
 	int tid = *(uae_u32*)arg;
 #else
 	int tid = (uae_u32)arg;

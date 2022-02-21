@@ -126,7 +126,7 @@
 #undef CPU_64_BIT
 #endif
 
-#ifdef CPU_AARCH64
+#if defined(__x86_64__) || defined(CPU_AARCH64) || defined CPU_AMD64
 #define SIZEOF_VOID_P 8
 #else
 #define SIZEOF_VOID_P 4
@@ -273,7 +273,7 @@ typedef int32_t uae_atomic;
 #define SIZEOF_INT 4
 
 /* The number of bytes in a long.  */
-#ifdef CPU_AARCH64
+#if defined(__x86_64__) || defined(CPU_AARCH64) || defined CPU_AMD64
 #define SIZEOF_LONG 8
 #else
 #define SIZEOF_LONG 4

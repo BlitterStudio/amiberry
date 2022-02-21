@@ -203,7 +203,7 @@ static void *uae_vm_alloc_with_flags(uae_u32 size, int flags, int protect)
 	int native_protect = protect_to_native(protect);
 #endif
 
-#ifndef CPU_AARCH64
+#if defined(__x86_64__) || defined(CPU_AARCH64) || defined CPU_AMD64
 	flags &= ~UAE_VM_32BIT;
 #endif
 	if (flags & UAE_VM_32BIT) {
@@ -338,7 +338,7 @@ static void *try_reserve(uintptr_t try_addr, uae_u32 size, int flags)
 		return NULL;
 	}
 #endif
-#ifdef CPU_AARCH64
+#if defined(__x86_64__) || defined(CPU_AARCH64) || defined CPU_AMD64
 	if (flags & UAE_VM_32BIT) {
 		uintptr_t end = (uintptr_t) address + size;
 		if (address && end > (uintptr_t) 0x100000000ULL) {
