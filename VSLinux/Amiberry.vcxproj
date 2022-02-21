@@ -678,6 +678,7 @@
     <ClInclude Include="..\src\archivers\chd\delegate.h" />
     <ClInclude Include="..\src\archivers\chd\eigcc.h" />
     <ClInclude Include="..\src\archivers\chd\eigccarm.h" />
+    <ClInclude Include="..\src\archivers\chd\eigccx86.h" />
     <ClInclude Include="..\src\archivers\chd\eminline.h" />
     <ClInclude Include="..\src\archivers\chd\flac.h" />
     <ClInclude Include="..\src\archivers\chd\harddisk.h" />
