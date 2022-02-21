@@ -2,6 +2,15 @@
 <project version="4">
   <component name="MakefileBuildTargetsManager">
     <user-build-targets>
+      <build-target name="PLATFORM=x86-64">
+        <build-configurations>
+          <build-configuration toolchainName="WSL">
+            <make-targets>
+              <make-target>PLATFORM=x86-64</make-target>
+            </make-targets>
+          </build-configuration>
+        </build-configurations>
+      </build-target>
       <build-target name="PLATFORM=rpi4-sdl2 DEBUG=1">
         <build-configurations>
           <build-configuration toolchainName="RPI4-RPIOS (32-bit)">
@@ -42,22 +51,11 @@
           </build-configuration>
         </build-configurations>
       </build-target>
-      <build-target name="PLATFORM=rpi4-64-sdl2 DEBUG=1">
+      <build-target name="clean">
         <build-configurations>
-          <build-configuration toolchainName="Pi400 (64-bit)">
+          <build-configuration toolchainName="WSL">
             <make-targets>
-              <make-target>PLATFORM=rpi4-64-sdl2</make-target>
-              <make-target>DEBUG=1</make-target>
-            </make-targets>
-          </build-configuration>
-        </build-configurations>
-      </build-target>
-      <build-target name="PLATFORM=rpi4-64-dmx DEBUG=1">
-        <build-configurations>
-          <build-configuration toolchainName="Pi400 (64-bit)">
-            <make-targets>
-              <make-target>PLATFORM=rpi4-64-dmx</make-target>
-              <make-target>DEBUG=1</make-target>
+              <make-target>clean</make-target>
             </make-targets>
           </build-configuration>
         </build-configurations>
@@ -65,24 +63,6 @@
       <build-target name="clean">
         <build-configurations>
           <build-configuration toolchainName="RPI4-RPIOS (32-bit)">
-            <make-targets>
-              <make-target>clean</make-target>
-            </make-targets>
-          </build-configuration>
-        </build-configurations>
-      </build-target>
-      <build-target name="clean">
-        <build-configurations>
-          <build-configuration toolchainName="RPI4-RPIOS (64-bit)">
-            <make-targets>
-              <make-target>clean</make-target>
-            </make-targets>
-          </build-configuration>
-        </build-configurations>
-      </build-target>
-      <build-target name="clean">
-        <build-configurations>
-          <build-configuration toolchainName="Pi400 (64-bit)">
             <make-targets>
               <make-target>clean</make-target>
             </make-targets>

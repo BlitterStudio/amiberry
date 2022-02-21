@@ -1,6 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="CLionExternalBuildManager">
+    <target id="fce4aec2-108a-4a07-8954-df079a2e8ec5" name="x86-64 (WSL)" defaultType="MAKE">
+      <configuration id="ec7f4f33-b00d-4a98-b98b-c08053bef509" name="x86-64 (WSL)" toolchainName="WSL">
+        <build type="MAKE">
+          <make targetName="PLATFORM=x86-64" />
+        </build>
+        <clean type="MAKE">
+          <make targetName="clean" />
+        </clean>
+      </configuration>
+    </target>
     <target id="9821eed6-961e-4c65-9d13-689205ec9d21" name="rpi4-sdl2 (32-bit)" defaultType="MAKE">
       <configuration id="fd46c317-78a7-4841-b62d-380cd0fec3f9" name="rpi4-sdl2 (32-bit)" toolchainName="RPI4-RPIOS (32-bit)">
         <build type="MAKE">
