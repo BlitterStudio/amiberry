@@ -2063,6 +2063,9 @@
     <ClInclude Include="..\src\floppybridge\resource.h">
       <Filter>src\floppybridge</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\archivers\chd\eigccx86.h">
+      <Filter>src\archivers\chd</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Xml Include="..\abr\brainfile.xml">
