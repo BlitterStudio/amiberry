@@ -224,8 +224,8 @@ public:
 		RefreshPanelCPU();
 		RefreshPanelChipset();
 		RefreshPanelRAM();
-	}
 #endif
+	}
 };
 
 static JITActionListener* jitActionListener;
