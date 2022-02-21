@@ -43,7 +43,8 @@ using namespace std;
 #if defined(__x86_64__) || defined(_M_AMD64)
 #define CPU_x86_64 1
 #define CPU_64_BIT 1
-#elif defined(__i386__) || defined(_M_IX86) && !defined(__arm__) && !defined(__aarch64__)
+#define X86_64_ASSEMBLY 1
+#elif defined(__i386__) || defined(_M_IX86)
 #define CPU_i386 1
 #elif defined(__arm__) || defined(_M_ARM) || defined(__aarch64__)
 #define CPU_arm 1
@@ -136,8 +137,8 @@ using namespace std;
 #define S_ISDIR(val) (S_IFDIR & val)
 struct utimbuf
 {
-    time_t actime;
-    time_t modtime;
+	time_t actime;
+	time_t modtime;
 };
 #endif
 
@@ -180,9 +181,9 @@ extern void to_upper (TCHAR *s, int len);
 /* While we're here, make abort more useful.  */
 #define abort() \
   do { \
-    printf ("Internal error; file %s, line %d\n", __FILE__, __LINE__); \
-    SDL_Quit(); \
-    (abort) (); \
+	printf ("Internal error; file %s, line %d\n", __FILE__, __LINE__); \
+	SDL_Quit(); \
+	(abort) (); \
 } while (0)
 #else
 #define ENUMDECL enum
@@ -220,9 +221,9 @@ extern void to_upper (TCHAR *s, int len);
 
 #define abort() \
   do { \
-    printf ("Internal error; file %s, line %d\n", __FILE__, __LINE__); \
-    SDL_Quit(); \
-    (abort) (); \
+	printf ("Internal error; file %s, line %d\n", __FILE__, __LINE__); \
+	SDL_Quit(); \
+	(abort) (); \
 } while (0)
 
 #endif
@@ -372,14 +373,14 @@ extern void gui_message (const TCHAR *,...);
 STATIC_INLINE uae_u32 do_byteswap_32(uae_u32 v) {
   __asm__ (
 	"rev %0, %0"
-    : "=r" (v) : "0" (v) ); return v;
+	: "=r" (v) : "0" (v) ); return v;
 }
 
 STATIC_INLINE uae_u32 do_byteswap_16(uae_u32 v) {
   __asm__ (
-    "revsh %0, %0\n\t"
-    "uxth %0, %0"
-    : "=r" (v) : "0" (v) ); return v;
+	"revsh %0, %0\n\t"
+	"uxth %0, %0"
+	: "=r" (v) : "0" (v) ); return v;
 }
 #define bswap_16(x) do_byteswap_16(x)
 #define bswap_32(x) do_byteswap_32(x)
@@ -389,14 +390,14 @@ STATIC_INLINE uae_u32 do_byteswap_16(uae_u32 v) {
 STATIC_INLINE uae_u32 do_byteswap_32(uae_u32 v) {
   __asm__ (
 	"rev %w0, %w0"
-    : "=r" (v) : "0" (v) ); return v;
+	: "=r" (v) : "0" (v) ); return v;
 }
 
 STATIC_INLINE uae_u32 do_byteswap_16(uae_u32 v) {
   __asm__ (
-    "rev16 %w0, %w0\n\t"
-    "uxth %w0, %w0"
-    : "=r" (v) : "0" (v) ); return v;
+	"rev16 %w0, %w0\n\t"
+	"uxth %w0, %w0"
+	: "=r" (v) : "0" (v) ); return v;
 }
 #define bswap_16(x) do_byteswap_16(x)
 #define bswap_32(x) do_byteswap_32(x)

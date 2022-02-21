@@ -39,8 +39,13 @@
   * Machine dependent structure for holding the 68k CCR flags
   */
 struct flag_struct {
-	unsigned int cznv;
-	unsigned int x;
+#if defined(CPU_x86_64)
+	uae_u64 cznv;
+	uae_u64 x;
+#else
+	uae_u32 cznv;
+	uae_u32 x;
+#endif
 };
 
 
@@ -129,8 +134,13 @@ STATIC_INLINE int cctrue (int cc)
 #ifndef REGS_DEFINED
 
 struct flag_struct {
+#if defined (CPU_AARCH64)
+	uae_u64 nzcv;
+	uae_u64 x;
+#else
 	uae_u32 nzcv;
 	uae_u32 x;
+#endif
 };
 
 #define FLAGVAL_Q       0x08000000
