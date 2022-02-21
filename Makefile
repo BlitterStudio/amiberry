@@ -561,6 +561,8 @@ OBJS += src/osdep/gui/androidsdl_event.o \
 	src/osdep/gui/PanelOnScreen.o
 endif
 
+USE_JIT=1
+
 ifdef AARCH64
 OBJS += src/osdep/aarch64_helper.o
 src/osdep/aarch64_helper.o: src/osdep/aarch64_helper.s
@@ -571,6 +573,8 @@ src/osdep/arm_helper.o: src/osdep/arm_helper.s
 	$(AS) $(CPUFLAGS) -o src/osdep/arm_helper.o -c src/osdep/arm_helper.s
 else ifeq ($(PLATFORM),$(filter $(PLATFORM),osx))
 OBJS += src/osdep/aarch64_helper_osx.o
+else ifeq ($(PLATFORM),$(filter $(PLATFORM),x86-64))
+	USE_JIT = 0
 else
 OBJS += src/osdep/neon_helper.o
 src/osdep/neon_helper.o: src/osdep/neon_helper.s
@@ -587,11 +591,14 @@ OBJS += src/newcpu.o \
 	src/cpuemu_11.o \
 	src/cpuemu_13.o \
 	src/cpuemu_40.o \
-	src/cpuemu_44.o \
-	src/jit/compemu.o \
+	src/cpuemu_44.o
+
+ifeq ($(USE_JIT),1)
+OBJS += src/jit/compemu.o \
 	src/jit/compstbl.o \
 	src/jit/compemu_fpp.o \
 	src/jit/compemu_support.o
+endif
 
 OBJS += src/floppybridge/ArduinoFloppyBridge.o \
 		src/floppybridge/ArduinoInterface.o \
