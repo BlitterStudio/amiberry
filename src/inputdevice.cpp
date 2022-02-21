@@ -4747,6 +4747,7 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 		host_poweroff = true;
 		break;
 	case AKS_TOGGLE_JIT:
+#ifdef JIT
 		if (currprefs.cachesize == 0)
 		{
 			currprefs.cpu_compatible = changed_prefs.cpu_compatible = false;
@@ -4762,9 +4763,12 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 			currprefs.compfpu = changed_prefs.compfpu = false;
 		}
 		fixup_prefs(&changed_prefs, true);
+#endif
 		break;
 	case AKS_TOGGLE_JIT_FPU:
+#ifdef USE_JIT_FPU
 		currprefs.compfpu = changed_prefs.compfpu = !currprefs.compfpu;
+#endif
 		break;
 #endif
 	}
