@@ -267,9 +267,9 @@ void cap_fps(Uint64 start)
 	refresh_rate = sdl_mode.refresh_rate;
 #endif
 	if (refresh_rate < 60)
-		SDL_Delay(floor(16.666f - elapsed_ms));
-	else
 		SDL_Delay(floor(20.000f - elapsed_ms));
+	else
+		SDL_Delay(floor(16.666f - elapsed_ms));
 }
 
 void update_gui_screen()
