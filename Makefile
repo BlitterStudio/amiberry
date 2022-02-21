@@ -216,6 +216,10 @@ else ifeq ($(PLATFORM),a64)
 	CPPFLAGS += $(CPPFLAGS64)
 	AARCH64 = 1
 
+# Generic EXPERIMENTAL x86-64 target
+else ifeq ($(PLATFORM),x86-64)
+	CPPFLAGS += -DUSE_RENDER_THREAD
+
 # RK3288 e.g. Asus Tinker Board
 # RK3328 e.g. PINE64 Rock64 
 # RK3399 e.g. PINE64 RockPro64 
