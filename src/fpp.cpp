@@ -2728,7 +2728,7 @@ static void get_features(void)
 void fpu_reset (void)
 {
 #if defined(CPU_i386) || defined(CPU_x86_64)
-	init_fpucw_x87();
+//	init_fpucw_x87();
 #endif
 
 	regs.fpu_exp_state = 0;
