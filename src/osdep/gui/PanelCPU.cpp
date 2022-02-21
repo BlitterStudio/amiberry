@@ -199,6 +199,7 @@ class JITActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
+#ifdef JIT
 		if (actionEvent.getSource() == chkJIT)
 		{
 			if (chkJIT->isSelected())
@@ -224,6 +225,7 @@ public:
 		RefreshPanelChipset();
 		RefreshPanelRAM();
 	}
+#endif
 };
 
 static JITActionListener* jitActionListener;
@@ -471,8 +473,7 @@ void RefreshPanelCPU()
 	chkCPUCycleExact->setSelected(changed_prefs.cpu_cycle_exact > 0);
 	chkCPUCycleExact->setEnabled(changed_prefs.cpu_model <= 68010);
 
-// Make JIT not selectable with OS X for now, sigurbjornl, 20220208
-#ifndef __MACH__	
+#ifndef JIT
 	chkJIT->setEnabled(changed_prefs.cpu_model >= 68020);
 	chkJIT->setSelected(changed_prefs.cachesize > 0);
 #else
@@ -508,8 +509,8 @@ void RefreshPanelCPU()
 	chkFPUJIT->setSelected(false);
 	chkFPUJIT->setEnabled(false);
 #endif
-// Make FPU JIT not selectable with OS X for now, sigurbjornl, 20220208
-#ifdef __MACH__
+
+#ifdef JIT
 	chkFPUJIT->setSelected(false);
 	chkFPUJIT->setEnabled(false);
 #endif
