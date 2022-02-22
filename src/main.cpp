@@ -713,7 +713,7 @@ void usage()
 	std::cout << " -r <kick.rom>              Load main ROM from the specified path." << std::endl;
 	std::cout << " -K <kick.rom>              Load extended ROM from the specified path." << std::endl;
 	std::cout << " -m VOLNAME:mount_point     Attach a volume directly to the specified mount point." << std::endl;
-	std::cout << " -W VOLNAME:hardfile        Attach a hardfile with the specified device name." << std::endl;
+	std::cout << " -W DEVNAME:hardfile        Attach a hardfile with the specified device name." << std::endl;
 	std::cout << " -S <value>                 Sound parameter specification." << std::endl;
 	std::cout << " -R <value>                 Output framerate in frames per second." << std::endl;
 	std::cout << " -i                         Enable illegal memory." << std::endl;
