@@ -243,7 +243,12 @@ void RotationExtractor::submitSequence(const MFMSequenceInfo& sequence, const bo
 
 	// Handle index search
 	if (isIndex) {
-		if (m_sequenceIndex == INDEX_NOT_FOUND) m_sequenceIndex = m_sequencePos; else m_nextSequenceIndex = m_sequencePos;
+		if (m_sequenceIndex == INDEX_NOT_FOUND) {
+			m_sequenceIndex = m_sequencePos;
+		}
+		else {
+			m_nextSequenceIndex = m_sequencePos;
+		}
 	}
 
 	// Do different things depending on the mode in use
@@ -292,11 +297,29 @@ void RotationExtractor::submitSequence(const MFMSequenceInfo& sequence, const bo
 
 		// This is a sneaky check-ahead for a full rotation, like a virtual index marker
 		if (m_currentTime >= m_revolutionTime) {
-			if (m_revolutionReadyAt == INDEX_NOT_FOUND) m_revolutionReadyAt = m_sequencePos; else
+			if (m_revolutionReadyAt == INDEX_NOT_FOUND) 
+				m_revolutionReadyAt = m_sequencePos; 
+			else
 				if (m_sequencePos > m_revolutionReadyAt + (OVERLAP_SEQUENCE_MATCHES * OVERLAP_EXTRA_BUFFER))
 					m_revolutionReady = true;
 		}
 	}
+}
+
+
+// Reset this back to "empty"
+void RotationExtractor::reset(bool isHD) {
+	m_indexSequence.valid = false;
+	m_revolutionReadyAt = INDEX_NOT_FOUND;
+	m_sequencePos = 0;
+	m_sequenceIndex = INDEX_NOT_FOUND;
+	m_nextSequenceIndex = INDEX_NOT_FOUND;
+	m_currentTime = 0;
+	m_revolutionReady = false;
+	m_initialSequencesLength = 0;
+	m_initialSequencesWritePos = 0;
+	m_timeReceived = 0;
+	m_isHD = isHD;
 }
 
 // Extracts a single rotation and updates the buffer to remove it.  Returns FALSE if no rotation is available
@@ -305,8 +328,10 @@ bool RotationExtractor::extractRotation(MFMSample* output, uint32_t& outputBits,
 	if (!canExtract()) return false;
 
 	if (m_useIndex) {
-		if (m_sequenceIndex == INDEX_NOT_FOUND) return false;
-		if (m_nextSequenceIndex == INDEX_NOT_FOUND) return false;
+		if (m_sequenceIndex == INDEX_NOT_FOUND) 
+			return false;
+		if (m_nextSequenceIndex == INDEX_NOT_FOUND) 
+			return false;
 		if (m_sequenceIndex > m_nextSequenceIndex) {
 			uint32_t s = m_sequenceIndex;
 			m_sequenceIndex = m_nextSequenceIndex;
@@ -339,19 +364,27 @@ bool RotationExtractor::extractRotation(MFMSample* output, uint32_t& outputBits,
 			rTime += sequence.timeNS;
 			
 #ifdef OUTPUT_TIME_IN_NS
-			const uint32_t bitTime = (usePLLTime ? sequence.pllTimeNS : sequence.timeNS) / ((uint32_t)sequence.mfm + 2);
+			const uint32_t bitTime = (usePLLTime ? sequence.pllTimeNS : sequence.timeNS) / ((sequence.mfm == MFMSequence::mfm000) ? 3 : (uint32_t)sequence.mfm + 1);
 
 			// And write the output stream
-			for (uint32_t s = 0; s <= (uint32_t)sequence.mfm; s++)
+			uint32_t bitsToWrite = (uint32_t)sequence.mfm;
+			if (bitsToWrite > 3)
+				bitsToWrite = 3;
+			for (uint32_t s = 0; s < bitsToWrite; s++)
 				writeStreamBit(output, outputStreamPos, outputStreamBit, false, bitTime, maxBufferSizeBytes);
-			writeStreamBit(output, outputStreamPos, outputStreamBit, (sequence.mfm != MFMSequence::mfm0000), bitTime, maxBufferSizeBytes);
+			if (sequence.mfm != MFMSequence::mfm000)
+				writeStreamBit(output, outputStreamPos, outputStreamBit, true, bitTime, maxBufferSizeBytes);
 #else
 			const uint32_t speed = ((uint32_t)(usePLLTime ? sequence.pllTimeNS : sequence.timeNS) * 100) / (((uint32_t)sequence.mfm + 2) * 2000);
 
 			// And write the output stream
-			for (uint32_t s = 0; s <= (uint32_t)sequence.mfm; s++)
+			uint32_t bitsToWrite = (uint32_t)sequence.mfm;
+			if (bitsToWrite > 3) 
+				bitsToWrite = 3;
+			for (uint32_t s = 0; s < bitsToWrite; s++)
 				writeStreamBit(output, outputStreamPos, outputStreamBit, false, speed, maxBufferSizeBytes);
-			writeStreamBit(output, outputStreamPos, outputStreamBit, (sequence.mfm != MFMSequence::mfm0000), speed, maxBufferSizeBytes);
+			if (sequence.mfm != MFMSequence::mfm000)
+				writeStreamBit(output, outputStreamPos, outputStreamBit, true, speed, maxBufferSizeBytes);
 #endif
 		}
 		// Need to shift the last ones onto place
@@ -391,7 +424,8 @@ bool RotationExtractor::extractRotation(MFMSample* output, uint32_t& outputBits,
 		uint32_t numBadValues = 0;
 
 		uint32_t nextRevolutionStart = getOverlapPosition(numBadValues);
-		if (nextRevolutionStart < 1) return false;
+		if (nextRevolutionStart < 1) 
+			return false;
 
 		// If the overlap is poor, switch to overlap detection using the indexes - if this is in the GAP its ok, but there's no way to tell
 		if (numBadValues >= MAX_BAD_VALUES_BEFORE_SWITCH) {
@@ -418,19 +452,26 @@ bool RotationExtractor::extractRotation(MFMSample* output, uint32_t& outputBits,
 			m_timeReceived -= (uint32_t)sequence.timeNS;
 
 #ifdef OUTPUT_TIME_IN_NS
-			const uint32_t bitTime = (usePLLTime ? sequence.pllTimeNS : sequence.timeNS) / ((uint32_t)sequence.mfm + 2);
+			const uint32_t bitTime = (usePLLTime ? sequence.pllTimeNS : sequence.timeNS) / ((sequence.mfm == MFMSequence::mfm000) ? 3 : (uint32_t)sequence.mfm + 1);
 
 			// And write the output stream
-			for (uint32_t s = 0; s <= (uint32_t)sequence.mfm; s++)
+			uint32_t bitsToWrite = (uint32_t)sequence.mfm;
+			if (bitsToWrite > 3) bitsToWrite = 3;
+			for (uint32_t s = 0; s < bitsToWrite; s++)
 				writeStreamBit(output, outputStreamPos, outputStreamBit, false, bitTime, maxBufferSizeBytes);
-			writeStreamBit(output, outputStreamPos, outputStreamBit, (sequence.mfm != MFMSequence::mfm0000), bitTime, maxBufferSizeBytes);
+			if (sequence.mfm != MFMSequence::mfm000)
+				writeStreamBit(output, outputStreamPos, outputStreamBit, true, bitTime, maxBufferSizeBytes);
+
 #else
 			const uint32_t speed = ((uint32_t)(usePLLTime ? sequence.pllTimeNS : sequence.timeNS) * 100) / (((uint32_t)sequence.mfm + 2) * 2000);
 
 			// And write the output stream
-			for (uint32_t s = 0; s <= (uint32_t)sequence.mfm; s++)
+			uint32_t bitsToWrite = (uint32_t)sequence.mfm;
+			if (bitsToWrite > 3) bitsToWrite = 3;
+			for (uint32_t s = 0; s < bitsToWrite; s++)
 				writeStreamBit(output, outputStreamPos, outputStreamBit, false, speed, maxBufferSizeBytes);
-			writeStreamBit(output, outputStreamPos, outputStreamBit, (sequence.mfm != MFMSequence::mfm0000), speed, maxBufferSizeBytes);
+			if (sequence.mfm != MFMSequence::mfm000)
+				writeStreamBit(output, outputStreamPos, outputStreamBit, true, speed, maxBufferSizeBytes);
 #endif
 		}
 		// Need to shift the last ones onto place
