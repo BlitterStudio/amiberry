@@ -7157,38 +7157,34 @@ static void parse_filesys_spec (struct uae_prefs *p, bool readonly, const TCHAR 
 
 static void parse_hardfile_spec (struct uae_prefs *p, const TCHAR *spec)
 {
-	struct uaedev_config_info uci;
-	TCHAR *x0 = my_strdup (spec);
-	TCHAR *x1, *x2, *x3, *x4;
+	uaedev_config_data* uci;
+	auto parameter = std::string(spec);
+	std::string x1;
 
-	uci_set_defaults (&uci, false);
-	x1 = _tcschr (x0, ':');
-	if (x1 == NULL)
-		goto argh;
-	*x1++ = '\0';
-	x2 = _tcschr (x1 + 1, ':');
-	if (x2 == NULL)
-		goto argh;
-	*x2++ = '\0';
-	x3 = _tcschr (x2 + 1, ':');
-	if (x3 == NULL)
-		goto argh;
-	*x3++ = '\0';
-	x4 = _tcschr (x3 + 1, ':');
-	if (x4 == NULL)
-		goto argh;
-	*x4++ = '\0';
+	const auto pos = parameter.find(':');
+	if (pos != std::string::npos)
+	{
+		x1 = parameter.substr(0, pos);
+		x1 += ':';
+	}
+	const std::string x2 = parameter.substr(pos + 1, parameter.length());
 #ifdef FILESYS
-	_tcscpy (uci.rootdir, x4);
-	//add_filesys_config (p, -1, NULL, NULL, x4, 0, 0, _tstoi (x0), _tstoi (x1), _tstoi (x2), _tstoi (x3), 0, 0, 0, 0, 0, 0, 0);
-#endif
-	free (x0);
-	return;
+	default_hfdlg(&current_hfdlg);
+	updatehdfinfo(true, false);
 
-argh:
-	free (x0);
-	cfgfile_warning(_T("Bad hardfile parameter specified\n"));
-	return;
+	current_hfdlg.ci.type = UAEDEV_HDF;
+	_tcscpy(current_hfdlg.ci.devname, x1.c_str());
+	_tcscpy(current_hfdlg.ci.rootdir, x2.c_str());
+	hardfile_testrdb(&current_hfdlg);
+
+	uaedev_config_info ci{};
+	memcpy(&ci, &current_hfdlg.ci, sizeof(uaedev_config_info));
+	uci = add_filesys_config(p, -1, &ci);
+	if (uci) {
+		if (auto* const hfd = get_hardfile_data(uci->configoffset))
+			hardfile_media_change(hfd, &ci, true, false);
+	}
+#endif
 }
 
 static void parse_cpu_specs (struct uae_prefs *p, const TCHAR *spec)
@@ -7254,20 +7250,20 @@ int parse_cmdline_option (struct uae_prefs *p, TCHAR c, const TCHAR *arg)
 	p->all_lines = u;
 
 	switch (c) {
-	case 'h': usage (); exit (0);
+	case 'h': usage(); exit(0);
 
-	case '0': cmdpath (p->floppyslots[0].df, arg, 255); break;
-	case '1': cmdpath (p->floppyslots[1].df, arg, 255); break;
-	case '2': cmdpath (p->floppyslots[2].df, arg, 255); break;
-	case '3': cmdpath (p->floppyslots[3].df, arg, 255); break;
-	case 'r': cmdpath (p->romfile, arg, 255); break;
-	case 'K': cmdpath (p->romextfile, arg, 255); break;
-	case 'p': _tcsncpy (p->prtname, arg, 255); p->prtname[255] = 0; break;
-		/*     case 'I': _tcsncpy (p->sername, arg, 255); p->sername[255] = 0; currprefs.use_serial = 1; break; */
-	case 'm': case 'M': parse_filesys_spec (p, c == 'M', arg); break;
-	case 'W': parse_hardfile_spec (p, arg); break;
-	case 'S': parse_sound_spec (p, arg); break;
-	case 'R': p->gfx_framerate = _tstoi (arg); break;
+	case '0': cmdpath(p->floppyslots[0].df, arg, 255); break;
+	case '1': cmdpath(p->floppyslots[1].df, arg, 255); break;
+	case '2': cmdpath(p->floppyslots[2].df, arg, 255); break;
+	case '3': cmdpath(p->floppyslots[3].df, arg, 255); break;
+	case 'r': cmdpath(p->romfile, arg, 255); break;
+	case 'K': cmdpath(p->romextfile, arg, 255); break;
+	case 'p': _tcsncpy(p->prtname, arg, 255); p->prtname[255] = 0; break;
+/*  case 'I': _tcsncpy (p->sername, arg, 255); p->sername[255] = 0; currprefs.use_serial = 1; break; */
+	case 'm': case 'M': parse_filesys_spec(p, c == 'M', arg); break;
+	case 'W': parse_hardfile_spec(p, arg); break;
+	case 'S': parse_sound_spec(p, arg); break;
+	case 'R': p->gfx_framerate = _tstoi(arg); break;
 	case 'i': p->illegal_mem = 1; break;
 	case 'J': parse_joy_spec (p, arg); break;
 
