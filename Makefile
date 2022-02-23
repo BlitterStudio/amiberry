@@ -73,8 +73,8 @@ ifneq (,$(findstring rpi4,$(PLATFORM)))
 	CPUFLAGS = -mcpu=cortex-a72 -mfpu=neon-fp-armv8
 endif
 
-# Mac OS X CPU flags
-ifneq (,$(findstring osx,$(PLATFORM)))
+# Mac OS X M1 CPU flags
+ifneq (,$(findstring osx-m1,$(PLATFORM)))
 	CPUFLAGS=-mcpu=apple-m1
 endif
 #
@@ -215,10 +215,18 @@ else ifeq ($(PLATFORM),oga)
 	CPPFLAGS += $(CPPFLAGS64)
 	AARCH64 = 1
 
-# OS X (SDL2, 64-bit)
-else ifeq ($(PLATFORM),osx)
+# OS X (SDL2, 64-bit, M1)
+else ifeq ($(PLATFORM),osx-m1)
 	LDFLAGS = -L/usr/local/lib external/libguisan/dylib/libguisan.dylib -lSDL2_image -lSDL2_ttf -lpng -liconv -lz -lFLAC -L/opt/homebrew/lib/ -lmpg123 -lmpeg2 -lmpeg2convert $(SDL_LDFLAGS) -framework IOKit -framework Foundation
 	CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -I/opt/homebrew/include -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -DAMIBERRY -D_FILE_OFFSET_BITS=64 -DCPU_AARCH64 $(SDL_CFLAGS) 
+	CXX=/usr/bin/c++
+#	DEBUG=1
+	APPBUNDLE=1
+
+# OS X (SDL2, 64-bit, x86-64)
+else ifeq ($(PLATFORM),osx-x86)
+	LDFLAGS = -L/usr/local/lib external/libguisan/dylib/libguisan.dylib -lSDL2_image -lSDL2_ttf -lpng -liconv -lz -lFLAC -L/opt/homebrew/lib/ -lmpg123 -lmpeg2 -lmpeg2convert $(SDL_LDFLAGS) -framework IOKit -framework Foundation
+	CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -I/opt/homebrew/include -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -DAMIBERRY -D_FILE_OFFSET_BITS=64 $(SDL_CFLAGS) 
 	CXX=/usr/bin/c++
 #	DEBUG=1
 	APPBUNDLE=1
@@ -571,8 +579,10 @@ else ifeq ($(PLATFORM),$(filter $(PLATFORM),rpi1 rpi1-sdl2))
 OBJS += src/osdep/arm_helper.o
 src/osdep/arm_helper.o: src/osdep/arm_helper.s
 	$(AS) $(CPUFLAGS) -o src/osdep/arm_helper.o -c src/osdep/arm_helper.s
-else ifeq ($(PLATFORM),$(filter $(PLATFORM),osx))
+else ifeq ($(PLATFORM),$(filter $(PLATFORM),osx-m1))
 OBJS += src/osdep/aarch64_helper_osx.o
+else ifeq ($(PLATFORM),$(filter $(PLATFORM),osx-x86))
+	USE_JIT = 0
 else ifeq ($(PLATFORM),$(filter $(PLATFORM),x86-64))
 	USE_JIT = 0
 else

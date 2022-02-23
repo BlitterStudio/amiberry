@@ -10,8 +10,9 @@
 #include <list>
 #include <dirent.h>
 #include <iconv.h>
+#ifndef __MACH__
 #include <sys/sendfile.h>
-
+#endif
 #include "fsdb_host.h"
 #include "uae.h"
 
@@ -613,6 +614,7 @@ int target_get_volume_name(struct uaedev_mount_info* mtinf, struct uaedev_config
 	return 2;
 }
 
+#ifndef __MACH__
 // If replace is false, copyfile will fail if file already exists
 int copyfile(const char* target, const char* source, int replace)
 {
@@ -642,6 +644,7 @@ int copyfile(const char* target, const char* source, int replace)
 
 	return ret;
 }
+#endif
 void filesys_addexternals(void)
 {
 	// this would mount system drives on Windows

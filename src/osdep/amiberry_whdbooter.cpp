@@ -215,8 +215,10 @@ void make_rom_symlink(const char* kick_short, char* kick_path, int kick_numb, st
 			int r = symlink(p->romfile, kick_long);
 			// VFAT filesystems do not support creation of symlinks.
 			// Fallback to copying file if filesystem does not support the generation of symlinks
+#ifndef __MACH__
 			if( r < 0 && errno == EPERM )
 				r = copyfile( kick_long, p->romfile, 1 );
+#endif
 			write_log("Making SymLink for Kickstart ROM: %s  [%s]\n", kick_long, r < 0 ? "Fail" : "Ok");
 		}
 	}
@@ -288,8 +290,10 @@ void symlink_roms(struct uae_prefs* prefs)
 
 	if (my_existsfile(tmp)) {
 		int r = symlink(tmp, tmp2);
+#ifndef __MACH__
 		if( r < 0 && errno == EPERM )
 			copyfile( tmp2, tmp, 1 ); // copyfile in amiberry.cpp
+#endif
 	}
 }
 
