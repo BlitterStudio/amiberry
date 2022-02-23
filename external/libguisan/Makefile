@@ -8,7 +8,7 @@ SOURCE	= $(foreach dir,$(DIRS),$(wildcard $(dir)/*.cpp))
 OBJS    = $(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$(SOURCE)))
 DEPS	= $(SOURCE:%.cpp=%.d)
 
-ifeq ($(PLATFORM),osx)
+ifneq (,$(findstring osx,$(PLATFORM)))
 	# Create DYLIB on OS X
 	TARGET=dylib/libguisan.dylib
         LDFLAGS += -lsdl2 -no_branch_islands
