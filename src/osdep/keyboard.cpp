@@ -386,38 +386,50 @@ bool my_kbd_handler(int keyboard, int scancode, int newstate, bool alwaysrelease
 	bool special = false;
 	static int swapperdrive = 0;
 
+	// Amiberry uses qualifiers for Quit also, so we handle this piece below
+#ifndef AMIBERRY
 	if (amode && quit_key.scancode && scancode == quit_key.scancode) {
 		uae_quit();
 		return true;
 	}
 
-	//if (scancode == DIK_F9 && specialpressed()) {
-	//	extern bool toggle_3d_debug(void);
-	//	if (newstate) {
-	//		if (!toggle_3d_debug()) {
-	//			toggle_rtg(0, MAX_RTG_BOARDS + 1);
-	//		}
-	//	}
-	//	return true;
-	//}
-
+	if (scancode == DIK_F9 && specialpressed()) {
+		extern bool toggle_3d_debug(void);
+		if (newstate) {
+			if (!toggle_3d_debug()) {
+				toggle_rtg(0, MAX_RTG_BOARDS + 1);
+			}
+		}
+		return true;
+	}
+#endif
 	scancode_new = scancode;
 
+	const bool ctrl_state = ctrlpressed();
+	const bool shift_state = shiftpressed();
+	const bool alt_state = altpressed();
+	const bool win_state = winpressed();
+	const bool special_state = specialpressed();
+
 	if (newstate) {
+		if (quit_key.scancode && scancode == quit_key.scancode)
+		{
+			if ((quit_key.modifiers.lctrl || quit_key.modifiers.rctrl) == ctrl_state
+				&& (quit_key.modifiers.lshift || quit_key.modifiers.rshift) == shift_state
+				&& (quit_key.modifiers.lalt || quit_key.modifiers.ralt) == alt_state
+				&& (quit_key.modifiers.lgui || quit_key.modifiers.rgui) == win_state)
+			{
+				uae_quit();
+				return true;
+			}
+		}
+
 		if (enter_gui_key.scancode && scancode == enter_gui_key.scancode)
 		{
-			if ((enter_gui_key.modifiers.lctrl || enter_gui_key.modifiers.rctrl) && ctrlpressed()
-				|| (enter_gui_key.modifiers.lshift || enter_gui_key.modifiers.rshift) && shiftpressed()
-				|| (enter_gui_key.modifiers.lalt || enter_gui_key.modifiers.ralt) && altpressed()
-				|| (enter_gui_key.modifiers.lgui || enter_gui_key.modifiers.rgui) && winpressed()
-				|| !enter_gui_key.modifiers.lctrl
-				&& !enter_gui_key.modifiers.rctrl
-				&& !enter_gui_key.modifiers.lshift
-				&& !enter_gui_key.modifiers.rshift
-				&& !enter_gui_key.modifiers.lalt
-				&& !enter_gui_key.modifiers.ralt
-				&& !enter_gui_key.modifiers.lgui
-				&& !enter_gui_key.modifiers.rgui)
+			if ((enter_gui_key.modifiers.lctrl || enter_gui_key.modifiers.rctrl) == ctrl_state
+				&& (enter_gui_key.modifiers.lshift || enter_gui_key.modifiers.rshift) == shift_state
+				&& (enter_gui_key.modifiers.lalt || enter_gui_key.modifiers.ralt) == alt_state
+				&& (enter_gui_key.modifiers.lgui || enter_gui_key.modifiers.rgui) == win_state)
 			{
 				inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
 				scancode = 0;
@@ -427,18 +439,10 @@ bool my_kbd_handler(int keyboard, int scancode, int newstate, bool alwaysrelease
 
 		if (action_replay_key.scancode && scancode == action_replay_key.scancode)
 		{
-			if ((action_replay_key.modifiers.lctrl || action_replay_key.modifiers.rctrl) && ctrlpressed()
-				|| (action_replay_key.modifiers.lshift || action_replay_key.modifiers.rshift) && shiftpressed()
-				|| (action_replay_key.modifiers.lalt || action_replay_key.modifiers.ralt) && altpressed()
-				|| (action_replay_key.modifiers.lgui || action_replay_key.modifiers.rgui) && winpressed()
-				|| !action_replay_key.modifiers.lctrl
-				&& !action_replay_key.modifiers.rctrl
-				&& !action_replay_key.modifiers.lshift
-				&& !action_replay_key.modifiers.rshift
-				&& !action_replay_key.modifiers.lalt
-				&& !action_replay_key.modifiers.ralt
-				&& !action_replay_key.modifiers.lgui
-				&& !action_replay_key.modifiers.rgui)
+			if ((action_replay_key.modifiers.lctrl || action_replay_key.modifiers.rctrl) == ctrl_state
+				&& (action_replay_key.modifiers.lshift || action_replay_key.modifiers.rshift) == shift_state
+				&& (action_replay_key.modifiers.lalt || action_replay_key.modifiers.ralt) == alt_state
+				&& (action_replay_key.modifiers.lgui || action_replay_key.modifiers.rgui) == win_state)
 			{
 				inputdevice_add_inputcode(AKS_FREEZEBUTTON, 1, nullptr);
 				scancode = 0;
@@ -447,18 +451,10 @@ bool my_kbd_handler(int keyboard, int scancode, int newstate, bool alwaysrelease
 
 		if (fullscreen_key.scancode && scancode == fullscreen_key.scancode)
 		{
-			if ((fullscreen_key.modifiers.lctrl || fullscreen_key.modifiers.rctrl) && ctrlpressed()
-				|| (fullscreen_key.modifiers.lshift || fullscreen_key.modifiers.rshift) && shiftpressed()
-				|| (fullscreen_key.modifiers.lalt || fullscreen_key.modifiers.ralt) && altpressed()
-				|| (fullscreen_key.modifiers.lgui || fullscreen_key.modifiers.rgui) && winpressed()
-				|| !fullscreen_key.modifiers.lctrl
-				&& !fullscreen_key.modifiers.rctrl
-				&& !fullscreen_key.modifiers.lshift
-				&& !fullscreen_key.modifiers.rshift
-				&& !fullscreen_key.modifiers.lalt
-				&& !fullscreen_key.modifiers.ralt
-				&& !fullscreen_key.modifiers.lgui
-				&& !fullscreen_key.modifiers.rgui)
+			if ((fullscreen_key.modifiers.lctrl || fullscreen_key.modifiers.rctrl) == ctrl_state
+				&& (fullscreen_key.modifiers.lshift || fullscreen_key.modifiers.rshift) == shift_state
+				&& (fullscreen_key.modifiers.lalt || fullscreen_key.modifiers.ralt) == alt_state
+				&& (fullscreen_key.modifiers.lgui || fullscreen_key.modifiers.rgui) == win_state)
 			{
 				inputdevice_add_inputcode(AKS_TOGGLEWINDOWEDFULLSCREEN, 1, nullptr);
 				scancode = 0;
@@ -467,18 +463,10 @@ bool my_kbd_handler(int keyboard, int scancode, int newstate, bool alwaysrelease
 
 		if (minimize_key.scancode && scancode == minimize_key.scancode)
 		{
-			if ((minimize_key.modifiers.lctrl || minimize_key.modifiers.rctrl) && ctrlpressed()
-				|| (minimize_key.modifiers.lshift || minimize_key.modifiers.rshift) && shiftpressed()
-				|| (minimize_key.modifiers.lalt || minimize_key.modifiers.ralt) && altpressed()
-				|| (minimize_key.modifiers.lgui || minimize_key.modifiers.rgui) && winpressed()
-				|| !minimize_key.modifiers.lctrl
-				&& !minimize_key.modifiers.rctrl
-				&& !minimize_key.modifiers.lshift
-				&& !minimize_key.modifiers.rshift
-				&& !minimize_key.modifiers.lalt
-				&& !minimize_key.modifiers.ralt
-				&& !minimize_key.modifiers.lgui
-				&& !minimize_key.modifiers.rgui)
+			if ((minimize_key.modifiers.lctrl || minimize_key.modifiers.rctrl) == ctrl_state
+				&& (minimize_key.modifiers.lshift || minimize_key.modifiers.rshift) == shift_state
+				&& (minimize_key.modifiers.lalt || minimize_key.modifiers.ralt) == alt_state
+				&& (minimize_key.modifiers.lgui || minimize_key.modifiers.rgui) == win_state)
 			{
 				minimizewindow(0);
 				scancode = 0;
@@ -489,7 +477,7 @@ bool my_kbd_handler(int keyboard, int scancode, int newstate, bool alwaysrelease
 			clipboard_disable(true);
 	}
 	
-	if (!specialpressed() && inputdevice_iskeymapped(keyboard, scancode))
+	if (!special_state && inputdevice_iskeymapped(keyboard, scancode))
 		scancode = 0;
 
 	if (newstate && code == 0 && amode) {
@@ -505,11 +493,11 @@ bool my_kbd_handler(int keyboard, int scancode, int newstate, bool alwaysrelease
 		case SDL_SCANCODE_8:
 		case SDL_SCANCODE_9:
 		case SDL_SCANCODE_0:
-			if (specialpressed()) {
+			if (special_state) {
 				int num = scancode - SDL_SCANCODE_1;
-				if (shiftpressed())
+				if (shift_state)
 					num += 10;
-				if (ctrlpressed()) {
+				if (ctrl_state) {
 					swapperdrive = num;
 					if (swapperdrive > 3)
 						swapperdrive = 0;
@@ -537,7 +525,7 @@ bool my_kbd_handler(int keyboard, int scancode, int newstate, bool alwaysrelease
 		case SDL_SCANCODE_KP_8:
 		case SDL_SCANCODE_KP_9:
 		case SDL_SCANCODE_KP_PERIOD:
-			if (specialpressed()) {
+			if (special_state) {
 				int i = 0, v = -1;
 				while (np[i] >= 0) {
 					v = np[i + 1];
@@ -546,7 +534,7 @@ bool my_kbd_handler(int keyboard, int scancode, int newstate, bool alwaysrelease
 					i += 2;
 				}
 				if (v >= 0)
-					code = AKS_STATESAVEQUICK + v * 2 + ((shiftpressed() || ctrlpressed()) ? 0 : 1);
+					code = AKS_STATESAVEQUICK + v * 2 + ((shift_state || ctrl_state) ? 0 : 1);
 				special = true;
 			}
 			break;
@@ -559,7 +547,7 @@ bool my_kbd_handler(int keyboard, int scancode, int newstate, bool alwaysrelease
 	}
 
 	scancode = scancode_new;
-	if (!specialpressed() && newstate) {
+	if (!special_state && newstate) {
 		if (scancode == SDL_SCANCODE_CAPSLOCK) {
 			host_capslockstate = host_capslockstate ? 0 : 1;
 			capslockstate = host_capslockstate;
