@@ -35,8 +35,12 @@ cp -R data Amiberry.app/Contents/Resources/Data
 # Copy docs into the bundle
 cp -R docs Amiberry.app/Contents/Resources/Docs
 
+# Overwrite default conf with OSX specific one
+mkdir Amiberry.app/Contents/resources/conf
+cat conf/amiberry-osx.conf | sed -e "s#USERDIR#$USERDIR#g" >Amiberry.app/Contents/Resources/conf/amiberry.conf
 # Use dylibbundler to install into app if exists
 dylibbundler -od -b -x Amiberry.app/Contents/MacOS/Amiberry -d Amiberry.app/Contents/libs/ -s external/libguisan/dylib/
 if [ $? -gt 0 ]; then
-	echo "Can't find dylibbundler, use brew to install it, or have users manually copy external/libguisan/dylib/libguisan.dylib into /usr/local/lib (needs sudo)"
+    echo "Can't find dylibbundler, use brew to install it, or manually copy external/libguisan/dylib/libguisan.dylib into /usr/local/lib (you'll need sudo)"
 fi
+
