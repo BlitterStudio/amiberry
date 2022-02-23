@@ -86,29 +86,29 @@ typedef struct a_inode_struct {
   /* Unique number for identification.  */
   uae_u32 uniq;
   /* For a directory that is being ExNext()ed, the number of child ainos
-     which must be kept locked in core.  */
-    unsigned int locked_children;
-    /* How many ExNext()s are going on in this directory?  */
-    unsigned int exnext_count;
-    /* AmigaOS locking bits.  */
-    int shlock;
-    long db_offset;
-    unsigned int dir:1;
-    unsigned int softlink:2;
-    unsigned int elock:1;
-    /* Nonzero if this came from an entry in our database.  */
-    unsigned int has_dbentry:1;
-    /* Nonzero if this will need an entry in our database.  */
-    unsigned int needs_dbentry:1;
-    /* This a_inode possibly needs writing back to the database.  */
-    unsigned int dirty:1;
-    /* If nonzero, this represents a deleted file; the corresponding
-     * entry in the database must be cleared.  */
-    unsigned int deleted:1;
-    /* target volume flag */
-    unsigned int volflags;
-    /* not equaling unit.mountcount -> not in this volume */
-    unsigned int mountcount;
+	 which must be kept locked in core.  */
+	unsigned int locked_children;
+	/* How many ExNext()s are going on in this directory?  */
+	unsigned int exnext_count;
+	/* AmigaOS locking bits.  */
+	int shlock;
+	long db_offset;
+	unsigned int dir:1;
+	unsigned int softlink:2;
+	unsigned int elock:1;
+	/* Nonzero if this came from an entry in our database.  */
+	unsigned int has_dbentry:1;
+	/* Nonzero if this will need an entry in our database.  */
+	unsigned int needs_dbentry:1;
+	/* This a_inode possibly needs writing back to the database.  */
+	unsigned int dirty:1;
+	/* If nonzero, this represents a deleted file; the corresponding
+	 * entry in the database must be cleared.  */
+	unsigned int deleted:1;
+	/* target volume flag */
+	unsigned int volflags;
+	/* not equaling unit.mountcount -> not in this volume */
+	unsigned int mountcount;
 	uae_u64 uniq_external;
 	struct virtualfilesysobject *vfso;
 } a_inode;
@@ -192,7 +192,7 @@ char* fsdb_native_path(const char* root_dir, const char* amiga_path);
 void fsdb_get_file_time(a_inode* node, int* days, int* mins, int* ticks);
 int fsdb_set_file_time(a_inode* node, int days, int mins, int ticks);
 int host_errno_to_dos_errno(int err);
-int copyfile(const char* target, const char* source, int replace);
+bool copyfile(const char* target, const char* source, bool replace);
 #endif
 
 #endif /* UAE_FSDB_H */

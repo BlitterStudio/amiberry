@@ -10,9 +10,7 @@
 #include <list>
 #include <dirent.h>
 #include <iconv.h>
-#ifndef __MACH__
-#include <sys/sendfile.h>
-#endif
+#include <filesystem>
 #include "fsdb_host.h"
 #include "uae.h"
 
@@ -614,34 +612,10 @@ int target_get_volume_name(struct uaedev_mount_info* mtinf, struct uaedev_config
 	return 2;
 }
 
-#ifndef __MACH__
 // If replace is false, copyfile will fail if file already exists
-int copyfile(const char* target, const char* source, int replace)
+bool copyfile(const char* target, const char* source, const bool replace)
 {
-	int tfd = -1;
-	int sfd = -1;
-	int ret = -1;
-	struct stat sb {};
-
-	const int rflag = replace ? 0 : O_EXCL;
-
-	while (!((tfd = open(target, O_WRONLY | O_CREAT | O_TRUNC | rflag, 0644)) < 0)) {
-		if ((sfd = open(source, O_RDONLY)) < 0)
-			break;
-
-		if (fstat(sfd, &sb) < 0)
-			break;
-
-		// Could use mmap and write to transfer file for better portability
-		off_t transferred = 0;
-		ret = sendfile(tfd, sfd, &transferred, sb.st_size);
-
-		break;
-	}
-
-	if (sfd >= 0) close(sfd);
-	if (tfd >= 0) close(tfd);
-
-	return ret;
+	std::filesystem::copy_options options = {};
+	options = replace ? filesystem::copy_options::overwrite_existing : filesystem::copy_options::none;
+	return copy_file(source, target, options);
 }
-#endif
