@@ -356,7 +356,7 @@ static void ShowMessageWaitInputLoop()
 			break;
 
 		case SDL_CONTROLLERBUTTONDOWN:
-		case SDL_JOYBUTTONDOWN:
+		//case SDL_JOYBUTTONDOWN:
 			got_event = 1;
 			hotkey.key_name = SDL_GameControllerGetStringForButton(
 				SDL_GameControllerButton(event.cbutton.button));
@@ -439,6 +439,7 @@ static void ShowMessageWaitInputLoop()
 				}
 			}			
 			break;
+		case SDL_CONTROLLERBUTTONUP:
 		case SDL_JOYBUTTONUP:
 		case SDL_MOUSEBUTTONDOWN:
 		case SDL_MOUSEBUTTONUP:
