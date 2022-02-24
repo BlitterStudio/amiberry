@@ -31,6 +31,8 @@
 #include <android/log.h>
 #endif
 
+bool ctrl_state = false, shift_state = false, alt_state = false, win_state = false;
+
 //Analog joystick dead zone
 constexpr int joystick_dead_zone = 8000;
 int last_x = 0;
@@ -638,8 +640,6 @@ void amiberry_gui_halt()
 
 void check_input()
 {
-	const auto key_for_gui = SDL_GetKeyFromName(currprefs.open_gui);
-	const auto button_for_gui = SDL_GameControllerGetButtonFromString(currprefs.open_gui);
 	auto got_event = 0;
 	didata* did = &di_joystick[0];
 	
@@ -676,7 +676,7 @@ void check_input()
 				got_event = 1;
 				const int hat = SDL_JoystickGetHat(gui_joystick, 0);
 				
-				if (gui_event.jbutton.button == static_cast<Uint8>(button_for_gui) || (
+				if (gui_event.jbutton.button == static_cast<Uint8>(enter_gui_button) || (
 					SDL_JoystickGetButton(gui_joystick, did->mapping.menu_button) &&
 					SDL_JoystickGetButton(gui_joystick, did->mapping.hotkey_button)))
 				{
@@ -696,14 +696,14 @@ void check_input()
 						gui_running = false;
 					}
 				}
-				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_DPAD_UP]) || hat & SDL_HAT_UP)
+				else if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_DPAD_UP]) || hat & SDL_HAT_UP)
 				{
 					if (HandleNavigation(DIRECTION_UP))
 						continue; // Don't change value when enter Slider -> don't send event to control
 					PushFakeKey(SDLK_UP);
 					break;
 				}
-				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_DPAD_DOWN]) || hat & SDL_HAT_DOWN)
+				else if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_DPAD_DOWN]) || hat & SDL_HAT_DOWN)
 				{
 					if (HandleNavigation(DIRECTION_DOWN))
 						continue; // Don't change value when enter Slider -> don't send event to control
@@ -711,7 +711,7 @@ void check_input()
 					break;
 				}
 
-				if ((did->mapping.is_retroarch || !did->is_controller)
+				else if ((did->mapping.is_retroarch || !did->is_controller)
 					&& SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_LEFTSHOULDER])
 					|| SDL_GameControllerGetButton(did->controller,
 						static_cast<SDL_GameControllerButton>(did->mapping.button[SDL_CONTROLLER_BUTTON_LEFTSHOULDER])))
@@ -721,7 +721,7 @@ void check_input()
 						PushFakeKey(SDLK_UP);
 					}
 				}
-				if ((did->mapping.is_retroarch || !did->is_controller)
+				else if ((did->mapping.is_retroarch || !did->is_controller)
 					&& SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_RIGHTSHOULDER])
 					|| SDL_GameControllerGetButton(did->controller,
 						static_cast<SDL_GameControllerButton>(did->mapping.button[SDL_CONTROLLER_BUTTON_RIGHTSHOULDER])))
@@ -732,21 +732,21 @@ void check_input()
 					}
 				}
 
-				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_DPAD_RIGHT]) || hat & SDL_HAT_RIGHT)
+				else if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_DPAD_RIGHT]) || hat & SDL_HAT_RIGHT)
 				{
 					if (HandleNavigation(DIRECTION_RIGHT))
 						continue; // Don't change value when enter Slider -> don't send event to control
 					PushFakeKey(SDLK_RIGHT);
 					break;
 				}
-				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_DPAD_LEFT]) || hat & SDL_HAT_LEFT)
+				else if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_DPAD_LEFT]) || hat & SDL_HAT_LEFT)
 				{
 					if (HandleNavigation(DIRECTION_LEFT))
 						continue; // Don't change value when enter Slider -> don't send event to control
 					PushFakeKey(SDLK_LEFT);
 					break;
 				}
-				if ((did->mapping.is_retroarch || !did->is_controller)
+				else if ((did->mapping.is_retroarch || !did->is_controller)
 					&& (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_A])
 						|| SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_B]))
 					|| SDL_GameControllerGetButton(did->controller,
@@ -758,7 +758,7 @@ void check_input()
 					continue;
 				}
 
-				if (SDL_JoystickGetButton(gui_joystick, did->mapping.quit_button) &&
+				else if (SDL_JoystickGetButton(gui_joystick, did->mapping.quit_button) &&
 					SDL_JoystickGetButton(gui_joystick, did->mapping.hotkey_button))
 				{
 					// use the HOTKEY button
@@ -767,7 +767,7 @@ void check_input()
 					break;
 				}
 
-				if ((did->mapping.is_retroarch || !did->is_controller)
+				else if ((did->mapping.is_retroarch || !did->is_controller)
 					&& SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_GUIDE])
 					|| SDL_GameControllerGetButton(did->controller,
 						static_cast<SDL_GameControllerButton>(did->mapping.button[SDL_CONTROLLER_BUTTON_GUIDE])))
@@ -829,25 +829,37 @@ void check_input()
 
 		case SDL_KEYDOWN:
 			got_event = 1;
-			if (gui_event.key.keysym.sym == key_for_gui)
+			if (gui_event.key.keysym.sym == SDLK_RCTRL || gui_event.key.keysym.sym == SDLK_LCTRL) ctrl_state = true;
+			else if (gui_event.key.keysym.sym == SDLK_RSHIFT || gui_event.key.keysym.sym == SDLK_LSHIFT) shift_state = true;
+			else if (gui_event.key.keysym.sym == SDLK_RALT || gui_event.key.keysym.sym == SDLK_LALT) alt_state = true;
+			else if (gui_event.key.keysym.sym == SDLK_RGUI || gui_event.key.keysym.sym == SDLK_LGUI) win_state = true;
+
+			if (gui_event.key.keysym.scancode == enter_gui_key.scancode)
 			{
-				if (emulating && cmdStart->isEnabled())
+				if ((enter_gui_key.modifiers.lctrl || enter_gui_key.modifiers.rctrl) == ctrl_state
+					&& (enter_gui_key.modifiers.lshift || enter_gui_key.modifiers.rshift) == shift_state
+					&& (enter_gui_key.modifiers.lalt || enter_gui_key.modifiers.ralt) == alt_state
+					&& (enter_gui_key.modifiers.lgui || enter_gui_key.modifiers.rgui) == win_state)
 				{
-					//------------------------------------------------
-					// Continue emulation
-					//------------------------------------------------
-					gui_running = false;
-				}
-				else
-				{
-					//------------------------------------------------
-					// First start of emulator -> reset Amiga
-					//------------------------------------------------
-					uae_reset(0, 1);
-					gui_running = false;
+					if (emulating && cmdStart->isEnabled())
+					{
+						//------------------------------------------------
+						// Continue emulation
+						//------------------------------------------------
+						gui_running = false;
+					}
+					else
+					{
+						//------------------------------------------------
+						// First start of emulator -> reset Amiga
+						//------------------------------------------------
+						uae_reset(0, 1);
+						gui_running = false;
+					}
 				}
 			}
 			else
+			{
 				switch (gui_event.key.keysym.sym)
 				{
 				case SDLK_q:
@@ -909,6 +921,7 @@ void check_input()
 				default:
 					break;
 				}
+			}
 			break;
 
 		case SDL_FINGERDOWN:
@@ -980,6 +993,12 @@ void check_input()
 			break;
 
 		case SDL_KEYUP:
+			got_event = 1;
+			if (gui_event.key.keysym.sym == SDLK_RCTRL || gui_event.key.keysym.sym == SDLK_LCTRL) ctrl_state = false;
+			else if (gui_event.key.keysym.sym == SDLK_RSHIFT || gui_event.key.keysym.sym == SDLK_LSHIFT) shift_state = false;
+			else if (gui_event.key.keysym.sym == SDLK_RALT || gui_event.key.keysym.sym == SDLK_LALT) alt_state = false;
+			else if (gui_event.key.keysym.sym == SDLK_RGUI || gui_event.key.keysym.sym == SDLK_LGUI) win_state = false;
+			break;
 		case SDL_JOYBUTTONUP:
 		case SDL_CONTROLLERBUTTONUP:
 		case SDL_MOUSEBUTTONDOWN:

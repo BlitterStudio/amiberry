@@ -372,5 +372,6 @@ extern int todfxtype(int num, int dfx, int* subtype);
 extern void DisplayDiskInfo(int num);
 
 extern std::string get_full_path_from_disk_list(std::string element);
+extern amiberry_hotkey get_hotkey_from_config(std::string config_option);
 
 #endif // GUI_HANDLING_H
