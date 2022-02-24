@@ -443,6 +443,7 @@ void amiberry_gui_init()
 			flags |= SDL_WINDOW_BORDERLESS;
 		if (currprefs.main_alwaysontop)
 			flags |= SDL_WINDOW_ALWAYS_ON_TOP;
+		flags |= SDL_WINDOW_ALLOW_HIGHDPI;
 
 		mon->sdl_window = SDL_CreateWindow("Amiberry",
 			SDL_WINDOWPOS_CENTERED,
