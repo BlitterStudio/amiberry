@@ -2,11 +2,12 @@
 <project version="4">
   <component name="MakefileBuildTargetsManager">
     <user-build-targets>
-      <build-target name="PLATFORM=x86-64">
+      <build-target name="PLATFORM=x86-64 DEBUG=1">
         <build-configurations>
           <build-configuration toolchainName="WSL">
             <make-targets>
               <make-target>PLATFORM=x86-64</make-target>
+              <make-target>DEBUG=1</make-target>
             </make-targets>
           </build-configuration>
         </build-configurations>

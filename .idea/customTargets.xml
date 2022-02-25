@@ -4,7 +4,7 @@
     <target id="fce4aec2-108a-4a07-8954-df079a2e8ec5" name="x86-64 (WSL)" defaultType="MAKE">
       <configuration id="ec7f4f33-b00d-4a98-b98b-c08053bef509" name="x86-64 (WSL)" toolchainName="WSL">
         <build type="MAKE">
-          <make targetName="PLATFORM=x86-64" />
+          <make targetName="PLATFORM=x86-64 DEBUG=1" />
         </build>
         <clean type="MAKE">
           <make targetName="clean" />
