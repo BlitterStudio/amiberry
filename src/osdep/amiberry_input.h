@@ -40,6 +40,7 @@ struct didata {
 	bool is_controller;
 	SDL_GameController* controller;
 	SDL_Joystick* joystick;
+	SDL_JoystickID joystick_id;
 	host_input_button mapping;
 	uae_s16 axles;
 	uae_s16 buttons, buttons_real;
@@ -57,6 +58,11 @@ struct didata {
 	uae_s16 buttonaxisparentdir[MAX_MAPPINGS];
 	uae_s16 buttonaxistype[MAX_MAPPINGS];
 };
+
+//Analog joystick dead zone
+static int joystick_dead_zone = 8000;
+#define REMAP_BUTTONS 16
+static int axisold[MAX_INPUT_DEVICES][256], buttonold[MAX_INPUT_DEVICES][256];
 
 extern struct didata di_joystick[MAX_INPUT_DEVICES];
 

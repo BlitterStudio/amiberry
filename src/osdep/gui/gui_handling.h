@@ -343,7 +343,6 @@ STATIC_INLINE bool is_hdf_rdb(void)
 extern char* screenshot_filename;
 extern int currentStateNum;
 extern int delay_savestate_frame;
-extern const int joystick_dead_zone;
 extern int last_x;
 extern int last_y;
 

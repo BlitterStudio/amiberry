@@ -28,9 +28,6 @@
 #endif
 
 bool ctrl_state = false, shift_state = false, alt_state = false, win_state = false;
-
-//Analog joystick dead zone
-constexpr int joystick_dead_zone = 8000;
 int last_x = 0;
 int last_y = 0;
 

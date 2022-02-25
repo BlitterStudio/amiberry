@@ -20,12 +20,15 @@ static gcn::RadioButton* optPort1;
 static gcn::RadioButton* optPort2;
 static gcn::RadioButton* optPort3;
 
-static gcn::Window* grpFunction;
+static gcn::Label* lblFunction;
 static gcn::RadioButton* optMultiNone;
 static gcn::RadioButton* optMultiSelect;
 
-static gcn::Label* lblCustomAction[SDL_CONTROLLER_BUTTON_MAX];
-static gcn::DropDown* cboCustomAction[SDL_CONTROLLER_BUTTON_MAX];
+static gcn::Label* lblCustomButtonAction[SDL_CONTROLLER_BUTTON_MAX];
+static gcn::DropDown* cboCustomButtonAction[SDL_CONTROLLER_BUTTON_MAX];
+
+static gcn::Label* lblCustomAxisAction[SDL_CONTROLLER_AXIS_MAX];
+static gcn::DropDown* cboCustomAxisAction[SDL_CONTROLLER_AXIS_MAX];
 
 static gcn::Label* lblPortInput;
 static gcn::TextField* txtPortInput;
@@ -129,18 +132,18 @@ public:
 	{
 		for (auto t = 0; t < SDL_CONTROLLER_BUTTON_MAX; t++)
 		{
-			if (actionEvent.getSource() == cboCustomAction[t])
+			if (actionEvent.getSource() == cboCustomButtonAction[t])
 			{
-				std::array<int, SDL_CONTROLLER_BUTTON_MAX> tempmap{};
+				std::array<int, SDL_CONTROLLER_BUTTON_MAX> temp_button_map{};
 
 				// get map
 				switch (SelectedFunction)
 				{
 				case 0:
-					tempmap = changed_prefs.jports[SelectedPort].amiberry_custom_none;
+					temp_button_map = changed_prefs.jports[SelectedPort].amiberry_custom_none;
 					break;
 				case 1:
-					tempmap = changed_prefs.jports[SelectedPort].amiberry_custom_hotkey;
+					temp_button_map = changed_prefs.jports[SelectedPort].amiberry_custom_hotkey;
 					break;
 				default:
 					break;
@@ -148,16 +151,16 @@ public:
 
 				// get the selected action from the drop-down, and 
 				// push it into the 'temp map'
-				tempmap[t] = remap_event_list[cboCustomAction[t]->getSelected() - 1];
+				temp_button_map[t] = remap_event_list[cboCustomButtonAction[t]->getSelected() - 1];
 
 				// push map back into changed_prefs
 				switch (SelectedFunction)
 				{
 				case 0:
-					changed_prefs.jports[SelectedPort].amiberry_custom_none = tempmap;
+					changed_prefs.jports[SelectedPort].amiberry_custom_none = temp_button_map;
 					break;
 				case 1:
-					changed_prefs.jports[SelectedPort].amiberry_custom_hotkey = tempmap;
+					changed_prefs.jports[SelectedPort].amiberry_custom_hotkey = temp_button_map;
 					break;
 				default:
 					break;
@@ -165,6 +168,47 @@ public:
 
 				// and here, we will scroll through the custom-map and 
 				// push it into the currprefs config file
+				inputdevice_updateconfig(nullptr, &changed_prefs);
+				RefreshPanelCustom();
+			}
+		}
+
+		for (auto t = 0; t < SDL_CONTROLLER_AXIS_MAX; t++)
+		{
+			if (actionEvent.getSource() == cboCustomAxisAction[t])
+			{
+				std::array<int, SDL_CONTROLLER_AXIS_MAX> temp_axis_map{};
+
+				// get map
+				switch (SelectedFunction)
+				{
+				case 0:
+					temp_axis_map = changed_prefs.jports[SelectedPort].amiberry_custom_axis_none;
+					break;
+				case 1:
+					temp_axis_map = changed_prefs.jports[SelectedPort].amiberry_custom_axis_hotkey;
+					break;
+				default:
+					break;
+				}
+
+				// get the selected action from the drop-down
+				// and push it into the temp map
+				temp_axis_map[t] = remap_event_list[cboCustomAxisAction[t]->getSelected() - 1];
+
+				// push map back to changed_prefs
+				switch (SelectedFunction)
+				{
+				case 0:
+					changed_prefs.jports[SelectedPort].amiberry_custom_axis_none = temp_axis_map;
+					break;
+				case 1:
+					changed_prefs.jports[SelectedPort].amiberry_custom_axis_hotkey = temp_axis_map;
+					break;
+				default:
+					break;
+				}
+
 				inputdevice_updateconfig(nullptr, &changed_prefs);
 				RefreshPanelCustom();
 			}
@@ -242,17 +286,11 @@ void InitPanelCustom(const config_category& category)
 
 	category.panel->add(grpPort);
 
-	grpFunction = new gcn::Window("Function Key");
-	grpFunction->setPosition(DISTANCE_BORDER, grpPort->getY() + grpPort->getHeight() + DISTANCE_NEXT_Y);
-	grpFunction->setMovable(false);
-	grpFunction->add(optMultiNone, 10, 10);
-	grpFunction->add(optMultiSelect, optMultiNone->getX() + optMultiNone->getWidth() + DISTANCE_NEXT_X, optMultiNone->getY());
-
-	grpFunction->setSize(grpPort->getWidth(), grpPort->getHeight());
-	grpFunction->setTitleBarHeight(TITLEBAR_HEIGHT);
-	grpFunction->setBaseColor(gui_baseCol);
-
-	category.panel->add(grpFunction);
+	lblFunction = new gcn::Label("Function Key:");
+	category.panel->add(lblFunction, DISTANCE_BORDER, grpPort->getY() + grpPort->getHeight() + DISTANCE_NEXT_Y);
+	category.panel->add(optMultiNone, lblFunction->getX() + lblFunction->getWidth() + 8, lblFunction->getY());
+	category.panel->add(optMultiSelect, optMultiNone->getX() + optMultiNone->getWidth() + DISTANCE_NEXT_X, optMultiNone->getY());
+	category.panel->add(chkAnalogRemap, optMultiSelect->getX() + optMultiSelect->getWidth() + DISTANCE_NEXT_X * 4, optMultiSelect->getY());
 
 	// the input-device should be listed
 	lblPortInput = new gcn::Label("Input Device:");
@@ -266,52 +304,80 @@ void InitPanelCustom(const config_category& category)
 	lblRetroarch = new gcn::Label("[-]");
 	lblRetroarch->setAlignment(gcn::Graphics::LEFT);
 
-	txtPortInput->setSize(
-		grpFunction->getWidth() - (lblPortInput->getWidth() + DISTANCE_NEXT_X * 2 + lblRetroarch->getWidth()),
+	txtPortInput->setSize(grpPort->getWidth() - (lblPortInput->getWidth() + DISTANCE_NEXT_X * 2 + lblRetroarch->getWidth()),
 		TEXTFIELD_HEIGHT);
-
 	for (i = 0; i < SDL_CONTROLLER_BUTTON_MAX; ++i)
-		lblCustomAction[i] = new gcn::Label(label_button_list[i]);
-	
+		lblCustomButtonAction[i] = new gcn::Label(label_button_list[i]);
 	for (i = 0; i < SDL_CONTROLLER_BUTTON_MAX; ++i)
 	{
-		lblCustomAction[i]->setSize(lblCustomAction[14]->getWidth(), lblCustomAction[14]->getHeight());
-		lblCustomAction[i]->setAlignment(gcn::Graphics::RIGHT);
+		lblCustomButtonAction[i]->setSize(lblCustomButtonAction[14]->getWidth(), lblCustomButtonAction[14]->getHeight());
+		lblCustomButtonAction[i]->setAlignment(gcn::Graphics::RIGHT);
 
-		cboCustomAction[i] = new gcn::DropDown(&CustomEventList);
-		cboCustomAction[i]->setSize(cboCustomAction[i]->getWidth() * 2, cboCustomAction[i]->getHeight());
-		cboCustomAction[i]->setBaseColor(gui_baseCol);
-		cboCustomAction[i]->setBackgroundColor(colTextboxBackground);
+		cboCustomButtonAction[i] = new gcn::DropDown(&CustomEventList);
+		cboCustomButtonAction[i]->setSize(cboCustomButtonAction[i]->getWidth() * 2, cboCustomButtonAction[i]->getHeight());
+		cboCustomButtonAction[i]->setBaseColor(gui_baseCol);
+		cboCustomButtonAction[i]->setBackgroundColor(colTextboxBackground);
 
-		snprintf(tmp, 20, "cboCustomAction%d", i);
-		cboCustomAction[i]->setId(tmp);
-		cboCustomAction[i]->addActionListener(customActionListener);
+		snprintf(tmp, 20, "cboCustomButtonAction%d", i);
+		cboCustomButtonAction[i]->setId(tmp);
+		cboCustomButtonAction[i]->addActionListener(customActionListener);
 	}
 
-	auto posY = grpFunction->getY() + grpFunction->getHeight() + DISTANCE_NEXT_Y;
+	for (i = 0; i < SDL_CONTROLLER_AXIS_MAX; ++i)
+	{
+		lblCustomAxisAction[i] = new gcn::Label(label_axis_list[i]);
+		lblCustomAxisAction[i]->setSize(lblCustomButtonAction[14]->getWidth(), lblCustomButtonAction[14]->getHeight());
+		lblCustomAxisAction[i]->setAlignment(gcn::Graphics::RIGHT);
+
+		cboCustomAxisAction[i] = new gcn::DropDown(&CustomEventList);
+		cboCustomAxisAction[i]->setSize(cboCustomAxisAction[i]->getWidth() * 2, cboCustomAxisAction[i]->getHeight());
+		cboCustomAxisAction[i]->setBaseColor(gui_baseCol);
+		cboCustomAxisAction[i]->setBackgroundColor(colTextboxBackground);
+
+		snprintf(tmp, 20, "cboCustomAxisAction%d", i);
+		cboCustomAxisAction[i]->setId(tmp);
+		cboCustomAxisAction[i]->addActionListener(customActionListener);
+	}
+
+
+	auto posY = lblFunction->getY() + lblFunction->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(lblPortInput, DISTANCE_BORDER, posY);
 	category.panel->add(txtPortInput, lblPortInput->getX() + lblPortInput->getWidth() + DISTANCE_NEXT_X, posY);
 	category.panel->add(lblRetroarch, txtPortInput->getX() + txtPortInput->getWidth() + DISTANCE_NEXT_X, posY);
 	posY = txtPortInput->getY() + txtPortInput->getHeight() + DISTANCE_NEXT_Y;
-	
+
+	// Column 1
+	const auto column1 = 5;
 	for (i = 0; i < SDL_CONTROLLER_BUTTON_MAX / 2; i++)
 	{
-		category.panel->add(lblCustomAction[i], 5, posY);
-		category.panel->add(cboCustomAction[i], lblCustomAction[i]->getX() + lblCustomAction[i]->getWidth() + 4, posY);
+		category.panel->add(lblCustomButtonAction[i], column1, posY);
+		category.panel->add(cboCustomButtonAction[i], lblCustomButtonAction[i]->getX() + lblCustomButtonAction[i]->getWidth() + 4, posY);
 		posY = posY + DROPDOWN_HEIGHT + 6;
 	}
 
+	for (i = 0; i < SDL_CONTROLLER_AXIS_MAX / 2 + 1; i++)
+	{
+		category.panel->add(lblCustomAxisAction[i], column1, posY);
+		category.panel->add(cboCustomAxisAction[i], lblCustomAxisAction[i]->getX() + lblCustomAxisAction[i]->getWidth() + 4, posY);
+		posY = posY + DROPDOWN_HEIGHT + 6;
+	}
+
+	// Column 2
 	posY = txtPortInput->getY() + txtPortInput->getHeight() + DISTANCE_NEXT_Y;
-	auto posX = cboCustomAction[0]->getX() + cboCustomAction[0]->getWidth() + 4;
+	const auto column2 = cboCustomButtonAction[0]->getX() + cboCustomButtonAction[0]->getWidth() + 4;
 	for (i = SDL_CONTROLLER_BUTTON_MAX / 2; i < SDL_CONTROLLER_BUTTON_MAX; i++)
 	{
-		category.panel->add(lblCustomAction[i], posX, posY);
-		category.panel->add(cboCustomAction[i], lblCustomAction[i]->getX() + lblCustomAction[i]->getWidth() + 4, posY);
+		category.panel->add(lblCustomButtonAction[i], column2, posY);
+		category.panel->add(cboCustomButtonAction[i], lblCustomButtonAction[i]->getX() + lblCustomButtonAction[i]->getWidth() + 4, posY);
 		posY = posY + DROPDOWN_HEIGHT + 6;
 	}
 
-	category.panel->add(chkAnalogRemap, DISTANCE_BORDER + lblCustomAction[0]->getWidth(), posY);
-	posY += chkAnalogRemap->getHeight() + DISTANCE_NEXT_Y;
+	for (i = SDL_CONTROLLER_AXIS_MAX / 2 + 1; i < SDL_CONTROLLER_AXIS_MAX; i++)
+	{
+		category.panel->add(lblCustomAxisAction[i], column2, posY);
+		category.panel->add(cboCustomAxisAction[i], lblCustomAxisAction[i]->getX() + lblCustomAxisAction[i]->getWidth() + 4, posY);
+		posY = posY + DROPDOWN_HEIGHT + 6;
+	}
 
 	RefreshPanelCustom();
 }
@@ -327,13 +393,19 @@ void ExitPanelCustom()
 	delete optMultiNone;
 	delete optMultiSelect;
 
-	delete grpFunction;
+	delete lblFunction;
 	delete chkAnalogRemap;
 
-	for (auto& i : lblCustomAction)
+	for (auto& i : lblCustomButtonAction)
 		delete i;
 
-	for (auto& i : cboCustomAction)
+	for (auto& i : cboCustomButtonAction)
+		delete i;
+
+	for (auto& i : lblCustomAxisAction)
+		delete i;
+
+	for (auto& i : cboCustomAxisAction)
 		delete i;
 
 	delete lblPortInput;
@@ -358,14 +430,27 @@ void RefreshPanelCustom()
 
 	// Refresh the drop-down section here
 	// get map
-	std::array<int, SDL_CONTROLLER_BUTTON_MAX> tempmap{};
+	std::array<int, SDL_CONTROLLER_BUTTON_MAX> temp_button_map{};
 	switch (SelectedFunction)
 	{
 	case 0:
-		tempmap = changed_prefs.jports[SelectedPort].amiberry_custom_none;
+		temp_button_map = changed_prefs.jports[SelectedPort].amiberry_custom_none;
 		break;
 	case 1:
-		tempmap = changed_prefs.jports[SelectedPort].amiberry_custom_hotkey;
+		temp_button_map = changed_prefs.jports[SelectedPort].amiberry_custom_hotkey;
+		break;
+	default:
+		break;
+	}
+
+	std::array<int, SDL_CONTROLLER_AXIS_MAX> temp_axis_map{};
+	switch (SelectedFunction)
+	{
+	case 0:
+		temp_axis_map = changed_prefs.jports[SelectedPort].amiberry_custom_axis_none;
+		break;
+	case 1:
+		temp_axis_map = changed_prefs.jports[SelectedPort].amiberry_custom_axis_hotkey;
 		break;
 	default:
 		break;
@@ -383,16 +468,16 @@ void RefreshPanelCustom()
 			const auto temp_button = did->mapping.button[n];
 
 			// disable unmapped buttons
-			cboCustomAction[n]->setEnabled(temp_button > -1);
-			lblCustomAction[n]->setEnabled(temp_button > -1);
+			cboCustomButtonAction[n]->setEnabled(temp_button > -1);
+			lblCustomButtonAction[n]->setEnabled(temp_button > -1);
 
 			// set hotkey/quit/reset/menu on NONE field (and disable hotkey)
 			if (temp_button == did->mapping.hotkey_button
 				&& temp_button != -1)
 			{
-				cboCustomAction[n]->setListModel(&CustomEventList_HotKey);
-				cboCustomAction[n]->setEnabled(false);
-				lblCustomAction[n]->setEnabled(false);
+				cboCustomButtonAction[n]->setListModel(&CustomEventList_HotKey);
+				cboCustomButtonAction[n]->setEnabled(false);
+				lblCustomButtonAction[n]->setEnabled(false);
 			}
 
 			else if (temp_button == did->mapping.quit_button
@@ -400,9 +485,9 @@ void RefreshPanelCustom()
 				&& SelectedFunction == 1
 				&& changed_prefs.use_retroarch_quit)
 			{
-				cboCustomAction[n]->setListModel(&CustomEventList_Quit);
-				cboCustomAction[n]->setEnabled(false);
-				lblCustomAction[n]->setEnabled(false);
+				cboCustomButtonAction[n]->setListModel(&CustomEventList_Quit);
+				cboCustomButtonAction[n]->setEnabled(false);
+				lblCustomButtonAction[n]->setEnabled(false);
 			}
 
 			else if (temp_button == did->mapping.menu_button
@@ -410,9 +495,9 @@ void RefreshPanelCustom()
 				&& SelectedFunction == 1
 				&& changed_prefs.use_retroarch_menu)
 			{
-				cboCustomAction[n]->setListModel(&CustomEventList_Menu);
-				cboCustomAction[n]->setEnabled(false);
-				lblCustomAction[n]->setEnabled(false);
+				cboCustomButtonAction[n]->setListModel(&CustomEventList_Menu);
+				cboCustomButtonAction[n]->setEnabled(false);
+				lblCustomButtonAction[n]->setEnabled(false);
 			}
 
 			else if (temp_button == did->mapping.reset_button
@@ -420,40 +505,69 @@ void RefreshPanelCustom()
 				&& SelectedFunction == 1
 				&& changed_prefs.use_retroarch_reset)
 			{
-				cboCustomAction[n]->setListModel(&CustomEventList_Reset);
-				cboCustomAction[n]->setEnabled(false);
-				lblCustomAction[n]->setEnabled(false);
+				cboCustomButtonAction[n]->setListModel(&CustomEventList_Reset);
+				cboCustomButtonAction[n]->setEnabled(false);
+				lblCustomButtonAction[n]->setEnabled(false);
 			}
 
 			else
-				cboCustomAction[n]->setListModel(&CustomEventList);
+				cboCustomButtonAction[n]->setListModel(&CustomEventList);
 
-			if (tempmap[n] > 0)
+			if (temp_button_map[n] > 0)
 			{
 				// Custom mapping found
-				const auto x = find_in_array(remap_event_list, remap_event_list_size, tempmap[n]);
-				cboCustomAction[n]->setSelected(x + 1);
+				const auto x = find_in_array(remap_event_list, remap_event_list_size, temp_button_map[n]);
+				cboCustomButtonAction[n]->setSelected(x + 1);
 			}
 			// Retroarch mapping is not the same, so we skip this to avoid incorrect actions showing in the GUI
 			else if (did->mapping.is_retroarch)
 			{
-				cboCustomAction[n]->setSelected(0);
+				cboCustomButtonAction[n]->setSelected(0);
 			}
 			else
 			{
 				// Default mapping
 				const auto evt = default_mapping[temp_button];
 				const auto x = find_in_array(remap_event_list, remap_event_list_size, evt);
-				cboCustomAction[n]->setSelected(x + 1);
+				cboCustomButtonAction[n]->setSelected(x + 1);
 			}
+		}
+
+		for (auto n = 0; n < SDL_CONTROLLER_AXIS_MAX; ++n)
+		{
+			const auto temp_axis = did->mapping.axis[n];
+
+			// disable unmapped axes
+			cboCustomAxisAction[n]->setEnabled(temp_axis > -1);
+			lblCustomAxisAction[n]->setEnabled(temp_axis > -1);
+
+			cboCustomAxisAction[n]->setListModel(&CustomEventList);
+
+			if (temp_axis_map[n] > 0)
+			{
+				// Custom mapping found
+				const auto x = find_in_array(remap_event_list, remap_event_list_size, temp_axis_map[n]);
+				cboCustomAxisAction[n]->setSelected(x + 1);
+			}
+			else if (did->mapping.is_retroarch)
+			{
+				cboCustomAxisAction[n]->setSelected(0);
+			}
+			//else
+			//{
+			//	// Default mapping
+			//	const auto evt = default_mapping[temp_axis];
+			//	const auto x = find_in_array(remap_event_list, remap_event_list_size, evt);
+			//	cboCustomAxisAction[n]->setSelected(x + 1);
+			//}
 		}
 
 		if (did->mapping.number_of_hats > 0 || changed_prefs.input_analog_remap == true)
 		{
 			for (int i = SDL_CONTROLLER_BUTTON_DPAD_UP; i <= SDL_CONTROLLER_BUTTON_DPAD_RIGHT; i++)
 			{
-				cboCustomAction[i]->setEnabled(true);
-				lblCustomAction[i]->setEnabled(true);
+				cboCustomButtonAction[i]->setEnabled(true);
+				lblCustomButtonAction[i]->setEnabled(true);
 			}
 		}
 
@@ -467,12 +581,21 @@ void RefreshPanelCustom()
 
 	else
 	{
-		for (auto& n : cboCustomAction)
+		for (auto& n : cboCustomButtonAction)
 		{
 			n->setListModel(&CustomEventList);
 			n->setEnabled(false);
 		}
-		for (auto& n : lblCustomAction)
+		for (auto& n : lblCustomButtonAction)
+		{
+			n->setEnabled(false);
+		}
+		for (auto& n : cboCustomAxisAction)
+		{
+			n->setListModel(&CustomEventList);
+			n->setEnabled(false);
+		}
+		for (auto& n : lblCustomAxisAction)
 		{
 			n->setEnabled(false);
 		}

@@ -11,7 +11,6 @@
 #include "uae.h"
 #include "xwin.h"
 
-#define REMAP_BUTTONS        16
 #define MAX_MOUSE_BUTTONS	  3
 #define MAX_MOUSE_AXES        4
 #define FIRST_MOUSE_AXIS	  0
@@ -44,6 +43,17 @@ static int isrealbutton(struct didata* did, int num)
 	return 1;
 }
 
+static void fixbuttons(struct didata* did)
+{
+	if (did->buttons > 0)
+		return;
+	write_log(_T("'%s' has no buttons, adding single default button\n"), did->name);
+	did->buttonmappings[0] = 0;
+	did->buttonsort[0] = 0;
+	did->buttonname[0] = my_strdup(_T("Button"));
+	did->buttons++;
+}
+
 static void addplusminus(struct didata* did, int i)
 {
 	TCHAR tmp[256];
@@ -61,6 +71,15 @@ static void addplusminus(struct didata* did, int i)
 		did->buttonaxistype[did->buttons] = did->axistype[i];
 		did->buttons++;
 	}
+}
+
+static void fixthings(struct didata* did)
+{
+	int i;
+
+	did->buttons_real = did->buttons;
+	for (i = 0; i < did->axles; i++)
+		addplusminus(did, i);
 }
 
 int find_in_array(const int arr[], int n, int key)
@@ -817,12 +836,12 @@ static int init_joystick()
 			}
 			did->is_controller = true;
 			did->joystick = SDL_GameControllerGetJoystick(did->controller);
-			const auto instance_id = SDL_JoystickInstanceID(did->joystick);
+			did->joystick_id = SDL_JoystickInstanceID(did->joystick);
 			SDL_JoystickGetGUIDString(SDL_JoystickGetGUID(did->joystick), guid_str, 33);
-			
+
 			if (SDL_GameControllerNameForIndex(i) != nullptr)
 				did->name.assign(SDL_GameControllerNameForIndex(i));
-			write_log("Controller #%i: %s\n      GUID: %s\n", instance_id, SDL_GameControllerName(did->controller), guid_str);
+			write_log("Controller #%i: %s\n      GUID: %s\n", did->joystick_id, SDL_GameControllerName(did->controller), guid_str);
 
 			auto* const mapping = SDL_GameControllerMapping(did->controller);
 			write_log("Controller %i is mapped as \"%s\".\n", i, mapping);
@@ -838,20 +857,34 @@ static int init_joystick()
 				continue;
 			}
 			did->is_controller = false;
-			const auto instance_id = SDL_JoystickInstanceID(did->joystick);
+			did->joystick_id = SDL_JoystickInstanceID(did->joystick);
 			SDL_JoystickGetGUIDString(SDL_JoystickGetGUID(did->joystick), guid_str, 33);
 			
 			if (SDL_JoystickNameForIndex(i) != nullptr)
 				did->name.assign(SDL_JoystickNameForIndex(i));
 			write_log("Controller #%i: %s\n      GUID: %s\n      Axes: %d\n      Buttons: %d\n      Balls: %d\n",
-									instance_id, SDL_JoystickName(did->joystick), guid_str, SDL_JoystickNumAxes(did->joystick),
+				did->joystick_id, SDL_JoystickName(did->joystick), guid_str, SDL_JoystickNumAxes(did->joystick),
 									SDL_JoystickNumButtons(did->joystick), SDL_JoystickNumBalls(did->joystick));
-			write_log("Controller #%i does not have a mapping available\n", instance_id);
+			write_log("Controller #%i does not have a mapping available\n", did->joystick_id);
 		}
 
-		did->axles = SDL_JoystickNumAxes(did->joystick);
-		did->buttons = SDL_JoystickNumButtons(did->joystick);
-		
+		did->axles = static_cast<uae_s16>(SDL_JoystickNumAxes(did->joystick));
+		did->buttons = static_cast<uae_s16>(SDL_JoystickNumButtons(did->joystick));
+		if (did->is_controller)
+		{
+			for (int a = 0; a < did->axles; a++)
+			{
+				did->axisname[a] = my_strdup(SDL_GameControllerGetStringForAxis(static_cast<SDL_GameControllerAxis>(a)));
+			}
+			for (int b = 0; b < did->buttons; b++)
+			{
+				did->buttonname[b] = my_strdup(SDL_GameControllerGetStringForButton(static_cast<SDL_GameControllerButton>(b)));
+			}
+		}
+
+		fixbuttons(did);
+		fixthings(did);
+
 		const string retroarch_joy_name = SDL_JoystickNameForIndex(i);
 
 		char retroarch_config_file[255];
@@ -1045,270 +1078,191 @@ static int get_joystick_flags(int num)
 	return 0;
 }
 
+static void read_gamecontroller_buttons(const int joy)
+{
+	didata* did = &di_joystick[joy];
+	auto held_offset = 0;
+
+	if (did->mapping.hotkey_button > SDL_CONTROLLER_BUTTON_INVALID) held_offset = REMAP_BUTTONS;
+
+	// detect RetroArch events, with or without Hotkey
+	if (did->mapping.hotkey_button == SDL_CONTROLLER_BUTTON_INVALID
+		|| SDL_GameControllerGetButton(did->controller, static_cast<SDL_GameControllerButton>(did->mapping.hotkey_button)) & 1)
+	{
+		if (did->mapping.menu_button != SDL_CONTROLLER_BUTTON_INVALID)
+		{
+			setjoybuttonstate(joy, SDL_CONTROLLER_BUTTON_MAX + 1,
+				SDL_GameControllerGetButton(did->controller,
+					static_cast<SDL_GameControllerButton>(did->mapping.menu_button)) & 1);
+		}
+		if (did->mapping.quit_button != SDL_CONTROLLER_BUTTON_INVALID)
+		{
+			setjoybuttonstate(joy, SDL_CONTROLLER_BUTTON_MAX + 2,
+				SDL_GameControllerGetButton(did->controller,
+					static_cast<SDL_GameControllerButton>(did->mapping.quit_button)) & 1);
+		}
+		if (did->mapping.reset_button != SDL_CONTROLLER_BUTTON_INVALID)
+		{
+			setjoybuttonstate(joy, SDL_CONTROLLER_BUTTON_MAX + 3,
+				SDL_GameControllerGetButton(did->controller,
+					static_cast<SDL_GameControllerButton>(did->mapping.reset_button)) & 1);
+		}
+	}
+
+	// Check all controller buttons
+	for (int button = 0; button < SDL_CONTROLLER_BUTTON_MAX; button++)
+	{
+		if (did->mapping.button[button] != SDL_CONTROLLER_BUTTON_INVALID)
+		{
+			const int state = SDL_GameControllerGetButton(did->controller, static_cast<SDL_GameControllerButton>(did->mapping.button[button])) & 1;
+			setjoybuttonstate(joy, button + held_offset, state);
+		}
+	}
+}
+
+static void read_gamecontroller_axes(const int joy)
+{
+	didata* did = &di_joystick[joy];
+
+	// Check for any Axis movement
+	if (did->axles > 0)
+	{
+		for (auto axis = 0; axis < SDL_CONTROLLER_AXIS_MAX; axis++)
+		{
+			// If analog mouse mapping is used, the Left stick acts as a mouse
+			if (axis >= SDL_CONTROLLER_AXIS_LEFTX && axis <= SDL_CONTROLLER_AXIS_LEFTY
+				&& currprefs.input_analog_remap
+				&& did->mapping.axis[axis] != SDL_CONTROLLER_AXIS_INVALID)
+			{
+				const int data = SDL_GameControllerGetAxis(did->controller, static_cast<SDL_GameControllerAxis>(did->mapping.axis[axis]));
+				if (data > joystick_dead_zone || data < -joystick_dead_zone)
+					setmousestate(joy, axis, data / 1000, 0);
+			}
+
+			else if (did->mapping.axis[axis] != SDL_CONTROLLER_AXIS_INVALID)
+			{
+				const int val = SDL_GameControllerGetAxis(did->controller, static_cast<SDL_GameControllerAxis>(did->mapping.axis[axis]));
+				if (axisold[joy][axis] != val)
+				{
+					setjoystickstate(joy, axis, val, analog_upper_bound);
+					axisold[joy][axis] = val;
+				}
+			}
+		}
+	}
+}
+
+static void read_joystick_buttons(const int joy)
+{
+	const didata* did = &di_joystick[joy];
+	auto held_offset = 0;
+
+	if (did->mapping.hotkey_button > SDL_CONTROLLER_BUTTON_INVALID) held_offset = REMAP_BUTTONS;
+
+	if (did->mapping.hotkey_button == SDL_CONTROLLER_BUTTON_INVALID
+		|| SDL_JoystickGetButton(did->joystick, did->mapping.hotkey_button) & 1)
+	{
+		if (did->mapping.menu_button != SDL_CONTROLLER_BUTTON_INVALID)
+		{
+			setjoybuttonstate(joy, SDL_CONTROLLER_BUTTON_MAX + 1,
+				SDL_JoystickGetButton(did->joystick, did->mapping.menu_button) & 1);
+		}
+		if (did->mapping.quit_button != SDL_CONTROLLER_BUTTON_INVALID)
+		{
+			setjoybuttonstate(joy, SDL_CONTROLLER_BUTTON_MAX + 2,
+				SDL_JoystickGetButton(did->joystick, did->mapping.quit_button) & 1);
+		}
+		if (did->mapping.reset_button != SDL_CONTROLLER_BUTTON_INVALID)
+		{
+			setjoybuttonstate(joy, SDL_CONTROLLER_BUTTON_MAX + 3,
+				SDL_JoystickGetButton(did->joystick, did->mapping.reset_button) & 1);
+		}
+	}
+
+	// Check all Joystick buttons
+	for (int button = 0; button < SDL_CONTROLLER_BUTTON_MAX; button++)
+	{
+		if (did->mapping.button[button] != SDL_CONTROLLER_BUTTON_INVALID)
+		{
+			int state;
+
+			if (button >= SDL_CONTROLLER_BUTTON_DPAD_UP && button <= SDL_CONTROLLER_BUTTON_DPAD_RIGHT)
+			{
+				const int hat = SDL_JoystickGetHat(did->joystick, 0);
+				state = did->mapping.button[button] + 1
+					? SDL_JoystickGetButton(did->joystick, did->mapping.button[button]) & 1
+					: button == 11
+					? hat & SDL_HAT_UP
+					: button == 12
+					? hat & SDL_HAT_DOWN
+					: button == 13
+					? hat & SDL_HAT_LEFT
+					: button == 14
+					? hat & SDL_HAT_RIGHT
+					: 0;
+			}
+			else
+			{
+				state = SDL_JoystickGetButton(did->joystick, did->mapping.button[button]) & 1;
+			}
+
+			setjoybuttonstate(joy, button + held_offset, state);
+		}
+	}
+}
+
+static void read_joystick_axes(const int joy)
+{
+	const didata* did = &di_joystick[joy];
+
+	// Check for any Axis movement
+	for (auto axis = 0; axis < SDL_CONTROLLER_AXIS_MAX; axis++)
+	{
+		// If analog mouse mapping is used, the Left stick acts as a mouse
+		if (axis >= SDL_CONTROLLER_AXIS_LEFTX && axis <= SDL_CONTROLLER_AXIS_LEFTY
+			&& currprefs.input_analog_remap
+			&& did->mapping.axis[axis] != SDL_CONTROLLER_AXIS_INVALID)
+		{
+			const int data = SDL_JoystickGetAxis(did->joystick, did->mapping.axis[axis]);
+			if (data > joystick_dead_zone || data < -joystick_dead_zone)
+				setmousestate(joy, axis, data / 1000, 0);
+		}
+
+		else if (did->mapping.axis[axis] != SDL_CONTROLLER_AXIS_INVALID)
+		{
+			const int val = SDL_JoystickGetAxis(did->joystick, did->mapping.axis[axis]);
+			if (axisold[joy][axis] != val)
+			{
+				setjoystickstate(joy, axis, val, analog_upper_bound);
+				axisold[joy][axis] = val;
+			}
+		}
+	}
+}
+
 static void read_joystick()
 {
 	for (auto i = 0; i < MAX_INPUT_DEVICES; i++)
 	{
-		struct didata* did = &di_joystick[i];
+		const didata* did = &di_joystick[i];
 		//if (!did->acquired)
 		//	continue;
 		if (did->name == "")
 			continue;
+
 		if (isfocus() || currprefs.inactive_input & 4)
 		{
-			auto held_offset = 0;
-			
-			// detect standalone retroarch hotkeys
-			if (did->mapping.hotkey_button == SDL_CONTROLLER_BUTTON_INVALID)
+			if (did->mapping.is_retroarch || !did->is_controller)
 			{
-				if (did->mapping.menu_button != SDL_CONTROLLER_BUTTON_INVALID)
-				{
-					if (did->mapping.is_retroarch || !did->is_controller)
-					{
-						setjoybuttonstate(i, 14,
-							SDL_JoystickGetButton(did->joystick, did->mapping.menu_button) & 1);
-					}
-					else
-					{
-						setjoybuttonstate(i, 14,
-							SDL_GameControllerGetButton(did->controller,
-								static_cast<SDL_GameControllerButton>(did->mapping.menu_button)) & 1);
-					}
-				}
-				if (did->mapping.quit_button != SDL_CONTROLLER_BUTTON_INVALID)
-				{
-					if (did->mapping.is_retroarch || !did->is_controller)
-					{
-						setjoybuttonstate(i, 15,
-							SDL_JoystickGetButton(did->joystick, did->mapping.quit_button) & 1);
-					}
-					else
-					{
-						setjoybuttonstate(i, 15,
-							SDL_GameControllerGetButton(did->controller,
-								static_cast<SDL_GameControllerButton>(did->mapping.quit_button)) & 1);
-					}
-				}
-				if (did->mapping.reset_button != SDL_CONTROLLER_BUTTON_INVALID)
-				{
-					if (did->mapping.is_retroarch || !did->is_controller)
-					{
-						setjoybuttonstate(i, 30,
-							SDL_JoystickGetButton(did->joystick, did->mapping.reset_button) & 1);
-					}
-					else
-					{
-						setjoybuttonstate(i, 30,
-							SDL_GameControllerGetButton(did->controller,
-								static_cast<SDL_GameControllerButton>(did->mapping.reset_button)) & 1);
-					}
-				}
-			}
-			// temporary solution for retroarch buttons inc. HOTKEY
-			else if (did->mapping.is_retroarch || !did->is_controller)
-			{
-				if (SDL_JoystickGetButton(did->joystick, did->mapping.hotkey_button) & 1)
-				{
-					held_offset = REMAP_BUTTONS;
-					setjoybuttonstate(i, 14,
-						SDL_JoystickGetButton(did->joystick, did->mapping.menu_button) & 1);
-					setjoybuttonstate(i, 15,
-						SDL_JoystickGetButton(did->joystick, did->mapping.quit_button) & 1);
-					setjoybuttonstate(i, 30,
-						SDL_JoystickGetButton(did->joystick, did->mapping.reset_button) & 1);
-				}
-			}
-			else if (SDL_GameControllerGetButton(did->controller, static_cast<SDL_GameControllerButton>(did->mapping.hotkey_button)) & 1)
-			{
-				held_offset = REMAP_BUTTONS;
-				setjoybuttonstate(i, 14,
-					SDL_GameControllerGetButton(did->controller, static_cast<SDL_GameControllerButton>(did->mapping.menu_button)) & 1);
-				setjoybuttonstate(i, 15,
-					SDL_GameControllerGetButton(did->controller, static_cast<SDL_GameControllerButton>(did->mapping.quit_button)) & 1);
-				setjoybuttonstate(i, 30,
-					SDL_GameControllerGetButton(did->controller, static_cast<SDL_GameControllerButton>(did->mapping.reset_button)) & 1);
+				// Joystick mode
+				read_joystick_buttons(i);
+				read_joystick_axes(i);
 			}
 			else
 			{
-				held_offset = 0;
-			}
-
-			// Check for any Axis movement
-			if (did->axles > 0)
-			{
-				int val;
-				for (auto axis = 0; axis <= SDL_CONTROLLER_AXIS_RIGHTY; axis++)
-				{
-					if (axis == 0 && currprefs.input_analog_remap && did->mapping.axis[axis] != SDL_CONTROLLER_AXIS_INVALID)
-					{
-						int x_state_lower, x_state_upper;
-						if (did->mapping.is_retroarch || !did->is_controller)
-						{
-							x_state_lower = SDL_JoystickGetAxis(did->joystick, did->mapping.axis[axis]) <= analog_lower_bound
-								? 1
-								: 0;
-							x_state_upper = SDL_JoystickGetAxis(did->joystick, did->mapping.axis[axis]) >= analog_upper_bound
-								? 1
-								: 0;
-						}
-						else
-						{
-							x_state_lower = SDL_GameControllerGetAxis(did->controller,
-								static_cast<SDL_GameControllerAxis>(did->mapping.axis[axis])) <= analog_lower_bound
-								? 1
-								: 0;
-							x_state_upper = SDL_GameControllerGetAxis(did->controller,
-								static_cast<SDL_GameControllerAxis>(did->mapping.axis[axis])) >= analog_upper_bound
-								? 1
-								: 0;
-						}
-						setjoybuttonstate(i, 9 + held_offset, x_state_lower);
-						setjoybuttonstate(i, 10 + held_offset, x_state_upper);
-					}
-					else if (axis == 1 && currprefs.input_analog_remap && did->mapping.axis[axis] != SDL_CONTROLLER_AXIS_INVALID)
-					{
-						int y_state_lower, y_state_upper;
-						if (did->mapping.is_retroarch || !did->is_controller)
-						{
-							if (SDL_JoystickGetAxis(did->joystick, did->mapping.axis[axis]) <= analog_lower_bound) y_state_lower = 1;
-							else y_state_lower = 0;
-							y_state_upper = SDL_JoystickGetAxis(did->joystick, did->mapping.axis[axis]) >= analog_upper_bound
-								? 1
-								: 0;
-						}
-						else
-						{
-							y_state_lower = SDL_GameControllerGetAxis(did->controller,
-								static_cast<SDL_GameControllerAxis>(did->mapping.axis[axis])) <= analog_lower_bound
-								? 1
-								: 0;
-							y_state_upper = SDL_GameControllerGetAxis(did->controller,
-								static_cast<SDL_GameControllerAxis>(did->mapping.axis[axis])) >= analog_upper_bound
-								? 1
-								: 0;
-						}
-						setjoybuttonstate(i, 7 + held_offset, y_state_lower);
-						setjoybuttonstate(i, 8 + held_offset, y_state_upper);
-					}
-					else if (did->mapping.axis[axis] != SDL_CONTROLLER_AXIS_INVALID)
-					{
-						if (did->mapping.is_retroarch || !did->is_controller)
-							val = SDL_JoystickGetAxis(did->joystick, did->mapping.axis[axis]);
-						else
-							val = SDL_GameControllerGetAxis(did->controller, static_cast<SDL_GameControllerAxis>(did->mapping.axis[axis]));
-
-						setjoystickstate(i, axis, val, analog_upper_bound);
-					}
-				}
-			}
-
-			// A/B/X/Y --> CD32 red, blue, green, yellow
-			for (int button = SDL_CONTROLLER_BUTTON_A; button <= SDL_CONTROLLER_BUTTON_Y; button++)
-			{
-				if (did->mapping.button[button] != SDL_CONTROLLER_BUTTON_INVALID)
-				{
-					int state;
-					if (did->mapping.is_retroarch || !did->is_controller)
-						state = SDL_JoystickGetButton(did->joystick, did->mapping.button[button]) & 1;
-					else
-						state = SDL_GameControllerGetButton(did->controller,
-							static_cast<SDL_GameControllerButton>(did->mapping.button[button])) & 1;
-					setjoybuttonstate(i, button + held_offset, state);
-				}
-			}
-
-			// LShoulder/RShoulder --> CD32 rwd, ffw
-			for (int button = SDL_CONTROLLER_BUTTON_LEFTSHOULDER; button <= SDL_CONTROLLER_BUTTON_RIGHTSHOULDER; button++)
-			{
-				if (did->mapping.button[button] != SDL_CONTROLLER_BUTTON_INVALID)
-				{
-					int state;
-					if (did->mapping.is_retroarch || !did->is_controller)
-						state = SDL_JoystickGetButton(did->joystick, did->mapping.button[button]) & 1;
-					else
-						state = SDL_GameControllerGetButton(did->controller,
-							static_cast<SDL_GameControllerButton>(did->mapping.button[button])) & 1;
-					setjoybuttonstate(i, button - 5 + held_offset, state);
-				}
-			}
-
-			// Guide button
-			if (did->mapping.button[SDL_CONTROLLER_BUTTON_GUIDE] != SDL_CONTROLLER_BUTTON_INVALID)
-			{
-				int state;
-				if (did->mapping.is_retroarch || !did->is_controller)
-					state = SDL_JoystickGetButton(did->joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_GUIDE]) & 1;
-				else
-					state = SDL_GameControllerGetButton(did->controller,
-						static_cast<SDL_GameControllerButton>(did->mapping.button[SDL_CONTROLLER_BUTTON_GUIDE])) & 1;
-				setjoybuttonstate(i, 31, state);
-			}
-
-			// Start button
-			if (did->mapping.button[SDL_CONTROLLER_BUTTON_START] != SDL_CONTROLLER_BUTTON_INVALID)
-			{
-				int state;
-				if (did->mapping.is_retroarch || !did->is_controller)
-					state = SDL_JoystickGetButton(did->joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_START]) & 1;
-				else
-					state = SDL_GameControllerGetButton(did->controller,
-						static_cast<SDL_GameControllerButton>(did->mapping.button[SDL_CONTROLLER_BUTTON_START])) & 1;
-				setjoybuttonstate(i, 6 + held_offset, state);
-			}
-
-			// D-pad Up, Down, Left, Right
-			for (int button = SDL_CONTROLLER_BUTTON_DPAD_UP; button <= SDL_CONTROLLER_BUTTON_DPAD_RIGHT; button++)
-			{
-				int state;
-				if (did->mapping.is_retroarch || !did->is_controller)
-				{
-					const int hat = SDL_JoystickGetHat(did->joystick, 0);
-					state = did->mapping.button[button] + 1
-						? SDL_JoystickGetButton(did->joystick, did->mapping.button[button]) & 1
-						: button == 11
-						? hat & SDL_HAT_UP
-						: button == 12
-						? hat & SDL_HAT_DOWN
-						: button == 13
-						? hat & SDL_HAT_LEFT
-						: button == 14
-						? hat & SDL_HAT_RIGHT
-						: 0;
-				}
-				else
-				{
-					state = did->mapping.button[button] + 1
-						? SDL_GameControllerGetButton(did->controller, static_cast<SDL_GameControllerButton>(did->mapping.button[button])) & 1
-						: 0;
-				}
-				setjoybuttonstate(i, button - 4 + held_offset, state);
-			}
-
-			// Left/Right Stick buttons
-			for (int button = SDL_CONTROLLER_BUTTON_LEFTSTICK; button <= SDL_CONTROLLER_BUTTON_RIGHTSTICK; button++)
-			{
-				if (did->mapping.button[button] != -1)
-				{
-					int state;
-					if (did->mapping.is_retroarch || !did->is_controller)
-						state = SDL_JoystickGetButton(did->joystick, did->mapping.button[button]) & 1;
-					else
-						state = SDL_GameControllerGetButton(did->controller,
-							static_cast<SDL_GameControllerButton>(did->mapping.button[button])) & 1;
-					setjoybuttonstate(i, button + 4 + held_offset, state);
-				}
-			}
-
-			// Select button
-			if (did->mapping.button[SDL_CONTROLLER_BUTTON_BACK] != SDL_CONTROLLER_BUTTON_INVALID)
-			{
-				int state;
-				if (did->mapping.is_retroarch || !did->is_controller)
-					state = SDL_JoystickGetButton(did->joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_BACK]) & 1;
-				else
-					state = SDL_GameControllerGetButton(did->controller,
-						static_cast<SDL_GameControllerButton>(did->mapping.button[SDL_CONTROLLER_BUTTON_BACK])) & 1;
-				setjoybuttonstate(i, 13 + held_offset, state);
+				// Game Controller mode
+				read_gamecontroller_buttons(i);
+				read_gamecontroller_axes(i);
 			}
 		}
 	}
@@ -1322,6 +1276,7 @@ struct inputdevice_functions inputdevicefunc_joystick = {
 	get_joystick_flags
 };
 
+// We use setid to set up custom events
 int input_get_default_joystick(struct uae_input_device* uid, int i, int port, int af, int mode, bool gp, bool joymouseswap)
 {
 	struct didata* did = NULL;
@@ -1365,31 +1320,43 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 	setid(uid, i, ID_AXIS_OFFSET + 0, 0, port, h, gp);
 	setid(uid, i, ID_AXIS_OFFSET + 1, 0, port, v, gp);
 
-	// ASSIGN ALL INPUT EVENT ACTIONS, EITHER CUSTOM OR DEFAULT
-	//
-	std::array<int, SDL_CONTROLLER_BUTTON_MAX> thismap[4]{};
-	thismap[0] = currprefs.jports[port].amiberry_custom_none;
+	std::array<int, SDL_CONTROLLER_BUTTON_MAX> button_map[2]{};
+	button_map[0] = currprefs.jports[port].amiberry_custom_none;
+	button_map[1] = currprefs.jports[port].amiberry_custom_hotkey;
 
+	std::array<int, SDL_CONTROLLER_AXIS_MAX> axis_map[2]{};
+	axis_map[0] = currprefs.jports[port].amiberry_custom_axis_none;
+	axis_map[1] = currprefs.jports[port].amiberry_custom_axis_hotkey;
+
+	// Configure default button mapping, only if none is already configured
 	if (port < 2) // ports 0, 1 ... 
 	{
 		if (mode == JSEM_MODE_MOUSE)
 		{
+			// Map D-Pad buttons to mouse movement
 			int event = port ? INPUTEVENT_MOUSE2_UP : INPUTEVENT_MOUSE1_UP;
 			for (int x = SDL_CONTROLLER_BUTTON_DPAD_UP; x <= SDL_CONTROLLER_BUTTON_DPAD_RIGHT; x++)
 			{
-				if (!thismap[0][x])
+				if (!button_map[0][x])
 				{
-					thismap[0][x] = event;
+					button_map[0][x] = event;
 				}
 				event++;
 			}
 
+			// Map Left X/Y axis to Mouse Horizontal/Vertical movement
+			event = port ? INPUTEVENT_MOUSE2_HORIZ : INPUTEVENT_MOUSE1_HORIZ;
+			if (!axis_map[0][SDL_CONTROLLER_AXIS_LEFTX]) axis_map[0][SDL_CONTROLLER_AXIS_LEFTX] = event;
+			event++;
+			if (!axis_map[0][SDL_CONTROLLER_AXIS_LEFTY]) axis_map[0][SDL_CONTROLLER_AXIS_LEFTY] = event;
+			
+
 			event = port ? INPUTEVENT_JOY2_FIRE_BUTTON : INPUTEVENT_JOY1_FIRE_BUTTON;
 			for (int x = SDL_CONTROLLER_BUTTON_LEFTSHOULDER; x <= SDL_CONTROLLER_BUTTON_RIGHTSHOULDER; x++)
 			{
-				if (!thismap[0][x])
+				if (!button_map[0][x])
 				{
-					thismap[0][x] = event;
+					button_map[0][x] = event;
 				}
 				event++;
 			}
@@ -1399,9 +1366,9 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 			int event = INPUTEVENT_JOY1_FIRE_BUTTON;
 			for (int x = SDL_CONTROLLER_BUTTON_LEFTSHOULDER; x <= SDL_CONTROLLER_BUTTON_RIGHTSHOULDER; x++)
 			{
-				if (!thismap[0][x])
+				if (!button_map[0][x])
 				{
-					thismap[0][x] = event;
+					button_map[0][x] = event;
 				}
 				event++;
 			}
@@ -1411,9 +1378,9 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 			int event = port ? INPUTEVENT_JOY2_UP : INPUTEVENT_JOY1_UP;
 			for (int x = SDL_CONTROLLER_BUTTON_DPAD_UP; x <= SDL_CONTROLLER_BUTTON_DPAD_DOWN; x++)
 			{
-				if (!thismap[0][x])
+				if (!button_map[0][x])
 				{
-					thismap[0][x] = event;
+					button_map[0][x] = event;
 				}
 				event++;
 			}
@@ -1421,9 +1388,9 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 			event = port ? INPUTEVENT_JOY2_LEFT : INPUTEVENT_JOY1_LEFT;
 			for (int x = SDL_CONTROLLER_BUTTON_DPAD_LEFT; x <= SDL_CONTROLLER_BUTTON_DPAD_RIGHT; x++)
 			{
-				if (!thismap[0][x])
+				if (!button_map[0][x])
 				{
-					thismap[0][x] = event;
+					button_map[0][x] = event;
 				}
 				event++;
 			}
@@ -1434,9 +1401,9 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 			int event = port ? INPUTEVENT_JOY2_CD32_RED : INPUTEVENT_JOY1_CD32_RED;
 			for (int x = SDL_CONTROLLER_BUTTON_A; x <= SDL_CONTROLLER_BUTTON_B; x++)
 			{
-				if (!thismap[0][x])
+				if (!button_map[0][x])
 				{
-					thismap[0][x] = event;
+					button_map[0][x] = event;
 				}
 				event++;
 			}
@@ -1444,25 +1411,25 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 			event = port ? INPUTEVENT_JOY2_CD32_GREEN : INPUTEVENT_JOY1_CD32_GREEN;
 			for (int x = SDL_CONTROLLER_BUTTON_X; x <= SDL_CONTROLLER_BUTTON_Y; x++)
 			{
-				if (!thismap[0][x])
+				if (!button_map[0][x])
 				{
-					thismap[0][x] = event;
+					button_map[0][x] = event;
 				}
 				event++;
 			}
 
 			event = port ? INPUTEVENT_JOY2_CD32_PLAY : INPUTEVENT_JOY1_CD32_PLAY;
-			if (!thismap[0][SDL_CONTROLLER_BUTTON_START])
+			if (!button_map[0][SDL_CONTROLLER_BUTTON_START])
 			{
-				thismap[0][SDL_CONTROLLER_BUTTON_START] = event;
+				button_map[0][SDL_CONTROLLER_BUTTON_START] = event;
 			}
 
 			event = port ? INPUTEVENT_JOY2_CD32_RWD : INPUTEVENT_JOY1_CD32_RWD;
 			for (int x = SDL_CONTROLLER_BUTTON_LEFTSHOULDER; x <= SDL_CONTROLLER_BUTTON_RIGHTSHOULDER; x++)
 			{
-				if (!thismap[0][x])
+				if (!button_map[0][x])
 				{
-					thismap[0][x] = event;
+					button_map[0][x] = event;
 				}
 				event++;
 			}
@@ -1472,41 +1439,41 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 			int event = port ? INPUTEVENT_JOY2_FIRE_BUTTON : INPUTEVENT_JOY1_FIRE_BUTTON;
 			for (int x = SDL_CONTROLLER_BUTTON_A; x <= SDL_CONTROLLER_BUTTON_B; x++)
 			{
-				if (!thismap[0][x])
+				if (!button_map[0][x])
 				{
-					thismap[0][x] = event;
+					button_map[0][x] = event;
 				}
 				event++;
 			}
 
 			event = port ? INPUTEVENT_JOY2_UP : INPUTEVENT_JOY1_UP;
-			if (!thismap[0][SDL_CONTROLLER_BUTTON_X])
+			if (!button_map[0][SDL_CONTROLLER_BUTTON_X])
 			{
-				thismap[0][SDL_CONTROLLER_BUTTON_X] = event;
+				button_map[0][SDL_CONTROLLER_BUTTON_X] = event;
 			}
 
 			event = port ? INPUTEVENT_JOY2_3RD_BUTTON : INPUTEVENT_JOY1_3RD_BUTTON;
-			if (!thismap[0][SDL_CONTROLLER_BUTTON_Y])
+			if (!button_map[0][SDL_CONTROLLER_BUTTON_Y])
 			{
-				thismap[0][SDL_CONTROLLER_BUTTON_Y] = event;
+				button_map[0][SDL_CONTROLLER_BUTTON_Y] = event;
 			}
 
 			event = INPUTEVENT_KEY_P;
-			if (!thismap[0][SDL_CONTROLLER_BUTTON_START])
+			if (!button_map[0][SDL_CONTROLLER_BUTTON_START])
 			{
-				thismap[0][SDL_CONTROLLER_BUTTON_START] = event;
+				button_map[0][SDL_CONTROLLER_BUTTON_START] = event;
 			}
 
 			event = INPUTEVENT_KEY_SPACE;
-			if (!thismap[0][SDL_CONTROLLER_BUTTON_LEFTSHOULDER])
+			if (!button_map[0][SDL_CONTROLLER_BUTTON_LEFTSHOULDER])
 			{
-				thismap[0][SDL_CONTROLLER_BUTTON_LEFTSHOULDER] = event;
+				button_map[0][SDL_CONTROLLER_BUTTON_LEFTSHOULDER] = event;
 			}
 
 			event = INPUTEVENT_KEY_RETURN;
-			if (!thismap[0][SDL_CONTROLLER_BUTTON_RIGHTSHOULDER])
+			if (!button_map[0][SDL_CONTROLLER_BUTTON_RIGHTSHOULDER])
 			{
-				thismap[0][SDL_CONTROLLER_BUTTON_RIGHTSHOULDER] = event;
+				button_map[0][SDL_CONTROLLER_BUTTON_RIGHTSHOULDER] = event;
 			}
 		}
 	}
@@ -1515,9 +1482,9 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 		int event = port - 2 ? INPUTEVENT_PAR_JOY2_UP : INPUTEVENT_PAR_JOY1_UP;
 		for (int x = SDL_CONTROLLER_BUTTON_DPAD_UP; x <= SDL_CONTROLLER_BUTTON_DPAD_DOWN; x++)
 		{
-			if (!thismap[0][x])
+			if (!button_map[0][x])
 			{
-				thismap[0][x] = event;
+				button_map[0][x] = event;
 			}
 			event++;
 		}
@@ -1525,9 +1492,9 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 		event = port - 2 ? INPUTEVENT_PAR_JOY2_LEFT : INPUTEVENT_PAR_JOY1_LEFT;
 		for (int x = SDL_CONTROLLER_BUTTON_DPAD_LEFT; x <= SDL_CONTROLLER_BUTTON_DPAD_RIGHT; x++)
 		{
-			if (!thismap[0][x])
+			if (!button_map[0][x])
 			{
-				thismap[0][x] = event;
+				button_map[0][x] = event;
 			}
 			event++;
 		}
@@ -1535,9 +1502,9 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 		event = port - 2 ? INPUTEVENT_PAR_JOY2_FIRE_BUTTON : INPUTEVENT_PAR_JOY1_FIRE_BUTTON;
 		for (int x = SDL_CONTROLLER_BUTTON_A; x <= SDL_CONTROLLER_BUTTON_B; x++)
 		{
-			if (!thismap[0][x])
+			if (!button_map[0][x])
 			{
-				thismap[0][x] = event;
+				button_map[0][x] = event;
 			}
 			event++;
 		}
@@ -1545,73 +1512,62 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 		event = port ? INPUTEVENT_PAR_JOY2_2ND_BUTTON : INPUTEVENT_PAR_JOY1_2ND_BUTTON;
 		for (int x = SDL_CONTROLLER_BUTTON_X; x <= SDL_CONTROLLER_BUTTON_Y; x++)
 		{
-			if (!thismap[0][x])
+			if (!button_map[0][x])
 			{
-				thismap[0][x] = event;
+				button_map[0][x] = event;
 			}
 			event++;
 		}
 
 		event = INPUTEVENT_KEY_P;
-		if (!thismap[0][SDL_CONTROLLER_BUTTON_START])
+		if (!button_map[0][SDL_CONTROLLER_BUTTON_START])
 		{
-			thismap[0][SDL_CONTROLLER_BUTTON_START] = event;
+			button_map[0][SDL_CONTROLLER_BUTTON_START] = event;
 		}
 
 		event = INPUTEVENT_KEY_SPACE;
-		if (!thismap[0][SDL_CONTROLLER_BUTTON_LEFTSHOULDER])
+		if (!button_map[0][SDL_CONTROLLER_BUTTON_LEFTSHOULDER])
 		{
-			thismap[0][SDL_CONTROLLER_BUTTON_LEFTSHOULDER] = event;
+			button_map[0][SDL_CONTROLLER_BUTTON_LEFTSHOULDER] = event;
 		}
 
 		event = INPUTEVENT_KEY_RETURN;
-		if (!thismap[0][SDL_CONTROLLER_BUTTON_RIGHTSHOULDER])
+		if (!button_map[0][SDL_CONTROLLER_BUTTON_RIGHTSHOULDER])
 		{
-			thismap[0][SDL_CONTROLLER_BUTTON_RIGHTSHOULDER] = event;
+			button_map[0][SDL_CONTROLLER_BUTTON_RIGHTSHOULDER] = event;
 		}
 	}
 
-	thismap[1] = currprefs.jports[port].amiberry_custom_hotkey;
-
+	
+	// Push button and axis mapping to IDs
 	for (auto n = 0; n < 2; ++n)
 	{
 		const auto function_offset = n * REMAP_BUTTONS;
+		for (int x = 0; x < SDL_CONTROLLER_BUTTON_MAX; x++)
+		{
+			setid(uid, i, ID_BUTTON_OFFSET + x + function_offset, 0, port, button_map[n][x], af, gp);
+		}
 
-		// s/e/w/n
-		for (int x = SDL_CONTROLLER_BUTTON_A; x <= SDL_CONTROLLER_BUTTON_Y; x++)
-			setid(uid, i, ID_BUTTON_OFFSET + x + function_offset, 0, port, thismap[n][x], af, gp);
-
-		// Left/Right shoulder 
-		for (int x = SDL_CONTROLLER_BUTTON_LEFTSHOULDER; x <= SDL_CONTROLLER_BUTTON_RIGHTSHOULDER; x++)
-			setid(uid, i, ID_BUTTON_OFFSET + (x - 5) + function_offset, 0, port, thismap[n][x], af, gp);
-
-		// Start button
-		setid(uid, i, ID_BUTTON_OFFSET + 6 + function_offset, 0, port, thismap[n][SDL_CONTROLLER_BUTTON_START], gp);
-
-		// D-pad Up/Down/Left/Right
-		for (int x = SDL_CONTROLLER_BUTTON_DPAD_UP; x <= SDL_CONTROLLER_BUTTON_DPAD_RIGHT; x++)
-			setid(uid, i, ID_BUTTON_OFFSET + (x - 4) + function_offset, 0, port, thismap[n][x], af, gp);
-
-		// Left/Right Stick buttons
-		for (int x = SDL_CONTROLLER_BUTTON_LEFTSTICK; x <= SDL_CONTROLLER_BUTTON_RIGHTSTICK; x++)
-			setid(uid, i, ID_BUTTON_OFFSET + (x + 4) + function_offset, 0, port, thismap[n][x], af, gp);
-		
-		// Back/Select button
-		setid(uid, i, ID_BUTTON_OFFSET + 13 + function_offset, 0, port, thismap[n][SDL_CONTROLLER_BUTTON_BACK], gp);
+		// Axis mapping, skip the first 2 (Horizontal / Vertical on Left stick)
+		// as they are already handled above
+		for (int x = 2; x < SDL_CONTROLLER_AXIS_MAX; x++)
+		{
+			setid(uid, i, ID_AXIS_OFFSET + x + function_offset, 0, port, axis_map[n][x], af, gp);
+		}
 	}
 
-	// if using retroarch options
+	// We put any retroarch special mappings above the controller's max value
+	// to avoid clashing with any custom mappings above.
+	// Note that newer versions of SDL2 might have a higher value in SDL_CONTROLLER_BUTTON_MAX
+	// This is already the case between 2.0.10 and 2.0.18 for example
 	if (currprefs.use_retroarch_menu)
-		setid(uid, i, ID_BUTTON_OFFSET + 14, 0, port, INPUTEVENT_SPC_ENTERGUI, gp);
+		setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_MAX + 1, 0, port, INPUTEVENT_SPC_ENTERGUI, gp);
 	
 	if (currprefs.use_retroarch_quit)
-		setid(uid, i, ID_BUTTON_OFFSET + 15, 0, port, INPUTEVENT_SPC_QUIT, gp);
+		setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_MAX + 2, 0, port, INPUTEVENT_SPC_QUIT, gp);
 	
 	if (currprefs.use_retroarch_reset)
-		setid(uid, i, ID_BUTTON_OFFSET + 30, 0, port, INPUTEVENT_SPC_SOFTRESET, gp);
-
-	// Guide button
-	setid(uid, i, ID_BUTTON_OFFSET + 31, 0, port, thismap[0][SDL_CONTROLLER_BUTTON_GUIDE], gp);
+		setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_MAX + 3, 0, port, INPUTEVENT_SPC_SOFTRESET, gp);
 
 	if (i >= 0 && i < num_joystick)
 		return 1;
