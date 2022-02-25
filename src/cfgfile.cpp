@@ -247,17 +247,6 @@ static const TCHAR *unmapped[] = { _T("floating"), _T("zero"), _T("one"), 0 };
 static const TCHAR *ciatype[] = { _T("default"), _T("391078-01"), 0 };
 static const TCHAR *debugfeatures[] = { _T("segtracker"), _T("fsdebug"), 0 };
 
-#ifdef AMIBERRY
-static const TCHAR* button_remap_name[] = {
-	_T("south"), _T("east"), _T("west"), _T("north"),
-	_T("select"), _T("menu"), _T("start"),
-	_T("left_stick"), _T("right_stick"), _T("left_shoulder"), _T("right_shoulder"),
-	_T("dpad_up"), _T("dpad_down"), _T("dpad_left"), _T("dpad_right"),
-	_T("misc1"), _T("paddle1"), _T("paddle2"), _T("paddle3"), _T("paddle4"), _T("touchpad"),
-	nullptr
-};
-#endif
-
 struct hdcontrollerconfig
 {
 	const TCHAR *label;
@@ -2124,8 +2113,8 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 		}
 #ifdef AMIBERRY
 		// custom options SAVING
-		std::array<int, SDL_CONTROLLER_BUTTON_MAX> tempcustom{};
-		const TCHAR* namecustom;
+		std::array<int, SDL_CONTROLLER_BUTTON_MAX> custom_button_map{};
+		const TCHAR* custom_name;
 		
 		// get all of the custom actions
 		for (auto n = 0; n < SDL_CONTROLLER_BUTTON_MAX; ++n) // loop through all buttons
@@ -2136,20 +2125,45 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 				// currently only 'none' and 'hotkey'
 				if (m == 0)
 				{
-					tempcustom = jp->amiberry_custom_none;
-					namecustom = _T("_amiberry_custom_none_");
+					custom_button_map = jp->amiberry_custom_none;
+					custom_name = _T("_amiberry_custom_none_");
 				}
 				else
 				{
-					tempcustom = jp->amiberry_custom_hotkey;
-					namecustom = _T("_amiberry_custom_hotkey_");
+					custom_button_map = jp->amiberry_custom_hotkey;
+					custom_name = _T("_amiberry_custom_hotkey_");
 				}
-				const auto b = tempcustom[n];
+				const auto b = custom_button_map[n];
 
 				if (b > 0) { _tcscpy(tmp2, _T(find_inputevent_name(b))); }
 				else { snprintf(tmp2, 1, "%s", ""); }
 
-				_stprintf(tmp1, "joyport%d%s%s", i, namecustom, button_remap_name[n]);
+				_stprintf(tmp1, "joyport%d%s%s", i, custom_name, SDL_GameControllerGetStringForButton(static_cast<SDL_GameControllerButton>(n)));
+				cfgfile_dwrite_str(f, tmp1, tmp2);
+			}
+		}
+
+		std::array<int, SDL_CONTROLLER_AXIS_MAX> custom_axis_map{};
+		for (auto n = 0; n < SDL_CONTROLLER_AXIS_MAX; ++n)
+		{
+			for (auto m = 0; m < 2; m++)
+			{
+				if (m == 0)
+				{
+					custom_axis_map = jp->amiberry_custom_axis_none;
+					custom_name = _T("_amiberry_custom_axis_none_");
+				}
+				else
+				{
+					custom_axis_map = jp->amiberry_custom_axis_hotkey;
+					custom_name = _T("_amiberry_custom_axis_hotkey_");
+				}
+				const auto b = custom_axis_map[n];
+
+				if (b > 0) { _tcscpy(tmp2, _T(find_inputevent_name(b))); }
+				else { snprintf(tmp2, 1, "%s", ""); }
+
+				_stprintf(tmp1, "joyport%d%s%s", i, custom_name, SDL_GameControllerGetStringForAxis(static_cast<SDL_GameControllerAxis>(n)));
 				cfgfile_dwrite_str(f, tmp1, tmp2);
 			}
 		}
@@ -3264,7 +3278,7 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 	// custom options LOADING
 	for (i = 0; i < MAX_JPORTS; ++i)
 	{
-		std::array<int, SDL_CONTROLLER_BUTTON_MAX>tempcustom{};
+		std::array<int, SDL_CONTROLLER_BUTTON_MAX> custom_button_map{};
 
 		for (auto n = 0; n < SDL_CONTROLLER_BUTTON_MAX; ++n)
 		{
@@ -3273,27 +3287,63 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 				if (m == 0)
 				{
 					tmp1 = "none";
-					tempcustom = p->jports[i].amiberry_custom_none;
+					custom_button_map = p->jports[i].amiberry_custom_none;
 				}
 				else if (m == 1)
 				{
 					tmp1 = "hotkey";
-					tempcustom = p->jports[i].amiberry_custom_hotkey;
+					custom_button_map = p->jports[i].amiberry_custom_hotkey;
 				}
-				_stprintf(tmpbuf, "joyport%d_amiberry_custom_%s_%s", i, tmp1, button_remap_name[n]);
+				_stprintf(tmpbuf, "joyport%d_amiberry_custom_%s_%s", i, tmp1, SDL_GameControllerGetStringForButton(static_cast<SDL_GameControllerButton>(n)));
 
 				// this is where we need to check if we have this particular option!!
 				if (!_tcsncmp(option, _T(tmpbuf), sizeof tmpbuf / sizeof(TCHAR)))
 				{
 					auto b = 0;
 					if (find_inputevent(value) > -1) { b = remap_event_list[find_inputevent(value)]; }
-					tempcustom[n] = b;
+					custom_button_map[n] = b;
 
 					if (m == 0)
-						p->jports[i].amiberry_custom_none = tempcustom;
+						p->jports[i].amiberry_custom_none = custom_button_map;
 
 					else if (m == 1)
-						p->jports[i].amiberry_custom_hotkey = tempcustom;
+						p->jports[i].amiberry_custom_hotkey = custom_button_map;
+
+					return 1;
+				}
+			}
+		}
+
+		std::array<int, SDL_CONTROLLER_AXIS_MAX> custom_axis_map{};
+
+		for (auto n = 0; n < SDL_CONTROLLER_AXIS_MAX; ++n)
+		{
+			for (auto m = 0; m < 2; ++m)
+			{
+				if (m == 0)
+				{
+					tmp1 = "none";
+					custom_axis_map = p->jports[i].amiberry_custom_axis_none;
+				}
+				else if (m == 1)
+				{
+					tmp1 = "hotkey";
+					custom_axis_map = p->jports[i].amiberry_custom_axis_hotkey;
+				}
+				_stprintf(tmpbuf, "joyport%d_amiberry_custom_axis_%s_%s", i, tmp1, SDL_GameControllerGetStringForAxis(static_cast<SDL_GameControllerAxis>(n)));
+
+				// this is where we need to check if we have this particular option!!
+				if (!_tcsncmp(option, _T(tmpbuf), sizeof tmpbuf / sizeof(TCHAR)))
+				{
+					auto b = 0;
+					if (find_inputevent(value) > -1) { b = remap_event_list[find_inputevent(value)]; }
+					custom_axis_map[n] = b;
+
+					if (m == 0)
+						p->jports[i].amiberry_custom_axis_none = custom_axis_map;
+
+					else if (m == 1)
+						p->jports[i].amiberry_custom_axis_hotkey = custom_axis_map;
 
 					return 1;
 				}

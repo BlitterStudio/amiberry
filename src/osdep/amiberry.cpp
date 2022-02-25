@@ -1052,8 +1052,8 @@ static void touch_event(unsigned long id, int pressrel, int x, int y, const SDL_
 
 void process_event(SDL_Event event)
 {
-	struct AmigaMonitor* mon = &AMonitors[0];
-	struct didata* did = &di_joystick[0];
+	AmigaMonitor* mon = &AMonitors[0];
+	didata* did = &di_joystick[0];
 	
 	if (event.type == SDL_WINDOWEVENT)
 	{
@@ -1138,9 +1138,10 @@ void process_event(SDL_Event event)
 		return;
 
 	case SDL_CONTROLLERBUTTONDOWN:
+	case SDL_CONTROLLERBUTTONUP:
 		if (event.cbutton.button == enter_gui_button)
 		{
-			inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
+			inputdevice_add_inputcode(AKS_ENTERGUI, event.cbutton.state == SDL_PRESSED, nullptr);
 			break;
 		}
 		return;
@@ -1308,11 +1309,6 @@ void process_event(SDL_Event event)
 		monitor_off = 0;
 		if (!mouseinside)
 			mouseinside = true;
-
-#if 0
-		write_log(_T("WM_MOUSEMOVE MON=%d NUM=%d ACT=%d FOCUS=%d CLIP=%d FS=%d %dx%d %dx%d\n"),
-				mon->monitor_id, 0, mouseactive, focus, mon_cursorclipped, isfullscreen(), mx, my, mon->mouseposx, mon->mouseposy);
-#endif
 			
 		if (recapture && isfullscreen() <= 0) {
 			enablecapture(mon->monitor_id);
@@ -1440,8 +1436,9 @@ bool handle_events()
 			process_event(event);
 		}
 
-		inputdevicefunc_keyboard.read();
-		inputdevicefunc_mouse.read();
+		// Keyboard and mouse read are handled in process_event in Amiberry
+		//inputdevicefunc_keyboard.read();
+		//inputdevicefunc_mouse.read();
 		inputdevicefunc_joystick.read();
 		inputdevice_handle_inputcode();
 		cnt1 = 0;
