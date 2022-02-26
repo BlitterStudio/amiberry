@@ -473,7 +473,7 @@ void RefreshPanelCPU()
 	chkCPUCycleExact->setSelected(changed_prefs.cpu_cycle_exact > 0);
 	chkCPUCycleExact->setEnabled(changed_prefs.cpu_model <= 68010);
 
-#ifndef JIT
+#ifdef JIT
 	chkJIT->setEnabled(changed_prefs.cpu_model >= 68020);
 	chkJIT->setSelected(changed_prefs.cachesize > 0);
 #else
