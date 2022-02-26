@@ -1163,37 +1163,7 @@ void process_event(SDL_Event event)
 		return;
 
 	case SDL_KEYDOWN:
-		// if the key belongs to a "retro arch joystick" ignore it
-		// ONLY when in game though, we need to remove the joysticks really 
-		// if we want to use the KB
-		// i've added this so when using the joysticks it doesn't hit the 'r' key for some games
-		// which starts a replay!!!
-		// 
-		//const auto ok_to_use = !key_used_by_retroarch_joy(event.key.keysym.scancode);
-		//if (ok_to_use && event.key.repeat == 0)
-		if (event.key.repeat == 0)
-		{
-			if (!isfocus())
-				break;
-			if (isfocus() < 2 && currprefs.input_tablet >= TABLET_MOUSEHACK && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC))
-				break;
-			
-			int scancode = event.key.keysym.scancode;
-			int pressed = 1;
-
-			if ((amiberry_options.rctrl_as_ramiga || currprefs.right_control_is_right_win_key)
-				&& scancode == SDL_SCANCODE_RCTRL)
-			{
-				scancode = SDL_SCANCODE_RGUI;
-			}
-			scancode = keyhack(scancode, pressed, 0);
-			my_kbd_handler(0, scancode, pressed, false);
-		}
-		return;
-
 	case SDL_KEYUP:
-		//const auto ok_to_use = !key_used_by_retroarch_joy(event.key.keysym.scancode);
-		//if (ok_to_use && event.key.repeat == 0)
 		if (event.key.repeat == 0)
 		{
 			if (!isfocus())
@@ -1202,7 +1172,7 @@ void process_event(SDL_Event event)
 				break;
 			
 			int scancode = event.key.keysym.scancode;
-			int pressed = 0;
+			const int pressed = event.key.state;
 
 			if ((amiberry_options.rctrl_as_ramiga || currprefs.right_control_is_right_win_key)
 				&& scancode == SDL_SCANCODE_RCTRL)
@@ -1219,6 +1189,12 @@ void process_event(SDL_Event event)
 		{
 			if (event.button.clicks == 2)
 				setmousebuttonstate(0, 0, 1);
+		}
+		return;
+	case SDL_FINGERUP:
+		if (isfocus())
+		{
+			setmousebuttonstate(0, 0, 0);
 		}
 		return;
 
@@ -1258,13 +1234,6 @@ void process_event(SDL_Event event)
 				break;
 			default: break;
 			}
-		}
-		return;
-
-	case SDL_FINGERUP:
-		if (isfocus())
-		{
-			setmousebuttonstate(0, 0, 0);
 		}
 		return;
 
