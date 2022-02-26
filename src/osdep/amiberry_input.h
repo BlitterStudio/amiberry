@@ -33,30 +33,30 @@ struct host_input_button {
 };
 
 struct didata {
-	int type;
-	int acquired;
-	std::string name;
+	int type{};
+	int acquired{};
+	std::string name{};
 
-	bool is_controller;
-	SDL_GameController* controller;
-	SDL_Joystick* joystick;
-	SDL_JoystickID joystick_id;
+	bool is_controller{};
+	SDL_GameController* controller{};
+	SDL_Joystick* joystick{};
+	SDL_JoystickID joystick_id{};
 	host_input_button mapping;
-	uae_s16 axles;
-	uae_s16 buttons, buttons_real;
+	uae_s16 axles{};
+	uae_s16 buttons{}, buttons_real{};
 
-	uae_s16 axismappings[MAX_MAPPINGS];
-	TCHAR* axisname[MAX_MAPPINGS];
-	uae_s16 axissort[MAX_MAPPINGS];
-	uae_s16 axistype[MAX_MAPPINGS];
-	bool analogstick;
+	uae_s16 axismappings[MAX_MAPPINGS]{};
+	TCHAR* axisname[MAX_MAPPINGS]{};
+	uae_s16 axissort[MAX_MAPPINGS]{};
+	uae_s16 axistype[MAX_MAPPINGS]{};
+	bool analogstick{};
 
-	uae_s16 buttonmappings[MAX_MAPPINGS];
-	TCHAR* buttonname[MAX_MAPPINGS];
-	uae_s16 buttonsort[MAX_MAPPINGS];
-	uae_s16 buttonaxisparent[MAX_MAPPINGS];
-	uae_s16 buttonaxisparentdir[MAX_MAPPINGS];
-	uae_s16 buttonaxistype[MAX_MAPPINGS];
+	uae_s16 buttonmappings[MAX_MAPPINGS]{};
+	TCHAR* buttonname[MAX_MAPPINGS]{};
+	uae_s16 buttonsort[MAX_MAPPINGS]{};
+	uae_s16 buttonaxisparent[MAX_MAPPINGS]{};
+	uae_s16 buttonaxisparentdir[MAX_MAPPINGS]{};
+	uae_s16 buttonaxistype[MAX_MAPPINGS]{};
 };
 
 //Analog joystick dead zone
