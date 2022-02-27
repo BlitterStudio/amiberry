@@ -61,7 +61,7 @@ struct didata {
 
 //Analog joystick dead zone
 static int joystick_dead_zone = 8000;
-#define REMAP_BUTTONS 16
+#define REMAP_BUTTONS 32
 static int axisold[MAX_INPUT_DEVICES][256], buttonold[MAX_INPUT_DEVICES][256];
 
 extern struct didata di_joystick[MAX_INPUT_DEVICES];

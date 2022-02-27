@@ -159,8 +159,13 @@ struct inputevent {
 #define SET_ONOFF_MASK_PRESS 15
 
 #define ID_BUTTON_OFFSET 0
+#ifdef AMIBERRY
+#define ID_BUTTON_TOTAL 64
+#define ID_AXIS_OFFSET 64
+#else
 #define ID_BUTTON_TOTAL 32
 #define ID_AXIS_OFFSET 32
+#endif
 #define ID_AXIS_TOTAL 32
 
 #define MAX_COMPA_INPUTLIST 30
