@@ -642,7 +642,6 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 	cfgfile_createconfigstore(p);
 }
 
-static int quitting = 0;
 int quit_program = 0;
 static int restart_program;
 static TCHAR restart_config[MAX_DPATH];
@@ -668,9 +667,6 @@ void uae_reset (int hardreset, int keyboardreset)
 
 void uae_quit (void)
 {
-	if (quitting) return;
-	quitting = 1;
-
 	//deactivate_debugger ();
 	if (quit_program != -UAE_QUIT)
 		quit_program = -UAE_QUIT;
