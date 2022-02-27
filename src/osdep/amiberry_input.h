@@ -82,7 +82,8 @@ extern int kb_cd32_retroarch_player4[23];
 extern const TCHAR* find_inputevent_name(int key);
 extern int find_inputevent(TCHAR* key);
 extern int find_in_array(const int arr[], int n, int key);
-extern const int default_mapping[];
+extern const int default_button_mapping[];
+extern const int default_axis_mapping[];
 extern const int remap_event_list[];
 extern const int remap_event_list_size;
 

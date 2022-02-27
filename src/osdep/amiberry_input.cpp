@@ -139,11 +139,16 @@ static void fill_blank_controller()
 		axi = SDL_CONTROLLER_AXIS_INVALID;
 }
 
-constexpr int default_mapping[] = {
+constexpr int default_button_mapping[] = {
 	INPUTEVENT_JOY2_CD32_RED,  INPUTEVENT_JOY2_CD32_BLUE, INPUTEVENT_JOY2_CD32_GREEN, INPUTEVENT_JOY2_CD32_YELLOW,
 	0, 0, INPUTEVENT_JOY2_CD32_PLAY, 0, 0, INPUTEVENT_JOY2_CD32_RWD, INPUTEVENT_JOY2_CD32_FFW,
 	INPUTEVENT_JOY2_UP, INPUTEVENT_JOY2_DOWN, INPUTEVENT_JOY2_LEFT, INPUTEVENT_JOY2_RIGHT,
 	0, 0, 0, 0, 0, 0
+};
+
+constexpr int default_axis_mapping[] = {
+	INPUTEVENT_JOY2_HORIZ, INPUTEVENT_JOY2_VERT, INPUTEVENT_JOY2_HORIZ, INPUTEVENT_JOY2_VERT,
+	0, 0
 };
 
 constexpr int remap_event_list[] = {
@@ -951,9 +956,6 @@ static int init_joystick()
 		strcat(retroarch_config_file, sanitized_name.c_str());
 		strcat(retroarch_config_file, ".cfg");
 
-		//fill_default_controller();
-		//host_input_buttons[cpt] = default_controller_map;
-
 		if (my_existsfile(retroarch_config_file))
 		{
 			write_log("Retroarch controller cfg file found, using that for mapping\n");
@@ -1510,9 +1512,6 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 		setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_RIGHTSHOULDER, 0, port, INPUTEVENT_JOY1_2ND_BUTTON, gp);
 	}
 
-	//
-	// Amiberry extra mappings
-	//
 	// Configure a few extra default mappings, for convenience
 	std::array<int, SDL_CONTROLLER_BUTTON_MAX> button_map[2]{};
 	button_map[0] = currprefs.jports[port].amiberry_custom_none;
