@@ -527,7 +527,7 @@ void RefreshPanelCustom()
 			else
 			{
 				// Default mapping
-				const auto evt = default_mapping[temp_button];
+				const auto evt = default_button_mapping[temp_button];
 				const auto x = find_in_array(remap_event_list, remap_event_list_size, evt);
 				cboCustomButtonAction[n]->setSelected(x + 1);
 			}
@@ -553,13 +553,13 @@ void RefreshPanelCustom()
 			{
 				cboCustomAxisAction[n]->setSelected(0);
 			}
-			//else
-			//{
-			//	// Default mapping
-			//	const auto evt = default_mapping[temp_axis];
-			//	const auto x = find_in_array(remap_event_list, remap_event_list_size, evt);
-			//	cboCustomAxisAction[n]->setSelected(x + 1);
-			//}
+			else
+			{
+				// Default mapping
+				const auto evt = default_axis_mapping[temp_axis];
+				const auto x = find_in_array(remap_event_list, remap_event_list_size, evt);
+				cboCustomAxisAction[n]->setSelected(x + 1);
+			}
 		}
 
 		if (did->mapping.number_of_hats > 0 || changed_prefs.input_analog_remap == true)
