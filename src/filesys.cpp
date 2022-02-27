@@ -51,6 +51,7 @@
 #include "cdtv.h"
 #include "sana2.h"
 #include "bsdsocket.h"
+#include "uaeserial.h"
 #include "uaeresource.h"
 #include "inputdevice.h"
 #include "clipboard.h"

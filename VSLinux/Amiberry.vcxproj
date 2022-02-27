@@ -598,7 +598,8 @@
     <ClCompile Include="..\src\uaeexe.cpp" />
     <ClCompile Include="..\src\uaelib.cpp" />
     <ClCompile Include="..\src\uaenative.cpp" />
-    <ClCompile Include="..\src\uaeresource.cpp" />
+    <ClCompile Include="..\src\uaeresource.cpp"/>
+    <ClCompile Include="..\src\uaeserial.cpp" />
     <ClCompile Include="..\src\vm.cpp" />
     <ClCompile Include="..\src\zfile.cpp" />
     <ClCompile Include="..\src\zfile_archive.cpp" />
@@ -858,6 +859,7 @@
     <ClInclude Include="..\src\include\uaeexe.h" />
     <ClInclude Include="..\src\include\uaenative.h" />
     <ClInclude Include="..\src\include\uaeresource.h" />
+    <ClInclude Include="..\src\include\uaeserial.h" />
     <ClInclude Include="..\src\include\uae\caps.h" />
     <ClInclude Include="..\src\include\uae\cdrom.h" />
     <ClInclude Include="..\src\include\uae\dlopen.h" />

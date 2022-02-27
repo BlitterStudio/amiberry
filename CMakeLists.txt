@@ -71,6 +71,7 @@ add_executable(amiberry
         src/traps.cpp
         src/uaeexe.cpp
         src/uaelib.cpp
+        src/uaeserial.cpp
         src/uaenative.cpp
         src/uaeresource.cpp
         src/zfile.cpp
