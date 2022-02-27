@@ -307,13 +307,13 @@ host_input_button map_from_retroarch(host_input_button mapping, char* control_co
 	mapping.reset_button = find_retroarch("input_reset_btn", control_config);
 	mapping.menu_button = find_retroarch("input_menu_toggle_btn", control_config);
 
-	// Retroarch supports 15 buttons
+	// RetroArch supports 15 buttons
 	for (auto b = 0; b < 15; b++)
 	{
 		mapping.button[b] = find_retroarch(ra_player_input(retroarch_button_list[b], player), control_config);
 	}
 
-	// Retroarch supports 6 axes
+	// RetroArch supports 6 axes
 	for (auto a = 0; a < 6; a++)
 	{
 		mapping.axis[a] = find_retroarch(ra_player_input(retroarch_axis_list[a], player), control_config);
