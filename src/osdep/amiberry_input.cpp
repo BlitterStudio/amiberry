@@ -1145,9 +1145,9 @@ static void read_gamecontroller_buttons(const int joy)
 {
 	didata* did = &di_joystick[joy];
 	auto held_offset = 0;
-#if 0
-	if (did->mapping.hotkey_button > SDL_CONTROLLER_BUTTON_INVALID) held_offset = REMAP_BUTTONS;
 
+	if (did->mapping.hotkey_button > SDL_CONTROLLER_BUTTON_INVALID) held_offset = REMAP_BUTTONS;
+#if 0
 	// detect RetroArch events, with or without Hotkey
 	if (did->mapping.hotkey_button == SDL_CONTROLLER_BUTTON_INVALID
 		|| SDL_GameControllerGetButton(did->controller, static_cast<SDL_GameControllerButton>(did->mapping.hotkey_button)) & 1)
@@ -1236,9 +1236,9 @@ static void read_joystick_buttons(const int joy)
 {
 	const didata* did = &di_joystick[joy];
 	auto held_offset = 0;
-#if 0
-	if (did->mapping.hotkey_button > SDL_CONTROLLER_BUTTON_INVALID) held_offset = REMAP_BUTTONS;
 
+	if (did->mapping.hotkey_button > SDL_CONTROLLER_BUTTON_INVALID) held_offset = REMAP_BUTTONS;
+#if 0
 	if (did->mapping.hotkey_button == SDL_CONTROLLER_BUTTON_INVALID
 		|| SDL_JoystickGetButton(did->joystick, did->mapping.hotkey_button) & 1)
 	{
@@ -1547,24 +1547,25 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 		}
 	}
 
-#if 0
-
-	// Push button and axis mapping to IDs
+	// Set the events for any Custom Controls mapping
 	for (auto n = 0; n < 2; ++n)
 	{
 		const auto function_offset = n * REMAP_BUTTONS;
-		for (int x = 0; x < SDL_CONTROLLER_BUTTON_MAX; x++)
+		for (int button = 0; button < SDL_CONTROLLER_BUTTON_MAX; button++)
 		{
-			setid(uid, i, ID_BUTTON_OFFSET + x + function_offset, 0, port, button_map[n][x], af, gp);
+			if (button_map[0][button] && isrealbutton(did, button))
+				setid(uid, i, ID_BUTTON_OFFSET + button + function_offset, 0, port, button_map[n][button], af, gp);
 		}
 
 		// Axis mapping, skip the first 2 (Horizontal / Vertical on Left stick)
 		// as they are already handled above
-		for (int x = 2; x < SDL_CONTROLLER_AXIS_MAX; x++)
+		for (int axis = 2; axis < SDL_CONTROLLER_AXIS_MAX; axis++)
 		{
-			setid(uid, i, ID_AXIS_OFFSET + x + function_offset, 0, port, axis_map[n][x], af, gp);
+			if (axis_map[n][axis])
+				setid(uid, i, ID_AXIS_OFFSET + axis + function_offset, 0, port, axis_map[n][axis], af, gp);
 		}
 	}
+
 #if 0
 	// We put any retroarch special mappings above the controller's max value
 	// to avoid clashing with any custom mappings above.
@@ -1579,7 +1580,7 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 	if (currprefs.use_retroarch_reset)
 		setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_MAX + 3, 0, port, INPUTEVENT_SPC_SOFTRESET, gp);
 #endif
-#endif
+
 	if (i >= 0 && i < num_joystick)
 		return 1;
 	
