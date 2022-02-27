@@ -3123,6 +3123,7 @@ static void init_amiberry_paths(void)
 	snprintf(config_path, MAX_DPATH, "%s/conf/", start_path_data);
 	snprintf(controllers_path, MAX_DPATH, "%s/controllers/", start_path_data);
 	snprintf(retroarch_file, MAX_DPATH, "%s/conf/retroarch.cfg", start_path_data);
+	snprintf(whdboot_path, MAX_DPATH, "%s/whdboot/", start_path_data);
 	snprintf(logfile_path, MAX_DPATH, "%s/amiberry.log", start_path_data);
 
 #ifdef ANDROID
