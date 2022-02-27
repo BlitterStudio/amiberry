@@ -903,13 +903,17 @@ static int init_joystick()
 			{
 				did->buttonsort[b] = b;
 				did->buttonmappings[b] = b;
-				did->buttonname[b] = my_strdup(SDL_GameControllerGetStringForButton(static_cast<SDL_GameControllerButton>(b)));
+				const auto button_name = SDL_GameControllerGetStringForButton(static_cast<SDL_GameControllerButton>(b));
+				if (button_name != nullptr)
+					did->buttonname[b] = my_strdup(button_name);
 			}
 			for (uae_s16 a = 0; a < did->axles; a++)
 			{
 				did->axissort[a] = a;
 				did->axismappings[a] = a;
-				did->axisname[a] = my_strdup(SDL_GameControllerGetStringForAxis(static_cast<SDL_GameControllerAxis>(a)));
+				const auto axis_name = SDL_GameControllerGetStringForAxis(static_cast<SDL_GameControllerAxis>(a));
+				if (axis_name != nullptr)
+					did->axisname[a] = my_strdup(axis_name);
 				if (a == SDL_CONTROLLER_AXIS_LEFTX || a == SDL_CONTROLLER_AXIS_RIGHTX)
 					did->axistype[a] = AXISTYPE_POV_X;
 				else if (a == SDL_CONTROLLER_AXIS_LEFTY || a == SDL_CONTROLLER_AXIS_RIGHTY)
