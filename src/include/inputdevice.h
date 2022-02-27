@@ -41,18 +41,18 @@
 #define IDTYPE_MAX 4
 
 struct inputdevice_functions {
-    int (*init)(void);
-    void (*close)(void);
-    int (*acquire)(int,int);
-    void (*unacquire)(int);
-    void (*read)(void);
-    int (*get_num)(void);
-    const TCHAR* (*get_friendlyname)(int);
-    const TCHAR* (*get_uniquename)(int);
-    int (*get_widget_num)(int);
-    int (*get_widget_type)(int,int,TCHAR*,uae_u32*);
-    int (*get_widget_first)(int,int);
-    int (*get_flags)(int);
+	int (*init)(void);
+	void (*close)(void);
+	int (*acquire)(int,int);
+	void (*unacquire)(int);
+	void (*read)(void);
+	int (*get_num)(void);
+	const TCHAR* (*get_friendlyname)(int);
+	const TCHAR* (*get_uniquename)(int);
+	int (*get_widget_num)(int);
+	int (*get_widget_type)(int,int,TCHAR*,uae_u32*);
+	int (*get_widget_first)(int,int);
+	int (*get_flags)(int);
 };
 extern struct inputdevice_functions inputdevicefunc_joystick;
 extern struct inputdevice_functions inputdevicefunc_mouse;
@@ -66,8 +66,8 @@ struct uae_input_device_default_node
 };
 
 struct uae_input_device_kbr_default {
-    int scancode;
-    struct uae_input_device_default_node node[MAX_INPUT_SUB_EVENT];
+	int scancode;
+	struct uae_input_device_default_node node[MAX_INPUT_SUB_EVENT];
 };
 
 struct inputevent {
@@ -317,8 +317,8 @@ extern void inputdevice_add_inputcode (int code, int state, const TCHAR *);
 extern void inputdevice_handle_inputcode (void);
 
 extern void inputdevice_tablet (int x, int y, int z,
-	      int pressure, uae_u32 buttonbits, int inproximity,
-	      int ax, int ay, int az, int devid);
+		  int pressure, uae_u32 buttonbits, int inproximity,
+		  int ax, int ay, int az, int devid);
 extern void inputdevice_tablet_info (int maxx, int maxy, int maxz, int maxax, int maxay, int maxaz, int xres, int yres);
 extern void inputdevice_tablet_strobe (void);
 extern void tablet_lightpen(int x, int y, int maxx, int maxy, int touch, int buttonmask, bool touchmode, int devid, int lpnum);

@@ -1206,27 +1206,21 @@ static void read_gamecontroller_axes(const int joy)
 	// Check for any Axis movement
 	for (auto axis = 0; axis < did->axles; axis++)
 	{
-		// If analog mouse mapping is used, the Left stick acts as a mouse
-		if (axis <= SDL_CONTROLLER_AXIS_LEFTY && currprefs.input_analog_remap
-			&& did->mapping.axis[axis] != SDL_CONTROLLER_AXIS_INVALID)
+		if (did->mapping.axis[axis] != SDL_CONTROLLER_AXIS_INVALID)
 		{
 			const int data = SDL_GameControllerGetAxis(did->controller, static_cast<SDL_GameControllerAxis>(did->mapping.axis[axis]));
-			if (data > joystick_dead_zone || data < -joystick_dead_zone)
-				setmousestate(joy, axis, data / 1000, 0);
-		}
 
-		else if (did->mapping.axis[axis] != SDL_CONTROLLER_AXIS_INVALID)
-		{
-			const int val = SDL_GameControllerGetAxis(did->controller, static_cast<SDL_GameControllerAxis>(did->mapping.axis[axis]));
-			const int state = val <= -joystick_dead_zone ? -1 : val >= joystick_dead_zone ? 1 : 0;
-
-			if (did->axistype[axis] == AXISTYPE_POV_X || did->axistype[axis] == AXISTYPE_POV_Y) {
-				setjoystickstate(joy, axis, state, 1);
+			// If analog mouse mapping is used, the Left stick acts as a mouse
+			if (axis <= SDL_CONTROLLER_AXIS_LEFTY && currprefs.input_analog_remap)
+			{
+				if (data > joystick_dead_zone || data < -joystick_dead_zone)
+					setmousestate(joy, axis, data / 1000, 0);
 			}
-			else if (did->axistype[axis] == AXISTYPE_NORMAL) {
-				if (axisold[joy][axis] != val) {
-					setjoystickstate(joy, axis, val, analog_upper_bound);
-					axisold[joy][axis] = val;
+			else
+			{
+				if (axisold[joy][axis] != data) {
+					setjoystickstate(joy, axis, data, analog_upper_bound);
+					axisold[joy][axis] = data;
 				}
 			}
 		}
@@ -1319,27 +1313,21 @@ static void read_joystick_axes(const int joy)
 	// Check for any Axis movement
 	for (auto axis = 0; axis < did->axles; axis++)
 	{
-		// If analog mouse mapping is used, the Left stick acts as a mouse
-		if (axis <= SDL_CONTROLLER_AXIS_LEFTY && currprefs.input_analog_remap
-			&& did->mapping.axis[axis] != SDL_CONTROLLER_AXIS_INVALID)
+		if (did->mapping.axis[axis] != SDL_CONTROLLER_AXIS_INVALID)
 		{
 			const int data = SDL_JoystickGetAxis(did->joystick, did->mapping.axis[axis]);
-			if (data > joystick_dead_zone || data < -joystick_dead_zone)
-				setmousestate(joy, axis, data / 1000, 0);
-		}
 
-		else if (did->mapping.axis[axis] != SDL_CONTROLLER_AXIS_INVALID)
-		{
-			const int val = SDL_JoystickGetAxis(did->joystick, did->mapping.axis[axis]);
-			const int state = val <= -joystick_dead_zone ? -1 : val >= joystick_dead_zone ? 1 : 0;
-
-			if (did->axistype[axis] == AXISTYPE_POV_X || did->axistype[axis] == AXISTYPE_POV_Y) {
-				setjoystickstate(joy, axis, state, 1);
+			// If analog mouse mapping is used, the Left stick acts as a mouse
+			if (axis <= SDL_CONTROLLER_AXIS_LEFTY && currprefs.input_analog_remap)
+			{
+				if (data > joystick_dead_zone || data < -joystick_dead_zone)
+					setmousestate(joy, axis, data / 1000, 0);
 			}
-			else if (did->axistype[axis] == AXISTYPE_NORMAL) {
-				if (axisold[joy][axis] != val) {
-					setjoystickstate(joy, axis, val, analog_upper_bound);
-					axisold[joy][axis] = val;
+			else
+			{
+				if (axisold[joy][axis] != data) {
+					setjoystickstate(joy, axis, data, analog_upper_bound);
+					axisold[joy][axis] = data;
 				}
 			}
 		}
@@ -1464,18 +1452,68 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 			setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_START, 0, port, port ? INPUTEVENT_JOY2_CD32_PLAY : INPUTEVENT_JOY1_CD32_PLAY, gp);
 	}
 
-	// Map D-Pad buttons if they exist
+	// Map D-Pad buttons if they exist. If Mouse Mode is set, they function as mouse movements, otherwise as digital Joystick directions
 	if (isrealbutton(did, SDL_CONTROLLER_BUTTON_DPAD_UP))
-		setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_DPAD_UP, 0, port, port ? INPUTEVENT_JOY2_UP : INPUTEVENT_JOY1_UP, gp);
+	{
+		if (mode == JSEM_MODE_MOUSE)
+		{
+			// Map D-Pad buttons to mouse movement
+			setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_DPAD_UP, 0, port, port ? INPUTEVENT_MOUSE2_UP : INPUTEVENT_MOUSE1_UP, gp);
+		}
+		else
+		{
+			setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_DPAD_UP, 0, port, port ? INPUTEVENT_JOY2_UP : INPUTEVENT_JOY1_UP, gp);
+		}
+	}
 	if (isrealbutton(did, SDL_CONTROLLER_BUTTON_DPAD_DOWN))
-		setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_DPAD_DOWN, 0, port, port ? INPUTEVENT_JOY2_DOWN : INPUTEVENT_JOY1_DOWN, gp);
+	{
+		if (mode == JSEM_MODE_MOUSE)
+		{
+			// Map D-Pad buttons to mouse movement
+			setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_DPAD_DOWN, 0, port, port ? INPUTEVENT_MOUSE2_DOWN : INPUTEVENT_MOUSE1_DOWN, gp);
+		}
+		else
+		{
+			setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_DPAD_DOWN, 0, port, port ? INPUTEVENT_JOY2_DOWN : INPUTEVENT_JOY1_DOWN, gp);
+		}
+	}
 	if (isrealbutton(did, SDL_CONTROLLER_BUTTON_DPAD_LEFT))
-		setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_DPAD_LEFT, 0, port, port ? INPUTEVENT_JOY2_LEFT : INPUTEVENT_JOY1_LEFT, gp);
+	{
+		if (mode == JSEM_MODE_MOUSE)
+		{
+			// Map D-Pad buttons to mouse movement
+			setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_DPAD_LEFT, 0, port, port ? INPUTEVENT_MOUSE2_LEFT : INPUTEVENT_MOUSE1_LEFT, gp);
+		}
+		else
+		{
+			setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_DPAD_LEFT, 0, port, port ? INPUTEVENT_JOY2_LEFT : INPUTEVENT_JOY1_LEFT, gp);
+		}
+	}
 	if (isrealbutton(did, SDL_CONTROLLER_BUTTON_DPAD_RIGHT))
-		setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_DPAD_RIGHT, 0, port, port ? INPUTEVENT_JOY2_RIGHT : INPUTEVENT_JOY1_RIGHT, gp);
+	{
+		if (mode == JSEM_MODE_MOUSE)
+		{
+			// Map D-Pad buttons to mouse movement
+			setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_DPAD_RIGHT, 0, port, port ? INPUTEVENT_MOUSE2_RIGHT : INPUTEVENT_MOUSE1_RIGHT, gp);
+		}
+		else
+		{
+			setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_DPAD_RIGHT, 0, port, port ? INPUTEVENT_JOY2_RIGHT : INPUTEVENT_JOY1_RIGHT, gp);
+		}
+	}
 
+	// If mouse map is enabled (we're emulating a mouse on Port 0 from this controller's Analog stick)
+	// we need to enable 2 mouse buttons for Port 0 as well. These are currently LShoulder / RShoulder respectively
+	if (currprefs.jports[port].mousemap > 0)
+	{
+		setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_LEFTSHOULDER, 0, port, INPUTEVENT_JOY1_FIRE_BUTTON, gp);
+		setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_RIGHTSHOULDER, 0, port, INPUTEVENT_JOY1_2ND_BUTTON, gp);
+	}
 
-#if 0
+	//
+	// Amiberry extra mappings
+	//
+	// Configure a few extra default mappings, for convenience
 	std::array<int, SDL_CONTROLLER_BUTTON_MAX> button_map[2]{};
 	button_map[0] = currprefs.jports[port].amiberry_custom_none;
 	button_map[1] = currprefs.jports[port].amiberry_custom_hotkey;
@@ -1484,69 +1522,27 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 	axis_map[0] = currprefs.jports[port].amiberry_custom_axis_none;
 	axis_map[1] = currprefs.jports[port].amiberry_custom_axis_hotkey;
 
-	int event;
-	// Configure default button mapping, only if none is already configured
-	if (port < 2) // ports 0, 1 ... 
+	// Only applies for normal joysticks, as CD32 pads will use these buttons already
+	if (mode < JSEM_MODE_JOYSTICK_CD32)
 	{
-		if (mode == JSEM_MODE_MOUSE)
+		// Key P: commonly used for Pause in many games => START
+		if (isrealbutton(did, SDL_CONTROLLER_BUTTON_START) && !button_map[0][SDL_CONTROLLER_BUTTON_START])
+			setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_START, 0, port, INPUTEVENT_KEY_P, gp);
+
+		// Mouse map uses these already, so we skip them if that's enabled
+		if (currprefs.jports[port].mousemap == 0)
 		{
-			// Map D-Pad buttons to mouse movement
-			event = port ? INPUTEVENT_MOUSE2_UP : INPUTEVENT_MOUSE1_UP;
-			for (int x = SDL_CONTROLLER_BUTTON_DPAD_UP; x <= SDL_CONTROLLER_BUTTON_DPAD_RIGHT; x++)
-			{
-				if (!button_map[0][x]) button_map[0][x] = event;
-				event++;
-			}
+			// Space bar used on many games as a 2nd fire button => LShoulder
+			if (isrealbutton(did, SDL_CONTROLLER_BUTTON_LEFTSHOULDER) && !button_map[0][SDL_CONTROLLER_BUTTON_LEFTSHOULDER])
+				setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_LEFTSHOULDER, 0, port, INPUTEVENT_KEY_SPACE, gp);
 
-			// Map Left X/Y axis to Mouse Horizontal/Vertical movement
-			event = port ? INPUTEVENT_MOUSE2_HORIZ : INPUTEVENT_MOUSE1_HORIZ;
-			if (!axis_map[0][SDL_CONTROLLER_AXIS_LEFTX]) axis_map[0][SDL_CONTROLLER_AXIS_LEFTX] = event;
-			event++;
-			if (!axis_map[0][SDL_CONTROLLER_AXIS_LEFTY]) axis_map[0][SDL_CONTROLLER_AXIS_LEFTY] = event;
-			
-
-			event = port ? INPUTEVENT_JOY2_FIRE_BUTTON : INPUTEVENT_JOY1_FIRE_BUTTON;
-			for (int x = SDL_CONTROLLER_BUTTON_LEFTSHOULDER; x <= SDL_CONTROLLER_BUTTON_RIGHTSHOULDER; x++)
-			{
-				if (!button_map[0][x]) button_map[0][x] = event;
-				event++;
-			}
-		}
-		else if (currprefs.jports[port].mousemap > 0)
-		{
-			event = INPUTEVENT_JOY1_FIRE_BUTTON;
-			for (int x = SDL_CONTROLLER_BUTTON_LEFTSHOULDER; x <= SDL_CONTROLLER_BUTTON_RIGHTSHOULDER; x++)
-			{
-				if (!button_map[0][x]) button_map[0][x] = event;
-				event++;
-			}
-		}
-
-		else if (currprefs.jports[port].id >= JSEM_JOYS) // default, normal joystick  
-		{
-
-			event = INPUTEVENT_KEY_P;
-			if (!button_map[0][SDL_CONTROLLER_BUTTON_START]) button_map[0][SDL_CONTROLLER_BUTTON_START] = event;
-
-			event = INPUTEVENT_KEY_SPACE;
-			if (!button_map[0][SDL_CONTROLLER_BUTTON_LEFTSHOULDER]) button_map[0][SDL_CONTROLLER_BUTTON_LEFTSHOULDER] = event;
-
-			event = INPUTEVENT_KEY_RETURN;
-			if (!button_map[0][SDL_CONTROLLER_BUTTON_RIGHTSHOULDER]) button_map[0][SDL_CONTROLLER_BUTTON_RIGHTSHOULDER] = event;
+			// Return => RShoulder
+			if (isrealbutton(did, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER) && !button_map[0][SDL_CONTROLLER_BUTTON_RIGHTSHOULDER])
+				setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_RIGHTSHOULDER, 0, port, INPUTEVENT_KEY_RETURN, gp);
 		}
 	}
-	else // ports 2, 3 ... parallel ports 
-	{
 
-		event = INPUTEVENT_KEY_P;
-		if (!button_map[0][SDL_CONTROLLER_BUTTON_START]) button_map[0][SDL_CONTROLLER_BUTTON_START] = event;
-
-		event = INPUTEVENT_KEY_SPACE;
-		if (!button_map[0][SDL_CONTROLLER_BUTTON_LEFTSHOULDER]) button_map[0][SDL_CONTROLLER_BUTTON_LEFTSHOULDER] = event;
-
-		event = INPUTEVENT_KEY_RETURN;
-		if (!button_map[0][SDL_CONTROLLER_BUTTON_RIGHTSHOULDER]) button_map[0][SDL_CONTROLLER_BUTTON_RIGHTSHOULDER] = event;
-	}
+#if 0
 
 	// Push button and axis mapping to IDs
 	for (auto n = 0; n < 2; ++n)
