@@ -1489,19 +1489,17 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 	axis_map[0] = currprefs.jports[port].amiberry_custom_axis_none;
 	axis_map[1] = currprefs.jports[port].amiberry_custom_axis_hotkey;
 
+	int event;
 	// Configure default button mapping, only if none is already configured
 	if (port < 2) // ports 0, 1 ... 
 	{
 		if (mode == JSEM_MODE_MOUSE)
 		{
 			// Map D-Pad buttons to mouse movement
-			int event = port ? INPUTEVENT_MOUSE2_UP : INPUTEVENT_MOUSE1_UP;
+			event = port ? INPUTEVENT_MOUSE2_UP : INPUTEVENT_MOUSE1_UP;
 			for (int x = SDL_CONTROLLER_BUTTON_DPAD_UP; x <= SDL_CONTROLLER_BUTTON_DPAD_RIGHT; x++)
 			{
-				if (!button_map[0][x])
-				{
-					button_map[0][x] = event;
-				}
+				if (!button_map[0][x]) button_map[0][x] = event;
 				event++;
 			}
 
@@ -1515,188 +1513,44 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 			event = port ? INPUTEVENT_JOY2_FIRE_BUTTON : INPUTEVENT_JOY1_FIRE_BUTTON;
 			for (int x = SDL_CONTROLLER_BUTTON_LEFTSHOULDER; x <= SDL_CONTROLLER_BUTTON_RIGHTSHOULDER; x++)
 			{
-				if (!button_map[0][x])
-				{
-					button_map[0][x] = event;
-				}
+				if (!button_map[0][x]) button_map[0][x] = event;
 				event++;
 			}
 		}
 		else if (currprefs.jports[port].mousemap > 0)
 		{
-			int event = INPUTEVENT_JOY1_FIRE_BUTTON;
+			event = INPUTEVENT_JOY1_FIRE_BUTTON;
 			for (int x = SDL_CONTROLLER_BUTTON_LEFTSHOULDER; x <= SDL_CONTROLLER_BUTTON_RIGHTSHOULDER; x++)
 			{
-				if (!button_map[0][x])
-				{
-					button_map[0][x] = event;
-				}
+				if (!button_map[0][x]) button_map[0][x] = event;
 				event++;
 			}
 		}
-		else
-		{
-			int event = port ? INPUTEVENT_JOY2_UP : INPUTEVENT_JOY1_UP;
-			for (int x = SDL_CONTROLLER_BUTTON_DPAD_UP; x <= SDL_CONTROLLER_BUTTON_DPAD_DOWN; x++)
-			{
-				if (!button_map[0][x])
-				{
-					button_map[0][x] = event;
-				}
-				event++;
-			}
 
-			event = port ? INPUTEVENT_JOY2_LEFT : INPUTEVENT_JOY1_LEFT;
-			for (int x = SDL_CONTROLLER_BUTTON_DPAD_LEFT; x <= SDL_CONTROLLER_BUTTON_DPAD_RIGHT; x++)
-			{
-				if (!button_map[0][x])
-				{
-					button_map[0][x] = event;
-				}
-				event++;
-			}
-		}
-		// standard fire buttons
-		if (mode == JSEM_MODE_JOYSTICK_CD32) // CD32 joypad  
-		{
-			int event = port ? INPUTEVENT_JOY2_CD32_RED : INPUTEVENT_JOY1_CD32_RED;
-			for (int x = SDL_CONTROLLER_BUTTON_A; x <= SDL_CONTROLLER_BUTTON_B; x++)
-			{
-				if (!button_map[0][x])
-				{
-					button_map[0][x] = event;
-				}
-				event++;
-			}
-
-			event = port ? INPUTEVENT_JOY2_CD32_GREEN : INPUTEVENT_JOY1_CD32_GREEN;
-			for (int x = SDL_CONTROLLER_BUTTON_X; x <= SDL_CONTROLLER_BUTTON_Y; x++)
-			{
-				if (!button_map[0][x])
-				{
-					button_map[0][x] = event;
-				}
-				event++;
-			}
-
-			event = port ? INPUTEVENT_JOY2_CD32_PLAY : INPUTEVENT_JOY1_CD32_PLAY;
-			if (!button_map[0][SDL_CONTROLLER_BUTTON_START])
-			{
-				button_map[0][SDL_CONTROLLER_BUTTON_START] = event;
-			}
-
-			event = port ? INPUTEVENT_JOY2_CD32_RWD : INPUTEVENT_JOY1_CD32_RWD;
-			for (int x = SDL_CONTROLLER_BUTTON_LEFTSHOULDER; x <= SDL_CONTROLLER_BUTTON_RIGHTSHOULDER; x++)
-			{
-				if (!button_map[0][x])
-				{
-					button_map[0][x] = event;
-				}
-				event++;
-			}
-		}
 		else if (currprefs.jports[port].id >= JSEM_JOYS) // default, normal joystick  
 		{
-			int event = port ? INPUTEVENT_JOY2_FIRE_BUTTON : INPUTEVENT_JOY1_FIRE_BUTTON;
-			for (int x = SDL_CONTROLLER_BUTTON_A; x <= SDL_CONTROLLER_BUTTON_B; x++)
-			{
-				if (!button_map[0][x])
-				{
-					button_map[0][x] = event;
-				}
-				event++;
-			}
-
-			event = port ? INPUTEVENT_JOY2_UP : INPUTEVENT_JOY1_UP;
-			if (!button_map[0][SDL_CONTROLLER_BUTTON_X])
-			{
-				button_map[0][SDL_CONTROLLER_BUTTON_X] = event;
-			}
-
-			event = port ? INPUTEVENT_JOY2_3RD_BUTTON : INPUTEVENT_JOY1_3RD_BUTTON;
-			if (!button_map[0][SDL_CONTROLLER_BUTTON_Y])
-			{
-				button_map[0][SDL_CONTROLLER_BUTTON_Y] = event;
-			}
 
 			event = INPUTEVENT_KEY_P;
-			if (!button_map[0][SDL_CONTROLLER_BUTTON_START])
-			{
-				button_map[0][SDL_CONTROLLER_BUTTON_START] = event;
-			}
+			if (!button_map[0][SDL_CONTROLLER_BUTTON_START]) button_map[0][SDL_CONTROLLER_BUTTON_START] = event;
 
 			event = INPUTEVENT_KEY_SPACE;
-			if (!button_map[0][SDL_CONTROLLER_BUTTON_LEFTSHOULDER])
-			{
-				button_map[0][SDL_CONTROLLER_BUTTON_LEFTSHOULDER] = event;
-			}
+			if (!button_map[0][SDL_CONTROLLER_BUTTON_LEFTSHOULDER]) button_map[0][SDL_CONTROLLER_BUTTON_LEFTSHOULDER] = event;
 
 			event = INPUTEVENT_KEY_RETURN;
-			if (!button_map[0][SDL_CONTROLLER_BUTTON_RIGHTSHOULDER])
-			{
-				button_map[0][SDL_CONTROLLER_BUTTON_RIGHTSHOULDER] = event;
-			}
+			if (!button_map[0][SDL_CONTROLLER_BUTTON_RIGHTSHOULDER]) button_map[0][SDL_CONTROLLER_BUTTON_RIGHTSHOULDER] = event;
 		}
 	}
 	else // ports 2, 3 ... parallel ports 
 	{
-		int event = port - 2 ? INPUTEVENT_PAR_JOY2_UP : INPUTEVENT_PAR_JOY1_UP;
-		for (int x = SDL_CONTROLLER_BUTTON_DPAD_UP; x <= SDL_CONTROLLER_BUTTON_DPAD_DOWN; x++)
-		{
-			if (!button_map[0][x])
-			{
-				button_map[0][x] = event;
-			}
-			event++;
-		}
-
-		event = port - 2 ? INPUTEVENT_PAR_JOY2_LEFT : INPUTEVENT_PAR_JOY1_LEFT;
-		for (int x = SDL_CONTROLLER_BUTTON_DPAD_LEFT; x <= SDL_CONTROLLER_BUTTON_DPAD_RIGHT; x++)
-		{
-			if (!button_map[0][x])
-			{
-				button_map[0][x] = event;
-			}
-			event++;
-		}
-
-		event = port - 2 ? INPUTEVENT_PAR_JOY2_FIRE_BUTTON : INPUTEVENT_PAR_JOY1_FIRE_BUTTON;
-		for (int x = SDL_CONTROLLER_BUTTON_A; x <= SDL_CONTROLLER_BUTTON_B; x++)
-		{
-			if (!button_map[0][x])
-			{
-				button_map[0][x] = event;
-			}
-			event++;
-		}
-
-		event = port ? INPUTEVENT_PAR_JOY2_2ND_BUTTON : INPUTEVENT_PAR_JOY1_2ND_BUTTON;
-		for (int x = SDL_CONTROLLER_BUTTON_X; x <= SDL_CONTROLLER_BUTTON_Y; x++)
-		{
-			if (!button_map[0][x])
-			{
-				button_map[0][x] = event;
-			}
-			event++;
-		}
 
 		event = INPUTEVENT_KEY_P;
-		if (!button_map[0][SDL_CONTROLLER_BUTTON_START])
-		{
-			button_map[0][SDL_CONTROLLER_BUTTON_START] = event;
-		}
+		if (!button_map[0][SDL_CONTROLLER_BUTTON_START]) button_map[0][SDL_CONTROLLER_BUTTON_START] = event;
 
 		event = INPUTEVENT_KEY_SPACE;
-		if (!button_map[0][SDL_CONTROLLER_BUTTON_LEFTSHOULDER])
-		{
-			button_map[0][SDL_CONTROLLER_BUTTON_LEFTSHOULDER] = event;
-		}
+		if (!button_map[0][SDL_CONTROLLER_BUTTON_LEFTSHOULDER]) button_map[0][SDL_CONTROLLER_BUTTON_LEFTSHOULDER] = event;
 
 		event = INPUTEVENT_KEY_RETURN;
-		if (!button_map[0][SDL_CONTROLLER_BUTTON_RIGHTSHOULDER])
-		{
-			button_map[0][SDL_CONTROLLER_BUTTON_RIGHTSHOULDER] = event;
-		}
+		if (!button_map[0][SDL_CONTROLLER_BUTTON_RIGHTSHOULDER]) button_map[0][SDL_CONTROLLER_BUTTON_RIGHTSHOULDER] = event;
 	}
 
 	// Push button and axis mapping to IDs
@@ -1715,7 +1569,7 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 			setid(uid, i, ID_AXIS_OFFSET + x + function_offset, 0, port, axis_map[n][x], af, gp);
 		}
 	}
-
+#if 0
 	// We put any retroarch special mappings above the controller's max value
 	// to avoid clashing with any custom mappings above.
 	// Note that newer versions of SDL2 might have a higher value in SDL_CONTROLLER_BUTTON_MAX
@@ -1728,6 +1582,7 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 	
 	if (currprefs.use_retroarch_reset)
 		setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_MAX + 3, 0, port, INPUTEVENT_SPC_SOFTRESET, gp);
+#endif
 #endif
 	if (i >= 0 && i < num_joystick)
 		return 1;
