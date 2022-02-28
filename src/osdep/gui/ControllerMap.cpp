@@ -12,10 +12,8 @@
 #include "amiberry_gfx.h"
 #include "amiberry_input.h"
 
-#define DIALOG_WIDTH 512
-#define DIALOG_HEIGHT 320
-
-static gcn::Window* wnd_controller_map;
+#define SCREEN_WIDTH 512
+#define SCREEN_HEIGHT 320
 
 #define MARKER_BUTTON 1
 #define MARKER_AXIS 2
@@ -42,7 +40,7 @@ static struct
 	int x, y;
 	double angle;
 	int marker;
-} s_arrBindingDisplay[BINDING_COUNT] = {
+} s_arrBindingDisplay[] = {
 	{ 387, 167, 0.0, MARKER_BUTTON }, /* SDL_CONTROLLER_BUTTON_A */
 	{ 431, 132, 0.0, MARKER_BUTTON }, /* SDL_CONTROLLER_BUTTON_B */
 	{ 342, 132, 0.0, MARKER_BUTTON }, /* SDL_CONTROLLER_BUTTON_X */
@@ -77,6 +75,7 @@ static struct
 	{  91, -20, 180.0, MARKER_AXIS }, /* SDL_CONTROLLER_BINDING_AXIS_TRIGGERLEFT */
 	{ 375, -20, 180.0, MARKER_AXIS }, /* SDL_CONTROLLER_BINDING_AXIS_TRIGGERRIGHT */
 };
+SDL_COMPILE_TIME_ASSERT(s_arrBindingDisplay, SDL_arraysize(s_arrBindingDisplay) == BINDING_COUNT);
 
 static int s_arrBindingOrder[BINDING_COUNT] = {
 	SDL_CONTROLLER_BUTTON_A,
@@ -110,8 +109,10 @@ static int s_arrBindingOrder[BINDING_COUNT] = {
 	SDL_CONTROLLER_BUTTON_PADDLE2,
 	SDL_CONTROLLER_BUTTON_PADDLE3,
 	SDL_CONTROLLER_BUTTON_PADDLE4,
+	SDL_CONTROLLER_BUTTON_TOUCHPAD,
 #endif
 };
+SDL_COMPILE_TIME_ASSERT(s_arrBindingOrder, SDL_arraysize(s_arrBindingOrder) == BINDING_COUNT);
 
 typedef struct
 {
@@ -154,6 +155,13 @@ static AxisState* s_arrAxisState;
 static int s_iCurrentBinding;
 static Uint32 s_unPendingAdvanceTime;
 static SDL_bool s_bBindingComplete;
+
+#if 1
+static SDL_Window* window;
+static SDL_Renderer* screen;
+#endif
+static SDL_bool done = SDL_FALSE;
+static SDL_bool bind_touchpad = SDL_FALSE;
 
 SDL_Texture*
 LoadTexture(SDL_Renderer* renderer, const char* file, SDL_bool transparent)
@@ -217,6 +225,19 @@ SetCurrentBinding(int iBinding)
 	if (iBinding == BINDING_COUNT)
 	{
 		s_bBindingComplete = SDL_TRUE;
+		return;
+	}
+
+	if (s_arrBindingOrder[iBinding] == -1)
+	{
+		SetCurrentBinding(iBinding + 1);
+		return;
+	}
+
+	if (s_arrBindingOrder[iBinding] == SDL_CONTROLLER_BUTTON_TOUCHPAD &&
+		!bind_touchpad)
+	{
+		SetCurrentBinding(iBinding + 1);
 		return;
 	}
 
@@ -378,34 +399,13 @@ BMergeAxisBindings(int iIndex)
 static void
 WatchJoystick(SDL_Joystick* joystick)
 {
-	SDL_Window* window = nullptr;
-	SDL_Renderer* screen = nullptr;
 	SDL_Texture* background_front, * background_back, * button, * axis, * marker;
-	const char* name = nullptr;
-	SDL_bool done = SDL_FALSE;
+	const char* name = NULL;
 	SDL_Event event;
 	SDL_Rect dst;
 	Uint8 alpha = 200, alpha_step = -1;
 	Uint32 alpha_ticks = 0;
 	SDL_JoystickID nJoystickID;
-
-	/* Create a window to display joystick axis position */
-	window = SDL_CreateWindow("Game Controller Map", SDL_WINDOWPOS_CENTERED,
-							  SDL_WINDOWPOS_CENTERED, DIALOG_WIDTH,
-							  DIALOG_HEIGHT, 0);
-	if (window == nullptr)
-	{
-		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't create window: %s\n", SDL_GetError());
-		return;
-	}
-
-	screen = SDL_CreateRenderer(window, -1, 0);
-	if (screen == nullptr)
-	{
-		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't create renderer: %s\n", SDL_GetError());
-		SDL_DestroyWindow(window);
-		return;
-	}
 
 	background_front = LoadTexture(screen, "data/controllermap.bmp", SDL_FALSE);
 	background_back = LoadTexture(screen, "data/controllermap_back.bmp", SDL_FALSE);
@@ -414,7 +414,7 @@ WatchJoystick(SDL_Joystick* joystick)
 	SDL_RaiseWindow(window);
 
 	/* scale for platforms that don't give you the window size you asked for. */
-	SDL_RenderSetLogicalSize(screen, DIALOG_WIDTH, DIALOG_HEIGHT);
+	SDL_RenderSetLogicalSize(screen, SCREEN_WIDTH, SCREEN_HEIGHT);
 
 	/* Print info about the joystick we are watching */
 	name = SDL_JoystickName(joystick);
@@ -424,8 +424,7 @@ WatchJoystick(SDL_Joystick* joystick)
 			SDL_JoystickNumAxes(joystick), SDL_JoystickNumHats(joystick),
 			SDL_JoystickNumBalls(joystick), SDL_JoystickNumButtons(joystick));
 
-	SDL_Log(
-		"\n\n\
+	SDL_Log("\n\n\
 	====================================================================================\n\
 	Press the buttons on your controller when indicated\n\
 	(Your controller may look different than the picture)\n\
@@ -785,7 +784,6 @@ WatchJoystick(SDL_Joystick* joystick)
 	s_arrAxisState = nullptr;
 
 	SDL_DestroyRenderer(screen);
-	SDL_DestroyWindow(window);
 }
 
 void
@@ -794,6 +792,58 @@ controller_map(int device)
 	const char* name;
 	int i;
 	SDL_Joystick* joystick;
+
+	// Already declared earlier in Amiberry
+#if 0
+	SDL_SetHint(SDL_HINT_ACCELEROMETER_AS_JOYSTICK, "0");
+
+	/* Enable standard application logging */
+	SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_INFO);
+
+	/* Initialize SDL (Note: video is required to start event loop) */
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK) < 0) {
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't initialize SDL: %s\n", SDL_GetError());
+		exit(1);
+	}
+
+	if (argv[1] && SDL_strcmp(argv[1], "--bind-touchpad") == 0) {
+		bind_touchpad = SDL_TRUE;
+	}
+#endif
+	/* Create a window to display joystick axis position */
+	window = SDL_CreateWindow("Game Controller Map", SDL_WINDOWPOS_CENTERED,
+		SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH,
+		SCREEN_HEIGHT, 0);
+	if (window == NULL) {
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't create window: %s\n", SDL_GetError());
+		return; //2;
+	}
+
+	screen = SDL_CreateRenderer(window, -1, 0);
+	if (screen == NULL) {
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't create renderer: %s\n", SDL_GetError());
+		return; //2;
+	}
+
+	while (!done && SDL_NumJoysticks() == 0) {
+		SDL_Event event;
+
+		while (SDL_PollEvent(&event) > 0) {
+			switch (event.type) {
+			case SDL_KEYDOWN:
+				if ((event.key.keysym.sym != SDLK_ESCAPE)) {
+					break;
+				}
+				SDL_FALLTHROUGH;
+			case SDL_QUIT:
+				done = SDL_TRUE;
+				break;
+			default:
+				break;
+			}
+		}
+		SDL_RenderPresent(screen);
+	}
 
 	/* Print information about the joysticks */
 	SDL_Log("There are %d joysticks attached\n", SDL_NumJoysticks());
@@ -833,4 +883,11 @@ controller_map(int device)
 		WatchJoystick(joystick);
 		SDL_JoystickClose(joystick);
 	}
+
+	SDL_DestroyWindow(window);
+#if 0
+	SDL_QuitSubSystem(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK);
+
+	return 0;
+#endif
 }
