@@ -71,6 +71,9 @@ static gcn::DropDown* joysm[] = { cboPort0mode, cboPort1mode, nullptr, nullptr }
 static gcn::DropDown* joysaf[] = { cboPort0Autofire, cboPort1Autofire, cboPort2Autofire, cboPort3Autofire };
 static gcn::DropDown* joysmm[] = { cboPort0mousemode, cboPort1mousemode, nullptr, nullptr };
 
+static gcn::Button* cmdRemap0;
+static gcn::Button* cmdRemap1;
+
 class string_list_model : public gcn::ListModel
 {
 	std::vector<std::string> values{};
@@ -322,6 +325,18 @@ public:
 			inputdevice_forget_unplugged_device(0);
 			inputdevice_forget_unplugged_device(1);
 		}
+
+		else if (actionEvent.getSource() == cmdRemap0)
+		{
+			const auto host_joy_id = changed_prefs.jports[0].id - JSEM_JOYS;
+			controller_map(host_joy_id);
+		}
+
+		else if (actionEvent.getSource() == cmdRemap1)
+		{
+			const auto host_joy_id = changed_prefs.jports[1].id - JSEM_JOYS;
+			controller_map(host_joy_id);
+		}
 		
 		RefreshPanelInput();
 	}
@@ -408,6 +423,18 @@ void InitPanelInput(const config_category& category)
 		}
 	}
 
+	cmdRemap0 = new gcn::Button("Remap");
+	cmdRemap0->setId("cmdRemap0");
+	cmdRemap0->setSize(BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	cmdRemap0->setBaseColor(gui_baseCol);
+	cmdRemap0->addActionListener(inputActionListener);
+
+	cmdRemap1 = new gcn::Button("Remap");
+	cmdRemap1->setId("cmdRemap1");
+	cmdRemap1->setSize(BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	cmdRemap1->setBaseColor(gui_baseCol);
+	cmdRemap1->addActionListener(inputActionListener);
+	
 	cmdSwapPorts = new gcn::Button("Swap ports");
 	cmdSwapPorts->setId("cmdSwapPorts");
 	cmdSwapPorts->setSize(150, BUTTON_HEIGHT);
@@ -491,6 +518,7 @@ void InitPanelInput(const config_category& category)
 
 	category.panel->add(joysaf[0], joys[0]->getX(), posY);
 	category.panel->add(joysm[0], joysaf[0]->getX() + joysaf[0]->getWidth() + DISTANCE_NEXT_X, posY);
+	category.panel->add(cmdRemap0, joysm[0]->getX() + joysm[0]->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += joysaf[0]->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(lblPort1, DISTANCE_BORDER, posY);
@@ -499,6 +527,7 @@ void InitPanelInput(const config_category& category)
 
 	category.panel->add(joysaf[1], joys[1]->getX(), posY);
 	category.panel->add(joysm[1], joysaf[1]->getX() + joysaf[1]->getWidth() + DISTANCE_NEXT_X, posY);
+	category.panel->add(cmdRemap1, joysm[1]->getX() + joysm[1]->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += joysaf[1]->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(cmdSwapPorts, joysaf[1]->getX(), posY);
@@ -608,6 +637,9 @@ void ExitPanelInput()
 	delete optBoth;
 	delete optNative;
 	delete optHost;
+
+	delete cmdRemap0;
+	delete cmdRemap1;
 }
 
 void RefreshPanelInput()
@@ -640,6 +672,16 @@ void RefreshPanelInput()
 		}
 	}
 
+	if (changed_prefs.jports[0].id >= JSEM_JOYS && changed_prefs.jports[0].id < JSEM_MICE - 1)
+		cmdRemap0->setEnabled(true);
+	else
+		cmdRemap0->setEnabled(false);
+
+	if (changed_prefs.jports[1].id >= JSEM_JOYS && changed_prefs.jports[1].id < JSEM_MICE - 1)
+		cmdRemap1->setEnabled(true);
+	else
+		cmdRemap1->setEnabled(false);
+	
 	if (changed_prefs.input_autofire_linecnt == 0)
 		cboAutofireRate->setSelected(0);
 	else if (changed_prefs.input_autofire_linecnt > 10 * 312)
