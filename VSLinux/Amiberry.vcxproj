@@ -228,6 +228,7 @@
     <Text Include="..\conf\dir.txt">
       <DeploymentContent>true</DeploymentContent>
     </Text>
+    <Text Include="..\controllers\gamecontrollerdb_user.txt" />
     <Text Include="..\external\libguisan\CMakeLists.txt" />
     <Text Include="..\kickstarts\dir.txt">
       <DeploymentContent>true</DeploymentContent>
