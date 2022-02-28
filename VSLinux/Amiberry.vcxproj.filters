@@ -115,6 +115,9 @@
     <Filter Include="src\archivers\chd">
       <UniqueIdentifier>{773bc666-0530-4c6c-b535-731656a7c957}</UniqueIdentifier>
     </Filter>
+    <Filter Include="controllers">
+      <UniqueIdentifier>{df45c870-bacf-40a0-882f-995733bbc653}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\conf\dir.txt">
@@ -131,6 +134,9 @@
     </Text>
     <Text Include="..\external\libguisan\CMakeLists.txt">
       <Filter>external\libguisan</Filter>
+    </Text>
+    <Text Include="..\controllers\gamecontrollerdb_user.txt">
+      <Filter>controllers</Filter>
     </Text>
   </ItemGroup>
   <ItemGroup>
