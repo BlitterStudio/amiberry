@@ -46,7 +46,7 @@ public:
 
 static ShowMessageActionListener* showMessageActionListener;
 
-static void InitShowMessage(std::string message)
+static void InitShowMessage(const std::string& message)
 {
 	AmigaMonitor* mon = &AMonitors[0];
 	
