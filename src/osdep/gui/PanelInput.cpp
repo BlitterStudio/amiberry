@@ -329,13 +329,15 @@ public:
 		else if (actionEvent.getSource() == cmdRemap0)
 		{
 			const auto host_joy_id = changed_prefs.jports[0].id - JSEM_JOYS;
-			controller_map(host_joy_id);
+			auto mapping = show_controller_map(host_joy_id, false);
+			// TODO apply map and save to controllers db
 		}
 
 		else if (actionEvent.getSource() == cmdRemap1)
 		{
 			const auto host_joy_id = changed_prefs.jports[1].id - JSEM_JOYS;
-			controller_map(host_joy_id);
+			auto mapping = show_controller_map(host_joy_id, false);
+			// TODO apply map and save to controllers db
 		}
 		
 		RefreshPanelInput();

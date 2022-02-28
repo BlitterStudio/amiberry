@@ -11,9 +11,10 @@
 #include "options.h"
 #include "amiberry_gfx.h"
 #include "amiberry_input.h"
+#include "fsdb_host.h"
 
-#define SCREEN_WIDTH 512
-#define SCREEN_HEIGHT 320
+#define SCREEN_WIDTH 640
+#define SCREEN_HEIGHT 500
 
 #define MARKER_BUTTON 1
 #define MARKER_AXIS 2
@@ -34,6 +35,10 @@ enum
 };
 
 #define BINDING_COUNT (SDL_CONTROLLER_BUTTON_MAX + SDL_CONTROLLER_BINDING_AXIS_MAX)
+
+// We use the offset values here for positioning the marker, to avoid messing with the pixel coordinates below
+static constexpr int x_offset = 145;
+static constexpr int y_offset = 205;
 
 static struct
 {
@@ -156,12 +161,61 @@ static int s_iCurrentBinding;
 static Uint32 s_unPendingAdvanceTime;
 static SDL_bool s_bBindingComplete;
 
-#if 1
-static SDL_Window* window;
-static SDL_Renderer* screen;
+static bool done = SDL_FALSE;
+static bool bind_touchpad = SDL_FALSE;
+
+#ifdef AMIBERRY
+std::string result;
+std::string info_text =
+"Press the buttons on your controller when indicated\n\
+(Your controller may look different than the picture)\n\
+If you want to correct a mistake, press backspace or the\n\
+back button on your device\n\
+To skip a button, press SPACE or click/touch the screen\n\
+To exit, press ESC";
+
+static gcn::Window* wndControllerMap;
+static gcn::TextBox* txtInformation;
+static gcn::Icon* background_front_icon, *background_back_icon;
+static gcn::Image* background_front_image, * background_back_image;
+
+static void InitControllerMap()
+{
+	done = SDL_FALSE;
+	s_bBindingComplete = SDL_FALSE;
+
+	wndControllerMap = new gcn::Window("Controller Map");
+	wndControllerMap->setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+	wndControllerMap->setPosition((GUI_WIDTH - SCREEN_WIDTH) / 2, (GUI_HEIGHT - SCREEN_HEIGHT) / 2);
+	wndControllerMap->setBaseColor(gui_baseCol);
+	wndControllerMap->setTitleBarHeight(TITLEBAR_HEIGHT);
+
+	txtInformation = new gcn::TextBox(info_text);
+	txtInformation->setBackgroundColor(gui_baseCol);
+	txtInformation->setEditable(false);
+
+	wndControllerMap->add(txtInformation, DISTANCE_BORDER, DISTANCE_BORDER);
+
+	gui_top->add(wndControllerMap);
+
+	wndControllerMap->requestModalFocus();
+}
+
+static void ExitControllerMap()
+{
+	wndControllerMap->releaseModalFocus();
+	gui_top->remove(wndControllerMap);
+
+	delete txtInformation;
+	delete wndControllerMap;
+	delete background_front_icon;
+	delete background_back_icon;
+	delete background_front_image;
+	delete background_back_image;
+}
+
+
 #endif
-static SDL_bool done = SDL_FALSE;
-static SDL_bool bind_touchpad = SDL_FALSE;
 
 SDL_Texture*
 LoadTexture(SDL_Renderer* renderer, const char* file, SDL_bool transparent)
@@ -399,7 +453,8 @@ BMergeAxisBindings(int iIndex)
 static void
 WatchJoystick(SDL_Joystick* joystick)
 {
-	SDL_Texture* background_front, * background_back, * button, * axis, * marker;
+	//SDL_Texture* background_front, *background_back, *button, *axis, *marker;
+	SDL_Texture* button, *axis, *marker;
 	const char* name = NULL;
 	SDL_Event event;
 	SDL_Rect dst;
@@ -407,31 +462,24 @@ WatchJoystick(SDL_Joystick* joystick)
 	Uint32 alpha_ticks = 0;
 	SDL_JoystickID nJoystickID;
 
-	background_front = LoadTexture(screen, "data/controllermap.bmp", SDL_FALSE);
-	background_back = LoadTexture(screen, "data/controllermap_back.bmp", SDL_FALSE);
-	button = LoadTexture(screen, "data/button.bmp", SDL_TRUE);
-	axis = LoadTexture(screen, "data/axis.bmp", SDL_TRUE);
-	SDL_RaiseWindow(window);
+	background_front_image = gcn::Image::load(prefix_with_application_directory_path("data/controllermap.bmp"));
+	background_front_icon = new gcn::Icon(background_front_image);
+	//background_front = LoadTexture(sdl_renderer, "data/controllermap.bmp", SDL_FALSE);
 
-	/* scale for platforms that don't give you the window size you asked for. */
-	SDL_RenderSetLogicalSize(screen, SCREEN_WIDTH, SCREEN_HEIGHT);
+	background_back_image = gcn::Image::load(prefix_with_application_directory_path("data/controllermap_back.bmp"));
+	background_back_icon = new gcn::Icon(background_back_image);
+	//background_back = LoadTexture(sdl_renderer, "data/controllermap_back.bmp", SDL_FALSE);
+
+	button = LoadTexture(sdl_renderer, prefix_with_application_directory_path("data/button.bmp").c_str(), SDL_TRUE);
+	axis = LoadTexture(sdl_renderer, prefix_with_application_directory_path("data/axis.bmp").c_str(), SDL_TRUE);
 
 	/* Print info about the joystick we are watching */
 	name = SDL_JoystickName(joystick);
-	SDL_Log("Watching joystick %d: (%s)\n", SDL_JoystickInstanceID(joystick),
+	write_log("Watching joystick %d: (%s)\n", SDL_JoystickInstanceID(joystick),
 			name ? name : "Unknown Joystick");
-	SDL_Log("Joystick has %d axes, %d hats, %d balls, and %d buttons\n",
+	write_log("Joystick has %d axes, %d hats, %d balls, and %d buttons\n",
 			SDL_JoystickNumAxes(joystick), SDL_JoystickNumHats(joystick),
 			SDL_JoystickNumBalls(joystick), SDL_JoystickNumButtons(joystick));
-
-	SDL_Log("\n\n\
-	====================================================================================\n\
-	Press the buttons on your controller when indicated\n\
-	(Your controller may look different than the picture)\n\
-	If you want to correct a mistake, press backspace or the back button on your device\n\
-	To skip a button, press SPACE or click/touch the screen\n\
-	To exit, press ESC\n\
-	====================================================================================\n");
 
 	nJoystickID = SDL_JoystickInstanceID(joystick);
 
@@ -442,6 +490,11 @@ WatchJoystick(SDL_Joystick* joystick)
 	while (SDL_PollEvent(&event) > 0)
 	{
 	}
+
+	wndControllerMap->add(background_back_icon, (SCREEN_WIDTH - background_back_icon->getWidth()) / 2, txtInformation->getY() + txtInformation->getHeight() + DISTANCE_NEXT_Y);
+	wndControllerMap->add(background_front_icon, (SCREEN_WIDTH - background_front_icon->getWidth()) / 2, txtInformation->getY() + txtInformation->getHeight() + DISTANCE_NEXT_Y);
+	background_back_icon->setVisible(false);
+	background_front_icon->setVisible(false);
 
 	/* Loop, getting joystick events! */
 	while (!done && !s_bBindingComplete)
@@ -460,8 +513,8 @@ WatchJoystick(SDL_Joystick* joystick)
 			break;
 		}
 
-		dst.x = s_arrBindingDisplay[iElement].x;
-		dst.y = s_arrBindingDisplay[iElement].y;
+		dst.x = s_arrBindingDisplay[iElement].x + x_offset;
+		dst.y = s_arrBindingDisplay[iElement].y + y_offset;
 		SDL_QueryTexture(marker, nullptr, nullptr, &dst.w, &dst.h);
 
 		if (SDL_GetTicks() - alpha_ticks > 5)
@@ -478,22 +531,39 @@ WatchJoystick(SDL_Joystick* joystick)
 			}
 		}
 
-		SDL_SetRenderDrawColor(screen, 0xFF, 0xFF, 0xFF, SDL_ALPHA_OPAQUE);
-		SDL_RenderClear(screen);
 #if SDL_VERSION_ATLEAST(2,0,14)
 		if (s_arrBindingOrder[s_iCurrentBinding] >= SDL_CONTROLLER_BUTTON_PADDLE1 &&
 			s_arrBindingOrder[s_iCurrentBinding] <= SDL_CONTROLLER_BUTTON_PADDLE4) {
-			SDL_RenderCopy(screen, background_back, NULL, NULL);
+			//SDL_RenderCopy(sdl_renderer, background_back, NULL, NULL);
+			background_back_icon->setVisible(true);
+			background_front_icon->setVisible(false);
 		}
 		else
 #endif
 		{
-			SDL_RenderCopy(screen, background_front, NULL, NULL);
+			//SDL_RenderCopy(sdl_renderer, background_front, NULL, NULL);
+			background_front_icon->setVisible(true);
+			background_back_icon->setVisible(false);
 		}
+
+		// Update guisan
+		uae_gui->logic();
+#ifndef USE_OPENGL
+		SDL_RenderClear(sdl_renderer);
+#endif
+		uae_gui->draw();
+		SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
+		if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
+			renderQuad = { 0, 0, gui_screen->w, gui_screen->h };
+		else
+			renderQuad = { -(GUI_WIDTH - GUI_HEIGHT) / 2, (GUI_WIDTH - GUI_HEIGHT) / 2, gui_screen->w, gui_screen->h };
+		SDL_RenderCopyEx(sdl_renderer, gui_texture, nullptr, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
+
+		// Blit marker on top
 		SDL_SetTextureAlphaMod(marker, alpha);
 		SDL_SetTextureColorMod(marker, 10, 255, 21);
-		SDL_RenderCopyEx(screen, marker, nullptr, &dst, s_arrBindingDisplay[iElement].angle, nullptr, SDL_FLIP_NONE);
-		SDL_RenderPresent(screen);
+		SDL_RenderCopyEx(sdl_renderer, marker, nullptr, &dst, s_arrBindingDisplay[iElement].angle, nullptr, SDL_FLIP_NONE);
+		SDL_RenderPresent(sdl_renderer);
 
 		while (SDL_PollEvent(&event) > 0)
 		{
@@ -775,56 +845,24 @@ WatchJoystick(SDL_Joystick* joystick)
 			SDL_strlcat(mapping, ",", SDL_arraysize(mapping));
 		}
 
-		SDL_Log("Mapping:\n\n%s\n\n", mapping);
-		/* Print to stdout as well so the user can cat the output somewhere */
-		printf("%s\n", mapping);
+		write_log("Mapping:\n\n%s\n\n", mapping);
+		result = std::string(mapping);
 	}
 
 	SDL_free(s_arrAxisState);
 	s_arrAxisState = nullptr;
-
-	SDL_DestroyRenderer(screen);
+	SDL_DestroyTexture(axis);
+	SDL_DestroyTexture(button);
 }
 
-void
-controller_map(int device)
+std::string
+show_controller_map(int device, bool map_touchpad)
 {
 	const char* name;
 	int i;
 	SDL_Joystick* joystick;
-
-	// Already declared earlier in Amiberry
-#if 0
-	SDL_SetHint(SDL_HINT_ACCELEROMETER_AS_JOYSTICK, "0");
-
-	/* Enable standard application logging */
-	SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_INFO);
-
-	/* Initialize SDL (Note: video is required to start event loop) */
-	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK) < 0) {
-		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't initialize SDL: %s\n", SDL_GetError());
-		exit(1);
-	}
-
-	if (argv[1] && SDL_strcmp(argv[1], "--bind-touchpad") == 0) {
-		bind_touchpad = SDL_TRUE;
-	}
-#endif
-	/* Create a window to display joystick axis position */
-	window = SDL_CreateWindow("Game Controller Map", SDL_WINDOWPOS_CENTERED,
-		SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH,
-		SCREEN_HEIGHT, 0);
-	if (window == NULL) {
-		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't create window: %s\n", SDL_GetError());
-		return; //2;
-	}
-
-	screen = SDL_CreateRenderer(window, -1, 0);
-	if (screen == NULL) {
-		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't create renderer: %s\n", SDL_GetError());
-		return; //2;
-	}
-
+	bind_touchpad = map_touchpad;
+	
 	while (!done && SDL_NumJoysticks() == 0) {
 		SDL_Event event;
 
@@ -842,15 +880,15 @@ controller_map(int device)
 				break;
 			}
 		}
-		SDL_RenderPresent(screen);
+		SDL_RenderPresent(sdl_renderer);
 	}
-
+#ifdef DEBUG
 	/* Print information about the joysticks */
-	SDL_Log("There are %d joysticks attached\n", SDL_NumJoysticks());
+	write_log("There are %d joysticks attached\n", SDL_NumJoysticks());
 	for (i = 0; i < SDL_NumJoysticks(); ++i)
 	{
 		name = SDL_JoystickNameForIndex(i);
-		SDL_Log("Joystick %d: %s\n", i, name ? name : "Unknown Joystick");
+		write_log("Joystick %d: %s\n", i, name ? name : "Unknown Joystick");
 		joystick = SDL_JoystickOpen(i);
 		if (joystick == nullptr)
 		{
@@ -862,32 +900,29 @@ controller_map(int device)
 			char guid[64];
 			SDL_JoystickGetGUIDString(SDL_JoystickGetGUID(joystick),
 									  guid, sizeof(guid));
-			SDL_Log("       axes: %d\n", SDL_JoystickNumAxes(joystick));
-			SDL_Log("      balls: %d\n", SDL_JoystickNumBalls(joystick));
-			SDL_Log("       hats: %d\n", SDL_JoystickNumHats(joystick));
-			SDL_Log("    buttons: %d\n", SDL_JoystickNumButtons(joystick));
-			SDL_Log("instance id: %d\n", SDL_JoystickInstanceID(joystick));
-			SDL_Log("       guid: %s\n", guid);
-			SDL_Log("    VID/PID: 0x%.4x/0x%.4x\n", SDL_JoystickGetVendor(joystick), SDL_JoystickGetProduct(joystick));
+			write_log("       axes: %d\n", SDL_JoystickNumAxes(joystick));
+			write_log("      balls: %d\n", SDL_JoystickNumBalls(joystick));
+			write_log("       hats: %d\n", SDL_JoystickNumHats(joystick));
+			write_log("    buttons: %d\n", SDL_JoystickNumButtons(joystick));
+			write_log("instance id: %d\n", SDL_JoystickInstanceID(joystick));
+			write_log("       guid: %s\n", guid);
+			write_log("    VID/PID: 0x%.4x/0x%.4x\n", SDL_JoystickGetVendor(joystick), SDL_JoystickGetProduct(joystick));
 			SDL_JoystickClose(joystick);
 		}
 	}
-
+#endif
 	joystick = SDL_JoystickOpen(device);
 	if (joystick == nullptr)
 	{
-		SDL_Log("Couldn't open joystick %d: %s\n", device, SDL_GetError());
+		write_log("Couldn't open joystick %d: %s\n", device, SDL_GetError());
 	}
 	else
 	{
+		InitControllerMap();
 		WatchJoystick(joystick);
 		SDL_JoystickClose(joystick);
+		ExitControllerMap();
 	}
 
-	SDL_DestroyWindow(window);
-#if 0
-	SDL_QuitSubSystem(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK);
-
-	return 0;
-#endif
+	return result;
 }
