@@ -244,8 +244,12 @@
     <Image Include="..\data\amiberry-logo.png" />
     <Image Include="..\data\amiberry.png" />
     <Image Include="..\data\amigainfo.ico" />
+    <Image Include="..\data\axis.bmp" />
+    <Image Include="..\data\button.bmp" />
     <Image Include="..\data\chip.ico" />
     <Image Include="..\data\controller.png" />
+    <Image Include="..\data\controllermap.bmp" />
+    <Image Include="..\data\controllermap_back.bmp" />
     <Image Include="..\data\cpu.ico" />
     <Image Include="..\data\cursor.bmp" />
     <Image Include="..\data\delete.png" />
@@ -535,6 +539,7 @@
     <ClCompile Include="..\src\osdep\charset.cpp" />
     <ClCompile Include="..\src\osdep\clipboard.cpp" />
     <ClCompile Include="..\src\osdep\fsdb_host.cpp" />
+    <ClCompile Include="..\src\osdep\gui\ControllerMap.cpp" />
     <ClCompile Include="..\src\osdep\gui\CreateFilesysHardfile.cpp" />
     <ClCompile Include="..\src\osdep\gui\EditFilesysHardDrive.cpp" />
     <ClCompile Include="..\src\osdep\gui\EditFilesysHardfile.cpp" />
@@ -598,7 +603,7 @@
     <ClCompile Include="..\src\uaeexe.cpp" />
     <ClCompile Include="..\src\uaelib.cpp" />
     <ClCompile Include="..\src\uaenative.cpp" />
-    <ClCompile Include="..\src\uaeresource.cpp"/>
+    <ClCompile Include="..\src\uaeresource.cpp" />
     <ClCompile Include="..\src\uaeserial.cpp" />
     <ClCompile Include="..\src\vm.cpp" />
     <ClCompile Include="..\src\zfile.cpp" />

@@ -197,6 +197,18 @@
     <Image Include="..\data\fixedfont.bmp">
       <Filter>data</Filter>
     </Image>
+    <Image Include="..\data\axis.bmp">
+      <Filter>data</Filter>
+    </Image>
+    <Image Include="..\data\button.bmp">
+      <Filter>data</Filter>
+    </Image>
+    <Image Include="..\data\controllermap.bmp">
+      <Filter>data</Filter>
+    </Image>
+    <Image Include="..\data\controllermap_back.bmp">
+      <Filter>data</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <Font Include="..\data\AmigaTopaz.ttf">
@@ -1190,6 +1202,9 @@
     </ClCompile>
     <ClCompile Include="..\src\floppybridge\FloppyBridge.cpp">
       <Filter>src\floppybridge</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\osdep\gui\ControllerMap.cpp">
+      <Filter>src\osdep\gui</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

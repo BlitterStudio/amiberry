@@ -530,6 +530,7 @@ OBJS = \
 	src/osdep/retroarch.o \
 	src/sounddep/sound.o \
 	src/threaddep/threading.o \
+	src/osdep/gui/ControllerMap.o \
 	src/osdep/gui/SelectorEntry.o \
 	src/osdep/gui/ShowHelp.o \
 	src/osdep/gui/ShowMessage.o \

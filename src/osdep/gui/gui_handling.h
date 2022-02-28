@@ -325,6 +325,7 @@ bool EditFilesysHardDrive(int unit_no);
 bool CreateFilesysHardfile(void);
 void ShowHelp(const char* title, const std::vector<std::string>& text);
 void ShowDiskInfo(const char* title, const std::vector<std::string>& text);
+void controller_map(int device);
 
 bool LoadConfigByName(const char* name);
 ConfigFileInfo* SearchConfigInList(const char* name);
