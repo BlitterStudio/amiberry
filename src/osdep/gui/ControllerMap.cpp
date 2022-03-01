@@ -552,6 +552,10 @@ WatchJoystick(SDL_Joystick* joystick)
 		SDL_RenderClear(sdl_renderer);
 #endif
 		uae_gui->draw();
+#ifdef USE_OPENGL
+		const AmigaMonitor* mon = &AMonitors[0];
+		SDL_GL_SwapWindow(mon->sdl_window);
+#else
 		SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 		if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
 			renderQuad = { 0, 0, gui_screen->w, gui_screen->h };
@@ -564,7 +568,7 @@ WatchJoystick(SDL_Joystick* joystick)
 		SDL_SetTextureColorMod(marker, 10, 255, 21);
 		SDL_RenderCopyEx(sdl_renderer, marker, nullptr, &dst, s_arrBindingDisplay[iElement].angle, nullptr, SDL_FLIP_NONE);
 		SDL_RenderPresent(sdl_renderer);
-
+#endif
 		while (SDL_PollEvent(&event) > 0)
 		{
 			switch (event.type)
@@ -872,7 +876,9 @@ show_controller_map(int device, bool map_touchpad)
 				if ((event.key.keysym.sym != SDLK_ESCAPE)) {
 					break;
 				}
+#if SDL_VERSION_ATLEAST(2,0,18)
 				SDL_FALLTHROUGH;
+#endif
 			case SDL_QUIT:
 				done = SDL_TRUE;
 				break;
