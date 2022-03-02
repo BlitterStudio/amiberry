@@ -1,4 +1,5 @@
 #include <guisan.hpp>
+#include <SDL_image.h>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
@@ -213,7 +214,9 @@ static void ExitControllerMap()
 	delete background_front_image;
 	delete background_back_image;
 }
+#endif
 
+#ifdef USE_DISPMANX
 
 #endif
 
@@ -221,7 +224,7 @@ SDL_Texture*
 LoadTexture(SDL_Renderer* renderer, const char* file, SDL_bool transparent)
 {
 	/* Load the sprite image */
-	SDL_Surface* temp = SDL_LoadBMP(file);
+	SDL_Surface* temp = IMG_Load(file);
 	if (temp == nullptr)
 	{
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't load %s: %s", file, SDL_GetError());
@@ -468,10 +471,10 @@ WatchJoystick(SDL_Joystick* joystick)
 	Uint32 alpha_ticks = 0;
 	SDL_JoystickID nJoystickID;
 
-	background_front_image = gcn::Image::load(prefix_with_application_directory_path("data/controllermap.bmp"));
+	background_front_image = gcn::Image::load(prefix_with_application_directory_path("data/controllermap.png"));
 	background_front_icon = new gcn::Icon(background_front_image);
 
-	background_back_image = gcn::Image::load(prefix_with_application_directory_path("data/controllermap_back.bmp"));
+	background_back_image = gcn::Image::load(prefix_with_application_directory_path("data/controllermap_back.png"));
 	background_back_icon = new gcn::Icon(background_back_image);
 
 #ifdef USE_DISPMANX
@@ -479,8 +482,8 @@ WatchJoystick(SDL_Joystick* joystick)
 #elif USE_OPENGL
 	//TODO need implementation
 #else
-	button = LoadTexture(sdl_renderer, prefix_with_application_directory_path("data/button.bmp").c_str(), SDL_TRUE);
-	axis = LoadTexture(sdl_renderer, prefix_with_application_directory_path("data/axis.bmp").c_str(), SDL_TRUE);
+	button = LoadTexture(sdl_renderer, prefix_with_application_directory_path("data/button.png").c_str(), SDL_TRUE);
+	axis = LoadTexture(sdl_renderer, prefix_with_application_directory_path("data/axis.png").c_str(), SDL_TRUE);
 #endif
 
 	/* Print info about the joystick we are watching */

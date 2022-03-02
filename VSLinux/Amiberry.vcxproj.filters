@@ -203,16 +203,16 @@
     <Image Include="..\data\fixedfont.bmp">
       <Filter>data</Filter>
     </Image>
-    <Image Include="..\data\axis.bmp">
+    <Image Include="..\data\axis.png">
       <Filter>data</Filter>
     </Image>
-    <Image Include="..\data\button.bmp">
+    <Image Include="..\data\button.png">
       <Filter>data</Filter>
     </Image>
-    <Image Include="..\data\controllermap.bmp">
+    <Image Include="..\data\controllermap.png">
       <Filter>data</Filter>
     </Image>
-    <Image Include="..\data\controllermap_back.bmp">
+    <Image Include="..\data\controllermap_back.png">
       <Filter>data</Filter>
     </Image>
   </ItemGroup>
