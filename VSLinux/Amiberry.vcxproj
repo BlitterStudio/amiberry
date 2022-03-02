@@ -204,12 +204,12 @@
     <Image Include="..\data\amiberry-logo.png" />
     <Image Include="..\data\amiberry.png" />
     <Image Include="..\data\amigainfo.ico" />
-    <Image Include="..\data\axis.bmp" />
-    <Image Include="..\data\button.bmp" />
+    <Image Include="..\data\axis.png" />
+    <Image Include="..\data\button.png" />
     <Image Include="..\data\chip.ico" />
     <Image Include="..\data\controller.png" />
-    <Image Include="..\data\controllermap.bmp" />
-    <Image Include="..\data\controllermap_back.bmp" />
+    <Image Include="..\data\controllermap.png" />
+    <Image Include="..\data\controllermap_back.png" />
     <Image Include="..\data\cpu.ico" />
     <Image Include="..\data\cursor.bmp" />
     <Image Include="..\data\delete.png" />
