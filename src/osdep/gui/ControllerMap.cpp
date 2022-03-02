@@ -288,13 +288,14 @@ SetCurrentBinding(int iBinding)
 		return;
 	}
 
+#if SDL_VERSION_ATLEAST(2,0,14)
 	if (s_arrBindingOrder[iBinding] == SDL_CONTROLLER_BUTTON_TOUCHPAD &&
 		!bind_touchpad)
 	{
 		SetCurrentBinding(iBinding + 1);
 		return;
 	}
-
+#endif
 	s_iCurrentBinding = iBinding;
 
 	pBinding = &s_arrBindings[s_arrBindingOrder[s_iCurrentBinding]];
