@@ -173,7 +173,7 @@
     <RemoteBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug-dmx; make -j4 DEBUG=1 PLATFORM=rpi4-64-dmx</RemoteBuildCommandLine>
     <RemoteReBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug-dmx; make clean; make -j4 DEBUG=1 PLATFORM=rpi4-64-dmx</RemoteReBuildCommandLine>
     <RemoteCleanCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug-dmx; make clean</RemoteCleanCommandLine>
-    <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\archivers;..\external\libguisan\include;/usr/include/SDL2;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
+    <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\archivers;..\external\libguisan\include;/usr/include/SDL2;/opt/vc/include;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
     <NMakePreprocessorDefinitions>DEBUG;USE_DISPMANX;CPU_AARCH64;AMIBERRY;USE_SDL2;_REENTRANT;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <RemoteBuildOutputs />
     <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-Debug</RemoteProjectDir>
