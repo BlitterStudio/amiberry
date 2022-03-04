@@ -13,13 +13,9 @@
 #include "amiberry_gfx.h"
 #include "amiberry_input.h"
 #include "fsdb_host.h"
+#include <string>
 
 #ifdef USE_DISPMANX
-DISPMANX_RESOURCE_HANDLE_T button_resource, axis_resource;
-DISPMANX_ELEMENT_HANDLE_T button_element, axis_element;
-VC_RECT_T button_rect, axis_rect;
-
-SDL_Surface* button_surface, *axis_surface;
 
 #endif
 
@@ -55,40 +51,41 @@ static struct
 	int x, y;
 	double angle;
 	int marker;
+	std::string input;
 } s_arrBindingDisplay[] = {
-	{ 387, 167, 0.0, MARKER_BUTTON }, /* SDL_CONTROLLER_BUTTON_A */
-	{ 431, 132, 0.0, MARKER_BUTTON }, /* SDL_CONTROLLER_BUTTON_B */
-	{ 342, 132, 0.0, MARKER_BUTTON }, /* SDL_CONTROLLER_BUTTON_X */
-	{ 389, 101, 0.0, MARKER_BUTTON }, /* SDL_CONTROLLER_BUTTON_Y */
-	{ 174, 132, 0.0, MARKER_BUTTON }, /* SDL_CONTROLLER_BUTTON_BACK */
-	{ 232, 128, 0.0, MARKER_BUTTON }, /* SDL_CONTROLLER_BUTTON_GUIDE */
-	{ 289, 132, 0.0, MARKER_BUTTON }, /* SDL_CONTROLLER_BUTTON_START */
-	{  75, 154, 0.0, MARKER_BUTTON }, /* SDL_CONTROLLER_BUTTON_LEFTSTICK */
-	{ 305, 230, 0.0, MARKER_BUTTON }, /* SDL_CONTROLLER_BUTTON_RIGHTSTICK */
-	{  77,  40, 0.0, MARKER_BUTTON }, /* SDL_CONTROLLER_BUTTON_LEFTSHOULDER */
-	{ 396,  36, 0.0, MARKER_BUTTON }, /* SDL_CONTROLLER_BUTTON_RIGHTSHOULDER */
-	{ 154, 188, 0.0, MARKER_BUTTON }, /* SDL_CONTROLLER_BUTTON_DPAD_UP */
-	{ 154, 249, 0.0, MARKER_BUTTON }, /* SDL_CONTROLLER_BUTTON_DPAD_DOWN */
-	{ 116, 217, 0.0, MARKER_BUTTON }, /* SDL_CONTROLLER_BUTTON_DPAD_LEFT */
-	{ 186, 217, 0.0, MARKER_BUTTON }, /* SDL_CONTROLLER_BUTTON_DPAD_RIGHT */
+	{ 387, 167, 0.0, MARKER_BUTTON, "Button A"}, /* SDL_CONTROLLER_BUTTON_A */
+	{ 431, 132, 0.0, MARKER_BUTTON, "Button B"}, /* SDL_CONTROLLER_BUTTON_B */
+	{ 342, 132, 0.0, MARKER_BUTTON, "Button X"}, /* SDL_CONTROLLER_BUTTON_X */
+	{ 389, 101, 0.0, MARKER_BUTTON, "Button Y"}, /* SDL_CONTROLLER_BUTTON_Y */
+	{ 174, 132, 0.0, MARKER_BUTTON, "Button Back"}, /* SDL_CONTROLLER_BUTTON_BACK */
+	{ 232, 128, 0.0, MARKER_BUTTON, "Button Guide"}, /* SDL_CONTROLLER_BUTTON_GUIDE */
+	{ 289, 132, 0.0, MARKER_BUTTON, "Button Start"}, /* SDL_CONTROLLER_BUTTON_START */
+	{  75, 154, 0.0, MARKER_BUTTON, "Left Stick button"}, /* SDL_CONTROLLER_BUTTON_LEFTSTICK */
+	{ 305, 230, 0.0, MARKER_BUTTON, "Right Stick button"}, /* SDL_CONTROLLER_BUTTON_RIGHTSTICK */
+	{  77,  40, 0.0, MARKER_BUTTON, "Left Shoulder"}, /* SDL_CONTROLLER_BUTTON_LEFTSHOULDER */
+	{ 396,  36, 0.0, MARKER_BUTTON, "Right Shoulder"}, /* SDL_CONTROLLER_BUTTON_RIGHTSHOULDER */
+	{ 154, 188, 0.0, MARKER_BUTTON, "D-PAD Up"}, /* SDL_CONTROLLER_BUTTON_DPAD_UP */
+	{ 154, 249, 0.0, MARKER_BUTTON, "D-PAD Down"}, /* SDL_CONTROLLER_BUTTON_DPAD_DOWN */
+	{ 116, 217, 0.0, MARKER_BUTTON, "D-PAD Left"}, /* SDL_CONTROLLER_BUTTON_DPAD_LEFT */
+	{ 186, 217, 0.0, MARKER_BUTTON, "D-PAD Right"}, /* SDL_CONTROLLER_BUTTON_DPAD_RIGHT */
 #if SDL_VERSION_ATLEAST(2,0,14)
-	{ 232, 174, 0.0, MARKER_BUTTON }, /* SDL_CONTROLLER_BUTTON_MISC1 */
-	{ 132, 135, 0.0, MARKER_BUTTON }, /* SDL_CONTROLLER_BUTTON_PADDLE1 */
-	{ 330, 135, 0.0, MARKER_BUTTON }, /* SDL_CONTROLLER_BUTTON_PADDLE2 */
-	{ 132, 175, 0.0, MARKER_BUTTON }, /* SDL_CONTROLLER_BUTTON_PADDLE3 */
-	{ 330, 175, 0.0, MARKER_BUTTON }, /* SDL_CONTROLLER_BUTTON_PADDLE4 */
-	{   0,   0, 0.0, MARKER_BUTTON }, /* SDL_CONTROLLER_BUTTON_TOUCHPAD */
+	{ 232, 174, 0.0, MARKER_BUTTON, "Button Misc1"}, /* SDL_CONTROLLER_BUTTON_MISC1 */
+	{ 132, 135, 0.0, MARKER_BUTTON, "Button Paddle 1"}, /* SDL_CONTROLLER_BUTTON_PADDLE1 */
+	{ 330, 135, 0.0, MARKER_BUTTON, "Button Paddle 2"}, /* SDL_CONTROLLER_BUTTON_PADDLE2 */
+	{ 132, 175, 0.0, MARKER_BUTTON, "Button Paddle 3"}, /* SDL_CONTROLLER_BUTTON_PADDLE3 */
+	{ 330, 175, 0.0, MARKER_BUTTON, "Button Paddle 4"}, /* SDL_CONTROLLER_BUTTON_PADDLE4 */
+	{   0,   0, 0.0, MARKER_BUTTON, "PS4/PS5 Touchpad button"}, /* SDL_CONTROLLER_BUTTON_TOUCHPAD */
 #endif
-	{  74, 153, 270.0, MARKER_AXIS }, /* SDL_CONTROLLER_BINDING_AXIS_LEFTX_NEGATIVE */
-	{  74, 153, 90.0,  MARKER_AXIS }, /* SDL_CONTROLLER_BINDING_AXIS_LEFTX_POSITIVE */
-	{  74, 153, 0.0,   MARKER_AXIS }, /* SDL_CONTROLLER_BINDING_AXIS_LEFTY_NEGATIVE */
-	{  74, 153, 180.0, MARKER_AXIS }, /* SDL_CONTROLLER_BINDING_AXIS_LEFTY_POSITIVE */
-	{ 306, 231, 270.0, MARKER_AXIS }, /* SDL_CONTROLLER_BINDING_AXIS_RIGHTX_NEGATIVE */
-	{ 306, 231, 90.0,  MARKER_AXIS }, /* SDL_CONTROLLER_BINDING_AXIS_RIGHTX_POSITIVE */
-	{ 306, 231, 0.0,   MARKER_AXIS }, /* SDL_CONTROLLER_BINDING_AXIS_RIGHTY_NEGATIVE */
-	{ 306, 231, 180.0, MARKER_AXIS }, /* SDL_CONTROLLER_BINDING_AXIS_RIGHTY_POSITIVE */
-	{  91, -20, 180.0, MARKER_AXIS }, /* SDL_CONTROLLER_BINDING_AXIS_TRIGGERLEFT */
-	{ 375, -20, 180.0, MARKER_AXIS }, /* SDL_CONTROLLER_BINDING_AXIS_TRIGGERRIGHT */
+	{  74, 153, 270.0, MARKER_AXIS, "Left Stick X Negative"}, /* SDL_CONTROLLER_BINDING_AXIS_LEFTX_NEGATIVE */
+	{  74, 153, 90.0,  MARKER_AXIS, "Left Stick X Positive"}, /* SDL_CONTROLLER_BINDING_AXIS_LEFTX_POSITIVE */
+	{  74, 153, 0.0,   MARKER_AXIS, "Left Stick Y Negative"}, /* SDL_CONTROLLER_BINDING_AXIS_LEFTY_NEGATIVE */
+	{  74, 153, 180.0, MARKER_AXIS, "Left Stick Y Positive"}, /* SDL_CONTROLLER_BINDING_AXIS_LEFTY_POSITIVE */
+	{ 306, 231, 270.0, MARKER_AXIS, "Right Stick X Negative"}, /* SDL_CONTROLLER_BINDING_AXIS_RIGHTX_NEGATIVE */
+	{ 306, 231, 90.0,  MARKER_AXIS, "Right Stick X Positive"}, /* SDL_CONTROLLER_BINDING_AXIS_RIGHTX_POSITIVE */
+	{ 306, 231, 0.0,   MARKER_AXIS, "Right Stick Y Negative"}, /* SDL_CONTROLLER_BINDING_AXIS_RIGHTY_NEGATIVE */
+	{ 306, 231, 180.0, MARKER_AXIS, "Right Stick Y Positive"}, /* SDL_CONTROLLER_BINDING_AXIS_RIGHTY_POSITIVE */
+	{  91, -20, 180.0, MARKER_AXIS, "Left Trigger"}, /* SDL_CONTROLLER_BINDING_AXIS_TRIGGERLEFT */
+	{ 375, -20, 180.0, MARKER_AXIS, "Right Trigger"}, /* SDL_CONTROLLER_BINDING_AXIS_TRIGGERRIGHT */
 };
 SDL_COMPILE_TIME_ASSERT(s_arrBindingDisplay, SDL_arraysize(s_arrBindingDisplay) == BINDING_COUNT);
 
@@ -178,14 +175,14 @@ static bool bind_touchpad = SDL_FALSE;
 std::string result;
 std::string info_text =
 "Press the buttons on your controller when indicated\n\
-(Your controller may look different than the picture)\n\
 If you want to correct a mistake, press backspace or the\n\
-back button on your device\n\
-To skip a button, press SPACE or click/touch the screen\n\
-To exit, press ESC";
+back button on your device. To skip a button, press SPACE\n\
+or click/touch the screen. To exit, press ESC";
 
 static gcn::Window* wndControllerMap;
 static gcn::TextBox* txtInformation;
+static gcn::Label* lblMessage;
+static gcn::Label* lblPressButtonAxis;
 static gcn::Icon* background_front_icon, *background_back_icon;
 static gcn::Image* background_front_image, *background_back_image;
 
@@ -204,7 +201,13 @@ static void InitControllerMap()
 	txtInformation->setBackgroundColor(gui_baseCol);
 	txtInformation->setEditable(false);
 
+	lblMessage = new gcn::Label("Press: ");
+	lblPressButtonAxis = new gcn::Label("");
+
 	wndControllerMap->add(txtInformation, DISTANCE_BORDER, DISTANCE_BORDER);
+	const auto posY = txtInformation->getY() + txtInformation->getHeight() + DISTANCE_NEXT_Y;
+	wndControllerMap->add(lblMessage, SCREEN_WIDTH / 3, posY);
+	wndControllerMap->add(lblPressButtonAxis, lblMessage->getX() + lblMessage->getWidth() + 8, posY);
 
 	gui_top->add(wndControllerMap);
 
@@ -217,114 +220,13 @@ static void ExitControllerMap()
 	gui_top->remove(wndControllerMap);
 
 	delete txtInformation;
+	delete lblMessage;
+	delete lblPressButtonAxis;
 	delete wndControllerMap;
 	delete background_front_icon;
 	delete background_back_icon;
 	delete background_front_image;
 	delete background_back_image;
-}
-#endif
-
-#ifdef USE_DISPMANX
-void init_resources()
-{
-	auto button_file = prefix_with_application_directory_path("data/button.png").c_str();
-	auto axis_file = prefix_with_application_directory_path("data/axis.png").c_str();
-
-	/* Load the button sprite image */
-	button_surface = IMG_Load(button_file);
-	if (button_surface == nullptr)
-	{
-		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't load %s: %s", button_file, SDL_GetError());
-		return;
-	}
-
-	/* Set transparent pixel as the pixel at (0,0) */
-	if (button_surface->format->palette)
-	{
-		SDL_SetColorKey(button_surface, SDL_TRUE, *static_cast<Uint8*>(button_surface->pixels));
-	}
-
-	/* Load the axis sprite image */
-	axis_surface = IMG_Load(axis_file);
-	if (axis_surface == nullptr)
-	{
-		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't load %s: %s", axis_file, SDL_GetError());
-		return;
-	}
-
-	/* Set transparent pixel as the pixel at (0,0) */
-	if (axis_surface->format->palette)
-	{
-		SDL_SetColorKey(axis_surface, SDL_TRUE, *static_cast<Uint8*>(axis_surface->pixels));
-	}
-
-	uint32_t vc_gui_image_ptr;
-	if (!button_resource)
-		button_resource = vc_dispmanx_resource_create(VC_IMAGE_RGBA32, button_surface->w, button_surface->h, &vc_gui_image_ptr);
-
-	if (!axis_resource)
-		axis_resource = vc_dispmanx_resource_create(VC_IMAGE_RGBA32, axis_surface->w, axis_surface->h, &vc_gui_image_ptr);
-
-	vc_dispmanx_rect_set(&button_rect, 0, 0, button_surface->w, button_surface->h);
-	vc_dispmanx_rect_set(&axis_rect, 0, 0, axis_surface->w, axis_surface->h);
-
-	vc_dispmanx_resource_write_data(button_resource, VC_IMAGE_RGBA32, button_surface->pitch, button_surface->pixels, &button_rect);
-	vc_dispmanx_resource_write_data(axis_resource, VC_IMAGE_RGBA32, axis_surface->pitch, axis_surface->pixels, &axis_rect);
-}
-
-void add_button_element(const SDL_Rect* dst_rect, const int alpha_opacity, const double rotation_angle)
-{
-	VC_RECT_T dst;
-	dst.x = dst_rect->x;
-	dst.y = dst_rect->y;
-	dst.width = dst_rect->w;
-	dst.height = dst_rect->h;
-
-	VC_DISPMANX_ALPHA_T alpha;
-	alpha.flags = DISPMANX_FLAGS_ALPHA_FROM_SOURCE;
-	alpha.opacity = alpha_opacity;
-	alpha.mask = 0;
-
-	DISPMANX_TRANSFORM_T rotate;
-	if (rotation_angle == 90.0)
-		rotate = DISPMANX_ROTATE_90;
-	else if (rotation_angle == 180.0)
-		rotate = DISPMANX_ROTATE_180;
-	else if (rotation_angle == 270.0)
-		rotate = DISPMANX_ROTATE_270;
-	else rotate = DISPMANX_NO_ROTATE;
-
-	if (!button_element)
-		button_element = vc_dispmanx_element_add(updateHandle, displayHandle, 2, &dst, button_resource, &button_rect,
-			DISPMANX_PROTECTION_NONE, &alpha, nullptr, rotate);
-}
-
-void add_axis_element(const SDL_Rect* dst_rect, const int alpha_opacity, const double rotation_angle)
-{
-	VC_RECT_T dst;
-	dst.x = dst_rect->x;
-	dst.y = dst_rect->y;
-	dst.width = dst_rect->w;
-	dst.height = dst_rect->h;
-
-	VC_DISPMANX_ALPHA_T alpha;
-	alpha.flags = DISPMANX_FLAGS_ALPHA_FROM_SOURCE;
-	alpha.opacity = alpha_opacity;
-	alpha.mask = 0;
-
-	DISPMANX_TRANSFORM_T rotate;
-	if (rotation_angle == 90.0)
-		rotate = DISPMANX_ROTATE_90;
-	else if (rotation_angle == 180.0)
-		rotate = DISPMANX_ROTATE_180;
-	else if (rotation_angle == 270.0)
-		rotate = DISPMANX_ROTATE_270;
-	else rotate = DISPMANX_NO_ROTATE;
-
-	if (!axis_element)
-		axis_element = vc_dispmanx_element_add(updateHandle, displayHandle, 2, &dst, axis_resource, &axis_rect,
-			DISPMANX_PROTECTION_NONE, &alpha, nullptr, rotate);
 }
 #endif
 
@@ -586,8 +488,7 @@ WatchJoystick(SDL_Joystick* joystick)
 	background_back_icon = new gcn::Icon(background_back_image);
 
 #ifdef USE_DISPMANX
-	init_resources();
-	bool marker_is_axis = false;
+
 #elif USE_OPENGL
 	//TODO need implementation
 #else
@@ -613,8 +514,8 @@ WatchJoystick(SDL_Joystick* joystick)
 	{
 	}
 
-	wndControllerMap->add(background_back_icon, (SCREEN_WIDTH - background_back_icon->getWidth()) / 2, txtInformation->getY() + txtInformation->getHeight() + DISTANCE_NEXT_Y);
-	wndControllerMap->add(background_front_icon, (SCREEN_WIDTH - background_front_icon->getWidth()) / 2, txtInformation->getY() + txtInformation->getHeight() + DISTANCE_NEXT_Y);
+	wndControllerMap->add(background_back_icon, (SCREEN_WIDTH - background_back_icon->getWidth()) / 2, lblMessage->getY() + lblMessage->getHeight() + DISTANCE_NEXT_Y);
+	wndControllerMap->add(background_front_icon, (SCREEN_WIDTH - background_front_icon->getWidth()) / 2, lblMessage->getY() + lblMessage->getHeight() + DISTANCE_NEXT_Y);
 	background_back_icon->setVisible(false);
 	background_front_icon->setVisible(false);
 
@@ -627,7 +528,6 @@ WatchJoystick(SDL_Joystick* joystick)
 		{
 		case MARKER_AXIS:
 #ifdef USE_DISPMANX
-			marker_is_axis = true;
 #elif USE_OPENGL
 			//TODO need implementation
 #else
@@ -636,7 +536,6 @@ WatchJoystick(SDL_Joystick* joystick)
 			break;
 		case MARKER_BUTTON:
 #ifdef USE_DISPMANX
-			marker_is_axis = false;
 #elif USE_OPENGL
 			//TODO need implementation
 #else
@@ -647,19 +546,12 @@ WatchJoystick(SDL_Joystick* joystick)
 			break;
 		}
 
+		lblPressButtonAxis->setCaption(s_arrBindingDisplay[iElement].input);
+		lblPressButtonAxis->adjustSize();
+
 		dst.x = s_arrBindingDisplay[iElement].x + x_offset;
 		dst.y = s_arrBindingDisplay[iElement].y + y_offset;
 #ifdef USE_DISPMANX
-		if (marker_is_axis)
-		{
-			dst.w = axis_surface->w;
-			dst.h = axis_surface->h;
-		}
-		else
-		{
-			dst.w = button_surface->w;
-			dst.h = button_surface->h;
-		}
 		
 #elif USE_OPENGL
 		//TODO need implementation
@@ -703,22 +595,7 @@ WatchJoystick(SDL_Joystick* joystick)
 #endif
 		uae_gui->draw();
 #ifdef USE_DISPMANX
-		// TODO needs implementation
 		vc_dispmanx_resource_write_data(gui_resource, rgb_mode, gui_screen->pitch, gui_screen->pixels, &blit_rect);
-
-		if (marker_is_axis)
-		{
-			add_axis_element(&dst, alpha, s_arrBindingDisplay[iElement].angle);
-			vc_dispmanx_resource_write_data(axis_resource, VC_IMAGE_RGBA32, axis_surface->pitch, axis_surface->pixels, &axis_rect);
-		}
-		else
-		{
-			add_button_element(&dst, alpha, s_arrBindingDisplay[iElement].angle);
-			vc_dispmanx_resource_write_data(button_resource, VC_IMAGE_RGBA32, button_surface->pitch, button_surface->pixels, &button_rect);
-		}
-
-		
-
 		updateHandle = vc_dispmanx_update_start(0);
 		vc_dispmanx_element_change_source(updateHandle, gui_element, gui_resource);
 		vc_dispmanx_update_submit_sync(updateHandle);
@@ -1028,16 +905,7 @@ WatchJoystick(SDL_Joystick* joystick)
 	SDL_free(s_arrAxisState);
 	s_arrAxisState = nullptr;
 #ifdef USE_DISPMANX
-	updateHandle = vc_dispmanx_update_start(0);
-	vc_dispmanx_element_remove(updateHandle, axis_element);
-	vc_dispmanx_element_remove(updateHandle, button_element);
-	vc_dispmanx_update_submit_sync(updateHandle);
 
-	vc_dispmanx_resource_delete(axis_resource);
-	vc_dispmanx_resource_delete(button_resource);
-
-	SDL_FreeSurface(button_surface);
-	SDL_FreeSurface(axis_surface);
 #elif USE_OPENGL
 	//TODO need implementation
 #else
