@@ -330,14 +330,22 @@ public:
 		{
 			const auto host_joy_id = changed_prefs.jports[0].id - JSEM_JOYS;
 			auto mapping = show_controller_map(host_joy_id, false);
-			// TODO apply map and save to controllers db
+			if (!mapping.empty())
+			{
+				SDL_GameControllerAddMapping(mapping.c_str());
+				save_mapping_to_file(mapping);
+			}
 		}
 
 		else if (actionEvent.getSource() == cmdRemap1)
 		{
 			const auto host_joy_id = changed_prefs.jports[1].id - JSEM_JOYS;
 			auto mapping = show_controller_map(host_joy_id, false);
-			// TODO apply map and save to controllers db
+			if (!mapping.empty())
+			{
+				SDL_GameControllerAddMapping(mapping.c_str());
+				save_mapping_to_file(mapping);
+			}
 		}
 		
 		RefreshPanelInput();
