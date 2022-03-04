@@ -176,7 +176,7 @@
     <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\archivers;..\external\libguisan\include;/usr/include/SDL2;/opt/vc/include;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
     <NMakePreprocessorDefinitions>DEBUG;USE_DISPMANX;CPU_AARCH64;AMIBERRY;USE_SDL2;_REENTRANT;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <RemoteBuildOutputs />
-    <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-Debug</RemoteProjectDir>
+    <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-Debug-dmx</RemoteProjectDir>
     <IncrementalBuild>true</IncrementalBuild>
     <RemoteDeployDir>$(RemoteRootDir)/$(ProjectName)-Debug-dmx</RemoteDeployDir>
   </PropertyGroup>
