@@ -36,6 +36,7 @@
 #endif
 #include <sys/ioctl.h>
 #endif
+#include <fstream>
 
 int emulating = 0;
 bool config_loaded = false;
@@ -1105,4 +1106,19 @@ void DisplayDiskInfo(int num)
 	}
 
 	ShowDiskInfo(title, infotext);
+}
+
+void save_mapping_to_file(std::string mapping)
+{
+	char filename[MAX_DPATH];
+	get_controllers_path(filename, MAX_DPATH);
+	strcat(filename, "gamecontrollerdb_user.txt");
+
+	std::ofstream file_output; // out file stream
+	file_output.open(filename, ios::app);
+	if (file_output.is_open())
+	{
+		file_output << std::endl << mapping << std::endl;
+		file_output.close();
+	}
 }
