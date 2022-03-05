@@ -619,3 +619,8 @@ bool copyfile(const char* target, const char* source, const bool replace)
 	options = replace ? filesystem::copy_options::overwrite_existing : filesystem::copy_options::none;
 	return copy_file(source, target, options);
 }
+
+void filesys_addexternals(void)
+{
+	// this would mount system drives on Windows
+}
