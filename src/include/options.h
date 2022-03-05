@@ -435,12 +435,12 @@ struct romconfig
 	int device_id;
 	int device_settings;
 	int subtype;
-	void *unitdata;
+	void* unitdata;
 	TCHAR configtext[ROMCONFIG_CONFIGTEXT_LEN];
 	uae_u16 manufacturer;
 	uae_u8 product;
 	uae_u8 autoconfig[16];
-	struct boardromconfig *back;
+	struct boardromconfig* back;
 };
 #define MAX_BOARD_ROMS 2
 struct boardromconfig
@@ -976,8 +976,8 @@ struct uae_prefs
 };
 
 extern int config_changed;
-extern void config_check_vsync (void);
-extern void set_config_changed (void);
+extern void config_check_vsync(void);
+extern void set_config_changed(void);
 
 /* Contains the filename of .uaerc */
 //extern TCHAR optionsfile[];
@@ -1021,7 +1021,7 @@ extern int bip_a4000(struct uae_prefs* p, int rom);
 extern int bip_cd32(struct uae_prefs* p, int rom);
 extern int bip_cdtv(struct uae_prefs* p, int rom);
 
-int parse_cmdline_option (struct uae_prefs*, TCHAR, const TCHAR*);
+int parse_cmdline_option(struct uae_prefs*, TCHAR, const TCHAR*);
 
 extern int cfgfile_separate_linea(const TCHAR* filename, char* line, TCHAR* line1b, TCHAR* line2b);
 extern int cfgfile_yesno(const TCHAR* option, const TCHAR* value, const TCHAR* name, bool* location);
