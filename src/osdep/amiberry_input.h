@@ -36,6 +36,8 @@ struct didata {
 	int type{};
 	int acquired{};
 	std::string name{};
+	std::string controller_name{};
+	std::string joystick_name{};
 
 	int mousemap{};
 	bool is_controller{};

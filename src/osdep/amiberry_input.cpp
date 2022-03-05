@@ -865,8 +865,17 @@ static int init_joystick()
 			SDL_JoystickGetGUIDString(SDL_JoystickGetGUID(did->joystick), guid_str, 33);
 
 			if (SDL_GameControllerNameForIndex(i) != nullptr)
-				did->name.assign(SDL_GameControllerNameForIndex(i));
+				did->controller_name.assign(SDL_GameControllerNameForIndex(i));
 			write_log("Controller #%i: %s\n      GUID: %s\n", did->joystick_id, SDL_GameControllerName(did->controller), guid_str);
+
+			// Try to get the Joystick Name as well, we will need it in case of RetroArch mapping files
+			if (SDL_JoystickNameForIndex(i) != nullptr)
+				did->joystick_name.assign(SDL_JoystickNameForIndex(i));
+
+			if (!did->controller_name.empty())
+				did->name = did->controller_name;
+			else
+				did->name = did->joystick_name;
 
 			auto* const mapping = SDL_GameControllerMapping(did->controller);
 			write_log("Controller %i is mapped as \"%s\".\n", i, mapping);
@@ -886,7 +895,7 @@ static int init_joystick()
 			SDL_JoystickGetGUIDString(SDL_JoystickGetGUID(did->joystick), guid_str, 33);
 			
 			if (SDL_JoystickNameForIndex(i) != nullptr)
-				did->name.assign(SDL_JoystickNameForIndex(i));
+				did->joystick_name.assign(SDL_JoystickNameForIndex(i));
 			write_log("Controller #%i: %s\n      GUID: %s\n      Axes: %d\n      Buttons: %d\n      Balls: %d\n",
 				did->joystick_id, SDL_JoystickName(did->joystick), guid_str, SDL_JoystickNumAxes(did->joystick),
 									SDL_JoystickNumButtons(did->joystick), SDL_JoystickNumBalls(did->joystick));
@@ -952,20 +961,16 @@ static int init_joystick()
 		fixbuttons(did);
 		fixthings(did);
 
-		const string retroarch_joy_name = SDL_JoystickNameForIndex(i);
+		auto retroarch_config_file = string(controllers_path);
+		const auto sanitized_name = sanitize_retroarch_name(did->joystick_name);
+		retroarch_config_file += sanitized_name + ".cfg";
 
-		char retroarch_config_file[255];
-		strcpy(retroarch_config_file, controllers_path);
-		const auto sanitized_name = sanitize_retroarch_name(retroarch_joy_name);
-		strcat(retroarch_config_file, sanitized_name.c_str());
-		strcat(retroarch_config_file, ".cfg");
-
-		if (my_existsfile(retroarch_config_file))
+		if (my_existsfile(retroarch_config_file.c_str()))
 		{
 			write_log("Retroarch controller cfg file found, using that for mapping\n");
 			fill_blank_controller();
 			did->mapping = default_controller_map;
-			did->mapping = map_from_retroarch(did->mapping, retroarch_config_file, -1);
+			did->mapping = map_from_retroarch(did->mapping, retroarch_config_file.data(), -1);
 		}
 		else
 		{
@@ -1357,7 +1362,7 @@ static void read_joystick()
 		const didata* did = &di_joystick[i];
 		//if (!did->acquired)
 		//	continue;
-		if (did->name == "")
+		if (did->name.empty())
 			continue;
 
 		if (isfocus() || currprefs.inactive_input & 4)
