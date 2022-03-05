@@ -1139,6 +1139,7 @@ struct hotkey_modifiers
 struct amiberry_hotkey
 {
 	int scancode;
+	Uint8 button;
 	std::string key_name;
 	std::string modifiers_string;
 	hotkey_modifiers modifiers;
