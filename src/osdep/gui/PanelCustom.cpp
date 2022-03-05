@@ -34,8 +34,6 @@ static gcn::Label* lblPortInput;
 static gcn::TextField* txtPortInput;
 static gcn::Label* lblRetroarch;
 
-static gcn::CheckBox* chkAnalogRemap;
-
 static int SelectedPort = 1;
 static int SelectedFunction = 0;
 
@@ -116,8 +114,6 @@ public:
 			SelectedFunction = 0;
 		else if (actionEvent.getSource() == optMultiSelect)
 			SelectedFunction = 1;
-		else if (actionEvent.getSource() == chkAnalogRemap)
-			changed_prefs.input_analog_remap = chkAnalogRemap->isSelected();
 
 		RefreshPanelCustom();
 	}
@@ -268,11 +264,6 @@ void InitPanelCustom(const config_category& category)
 	optMultiSelect->setId("HotKey");
 	optMultiSelect->addActionListener(grpActionListener);
 
-	chkAnalogRemap = new gcn::CheckBox("Remap DPad to left axis");
-	chkAnalogRemap->setId("chkAnalogRemap");
-	chkAnalogRemap->addActionListener(grpActionListener);
-	chkAnalogRemap->setEnabled(true);
-
 	grpPort = new gcn::Window("Joystick Port");
 	grpPort->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
 	grpPort->setMovable(false);
@@ -290,7 +281,6 @@ void InitPanelCustom(const config_category& category)
 	category.panel->add(lblFunction, DISTANCE_BORDER, grpPort->getY() + grpPort->getHeight() + DISTANCE_NEXT_Y);
 	category.panel->add(optMultiNone, lblFunction->getX() + lblFunction->getWidth() + 8, lblFunction->getY());
 	category.panel->add(optMultiSelect, optMultiNone->getX() + optMultiNone->getWidth() + DISTANCE_NEXT_X, optMultiNone->getY());
-	category.panel->add(chkAnalogRemap, optMultiSelect->getX() + optMultiSelect->getWidth() + DISTANCE_NEXT_X * 4, optMultiSelect->getY());
 
 	// the input-device should be listed
 	lblPortInput = new gcn::Label("Input Device:");
@@ -394,7 +384,6 @@ void ExitPanelCustom()
 	delete optMultiSelect;
 
 	delete lblFunction;
-	delete chkAnalogRemap;
 
 	for (auto& i : lblCustomButtonAction)
 		delete i;
@@ -425,8 +414,6 @@ void RefreshPanelCustom()
 
 	optMultiNone->setSelected(SelectedFunction == 0);
 	optMultiSelect->setSelected(SelectedFunction == 1);
-
-	chkAnalogRemap->setSelected(changed_prefs.input_analog_remap);
 
 	// Refresh the drop-down section here
 	// get map
@@ -562,7 +549,7 @@ void RefreshPanelCustom()
 			}
 		}
 
-		if (did->mapping.number_of_hats > 0 || changed_prefs.input_analog_remap == true)
+		if (did->mapping.number_of_hats > 0)
 		{
 			for (int i = SDL_CONTROLLER_BUTTON_DPAD_UP; i <= SDL_CONTROLLER_BUTTON_DPAD_RIGHT; i++)
 			{

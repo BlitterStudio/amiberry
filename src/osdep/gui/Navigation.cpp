@@ -346,10 +346,10 @@ static NavigationMap navMap[] =
 	{ "cboProtectionDongle", "IO Ports", "IO Ports", "chkRTSCTS", "txtSerialDevice" },
 
 	// PanelCustom
-	{ "0: Mouse", "Custom controls", "1: Joystick", "chkAnalogRemap", "None" },
-	{ "1: Joystick", "0: Mouse", "2: Parallel 1", "chkAnalogRemap", "HotKey" },
-	{ "2: Parallel 1", "1: Joystick", "3: Parallel 2", "chkAnalogRemap", "Left Trigger" },
-	{ "3: Parallel 2", "2: Parallel 1", "Custom controls", "chkAnalogRemap", "Right Trigger" },
+	{ "0: Mouse", "Custom controls", "1: Joystick", "", "None" },
+	{ "1: Joystick", "0: Mouse", "2: Parallel 1", "", "HotKey" },
+	{ "2: Parallel 1", "1: Joystick", "3: Parallel 2", "", "Left Trigger" },
+	{ "3: Parallel 2", "2: Parallel 1", "Custom controls", "", "Right Trigger" },
 
 	{ "None", "Custom controls", "HotKey", "0: Mouse", "cboCustomAction0" },
 	{ "HotKey", "None", "Left Trigger", "1: Joystick", "cboCustomAction0" },
@@ -371,9 +371,7 @@ static NavigationMap navMap[] =
 	{ "cboCustomAction11", "cboCustomAction4", "Custom controls", "cboCustomAction10", "cboCustomAction12" },
 	{ "cboCustomAction12", "cboCustomAction5", "Custom controls", "cboCustomAction11", "cboCustomAction13" },
 	{ "cboCustomAction13", "cboCustomAction6", "Custom controls", "cboCustomAction12", "cboCustomAction14" },
-	{ "cboCustomAction14", "cboCustomAction6", "Custom controls", "cboCustomAction13", "chkAnalogRemap" },
-
-	{ "chkAnalogRemap", "Custom controls", "Custom controls", "cboCustomAction13", "0: Mouse" },
+	{ "cboCustomAction14", "cboCustomAction6", "Custom controls", "cboCustomAction13", "" },
 
 	// PanelDiskSwapper
 	// active				move left			move right			move up			move down
