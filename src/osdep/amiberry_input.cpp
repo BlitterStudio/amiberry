@@ -1559,7 +1559,7 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 		const auto function_offset = n * REMAP_BUTTONS;
 		for (int button = 0; button < SDL_CONTROLLER_BUTTON_MAX; button++)
 		{
-			if (button_map[0][button] && isrealbutton(did, button))
+			if (button_map[n][button] && isrealbutton(did, button))
 				setid(uid, i, ID_BUTTON_OFFSET + button + function_offset, 0, port, button_map[n][button], af, gp);
 		}
 
