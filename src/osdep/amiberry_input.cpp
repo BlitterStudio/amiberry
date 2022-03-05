@@ -1271,23 +1271,25 @@ static void read_joystick_buttons(const int joy)
 		}
 	}
 
+	const int hat = SDL_JoystickGetHat(did->joystick, 0);
 	// When using Joystick mode instead of GameController, the HAT is not part of the buttons array
 	// So we handle it here separately
 	for (int button = SDL_CONTROLLER_BUTTON_DPAD_UP; button <= SDL_CONTROLLER_BUTTON_DPAD_RIGHT; button++)
 	{
-		const int hat = SDL_JoystickGetHat(did->joystick, 0);
-		const int state = did->mapping.button[button] + 1
-			                  ? SDL_JoystickGetButton(did->joystick, did->mapping.button[button]) & 1
-			                  : button == SDL_CONTROLLER_BUTTON_DPAD_UP
-			                  ? hat & SDL_HAT_UP
-			                  : button == SDL_CONTROLLER_BUTTON_DPAD_DOWN
-			                  ? hat & SDL_HAT_DOWN
-			                  : button == SDL_CONTROLLER_BUTTON_DPAD_LEFT
-			                  ? hat & SDL_HAT_LEFT
-			                  : button == SDL_CONTROLLER_BUTTON_DPAD_RIGHT
-			                  ? hat & SDL_HAT_RIGHT
-			                  : 0;
-		setjoybuttonstate(joy, button + held_offset, state);
+		if (did->mapping.button[button] != SDL_CONTROLLER_BUTTON_INVALID)
+		{
+			int state = 0;
+			if (button == SDL_CONTROLLER_BUTTON_DPAD_UP)
+				state = hat & SDL_HAT_UP;
+			else if (button == SDL_CONTROLLER_BUTTON_DPAD_DOWN)
+				state = hat & SDL_HAT_DOWN;
+			else if (button == SDL_CONTROLLER_BUTTON_DPAD_LEFT)
+				state = hat & SDL_HAT_LEFT;
+			else if (button == SDL_CONTROLLER_BUTTON_DPAD_RIGHT)
+				state = hat & SDL_HAT_RIGHT;
+
+			setjoybuttonstate(joy, button + held_offset, state);
+		}
 	}
 
 	// Check all Joystick buttons, including axes acting as buttons
