@@ -334,7 +334,7 @@ void InitPanelHD(const config_category& category)
 {
 	int row, col;
 	auto posY = DISTANCE_BORDER / 2;
-	char tmp[20];
+	std::string id_string;
 
 	hdRemoveActionListener = new HDRemoveActionListener();
 	hdEditActionListener = new HDEditActionListener();
@@ -353,15 +353,15 @@ void InitPanelHD(const config_category& category)
 		listCmdProps[row] = new gcn::Button("...");
 		listCmdProps[row]->setBaseColor(gui_baseCol);
 		listCmdProps[row]->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
-		snprintf(tmp, 20, "cmdProp%d", row);
-		listCmdProps[row]->setId(tmp);
+		id_string = "cmdProp" + to_string(row);
+		listCmdProps[row]->setId(id_string);
 		listCmdProps[row]->addActionListener(hdEditActionListener);
 
 		listCmdDelete[row] = new gcn::ImageButton(prefix_with_application_directory_path("data/delete.png"));
 		listCmdDelete[row]->setBaseColor(gui_baseCol);
 		listCmdDelete[row]->setSize(SMALL_BUTTON_HEIGHT, SMALL_BUTTON_HEIGHT);
-		snprintf(tmp, 20, "cmdDel%d", row);
-		listCmdDelete[row]->setId(tmp);
+		id_string = "cmdDel" + to_string(row);
+		listCmdDelete[row]->setId(id_string);
 		listCmdDelete[row]->addActionListener(hdRemoveActionListener);
 
 		for (col = 0; col < COL_COUNT; ++col)

@@ -497,49 +497,50 @@ void InitPanelFloppy(const config_category& category)
 
 	for (i = 0; i < 4; ++i)
 	{
-		char tmp[20];
-		snprintf(tmp, 20, "DF%d:", i);
-		chkDFx[i] = new gcn::CheckBox(tmp);
-		chkDFx[i]->setId(tmp);
+		std::string id_string;
+
+		id_string = "DF" + to_string(i) + ":";
+		chkDFx[i] = new gcn::CheckBox(id_string);
+		chkDFx[i]->setId(id_string);
 		chkDFx[i]->addActionListener(dfxCheckActionListener);
 
 		cboDFxType[i] = new gcn::DropDown(&driveTypeList);
 		cboDFxType[i]->setBaseColor(gui_baseCol);
 		cboDFxType[i]->setBackgroundColor(colTextboxBackground);
-		snprintf(tmp, 20, "cboType%d", i);
-		cboDFxType[i]->setId(tmp);
+		id_string = "cboType" + to_string(i);
+		cboDFxType[i]->setId(id_string);
 		cboDFxType[i]->addActionListener(driveTypeActionListener);
 
 		chkDFxWriteProtect[i] = new gcn::CheckBox("Write-protected");
-		snprintf(tmp, 20, "chkWP%d", i);
-		chkDFxWriteProtect[i]->setId(tmp);
+		id_string = "chkWP" + to_string(i);
+		chkDFxWriteProtect[i]->setId(id_string);
 		chkDFxWriteProtect[i]->addActionListener(dfxCheckActionListener);
 		
 
 		cmdDFxInfo[i] = new gcn::Button("?");
-		snprintf(tmp, 20, "cmdInfo%d", i);
-		cmdDFxInfo[i]->setId(tmp);
+		id_string = "cmdInfo" + to_string(i);
+		cmdDFxInfo[i]->setId(id_string);
 		cmdDFxInfo[i]->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 		cmdDFxInfo[i]->setBaseColor(gui_baseCol);
 		cmdDFxInfo[i]->addActionListener(dfxButtonActionListener);
 
 		cmdDFxEject[i] = new gcn::Button("Eject");
-		snprintf(tmp, 20, "cmdEject%d", i);
-		cmdDFxEject[i]->setId(tmp);
+		id_string = "cmdEject" + to_string(i);
+		cmdDFxEject[i]->setId(id_string);
 		cmdDFxEject[i]->setSize(SMALL_BUTTON_WIDTH * 2, SMALL_BUTTON_HEIGHT);
 		cmdDFxEject[i]->setBaseColor(gui_baseCol);
 		cmdDFxEject[i]->addActionListener(dfxButtonActionListener);
 
 		cmdDFxSelect[i] = new gcn::Button("...");
-		snprintf(tmp, 20, "cmdSel%d", i);
-		cmdDFxSelect[i]->setId(tmp);
+		id_string = "cmdSel" + to_string(i);
+		cmdDFxSelect[i]->setId(id_string);
 		cmdDFxSelect[i]->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 		cmdDFxSelect[i]->setBaseColor(gui_baseCol);
 		cmdDFxSelect[i]->addActionListener(dfxButtonActionListener);
 
 		cboDFxFile[i] = new gcn::DropDown(&diskfileList);
-		snprintf(tmp, 20, "cboDisk%d", i);
-		cboDFxFile[i]->setId(tmp);
+		id_string = "cboDisk" + to_string(i);
+		cboDFxFile[i]->setId(id_string);
 		cboDFxFile[i]->setSize(textFieldWidth, cboDFxFile[i]->getHeight());
 		cboDFxFile[i]->setBaseColor(gui_baseCol);
 		cboDFxFile[i]->setBackgroundColor(colTextboxBackground);
