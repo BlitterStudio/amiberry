@@ -201,6 +201,8 @@
       <Filter>data</Filter>
     </Image>
     <Image Include="..\data\button.bmp">
+		<Filter>data</Filter>
+    </Image>
     <Image Include="..\data\axis.png">
       <Filter>data</Filter>
     </Image>
