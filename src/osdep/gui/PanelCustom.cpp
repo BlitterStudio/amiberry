@@ -631,11 +631,15 @@ void RefreshPanelCustom()
 		}
 
 		if (did->mapping.is_retroarch)
+		{
 			lblRetroarch->setCaption("[R]");
+			txtPortInput->setText(did->joystick_name);
+		}
 		else
+		{
 			lblRetroarch->setCaption("[N]");
-		
-		txtPortInput->setText(did->name);
+			txtPortInput->setText(did->name);
+		}
 	}
 
 	else
