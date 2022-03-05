@@ -1225,7 +1225,7 @@ static void read_gamecontroller_axes(const int joy)
 			const int data = SDL_GameControllerGetAxis(did->controller, static_cast<SDL_GameControllerAxis>(did->mapping.axis[axis]));
 
 			// If analog mouse mapping is used, the Left stick acts as a mouse
-			if (axis <= SDL_CONTROLLER_AXIS_LEFTY && currprefs.input_analog_remap)
+			if (axis <= SDL_CONTROLLER_AXIS_LEFTY && did->mousemap > 0)
 			{
 				if (data > joystick_dead_zone || data < -joystick_dead_zone)
 					setmousestate(joy, axis, data / 1000, 0);
@@ -1334,7 +1334,7 @@ static void read_joystick_axes(const int joy)
 			const int data = SDL_JoystickGetAxis(did->joystick, did->mapping.axis[axis]);
 
 			// If analog mouse mapping is used, the Left stick acts as a mouse
-			if (axis <= SDL_CONTROLLER_AXIS_LEFTY && currprefs.input_analog_remap)
+			if (axis <= SDL_CONTROLLER_AXIS_LEFTY && did->mousemap > 0)
 			{
 				if (data > joystick_dead_zone || data < -joystick_dead_zone)
 					setmousestate(joy, axis, data / 1000, 0);
@@ -1409,16 +1409,11 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 		h = port == 3 ? INPUTEVENT_PAR_JOY2_HORIZ : INPUTEVENT_PAR_JOY1_HORIZ;
 		v = port == 3 ? INPUTEVENT_PAR_JOY2_VERT : INPUTEVENT_PAR_JOY1_VERT;
 	} else {
-		// In Amiberry, we treat Mouse type or the mousemap option as real Mouse input events
+		// In Amiberry, we treat Mouse type option as real Mouse input events
 		if (mode == JSEM_MODE_MOUSE)
 		{
 			h = port ? INPUTEVENT_MOUSE2_HORIZ : INPUTEVENT_MOUSE1_HORIZ;
 			v = port ? INPUTEVENT_MOUSE2_VERT : INPUTEVENT_MOUSE1_VERT;
-		}
-		else if (currprefs.jports[port].mousemap > 0)
-		{
-			h = INPUTEVENT_MOUSE1_HORIZ;
-			v = INPUTEVENT_MOUSE1_VERT;
 		}
 		else
 		{
@@ -1428,6 +1423,9 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 	}
 	setid(uid, i, ID_AXIS_OFFSET + SDL_CONTROLLER_AXIS_LEFTX, 0, port, h, gp);
 	setid(uid, i, ID_AXIS_OFFSET + SDL_CONTROLLER_AXIS_LEFTY, 0, port, v, gp);
+
+	// Sync mouse map option to did struct, so we can use it while reading
+	did->mousemap = currprefs.jports[port].mousemap;
 
 	if (port >= 2) {
 		setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_A, 0, port, port == 3 ? INPUTEVENT_PAR_JOY2_FIRE_BUTTON : INPUTEVENT_PAR_JOY1_FIRE_BUTTON, af, gp);

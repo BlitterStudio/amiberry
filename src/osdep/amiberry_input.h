@@ -37,6 +37,7 @@ struct didata {
 	int acquired{};
 	std::string name{};
 
+	int mousemap{};
 	bool is_controller{};
 	SDL_GameController* controller{};
 	SDL_Joystick* joystick{};

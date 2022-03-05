@@ -1423,7 +1423,6 @@ int check_prefs_changed_gfx()
 		currprefs.use_retroarch_menu != changed_prefs.use_retroarch_menu ||
 		currprefs.use_retroarch_reset != changed_prefs.use_retroarch_reset ||
 		currprefs.sound_pullmode != changed_prefs.sound_pullmode ||
-		currprefs.input_analog_remap != changed_prefs.input_analog_remap ||
 		currprefs.kbd_led_num != changed_prefs.kbd_led_num ||
 		currprefs.kbd_led_scr != changed_prefs.kbd_led_scr ||
 		currprefs.kbd_led_cap != changed_prefs.kbd_led_cap ||
@@ -1457,7 +1456,6 @@ int check_prefs_changed_gfx()
 		currprefs.use_retroarch_menu = changed_prefs.use_retroarch_menu;
 		currprefs.use_retroarch_reset = changed_prefs.use_retroarch_reset;
 		currprefs.sound_pullmode = changed_prefs.sound_pullmode;
-		currprefs.input_analog_remap = changed_prefs.input_analog_remap;
 		currprefs.kbd_led_num = changed_prefs.kbd_led_num;
 		currprefs.kbd_led_scr = changed_prefs.kbd_led_scr;
 		currprefs.kbd_led_cap = changed_prefs.kbd_led_cap;

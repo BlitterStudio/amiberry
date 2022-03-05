@@ -1941,7 +1941,6 @@ void target_default_options(struct uae_prefs* p, int type)
 
 	p->alt_tab_release = false;
 	p->sound_pullmode = amiberry_options.default_sound_pull;
-	p->input_analog_remap = false;
 
 	p->use_retroarch_quit = amiberry_options.default_retroarch_quit;
 	p->use_retroarch_menu = amiberry_options.default_retroarch_menu;
@@ -2039,7 +2038,6 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 
 	cfgfile_target_dwrite_bool(f, _T("alt_tab_release"), p->alt_tab_release);
 	cfgfile_target_dwrite(f, _T("sound_pullmode"), _T("%d"), p->sound_pullmode);
-	cfgfile_target_dwrite_bool(f, _T("use_analogue_remap"), p->input_analog_remap);
 
 	cfgfile_target_dwrite_bool(f, _T("use_retroarch_quit"), p->use_retroarch_quit);
 	cfgfile_target_dwrite_bool(f, _T("use_retroarch_menu"), p->use_retroarch_menu);
@@ -2099,8 +2097,6 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 	if (cfgfile_intval(option, value, _T("sound_pullmode"), &p->sound_pullmode, 1))
 		return 1;
 	if (cfgfile_intval(option, value, _T("samplersoundcard"), &p->samplersoundcard, 1))
-		return 1;
-	if (cfgfile_yesno(option, value, _T("use_analogue_remap"), &p->input_analog_remap))
 		return 1;
 	if (cfgfile_intval(option, value, "kbd_led_num", &p->kbd_led_num, 1))
 		return 1;
