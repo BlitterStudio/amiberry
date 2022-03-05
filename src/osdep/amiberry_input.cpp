@@ -912,11 +912,6 @@ static int init_joystick()
 				if (k == did->mapping.hotkey_button)
 					k = SDL_CONTROLLER_BUTTON_INVALID;
 			}
-			for (auto& k : did->mapping.axis)
-			{
-				if (k == did->mapping.hotkey_button)
-					k = SDL_CONTROLLER_AXIS_INVALID;
-			}
 		}
 	}
 	return 1;
