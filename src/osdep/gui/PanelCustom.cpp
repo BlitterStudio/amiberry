@@ -13,6 +13,7 @@
 #include "gui_handling.h"
 #include "inputdevice.h"
 #include "amiberry_input.h"
+#include "fsdb_host.h"
 
 static gcn::Window* grpPort;
 static gcn::RadioButton* optPort0;
@@ -23,6 +24,11 @@ static gcn::RadioButton* optPort3;
 static gcn::Label* lblFunction;
 static gcn::RadioButton* optMultiNone;
 static gcn::RadioButton* optMultiSelect;
+
+static gcn::Label* lblSetHotkey;
+static gcn::TextField* txtSetHotkey;
+static gcn::Button* cmdSetHotkey;
+static gcn::ImageButton* cmdSetHotkeyClear;
 
 static gcn::Label* lblCustomButtonAction[SDL_CONTROLLER_BUTTON_MAX];
 static gcn::DropDown* cboCustomButtonAction[SDL_CONTROLLER_BUTTON_MAX];
@@ -114,6 +120,25 @@ public:
 			SelectedFunction = 0;
 		else if (actionEvent.getSource() == optMultiSelect)
 			SelectedFunction = 1;
+
+		else if (actionEvent.getSource() == cmdSetHotkey)
+		{
+			const auto button = ShowMessageForInput("Press a button", "Press a button on your controller to set it as the Hotkey button", "Cancel");
+			if (!button.key_name.empty())
+			{
+				txtSetHotkey->setText(button.key_name);
+				const auto host_joy_id = changed_prefs.jports[SelectedPort].id - JSEM_JOYS;
+				didata* did = &di_joystick[host_joy_id];
+				did->mapping.hotkey_button = button.button;
+			}
+		}
+		else if (actionEvent.getSource() == cmdSetHotkeyClear)
+		{
+			txtSetHotkey->setText("");
+			const auto host_joy_id = changed_prefs.jports[SelectedPort].id - JSEM_JOYS;
+			didata* did = &di_joystick[host_joy_id];
+			did->mapping.hotkey_button = SDL_CONTROLLER_BUTTON_INVALID;
+		}
 
 		RefreshPanelCustom();
 	}
@@ -277,10 +302,31 @@ void InitPanelCustom(const config_category& category)
 
 	category.panel->add(grpPort);
 
+	lblSetHotkey = new gcn::Label("Set Hotkey:");
+	lblSetHotkey->setAlignment(gcn::Graphics::RIGHT);
+	txtSetHotkey = new gcn::TextField();
+	txtSetHotkey->setEnabled(false);
+	txtSetHotkey->setSize(120, TEXTFIELD_HEIGHT);
+	txtSetHotkey->setBackgroundColor(colTextboxBackground);
+	cmdSetHotkey = new gcn::Button("...");
+	cmdSetHotkey->setId("cmdSetHotkey");
+	cmdSetHotkey->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	cmdSetHotkey->setBaseColor(gui_baseCol);
+	cmdSetHotkey->addActionListener(grpActionListener);
+	cmdSetHotkeyClear = new gcn::ImageButton(prefix_with_application_directory_path("data/delete.png"));
+	cmdSetHotkeyClear->setBaseColor(gui_baseCol);
+	cmdSetHotkeyClear->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	cmdSetHotkeyClear->setId("cmdSetHotkeyClear");
+	cmdSetHotkeyClear->addActionListener(grpActionListener);
+
 	lblFunction = new gcn::Label("Function Key:");
 	category.panel->add(lblFunction, DISTANCE_BORDER, grpPort->getY() + grpPort->getHeight() + DISTANCE_NEXT_Y);
 	category.panel->add(optMultiNone, lblFunction->getX() + lblFunction->getWidth() + 8, lblFunction->getY());
 	category.panel->add(optMultiSelect, optMultiNone->getX() + optMultiNone->getWidth() + DISTANCE_NEXT_X, optMultiNone->getY());
+	category.panel->add(lblSetHotkey, optMultiSelect->getX() + optMultiSelect->getWidth() + DISTANCE_NEXT_X * 2, optMultiSelect->getY());
+	category.panel->add(txtSetHotkey, lblSetHotkey->getX() + lblSetHotkey->getWidth() + 8, lblSetHotkey->getY());
+	category.panel->add(cmdSetHotkey, txtSetHotkey->getX() + txtSetHotkey->getWidth() + 8, txtSetHotkey->getY());
+	category.panel->add(cmdSetHotkeyClear, cmdSetHotkey->getX() + cmdSetHotkey->getWidth() + 8, cmdSetHotkey->getY());
 
 	// the input-device should be listed
 	lblPortInput = new gcn::Label("Input Device:");
@@ -382,8 +428,12 @@ void ExitPanelCustom()
 
 	delete optMultiNone;
 	delete optMultiSelect;
-
 	delete lblFunction;
+
+	delete lblSetHotkey;
+	delete txtSetHotkey;
+	delete cmdSetHotkey;
+	delete cmdSetHotkeyClear;
 
 	for (auto& i : lblCustomButtonAction)
 		delete i;
@@ -449,7 +499,29 @@ void RefreshPanelCustom()
 	{
 		const auto host_joy_id = changed_prefs.jports[SelectedPort].id - JSEM_JOYS;
 		didata* did = &di_joystick[host_joy_id];
-		
+
+		if (did->mapping.hotkey_button)
+		{
+			if (did->is_controller && !did->mapping.is_retroarch)
+			{
+				const auto hotkey_text = SDL_GameControllerGetStringForButton(static_cast<SDL_GameControllerButton>(did->mapping.hotkey_button));
+				if (hotkey_text != nullptr) txtSetHotkey->setText(hotkey_text);
+				cmdSetHotkey->setEnabled(true);
+				cmdSetHotkeyClear->setEnabled(true);
+			}
+			else
+			{
+				const std::string hotkey_text = to_string(did->mapping.hotkey_button);
+				if (!hotkey_text.empty()) txtSetHotkey->setText(hotkey_text);
+				if (did->mapping.is_retroarch)
+				{
+					// Disable editing buttons, as these are controlled by the retroarch config anyway
+					cmdSetHotkey->setEnabled(false);
+					cmdSetHotkeyClear->setEnabled(false);
+				}
+			}
+		}
+
 		for (auto n = 0; n < SDL_CONTROLLER_BUTTON_MAX; ++n)
 		{
 			const auto temp_button = did->mapping.button[n];

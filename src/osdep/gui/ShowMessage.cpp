@@ -396,8 +396,9 @@ static void ShowMessageWaitInputLoop()
 		case SDL_CONTROLLERBUTTONDOWN:
 		//case SDL_JOYBUTTONDOWN:
 			got_event = 1;
+			hotkey.button = event.cbutton.button;
 			hotkey.key_name = SDL_GameControllerGetStringForButton(
-				SDL_GameControllerButton(event.cbutton.button));
+				static_cast<SDL_GameControllerButton>(event.cbutton.button));
 			dialogFinished = true;
 			break;
 
