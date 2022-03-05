@@ -165,48 +165,32 @@ void BridgePLL::submitFlux(uint32_t timeInNanoSeconds, bool isAtIndex) {
 
 // Add data to the Rotation Extractor
 void BridgePLL::addToExtractor(unsigned int numZeros, unsigned int pllTimeInNS, unsigned int realTimeInNS) {
-    int zeros = numZeros - 1;   
-    if (zeros < 0) zeros = 0;
+    if (numZeros < 0) numZeros = 0;
 
     // More than 3 zeros.  This is not normal MFM, but is allowed
-    if (zeros >= 3) {
-        // Account for the ending 01
-        realTimeInNS -= m_clock * 2;
-        pllTimeInNS -= m_clock * 2;
-        zeros -= 2;
+    if (numZeros >= 4) {
+        unsigned int realTimePerBitcell = realTimeInNS / (numZeros + 1);
+        unsigned int pllTimePerBitcell = pllTimeInNS / (numZeros + 1);
 
-        // Based on the rules we can't output a sequence this big and times must be accurate so we output as many 0000's as possible
-        while (zeros > 0) {
+        // Based on the rules we can't output a sequence this big and times must be accurate so we output as many 000's as possible
+        while (numZeros > 3) {
             RotationExtractor::MFMSequenceInfo sample;
-            sample.mfm = RotationExtractor::MFMSequence::mfm0000;
-            unsigned int thisTicks = realTimeInNS;
-            unsigned int thisTicksPLL = pllTimeInNS;
-            if (thisTicks > (unsigned int)m_clock * 4) thisTicks = (unsigned int)m_clock * 4;
-            if (thisTicksPLL > (unsigned int)m_clock * 4) thisTicksPLL = (unsigned int)m_clock * 4;
-            sample.timeNS = thisTicks;
-            sample.pllTimeNS = thisTicksPLL;
+            sample.mfm = RotationExtractor::MFMSequence::mfm000;
+            sample.timeNS = realTimePerBitcell * 3;
+            sample.pllTimeNS = pllTimePerBitcell * 3;
             realTimeInNS -= sample.timeNS;
             pllTimeInNS -= sample.pllTimeNS;
             m_extractor->submitSequence(sample, m_indexFound);
             m_indexFound = false;
-            zeros -= 4;
+            numZeros -= 3;
         }
-
-        // And follow it up with an 01
-        RotationExtractor::MFMSequenceInfo sample;
-        sample.mfm = RotationExtractor::MFMSequence::mfm01;
-        sample.timeNS = m_clock * 2;
-        sample.pllTimeNS = m_clock * 2;
-        m_extractor->submitSequence(sample, m_indexFound);
-        m_indexFound = false;
     }
-    else {
-        RotationExtractor::MFMSequenceInfo sample;
-        sample.mfm = (RotationExtractor::MFMSequence)zeros;
-        sample.timeNS = realTimeInNS;
-        sample.pllTimeNS = pllTimeInNS;
 
-        m_extractor->submitSequence(sample, m_indexFound);
-        m_indexFound = false;
-    }
+    RotationExtractor::MFMSequenceInfo sample;
+    sample.mfm = (RotationExtractor::MFMSequence)numZeros;
+    sample.timeNS = realTimeInNS;
+    sample.pllTimeNS = pllTimeInNS;
+
+    m_extractor->submitSequence(sample, m_indexFound);
+    m_indexFound = false;
 }

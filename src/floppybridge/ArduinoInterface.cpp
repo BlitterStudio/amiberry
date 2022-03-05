@@ -1288,8 +1288,8 @@ DiagnosticResponse ArduinoInterface::readRotation(RotationExtractor& extractor, 
 				if (m_isHDMode) {
 					for (int i = 6; i >= 0; i -= 2) {
 						tmp = byteRead >> i & 0x03;
-						sequence.mfm = (RotationExtractor::MFMSequence)(tmp == 0x03 ? 0 : tmp);
-						sequence.timeNS = 4000 + (unsigned int)sequence.mfm * 2000;
+						sequence.mfm = (RotationExtractor::MFMSequence)((tmp == 0x03 ? 0 : tmp)+1);
+						sequence.timeNS = 2000 + (unsigned int)sequence.mfm * 2000;
 						extractor.submitSequence(sequence, tmp == 0x03);
 					}
 				}
@@ -1305,28 +1305,50 @@ DiagnosticResponse ArduinoInterface::readRotation(RotationExtractor& extractor, 
 						}
 						else {
 							if (dataState) {
-								int32_t readSpeed = (unsigned int)(byteRead & 0x7F) * 2000 / 128;
 
+								if (mode == COMMAND_READTRACKSTREAM_HALFPLL) {
+									const int32_t sequences[4] = { (mfmSequences >> 6) & 0x03, (mfmSequences >> 4) & 0x03, (mfmSequences >> 2) & 0x03, mfmSequences & 0x03 };
 
-								tmp = mfmSequences >> 6 & 0x03;
-								sequence.mfm = tmp == 0 ? RotationExtractor::MFMSequence::mfm0000 : (RotationExtractor::MFMSequence)(tmp - 1);
-								sequence.timeNS = 3000 + (unsigned int)sequence.mfm * 2000 + (sequence.mfm == RotationExtractor::MFMSequence::mfm0000 ? -1000 : readSpeed);
-								extractor.submitSequence(sequence, (byteRead & 0x80) != 0);
+									// First remove any flux time that us 000 as thats always fixed
+									int32_t readSpeed = (unsigned int)(byteRead & 0x7F) * 2000 / 128;
 
-								tmp = mfmSequences >> 4 & 0x03;
-								sequence.mfm = tmp == 0 ? RotationExtractor::MFMSequence::mfm0000 : (RotationExtractor::MFMSequence)(tmp - 1);
-								sequence.timeNS = 3000 + (unsigned int)sequence.mfm * 2000 + (sequence.mfm == RotationExtractor::MFMSequence::mfm0000 ? -1000 : readSpeed);
-								extractor.submitSequence(sequence, false);
+									// Output the fluxes
+									for (int a = 0; a < 4; a++) {
+										if (sequences[a] == 0) {
+											sequence.mfm = RotationExtractor::MFMSequence::mfm000;
+											sequence.timeNS = 5000 + readSpeed;
+										}
+										else {
+											sequence.mfm = (RotationExtractor::MFMSequence)sequences[a];
+											sequence.timeNS = 1000 + readSpeed + (((int)sequence.mfm) * 2000);
+										}
+										sequence.pllTimeNS = sequence.timeNS;
+										extractor.submitSequence(sequence, ((byteRead & 0x80) != 0) && (a==0));
+									}
 
-								tmp = mfmSequences >> 2 & 0x03;
-								sequence.mfm = tmp == 0 ? RotationExtractor::MFMSequence::mfm0000 : (RotationExtractor::MFMSequence)(tmp - 1);
-								sequence.timeNS = 3000 + (unsigned int)sequence.mfm * 2000 + (sequence.mfm == RotationExtractor::MFMSequence::mfm0000 ? -1000 : readSpeed);
-								extractor.submitSequence(sequence, false);
+								}
+								else {
+									int32_t readSpeed = (unsigned int)(byteRead & 0x7F) * 2000 / 128;
+									tmp = mfmSequences >> 6 & 0x03;
+									sequence.mfm = tmp == 0 ? RotationExtractor::MFMSequence::mfm000 : (RotationExtractor::MFMSequence)(tmp);
+									sequence.timeNS = 1000 + (unsigned int)sequence.mfm * 2000 + (sequence.mfm == RotationExtractor::MFMSequence::mfm000 ? -2000 : readSpeed);
+									extractor.submitSequence(sequence, (byteRead & 0x80) != 0);
 
-								tmp = mfmSequences & 0x03;
-								sequence.mfm = tmp == 0 ? RotationExtractor::MFMSequence::mfm0000 : (RotationExtractor::MFMSequence)(tmp - 1);
-								sequence.timeNS = 3000 + (unsigned int)sequence.mfm * 2000 + (sequence.mfm == RotationExtractor::MFMSequence::mfm0000 ? -1000 : readSpeed);
-								extractor.submitSequence(sequence, false);
+									tmp = mfmSequences >> 4 & 0x03;
+									sequence.mfm = tmp == 0 ? RotationExtractor::MFMSequence::mfm000 : (RotationExtractor::MFMSequence)(tmp);
+									sequence.timeNS = 1000 + (unsigned int)sequence.mfm * 2000 + (sequence.mfm == RotationExtractor::MFMSequence::mfm000 ? -2000 : readSpeed);
+									extractor.submitSequence(sequence, false);
+
+									tmp = mfmSequences >> 2 & 0x03;
+									sequence.mfm = tmp == 0 ? RotationExtractor::MFMSequence::mfm000 : (RotationExtractor::MFMSequence)(tmp);
+									sequence.timeNS = 1000 + (unsigned int)sequence.mfm * 2000 + (sequence.mfm == RotationExtractor::MFMSequence::mfm000 ? -2000 : readSpeed);
+									extractor.submitSequence(sequence, false);
+
+									tmp = mfmSequences & 0x03;
+									sequence.mfm = tmp == 0 ? RotationExtractor::MFMSequence::mfm000 : (RotationExtractor::MFMSequence)(tmp);
+									sequence.timeNS = 1000 + (unsigned int)sequence.mfm * 2000 + (sequence.mfm == RotationExtractor::MFMSequence::mfm000 ? -2000 : readSpeed);
+									extractor.submitSequence(sequence, false);
+								}
 
 								dataState = false;
 							}
@@ -1342,14 +1364,14 @@ DiagnosticResponse ArduinoInterface::readRotation(RotationExtractor& extractor, 
 
 						// Now packet up the data in the format the rotation extractor expects it to be in
 						tmp = byteRead >> 5 & 0x03;
-						sequence.mfm = tmp == 0 ? RotationExtractor::MFMSequence::mfm0000 : (RotationExtractor::MFMSequence)(tmp - 1);
-						sequence.timeNS = 3000 + (unsigned int)sequence.mfm * 2000 + readSpeed;
+						sequence.mfm = tmp == 0 ? RotationExtractor::MFMSequence::mfm000 : (RotationExtractor::MFMSequence)(tmp);
+						sequence.timeNS = 1000 + (unsigned int)sequence.mfm * 2000 + readSpeed;
 
 						extractor.submitSequence(sequence, (byteRead & 0x80) != 0);
 
 						tmp = byteRead >> 3 & 0x03;
-						sequence.mfm = tmp == 0 ? RotationExtractor::MFMSequence::mfm0000 : (RotationExtractor::MFMSequence)(tmp - 1);
-						sequence.timeNS = 3000 + (unsigned int)sequence.mfm * 2000 + readSpeed;
+						sequence.mfm = tmp == 0 ? RotationExtractor::MFMSequence::mfm000 : (RotationExtractor::MFMSequence)(tmp);
+						sequence.timeNS = 1000 + (unsigned int)sequence.mfm * 2000 + readSpeed;
 
 						extractor.submitSequence(sequence, false);
 					}

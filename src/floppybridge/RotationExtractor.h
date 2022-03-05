@@ -67,8 +67,8 @@
 class RotationExtractor {
 public:
 
-	// Enum for the possible sequences we support
-	enum class MFMSequence : unsigned char { mfm01 = 0, mfm001 = 1, mfm0001 = 2, mfm0000 = 3 };
+	// Enum for the possible sequences we support - mfm1 is not normally allowed.
+	enum class MFMSequence : unsigned char { mfm1 = 0, mfm01 = 1, mfm001 = 2, mfm0001 = 3, mfm000 = 4 };
 
 	// A single sequence of MFM data
 	struct MFMSequenceInfo {
@@ -163,19 +163,7 @@ public:
 	void getIndexSequence(IndexSequenceMarker& sequence) const { sequence = m_indexSequence; }
 
 	// Reset this back to "empty"
-	void reset(bool isHD) {
-		m_indexSequence.valid = false;
-		m_revolutionReadyAt = INDEX_NOT_FOUND;
-		m_sequencePos = 0;
-		m_sequenceIndex = INDEX_NOT_FOUND;
-		m_nextSequenceIndex = INDEX_NOT_FOUND;
-		m_currentTime = 0;
-		m_revolutionReady = false;
-		m_initialSequencesLength = 0;
-		m_initialSequencesWritePos = 0;
-		m_timeReceived = 0;
-		m_isHD = isHD;
-	}
+	void reset(bool isHD);
 
 	// Return TRUE if we're in HD mode
 	[[nodiscard]] bool isHD() const { return m_isHD; }
