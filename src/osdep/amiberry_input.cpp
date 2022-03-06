@@ -896,6 +896,7 @@ static int init_joystick()
 			
 			if (SDL_JoystickNameForIndex(i) != nullptr)
 				did->joystick_name.assign(SDL_JoystickNameForIndex(i));
+			did->name = did->joystick_name;
 			write_log("Controller #%i: %s\n      GUID: %s\n      Axes: %d\n      Buttons: %d\n      Balls: %d\n",
 				did->joystick_id, SDL_JoystickName(did->joystick), guid_str, SDL_JoystickNumAxes(did->joystick),
 									SDL_JoystickNumButtons(did->joystick), SDL_JoystickNumBalls(did->joystick));
