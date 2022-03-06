@@ -1060,7 +1060,9 @@ static void unacquire_joystick(int num)
 
 static const TCHAR* get_joystick_friendlyname(const int joy)
 {
-	return di_joystick[joy].name.c_str();
+	if (!di_joystick[joy].name.empty())
+		return di_joystick[joy].name.c_str();
+	return "";
 }
 
 static const TCHAR* get_joystick_uniquename(const int joy)
