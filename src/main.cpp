@@ -639,7 +639,10 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 	blkdev_fix_prefs (p);
 	inputdevice_fix_prefs(p, userconfig);
 	target_fixup_options (p);
+#ifndef AMIBERRY
+	// This one caused crashes in some cases, and I don't think it's actually needed in Amiberry
 	cfgfile_createconfigstore(p);
+#endif
 }
 
 int quit_program = 0;
