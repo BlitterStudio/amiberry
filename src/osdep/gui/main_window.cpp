@@ -1220,10 +1220,10 @@ void gui_widgets_init()
 		TCHAR font_file[MAX_DPATH];
 		get_data_path(font_file, sizeof font_file / sizeof(TCHAR));
 #ifdef USE_OPENGL
-		_tcscat(font_file, _T("data/fixedfont.bmp"));
+		_tcscat(font_file, _T("fixedfont.bmp"));
 		gui_font = new gcn::ImageFont(font_file, " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789");
 #else
-		_tcscat(font_file, _T("data/AmigaTopaz.ttf"));
+		_tcscat(font_file, _T("AmigaTopaz.ttf"));
 		gui_font = new gcn::SDLTrueTypeFont(font_file, 15);
 #endif
 	}

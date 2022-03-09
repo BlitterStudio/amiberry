@@ -3111,7 +3111,7 @@ static void init_amiberry_paths(void)
 	snprintf(amiberry_conf_file, MAX_DPATH, "%s/conf/amiberry.conf", start_path_data);
 #endif
 	snprintf(floppy_sounds_dir, MAX_DPATH, "%s/data/floppy_sounds/", start_path_data);
-	snprintf(data_dir, MAX_DPATH, "%s/", start_path_data);
+	snprintf(data_dir, MAX_DPATH, "%s/data/", start_path_data);
 	snprintf(saveimage_dir, MAX_DPATH, "%s/savestates/", start_path_data);
 	snprintf(savestate_dir, MAX_DPATH, "%s/savestates/", start_path_data);
 	snprintf(ripper_path, MAX_DPATH, "%s/ripper/", start_path_data);
