@@ -1138,7 +1138,10 @@ void gui_widgets_init()
 
 	try
 	{
-		gui_font = new gcn::SDLTrueTypeFont(prefix_with_application_directory_path("data/AmigaTopaz.ttf"), 15);
+		TCHAR font_file[MAX_DPATH];
+		get_data_path(font_file, sizeof font_file / sizeof(TCHAR));
+		_tcscat(font_file, _T("AmigaTopaz.ttf"));
+		gui_font = new gcn::SDLTrueTypeFont(font_file, 15);
 	}
 	catch (exception& ex)
 	{
