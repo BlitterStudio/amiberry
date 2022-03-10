@@ -118,8 +118,14 @@
     <Filter Include="controllers">
       <UniqueIdentifier>{df45c870-bacf-40a0-882f-995733bbc653}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\osdep\vkbd">
+      <UniqueIdentifier>{481cac80-8d9f-45cc-9a3e-1ca77c063bae}</UniqueIdentifier>
+    </Filter>
     <Filter Include="data\floppy_sounds">
       <UniqueIdentifier>{f2f64642-8486-4d27-9f0b-ef314f752024}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="data\vkbd">
+      <UniqueIdentifier>{bc8f1b9f-c930-42ee-bea8-1c25f61550a1}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -216,6 +222,204 @@
       <Filter>data</Filter>
     </Image>
     <Image Include="..\data\controllermap_back.png">
+      <Filter>data</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdCoolFRLarge.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdCoolFRLargeHires.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdCoolFRLargeShift.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdCoolFRLargeShiftHires.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdCoolGerLarge.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdCoolGerLargeHires.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdCoolGerLargeShift.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdCoolGerLargeShiftHires.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdCoolUKLarge.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdCoolUKLargeHires.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdCoolUKLargeShift.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdCoolUKLargeShiftHires.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdCoolUSLarge.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdCoolUSLargeHires.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdCoolUSLargeShift.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdCoolUSLargeShiftHires.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdDarkFRLarge.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdDarkFRLargeHires.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdDarkFRLargeShift.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdDarkFRLargeShiftHires.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdDarkGerLarge.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdDarkGerLargeHires.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdDarkGerLargeShift.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdDarkGerLargeShiftHires.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdDarkUKLarge.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdDarkUKLargeHires.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdDarkUKLargeShift.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdDarkUKLargeShiftHires.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdDarkUSLarge.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdDarkUSLargeHires.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdDarkUSLargeShift.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdDarkUSLargeShiftHires.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdOrigFRLarge.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdOrigFRLargeHires.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdOrigFRLargeShift.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdOrigFRLargeShiftHires.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdOrigGerLarge.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdOrigGerLargeHires.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdOrigGerLargeShift.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdOrigGerLargeShiftHires.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdOrigUKLarge.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdOrigUKLargeHires.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdOrigUKLargeShift.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdOrigUKLargeShiftHires.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdOrigUSLarge.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdOrigUSLargeHires.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdOrigUSLargeShift.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdOrigUSLargeShiftHires.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdWarmFRLarge.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdWarmFRLargeHires.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdWarmFRLargeShift.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdWarmFRLargeShiftHires.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdWarmGerLarge.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdWarmGerLargeHires.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdWarmGerLargeShift.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdWarmGerLargeShiftHires.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdWarmUKLarge.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdWarmUKLargeHires.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdWarmUKLargeShift.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdWarmUKLargeShiftHires.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdWarmUSLarge.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdWarmUSLargeHires.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdWarmUSLargeShift.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdWarmUSLargeShiftHires.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\virtual_keyboard.png">
+      <Filter>data</Filter>
+    </Image>
+    <Image Include="..\data\vk_selector.png">
       <Filter>data</Filter>
     </Image>
   </ItemGroup>
@@ -1215,6 +1419,9 @@
     <ClCompile Include="..\src\osdep\gui\ControllerMap.cpp">
       <Filter>src\osdep\gui</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\osdep\vkbd\vkbd.cpp">
+      <Filter>src\osdep\vkbd</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\archivers\7z\7zBuf.h">
@@ -2095,6 +2302,9 @@
     </ClInclude>
     <ClInclude Include="..\src\archivers\chd\eigccx86.h">
       <Filter>src\archivers\chd</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\osdep\vkbd\vkbd.h">
+      <Filter>src\osdep\vkbd</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
