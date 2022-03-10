@@ -118,6 +118,9 @@
     <Filter Include="controllers">
       <UniqueIdentifier>{df45c870-bacf-40a0-882f-995733bbc653}</UniqueIdentifier>
     </Filter>
+    <Filter Include="data\floppy_sounds">
+      <UniqueIdentifier>{f2f64642-8486-4d27-9f0b-ef314f752024}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\conf\dir.txt">
@@ -2095,5 +2098,22 @@
     <Xml Include="..\abr\catlist.xml">
       <Filter>abr</Filter>
     </Xml>
+  </ItemGroup>
+  <ItemGroup>
+    <Media Include="..\data\floppy_sounds\drive_click.wav">
+      <Filter>data\floppy_sounds</Filter>
+    </Media>
+    <Media Include="..\data\floppy_sounds\drive_snatch.wav">
+      <Filter>data\floppy_sounds</Filter>
+    </Media>
+    <Media Include="..\data\floppy_sounds\drive_spin.wav">
+      <Filter>data\floppy_sounds</Filter>
+    </Media>
+    <Media Include="..\data\floppy_sounds\drive_spinnd.wav">
+      <Filter>data\floppy_sounds</Filter>
+    </Media>
+    <Media Include="..\data\floppy_sounds\drive_startup.wav">
+      <Filter>data\floppy_sounds</Filter>
+    </Media>
   </ItemGroup>
 </Project>

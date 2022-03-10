@@ -869,6 +869,13 @@
       <DeploymentContent>true</DeploymentContent>
     </Xml>
   </ItemGroup>
+  <ItemGroup>
+    <Media Include="..\data\floppy_sounds\drive_click.wav" />
+    <Media Include="..\data\floppy_sounds\drive_snatch.wav" />
+    <Media Include="..\data\floppy_sounds\drive_spin.wav" />
+    <Media Include="..\data\floppy_sounds\drive_spinnd.wav" />
+    <Media Include="..\data\floppy_sounds\drive_startup.wav" />
+  </ItemGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <RemotePostBuildEvent>
       <Command>cp $(RemoteRootDir)/$(ProjectName)-Debug/amiberry $(RemoteRootDir)/amiberry/$(MSBuildProjectName)-Debug</Command>
