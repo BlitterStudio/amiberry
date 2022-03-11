@@ -174,10 +174,11 @@ static void InitShowMessage(const std::string& message)
 	{
 		TTF_Init();
 #ifdef USE_OPENGL
-		gui_font = new gcn::ImageFont(prefix_with_application_directory_path("data/fixedfont.bmp"), " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789");
-		gcn::Widget::setGlobalFont(gui_font);
+		gui_font = new gcn::ImageFont(prefix_with_data_path("fixedfont.bmp"), " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789");
+
 #else
-		gui_font = new gcn::SDLTrueTypeFont(prefix_with_application_directory_path("data/AmigaTopaz.ttf"), 15);
+		gui_font = new gcn::SDLTrueTypeFont(prefix_with_data_path("AmigaTopaz.ttf"), 15);
+#endif
 		gcn::Widget::setGlobalFont(gui_font);
 		gui_font->setAntiAlias(false);
 #endif

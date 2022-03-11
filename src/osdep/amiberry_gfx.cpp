@@ -32,6 +32,7 @@
 #endif
 #include <iostream>
 
+#include "fsdb_host.h"
 #include "sampler.h"
 
 static uae_thread_id display_tid = nullptr;
@@ -1900,7 +1901,7 @@ int graphics_init(bool mousecapture)
 		}
 		check_error_sdl(mon->sdl_window == nullptr, "Unable to create window:");
 
-		auto* const icon_surface = IMG_Load("data/amiberry.png");
+		auto* const icon_surface = IMG_Load(prefix_with_data_path("amiberry.png").c_str());
 		if (icon_surface != nullptr)
 		{
 			SDL_SetWindowIcon(mon->sdl_window, icon_surface);

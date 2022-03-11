@@ -51,49 +51,49 @@ void target_startup_msg(const TCHAR* title, const TCHAR* msg)
 }
 
 ConfigCategory categories[] = {
-	{"About", "data/amigainfo.ico", nullptr, nullptr, InitPanelAbout, ExitPanelAbout, RefreshPanelAbout,
+	{"About", "amigainfo.ico", nullptr, nullptr, InitPanelAbout, ExitPanelAbout, RefreshPanelAbout,
 		HelpPanelAbout
 	},
-	{"Paths", "data/paths.ico", nullptr, nullptr, InitPanelPaths, ExitPanelPaths, RefreshPanelPaths, HelpPanelPaths},
-	{"Quickstart", "data/quickstart.ico", nullptr, nullptr, InitPanelQuickstart, ExitPanelQuickstart,
+	{"Paths", "paths.ico", nullptr, nullptr, InitPanelPaths, ExitPanelPaths, RefreshPanelPaths, HelpPanelPaths},
+	{"Quickstart", "quickstart.ico", nullptr, nullptr, InitPanelQuickstart, ExitPanelQuickstart,
 		RefreshPanelQuickstart, HelpPanelQuickstart
 	},
-	{"Configurations", "data/file.ico", nullptr, nullptr, InitPanelConfig, ExitPanelConfig, RefreshPanelConfig,
+	{"Configurations", "file.ico", nullptr, nullptr, InitPanelConfig, ExitPanelConfig, RefreshPanelConfig,
 		HelpPanelConfig
 	},
-	{"CPU and FPU", "data/cpu.ico", nullptr, nullptr, InitPanelCPU, ExitPanelCPU, RefreshPanelCPU, HelpPanelCPU},
-	{"Chipset", "data/cpu.ico", nullptr, nullptr, InitPanelChipset, ExitPanelChipset, RefreshPanelChipset,
+	{"CPU and FPU", "cpu.ico", nullptr, nullptr, InitPanelCPU, ExitPanelCPU, RefreshPanelCPU, HelpPanelCPU},
+	{"Chipset", "cpu.ico", nullptr, nullptr, InitPanelChipset, ExitPanelChipset, RefreshPanelChipset,
 		HelpPanelChipset
 	},
-	{"ROM", "data/chip.ico", nullptr, nullptr, InitPanelROM, ExitPanelROM, RefreshPanelROM, HelpPanelROM},
-	{"RAM", "data/chip.ico", nullptr, nullptr, InitPanelRAM, ExitPanelRAM, RefreshPanelRAM, HelpPanelRAM},
-	{"Floppy drives", "data/35floppy.ico", nullptr, nullptr, InitPanelFloppy, ExitPanelFloppy, RefreshPanelFloppy,
+	{"ROM", "chip.ico", nullptr, nullptr, InitPanelROM, ExitPanelROM, RefreshPanelROM, HelpPanelROM},
+	{"RAM", "chip.ico", nullptr, nullptr, InitPanelRAM, ExitPanelRAM, RefreshPanelRAM, HelpPanelRAM},
+	{"Floppy drives", "35floppy.ico", nullptr, nullptr, InitPanelFloppy, ExitPanelFloppy, RefreshPanelFloppy,
 		HelpPanelFloppy
 	},
-	{"Hard drives/CD", "data/drive.ico", nullptr, nullptr, InitPanelHD, ExitPanelHD, RefreshPanelHD, HelpPanelHD},
-	{"Expansions", "data/expansion.ico", nullptr, nullptr, InitPanelExpansions, ExitPanelExpansions,
+	{"Hard drives/CD", "drive.ico", nullptr, nullptr, InitPanelHD, ExitPanelHD, RefreshPanelHD, HelpPanelHD},
+	{"Expansions", "expansion.ico", nullptr, nullptr, InitPanelExpansions, ExitPanelExpansions,
 		RefreshPanelExpansions, HelpPanelExpansions},
-	{"RTG board", "data/expansion.ico", nullptr, nullptr, InitPanelRTG, ExitPanelRTG,
+	{"RTG board", "expansion.ico", nullptr, nullptr, InitPanelRTG, ExitPanelRTG,
 		RefreshPanelRTG, HelpPanelRTG
 	},
-	{"Hardware info", "data/expansion.ico", nullptr, nullptr, InitPanelHWInfo, ExitPanelHWInfo, RefreshPanelHWInfo, HelpPanelHWInfo},
-	{"Display", "data/screen.ico", nullptr, nullptr, InitPanelDisplay, ExitPanelDisplay, RefreshPanelDisplay,
+	{"Hardware info", "expansion.ico", nullptr, nullptr, InitPanelHWInfo, ExitPanelHWInfo, RefreshPanelHWInfo, HelpPanelHWInfo},
+	{"Display", "screen.ico", nullptr, nullptr, InitPanelDisplay, ExitPanelDisplay, RefreshPanelDisplay,
 		HelpPanelDisplay
 	},
-	{"Sound", "data/sound.ico", nullptr, nullptr, InitPanelSound, ExitPanelSound, RefreshPanelSound, HelpPanelSound},
-	{"Input", "data/joystick.ico", nullptr, nullptr, InitPanelInput, ExitPanelInput, RefreshPanelInput, HelpPanelInput},
-	{"IO Ports", "data/port.ico", nullptr, nullptr, InitPanelIO, ExitPanelIO, RefreshPanelIO, HelpPanelIO},
-	{"Custom controls", "data/controller.png", nullptr, nullptr, InitPanelCustom, ExitPanelCustom,
+	{"Sound", "sound.ico", nullptr, nullptr, InitPanelSound, ExitPanelSound, RefreshPanelSound, HelpPanelSound},
+	{"Input", "joystick.ico", nullptr, nullptr, InitPanelInput, ExitPanelInput, RefreshPanelInput, HelpPanelInput},
+	{"IO Ports", "port.ico", nullptr, nullptr, InitPanelIO, ExitPanelIO, RefreshPanelIO, HelpPanelIO},
+	{"Custom controls", "controller.png", nullptr, nullptr, InitPanelCustom, ExitPanelCustom,
 		RefreshPanelCustom, HelpPanelCustom
 	},
-	{"Disk swapper", "data/35floppy.ico", nullptr, nullptr, InitPanelDiskSwapper, ExitPanelDiskSwapper, RefreshPanelDiskSwapper, HelpPanelDiskSwapper},
-	{"Miscellaneous", "data/misc.ico", nullptr, nullptr, InitPanelMisc, ExitPanelMisc, RefreshPanelMisc, HelpPanelMisc},
-	{ "Priority", "data/misc.ico", nullptr, nullptr, InitPanelPrio, ExitPanelPrio, RefreshPanelPrio, HelpPanelPrio},
-	{"Savestates", "data/savestate.png", nullptr, nullptr, InitPanelSavestate, ExitPanelSavestate,
+	{"Disk swapper", "35floppy.ico", nullptr, nullptr, InitPanelDiskSwapper, ExitPanelDiskSwapper, RefreshPanelDiskSwapper, HelpPanelDiskSwapper},
+	{"Miscellaneous", "misc.ico", nullptr, nullptr, InitPanelMisc, ExitPanelMisc, RefreshPanelMisc, HelpPanelMisc},
+	{ "Priority", "misc.ico", nullptr, nullptr, InitPanelPrio, ExitPanelPrio, RefreshPanelPrio, HelpPanelPrio},
+	{"Savestates", "savestate.png", nullptr, nullptr, InitPanelSavestate, ExitPanelSavestate,
 		RefreshPanelSavestate, HelpPanelSavestate
 	},
 #ifdef ANDROID
-	{ "OnScreen",         "data/screen.ico",    NULL, NULL, InitPanelOnScreen,  ExitPanelOnScreen, RefreshPanelOnScreen,  HelpPanelOnScreen },
+	{ "OnScreen",         "screen.ico",    NULL, NULL, InitPanelOnScreen,  ExitPanelOnScreen, RefreshPanelOnScreen,  HelpPanelOnScreen },
 #endif
 	{nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr}
 };
@@ -302,7 +302,7 @@ void update_gui_screen()
 #else
 void setup_cursor()
 {
-	cursor_surface = SDL_LoadBMP(prefix_with_application_directory_path("data/cursor.bmp").c_str());
+	cursor_surface = SDL_LoadBMP(prefix_with_data_path("cursor.bmp").c_str());
 	if (!cursor_surface)
 	{
 		// Load failed. Log error.
@@ -473,7 +473,7 @@ void amiberry_gui_init()
 			GUI_HEIGHT,
 			flags);
 
-		auto* const icon_surface = IMG_Load("data/amiberry.png");
+		auto* const icon_surface = IMG_Load(prefix_with_data_path("amiberry.png").c_str());
 		if (icon_surface != nullptr)
 		{
 			SDL_SetWindowIcon(mon->sdl_window, icon_surface);
@@ -1217,14 +1217,10 @@ void gui_widgets_init()
 
 	try
 	{
-		TCHAR font_file[MAX_DPATH];
-		get_data_path(font_file, sizeof font_file / sizeof(TCHAR));
 #ifdef USE_OPENGL
-		_tcscat(font_file, _T("fixedfont.bmp"));
-		gui_font = new gcn::ImageFont(font_file, " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789");
+		gui_font = new gcn::ImageFont(prefix_with_data_path("fixedfont.bmp"), " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789");
 #else
-		_tcscat(font_file, _T("AmigaTopaz.ttf"));
-		gui_font = new gcn::SDLTrueTypeFont(font_file, 15);
+		gui_font = new gcn::SDLTrueTypeFont(prefix_with_data_path("AmigaTopaz.ttf"), 15);
 #endif
 	}
 	catch (exception& ex)
@@ -1295,7 +1291,7 @@ void gui_widgets_init()
 	panelFocusListener = new PanelFocusListener();
 	for (i = 0; categories[i].category != nullptr; ++i)
 	{
-		categories[i].selector = new gcn::SelectorEntry(categories[i].category, prefix_with_application_directory_path(categories[i].imagepath));
+		categories[i].selector = new gcn::SelectorEntry(categories[i].category, prefix_with_data_path(categories[i].imagepath));
 		categories[i].selector->setActiveColor(colSelectorActive);
 		categories[i].selector->setInactiveColor(colSelectorInactive);
 		categories[i].selector->setSize(150, 24);

@@ -313,7 +313,7 @@ void InitPanelCustom(const config_category& category)
 	cmdSetHotkey->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdSetHotkey->setBaseColor(gui_baseCol);
 	cmdSetHotkey->addActionListener(grpActionListener);
-	cmdSetHotkeyClear = new gcn::ImageButton(prefix_with_application_directory_path("data/delete.png"));
+	cmdSetHotkeyClear = new gcn::ImageButton(prefix_with_data_path("delete.png"));
 	cmdSetHotkeyClear->setBaseColor(gui_baseCol);
 	cmdSetHotkeyClear->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdSetHotkeyClear->setId("cmdSetHotkeyClear");

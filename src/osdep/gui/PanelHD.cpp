@@ -357,7 +357,7 @@ void InitPanelHD(const config_category& category)
 		listCmdProps[row]->setId(id_string);
 		listCmdProps[row]->addActionListener(hdEditActionListener);
 
-		listCmdDelete[row] = new gcn::ImageButton(prefix_with_application_directory_path("data/delete.png"));
+		listCmdDelete[row] = new gcn::ImageButton(prefix_with_data_path("delete.png"));
 		listCmdDelete[row]->setBaseColor(gui_baseCol);
 		listCmdDelete[row]->setSize(SMALL_BUTTON_HEIGHT, SMALL_BUTTON_HEIGHT);
 		id_string = "cmdDel" + to_string(row);

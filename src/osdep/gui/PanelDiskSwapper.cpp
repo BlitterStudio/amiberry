@@ -255,7 +255,7 @@ void InitPanelDiskSwapper(const config_category& category)
 		cmdDiskSwapperListAdd[row]->setId(tmp);
 		cmdDiskSwapperListAdd[row]->addActionListener(diskSwapperAddActionListener);
 
-		cmdDiskSwapperListDelete[row] = new gcn::ImageButton(prefix_with_application_directory_path("data/delete.png"));
+		cmdDiskSwapperListDelete[row] = new gcn::ImageButton(prefix_with_data_path("delete.png"));
 		cmdDiskSwapperListDelete[row]->setBaseColor(gui_baseCol);
 		cmdDiskSwapperListDelete[row]->setSize(SMALL_BUTTON_HEIGHT, SMALL_BUTTON_HEIGHT);
 		snprintf(tmp, 20, "cmdDiskSwapperDel%d", row);
