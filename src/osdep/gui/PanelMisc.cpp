@@ -438,7 +438,7 @@ void InitPanelMisc(const config_category& category)
 	cmdKeyOpenGUI->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdKeyOpenGUI->setBaseColor(gui_baseCol);
 	cmdKeyOpenGUI->addActionListener(miscActionListener);
-	cmdKeyOpenGUIClear = new gcn::ImageButton(prefix_with_application_directory_path("data/delete.png"));
+	cmdKeyOpenGUIClear = new gcn::ImageButton(prefix_with_data_path("delete.png"));
 	cmdKeyOpenGUIClear->setBaseColor(gui_baseCol);
 	cmdKeyOpenGUIClear->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdKeyOpenGUIClear->setId("cmdKeyOpenGUIClear");
@@ -455,7 +455,7 @@ void InitPanelMisc(const config_category& category)
 	cmdKeyForQuit->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdKeyForQuit->setBaseColor(gui_baseCol);
 	cmdKeyForQuit->addActionListener(miscActionListener);
-	cmdKeyForQuitClear = new gcn::ImageButton(prefix_with_application_directory_path("data/delete.png"));
+	cmdKeyForQuitClear = new gcn::ImageButton(prefix_with_data_path("delete.png"));
 	cmdKeyForQuitClear->setBaseColor(gui_baseCol);
 	cmdKeyForQuitClear->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdKeyForQuitClear->setId("cmdKeyForQuitClear");
@@ -472,7 +472,7 @@ void InitPanelMisc(const config_category& category)
 	cmdKeyActionReplay->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdKeyActionReplay->setBaseColor(gui_baseCol);
 	cmdKeyActionReplay->addActionListener(miscActionListener);
-	cmdKeyActionReplayClear = new gcn::ImageButton(prefix_with_application_directory_path("data/delete.png"));
+	cmdKeyActionReplayClear = new gcn::ImageButton(prefix_with_data_path("delete.png"));
 	cmdKeyActionReplayClear->setBaseColor(gui_baseCol);
 	cmdKeyActionReplayClear->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdKeyActionReplayClear->setId("cmdKeyActionReplayClear");
@@ -489,7 +489,7 @@ void InitPanelMisc(const config_category& category)
 	cmdKeyFullScreen->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdKeyFullScreen->setBaseColor(gui_baseCol);
 	cmdKeyFullScreen->addActionListener(miscActionListener);
-	cmdKeyFullScreenClear = new gcn::ImageButton(prefix_with_application_directory_path("data/delete.png"));
+	cmdKeyFullScreenClear = new gcn::ImageButton(prefix_with_data_path("delete.png"));
 	cmdKeyFullScreenClear->setBaseColor(gui_baseCol);
 	cmdKeyFullScreenClear->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdKeyFullScreenClear->setId("cmdKeyFullScreenClear");
@@ -506,7 +506,7 @@ void InitPanelMisc(const config_category& category)
 	cmdKeyMinimize->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdKeyMinimize->setBaseColor(gui_baseCol);
 	cmdKeyMinimize->addActionListener(miscActionListener);
-	cmdKeyMinimizeClear = new gcn::ImageButton(prefix_with_application_directory_path("data/delete.png"));
+	cmdKeyMinimizeClear = new gcn::ImageButton(prefix_with_data_path("delete.png"));
 	cmdKeyMinimizeClear->setBaseColor(gui_baseCol);
 	cmdKeyMinimizeClear->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdKeyMinimizeClear->setId("cmdKeyMinimizeClear");

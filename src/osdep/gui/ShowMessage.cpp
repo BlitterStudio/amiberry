@@ -153,7 +153,7 @@ static void InitShowMessage(const std::string& message)
 	if (gui_font == nullptr)
 	{
 		TTF_Init();
-		gui_font = new gcn::SDLTrueTypeFont(prefix_with_application_directory_path("data/AmigaTopaz.ttf"), 15);
+		gui_font = new gcn::SDLTrueTypeFont(prefix_with_data_path("AmigaTopaz.ttf"), 15);
 		gcn::Widget::setGlobalFont(gui_font);
 		gui_font->setAntiAlias(false);
 	}

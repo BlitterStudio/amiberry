@@ -76,7 +76,7 @@ std::string iso_8859_1_to_utf8(std::string& str)
 }
 #endif
 
-string prefix_with_application_directory_path(string currentpath)
+std::string prefix_with_application_directory_path(std::string currentpath)
 {
 #ifdef __MACH__
 // On OS X we return the path of the bundle
@@ -101,6 +101,15 @@ string prefix_with_application_directory_path(string currentpath)
 	}
 	return currentpath;
 #endif
+}
+
+std::string prefix_with_data_path(std::string filename)
+{
+	TCHAR directory[MAX_DPATH];
+	get_data_path(directory, sizeof directory / sizeof(TCHAR));
+	auto result = std::string(directory);
+	result += filename;
+	return result;
 }
 
 int my_setcurrentdir(const TCHAR* curdir, TCHAR* oldcur)

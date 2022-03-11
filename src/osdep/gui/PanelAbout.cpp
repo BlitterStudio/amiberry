@@ -24,7 +24,7 @@ void InitPanelAbout(const config_category& category)
 	SDL_VERSION(&compiled);
 	SDL_GetVersion(&linked);
 	
-	amiberryLogoImage = gcn::Image::load(prefix_with_application_directory_path("data/amiberry-logo.png"));
+	amiberryLogoImage = gcn::Image::load(prefix_with_data_path("amiberry-logo.png"));
 	icon = new gcn::Icon(amiberryLogoImage);
 	lblEmulatorVersion = new gcn::Label(get_version_string());
 	lblCopyright = new gcn::Label("Copyright (C) 2016-2022 Dimitris Panokostas");
