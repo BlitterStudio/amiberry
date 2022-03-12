@@ -10,6 +10,7 @@
 #include <list>
 #include <dirent.h>
 #include <iconv.h>
+#include <iostream>
 #include <filesystem>
 #include "fsdb_host.h"
 #include "uae.h"
@@ -76,6 +77,28 @@ std::string iso_8859_1_to_utf8(std::string& str)
 }
 #endif
 
+// Helper function to copy UTF 8 string to C string
+#ifdef __MACH__
+std::string CFStringCopyUTF8String(CFStringRef aString) {
+    if (aString == NULL) {
+        return NULL;
+    }
+
+    CFIndex length = CFStringGetLength(aString);
+    CFIndex maxSize =
+    CFStringGetMaximumSizeForEncoding(length,
+                                      kCFStringEncodingUTF8);
+    char *temp = (char *)malloc(maxSize);
+    std::string buffer; 
+    if (CFStringGetCString(aString, temp, maxSize,
+                           kCFStringEncodingUTF8)) {
+	buffer = std::string(temp);
+        return buffer;
+    }
+    return NULL;
+}
+#endif
+
 std::string prefix_with_application_directory_path(std::string currentpath)
 {
 #ifdef __MACH__
@@ -84,14 +107,12 @@ std::string prefix_with_application_directory_path(std::string currentpath)
 	CFURLRef appUrlRef;
 	// Get full path to current bundle + filename being fetched
 	appUrlRef = CFBundleCopyResourceURL(CFBundleGetMainBundle(), CFStringCreateWithCString(NULL,currentpath.c_str(),kCFStringEncodingASCII), NULL, NULL);
-	// Create filePathRef referencing the full path 
-	CFStringRef filePathRef = CFURLCopyPath(appUrlRef);
-	// Convert it into a c-string
-	const char* filePath = CFStringGetCStringPtr(filePathRef, kCFStringEncodingUTF8);
-	// Release both of our Ref objects
-	CFRelease(filePathRef);
-	CFRelease(appUrlRef);
-	write_log("Filepath: %s\n",filePath);
+	CFStringRef path;
+	if( !CFURLCopyResourcePropertyForKey(appUrlRef, kCFURLPathKey, &path, NULL))
+	{
+		printf("Unable to fetch App bundle file path\n");
+	}
+	std::string filePath = CFStringCopyUTF8String(path);
 	// Return correct filepath to application
 	return filePath;
 #else
@@ -103,13 +124,39 @@ std::string prefix_with_application_directory_path(std::string currentpath)
 #endif
 }
 
+
 std::string prefix_with_data_path(std::string filename)
 {
+#ifdef __MACH__
+	CFBundleRef mainBundle = CFBundleGetMainBundle();
+	if( mainBundle == NULL )
+	{
+		printf("Can't fetch main bundle\n");
+		return filename;
+	}
+	//CFURLRef dataFileURL = CFBundleCopyResourceURL(mainBundle, CFStringCreateWithCString(NULL,filename.c_str(),kCFStringEncodingASCII), NULL, NULL);
+	std::string filePath = "Data/" + filename;
+	CFURLRef dataFileURL = CFBundleCopyResourceURL(mainBundle, CFStringCreateWithCString(NULL,filePath.c_str(),kCFStringEncodingASCII), NULL, NULL);
+	if( dataFileURL == NULL )
+	{
+		printf("Can't fetch dataFileUrl\n");
+		return filename;
+	}
+	CFStringRef path;
+	if( !CFURLCopyResourcePropertyForKey(dataFileURL, kCFURLPathKey, &path, NULL))
+	{
+		printf("Can't find file path\n");
+		return filename;
+	}
+	filePath = CFStringCopyUTF8String(path);
+	return filePath;
+#else
 	TCHAR directory[MAX_DPATH];
 	get_data_path(directory, sizeof directory / sizeof(TCHAR));
 	auto result = std::string(directory);
 	result += filename;
 	return result;
+#endif
 }
 
 int my_setcurrentdir(const TCHAR* curdir, TCHAR* oldcur)
