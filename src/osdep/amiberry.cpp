@@ -3133,6 +3133,14 @@ void load_amiberry_settings(void)
 				parse_amiberry_settings_line(amiberry_conf_file, linea);
 		}
 		zfile_fclose(fh);
+		// fix old data_dir being equal to application startup dir
+		auto data_dir_string = std::string(data_dir);
+		auto start_path_data_string = std::string(start_path_data);
+		start_path_data_string += "/";
+		if (data_dir_string == start_path_data_string)
+		{
+			_tcscat(data_dir, _T("data/"));
+		}
 	}
 }
 
