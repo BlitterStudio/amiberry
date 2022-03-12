@@ -217,10 +217,10 @@ class DownloadControllerDbActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		char destination[MAX_DPATH];
-		get_configuration_path(destination, MAX_DPATH);
-		strcat(destination, "gamecontrollerdb.txt");
-		write_log("Downloading % ...\n", destination);
+		std::string destination;
+		get_configuration_path(destination.data(), MAX_DPATH);
+		destination += "gamecontrollerdb.txt";
+		write_log("Downloading % ...\n", destination.c_str());
 		const auto* const url = "https://raw.githubusercontent.com/gabomdq/SDL_GameControllerDB/master/gamecontrollerdb.txt";
 		const auto result = download_file(url, destination);
 
