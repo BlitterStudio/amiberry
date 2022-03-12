@@ -33,3 +33,4 @@ extern std::string iso_8859_1_to_utf8(std::string& str);
 extern void utf8_to_latin1_string(std::string& input, std::string& output);
 extern std::string prefix_with_application_directory_path(std::string currentpath);
 extern std::string prefix_with_data_path(std::string filename);
+extern std::string prefix_with_whdboot_path(std::string filename);

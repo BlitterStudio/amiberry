@@ -2,6 +2,8 @@
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
+
+#include "fsdb_host.h"
 #include "SelectorEntry.hpp"
 
 #include "sysdeps.h"
@@ -177,16 +179,15 @@ class DownloadXMLButtonActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		char destination[MAX_DPATH];
-
+		std::string destination;
 		//  download WHDLoad executable
-		snprintf(destination, MAX_DPATH, "%s/whdboot/WHDLoad", start_path_data);
-		write_log("Downloading %s ...\n", destination);
+		destination = prefix_with_whdboot_path("whdboot/WHDLoad");
+		write_log("Downloading %s ...\n", destination.c_str());
 		download_file("https://github.com/midwan/amiberry/blob/master/whdboot/WHDLoad?raw=true", destination);
 
 		//  download boot-data.zip
-		snprintf(destination, MAX_DPATH, "%s/whdboot/boot-data.zip", start_path_data);
-		write_log("Downloading %s ...\n", destination);
+		destination = prefix_with_whdboot_path("boot-data.zip");
+		write_log("Downloading %s ...\n", destination.c_str());
 		download_file("https://github.com/midwan/amiberry/blob/master/whdboot/boot-data.zip?raw=true", destination);
 
 		// download kickstart RTB files for maximum compatibility
@@ -196,8 +197,8 @@ public:
 		download_rtb("kick40068.A1200.RTB");
 		download_rtb("kick40068.A4000.RTB");
 
-		snprintf(destination, MAX_DPATH, "%s/whdboot/game-data/whdload_db.xml", start_path_data);
-		write_log("Downloading %s ...\n", destination);
+		destination = prefix_with_whdboot_path("game-data/whdload_db.xml");
+		write_log("Downloading %s ...\n", destination.c_str());
 		const auto result = download_file("https://github.com/HoraceAndTheSpider/Amiberry-XML-Builder/blob/master/whdload_db.xml?raw=true", destination);
 
 		if (result)

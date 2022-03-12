@@ -59,6 +59,8 @@
 #include <linux/kd.h>
 #endif
 #include <sys/ioctl.h>
+
+#include "fsdb_host.h"
 #include "keyboard.h"
 
 static const char __ver[40] = "$VER: Amiberry 5.0 (2022-03-11)";
@@ -1123,14 +1125,11 @@ bool download_file(const std::string& source, std::string destination)
 
 void download_rtb(std::string filename)
 {
-	char destination[MAX_DPATH];
-	char url[MAX_DPATH];
-	
-	snprintf(destination, MAX_DPATH, "%s/whdboot/save-data/Kickstarts/%s", start_path_data, filename.c_str());
+	const std::string destination = prefix_with_whdboot_path("save-data/Kickstarts/") + filename;
 	if (get_file_size(destination) <= 0)
 	{
-		write_log("Downloading %s ...\n", destination);
-		snprintf(url, MAX_DPATH, "https://github.com/midwan/amiberry/blob/master/whdboot/save-data/Kickstarts/%s?raw=true", filename.c_str());
+		write_log("Downloading %s ...\n", destination.c_str());
+		const std::string url = "https://github.com/midwan/amiberry/blob/master/whdboot/save-data/Kickstarts/" + filename + "?raw=true";
 		download_file(url,  destination);
 	}
 }

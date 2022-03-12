@@ -80,22 +80,22 @@ std::string iso_8859_1_to_utf8(std::string& str)
 // Helper function to copy UTF 8 string to C string
 #ifdef __MACH__
 std::string CFStringCopyUTF8String(CFStringRef aString) {
-    if (aString == NULL) {
-        return NULL;
-    }
+	if (aString == NULL) {
+		return NULL;
+	}
 
-    CFIndex length = CFStringGetLength(aString);
-    CFIndex maxSize =
-    CFStringGetMaximumSizeForEncoding(length,
-                                      kCFStringEncodingUTF8);
-    char *temp = (char *)malloc(maxSize);
-    std::string buffer; 
-    if (CFStringGetCString(aString, temp, maxSize,
-                           kCFStringEncodingUTF8)) {
+	CFIndex length = CFStringGetLength(aString);
+	CFIndex maxSize =
+	CFStringGetMaximumSizeForEncoding(length,
+									  kCFStringEncodingUTF8);
+	char *temp = (char *)malloc(maxSize);
+	std::string buffer; 
+	if (CFStringGetCString(aString, temp, maxSize,
+						   kCFStringEncodingUTF8)) {
 	buffer = std::string(temp);
-        return buffer;
-    }
-    return NULL;
+		return buffer;
+	}
+	return NULL;
 }
 #endif
 
@@ -153,6 +153,40 @@ std::string prefix_with_data_path(std::string filename)
 #else
 	TCHAR directory[MAX_DPATH];
 	get_data_path(directory, sizeof directory / sizeof(TCHAR));
+	auto result = std::string(directory);
+	result += filename;
+	return result;
+#endif
+}
+
+std::string prefix_with_whdboot_path(std::string filename)
+{
+#ifdef __MACH__
+	CFBundleRef mainBundle = CFBundleGetMainBundle();
+	if (mainBundle == NULL)
+	{
+		printf("Can't fetch main bundle\n");
+		return filename;
+	}
+
+	std::string filePath = "Whdboot/" + filename;
+	CFURLRef whdbootUrl = CFBundleCopyResourceURL(mainBundle, CFStringCreateWithCString(NULL, filePath.c_str(), kCFStringEncodingASCII), NULL, NULL);
+	if (whdbootUrl == NULL)
+	{
+		printf("Can't fetch WhdbootUrl\n");
+		return filename;
+	}
+	CFStringRef path;
+	if (!CFURLCopyResourcePropertyForKey(whdbootUrl, kCFURLPathKey, &path, NULL))
+	{
+		printf("Can't find file path\n");
+		return filename;
+	}
+	filePath = CFStringCopyUTF8String(path);
+	return filePath;
+#else
+	TCHAR directory[MAX_DPATH];
+	get_whdbootpath(directory, sizeof directory / sizeof(TCHAR));
 	auto result = std::string(directory);
 	result += filename;
 	return result;
