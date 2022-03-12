@@ -178,10 +178,9 @@ static void InitShowMessage(const std::string& message)
 
 #else
 		gui_font = new gcn::SDLTrueTypeFont(prefix_with_data_path("AmigaTopaz.ttf"), 15);
-#endif
-		gcn::Widget::setGlobalFont(gui_font);
 		gui_font->setAntiAlias(false);
 #endif
+		gcn::Widget::setGlobalFont(gui_font);
 	}
 	
 	wndShowMessage = new gcn::Window("Message");
