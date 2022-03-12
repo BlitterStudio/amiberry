@@ -23,8 +23,32 @@ if [[ ! -d "$USERDIR/Documents/Amiberry/Kickstarts" ]]; then
 	mkdir -p "$USERDIR/Documents/Amiberry/Kickstarts"
 fi
 
-if [[ ! -d "$USERDIR/Documents/Amiberry/RP9" ]]; then
-	mkdir -p "$USERDIR/Documents/Amiberry/RP9"
+if [[ ! -d "$USERDIR/Documents/Amiberry/Whdboot" ]]; then
+	mkdir -p "$USERDIR/Documents/Amiberry/Whdboot"
+fi
+
+if [[ ! -d "$USERDIR/Documents/Amiberry/Whdboot/game-data" ]]; then
+	mkdir -p "$USERDIR/Documents/Amiberry/Whdboot/game-data"
+fi
+
+if [[ ! -d "$USERDIR/Documents/Amiberry/Whdboot/save-data" ]]; then
+	mkdir -p "$USERDIR/Documents/Amiberry/Whdboot/save-data"
+fi
+
+if [[ ! -d "$USERDIR/Documents/Amiberry/Whdboot/save-data/Autoboots" ]]; then
+	mkdir -p "$USERDIR/Documents/Amiberry/Whdboot/save-data/Autoboots"
+fi
+
+if [[ ! -d "$USERDIR/Documents/Amiberry/Whdboot/save-data/Debugs" ]]; then
+	mkdir -p "$USERDIR/Documents/Amiberry/Whdboot/save-data/Debugs"
+fi
+
+if [[ ! -d "$USERDIR/Documents/Amiberry/Whdboot/save-data/Kickstarts" ]]; then
+	mkdir -p "$USERDIR/Documents/Amiberry/Whdboot/save-data/Kickstarts"
+fi
+
+if [[ ! -d "$USERDIR/Documents/Amiberry/Whdboot/save-data/Savegames" ]]; then
+	mkdir -p "$USERDIR/Documents/Amiberry/Whdboot/save-data/Savegames"
 fi
 
 if [[ ! -d "$USERDIR/Documents/Amiberry/Data/Floppy_Sounds" ]]; then
@@ -88,6 +112,14 @@ for file in $CWD_VAR/../Resources/Docs/**/*(.); do
 		echo "Copying $file to $USERDIR/Documents/Amiberry/Docs${file##*/Docs}"
 		mkdir -p $(dirname "$USERDIR/Documents/Amiberry/Docs${file##*/Docs}")
 		cp $file "$USERDIR/Documents/Amiberry/Docs${file##*/Docs}"
+	fi
+done
+
+for file in $CWD_VAR/../Resources/Whdboot/**/*(.); do
+	if [[ ! -f "$USERDIR/Documents/Amiberry/Whdboot${file##*/Whdboot}" ]]; then
+		echo "Copying $file to $USERDIR/Documents/Amiberry/Whdboot${file##*/Whdboot}"
+		mkdir -p $(dirname "$USERDIR/Documents/Amiberry/Whdboot${file##*/Whdboot}")
+		cp $file "$USERDIR/Documents/Amiberry/Whdboot${file##*/Whdboot}"
 	fi
 done
 
