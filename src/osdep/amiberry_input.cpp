@@ -47,7 +47,7 @@ static void fixbuttons(struct didata* did)
 {
 	if (did->buttons > 0)
 		return;
-	write_log(_T("'%s' has no buttons, adding single default button\n"), did->name);
+	write_log(_T("'%s' has no buttons, adding single default button\n"), did->name.c_str());
 	did->buttonmappings[0] = 0;
 	did->buttonsort[0] = 0;
 	did->buttonname[0] = my_strdup(_T("Button"));
