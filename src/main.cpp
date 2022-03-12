@@ -1065,7 +1065,7 @@ long get_file_size(const std::string& filename)
 	return rc == 0 ? static_cast<long>(stat_buf.st_size) : -1;
 }
 
-bool download_file(const std::string& source, std::string destination)
+bool download_file(const std::string& source, const std::string& destination)
 {
 	std::string download_command = "wget -np -nv -O ";
 	auto tmp = destination;
@@ -1087,7 +1087,7 @@ bool download_file(const std::string& source, std::string destination)
 
 	try
 	{
-		char buffer[1035];
+		char buffer[MAX_DPATH];
 		const auto output = popen(download_command.c_str(), "r");
 		if (!output)
 		{
