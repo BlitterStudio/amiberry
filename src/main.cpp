@@ -1123,7 +1123,7 @@ bool download_file(const std::string& source, const std::string& destination)
 	return false;
 }
 
-void download_rtb(std::string filename)
+void download_rtb(const std::string filename)
 {
 	const std::string destination = prefix_with_whdboot_path("save-data/Kickstarts/") + filename;
 	if (get_file_size(destination) <= 0)
