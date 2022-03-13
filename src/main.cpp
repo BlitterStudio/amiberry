@@ -1067,7 +1067,11 @@ long get_file_size(const std::string& filename)
 
 bool download_file(const std::string& source, const std::string& destination)
 {
+#ifdef __MACH__
+	std::string download_command = "/usr/local/bin/wget -np -nv -O ";
+#else
 	std::string download_command = "wget -np -nv -O ";
+#endif
 	auto tmp = destination;
 	tmp = tmp.append(".tmp");
 
@@ -1081,7 +1085,8 @@ bool download_file(const std::string& source, const std::string& destination)
 	{
 		if (std::remove(tmp.c_str()) < 0)
 		{
-			write_log(strerror(errno) + '\n');
+			write_log(strerror(errno));
+			write_log("\n");
 		}
 	}
 
@@ -1100,6 +1105,7 @@ bool download_file(const std::string& source, const std::string& destination)
 			write_log(buffer);
 		}
 		pclose(output);
+		write_log("\n");
 	}
 	catch (...)
 	{
@@ -1111,14 +1117,16 @@ bool download_file(const std::string& source, const std::string& destination)
 	{
 		if (std::rename(tmp.c_str(), destination.c_str()) < 0)
 		{
-			write_log(strerror(errno) + '\n');
+			write_log(strerror(errno));
+			write_log("\n");
 		}
 		return true;
 	}
 
 	if (std::remove(tmp.c_str()) < 0)
 	{
-		write_log(strerror(errno) + '\n');
+		write_log(strerror(errno));
+		write_log("\n");
 	}
 	return false;
 }
