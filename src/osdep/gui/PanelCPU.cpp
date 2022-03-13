@@ -510,7 +510,7 @@ void RefreshPanelCPU()
 	chkFPUJIT->setEnabled(false);
 #endif
 
-#ifdef JIT
+#ifndef JIT
 	chkFPUJIT->setSelected(false);
 	chkFPUJIT->setEnabled(false);
 #endif
