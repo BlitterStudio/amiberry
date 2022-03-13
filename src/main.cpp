@@ -1152,8 +1152,9 @@ bool download_file(const std::string& source, const std::string& destination)
 
 void download_rtb(const std::string filename)
 {
-	const std::string destination = prefix_with_whdboot_path("save-data/Kickstarts/") + filename;
-	if (get_file_size(destination) <= 0)
+	std::string destination_filename = "save-data/Kickstarts/" + filename;
+	const std::string destination = prefix_with_whdboot_path(destination_filename);
+	if (!file_exists(destination))
 	{
 		write_log("Downloading %s ...\n", destination.c_str());
 		const std::string url = "https://github.com/midwan/amiberry/blob/master/whdboot/save-data/Kickstarts/" + filename + "?raw=true";
