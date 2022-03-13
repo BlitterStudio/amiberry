@@ -217,8 +217,9 @@ class DownloadControllerDbActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		std::string destination;
-		get_configuration_path(destination.data(), MAX_DPATH);
+		char config_path[MAX_DPATH];
+		get_configuration_path(config_path, MAX_DPATH);
+		auto destination = std::string(config_path);
 		destination += "gamecontrollerdb.txt";
 		write_log("Downloading % ...\n", destination.c_str());
 		const auto* const url = "https://raw.githubusercontent.com/gabomdq/SDL_GameControllerDB/master/gamecontrollerdb.txt";
