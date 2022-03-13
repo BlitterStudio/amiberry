@@ -129,21 +129,20 @@ std::string prefix_with_data_path(std::string filename)
 {
 #ifdef __MACH__
 	CFBundleRef mainBundle = CFBundleGetMainBundle();
-	if( mainBundle == NULL )
+	if (mainBundle == NULL)
 	{
 		printf("Can't fetch main bundle\n");
 		return filename;
 	}
-	//CFURLRef dataFileURL = CFBundleCopyResourceURL(mainBundle, CFStringCreateWithCString(NULL,filename.c_str(),kCFStringEncodingASCII), NULL, NULL);
 	std::string filePath = "Data/" + filename;
-	CFURLRef dataFileURL = CFBundleCopyResourceURL(mainBundle, CFStringCreateWithCString(NULL,filePath.c_str(),kCFStringEncodingASCII), NULL, NULL);
-	if( dataFileURL == NULL )
+	CFURLRef dataFileURL = CFBundleCopyResourceURL(mainBundle, CFStringCreateWithCString(NULL, filePath.c_str(), kCFStringEncodingASCII), NULL, NULL);
+	if (dataFileURL == NULL)
 	{
 		printf("Can't fetch dataFileUrl\n");
 		return filename;
 	}
 	CFStringRef path;
-	if( !CFURLCopyResourcePropertyForKey(dataFileURL, kCFURLPathKey, &path, NULL))
+	if (!CFURLCopyResourcePropertyForKey(dataFileURL, kCFURLPathKey, &path, NULL))
 	{
 		printf("Can't find file path\n");
 		return filename;
@@ -173,13 +172,13 @@ std::string prefix_with_whdboot_path(std::string filename)
 	CFURLRef whdbootUrl = CFBundleCopyResourceURL(mainBundle, CFStringCreateWithCString(NULL, filePath.c_str(), kCFStringEncodingASCII), NULL, NULL);
 	if (whdbootUrl == NULL)
 	{
-		printf("Can't fetch WhdbootUrl\n");
+		printf("Can't fetch WhdbootUrl (CFBundleCopyResourceURL returned NULL)\n");
 		return filename;
 	}
 	CFStringRef path;
 	if (!CFURLCopyResourcePropertyForKey(whdbootUrl, kCFURLPathKey, &path, NULL))
 	{
-		printf("Can't find file path\n");
+		printf("Can't find file path (CFURLCopyResourcePropertyForKey failed)\n");
 		return filename;
 	}
 	filePath = CFStringCopyUTF8String(path);

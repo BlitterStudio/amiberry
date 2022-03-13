@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 
 #include "sysconfig.h"
 #include "sysdeps.h"
@@ -1065,13 +1066,34 @@ long get_file_size(const std::string& filename)
 	return rc == 0 ? static_cast<long>(stat_buf.st_size) : -1;
 }
 
+bool file_exists(std::string file)
+{
+	namespace fs = std::filesystem;
+	fs::path f { file };
+	return (fs::exists(f));
+}
+
 bool download_file(const std::string& source, const std::string& destination)
 {
-#ifdef __MACH__
-	std::string download_command = "/usr/local/bin/wget -np -nv -O ";
+	// homebrew installs in different locations on OSX Intel vs OSX Apple Silicon
+#if defined (__MACH__) && defined (__arm64__)	
+	std::string wget_path = "/opt/homebrew/wget";
+	if (!file_exists(wget_path))
+	{
+		write_log("Could not locate wget in /opt/homebrew/ - Please use homebrew to install it!\n");
+		return false;
+	}
+#elif defined(__MACH__)
+	std::string wget_path = "/usr/local/bin/wget";
+	if (!file_exists(wget_path))
+	{
+		write_log("Could not locate wget in /usr/local/bin/ - Please use homebrew to install it!\n");
+		return false;
+	}
 #else
-	std::string download_command = "wget -np -nv -O ";
+	std::string wget_path = "wget";
 #endif
+	std::string download_command = wget_path + " -np -nv -O ";
 	auto tmp = destination;
 	tmp = tmp.append(".tmp");
 
@@ -1081,7 +1103,7 @@ bool download_file(const std::string& source, const std::string& destination)
 	download_command.append(" 2>&1");
 
 	// Cleanup if the tmp destination already exists
-	if (get_file_size(tmp) > 0)
+	if (file_exists(tmp))
 	{
 		if (std::remove(tmp.c_str()) < 0)
 		{
@@ -1113,7 +1135,7 @@ bool download_file(const std::string& source, const std::string& destination)
 		return false;
 	}
 
-	if (get_file_size(tmp) > 0)
+	if (file_exists(tmp))
 	{
 		if (std::rename(tmp.c_str(), destination.c_str()) < 0)
 		{
@@ -1123,11 +1145,6 @@ bool download_file(const std::string& source, const std::string& destination)
 		return true;
 	}
 
-	if (std::remove(tmp.c_str()) < 0)
-	{
-		write_log(strerror(errno));
-		write_log("\n");
-	}
 	return false;
 }
 
