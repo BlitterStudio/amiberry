@@ -504,7 +504,7 @@ void RefreshPanelCPU()
 
 #ifdef USE_JIT_FPU
 	chkFPUJIT->setEnabled(changed_prefs.cachesize > 0);
-	chkFPUJIT->setSelected(changed_prefs.compfpu);
+	chkFPUJIT->setSelected(changed_prefs.cachesize > 0 && changed_prefs.compfpu);
 #else
 	chkFPUJIT->setSelected(false);
 	chkFPUJIT->setEnabled(false);
