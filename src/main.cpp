@@ -1105,6 +1105,7 @@ bool download_file(const std::string& source, const std::string& destination)
 	// Cleanup if the tmp destination already exists
 	if (file_exists(tmp))
 	{
+		write_log("Existing file found, removing %s\n", tmp.c_str());
 		if (std::remove(tmp.c_str()) < 0)
 		{
 			write_log(strerror(errno));
@@ -1125,9 +1126,9 @@ bool download_file(const std::string& source, const std::string& destination)
 		while (fgets(buffer, sizeof buffer, output))
 		{
 			write_log(buffer);
+			write_log("\n");
 		}
 		pclose(output);
-		write_log("\n");
 	}
 	catch (...)
 	{
@@ -1137,6 +1138,7 @@ bool download_file(const std::string& source, const std::string& destination)
 
 	if (file_exists(tmp))
 	{
+		write_log("Tmp file will now be renamed: %s\n", tmp.c_str());
 		if (std::rename(tmp.c_str(), destination.c_str()) < 0)
 		{
 			write_log(strerror(errno));
