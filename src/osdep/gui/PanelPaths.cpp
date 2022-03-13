@@ -181,7 +181,7 @@ public:
 	{
 		std::string destination;
 		//  download WHDLoad executable
-		destination = prefix_with_whdboot_path("whdboot/WHDLoad");
+		destination = prefix_with_whdboot_path("WHDLoad");
 		write_log("Downloading %s ...\n", destination.c_str());
 		download_file("https://github.com/midwan/amiberry/blob/master/whdboot/WHDLoad?raw=true", destination);
 
