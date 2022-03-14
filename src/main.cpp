@@ -1077,7 +1077,7 @@ bool download_file(const std::string& source, const std::string& destination)
 {
 	// homebrew installs in different locations on OSX Intel vs OSX Apple Silicon
 #if defined (__MACH__) && defined (__arm64__)	
-	std::string wget_path = "/opt/homebrew/wget";
+	std::string wget_path = "/opt/homebrew/bin/wget";
 	if (!file_exists(wget_path))
 	{
 		write_log("Could not locate wget in /opt/homebrew/ - Please use homebrew to install it!\n");
