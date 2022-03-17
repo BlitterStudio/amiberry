@@ -485,22 +485,36 @@ void toggle_fullscreen(int monid, int mode)
 	auto* p = ad->picasso_on ? &changed_prefs.gfx_apmode[1].gfx_fullscreen : &changed_prefs.gfx_apmode[0].gfx_fullscreen;
 	const auto wfw = ad->picasso_on ? wasfullwindow_p : wasfullwindow_a;
 	auto v = *p;
+	static int prevmode = -1;
 
 	if (mode < 0) {
-		// fullscreen <> window (if in fullwindow: fullwindow <> fullscreen)
-		if (v == GFX_FULLWINDOW)
-			v = GFX_FULLSCREEN;
-		else if (v == GFX_WINDOW)
-			v = GFX_FULLSCREEN;
-		else if (v == GFX_FULLSCREEN)
-		{
-			if (wfw > 0)
-				v = GFX_FULLWINDOW;
-			else
-				v = GFX_WINDOW;
+		// fullwindow->window->fullwindow.
+		// fullscreen->window->fullscreen.
+		// window->fullscreen->window.
+		if (v == GFX_FULLWINDOW) {
+			prevmode = v;
+			v = GFX_WINDOW;
+		}
+		else if (v == GFX_WINDOW) {
+			if (prevmode < 0) {
+				v = GFX_FULLSCREEN;
+				prevmode = v;
+			}
+			else {
+				v = prevmode;
+			}
+		}
+		else if (v == GFX_FULLSCREEN) {
+			{
+				if (wfw > 0)
+					v = GFX_FULLWINDOW;
+				else
+					v = GFX_WINDOW;
+			}
 		}
 	}
 	else if (mode == 0) {
+		prevmode = v;
 		// fullscreen <> window
 		if (v == GFX_FULLSCREEN)
 			v = GFX_WINDOW;
@@ -508,6 +522,7 @@ void toggle_fullscreen(int monid, int mode)
 			v = GFX_FULLSCREEN;
 	}
 	else if (mode == 1) {
+		prevmode = v;
 		// fullscreen <> fullwindow
 		if (v == GFX_FULLSCREEN)
 			v = GFX_FULLWINDOW;
@@ -515,6 +530,7 @@ void toggle_fullscreen(int monid, int mode)
 			v = GFX_FULLSCREEN;
 	}
 	else if (mode == 2) {
+		prevmode = v;
 		// window <> fullwindow
 		if (v == GFX_FULLWINDOW)
 			v = GFX_WINDOW;
