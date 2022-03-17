@@ -100,7 +100,7 @@ void remove_char(char* array, int len, int index)
 
 void parse_custom_settings(struct uae_prefs* p, const char* settings)
 {
-	char temp_options[4096];
+	char temp_options[MAX_DPATH];
 	strcpy(temp_options, settings);
 
 	auto* full_line = strtok(temp_options, "\n");
@@ -128,14 +128,14 @@ struct membuf final : std::streambuf
 
 std::string find_whdload_game_option(const TCHAR* find_setting, const char* whd_options)
 {
-	char temp_options[4096];
-	char temp_setting[4096];
-	char temp_setting_tab[4096];
+	char temp_options[MAX_DPATH];
+	char temp_setting[MAX_DPATH];
+	char temp_setting_tab[MAX_DPATH];
 
 	strcpy(temp_options, whd_options);
 	const auto* output = "nul";
 
-	auto* full_line = strtok(temp_options, "\n");
+	const auto* full_line = strtok(temp_options, "\n");
 
 	while (full_line != nullptr)
 	{
@@ -167,9 +167,9 @@ std::string find_whdload_game_option(const TCHAR* find_setting, const char* whd_
 	return output;
 }
 
-struct game_options get_game_settings(const char* HW)
+game_options get_game_settings(const char* HW)
 {
-	struct game_options output_detail;
+	game_options output_detail;
 	strcpy(output_detail.port0, find_whdload_game_option("PORT0", HW).c_str());
 	strcpy(output_detail.port1, find_whdload_game_option("PORT1", HW).c_str());
 	strcpy(output_detail.control, find_whdload_game_option("PRIMARY_CONTROL", HW).c_str());
@@ -193,7 +193,7 @@ struct game_options get_game_settings(const char* HW)
 void make_rom_symlink(const char* kick_short, char* kick_path, int kick_numb, struct uae_prefs* p)
 {
 	char kick_long[MAX_DPATH];
-	int roms[2] = {-1,-1};
+	int roms[2] = { -1,-1 };
 
 	// do the checks...
 	snprintf(kick_long, MAX_DPATH, "%s/%s", kick_path, kick_short);
@@ -204,7 +204,7 @@ void make_rom_symlink(const char* kick_short, char* kick_path, int kick_numb, st
 	// may have provided their own rom files, so we do not want to remove and replace those.
 	//
 	if (my_existslink(kick_long)) {
-	my_unlink(kick_long);
+		my_unlink(kick_long);
 	}
 
 	if (!my_existsfile(kick_long))
@@ -215,30 +215,30 @@ void make_rom_symlink(const char* kick_short, char* kick_path, int kick_numb, st
 			int r = symlink(p->romfile, kick_long);
 			// VFAT filesystems do not support creation of symlinks.
 			// Fallback to copying file if filesystem does not support the generation of symlinks
-			if( r < 0 && errno == EPERM )
-				r = copyfile( kick_long, p->romfile, true );
+			if (r < 0 && errno == EPERM)
+				r = copyfile(kick_long, p->romfile, true);
 			write_log("Making SymLink for Kickstart ROM: %s  [%s]\n", kick_long, r < 0 ? "Fail" : "Ok");
 		}
 	}
 }
 
-static void symlink_rtb( const char * ext_path )
+static void symlink_rtb(const char* ext_path)
 {
 	char kick_path[MAX_DPATH];
 	char src[MAX_DPATH];
 	char dst[MAX_DPATH];
 
 	// Get non-external whdboot kickstarts dir, which contains master RTB files
-	get_savedatapath( src, MAX_DPATH, 1 );
+	get_savedatapath(src, MAX_DPATH, 1);
 	snprintf(kick_path, MAX_DPATH, "%s/Kickstarts", src);
 
 	int i = 0;
-	while( *rtb_files[i] != '\0' ) {
+	while (*rtb_files[i] != '\0') {
 
 		snprintf(src, MAX_DPATH, "%s/%s", kick_path, rtb_files[i]);
-		snprintf(dst, MAX_DPATH, "%s/%s", ext_path,  rtb_files[i]);
+		snprintf(dst, MAX_DPATH, "%s/%s", ext_path, rtb_files[i]);
 
-		if(!my_existsfile(dst)) symlink( src, dst);
+		if (!my_existsfile(dst)) symlink(src, dst);
 		i++;
 	}
 }
@@ -257,15 +257,15 @@ void symlink_roms(struct uae_prefs* prefs)
 	strncpy(current_dir, start_path_data, MAX_DPATH);
 
 	// are we using save-data/ ?
-	get_savedatapath( tmp, MAX_DPATH, 1 );
+	get_savedatapath(tmp, MAX_DPATH, 1);
 	snprintf(kick_path, MAX_DPATH, "%s/Kickstarts", tmp);
 
 	if (!my_existsdir(kick_path)) {
-	// otherwise, use the old route
+		// otherwise, use the old route
 		get_whdbootpath(tmp, MAX_DPATH);
 		snprintf(kick_path, MAX_DPATH, "%sgame-data/Devs/Kickstarts", tmp);
 	}
-	write_log("WHDBoot - using kickstarts from %s\n", kick_path );
+	write_log("WHDBoot - using kickstarts from %s\n", kick_path);
 
 	// These are all the kickstart rom files found in skick346.lha
 	//   http://aminet.net/package/util/boot/skick346
@@ -287,9 +287,9 @@ void symlink_roms(struct uae_prefs* prefs)
 	snprintf(tmp2, MAX_DPATH, "%s/rom.key", kick_path);
 
 	if (my_existsfile(tmp)) {
-		int r = symlink(tmp, tmp2);
-		if( r < 0 && errno == EPERM )
-			copyfile( tmp2, tmp, true );
+		const int r = symlink(tmp, tmp2);
+		if (r < 0 && errno == EPERM)
+			copyfile(tmp2, tmp, true);
 	}
 }
 
@@ -432,9 +432,9 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	char whd_config[255];
 	char whd_startup[255];
 
-	char selected_slave[4096];
+	char selected_slave[MAX_DPATH];
 	// note!! this should be global later on, and only collected from the XML if set to 'nothing'
-	char subpath[4096];
+	char subpath[MAX_DPATH];
 
 	auto use_slave_libs = false;
 
@@ -477,10 +477,11 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	strcat(uae_config, ".uae");
 
 	// setups for tmp folder.
-	my_mkdir("/tmp/s");
-	my_mkdir("/tmp/c");
-	my_mkdir("/tmp/devs");
-	strcpy(whd_startup, "/tmp/s/startup-sequence");
+	my_mkdir("/tmp/amiberry");
+	my_mkdir("/tmp/amiberry/s");
+	my_mkdir("/tmp/amiberry/c");
+	my_mkdir("/tmp/amiberry/devs");
+	strcpy(whd_startup, "/tmp/amiberry/s/startup-sequence");
 	remove(whd_startup);
 
 	// LOAD HOST OPTIONS
@@ -497,10 +498,9 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 		target_cfgfile_load(&currprefs, uae_config, CONFIG_TYPE_ALL, 0);
 	}
 
-
 	// LOAD GAME SPECIFICS - USE SHA1 IF AVAILABLE
 	snprintf(whd_path, MAX_DPATH, "%sgame-data/", whdbootpath);
-	struct game_options game_detail;
+	game_options game_detail;
 
 	// EDIT THE FILE NAME TO USE HERE
 
@@ -702,16 +702,16 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	// now we should have a startup-file (if we don't, we are going to use the original booter)
 	if (my_existsfile(whd_startup))
 	{
-		// create a symlink to WHDLoad in /tmp/
+		// create a symlink to WHDLoad in /tmp/amiberry/
 		snprintf(whd_path, MAX_DPATH, "%sWHDLoad", whdbootpath);
-		symlink(whd_path, "/tmp/c/WHDLoad");
+		symlink(whd_path, "/tmp/amiberry/c/WHDLoad");
 
-		// Create a symlink to AmiQuit in /tmp/
+		// Create a symlink to AmiQuit in /tmp/amiberry/
 		snprintf(whd_path, MAX_DPATH, "%sAmiQuit", whdbootpath);
-		symlink(whd_path, "/tmp/c/AmiQuit");
+		symlink(whd_path, "/tmp/amiberry/c/AmiQuit");
 
-		// create a symlink for DEVS in /tmp/
-		symlink(kick_path, "/tmp/devs/Kickstarts");
+		// create a symlink for DEVS in /tmp/amiberry/
+		symlink(kick_path, "/tmp/amiberry/devs/Kickstarts");
 	}
 #if DEBUG
 	// debugging code!
@@ -781,7 +781,7 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	//SET THE WHD BOOTER AND GAME DATA
 	if (strlen(selected_slave) != 0) // new booter solution
 	{
-		snprintf(boot_path, MAX_DPATH, "/tmp/");
+		snprintf(boot_path, MAX_DPATH, "/tmp/amiberry/");
 
 		_stprintf(tmp, _T("filesystem2=rw,DH0:DH0:%s,10"), boot_path);
 		txt2 = parse_text_path(_T(tmp));

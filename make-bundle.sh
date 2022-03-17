@@ -34,6 +34,8 @@ cp -R kickstarts Amiberry.app/Contents/Resources/Kickstarts
 cp -R data Amiberry.app/Contents/Resources/Data
 # Copy docs into the bundle
 cp -R docs Amiberry.app/Contents/Resources/Docs
+# Copy whdboot into the bundle
+cp -R whdboot Amiberry.app/Contents/Resources/Whdboot
 
 # Overwrite default conf with OSX specific one
 mkdir Amiberry.app/Contents/resources/conf

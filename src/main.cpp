@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 
 #include "sysconfig.h"
 #include "sysdeps.h"
@@ -59,6 +60,8 @@
 #include <linux/kd.h>
 #endif
 #include <sys/ioctl.h>
+
+#include "fsdb_host.h"
 #include "keyboard.h"
 
 static const char __ver[40] = "$VER: Amiberry beta (2022-03-07)";
@@ -1063,9 +1066,34 @@ long get_file_size(const std::string& filename)
 	return rc == 0 ? static_cast<long>(stat_buf.st_size) : -1;
 }
 
-bool download_file(const std::string& source, std::string destination)
+bool file_exists(std::string file)
 {
-	std::string download_command = "wget -np -nv -O ";
+	namespace fs = std::filesystem;
+	fs::path f { file };
+	return (fs::exists(f));
+}
+
+bool download_file(const std::string& source, const std::string& destination)
+{
+	// homebrew installs in different locations on OSX Intel vs OSX Apple Silicon
+#if defined (__MACH__) && defined (__arm64__)	
+	std::string wget_path = "/opt/homebrew/bin/wget";
+	if (!file_exists(wget_path))
+	{
+		write_log("Could not locate wget in /opt/homebrew/ - Please use homebrew to install it!\n");
+		return false;
+	}
+#elif defined(__MACH__)
+	std::string wget_path = "/usr/local/bin/wget";
+	if (!file_exists(wget_path))
+	{
+		write_log("Could not locate wget in /usr/local/bin/ - Please use homebrew to install it!\n");
+		return false;
+	}
+#else
+	std::string wget_path = "wget";
+#endif
+	std::string download_command = wget_path + " -np -nv -O ";
 	auto tmp = destination;
 	tmp = tmp.append(".tmp");
 
@@ -1075,17 +1103,19 @@ bool download_file(const std::string& source, std::string destination)
 	download_command.append(" 2>&1");
 
 	// Cleanup if the tmp destination already exists
-	if (get_file_size(tmp) > 0)
+	if (file_exists(tmp))
 	{
+		write_log("Existing file found, removing %s\n", tmp.c_str());
 		if (std::remove(tmp.c_str()) < 0)
 		{
-			write_log(strerror(errno) + '\n');
+			write_log(strerror(errno));
+			write_log("\n");
 		}
 	}
 
 	try
 	{
-		char buffer[1035];
+		char buffer[MAX_DPATH];
 		const auto output = popen(download_command.c_str(), "r");
 		if (!output)
 		{
@@ -1096,6 +1126,7 @@ bool download_file(const std::string& source, std::string destination)
 		while (fgets(buffer, sizeof buffer, output))
 		{
 			write_log(buffer);
+			write_log("\n");
 		}
 		pclose(output);
 	}
@@ -1105,32 +1136,28 @@ bool download_file(const std::string& source, std::string destination)
 		return false;
 	}
 
-	if (get_file_size(tmp) > 0)
+	if (file_exists(tmp))
 	{
+		write_log("Tmp file will now be renamed: %s\n", tmp.c_str());
 		if (std::rename(tmp.c_str(), destination.c_str()) < 0)
 		{
-			write_log(strerror(errno) + '\n');
+			write_log(strerror(errno));
+			write_log("\n");
 		}
 		return true;
 	}
 
-	if (std::remove(tmp.c_str()) < 0)
-	{
-		write_log(strerror(errno) + '\n');
-	}
 	return false;
 }
 
-void download_rtb(std::string filename)
+void download_rtb(const std::string filename)
 {
-	char destination[MAX_DPATH];
-	char url[MAX_DPATH];
-	
-	snprintf(destination, MAX_DPATH, "%s/whdboot/save-data/Kickstarts/%s", start_path_data, filename.c_str());
-	if (get_file_size(destination) <= 0)
+	std::string destination_filename = "save-data/Kickstarts/" + filename;
+	const std::string destination = prefix_with_whdboot_path(destination_filename);
+	if (!file_exists(destination))
 	{
-		write_log("Downloading %s ...\n", destination);
-		snprintf(url, MAX_DPATH, "https://github.com/midwan/amiberry/blob/master/whdboot/save-data/Kickstarts/%s?raw=true", filename.c_str());
+		write_log("Downloading %s ...\n", destination.c_str());
+		const std::string url = "https://github.com/midwan/amiberry/blob/master/whdboot/save-data/Kickstarts/" + filename + "?raw=true";
 		download_file(url,  destination);
 	}
 }

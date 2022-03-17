@@ -684,27 +684,7 @@ void setmouseactivexy(int monid, int x, int y, int dir)
 
 	if (isfullscreen() > 0)
 		return;
-	x += mon->amigawin_rect.x;
-	y += mon->amigawin_rect.y;
-	if (dir & 1)
-		x = mon->amigawin_rect.x - diff;
-	if (dir & 2)
-		x = mon->amigawin_rect.w + diff;
-	if (dir & 4)
-		y = mon->amigawin_rect.y - diff;
-	if (dir & 8)
-		y = mon->amigawin_rect.h + diff;
-	if (!dir) {
-		x += (mon->amigawin_rect.w - mon->amigawin_rect.x) / 2;
-		y += (mon->amigawin_rect.h - mon->amigawin_rect.y) / 2;
-	}
-	//if (isfullscreen() < 0) {
-	//	POINT pt;
-	//	pt.x = x;
-	//	pt.y = y;
-	//	if (MonitorFromPoint(pt, MONITOR_DEFAULTTONULL) == NULL)
-	//		return;
-	//}
+
 	if (mouseactive) {
 		disablecapture();
 		SDL_WarpMouseInWindow(mon->sdl_window, x, y);
@@ -1383,9 +1363,8 @@ int handle_msgpump(bool vblank)
 
 bool handle_events()
 {
-	struct AmigaMonitor* mon = &AMonitors[0];
+	const AmigaMonitor* mon = &AMonitors[0];
 	static auto was_paused = 0;
-	static int cnt1, cnt2;
 
 	if (pause_emulation)
 	{
@@ -1410,11 +1389,6 @@ bool handle_events()
 		//inputdevicefunc_mouse.read();
 		inputdevicefunc_joystick.read();
 		inputdevice_handle_inputcode();
-		cnt1 = 0;
-		cnt2--;
-		if (cnt2 <= 0) {
-			cnt2 = 10;
-		}
 	}
 	if (was_paused && (!pause_emulation || quit_program))
 	{
@@ -1424,16 +1398,7 @@ bool handle_events()
 		sound_closed = 0;
 		was_paused = 0;
 	}
-	cnt1--;
-	if (cnt1 <= 0) {
-		uae_time_calibrate();
-		//flush_log();
-		cnt1 = 50 * 5;
-		cnt2--;
-		if (cnt2 <= 0) {
-			cnt2 = 5;
-		}
-	}
+
 	return pause_emulation != 0;
 }
 

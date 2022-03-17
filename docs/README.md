@@ -49,10 +49,10 @@ Alternatively, you can compile the latest version of Amiberry from source yourse
 
 ### Choosing a target
 
-Amiberry's Makefile includes several targets, to cover various platforms. For the Raspberry Pi platform specifically, we offer a special Dispmanx version for maximum performance:
+Amiberry's Makefile includes several targets, to cover various platforms. For the Raspberry Pi platform specifically, we offer a special Dispmanx version for maximum performance, but it requires the `fkms` driver to be used. Dispmanx is disabled when using the newer `kms` driver (now the default from Bullseye onwards):
 
-- SDL2 with DispmanX back-end for graphics - RPI platforms only.
-- SDL2 with whatever back-end it was configured with (e.g. KMS, OpenGL, X11, etc.) - all platforms
+- SDL2 with DispmanX back-end for graphics - RPI platforms only. Needs the `fkms` driver enabled.
+- SDL2 with whatever back-end it was configured with (e.g. KMS, OpenGL, X11, etc.) - all platforms.
 
 ### Compiling a target
 
