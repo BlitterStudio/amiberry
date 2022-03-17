@@ -151,6 +151,8 @@ struct mnemolookup lookuptab[] = {
 	{ i_PTESTW, _T("PTESTW"), NULL, 0 },
 
 	{ i_LPSTOP, _T("LPSTOP"), NULL, 0 },
+	{ i_HALT, _T("HALT"), NULL, 0 },
+	{ i_PULSE, _T("PULSE"), NULL, 0 },
 	{ i_ILLG, _T(""), NULL, 0 },
 };
 
@@ -267,7 +269,7 @@ out2:
 		int mnp = 0;
 		int bitno = 0;
 		int unsized = 1;
-		TCHAR mnemonic[64];
+		TCHAR mnemonic[10];
 		int mnemo;
 
 		wordsizes sz = sz_long;
@@ -308,9 +310,6 @@ out2:
 		if (bitval[bitz] == 3 || bitval[bitC] == 1)
 			continue;
 		if (bitcnt[bitI] && (bitval[bitI] == 0x00 || bitval[bitI] == 0xff))
-			continue;
-
-		if (bitcnt[bitE] && (bitval[bitE] == 0x00))
 			continue;
 
 		/* bitI and bitC get copied to biti and bitc */
@@ -390,9 +389,6 @@ out2:
 			case 'a': srcmode = Aind; pos++; break;
 			}
 			break;
-		case 'L':
-			srcmode = absl;
-			break;
 		case '#':
 			switch (opcstr[pos++]) {
 			case 'z': srcmode = imm; break;
@@ -439,7 +435,7 @@ out2:
 				}
 				break;
 			case 'E': srcmode = immi; srcreg = bitval[bitE];
-		    if (CPU_EMU_SIZE < 5) {
+				if (CPU_EMU_SIZE < 5) { // gb-- what is CPU_EMU_SIZE used for ??
 					/* 1..255 */
 					srcgather = 1;
 					srctype = 6;
@@ -447,7 +443,7 @@ out2:
 				}
 				break;
 			case 'p': srcmode = immi; srcreg = bitval[bitK];
-				if (CPU_EMU_SIZE < 5) {
+				if (CPU_EMU_SIZE < 5) { // gb-- what is CPU_EMU_SIZE used for ??
 					/* 0..3 */
 					srcgather = 1;
 					srctype = 7;
@@ -590,15 +586,10 @@ out2:
 			case 'x': destreg = 0; dstgather = 0; dstpos = 0; break;
 			default: abort();
 			}
-	    if (destmode != absl && (dstpos < 0 || dstpos >= 32))
-				abort ();
 			switch (opcstr[pos]) {
 			case 'p': destmode = Apdi; pos++; break;
 			case 'P': destmode = Aipi; pos++; break;
 			}
-			break;
-		case 'L':
-			destmode = absl;
 			break;
 		case '#':
 			switch (opcstr[pos++]) {
@@ -819,6 +810,8 @@ endofline:
 	}
 }
 
+static int imismatch;
+
 static void handle_merges (long int opcode)
 {
 	uae_u16 smsk;
@@ -874,20 +867,20 @@ static void handle_merges (long int opcode)
 				|| table68k[code].suse != table68k[opcode].suse
 				|| table68k[code].duse != table68k[opcode].duse)
 			{
-				continue;
+				imismatch++; continue;
 			}
 			if (table68k[opcode].suse
 				&& (table68k[opcode].spos != table68k[code].spos
 				|| table68k[opcode].smode != table68k[code].smode
 				|| table68k[opcode].stype != table68k[code].stype))
 			{
-				continue;
+				imismatch++; continue;
 			}
 			if (table68k[opcode].duse
 				&& (table68k[opcode].dpos != table68k[code].dpos
 				|| table68k[opcode].dmode != table68k[code].dmode))
 			{
-				continue;
+				imismatch++; continue;
 			}
 
 			if (code != opcode)
@@ -900,6 +893,7 @@ void do_merges (void)
 {
 	long int opcode;
 	int nr = 0;
+	imismatch = 0;
 	for (opcode = 0; opcode < 65536; opcode++) {
 		if (table68k[opcode].handler != -1 || table68k[opcode].mnemo == i_ILLG)
 			continue;
@@ -907,6 +901,49 @@ void do_merges (void)
 		handle_merges (opcode);
 	}
 	nr_cpuop_funcs = nr;
+}
+
+int get_no_mismatches (void)
+{
+	return imismatch;
+}
+
+static int isreg(amodes mode)
+{
+	if (mode == Dreg || mode == Areg)
+		return 1;
+	return 0;
+}
+
+bool opcode_loop_mode(uae_u16 opcode)
+{
+	struct instr *c = &table68k[opcode];
+	bool loopmode = false;
+	int i;
+	for (i = 0; lookuptab[i].name[0]; i++) {
+		if (c->mnemo == lookuptab[i].mnemo)
+			break;
+	}
+	if (lookuptab[i].flags & MNEMOFLAG_LOOPMODE) {
+		// Source is Dn,An,(An),(An)+,-(An)
+		// Destination is Dn,An,(An),(An)+,-(An)
+		// Both source and destination must not be Dn or An.
+		// RMW instruction must not be Dn or An
+		if (((isreg(c->smode) || c->smode == Aind || c->smode == Apdi || c->smode == Aipi)) &&
+			((!c->duse && !isreg(c->smode)) || (c->duse && (isreg(c->dmode) || c->dmode == Aind || c->dmode == Apdi || c->dmode == Aipi))) &&
+			(!c->duse || (isreg(c->smode) && !isreg(c->dmode)) || (!isreg(c->smode) && isreg(c->dmode)) || (!isreg(c->smode) && !isreg(c->dmode)))) {
+			loopmode = true;
+		}
+		if (c->mnemo == i_MOVE || c->mnemo == i_MOVEA) {
+			// move x,reg: not supported
+			if (isreg(c->dmode))
+				loopmode = false;
+			// move reg,-(an): not supported
+			if (isreg(c->smode) && c->dmode == Apdi)
+				loopmode = false;
+		}
+	}
+	return loopmode;
 }
 
 void init_table68k(void)

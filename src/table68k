@@ -1,0 +1,533 @@
+% 0: bit 0
+% 1: bit 1
+% c: condition code
+% C: condition codes, except F
+% f: direction
+% i: immediate
+% E: immediate, except 00 (Aranym only, EmulOp instruction)
+% I: immediate, except 00 and ff
+% j: immediate 1..8
+% J: immediate 0..15
+% k: immediate 0..7
+% K: immediate 0..63
+% p: immediate 0..3 (CINV and CPUSH: cache field)
+% s: source mode
+% S: source reg
+% d: dest mode
+% D: dest reg
+% r: reg
+% z: size
+%
+% Actually, a sssSSS may appear as a destination, and
+% vice versa. The only difference between sssSSS and
+% dddDDD are the valid addressing modes. There is
+% no match for immediate and pc-rel. addressing modes
+% in case of dddDDD.
+%
+% Arp: --> -(Ar)
+% ArP: --> (Ar)+
+% Ara: --> (Ar)
+% L: (xxx.L)
+%
+% Fields on a line: 
+% 16 chars bitpattern : 
+% CPU level / privilege level :
+%   CPU level 0: 68000
+%             1: 68010
+%             2: 68020
+%             3: 68030
+%             4: 68040
+%             5: 68060
+%			  [Everything from 68020 possibly allows for FPU emulation]
+%   Unimplemented after:
+%             0: Normal
+%             3: Not implemented in 68030 and later
+%             4: Not implemented in 68040 and later
+%             5: Not implemented in 68060
+%   privilege level 0: not privileged
+%                   1: unprivileged only on 68000 (check regs.s)
+%                   2: privileged                 (check regs.s)
+%                   3: privileged if size == word (check regs.s)
+% Flags set by instruction: XNZVC :
+% Flags used by instruction: XNZVC :
+%   - means flag unaffected / unused
+%   0 means flag reset
+%   1 means flag set
+%   ? means programmer was too lazy to check or instruction may trap
+%   + means instruction is conditional branch (ignored, only for sync)
+%   / means instruction is unconditional branch/call (ignored, only for sync)
+%   x means flag is unknown and well-behaved programs shouldn't check it
+%     everything else means flag set/used
+%
+% Control flow
+%   two letters, combination of
+%     - nothing
+%     T the instruction may trap or cause an exception
+%     B branch instruction
+%     J jump instruction
+%     R return instruction
+%
+% srcaddr status destaddr status :
+%   bitmasks of
+%   1 means fetched
+%   2 means stored
+%   4 means jump offset
+%   8 means jump address
+%
+% instruction
+% optional line feed and 68030 Head/Tail/Cycles/ea calculation
+%
+
+0000 0000 0011 1100:000:XNZVC:XNZVC:--:10: ORSR.B  #1
+0000 0000 0111 1100:002:XNZVC:XNZVC:T-:10: ORSR.W  #1
+0000 0zz0 11ss sSSS:250:-?Z?C:-----:T-:11: CHK2.z  #1,s[!Dreg,Areg,Aipi,Apdi,Immd]
+
+0000 0000 zzdd dDDD:000:-NZ00:-----:--:13: OR.z    #z,d[Dreg]
+- 2 0 2 fiea
+0000 0000 zzdd dDDD:000:-NZ00:-----:--:13: OR.z    #z,d[!Areg,Dreg]
+- 0 1 3 fiea
+
+0000 0010 0011 1100:000:XNZVC:XNZVC:--:10: ANDSR.B #1
+0000 0010 0111 1100:002:XNZVC:XNZVC:T-:10: ANDSR.W #1
+
+0000 0010 zzdd dDDD:000:-NZ00:-----:--:13: AND.z   #z,d[Dreg]
+- 2 0 2 fiea
+0000 0010 zzdd dDDD:000:-NZ00:-----:--:13: AND.z   #z,d[!Areg,Dreg]
+- 0 1 3 fiea
+0000 0100 zzdd dDDD:000:XNZVC:-----:--:13: SUB.z   #z,d[Dreg]
+- 2 0 2 fiea
+0000 0100 zzdd dDDD:000:XNZVC:-----:--:13: SUB.z   #z,d[!Areg,Dreg]
+- 0 1 3 fiea
+0000 0110 zzdd dDDD:000:XNZVC:-----:--:13: ADD.z   #z,d[Dreg]
+- 2 0 2 fiea
+0000 0110 zzdd dDDD:000:XNZVC:-----:--:13: ADD.z   #z,d[!Areg,Dreg]
+- 0 1 3 fiea
+
+0000 0110 11ss sSSS:230:-----:XNZVC:--:10: CALLM   s[!Dreg,Areg,Aipi,Apdi,Immd]
+0000 0110 11ss sSSS:230:XNZVC:-----:-R:10: RTM     s[Dreg,Areg]
+
+0000 1000 00ss sSSS:000:--Z--:-----:--:11: BTST    #1,s[Dreg]
+- 4 0 4
+0000 1000 00ss sSSS:000:--Z--:-----:--:11: BTST    #1,s[!Areg,Dreg,Immd]
+- 0 0 4 fiea
+0000 1000 01ss sSSS:000:--Z--:-----:--:13: BCHG    #1,s[Dreg]
+- 6 0 6
+0000 1000 01ss sSSS:000:--Z--:-----:--:13: BCHG    #1,s[!Areg,Dreg,Immd,PC8r,PC16]
+- 0 0 6 fiea
+0000 1000 10ss sSSS:000:--Z--:-----:--:13: BCLR    #1,s[Dreg]
+- 6 0 6
+0000 1000 10ss sSSS:000:--Z--:-----:--:13: BCLR    #1,s[!Areg,Dreg,Immd,PC8r,PC16]
+- 0 0 6 fiea
+0000 1000 11ss sSSS:000:--Z--:-----:--:13: BSET    #1,s[Dreg]
+- 6 0 6
+0000 1000 11ss sSSS:000:--Z--:-----:--:13: BSET    #1,s[!Areg,Dreg,Immd,PC8r,PC16]
+- 0 0 6 fiea
+
+0000 1010 0011 1100:000:XNZVC:XNZVC:--:10: EORSR.B #1
+0000 1010 0111 1100:002:XNZVC:XNZVC:T-:10: EORSR.W #1
+
+0000 1010 zzdd dDDD:000:-NZ00:-----:--:13: EOR.z   #z,d[Dreg]
+- 2 0 2 fiea
+0000 1010 zzdd dDDD:000:-NZ00:-----:--:13: EOR.z   #z,d[!Areg,Dreg]
+- 0 1 3 fiea
+0000 1100 zzss sSSS:000:-NZVC:-----:--:11: CMP.z   #z,s[Dreg]
+- 2 0 2 fiea
+0000 1100 zzss sSSS:000:-NZVC:-----:--:11: CMP.z   #z,s[!Areg,Dreg,Immd,PC8r,PC16]
+- 0 0 2 fiea
+0000 1100 zzss sSSS:200:-NZVC:-----:--:11: CMP.z   #z,s[PC8r,PC16]
+- 0 0 2 fiea
+
+0000 1010 11ss sSSS:200:-NZVC:-----:--:13: CAS.B   #1,s[!Dreg,Areg,Immd,PC8r,PC16]
+0000 1100 11ss sSSS:200:-NZVC:-----:--:13: CAS.W   #1,s[!Dreg,Areg,Immd,PC8r,PC16]
+0000 1100 1111 1100:250:-NZVC:-----:--:10: CAS2.W  #2
+0000 1110 zzss sSSS:102:-----:-----:T-:13: MOVES.z #1,s[!Dreg,Areg,Immd,PC8r,PC16]
+0000 1110 11ss sSSS:200:-NZVC:-----:--:13: CAS.L   #1,s[!Dreg,Areg,Immd,PC8r,PC16]
+0000 1110 1111 1100:250:-NZVC:-----:--:10: CAS2.L  #2
+
+0000 rrr1 00dd dDDD:050:-----:-----:--:12: MVPMR.W d[Areg-Ad16],Dr
+0000 rrr1 01dd dDDD:050:-----:-----:--:12: MVPMR.L d[Areg-Ad16],Dr
+0000 rrr1 10dd dDDD:050:-----:-----:--:12: MVPRM.W Dr,d[Areg-Ad16]
+0000 rrr1 11dd dDDD:050:-----:-----:--:12: MVPRM.L Dr,d[Areg-Ad16]
+
+0000 rrr1 00ss sSSS:000:--Z--:-----:--:11: BTST    Dr,s[Dreg]
+- 4 0 4
+0000 rrr1 00ss sSSS:000:--Z--:-----:--:11: BTST    Dr,s[!Areg,Dreg]
+- 0 0 4 fea
+0000 rrr1 01ss sSSS:000:--Z--:-----:--:13: BCHG    Dr,s[Dreg]
+- 6 0 6
+0000 rrr1 01ss sSSS:000:--Z--:-----:--:13: BCHG    Dr,s[!Areg,Dreg,Immd,PC8r,PC16]
+- 0 0 6 fea
+0000 rrr1 10ss sSSS:000:--Z--:-----:--:13: BCLR    Dr,s[Dreg]
+- 6 0 6
+0000 rrr1 10ss sSSS:000:--Z--:-----:--:13: BCLR    Dr,s[!Areg,Dreg,Immd,PC8r,PC16]
+- 0 0 6 fea
+0000 rrr1 11ss sSSS:000:--Z--:-----:--:13: BSET    Dr,s[Dreg]
+- 6 0 6
+0000 rrr1 11ss sSSS:000:--Z--:-----:--:13: BSET    Dr,s[!Areg,Dreg,Immd,PC8r,PC16]
+- 0 0 6 fea
+
+% Move cycles are special cased in gencpu.c
+0001 DDDd ddss sSSS:000:-NZ00:-----:--:12: MOVE.B  s,d[!Areg]
+0011 DDDd ddss sSSS:000:-----:-----:--:12: MOVEA.W s,d[Areg]
+0011 DDDd ddss sSSS:000:-NZ00:-----:--:12: MOVE.W  s,d[!Areg]
+0010 DDDd ddss sSSS:000:-----:-----:--:12: MOVEA.L s,d[Areg]
+0010 DDDd ddss sSSS:000:-NZ00:-----:--:12: MOVE.L  s,d[!Areg]
+
+0100 0000 zzdd dDDD:000:XNZVC:X-Z--:--:30: NEGX.z  d[Dreg]
+- 2 0 2
+0100 0000 zzdd dDDD:000:XNZVC:X-Z--:--:30: NEGX.z  d[!Areg,Dreg]
+- 0 1 3 fea
+0100 0000 11dd dDDD:001:-----:XNZVC:T-:10: MVSR2.W d[Dreg]
+- 2 0 4
+0100 0000 11dd dDDD:001:-----:XNZVC:T-:10: MVSR2.W d[!Areg,Dreg]
+- 2 0 4 cea
+0100 0010 zzdd dDDD:000:-0100:-----:--:20: CLR.z   d[Dreg]
+- 2 0 2
+0100 0010 zzdd dDDD:000:-0100:-----:--:20: CLR.z   d[!Areg,Dreg]
+- 0 1 3 cea
+0100 0010 11dd dDDD:100:-----:XNZVC:--:10: MVSR2.B d[Dreg]
+- 2 0 4
+0100 0010 11dd dDDD:100:-----:XNZVC:--:10: MVSR2.B d[!Areg,Dreg]
+- 2 0 4 cea
+0100 0100 zzdd dDDD:000:XNZVC:-----:--:30: NEG.z   d[Dreg]
+- 2 0 2
+0100 0100 zzdd dDDD:000:XNZVC:-----:--:30: NEG.z   d[!Areg,Dreg]
+- 0 1 3 fea
+0100 0100 11ss sSSS:000:XNZVC:-----:--:10: MV2SR.B s[Dreg]
+- 4 0 4
+0100 0100 11ss sSSS:000:XNZVC:-----:--:10: MV2SR.B s[!Areg,Dreg]
+- 0 0 4 fea
+0100 0110 zzdd dDDD:000:-NZ00:-----:--:30: NOT.z   d[Dreg]
+- 2 0 2
+0100 0110 zzdd dDDD:000:-NZ00:-----:--:30: NOT.z   d[!Areg,Dreg]
+- 0 1 3 fea
+0100 0110 11ss sSSS:002:XNZVC:XNZVC:T-:10: MV2SR.W s[!Areg]
+- 0 0 8 fea
+0100 1000 0000 1rrr:200:-----:-----:--:31: LINK.L  Ar,#2
+- 2 0 6
+0100 1000 00dd dDDD:000:X?Z?C:X-Z--:--:30: NBCD.B  d[!Areg]
+- 0 0 6
+
+0100 1000 0100 1kkk:100:-----:-----:T-:10: BKPT    #k
+
+0100 1000 01ss sSSS:000:-NZ00:-----:--:30: SWAP.W  s[Dreg]         
+- 4 0 4
+0100 1000 01ss sSSS:000:-----:-----:--:00: PEA.L   s[!Dreg,Areg,Aipi,Apdi,Immd]
+- 0 2 4 cea
+0100 1000 10dd dDDD:000:-NZ00:-----:--:30: EXT.W   d[Dreg]
+- 4 0 4
+
+0100 1000 10dd dDDD:000:-----:-----:--:02: MVMLE.W #1,d[!Dreg,Areg,Aipi]
+
+0100 1000 11dd dDDD:000:-NZ00:-----:--:30: EXT.L   d[Dreg]
+- 4 0 4
+
+0100 1000 11dd dDDD:000:-----:-----:--:02: MVMLE.L #1,d[!Dreg,Areg,Aipi]
+
+0100 1001 11dd dDDD:200:-NZ00:-----:--:30: EXT.B   d[Dreg]         
+- 4 0 4
+0100 1010 zzss sSSS:000:-NZ00:-----:--:10: TST.z   s[Dreg]
+- 0 0 2
+0100 1010 zzss sSSS:000:-NZ00:-----:--:10: TST.z   s[!Areg,Dreg,PC16,PC8r,Immd]
+- 0 0 2 fea
+0100 1010 zzss sSSS:200:-NZ00:-----:--:10: TST.z   s[Areg,PC16,PC8r,Immd]
+- 0 0 2 fea
+0100 1010 11dd dDDD:000:-NZ00:-----:--:30: TAS.B   d[Dreg]
+- 0 0 2
+0100 1010 11dd dDDD:000:-NZ00:-----:--:30: TAS.B   d[!Areg,Dreg]
+- 0 0 2 fea
+
+0100 1010 1111 1100:000:-----:-----:T-:00: ILLEGAL
+
+0100 1100 00ss sSSS:200:-NZVC:-----:--:13: MULL.L  #1,s[!Areg]
+- 2 0 30 fiea
+0100 1100 01ss sSSS:200:-NZV0:-----:T-:13: DIVL.L  #1,s[!Areg]
+- 0 0 50 fiea
+
+0100 1100 10ss sSSS:000:-----:-----:--:01: MVMEL.W #1,s[!Dreg,Areg,Apdi,Immd]
+0100 1100 11ss sSSS:000:-----:-----:--:01: MVMEL.L #1,s[!Dreg,Areg,Apdi,Immd]
+0100 1110 0100 JJJJ:000:-----:XNZVC:--:10: TRAP    #J
+
+0100 1110 0101 0rrr:000:-----:-----:--:31: LINK.W  Ar,#1
+- 0 0 4
+0100 1110 0101 1rrr:000:-----:-----:--:30: UNLK.L  Ar
+- 0 0 5
+0100 1110 0110 0rrr:002:-----:-----:T-:10: MVR2USP.L Ar
+- 4 0 4
+0100 1110 0110 1rrr:002:-----:-----:T-:20: MVUSP2R.L Ar
+- 4 0 4
+0100 1110 0111 0000:002:-----:-----:T-:00: RESET
+- 0 0 518
+0100 1110 0111 0001:000:-----:-----:--:00: NOP
+- 0 0 2
+0100 1110 0111 0010:002:XNZVC:-----:T-:10: STOP    #1
+- 0 0 8
+0100 1110 0111 0011:002:XNZVC:-----:TR:00: RTE
+- 1 9 18
+0100 1110 0111 0100:100:-----:-----:-R:10: RTD     #1
+- 2 0 10
+0100 1110 0111 0101:000:-----:-----:-R:00: RTS
+- 1 0 9
+
+0100 1110 0111 0110:000:-----:XNZVC:T-:00: TRAPV
+
+0100 1110 0111 0111:000:XNZVC:-----:-R:00: RTR
+- 1 0 12
+
+0100 1110 0111 1010:100:-----:-----:T-:10: MOVEC2  #1
+- 6 0 6
+0100 1110 0111 1011:100:-----:-----:T-:10: MOVE2C  #1
+- 6 0 6
+0100 1110 10ss sSSS:000://///://///:-J:80: JSR.L   s[!Dreg,Areg,Aipi,Apdi,Immd]
+- 0 0 4 jea
+
+0100 rrr1 00ss sSSS:200:-N???:-----:T-:11: CHK.L   s[!Areg],Dr
+0100 rrr1 10ss sSSS:000:-N???:-----:T-:11: CHK.W   s[!Areg],Dr
+
+0100 1110 11ss sSSS:000://///://///:-J:80: JMP.L   s[!Dreg,Areg,Aipi,Apdi,Immd]
+- 4 0 4 jea
+0100 rrr1 11ss sSSS:000:-----:-----:--:02: LEA.L   s[!Dreg,Areg,Aipi,Apdi,Immd],Ar
+- 2 0 2 cea
+
+% This variant of ADDQ is word and long sized only
+0101 jjj0 01dd dDDD:000:-----:-----:--:13: ADDA.W  #j,d[Areg]
+- 2 0 2
+0101 jjj0 10dd dDDD:000:-----:-----:--:13: ADDA.L  #j,d[Areg]
+- 2 0 2
+0101 jjj0 zzdd dDDD:000:XNZVC:-----:--:13: ADD.z   #j,d[Dreg]
+- 2 0 2
+0101 jjj0 zzdd dDDD:000:XNZVC:-----:--:13: ADD.z   #j,d[!Areg,Dreg]
+- 0 1 3 fea
+
+% This variant of SUBQ is word and long sized only
+0101 jjj1 01dd dDDD:000:-----:-----:--:13: SUBA.W  #j,d[Areg]
+- 2 0 2
+0101 jjj1 10dd dDDD:000:-----:-----:--:13: SUBA.L  #j,d[Areg]
+- 2 0 2
+0101 jjj1 zzdd dDDD:000:XNZVC:-----:--:13: SUB.z   #j,d[Dreg]
+- 2 0 2
+0101 jjj1 zzdd dDDD:000:XNZVC:-----:--:13: SUB.z   #j,d[!Areg,Dreg]
+- 0 1 3 fea
+0101 cccc 1100 1rrr:000:-----:-++++:-B:31: DBcc.W  Dr,#1
+- -1 0 0
+0101 cccc 11dd dDDD:000:-----:-++++:--:20: Scc.B   d[Dreg]
+- 0 0 2
+0101 cccc 11dd dDDD:000:-----:-++++:--:20: Scc.B   d[!Areg,Dreg]
+- 0 0 2 cea
+
+0101 cccc 1111 1010:200:-----:-????:T-:10: TRAPcc  #1
+0101 cccc 1111 1011:200:-----:-????:T-:10: TRAPcc  #2
+0101 cccc 1111 1100:200:-----:-????:T-:00: TRAPcc
+
+% Bxx.L is 68020 only, but setting the CPU level to 2 would give illegal
+% instruction exceptions when compiling a 68000 only emulation, which isn't
+% what we want either.
+0110 0001 0000 0000:000://///://///:-B:40: BSR.W   #1
+- 2 0 6
+0110 0001 IIII IIII:000://///://///:-B:40: BSR.B   #i
+- 2 0 6
+0110 0001 1111 1111:000://///://///:-B:40: BSR.L   #2
+- 2 0 6
+0110 CCCC 0000 0000:000:-----:-++++:-B:40: Bcc.W   #1
+- -1 0 0
+0110 CCCC IIII IIII:000:-----:-++++:-B:40: Bcc.B   #i
+- -1 0 0
+0110 CCCC 1111 1111:000:-----:-++++:-B:40: Bcc.L   #2
+- -1 0 0
+
+0111 rrr0 iiii iiii:000:-NZ00:-----:--:12: MOVE.L  #i,Dr
+
+1000 rrr0 zzss sSSS:000:-NZ00:-----:--:13: OR.z    s[Dreg],Dr
+- 2 0 2
+1000 rrr0 zzss sSSS:000:-NZ00:-----:--:13: OR.z    s[!Areg,Dreg],Dr
+- 0 0 2 fea
+
+1000 rrr0 11ss sSSS:000:-NZV0:-----:T-:13: DIVU.W  s[Dreg],Dr
+- 2 0 20
+1000 rrr0 11ss sSSS:000:-NZV0:-----:T-:13: DIVU.W  s[!Areg,Dreg],Dr
+- 0 0 20 fea
+
+1000 rrr1 00dd dDDD:000:X?Z?C:X-Z--:--:13: SBCD.B  d[Dreg],Dr
+- 0 0 4
+1000 rrr1 00dd dDDD:000:X?Z?C:X-Z--:--:13: SBCD.B  d[Areg-Apdi],Arp      
+- 2 1 13
+
+1000 rrr1 zzdd dDDD:000:-NZ00:-----:--:13: OR.z    Dr,d[!Areg,Dreg]
+- 0 1 3 fea
+
+1000 rrr1 01dd dDDD:200:-----:-----:--:12: PACK    d[Dreg],Dr
+- 6 0 6
+1000 rrr1 01dd dDDD:200:-----:-----:--:12: PACK    d[Areg-Apdi],Arp
+- 2 1 11
+1000 rrr1 10dd dDDD:200:-----:-----:--:12: UNPK    d[Dreg],Dr
+- 8 0 8
+1000 rrr1 10dd dDDD:200:-----:-----:--:12: UNPK    d[Areg-Apdi],Arp
+- 2 1 11
+
+1000 rrr1 11ss sSSS:000:-NZV0:-----:T-:13: DIVS.W  s[Dreg],Dr
+- 2 0 20
+1000 rrr1 11ss sSSS:000:-NZV0:-----:T-:13: DIVS.W  s[!Areg,Dreg],Dr
+- 0 0 20 fea
+
+1001 rrr0 zzss sSSS:000:XNZVC:-----:--:13: SUB.z   s[Areg,Dreg],Dr
+- 2 0 2
+1001 rrr0 zzss sSSS:000:XNZVC:-----:--:13: SUB.z   s[!Areg,Dreg],Dr
+- 0 0 2 fea
+1001 rrr0 11ss sSSS:000:-----:-----:--:13: SUBA.W  s[Areg,Dreg],Ar
+- 4 0 4
+1001 rrr0 11ss sSSS:000:-----:-----:--:13: SUBA.W  s[!Areg,Dreg],Ar
+- 0 0 4 fea
+
+1001 rrr1 zzdd dDDD:000:XNZVC:X-Z--:--:13: SUBX.z  d[Dreg],Dr
+- 2 0 2
+1001 rrr1 zzdd dDDD:000:XNZVC:X-Z--:--:13: SUBX.z  d[Areg-Apdi],Arp
+- 2 1 9
+
+1001 rrr1 zzdd dDDD:000:XNZVC:-----:--:13: SUB.z   Dr,d[!Areg,Dreg]
+- 0 1 3 fea
+1001 rrr1 11ss sSSS:000:-----:-----:--:13: SUBA.L  s[Areg,Dreg],Ar
+- 2 0 2
+1001 rrr1 11ss sSSS:000:-----:-----:--:13: SUBA.L  s[!Areg,Dreg],Ar
+- 0 0 2 fea
+
+1011 rrr0 zzss sSSS:000:-NZVC:-----:--:11: CMP.z   s[Areg,Dreg],Dr
+- 2 0 2
+1011 rrr0 zzss sSSS:000:-NZVC:-----:--:11: CMP.z   s[!Areg,Dreg],Dr
+- 0 0 2 fea
+1011 rrr0 11ss sSSS:000:-NZVC:-----:--:11: CMPA.W  s[Areg,Dreg],Ar
+- 4 0 4
+1011 rrr0 11ss sSSS:000:-NZVC:-----:--:11: CMPA.W  s[!Areg,Dreg],Ar
+- 0 0 4 fea
+1011 rrr1 11ss sSSS:000:-NZVC:-----:--:11: CMPA.L  s[Areg,Dreg],Ar
+- 4 0 4
+1011 rrr1 11ss sSSS:000:-NZVC:-----:--:11: CMPA.L  s[!Areg,Dreg],Ar
+- 0 0 4 fea
+1011 rrr1 zzdd dDDD:000:-NZVC:-----:--:11: CMPM.z  d[Areg-Aipi],ArP
+- 0 0 8
+1011 rrr1 zzdd dDDD:000:-NZ00:-----:--:13: EOR.z   Dr,d[Dreg]
+- 2 0 2
+1011 rrr1 zzdd dDDD:000:-NZ00:-----:--:13: EOR.z   Dr,d[!Areg,Dreg]
+- 0 1 3 fea
+
+1100 rrr0 zzss sSSS:000:-NZ00:-----:--:13: AND.z   s[Dreg],Dr
+- 2 0 2 fea
+1100 rrr0 zzss sSSS:000:-NZ00:-----:--:13: AND.z   s[!Areg,Dreg],Dr
+- 0 1 3 fea
+1100 rrr0 11ss sSSS:000:-NZ00:-----:--:13: MULU.W  s[!Areg],Dr
+- 2 0 12 fea
+
+1100 rrr1 00dd dDDD:000:X?Z?C:X-Z--:--:13: ABCD.B  d[Dreg],Dr
+- 0 0 4
+1100 rrr1 00dd dDDD:000:X?Z?C:X-Z--:--:13: ABCD.B  d[Areg-Apdi],Arp
+- 2 1 13
+
+1100 rrr1 zzdd dDDD:000:-NZ00:-----:--:13: AND.z   Dr,d[!Areg,Dreg]
+- 0 1 3 fea
+1100 rrr1 01dd dDDD:000:-----:-----:--:33: EXG.L   Dr,d[Dreg]      
+- 4 0 4
+1100 rrr1 01dd dDDD:000:-----:-----:--:33: EXG.L   Ar,d[Areg]            
+- 4 0 4
+1100 rrr1 10dd dDDD:000:-----:-----:--:33: EXG.L   Dr,d[Areg]      
+- 4 0 4
+1100 rrr1 11ss sSSS:000:-NZ00:-----:--:13: MULS.W  s[!Areg],Dr
+- 2 0 12 fea
+
+1101 rrr0 zzss sSSS:000:XNZVC:-----:--:13: ADD.z   s[Areg,Dreg],Dr
+- 2 0 2
+1101 rrr0 zzss sSSS:000:XNZVC:-----:--:13: ADD.z   s[!Areg,Dreg],Dr
+- 0 0 2 fea
+1101 rrr0 11ss sSSS:000:-----:-----:--:13: ADDA.W  s[Areg,Dreg],Ar
+- 0 0 4
+1101 rrr0 11ss sSSS:000:-----:-----:--:13: ADDA.W  s[!Areg,Dreg],Ar
+- 4 0 4 fea
+
+1101 rrr1 zzdd dDDD:000:XNZVC:X-Z--:--:13: ADDX.z  d[Dreg],Dr
+- 2 0 2
+1101 rrr1 zzdd dDDD:000:XNZVC:X-Z--:--:13: ADDX.z  d[Areg-Apdi],Arp
+- 2 1 9
+
+1101 rrr1 zzdd dDDD:000:XNZVC:-----:--:13: ADD.z   Dr,d[!Areg,Dreg]
+- 0 1 3 fea
+1101 rrr1 11ss sSSS:000:-----:-----:--:13: ADDA.L  s[Areg,Dreg],Ar
+- 2 0 2
+1101 rrr1 11ss sSSS:000:-----:-----:--:13: ADDA.L  s[!Areg,Dreg],Ar
+- 0 0 2 fea
+
+1110 jjjf zz00 0RRR:000:XNZVC:-----:--:13: ASf.z   #j,DR
+- 2 0 6
+1110 jjjf zz00 1RRR:000:XNZ0C:-----:--:13: LSf.z   #j,DR
+- 4 0 4
+1110 jjjf zz01 0RRR:000:XNZ0C:X----:--:13: ROXf.z  #j,DR
+- 10 0 12
+1110 jjjf zz01 1RRR:000:-NZ0C:-----:--:13: ROf.z   #j,DR
+- 4 0 6
+1110 rrrf zz10 0RRR:000:XNZVC:X----:--:13: ASf.z   Dr,DR
+- 4 0 6
+1110 rrrf zz10 1RRR:000:XNZ0C:X----:--:13: LSf.z   Dr,DR
+- 6 0 6
+1110 rrrf zz11 0RRR:000:XNZ0C:X----:--:13: ROXf.z  Dr,DR
+- 10 0 12
+1110 rrrf zz11 1RRR:000:-NZ0C:-----:--:13: ROf.z   Dr,DR
+- 6 0 8
+1110 000f 11dd dDDD:000:XNZVC:-----:--:13: ASfW.W  d[!Dreg,Areg]
+- 0 0 4 fea
+1110 001f 11dd dDDD:000:XNZ0C:-----:--:13: LSfW.W  d[!Dreg,Areg]
+- 0 0 4 fea
+1110 010f 11dd dDDD:000:XNZ0C:X----:--:13: ROXfW.W d[!Dreg,Areg]
+- 0 0 4 fea
+1110 011f 11dd dDDD:000:-NZ0C:-----:--:13: ROfW.W  d[!Dreg,Areg]
+- 0 0 6 fea
+
+1110 1000 11ss sSSS:200:-NZ00:-----:--:11: BFTST   #1,s[!Areg,Apdi,Aipi,Immd]
+1110 1001 11ss sSSS:200:-NZ00:-----:--:11: BFEXTU  #1,s[!Areg,Apdi,Aipi,Immd]
+1110 1010 11ss sSSS:200:-NZ00:-----:--:13: BFCHG   #1,s[!Areg,Apdi,Aipi,Immd,PC8r,PC16]
+1110 1011 11ss sSSS:200:-NZ00:-----:--:11: BFEXTS  #1,s[!Areg,Apdi,Aipi,Immd]
+1110 1100 11ss sSSS:200:-NZ00:-----:--:13: BFCLR   #1,s[!Areg,Apdi,Aipi,Immd,PC8r,PC16]
+1110 1101 11ss sSSS:200:-NZ00:-----:--:11: BFFFO   #1,s[!Areg,Apdi,Aipi,Immd]
+1110 1110 11ss sSSS:200:-NZ00:-----:--:13: BFSET   #1,s[!Areg,Apdi,Aipi,Immd,PC8r,PC16]
+1110 1111 11ss sSSS:200:-NZ00:-----:--:13: BFINS   #1,s[!Areg,Apdi,Aipi,Immd,PC8r,PC16]
+
+% floating point co processor
+1111 0010 00ss sSSS:200:-----:-----:--:11: FPP      #1,s
+1111 0010 01ss sSSS:200:-----:-----:-B:11: FDBcc    #1,s[Areg-Dreg]
+1111 0010 01ss sSSS:200:-----:-----:--:11: FScc     #1,s[!Areg,Immd,PC8r,PC16]
+1111 0010 0111 1010:200:-----:-----:T-:10: FTRAPcc  #1
+1111 0010 0111 1011:200:-----:-----:T-:10: FTRAPcc  #2
+1111 0010 0111 1100:200:-----:-----:T-:00: FTRAPcc
+1111 0010 10KK KKKK:200:-----:-----:-B:11: FBcc     #K,#1
+1111 0010 11KK KKKK:200:-----:-----:-B:11: FBcc     #K,#2
+1111 0011 00ss sSSS:202:-----:-----:--:20: FSAVE    s[!Dreg,Areg,Aipi,Immd,PC8r,PC16]
+1111 0011 01ss sSSS:202:-----:-----:--:10: FRESTORE s[!Dreg,Areg,Apdi,Immd]
+
+% 68030 MMU (allowed addressing modes not checked!)
+1111 0000 00ss sSSS:342:-----:-----:T-:11: MMUOP030 s[Dreg,Areg,Apdi,Aipi,Aind,Ad16,Ad8r,absl,absw],#1
+
+% 68040/68060 instructions
+1111 0100 pp00 1rrr:402:-----:-----:T-:02: CINVL    #p,Ar
+1111 0100 pp01 0rrr:402:-----:-----:T-:02: CINVP    #p,Ar
+1111 0100 pp01 1rrr:402:-----:-----:T-:00: CINVA    #p
+1111 0100 pp10 1rrr:402:-----:-----:T-:02: CPUSHL   #p,Ar
+1111 0100 pp11 0rrr:402:-----:-----:T-:02: CPUSHP   #p,Ar
+1111 0100 pp11 1rrr:402:-----:-----:T-:00: CPUSHA   #p
+1111 0101 0000 0rrr:402:-----:-----:T-:00: PFLUSHN  Ara
+1111 0101 0000 1rrr:402:-----:-----:T-:00: PFLUSH   Ara
+1111 0101 0001 0rrr:402:-----:-----:T-:00: PFLUSHAN Ara
+1111 0101 0001 1rrr:402:-----:-----:T-:00: PFLUSHA  Ara
+% 68040 only
+1111 0101 0100 1rrr:452:-----:-----:T-:00: PTESTW   Ara
+1111 0101 0110 1rrr:452:-----:-----:T-:00: PTESTR   Ara
+
+% destination register number is encoded in the following word
+1111 0110 0010 0rrr:400:-----:-----:--:12: MOVE16   ArP,AxP
+1111 0110 00ss sSSS:400:-----:-----:--:12: MOVE16   s[Dreg-Aipi],Al
+1111 0110 00dd dDDD:400:-----:-----:--:12: MOVE16   Al,d[Areg-Aipi]
+1111 0110 00ss sSSS:400:-----:-----:--:12: MOVE16   s[Aind],Al
+1111 0110 00dd dDDD:400:-----:-----:--:12: MOVE16   Al,d[Aipi-Aind]
+
+% 68060
+1111 1000 0000 0000:500:XNZVC:-----:T-:10: LPSTOP   #1
+1111 0101 1000 1rrr:502:-----:-----:T-:00: PLPAW    Ara
+1111 0101 1100 1rrr:502:-----:-----:T-:00: PLPAR    Ara
+% "Debug Pipe Control Mode Commands"
+0100 1010 1100 1000:502:-----:-----:--:00: HALT
+0100 1010 1100 1100:500:-----:-----:--:00: PULSE
