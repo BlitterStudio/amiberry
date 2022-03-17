@@ -3033,7 +3033,7 @@ static void update_fetch (int until, int fm)
 	/* First, a loop that prepares us for the speedup code.  We want to enter
 	the SPEEDUP case with fetch_state == fetch_was_plane0 or it is the very
 	first fetch cycle (which equals to same state as fetch_was_plane0)
-    and then unroll whole blocks, so that we end on the same fetch_state again.  */
+	and then unroll whole blocks, so that we end on the same fetch_state again.  */
 	for (; ; pos++) {
 		if (pos == until) {
 			if (until >= maxhpos) {
@@ -4046,7 +4046,7 @@ static int sprites_differ (struct draw_info *dip, struct draw_info *dip_old)
 			return 1;
 	}
 
-    npixels = this_last->first_pixel + (this_last->max - this_last->pos) - this_first->first_pixel;
+	npixels = this_last->first_pixel + (this_last->max - this_last->pos) - this_first->first_pixel;
 	if (memcmp (spixels + this_first->first_pixel, spixels + prev_first->first_pixel,
 		npixels * sizeof (uae_u16)) != 0)
 		return 1;
@@ -8356,7 +8356,7 @@ static uae_u16 dmal, dmal_hpos;
 static void dmal_emu(uae_u32 v)
 {
 	// Disk and Audio DMA bits are ignored by Agnus. Including DMA master bit.
-    if (!(dmacon & DMA_MASTER))
+	if (!(dmacon & DMA_MASTER))
 		return;
 	int hpos = current_hpos ();
 	if (v >= 6) {

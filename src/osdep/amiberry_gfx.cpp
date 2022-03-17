@@ -1070,6 +1070,10 @@ int check_prefs_changed_gfx()
 	c |= currprefs.rtgallowscaling != changed_prefs.rtgallowscaling ? (2 | 8 | 64) : 0;
 	c |= currprefs.rtgscaleaspectratio != changed_prefs.rtgscaleaspectratio ? (8 | 64) : 0;
 	c |= currprefs.rtgvblankrate != changed_prefs.rtgvblankrate ? 8 : 0;
+
+#ifdef AMIBERRY
+	c |= currprefs.multithreaded_drawing != changed_prefs.multithreaded_drawing ? (512) : 0;
+#endif
 	
 	if (display_change_requested || c)
 	{
@@ -1133,6 +1137,7 @@ int check_prefs_changed_gfx()
 		currprefs.gfx_apmode[1].gfx_vsyncmode = changed_prefs.gfx_apmode[1].gfx_vsyncmode;
 		currprefs.gfx_apmode[0].gfx_refreshrate = changed_prefs.gfx_apmode[0].gfx_refreshrate;
 
+		currprefs.multithreaded_drawing = changed_prefs.multithreaded_drawing;
 		currprefs.gfx_horizontal_offset = changed_prefs.gfx_horizontal_offset;
 		currprefs.gfx_vertical_offset = changed_prefs.gfx_vertical_offset;
 		currprefs.gfx_auto_height = changed_prefs.gfx_auto_height;

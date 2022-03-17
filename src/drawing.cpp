@@ -4340,12 +4340,19 @@ void vsync_handle_redraw(int long_field, int lof_changed, uae_u16 bplcon0p, uae_
 
 		if (ad->framecnt == 0) {
 #ifdef AMIBERRY
-			if (render_tid) 
+			if (currprefs.multithreaded_drawing)
 			{
-				while (render_thread_busy)
-					sleep_micros(10);
-				write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_FRAME_DONE, 1);
-				uae_sem_wait(&render_sem);
+				if (render_tid)
+				{
+					while (render_thread_busy)
+						sleep_micros(10);
+					write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_FRAME_DONE, 1);
+					uae_sem_wait(&render_sem);
+				}
+			}
+			else
+			{
+				finish_drawing_frame(drawlines);
 			}
 #else
 			finish_drawing_frame(drawlines);
@@ -4354,19 +4361,22 @@ void vsync_handle_redraw(int long_field, int lof_changed, uae_u16 bplcon0p, uae_
 
 		if (quit_program < 0) {
 #ifdef AMIBERRY
-			if (render_tid) 
+			if (currprefs.multithreaded_drawing)
 			{
-				while (render_thread_busy)
-					sleep_micros(1);
-				write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_QUIT, 1);
-				while (render_tid != nullptr) {
-					sleep_micros(10);
+				if (render_tid)
+				{
+					while (render_thread_busy)
+						sleep_micros(1);
+					write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_QUIT, 1);
+					while (render_tid != nullptr) {
+						sleep_micros(10);
+					}
+					destroy_comm_pipe(render_pipe);
+					xfree(render_pipe);
+					render_pipe = nullptr;
+					uae_sem_destroy(&render_sem);
+					render_sem = nullptr;
 				}
-				destroy_comm_pipe(render_pipe);
-				xfree(render_pipe);
-				render_pipe = nullptr;
-				uae_sem_destroy(&render_sem);
-				render_sem = nullptr;
 			}
 #endif
 #ifdef SAVESTATE
@@ -4472,13 +4482,16 @@ void hsync_record_line_state (int lineno, enum nln_how how, int changed)
 	}
 #ifdef AMIBERRY
 	linestate_first_undecided = lineno + 1;
-	if (render_tid && linestate_first_undecided > 3 && !render_thread_busy) {
-		if (currprefs.gfx_vresolution) {
-			if (!(linestate_first_undecided & 0x3e))
+	if (currprefs.multithreaded_drawing)
+	{
+		if (render_tid && linestate_first_undecided > 3 && !render_thread_busy) {
+			if (currprefs.gfx_vresolution) {
+				if (!(linestate_first_undecided & 0x3e))
+					write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_PARTIAL, 1);
+			}
+			else if (!(linestate_first_undecided & 0x1f))
 				write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_PARTIAL, 1);
 		}
-		else if (!(linestate_first_undecided & 0x1f))
-			write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_PARTIAL, 1);
 	}
 #endif
 }
@@ -4599,6 +4612,7 @@ void reset_drawing(void)
 	memset (spixels, 0, sizeof spixels);
 	memset (&spixstate, 0, sizeof spixstate);
 
+	// Suspect #1
 	init_hardware_for_drawing_frame();
 
 	notice_screen_contents_lost(monid);
@@ -4636,7 +4650,7 @@ static int render_thread(void *unused)
 {
 	for (;;) {
 		render_thread_busy = false;
-		auto signal = read_comm_pipe_u32_blocking(render_pipe);
+		const auto signal = read_comm_pipe_u32_blocking(render_pipe);
 		render_thread_busy = true;
 		switch (signal) {
 
