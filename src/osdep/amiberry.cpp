@@ -684,27 +684,7 @@ void setmouseactivexy(int monid, int x, int y, int dir)
 
 	if (isfullscreen() > 0)
 		return;
-	x += mon->amigawin_rect.x;
-	y += mon->amigawin_rect.y;
-	if (dir & 1)
-		x = mon->amigawin_rect.x - diff;
-	if (dir & 2)
-		x = mon->amigawin_rect.w + diff;
-	if (dir & 4)
-		y = mon->amigawin_rect.y - diff;
-	if (dir & 8)
-		y = mon->amigawin_rect.h + diff;
-	if (!dir) {
-		x += (mon->amigawin_rect.w - mon->amigawin_rect.x) / 2;
-		y += (mon->amigawin_rect.h - mon->amigawin_rect.y) / 2;
-	}
-	//if (isfullscreen() < 0) {
-	//	POINT pt;
-	//	pt.x = x;
-	//	pt.y = y;
-	//	if (MonitorFromPoint(pt, MONITOR_DEFAULTTONULL) == NULL)
-	//		return;
-	//}
+
 	if (mouseactive) {
 		disablecapture();
 		SDL_WarpMouseInWindow(mon->sdl_window, x, y);
