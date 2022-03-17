@@ -178,6 +178,7 @@ extern int display_reset;
 
 extern unsigned long frametime, timeframes;
 extern uae_u16 htotal, vtotal, beamcon0, new_beamcon0;
+extern uae_u16 bemcon0_hsync_mask, bemcon0_vsync_mask;
 
 // 100 words give you 1600 horizontal pixels. Should be more than enough for superhires. 
 // Extreme overscan superhires needs more.
@@ -261,6 +262,8 @@ extern void getsyncregisters(uae_u16 *phsstrt, uae_u16 *phsstop, uae_u16 *pvsstr
 bool blitter_cant_access(int hpos);
 void custom_cpuchange(void);
 bool bitplane_dma_access(int hpos, int offset);
+void custom_dumpstate(int);
+bool get_ras_cas(uaecptr, int*, int*);
 
 #define RGA_PIPELINE_ADJUST 4
 #define MAX_CHIPSETSLOTS 256

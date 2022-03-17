@@ -211,7 +211,7 @@ void draw_status_line_single(int monid, uae_u8 *buf, int bpp, int y, int totalwi
 			} else {
 				int fps = (gui_data.fps + 5) / 10;
 				on_rgb = 0x000000;
-				off_rgb = gui_data.fps_color ? 0xcccc00 : 0x000000;
+				off_rgb = gui_data.fps_color == 1 ? 0xcccc00 : (gui_data.fps_color == 2 ? 0x0000cc : 0x000000);
 				am = 3;
 				if (fps > 999) {
 					fps += 50;

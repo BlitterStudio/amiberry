@@ -98,6 +98,7 @@ extern uae_u8 *restore_custom (uae_u8 *);
 extern uae_u8 *save_custom (int *, uae_u8 *, int);
 extern uae_u8 *restore_custom_extra (uae_u8 *);
 extern uae_u8 *save_custom_extra (int *, uae_u8 *);
+extern void restore_custom_finish(void);
 
 extern uae_u8 *restore_custom_sprite (int num, uae_u8 *src);
 extern uae_u8 *save_custom_sprite (int num, int *len, uae_u8 *);

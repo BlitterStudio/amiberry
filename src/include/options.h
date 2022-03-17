@@ -339,6 +339,7 @@ enum
 #define OVERSCANMODE_OVERSCAN 3
 #define OVERSCANMODE_BROADCAST 4
 #define OVERSCANMODE_EXTREME 5
+#define OVERSCANMODE_ULTRA 6
 
 #define MAX_FILTERSHADERS 4
 
@@ -629,7 +630,6 @@ struct uae_prefs
 	bool gfx_blackerthanblack;
 	int gfx_threebitcolors;
 	int gfx_api;
-	bool gfx_hdr;
 	int gfx_api_options;
 	int color_mode;
 	int gfx_extrawidth;
@@ -715,6 +715,7 @@ struct uae_prefs
 	int uaescsidevmode;
 	bool reset_delay;
 	bool crash_auto_reset;
+	int monitorblankdelay;
 
 	int cs_compatible;
 	int cs_ciaatod;
@@ -759,6 +760,7 @@ struct uae_prefs
 	int cs_hacks;
 	int cs_ciatype[2];
 	int cs_kbhandshake;
+	int cs_hvcsync;
 
 	struct boardromconfig expansionboard[MAX_EXPANSION_BOARDS];
 
