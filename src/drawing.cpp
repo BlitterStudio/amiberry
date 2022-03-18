@@ -3290,9 +3290,9 @@ static void pfield_expand_dp_bplconx (int regno, int v, int hp, int vp)
 // this handles auto-height
 STATIC_INLINE void do_flush_screen(int start, int stop)
 {
-	struct amigadisplay* ad = &adisplays[0];
-	struct vidbuf_description* vidinfo = &ad->gfxvidinfo;
-	struct vidbuffer* vb = &vidinfo->drawbuffer;
+	const struct amigadisplay* ad = &adisplays[0];
+	const struct vidbuf_description* vidinfo = &ad->gfxvidinfo;
+	const struct vidbuffer* vb = &vidinfo->drawbuffer;
 	
 	if (start <= stop)
 		flush_screen(vb, start, stop);
@@ -3557,12 +3557,12 @@ enum double_how {
 static void pfield_draw_line(struct vidbuffer *vb, int lineno, int gfx_ypos, int follow_ypos)
 {
 	struct vidbuf_description *vidinfo = &adisplays[0].gfxvidinfo;
-	static int warned = 0;
+	//static int warned = 0;
 	int border = 0;
 	int do_double = 0;
 	bool have_color_changes;
-	enum double_how dh;
-	int ls = linestate[lineno];
+	//enum double_how dh; // performance optimization - we only use bufmen so no need to test
+	//int ls = linestate[lineno];
 
 	dp_for_drawing = line_decisions + lineno;
 	dip_for_drawing = curr_drawinfo + lineno;
@@ -3572,7 +3572,7 @@ static void pfield_draw_line(struct vidbuffer *vb, int lineno, int gfx_ypos, int
 		resolution_count[dp_for_drawing->bplres]++;
 	}
 
-	switch (ls)
+	switch (linestate[lineno])
 	{
 	case LINE_REMEMBERED_AS_PREVIOUS:
 //		if (!warned) // happens when program messes up with VPOSW
@@ -3622,13 +3622,14 @@ static void pfield_draw_line(struct vidbuffer *vb, int lineno, int gfx_ypos, int
 	}
 	sprite_smaller_than_64_inuse = false;
 
-	dh = dh_line;
-	xlinebuffer = vidinfo->drawbuffer.linemem;
-	if (xlinebuffer == 0 && do_double
-		&& (border == 0 || have_color_changes))
-		xlinebuffer = vidinfo->drawbuffer.emergmem, dh = dh_emerg;
-	if (xlinebuffer == 0)
-		xlinebuffer = row_map[gfx_ypos], dh = dh_buf;
+	//dh = dh_line;
+	//xlinebuffer = vidinfo->drawbuffer.linemem;
+	//if (xlinebuffer == 0 && do_double
+	//	&& (border == 0 || have_color_changes))
+	//	xlinebuffer = vidinfo->drawbuffer.emergmem, dh = dh_emerg;
+	//if (xlinebuffer == 0)
+	//	xlinebuffer = row_map[gfx_ypos], dh = dh_buf;
+	xlinebuffer = row_map[gfx_ypos];
 	xlinebuffer -= linetoscr_x_adjust_pixbytes;
 	xlinebuffer_genlock = row_map_genlock[gfx_ypos] - linetoscr_x_adjust_pixels;
 
@@ -3702,13 +3703,13 @@ static void pfield_draw_line(struct vidbuffer *vb, int lineno, int gfx_ypos, int
 #endif
 			do_color_changes(pfield_do_fill_line, dip_for_drawing->nr_sprites ? pfield_do_linetoscr_spr : pfield_do_linetoscr, lineno);
 
-		if (dh == dh_emerg)
-			memcpy(row_map[gfx_ypos], xlinebuffer + linetoscr_x_adjust_pixbytes, vidinfo->drawbuffer.pixbytes * vidinfo->drawbuffer.inwidth);
+		//if (dh == dh_emerg)
+		//	memcpy(row_map[gfx_ypos], xlinebuffer + linetoscr_x_adjust_pixbytes, vidinfo->drawbuffer.pixbytes * vidinfo->drawbuffer.inwidth);
 
 		if (do_double) {
-			if (dh == dh_emerg)
-				memcpy(row_map[follow_ypos], xlinebuffer + linetoscr_x_adjust_pixbytes, vidinfo->drawbuffer.pixbytes * vidinfo->drawbuffer.inwidth);
-			else if (dh == dh_buf)
+			//if (dh == dh_emerg)
+				//memcpy(row_map[follow_ypos], xlinebuffer + linetoscr_x_adjust_pixbytes, vidinfo->drawbuffer.pixbytes * vidinfo->drawbuffer.inwidth);
+			//else if (dh == dh_buf)
 				memcpy(row_map[follow_ypos], row_map[gfx_ypos], vidinfo->drawbuffer.pixbytes * vidinfo->drawbuffer.inwidth);
 			if (need_genlock_data)
 				memcpy(row_map_genlock[follow_ypos], row_map_genlock[gfx_ypos], vidinfo->drawbuffer.inwidth);
@@ -3745,11 +3746,11 @@ static void pfield_draw_line(struct vidbuffer *vb, int lineno, int gfx_ypos, int
 			}
 
 			if (do_double) {
-				if (dh == dh_buf) {
+				//if (dh == dh_buf) {
 					xlinebuffer = row_map[follow_ypos] - linetoscr_x_adjust_pixbytes;
 					xlinebuffer_genlock = row_map_genlock[follow_ypos] - linetoscr_x_adjust_pixels;
 					fill_line_border(lineno);
-				}
+				//}
 				/* If dh == dh_line, do_flush_line will re-use the rendered line
 				* from linemem.  */
 			}
@@ -3776,12 +3777,12 @@ static void pfield_draw_line(struct vidbuffer *vb, int lineno, int gfx_ypos, int
 
 		}
 
-		if (dh == dh_emerg)
-			memcpy(row_map[gfx_ypos], xlinebuffer + linetoscr_x_adjust_pixbytes, vidinfo->drawbuffer.pixbytes * vidinfo->drawbuffer.inwidth);
+		//if (dh == dh_emerg)
+		//	memcpy(row_map[gfx_ypos], xlinebuffer + linetoscr_x_adjust_pixbytes, vidinfo->drawbuffer.pixbytes * vidinfo->drawbuffer.inwidth);
 		if (do_double) {
-			if (dh == dh_emerg)
-				memcpy(row_map[follow_ypos], xlinebuffer + linetoscr_x_adjust_pixbytes, vidinfo->drawbuffer.pixbytes * vidinfo->drawbuffer.inwidth);
-			else if (dh == dh_buf)
+			//if (dh == dh_emerg)
+			//	memcpy(row_map[follow_ypos], xlinebuffer + linetoscr_x_adjust_pixbytes, vidinfo->drawbuffer.pixbytes * vidinfo->drawbuffer.inwidth);
+			//else if (dh == dh_buf)
 				memcpy(row_map[follow_ypos], row_map[gfx_ypos], vidinfo->drawbuffer.pixbytes * vidinfo->drawbuffer.inwidth);
 			if (need_genlock_data)
 				memcpy(row_map_genlock[follow_ypos], row_map_genlock[gfx_ypos], vidinfo->drawbuffer.inwidth);
@@ -4744,7 +4745,7 @@ static void finish_drawing_frame(bool drawlines)
 	unlockscr(vb, display_reset ? -2 : -1, -1);
 #ifdef AMIBERRY
 	// for auto-height
-	do_flush_screen(first_drawn_line, last_drawn_line);
+	do_flush_screen(first_drawn_line, vb->last_drawn_line);
 #endif
 }
 
