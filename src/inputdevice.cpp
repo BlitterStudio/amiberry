@@ -4773,6 +4773,9 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 #endif
 		break;
 #endif
+	case AKS_AUTO_CROP_IMAGE:
+		auto_crop_image();
+		break;
 	}
 end:
 	if (tracer_enable) {
