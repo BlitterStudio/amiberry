@@ -156,3 +156,4 @@ struct MultiDisplay* getdisplay(struct uae_prefs* p, int monid);
 extern int getrefreshrate(int monid, int width, int height);
 void SDL2_guimode(int monid, int guion);
 void SDL2_toggle_vsync(bool vsync);
+extern void auto_crop_image();

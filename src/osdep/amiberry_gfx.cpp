@@ -994,6 +994,35 @@ extern int vstrt; // vertical start
 extern int vstop; // vertical stop
 extern int hstrt; // horizontal start
 extern int hstop; // horizontal stop
+
+void auto_crop_image()
+{
+	static int new_height;
+
+	auto start_y = minfirstline; // minfirstline = first line to be written to screen buffer
+	auto stop_y = MAXVPOS_PAL + minfirstline; // last line to be written to screen buffer
+	if (vstrt > minfirstline)
+		start_y = vstrt;		// if vstrt > minfirstline then there is a black border
+	if (start_y > 200)
+		start_y = minfirstline; // shouldn't happen but does for donkey kong
+	if (vstop < stop_y)
+		stop_y = vstop;			// if vstop < stop_y then there is a black border
+
+	new_height = stop_y - start_y;
+
+	if (new_height < 200)
+		new_height = 200;
+	new_height = new_height * 2 <= 568 ? new_height * 2 : 568;
+	if (new_height != currprefs.gfx_monitor[0].gfx_size_win.height)
+	{
+		display_height = new_height;
+		currprefs.gfx_monitor[0].gfx_size_win.height = new_height;
+		copy_prefs(&currprefs, &changed_prefs);
+		open_screen(&currprefs);
+		init_custom();
+	}
+}
+
 void flush_screen(const vidbuffer* vidbuffer, int ystart, int ystop)
 {
 	if (vidbuffer->bufmem == nullptr) return; // no buffer allocated return
@@ -1001,7 +1030,7 @@ void flush_screen(const vidbuffer* vidbuffer, int ystart, int ystop)
 	static bool last_autoheight = false;
 	if (currprefs.gfx_auto_height)
 	{
-		static int last_vstrt, last_vstop, new_height;
+		static int last_vstrt, last_vstop;
 		if (last_autoheight != currprefs.gfx_auto_height 
 			|| last_vstrt != vstrt 
 			|| last_vstop != vstop
@@ -1010,28 +1039,7 @@ void flush_screen(const vidbuffer* vidbuffer, int ystart, int ystop)
 			last_vstrt = vstrt;
 			last_vstop = vstop;
 
-			auto start_y = ystart > 0 ? ystart : minfirstline; // minfirstline = first line to be written to screen buffer
-			auto stop_y = ystop > 0 ? ystop : MAXVPOS_PAL + minfirstline; // last line to be written to screen buffer
-			if (vstrt > minfirstline)
-				start_y = vstrt;		// if vstrt > minfirstline then there is a black border
-			if (start_y > 200)
-				start_y = minfirstline; // shouldn't happen but does for donkey kong
-			if (vstop < stop_y)
-				stop_y = vstop;			// if vstop < stop_y then there is a black border
-
-			new_height = stop_y - start_y;
-
-			if (new_height < 200)
-				new_height = 200;
-			new_height = new_height * 2 <= 568 ? new_height * 2: 568;
-			if (new_height != currprefs.gfx_monitor[0].gfx_size_win.height)
-			{
-				display_height = new_height;
-				currprefs.gfx_monitor[0].gfx_size_win.height = new_height;
-				copy_prefs(&currprefs, &changed_prefs);
-				open_screen(&currprefs);
-				init_custom();
-			}
+			auto_crop_image();
 		}
 	}
 
