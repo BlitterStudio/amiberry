@@ -37,7 +37,7 @@
 //#include "debug.h"
 //#include "debugmem.h"
 #include "gfxboard.h"
-//#include "cpuboard.h"
+#include "cpuboard.h"
 //#include "uae/ppc.h"
 #include "devices.h"
 #include "inputdevice.h"
@@ -1124,30 +1124,55 @@ static void REGPARAM2 extendedkickmem_bput (uaecptr addr, uae_u32 b)
 }
 
 
-static void REGPARAM3 extendedkickmem2_lput (uaecptr, uae_u32) REGPARAM;
-static void REGPARAM3 extendedkickmem2_wput (uaecptr, uae_u32) REGPARAM;
-static void REGPARAM3 extendedkickmem2_bput (uaecptr, uae_u32) REGPARAM;
+static void REGPARAM3 extendedkickmem2a_lput(uaecptr, uae_u32) REGPARAM;
+static void REGPARAM3 extendedkickmem2a_wput(uaecptr, uae_u32) REGPARAM;
+static void REGPARAM3 extendedkickmem2a_bput(uaecptr, uae_u32) REGPARAM;
+static void REGPARAM3 extendedkickmem2b_lput(uaecptr, uae_u32) REGPARAM;
+static void REGPARAM3 extendedkickmem2b_wput(uaecptr, uae_u32) REGPARAM;
+static void REGPARAM3 extendedkickmem2b_bput(uaecptr, uae_u32) REGPARAM;
 
-MEMORY_BGET(extendedkickmem2);
-MEMORY_WGET(extendedkickmem2);
-MEMORY_LGET(extendedkickmem2);
-MEMORY_CHECK(extendedkickmem2);
-MEMORY_XLATE(extendedkickmem2);
+MEMORY_BGET(extendedkickmem2a);
+MEMORY_WGET(extendedkickmem2a);
+MEMORY_LGET(extendedkickmem2a);
+MEMORY_CHECK(extendedkickmem2a);
+MEMORY_XLATE(extendedkickmem2a);
 
-static void REGPARAM2 extendedkickmem2_lput (uaecptr addr, uae_u32 b)
+MEMORY_BGET(extendedkickmem2b);
+MEMORY_WGET(extendedkickmem2b);
+MEMORY_LGET(extendedkickmem2b);
+MEMORY_CHECK(extendedkickmem2b);
+MEMORY_XLATE(extendedkickmem2b);
+
+static void REGPARAM2 extendedkickmem2a_lput (uaecptr addr, uae_u32 b)
 {
 	if (currprefs.illegal_mem)
-		write_log (_T("Illegal extendedkickmem2 lput at %08x\n"), addr);
+		write_log (_T("Illegal extendedkickmem2a lput at %08x\n"), addr);
 }
-static void REGPARAM2 extendedkickmem2_wput (uaecptr addr, uae_u32 b)
+static void REGPARAM2 extendedkickmem2a_wput (uaecptr addr, uae_u32 b)
 {
 	if (currprefs.illegal_mem)
-		write_log (_T("Illegal extendedkickmem2 wput at %08x\n"), addr);
+		write_log (_T("Illegal extendedkickmem2a wput at %08x\n"), addr);
 }
-static void REGPARAM2 extendedkickmem2_bput (uaecptr addr, uae_u32 b)
+static void REGPARAM2 extendedkickmem2a_bput (uaecptr addr, uae_u32 b)
 {
 	if (currprefs.illegal_mem)
-		write_log (_T("Illegal extendedkickmem2 lput at %08x\n"), addr);
+		write_log (_T("Illegal extendedkickmem2a lput at %08x\n"), addr);
+}
+
+static void REGPARAM2 extendedkickmem2b_lput(uaecptr addr, uae_u32 b)
+{
+	if (currprefs.illegal_mem)
+		write_log(_T("Illegal extendedkickmem2b lput at %08x\n"), addr);
+}
+static void REGPARAM2 extendedkickmem2b_wput(uaecptr addr, uae_u32 b)
+{
+	if (currprefs.illegal_mem)
+		write_log(_T("Illegal extendedkickmem2b wput at %08x\n"), addr);
+}
+static void REGPARAM2 extendedkickmem2b_bput(uaecptr addr, uae_u32 b)
+{
+	if (currprefs.illegal_mem)
+		write_log(_T("Illegal extendedkickmem2b lput at %08x\n"), addr);
 }
 
 /* Default memory access functions */
@@ -1316,11 +1341,18 @@ addrbank extendedkickmem_bank = {
 	extendedkickmem_lget, extendedkickmem_wget,
 	ABFLAG_ROM | ABFLAG_THREADSAFE | ABFLAG_CACHE_ENABLE_ALL | ABFLAG_DIRECTACCESS, 0, S_WRITE
 };
-addrbank extendedkickmem2_bank = {
-	extendedkickmem2_lget, extendedkickmem2_wget, extendedkickmem2_bget,
-	extendedkickmem2_lput, extendedkickmem2_wput, extendedkickmem2_bput,
-	extendedkickmem2_xlate, extendedkickmem2_check, NULL, _T("rom_a8"), _T("Extended 2nd Kickstart ROM"),
-	extendedkickmem2_lget, extendedkickmem2_wget,
+addrbank extendedkickmem2a_bank = {
+	extendedkickmem2a_lget, extendedkickmem2a_wget, extendedkickmem2a_bget,
+	extendedkickmem2a_lput, extendedkickmem2a_wput, extendedkickmem2a_bput,
+	extendedkickmem2a_xlate, extendedkickmem2a_check, NULL, _T("rom_a8"), _T("Extended 2nd Kickstart ROM"),
+	extendedkickmem2a_lget, extendedkickmem2a_wget,
+	ABFLAG_ROM | ABFLAG_THREADSAFE | ABFLAG_CACHE_ENABLE_ALL | ABFLAG_DIRECTACCESS, 0, S_WRITE
+};
+addrbank extendedkickmem2b_bank = {
+	extendedkickmem2b_lget, extendedkickmem2b_wget, extendedkickmem2b_bget,
+	extendedkickmem2b_lput, extendedkickmem2b_wput, extendedkickmem2b_bput,
+	extendedkickmem2b_xlate, extendedkickmem2b_check, NULL, _T("rom_b0"), _T("Extended 3nd Kickstart ROM"),
+	extendedkickmem2b_lget, extendedkickmem2b_wget,
 	ABFLAG_ROM | ABFLAG_THREADSAFE | ABFLAG_CACHE_ENABLE_ALL | ABFLAG_DIRECTACCESS, 0, S_WRITE
 };
 addrbank fakeuaebootrom_bank = {
@@ -1873,13 +1905,18 @@ static int load_kickstart (void)
 		//		if (size > ROM_SIZE_512) {
 		//			maxsize = zfile_size(zf);
 		//			singlebigrom = true;
-		//			extendedkickmem2_bank.reserved_size = size;
-		//			extendedkickmem2_bank.mask = extendedkickmem2_bank.allocated_size - 1;
-		//			extendedkickmem2_bank.start = size > 2 * ROM_SIZE_512 ? 0xa00000 : 0xa80000;
-		//			mapped_malloc(&extendedkickmem2_bank);
-		//			read_kickstart(f, extendedkickmem2_bank.baseaddr, size, 0, 1);
+		//			extendedkickmem2a_bank.reserved_size = 524288;
+		//			extendedkickmem2a_bank.mask = extendedkickmem2a_bank.allocated_size - 1;
+		//			extendedkickmem2a_bank.start = size > 2 * ROM_SIZE_512 ? 0xa00000 : 0xa80000;
+		//			mapped_malloc(&extendedkickmem2a_bank);
+		//			extendedkickmem2b_bank.reserved_size = 524288;
+		//			extendedkickmem2b_bank.mask = extendedkickmem2a_bank.allocated_size - 1;
+		//			extendedkickmem2a_bank.start = extendedkickmem2a_bank.start + 524288;
+		//			mapped_malloc(&extendedkickmem2a_bank);
+		//			read_kickstart(f, extendedkickmem2a_bank.baseaddr, 524288, 0, 1);
+		//			read_kickstart(f, extendedkickmem2b_bank.baseaddr, 524288, 0, 1);
 		//			memset(kickmem_bank.baseaddr, 0, ROM_SIZE_512);
-		//			memcpy(kickmem_bank.baseaddr, extendedkickmem2_bank.baseaddr, 0xd0);
+		//			memcpy(kickmem_bank.baseaddr, extendedkickmem2a_bank.baseaddr, 0xd0);
 		//			memcpy(kickmem_bank.baseaddr + ROM_SIZE_512 - 20, romend, sizeof(romend));
 		//			kickstart_fix_checksum(kickmem_bank.baseaddr, ROM_SIZE_512);
 		//		}
@@ -1932,14 +1969,18 @@ static int load_kickstart (void)
 				extendedkickmem_bank.mask = extendedkickmem_bank.allocated_size - 1;
 			}
 			if (filesize > ROM_SIZE_512 * 2) {
-				extendedkickmem2_bank.reserved_size = ROM_SIZE_512 * 2;
-				mapped_malloc(&extendedkickmem2_bank);
+				extendedkickmem2a_bank.reserved_size = ROM_SIZE_512;
+				mapped_malloc(&extendedkickmem2a_bank);
+				extendedkickmem2b_bank.reserved_size = ROM_SIZE_512;
+				mapped_malloc(&extendedkickmem2b_bank);
 				zfile_fseek(f, extpos + ROM_SIZE_512, SEEK_SET);
-				read_kickstart(f, extendedkickmem2_bank.baseaddr, ROM_SIZE_512, 0, 1);
+				read_kickstart(f, extendedkickmem2a_bank.baseaddr, ROM_SIZE_512, 0, 1);
 				zfile_fseek(f, extpos + ROM_SIZE_512 * 2, SEEK_SET);
-				read_kickstart(f, extendedkickmem2_bank.baseaddr + ROM_SIZE_512, ROM_SIZE_512, 0, 1);
-				extendedkickmem2_bank.mask = extendedkickmem2_bank.allocated_size - 1;
-				extendedkickmem2_bank.start = 0xa80000;
+				read_kickstart(f, extendedkickmem2b_bank.baseaddr, ROM_SIZE_512, 0, 1);
+				extendedkickmem2a_bank.mask = extendedkickmem2a_bank.allocated_size - 1;
+				extendedkickmem2a_bank.start = 0xa80000;
+				extendedkickmem2b_bank.mask = extendedkickmem2b_bank.allocated_size - 1;
+				extendedkickmem2b_bank.start = 0xb00000;
 			}
 		}
 	}
@@ -2403,10 +2444,12 @@ static void restore_roms(void)
 	memcpy (currprefs.romfile, changed_prefs.romfile, sizeof currprefs.romfile);
 	memcpy (currprefs.romextfile, changed_prefs.romextfile, sizeof currprefs.romextfile);
 	need_hardreset = true;
-	mapped_free (&extendedkickmem_bank);
-	mapped_free (&extendedkickmem2_bank);
+	mapped_free(&extendedkickmem_bank);
+	mapped_free(&extendedkickmem2a_bank);
+	mapped_free(&extendedkickmem2b_bank);
 	extendedkickmem_bank.reserved_size = 0;
-	extendedkickmem2_bank.reserved_size = 0;
+	extendedkickmem2a_bank.reserved_size = 0;
+	extendedkickmem2b_bank.reserved_size = 0;
 	extendedkickmem_type = 0;
 	load_extendedkickstart (currprefs.romextfile, 0);
 	load_extendedkickstart (currprefs.romextfile2, EXTENDED_ROM_CDTV);
@@ -2544,7 +2587,7 @@ void memory_reset (void)
 
 	if ((cloanto_rom || extendedkickmem_bank.allocated_size) && currprefs.maprom && currprefs.maprom < 0x01000000) {
 		currprefs.maprom = changed_prefs.maprom = 0x00a80000;
-		if (extendedkickmem2_bank.allocated_size) // can't do if 2M ROM
+		if (extendedkickmem2a_bank.allocated_size || extendedkickmem2b_bank.allocated_size) // can't do if 2M ROM
 			currprefs.maprom = changed_prefs.maprom = 0;
 	}
 
@@ -2630,7 +2673,7 @@ void memory_reset (void)
 	map_banks_set(&kickmem_bank, 0xF8, 8, 0);
 	//if (currprefs.maprom) {
 	//	if (!cpuboard_maprom())
-	//		map_banks_set(&kickram_bank, currprefs.maprom >> 16, extendedkickmem2_bank.allocated_size ? 32 : (extendedkickmem_bank.allocated_size ? 16 : 8), 0);
+	//		map_banks_set(&kickram_bank, currprefs.maprom >> 16, extendedkickmem2a_bank.allocated_size ? 32 : (extendedkickmem_bank.allocated_size ? 16 : 8), 0);
 	//}
 	/* map beta Kickstarts at 0x200000/0xC00000/0xF00000 */
 	if (kickmem_bank.baseaddr[0] == 0x11 && kickmem_bank.baseaddr[2] == 0x4e && kickmem_bank.baseaddr[3] == 0xf9 && kickmem_bank.baseaddr[4] == 0x00) {
@@ -2685,8 +2728,11 @@ void memory_reset (void)
 		map_banks(&kickmem_bank, 0xE0, 8, 0);
 	}
 	if (currprefs.cs_ksmirror_a8) {
-		if (extendedkickmem2_bank.allocated_size) {
-			map_banks_set(&extendedkickmem2_bank, extendedkickmem2_bank.start >> 16, extendedkickmem2_bank.allocated_size >> 16, 0);
+		if (extendedkickmem2a_bank.allocated_size && extendedkickmem2a_bank.baseaddr) {
+			map_banks_set(&extendedkickmem2a_bank, extendedkickmem2a_bank.start >> 16, extendedkickmem2a_bank.allocated_size >> 16, 0);
+			if (extendedkickmem2b_bank.allocated_size && extendedkickmem2b_bank.baseaddr) {
+				map_banks_set(&extendedkickmem2b_bank, extendedkickmem2b_bank.start >> 16, extendedkickmem2b_bank.allocated_size >> 16, 0);
+			}
 		} else {
 			struct romdata *rd = getromdatabypath (currprefs.cartfile);
 			if (!rd || rd->id != 63) {
@@ -2697,8 +2743,11 @@ void memory_reset (void)
 				map_banks(&kickmem_bank, 0xa8, 8, 0);
 			}
 		}
-	} else if (extendedkickmem2_bank.allocated_size && extendedkickmem2_bank.baseaddr) {
-		map_banks_set(&extendedkickmem2_bank, extendedkickmem2_bank.start >> 16, extendedkickmem2_bank.allocated_size >> 16, 0);
+	} else if (extendedkickmem2a_bank.allocated_size && extendedkickmem2a_bank.baseaddr) {
+		map_banks_set(&extendedkickmem2a_bank, extendedkickmem2a_bank.start >> 16, extendedkickmem2a_bank.allocated_size >> 16, 0);
+		if (extendedkickmem2b_bank.allocated_size && extendedkickmem2b_bank.baseaddr) {
+			map_banks_set(&extendedkickmem2b_bank, extendedkickmem2b_bank.start >> 16, extendedkickmem2b_bank.allocated_size >> 16, 0);
+		}
 	}
 
 #ifdef ARCADIA
@@ -2754,8 +2803,10 @@ void memory_init (void)
 	kickmem_bank.baseaddr = NULL;
 	extendedkickmem_bank.baseaddr = NULL;
 	extendedkickmem_bank.reserved_size = 0;
-	extendedkickmem2_bank.baseaddr = NULL;
-	extendedkickmem2_bank.reserved_size = 0;
+	extendedkickmem2a_bank.baseaddr = NULL;
+	extendedkickmem2a_bank.reserved_size = 0;
+	extendedkickmem2b_bank.baseaddr = NULL;
+	extendedkickmem2b_bank.reserved_size = 0;
 	extendedkickmem_type = 0;
 	chipmem_bank.baseaddr = 0;
 	mem25bit_bank.reserved_size = mem25bit_bank.reserved_size = 0;
