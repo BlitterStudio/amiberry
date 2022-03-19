@@ -47,6 +47,7 @@ SDL_DisplayMode sdl_mode;
 SDL_Surface* sdl_surface = nullptr;
 SDL_Texture* amiga_texture;
 SDL_Rect renderQuad;
+static int dx = 0, dy = 0;
 SDL_Renderer* sdl_renderer;
 const char* sdl_video_driver;
 
@@ -814,7 +815,7 @@ static void open_screen(struct uae_prefs* p)
 		if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
 		{
 			SDL_RenderSetLogicalSize(sdl_renderer, width, height);
-			renderQuad = { 0, 0, width, height };
+			renderQuad = { dx, dy, width, height };
 		}
 		else
 		{
@@ -896,21 +897,26 @@ void SDL2_toggle_vsync(bool vsync)
 
 extern int vstrt; // vertical start
 extern int vstop; // vertical stop
-void flush_screen(struct vidbuffer* vidbuffer, int ystart, int ystop)
+extern int hstrt; // horizontal start
+extern int hstop; // horizontal stop
+void flush_screen(const vidbuffer* vidbuffer, int ystart, int ystop)
 {
 	if (vidbuffer->bufmem == nullptr) return; // no buffer allocated return
 
-	static int last_autoheight;
+	static bool last_autoheight;
 	if (currprefs.gfx_auto_height)
 	{
 		static int last_vstrt, last_vstop, new_height;
-		if (last_autoheight != currprefs.gfx_auto_height || last_vstrt != vstrt || last_vstop != vstop)
+		if (last_autoheight != currprefs.gfx_auto_height
+			|| last_vstrt != vstrt
+			|| last_vstop != vstop
+			)
 		{
 			last_vstrt = vstrt;
 			last_vstop = vstop;
 
-			auto start_y = minfirstline;  // minfirstline = first line to be written to screen buffer
-			auto stop_y = 274 + minfirstline; // last line to be written to screen buffer
+			auto start_y = ystart > 0 ? ystart : minfirstline; // minfirstline = first line to be written to screen buffer
+			auto stop_y = ystop > 0 ? ystop : MAXVPOS_PAL + minfirstline; // last line to be written to screen buffer
 			if (vstrt > minfirstline)
 				start_y = vstrt;		// if vstrt > minfirstline then there is a black border
 			if (start_y > 200)
@@ -922,10 +928,11 @@ void flush_screen(struct vidbuffer* vidbuffer, int ystart, int ystop)
 			
 			if (new_height < 200)
 				new_height = 200;
-			if (new_height * 2 != currprefs.gfx_monitor[0].gfx_size_win.height)
+			new_height = new_height * 2 <= 568 ? new_height * 2 : 568;
+			if (new_height != currprefs.gfx_monitor[0].gfx_size_win.height)
 			{
-				display_height = new_height * 2;
-				currprefs.gfx_monitor[0].gfx_size_win.height = new_height * 2;
+				display_height = new_height;
+				currprefs.gfx_monitor[0].gfx_size_win.height = new_height;
 				copy_prefs(&currprefs, &changed_prefs);
 				open_screen(&currprefs);
 				init_custom();
