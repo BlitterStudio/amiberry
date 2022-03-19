@@ -10697,8 +10697,9 @@ uae_u32 wait_cpu_cycle_read (uaecptr addr, int mode)
 	uae_u32 v = 0;
 	int hpos;
 
+	x_do_cycles_pre(CYCLE_UNIT);
+
 	hpos = dma_cycle(0xffffffff, 0xffff, NULL);
-	x_do_cycles_pre (CYCLE_UNIT);
 
 	switch(mode)
 	{
@@ -10730,8 +10731,9 @@ void wait_cpu_cycle_write (uaecptr addr, int mode, uae_u32 v)
 {
 	int hpos;
 
+	x_do_cycles_pre(CYCLE_UNIT);
+
 	hpos = dma_cycle(addr, v, &mode);
-	x_do_cycles_pre (CYCLE_UNIT);
 
 	if (mode > -2) {
 		if (mode < 0)

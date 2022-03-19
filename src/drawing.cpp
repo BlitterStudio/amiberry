@@ -4612,7 +4612,6 @@ void reset_drawing(void)
 	memset (spixels, 0, sizeof spixels);
 	memset (&spixstate, 0, sizeof spixstate);
 
-	// Suspect #1
 	init_hardware_for_drawing_frame();
 
 	notice_screen_contents_lost(monid);
