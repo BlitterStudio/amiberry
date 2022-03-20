@@ -916,6 +916,9 @@ void auto_crop_image()
 	new_width = (hstop - hstrt) / 2;
 	new_height = stop_y - start_y;
 
+	if (new_width < 320)
+		new_width = 320;
+
 	if (new_height < 200)
 		new_height = 200;
 	new_height = new_height * 2 <= 568 ? new_height * 2 : 568;
