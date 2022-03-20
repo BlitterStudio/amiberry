@@ -367,7 +367,7 @@ void InitPanelDisplay(const config_category& category)
 	txtAmigaHeight->setBackgroundColor(colTextboxBackground);
 	txtAmigaHeight->addActionListener(amigaScreenActionListener);
 
-	chkAutoHeight = new gcn::CheckBox("Auto Height");
+	chkAutoHeight = new gcn::CheckBox("Auto Crop");
 	chkAutoHeight->setId("chkAutoHeight");
 	chkAutoHeight->addActionListener(amigaScreenActionListener);
 
