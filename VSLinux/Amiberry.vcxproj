@@ -830,6 +830,7 @@
     <ClInclude Include="..\src\include\uae\string.h" />
     <ClInclude Include="..\src\include\uae\types.h" />
     <ClInclude Include="..\src\include\uae\uae.h" />
+    <ClInclude Include="..\src\include\uae\uae_pragmas.h" />
     <ClInclude Include="..\src\include\uae\vm.h" />
     <ClInclude Include="..\src\include\uni_common.h" />
     <ClInclude Include="..\src\include\xwin.h" />
