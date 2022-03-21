@@ -3008,20 +3008,20 @@ void init_row_map(void)
 	}
 	if (!row_map) {
 		row_map = xmalloc(uae_u8*, max_uae_height + 1);
-		row_map_genlock = xmalloc(uae_u8*, max_uae_height + 1);
+		//row_map_genlock = xmalloc(uae_u8*, max_uae_height + 1);
 	}
 
 	if (oldbufmem && oldbufmem == vidinfo->drawbuffer.bufmem &&
 		oldheight == vidinfo->drawbuffer.height_allocated &&
 		oldpitch == vidinfo->drawbuffer.rowbytes &&
-		oldgenlock == init_genlock_data &&
+		//oldgenlock == init_genlock_data &&
 		oldburst == (row_map_color_burst_buffer ? 1 : 0))
 		return;
-	xfree(row_map_genlock_buffer);
-	row_map_genlock_buffer = NULL;
-	if (init_genlock_data) {
-		row_map_genlock_buffer = xcalloc(uae_u8, vidinfo->drawbuffer.width_allocated * (vidinfo->drawbuffer.height_allocated + 2));
-	}
+	//xfree(row_map_genlock_buffer);
+	//row_map_genlock_buffer = NULL;
+	//if (init_genlock_data) {
+	//	row_map_genlock_buffer = xcalloc(uae_u8, vidinfo->drawbuffer.width_allocated * (vidinfo->drawbuffer.height_allocated + 2));
+	//}
 	xfree(row_map_color_burst_buffer);
 	row_map_color_burst_buffer = NULL;
 	if (currprefs.cs_color_burst) {
@@ -3030,20 +3030,20 @@ void init_row_map(void)
 	j = oldheight == 0 ? max_uae_height : oldheight;
 	for (i = vidinfo->drawbuffer.height_allocated; i < max_uae_height + 1 && i < j + 1; i++) {
 		row_map[i] = row_tmp;
-		row_map_genlock[i] = row_tmp;
+		//row_map_genlock[i] = row_tmp;
 	}
 	for (i = 0, j = 0; i < vidinfo->drawbuffer.height_allocated; i++, j += vidinfo->drawbuffer.rowbytes) {
 		row_map[i] = vidinfo->drawbuffer.bufmem + j;
-		if (init_genlock_data) {
-			row_map_genlock[i] = row_map_genlock_buffer + vidinfo->drawbuffer.width_allocated * (i + 1);
-		} else {
-			row_map_genlock[i] = NULL;
-		}
+		//if (init_genlock_data) {
+		//	row_map_genlock[i] = row_map_genlock_buffer + vidinfo->drawbuffer.width_allocated * (i + 1);
+		//} else {
+		//	row_map_genlock[i] = NULL;
+		//}
 	}
 	oldbufmem = vidinfo->drawbuffer.bufmem;
 	oldheight = vidinfo->drawbuffer.height_allocated;
 	oldpitch = vidinfo->drawbuffer.rowbytes;
-	oldgenlock = init_genlock_data;
+	//oldgenlock = init_genlock_data;
 	oldburst = row_map_color_burst_buffer ? 1 : 0;
 }
 
@@ -3632,7 +3632,7 @@ static void pfield_draw_line(struct vidbuffer *vb, int lineno, int gfx_ypos, int
 	//	xlinebuffer = row_map[gfx_ypos], dh = dh_buf;
 	xlinebuffer = row_map[gfx_ypos];
 	xlinebuffer -= linetoscr_x_adjust_pixbytes;
-	xlinebuffer_genlock = row_map_genlock[gfx_ypos] - linetoscr_x_adjust_pixels;
+	//xlinebuffer_genlock = row_map_genlock[gfx_ypos] - linetoscr_x_adjust_pixels;
 
 	if (row_map_color_burst_buffer)
 		row_map_color_burst_buffer[gfx_ypos] = bplcolorburst;
@@ -3749,7 +3749,7 @@ static void pfield_draw_line(struct vidbuffer *vb, int lineno, int gfx_ypos, int
 			if (do_double) {
 				//if (dh == dh_buf) {
 					xlinebuffer = row_map[follow_ypos] - linetoscr_x_adjust_pixbytes;
-					xlinebuffer_genlock = row_map_genlock[follow_ypos] - linetoscr_x_adjust_pixels;
+					//xlinebuffer_genlock = row_map_genlock[follow_ypos] - linetoscr_x_adjust_pixels;
 					fill_line_border(lineno);
 				//}
 				/* If dh == dh_line, do_flush_line will re-use the rendered line
@@ -4184,7 +4184,7 @@ static uae_u8 *status_line_ptr(int monid, int line)
 	xlinebuffer = vidinfo->drawbuffer.linemem;
 	if (xlinebuffer == 0)
 		xlinebuffer = row_map[line];
-	xlinebuffer_genlock = row_map_genlock[line];
+	//xlinebuffer_genlock = row_map_genlock[line];
 	return xlinebuffer;
 }
 
