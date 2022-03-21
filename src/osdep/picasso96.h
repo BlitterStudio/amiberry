@@ -716,21 +716,6 @@ extern int p96refresh_active;
 #define CARD_END (CARD_IRQCODE + 11 * 2)
 #define CARD_SIZEOF CARD_END
 
-#ifndef ANDROID
-#ifdef __cplusplus
-  extern "C" {
-#endif
-  void copy_screen_8bit_to_16bit(uae_u8 *dst, uae_u8 *src, int bytes, uae_u32 *clut);
-  void copy_screen_8bit_to_32bit(uae_u8 *dst, uae_u8 *src, int bytes, uae_u32 *clut);
-  void copy_screen_16bit_swap(uae_u8 *dst, uae_u8 *src, int bytes);
-  void copy_screen_16bit_to_32bit(uae_u8 *dst, uae_u8 *src, int bytes);
-  void copy_screen_32bit_to_16bit(uae_u8 *dst, uae_u8 *src, int bytes);
-  void copy_screen_32bit_to_32bit(uae_u8 *dst, uae_u8 *src, int bytes);
-#ifdef __cplusplus
-  }
-#endif
-#endif
-
 #endif
 
 void picasso96_alloc(TrapContext* ctx);
