@@ -2303,6 +2303,9 @@
     <ClInclude Include="..\src\archivers\chd\eigccx86.h">
       <Filter>src\archivers\chd</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\include\uae\uae_pragmas.h">
+      <Filter>src\include\uae</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\osdep\vkbd\vkbd.h">
       <Filter>src\osdep\vkbd</Filter>
     </ClInclude>

@@ -229,10 +229,10 @@ uae_u8 *xlinebuffer, *xlinebuffer_genlock;
 static int *amiga2aspect_line_map, *native2amiga_line_map;
 static int native2amiga_line_map_height;
 static uae_u8 **row_map;
-static uae_u8 *row_map_genlock_buffer;
+//static uae_u8 *row_map_genlock_buffer;
 static uae_u8 row_tmp[MAX_PIXELS_PER_LINE * 32 / 8];
 static int max_drawn_amiga_line;
-uae_u8 **row_map_genlock;
+//uae_u8 **row_map_genlock;
 uae_u8 *row_map_color_burst_buffer;
 
 /* line_draw_funcs: pfield_do_linetoscr, pfield_do_fill_line, decode_ham */
@@ -2998,7 +2998,8 @@ void init_row_map(void)
 	struct vidbuf_description *vidinfo = &adisplays[0].gfxvidinfo;
 	static uae_u8 *oldbufmem;
 	static int oldheight, oldpitch;
-	static bool oldgenlock, oldburst;
+	//static bool oldgenlock, oldburst;
+	static bool oldburst;
 	int i, j;
 
 	if (vidinfo->drawbuffer.height_allocated > max_uae_height) {
@@ -3704,15 +3705,15 @@ static void pfield_draw_line(struct vidbuffer *vb, int lineno, int gfx_ypos, int
 			do_color_changes(pfield_do_fill_line, dip_for_drawing->nr_sprites ? pfield_do_linetoscr_spr : pfield_do_linetoscr, lineno);
 
 		//if (dh == dh_emerg)
-		//	memcpy(row_map[gfx_ypos], xlinebuffer + linetoscr_x_adjust_pixbytes, vidinfo->drawbuffer.pixbytes * vidinfo->drawbuffer.inwidth);
+		//	memcpy (row_map[gfx_ypos], xlinebuffer + linetoscr_x_adjust_pixbytes, vidinfo->drawbuffer.pixbytes * vidinfo->drawbuffer.inwidth);
 
 		if (do_double) {
 			//if (dh == dh_emerg)
-				//memcpy(row_map[follow_ypos], xlinebuffer + linetoscr_x_adjust_pixbytes, vidinfo->drawbuffer.pixbytes * vidinfo->drawbuffer.inwidth);
+			//	memcpy (row_map[follow_ypos], xlinebuffer + linetoscr_x_adjust_pixbytes, vidinfo->drawbuffer.pixbytes * vidinfo->drawbuffer.inwidth);
 			//else if (dh == dh_buf)
-				memcpy(row_map[follow_ypos], row_map[gfx_ypos], vidinfo->drawbuffer.pixbytes * vidinfo->drawbuffer.inwidth);
-			if (need_genlock_data)
-				memcpy(row_map_genlock[follow_ypos], row_map_genlock[gfx_ypos], vidinfo->drawbuffer.inwidth);
+				memcpy (row_map[follow_ypos], row_map[gfx_ypos], vidinfo->drawbuffer.pixbytes * vidinfo->drawbuffer.inwidth);
+			//if (need_genlock_data)
+				//memcpy(row_map_genlock[follow_ypos], row_map_genlock[gfx_ypos], vidinfo->drawbuffer.inwidth);
 		}
 
 		if (dip_for_drawing->nr_sprites) {
@@ -3778,14 +3779,14 @@ static void pfield_draw_line(struct vidbuffer *vb, int lineno, int gfx_ypos, int
 		}
 
 		//if (dh == dh_emerg)
-		//	memcpy(row_map[gfx_ypos], xlinebuffer + linetoscr_x_adjust_pixbytes, vidinfo->drawbuffer.pixbytes * vidinfo->drawbuffer.inwidth);
+		//	memcpy (row_map[gfx_ypos], xlinebuffer + linetoscr_x_adjust_pixbytes, vidinfo->drawbuffer.pixbytes * vidinfo->drawbuffer.inwidth);
 		if (do_double) {
 			//if (dh == dh_emerg)
-			//	memcpy(row_map[follow_ypos], xlinebuffer + linetoscr_x_adjust_pixbytes, vidinfo->drawbuffer.pixbytes * vidinfo->drawbuffer.inwidth);
+			//	memcpy (row_map[follow_ypos], xlinebuffer + linetoscr_x_adjust_pixbytes, vidinfo->drawbuffer.pixbytes * vidinfo->drawbuffer.inwidth);
 			//else if (dh == dh_buf)
-				memcpy(row_map[follow_ypos], row_map[gfx_ypos], vidinfo->drawbuffer.pixbytes * vidinfo->drawbuffer.inwidth);
-			if (need_genlock_data)
-				memcpy(row_map_genlock[follow_ypos], row_map_genlock[gfx_ypos], vidinfo->drawbuffer.inwidth);
+				memcpy (row_map[follow_ypos], row_map[gfx_ypos], vidinfo->drawbuffer.pixbytes * vidinfo->drawbuffer.inwidth);
+			//if (need_genlock_data)
+			//	memcpy(row_map_genlock[follow_ypos], row_map_genlock[gfx_ypos], vidinfo->drawbuffer.inwidth);
 		}
 
 	} else {
@@ -4205,7 +4206,7 @@ static void draw_debug_status_line(int monid, int line)
 	xlinebuffer = vidinfo->drawbuffer.linemem;
 	if (xlinebuffer == 0)
 		xlinebuffer = row_map[line];
-	xlinebuffer_genlock = row_map_genlock[line];
+	//xlinebuffer_genlock = row_map_genlock[line];
 	//debug_draw(xlinebuffer, vidinfo->drawbuffer.pixbytes, line, vidinfo->drawbuffer.outwidth, vidinfo->drawbuffer.outheight, xredcolors, xgreencolors, xbluecolors);
 }
 
@@ -4237,7 +4238,7 @@ static void draw_lightpen_cursor(int monid, int x, int y, int line, int onscreen
 	xlinebuffer = vidinfo->drawbuffer.linemem;
 	if (xlinebuffer == 0)
 		xlinebuffer = row_map[line];
-	xlinebuffer_genlock = row_map_genlock[line];
+	//xlinebuffer_genlock = row_map_genlock[line];
 
 	p = lightpen_cursor + y * LIGHTPEN_WIDTH;
 	for (int i = 0; i < LIGHTPEN_WIDTH; i++) {

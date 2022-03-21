@@ -997,7 +997,7 @@ extern int hstop; // horizontal stop
 
 void auto_crop_image()
 {
-	static int new_height;
+	static int new_height, new_width;
 
 	auto start_y = minfirstline; // minfirstline = first line to be written to screen buffer
 	auto stop_y = MAXVPOS_PAL + minfirstline; // last line to be written to screen buffer
@@ -1008,14 +1008,21 @@ void auto_crop_image()
 	if (vstop < stop_y)
 		stop_y = vstop;			// if vstop < stop_y then there is a black border
 
+	new_width = (hstop - hstrt) / 2;
 	new_height = stop_y - start_y;
+
+	if (new_width < 320)
+		new_width = 320;
 
 	if (new_height < 200)
 		new_height = 200;
 	new_height = new_height * 2 <= 568 ? new_height * 2 : 568;
-	if (new_height != currprefs.gfx_monitor[0].gfx_size_win.height)
+	if (new_height != currprefs.gfx_monitor[0].gfx_size_win.height 
+		|| new_width != currprefs.gfx_monitor[0].gfx_size_win.width)
 	{
+		display_width = new_width;
 		display_height = new_height;
+		currprefs.gfx_monitor[0].gfx_size_win.width = new_width;
 		currprefs.gfx_monitor[0].gfx_size_win.height = new_height;
 		copy_prefs(&currprefs, &changed_prefs);
 		open_screen(&currprefs);
@@ -1027,17 +1034,21 @@ void flush_screen(const vidbuffer* vidbuffer, int ystart, int ystop)
 {
 	if (vidbuffer->bufmem == nullptr) return; // no buffer allocated return
 
-	static bool last_autoheight = false;
+	static bool last_autoheight;
 	if (currprefs.gfx_auto_height)
 	{
-		static int last_vstrt, last_vstop;
+		static int last_vstrt, last_vstop, last_hstrt, last_hstop;
 		if (last_autoheight != currprefs.gfx_auto_height 
 			|| last_vstrt != vstrt 
 			|| last_vstop != vstop
+			|| last_hstrt != hstrt
+			|| last_hstop != hstop
 			)
 		{
 			last_vstrt = vstrt;
 			last_vstop = vstop;
+			last_hstrt = hstrt;
+			last_hstop = hstop;
 
 			auto_crop_image();
 		}
