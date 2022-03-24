@@ -727,6 +727,9 @@ void graphics_subshutdown()
 	}
 	reset_sound();
 
+	SDL_FreeSurface(sdl_surface);
+	sdl_surface = nullptr;
+
 	auto* avidinfo = &adisplays[0].gfxvidinfo;
 	avidinfo->drawbuffer.realbufmem = NULL;
 	avidinfo->drawbuffer.bufmem = NULL;
@@ -735,7 +738,7 @@ void graphics_subshutdown()
 
 	avidinfo->outbuffer = &avidinfo->drawbuffer;
 	avidinfo->inbuffer = &avidinfo->drawbuffer;
-	
+
 #ifndef USE_DISPMANX
 #ifdef USE_OPENGL
 #else
@@ -745,13 +748,6 @@ void graphics_subshutdown()
 		amiga_texture = nullptr;
 	}
 #endif
-#endif
-	
-	if (sdl_surface)
-	{
-		SDL_FreeSurface(sdl_surface);
-		sdl_surface = nullptr;
-	}
 }
 
 static void updatepicasso96(struct AmigaMonitor* mon)
@@ -885,7 +881,7 @@ static void open_screen(struct uae_prefs* p)
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
 	else if (p->scaling_method == 1)
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
-	
+
 	sdl_surface = SDL_CreateRGBSurfaceWithFormat(0, display_width, display_height, display_depth, pixel_format);
 	check_error_sdl(sdl_surface == nullptr, "Unable to create a surface");
 
@@ -1011,22 +1007,32 @@ void auto_crop_image()
 	new_width = (hstop - hstrt) / 2;
 	new_height = stop_y - start_y;
 
-	if (new_width < 320)
-		new_width = 320;
-
+	if (new_width <= 0)
+		new_width = currprefs.gfx_monitor[0].gfx_size_win.width;
+	
+	// Minimum height set to 200 * 2 (400)
 	if (new_height < 200)
 		new_height = 200;
-	new_height = new_height * 2 <= 568 ? new_height * 2 : 568;
+
+	// Keep max values sane
+	if (new_width > 720)
+		new_width = 720;
+	if (new_height * 2 <= 568)
+		new_height = new_height * 2;
+	else
+		new_height = 568;
+
 	if (new_height != currprefs.gfx_monitor[0].gfx_size_win.height 
 		|| new_width != currprefs.gfx_monitor[0].gfx_size_win.width)
 	{
-		display_width = new_width;
-		display_height = new_height;
 		currprefs.gfx_monitor[0].gfx_size_win.width = new_width;
 		currprefs.gfx_monitor[0].gfx_size_win.height = new_height;
-		copy_prefs(&currprefs, &changed_prefs);
+		memcpy(&changed_prefs, &currprefs, sizeof(uae_prefs));
+#ifdef DEBUG
+		write_log("DEBUG: Auto-Crop new width: %d, new height: %d\n", new_width, new_height);
+#endif
 		open_screen(&currprefs);
-		init_custom();
+		reset_drawing();
 	}
 }
 

@@ -87,6 +87,18 @@ namespace gcn
 			&& (mValue != 215) && (mValue != 247));
 	}
 
+	bool Key::isSymbol() const
+	{
+		// ,-./
+		// ;'
+		// [\]
+		// = `
+		return (mValue >= 44 && mValue <= 47)
+		|| mValue == 59 || mValue == 39
+		|| (mValue >= 91 && mValue <= 93)
+		|| mValue == 61 || mValue == 96;
+	}
+
 	int Key::getValue() const
 	{
 		return mValue;
@@ -99,4 +111,59 @@ namespace gcn
 
 		return '\0';
 	}
+
+	char Key::getShiftedNumeric() const
+	{
+		// 1 -> !
+		if (mValue == 49) return static_cast<char>(33);
+		// 2 -> @
+		if (mValue == 50) return static_cast<char>(64);
+		// 3 -> #
+		if (mValue == 51) return static_cast<char>(35);
+		// 4 -> $
+		if (mValue == 52) return static_cast<char>(36);
+		// 5 -> %
+		if (mValue == 53) return static_cast<char>(37);
+		// 6 -> ^
+		if (mValue == 54) return static_cast<char>(94);
+		// 7 -> &
+		if (mValue == 55) return static_cast<char>(38);
+		// 8 -> *
+		if (mValue == 56) return static_cast<char>(42);
+		// 9 -> (
+		if (mValue == 57) return static_cast<char>(40);
+		// 0 -> )
+		if (mValue == 48) return static_cast<char>(41);
+
+		return '\0';
+	}
+
+	char Key::getShiftedSymbol() const
+	{
+		// , -> <
+		if (mValue == 44) return static_cast<char>(60);
+		// - -> _
+		if (mValue == 45) return static_cast<char>(95);
+		// . -> >
+		if (mValue == 46) return static_cast<char>(62);
+		// / -> ?
+		if (mValue == 47) return static_cast<char>(63);
+		// ; -> :
+		if (mValue == 59) return static_cast<char>(58);
+		// ' -> "
+		if (mValue == 39) return static_cast<char>(34);
+		// [ -> {
+		if (mValue == 91) return static_cast<char>(123);
+		// \ -> |
+		if (mValue == 92) return static_cast<char>(124);
+		// ] -> }
+		if (mValue == 93) return static_cast<char>(125);
+		// = -> +
+		if (mValue == 61) return static_cast<char>(43);
+		// ` -> ~
+		if (mValue == 96) return static_cast<char>(126);
+
+		return '\0';
+	}
+
 }

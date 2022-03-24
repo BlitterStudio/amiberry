@@ -210,9 +210,14 @@ namespace gcn
 		else if (key.isCharacter()
 			&& key.getValue() != Key::TAB)
 		{
-			if (keyEvent.isShiftPressed() && key.isLetter())
+			if (keyEvent.isShiftPressed())
 			{
-				mText.insert(mCaretPosition, std::string(1, static_cast<char>(key.getValue() - 32)));
+				if (key.isLetter())
+					mText.insert(mCaretPosition, std::string(1, static_cast<char>(key.getValue() - 32)));
+				else if (key.isNumber())
+					mText.insert(mCaretPosition, std::string(1, key.getShiftedNumeric()));
+				else if (key.isSymbol())
+					mText.insert(mCaretPosition, std::string(1, key.getShiftedSymbol()));
 			}
 			else
 			{
