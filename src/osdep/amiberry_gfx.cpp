@@ -748,6 +748,7 @@ void graphics_subshutdown()
 		amiga_texture = nullptr;
 	}
 #endif
+#endif
 }
 
 static void updatepicasso96(struct AmigaMonitor* mon)
