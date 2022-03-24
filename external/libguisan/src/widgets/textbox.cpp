@@ -350,9 +350,14 @@ namespace gcn
 		else if (key.isCharacter()
 			&& mEditable)
 		{
-			if (keyEvent.isShiftPressed() && key.isLetter())
+			if (keyEvent.isShiftPressed())
 			{
-				mTextRows[mCaretRow].insert(mCaretColumn, std::string(1, static_cast<char>(key.getValue() - 32)));
+				if (key.isLetter())
+					mTextRows[mCaretRow].insert(mCaretColumn, std::string(1, static_cast<char>(key.getValue() - 32)));
+				else if (key.isNumber())
+					mTextRows[mCaretRow].insert(mCaretColumn, std::string(1, key.getShiftedNumeric()));
+				else if (key.isSymbol())
+					mTextRows[mCaretRow].insert(mCaretColumn, std::string(1, key.getShiftedSymbol()));
 			}
 			else
 			{

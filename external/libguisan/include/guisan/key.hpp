@@ -96,6 +96,13 @@ namespace gcn
 		 */
 		[[nodiscard]] bool isLetter() const;
 
+		/*
+		 * Checks if the key is a symbol
+		 *
+		 * @return true if the key is a symbol (-/+.; etc)
+		 */
+		[[nodiscard]] bool isSymbol() const;
+
 		/**
 		 * Gets the value of the key. If an ascii value exists it will be
 		 * returned. Otherwise an enum value will be returned.
@@ -110,6 +117,20 @@ namespace gcn
 		 *  @return the char value of the key, the null character otherwise
 		 */
 		[[nodiscard]] char getChar() const;
+
+		/**
+		 * Gets the value represented by SHIFT + numeric key
+		 *
+		 * @return the char value of the key, the null character otherwise
+		 */
+		[[nodiscard]] char getShiftedNumeric() const;
+
+		/**
+		 * Gets the value represented by SHIFT + symbol key
+		 *
+		 * @return the char value of the key, the null character otherwise
+		 */
+		[[nodiscard]] char getShiftedSymbol() const;
 
 		/**
 		 * An enum with key values.
