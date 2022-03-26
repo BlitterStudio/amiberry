@@ -31,6 +31,7 @@
 #include "fsdb_host.h"
 #include "sampler.h"
 
+static bool force_auto_crop = false;
 static uae_thread_id display_tid = nullptr;
 static smp_comm_pipe *volatile display_pipe = nullptr;
 static uae_sem_t display_sem = nullptr;
@@ -46,6 +47,7 @@ bool volatile flip_in_progress = false;
 SDL_DisplayMode sdl_mode;
 SDL_Surface* sdl_surface = nullptr;
 SDL_Texture* amiga_texture;
+SDL_Rect crop_rect;
 SDL_Rect renderQuad;
 static int dx = 0, dy = 0;
 SDL_Renderer* sdl_renderer;
@@ -335,7 +337,7 @@ static int display_thread(void* unused)
 #else
 			SDL_RenderClear(sdl_renderer);
 			SDL_UpdateTexture(amiga_texture, nullptr, sdl_surface->pixels, sdl_surface->pitch);
-			SDL_RenderCopyEx(sdl_renderer, amiga_texture, nullptr, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
+			SDL_RenderCopyEx(sdl_renderer, amiga_texture, &crop_rect, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
 #endif
 			flip_in_progress = false;
 			break;
@@ -892,66 +894,22 @@ void SDL2_toggle_vsync(bool vsync)
 	open_screen(&currprefs);
 }
 
+
 extern int vstrt; // vertical start
 extern int vstop; // vertical stop
 extern int hstrt; // horizontal start
 extern int hstop; // horizontal stop
+extern int get_visible_left_border();
 
 void auto_crop_image()
 {
-	static int new_height, new_width;
-
-	auto start_y = minfirstline; // minfirstline = first line to be written to screen buffer
-	auto stop_y = MAXVPOS_PAL + minfirstline; // last line to be written to screen buffer
-	if (vstrt > minfirstline)
-		start_y = vstrt;		// if vstrt > minfirstline then there is a black border
-	if (start_y > 200)
-		start_y = minfirstline; // shouldn't happen but does for donkey kong
-	if (vstop < stop_y)
-		stop_y = vstop;			// if vstop < stop_y then there is a black border
-
-	new_width = (hstop - hstrt) / 2;
-	new_height = stop_y - start_y;
-
-	if (new_width <= 0)
-		new_width = currprefs.gfx_monitor[0].gfx_size_win.width;
-	
-	// Minimum height set to 200 * 2 (400)
-	if (new_height < 200)
-		new_height = 200;
-
-	// Keep max values sane
-	if (new_width > 720)
-		new_width = 720;
-	if (new_height * 2 <= 568)
-		new_height = new_height * 2;
-	else
-		new_height = 568;
-
-	if (new_height != currprefs.gfx_monitor[0].gfx_size_win.height 
-		|| new_width != currprefs.gfx_monitor[0].gfx_size_win.width)
-	{
-		currprefs.gfx_monitor[0].gfx_size_win.width = new_width;
-		currprefs.gfx_monitor[0].gfx_size_win.height = new_height;
-		memcpy(&changed_prefs, &currprefs, sizeof(uae_prefs));
-#ifdef DEBUG
-		write_log("DEBUG: Auto-Crop new width: %d, new height: %d\n", new_width, new_height);
-#endif
-		open_screen(&currprefs);
-		reset_drawing();
-	}
-}
-
-void flush_screen(const vidbuffer* vidbuffer, int ystart, int ystop)
-{
-	if (vidbuffer->bufmem == nullptr) return; // no buffer allocated return
-
-	static bool last_autoheight;
-	if (currprefs.gfx_auto_height)
+	static bool last_autocrop;
+	if (currprefs.gfx_auto_crop)
 	{
 		static int last_vstrt, last_vstop, last_hstrt, last_hstop;
-		if (last_autoheight != currprefs.gfx_auto_height 
-			|| last_vstrt != vstrt 
+		if (force_auto_crop
+			|| last_autocrop != currprefs.gfx_auto_crop
+			|| last_vstrt != vstrt
 			|| last_vstop != vstop
 			|| last_hstrt != hstrt
 			|| last_hstop != hstop
@@ -961,12 +919,65 @@ void flush_screen(const vidbuffer* vidbuffer, int ystart, int ystop)
 			last_vstop = vstop;
 			last_hstrt = hstrt;
 			last_hstop = hstop;
+			force_auto_crop = false;
+			static int new_height, new_width;
 
-			auto_crop_image();
+			auto start_y = minfirstline; // minfirstline = first line to be written to screen buffer
+			auto stop_y = MAXVPOS_PAL + minfirstline; // last line to be written to screen buffer
+			if (vstrt > minfirstline)
+				start_y = vstrt;		// if vstrt > minfirstline then there is a black border
+			if (start_y > 200)
+				start_y = minfirstline; // shouldn't happen but does for donkey kong
+			if (vstop < stop_y)
+				stop_y = vstop;			// if vstop < stop_y then there is a black border
+
+			new_width = (hstop - hstrt) / 2;
+			new_height = stop_y - start_y;
+
+			// Minimum values
+			if (new_width < 256)
+				new_width = 256;
+			if (new_height < 192)
+				new_height = 192;
+
+			// Maximum values
+			if (new_width / 2 << currprefs.gfx_resolution <= currprefs.gfx_monitor[0].gfx_size_win.width)
+				new_width = new_width / 2 << currprefs.gfx_resolution;
+			else
+				new_width = currprefs.gfx_monitor[0].gfx_size_win.width;
+			if (new_height << currprefs.gfx_vresolution <= currprefs.gfx_monitor[0].gfx_size_win.height)
+				new_height = new_height << currprefs.gfx_vresolution;
+			else
+				new_height = currprefs.gfx_monitor[0].gfx_size_win.height;
+
+			const int x = get_visible_left_border() > 0 ? get_visible_left_border() : 0;
+			const int y = vstrt - minfirstline << currprefs.gfx_vresolution > 0 ? vstrt - minfirstline << currprefs.gfx_vresolution : 0;
+
+#ifdef USE_DISPMANX
+			// Still using the old approach for DMX, for now
+			if (new_height != currprefs.gfx_monitor[0].gfx_size_win.height
+				|| new_width != currprefs.gfx_monitor[0].gfx_size_win.width)
+			{
+				currprefs.gfx_monitor[0].gfx_size_win.width = new_width;
+				currprefs.gfx_monitor[0].gfx_size_win.height = new_height;
+				memcpy(&changed_prefs, &currprefs, sizeof(uae_prefs));
+				open_screen(&currprefs);
+				reset_drawing();
+			}
+#else
+			crop_rect = { x, y, new_width, new_height };
+#endif
 		}
 	}
+	else
+	{
+#ifdef USE_DISPMANX
+#else
+		crop_rect = { 0, 0, sdl_surface->w, sdl_surface->h };
+#endif
+	}
 
-	last_autoheight = currprefs.gfx_auto_height;
+	last_autocrop = currprefs.gfx_auto_crop;
 }
 
 void update_display(struct uae_prefs* p)
@@ -1007,7 +1018,7 @@ int check_prefs_changed_gfx()
 #ifdef AMIBERRY
 		c2 |= currprefs.gfx_horizontal_offset != changed_prefs.gfx_horizontal_offset ? 16 : 0;
 		c2 |= currprefs.gfx_vertical_offset != changed_prefs.gfx_vertical_offset ? 16 : 0;
-		c2 |= currprefs.gfx_auto_height != changed_prefs.gfx_auto_height ? 16 : 0;
+		c2 |= currprefs.gfx_auto_crop != changed_prefs.gfx_auto_crop ? 16 : 0;
 		c2 |= currprefs.gfx_correct_aspect != changed_prefs.gfx_correct_aspect ? 16 : 0;
 		c2 |= currprefs.scaling_method != changed_prefs.scaling_method ? 16 : 0;
 #endif
@@ -1189,7 +1200,7 @@ int check_prefs_changed_gfx()
 		currprefs.multithreaded_drawing = changed_prefs.multithreaded_drawing;
 		currprefs.gfx_horizontal_offset = changed_prefs.gfx_horizontal_offset;
 		currprefs.gfx_vertical_offset = changed_prefs.gfx_vertical_offset;
-		currprefs.gfx_auto_height = changed_prefs.gfx_auto_height;
+		currprefs.gfx_auto_crop = changed_prefs.gfx_auto_crop;
 		currprefs.gfx_correct_aspect = changed_prefs.gfx_correct_aspect;
 		currprefs.scaling_method = changed_prefs.scaling_method;
 #endif
@@ -1268,6 +1279,8 @@ int check_prefs_changed_gfx()
 					c |= 16;
 					reset_drawing();
 					//S2X_reset();
+					// Trigger auto-crop recalculations if needed
+					force_auto_crop = true;
 				}
 			}
 			if (c & 1024) {
@@ -1579,7 +1592,7 @@ void show_screen(int monid, int mode)
 		flip_in_progress = true;
 		SDL_RenderClear(sdl_renderer);
 		SDL_UpdateTexture(amiga_texture, nullptr, sdl_surface->pixels, sdl_surface->pitch);
-		SDL_RenderCopyEx(sdl_renderer, amiga_texture, nullptr, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
+		SDL_RenderCopyEx(sdl_renderer, amiga_texture, &crop_rect, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
 		SDL_RenderPresent(sdl_renderer);
 		flip_in_progress = false;
 	}
