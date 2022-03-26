@@ -781,11 +781,13 @@ static void open_screen(struct uae_prefs* p)
 		{
 			SDL_RenderSetLogicalSize(sdl_renderer, display_width, display_height);
 			renderQuad = { 0, 0, display_width, display_height };
+			crop_rect = { 0, 0, display_width, display_height };
 		}
 		else
 		{
 			SDL_RenderSetLogicalSize(sdl_renderer, display_height, display_width);
 			renderQuad = { -(display_width - display_height) / 2, (display_width - display_height) / 2, display_width, display_height };
+			crop_rect = { -(display_width - display_height) / 2, (display_width - display_height) / 2, display_width, display_height };
 		}
 		
 		if (isfullscreen() == 0 && !is_maximized)
