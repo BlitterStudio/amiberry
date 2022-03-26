@@ -476,6 +476,8 @@ void update_win_fs_mode(int monid, struct uae_prefs* p)
 
 		display_width = p->gfx_monitor[0].gfx_size.width / 2 << p->gfx_resolution;
 		display_height = p->gfx_monitor[0].gfx_size.height / 2 << p->gfx_vresolution;
+
+		force_auto_crop = true;
 	}
 }
 
@@ -968,6 +970,28 @@ void auto_crop_image()
 			}
 #else
 			crop_rect = { x, y, new_width, new_height };
+
+			int width, height;
+			if (changed_prefs.gfx_correct_aspect == 0)
+			{
+				width = sdl_mode.w;
+				height = sdl_mode.h;
+			}
+			else
+			{
+				width = new_width * 2 >> currprefs.gfx_resolution;
+				height = new_height * 2 >> currprefs.gfx_vresolution;
+			}
+			if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
+			{
+				SDL_RenderSetLogicalSize(sdl_renderer, width, height);
+				renderQuad = { dx, dy, width, height };
+			}
+			else
+			{
+				SDL_RenderSetLogicalSize(sdl_renderer, height, width);
+				renderQuad = { -(width - height) / 2, (width - height) / 2, width, height };
+			}
 #endif
 		}
 	}
