@@ -908,6 +908,7 @@ extern int get_visible_left_border();
 void auto_crop_image()
 {
 	static bool last_autocrop;
+	static int width, height;
 	if (currprefs.gfx_auto_crop)
 	{
 		static int last_vstrt, last_vstop, last_hstrt, last_hstop;
@@ -971,7 +972,6 @@ void auto_crop_image()
 #else
 			crop_rect = { x, y, new_width, new_height };
 
-			int width, height;
 			if (changed_prefs.gfx_correct_aspect == 0)
 			{
 				width = sdl_mode.w;
@@ -1000,6 +1000,32 @@ void auto_crop_image()
 #ifdef USE_DISPMANX
 #else
 		crop_rect = { 0, 0, sdl_surface->w, sdl_surface->h };
+
+		if (last_autocrop != currprefs.gfx_auto_crop)
+		{
+			// Restore Aspect ratio corrections if auto-crop was turned off
+			if (changed_prefs.gfx_correct_aspect == 0)
+			{
+				width = sdl_mode.w;
+				height = sdl_mode.h;
+			}
+			else
+			{
+				width = display_width * 2 >> currprefs.gfx_resolution;
+				height = display_height * 2 >> currprefs.gfx_vresolution;
+			}
+			if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
+			{
+				SDL_RenderSetLogicalSize(sdl_renderer, width, height);
+				renderQuad = { dx, dy, width, height };
+			}
+			else
+			{
+				SDL_RenderSetLogicalSize(sdl_renderer, height, width);
+				renderQuad = { -(width - height) / 2, (width - height) / 2, width, height };
+			}
+		}
+		
 #endif
 	}
 
