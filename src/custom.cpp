@@ -366,14 +366,15 @@ static int hhbpl, hhspr;
 static int ciavsyncmode;
 static int diw_hstrt, diw_hstop;
 static int hdiw_counter;
-static int hdiw_counter_sconflict, hdiw_counter_sconflict_mask;
-static int hdiw_counter_conflict;
+static uae_u16 hdiw_counter_sconflict, hdiw_counter_sconflict_mask;
+static uae_u16 hdiw_counter_conflict;
+static int hstrobe_hdiw_min;
 static uae_u32 ref_ras_add;
 static uaecptr refptr, refptr_p;
 static uae_u32 refmask;
 static int refresh_handled_slot;
 static bool refptr_preupdated;
-static bool hstrobe_conflict, hstrobe_conflict_frame;
+static bool hstrobe_conflict, hstrobe_conflict2;
 static int line_disabled;
 static bool custom_disabled;
 
@@ -458,7 +459,7 @@ static int diwfirstword, diwlastword;
 static int last_diwlastword;
 static int hb_last_diwlastword;
 static int last_hdiw;
-static diw_states vdiwstate, hdiwstate;
+static diw_states vdiwstate, hdiwstate, hdiwstate_conflict;
 static int bpl_hstart;
 static bool exthblank, exthblank_state, hcenterblank_state;
 static int last_diw_hpos, last_diw_hpos2;
@@ -623,6 +624,12 @@ static void events_dmal(int);
 static uae_u16 dmal, dmal_hpos;
 static uae_u16 dmal_htotal_mask;
 static bool dmal_ce;
+
+static void update_copper(int until_hpos);
+static void decide_sprites_fetch(int endhpos);
+static void decide_line(int endhpos);
+static void decide_sprites(int hpos, bool usepointx, bool quick);
+static void decide_sprites(int hpos);
 
 /* The number of bits left from the last fetched words.
 This is an optimization - conceptually, we have to make sure the result is
@@ -915,18 +922,6 @@ static void reset_bpl_vars()
 	thisline_decision.bplres = output_res(bplcon0_res);
 }
 
-static int get_strobe_conflict_shift(int hpos)
-{
-	// Because Denise hcounter is not synced to Agnus hcounter, BPL1DAT DMA
-	// has now offset causing jagged display. Emulate it here.
-	int unalign = hpos * 2 + hdiw_counter;
-	unalign >>= 1;
-	unalign -= 5;
-	unalign &= 7;
-	unalign *= 2;
-	return unalign - 2;
-}
-
 STATIC_INLINE bool line_hidden(void)
 {
 	return vpos >= maxvpos_display_vsync && vpos < minfirstline - 1;
@@ -1121,22 +1116,29 @@ static void insert_actborder(int diw, bool onoff)
 	if (line_hidden() || custom_disabled) {
 		return;
 	}
-	diw = adjust_hr(diw);
-	// find slot to insert into
+
 	int i;
+	// already exists?
+	for (i = last_color_change; i < next_color_change; i++) {
+		struct color_change *cc = &curr_color_changes[i];
+		if (cc->linepos == diw && cc->regno == 0 && (cc->value & COLOR_CHANGE_MASK) == COLOR_CHANGE_ACTBORDER) {
+			cc->value = COLOR_CHANGE_ACTBORDER | (onoff ? 1 : 0);
+			return;
+		}
+	}
+	// find slot to insert into
 	for (i = last_color_change; i < next_color_change; i++) {
 		struct color_change *cc = &curr_color_changes[i];
 		if (cc->linepos > diw) {
 			break;
 		}
 	}
-	int ii = i;
-	while (i < next_color_change) {
-		memcpy(&curr_color_changes[i + 1], &curr_color_changes[i], sizeof(struct color_change));
-		i++;
+	if (i < next_color_change) {
+		int num = next_color_change - i;
+		memmove(&curr_color_changes[i + 1], &curr_color_changes[i], sizeof(struct color_change) * num);
 	}
 
-	struct color_change *cc = &curr_color_changes[ii];
+	struct color_change *cc = &curr_color_changes[i];
 	cc->linepos = diw;
 	cc->regno = 0;
 	cc->value = COLOR_CHANGE_ACTBORDER | (onoff ? 1 : 0);
@@ -1162,19 +1164,78 @@ static void hdiw_restart(int diw_last, int diw_current)
 			break;
 		}
 	}
-	int ii = i;
-	while (i < next_color_change) {
-		memcpy(&curr_color_changes[i + 1], &curr_color_changes[i], sizeof(struct color_change));
-		i++;
+	if (i < next_color_change) {
+		int num = next_color_change - i;
+		memmove(&curr_color_changes[i + 1], &curr_color_changes[i], sizeof(struct color_change) * num);
 	}
 
-	struct color_change *cc = &curr_color_changes[ii];
+	struct color_change *cc = &curr_color_changes[i];
 	cc->linepos = diw_last;
 	cc->regno = 0;
 	cc->value = COLOR_CHANGE_ACTBORDER | 1;
 	next_color_change++;
 
 	record_color_change2(-diw_current, 0, COLOR_CHANGE_ACTBORDER | 0);
+}
+
+static void decide_hstrobe_hdiw(int hpos)
+{
+	int off = hdiw_counter_conflict;
+
+	hpos += hpos_hsync_extra;
+	if (hpos <= hstrobe_hdiw_min) {
+		return;
+	}
+
+	int max = (hpos * 2 + 1) << 2;
+	int min = (hstrobe_hdiw_min * 2 + 1) << 2;
+
+	int hdiw1 = (diw_hstrt - off) & ((512 << 2) - 1);
+	int hdiw2 = (diw_hstop - off) & ((512 << 2) - 1);
+
+	hdiw1 = adjust_hr(hdiw1);
+	hdiw2 = adjust_hr(hdiw2);
+
+	max = adjust_hr(max);
+	min = adjust_hr(min);
+
+	if (hdiw1 < min) {
+		hdiw1 = min;
+	}
+	if (hdiw2 < min) {
+		hdiw2 = min;
+	}
+	if (hdiw1 > max) {
+		hdiw1 = max;
+	}
+	if (hdiw2 > max) {
+		hdiw2 = max;
+	}
+
+	if (hdiw1 < hdiw2) {
+		if (hdiw1 > min && hdiwstate_conflict == diw_states::DIW_waiting_start) {
+			insert_actborder(min, true);
+			insert_actborder(hdiw1, false);
+			hdiwstate_conflict = diw_states::DIW_waiting_stop;
+		}
+		if (hdiw2 < max && hdiwstate_conflict == diw_states::DIW_waiting_stop) {
+			insert_actborder(hdiw2, true);
+			insert_actborder(max, false);
+		}
+	} else if (hdiw1 > hdiw2) {
+		insert_actborder(hdiw2, true);
+		insert_actborder(hdiw1, false);
+		hdiwstate_conflict = diw_states::DIW_waiting_stop;
+	}
+
+	hstrobe_hdiw_min = hpos;
+}
+
+static void decide_conflict_hdiw(int hpos)
+{
+	if (hstrobe_conflict) {
+		decide_hstrobe_hdiw(hpos);
+	}
 }
 
 /* Called to determine the state of the horizontal display window state
@@ -1184,7 +1245,7 @@ static void hdiw_restart(int diw_last, int diw_current)
 static void decide_hdiw_check_start(int start_diw_hpos, int end_diw_hpos, int extrahpos)
 {
 	if (hdiwstate == diw_states::DIW_waiting_start) {
-		if (diw_hstrt > start_diw_hpos && diw_hstrt < end_diw_hpos) {
+		if (diw_hstrt > start_diw_hpos && diw_hstrt < end_diw_hpos && !hstrobe_conflict) {
 			int first = diwfirstword + extrahpos;
 			if (last_diwlastword >= 0) {
 				int first2 = first * 2;
@@ -1212,8 +1273,8 @@ static void decide_hdiw_check_start(int start_diw_hpos, int end_diw_hpos, int ex
 }
 static void decide_hdiw_check_stop(int start_diw_hpos, int end_diw_hpos, int extrahpos)
 {
-	if (hdiwstate == diw_states::DIW_waiting_stop && !hstrobe_conflict) {
-		if (diw_hstop > start_diw_hpos && diw_hstop <= end_diw_hpos) {
+	if (hdiwstate == diw_states::DIW_waiting_stop) {
+		if (diw_hstop > start_diw_hpos && diw_hstop <= end_diw_hpos && !hstrobe_conflict) {
 			int last = diwlastword + extrahpos;
 			if (last > thisline_decision.diwlastword) {
 				thisline_decision.diwlastword = adjust_hr2(last);
@@ -2361,13 +2422,24 @@ static void fetch_strobe_conflict(int nr, int fm, int hpos, bool addmodulo)
 		warned1--;
 	}
 
-	if (!hstrobe_conflict_frame) {
-		int d = 512 - (maxhpos * 2 + 1) + 1;
-		hdiw_counter_sconflict = d << sprite_buffer_res;
-		hdiw_counter_conflict = 0;
-		hstrobe_conflict_frame = true;
+	// decide sprites before sprite offset change
+	decide_sprites(hpos + 1);
+
+	if (!hstrobe_conflict) {
+		hdiwstate_conflict = hdiwstate;
 	}
+
+	hdiw_counter_sconflict += (512 - ((maxhpos * 2 + 1) - 1)) << sprite_buffer_res;
+	hdiw_counter_sconflict &= hdiw_counter_sconflict_mask;
+
+	if (hstrobe_conflict) {
+		hdiw_counter_conflict += ((maxhpos * 2 + 1) - 1) << 2;
+	}
+	hdiw_counter_conflict &= (512 << 2) - 1;
+
+	hstrobe_conflict2 = true;
 	hstrobe_conflict = true;
+
 
 	SET_LINE_CYCLEBASED;
 }
@@ -2384,6 +2456,7 @@ static void fetch_refresh_conflict(int nr, int fm, int hpos, bool addmodulo)
 	uaecptr bplptx = bplpt[nr];
 	uaecptr refptx = refptr;
 	uaecptr px = bplptx | refptx;
+	uaecptr p = px;
 
 #ifdef DEBUGGER
 	if (debug_dma) {
@@ -2420,6 +2493,44 @@ static void fetch_refresh_conflict(int nr, int fm, int hpos, bool addmodulo)
 	}
 
 	SET_LINE_CYCLEBASED;
+
+#ifdef DEBUGGER
+	if (debug_dma) {
+		record_dma_read(0x110 + nr * 2, p, hpos, vpos, DMARECORD_BITPLANE, nr);
+	}
+	if (memwatch_enabled) {
+		debug_getpeekdma_chipram(p, MW_MASK_BPL_0 << nr, 0x110 + nr * 2, 0xe0 + nr * 4);
+	}
+#endif
+
+	switch (fm)
+	{
+		case 0:
+		{
+			fetched_aga[nr] = fetched[nr] = 0xffff;
+			regs.chipset_latch_rw = 0xffff;
+			last_custom_value = (uae_u16)regs.chipset_latch_rw;
+			break;
+		}
+#ifdef AGA
+		case 1:
+		{
+			fetched_aga[nr] = 0xffffffff;
+			regs.chipset_latch_rw = (uae_u32)fetched_aga[nr];
+			last_custom_value = (uae_u16)regs.chipset_latch_rw;
+			fetched[nr] = (uae_u16)fetched_aga[nr];
+			break;
+		}
+		case 2:
+		{
+			fetched_aga[nr] = 0xffffffffffffffff;
+			regs.chipset_latch_rw = (uae_u32)fetched_aga[nr];
+			last_custom_value = (uae_u16)regs.chipset_latch_rw;
+			fetched[nr] = (uae_u16)fetched_aga[nr];
+			break;
+		}
+#endif
+	}
 }
 
 static bool fetch(int nr, int fm, int hpos, bool addmodulo)
@@ -2440,7 +2551,7 @@ static bool fetch(int nr, int fm, int hpos, bool addmodulo)
 		} else if (dmaslot == CYCLE_REFRESH) {
 			// refresh conflict
 			fetch_refresh_conflict(nr, fm, hpos, addmodulo);
-			p = bplpt[nr];
+			return nr == 0;
 		} else if (dmaslot == CYCLE_MISC) {
 			// DMAL conflict
 			// AUDxDAT AND BPLxDAT = read-only register
@@ -2902,7 +3013,9 @@ STATIC_INLINE void toscr_special(int nbits, int fm)
 		for (int i = 0; i < nbits; i++) {
 			if (toscr_hend == 0 && delay_cycles2 == delay_lastcycle[lol]) {
 				toscr_hend = 1;
-				delay_cycles = 2 << LORES_TO_SHRES_SHIFT;
+				if (!hstrobe_conflict) {
+					delay_cycles = 2 << LORES_TO_SHRES_SHIFT;
+				}
 			}
 			if (delay_cycles2 == delay_hsynccycle) {
 				toscr_hend = 2;
@@ -2955,7 +3068,9 @@ STATIC_INLINE void toscr_special_hr(int nbits, int fm)
 		for (int i = 0; i < nbits; i++) {
 			if (toscr_hend == 0 && delay_cycles2 == delay_lastcycle[lol]) {
 				toscr_hend = 1;
-				delay_cycles = 2 << LORES_TO_SHRES_SHIFT;
+				if (!hstrobe_conflict) {
+					delay_cycles = 2 << LORES_TO_SHRES_SHIFT;
+				}
 			}
 			if (delay_cycles2 == delay_hsynccycle) {
 				toscr_hend = 2;
@@ -3322,9 +3437,6 @@ static void beginning_of_plane_block_early(int hpos)
 	bpl_shifter = 1;
 	int left = hpos + hpos_hsync_extra;
 	thisline_decision.plfleft = left * 2;
-	if (hstrobe_conflict) {
-		thisline_decision.plfleft -= get_strobe_conflict_shift(hpos);
-	}
 	if (hdiwstate == diw_states::DIW_waiting_stop && thisline_decision.diwfirstword < 0) {
 		// 1.5 lores pixels
 		int v = hpos_to_diw(hpos);
@@ -3342,9 +3454,6 @@ static void start_noborder(int hpos)
 	reset_bpl_vars();
 	if (thisline_decision.plfleft < 0) {
 		thisline_decision.plfleft = hpos * 2;
-		if (hstrobe_conflict) {
-			thisline_decision.plfleft -= get_strobe_conflict_shift(hpos);
-		}
 		if (hdiwstate == diw_states::DIW_waiting_stop && thisline_decision.diwfirstword < 0) {
 			thisline_decision.diwfirstword = min_diwlastword;
 		}
@@ -4199,10 +4308,6 @@ static void decide_vline(void)
 	}
 }
 
-static void update_copper(int until_hpos);
-static void decide_sprites_fetch(int endhpos);
-static void decide_line(int endhpos);
-
 static void decide_line_decision_fetches(int endhpos)
 {
 	decide_bpl_fetch(endhpos);
@@ -4549,72 +4654,6 @@ static int fromspritexdiw(int ddf)
 	return coord_hw_to_window_x_lores(ddf >> sprite_buffer_res) + (DIW_DDF_OFFSET << lores_shift);
 }
 
-static void record_sprite_2(int sprxp, uae_u16 *buf, uae_u32 datab, int num, int dbl,
-	unsigned int mask, int do_collisions, uae_u32 collision_mask)
-{
-	uae_u16 erasemask = ~(3 << (2 * num));
-
-	// handle free running hdiw hiding sprites in different horizontal positions in different lines
-	int hdiwx1 = (diw_hstrt + (hdiw_counter_conflict << 2) + 3) & ((512 << 2) - 1);
-	int hdiwx2 = (diw_hstop + (hdiw_counter_conflict << 2) + 3) & ((512 << 2) - 1);
-	int hdiw1 = tospritexdiw(hdiwx1);
-	int hdiw2 = tospritexdiw(hdiwx2);
-
-	int j = 0;
-	while (datab) {
-		unsigned int col = 0;
-		unsigned coltmp = 0;
-
-		col = (datab & 3) << (2 * num);
-		if (hdiw2 > hdiw1) {
-			if (sprxp < hdiw1 || sprxp >= hdiw2) {
-				col = 0;
-			}
-		} else {
-			if (sprxp >= hdiw2 && sprxp < hdiw1) {
-				col = 0;
-			}
-		}
-
-		if ((j & mask) == 0) {
-			unsigned int tmp = ((*buf) & erasemask) | col;
-			*buf++ = tmp;
-			if (do_collisions)
-				coltmp |= tmp;
-			sprxp++;
-		}
-		if (dbl > 0) {
-			unsigned int tmp = ((*buf) & erasemask) | col;
-			*buf++ = tmp;
-			if (do_collisions)
-				coltmp |= tmp;
-			sprxp++;
-		}
-		if (dbl > 1) {
-			unsigned int tmp;
-			tmp = ((*buf) & erasemask) | col;
-			*buf++ = tmp;
-			if (do_collisions)
-				coltmp |= tmp;
-			tmp = ((*buf) & erasemask) | col;
-			*buf++ = tmp;
-			if (do_collisions)
-				coltmp |= tmp;
-			sprxp++;
-			sprxp++;
-		}
-		j++;
-		datab >>= 2;
-		if (do_collisions) {
-			coltmp &= collision_mask;
-			if (coltmp) {
-				unsigned int shrunk_tmp = sprite_ab_merge[coltmp & 255] | (sprite_ab_merge[coltmp >> 8] << 2);
-				clxdat |= sprclx[shrunk_tmp];
-			}
-		}
-	}
-}
-
 static void record_sprite_1(int sprxp, uae_u16 *buf, uae_u32 datab, int num, int dbl,
 	unsigned int mask, int do_collisions, uae_u32 collision_mask)
 {
@@ -4624,7 +4663,7 @@ static void record_sprite_1(int sprxp, uae_u16 *buf, uae_u32 datab, int num, int
 		unsigned int col = 0;
 		unsigned coltmp = 0;
 
-		if (sprxp >= sprite_minx || brdspractive())
+		if (sprxp >= sprite_minx || brdspractive() || hstrobe_conflict)
 			col = (datab & 3) << (2 * num);
 #if 0
 		if (sprxp == sprite_minx)
@@ -4728,9 +4767,7 @@ static void record_sprite(int num, int sprxp, uae_u16 *data, uae_u16 *datb, unsi
 			| (sprtabb[db & 0xFF] << 16) | sprtabb[db >> 8]);
 		int off = (i << dbl) >> half;
 		uae_u16 *buf = spixels + word_offs + off;
-		if (hstrobe_conflict) {
-			record_sprite_2(sprxp + off, buf, datab, num, dbl, mask, 1, collision_mask);
-		} else if (currprefs.collision_level > 0 && collision_mask) {
+		if (currprefs.collision_level > 0 && collision_mask) {
 			record_sprite_1(sprxp + off, buf, datab, num, dbl, mask, 1, collision_mask);
 		} else {
 			record_sprite_1(sprxp + off, buf, datab, num, dbl, mask, 0, collision_mask);
@@ -4835,7 +4872,6 @@ static void decide_sprites(int hpos, bool usepointx, bool quick)
 	int sscanmask = 0x100 << sprite_buffer_res;
 	int gotdata = 0;
 	int extrahpos = hsyncstartpos_start_cycles * 2; // hpos 0 to this value is visible in right border
-	int conflict_diff = 0;
 
 	point = (hpos + hpos_hsync_extra) * 2 - DDF_OFFSET;
 
@@ -4863,7 +4899,7 @@ static void decide_sprites(int hpos, bool usepointx, bool quick)
 		int pointx = usepointx && (s->ctl & sprite_sprctlmask) ? 0 : 1;
 
 		// Sprite does not start if X=0 but SSCAN2 sprite does. Don't do X == 0 check here.
-		if (sprxp < 0 || (!hdiw_counter_sconflict && hw_xp > maxhpos * 2 + 1)) {
+		if (sprxp < 0 || hw_xp > maxhpos * 2 + 1) {
 			continue;
 		}
 
@@ -5029,6 +5065,29 @@ static void finish_partial_decision(int hpos)
 	}
 }
 
+static void hstrobe_conflict_check(uae_u32 v)
+{
+	int hpos = current_hpos();
+	finish_partial_decision(hpos);
+
+	SET_LINE_CYCLEBASED;
+	uae_u16 datreg = cycle_line_pipe[hpos];
+	// not conflict?
+	if (!(datreg & CYCLE_PIPE_BITPLANE)) {
+		hstrobe_conflict = false;
+		hdiw_counter_conflict += ((maxhpos * 2 + 1) - 1) << 2;
+		hdiw_counter_conflict &= (512 << 2) - 1;
+		decide_hstrobe_hdiw(hpos);
+		hdiwstate = hdiwstate_conflict;
+		decide_hdiw(hpos);
+		hdiw_counter_sconflict = 0;
+		hdiw_counter_conflict = 0;
+		flush_display(fetchmode);
+		delay_cycles = (2 + 2) << LORES_TO_SHRES_SHIFT;
+	}
+}
+
+
 static void finish_decisions(int hpos)
 {
 	struct amigadisplay *ad = &adisplays[0];
@@ -5050,18 +5109,7 @@ static void finish_decisions(int hpos)
 
 	if (hstrobe_conflict) {
 		sync_color_changes(hpos + DDF_OFFSET / 2 + 1);
-		int hdiw1 = (diw_hstrt + (hdiw_counter_conflict << 2) + 3) & ((512 << 2) - 1);
-		int hdiw2 = (diw_hstop + (hdiw_counter_conflict << 2) + 3) & ((512 << 2) - 1);
-		if (hdiw1 < hdiw2) {
-			if (hdiw1 > 0) {
-				insert_actborder(0, true);
-				insert_actborder(hdiw1, false);
-			}
-			insert_actborder(hdiw2, true);
-		} else {
-			insert_actborder(hdiw2, true);
-			insert_actborder(hdiw1, false);
-		}
+		decide_hstrobe_hdiw(hpos);
 	}
 
 	// Add DDF_OFFSET to detect blanking changes past hpos max
@@ -5146,6 +5194,11 @@ static void reset_decisions_scanline_start(void)
 	if (nodraw())
 		return;
 
+	if (hstrobe_conflict) {
+		hstrobe_conflict2 = false;
+		event2_newevent_xx(-1, REFRESH_FIRST_HPOS * CYCLE_UNIT, 0, hstrobe_conflict_check);
+	}
+
 	last_decide_line_hpos = 0;
 	last_decide_sprite_hpos = 0;
 	last_fetch_hpos = 0;
@@ -5185,6 +5238,18 @@ static void reset_decisions_scanline_start(void)
 		}
 	}
 
+}
+
+static void get_strobe_conflict_shift(int hpos)
+{
+	// Because Denise hcounter is not synced to Agnus hcounter,
+	// BPLCON1 offset changes every line, causing jagged display.
+	int unalign = hpos * 2 + hdiw_counter;
+	unalign /= 2;
+	unalign -= 4;
+	unalign &= 7;
+	unalign *= 2;
+	delay_cycles = unalign << LORES_TO_SHRES_SHIFT;
 }
 
 static void reset_decisions_hsync_start(void)
@@ -5335,6 +5400,9 @@ static void reset_decisions_hsync_start(void)
 	delay_cycles = ((hpos) * 2 - DDF_OFFSET + 0) << LORES_TO_SHRES_SHIFT;
 	delay_cycles2 = delay_cycles;
 	set_delay_lastcycle();
+	if (hstrobe_conflict) {
+		get_strobe_conflict_shift(hpos);
+	}
 
 	if (1 && fetchmode >= 2 && !doflickerfix_active()) {
 		// handle bitplane data wrap around
@@ -5442,6 +5510,10 @@ static void reset_decisions_hsync_start(void)
 	last_bpl1dat_hpos_early = false;
 	last_hblank_start = -1;
 	hcenterblank_state = false;
+	hstrobe_hdiw_min = hsyncstartpos_start_cycles;
+	if (hstrobe_conflict) {
+		SET_LINE_CYCLEBASED;
+	}
 }
 
 int vsynctimebase_orig;
@@ -7926,6 +7998,7 @@ static void DIWSTRT(int hpos, uae_u16 v)
 		diw_hstrt = max_diwlastword << 2;
 	}
 	decide_hdiw(hpos);
+	decide_conflict_hdiw(hpos);
 	decide_line(hpos);
 	diwhigh_written = 0;
 	diwstrt = v;
@@ -7941,6 +8014,7 @@ static void DIWSTOP(int hpos, uae_u16 v)
 		diw_hstop = min_diwlastword << 2;
 	}
 	decide_hdiw(hpos);
+	decide_conflict_hdiw(hpos);
 	decide_line(hpos);
 	diwhigh_written = 0;
 	diwstop = v;
@@ -7960,6 +8034,7 @@ static void DIWHIGH(int hpos, uae_u16 v)
 		return;
 	}
 	decide_hdiw(hpos);
+	decide_conflict_hdiw(hpos);
 	decide_line(hpos);
 	diwhigh_written = 1;
 	diwhigh = v;
@@ -11082,9 +11157,6 @@ static void events_dmal_hsync2(uae_u32 v)
 {
 	int dmal_first = DMAL_FIRST_HPOS - v;
 	// 3 disk + 4 audio
-	if (dmal && !hstrobe_conflict_frame) {
-		write_log(_T("DMAL error!? %04x\n"), dmal);
-	}
 	uae_u16 dmalt = audio_dmal();
 	dmalt <<= (3 * 2);
 	dmalt |= disk_dmal();
@@ -11337,20 +11409,12 @@ static void hsync_handler_pre(bool onvsync)
 
 		hdiw_counter += maxhpos * 2;
 		if (!hstrobe_conflict) {
-			hdiw_counter_sconflict = 0;
-			hdiw_counter_conflict = 0;
 			if (!ecs_denise && vpos == get_equ_vblank_endline() - 1) {
 				hdiw_counter++;
 			}
 			if (ecs_denise || vpos > get_equ_vblank_endline() || (currprefs.cs_dipagnus && vpos == 0)) {
 				hdiw_counter = maxhpos * 2;
 			}
-		} else {
-			hdiwstate = diw_states::DIW_waiting_stop;
-			hdiw_counter_sconflict += ((512 - maxhpos * 2 + 1) + 1) << sprite_buffer_res;
-			hdiw_counter_sconflict &= hdiw_counter_sconflict_mask;
-			hdiw_counter_conflict += 512 - (maxhpos * 2 + 1) + 1;
-			hdiw_counter_conflict &= 511;
 		}
 		hdiw_counter &= 511;
 	}
@@ -11400,10 +11464,6 @@ static void hsync_handler_pre(bool onvsync)
 			}
 		}
 	}
-	if (!hstrobe_conflict) {
-		dmal = 0;
-	}
-	hstrobe_conflict = false;
 
 	//debug_hsync();
 }
@@ -12565,7 +12625,7 @@ static void hsync_handler(void)
 		vsync_display_rendered = false;
 		lof_display = lof_store;
 		hstrobe_conflict = false;
-		hstrobe_conflict_frame = false;
+		hstrobe_conflict2 = false;
 		reset_autoscale();
 	}
 	vsync_line = vs;
@@ -12683,6 +12743,15 @@ void custom_reset(bool hardreset, bool keyboardreset)
 	set_hcenter();
 	display_reset = 1;
 
+	if (hardreset || savestate_state) {
+		bool ntsc = currprefs.ntscmode;
+		maxhpos = ntsc ? MAXHPOS_NTSC : MAXHPOS_PAL;
+		maxhpos_short = ntsc ? MAXHPOS_NTSC : MAXHPOS_PAL;
+		maxvpos = ntsc ? MAXVPOS_NTSC : MAXVPOS_PAL;
+		maxvpos_nom = ntsc ? MAXVPOS_NTSC : MAXVPOS_PAL;
+		maxvpos_display = ntsc ? MAXVPOS_NTSC : MAXVPOS_PAL;
+	}
+
 	if (!savestate_state) {
 		cia_hsync = 0;
 		extra_cycle = 0;
@@ -12693,6 +12762,7 @@ void custom_reset(bool hardreset, bool keyboardreset)
 		blitter_reset();
 
 		if (hardreset) {
+
 			vtotal = MAXVPOS_LINES_ECS - 1;
 			htotal = MAXHPOS_ROWS - 1;
 			hbstrt = 0;
@@ -12704,6 +12774,7 @@ void custom_reset(bool hardreset, bool keyboardreset)
 			vsstrt = 0;
 			vsstop = 0;
 			hcenter = 0;
+
 			if (!aga_mode) {
 				uae_u16 c = ((ecs_denise && !aga_mode) || currprefs.cs_denisenoehb) ? 0xfff : 0x000;
 				for (int i = 0; i < 32; i++) {

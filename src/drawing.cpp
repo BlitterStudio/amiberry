@@ -29,6 +29,7 @@ happening, all ports should restrict window widths to be multiples of 16 pixels.
 
 #define SPRITE_DEBUG_HIDE 0
 #define BG_COLOR_DEBUG 0
+#define EXTBORDER_BLANK 0
 
 #include "sysconfig.h"
 #include "sysdeps.h"
@@ -2053,7 +2054,11 @@ static void pfield_do_linetoscr(int start, int stop, int blank)
 	if (exthblank) {
 		pfield_do_fill_line(start, stop, 1);
 	} else if (extborder) {
+#if EXTBORDER_BLANK
+		bool bb = true;
+#else
 		bool bb = ce_is_borderblank(colors_for_drawing.extra);
+#endif
 		pfield_do_fill_line(start, stop, bb ? 1 : 0);
 	}
 	src_pixel = pixel;
@@ -2062,7 +2067,11 @@ static void pfield_do_linetoscr_spr(int start, int stop, int blank)
 {
 	int pixel;
 	if (extborder) {
+#if EXTBORDER_BLANK
+		bool bb = true;
+#else
 		bool bb = ce_is_borderblank(colors_for_drawing.extra);
+#endif
 		pixel = pfield_do_linetoscr_sprite(src_pixel, start, stop);
 		pfield_do_fill_line(start, stop, bb || exthblank);
 	} else {
@@ -4400,6 +4409,7 @@ static void draw_frame2(struct vidbuffer *vbin, struct vidbuffer *vbout)
 				// scan line - 1 events, it might have hblank enable for next line.
 				for (int j = 0; j < 2; j++) {
 					dip_for_drawing = curr_drawinfo + lastline;
+					dp_for_drawing = line_decisions + lastline;
 					do_color_changes(NULL, NULL, -1);
 					lastline++;
 				}
