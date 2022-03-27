@@ -1674,6 +1674,14 @@ void target_fixup_options(struct uae_prefs* p)
 	// Always use these pixel formats, for optimal performance
 	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5PC | RGBFF_R8G8B8A8;
 
+	if (p->gfx_auto_crop)
+	{
+		// Make sure that Width/Height are set to max, and Auto-Center disabled
+		p->gfx_monitor[0].gfx_size.width = p->gfx_monitor[0].gfx_size_win.width = 720;
+		p->gfx_monitor[0].gfx_size.height = p->gfx_monitor[0].gfx_size_win.height = 568;
+		p->gfx_xcenter = p->gfx_ycenter = 0;
+	}
+
 #ifdef USE_DISPMANX
 	// Always disable Virtual Mouse mode on Dispmanx, as it doesn't work as expected in some cases
 	if (p->input_tablet > 0)
@@ -1824,8 +1832,8 @@ void target_default_options(struct uae_prefs* p, int type)
 	if (amiberry_options.default_auto_crop)
 	{
 		p->gfx_auto_crop = amiberry_options.default_auto_crop;
-		p->gfx_monitor[0].gfx_size_win.width = 720;
-		p->gfx_monitor[0].gfx_size_win.height = 568;
+		p->gfx_monitor[0].gfx_size.width = p->gfx_monitor[0].gfx_size_win.width = 720;
+		p->gfx_monitor[0].gfx_size.height = p->gfx_monitor[0].gfx_size_win.height = 568;
 	}
 	
 	p->gfx_correct_aspect = amiberry_options.default_correct_aspect_ratio;
@@ -1871,10 +1879,10 @@ void target_default_options(struct uae_prefs* p, int type)
 		p->gfx_pscanlines = 0;
 	}
 
-	if (amiberry_options.default_horizontal_centering)
+	if (amiberry_options.default_horizontal_centering && !p->gfx_auto_crop)
 		p->gfx_xcenter = 2;
 	
-	if (amiberry_options.default_vertical_centering)
+	if (amiberry_options.default_vertical_centering && !p->gfx_auto_crop)
 		p->gfx_ycenter = 2;
 
 	if (amiberry_options.default_frameskip)

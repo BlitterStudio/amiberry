@@ -699,6 +699,13 @@ void RefreshPanelDisplay()
 		}
 	}
 	chkAutoCrop->setSelected(changed_prefs.gfx_auto_crop);
+	if (changed_prefs.gfx_auto_crop)
+	{
+		changed_prefs.gfx_monitor[0].gfx_size_win.width = 720;
+		changed_prefs.gfx_monitor[0].gfx_size_win.height = 568;
+		changed_prefs.gfx_xcenter = 0;
+		changed_prefs.gfx_ycenter = 0;
+	}
 	chkBorderless->setSelected(changed_prefs.borderless);
 
 	sldHOffset->setValue(changed_prefs.gfx_horizontal_offset);
@@ -709,6 +716,8 @@ void RefreshPanelDisplay()
 	lblVOffsetValue->setCaption(std::to_string(changed_prefs.gfx_vertical_offset));
 	lblVOffsetValue->adjustSize();
 
+	chkHorizontal->setEnabled(!changed_prefs.gfx_auto_crop);
+	chkVertical->setEnabled(!changed_prefs.gfx_auto_crop);
 	chkHorizontal->setSelected(changed_prefs.gfx_xcenter == 2);
 	chkVertical->setSelected(changed_prefs.gfx_ycenter == 2);
 
