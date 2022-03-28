@@ -14,10 +14,6 @@ steps:
       make -f Makefile.fs
       cp capsimg.so $(Build.SourcesDirectory)
       cd $(Build.SourcesDirectory)
-      cd external/FloppyDriveBridge
-      make
-      cp FloppyBridge.so $(Build.SourcesDirectory)
-      cd $(Build.SourcesDirectory)
       make -j4 PLATFORM=rpi1
       mkdir amiberry-rpi1-dmx-32bit
     displayName: 'Compile for RPI1 (Dispmanx) 32-bit'
@@ -27,7 +23,6 @@ steps:
      Contents: |
         amiberry
         capsimg.so
-        FloppyBridge.so
         abr/**
         conf/**
         controllers/**

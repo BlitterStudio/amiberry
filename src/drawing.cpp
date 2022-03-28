@@ -3296,21 +3296,6 @@ static void pfield_expand_dp_bplconx (int regno, int v, int hp, int vp)
 	set_res_shift();
 }
 
-#ifdef AMIBERRY
-// this handles auto-height
-STATIC_INLINE void do_flush_screen(int start, int stop)
-{
-	const struct amigadisplay* ad = &adisplays[0];
-	const struct vidbuf_description* vidinfo = &ad->gfxvidinfo;
-	const struct vidbuffer* vb = &vidinfo->drawbuffer;
-	
-	if (start <= stop)
-		flush_screen(vb, start, stop);
-	else
-		flush_screen(vb, 0, 0); /* vsync mode */
-}
-#endif
-
 static int drawing_color_matches;
 static enum { color_match_acolors, color_match_full } color_match_type;
 
@@ -3808,6 +3793,13 @@ static void pfield_draw_line(struct vidbuffer *vb, int lineno, int gfx_ypos, int
 
 	}
 }
+
+#ifdef AMIBERRY
+int get_visible_left_border()
+{
+	return min_diwstart == MAX_STOP ? visible_left_border / 2 : min_diwstart - visible_left_border;
+}
+#endif
 
 static void center_image (void)
 {
@@ -4755,8 +4747,8 @@ static void finish_drawing_frame(bool drawlines)
 
 	unlockscr(vb, display_reset ? -2 : -1, -1);
 #ifdef AMIBERRY
-	// for auto-height
-	do_flush_screen(first_drawn_line, vb->last_drawn_line);
+	next_line_to_render = 0;
+	auto_crop_image();
 #endif
 }
 

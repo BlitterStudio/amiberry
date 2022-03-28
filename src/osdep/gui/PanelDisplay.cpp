@@ -73,7 +73,7 @@ static gcn::Label* lblAmigaHeight;
 static gcn::TextField* txtAmigaHeight;
 static gcn::Slider* sldAmigaHeight;
 
-static gcn::CheckBox* chkAutoHeight;
+static gcn::CheckBox* chkAutoCrop;
 static gcn::CheckBox* chkBorderless;
 
 static gcn::Label* lblHOffset;
@@ -139,8 +139,12 @@ public:
 		else if (actionEvent.getSource() == txtAmigaHeight)
 			changed_prefs.gfx_monitor[0].gfx_size_win.height = std::stoi(txtAmigaHeight->getText());
 
-		else if (actionEvent.getSource() == chkAutoHeight)
-			changed_prefs.gfx_auto_height = chkAutoHeight->isSelected();
+		else if (actionEvent.getSource() == chkAutoCrop)
+		{
+			changed_prefs.gfx_auto_crop = chkAutoCrop->isSelected();
+			changed_prefs.gfx_monitor[0].gfx_size_win.width = 720;
+			changed_prefs.gfx_monitor[0].gfx_size_win.height = 568;
+		}
 
 		else if (actionEvent.getSource() == chkBorderless)
 			changed_prefs.borderless = chkBorderless->isSelected();
@@ -367,9 +371,9 @@ void InitPanelDisplay(const config_category& category)
 	txtAmigaHeight->setBackgroundColor(colTextboxBackground);
 	txtAmigaHeight->addActionListener(amigaScreenActionListener);
 
-	chkAutoHeight = new gcn::CheckBox("Auto Crop");
-	chkAutoHeight->setId("chkAutoHeight");
-	chkAutoHeight->addActionListener(amigaScreenActionListener);
+	chkAutoCrop = new gcn::CheckBox("Auto Crop");
+	chkAutoCrop->setId("chkAutoCrop");
+	chkAutoCrop->addActionListener(amigaScreenActionListener);
 
 	chkBorderless = new gcn::CheckBox("Borderless");
 	chkBorderless->setId("chkBorderless");
@@ -476,9 +480,9 @@ void InitPanelDisplay(const config_category& category)
 		posY);
 	
 	posY += sldAmigaHeight->getHeight() + DISTANCE_NEXT_Y;
-	grpAmigaScreen->add(chkAutoHeight, DISTANCE_BORDER, posY);
-	grpAmigaScreen->add(chkBorderless, chkAutoHeight->getX() + chkAutoHeight->getWidth() + DISTANCE_NEXT_X, posY);
-	posY += chkAutoHeight->getHeight() + DISTANCE_NEXT_Y;
+	grpAmigaScreen->add(chkAutoCrop, DISTANCE_BORDER, posY);
+	grpAmigaScreen->add(chkBorderless, chkAutoCrop->getX() + chkAutoCrop->getWidth() + DISTANCE_NEXT_X, posY);
+	posY += chkAutoCrop->getHeight() + DISTANCE_NEXT_Y;
 	grpAmigaScreen->add(lblHOffset, DISTANCE_BORDER, posY);
 	grpAmigaScreen->add(sldHOffset, lblHOffset->getX() + lblHOffset->getWidth() + DISTANCE_NEXT_X, posY);
 	grpAmigaScreen->add(lblHOffsetValue, sldHOffset->getX() + sldHOffset->getWidth() + 8, posY + 2);
@@ -611,7 +615,7 @@ void ExitPanelDisplay()
 	delete lblAmigaHeight;
 	delete sldAmigaHeight;
 	delete txtAmigaHeight;
-	delete chkAutoHeight;
+	delete chkAutoCrop;
 	delete chkBorderless;
 	delete lblHOffset;
 	delete sldHOffset;
@@ -694,7 +698,14 @@ void RefreshPanelDisplay()
 			break;
 		}
 	}
-	chkAutoHeight->setSelected(changed_prefs.gfx_auto_height);
+	chkAutoCrop->setSelected(changed_prefs.gfx_auto_crop);
+	if (changed_prefs.gfx_auto_crop)
+	{
+		changed_prefs.gfx_monitor[0].gfx_size_win.width = 720;
+		changed_prefs.gfx_monitor[0].gfx_size_win.height = 568;
+		changed_prefs.gfx_xcenter = 0;
+		changed_prefs.gfx_ycenter = 0;
+	}
 	chkBorderless->setSelected(changed_prefs.borderless);
 
 	sldHOffset->setValue(changed_prefs.gfx_horizontal_offset);
@@ -705,6 +716,8 @@ void RefreshPanelDisplay()
 	lblVOffsetValue->setCaption(std::to_string(changed_prefs.gfx_vertical_offset));
 	lblVOffsetValue->adjustSize();
 
+	chkHorizontal->setEnabled(!changed_prefs.gfx_auto_crop);
+	chkVertical->setEnabled(!changed_prefs.gfx_auto_crop);
 	chkHorizontal->setSelected(changed_prefs.gfx_xcenter == 2);
 	chkVertical->setSelected(changed_prefs.gfx_ycenter == 2);
 
@@ -719,9 +732,13 @@ void RefreshPanelDisplay()
 		cboScreenmode->setSelected(0);
 		cboFullscreen->setEnabled(false);
 
-		lblAmigaHeight->setEnabled(!chkAutoHeight->isSelected());
-		sldAmigaHeight->setEnabled(!chkAutoHeight->isSelected());
-		txtAmigaHeight->setEnabled(!chkAutoHeight->isSelected());
+		lblAmigaWidth->setEnabled(!chkAutoCrop->isSelected());
+		sldAmigaWidth->setEnabled(!chkAutoCrop->isSelected());
+		txtAmigaWidth->setEnabled(!chkAutoCrop->isSelected());
+
+		lblAmigaHeight->setEnabled(!chkAutoCrop->isSelected());
+		sldAmigaHeight->setEnabled(!chkAutoCrop->isSelected());
+		txtAmigaHeight->setEnabled(!chkAutoCrop->isSelected());
 	}
 	else if (changed_prefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN)
 	{
@@ -733,9 +750,13 @@ void RefreshPanelDisplay()
 		cboScreenmode->setSelected(2);
 		cboFullscreen->setEnabled(false);
 
-		lblAmigaHeight->setEnabled(!chkAutoHeight->isSelected());
-		sldAmigaHeight->setEnabled(!chkAutoHeight->isSelected());
-		txtAmigaHeight->setEnabled(!chkAutoHeight->isSelected());
+		lblAmigaWidth->setEnabled(!chkAutoCrop->isSelected());
+		sldAmigaWidth->setEnabled(!chkAutoCrop->isSelected());
+		txtAmigaWidth->setEnabled(!chkAutoCrop->isSelected());
+
+		lblAmigaHeight->setEnabled(!chkAutoCrop->isSelected());
+		sldAmigaHeight->setEnabled(!chkAutoCrop->isSelected());
+		txtAmigaHeight->setEnabled(!chkAutoCrop->isSelected());
 	}
 
 	//Disable Borderless checkbox in non-Windowed modes

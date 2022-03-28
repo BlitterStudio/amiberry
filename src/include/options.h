@@ -882,7 +882,7 @@ struct uae_prefs
 	int kbd_led_scr;
 	int kbd_led_cap;
 
-	bool gfx_auto_height;
+	bool gfx_auto_crop;
 	int gfx_horizontal_offset;
 	int gfx_vertical_offset;
 	int gfx_correct_aspect;
@@ -1173,7 +1173,7 @@ struct amiberry_options
 	int default_scaling_method = -1;
 	bool default_frameskip = false;
 	bool default_correct_aspect_ratio = true;
-	bool default_auto_height = false;
+	bool default_auto_crop = false;
 	int default_width = 720;
 	int default_height = 568;
 	int default_fullscreen_mode = false;

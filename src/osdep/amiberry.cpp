@@ -1674,6 +1674,14 @@ void target_fixup_options(struct uae_prefs* p)
 	// Always use these pixel formats, for optimal performance
 	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5PC | RGBFF_R8G8B8A8;
 
+	if (p->gfx_auto_crop)
+	{
+		// Make sure that Width/Height are set to max, and Auto-Center disabled
+		p->gfx_monitor[0].gfx_size.width = p->gfx_monitor[0].gfx_size_win.width = 720;
+		p->gfx_monitor[0].gfx_size.height = p->gfx_monitor[0].gfx_size_win.height = 568;
+		p->gfx_xcenter = p->gfx_ycenter = 0;
+	}
+
 #ifdef USE_DISPMANX
 	// Always disable Virtual Mouse mode on Dispmanx, as it doesn't work as expected in some cases
 	if (p->input_tablet > 0)
@@ -1821,7 +1829,13 @@ void target_default_options(struct uae_prefs* p, int type)
 
 	p->gfx_horizontal_offset = 0;
 	p->gfx_vertical_offset = 0;
-	p->gfx_auto_height = amiberry_options.default_auto_height;
+	if (amiberry_options.default_auto_crop)
+	{
+		p->gfx_auto_crop = amiberry_options.default_auto_crop;
+		p->gfx_monitor[0].gfx_size.width = p->gfx_monitor[0].gfx_size_win.width = 720;
+		p->gfx_monitor[0].gfx_size.height = p->gfx_monitor[0].gfx_size_win.height = 568;
+	}
+	
 	p->gfx_correct_aspect = amiberry_options.default_correct_aspect_ratio;
 
 	// GFX_WINDOW = 0
@@ -1865,10 +1879,10 @@ void target_default_options(struct uae_prefs* p, int type)
 		p->gfx_pscanlines = 0;
 	}
 
-	if (amiberry_options.default_horizontal_centering)
+	if (amiberry_options.default_horizontal_centering && !p->gfx_auto_crop)
 		p->gfx_xcenter = 2;
 	
-	if (amiberry_options.default_vertical_centering)
+	if (amiberry_options.default_vertical_centering && !p->gfx_auto_crop)
 		p->gfx_ycenter = 2;
 
 	if (amiberry_options.default_frameskip)
@@ -1983,7 +1997,7 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 
 	cfgfile_target_dwrite(f, _T("gfx_horizontal_offset"), _T("%d"), p->gfx_horizontal_offset);
 	cfgfile_target_dwrite(f, _T("gfx_vertical_offset"), _T("%d"), p->gfx_vertical_offset);
-	cfgfile_target_dwrite_bool(f, _T("gfx_auto_height"), p->gfx_auto_height);
+	cfgfile_target_dwrite_bool(f, _T("gfx_auto_crop"), p->gfx_auto_crop);
 	cfgfile_target_dwrite(f, _T("gfx_correct_aspect"), _T("%d"), p->gfx_correct_aspect);
 	cfgfile_target_dwrite(f, _T("kbd_led_num"), _T("%d"), p->kbd_led_num);
 	cfgfile_target_dwrite(f, _T("kbd_led_scr"), _T("%d"), p->kbd_led_scr);
@@ -2073,7 +2087,9 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 		return 1;
 	if (cfgfile_intval(option, value, "gfx_vertical_offset", &p->gfx_vertical_offset, 1))
 		return 1;
-	if (cfgfile_yesno(option, value, _T("gfx_auto_height"), &p->gfx_auto_height))
+	if (cfgfile_yesno(option, value, _T("gfx_auto_height"), &p->gfx_auto_crop))
+		return 1;
+	if (cfgfile_yesno(option, value, _T("gfx_auto_crop"), &p->gfx_auto_crop))
 		return 1;
 	if (cfgfile_intval(option, value, "gfx_correct_aspect", &p->gfx_correct_aspect, 1))
 		return 1;
@@ -2656,7 +2672,7 @@ void save_amiberry_settings(void)
 	fputs(buffer, f);
 
 	// Enable Auto-Height by default?
-	snprintf(buffer, MAX_DPATH, "default_auto_height=%s\n", amiberry_options.default_auto_height ? "yes" : "no");
+	snprintf(buffer, MAX_DPATH, "default_auto_crop=%s\n", amiberry_options.default_auto_crop ? "yes" : "no");
 	fputs(buffer, f);
 
 	// Default Screen Width
@@ -2962,7 +2978,8 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_intval(option, value, "default_scaling_method", &amiberry_options.default_scaling_method, 1);
 		ret |= cfgfile_yesno(option, value, "default_frameskip", &amiberry_options.default_frameskip);
 		ret |= cfgfile_yesno(option, value, "default_correct_aspect_ratio", &amiberry_options.default_correct_aspect_ratio);
-		ret |= cfgfile_yesno(option, value, "default_auto_height", &amiberry_options.default_auto_height);
+		ret |= cfgfile_yesno(option, value, "default_auto_height", &amiberry_options.default_auto_crop);
+		ret |= cfgfile_yesno(option, value, "default_auto_crop", &amiberry_options.default_auto_crop);
 		ret |= cfgfile_intval(option, value, "default_width", &amiberry_options.default_width, 1);
 		ret |= cfgfile_intval(option, value, "default_height", &amiberry_options.default_height, 1);
 		ret |= cfgfile_intval(option, value, "default_fullscreen_mode", &amiberry_options.default_fullscreen_mode, 1);

@@ -4774,7 +4774,8 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 		break;
 #endif
 	case AKS_AUTO_CROP_IMAGE:
-		auto_crop_image();
+		currprefs.gfx_auto_crop = !currprefs.gfx_auto_crop;
+		check_prefs_changed_gfx();
 		break;
 	}
 end:

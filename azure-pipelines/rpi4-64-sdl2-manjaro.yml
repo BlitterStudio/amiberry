@@ -14,10 +14,6 @@ steps:
       make -f Makefile.fs
       cp capsimg.so $(Build.SourcesDirectory)
       cd $(Build.SourcesDirectory)
-      cd external/FloppyDriveBridge
-      make
-      cp FloppyBridge.so $(Build.SourcesDirectory)
-      cd $(Build.SourcesDirectory)
       make -j4 PLATFORM=rpi4-64-sdl2
       mkdir amiberry-rpi4-sdl2-64bit
     displayName: 'Compile for RPI4 SDL2 64-bit'
@@ -27,7 +23,6 @@ steps:
      Contents: |
         amiberry
         capsimg.so
-        FloppyBridge.so
         abr/**
         conf/**
         controllers/**
