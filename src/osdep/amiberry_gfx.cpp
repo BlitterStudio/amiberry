@@ -1064,6 +1064,8 @@ void auto_crop_image()
 				open_screen(&currprefs);
 				reset_drawing();
 			}
+#elif USE_OPENGL
+			// TODO
 #else
 			crop_rect = { x, y, new_width, new_height };
 
@@ -1093,6 +1095,8 @@ void auto_crop_image()
 	else
 	{
 #ifdef USE_DISPMANX
+#elif USE_OPENGL
+		// TODO
 #else
 		crop_rect = { 0, 0, sdl_surface->w, sdl_surface->h };
 
