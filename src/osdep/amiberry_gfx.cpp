@@ -1035,17 +1035,18 @@ void auto_crop_image()
 			new_height = stop_y - start_y;
 
 			// Minimum values
-			if (new_width < 256)
-				new_width = 256;
+			const int min_width = currprefs.gfx_resolution ? 640 : 320;
+			if (new_width / 2 << currprefs.gfx_resolution < min_width)
+				new_width = min_width;
+			else
+				new_width = new_width / 2 << currprefs.gfx_resolution;
 			if (new_height < 192)
 				new_height = 192;
 
 			// Maximum values
-			if (new_width / 2 << currprefs.gfx_resolution <= currprefs.gfx_monitor[0].gfx_size_win.width)
-				new_width = new_width / 2 << currprefs.gfx_resolution;
-			else
+			if (new_width > currprefs.gfx_monitor[0].gfx_size_win.width)
 				new_width = currprefs.gfx_monitor[0].gfx_size_win.width;
-			if (new_height << currprefs.gfx_vresolution <= currprefs.gfx_monitor[0].gfx_size_win.height)
+			if (new_height << currprefs.gfx_vresolution < currprefs.gfx_monitor[0].gfx_size_win.height)
 				new_height = new_height << currprefs.gfx_vresolution;
 			else
 				new_height = currprefs.gfx_monitor[0].gfx_size_win.height;
@@ -1055,10 +1056,8 @@ void auto_crop_image()
 
 #ifdef USE_DISPMANX
 			// Still using the old approach for DMX, for now
-			if (new_height != currprefs.gfx_monitor[0].gfx_size_win.height
-				|| new_width != currprefs.gfx_monitor[0].gfx_size_win.width)
+			if (new_height != currprefs.gfx_monitor[0].gfx_size_win.height)
 			{
-				currprefs.gfx_monitor[0].gfx_size_win.width = new_width;
 				currprefs.gfx_monitor[0].gfx_size_win.height = new_height;
 				memcpy(&changed_prefs, &currprefs, sizeof(uae_prefs));
 				open_screen(&currprefs);

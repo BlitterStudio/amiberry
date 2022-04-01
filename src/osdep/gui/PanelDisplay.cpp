@@ -838,9 +838,12 @@ bool HelpPanelDisplay(std::vector<std::string>& helptext)
 	helptext.emplace_back("- Windowed: the Amiga screen will be shown in a Window on your desktop");
 	helptext.emplace_back("- Fullscreen: the monitor resolution will change to the selected one.");
 	helptext.emplace_back("- Full-window: the Amiga screen will be scaled to the current resolution.");
-	helptext.emplace_back("The Auto-height option will have the emulator try to detect the height automatically.");
+	helptext.emplace_back("The Auto-Crop option will have the emulator try to detect the width/height automatically,");
+	helptext.emplace_back("and scale it up to the full area of the screen, eliminating any black borders.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("You can use the Horizontal/Vertical centering options to center the image automatically.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("You can also manually shift the image horizontally or vertically, with the Offset options.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("The Aspect Ratio option allows you to choose if you want the correct Aspect Ratio");
 	helptext.emplace_back("to be kept always (default), or have the image stretched to fill the screen instead.");
@@ -855,7 +858,7 @@ bool HelpPanelDisplay(std::vector<std::string>& helptext)
 	helptext.emplace_back("You can additionally use the Remove interlace artifacts option, to enable the flicker-fixer feature.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("When you activate \"Frameskip\", only every second frame is drawn.");
-	helptext.emplace_back("You can use the slider to further fine-tune how many frames should be skipped.");
+	helptext.emplace_back("You can use the slider to further fine-tune how many frames are skipped.");
 	helptext.emplace_back("This will improve performance and some more games are playable.");
 	return true;
 }
