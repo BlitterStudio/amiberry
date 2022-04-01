@@ -38,7 +38,7 @@ cp -R docs Amiberry.app/Contents/Resources/Docs
 cp -R whdboot Amiberry.app/Contents/Resources/Whdboot
 
 # Overwrite default conf with OSX specific one
-mkdir Amiberry.app/Contents/resources/conf
+mkdir Amiberry.app/Contents/Resources/conf
 cat conf/amiberry-osx.conf | sed -e "s#USERDIR#$USERDIR#g" >Amiberry.app/Contents/Resources/conf/amiberry.conf
 # Use dylibbundler to install into app if exists
 dylibbundler -od -b -x Amiberry.app/Contents/MacOS/Amiberry -d Amiberry.app/Contents/libs/ -s external/libguisan/dylib/
