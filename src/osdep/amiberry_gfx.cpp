@@ -955,9 +955,10 @@ void auto_crop_image()
 
 #ifdef USE_DISPMANX
 			// Still using the old approach for DMX, for now
-			if (new_height != currprefs.gfx_monitor[0].gfx_size_win.height)
+			height = new_height * 2 >> currprefs.gfx_vresolution;
+			if (height != currprefs.gfx_monitor[0].gfx_size_win.height)
 			{
-				currprefs.gfx_monitor[0].gfx_size_win.height = new_height;
+				currprefs.gfx_monitor[0].gfx_size_win.height = height;
 				memcpy(&changed_prefs, &currprefs, sizeof(uae_prefs));
 				open_screen(&currprefs);
 				reset_drawing();
