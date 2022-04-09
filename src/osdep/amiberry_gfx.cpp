@@ -129,6 +129,7 @@ VC_RECT_T       blit_rect;
 VC_RECT_T		black_rect;
 
 VC_IMAGE_TYPE_T rgb_mode = VC_IMAGE_RGB565;
+VC_DISPMANX_ALPHA_T dmx_alpha = { static_cast<DISPMANX_FLAGS_ALPHA_T>(DISPMANX_FLAGS_ALPHA_FROM_SOURCE | DISPMANX_FLAGS_ALPHA_FIXED_ALL_PIXELS), 255, 0 };
 
 static int DispManXElementpresent = 0;
 static unsigned char current_resource_amigafb = 0;
@@ -144,10 +145,6 @@ static int display_thread(void* unused)
 {
 	struct AmigaMonitor* mon = &AMonitors[0];
 #ifdef USE_DISPMANX
-	VC_DISPMANX_ALPHA_T alpha = {
-		static_cast<DISPMANX_FLAGS_ALPHA_T>(DISPMANX_FLAGS_ALPHA_FROM_SOURCE | DISPMANX_FLAGS_ALPHA_FIXED_ALL_PIXELS),
-		255, 0
-	};
 	uint32_t vc_image_ptr;
 	SDL_Rect viewport;
 #endif
@@ -265,23 +262,20 @@ static int display_thread(void* unused)
 				const auto want_aspect = static_cast<float>(width) / static_cast<float>(height);
 				const auto real_aspect = static_cast<float>(modeInfo.width) / static_cast<float>(modeInfo.height);
 
+				float scale;
 				if (want_aspect > real_aspect)
 				{
-					const auto scale = static_cast<float>(modeInfo.width) / static_cast<float>(width);
-					viewport.x = 0;
-					viewport.w = modeInfo.width;
-					viewport.h = static_cast<int>(std::ceil(height * scale));
-					viewport.y = (modeInfo.height - viewport.h) / 2;
+					scale = static_cast<float>(modeInfo.width) / static_cast<float>(width);
 				}
 				else
 				{
-					const auto scale = static_cast<float>(modeInfo.height) / static_cast<float>(height);
-					viewport.y = 0;
-					viewport.h = modeInfo.height;
-					viewport.w = static_cast<int>(std::ceil(width * scale));
-					viewport.x = (modeInfo.width - viewport.w) / 2;
+					scale = static_cast<float>(modeInfo.height) / static_cast<float>(height);
 				}
 
+				viewport.w = static_cast<int>(SDL_floor(width * scale));
+				viewport.x = (modeInfo.width - viewport.w) / 2;
+				viewport.h = static_cast<int>(SDL_floor(height * scale));
+				viewport.y = (modeInfo.height - viewport.h) / 2;
 				vc_dispmanx_rect_set(&dst_rect, viewport.x, viewport.y, viewport.w, viewport.h);
 			}
 
@@ -292,12 +286,12 @@ static int display_thread(void* unused)
 				
 				if (!blackscreen_element)
 					blackscreen_element = vc_dispmanx_element_add(updateHandle, displayHandle, 0,
-						&black_rect, blackfb_resource, &src_rect, DISPMANX_PROTECTION_NONE, &alpha,
+						&black_rect, blackfb_resource, &src_rect, DISPMANX_PROTECTION_NONE, &dmx_alpha,
 						nullptr, DISPMANX_NO_ROTATE);
 
 				if (!elementHandle)
 					elementHandle = vc_dispmanx_element_add(updateHandle, displayHandle, 1,
-						&dst_rect, amigafb_resource_1, &src_rect, DISPMANX_PROTECTION_NONE, &alpha,
+						&dst_rect, amigafb_resource_1, &src_rect, DISPMANX_PROTECTION_NONE, &dmx_alpha,
 						nullptr, DISPMANX_NO_ROTATE);
 
 				vc_dispmanx_update_submit(updateHandle, nullptr, nullptr);
