@@ -945,10 +945,14 @@ void auto_crop_image()
 			// Maximum values
 			if (new_width > currprefs.gfx_monitor[0].gfx_size_win.width)
 				new_width = currprefs.gfx_monitor[0].gfx_size_win.width;
+#ifdef USE_DISPMANX
+			new_height = new_height << currprefs.gfx_vresolution;
+#else
 			if (new_height << currprefs.gfx_vresolution < currprefs.gfx_monitor[0].gfx_size_win.height)
 				new_height = new_height << currprefs.gfx_vresolution;
 			else
 				new_height = currprefs.gfx_monitor[0].gfx_size_win.height;
+#endif
 
 			const int x = get_visible_left_border() > 0 ? get_visible_left_border() : 0;
 			const int y = vstrt - minfirstline << currprefs.gfx_vresolution > 0 ? vstrt - minfirstline << currprefs.gfx_vresolution : 0;
