@@ -1034,8 +1034,8 @@ void auto_crop_image()
 				new_width = min_width;
 			else
 				new_width = new_width / 2 << currprefs.gfx_resolution;
-			if (new_height < 192)
-				new_height = 192;
+			if (new_height < 204)
+				new_height = 204;
 
 			// Maximum values
 			if (new_width > currprefs.gfx_monitor[0].gfx_size_win.width)
