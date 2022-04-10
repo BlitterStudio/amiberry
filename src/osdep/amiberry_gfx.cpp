@@ -1346,12 +1346,14 @@ int check_prefs_changed_gfx()
 		currprefs.gfx_horizontal_offset = changed_prefs.gfx_horizontal_offset;
 		currprefs.gfx_vertical_offset = changed_prefs.gfx_vertical_offset;
 		currprefs.gfx_auto_crop = changed_prefs.gfx_auto_crop;
+#if !defined USE_DISPMANX
 		if (currprefs.gfx_auto_crop)
 		{
 			currprefs.gfx_monitor[0].gfx_size_fs.width = changed_prefs.gfx_monitor[0].gfx_size_fs.width = currprefs.gfx_monitor[0].gfx_size_win.width = changed_prefs.gfx_monitor[0].gfx_size_win.width = currprefs.gfx_monitor[0].gfx_size.width = changed_prefs.gfx_monitor[0].gfx_size.width = 720;
 			currprefs.gfx_monitor[0].gfx_size_fs.height = changed_prefs.gfx_monitor[0].gfx_size_fs.height = currprefs.gfx_monitor[0].gfx_size_win.height = changed_prefs.gfx_monitor[0].gfx_size_win.height = currprefs.gfx_monitor[0].gfx_size.height = changed_prefs.gfx_monitor[0].gfx_size.height = 568;
 			changed_prefs.gfx_xcenter = changed_prefs.gfx_ycenter = 0;
 		}
+#endif
 		currprefs.gfx_correct_aspect = changed_prefs.gfx_correct_aspect;
 		currprefs.scaling_method = changed_prefs.scaling_method;
 #endif
