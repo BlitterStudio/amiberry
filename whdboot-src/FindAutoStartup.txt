@@ -1,0 +1,407 @@
+'
+' -- auto-startup
+'  
+
+Set Buffer 25
+
+
+   Dim PALSTORE(31)
+   Global RANCOL,PALSTORE()
+   Global NCOUNT
+
+Dim SUBFOLDER$(256)
+Dim ADRIVE$(32)
+
+Global ADRIVE$()
+
+
+
+   PROGNAME$="Amiberry WHDload AutoBooter" : WEBNAME$="blitterstudio.com"
+   NCOUNT=4
+
+
+ ' --- find a specified drive 
+    CHKCOMMAND$=Command Line$
+
+    If Instr(Lower$(CHKCOMMAND$)," scanpath=")>0
+         For SNUM=1 To Len(CHKCOMMAND$)-8
+            If Lower$(Mid$(CHKCOMMAND$,SNUM,8))="scanpath"
+            Exit 
+            End If 
+         Next 
+
+         For ENUM=SNUM To Len(CHKCOMMAND$)
+            If Lower$(Mid$(CHKCOMMAND$,ENUM,1))=" " or Lower$(Mid$(CHKCOMMAND$,ENUM,1))="/"
+            Exit 
+            End If 
+         Next 
+
+
+         ADRIVE$(0)=Mid$(CHKCOMMAND$,SNUM,ENUM-SNUM)
+    End If 
+
+
+    If ADRIVE$(0)="" : ADRIVE$(0)="DH1:" : End If 
+
+
+'
+' --- find the available drives.   
+'   _GETDRIVES 
+
+
+' --- scan drive for folder(s) 
+
+   Examine Dir(ADRIVE$(0))
+
+Repeat 
+   _GAME$=Examine Next$
+
+   If Object Type>0 and _GAME$<>"" : Rem -- it is a folder
+      Inc FOLDERCOUNT
+   End If 
+
+Until _GAME$=""
+
+Print FOLDERCOUNT
+If FOLDERCOUNT<>1 Then End 
+
+
+
+    Examine Dir(ADRIVE$(0))
+   _GAME$=Examine Next$
+   _HOME$=Dir$
+
+
+
+' check for auto-startup 
+
+If Exist(_HOME$+"WHDBooter/Autoboots/"+_GAME$+".auto-startup")
+      COMMAND$=""
+      COMMAND$=COMMAND$+"COPY "
+      COMMAND$=COMMAND$+Chr$(34)+_HOME$+"WHDBooter/Autoboots/"+GAME$+".auto-startup"+Chr$(34)
+      COMMAND$=COMMAND$+" to "
+      COMMAND$=COMMAND$+"T:auto-startup"
+
+      Print COMMAND$
+      Exec(COMMAND$)
+      Wait 2
+Else 
+      Write Cli "No autoboot-startup found"+Chr$($A)+Chr$($A)
+End If 
+
+
+
+' status update
+     If Exist("T:auto-startup")
+       Write Cli "Copied "+SCRIPTFOLDER$+SCRIPTFILE$+" to T:"+Chr$($A)+Chr$($A)
+      Else 
+       Write Cli "Failed to copy "+SCRIPTFOLDER$+SCRIPTFILE$+" to T:"+Chr$($A)+Chr$($A)
+
+      End If 
+
+
+
+
+'============================
+
+      DBUG$=_GAME$+".whd_debug"
+
+
+'====
+      If Exist(_DEBUGPATH$+DBUG$)
+
+         If Object Size(_DEBUGPATH$+DBUG$)>0
+           Write Cli "Debug file found."+Chr$($A)+Chr$($A)
+         Else 
+           Write Cli "No Debug file found."+_DEBUGPATH$+Chr$($A)+Chr$($A)
+           End 
+         End If 
+
+      Else 
+         Write Cli "No Debug file found."+_DEBUGPATH$+Chr$($A)+Chr$($A)
+         End 
+     End If 
+
+
+
+_LOAD_DEBUG:
+
+
+'-----   load up the debug text and display and stuff
+
+
+
+    Reserve As Work 1,Object Size(_DEBUGPATH$+DBUG$)
+     Bload _DEBUGPATH$+DBUG$,1
+
+
+      For COUNT=0 To Length(1)
+      _GDEBUG$=_GDEBUG$+Chr$(Peek(Start(1)+COUNT-1))
+      Next COUNT
+
+      _DEBUG$="A WHDload error previously occured"+Chr$($A)+Chr$($A)
+  Rem    _DEBUG$=_DEBUG$+_GAMENAME$+Chr$($A)+Chr$($A)
+      _DEBUG$=_DEBUG$+_GDEBUG$+Chr$($A)+Chr$($A)
+      _DEBUG$=_DEBUG$+Chr$($A)+Chr$($A)+""
+      _DEBUG$=_DEBUG$+Chr$($A)+Chr$($A)+SCRIPTFILE$+" will be deleted"
+      _DEBUG$=_DEBUG$+Chr$($A)+Chr$($A)+""
+
+
+
+SKIPDEBUG:
+     Screen Open 0,640,200,16,Hires : Screen Hide 0
+     Curs Off : Flash Off : Hide 
+     Palette 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+     Cls 0
+
+
+
+
+
+    Screen Show 
+' decide on our theme colour.... 
+
+    _STANPAL
+
+
+      Palette 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+      MYY=1 : MYZ=11 : TXT$=PROGNAME$
+      Gosub CENTXT
+
+      MYY=19 : MYZ=8 : TXT$=WEBNAME$
+      Gosub CENTXT
+
+
+' -- Fade "in" our palette 
+
+      Wait Vbl 
+      Fade 3,,PALSTORE(1),PALSTORE(2),,PALSTORE(3),PALSTORE(5),PALSTORE(6),PALSTORE(7),PALSTORE(8),,,PALSTORE(11),,,,PALSTORE(15)
+      Wait 35
+
+
+      MYZ=6 : TYPCOUNT=4
+      PTXT$=_DEBUG$ : Gosub MULTILINE
+
+      Exec("c:delete t:auto-startup")
+      Exec("c:delete "+Chr$(34)+_DEBUGPATH$+DBUG$)+Chr$(34)
+      Exec("c:delete "+Chr$(34)+_DEBUGFOLDER$+SCRIPTFILE$)+Chr$(34)
+
+      Wait 10
+
+      Repeat 
+       Wait Vbl 
+      Until Fire(0)=True or Fire(1)=True or Key State($40)=True or Key State($44)=True
+
+
+
+ABORT:
+   Wait 1*NCOUNT
+     Fade 3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 : Wait 100
+   End 
+
+
+CENTXT: YY=MYY*10 : XX=320-((Len(TXT$)*8)/2) : ZZ=MYZ : Ink ZZ,0 : Text XX,YY,TXT$ : YY=0 : XX=0 : ZZ=0 : TXT$="" : Return 
+
+MULTILINE:
+   TXT$=""
+   For A=1 To Len(PTXT$)
+        B$=Mid$(PTXT$,A,1)
+
+        If B$=Chr$($A) or B$=Chr$($FF)
+           MYY=TYPCOUNT : Gosub CENTXT : TYPCOUNT=TYPCOUNT+1 : TXT$=""
+        Else If A=Len(PTXT$)
+           TXT$=TXT$+B$
+           MYY=TYPCOUNT : Gosub CENTXT : TYPCOUNT=TYPCOUNT+1 : TXT$=""
+        Else 
+           TXT$=TXT$+B$
+        End If 
+   Next A
+Return 
+
+
+
+
+Return 
+
+
+
+SEARCHOUT:
+
+   If Exist(INDIR$)=False Then Return 
+   Examine Dir(INDIR$)
+
+
+Repeat 
+   FILE$=Examine Next$
+
+   If Object Type<0 : Rem -- it is a file
+
+      If Instr(FILE$,".auto-startup")>0
+         SCRIPTFILE$=FILE$
+         SCRIPTFOLDER$=INDIR$
+      Else 
+         SCRIPTFILE$=""
+         SCRIPTFOLDER$=""
+      End If 
+
+   Else If Object Type>0 : Rem -- it is a sub-folder  
+
+      TEST$=Lower$(FILE$)
+      If N<255 and TEST$<>"c" and TEST$<>"s" and TES$<>"libs" and TEST$<>"devs" and FILE$<>"fonts"
+        SUBFOLDER$(N)=FILE$
+        N=N+1
+      End If 
+   End If 
+
+Until FILE$="" or SCRIPTFILE$<>""
+
+
+If SCRIPTFILE$<>"" Then Return 
+
+' ---- now scan sub folders
+
+For N=0 To 255
+
+   If Exist(INDIR$+SUBFOLDER$(N))=False or SUBFOLDER$(N)="" Then Exit 1
+
+   Examine Dir(INDIR$+SUBFOLDER$(N))
+
+   Repeat 
+      FILE$=Examine Next$
+
+      If Object Type<0 : Rem -- it is a file
+
+         If Instr(FILE$,".auto-startup")>0
+            SCRIPTFILE$=FILE$
+            SCRIPTFOLDER$=INDIR$+SUBFOLDER$(N)+"/"
+         Else 
+            SCRIPTFILE$=""
+            SCRIPTFOLDER$=""
+         End If 
+
+   End If 
+
+   Until FILE$="" or SCRIPTFILE$<>""
+
+   If SCRIPTFILE$<>"" Then Exit 1
+
+
+Next N
+
+
+
+Return 
+
+
+Procedure _STANPAL
+
+Randomize Timer*Ct Second(Current Time)
+RANCOL=Rnd(14)
+
+
+For A=0 To $10
+   If Exist("T:PAL"+Hex$(A)) Then Exit 
+Next A
+
+
+
+If A>$F
+     A=RANCOL
+     Reserve As Work 8,1
+     Wsave "T:PAL"+Hex$(A),8
+     Erase 8
+End If 
+
+
+     If A=0 or A1 or A=2 : Gosub RED
+Else If A=3 or A=4 or A=5 : Gosub BLUE
+Else If A=6 or A=7 or A=8 : Gosub GREEN
+Else If A=9 or A=10 : Gosub YELLOW
+Else If A=11 or A=12 or A=13 : Gosub CYAN
+Else If A=14 : Gosub PINK
+Else 
+              Gosub RED
+End If 
+
+   Pal Set 0,15,$A00
+   Colour 7,$FFF
+   Colour 15,$A00
+
+
+Pal Get Screen 0,0
+
+For A=0 To 15
+   PALSTORE(A)=Pal Get(0,A)
+Next A
+
+
+
+
+
+Pop Proc
+
+
+
+RED:
+Pal Spread 0,$0 To 6,$FFF
+Pal Spread 8,$EDD To 10,$F00
+Pal Spread 11,$F00 To 15,$300
+
+   CULN=$100 : Gosub MAKEFLSH
+
+Return 
+
+GREEN:
+Pal Spread 0,$0 To 6,$FFF
+Pal Spread 8,$DED To 10,$D0
+Pal Spread 11,$D0 To 15,$30
+
+   CULN=$10 : Gosub MAKEFLSH
+
+Return 
+
+CYAN:
+Pal Spread 0,$0 To 6,$FFF
+Pal Spread 8,$DEE To 10,$FF
+Pal Spread 11,$FF To 15,$33
+
+   CULN=$11 : Gosub MAKEFLSH
+
+Return 
+
+PINK:
+Pal Spread 0,$0 To 6,$FFF
+Pal Spread 8,$EDE To 10,$F0F
+Pal Spread 11,$F0F To 15,$303
+
+   CULN=$101 : Gosub MAKEFLSH
+
+Return 
+
+BLUE:
+Pal Spread 0,$0 To 6,$FFF
+Pal Spread 8,$DDE To 10,$F
+Pal Spread 11,$F To 15,$3
+
+   CULN=$1 : Gosub MAKEFLSH
+
+
+Return 
+
+YELLOW:
+Pal Spread 0,$0 To 6,$FFF
+Pal Spread 8,$EED To 10,$FF0
+Pal Spread 11,$FF0 To 15,$330
+
+   CULN=$110 : Gosub MAKEFLSH
+
+Return 
+
+MAKEFLSH:
+   MADEUP$=""
+   For Q=5 To 15 Step 1 : MADEUP$=MADEUP$+"("+Right$(Hex$(0+(Q*CULN)+$1000),3)+",5)" : Next Q
+   For Q=15 To 8 Step -2 : MADEUP$=MADEUP$+"("+Right$(Hex$(0+(Q*CULN)+$1000),3)+",5)" : Next Q
+   Flash 7,MADEUP$
+Return 
+
+End Proc

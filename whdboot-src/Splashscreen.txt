@@ -1,0 +1,373 @@
+'
+'
+' New AMIGA ONLINE / FS-ARCADE / PSPUAE etc splash screen prog.  
+'
+'
+' By Hungry Horace 
+'
+'
+'
+
+Set Buffer 200
+
+Dim PALSTORE(31)
+Global RANCOL,PALSTORE()
+
+
+' this program is pointless if we have a key file! 
+ ' If Exist("C:whdload.key") or Exist("L:whdload.key") or Exist("DEVS:whdload.key") or Exist("S:whdload.key") or Exist("LIBS:whdload.key") or Exist(PICKSLAVEFOLDER$+"whdload.key") Then End  
+   If Exist("S:booter.key") Then End 
+
+'  _GET_TEXT["s:ProgramTitle"] 
+'   PROGTITLE$=Param$
+
+'  _GET_TEXT["s:WebTitle"] 
+'   WEBTITLE$=Param$ 
+
+
+   PROGTITLE$="Amiberry WHDLoad AutoBooter"
+   WEBTITLE$="www.ultimateamiga.co.uk"
+
+
+' set up a nice new clean hi-res screen to play with 
+
+   Screen Open 0,640,200,16,Hires : Screen Hide 0
+
+   Curs Off : Flash Off : Hide 
+   Palette 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+
+   Cls 0
+   Screen Show 0
+
+
+' decide on our theme colour.... 
+
+  _STANPAL
+
+Rem Goto WHDSPLASH : 
+
+  _ULTIMATEAMIGA
+
+  ' If Exist("C:whdload.key") or Exist("L:whdload.key") or Exist("DEVS:whdload.key") or Exist("S:whdload.key") or Exist("LIBS:whdload.key") or Exist(PICKSLAVEFOLDER$+"whdload.key") Then End  
+
+   Screen Open 0,640,200,16,Hires : Screen Hide 0
+
+   Curs Off : Flash Off : Hide 
+   Cls 0
+   Screen Show 0
+
+  _STANPAL
+
+Goto LEAVER : 
+WHDSPLASH:
+   Palette 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+
+   MYY=1 : MYZ=11 : TXT$=PROGTITLE$
+   Gosub CENTXT
+
+   MYY=19 : MYZ=13 : TXT$=WEBTITLE$
+   Gosub CENTXT
+
+   Wait Vbl 
+   Fade 3,,PALSTORE(1),PALSTORE(2),PALSTORE(3),PALSTORE(4),PALSTORE(5),PALSTORE(6),PALSTORE(7),PALSTORE(8),,,,
+   Wait 35
+
+
+   'MYY=5 : MYZ=6 : TXT$="UAE Config Maker" 
+   'Gosub CENTXT
+   'MYY=5 : MYZ=6 : TXT$="- Please Wait -"
+   'Gosub CENTXT
+
+   MYY=6 : MYZ=6 : TXT$="Please show your appreciation for this work"
+   Gosub CENTXT
+
+   MYY=7 : MYZ=6 : TXT$="and support future development."
+   Gosub CENTXT
+
+
+  _GET_TEXT["s:URL"]
+   TXT$=" - "+Param$+" - "
+   MYY=12 : MYZ=28
+   Gosub CENTXT
+
+
+LEAVER:
+   Wait 100
+   Fade 3,,,,,,,,,,,,PALSTORE(11),PALSTORE(12),PALSTORE(13),PALSTORE(14)
+
+   Wait 160
+   Fade 3
+   Wait 10
+
+
+
+End 
+
+
+' *************  SUB-ROUTINES  ************* 
+CENTXT: YY=MYY*10 : XX=320-((Len(TXT$)*8)/2) : ZZ=MYZ : Ink ZZ,0 : Text XX,YY,TXT$ : YY=0 : XX=0 : ZZ=0 : TXT$="" : Return 
+LEFTXT: YY=MYY*10 : XX=320-((Len(TXT$)*8)/2) : ZZ=MYZ : Ink ZZ,0 : Text 0,YY,TXT$ : YY=0 : XX=0 : ZZ=0 : TXT$="" : Return 
+
+
+Procedure _STANPAL
+
+  Randomize Timer*Ct Second(Current Time) : RANCOL=Rnd(14)
+
+
+For A=0 To $10
+   If Exist("T:PAL"+Hex$(A)) Then Exit 1
+Next A
+
+
+If A>=$10
+     A=RANCOL
+     Reserve As Work 8,1
+     Wsave "T:PAL"+Hex$(A),8
+     Erase 8
+End If 
+
+     If A=0 or A1 or A=2 : Gosub RED
+Else If A=3 or A=4 or A=5 : Gosub BLUE
+Else If A=6 or A=7 or A=8 : Gosub GREEN
+Else If A=9 or A=10 : Gosub YELLOW
+Else If A=11 or A=12 or A=13 : Gosub CYAN
+Else If A=14 : Gosub PINK
+Else 
+              Gosub RED
+End If 
+
+
+   Colour 7,$FFF
+
+Pal Get Screen 0,0
+
+For A=0 To 15
+   PALSTORE(A)=Pal Get(0,A)
+Next A
+
+
+
+
+
+Pop Proc
+
+
+
+RED:
+Pal Spread 0,$0 To 6,$FFF
+Pal Spread 8,$EDD To 10,$F00
+Pal Spread 11,$F00 To 15,$300
+
+   CULN=$100 : Gosub MAKEFLSH
+
+Return 
+
+GREEN:
+Pal Spread 0,$0 To 6,$FFF
+Pal Spread 8,$DED To 10,$D0
+Pal Spread 11,$D0 To 15,$30
+
+   CULN=$10 : Gosub MAKEFLSH
+
+Return 
+
+CYAN:
+Pal Spread 0,$0 To 6,$FFF
+Pal Spread 8,$DEE To 10,$FF
+Pal Spread 11,$FF To 15,$33
+
+   CULN=$11 : Gosub MAKEFLSH
+
+Return 
+
+PINK:
+Pal Spread 0,$0 To 6,$FFF
+Pal Spread 8,$EDE To 10,$F0F
+Pal Spread 11,$F0F To 15,$303
+
+   CULN=$101 : Gosub MAKEFLSH
+
+Return 
+
+BLUE:
+Pal Spread 0,$0 To 6,$FFF
+Pal Spread 8,$DDE To 10,$F
+Pal Spread 11,$F To 15,$3
+
+   CULN=$1 : Gosub MAKEFLSH
+
+
+Return 
+
+YELLOW:
+Pal Spread 0,$0 To 6,$FFF
+Pal Spread 8,$EED To 10,$FF0
+Pal Spread 11,$FF0 To 15,$330
+
+   CULN=$110 : Gosub MAKEFLSH
+
+Return 
+
+MAKEFLSH:
+   MADEUP$=""
+   For Q=5 To 15 Step 1 : MADEUP$=MADEUP$+"("+Right$(Hex$(0+(Q*CULN)+$1000),3)+",5)" : Next Q
+   For Q=15 To 8 Step -2 : MADEUP$=MADEUP$+"("+Right$(Hex$(0+(Q*CULN)+$1000),3)+",5)" : Next Q
+   Flash 7,MADEUP$
+Return 
+
+End Proc
+Procedure _ULTIMATEAMIGA
+
+
+Rem Reserve As Chip Data 12,86552
+
+
+
+
+
+
+Screen Open 0,320,256,16,Lowres : Curs Off : Hide 
+Colour 0,$0 : Colour 1,$0
+Colour 2,$0 : Colour 3,$0
+Cls 0 : 
+
+
+Default Palette 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+
+Screen 0
+
+
+Randomize Timer*Ct Second(Current Time) : RANCOL=Rnd(14)
+
+For A=0 To $10
+   If Exist("T:PAL"+Hex$(A)) Then Exit 1
+Next A
+
+If A=$10
+     A=RANCOL
+     Reserve As Work 8,1
+     Wsave "T:PAL"+Hex$(A),8
+     Erase 8
+End If 
+
+Colour 15,$373
+
+     If A=0 or A1 or A=2 : Gosub RED
+Else If A=3 or A=4 or A=5 : Gosub BLUE
+Else If A=6 or A=7 or A=8 : Gosub GREEN
+Else If A=9 or A=10 : Gosub YELLOW
+Else If A=11 or A=12 or A=13 : Gosub CYAN
+Else If A=14 : Gosub PINK
+
+Else 
+              Gosub RED
+End If 
+
+
+
+Pal Get Screen 0,0
+
+For A=0 To 31
+   PALSTORE(A)=Pal Get(0,A)
+Next A
+
+Load Iff "Splash/Intro_000A.iff",0 : Screen Hide 0
+Palette 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+
+
+'Wload "splash/titlesound",-12 : Bank Name 12,"U.A.Snd"
+
+
+Screen Show 0 : Led On 
+Pt Voice %1111
+Pt Raw Play %1001,Start(12),Length(12),22050 : Wait 6
+Pt Raw Play %110,Start(12),Length(12),22050 : Wait 20
+
+Rem --- BODGE-IT CODE!!
+
+A=PALSTORE(0) : B=PALSTORE(1) : C=PALSTORE(2) : D=PALSTORE(3)
+E=PALSTORE(4) : F=PALSTORE(5) : G=PALSTORE(6) : H=PALSTORE(7)
+I=PALSTORE(8) : J=PALSTORE(9) : K=PALSTORE(10) : L=PALSTORE(11)
+M=PALSTORE(12) : N=PALSTORE(13) : O=PALSTORE(14) : P=PALSTORE(15)
+Q=PALSTORE(16) : R=PALSTORE(17) : S=PALSTORE(18) : T=PALSTORE(19)
+U=PALSTORE(20) : V=PALSTORE(21) : W=PALSTORE(22) : X=PALSTORE(23)
+Y=PALSTORE(24) : Z=PALSTORE(25) : AA=PALSTORE(26) : BB=PALSTORE(27)
+CC=PALSTORE(28) : DD=PALSTORE(29) : EE=PALSTORE(30) : FF=PALSTORE(31)
+
+Fade 6,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,AA,BB,CC,DD,EE,FF
+
+
+COUNT=0
+
+ While COUNT<380
+   Wait Vbl 
+   COUNT=COUNT+1
+ Wend 
+
+Fade 5
+
+Wait 150
+
+Screen Close 0 : Erase 12 : Led Off 
+
+Pop Proc
+
+
+RED:
+Pal Spread 0,$0 To 14,$FFF
+Pal Spread 16,$EDD To 21,$F00
+Pal Spread 21,$F00 To 31,$300
+Return 
+
+GREEN:
+Pal Spread 0,$0 To 14,$FFF
+Pal Spread 16,$DED To 21,$D0
+Pal Spread 21,$D0 To 31,$30
+Return 
+
+CYAN:
+Pal Spread 0,$0 To 14,$FFF
+Pal Spread 16,$DEE To 21,$FF
+Pal Spread 21,$FF To 31,$33
+Return 
+
+PINK:
+Pal Spread 0,$0 To 14,$FFF
+Pal Spread 16,$EDE To 21,$F0F
+Pal Spread 21,$F0F To 31,$303
+Return 
+
+BLUE:
+Pal Spread 0,$0 To 14,$FFF
+Pal Spread 16,$DDE To 21,$F
+Pal Spread 21,$F To 31,$3
+Return 
+
+YELLOW:
+Pal Spread 0,$0 To 14,$FFF
+Pal Spread 16,$EED To 21,$FF0
+Pal Spread 21,$FF0 To 31,$330
+Return 
+
+
+End Proc
+
+Procedure _GET_TEXT[INFILE$]
+
+
+   If Exist(INFILE$)
+
+      Wload INFILE$,1
+      For COUNT=0 To Length(1)
+       OUTPUT$=OUTPUT$+Chr$(Peek(Start(1)+COUNT-1))
+      Next COUNT
+
+   End If 
+
+   OUTPUT$=Replacestr$(OUTPUT$,Chr$($A) To "")
+
+
+End Proc[OUTPUT$]
+
+
+

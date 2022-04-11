@@ -1,0 +1,3038 @@
+ '    ####################################################### ' 
+'    # 
+'    #    # #_# ##       
+'    #   V V  # # #/ 
+'    # 
+'     #############################  
+
+
+
+Set Buffer 200
+
+
+
+Dim SLAVEFILES$(255),SLAVEFOLDERS$(255)
+Dim PALSTORE(31)
+Dim ADRIVE$(32)
+Dim _WS_KICKNAME$(20)
+
+
+Global ADRIVE$(),_GETDATA$,CLEARDB,DBPATH$
+Global _STOREDRIVE$,_PARENTFOLDER$
+
+Global _WS_NAME$,_WS_COPY$,_WS_INFO$,_WS_CONFIG$,_WS_KICKNAME$(),_WS_DIR$
+
+
+'_GET_SLAVE_DATA["dh1:games_whdload/cybernoid/","cybernoid.slave"] 
+'_GET_SLAVE_DATA["dh1:games_whdload/sensibleworldofsoccer9697/","sensibleworldofsoccer9697.slave"] 
+'
+'Print _WS_DIR$
+'End 
+
+
+'============
+
+' delete database info 
+
+   If Fire(0)<>0 or Fire(1)<>0
+      CLEARDB=True
+   End If 
+
+
+
+ ' --- find a specified drive 
+
+    CHKCOMMAND$=Lower$(Command Line$)
+'    CHKCOMMAND$=" scanpath=dh1: only usefolderpath" 
+
+    If Instr(CHKCOMMAND$,"usefolderpath")>0
+      Write Cli "Using Folder Path as filename"
+   Else 
+      Write Cli "Using Slave Name as filename"
+   End If 
+
+
+    If Instr(CHKCOMMAND$,"scanpath=")>0
+
+
+         For SNUM=1 To Len(CHKCOMMAND$)-8
+            If Mid$(CHKCOMMAND$,SNUM,8)="scanpath"
+            Exit 
+            End If 
+         Next 
+
+
+         SNUM=SNUM+9
+
+         For ENUM=SNUM To Len(CHKCOMMAND$)
+            If Mid$(CHKCOMMAND$,ENUM,1)=" " or Mid$(CHKCOMMAND$,ENUM,1)="/"
+            Exit 
+            End If 
+         Next 
+
+
+         ADRIVE$(0)=Mid$(CHKCOMMAND$,SNUM,ENUM-SNUM)
+
+         Write Cli "Scanpath will include "+ADRIVE$(0)+Chr$($A)+""
+
+    End If 
+
+
+
+    If Instr(CHKCOMMAND$,"database=")>0
+
+
+         For SNUM=1 To Len(CHKCOMMAND$)-8
+            If Mid$(CHKCOMMAND$,SNUM,8)="database"
+            Exit 
+            End If 
+         Next 
+
+
+         SNUM=SNUM+9
+
+         For ENUM=SNUM To Len(CHKCOMMAND$)
+            If Mid$(CHKCOMMAND$,ENUM,1)=" " or Mid$(CHKCOMMAND$,ENUM,2)="/ "
+            Exit 
+            End If 
+         Next 
+
+
+         DBPATH$=Mid$(CHKCOMMAND$,SNUM,ENUM-SNUM)
+
+         If Right$(DBATH$,1)<>":" and Right$(DBPATH$,1)<>"/"
+            DBPATH$=DBPATH$+"/"
+         End If 
+
+
+         Write Cli "Database path set to "+DBPATH$+Chr$($A)+""
+
+
+    Else If Instr(CHKCOMMAND$,"database")>0
+
+       DBPATH$=_RUNFROM$+"Database/"
+
+    End If 
+
+
+
+'============
+
+    If Instr(CHKCOMMAND$,"scanpath=")>0 and Instr(CHKCOMMAND$,"only")>0
+         Write Cli "Scanpath is "+ADRIVE$(0)+" only"+Chr$($A)
+
+    Else 
+         Write Cli "Scanpath includes all drives"+Chr$($A)
+        _GETDRIVES
+
+    End If 
+
+
+
+
+' --- these two are our "final" slave selections 
+Global PICKSLAVEFILE$,PICKSLAVEFOLDER$
+
+' --- these are the optional slaves from our scan. 
+Global SLAVEFILES$(),SLAVEFOLDERS$()
+Global SLAVECOUNT
+
+' --- these are the optional scripts from our scan.
+Global SCRIPTFOLDER$,SCRIPTFILE$
+
+' --- these are for the colour-scheme  
+Global RANCOL,PALSTORE(),PROGMODE
+Global NCOUNT
+
+' --- and the program details
+  Global PROGNAME$,WEBNAME$
+
+ Global _DEBUGPATH$,_AUTOBOOTPATH$,_RUNFROM$
+ Global ENABLEDEBUG,ENABLEDATABASE,ENABLEFOLDERPATH
+
+ Global TYPCOUNT
+
+
+
+' ====  lets read in the command line item(s)
+
+ENABLEDATABASE=False
+ENABLEDEBUG=False
+ENABLEFOLDERPATH=False
+
+
+If Instr(CHKCOMMAND$,"debug")>0 Then ENABLEDEBUG=True
+If Instr(CHKCOMMAND$,"database")>0 Then ENABLEDATABASE=True
+If Instr(CHKCOMMAND$,"usefolderpath")>0 Then ENABLEFOLDERPATH=True
+
+
+
+CHEKA:
+
+
+' program folder is a a WHDbooter folder 
+' ---
+'Screen Open 0,320,256,4,Lowres
+
+
+'_GETDRIVES
+
+
+' scan drives for the folder 
+For QQQ=0 To 31
+
+      TEST$=ADRIVE$(QQQ)+"WHDbooter"
+
+
+   If Exist(ADRIVE$(QQQ)+"WHDbooter")
+
+      _RUNFROM$=ADRIVE$(QQQ)+"WHDbooter/"
+      Exit 
+   End If 
+Next QQQ
+
+
+
+' check current folder?
+
+   If _RUNFROM$="" Then _RUNFROM$=Dir$
+
+   If _RUNFROM$=""
+     Write Cli "Cannot find WHDBooter folder"
+     End 
+   End If 
+
+   If ENABLEDEBUG=True Then Write Cli "Running from "+_RUNFROM$+Chr$($A)
+
+
+  _GET_TEXT["s:ProgramTitle"]
+  ' PROGNAME$=Param$ 
+    PROGNAME$="Amiberry WHDload AutoBooter"
+
+'  _GET_TEXT["s:WebTitle"] 
+'   WEBTITLE$=Param$ 
+    WEBNAME$="(C) Ultimate Amiga - blitterstudio.com"
+
+NCOUNT=4
+
+Screen Open 0,320,200,16,Lowres
+
+
+' --- these are the final whdload settings .... to be changed? 
+
+' Dim _WS_KICKNAME$(20)  
+'Global _WS_NAME$,_WS_COPY$,_WS_INFO$,_WS_CONFIG$,_WS_KICKNAME$(),_WS_DIR$ 
+
+
+Global CUST1,CUST2,CUST3,CUST4,CUST5,BWAIT
+Global QUITK,CACHE$,SCRN$,DATTA$
+Global WHDREG
+
+
+
+Reserve As Work 1,$20000
+
+_PROGSTART:
+
+' set up a nice new clean hi-res screen to play with 
+
+    Screen Open 0,640,200,16,Hires : Screen Hide 0
+    Curs Off : Flash Off : Hide 
+    Palette 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    Cls 0
+
+    '  Pen 1 : Ink 12
+    '  _TOP=6 : _LOW=199 
+    '  _LEFT=0 : _RIGHT=639
+'' 
+  '    Draw _LEFT,_TOP To 32,_TOP : Draw _LEFT,_TOP To _LEFT,_LOW : Draw _LEFT,_TOP To _LEFT,_LOW
+   '   Draw _LEFT,_LOW To _RIGHT,_LOW : Draw _RIGHT,_LOW To _RIGHT,_TOP : Draw _RIGHT,_LOW To _RIGHT,_TOP 
+    '  Draw _RIGHT,_TOP To 607,_TOP
+    '
+    '  Rem Bob 0,257,0,1 
+
+'   Flash 7,"(f00,5)(fff,5)(ff0,5)(0f0,5)(0ff,5)(00f,5)(F0F,5)"
+
+    Screen Show 
+
+
+' decide on our theme colour.... 
+
+  _STANPAL
+
+   Palette 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+   MYY=1 : MYZ=11 : TXT$=PROGNAME$
+   Gosub CENTXT
+
+   MYY=19 : MYZ=2 : TXT$=WEBNAME$
+   Gosub CENTXT
+
+
+' -- Fade "in" our palette 
+
+   Wait Vbl 
+   Fade 3,,PALSTORE(1),PALSTORE(2),,PALSTORE(3),PALSTORE(5),PALSTORE(6),PALSTORE(7),PALSTORE(8),,,PALSTORE(11),,,,PALSTORE(15)
+   Wait 35
+
+
+
+
+'================
+
+' ---- check for database mode, and if needed, enter it
+
+   If ENABLEDATABASE=True
+
+
+
+         If ENABLEDEBUG=True
+            Write Cli "Running in database mode"+Chr$($A)
+         End If 
+
+
+
+         If CLEARDB=True
+            Write Cli "Removing Database Contents"+Chr$($A)
+
+
+               Examine Dir DBPATH$
+               FIRST$=Examine Next$
+
+               Repeat 
+                  If Object Name$<>"Database"
+                     Kill _RUNFROM$+"Database/"+Object Name$
+                  End If 
+               Until Examine Next$=""
+
+         End If 
+
+
+         If Exist(DBPATH$)=False
+
+                     ENABLEDATABASE=False
+            Write Cli _RUNFROM$+"Database not found."+Chr$($A)
+
+         Else 
+           _DO_DATABASE_SELECT
+
+         End If 
+
+
+
+' we've picked a file via the database mode  
+
+         If PICKSLAVEFILE$<>"" and PICKSLAVEFOLDER$<>""
+                 TYPCOUNT=4
+                 Goto FILECHOSEN
+         End If 
+   End If 
+
+
+' we DIDNT pick a file via database mode...  
+
+
+
+' --- get the base-info, establish how we are running etc. 
+
+SCANNING:
+
+' --- we scan "user-startup" for any possible  slave file and WHDLOAD settings 
+
+     If PICKSLAVEFILE$="" Then _GET_FROM_SCRIPT_FILE["t:auto-startup"]
+     If PICKSLAVEFILE$="" Then _GET_FROM_SCRIPT_FILE["s:auto-startup"]
+     If PICKSLAVEFILE$="" Then _GET_FROM_SCRIPT_FILE["s:user-startup"]
+
+
+    If Exist(PICKSLAVEFOLDER$+PICKSLAVEFILE$)=False
+         PICKSLAVEFOLDER$=""
+         PICKSLAVEFILE$=""
+         SLAVECOUNT=0
+    End If 
+
+' --- scan certain folders for testing purposes
+
+'       If PICKSCRIPTFILE$="" and SLAVECOUNT<1 Then _GET_FROM_SCAN["games:midnightresistance/"]
+'        If PICKSCRIPTFILE$="" and SLAVECOUNT<1 Then _GET_FROM_SCAN["games:bloodwych/"]
+'       If PICKSCRIPTFILE$="" and SLAVECOUNT<1 Then _GET_FROM_SCAN["whd:afterburneractivision/"] 
+'        If PICKSCRIPTFILE$="" and SLAVECOUNT<1 Then _GET_FROM_SCAN["games:wormsdirectorscutaga2"] 
+
+
+' --- failing this, we scan available drives 
+
+   TYPCOUNT=3
+
+   For AAA=31 To 0 Step -1
+
+      If ADRIVE$(AAA)<>""
+        TXT$="Scanning... "+ADRIVE$(AAA)+"             "
+        MYY=TYPCOUNT : MYZ=1 : Gosub LEFTXT : TYPCOUNT=TYPCOUNT+1 : Wait 2
+        If PICKSCRIPTFILE$="" and SLAVECOUNT<1 : _GET_FROM_SCAN[ADRIVE$(AAA)] : End If 
+      End If 
+
+        If SLAVECOUNT>0
+            _STOREDRIVE$=ADRIVE$(AAA)
+            Exit 
+         End If 
+   Next AAA
+
+   TYPCOUNT=TYPCOUNT+1
+
+
+
+
+FILECHOSEN:
+
+' --- this is the "status display" and report shizzle
+     _DO_INITIAL_CHECKS
+
+' -----  at this point we should probably branch off 
+'         if we are using a script or anything else. (including a quit)
+
+' ---  this is all the code for running a selected slave.
+CHOSENWHD:
+
+
+
+
+' --- display the WHD info 
+   MYZ=6 : TYPCOUNT=4
+   PTXT$=_WS_NAME$ : Gosub MULTILINE
+   PTXT$=_WS_COPY$ : Gosub MULTILINE
+   PTXT$=_WS_INFO$ : Gosub MULTILINE
+
+
+
+   If _WS_CONFIG$<>""
+         MYY=17 : MYZ=1
+         TXT$="Press Second Fire or Space for Custom Options"
+         Gosub CENTXT : 
+   End If 
+
+  Wait Vbl 
+   Fade 3,,PALSTORE(1),PALSTORE(2),,PALSTORE(3),PALSTORE(5),PALSTORE(6),PALSTORE(7),PALSTORE(8),,,PALSTORE(11),
+    Wait 35
+
+
+If ENABLEFOLDERPATH=True
+
+   For TEMP=1 To Len(PICKSLAVEFOLDER$)-1
+      A$=Mid$(PICKSLAVEFOLDER$,Len(PICKSLAVEFOLDER$)-TEMP,1)
+         If A$="/" or A$=":"
+         Exit 
+         End If 
+      _PARENTFOLDER$=A$+_PARENTFOLDER$
+   Next 
+Else 
+   _PARENTFOLDER$=""
+End If 
+
+
+
+' ----- Holding loop (WHD Display) 
+
+   ACTION=0 : ACTIONTIME=Timer : Clear Key 
+   Repeat 
+                  If Timer-ACTIONTIME=>(10*50) Then ACTION=1
+               If Fire(0)=True or Fire(1)=True Then ACTION=1
+         If Xfire(0,1)=True or Xfire(1,1)=True or Jup(1)=True or Jup(0)=True or Key State($40)=True Then ACTION=-1
+         If Mouse Click>2 Then ACTION=-1
+         Wait Vbl 
+   Until ACTION<>0
+
+   Wait 30 : Fade 3,0,0,0,0,0,0,0 : Wait 60
+   Ink 0 : Bar 3,12 To 640-3,182
+
+
+
+' --- do "customiser"
+   If ACTION=-1 and _WS_CONFIG$<>"" Then _CUSTOM_OPTIONS
+
+
+
+' --- make the loading script
+
+SCRIPTOR:
+   Fade 1,,PALSTORE(1),PALSTORE(2),,PALSTORE(3),PALSTORE(5),PALSTORE(6),PALSTORE(7),PALSTORE(8),,,PALSTORE(11),
+   Wait 5
+
+   TYPCOUNT=3
+   TXT$="Creating WHDLoad BootScript...."
+   MYY=TYPCOUNT : MYZ=1 : Gosub LEFTXT : TYPCOUNT=TYPCOUNT+1 : Wait 2
+
+   If ENABLEFOLDERPATH=False
+      TXT$=" "+PICKSLAVEFILE$
+   Else 
+      TXT$=" "+_PARENTFOLDER$
+   End If 
+
+
+
+   MYY=TYPCOUNT : MYZ=2 : Gosub LEFTXT : TYPCOUNT=TYPCOUNT+2 : Wait 2
+
+   Clear Key 
+
+   Wait 10*NCOUNT
+
+   _TYPE_WHDSCRIPT : WHDSCRIPT_TEXT$=Param$
+
+'  ... delet oldscripts
+
+   If ENABLEFOLDERPATH=False
+      Exec("c:delete "+Chr$(34)+PICKSLAVEFOLDER$+"#?.auto-startup"+Chr$(34)+" >nil:")
+   Else 
+      Exec("c:delete "+Chr$(34)+_RUNFROM$+"Autoboots/"+_PARENTFOLDER$+".auto-startup"+Chr$(34)+" >nil:")
+   End If 
+
+
+' CREATE THE FINAL SCRIPT
+
+   STORE_TEXT$=WHDSCRIPT_TEXT$
+
+   '--- save one copy to T: 
+    OUTFILE$="t:auto-startup"
+   _OUTPUT[OUTFILE$,WHDSCRIPT_TEXT$] : Wait Vbl 
+
+
+   '--- save one copy with the slave, or in AutoBoots 
+
+   If Exist("WHDLoadSave:Autoboots")
+      _AUTOBOOTPATH$="WHDLoadSave:Autoboots/"
+
+   Else If Exist(_RUNFROM$+"Autoboots")
+      _AUTOBOOTPATH$=_RUNFROM$+"Autoboots/"
+   End If 
+
+ If ENABLEDEBUG=True Then Write Cli "Autoboot Path; "+_AUTOBOOTPATH$+Chr$($A)
+    OUTFILE3$=OUTFILE2$
+
+
+
+ If ENABLEFOLDERPATH=False
+    OUTFILE2$=PICKSLAVEFOLDER$
+    OUTFILE2$=OUTFILE2$+"auto-startup"
+   _OUTPUT[OUTFILE2$,STORE_TEXT$] : Wait Vbl 
+ End If 
+
+
+' make " 
+   If _AUTOBOOTPATH$<>""
+
+    If ENABLEFOLDERPATH=False
+       OUTFILE3$=_AUTOBOOTPATH$+PICKSLAVEFILE$
+       OUTFILE3$=Left$(OUTFILE3$,Len(OUTFILE3$)-Len(".slave"))
+
+    Else 
+
+
+       OUTFILE3$=_AUTOBOOTPATH$+_PARENTFOLDER$
+    End If 
+
+    OUTFILE3$=OUTFILE3$+".auto-startup"
+
+   _OUTPUT[OUTFILE3$,STORE_TEXT$] : Wait Vbl 
+
+   End If 
+
+
+''Print "hard sun" 
+
+   If Exist(OUTFILE$)
+      TXT$="File Created..."
+   Else 
+      TXT$="Error in File Creation..."
+   End If 
+
+      MYY=TYPCOUNT : MYZ=1 : Gosub LEFTXT : TYPCOUNT=TYPCOUNT+1 : Wait 2
+
+
+ABORT:
+   Wait 30*NCOUNT : Fade 3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 : Wait 100
+
+   Goto LAST : 
+
+
+CENTXT: YY=MYY*10 : XX=320-((Len(TXT$)*8)/2) : ZZ=MYZ : Ink ZZ,0 : Text XX,YY,TXT$ : YY=0 : XX=0 : ZZ=0 : TXT$="" : Return 
+LEFTXT: YY=MYY*10 : XX=320-((Len(TXT$)*8)/2) : ZZ=MYZ : Ink ZZ,0 : Text 0+8,YY,TXT$ : YY=0 : XX=0 : ZZ=0 : TXT$="" : Return 
+
+
+MULTILINE:
+   TXT$=""
+   For A=1 To Len(PTXT$)
+        B$=Mid$(PTXT$,A,1)
+
+        If B$=Chr$($A) or B$=Chr$($FF)
+           MYY=TYPCOUNT : Gosub CENTXT : TYPCOUNT=TYPCOUNT+1 : TXT$=""
+        Else If A=Len(PTXT$)
+           TXT$=TXT$+B$
+           MYY=TYPCOUNT : Gosub CENTXT : TYPCOUNT=TYPCOUNT+1 : TXT$=""
+        Else 
+           TXT$=TXT$+B$
+End If 
+   Next A
+Return 
+
+Procedure _GET_DB_DATA[INFILE$]
+
+
+' ---
+
+If _GETDATA$="" Then Pop Proc
+If Exist(INFILE$)=False Then Pop Proc
+
+'Print _GETDATA$ 
+
+
+    ' open the file, and extract the name
+      Wload INFILE$,1
+
+         FILETEXT$=""
+         For Z=0 To Length(1)
+         FILETEXT$=FILETEXT$+Chr$(Peek(Start(1)+Z))
+         Next Z
+
+     Erase 1
+
+'Print FILETEXT$ 
+
+    'find the "[??]
+
+      For _STARTPOINT=1 To Len(FILETEXT$)-(Len(_GETDATA$)+2)
+         If Lower$(Mid$(FILETEXT$,_STARTPOINT,(Len(_GETDATA$)+2)))="["+_GETDATA$+"]"
+         Exit 
+         End If 
+      Next _STARTPOINT
+
+     If _STARTPOINT>=Len(FILETEXT$)-(Len(_GETDATA$)+2)
+        _GETDATA$=""
+         Pop Proc
+     End If 
+
+        _STARTPOINT=_STARTPOINT+Len(_GETDATA$)+2
+
+
+
+  '===find the "[??] 
+
+      For _ENDPOINT=_STARTPOINT To Len(FILETEXT$)-(Len(_GETDATA$)+2)
+         If Mid$(FILETEXT$,_ENDPOINT,2)=Chr$($A)+"[" or Mid$(FILETEXT$,_ENDPOINT,1)=Chr$(0) or _ENDPOINT>=Len(FILETEXT$)
+         Exit 
+         End If 
+      Next _ENDPOINT
+
+
+       _SENDDATA$=Mid$(FILETEXT$,_STARTPOINT,_ENDPOINT-_STARTPOINT)
+
+
+
+
+_GETDATA$=""
+
+End Proc[_SENDDATA$]
+Procedure _DO_DATABASE_SELECT
+
+
+
+' check for any 0000 database file(s)
+
+   Examine Dir(DBPATH$)
+
+      FOUNDFILE=False
+      Repeat 
+
+         FILE$=Examine Next$
+          If Object Type<0 and Right$(FILE$,5)=" 0000"
+            If Exist(DBPATH$+FILE$)=True : FOUNDFILE=True : Exit : End If 
+          End If 
+
+      Until FILE$=""
+
+
+
+' if not found, do a db scan 
+
+     If FOUNDFILE=False
+       _DATABASE_SCAN
+
+      ' clear the screen afterwards
+         Wait 30 : Fade 3,0,0,0,0,0,0,0 : Wait 60
+         Ink 0 : Bar 3,12 To 640-3,182
+
+         Fade 1,,PALSTORE(1),PALSTORE(2),,PALSTORE(3),PALSTORE(5),PALSTORE(6),PALSTORE(7),PALSTORE(8),,,PALSTORE(11),
+         Wait 5
+     End If 
+
+
+' now, trawl through and save all the game names.
+
+   Dim GAMESTORE$(4096),FILESTORE$(4096),AUDERSTORE(4096)
+
+      Examine Dir(DBPATH$)
+
+      FOUNDFILE=False
+      Repeat 
+
+            FILE$=Examine Next$
+
+            If Object Type<0 and Right$(FILE$,5)=" 0000"
+
+               ' ------------------ 
+               ' open the file, and extract the name
+                  Reserve As Work 1,Object Size
+                  Bload DBPATH$+FILE$,1
+                     FILETEXT$=""
+                     For Z=0 To Length(1)
+                     FILETEXT$=FILETEXT$+Chr$(Peek(Start(1)+Z))
+                     Next Z
+
+                  Erase 1
+
+
+               ' ------------------ 
+                ' find the "[name] 
+
+                  For _STARTPOINT=0 To Len(FILETEXT$)-6
+                     If Lower$(Mid$(FILETEXT$,_STARTPOINT,6))="[name]"
+                     Exit 
+                     End If 
+                  Next _STARTPOINT
+
+                  If _STARTPOINT>=Len(FILETEXT$)-6 : Exit : End If 
+
+                  _STARTPOINT=_STARTPOINT+6
+
+
+               ' ------------------ 
+                ' find the "[name] 
+
+                  For _ENDPOINT=_STARTPOINT To Len(FILETEXT$)
+                     If Mid$(FILETEXT$,_ENDPOINT,1)=Chr$($A)
+                     Exit 
+                     End If 
+                  Next _ENDPOINT
+
+
+                  GAMENAME$=Mid$(FILETEXT$,_STARTPOINT,_ENDPOINT-_STARTPOINT)
+
+                  GAMESTORE$(BIGCOUNT)=GAMENAME$
+                  FILESTORE$(BIGCOUNT)=FILE$
+
+
+                  AUDERSTORE(BIGCOUNT)=0
+                  AUDERSTORE(BIGCOUNT)=AUDERSTORE(BIGCOUNT)+(Asc(Mid$(GAMENAME$,1,1))*10000)
+                  AUDERSTORE(BIGCOUNT)=AUDERSTORE(BIGCOUNT)+(Asc(Mid$(GAMENAME$,2,1))*100)
+                  AUDERSTORE(BIGCOUNT)=AUDERSTORE(BIGCOUNT)+(Asc(Mid$(GAMENAME$,3,1)))
+
+
+               BIGCOUNT=BIGCOUNT+1
+               If BIGCOUNT>4095 : Exit : End If 
+            End If 
+      Until FILE$=""
+
+
+'Sort GAMESTORE$(0)
+'Sort FILESTORE$(0)
+
+
+
+
+'  lets draw up a list of games from the DB  
+
+     THISPAGE=0
+     PAGELIMIT=10
+         PAGES=(BIGCOUNT/PAGELIMIT)+1
+      SELECTED=0
+
+_DRAWPAGE:
+
+TYPCOUNT=4
+
+Gosub DRWMENU : 
+
+
+
+
+' now we wait for an input 
+
+
+WRITEOPTIONS:
+
+    Gosub REDRWMENU
+    PREVIOUS=SELECTED
+    OLDPAGE=THISPAGE
+    Wait 7
+
+
+_INPUTLOOP:
+' INPUT-READ LOOP
+Repeat 
+
+   If Xfire(1,0)=True or Xfire(0,0)=True or Key State($40)=True
+         PICKGAME$=GAMESTORE$(SELECTED+(THISPAGE*PAGELIMIT))
+
+
+
+        If SELECTED>9
+       Rem If SELECTED>PAGELIMIT
+            PICKGAME$="other"
+            Text 0,50,PICKGAME$ : End If 
+
+   End If 
+
+     If Jup(1)=True Then SELECTED=SELECTED-1
+   If Jdown(1)=True Then SELECTED=SELECTED+1
+
+   If Key State($4C)=True Then SELECTED=SELECTED-1
+   If Key State($4D)=True Then SELECTED=SELECTED+1
+
+   If Xfire(0,1)=True Then SELECTED=SELECTED+1
+
+
+   If SELECTED>PAGELIMIT+1 Then SELECTED=0
+   If SELECTED<0 Then SELECTED=PAGELIMIT+1
+
+
+   If PAGES<=1 and PREVIOUS<SELECTED Then SELECTED=0
+   If PAGES<=1 and PREVIOUS>SELECTED Then SELECTED=9
+
+
+
+' deal with incomplete pages 
+   If PREVIOUS<SELECTED and GAMESTORE$(SELECTED+(THISPAGE*PAGELIMIT))=""
+      If PAGES>1
+      SELECTED=PAGELIMIT
+      Else 
+      SELECTED=0
+      End If 
+   End If 
+
+
+   If PREVIOUS>SELECTED and GAMESTORE$(SELECTED+(THISPAGE*PAGELIMIT))=""
+      If PAGES>1
+         For SELECTED=PAGELIMIT-1 To 0 Step -1
+            If GAMESTORE$(SELECTED+(THISPAGE*PAGELIMIT))<>"" : Exit : End If 
+         Next SELECTED
+      Else 
+       SELECTED=PAGELIMIT-1
+      End If 
+   End If 
+
+
+   ' "next" is true, but "previous" isnt   ... and selected>9 
+
+   If PAGES>1 and THISPAGE<1 and PREVIOUS<SELECTED and SELECTED>9 Then SELECTED=11
+   If PAGES>1 and THISPAGE<1 and PREVIOUS>SELECTED and SELECTED>9 Then SELECTED=9
+
+
+
+Until PREVIOUS<>SELECTED or PICKGAME$<>""
+
+
+
+
+' wait, its a "Previous or next" 
+
+
+   If(PICKGAME$<>"" and SELECTED>PAGELIMIT) or PICKGAME$="other"
+
+     If SELECTED-PAGELIMIT=0 or SELECTED=10
+         THISPAGE=THISPAGE-1
+      End If 
+
+
+      If SELECTED-PAGELIMIT=1 or SELECTED=11
+         THISPAGE=THISPAGE+1
+         If THIPAGE>PAGELIMIT : THISPAGE=PAGELIMIT : End If 
+       End If 
+
+      PICKGAME$="" : SELECTED=0
+
+   End If 
+
+
+If OLDPAGE<>THISPAGE Then Gosub DRWMENU : 
+If PICKGAME$="" Then Goto WRITEOPTIONS
+
+
+
+
+'==================================================
+
+
+VERSIONSELECT:
+
+   Ink 0
+   Bar 0,30 To 640,180
+   Blitter Wait 
+
+' we#re not done yet.... 
+
+
+    PICKFILE$=FILESTORE$(SELECTED+(THISPAGE*PAGELIMIT))
+    PICKFILE$=Left$(PICKFILE$,Len(PICKFILE$)-4)
+
+    For COUNT=0 To 9999
+         If Exist(DBPATH$+PICKFILE$+Lzstr$(COUNT,4))=False
+            Exit 
+         End If 
+
+    Next 
+
+
+'''  
+
+' there's only one file (0000) 
+    If COUNT=1
+         FULLPATH$=DBPATH$+PICKFILE$+Lzstr$(COUNT-1,4)
+
+        _GETDATA$="slave"
+        _GET_DB_DATA[FULLPATH$]
+         PICKSLAVEFILE$=Param$
+
+        _GETDATA$="path"
+        _GET_DB_DATA[FULLPATH$]
+         PICKSLAVEFOLDER$=Param$
+
+         SLAVECOUNT=1
+         Pop Proc
+    End If 
+
+
+
+' or there are several 
+
+COUNT=0
+
+_DRWVER:
+
+OLDCOUNT=COUNT
+
+   Ink 0
+   Bar 0,30 To 640,180
+   Blitter Wait 
+   'Wait Vbl  
+
+
+         TYPCOUNT=4
+
+           MYZ=7 : MYY=TYPCOUNT
+           TYPCOUNT=TYPCOUNT+2
+           TXT$="Version: "+Lzstr$(COUNT+1,4)
+           Gosub CENTXT
+
+
+' game name
+          MYY=TYPCOUNT
+          MYZ=8
+
+         FULLPATH$=DBPATH$+PICKFILE$+Lzstr$(COUNT,4)
+        _GETDATA$="name"
+        _GET_DB_DATA[FULLPATH$]
+
+         TXT$=Param$
+
+
+         Gosub CENTXT
+
+
+
+' version details
+
+         FULLPATH$=DBPATH$+PICKFILE$+Lzstr$(COUNT,4)
+        _GETDATA$="version"
+        _GET_DB_DATA[FULLPATH$]
+         PTXT$=Param$
+
+         TYPCOUNT=MYY+2
+         Gosub MULTILINE
+
+
+Wait 5
+PICKVER=-1
+
+Repeat 
+ Wait Vbl 
+Until Key State($40)=False and Key State($4F)=False and Key State($4E)=False
+
+Clear Key 
+
+'===== 
+Repeat 
+
+   If Xfire(1,0)=True or Xfire(0,0)=True or Key State($40)=True
+         PICKVER=COUNT+1
+   End If 
+
+    If Jleft(1)=True : COUNT=COUNT-1 : End If 
+   If Jright(1)=True : COUNT=COUNT+1 : End If 
+
+   If Key State($4F)=True : COUNT=COUNT-1 : End If 
+   If Key State($4E)=True : COUNT=COUNT+1 : End If 
+
+
+   If Exist(DBPATH$+PICKFILE$+Lzstr$(COUNT,4))=False
+      COUNT=COUNT-1
+   End If 
+   If COUNT<0
+      COUNT=0
+   End If 
+
+   If OLDCOUNT<>COUNT : Goto _DRWVER : End If 
+
+
+   Wait Vbl 
+Until PICKVER<>-1
+
+
+Wait Vbl 
+
+   Ink 0
+   Bar 0,30 To 640,180
+   Blitter Wait 
+
+
+         FULLPATH$=DBPATH$+PICKFILE$+Lzstr$(COUNT,4)
+        _GETDATA$="slave"
+        _GET_DB_DATA[FULLPATH$]
+
+         PICKSLAVEFILE$=Param$
+
+        _GETDATA$="path"
+        _GET_DB_DATA[FULLPATH$]
+         PICKSLAVEFOLDER$=Param$
+
+         SLAVECOUNT=1
+
+Pop Proc
+
+
+
+
+
+
+
+
+DRWMENU:
+
+   Ink 0
+   Bar 0,30 To 640,180
+   Blitter Wait 
+   MYY=1 : MYZ=11 : TXT$=PROGNAME$
+   Gosub CENTXT
+
+   MYY=19 : MYZ=2 : TXT$=WEBNAME$
+   Gosub CENTXT
+
+
+' WRITE THE MENU 
+
+TYPCOUNT=4
+
+   For COUNT=0 To PAGELIMIT-1
+      If GAMESTORE$(COUNT+(THISPAGE*PAGELIMIT))="" Then Exit 
+
+      MYZ=8 : MYY=TYPCOUNT
+      If COUNT=SELECTED Then MYZ=7
+           TYPCOUNT=TYPCOUNT+1
+         '  TXT$=GAMESTORE$(COUNT+(THISPAGE*PAGELIMIT)) 
+         '  TXT$=Str$(AUDERSTORE(COUNT+(THISPAGE*PAGELIMIT))) 
+
+           If TXT$="" Then Exit 
+
+      Gosub CENTXT
+
+   Next COUNT
+
+
+   MYZ=8
+   If PAGES>1 and THISPAGE<>0
+           MYY=16
+           If SELECTED=10 : MYZ=7 : End If 
+           TXT$="Previous"
+           Gosub CENTXT
+   End If 
+
+   MYZ=8
+   If PAGES>1 and THISPAGE<PAGES-1
+           MYY=17
+           If SELECTED=11 : MYZ=7 : End If 
+           TXT$="Next"
+           Gosub CENTXT
+   End If 
+
+
+
+Return 
+
+
+REDRWMENU:
+
+
+' WRITE THE MENU (for the exit fade) 
+
+TYPCOUNT=4
+
+'   MYY=1 : MYZ=11 : TXT$=PROGNAME$
+'   Gosub CENTXT 
+'
+'   MYY=19 : MYZ=8 : TXT$=WEBNAME$ 
+'   Gosub CENTX
+
+
+
+   For COUNT=0 To PAGELIMIT-1
+      If GAMESTORE$(COUNT+(THISPAGE*PAGELIMIT))="" Then Exit 
+
+      MYZ=8 : MYY=TYPCOUNT
+      If COUNT=SELECTED Then MYZ=7
+      If PICKGAME$<>"" Then MYZ=1
+
+           TYPCOUNT=TYPCOUNT+1
+           TXT$=GAMESTORE$(COUNT+(THISPAGE*PAGELIMIT))
+           'TXT$=TXT$+"   "+Str$(AUDERSTORE(COUNT+(THISPAGE*PAGELIMIT)))
+           If TXT$="" Then Exit 
+
+        Gosub CENTXT
+
+   Next COUNT
+
+
+
+   If PAGES>1 and THISPAGE<>0
+           MYY=16 : MYZ=8
+           If SELECTED=10 : MYZ=7 : End If 
+           If PICKGAME$<>"" : MYZ=1 : End If 
+           TXT$="Previous"
+           Gosub CENTXT
+   End If 
+
+   If PAGES>1 and THISPAGE<PAGES-1
+           MYY=17 : MYZ=8
+           If SELECTED=11 : MYZ=7 : End If 
+           If PICKGAME$<>"" : MYZ=1 : End If 
+           TXT$="Next"
+           Gosub CENTXT
+   End If 
+
+
+
+Return 
+
+CENTXT: YY=MYY*10 : XX=320-((Len(TXT$)*8)/2) : ZZ=MYZ : Ink ZZ,0 : Text XX,YY,TXT$ : YY=0 : XX=0 : ZZ=0 : TXT$="" : Return 
+LEFTXT: YY=MYY*10 : XX=320-((Len(TXT$)*8)/2) : ZZ=MYZ : Ink ZZ,0 : Text 0+8,YY,TXT$ : YY=0 : XX=0 : ZZ=0 : TXT$="" : Return 
+
+
+MULTILINE:
+   TXT$=""
+   For A=1 To Len(PTXT$)
+        B$=Mid$(PTXT$,A,1)
+
+        If B$=Chr$($A) or B$=Chr$($FF)
+           MYY=TYPCOUNT : Gosub CENTXT : TYPCOUNT=TYPCOUNT+1 : TXT$=""
+        Else If A=Len(PTXT$)
+           TXT$=TXT$+B$
+           MYY=TYPCOUNT : Gosub CENTXT : TYPCOUNT=TYPCOUNT+1 : TXT$=""
+        Else 
+           TXT$=TXT$+B$
+        End If 
+   Next A
+Return 
+
+
+End Proc
+Procedure _DATABASE_SCAN
+
+   For AAA=31 To 0 Step -1
+
+      TYPCOUNT=3
+
+      If ADRIVE$(AAA)<>""
+
+         TXT$="Scanning for Slave Files... "+ADRIVE$(AAA)+"             "
+         MYY=TYPCOUNT : MYZ=1 : Gosub LEFTXT : TYPCOUNT=TYPCOUNT+1 : Wait 2
+        _GET_FROM_SCAN[ADRIVE$(AAA)]
+
+      End If 
+
+   Next AAA
+
+
+
+'==========
+
+   TYPCOUNT=TYPCOUNT+1
+
+   For BRRR=1 To 9999
+       If SLAVEFILES$(BRRR)="" Then Exit 
+   Next BRRR
+
+
+   TXT$="Found"+Str$(BRRR)+" files"
+   MYY=TYPCOUNT : MYZ=1 : Gosub LEFTXT : TYPCOUNT=TYPCOUNT+1 : Wait 2
+
+
+
+   ' now we need to create each entry 
+
+   For BRRR=0 To 9999
+      If SLAVEFILES$(BRRR)="" Then Exit 
+
+       _GET_SLAVE_DATA[SLAVEFOLDERS$(BRRR),SLAVEFILES$(BRRR)]
+
+        DBSLAVE$=SLAVEFILES$(BRRR)
+        DBPATH$=SLAVEFOLDERS$(BRRR)
+        DBNAME$=_WS_NAME$
+        DBVERSION$=_WS_INFO$
+        DBADD$=_WS_COPY$
+        DBPLAYS$="0"
+        DBFAVE$="0"
+
+
+
+         DBENTRY$=""
+         DBENTRY$=DBENTRY$+"[slave]"+DBSLAVE$+Chr$($A)
+         DBENTRY$=DBENTRY$+"[path]"+DBPATH$+Chr$($A)
+         DBENTRY$=DBENTRY$+"[name]"+DBNAME$+Chr$($A)
+         DBENTRY$=DBENTRY$+"[version]"+DBVERSION$+Chr$($A)
+         DBENTRY$=DBENTRY$+"[additional]"+DBADD$+Chr$($A)
+         DBENTRY$=DBENTRY$+"[plays] "+DBPLAYS$+Chr$($A)
+         DBENTRY$=DBENTRY$+"[favourite] "+DBFAVE$+Chr$($A)
+         DBENTRY$=DBENTRY$+"[end]"
+
+
+         If DBNAME$="" : DBNAME$=Left$(DBSLAVE$,Len(DBSLAVE$)-6) : End If 
+
+         SVENAME$=DBNAME$
+         SVENAME$=Replacestr$(SVENAME$,"/" To "-")
+         SVENAME$=Replacestr$(SVENAME$,":" To "-")
+
+         Rem SVENAME$=Replacestr$(SVENAME$,"" To "")
+
+
+         If Len(SVENAME$)>30 : SVENAME$=Left$(SVENAME$,27)+"..." : End If 
+
+         'Print SVENAME$ : Print Len(SVENAME$) : Wait 3 
+
+       ' find next available lost 
+         For COUNTER=0 To 9999
+            DBFILE$=DBPATH$+SVENAME$+" "+Lzstr$(COUNTER,4)
+            Rem DBFILE$=Replacestr$(DBFILE$,":" To " ")
+            Rem DBFILE$=Replacestr$(DBFILE$,"/" To " ")
+            Rem DBFILE$=REPLACE(DBFILE$,"" to " ") 
+
+            If Not Exist(DBFILE$) Then Exit 
+
+         Next 
+
+         Rem Print DBFILE$
+
+        _OUTPUT[DBFILE$,DBENTRY$]
+
+
+   Next BRRR
+
+
+
+Pop Proc
+
+
+
+
+CENTXT: YY=MYY*10 : XX=320-((Len(TXT$)*8)/2) : ZZ=MYZ : Ink ZZ,0 : Text XX,YY,TXT$ : YY=0 : XX=0 : ZZ=0 : TXT$="" : Return 
+LEFTXT: YY=MYY*10 : XX=320-((Len(TXT$)*8)/2) : ZZ=MYZ : Ink ZZ,0 : Text 0+8,YY,TXT$ : YY=0 : XX=0 : ZZ=0 : TXT$="" : Return 
+MULTILINE:
+   TXT$=""
+   For A=1 To Len(PTXT$)
+        B$=Mid$(PTXT$,A,1)
+
+        If B$=Chr$($A) or B$=Chr$($FF)
+           MYY=TYPCOUNT : Gosub CENTXT : TYPCOUNT=TYPCOUNT+1 : TXT$=""
+        Else If A=Len(PTXT$)
+           TXT$=TXT$+B$
+           MYY=TYPCOUNT : Gosub CENTXT : TYPCOUNT=TYPCOUNT+1 : TXT$=""
+        Else 
+           TXT$=TXT$+B$
+        End If 
+   Next A
+Return 
+End Proc
+
+
+Procedure _DO_INITIAL_CHECKS
+
+' --- do the initialisation display stuff. ' 
+
+Rem TYPCOUNT=3 
+
+' --- check the whd/script found file(s) and report... 
+
+If SCRIPTFILE$=""
+   TXT$=Replacestr$(Str$(SLAVECOUNT)," " To "")+" WHDLoad slave files identified."
+   MYY=TYPCOUNT : MYZ=1 : Gosub LEFTXT : TYPCOUNT=TYPCOUNT+2 : Wait 2
+
+Else 
+   TXT$="Script file...." : MYZ=1
+   If SCRIPTFOLDER$="" or SCRIPTFILE$="" : MYZ=15 : TXT$=TXT$+"     Error " : Else : TXT$=TXT$+"    Found " : End If 
+   MYY=TYPCOUNT : MYZ=1 : Gosub LEFTXT : TYPCOUNT=TYPCOUNT+1 : Wait 2
+End If 
+
+
+' if no slaves, wtf! 
+   If SLAVECOUNT=0
+      TXT$="No files to load."
+      MYY=TYPCOUNT : MYZ=1 : Gosub LEFTXT : TYPCOUNT=TYPCOUNT+1 : Wait 2
+      Wait 240 : 
+      Fade 3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 : Wait 100 : End 
+   End If 
+
+
+' --- if multi-slaves, lets select 
+   If SLAVECOUNT>1 and SLAVECOUNT<13 and SCRIPTFILE$=""
+     _SELECTSLAVE
+
+   Else If SLAVECOUNT>12
+
+     TXT$=TXT$+"Too many slaves found."
+     MYY=TYPCOUNT : Gosub LEFTXT : TYPCOUNT=TYPCOUNT+1 : Wait 2
+
+     TXT$=TXT$+"Use database mode."
+     MYY=TYPCOUNT : Gosub LEFTXT : TYPCOUNT=TYPCOUNT+1 : Wait 2
+
+           Wait 500
+           Wait 30 : Fade 3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 : Wait 100
+           End 
+
+   End If 
+
+' --- if only  one slave is found
+   If SLAVECOUNT=1 and PICKSLAVEFILE$=""
+      PICKSLAVEFILE$=SLAVEFILES$(0)
+      PICKSLAVEFOLDER$=SLAVEFOLDERS$(0)
+   End If 
+
+
+' get slave information (if applicable)
+
+  If PICKSLAVEFILE$<>"" Then _GET_SLAVE_DATA[PICKSLAVEFOLDER$,PICKSLAVEFILE$]
+        If _WS_NAME$="" Then _WS_NAME$=PICKSLAVEFILE$
+      If _WS_CONFIG$="" Then _GET_WSCONFIG_FROM_FILE[PICKSLAVEFILE$]
+
+
+'If SCRIPTFILE$="" 
+'   TXT$="WHDLoad...." 
+'   If Exist("C:whdload.key") or Exist("L:whdload.key") or Exist("DEVS:whdload.key") or Exist("S:whdload.key") or Exist("LIBS:whdload.key") or Exist(PICKSLAVEFOLDER$+"whdload.key") 
+'   MYZ=1
+'   TXT$=TXT$+"          Registered" : WHDREG=True : Else : MYZ=15 : TXT$=TXT$+"          Unregistered" : WHDREG=False : End If  
+'   MYY=TYPCOUNT : Gosub LEFTXT : TYPCOUNT=TYPCOUNT+1 : Wait 2 
+'End If  
+
+
+
+' --- setpatch check.. 
+
+   TXT$="Setpatch...."
+   If Exist("C:SetPatch") : MYZ=1
+     TXT$=TXT$+"         Found"
+     MYY=TYPCOUNT : Gosub LEFTXT : TYPCOUNT=TYPCOUNT+1 : Wait 2
+
+   Else : MYZ=15 : 
+     TXT$=TXT$+"         Not Found"
+     MYY=TYPCOUNT : Gosub LEFTXT : TYPCOUNT=TYPCOUNT+1 : Wait 50
+   End If 
+
+
+' --- kickstart check ? (if applicable)
+
+
+   OK=False
+
+   For QQQ=0 To 20
+   If _WS_KICKNAME$(QQQ)<>""
+
+         TXT$="Required rom file: kick"
+
+         TXT$="kick"+_WS_KICKNAME$(QQQ)+"...."
+         If Exist("devs:kickstarts/kick"+_WS_KICKNAME$(QQQ)) : MYZ=1
+           TXT$=TXT$+"   Found"
+           MYY=TYPCOUNT : Gosub LEFTXT : TYPCOUNT=TYPCOUNT+1 : Wait 2
+           OK=True
+
+         Else : MYZ=15 : 
+           TXT$=TXT$+"   Not Found"
+           MYY=TYPCOUNT : Gosub LEFTXT : TYPCOUNT=TYPCOUNT+1
+
+         End If 
+
+   End If 
+   Next QQQ
+
+
+   If OK=False and _WS_KICKNAME$(0)<>""
+           TYPCOUNT=TYPCOUNT+1
+           TXT$=TXT$+"This WHDload slave cannot be run without a required kickstart rom." : MYZ=1
+           MYY=TYPCOUNT : Gosub LEFTXT : TYPCOUNT=TYPCOUNT+1
+           Wait 500
+           Wait 30 : Fade 3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 : Wait 100
+           End 
+   End If 
+
+' --- and remove the display 
+
+   Wait 60*NCOUNT : Fade 3,0,0,0,0,0,0,0,,,,,,,,,0 : Wait 60
+   Ink 0 : Bar 0+3,12 To 640-3,182
+
+
+
+Pop Proc
+
+CENTXT: YY=MYY*10 : XX=320-((Len(TXT$)*8)/2) : ZZ=MYZ : Ink ZZ,0 : Text XX,YY,TXT$ : YY=0 : XX=0 : ZZ=0 : TXT$="" : Return 
+LEFTXT: YY=MYY*10 : XX=320-((Len(TXT$)*8)/2) : ZZ=MYZ : Ink ZZ,0 : Text 0+8,YY,TXT$ : YY=0 : XX=0 : ZZ=0 : TXT$="" : Return 
+
+End Proc
+Procedure _TYPE_WHDSCRIPT
+
+
+' lets "write" a script
+
+    OUTTEXT$=""
+
+ '  OUTTEXT$=OUTTEXT$+"CD "+Chr$($22)+_RUNFROM$+"WHDBooter"+Chr$($22)+Chr$($A)
+ '  If WHDREG=False Then OUTTEXT$=OUTTEXT$+"C:RUN SplashScreen.exe >nil:"+Chr$($A)
+
+
+   OUTTEXT$=OUTTEXT$+"CD "+Chr$($22)+PICKSLAVEFOLDER$+Chr$($22)+Chr$($A)
+
+' lets write the WHD part
+'Global CUST1$,CUST2$,CUST3$,CUST4$,CUST5$,CUST0$
+
+' UNCHANGED SLAVE OPTIONS: 
+
+
+   If Right$(PICKSLAVEFOLDER$,1)<>"/" and Right$(PICKSLAVEFOLDER$,1)<>":" Then PICKSLAVEFOLDER$=PICKSLAVEFOLDER$+"/"
+
+
+   OUTTEXT$=OUTTEXT$+"WHDLOAD "
+   OUTTEXT$=OUTTEXT$+"SLAVE="+Chr$($22)+PICKSLAVEFOLDER$+PICKSLAVEFILE$+Chr$($22)+" "
+
+   OUTTEXT$=OUTTEXT$+"PRELOAD "
+   If CACHE$<>"" Then OUTTEXT$=OUTTEXT$+CACHE$+" "
+   OUTTEXT$=OUTTEXT$+"NOWRITECACHE "
+   OUTTEXT$=OUTTEXT$+"NOREQ "
+   OUTTEXT$=OUTTEXT$+"SPLASHDELAY=0 "
+
+If ENABLEFOLDERPATH=True
+
+   _TEMPFOLDER$=_PARENTFOLDER$
+   _TEMPFOLDER$=Replacestr$(_TEMPFOLDER$,"&" To "")
+   _TEMPFOLDER$=Replacestr$(_TEMPFOLDER$,"!" To "")
+   _TEMPFOLDER$=Replacestr$(_TEMPFOLDER$,"?" To "")
+
+    OUTTEXT$=OUTTEXT$+"SAVEDIR="+_TEMPFOLDER$+" "
+End If 
+
+
+' QUITKEY, BUTTONWAIT ETC
+   If QUITK=0
+   Else : OUTTEXT$=OUTTEXT$+"QUITKEY="+Hex$(QUITK)+" " : End If 
+
+   If BWAIT=True : OUTTEXT$=OUTTEXT$+BTWAIT$+"BUTTONWAIT " : End If 
+
+
+    If CACHE$<>"" : OUTTEXT$=OUTTEXT$+CACHE$+" " : End If 
+     If SCRN$<>"" : OUTTEXT$=OUTTEXT$+SCRN$+" " : End If 
+
+    If CUST1<>0 : OUTTEXT$=OUTTEXT$+"CUSTOM1="+Lzstr$(CUST1,4)+" " : End If 
+    If CUST2<>0 : OUTTEXT$=OUTTEXT$+"CUSTOM2="+Lzstr$(CUST2,4)+" " : End If 
+    If CUST3<>0 : OUTTEXT$=OUTTEXT$+"CUSTOM3="+Lzstr$(CUST3,4)+" " : End If 
+    If CUST4<>0 : OUTTEXT$=OUTTEXT$+"CUSTOM4="+Lzstr$(CUST4,4)+" " : End If 
+    If CUST5<>0 : OUTTEXT$=OUTTEXT$+"CUSTOM5="+Lzstr$(CUST5,4)+" " : End If 
+
+    If CUST0$<>"" : OUTTEXT$=OUTTEXT$+"CUSTOM="+CUST0$ : End If 
+
+
+
+' GAME DATA
+
+   If DATTA$="" or DATTA$="DATA="
+
+    '''  If Exist(PICKSLAVEFOLDER$+"data/")  
+    '''   OUTTEXT$=OUTTEXT$+"DATA="+Chr$($22)+PICKSLAVEFOLDER$+"data/"+Chr$($22)+" "   
+    '''  Else    
+    '''   OUTTEXT$=OUTTEXT$+"DATA="+Chr$($22)+PICKSLAVEFOLDER$+Chr$($22)+" "   
+    '''  End If    
+
+    ' use "default" data dir 
+
+'Print "ws dir: "+WS_DIR$
+
+       If Exist(PICKSLAVEFOLDER$+_WS_DIR$+"/") and _WS_DIR$<>""
+        OUTTEXT$=OUTTEXT$+"DATA="+Chr$($22)+PICKSLAVEFOLDER$+_WS_DIR$+"/"+Chr$($22)+" "
+       Else 
+        OUTTEXT$=OUTTEXT$+"DATA="+Chr$($22)+PICKSLAVEFOLDER$+Chr$($22)+" "
+       End If 
+
+   Else 
+     OUTTEXT$=OUTTEXT$+"DATA="+DATTA$+" "
+   End If 
+
+
+   ' if the 
+
+
+     GAMENAME$=Left$(PICKSLAVEFILE$,Len(PICKSLAVEFILE$)-Len(".slave"))
+
+
+       If Instr(Lower$(PICKSLAVEFOLDER$),Lower$(_STOREDRIVE$))>0
+          _DEBUGPATH$=PICKSLAVEFOLDER$
+          _DEBUGNAME$="whdscript_debug"
+
+       Else If Exist(_RUNFROM$+"Debugs")
+          _DEBUGPATH$=_RUNFROM$+"Debugs/"
+          _DEBUGNAME$=GAMENAME$+".whdscript_debug"
+       Else 
+
+          _DEBUGPATH$=PICKSLAVEFOLDER$
+          _DEBUGNAME$="whdscript_debug"
+
+       End If 
+
+
+   If ENABLEFOLDERPATH=True
+
+          If Exist("WHDLoadSave:Debugs/")
+          _DEBUGPATH$="WHDLoadSave:Debugs/"
+
+      Else If Exist(_RUNFROM$+"Debugs/")
+          _DEBUGPATH$=_RUNFROM$+"Debugs/"
+      Else 
+          _DEBUGPATH$=_RUNFROM$
+      End If 
+
+          _DEBUGNAME$=_PARENTFOLDER$+".whdscript_debug"
+   End If 
+
+
+  If ENABLEDEBUG=True Then Write Cli "Debug path; "+_DEBUGPATH$+Chr$($A)
+
+
+
+
+
+   OUTTEXT$=OUTTEXT$+" NOREQ"
+
+   OUTTEXT$=OUTTEXT$+" >"+Chr$($22)+_DEBUGPATH$+_DEBUGNAME$+Chr$($22)+Chr$($A)
+
+
+
+
+   OUTTEXT$=OUTTEXT$+Chr$($A)
+   OUTTEXT$=OUTTEXT$+"uae-configuration SPC_QUIT 1"+Chr$($A)
+
+
+
+End Proc[OUTTEXT$]
+
+Procedure _CUSTOM_OPTIONS
+
+Dim COMPLETEOPTIONS$(31),MENU_LAYOUT(31)
+Dim CUSTOPTIONS$(31),CUSTCUSTOM$(31),CUSTTYPE$(31),CUSTPARAM$(31)
+LINEMAX=24
+
+  Fade 1,,PALSTORE(1),PALSTORE(2),,PALSTORE(3),PALSTORE(5),PALSTORE(6),PALSTORE(7),PALSTORE(8),,,PALSTORE(11),,,,PALSTORE(15)
+
+
+
+'---- Title  
+  MYY=2 : MYZ=4 : TXT$="Custom Setup Options"
+  Gosub CENTXT
+
+
+'--- read the customiers  settings file into a string  
+'      we already have this with _WS_CONFIG$ 
+
+'--- count the total number of items within  
+   COUNTEND=0
+
+   For AA=1 To Len(_WS_CONFIG$)+1
+       CODE$=Mid$(_WS_CONFIG$,AA,1)
+       If CODE$=";" Then COUNTEND=COUNTEND+1
+   Next AA
+
+   If COUNTEND=0 Then Goto NOMORE
+
+
+RECCUST:
+ ' Read-in what Customiser settings we are using. 
+
+   For AA=0 To COUNTEND
+        COMPLETEOPTIONS$(AA)=Itemstr$(_WS_CONFIG$,AA,";")
+        COMPLETEOPTIONS$(AA)=COMPLETEOPTIONS$(AA)+":::"
+   Next AA
+   BB=COUNTEND
+
+
+
+' some initialisation of variables.... 
+   OLDLINEMAX=LINEMAX
+
+   For NEWLINEMAX=LINEMAX To 0 Step -2
+      If BB>NEWLINEMAX Then Exit 
+   Next NEWLINEMAX
+
+   YOFFSET=Vclip((OLDLINEMAX-NEWLINEMAX)/2,0 To 4)
+
+   If Even(YOFFSET)=True Then YOFFSET=YOFFSET-1
+
+   NEWLINEMAX=NEWLINEMAX+2
+   LINEMAX=NEWLINEMAX
+
+   COUNTEND=0
+   For AA=0 To LINEMAX-1
+
+
+
+  If COMPLETEOPTIONS$(AA)<>""
+          CUSTCUSTOM$(AA)=Upper$(Itemstr$(COMPLETEOPTIONS$(AA),0,":"))
+            CUSTTYPE$(AA)=Upper$(Itemstr$(COMPLETEOPTIONS$(AA),1,":"))
+         CUSTOPTIONS$(AA)=Itemstr$(COMPLETEOPTIONS$(AA),2,":")
+           CUSTPARAM$(AA)=Itemstr$(COMPLETEOPTIONS$(AA),3,":")
+         COUNTEND=COUNTEND+1
+     End If 
+   Next AA
+
+
+' --- lets do some "allocating" of each into slots 
+
+
+MENULAYOUTS:
+
+Rem   widthmax = 30  + 3 (bit / toggle) + 3 spaces 
+
+
+' allocate all "short" ones
+
+   For AA=0 To 31
+
+     '** is it a toggle / bit type? 
+      If Upper$(CUSTTYPE$(AA))="B" or Upper$(CUSTTYPE$(AA))="X"
+
+         ' is it short enough?
+         If Len(CUSTOPTIONS$(AA))<=30
+          Rem ... allocate into "any" slot (even / odd)
+
+            For CC=0 To 31
+               If Btst(7,MENU_LAYOUT(CC))=False
+                  MENU_LAYOUT(CC)=AA
+                  Bset 7,MENU_LAYOUT(CC)
+                  Exit 1
+               End If 
+            Next CC
+          End If 
+
+
+
+     '** is it a list type? 
+      Else If Upper$(CUSTTYPE$(AA))="L"
+
+        '** how many options are there in CUSTPARAM$(AA) ? 
+          ITEMCOUNT=0
+          For Z=1 To Len(CUSTPARAM$(AA))
+           If Mid$(CUSTPARAM$(AA),Z,1)="," : ITEMCOUNT=ITEMCOUNT+1 : End If 
+          Next Z
+
+        '**  establish the longest length
+         MXLENGTH=0
+         For Z=1 To ITEMCOUNT
+            If Len(Itemstr$(CUSTPARAM$(AA),Z,","))>MXLENGTH : MXLENGTH=Len(Itemstr$(CUSTPARAM$(AA),Z,",")) : End If 
+         Next Z
+
+         MXLENGTH=MXLENGTH+3 : Rem-- to allow for decent "space"
+
+         If Len(CUSTOPTIONS$(AA))+MXLENGTH<36
+          Rem ... allocate into "any" slot (even / odd)
+
+            For CC=0 To 31
+               If Btst(7,MENU_LAYOUT(CC))=False
+                  MENU_LAYOUT(CC)=AA
+                  Bset 7,MENU_LAYOUT(CC)
+                  Exit 1
+               End If 
+            Next CC
+         End If 
+
+      End If 
+   Next AA
+
+
+AASD:
+
+' --- scan for the "long" ones (remainer 
+   For AA=0 To 31
+
+       If CUSTOPTIONS$(AA)="" Then Goto NXT : Rem -- blank, ignore 
+
+       For CC=0 To 31
+         If MENU_LAYOUT(CC)-128=AA Then Goto NXT : Remm - already placed, ignore
+       Next CC
+
+       For CC=0 To 31 Step 2
+       '   Print AA 
+          If Btst(7,MENU_LAYOUT(CC))=False
+             MENU_LAYOUT(CC)=AA
+             Bset 6,MENU_LAYOUT(CC) : Rem -- mark as "long"
+             Bset 7,MENU_LAYOUT(CC) : Rem -- mark as "used"
+            Goto NXT : 
+          End If 
+       Next CC
+
+
+NXT:
+   Next AA
+
+
+
+
+
+' --- menu initialisation
+SELECTY=99 : SELECTX=0
+
+
+Rem -- sanity check!!
+
+If Btst(7,MENU_LAYOUT(0))<>True
+      Wait 20
+      MYZ=15 : MYY=5
+      TXT$="No WSCustom Options Found... Aborting"
+      Gosub LEFTXT : Wait 200
+      Goto NOMORE : 
+
+End If 
+
+
+Gosub DRWMENU
+
+
+'--- Wait For all Inputs To be clear 
+
+Repeat 
+Wait Vbl 
+Until(Fire(1)=False and Fire(0)=False and Key State($40)=False)
+
+' --- main loop for selection  
+
+MAINLOOP:
+_KEYHELD=False
+Repeat 
+
+
+     If Key State($4C)=True or Jup(1)=True
+         Gosub _MOVE_UP : 
+         REFRESH=True
+
+Else If Key State($4E)=True or Jright(1)=True
+         Gosub _MOVE_RIGHT : 
+         REFRESH=True
+
+Else If Key State($4F)=True or Jleft(1)=True
+         Gosub _MOVE_LEFT : 
+         REFRESH=True
+
+Else If Key State($4D)=True or Jdown(1)=True or Xfire(0,1)=True
+         Gosub _MOVE_DOWN : 
+         REFRESH=True
+ End If 
+
+
+           If REFRESH=True Then Gosub DRWMENU : 
+
+              If SELECTY=99 and(Fire(1)=True or Fire(0)=True or Key State($40)=True)
+               Exit 
+
+      Else If(Fire(1)=True or Fire(0)=True or Key State($40)=True) and KEYHELD=False
+
+              Gosub CHANGEOPTION
+              KEYHELD=True
+
+       Else If Fire(1)=False and Fire(0)=False and Key State($40)=False
+            KEYHELD=False
+       End If 
+
+
+Until 1=0
+
+
+' ---- exit! 
+Flash Off 
+Rem Wait Vbl : Colour 7,$FFF : fade 3
+
+NOMORE:
+   Wait 20 : Fade 3,0,0,0,0,0,0,0,0,,0,,,,,,0 : Wait 60
+   Ink 0 : Bar 0,12 To 640,182
+
+   Pop Proc
+
+
+' *************  SUB-ROUTINES  ************* 
+
+
+
+
+_MOVE_UP:
+    If SELECTY=0 or SELECTY=1 Then Return 
+    If SELECTY=99 Then SELECTY=30
+    SELECTY=SELECTY-2
+
+    For SELECTY=SELECTY To 0 Step -2
+
+      If Odd(SELECTY)=True
+         If Btst(7,MENU_LAYOUT(SELECTY))=False and Btst(7,MENU_LAYOUT(SELECTY-1))=True
+            SELECTY=SELECTY-1
+         End If 
+      End If 
+
+      If Btst(7,MENU_LAYOUT(SELECTY))=True Then Exit 
+    Next SELECTY
+
+
+Return 
+
+
+
+_MOVE_DOWN:
+    If SELECTY=99 Then Return 
+    SELECTY=SELECTY+2
+
+    For SELECTY=SELECTY To 31
+
+      If Odd(SELECTY)=True and Btst(7,MENU_LAYOUT(SELECTY))=False and Btst(7,MENU_LAYOUT(SELECTY-1))=True
+         SELECTY=SELECTY-1
+      End If 
+
+      If Btst(7,MENU_LAYOUT(SELECTY))=True Then Exit 
+    Next SELECTY
+
+    If SELECTY>31 Then SELECTY=99
+
+Return 
+
+
+_MOVE_LEFT:
+    If SELECTY=99 Then Return 
+    If Odd(SELECTY)=True
+       If Btst(7,MENU_LAYOUT(SELECTY-1))=True
+         SELECTY=SELECTY-1
+       End If 
+    End If 
+
+Return 
+
+
+_MOVE_RIGHT:
+    If SELECTY=99 Then Return 
+
+    If Even(SELECTY)=True
+       If Btst(7,MENU_LAYOUT(SELECTY+1))=True
+         SELECTY=SELECTY+1
+       End If 
+    End If 
+
+Return 
+
+
+DRWMENU:
+
+
+TYPCOUNT=4+(YOFFSET/2)
+
+
+
+
+For AA=0 To 31 : Rem ...  AA is the value of the menu positioner
+
+      BB=MENU_LAYOUT(AA)
+
+      If Btst(7,BB)=False Then Goto SKP
+         LONGTYPE=Btst(6,BB)
+         Bclr 7,BB : Bclr 6,BB
+
+
+   ' write the option name
+      If CUSTOPTIONS$(BB)="" Then Goto SKP
+
+        ' ink colour 
+           If SELECTY=AA : MYZ=7 : Else : MYZ=6 : End If 
+
+           MYY=TYPCOUNT
+           If Even(AA)=True Then MYX=0
+           If Odd(AA)=True Then MYX=40
+
+           TXT$="  "+CUSTOPTIONS$(BB)
+           Gosub LEFFXT
+
+           TXT$=""
+           Gosub BITOPTION
+
+
+SKP:
+           If Odd(AA)=True Then TYPCOUNT=TYPCOUNT+1
+
+
+Next AA
+
+
+
+
+If SELECTY=99 : MYZ=7 : Else : MYZ=6 : End If 
+
+   MYY=17 : TXT$="--- Start Game ---" : Gosub CENTXT
+
+Wait 5 : Clear Key 
+REFRESH=False
+Return 
+
+
+
+
+CHANGEOPTION:
+
+'    BB=SELECTY  
+     BB=MENU_LAYOUT(SELECTY)
+     Bclr 7,BB : Bclr 6,BB
+
+   If CUSTCUSTOM$(BB)="C1" Then TESTITEM=CUST1
+   If CUSTCUSTOM$(BB)="C2" Then TESTITEM=CUST2
+   If CUSTCUSTOM$(BB)="C3" Then TESTITEM=CUST3
+   If CUSTCUSTOM$(BB)="C4" Then TESTITEM=CUST4
+   If CUSTCUSTOM$(BB)="C5" Then TESTITEM=CUST5
+
+    TESTBIT=Val(CUSTPARAM$(BB))
+
+'   Text 20,190,"bit:"+Str$(TESTBIT)+" VAL:"+Str$(TESTITEM)+"   "
+
+   Rem -- testitem = current value
+   Rem -- testbit = bit to change, or value upper limit or... ? 
+
+
+   If CUSTTYPE$(BB)="X"
+      Bchg TESTBIT,TESTITEM
+
+   Else If CUSTTYPE$(BB)="B"
+      Bchg 0,TESTITEM
+
+   Else If CUSTTYPE$(BB)="L"
+
+       ITEMCOUNT=0
+       For Z=1 To Len(CUSTPARAM$(BB))
+        If Mid$(CUSTPARAM$(BB),Z,1)="," : ITEMCOUNT=ITEMCOUNT+1 : End If 
+       Next Z
+
+      TESTITEM=TESTITEM+1
+      If TESTITEM>ITEMCOUNT : TESTITEM=0 : End If 
+   End If 
+
+
+   If CUSTCUSTOM$(BB)="C1" Then CUST1=TESTITEM
+   If CUSTCUSTOM$(BB)="C2" Then CUST2=TESTITEM
+   If CUSTCUSTOM$(BB)="C3" Then CUST3=TESTITEM
+   If CUSTCUSTOM$(BB)="C4" Then CUST4=TESTITEM
+   If CUSTCUSTOM$(BB)="C5" Then CUST5=TESTITEM
+
+   REFRESH=True
+Return 
+
+
+BITOPTION:
+
+   ' get current parameter
+   If CUSTCUSTOM$(BB)="C1" Then TESTITEM=CUST1
+   If CUSTCUSTOM$(BB)="C2" Then TESTITEM=CUST2
+   If CUSTCUSTOM$(BB)="C3" Then TESTITEM=CUST3
+   If CUSTCUSTOM$(BB)="C4" Then TESTITEM=CUST4
+   If CUSTCUSTOM$(BB)="C5" Then TESTITEM=CUST5
+
+      TESTBIT=Val(CUSTPARAM$(BB))
+
+   ' draw a bit/option item 
+     If CUSTTYPE$(BB)="B" or CUSTTYPE$(BB)="X"
+
+         If CUSTTYPE$(BB)="B" : TESTBIT=0 : End If 
+
+         RESULT=Btst(TESTBIT,TESTITEM)
+      If RESULT=True : TXT$=" ON" : Else TXT$="OFF" : End If 
+
+         XOFFSET=3
+
+    'draw a list item
+     Else If CUSTTYPE$(BB)="L"
+
+        '** how many options are there in CUSTPARAM$(AA) ? 
+              ITEMCOUNT=0
+              For Z=1 To Len(CUSTPARAM$(BB))
+               If Mid$(CUSTPARAM$(BB),Z,1)="," : ITEMCOUNT=ITEMCOUNT+1 : End If 
+              Next Z
+
+        '**  establish the longest length  
+              For Z=1 To ITEMCOUNT
+               If Len(Itemstr$(CUSTPARAM$(BB),Z,","))>MXLENGTH : MXLENGTH=Len(Itemstr$(CUSTPARAM$(BB),Z,",")) : End If 
+              Next Z
+
+           TXT$=Itemstr$(CUSTPARAM$(BB),TESTITEM,",")
+
+           XOFFSET=MXLENGTH
+
+           While Len(TXT$)<MXLENGTH
+               TXT$=" "+TXT$
+           Wend 
+    End If 
+
+
+      ' if selected, flash 
+      If SELECTY=AA : MYZ=7 : Else : MYZ=6 : End If 
+
+      ' pick a column etc. 
+
+            If Even(AA)=True Then MYX=0+38-Len(TXT$)
+             If Odd(AA)=True Then MYX=40+38-Len(TXT$)
+            If LONGTYPE=True Then MYX=78-Len(TXT$)
+
+      ' pick the row (??)
+            MYY=TYPCOUNT
+
+      ' draw it! 
+            Gosub LEFFXT
+
+Return 
+
+
+
+
+Pop Proc
+
+CENTXT: YY=MYY*10 : XX=320-((Len(TXT$)*8)/2) : ZZ=MYZ : Ink ZZ,0 : Text XX,YY,TXT$ : YY=0 : XX=0 : ZZ=0 : TXT$="" : Return 
+LEFTXT: YY=MYY*10 : XX=320-((Len(TXT$)*8)/2) : ZZ=MYZ : Ink ZZ,0 : Text 0,YY,TXT$ : YY=0 : XX=0 : ZZ=0 : TXT$="" : Return 
+
+LEFFXT: YY=MYY*10 : XX=MYX*8 : ZZ=MYZ : Ink ZZ,0 : Text XX,YY,TXT$ : YY=0 : XX=0 : ZZ=0 : TXT$="" : Return 
+
+End Proc
+
+Procedure _GET_SLAVE_DATA[INFOLDER$,INFILE$]
+
+
+If INFOLDER$="" or INFILE$="" Then Pop Proc
+
+   If Right$(INFOLDER$,1)<>"/" and Right$(INFOLDER$,1)<>":" Then INFOLDER$=INFOLDER$+"/"
+
+   If Exist(INFOLDER$+INFILE$)=False Then Pop Proc
+
+   Reserve As Work 1,$20000
+
+   Bload INFOLDER$+INFILE$,1
+
+
+' FIND "WHDLOADS"
+
+   For COUNT=1 To Length(1)
+
+      CHK$=""
+      For B=0 To 7
+         CHK$=CHK$+Chr$(Peek(Start(1)+COUNT+B))
+      Next B
+
+      If CHK$="WHDLOADS" Then Exit 
+
+   Next COUNT
+
+
+' lets store some detault variables
+
+     BASEREF=COUNT-4
+
+     A=Start(1)
+
+
+                               COUNT=COUNT+8 : Rem -- security / ID skipped 
+     WS_REQVER=Deek(COUNT+A) : COUNT=COUNT+2 : Rem -- whd ver 
+                               COUNT=COUNT+2 : Rem -- flags 
+                               COUNT=COUNT+4 : Rem -- basemem 
+                               COUNT=COUNT+4 : Rem -- execinstall 
+                               COUNT=COUNT+2 : Rem -- gameloader
+ WS_CURRENTDIR=Deek(COUNT+A) : COUNT=COUNT+2 : Rem -- currentdir  
+                               COUNT=COUNT+2 : Rem -- dont cache
+
+
+
+   If WS_REQVER<4 Then Goto NOMORE
+
+      WS_DEBUG=Peek(COUNT+A) : COUNT=COUNT+1 : Rem -- debug key 
+       WS_QUIT=Peek(COUNT+A) : COUNT=COUNT+1 : Rem -- quit key  
+
+   If WS_REQVER<8 Then Goto NOMORE
+
+                               COUNT=COUNT+4 : Rem -- expmem
+
+   If WS_REQVER<10 Then Goto NOMORE
+
+       WS_NAME=Deek(COUNT+A) : COUNT=COUNT+2 : Rem -- name
+       WS_COPY=Deek(COUNT+A) : COUNT=COUNT+2 : Rem -- copy
+       WS_INFO=Deek(COUNT+A) : COUNT=COUNT+2 : Rem -- info
+
+   If WS_REQVER<16 Then Goto NOMORE
+       WS_KICK=Deek(COUNT+A) : COUNT=COUNT+2 : Rem -- kickname
+                               COUNT=COUNT+4 : Rem -- kicksize  
+                               COUNT=COUNT+2 : Rem -- kickcrc   
+
+   If WS_REQVER<17 Then Goto NOMORE
+
+     WS_CONFIG=Deek(COUNT+A) : COUNT=COUNT+2 : Rem -- config  
+
+
+' ----- now we have the relevant info / offsets
+
+
+
+NOMORE:
+   If WS_CURRENTDIR<>0
+      _GET_SLAVE_LINE[1,BASEREF,WS_CURRENTDIR,0] : _WS_DIR$=Param$
+   Else 
+      _WS_DIR$=""
+   End If 
+
+
+
+
+  If WS_REQVER<10 Then Goto NOMORE2
+        _GET_SLAVE_LINE[1,BASEREF,WS_NAME,WS_COPY] : _WS_NAME$=Param$
+        _GET_SLAVE_LINE[1,BASEREF,WS_COPY,WS_INFO] : _WS_COPY$=Param$
+        _GET_SLAVE_LINE[1,BASEREF,WS_INFO,0] : _WS_INFO$=Param$
+
+   If WS_REQVER<16 Then Goto NOMORE2
+
+       ' cehcking multiple kickstarts needs trickery. 
+
+        If WS_KICK<>0
+
+           _OFFS=-1 : Q=0
+
+       Repeat 
+         Repeat 
+           _OFFS=_OFFS+1
+            AAA$=""
+
+            For RRR=0 To 3
+            AAA$=AAA$+Chr$(Peek(Start(1)+BASEREF+WS_KICK+RRR+_OFFS))
+            Next RRR
+
+         Until AAA$="4006" or _OFFS>$64
+
+       If _OFFS<$32
+        _GET_SLAVE_LINE[1,BASEREF,WS_KICK+_OFFS,0]
+        _WS_KICKNAME$(Q)=Param$
+         Q=Q+1
+       End If 
+
+      Until _OFFS>$32
+
+    End If 
+
+
+  If WS_REQVER<17 Then Goto NOMORE2
+      _GET_SLAVE_LINE[1,BASEREF,WS_CONFIG,0] : _WS_CONFIG$=Param$
+
+
+NOMORE2:
+
+   Erase 1
+
+End Proc
+Procedure _GET_SLAVE_LINE[_BANKNUMB,_BASEADD,_OFFSET,_MAXOFF]
+
+
+OUTTIE$=""
+
+' main loop
+
+    ADYIN=Start(_BANKNUMB)+_BASEADD+_OFFSET
+
+If _MAXOFF=0 or _MAXOFF<_OFFSET
+   ADYOUT=Start(_BANKNUMB)+Length(_BANKNUMB)
+
+Else 
+   ADYOUT=Start(_BANKNUMB)+_BASEADD+_MAXOFF-1
+End If 
+
+For B=ADYIN To ADYOUT
+
+      CODE=Peek(B)
+   If CODE=0 Then Exit 
+   OUTTIE$=OUTTIE$+Chr$(CODE)
+
+Next B
+
+
+End Proc[OUTTIE$]
+
+
+Procedure _SELECTSLAVE
+
+TMPCOUNT=TYPCOUNT
+
+    Gosub DRWMENU
+Rem Gosub FADIN
+
+
+
+WRITEOPTIONS:
+
+    Gosub DRWMENU
+    PREVIOUS=SELECTED
+    Wait 7
+
+
+' INPUT-READ LOOP
+Repeat 
+
+   If Xfire(1,0)=True or Xfire(0,0)=True or Key State($40)=True
+                      PICKSLAVEFILE$=SLAVEFILES$(SELECTED)
+                      PICKSLAVEFOLDER$=SLAVEFOLDERS$(SELECTED)
+   End If 
+
+     If Jup(1)=True Then SELECTED=SELECTED-1
+   If Jdown(1)=True Then SELECTED=SELECTED+1
+
+   If Key State($4C)=True Then SELECTED=SELECTED-1
+   If Key State($4D)=True Then SELECTED=SELECTED+1
+
+   If Xfire(0,1)=True Then SELECTED=SELECTED+1
+
+
+   If SELECTED>SLAVECOUNT-1 Then SELECTED=0
+   If SELECTED<0 Then SELECTED=SLAVECOUNT-1
+
+
+Until PREVIOUS<>SELECTED or PICKSLAVEFILE$<>""
+
+
+If PICKSLAVEFILE$="" Then Goto WRITEOPTIONS
+
+
+
+   Gosub REDRWMENU : 
+
+   TYPCOUNT=TYPCOUNT+1
+
+
+Rem : Flash Off : Wait Vbl : Colour 7,$FFF : Fade 3
+Rem For A=0 To 50 : Wait Vbl : Next A
+
+Pop Proc
+
+
+
+
+
+DRWMENU:
+
+   MYY=1 : MYZ=11 : TXT$=PROGNAME$
+   Gosub CENTXT
+
+   MYY=19 : MYZ=2 : TXT$=WEBNAME$
+   Gosub CENTXT
+
+
+' WRITE THE MENU 
+
+TYPCOUNT=TMPCOUNT
+
+   For COUNT=0 To 255
+      If SLAVEFILES$(COUNT)="" Then Exit 
+
+      MYZ=8 : MYY=TYPCOUNT
+      If COUNT=SELECTED Then MYZ=7
+      TXT$="Option"+Str$(COUNT+1)+": "+SLAVEFILES$(COUNT) : TYPCOUNT=TYPCOUNT+1
+      Gosub LEFTXT
+
+   Next COUNT
+
+Return 
+
+REDRWMENU:
+
+
+' WRITE THE MENU 
+
+TYPCOUNT=TMPCOUNT
+
+For COUNT=0 To 255
+   If SLAVEFILES$(COUNT)="" Then Exit 
+
+   MYZ=1 : MYY=TYPCOUNT
+   If COUNT=SELECTED Then MYZ=2
+   TXT$="Option"+Str$(COUNT+1)+": "+SLAVEFILES$(COUNT) : TYPCOUNT=TYPCOUNT+1
+   Gosub LEFTXT
+Next COUNT
+
+Return 
+
+
+
+' *************  SUB-ROUTINES  ************* 
+CENTXT: YY=MYY*10 : XX=320-((Len(TXT$)*8)/2) : ZZ=MYZ : Ink ZZ,0 : Text XX,YY,TXT$ : YY=0 : XX=0 : ZZ=0 : TXT$="" : Return 
+LEFTXT: YY=MYY*10 : XX=320-((Len(TXT$)*8)/2) : ZZ=MYZ : Ink ZZ,0 : Text 0+8,YY,TXT$ : YY=0 : XX=0 : ZZ=0 : TXT$="" : Return 
+
+Return 
+
+
+FADIN:
+
+Rem --- BODGE-IT CODE!!
+
+A=PALSTORE(0) : B=PALSTORE(1) : C=PALSTORE(2) : D=PALSTORE(3)
+E=PALSTORE(4) : F=PALSTORE(5) : G=PALSTORE(6) : H=PALSTORE(7)
+I=PALSTORE(8) : J=PALSTORE(9) : K=PALSTORE(10) : L=PALSTORE(11)
+M=PALSTORE(12) : N=PALSTORE(13) : O=PALSTORE(14) : P=PALSTORE(15)
+Q=PALSTORE(16) : R=PALSTORE(17) : S=PALSTORE(18) : T=PALSTORE(19)
+U=PALSTORE(20) : V=PALSTORE(21) : W=PALSTORE(22) : X=PALSTORE(23)
+Y=PALSTORE(24) : Z=PALSTORE(25) : AA=PALSTORE(26) : BB=PALSTORE(27)
+CC=PALSTORE(28) : DD=PALSTORE(29) : EE=PALSTORE(30) : FF=PALSTORE(31)
+
+Fade 4,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,AA,BB,CC,DD,EE,FF
+
+
+For A=0 To 50
+   Wait Vbl 
+Next A
+
+Return 
+End Proc
+
+Procedure _GET_FROM_SCAN[CHKFOLDER$]
+Dim STOREDIR$(9999)
+
+
+SCRIPTCOUNT=0
+SLAVECOUNT=0
+
+
+' Check that there is a DH1: 
+
+If Not Exist(CHKFOLDER$)
+
+
+'   MYY=3 : MYZ=1
+'   TXT$="Drive DH1: not found!" : Gosub LEFTXT
+''  MYY=19 : MYZ=3   
+''  TXT$=webname$ : Gosub    
+'   Wait 150 
+'   Fade 3 
+'   Wait 100 
+
+    Pop Proc
+ End If 
+
+
+
+
+'lets scan for any folders we may be interested in.
+
+ADIR$=CHKFOLDER$ : Gosub PLUSDIR
+
+
+
+' 5 LEVEL FOLDER-FIND
+
+Gosub SWEEP
+Gosub SWEEP
+Gosub SWEEP
+Gosub SWEEP
+Gosub SWEEP
+
+
+'Repeat  
+'
+'Print STOREDIR$(BLAH)   
+'Inc BLAH
+'Until STOREDIR$(BLAH)=""
+
+Pop Proc
+
+
+SWEEP:
+COUNT=9999
+Repeat 
+
+
+      If STOREDIR$(COUNT)<>""
+         Examine Dir(STOREDIR$(COUNT))
+
+         Repeat 
+
+            FILE$=Examine Next$
+
+       '''' store all subfolders  
+            If Object Type>0
+
+                  If Right$(STOREDIR$(COUNT)+FILE$,1)<>"/" and Right$(STOREDIR$(COUNT)+FILE$,1)<>":"
+                   ADIR$=STOREDIR$(COUNT)+FILE$+"/"
+                   Gosub PLUSDIR
+                  Else 
+                     ADIR$=STOREDIR$(COUNT)+FILE$
+                     Gosub PLUSDIR
+                  End If 
+
+      '''' store files 
+
+            Else If Object Type<0
+
+      '''' store script file 
+                  If Lower$(FILE$)="script" or Lower$(FILE$)="bootscript"
+                     SCRIPTFILE$=FILE$
+                     SCRIPTFOLDER$=STOREDIR$(COUNT)
+                     If Right$(SCRIPTFOLDER$,1)<>"/" and Right$(SCRIPTFOLDER$,1)<>":"
+                        SCRIPTFOLDER$=SCRIPTFOLDER$+"/"
+                     End If 
+                     SCRIPTCOUNT=SCRIPTCOUNT+1
+
+      '''' store .slave files? 
+                  Else If Lower$(Right$(FILE$,6))=".slave" and Left$(FILE$,1)<>"." and Left$(FILE$,1)<>"_"
+
+
+                     AFILE$=FILE$
+                     AFOLDER$=STOREDIR$(COUNT)
+                     If Right$(AFOLDER$,1)<>"/" and Right$(AFOLDER$,1)<>":"
+                        AFOLDER$=AFOLDER$+"/"
+                     End If 
+                     Gosub PLUSSLAVE
+                     SLAVECOUNT=SLAVECOUNT+1
+
+      '''' store JST files?  
+
+                  End If 
+
+
+            End If 
+          Until FILE$="" or SCRIPTCOUNT>1
+
+      End If 
+
+      COUNT=COUNT-1
+
+Until COUNT<0 or(SLAVECOUNT>0 and ENABLEDATABASE=False)
+
+
+
+Return 
+
+
+PLUSSLAVE:
+   For A=0 To 255
+    If Lower$(SLAVEFILES$(A))=Lower$(AFILE$)
+      Exit 1
+    Else If SLAVEFILES$(A)=""
+      SLAVEFILES$(A)=AFILE$
+      SLAVEFOLDERS$(A)=AFOLDER$
+      Exit 1
+    End If 
+   Next A
+Return 
+
+
+
+PLUSDIR:
+
+   For A=0 To 9999
+    If Lower$(STOREDIR$(A))=Lower$(ADIR$)
+      Exit 1
+    Else If STOREDIR$(A)=""
+      STOREDIR$(A)=ADIR$
+      Exit 1
+    End If 
+   Next A
+
+
+Return 
+
+
+
+
+End Proc
+Procedure _GET_FROM_SCRIPT_FILE[CHKFILE$]
+
+PICKSLAVEFILE$=""
+PICKSLAVEFOLDER$=""
+
+  If Exist(CHKFILE$)=False Then Pop Proc
+
+      Reserve As Work 1,$20000
+      Bload CHKFILE$,1
+      _MAXSZ=Object Size(CHKFILE$)
+
+   _FINDAWORD[".slave",1,_MAXSZ] : PICKSLAVEFILE$=Param$
+        _FINDLINE["cd",1,_MAXSZ] : PICKSLAVEFOLDER$=Param$
+   _FINDLINE["whdload",1,_MAXSZ] : PICKSLAVELINE$=Param$
+
+
+   ' check how many WHD parameters there are (spaces) 
+   ENTRIES=0
+   For A=0 To Len(PICKSLAVELINE$)
+      If Mid$(PICKSLAVELINE$,A,1)=" " Then ENTRIES=ENTRIES+1
+   Next A
+
+
+   ' process them all 
+   For A=0 To ENTRIES
+
+      _WHDPARAM$=Itemstr$(PICKSLAVELINE$,A," ")
+      _WHDPARAM$=Lower$(_WHDPARAM$)
+
+
+      If Left$(_WHDPARAM$,8)="custom1=" Then CUST1=Val(Replacestr$(_WHDPARAM$,"custom1=" To ""))
+      If Left$(_WHDPARAM$,8)="custom2=" Then CUST2=Val(Replacestr$(_WHDPARAM$,"custom2=" To ""))
+      If Left$(_WHDPARAM$,8)="custom3=" Then CUST3=Val(Replacestr$(_WHDPARAM$,"custom3=" To ""))
+      If Left$(_WHDPARAM$,8)="custom4=" Then CUST4=Val(Replacestr$(_WHDPARAM$,"custom4=" To ""))
+      If Left$(_WHDPARAM$,8)="custom5=" Then CUST5=Val(Replacestr$(_WHDPARAM$,"custom5=" To ""))
+
+      If Left$(_WHDPARAM$,8)="custom=" Then CUST0$=Replacestr$(_WHDPARAM$,"custom=" To "")
+
+      If Left$(_WHDPARAM$,10)="buttonwait" Then BWAIT=True
+
+      If Left$(_WHDPARAM$,3)="pal" Then SCRN$="PAL"
+      If Left$(_WHDPARAM$,4)="ntsc" Then SCRN$="NTSC"
+
+      If Left$(_WHDPARAM$,8)="quitkey=" Then QUITK=Val(Replacestr$(_WHDPARAM$,"quitkey=" To ""))
+
+      If Left$(_WHDPARAM$,10)="branchcache" Then CACHE$="BRANCHCACHE"
+      If Left$(_WHDPARAM$,10)="nofilecache" Then CACHE$="NOFILECACHE"
+      If Left$(_WHDPARAM$,11)="nowritecache" Then CACHE$="NOWRITECACHE"
+      If Left$(_WHDPARAM$,10)="chipnocache" Then CACHE$="CHIPNOCACHE"
+      If Left$(_WHDPARAM$,10)="dcache" Then CACHE$="DCACHE"
+      If Left$(_WHDPARAM$,5)="cache" Then CACHE$="CACHE"
+      If Left$(_WHDPARAM$,6)="nocache" Then CACHE$="NOCACHE"
+
+      If Left$(_WHDPARAM$,5)="data=" Then DATTA$=Replacestr$(_WHDPARAM$,"data=" To "")
+
+
+   Next A
+
+
+   PICKSLAVEFOLDER$=Replacestr$(PICKSLAVEFOLDER$,"cd " To "")
+   PICKSLAVEFOLDER$=Replacestr$(PICKSLAVEFOLDER$,"CD " To "")
+   PICKSLAVEFOLDER$=Replacestr$(PICKSLAVEFOLDER$,"cD " To "")
+   PICKSLAVEFOLDER$=Replacestr$(PICKSLAVEFOLDER$,"Cd " To "")
+
+   PICKSLAVEFOLDER$=Replacestr$(PICKSLAVEFOLDER$,Chr$(34) To "")
+   PICKSLAVEFOLDER$=":"+PICKSLAVEFOLDER$
+
+   If Right$(PICKSLAVEFOLDER$,1)<>"/" and Right$(PICKSLAVEFOLDER$,1)<>":" Then PICKSLAVEFOLDER$=PICKSLAVEFOLDER$+"/"
+
+   If PICKSLAVEFILE$<>"" Then SLAVECOUNT=1
+
+   Erase 1
+
+End Proc
+
+Procedure _FINDLINE[FINDWORD$,BANKNUMB,_MAXSZ]
+OUTPHRASE$=""
+If Len(FINDWORD$)=0 Then Goto ZERO
+If _MAXSZ>Length(BANKNUMB) Then _MAXSZ=Length(BANKNUMB)
+
+
+' === this searches for the "findword$" and allows us to store a start-point   
+
+'   For COUNTER=0 To Length(BANKNUMB)-Len(FINDWORD$) 
+    For COUNTER=0 To _MAXSZ-Len(FINDWORD$)
+
+      CHK$=""
+
+      For WORDCOUNT=0 To Len(FINDWORD$)-1
+      CHK$=CHK$+Chr$(Peek(Start(BANKNUMB)+COUNTER+WORDCOUNT))
+      Next WORDCOUNT
+
+      If Lower$(CHK$)=FINDWORD$
+         WORDFOUND=True
+         If Peek(Start(BANKNUMB)+COUNTER+Len(FINDWORD$))=34 : QUOTESUSED=True : End If 
+         Exit 
+      End If 
+
+   Next COUNTER
+
+' === set the in-point   
+        INPOINT=COUNTER
+
+
+' === find the out-point   
+
+   FINDVALUE=$A
+
+'   For COUNTER=INPOINT To Length(BANKNUMB)
+   For COUNTER=INPOINT To _MAXSZ
+         If Peek(Start(BANKNUMB)+COUNTER)=FINDVALUE Then Exit 
+   Next COUNTER
+
+   OUTPOINT=COUNTER-1
+
+
+   OUTPHRASE$=""
+
+   For COUNTER=INPOINT To OUTPOINT
+      OUTPHRASE$=OUTPHRASE$+Chr$(Peek(Start(1)+COUNTER))
+   Next COUNTER
+
+
+ZERO:
+End Proc[OUTPHRASE$]
+Procedure _FINDAWORD[FINDWORD$,BANKNUMB,_MAXSZ]
+OUTPHRASE$=""
+If Len(FINDWORD$)=0 Then Goto ZERO : 
+If _MAXSZ>Length(BANKNUMB) Then _MAXSZ=Length(BANKNUMB)
+WORDFOUND=False
+QUOTESUSED=False
+
+' === this searches for the "findword$" and allows us to store an end-point  
+
+'   For COUNTER=0 To Length(BANKNUMB)-Len(FINDWORD$) 
+    For COUNTER=0 To _MAXSZ-Len(FINDWORD$)
+
+         CHK$=""
+
+         For WORDCOUNT=0 To Len(FINDWORD$)-1
+            CHK$=CHK$+Chr$(Peek(Start(BANKNUMB)+COUNTER+WORDCOUNT))
+         Next WORDCOUNT
+
+      If Lower$(CHK$)=FINDWORD$
+         WORDFOUND=True
+         If Peek(Start(BANKNUMB)+COUNTER+Len(FINDWORD$))=34 : QUOTESUSED=True : End If 
+         Exit 
+      End If 
+
+   Next COUNTER
+
+   If WORDFOUND=False Then Goto ZERO : 
+
+
+' === set the out-point  
+        OUTPOINT=COUNTER
+
+      OUTPOINT=OUTPOINT+Len(FINDWORD$)-1
+   If QUOTESUSED=True Then OUTPOINT=OUTPOINT+1
+
+
+' === what character do we need to find? 
+
+       FINDVALUE=Asc(" ")
+   If QUOTESUSED=True Then FINDVALUE=34
+
+
+' === find the in-point  
+
+   For COUNTER=OUTPOINT To 0 Step -1
+         If Peek(Start(BANKNUMB)+COUNTER)=FINDVALUE Then Exit 
+   Next COUNTER
+
+
+
+' === set the in-point   
+
+        INPOINT=COUNTER+1
+
+'   Print "      in: "+Str$(INPOINT) 
+'   Print "     out: "+Str$(OUTPOINT)
+
+
+   OUTPHRASE$=""
+
+   For COUNTER=INPOINT To OUTPOINT
+      OUTPHRASE$=OUTPHRASE$+Chr$(Peek(Start(1)+COUNTER))
+   Next COUNTER
+
+
+ZERO:
+End Proc[OUTPHRASE$]
+Procedure _STANPAL
+
+Randomize Timer*Ct Second(Current Time)
+RANCOL=Rnd(14)
+
+
+For A=0 To $10
+   If Exist("T:PAL"+Hex$(A)) Then Exit 
+Next A
+
+
+
+If A>$F
+     A=RANCOL
+     Reserve As Work 8,1
+     Wsave "T:PAL"+Hex$(A),8
+     Erase 8
+End If 
+
+
+     If A=0 or A1 or A=2 : Gosub RED
+Else If A=3 or A=4 or A=5 : Gosub BLUE
+Else If A=6 or A=7 or A=8 : Gosub GREEN
+Else If A=9 or A=10 : Gosub YELLOW
+Else If A=11 or A=12 or A=13 : Gosub CYAN
+Else If A=14 : Gosub PINK
+Else 
+              Gosub RED
+End If 
+
+   Pal Set 0,15,$A00
+   Colour 7,$FFF
+   Colour 15,$A00
+
+
+Pal Get Screen 0,0
+
+For A=0 To 15
+   PALSTORE(A)=Pal Get(0,A)
+Next A
+
+
+
+
+
+Pop Proc
+
+
+
+RED:
+Pal Spread 0,$0 To 6,$FFF
+Pal Spread 8,$EDD To 10,$F00
+Pal Spread 11,$F00 To 15,$300
+
+   CULN=$100 : Gosub MAKEFLSH
+
+Return 
+
+GREEN:
+Pal Spread 0,$0 To 6,$FFF
+Pal Spread 8,$DED To 10,$D0
+Pal Spread 11,$D0 To 15,$30
+
+   CULN=$10 : Gosub MAKEFLSH
+
+Return 
+
+CYAN:
+Pal Spread 0,$0 To 6,$FFF
+Pal Spread 8,$DEE To 10,$FF
+Pal Spread 11,$FF To 15,$33
+
+   CULN=$11 : Gosub MAKEFLSH
+
+Return 
+
+PINK:
+Pal Spread 0,$0 To 6,$FFF
+Pal Spread 8,$EDE To 10,$F0F
+Pal Spread 11,$F0F To 15,$303
+
+   CULN=$101 : Gosub MAKEFLSH
+
+Return 
+
+BLUE:
+Pal Spread 0,$0 To 6,$FFF
+Pal Spread 8,$DDE To 10,$F
+Pal Spread 11,$F To 15,$3
+
+   CULN=$1 : Gosub MAKEFLSH
+
+
+Return 
+
+YELLOW:
+Pal Spread 0,$0 To 6,$FFF
+Pal Spread 8,$EED To 10,$FF0
+Pal Spread 11,$FF0 To 15,$330
+
+   CULN=$110 : Gosub MAKEFLSH
+
+Return 
+
+MAKEFLSH:
+   MADEUP$=""
+   For Q=5 To 15 Step 1 : MADEUP$=MADEUP$+"("+Right$(Hex$(0+(Q*CULN)+$1000),3)+",5)" : Next Q
+   For Q=15 To 8 Step -2 : MADEUP$=MADEUP$+"("+Right$(Hex$(0+(Q*CULN)+$1000),3)+",5)" : Next Q
+   Flash 7,MADEUP$
+Return 
+
+End Proc
+Procedure _ULTIMATEAMIGA
+
+Rem Reserve As Chip Data 12,86552
+
+
+Screen Open 0,320,256,16,Lowres : Curs Off : Hide 
+Colour 0,$0 : Colour 1,$0
+Colour 2,$0 : Colour 3,$0
+Cls 0 : 
+
+
+Default Palette 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+
+Screen 0
+
+A=RANCOL
+
+     If A=0 or A1 or A=2 : Gosub RED
+Else If A=3 or A=4 or A=5 : Gosub BLUE
+Else If A=6 or A=7 or A=8 : Gosub GREEN
+Else If A=9 or A=10 : Gosub YELLOW
+Else If A=11 or A=12 or A=13 : Gosub CYAN
+Else If A=14 : Gosub PINK
+
+Else 
+              Gosub RED
+End If 
+
+
+
+Pal Get Screen 0,0
+
+For A=0 To 31
+   PALSTORE(A)=Pal Get(0,A)
+Next A
+
+Load Iff "GRAFS/ua.iff",0 : Screen Hide 0
+Palette 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+
+
+
+Wload "titlesound",-12 : Bank Name 12,"U.A.Snd"
+
+
+Screen Show 0 : Led On 
+Pt Voice %1111
+Pt Raw Play %1001,Start(12),Length(12),22050 : Wait 6
+Pt Raw Play %110,Start(12),Length(12),22050 : Wait 20
+
+Rem --- BODGE-IT CODE!!
+
+A=PALSTORE(0) : B=PALSTORE(1) : C=PALSTORE(2) : D=PALSTORE(3)
+E=PALSTORE(4) : F=PALSTORE(5) : G=PALSTORE(6) : H=PALSTORE(7)
+I=PALSTORE(8) : J=PALSTORE(9) : K=PALSTORE(10) : L=PALSTORE(11)
+M=PALSTORE(12) : N=PALSTORE(13) : O=PALSTORE(14) : P=PALSTORE(15)
+Q=PALSTORE(16) : R=PALSTORE(17) : S=PALSTORE(18) : T=PALSTORE(19)
+U=PALSTORE(20) : V=PALSTORE(21) : W=PALSTORE(22) : X=PALSTORE(23)
+Y=PALSTORE(24) : Z=PALSTORE(25) : AA=PALSTORE(26) : BB=PALSTORE(27)
+CC=PALSTORE(28) : DD=PALSTORE(29) : EE=PALSTORE(30) : FF=PALSTORE(31)
+
+Fade 6,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,AA,BB,CC,DD,EE,FF
+
+
+COUNT=0
+
+ While COUNT<320
+   Wait Vbl 
+   COUNT=COUNT+1
+ Wend 
+
+Fade 5
+
+Wait 150
+
+Screen Close 0 : Erase 12 : Led Off 
+
+Pop Proc
+
+
+RED:
+Pal Spread 0,$0 To 14,$FFF
+Pal Spread 16,$EDD To 21,$F00
+Pal Spread 21,$F00 To 31,$300
+Return 
+
+GREEN:
+Pal Spread 0,$0 To 14,$FFF
+Pal Spread 16,$DED To 21,$D0
+Pal Spread 21,$D0 To 31,$30
+Return 
+
+CYAN:
+Pal Spread 0,$0 To 14,$FFF
+Pal Spread 16,$DEE To 21,$FF
+Pal Spread 21,$FF To 31,$33
+Return 
+
+PINK:
+Pal Spread 0,$0 To 14,$FFF
+Pal Spread 16,$EDE To 21,$F0F
+Pal Spread 21,$F0F To 31,$303
+Return 
+
+BLUE:
+Pal Spread 0,$0 To 14,$FFF
+Pal Spread 16,$DDE To 21,$F
+Pal Spread 21,$F To 31,$3
+Return 
+
+YELLOW:
+Pal Spread 0,$0 To 14,$FFF
+Pal Spread 16,$EED To 21,$FF0
+Pal Spread 21,$FF0 To 31,$330
+Return 
+
+
+End Proc
+Procedure _OUTPUT[OUTFILE$,OUTTEXT$]
+
+If OUTFILE$="" Then Pop Proc
+If OUTTEXT$="" Then Pop Proc
+
+Reserve As Work 9,Len(OUTTEXT$)+3
+
+   For CHARNUM=1 To Len(OUTTEXT$)
+
+      ACHAR=Asc(Mid$(OUTTEXT$,CHARNUM,1))
+      If ACHAR=$FF Then Exit 1
+      Poke Start(9)-1+CHARNUM,ACHAR
+
+   Next CHARNUM
+
+Poke Start(9)+CHARNUM,$A
+
+
+ Wsave OUTFILE$,9
+ Wait Vbl : Erase 9
+ Wait Vbl 
+End Proc
+Procedure _GET_WSCONFIG_FROM_FILE[PICKSLAVEFILE$]
+
+   If PICKSLAVEFILE$="" Then Pop Proc
+
+   Reserve As Work 1,$20000
+
+   FILEN$=Lower$(PICKSLAVEFILE$)
+   FILEN$=Replacestr$(FILEN$,".slave" To ".ws")
+
+             If Exist(_RUNFROM$+"WSConfigs/"+FILEN$)=False Then Pop Proc
+                Bload _RUNFROM$+"WSConfigs/"+FILEN$,1
+   FILESZ=Object Size(_RUNFROM$+"WSConfigs/"+FILEN$)
+
+
+   For A=0 To FILESZ
+      CODE=Peek(Start(1)+A)
+
+
+     ' fix any PC txt file line-ends
+      If CODE=$5 Then CODE=$A
+
+     ' exit at end
+      If CODE=0 Then Exit 
+
+     ' read everythign except line-ends 
+      If CODE<>$A Then _WS_CONFIG$=_WS_CONFIG$+Chr$(CODE)
+
+   Next A
+
+   Erase 1
+End Proc
+Procedure _GETDRIVES
+
+
+
+' ====== this is a program to fill  an array with available drives 
+
+' --- output the INFO command to ram:
+Exec "C:info >t:infoout"
+
+
+' ---  load the file, stick it into string 
+
+Reserve As Work 1,Object Size("t:infoout")
+
+Bload "t:infoout",1
+
+For B=0 To Length(1)-1
+   ALL$=ALL$+Chr$(Peek(Start(1)+B))
+Next B
+
+Erase 1
+Exec("C:delete t:infoout")
+
+
+
+
+' ==== now read each line at a time
+
+For Q=3 To 100
+      FISH$=Itemstr$(ALL$,Q,Chr$($A))
+
+   If FISH$<>""
+
+   If Left$(FISH$,7)="Volumes" : Exit : End If 
+    For T=1 To Len(FISH$)-3
+       If Mid$(FISH$,T,3)=":  " : Exit : End If 
+    Next T
+
+
+    FISH$=Left$(FISH$,T)
+
+
+    For F=0 To 31
+      If ADRIVE$(F)="" or ADRIVE$(F)=FISH$
+         ADRIVE$(F)=FISH$
+         Exit 
+      End If 
+    Next 
+
+
+'    If FISH$<>"" : ADRIVE$(F)=FISH$ : F=F+1 : End If  
+'    If F>32 : Exit : End If 
+
+   End If 
+
+Rem   Gosub _SAVELINE
+Next Q
+
+'For F=0 To 31 
+'Print "??????+"+ADRIVE$(F)
+'Next F
+
+
+
+Pop Proc
+
+
+
+'============= export the line to a file for checking etc. 
+_SAVELINE:
+
+   Reserve As Work 2,Len(FISH$)
+
+   For R=1 To Len(FISH$)
+      Poke Start(2)+R-1,Asc(Mid$(FISH$,R,1))
+   Next R
+
+   Wsave "dh2:_output_"+Hex$(Q,2),2
+   Erase 2
+
+Return 
+
+
+
+End Proc
+
+
+Procedure _GET_TEXT[INFILE$]
+
+
+   If Exist(INFILE$)
+
+      Wload INFILE$,1
+      For COUNT=0 To Length(1)
+       OUTPUT$=OUTPUT$+Chr$(Peek(Start(1)+COUNT-1))
+      Next COUNT
+
+   End If 
+
+   OUTPUT$=Replacestr$(OUTPUT$,Chr$($A) To "")
+
+
+End Proc[OUTPUT$]
+
+
+
+
+LAST:
