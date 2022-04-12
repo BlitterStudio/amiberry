@@ -925,7 +925,9 @@ static void parse_cmdline (int argc, TCHAR **argv)
 					whdload_auto_prefs(&currprefs, txt);
 					xfree(txt);
 				}
-				else if (_tcscmp(txt2.c_str(), ".cue") == 0)
+				else if (_tcscmp(txt2.c_str(), ".cue") == 0 
+					|| _tcscmp(txt2.c_str(), ".iso") == 0
+					|| _tcscmp(txt2.c_str(), ".chd") == 0)
 				{
 					write_log("CDTV/CD32... %s\n", txt);
 					cd_auto_prefs(&currprefs, txt);
