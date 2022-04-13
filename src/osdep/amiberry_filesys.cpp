@@ -12,6 +12,9 @@
 #include <iconv.h>
 #include <iostream>
 #include <filesystem>
+#include <sys/mman.h>
+
+#include "crc32.h"
 #include "fsdb_host.h"
 #include "uae.h"
 
@@ -712,4 +715,34 @@ bool copyfile(const char* target, const char* source, const bool replace)
 void filesys_addexternals(void)
 {
 	// this would mount system drives on Windows
+}
+
+const std::string my_get_sha1_of_file(const char* filepath)
+{
+	void* mem;
+	struct  stat sb;
+	int     fd = -1;
+	int     ret = 0;
+	int len;
+
+	if ((fd = open((char*)filepath, O_RDONLY)) < 0) ret = (-3);
+	if (ret == 0 && fstat(fd, &sb) < 0) ret = (-2);
+
+	if (ret == 0) {
+		if ((mem = mmap((caddr_t)0, (int)sb.st_size,
+			PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0)) != MAP_FAILED) {
+			len = (int)sb.st_size;
+		}
+		else ret = (-1);
+	}
+
+	if (ret > (-3)) close(fd);
+
+	if (ret < 0) return NULL;
+
+	const TCHAR* sha1 = get_sha1_txt(mem, len);
+
+	munmap((caddr_t)mem, (size_t)len);
+
+	return string(sha1);
 }
