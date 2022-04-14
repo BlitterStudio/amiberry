@@ -1741,6 +1741,13 @@ void target_fixup_options(struct uae_prefs* p)
 		}
 	}
 
+	// Initialize Drawbridge if needed
+	for (const auto& floppyslot : p->floppyslots)
+	{
+		if (floppyslot.dfxtype == DRV_FB)
+			drawbridge_update_profiles(p);
+	}
+
 	set_key_configs(p);
 }
 
@@ -3468,6 +3475,6 @@ void drawbridge_update_profiles(uae_prefs* p)
 	drawbridge_profiles[78] = driver;
 
 	floppybridge_set_config(drawbridge_profiles.c_str());
-	floppybridge_init(&changed_prefs);
+	floppybridge_init(p);
 #endif
 }
