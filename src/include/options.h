@@ -1168,7 +1168,7 @@ struct amiberry_options
 	char default_ar_key[128] = "Pause";
 	char default_fullscreen_toggle_key[128]{};
 	int rotation_angle = 0;
-	bool default_horizontal_centering = true;
+	bool default_horizontal_centering = false;
 	bool default_vertical_centering = false;
 	int default_scaling_method = -1;
 	bool default_frameskip = false;
@@ -1196,6 +1196,7 @@ struct amiberry_options
 	bool default_whd_writecache = false;
 	bool default_whd_quit_on_exit = false;
 	bool disable_shutdown_button = false;
+	bool allow_display_settings_from_xml = true;
 };
 
 extern struct amiberry_options amiberry_options;

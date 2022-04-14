@@ -1937,14 +1937,18 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 		cfgfile_dwrite_bool (f, tmp, p->floppyslots[i].forcedwriteprotect);
 		_stprintf(tmp, _T("floppy%dtype"), i);
 		cfgfile_dwrite(f, tmp, _T("%d"), p->floppyslots[i].dfxtype);
-		if (p->floppyslots[i].dfxsubtype) {
+#ifdef AMIBERRY
+		// Check if the dfxtype is a FloppyBridge option, then always save subtype and subtypeid
+		// This ensures that when we load a config with these options, the DrawBridge will get initialized
+		if (p->floppyslots[i].dfxsubtype || p->floppyslots[i].dfxtype == DRV_FB) {
 			_stprintf(tmp, _T("floppy%dsubtype"), i);
 			cfgfile_dwrite(f, tmp, _T("%d"), p->floppyslots[i].dfxsubtype);
-			if (p->floppyslots[i].dfxsubtypeid) {
+			if (p->floppyslots[i].dfxsubtypeid || p->floppyslots[i].dfxtype == DRV_FB) {
 				_stprintf(tmp, _T("floppy%dsubtypeid"), i);
 				cfgfile_dwrite_escape(f, tmp, _T("%s"), p->floppyslots[i].dfxsubtypeid);
 			}
 		}
+#endif
 		_stprintf (tmp, _T("floppy%dsound"), i);
 		cfgfile_dwrite (f, tmp, _T("%d"), p->floppyslots[i].dfxclick);
 		if (p->floppyslots[i].dfxclick < 0 && p->floppyslots[i].dfxclickexternal[0]) {

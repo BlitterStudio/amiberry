@@ -1741,6 +1741,13 @@ void target_fixup_options(struct uae_prefs* p)
 		}
 	}
 
+	// Initialize Drawbridge if needed
+	for (const auto& floppyslot : p->floppyslots)
+	{
+		if (floppyslot.dfxtype == DRV_FB)
+			drawbridge_update_profiles(p);
+	}
+
 	set_key_configs(p);
 }
 
@@ -2773,6 +2780,10 @@ void save_amiberry_settings(void)
 	// Disable Shutdown button in GUI
 	snprintf(buffer, MAX_DPATH, "disable_shutdown_button=%s\n", amiberry_options.disable_shutdown_button ? "yes" : "no");
 	fputs(buffer, f);
+
+	// Allow Display settings to be used from the WHDLoad XML (override amiberry.conf defaults)
+	snprintf(buffer, MAX_DPATH, "allow_display_settings_from_xml=%s\n", amiberry_options.allow_display_settings_from_xml ? "yes" : "no");
+	fputs(buffer, f);
 	
 	// Paths
 	snprintf(buffer, MAX_DPATH, "path=%s\n", current_dir);
@@ -3013,6 +3024,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_yesno(option, value, "default_whd_writecache", &amiberry_options.default_whd_writecache);
 		ret |= cfgfile_yesno(option, value, "default_whd_quit_on_exit", &amiberry_options.default_whd_quit_on_exit);
 		ret |= cfgfile_yesno(option, value, "disable_shutdown_button", &amiberry_options.disable_shutdown_button);
+		ret |= cfgfile_yesno(option, value, "allow_display_settings_from_xml", &amiberry_options.allow_display_settings_from_xml);
 	}
 	return ret;
 }
@@ -3469,6 +3481,6 @@ void drawbridge_update_profiles(uae_prefs* p)
 	drawbridge_profiles[78] = driver;
 
 	floppybridge_set_config(drawbridge_profiles.c_str());
-	floppybridge_init(&changed_prefs);
+	floppybridge_init(p);
 #endif
 }

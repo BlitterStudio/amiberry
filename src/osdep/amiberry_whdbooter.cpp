@@ -59,6 +59,11 @@ struct game_options
 	TCHAR cpu_comp[256] = "nul\0";
 	TCHAR cpu_24bit[256] = "nul\0";
 	TCHAR sprites[256] = "nul\0";
+	TCHAR scr_height[256] = "nul\0";
+	TCHAR scr_width[256] = "nul\0";
+	TCHAR scr_autoheight[256] = "nul\0";
+	TCHAR scr_centerh[256] = "nul\0";
+	TCHAR scr_centerv[256] = "nul\0";
 	TCHAR ntsc[256] = "nul\0";
 	TCHAR chip[256] = "nul\0";
 	TCHAR fast[256] = "nul\0";
@@ -184,6 +189,11 @@ game_options get_game_settings(const char* HW)
 	strcpy(output_detail.cpu_24bit, find_whdload_game_option("CPU_24BITADDRESSING", HW).c_str());
 	strcpy(output_detail.cpu_comp, find_whdload_game_option("CPU_COMPATIBLE", HW).c_str());
 	strcpy(output_detail.sprites, find_whdload_game_option("SPRITES", HW).c_str());
+	strcpy(output_detail.scr_height, find_whdload_game_option("SCREEN_HEIGHT", HW).c_str());
+	strcpy(output_detail.scr_width, find_whdload_game_option("SCREEN_WIDTH", HW).c_str());
+	strcpy(output_detail.scr_autoheight, find_whdload_game_option("SCREEN_AUTOHEIGHT", HW).c_str());
+	strcpy(output_detail.scr_centerh, find_whdload_game_option("SCREEN_CENTERH", HW).c_str());
+	strcpy(output_detail.scr_centerv, find_whdload_game_option("SCREEN_CENTERV", HW).c_str());
 	strcpy(output_detail.ntsc, find_whdload_game_option("NTSC", HW).c_str());
 	strcpy(output_detail.fast, find_whdload_game_option("FAST_RAM", HW).c_str());
 	strcpy(output_detail.z3, find_whdload_game_option("Z3_RAM", HW).c_str());
@@ -742,6 +752,11 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	write_log("WHDBooter - Game: JIT        : %s  \n", game_detail.jit);
 	write_log("WHDBooter - Game: CPU Compat : %s  \n", game_detail.cpu_comp);
 	write_log("WHDBooter - Game: Sprite Col : %s  \n", game_detail.sprites);
+	write_log("WHDBooter - Game: Scr Height : %s  \n", game_detail.scr_height);
+	write_log("WHDBooter - Game: Scr Width  : %s  \n", game_detail.scr_width);
+	write_log("WHDBooter - Game: Scr AutoHgt: %s  \n", game_detail.scr_autoheight);
+	write_log("WHDBooter - Game: Scr CentrH : %s  \n", game_detail.scr_centerh);
+	write_log("WHDBooter - Game: Scr CentrV : %s  \n", game_detail.scr_centerv);
 	write_log("WHDBooter - Game: NTSC       : %s  \n", game_detail.ntsc);
 	write_log("WHDBooter - Game: Fast Ram   : %s  \n", game_detail.fast);
 	write_log("WHDBooter - Game: Z3 Ram     : %s  \n", game_detail.z3);
@@ -1089,5 +1104,136 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	{
 		_stprintf(txt2, "collision_level=%s", game_detail.sprites);
 		cfgfile_parse_line(prefs, txt2, 0);
+	}
+
+	// Screen settings, only if allowed to override the defaults from amiberry.conf
+	if (amiberry_options.allow_display_settings_from_xml)
+	{
+		// SCREEN AUTO-HEIGHT
+		if (strcmpi(game_detail.scr_autoheight, "true") == 0)
+		{
+			_stprintf(txt2, "amiberry.gfx_auto_crop=true");
+			cfgfile_parse_line(prefs, txt2, 0);
+		}
+		else if (strcmpi(game_detail.scr_autoheight, "false") == 0)
+		{
+			_stprintf(txt2, "amiberry.gfx_auto_crop=false");
+			cfgfile_parse_line(prefs, txt2, 0);
+		}
+
+		// SCREEN CENTER/HEIGHT/WIDTH
+		if (strcmpi(game_detail.scr_centerh, "smart") == 0)
+		{
+#ifdef USE_DISPMANX
+			_stprintf(txt2, "gfx_center_horizontal=smart");
+			cfgfile_parse_line(prefs, txt2, 0);
+#else
+			if (prefs->gfx_auto_crop)
+			{
+				// Disable if using Auto-Crop, otherwise the output won't be correct
+				_stprintf(txt2, "gfx_center_horizontal=none");
+				cfgfile_parse_line(prefs, txt2, 0);
+			}
+			else
+			{
+				_stprintf(txt2, "gfx_center_horizontal=smart");
+				cfgfile_parse_line(prefs, txt2, 0);
+			}
+#endif
+		}
+		else if (strcmpi(game_detail.scr_centerh, "none") == 0)
+		{
+			_stprintf(txt2, "gfx_center_horizontal=none");
+			cfgfile_parse_line(prefs, txt2, 0);
+		}
+
+		if (strcmpi(game_detail.scr_centerv, "smart") == 0)
+		{
+#ifdef USE_DISPMANX
+			_stprintf(txt2, "gfx_center_vertical=smart");
+			cfgfile_parse_line(prefs, txt2, 0);
+#else
+			if (prefs->gfx_auto_crop)
+			{
+				// Disable if using Auto-Crop, otherwise the output won't be correct
+				_stprintf(txt2, "gfx_center_vertical=none");
+				cfgfile_parse_line(prefs, txt2, 0);
+			}
+			else
+			{
+				_stprintf(txt2, "gfx_center_vertical=smart");
+				cfgfile_parse_line(prefs, txt2, 0);
+			}
+#endif
+		}
+		else if (strcmpi(game_detail.scr_centerv, "none") == 0)
+		{
+			_stprintf(txt2, "gfx_center_vertical=none");
+			cfgfile_parse_line(prefs, txt2, 0);
+		}
+
+		if (strcmpi(game_detail.scr_height, "nul") != 0)
+		{
+#ifdef USE_DISPMANX
+			_stprintf(txt2, "gfx_height=%s", game_detail.scr_height);
+			cfgfile_parse_line(prefs, txt2, 0);
+			_stprintf(txt2, "gfx_height_windowed=%s", game_detail.scr_height);
+			cfgfile_parse_line(prefs, txt2, 0);
+			_stprintf(txt2, "gfx_height_fullscreen=%s", game_detail.scr_height);
+			cfgfile_parse_line(prefs, txt2, 0);
+#else
+			if (prefs->gfx_auto_crop)
+			{
+				// If using Auto-Crop, bypass any screen Height adjustments as they are not needed and will cause issues
+				_stprintf(txt2, "gfx_height=%s", "768");
+				cfgfile_parse_line(prefs, txt2, 0);
+				_stprintf(txt2, "gfx_height_windowed=%s", "768");
+				cfgfile_parse_line(prefs, txt2, 0);
+				_stprintf(txt2, "gfx_height_fullscreen=%s", "768");
+				cfgfile_parse_line(prefs, txt2, 0);
+			}
+			else
+			{
+				_stprintf(txt2, "gfx_height=%s", game_detail.scr_height);
+				cfgfile_parse_line(prefs, txt2, 0);
+				_stprintf(txt2, "gfx_height_windowed=%s", game_detail.scr_height);
+				cfgfile_parse_line(prefs, txt2, 0);
+				_stprintf(txt2, "gfx_height_fullscreen=%s", game_detail.scr_height);
+				cfgfile_parse_line(prefs, txt2, 0);
+			}
+#endif
+		}
+
+		if (strcmpi(game_detail.scr_width, "nul") != 0)
+		{
+#ifdef USE_DISPMANX
+			_stprintf(txt2, "gfx_width=%s", game_detail.scr_width);
+			cfgfile_parse_line(prefs, txt2, 0);
+			_stprintf(txt2, "gfx_width_windowed=%s", game_detail.scr_width);
+			cfgfile_parse_line(prefs, txt2, 0);
+			_stprintf(txt2, "gfx_width_fullscreen=%s", game_detail.scr_width);
+			cfgfile_parse_line(prefs, txt2, 0);
+#else
+			if (prefs->gfx_auto_crop)
+			{
+				// If using Auto-Crop, bypass any screen Width adjustments as they are not needed and will cause issues
+				_stprintf(txt2, "gfx_width=%s", "720");
+				cfgfile_parse_line(prefs, txt2, 0);
+				_stprintf(txt2, "gfx_width_windowed=%s", "720");
+				cfgfile_parse_line(prefs, txt2, 0);
+				_stprintf(txt2, "gfx_width_fullscreen=%s", "720");
+				cfgfile_parse_line(prefs, txt2, 0);
+			}
+			else
+			{
+				_stprintf(txt2, "gfx_width=%s", game_detail.scr_width);
+				cfgfile_parse_line(prefs, txt2, 0);
+				_stprintf(txt2, "gfx_width_windowed=%s", game_detail.scr_width);
+				cfgfile_parse_line(prefs, txt2, 0);
+				_stprintf(txt2, "gfx_width_fullscreen=%s", game_detail.scr_width);
+				cfgfile_parse_line(prefs, txt2, 0);
+			}
+#endif
+		}
 	}
 }
