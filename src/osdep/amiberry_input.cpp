@@ -1280,20 +1280,17 @@ static void read_joystick_buttons(const int joy)
 	// So we handle it here separately
 	for (int button = SDL_CONTROLLER_BUTTON_DPAD_UP; button <= SDL_CONTROLLER_BUTTON_DPAD_RIGHT; button++)
 	{
-		if (did->mapping.button[button] != SDL_CONTROLLER_BUTTON_INVALID)
-		{
-			int state = 0;
-			if (button == SDL_CONTROLLER_BUTTON_DPAD_UP)
-				state = hat & SDL_HAT_UP;
-			else if (button == SDL_CONTROLLER_BUTTON_DPAD_DOWN)
-				state = hat & SDL_HAT_DOWN;
-			else if (button == SDL_CONTROLLER_BUTTON_DPAD_LEFT)
-				state = hat & SDL_HAT_LEFT;
-			else if (button == SDL_CONTROLLER_BUTTON_DPAD_RIGHT)
-				state = hat & SDL_HAT_RIGHT;
+		int state = 0;
+		if (button == SDL_CONTROLLER_BUTTON_DPAD_UP)
+			state = hat & SDL_HAT_UP;
+		else if (button == SDL_CONTROLLER_BUTTON_DPAD_DOWN)
+			state = hat & SDL_HAT_DOWN;
+		else if (button == SDL_CONTROLLER_BUTTON_DPAD_LEFT)
+			state = hat & SDL_HAT_LEFT;
+		else if (button == SDL_CONTROLLER_BUTTON_DPAD_RIGHT)
+			state = hat & SDL_HAT_RIGHT;
 
-			setjoybuttonstate(joy, button + held_offset, state);
-		}
+		setjoybuttonstate(joy, button + held_offset, state);
 	}
 
 	// Check all Joystick buttons, including axes acting as buttons

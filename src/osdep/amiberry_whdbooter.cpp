@@ -4,6 +4,7 @@
  * Amiberry interface
  *
  */
+#include <algorithm>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -532,11 +533,26 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 
 		if (!error)
 		{
+			auto sha1 = my_get_sha1_of_file(filepath);
+			std::transform(sha1.begin(), sha1.end(), sha1.begin(), ::tolower);
 			auto* game_node = doc.FirstChildElement("whdbooter");
 			game_node = game_node->FirstChildElement("game");
 			while (game_node != nullptr)
 			{
+				// Ideally we'd just match by sha1, but filename has worked up until now, so try that first
+				// then fall back to sha1 if a user has renamed the file!
+				//
+				int found = 0;
 				if (game_node->Attribute("filename", game_name))
+				{
+					found = 1;
+				}
+				if (game_node->Attribute("sha1", sha1.c_str()))
+				{
+					found = 1;
+				}
+
+				if (found)
 				{
 					// now get the <hardware> and <custom_controls> items
 					// get hardware

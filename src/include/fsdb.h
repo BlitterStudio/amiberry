@@ -186,6 +186,7 @@ extern bool my_createshortcut(const TCHAR *source, const TCHAR *target, const TC
 #define MYVOLUMEINFO_CDFS 16
 
 extern int my_getvolumeinfo (const TCHAR *root);
+extern const std::string my_get_sha1_of_file(const char* filepath);
 
 #ifdef AMIBERRY
 char* fsdb_native_path(const char* root_dir, const char* amiga_path);

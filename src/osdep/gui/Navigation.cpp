@@ -47,7 +47,7 @@ static NavigationMap navMap[] =
 	{ "Start",            "Help",           "Quit",           "OnScreen",       "Paths" },
 #else
 	{"Priority", "cboInactiveRunAtPrio", "cboActiveRunAtPrio", "Miscellaneous", "Savestates" },
-	{"Savestates", "State0", "State0", "Priority", "Shutdown"},
+	{"Savestates", "State0", "State0", "Priority", "Quit"},
 	{"Shutdown", "Start", "Quit", "Savestates", "Paths"},
 	{"Quit", "Shutdown", "Restart", "Savestates", "Paths"},
 	{"Restart", "Quit", "Help", "Savestates", "Paths"},
