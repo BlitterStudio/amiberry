@@ -64,6 +64,8 @@ struct game_options
 	TCHAR scr_autoheight[256] = "nul\0";
 	TCHAR scr_centerh[256] = "nul\0";
 	TCHAR scr_centerv[256] = "nul\0";
+	TCHAR scr_offseth[256] = "nul\0";
+	TCHAR scr_offsetv[256] = "nul\0";
 	TCHAR ntsc[256] = "nul\0";
 	TCHAR chip[256] = "nul\0";
 	TCHAR fast[256] = "nul\0";
@@ -194,6 +196,8 @@ game_options get_game_settings(const char* HW)
 	strcpy(output_detail.scr_autoheight, find_whdload_game_option("SCREEN_AUTOHEIGHT", HW).c_str());
 	strcpy(output_detail.scr_centerh, find_whdload_game_option("SCREEN_CENTERH", HW).c_str());
 	strcpy(output_detail.scr_centerv, find_whdload_game_option("SCREEN_CENTERV", HW).c_str());
+	strcpy(output_detail.scr_offseth, find_whdload_game_option("SCREEN_OFFSETH", HW).c_str());
+	strcpy(output_detail.scr_offsetv, find_whdload_game_option("SCREEN_OFFSETV", HW).c_str());
 	strcpy(output_detail.ntsc, find_whdload_game_option("NTSC", HW).c_str());
 	strcpy(output_detail.fast, find_whdload_game_option("FAST_RAM", HW).c_str());
 	strcpy(output_detail.z3, find_whdload_game_option("Z3_RAM", HW).c_str());
@@ -757,6 +761,8 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	write_log("WHDBooter - Game: Scr AutoHgt: %s  \n", game_detail.scr_autoheight);
 	write_log("WHDBooter - Game: Scr CentrH : %s  \n", game_detail.scr_centerh);
 	write_log("WHDBooter - Game: Scr CentrV : %s  \n", game_detail.scr_centerv);
+	write_log("WHDBooter - Game: Scr OffsetH: %s  \n", game_detail.scr_offseth);
+	write_log("WHDBooter - Game: Scr OffsetV: %s  \n", game_detail.scr_offsetv);
 	write_log("WHDBooter - Game: NTSC       : %s  \n", game_detail.ntsc);
 	write_log("WHDBooter - Game: Fast Ram   : %s  \n", game_detail.fast);
 	write_log("WHDBooter - Game: Z3 Ram     : %s  \n", game_detail.z3);
@@ -1231,6 +1237,44 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 				_stprintf(txt2, "gfx_width_windowed=%s", game_detail.scr_width);
 				cfgfile_parse_line(prefs, txt2, 0);
 				_stprintf(txt2, "gfx_width_fullscreen=%s", game_detail.scr_width);
+				cfgfile_parse_line(prefs, txt2, 0);
+			}
+#endif
+		}
+
+		if (strcmpi(game_detail.scr_offseth, "nul") != 0)
+		{
+#ifdef USE_DISPMANX
+			_stprintf(txt2, "amiberry.gfx_horizontal_offset=%s", game_detail.scr_offseth);
+			cfgfile_parse_line(prefs, txt2, 0);
+#else
+			if (prefs->gfx_auto_crop)
+			{
+				_stprintf(txt2, "amiberry.gfx_horizontal_offset=%s", "0");
+				cfgfile_parse_line(prefs, txt2, 0);
+			}
+			else
+			{
+				_stprintf(txt2, "amiberry.gfx_horizontal_offset=%s", game_detail.scr_offseth);
+				cfgfile_parse_line(prefs, txt2, 0);
+			}
+#endif
+		}
+
+		if (strcmpi(game_detail.scr_offsetv, "nul") != 0)
+		{
+#ifdef USE_DISPMANX
+			_stprintf(txt2, "amiberry.gfx_vertical_offset=%s", game_detail.scr_offsetv);
+			cfgfile_parse_line(prefs, txt2, 0);
+#else
+			if (prefs->gfx_auto_crop)
+			{
+				_stprintf(txt2, "amiberry.gfx_vertical_offset=%s", "0");
+				cfgfile_parse_line(prefs, txt2, 0);
+			}
+			else
+			{
+				_stprintf(txt2, "amiberry.gfx_vertical_offset=%s", game_detail.scr_offsetv);
 				cfgfile_parse_line(prefs, txt2, 0);
 			}
 #endif
