@@ -3315,7 +3315,13 @@ static void DISK_check_change (void)
 			setdskchangetime(drv, 2 * 50 * 312);
 		}
 		if (currprefs.floppyslots[i].dfxtype != changed_prefs.floppyslots[i].dfxtype) {
+			int old = currprefs.floppyslots[i].dfxtype;
 			currprefs.floppyslots[i].dfxtype = changed_prefs.floppyslots[i].dfxtype;
+#ifdef FLOPPYBRIDGE
+			if (old >= DRV_FB || currprefs.floppyslots[i].dfxtype >= DRV_FB) {
+				floppybridge_init(&currprefs);
+		}
+#endif
 			reset_drive (i);
 #ifdef RETROPLATFORM
 			rp_floppy_device_enable (i, currprefs.floppyslots[i].dfxtype >= 0);
