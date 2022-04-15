@@ -3279,6 +3279,7 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 	}
 
 #ifdef AMIBERRY
+	std::string buffer;
 	// custom options LOADING
 	for (i = 0; i < MAX_JPORTS; ++i)
 	{
@@ -3298,10 +3299,10 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 					tmp1 = "hotkey";
 					custom_button_map = p->jports[i].amiberry_custom_hotkey;
 				}
-				_stprintf(tmpbuf, "joyport%d_amiberry_custom_%s_%s", i, tmp1, SDL_GameControllerGetStringForButton(static_cast<SDL_GameControllerButton>(n)));
+				buffer = "joyport" + std::to_string(i) + "_amiberry_custom_" + tmp1 + "_" + SDL_GameControllerGetStringForButton(static_cast<SDL_GameControllerButton>(n));
 
 				// this is where we need to check if we have this particular option!!
-				if (!_tcsncmp(option, _T(tmpbuf), sizeof tmpbuf / sizeof(TCHAR)))
+				if (buffer == string(option))
 				{
 					auto b = 0;
 					if (find_inputevent(value) > -1) { b = remap_event_list[find_inputevent(value)]; }
@@ -3309,7 +3310,6 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 
 					if (m == 0)
 						p->jports[i].amiberry_custom_none = custom_button_map;
-
 					else if (m == 1)
 						p->jports[i].amiberry_custom_hotkey = custom_button_map;
 
@@ -3319,7 +3319,6 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		}
 
 		std::array<int, SDL_CONTROLLER_AXIS_MAX> custom_axis_map{};
-
 		for (auto n = 0; n < SDL_CONTROLLER_AXIS_MAX; ++n)
 		{
 			for (auto m = 0; m < 2; ++m)
@@ -3334,10 +3333,10 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 					tmp1 = "hotkey";
 					custom_axis_map = p->jports[i].amiberry_custom_axis_hotkey;
 				}
-				_stprintf(tmpbuf, "joyport%d_amiberry_custom_axis_%s_%s", i, tmp1, SDL_GameControllerGetStringForAxis(static_cast<SDL_GameControllerAxis>(n)));
+				buffer = "joyport" + std::to_string(i) + "_amiberry_custom_axis_" + tmp1 + "_" + SDL_GameControllerGetStringForAxis(static_cast<SDL_GameControllerAxis>(n));
 
 				// this is where we need to check if we have this particular option!!
-				if (!_tcsncmp(option, _T(tmpbuf), sizeof tmpbuf / sizeof(TCHAR)))
+				if (buffer == string(option))
 				{
 					auto b = 0;
 					if (find_inputevent(value) > -1) { b = remap_event_list[find_inputevent(value)]; }
@@ -3345,7 +3344,6 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 
 					if (m == 0)
 						p->jports[i].amiberry_custom_axis_none = custom_axis_map;
-
 					else if (m == 1)
 						p->jports[i].amiberry_custom_axis_hotkey = custom_axis_map;
 
