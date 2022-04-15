@@ -3315,7 +3315,13 @@ static void DISK_check_change (void)
 			setdskchangetime(drv, 2 * 50 * 312);
 		}
 		if (currprefs.floppyslots[i].dfxtype != changed_prefs.floppyslots[i].dfxtype) {
+			int old = currprefs.floppyslots[i].dfxtype;
 			currprefs.floppyslots[i].dfxtype = changed_prefs.floppyslots[i].dfxtype;
+#ifdef FLOPPYBRIDGE
+			if (old >= DRV_FB || currprefs.floppyslots[i].dfxtype >= DRV_FB) {
+				floppybridge_init(&currprefs);
+		}
+#endif
 			reset_drive (i);
 #ifdef RETROPLATFORM
 			rp_floppy_device_enable (i, currprefs.floppyslots[i].dfxtype >= 0);
@@ -5364,6 +5370,8 @@ int DISK_examine_image(struct uae_prefs *p, int num, struct diskinfo *di, bool d
 	di->unreadable = true;
 	oldcyl = drv->cyl;
 	oldside = side;
+	drv->cyl = 0;
+	side = 0;
 #ifdef FLOPPYBRIDGE
 	if (!drive_insert (drv, p, num, p->floppyslots[num].df, true, true) || (!drv->diskfile && !drv->bridge)) {
 #else
