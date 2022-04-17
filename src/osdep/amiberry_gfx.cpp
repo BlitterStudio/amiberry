@@ -905,13 +905,15 @@ void auto_crop_image()
 	static int width, height;
 	if (currprefs.gfx_auto_crop)
 	{
-		static int last_vstrt, last_vstop, last_hstrt, last_hstop;
+		static int last_vstrt, last_vstop, last_hstrt, last_hstop, last_x;
+		const int x = get_visible_left_border() > 0 ? get_visible_left_border() : 0;
 		if (force_auto_crop
 			|| last_autocrop != currprefs.gfx_auto_crop
 			|| last_vstrt != vstrt
 			|| last_vstop != vstop
 			|| last_hstrt != hstrt
 			|| last_hstop != hstop
+			|| last_x != x
 			)
 		{
 			last_vstrt = vstrt;
@@ -943,18 +945,13 @@ void auto_crop_image()
 				new_height = 204;
 
 			// Maximum values
-			if (new_width > currprefs.gfx_monitor[0].gfx_size_win.width)
-				new_width = currprefs.gfx_monitor[0].gfx_size_win.width;
-#ifdef USE_DISPMANX
-			new_height = new_height << currprefs.gfx_vresolution;
-#else
-			if (new_height << currprefs.gfx_vresolution < currprefs.gfx_monitor[0].gfx_size_win.height)
-				new_height = new_height << currprefs.gfx_vresolution;
-			else
-				new_height = currprefs.gfx_monitor[0].gfx_size_win.height;
-#endif
+			if (new_width > 720)
+				new_width = 720;
 
-			const int x = get_visible_left_border() > 0 ? get_visible_left_border() : 0;
+			// Adjust new Height for Line mode option
+			new_height = new_height << currprefs.gfx_vresolution;
+\
+			last_x = x;
 			const int y = vstrt - minfirstline << currprefs.gfx_vresolution > 0 ? vstrt - minfirstline << currprefs.gfx_vresolution : 0;
 
 #ifdef USE_DISPMANX
