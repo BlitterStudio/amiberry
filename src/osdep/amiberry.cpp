@@ -1126,22 +1126,22 @@ void process_event(SDL_Event event)
 				inputdevice_add_inputcode(AKS_ENTERGUI, event.cbutton.state == SDL_PRESSED, nullptr);
 				break;
 			}
-			if (event.cbutton.button == quit_key.button)
+			if (quit_key.button && event.cbutton.button == quit_key.button)
 			{
 				uae_quit();
 				break;
 			}
-			if (event.cbutton.button == action_replay_key.button)
+			if (action_replay_key.button && event.cbutton.button == action_replay_key.button)
 			{
 				inputdevice_add_inputcode(AKS_FREEZEBUTTON, event.cbutton.state == SDL_PRESSED, nullptr);
 				break;
 			}
-			if (event.cbutton.button == fullscreen_key.button)
+			if (fullscreen_key.button && event.cbutton.button == fullscreen_key.button)
 			{
 				inputdevice_add_inputcode(AKS_TOGGLEWINDOWEDFULLSCREEN, event.cbutton.state == SDL_PRESSED, nullptr);
 				break;
 			}
-			if (event.cbutton.button == minimize_key.button)
+			if (minimize_key.button && event.cbutton.button == minimize_key.button)
 			{
 				minimizewindow(0);
 				break;
