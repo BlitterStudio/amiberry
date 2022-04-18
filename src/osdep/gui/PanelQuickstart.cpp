@@ -175,6 +175,8 @@ static amigamodels amodels[] = {
 		3, "CD32", {
 			"CD32",
 			"CD32 with Full Motion Video cartridge",
+			"Cubo CD32",
+			"CD32, 8MB Fast"
 #ifdef ANDROID
 		 " ", " ", " ", " ",
 #endif
