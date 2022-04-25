@@ -8769,17 +8769,27 @@ static int bip_cd32 (struct uae_prefs *p, int config, int compa, int romcheck)
 		if (!configure_rom (p, roms, romcheck))
 			return 0;
 	}
-	if (config == 1) {
+#ifdef AMIBERRY
+	// Amiberry offers one more config option: CD32 with 8MB Fast RAM
+	switch (config)
+	{
+	case 1:
 		p->cs_cd32fmv = true;
 		roms[0] = 74;
 		roms[1] = 23;
 		roms[2] = -1;
 		if (!configure_rom (p, roms, romcheck))
 			return 0;
-	} else if (config > 1) {
+		break;
+	case 2:
 		addbcromtype(p, ROMTYPE_CUBO, true, NULL, 0);
+		break;
+	case 3:
+		p->fastmem[0].size = 0x800000;
+		p->cs_rtc = 1;
+		break;
 	}
-#ifdef AMIBERRY
+
 	p->m68k_speed = M68K_SPEED_14MHZ_CYCLES;
 #endif
 	return 1;

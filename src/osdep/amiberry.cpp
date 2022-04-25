@@ -160,6 +160,7 @@ amiberry_hotkey get_hotkey_from_config(std::string config_option)
 	}
 	hotkey.key_name = config_option;
 	hotkey.scancode = SDL_GetScancodeFromName(hotkey.key_name.c_str());
+	hotkey.button = SDL_GameControllerGetButtonFromString(hotkey.key_name.c_str());
 	
 	return hotkey;
 }
@@ -1119,10 +1120,32 @@ void process_event(SDL_Event event)
 
 	case SDL_CONTROLLERBUTTONDOWN:
 	case SDL_CONTROLLERBUTTONUP:
-		if (event.cbutton.button == enter_gui_button)
 		{
-			inputdevice_add_inputcode(AKS_ENTERGUI, event.cbutton.state == SDL_PRESSED, nullptr);
-			break;
+			if (event.cbutton.button == enter_gui_button)
+			{
+				inputdevice_add_inputcode(AKS_ENTERGUI, event.cbutton.state == SDL_PRESSED, nullptr);
+				break;
+			}
+			if (quit_key.button && event.cbutton.button == quit_key.button)
+			{
+				uae_quit();
+				break;
+			}
+			if (action_replay_key.button && event.cbutton.button == action_replay_key.button)
+			{
+				inputdevice_add_inputcode(AKS_FREEZEBUTTON, event.cbutton.state == SDL_PRESSED, nullptr);
+				break;
+			}
+			if (fullscreen_key.button && event.cbutton.button == fullscreen_key.button)
+			{
+				inputdevice_add_inputcode(AKS_TOGGLEWINDOWEDFULLSCREEN, event.cbutton.state == SDL_PRESSED, nullptr);
+				break;
+			}
+			if (minimize_key.button && event.cbutton.button == minimize_key.button)
+			{
+				minimizewindow(0);
+				break;
+			}
 		}
 		return;
 
