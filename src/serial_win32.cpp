@@ -1011,7 +1011,7 @@ static void enet_service (int serveronly)
 					case ENET_EVENT_TYPE_RECEIVE:
 					{
 						uae_u8 *p = evt.packet->data;
-						int len = evt.packet->dataLength;
+						size_t len = evt.packet->dataLength;
 						if (len == 6 && !memcmp (p, "UAE_", 4)) {
 							if (((enet_receive_off_w + 1) & 0xff) != enet_receive_off_r) {
 								enet_receive[enet_receive_off_w++] = (p[4] << 8) | p[5];

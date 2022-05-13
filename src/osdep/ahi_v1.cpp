@@ -354,7 +354,7 @@ int ahi_open_sound (void)
 
 static void *bswap_buffer = NULL;
 static uae_u32 bswap_buffer_size = 0;
-static double syncdivisor;
+static float syncdivisor;
 
 uae_u32 REGPARAM2 ahi_demux (TrapContext *context)
 {

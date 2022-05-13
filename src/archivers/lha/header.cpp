@@ -536,7 +536,7 @@ boolean get_header(struct zfile *fp, LzHeader *hdr)
 				    hdr->extend_type == EXTEND_HUMAN ||
 				    hdr->extend_type == EXTEND_AMIGAOS ||
 				    hdr->extend_type == EXTEND_GENERIC)
-					hdr->attribute = get_word ();
+					hdr->attribute = (unsigned char)get_word ();
 				break;
 			case 0x50:
 				/*
@@ -582,8 +582,8 @@ boolean get_header(struct zfile *fp, LzHeader *hdr)
 			}
 		}
 		if (hdr->header_level != 2 && get_ptr - ptr != 2) {
-			hdr->packed_size -= get_ptr - ptr - 2;
-			hdr->header_size += get_ptr - ptr - 2;
+			hdr->packed_size -= (long)(get_ptr - ptr - 2);
+			hdr->header_size += (unsigned char)(get_ptr - ptr - 2);
 		}
 	}
 

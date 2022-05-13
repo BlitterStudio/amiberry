@@ -243,7 +243,7 @@ static void sl(uae_u8 *d, int o)
 	d[o + 0] = d[o + 2];
 	d[o + 1] = d[o + 3];
 	d[o + 2] = t >> 8;
-	d[o + 3] = t;
+	d[o + 3] = (uae_u8)t;
 }
 static void ql(uae_u8 *d, int o)
 {
@@ -253,7 +253,7 @@ static void ql(uae_u8 *d, int o)
 	d[o + 0] = d[o + 6];
 	d[o + 1] = d[o + 7];
 	d[o + 6] = t >> 8;
-	d[o + 7] = t;
+	d[o + 7] = (uae_u8)t;
 }
 
 void ata_byteswapidentity(uae_u8 *d)
@@ -535,7 +535,7 @@ static void ide_identity_buffer(struct ide_hdf *ide)
 		pw(ide, 55, ide->hdhfd.heads);
 		pw(ide, 56, ide->hdhfd.secspertrack);
 		uae_u64 totalsecs = (uae_u64)ide->hdhfd.cyls * ide->hdhfd.heads * ide->hdhfd.secspertrack;
-		pl(ide, 57, totalsecs);
+		pl(ide, 57, (uae_u32)totalsecs);
 		pw(ide, 59, ide->max_multiple_mode ? (0x100 | ide->max_multiple_mode >> (ide->blocksize / 512 - 1)) : 0); /* Multiple mode supported */
 		pw(ide, 62, 0x0f);
 		pw(ide, 63, 0x0f);
@@ -543,7 +543,7 @@ static void ide_identity_buffer(struct ide_hdf *ide)
 			totalsecs = ide->blocksize ? ide->hdhfd.size / ide->blocksize : 0;
 			if (totalsecs > 0x0fffffff)
 				totalsecs = 0x0fffffff;
-			pl(ide, 60, totalsecs);
+			pl(ide, 60, (uae_u32)totalsecs);
 			if (ide->ata_level > 0) {
 				pw(ide, 64, ide->ata_level ? 0x03 : 0x00); /* PIO3 and PIO4 */
 				pw(ide, 65, 120); /* MDMA2 supported */
@@ -655,7 +655,7 @@ static void ide_initialize_drive_parameters (struct ide_hdf *ide)
 		if (ide->hdhfd.hfd.ci.pcyls)
 			ide->hdhfd.cyls = ide->hdhfd.hfd.ci.pcyls;
 		else
-			ide->hdhfd.cyls = (ide->hdhfd.size / ide->blocksize) / ((uae_u64)ide->hdhfd.secspertrack * ide->hdhfd.heads);
+			ide->hdhfd.cyls = (int)((ide->hdhfd.size / ide->blocksize) / ((uae_u64)ide->hdhfd.secspertrack * ide->hdhfd.heads));
 		if (ide->hdhfd.heads * ide->hdhfd.cyls * ide->hdhfd.secspertrack > 16515072 || ide->lba48) {
 			if (ide->hdhfd.hfd.ci.pcyls)
 				ide->hdhfd.cyls = ide->hdhfd.hfd.ci.pcyls;
@@ -990,7 +990,7 @@ static void do_process_rw_command (struct ide_hdf *ide)
 	if (IDE_LOG > 1)
 		write_log(_T("IDE%d off=%d, nsec=%d (%d) %s\n"), ide->num, (uae_u32)lba, nsec, ide->multiple_mode, getidemode(ide));
 	if (nsec > ide->max_lba - lba) {
-		nsec = ide->max_lba - lba;
+		nsec = (unsigned int)(ide->max_lba - lba);
 		if (IDE_LOG > 1)
 			write_log (_T("IDE%d nsec changed to %d\n"), ide->num, nsec);
 	}
@@ -1113,7 +1113,7 @@ static void ide_write_sectors (struct ide_hdf *ide, int flags)
 	if (IDE_LOG > 0)
 		write_log (_T("IDE%d write off=%d, sec=%d (%d) %s\n"), ide->num, (uae_u32)lba, nsec, ide->multiple_mode, getidemode(ide));
 	if (nsec > ide->max_lba - lba)
-		nsec = ide->max_lba - lba;
+		nsec = (unsigned int)(ide->max_lba - lba);
 	if (nsec <= 0) {
 		ide_data_ready (ide);
 		ide_fail_err (ide, IDE_ERR_IDNF);
@@ -1341,14 +1341,14 @@ static void ide_put_data_2(struct ide_hdf *ide, uae_u16 v, int bussize)
 			ide->secbuf[ide->packet_data_offset + ide->data_offset + 1] = v & 0xff;
 			ide->secbuf[ide->packet_data_offset + ide->data_offset + 0] = v >> 8;
 		} else {
-			ide->secbuf[(ide->packet_data_offset + ide->data_offset) ^ 1] = v;
+			ide->secbuf[(ide->packet_data_offset + ide->data_offset) ^ 1] = (uae_u8)v;
 		}
 	} else {
 		if (bussize) {
 			ide->secbuf[ide->buffer_offset + ide->data_offset + 1] = v & 0xff;
 			ide->secbuf[ide->buffer_offset + ide->data_offset + 0] = v >> 8;
 		} else {
-			ide->secbuf[(ide->buffer_offset + ide->data_offset)] = v;
+			ide->secbuf[(ide->buffer_offset + ide->data_offset)] = (uae_u8)v;
 		}
 	}
 	ide->data_offset += inc;

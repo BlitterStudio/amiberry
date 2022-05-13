@@ -6315,7 +6315,7 @@ uae_u8 *restore_p96 (uae_u8 *src)
 	return src;
 }
 
-uae_u8 *save_p96 (int *len, uae_u8 *dstptr)
+uae_u8 *save_p96 (size_t*len, uae_u8 *dstptr)
 {
 	struct amigadisplay *ad = &adisplays[0];
 	struct picasso96_state_struct *state = &picasso96_state[0];

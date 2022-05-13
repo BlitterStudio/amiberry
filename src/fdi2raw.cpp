@@ -1709,7 +1709,7 @@ FDI *fdi2raw_header(struct zfile *f)
 	fdi = fdi_malloc (FDI, 1);
 	memset (fdi, 0, sizeof (FDI));
 	fdi->file = f;
-	oldseek = zfile_ftell (fdi->file);
+	oldseek = zfile_ftell32(fdi->file);
 	zfile_fseek (fdi->file, 0, SEEK_SET);
 	zfile_fread (fdi->header, 2048, 1, fdi->file);
 	zfile_fseek (fdi->file, oldseek, SEEK_SET);

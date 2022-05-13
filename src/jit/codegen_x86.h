@@ -521,7 +521,7 @@ static inline int x86_DISP32_addressing_possible(uintptr addr)
 
 #define _VOID()			((void)0)
 #define _BIT(X)			(!!(X))
-#define _d64(W,R,X,B)		(_B(0x40|(W)<<3|(R)<<2|(X)<<1|(B)))
+#define _d64(W,R,X,B)		(_B(0x40|(W)<<3|(R)<<2|(X)<<1|(B?1:0)))
 
 #define __REXwrxb(L,W,R,X,B)	((W|R|X|B) || (L) ? _d64(W,R,X,B) : _VOID())
 #define __REXwrx_(L,W,R,X,MR)	(__REXwrxb(L,W,R,X,_BIT(_rIP(MR)?0:_rXP(MR))))

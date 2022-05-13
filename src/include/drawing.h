@@ -125,19 +125,19 @@ STATIC_INLINE int coord_window_to_diw_x(int x)
 #define CE_EXTBLANKSET 3
 #define CE_SHRES_DELAY_SHIFT 8
 
-STATIC_INLINE bool ce_is_borderblank(uae_u8 data)
+STATIC_INLINE bool ce_is_borderblank(uae_u16 data)
 {
 	return (data & (1 << CE_BORDERBLANK)) != 0;
 }
-STATIC_INLINE bool ce_is_extblankset(uae_u8 data)
+STATIC_INLINE bool ce_is_extblankset(uae_u16 data)
 {
 	return (data & (1 << CE_EXTBLANKSET)) != 0;
 }
-STATIC_INLINE bool ce_is_bordersprite(uae_u8 data)
+STATIC_INLINE bool ce_is_bordersprite(uae_u16 data)
 {
 	return (data & (1 << CE_BORDERSPRITE)) != 0;
 }
-STATIC_INLINE bool ce_is_borderntrans(uae_u8 data)
+STATIC_INLINE bool ce_is_borderntrans(uae_u16 data)
 {
 	return (data & (1 << CE_BORDERNTRANS)) != 0;
 }

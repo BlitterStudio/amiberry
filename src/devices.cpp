@@ -279,7 +279,7 @@ void devices_rethink(void)
 	//cpuboard_rethink();
 }
 
-void devices_update_sound(double clk, double syncadjust)
+void devices_update_sound(float clk, float syncadjust)
 {
 	update_sound (clk);
 	//update_sndboard_sound (clk / syncadjust);
@@ -287,7 +287,7 @@ void devices_update_sound(double clk, double syncadjust)
 	//x86_update_sound(clk / syncadjust);
 }
 
-void devices_update_sync(double svpos, double syncadjust)
+void devices_update_sync(float svpos, float syncadjust)
 {
 #ifdef CD32
 	cd32_fmv_set_sync(svpos, syncadjust);

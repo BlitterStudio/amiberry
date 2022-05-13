@@ -1592,7 +1592,7 @@ static void cdtv_savecardmem (uae_u8 *p, int size)
 static void cdtv_battram_reset (void)
 {
 	struct zfile *f;
-	int v;
+	size_t v;
 
 	memset (cdtv_battram, 0, CDTV_NVRAM_SIZE);
 	cfgfile_resolve_path_out_load(currprefs.flashfile, flashfilepath, MAX_DPATH, PATH_ROM);
@@ -1783,7 +1783,7 @@ bool cdtvscsi_init(struct autoconfig_info *aci)
 
 #ifdef SAVESTATE
 
-uae_u8 *save_cdtv_dmac (int *len, uae_u8 *dstptr)
+uae_u8 *save_cdtv_dmac (size_t *len, uae_u8 *dstptr)
 {
 	uae_u8 *dstbak, *dst;
 	
@@ -1823,7 +1823,7 @@ uae_u8 *restore_cdtv_dmac (uae_u8 *src)
 	return src;
 }
 
-uae_u8 *save_cdtv (int *len, uae_u8 *dstptr)
+uae_u8 *save_cdtv (size_t *len, uae_u8 *dstptr)
 {
 	uae_u8 *dstbak, *dst;
 

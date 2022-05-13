@@ -463,7 +463,7 @@ void statusline_add_message(int statustype, const TCHAR *format, ...)
 			statusline_data[i].text = my_strdup(buffer);
 			statusline_data[i].type = statustype;
 			if (i == 0)
-				statusline_delay = STATUSLINE_MS * vblank_hz / (1000 * 1);
+				statusline_delay = (int)(STATUSLINE_MS * vblank_hz / 1000.0f);
 			statusline_text_active = statusline_data[0].text;
 			statusline_update_notification();
 			return;
@@ -487,11 +487,11 @@ void statusline_vsync(void)
 	if (!statusline_data[0].text)
 		return;
 	if (statusline_delay == 0)
-		statusline_delay = STATUSLINE_MS * vblank_hz / (1000 * 1);
-	if (statusline_delay > STATUSLINE_MS * vblank_hz / (1000 * 1))
-		statusline_delay = STATUSLINE_MS * vblank_hz / (1000 * 1);
-	if (statusline_delay > STATUSLINE_MS * vblank_hz / (1000 * 3) && statusline_data[1].text)
-		statusline_delay = STATUSLINE_MS * vblank_hz / (1000 * 3);
+		statusline_delay = (int)(STATUSLINE_MS * vblank_hz / (1000.0f * 1.0f));
+	if (statusline_delay > STATUSLINE_MS * vblank_hz / (1000.0f * 1.0f))
+		statusline_delay = (int)(STATUSLINE_MS * vblank_hz / (1000.0f * 1.0f));
+	if (statusline_delay > STATUSLINE_MS * vblank_hz / (1000.0f * 3.0f) && statusline_data[1].text)
+		statusline_delay = (int)(STATUSLINE_MS * vblank_hz / (1000.0f * 3.0f));
 	statusline_delay--;
 	if (statusline_delay)
 		return;

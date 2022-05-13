@@ -203,7 +203,7 @@ void eeprom93xx_write(void *eepromp, int eecs, int eesk, int eedi)
 	eeprom->eecs = eecs;
 	eeprom->eesk = eesk;
 	eeprom->eedo = eedo;
-	eeprom->address = address;
+	eeprom->address = (uae_u8)address;
 	eeprom->command = command;
 }
 
@@ -221,7 +221,7 @@ uae_u8 eeprom93xx_read_byte(void *eepromp, int offset)
 {
 	eeprom93xx_eeprom_t *eeprom = (eeprom93xx_eeprom_t*)eepromp;
 	if (offset & 1)
-		return eeprom->contents[offset / 2];
+		return (uae_u8)eeprom->contents[offset / 2];
 	else
 		return eeprom->contents[offset / 2] >> 8;
 }

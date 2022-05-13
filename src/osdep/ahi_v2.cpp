@@ -336,7 +336,7 @@ struct DSAHI {
 	struct dssample* sample;
 	struct dschannel* channel;
 	int playing, recording;
-	evt evttime;
+	evt_t evttime;
 	uae_u32 signalchannelmask;
 
 	SDL_AudioDeviceID al_dev, al_recorddev;
@@ -480,13 +480,13 @@ static void setevent(struct DSAHI* dsahip)
 	uae_u32 freq = get_long(audioctrl + ahiac_PlayerFreq);
 	double f;
 	uae_u32 cycles;
-	evt t;
+	evt_t t;
 
 	f = ((double)(freq >> 16)) + ((double)(freq & 0xffff)) / 65536.0;
 	if (f < 1)
 		return;
-	cycles = maxhpos * maxvpos_nom * vblank_hz;
-	t = (evt)(cycles / f);
+	cycles = (uae_u32)(maxhpos * maxvpos_nom * vblank_hz);
+	t = (evt_t)(cycles / f);
 	if (dsahip->evttime == t)
 		return;
 	write_log(_T("AHI: playerfunc freq = %.2fHz\n"), f);
@@ -682,7 +682,7 @@ static void ds_setvolume(struct DSAHI* dsahip, struct dschannel* dc)
 {
 	if (dc->al_source != -1) {
 		if (abs(dc->cs.volume) != abs(dc->csnext.volume)) {
-			float vol = ((float)(abs(dc->csnext.volume))) / 65536.0;
+			float vol = ((float)(abs(dc->csnext.volume))) / 65536.0f;
 			alClear();
 			alSourcef(dc->al_source, AL_GAIN, vol);
 			alError(_T("AHI: SetVolume(%d,%d)"), dc->num, vol);

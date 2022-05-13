@@ -690,10 +690,10 @@ static struct romdata roms[] = {
 	{ _T("Hardital Synthesis"), 0, 0, 0, 0, _T("SYNTHESIS\0"), 32768, 266, 0, 0, ROMTYPE_SYNTHESIS, 0, 0, NULL,
 	0x667c7616, 0x0eb1cb38,0x3133f070,0x7cb57944,0xc516f236,0xbad4d4f6, NULL, NULL },
 
-	{ _T("CyberStorm MK I 68040"), 0, 0, 0, 0, _T("CSMKI\0"), 32768, 95, 0, 0, ROMTYPE_CB_CSMK1, 0, 0, NULL,
-	  0, 0, 0, 0, 0, 0, NULL, _T("cyberstormmk1_040.rom") },
-	{ _T("CyberStorm MK I 68060"), 0, 0, 0, 0, _T("CSMKI\0"), 65536, 101, 0, 0, ROMTYPE_CB_CSMK1, 0, 0, NULL,
-	  0, 0, 0, 0, 0, 0, NULL, _T("cyberstormmk1_060.rom") },
+	{ _T("CyberStorm MK I 68060 Support"), 0, 0, 0, 0, _T("CSMKI\0"), 32768, 95, 0, 0, ROMTYPE_CB_CSMK1, 0, 0, NULL,
+	0x33a8ff3a, 0x8f4bdda0,0x10338a48,0x51e4a2fb,0xb4aa6d6e,0x202fe98e, NULL, NULL },
+	{ _T("CyberStorm MK I CyberSCSI Module"), 0, 0, 0, 0, _T("CSMKISCSI\0"), 32768, 101, 0, 0, ROMTYPE_CSMK1SCSI, 0, 0, NULL,
+	0x4e71ec63, 0x8e95bc8d,0xa06050fc,0xb596b5b4,0xc8cf9102,0x1ff4aeb3, NULL, NULL },
 	{ _T("CyberStorm MK II"), 0, 0, 0, 0, _T("CSMKII\0"), 131072, 96, 0, 0, ROMTYPE_CB_CSMK2, 0, 0, NULL,
 	  0, 0, 0, 0, 0, 0, NULL, _T("cyberstormmk2.rom") },
 	{ _T("CyberStorm MK III"), 0, 0, 0, 0, _T("CSMKIII\0"), 131072, 97, 0, 0, ROMTYPE_CB_CSMK3, 0, 0, NULL,
@@ -1194,7 +1194,7 @@ void addkeyfile (const TCHAR *path)
 	if (!f)
 		return;
 	zfile_fseek (f, 0, SEEK_END);
-	keysize = zfile_ftell (f);
+	keysize = zfile_ftell32(f);
 	if (keysize > 0) {
 		zfile_fseek (f, 0, SEEK_SET);
 		keybuf = xmalloc (uae_u8, keysize);
@@ -1562,9 +1562,9 @@ struct romdata *getromdatabyzfile (struct zfile *f)
 	uae_u8 *p;
 	struct romdata *rd;
 
-	pos = zfile_ftell (f);
+	pos = zfile_ftell32(f);
 	zfile_fseek (f, 0, SEEK_END);
-	size = zfile_ftell (f);
+	size = zfile_ftell32(f);
 	if (size > 2048 * 1024)
 		return NULL;
 	p = xmalloc (uae_u8, size);
@@ -2006,7 +2006,7 @@ static struct zfile *rom_fopen2(const TCHAR *name, const TCHAR *mode, int mask)
 	struct zfile *f2 = NULL;
 	struct zfile *f = rom_fopen(name, mode, mask);
 	if (f) {
-		int size = zfile_size(f);
+		int size = zfile_size32(f);
 		if (size == 524288 * 2 || size == 524288 || size == 262144) {
 			uae_u8 *newrom = NULL;
 			uae_u8 *tmp1 = xcalloc(uae_u8, 524288 * 2);
@@ -2090,7 +2090,7 @@ struct zfile *read_rom_name (const TCHAR *filename)
 			uae_u8 *buf;
 			addkeydir(filename);
 			zfile_fseek(f, 0, SEEK_END);
-			size = zfile_ftell(f) - sizeof tmp;
+			size = zfile_ftell32(f) - sizeof tmp;
 			zfile_fseek(f, sizeof tmp, SEEK_SET);
 			buf = xmalloc(uae_u8, size);
 			zfile_fread(buf, size, 1, f);

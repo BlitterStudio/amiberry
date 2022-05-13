@@ -359,9 +359,9 @@ STATIC_INLINE void m68k_setpc_normal(uaecptr pc)
 extern void check_t0_trace(void);
 
 
-extern void (*x_do_cycles)(unsigned long);
-extern void (*x_do_cycles_pre)(unsigned long);
-extern void (*x_do_cycles_post)(unsigned long, uae_u32);
+extern void (*x_do_cycles)(int);
+extern void (*x_do_cycles_pre)(int);
+extern void (*x_do_cycles_post)(int, uae_u32);
 
 extern uae_u32 REGPARAM3 x_get_disp_ea_020(uae_u32 base) REGPARAM;
 

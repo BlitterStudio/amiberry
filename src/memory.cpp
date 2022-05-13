@@ -1492,10 +1492,10 @@ static int read_kickstart (struct zfile *f, uae_u8 *mem, int size, int dochecksu
 
 	if (size < 0) {
 		zfile_fseek (f, 0, SEEK_END);
-		size = zfile_ftell (f) & ~0x3ff;
+		size = zfile_ftell32(f) & ~0x3ff;
 		zfile_fseek (f, 0, SEEK_SET);
 	}
-	oldpos = zfile_ftell (f);
+	oldpos = zfile_ftell32(f);
 	i = zfile_fread (buffer, 1, sizeof(buffer), f);
 	if (i < sizeof(buffer))
 		return 0;
@@ -1604,7 +1604,7 @@ static bool load_extendedkickstart (const TCHAR *romextfile, int type)
 		return false;
 	}
 	zfile_fseek (f, 0, SEEK_END);
-	size = zfile_ftell (f);
+	size = zfile_ftell32(f);
 	extendedkickmem_bank.reserved_size = ROM_SIZE_512;
 	off = 0;
 	if (type == 0) {
@@ -1915,7 +1915,7 @@ static int load_kickstart (void)
 
 		if (!singlebigrom) {
 			zfile_fseek(f, 0, SEEK_END);
-			filesize = zfile_ftell(f);
+			filesize = zfile_ftell32(f);
 			zfile_fseek(f, 0, SEEK_SET);
 			if (!singlebigrom) {
 				if (filesize == 1760 * 512) {
@@ -2431,8 +2431,8 @@ static void restore_roms(void)
 	a1000_bootrom = 0;
 	a1000_kickstart_mode = 0;
 
-	memcpy (currprefs.romfile, changed_prefs.romfile, sizeof currprefs.romfile);
-	memcpy (currprefs.romextfile, changed_prefs.romextfile, sizeof currprefs.romextfile);
+	memcpy(currprefs.romfile, changed_prefs.romfile, sizeof currprefs.romfile);
+	memcpy(currprefs.romextfile, changed_prefs.romextfile, sizeof currprefs.romextfile);
 	need_hardreset = true;
 	mapped_free(&extendedkickmem_bank);
 	mapped_free(&extendedkickmem2a_bank);
@@ -3249,7 +3249,7 @@ void map_banks_nojitdirect (addrbank *bank, int start, int size, int realsize)
 
 /* memory save/restore code */
 
-uae_u8 *save_bootrom (int *len)
+uae_u8 *save_bootrom(size_t *len)
 {
 	if (!uae_boot_rom_type)
 		return 0;
@@ -3257,66 +3257,66 @@ uae_u8 *save_bootrom (int *len)
 	return rtarea_bank.baseaddr;
 }
 
-uae_u8 *save_cram (int *len)
+uae_u8 *save_cram(size_t *len)
 {
 	*len = chipmem_bank.allocated_size;
 	return chipmem_bank.baseaddr;
 }
 
-uae_u8 *save_bram (int *len)
+uae_u8 *save_bram(size_t *len)
 {
 	*len = bogomem_bank.allocated_size;
 	return bogomem_bank.baseaddr;
 }
 
-static uae_u8 *save_mem25bitram (int *len)
+static uae_u8 *save_mem25bitram(size_t *len)
 {
 	*len = mem25bit_bank.allocated_size;
 	return mem25bit_bank.baseaddr;
 }
 
-uae_u8 *save_a3000lram (int *len)
+uae_u8 *save_a3000lram(size_t *len)
 {
 	*len = a3000lmem_bank.allocated_size;
 	return a3000lmem_bank.baseaddr;
 }
 
-uae_u8 *save_a3000hram (int *len)
+uae_u8 *save_a3000hram(size_t *len)
 {
 	*len = a3000hmem_bank.allocated_size;
 	return a3000hmem_bank.baseaddr;
 }
 
-void restore_bootrom (int len, size_t filepos)
+void restore_bootrom(int len, size_t filepos)
 {
 	bootrom_filepos = filepos;
 }
 
-void restore_cram (int len, size_t filepos)
+void restore_cram(int len, size_t filepos)
 {
 	chip_filepos = filepos;
 	changed_prefs.chipmem.size = len;
 }
 
-void restore_bram (int len, size_t filepos)
+void restore_bram(int len, size_t filepos)
 {
 	bogo_filepos = filepos;
 	changed_prefs.bogomem.size = len;
 }
 
-void restore_a3000lram (int len, size_t filepos)
+void restore_a3000lram(int len, size_t filepos)
 {
 	a3000lmem_filepos = filepos;
 	changed_prefs.mbresmem_low.size = len;
 }
 
-void restore_a3000hram (int len, size_t filepos)
+void restore_a3000hram(int len, size_t filepos)
 {
 	a3000hmem_filepos = filepos;
 	changed_prefs.mbresmem_high.size = len;
 }
 
-uae_u8 *restore_rom (uae_u8 *src)
+uae_u8 *restore_rom(uae_u8 *src)
 {
 	uae_u32 crc32, mem_start, mem_size, mem_type, version;
 	TCHAR *s, *romn;
@@ -3374,7 +3374,7 @@ uae_u8 *restore_rom (uae_u8 *src)
 	return src;
 }
 
-uae_u8 *save_rom (int first, int *len, uae_u8 *dstptr)
+uae_u8 *save_rom(int first, size_t *len, uae_u8 *dstptr)
 {
 	static int count;
 	uae_u8 *dst, *dstbak;

@@ -255,7 +255,10 @@ bool system2000_init(struct autoconfig_info *aci);
 void system2000_add_scsi_unit(int ch, struct uaedev_config_info *ci, struct romconfig *rc);
 
 bool omtiadapter_init(struct autoconfig_info *aci);
-void omtiadapter_scsi_unit(int ch, struct uaedev_config_info *ci, struct romconfig *rc);
+void omtiadapter_add_scsi_unit(int ch, struct uaedev_config_info *ci, struct romconfig *rc);
+
+bool hd20_init(struct autoconfig_info *aci);
+void hd20_add_scsi_unit(int ch, struct uaedev_config_info *ci, struct romconfig *rc);
 
 bool phoenixboard_init(struct autoconfig_info *aci);
 void phoenixboard_add_scsi_unit(int ch, struct uaedev_config_info *ci, struct romconfig *rc);

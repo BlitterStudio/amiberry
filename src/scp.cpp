@@ -203,7 +203,7 @@ static int scp_next_flux(struct scpdrive *d)
          * reversal sits exactly on the index we have some time to donate to 
          * the first reversal of the first revolution. */
         val = d->total_ticks - d->acc_ticks;
-        d->acc_ticks = -val;
+        d->acc_ticks = 0 - val;
     }
 
     for (;;) {
@@ -291,15 +291,15 @@ void scp_loadrevolution(
         if (b)
             mfmbuf[i>>4] |= 0x8000u >> (i&15);
         if ((i & 7) == 7) {
-            tracktiming[i>>3] = d->latency - prev_latency;
+            tracktiming[i>>3] = (uae_u16)(d->latency - prev_latency);
             prev_latency = d->latency;
         }
     }
 
     if (i & 7)
-        tracktiming[i>>3] = ((d->latency - prev_latency) * 8) / (i & 7);
+        tracktiming[i>>3] = (uae_u16)(((d->latency - prev_latency) * 8) / (i & 7));
 
-    av_latency = prev_latency / (i>>3);
+    av_latency = (uint32_t)(prev_latency / (i>>3));
     for (j = 0; j < (i+7)>>3; j++)
         tracktiming[j] = ((uint32_t)tracktiming[j] * 1000u) / av_latency;
 

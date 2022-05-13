@@ -30,7 +30,7 @@
 #define SCALA_GREEN 12
 
 static int dflag;
-static unsigned int cycles;
+static frame_time_t cycles;
 
 /*
 RoboCop 3
