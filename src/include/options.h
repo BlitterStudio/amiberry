@@ -16,7 +16,7 @@
 #include "traps.h"
 
 #define UAEMAJOR 5
-#define UAEMINOR 0
+#define UAEMINOR 2
 #define UAESUBREV 0
 
 #define MAX_AMIGADISPLAYS 1
@@ -836,6 +836,10 @@ struct uae_prefs
 	bool rtg_hardwaresprite;
 	bool rtg_more_compatible;
 	bool rtg_multithread;
+	bool rtg_overlay;
+	bool rtg_vgascreensplit;
+	bool rtg_paletteswitch;
+	bool rtg_dacswitch;
 	struct rtgboardconfig rtgboards[MAX_RTG_BOARDS];
 	uae_u32 custom_memory_addrs[MAX_CUSTOM_MEMORY_ADDRS];
 	uae_u32 custom_memory_sizes[MAX_CUSTOM_MEMORY_ADDRS];

@@ -1819,6 +1819,10 @@ void target_default_options(struct uae_prefs* p, int type)
 		p->rtgscaleaspectratio = -1;
 		p->rtgvblankrate = 0;
 		p->rtg_hardwaresprite = true;
+		p->rtg_overlay = true;
+		p->rtg_vgascreensplit = true;
+		p->rtg_paletteswitch = true;
+		p->rtg_dacswitch = true;
 		//p->commandpathstart[0] = 0;
 		//p->commandpathend[0] = 0;
 		//p->statusbar = 1;
