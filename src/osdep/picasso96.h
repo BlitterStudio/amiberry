@@ -574,6 +574,7 @@ enum {
 #define BIB_SYSTEM2SCREENBLITS	25	/* allow data to be written to screen memory for cpu as blitter source */
 #define BIB_GRANTDIRECTACCESS	26	/* all data on the board can be accessed at any time without bi->SetMemoryMode() */
 #define BIB_PALETTESWITCH		27
+#define BIB_DACSWITCH   		28
 #define BIB_OVERCLOCK			31	/* enable overclocking for some boards */
 
 #define BIB_IGNOREMASK	BIB_NOMASKBLITS
@@ -604,6 +605,7 @@ enum {
 #define BIF_SYSTEM2SCREENBLITS	(1 << BIB_SYSTEM2SCREENBLITS)
 #define BIF_GRANTDIRECTACCESS	(1 << BIB_GRANTDIRECTACCESS)
 #define BIF_PALETTESWITCH		(1 << BIB_PALETTESWITCH)
+#define BIF_DACSWITCH		    (1 << BIB_DACSWITCH)
 #define BIF_OVERCLOCK			(1 << BIB_OVERCLOCK)
 
 #define BIF_IGNOREMASK 	BIF_NOMASKBLITS
@@ -636,8 +638,8 @@ struct picasso96_state_struct
 	// every time windows can remove your surface from card so the mainrender place
 	// must be in memory
 	long		XYOffset;
-    bool        dualclut, advDragging;
-    int         HLineDBL, VLineDBL;
+	bool        dualclut, advDragging;
+	int         HLineDBL, VLineDBL;
 };
 
 extern void InitPicasso96(int monid);
@@ -676,9 +678,9 @@ struct picasso_vidbuf_description {
 	int rtg_clear_flag;
 	bool picasso_active;
 	bool picasso_changed;
-    uae_s16 splitypos;
+	uae_s16 splitypos;
 	uae_atomic picasso_state_change;
-    uae_u32 dacrgbformat[2];
+	uae_u32 dacrgbformat[2];
 };
 
 extern struct picasso_vidbuf_description picasso_vidinfo[MAX_AMIGAMONITORS];

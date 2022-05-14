@@ -70,6 +70,7 @@ struct game_options
 	TCHAR chip[256] = "nul\0";
 	TCHAR fast[256] = "nul\0";
 	TCHAR z3[256] = "nul\0";
+	TCHAR cpu_exact[256] = "nul\0";
 };
 
 static TCHAR* parse_text(const TCHAR* s)
@@ -201,6 +202,7 @@ game_options get_game_settings(const char* HW)
 	strcpy(output_detail.ntsc, find_whdload_game_option("NTSC", HW).c_str());
 	strcpy(output_detail.fast, find_whdload_game_option("FAST_RAM", HW).c_str());
 	strcpy(output_detail.z3, find_whdload_game_option("Z3_RAM", HW).c_str());
+	strcpy(output_detail.cpu_exact, find_whdload_game_option("CPU_EXACT", HW).c_str());
 
 	return output_detail;
 }
@@ -766,6 +768,7 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	write_log("WHDBooter - Game: NTSC       : %s  \n", game_detail.ntsc);
 	write_log("WHDBooter - Game: Fast Ram   : %s  \n", game_detail.fast);
 	write_log("WHDBooter - Game: Z3 Ram     : %s  \n", game_detail.z3);
+	write_log("WHDBooter - Game: CPU Exact  : %s  \n", game_detail.cpu_exact);
 
 	// debugging code!
 	write_log("WHDBooter - Host: Controller 1   : %s  \n", amiberry_options.default_controller1);
@@ -1026,6 +1029,13 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	if (strcmpi(game_detail.cpu_24bit, "false") == 0 || strcmpi(game_detail.z3, "nul") != 0)
 	{
 		_stprintf(txt2, "cpu_24bit_addressing=false");
+		cfgfile_parse_line(prefs, txt2, 0);
+	}
+
+	// CYCLE-EXACT CPU
+	if (strcmpi(game_detail.cpu_exact, "true") == 0)
+	{
+		_stprintf(txt2, "cpu_cycle_exact=true");
 		cfgfile_parse_line(prefs, txt2, 0);
 	}
 
