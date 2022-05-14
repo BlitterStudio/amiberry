@@ -1984,6 +1984,8 @@ void target_default_options(struct uae_prefs* p, int type)
 			changed_prefs.cpu_cycle_exact = changed_prefs.cpu_memory_cycle_exact = false;
 		}
 	}
+
+	if (amiberry_options.default_soundcard > 0) p->soundcard = amiberry_options.default_soundcard;
 }
 
 static const TCHAR* scsimode[] = { _T("SCSIEMU"), _T("SPTI"), _T("SPTI+SCSISCAN"), NULL };
@@ -2811,6 +2813,10 @@ void save_amiberry_settings(void)
 	// Allow Display settings to be used from the WHDLoad XML (override amiberry.conf defaults)
 	snprintf(buffer, MAX_DPATH, "allow_display_settings_from_xml=%s\n", amiberry_options.allow_display_settings_from_xml ? "yes" : "no");
 	fputs(buffer, f);
+
+	// Default Sound Card (0=default, first one available in the system)
+	snprintf(buffer, MAX_DPATH, "default_soundcard=%d\n", amiberry_options.default_soundcard);
+	fputs(buffer, f);
 	
 	// Paths
 	snprintf(buffer, MAX_DPATH, "path=%s\n", current_dir);
@@ -3052,6 +3058,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_yesno(option, value, "default_whd_quit_on_exit", &amiberry_options.default_whd_quit_on_exit);
 		ret |= cfgfile_yesno(option, value, "disable_shutdown_button", &amiberry_options.disable_shutdown_button);
 		ret |= cfgfile_yesno(option, value, "allow_display_settings_from_xml", &amiberry_options.allow_display_settings_from_xml);
+		ret |= cfgfile_intval(option, value, "default_soundcard", &amiberry_options.default_soundcard, 1);
 	}
 	return ret;
 }

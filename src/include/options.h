@@ -1199,6 +1199,7 @@ struct amiberry_options
 	bool default_whd_quit_on_exit = false;
 	bool disable_shutdown_button = false;
 	bool allow_display_settings_from_xml = true;
+	int default_soundcard = 0;
 };
 
 extern struct amiberry_options amiberry_options;
