@@ -9104,6 +9104,22 @@ int built_in_prefs (struct uae_prefs *p, int model, int config, int compa, int r
 	return v;
 }
 
+static bool has_expansion_with_rtc(struct uae_prefs* p, int chiplimit)
+{
+	if (p->bogomem.size ||
+		p->chipmem.size > chiplimit ||
+		p->cpuboard_type) {
+		return true;
+	}
+
+	for (int i = 0; i < MAX_RAM_BOARDS; i++) {
+		if (p->fastmem[i].size || p->z3fastmem[i].size) {
+			return true;
+		}
+	}
+	return false;
+}
+
 int built_in_chipset_prefs (struct uae_prefs *p)
 {
 	if (!p->cs_compatible)
@@ -9157,7 +9173,7 @@ int built_in_chipset_prefs (struct uae_prefs *p)
 			// very A500-like
 			p->cs_df0idhw = 0;
 			p->cs_resetwarning = 0;
-			if (p->bogomem.size || p->chipmem.size > 0x80000 || p->fastmem[0].size)
+			if (has_expansion_with_rtc(p, 0x80000))
 				p->cs_rtc = 1;
 			p->cs_ciatodbug = true;
 		} else {
@@ -9192,11 +9208,13 @@ int built_in_chipset_prefs (struct uae_prefs *p)
 		p->cs_ciaoverlay = 0;
 		p->cs_resetwarning = 0;
 		p->cs_unmapped_space = 1;
+		if (has_expansion_with_rtc(p, 0x200000))
+			p->cs_rtc = 1;
 		break;
 	case CP_A500: // A500
 		p->cs_df0idhw = 0;
 		p->cs_resetwarning = 0;
-		if (p->bogomem.size || p->chipmem.size > 0x80000 || p->fastmem[0].size)
+		if (has_expansion_with_rtc(p, 0x100000))
 			p->cs_rtc = 1;
 		p->cs_ciatodbug = true;
 		break;
@@ -9213,6 +9231,8 @@ int built_in_chipset_prefs (struct uae_prefs *p)
 		p->cs_resetwarning = 0;
 		p->cs_ciatodbug = true;
 		p->cs_ciatype[0] = p->cs_ciatype[1] = 1;
+		if (has_expansion_with_rtc(p, 0x100000))
+			p->cs_rtc = 1;
 		break;
 	case CP_A1000: // A1000
 		p->cs_a1000ram = 1;
@@ -9221,6 +9241,8 @@ int built_in_chipset_prefs (struct uae_prefs *p)
 		p->cs_agnusbltbusybug = 1;
 		p->cs_dipagnus = 1;
 		p->cs_ciatodbug = true;
+		if (has_expansion_with_rtc(p, 0x80000))
+			p->cs_rtc = 1;
 		break;
 	case CP_VELVET: // A1000 Prototype
 		p->cs_ciaatod = p->ntscmode ? 2 : 1;
@@ -9234,7 +9256,7 @@ int built_in_chipset_prefs (struct uae_prefs *p)
 		p->cs_pcmcia = 1;
 		p->cs_ksmirror_a8 = 1;
 		p->cs_ciaoverlay = 0;
-		if (p->fastmem[0].size || p->z3fastmem[0].size || p->cpuboard_type)
+		if (has_expansion_with_rtc(p, 0x200000))
 			p->cs_rtc = 1;
 		break;
 	case CP_A2000: // A2000
