@@ -3,70 +3,6 @@
 CWD_VAR=$(cd "$(dirname "$0")"; pwd)
 USERDIR=`echo ~`
 
-if [[ ! -d "$USERDIR/Documents/Amiberry/Hard Drives" ]]; then
-	mkdir -p "$USERDIR/Documents/Amiberry/Hard Drives"
-fi
-
-if [[ ! -d "$USERDIR/Documents/Amiberry/Configurations" ]]; then
-	mkdir -p "$USERDIR/Documents/Amiberry/Configurations"
-fi
-
-if [[ ! -d "$USERDIR/Documents/Amiberry/Controllers" ]]; then
-	mkdir -p "$USERDIR/Documents/Amiberry/Controllers"
-fi
-
-if [[ ! -d "$USERDIR/Documents/Amiberry/Logfiles" ]]; then
-	mkdir -p "$USERDIR/Documents/Amiberry/Logfiles"
-fi
-
-if [[ ! -d "$USERDIR/Documents/Amiberry/Kickstarts" ]]; then
-	mkdir -p "$USERDIR/Documents/Amiberry/Kickstarts"
-fi
-
-if [[ ! -d "$USERDIR/Documents/Amiberry/Whdboot" ]]; then
-	mkdir -p "$USERDIR/Documents/Amiberry/Whdboot"
-fi
-
-if [[ ! -d "$USERDIR/Documents/Amiberry/Whdboot/game-data" ]]; then
-	mkdir -p "$USERDIR/Documents/Amiberry/Whdboot/game-data"
-fi
-
-if [[ ! -d "$USERDIR/Documents/Amiberry/Whdboot/save-data" ]]; then
-	mkdir -p "$USERDIR/Documents/Amiberry/Whdboot/save-data"
-fi
-
-if [[ ! -d "$USERDIR/Documents/Amiberry/Whdboot/save-data/Autoboots" ]]; then
-	mkdir -p "$USERDIR/Documents/Amiberry/Whdboot/save-data/Autoboots"
-fi
-
-if [[ ! -d "$USERDIR/Documents/Amiberry/Whdboot/save-data/Debugs" ]]; then
-	mkdir -p "$USERDIR/Documents/Amiberry/Whdboot/save-data/Debugs"
-fi
-
-if [[ ! -d "$USERDIR/Documents/Amiberry/Whdboot/save-data/Kickstarts" ]]; then
-	mkdir -p "$USERDIR/Documents/Amiberry/Whdboot/save-data/Kickstarts"
-fi
-
-if [[ ! -d "$USERDIR/Documents/Amiberry/Whdboot/save-data/Savegames" ]]; then
-	mkdir -p "$USERDIR/Documents/Amiberry/Whdboot/save-data/Savegames"
-fi
-
-if [[ ! -d "$USERDIR/Documents/Amiberry/Data/Floppy_Sounds" ]]; then
-	mkdir -p "$USERDIR/Documents/Amiberry/Data/Floppy_Sounds"
-fi
-
-if [[ ! -d "$USERDIR/Documents/Amiberry/Savestates" ]]; then
-	mkdir -p "$USERDIR/Documents/Amiberry/Savestates"
-fi
-
-if [[ ! -d "$USERDIR/Documents/Amiberry/Screenshots" ]]; then
-	mkdir -p "$USERDIR/Documents/Amiberry/Screenshots"
-fi
-
-if [[ ! -d "$USERDIR/Documents/Amiberry/Docs" ]]; then
-	mkdir -p "$USERDIR/Documents/Amiberry/Docs"
-fi
-
 if [[ ! -f "$USERDIR/Documents/Amiberry/Configurations/amiberry.conf" ]]; then
 	cat $CWD_VAR/../Resources/Configurations/amiberry-osx.conf | sed -e "s#USERDIR#$USERDIR#g" > "$USERDIR/Documents/Amiberry/Configurations/amiberry.conf"
 fi
@@ -122,7 +58,3 @@ for file in $CWD_VAR/../Resources/Whdboot/**/*(.); do
 		cp $file "$USERDIR/Documents/Amiberry/Whdboot${file##*/Whdboot}"
 	fi
 done
-
-echo "Running Amiberry"
-
-$CWD_VAR/Amiberry

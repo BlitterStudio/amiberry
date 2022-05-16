@@ -4,28 +4,28 @@
 <plist version="1.0">
 	<dict>
 		<key>CFBundleGetInfoString</key>
-			<string>LONGVERSION</string>
+		<string>LONGVERSION</string>
 		<key>CFBundleExecutable</key>
-			<string>run_amiberry.zsh</string>
+		<string>Amiberry</string>
 		<key>CFBundleIdentifier</key>
-			<string>com.midwan.amiberry</string>
+		<string>com.blitterstudio.amiberry</string>
 		<key>CFBundleName</key>
-			<string>Amiberry.app</string>
+		<string>Amiberry.app</string>
 		<key>CFBundleIconName</key>
-			<string>AppIcon</string>
+		<string>AppIcon</string>
 		<key>CFBundleIconFile</key>
-			<string>docs/resources/icon.png</string>
-			<key>UIPrerenderedIcon</key>
-				<true/>
+		<string>docs/resources/icon.png</string>
+		<key>UIPrerenderedIcon</key>
+		<true/>
 		<key>CFBundleShortVersionString</key>
-			<string>VERSION</string>
+		<string>VERSION</string>
 		<key>CFBundleInfoDictionaryVersion</key>
-			<string>6.0</string>
+		<string>6.0</string>
 		<key>CFBundlePackageType</key>
-			<string>APPL</string>
+		<string>APPL</string>
 		<key>IFMajorVersion</key>
-			<integer>MAJOR</integer>
+		<integer>MAJOR</integer>
 		<key>IFMinorVersion</key>
-			<integer>MINOR</integer>
+		<integer>MINOR</integer>
 	</dict>
 </plist>

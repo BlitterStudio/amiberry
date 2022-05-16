@@ -3118,6 +3118,107 @@ static int get_env_dir( char * path, const char *path_template, const char *envn
 	return ret;
 }
 
+void init_macos_amiberry_folders(std::string macos_amiberry_directory)
+{
+	if (!my_existsdir(macos_amiberry_directory.c_str()))
+		my_mkdir(macos_amiberry_directory.c_str());
+
+	std::string directory = macos_amiberry_directory + "/Hard Drives";
+	if (!my_existsdir(directory.c_str()))
+		my_mkdir(directory.c_str());
+
+	directory = macos_amiberry_directory + "/Configurations";
+	if (!my_existsdir(directory.c_str()))
+		my_mkdir(directory.c_str());
+
+	directory = macos_amiberry_directory + "/Controllers";
+	if (!my_existsdir(directory.c_str()))
+		my_mkdir(directory.c_str());
+
+	directory = macos_amiberry_directory + "/Logfiles";
+	if (!my_existsdir(directory.c_str()))
+		my_mkdir(directory.c_str());
+
+	directory = macos_amiberry_directory + "/Kickstarts";
+	if (!my_existsdir(directory.c_str()))
+		my_mkdir(directory.c_str());
+
+	directory = macos_amiberry_directory + "/Whdboot";
+	if (!my_existsdir(directory.c_str()))
+		my_mkdir(directory.c_str());
+
+	directory = macos_amiberry_directory + "/Whdboot/game-data";
+	if (!my_existsdir(directory.c_str()))
+		my_mkdir(directory.c_str());
+
+	directory = macos_amiberry_directory + "/Whdboot/save-data";
+	if (!my_existsdir(directory.c_str()))
+		my_mkdir(directory.c_str());
+
+	directory = macos_amiberry_directory + "/Whdboot/save-data/Autoboots";
+	if (!my_existsdir(directory.c_str()))
+		my_mkdir(directory.c_str());
+
+	directory = macos_amiberry_directory + "/Whdboot/save-data/Debugs";
+	if (!my_existsdir(directory.c_str()))
+		my_mkdir(directory.c_str());
+
+	directory = macos_amiberry_directory + "/Whdboot/save-data/Kickstarts";
+	if (!my_existsdir(directory.c_str()))
+		my_mkdir(directory.c_str());
+
+	directory = macos_amiberry_directory + "/Whdboot/save-data/Savegames";
+	if (!my_existsdir(directory.c_str()))
+		my_mkdir(directory.c_str());
+
+	directory = macos_amiberry_directory + "/Data";
+	if (!my_existsdir(directory.c_str()))
+		my_mkdir(directory.c_str());
+
+	directory = macos_amiberry_directory + "/Data/Floppy_Sounds";
+	if (!my_existsdir(directory.c_str()))
+		my_mkdir(directory.c_str());
+
+	directory = macos_amiberry_directory + "/Savestates";
+	if (!my_existsdir(directory.c_str()))
+		my_mkdir(directory.c_str());
+
+	directory = macos_amiberry_directory + "/Screenshots";
+	if (!my_existsdir(directory.c_str()))
+		my_mkdir(directory.c_str());
+
+	directory = macos_amiberry_directory + "/Docs";
+	if (!my_existsdir(directory.c_str()))
+		my_mkdir(directory.c_str());
+}
+
+#ifdef __MACH__
+#include <mach-o/dyld.h>
+void macos_copy_amiberry_files_to_userdir(std::string macos_amiberry_directory)
+{
+	char exepath[MAX_DPATH];
+	uint32_t size = sizeof exepath;
+	if (_NSGetExecutablePath(exepath, &size) == 0)
+	{
+		std::string directory;
+		size_t last_slash_idx = string(exepath).rfind('/');
+		if (std::string::npos != last_slash_idx)
+		{
+			directory = string(exepath).substr(0, last_slash_idx);
+		}
+		last_slash_idx = directory.rfind('/');
+		if (std::string::npos != last_slash_idx)
+		{
+			directory = directory.substr(0, last_slash_idx);
+		}
+		char command[MAX_DPATH];
+		sprintf(command, "%s/%s", directory.c_str(), "Resources/macos_init_amiberry.zsh");
+		system(command);
+	}
+	
+}
+#endif
+
 static void init_amiberry_paths(void)
 {
 	strncpy(current_dir, start_path_data, MAX_DPATH - 1);
@@ -3143,9 +3244,17 @@ static void init_amiberry_paths(void)
 	snprintf(rp9_path, MAX_DPATH, "%s/rp9/", start_path_data);
 #ifdef __MACH__
 	// Open amiberry.conf from Application Data directory
-	string macos_home_directory = getenv("HOME");
-	snprintf(amiberry_conf_file, MAX_DPATH, "%s", (macos_home_directory + "/Documents/Amiberry/Configurations/amiberry.conf").c_str());
-	printf("Using configuration: %s\n", (macos_home_directory + "/Documents/Amiberry/Configurations/amiberry.conf").c_str());
+	const std::string macos_home_directory = getenv("HOME");
+	const std::string macos_amiberry_directory = macos_home_directory + "/Documents/Amiberry";
+	if (!my_existsdir(macos_amiberry_directory.c_str()))
+	{
+		// Amiberry home dir is missing, generate it and all directories under it
+		init_macos_amiberry_folders(macos_amiberry_directory);
+		macos_copy_amiberry_files_to_userdir(macos_amiberry_directory);
+	}
+
+	snprintf(amiberry_conf_file, MAX_DPATH, "%s", (macos_amiberry_directory + "/Configurations/amiberry.conf").c_str());
+	write_log("Using configuration: %s\n", (macos_amiberry_directory + "/Configurations/amiberry.conf").c_str());
 #else
 	snprintf(amiberry_conf_file, MAX_DPATH, "%s/conf/amiberry.conf", start_path_data);
 #endif
