@@ -109,7 +109,7 @@ jobs:
 
   build-rpios64-rpi3-dmx:
 
-    runs-on: [self-hosted, Linux, ARM, rpios64, dmx]
+    runs-on: [self-hosted, Linux, ARM64, rpios64, dmx]
 
     steps:
     - uses: actions/checkout@v3
@@ -134,7 +134,7 @@ jobs:
 
   build-rpios64-rpi3-sdl2:
 
-    runs-on: [self-hosted, Linux, ARM, rpios64]
+    runs-on: [self-hosted, Linux, ARM64, rpios64]
 
     steps:
     - uses: actions/checkout@v3
@@ -159,7 +159,7 @@ jobs:
 
   build-rpios64-rpi4-dmx:
 
-    runs-on: [self-hosted, Linux, ARM, rpios64, dmx]
+    runs-on: [self-hosted, Linux, ARM64, rpios64, dmx]
 
     steps:
     - uses: actions/checkout@v3
@@ -184,7 +184,7 @@ jobs:
 
   build-rpios64-rpi4-sdl2:
 
-    runs-on: [self-hosted, Linux, ARM, rpios64]
+    runs-on: [self-hosted, Linux, ARM64, rpios64]
 
     steps:
     - uses: actions/checkout@v3
@@ -209,7 +209,7 @@ jobs:
 
   build-manjaro-rpi4-dmx:
 
-    runs-on: [self-hosted, Linux, ARM, manjaro]
+    runs-on: [self-hosted, Linux, ARM64, manjaro]
 
     steps:
     - uses: actions/checkout@v3
@@ -234,7 +234,7 @@ jobs:
 
   build-manjaro-rpi4-sdl2:
 
-    runs-on: [self-hosted, Linux, ARM, manjaro]
+    runs-on: [self-hosted, Linux, ARM64, manjaro]
 
     steps:
     - uses: actions/checkout@v3
