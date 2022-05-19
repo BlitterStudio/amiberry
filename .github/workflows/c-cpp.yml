@@ -7,6 +7,256 @@ on:
     branches: [ master ]
 
 jobs:
+  build-rpios32-rpi3-dmx:
+
+    runs-on: [self-hosted, Linux, ARM, rpios32, dmx]
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'true'
+    - name: make for RPIOS RPI3-DMX 32-bit
+      run: make -j4 PLATFORM=rpi3
+    - uses: actions/upload-artifact@v3
+      with:
+        name: amiberry-rpios32-rpi3-dmx
+        path: |
+          amiberry
+          capsimg.so
+          abr/**
+          conf/**
+          controllers/**
+          data/**
+          kickstarts/**
+          savestates/**
+          screenshots/**
+          whdboot/**
+
+  build-rpios32-rpi3-sdl2:
+
+    runs-on: [self-hosted, Linux, ARM, rpios32]
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'true'
+    - name: make for RPIOS RPI3-SDL2 32-bit
+      run: make -j4 PLATFORM=rpi3-sdl2
+    - uses: actions/upload-artifact@v3
+      with:
+        name: amiberry-rpios32-rpi3-sdl2
+        path: |
+          amiberry
+          capsimg.so
+          abr/**
+          conf/**
+          controllers/**
+          data/**
+          kickstarts/**
+          savestates/**
+          screenshots/**
+          whdboot/**
+
+  build-rpios32-rpi4-dmx:
+
+    runs-on: [self-hosted, Linux, ARM, rpios32, dmx]
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'true'
+    - name: make for RPIOS RPI4-DMX 32-bit
+      run: make -j4 PLATFORM=rpi4
+    - uses: actions/upload-artifact@v3
+      with:
+        name: amiberry-rpios32-rpi4-dmx
+        path: |
+          amiberry
+          capsimg.so
+          abr/**
+          conf/**
+          controllers/**
+          data/**
+          kickstarts/**
+          savestates/**
+          screenshots/**
+          whdboot/**
+
+  build-rpios32-rpi4-sdl2:
+
+    runs-on: [self-hosted, Linux, ARM, rpios32]
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'true'
+    - name: make for RPIOS RPI4-SDL2 32-bit
+      run: make -j4 PLATFORM=rpi4-sdl2
+    - uses: actions/upload-artifact@v3
+      with:
+        name: amiberry-rpios32-rpi4-sdl2
+        path: |
+          amiberry
+          capsimg.so
+          abr/**
+          conf/**
+          controllers/**
+          data/**
+          kickstarts/**
+          savestates/**
+          screenshots/**
+          whdboot/**
+
+  build-rpios64-rpi3-dmx:
+
+    runs-on: [self-hosted, Linux, ARM, rpios64, dmx]
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'true'
+    - name: make for RPIOS RPI3-DMX 64-bit
+      run: make -j4 PLATFORM=rpi3-64-dmx
+    - uses: actions/upload-artifact@v3
+      with:
+        name: amiberry-rpios64-rpi3-dmx
+        path: |
+          amiberry
+          capsimg.so
+          abr/**
+          conf/**
+          controllers/**
+          data/**
+          kickstarts/**
+          savestates/**
+          screenshots/**
+          whdboot/**
+
+  build-rpios64-rpi3-sdl2:
+
+    runs-on: [self-hosted, Linux, ARM, rpios64]
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'true'
+    - name: make for RPIOS RPI3-SDL2 64-bit
+      run: make -j4 PLATFORM=rpi3-64-sdl2
+    - uses: actions/upload-artifact@v3
+      with:
+        name: amiberry-rpios64-rpi3-sdl2
+        path: |
+          amiberry
+          capsimg.so
+          abr/**
+          conf/**
+          controllers/**
+          data/**
+          kickstarts/**
+          savestates/**
+          screenshots/**
+          whdboot/**
+
+  build-rpios64-rpi4-dmx:
+
+    runs-on: [self-hosted, Linux, ARM, rpios64, dmx]
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'true'
+    - name: make for RPIOS RPI4-DMX 64-bit
+      run: make -j4 PLATFORM=rpi4-64-dmx
+    - uses: actions/upload-artifact@v3
+      with:
+        name: amiberry-rpios64-rpi4-dmx
+        path: |
+          amiberry
+          capsimg.so
+          abr/**
+          conf/**
+          controllers/**
+          data/**
+          kickstarts/**
+          savestates/**
+          screenshots/**
+          whdboot/**
+
+  build-rpios64-rpi4-sdl2:
+
+    runs-on: [self-hosted, Linux, ARM, rpios64]
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'true'
+    - name: make for RPIOS RPI4-SDL2 64-bit
+      run: make -j4 PLATFORM=rpi4-64-sdl2
+    - uses: actions/upload-artifact@v3
+      with:
+        name: amiberry-rpios64-rpi4-sdl2
+        path: |
+          amiberry
+          capsimg.so
+          abr/**
+          conf/**
+          controllers/**
+          data/**
+          kickstarts/**
+          savestates/**
+          screenshots/**
+          whdboot/**
+
+  build-manjaro-rpi4-dmx:
+
+    runs-on: [self-hosted, Linux, ARM, manjaro]
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'true'
+    - name: make for Manjaro RPI4-DMX 64-bit
+      run: make -j4 PLATFORM=rpi4-64-dmx
+    - uses: actions/upload-artifact@v3
+      with:
+        name: amiberry-manjaro-rpi4-dmx
+        path: |
+          amiberry
+          capsimg.so
+          abr/**
+          conf/**
+          controllers/**
+          data/**
+          kickstarts/**
+          savestates/**
+          screenshots/**
+          whdboot/**
+
+  build-manjaro-rpi4-sdl2:
+
+    runs-on: [self-hosted, Linux, ARM, manjaro]
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'true'
+    - name: make for Manjaro RPI4-SDL2 64-bit
+      run: make -j4 PLATFORM=rpi4-64-sdl2
+    - uses: actions/upload-artifact@v3
+      with:
+        name: amiberry-manjaro-rpi4-sdl2
+        path: |
+          amiberry
+          capsimg.so
+          abr/**
+          conf/**
+          controllers/**
+          data/**
+          kickstarts/**
+          savestates/**
+          screenshots/**
+          whdboot/**
+          
   build-RK3399:
 
     runs-on: [self-hosted, Linux, ARM64, rockpro64]
@@ -15,13 +265,6 @@ jobs:
     - uses: actions/checkout@v3
       with:
         submodules: 'true'
-    - name: make capsimg.so
-      run: cd external/capsimg
-    - run: ./bootstrap.fs
-    - run: ./configure.fs
-    - run: make -f Makefile.fs
-    - run: cp capsimg.so ../..
-    - run: cd ../..
     - name: make for RK3399
       run: make -j4 PLATFORM=n2
     - uses: actions/upload-artifact@v3
@@ -29,6 +272,7 @@ jobs:
         name: amiberry-rk3399
         path: |
           amiberry
+          capsimg.so
           abr/**
           conf/**
           controllers/**

@@ -301,7 +301,7 @@ PROG   = amiberry
 #
 # SDL2 options
 #
-all: guisan $(PROG)
+all: guisan capsimg $(PROG)
 
 export CFLAGS := $(CPUFLAGS) $(CFLAGS) $(EXTRA_CFLAGS)
 export CXXFLAGS = $(CFLAGS) -std=gnu++17
@@ -636,5 +636,9 @@ cleanprofile:
 	
 guisan:
 	$(MAKE) -C external/libguisan
-	
+
+capsimg:
+	cd external/capsimg && ./bootstrap && ./configure && $(MAKE)
+	cp external/capsimg/capsimg.so ./
+
 -include $(DEPS)
