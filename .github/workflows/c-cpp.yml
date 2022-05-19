@@ -13,6 +13,16 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: 'true'
+    - name: make capsimg.so
+      run: |
+        cd external/capsimg
+        ./bootstrap.fs
+        ./configure.fs
+        make -f Makefile.fs
+        cp capsimg.so ../..
+        cd ../..
     - name: make for RK3399
       run: make -j4 PLATFORM=n2
     - uses: actions/upload-artifact@v3
