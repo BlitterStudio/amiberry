@@ -301,7 +301,7 @@ PROG   = amiberry
 #
 # SDL2 options
 #
-all: guisan capsimg $(PROG)
+all: guisan $(PROG)
 
 export CFLAGS := $(CPUFLAGS) $(CFLAGS) $(EXTRA_CFLAGS)
 export CXXFLAGS = $(CFLAGS) -std=gnu++17

@@ -15,6 +15,8 @@ jobs:
     - uses: actions/checkout@v3
       with:
         submodules: 'true'
+    - name: make capsimg
+      run: make capsimg
     - name: make for RPIOS RPI3-DMX 32-bit
       run: make -j4 PLATFORM=rpi3
     - uses: actions/upload-artifact@v3
@@ -40,6 +42,8 @@ jobs:
     - uses: actions/checkout@v3
       with:
         submodules: 'true'
+    - name: make capsimg
+      run: make capsimg
     - name: make for RPIOS RPI3-SDL2 32-bit
       run: make -j4 PLATFORM=rpi3-sdl2
     - uses: actions/upload-artifact@v3
@@ -65,6 +69,8 @@ jobs:
     - uses: actions/checkout@v3
       with:
         submodules: 'true'
+    - name: make capsimg
+      run: make capsimg
     - name: make for RPIOS RPI4-DMX 32-bit
       run: make -j4 PLATFORM=rpi4
     - uses: actions/upload-artifact@v3
@@ -90,6 +96,8 @@ jobs:
     - uses: actions/checkout@v3
       with:
         submodules: 'true'
+    - name: make capsimg
+      run: make capsimg
     - name: make for RPIOS RPI4-SDL2 32-bit
       run: make -j4 PLATFORM=rpi4-sdl2
     - uses: actions/upload-artifact@v3
@@ -115,6 +123,8 @@ jobs:
     - uses: actions/checkout@v3
       with:
         submodules: 'true'
+    - name: make capsimg
+      run: make capsimg
     - name: make for RPIOS RPI3-DMX 64-bit
       run: make -j4 PLATFORM=rpi3-64-dmx
     - uses: actions/upload-artifact@v3
@@ -140,6 +150,8 @@ jobs:
     - uses: actions/checkout@v3
       with:
         submodules: 'true'
+    - name: make capsimg
+      run: make capsimg
     - name: make for RPIOS RPI3-SDL2 64-bit
       run: make -j4 PLATFORM=rpi3-64-sdl2
     - uses: actions/upload-artifact@v3
@@ -165,6 +177,8 @@ jobs:
     - uses: actions/checkout@v3
       with:
         submodules: 'true'
+    - name: make capsimg
+      run: make capsimg
     - name: make for RPIOS RPI4-DMX 64-bit
       run: make -j4 PLATFORM=rpi4-64-dmx
     - uses: actions/upload-artifact@v3
@@ -190,6 +204,8 @@ jobs:
     - uses: actions/checkout@v3
       with:
         submodules: 'true'
+    - name: make capsimg
+      run: make capsimg
     - name: make for RPIOS RPI4-SDL2 64-bit
       run: make -j4 PLATFORM=rpi4-64-sdl2
     - uses: actions/upload-artifact@v3
@@ -215,6 +231,8 @@ jobs:
     - uses: actions/checkout@v3
       with:
         submodules: 'true'
+    - name: make capsimg
+      run: make capsimg
     - name: make for Manjaro RPI4-DMX 64-bit
       run: make -j4 PLATFORM=rpi4-64-dmx
     - uses: actions/upload-artifact@v3
@@ -240,6 +258,8 @@ jobs:
     - uses: actions/checkout@v3
       with:
         submodules: 'true'
+    - name: make capsimg
+      run: make capsimg
     - name: make for Manjaro RPI4-SDL2 64-bit
       run: make -j4 PLATFORM=rpi4-64-sdl2
     - uses: actions/upload-artifact@v3
@@ -265,6 +285,8 @@ jobs:
     - uses: actions/checkout@v3
       with:
         submodules: 'true'
+    - name: make capsimg
+      run: make capsimg
     - name: make for RK3399
       run: make -j4 PLATFORM=n2
     - uses: actions/upload-artifact@v3
