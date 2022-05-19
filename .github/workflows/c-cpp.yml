@@ -1,0 +1,30 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build-RK3399:
+
+    runs-on: [self-hosted, Linux, ARM64, rockpro64]
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: make for RK3399
+      run: make -j4 PLATFORM=n2
+    - uses: actions/upload-artifact@v3
+      with:
+        name: amiberry-rk3399
+        path: |
+          amiberry
+          abr/**
+          conf/**
+          controllers/**
+          data/**
+          kickstarts/**
+          savestates/**
+          screenshots/**
+          whdboot/**
