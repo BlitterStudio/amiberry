@@ -3,14 +3,21 @@ name: C/C++ CI
 on:
   push:
     branches: [ master ]
-  pull_request:
-    branches: [ master ]
+    tags: 
+      - v[1-9]+.[0-9]
 
 jobs:
-  build-rpios32-rpi3-dmx:
+  git-tag:
+    runs-on: [self-hosted]
+    outputs:
+      tag_name: ${{ steps.step1.outputs.TAG_NAME}}
+    steps:
+      - id: step1
+        run: echo "::set-output name=TAG_NAME::$(git describe)"
 
+  build-rpi3-dmx-32bit-rpios:
+    needs: git-tag
     runs-on: [self-hosted, Linux, ARM, rpios32, dmx]
-
     steps:
     - uses: actions/checkout@v3
       with:
@@ -21,7 +28,7 @@ jobs:
       run: make -j4 PLATFORM=rpi3
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-rpios32-rpi3-dmx
+        name: amiberry-${{needs.git-tag.outputs.tag_name}}-rpi3-dmx-32bit-rpios
         path: |
           amiberry
           capsimg.so
@@ -34,10 +41,9 @@ jobs:
           screenshots/**
           whdboot/**
 
-  build-rpios32-rpi3-sdl2:
-
+  build-rpi3-sdl2-32bit-rpios:
+    needs: git-tag
     runs-on: [self-hosted, Linux, ARM, rpios32]
-
     steps:
     - uses: actions/checkout@v3
       with:
@@ -48,7 +54,7 @@ jobs:
       run: make -j4 PLATFORM=rpi3-sdl2
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-rpios32-rpi3-sdl2
+        name: amiberry-${{needs.git-tag.outputs.tag_name}}-rpi3-sdl2-32bit-rpios
         path: |
           amiberry
           capsimg.so
@@ -61,10 +67,9 @@ jobs:
           screenshots/**
           whdboot/**
 
-  build-rpios32-rpi4-dmx:
-
+  build-rpi4-dmx-32bit-rpios:
+    needs: git-tag
     runs-on: [self-hosted, Linux, ARM, rpios32, dmx]
-
     steps:
     - uses: actions/checkout@v3
       with:
@@ -75,7 +80,7 @@ jobs:
       run: make -j4 PLATFORM=rpi4
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-rpios32-rpi4-dmx
+        name: amiberry-${{needs.git-tag.outputs.tag_name}}-rpi4-dmx-32bit-rpios
         path: |
           amiberry
           capsimg.so
@@ -88,10 +93,9 @@ jobs:
           screenshots/**
           whdboot/**
 
-  build-rpios32-rpi4-sdl2:
-
+  build-rpi4-sdl2-32bit-rpios:
+    needs: git-tag
     runs-on: [self-hosted, Linux, ARM, rpios32]
-
     steps:
     - uses: actions/checkout@v3
       with:
@@ -102,7 +106,7 @@ jobs:
       run: make -j4 PLATFORM=rpi4-sdl2
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-rpios32-rpi4-sdl2
+        name: amiberry-${{needs.git-tag.outputs.tag_name}}-rpi4-sdl2-32bit-rpios
         path: |
           amiberry
           capsimg.so
@@ -115,10 +119,9 @@ jobs:
           screenshots/**
           whdboot/**
 
-  build-rpios64-rpi3-dmx:
-
+  build-rpi3-dmx-64bit-rpios:
+    needs: git-tag
     runs-on: [self-hosted, Linux, ARM64, rpios64, dmx]
-
     steps:
     - uses: actions/checkout@v3
       with:
@@ -129,7 +132,7 @@ jobs:
       run: make -j4 PLATFORM=rpi3-64-dmx
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-rpios64-rpi3-dmx
+        name: amiberry-${{needs.git-tag.outputs.tag_name}}-rpi3-dmx-64bit-rpios
         path: |
           amiberry
           capsimg.so
@@ -142,10 +145,9 @@ jobs:
           screenshots/**
           whdboot/**
 
-  build-rpios64-rpi3-sdl2:
-
+  build-rpi3-sdl2-64bit-rpios:
+    needs: git-tag
     runs-on: [self-hosted, Linux, ARM64, rpios64]
-
     steps:
     - uses: actions/checkout@v3
       with:
@@ -156,7 +158,7 @@ jobs:
       run: make -j4 PLATFORM=rpi3-64-sdl2
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-rpios64-rpi3-sdl2
+        name: amiberry-${{needs.git-tag.outputs.tag_name}}-rpi3-sdl2-64bit-rpios
         path: |
           amiberry
           capsimg.so
@@ -169,10 +171,9 @@ jobs:
           screenshots/**
           whdboot/**
 
-  build-rpios64-rpi4-dmx:
-
+  build-rpi4-dmx-64bit-rpios:
+    needs: git-tag
     runs-on: [self-hosted, Linux, ARM64, rpios64, dmx]
-
     steps:
     - uses: actions/checkout@v3
       with:
@@ -183,7 +184,7 @@ jobs:
       run: make -j4 PLATFORM=rpi4-64-dmx
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-rpios64-rpi4-dmx
+        name: amiberry-${{needs.git-tag.outputs.tag_name}}-rpi4-dmx-64bit-rpios
         path: |
           amiberry
           capsimg.so
@@ -196,10 +197,9 @@ jobs:
           screenshots/**
           whdboot/**
 
-  build-rpios64-rpi4-sdl2:
-
+  build-rpi4-sdl2-64bit-rpios:
+    needs: git-tag
     runs-on: [self-hosted, Linux, ARM64, rpios64]
-
     steps:
     - uses: actions/checkout@v3
       with:
@@ -210,7 +210,7 @@ jobs:
       run: make -j4 PLATFORM=rpi4-64-sdl2
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-rpios64-rpi4-sdl2
+        name: amiberry-${{needs.git-tag.outputs.tag_name}}-rpi4-sdl2-64bit-rpios
         path: |
           amiberry
           capsimg.so
@@ -223,10 +223,9 @@ jobs:
           screenshots/**
           whdboot/**
 
-  build-manjaro-rpi4-dmx:
-
+  build-rpi4-dmx-64bit-manjaro:
+    needs: git-tag
     runs-on: [self-hosted, Linux, ARM64, manjaro]
-
     steps:
     - uses: actions/checkout@v3
       with:
@@ -237,7 +236,7 @@ jobs:
       run: make -j4 PLATFORM=rpi4-64-dmx
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-manjaro-rpi4-dmx
+        name: amiberry-${{needs.git-tag.outputs.tag_name}}-rpi4-dmx-64bit-manjaro
         path: |
           amiberry
           capsimg.so
@@ -250,10 +249,9 @@ jobs:
           screenshots/**
           whdboot/**
 
-  build-manjaro-rpi4-sdl2:
-
+  build-rpi4-sdl2-64bit-manjaro:
+    needs: git-tag
     runs-on: [self-hosted, Linux, ARM64, manjaro]
-
     steps:
     - uses: actions/checkout@v3
       with:
@@ -264,7 +262,7 @@ jobs:
       run: make -j4 PLATFORM=rpi4-64-sdl2
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-manjaro-rpi4-sdl2
+        name: amiberry-${{needs.git-tag.outputs.tag_name}}-rpi4-sdl2-64bit-manjaro
         path: |
           amiberry
           capsimg.so
@@ -277,10 +275,9 @@ jobs:
           screenshots/**
           whdboot/**
           
-  build-RK3399:
-
+  build-RK3399-sdl2-64bit-manjaro:
+    needs: git-tag
     runs-on: [self-hosted, Linux, ARM64, rockpro64]
-
     steps:
     - uses: actions/checkout@v3
       with:
@@ -291,7 +288,7 @@ jobs:
       run: make -j4 PLATFORM=n2
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-rk3399
+        name: amiberry--${{needs.git-tag.outputs.tag_name}}-rk3399-sdl2-64bit-manjaro
         path: |
           amiberry
           capsimg.so
@@ -303,3 +300,4 @@ jobs:
           savestates/**
           screenshots/**
           whdboot/**
+    
