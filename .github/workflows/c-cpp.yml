@@ -10,13 +10,15 @@ jobs:
   git-tag:
     runs-on: [self-hosted]
     outputs:
-      tag_name: ${{ steps.step1.outputs.TAG_NAME}}
+      tag_name: ${{ steps.vars.outputs.TAG_NAME }}
     steps:
       - uses: actions/checkout@v3
         with:
+          fetch-depth: 0
           submodules: 'true'
-      - id: step1
-        run: echo "::set-output name=TAG_NAME::$(git describe)"
+      - name: Set output
+        id: vars
+        run: echo ::set-output name=TAG_NAME::$(git describe)
 
   build-rpi3-dmx-32bit-rpios:
     needs: git-tag
@@ -31,7 +33,7 @@ jobs:
       run: make -j4 PLATFORM=rpi3
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-${{needs.git-tag.outputs.tag_name}}-rpi3-dmx-32bit-rpios
+        name: amiberry-${{ needs.git-tag.outputs.tag_name }}-rpi3-dmx-32bit-rpios
         path: |
           amiberry
           capsimg.so
@@ -57,7 +59,7 @@ jobs:
       run: make -j4 PLATFORM=rpi3-sdl2
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-${{needs.git-tag.outputs.tag_name}}-rpi3-sdl2-32bit-rpios
+        name: amiberry-${{ needs.git-tag.outputs.tag_name }}-rpi3-sdl2-32bit-rpios
         path: |
           amiberry
           capsimg.so
@@ -83,7 +85,7 @@ jobs:
       run: make -j4 PLATFORM=rpi4
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-${{needs.git-tag.outputs.tag_name}}-rpi4-dmx-32bit-rpios
+        name: amiberry-${{ needs.git-tag.outputs.tag_name }}-rpi4-dmx-32bit-rpios
         path: |
           amiberry
           capsimg.so
@@ -109,7 +111,7 @@ jobs:
       run: make -j4 PLATFORM=rpi4-sdl2
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-${{needs.git-tag.outputs.tag_name}}-rpi4-sdl2-32bit-rpios
+        name: amiberry-${{ needs.git-tag.outputs.tag_name }}-rpi4-sdl2-32bit-rpios
         path: |
           amiberry
           capsimg.so
@@ -135,7 +137,7 @@ jobs:
       run: make -j4 PLATFORM=rpi3-64-dmx
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-${{needs.git-tag.outputs.tag_name}}-rpi3-dmx-64bit-rpios
+        name: amiberry-${{ needs.git-tag.outputs.tag_name }}-rpi3-dmx-64bit-rpios
         path: |
           amiberry
           capsimg.so
@@ -161,7 +163,7 @@ jobs:
       run: make -j4 PLATFORM=rpi3-64-sdl2
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-${{needs.git-tag.outputs.tag_name}}-rpi3-sdl2-64bit-rpios
+        name: amiberry-${{ needs.git-tag.outputs.tag_name }}-rpi3-sdl2-64bit-rpios
         path: |
           amiberry
           capsimg.so
@@ -187,7 +189,7 @@ jobs:
       run: make -j4 PLATFORM=rpi4-64-dmx
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-${{needs.git-tag.outputs.tag_name}}-rpi4-dmx-64bit-rpios
+        name: amiberry-${{ needs.git-tag.outputs.tag_name }}-rpi4-dmx-64bit-rpios
         path: |
           amiberry
           capsimg.so
@@ -213,7 +215,7 @@ jobs:
       run: make -j4 PLATFORM=rpi4-64-sdl2
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-${{needs.git-tag.outputs.tag_name}}-rpi4-sdl2-64bit-rpios
+        name: amiberry-${{ needs.git-tag.outputs.tag_name }}-rpi4-sdl2-64bit-rpios
         path: |
           amiberry
           capsimg.so
@@ -239,7 +241,7 @@ jobs:
       run: make -j4 PLATFORM=rpi4-64-dmx
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-${{needs.git-tag.outputs.tag_name}}-rpi4-dmx-64bit-manjaro
+        name: amiberry-${{ needs.git-tag.outputs.tag_name }}-rpi4-dmx-64bit-manjaro
         path: |
           amiberry
           capsimg.so
@@ -265,7 +267,7 @@ jobs:
       run: make -j4 PLATFORM=rpi4-64-sdl2
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-${{needs.git-tag.outputs.tag_name}}-rpi4-sdl2-64bit-manjaro
+        name: amiberry-${{ needs.git-tag.outputs.tag_name }}-rpi4-sdl2-64bit-manjaro
         path: |
           amiberry
           capsimg.so
@@ -291,7 +293,7 @@ jobs:
       run: make -j4 PLATFORM=n2
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry--${{needs.git-tag.outputs.tag_name}}-rk3399-sdl2-64bit-manjaro
+        name: amiberry--${{ needs.git-tag.outputs.tag_name }}-rk3399-sdl2-64bit-manjaro
         path: |
           amiberry
           capsimg.so
