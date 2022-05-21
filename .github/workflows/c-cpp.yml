@@ -306,3 +306,19 @@ jobs:
           screenshots/**
           whdboot/**
     
+  build-macOS-64bit-intel:
+    needs: git-tag
+    runs-on: [self-hosted, macOS, X64]
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'true'
+    - name: make capsimg
+      run: make capsimg
+    - name: make for macOS X64
+      run: make -j4 PLATFORM=osx-x86
+    - uses: actions/upload-artifact@v3
+      with:
+        name: amiberry--${{ needs.git-tag.outputs.tag_name }}-macOS-64bit-intel
+        path: |
+          Amiberry.app/**
