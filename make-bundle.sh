@@ -16,9 +16,9 @@ mkdir -p Amiberry.app/Contents/Frameworks
 mkdir -p Amiberry.app/Contents/Resources
 # Copy executable into App bundle
 cp amiberry Amiberry.app/Contents/MacOS/Amiberry
-# Copy launch script into the bundle
-cp run_amiberry.zsh Amiberry.app/Contents/MacOS
-chmod +x Amiberry.app/Contents/MacOS/run_amiberry.zsh
+# Copy init script into the bundle
+cp macos_init_amiberry.zsh Amiberry.app/Contents/Resources
+chmod +x Amiberry.app/Contents/Resources/macos_init_amiberry.zsh
 # Copy parameter list into the bundle
 cat Info.plist.template | sed -e "s/LONGVERSION/$LONGVER/" | sed -e "s/VERSION/$VERSION/" | sed -e "s/MAJOR/$MAJOR/" | sed -e "s/MINOR/$MINOR/" > Amiberry.app/Contents/Info.plist
 # Self-sign binary

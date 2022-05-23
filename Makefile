@@ -650,5 +650,9 @@ cleanprofile:
 	
 guisan:
 	$(MAKE) -C external/libguisan
-	
+
+capsimg:
+	cd external/capsimg && ./bootstrap && ./configure && $(MAKE)
+	cp external/capsimg/capsimg.so ./
+
 -include $(DEPS)

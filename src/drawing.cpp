@@ -411,7 +411,7 @@ int coord_native_to_amiga_y (int y)
 	if (!native2amiga_line_map || y < 0)
 		return -1;
 	if (y >= native2amiga_line_map_height) 
-		return native2amiga_line_map_height;
+		return native2amiga_line_map[native2amiga_line_map_height] + thisframe_y_adjust - minfirstline;
 	return native2amiga_line_map[y] + thisframe_y_adjust - minfirstline;
 }
 #else
