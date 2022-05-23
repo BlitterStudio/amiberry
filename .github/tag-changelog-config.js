@@ -13,7 +13,7 @@ module.exports = {
       { types: ["other"], label: "Other Changes" },
     ],
   
-    // excludeTypes: ["other"],
+    excludeTypes: ["other"],
   
     renderTypeSection: function (label, commits) {
       let text = `\n## ${label}\n`;
