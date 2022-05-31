@@ -1,6 +1,6 @@
 # Amiga emulator for ARM boards
 
-![Publish](https://vsrm.dev.azure.com/BlitterStudio/_apis/public/Release/badge/982ec411-61fe-404f-a8c8-6ee76182cead/1/2)
+[![C/C++ CI](https://github.com/midwan/amiberry/actions/workflows/c-cpp.yml/badge.svg)](https://github.com/midwan/amiberry/actions/workflows/c-cpp.yml)
 
 [![Gitter](https://badges.gitter.im/amiberry/Amiberry.svg)](https://gitter.im/amiberry/Amiberry?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
