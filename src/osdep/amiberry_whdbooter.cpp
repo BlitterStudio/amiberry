@@ -590,6 +590,7 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 						const auto* custom_settings = temp_node->GetText();
 						if (custom_settings)
 						{
+							write_log("WHDBooter - Game Custom Settings: \n%s\n", custom_settings);
 							parse_custom_settings(prefs, custom_settings);
 						}
 					}
