@@ -59,6 +59,7 @@ add_executable(amiberry
         src/parser.cpp
         src/rommgr.cpp
         src/rtc.cpp
+        src/sampler.cpp
         src/savestate.cpp
         src/scp.cpp
         src/scsi.cpp
@@ -169,7 +170,19 @@ add_executable(amiberry
         src/archivers/zip/unzip.cpp
         src/caps/caps_amiberry.cpp
         src/machdep/support.cpp
+        src/floppybridge/ArduinoFloppyBridge.cpp
+        src/floppybridge/ArduinoInterface.cpp
+        src/floppybridge/CommonBridgeTemplate.cpp
         src/floppybridge/floppybridge_lib.cpp
+        src/floppybridge/ftdi.cpp
+        src/floppybridge/GreaseWeazleBridge.cpp
+        src/floppybridge/GreaseWeazleInterface.cpp
+        src/floppybridge/pll.cpp
+        src/floppybridge/RotationExtractor.cpp
+        src/floppybridge/SerialIO.cpp
+        src/floppybridge/SuperCardProBridge.cpp
+        src/floppybridge/SuperCardProInterface.cpp
+        src/floppybridge/FloppyBridge.cpp
         src/osdep/ahi_v1.cpp
         src/osdep/bsdsocket_host.cpp
         src/osdep/cda_play.cpp
@@ -193,6 +206,7 @@ add_executable(amiberry
         src/osdep/retroarch.cpp
         src/sounddep/sound.cpp
         src/threaddep/threading.cpp
+        src/osdep/gui/ControllerMap.cpp
         src/osdep/gui/SelectorEntry.cpp
         src/osdep/gui/ShowHelp.cpp
         src/osdep/gui/ShowMessage.cpp
@@ -227,6 +241,7 @@ add_executable(amiberry
         src/osdep/gui/PanelSavestate.cpp
         src/osdep/gui/main_window.cpp
         src/osdep/gui/Navigation.cpp
+        src/osdep/aarch64_helper.s
         src/newcpu.cpp
         src/newcpu_common.cpp
         src/readcpu.cpp

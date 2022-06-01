@@ -1,7 +1,7 @@
 module.exports = {
     types: [
       { types: ["feat", "feature"], label: "🎉 New Features" },
-      { types: ["fix", "bugfix", "bug"], label: "🐛 Bugfixes" },
+      { types: ["fix", "bugfix"], label: "🐛 Bugfixes" },
       { types: ["improvements", "enhancement"], label: "🔨 Improvements" },
       { types: ["perf"], label: "🏎️ Performance Improvements" },
       { types: ["build", "ci"], label: "🏗️ Build System" },
@@ -13,7 +13,7 @@ module.exports = {
       { types: ["other"], label: "Other Changes" },
     ],
   
-    // excludeTypes: ["other"],
+    excludeTypes: ["other"],
   
     renderTypeSection: function (label, commits) {
       let text = `\n## ${label}\n`;

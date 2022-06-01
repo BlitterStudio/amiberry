@@ -107,73 +107,71 @@ void remove_char(char* array, int len, int index)
 	array[len - 1] = 0;
 }
 
+std::string trim_full_line(std::string full_line)
+{
+	const std::string tab = "\t";
+
+	auto found = full_line.find(tab);
+	while (found != std::string::npos)
+	{
+		full_line.replace(found, tab.size(), "");
+		found = full_line.find(tab);
+	}
+
+	return full_line;
+}
+
 void parse_custom_settings(struct uae_prefs* p, const char* settings)
 {
-	char temp_options[MAX_DPATH];
-	strcpy(temp_options, settings);
+	const std::string lf = "\n";
+	const std::string check = "amiberry_custom";
+	auto full_line = string(settings);
 
-	auto* full_line = strtok(temp_options, "\n");
-
-	while (full_line != nullptr)
+	auto lf_found = full_line.find(lf);
+	while (lf_found != std::string::npos)
 	{
-		std::string line = full_line;
-		std::string check = "amiberry_custom";
+		const auto start = full_line.find_first_of(lf, lf_found);
+		auto end = full_line.find_first_of(lf, start + 1);
+		if (end == std::string::npos) end = full_line.size();
 
-		if (strstr(line.c_str(), check.c_str()) != nullptr)
+		std::string line = full_line.substr(start + 1, end - start - 1);
+		std::string trimmed_line = trim_full_line(line);
+		if (trimmed_line.find(check) != std::string::npos)
 		{
-			cfgfile_parse_line(p, full_line, 0);
+			const auto cstr = new char[trimmed_line.length() + 1];
+			strcpy(cstr, trimmed_line.c_str());
+			cfgfile_parse_line(p, cstr, 0);
+			delete[] cstr;
 		}
-		full_line = strtok(nullptr, "\n");
+
+		lf_found = full_line.find(lf, end + 1);
 	}
 }
 
-struct membuf final : std::streambuf
-{
-	membuf(char* begin, char* end)
-	{
-		this->setg(begin, begin, end);
-	}
-};
-
 std::string find_whdload_game_option(const TCHAR* find_setting, const char* whd_options)
 {
-	char temp_options[MAX_DPATH];
-	char temp_setting[MAX_DPATH];
-	char temp_setting_tab[MAX_DPATH];
+	const std::string lf = "\n";
+	const auto check = string(find_setting);
+	auto full_line = string(whd_options);
 
-	strcpy(temp_options, whd_options);
-	const auto* output = "nul";
-
-	const auto* full_line = strtok(temp_options, "\n");
-
-	while (full_line != nullptr)
+	auto lf_found = full_line.find(lf);
+	while (lf_found != std::string::npos)
 	{
-		// Do checks with and without leading tabs  (*** THIS SHOULD BE IMPROVED ***)
-		std::string t = full_line;
+		const auto start = full_line.find_first_of(lf, lf_found);
+		auto end = full_line.find_first_of(lf, start + 1);
+		if (end == std::string::npos) end = full_line.size();
 
-		strcpy(temp_setting_tab, "\t\t");
-		strcat(temp_setting_tab, find_setting);
-		strcat(temp_setting_tab, "=");
-
-		strcpy(temp_setting, find_setting);
-		strcat(temp_setting, "=");
-
-		// check the beginning of the full line
-		if (strncmp(temp_setting, full_line, strlen(temp_setting)) == 0)
+		std::string trimmed_line = trim_full_line(full_line.substr(start + 1, end - start - 1));
+		const auto found = trimmed_line.find(check);
+		if (found != std::string::npos)
 		{
-			t.erase(t.begin(), t.begin() + strlen(temp_setting));
-			return t;
-		}
-		if (strncmp(temp_setting_tab, full_line, strlen(temp_setting_tab)) == 0)
-		{
-			t.erase(t.begin(), t.begin() + strlen(temp_setting_tab));
-			return t;
+			return trimmed_line.substr(found + check.size() + 1);
 		}
 
-		full_line = strtok(nullptr, "\n");
+		lf_found = full_line.find(lf, end + 1);
 	}
 
-	return output;
+	return "nul";
 }
 
 game_options get_game_settings(const char* HW)
@@ -590,6 +588,7 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 						const auto* custom_settings = temp_node->GetText();
 						if (custom_settings)
 						{
+							write_log("WHDBooter - Game Custom Settings: \n%s\n", custom_settings);
 							parse_custom_settings(prefs, custom_settings);
 						}
 					}
