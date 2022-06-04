@@ -164,6 +164,63 @@ jobs:
         artifacts: |
           amiberry-${{ steps.tag.outputs.tag }}-rpi4-dmx-32bit-rpios.zip
 
+  build-rpi4-sdl2-32bit-docker:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'true'
+    - name: Run the build process with Docker
+      uses: addnab/docker-run-action@v3
+      with:
+        image: midwan/amiberry-docker-armhf:latest
+        options: -v ${{ github.workspace }}:/build
+        run: |
+          make capsimg
+          make -j8 PLATFORM=rpi4-sdl2
+    - name: copy binary locally
+      run: cp amiberry ~/projects/amiberry/amiberry
+    - uses: actions/upload-artifact@v3
+      with:
+        name: amiberry-rpi4-sdl2-32bit-docker
+        path: |
+          amiberry
+          capsimg.so
+          abr/**
+          conf/**
+          controllers/**
+          data/**
+          kickstarts/**
+          savestates/**
+          screenshots/**
+          whdboot/**
+    - name: Get tag
+      if: github.ref_type == 'tag'
+      id: tag
+      uses: dawidd6/action-get-tag@v1
+      with:
+        # Optionally strip `v` prefix
+        strip_v: false
+    - name: ZIP binaries
+      if: github.ref_type == 'tag'
+      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-rpi4-sdl2-32bit-rpios.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
+    - name: Create Changelog
+      if: github.ref_type == 'tag'
+      id: changelog
+      uses: loopwerk/tag-changelog@v1
+      with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config_file: .github/tag-changelog-config.js
+    - name: Create Release
+      if: github.ref_type == 'tag'
+      uses: ncipollo/release-action@v1
+      with:
+        allowUpdates: true
+        omitBodyDuringUpdate: true
+        body: ${{ steps.changelog.outputs.changes }}
+        artifacts: |
+          amiberry-${{ steps.tag.outputs.tag }}-rpi4-sdl2-32bit-rpios.zip
+
   build-rpi4-sdl2-32bit-rpios:
     runs-on: [self-hosted, Linux, ARM, rpios32]
     steps:
