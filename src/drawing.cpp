@@ -271,6 +271,7 @@ static int visible_top_start, visible_bottom_stop;
 /* same for blank */
 static int vblank_top_start, vblank_bottom_stop;
 static int hblank_left_start, hblank_right_stop;
+static int hblank_left_start_hard, hblank_right_stop_hard;
 static bool exthblank, extborder, exthblanken;
 
 static int linetoscr_x_adjust_pixbytes, linetoscr_x_adjust_pixels;
@@ -637,13 +638,18 @@ int get_vertical_visible_height(bool useoldsize)
 static void set_hblanking_limits(void)
 {
 	if (currprefs.gfx_overscanmode == OVERSCANMODE_ULTRA) {
+		hblank_left_start_hard = visible_left_start;
+		hblank_right_stop_hard = visible_right_stop;
 		return;
 	}
+
+	hblank_left_start_hard = hblank_left_start;
+	hblank_right_stop_hard = hblank_right_stop;
 
 	// horizontal blanking
 	bool hardwired = !dp_for_drawing || !ce_is_extblankset(colors_for_drawing.extra);
 	bool doblank = false;
-	int hbstrt = (235 << CCK_SHRES_SHIFT) - 3;
+	int hbstrt = ((maxhpos + 8) << CCK_SHRES_SHIFT) - 3;
 	int hbstop = (47 << CCK_SHRES_SHIFT) - 7;
 
 	if (currprefs.gfx_overscanmode < OVERSCANMODE_OVERSCAN) {
@@ -656,6 +662,14 @@ static void set_hblanking_limits(void)
 		}
 	}
 
+	// programmed mode with hardwired hblanking
+	if (hblank_left_start_hard < coord_hw_to_window_x_shres(hbstop)) {
+		hblank_left_start_hard = coord_hw_to_window_x_shres(hbstop);
+	}
+	if (hblank_right_stop_hard > coord_hw_to_window_x_shres(hbstrt)) {
+		hblank_right_stop_hard = coord_hw_to_window_x_shres(hbstrt);
+	}
+
 	if (hardwired) {
 		doblank = true;
 	} else if (currprefs.gfx_overscanmode <= OVERSCANMODE_OVERSCAN) {
@@ -666,6 +680,7 @@ static void set_hblanking_limits(void)
 	}
 
 	if (doblank && programmedmode != 1) {
+		// programmed mode with programmed hblanking
 		// reposition to sync
 		// use hardwired hblank emulation as overscan blanking.
 		if ((new_beamcon0 & bemcon0_hsync_mask) && !hardwired) {
@@ -1229,6 +1244,10 @@ static void pfield_init_linetoscr (int lineno, bool border)
 			if (playfield_end < linetoscr_diw_end && hblank_right_stop > playfield_end) {
 				playfield_end = linetoscr_diw_end;
 			}
+			// A1000 shows extra sprite pixel after hdiw end TODO: Denise feature, not Agnus.
+			if (currprefs.cs_dipagnus) {
+				sprite_end += 1 << lores_shift;
+			}
 			int plfleft = dp_for_drawing->plfleft - DDF_OFFSET;
 			int left = coord_hw_to_window_x_lores(plfleft);
 			if (aga_mode) {
@@ -1537,6 +1556,9 @@ static void fill_line_border(int lineno)
 	int endpos = visible_left_border + vidinfo->drawbuffer.inwidth;
 	int w = endpos - lastpos;
 
+	int hblank_left = exthblank ? hblank_left_start : hblank_left_start_hard;
+	int hblank_right = exthblank ? hblank_right_stop : hblank_right_stop_hard;
+
 	if (lineno < visible_top_start || lineno < vblank_top_start || lineno >= visible_bottom_stop || lineno >= vblank_bottom_stop || full_blank) {
 		int b = hposblank;
 		hposblank = 3;
@@ -1558,7 +1580,7 @@ static void fill_line_border(int lineno)
 		return;
 	}
 	// hblank not visible
-	if (hblank_left_start <= lastpos && hblank_right_stop >= endpos) {
+	if (hblank_left <= lastpos && hblank_right >= endpos) {
 		fill_line2(lastpos, w);
 		if (need_genlock_data) {
 			memset(xlinebuffer_genlock + lastpos, 0, w);
@@ -1567,13 +1589,13 @@ static void fill_line_border(int lineno)
 	}
 
 	// left, right or both hblanks visible
-	if (lastpos < hblank_left_start) {
-		int t = hblank_left_start < endpos ? hblank_left_start : endpos;
+	if (lastpos < hblank_left) {
+		int t = hblank_left < endpos ? hblank_left : endpos;
 		pfield_do_fill_line(lastpos, t, true);
 		lastpos = t;
 	}
-	if (lastpos < hblank_right_stop) {
-		int t = hblank_right_stop < endpos ? hblank_right_stop : endpos;
+	if (lastpos < hblank_right) {
+		int t = hblank_right < endpos ? hblank_right : endpos;
 		pfield_do_fill_line(lastpos, t, false);
 		lastpos = t;
 	}
@@ -2258,6 +2280,77 @@ static void pfield_set_linetoscr (void)
 		}
 	}
 #endif
+	// A1000 Denise right border "bordersprite" bug
+	if (currprefs.cs_dipagnus) {
+		if (res_shift == 0) {
+			switch (vidinfo->drawbuffer.pixbytes) {
+				case 2:
+				pfield_do_linetoscr_spriteonly = linetoscr_16_aga_spronly;
+				break;
+				case 4:
+				pfield_do_linetoscr_spriteonly = linetoscr_32_aga_spronly;
+				break;
+			}
+		} else if (res_shift == 2) {
+			switch (vidinfo->drawbuffer.pixbytes) {
+				case 2:
+				pfield_do_linetoscr_spriteonly = linetoscr_16_stretch2_aga_spronly;
+				break;
+				case 4:
+				pfield_do_linetoscr_spriteonly = linetoscr_32_stretch2_aga_spronly;
+				break;
+			}
+		} else if (res_shift == 1) {
+			switch (vidinfo->drawbuffer.pixbytes) {
+				case 2:
+				pfield_do_linetoscr_spriteonly = linetoscr_16_stretch1_aga_spronly;
+				break;
+				case 4:
+				pfield_do_linetoscr_spriteonly = linetoscr_32_stretch1_aga_spronly;
+				break;
+			}
+		} else if (res_shift == -1) {
+			if (currprefs.gfx_lores_mode) {
+				switch (vidinfo->drawbuffer.pixbytes) {
+					case 2:
+					pfield_do_linetoscr_spriteonly = linetoscr_16_shrink1f_aga_spronly;
+					break;
+					case 4:
+					pfield_do_linetoscr_spriteonly = linetoscr_32_shrink1f_aga_spronly;
+					break;
+				}
+			} else {
+				switch (vidinfo->drawbuffer.pixbytes) {
+					case 2:
+					pfield_do_linetoscr_spriteonly = linetoscr_16_shrink1_aga_spronly;
+					break;
+					case 4:
+					pfield_do_linetoscr_spriteonly = linetoscr_32_shrink1_aga_spronly;
+					break;
+				}
+			}
+		} else if (res_shift == -2) {
+			if (currprefs.gfx_lores_mode) {
+				switch (vidinfo->drawbuffer.pixbytes) {
+					case 2:
+					pfield_do_linetoscr_spriteonly = linetoscr_16_shrink2f_aga_spronly;
+					break;
+					case 4:
+					pfield_do_linetoscr_spriteonly = linetoscr_32_shrink2f_aga_spronly;
+					break;
+				}
+			} else {
+				switch (vidinfo->drawbuffer.pixbytes) {
+					case 2:
+					pfield_do_linetoscr_spriteonly = linetoscr_16_shrink2_aga_spronly;
+					break;
+					case 4:
+					pfield_do_linetoscr_spriteonly = linetoscr_32_shrink2_aga_spronly;
+					break;
+				}
+			}
+		}
+	}
 #ifdef ECS_DENISE
 	if (!aga_mode && ecsshres) {
 		// TODO: genlock support
@@ -2385,6 +2478,26 @@ static void pfield_set_linetoscr (void)
 	}
 	pfield_do_linetoscr_normal2 = pfield_do_linetoscr_normal;
 	pfield_do_linetoscr_sprite2 = pfield_do_linetoscr_sprite2;
+}
+
+// A1000 Denise right border bug: sprites have 1 extra lores pixel visible
+static void pfield_do_linetoscr_bordersprite_a1000(int start, int stop, int blank)
+{
+	if (blank || exthblank || extborder) {
+		pfield_do_fill_line(start, stop, blank);
+		return;
+	}
+	pfield_do_fill_line(start, stop, blank);
+	if (start < sprite_playfield_start) {
+		return;
+	}
+	if (stop > sprite_end) {
+		stop = sprite_end;
+		if (start >= stop) {
+			return;
+		}
+	}
+	pfield_do_linetoscr_spriteonly(src_pixel, start, stop, false);
 }
 
 // left or right AGA border sprite
@@ -3145,10 +3258,15 @@ static void pfield_expand_dp_bplcon(void)
 	bplplanecnt = dp_for_drawing->nr_planes;
 	bplham = dp_for_drawing->ham_seen;
 	bplehb = dp_for_drawing->ehb_seen;
-	if (ecs_denise && (dp_for_drawing->bplcon2 & 0x0200)) {
-		bplehb = 0;
-		if (!aga_mode)
-			bplehb = -1;
+	if (ecs_denise) {
+		// Check for KillEHB bit in ECS/AGA
+		if (dp_for_drawing->bplcon2 & 0x0200) {
+			bplehb = 0;
+			if (!aga_mode)
+				bplehb = -1;
+		}
+	} else if ((currprefs.cs_denisenoehb)) {
+		bplehb = -1;
 	}
 	bplcolorburst = (dp_for_drawing->bplcon0 & 0x200) != 0;
 	if (!bplcolorburst)
@@ -3405,9 +3523,11 @@ static void do_color_changes(line_draw_func worker_border, line_draw_func worker
 			} else {
 				// non-vblank scanline
 
+				int hblank_left = exthblank ? hblank_left_start : hblank_left_start_hard;
+
 				// left hblank (left edge to hblank end)
-				if (nextpos_in_range > lastpos && lastpos < hblank_left_start) {
-					int t = nextpos_in_range <= hblank_left_start ? nextpos_in_range : hblank_left_start;
+				if (nextpos_in_range > lastpos && lastpos < hblank_left) {
+					int t = nextpos_in_range <= hblank_left ? nextpos_in_range : hblank_left;
 					(*worker_border)(lastpos, t, 1);
 					lastpos = t;
 				}
@@ -3470,16 +3590,18 @@ static void do_color_changes(line_draw_func worker_border, line_draw_func worker
 					}
 				}
 
+				int hblank_right = exthblank ? hblank_right_stop : hblank_right_stop_hard;
+
 				// right border (playfield end to hblank start)
 				if (nextpos_in_range > lastpos && lastpos >= playfield_end_pre) {
-					int t = nextpos_in_range <= hblank_right_stop ? nextpos_in_range : hblank_right_stop;
+					int t = nextpos_in_range <= hblank_right ? nextpos_in_range : hblank_right;
 					(*worker_border)(lastpos, t, 0);
 					lastpos = t;
 				}
 
 				// right hblank (hblank start to right edge, hblank start may be earlier than playfield end)
-				if (nextpos_in_range > hblank_right_stop) {
-					(*worker_border) (hblank_right_stop, nextpos_in_range, 1);
+				if (nextpos_in_range > hblank_right) {
+					(*worker_border) (hblank_right, nextpos_in_range, 1);
 					lastpos = nextpos_in_range;
 				}
 			}
@@ -3691,12 +3813,17 @@ static void pfield_draw_line(struct vidbuffer *vb, int lineno, int gfx_ypos, int
 			}
 		}
 
-#ifdef AGA
-		if (dip_for_drawing->nr_sprites && ce_is_bordersprite(colors_for_drawing.extra) && !ce_is_borderblank(colors_for_drawing.extra) && dp_for_drawing->bordersprite_seen)
-			do_color_changes(pfield_do_linetoscr_bordersprite_aga, pfield_do_linetoscr_spr, lineno);
-		else
-#endif
+		if (dip_for_drawing->nr_sprites) {
+			if (ce_is_bordersprite(colors_for_drawing.extra) && !ce_is_borderblank(colors_for_drawing.extra) && dp_for_drawing->bordersprite_seen) {
+				do_color_changes(pfield_do_linetoscr_bordersprite_aga, pfield_do_linetoscr_spr, lineno);
+			} else if (currprefs.cs_dipagnus) {
+				do_color_changes(pfield_do_linetoscr_bordersprite_a1000, pfield_do_linetoscr_spr, lineno);
+			} else {
+				do_color_changes(pfield_do_fill_line, dip_for_drawing->nr_sprites ? pfield_do_linetoscr_spr : pfield_do_linetoscr, lineno);
+			}
+		} else {
 			do_color_changes(pfield_do_fill_line, dip_for_drawing->nr_sprites ? pfield_do_linetoscr_spr : pfield_do_linetoscr, lineno);
+		}
 
 		//if (dh == dh_emerg)
 		//	memcpy (row_map[gfx_ypos], xlinebuffer + linetoscr_x_adjust_pixbytes, vidinfo->drawbuffer.pixbytes * vidinfo->drawbuffer.inwidth);
@@ -3705,7 +3832,7 @@ static void pfield_draw_line(struct vidbuffer *vb, int lineno, int gfx_ypos, int
 			//if (dh == dh_emerg)
 			//	memcpy (row_map[follow_ypos], xlinebuffer + linetoscr_x_adjust_pixbytes, vidinfo->drawbuffer.pixbytes * vidinfo->drawbuffer.inwidth);
 			//else if (dh == dh_buf)
-				memcpy (row_map[follow_ypos], row_map[gfx_ypos], vidinfo->drawbuffer.pixbytes * vidinfo->drawbuffer.inwidth);
+				memcpy(row_map[follow_ypos], row_map[gfx_ypos], vidinfo->drawbuffer.pixbytes * vidinfo->drawbuffer.inwidth);
 			//if (need_genlock_data)
 				//memcpy(row_map_genlock[follow_ypos], row_map_genlock[gfx_ypos], vidinfo->drawbuffer.inwidth);
 		}

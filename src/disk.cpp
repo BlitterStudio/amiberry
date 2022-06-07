@@ -288,10 +288,10 @@ static int dirhash (const uae_char *name)
 	uae_u32 hash;
 	int i;
 
-	hash = strlen (name);
-	for(i = 0; i < strlen (name); i++) {
+	hash = strlen(name);
+	for(i = 0; i < strlen(name); i++) {
 		hash = hash * 13;
-		hash = hash + toupper (name[i]);
+		hash = hash + toupper(name[i]);
 		hash = hash & 0x7ff;
 	}
 	hash = hash % ((FS_FLOPPY_BLOCKSIZE / 4) - 56);

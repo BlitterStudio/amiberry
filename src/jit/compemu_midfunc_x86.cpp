@@ -112,7 +112,7 @@ MIDFUNC(0,duplicate_carry,(void))
 {
 	evict(FLAGX);
 	make_flags_live_internal();
-	COMPCALL(setcc_m)((uintptr)live.state[FLAGX].mem, NATIVE_CC_CS);
+	COMPCALL(setcc_m)(JITPTR live.state[FLAGX].mem, NATIVE_CC_CS);
 	log_vwrite(FLAGX);
 }
 
@@ -172,7 +172,7 @@ MIDFUNC(6, setcc_for_cntzero, (RR4 /* cnt */, RR4 data, RR4 odata, int obit, int
 	branchadd2 = get_target();
 	skip_byte();
 
-	*branchadd4 = (uintptr)get_target() - ((uintptr)branchadd4 + 1);
+	*branchadd4 = JITPTR get_target() - (JITPTR branchadd4 + 1);
 	// Shift count: zero, same or larger than data size
 	// Need to update C, N and Z.
 	raw_popfl();
@@ -200,20 +200,20 @@ MIDFUNC(6, setcc_for_cntzero, (RR4 /* cnt */, RR4 data, RR4 odata, int obit, int
 	// Non-zero shift count.
 	// Do not modify C, N and Z.
 	// C -> X
-	*branchadd2 = (uintptr)get_target() - ((uintptr)branchadd2 + 1);
+	*branchadd2 = JITPTR get_target() - (JITPTR branchadd2 + 1);
 	raw_popfl();
 	// Execute "duplicate_carry()"
-	COMPCALL(setcc_m)((uintptr)live.state[FLAGX].mem, NATIVE_CC_CS);
+	COMPCALL(setcc_m)(JITPTR live.state[FLAGX].mem, NATIVE_CC_CS);
 	log_vwrite(FLAGX);
 	raw_jmp_b_oponly();
 	branchadd3 = get_target();
 	skip_byte();
 
 	// Zero shift count after CNZ adjustments
-	*branchadd1 = (uintptr)get_target() - ((uintptr)branchadd1 + 1);
+	*branchadd1 = JITPTR get_target() - (JITPTR branchadd1 + 1);
 	raw_popfl();
 
-	*branchadd3 = (uintptr)get_target() - ((uintptr)branchadd3 + 1);
+	*branchadd3 = JITPTR get_target() - (JITPTR branchadd3 + 1);
 }
 
 /*
@@ -2885,7 +2885,7 @@ static inline void write_jmp_target(uae_u32 *jmpaddr, cpuop_func* a) {
 }
 
 static inline void emit_jmp_target(uae_u32 a) {
-	emit_long(a-((uintptr)target+4));
+	emit_long(a-(JITPTR target+4));
 }
 
 

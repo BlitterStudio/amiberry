@@ -60,7 +60,7 @@
 bool check_prefs_changed_comp (bool checkonly) { return false; }
 #endif
 /* For faster JIT cycles handling */
-uae_s32 pissoff = 0;
+int pissoff = 0;
 
 #ifdef AMIBERRY
 extern void memory_map_dump(void);
@@ -2069,6 +2069,9 @@ static void m68k_reset(bool hardreset)
 		uae_interrupt = 0;
 	}
 
+	// Force config changes (CPU speed) into effect on hard reset
+	update_68k_cycles();
+	
 #ifdef SAVESTATE
 	if (isrestore ()) {
 		m68k_reset_sr();
@@ -2777,17 +2780,18 @@ static int do_specialties (int cycles)
 		Exception (3);
 	}
 
-	if ((regs.spcflags & SPCFLAG_STOP) && regs.s == 0 && currprefs.cpu_model <= 68010) {
-		// 68000/68010 undocumented special case:
-		// if STOP clears S-bit and T was not set:
-		// cause privilege violation exception, PC pointing to following instruction.
-		// If T was set before STOP: STOP works as documented.
-		m68k_unset_stop();
-		Exception(8);
-	}
+	while (regs.spcflags & SPCFLAG_STOP) {
 
-	bool first = true;
-	while ((regs.spcflags & SPCFLAG_STOP) && !(regs.spcflags & SPCFLAG_BRK)) {
+		if (regs.s == 0 && currprefs.cpu_model <= 68010) {
+			// 68000/68010 undocumented special case:
+			// if STOP clears S-bit and T was not set:
+			// cause privilege violation exception, PC pointing to following instruction.
+			// If T was set before STOP: STOP works as documented.
+			m68k_unset_stop();
+			Exception(8);
+			break;
+		}
+
 	isstopped:
 		check_uae_int_request();
 		{
@@ -2811,6 +2815,7 @@ static int do_specialties (int cycles)
 			ipl_fetch ();
 			if (time_for_interrupt ()) {
 				do_interrupt (regs.ipl);
+				break;
 			}
 		} else {
 			if (regs.spcflags & (SPCFLAG_INT | SPCFLAG_DOINT)) {
@@ -2823,17 +2828,20 @@ static int do_specialties (int cycles)
 				}
 				if (m68kint) {
 #endif
-					if (intr > 0 && intr > regs.intmask)
-						do_interrupt (intr);
+					if (intr > 0 && intr > regs.intmask) {
+						do_interrupt(intr);
+						break;
+					}
 #ifdef WITH_PPC
 				}
 #endif
 			}
 		}
 
-		if (!first)
-			x_do_cycles(currprefs.cpu_cycle_exact ? 2 * CYCLE_UNIT : 4 * CYCLE_UNIT);
-		first = false;
+		ipl_fetch();
+
+		x_do_cycles(4 * cpucycleunit);
+
 		if (regs.spcflags & SPCFLAG_COPPER)
 			do_copper();
 

@@ -1734,10 +1734,14 @@ int hrtmon_load (void)
 	armodel = 0;
 	cart_type = CART_AR;
 	hrtmem_start = 0xa10000;
+#ifdef AMIBERRY
 	if(!_tcscmp(currprefs.cartfile, _T(":HRTMon")))
 		rd = getromdatabyid(63);
 	else
 		rd = getromdatabypath(currprefs.cartfile);
+#else
+	rd = getromdatabypath(currprefs.cartfile);
+#endif
 	if (rd) {
 		if (rd->id == 63)
 			isinternal = 1;

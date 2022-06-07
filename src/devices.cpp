@@ -302,7 +302,7 @@ void virtualdevice_free(void)
 #endif
 	free_traps();
 	sampler_free();
-	inputdevice_close ();
+	inputdevice_close();
 	DISK_free();
 	//dump_counts ();
 #ifdef SERIAL_PORT

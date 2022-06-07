@@ -19,6 +19,7 @@
 #include "xwin.h"
 //#include "x86.h"
 #include "audio.h"
+#include "cia.h"
 
 static const int pissoff_nojit_value = 256 * CYCLE_UNIT;
 
@@ -47,7 +48,7 @@ void events_reset_syncline(void)
 	events_fast();
 }
 
-void events_schedule (void)
+void events_schedule(void)
 {
 	int i;
 
@@ -338,7 +339,7 @@ void MISC_handler (void)
 				if (eventtab2[i].evtime == ct) {
 					eventtab2[i].active = false;
 					event2_count--;
-					eventtab2[i].handler (eventtab2[i].data);
+					eventtab2[i].handler(eventtab2[i].data);
 					if (dorecheck || eventtab2[i].active) {
 						recheck = true;
 						dorecheck = false;
@@ -355,7 +356,7 @@ void MISC_handler (void)
 		eventtab[ev_misc].active = true;
 		eventtab[ev_misc].oldcycles = ct;
 		eventtab[ev_misc].evtime = ct + mintime;
-		events_schedule ();
+		events_schedule();
 	}
 	recursive--;
 }
@@ -366,7 +367,7 @@ void event2_newevent_xx (int no, evt_t t, uae_u32 data, evfunc2 func)
 	evt_t et;
 	static int next = ev2_misc;
 
-	et = t + get_cycles ();
+	et = t + get_cycles();
 	if (no < 0) {
 		no = next;
 		for (;;) {
@@ -407,7 +408,7 @@ void event2_newevent_xx (int no, evt_t t, uae_u32 data, evfunc2 func)
 	eventtab2[no].evtime = et;
 	eventtab2[no].handler = func;
 	eventtab2[no].data = data;
-	MISC_handler ();
+	MISC_handler();
 }
 
 void event2_newevent_x_replace(evt_t t, uae_u32 data, evfunc2 func)
@@ -425,7 +426,7 @@ void event2_newevent_x_replace(evt_t t, uae_u32 data, evfunc2 func)
 }
 
 
-int current_hpos (void)
+int current_hpos(void)
 {
 	int hp = current_hpos_safe();
 	if (hp < 0 || hp > 256) {
@@ -435,3 +436,48 @@ int current_hpos (void)
 	return hp;
 }
 
+// emulate VPOSHW writes changing cycle counter
+void modify_eventcounter(int diff)
+{
+
+	int hpos = current_hpos();
+
+	if (hpos + diff < 0) {
+		return;
+	}
+	if (hpos + diff >= maxhpos) {
+		return;
+	}
+
+	int cdiff = diff * CYCLE_UNIT;
+	if (cdiff < 0) {
+		if (currcycle >= cdiff) {
+			currcycle -= cdiff;
+		} else {
+			cdiff = -(int)currcycle;
+			currcycle = 0;
+		}
+	} else {
+		currcycle += cdiff;
+	}
+
+	int hp1 = current_hpos();
+
+	cia_adjust_eclock_phase(diff);
+
+	// adjust all existing timers
+	for (int i = 0; i < ev_max; i++) {
+		if (i != ev_hsync && i != ev_hsynch) {
+			eventtab[i].evtime += cdiff;
+			eventtab[i].oldcycles += cdiff;
+		}
+	}
+
+	for (int i = 0; i < ev2_max; i++) {
+		eventtab2[i].evtime += cdiff;
+	}
+
+	int hp2 = current_hpos();
+
+	events_schedule();
+}

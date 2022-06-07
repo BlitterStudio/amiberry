@@ -2220,7 +2220,7 @@ void update_audio (void)
 	if (!is_audio_active ())
 		goto end;
 
-	n_cycles = (int)(get_cycles() - last_cycles);
+	n_cycles = (int)(get_cycles () - last_cycles);
 	while (n_cycles > 0) {
 		uae_u32 best_evtime = n_cycles + 1;
 		uae_u32 rounded;

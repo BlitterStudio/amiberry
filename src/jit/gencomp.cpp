@@ -135,7 +135,6 @@ static int global_mayfail;
 static int global_fpu;
 
 static char endstr[1000];
-static char lines[100000];
 
 #include "flags_x86.h"
 
@@ -956,15 +955,18 @@ genmovemle(uae_u16 opcode)
 	   on her, but unfortunately, gfx mem isn't "real" mem, and thus that
 	   act of cleverness means that movmle must pay attention to special_mem,
 	   or Genetic Species is a rather boring-looking game ;-) */
-	if (table68k[opcode].size == sz_long)
+	if (table68k[opcode].dmode != Apdi) {
 		comprintf("\tif (1 && !special_mem && !jit_n_addr_unsafe) {\n");
-	else
-		comprintf("\tif (1 && !special_mem && !jit_n_addr_unsafe) {\n");
+	} else {
+		// if Apdi and dstreg is included with mask: use indirect mode.
+		comprintf("\tif (1 && !special_mem && !jit_n_addr_unsafe && !(mask & (1 << (7 - dstreg)))) {\n");
+	}
 #endif
+
 	comprintf("\tget_n_addr(srca,native,scratchie);\n");
 
 	if (table68k[opcode].dmode != Apdi) {
-		comprintf("\tfor (i=0;i<16;i++) {\n"
+		comprintf("\tfor (i=0;i<16 && mask;i++) {\n"
 			"\t\tif ((mask>>i)&1) {\n");
 		switch (table68k[opcode].size) {
 		case sz_long:
@@ -982,7 +984,7 @@ genmovemle(uae_u16 opcode)
 		default: assert(0);
 		}
 	} else {  /* Pre-decrement */
-		comprintf("\tfor (i=0;i<16;i++) {\n"
+		comprintf("\tfor (i=0;i<16 && mask;i++) {\n"
 			"\t\tif ((mask>>i)&1) {\n");
 		switch (table68k[opcode].size) {
 		case sz_long:
@@ -1013,7 +1015,7 @@ genmovemle(uae_u16 opcode)
 
 	if (table68k[opcode].dmode != Apdi) {
 		comprintf("\tmov_l_rr(tmp,srca);\n");
-		comprintf("\tfor (i=0;i<16;i++) {\n"
+		comprintf("\tfor (i=0;i<16 && mask;i++) {\n"
 			"\t\tif ((mask>>i)&1) {\n");
 		switch (table68k[opcode].size) {
 		case sz_long:
@@ -1027,7 +1029,7 @@ genmovemle(uae_u16 opcode)
 		default: assert(0);
 		}
 	} else {  /* Pre-decrement */
-		comprintf("\tfor (i=0;i<16;i++) {\n"
+		comprintf("\tfor (i=0;i<16 && mask;i++) {\n"
 			"\t\tif ((mask>>i)&1) {\n");
 		switch (table68k[opcode].size) {
 		case sz_long:

@@ -2307,10 +2307,17 @@ static void fill_ce_banks (void)
 	}
 
 	if (currprefs.cs_romisslow) {
-		for (i = (0xe00000 >> 16); i < (0xe80000 >> 16); i++)
-			ce_banktype[i] = CE_MEMBANK_CHIP16;
-		for (i = (0xf80000 >> 16); i < (0x1000000 >> 16); i++)
-			ce_banktype[i] = CE_MEMBANK_CHIP16;
+		if (aga_mode && !currprefs.cs_cd32cd) {
+			for (i = (0xe00000 >> 16); i < (0xe80000 >> 16); i++)
+				ce_banktype[i] = CE_MEMBANK_CHIP32;
+			for (i = (0xf80000 >> 16); i < (0x1000000 >> 16); i++)
+				ce_banktype[i] = CE_MEMBANK_CHIP32;
+		} else {
+			for (i = (0xe00000 >> 16); i < (0xe80000 >> 16); i++)
+				ce_banktype[i] = CE_MEMBANK_CHIP16;
+			for (i = (0xf80000 >> 16); i < (0x1000000 >> 16); i++)
+				ce_banktype[i] = CE_MEMBANK_CHIP16;
+		}
 	}
 
 	setmemorywidth(&currprefs.chipmem, &chipmem_bank);
@@ -2406,10 +2413,61 @@ void memory_clear (void)
 	mem_hardreset = 0;
 	if (savestate_state == STATE_RESTORE)
 		return;
-	if (chipmem_bank.baseaddr)
-		memset(chipmem_bank.baseaddr, 0, chipmem_bank.allocated_size);
-	if (bogomem_bank.baseaddr)
-		memset(bogomem_bank.baseaddr, 0, bogomem_bank.allocated_size);
+	
+	// Set a default pattern for uninitialized memory after hard reset.
+	//   0:even 1:odd on columns for even rows,
+	//   1:even 0:odd on columns for odd rows.
+	if (chipmem_bank.baseaddr) {
+		if (aga_mode) {
+			uae_u32 fillval = 0;
+			for (int fillbank = 0; fillbank < chipmem_bank.allocated_size / 2048; fillbank++) {
+				for (int fillrow = fillbank * 2048; fillrow < (fillbank + 1) * 2048; fillrow += 4) {
+					// Chip emulated: NEC PD42S4260 (A1200 R1).  Spec says 512x512x16.
+					*((uae_u32*)(chipmem_bank.baseaddr + fillrow)) = fillval;
+					fillval = ~fillval;
+				}
+				fillval = ~fillval;
+			}
+		} else {
+			uae_u16 fillval = 0;
+			for (int fillbank = 0; fillbank < chipmem_bank.allocated_size / 1024; fillbank++) {
+				for (int fillrow = fillbank * 1024; fillrow < (fillbank + 1) * 1024; fillrow += 2) {
+					// Chip emulated: Generic 4256.  Should apply to both 512x512x1 and 512x512x4.
+					*((uae_u16*)(chipmem_bank.baseaddr + fillrow)) = fillval;
+					fillval = ~fillval;
+				}
+				fillval = ~fillval;
+			}
+		}
+	}
+
+	if (bogomem_bank.baseaddr) {
+		// NOTE: At reset, WinUAE maps "slow" memory to fast before later re-assigning to chip.
+		if (ce_banktype[0xC0] == CE_MEMBANK_FAST32) {
+			uae_u32 fillval = 0;
+			for (int fillbank = 0; fillbank < bogomem_bank.allocated_size / 2048; fillbank++) {
+				for (int fillrow = fillbank * 2048; fillrow < (fillbank + 1) * 2048; fillrow += 4) {
+					// Chip emulated: 512x512x16 (A1200 R1)
+					*((uae_u32*)(bogomem_bank.baseaddr + fillrow)) = fillval;
+					fillval = ~fillval;
+				}
+				fillval = ~fillval;
+			}
+		} else if (ce_banktype[0xC0] == CE_MEMBANK_FAST16) {
+			uae_u16 fillval = 0;
+			for (int fillbank = 0; fillbank < bogomem_bank.allocated_size / 1024; fillbank++) {
+				for (int fillrow = fillbank * 1024; fillrow < (fillbank + 1) * 1024; fillrow += 2) {
+					// Chip emulated: Generic 4256
+					*((uae_u16*)(bogomem_bank.baseaddr + fillrow)) = fillval;
+					fillval = ~fillval;
+				}
+				fillval = ~fillval;
+			}
+		} else {
+			memset(bogomem_bank.baseaddr, 0, bogomem_bank.allocated_size);
+		}
+	}
+	
 	if (mem25bit_bank.baseaddr)
 		memset(mem25bit_bank.baseaddr, 0, mem25bit_bank.allocated_size);
 	if (a3000lmem_bank.baseaddr)

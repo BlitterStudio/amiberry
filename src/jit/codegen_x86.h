@@ -1283,14 +1283,14 @@ enum {
 
 /*									_format		Opcd		,Mod ,r	    ,m		,mem=dsp+sib	,imm... */
 
-// FIXME: no prefix is availble to encode a 32-bit operand size in 64-bit mode
+// FIXME: no prefix is available to encode a 32-bit operand size in 64-bit mode
 #define CALLm(M)							_O_D32		(0xe8					,(int)(M)		)
 #define _CALLLsr(R)			(_REXLrr(0, R),			_O_Mrm		(0xff		,_b11,_b010,_r4(R)				))
 #define _CALLQsr(R)			(_REXQrr(0, R),			_O_Mrm		(0xff		,_b11,_b010,_r8(R)				))
 #define CALLsr(R)			( X86_TARGET_64BIT ? _CALLQsr(R) : _CALLLsr(R))
 #define CALLsm(D,B,I,S)			(_REXLrm(0, B, I),		_O_r_X		(0xff		     ,_b010		,(int)(D),B,I,S		))
 
-// FIXME: no prefix is availble to encode a 32-bit operand size in 64-bit mode
+// FIXME: no prefix is available to encode a 32-bit operand size in 64-bit mode
 #define JMPSm(M)							_O_D8		(0xeb					,(int)(M)		)
 #define JMPm(M)								_O_D32		(0xe9					,(int)(M)		)
 #define _JMPLsr(R)			(_REXLrr(0, R),			_O_Mrm		(0xff		,_b11,_b100,_r4(R)				))
