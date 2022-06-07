@@ -749,7 +749,7 @@ jobs:
         options: -v ${{ github.workspace }}:/build
         run: |
           make capsimg
-          make -j8 PLATFORM=x86_64
+          make -j8 PLATFORM=x86-64
     - uses: actions/upload-artifact@v3
       with:
         name: amiberry-x86-64-ubuntu
