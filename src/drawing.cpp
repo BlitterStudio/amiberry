@@ -1496,9 +1496,9 @@ static void pfield_do_fill_line (int start, int stop, int blank)
 	case 2: fill_line_16 (xlinebuffer, start, stop, blank); break;
 	case 4: fill_line_32 (xlinebuffer, start, stop, blank); break;
 	}
-	if (need_genlock_data) {
-		memset(xlinebuffer_genlock + start, 0, stop - start);
-	}
+	//if (need_genlock_data) {
+	//	memset(xlinebuffer_genlock + start, 0, stop - start);
+	//}
 }
 
 static void fill_line2(int startpos, int len)
@@ -1563,9 +1563,9 @@ static void fill_line_border(int lineno)
 		int b = hposblank;
 		hposblank = 3;
 		fill_line2(lastpos, w);
-		if (need_genlock_data) {
-			memset(xlinebuffer_genlock + lastpos, 0, w);
-		}
+		//if (need_genlock_data) {
+		//	memset(xlinebuffer_genlock + lastpos, 0, w);
+		//}
 		hposblank = b;
 		return;
 	}
@@ -1574,17 +1574,17 @@ static void fill_line_border(int lineno)
 	if (hposblank) {
 		hposblank = 3;
 		fill_line2(lastpos, w);
-		if (need_genlock_data) {
-			memset(xlinebuffer_genlock + lastpos, 0, w);
-		}
+		//if (need_genlock_data) {
+		//	memset(xlinebuffer_genlock + lastpos, 0, w);
+		//}
 		return;
 	}
 	// hblank not visible
 	if (hblank_left <= lastpos && hblank_right >= endpos) {
 		fill_line2(lastpos, w);
-		if (need_genlock_data) {
-			memset(xlinebuffer_genlock + lastpos, 0, w);
-		}
+		//if (need_genlock_data) {
+		//	memset(xlinebuffer_genlock + lastpos, 0, w);
+		//}
 		return;
 	}
 
