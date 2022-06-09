@@ -35,9 +35,6 @@
 #include "fsdb_host.h"
 #include "sampler.h"
 
-#include "fsdb_host.h"
-#include "sampler.h"
-
 static bool force_auto_crop = false;
 static uae_thread_id display_tid = nullptr;
 static smp_comm_pipe *volatile display_pipe = nullptr;
