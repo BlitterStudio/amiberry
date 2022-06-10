@@ -211,25 +211,32 @@ void draw_status_line_single(int monid, uae_u8 *buf, int bpp, int y, int totalwi
 			} else {
 				int fps = (gui_data.fps + 5) / 10;
 				on_rgb = 0x000000;
-				off_rgb = gui_data.fps_color ? 0xcccc00 : 0x000000;
+				off_rgb = gui_data.fps_color == 1 ? 0xcccc00 : (gui_data.fps_color == 2 ? 0x0000cc : 0x000000);
 				am = 3;
-				if (fps > 999) {
-					fps += 50;
-					fps /= 10;
-					if (fps > 999)
-						fps = 999;
-					num1 = fps / 100;
-					num1 %= 10;
-					num2 = 18;
-					num3 = (fps - num1 * 100) / 10;
+				if (gui_data.fps_color >= 2) {
+					num1 = -1;
+					num2 = 15;
+					num3 = 15;
+					am = 2;
 				} else {
-					num1 = fps / 100;
-					num2 = (fps - num1 * 100) / 10;
-					num3 = fps % 10;
-					num1 %= 10;
-					num2 %= 10;
-					if (num1 == 0)
-						am = 2;
+					if (fps > 999) {
+						fps += 50;
+						fps /= 10;
+						if (fps > 999)
+							fps = 999;
+						num1 = fps / 100;
+						num1 %= 10;
+						num2 = 18;
+						num3 = (fps - num1 * 100) / 10;
+					} else {
+						num1 = fps / 100;
+						num2 = (fps - num1 * 100) / 10;
+						num3 = fps % 10;
+						num1 %= 10;
+						num2 %= 10;
+						if (num1 == 0)
+							am = 2;
+					}
 				}
 			}
 		} else if (led == LED_CPU) {
