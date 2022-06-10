@@ -561,27 +561,18 @@ bool SCPInterface::checkDiskCapacity(bool& isHD) {
 	std::thread* backgroundReader = new std::thread([this, &readBuffer, &safetyLock]() {
 #ifdef _WIN32
 		SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
-#else
-		struct sched_param sch;
-		int policy;
-		if (pthread_getschedparam(pthread_self(), &policy, &sch) == 0) {
-			policy = SCHED_FIFO;
-			sch.sched_priority = sched_get_priority_max(policy); // boost priority
-			pthread_setschedparam(pthread_self(), policy, &sch);
-		}
 #endif
 		unsigned char buffer[1024];  // the LINUX serial buffer is only 512 bytes anyway
 		while (m_isStreaming) {
 			uint32_t waiting = m_comPort.justRead(buffer, 1024);
-			if (waiting > 0) {
-				safetyLock.lock();
-				readBuffer.insert(readBuffer.end(), buffer, buffer + waiting);
+			if (waiting>0) {
+				safetyLock.lock();				
+				readBuffer.insert(readBuffer.end(), buffer, buffer+waiting);
 				safetyLock.unlock();
-			}
-			else
-				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			} else
+				std::this_thread::sleep_for(std::chrono::microseconds(200));
 		}
-		});
+	});
 
 
 #else

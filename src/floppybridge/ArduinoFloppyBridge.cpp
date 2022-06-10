@@ -123,6 +123,8 @@ bool ArduinoFloppyDiskBridge::openInterface(std::string& errorMessage) {
 
 	ArduinoFloppyReader::DiagnosticResponse error = m_io.openPort(prt);
 	if (error == ArduinoFloppyReader::DiagnosticResponse::drOK) {
+		m_currentCylinder = 0;
+
 		// See which version it is
 		ArduinoFloppyReader::FirmwareVersion fv = m_io.getFirwareVersion();
 		if ((fv.major <= 1) && (fv.minor < 8)) {
@@ -218,6 +220,14 @@ bool ArduinoFloppyDiskBridge::checkWriteProtectStatus(const bool forceCheck) {
 // If the above is TRUE then this is called to get the status of the DiskChange line.  Basically, this is TRUE if there is a disk in the drive.
 // If force is true you should re-check, if false, then you are allowed to return a cached value from the last disk operation (eg: seek)
 bool ArduinoFloppyDiskBridge::getDiskChangeStatus(const bool forceCheck) {
+	if ((forceCheck) && (m_io.getFirwareVersion().fullControlMod)) {
+		if (m_currentCylinder == 0) {
+			if (performNoClickSeek()) {
+				return m_io.isDiskInDrive();
+			}
+		}
+	}
+
 	// Perform the check, if required
 	return m_io.checkForDisk(forceCheck) != ArduinoFloppyReader::DiagnosticResponse::drNoDiskInDrive;
 }
@@ -230,7 +240,6 @@ bool ArduinoFloppyDiskBridge::performNoClickSeek() {
 	if (!m_io.getFirwareVersion().fullControlMod) return true;
 
 	if (m_io.performNoClickSeek() == ArduinoFloppyReader::DiagnosticResponse::drOK) {
-		bool ignoreDiskCheck = (isMotorRunning()) && (!isReady());
 		updateLastManualCheckTime();
 		return true;
 	}
@@ -239,6 +248,8 @@ bool ArduinoFloppyDiskBridge::performNoClickSeek() {
 
 // Trigger a seek to the requested cylinder, this can block until complete
 bool ArduinoFloppyDiskBridge::setCurrentCylinder(const unsigned int cylinder) {
+	m_currentCylinder = cylinder;
+
 	// No need if its busy
 	bool ignoreDiskCheck = isMotorRunning() && !isReady();
 

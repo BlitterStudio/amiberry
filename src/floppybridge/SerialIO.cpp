@@ -22,6 +22,11 @@
 ////////////////////////////////////////////////////////////////////////////////////////
 //
 //
+
+#define _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING
+#define _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
+
+
 #include "SerialIO.h"
 
 
@@ -774,19 +779,14 @@ unsigned int SerialIO::write(const void* data, unsigned int dataLength) {
 
 		int result = select(m_portHandle + 1, NULL, &fds, NULL, &timeout);
 		if (result < 0) {
-			if (errno == EINTR) continue; else {
-				return 0;
-			}
-
+			if (errno == EINTR || errno == EAGAIN) continue; else return 0;
 		}
 		else if (result == 0) break;
 
 		result = ::write(m_portHandle, buffer, dataLength - written);
 
 		if (result < 0) {
-			if (errno == EAGAIN) continue; else {
-				return 0;
-			}
+			if (errno == EINTR || errno == EAGAIN) continue; else return 0;
 		}
 
 		written += result;
@@ -874,13 +874,13 @@ unsigned int SerialIO::read(void* data, unsigned int dataLength) {
 		int result = select(m_portHandle + 1, &fds, NULL, NULL, &timeout);
 
 		if (result < 0) {
-			if (errno == EINTR) continue; else break;
+			if (errno == EINTR || errno == EAGAIN) continue; else return 0;
 		}
 		else if (result == 0) break;
 		result = ::read(m_portHandle, buffer, dataLength - read);
 
 		if (result < 0) {
-			if (errno == EAGAIN) continue; else break;
+			if (errno == EINTR || errno == EAGAIN) continue; else return 0;
 		}
 		read += result;
 		buffer += result;

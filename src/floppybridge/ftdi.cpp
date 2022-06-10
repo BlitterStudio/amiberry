@@ -79,7 +79,7 @@ typedef FTDI::FT_STATUS (CALLING_CONVENTION *_FT_WaitOnMask)(FT_HANDLE ftHandle,
 
 typedef FTDI::FT_STATUS (CALLING_CONVENTION* _FT_CreateDeviceInfoList)(LPDWORD lpdwNumDevs);
 typedef FTDI::FT_STATUS (CALLING_CONVENTION* _FT_GetDeviceInfoList)(FT_DEVICE_LIST_INFO_NODE* pDest, LPDWORD lpdwNumDevs);
-typedef FTDI::FT_STATUS (CALLING_CONVENTION* _FT_GetDeviceInfoDetail)(DWORD dwIndex, LPDWORD lpdwFlags, LPDWORD lpdwType, LPDWORD lpdwID, LPDWORD lpdwLocId, PCHAR pcSerialNumber, PCHAR pcDescription, FT_HANDLE* ftHandle);
+typedef FTDI::FT_STATUS (CALLING_CONVENTION* _FT_GetDeviceInfoDetail)(DWORD dwIndex, LPDWORD lpdwFlags, LPDWORD lpdwType, LPDWORD lpdwID, LPDWORD lpdwLocId, char* pcSerialNumber, char* pcDescription, FT_HANDLE* ftHandle);
 typedef FTDI::FT_STATUS (CALLING_CONVENTION* _FT_GetDriverVersion)(FT_HANDLE ftHandle, LPDWORD lpdwDriverVersion);
 typedef FTDI::FT_STATUS (CALLING_CONVENTION* _FT_GetLibraryVersion)(LPDWORD lpdwDLLVersion);
 typedef FTDI::FT_STATUS (CALLING_CONVENTION* _FT_ResetPort)(FT_HANDLE ftHandle);
@@ -420,7 +420,7 @@ FTDI::FT_STATUS FTDIInterface::FT_GetComPortNumber(FT_HANDLE handle, LPLONG port
 	return FTDI::FT_STATUS::FT_DRIVER_NOT_AVAILABLE;
 }
 
-FTDI::FT_STATUS FTDIInterface::FT_GetDeviceInfoDetail(DWORD dwIndex, LPDWORD lpdwFlags, LPDWORD lpdwType, LPDWORD lpdwID, LPDWORD lpdwLocId, PCHAR pcSerialNumber, PCHAR pcDescription, FT_HANDLE* handle) {
+FTDI::FT_STATUS FTDIInterface::FT_GetDeviceInfoDetail(DWORD dwIndex, LPDWORD lpdwFlags, LPDWORD lpdwType, LPDWORD lpdwID, LPDWORD lpdwLocId, char* pcSerialNumber, char* pcDescription, FT_HANDLE* handle) {
 	if (::FT_GetDeviceInfoDetail) return ::FT_GetDeviceInfoDetail(dwIndex, lpdwFlags, lpdwType, lpdwID, lpdwLocId, pcSerialNumber, pcDescription, handle);
 	return FTDI::FT_STATUS::FT_DRIVER_NOT_AVAILABLE;
 };

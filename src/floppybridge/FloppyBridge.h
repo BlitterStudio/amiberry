@@ -100,7 +100,7 @@ public:
 	// Not all of these settings are used.
 	char comPortToUse[128] = { 0 };
 	bool autoDetectComPort = true;
-	bool driveCableIsB = false;
+	CommonBridgeTemplate::DriveSelection driveCable = CommonBridgeTemplate::DriveSelection::dsDriveA;
 	bool autoCache = false;
 	bool smartSpeed = false;
 

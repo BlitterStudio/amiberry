@@ -48,20 +48,23 @@
 #define MFM_BUFFER_MAX_TRACK_LENGTH			(0x3A00 * 2)
 
 // Max number of cylinders we can offer
-#define MAX_CYLINDER_BRIDGE 82
+#define MAX_CYLINDER_BRIDGE 84
 
 
-// Bit-mast of options that can be configured in BridgeDriver::configOptions
+// Bit-mask of options that can be configured in BridgeDriver::configOptions
 #define CONFIG_OPTIONS_AUTOCACHE            1
 #define CONFIG_OPTIONS_COMPORT				2
 #define CONFIG_OPTIONS_COMPORT_AUTODETECT	4
 #define CONFIG_OPTIONS_DRIVE_AB				8
 #define CONFIG_OPTIONS_SMARTSPEED			16
+#define CONFIG_OPTIONS_DRIVE_123			32
 
 
 // Some of the functions in FloppyDiskBridge are implemented, some not.
 class CommonBridgeTemplate : public FloppyDiskBridge {
 public:
+	enum class DriveSelection { dsDriveA = 0, dsDriveB = 1, dsDrive0 = 2, dsDrive1 = 3, dsDrive2 = 4, dsDrive3 = 5 };
+
 	// Type of bridge mode
 	enum class BridgeMode : unsigned char {
 		bmFast = 0,
