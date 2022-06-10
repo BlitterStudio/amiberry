@@ -64,9 +64,6 @@ namespace FTDI {
 #ifndef LPOVERLAPPED
 #define LPOVERLAPPED void*
 #endif
-#ifndef PCHAR
-#define PCHAR char*
-#endif
 #endif
 
 	typedef void* FT_HANDLE;
@@ -266,7 +263,7 @@ namespace FTDI {
 
 		FT_STATUS FT_CreateDeviceInfoList(LPDWORD lpdwNumDevs);
 		FT_STATUS FT_GetDeviceInfoList(FT_DEVICE_LIST_INFO_NODE* pDest, LPDWORD lpdwNumDevs);
-		FT_STATUS FT_GetDeviceInfoDetail(DWORD dwIndex, LPDWORD lpdwFlags, LPDWORD lpdwType, LPDWORD lpdwID, LPDWORD lpdwLocId, PCHAR pcSerialNumber, PCHAR pcDescription, FT_HANDLE* handle);
+		FT_STATUS FT_GetDeviceInfoDetail(DWORD dwIndex, LPDWORD lpdwFlags, LPDWORD lpdwType, LPDWORD lpdwID, LPDWORD lpdwLocId, char* pcSerialNumber, char* pcDescription, FT_HANDLE* handle);
 		FT_STATUS FT_GetDriverVersion(LPDWORD lpdwDriverVersion);
 		FT_STATUS FT_GetLibraryVersion(LPDWORD lpdwDLLVersion);
 		FT_STATUS FT_ResetPort();

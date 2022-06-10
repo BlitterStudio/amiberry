@@ -25,6 +25,9 @@
 #define IDC_URL                         1012
 #define IDC_AUTODETECT                  1013
 #define IDC_URL_MAIN                    1014
+#define IDC_AUTOCHECK                   1015
+#define IDC_URL2                        1015
+#define IDC_UPDATENOW                   1016
 #define IDC_PATREON                     1019
 #define IDC_PROFILELIST_TITLE           1200
 #define IDC_CHECKUPDATES                1202
@@ -35,7 +38,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        109
 #define _APS_NEXT_COMMAND_VALUE         40001
-#define _APS_NEXT_CONTROL_VALUE         1015
+#define _APS_NEXT_CONTROL_VALUE         1016
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

@@ -53,6 +53,8 @@ private:
 	// Returns the serial port to use
 	std::wstring getComPort();
 
+	// Remember where we are
+	int m_currentCylinder = 0;
 protected:
 	// Called when a disk is inserted so that you can (re)populate the response to _getDriveTypeID()
 	virtual void checkDiskType() override;

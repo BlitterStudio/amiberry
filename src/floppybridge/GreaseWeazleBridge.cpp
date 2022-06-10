@@ -22,17 +22,17 @@ using namespace GreaseWeazle;
 
 
 static const FloppyDiskBridge::BridgeDriver DriverGreaseweazleFloppy = {
-	"Greaseweazle", "https://github.com/keirf/Greaseweazle", "Keir Fraser", "RobSmithDev", CONFIG_OPTIONS_COMPORT | CONFIG_OPTIONS_COMPORT_AUTODETECT | CONFIG_OPTIONS_DRIVE_AB | CONFIG_OPTIONS_SMARTSPEED | CONFIG_OPTIONS_AUTOCACHE
+	"Greaseweazle", "https://github.com/keirf/Greaseweazle", "Keir Fraser", "RobSmithDev", CONFIG_OPTIONS_COMPORT | CONFIG_OPTIONS_COMPORT_AUTODETECT | CONFIG_OPTIONS_DRIVE_AB | CONFIG_OPTIONS_DRIVE_123 | CONFIG_OPTIONS_SMARTSPEED | CONFIG_OPTIONS_AUTOCACHE
 };
 
 // Flags from WINUAE
-GreaseWeazleDiskBridge::GreaseWeazleDiskBridge(BridgeMode bridgeMode, BridgeDensityMode bridgeDensity, bool enableAutoCache, bool useSmartSpeed, bool autoDetectComPort, char* comPort, bool driveOnB) :
-	CommonBridgeTemplate(bridgeMode, bridgeDensity, enableAutoCache, useSmartSpeed), m_useDriveA(!driveOnB), m_comPort(autoDetectComPort ? "" : comPort) {
+GreaseWeazleDiskBridge::GreaseWeazleDiskBridge(BridgeMode bridgeMode, BridgeDensityMode bridgeDensity, bool enableAutoCache, bool useSmartSpeed, bool autoDetectComPort, char* comPort, CommonBridgeTemplate::DriveSelection drive) :
+	CommonBridgeTemplate(bridgeMode, bridgeDensity, enableAutoCache, useSmartSpeed), m_useDrive(drive), m_comPort(autoDetectComPort ? "" : comPort) {
 }
 
 // This is for the static version
 GreaseWeazleDiskBridge::GreaseWeazleDiskBridge(BridgeMode bridgeMode, BridgeDensityMode bridgeDensity, int uaeSettings) :
-	CommonBridgeTemplate(bridgeMode, bridgeDensity, false, false), m_useDriveA((uaeSettings & 0x0F) == 0), m_comPort("") {
+	CommonBridgeTemplate(bridgeMode, bridgeDensity, false, false), m_useDrive((DriveSelection)((uaeSettings & 0x0F) == 0)), m_comPort("") {
 }
 
 
@@ -68,7 +68,7 @@ void GreaseWeazleDiskBridge::closeInterface() {
 // Called to start the interface, you should update any error messages if it fails.  This needs to be ready to see to any cylinder and so should already know where cylinder 0 is
 bool GreaseWeazleDiskBridge::openInterface(std::string& errorMessage) {
 
-	GWResponse error = m_io.openPort(m_comPort, m_useDriveA);
+	GWResponse error = m_io.openPort(m_comPort, (GreaseWeazle::DriveSelection)m_useDrive);
 
 	if (error == GWResponse::drOK) {
 		if (m_io.findTrack0() == GWResponse::drRewindFailure) {
@@ -174,8 +174,13 @@ bool GreaseWeazleDiskBridge::getDiskChangeStatus(const bool forceCheck) {
 	// We actually trigger a SEEK operation to ensure this is right
 	if (forceCheck) {
 		if (m_io.checkForDisk(forceCheck) == GWResponse::drNoDiskInDrive) {
-			m_io.selectTrack((m_currentCylinder > 40) ? m_currentCylinder - 1 : m_currentCylinder + 1, TrackSearchSpeed::tssNormal, true);
-			m_io.selectTrack(m_currentCylinder, TrackSearchSpeed::tssNormal, true);
+			if ((m_currentCylinder == 0) && (m_io.supportsDiskChange())) {
+				m_io.performNoClickSeek();
+			}
+			else {
+				m_io.selectTrack((m_currentCylinder > 40) ? m_currentCylinder - 1 : m_currentCylinder + 1, TrackSearchSpeed::tssNormal, true);
+				m_io.selectTrack(m_currentCylinder, TrackSearchSpeed::tssNormal, true);
+			}
 		}
 	}
 
@@ -194,7 +199,6 @@ bool GreaseWeazleDiskBridge::performNoClickSeek() {
 	if (!m_io.supportsDiskChange()) return true;
 
 	if (m_io.performNoClickSeek() == GWResponse::drOK) {
-		bool ignoreDiskCheck = (isMotorRunning()) && (!isReady());
 		updateLastManualCheckTime();
 		return true;
 	}

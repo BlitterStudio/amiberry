@@ -129,6 +129,8 @@ namespace GreaseWeazle {
 
 	// ## Cmd.SetBusType values
 	enum class BusType { Invalid = 0, IBMPC = 1, Shugart = 2 };
+
+	enum class DriveSelection { dsA=0, dsB=1, ds0=2, ds1=3, ds2=4, ds3=5 };
 		
 #pragma pack()
 
@@ -141,7 +143,7 @@ namespace GreaseWeazle {
 		BusType			m_currentBusType;
 		unsigned char	m_currentDriveIndex;
 		bool			m_diskInDrive;
-		bool			m_motorIsEnabled{};
+		bool			m_motorIsEnabled;
 		bool			m_shouldAbortReading = false;
 		bool			m_pinDskChangeAvailable = false;
 		bool			m_pinWrProtectAvailable = false;
@@ -193,7 +195,7 @@ namespace GreaseWeazle {
 		GWResponse checkDiskCapacity(bool& isHD);
 
 		// Attempts to open the reader running on the COM port provided (or blank for auto-detect)
-		GWResponse openPort(const std::string& comPort, bool useDriveA);
+		GWResponse openPort(const std::string& comPort, DriveSelection drive);
 
 		// Reads a complete rotation of the disk, and returns it using the callback function which can return FALSE to stop
 		// An instance of BridgePLL is required.  This is purely to save on re-allocations.  It is internally reset each time

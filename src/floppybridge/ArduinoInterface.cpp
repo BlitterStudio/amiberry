@@ -533,7 +533,7 @@ DiagnosticResponse ArduinoInterface::openPort(const std::wstring& portName, bool
 	m_version.deviceFlags2 = 0;
 	m_version.buildNumber = 0;
 
-	if (m_version.major > 1 || m_version.major == 1 && m_version.minor >= 9) {
+	if ((m_version.major > 1) || ((m_version.major == 1) && (m_version.minor >= 9))) {
 		m_lastError = runCommand(COMMAND_CHECK_FEATURES);
 		if (m_lastError != DiagnosticResponse::drOK) return m_lastError;
 		if (!deviceRead(&m_version.deviceFlags1, 1)) {
@@ -695,7 +695,7 @@ DiagnosticResponse ArduinoInterface::enableReading(const bool enable, const bool
 DiagnosticResponse ArduinoInterface::measureDriveRPM(float& rpm) {
 	m_lastCommand = LastCommand::lcMeasureRPM;
 
-	bool isV19 = m_version.major > 1 || m_version.major == 1 && m_version.minor >= 9;
+	bool isV19 = (m_version.major > 1) || ((m_version.major == 1) && (m_version.minor >= 9));
 	if (!isV19) return DiagnosticResponse::drOldFirmware;
 
 	// Query the RPM
@@ -733,7 +733,7 @@ DiagnosticResponse ArduinoInterface::measureDriveRPM(float& rpm) {
 DiagnosticResponse ArduinoInterface::checkDiskCapacity(bool& isHD) {
 	m_lastCommand = LastCommand::lcCheckDensity;
 
-	bool isV19 = m_version.major > 1 || m_version.major == 1 && m_version.minor >= 9;
+	bool isV19 = (m_version.major > 1) || ((m_version.major == 1) && (m_version.minor >= 9));
 	if (!isV19) return DiagnosticResponse::drOldFirmware;
 
 	if ((m_version.deviceFlags1 & FLAGS_DENSITYDETECT_ENABLED) == 0) {
@@ -792,7 +792,7 @@ DiagnosticResponse ArduinoInterface::setDiskCapacity(bool switchToHD_Disk) {
 // If the drive is on track 0, this does a test seek to -1 if supported
 DiagnosticResponse ArduinoInterface::performNoClickSeek() {
 	// And send the command and track.  This is sent as ASCII text as a result of terminal testing.  Easier to see whats going on
-	bool isV18 = m_version.major > 1 || m_version.major == 1 && m_version.minor >= 8;
+	bool isV18 = (m_version.major > 1) || ((m_version.major == 1) && (m_version.minor >= 8));
 	if (!isV18) return DiagnosticResponse::drOldFirmware;
 	if (!m_version.fullControlMod) return DiagnosticResponse::drOldFirmware;
 
@@ -824,13 +824,13 @@ DiagnosticResponse ArduinoInterface::performNoClickSeek() {
 DiagnosticResponse ArduinoInterface::selectTrack(const unsigned char trackIndex, const TrackSearchSpeed searchSpeed, bool ignoreDiskInsertCheck) {
 	m_lastCommand = LastCommand::lcGotoTrack;
 
-	if (trackIndex > 81) {
+	if (trackIndex > 83) {
 		m_lastError = DiagnosticResponse::drTrackRangeError;
 		return m_lastError; // no chance, it can't be done.
 	}
 
 	// And send the command and track.  This is sent as ASCII text as a result of terminal testing.  Easier to see whats going on
-	bool isV18 = m_version.major > 1 || m_version.major == 1 && m_version.minor >= 8;
+	bool isV18 = (m_version.major > 1) || ((m_version.major == 1) && (m_version.minor >= 8));
 	char buf[8];
 	if (isV18) {
 		char flags = (int)searchSpeed;
@@ -955,7 +955,7 @@ void unpack(const unsigned char* data, unsigned char* output, const int maxLengt
 		// Each byte contains four pairs of bits that identify an MFM sequence to be encoded
 
 		for (int b = 6; b >= 0; b -= 2) {
-			switch (unsigned char value = data[index] >> b & 3) {
+			switch ((data[index] >> b) & 3) {
 			case 0:
 				// This can't happen, its invalid data but we account for 4 '0' bits
 				writeBit(output, pos, p2, 0, maxLength);
@@ -1512,7 +1512,7 @@ DiagnosticResponse ArduinoInterface::readFlux(PLL::BridgePLL& pll, const unsigne
 
 					uint32_t flux[3];
 					flux[0] = byte1 & 0x1F;
-					flux[1] = byte1 >> 5 | byteRead >> 2 & 0x18;
+					flux[1] = (byte1 >> 5) | ((byteRead >> 2) & 0x18);
 					flux[2] = byteRead & 0x1F;
 					indexDetected |= (byteRead & 0x80) != 0;
 
@@ -1771,7 +1771,7 @@ DiagnosticResponse ArduinoInterface::writeCurrentTrackPrecomp(const unsigned cha
 			// See how many zero bits there are before we hit a 1
 			do {
 				b = readBit(mfmData, numBytes, pos, bit);
-				sequence = sequence << 1 & 0x7F | b;
+				sequence = ((sequence << 1) & 0x7F) | b;
 				count++;
 			} while ((sequence & 0x08) == 0 && pos < numBytes + 8);
 
@@ -1802,7 +1802,7 @@ DiagnosticResponse ArduinoInterface::writeCurrentTrackPrecomp(const unsigned cha
 			}
 			else precomp = PRECOMP_NONE;
 
-			*output |= (lastCount - 2 | precomp) << i * 4;
+			*output |= ((lastCount - 2) | precomp) << (i * 4);
 			lastCount = count;
 		}
 
@@ -1927,7 +1927,7 @@ DiagnosticResponse ArduinoInterface::internalWriteTrack(const unsigned char* dat
 DiagnosticResponse ArduinoInterface::eraseFluxOnTrack() {
 	m_lastCommand = LastCommand::lcEraseFlux;
 
-	if (m_version.major == 1 && (m_version.minor < 9 || m_version.minor == 9 && m_version.buildNumber < 18)) {
+	if (((m_version.major == 1) && (m_version.minor < 9)) || ((m_version.minor == 9) && (m_version.buildNumber < 18))) {
 		m_lastError = DiagnosticResponse::drOldFirmware;
 		return m_lastError;
 	}
@@ -2076,7 +2076,7 @@ void appendToBlock(DWORD fluxTime, DWORD& timingsExtra, Times8& currentBlock, st
 DiagnosticResponse ArduinoInterface::writeFlux(const std::vector<DWORD>& fluxTimes, const DWORD offsetFromIndex, const float driveRPM, bool compensateFluxTimings, bool terminateAtIndex) {
 	m_lastCommand = LastCommand::lcWriteFlux;
 
-	if (m_version.major == 1 && (m_version.minor < 9 || m_version.minor == 9 && m_version.buildNumber < 22)) {
+	if ((m_version.major == 1) && ((m_version.minor < 9) || ((m_version.minor == 9) && (m_version.buildNumber < 22)))) {
 		m_lastError = DiagnosticResponse::drOldFirmware;
 		return m_lastError;
 	}
@@ -2122,10 +2122,6 @@ DiagnosticResponse ArduinoInterface::writeFlux(const std::vector<DWORD>& fluxTim
 
 	// We cant write this.
 	if (hdStyleCount > ddStyleCount) {
-		bool isFirst = true;
-		int threshold = 0;
-
-		DWORD lastValue = 0;
 		bool unformatted = true;
 
 		// This picks up 'unformatted track' simulation output from HxC and replaces it with a proper unformatted track, if that's what it is.
@@ -2282,11 +2278,11 @@ DiagnosticResponse ArduinoInterface::writeFlux(const std::vector<DWORD>& fluxTim
 	flux.push_back(firstFlux);   // special value to get it started
 
 	for (const Times8& block : fluxTimesGrouped) {
-		flux.push_back(block.a & 0x1F | GET_BIT_IF_SET(block.b, 4, 5) | GET_BIT_IF_SET(block.c, 4, 6) | GET_BIT_IF_SET(block.d, 4, 7));
-		flux.push_back(block.b & 0x0F | (block.c & 0x0F) << 4);
-		flux.push_back(block.d & 0x0F | (block.e & 0x0F) << 4);
-		flux.push_back(block.f & 0x1F | GET_BIT_IF_SET(block.g, 4, 5) | GET_BIT_IF_SET(block.h, 4, 6) | GET_BIT_IF_SET(block.e, 4, 7));
-		flux.push_back(block.g & 0x0F | (block.h & 0x0F) << 4);
+		flux.push_back((block.a & 0x1F) | GET_BIT_IF_SET(block.b, 4, 5) | GET_BIT_IF_SET(block.c, 4, 6) | GET_BIT_IF_SET(block.d, 4, 7));
+		flux.push_back((block.b & 0x0F) | ((block.c & 0x0F) << 4));
+		flux.push_back((block.d & 0x0F) | ((block.e & 0x0F) << 4));
+		flux.push_back((block.f & 0x1F) | GET_BIT_IF_SET(block.g, 4, 5) | GET_BIT_IF_SET(block.h, 4, 6) | GET_BIT_IF_SET(block.e, 4, 7));
+		flux.push_back((block.g & 0x0F) | ((block.h & 0x0F) << 4));
 	}
 
 	m_lastError = runCommand(COMMAND_WRITEFLUX);
@@ -2334,7 +2330,7 @@ DiagnosticResponse ArduinoInterface::writeFlux(const std::vector<DWORD>& fluxTim
 	}
 
 	// If this is a '1' then the Arduino didn't miss a single bit!
-	if (response != '1' && response != 'I') {
+	if ((response != '1') && (response != 'I')) {
 		switch (response) {
 		case 'X': m_lastError = DiagnosticResponse::drWriteTimeout;  break;
 		case 'Y': m_lastError = DiagnosticResponse::drFramingError; break;
@@ -2360,9 +2356,12 @@ void ArduinoInterface::enumeratePorts(std::vector<std::wstring>& portList) {
 	prt.enumSerialPorts(prts);
 
 	for (const SerialIO::SerialPortInformation& port : prts) {
+		// Skip CH340 boards
+		if ((port.vid == 0x1a86) && (port.pid == 0x7523)) continue;
+
 		// Skip any Greaseweazle boards 
-		if (port.vid == 0x1209 && port.pid == 0x4d69) continue;
-		if (port.vid == 0x1209 && port.pid == 0x0001) continue;
+		if ((port.vid == 0x1209) && (port.pid == 0x4d69)) continue;
+		if ((port.vid == 0x1209) && (port.pid == 0x0001)) continue;
 		if (port.productName == L"Greaseweazle") continue;
 		if (port.instanceID.find(L"\\GW") != std::wstring::npos) continue;
 
@@ -2442,7 +2441,7 @@ DiagnosticResponse ArduinoInterface::eepromRead(unsigned char position, unsigned
 	m_lastCommand = LastCommand::lcEEPROMRead;
 
 	// Fall back if older firmware
-	if (m_version.major == 1 && m_version.minor < 9) {
+	if ((m_version.major == 1) && (m_version.minor < 9)) {
 		return DiagnosticResponse::drOldFirmware;
 	}
 
@@ -2468,7 +2467,7 @@ DiagnosticResponse ArduinoInterface::eepromWrite(unsigned char position, unsigne
 	m_lastCommand = LastCommand::lcEEPROMWrite;
 
 	// Fall back if older firmware
-	if (m_version.major == 1 && m_version.minor < 9) {
+	if ((m_version.major == 1) && (m_version.minor < 9)) {
 		return DiagnosticResponse::drOldFirmware;
 	}
 
@@ -2507,7 +2506,7 @@ DiagnosticResponse ArduinoInterface::eeprom_IsAdvancedController(bool& enabled) 
 		if (r != DiagnosticResponse::drOK) return r;
 	}
 
-	enabled = ret[0] == 0x52 && ret[1] == 0x6F && ret[2] == 0x62 && ret[3] == 0x53;
+	enabled = (ret[0] == 0x52) && (ret[1] == 0x6F) && (ret[2] == 0x62) && (ret[3] == 0x53);
 	m_lastError = DiagnosticResponse::drOK;
 	return m_lastError;
 }
@@ -2520,7 +2519,7 @@ DiagnosticResponse ArduinoInterface::eeprom_IsDrawbridgePlusMode(bool& enabled) 
 		if (r != DiagnosticResponse::drOK) return r;
 	}
 
-	enabled = ret[0] == 0x2B && ret[1] == 0xB2;
+	enabled = (ret[0] == 0x2B) && (ret[1] == 0xB2);
 	m_lastError = DiagnosticResponse::drOK;
 	return m_lastError;
 }
@@ -2534,7 +2533,7 @@ DiagnosticResponse ArduinoInterface::eeprom_IsDensityDetectDisabled(bool& enable
 		if (r != DiagnosticResponse::drOK) return r;
 	}
 
-	enabled = ret[0] == 0x44 && ret[1] == 0x53;
+	enabled = (ret[0] == 0x44) && (ret[1] == 0x53);
 	m_lastError = DiagnosticResponse::drOK;
 	return m_lastError;
 }
@@ -2547,7 +2546,7 @@ DiagnosticResponse ArduinoInterface::eeprom_IsSlowSeekMode(bool& enabled) {
 		if (r != DiagnosticResponse::drOK) return r;
 	}
 
-	enabled = ret[0] == 0x53 && ret[1] == 0x77;
+	enabled = (ret[0] == 0x53) && (ret[1] == 0x77);
 	m_lastError = DiagnosticResponse::drOK;
 	return m_lastError;
 }
@@ -2560,7 +2559,7 @@ DiagnosticResponse ArduinoInterface::eeprom_IsIndexAlignMode(bool& enabled) {
 		if (r != DiagnosticResponse::drOK) return r;
 	}
 
-	enabled = ret[0] == 0x69 && ret[1] == 0x61;
+	enabled = (ret[0] == 0x69) && (ret[1] == 0x61);
 	m_lastError = DiagnosticResponse::drOK;
 	return m_lastError;
 }

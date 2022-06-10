@@ -22,7 +22,8 @@
 #define ONE_NANOSECOND 1000000000UL
 #define BITCELL_SIZE_IN_NS 2000L
 
-#define PIN_DISKCHG			34
+#define PIN_DISKCHG_IBMPC	34
+#define PIN_DISKCHG_SHUGART 2
 #define PIN_WRPROT			28
 
 using namespace GreaseWeazle;
@@ -114,7 +115,7 @@ std::wstring findPortNumber() {
 }
 
 // Attempts to open the reader running on the COM port provided (or blank for auto-detect)
-GWResponse GreaseWeazleInterface::openPort(const std::string& comPort, bool useDriveA) {
+GWResponse GreaseWeazleInterface::openPort(const std::string& comPort, DriveSelection drive) {
 	closePort();
 
 	m_motorIsEnabled = false;
@@ -191,9 +192,33 @@ GWResponse GreaseWeazleInterface::openPort(const std::string& comPort, bool useD
 	};
 
 	// Select the drive we want to communicate with
-	m_currentBusType = BusType::IBMPC;
-	m_currentDriveIndex = useDriveA ? 0 : 1;
-
+	switch (drive) {
+	case DriveSelection::dsA:
+		m_currentBusType = BusType::IBMPC;
+		m_currentDriveIndex = 0;
+		break;
+	case DriveSelection::dsB:
+		m_currentBusType = BusType::IBMPC;
+		m_currentDriveIndex = 0;
+		break;
+	case DriveSelection::ds0:
+		m_currentBusType = BusType::Shugart;
+		m_currentDriveIndex = 0;
+		break;
+	case DriveSelection::ds1:
+		m_currentBusType = BusType::Shugart;
+		m_currentDriveIndex = 1;
+		break;
+	case DriveSelection::ds2:
+		m_currentBusType = BusType::Shugart;
+		m_currentDriveIndex = 2;
+		break;
+	case DriveSelection::ds3:
+		m_currentBusType = BusType::Shugart;
+		m_currentDriveIndex = 3;
+		break;
+	}
+	
 	if (!sendCommand(Cmd::SetBusType, (unsigned char)m_currentBusType, response)) {
 		closePort();
 		return GWResponse::drError;
@@ -361,7 +386,9 @@ void GreaseWeazleInterface::checkPins() {
 		}
 	}
 
-	if ((!sendCommand(Cmd::GetPin, PIN_DISKCHG, response)) || (response != Ack::Okay)) {
+	const int pin = (m_currentBusType == BusType::Shugart) ? PIN_DISKCHG_SHUGART : PIN_DISKCHG_IBMPC;
+
+	if ((!sendCommand(Cmd::GetPin, pin, response)) || (response != Ack::Okay)) {
 		m_pinDskChangeAvailable = false;
 	}
 	else {

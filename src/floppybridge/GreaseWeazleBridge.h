@@ -31,7 +31,7 @@ private:
 	std::string m_comPort;
 
 	// Which drive to use
-	bool m_useDriveA = false;
+	CommonBridgeTemplate::DriveSelection m_useDrive;
 
 	// Is this a HD disk?
 	bool m_isHDDisk = false;
@@ -117,7 +117,7 @@ protected:
 	;
 
 public:
-	GreaseWeazleDiskBridge(BridgeMode bridgeMode, BridgeDensityMode bridgeDensity, bool enableAutoCache, bool useSmartSpeed, bool autoDetectComPort, char* comPort, bool driveOnB);
+	GreaseWeazleDiskBridge(BridgeMode bridgeMode, BridgeDensityMode bridgeDensity, bool enableAutoCache, bool useSmartSpeed, bool autoDetectComPort, char* comPort, CommonBridgeTemplate::DriveSelection drive);
 
 	// This is for the static version
 	GreaseWeazleDiskBridge(BridgeMode bridgeMode, BridgeDensityMode bridgeDensity, int uaeSettings);

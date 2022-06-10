@@ -53,7 +53,8 @@ HINSTANCE hInstance;
 
 
 
-static BridgeAbout BridgeInformation = { "FloppyBridge, Copyright(C) 2021-2022 Robert Smith (@RobSmithDev)", "https://amiga.robsmithdev.co.uk/winuae", 0, 11, 1, 0, 0};
+static BridgeAbout BridgeInformation = { "FloppyBridge, Copyright(C) 2021-2022 RobSmithDev", "https://amiga.robsmithdev.co.uk/winuae", 1, 2, 0, 0, 0};
+static BridgeAbout BridgeInformationUpdate = { "FloppyBridge UPDATE AVAILABLE, Copyright(C) 2021-2022 RobSmithDev", "https://amiga.robsmithdev.co.uk/winuae", 1, 2, 0, 0, 0 };
 static bool hasUpdateChecked = false;
 std::vector<SerialIO::SerialPortInformation> serialports;
 #ifdef _WIN32
@@ -104,7 +105,7 @@ bool BridgeConfig::fromString(char* serialisedOptions) {
 
     unsigned int i = atoi(params[1].c_str());
     autoCache = (i & 1) != 0;
-    driveCableIsB = (i & 2) != 0;
+    driveCable = (CommonBridgeTemplate::DriveSelection)(((i & 2)>>1) | ((i & 48) >> 3));
     autoDetectComPort = (i & 4) != 0;
     smartSpeed = (i & 8) != 0;
 #ifdef _WIN32
@@ -125,7 +126,9 @@ bool BridgeConfig::fromString(char* serialisedOptions) {
 }
 
 void BridgeConfig::toString(char** serialisedOptions) {
-    unsigned int flags = (autoCache ? 1 : 0) | (driveCableIsB ? 2 : 0) | (autoDetectComPort ? 4 : 0) | (smartSpeed ? 8 : 0);
+    unsigned int i = (unsigned int)driveCable;
+
+    unsigned int flags = (autoCache ? 1 : 0) | ((i & 1) << 1) | ((i & 6) << 3) | (autoDetectComPort ? 4 : 0) | (smartSpeed ? 8 : 0);
 
     std::string tmp;
     tmp = std::string(profileName) + "[" + std::to_string(bridgeIndex) + "|" + std::to_string(flags) + "|" + std::string(comPortToUse) + "|" + std::to_string((unsigned int)bridgeMode) + "|" + std::to_string((unsigned int)bridgeDensity) + "]";
@@ -140,6 +143,9 @@ void BridgeConfig::toString(char** serialisedOptions) {
 
 // Returns a pointer to information about the project
 void handleAbout(bool checkForUpdates, BridgeAbout** output) {
+#ifdef _WIN32
+    checkForUpdates |= BridgeProfileListEditor::shouldAutoCheckForUpdates();
+#endif
     if ((checkForUpdates) && (!hasUpdateChecked)) {
         hasUpdateChecked = true;
 
@@ -157,18 +163,29 @@ void handleAbout(bool checkForUpdates, BridgeAbout** output) {
 #ifdef _WIN32
                 BridgeInformation.updateMajorVersion = add.S_un.S_un_b.s_b1;
                 BridgeInformation.updateMinorVersion = add.S_un.S_un_b.s_b2;
+                BridgeInformationUpdate.updateMajorVersion = add.S_un.S_un_b.s_b1;
+                BridgeInformationUpdate.updateMinorVersion = add.S_un.S_un_b.s_b2;
 #else
                 uint32_t bytes = htonl(add.s_addr);
                 BridgeInformation.updateMajorVersion = bytes >> 24;
                 BridgeInformation.updateMinorVersion = (bytes >> 16) & 0xFF;
+                BridgeInformationUpdate.updateMajorVersion = bytes >> 24;
+                BridgeInformationUpdate.updateMinorVersion = (bytes >> 16) & 0xFF;
 #endif  
                 BridgeInformation.isUpdateAvailable = ((BridgeInformation.majorVersion < BridgeInformation.updateMajorVersion) ||
                     ((BridgeInformation.majorVersion == BridgeInformation.updateMajorVersion) && (BridgeInformation.minorVersion < BridgeInformation.updateMinorVersion))) ? 1 : 0;
+              
+                BridgeInformationUpdate.isUpdateAvailable = BridgeInformation.isUpdateAvailable;;
             }
         }
     }
+#ifdef _WIN32
+    if (output) 
+        if (BridgeInformationUpdate.isUpdateAvailable) *output = (BridgeAbout*)&BridgeInformationUpdate; else *output = (BridgeAbout*)&BridgeInformation;
 
+#else
     if (output) *output = (BridgeAbout*)&BridgeInformation;
+#endif 
 }
 
 // Get driver information
@@ -542,8 +559,8 @@ extern "C" {
 
         switch (bridgeDriverHandle->config.bridgeIndex) {
         case 0: bridgeDriverHandle->bridge = new ArduinoFloppyDiskBridge(bridgeDriverHandle->config.bridgeMode, bridgeDriverHandle->config.bridgeDensity, bridgeDriverHandle->config.autoCache, bridgeDriverHandle->config.smartSpeed, bridgeDriverHandle->config.autoDetectComPort, bridgeDriverHandle->config.comPortToUse); break;
-        case 1: bridgeDriverHandle->bridge = new GreaseWeazleDiskBridge(bridgeDriverHandle->config.bridgeMode, bridgeDriverHandle->config.bridgeDensity, bridgeDriverHandle->config.autoCache, bridgeDriverHandle->config.smartSpeed, bridgeDriverHandle->config.autoDetectComPort, bridgeDriverHandle->config.comPortToUse, bridgeDriverHandle->config.driveCableIsB); break;
-        case 2: bridgeDriverHandle->bridge = new SupercardProDiskBridge(bridgeDriverHandle->config.bridgeMode, bridgeDriverHandle->config.bridgeDensity, bridgeDriverHandle->config.autoCache, bridgeDriverHandle->config.smartSpeed, bridgeDriverHandle->config.autoDetectComPort, bridgeDriverHandle->config.comPortToUse, bridgeDriverHandle->config.driveCableIsB); break;
+        case 1: bridgeDriverHandle->bridge = new GreaseWeazleDiskBridge(bridgeDriverHandle->config.bridgeMode, bridgeDriverHandle->config.bridgeDensity, bridgeDriverHandle->config.autoCache, bridgeDriverHandle->config.smartSpeed, bridgeDriverHandle->config.autoDetectComPort, bridgeDriverHandle->config.comPortToUse, bridgeDriverHandle->config.driveCable); break;
+        case 2: bridgeDriverHandle->bridge = new SupercardProDiskBridge(bridgeDriverHandle->config.bridgeMode, bridgeDriverHandle->config.bridgeDensity, bridgeDriverHandle->config.autoCache, bridgeDriverHandle->config.smartSpeed, bridgeDriverHandle->config.autoDetectComPort, bridgeDriverHandle->config.comPortToUse, bridgeDriverHandle->config.driveCable == CommonBridgeTemplate::DriveSelection::dsDriveB); break;
         default: return false;
         }
 
@@ -693,19 +710,34 @@ extern "C" {
         bridgeDriverHandle->config.autoDetectComPort = autoDetectComPort;
         return true;
     }
-    // Get the cable on the drive where the floppy drive is (A or B)
+    // Get the cable on the drive where the floppy drive is (A or B) - Obsolete
     FLOPPYBRIDGE_API bool CALLING_CONVENSION BRIDGE_DriverGetCable(BridgeOpened* bridgeDriverHandle, bool* isOnB) {
         if (!bridgeDriverHandle) return false;
         if (!(bridgeDriverHandle->driverDetails->configOptions & CONFIG_OPTIONS_DRIVE_AB)) return false;
         if (!isOnB) return false;
-        (*isOnB) = bridgeDriverHandle->config.driveCableIsB;
+        (*isOnB) = bridgeDriverHandle->config.driveCable == CommonBridgeTemplate::DriveSelection::dsDriveB;
         return true;
     }
-    // Set the cable on the drive where the floppy drive is (A or B)
+    // Set the cable on the drive where the floppy drive is (A or B) - Obsolete
     FLOPPYBRIDGE_API bool CALLING_CONVENSION BRIDGE_DriverSetCable(BridgeOpened* bridgeDriverHandle, bool isOnB) {
         if (!bridgeDriverHandle) return false;
         if (!(bridgeDriverHandle->driverDetails->configOptions & CONFIG_OPTIONS_DRIVE_AB)) return false;
-        bridgeDriverHandle->config.driveCableIsB = isOnB;
+        bridgeDriverHandle->config.driveCable = isOnB ? CommonBridgeTemplate::DriveSelection::dsDriveB : CommonBridgeTemplate::DriveSelection::dsDriveA;
+        return true;
+    }
+    // Get the cable on the drive where the floppy drive is (A, B, 0, 1 or 2)
+    FLOPPYBRIDGE_API bool CALLING_CONVENSION BRIDGE_DriverGetCable2(BridgeOpened* bridgeDriverHandle, int* driveSelection) {
+        if (!bridgeDriverHandle) return false;
+        if (!(bridgeDriverHandle->driverDetails->configOptions & CONFIG_OPTIONS_DRIVE_AB)) return false;
+        if (!driveSelection) return false;
+        (*driveSelection) = (int)bridgeDriverHandle->config.driveCable;
+        return true;
+    }
+    // Set the cable on the drive where the floppy drive is (A, B, 0, 1 or 2)
+    FLOPPYBRIDGE_API bool CALLING_CONVENSION BRIDGE_DriverSetCable2(BridgeOpened* bridgeDriverHandle, int driveSelection) {
+        if (!bridgeDriverHandle) return false;
+        if (!(bridgeDriverHandle->driverDetails->configOptions & CONFIG_OPTIONS_DRIVE_AB)) return false;
+        bridgeDriverHandle->config.driveCable = (CommonBridgeTemplate::DriveSelection)driveSelection;
         return true;
     }
 
@@ -895,6 +927,7 @@ BOOL WINAPI DllMain(
         bridgeLogos.push_back((HBITMAP)LoadImage(hInstance, MAKEINTRESOURCE(IDB_BRIDGELOGO0), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
         bridgeLogos.push_back((HBITMAP)LoadImage(hInstance, MAKEINTRESOURCE(IDB_BRIDGELOGO1), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
         bridgeLogos.push_back((HBITMAP)LoadImage(hInstance, MAKEINTRESOURCE(IDB_BRIDGELOGO2), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
+        bridgeLogos.push_back((HBITMAP)LoadImage(hInstance, MAKEINTRESOURCE(IDB_BRIDGELOGO0), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
         break;
 
     case DLL_PROCESS_DETACH:
