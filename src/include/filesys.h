@@ -96,8 +96,8 @@ struct hd_hardfiledata {
     int ansi_version;
 };
 
-#define HD_CONTROLLER_EXPANSION_MAX 120
-#define HD_CONTROLLER_NEXT_UNIT 300
+#define HD_CONTROLLER_EXPANSION_MAX 190
+#define HD_CONTROLLER_NEXT_UNIT 600
 
 #define HD_CONTROLLER_TYPE_UAE 0
 #define HD_CONTROLLER_TYPE_IDE_AUTO (HD_CONTROLLER_TYPE_UAE + 1)
@@ -120,7 +120,7 @@ struct hd_hardfiledata {
 #define FILESYS_CD 4
 #define FILESYS_TAPE 5
 
-#define MAX_FILESYSTEM_UNITS 30
+#define MAX_FILESYSTEM_UNITS 50
 
 struct uaedev_mount_info;
 extern struct uaedev_mount_info options_mountinfo;

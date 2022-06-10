@@ -27,8 +27,6 @@ extern void reset_sound(void);
 extern bool sound_paused(void);
 extern void sound_setadjust(float);
 extern int enumerate_sound_devices(void);
-extern int drivesound_init(void);
-extern void drivesound_free(void);
 extern void sound_mute(int);
 extern void sound_volume(int);
 extern void set_volume(int, int);

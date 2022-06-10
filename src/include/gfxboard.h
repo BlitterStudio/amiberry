@@ -81,6 +81,7 @@ struct gfxboard_mode
 	int height;
 	RGBFTYPE mode;
 	bool redraw_required;
+	int hlinedbl, vlinedbl;
 };
 
 typedef bool(*GFXBOARD_INIT)(struct autoconfig_info*);

@@ -5209,7 +5209,7 @@ bool omtiadapter_init(struct autoconfig_info *aci)
 	return true;
 }
 
-void omtiadapter_scsi_unit(int ch, struct uaedev_config_info *ci, struct romconfig *rc)
+void omtiadapter_add_scsi_unit(int ch, struct uaedev_config_info *ci, struct romconfig *rc)
 {
 	generic_soft_scsi_add(ch, ci, rc, OMTI_ADAPTER, 65536, 0, ROMTYPE_OMTIADAPTER);
 }

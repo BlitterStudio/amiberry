@@ -5856,7 +5856,7 @@ const struct expansionromtype expansionroms[] = {
 
 	{
 		_T("omtiadapter"), _T("OMTI-Adapter"), _T("C't"),
-		NULL, omtiadapter_init, NULL, omtiadapter_scsi_unit, ROMTYPE_OMTIADAPTER | ROMTYPE_NOT, 0, 0, BOARD_NONAUTOCONFIG_BEFORE, true,
+		NULL, omtiadapter_init, NULL, omtiadapter_add_scsi_unit, ROMTYPE_OMTIADAPTER | ROMTYPE_NOT, 0, 0, BOARD_NONAUTOCONFIG_BEFORE, true,
 		NULL, 0,
 		false, EXPANSIONTYPE_CUSTOM | EXPANSIONTYPE_SCSI
 	},

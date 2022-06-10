@@ -1324,7 +1324,7 @@ static void initialize_mountinfo (void)
 			allocuci (&currprefs, nr, idx);
 		}
 	}
-	//filesys_addexternals ();
+	filesys_addexternals ();
 	nr = nr_units ();
 	cd_unit_offset = nr;
 	cd_unit_number = 0;
