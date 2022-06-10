@@ -72,8 +72,8 @@ extern bool gfxboard_set(bool rtg);
 #define GFXBOARD_ID_CV64_Z3 17
 #define GFXBOARD_ID_VOODOO3_PCI 18
 #define GFXBOARD_ID_S3VIRGE_PCI 19
-#define GFXBOARD_ID_VOODOO5_PCI 20
-
+#define GFXBOARD_ID_PIXEL64 20
+#define GFXBOARD_ID_VOODOO5_PCI 21
 
 struct gfxboard_mode
 {

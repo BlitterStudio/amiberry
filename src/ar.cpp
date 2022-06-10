@@ -1616,7 +1616,7 @@ int action_replay_load (void)
 		}
 	}
 	zfile_fseek(f, 0, SEEK_END);
-	ar_rom_file_size = zfile_ftell(f);
+	ar_rom_file_size = zfile_ftell32(f);
 	zfile_fseek(f, 0, SEEK_SET);
 	zfile_fread (header, 1, sizeof header, f);
 	zfile_fseek (f, 0, SEEK_SET);
@@ -1734,10 +1734,14 @@ int hrtmon_load (void)
 	armodel = 0;
 	cart_type = CART_AR;
 	hrtmem_start = 0xa10000;
+#ifdef AMIBERRY
 	if(!_tcscmp(currprefs.cartfile, _T(":HRTMon")))
 		rd = getromdatabyid(63);
 	else
 		rd = getromdatabypath(currprefs.cartfile);
+#else
+	rd = getromdatabypath(currprefs.cartfile);
+#endif
 	if (rd) {
 		if (rd->id == 63)
 			isinternal = 1;
@@ -1936,7 +1940,7 @@ void action_replay_memory_reset (void)
 		action_replay_flag = ACTION_REPLAY_ACTIVE;
 }
 
-uae_u8 *save_hrtmon (int *len, uae_u8 *dstptr)
+uae_u8 *save_hrtmon(size_t *len, uae_u8 *dstptr)
 {
 	uae_u8 *dstbak, *dst;
 
@@ -2015,7 +2019,7 @@ uae_u8 *restore_hrtmon (uae_u8 *src)
 	return src;
 }
 
-uae_u8 *save_action_replay (int *len, uae_u8 *dstptr)
+uae_u8 *save_action_replay(size_t *len, uae_u8 *dstptr)
 {
 	uae_u8 *dstbak, *dst;
 

@@ -392,13 +392,12 @@ bool my_kbd_handler(int keyboard, int scancode, int newstate, bool alwaysrelease
 		uae_quit();
 		return true;
 	}
-
-	if (scancode == DIK_F9 && specialpressed()) {
-		extern bool toggle_3d_debug(void);
+#endif
+#if 1
+	if (scancode == SDL_SCANCODE_F9 && specialpressed()) {
 		if (newstate) {
-			if (!toggle_3d_debug()) {
-				toggle_rtg(0, MAX_RTG_BOARDS + 1);
-			}
+			extern int blop;
+			blop++;
 		}
 		return true;
 	}

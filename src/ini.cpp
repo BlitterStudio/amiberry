@@ -178,7 +178,7 @@ struct ini_data *ini_load(const TCHAR *path, bool sort)
 	FILE *f = _tfopen(path, _T("rb"));
 	if (!f)
 		return NULL;
-	int v = fread(tmp, 1, sizeof tmp, f);
+	size_t v = fread(tmp, 1, sizeof tmp, f);
 	fclose (f);
 	if (v == 3 && tmp[0] == 0xef && tmp[1] == 0xbb && tmp[2] == 0xbf) {
 		f = _tfopen (path, _T("rt, ccs=UTF-8"));

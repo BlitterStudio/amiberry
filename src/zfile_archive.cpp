@@ -323,7 +323,7 @@ struct zvolume *archive_directory_tar (struct zfile *z)
 			} else {
 				zn = zvolume_addfile_abs (zv, &zai);
 				if (zn)
-					zn->offset = zfile_ftell (z);
+					zn->offset = zfile_ftell32(z);
 			}
 			xfree (zai.name);
 		}
@@ -760,7 +760,7 @@ static struct zfile *archive_access_7z (struct znode *zn)
 		&offset, &outSizeProcessed,
 		&allocImp, &allocTempImp);
 	if (res == SZ_OK) {
-		zfile_fwrite (ctx->outBuffer + offset, zn->size, 1, z);
+		zfile_fwrite (ctx->outBuffer + offset, (size_t)zn->size, 1, z);
 	} else {
 		write_log (_T("7Z: SzExtract %s returned %d\n"), zn->fullname, res);
 		zfile_fclose (z);
@@ -1024,7 +1024,7 @@ static HRESULT __stdcall readCallback (int StreamID, uae_u64 offset, uae_u32 cou
 	int ret;
 
 	zfile_fseek (f, (long)offset, SEEK_SET);
-	ret = zfile_fread (buf, 1, count, f);
+	ret = (int)zfile_fread (buf, 1, count, f);
 	if (processedSize)
 		*processedSize = ret;
 	return 0;
@@ -1034,7 +1034,7 @@ static HRESULT __stdcall writeCallback (int StreamID, uae_u64 offset, uae_u32 co
 	struct zfile *f = arcacc_stack[StreamID];
 	int ret;
 
-	ret = zfile_fwrite ((void*)buf, 1, count, f);
+	ret = (int)zfile_fwrite ((void*)buf, 1, count, f);
 	if (processedSize)
 		*processedSize = ret;
 	if (ret != count)
@@ -1220,14 +1220,14 @@ static struct zfile *archive_access_plain (struct znode *zn)
 		z = zfile_fopen_empty (zn->volume->archive, zn->fullname, zn->size);
 		zf = zfile_fopen (zfile_getname (zn->volume->archive), _T("rb"), zn->volume->archive->zfdmask & ~ZFD_ADF, zn->offset - 1);
 		if (zf) {
-			zfile_fread (z->data, zn->size, 1, zf);
+			zfile_fread (z->data, (size_t)zn->size, 1, zf);
 			zfile_fclose (zf);
 		}
 	} else {
 		z = zfile_fopen_empty (zn->volume->archive, zn->fullname, zn->size);
 		if (z) {
 			zfile_fseek (zn->volume->archive, 0, SEEK_SET);
-			zfile_fread (z->data, zn->size, 1, zn->volume->archive);
+			zfile_fread (z->data, (size_t)zn->size, 1, zn->volume->archive);
 		}
 	}
 	return z;
@@ -1479,7 +1479,7 @@ struct zvolume *archive_directory_adf (struct znode *parent, struct zfile *z)
 
 	adf = xcalloc (struct adfhandle, 1);
 	zfile_fseek (z, 0, SEEK_END);
-	adf->size = zfile_ftell (z);
+	adf->size = zfile_ftell32(z);
 	zfile_fseek (z, 0, SEEK_SET);
 
 	adf->blocksize = 512;
@@ -1695,7 +1695,7 @@ static struct zfile *archive_access_adf (struct znode *zn)
 					zfile_fseek (adf->z, block * adf->blocksize, SEEK_SET);
 				else
 					zfile_fseek (adf->z, block * adf->blocksize + 24, SEEK_SET);
-				zfile_fread (dst, bsize, 1, adf->z);
+				zfile_fread (dst, (size_t)bsize, 1, adf->z);
 				size -= bsize;
 				dst += bsize;
 				if (size <= 0)
@@ -1750,7 +1750,7 @@ static struct zfile *archive_access_adf (struct znode *zn)
 			zfile_fseek (adf->z, block * adf->blocksize, SEEK_SET);
 			if (bsize > size)
 				bsize = size;
-			zfile_fread (dst, bsize, 1, adf->z);
+			zfile_fread (dst, (size_t)bsize, 1, adf->z);
 			dst += bsize;
 			size -= bsize; 
 		}
@@ -2183,7 +2183,7 @@ static struct zfile *archive_access_fat (struct znode *zn)
 		uae_s64 left = size > sectorspercluster * 512 ? sectorspercluster * 512 : size;
 		int sector = dataregion + (cluster - 2) * sectorspercluster;
 		zfile_fseek (sz, sector * 512, SEEK_SET);
-		zfile_fread (dz->data + offset, 1, left, sz);
+		zfile_fread (dz->data + offset, 1, (size_t)left, sz);
 		size -= left;
 		offset += left;
 		cluster = getcluster (sz, cluster, reserved, fatbits);

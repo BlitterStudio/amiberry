@@ -45,7 +45,8 @@ static int op_preced(const TCHAR c)
     switch(c)    {
         case '!':
             return 4;
-		case '*':  case '/': case '\\': case '%':
+        case '*':  case '/': case '\\': case '%':
+        case '|':  case '&': case '^':
             return 3;
         case '+': case '-':
             return 2;
@@ -60,6 +61,7 @@ static bool op_left_assoc(const TCHAR c)
     switch(c)    {
         // left to right
         case '*': case '/': case '%': case '+': case '-':
+        case '|': case '&': case '^':
             return true;
         // right to left
         case '=': case '!':
@@ -72,6 +74,7 @@ static unsigned int op_arg_count(const TCHAR c)
 {
     switch(c)  {
         case '*': case '/': case '%': case '+': case '-': case '=':
+        case '|': case '&': case '^':
             return 2;
         case '!':
             return 1;
@@ -81,7 +84,7 @@ static unsigned int op_arg_count(const TCHAR c)
     return 0;
 }
  
-#define is_operator(c)  (c == '+' || c == '-' || c == '/' || c == '*' || c == '!' || c == '%' || c == '=')
+#define is_operator(c)  (c == '+' || c == '-' || c == '/' || c == '*' || c == '!' || c == '%' || c == '=' || c == '|' || c == '&' || c == '^')
 #define is_function(c)  (c >= 'A' && c <= 'Z')
 #define is_ident(c)     ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z'))
  
@@ -240,7 +243,12 @@ static double docalcx(TCHAR op, double v1, double v2)
 		return v1 / v2;
 		case '\\':
 		return (int)v1 % (int)v2;
-
+        case '|':
+        return (int)v1 | (int)v2;
+        case '&':
+        return (int)v1 & (int)v2;
+        case '^':
+        return (int)v1 ^ (int)v2;
 	}
 	return 0;
 }

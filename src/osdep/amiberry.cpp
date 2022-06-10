@@ -1461,7 +1461,7 @@ void logging_cleanup(void)
 	debugfile = nullptr;
 }
 
-uae_u8* save_log(int bootlog, int* len)
+uae_u8* save_log(int bootlog, size_t* len)
 {
 	FILE* f;
 	uae_u8* dst = NULL;

@@ -149,14 +149,14 @@ uae_u8 sampler_getsample (int channel)
 	static int cap_pos;
 	static float diffsample;
 #endif
-	static double doffset_offset;
+	static float doffset_offset;
 	//HRESULT hr;
 	//DWORD t;
 	void *p1, *p2;
 	//DWORD len1, len2;
-	evt cycles;
+	evt_t cycles;
 	int sample, samplecnt;
-	double doffset;
+	float doffset;
 	int offset;
 
 	if (!currprefs.sampler_stereo)

@@ -2808,7 +2808,7 @@ uae_u8 *restore_fpu (uae_u8 *src)
 	return src;
 }
 
-uae_u8 *save_fpu (int *len, uae_u8 *dstptr)
+uae_u8 *save_fpu(size_t *len, uae_u8 *dstptr)
 {
 	uae_u32 w1, w2, w3, v;
 	uae_u8 *dstbak, *dst;

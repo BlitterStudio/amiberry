@@ -573,7 +573,7 @@ LOWFUNC(READ,NONE,3,raw_cmov_l_rr,(RW4 d, R4 s, IMM cc))
 		uae_s8 *target_p = (uae_s8 *)x86_get_target() + 1;
 		JCCSii(cc^1, 0);
 		MOVLrr(s, d);
-		*target_p = (uintptr)x86_get_target() - ((uintptr)target_p + 1);
+		*target_p = JITPTR x86_get_target() - (JITPTR target_p + 1);
 	}
 }
 
@@ -716,7 +716,7 @@ LOWFUNC(NONE,READ,5,raw_cmov_l_rm_indexed,(W4 d, IMM base, R4 index, IMM factor,
 		uae_s8 *target_p = (uae_s8 *)x86_get_target() + 1;
 		JCCSii(cond^1, 0);
 		ADDR32 MOVLmr(base, X86_NOREG, index, factor, d);
-		*target_p = (uintptr)x86_get_target() - ((uintptr)target_p + 1);
+		*target_p = JITPTR x86_get_target() - (JITPTR target_p + 1);
 	}
 }
 
@@ -728,7 +728,7 @@ LOWFUNC(NONE,READ,3,raw_cmov_l_rm,(W4 d, IMM mem, IMM cond))
 		uae_s8 *target_p = (uae_s8 *)x86_get_target() + 1;
 		JCCSii(cond^1, 0);
 		ADDR32 MOVLmr(mem, X86_NOREG, X86_NOREG, 1, d);
-		*target_p = (uintptr)x86_get_target() - ((uintptr)target_p + 1);
+		*target_p = JITPTR x86_get_target() - (JITPTR target_p + 1);
 	}
 }
 
@@ -1210,19 +1210,19 @@ static inline void raw_jnz_l_oponly(void)
 static inline void raw_jl(uae_u32 t)
 {
 	raw_jcc_l_oponly(NATIVE_CC_LT);
-	emit_long(t-(uintptr)target-4);
+	emit_long(t-(uae_u32)JITPTR target-4);
 }
 
 static inline void raw_jz(uae_u32 t)
 {
 	raw_jz_l_oponly();
-	emit_long(t-(uintptr)target-4);
+	emit_long(t-(uae_u32)JITPTR target-4);
 }
 
 static inline void raw_jnz(uae_u32 t)
 {
 	raw_jnz_l_oponly();
-	emit_long(t-(uintptr)target-4);
+	emit_long(t-(uae_u32)JITPTR target-4);
 }
 
 static inline void raw_jcc_b_oponly(int cc)
@@ -1368,11 +1368,11 @@ static inline void raw_flags_to_reg_FLAGREG(int r)
 {
 	raw_lahf(0);  /* Most flags in AH */
 	//raw_setcc(r,0); /* V flag in AL */
-	raw_setcc_m((uintptr)live.state[FLAGTMP].mem,0);
+	raw_setcc_m(JITPTR live.state[FLAGTMP].mem,0);
 
 #if 1   /* Let's avoid those nasty partial register stalls */
-	//raw_mov_b_mr((uintptr)live.state[FLAGTMP].mem,r);
-	raw_mov_b_mr(((uintptr)live.state[FLAGTMP].mem)+1,AH_INDEX);
+	//raw_mov_b_mr(JITPTR live.state[FLAGTMP].mem,r);
+	raw_mov_b_mr((JITPTR live.state[FLAGTMP].mem)+1,AH_INDEX);
 	raw_flags_evicted(r);
 #endif
 }
@@ -1405,7 +1405,7 @@ static inline void raw_flags_to_reg_FLAGSTK(int r)
 {
 	raw_pushfl();
 	raw_pop_l_r(r);
-	raw_mov_l_mr((uintptr)live.state[FLAGTMP].mem,r);
+	raw_mov_l_mr(JITPTR live.state[FLAGTMP].mem,r);
 	raw_flags_evicted(r);
 }
 
@@ -1451,9 +1451,9 @@ static inline void raw_flags_to_reg_FLAGGEN(int r)
 		assert(r == 0);
 		raw_setcc(r,0); 				/* V flag in AL */
 		raw_lea_l_r_scaled(0,0,8);		/* move it to its EFLAGS location */
-		raw_mov_b_mr(((uintptr)live.state[FLAGTMP].mem)+1,0);
+		raw_mov_b_mr((JITPTR live.state[FLAGTMP].mem)+1,0);
 		raw_lahf(0);					/* most flags in AH */
-		raw_mov_b_mr((uintptr)live.state[FLAGTMP].mem,AH_INDEX);
+		raw_mov_b_mr(JITPTR live.state[FLAGTMP].mem,AH_INDEX);
 		raw_flags_evicted(r);
 	}
 	else
@@ -1521,20 +1521,20 @@ static inline void raw_flags_init_FLAGGEN(void)
 static inline void raw_load_flagreg(uae_u32 target)
 {
 	/* attention: in 64bit mode, relies on LITTE_ENDIANESS of regflags.cznv */
-	raw_mov_l_rm(target,(uintptr)live.state[FLAGTMP].mem);
+	raw_mov_l_rm(target,JITPTR live.state[FLAGTMP].mem);
 }
 
 static inline void raw_load_flagx(uae_u32 target)
 {
 #if FLAGBIT_X < 8
 	if (live.nat[target].canbyte)
-		raw_mov_b_rm(target,(uintptr)live.state[FLAGX].mem);
+		raw_mov_b_rm(target,JITPTR live.state[FLAGX].mem);
 	else
 #endif
 	if (live.nat[target].canword)
-		raw_mov_w_rm(target,(uintptr)live.state[FLAGX].mem);
+		raw_mov_w_rm(target,JITPTR live.state[FLAGX].mem);
 	else
-		raw_mov_l_rm(target,(uintptr)live.state[FLAGX].mem);
+		raw_mov_l_rm(target,JITPTR live.state[FLAGX].mem);
 }
 
 static inline void raw_dec_sp(int off)
@@ -2108,7 +2108,7 @@ LOWFUNC(NONE,WRITE,3,raw_fmovi_mrb,(MEMPTRW m, FR r, double *bounds))
 	rs = stackpos(r)+1;
 
 	/* Lower bound onto stack */
-	raw_fldl((uintptr) &bounds[0]); /* fld double from lower */
+	raw_fldl(JITPTR  &bounds[0]); /* fld double from lower */
 
 	/* Clamp to lower */
 	emit_byte(0xdb);
@@ -2119,7 +2119,7 @@ LOWFUNC(NONE,WRITE,3,raw_fmovi_mrb,(MEMPTRW m, FR r, double *bounds))
 	/* Upper bound onto stack */
 	emit_byte(0xdd);
 	emit_byte(0xd8);	/* fstp st(0) */
-	raw_fldl((uintptr) &bounds[1]); /* fld double from upper */
+	raw_fldl(JITPTR  &bounds[1]); /* fld double from upper */
 
 	/* Clamp to upper */
 	emit_byte(0xdb);
@@ -2360,7 +2360,7 @@ LOWFUNC(NONE,NONE,2,raw_ftwotox_rr,(FW d, FR s))
 	emit_byte(0xe1);    /* fsub frac(x) = x - int(x) */
 	emit_byte(0xd9);
 	emit_byte(0xf0);    /* f2xm1 (2^frac(x))-1 */
-	x86_fadd_m((uintptr) &one); /* Add '1' without using extra stack space */
+	x86_fadd_m(JITPTR  &one); /* Add '1' without using extra stack space */
 	emit_byte(0xd9);
 	emit_byte(0xfd);    /* fscale (2^frac(x))*2^int(x) */
 	emit_byte(0xdd);
@@ -2391,7 +2391,7 @@ LOWFUNC(NONE,NONE,2,raw_fetox_rr,(FW d, FR s))
 	emit_byte(0xe1);  /* subtract rounded from original */
 	emit_byte(0xd9);
 	emit_byte(0xf0);  /* f2xm1 */
-	x86_fadd_m((uintptr)&one);	/* Add '1' without using extra stack space */
+	x86_fadd_m(JITPTR &one);	/* Add '1' without using extra stack space */
 	emit_byte(0xd9);
 	emit_byte(0xfd);  /* and scale it */
 	emit_byte(0xdd);
@@ -2639,7 +2639,7 @@ LOWFUNC(NONE,NONE,2,raw_ftentox_rr,(FW d, FR s))
 	emit_byte(0xe1);    /* fsub x*log2(10) - int(x*log2(10))  */
 	emit_byte(0xd9);
 	emit_byte(0xf0);    /* f2xm1 (2^frac(x))-1 */
-	x86_fadd_m((uintptr) &one);
+	x86_fadd_m(JITPTR  &one);
 	emit_byte(0xd9);
 	emit_byte(0xfd);    /* fscale (2^frac(x))*2^int(x*log2(10)) */
 	emit_byte(0xdd);
@@ -2937,7 +2937,7 @@ LOWFUNC(NONE,NONE,2,raw_facos_rr,(FW d, FR s))
 	emit_byte(0xc9);    /* fxch swap x with sqrt(1-(x^2))  */
 	emit_byte(0xd9);
 	emit_byte(0xf3);    /* fpatan atan(x/sqrt(1-(x^2))) & pop */
-	raw_fldt((uintptr) &pihalf); /* fld load pi/2 from pihalf */
+	raw_fldt(JITPTR  &pihalf); /* fld load pi/2 from pihalf */
 	emit_byte(0xde);
 	emit_byte(0xe1);    /* fsubrp pi/2 - asin(x) & pop */
 	tos_make(d);        /* store y=acos(x) */
@@ -3037,7 +3037,7 @@ LOWFUNC(NONE,NONE,2,raw_fsinh_rr,(FW d, FR s))
 	emit_byte(0xe1);     /* fsub -x*log2(e) - int(-x*log2(e))  */
 	emit_byte(0xd9);
 	emit_byte(0xf0);     /* f2xm1 (2^frac(x))-1 */
-	x86_fadd_m((uintptr) &one);
+	x86_fadd_m(JITPTR  &one);
 	emit_byte(0xd9);
 	emit_byte(0xfd);     /* fscale (2^frac(x))*2^int(x*log2(e)) */
 	emit_byte(0xd9);
@@ -3052,7 +3052,7 @@ LOWFUNC(NONE,NONE,2,raw_fsinh_rr,(FW d, FR s))
 	emit_byte(0xe1);     /* fsub x*log2(e) - int(x*log2(e))  */
 	emit_byte(0xd9);
 	emit_byte(0xf0);     /* f2xm1 (2^frac(x))-1 */
-	x86_fadd_m((uintptr) &one);
+	x86_fadd_m(JITPTR  &one);
 	emit_byte(0xd9);
 	emit_byte(0xfd);     /* fscale (2^frac(x))*2^int(x*log2(e)) */
 	emit_byte(0xdd);
@@ -3129,7 +3129,7 @@ LOWFUNC(NONE,NONE,2,raw_fcosh_rr,(FW d, FR s))
 	emit_byte(0xe1);     /* fsub -x*log2(e) - int(-x*log2(e))  */
 	emit_byte(0xd9);
 	emit_byte(0xf0);     /* f2xm1 (2^frac(x))-1 */
-	x86_fadd_m((uintptr) &one);
+	x86_fadd_m(JITPTR  &one);
 	emit_byte(0xd9);
 	emit_byte(0xfd);     /* fscale (2^frac(x))*2^int(x*log2(e)) */
 	emit_byte(0xd9);
@@ -3144,7 +3144,7 @@ LOWFUNC(NONE,NONE,2,raw_fcosh_rr,(FW d, FR s))
 	emit_byte(0xe1);     /* fsub x*log2(e) - int(x*log2(e))  */
 	emit_byte(0xd9);
 	emit_byte(0xf0);     /* f2xm1 (2^frac(x))-1 */
-	x86_fadd_m((uintptr) &one);
+	x86_fadd_m(JITPTR  &one);
 	emit_byte(0xd9);
 	emit_byte(0xfd);     /* fscale (2^frac(x))*2^int(x*log2(e)) */
 	emit_byte(0xdd);
@@ -3217,7 +3217,7 @@ LOWFUNC(NONE,NONE,2,raw_ftanh_rr,(FW d, FR s))
 	emit_byte(0xe1);     /* fsub -x*log2(e) - int(-x*log2(e))  */
 	emit_byte(0xd9);
 	emit_byte(0xf0);     /* f2xm1 (2^frac(x))-1 */
-	x86_fadd_m((uintptr) &one);
+	x86_fadd_m(JITPTR  &one);
 	emit_byte(0xd9);
 	emit_byte(0xfd);     /* fscale (2^frac(x))*2^int(x*log2(e)) */
 	emit_byte(0xd9);
@@ -3232,7 +3232,7 @@ LOWFUNC(NONE,NONE,2,raw_ftanh_rr,(FW d, FR s))
 	emit_byte(0xe1);     /* fsub x*log2(e) - int(x*log2(e))  */
 	emit_byte(0xd9);
 	emit_byte(0xf0);     /* f2xm1 (2^frac(x))-1 */
-	x86_fadd_m((uintptr) &one);
+	x86_fadd_m(JITPTR  &one);
 	emit_byte(0xd9);
 	emit_byte(0xfd);     /* fscale (2^frac(x))*2^int(x*log2(e)) */
 	emit_byte(0xdd);

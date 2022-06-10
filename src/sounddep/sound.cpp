@@ -41,8 +41,8 @@ struct sound_dp
 	uae_u8* pullbuffer;
 	unsigned int pullbufferlen;
 	int pullbuffermaxlen;
-	double avg_correct;
-	double cnt_correct;
+	float avg_correct;
+	float cnt_correct;
 	int stream_initialised;
 	int silence_written;
 };
@@ -90,28 +90,28 @@ float sound_sync_multiplier = 1.0;
 float scaled_sample_evtime_orig;
 extern float sampler_evtime;
 
-void update_sound(double clk)
+void update_sound(float clk)
 {
 	if (!have_sound)
 		return;
-	scaled_sample_evtime_orig = static_cast<float>(clk) * CYCLE_UNIT * sound_sync_multiplier / static_cast<float>(sdp->obtainedfreq);
+	scaled_sample_evtime_orig = clk * (float)CYCLE_UNIT * sound_sync_multiplier / static_cast<float>(sdp->obtainedfreq);
 	scaled_sample_evtime = scaled_sample_evtime_orig;
-	sampler_evtime = static_cast<float>(clk) * CYCLE_UNIT * sound_sync_multiplier;
+	sampler_evtime = clk * CYCLE_UNIT * sound_sync_multiplier;
 }
 
-extern int vsynctimebase_orig;
+extern frame_time_t vsynctimebase_orig;
 
 #define ADJUST_LIMIT 6
 #define ADJUST_LIMIT2 1
 
-void sound_setadjust(double v)
+void sound_setadjust(float v)
 {
 	if (v < -ADJUST_LIMIT)
 		v = -ADJUST_LIMIT;
 	if (v > ADJUST_LIMIT)
 		v = ADJUST_LIMIT;
 
-	const float mult = 1000.0f + static_cast<float>(v);
+	const float mult = 1000.0f + v;
 	if (isvsync_chipset()) {
 		vsynctimebase = vsynctimebase_orig;
 		scaled_sample_evtime = scaled_sample_evtime_orig * mult / 1000.0f;
@@ -126,7 +126,7 @@ void sound_setadjust(double v)
 	}
 }
 
-static void docorrection(struct sound_dp* s, int sndbuf, double sync, int granulaty)
+static void docorrection(struct sound_dp* s, int sndbuf, float sync, int granulaty)
 {
 	static int tfprev;
 
@@ -139,8 +139,8 @@ static void docorrection(struct sound_dp* s, int sndbuf, double sync, int granul
 	if (tfprev != timeframes) {
 		const auto avg = s->avg_correct / s->cnt_correct;
 
-		auto skipmode = sync / 100.0;
-		const auto avgskipmode = avg / (10000.0 / granulaty);
+		auto skipmode = sync / 100.0f;
+		const auto avgskipmode = avg / (10000.0f / granulaty);
 
 		gui_data.sndbuf = sndbuf;
 
@@ -154,12 +154,12 @@ static void docorrection(struct sound_dp* s, int sndbuf, double sync, int granul
 	}
 }
 
-static double sync_sound(double m)
+static float sync_sound(float m)
 {
-	double skipmode;
+	float skipmode;
 	if (isvsync()) {
 
-		skipmode = pow(m < 0 ? -m : m, EXPVS) / 2;
+		skipmode = (float)pow(m < 0 ? -m : m, EXPVS) / 2.0f;
 		if (m < 0)
 			skipmode = -skipmode;
 		if (skipmode < -ADJUST_VSSIZE)
@@ -170,7 +170,7 @@ static double sync_sound(double m)
 	}
 	else {
 
-		skipmode = pow(m < 0 ? -m : m, EXP) / 2;
+		skipmode = (float)pow(m < 0 ? -m : m, EXP) / 2.0f;
 		if (m < 0)
 			skipmode = -skipmode;
 		if (skipmode < -ADJUST_SIZE)

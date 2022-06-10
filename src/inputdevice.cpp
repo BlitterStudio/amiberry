@@ -159,7 +159,7 @@ static struct teststore testmode_data[TESTMODE_MAX];
 static struct teststore testmode_wait[TESTMODE_MAX];
 
 static int bouncy;
-static signed long bouncy_cycles;
+static frame_time_t bouncy_cycles;
 static int autopause;
 
 #define HANDLE_IE_FLAG_CANSTOPPLAYBACK 1
@@ -469,7 +469,7 @@ uae_u8 *restore_input (uae_u8 *src)
 	}
 	return src;
 }
-uae_u8 *save_input (int *len, uae_u8 *dstptr)
+uae_u8 *save_input (size_t *len, uae_u8 *dstptr)
 {
 	uae_u8 *dstbak, *dst;
 
@@ -1441,7 +1441,7 @@ static bool read_slot (const TCHAR *parm, int num, int joystick, int button, str
 	if (joystick < 0) {
 		if (!(ie->allow_mask & AM_K))
 			return false;
-		id->eventid[keynum][subnum] = ie - events;
+		id->eventid[keynum][subnum] = (int)(ie - events);
 		id->flags[keynum][subnum] = flags;
 		id->port[keynum][subnum] = port;
 		xfree (id->custom[keynum][subnum]);
@@ -1453,7 +1453,7 @@ static bool read_slot (const TCHAR *parm, int num, int joystick, int button, str
 			mask = AM_MOUSE_BUT;
 		if (!(ie->allow_mask & mask))
 			return false;
-		id->eventid[num + ID_BUTTON_OFFSET][subnum] = ie - events;
+		id->eventid[num + ID_BUTTON_OFFSET][subnum] = (int)(ie - events);
 		id->flags[num + ID_BUTTON_OFFSET][subnum] = flags;
 		id->port[num + ID_BUTTON_OFFSET][subnum] = port;
 		xfree (id->custom[num + ID_BUTTON_OFFSET][subnum]);
@@ -1465,7 +1465,7 @@ static bool read_slot (const TCHAR *parm, int num, int joystick, int button, str
 			mask = AM_MOUSE_AXIS;
 		if (!(ie->allow_mask & mask))
 			return false;
-		id->eventid[num + ID_AXIS_OFFSET][subnum] = ie - events;
+		id->eventid[num + ID_AXIS_OFFSET][subnum] = (int)(ie - events);
 		id->flags[num + ID_AXIS_OFFSET][subnum] = flags;
 		id->port[num + ID_AXIS_OFFSET][subnum] = port;
 		xfree (id->custom[num + ID_AXIS_OFFSET][subnum]);
@@ -2034,7 +2034,7 @@ void inputdevice_parse_jport_custom(struct uae_prefs *pr, int index, int port, T
 					goto skip;
 			}
 			if (outname == NULL) {
-				int evt = ie - &events[0];
+				int evt = (int)(ie - &events[0]);
 				if (joystick < 0) {
 					if (port >= 0) {
 						// all active keyboards
@@ -3695,7 +3695,7 @@ static void inject_events (const TCHAR *str)
 			const TCHAR *s2 = s;
 			while (*s && *s != ' ')
 				s++;
-			int s2len = s - s2;
+			int s2len = (int)(s - s2);
 			if (!s2len)
 				break;
 			for (int i = 1; events[i].name; i++) {
@@ -4470,7 +4470,7 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 		changed_prefs.cdslots[0].inuse = false;
 		break;
 	case AKS_IRQ7:
-	//	NMI_delayed();
+		//IRQ_forced(7, 0);
 		break;
 	case AKS_PAUSE:
 		pausemode(newstate > 0 ? 1 : newstate);
@@ -4605,13 +4605,13 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 			if (cr) {
 				int dir = code == AKS_INCREASEREFRESHRATE ? 5 : -5;
 				if (cr->rate == 0)
-					cr->rate = currprefs.ntscmode ? 60 : 50;
+					cr->rate = currprefs.ntscmode ? 60.0f : 50.0f;
 				cr->locked = true;
 				cr->rate += dir;
-				if (cr->rate < 10)
-					cr->rate = 10;
-				if (cr->rate > 900)
-					cr->rate = 900;
+				if (cr->rate < 10.0f)
+					cr->rate = 10.0f;
+				if (cr->rate > 900.0f)
+					cr->rate = 900.0f;
 				set_config_changed();
 			}
 		}
@@ -8409,7 +8409,7 @@ int inputdevice_iterate (int devnum, int num, TCHAR *name, int *af)
 		if (ie->allow_mask & AM_INFO) {
 			const struct inputevent *ie2 = ie + 1;
 			while (!(ie2->allow_mask & AM_INFO)) {
-				if (is_event_used (idf, devindex, ie2 - ie, -1)) {
+				if (is_event_used (idf, devindex, (int)(ie2 - ie), -1)) {
 					ie2++;
 					continue;
 				}
@@ -9834,7 +9834,7 @@ void inputdevice_fix_prefs(struct uae_prefs *p, bool userconfig)
 
 // for state recorder use only!
 
-uae_u8 *save_inputstate (int *len, uae_u8 *dstptr)
+uae_u8 *save_inputstate (size_t *len, uae_u8 *dstptr)
 {
 	uae_u8 *dstbak, *dst;
 

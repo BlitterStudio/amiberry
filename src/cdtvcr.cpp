@@ -107,7 +107,7 @@ static TCHAR flashfilepath[MAX_DPATH];
 static void cdtvcr_battram_reset (void)
 {
 	struct zfile *f;
-	int v;
+	size_t v;
 
 	memset (cdtvcr_ram, 0, CDTVCR_RAM_SIZE);
 	cfgfile_resolve_path_out_load(currprefs.flashfile, flashfilepath, MAX_DPATH, PATH_ROM);

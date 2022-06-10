@@ -34,9 +34,12 @@
 
 #if defined(CPU_AARCH64)
 typedef uae_u64 uintptr;
+typedef uae_s64 intptr;
 #else
 typedef uae_u32 uintptr;
 #endif
+
+#define JITPTR (uae_u32)(uintptr)
 
 /* Now that we do block chaining, and also have linked lists on each tag,
    TAGMASK can be much smaller and still do its job. Saves several megs
@@ -44,11 +47,7 @@ typedef uae_u32 uintptr;
 #define TAGMASK 0x0000ffff
 #define TAGSIZE (TAGMASK+1)
 #define MAXRUN 1024
-#if defined(CPU_AARCH64)
-#define cacheline(x) (((uae_u64)x)&TAGMASK)
-#else
-#define cacheline(x) (((uae_u32)x)&TAGMASK)
-#endif
+#define cacheline(x) (((uintptr)x)&TAGMASK)
 
 extern uae_u8* start_pc_p;
 extern uae_u32 start_pc;

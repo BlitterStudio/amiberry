@@ -178,7 +178,6 @@ void fixup_prefs_dimensions (struct uae_prefs *prefs)
 		fixup_prefs_dim2(i, &prefs->gfx_monitor[i].gfx_size_fs);
 		fixup_prefs_dim2(i, &prefs->gfx_monitor[i].gfx_size_win);
 	}
-	
 	if (prefs->gfx_apmode[1].gfx_vsync > 0)
 		prefs->gfx_apmode[1].gfx_vsyncmode = 1;
 

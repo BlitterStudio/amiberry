@@ -87,7 +87,7 @@ static void read_tree_p(void)
 
 	i = 0;
 	while (i < NP) {
-		pt_len[i] = getbits(LENFIELD);
+		pt_len[i] = (unsigned char)getbits(LENFIELD);
 		if (++i == 3 && pt_len[0] == 1 && pt_len[1] == 1 && pt_len[2] == 1) {
 #ifdef SUPPORT_LH7
 			c = getbits(MAX_DICBIT - 7);

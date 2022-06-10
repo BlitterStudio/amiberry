@@ -420,7 +420,7 @@ struct zfile *unwarp(struct zfile *zf)
 		if (!memcmp (buf + 12, "TOP\0", 4))
 			side = 0;
 		crc = (buf[20] << 8) | buf[21];
-		pos = zfile_ftell (zf);
+		pos = zfile_ftell32(zf);
 		dstpos = -1;
 		if (side >= 0 && track >= 0 && track <= 79)
 			dstpos = track * 22 * 512 + (side * 11 * 512);
@@ -465,7 +465,7 @@ struct zfile *unwarp(struct zfile *zf)
 			write_log (_T("WRP corrupt data, track=%d,side=%d,err=%d\n"), track, side, err);
 		} else {
 			uae_u16 crc2;
-			int os = zfile_ftell (tmpf);
+			int os = zfile_ftell32(tmpf);
 			data = zfile_getdata (tmpf, 0, os, NULL);
 			crc2 = wrpcrc16 (wrpcrc16table, data, os);
 			if (crc != crc2)

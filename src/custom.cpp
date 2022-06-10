@@ -1,11 +1,11 @@
- /*
+/*
 * UAE - The Un*x Amiga Emulator
 *
 * Custom chip emulation
 *
 * Copyright 1995-2002 Bernd Schmidt
 * Copyright 1995 Alessandro Bissacco
-* Copyright 2000-2015 Toni Wilen
+* Copyright 2000-2021 Toni Wilen
 */
 
 #include "sysconfig.h"
@@ -39,18 +39,55 @@
 #include "drawing.h"
 #include "savestate.h"
 #include "ar.h"
+//#include "debug.h"
 #include "akiko.h"
+#if defined(ENFORCER)
+#include "enforcer.h"
+#endif
 #include "threaddep/thread.h"
+//#include "luascript.h"
 #include "devices.h"
 #include "rommgr.h"
+//#include "specialmonitors.h"
+
+#define BPL_ERASE_TEST 0
+
+#define FRAMEWAIT_MIN_MS 2
+#define FRAMEWAIT_SPLIT 4
 
 #define SPR0_HPOS 0x15
-#define MAX_SPRITES 8
+
 #define SPEEDUP 1
+
+#define CUSTOM_DEBUG 0
+#define SPRITE_DEBUG 0
+#define SPRITE_DEBUG_MINY 0
+#define SPRITE_DEBUG_MAXY 0x30
+#define MAX_SPRITES 8
 #define AUTOSCALE_SPRITES 1
 #define ALL_SUBPIXEL 1
 
+#define RGA_COPPER_PIPELINE_DEPTH 2
+#define RGA_SPRITE_PIPELINE_DEPTH 3
+#define REFRESH_FIRST_HPOS 3
+#define DMAL_FIRST_HPOS 11
+#define SPR_FIRST_HPOS 25
+#define COPPER_CYCLE_POLARITY 0
+
+#define REF_RAS_ADD_AGA 0x000
+#define REF_RAS_ADD_ECS 0x200
+#define REF_RAS_ADD_OCS 0x002
+
 #define SPRBORDER 0
+
+#define EXTRAWIDTH_BROADCAST 15
+#define EXTRAHEIGHT_BROADCAST_TOP 0
+#define EXTRAHEIGHT_BROADCAST_BOTTOM 0
+#define EXTRAWIDTH_EXTREME 33
+#define EXTRAHEIGHT_EXTREME 24
+#define EXTRAWIDTH_ULTRA 77
+
+#define LORES_TO_SHRES_SHIFT 2
 
 #ifdef SERIAL_PORT
 extern uae_u16 serper;
@@ -85,8 +122,8 @@ static void uae_abort (const TCHAR *format,...)
 	nomore = 1;
 }
 
-static unsigned int n_consecutive_skipped = 0;
-static unsigned int total_skipped = 0;
+static uae_u32 n_consecutive_skipped = 0;
+static uae_u32 total_skipped = 0;
 
 extern int cpu_last_stop_vpos, cpu_stopped_lines;
 static int cpu_sleepmode, cpu_sleepmode_cnt;
@@ -99,7 +136,7 @@ STATIC_INLINE void sync_copper (int hpos);
 
 /* Events */
 
-unsigned long int vsync_cycles;
+evt_t vsync_cycles;
 static int extra_cycle;
 
 static int rpt_did_reset;
@@ -122,8 +159,8 @@ static bool lof_lace;
 static bool bplcon0_interlace_seen;
 static int scandoubled_line;
 static bool vsync_rendered, frame_rendered, frame_shown;
-static int vsynctimeperline;
-static int frameskiptime;
+static frame_time_t vsynctimeperline;
+static frame_time_t frameskiptime;
 static bool genlockhtoggle;
 static bool genlockvtoggle;
 static bool graphicsbuffer_retry;
@@ -173,22 +210,22 @@ static uae_u32 cop1lc, cop2lc, copcon;
 * horizontal defaults
 * 0x00   0 HCB
 * 0x01   1 HC1 (HSTART)
-* 0x09   9 VR1
-* 0x12  18 SHS (Horizontal blank start)
+* 0x09   9 VR1 (HBLANK start)
+* 0x12  18 SHS (Horizontal sync start)
 * 0x1a  26 VER1 PAL
 * 0x1b  27 VER1 NTSC
-* 0x23  35 RHS (Horizontal blank end)
+* 0x23  35 RHS (Horizontal sync end)
 * 0x73 115 VR2
 * 0x84 132 CEN (HCENTER)
 * 0x8c 140 VER2 PAL
 * 0x8d 141 VER2 NTSC
 * 0xe2 226 HC226 (short line, selected if LOL=1, NTSC only)
 * 0xe3 227 HC227 (NTSC long line/PAL)
-*
+* 
 * vertical defaults
-*
+* 
 * PAL
-*
+* 
 * 0    SVB
 * 2    VC2
 * 3    VC3
@@ -198,7 +235,7 @@ static uae_u32 cop1lc, cop2lc, copcon;
 * 25   RVB (Vertical blank end)
 * 311  VC311 short field (Vertical blank start)
 * 312  VC312 long field (Vertical blank start)
-*
+* 
 * Odd field:
 *
 * HSYNC SHS to RHS
@@ -219,7 +256,7 @@ static uae_u32 cop1lc, cop2lc, copcon;
 *
 *
 * NTSC
-*
+* 
 * 0    SVB
 * 3    VC3
 * 6    VC6
@@ -227,9 +264,9 @@ static uae_u32 cop1lc, cop2lc, copcon;
 * 20   RVB (Vertical blank end)
 * 261  VC261 short field (Vertical blank start)
 * 262  VC262 long field (Vertical blank start)
-*
+* 
 * Odd field:
-*
+* 
 * HSYNC SHS to RHS
 * VSYNC VC3/SHS to VC6/SHS
 * CSYNC HSYNC + if VSYNC active: SHS to VER1 and CEN to VER2
@@ -248,6 +285,30 @@ static uae_u32 cop1lc, cop2lc, copcon;
 *
 */
 
+/*
+* Bitplane DMA enable logic OCS/ECS differences:
+* 
+* OCS: DDFSTRT hard start limit flag is disabled when horizontal hard start position matches.
+* It is enabled during active bitplane DMA's last cycle. (Ending due to either DDFSTOP or hardstop match).
+* ECS: DDFTSTR/STOP hard limit work as documented.
+* It is cleared when hard start matches and set when hard stop matches.
+* 
+* OCS hard start limit bug: if line didn't have BPL DMA active, next line's BPL DMA can start earlier than start limit.
+* (See music disk Ode to Ramon by Digital Force, bottom scroller "scanline affect" )
+* This feature also prevents multiple DDFSTRT/STOP regions in same scanline. ECS/AGA does not have this limit.
+* 
+* DDFSTRT match is ignored if DMACON BPLEN is not enabled. ECS/AGA allows it. Does not affect DDFSTOP.
+* Switch DMACON BPLEN off, wait value to DDFSTRT that matches during current scanline,
+* switch BPLEN on: if OCS, bitplane DMA won't start, ECS/AGA: bitplane DMA starts.
+* 
+* 
+* 
+* 
+* 
+* 
+*/
+
+
 int maxhpos = MAXHPOS_PAL;
 int maxhpos_short = MAXHPOS_PAL;
 int maxvpos = MAXVPOS_PAL;
@@ -256,7 +317,7 @@ int maxvpos_display = MAXVPOS_PAL; // value used for display size
 int hsyncendpos, hsyncstartpos;
 static int maxvpos_total = 511;
 int minfirstline = VBLANK_ENDLINE_PAL;
-int firstblankedline;
+static int firstblankedline;
 static int equ_vblank_endline = EQU_ENDLINE_PAL;
 static bool equ_vblank_toggle = true;
 float vblank_hz = VBLANK_HZ_PAL, fake_vblank_hz, vblank_hz_stored, vblank_hz_nom;
@@ -266,7 +327,7 @@ static int vblank_hz_mult, vblank_hz_state;
 static struct chipset_refresh *stored_chipset_refresh;
 int doublescan;
 bool programmedmode;
-int syncbase;
+frame_time_t syncbase;
 static int fmode_saved, fmode;
 uae_u16 beamcon0, new_beamcon0;
 static uae_u16 beamcon0_saved;
@@ -349,7 +410,7 @@ static int line_cyclebased, badmode, diw_change;
 static int bplcon1_fetch;
 static int hpos_is_zero_bplcon1_hack = -1;
 
-#define SET_LINE_CYCLEBASED line_cyclebased = 2;
+#define SET_LINE_CYCLEBASED line_cyclebased = 1;
 
 /* The display and data fetch windows */
 
@@ -455,9 +516,11 @@ static int cop_min_waittime;
 /*
 * Statistics
 */
-unsigned long int frametime = 0, lastframetime = 0, timeframes = 0;
-unsigned long hsync_counter = 0, vsync_counter = 0;
-unsigned long int idletime;
+uae_u32 timeframes;
+evt_t frametime;
+frame_time_t lastframetime;
+uae_u32 hsync_counter, vsync_counter;
+frame_time_t idletime;
 int bogusframe;
 
 /* Recording of custom chip register changes.  */
@@ -561,7 +624,7 @@ static int doflickerfix (void)
 	return currprefs.gfx_vresolution && doublescan < 0 && vpos < MAXVPOS;
 }
 
-uae_u32 get_copper_address (int copno)
+uae_u32 get_copper_address(int copno)
 {
 	switch (copno) {
 	case 1: return cop1lc;
@@ -571,35 +634,37 @@ uae_u32 get_copper_address (int copno)
 	}
 }
 
-void reset_frame_rate_hack (void)
+void reset_frame_rate_hack(void)
 {
-	if (currprefs.m68k_speed >= 0)
+	if (currprefs.m68k_speed >= 0) {
 		return;
+	}
 
 	rpt_did_reset = 1;
 	events_reset_syncline();
-	vsyncmintime = read_processor_time () + vsynctimebase;
-	write_log (_T("Resetting frame rate hack\n"));
+	vsyncmintime = read_processor_time() + vsynctimebase;
+	write_log(_T("Resetting frame rate hack\n"));
 }
 
-STATIC_INLINE void setclr (uae_u16 *p, uae_u16 val)
+static void setclr(uae_u16 *p, uae_u16 val)
 {
-	if (val & 0x8000)
+	if (val & 0x8000) {
 		*p |= val & 0x7FFF;
-	else
+	} else {
 		*p &= ~val;
+	}
 }
 
-STATIC_INLINE void alloc_cycle (int hpos, int type)
+static void alloc_cycle(int hpos, int type)
 {
 #ifdef CPUEMU_13
 	cycle_line[hpos] = type;
 #endif
 }
-STATIC_INLINE void alloc_cycle_maybe (int hpos, int type)
+static void alloc_cycle_maybe(int hpos, int type)
 {
 	if ((cycle_line[hpos] & CYCLE_MASK) == 0)
-		alloc_cycle (hpos, type);
+		alloc_cycle(hpos, type);
 }
 
 void alloc_cycle_ext (int hpos, int type)
@@ -618,7 +683,7 @@ void alloc_cycle_blitter (int hpos, uaecptr *ptr, int chnum)
 			//activate_debugger();
 		}
 	}
-	alloc_cycle (hpos, CYCLE_BLITTER);
+	alloc_cycle(hpos, CYCLE_BLITTER);
 }
 
 static int expand_sprres(uae_u16 con0, uae_u16 con3)
@@ -653,7 +718,7 @@ static int expand_sprres(uae_u16 con0, uae_u16 con3)
 	return res;
 }
 
-STATIC_INLINE uae_u8 *pfield_xlateptr (uaecptr plpt, int bytecount)
+STATIC_INLINE uae_u8 *pfield_xlateptr(uaecptr plpt, int bytecount)
 {
 	if (!chipmem_check_indirect (plpt, bytecount)) {
 		static int count = 0;
@@ -661,9 +726,10 @@ STATIC_INLINE uae_u8 *pfield_xlateptr (uaecptr plpt, int bytecount)
 			count++, write_log (_T("Warning: Bad playfield pointer %08x\n"), plpt);
 		return NULL;
 	}
-	return chipmem_xlate_indirect (plpt);
+	return chipmem_xlate_indirect(plpt);
 }
-static void docols (struct color_entry *colentry)
+
+static void docols(struct color_entry *colentry)
 {
 	int i;
 
@@ -690,15 +756,16 @@ static void docols (struct color_entry *colentry)
 
 static void do_sprites (int currhp);
 
-static void remember_ctable (void)
+static void remember_ctable(void)
 {
 	/* This can happen when program crashes very badly */
-	if (next_color_entry >= COLOR_TABLE_SIZE)
+	if (next_color_entry >= COLOR_TABLE_SIZE) {
 		return;
+	}
 	if (remembered_color_entry < 0) {
 		/* The colors changed since we last recorded a color map. Record a
 		* new one. */
-		color_reg_cpy (curr_color_tables + next_color_entry, &current_colors);
+		color_reg_cpy(curr_color_tables + next_color_entry, &current_colors);
 		remembered_color_entry = next_color_entry++;
 	}
 	thisline_decision.ctable = remembered_color_entry;
@@ -713,23 +780,25 @@ static void remember_ctable (void)
 			changed = 1;
 			color_src_match = color_dest_match = -1;
 		} else {
-			color_compare_result = color_reg_cmp (&prev_color_tables[oldctable], &current_colors) != 0;
-			if (color_compare_result)
+			color_compare_result = color_reg_cmp(&prev_color_tables[oldctable], &current_colors) != 0;
+			if (color_compare_result) {
 				changed = 1;
+			}
 			color_src_match = oldctable;
 			color_dest_match = remembered_color_entry;
 		}
 		thisline_changed |= changed;
 	} else {
 		/* We know the result of the comparison */
-		if (color_compare_result)
+		if (color_compare_result) {
 			thisline_changed = 1;
+		}
 	}
 }
 
-static void remember_ctable_for_border (void)
+static void remember_ctable_for_border(void)
 {
-	remember_ctable ();
+	remember_ctable();
 }
 
 STATIC_INLINE int get_equ_vblank_endline (void)
@@ -8598,12 +8667,12 @@ void vsync_event_done(void)
 }
 
 // this prepares for new line
-static void hsync_handler_post (bool onvsync)
+static void hsync_handler_post(bool onvsync)
 {
 	last_copper_hpos = 0;
 #ifdef CPUEMU_13
 	if (currprefs.cpu_memory_cycle_exact || currprefs.blitter_cycle_exact) {
-		memset (cycle_line, 0, sizeof cycle_line);
+		memset(cycle_line, 0, sizeof cycle_line);
 	}
 #endif
 
@@ -8617,21 +8686,21 @@ static void hsync_handler_post (bool onvsync)
 	CIA_hsync_posthandler(false, false);
 	if (currprefs.cs_cd32cd) {
 		CIA_hsync_posthandler(true, true);
-		CIAB_tod_handler(18);
+		CIAB_tod_handler(35);
 	} else if (ciahsyncs) {
 		CIA_hsync_posthandler(true, ciahsyncs);
 		if (beamcon0 & (0x80 | 0x100)) {
 			if (hsstop < (maxhpos & ~1) && hsstrt < maxhpos)
 				CIAB_tod_handler(hsstop);
 		} else {
-			CIAB_tod_handler(18);
+			CIAB_tod_handler(35); // hsync end
 		}
 	}
 
 	if (currprefs.cs_cd32cd) {
 
 		if (cia_hsync < maxhpos) {
-			CIAA_tod_inc(cia_hsync);
+			CIAA_tod_handler(cia_hsync);
 			cia_hsync += (akiko_ntscmode() ? 262 : 313) * maxhpos;
 		} else {
 			cia_hsync -= maxhpos;
@@ -8640,7 +8709,7 @@ static void hsync_handler_post (bool onvsync)
 	} else if (currprefs.cs_ciaatod > 0) {
 		if (cia_hsync < maxhpos) {
 			int newcount;
-			CIAA_tod_inc (cia_hsync);
+			CIAA_tod_handler(cia_hsync);
 			newcount = (int)((vblank_hz * (2 * maxvpos + (interlace_seen ? 1 : 0)) * (2 * maxhpos + (islinetoggle () ? 1 : 0))) / ((currprefs.cs_ciaatod == 2 ? 60 : 50) * 4));
 			cia_hsync += newcount;
 		} else {
@@ -8650,10 +8719,10 @@ static void hsync_handler_post (bool onvsync)
 		// CIA-A TOD counter increases when vsync pulse ends
 		if (beamcon0 & (0x80 | 0x200)) {
 			if (vpos == vsstop && vsstrt <= maxvpos)
-				CIAA_tod_inc (lof_store ? hsstop : hsstop + hcenter);
+				CIAA_tod_handler(lof_store ? hcenter : hsstrt);
 		} else {
 			if (vpos == (currprefs.ntscmode ? VSYNC_ENDLINE_NTSC : VSYNC_ENDLINE_PAL)) {
-				CIAA_tod_inc (lof_store ? 132 : 18);
+				CIAA_tod_handler(lof_store ? 132 : 18);
 			}
 		}
 	}
@@ -10047,7 +10116,7 @@ uae_u8 *restore_custom (uae_u8 *src)
 #define SW save_u16
 #define SL save_u32
 
-uae_u8 *save_custom (int *len, uae_u8 *dstptr, int full)
+uae_u8 *save_custom(size_t *len, uae_u8 *dstptr, int full)
 {
 	uae_u8 *dstbak, *dst;
 	int i, dummy;
@@ -10055,109 +10124,110 @@ uae_u8 *save_custom (int *len, uae_u8 *dstptr, int full)
 	uae_u16 dsklen, dsksync, dskbytr;
 	uae_u16 v;
 
-	DISK_save_custom (&dskpt, &dsklen, &dsksync, &dskbytr);
+	DISK_save_custom(&dskpt, &dsklen, &dsksync, &dskbytr);
 
-	if (dstptr)
+	if (dstptr) {
 		dstbak = dst = dstptr;
-	else
-		dstbak = dst = xmalloc (uae_u8, 8 + 256 * 2);
+	} else {
+		dstbak = dst = xmalloc(uae_u8, 8 + 256 * 2);
+	}
 
-	SL (currprefs.chipset_mask);
-	SW (0);					/* 000 BLTDDAT */
-	SW (dmacon);			/* 002 DMACONR */
-	SW (VPOSR ());			/* 004 VPOSR */
-	SW (VHPOSR ());			/* 006 VHPOSR */
-	SW (0);					/* 008 DSKDATR */
-	SW (JOYGET (0));		/* 00A JOY0DAT */
-	SW (JOYGET (1));		/* 00C JOY1DAT */
-	SW (clxdat | 0x8000);	/* 00E CLXDAT */
-	SW (ADKCONR ());		/* 010 ADKCONR */
-	SW (POT0DAT ());		/* 012 POT0DAT */
-	SW (POT1DAT ());		/* 014 POT1DAT */
-	SW (0);					/* 016 POTINP * */
-	SW (0);					/* 018 SERDATR * */
-	SW (dskbytr);			/* 01A DSKBYTR */
-	SW (INTENAR ());		/* 01C INTENAR */
-	SW (INTREQR ());		/* 01E INTREQR */
-	SL (dskpt);				/* 020-023 DSKPT */
-	SW (dsklen);			/* 024 DSKLEN */
-	SW (0);					/* 026 DSKDAT */
-	SW (refptr);			/* 028 REFPTR */
-	SW ((lof_store ? 0x8001 : 0) | (lol ? 0x0080 : 0));/* 02A VPOSW */
-	SW (0);					/* 02C VHPOSW */
-	SW (copcon);			/* 02E COPCON */
+	SL(currprefs.chipset_mask);
+	SW(0);					/* 000 BLTDDAT */
+	SW(dmacon);				/* 002 DMACONR */
+	SW(VPOSR());			/* 004 VPOSR */
+	SW(VHPOSR());			/* 006 VHPOSR */
+	SW(0);					/* 008 DSKDATR */
+	SW(JOYGET(0));			/* 00A JOY0DAT */
+	SW(JOYGET(1));			/* 00C JOY1DAT */
+	SW(clxdat | 0x8000);	/* 00E CLXDAT */
+	SW(ADKCONR());			/* 010 ADKCONR */
+	SW(POT0DAT());			/* 012 POT0DAT */
+	SW(POT1DAT());			/* 014 POT1DAT */
+	SW(0);					/* 016 POTINP * */
+	SW(0);					/* 018 SERDATR * */
+	SW(dskbytr);			/* 01A DSKBYTR */
+	SW(INTENAR());			/* 01C INTENAR */
+	SW(INTREQR());			/* 01E INTREQR */
+	SL(dskpt);				/* 020-023 DSKPT */
+	SW(dsklen);				/* 024 DSKLEN */
+	SW(0);					/* 026 DSKDAT */
+	SW(refptr);				/* 028 REFPTR */
+	SW((lof_store ? 0x8001 : 0) | (lol ? 0x0080 : 0));/* 02A VPOSW */
+	SW(0);					/* 02C VHPOSW */
+	SW(copcon);				/* 02E COPCON */
 #ifdef SERIAL_PORT
-	SW (serdat);			/* 030 SERDAT * */
-	SW (serper);			/* 032 SERPER * */
+	SW(serdat);				/* 030 SERDAT * */
+	SW(serper);				/* 032 SERPER * */
 #else
-	SW(0);		          /* 030 SERDAT * */
-	SW(0);		          /* 032 SERPER * */
+	SW(0);					/* 030 SERDAT * */
+	SW(0);					/* 032 SERPER * */
 #endif
-	SW (potgo_value);		/* 034 POTGO */
-	SW (0);					/* 036 JOYTEST * */
-	SW (0);					/* 038 STREQU */
-	SW (0);					/* 03A STRVBL */
-	SW (0);					/* 03C STRHOR */
-	SW (0);					/* 03E STRLONG */
-	SW (bltcon0);			/* 040 BLTCON0 */
-	SW (bltcon1);			/* 042 BLTCON1 */
-	SW (blt_info.bltafwm);	/* 044 BLTAFWM */
-	SW (blt_info.bltalwm);	/* 046 BLTALWM */
-	SL (bltcpt);			/* 048-04B BLTCPT */
-	SL (bltbpt);			/* 04C-04F BLTCPT */
-	SL (bltapt);			/* 050-053 BLTCPT */
-	SL (bltdpt);			/* 054-057 BLTCPT */
+	SW(potgo_value);		/* 034 POTGO */
+	SW(0);					/* 036 JOYTEST * */
+	SW(0);					/* 038 STREQU */
+	SW(0);					/* 03A STRVBL */
+	SW(0);					/* 03C STRHOR */
+	SW(0);					/* 03E STRLONG */
+	SW(bltcon0);			/* 040 BLTCON0 */
+	SW(bltcon1);			/* 042 BLTCON1 */
+	SW(blt_info.bltafwm);	/* 044 BLTAFWM */
+	SW(blt_info.bltalwm);	/* 046 BLTALWM */
+	SL(bltcpt);				/* 048-04B BLTCPT */
+	SL(bltbpt);				/* 04C-04F BLTCPT */
+	SL(bltapt);				/* 050-053 BLTCPT */
+	SL(bltdpt);				/* 054-057 BLTCPT */
 	if (blt_info.vblitsize > 1024 || blt_info.hblitsize > 64) {
 		v = 0;
 	} else {
 		v = (blt_info.vblitsize << 6) | (blt_info.hblitsize & 63);
 	}
-	SW (v);					/* 058 BLTSIZE */
-	SW (bltcon0 & 0xff);	/* 05A BLTCON0L (use BLTCON0 instead) */
-	SW (blt_info.vblitsize);/* 05C BLTSIZV */
-	SW (blt_info.hblitsize);/* 05E BLTSIZH */
-	SW (blt_info.bltcmod);	/* 060 BLTCMOD */
-	SW (blt_info.bltbmod);	/* 062 BLTBMOD */
-	SW (blt_info.bltamod);	/* 064 BLTAMOD */
-	SW (blt_info.bltdmod);	/* 066 BLTDMOD */
-	SW (0);					/* 068 ? */
-	SW (0);					/* 06A ? */
-	SW (0);					/* 06C ? */
-	SW (0);					/* 06E ? */
-	SW (blt_info.bltcdat);	/* 070 BLTCDAT */
-	SW (blt_info.bltbdat);	/* 072 BLTBDAT */
-	SW (blt_info.bltadat);	/* 074 BLTADAT */
-	SW (0);					/* 076 ? */
-	SW (0);					/* 078 ? */
-	SW (0);					/* 07A ? */
-	SW (DENISEID (&dummy));	/* 07C DENISEID/LISAID */
-	SW (dsksync);			/* 07E DSKSYNC */
-	SL (cop1lc);			/* 080-083 COP1LC */
-	SL (cop2lc);			/* 084-087 COP2LC */
-	SW (0);					/* 088 ? */
-	SW (0);					/* 08A ? */
-	SW (0);					/* 08C ? */
-	SW (diwstrt);			/* 08E DIWSTRT */
-	SW (diwstop);			/* 090 DIWSTOP */
-	SW (ddfstrt);			/* 092 DDFSTRT */
-	SW (ddfstop);			/* 094 DDFSTOP */
-	SW (dmacon);			/* 096 DMACON */
-	SW (clxcon);			/* 098 CLXCON */
-	SW (intena);			/* 09A INTENA */
-	SW (intreq);			/* 09C INTREQ */
-	SW (adkcon);			/* 09E ADKCON */
+	SW(v);					/* 058 BLTSIZE */
+	SW(bltcon0 & 0xff);		/* 05A BLTCON0L (use BLTCON0 instead) */
+	SW(blt_info.vblitsize);	/* 05C BLTSIZV */
+	SW(blt_info.hblitsize);	/* 05E BLTSIZH */
+	SW(blt_info.bltcmod);	/* 060 BLTCMOD */
+	SW(blt_info.bltbmod);	/* 062 BLTBMOD */
+	SW(blt_info.bltamod);	/* 064 BLTAMOD */
+	SW(blt_info.bltdmod);	/* 066 BLTDMOD */
+	SW(0);					/* 068 ? */
+	SW(0);					/* 06A ? */
+	SW(0);					/* 06C ? */
+	SW(0);					/* 06E ? */
+	SW(blt_info.bltcdat);	/* 070 BLTCDAT */
+	SW(blt_info.bltbdat);	/* 072 BLTBDAT */
+	SW(blt_info.bltadat);	/* 074 BLTADAT */
+	SW(0);					/* 076 ? */
+	SW(0);					/* 078 ? */
+	SW(0);					/* 07A ? */
+	SW(DENISEID(&dummy));	/* 07C DENISEID/LISAID */
+	SW(dsksync);			/* 07E DSKSYNC */
+	SL(cop1lc);				/* 080-083 COP1LC */
+	SL(cop2lc);				/* 084-087 COP2LC */
+	SW(0);					/* 088 ? */
+	SW(0);					/* 08A ? */
+	SW(0);					/* 08C ? */
+	SW(diwstrt);			/* 08E DIWSTRT */
+	SW(diwstop);			/* 090 DIWSTOP */
+	SW(ddfstrt);			/* 092 DDFSTRT */
+	SW(ddfstop);			/* 094 DDFSTOP */
+	SW(dmacon);				/* 096 DMACON */
+	SW(clxcon);				/* 098 CLXCON */
+	SW(intena);				/* 09A INTENA */
+	SW(intreq);				/* 09C INTREQ */
+	SW(adkcon);				/* 09E ADKCON */
 	for (i = 0; full && i < 32; i++)
-		SW (0);
+		SW(0);
 	for (i = 0; i < 8; i++)
-		SL (bplpt[i]);		/* 0E0-0FE BPLxPT */
-	SW (bplcon0);			/* 100 BPLCON0 */
-	SW (bplcon1);			/* 102 BPLCON1 */
-	SW (bplcon2);			/* 104 BPLCON2 */
-	SW (bplcon3);			/* 106 BPLCON3 */
-	SW (bpl1mod);			/* 108 BPL1MOD */
-	SW (bpl2mod);			/* 10A BPL2MOD */
-	SW (bplcon4);			/* 10C BPLCON4 */
-	SW (clxcon2);			/* 10E CLXCON2 */
+		SL(bplpt[i]);		/* 0E0-0FE BPLxPT */
+	SW(bplcon0);			/* 100 BPLCON0 */
+	SW(bplcon1);			/* 102 BPLCON1 */
+	SW(bplcon2);			/* 104 BPLCON2 */
+	SW(bplcon3);			/* 106 BPLCON3 */
+	SW(bpl1mod);			/* 108 BPL1MOD */
+	SW(bpl2mod);			/* 10A BPL2MOD */
+	SW(bplcon4);			/* 10C BPLCON4 */
+	SW(clxcon2);			/* 10E CLXCON2 */
 	for (i = 0;i < 8; i++)
 		SW (fetched[i]);	/* 110 BPLxDAT */
 	if (full) {
@@ -10166,10 +10236,10 @@ uae_u8 *save_custom (int *len, uae_u8 *dstptr, int full)
 		}
 		for (i = 0; i < 8; i++) {
 			struct sprite *s = &spr[i];
-			SW (s->pos);	/* 1x0 SPRxPOS */
-			SW (s->ctl);	/* 1x2 SPRxPOS */
-			SW (s->data[0]);	/* 1x4 SPRxDATA */
-			SW (s->datb[0]);	/* 1x6 SPRxDATB */
+			SW(s->pos);	/* 1x0 SPRxPOS */
+			SW(s->ctl);	/* 1x2 SPRxPOS */
+			SW(s->data[0]);	/* 1x4 SPRxDATA */
+			SW(s->datb[0]);	/* 1x6 SPRxDATB */
 		}
 	}
 	for (i = 0; i < 32; i++) {
@@ -10180,12 +10250,12 @@ uae_u8 *save_custom (int *len, uae_u8 *dstptr, int full)
 			v2 = (v >> 4) & 15;
 			v2 |= ((v >> 12) & 15) << 4;
 			v2 |= ((v >> 20) & 15) << 8;
-			SW (v2);
+			SW(v2);
 		} else {
 			uae_u16 v = current_colors.color_regs_ecs[i];
 			if (color_regs_genlock[i])
 				v |= 0x8000;
-			SW (v); /* 180-1BE COLORxx */
+			SW(v); /* 180-1BE COLORxx */
 		}
 	}
 	SW (htotal);		/* 1C0 HTOTAL */
@@ -10225,7 +10295,7 @@ uae_u8 *save_custom (int *len, uae_u8 *dstptr, int full)
 	return dstbak;
 }
 
-uae_u8 *restore_custom_agacolors (uae_u8 *src)
+uae_u8 *restore_custom_agacolors(uae_u8 *src)
 {
 	int i;
 
@@ -10244,7 +10314,7 @@ uae_u8 *restore_custom_agacolors (uae_u8 *src)
 	return src;
 }
 
-uae_u8 *save_custom_agacolors (int *len, uae_u8 *dstptr)
+uae_u8 *save_custom_agacolors(size_t *len, uae_u8 *dstptr)
 {
 	uae_u8 *dstbak, *dst;
 
@@ -10272,7 +10342,7 @@ uae_u8 *save_custom_agacolors (int *len, uae_u8 *dstptr)
 	return dstbak;
 }
 
-uae_u8 *restore_custom_sprite (int num, uae_u8 *src)
+uae_u8 *restore_custom_sprite(int num, uae_u8 *src)
 {
 	struct sprite *s = &spr[num];
 	memset (s, 0, sizeof (struct sprite));
@@ -10291,7 +10361,7 @@ uae_u8 *restore_custom_sprite (int num, uae_u8 *src)
 	return src;
 }
 
-uae_u8 *save_custom_sprite (int num, int *len, uae_u8 *dstptr)
+uae_u8 *save_custom_sprite(int num, size_t *len, uae_u8 *dstptr)
 {
 	uae_u8 *dstbak, *dst;
 	struct sprite *s = &spr[num];
@@ -10299,31 +10369,32 @@ uae_u8 *save_custom_sprite (int num, int *len, uae_u8 *dstptr)
 	if (dstptr)
 		dstbak = dst = dstptr;
 	else
-		dstbak = dst = xmalloc (uae_u8, 30);
-	SL (s->pt);		/* 120-13E SPRxPT */
-	SW (s->pos);		/* 1x0 SPRxPOS */
-	SW (s->ctl);		/* 1x2 SPRxPOS */
-	SW (s->data[0]);	/* 1x4 SPRxDATA */
-	SW (s->datb[0]);	/* 1x6 SPRxDATB */
-	SW (s->data[1]);
-	SW (s->datb[1]);
-	SW (s->data[2]);
-	SW (s->datb[2]);
-	SW (s->data[3]);
-	SW (s->datb[3]);
-	SB (s->armed ? 1 : 0);
+		dstbak = dst = xmalloc(uae_u8, 30);
+	SL(s->pt);		/* 120-13E SPRxPT */
+	SW(s->pos);		/* 1x0 SPRxPOS */
+	SW(s->ctl);		/* 1x2 SPRxPOS */
+	SW(s->data[0]);	/* 1x4 SPRxDATA */
+	SW(s->datb[0]);	/* 1x6 SPRxDATB */
+	SW(s->data[1]);
+	SW(s->datb[1]);
+	SW(s->data[2]);
+	SW(s->datb[2]);
+	SW(s->data[3]);
+	SW(s->datb[3]);
+	SB(s->armed ? 1 : 0);
 	*len = dst - dstbak;
 	return dstbak;
 }
 
-uae_u8 *restore_custom_extra (uae_u8 *src)
+uae_u8 *restore_custom_extra(uae_u8 *src)
 {
-	uae_u32 v = restore_u32 ();
+	uae_u32 v = restore_u32();
+	uae_u8 tmp = 0;
 
 	if (!(v & 1))
 		v = 0;
 	currprefs.cs_compatible = changed_prefs.cs_compatible = v >> 24;
-	cia_set_overlay ((v & 2) != 0);
+	cia_set_overlay((v & 2) != 0);
 
 	currprefs.genlock = changed_prefs.genlock = RBB;
 	currprefs.cs_rtc = changed_prefs.cs_rtc = RB;
@@ -10334,9 +10405,9 @@ uae_u8 *restore_custom_extra (uae_u8 *src)
 
 	//currprefs.a2091rom.enabled = changed_prefs.a2091rom.enabled = RBB;
 	//currprefs.a4091rom.enabled = changed_prefs.a4091rom.enabled = RBB;
-	RBB;
-	RBB;
-	RBB;
+	tmp = RBB;
+	tmp = RBB;
+	tmp = RBB;
 
 	currprefs.cs_pcmcia = changed_prefs.cs_pcmcia = RBB;
 	currprefs.cs_ciaatod = changed_prefs.cs_ciaatod = RB;
@@ -10377,55 +10448,55 @@ uae_u8 *restore_custom_extra (uae_u8 *src)
 	return src;
 }
 
-uae_u8 *save_custom_extra (int *len, uae_u8 *dstptr)
+uae_u8 *save_custom_extra(size_t *len, uae_u8 *dstptr)
 {
 	uae_u8 *dstbak, *dst;
 
 	if (dstptr)
 		dstbak = dst = dstptr;
 	else
-		dstbak = dst = xmalloc (uae_u8, 1000);
+		dstbak = dst = xmalloc(uae_u8, 1000);
 
 	SL ((currprefs.cs_compatible << 24) | (&get_mem_bank(0) != &chipmem_bank ? 2 : 0) | 1);
 	SB (currprefs.genlock ? 1 : 0);
 	SB (currprefs.cs_rtc);
 	SL (currprefs.cs_rtc_adjust);
 
-	SB (currprefs.cs_a1000ram ? 1 : 0);
-	SB (currprefs.cs_slowmemisfast ? 1 : 0);
+	SB(currprefs.cs_a1000ram ? 1 : 0);
+	SB(currprefs.cs_slowmemisfast ? 1 : 0);
 
-	SB (is_board_enabled(&currprefs, ROMTYPE_A2091, 0) ? 1 : 0);
-	SB (is_board_enabled(&currprefs, ROMTYPE_A4091, 0) ? 1 : 0);
-	SB (0);
+	SB(is_board_enabled(&currprefs, ROMTYPE_A2091, 0) ? 1 : 0);
+	SB(is_board_enabled(&currprefs, ROMTYPE_A4091, 0) ? 1 : 0);
+	SB(0);
 
-	SB (currprefs.cs_pcmcia ? 1 : 0);
-	SB (currprefs.cs_ciaatod);
-	SB (currprefs.cs_ciaoverlay ? 1 : 0);
+	SB(currprefs.cs_pcmcia ? 1 : 0);
+	SB(currprefs.cs_ciaatod);
+	SB(currprefs.cs_ciaoverlay ? 1 : 0);
 
-	SB (currprefs.cs_agnusbltbusybug ? 1 : 0);
-	SB (currprefs.cs_denisenoehb ? 1 : 0);
+	SB(currprefs.cs_agnusbltbusybug ? 1 : 0);
+	SB(currprefs.cs_denisenoehb ? 1 : 0);
 
-	SB (currprefs.cs_agnusrev);
-	SB (currprefs.cs_deniserev);
-	SB (currprefs.cs_fatgaryrev);
-	SB (currprefs.cs_ramseyrev);
+	SB(currprefs.cs_agnusrev);
+	SB(currprefs.cs_deniserev);
+	SB(currprefs.cs_fatgaryrev);
+	SB(currprefs.cs_ramseyrev);
 
-	SB (currprefs.cs_cd32c2p);
-	SB (currprefs.cs_cd32cd);
-	SB (currprefs.cs_cd32nvram);
-	SB (currprefs.cs_cdtvcd ? 1 : 0);
-	SB (currprefs.cs_cdtvram ? 1 : 0);
-	SB (0);
+	SB(currprefs.cs_cd32c2p);
+	SB(currprefs.cs_cd32cd);
+	SB(currprefs.cs_cd32nvram);
+	SB(currprefs.cs_cdtvcd ? 1 : 0);
+	SB(currprefs.cs_cdtvram ? 1 : 0);
+	SB(0);
 
-	SB (currprefs.cs_df0idhw ? 1 : 0);
-	SB (currprefs.cs_dipagnus ? 1 : 0);
-	SB (currprefs.cs_ide);
-	SB (currprefs.cs_mbdmac);
-	SB (currprefs.cs_ksmirror_a8 ? 1 : 0);
-	SB (currprefs.cs_ksmirror_e0 ? 1 : 0);
-	SB (currprefs.cs_resetwarning ? 1 : 0);
-	SB (currprefs.cs_z3autoconfig ? 1 : 0);
-	SB (currprefs.cs_1mchipjumper ? 1 : 0);
+	SB(currprefs.cs_df0idhw ? 1 : 0);
+	SB(currprefs.cs_dipagnus ? 1 : 0);
+	SB(currprefs.cs_ide);
+	SB(currprefs.cs_mbdmac);
+	SB(currprefs.cs_ksmirror_a8 ? 1 : 0);
+	SB(currprefs.cs_ksmirror_e0 ? 1 : 0);
+	SB(currprefs.cs_resetwarning ? 1 : 0);
+	SB(currprefs.cs_z3autoconfig ? 1 : 0);
+	SB(currprefs.cs_1mchipjumper ? 1 : 0);
 
 	SB(currprefs.cs_bytecustomwritebug ? 1 : 0);
 	SB(currprefs.cs_color_burst ? 1 : 0);
@@ -10438,21 +10509,21 @@ uae_u8 *save_custom_extra (int *len, uae_u8 *dstptr)
 	return dstbak;
 }
 
-uae_u8 *restore_custom_event_delay (uae_u8 *src)
+uae_u8 *restore_custom_event_delay(uae_u8 *src)
 {
-	if (restore_u32 () != 1)
+	if (restore_u32() != 1)
 		return src;
-	int cnt = restore_u8 ();
+	int cnt = restore_u8();
 	for (int i = 0; i < cnt; i++) {
-		uae_u8 type = restore_u8 ();
-		evt e = restore_u64 ();
-		uae_u32 data = restore_u32 ();
+		uae_u8 type = restore_u8();
+		evt_t e = restore_u64();
+		uae_u32 data = restore_u32();
 		if (type == 1)
-			event2_newevent_xx (-1, e, data, send_interrupt_do);
+			event2_newevent_xx(-1, e, data, send_interrupt_do);
 	}
 	return src;
 }
-uae_u8 *save_custom_event_delay (int *len, uae_u8 *dstptr)
+uae_u8 *save_custom_event_delay(size_t *len, uae_u8 *dstptr)
 {
 	uae_u8 *dstbak, *dst;
 	int cnt = 0;
@@ -10469,16 +10540,16 @@ uae_u8 *save_custom_event_delay (int *len, uae_u8 *dstptr)
 	if (dstptr)
 		dstbak = dst = dstptr;
 	else
-		dstbak = dst = xmalloc (uae_u8, 1000);
+		dstbak = dst = xmalloc(uae_u8, 1000);
 
-	save_u32 (1);
-	save_u8 (cnt);
+	save_u32(1);
+	save_u8(cnt);
 	for (int i = ev2_misc; i < ev2_max; i++) {
 		struct ev2 *e = &eventtab2[i];
 		if (e->active && e->handler == send_interrupt_do) {
-			save_u8 (1);
-			save_u64 (e->evtime - get_cycles ());
-			save_u32 (e->data);
+			save_u8(1);
+			save_u64(e->evtime - get_cycles());
+			save_u32(e->data);
 		
 		}
 	}
@@ -10488,38 +10559,38 @@ uae_u8 *save_custom_event_delay (int *len, uae_u8 *dstptr)
 }
 
 
-uae_u8 *save_cycles (int *len, uae_u8 *dstptr)
+uae_u8 *save_cycles(size_t *len, uae_u8 *dstptr)
 {
 	uae_u8 *dstbak, *dst;
 	if (dstptr)
 		dstbak = dst = dstptr;
 	else
-		dstbak = dst = xmalloc (uae_u8, 1000);
-	save_u32 (1);
-	save_u32 (CYCLE_UNIT);
-	save_u64 (get_cycles ());
-	save_u32 (extra_cycle);
-	write_log (_T("SAVECYCLES %08lX\n"), get_cycles ());
+		dstbak = dst = xmalloc(uae_u8, 1000);
+	save_u32(1);
+	save_u32(CYCLE_UNIT);
+	save_u64(get_cycles());
+	save_u32(extra_cycle);
+	write_log(_T("SAVECYCLES %08llX\n"), get_cycles());
 	*len = dst - dstbak;
 	return dstbak;
 }
 
-uae_u8 *restore_cycles (uae_u8 *src)
+uae_u8 *restore_cycles(uae_u8 *src)
 {
-	if (restore_u32 () != 1)
+	if (restore_u32() != 1)
 		return src;
-	restore_u32 ();
-	start_cycles = restore_u64 ();
-	extra_cycle = restore_u32 ();
-	if (extra_cycle < 0 || extra_cycle >= 2 * CYCLE_UNIT)
+	restore_u32();
+	start_cycles = restore_u64();
+	extra_cycle = restore_u32();
+	if (extra_cycle >= 2 * CYCLE_UNIT)
 		extra_cycle = 0;
-	write_log (_T("RESTORECYCLES %08lX\n"), start_cycles);
+	write_log(_T("RESTORECYCLES %08llX\n"), start_cycles);
 	return src;
 }
 
 #endif /* SAVESTATE */
 
-void check_prefs_changed_custom (void)
+void check_prefs_changed_custom(void)
 {
 	if (!config_changed)
 		return;
@@ -10527,12 +10598,12 @@ void check_prefs_changed_custom (void)
 	if (currprefs.turbo_emulation_limit != changed_prefs.turbo_emulation_limit) {
 		currprefs.turbo_emulation_limit = changed_prefs.turbo_emulation_limit;
 		if (changed_prefs.turbo_emulation) {
-			warpmode (changed_prefs.turbo_emulation);
+			warpmode(changed_prefs.turbo_emulation);
 		}
 	}
 	if (currprefs.turbo_emulation != changed_prefs.turbo_emulation)
-		warpmode (changed_prefs.turbo_emulation);
-	if (inputdevice_config_change_test ()) 
+		warpmode(changed_prefs.turbo_emulation);
+	if (inputdevice_config_change_test()) 
 		inputdevice_copyconfig (&changed_prefs, &currprefs);
 	currprefs.immediate_blits = changed_prefs.immediate_blits;
 	currprefs.waiting_blits = changed_prefs.waiting_blits;
@@ -10570,7 +10641,6 @@ void check_prefs_changed_custom (void)
 	currprefs.cs_mbdmac = changed_prefs.cs_mbdmac;
 	currprefs.cs_df0idhw = changed_prefs.cs_df0idhw;
 	currprefs.cs_slowmemisfast = changed_prefs.cs_slowmemisfast;
-	currprefs.cs_dipagnus = changed_prefs.cs_dipagnus;
 	currprefs.cs_denisenoehb = changed_prefs.cs_denisenoehb;
 	currprefs.cs_z3autoconfig = changed_prefs.cs_z3autoconfig;
 	currprefs.cs_bytecustomwritebug = changed_prefs.cs_bytecustomwritebug;
@@ -10578,12 +10648,17 @@ void check_prefs_changed_custom (void)
 	currprefs.cs_romisslow = changed_prefs.cs_romisslow;
 	currprefs.cs_toshibagary = changed_prefs.cs_toshibagary;
 	currprefs.cs_unmapped_space = changed_prefs.cs_unmapped_space;
+	currprefs.cs_eclockphase = changed_prefs.cs_eclockphase;
+	currprefs.cs_eclocksync = changed_prefs.cs_eclocksync;
 	currprefs.cs_ciatype[0] = changed_prefs.cs_ciatype[0];
 	currprefs.cs_ciatype[1] = changed_prefs.cs_ciatype[1];
 
 	if (currprefs.chipset_mask != changed_prefs.chipset_mask ||
+		currprefs.cs_dipagnus != changed_prefs.cs_dipagnus ||
 		currprefs.picasso96_nocustom != changed_prefs.picasso96_nocustom ||
-		currprefs.ntscmode != changed_prefs.ntscmode) {
+		currprefs.ntscmode != changed_prefs.ntscmode ||
+		currprefs.cs_hvcsync != changed_prefs.cs_hvcsync
+		) {
 			currprefs.picasso96_nocustom = changed_prefs.picasso96_nocustom;
 			if (currprefs.ntscmode != changed_prefs.ntscmode) {
 				currprefs.ntscmode = changed_prefs.ntscmode;
@@ -10599,6 +10674,8 @@ void check_prefs_changed_custom (void)
 				bplcon0 &= ~(0x10 | 0x01);
 			}
 			currprefs.chipset_mask = changed_prefs.chipset_mask;
+			currprefs.cs_dipagnus = changed_prefs.cs_dipagnus;
+			currprefs.cs_hvcsync = changed_prefs.cs_hvcsync;
 			init_custom();
 	}
 
@@ -10727,7 +10804,7 @@ uae_u32 wait_cpu_cycle_read (uaecptr addr, int mode)
 	return v;
 }
 
-void wait_cpu_cycle_write (uaecptr addr, int mode, uae_u32 v)
+void wait_cpu_cycle_write(uaecptr addr, int mode, uae_u32 v)
 {
 	int hpos;
 
@@ -10744,19 +10821,19 @@ void wait_cpu_cycle_write (uaecptr addr, int mode, uae_u32 v)
 			put_byte(addr, v);
 	}
 
-	x_do_cycles_post (CYCLE_UNIT, v);
+	x_do_cycles_post(CYCLE_UNIT, v);
 
 	regs.chipset_latch_rw = v;
 	SETIFCHIP
 }
 
-void do_cycles_ce (unsigned long cycles)
+void do_cycles_ce(int cycles)
 {
 	cycles += extra_cycle;
 	while (cycles >= CYCLE_UNIT) {
-		int hpos = current_hpos () + 1;
-		decide_line (hpos);
-		sync_copper (hpos);
+		int hpos = current_hpos() + 1;
+		decide_line(hpos);
+		sync_copper(hpos);
 		decide_fetch_ce (hpos);
 		if (blt_info.blit_main || blt_info.blit_finald) {
 			decide_blitter(hpos);

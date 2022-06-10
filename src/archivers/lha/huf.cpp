@@ -84,9 +84,9 @@ static void read_pt_len(short nn, short nbit, short i_special)
 {
 	int           i, c, n;
 
-	n = getbits(nbit);
+	n = getbits((unsigned char)nbit);
 	if (n == 0) {
-		c = getbits(nbit);
+		c = getbits((unsigned char)nbit);
 		for (i = 0; i < nn; i++)
 			pt_len[i] = 0;
 		for (i = 0; i < 256; i++)

@@ -31,15 +31,15 @@ void update_audio (void);
 void audio_evhandler (void);
 void audio_hsync (void);
 void audio_update_adkmasks (void);
-void update_sound (double clk);
-void update_cda_sound (double clk);
+void update_sound (float clk);
+void update_cda_sound (float clk);
 void led_filter_audio (void);
 void set_audio (void);
 int audio_activate (void);
 void audio_deactivate (void);
 void audio_vsync (void);
 void audio_sampleripper(int);
-void write_wavheader (struct zfile *wavfile, uae_u32 size, uae_u32 freq);
+void write_wavheader (struct zfile *wavfile, size_t size, uae_u32 freq);
 
 int audio_is_pull(void);
 int audio_pull_buffer(void);

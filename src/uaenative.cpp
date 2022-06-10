@@ -38,7 +38,7 @@
 #include <dlfcn.h>
 #endif
 
-static double syncdivisor;
+static float syncdivisor;
 
 #define SIGBIT 8 // SIGB_DOS
 
@@ -226,7 +226,7 @@ static void set_library_globals(void *dl)
 
 static uae_u32 open_library (const char *name, uae_u32 min_version)
 {
-    syncdivisor = (3580000.0 * CYCLE_UNIT) / (double) syncbase;
+    syncdivisor = (3580000.0f * CYCLE_UNIT) / (float) syncbase;
 
     for (const char *c = name; *c; c++) {
         if (*c == '/' || *c == '\\' || *c == ':') {
@@ -426,7 +426,7 @@ static void do_call_function (struct uni *uni)
 {
     printf("uni: calling native function %p\n", uni->native_function);
 
-    unsigned long start_time;
+    frame_time_t start_time;
     const int flags = uni->flags;
     if ((flags & UNI_FLAG_ASYNCHRONOUS) == 0) {
         start_time = read_processor_time ();
@@ -447,11 +447,11 @@ static void do_call_function (struct uni *uni)
     }
 
     if ((flags & UNI_FLAG_ASYNCHRONOUS) == 0) {
-        unsigned long time_diff = read_processor_time () - start_time;
-        double v = syncdivisor * time_diff;
+        frame_time_t time_diff = read_processor_time () - start_time;
+        float v = syncdivisor * time_diff;
         if (v > 0) {
-            if (v > 1000000 * CYCLE_UNIT) {
-                v = 1000000 * CYCLE_UNIT;
+            if (v > 1000000.0f * CYCLE_UNIT) {
+                v = 1000000.0f * CYCLE_UNIT;
             }
             // compensate for the time spent in the native function
             do_extra_cycles ((unsigned long) (syncdivisor * time_diff));

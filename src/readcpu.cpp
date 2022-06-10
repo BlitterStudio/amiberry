@@ -716,8 +716,8 @@ out2:
 			goto nomatch;
 endofline:
 		/* now, we have a match */
-		if (table68k[opc].mnemo != i_ILLG)
-			;//write_log (_T("Double match: %x: %s\n"), opc, opcstr);
+		//if (table68k[opc].mnemo != i_ILLG)
+		//	write_log (_T("Double match: %x: %s\n"), opc, opcstr);
 		if (find == -1) {
 			for (find = 0;; find++) {
 				if (_tcscmp (mnemonic, lookuptab[find].name) == 0) {

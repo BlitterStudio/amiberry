@@ -350,8 +350,7 @@ STATIC_INLINE void m68k_setpc_normal(uaecptr pc)
 	if (m68k_pc_indirect > 0) {
 		regs.pc_p = regs.pc_oldp = 0;
 		m68k_setpci(pc);
-	}
-	else {
+	} else {
 		m68k_setpc(pc);
 	}
 }
@@ -359,9 +358,9 @@ STATIC_INLINE void m68k_setpc_normal(uaecptr pc)
 extern void check_t0_trace(void);
 
 
-extern void (*x_do_cycles)(unsigned long);
-extern void (*x_do_cycles_pre)(unsigned long);
-extern void (*x_do_cycles_post)(unsigned long, uae_u32);
+extern void (*x_do_cycles)(int);
+extern void (*x_do_cycles_pre)(int);
+extern void (*x_do_cycles_post)(int, uae_u32);
 
 extern uae_u32 REGPARAM3 x_get_disp_ea_020(uae_u32 base) REGPARAM;
 
@@ -383,10 +382,10 @@ extern void REGPARAM3 MakeFromSR_T0(void) REGPARAM;
 extern void REGPARAM3 Exception(int) REGPARAM;
 extern void REGPARAM3 Exception_cpu(int) REGPARAM;
 extern void REGPARAM3 Exception_cpu_oldpc(int, uaecptr) REGPARAM;
-extern void NMI(void);
-extern void NMI_delayed(void);
-extern void prepare_interrupt(uae_u32);
-extern void doint(void);
+extern void NMI (void);
+extern void IRQ_forced(int, int);
+extern void prepare_interrupt (uae_u32);
+extern void doint (void);
 extern int m68k_move2c(int, uae_u32*);
 extern int m68k_movec2(int, uae_u32*);
 extern int m68k_divl(uae_u32, uae_u32, uae_u16, uaecptr);

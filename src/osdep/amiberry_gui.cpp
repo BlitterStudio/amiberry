@@ -190,7 +190,7 @@ static struct romdata* scan_single_rom_2(struct zfile* f)
 	struct romdata* rd = nullptr;
 
 	zfile_fseek(f, 0, SEEK_END);
-	int size = zfile_ftell(f);
+	int size = zfile_ftell32(f);
 	zfile_fseek(f, 0, SEEK_SET);
 	if (size > 524288 * 2) /* don't skip KICK disks or 1M ROMs */
 		return nullptr;

@@ -60,7 +60,7 @@ struct zvolume *archive_directory_lha (struct zfile *zf)
 		} else {
 			zn = zvolume_addfile_abs (zv, &zai);
 			if (zn) {
-				zn->offset = zfile_ftell(zf);
+				zn->offset = zfile_ftell32(zf);
 				zn->packedsize = hdr.packed_size;
 				zn->method = method;
 			}
@@ -84,13 +84,13 @@ struct zfile *archive_access_lha (struct znode *zn)
     lhinterface.dicbit = 13;	/* method + 8; -lh5- */
     lhinterface.infile = zf;
     lhinterface.outfile = out;
-    lhinterface.original = zn->size;
+    lhinterface.original = (unsigned long)zn->size;
     lhinterface.packed = zn->packedsize;
 
     switch (zn->method) {
 	case LZHUFF0_METHOD_NUM:
 	case LARC4_METHOD_NUM:
-	    zfile_fread(out->data, zn->size, 1, zf);
+	    zfile_fread(out->data, (size_t)zn->size, 1, zf);
 	break;
 	case LARC_METHOD_NUM:		/* -lzs- */
 	    lhinterface.dicbit = 11;

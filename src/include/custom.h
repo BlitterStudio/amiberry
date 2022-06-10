@@ -12,6 +12,22 @@
 #include "uae/types.h"
 #include "machdep/rpt.h"
 
+#define BEAMCON0_HARDDIS	0x4000
+#define BEAMCON0_LPENDIS	0x2000
+#define BEAMCON0_VARVBEN	0x1000
+#define BEAMCON0_LOLDIS		0x0800
+#define BEAMCON0_CSCBEN		0x0400
+#define BEAMCON0_VARVSYEN	0x0200
+#define BEAMCON0_VARHSYEN	0x0100
+#define BEAMCON0_VARBEAMEN	0x0080
+#define BEAMCON0_DUAL		0x0040
+#define BEAMCON0_PAL		0x0020
+#define BEAMCON0_VARCSYEN	0x0010
+#define BEAMCON0_BLANKEN	0x0008
+#define BEAMCON0_CSYTRUE	0x0004
+#define BEAMCON0_VSYTRUE	0x0002
+#define BEAMCON0_HSYTRUE	0x0001
+
 extern bool aga_mode, ecs_agnus, ecs_denise, direct_rgb;
 
 /* These are the masks that are ORed together in the chipset_mask option.
@@ -31,31 +47,31 @@ extern bool aga_mode, ecs_agnus, ecs_denise, direct_rgb;
 
 #define BLIT_NASTY_CPU_STEAL_CYCLE_COUNT 3
 
-uae_u32 get_copper_address (int copno);
+uae_u32 get_copper_address(int copno);
 
-extern int custom_init (void);
-extern void custom_prepare (void);
-extern void custom_reset (bool hardreset, bool keyboardreset);
-extern int intlev (void);
-extern void dumpcustom (void);
+extern int custom_init(void);
+extern void custom_prepare(void);
+extern void custom_reset(bool hardreset, bool keyboardreset);
+extern int intlev(void);
+extern void dumpcustom(void);
 
-extern void do_copper (void);
+extern void do_copper(void);
 #ifdef AMIBERRY
 extern void check_copperlist_write(uaecptr addr);
 #endif
 
-extern void notice_new_xcolors (void);
+extern void notice_new_xcolors(void);
 extern void notice_screen_contents_lost(int monid);
-extern void init_row_map (void);
-extern void init_hz_normal (void);
-extern void init_custom (void);
+extern void init_row_map(void);
+extern void init_hz_normal(void);
+extern void init_custom(void);
 
 extern void set_picasso_hack_rate(int hz);
 
 /* Set to 1 to leave out the current frame in average frame time calculation.
 * Useful if the debugger was active.  */
 extern int bogusframe;
-extern unsigned long int hsync_counter, vsync_counter;
+extern uae_u32 hsync_counter, vsync_counter;
 
 extern uae_u16 dmacon;
 extern uae_u16 intena, intreq, intreqr;
@@ -64,7 +80,7 @@ extern int vpos, lof_store;
 
 extern int n_frames;
 
-STATIC_INLINE int dmaen (unsigned int dmamask)
+STATIC_INLINE int dmaen(unsigned int dmamask)
 {
 	return (dmamask & dmacon) && (dmacon & 0x200);
 }
@@ -162,12 +178,13 @@ extern bool programmedmode;
 
 #define CYCLE_MASK 0x0f
 
-extern unsigned long frametime, timeframes;
+extern uae_u32 timeframes;
+extern evt_t frametime;
 extern uae_u16 htotal, vtotal, beamcon0;
 
-/* 100 words give you 1600 horizontal pixels. Should be more than enough for
-* superhires. Don't forget to update the definition in genp2c.c as well.
-* needs to be larger for superhires support */
+// 100 words give you 1600 horizontal pixels. Should be more than enough for superhires. 
+// Extreme overscan superhires needs more.
+// must be divisible by 8
 #ifdef CUSTOM_SIMPLE
 #define MAX_WORDS_PER_LINE 50
 #else
@@ -201,7 +218,7 @@ extern int xbluecolor_s, xbluecolor_b, xbluecolor_m;
 #define RES_SHIFT(res) ((res) == RES_LORES ? 8 : (res) == RES_HIRES ? 4 : 2)
 
 /* get resolution from bplcon0 */
-STATIC_INLINE int GET_RES_DENISE (uae_u16 con0)
+STATIC_INLINE int GET_RES_DENISE(uae_u16 con0)
 {
 	if (!(currprefs.chipset_mask & CSMASK_ECS_DENISE))
 		con0 &= ~0x40; // SUPERHIRES
@@ -225,8 +242,8 @@ STATIC_INLINE int GET_PLANES(uae_u16 bplcon0)
 	return (bplcon0 >> 12) & 7; // normal planes bits
 }
 
-extern void fpscounter_reset (void);
-extern unsigned long idletime;
+extern void fpscounter_reset(void);
+extern frame_time_t idletime;
 extern int lightpen_x[2], lightpen_y[2];
 extern int lightpen_cx[2], lightpen_cy[2], lightpen_active, lightpen_enabled, lightpen_enabled2;
 
@@ -236,15 +253,15 @@ struct customhack {
 };
 void customhack_put (struct customhack *ch, uae_u16 v, int hpos);
 uae_u16 customhack_get (struct customhack *ch, int hpos);
-extern void alloc_cycle_ext (int, int);
-extern void alloc_cycle_blitter (int hpos, uaecptr *ptr, int);
-extern bool ispal (void);
-extern bool isvga (void);
-extern int current_maxvpos (void);
-extern struct chipset_refresh *get_chipset_refresh (struct uae_prefs*);
-extern void compute_framesync (void);
+extern void alloc_cycle_ext(int, int);
+extern void alloc_cycle_blitter(int hpos, uaecptr *ptr, int);
+extern bool ispal(void);
+extern bool isvga(void);
+extern int current_maxvpos(void);
+extern struct chipset_refresh *get_chipset_refresh(struct uae_prefs*);
+extern void compute_framesync(void);
 extern void getsyncregisters(uae_u16 *phsstrt, uae_u16 *phsstop, uae_u16 *pvsstrt, uae_u16 *pvsstop);
-int is_bitplane_dma (int hpos);
+int is_bitplane_dma(int hpos);
 void custom_cpuchange(void);
 
 struct custom_store

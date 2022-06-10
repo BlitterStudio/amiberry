@@ -17,8 +17,11 @@
 #include <switch.h>
 #endif
 
+/* frame_time_t is often cast to int in the code so we use int for now... */
+typedef uae_s64 uae_time_t;
+
 void uae_time_calibrate(void);
-typedef unsigned long frame_time_t;
+typedef uae_time_t frame_time_t;
 
 extern int64_t g_uae_epoch;
 

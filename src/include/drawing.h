@@ -63,13 +63,13 @@ STATIC_INLINE int shres_coord_hw_to_window_x (int x)
 	return x;
 }
 
-STATIC_INLINE int coord_hw_to_window_x (int x)
+STATIC_INLINE int coord_hw_to_window_x(int x)
 {
 	x -= DISPLAY_LEFT_SHIFT;
 	return x << lores_shift;
 }
 
-STATIC_INLINE int coord_window_to_hw_x (int x)
+STATIC_INLINE int coord_window_to_hw_x(int x)
 {
 	x >>= lores_shift;
 	return x + DISPLAY_LEFT_SHIFT;
@@ -80,12 +80,12 @@ STATIC_INLINE int coord_diw_lores_to_window_x(int x)
 	return (x - DISPLAY_LEFT_SHIFT + DIW_DDF_OFFSET - 1) << lores_shift;
 }
 
-STATIC_INLINE int coord_diw_shres_to_window_x (int x)
+STATIC_INLINE int coord_diw_shres_to_window_x(int x)
 {
 	return (x - DISPLAY_LEFT_SHIFT_SHRES + DIW_DDF_OFFSET_SHRES - (1 << 2)) >> shres_shift;
 }
 
-STATIC_INLINE int coord_window_to_diw_x (int x)
+STATIC_INLINE int coord_window_to_diw_x(int x)
 {
 	x = coord_window_to_hw_x (x);
 	return x - DIW_DDF_OFFSET;
@@ -99,20 +99,30 @@ STATIC_INLINE int coord_window_to_diw_x (int x)
 #define CE_BORDERBLANK 0
 #define CE_BORDERNTRANS 1
 #define CE_BORDERSPRITE 2
+#define CE_EXTBLANKSET 3
 #define CE_SHRES_DELAY 4
 
-STATIC_INLINE bool ce_is_borderblank(uae_u8 data)
+STATIC_INLINE bool ce_is_borderblank(uae_u16 data)
 {
 	return (data & (1 << CE_BORDERBLANK)) != 0;
 }
-STATIC_INLINE bool ce_is_bordersprite(uae_u8 data)
+STATIC_INLINE bool ce_is_extblankset(uae_u16 data)
+{
+	return (data & (1 << CE_EXTBLANKSET)) != 0;
+}
+STATIC_INLINE bool ce_is_bordersprite(uae_u16 data)
 {
 	return (data & (1 << CE_BORDERSPRITE)) != 0;
 }
-STATIC_INLINE bool ce_is_borderntrans(uae_u8 data)
+STATIC_INLINE bool ce_is_borderntrans(uae_u16 data)
 {
 	return (data & (1 << CE_BORDERNTRANS)) != 0;
 }
+
+#define VB_XBORDER 0x08 // forced border color or bblank
+#define VB_XBLANK 0x04 // forced bblank
+#define VB_PRGVB 0x02 // programmed vblank
+#define VB_NOVB 0x01 // normal
 
 struct color_entry {
 	uae_u16 color_regs_ecs[32];
@@ -122,7 +132,7 @@ struct color_entry {
 	xcolnr acolors[256];
 	uae_u32 color_regs_aga[256];
 #endif
-	uae_u8 extra;
+	uae_u16 extra;
 };
 
 #ifdef AGA
@@ -207,6 +217,8 @@ STATIC_INLINE void color_reg_cpy (struct color_entry *dst, struct color_entry *s
 #define COLOR_CHANGE_BRDBLANK 0x80000000
 #define COLOR_CHANGE_SHRES_DELAY 0x40000000
 #define COLOR_CHANGE_HSYNC_HACK 0x20000000
+#define COLOR_CHANGE_BLANK 0x10000000
+#define COLOR_CHANGE_ACTBORDER (COLOR_CHANGE_BLANK | COLOR_CHANGE_BRDBLANK)
 #define COLOR_CHANGE_MASK 0xf0000000
 struct color_change {
 	int linepos;

@@ -1,7 +1,7 @@
 #ifndef UAE_ROMMGR_H
 #define UAE_ROMMGR_H
 
-extern int decode_cloanto_rom_do (uae_u8 *mem, int size, int real_size);
+extern int decode_cloanto_rom_do(uae_u8 *mem, int size, int real_size);
 
 #define ROMTYPE_SUB_MASK    0x000000ff
 #define ROMTYPE_GROUP_MASK  0x003fff00
@@ -202,6 +202,8 @@ extern int decode_cloanto_rom_do (uae_u8 *mem, int size, int real_size);
 #define ROMTYPE_VOODOO5		0x0010008a
 #define ROMTYPE_HD20A		0x0010008b
 #define ROMTYPE_DEVHD		0x0010008c
+#define ROMTYPE_CSMK1SCSI	0x0010008d
+
 #define ROMTYPE_FLOPYBRDGE0 0x001000D0
 #define ROMTYPE_FLOPYBRDGE1 0x001000D1
 #define ROMTYPE_FLOPYBRDGE2 0x001000D2

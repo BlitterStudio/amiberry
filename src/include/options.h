@@ -339,6 +339,7 @@ enum
 #define OVERSCANMODE_OVERSCAN 3
 #define OVERSCANMODE_BROADCAST 4
 #define OVERSCANMODE_EXTREME 5
+#define OVERSCANMODE_ULTRA 6
 
 #define MAX_FILTERSHADERS 4
 
@@ -362,7 +363,7 @@ struct chipset_refresh
 	int ntsc;
 	int vsync;
 	int framelength;
-	double rate;
+	float rate;
 	TCHAR label[16];
 	TCHAR commands[256];
 	TCHAR filterprofile[64];
@@ -629,7 +630,6 @@ struct uae_prefs
 	bool gfx_blackerthanblack;
 	int gfx_threebitcolors;
 	int gfx_api;
-	bool gfx_hdr;
 	int gfx_api_options;
 	int color_mode;
 	int gfx_extrawidth;
@@ -643,6 +643,7 @@ struct uae_prefs
 	int gfx_variable_sync;
 	bool gfx_windowed_resize;
 	int gfx_overscanmode;
+	int gfx_monitorblankdelay;
 
 	struct gfx_filterdata gf[2];
 
@@ -651,7 +652,7 @@ struct uae_prefs
 
 	bool immediate_blits;
 	int waiting_blits;
-	double blitter_speed_throttle;
+	float blitter_speed_throttle;
 	unsigned int chipset_mask;
 	bool chipset_hr;
 	bool keyboard_connected;
@@ -666,7 +667,7 @@ struct uae_prefs
 	TCHAR genlock_video_file[MAX_DPATH];
 	int monitoremu;
 	int monitoremu_mon;
-	double chipset_refreshrate;
+	float chipset_refreshrate;
 	struct chipset_refresh cr[MAX_CHIPSET_REFRESH + 2];
 	int cr_selected;
 	int collision_level;
@@ -759,6 +760,9 @@ struct uae_prefs
 	int cs_hacks;
 	int cs_ciatype[2];
 	int cs_kbhandshake;
+	int cs_hvcsync;
+	int cs_eclockphase;
+	int cs_eclocksync;
 
 	struct boardromconfig expansionboard[MAX_EXPANSION_BOARDS];
 
@@ -794,8 +798,8 @@ struct uae_prefs
 	struct multipath path_cd;
 
 	int m68k_speed;
-	double m68k_speed_throttle;
-	double x86_speed_throttle;
+	float m68k_speed_throttle;
+	float x86_speed_throttle;
 	int cpu_model;
 	int mmu_model;
 	bool mmu_ec;
@@ -863,6 +867,7 @@ struct uae_prefs
 	bool obs_sound_toccata_mixer;
 	bool obs_sound_es1370;
 	bool obs_sound_fm801;
+	bool cputester;
 
 	int mountitems;
 	struct uaedev_config_data mountconfig[MOUNT_CONFIG_SIZE];

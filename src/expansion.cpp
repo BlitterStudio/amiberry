@@ -3063,7 +3063,7 @@ static int get_order(struct uae_prefs *p, struct card_data *cd)
 		return -1;
 	if (cd->zorro >= 4)
 		return -2;
-	if (cd->rc)
+	if (cd->rc && cd->rc->back)
 		return cd->rc->back->device_order;
 	int devnum = (cd->flags >> 16) & 255;
 	if (!_tcsicmp(cd->name, _T("Z2Fast")))
@@ -3141,7 +3141,7 @@ static void expansion_parse_cards(struct uae_prefs *p, bool log)
 #endif
 				_tcscpy(label, aci->cst->name);
 			}
-			if (cd->rc && !label[0]) {
+			if (cd->rc && !label[0] && cd->rc->back) {
 				const struct expansionromtype *ert = get_device_expansion_rom(cd->rc->back->device_type);
 				if (ert) {
 					_tcscpy(label, ert->friendlyname);
@@ -4018,13 +4018,13 @@ void expansion_clear (void)
 
 /* State save/restore code.  */
 
-uae_u8 *save_fram (int *len, int num)
+uae_u8 *save_fram(size_t *len, int num)
 {
 	*len = fastmem_bank[num].allocated_size;
 	return fastmem_bank[num].baseaddr;
 }
 
-uae_u8 *save_zram (int *len, int num)
+uae_u8 *save_zram(size_t *len, int num)
 {
 	if (num < 0) {
 		*len = z3chipmem_bank.allocated_size;
@@ -4034,19 +4034,19 @@ uae_u8 *save_zram (int *len, int num)
 	return z3fastmem_bank[num].baseaddr;
 }
 
-uae_u8 *save_pram (int *len)
+uae_u8 *save_pram(size_t *len)
 {
 	*len = gfxmem_banks[0]->allocated_size;
 	return gfxmem_banks[0]->baseaddr;
 }
 
-void restore_fram (int len, size_t filepos, int num)
+void restore_fram(int len, size_t filepos, int num)
 {
 	fast_filepos[num] = filepos;
 	changed_prefs.fastmem[num].size = len;
 }
 
-void restore_zram (int len, size_t filepos, int num)
+void restore_zram(int len, size_t filepos, int num)
 {
 	if (num == -1) {
 		z3_fileposchip = filepos;
@@ -4057,13 +4057,13 @@ void restore_zram (int len, size_t filepos, int num)
 	}
 }
 
-void restore_pram (int len, size_t filepos)
+void restore_pram(int len, size_t filepos)
 {
 	p96_filepos = filepos;
 	changed_prefs.rtgboards[0].rtgmem_size = len;
 }
 
-uae_u8 *save_expansion (int *len, uae_u8 *dstptr)
+uae_u8 *save_expansion(size_t *len, uae_u8 *dstptr)
 {
 	uae_u8 *dst, *dstbak;
 	if (dstptr)
@@ -4079,7 +4079,7 @@ uae_u8 *save_expansion (int *len, uae_u8 *dstptr)
 	return dstbak;
 }
 
-uae_u8 *restore_expansion (uae_u8 *src)
+uae_u8 *restore_expansion(uae_u8 *src)
 {
 	fastmem_bank[0].start = restore_u32 ();
 	z3fastmem_bank[0].start = restore_u32 ();
@@ -4091,7 +4091,7 @@ uae_u8 *restore_expansion (uae_u8 *src)
 	return src;
 }
 
-uae_u8 *save_expansion_boards(int *len, uae_u8 *dstptr, int cardnum)
+uae_u8 *save_expansion_boards(size_t *len, uae_u8 *dstptr, int cardnum)
 {
 	uae_u8 *dst, *dstbak;
 	if (cardnum >= cardno)

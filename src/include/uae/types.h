@@ -109,4 +109,6 @@ typedef char TCHAR;
 #define TRUE (!FALSE)
 #endif
 
+typedef signed long long evt_t;
+
 #endif /* UAE_TYPES_H */
