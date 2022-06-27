@@ -186,6 +186,7 @@ namespace GreaseWeazle {
 		int getMotorTimeout() const { return m_gwDriveDelays.watchdog_delay; }
 
 		bool supportsDiskChange() const { return m_pinDskChangeAvailable; }
+		BusType currentBusType() const { return m_currentBusType; };
 		bool isWriteProtected() const { return m_isWriteProtected; }
 
 		// Change the disk capacity we're using

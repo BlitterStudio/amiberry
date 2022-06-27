@@ -72,7 +72,7 @@ bool GreaseWeazleDiskBridge::openInterface(std::string& errorMessage) {
 
 	if (error == GWResponse::drOK) {
 		if (m_io.findTrack0() == GWResponse::drRewindFailure) {
-			errorMessage = "Failed to find track 0 (usually when Drive A and B are the wrong way around)";
+			errorMessage = "Failed to find track 0 (usually when IBM PC/Shugart drive A-B/0-3 Selection is incorrect)";
 			m_io.closePort();
 			return false;
 		}
@@ -82,15 +82,27 @@ bool GreaseWeazleDiskBridge::openInterface(std::string& errorMessage) {
 #ifdef _WIN32			
 			DWORD hasBeenSeen = 0;
 			DWORD dataSize = sizeof(hasBeenSeen);
-
 			HKEY key = 0;
-			if (SUCCEEDED(RegCreateKeyExA(HKEY_CURRENT_USER, "Software\\RobSmithDev\\GreaseWeazleSupport", 0, NULL, 0, KEY_READ | KEY_WRITE | KEY_SET_VALUE | KEY_CREATE_SUB_KEY, NULL, &key, NULL)))
-				if (!RegQueryValueEx(key, L"WarningShown", NULL, NULL, (LPBYTE)&hasBeenSeen, &dataSize)) dataSize = 0;
 
-			if (!hasBeenSeen) {
-				hasBeenSeen = 1;
-				if (key) RegSetValueEx(key, L"GreaseWeazleSupport", NULL, REG_DWORD, (LPBYTE)&hasBeenSeen, sizeof(hasBeenSeen));
-				errorMessage = "The Greaseweazle board you are using does not support access to the DISK CHANGE pin.\nThis is not optimal and will result in a higher amount of disk access.\nIf you are sure that it does, please update its firmware.";
+			if (m_io.currentBusType() == GreaseWeazle::BusType::Shugart) {
+				if (SUCCEEDED(RegCreateKeyExA(HKEY_CURRENT_USER, "Software\\RobSmithDev\\GreaseWeazleSupport", 0, NULL, 0, KEY_READ | KEY_WRITE | KEY_SET_VALUE | KEY_CREATE_SUB_KEY, NULL, &key, NULL)))
+					if (!RegQueryValueEx(key, L"WarningShownShugart", NULL, NULL, (LPBYTE)&hasBeenSeen, &dataSize)) dataSize = 0;
+
+				if (!hasBeenSeen) {
+					hasBeenSeen = 1;
+					if (key) RegSetValueEx(key, L"WarningShownShugart", NULL, REG_DWORD, (LPBYTE)&hasBeenSeen, sizeof(hasBeenSeen));
+					errorMessage = "Greaseweazle boards cannot read the DiskChange pin from this type of drive and so will be simulated.\nThis is not optimal and will result in a higher amount of disk access.\nI highly recommend using an IBM/PC drive instead.";
+				}
+			}
+			else {
+				if (SUCCEEDED(RegCreateKeyExA(HKEY_CURRENT_USER, "Software\\RobSmithDev\\GreaseWeazleSupport", 0, NULL, 0, KEY_READ | KEY_WRITE | KEY_SET_VALUE | KEY_CREATE_SUB_KEY, NULL, &key, NULL)))
+					if (!RegQueryValueEx(key, L"WarningShown", NULL, NULL, (LPBYTE)&hasBeenSeen, &dataSize)) dataSize = 0;
+
+				if (!hasBeenSeen) {
+					hasBeenSeen = 1;
+					if (key) RegSetValueEx(key, L"WarningShown", NULL, REG_DWORD, (LPBYTE)&hasBeenSeen, sizeof(hasBeenSeen));
+					errorMessage = "The Greaseweazle board you are using does not support access to the DISK CHANGE pin and so will be simulated.\nThis is not optimal and will result in a higher amount of disk access.\nIf you are sure that it does, please update its firmware.";
+				}
 			}
 			if (key) RegCloseKey(key);
 #endif			
