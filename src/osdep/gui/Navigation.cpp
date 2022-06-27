@@ -156,7 +156,7 @@ static NavigationMap navMap[] =
 	{ "cboUAEROM", "ROM", "ROM", "cboCartROM", "chkShapeShifter" },
 	{ "chkShapeShifter", "ROM", "ROM", "cboUAEROM", "cboMainROM" },
 
-	//PanelRAM
+	// PanelRAM
 	{ "sldChipmem", "", "", "RAM", "sldSlowmem" },
 	{ "sldSlowmem", "", "", "sldChipmem", "sldFastmem" },
 	{ "sldFastmem", "", "", "sldSlowmem", "sldZ3mem" },
@@ -164,7 +164,7 @@ static NavigationMap navMap[] =
 	{ "sldMbResLowmem", "", "", "sldZ3mem", "sldMbResHighmem" },
 	{ "sldMbResHighmem", "", "", "sldMbResLowmem", "sldChipmem" },
 
-	//PanelFloppy
+	// PanelFloppy
 	{ "DF0:", "Floppy drives", "cboType0", "cmdSaveForDisk", "cboDisk0" },
 	{ "cboType0", "DF0:", "chkWP0", "cmdSaveForDisk", "cboDisk0" },
 	{ "chkWP0", "cboType0", "cmdInfo0", "cmdSaveForDisk", "cboDisk0" },
@@ -256,7 +256,7 @@ static NavigationMap navMap[] =
 
 	//  active            move left           move right          move up           move down
 	// PanelDisplay
-	{ "cboFullscreen", "Display", "chkHorizontal", "chkFrameskip", "cboScreenmode" },
+	{ "cboFullscreen", "Display", "chkHorizontal", "sldBrightness", "cboScreenmode" },
 	{ "cboScreenmode", "Display", "chkVertical", "cboFullscreen", "sldWidth" },
 	{ "sldWidth", "", "", "cboScreenmode", "sldHeight" },
 	{ "sldHeight", "", "", "sldWidth", "chkAutoCrop" },
@@ -265,13 +265,14 @@ static NavigationMap navMap[] =
 	{ "sldHOffset", "", "", "chkAutoCrop", "sldVOffset" },
 	{ "sldVOffset", "", "", "sldHOffset", "cboScalingMethod" },
 	{ "cboScalingMethod", "Display", "optScanlines", "sldVOffset", "cboResolution" },
-	{ "cboResolution", "Display", "optDouble2", "cboScalingMethod", "chkFilterLowRes" },
-	{ "chkFilterLowRes", "Display", "optDouble3", "cboResolution", "chkBlackerThanBlack" },
-	{ "chkBlackerThanBlack", "Display", "optISingle", "chkFilterLowRes", "chkAspect" },
+	{ "cboResolution", "Display", "optDouble2", "cboScalingMethod", "chkBlackerThanBlack" },
+	{ "chkBlackerThanBlack", "Display", "chkFilterLowRes", "cboResolution", "chkAspect" },
+	{ "chkFilterLowRes", "chkBlackerThanBlack", "optISingle", "cboResolution", "chkAspect" },
 	{ "chkAspect", "Display", "optISingle", "chkBlackerThanBlack", "chkFlickerFixer" },
 	{ "chkFlickerFixer", "Display", "optIDouble", "chkAspect", "chkFrameskip" },
-	{ "chkFrameskip", "Display", "optIDouble2", "chkFlickerFixer", "cboFullscreen" },
-	{ "sldRefresh", "", "", "chkFlickerFixer", "cboFullscreen" },
+	{ "chkFrameskip", "Display", "optIDouble2", "chkFlickerFixer", "sldBrightness" },
+	{ "sldRefresh", "", "", "chkFlickerFixer", "sldBrightness" },
+	{ "sldBrightness", "", "", "chkFrameskip", "cboFullscreen" },
 
 	{ "chkHorizontal", "cboScreenmode", "", "optIDouble3", "chkVertical" },
 	{ "chkVertical", "cboScreenmode", "", "chkHorizontal", "optSingle" },

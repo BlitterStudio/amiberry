@@ -23,7 +23,7 @@
 #define BITCELL_SIZE_IN_NS 2000L
 
 #define PIN_DISKCHG_IBMPC	34
-#define PIN_DISKCHG_SHUGART 2
+#define PIN_DISKCHG_SHUGART 2     // Greaseweazle cannot read from this pin
 #define PIN_WRPROT			28
 
 using namespace GreaseWeazle;
@@ -199,7 +199,7 @@ GWResponse GreaseWeazleInterface::openPort(const std::string& comPort, DriveSele
 		break;
 	case DriveSelection::dsB:
 		m_currentBusType = BusType::IBMPC;
-		m_currentDriveIndex = 0;
+		m_currentDriveIndex = 1;
 		break;
 	case DriveSelection::ds0:
 		m_currentBusType = BusType::Shugart;
@@ -386,17 +386,20 @@ void GreaseWeazleInterface::checkPins() {
 		}
 	}
 
-	const int pin = (m_currentBusType == BusType::Shugart) ? PIN_DISKCHG_SHUGART : PIN_DISKCHG_IBMPC;
-
-	if ((!sendCommand(Cmd::GetPin, pin, response)) || (response != Ack::Okay)) {
-		m_pinDskChangeAvailable = false;
+	if (m_currentBusType == BusType::Shugart) {
+		m_pinDskChangeAvailable = false; // not supported by Greaseweazle on Pin 2
 	}
 	else {
-		unsigned char value = 0;
-		unsigned long read = m_comPort.read(&value, 1);
-		if (read == 1) {
-			m_pinDskChangeAvailable = true;
-			m_diskInDrive = value == 1;
+		if ((!sendCommand(Cmd::GetPin, PIN_DISKCHG_IBMPC, response)) || (response != Ack::Okay)) {
+			m_pinDskChangeAvailable = false;
+		}
+		else {
+			unsigned char value = 0;
+			unsigned long read = m_comPort.read(&value, 1);
+			if (read == 1) {
+				m_pinDskChangeAvailable = true;
+				m_diskInDrive = value == 1;
+			}
 		}
 	}
 

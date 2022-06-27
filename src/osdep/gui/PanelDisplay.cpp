@@ -119,6 +119,10 @@ static gcn::Label* lblFrameRate;
 static gcn::CheckBox* chkAspect;
 static gcn::CheckBox* chkBlackerThanBlack;
 
+static gcn::Label* lblBrightness;
+static gcn::Slider* sldBrightness;
+static gcn::Label* lblBrightnessValue;
+
 class AmigaScreenActionListener : public gcn::ActionListener
 {
 public:
@@ -170,6 +174,12 @@ public:
 			sldRefresh->setValue(changed_prefs.gfx_framerate);
 			lblFrameRate->setCaption(std::to_string(changed_prefs.gfx_framerate));
 			lblFrameRate->adjustSize();
+		}
+		else if (actionEvent.getSource() == sldBrightness)
+		{
+			changed_prefs.gfx_luminance = static_cast<int>(sldBrightness->getValue());
+			lblBrightnessValue->setCaption(std::to_string(changed_prefs.gfx_luminance));
+			lblBrightnessValue->adjustSize();
 		}
 
 		else if (actionEvent.getSource() == sldRefresh)
@@ -432,7 +442,7 @@ void InitPanelDisplay(const config_category& category)
 	chkAspect->setId("chkAspect");
 	chkAspect->addActionListener(amigaScreenActionListener);
 
-	chkFrameskip = new gcn::CheckBox("Refresh");
+	chkFrameskip = new gcn::CheckBox("Refresh:");
 	chkFrameskip->setId("chkFrameskip");
 	chkFrameskip->addActionListener(amigaScreenActionListener);
 
@@ -445,7 +455,19 @@ void InitPanelDisplay(const config_category& category)
 	sldRefresh->addActionListener(amigaScreenActionListener);
 	lblFrameRate = new gcn::Label("50");
 	lblFrameRate->setAlignment(gcn::Graphics::LEFT);
-	
+
+	lblBrightness = new gcn::Label("Brightness:");
+	lblBrightness->setAlignment(gcn::Graphics::LEFT);
+	sldBrightness = new gcn::Slider(-200, 200);
+	sldBrightness->setSize(100, SLIDER_HEIGHT);
+	sldBrightness->setBaseColor(gui_baseCol);
+	sldBrightness->setMarkerLength(20);
+	sldBrightness->setStepLength(1);
+	sldBrightness->setId("sldBrightness");
+	sldBrightness->addActionListener(amigaScreenActionListener);
+	lblBrightnessValue = new gcn::Label("0.0");
+	lblBrightnessValue->setAlignment(gcn::Graphics::LEFT);
+
 	lblScreenmode = new gcn::Label("Screen mode:");
 	lblScreenmode->setAlignment(gcn::Graphics::RIGHT);
 	cboScreenmode = new gcn::DropDown(&fullscreen_modes_list);
@@ -504,13 +526,13 @@ void InitPanelDisplay(const config_category& category)
 	category.panel->add(grpAmigaScreen);
 
 	grpCentering = new gcn::Window("Centering");
-	grpCentering->setPosition(DISTANCE_BORDER + grpAmigaScreen->getWidth() + DISTANCE_NEXT_X, DISTANCE_BORDER);
 	grpCentering->add(chkHorizontal, DISTANCE_BORDER, DISTANCE_BORDER);
 	grpCentering->add(chkVertical, DISTANCE_BORDER, chkHorizontal->getY() + chkHorizontal->getHeight() + DISTANCE_NEXT_Y);
 	grpCentering->setMovable(false);
-	grpCentering->setSize(chkHorizontal->getX() + chkHorizontal->getWidth() + DISTANCE_BORDER * 5, TITLEBAR_HEIGHT + chkVertical->getY() + chkVertical->getHeight() + DISTANCE_NEXT_Y);
 	grpCentering->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpCentering->setBaseColor(gui_baseCol);
+	grpCentering->setSize(chkHorizontal->getX() + chkHorizontal->getWidth() + DISTANCE_BORDER * 5, TITLEBAR_HEIGHT + chkVertical->getY() + chkVertical->getHeight() + DISTANCE_NEXT_Y);
+	grpCentering->setPosition(category.panel->getWidth() - DISTANCE_BORDER - grpCentering->getWidth(), DISTANCE_BORDER);
 	category.panel->add(grpCentering);	
 	posY = DISTANCE_BORDER + grpAmigaScreen->getHeight() + DISTANCE_NEXT_Y;
 
@@ -529,9 +551,6 @@ void InitPanelDisplay(const config_category& category)
 	category.panel->add(lblResolution, DISTANCE_BORDER, posY);
 	category.panel->add(cboResolution, cboScalingMethod->getX(), posY);
 	posY += cboResolution->getHeight() + DISTANCE_NEXT_Y;
-	
-	category.panel->add(chkFilterLowRes, DISTANCE_BORDER, posY);
-	posY += chkFilterLowRes->getHeight() + DISTANCE_NEXT_Y;
 	
 	optSingle = new gcn::RadioButton("Single", "linemodegroup");
 	optSingle->setId("optSingle");
@@ -595,7 +614,9 @@ void InitPanelDisplay(const config_category& category)
 	category.panel->add(grpILineMode);
 
 	category.panel->add(chkBlackerThanBlack, DISTANCE_BORDER, posY);
-	posY += chkBlackerThanBlack->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(chkFilterLowRes, chkBlackerThanBlack->getX() + chkBlackerThanBlack->getWidth() + DISTANCE_NEXT_X, posY);
+	posY += chkFilterLowRes->getHeight() + DISTANCE_NEXT_Y;
+	
 	category.panel->add(chkAspect, DISTANCE_BORDER, posY);
 	posY += chkAspect->getHeight() + DISTANCE_NEXT_Y;
 	
@@ -603,8 +624,13 @@ void InitPanelDisplay(const config_category& category)
 	posY += chkFlickerFixer->getHeight() + DISTANCE_NEXT_Y;
 	
 	category.panel->add(chkFrameskip, DISTANCE_BORDER, posY);
-	category.panel->add(sldRefresh, chkFrameskip->getX() + chkFrameskip->getWidth() + DISTANCE_NEXT_X, posY);
+	category.panel->add(sldRefresh, chkFrameskip->getX() + chkFrameskip->getWidth() + DISTANCE_NEXT_X + 1, posY);
 	category.panel->add(lblFrameRate, sldRefresh->getX() + sldRefresh->getWidth() + 8, posY + 2);
+	posY += chkFrameskip->getHeight() + DISTANCE_NEXT_Y;
+
+	category.panel->add(lblBrightness, DISTANCE_BORDER, posY);
+	category.panel->add(sldBrightness, lblBrightness->getX() + lblBrightness->getWidth() + DISTANCE_NEXT_X, posY);
+	category.panel->add(lblBrightnessValue, sldBrightness->getX() + sldBrightness->getWidth() + 8, posY);
 
 	RefreshPanelDisplay();
 }
@@ -614,6 +640,9 @@ void ExitPanelDisplay()
 	delete chkFrameskip;
 	delete sldRefresh;
 	delete lblFrameRate;
+	delete lblBrightness;
+	delete sldBrightness;
+	delete lblBrightnessValue;
 	delete amigaScreenActionListener;
 	delete lblAmigaWidth;
 	delete sldAmigaWidth;
@@ -672,6 +701,10 @@ void RefreshPanelDisplay()
 	sldRefresh->setValue(changed_prefs.gfx_framerate);
 	lblFrameRate->setCaption(std::to_string(changed_prefs.gfx_framerate));
 	lblFrameRate->adjustSize();
+
+	sldBrightness->setValue(changed_prefs.gfx_luminance);
+	lblBrightnessValue->setCaption(std::to_string(changed_prefs.gfx_luminance));
+	lblBrightnessValue->adjustSize();
 	
 	int i;
 

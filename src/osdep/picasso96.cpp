@@ -5958,6 +5958,9 @@ static void inituaegfxfuncs(TrapContext *ctx, uaecptr start, uaecptr ABI)
 		RTGCALL2(PSSO_BoardInfo_CoerceMode, picasso_CoerceMode);
 	}
 
+	if (currprefs.rtg_hardwareinterrupt)
+		RTGCALL2(PSSO_BoardInfo_SetInterrupt, picasso_SetInterrupt);
+
 	write_log (_T("uaegfx.card magic code: %08X-%08X BI=%08X\n"), start, here (), ABI);
 
 	if (ABI && currprefs.rtg_hardwareinterrupt)
