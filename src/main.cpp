@@ -1215,6 +1215,8 @@ static int real_main2 (int argc, TCHAR **argv)
 
 	copy_prefs(&currprefs, &changed_prefs);
 
+	inputdevice_config_change();
+
 	no_gui = ! currprefs.start_gui;
 	if (restart_program == 2 || restart_program == 4)
 		no_gui = true;
