@@ -580,8 +580,9 @@ void set_custom_limits (int w, int h, int dx, int dy)
 		visible_bottom_stop = visible_top_start + h;
 	}
 
-	if (vls != visible_left_start || vrs != visible_right_stop ||
-		vts != visible_top_start || vbs != visible_bottom_stop)
+	if ((w >= 0 && h >= 0) &&
+		(vls != visible_left_start || vrs != visible_right_stop ||
+		vts != visible_top_start || vbs != visible_bottom_stop))
 		notice_screen_contents_lost(0);
 
 	check_custom_limits();
