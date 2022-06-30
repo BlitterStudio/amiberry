@@ -354,7 +354,7 @@ void InitPanelCustom(const config_category& category)
 		cboCustomButtonAction[i]->setBaseColor(gui_baseCol);
 		cboCustomButtonAction[i]->setBackgroundColor(colTextboxBackground);
 
-		std::string cbo_id = "cboCustomButtonAction" + to_string(i);
+		std::string cbo_id = "cboCustomButtonAction" + std::to_string(i);
 		cboCustomButtonAction[i]->setId(cbo_id);
 		cboCustomButtonAction[i]->addActionListener(customActionListener);
 	}
@@ -370,7 +370,7 @@ void InitPanelCustom(const config_category& category)
 		cboCustomAxisAction[i]->setBaseColor(gui_baseCol);
 		cboCustomAxisAction[i]->setBackgroundColor(colTextboxBackground);
 
-		std::string cbo_id = "cboCustomAxisAction" + to_string(i);
+		std::string cbo_id = "cboCustomAxisAction" + std::to_string(i);
 		cboCustomAxisAction[i]->setId(cbo_id);
 		cboCustomAxisAction[i]->addActionListener(customActionListener);
 	}
