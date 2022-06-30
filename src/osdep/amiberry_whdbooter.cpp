@@ -598,9 +598,9 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 						temp_node = game_node->FirstChildElement("slave_default");
 
 						// use a selected slave if we have one
-						if (strlen(currprefs.whdbootprefs.slave) != 0)
+						if (strlen(prefs->whdbootprefs.slave) != 0)
 						{
-							strcpy(selected_slave, currprefs.whdbootprefs.slave);
+							strcpy(selected_slave, prefs->whdbootprefs.slave);
 							write_log("WHDBooter - Config Selected Slave: %s \n", selected_slave);
 						}
 						// otherwise use the XML default
@@ -656,7 +656,7 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 		whd_bootscript << "WHDLoad SLAVE=\"Games:" << subpath << "/" << selected_slave << "\"";
 
 		// Write Cache
-		if (currprefs.whdbootprefs.writecache)
+		if (prefs->whdbootprefs.writecache)
 		{
 			whd_bootscript << " PRELOAD NOREQ ";
 		}
@@ -666,47 +666,47 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 		}
 
 		// CUSTOM options
-		if (currprefs.whdbootprefs.custom1 > 0)
+		if (prefs->whdbootprefs.custom1 > 0)
 		{
-			whd_bootscript << " CUSTOM1=" << currprefs.whdbootprefs.custom1;
+			whd_bootscript << " CUSTOM1=" << prefs->whdbootprefs.custom1;
 		}
-		if (currprefs.whdbootprefs.custom2 > 0)
+		if (prefs->whdbootprefs.custom2 > 0)
 		{
-			whd_bootscript << " CUSTOM2=" << currprefs.whdbootprefs.custom2;
+			whd_bootscript << " CUSTOM2=" << prefs->whdbootprefs.custom2;
 		}
-		if (currprefs.whdbootprefs.custom3 > 0)
+		if (prefs->whdbootprefs.custom3 > 0)
 		{
-			whd_bootscript << " CUSTOM3=" << currprefs.whdbootprefs.custom3;
+			whd_bootscript << " CUSTOM3=" << prefs->whdbootprefs.custom3;
 		}
-		if (currprefs.whdbootprefs.custom4 > 0)
+		if (prefs->whdbootprefs.custom4 > 0)
 		{
-			whd_bootscript << " CUSTOM4=" << currprefs.whdbootprefs.custom4;
+			whd_bootscript << " CUSTOM4=" << prefs->whdbootprefs.custom4;
 		}
-		if (currprefs.whdbootprefs.custom5 > 0)
+		if (prefs->whdbootprefs.custom5 > 0)
 		{
-			whd_bootscript << " CUSTOM5=" << currprefs.whdbootprefs.custom5;
+			whd_bootscript << " CUSTOM5=" << prefs->whdbootprefs.custom5;
 		}
-		if (strlen(currprefs.whdbootprefs.custom) != 0)
+		if (strlen(prefs->whdbootprefs.custom) != 0)
 		{
-			whd_bootscript << " CUSTOM=\"" << currprefs.whdbootprefs.custom << "\"";
+			whd_bootscript << " CUSTOM=\"" << prefs->whdbootprefs.custom << "\"";
 		}
 
 		// BUTTONWAIT
-		if (currprefs.whdbootprefs.buttonwait == true)
+		if (prefs->whdbootprefs.buttonwait == true)
 		{
 			whd_bootscript << " BUTTONWAIT";
 		}
 
 		// SPLASH
-		if (currprefs.whdbootprefs.showsplash != true)
+		if (prefs->whdbootprefs.showsplash != true)
 		{
 			whd_bootscript << " SPLASHDELAY=0";
 		}
 
 		// CONFIGDELAY
-		if (currprefs.whdbootprefs.configdelay != 0)
+		if (prefs->whdbootprefs.configdelay != 0)
 		{
-			whd_bootscript << " CONFIGDELAY=" << currprefs.whdbootprefs.configdelay;
+			whd_bootscript << " CONFIGDELAY=" << prefs->whdbootprefs.configdelay;
 		}
 
 		// SPECIAL SAVE PATH
@@ -714,7 +714,7 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 		whd_bootscript << '\n';
 
 		// Launches utility program to quit the emulator (via UAE trap in RTAREA)
-		if (currprefs.whdbootprefs.quit_on_exit)
+		if (prefs->whdbootprefs.quit_on_exit)
 		{
 			whd_bootscript << "DH0:C/AmiQuit\n";
 		}

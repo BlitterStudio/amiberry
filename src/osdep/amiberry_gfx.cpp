@@ -240,7 +240,7 @@ static int display_thread(void* unused)
 			vc_dispmanx_rect_set(&black_rect, 0, 0, modeInfo.width, modeInfo.height);
 
 			// Correct Aspect Ratio
-			if (changed_prefs.gfx_correct_aspect == 0)
+			if (currprefs.gfx_correct_aspect == 0)
 			{
 				// Fullscreen.
 				vc_dispmanx_rect_set(&dst_rect, 0, 0, modeInfo.width, modeInfo.height);
@@ -255,8 +255,8 @@ static int display_thread(void* unused)
 				}
 				else
 				{
-					width = display_width * 2 >> changed_prefs.gfx_resolution;
-					height = display_height * 2 >> changed_prefs.gfx_vresolution;
+					width = display_width * 2 >> currprefs.gfx_resolution;
+					height = display_height * 2 >> currprefs.gfx_vresolution;
 				}
 
 				const auto want_aspect = static_cast<float>(width) / static_cast<float>(height);
@@ -481,7 +481,7 @@ void toggle_fullscreen(int monid, int mode)
 	// Dispmanx is full-window always
 #else
 	auto* const ad = &adisplays[monid];
-	auto* p = ad->picasso_on ? &changed_prefs.gfx_apmode[1].gfx_fullscreen : &changed_prefs.gfx_apmode[0].gfx_fullscreen;
+	auto* p = ad->picasso_on ? &currprefs.gfx_apmode[1].gfx_fullscreen : &currprefs.gfx_apmode[0].gfx_fullscreen;
 	const auto wfw = ad->picasso_on ? wasfullwindow_p : wasfullwindow_a;
 	auto v = *p;
 	static int prevmode = -1;
@@ -737,9 +737,9 @@ static void open_screen(struct uae_prefs* p)
 	}
 	
 	if (wasfullwindow_a == 0)
-		wasfullwindow_a = currprefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLWINDOW ? 1 : -1;
+		wasfullwindow_a = p->gfx_apmode[0].gfx_fullscreen == GFX_FULLWINDOW ? 1 : -1;
 	if (wasfullwindow_p == 0)
-		wasfullwindow_p = currprefs.gfx_apmode[1].gfx_fullscreen == GFX_FULLWINDOW ? 1 : -1;
+		wasfullwindow_p = p->gfx_apmode[1].gfx_fullscreen == GFX_FULLWINDOW ? 1 : -1;
 	
 	update_win_fs_mode(0, p);
 	
@@ -798,7 +798,7 @@ static void open_screen(struct uae_prefs* p)
 		display_depth = 32;
 		pixel_format = SDL_PIXELFORMAT_RGBA32;
 
-		if (changed_prefs.gfx_correct_aspect == 0)
+		if (p->gfx_correct_aspect == 0)
 		{
 			width = sdl_mode.w;
 			height = sdl_mode.h;
@@ -844,7 +844,7 @@ static void open_screen(struct uae_prefs* p)
 
 #endif
 
-	setpriority(currprefs.active_capture_priority);
+	setpriority(p->active_capture_priority);
 	updatepicasso96(mon);
 
 	if (sdl_surface != nullptr)
@@ -959,15 +959,14 @@ void auto_crop_image()
 			height = new_height * 2 >> currprefs.gfx_vresolution;
 			if (height != currprefs.gfx_monitor[0].gfx_size_win.height)
 			{
-				currprefs.gfx_monitor[0].gfx_size_win.height = height;
-				memcpy(&changed_prefs, &currprefs, sizeof(uae_prefs));
+				changed_prefs.gfx_monitor[0].gfx_size_win.height = currprefs.gfx_monitor[0].gfx_size_win.height = height;
 				open_screen(&currprefs);
 				reset_drawing();
 			}
 #else
 			crop_rect = { x, y, new_width, new_height };
 
-			if (changed_prefs.gfx_correct_aspect == 0)
+			if (currprefs.gfx_correct_aspect == 0)
 			{
 				width = sdl_mode.w;
 				height = sdl_mode.h;
@@ -999,7 +998,7 @@ void auto_crop_image()
 		if (last_autocrop != currprefs.gfx_auto_crop)
 		{
 			// Restore Aspect ratio corrections if auto-crop was turned off
-			if (changed_prefs.gfx_correct_aspect == 0)
+			if (currprefs.gfx_correct_aspect == 0)
 			{
 				width = sdl_mode.w;
 				height = sdl_mode.h;
