@@ -8700,7 +8700,7 @@ static void hsync_handler_post(bool onvsync)
 	if (currprefs.cs_cd32cd) {
 
 		if (cia_hsync < maxhpos) {
-			CIAA_tod_handler(cia_hsync);
+			CIAA_tod_inc(cia_hsync);
 			cia_hsync += (akiko_ntscmode() ? 262 : 313) * maxhpos;
 		} else {
 			cia_hsync -= maxhpos;
@@ -8709,7 +8709,7 @@ static void hsync_handler_post(bool onvsync)
 	} else if (currprefs.cs_ciaatod > 0) {
 		if (cia_hsync < maxhpos) {
 			int newcount;
-			CIAA_tod_handler(cia_hsync);
+			CIAA_tod_inc(cia_hsync);
 			newcount = (int)((vblank_hz * (2 * maxvpos + (interlace_seen ? 1 : 0)) * (2 * maxhpos + (islinetoggle () ? 1 : 0))) / ((currprefs.cs_ciaatod == 2 ? 60 : 50) * 4));
 			cia_hsync += newcount;
 		} else {
@@ -8719,10 +8719,10 @@ static void hsync_handler_post(bool onvsync)
 		// CIA-A TOD counter increases when vsync pulse ends
 		if (beamcon0 & (0x80 | 0x200)) {
 			if (vpos == vsstop && vsstrt <= maxvpos)
-				CIAA_tod_handler(lof_store ? hcenter : hsstrt);
+				CIAA_tod_inc(lof_store ? hcenter : hsstrt);
 		} else {
 			if (vpos == (currprefs.ntscmode ? VSYNC_ENDLINE_NTSC : VSYNC_ENDLINE_PAL)) {
-				CIAA_tod_handler(lof_store ? 132 : 18);
+				CIAA_tod_inc(lof_store ? 132 : 18);
 			}
 		}
 	}
