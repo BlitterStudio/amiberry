@@ -395,10 +395,10 @@ bool my_kbd_handler(int keyboard, int scancode, int newstate, bool alwaysrelease
 #endif
 #if 1
 	if (scancode == SDL_SCANCODE_F9 && specialpressed()) {
-		if (newstate) {
-			extern int blop;
-			blop++;
-		}
+		//if (newstate) {
+		//	extern int blop;
+		//	blop++;
+		//}
 		return true;
 	}
 #endif

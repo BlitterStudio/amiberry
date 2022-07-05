@@ -545,7 +545,7 @@ static void cputracefunc_x_do_cycles_post (int cycles, uae_u32 v)
 // cyclecounter_post = how many cycles we need to WAIT
 static void cputracefunc2_x_do_cycles_post (int cycles, uae_u32 v)
 {
-	uae_u32 c;
+	int c;
 	if (cputrace.cyclecounter_post) {
 		c = cputrace.cyclecounter_post;
 		cputrace.cyclecounter_post = 0;
@@ -1104,9 +1104,9 @@ STATIC_INLINE int in_rtarea (uaecptr pc)
 	return (munge24 (pc) & 0xFFFF0000) == rtarea_base && (uae_boot_rom_type || currprefs.uaeboard > 0);
 }
 
-STATIC_INLINE uae_u32 adjust_cycles (uae_u32 cycles)
+STATIC_INLINE int adjust_cycles (int cycles)
 {
-	uae_u32 res = cycles >> cycles_shift;
+	const auto res = cycles >> cycles_shift;
 	if (cycles_shift_2)
 		return res + (cycles >> cycles_shift_2);
 	return res;
@@ -2512,7 +2512,7 @@ int cpu_sleep_millis(int ms)
 	return sleep_millis_main(ms);
 }
 
-static bool haltloop_do(int vsynctimeline, int rpt_end, int lines)
+static bool haltloop_do(int vsynctimeline, frame_time_t rpt_end, int lines)
 {
 	int ovpos = vpos;
 	while (lines-- >= 0) {
@@ -2548,7 +2548,7 @@ static bool haltloop_do(int vsynctimeline, int rpt_end, int lines)
 #endif
 			if (event_wait)
 				break;
-			int d = read_processor_time() - rpt_end;
+			frame_time_t d = read_processor_time() - rpt_end;
 			if (d < -2 * vsynctimeline || d >= 0)
 				break;
 		}
@@ -2564,10 +2564,10 @@ static bool haltloop(void)
 		int ovpos = vpos;
 
 		while (regs.halted) {
-			int vsynctimeline = vsynctimebase / (maxvpos_display + 1);
+			int vsynctimeline = (int)(vsynctimebase / (maxvpos_display + 1));
 			int lines;
-			int rpt_scanline = read_processor_time();
-			int rpt_end = rpt_scanline + vsynctimeline;
+			frame_time_t rpt_scanline = read_processor_time();
+			frame_time_t rpt_end = rpt_scanline + vsynctimeline;
 
 			// See expansion handling.
 			// Dialog must be opened from main thread.
@@ -2598,7 +2598,7 @@ static bool haltloop(void)
 				check_uae_int_request();
 				uae_ppc_execute_check();
 
-				lines = (read_processor_time() - rpt_scanline) / vsynctimeline + 1;
+				lines = (int)(read_processor_time() - rpt_scanline) / vsynctimeline + 1;
 
 			} else {
 
@@ -2812,8 +2812,8 @@ static int do_specialties (int cycles)
 
 		if (m68k_interrupt_delay) {
 			unset_special(SPCFLAG_INT);
-			ipl_fetch ();
 			if (time_for_interrupt ()) {
+				x_do_cycles(4 * cpucycleunit);
 				do_interrupt (regs.ipl);
 				break;
 			}
@@ -2842,8 +2842,9 @@ static int do_specialties (int cycles)
 
 		x_do_cycles(4 * cpucycleunit);
 
-		if (regs.spcflags & SPCFLAG_COPPER)
+		if (regs.spcflags & SPCFLAG_COPPER) {
 			do_copper();
+		}
 
 		if (regs.spcflags & SPCFLAG_MODE_CHANGE) {
 			m68k_resumestopped();
@@ -3026,6 +3027,7 @@ static void m68k_run_1_ce (void)
 				//}
 
 				r->instruction_pc = m68k_getpc ();
+
 				(*cpufunctbl[r->opcode])(r->opcode);
 				regs.instruction_cnt++;
 				if (cpu_tracer) {
@@ -3853,7 +3855,7 @@ void m68k_go (int may_quit)
 
 uae_u8 *restore_cpu (uae_u8 *src)
 {
-	uae_u32 flags, model;
+	int flags, model;
 	uae_u32 l;
 
 	currprefs.cpu_model = changed_prefs.cpu_model = model = restore_u32 ();

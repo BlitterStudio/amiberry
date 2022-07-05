@@ -75,8 +75,8 @@ int m68k_move2c (int regno, uae_u32 *regp)
 			break;
 		/* 68040 only */
 		case 3:
-				regs.tcr = *regp & 0xc000;
-				break;
+			regs.tcr = *regp & 0xc000;
+			break;
 
 		case 4: regs.itt0 = *regp & 0xffffe364; break;
 		case 5: regs.itt1 = *regp & 0xffffe364; break;

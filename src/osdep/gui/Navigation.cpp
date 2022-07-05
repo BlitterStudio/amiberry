@@ -287,7 +287,7 @@ static NavigationMap navMap[] =
 	{ "optIDouble3", "chkFrameskip", "", "optIDouble2", "chkHorizontal" },
 
 	//  active            move left           move right          move up           move down
-	//PanelSound
+	// PanelSound
 	{ "cboSoundcard", "Sound", "Sound", "sldFloppySoundDisk", "sndDisable" },
 	{ "sndDisable", "Sound", "sldPaulaVol", "cboSoundcard", "sndDisEmu" },
 	{ "sndDisEmu", "Sound", "sldPaulaVol", "sndDisable", "sndEmulate" },
@@ -354,9 +354,12 @@ static NavigationMap navMap[] =
 
 	{ "None", "Custom controls", "HotKey", "0: Mouse", "cboCustomButtonAction0" },
 	{ "HotKey", "None", "cmdSetHotkey", "1: Joystick", "cboCustomButtonAction0" },
+
+#if SDL_VERSION_ATLEAST( 2, 0, 14 )
 	{ "cmdSetHotkey", "HotKey", "cmdSetHotkeyClear", "3: Parallel 2", "cboCustomButtonAction10" },
 	{ "cmdSetHotkeyClear", "cmdSetHotkey", "Custom controls", "3: Parallel 2", "cboCustomButtonAction10" },
-		// Left column
+
+	// Left column
 	{ "cboCustomButtonAction0", "Custom controls", "cboCustomButtonAction10", "None", "cboCustomButtonAction1" },
 	{ "cboCustomButtonAction1", "Custom controls", "cboCustomButtonAction11", "cboCustomButtonAction0", "cboCustomButtonAction2" },
 	{ "cboCustomButtonAction2", "Custom controls", "cboCustomButtonAction12", "cboCustomButtonAction1", "cboCustomButtonAction3" },
@@ -387,6 +390,38 @@ static NavigationMap navMap[] =
 		// Right column bottom
 	{ "cboCustomAxisAction4", "cboCustomAxisAction1", "Custom controls", "cboCustomButtonAction20", "cboCustomAxisAction5" },
 	{ "cboCustomAxisAction5", "cboCustomAxisAction2", "Custom controls", "cboCustomAxisAction4", "cmdSetHotkey" },
+#else
+	// Previous SDL2 versions only had a maximum of 15 buttons (0 - 14)
+	{ "cmdSetHotkey", "HotKey", "cmdSetHotkeyClear", "3: Parallel 2", "cboCustomButtonAction7" },
+	{ "cmdSetHotkeyClear", "cmdSetHotkey", "Custom controls", "3: Parallel 2", "cboCustomButtonAction7" },
+		// Left column
+	{ "cboCustomButtonAction0", "Custom controls", "cboCustomButtonAction7", "None", "cboCustomButtonAction1" },
+	{ "cboCustomButtonAction1", "Custom controls", "cboCustomButtonAction8", "cboCustomButtonAction0", "cboCustomButtonAction2" },
+	{ "cboCustomButtonAction2", "Custom controls", "cboCustomButtonAction9", "cboCustomButtonAction1", "cboCustomButtonAction3" },
+	{ "cboCustomButtonAction3", "Custom controls", "cboCustomButtonAction10", "cboCustomButtonAction2", "cboCustomButtonAction4" },
+	{ "cboCustomButtonAction4", "Custom controls", "cboCustomButtonAction11", "cboCustomButtonAction3", "cboCustomButtonAction5" },
+	{ "cboCustomButtonAction5", "Custom controls", "cboCustomButtonAction12", "cboCustomButtonAction4", "cboCustomButtonAction6" },
+	{ "cboCustomButtonAction6", "Custom controls", "cboCustomButtonAction13", "cboCustomButtonAction5", "cboCustomAxisAction0" },
+
+		// Right column
+	{ "cboCustomButtonAction7", "cboCustomButtonAction0", "Custom controls", "None", "cboCustomButtonAction8" },
+	{ "cboCustomButtonAction8", "cboCustomButtonAction1", "Custom controls", "cboCustomButtonAction7", "cboCustomButtonAction9" },
+	{ "cboCustomButtonAction9", "cboCustomButtonAction2", "Custom controls", "cboCustomButtonAction8", "cboCustomButtonAction10" },
+	{ "cboCustomButtonAction10", "cboCustomButtonAction3", "Custom controls", "cboCustomButtonAction9", "cboCustomButtonAction11" },
+	{ "cboCustomButtonAction11", "cboCustomButtonAction4", "Custom controls", "cboCustomButtonAction10", "cboCustomButtonAction12" },
+	{ "cboCustomButtonAction12", "cboCustomButtonAction5", "Custom controls", "cboCustomButtonAction11", "cboCustomButtonAction13" },
+	{ "cboCustomButtonAction13", "cboCustomButtonAction6", "Custom controls", "cboCustomButtonAction12", "cboCustomButtonAction14" },
+	{ "cboCustomButtonAction14", "cboCustomAxisAction0", "Custom controls", "cboCustomButtonAction13", "cboCustomAxisAction1" },
+
+	{ "cboCustomAxisAction0", "Custom controls", "cboCustomButtonAction14", "cboCustomButtonAction6", "cboCustomAxisAction1" },
+	{ "cboCustomAxisAction1", "Custom controls", "cboCustomAxisAction4", "cboCustomAxisAction0", "cboCustomAxisAction2" },
+	{ "cboCustomAxisAction2", "Custom controls", "cboCustomAxisAction5", "cboCustomAxisAction1", "cboCustomAxisAction3" },
+	{ "cboCustomAxisAction3", "Custom controls", "", "cboCustomAxisAction2", "0: Mouse" },
+		// Right column bottom
+	{ "cboCustomAxisAction4", "cboCustomAxisAction1", "Custom controls", "cboCustomButtonAction14", "cboCustomAxisAction5" },
+	{ "cboCustomAxisAction5", "cboCustomAxisAction2", "Custom controls", "cboCustomAxisAction4", "cmdSetHotkey" },
+
+#endif
 
 	// PanelDiskSwapper
 	// active				move left			move right			move up			move down
