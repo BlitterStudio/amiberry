@@ -4362,7 +4362,7 @@ static void update_fetch(int until, int fm)
 	/* First, a loop that prepares us for the speedup code.  We want to enter
 	the SPEEDUP case with fetch_state == plane0 or it is the very
 	first fetch cycle (which equals to same state as fetch_was_plane0)
-	and then unroll whole blocks, so that we end on the same fetch_state again.  */
+    and then unroll whole blocks, so that we end on the same fetch_state again.  */
 	for(;;) {
 		if (hpos == until || hpos >= maxhpos) {
 			if (until >= maxhpos) {
@@ -5279,7 +5279,7 @@ static int sprites_differ(struct draw_info *dip, struct draw_info *dip_old)
 		}
 	}
 
-	npixels = this_last->first_pixel + (this_last->max - this_last->pos) - this_first->first_pixel;
+    npixels = this_last->first_pixel + (this_last->max - this_last->pos) - this_first->first_pixel;
 	if (memcmp(spixels + this_first->first_pixel, spixels + prev_first->first_pixel, npixels * sizeof(uae_u16)) != 0) {
 		return 1;
 	}
@@ -5377,7 +5377,7 @@ static void finish_decisions(int hpos)
 	/* Large DIWSTOP values can cause the stop position never to be
 	* reached, so the state machine always stays in the same state and
 	* there's a more-or-less full-screen DIW. */
-	if (hdiwstate == diw_states::DIW_waiting_stop && thisline_decision.diwfirstword >= 0) {
+	if ((hdiwstate == diw_states::DIW_waiting_stop && thisline_decision.diwfirstword >= 0) || hstrobe_conflict) {
 		thisline_decision.diwlastword = max_diwlastword;
 	}
 
@@ -5621,7 +5621,7 @@ static void reset_decisions_hsync_start(void)
 	if (currprefs.gfx_overscanmode == OVERSCANMODE_ULTRA) {
 		thisline_decision.vb = VB_NOVB;
 	}
-	if (nosignal_status == 1) {
+	if (nosignal_status >= 1) {
 		thisline_decision.vb = VB_XBLANK;
 		MARK_LINE_CHANGED;
 	} else if (nosignal_status < 0) {
@@ -8509,20 +8509,23 @@ static void BLTALWM(int hpos, uae_u16 v) {
 	blt_info.bltalwm = v;
 	reset_blit(0);
 }
+static void setblitx(int hpos, int n)
+{
+	bltptxpos = (hpos + 1) % maxhpos;
+	bltptxc = copper_access ? n : -n;
+}
 static void BLTAPTH(int hpos, uae_u16 v)
 {
 	maybe_blit(hpos, 0);
 	bltptx = bltapt;
-	bltptxpos = hpos;
-	bltptxc = copper_access ? 1 : -1;
+	setblitx(hpos, 1);
 	bltapt = (bltapt & 0xffff) | ((uae_u32)v << 16);
 }
 static void BLTAPTL(int hpos, uae_u16 v)
 {
 	maybe_blit(hpos, 0);
 	bltptx = bltapt;
-	bltptxpos = hpos;
-	bltptxc = copper_access ? 1 : -1;
+	setblitx(hpos, 1);
 	bltapt = (bltapt & ~0xffff) | (v & 0xFFFE);
 }
 static void BLTBPTH(int hpos, uae_u16 v)
@@ -8537,24 +8540,21 @@ static void BLTBPTL(int hpos, uae_u16 v)
 {
 	maybe_blit(hpos, 0);
 	bltptx = bltbpt;
-	bltptxpos = hpos;
-	bltptxc = copper_access ? 2 : -2;
+	setblitx(hpos, 2);
 	bltbpt = (bltbpt & ~0xffff) | (v & 0xFFFE);
 }
 static void BLTCPTH(int hpos, uae_u16 v)
 {
 	maybe_blit(hpos, 0);
 	bltptx = bltcpt;
-	bltptxpos = hpos;
-	bltptxc = copper_access ? 3 : -3;
+	setblitx(hpos, 3);
 	bltcpt = (bltcpt & 0xffff) | ((uae_u32)v << 16);
 }
 static void BLTCPTL(int hpos, uae_u16 v)
 {
 	maybe_blit(hpos, 0);
 	bltptx = bltcpt;
-	bltptxpos = hpos;
-	bltptxc = copper_access ? 3 : -3;
+	setblitx(hpos, 3);
 	bltcpt = (bltcpt & ~0xffff) | (v & 0xFFFE);
 }
 static void BLTDPTH (int hpos, uae_u16 v)
@@ -8568,10 +8568,8 @@ static void BLTDPTH (int hpos, uae_u16 v)
 			write_log("Possible Copper Blitter wait bug detected COP=%08x\n", cop_state.ip);
 		}
 	}
-
 	bltptx = bltdpt;
-	bltptxpos = hpos;
-	bltptxc = copper_access ? 4 : -4;
+	setblitx(hpos, 4);
 	bltdpt = (bltdpt & 0xffff) | ((uae_u32)v << 16);
 }
 static void BLTDPTL(int hpos, uae_u16 v)
@@ -8587,8 +8585,7 @@ static void BLTDPTL(int hpos, uae_u16 v)
 	}
 
 	bltptx = bltdpt;
-	bltptxpos = hpos;
-	bltptxc = copper_access ? 4 : -4;
+	setblitx(hpos, 4);
 	bltdpt = (bltdpt & ~0xffff) | (v & 0xFFFE);
 }
 
@@ -11047,9 +11044,11 @@ static void vsync_handler_post(void)
 	if ((bplcon0 & 2) && !currprefs.genlock) {
 		nosignal_trigger = true;
 	}
+	// Inverted CSYNC
 	if ((beamcon0 & BEAMCON0_CSYTRUE) && currprefs.cs_hvcsync == 1) {
 		nosignal_trigger = true;
 	}
+	// BLANKEN set: horizontal blanking is merged with CSYNC
 	if ((beamcon0 & BEAMCON0_BLANKEN) && currprefs.cs_hvcsync == 1) {
 		nosignal_trigger = true;
 	}
@@ -11057,13 +11056,19 @@ static void vsync_handler_post(void)
 		nosignal_trigger = true;
 	}
 	if (beamcon0 & BEAMCON0_VARBEAMEN) {
-		if (htotal < 100 || htotal > 250) {
+		if (htotal < 50 || htotal > 250) {
 			nosignal_trigger = true;
 		}
 		if (vtotal < 100 || vtotal > 1000) {
 			nosignal_trigger = true;
 		}
+		// CSY output is invalid (no vsync part included) if HTOTAL is too small + hardwired CSYNC.
+		int csyh = (beamcon0 & 0x20) ? 0x8c : 0x8d;
+		if (htotal < csyh && !(beamcon0 & BEAMCON0_VARCSYEN) && currprefs.cs_hvcsync == 1) {
+			nosignal_trigger = true;
+		}
 	}
+	// Too small or large HSYNC
 	if (beamcon0 & (BEAMCON0_VARHSYEN | BEAMCON0_VARCSYEN)) {
 		if (hsstop < hsstrt) {
 			hsstop += maxhpos;
@@ -11072,6 +11077,7 @@ static void vsync_handler_post(void)
 			nosignal_trigger = true;
 		}
 	}
+	// Too small or large VSYNC
 	if (beamcon0 & (BEAMCON0_VARVSYEN | BEAMCON0_VARCSYEN)) {
 		if (vsstop < vsstrt) {
 			vsstop += maxvpos;
@@ -11220,8 +11226,6 @@ static void vsync_handler_post(void)
 	lof_changed = 0;
 	vposw_change = 0;
 	bplcon0_interlace_seen = false;
-
-	COPJMP(1, 1);
 
 	vsync_handle_check();
 
@@ -12574,11 +12578,18 @@ static void hsync_handler_post(bool onvsync)
 		vsync_handler_post();
 		vpos_count = 0;
 	}
+
 	// vblank interrupt = next line after VBSTRT
-	if (vb_start_line == 1) {
+	if (vpos == 0 && vb_start_line == 1) {
 		// first refresh (strobe) slot triggers vblank interrupt
+		// copper and vblank trigger in same line
+		event2_newevent_xx(-1, 2 * CYCLE_UNIT, 0, delayed_framestart);
+	} else if (vb_start_line == 1) {
 		send_interrupt(5, (REFRESH_FIRST_HPOS + 1) * CYCLE_UNIT);
+	} else if (vpos == 0) {
+		event2_newevent_xx(-1, 2 * CYCLE_UNIT, 0, delayed_copjmp);
 	}
+
 	// lastline - 1?
 	if (vpos + 1 == maxvpos + lof_store || vpos + 1 == maxvpos + lof_store + 1) {
 		lof_lastline = lof_store != 0;
@@ -14670,6 +14681,8 @@ uae_u8 *restore_cycles(uae_u8 *src)
 
 void check_prefs_changed_custom(void)
 {
+	bool syncchange = false;
+
 	if (!config_changed)
 		return;
 	currprefs.gfx_framerate = changed_prefs.gfx_framerate;
@@ -14742,6 +14755,11 @@ void check_prefs_changed_custom(void)
 				diwhigh_written = 0;
 				bplcon0 &= ~(0x10 | 0x01);
 			}
+			if (currprefs.cs_hvcsync != changed_prefs.cs_hvcsync) {
+				syncchange = true;
+				nosignal_trigger = false;
+				nosignal_status = 0;
+			}
 			currprefs.chipset_mask = changed_prefs.chipset_mask;
 			currprefs.cs_dipagnus = changed_prefs.cs_dipagnus;
 			currprefs.cs_hvcsync = changed_prefs.cs_hvcsync;
@@ -14751,6 +14769,9 @@ void check_prefs_changed_custom(void)
 	if (currprefs.chipset_hr != changed_prefs.chipset_hr) {
 		currprefs.chipset_hr = changed_prefs.chipset_hr;
 		init_custom();
+	}
+	if (syncchange) {
+		varsync_changed = 2;
 	}
 
 #ifdef GFXFILTER
@@ -14804,7 +14825,7 @@ static int dma_cycle(uaecptr addr, uae_u32 value, int *mode)
 		decide_fetch_ce(hpos_next);
 		int bpldma = bitplane_dma_access(hpos_old, 0);
 		if (blt_info.blit_queued) {
-#if 0
+#if 1
 			decide_blitter(hpos_next);
 #else
 			// CPU write must be done at the same time with blitter idle cycles

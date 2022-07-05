@@ -128,6 +128,7 @@ struct CIATimer
 	uae_u32 passed;
 	uae_u16 inputpipe;
 	uae_u32 loaddelay;
+	uae_u8 preovfl;
 	uae_u8 cr;
 };
 
@@ -166,16 +167,17 @@ static uae_u8 kbcode;
 #ifdef SERIAL_PORT
 static uae_u8 serbits;
 #endif
-static int warned = 10;
+static int warned = 100;
 
 static struct rtc_msm_data rtc_msm;
 static struct rtc_ricoh_data rtc_ricoh;
 
 static int internaleclockphase;
+static bool cia_cycle_accurate;
 
 static bool acc_mode(void)
 {
-	return currprefs.m68k_speed >= 0 && currprefs.cpu_compatible;
+	return cia_cycle_accurate;
 }
 
 int blop, blop2;
@@ -287,7 +289,7 @@ static void RethinkICR(int num)
 
 	if (c->icr1 & c->imask & ICR_MASK) {
 #if CIAA_DEBUG_IRQ
-		write_log(_T("CIA%c IRQ %02X\n"), num ? 'B' : 'A', c->icr);
+		write_log(_T("CIA%c IRQ %02X %02X\n"), num ? 'B' : 'A', c->icr1, c->icr2);
 #endif
 		if (!(c->icr1 & 0x80)) {
 			c->icr1 |= 0x80 | 0x40;
@@ -391,10 +393,12 @@ static void compute_passed_time(void)
 static void timer_reset(struct CIATimer *t)
 {
 	t->timer = t->latch;
-	if (t->cr & CR_RUNMODE) {
-		t->inputpipe &= ~CIA_PIPE_CLR1;
-	} else {
-		t->inputpipe &= ~CIA_PIPE_CLR2;
+	if (acc_mode()) {
+		if (t->cr & CR_RUNMODE) {
+			t->inputpipe &= ~CIA_PIPE_CLR1;
+		} else {
+			t->inputpipe &= ~CIA_PIPE_CLR2;
+		}
 	}
 }
 
@@ -441,7 +445,7 @@ static int process_pipe(struct CIATimer *t, int cc, uae_u8 crmask, int *ovfl)
 {
 	int ccout = cc;
 
-	if (cc == 1) {
+	if (cc == 1 && acc_mode()) {
 		int out = t->inputpipe & CIA_PIPE_OUTPUT;
 		t->inputpipe >>= 1;
 		if ((t->cr & crmask) == CR_START) {
@@ -578,7 +582,7 @@ static void CIA_update_check(void)
 		for (int tn = 0; tn < 2; tn++) {
 			struct CIATimer *t = &c->t[tn];
 
-			if (ovfl[tn]) {
+			if (ovfl[tn] || t->preovfl) {
 				c->icr2 |= tn ? ICR_B : ICR_A;
 				t->timer = t->latch;
 				if (!loaded[tn]) {
@@ -588,13 +592,21 @@ static void CIA_update_check(void)
 						// timer does not stop.
 						if (!loaded2[tn]) {
 							t->cr &= ~CR_START;
+							if (!acc_mode()) {
+								t->inputpipe = 0;
+							}
 						}
-						t->inputpipe &= ~CIA_PIPE_CLR2;
+						if (acc_mode()) {
+							t->inputpipe &= ~CIA_PIPE_CLR2;
+						}
 					} else {
-						t->inputpipe &= ~CIA_PIPE_CLR1;
+						if (acc_mode()) {
+							t->inputpipe &= ~CIA_PIPE_CLR1;
+						}
 					}
 				}
 				icr |= 1 << num;
+				t->preovfl = false;
 			}
 		}
 
@@ -606,9 +618,10 @@ static void CIA_update_check(void)
 		if (!acc_mode()) {
 			c->icr1 |= c->icr2;
 			c->icr2 = 0;
-		}
-		if (icr) {
-			c->icr_change = true;
+		} else {
+			if (icr) {
+				c->icr_change = true;
+			}
 		}
 	}
 }
@@ -795,7 +808,7 @@ static bool cia_checkalarm(bool inc, bool irq, int num)
 	// modes. Real hardware value written to ciabtod by KS is always
 	// at least 1 or larger due to bus cycle delays when reading
 	// old value.
-#if 1
+#if 0
 	if (num) {
 		if (!currprefs.cpu_compatible && (munge24(m68k_getpc()) & 0xFFF80000) != 0xF80000) {
 			if (c->tod == 0 && c->alarm == 0)
@@ -840,7 +853,7 @@ void cia_heartbeat(void)
 	heartbeat_cnt = 10;
 }
 
-static void do_tod_hack(int dotod)
+static void do_tod_hack(void)
 {
 	struct timeval tv;
 	static int oldrate;
@@ -888,7 +901,7 @@ static void do_tod_hack(int dotod)
 		docount = 1;
 	}
 
-	if (!dotod && currprefs.cs_ciaatod == 0)
+	if (currprefs.cs_ciaatod == 0)
 		return;
 
 	if (tod_hack_delay > 0) {
@@ -1063,7 +1076,7 @@ static void CIA_tod_check(int num)
 		return;
 	int hpos = current_hpos();
 	hpos -= c->tod_offset;
-	if (hpos >= 0 || currprefs.m68k_speed < 0) {
+	if (hpos >= 0 || !acc_mode()) {
 		// Program should see the changed TOD
 		CIA_tod_inc(true, num);
 		return;
@@ -1091,9 +1104,10 @@ static void CIA_tod_handler(int hoffset, int num)
 
 void CIAA_tod_handler(int hoffset)
 {
+	struct CIA *c = &cia[0];
 #ifdef TOD_HACK
 	if (currprefs.tod_hack && tod_hack_enabled == 1) {
-		cia[0].tod_event_state = 0;
+		c->tod_event_state = 0;
 		return;
 	}
 #endif
@@ -1166,24 +1180,28 @@ void CIA_hsync_posthandler(bool ciahsync, bool dotod)
 		// custom hsync
 		if (resetwarning_phase) {
 			resetwarning_check();
-			while (keys_available())
+			while (keys_available()) {
 				get_next_key();
+			}
 		} else {
-			if ((hsync_counter & 15) == 0)
+			if ((hsync_counter & 15) == 0) {
 				check_keyboard();
+			}
 		}
 	} else {
 		while (keys_available()) {
 			get_next_key();
 		}
 	}
+
 	if (!ciahsync) {
-		// Delayed CIA-A VSync pulse
+		// Increase CIA-A TOD if delayed from previous line
 		cia_delayed_tod(0);
 		if (currprefs.tod_hack && cia[0].todon) {
-			do_tod_hack(dotod);
+			do_tod_hack();
 		}
 	}
+
 }
 
 static void calc_led(int old_led)
@@ -1262,6 +1280,8 @@ void CIA_vsync_prehandler(void)
 #endif
 		}
 	}
+
+	cia_cycle_accurate = currprefs.m68k_speed >= 0 && currprefs.cpu_compatible;
 }
 
 static void check_led(void)
@@ -1435,17 +1455,39 @@ static void CIA_thi_write(int num, int tnum, uae_u8 val)
 	struct CIA *c = &cia[num];
 	struct CIATimer *t = &c->t[tnum];
 
-	uae_u16 latch_old = t->latch;
 	t->latch = (t->latch & 0xff) | (val << 8);
 
-	t->loaddelay |= 1 << 2;
-	if (!(t->cr & CR_START)) {
-		t->loaddelay |= 1 << 1;
-	}
+	if (!acc_mode()) {
+		// if inaccurate mode: do everything immediately
 
-	if (t->cr & CR_RUNMODE) {
-		t->cr |= CR_START;
-		t->loaddelay |= 0x01000000 << 1;
+		if (!(t->cr & CR_START)) {
+			t->timer = t->latch;
+		}
+
+		if (t->cr & CR_RUNMODE) {
+			t->cr |= CR_START;
+			t->inputpipe = CIA_PIPE_ALL_MASK;
+		}
+
+		if (t->cr & CR_START) {
+			if (t->timer <= 1) {
+				t->preovfl = true;
+			}
+		}
+
+	} else {
+		// if accurate mode: handle delays cycle-accurately
+
+		t->loaddelay |= 1 << 2;
+
+		if (!(t->cr & CR_START)) {
+			t->loaddelay |= 1 << 1;
+		}
+
+		if (t->cr & CR_RUNMODE) {
+			t->cr |= CR_START;
+			t->loaddelay |= 0x01000000 << 1;
+		}
 	}
 }
 
@@ -1458,21 +1500,41 @@ static void CIA_cr_write(int num, int tnum, uae_u8 val)
 		val &= 0x7f; /* bit 7 is unused */
 	}
 
-	if (val & CR_LOAD) {
-		val &= ~CR_LOAD;
-		t->loaddelay |= 0x0001 << 2;
-		t->loaddelay |= 0x0100 << 0;
-		if (!(t->cr & CR_START)) {
-			t->loaddelay |= 0x0001 << 1;
-		}
-	} else {
-		if ((val & CR_START)) {
-			t->loaddelay |= 0x010000 << 0;
-		}
-	}
+	if (!acc_mode()) {
+		// if inaccurate mode: do everything immediately
 
-	if (!(val & CR_START)) {
-		t->inputpipe &= ~CIA_PIPE_CLR1;
+		if (val & CR_LOAD) {
+			val &= ~CR_LOAD;
+			t->timer = t->latch;
+		}
+		if (val & CR_START) {
+			t->inputpipe = CIA_PIPE_ALL_MASK;
+			if (t->timer <= 1) {
+				t->preovfl = true;
+			}
+		} else {
+			t->inputpipe = 0; 
+		}
+
+	} else {
+		// if accurate mode: handle delays cycle-accurately
+
+		if (val & CR_LOAD) {
+			val &= ~CR_LOAD;
+			t->loaddelay |= 0x0001 << 2;
+			t->loaddelay |= 0x0100 << 0;
+			if (!(t->cr & CR_START)) {
+				t->loaddelay |= 0x0001 << 1;
+			}
+		} else {
+			if ((val & CR_START)) {
+				t->loaddelay |= 0x010000 << 0;
+			}
+		}
+
+		if (!(val & CR_START)) {
+			t->inputpipe &= ~CIA_PIPE_CLR1;
+		}
 	}
 
 	t->cr = val;

@@ -81,7 +81,6 @@ uae_u32 blit_masktable[BLITTER_MAX_WORDS];
 static int blit_cyclecounter, blit_waitcyclecounter;
 static int blit_maxcyclecounter, blit_slowdown, blit_totalcyclecounter;
 static int blit_misscyclecounter;
-static int blit_copperstarted;
 
 #ifdef CPUEMU_13
 static int blitter_cyclecounter;
@@ -113,7 +112,7 @@ static uae_u16 debug_bltadat, debug_bltbdat, debug_bltcdat;
 #define BLITTER_MAX_PIPELINED_CYCLES 4
 
 #define CYCLECOUNT_FINISHED -1000
-#define CYCLECOUNT_START 3
+#define CYCLECOUNT_START 4
 
 /*
 Blitter Idle Cycle:
@@ -429,6 +428,7 @@ static void blitter_end(void)
 	if (log_blitter & 1) {
 		write_log(_T("cycles %d, missed %d, total %d\n"),
 			blit_totalcyclecounter, blit_misscyclecounter, blit_totalcyclecounter + blit_misscyclecounter);
+
 	}
 	blt_info.blitter_dangerous_bpl = 0;
 }
@@ -1385,7 +1385,7 @@ static bool decide_blitter_maybe_write2(int until_hpos, uaecptr addr, uae_u32 va
 		if (dmaen(DMA_BLITTER)) {
 			blitter_doit(last_blitter_hpos);
 		}
-		goto end;
+		goto end2;
 	}
 
 	if (log_blitter && blitter_delayed_debug) {
@@ -1394,7 +1394,7 @@ static bool decide_blitter_maybe_write2(int until_hpos, uaecptr addr, uae_u32 va
 	}
 
 	if (!blitter_cycle_exact) {
-		goto end;
+		goto end2;
 	}
 
 	while (last_blitter_hpos < until_hpos) {
@@ -1654,9 +1654,9 @@ static bool decide_blitter_maybe_write2(int until_hpos, uaecptr addr, uae_u32 va
 		last_blitter_hpos++;
 		bltptxpos = -1;
 	}
-
-end:
+end2:
 	bltptxpos = -1;
+end:
 	if (hsync) {
 		last_blitter_hpos = 0;
 	}
@@ -1864,6 +1864,7 @@ void do_blitter(int hpos, int copper, uaecptr pc)
 
 	blit_maxcyclecounter = 0x7fffffff;
 	blit_waitcyclecounter = 0;
+	last_blitter_hpos = hpos;
 
 	if (blitter_cycle_exact) {
 		if (immediate_blits) {
@@ -1878,11 +1879,8 @@ void do_blitter(int hpos, int copper, uaecptr pc)
 			blitter_hcounter = 0;
 			blitter_vcounter = 0;
 			blit_cyclecounter = -CYCLECOUNT_START;
-			blit_copperstarted = copper;
-			if (copper) {
-				blit_waitcyclecounter = 0;
-			} else {
-				blit_waitcyclecounter = 0;
+			if (!copper) {
+				blit_cyclecounter++;
 			}
 			blit_maxcyclecounter = blt_info.hblitsize * blt_info.vblitsize + 2;
 			blt_info.blit_pending = 0;

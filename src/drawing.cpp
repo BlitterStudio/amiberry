@@ -272,7 +272,7 @@ static int visible_top_start, visible_bottom_stop;
 static int vblank_top_start, vblank_bottom_stop;
 static int hblank_left_start, hblank_right_stop;
 static int hblank_left_start_hard, hblank_right_stop_hard;
-static bool exthblank, extborder, exthblanken;
+static bool exthblank, extborder, exthblanken, exthblankon;
 
 static int linetoscr_x_adjust_pixbytes, linetoscr_x_adjust_pixels;
 static int thisframe_y_adjust;
@@ -510,10 +510,11 @@ static void expand_vb_state(void)
 
 static void extblankcheck(void)
 {
-	if (exthblanken && ((dp_for_drawing->bplcon3 & 1) && (dp_for_drawing->bplcon0 & 1))) {
+	exthblankon = dp_for_drawing && (dp_for_drawing->bplcon3 & 1) && (dp_for_drawing->bplcon0 & 1);
+	if (exthblanken && exthblankon) {
 		exthblank = true;
 	}
-	if (exthblanken && (!(dp_for_drawing->bplcon3 & 1) || !(dp_for_drawing->bplcon0 & 1))) {
+	if (exthblanken && !exthblankon) {
 		exthblank = false;
 	}
 }
@@ -3523,7 +3524,7 @@ static void do_color_changes(line_draw_func worker_border, line_draw_func worker
 			} else {
 				// non-vblank scanline
 
-				int hblank_left = exthblank ? hblank_left_start : hblank_left_start_hard;
+				int hblank_left = exthblankon ? hblank_left_start : hblank_left_start_hard;
 
 				// left hblank (left edge to hblank end)
 				if (nextpos_in_range > lastpos && lastpos < hblank_left) {
@@ -3590,7 +3591,7 @@ static void do_color_changes(line_draw_func worker_border, line_draw_func worker
 					}
 				}
 
-				int hblank_right = exthblank ? hblank_right_stop : hblank_right_stop_hard;
+				int hblank_right = exthblankon ? hblank_right_stop : hblank_right_stop_hard;
 
 				// right border (playfield end to hblank start)
 				if (nextpos_in_range > lastpos && lastpos >= playfield_end_pre) {
@@ -4261,7 +4262,7 @@ static void init_drawing_frame (void)
 static int lightpen_y1[2], lightpen_y2[2];
 static int statusbar_y1, statusbar_y2;
 
-void putpixel(uae_u8 *buf, uae_u8 *genlockbuf, int bpp, int x, xcolnr c8, int opaq)
+void putpixel(uae_u8 *buf, uae_u8 *genlockbuf, int bpp, int x, xcolnr c8)
 {
 	if (x <= 0)
 		return;
@@ -4284,20 +4285,8 @@ void putpixel(uae_u8 *buf, uae_u8 *genlockbuf, int bpp, int x, xcolnr c8, int op
 		break;
 	case 4:
 		{
-			int i;
-			if (1 || opaq || currprefs.gf[0].gfx_filter == 0) {
-				uae_u32 *p = (uae_u32*)buf + x;
-				*p = c8;
-			} else {
-				for (i = 0; i < 4; i++) {
-					int v1 = buf[i + bpp * x];
-					int v2 = (c8 >> (i * 8)) & 255;
-					v1 = (v1 * 2 + v2 * 3) / 5;
-					if (v1 > 255)
-						v1 = 255;
-					buf[i + bpp * x] = v1;
-				}
-			}
+			uae_u32 *p = (uae_u32*)buf + x;
+			*p = c8;
 			break;
 		}
 	}
@@ -4372,7 +4361,7 @@ static void draw_lightpen_cursor(int monid, int x, int y, int line, int onscreen
 	for (int i = 0; i < LIGHTPEN_WIDTH; i++) {
 		int xx = x + i - LIGHTPEN_WIDTH / 2;
 		if (*p != '-' && xx >= 0 && xx < vidinfo->drawbuffer.outwidth) {
-			putpixel(xlinebuffer, xlinebuffer_genlock, vidinfo->drawbuffer.pixbytes, xx, *p == 'x' ? xcolors[color1] : xcolors[color2], 1);
+			putpixel(xlinebuffer, xlinebuffer_genlock, vidinfo->drawbuffer.pixbytes, xx, *p == 'x' ? xcolors[color1] : xcolors[color2]);
 		}
 		p++;
 	}
@@ -4482,10 +4471,10 @@ static void refresh_indicator_update(struct vidbuffer *vb)
 			color2 = refresh_indicator_colors[pixel - 5];
 		}
 		for (int x = 0; x < 8; x++) {
-			putpixel(xlinebuffer, NULL, vidinfo->drawbuffer.pixbytes, x, xcolors[color1], 1);
+			putpixel(xlinebuffer, NULL, vidinfo->drawbuffer.pixbytes, x, xcolors[color1]);
 		}
 		for (int x = 8; x < 16; x++) {
-			putpixel(xlinebuffer, NULL, vidinfo->drawbuffer.pixbytes, x, xcolors[color2], 1);
+			putpixel(xlinebuffer, NULL, vidinfo->drawbuffer.pixbytes, x, xcolors[color2]);
 		}
 	}
 }
@@ -4680,7 +4669,7 @@ void draw_lines(int end, int section)
 				int color = section_toggle ? section_colors[section & 3] : 0;
 				xlinebuffer = row_map[whereline];
 				for (int x = 0; x < 4; x++) {
-					putpixel(xlinebuffer, NULL, vidinfo->drawbuffer.pixbytes, x, xcolors[color], 1);
+					putpixel(xlinebuffer, NULL, vidinfo->drawbuffer.pixbytes, x, xcolors[color]);
 				}
 			}
 		}
@@ -5268,6 +5257,7 @@ void reset_drawing(void)
 	vb_state = 0;
 	exthblank = false;
 	exthblanken = false;
+	exthblankon = false;
 	extborder = false;
 	display_reset = 1;
 
