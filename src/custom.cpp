@@ -12491,6 +12491,17 @@ void vsync_event_done(void)
 	//}
 }
 
+static void delayed_copjmp(uae_u32 v)
+{
+	COPJMP(1, 1);
+}
+
+static void delayed_framestart(uae_u32 v)
+{
+	COPJMP(1, 1);
+	send_interrupt(5, 2 * CYCLE_UNIT); // total REFRESH_FIRST_HPOS + 1
+}
+
 // this prepares for new line
 static void hsync_handler_post(bool onvsync)
 {
