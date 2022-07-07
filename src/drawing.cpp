@@ -4547,16 +4547,14 @@ static void draw_frame2(struct vidbuffer *vbin, struct vidbuffer *vbout)
 static void draw_frame_extras(struct vidbuffer *vb, int y_start, int y_end)
 {
 	if ((currprefs.leds_on_screen & STATUSLINE_CHIPSET)) {
-		//int slx, sly;
-		//int mult = statusline_get_multiplier(vb->monitor_id) / 100;
-		//statusline_getpos(vb->monitor_id, &slx, &sly, vb->outwidth, vb->outheight);
-		//statusbar_y1 = sly + min_ypos_for_screen - 1;
-		//statusbar_y2 = statusbar_y1 + TD_TOTAL_HEIGHT * mult + 1;
+		int slx, sly;
+		int mult = statusline_get_multiplier(vb->monitor_id) / 100;
+		statusline_getpos(vb->monitor_id, &slx, &sly, vb->outwidth, vb->outheight);
+		statusbar_y1 = sly + min_ypos_for_screen - 1;
+		statusbar_y2 = statusbar_y1 + TD_TOTAL_HEIGHT * mult + 1;
 		//draw_status_line(vb->monitor_id, sly, -1);
-		struct amigadisplay* ad = &adisplays[0];
-		struct vidbuf_description* vidinfo = &ad->gfxvidinfo;
-		for (int i = 0; i < TD_TOTAL_HEIGHT; i++) {
-			int line = vidinfo->drawbuffer.outheight - TD_TOTAL_HEIGHT + i;
+		for (int i = 0; i < TD_TOTAL_HEIGHT * mult; i++) {
+			int line = sly + i;
 			draw_status_line(vb->monitor_id, line, i);
 		}
 	} else {
