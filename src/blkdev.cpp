@@ -587,7 +587,6 @@ void blkdev_entergui (void)
 {
 	for (int i = 0; i < MAX_TOTAL_SCSI_DEVICES; i++) {
 		struct blkdevstate *st = &state[i];
-		st->waspaused = 0;
 		struct device_info di;
 		if (sys_command_info (i, &di, 1)) {
 			if (sys_command_cd_pause (i, 1) == 0)
