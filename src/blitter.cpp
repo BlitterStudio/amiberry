@@ -112,7 +112,7 @@ static uae_u16 debug_bltadat, debug_bltbdat, debug_bltcdat;
 #define BLITTER_MAX_PIPELINED_CYCLES 4
 
 #define CYCLECOUNT_FINISHED -1000
-#define CYCLECOUNT_START 4
+#define CYCLECOUNT_START 3
 
 /*
 Blitter Idle Cycle:
@@ -412,7 +412,7 @@ static void blitter_interrupt(void)
 		return;
 	}
 	blt_info.blit_interrupt = 1;
-	send_interrupt(6, (4 + 1) * CYCLE_UNIT);
+	send_interrupt(6, 3 * CYCLE_UNIT);
 	//if (debug_dma) {
 	//	record_dma_event(DMA_EVENT_BLITIRQ, hpos, vpos);
 	//}
@@ -818,21 +818,16 @@ static void actually_do_blit (void)
 	if (blitline) {
 		do {
 			blitter_line_read();
-			if (ddat1use) {
-				bltdpt = bltcpt;
-			}
-			ddat1use = 1;
 			blitter_line();
 			blitter_line_proc();
 			blitter_nxline();
 			blt_info.vblitsize--;
 			if (blitlinepixel) {
-				record_dma_blit(0x00, blt_info.bltddat, bltdpt, last_blitter_hpos);
 				blitter_line_write();
 				blitlinepixel = 0;
 			}
+            bltdpt = bltcpt;
 		} while (blt_info.vblitsize != 0);
-		bltdpt = bltcpt;
 	} else {
 		if (blitdesc)
 			blitter_dofast_desc();
@@ -1366,7 +1361,7 @@ static bool decide_blitter_maybe_write2(int until_hpos, uaecptr addr, uae_u32 va
 			blt_delayed_irq--;
 		if (blt_delayed_irq <= 0) {
 			blt_delayed_irq = 0;
-			send_interrupt(6, 2 * CYCLE_UNIT);
+			send_interrupt(6, 3 * CYCLE_UNIT);
 		}
 	}
 
@@ -1467,6 +1462,7 @@ static bool decide_blitter_maybe_write2(int until_hpos, uaecptr addr, uae_u32 va
 			} else if (c == 3 && line) { // line 2/4 (C)
 
 				record_dma_blit(0x70, 0, bltcpt, hpos);
+				check_channel_mods(hpos, 3, &bltcpt);
 				blt_info.bltcdat = chipmem_wget_indirect(bltcpt);
 				regs.chipset_latch_rw = blt_info.bltcdat;
 				record_dma_blit_val(blt_info.bltcdat);
@@ -1480,17 +1476,13 @@ static bool decide_blitter_maybe_write2(int until_hpos, uaecptr addr, uae_u32 va
 
 			} else if ((c == 4 || c == 6) && line) { // line 4/4 (D)
 
-				if (ddat2use) {
-					bltdpt = bltcpt;
-				}
-				ddat2use = 1;
-
 				blitter_line_proc();
 				blitter_nxline();
 
 				/* onedot mode and no pixel = bus write access is skipped */
 				if (blitlinepixel && c == 4) {
 					record_dma_blit(0x00, blt_info.bltddat, bltdpt, hpos);
+                    check_channel_mods(hpos, 4, &bltdpt);
 					chipmem_wput_indirect(bltdpt, blt_info.bltddat);
 					regs.chipset_latch_rw = blt_info.bltddat;
 					alloc_cycle_blitter(hpos, &bltdpt, 4);
@@ -1530,18 +1522,17 @@ static bool decide_blitter_maybe_write2(int until_hpos, uaecptr addr, uae_u32 va
 
 			// cycle allocations
 			for (;;) {
-				// copper bltsize write needs one cycle (any cycle) delay
-				// does not need free bus
-				if (blit_waitcyclecounter > 0) {
-					blit_waitcyclecounter--;
-					markidlecycle(hpos);
-					break;
-				}
 
 				// final D idle cycle
 				// does not need free bus
 				if (blt_info.blit_finald > 1) {
 					blt_info.blit_finald--;
+				}
+
+				// Skip BLTSIZE write cycle
+				if (blit_waitcyclecounter) {
+					blit_waitcyclecounter = 0;
+					break;
 				}
 
 				bool cant = blitter_cant_access(hpos);
@@ -1879,9 +1870,7 @@ void do_blitter(int hpos, int copper, uaecptr pc)
 			blitter_hcounter = 0;
 			blitter_vcounter = 0;
 			blit_cyclecounter = -CYCLECOUNT_START;
-			if (!copper) {
-				blit_cyclecounter++;
-			}
+			blit_waitcyclecounter = 1;
 			blit_maxcyclecounter = blt_info.hblitsize * blt_info.vblitsize + 2;
 			blt_info.blit_pending = 0;
 			blt_info.blit_main = 1;
