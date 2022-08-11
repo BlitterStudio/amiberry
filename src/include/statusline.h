@@ -30,7 +30,6 @@ static int td_pos = (TD_RIGHT | TD_BOTTOM);
 void draw_status_line_single(int monid, uae_u8 *buf, int bpp, int y, int totalwidth, uae_u32 *rc, uae_u32 *gc, uae_u32 *bc, uae_u32 *alpha);
 void statusline_single_erase(int monid, uae_u8 *buf, int bpp, int y, int totalwidth);
 void statusline_getpos(int monid, int *x, int *y, int width, int height);
-bool softstatusline(void);
 
 #define STATUSTYPE_FLOPPY 1
 #define STATUSTYPE_DISPLAY 2
