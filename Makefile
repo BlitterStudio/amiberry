@@ -311,14 +311,11 @@ CXX    ?= g++
 STRIP  ?= strip
 PROG   = amiberry
 
-#
-# SDL2 options
-#
-all: guisan $(PROG)
-
 export CFLAGS := $(CPUFLAGS) $(CFLAGS) $(EXTRA_CFLAGS)
 export CXXFLAGS = $(CFLAGS) -std=gnu++17
 export CPPFLAGS
+
+all: guisan $(PROG)
 
 ifdef GCC_PROFILE
 	CFLAGS += -pg
@@ -650,6 +647,9 @@ cleanprofile:
 	
 guisan:
 	$(MAKE) -C external/libguisan
+
+gencpu:
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LDFLAGS) -o gencpu src/cpudefs.cpp src/gencpu.cpp src/readcpu.cpp src/osdep/charset.cpp
 
 capsimg:
 	cd external/capsimg && ./bootstrap && ./configure && $(MAKE)
