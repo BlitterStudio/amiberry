@@ -235,6 +235,7 @@ static char savestate_dir[MAX_DPATH];
 static char ripper_path[MAX_DPATH];
 static char input_dir[MAX_DPATH];
 static char screenshot_dir[MAX_DPATH];
+static char nvram_dir[MAX_DPATH];
 static char amiberry_conf_file[MAX_DPATH];
 
 char last_loaded_config[MAX_DPATH] = {'\0'};
@@ -2473,6 +2474,12 @@ void fetch_inputfilepath(TCHAR *out, int size)
 	strncpy(out, input_dir, size - 1);
 }
 
+void get_nvram_path(TCHAR *out, int size)
+{
+	fix_trailing(nvram_dir);
+	strncpy(out, nvram_dir, size - 1);
+}
+
 void get_screenshot_path(char* out, int size)
 {
 	fix_trailing(screenshot_dir);
@@ -2864,6 +2871,9 @@ void save_amiberry_settings(void)
 	snprintf(buffer, MAX_DPATH, "screenshot_dir=%s\n", screenshot_dir);
 	fputs(buffer, f);
 
+	snprintf(buffer, MAX_DPATH, "nvram_dir=%s\n", nvram_dir);
+	fputs(buffer, f);
+
 	// The number of ROMs in the last scan
 	snprintf(buffer, MAX_DPATH, "ROMs=%zu\n", lstAvailableROMs.size());
 	fputs(buffer, f);
@@ -3006,6 +3016,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_string(option, value, "ripper_path", ripper_path, sizeof ripper_path);
 		ret |= cfgfile_string(option, value, "inputrecordings_dir", input_dir, sizeof input_dir);
 		ret |= cfgfile_string(option, value, "screenshot_dir", screenshot_dir, sizeof screenshot_dir);
+		ret |= cfgfile_string(option, value, "nvram_dir", nvram_dir, sizeof nvram_dir);
 		// NOTE: amiberry_config is a "read only", ie. it's not written in
 		// save_amiberry_settings(). It's purpose is to provide -o amiberry_config=path
 		// command line option.
@@ -3265,6 +3276,7 @@ static void init_amiberry_paths(void)
 	snprintf(ripper_path, MAX_DPATH, "%s/ripper/", start_path_data);
 	snprintf(input_dir, MAX_DPATH, "%s/inputrecordings/", start_path_data);
 	snprintf(screenshot_dir, MAX_DPATH, "%s/screenshots/", start_path_data);
+	snprintf(nvram_dir, MAX_DPATH, "%s/nvram/", start_path_data);
 }
 
 void load_amiberry_settings(void)

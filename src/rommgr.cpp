@@ -2334,6 +2334,17 @@ int configure_rom (struct uae_prefs *p, const int *rom, int msg)
 		_tcscpy (p->cartfile, path);
 	if (rd->type & ROMTYPE_CPUBOARD)
 		set_device_rom(p, path, ROMTYPE_CPUBOARD, 0);
+
+	if (rd->type & (ROMTYPE_ARCADIAGAME | ROMTYPE_ALG)) {
+		get_nvram_path(p->flashfile, sizeof(p->flashfile) / sizeof(TCHAR));
+		_stprintf(p->flashfile + _tcslen(p->flashfile), _T("%s.nvr"), rd->name);
+	}
+#ifndef AMIBERRY
+	if (rd->type & ROMTYPE_ALG) {
+		get_video_path(p->genlock_video_file, sizeof(p->genlock_video_file) / sizeof(TCHAR));
+		_stprintf(p->genlock_video_file + _tcslen(p->genlock_video_file), _T("%s.avi"), rd->name);
+	}
+#endif
 	return 1;
 }
 
