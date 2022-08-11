@@ -14198,6 +14198,7 @@ uae_u8 *restore_custom(uae_u8 *src)
 	clxcon2 = RW;			/* 10E CLXCON2* */
 	for (i = 0; i < 8; i++) {
 		fetched[i] = RW;	/*     BPLXDAT */
+		fetched_aga[i] = fetched[i];
 	}
 	for (i = 0; i < 32; i++) {
 		uae_u16 v = RW;
