@@ -14300,7 +14300,7 @@ uae_u8 *save_custom(size_t *len, uae_u8 *dstptr, int full)
 	}
 
 	SL(currprefs.chipset_mask);
-	SW(0);					/* 000 BLTDDAT */
+	SW(blt_info.bltddat);	/* 000 BLTDDAT */
 	SW(dmacon);				/* 002 DMACONR */
 	SW(VPOSR());			/* 004 VPOSR */
 	SW(VHPOSR());			/* 006 VHPOSR */
