@@ -12829,7 +12829,6 @@ static void hsync_handler_post(bool onvsync)
 		if (lol) {
 			record_dma_event(DMA_EVENT_LOL, REFRESH_FIRST_HPOS + 2, vpos);
 		}
-		record_dma_hsync();
 	}
 #endif
 
