@@ -1,6 +1,8 @@
 #ifndef UAE_ROMMGR_H
 #define UAE_ROMMGR_H
 
+#define MAX_ROMMGR_ROMS 300
+
 extern int decode_cloanto_rom_do(uae_u8 *mem, int size, int real_size);
 
 #define ROMTYPE_SUB_MASK    0x000000ff
@@ -257,6 +259,7 @@ struct romdata {
 	uae_u32 sha1[5];
 	const TCHAR *configname;
 	const TCHAR *defaultfilename;
+	int sortpriority;
 };
 
 struct romlist {
@@ -273,7 +276,7 @@ extern struct romdata *getromdatabytype (int romtype);
 extern struct romdata *getromdatabyidgroup (int id, int group, int subitem);
 extern struct romdata *getromdatabyzfile (struct zfile *f);
 extern struct romdata *getfrombydefaultname(const TCHAR *name, int size);
-extern struct romlist **getarcadiaroms (void);
+extern struct romlist **getarcadiaroms(int);
 extern struct romdata *getarcadiarombyname (const TCHAR *name);
 extern struct romlist **getromlistbyident (int ver, int rev, int subver, int subrev, const TCHAR *model, int romflags, bool all);
 extern void getromname (const struct romdata*, TCHAR*);
