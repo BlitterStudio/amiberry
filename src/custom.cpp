@@ -499,6 +499,8 @@ enum copper_states {
 	COP_skip1,
 	COP_strobe_delay1,
 	COP_strobe_delay2,
+	COP_strobe_delay3,
+	COP_strobe_delay4,
 	COP_strobe_delay1x,
 	COP_strobe_delay2x,
 	COP_strobe_extra, // just to skip current cycle when CPU wrote to COPJMP
@@ -7015,14 +7017,15 @@ static void vhpos_adj(uae_u16 *hpp, uae_u16 *vpp)
 {
 	uae_u16 hp = *hpp;
 	uae_u16 vp = *vpp;
+
 	hp++;
 	if (hp == maxhpos) {
 		hp = 0;
-	}
-	if (hp <= 1) {
+	} else if (hp == 1) {
 		// HP=0-1: VP = previous line.
 		vp = vpos_prev;
 	}
+
 	*hpp = hp;
 	*vpp = vp;
 }
@@ -7524,7 +7527,20 @@ static void COPJMP(int num, int vblank)
 			cop_state.state = COP_strobe_delay1;
 		}
 	} else {
-		cop_state.state = vblank ? COP_strobe_delay2 : (copper_access ? COP_strobe_delay1 : COP_strobe_extra);
+		if (vblank) {
+			cop_state.state = COP_strobe_delay2;
+			switch (cop_state.state_prev)
+			{
+				case copper_states::COP_read2:
+				case copper_states::COP_read1:
+					// Wake up is delayed by 1 copper cycle if copper is currently loading words
+					cop_state.state = COP_strobe_delay3;
+					break;
+
+			}
+		} else {
+			cop_state.state = copper_access ? COP_strobe_delay1 : COP_strobe_extra;
+		}
 	}
 	cop_state.vblankip = cop1lc;
 	copper_enabled_thisline = 0;
@@ -9553,6 +9569,7 @@ static void do_copper_fetch(int hpos, uae_u16 id)
 		break;
 	}
 	case COP_strobe_delay2:
+	case COP_strobe_delay3:
 	{
 		// fake MOVE phase 2
 #ifdef DEBUGGER
@@ -9567,7 +9584,11 @@ static void do_copper_fetch(int hpos, uae_u16 id)
 			record_dma_read_value(cop_state.ir[1]);
 		}
 #endif
-		cop_state.state = COP_read1;
+		if (cop_state.state == COP_strobe_delay3) {
+			cop_state.state = COP_strobe_delay4;
+		} else {
+			cop_state.state = COP_read1;
+		}
 		// Next cycle finally reads from new pointer
 		if (cop_state.strobe == 1) {
 			cop_state.ip = cop1lc;
@@ -9575,6 +9596,13 @@ static void do_copper_fetch(int hpos, uae_u16 id)
 			cop_state.ip = cop2lc;
 		}
 		cop_state.strobe = 0;
+		alloc_cycle(hpos, CYCLE_COPPER);
+	}
+	break;
+	case COP_strobe_delay4:
+	{
+		// COPJMP when previous instruction is mid-cycle
+		cop_state.state = COP_read1;
 		alloc_cycle(hpos, CYCLE_COPPER);
 	}
 	break;
@@ -9798,6 +9826,8 @@ static int coppercomp(int hpos, bool blitwait)
 	int hpos_cmp = hpos;
 	int vpos_cmp = vpos;
 
+	// If waiting for last cycle of line and last cycle is even cycle:
+	// Horizontal counter has already wrapped around to zero.
 	if (hpos_cmp == maxhposm1 && maxhposeven == COPPER_CYCLE_POLARITY) {
 		hpos_cmp = 0;
 	}
@@ -9807,6 +9837,11 @@ static int coppercomp(int hpos, bool blitwait)
 
 	if (vp < cop_state.vcmp) {
 		return -1;
+	}
+
+	// Cycle 0: copper can't wake up
+	if (hpos == 0) {
+		return 1;
 	}
 
 	if ((cop_state.ir[1] & 0x8000) == 0) {
@@ -9903,6 +9938,8 @@ static void update_copper(int until_hpos)
 			}
 			break;
 		case COP_strobe_delay2:
+		case COP_strobe_delay3:
+		case COP_strobe_delay4:
 			// Second cycle after COPJMP does basically skipped MOVE (MOVE to 1FE)
 			// Cycle is used and needs to be free.
 			copper_cant_read(hpos, CYCLE_PIPE_COPPER);
@@ -11704,6 +11741,11 @@ static void set_hpos(void)
 	maxhposeven = (maxhpos & 1) == 0;
 	eventtab[ev_hsync].evtime = get_cycles() + HSYNCTIME;
 	eventtab[ev_hsync].oldcycles = get_cycles();
+#ifdef DEBUGGER
+	if (debug_dma) {
+		record_dma_hsync(maxhpos);
+	}
+#endif
 }
 
 // this finishes current line
@@ -11762,6 +11804,11 @@ static void hsync_handler_pre(bool onvsync)
 		vpos = 0;
 	}
 	if (onvsync) {
+#ifdef DEBUGGER
+		if (debug_dma) {
+			record_dma_vsync(vpos);
+		}
+#endif
 		vpos = 0;
 		vsync_counter++;
 	}
@@ -12491,14 +12538,14 @@ void vsync_event_done(void)
 	//}
 }
 
-static void delayed_copjmp(uae_u32 v)
+static void check_vblank_copjmp(uae_u32 v)
 {
 	COPJMP(1, 1);
 }
 
 static void delayed_framestart(uae_u32 v)
 {
-	COPJMP(1, 1);
+	check_vblank_copjmp(0);
 	send_interrupt(5, 2 * CYCLE_UNIT); // total REFRESH_FIRST_HPOS + 1
 }
 
@@ -12598,7 +12645,7 @@ static void hsync_handler_post(bool onvsync)
 	} else if (vb_start_line == 1) {
 		send_interrupt(5, (REFRESH_FIRST_HPOS + 1) * CYCLE_UNIT);
 	} else if (vpos == 0) {
-		event2_newevent_xx(-1, 2 * CYCLE_UNIT, 0, delayed_copjmp);
+		event2_newevent_xx(-1, 2 * CYCLE_UNIT, 0, check_vblank_copjmp);
 	}
 
 	// lastline - 1?
