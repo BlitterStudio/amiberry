@@ -573,6 +573,7 @@ static addrbank *expamem_init_last (void)
 	expamem_init_clear2 ();
 	write_log (_T("Memory map after autoconfig:\n"));
 	memory_map_dump ();
+	mman_set_barriers(false);
 	return NULL;
 }
 
@@ -5662,7 +5663,7 @@ const struct expansionromtype expansionroms[] = {
 	//	{ 0xd1, 0x31, 0x00, 0x00, 0x08, 0x40, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00 },
 	//},
 	{
-		_T("kommos"), _T("Kommos A500/A2000 SCSI"), _T("Jürgen Kommos"),
+		_T("kommos"), _T("Kommos A500/A2000 SCSI"), _T("Jï¿½rgen Kommos"),
 		NULL, kommos_init, NULL, kommos_add_scsi_unit, ROMTYPE_KOMMOS, 0, 0, BOARD_NONAUTOCONFIG_BEFORE, true,
 		NULL, 0,
 		false, EXPANSIONTYPE_SCSI
@@ -5881,7 +5882,7 @@ const struct expansionromtype expansionroms[] = {
 	//	true, 0, alf3_settings
 	//},
 	{
-		_T("promigos"), _T("Promigos"), _T("Flesch und Hörnemann"),
+		_T("promigos"), _T("Promigos"), _T("Flesch und Hï¿½rnemann"),
 		NULL, promigos_init, NULL, promigos_add_scsi_unit, ROMTYPE_PROMIGOS | ROMTYPE_NOT, 0, 0, BOARD_NONAUTOCONFIG_BEFORE, true,
 		NULL, 0,
 		false, EXPANSIONTYPE_CUSTOM | EXPANSIONTYPE_SCSI

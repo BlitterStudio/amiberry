@@ -15,6 +15,7 @@ extern void a1000_reset(void);
 
 #ifdef JIT
 extern int special_mem;
+extern int special_mem_default;
 extern int jit_n_addr_unsafe;
 #endif
 
@@ -108,7 +109,9 @@ enum
 #define ABFLAG_CACHE_ENABLE_ALL (ABFLAG_CACHE_ENABLE_BOTH | ABFLAG_CACHE_ENABLE_INS_BURST | ABFLAG_CACHE_ENABLE_DATA_BURST)
 
 typedef struct {
-	/* These ones should be self-explanatory... */
+	/* These ones should be self-explanatory...
+	 * Do not move. JIT depends on it
+	 */
 	mem_get_func lget, wget, bget;
 	mem_put_func lput, wput, bput;
 	/* Use xlateaddr to translate an Amiga address to a uae_u8 * that can
@@ -144,6 +147,8 @@ typedef struct {
 	uae_u8 *baseaddr_direct_r;
 	uae_u8 *baseaddr_direct_w;
 	uae_u32 startaccessmask;
+	bool barrier;
+	uae_u32 protectmode;
 } addrbank;
 
 #define MEMORY_MIN_SUBBANK 1024
@@ -533,6 +538,7 @@ extern bool read_kickstart_version(struct uae_prefs *p);
 extern void chipmem_setindirect(void);
 extern void initramboard(addrbank *ab, struct ramboard *rb);
 extern void loadboardfile(addrbank *ab, struct boardloadfile *lf);
+extern void mman_set_barriers(bool);
 
 uae_u32 memory_get_long(uaecptr);
 uae_u32 memory_get_word(uaecptr);
