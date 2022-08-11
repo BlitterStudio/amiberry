@@ -13143,15 +13143,16 @@ void custom_reset(bool hardreset, bool keyboardreset)
 	lightpen_y[1] = -1;
 	nr_armed = 0;
 	next_lineno = 0;
-	vb_start_line = 0;
+	vb_start_line = 1;
+	if (currprefs.cs_dipagnus) {
+		vb_start_line = 0;
+	}
+	vb_state = true;
 	vs_state = false;
 	vs_state_hw = false;
 	vs_state_on = false;
 	dmal_htotal_mask = 0xffff;
 	memset(custom_storage, 0, sizeof(custom_storage));
-	if (!currprefs.cs_dipagnus) {
-		vb_start_line = 1;
-	}
 	toscr_res_old = -1;
 	toscr_nbits = 0;
 	update_denise_vars();
