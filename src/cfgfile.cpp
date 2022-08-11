@@ -9002,7 +9002,7 @@ static int bip_arcadia (struct uae_prefs *p, int config, int compa, int romcheck
 	roms[2] = -1;
 	if (!configure_rom (p, roms, romcheck))
 		return 0;
-	rl = getarcadiaroms ();
+	rl = getarcadiaroms(0);
 	for (i = 0; rl[i]; i++) {
 		if (config-- == 0) {
 			roms[0] = rl[i]->rd->id;
@@ -9014,7 +9014,43 @@ static int bip_arcadia (struct uae_prefs *p, int config, int compa, int romcheck
 	xfree (rl);
 	return 1;
 }
+#ifndef AMIBERRY
+static int bip_alg(struct uae_prefs* p, int config, int compa, int romcheck)
+{
+	int roms[4], i;
+	struct romlist** rl;
 
+	p->bogomem.size = 0;
+	p->chipset_mask = 0;
+	p->cs_rtc = 0;
+	p->nr_floppies = 0;
+	p->genlock = 1;
+	p->genlock_image = 6;
+	p->floppyslots[0].dfxtype = DRV_NONE;
+	p->floppyslots[1].dfxtype = DRV_NONE;
+	set_68000_compa(p, compa);
+	p->cs_compatible = CP_A500;
+	built_in_chipset_prefs(p);
+	fetch_nvrampath(p->flashfile, sizeof(p->flashfile) / sizeof(TCHAR));
+	_tcscat(p->flashfile, _T("alg.nvr"));
+	roms[0] = 5;
+	roms[1] = 4;
+	roms[2] = -1;
+	if (!configure_rom(p, roms, romcheck))
+		return 0;
+	rl = getarcadiaroms(1);
+	for (i = 0; rl[i]; i++) {
+		if (config-- == 0) {
+			roms[0] = rl[i]->rd->id;
+			roms[1] = -1;
+			configure_rom(p, roms, 0);
+			break;
+		}
+	}
+	xfree(rl);
+	return 1;
+}
+#endif
 static int bip_casablanca(struct uae_prefs *p, int config, int compa, int romcheck)
 {
 	int roms[8];
