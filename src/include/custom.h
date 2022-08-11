@@ -118,7 +118,7 @@ extern uae_u16 INTREQR(void);
 #define MAXVPOS 312
 #else
 #define MAXHPOS 256
-#define MAXVPOS 592
+#define MAXVPOS 800
 #endif
 
 /* PAL/NTSC values */

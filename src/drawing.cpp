@@ -3959,7 +3959,7 @@ static void center_image (void)
 
 	} else if (ew == -1) {
 		// wide mode
-		int hs = hsync_end_left_border * 2;
+		int hs = hsync_end_left_border;
 		visible_left_border = hs << currprefs.gfx_resolution;
 		if (visible_left_border + w > maxdiw) {
 			visible_left_border += (maxdiw - (visible_left_border + w) - 1) / 2;
@@ -4143,7 +4143,7 @@ static void init_drawing_frame (void)
 						struct wh *dst = currprefs.gfx_apmode[0].gfx_fullscreen ? &changed_prefs.gfx_monitor[0].gfx_size_fs : &changed_prefs.gfx_monitor[0].gfx_size_win;
 						while (m < 3 * 2) {
 							struct wh *src = currprefs.gfx_apmode[0].gfx_fullscreen ? &currprefs.gfx_monitor[0].gfx_size_fs_xtra[m] : &currprefs.gfx_monitor[0].gfx_size_win_xtra[m];
-							if ((src->width > 0 && src->height > 0) || (currprefs.gfx_api || currprefs.gf[0].gfx_filter > 0)) {
+							if (src->width > 0 && src->height > 0) {
 								int nr = m >> 1;
 								int nl = (m & 1) == 0 ? 0 : 1;
 								int nr_o = nr;

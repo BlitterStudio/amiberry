@@ -286,7 +286,7 @@ extern uae_u16 spixels[MAX_SPR_PIXELS * 2];
 #endif
 
 /* Way too much... */
-#define MAX_REG_CHANGE ((MAXVPOS + MAXVPOS_WRAPLINES) * 2 * MAXHPOS)
+#define MAX_REG_CHANGE ((MAXVPOS + MAXVPOS_WRAPLINES) * 2 * MAXHPOS / 2)
 
 extern struct color_entry *curr_color_tables, *prev_color_tables;
 

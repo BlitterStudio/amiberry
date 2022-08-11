@@ -1329,7 +1329,7 @@ static void decide_hdiw(int hpos)
 		return;
 	}
 	int start_diw_hpos = ((last_diw_hpos * 2 - DDF_OFFSET + 1) << 2) + 3;
-	int end_diw_hpos = ((hpos2 * 2 + 1) << 2) + 3;
+	int end_diw_hpos = ((hpos * 2 + 1) << 2) + 3;
 	// should handle wrap around..
 	if (start_diw_hpos < ((1 << 2) + 3)) {
 		start_diw_hpos = (1 << 2) + 3;
@@ -5837,7 +5837,7 @@ void compute_vsynctime(void)
 void getsyncregisters(uae_u16 *phsstrt, uae_u16 *phsstop, uae_u16 *pvsstrt, uae_u16 *pvsstop)
 {
 	*phsstrt = hsstrt;
-	*phsstop = hsstop_detect;
+	*phsstop = hsstop_detect * 2;
 	*pvsstrt = vsstrt;
 	*pvsstop = vsstop;
 }
@@ -5988,9 +5988,9 @@ static void updateextblk(void)
 		}
 		hsyncendpos = hsstop;
 
-		hsstop_detect2 = hsstrt + 21;
-		if (hsstop_detect2 >= maxhpos) {
-			hsstop_detect2 -= maxhpos;
+		hsstop_detect2 = (hsstrt + 21) * 2;
+		if (hsstop_detect2 >= maxhpos * 2) {
+			hsstop_detect2 -= maxhpos * 2;
 		}
 		hsyncendpos2 = hsstop_detect2;
 
@@ -6018,7 +6018,7 @@ static void updateextblk(void)
 		hsyncstartpos = hsyncstartpos_hw;
 		hsyncendpos2 = hsyncendpos = hsyncendpos_hw;
 		denisehtotal = 227 + 7;
-		hsstop_detect2 = 35 + 9;
+		hsstop_detect2 = (35 + 9) * 2;
 
 	}
 
@@ -6453,31 +6453,39 @@ static void init_hz(bool checkvposw)
 		// assume VGA-like monitor if VARBEAMEN
 		if (currprefs.gfx_overscanmode >= OVERSCANMODE_ULTRA) {
 			maxhpos_display = maxhpos;
-			hsstop_detect = 8;
+			hsstop_detect = 8 * 2;
 			maxvpos_display_vsync += 2;
-		} else if (currprefs.gfx_overscanmode >= OVERSCANMODE_EXTREME) {
-			maxhpos_display = maxhpos - 2;
-			hsstop_detect = 18;
-			maxvpos_display_vsync += 2;
-		} else if (currprefs.gfx_overscanmode == OVERSCANMODE_BROADCAST) {
-			maxhpos_display = maxhpos - 10;
-			hsstop_detect = 22;
-			maxvpos_display_vsync++;
 		} else {
+			int hp2 = maxhpos * 2;
 			if (exthblank) {
+
 				int hb = 0;
-				int hbstrtx = hbstrt & 0xff;
-				int hbstopx = hbstop & 0xff;
-				if (hbstrtx > maxhpos / 2 && hbstopx < maxhpos / 2) {
-					hb = (maxhpos - hbstrtx) + hbstopx;
-				} else if (hbstopx < maxhpos / 2 && hbstrtx < hbstopx) {
+				int hbstrtx = (hbstrt & 0xff) * 2;
+				int hbstopx = (hbstop & 0xff) * 2;
+				if (aga_mode) {
+					hbstrtx |= (hbstrt & 0x400) ? 1 : 0;
+					hbstopx |= (hbstop & 0x400) ? 1 : 0;
+				}
+				if (hbstrtx > hp2) {
+					hbstrtx = hp2;
+				}
+				if (hbstopx > hp2) {
+					hbstopx = hp2;
+				}
+				if (hbstrtx > hp2 / 2 && hbstopx < hp2 / 2) {
+					hb = (hp2 - hbstrtx) + hbstopx;
+				} else if (hbstopx < hp2 / 2 && hbstrtx < hbstopx) {
 					hb = hbstopx - hbstrtx;
 				}
-				if (hb < 4) {
-					hb = 4;
+				if (hbstopx > hp2 / 2) {
+					hbstopx = 0;
 				}
-				maxhpos_display = maxhpos - (hb - 2);
-				int hsadj = 10;
+				if (hb < 0) {
+					hb = 0;
+				}
+
+#if 0
+				// HSYNC adjustment
 				int hsz = 0;
 				if (hsstrt > maxhpos / 2 && hsstop > hsstrt) {
 					hsz = hsstop - hsstrt;
@@ -6486,19 +6494,35 @@ static void init_hz(bool checkvposw)
 				} else if (hsstop < maxhpos / 2 && hsstrt < hsstop) {
 					hsz = hsstop - hsstrt;
 				}
-				if (hsz >= 12) {
-					hsadj = 15;
-				}
-				hsstop_detect = (hbstopx - (hsstrt - hsadj));
+#endif
+				maxhpos_display = maxhpos - (hb / 2);
+				hsstop_detect = hbstopx;
+
 			} else {
-				maxhpos_display = maxhpos - 15;
-				hsstop_detect = 15;
+
+				// hardwired
+				int hbstrtx = 7 * 2;
+				int hbstopx = 46 * 2;
+				int hb = hbstopx - hbstrtx;
+				maxhpos_display = maxhpos - (hb / 2);
+				hsstop_detect = 46 * 2 - 2;
 			}
+
+			if (currprefs.gfx_overscanmode >= OVERSCANMODE_EXTREME) {
+				int diff = (maxhpos - 2) - maxhpos_display;
+				if (diff > 0) {
+					hsstop_detect -= (diff / 2) * 2;
+				}
+				maxhpos_display = maxhpos - 2;
+				maxvpos_display_vsync += 2;
+			} else if (currprefs.gfx_overscanmode == OVERSCANMODE_BROADCAST) {
+				maxhpos_display += EXTRAWIDTH_BROADCAST;
+				hsstop_detect--;
+				maxvpos_display_vsync++;
+			}
+
 		}
 		maxhpos_display *= 2;
-		if (currprefs.gfx_overscanmode < OVERSCANMODE_ULTRA && hsstop_detect2 > hsstop_detect + 5) {
-			hsstop_detect = hsstop_detect2;
-		}
 
 	} else {
 
@@ -6514,14 +6538,14 @@ static void init_hz(bool checkvposw)
 				maxhpos_display += EXTRAWIDTH_ULTRA;
 				maxvpos_display_vsync += 2;
 				minfirstline = 0;
-				hsstop_detect = hsyncstartpos_start_cycles - 1;
+				hsstop_detect = hsyncstartpos_start_cycles - 2;
 			}
 		} else {
 
 			if (currprefs.gfx_overscanmode == OVERSCANMODE_ULTRA) {
 				maxhpos_display += EXTRAWIDTH_ULTRA;
 				maxvpos_display_vsync += 2;
-				hsstop_detect = 8;
+				hsstop_detect = 16;
 				minfirstline = 0;
 			}
 		}
