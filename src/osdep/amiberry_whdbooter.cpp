@@ -152,7 +152,7 @@ std::string find_whdload_game_option(const TCHAR* find_setting, const char* whd_
 {
 	const std::string lf = "\n";
 	const auto check = string(find_setting);
-	auto full_line = string(whd_options);
+	auto full_line = trim_full_line(string(whd_options));
 
 	auto lf_found = full_line.find(lf);
 	while (lf_found != std::string::npos)
@@ -161,14 +161,19 @@ std::string find_whdload_game_option(const TCHAR* find_setting, const char* whd_
 		auto end = full_line.find_first_of(lf, start + 1);
 		if (end == std::string::npos) end = full_line.size();
 
-		std::string trimmed_line = trim_full_line(full_line.substr(start + 1, end - start - 1));
-		const auto found = trimmed_line.find(check);
+		const auto substring = full_line.substr(start + 1, end - start - 1);
+		const auto found = full_line.find(check);
 		if (found != std::string::npos)
 		{
-			return trimmed_line.substr(found + check.size() + 1);
+			const auto found_end = full_line.find_first_of(lf, found);
+			auto result = full_line.substr(found + check.size() + 1, found_end - found - check.size() - 1);
+			return result;
 		}
 
-		lf_found = full_line.find(lf, end + 1);
+		if (end < full_line.size())
+			lf_found = end + 1;
+		else
+			lf_found = std::string::npos;
 	}
 
 	return "nul";
