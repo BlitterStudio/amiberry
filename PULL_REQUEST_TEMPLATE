@@ -1,8 +1,9 @@
-Fixes # .
+Fixes # . Fixed the possibility to compile using a version of GCC older than 8.0 where <filesystem> is found under <experimental/filesystem>
+          Tested only an my Linux Box AMD E1 Mint 19.3 GCC 7.5
 
 Changes proposed in this pull request:
--
--
+- Makefile added option USE_OLDGCC
+- Main.gcc and osdep/amiberry_filesys.cpp fixed include and some lines where <filesystem> is used
 -
 
 @midwan
