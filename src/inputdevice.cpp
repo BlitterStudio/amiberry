@@ -4382,11 +4382,11 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 		setsystime ();
 		break;
 	case AKS_SCREENSHOT_FILE:
-		//if (state > 1) {
-		//	screenshot(-1, 3, 1);
-		//} else {
-		//	screenshot(-1, 1, 1);
-		//}
+		if (state > 1) {
+			screenshot(-1, 3, 1);
+		} else {
+			screenshot(-1, 1, 1);
+		}
 		break;
 	case AKS_SCREENSHOT_CLIPBOARD:
 		//screenshot(-1, 0, 1);
