@@ -10,7 +10,12 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+
+#ifdef USE_OLDGCC
+#include <experimental/filesystem>
+#else
 #include <filesystem>
+#endif
 
 #include "sysconfig.h"
 #include "sysdeps.h"
@@ -1069,7 +1074,11 @@ long get_file_size(const std::string& filename)
 
 bool file_exists(std::string file)
 {
+	#ifdef USE_OLDGCC
+	namespace fs = std::experimental::filesystem;
+	#else
 	namespace fs = std::filesystem;
+	#endif
 	fs::path f { file };
 	return (fs::exists(f));
 }
