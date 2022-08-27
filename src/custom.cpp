@@ -5536,20 +5536,30 @@ static void DMACON (int hpos, uae_u16 v)
 #endif
 }
 
-static int irq_nmi;
+static int irq_forced;
+static evt_t irq_delay;
 
-void NMI_delayed (void)
+void IRQ_forced(int lvl, int delay)
 {
-	irq_nmi = 1;
+	irq_forced = lvl;
+	irq_delay = 0;
+	if (delay > 0 && currprefs.cpu_compatible) {
+		irq_delay = get_cycles() + delay * CYCLE_UNIT;
+	}
+	doint();
 }
 
-int intlev (void)
+int intlev(void)
 {
-	uae_u16 imask = intreq & intena;
-	if (irq_nmi) {
-		irq_nmi = 0;
-		return 7;
+	if (irq_forced) {
+		int lvl = irq_forced;
+		if (irq_delay == -1 || get_cycles() > irq_delay) {
+			irq_forced = 0;
+			irq_delay = -1;
+		}
+		return lvl;
 	}
+	uae_u16 imask = intreq & intena;
 	if (!(imask && (intena & 0x4000)))
 		return -1;
 	if (imask & (0x4000 | 0x2000))						// 13 14
@@ -8700,7 +8710,7 @@ static void hsync_handler_post(bool onvsync)
 	if (currprefs.cs_cd32cd) {
 
 		if (cia_hsync < maxhpos) {
-			CIAA_tod_inc(cia_hsync);
+			CIAA_tod_handler(cia_hsync);
 			cia_hsync += (akiko_ntscmode() ? 262 : 313) * maxhpos;
 		} else {
 			cia_hsync -= maxhpos;
@@ -8709,7 +8719,7 @@ static void hsync_handler_post(bool onvsync)
 	} else if (currprefs.cs_ciaatod > 0) {
 		if (cia_hsync < maxhpos) {
 			int newcount;
-			CIAA_tod_inc(cia_hsync);
+			CIAA_tod_handler(cia_hsync);
 			newcount = (int)((vblank_hz * (2 * maxvpos + (interlace_seen ? 1 : 0)) * (2 * maxhpos + (islinetoggle () ? 1 : 0))) / ((currprefs.cs_ciaatod == 2 ? 60 : 50) * 4));
 			cia_hsync += newcount;
 		} else {
@@ -8717,12 +8727,14 @@ static void hsync_handler_post(bool onvsync)
 		}
 	} else if (currprefs.cs_ciaatod == 0 && ciavsyncs) {
 		// CIA-A TOD counter increases when vsync pulse ends
-		if (beamcon0 & (0x80 | 0x200)) {
-			if (vpos == vsstop && vsstrt <= maxvpos)
-				CIAA_tod_inc(lof_store ? hcenter : hsstrt);
+		if (beamcon0 & BEAMCON0_VARVSYEN) {
+			if (vsstop == vpos) {
+				// Always uses HCENTER and HSSTRT registers. Even if VARHSYEN=0.
+				CIAA_tod_handler(lof_store ? hcenter : hsstrt);
+			}
 		} else {
 			if (vpos == (currprefs.ntscmode ? VSYNC_ENDLINE_NTSC : VSYNC_ENDLINE_PAL)) {
-				CIAA_tod_inc(lof_store ? 132 : 18);
+				CIAA_tod_handler(lof_store ? 132 : 18);
 			}
 		}
 	}
