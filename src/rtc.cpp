@@ -58,9 +58,24 @@ bool put_clock_msm(struct rtc_msm_data *data, int addr, uae_u8 v)
 {
 	switch (addr)
 	{
-		case 0xD: data->clock_control_d = v & (1|8); break;
-		case 0xE: data->clock_control_e = v; break;
-		case 0xF: data->clock_control_f = v; break;
+		case 0xD:
+			if (data->clock_control_d != (v & (1 | 8))) {
+				data->clock_control_d = v & (1 | 8);
+				data->delayed_write = -1;
+			}
+		break;
+		case 0xE:
+			if (data->clock_control_e != v) {
+				data->clock_control_e = v;
+				data->delayed_write = -1;
+			}
+			break;
+		case 0xF:
+			if (data->clock_control_f != v) {
+				data->clock_control_f = v;
+				data->delayed_write = -1;
+			}
+		break;
 	}
 	return false;
 }
@@ -149,8 +164,23 @@ void put_clock_ricoh(struct rtc_ricoh_data *data, int addr, uae_u8 v)
 #endif
 	switch (addr)
 	{
-		case 0xD: data->clock_control_d = v; break;
-		case 0xE: data->clock_control_e = v; break;
-		case 0xF: data->clock_control_f = v; break;
+		case 0xD:
+			if (data->clock_control_d != v) {
+				data->clock_control_d = v;
+				data->delayed_write = -1;
+			}
+			break;
+		case 0xE:
+			if (data->clock_control_e != v) {
+				data->clock_control_e = v;
+				data->delayed_write = -1;
+			}
+			break;
+		case 0xF:
+			if (data->clock_control_f != v) {
+				data->clock_control_f = v;
+				data->delayed_write = -1;
+			}
+			break;
 	}
 }
