@@ -318,11 +318,14 @@ CXX    ?= g++
 STRIP  ?= strip
 PROG   = amiberry
 
+#
+# SDL2 options
+#
+all: guisan $(PROG)
+
 export CFLAGS := $(CPUFLAGS) $(CFLAGS) $(EXTRA_CFLAGS)
 export CXXFLAGS = $(CFLAGS) -std=gnu++17
 export CPPFLAGS
-
-all: guisan $(PROG)
 
 ifdef GCC_PROFILE
 	CFLAGS += -pg
