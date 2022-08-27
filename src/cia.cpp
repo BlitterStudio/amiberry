@@ -2425,21 +2425,21 @@ void rtc_hardreset (void)
 		cfgfile_resolve_path_out_load(currprefs.rtcfile, path, MAX_DPATH, PATH_ROM);
 		struct zfile *f = zfile_fopen (path, _T("rb"));
 		if (f) {
-			uae_u8 empty[13];
-			zfile_fread (empty, 13, 1, f);
-			uae_u8 v;
-			zfile_fread (&v, 1, 1, f);
-			rtc_ricoh.clock_control_d = v;
-			rtc_msm.clock_control_d = v;
-			zfile_fread (&v, 1, 1, f);
-			rtc_ricoh.clock_control_e = v;
-			rtc_msm.clock_control_d = v;
-			zfile_fread (&v, 1, 1, f);
-			rtc_ricoh.clock_control_f = v;
-			rtc_msm.clock_control_d = v;
-			zfile_fread (rtc_ricoh.rtc_alarm, RF5C01A_RAM_SIZE, 1, f);
-			zfile_fread (rtc_ricoh.rtc_memory, RF5C01A_RAM_SIZE, 1, f);
-			zfile_fclose (f);
+			int size = zfile_size32(f);
+			uae_u8 empty[16];
+			zfile_fread(empty, sizeof(empty), 1, f);
+			if (size > 16) {
+				rtc_ricoh.clock_control_d = empty[13];
+				rtc_ricoh.clock_control_e = empty[14];
+				rtc_ricoh.clock_control_f = empty[15];
+				zfile_fread(rtc_ricoh.rtc_alarm, RF5C01A_RAM_SIZE, 1, f);
+				zfile_fread(rtc_ricoh.rtc_memory, RF5C01A_RAM_SIZE, 1, f);
+			} else if (size == 16) {
+				rtc_msm.clock_control_d = empty[13];
+				rtc_msm.clock_control_e = empty[14];
+				rtc_msm.clock_control_f = empty[15];
+			}
+			zfile_fclose(f);
 		}
 	}
 }
