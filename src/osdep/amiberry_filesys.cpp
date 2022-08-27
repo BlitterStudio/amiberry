@@ -11,7 +11,13 @@
 #include <dirent.h>
 #include <iconv.h>
 #include <iostream>
+
+#ifdef USE_OLDGCC
+#include <experimental/filesystem>
+#else
 #include <filesystem>
+#endif
+
 #include <sys/mman.h>
 
 #include "crc32.h"
@@ -707,8 +713,13 @@ int target_get_volume_name(struct uaedev_mount_info* mtinf, struct uaedev_config
 // If replace is false, copyfile will fail if file already exists
 bool copyfile(const char* target, const char* source, const bool replace)
 {
+	#ifdef USE_OLDGCC
+	std::experimental::filesystem::copy_options options = {};
+	options = replace ? experimental::filesystem::copy_options::overwrite_existing : experimental::filesystem::copy_options::none;
+	#else
 	std::filesystem::copy_options options = {};
 	options = replace ? filesystem::copy_options::overwrite_existing : filesystem::copy_options::none;
+	#endif
 	return copy_file(source, target, options);
 }
 

@@ -11,6 +11,9 @@
 #USE_GPIOD=1
 #USE_OPENGL=1
 
+#enable to compile on a version of GCC older than 8.0
+#USE_OLDGCC=1
+
 #
 ## Common options for all targets
 #
@@ -42,6 +45,10 @@ ifndef DEBUG
 	CFLAGS += -O3
 else
 	CFLAGS += -g -rdynamic -funwind-tables -DDEBUG -Wl,--export-dynamic
+endif
+
+ifdef USE_OLDGCC
+	CFLAGS += -DUSE_OLDGCC
 endif
 
 #Common flags for all 32bit targets

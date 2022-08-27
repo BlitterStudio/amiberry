@@ -2309,6 +2309,25 @@ static int save_thumb(char* path)
 	return ret;
 }
 
+void screenshot(int monid, int mode, int doprepare)
+{
+	char tmp[MAX_DPATH];
+
+	create_screenshot();
+	get_screenshot_path(screenshot_filename, MAX_DPATH - 1);
+
+	if (strlen(currprefs.floppyslots[0].df) > 0)
+		extract_filename(currprefs.floppyslots[0].df, tmp);
+	else
+		strncpy(tmp, "default.uae", MAX_DPATH - 1);
+
+	strncat(screenshot_filename, tmp, MAX_DPATH - 1);
+	remove_file_extension(screenshot_filename);
+
+	strncat(screenshot_filename,".png", MAX_DPATH - 1);
+	save_thumb(screenshot_filename);
+}
+
 #ifdef USE_DISPMANX	
 static int currVSyncRate = 0;
 #endif
