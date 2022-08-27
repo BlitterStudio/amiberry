@@ -203,6 +203,9 @@
     <Image Include="..\data\port.ico">
       <Filter>data</Filter>
     </Image>
+    <Image Include="..\data\fixedfont.bmp">
+      <Filter>data</Filter>
+    </Image>
     <Image Include="..\data\axis.png">
       <Filter>data</Filter>
     </Image>

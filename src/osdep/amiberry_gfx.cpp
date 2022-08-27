@@ -27,6 +27,10 @@
 
 #include <png.h>
 #include <SDL_image.h>
+#ifdef USE_OPENGL
+#include <SDL_opengl.h>
+#endif
+#include <iostream>
 
 #include "fsdb_host.h"
 #include "sampler.h"
@@ -46,11 +50,40 @@ bool volatile flip_in_progress = false;
 /* SDL Surface for output of emulation */
 SDL_DisplayMode sdl_mode;
 SDL_Surface* sdl_surface = nullptr;
+#ifdef USE_OPENGL
+SDL_GLContext gl_context;
+GLuint gl_texture;
+static int old_w, old_h;
+static float vertex_coords[] = {
+	-1.0f,  1.0f,  0.0f, // 0    0  1
+	 1.0f,  1.0f,  0.0f, // 1  ^
+	-1.0f, -1.0f,  0.0f, // 2  | 2  3
+	 1.0f, -1.0f,  0.0f, // 3  +-->
+};
+
+static float texture_coords[] = {
+	0.0f, 0.0f, // we flip this:
+	1.0f, 0.0f, // v^
+	0.0f, 1.0f, //  |  u
+	1.0f, 1.0f, //  +-->
+};
+
+static int gl_have_error(const char* name)
+{
+	if (const GLenum e = glGetError(); e != GL_NO_ERROR) {
+		write_log("GL error: %s %x\n", name, e);
+		return 1;
+	}
+	return 0;
+}
+
+#else
 SDL_Texture* amiga_texture;
 SDL_Rect crop_rect;
+SDL_Renderer* sdl_renderer;
+#endif
 SDL_Rect renderQuad;
 static int dx = 0, dy = 0;
-SDL_Renderer* sdl_renderer;
 const char* sdl_video_driver;
 
 #ifdef ANDROID
@@ -329,9 +362,11 @@ static int display_thread(void* unused)
 			}
 			vc_dispmanx_update_submit(updateHandle, nullptr, nullptr);
 #else
+#ifndef USE_OPENGL
 			SDL_RenderClear(sdl_renderer);
 			SDL_UpdateTexture(amiga_texture, nullptr, sdl_surface->pixels, sdl_surface->pitch);
 			SDL_RenderCopyEx(sdl_renderer, amiga_texture, &crop_rect, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
+#endif
 #endif
 			flip_in_progress = false;
 			break;
@@ -700,11 +735,14 @@ void graphics_subshutdown()
 	avidinfo->inbuffer = &avidinfo->drawbuffer;
 
 #ifndef USE_DISPMANX
+#ifdef USE_OPENGL
+#else
 	if (amiga_texture != nullptr)
 	{
 		SDL_DestroyTexture(amiga_texture);
 		amiga_texture = nullptr;
 	}
+#endif
 #endif
 }
 
@@ -773,6 +811,9 @@ static void open_screen(struct uae_prefs* p)
 			pixel_format = SDL_PIXELFORMAT_RGBA32;
 		}
 
+#ifdef USE_OPENGL
+		// TODO
+#else
 		if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
 		{
 			SDL_RenderSetLogicalSize(sdl_renderer, display_width, display_height);
@@ -785,7 +826,7 @@ static void open_screen(struct uae_prefs* p)
 			renderQuad = { -(display_width - display_height) / 2, (display_width - display_height) / 2, display_width, display_height };
 			crop_rect = { -(display_width - display_height) / 2, (display_width - display_height) / 2, display_width, display_height };
 		}
-		
+#endif
 		if (isfullscreen() == 0 && !is_maximized)
 			SDL_SetWindowSize(mon->sdl_window, display_width, display_height);
 			// Center window, sigurbjornl 20220122
@@ -809,6 +850,9 @@ static void open_screen(struct uae_prefs* p)
 			height = display_height * 2 >> p->gfx_vresolution;
 		}
 
+#ifdef USE_OPENGL
+		// TODO
+#else
 		if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
 		{
 			SDL_RenderSetLogicalSize(sdl_renderer, width, height);
@@ -819,7 +863,7 @@ static void open_screen(struct uae_prefs* p)
 			SDL_RenderSetLogicalSize(sdl_renderer, height, width);
 			renderQuad = { -(width - height) / 2, (width - height) / 2, width, height };
 		}
-		
+#endif
 		if (isfullscreen() == 0 && !is_maximized)
 			SDL_SetWindowSize(mon->sdl_window, width, height);
 	}
@@ -839,9 +883,41 @@ static void open_screen(struct uae_prefs* p)
 	sdl_surface = SDL_CreateRGBSurfaceWithFormat(0, display_width, display_height, display_depth, pixel_format);
 	check_error_sdl(sdl_surface == nullptr, "Unable to create a surface");
 
+#ifdef USE_OPENGL
+	glGenTextures(1, &gl_texture);
+	if (gl_have_error("glGenTextures"))	abort();
+
+	glBindTexture(GL_TEXTURE_2D, gl_texture);
+	display_depth == 32
+		? glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
+			display_width, display_height, 0, GL_RGBA,
+			GL_UNSIGNED_BYTE, sdl_surface->pixels)
+		: glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,
+			display_width, display_height, 0, GL_RGB,
+			GL_UNSIGNED_SHORT_5_6_5, sdl_surface->pixels);
+
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+
+	//glViewport(0, 0, display_width, display_height);
+
+	//glMatrixMode(GL_PROJECTION); //from now on all glOrtho, glTranslate etc affect projection
+	//glOrtho(0, display_width, 0, display_height, -1, 1);
+	//glMatrixMode(GL_MODELVIEW); //good to leave in edit-modelview mode
+
+	glLoadIdentity();
+	glFrontFace(GL_CW);
+	glEnable(GL_CULL_FACE);
+
+	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+	glEnableClientState(GL_VERTEX_ARRAY);
+#else
 	amiga_texture = SDL_CreateTexture(sdl_renderer, pixel_format, SDL_TEXTUREACCESS_STREAMING, sdl_surface->w, sdl_surface->h);
 	check_error_sdl(amiga_texture == nullptr, "Unable to create texture");
-
+#endif
 #endif
 
 	setpriority(p->active_capture_priority);
@@ -871,6 +947,22 @@ void SDL2_toggle_vsync(bool vsync)
 {
 	struct AmigaMonitor* mon = &AMonitors[0];
 
+#ifdef USE_OPENGL
+	if (vsync)
+	{
+		if (SDL_GL_SetSwapInterval(1) < 0)
+		{
+			write_log("Warning: failed to enable Vsync for the current GL context!\n");
+		}
+	}
+	else
+	{
+		if (SDL_GL_SetSwapInterval(0) < 0)
+		{
+			write_log("Warning: failed to disable Vsync for the current GL context!\n");
+		}
+	}
+#else
 	if (sdl_renderer)
 	{
 		SDL_DestroyRenderer(sdl_renderer);
@@ -888,7 +980,7 @@ void SDL2_toggle_vsync(bool vsync)
 	}
 	sdl_renderer = SDL_CreateRenderer(mon->sdl_window, -1, flags);
 	check_error_sdl(sdl_renderer == nullptr, "Unable to create a renderer:");
-
+#endif
 	open_screen(&currprefs);
 }
 
@@ -963,6 +1055,8 @@ void auto_crop_image()
 				open_screen(&currprefs);
 				reset_drawing();
 			}
+#elif USE_OPENGL
+			// TODO
 #else
 			crop_rect = { x, y, new_width, new_height };
 
@@ -992,6 +1086,8 @@ void auto_crop_image()
 	else
 	{
 #ifdef USE_DISPMANX
+#elif USE_OPENGL
+		// TODO
 #else
 		crop_rect = { 0, 0, sdl_surface->w, sdl_surface->h };
 
@@ -1572,6 +1668,7 @@ bool render_screen(int monid, int mode, bool immediate)
 
 void show_screen(int monid, int mode)
 {
+	struct AmigaMonitor* mon = &AMonitors[monid];
 	const auto start = read_processor_time();
 		
 #ifdef USE_DISPMANX
@@ -1633,21 +1730,57 @@ void show_screen(int monid, int mode)
 	flip_in_progress = true;
 	write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SHOW, 1);
 #else
+
 	if (amiberry_options.use_sdl2_render_thread)
 	{
 		wait_for_display_thread();
 		flip_in_progress = true;
+#ifdef USE_OPENGL
+		
+#else
 		// RenderPresent must be done in the main thread.
 		SDL_RenderPresent(sdl_renderer);
 		write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SHOW, 1);
+#endif
 	}
 	else 
 	{
 		flip_in_progress = true;
+#ifdef USE_OPENGL
+		//Initialize clear color
+		glClearColor(0.f, 0.f, 0.f, 1.f);
+		glClear(GL_COLOR_BUFFER_BIT);
+
+		if (sdl_surface->w != old_w || sdl_surface->h != old_h) {
+			float f_w = static_cast<float>(sdl_surface->w) / static_cast<float>(display_width);
+			float f_h = static_cast<float>(sdl_surface->h) / static_cast<float>(display_height);
+			texture_coords[1 * 2 + 0] = f_w;
+			texture_coords[2 * 2 + 1] = f_h;
+			texture_coords[3 * 2 + 0] = f_w;
+			texture_coords[3 * 2 + 1] = f_h;
+			old_w = sdl_surface->w;
+			old_h = sdl_surface->h;
+		}
+
+		glBindTexture(GL_TEXTURE_2D, gl_texture);
+		display_depth == 32
+		? glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sdl_surface->w, sdl_surface->h,
+			GL_RGBA, GL_UNSIGNED_BYTE, sdl_surface->pixels)
+		: glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sdl_surface->w, sdl_surface->h,
+			GL_RGB, GL_UNSIGNED_SHORT_5_6_5, sdl_surface->pixels);
+
+		glVertexPointer(3, GL_FLOAT, 0, vertex_coords);
+		glTexCoordPointer(2, GL_FLOAT, 0, texture_coords);
+		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+		SDL_GL_SwapWindow(mon->sdl_window);
+		
+#else
 		SDL_RenderClear(sdl_renderer);
 		SDL_UpdateTexture(amiga_texture, nullptr, sdl_surface->pixels, sdl_surface->pitch);
 		SDL_RenderCopyEx(sdl_renderer, amiga_texture, &crop_rect, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
 		SDL_RenderPresent(sdl_renderer);
+#endif
 		flip_in_progress = false;
 	}
 #endif
@@ -1816,6 +1949,16 @@ int machdep_init(void)
 	return 1;
 }
 
+#ifdef USE_OPENGL
+void set_gl_attribute(SDL_GLattr attr, int value)
+{
+	if (SDL_GL_SetAttribute(attr, value) != 0)
+	{
+		std::cerr << "SDL_GL_SetAttribute(" << attr << ", " << value << ") failed: " << SDL_GetError() << std::endl;
+	}
+}
+#endif
+
 int graphics_init(bool mousecapture)
 {
 	struct AmigaMonitor* mon = &AMonitors[0];
@@ -1861,6 +2004,9 @@ int graphics_init(bool mousecapture)
 				sdl_window_mode |= SDL_WINDOW_ALWAYS_ON_TOP;
 			// Set Window allow high DPI by default
 			sdl_window_mode |= SDL_WINDOW_ALLOW_HIGHDPI;
+#ifdef USE_OPENGL
+			sdl_window_mode |= SDL_WINDOW_OPENGL;
+#endif
 		}
 		else
 		{
@@ -1898,11 +2044,28 @@ int graphics_init(bool mousecapture)
 
 #endif
 
+#ifdef USE_OPENGL
+	if (gl_context == nullptr)
+		gl_context = SDL_GL_CreateContext(mon->sdl_window);
+
+	// Enable vsync
+	if (SDL_GL_SetSwapInterval(-1) < 0)
+	{
+		write_log("Warning: Adaptive V-Sync not supported on this platform, trying normal V-Sync\n");
+		if (SDL_GL_SetSwapInterval(1) < 0)
+		{
+			write_log("Warning: Failed to enable V-Sync in the current GL context!\n");
+		}
+	}
+	// for old fixed-function pipeline (change when using shaders!)
+	glEnable(GL_TEXTURE_2D);
+#else
 	if (sdl_renderer == nullptr)
 	{
 		sdl_renderer = SDL_CreateRenderer(mon->sdl_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 		check_error_sdl(sdl_renderer == nullptr, "Unable to create a renderer:");
 	}
+#endif
 
 	if (SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1") != SDL_TRUE)
 		write_log("SDL2: could not grab the keyboard!\n");
@@ -1985,19 +2148,28 @@ void graphics_leave()
 #ifdef USE_DISPMANX
 	bcm_host_deinit();
 #else
+#ifndef USE_OPENGL
 	if (amiga_texture)
 	{
 		SDL_DestroyTexture(amiga_texture);
 		amiga_texture = nullptr;
 	}
 #endif
+#endif
 
+#ifdef USE_OPENGL
+	if (gl_context != nullptr)
+	{
+		SDL_GL_DeleteContext(gl_context);
+		gl_context = nullptr;
+	}
+#else
 	if (sdl_renderer)
 	{
 		SDL_DestroyRenderer(sdl_renderer);
 		sdl_renderer = nullptr;
 	}
-
+#endif
 	if (mon->sdl_window)
 	{
 		SDL_DestroyWindow(mon->sdl_window);

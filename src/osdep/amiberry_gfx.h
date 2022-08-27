@@ -129,7 +129,9 @@ extern SDL_DisplayMode sdl_mode;
 #endif
 extern SDL_Surface* sdl_surface;
 extern const char* sdl_video_driver;
+#ifndef USE_OPENGL
 extern SDL_Renderer* sdl_renderer;
+#endif
 extern SDL_Rect renderQuad;
 extern SDL_Cursor* normalcursor;
 

@@ -17,6 +17,10 @@
 #define TITLEBAR_HEIGHT 24
 #include <guisan/sdl/sdlinput.hpp>
 
+#ifdef USE_OPENGL
+#include <guisan/opengl.hpp>
+#endif
+
 #include "options.h"
 
 static const TCHAR* memsize_names[] = {
@@ -146,10 +150,15 @@ extern gcn::Color gui_baseCol;
 extern gcn::Color colTextboxBackground;
 extern gcn::Color colSelectorActive;
 extern gcn::SDLInput* gui_input;
-extern gcn::SDLTrueTypeFont* gui_font;
 extern SDL_Surface* gui_screen;
 extern SDL_Joystick* gui_joystick;
+#ifdef USE_OPENGL
+extern gcn::OpenGLGraphics* gui_graphics;
+extern gcn::ImageFont* gui_font;
+#else
 extern gcn::SDLGraphics* gui_graphics;
+extern gcn::SDLTrueTypeFont* gui_font;
+#endif
 
 #ifdef USE_DISPMANX
 extern DISPMANX_RESOURCE_HANDLE_T gui_resource;
@@ -157,7 +166,11 @@ extern DISPMANX_RESOURCE_HANDLE_T black_gui_resource;
 extern DISPMANX_ELEMENT_HANDLE_T gui_element;
 extern int element_present;
 #else
+#ifdef USE_OPENGL
+extern SDL_GLContext gl_context;
+#else
 extern SDL_Texture* gui_texture;
+#endif
 extern SDL_Cursor* cursor;
 extern SDL_Surface* cursor_surface;
 #endif

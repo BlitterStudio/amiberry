@@ -9,6 +9,7 @@
 #USE_LTO=1
 #SANITIZE=1
 #USE_GPIOD=1
+#USE_OPENGL=1
 
 #enable to compile on a version of GCC older than 8.0
 #USE_OLDGCC=1
@@ -28,6 +29,11 @@ ifneq ($(strip $(USE_LD)),)
 	LDFLAGS += -fuse-ld=$(USE_LD)
 endif
 LDFLAGS += -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed -lpthread -lz -lpng -lrt -lFLAC -lmpg123 -ldl -lmpeg2convert -lmpeg2 -lstdc++fs
+
+ifdef USE_OPENGL
+	CFLAGS += -DUSE_OPENGL
+	LDFLAGS += -lGL
+endif
 
 # Use libgpiod to control GPIO LEDs?
 ifdef USE_GPIOD
@@ -156,6 +162,13 @@ else ifeq ($(PLATFORM),rpi3-64-sdl2)
 else ifeq ($(PLATFORM),rpi4-64-sdl2)
 	CPUFLAGS = -mcpu=cortex-a72+crc+simd+fp
 	CPPFLAGS += $(CPPFLAGS64)
+	AARCH64 = 1
+
+# Raspberry Pi 4 (SDL2 with OpenGLES 64-bit) - experimental
+else ifeq ($(PLATFORM),rpi4-64-opengl)
+	CPUFLAGS = -mcpu=cortex-a72+crc+simd+fp
+	CPPFLAGS += $(CPPFLAGS64) -DUSE_OPENGL
+	LDFLAGS += -lGL
 	AARCH64 = 1
 
 # Raspberry Pi 3 (SDL2 64-bit with DispmanX)
