@@ -418,7 +418,7 @@ void event2_newevent_x_replace(evt_t t, uae_u32 data, evfunc2 func)
 			eventtab2[i].active = false;
 		}
 	}
-	if (((int)t) <= 0) {
+	if (t <= 0) {
 		func(data);
 		return;
 	}
