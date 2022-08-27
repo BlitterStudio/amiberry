@@ -101,6 +101,7 @@ LOCAL_SRC_FILES := src/akiko.cpp \
                     src/uaelib.cpp \
                     src/uaenative.cpp \
                     src/uaeresource.cpp \
+					src/uaeserial.cpp \
                     src/zfile.cpp \
                     src/zfile_archive.cpp \
                     src/archivers/7z/7zAlloc.c \
