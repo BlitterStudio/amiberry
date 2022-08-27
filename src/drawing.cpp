@@ -3705,7 +3705,7 @@ static void init_drawing_frame (void)
 static int lightpen_y1[2], lightpen_y2[2];
 static int statusbar_y1, statusbar_y2;
 
-void putpixel(uae_u8 *buf, uae_u8 *genlockbuf, int bpp, int x, xcolnr c8, int opaq)
+void putpixel(uae_u8 *buf, uae_u8 *genlockbuf, int bpp, int x, xcolnr c8)
 {
 	if (x <= 0)
 		return;
@@ -3728,20 +3728,8 @@ void putpixel(uae_u8 *buf, uae_u8 *genlockbuf, int bpp, int x, xcolnr c8, int op
 		break;
 	case 4:
 		{
-			int i;
-			if (1 || opaq || currprefs.gf[0].gfx_filter == 0) {
-				uae_u32 *p = (uae_u32*)buf + x;
-				*p = c8;
-			} else {
-				for (i = 0; i < 4; i++) {
-					int v1 = buf[i + bpp * x];
-					int v2 = (c8 >> (i * 8)) & 255;
-					v1 = (v1 * 2 + v2 * 3) / 5;
-					if (v1 > 255)
-						v1 = 255;
-					buf[i + bpp * x] = v1;
-				}
-			}
+			uae_u32 *p = (uae_u32*)buf + x;
+			*p = c8;
 			break;
 		}
 	}
@@ -3816,7 +3804,7 @@ static void draw_lightpen_cursor(int monid, int x, int y, int line, int onscreen
 	for (int i = 0; i < LIGHTPEN_WIDTH; i++) {
 		int xx = x + i - LIGHTPEN_WIDTH / 2;
 		if (*p != '-' && xx >= 0 && xx < vidinfo->drawbuffer.outwidth) {
-			putpixel(xlinebuffer, xlinebuffer_genlock, vidinfo->drawbuffer.pixbytes, xx, *p == 'x' ? xcolors[color1] : xcolors[color2], 1);
+			putpixel(xlinebuffer, xlinebuffer_genlock, vidinfo->drawbuffer.pixbytes, xx, *p == 'x' ? xcolors[color1] : xcolors[color2]);
 		}
 		p++;
 	}
@@ -3925,10 +3913,10 @@ static void refresh_indicator_update(struct vidbuffer *vb)
 			color2 = refresh_indicator_colors[pixel - 5];
 		}
 		for (int x = 0; x < 8; x++) {
-			putpixel(xlinebuffer, NULL, vidinfo->drawbuffer.pixbytes, x, xcolors[color1], 1);
+			putpixel(xlinebuffer, NULL, vidinfo->drawbuffer.pixbytes, x, xcolors[color1]);
 		}
 		for (int x = 8; x < 16; x++) {
-			putpixel(xlinebuffer, NULL, vidinfo->drawbuffer.pixbytes, x, xcolors[color2], 1);
+			putpixel(xlinebuffer, NULL, vidinfo->drawbuffer.pixbytes, x, xcolors[color2]);
 		}
 	}
 }
@@ -3962,16 +3950,14 @@ static void draw_frame2(struct vidbuffer* vbin, struct vidbuffer* vbout)
 static void draw_frame_extras(struct vidbuffer *vb, int y_start, int y_end)
 {
 	if ((currprefs.leds_on_screen & STATUSLINE_CHIPSET)) {
-		//int slx, sly;
-		//int mult = statusline_get_multiplier(vb->monitor_id) / 100;
-		//statusline_getpos(vb->monitor_id, &slx, &sly, vb->outwidth, vb->outheight);
-		//statusbar_y1 = sly + min_ypos_for_screen - 1;
-		//statusbar_y2 = statusbar_y1 + TD_TOTAL_HEIGHT * mult + 1;
+		int slx, sly;
+		int mult = statusline_get_multiplier(vb->monitor_id) / 100;
+		statusline_getpos(vb->monitor_id, &slx, &sly, vb->outwidth, vb->outheight);
+		statusbar_y1 = sly + min_ypos_for_screen - 1;
+		statusbar_y2 = statusbar_y1 + TD_TOTAL_HEIGHT * mult + 1;
 		//draw_status_line(vb->monitor_id, sly, -1);
-		struct amigadisplay* ad = &adisplays[0];
-		struct vidbuf_description* vidinfo = &ad->gfxvidinfo;
-		for (int i = 0; i < TD_TOTAL_HEIGHT; i++) {
-			int line = vidinfo->drawbuffer.outheight - TD_TOTAL_HEIGHT + i;
+		for (int i = 0; i < TD_TOTAL_HEIGHT * mult; i++) {
+			int line = sly + i;
 			draw_status_line(vb->monitor_id, line, i);
 		}
 	}
