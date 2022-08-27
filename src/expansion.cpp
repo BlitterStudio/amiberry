@@ -573,6 +573,7 @@ static addrbank *expamem_init_last (void)
 	expamem_init_clear2 ();
 	write_log (_T("Memory map after autoconfig:\n"));
 	memory_map_dump ();
+	mman_set_barriers(false);
 	return NULL;
 }
 
