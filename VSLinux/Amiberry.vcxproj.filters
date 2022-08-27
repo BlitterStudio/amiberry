@@ -1017,6 +1017,9 @@
     <ClCompile Include="..\src\osdep\gui\PanelRTG.cpp">
       <Filter>src\osdep\gui</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\uaeserial.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\cpuemu_13.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -1899,6 +1902,9 @@
       <Filter>src\osdep</Filter>
     </ClInclude>
     <ClInclude Include="..\src\include\parallel.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\uaeserial.h">
       <Filter>src\include</Filter>
     </ClInclude>
     <ClInclude Include="..\src\floppybridge\floppybridge_abstract.h">
