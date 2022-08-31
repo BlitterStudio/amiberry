@@ -27,6 +27,9 @@ resolution.
 To prevent extremely bad things (think pixels cut in half by window borders) from
 happening, all ports should restrict window widths to be multiples of 16 pixels.  */
 
+#define SPRITE_DEBUG_HIDE 0
+#define BG_COLOR_DEBUG 0
+#define EXTBORDER_BLANK 0
 
 #include "sysconfig.h"
 #include "sysdeps.h"
@@ -87,6 +90,9 @@ static void pfield_set_linetoscr(void);
 
 int debug_bpl_mask = 0xff, debug_bpl_mask_one;
 
+static struct decision *dp_for_drawing;
+static struct draw_info *dip_for_drawing;
+
 static void lores_set(int lores)
 {
 	int old = lores_shift;
@@ -114,7 +120,12 @@ static void lores_reset (void)
 		sprite_buffer_res++;
 }
 
-bool aga_mode; /* mirror of chipset_mask & CSMASK_AGA */
+/* mirror of chipset_mask */
+bool ecs_agnus;
+bool ecs_denise;
+bool aga_mode;
+
+bool direct_rgb;
 
 /* The shift factor to apply when converting between Amiga coordinates and window
 coordinates.  Zero if the resolution is the same, positive if window coordinates
@@ -259,6 +270,8 @@ static int visible_left_start, visible_right_stop;
 static int visible_top_start, visible_bottom_stop;
 /* same for hblank */
 static int hblank_left_start, hblank_right_stop;
+static int hblank_left_start_hard, hblank_right_stop_hard;
+static bool exthblank, extborder, exthblanken, exthblankon;
 
 static int linetoscr_x_adjust_pixbytes, linetoscr_x_adjust_pixels;
 static int thisframe_y_adjust;
@@ -289,6 +302,8 @@ static uae_u8 ecs_genlock_features_mask;
 static bool ecs_genlock_features_colorkey;
 static int hsync_shift_hack;
 static bool sprite_smaller_than_64, sprite_smaller_than_64_inuse;
+static bool full_blank;
+static uae_u8 vb_state;
 
 uae_sem_t gui_sem;
 
@@ -490,7 +505,7 @@ static void set_blanking_limits(void)
 	}
 }
 
-void get_custom_raw_limits (int *pw, int *ph, int *pdx, int *pdy)
+void get_custom_raw_limits(int *pw, int *ph, int *pdx, int *pdy)
 {
 	if (stored_width > 0) {
 		*pw = stored_width;
@@ -543,7 +558,7 @@ void check_custom_limits(void)
 	set_blanking_limits ();
 }
 
-void set_custom_limits (int w, int h, int dx, int dy)
+void set_custom_limits (int w, int h, int dx, int dy, bool blank)
 {
 	struct gfx_filterdata *fd = &currprefs.gf[0];
 	int vls = visible_left_start;
@@ -822,9 +837,6 @@ void get_custom_mouse_limits (int *pw, int *ph, int *pdx, int *pdy, int dbl)
 	*pdx = dx; *pdy = dy;
 }
 
-static struct decision *dp_for_drawing;
-static struct draw_info *dip_for_drawing;
-
 /* Record DIW of the current line for use by centering code.  */
 void record_diw_line (int plfstrt, int first, int last)
 {
@@ -869,7 +881,8 @@ static int src_pixel;
 /* How many pixels in window coordinates which are to the left of the left border.  */
 static int unpainted;
 
-STATIC_INLINE xcolnr getbgc (int blank)
+// blank = -1: force normal border color even if borderblank is active
+static xcolnr getbgc(int blank)
 {
 	return (blank >= 0 && (blank > 0 || hposblank || ce_is_borderblank(colors_for_drawing.extra))) ? 0 : colors_for_drawing.acolors[0];
 }
@@ -1292,6 +1305,7 @@ static void fill_line_border(int lineno)
 }
 
 static int sprite_shdelay;
+#define SPRITE_DEBUG 0
 static uae_u8 render_sprites(int pos, int dualpf, uae_u8 apixel, int aga)
 {
 	struct spritepixelsbuf *spb = &spritepixels[pos];
@@ -1377,7 +1391,7 @@ static bool get_genlock_very_rare_and_complex_case(uae_u8 v)
 		return false;
 	if (ecs_genlock_features_colorkey) {
 		// color key match?
-		if (currprefs.chipset_mask & CSMASK_AGA) {
+		if (aga_mode) {
 			if (colors_for_drawing.color_regs_aga[v] & 0x80000000)
 				return false;
 		} else {
@@ -1754,6 +1768,10 @@ static int pfield_do_nothing(int a, int b, int c)
 {
 	return a;
 }
+static int pfield_do_nothingb(int a, int b, int c, int d)
+{
+	return a;
+}
 
 /* AGA subpixel delay hack */
 static call_linetoscr pfield_do_linetoscr_shdelay_normal;
@@ -1817,7 +1835,7 @@ static void pfield_set_linetoscr (void)
 	spritepixels = spritepixels_buffer;
 	pfield_do_linetoscr_spriteonly = pfield_do_nothing;
 #ifdef AGA
-	if (currprefs.chipset_mask & CSMASK_AGA) {
+	if (aga_mode) {
 		if (res_shift == 0) {
 			switch (vidinfo->drawbuffer.pixbytes) {
 				case 2:
@@ -1923,7 +1941,7 @@ static void pfield_set_linetoscr (void)
 	}
 #endif
 #ifdef ECS_DENISE
-	if (!(currprefs.chipset_mask & CSMASK_AGA) && ecsshres) {
+	if (!aga_mode && ecsshres) {
 		// TODO: genlock support
 		if (res_shift == 0) {
 			switch (vidinfo->drawbuffer.pixbytes) {
@@ -1987,7 +2005,7 @@ static void pfield_set_linetoscr (void)
 		}
 	}
 #endif
-	if (!(currprefs.chipset_mask & CSMASK_AGA) && !ecsshres) {
+	if (!aga_mode && !ecsshres) {
 		if (res_shift == 0) {
 			switch (vidinfo->drawbuffer.pixbytes) {
 				case 2:
@@ -2082,14 +2100,14 @@ static void init_ham_decoding(void)
 		if (unpainted_amiga > 0) {
 			int pv = pixdata.apixels[ham_decode_pixel + unpainted_amiga - 1];
 #ifdef AGA
-			if (currprefs.chipset_mask & CSMASK_AGA)
+			if (aga_mode)
 				ham_lastcolor = colors_for_drawing.color_regs_aga[pv ^ bplxor] & 0xffffff;
 			else
 #endif
 				ham_lastcolor = colors_for_drawing.color_regs_ecs[pv] & 0xfff;
 		}
 #ifdef AGA
-	} else if (currprefs.chipset_mask & CSMASK_AGA) {
+	} else if (aga_mode) {
 		if (bplplanecnt >= 7) { /* AGA mode HAM8 */
 			while (unpainted_amiga-- > 0) {
 				int pw = pixdata.apixels[ham_decode_pixel++];
@@ -2157,7 +2175,7 @@ static void decode_ham(int pix, int stoppos, int blank)
 		while (todraw_amiga-- > 0) {
 			int pv = pixdata.apixels[ham_decode_pixel];
 #ifdef AGA
-			if (currprefs.chipset_mask & CSMASK_AGA)
+			if (aga_mode)
 				ham_lastcolor = colors_for_drawing.color_regs_aga[pv ^ bplxor] & 0xffffff;
 			else
 #endif
@@ -2166,7 +2184,7 @@ static void decode_ham(int pix, int stoppos, int blank)
 			ham_linebuf[ham_decode_pixel++] = ham_lastcolor;
 		}
 #ifdef AGA
-	} else if (currprefs.chipset_mask & CSMASK_AGA) {
+	} else if (aga_mode) {
 		if (bplplanecnt >= 7) { /* AGA mode HAM8 */
 			while (todraw_amiga-- > 0) {
 				int pw = pixdata.apixels[ham_decode_pixel];
@@ -2634,16 +2652,16 @@ static void pfield_doline (int lineno)
 
 	switch (bplplanecnt) {
 	default: break;
-	case 0: memset (data, 0, wordcount * 32); break;
-	case 1: pfield_doline_n1 (data, wordcount); break;
-	case 2: pfield_doline_n2 (data, wordcount); break;
-	case 3: pfield_doline_n3 (data, wordcount); break;
-	case 4: pfield_doline_n4 (data, wordcount); break;
-	case 5: pfield_doline_n5 (data, wordcount); break;
-	case 6: pfield_doline_n6 (data, wordcount); break;
+	case 0: memset(data, 0, wordcount * 32); break;
+	case 1: pfield_doline_n1(data, wordcount); break;
+	case 2: pfield_doline_n2(data, wordcount); break;
+	case 3: pfield_doline_n3(data, wordcount); break;
+	case 4: pfield_doline_n4(data, wordcount); break;
+	case 5: pfield_doline_n5(data, wordcount); break;
+	case 6: pfield_doline_n6(data, wordcount); break;
 #ifdef AGA
-	case 7: pfield_doline_n7 (data, wordcount); break;
-	case 8: pfield_doline_n8 (data, wordcount); break;
+	case 7: pfield_doline_n7(data, wordcount); break;
+	case 8: pfield_doline_n8(data, wordcount); break;
 #endif
 	}
 #endif /* USE_ARMNEON */
@@ -2823,7 +2841,7 @@ static void pfield_expand_dp_bplcon(void)
 		bplcolorburst_field = 0;
 #ifdef ECS_DENISE
 	int oecsshres = ecsshres;
-	ecsshres = bplres == RES_SUPERHIRES && (currprefs.chipset_mask & CSMASK_ECS_DENISE) && !(currprefs.chipset_mask & CSMASK_AGA) && (dp_for_drawing->bplcon0 & 0x40);
+	ecsshres = bplres == RES_SUPERHIRES && ecs_denise && !aga_mode && (dp_for_drawing->bplcon0 & 0x40);
 	pfield_mode_changed = oecsshres != ecsshres;
 #endif
 
@@ -2886,7 +2904,7 @@ static bool isham(uae_u16 bplcon0)
 	int p = GET_PLANES(bplcon0);
 	if (!(bplcon0 & 0x800))
 		return 0;
-	if (currprefs.chipset_mask & CSMASK_AGA) {
+	if (aga_mode) {
 		// AGA only has 6 or 8 plane HAM
 		if (p == 6 || p == 8)
 			return 1;
@@ -2954,8 +2972,7 @@ static void adjust_drawing_colors (int ctable, int need_full)
 			color_reg_cpy (&colors_for_drawing, curr_color_tables + ctable);
 			color_match_type = color_match_full;
 		} else {
-			memcpy (colors_for_drawing.acolors, curr_color_tables[ctable].acolors,
-				sizeof colors_for_drawing.acolors);
+			memcpy (colors_for_drawing.acolors, curr_color_tables[ctable].acolors, sizeof colors_for_drawing.acolors);
 			colors_for_drawing.extra = curr_color_tables[ctable].extra;
 			color_match_type = color_match_acolors;
 		}
@@ -3014,14 +3031,16 @@ static void do_color_changes(line_draw_func worker_border, line_draw_func worker
 		uae_u32 value = curr_color_changes[i].value;
 		int nextpos, nextpos_in_range;
 
-		if (i == dip_for_drawing->last_color_change)
+		if (i == dip_for_drawing->last_color_change) {
 			nextpos = endpos;
-		else
-			nextpos = shres_coord_hw_to_window_x (curr_color_changes[i].linepos);
+		} else {
+			nextpos = shres_coord_hw_to_window_x(curr_color_changes[i].linepos);
+		}
 
 		nextpos_in_range = nextpos;
-		if (nextpos > endpos)
+		if (nextpos > endpos) {
 			nextpos_in_range = endpos;
+		}
 
 		// left hblank (left edge to hblank end)
 		if (nextpos_in_range > lastpos && lastpos < hblank_left_start) {
@@ -3283,8 +3302,8 @@ static void pfield_draw_line(struct vidbuffer *vb, int lineno, int gfx_ypos, int
 
 			for (int i = 0; i < dip_for_drawing->nr_sprites; i++) {
 #ifdef AGA
-				if (currprefs.chipset_mask & CSMASK_AGA)
-					draw_sprites_aga (curr_sprite_entries + dip_for_drawing->first_sprite_entry + i);
+				if (aga_mode)
+					draw_sprites_aga(curr_sprite_entries + dip_for_drawing->first_sprite_entry + i);
 				else
 #endif
 					draw_sprites_ecs (curr_sprite_entries + dip_for_drawing->first_sprite_entry + i);
@@ -3305,13 +3324,14 @@ static void pfield_draw_line(struct vidbuffer *vb, int lineno, int gfx_ypos, int
 			//if (dh == dh_emerg)
 			//	memcpy (row_map[follow_ypos], xlinebuffer + linetoscr_x_adjust_pixbytes, vidinfo->drawbuffer.pixbytes * vidinfo->drawbuffer.inwidth);
 			//else if (dh == dh_buf)
-				memcpy (row_map[follow_ypos], row_map[gfx_ypos], vidinfo->drawbuffer.pixbytes * vidinfo->drawbuffer.inwidth);
+				memcpy(row_map[follow_ypos], row_map[gfx_ypos], vidinfo->drawbuffer.pixbytes * vidinfo->drawbuffer.inwidth);
 			//if (need_genlock_data)
 				//memcpy(row_map_genlock[follow_ypos], row_map_genlock[gfx_ypos], vidinfo->drawbuffer.inwidth);
 		}
 
-		if (dip_for_drawing->nr_sprites)
-			pfield_erase_hborder_sprites ();
+		if (dip_for_drawing->nr_sprites) {
+			pfield_erase_hborder_sprites();
+		}
 
 	} else if (border > 0) { // border > 0: top or bottom border
 
@@ -3415,8 +3435,8 @@ static void center_image (void)
 			visible_left_border = (max_diwstop - min_diwstart - w) / 2 + min_diwstart;
 		else
 			visible_left_border = max_diwstop - w - (max_diwstop - min_diwstart - w) / 2;
-		visible_left_border &= ~((xshift (1, lores_shift)) - 1);
-#if 1
+		visible_left_border &= ~((xshift(1, lores_shift)) - 1);
+
 		if (!center_reset && !vertical_changed) {
 			/* Would the old value be good enough? If so, leave it as it is if we want to be clever. */
 			if (currprefs.gfx_xcenter == 2) {
@@ -3424,7 +3444,7 @@ static void center_image (void)
 					visible_left_border = prev_x_adjust;
 			}
 		}
-#endif
+
 	} else if (vidinfo->drawbuffer.extrawidth) {
 		visible_left_border = max_diwlastword - w;
 		if (vidinfo->drawbuffer.extrawidth > 0)
@@ -3472,7 +3492,7 @@ static void center_image (void)
 			thisframe_y_adjust = (thisframe_last_drawn_line - thisframe_first_drawn_line - max_drawn_amiga_line_tmp) / 2 + thisframe_first_drawn_line;
 		else
 			thisframe_y_adjust = thisframe_first_drawn_line;
-#if 1
+
 		/* Would the old value be good enough? If so, leave it as it is if we want to be clever. */
 		if (!center_reset && !horizontal_changed) {
 			if (currprefs.gfx_ycenter == 2 && thisframe_y_adjust != prev_y_adjust) {
@@ -3480,7 +3500,6 @@ static void center_image (void)
 					thisframe_y_adjust = prev_y_adjust;
 			}
 		}
-#endif
 	}
 
 	/* Make sure the value makes sense */
@@ -3515,7 +3534,6 @@ static void init_drawing_frame (void)
 {
 	struct amigadisplay *ad = &adisplays[0];
 	struct vidbuf_description *vidinfo = &ad->gfxvidinfo;
-	int maxline;
 	static int frame_res_old;
 
 	int largest_res = 0;
@@ -3586,7 +3604,7 @@ static void init_drawing_frame (void)
 						struct wh *dst = currprefs.gfx_apmode[0].gfx_fullscreen ? &changed_prefs.gfx_monitor[0].gfx_size_fs : &changed_prefs.gfx_monitor[0].gfx_size_win;
 						while (m < 3 * 2) {
 							struct wh *src = currprefs.gfx_apmode[0].gfx_fullscreen ? &currprefs.gfx_monitor[0].gfx_size_fs_xtra[m] : &currprefs.gfx_monitor[0].gfx_size_win_xtra[m];
-							if ((src->width > 0 && src->height > 0) || (currprefs.gfx_api || currprefs.gf[0].gfx_filter > 0)) {
+							if (src->width > 0 && src->height > 0) {
 								int nr = m >> 1;
 								int nl = (m & 1) == 0 ? 0 : 1;
 								int nr_o = nr;
@@ -3669,7 +3687,7 @@ static void init_drawing_frame (void)
 	if (thisframe_first_drawn_line > thisframe_last_drawn_line)
 		thisframe_last_drawn_line = thisframe_first_drawn_line;
 
-	maxline = ((maxvpos_display + 1) << linedbl) + 2;
+	int maxline = ((maxvpos_display + 1) << linedbl) + 2;
 	for (int i = 0; i < maxline; i++) {
 		int ls = linestate[i];
 		switch (ls) {
@@ -3836,14 +3854,17 @@ static void lightpen_update(struct vidbuffer *vb, int lpnum)
 	cx += currprefs.lightpen_offset[0];
 	cy += currprefs.lightpen_offset[1];
 
-	if (cx < 0x18)
+	if (cx < 0x18) {
 		cx = 0x18;
+	}
 	if (cx >= maxhpos)
 		cx -= maxhpos;
-	if (cy < minfirstline)
+	if (cy < minfirstline) {
 		cy = minfirstline;
-	if (cy >= maxvpos)
+	}
+	if (cy >= maxvpos) {
 		cy = maxvpos - 1;
+	}
 
 	if (currprefs.lightpen_crosshair && lightpen_active) {
 		for (int i = 0; i < LIGHTPEN_HEIGHT; i++) {
@@ -3921,7 +3942,7 @@ static void refresh_indicator_update(struct vidbuffer *vb)
 	}
 }
 
-static void draw_frame2(struct vidbuffer* vbin, struct vidbuffer* vbout)
+static void draw_frame2(struct vidbuffer *vbin, struct vidbuffer *vbout)
 {
 #ifdef AMIBERRY
 	for (int i = next_line_to_render; i < max_ypos_thisframe; i++) {
@@ -3990,8 +4011,8 @@ void draw_lines(int end, int section)
 		int y_end = -1;
 		
 		vidinfo->outbuffer = vb;
-		if (!lockscr(vb, false, vb->last_drawn_line ? false : true))
-			return;
+	if (!lockscr(vb, false, vb->last_drawn_line ? false : true, display_reset > 0))
+		return;
 
 		for (; next_line_to_render < max_ypos_thisframe; ++next_line_to_render) {
 			int i1 = next_line_to_render + min_ypos_for_screen;
@@ -4102,7 +4123,7 @@ static void finish_drawing_frame(bool drawlines)
 		return;
 	}
 
-	if (!lockscr(vb, false, true)) {
+	if (!lockscr(vb, false, true, display_reset > 0)) {
 		notice_screen_contents_lost(monid);
 		return;
 	}
@@ -4123,7 +4144,7 @@ static void finish_drawing_frame(bool drawlines)
 		bool locked = true;
 		bool multimon = currprefs.monitoremu_mon != 0;
 		if (multimon) {
-			locked = lockscr(out, false, true);
+			locked = lockscr(out, false, true, display_reset > 0);
 			outvi->xchange = vidinfo->xchange;
 			outvi->ychange = vidinfo->ychange;
 		} else {
@@ -4201,7 +4222,7 @@ static void finish_drawing_frame(bool drawlines)
 	//	vidinfo->drawbuffer.tempbufferinuse = true;
 	//}
 
-	unlockscr(vb, -1, -1);
+	unlockscr(vb, display_reset ? -2 : -1, -1);
 #ifdef AMIBERRY
 	next_line_to_render = 0;
 	auto_crop_image();
@@ -4225,6 +4246,7 @@ void check_prefs_picasso(void)
 
 		if (!ad->picasso_requested_on && monid > 0) {
 			ad->picasso_requested_on = ad->picasso_on;
+			ad->picasso_requested_forced_on = false;
 			continue;
 		}
 
@@ -4437,18 +4459,13 @@ void hsync_record_line_state (int lineno, enum nln_how how, int changed)
 		break;
 	case nln_lower_black:
 		changed |= state[0] != LINE_DONE;
-		state[1] = LINE_DONE;
 		*state = changed ? LINE_DECIDED : LINE_DONE;
-//		if (lineno == (maxvpos + lof_store) * 2 - 1)
-//			*state = LINE_BLACK;
+		state[1] = LINE_DONE;
 		break;
 	case nln_upper_black_always:
 		*state = LINE_DECIDED;
 		if (lineno > 0) {
 			state[-1] = LINE_BLACK;
-		}
-		if (!interlace_seen && lineno == (maxvpos + lof_store) * 2 - 2) {
-			state[1] = LINE_BLACK;
 		}
 		break;
 	case nln_upper_black:
@@ -4456,9 +4473,6 @@ void hsync_record_line_state (int lineno, enum nln_how how, int changed)
 		*state = changed ? LINE_DECIDED : LINE_DONE;
 		if (lineno > 0) {
 			state[-1] = LINE_DONE;
-		}
-		if (!interlace_seen && lineno == (maxvpos + lof_store) * 2 - 2) {
-			state[1] = LINE_DONE;
 		}
 		break;
 	}
@@ -4576,6 +4590,7 @@ void reset_drawing(void)
 	struct vidbuf_description *vidinfo = &ad->gfxvidinfo;
 
 	max_diwstop = 0;
+	display_reset = 1;
 
 	lores_reset ();
 
@@ -4591,8 +4606,8 @@ void reset_drawing(void)
 
 	last_redraw_point = 0;
 
-	memset (spixels, 0, sizeof spixels);
-	memset (&spixstate, 0, sizeof spixstate);
+	memset(spixels, 0, sizeof spixels);
+	memset(&spixstate, 0, sizeof spixstate);
 
 	init_hardware_for_drawing_frame();
 

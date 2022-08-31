@@ -443,7 +443,7 @@ int graphics_setup(void)
 
 void updatedisplayarea(int monid)
 {
-	set_custom_limits(-1, -1, -1, -1);
+	set_custom_limits(-1, -1, -1, -1, false);
 	show_screen(monid, 0);
 }
 
@@ -1632,7 +1632,7 @@ float target_getcurrentvblankrate(int monid)
 	return SDL2_getrefreshrate(0);
 }
 
-int lockscr(struct vidbuffer* vb, bool fullupdate, bool first)
+int lockscr(struct vidbuffer* vb, bool fullupdate, bool first, bool skip)
 {
 	if (sdl_surface && SDL_MUSTLOCK(sdl_surface))
 		SDL_LockSurface(sdl_surface);

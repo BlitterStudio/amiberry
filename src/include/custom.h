@@ -76,7 +76,7 @@ extern uae_u32 hsync_counter, vsync_counter;
 extern uae_u16 dmacon;
 extern uae_u16 intena, intreq, intreqr;
 
-extern int vpos, lof_store;
+extern int vpos, lof_store, lof_display;
 
 extern int n_frames;
 
@@ -153,6 +153,7 @@ extern float vblank_hz, fake_vblank_hz;
 extern float hblank_hz;
 extern int vblank_skip, doublescan;
 extern bool programmedmode;
+extern int display_reset;
 
 #define DMA_AUD0      0x0001
 #define DMA_AUD1      0x0002
@@ -220,14 +221,16 @@ extern int xbluecolor_s, xbluecolor_b, xbluecolor_m;
 /* get resolution from bplcon0 */
 STATIC_INLINE int GET_RES_DENISE(uae_u16 con0)
 {
-	if (!(currprefs.chipset_mask & CSMASK_ECS_DENISE))
+	if (!ecs_denise) {
 		con0 &= ~0x40; // SUPERHIRES
+	}
 	return ((con0) & 0x40) ? RES_SUPERHIRES : ((con0) & 0x8000) ? RES_HIRES : RES_LORES;
 }
-STATIC_INLINE int GET_RES_AGNUS (uae_u16 con0)
+STATIC_INLINE int GET_RES_AGNUS(uae_u16 con0)
 {
-	if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS))
+	if (!ecs_agnus) {
 		con0 &= ~0x40; // SUPERHIRES
+	}
 	return ((con0) & 0x40) ? RES_SUPERHIRES : ((con0) & 0x8000) ? RES_HIRES : RES_LORES;
 }
 /* get sprite width from FMODE */
@@ -263,6 +266,32 @@ extern void compute_framesync(void);
 extern void getsyncregisters(uae_u16 *phsstrt, uae_u16 *phsstop, uae_u16 *pvsstrt, uae_u16 *pvsstop);
 int is_bitplane_dma(int hpos);
 void custom_cpuchange(void);
+bool bitplane_dma_access(int hpos, int offset);
+void custom_dumpstate(int);
+bool get_ras_cas(uaecptr, int*, int*);
+
+#define RGA_PIPELINE_ADJUST 4
+#define MAX_CHIPSETSLOTS 256
+extern uae_u8 cycle_line_slot[MAX_CHIPSETSLOTS + RGA_PIPELINE_ADJUST];
+extern uae_u16 cycle_line_pipe[MAX_CHIPSETSLOTS + RGA_PIPELINE_ADJUST];
+
+#define CYCLE_PIPE_CPUSTEAL 0x8000
+#define CYCLE_PIPE_BLITTER 0x100
+#define CYCLE_PIPE_COPPER 0x80
+#define CYCLE_PIPE_SPRITE 0x40
+#define CYCLE_PIPE_BITPLANE 0x20
+#define CYCLE_PIPE_MODULO 0x10
+
+#define RGA_PIPELINE_MASK 255
+
+#define RGA_PIPELINE_OFFSET_BLITTER 1
+
+extern int rga_pipeline_blitter;
+
+STATIC_INLINE int get_rga_pipeline(int hpos, int off)
+{
+	return (hpos + off) % maxhpos;
+}
 
 struct custom_store
 {

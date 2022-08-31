@@ -49,6 +49,7 @@ extern void blitter_slowdown(int, int, int, int);
 extern void blitter_check_start(void);
 extern void blitter_reset(void);
 extern void blitter_debugdump(void);
+extern void restore_blitter_start(void);
 
 typedef void blitter_func(uaecptr, uaecptr, uaecptr, uaecptr, struct bltinfo *);
 

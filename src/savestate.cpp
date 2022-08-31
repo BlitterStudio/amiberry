@@ -852,6 +852,7 @@ bool savestate_restore_finish(void)
 	restore_blitter_finish();
 	restore_expansion_finish();
 	restore_akiko_finish();
+	restore_custom_finish();
 #ifdef CDTV
 	restore_cdtv_finish();
 #endif

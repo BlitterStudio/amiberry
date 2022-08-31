@@ -152,7 +152,7 @@ struct color_entry {
 STATIC_INLINE xcolnr getxcolor(int c)
 {
 #ifdef AGA
-	if (aga_mode)
+	if (direct_rgb)
 		return CONVERT_RGB(c);
 	else
 #endif
@@ -345,7 +345,7 @@ extern void full_redraw_all(void);
 extern bool draw_frame (struct vidbuffer*);
 extern int get_custom_limits (int *pw, int *ph, int *pdx, int *pdy, int *prealh);
 extern void store_custom_limits (int w, int h, int dx, int dy);
-extern void set_custom_limits (int w, int h, int dx, int dy);
+extern void set_custom_limits (int w, int h, int dx, int dy, bool blank);
 extern void check_custom_limits (void);
 extern void get_custom_topedge (int *x, int *y, bool max);
 extern void get_custom_raw_limits (int *pw, int *ph, int *pdx, int *pdy);

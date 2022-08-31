@@ -396,6 +396,7 @@ void devices_restore_start(void)
 {
 	restore_cia_start();
 	restore_blkdev_start();
+	restore_blitter_start();
 	changed_prefs.bogomem.size = 0;
 	changed_prefs.chipmem.size = 0;
 	for (int i = 0; i < MAX_RAM_BOARDS; i++) {
