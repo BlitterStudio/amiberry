@@ -6,11 +6,12 @@
 extern bool gfxboard_init_memory (struct autoconfig_info*);
 extern bool gfxboard_init_memory_p4_z2(struct autoconfig_info*);
 extern bool gfxboard_init_registers(struct autoconfig_info*);
+extern bool gfxboard_init_registers2(struct autoconfig_info*);
 extern void gfxboard_free (void);
 extern void gfxboard_reset (void);
 //extern void gfxboard_vsync_handler (bool, bool);
 extern int gfxboard_get_configtype (struct rtgboardconfig*);
-extern bool gfxboard_is_registers (struct rtgboardconfig*);
+extern int gfxboard_is_registers (struct rtgboardconfig*);
 extern int gfxboard_get_vram_min (struct rtgboardconfig*);
 extern int gfxboard_get_vram_max (struct rtgboardconfig*);
 extern bool gfxboard_need_byteswap (struct rtgboardconfig*);
@@ -33,6 +34,11 @@ extern bool gfxboard_rtg_enable_initial(int monid, int);
 extern void gfxboard_rtg_disable(int monid, int);
 extern bool gfxboard_init_board(struct autoconfig_info*);
 extern bool gfxboard_set(int monid, bool rtg);
+extern void gfxboard_resize(int width, int height, int hmult, int vmult, void *p);
+
+uae_u8 *gfxboard_getrtgbuffer(int monid, int *widthp, int *heightp, int *pitch, int *depth, uae_u8 *palette);
+void gfxboard_freertgbuffer(int monid, uae_u8 *dst);
+bool gfxboard_isgfxboardscreen(int monid);
 
 extern struct gfxboard_func a2410_func;
 extern struct gfxboard_func harlequin_func;
@@ -48,7 +54,8 @@ void gfxboard_get_a8_vram(int index);
 void gfxboard_free_vram(int index);
 
 int gfxboard_get_devnum(struct uae_prefs *p, int index);
-extern bool gfxboard_set(bool rtg);
+
+int pcem_getvramsize(void);
 
 #define GFXBOARD_UAE_Z2 0
 #define GFXBOARD_UAE_Z3 1
