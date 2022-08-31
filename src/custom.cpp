@@ -7571,12 +7571,6 @@ void blitter_done_notify(int blitline)
 	event2_newevent_xx(-1, (blitline ? 4 : 2) * CYCLE_UNIT, 0, blitter_done_notify_wakeup);
 }
 
-void do_copper (void)
-{
-	int hpos = current_hpos ();
-	update_copper (hpos);
-}
-
 /* ADDR is the address that is going to be read/written; this access is
 the reason why we want to update the copper.  This function is also
 used from hsync_handler to finish up the line; for this case, we check
@@ -11005,14 +10999,33 @@ static int dma_cycle(uaecptr addr, uae_u16 v, int *mode)
 	return hpos_old;
 }
 
-#define SETIFCHIP \
-	if (addr < 0xd80000) \
-		regs.chipset_latch_rw = v;
+static void sync_cycles(void)
+{
+	if (extra_cycle) {
+		do_cycles(extra_cycle);
+		extra_cycle = 0;
+	}
+	evt_t c = get_cycles();
+	int extra = c & (CYCLE_UNIT - 1);
+	if (extra) {
+		extra = CYCLE_UNIT - extra;
+		do_cycles(extra);
+	}
+}
+
+void do_copper(void)
+{
+	sync_cycles();
+	int hpos = current_hpos();
+	update_copper(hpos);
+}
 
 uae_u32 wait_cpu_cycle_read(uaecptr addr, int mode)
 {
 	uae_u32 v = 0;
 	int hpos;
+
+	sync_cycles();
 
 	x_do_cycles_pre(CYCLE_UNIT);
 
@@ -11037,10 +11050,11 @@ uae_u32 wait_cpu_cycle_read(uaecptr addr, int mode)
 		break;
 	}
 
-	x_do_cycles_post(CYCLE_UNIT, v);
 
 	regs.chipset_latch_rw = v;
-	SETIFCHIP
+
+	x_do_cycles_post(CYCLE_UNIT, v);
+
 	return v;
 }
 
@@ -11048,9 +11062,12 @@ void wait_cpu_cycle_write(uaecptr addr, int mode, uae_u32 v)
 {
 	int hpos;
 
+	sync_cycles();
+
 	x_do_cycles_pre(CYCLE_UNIT);
 
 	hpos = dma_cycle(addr, v, &mode);
+
 
 	if (mode > -2) {
 		if (mode < 0) {
@@ -11062,10 +11079,10 @@ void wait_cpu_cycle_write(uaecptr addr, int mode, uae_u32 v)
 		}
 	}
 
+	regs.chipset_latch_rw = v;
+		
 	x_do_cycles_post(CYCLE_UNIT, v);
 
-	regs.chipset_latch_rw = v;
-	SETIFCHIP
 }
 
 void do_cycles_ce(int cycles)

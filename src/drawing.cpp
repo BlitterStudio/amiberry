@@ -555,7 +555,7 @@ void check_custom_limits(void)
 	if (bottom > top && bottom < visible_bottom_stop)
 		visible_bottom_stop = bottom;
 	
-	set_blanking_limits ();
+	set_blanking_limits();
 }
 
 void set_custom_limits (int w, int h, int dx, int dy, bool blank)
@@ -676,7 +676,7 @@ int get_custom_limits (int *pw, int *ph, int *pdx, int *pdy, int *prealh)
 			ddffirstword_total = min;
 		if (ddflastword_total > max)
 			ddflastword_total = max;
-		if (0 && !(currprefs.chipset_mask & CSMASK_AGA)) {
+		if (0 && !aga_mode) {
 			if (ddffirstword_total > diwfirstword_total)
 				diwfirstword_total = ddffirstword_total;
 			if (ddflastword_total < diwlastword_total)
@@ -1026,7 +1026,7 @@ static void pfield_init_linetoscr (bool border)
 	// AGA borderblank starts horizontally 1 shres pixel before bitplanes start
 	playfield_start_pre = playfield_start;
 	playfield_end_pre = playfield_end;
-	if (currprefs.chipset_hr && (currprefs.chipset_mask & CSMASK_AGA) && bplres > 0) {
+	if (currprefs.chipset_hr && aga_mode && bplres > 0) {
 		playfield_start_pre -= bplres;
 		playfield_end_pre -= bplres;
 	}
@@ -2830,10 +2830,15 @@ static void pfield_expand_dp_bplcon(void)
 	bplplanecnt = dp_for_drawing->nr_planes;
 	bplham = dp_for_drawing->ham_seen;
 	bplehb = dp_for_drawing->ehb_seen;
-	if ((currprefs.chipset_mask & CSMASK_ECS_DENISE) && (dp_for_drawing->bplcon2 & 0x0200)) {
-		bplehb = 0;
-		if (!(currprefs.chipset_mask & CSMASK_AGA))
-			bplehb = -1;
+	if (ecs_denise) {
+		// Check for KillEHB bit in ECS/AGA
+		if (dp_for_drawing->bplcon2 & 0x0200) {
+			bplehb = 0;
+			if (!aga_mode)
+				bplehb = -1;
+		}
+	} else if ((currprefs.cs_denisenoehb)) {
+		bplehb = -1;
 	}
 	issprites = dip_for_drawing->nr_sprites > 0;
 	bplcolorburst = (dp_for_drawing->bplcon0 & 0x200) != 0;
@@ -2882,7 +2887,7 @@ static void pfield_expand_dp_bplcon(void)
 		sprite_smaller_than_64_inuse = true;
 	sprite_smaller_than_64 = (dp_for_drawing->fmode & 0x0c) != 0x0c;
 #endif
-	//ecs_genlock_features_active = (currprefs.chipset_mask & CSMASK_ECS_DENISE) && ((dp_for_drawing->bplcon2 & 0x0c00) || ce_is_borderntrans(colors_for_drawing.extra)) ? 1 : 0;
+	//ecs_genlock_features_active = ecs_denise && ((dp_for_drawing->bplcon2 & 0x0c00) || ce_is_borderntrans(colors_for_drawing.extra)) ? 1 : 0;
 	//if (ecs_genlock_features_active) {
 	//	ecs_genlock_features_colorkey = false;
 	//	ecs_genlock_features_mask = 0;
@@ -2929,11 +2934,18 @@ static void pfield_expand_dp_bplconx (int regno, int v)
 	{
 	case 0x100: // BPLCON0
 		dp_for_drawing->bplcon0 = v;
-		dp_for_drawing->bplres = GET_RES_DENISE (v);
-		dp_for_drawing->nr_planes = GET_PLANES (v);
-		dp_for_drawing->ham_seen = isham (v);
+		dp_for_drawing->bplres = GET_RES_DENISE(v);
+		dp_for_drawing->nr_planes = GET_PLANES(v);
+		dp_for_drawing->ham_seen = isham(v);
 		if (currprefs.chipset_hr && dp_for_drawing->bplres < currprefs.gfx_resolution)
 			dp_for_drawing->bplres = currprefs.gfx_resolution;
+		//extblankcheck();
+		break;
+	case 0x101: // BPLCON0 partial
+		dp_for_drawing->bplcon0 &= ~(0x0800 | 0x0400 | 0x0080 | 0x0001);
+		dp_for_drawing->bplcon0 |= v & (0x0800 | 0x0400 | 0x0080 | 0x0001);
+		dp_for_drawing->ham_seen = isham(v);
+		//extblankcheck();
 		break;
 	case 0x104: // BPLCON2
 		dp_for_drawing->bplcon2 = v;
@@ -2941,6 +2953,7 @@ static void pfield_expand_dp_bplconx (int regno, int v)
 #ifdef ECS_DENISE
 	case 0x106: // BPLCON3
 		dp_for_drawing->bplcon3 = v;
+		//extblankcheck();
 		break;
 #endif
 #ifdef AGA
@@ -3049,7 +3062,6 @@ static void do_color_changes(line_draw_func worker_border, line_draw_func worker
 			lastpos = t;
 		}
 
-		// normal
 		if (playfield_start_pre >= playfield_start || !ce_is_borderblank(colors_for_drawing.extra)) {
 
 			// normal left border (hblank end to playfield start)
@@ -3062,7 +3074,7 @@ static void do_color_changes(line_draw_func worker_border, line_draw_func worker
 			// playfield
 			if (nextpos_in_range > lastpos && lastpos >= playfield_start && lastpos < playfield_end) {
 				int t = nextpos_in_range <= playfield_end ? nextpos_in_range : playfield_end;
-				if ((plf2pri >= 5 || plf1pri >= 5) && !(currprefs.chipset_mask & CSMASK_AGA)) {
+				if ((plf2pri >= 5 || plf1pri >= 5) && !aga_mode) {
 					weird_bitplane_fix(lastpos, t);
 				}
 				if (may_require_hard_way && (may_require_hard_way < 0 || (bplxor && may_require_hard_way && worker_pfield != pfield_do_linetoscr_bordersprite_aga))) {
@@ -3261,10 +3273,10 @@ static void pfield_draw_line(struct vidbuffer *vb, int lineno, int gfx_ypos, int
 	if (border == 0) {
 
 		pfield_expand_dp_bplcon();
-		pfield_init_linetoscr (false);
-		pfield_doline (lineno);
-
-		adjust_drawing_colors (dp_for_drawing->ctable, dp_for_drawing->ham_seen || bplehb || ecsshres);
+		// must be after pfield_expand_dp_bplcon
+		adjust_drawing_colors(dp_for_drawing->ctable, dp_for_drawing->ham_seen || bplehb || ecsshres);
+		pfield_init_linetoscr(false);
+		pfield_doline(lineno);
 
 		/* The problem is that we must call decode_ham() BEFORE we do the sprites. */
 		if (dp_for_drawing->ham_seen) {
@@ -3960,8 +3972,9 @@ static void draw_frame2(struct vidbuffer *vbin, struct vidbuffer *vbout)
 		if (whereline >= vbin->inheight)
 #endif
 			break;
-		if (whereline < 0)
+		if (whereline < 0) {
 			continue;
+		}
 
 		hposblank = 0;
 		pfield_draw_line(vbout, line, whereline, wherenext);
@@ -4005,11 +4018,11 @@ void draw_lines(int end, int section)
 {
 	struct amigadisplay* ad = &adisplays[0];
 	if (ad->framecnt == 0) {
-		struct vidbuf_description* vidinfo = &ad->gfxvidinfo;
+		struct vidbuf_description *vidinfo = &adisplays[0].gfxvidinfo;
 		struct vidbuffer* vb = &vidinfo->drawbuffer;
 		int y_start = -1;
 		int y_end = -1;
-		
+
 		vidinfo->outbuffer = vb;
 	if (!lockscr(vb, false, vb->last_drawn_line ? false : true, display_reset > 0))
 		return;
@@ -4020,14 +4033,17 @@ void draw_lines(int end, int section)
 			int whereline = amiga2aspect_line_map[i1];
 			int wherenext = amiga2aspect_line_map[i1 + 1];
 
-			if (whereline >= vb->inheight || line >= linestate_first_undecided)
-			{
+#ifdef AMIBERRY
+		if (whereline >= vb->inheight || line >= linestate_first_undecided) {
+#else
+		if (whereline >= vb->inheight) {
+#endif
 				y_end = vb->inheight - 1;
 				break;
 			}
-				
-			if (whereline < 0)
+			if (whereline < 0) {
 				continue;
+			}
 			if (y_start < 0) {
 				y_start = whereline;
 			}

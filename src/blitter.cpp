@@ -478,6 +478,7 @@ static void chipmem_agnus_wput2(uaecptr addr, uae_u32 w)
 	if (!(log_blitter & 4)) {
 		//debug_putpeekdma_chipram(addr, w, typemask, 0x000, 0x054);
 		chipmem_wput_indirect(addr, w);
+		regs.chipset_latch_rw = w;
 	}
 }
 
@@ -1196,6 +1197,9 @@ static bool blitter_idle_cycle_register_write(uaecptr addr, uae_u32 v)
 	if (ab != &custom_bank)
 		return false;
 	addr &= 0x1fe;
+	if (v == 0xffffffff) {
+		v = regs.chipset_latch_rw;
+	}
 	if (addr == 0x40) {
 		bltcon0 = v;
 		blit_bltset(1);
@@ -1741,6 +1745,14 @@ void blitter_slowdown (int ddfstrt, int ddfstop, int totalcycles, int freecycles
 void blitter_reset (void)
 {
 	bltptxpos = -1;
+	blitter_cycle_exact = currprefs.blitter_cycle_exact;
+	immediate_blits = currprefs.immediate_blits;
+	shifter[0] = shifter[1] = shifter[2] = shifter[3] = 0;
+	shifter_skip_b = false;
+	shifter_skip_y = false;
+	bltcon0 = 0;
+	bltcon1 = 0;
+	blitter_start_init();
 }
 
 #ifdef SAVESTATE
@@ -1754,6 +1766,8 @@ void restore_blitter_finish (void)
 {
 	//record_dma_reset();
 	//record_dma_reset();
+	blitter_cycle_exact = currprefs.blitter_cycle_exact;
+	immediate_blits = currprefs.immediate_blits;
 	if (blt_statefile_type == 0) {
 		blt_info.blit_interrupt = 1;
 		if (blt_info.blit_pending) {
