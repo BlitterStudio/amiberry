@@ -56,12 +56,12 @@
 #ifdef POSIX_SERIAL
 #include <termios.h>
 #include <unistd.h>
-#include <sys/epoll.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/select.h>
 #include <netdb.h>
 #ifndef __MACH__
+#include <sys/epoll.h>
 #include <linux/serial.h>
 #endif
 #endif
@@ -273,8 +273,9 @@ struct uaeserialdata
 	volatile int threadactive;
 	uae_sem_t change_sem, sync_sem, evtt;
 	void *user;
+#ifndef __MACH__
 	struct serial_icounter_struct serial_counter;
-
+#endif
 	uae_sem_t write_start, write_done;
 };
 
@@ -292,6 +293,7 @@ static void uaeser_initdata (void *vsd, void *user)
 
 int uaeser_query (void *vsd, uae_u16 *status, uae_u32 *pending)
 {
+#ifndef __MACH__
 	struct uaeserialdata* sd = (struct uaeserialdata*)vsd;
 	struct serial_icounter_struct new_serial_counter;
 	uae_u16 s = 0;
@@ -324,12 +326,13 @@ int uaeser_query (void *vsd, uae_u16 *status, uae_u32 *pending)
 
 	ioctl(sd->fd, FIONREAD, &nread);
 	*pending = nread;
-
+#endif
 	return 1;
 }
 
 int uaeser_break (void *vsd, int brklen)
 {
+#ifndef __MACH__
 	struct uaeserialdata* sd = (struct uaeserialdata*)vsd;
 
 	if (ioctl(sd->fd, TIOCSBRK) < 0)
@@ -337,12 +340,13 @@ int uaeser_break (void *vsd, int brklen)
 
 	usleep(brklen);
 	ioctl(sd->fd, TIOCCBRK);
-
+#endif
 	return 1;
 }
 
 int uaeser_setparams (void *vsd, int baud, int rbuffer, int bits, int sbits, int rtscts, int parity, uae_u32 xonxoff)
 {
+#ifndef __MACH__
 	struct termios newtio;
 	struct uaeserialdata* sd = (struct uaeserialdata*)vsd;
 	int pspeed = 0;
@@ -421,13 +425,14 @@ int uaeser_setparams (void *vsd, int baud, int rbuffer, int bits, int sbits, int
 	 * TODO
 	 * What to do with rbuffer?
 	 */
-
+#endif
 	/* Return logic is reversed in this function! */
 	return 0;
 }
 
 static int uaeser_trap_thread (void *arg)
 {
+#ifndef __MACH__
 	struct uaeserialdata* sd = (struct uaeserialdata*)arg;
 	//HANDLE handles[4];
 	int cnt;
@@ -482,20 +487,23 @@ static int uaeser_trap_thread (void *arg)
 	}
 	sd->threadactive = 0;
 	uae_sem_post(&sd->sync_sem);
-
-	return( 0 );
+#endif
+	return(0);
 }
 
 void uaeser_trigger (void *vsd)
 {
+#ifndef __MACH__
 	struct uaeserialdata *sd = (struct uaeserialdata*)vsd;
 	uae_sem_post (&sd->evtt);
+#endif
 }
 
 int uaeser_write (void *vsd, uae_u8 *data, uae_u32 len)
 {
 	struct uaeserialdata* sd = (struct uaeserialdata*)vsd;
 	int ret = 1;
+#ifndef __MACH__
 
 	if (sd->writeactive==0)
 	{
@@ -507,12 +515,14 @@ int uaeser_write (void *vsd, uae_u8 *data, uae_u32 len)
 	}
 
 	//uae_sem_post (&sd->evtt);
-
+#endif
 	return ret;
 }
 
 int uaeser_read (void *vsd, uae_u8 *data, uae_u32 len)
 {
+#ifndef __MACH__
+
 	struct uaeserialdata* sd = (struct uaeserialdata*)vsd;
 
 	struct timeval tv;
@@ -530,18 +540,21 @@ int uaeser_read (void *vsd, uae_u8 *data, uae_u32 len)
 		return 0;
 
 	//uae_sem_post (&sd->evtt);
-
+#endif
 	return 1;
 }
 
 void uaeser_clearbuffers (void *vsd)
 {
+#ifndef __MACH__
 	struct uaeserialdata* sd = (struct uaeserialdata*)vsd;
 	tcflush(sd->fd, TCOFLUSH);
+#endif
 }
 
 static int serial_read_thread(void* data)
 {
+#ifndef __MACH__ // disabled for MacOS for now, it doesn't support epoll
 	struct uaeserialdata* sd = (struct uaeserialdata*)data;
 	int efd, n, available_bytes, bytes_read;
 	struct epoll_event event;
@@ -572,12 +585,13 @@ static int serial_read_thread(void* data)
 	}
 
 	free(events);
-
+#endif
 	return(0);
 }
 
 static int serial_write_thread(void* data)
 {
+#ifndef __MACH__
 	struct uaeserialdata* sd = (struct uaeserialdata*)data;
 	int total_written = 0, written = 0;
 
@@ -603,12 +617,13 @@ static int serial_write_thread(void* data)
 
 		uae_sem_post(&sd->evtt);
 	}
-
+#endif
 	return 0;
 }
 
 int uaeser_open (void *vsd, void *user, int unit)
 {
+#ifndef __MACH__
 	struct uaeserialdata* sd = (struct uaeserialdata*)vsd;
 	struct termios newtio;
 	struct serial_icounter_struct serial_counter;
@@ -657,12 +672,13 @@ int uaeser_open (void *vsd, void *user, int unit)
 
 	uae_sem_init (&sd->write_start, 0, 0);
 	uae_sem_init (&sd->write_done, 0, 0);
-
+#endif
 	return 1;
 }
 
 void uaeser_close(void* vsd)
 {
+#ifndef __MACH__
 	struct uaeserialdata* sd = (struct uaeserialdata*)vsd;
 
 	if (sd->threadactive) {
@@ -682,8 +698,8 @@ void uaeser_close(void* vsd)
 	uae_sem_destroy(&sd->write_start);
 	uae_sem_destroy(&sd->write_done);
 
-
 	uaeser_initdata(sd, sd->user);
+#endif
 }
 
 
