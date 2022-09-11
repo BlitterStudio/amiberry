@@ -330,8 +330,8 @@ static void ps (struct ide_hdf *ide, int offset, const TCHAR *src, int max)
 	int i, len;
 	char *s;
 
-	s = ua (src);
-	len = strlen (s);
+	s = ua(src);
+	len = strlen(s);
 	for (i = 0; i < max; i += 2) {
 		char c1 = ' ';
 		if (i < len)

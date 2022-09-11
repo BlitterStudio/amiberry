@@ -1475,6 +1475,7 @@ static void cd32_fmv_audio_handler(void)
 	} else {
 		cda->play(bufnum);
 	}
+	fmv_bufon[bufnum] = 1;
 	offset += PCM_SECTORS;
 	offset &= l64111_cb_mask;
 	l64111_regs[A_CB_READ] = offset;

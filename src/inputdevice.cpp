@@ -4393,7 +4393,17 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 		break;
 #ifdef AVIOUTPUT
 	case AKS_VIDEORECORD:
-		AVIOutput_Toggle (newstate, true);
+		AVIOutput_Toggle(newstate, true);
+		break;
+	case AKS_VIDEORECORDFILE:
+		if (s) {
+			_tcsncpy(avioutput_filename_gui, s, MAX_DPATH);
+			avioutput_filename_gui[MAX_DPATH - 1] = 0;
+			set_config_changed();
+		} else {
+			gui_display (7);
+			setsystime ();
+		}
 		break;
 #endif
 #ifdef ACTION_REPLAY

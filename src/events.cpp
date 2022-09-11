@@ -289,7 +289,8 @@ void do_cycles_cpu_fastest(int cycles_to_add)
 				}
 			}
 		}
-		events_schedule ();
+		events_schedule();
+
 	}
 	currcycle += cycles_to_add;
 }
@@ -315,7 +316,7 @@ void do_cycles_cpu_norm(int cycles_to_add)
 
 do_cycles_func do_cycles = do_cycles_cpu_norm;
 
-void MISC_handler (void)
+void MISC_handler(void)
 {
 	static bool dorecheck;
 	bool recheck;
