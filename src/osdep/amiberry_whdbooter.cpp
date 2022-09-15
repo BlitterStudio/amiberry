@@ -121,11 +121,11 @@ std::string trim_full_line(std::string full_line)
 	return full_line;
 }
 
-void parse_custom_settings(struct uae_prefs* p, const char* settings)
+std::string find_substring(const std::string& search_string, const std::string& whole_string)
 {
 	const std::string lf = "\n";
-	const std::string check = "amiberry_custom";
-	auto full_line = string(settings);
+	const auto check = string(search_string);
+	auto full_line = trim_full_line(string(whole_string));
 
 	auto lf_found = full_line.find(lf);
 	while (lf_found != std::string::npos)
@@ -134,34 +134,6 @@ void parse_custom_settings(struct uae_prefs* p, const char* settings)
 		auto end = full_line.find_first_of(lf, start + 1);
 		if (end == std::string::npos) end = full_line.size();
 
-		std::string line = full_line.substr(start + 1, end - start - 1);
-		std::string trimmed_line = trim_full_line(line);
-		if (trimmed_line.find(check) != std::string::npos)
-		{
-			const auto cstr = new char[trimmed_line.length() + 1];
-			strcpy(cstr, trimmed_line.c_str());
-			cfgfile_parse_line(p, cstr, 0);
-			delete[] cstr;
-		}
-
-		lf_found = full_line.find(lf, end + 1);
-	}
-}
-
-std::string find_whdload_game_option(const TCHAR* find_setting, const char* whd_options)
-{
-	const std::string lf = "\n";
-	const auto check = string(find_setting);
-	auto full_line = trim_full_line(string(whd_options));
-
-	auto lf_found = full_line.find(lf);
-	while (lf_found != std::string::npos)
-	{
-		const auto start = full_line.find_first_of(lf, lf_found);
-		auto end = full_line.find_first_of(lf, start + 1);
-		if (end == std::string::npos) end = full_line.size();
-
-		const auto substring = full_line.substr(start + 1, end - start - 1);
 		const auto found = full_line.find(check);
 		if (found != std::string::npos)
 		{
@@ -171,12 +143,46 @@ std::string find_whdload_game_option(const TCHAR* find_setting, const char* whd_
 		}
 
 		if (end < full_line.size())
-			lf_found = end + 1;
+			lf_found = end;
 		else
 			lf_found = std::string::npos;
 	}
 
 	return "nul";
+}
+
+void parse_custom_settings(uae_prefs* p, const char* settings)
+{
+	const std::string lf = "\n";
+	const std::string check = "amiberry_custom";
+	auto full_line = trim_full_line(string(settings));
+
+	auto lf_found = full_line.find(lf);
+	while (lf_found != std::string::npos)
+	{
+		const auto start = full_line.find_first_of(lf, lf_found);
+		auto end = full_line.find_first_of(lf, start + 1);
+		if (end == std::string::npos) end = full_line.size();
+
+		std::string line = full_line.substr(start + 1, end - start - 1);
+		if (line.find(check) != std::string::npos)
+		{
+			const auto cstr = new char[line.length() + 1];
+			strcpy(cstr, line.c_str());
+			cfgfile_parse_line(p, cstr, 0);
+			delete[] cstr;
+		}
+
+		if (end < full_line.size())
+			lf_found = end;
+		else
+			lf_found = std::string::npos;
+	}
+}
+
+std::string find_whdload_game_option(const TCHAR* find_setting, const char* whd_options)
+{
+	return find_substring(string(find_setting), string(whd_options));
 }
 
 game_options get_game_settings(const char* HW)
