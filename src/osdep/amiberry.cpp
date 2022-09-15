@@ -1301,15 +1301,15 @@ void process_event(SDL_Event event)
 			if (currprefs.input_tablet >= TABLET_MOUSEHACK)
 			{
 				/* absolute */
-				setmousestate(event.motion.which, 0, event.motion.x, 1);
-				setmousestate(event.motion.which, 1, event.motion.y, 1);
+				setmousestate(0, 0, event.motion.x, 1);
+				setmousestate(0, 1, event.motion.y, 1);
 				return;
 			}
 			if (!focus || !mouseactive)
 				return;
 			/* relative */
-			setmousestate(event.motion.which, 0, event.motion.xrel, 0);
-			setmousestate(event.motion.which, 1, event.motion.yrel, 0);
+			setmousestate(0, 0, event.motion.xrel, 0);
+			setmousestate(0, 1, event.motion.yrel, 0);
 		}
 		else if (isfocus() < 0 && currprefs.input_tablet >= TABLET_MOUSEHACK) {
 			setmousestate(0, 0, event.motion.x, 1);
