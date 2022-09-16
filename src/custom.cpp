@@ -11015,7 +11015,6 @@ static void sync_cycles(void)
 
 void do_copper(void)
 {
-	sync_cycles();
 	int hpos = current_hpos();
 	update_copper(hpos);
 }
@@ -11024,8 +11023,6 @@ uae_u32 wait_cpu_cycle_read(uaecptr addr, int mode)
 {
 	uae_u32 v = 0;
 	int hpos;
-
-	sync_cycles();
 
 	x_do_cycles_pre(CYCLE_UNIT);
 
@@ -11062,12 +11059,9 @@ void wait_cpu_cycle_write(uaecptr addr, int mode, uae_u32 v)
 {
 	int hpos;
 
-	sync_cycles();
-
 	x_do_cycles_pre(CYCLE_UNIT);
 
 	hpos = dma_cycle(addr, v, &mode);
-
 
 	if (mode > -2) {
 		if (mode < 0) {
