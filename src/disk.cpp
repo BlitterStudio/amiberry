@@ -4491,13 +4491,18 @@ void DISK_update (int tohpos)
 		drv->floppybitcounter %= drv->trackspeed;
 		didaccess = 1;
 	}
-	/* no floppy selected but dma active */
 	if (!didaccess) {
-		if (dskdmaen == DSKDMA_READ) {
-			disk_doupdate_read_nothing(cycles);
-		} else if (dskdmaen == DSKDMA_WRITE) {
-			disk_doupdate_write(cycles, get_floppy_speed());
-		} else {
+		if ((selected | disabled) != 15) {
+			/* no active floppy (selected and motor active) found but DMA was active */
+			if (dskdmaen == DSKDMA_READ) {
+				disk_doupdate_read_nothing(cycles);
+			}
+			else if (dskdmaen == DSKDMA_WRITE) {
+				disk_doupdate_write(cycles, get_floppy_speed());
+			}
+		}
+		/* no floppy selected and no DMA */
+		if ((selected | disabled) == 15 && dskdmaen < DSKDMA_WRITE) {
 			//disk_doupdate_read_reallynothing(cycles, true);
 		}
 	}
