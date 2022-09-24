@@ -870,11 +870,11 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	}
 
 	//set the Second (game data) drive
-	_stprintf(tmp, "filesystem2=rw,DH1:Games:%s,0", filepath);
+	_stprintf(tmp, "filesystem2=rw,DH1:Games:\"%s\",0", filepath);
 	txt2 = parse_text_path(_T(tmp));
 	cfgfile_parse_line(prefs, txt2, 0);
 
-	_stprintf(tmp, "uaehf1=dir,rw,DH1:Games:%s,0", filepath);
+	_stprintf(tmp, "uaehf1=dir,rw,DH1:Games:\"%s\",0", filepath);
 	txt2 = parse_text_path(_T(tmp));
 	cfgfile_parse_line(prefs, txt2, 0);
 
