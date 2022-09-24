@@ -3660,7 +3660,6 @@ static uae_u8 fp_buffer[9 * 16];
 void m68k_go (int may_quit)
 {
 	int hardboot = 1;
-	int startup = 1;
 
 #ifdef WITH_THREADED_CPU
 	init_cpu_thread();
@@ -3703,7 +3702,8 @@ void m68k_go (int may_quit)
 
 		if (quit_program > 0) {
 			cpu_keyboardreset = quit_program == UAE_RESET_KEYBOARD;
-			cpu_hardreset = ((quit_program == UAE_RESET_HARD ? 1 : 0) | hardboot) != 0;
+			cpu_hardreset = ((quit_program == UAE_RESET_HARD ? 1 : 0) || hardboot) != 0;
+			hardboot |= quit_program == UAE_RESET_HARD ? 1 : 0;
 
 			if (quit_program == UAE_QUIT)
 				break;
@@ -3711,7 +3711,6 @@ void m68k_go (int may_quit)
 			hsync_counter = 0;
 			vsync_counter = 0;
 			quit_program = 0;
-			hardboot = 0;
 
 #ifdef SAVESTATE
 			if (savestate_state == STATE_DORESTORE)
@@ -3731,13 +3730,12 @@ void m68k_go (int may_quit)
 				memory_clear ();
 				write_log (_T("hardreset, memory cleared\n"));
 			}
-			cpu_hardreset = false;
 #ifdef SAVESTATE
 			/* We may have been restoring state, but we're done now.  */
 			if (isrestore()) {
 				restored = savestate_restore_finish ();
 				memory_map_dump ();
-				startup = 1;
+				hardboot = 1;
 			}
 #endif
 			if (currprefs.produce_sound == 0)
@@ -3789,12 +3787,14 @@ void m68k_go (int may_quit)
 		}
 
 		set_x_funcs();
-		if (startup) {
+		if (hardboot) {
 			custom_prepare ();
 			mman_set_barriers(false);
 			protect_roms (true);
 		}
-		startup = 0;
+		cpu_hardreset = false;
+		cpu_keyboardreset = false;
+		hardboot = 0;
 		event_wait = true;
 		unset_special(SPCFLAG_MODE_CHANGE);
 
