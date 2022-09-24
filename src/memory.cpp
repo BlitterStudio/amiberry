@@ -1660,7 +1660,7 @@ static bool load_extendedkickstart (const TCHAR *romextfile, int type)
 		if (extendedkickmem_bank.baseaddr) {
 			read_kickstart (f, extendedkickmem_bank.baseaddr, extendedkickmem_bank.allocated_size, 0, 1);
 			if (extendedkickmem_type == EXTENDED_ROM_ALG)
-				descramble_alg(extendedkickmem_bank.baseaddr, 262144);
+				descramble_alg(extendedkickmem_bank.baseaddr, size);
 			extendedkickmem_bank.mask = extendedkickmem_bank.allocated_size - 1;
 			ret = true;
 		}

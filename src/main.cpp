@@ -214,7 +214,7 @@ void fixup_prefs_dimensions (struct uae_prefs *prefs)
 			if (ap->gfx_backbuffers >= 2)
 				ap->gfx_vflip = -1;
 		}
-		if (prefs->gf[i].gfx_filter == 0 && ((prefs->gf[i].gfx_filter_autoscale && !prefs->gfx_api) || (prefs->gfx_apmode[APMODE_NATIVE].gfx_vsyncmode))) {
+		if (prefs->gf[i].gfx_filter == 0) {
 			prefs->gf[i].gfx_filter = 1;
 		}
 		if (i == 0) {
@@ -353,10 +353,12 @@ void fixup_cpu (struct uae_prefs *p)
 		error_log(_T("Data cache emulation requires Indirect UAE Boot ROM."));
 	}
 
+#ifdef AMIBERRY
 	if (p->cpu_memory_cycle_exact && p->fast_copper != 0) {
 		p->fast_copper = 0;
 		error_log(_T("Cycle-exact mode not compatible with fast copper."));
 	}
+#endif
 }
 
 void fixup_prefs (struct uae_prefs *p, bool userconfig)
