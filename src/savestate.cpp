@@ -379,7 +379,6 @@ TCHAR *restore_path_full_func(uae_u8 **dstp)
 static void save_chunk (struct zfile *f, uae_u8 *chunk, size_t len, const TCHAR *name, int compress)
 {
 	uae_u8 tmp[8], *dst;
-	uae_u8 zero[4]= { 0, 0, 0, 0 };
 	uae_u32 flags;
 	size_t pos;
 	size_t chunklen, len2;
@@ -436,8 +435,10 @@ static void save_chunk (struct zfile *f, uae_u8 *chunk, size_t len, const TCHAR 
 		zfile_fwrite (chunk, 1, len, f);
 	/* alignment */
 	len2 = 4 - (len & 3);
-	if (len2)
-		zfile_fwrite (zero, 1, len2, f);
+	if (len2) {
+		uae_u8 zero[4] = { 0, 0, 0, 0 };
+		zfile_fwrite(zero, 1, len2, f);
+	}
 
 	write_log (_T("Chunk '%s' chunk size %u (%u)\n"), name, chunklen, len);
 }
