@@ -3733,7 +3733,6 @@ static void init_drawing_frame (void)
 }
 
 static int lightpen_y1[2], lightpen_y2[2];
-static int statusbar_y1, statusbar_y2;
 
 void putpixel(uae_u8 *buf, uae_u8 *genlockbuf, int bpp, int x, xcolnr c8)
 {
@@ -3987,20 +3986,11 @@ static void draw_frame_extras(struct vidbuffer *vb, int y_start, int y_end)
 		int slx, sly;
 		int mult = statusline_get_multiplier(vb->monitor_id) / 100;
 		statusline_getpos(vb->monitor_id, &slx, &sly, vb->outwidth, vb->outheight);
-		statusbar_y1 = sly + min_ypos_for_screen - 1;
-		statusbar_y2 = statusbar_y1 + TD_TOTAL_HEIGHT * mult + 1;
-		//draw_status_line(vb->monitor_id, sly, -1);
 		for (int i = 0; i < TD_TOTAL_HEIGHT * mult; i++) {
 			int line = sly + i;
 			draw_status_line(vb->monitor_id, line, i);
 		}
 	}
-	//if (debug_dma > 1 || debug_heatmap > 1) {
-	//	for (int i = 0; i < vb->outheight; i++) {
-	//		int line = i;
-	//		draw_debug_status_line(vb->monitor_id, line);
-	//	}
-	//}
 
 	if (lightpen_active) {
 		if (lightpen_active & 1) {
@@ -4438,8 +4428,7 @@ void hsync_record_line_state (int lineno, enum nln_how how, int changed)
 	state = linestate + lineno;
 	changed |= ad->frame_redraw_necessary != 0 || refresh_indicator_buffer != NULL ||
 		((lineno >= lightpen_y1[0] && lineno < lightpen_y2[0]) ||
-		(lineno >= lightpen_y1[1] && lineno < lightpen_y2[1]) ||
-		(lineno >= statusbar_y1 && lineno < statusbar_y2));
+		(lineno >= lightpen_y1[1] && lineno < lightpen_y2[1]));
 
 	switch (how) {
 	case nln_normal:
