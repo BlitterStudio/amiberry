@@ -869,6 +869,7 @@ static int vhd_write_enlarge (struct hardfiledata *hfd, uae_u32 bamoffset)
 	buf = xcalloc (uae_u8, len);
 	if (!hdf_resize_target (hfd, hfd->physsize + len - 512)) {
 		write_log (_T("vhd_enlarge: failure\n"));
+		xfree(buf);
 		return 0;
 	}
 	// add footer (same as 512 byte header)

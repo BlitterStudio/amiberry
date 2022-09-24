@@ -95,8 +95,10 @@ static uae_s32 ARCunsqueeze(struct zfile *in, struct zfile *out, struct rledata 
 	{
 		numnodes = xadIOGetBitsLow(&io, 16);
 
-		if (io.err)
+		if (io.err) {
+			xfree(node);
 			return XADERR_ILLEGALDATA;
+		}
 
 		if(numnodes < 0 || numnodes >= ARCSQNUMVALS)
 			err = XADERR_DECRUNCH;
