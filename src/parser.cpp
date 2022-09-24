@@ -56,7 +56,6 @@
 #ifdef POSIX_SERIAL
 #include <termios.h>
 #include <unistd.h>
-#include <sys/epoll.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/select.h>
