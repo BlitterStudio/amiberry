@@ -767,7 +767,7 @@ static bool write_slot (TCHAR *p, struct uae_input_device *uid, int i, int j)
 		return false;
 	}
 	uae_u64 flags = uid->flags[i][j];
-	if (uid->custom[i][j] && _tcslen (uid->custom[i][j]) > 0) {
+	if (uid->custom[i][j] && uid->custom[i][j][0] != '\0') {
 		_stprintf (p, _T("'%s'.%d"), uid->custom[i][j], (int)(flags & ID_FLAG_SAVE_MASK_CONFIG));
 		ok = true;
 	} else if (uid->eventid[i][j] > 0) {
@@ -8259,7 +8259,7 @@ static int put_event_data (const struct inputdevice_functions *id, int devnum, i
 		uid->flags[i][sub] = flags;
 		uid->port[i][sub] = port;
 		xfree (uid->custom[i][sub]);
-		uid->custom[i][sub] = custom && _tcslen (custom) > 0 ? stripstrdup (custom) : NULL;
+		uid->custom[i][sub] = custom && custom[0] != '\0' ? stripstrdup(custom) : NULL;
 		ret = i;
 	} else if (type == IDEV_WIDGET_AXIS) {
 		i = num - id->get_widget_first (devnum, type) + ID_AXIS_OFFSET;
@@ -8267,7 +8267,7 @@ static int put_event_data (const struct inputdevice_functions *id, int devnum, i
 		uid->flags[i][sub] = flags;
 		uid->port[i][sub] = port;
 		xfree (uid->custom[i][sub]);
-		uid->custom[i][sub] = custom && _tcslen (custom) > 0 ? stripstrdup (custom) : NULL;
+		uid->custom[i][sub] = custom && custom[0] != '\0' ? stripstrdup(custom) : NULL;
 		ret = i;
 	} else if (type == IDEV_WIDGET_KEY) {
 		i = num - id->get_widget_first (devnum, type);
@@ -8275,7 +8275,7 @@ static int put_event_data (const struct inputdevice_functions *id, int devnum, i
 		uid->flags[i][sub] = flags;
 		uid->port[i][sub] = port;
 		xfree (uid->custom[i][sub]);
-		uid->custom[i][sub] = custom && _tcslen (custom) > 0 ? stripstrdup (custom) : NULL;
+		uid->custom[i][sub] = custom && custom[0] != '\0' ? stripstrdup(custom) : NULL;
 		ret = i;
 	}
 	if (ret < 0)

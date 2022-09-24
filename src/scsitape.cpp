@@ -244,7 +244,7 @@ static void next_file (struct scsi_data_tape *tape)
 			return;
 		}
 		// LF at the end = have at least one filemark
-		if (_tcslen(name) > 0 && (name[_tcslen(name) - 1] == 10 || name[_tcslen(name) - 1] == 13)) {
+		if (name[0] != '\0' && (name[_tcslen(name) - 1] == 10 || name[_tcslen(name) - 1] == 13)) {
 			tape->last_filemark = true;
 		}
 		my_trim (name);

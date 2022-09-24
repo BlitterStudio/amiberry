@@ -81,6 +81,11 @@
     <ConfigurationType>Makefile</ConfigurationType>
     <RemoteProjectRelDir>$(MSBuildProjectName)-Debug</RemoteProjectRelDir>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-OpenGL|ARM64'" Label="Configuration">
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <ConfigurationType>Makefile</ConfigurationType>
+    <RemoteProjectRelDir>$(MSBuildProjectName)-Debug</RemoteProjectRelDir>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debux-DMX|ARM64'" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
     <ConfigurationType>Makefile</ConfigurationType>
@@ -121,6 +126,18 @@
     </RemoteBuildOutputs>
     <AdditionalSourcesToCopyMapping>
     </AdditionalSourcesToCopyMapping>
+    <RemoteBuildOutputs />
+    <AdditionalSourcesToCopyMapping />
+    <IncrementalBuild>true</IncrementalBuild>
+    <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-Debug</RemoteProjectDir>
+    <RemoteDeployDir>$(RemoteRootDir)/$(ProjectName)-Debug</RemoteDeployDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-OpenGL|ARM'">
+    <RemoteBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug; make -j4 DEBUG=1 PLATFORM=rpi4-sdl2</RemoteBuildCommandLine>
+    <RemoteReBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug; make clean; make -j4 DEBUG=1 PLATFORM=rpi4-sdl2</RemoteReBuildCommandLine>
+    <RemoteCleanCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug; make clean</RemoteCleanCommandLine>
+    <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\threaddep;..\src\archivers;..\external\libguisan\include;/usr/include/SDL2;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
+    <NMakePreprocessorDefinitions>DEBUG;ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;CPU_arm;ARM_HAS_DIV;USE_SDL2;_REENTRANT;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <RemoteBuildOutputs />
     <AdditionalSourcesToCopyMapping />
     <IncrementalBuild>true</IncrementalBuild>
