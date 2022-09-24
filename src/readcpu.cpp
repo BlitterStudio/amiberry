@@ -724,7 +724,7 @@ endofline:
 					table68k[opc].mnemo = lookuptab[find].mnemo;
 					break;
 				}
-				if (_tcslen (lookuptab[find].name) == 0)
+				if (lookuptab[find].name[0] == '\0')
 					abort();
 			}
 		}

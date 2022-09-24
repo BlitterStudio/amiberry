@@ -1019,7 +1019,7 @@ void romlist_clear (void)
 				if (parent->partnumber == NULL)
 					parent->partnumber = my_strdup (_T(""));
 				newpn = xcalloc (TCHAR, _tcslen (parent->partnumber) + 1 + _tcslen (rd->partnumber) + 1);
-				if (_tcslen (parent->partnumber) > 0) {
+				if (parent->partnumber[0] != '\0') {
 					_tcscpy (newpn, parent->partnumber);
 					_tcscat (newpn, _T("/"));
 				}
@@ -1681,7 +1681,7 @@ void getromname	(const struct romdata *rd, TCHAR *name)
 		_stprintf (name + _tcslen (name), _T(" rev %d.%d"), rd->subver, rd->subrev);
 	if (rd->size > 0)
 		_stprintf (name + _tcslen (name), _T(" (%dk)"), (rd->size + 1023) / 1024);
-	if (rd->partnumber && _tcslen (rd->partnumber) > 0)
+	if (rd->partnumber && rd->partnumber[0] != '\0')
 		_stprintf (name + _tcslen (name), _T(" [%s]"), rd->partnumber);
 }
 
@@ -1879,7 +1879,7 @@ static int read_rom_file (uae_u8 *buf, const struct romdata *rd)
 	struct romlist *rl = romlist_getrl (rd);
 	uae_char tmp[11];
 
-	if (!rl || _tcslen (rl->path) == 0)
+	if (!rl || rl->path[0] == '\0')
 		return 0;
 	zf = zfile_fopen (rl->path, _T("rb"), ZFD_NORMAL);
 	if (!zf)
@@ -2584,7 +2584,7 @@ int is_device_rom(struct uae_prefs *p, int romtype, int devnum)
 	struct boardromconfig *brc = get_device_rom(p, romtype, devnum, &idx);
 	if (brc) {
 		const TCHAR *romname = brc->roms[idx].romfile;
-		if (_tcslen(romname) == 0)
+		if (romname[0] == '\0')
 			return -1;
 		if (isspecialrom(romname))
 			return 0;

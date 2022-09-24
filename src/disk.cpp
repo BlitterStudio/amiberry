@@ -2944,7 +2944,7 @@ static void floppy_get_rootblock (uae_u8 *dst, int block, const TCHAR *disk_name
 	dst[12+3] = 0x48; // size of hash table
 	dst[312] = dst[313] = dst[314] = dst[315] = (uae_u8)0xff; // bitmap valid
 	dst[316+2] = (block + 1) >> 8; dst[316+3] = (block + 1) & 255; // bitmap pointer
-	char *s = ua ((disk_name && _tcslen (disk_name) > 0) ? disk_name : _T("empty"));
+	char* s = ua((disk_name && disk_name[0] != '\0') ? disk_name : _T("empty"));
 	dst[432] = (uae_u8)strlen (s); // name length
 	strcpy ((char*)dst + 433, s); // name
 	xfree (s);
@@ -3048,7 +3048,7 @@ bool disk_creatediskfile (struct uae_prefs *p, const TCHAR *name, int type, driv
 			memcpy (dostrack, rawtrack, sizeof rawtrack);
 			dostrack[3] = 0;
 			dostrack[9] = (l * 8) >> 16; dostrack[10] = (l * 8) >> 8; dostrack[11] = (l * 8) >> 0;
-			bool dodos = ffs || bootable || (disk_name && _tcslen (disk_name) > 0);
+			bool dodos = ffs || bootable || (disk_name && disk_name[0] != '\0');
 			for (i = 0; i < tracks; i++) {
 				uae_u8 tmp[3 * 4];
 				memcpy (tmp, rawtrack, sizeof rawtrack);

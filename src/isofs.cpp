@@ -1964,7 +1964,7 @@ root_found:
 			if (IS_ERR(inode))
 				goto out_no_root;
 			TCHAR *volname = get_joliet_name(pri->volume_id, 28, sbi->s_utf8);
-			if (volname && _tcslen(volname) > 0) {
+			if (volname && volname[0] != '\0') {
 				xfree(volume_name);
 				volume_name = volname;
 				write_log(_T("ISOFS: Joliet Volume ID: '%s'\n"), volume_name);
@@ -2468,7 +2468,7 @@ bool isofs_mediainfo(void *sbp, struct isofs_info *ii)
 		}
 		ii->unknown_media = sb->unknown_media;
 		if (sb->root) {
-			if (_tcslen(sb->root->name) == 0) {
+			if (sb->root->name[0] == '\0') {
 				uae_tcslcpy(ii->volumename, _T("NO_LABEL"), sizeof(ii->volumename));
 			} else {
 				uae_tcslcpy (ii->volumename, sb->root->name, sizeof(ii->volumename));

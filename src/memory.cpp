@@ -1596,7 +1596,7 @@ static bool load_extendedkickstart (const TCHAR *romextfile, int type)
 	int size, off;
 	bool ret = false;
 
-	if (_tcslen (romextfile) == 0)
+	if (romextfile[0] == '\0')
 		return false;
 #ifdef ARCADIA
 	if (is_arcadia_rom (romextfile) == ARCADIA_BIOS) {
@@ -2513,7 +2513,7 @@ static void restore_roms(void)
 	load_extendedkickstart (currprefs.romextfile2, EXTENDED_ROM_CDTV);
 	kickmem_bank.mask = ROM_SIZE_512 - 1;
 	if (!load_kickstart ()) {
-		if (_tcslen (currprefs.romfile) > 0) {
+		if (currprefs.romfile[0] != '\0') {
 			error_log (_T("Failed to open '%s'\n"), currprefs.romfile);
 			notify_user (NUMSG_NOROM);
 		}
