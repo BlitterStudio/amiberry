@@ -8051,8 +8051,8 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 		p->gfx_monitor[0].gfx_size_win_xtra[i].height = 0;
 	}
 	p->gfx_resolution = RES_HIRES;
-	p->gfx_vresolution = VRES_NONDOUBLE;
-	p->gfx_iscanlines = 0;
+	p->gfx_vresolution = VRES_DOUBLE;
+	p->gfx_iscanlines = 1;
 	p->gfx_apmode[0].gfx_fullscreen = GFX_WINDOW;
 	p->gfx_apmode[1].gfx_fullscreen = GFX_WINDOW;
 	p->gfx_xcenter = 0; p->gfx_ycenter = 0;
