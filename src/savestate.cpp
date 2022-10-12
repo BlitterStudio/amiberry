@@ -264,7 +264,7 @@ TCHAR *restore_string_func (uae_u8 **dstp)
 	char *top, *to;
 	TCHAR *s;
 
-	len = strlen ((char*)dst) + 1;
+	len = strlen((char*)dst) + 1;
 	top = to = xmalloc (char, len);
 	do {
 		v = *dst++;

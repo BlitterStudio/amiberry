@@ -804,10 +804,10 @@ void init_traps(void)
 {
 	trap_count = 0;
 	if (!trap_thread_id[0] && trap_is_indirect()) {
-		for (int i = 0; i < TRAP_THREADS; i++) {
+		for (size_t i = 0; i < TRAP_THREADS; i++) {
 			init_comm_pipe(&trap_thread_pipe[i], 100, 1);
 			hardware_trap_kill[i] = 1;
-			uae_start_thread_fast(hardware_trap_thread, (void*)(intptr_t)i, &trap_thread_id[i]);
+			uae_start_thread_fast(hardware_trap_thread, (void *)i, &trap_thread_id[i]);
 		}
 	}
 }
@@ -844,9 +844,11 @@ void init_extended_traps (void)
 	exit_trap_trapaddr = here();
 	calltrap (deftrap2 (exit_trap_handler, TRAPFLAG_NO_RETVAL, _T("exit_trap")));
 
+#ifdef AMIBERRY
 	if(trap_mutex != 0)
 		uae_sem_destroy(&trap_mutex);
 	trap_mutex = 0;
+#endif
 	uae_sem_init (&trap_mutex, 0, 1);
 }
 

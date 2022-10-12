@@ -1072,7 +1072,7 @@ static void saveimagecutfilepart(TCHAR *name)
 	int i;
 
 	_tcscpy(tmp, name);
-	i = _tcslen (tmp) - 1;
+	i = _tcslen(tmp) - 1;
 	while (i > 0) {
 		if (tmp[i] == '/' || tmp[i] == '\\') {
 			_tcscpy(name, tmp + i + 1);
@@ -4076,6 +4076,7 @@ static void wordsync_detected(bool startup)
 
 static void disk_doupdate_read_reallynothing(int floppybits, bool state)
 {
+	bool done = false;
 	// Only because there is at least one demo that checks wrong bit
 	// and hangs unless DSKSYNC bit it set with zero DSKSYNC value...
 	if (INTREQR() & 0x1000)
@@ -4099,8 +4100,9 @@ static void disk_doupdate_read_reallynothing(int floppybits, bool state)
 			dskbytr_val = word & 0xff;
 			dskbytr_val |= 0x8000;
 		}
-		if (!(adkcon & 0x200) && word == dsksync) {
+		if (!done && !(adkcon & 0x200) && word == dsksync) {
 			INTREQ(0x8000 | 0x1000);
+			done = true;
 		}
 		bitoffset++;
 		bitoffset &= 15;
@@ -4496,8 +4498,7 @@ void DISK_update (int tohpos)
 			/* no active floppy (selected and motor active) found but DMA was active */
 			if (dskdmaen == DSKDMA_READ) {
 				disk_doupdate_read_nothing(cycles);
-			}
-			else if (dskdmaen == DSKDMA_WRITE) {
+			} else if (dskdmaen == DSKDMA_WRITE) {
 				disk_doupdate_write(cycles, get_floppy_speed());
 			}
 		}

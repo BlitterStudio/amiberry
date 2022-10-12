@@ -598,8 +598,8 @@ static void cdrom_command_thread (uae_u8 b)
 		break;
 	case 0x83:
 		if (cdrom_command_cnt_in == 7) {
-			memcpy (cdrom_command_output, MODEL_NAME, strlen (MODEL_NAME)); 
-			cdrom_command_accepted (strlen (MODEL_NAME), s, &cdrom_command_cnt_in);
+			memcpy (cdrom_command_output, MODEL_NAME, strlen(MODEL_NAME)); 
+			cdrom_command_accepted (strlen(MODEL_NAME), s, &cdrom_command_cnt_in);
 			cd_finished = 1;
 		}
 	case 0x84:

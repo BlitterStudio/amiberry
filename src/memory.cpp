@@ -2271,12 +2271,6 @@ static void fill_ce_banks (void)
 			ce_banktype[i] = (currprefs.cs_mbdmac || (currprefs.chipset_mask & CSMASK_AGA)) ? CE_MEMBANK_CHIP32 : CE_MEMBANK_CHIP16;
 		}
 	}
-	if (!currprefs.cs_slowmemisfast) {
-		for (i = (0xc00000 >> 16); i < (0xe00000 >> 16); i++)
-			ce_banktype[i] = ce_banktype[0];
-		for (i = (bogomem_bank.start >> 16); i < ((bogomem_bank.start + bogomem_bank.allocated_size) >> 16); i++)
-			ce_banktype[i] = ce_banktype[0];
-	}
 	for (i = (0xd00000 >> 16); i < (0xe00000 >> 16); i++) {
 		ce_banktype[i] = CE_MEMBANK_CHIP16;
 	}
@@ -2362,20 +2356,20 @@ void map_overlay (int chip)
 #endif
 #endif
 	if (chip) {
-		map_banks (&dummy_bank, 0, size, 0);
-		if (!isdirectjit ()) {
+		map_banks(&dummy_bank, 0, size, 0);
+		if (!isdirectjit()) {
 			if ((currprefs.chipset_mask & CSMASK_ECS_AGNUS) && bogomem_bank.allocated_size == 0) {
 				map_banks(cb, 0, size, chipmem_bank.allocated_size);
 				int start = chipmem_bank.allocated_size >> 16;
 				if (chipmem_bank.allocated_size < 0x100000) {
 					if (currprefs.cs_1mchipjumper) {
 						int dummy = (0x100000 - chipmem_bank.allocated_size) >> 16;
-						map_banks (&chipmem_dummy_bank, start, dummy, 0);
-						map_banks (&chipmem_dummy_bank, start + 16, dummy, 0);
+						map_banks(&chipmem_dummy_bank, start, dummy, 0);
+						map_banks(&chipmem_dummy_bank, start + 16, dummy, 0);
 					}
 				} else if (chipmem_bank.allocated_size < 0x200000 && chipmem_bank.allocated_size > 0x100000) {
 					int dummy = (0x200000 - chipmem_bank.allocated_size) >> 16;
-					map_banks (&chipmem_dummy_bank, start, dummy, 0);
+					map_banks(&chipmem_dummy_bank, start, dummy, 0);
 				}
 			} else {
 				int mapsize = 32;
@@ -2384,28 +2378,86 @@ void map_overlay (int chip)
 				map_banks(cb, 0, mapsize, chipmem_bank.allocated_size);
 			}
 		} else {
-			map_banks (cb, 0, chipmem_bank.allocated_size >> 16, 0);
+			map_banks(cb, 0, chipmem_bank.allocated_size >> 16, 0);
 		}
 	} else {
 		addrbank *rb = NULL;
 		if (size < 32 && bogomem_aliasing == 0)
 			size = 32;
 		cb = get_mem_bank_real(0xf00000);
-		if (!rb && cb && (cb->flags & ABFLAG_ROM) && get_word (0xf00000) == 0x1114)
+		if (!rb && cb && (cb->flags & ABFLAG_ROM) && get_word(0xf00000) == 0x1114)
 			rb = cb;
 		cb = get_mem_bank_real(0xe00000);
-		if (!rb && cb && (cb->flags & ABFLAG_ROM) && get_word (0xe00000) == 0x1114)
+		if (!rb && cb && (cb->flags & ABFLAG_ROM) && get_word(0xe00000) == 0x1114)
 			rb = cb;
 		if (!rb)
 			rb = &kickmem_bank;
-		map_banks (rb, 0, size, 0x80000);
+		map_banks(rb, 0, size, 0x80000);
 	}
 	initramboard(&chipmem_bank, &currprefs.chipmem);
 	overlay_state = chip;
-	fill_ce_banks ();
+	fill_ce_banks();
 	//cpuboard_overlay_override();
-	if (!isrestore () && valid_address (regs.pc, 4))
-		m68k_setpc_normal (m68k_getpc ());
+	if (!isrestore() && valid_address(regs.pc, 4)) {
+		m68k_setpc_normal(m68k_getpc());
+	}
+}
+
+// Set a default pattern for uninitialized memory after hard reset.
+//   0:even 1:odd on columns for even rows,
+//   1:even 0:odd on columns for odd rows.
+static void fillpattern(addrbank *ab)
+{
+	if (currprefs.cs_memorypatternfill && aga_mode) {
+		uae_u32 fillval = 0;
+		for (int fillbank = 0; fillbank < ab->allocated_size / 2048; fillbank++) {
+			fillval = ~fillval;
+			for (int fillrow = fillbank * 2048; fillrow < (fillbank + 1) * 2048; fillrow += 4) {
+				// Chip emulated: NEC PD42S4260 (A1200 R1).  Spec says 512x512x16.
+				*((uae_u32 *)(ab->baseaddr + fillrow)) = fillval;
+				if ((fillrow & 7) == 4) {
+					fillval = ~fillval;
+				}
+			}
+		}
+	} else if (currprefs.cs_memorypatternfill && (currprefs.chipset_mask & CSMASK_ECS_AGNUS)) {
+		uae_u32 fillval = 0;
+		for (int fillbank = 0; fillbank < ab->allocated_size / 1024; fillbank++) {
+			fillval = ~fillval;
+			for (int fillrow = fillbank * 1024; fillrow < (fillbank + 1) * 1024; fillrow += 4) {
+				// Chip emulated: Generic 4256.  4 * 512x4.
+				*((uae_u32 *)(ab->baseaddr + fillrow)) = fillval;
+				if ((fillrow & 7) == 0) {
+					fillval = ~fillval;
+				}
+			}
+		}
+	} else if (currprefs.cs_memorypatternfill && !currprefs.cs_dipagnus) {
+		// OCS Agnus has swapped row and column compared to ECS and AGA.
+		uae_u16 fillval = 0;
+		for (int fillbank = 0; fillbank < ab->allocated_size / 256; fillbank++) {
+			fillval = ~fillval;
+			for (int fillrow = 0; fillrow < 256; fillrow += 2) {
+				// Chip emulated: Generic 4256.  16 * 512x1.
+				*((uae_u16 *)(ab->baseaddr + fillbank * 256 + fillrow)) = fillval;
+			}
+		}
+	} else if (currprefs.cs_memorypatternfill) {
+		// A1000
+		uae_u16 fillval = 0;
+		for (int fillbank = 0; fillbank < ab->allocated_size / 512; fillbank++) {
+			fillval = ~fillval;
+			for (int fillrow = 0; fillrow < 512; fillrow += 2) {
+				// Chip emulated: Generic 4256.  16 * 512x1.
+				*((uae_u16 *)(ab->baseaddr + fillbank * 512 + fillrow)) = fillval;
+				if (((fillrow >> 1) & 15) == 15) {
+					fillval = ~fillval;
+				}
+			}
+		}
+	} else {
+		memset(ab->baseaddr, 0, ab->allocated_size);
+	}
 }
 
 void memory_clear (void)
@@ -2414,58 +2466,13 @@ void memory_clear (void)
 	if (savestate_state == STATE_RESTORE)
 		return;
 	
-	// Set a default pattern for uninitialized memory after hard reset.
-	//   0:even 1:odd on columns for even rows,
-	//   1:even 0:odd on columns for odd rows.
 	if (chipmem_bank.baseaddr) {
-		if (aga_mode) {
-			uae_u32 fillval = 0;
-			for (int fillbank = 0; fillbank < chipmem_bank.allocated_size / 2048; fillbank++) {
-				for (int fillrow = fillbank * 2048; fillrow < (fillbank + 1) * 2048; fillrow += 4) {
-					// Chip emulated: NEC PD42S4260 (A1200 R1).  Spec says 512x512x16.
-					*((uae_u32*)(chipmem_bank.baseaddr + fillrow)) = fillval;
-					fillval = ~fillval;
-				}
-				fillval = ~fillval;
-			}
-		} else {
-			uae_u16 fillval = 0;
-			for (int fillbank = 0; fillbank < chipmem_bank.allocated_size / 1024; fillbank++) {
-				for (int fillrow = fillbank * 1024; fillrow < (fillbank + 1) * 1024; fillrow += 2) {
-					// Chip emulated: Generic 4256.  Should apply to both 512x512x1 and 512x512x4.
-					*((uae_u16*)(chipmem_bank.baseaddr + fillrow)) = fillval;
-					fillval = ~fillval;
-				}
-				fillval = ~fillval;
-			}
-		}
+		fillpattern(&chipmem_bank);
 	}
 
 	if (bogomem_bank.baseaddr) {
-		// NOTE: At reset, WinUAE maps "slow" memory to fast before later re-assigning to chip.
-		if (ce_banktype[0xC0] == CE_MEMBANK_FAST32) {
-			uae_u32 fillval = 0;
-			for (int fillbank = 0; fillbank < bogomem_bank.allocated_size / 2048; fillbank++) {
-				for (int fillrow = fillbank * 2048; fillrow < (fillbank + 1) * 2048; fillrow += 4) {
-					// Chip emulated: 512x512x16 (A1200 R1)
-					*((uae_u32*)(bogomem_bank.baseaddr + fillrow)) = fillval;
-					fillval = ~fillval;
-				}
-				fillval = ~fillval;
-			}
-		} else if (ce_banktype[0xC0] == CE_MEMBANK_FAST16) {
-			uae_u16 fillval = 0;
-			for (int fillbank = 0; fillbank < bogomem_bank.allocated_size / 1024; fillbank++) {
-				for (int fillrow = fillbank * 1024; fillrow < (fillbank + 1) * 1024; fillrow += 2) {
-					// Chip emulated: Generic 4256
-					*((uae_u16*)(bogomem_bank.baseaddr + fillrow)) = fillval;
-					fillval = ~fillval;
-				}
-				fillval = ~fillval;
-			}
-		} else {
-			memset(bogomem_bank.baseaddr, 0, bogomem_bank.allocated_size);
-		}
+		// TODO: slow RAM can have 16x chips even if Agnus is ECS.
+		fillpattern(&bogomem_bank);
 	}
 	
 	if (mem25bit_bank.baseaddr)

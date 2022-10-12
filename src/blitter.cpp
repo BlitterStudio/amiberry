@@ -470,7 +470,7 @@ static void blitter_interrupt(void)
 		return;
 	}
 	blt_info.blit_interrupt = 1;
-	send_interrupt(6, 3 * CYCLE_UNIT);
+	INTREQ_INT(6, 3);
 	//if (debug_dma) {
 	//	record_dma_event(DMA_EVENT_BLITIRQ, hpos, vpos);
 	//}
@@ -1481,7 +1481,7 @@ static bool decide_blitter_maybe_write2(int until_hpos, uaecptr addr, uae_u32 va
 			blt_delayed_irq--;
 		if (blt_delayed_irq <= 0) {
 			blt_delayed_irq = 0;
-			send_interrupt(6, 3 * CYCLE_UNIT);
+			INTREQ_INT(6, 3);
 		}
 	}
 

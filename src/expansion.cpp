@@ -3842,6 +3842,7 @@ void expamem_reset (int hardreset)
 
 	chipdone = false;
 
+	expamem_init_clear();
 	allocate_expamem ();
 	expamem_bank.name = _T("Autoconfig [reset]");
 

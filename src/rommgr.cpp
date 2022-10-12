@@ -1052,7 +1052,7 @@ static void romlist_cleanup (void)
 			while (i < j) {
 				struct romlist *rl2 = romlist_getrl (&roms[i]);
 				if (rl2) {
-					int cnt = romlist_cnt - (rl2 - rl) - 1;
+					size_t cnt = romlist_cnt - (rl2 - rl) - 1;
 					write_log (_T("%s '%s' removed from romlist\n"), roms[k].name, rl2->path);
 					xfree (rl2->path);
 					if (cnt > 0)
@@ -1294,22 +1294,22 @@ void addkeyfile (const TCHAR *path)
 	zfile_fclose (f);
 }
 
-void addkeydir (const TCHAR *path)
+void addkeydir(const TCHAR *path)
 {
 	TCHAR tmp[MAX_DPATH];
 
-	_tcscpy (tmp, path);
-	if (zfile_exists (tmp)) {
+	_tcscpy(tmp, path);
+	if (zfile_exists(tmp)) {
 		int i;
-		for (i = _tcslen (tmp) - 1; i > 0; i--) {
+		for (i = _tcslen(tmp) - 1; i > 0; i--) {
 			if (tmp[i] == '\\' || tmp[i] == '/')
 				break;
 		}
 		tmp[i] = 0;
 	}
-	_tcscat (tmp, _T("/"));
-	_tcscat (tmp, _T("rom.key"));
-	addkeyfile (tmp);
+	_tcscat(tmp, _T("/"));
+	_tcscat(tmp, _T("rom.key"));
+	addkeyfile(tmp);
 }
 
 int get_keyring (void)
@@ -2231,7 +2231,7 @@ struct zfile *read_rom_name_guess (const TCHAR *filename, TCHAR *out)
 	struct zfile *f;
 	const TCHAR *name;
 
-	for (i = _tcslen (filename) - 1; i >= 0; i--) {
+	for (i = _tcslen(filename) - 1; i >= 0; i--) {
 		if (filename[i] == '/' || filename[i] == '\\')
 			break;
 	}
@@ -2241,13 +2241,13 @@ struct zfile *read_rom_name_guess (const TCHAR *filename, TCHAR *out)
 
 	for (i = 0; i < romlist_cnt; i++) {
 		TCHAR *n = rl[i].path;
-		for (j = _tcslen (n) - 1; j >= 0; j--) {
+		for (j = _tcslen(n) - 1; j >= 0; j--) {
 			if (n[j] == '/' || n[j] == '\\')
 				break;
 		}
 		if (j < 0)
 			continue;
-		if (!_tcsicmp (name, n + j)) {
+		if (!_tcsicmp(name, n + j)) {
 			struct romdata *rd = rl[i].rd;
 			f = read_rom (rd);
 			if (f) {
@@ -2294,6 +2294,17 @@ int kickstart_checksum (uae_u8 *mem, int size)
 	return 1;
 }
 
+static void clean_path(TCHAR *s)
+{
+	for (;;) {
+		size_t v = _tcscspn(s, _T("?:\t\r\n"));
+		if (s[v] == 0) {
+			break;
+		}
+		memmove(s + v, s + v + 1, (_tcslen(s + v + 1) + 1) * sizeof(TCHAR));
+	}
+}
+
 int configure_rom (struct uae_prefs *p, const int *rom, int msg)
 {
 	struct romdata *rd;
@@ -2338,11 +2349,13 @@ int configure_rom (struct uae_prefs *p, const int *rom, int msg)
 	if (rd->type & (ROMTYPE_ARCADIAGAME | ROMTYPE_ALG)) {
 		get_nvram_path(p->flashfile, sizeof(p->flashfile) / sizeof(TCHAR));
 		_stprintf(p->flashfile + _tcslen(p->flashfile), _T("%s.nvr"), rd->name);
+		clean_path(p->flashfile);
 	}
 #ifndef AMIBERRY
 	if (rd->type & ROMTYPE_ALG) {
 		get_video_path(p->genlock_video_file, sizeof(p->genlock_video_file) / sizeof(TCHAR));
 		_stprintf(p->genlock_video_file + _tcslen(p->genlock_video_file), _T("%s.avi"), rd->name);
+		clean_path(p->genlock_video_file);
 	}
 #endif
 	return 1;

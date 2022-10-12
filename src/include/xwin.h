@@ -18,6 +18,7 @@ typedef int (*allocfunc_type)(int, int, int, xcolnr*);
 
 extern xcolnr xcolors[4096];
 extern uae_u32 p96_rgbx16[65536];
+extern xcolnr fullblack;
 
 extern int graphics_setup(void);
 extern int graphics_init(bool);

@@ -121,7 +121,7 @@ STATIC_INLINE void set_cycles (evt_t x)
 
 STATIC_INLINE int current_hpos_safe(void)
 {
-	int hp = (int)((get_cycles () - eventtab[ev_hsync].oldcycles)) / CYCLE_UNIT;
+	int hp = (int)((get_cycles() - eventtab[ev_hsync].oldcycles)) / CYCLE_UNIT;
 	return hp;
 }
 
@@ -136,6 +136,7 @@ STATIC_INLINE bool cycles_in_range(evt_t endcycles)
 extern void MISC_handler(void);
 extern void event2_newevent_xx(int no, evt_t t, uae_u32 data, evfunc2 func);
 extern void event2_newevent_x_replace(evt_t t, uae_u32 data, evfunc2 func);
+extern void event2_newevent_x_replace_exists(evt_t t, uae_u32 data, evfunc2 func);
 
 STATIC_INLINE void event2_newevent_x(int no, evt_t t, uae_u32 data, evfunc2 func)
 {

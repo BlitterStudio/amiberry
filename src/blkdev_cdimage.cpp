@@ -476,7 +476,6 @@ static bool cdda_play_func2 (struct cdunit *cdu, int *outpos)
 	int silentframes = 0;
 	bool foundsub;
 	int oldtrack = -1;
-	int mode = currprefs.sound_cdaudio;
 	bool restart = false;
 	bool first = true;
 
@@ -490,7 +489,7 @@ static bool cdda_play_func2 (struct cdunit *cdu, int *outpos)
 	cdu->cda_bufon[0] = cdu->cda_bufon[1] = 0;
 	bufnum = 0;
 
-	cdu->cda = new cda_audio (CDDA_BUFFERS, 2352, 44100, mode != 0);
+	cdu->cda = new cda_audio (CDDA_BUFFERS, 2352, 44100);
 
 	while (cdu->cdda_play > 0) {
 
@@ -594,16 +593,12 @@ static bool cdda_play_func2 (struct cdunit *cdu, int *outpos)
 			}
 		}
 
-		if (mode) {
-			while (cdu->cda_bufon[bufnum] && cdu->cdda_play > 0) {
-				if (cd_audio_mode_changed) {
-					restart = true;
-					goto end;
-				}
-				sleep_millis(10);
+		while (cdu->cda_bufon[bufnum] && cdu->cdda_play > 0) {
+			if (cd_audio_mode_changed) {
+				restart = true;
+				goto end;
 			}
-		} else {
-			cdu->cda->wait(bufnum);
+			sleep_millis(10);
 		}
 
 		cdu->cda_bufon[bufnum] = 0;
@@ -703,22 +698,12 @@ static bool cdda_play_func2 (struct cdunit *cdu, int *outpos)
 			if (idleframes <= 0)
 				cdu->cd_last_pos = cdda_pos;
 
-			if (mode) {
-				if (cdu->cda_bufon[0] == 0 && cdu->cda_bufon[1] == 0) {
-					cdu->cda_bufon[bufnum] = 1;
-					next_cd_audio_buffer_callback(1 - bufnum, cdu);
-				}
-				audio_cda_volume(&cdu->cas, cdu->cdda_volume[0], cdu->cdda_volume[1]);
+			if (cdu->cda_bufon[0] == 0 && cdu->cda_bufon[1] == 0) {
 				cdu->cda_bufon[bufnum] = 1;
-			} else {
-				cdu->cda_bufon[bufnum] = 1;
-				cdu->cda->setvolume (cdu->cdda_volume[0], cdu->cdda_volume[1]);
-				if (!cdu->cda->play (bufnum)) {
-					if (cdu->cdda_play > 0)
-						setstate (cdu, AUDIO_STATUS_PLAY_ERROR, -1);
-					goto end;
-				}
+				next_cd_audio_buffer_callback(1 - bufnum, cdu);
 			}
+			audio_cda_volume(&cdu->cas, cdu->cdda_volume[0], cdu->cdda_volume[1]);
+			cdu->cda_bufon[bufnum] = 1;
 
 			if (first) {
 				first = false;
@@ -749,14 +734,9 @@ static bool cdda_play_func2 (struct cdunit *cdu, int *outpos)
 
 end:
 	*outpos = cdda_pos;
-	if (mode) {
-		next_cd_audio_buffer_callback(-1, cdu);
-		if (restart)
-			audio_cda_new_buffer(&cdu->cas, NULL, -1, -1, NULL, NULL);
-	} else {
-		cdu->cda->wait (0);
-		cdu->cda->wait (1);
-	}
+	next_cd_audio_buffer_callback(-1, cdu);
+	if (restart)
+		audio_cda_new_buffer(&cdu->cas, NULL, -1, -1, NULL, NULL);
 
 	while (cdimage_unpack_active == 1)
 		sleep_millis(10);

@@ -42,7 +42,7 @@ cda_audio::~cda_audio()
 	}
 }
 
-cda_audio::cda_audio(int num_sectors, int sectorsize, int samplerate, bool internalmode)
+cda_audio::cda_audio(int num_sectors, int sectorsize, int samplerate)
 {
 	active = false;
 	playing = false;
@@ -54,9 +54,6 @@ cda_audio::cda_audio(int num_sectors, int sectorsize, int samplerate, bool inter
 		buffers[i] = xcalloc(uae_u8, num_sectors * ((bufsize + 4095) & ~4095));
 	}
 	this->num_sectors = num_sectors;
-
-	if (internalmode)
-		return;
 
 	const Uint8 channels = 2;
 	SDL_AudioSpec cdda_want, cdda_have;

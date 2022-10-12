@@ -8259,7 +8259,7 @@ static int put_event_data (const struct inputdevice_functions *id, int devnum, i
 		uid->flags[i][sub] = flags;
 		uid->port[i][sub] = port;
 		xfree (uid->custom[i][sub]);
-		uid->custom[i][sub] = custom && custom[0] != '\0' ? stripstrdup(custom) : NULL;
+		uid->custom[i][sub] = custom && custom[0] != '\0' ? stripstrdup (custom) : NULL;
 		ret = i;
 	} else if (type == IDEV_WIDGET_AXIS) {
 		i = num - id->get_widget_first (devnum, type) + ID_AXIS_OFFSET;
@@ -8267,7 +8267,7 @@ static int put_event_data (const struct inputdevice_functions *id, int devnum, i
 		uid->flags[i][sub] = flags;
 		uid->port[i][sub] = port;
 		xfree (uid->custom[i][sub]);
-		uid->custom[i][sub] = custom && custom[0] != '\0' ? stripstrdup(custom) : NULL;
+		uid->custom[i][sub] = custom && custom[0] != '\0' ? stripstrdup (custom) : NULL;
 		ret = i;
 	} else if (type == IDEV_WIDGET_KEY) {
 		i = num - id->get_widget_first (devnum, type);
@@ -8275,7 +8275,7 @@ static int put_event_data (const struct inputdevice_functions *id, int devnum, i
 		uid->flags[i][sub] = flags;
 		uid->port[i][sub] = port;
 		xfree (uid->custom[i][sub]);
-		uid->custom[i][sub] = custom && custom[0] != '\0' ? stripstrdup(custom) : NULL;
+		uid->custom[i][sub] = custom && custom[0] != '\0' ? stripstrdup (custom) : NULL;
 		ret = i;
 	}
 	if (ret < 0)

@@ -165,6 +165,7 @@ bool shmem_serial_create(void)
 
 static int data_in_serdat; /* new data written to SERDAT */
 static int data_in_serdatr; /* new data received */
+static evt_t data_in_serdatr_evt;
 static int data_in_sershift; /* data transferred from SERDAT to shift register */
 static int break_in_serdatr; /* break state */
 static int break_delay;
@@ -253,6 +254,45 @@ void SERPER (uae_u16 w)
 #ifdef SERIAL_PORT
 	setbaud (baud);
 #endif
+}
+
+static void serial_rx_irq(void)
+{
+	int delay = 9;
+	// Data in receive buffer
+	if (!data_in_serdatr) {
+		data_in_serdatr = 1;
+		data_in_serdatr_evt = get_cycles() + delay * CYCLE_UNIT;
+	}
+	if (currprefs.cpu_memory_cycle_exact) {
+		INTREQ_INT(11, delay);
+	}
+	else {
+		INTREQ_INT(11, 0);
+	}
+}
+
+void serial_rethink(void)
+{
+	if (data_in_serdatr) {
+		int sdr = data_in_serdatr;
+		if (currprefs.cpu_memory_cycle_exact && get_cycles() > data_in_serdatr_evt) {
+			sdr = 0;
+		}
+#ifdef SERIAL_MAP
+		if (serloop_enabled) {
+			sdr = 0;
+		}
+		if (serxdevice_enabled) {
+			sdr = 1;
+		}
+#endif
+		// RBF bit is not "sticky" but without it data can be lost when using fast emulation modes
+		// and physical serial port or internally emulated serial devices.
+		if (sdr) {
+			INTREQ_INT(11, 0);
+		}
+	}
 }
 
 static TCHAR docharlog(int v)
@@ -452,7 +492,7 @@ static void checkreceive_serial (void)
 
 	data_in_serdatr = 1;
 	serdatr_last_got = 0;
-	serial_check_irq();
+	serial_rx_irq();
 #if SERIALDEBUG > 2
 	write_log(_T("SERIAL: received %02X (%c)\n"), serdatr & 0xff, dochar(serdatr));
 #endif

@@ -81,7 +81,6 @@ STATIC_INLINE int dmaen(unsigned int dmamask)
 	return (dmamask & dmacon) && (dmacon & 0x200);
 }
 
-#define SPCFLAG_STOP 2
 #define SPCFLAG_COPPER 4
 #define SPCFLAG_INT 8
 #define SPCFLAG_BRK 16
@@ -107,7 +106,7 @@ extern int joy0button, joy1button;
 extern void INTREQ(uae_u16);
 extern bool INTREQ_0(uae_u16);
 extern void INTREQ_f(uae_u16);
-extern void send_interrupt(int num, int delay);
+extern void INTREQ_INT(int num, int delay);
 extern void rethink_uae_int(void);
 extern uae_u16 INTREQR(void);
 
