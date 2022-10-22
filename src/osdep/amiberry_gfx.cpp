@@ -2183,7 +2183,7 @@ void close_windows(struct AmigaMonitor* mon)
 	graphics_subshutdown();
 }
 
-static int save_png(SDL_Surface* surface, char* path)
+static int save_png(const SDL_Surface* surface, char* path)
 {
 	const auto w = surface->w;
 	const auto h = surface->h;
