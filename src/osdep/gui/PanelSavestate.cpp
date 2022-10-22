@@ -240,7 +240,7 @@ void InitPanelSavestate(const config_category& category)
 
 	grpScreenshot = new gcn::Window("State screen");
 	grpScreenshot->setMovable(false);
-	grpScreenshot->setSize(320, 320);
+	grpScreenshot->setSize(464, 410);
 	grpScreenshot->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpScreenshot->setBaseColor(gui_baseCol);
 
@@ -391,7 +391,7 @@ void RefreshPanelSavestate()
 			{
 				SDL_Rect source = {0, 0, 0, 0};
 				SDL_Rect target = {0, 0, 0, 0};
-				auto* scaled = SDL_CreateRGBSurface(loadedImage->flags, rect.width, rect.height,
+				auto* scaled = SDL_CreateRGBSurface(0, rect.width, rect.height,
 													loadedImage->format->BitsPerPixel,
 													loadedImage->format->Rmask, loadedImage->format->Gmask,
 													loadedImage->format->Bmask, loadedImage->format->Amask);
@@ -409,25 +409,24 @@ void RefreshPanelSavestate()
 		}
 	}
 
-	const auto enabled = true;
-	optState0->setEnabled(enabled);
-	optState1->setEnabled(enabled);
-	optState2->setEnabled(enabled);
-	optState3->setEnabled(enabled);
-	optState4->setEnabled(enabled);
-	optState5->setEnabled(enabled);
-	optState6->setEnabled(enabled);
-	optState7->setEnabled(enabled);
-	optState8->setEnabled(enabled);
-	optState9->setEnabled(enabled);
-	optState10->setEnabled(enabled);
-	optState11->setEnabled(enabled);
-	optState12->setEnabled(enabled);
-	optState13->setEnabled(enabled);
-	optState14->setEnabled(enabled);
-	grpScreenshot->setVisible(enabled);
-	cmdLoadState->setEnabled(enabled);
-	cmdSaveState->setEnabled(enabled);
+	optState0->setEnabled(true);
+	optState1->setEnabled(true);
+	optState2->setEnabled(true);
+	optState3->setEnabled(true);
+	optState4->setEnabled(true);
+	optState5->setEnabled(true);
+	optState6->setEnabled(true);
+	optState7->setEnabled(true);
+	optState8->setEnabled(true);
+	optState9->setEnabled(true);
+	optState10->setEnabled(true);
+	optState11->setEnabled(true);
+	optState12->setEnabled(true);
+	optState13->setEnabled(true);
+	optState14->setEnabled(true);
+	grpScreenshot->setVisible(true);
+	cmdLoadState->setEnabled(true);
+	cmdSaveState->setEnabled(true);
 }
 
 bool HelpPanelSavestate(std::vector<std::string>& helptext)

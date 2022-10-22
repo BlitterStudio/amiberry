@@ -45,8 +45,8 @@ public:
 	}
 };
 
-const char* rtg_boards[] = { "-", "UAE Zorro III" };
-string_list_model rtg_boards_list(rtg_boards, 2);
+const char* rtg_boards[] = { "-", "UAE [Zorro II]", "UAE [Zorro III]" };
+string_list_model rtg_boards_list(rtg_boards, 3);
 
 const char* rtg_refreshrates[] = { "Chipset", "Default", "50", "60", "70", "75" };
 string_list_model rtg_refreshrates_list(rtg_refreshrates, 6);
@@ -95,14 +95,15 @@ public:
 		
 		if (action_event.getSource() == cboBoard)
 		{
-			if (cboBoard->getSelected() == 0)
+			auto v = cboBoard->getSelected();
+			if (v == 0)
 			{
 				changed_prefs.rtgboards[0].rtgmem_type = 1;
 				changed_prefs.rtgboards[0].rtgmem_size = 0;
 			}
-			else if (cboBoard->getSelected() == 1)
+			else
 			{
-				changed_prefs.rtgboards[0].rtgmem_type = gfxboard_get_id_from_index(1);
+				changed_prefs.rtgboards[0].rtgmem_type = gfxboard_get_id_from_index(v - 1);
 				if (changed_prefs.rtgboards[0].rtgmem_size == 0)
 					changed_prefs.rtgboards[0].rtgmem_size = 4096 * 1024;
 			}
@@ -381,7 +382,7 @@ void RefreshPanelRTG()
 	if (rbc->rtgmem_size == 0)
 		cboBoard->setSelected(0);
 	else
-		cboBoard->setSelected(1);
+		cboBoard->setSelected(gfxboard_get_index_from_id(rbc->rtgmem_type) + 1);
 
 	if (changed_prefs.address_space_24)
 	{
