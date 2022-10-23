@@ -120,12 +120,7 @@ static void lores_reset (void)
 		sprite_buffer_res++;
 }
 
-/* mirror of chipset_mask */
-bool ecs_agnus;
-bool ecs_denise;
-bool aga_mode;
-
-bool direct_rgb;
+bool aga_mode; /* mirror of chipset_mask & CSMASK_AGA */
 
 /* The shift factor to apply when converting between Amiga coordinates and window
 coordinates.  Zero if the resolution is the same, positive if window coordinates
@@ -676,7 +671,7 @@ int get_custom_limits (int *pw, int *ph, int *pdx, int *pdy, int *prealh)
 			ddffirstword_total = min;
 		if (ddflastword_total > max)
 			ddflastword_total = max;
-		if (0 && !aga_mode) {
+		if (0 && !(currprefs.chipset_mask & CSMASK_AGA)) {
 			if (ddffirstword_total > diwfirstword_total)
 				diwfirstword_total = ddffirstword_total;
 			if (ddflastword_total < diwlastword_total)
@@ -1026,7 +1021,7 @@ static void pfield_init_linetoscr (bool border)
 	// AGA borderblank starts horizontally 1 shres pixel before bitplanes start
 	playfield_start_pre = playfield_start;
 	playfield_end_pre = playfield_end;
-	if (currprefs.chipset_hr && aga_mode && bplres > 0) {
+	if (currprefs.chipset_hr && (currprefs.chipset_mask & CSMASK_AGA) && bplres > 0) {
 		playfield_start_pre -= bplres;
 		playfield_end_pre -= bplres;
 	}
@@ -1391,7 +1386,7 @@ static bool get_genlock_very_rare_and_complex_case(uae_u8 v)
 		return false;
 	if (ecs_genlock_features_colorkey) {
 		// color key match?
-		if (aga_mode) {
+		if (currprefs.chipset_mask & CSMASK_AGA) {
 			if (colors_for_drawing.color_regs_aga[v] & 0x80000000)
 				return false;
 		} else {
@@ -1835,7 +1830,7 @@ static void pfield_set_linetoscr (void)
 	spritepixels = spritepixels_buffer;
 	pfield_do_linetoscr_spriteonly = pfield_do_nothing;
 #ifdef AGA
-	if (aga_mode) {
+	if (currprefs.chipset_mask & CSMASK_AGA) {
 		if (res_shift == 0) {
 			switch (vidinfo->drawbuffer.pixbytes) {
 				case 2:
@@ -1941,7 +1936,7 @@ static void pfield_set_linetoscr (void)
 	}
 #endif
 #ifdef ECS_DENISE
-	if (!aga_mode && ecsshres) {
+	if (!(currprefs.chipset_mask & CSMASK_AGA) && ecsshres) {
 		// TODO: genlock support
 		if (res_shift == 0) {
 			switch (vidinfo->drawbuffer.pixbytes) {
@@ -2005,7 +2000,7 @@ static void pfield_set_linetoscr (void)
 		}
 	}
 #endif
-	if (!aga_mode && !ecsshres) {
+	if (!(currprefs.chipset_mask & CSMASK_AGA) && !ecsshres) {
 		if (res_shift == 0) {
 			switch (vidinfo->drawbuffer.pixbytes) {
 				case 2:
@@ -2100,14 +2095,14 @@ static void init_ham_decoding(void)
 		if (unpainted_amiga > 0) {
 			int pv = pixdata.apixels[ham_decode_pixel + unpainted_amiga - 1];
 #ifdef AGA
-			if (aga_mode)
+			if (currprefs.chipset_mask & CSMASK_AGA)
 				ham_lastcolor = colors_for_drawing.color_regs_aga[pv ^ bplxor] & 0xffffff;
 			else
 #endif
 				ham_lastcolor = colors_for_drawing.color_regs_ecs[pv] & 0xfff;
 		}
 #ifdef AGA
-	} else if (aga_mode) {
+	} else if (currprefs.chipset_mask & CSMASK_AGA) {
 		if (bplplanecnt >= 7) { /* AGA mode HAM8 */
 			while (unpainted_amiga-- > 0) {
 				int pw = pixdata.apixels[ham_decode_pixel++];
@@ -2175,7 +2170,7 @@ static void decode_ham(int pix, int stoppos, int blank)
 		while (todraw_amiga-- > 0) {
 			int pv = pixdata.apixels[ham_decode_pixel];
 #ifdef AGA
-			if (aga_mode)
+			if (currprefs.chipset_mask & CSMASK_AGA)
 				ham_lastcolor = colors_for_drawing.color_regs_aga[pv ^ bplxor] & 0xffffff;
 			else
 #endif
@@ -2184,7 +2179,7 @@ static void decode_ham(int pix, int stoppos, int blank)
 			ham_linebuf[ham_decode_pixel++] = ham_lastcolor;
 		}
 #ifdef AGA
-	} else if (aga_mode) {
+	} else if (currprefs.chipset_mask & CSMASK_AGA) {
 		if (bplplanecnt >= 7) { /* AGA mode HAM8 */
 			while (todraw_amiga-- > 0) {
 				int pw = pixdata.apixels[ham_decode_pixel];
@@ -2830,14 +2825,9 @@ static void pfield_expand_dp_bplcon(void)
 	bplplanecnt = dp_for_drawing->nr_planes;
 	bplham = dp_for_drawing->ham_seen;
 	bplehb = dp_for_drawing->ehb_seen;
-	if (ecs_denise) {
-		// Check for KillEHB bit in ECS/AGA
-		if (dp_for_drawing->bplcon2 & 0x0200) {
+	if ((currprefs.chipset_mask & CSMASK_ECS_DENISE) && (dp_for_drawing->bplcon2 & 0x0200)) {
 			bplehb = 0;
-			if (!aga_mode)
-				bplehb = -1;
-		}
-	} else if ((currprefs.cs_denisenoehb)) {
+		if (!(currprefs.chipset_mask & CSMASK_AGA))
 		bplehb = -1;
 	}
 	issprites = dip_for_drawing->nr_sprites > 0;
@@ -2846,7 +2836,7 @@ static void pfield_expand_dp_bplcon(void)
 		bplcolorburst_field = 0;
 #ifdef ECS_DENISE
 	int oecsshres = ecsshres;
-	ecsshres = bplres == RES_SUPERHIRES && ecs_denise && !aga_mode && (dp_for_drawing->bplcon0 & 0x40);
+	ecsshres = bplres == RES_SUPERHIRES && (currprefs.chipset_mask & CSMASK_ECS_DENISE) && !(currprefs.chipset_mask & CSMASK_AGA) && (dp_for_drawing->bplcon0 & 0x40);
 	pfield_mode_changed = oecsshres != ecsshres;
 #endif
 
@@ -2887,7 +2877,7 @@ static void pfield_expand_dp_bplcon(void)
 		sprite_smaller_than_64_inuse = true;
 	sprite_smaller_than_64 = (dp_for_drawing->fmode & 0x0c) != 0x0c;
 #endif
-	//ecs_genlock_features_active = ecs_denise && ((dp_for_drawing->bplcon2 & 0x0c00) || ce_is_borderntrans(colors_for_drawing.extra)) ? 1 : 0;
+	//ecs_genlock_features_active = (currprefs.chipset_mask & CSMASK_ECS_DENISE) && ((dp_for_drawing->bplcon2 & 0x0c00) || ce_is_borderntrans(colors_for_drawing.extra)) ? 1 : 0;
 	//if (ecs_genlock_features_active) {
 	//	ecs_genlock_features_colorkey = false;
 	//	ecs_genlock_features_mask = 0;
@@ -2909,7 +2899,7 @@ static bool isham(uae_u16 bplcon0)
 	int p = GET_PLANES(bplcon0);
 	if (!(bplcon0 & 0x800))
 		return 0;
-	if (aga_mode) {
+	if (currprefs.chipset_mask & CSMASK_AGA) {
 		// AGA only has 6 or 8 plane HAM
 		if (p == 6 || p == 8)
 			return 1;
@@ -3074,7 +3064,7 @@ static void do_color_changes(line_draw_func worker_border, line_draw_func worker
 			// playfield
 			if (nextpos_in_range > lastpos && lastpos >= playfield_start && lastpos < playfield_end) {
 				int t = nextpos_in_range <= playfield_end ? nextpos_in_range : playfield_end;
-				if ((plf2pri >= 5 || plf1pri >= 5) && !aga_mode) {
+				if ((plf2pri >= 5 || plf1pri >= 5) && !(currprefs.chipset_mask & CSMASK_AGA)) {
 					weird_bitplane_fix(lastpos, t);
 				}
 				if (may_require_hard_way && (may_require_hard_way < 0 || (bplxor && may_require_hard_way && worker_pfield != pfield_do_linetoscr_bordersprite_aga))) {
@@ -3314,7 +3304,7 @@ static void pfield_draw_line(struct vidbuffer *vb, int lineno, int gfx_ypos, int
 
 			for (int i = 0; i < dip_for_drawing->nr_sprites; i++) {
 #ifdef AGA
-				if (aga_mode)
+				if (currprefs.chipset_mask & CSMASK_AGA)
 					draw_sprites_aga(curr_sprite_entries + dip_for_drawing->first_sprite_entry + i);
 				else
 #endif

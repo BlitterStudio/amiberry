@@ -699,7 +699,7 @@ static int expand_sprres(uae_u16 con0, uae_u16 con3)
 		break;
 #ifdef ECS_DENISE
 	case 0: /* ECS defaults (LORES,HIRES=LORES sprite,SHRES=HIRES sprite) */
-		if (ecs_denise && GET_RES_DENISE(con0) == RES_SUPERHIRES)
+		if ((currprefs.chipset_mask & CSMASK_ECS_DENISE) && GET_RES_DENISE(con0) == RES_SUPERHIRES)
 			res = RES_HIRES;
 		else
 			res = RES_LORES;
@@ -736,7 +736,7 @@ STATIC_INLINE uae_u8 *pfield_xlateptr(uaecptr plpt, int bytecount)
 static void docols(struct color_entry *colentry)
 {
 #ifdef AGA
-	if (aga_mode) {
+	if (currprefs.chipset_mask & CSMASK_AGA) {
 		for (int i = 0; i < 256; i++) {
 			int v = colentry->color_regs_aga[i];
 			if (v < 0 || v > 16777215)
@@ -1041,7 +1041,7 @@ static void create_cycle_diagram_table(void)
 				if (rplanes > max_planes) {
 					rplanes = 0;
 				}
-				if (rplanes == 7 && fm == 0 && res == 0 && !aga_mode) {
+				if (rplanes == 7 && fm == 0 && res == 0 && !(currprefs.chipset_mask & CSMASK_AGA)) {
 					rplanes = 4;
 				}
 				real_bitplane_number[fm][res][planes] = rplanes;
@@ -1062,7 +1062,8 @@ static void estimate_last_fetch_cycle(int hpos)
 
 	if (plf_state < plf_passed_stop) {
 		int stop;
-		if (ecs_agnus) {
+		
+		if (currprefs.chipset_mask & CSMASK_ECS_AGNUS) {
 			// ECS: stop wins if start == stop
 			stop = plfstop + DDF_OFFSET < hpos || plfstop > HARD_DDF_STOP ? HARD_DDF_STOP : plfstop;
 		} else {
@@ -1125,7 +1126,7 @@ static void set_chipset_mode(void)
 	bplcon2 = bplcon2_saved;
 	bplcon3 = bplcon3_saved;
 	bplcon4 = bplcon4_saved;
-	if (!aga_mode) {
+	if (!(currprefs.chipset_mask & CSMASK_AGA)) {
 		fmode = 0;
 		bplcon0 &= ~(0x0010 | 0x0020);
 		bplcon1 &= ~(0xff00);
@@ -1133,11 +1134,11 @@ static void set_chipset_mode(void)
 		bplcon3 &= 0x003f;
 		bplcon3 |= 0x0c00;
 		bplcon4 = 0x0011;
-		if (!ecs_agnus) {
+		if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS)) {
 			bplcon0 &= ~0x0080;
 			diwhigh_written = 0;
 		}
-		if (!ecs_denise) {
+		if (!(currprefs.chipset_mask & CSMASK_ECS_DENISE)) {
 			bplcon0 &= ~0x0001;
 			bplcon2 &= 0x007f;
 			bplcon3 = 0x0c00;
@@ -1155,12 +1156,9 @@ static void set_chipset_mode(void)
 static void update_mirrors(void)
 {
 	aga_mode = (currprefs.chipset_mask & CSMASK_AGA) != 0;
-	ecs_agnus = (currprefs.chipset_mask & CSMASK_ECS_AGNUS) != 0;
-	ecs_denise = (currprefs.chipset_mask & CSMASK_ECS_DENISE) != 0;
-	direct_rgb = aga_mode;
-	if (aga_mode) {
+	if (currprefs.chipset_mask & CSMASK_AGA) {
 		sprite_sprctlmask = 0x01 | 0x08 | 0x10;
-	} else if (ecs_denise) {
+	} else if (currprefs.chipset_mask & CSMASK_ECS_DENISE) {
 		sprite_sprctlmask = 0x01 | 0x10;
 	} else {
 		sprite_sprctlmask = 0x01;
@@ -1186,7 +1184,7 @@ static void record_color_change2(int hpos, int regno, uae_u32 value)
 	int pos = (hpos * 2) * 4;
 
 	// AGA has extra hires pixel delay in color changes
-	if ((regno < 0x1000 || regno == 0x1000 + 0x10c) && aga_mode) {
+	if ((regno < 0x1000 || regno == 0x1000 + 0x10c) && (currprefs.chipset_mask & CSMASK_AGA)) {
 		if (currprefs.chipset_hr)
 			pos += 2;
 		if (regno == 0x1000 + 0x10c) {
@@ -1220,9 +1218,9 @@ static void record_color_change2(int hpos, int regno, uae_u32 value)
 static bool isehb (uae_u16 bplcon0, uae_u16 bplcon2)
 {
 	bool bplehb;
-	if (aga_mode) {
+	if (currprefs.chipset_mask & CSMASK_AGA) {
 		bplehb = (bplcon0 & 0x7010) == 0x6000;
-	} else if (ecs_denise) {
+	} else if (currprefs.chipset_mask & CSMASK_ECS_DENISE) {
 		bplehb = ((bplcon0 & 0xFC00) == 0x6000 || (bplcon0 & 0xFC00) == 0x7000);
 	} else {
 		bplehb = ((bplcon0 & 0xFC00) == 0x6000 || (bplcon0 & 0xFC00) == 0x7000) && !currprefs.cs_denisenoehb;
@@ -1233,7 +1231,7 @@ static bool isehb (uae_u16 bplcon0, uae_u16 bplcon2)
 // OCS/ECS, lores, 7 planes = 4 "real" planes + BPL5DAT and BPL6DAT as static 5th and 6th plane
 STATIC_INLINE int isocs7planes(void)
 {
-	return !aga_mode && bplcon0_res == 0 && bplcon0_planes == 7;
+	return !(currprefs.chipset_mask & CSMASK_AGA) && bplcon0_res == 0 && bplcon0_planes == 7;
 }
 
 int is_bitplane_dma(int hpos)
@@ -1267,9 +1265,9 @@ STATIC_INLINE int is_bitplane_dma_inline(int hpos)
 static int islinetoggle(void)
 {
 	int linetoggle = 0;
-	if (!(beamcon0 & 0x0800) && !(beamcon0 & 0x0020) && ecs_agnus) {
+	if (!(beamcon0 & 0x0800) && !(beamcon0 & 0x0020) && (currprefs.chipset_mask & CSMASK_ECS_AGNUS)) {
 		linetoggle = 1; // NTSC and !LOLDIS -> LOL toggles every line
-	} else if (!ecs_agnus && currprefs.ntscmode) {
+	} else if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS) && currprefs.ntscmode) {
 		linetoggle = 1; // hardwired NTSC Agnus
 	}
 	return linetoggle;
@@ -2249,7 +2247,7 @@ static void hack_shres_delay(int hpos)
 {
 	if (currprefs.chipset_hr)
 		return;
-	if (!aga_mode && !toscr_delay_sh[0] && !toscr_delay_sh[1])
+	if (!(currprefs.chipset_mask & CSMASK_AGA) && !toscr_delay_sh[0] && !toscr_delay_sh[1])
 		return;
 	int o0 = toscr_delay_sh[0];
 	int o1 = toscr_delay_sh[1];
@@ -3586,8 +3584,8 @@ static bool isbrdblank(int hpos, uae_u16 bplcon0, uae_u16 bplcon3)
 {
 	bool brdblank, brdntrans;
 #ifdef ECS_DENISE
-	brdblank = ecs_denise && (bplcon0 & 1) && (bplcon3 & 0x20);
-	brdntrans = ecs_denise && (bplcon0 & 1) && (bplcon3 & 0x10);
+	brdblank = (currprefs.chipset_mask & CSMASK_ECS_DENISE) && (bplcon0 & 1) && (bplcon3 & 0x20);
+	brdntrans = (currprefs.chipset_mask & CSMASK_ECS_DENISE) && (bplcon0 & 1) && (bplcon3 & 0x10);
 #else
 	brdblank = false;
 	brdntrans = false;
@@ -3613,7 +3611,7 @@ static bool issprbrd(int hpos, uae_u16 bplcon0, uae_u16 bplcon3)
 {
 	bool brdsprt;
 #ifdef AGA
-	brdsprt = aga_mode && brdspractive();
+	brdsprt = (currprefs.chipset_mask & CSMASK_AGA) && brdspractive();
 #else
 	brdsprt = false;
 #endif
@@ -3657,7 +3655,7 @@ static void do_playfield_collisions (void)
 	hwres_t hw_diwfirst = coord_window_to_diw_x(thisline_decision.diwfirstword);
 	int i, collided, minpos, maxpos;
 #ifdef AGA
-	int planes = aga_mode ? 8 : 6;
+	int planes = (currprefs.chipset_mask & CSMASK_AGA) ? 8 : 6;
 #else
 	int planes = 6;
 #endif
@@ -3771,7 +3769,7 @@ static void do_sprite_collisions(void)
 			/* Loop over number of playfields.  */
 			for (int k = 1; k >= 0; k--) {
 #ifdef AGA
-				int planes = aga_mode ? 8 : 6;
+				int planes = (currprefs.chipset_mask & CSMASK_AGA) ? 8 : 6;
 #else
 				int planes = 6;
 #endif
@@ -4004,7 +4002,7 @@ static void calcsprite(void)
 		min = tospritexddf(thisline_decision.plfleft);
 		max = tospritexddf(thisline_decision.plfright);
 		if (min > sprite_minx && min < max) { /* min < max = full line ddf */
-			if (ecs_denise) {
+			if (currprefs.chipset_mask & CSMASK_ECS_DENISE) {
 				sprite_minx = min;
 			} else {
 				if (thisline_decision.plfleft >= 0x28 || bpldmawasactive) {
@@ -4535,7 +4533,7 @@ struct chipset_refresh *get_chipset_refresh(struct uae_prefs *p)
 	int isntsc = (beamcon0 & 0x20) ? 0 : 1;
 	int custom = (beamcon0 & 0x80) ? 1 : 0;
 
-	if (!ecs_agnus) {
+	if (!(p->chipset_mask & CSMASK_ECS_AGNUS)) {
 		isntsc = currprefs.ntscmode ? 1 : 0;
 	}
 
@@ -4782,7 +4780,7 @@ static void init_hz(bool checkvposw)
 	beamcon0 = new_beamcon0;
 	isntsc = (beamcon0 & 0x20) ? 0 : 1;
 	islace = (interlace_seen) ? 1 : 0;
-	if (!ecs_agnus) {
+	if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS)) {
 		isntsc = currprefs.ntscmode ? 1 : 0;
 	}
 #ifdef AMIBERRY // Don't change vblank_hz when opening P96 screens
@@ -4965,7 +4963,7 @@ static void init_hz(bool checkvposw)
 		reset_drawing();
 	}
 
-	maxvpos_total = ecs_agnus ? (MAXVPOS_LINES_ECS - 1) : (MAXVPOS_LINES_OCS - 1);
+	maxvpos_total = (currprefs.chipset_mask & CSMASK_ECS_AGNUS) ? (MAXVPOS_LINES_ECS - 1) : (MAXVPOS_LINES_OCS - 1);
 	if (maxvpos_total > MAXVPOS) {
 		maxvpos_total = MAXVPOS;
 	}
@@ -5022,14 +5020,14 @@ static void calcdiw(void)
 			vstop |= 0x100;
 	}
 	// ECS Denise/AGA: horizontal DIWHIGH high bit.
-	if (diwhigh_written && ecs_denise) {
+	if (diwhigh_written && (currprefs.chipset_mask & CSMASK_ECS_DENISE)) {
 		hstrt |= ((diwhigh >> 5) & 1) << (8 + 2);
 		hstop |= ((diwhigh >> 13) & 1) << (8 + 2);
 	} else {
 		hstop |= 0x100 << 2;
 	}
 	// AGA only: horizontal DIWHIGH hires/shres bits.
-	if (diwhigh_written && aga_mode) {
+	if (diwhigh_written && (currprefs.chipset_mask & CSMASK_AGA)) {
 		hstrt |= (diwhigh >> 3) & 3;
 		hstop |= (diwhigh >> 11) & 3;
 	}
@@ -5058,7 +5056,7 @@ static void calcdiw(void)
 
 	plfstrt = ddfstrt - DDF_OFFSET;
 	plfstop = ddfstop - DDF_OFFSET;
-	if (!ecs_agnus) {
+	if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS)) {
 		plfstrt &= 0x00fc;
 		plfstop &= 0x00fc;
 	}
@@ -5111,14 +5109,14 @@ static uae_u16 DENISEID(int *missing)
 		return currprefs.cs_deniserev;
 	}
 #ifdef AGA
-	if (aga_mode) {
+	if (currprefs.chipset_mask & CSMASK_AGA) {
 		if (currprefs.cs_ide == IDE_A4000) {
 			return 0xFCF8;
 		}
 		return 0x00F8;
 	}
 #endif
-	if (ecs_denise) {
+	if (currprefs.chipset_mask & CSMASK_ECS_DENISE) {
 		return 0xFFFC;
 	}
 	if (currprefs.cpu_model == 68000 && (currprefs.cpu_compatible || currprefs.cpu_memory_cycle_exact)) {
@@ -5145,7 +5143,7 @@ static bool blit_busy(void)
 		if (!blt_info.blit_main && blt_info.blit_finald) {
 			return false;
 		}
-	} else if (!aga_mode) {
+	} else if (!(currprefs.chipset_mask & CSMASK_AGA)) {
 		if (blt_info.blit_pending) {
 			return true;
 		}
@@ -5250,19 +5248,20 @@ static uae_u16 VPOSR(void)
 		csbit |= currprefs.cs_agnusrev << 8;
 	} else {
 #ifdef AGA
-		csbit |= aga_mode ? 0x2300 : 0;
+		csbit |= (currprefs.chipset_mask & CSMASK_AGA) ? 0x2300 : 0;
 #endif
-		csbit |= ecs_agnus ? 0x2000 : 0;
+		csbit |= (currprefs.chipset_mask & CSMASK_ECS_AGNUS) ? 0x2000 : 0;
+
 		if (currprefs.ntscmode) {
 			csbit |= 0x1000;
 		}
 	}
 
-	if (!ecs_agnus) {
+	if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS)) {
 		vp &= 1;
 	}
 	vp |= (lof ? 0x8000 : 0) | csbit;
-	if (ecs_agnus) {
+	if (currprefs.chipset_mask & CSMASK_ECS_AGNUS) {
 		vp |= lol ? 0x80 : 0;
 	}
 	hsyncdelay();
@@ -5285,16 +5284,16 @@ static void VPOSW(uae_u16 v)
 		lof_store = (v & 0x8000) ? 1 : 0;
 		lof_changing = lof_store ? 1 : -1;
 	}
-	if (ecs_agnus) {
 		// LOL is always reset when VPOSW is written to.
 		lol = 0;
+	if (currprefs.chipset_mask & CSMASK_ECS_AGNUS) {
 	}
 	if (lof_changing) {
 		return;
 	}
 	vpos &= 0x00ff;
 	v &= 7;
-	if (!ecs_agnus) {
+	if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS)) {
 		v &= 1;
 	}
 	vpos |= v << 8;
@@ -5428,7 +5427,7 @@ static void REFPTR(uae_u16 v)
 static int test_copper_dangerous(uaecptr address)
 {
 	int addr = address & 0x01fe;
-	if (addr < ((copcon & 2) ? (ecs_agnus ? 0 : 0x40) : 0x80)) {
+	if (addr < ((copcon & 2) ? ((currprefs.chipset_mask & CSMASK_ECS_AGNUS) ? 0 : 0x40) : 0x80)) {
 		cop_state.state = COP_stop;
 		copper_enabled_thisline = 0;
 		unset_special (SPCFLAG_COPPER);
@@ -5820,7 +5819,7 @@ static void ADKCON(int hpos, uae_u16 v)
 
 static void BEAMCON0(uae_u16 v)
 {
-	if (ecs_agnus) {
+	if (currprefs.chipset_mask & CSMASK_ECS_AGNUS) {
 		if (v != new_beamcon0) {
 			new_beamcon0 = v;
 			if (v & ~0x20) {
@@ -5836,7 +5835,7 @@ static void BEAMCON0(uae_u16 v)
 static void varsync(void)
 {
 	struct amigadisplay *ad = &adisplays[0];
-	if (!ecs_agnus) {
+	if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS)) {
 		return;
 	}
 #ifdef PICASSO96
@@ -5906,11 +5905,10 @@ static void BPLxPTL(int hpos, uae_u16 v, int num)
 
 static void BPLCON0_Denise(int hpos, uae_u16 v, bool immediate)
 {
-	if (!ecs_denise) {
+	if (! (currprefs.chipset_mask & CSMASK_ECS_DENISE))
 		v &= ~0x00F1;
-	} else if (!aga_mode) {
+	else if (! (currprefs.chipset_mask & CSMASK_AGA))
 		v &= ~0x00B0;
-	}
 
 	v &= ~((currprefs.cs_color_burst ? 0x0000 : 0x0200) | 0x0100 | 0x0080 | 0x0020);
 #if SPRBORDER
@@ -5933,7 +5931,7 @@ static void BPLCON0_Denise(int hpos, uae_u16 v, bool immediate)
 	bplcon0d = v & ~0x80;
 
 #ifdef ECS_DENISE
-	if (ecs_denise) {
+	if (currprefs.chipset_mask & CSMASK_ECS_DENISE) {
 		decide_sprites(hpos);
 		sprres = expand_sprres(v, bplcon3);
 	}
@@ -5947,9 +5945,9 @@ static void BPLCON0_Denise(int hpos, uae_u16 v, bool immediate)
 static void BPLCON0(int hpos, uae_u16 v)
 {
 	bplcon0_saved = v;
-	if (!ecs_denise) {
+	if (! (currprefs.chipset_mask & CSMASK_ECS_DENISE))
 		v &= ~0x00F1;
-	} else if (!aga_mode) {
+	else if (! (currprefs.chipset_mask & CSMASK_AGA)) {
 		v &= ~0x00B0;
 	}
 	v &= ~0x0080;
@@ -5998,7 +5996,7 @@ static void BPLCON0(int hpos, uae_u16 v)
 static void BPLCON1(int hpos, uae_u16 v)
 {
 	bplcon1_saved = v;
-	if (!aga_mode) {
+	if (!(currprefs.chipset_mask & CSMASK_AGA)) {
 		v &= 0xff;
 	}
 	if (bplcon1 == v) {
@@ -6015,12 +6013,10 @@ static void BPLCON1(int hpos, uae_u16 v)
 static void BPLCON2(int hpos, uae_u16 v)
 {
 	bplcon2_saved = v;
-	if (!aga_mode) {
+	if (!(currprefs.chipset_mask & CSMASK_AGA))
 		v &= ~(0x100 | 0x80); // RDRAM and SOGEN
-	}
-	if (!ecs_denise) {
+	if (!(currprefs.chipset_mask & CSMASK_ECS_DENISE))
 		v &= 0x7f;
-	}
 	v &= ~0x8000; // unused
 	if (bplcon2 == v) {
 		return;
@@ -6034,9 +6030,8 @@ static void BPLCON2(int hpos, uae_u16 v)
 static void BPLCON3(int hpos, uae_u16 v)
 {
 	bplcon3_saved = v;
-	if (!ecs_denise) {
+	if (!(currprefs.chipset_mask & CSMASK_ECS_DENISE))
 		return;
-	}
 	if (!(currprefs.chipset_mask & CSMASK_AGA)) {
 		v &= 0x003f;
 		v |= 0x0c00;
@@ -6058,9 +6053,8 @@ static void BPLCON3(int hpos, uae_u16 v)
 static void BPLCON4(int hpos, uae_u16 v)
 {
 	bplcon4_saved = v;
-	if (!aga_mode) {
+	if (!(currprefs.chipset_mask & CSMASK_AGA))
 		return;
-	}
 	if (bplcon4 == v) {
 		return;
 	}
@@ -6182,7 +6176,7 @@ static void DIWSTOP(int hpos, uae_u16 v)
 
 static void DIWHIGH(int hpos, uae_u16 v)
 {
-	if (!ecs_agnus && !ecs_denise) {
+	if (!(currprefs.chipset_mask & (CSMASK_ECS_DENISE | CSMASK_ECS_AGNUS))) {
 		return;
 	}
 	if (!(currprefs.chipset_mask & CSMASK_AGA))
@@ -6199,7 +6193,7 @@ static void DIWHIGH(int hpos, uae_u16 v)
 static void DDFSTRT(int hpos, uae_u16 v)
 {
 	v &= 0xfe;
-	if (!ecs_agnus) {
+	if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS)) {
 		v &= 0xfc;
 	}
 	decide_line(hpos);
@@ -6225,7 +6219,7 @@ static void DDFSTRT(int hpos, uae_u16 v)
 static void DDFSTOP(int hpos, uae_u16 v)
 {
 	v &= 0xfe;
-	if (!ecs_agnus) {
+	if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS)) {
 		v &= 0xfc;
 	}
 	decide_line(hpos);
@@ -6261,10 +6255,7 @@ static void DDFSTOP(int hpos, uae_u16 v)
 
 static void FMODE(int hpos, uae_u16 v)
 {
-	if (!aga_mode) {
-		//if (currprefs.monitoremu) {
-		//	specialmonitor_store_fmode(vpos, hpos, v);
-		//}
+	if (!(currprefs.chipset_mask & CSMASK_AGA)) {
 		v = 0;
 	}
 	v &= 0xC00F;
@@ -6318,7 +6309,7 @@ static void BLTCON0(int hpos, uae_u16 v) { maybe_blit (hpos, 2); bltcon0 = v; re
 * And the winner is... */
 static void BLTCON0L(int hpos, uae_u16 v)
 {
-	if (!ecs_agnus)
+	if (! (currprefs.chipset_mask & CSMASK_ECS_AGNUS))
 		return; // ei voittoa.
 	maybe_blit(hpos, 2); bltcon0 = (bltcon0 & 0xFF00) | (v & 0xFF);
 	reset_blit(1);
@@ -6434,7 +6425,7 @@ static void BLTSIZE(int hpos, uae_u16 v)
 
 static void BLTSIZV(int hpos, uae_u16 v)
 {
-	if (!ecs_agnus) {
+	if (! (currprefs.chipset_mask & CSMASK_ECS_AGNUS)) {
 		return;
 	}
 	maybe_blit(hpos, 0);
@@ -6443,7 +6434,7 @@ static void BLTSIZV(int hpos, uae_u16 v)
 
 static void BLTSIZH(int hpos, uae_u16 v)
 {
-	if (!ecs_agnus) {
+	if (! (currprefs.chipset_mask & CSMASK_ECS_AGNUS)) {
 		return;
 	}
 	maybe_blit(hpos, 0);
@@ -6492,13 +6483,13 @@ static void SPRxCTLPOS(int num)
 	s->dblscan = 0;
 	/* Quite a bit salad in this register... */
 #ifdef AGA
-	if (aga_mode) {
+	if (currprefs.chipset_mask & CSMASK_AGA) {
 		sprxp |= ((s->ctl >> 3) & 3) >> (RES_MAX - sprite_buffer_res);
 		s->dblscan = s->pos & 0x80;
 	}
 #endif
 #ifdef ECS_DENISE
-	else if (ecs_denise) {
+	else if (currprefs.chipset_mask & CSMASK_ECS_DENISE) {
 		sprxp |= ((s->ctl >> 3) & 2) >> (RES_MAX - sprite_buffer_res);
 	}
 #endif
@@ -6507,7 +6498,7 @@ static void SPRxCTLPOS(int num)
 	s->vstart |= (s->ctl & 0x04) ? 0x0100 : 0;
 	s->vstop = s->ctl >> 8;
 	s->vstop |= (s->ctl & 0x02) ? 0x100 : 0;
-	if (ecs_agnus) {
+	if (currprefs.chipset_mask & CSMASK_ECS_AGNUS) {
 		s->vstart |= (s->ctl & 0x40) ? 0x0200 : 0;
 		s->vstop |= (s->ctl & 0x20) ? 0x0200 : 0;
 	}
@@ -6696,7 +6687,7 @@ static uae_u16 COLOR_READ(int num)
 	int cr, cg, cb, colreg;
 	uae_u16 cval;
 
-	if (!aga_mode || !(bplcon2 & 0x0100))
+	if (!(currprefs.chipset_mask & CSMASK_AGA) || !(bplcon2 & 0x0100))
 		return 0xffff;
 
 	colreg = ((bplcon3 >> 13) & 7) * 32 + num;
@@ -6744,7 +6735,7 @@ static void COLOR_WRITE(int hpos, uae_u16 v, int num)
 {
 	bool colzero = false;
 #ifdef AGA
-	if (aga_mode) {
+	if (currprefs.chipset_mask & CSMASK_AGA) {
 		int r,g,b;
 		int cr,cg,cb;
 		int colreg;
@@ -6792,7 +6783,7 @@ static void COLOR_WRITE(int hpos, uae_u16 v, int num)
 	} else {
 #endif
 		v &= 0x8fff;
-		if (!ecs_denise) {
+		if (!(currprefs.chipset_mask & CSMASK_ECS_DENISE)) {
 			v &= 0xfff;
 		}
 		//color_regs_genlock[num] = v >> 15;
@@ -7608,7 +7599,7 @@ static void cursorsprite(void)
 	if (sprres == 0) {
 		sprite_0_doubled = 1;
 	}
-	if (aga_mode) {
+	if (currprefs.chipset_mask & CSMASK_AGA) {
 		int sbasecol = ((bplcon4 >> 4) & 15) << 4;
 		sprite_0_colors[1] = current_colors.color_regs_aga[sbasecol + 1];
 		sprite_0_colors[2] = current_colors.color_regs_aga[sbasecol + 2];
@@ -9394,7 +9385,7 @@ void custom_reset(bool hardreset, bool keyboardreset)
 
 		if (hardreset) {
 			if (!aga_mode) {
-				uae_u16 c = ((ecs_denise && !aga_mode) || currprefs.cs_denisenoehb) ? 0xfff : 0x000;
+				uae_u16 c = (((currprefs.chipset_mask & CSMASK_ECS_DENISE) && !(currprefs.chipset_mask & CSMASK_AGA)) || currprefs.cs_denisenoehb) ? 0xfff : 0x000;
 				for (int i = 0; i < 32; i++) {
 					current_colors.color_regs_ecs[i] = c;
 					current_colors.acolors[i] = getxcolor(c);
@@ -9522,7 +9513,7 @@ void custom_reset(bool hardreset, bool keyboardreset)
 		BPLCON0(0, 0);
 		BPLCON0(0, v);
 		FMODE(0, fmode);
-		if (!aga_mode) {
+		if (!(currprefs.chipset_mask & CSMASK_AGA)) {
 			for(int i = 0 ; i < 32 ; i++)  {
 				vv = current_colors.color_regs_ecs[i];
 				current_colors.color_regs_ecs[i] = -1;
@@ -9562,11 +9553,11 @@ void custom_reset(bool hardreset, bool keyboardreset)
 
 		write_log(_T("CPU=%d Chipset=%s %s\n"),
 			currprefs.cpu_model,
-			(aga_mode ? _T("AGA") :
-			(ecs_agnus && ecs_denise ? _T("Full ECS") :
-			(ecs_denise ? _T("ECS Denise") :
-			(ecs_agnus ? _T("ECS") : _T("OCS"))))),
-			currprefs.ntscmode ? _T("NTSC") : _T("PAL"));
+			(currprefs.chipset_mask & CSMASK_AGA) ? _T("AGA") :
+			(currprefs.chipset_mask & (CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE)) == (CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE) ? _T("Full ECS") :
+			(currprefs.chipset_mask & CSMASK_ECS_DENISE) ? _T("ECS Denise") :
+			(currprefs.chipset_mask & CSMASK_ECS_AGNUS) ? _T("ECS") :
+			_T("OCS"), currprefs.ntscmode ? _T("NTSC") : _T("PAL"));
 		write_log(_T("State restored\n"));
 	}
 
@@ -9724,7 +9715,7 @@ static uae_u32 REGPARAM2 custom_wget_1(int hpos, uaecptr addr, int noput, bool i
 		break;
 
 	case 0x1DA:
-		if (!ecs_agnus)
+		if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS))
 			goto writeonly;
 		v = HHPOSR();
 		break;
@@ -9736,7 +9727,7 @@ static uae_u32 REGPARAM2 custom_wget_1(int hpos, uaecptr addr, int noput, bool i
 	case 0x1A4: case 0x1A6: case 0x1A8: case 0x1AA: case 0x1AC: case 0x1AE:
 	case 0x1B0: case 0x1B2: case 0x1B4: case 0x1B6: case 0x1B8: case 0x1BA:
 	case 0x1BC: case 0x1BE:
-		if (!aga_mode)
+		if (!(currprefs.chipset_mask & CSMASK_AGA))
 			goto writeonly;
 		v = COLOR_READ ((addr & 0x3E) / 2);
 		break;
@@ -9762,7 +9753,7 @@ writeonly:
 			int r, c, bmdma;
 			uae_u16 l;
 
-			if (aga_mode) {
+			if (currprefs.chipset_mask & CSMASK_AGA) {
 				l = 0;
 			} else {
 				// last chip bus value (read or write) is written to register
@@ -9785,7 +9776,7 @@ writeonly:
 			//
 			c = cycle_line[hpos] & CYCLE_MASK;
 			bmdma = is_bitplane_dma(hpos);
-			if (aga_mode) {
+			if (currprefs.chipset_mask & CSMASK_AGA) {
 				if (bmdma || (c > CYCLE_REFRESH && c < CYCLE_CPU)) {
 					v = regs.chipset_latch_rw;
 				} else if (c == CYCLE_CPU) {
@@ -10100,8 +10091,7 @@ static void REGPARAM2 custom_bput (uaecptr addr, uae_u32 value)
 		dummy_put(addr, 1, value);
 		return;
 	}
-	//debug_invalid_reg(addr, -1, value);
-	if (aga_mode) {
+	if (currprefs.chipset_mask & CSMASK_AGA) {
 		if (addr & 1) {
 			rval = value & 0xff;
 		} else {
@@ -10317,7 +10307,7 @@ uae_u8 *restore_custom(uae_u8 *src)
 	if (issprbrd(-1, bplcon0, bplcon3)) {
 		current_colors.extra |= 1 << CE_BORDERSPRITE;
 	}
-	if (ecs_denise && (bplcon0 & 1) && (bplcon3 & 0x10)) {
+	if ((currprefs.chipset_mask & CSMASK_ECS_DENISE) && (bplcon0 & 1) && (bplcon3 & 0x10)) {
 		current_colors.extra |= 1 << CE_BORDERNTRANS;
 	}
 
@@ -10540,7 +10530,7 @@ uae_u8 *save_custom_agacolors(size_t *len, uae_u8 *dstptr)
 {
 	uae_u8 *dstbak, *dst;
 
-	if (!aga_mode) {
+	if (!(currprefs.chipset_mask & CSMASK_AGA)) {
 		int i;
 		for (i = 0; i < 256; i++) {
 			if (current_colors.color_regs_aga[i] || color_regs_genlock[i])
