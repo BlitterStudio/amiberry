@@ -362,7 +362,7 @@ void cd_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	{
 		_tcscpy(prefs->description, _T("AutoBoot Configuration [CD32]"));
 		// SET THE BASE AMIGA (CD32)
-		built_in_prefs(prefs, 8, 3, 0, 0);
+		built_in_prefs(prefs, 8, 0, 0, 0);
 	}
 	else if (is_cdtv)
 	{
