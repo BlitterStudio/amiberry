@@ -161,6 +161,7 @@ static struct teststore testmode_wait[TESTMODE_MAX];
 static int bouncy;
 static frame_time_t bouncy_cycles;
 static int autopause;
+static int keyboard_reset_seq;
 
 #define HANDLE_IE_FLAG_CANSTOPPLAYBACK 1
 #define HANDLE_IE_FLAG_PLAYBACKEVENT 2
@@ -4183,16 +4184,36 @@ void inputdevice_do_keyboard (int code, int state)
 	if (code < 0x80) {
 		uae_u8 key = code | (state ? 0x00 : 0x80);
 		keybuf[key & 0x7f] = (key & 0x80) ? 0 : 1;
+		if (keyboard_reset_seq) {
+			if (!(keybuf[AK_CTRL] || keybuf[AK_RCTRL]) || !keybuf[AK_LAMI] || !keybuf[AK_RAMI]) {
+				memset(keybuf, 0, sizeof(keybuf));
+				send_internalevent(INTERNALEVENT_KBRESET);
+				if (keyboard_reset_seq >= 5 * 50) {
+					uae_reset(1, 1);
+				} else {
+					if (currprefs.cs_resetwarning && resetwarning_do(0))
+						return;
+					uae_reset(0, 1);
+				}
+				keyboard_reset_seq = 0;
+			}
+		}
+
 		if (key == AK_RESETWARNING) {
 			resetwarning_do (0);
 			return;
 		} else if ((keybuf[AK_CTRL] || keybuf[AK_RCTRL]) && keybuf[AK_LAMI] && keybuf[AK_RAMI]) {
 			int r = keybuf[AK_LALT] | keybuf[AK_RALT];
-			if (!r && currprefs.cs_resetwarning && resetwarning_do (1))
-				return;
-			memset (keybuf, 0, sizeof (keybuf));
-			send_internalevent (INTERNALEVENT_KBRESET);
-			uae_reset (r, 1);
+			if (r) {
+				send_internalevent(INTERNALEVENT_KBRESET);
+				uae_reset(1, 1);
+				keyboard_reset_seq = 0;
+			} else {
+				keyboard_reset_seq = 1;
+				if (!currprefs.cs_resetwarning || !resetwarning_do(0)) {
+					custom_reset(false, true);
+				}
+			}
 		}
 		if (record_key ((uae_u8)((key << 1) | (key >> 7)))) {
 			if (inputdevice_logging & 1)
@@ -5347,6 +5368,9 @@ void inputdevice_vsync (void)
 		if (!autopause) {
 			pausemode(1);
 		}
+	}
+	if (keyboard_reset_seq > 0) {
+		keyboard_reset_seq++;
 	}
 
 	input_frame++;
