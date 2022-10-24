@@ -359,6 +359,7 @@ static const TCHAR *obsolete[] = {
 	_T("gfx_hdr"),
 
 	_T("bogomem_fast"),
+	_T("sound_cdaudio"),
 
 	NULL
 };

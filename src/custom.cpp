@@ -8369,9 +8369,9 @@ static void BPLxDAT_next(uae_u32 vv)
 	if ((fmode & 3) == 3) {
 		fetched_aga[num] = ((uae_u64)last_custom_value << 48) | ((uae_u64)data << 32) | ((uae_u64)data << 16) | data;
 	} else if ((fmode & 3) == 2) {
-		fetched_aga[num] = (last_custom_value << 16) | data;
+		fetched_aga[num] = ((uae_u32)last_custom_value << 16) | data;
 	} else if ((fmode & 3) == 1) {
-		fetched_aga[num] = (data << 16) | data;
+		fetched_aga[num] = ((uae_u32)data << 16) | data;
 	} else {
 		fetched_aga[num] = data;
 	}
