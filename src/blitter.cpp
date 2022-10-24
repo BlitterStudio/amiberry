@@ -507,9 +507,14 @@ static void blitter_done_all(int hpos)
 	}
 }
 
-static void blitter_done_except_d(void)
+static void blitter_done_except_d(int hpos)
 {
 	blt_info.blit_main = 0;
+	if (m68k_interrupt_delay && hpos >= 0) {
+		blt_info.finishhpos = hpos;
+	} else {
+		blt_info.finishhpos = -1;
+	}
 	blitter_interrupt();
 	blitter_done_notify(blitline);
 }
@@ -1070,7 +1075,6 @@ static void blit_bltset(int con)
 		}
 		bltcon0_old = bltcon0;
 		bltcon1_old = bltcon1;
-		//activate_debugger();
 	}
 
 	blit_ch = (bltcon0 & 0x0f00) >> 8;
@@ -1776,7 +1780,7 @@ static bool decide_blitter_maybe_write2(int until_hpos, uaecptr addr, uae_u32 va
 						// has final D write?
 						if (blt_info.blit_finald) {
 							if (!(currprefs.chipset_mask & CSMASK_AGA)) {
-								blitter_done_except_d();
+								blitter_done_except_d(hpos);
 							}
 						} else {
 							blitter_done_all(hpos);
