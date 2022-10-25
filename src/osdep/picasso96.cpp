@@ -226,7 +226,7 @@ STATIC_INLINE void endianswap(uae_u32* vp, int bpp)
 	}
 }
 
-//extern uae_u8* natmem_offset;
+extern uae_u8* natmem_offset;
 
 static uae_u8 GetBytesPerPixel(uae_u32 RGBfmt)
 {
@@ -729,7 +729,7 @@ static void rtg_render(void)
 		bool full = vidinfo->full_refresh > 0;
 		if (uaegfx_active) {
 			if (!currprefs.rtg_multithread) {
-				picasso_flushpixels(0, gfxmem_banks[uaegfx_index]->start + regs.natmem_offset, state->XYOffset - gfxmem_banks[uaegfx_index]->start, true);
+				picasso_flushpixels(0, gfxmem_banks[uaegfx_index]->start + natmem_offset, state->XYOffset - gfxmem_banks[uaegfx_index]->start, true);
 			}
 		} else {
 			if (vidinfo->full_refresh < 0)
@@ -4328,7 +4328,7 @@ static void copyrow(int monid, uae_u8 *src, uae_u8 *dst, int x, int y, int width
 	int convert_mode = convert_modep[0];
 
 	if (y >= vidinfo->splitypos && vidinfo->splitypos >= 0) {
-		src = gfxmem_banks[monid]->start + regs.natmem_offset;
+		src = gfxmem_banks[monid]->start + natmem_offset;
 		if (state->dualclut) {
 			clut += 256;
 		}
@@ -5200,7 +5200,7 @@ uae_u8 *uaegfx_getrtgbuffer(int monid, int *widthp, int *heightp, int *pitch, in
 {
 	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[monid];
 	struct picasso96_state_struct *state = &picasso96_state[monid];
-	uae_u8 *src = gfxmem_banks[monid]->start + regs.natmem_offset;
+	uae_u8 *src = gfxmem_banks[monid]->start + natmem_offset;
 	int off = state->XYOffset - gfxmem_banks[monid]->start;
 	int width, height, pixbytes;
 	uae_u8 *dst;
@@ -5476,7 +5476,7 @@ static int render_thread(void* v)
 			lockrtg();
 			if (ad->picasso_requested_on) {
 				struct picasso96_state_struct *state = &picasso96_state[monid];
-				picasso_flushpixels(idx, gfxmem_banks[idx]->start + regs.natmem_offset, state->XYOffset - gfxmem_banks[idx]->start, false);
+				picasso_flushpixels(idx, gfxmem_banks[idx]->start + natmem_offset, state->XYOffset - gfxmem_banks[idx]->start, false);
 				ad->pending_render = true;
 			}
 			unlockrtg();

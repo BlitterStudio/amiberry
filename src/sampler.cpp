@@ -139,7 +139,7 @@ static void capture_free (void)
 	samplebuffer = nullptr;
 }
 
-static evt oldcycles;
+static evt_t oldcycles;
 static int oldoffset;
 
 uae_u8 sampler_getsample (int channel)

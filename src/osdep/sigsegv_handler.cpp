@@ -170,7 +170,7 @@ static int handle_exception(mcontext_t sigcont, long fault_addr)
 		}
 
 		// Get Amiga address of illegal memory address
-		long amiga_addr = long(fault_addr) - long(regs.natmem_offset);
+		long amiga_addr = long(fault_addr) - long(natmem_offset);
 
 		// Check for stupid RAM detection of kickstart
 		if (a3000lmem_bank.allocated_size > 0 && amiga_addr >= a3000lmem_bank.start - 0x00100000 && amiga_addr < a3000lmem_bank.start - 0x00100000 + 8) {
@@ -613,7 +613,7 @@ static int handle_exception(unsigned long* pregs, long fault_addr)
 		}
 
 		// Get Amiga address of illegal memory address
-		auto amiga_addr = (long)fault_addr - (long)regs.natmem_offset;
+		auto amiga_addr = (long)fault_addr - (long)natmem_offset;
 
 		// Check for stupid RAM detection of kickstart
 		if (a3000lmem_bank.allocated_size > 0 && amiga_addr >= a3000lmem_bank.start - 0x00100000 && amiga_addr < a3000lmem_bank.start - 0x00100000 + 8) {

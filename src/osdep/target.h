@@ -219,14 +219,14 @@ STATIC_INLINE uae_u32 atomic_fetch(volatile uae_atomic* p)
 	return *p;
 }
 
-STATIC_INLINE void atomic_and(volatile uae_atomic* p, uae_u32 v)
+STATIC_INLINE uae_atomic atomic_and(volatile uae_atomic* p, uae_u32 v)
 {
-	__sync_and_and_fetch(p, v);
+	return __sync_and_and_fetch(p, v);
 }
 
-STATIC_INLINE void atomic_or(volatile uae_atomic* p, uae_u32 v)
+STATIC_INLINE uae_atomic atomic_or(volatile uae_atomic* p, uae_u32 v)
 {
-	__sync_or_and_fetch(p, v);
+	return __sync_or_and_fetch(p, v);
 }
 
 STATIC_INLINE uae_atomic atomic_inc(volatile uae_atomic* p)

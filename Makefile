@@ -423,6 +423,7 @@ OBJS = \
 	src/filesys.o \
 	src/flashrom.o \
 	src/fpp.o \
+	src/fpp_native.o \
 	src/fsdb.o \
 	src/fsusage.o \
 	src/gayle.o \
@@ -458,6 +459,7 @@ OBJS = \
 	src/uaeserial.o \
 	src/uaenative.o \
 	src/uaeresource.o \
+	src/vm.o \
 	src/zfile.o \
 	src/zfile_archive.o \
 	src/archivers/chd/avhuff.o \
@@ -513,6 +515,7 @@ OBJS = \
 	src/archivers/wrp/warp.o \
 	src/archivers/zip/unzip.o \
 	src/caps/caps_amiberry.o \
+	src/machdep/m68k.o \
 	src/machdep/support.o \
 	src/osdep/ahi_v1.o \
 	src/osdep/bsdsocket_host.o \
@@ -606,12 +609,23 @@ OBJS += src/newcpu.o \
 	src/readcpu.o \
 	src/cpudefs.o \
 	src/cpustbl.o \
+	src/cpummu.o \
+	src/cpummu30.o \
 	src/cpuemu_0.o \
-	src/cpuemu_4.o \
 	src/cpuemu_11.o \
 	src/cpuemu_13.o \
+	src/cpuemu_20.o \
+	src/cpuemu_21.o \
+	src/cpuemu_22.o \
+	src/cpuemu_23.o \
+	src/cpuemu_24.o \
+	src/cpuemu_31.o \
+	src/cpuemu_32.o \
+	src/cpuemu_33.o \
+	src/cpuemu_34.o \
+	src/cpuemu_35.o \
 	src/cpuemu_40.o \
-	src/cpuemu_44.o
+	src/cpuemu_50.o
 
 ifeq ($(USE_JIT),1)
 OBJS += src/jit/compemu.o \

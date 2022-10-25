@@ -257,8 +257,16 @@ static bool event_check_vsync(void)
 	return false;
 }
 
-void do_cycles_cpu_fastest(int cycles_to_add)
+void do_cycles_slow(int cycles_to_add)
 {
+#ifdef WITH_X86
+#if 0
+	if (x86_turbo_on) {
+		execute_other_cpu_single();
+	}
+#endif
+#endif
+
 	if (!currprefs.cpu_thread) {
 		if ((pissoff -= cycles_to_add) >= 0)
 			return;
@@ -294,27 +302,6 @@ void do_cycles_cpu_fastest(int cycles_to_add)
 	}
 	currcycle += cycles_to_add;
 }
-
-void do_cycles_cpu_norm(int cycles_to_add)
-{
-	while ((nextevent - currcycle) <= cycles_to_add)
-	{
-		cycles_to_add -= (nextevent - currcycle);
-		currcycle = nextevent;
-
-		for (auto& i : eventtab)
-		{
-			if (i.active && i.evtime == currcycle)
-			{
-				(*i.handler)();
-			}
-		}
-		events_schedule();
-	}
-	currcycle += cycles_to_add;
-}
-
-do_cycles_func do_cycles = do_cycles_cpu_norm;
 
 void MISC_handler(void)
 {

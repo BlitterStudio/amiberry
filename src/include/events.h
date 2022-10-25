@@ -46,43 +46,36 @@ extern evt_t is_syncline_end;
 typedef void (*evfunc)(void);
 typedef void (*evfunc2)(uae_u32);
 
-typedef void (*do_cycles_func)(int);
-extern do_cycles_func do_cycles;
-void do_cycles_cpu_fastest(int cycles_to_add);
-void do_cycles_cpu_norm(int cycles_to_add);
-
-typedef unsigned long int evt;
-
 struct ev
 {
-	bool active;
+    bool active;
 	evt_t evtime, oldcycles;
-	evfunc handler;
+    evfunc handler;
 };
 
 struct ev2
 {
-	bool active;
+    bool active;
 	evt_t evtime;
-	uae_u32 data;
-	evfunc2 handler;
+    uae_u32 data;
+    evfunc2 handler;
 };
 
 enum {
-	ev_copper, 
-	ev_cia, ev_audio, ev_misc, ev_hsync, ev_hsynch,
-	ev_max
+    ev_cia, ev_audio, ev_misc, ev_hsync, ev_hsynch,
+    ev_max
 };
 
 enum {
-	ev2_blitter, ev2_disk, ev2_misc,
-	ev2_max = 12
+    ev2_blitter, ev2_disk, ev2_misc,
+    ev2_max = 12
 };
 
 extern int pissoff_value;
 extern int pissoff;
 
 #define countdown pissoff
+#define do_cycles do_cycles_slow
 
 extern struct ev eventtab[ev_max];
 extern struct ev2 eventtab2[ev2_max];
@@ -117,11 +110,15 @@ STATIC_INLINE void set_cycles (evt_t x)
 	currcycle = x;
 	eventtab[ev_hsync].oldcycles = x;
 	eventtab[ev_hsynch].active = 0;
+#ifdef EVT_DEBUG
+	if (currcycle & (CYCLE_UNIT - 1))
+		write_log (_T("%x\n"), currcycle);
+#endif
 }
 
 STATIC_INLINE int current_hpos_safe(void)
 {
-	int hp = (int)((get_cycles() - eventtab[ev_hsync].oldcycles)) / CYCLE_UNIT;
+    int hp = (int)((get_cycles() - eventtab[ev_hsync].oldcycles)) / CYCLE_UNIT;
 	return hp;
 }
 

@@ -1760,7 +1760,7 @@ static uae_u8 render_sprites(int pos, int dualpf, uae_u8 apixel, int aga)
 	return 0;
 }
 
-#include "linetoscr.cpp.in"
+#include "linetoscr.cpp"
 
 #define LTPARMS src_pixel, start, stop
 

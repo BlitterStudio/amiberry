@@ -44,6 +44,7 @@ using namespace std;
 #define CPU_x86_64 1
 #define CPU_64_BIT 1
 #define X86_64_ASSEMBLY 1
+#define SAHF_SETO_PROFITABLE
 #elif defined(__i386__) || defined(_M_IX86)
 #define CPU_i386 1
 #elif defined(__arm__) || defined(_M_ARM) || defined(__aarch64__)
