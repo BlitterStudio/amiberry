@@ -18,13 +18,14 @@
 #define FILESYS /* filesys emulation */
 #define UAE_FILESYS_THREADS
 #define AUTOCONFIG /* autoconfig support, fast ram, harddrives etc.. */
-#if !defined (CPU_AMD64) && !defined (__x86_64__) && !defined (__MACH__)
 #define JIT /* JIT compiler support */
-#endif
-#if defined(ARMV6T2) || defined(CPU_AARCH64)
 #define USE_JIT_FPU
-#endif
+//#define NOFLAGS_SUPPORT_GENCPU
+#define NOFLAGS_SUPPORT_GENCOMP
+//#define HAVE_GET_WORD_UNSWAPPED
 #define NATMEM_OFFSET natmem_offset
+#define USE_NORMAL_CALLING_CONVENTION 0
+#define USE_X86_FPUCW 1
 /* #define CATWEASEL */ /* Catweasel MK2/3 support */
 #define AHI /* AHI sound emulation */
 //#define AHI_v2 // AHI v2 was never completed on the Amiga-side
@@ -42,7 +43,7 @@
 #define SCSIEMU /* uaescsi.device emulation */
 #define UAESERIAL /* uaeserial.device emulation */
 #define FPUEMU /* FPU emulation */
-/* #define FPU_UAE */
+#define FPU_UAE
 /* #define WITH_SOFTFLOAT */
 #define MMUEMU /* Aranym 68040 MMU */
 #define FULLMMU /* Aranym 68040 MMU */
@@ -98,10 +99,6 @@
 #define WITH_THREADED_CPU
 #define FLOPPYBRIDGE
 
-/* #define CUSTOM_SIMPLE */ /* simplified custom chipset emulation */
-/* #define CPUEMU_68000_ONLY */ /* drop 68010+ commands from CPUEMU_0 */
-/* #define ADDRESS_SPACE_24BIT */
-
 /* #define WITH_SCSI_IOCTL */
 /* #define WITH_SCSI_SPTI */
 
@@ -122,13 +119,13 @@
 
 #include <stdint.h>
 
-#if defined(__x86_64__) || defined(CPU_AARCH64) || defined CPU_AMD64
+#if defined(__x86_64__) || defined(CPU_AARCH64) || defined(CPU_AMD64)
 #define CPU_64_BIT 1
 #else
 #undef CPU_64_BIT
 #endif
 
-#if defined(__x86_64__) || defined(CPU_AARCH64) || defined CPU_AMD64
+#if defined(__x86_64__) || defined(CPU_AARCH64) || defined(CPU_AMD64)
 #define SIZEOF_VOID_P 8
 #else
 #define SIZEOF_VOID_P 4

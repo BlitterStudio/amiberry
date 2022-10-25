@@ -28,6 +28,8 @@
  * along with ARAnyM; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+#include "sysconfig.h"
+#include "sysdeps.h"
 
 #ifdef UAE
 
@@ -48,8 +50,8 @@
  * code is not 64-bit clean and (ii) it's faster to resolve branches
  * that way.
  */
-#if !defined(CPU_i386) && !defined(CPU_x86_64) && !defined(CPU_arm)
-#error "Only IA-32, X86-64 and ARM v6 targets are supported with the JIT Compiler"
+#if !defined(CPU_i386) && !defined(CPU_x86_64) && !defined(CPU_arm) && !defined(CPU_AARCH64)
+#error "Only IA-32, X86-64, ARM and ARM64 targets are supported with the JIT Compiler"
 #endif
 #endif
 
@@ -57,9 +59,6 @@
 
 /* kludge for Brian, so he can compile under MSVC++ */
 #define USE_NORMAL_CALLING_CONVENTION 0
-
-#include "sysconfig.h"
-#include "sysdeps.h"
 
 #ifdef JIT
 
@@ -101,6 +100,11 @@ static void build_comp(void);
 #include "uae/fs.h"
 #endif
 #include "uae/log.h"
+
+#ifdef __MACH__
+// Needed for sys_cache_invalidate to on the JIT space region, Mac OS X specific
+#include <libkern/OSCacheControl.h>
+#endif
 
 #if defined(__pie__) || defined (__PIE__)
 #error Position-independent code (PIE) cannot be used with JIT
@@ -1031,7 +1035,7 @@ static inline void emit_block(const uae_u8 *block, uae_u32 blocklen)
 
 static inline uae_u32 reverse32(uae_u32 v)
 {
-	return do_byteswap_32(v);
+	return bswap_32(v);
 }
 
 void set_target(uae_u8* t)
@@ -4612,7 +4616,7 @@ int failure;
 #else
 static inline unsigned int get_opcode_cft_map(unsigned int f)
 {
-	return do_byteswap_16(f);
+	return bswap_16(f);
 }
 #define DO_GET_OPCODE(a) (get_opcode_cft_map((uae_u16)*(a)))
 #endif

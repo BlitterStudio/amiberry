@@ -1453,5 +1453,5 @@ void run_gui()
 	}
 
 	// Reset counter for access violations
-	init_max_signals();
+	//init_max_signals();
 }

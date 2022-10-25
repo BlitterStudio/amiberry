@@ -5426,7 +5426,7 @@ void execute_normal(void)
 typedef void compiled_handler (void);
 
 #ifdef WITH_THREADED_CPU
-static void cpu_thread_run_jit(void *v)
+static int cpu_thread_run_jit(void *v)
 {
 	cpu_thread_tid = uae_thread_get_id();
 	cpu_thread_active = 1;
@@ -5455,6 +5455,7 @@ static void cpu_thread_run_jit(void *v)
 	}
 #endif
 	cpu_thread_active = 0;
+	return 0;
 }
 #endif
 

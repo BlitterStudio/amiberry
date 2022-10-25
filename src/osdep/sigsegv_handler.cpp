@@ -36,7 +36,7 @@
 #endif
 #include "uae.h"
 
-#if !defined (__MACH__) && !defined (CPU_AMD64) && !defined (__x86_64__)
+#if !defined(__MACH__) && !defined(CPU_AMD64) && !defined(__x86_64__)
 #include <asm/sigcontext.h>
 #else
 #include <sys/ucontext.h>
@@ -102,7 +102,7 @@ void init_max_signals(void)
 }
 
 
-#if defined(CPU_AARCH64)
+#if defined(CPU_AARCH64) || defined(CPU_AMD64) || defined(__x86_64__)
 
 #ifdef JIT
 static int delete_trigger(blockinfo *bi, void *pc)

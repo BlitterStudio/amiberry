@@ -1639,7 +1639,7 @@ void target_execute(const char* command)
 void target_run(void)
 {
 	// Reset counter for access violations
-	init_max_signals();
+	//init_max_signals();
 }
 
 void target_quit(void)
@@ -3402,7 +3402,7 @@ const TCHAR** uaenative_get_library_dirs(void)
 
 int main(int argc, char* argv[])
 {
-	struct sigaction action{};
+	//struct sigaction action{};
 
 	max_uae_width = 8192;
 	max_uae_height = 8192;
@@ -3442,37 +3442,37 @@ int main(int argc, char* argv[])
 	snprintf(savestate_fname, sizeof savestate_fname, "%s/default.ads", savestate_dir);
 	logging_init();
 
-	memset(&action, 0, sizeof action);
-	action.sa_sigaction = signal_segv;
-	action.sa_flags = SA_SIGINFO;
-	if (sigaction(SIGSEGV, &action, nullptr) < 0)
-	{
-		printf("Failed to set signal handler (SIGSEGV).\n");
-		abort();
-	}
-	if (sigaction(SIGILL, &action, nullptr) < 0)
-	{
-		printf("Failed to set signal handler (SIGILL).\n");
-		abort();
-	}
+	//memset(&action, 0, sizeof action);
+	//action.sa_sigaction = signal_segv;
+	//action.sa_flags = SA_SIGINFO;
+	//if (sigaction(SIGSEGV, &action, nullptr) < 0)
+	//{
+	//	printf("Failed to set signal handler (SIGSEGV).\n");
+	//	abort();
+	//}
+	//if (sigaction(SIGILL, &action, nullptr) < 0)
+	//{
+	//	printf("Failed to set signal handler (SIGILL).\n");
+	//	abort();
+	//}
 
-	memset(&action, 0, sizeof action);
-	action.sa_sigaction = signal_buserror;
-	action.sa_flags = SA_SIGINFO;
-	if (sigaction(SIGBUS, &action, nullptr) < 0)
-	{
-		printf("Failed to set signal handler (SIGBUS).\n");
-		abort();
-	}
+	//memset(&action, 0, sizeof action);
+	//action.sa_sigaction = signal_buserror;
+	//action.sa_flags = SA_SIGINFO;
+	//if (sigaction(SIGBUS, &action, nullptr) < 0)
+	//{
+	//	printf("Failed to set signal handler (SIGBUS).\n");
+	//	abort();
+	//}
 
-	memset(&action, 0, sizeof action);
-	action.sa_sigaction = signal_term;
-	action.sa_flags = SA_SIGINFO;
-	if (sigaction(SIGTERM, &action, nullptr) < 0)
-	{
-		printf("Failed to set signal handler (SIGTERM).\n");
-		abort();
-	}
+	//memset(&action, 0, sizeof action);
+	//action.sa_sigaction = signal_term;
+	//action.sa_flags = SA_SIGINFO;
+	//if (sigaction(SIGTERM, &action, nullptr) < 0)
+	//{
+	//	printf("Failed to set signal handler (SIGTERM).\n");
+	//	abort();
+	//}
 
 	alloc_AmigaMem();
 	RescanROMs();
