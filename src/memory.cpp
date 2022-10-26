@@ -58,7 +58,7 @@ bool canbang = true;
 static bool rom_write_enabled;
 #ifdef JIT
 /* Set by each memory handler that does not simply access real memory. */
-int special_mem;
+int special_mem, special_mem_default;
 /* do not use get_n_addr */
 int jit_n_addr_unsafe;
 #endif

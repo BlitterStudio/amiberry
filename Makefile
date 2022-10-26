@@ -22,7 +22,7 @@ export SDL_CFLAGS := $(shell $(SDL_CONFIG) --cflags)
 export SDL_LDFLAGS := $(shell $(SDL_CONFIG) --libs)
 
 CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -Isrc/floppybridge -DAMIBERRY -D_FILE_OFFSET_BITS=64
-CFLAGS=-pipe -Wno-shift-overflow -Wno-narrowing -fno-pie
+CFLAGS=-pipe -Wno-shift-overflow -Wno-narrowing -fno-pie -fPIC
 USE_LD ?= gold
 LDFLAGS = $(SDL_LDFLAGS) -lSDL2_image -lSDL2_ttf -lguisan -Lexternal/libguisan/lib
 ifneq ($(strip $(USE_LD)),)
