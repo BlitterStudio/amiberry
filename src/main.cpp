@@ -255,15 +255,20 @@ void fixup_cpu (struct uae_prefs *p)
 	switch (p->cpu_model)
 	{
 	case 68000:
+		break;
 	case 68010:
+		break;
 	case 68020:
+		break;
 	case 68030:
 		break;
 	case 68040:
 		if (p->fpu_model)
 			p->fpu_model = 68040;
 		break;
-	default:
+	case 68060:
+		if (p->fpu_model)
+			p->fpu_model = 68060;
 		break;
 	}
 
@@ -758,8 +763,7 @@ static void parse_cmdline_2 (int argc, TCHAR **argv)
 	for (auto i = 1; i < argc; i++) {
 		if (_tcsncmp(argv[i], _T("-cfgparam="), 10) == 0) {
 			cfgfile_addcfgparam(argv[i] + 10);
-		} else if (_tcscmp(argv[i], _T("-cfgparam")) == 0)
-		{
+		} else if (_tcscmp(argv[i], _T("-cfgparam")) == 0) {
 			if (i + 1 == argc)
 				write_log (_T("Missing argument for '-cfgparam' option.\n"));
 			else
@@ -1195,7 +1199,11 @@ static int real_main2 (int argc, TCHAR **argv)
 	}
 
 #ifdef NATMEM_OFFSET
+#ifdef AMIBERRY
+	preinit_shm ();
+#else
 	//preinit_shm ();
+#endif
 #endif
 
 	if (restart_config[0]) {
@@ -1252,6 +1260,7 @@ static int real_main2 (int argc, TCHAR **argv)
 	gui_data.net = -1;
 	gui_data.md = (currprefs.cs_cd32nvram || currprefs.cs_cdtvram) ? 0 : -1;
 
+	compiler_init();
 #ifdef NATMEM_OFFSET
 	if (!init_shm ()) {
 		if (currprefs.start_gui)

@@ -2395,12 +2395,14 @@ static void MakeFromSR_x(int t0trace)
 	SET_ZFLG((regs.sr >> 2) & 1);
 	SET_VFLG((regs.sr >> 1) & 1);
 	SET_CFLG(regs.sr & 1);
+
 	if (regs.t1 == ((regs.sr >> 15) & 1) &&
 		regs.t0 == ((regs.sr >> 14) & 1) &&
 		regs.s  == ((regs.sr >> 13) & 1) &&
 		regs.m  == ((regs.sr >> 12) & 1) &&
 		regs.intmask == ((regs.sr >> 8) & 7))
 		return;
+
 	regs.t1 = (regs.sr >> 15) & 1;
 	regs.t0 = (regs.sr >> 14) & 1;
 	regs.s  = (regs.sr >> 13) & 1;
@@ -2413,11 +2415,12 @@ static void MakeFromSR_x(int t0trace)
 			if (t0trace < 0 && regs.ipl[0] <= regs.intmask && regs.ipl[0] > newimask && regs.ipl[0] < 7) {
 				regs.ipl[0] = 0;
 			}
+		} else {
+			if (regs.ipl[0] <= regs.intmask && regs.ipl_pin > newimask) {
+				set_special(SPCFLAG_INT);
+			}
 		}
 		regs.intmask = newimask;
-		if (regs.ipl_pin > regs.intmask) {
-			set_special(SPCFLAG_INT);
-		}
 	}
 
 	if (currprefs.cpu_model >= 68020) {
@@ -2886,11 +2889,8 @@ kludge_me_do:
 		return;
 	}
 	regs.ird = regs.ir;
-	if (m68k_accurate_ipl && interrupt) {
-		ipl_fetch_now();
-	}
 	x_do_cycles(2 * cpucycleunit);
-	if (m68k_accurate_ipl && !interrupt) {
+	if (m68k_accurate_ipl) {
 		ipl_fetch_next();
 	}
 	regs.irc = x_get_word(m68k_getpc() + 2); // prefetch 2
@@ -4456,13 +4456,14 @@ static int time_for_interrupt(void)
 // ipl check mid next memory cycle
 void ipl_fetch_next_pre(void)
 {
+	ipl_fetch_next();
 	regs.ipl_evt_pre = get_cycles();
 	regs.ipl_evt_pre_mode = 1;
 }
 
 void ipl_fetch_now_pre(void)
 {
-	regs.ipl[1] = regs.ipl_pin;
+	ipl_fetch_now();
 	regs.ipl_evt_pre = get_cycles();
 	regs.ipl_evt_pre_mode = 0;
 }
@@ -4471,6 +4472,7 @@ void ipl_fetch_now_pre(void)
 void ipl_fetch_now(void)
 {
 	evt_t c = get_cycles();
+
 	regs.ipl_evt = c;
 	regs.ipl[0] = regs.ipl_pin;
 	regs.ipl[1] = 0;
@@ -4482,8 +4484,12 @@ void ipl_fetch_now(void)
 void ipl_fetch_next(void)
 {
 	evt_t c = get_cycles();
+
 	if (c - regs.ipl_pin_change_evt >= cpuipldelay4) {
 		regs.ipl[0] = regs.ipl_pin;
+		regs.ipl[1] = 0;
+	} else if (c - regs.ipl_pin_change_evt_p >= cpuipldelay2) {
+		regs.ipl[0] = regs.ipl_pin_p;
 		regs.ipl[1] = 0;
 	} else {
 		regs.ipl[1] = regs.ipl_pin;
@@ -4498,6 +4504,36 @@ void intlev_load(void)
 	doint();
 }
 
+static void update_ipl(int ipl)
+{
+	evt_t c = get_cycles();
+	regs.ipl_pin_change_evt_p = regs.ipl_pin_change_evt;
+	regs.ipl_pin_p = regs.ipl_pin;
+	regs.ipl_pin_change_evt = c;
+	regs.ipl_pin = ipl;
+	if (m68k_accurate_ipl) {
+		// check if 68000/010 interrupt was detected mid memory access,
+		// 2 cycles from start of memory cycle
+		if (ipl > 0 && c == regs.ipl_evt_pre + cpuipldelay2) {
+			if (regs.ipl_evt_pre_mode) {
+				ipl_fetch_next();
+			} else {
+				ipl_fetch_now();
+			}
+		}
+	}
+#ifdef DEBUGGER
+	if (debug_dma) {
+		record_dma_ipl(current_hpos(), vpos);
+	}
+#endif
+}
+
+static void doint_delayed(uae_u32 v)
+{
+	update_ipl(v);
+}
+
 void doint(void)
 {
 #ifdef WITH_PPC
@@ -4506,26 +4542,23 @@ void doint(void)
 			return;
 	}
 #endif
-	int il = intlev();
-	if (regs.ipl_pin != il) {
-		regs.ipl_pin = il;
-		regs.ipl_pin_change_evt = get_cycles();
-		if (m68k_accurate_ipl) {
-			// check if 68000/010 interrupt was detected mid memory access,
-			// 2 cycles from start of memory cycle
-			if (il > 0 && get_cycles() == regs.ipl_evt_pre + cpuipldelay2) {
-				if (regs.ipl_evt_pre_mode) {
-					ipl_fetch_next();
-				} else {
-					ipl_fetch_now();
-				}
-			}
+	int ipl = intlev();
+
+	if (regs.ipl_pin != ipl) {
+
+		// Paula does low to high IPL changes about 1.5 CPU clocks later than high to low.
+		// -> CPU detects IPL change 1 CCK later if any IPL pin has high to low transition.
+		// (In real world IPL is active low and delay is added if 0 to 1 transition)
+		if (m68k_accurate_ipl && regs.ipl_pin >= 0 && ipl >= 0 && (
+			((regs.ipl_pin & 1) && !(ipl & 1)) ||
+			((regs.ipl_pin & 2) && !(ipl & 2)) ||
+			((regs.ipl_pin & 4) && !(ipl & 4))
+			)) {
+				event2_newevent_xx(-1, CYCLE_UNIT, ipl, doint_delayed);
+				return;
 		}
-#ifdef DEBUGGER
-		if (debug_dma) {
-			record_dma_ipl(current_hpos(), vpos);
-		}
-#endif
+
+		update_ipl(ipl);
 	}
 	if (m68k_interrupt_delay) {
 		if (!m68k_accurate_ipl && regs.ipl_pin > regs.intmask) {
@@ -4845,7 +4878,7 @@ static void m68k_run_1 (void)
 				cpu_cycles = adjust_cycles (cpu_cycles);
 				do_cycles(cpu_cycles);
 				regs.instruction_cnt++;
-				if (r->spcflags || regs.ipl[0]) {
+				if (r->spcflags || regs.ipl[0] > 0) {
 					if (do_specialties (cpu_cycles))
 						exit = true;
 				}
@@ -4981,7 +5014,7 @@ cont:
 #endif
 				}
 
-				if (r->spcflags || regs.ipl[0]) {
+				if (r->spcflags || regs.ipl[0] > 0) {
 					if (do_specialties (0))
 						exit = true;
 				}
@@ -6060,7 +6093,7 @@ static void m68k_run_2ce (void)
 				regs.instruction_cnt++;
 
 		cont:
-				if (r->spcflags || regs.ipl[0]) {
+				if (r->spcflags || regs.ipl[0] > 0) {
 					if (do_specialties (0))
 						exit = true;
 				}
@@ -6204,7 +6237,7 @@ static void m68k_run_2p (void)
 					x_do_cycles(cpu_cycles);
 
 cont:
-				if (r->spcflags || regs.ipl[0]) {
+				if (r->spcflags || regs.ipl[0] > 0) {
 					if (do_specialties (cpu_cycles))
 						exit = true;
 				}
@@ -6997,9 +7030,11 @@ uae_u8 *restore_cpu (uae_u8 *src)
 			regs.ipl[0] = restore_u8();
 			regs.ipl[1] = restore_u8();
 			regs.ipl_pin = (uae_s32)restore_u8();
+			regs.ipl_pin_p = (uae_s32)restore_u8();
 			regs.ipl_evt = restore_u64();
 			regs.ipl_evt_pre = restore_u64();
 			regs.ipl_pin_change_evt = restore_u64();
+			regs.ipl_pin_change_evt_p = restore_u64();
 		}
 	}
 
@@ -7437,9 +7472,11 @@ uae_u8 *save_cpu(size_t *len, uae_u8 *dstptr)
 		save_u8(regs.ipl[0]);
 		save_u8(regs.ipl[1]);
 		save_u8(regs.ipl_pin);
+		save_u8(regs.ipl_pin_p);
 		save_u64(regs.ipl_evt);
 		save_u64(regs.ipl_evt_pre);
 		save_u64(regs.ipl_pin_change_evt);
+		save_u64(regs.ipl_pin_change_evt_p);
 	}
 	*len = dst - dstbak;
 	return dstbak;
@@ -8503,36 +8540,56 @@ static void fill_icache030(uae_u32 addr)
 			// instruction cache not frozen and enabled
 			update_icache030 (c, data, tag, lws);
 		}
-		if ((mmu030_cache_state & CACHE_ENABLE_INS_BURST) && (regs.cacr & 0x11) == 0x11 && (c->valid[0] + c->valid[1] + c->valid[2] + c->valid[3] == 1)) {
-			// do burst fetch if cache enabled, not frozen, all slots invalid, no chip ram
-			int i;
-			for (i = 0; i < 4; i++) {
-				if (c->valid[i])
-					break;
-			}
-			uaecptr baddr = addr & ~15;
-			if (currprefs.mmu_model) {
-				TRY (prb) {
-					if (currprefs.cpu_cycle_exact)
-						do_cycles_ce020(3 * (CPU020_MEM_CYCLE - 1));
-					for (int j = 0; j < 3; j++) {
-						i++;
-						i &= 3;
-						c->data[i] = icache_fetch(baddr + i * 4);
-						c->valid[i] = true;
-					}
-				} CATCH (prb) {
-					; // abort burst fetch if bus error, do not report it.
-				} ENDTRY
-			} else {
-				for (int j = 0; j < 3; j++) {
-					i++;
-					i &= 3;
-					c->data[i] = icache_fetch(baddr + i * 4);
-					c->valid[i] = true;
+
+		// Do burst fetch if enabled, cache is not frozen, all line slots invalid, and 32-bit CPU local bus (no chip ram).
+		//
+		// Burst cycles 2-4 are handled by the 030 bus controller rather than the sequencing unit.
+		// The MMU only translates the first cache fetch (above) and the following 3 fetches increment
+		// address lines A2-A3 (optionally via external hardware).  If a bus error occurs, no exception
+		// is generated and the remaining cache line slots are left invalid.
+		//
+		if ((mmu030_cache_state & CACHE_ENABLE_INS_BURST) && (regs.cacr & 0x11) == 0x11) {
+			if (c->valid[0] + c->valid[1] + c->valid[2] + c->valid[3] == 1) {
+				uaecptr physaddr = addr;
+				if (currprefs.mmu_model) {
+					physaddr = mmu030_translate(addr, regs.s != 0, false, false);
 				}
-				if (currprefs.cpu_cycle_exact)
-					do_cycles_ce020_mem (3 * (CPU020_MEM_CYCLE - 1), c->data[3]);
+
+				if (ce_banktype[physaddr >> 16] == CE_MEMBANK_FAST32) {
+					int i;
+					for (i = 0; i < 4; i++) {
+						if (c->valid[i])
+							break;
+					}
+					uaecptr baddr = physaddr & ~15;
+
+					if (currprefs.mmu_model) {
+						TRY (prb) {
+							// TODO: Need memory functions for burst row and burst column access.
+							for (int j = 0; j < 3; j++) {
+								i++;
+								i &= 3;
+								c->data[i] = get_longi(baddr + i * 4);
+								c->valid[i] = true;
+
+								if (currprefs.cpu_cycle_exact)
+									do_cycles_ce020_mem(1 * (CPU020_MEM_CYCLE - 1), c->data[i]);
+							}
+						} CATCH (prb) {
+							; // abort burst fetch if bus error, do not report it.
+						} ENDTRY
+					} else {
+						for (int j = 0; j < 3; j++) {
+							i++;
+							i &= 3;
+							c->data[i] = get_longi(baddr + i * 4);
+							c->valid[i] = true;
+
+							if (currprefs.cpu_cycle_exact)
+								do_cycles_ce020_mem(1 * (CPU020_MEM_CYCLE - 1), c->data[i]);
+						}
+					}
+				}
 			}
 		}
 	}
@@ -8670,36 +8727,48 @@ void write_dcache030_retry(uaecptr addr, uae_u32 v, uae_u32 fc, int size, int fl
 
 static void dcache030_maybe_burst(uaecptr addr, struct cache030 *c, int lws)
 {
-	if ((c->valid[0] + c->valid[1] + c->valid[2] + c->valid[3] == 1) && ce_banktype[addr >> 16] == CE_MEMBANK_FAST32) {
-		// do burst fetch if cache enabled, not frozen, all slots invalid, no chip ram
-		int i;
-		uaecptr baddr = addr & ~15;
-		for (i = 0; i < 4; i++) {
-			if (c->valid[i])
-				break;
-		}
+	// Do burst fetch if enabled, cache not frozen, all line slots invalid, and 32-bit CPU local bus (no chip ram).
+	// (See notes about burst fetches in icache routines)
+	if (c->valid[0] + c->valid[1] + c->valid[2] + c->valid[3] == 1) {
+		uaecptr physaddr = addr;
 		if (currprefs.mmu_model) {
-			TRY (prb) {
-				if (currprefs.cpu_cycle_exact)
-					do_cycles_ce020(3 * (CPU020_MEM_CYCLE - 1));
+			physaddr = mmu030_translate(addr, regs.s != 0, false, false);
+		}
+
+		if (ce_banktype[physaddr >> 16] == CE_MEMBANK_FAST32) {
+			int i;
+			for (i = 0; i < 4; i++) {
+				if (c->valid[i])
+					break;
+			}
+			uaecptr baddr = physaddr & ~15;
+
+			if (currprefs.mmu_model) {
+				TRY (prb) {
+					// TODO: Need memory functions for burst row and burst column access.
+					for (int j = 0; j < 3; j++) {
+						i++;
+						i &= 3;
+						c->data[i] = get_long(baddr + i * 4);
+						c->valid[i] = true;
+
+						if (currprefs.cpu_cycle_exact)
+							do_cycles_ce020_mem(1 * (CPU020_MEM_CYCLE - 1), c->data[i]);
+					}
+				} CATCH (prb) {
+					; // abort burst fetch if bus error
+				} ENDTRY
+			} else {
 				for (int j = 0; j < 3; j++) {
 					i++;
 					i &= 3;
-					c->data[i] = dcache_lget (baddr + i * 4);
+					c->data[i] = get_long(baddr + i * 4);
 					c->valid[i] = true;
+
+					if (currprefs.cpu_cycle_exact)
+						do_cycles_ce020_mem(1 * (CPU020_MEM_CYCLE - 1), c->data[i]);
 				}
-			} CATCH (prb) {
-				; // abort burst fetch if bus error
-			} ENDTRY
-		} else {
-			for (int j = 0; j < 3; j++) {
-				i++;
-				i &= 3;
-				c->data[i] = dcache_lget (baddr + i * 4);
-				c->valid[i] = true;
 			}
-			if (currprefs.cpu_cycle_exact)
-				do_cycles_ce020_mem (3 * (CPU020_MEM_CYCLE - 1), c->data[i]);
 		}
 #if VALIDATE_68030_DATACACHE
 		validate_dcache030();

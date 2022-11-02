@@ -1,5 +1,5 @@
 #include <cstdlib>
-#include "string.h"
+#include <cstring>
 
 #include "sysdeps.h"
 #include "options.h"
@@ -7,7 +7,12 @@
 #include "newcpu.h"
 #include "autoconf.h"
 #include "uae/mman.h"
+#include "uae/vm.h"
+#include "gfxboard.h"
+#include "cpuboard.h"
 #include <sys/mman.h>
+
+#include "gui.h"
 #include "sys/types.h"
 #ifndef __MACH__
 #include "sys/sysinfo.h"
@@ -17,48 +22,173 @@
 #define valloc(x) memalign(getpagesize(), x)
 #endif
 
+#if defined(__x86_64__) || defined(CPU_AARCH64)
+static int os_64bit = 1;
+#else
+static int os_64bit = 0;
+#endif
+
+#define MEM_COMMIT       0x00001000
+#define MEM_RESERVE      0x00002000
+#define MEM_DECOMMIT         0x4000
+#define MEM_RELEASE          0x8000
+#define MEM_WRITE_WATCH  0x00200000
+#define MEM_TOP_DOWN     0x00100000
+
+#define PAGE_EXECUTE_READWRITE 0x40
+#define PAGE_NOACCESS          0x01
+#define PAGE_READONLY          0x02
+#define PAGE_READWRITE         0x04
+
+typedef void* LPVOID;
+typedef size_t SIZE_T;
+
+typedef struct {
+	int dwPageSize;
+} SYSTEM_INFO;
+
+static void GetSystemInfo(SYSTEM_INFO* si)
+{
+	si->dwPageSize = sysconf(_SC_PAGESIZE);
+}
+
+#define USE_MMAP
+
+#ifdef USE_MMAP
+#ifdef MACOSX
+#define MAP_ANONYMOUS MAP_ANON
+#endif
+#endif
+
+static void* VirtualAlloc(void* lpAddress, size_t dwSize, int flAllocationType,
+	int flProtect)
+{
+	write_log("- VirtualAlloc addr=%p size=%zu type=%d prot=%d\n",
+		lpAddress, dwSize, flAllocationType, flProtect);
+	if (flAllocationType & MEM_RESERVE) {
+		write_log("  MEM_RESERVE\n");
+	}
+	if (flAllocationType & MEM_COMMIT) {
+		write_log("  MEM_COMMIT\n");
+	}
+
+	int prot = 0;
+	if (flProtect == PAGE_READWRITE) {
+		write_log("  PAGE_READWRITE\n");
+		prot = UAE_VM_READ_WRITE;
+	}
+	else if (flProtect == PAGE_READONLY) {
+		write_log("  PAGE_READONLY\n");
+		prot = UAE_VM_READ;
+	}
+	else if (flProtect == PAGE_EXECUTE_READWRITE) {
+		write_log("  PAGE_EXECUTE_READWRITE\n");
+		prot = UAE_VM_READ_WRITE_EXECUTE;
+	}
+	else {
+		write_log("  WARNING: unknown protection\n");
+	}
+
+	void* address = NULL;
+
+	if (flAllocationType == MEM_COMMIT && lpAddress == NULL) {
+		write_log("NATMEM: Allocated non-reserved memory size %zu\n", dwSize);
+		void* memory = uae_vm_alloc(dwSize, 0, UAE_VM_READ_WRITE);
+		if (memory == NULL) {
+			write_log("memory allocated failed errno %d\n", errno);
+		}
+		return memory;
+	}
+
+	if (flAllocationType & MEM_RESERVE) {
+		address = uae_vm_reserve(dwSize, 0);
+	}
+	else {
+		address = lpAddress;
+	}
+
+	if (flAllocationType & MEM_COMMIT) {
+		write_log("commit prot=%d\n", prot);
+		uae_vm_commit(address, dwSize, prot);
+	}
+
+	return address;
+}
+
+static int VirtualProtect(void* lpAddress, int dwSize, int flNewProtect,
+	unsigned int* lpflOldProtect)
+{
+	write_log("- VirtualProtect addr=%p size=%d prot=%d\n",
+		lpAddress, dwSize, flNewProtect);
+	int prot = 0;
+	if (flNewProtect == PAGE_READWRITE) {
+		write_log("  PAGE_READWRITE\n");
+		prot = UAE_VM_READ_WRITE;
+	}
+	else if (flNewProtect == PAGE_READONLY) {
+		write_log("  PAGE_READONLY\n");
+		prot = UAE_VM_READ;
+	}
+	else {
+		write_log("  -- unknown protection --\n");
+	}
+	if (uae_vm_protect(lpAddress, dwSize, prot) == 0) {
+		write_log("mprotect failed errno %d\n", errno);
+		return 0;
+	}
+	return 1;
+}
+
+static bool VirtualFree(void* lpAddress, size_t dwSize, int dwFreeType)
+{
+	int result = 0;
+	if (dwFreeType == MEM_DECOMMIT) {
+		return uae_vm_decommit(lpAddress, dwSize);
+	}
+	else if (dwFreeType == MEM_RELEASE) {
+		return uae_vm_free(lpAddress, dwSize);
+	}
+	return 0;
+}
+
+static int GetLastError()
+{
+	return errno;
+}
+
+static int my_getpagesize(void)
+{
+	return uae_vm_page_size();
+}
+
+#define getpagesize my_getpagesize
+
+
 static uae_u32 natmem_size;
 uae_u32 max_z3fastmem;
 
-/* JIT can access few bytes outside of memory block of it executes code at the very end of memory block */
+/* BARRIER is used in case Amiga memory is access across memory banks,
+ * for example move.l $1fffffff,d0 when $10000000-$1fffffff is mapped and
+ * $20000000+ is not mapped.
+ * Note: BARRIER will probably effectively be rounded up the host memory
+ * page size.
+ */
 #define BARRIER 32
 
-uae_u8* natmem_offset;
-static uae_u8* additional_mem = static_cast<uae_u8*>(MAP_FAILED);
-#define MAX_RTG_MEM (128 * 1024 * 1024)
-#define ADDITIONAL_MEMSIZE (max_z3fastmem + MAX_RTG_MEM)
+#define MAXZ3MEM32 0x7F000000
+#define MAXZ3MEM64 0xF0000000
 
-static uae_u8* a3000_mem = static_cast<uae_u8*>(MAP_FAILED);
-static unsigned int a3000_totalsize = 0;
-#define A3000MEM_START 0x08000000
-
-static unsigned int last_low_size = 0;
-static unsigned int last_high_size = 0;
-int z3_base_adr = 0;
-
-void free_AmigaMem(void)
-{
-	if (natmem_offset != nullptr)
-	{
-#ifdef AMIBERRY
-		munmap(natmem_offset, natmem_size + BARRIER);
-#else
-		free(natmem_offset);
-#endif
-		natmem_offset = nullptr;
-	}
-	if (additional_mem != MAP_FAILED)
-	{
-		munmap(additional_mem, ADDITIONAL_MEMSIZE + BARRIER);
-		additional_mem = static_cast<uae_u8*>(MAP_FAILED);
-	}
-	if (a3000_mem != MAP_FAILED)
-	{
-		munmap(a3000_mem, a3000_totalsize);
-		a3000_mem = static_cast<uae_u8*>(MAP_FAILED);
-		a3000_totalsize = 0;
-	}
-}
+static struct uae_shmid_ds shmids[MAX_SHMID];
+uae_u8 *natmem_reserved, *natmem_offset;
+uae_u32 natmem_reserved_size;
+static uae_u8 *p96mem_offset;
+static int p96mem_size;
+static uae_u32 p96base_offset;
+static SYSTEM_INFO si;
+static uaecptr start_rtg = 0;
+static uaecptr end_rtg = 0;
+static uint32_t maxmem;
+bool jit_direct_compatible_memory;
 
 bool can_have_1gb()
 {
@@ -77,165 +207,605 @@ bool can_have_1gb()
 	#endif
 }
 
-void alloc_AmigaMem(void)
+static uae_u8 *virtualallocwithlock (LPVOID addr, SIZE_T size, unsigned int allocationtype, unsigned int protect)
 {
-	free_AmigaMem();
-	set_expamem_z3_hack_mode(Z3MAPPING_AUTO);
-
-// This crashes on Android
-#ifndef ANDROID
-	// First attempt: allocate 16 MB for all memory in 24-bit area
-	// and additional mem for Z3 and RTG at correct offset
-	natmem_size = 16 * 1024 * 1024;
-#ifdef AMIBERRY
-	// address returned by valloc() too high for later mmap() calls. Use mmap() also for first area.
-	natmem_offset = static_cast<uae_u8*>(mmap(reinterpret_cast<void *>(0x20000000), natmem_size + BARRIER,
-	                                               PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0));
-#else
-	natmem_offset = (uae_u8*)valloc(natmem_size + BARRIER);
-#endif
-
-	if (can_have_1gb())
-		max_z3fastmem = 1024 * 1024 * 1024;
-	else
-		max_z3fastmem = 512 * 1024 * 1024;
-
-	if (!natmem_offset)
-	{
-		write_log("Can't allocate 16M of virtual address space!?\n");
-		abort();
-	}
-	additional_mem = static_cast<uae_u8*>(mmap(natmem_offset + Z3BASE_REAL, ADDITIONAL_MEMSIZE + BARRIER,
-	                                           PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0));
-	if (additional_mem != MAP_FAILED)
-	{
-		// Allocation successful -> we can use natmem_offset for entire memory access at real address
-		changed_prefs.z3autoconfig_start = currprefs.z3autoconfig_start = Z3BASE_REAL;
-		z3_base_adr = Z3BASE_REAL;
-#if defined(CPU_AARCH64) || defined (__x86_64__)
-		write_log("Allocated 16 MB for 24-bit area (0x%016lx) and %d MB for Z3 and RTG at real address (0x%016lx - 0x%016lx)\n",
-			natmem_offset, ADDITIONAL_MEMSIZE / (1024 * 1024), additional_mem, additional_mem + ADDITIONAL_MEMSIZE + BARRIER);
-#else
-		write_log("Allocated 16 MB for 24-bit area (0x%08x) and %d MB for Z3 and RTG at real address (0x%08x - 0x%08x)\n",
-			natmem_offset, ADDITIONAL_MEMSIZE / (1024 * 1024), additional_mem, additional_mem + ADDITIONAL_MEMSIZE + BARRIER
-		);
-#endif
-		set_expamem_z3_hack_mode(Z3MAPPING_REAL);
-		return;
-	}
-
-	additional_mem = static_cast<uae_u8*>(mmap(natmem_offset + Z3BASE_UAE, ADDITIONAL_MEMSIZE + BARRIER,
-	                                           PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0));
-	if (additional_mem != MAP_FAILED)
-	{
-		// Allocation successful -> we can use natmem_offset for entire memory access at fake address
-		changed_prefs.z3autoconfig_start = currprefs.z3autoconfig_start = Z3BASE_UAE;
-		z3_base_adr = Z3BASE_UAE;
-#if defined(CPU_AARCH64) || defined (__x86_64__)
-		write_log("Allocated 16 MB for 24-bit area (0x%016lx) and %d MB for Z3 and RTG at fake address (0x%016lx - 0x%016lx)\n",
-			natmem_offset, ADDITIONAL_MEMSIZE / (1024 * 1024), additional_mem, additional_mem + ADDITIONAL_MEMSIZE + BARRIER);
-#else
-		write_log("Allocated 16 MB for 24-bit area (0x%08x) and %d MB for Z3 and RTG at fake address (0x%08x - 0x%08x)\n",
-			natmem_offset, ADDITIONAL_MEMSIZE / (1024 * 1024), additional_mem, additional_mem + ADDITIONAL_MEMSIZE + BARRIER);
-#endif
-		set_expamem_z3_hack_mode(Z3MAPPING_UAE);
-		return;
-	}
-#ifdef AMIBERRY
-	munmap(natmem_offset, natmem_size + BARRIER);
-#else
-	free(natmem_offset);
-#endif
-
-	// Next attempt: allocate huge memory block for entire area
-	natmem_size = ADDITIONAL_MEMSIZE + 256 * 1024 * 1024;
-	natmem_offset = static_cast<uae_u8*>(valloc(natmem_size + BARRIER));
-	if (natmem_offset)
-	{
-		// Allocation successful
-		changed_prefs.z3autoconfig_start = currprefs.z3autoconfig_start = Z3BASE_UAE;
-		z3_base_adr = Z3BASE_UAE;
-		write_log("Allocated %d MB for entire memory\n", natmem_size / (1024 * 1024));
-#if defined(CPU_AARCH64) || defined (__x86_64__)
-		if (((uae_u64)(natmem_offset + natmem_size + BARRIER) & 0xffffffff00000000) != 0)
-			write_log("Memory address is higher than 32 bit. JIT will crash\n");
-#endif
-		return;
-	}
-#endif
-
-	// No mem for Z3 or RTG at all
-	natmem_size = 16 * 1024 * 1024;
-	natmem_offset = static_cast<uae_u8*>(valloc(natmem_size + BARRIER));
-
-	if (!natmem_offset)
-	{
-		write_log("Can't allocate 16M of virtual address space!?\n");
-		abort();
-	}
-
-	changed_prefs.z3autoconfig_start = currprefs.z3autoconfig_start = 0x00000000; // No mem for Z3
-	z3_base_adr = 0x00000000;
-	max_z3fastmem = 0;
-
-	write_log("Reserved: %p-%p (0x%08x %dM)\n", natmem_offset, static_cast<uae_u8*>(natmem_offset) + natmem_size,
-		natmem_size, natmem_size >> 20);
-#if defined(CPU_AARCH64) || defined (__x86_64__)
-	if (((uae_u64)(natmem_offset + natmem_size + BARRIER) & 0xffffffff00000000) != 0)
-		write_log("Memory address is higher than 32 bit. JIT will crash\n");
-#endif
+	uae_u8 *p = (uae_u8*)VirtualAlloc (addr, size, allocationtype, protect);
+	return p;
+}
+static void virtualfreewithlock (LPVOID addr, SIZE_T size, unsigned int freetype)
+{
+	VirtualFree(addr, size, freetype);
 }
 
-static bool HandleA3000Mem(unsigned int lowsize, unsigned int highsize)
+static uae_u32 lowmem (void)
 {
-	auto result = true;
+	uae_u32 change = 0;
+	return change;
+}
 
-	if (lowsize == last_low_size && highsize == last_high_size)
-		return result;
+static uae_u64 size64;
 
-	if (a3000_mem != MAP_FAILED)
-	{
-		write_log("HandleA3000Mem(): Free A3000 memory (0x%08x). %d MB.\n", a3000_mem, a3000_totalsize / (1024 * 1024));
-		munmap(a3000_mem, a3000_totalsize);
-		a3000_mem = static_cast<uae_u8*>(MAP_FAILED);
-		a3000_totalsize = 0;
-		last_low_size = 0;
-		last_high_size = 0;
+static void clear_shm (void)
+{
+	shm_start = NULL;
+	for (int i = 0; i < MAX_SHMID; i++) {
+		memset (&shmids[i], 0, sizeof(struct uae_shmid_ds));
+		shmids[i].key = -1;
 	}
-	if (lowsize + highsize > 0)
-	{
-		// Try to get memory for A3000 motherboard
-		write_log("Try to get A3000 memory at correct place (0x%08x). %d MB and %d MB.\n", A3000MEM_START,
-			lowsize / (1024 * 1024), highsize / (1024 * 1024));
-		a3000_totalsize = lowsize + highsize;
-		a3000_mem = static_cast<uae_u8*>(mmap(natmem_offset + (A3000MEM_START - lowsize), a3000_totalsize,
-		                                      PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0));
-		if (a3000_mem != MAP_FAILED)
-		{
-			last_low_size = lowsize;
-			last_high_size = highsize;
-			write_log(_T("Succeeded: location at 0x%08x (Amiga: 0x%08x)\n"), a3000_mem, (A3000MEM_START - lowsize));
+}
+
+bool preinit_shm (void)
+{
+#ifdef AMIBERRY
+	write_log("preinit_shm\n");
+#endif
+	uae_u64 total64;
+	uae_u64 totalphys64;
+#ifdef _WIN32
+	MEMORYSTATUS memstats;
+	GLOBALMEMORYSTATUSEX pGlobalMemoryStatusEx;
+	MEMORYSTATUSEX memstatsex;
+#endif
+	uae_u32 max_allowed_mman;
+
+	if (natmem_reserved)
+#ifdef _WIN32
+		VirtualFree (natmem_reserved, 0, MEM_RELEASE);
+#else
+#ifdef AMIBERRY
+		free (natmem_reserved);
+#endif
+#endif
+	natmem_reserved = NULL;
+	natmem_offset = NULL;
+	GetSystemInfo (&si);
+#ifdef AMIBERRY
+	max_allowed_mman = 2048;
+#else
+	max_allowed_mman = 512 + 256;
+#endif
+#if 1
+	if (os_64bit) {
+//#ifdef WIN64
+//		max_allowed_mman = 3072;
+//#else
+		max_allowed_mman = 2048;
+//#endif
+	}
+#endif
+	if (maxmem > max_allowed_mman)
+		max_allowed_mman = maxmem;
+
+#ifdef _WIN32
+	memstats.dwLength = sizeof(memstats);
+	GlobalMemoryStatus(&memstats);
+	totalphys64 = memstats.dwTotalPhys;
+	total64 = (uae_u64)memstats.dwAvailPageFile + (uae_u64)memstats.dwTotalPhys;
+#ifdef AMIBERRY
+	pGlobalMemoryStatusEx = GlobalMemoryStatusEx;
+#else
+	pGlobalMemoryStatusEx = (GLOBALMEMORYSTATUSEX)GetProcAddress (GetModuleHandle (_T("kernel32.dll")), "GlobalMemoryStatusEx");
+#endif
+	if (pGlobalMemoryStatusEx) {
+		memstatsex.dwLength = sizeof (MEMORYSTATUSEX);
+		if (pGlobalMemoryStatusEx(&memstatsex)) {
+			totalphys64 = memstatsex.ullTotalPhys;
+			total64 = memstatsex.ullAvailPageFile + memstatsex.ullTotalPhys;
 		}
-		else
-		{
-			write_log("Failed.\n");
-			a3000_totalsize = 0;
-			result = false;
+	}
+#else
+#ifdef AMIBERRY
+#ifdef __APPLE__
+	int mib[2];
+	size_t len;
+
+	mib[0] = CTL_HW;
+	// FIXME: check 64-bit compat
+	mib[1] = HW_MEMSIZE; /* gives a 64 bit int */
+	len = sizeof(totalphys64);
+	sysctl(mib, 2, &totalphys64, &len, NULL, 0);
+	total64 = (uae_u64) totalphys64;
+#else
+	totalphys64 = sysconf (_SC_PHYS_PAGES) * (uae_u64)getpagesize();
+	total64 = (uae_u64)sysconf (_SC_PHYS_PAGES) * (uae_u64)getpagesize();
+#endif
+#endif
+#endif
+	size64 = total64;
+	if (os_64bit) {
+		if (size64 > MAXZ3MEM64)
+			size64 = MAXZ3MEM64;
+	} else {
+		if (size64 > MAXZ3MEM32)
+			size64 = MAXZ3MEM32;
+	}
+#ifdef AMIBERRY
+	/* FIXME: check */
+	if (maxmem == 0) {
+#else
+	if (maxmem < 0) {
+#endif
+		size64 = MAXZ3MEM64;
+		if (!os_64bit) {
+			if (totalphys64 < 1536 * 1024 * 1024)
+				max_allowed_mman = 256;
+			if (max_allowed_mman < 256)
+				max_allowed_mman = 256;
+		}
+	} else if (maxmem > 0) {
+		size64 = maxmem * 1024 * 1024;
+	}
+	if (size64 < 8 * 1024 * 1024)
+		size64 = 8 * 1024 * 1024;
+	if (max_allowed_mman * 1024 * 1024 > size64)
+		max_allowed_mman = size64 / (1024 * 1024);
+
+	uae_u32 natmem_size = (max_allowed_mman + 1) * 1024 * 1024;
+	if (natmem_size < 17 * 1024 * 1024)
+		natmem_size = 17 * 1024 * 1024;
+
+#if WIN32_NATMEM_TEST
+	natmem_size = WIN32_NATMEM_TEST * 1024 * 1024;
+#endif
+
+	if (natmem_size > 0x80000000) {
+		natmem_size = 0x80000000;
+	}
+
+	write_log (_T("MMAN: Total physical RAM %llu MB, all RAM %llu MB\n"),
+				  totalphys64 >> 20, total64 >> 20);
+	write_log(_T("MMAN: Attempting to reserve: %u MB\n"), natmem_size >> 20);
+
+	int vm_flags = UAE_VM_32BIT | UAE_VM_WRITE_WATCH;
+#ifdef AMIBERRY
+	const auto jit_compiler = currprefs.cachesize > 0;
+	write_log("NATMEM: jit compiler %d\n", jit_compiler);
+	if (!jit_compiler) {
+		/* Not using the JIT compiler, so we do not need "32-bit memory". */
+		vm_flags &= ~UAE_VM_32BIT;
+	}
+#endif
+	natmem_reserved = (uae_u8 *) uae_vm_reserve(natmem_size, vm_flags);
+
+	if (!natmem_reserved) {
+		if (natmem_size <= 768 * 1024 * 1024) {
+			uae_u32 p = 0x78000000 - natmem_size;
+			for (;;) {
+#ifdef AMIBERRY
+				natmem_reserved = (uae_u8 *) uae_vm_reserve(natmem_size, vm_flags);
+#else
+				natmem_reserved = (uae_u8*) VirtualAlloc((void*)(intptr_t)p, natmem_size, MEM_RESERVE | MEM_WRITE_WATCH, PAGE_READWRITE);
+#endif
+				if (natmem_reserved)
+					break;
+				p -= 128 * 1024 * 1024;
+				if (p <= 128 * 1024 * 1024)
+					break;
+			}
+		}
+	}
+	if (!natmem_reserved) {
+		unsigned int vaflags = MEM_RESERVE | MEM_WRITE_WATCH;
+#ifdef _WIN32
+#ifdef AMIBERRY
+		OSVERSIONINFO osVersion;
+		osVersion.dwOSVersionInfoSize = sizeof (OSVERSIONINFO);
+		bool os_vista = (osVersion.dwMajorVersion == 6 &&
+						 osVersion.dwMinorVersion == 0);
+#endif
+#ifndef _WIN64
+		if (!os_vista)
+			vaflags |= MEM_TOP_DOWN;
+#endif
+#endif
+		for (;;) {
+#ifdef AMIBERRY
+			natmem_reserved = (uae_u8 *) uae_vm_reserve(natmem_size, vm_flags);
+#else
+			natmem_reserved = (uae_u8*)VirtualAlloc (NULL, natmem_size, vaflags, PAGE_READWRITE);
+#endif
+			if (natmem_reserved)
+				break;
+			natmem_size -= 64 * 1024 * 1024;
+			if (!natmem_size) {
+				write_log (_T("MMAN: Can't allocate 257M of virtual address space!?\n"));
+				natmem_size = 17 * 1024 * 1024;
+#ifdef AMIBERRY
+				natmem_reserved = (uae_u8 *) uae_vm_reserve(natmem_size, vm_flags);
+#else
+				natmem_reserved = (uae_u8*)VirtualAlloc (NULL, natmem_size, vaflags, PAGE_READWRITE);
+#endif
+				if (!natmem_size) {
+					write_log (_T("MMAN: Can't allocate 17M of virtual address space!? Something is seriously wrong\n"));
+					notify_user(NUMSG_NOMEMORY);
+					return false;
+				}
+				break;
+			}
+		}
+	}
+	natmem_reserved_size = natmem_size;
+	natmem_offset = natmem_reserved;
+	if (natmem_size <= 257 * 1024 * 1024) {
+		max_z3fastmem = 0;
+	} else {
+		max_z3fastmem = natmem_size;
+	}
+	write_log (_T("MMAN: Reserved %p-%p (0x%08x %dM)\n"),
+			   natmem_reserved, (uae_u8 *) natmem_reserved + natmem_reserved_size,
+			   natmem_reserved_size, natmem_reserved_size / (1024 * 1024));
+
+	clear_shm ();
+
+	canbang = 1;
+	return true;
+}
+
+static void resetmem (bool decommit)
+{
+	int i;
+
+	if (!shm_start)
+		return;
+	for (i = 0; i < MAX_SHMID; i++) {
+		struct uae_shmid_ds *s = &shmids[i];
+		int size = s->size;
+		uae_u8 *shmaddr;
+		uae_u8 *result;
+
+		if (!s->attached)
+			continue;
+		if (!s->natmembase)
+			continue;
+		if (s->fake)
+			continue;
+		if (!decommit && ((uae_u8*)s->attached - (uae_u8*)s->natmembase) >= 0x10000000)
+			continue;
+		shmaddr = natmem_offset + ((uae_u8*)s->attached - (uae_u8*)s->natmembase);
+		if (decommit) {
+			VirtualFree (shmaddr, size, MEM_DECOMMIT);
+		} else {
+			result = virtualallocwithlock (shmaddr, size, decommit ? MEM_DECOMMIT : MEM_COMMIT, PAGE_READWRITE);
+			if (result != shmaddr)
+				write_log (_T("MMAN: realloc(%p-%p,%d,%d,%s) failed, err=%d\n"), shmaddr, shmaddr + size, size, s->mode, s->name, GetLastError ());
+			else
+				write_log (_T("MMAN: rellocated(%p-%p,%d,%s)\n"), shmaddr, shmaddr + size, size, s->name);
+		}
+	}
+}
+
+static uae_u8 *va (uae_u32 offset, uae_u32 len, unsigned int alloc, unsigned int protect)
+{
+	uae_u8 *addr;
+
+	addr = (uae_u8*)VirtualAlloc (natmem_offset + offset, len, alloc, protect);
+	if (addr) {
+		write_log (_T("VA(%p - %p, %4uM, %s)\n"),
+			natmem_offset + offset, natmem_offset + offset + len, len >> 20, (alloc & MEM_WRITE_WATCH) ? _T("WATCH") : _T("RESERVED"));
+		return addr;
+	}
+	write_log (_T("VA(%p - %p, %4uM, %s) failed %d\n"),
+		natmem_offset + offset, natmem_offset + offset + len, len >> 20, (alloc & MEM_WRITE_WATCH) ? _T("WATCH") : _T("RESERVED"), GetLastError ());
+	return NULL;
+}
+
+static int doinit_shm (void)
+{
+	uae_u32 totalsize, totalsize_z3;
+	uae_u32 align;
+	uae_u32 z3rtgmem_size;
+	struct rtgboardconfig *rbc = &changed_prefs.rtgboards[0];
+	struct rtgboardconfig *crbc = &currprefs.rtgboards[0];
+	uae_u32 extra = 65536;
+	struct uae_prefs *p = &changed_prefs;
+
+	changed_prefs.z3autoconfig_start = currprefs.z3autoconfig_start = 0;
+	set_expamem_z3_hack_mode(0);
+	expansion_scan_autoconfig(&currprefs, true);
+
+	canbang = 1;
+	natmem_offset = natmem_reserved;
+
+	align = 16 * 1024 * 1024 - 1;
+	totalsize = 0x01000000;
+
+	z3rtgmem_size = gfxboard_get_configtype(rbc) == 3 ? rbc->rtgmem_size : 0;
+
+	if (p->cpu_model >= 68020)
+		totalsize = 0x10000000;
+	totalsize += (p->z3chipmem.size + align) & ~align;
+	totalsize_z3 = totalsize;
+
+	start_rtg = 0;
+	end_rtg = 0;
+
+	jit_direct_compatible_memory = p->cachesize && (!p->comptrustbyte || !p->comptrustword || !p->comptrustlong);
+
+	// 1G Z3chip?
+	if ((Z3BASE_UAE + p->z3chipmem.size > Z3BASE_REAL) ||
+		// real wrapped around
+		(expamem_z3_highram_real == 0xffffffff) ||
+		// Real highram > 0x80000000 && UAE highram <= 0x80000000 && Automatic
+		(expamem_z3_highram_real > 0x80000000 && expamem_z3_highram_uae <= 0x80000000 && p->z3_mapping_mode == Z3MAPPING_AUTO) ||
+		// Wanted UAE || Blizzard RAM
+		p->z3_mapping_mode == Z3MAPPING_UAE || //cpuboard_memorytype(&changed_prefs) == BOARD_MEMORY_BLIZZARD_12xx ||
+		// JIT && Automatic && Real does not fit in NATMEM && UAE fits in NATMEM
+		(expamem_z3_highram_real + extra >= natmem_reserved_size && expamem_z3_highram_uae + extra <= natmem_reserved_size && p->z3_mapping_mode == Z3MAPPING_AUTO && jit_direct_compatible_memory)) {
+		changed_prefs.z3autoconfig_start = currprefs.z3autoconfig_start = Z3BASE_UAE;
+		if (p->z3_mapping_mode == Z3MAPPING_AUTO)
+			write_log(_T("MMAN: Selected UAE Z3 mapping mode\n"));
+		set_expamem_z3_hack_mode(Z3MAPPING_UAE);
+		if (expamem_z3_highram_uae > totalsize_z3) {
+			totalsize_z3 = expamem_z3_highram_uae;
+		}
+	} else {
+		if (p->z3_mapping_mode == Z3MAPPING_AUTO)
+			write_log(_T("MMAN: Selected REAL Z3 mapping mode\n"));
+		changed_prefs.z3autoconfig_start = currprefs.z3autoconfig_start = Z3BASE_REAL;
+		set_expamem_z3_hack_mode(Z3MAPPING_REAL);
+		if (expamem_z3_highram_real > totalsize_z3 && jit_direct_compatible_memory) {
+			totalsize_z3 = expamem_z3_highram_real;
+			if (totalsize_z3 + extra >= natmem_reserved_size) {
+				jit_direct_compatible_memory = false;
+				write_log(_T("MMAN: Not enough direct memory for Z3REAL. Switching off JIT Direct.\n"));
+			}
+		}
+	}
+	write_log(_T("Total %uM Z3 Total %uM, HM %uM\n"), totalsize >> 20, totalsize_z3 >> 20, expamem_highmem_pointer >> 20);
+
+	if (totalsize_z3 < expamem_highmem_pointer)
+		totalsize_z3 = expamem_highmem_pointer;
+
+	expansion_scan_autoconfig(&currprefs, true);
+
+	if (jit_direct_compatible_memory && (totalsize > size64 || totalsize + extra >= natmem_reserved_size)) {
+		jit_direct_compatible_memory = false;
+		write_log(_T("MMAN: Not enough direct memory. Switching off JIT Direct.\n"));
+	}
+
+	int idx = 0;
+	for (;;) {
+		struct autoconfig_info *aci = expansion_get_autoconfig_data(&currprefs, idx++);
+		if (!aci)
+			break;
+		addrbank *ab = aci->addrbank;
+		if (!ab)
+			continue;
+		if (aci->direct_vram && aci->start != 0xffffffff) {
+			if (!start_rtg)
+				start_rtg = aci->start;
+			end_rtg = aci->start + aci->size;
+		}
+	}
+#ifdef AMIBERRY
+	//write_log("NATMEM: size            0x%08x\n", size);
+	//write_log("NATMEM: z3size        + 0x%08x\n", z3size);
+	write_log("NATMEM: z3rtgmem_size + 0x%08x\n", z3rtgmem_size);
+	//write_log("NATMEM: othersize     + 0x%08x\n", othersize);
+	write_log("NATMEM: totalsize     = 0x%08x\n", totalsize);
+#endif
+
+	// rtg outside of natmem?
+	if (start_rtg > 0 && start_rtg < 0xffffffff && end_rtg > natmem_reserved_size) {
+		if (jit_direct_compatible_memory) {
+			write_log(_T("MMAN: VRAM outside of natmem (%08x > %08x), switching off JIT Direct.\n"), end_rtg, natmem_reserved_size);
+			jit_direct_compatible_memory = false;
+		}
+		if (end_rtg - start_rtg > natmem_reserved_size) {
+			write_log(_T("MMAN: VRAMs don't fit in natmem space! (%08x > %08x)\n"), end_rtg - start_rtg, natmem_reserved_size);
+			notify_user(NUMSG_NOMEMORY);
+			return -1;
+		}
+#ifdef _WIN64
+#ifdef AMIBERRY
+		/* FIXME: Check for FS-UAE. */
+#endif
+		// 64-bit can't do natmem_offset..
+		notify_user(NUMSG_NOMEMORY);
+		return -1;
+#else
+
+		p96base_offset = start_rtg;
+		p96mem_size = end_rtg - start_rtg;
+		write_log("MMAN: rtgbase_offset = %08x, size %08x\n", p96base_offset, p96mem_size);
+		// adjust p96mem_offset to beginning of natmem
+		// by subtracting start of original p96mem_offset from natmem_offset
+		if (p96base_offset >= 0x10000000) {
+			natmem_offset = natmem_reserved - p96base_offset;
+			p96mem_offset = natmem_offset + p96base_offset;
+		}
+#endif
+	} else {
+		start_rtg = 0;
+		end_rtg = 0;
+	}
+
+	idx = 0;
+	for (;;) {
+		struct autoconfig_info *aci = expansion_get_autoconfig_data(&currprefs, idx++);
+		if (!aci)
+			break;
+		addrbank *ab = aci->addrbank;
+		// disable JIT direct from Z3 boards that are outside of natmem
+		for (int i = 0; i < MAX_RAM_BOARDS; i++) {
+			if (&z3fastmem_bank[i] == ab) {
+				ab->flags &= ~ABFLAG_ALLOCINDIRECT;
+				ab->jit_read_flag = 0;
+				ab->jit_write_flag = 0;
+				if (aci->start + aci->size > natmem_reserved_size) {
+					write_log(_T("%s %08x-%08x: not JIT direct capable (>%08x)!\n"), ab->name, aci->start, aci->start + aci->size - 1, natmem_reserved_size);
+					ab->flags |= ABFLAG_ALLOCINDIRECT;
+					ab->jit_read_flag = S_READ;
+					ab->jit_write_flag = S_WRITE;
+				}
+			}
 		}
 	}
 
+#ifdef AMIBERRY
+	write_log("NATMEM: JIT direct compatible: %d\n", jit_direct_compatible_memory);
+#endif
+
+	if (!natmem_offset) {
+		write_log (_T("MMAN: No special area could be allocated! err=%d\n"), GetLastError ());
+	} else {
+		write_log(_T("MMAN: Our special area: %p-%p (0x%08x %dM)\n"),
+			natmem_offset, (uae_u8*)natmem_offset + totalsize,
+			totalsize, totalsize / (1024 * 1024));
+		canbang = jit_direct_compatible_memory ? 1 : 0;
+	}
+
+	return canbang;
+}
+
+static uae_u32 oz3fastmem_size[MAX_RAM_BOARDS];
+static uae_u32 ofastmem_size[MAX_RAM_BOARDS];
+static uae_u32 oz3chipmem_size;
+static uae_u32 ortgmem_size[MAX_RTG_BOARDS];
+static int ortgmem_type[MAX_RTG_BOARDS];
+
+bool init_shm(void)
+{
+	auto changed = false;
+
+	for (auto i = 0; i < MAX_RAM_BOARDS; i++)
+	{
+		if (oz3fastmem_size[i] != changed_prefs.z3fastmem[i].size)
+			changed = true;
+		if (ofastmem_size[i] != changed_prefs.fastmem[i].size)
+			changed = true;
+	}
+	for (auto i = 0; i < MAX_RTG_BOARDS; i++)
+	{
+		if (ortgmem_size[i] != changed_prefs.rtgboards[i].rtgmem_size)
+			changed = true;
+		if (ortgmem_type[i] != changed_prefs.rtgboards[i].rtgmem_type)
+			changed = true;
+	}
+	if (!changed && oz3chipmem_size == changed_prefs.z3chipmem.size)
+		return true;
+
+	for (auto i = 0; i < MAX_RAM_BOARDS; i++)
+	{
+		oz3fastmem_size[i] = changed_prefs.z3fastmem[i].size;
+		ofastmem_size[i] = changed_prefs.fastmem[i].size;
+	}
+	for (auto i = 0; i < MAX_RTG_BOARDS; i++)
+	{
+		ortgmem_size[i] = changed_prefs.rtgboards[i].rtgmem_size;
+		ortgmem_type[i] = changed_prefs.rtgboards[i].rtgmem_type;
+	}
+	oz3chipmem_size = changed_prefs.z3chipmem.size;
+
+	if (doinit_shm() < 0)
+		return false;
+
+	resetmem (false);
+	clear_shm ();
+
+	memory_hardreset(2);
+	return true;
+}
+
+void free_shm (void)
+{
+	resetmem (true);
+	clear_shm ();
+	for (int i = 0; i < MAX_RAM_BOARDS; i++) {
+		ortgmem_type[i] = -1;
+	}
+}
+
+void mapped_free (addrbank *ab)
+{
+	shmpiece *x = shm_start;
+	bool rtgmem = (ab->flags & ABFLAG_RTG) != 0;
+
+	ab->flags &= ~ABFLAG_MAPPED;
+	if (ab->baseaddr == NULL)
+		return;
+
+	if (ab->flags & ABFLAG_INDIRECT) {
+		while(x) {
+			if (ab->baseaddr == x->native_address) {
+				int shmid = x->id;
+				shmids[shmid].key = -1;
+				shmids[shmid].name[0] = '\0';
+				shmids[shmid].size = 0;
+				shmids[shmid].attached = 0;
+				shmids[shmid].mode = 0;
+				shmids[shmid].natmembase = 0;
+				if (!(ab->flags & ABFLAG_NOALLOC)) {
+					xfree(ab->baseaddr);
+					ab->baseaddr = NULL;
+				}
+			}
+			x = x->next;
+		}
+		ab->baseaddr = NULL;
+		ab->flags &= ~ABFLAG_DIRECTMAP;
+		ab->allocated_size = 0;
+		write_log(_T("mapped_free indirect %s\n"), ab->name);
+		return;
+	}
+
+	if (!(ab->flags & ABFLAG_DIRECTMAP)) {
+		if (!(ab->flags & ABFLAG_NOALLOC)) {
+			xfree(ab->baseaddr);
+		}
+		ab->baseaddr = NULL;
+		ab->allocated_size = 0;
+		write_log(_T("mapped_free nondirect %s\n"), ab->name);
+		return;
+	}
+
+	while(x) {
+		if(ab->baseaddr == x->native_address)
+			uae_shmdt (x->native_address);
+		x = x->next;
+	}
+	x = shm_start;
+	while(x) {
+		struct uae_shmid_ds blah;
+		if (ab->baseaddr == x->native_address) {
+			if (uae_shmctl (x->id, UAE_IPC_STAT, &blah) == 0)
+				uae_shmctl (x->id, UAE_IPC_RMID, &blah);
+		}
+		x = x->next;
+	}
+	ab->baseaddr = NULL;
+	ab->allocated_size = 0;
+	write_log(_T("mapped_free direct %s\n"), ab->name);
+}
+
+static uae_key_t get_next_shmkey (void)
+{
+	uae_key_t result = -1;
+	int i;
+	for (i = 0; i < MAX_SHMID; i++) {
+		if (shmids[i].key == -1) {
+			shmids[i].key = i;
+			result = i;
+			break;
+		}
+	}
 	return result;
 }
 
-static bool A3000MemAvailable(void)
+STATIC_INLINE uae_key_t find_shmkey (uae_key_t key)
 {
-	return a3000_mem != MAP_FAILED;
+	int result = -1;
+	if(shmids[key].key == key) {
+		result = key;
+	}
+	return result;
 }
 
 bool uae_mman_info(addrbank* ab, struct uae_mman_data* md)
 {
 	auto got = false;
-	auto readonly = false;
+	bool readonly = false, maprom = false;
+	bool directsupport = true;
 	uaecptr start;
 	auto size = ab->reserved_size;
 	auto readonlysize = size;
@@ -308,13 +878,10 @@ bool uae_mman_info(addrbank* ab, struct uae_mman_data* md)
 	}
 	else if (!_tcscmp(ab->label, _T("ramsey_low")))
 	{
-		if (ab->reserved_size != last_low_size)
-			HandleA3000Mem(ab->reserved_size, last_high_size);
-		if (A3000MemAvailable())
-		{
-			start = a3000lmem_bank.start;
-			got = true;
-		}
+		start = a3000lmem_bank.start;
+		if (!a3000hmem_bank.start)
+			barrier = true;
+		got = true;
 	}
 	else if (!_tcscmp(ab->label, _T("csmk1_maprom")))
 	{
@@ -328,13 +895,8 @@ bool uae_mman_info(addrbank* ab, struct uae_mman_data* md)
 	}
 	else if (!_tcscmp(ab->label, _T("ramsey_high")))
 	{
-		if (ab->reserved_size != last_high_size)
-			HandleA3000Mem(last_low_size, ab->reserved_size);
-		if (A3000MemAvailable())
-		{
-			start = 0x08000000;
-			got = true;
-		}
+		start = 0x08000000;
+		got = true;
 	}
 	else if (!_tcscmp(ab->label, _T("dkb")))
 	{
@@ -458,104 +1020,162 @@ bool uae_mman_info(addrbank* ab, struct uae_mman_data* md)
 		barrier = true;
 		got = true;
 	}
+	else
+	{
+		directsupport = false;
+	}
 	if (got)
 	{
 		md->start = start;
 		md->size = size;
 		md->readonly = readonly;
 		md->readonlysize = readonlysize;
+		md->maprom = maprom;
 		md->hasbarrier = barrier;
 
-		if (md->hasbarrier)
-		{
+		if (start_rtg && end_rtg) {
+			if (start < start_rtg || start + size > end_rtg)
+				directsupport = false;
+		} else if (start >= natmem_reserved_size || start + size > natmem_reserved_size) {
+			// start + size may cause 32-bit overflow
+			directsupport = false;
+		}
+		md->directsupport = directsupport;
+		if (md->hasbarrier) {
 			md->size += BARRIER;
 		}
 	}
 	return got;
 }
 
-bool mapped_malloc(addrbank* ab)
+void *uae_shmat (addrbank *ab, int shmid, void *shmaddr, int shmflg, struct uae_mman_data *md)
 {
-	if (ab->allocated_size)
-	{
-		write_log(_T("mapped_malloc with memory bank '%s' already allocated!?\n"), ab->name);
-	}
-	ab->allocated_size = 0;
+#ifdef AMIBERRY
+	write_log("uae_shmat shmid %d shmaddr %p, shmflg %d natmem_offset = %p\n",
+			shmid, shmaddr, shmflg, natmem_offset);
+#endif
+	void *result = (void *)-1;
+	bool got = false, readonly = false, maprom = false;
+	int p96special = FALSE;
+	struct uae_mman_data md2;
 
-	if (ab->label && ab->label[0] == '*')
-	{
-		if (ab->start == 0 || ab->start == 0xffffffff)
-		{
-			write_log(_T("mapped_malloc(*) without start address!\n"));
-			return false;
+#ifdef NATMEM_OFFSET
+
+	unsigned int size = shmids[shmid].size;
+	unsigned int readonlysize = size;
+
+	if (shmids[shmid].attached)
+		return shmids[shmid].attached;
+
+	if (ab->flags & ABFLAG_INDIRECT) {
+		shmids[shmid].attached = ab->baseaddr;
+		shmids[shmid].fake = true;
+		return shmids[shmid].attached;
+	}
+
+	if ((uae_u8*)shmaddr < natmem_offset) {
+		if (!md) {
+			if (!uae_mman_info(ab, &md2))
+				return NULL;
+			md = &md2;
+		}
+		if (!shmaddr) {
+			shmaddr = natmem_offset + md->start;
+			size = md->size;
+			readonlysize = md->readonlysize;
+			readonly = md->readonly;
+			maprom = md->maprom;
+			got = true;
 		}
 	}
 
-	struct uae_mman_data md = {0};
-	if (uae_mman_info(ab, &md))
-	{
-		const auto start = md.start;
-		ab->baseaddr = natmem_offset + start;
+	uintptr_t natmem_end = (uintptr_t) natmem_reserved + natmem_reserved_size;
+	if (md && md->hasbarrier && (uintptr_t) shmaddr + size > natmem_end && (uintptr_t)shmaddr <= natmem_end) {
+		/* We cannot add a barrier beyond the end of the reserved memory. */
+		//assert((uintptr_t) shmaddr + size - natmem_end == BARRIER);
+		write_log(_T("NATMEM: Removing barrier (%d bytes) beyond reserved memory\n"), BARRIER);
+		size -= BARRIER;
+		md->size -= BARRIER;
+		md->hasbarrier = false;
 	}
 
-	if (ab->baseaddr)
-	{
-		if (md.hasbarrier)
-		{
-			// fill end of ram with ILLEGAL to catch direct PC falling out of RAM.
-			put_long_host(ab->baseaddr + ab->reserved_size, 0x4afc4afc);
-			ab->barrier = true;
+#endif
+
+	if (shmids[shmid].key == shmid && shmids[shmid].size) {
+		unsigned int protect = readonly ? PAGE_READONLY : PAGE_READWRITE;
+		shmids[shmid].mode = protect;
+		shmids[shmid].rosize = readonlysize;
+		shmids[shmid].natmembase = natmem_offset;
+		shmids[shmid].maprom = maprom ? 1 : 0;
+		if (shmaddr)
+			virtualfreewithlock (shmaddr, size, MEM_DECOMMIT);
+		result = virtualallocwithlock (shmaddr, size, MEM_COMMIT, PAGE_READWRITE);
+		if (result == NULL)
+			virtualfreewithlock (shmaddr, 0, MEM_DECOMMIT);
+		result = virtualallocwithlock (shmaddr, size, MEM_COMMIT, PAGE_READWRITE);
+		if (result == NULL) {
+			result = (void*)-1;
+			error_log (_T("Memory %s (%s) failed to allocate %p: VA %08X - %08X %x (%dk). Error %d."),
+				shmids[shmid].name, ab ? ab->name : _T("?"), shmaddr,
+				(uae_u8*)shmaddr - natmem_offset, (uae_u8*)shmaddr - natmem_offset + size,
+				size, size >> 10, GetLastError ());
+		} else {
+			shmids[shmid].attached = result;
+			write_log (_T("%p: VA %08lX - %08lX %x (%dk) ok (%p)%s\n"),
+				shmaddr, (uae_u8*)shmaddr - natmem_offset, (uae_u8*)shmaddr - natmem_offset + size,
+				size, size >> 10, shmaddr, p96special ? _T(" RTG") : _T(""));
 		}
-		ab->startaccessmask = ab->start & ab->mask;
-		ab->allocated_size = ab->reserved_size;
-		write_log("mapped_malloc(): 0x%08x - 0x%08x (0x%08x - 0x%08x) -> %s (%s)\n",
-			ab->baseaddr - natmem_offset, ab->baseaddr - natmem_offset + ab->allocated_size,
-			ab->baseaddr, ab->baseaddr + ab->allocated_size, ab->name, ab->label);
 	}
-	ab->flags |= ABFLAG_DIRECTMAP;
-
-	return ab->baseaddr != nullptr;
+	return result;
 }
 
-void mapped_free(addrbank* ab)
+void unprotect_maprom (void)
 {
-	ab->flags &= ~ABFLAG_MAPPED;
-	if (ab->baseaddr == nullptr)
-		return;
-	
-	if (ab->label != nullptr && !strcmp(ab->label, "filesys") && ab->baseaddr != nullptr)
-	{		
-		write_log("mapped_free(): 0x%08x - 0x%08x (0x%08x - 0x%08x) -> %s (%s)\n",
-			ab->baseaddr - natmem_offset, ab->baseaddr - natmem_offset + ab->allocated_size,
-			ab->baseaddr, ab->baseaddr + ab->allocated_size, ab->name, ab->label);
-		free(ab->baseaddr);
+	bool protect = false;
+	for (int i = 0; i < MAX_SHMID; i++) {
+		struct uae_shmid_ds *shm = &shmids[i];
+		if (shm->mode != PAGE_READONLY)
+			continue;
+		if (!shm->attached || !shm->rosize)
+			continue;
+		if (shm->maprom <= 0)
+			continue;
+		shm->maprom = -1;
+		unsigned int old;
+		if (!VirtualProtect (shm->attached, shm->rosize, protect ? PAGE_READONLY : PAGE_READWRITE, &old)) {
+			write_log (_T("unprotect_maprom VP %08lX - %08lX %x (%dk) failed %d\n"),
+				(uae_u8*)shm->attached - natmem_offset, (uae_u8*)shm->attached - natmem_offset + shm->size,
+				shm->size, shm->size >> 10, GetLastError ());
+		}
 	}
-	ab->baseaddr = nullptr;
-	ab->allocated_size = 0;
 }
 
-void protect_roms(bool protect)
+void protect_roms (bool protect)
 {
-	//If this code is enabled, we can't switch back from JIT to nonJIT emulation...
-
-	//if (protect) {
-	//	// protect only if JIT enabled, always allow unprotect
-	//	if (!currprefs.cachesize || currprefs.comptrustbyte || currprefs.comptrustword || currprefs.comptrustlong)
-	//		return;
-	//}
-
-	// Protect all regions, which contains ROM
-	//if (extendedkickmem_bank.baseaddr != NULL)
-		//mprotect(extendedkickmem_bank.baseaddr, 0x80000, protect ? PROT_READ : PROT_READ | PROT_WRITE);
-	//if (extendedkickmem2_bank.baseaddr != NULL)
-		//mprotect(extendedkickmem2_bank.baseaddr, 0x80000, protect ? PROT_READ : PROT_READ | PROT_WRITE);
-	//if (kickmem_bank.baseaddr != NULL)
-		//mprotect(kickmem_bank.baseaddr, 0x80000, protect ? PROT_READ : PROT_READ | PROT_WRITE);
-	//if (rtarea != NULL)
-	//	mprotect(rtarea, RTAREA_SIZE, protect ? PROT_READ : PROT_READ | PROT_WRITE);
-	//if (filesysory != NULL)
-	//	mprotect(filesysory, 0x10000, protect ? PROT_READ : PROT_READ | PROT_WRITE);
-
+	if (protect) {
+		// protect only if JIT enabled, always allow unprotect
+		if (!currprefs.cachesize || currprefs.comptrustbyte || currprefs.comptrustword || currprefs.comptrustlong)
+			return;
+	}
+	for (int i = 0; i < MAX_SHMID; i++) {
+		struct uae_shmid_ds *shm = &shmids[i];
+		if (shm->mode != PAGE_READONLY)
+			continue;
+		if (!shm->attached || !shm->rosize)
+			continue;
+		if (shm->maprom < 0 && protect)
+			continue;
+		unsigned int old;
+		if (!VirtualProtect (shm->attached, shm->rosize, protect ? PAGE_READONLY : PAGE_READWRITE, &old)) {
+			write_log (_T("protect_roms VP %08lX - %08lX %x (%dk) failed %d\n"),
+				(uae_u8*)shm->attached - natmem_offset, (uae_u8*)shm->attached - natmem_offset + shm->rosize,
+				shm->rosize, shm->rosize >> 10, GetLastError ());
+		} else {
+			write_log(_T("ROM VP %08lX - %08lX %x (%dk) %s\n"),
+				(uae_u8*)shm->attached - natmem_offset, (uae_u8*)shm->attached - natmem_offset + shm->rosize,
+				shm->rosize, shm->rosize >> 10, protect ? _T("WPROT") : _T("UNPROT"));
+		}
+	}
 }
 
 // Mark indirect regions (indirect VRAM) as non-accessible when JIT direct is active.
@@ -563,26 +1183,26 @@ void protect_roms(bool protect)
 // allowing JIT direct to think it is directly accessible VRAM.
 void mman_set_barriers(bool disable)
 {
-	addrbank *abprev = NULL;
+	addrbank* abprev = NULL;
 	for (int i = 0; i < MEMORY_BANKS; i++) {
 		uaecptr addr = i * 0x10000;
-		addrbank *ab = &get_mem_bank(addr);
+		addrbank* ab = &get_mem_bank(addr);
 		if (ab == abprev) {
 			continue;
 		}
 		int size = 0x10000;
 		for (int j = i + 1; j < MEMORY_BANKS; j++) {
 			uaecptr addr2 = j * 0x10000;
-			addrbank *ab2 = &get_mem_bank(addr2);
+			addrbank* ab2 = &get_mem_bank(addr2);
 			if (ab2 != ab) {
 				break;
 			}
 			size += 0x10000;
 		}
 		abprev = ab;
-#ifndef AMIBERRY // not implemented yet
+
 		if (ab && ab->baseaddr == NULL && (ab->flags & ABFLAG_ALLOCINDIRECT)) {
-			DWORD old;
+			unsigned int old;
 			if (disable || !currprefs.cachesize || currprefs.comptrustbyte || currprefs.comptrustword || currprefs.comptrustlong) {
 				if (!ab->protectmode) {
 					ab->protectmode = PAGE_READWRITE;
@@ -592,11 +1212,13 @@ void mman_set_barriers(bool disable)
 					VirtualProtect(addr + natmem_offset, size, ab->protectmode, &old);
 				}
 				write_log("%08x-%08x = access restored (%08x)\n", addr, size, ab->protectmode);
-			} else {
+			}
+			else {
 				if (VirtualProtect(addr + natmem_offset, size, PAGE_NOACCESS, &old)) {
 					ab->protectmode = old;
 					write_log("%08x-%08x = set to no access\n", addr, addr + size);
-				} else {
+				}
+				else {
 					size = 0x1000;
 					if (VirtualProtect(addr + natmem_offset, size, PAGE_NOACCESS, &old)) {
 						ab->protectmode = old;
@@ -605,69 +1227,51 @@ void mman_set_barriers(bool disable)
 				}
 			}
 		}
-#endif
 	}
 }
 
-static int doinit_shm(void)
+int uae_shmdt (const void *shmaddr)
 {
-	changed_prefs.z3autoconfig_start = currprefs.z3autoconfig_start = 0;
-	set_expamem_z3_hack_mode(0);
-	expansion_scan_autoconfig(&currprefs, true);
-
-	return 1;
+	return 0;
 }
 
-static uae_u32 oz3fastmem_size[MAX_RAM_BOARDS];
-static uae_u32 ofastmem_size[MAX_RAM_BOARDS];
-static uae_u32 oz3chipmem_size;
-static uae_u32 ortgmem_size[MAX_RTG_BOARDS];
-static int ortgmem_type[MAX_RTG_BOARDS];
-
-bool init_shm(void)
+int uae_shmget (uae_key_t key, addrbank *ab, int shmflg)
 {
-	auto changed = false;
+	int result = -1;
 
-	for (auto i = 0; i < MAX_RAM_BOARDS; i++)
-	{
-		if (oz3fastmem_size[i] != changed_prefs.z3fastmem[i].size)
-			changed = true;
-		if (ofastmem_size[i] != changed_prefs.fastmem[i].size)
-			changed = true;
+	if ((key == UAE_IPC_PRIVATE) || ((shmflg & UAE_IPC_CREAT) && (find_shmkey (key) == -1))) {
+		write_log (_T("shmget of size %ud (%udk) for %s (%s)\n"), ab->reserved_size, ab->reserved_size >> 10, ab->label, ab->name);
+		if ((result = get_next_shmkey ()) != -1) {
+			shmids[result].size = ab->reserved_size;
+			_tcscpy (shmids[result].name, ab->label);
+		} else {
+			result = -1;
+		}
 	}
-	for (auto i = 0; i < MAX_RTG_BOARDS; i++)
-	{
-		if (ortgmem_size[i] != changed_prefs.rtgboards[i].rtgmem_size)
-			changed = true;
-		if (ortgmem_type[i] != changed_prefs.rtgboards[i].rtgmem_type)
-			changed = true;
-	}
-	if (!changed && oz3chipmem_size == changed_prefs.z3chipmem.size)
-		return true;
-
-	for (auto i = 0; i < MAX_RAM_BOARDS; i++)
-	{
-		oz3fastmem_size[i] = changed_prefs.z3fastmem[i].size;
-		ofastmem_size[i] = changed_prefs.fastmem[i].size;
-	}
-	for (auto i = 0; i < MAX_RTG_BOARDS; i++)
-	{
-		ortgmem_size[i] = changed_prefs.rtgboards[i].rtgmem_size;
-		ortgmem_type[i] = changed_prefs.rtgboards[i].rtgmem_type;
-	}
-	oz3chipmem_size = changed_prefs.z3chipmem.size;
-
-	if (doinit_shm() < 0)
-		return false;
-
-	memory_hardreset(2);
-	return true;
+	return result;
 }
 
-void free_shm (void)
+int uae_shmctl (int shmid, int cmd, struct uae_shmid_ds *buf)
 {
-	for (auto& i : ortgmem_type)
-	{
-		i = -1;
+	int result = -1;
+
+	if ((find_shmkey (shmid) != -1) && buf) {
+		switch (cmd)
+		{
+		case UAE_IPC_STAT:
+			*buf = shmids[shmid];
+			result = 0;
+			break;
+		case UAE_IPC_RMID:
+			VirtualFree (shmids[shmid].attached, shmids[shmid].size, MEM_DECOMMIT);
+			shmids[shmid].key = -1;
+			shmids[shmid].name[0] = '\0';
+			shmids[shmid].size = 0;
+			shmids[shmid].attached = 0;
+			shmids[shmid].mode = 0;
+			result = 0;
+			break;
+		}
 	}
+	return result;
 }

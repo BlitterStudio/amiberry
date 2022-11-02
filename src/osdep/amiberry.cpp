@@ -1682,19 +1682,6 @@ void target_fixup_options(struct uae_prefs* p)
 	}
 	
 #ifdef AMIBERRY
-	p->rtgboards[0].rtgmem_type = GFXBOARD_UAE_Z3;
-	if (z3_base_adr == Z3BASE_REAL)
-	{
-		// map Z3 memory at real address (0x40000000)
-		p->z3_mapping_mode = Z3MAPPING_REAL;
-		p->z3autoconfig_start = z3_base_adr;
-	}
-	else
-	{
-		// map Z3 memory at UAE address (0x10000000)
-		p->z3_mapping_mode = Z3MAPPING_UAE;
-		p->z3autoconfig_start = z3_base_adr;
-	}
 	// Always use these pixel formats, for optimal performance
 	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5PC | RGBFF_R8G8B8A8;
 
@@ -1720,10 +1707,6 @@ void target_fixup_options(struct uae_prefs* p)
 		p->rtg_hardwaresprite = false;
 		p->rtgmatchdepth = false;
 		p->color_mode = 5;
-		//if (p->ppc_model && !p->gfx_api) {
-		//	error_log(_T("Graphics board and PPC: Direct3D enabled."));
-		//	p->gfx_api = os_win7 ? 2 : 1;
-		//}
 	}
 
 	struct MultiDisplay* md = getdisplay(p, 0);
@@ -1764,7 +1747,7 @@ void target_fixup_options(struct uae_prefs* p)
 			p->soundcard = 0;
 		}
 	}
-
+#ifdef AMIBERRY
 	// Initialize Drawbridge if needed
 	for (const auto& floppyslot : p->floppyslots)
 	{
@@ -1773,6 +1756,7 @@ void target_fixup_options(struct uae_prefs* p)
 	}
 
 	set_key_configs(p);
+#endif
 }
 
 void target_default_options(struct uae_prefs* p, int type)
@@ -3474,7 +3458,6 @@ int main(int argc, char* argv[])
 	//	abort();
 	//}
 
-	alloc_AmigaMem();
 	RescanROMs();
 	uae_time_calibrate();
 	
@@ -3587,7 +3570,6 @@ int main(int argc, char* argv[])
 	ClearAvailableROMList();
 	romlist_clear();
 	free_keyring();
-	free_AmigaMem();
 	lstMRUDiskList.clear();
 	lstMRUCDList.clear();
 	lstMRUWhdloadList.clear();
