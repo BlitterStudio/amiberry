@@ -76,7 +76,7 @@
 
 #define NOBLITTER 0
 #define NOBLITTER_BLIT 0
-#define NOBLITTER_ALL 0
+#define NOBLITTER_ALL 1
 
 #define CURSORMAXWIDTH 128
 #define CURSORMAXHEIGHT 128
@@ -5138,22 +5138,28 @@ static void picasso_flushoverlay(int index, uae_u8 *src, int scr_offset, uae_u8 
 		return;
 
 	uae_u8 *vram_end = src + gfxmem_banks[0]->allocated_size;
+	uae_u8* dst_end = dst + vidinfo->height * vidinfo->rowbytes;
 	uae_u8 *s = src + overlay_vram_offset;
 	uae_u8 *ss = src + scr_offset;
 	int mx = overlay_src_width_in * 256 / overlay_w;
 	int my = overlay_src_height_in * 256 / overlay_h;
 	int y = 0;
+
 	int split = 0;
 	if (vidinfo->splitypos >= 0) {
 		split = vidinfo->splitypos;
 	}
+
 	for (int dy = 0; dy < overlay_h; dy++) {
-		if (s + (y >> 8) * overlay_src_width_in * overlay_pix > vram_end)
+		if (s + (y >> 8) * overlay_src_width_in * overlay_pix > vram_end) {
 			break;
-		if (ss + (overlay_y + dy + split) * state->BytesPerRow > vram_end)
+		}
+		if (ss + (overlay_y + dy + split) * state->BytesPerRow > vram_end) {
 			break;
-		if (dst + (overlay_y + dy + split) * vidinfo->rowbytes > vram_end)
+		}
+		if (dst + (overlay_y + dy + split) * vidinfo->rowbytes > dst_end) {
 			break;
+		}
 		copyrow_scale(monid, s, ss, dst,
 			0, (y >> 8), mx, overlay_src_width_in, overlay_src_width * overlay_pix, overlay_pix,
 			state->BytesPerRow, state->BytesPerPixel,
@@ -6290,7 +6296,7 @@ static uaecptr uaegfx_card_install (TrapContext *ctx, uae_u32 extrasize)
 	if (uaegfx_old || !(gfxmem_bank.flags & ABFLAG_MAPPED))
 		return 0;
 
-	uaegfx_resid = ds (_T("UAE Graphics Card 3.4"));
+	uaegfx_resid = ds (_T("UAE Graphics Card 4.0"));
 	uaegfx_vblankname = ds (_T("UAE Graphics Card VBLANK"));
 	uaegfx_portsname = ds (_T("UAE Graphics Card PORTS"));
 
