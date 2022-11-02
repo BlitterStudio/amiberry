@@ -1260,7 +1260,9 @@ static int real_main2 (int argc, TCHAR **argv)
 	gui_data.net = -1;
 	gui_data.md = (currprefs.cs_cd32nvram || currprefs.cs_cdtvram) ? 0 : -1;
 
+#ifdef JIT
 	compiler_init();
+#endif
 #ifdef NATMEM_OFFSET
 	if (!init_shm ()) {
 		if (currprefs.start_gui)
