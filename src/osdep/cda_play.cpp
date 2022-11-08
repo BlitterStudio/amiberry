@@ -55,20 +55,25 @@ cda_audio::cda_audio(int num_sectors, int sectorsize, int samplerate)
 	}
 	this->num_sectors = num_sectors;
 
+	auto devname = sound_devices[currprefs.soundcard]->name;
 	const Uint8 channels = 2;
 	SDL_AudioSpec cdda_want, cdda_have;
-	memset(&cdda_want, 0, sizeof cdda_want);
+	SDL_zero(cdda_want);
 	cdda_want.freq = samplerate;
-	cdda_want.format = AUDIO_S16;
+	cdda_want.format = AUDIO_S16SYS;
 	cdda_want.channels = channels;
 	cdda_want.samples = static_cast<Uint16>(bufsize / 4);
 	if (pull_mode)
 		cdda_want.callback = sdl2_cdaudio_callback;
 
-	cdda_dev = SDL_OpenAudioDevice(nullptr, 0, &cdda_want, &cdda_have, 0);
+	if (cdda_dev == 0)
+		cdda_dev = SDL_OpenAudioDevice(devname, 0, &cdda_want, &cdda_have, 0);
 	if (cdda_dev == 0)
 	{
-		write_log("Failed to open SDL2 device for CD-Audio: %s", SDL_GetError());
+		write_log("Failed to open selected SDL2 device for CD-audio: %s, retrying with default device\n", SDL_GetError());
+		cdda_dev = SDL_OpenAudioDevice(nullptr, 0, &cdda_want, &cdda_have, 0);
+		if (cdda_dev == 0)
+			write_log("Failed to open default SDL2 device for CD-Audio: %s\n", SDL_GetError());
 	}
 	else
 	{

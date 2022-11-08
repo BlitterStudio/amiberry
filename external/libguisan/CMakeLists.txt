@@ -55,11 +55,12 @@ add_library(guisan STATIC
         src/widgets/window.cpp)
 target_include_directories(guisan PRIVATE ./include)
 
-find_package(SDL2 CONFIG REQUIRED)
-target_link_libraries(guisan PRIVATE PRIVATE SDL2::SDL2 SDL2::SDL2main)
-find_package(sdl2-image CONFIG REQUIRED)
-target_link_libraries(guisan PRIVATE SDL2::SDL2_image)
-find_package(sdl2-ttf CONFIG REQUIRED)
-target_link_libraries(guisan PRIVATE SDL2::SDL2_ttf)
+INCLUDE(FindPkgConfig)
+
+PKG_SEARCH_MODULE(SDL2 REQUIRED sdl2)
+PKG_SEARCH_MODULE(SDL2IMAGE REQUIRED SDL2_image>=2.0.0)
+
+INCLUDE_DIRECTORIES(${SDL2_INCLUDE_DIRS} ${SDL2IMAGE_INCLUDE_DIRS})
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${SDL2_LIBRARIES} ${SDL2IMAGE_LIBRARIES})
 
 install(TARGETS guisan DESTINATION ./lib)
