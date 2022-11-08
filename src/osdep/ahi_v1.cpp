@@ -265,7 +265,8 @@ static int ahi_init_sound(void)
 	ahisndbuffer = xmalloc(uae_u8, ahisndbufsize + 32);
 	if (!ahisndbuffer)
 		return 0;
-	
+
+	auto devname = sound_devices[currprefs.soundcard]->name;
 	SDL_zero(ahi_want);
 	ahi_want.freq = sound_freq_ahi;
 	ahi_want.format = AUDIO_S16SYS;
@@ -275,7 +276,7 @@ static int ahi_init_sound(void)
 	write_log(_T("AHI: Init AHI Sound Rate %d, Channels %d, Bits %d, Buffsize %d\n"),
 		sound_freq_ahi, sound_channels_ahi, sound_bits_ahi, amigablksize);
 
-	ahi_dev = SDL_OpenAudioDevice(nullptr, 0, &ahi_want, &ahi_have, 0);
+	ahi_dev = SDL_OpenAudioDevice(devname, 0, &ahi_want, &ahi_have, 0);
 	SDL_PauseAudioDevice(ahi_dev, 0);
 
 	//if (sound_devices[currprefs.win32_soundcard]->type != SOUND_DEVICE_DS)
@@ -283,8 +284,13 @@ static int ahi_init_sound(void)
 	//else
 	//	hr = DirectSoundCreate(&sound_devices[currprefs.win32_soundcard]->guid, &lpDS2, NULL);
 	if (ahi_dev == 0) {
-		write_log(_T("AHI: SDL_OpenAudioDevice failure: %s\n"), SDL_GetError());
-		return 0;
+		write_log(_T("AHI: Failed to open selected SDL2 device: %s, retrying with default device\n"), SDL_GetError());
+		ahi_dev = SDL_OpenAudioDevice(nullptr, 0, &ahi_want, &ahi_have, 0);
+		if (ahi_dev == 0)
+		{
+			write_log(_T("AHI: Failed to open default SDL2 device: %s:\n"), SDL_GetError());
+			return 0;
+		}
 	}
 	//memset(&sound_buffer, 0, sizeof(DSBUFFERDESC));
 	//sound_buffer.dwSize = sizeof(DSBUFFERDESC);

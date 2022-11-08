@@ -326,9 +326,13 @@ static int open_audio_sdl2(struct sound_data* sd, int index)
 	s->dev = SDL_OpenAudioDevice(devname, 0, &want, &have, 0);
 	if (s->dev == 0)
 	{
-		write_log("Failed to open audio: %s, retrying with default device\n", SDL_GetError());
+		write_log("Failed to open selected SDL2 device for audio: %s, retrying with default device\n", SDL_GetError());
 		s->dev = SDL_OpenAudioDevice(nullptr, 0, &want, &have, 0);
-		return 0;
+		if (s->dev == 0)
+		{
+			write_log("Failed to open default SDL2 device for audio: %s\n", SDL_GetError());
+			return 0;
+		}
 	}
 
 	if (s->pullmode)
