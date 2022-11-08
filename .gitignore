@@ -216,3 +216,4 @@ Thumbs.db
 *.orig
 cmake-build-debug
 VSLinux/.vs
+.vs
