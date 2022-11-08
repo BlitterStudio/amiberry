@@ -246,9 +246,6 @@ static int ahi_init_sound(void)
 	//DSBUFFERDESC sound_buffer;
 	//DSCAPS DSCaps;
 
-	if (ahi_dev)
-		return 0;
-
 	enumerate_sound_devices();
 	//wavfmt.wFormatTag = WAVE_FORMAT_PCM;
 	//wavfmt.nChannels = sound_channels_ahi;
@@ -276,9 +273,9 @@ static int ahi_init_sound(void)
 	write_log(_T("AHI: Init AHI Sound Rate %d, Channels %d, Bits %d, Buffsize %d\n"),
 		sound_freq_ahi, sound_channels_ahi, sound_bits_ahi, amigablksize);
 
-	ahi_dev = SDL_OpenAudioDevice(devname, 0, &ahi_want, &ahi_have, 0);
-	SDL_PauseAudioDevice(ahi_dev, 0);
-
+	if (ahi_dev == 0)
+		ahi_dev = SDL_OpenAudioDevice(devname, 0, &ahi_want, &ahi_have, 0);
+	
 	//if (sound_devices[currprefs.win32_soundcard]->type != SOUND_DEVICE_DS)
 	//	hr = DirectSoundCreate(NULL, &lpDS2, NULL);
 	//else
@@ -292,6 +289,9 @@ static int ahi_init_sound(void)
 			return 0;
 		}
 	}
+
+	SDL_PauseAudioDevice(ahi_dev, 0);
+
 	//memset(&sound_buffer, 0, sizeof(DSBUFFERDESC));
 	//sound_buffer.dwSize = sizeof(DSBUFFERDESC);
 	//sound_buffer.dwFlags = DSBCAPS_PRIMARYBUFFER;

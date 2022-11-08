@@ -69,7 +69,8 @@ cda_audio::cda_audio(int num_sectors, int sectorsize, int samplerate, bool inter
 	if (pull_mode)
 		cdda_want.callback = sdl2_cdaudio_callback;
 
-	cdda_dev = SDL_OpenAudioDevice(devname, 0, &cdda_want, &cdda_have, 0);
+	if (cdda_dev == 0)
+		cdda_dev = SDL_OpenAudioDevice(devname, 0, &cdda_want, &cdda_have, 0);
 	if (cdda_dev == 0)
 	{
 		write_log("Failed to open selected SDL2 device for CD-audio: %s, retrying with default device\n", SDL_GetError());

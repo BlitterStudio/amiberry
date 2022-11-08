@@ -323,7 +323,8 @@ static int open_audio_sdl2(struct sound_data* sd, int index)
 		want.userdata = sd;
 	}
 
-	s->dev = SDL_OpenAudioDevice(devname, 0, &want, &have, 0);
+	if (s->dev == 0)
+		s->dev = SDL_OpenAudioDevice(devname, 0, &want, &have, 0);
 	if (s->dev == 0)
 	{
 		write_log("Failed to open selected SDL2 device for audio: %s, retrying with default device\n", SDL_GetError());
