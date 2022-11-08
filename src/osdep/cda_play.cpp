@@ -71,7 +71,7 @@ cda_audio::cda_audio(int num_sectors, int sectorsize, int samplerate, bool inter
 	cdda_dev = SDL_OpenAudioDevice(nullptr, 0, &cdda_want, &cdda_have, 0);
 	if (cdda_dev == 0)
 	{
-		write_log("Failed to open SDL2 device for CD-Audio: %s", SDL_GetError());
+		write_log("Failed to open SDL2 device for CD-Audio: %s\n", SDL_GetError());
 	}
 	else
 	{
