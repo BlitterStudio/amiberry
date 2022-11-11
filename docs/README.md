@@ -1,5 +1,7 @@
 # Amiga emulator for ARM boards
 
+<a rel="me" href="https://mastodon.social/@midwan">Follow me Mastodon!</a>
+
 [![C/C++ CI](https://github.com/midwan/amiberry/actions/workflows/c-cpp.yml/badge.svg)](https://github.com/midwan/amiberry/actions/workflows/c-cpp.yml)
 
 [![Gitter](https://badges.gitter.im/amiberry/Amiberry.svg)](https://gitter.im/amiberry/Amiberry?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
