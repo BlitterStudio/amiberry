@@ -22,7 +22,7 @@ export SDL_CFLAGS := $(shell $(SDL_CONFIG) --cflags)
 export SDL_LDFLAGS := $(shell $(SDL_CONFIG) --libs)
 
 CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -Isrc/floppybridge -DAMIBERRY -D_FILE_OFFSET_BITS=64
-CFLAGS=-pipe -Wno-shift-overflow -Wno-narrowing -fno-pie -fPIC
+CFLAGS=-pipe -Wno-shift-overflow -Wno-narrowing
 USE_LD ?= gold
 LDFLAGS = $(SDL_LDFLAGS) -lSDL2_image -lSDL2_ttf -lguisan -Lexternal/libguisan/lib
 ifneq ($(strip $(USE_LD)),)
@@ -536,6 +536,7 @@ OBJS = \
 	src/osdep/amiberry_gui.o \
 	src/osdep/amiberry_mem.o \
 	src/osdep/amiberry_whdbooter.o \
+	src/osdep/sigsegv_handler.o \
 	src/osdep/retroarch.o \
 	src/sounddep/sound.o \
 	src/threaddep/threading.o \
@@ -596,7 +597,7 @@ OBJS += src/osdep/aarch64_helper_osx.o
 else ifeq ($(PLATFORM),$(filter $(PLATFORM),osx-x86))
 	USE_JIT = 0
 else ifeq ($(PLATFORM),$(filter $(PLATFORM),x86-64))
-	USE_JIT = 1
+	USE_JIT = 0
 else
 OBJS += src/osdep/neon_helper.o
 src/osdep/neon_helper.o: src/osdep/neon_helper.s

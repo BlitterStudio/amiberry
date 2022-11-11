@@ -102,7 +102,7 @@ void init_max_signals(void)
 }
 
 
-#if defined(CPU_AARCH64) || defined(CPU_AMD64) || defined(__x86_64__)
+#if defined(CPU_AARCH64)
 
 #ifdef JIT
 static int delete_trigger(blockinfo *bi, void *pc)
