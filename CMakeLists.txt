@@ -15,7 +15,7 @@ include_directories(
 )
 
 add_subdirectory(external/libguisan)
-add_definitions(-DAMIBERRY)
+add_definitions(-DAMIBERRY -D_FILE_OFFSET_BITS=64 -DUSE_RENDER_THREAD)
 
 add_executable(${PROJECT_NAME}
 		src/akiko.cpp
@@ -257,7 +257,6 @@ add_executable(${PROJECT_NAME}
 		src/osdep/gui/PanelSavestate.cpp
 		src/osdep/gui/main_window.cpp
 		src/osdep/gui/Navigation.cpp
-		src/osdep/aarch64_helper.s
 		src/newcpu.cpp
 		src/newcpu_common.cpp
 		src/readcpu.cpp
@@ -280,10 +279,10 @@ add_executable(${PROJECT_NAME}
 		src/cpuemu_35.cpp
 		src/cpuemu_40.cpp
 		src/cpuemu_50.cpp
-		src/jit/compemu.cpp
-		src/jit/compstbl.cpp
-		src/jit/compemu_fpp.cpp
-		src/jit/compemu_support.cpp
+#		src/jit/compemu.cpp
+#		src/jit/compstbl.cpp
+#		src/jit/compemu_fpp.cpp
+#		src/jit/compemu_support.cpp
 		)
 
 INCLUDE(FindPkgConfig)
@@ -297,9 +296,29 @@ find_package(mpg123 REQUIRED)
 find_package(PNG REQUIRED)
 
 INCLUDE_DIRECTORIES(${SDL2_INCLUDE_DIRS} ${SDL2IMAGE_INCLUDE_DIRS})
-TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE ${SDL2_LIBRARIES} ${SDL2IMAGE_LIBRARIES} FLAC::FLAC PNG::PNG png_static)
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE ${SDL2_LIBRARIES} ${SDL2IMAGE_LIBRARIES} ${SDL2TTF_LIBRARIES} FLAC::FLAC PNG::PNG mpg123 mpeg2convert mpeg2)
 
 target_include_directories(${PROJECT_NAME} PRIVATE ./external/libguisan/include)
 target_link_libraries(${PROJECT_NAME} PRIVATE guisan)
 
-
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory
+                       ${CMAKE_SOURCE_DIR}/conf $<TARGET_FILE_DIR:${PROJECT_NAME}>/conf)
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory
+                       ${CMAKE_SOURCE_DIR}/controllers $<TARGET_FILE_DIR:${PROJECT_NAME}>/controllers)
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory
+                       ${CMAKE_SOURCE_DIR}/data $<TARGET_FILE_DIR:${PROJECT_NAME}>/data)
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory
+                       ${CMAKE_SOURCE_DIR}/kickstarts $<TARGET_FILE_DIR:${PROJECT_NAME}>/kickstarts)
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory
+                       ${CMAKE_SOURCE_DIR}/savestates $<TARGET_FILE_DIR:${PROJECT_NAME}>/savestates)
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory
+                       ${CMAKE_SOURCE_DIR}/screenshots $<TARGET_FILE_DIR:${PROJECT_NAME}>/screenshots)
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory
+                       ${CMAKE_SOURCE_DIR}/whdboot $<TARGET_FILE_DIR:${PROJECT_NAME}>/whdboot)
