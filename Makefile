@@ -17,8 +17,9 @@
 #
 ## Common options for all targets
 #
-export SDL_CFLAGS := $(shell pkgconf --cflags sdl2)
-export SDL_LDFLAGS := $(shell pkgconf --libs sdl2)
+SDL_CONFIG ?= sdl2-config
+export SDL_CFLAGS := $(shell $(SDL_CONFIG) --cflags)
+export SDL_LDFLAGS := $(shell $(SDL_CONFIG) --libs)
 
 CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -Isrc/floppybridge -DAMIBERRY -D_FILE_OFFSET_BITS=64
 CFLAGS=-pipe -Wno-shift-overflow -Wno-narrowing
