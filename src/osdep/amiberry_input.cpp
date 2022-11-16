@@ -1217,6 +1217,19 @@ static void read_gamecontroller_buttons(const int joy)
 	}
 }
 
+static bool invert_axis(int axis, const didata* did)
+{
+	if (axis == SDL_CONTROLLER_AXIS_LEFTX && did->mapping.lstick_axis_x_invert != 0)
+		return true;
+	if (axis == SDL_CONTROLLER_AXIS_LEFTY && did->mapping.lstick_axis_y_invert != 0)
+		return true;
+	if (axis == SDL_CONTROLLER_AXIS_RIGHTX && did->mapping.rstick_axis_x_invert != 0)
+		return true;
+	if (axis == SDL_CONTROLLER_AXIS_RIGHTY && did->mapping.rstick_axis_y_invert != 0)
+		return true;
+	return false;
+}
+
 static void read_gamecontroller_axes(const int joy)
 {
 	didata* did = &di_joystick[joy];
@@ -1226,7 +1239,7 @@ static void read_gamecontroller_axes(const int joy)
 	{
 		if (did->mapping.axis[axis] != SDL_CONTROLLER_AXIS_INVALID)
 		{
-			const int data = SDL_GameControllerGetAxis(did->controller, static_cast<SDL_GameControllerAxis>(did->mapping.axis[axis]));
+			int data = SDL_GameControllerGetAxis(did->controller, static_cast<SDL_GameControllerAxis>(did->mapping.axis[axis]));
 
 			// If analog mouse mapping is used, the Left stick acts as a mouse
 			if (axis <= SDL_CONTROLLER_AXIS_LEFTY && did->mousemap > 0)
@@ -1236,6 +1249,10 @@ static void read_gamecontroller_axes(const int joy)
 			}
 			else
 			{
+				if (invert_axis(axis, did))
+				{
+					data = data * -1;
+				}
 				if (axisold[joy][axis] != data) {
 					setjoystickstate(joy, axis, data, analog_upper_bound);
 					axisold[joy][axis] = data;
@@ -1334,7 +1351,7 @@ static void read_joystick_axes(const int joy)
 	{
 		if (did->mapping.axis[axis] != SDL_CONTROLLER_AXIS_INVALID)
 		{
-			const int data = SDL_JoystickGetAxis(did->joystick, did->mapping.axis[axis]);
+			int data = SDL_JoystickGetAxis(did->joystick, did->mapping.axis[axis]);
 
 			// If analog mouse mapping is used, the Left stick acts as a mouse
 			if (axis <= SDL_CONTROLLER_AXIS_LEFTY && did->mousemap > 0)
@@ -1344,6 +1361,10 @@ static void read_joystick_axes(const int joy)
 			}
 			else
 			{
+				if (invert_axis(axis, did))
+				{
+					data = data * -1;
+				}
 				if (axisold[joy][axis] != data) {
 					setjoystickstate(joy, axis, data, analog_upper_bound);
 					axisold[joy][axis] = data;
