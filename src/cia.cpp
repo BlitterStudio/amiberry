@@ -158,7 +158,9 @@ static struct CIA cia[2];
 static bool oldovl;
 static bool led;
 static int led_old_brightness;
-static evt_t led_cycles_on, led_cycles_off, led_cycle;
+static evt_t led_cycle;
+static evt_t cia_now_evt;
+static int led_cycles_on, led_cycles_off;
 
 static int kbstate, kblostsynccnt;
 static evt_t kbhandshakestart;
@@ -410,7 +412,6 @@ static uae_u8 cia_inmode_cnt(int num)
 
 	// A INMODE=1 (count CNT pulses)
 	if ((c->t[0].cr & (CR_INMODE | CR_START)) == (CR_INMODE | CR_START)) {
-		c->t[0].timer--;
 		if (c->t[0].timer == 0) {
 			icr |= ICR_A;
 			timer_reset(&c->t[0]);
@@ -421,6 +422,8 @@ static uae_u8 cia_inmode_cnt(int num)
 			if ((c->t[1].cr & (CR_INMODE1 | CR_START)) == (CR_INMODE1 | CR_START)) {
 				decb = true;
 			}
+		} else {
+			c->t[0].timer--;
 		}
 	}
 	// B INMODE=01 (count CNT pulses)
@@ -429,13 +432,14 @@ static uae_u8 cia_inmode_cnt(int num)
 	}
 
 	if (decb) {
-		c->t[1].timer--;
 		if (c->t[1].timer == 0) {
 			icr |= ICR_B;
 			timer_reset(&c->t[1]);
 			if (c->t[1].cr & CR_RUNMODE) {
 				c->t[1].cr &= ~CR_START;
 			}
+		} else {
+			c->t[1].timer--;
 		}
 	}
 	return icr;
@@ -516,6 +520,7 @@ static void CIA_update_check(void)
 					t->timer = t->latch;
 					t->inputpipe &= ~CIA_PIPE_CLR1;
 				}
+
 				if ((t->loaddelay & 0x0100) && t->timer != 0) {
 					loaded2[tn] = true;
 				}
@@ -534,12 +539,11 @@ static void CIA_update_check(void)
 				t->loaddelay >>= 1;
 				t->loaddelay &= 0x7f7f7f7f;
 			}
-
 		}
 
 		// Timer A
 		int cc = 0;
-		if ((c->t[0].cr& (CR_INMODE | CR_START)) == CR_START || c->t[0].inputpipe) {
+		if ((c->t[0].cr & (CR_INMODE | CR_START)) == CR_START || c->t[0].inputpipe) {
 			cc = process_pipe(&c->t[0], ciaclocks, CR_INMODE | CR_START, &ovfl[0]);
 		}
 		if (cc > 0) {
@@ -558,10 +562,6 @@ static void CIA_update_check(void)
 					}
 				}
 				ovfl[0] = 1;
-				// B INMODE=10 or 11
-				if ((c->t[1].cr & (CR_INMODE | CR_INMODE1 | CR_START)) == (CR_INMODE1 | CR_START) || (c->t[1].cr & (CR_INMODE | CR_INMODE1 | CR_START)) == (CR_INMODE | CR_INMODE1 | CR_START)) {
-					c->t[1].inputpipe |= CIA_PIPE_INPUT;
-				}
 			}
 		}
 		assert(c->t[0].timer < 0x10000);
@@ -572,12 +572,21 @@ static void CIA_update_check(void)
 			cc = process_pipe(&c->t[1], ciaclocks, CR_INMODE | CR_INMODE1 | CR_START, &ovfl[1]);
 		}
 		if (cc > 0) {
-			c->t[1].timer -= cc;
-			if (c->t[1].timer == 0) {
+			if ((c->t[1].timer == 0 && (c->t[1].cr & (CR_INMODE | CR_INMODE1)))) {
 				ovfl[1] = 1;
+			} else {
+				c->t[1].timer -= cc;
+				if ((c->t[1].timer == 0 && !(c->t[1].cr & (CR_INMODE | CR_INMODE1)))) {
+					ovfl[1] = 1;
+				}
 			}
 		}
 		assert(c->t[1].timer < 0x10000);
+
+		// B INMODE=10 or 11
+		if (ovfl[0] && ((c->t[1].cr & (CR_INMODE | CR_INMODE1 | CR_START)) == (CR_INMODE1 | CR_START) || (c->t[1].cr & (CR_INMODE | CR_INMODE1 | CR_START)) == (CR_INMODE | CR_INMODE1 | CR_START))) {
+			c->t[1].inputpipe |= CIA_PIPE_INPUT;
+		}
 
 		for (int tn = 0; tn < 2; tn++) {
 			struct CIATimer *t = &c->t[tn];
@@ -677,6 +686,7 @@ static void CIA_calctimers(void)
 		for (int tn = 0; tn < 2; tn++) {
 			struct CIATimer *t = &c->t[tn];
 			bool timerspecial = t->loaddelay != 0;
+			int tnidx = idx + tn;
 			if (t->cr & CR_START) {
 				if (t->inputpipe != CIA_PIPE_ALL_MASK) {
 					timerspecial = true;
@@ -686,8 +696,8 @@ static void CIA_calctimers(void)
 					timerspecial = true;
 				}
 			}
-			if (timerspecial && (timevals[idx] < 0 || timevals[idx] > DIV10)) {
-				timevals[idx + tn] = DIV10;
+			if (timerspecial && (timevals[tnidx] < 0 || timevals[tnidx] > DIV10)) {
+				timevals[tnidx] = DIV10;
 			}
 		}
 
@@ -695,7 +705,7 @@ static void CIA_calctimers(void)
 			timevals[idx] = DIV10;
 		}
 
-#if CIA_EVERY_CYCLE_DEBUG		
+#if CIA_EVERY_CYCLE_DEBUG
 		timevals[idx] = DIV10;
 #endif
 
@@ -726,7 +736,7 @@ void CIA_handler(void)
 	CIA_calctimers();
 }
 
-static int get_cia_sync_cycles(void)
+static int get_cia_sync_cycles(int *syncdelay)
 {
 	evt_t c = get_e_cycles();
 	int div10 = c % DIV10;
@@ -734,13 +744,13 @@ static int get_cia_sync_cycles(void)
 	int synccycle = e_clock_sync * E_CYCLE_UNIT;
 	if (div10 < synccycle) {
 		add += synccycle - div10;
-	}
-	else if (div10 > synccycle) {
+	} else if (div10 > synccycle) {
 		add += DIV10 - div10;
 		add += synccycle;
 	}
-	// sync + 4 first cycles of E-clock
-	add += e_clock_start * E_CYCLE_UNIT;
+	*syncdelay = add;
+	// 4 first cycles of E-clock
+	add = e_clock_start * E_CYCLE_UNIT;
 	return add;
 }
 
@@ -763,7 +773,9 @@ static void CIA_sync_interrupt(int num, uae_u8 icr)
 			c->icr1 |= icr;
 			return;
 		}
-		int delay = get_cia_sync_cycles();
+		int syncdelay = 0;
+		int delay = get_cia_sync_cycles(&syncdelay);
+		delay += syncdelay;
 		event2_newevent_xx(-1, DIV10 + delay, num, CIA_synced_interrupt);
 	} else {
 		c->icr1 |= icr;
@@ -1207,7 +1219,7 @@ void CIA_hsync_posthandler(bool ciahsync, bool dotod)
 static void calc_led(int old_led)
 {
 	evt_t c = get_cycles();
-	evt_t t = (c - led_cycle) / CYCLE_UNIT;
+	int t = (int)((c - led_cycle) / CYCLE_UNIT);
 	if (old_led)
 		led_cycles_on += t;
 	else
@@ -2102,6 +2114,9 @@ void CIA_reset(void)
 	heartbeat_cnt = 0;
 	cia[0].tod_event_state = 0;
 	cia[1].tod_event_state = 0;
+	led_cycles_off = 0;
+	led_cycles_on = 0;
+	led_cycle = get_cycles();
 
 	if (!savestate_state) {
 		oldovl = true;
@@ -2166,6 +2181,36 @@ addrbank cia_bank = {
 	ABFLAG_IO | ABFLAG_CIA, S_READ, S_WRITE, NULL, 0x3f01, 0xbfc000
 };
 
+static int cia_cycles(int delay, int phase, int val, int post)
+{
+#ifdef DEBUGGER
+	if (currprefs.cpu_memory_cycle_exact && debug_dma) {
+		while (delay > 0) {
+			int hpos = current_hpos();
+			record_cia_access(0xfffff, 0, 0, 0, hpos, vpos, phase + 1);
+			phase += 2;
+			if (post) {
+				x_do_cycles_post(CYCLE_UNIT, val);
+			} else {
+				x_do_cycles_pre(CYCLE_UNIT);
+			}
+			delay -= CYCLE_UNIT;
+		}
+	} else {
+#endif
+		if (delay > 0) {
+			if (post) {
+				x_do_cycles_post(delay, val);
+			} else {
+				x_do_cycles_pre(delay);
+			}
+		}
+#ifdef DEBUGGER
+	}
+#endif
+	return phase;
+}
+
 static void cia_wait_pre(int cianummask)
 {
 	if (currprefs.cachesize || currprefs.cpu_thread)
@@ -2182,8 +2227,15 @@ static void cia_wait_pre(int cianummask)
 #endif
 
 #ifndef CUSTOM_SIMPLE
-	int delay = get_cia_sync_cycles();
-	x_do_cycles_pre(delay);
+	cia_now_evt = get_cycles();
+	int syncdelay = 0;
+	int delay = get_cia_sync_cycles(&syncdelay);
+	//if (debug_dma) {
+	//	cia_cycles(syncdelay, 100, 0, 0);
+	//	cia_cycles(delay, 0, 0, 0);
+	//} else {
+		cia_cycles(syncdelay + delay, 0, 0, 0);
+	//}
 #endif
 }
 
@@ -2193,7 +2245,7 @@ static void cia_wait_post(int cianummask, uaecptr addr, uae_u32 value, bool rw)
 	if (currprefs.cpu_memory_cycle_exact && debug_dma) {
 		int r = (addr & 0xf00) >> 8;
 		int hpos = current_hpos();
-		record_cia_access(r, cianummask, value, rw, hpos, vpos);
+		record_cia_access(r, cianummask, value, rw, hpos, vpos, -1);
 	}
 #endif
 

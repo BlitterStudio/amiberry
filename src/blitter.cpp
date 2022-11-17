@@ -1360,13 +1360,15 @@ static int blitter_next_cycle(void)
 
 static void blitter_doddma_new(int hpos, bool addmod)
 {
+	uaecptr *hpt = NULL;
+
 	check_channel_mods(hpos, 4, &bltdpt);
+	uaecptr orptr = alloc_cycle_blitter_conflict_or();
+	record_dma_blit(0x00, ddat1, bltdpt | orptr, hpos);
+	blit_chipmem_agnus_wput(bltdpt | orptr, ddat1, MW_MASK_BLITTER_D_N);
+	bool skipadd = alloc_cycle_blitter(hpos, &bltdpt, 4, addmod ? blit_modaddd : 0);
 
-	record_dma_blit(0x00, ddat1, bltdpt, hpos);
-	blit_chipmem_agnus_wput(bltdpt, ddat1, MW_MASK_BLITTER_D_N);
-	alloc_cycle_blitter(hpos, &bltdpt, 4);
-
-	if (!blitline) {
+	if (!blitline && !skipadd) {
 		bltdpt += blit_add;
 	}
 	if (addmod) {
@@ -1378,7 +1380,10 @@ static void blitter_dodma_new(int ch, int hpos, bool addmod)
 {
 	uae_u16 dat, reg;
 	uae_u32 *addr;
+	bool skipadd = false;
 	int mod;
+
+	uaecptr orptr = alloc_cycle_blitter_conflict_or();
 
 	switch (ch)
 	{
@@ -1386,13 +1391,13 @@ static void blitter_dodma_new(int ch, int hpos, bool addmod)
 	{
 		check_channel_mods(hpos, 1, &bltapt);
 		reg = 0x74;
-		record_dma_blit(reg, 0, bltapt, hpos);
-		blt_info.bltadat = dat = chipmem_wget_indirect(bltapt);
+		record_dma_blit(reg, 0, bltapt | orptr, hpos);
+		blt_info.bltadat = dat = chipmem_wget_indirect(bltapt | orptr);
 		record_dma_blit_val(dat);
 		regs.chipset_latch_rw = blt_info.bltadat;
 		addr = &bltapt;
 		mod = blit_modadda;
-		alloc_cycle_blitter(hpos, &bltapt, 1);
+		skipadd = alloc_cycle_blitter(hpos, &bltapt, 1, addmod ? mod : 0);
 		break;
 	}
 	case 2: // B
@@ -1400,8 +1405,8 @@ static void blitter_dodma_new(int ch, int hpos, bool addmod)
 		int bshift = bltcon1 >> 12;
 		check_channel_mods(hpos, 2, &bltbpt);
 		reg = 0x72;
-		record_dma_blit(reg, 0, bltbpt, hpos);
-		blt_info.bltbdat = dat = chipmem_wget_indirect(bltbpt);
+		record_dma_blit(reg, 0, bltbpt | orptr, hpos);
+		blt_info.bltbdat = dat = chipmem_wget_indirect(bltbpt | orptr);
 		record_dma_blit_val(dat);
 		regs.chipset_latch_rw = blt_info.bltbdat;
 		addr = &bltbpt;
@@ -1412,27 +1417,27 @@ static void blitter_dodma_new(int ch, int hpos, bool addmod)
 			blt_info.bltbhold = (((uae_u32)blt_info.bltbold << 16) | blt_info.bltbdat) >> bshift;
 		blineb = blt_info.bltbhold;
 		blt_info.bltbold = blt_info.bltbdat;
-		alloc_cycle_blitter(hpos, &bltbpt, 2);
+		skipadd = alloc_cycle_blitter(hpos, &bltbpt, 2, addmod ? mod : 0);
 		break;
 	}
 	case 3: // C
 	{
 		reg = 0x70;
 		check_channel_mods(hpos, 3, &bltcpt);
-		record_dma_blit(reg, 0, bltcpt, hpos);
-		blt_info.bltcdat = dat = chipmem_wget_indirect(bltcpt);
+		record_dma_blit(reg, 0, bltcpt | orptr, hpos);
+		blt_info.bltcdat = dat = chipmem_wget_indirect(bltcpt | orptr);
 		record_dma_blit_val(dat);
 		regs.chipset_latch_rw = blt_info.bltcdat;
 		addr = &bltcpt;
 		mod = blit_modaddc;
-		alloc_cycle_blitter(hpos, &bltcpt, 3);
+		skipadd = alloc_cycle_blitter(hpos, &bltcpt, 3, addmod ? mod : 0);
 		break;
 	}
 	default:
 		abort();
 	}
 
-	if (!blitline) {
+	if (!blitline && !skipadd) {
 		(*addr) += blit_add;
 	}
 	if (addmod) {
@@ -1594,13 +1599,13 @@ static bool decide_blitter_maybe_write2(int until_hpos, uaecptr addr, uae_u32 va
 					blitter_line_proc_cpt_y();
 					blitlineloop = 0;
 				}
-
-				record_dma_blit(0x70, 0, bltcpt, hpos);
+				uaecptr orptr = alloc_cycle_blitter_conflict_or();
+				record_dma_blit(0x70, 0, bltcpt | orptr, hpos);
 				check_channel_mods(hpos, 3, &bltcpt);
-				blt_info.bltcdat = chipmem_wget_indirect(bltcpt);
+				blt_info.bltcdat = chipmem_wget_indirect(bltcpt | orptr);
 				regs.chipset_latch_rw = blt_info.bltcdat;
 				record_dma_blit_val(blt_info.bltcdat);
-				alloc_cycle_blitter(hpos, &bltcpt, 3);
+				alloc_cycle_blitter(hpos, &bltcpt, 3, 0);
 
 				if (dat & BLITTER_PIPELINE_FIRST) {
 					blitter_line_minterm(dat);
@@ -1631,10 +1636,11 @@ static bool decide_blitter_maybe_write2(int until_hpos, uaecptr addr, uae_u32 va
 
 				/* onedot mode and no pixel = bus write access is skipped */
 				if (blitlinepixel && c == 4) {
-					record_dma_blit(0x00, blt_info.bltddat, bltdpt, hpos);
+					uaecptr orptr = alloc_cycle_blitter_conflict_or();
+					record_dma_blit(0x00, blt_info.bltddat, bltdpt | orptr, hpos);
 					check_channel_mods(hpos, 4, &bltdpt);
-					blit_chipmem_agnus_wput(bltdpt, blt_info.bltddat, MW_MASK_BLITTER_D_L);
-					alloc_cycle_blitter(hpos, &bltdpt, 4);
+					blit_chipmem_agnus_wput(bltdpt | orptr, blt_info.bltddat, MW_MASK_BLITTER_D_L);
+					alloc_cycle_blitter(hpos, &bltdpt, 4, 0);
 				} else {
 					markidlecycle(hpos);
 				}
@@ -1644,7 +1650,12 @@ static bool decide_blitter_maybe_write2(int until_hpos, uaecptr addr, uae_u32 va
 				bltdpt = bltcpt;
 
 				blitter_line_minterm(dat);
-
+#if 0
+				if (blt_info.hblitsize == 1) {
+					blitter_line_proc_cpt_x();
+					blitter_line_proc_cpt_y();
+				}
+#endif
 			} else {
 
 				// normal mode channels

@@ -171,7 +171,6 @@ extern int display_reset;
 #define CYCLE_COPPER	6
 #define CYCLE_BLITTER	7
 #define CYCLE_CPU		8
-#define CYCLE_COPPER_SPECIAL 0x10
 
 #define CYCLE_MASK 0x0f
 
@@ -252,7 +251,8 @@ struct customhack {
 	int vpos, hpos;
 };
 extern void alloc_cycle_ext(int, int);
-extern void alloc_cycle_blitter(int hpos, uaecptr *ptr, int);
+extern bool alloc_cycle_blitter(int hpos, uaecptr *ptr, int, int);
+extern uaecptr alloc_cycle_blitter_conflict_or(void);
 extern bool ispal(int *lines);
 extern bool isvga(void);
 extern int current_maxvpos(void);
@@ -271,6 +271,7 @@ extern uae_u8 cycle_line_slot[MAX_CHIPSETSLOTS + RGA_PIPELINE_ADJUST];
 extern uae_u16 cycle_line_pipe[MAX_CHIPSETSLOTS + RGA_PIPELINE_ADJUST];
 
 #define CYCLE_PIPE_CPUSTEAL 0x8000
+#define CYCLE_PIPE_NONE 0x4000
 #define CYCLE_PIPE_BLITTER 0x100
 #define CYCLE_PIPE_COPPER 0x80
 #define CYCLE_PIPE_SPRITE 0x40

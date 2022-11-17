@@ -1406,55 +1406,46 @@ static void update_volume(int nr, uae_u16 v)
 	cdp->data.audvol = v;
 }
 
-uae_u16 audio_dmal (void)
+uae_u16 audio_dmal(void)
 {
 	uae_u16 dmal = 0;
 	for (int nr = 0; nr < AUDIO_CHANNELS_PAULA; nr++) {
 		struct audio_channel_data *cdp = audio_channel + nr;
 		if (cdp->dr)
-			dmal |= 1 << (nr * 2);
-		if (cdp->dsr)
 			dmal |= 1 << (nr * 2 + 1);
+		if (cdp->dsr)
+			dmal |= 1 << (nr * 2 + 0);
 		cdp->dr = cdp->dsr = false;
 	}
 	return dmal;
 }
 
-static int isirq (int nr)
+static int isirq(int nr)
 {
-	return INTREQR () & (0x80 << nr);
+	return INTREQR() & (0x80 << nr);
 }
 
-static void audio_setirq_event(uae_u32 nr)
-{
-	INTREQ_0 (0x8000 | (0x80 << nr));
-}
-
-static void setirq (int nr, int which)
+static void setirq(int nr, int which)
 {
 #if DEBUG_AUDIO > 0
 	struct audio_channel_data *cdp = audio_channel + nr;
 	if (debugchannel (nr) && cdp->wlen > 1)
 		write_log (_T("SETIRQ%d (%d,%d) PC=%08X\n"), nr, which, isirq (nr) ? 1 : 0, M68K_GETPC);
 #endif
-	// audio interrupts are delayed by 2 cycles
-	if (!currprefs.cachesize && currprefs.cpu_compatible) {
-		event2_newevent_xx (-1, 2 * CYCLE_UNIT + CYCLE_UNIT / 2, nr, audio_setirq_event);
-	} else {
-		audio_setirq_event(nr);
-	}
+	// audio interrupts are delayed by 1 CCK
+	INTREQ_INT(nr + 7, CYCLE_UNIT);
 }
 
-static void newsample (int nr, sample8_t sample)
+static void newsample(int nr, sample8_t sample)
 {
 	struct audio_channel_data *cdp = audio_channel + nr;
 #if DEBUG_AUDIO > 0
-	if (!debugchannel (nr))
+	if (!debugchannel(nr))
 		sample = 0;
 #endif
 #if DEBUG_AUDIO > 2
-	if (debugchannel (nr))
-		write_log (_T("SAMPLE%d: %02x\n"), nr, sample & 0xff);
+	if (debugchannel(nr))
+		write_log(_T("SAMPLE%d: %02x\n"), nr, sample & 0xff);
 #endif
 	if (!(audio_channel_mask & (1 << nr)))
 		sample = 0;
@@ -2386,7 +2377,7 @@ static void audxdat_func(uae_u32 v)
 	cdp->dat_written = false;
 }
 
-void AUDxDAT (int nr, uae_u16 v, uaecptr addr)
+void AUDxDAT(int nr, uae_u16 v, uaecptr addr)
 {
 	struct audio_channel_data *cdp = audio_channel + nr;
 	int chan_ena = (dmacon & DMA_MASTER) && (dmacon & (1 << nr));
@@ -2418,13 +2409,9 @@ void AUDxDAT (int nr, uae_u16 v, uaecptr addr)
 	}
 	uae_u32 vv = nr | (chan_ena ? 0x80 : 0) | (v << 8);
 	if (!currprefs.cachesize && (cdp->per < PERIOD_LOW * CYCLE_UNIT || currprefs.cpu_compatible)) {
-		int cyc;
+		int cyc = 0;
 		if (chan_ena) {
-			// AUDxLEN is processed after 2 cycle delay
-			cyc = 2 * CYCLE_UNIT;
-		} else if (cdp->state == 0) {
-			cyc = 1 * CYCLE_UNIT;
-		} else {
+			// AUDxLEN is processed after 1 CCK delay
 			cyc = 1 * CYCLE_UNIT;
 		}
 		if (cyc > 0) {
@@ -2436,12 +2423,12 @@ void AUDxDAT (int nr, uae_u16 v, uaecptr addr)
 		audxdat_func(vv);
 	}
 }
-void AUDxDAT (int nr, uae_u16 v)
+void AUDxDAT(int nr, uae_u16 v)
 {
-	AUDxDAT (nr, v, 0xffffffff);
+	AUDxDAT(nr, v, 0xffffffff);
 }
 
-uaecptr audio_getpt (int nr, bool reset)
+uaecptr audio_getpt(int nr, bool reset)
 {
 	struct audio_channel_data *cdp = audio_channel + nr;
 	uaecptr p = cdp->pt;
@@ -2449,14 +2436,14 @@ uaecptr audio_getpt (int nr, bool reset)
 	if (reset)
 		cdp->pt = cdp->lc;
 	cdp->ptx_tofetch = false;
-	return p;
+	return p & ~1;
 }
 
-void AUDxLCH (int nr, uae_u16 v)
+void AUDxLCH(int nr, uae_u16 v)
 {
 	struct audio_channel_data *cdp = audio_channel + nr;
-	audio_activate ();
-	update_audio ();
+	audio_activate();
+	update_audio();
 
 	// someone wants to update PT but DSR has not yet been processed.
 	// too fast CPU and some tracker players: enable DMA, CPU delay, update AUDxPT with loop position
@@ -2481,11 +2468,11 @@ void AUDxLCH (int nr, uae_u16 v)
 	}
 }
 
-void AUDxLCL (int nr, uae_u16 v)
+void AUDxLCL(int nr, uae_u16 v)
 {
 	struct audio_channel_data *cdp = audio_channel + nr;
-	audio_activate ();
-	update_audio ();
+	audio_activate();
+	update_audio();
 	if (usehacks() && ((cdp->ptx_tofetch && cdp->state == 1) || cdp->ptx_written)) {
 		static int warned = 100;
 		cdp->ptx = cdp->lc;
