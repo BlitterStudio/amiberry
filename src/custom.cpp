@@ -10084,9 +10084,11 @@ static void update_copper(int until_hpos)
 				if (copper_bad_cycle - copper_bad_cycle_start != 3 * CYCLE_UNIT) {
 					copper_bad_cycle = 0;
 				} else {
+#ifdef DEBUGGER
 					if (debug_dma) {
 						record_dma_event(DMA_EVENT_SPECIAL, hpos, vpos);
 					}
+#endif
 					// early COPJMP processing
 					cop_state.state = COP_read1;
 					copper_bad_cycle_pc_old = cop_state.ip;
