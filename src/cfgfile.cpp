@@ -192,19 +192,19 @@ static const TCHAR *abspointers[] = { _T("none"), _T("mousehack"), _T("tablet"),
 static const TCHAR *magiccursors[] = { _T("both"), _T("native"), _T("host"), 0 };
 static const TCHAR *autoscale[] = { _T("none"), _T("auto"), _T("standard"), _T("max"), _T("scale"), _T("resize"), _T("center"), _T("manual"),
 	_T("integer"), _T("integer_auto"), _T("separator"), _T("overscan_blanking"), 0 };
-static const TCHAR* autoscale_rtg[] = { _T("resize"), _T("scale"), _T("center"), _T("integer"), 0 };
-static const TCHAR* autoscalelimit[] = { _T("1/1"), _T("1/2"), _T("1/4"), _T("1/8"), 0 };
-static const TCHAR* joyportmodes[] = { _T(""), _T("mouse"), _T("mousenowheel"), _T("djoy"), _T("gamepad"), _T("ajoy"), _T("cdtvjoy"), _T("cd32joy"), _T("lightpen"), 0 };
-static const TCHAR* joyportsubmodes_lightpen[] = { _T(""), _T("trojan"), 0 };
-static const TCHAR* joyaf[] = { _T("none"), _T("normal"), _T("toggle"), _T("always"), 0 };
-static const TCHAR* epsonprinter[] = { _T("none"), _T("ascii"), _T("epson_matrix_9pin"), _T("epson_matrix_24pin"), _T("epson_matrix_48pin"), 0 };
-static const TCHAR* aspects[] = { _T("none"), _T("vga"), _T("tv"), 0 };
-static const TCHAR* vsyncmodes[] = { _T("false"), _T("true"), _T("autoswitch"), 0 };
-static const TCHAR* vsyncmodes2[] = { _T("normal"), _T("busywait"), 0 };
-static const TCHAR* filterapi[] = { _T("directdraw"), _T("direct3d"), _T("direct3d11"), _T("direct3d11"), 0 };
-static const TCHAR* filterapiopts[] = { _T("hardware"), _T("software"), 0 };
-static const TCHAR* overscanmodes[] = { _T("tv_narrow"), _T("tv_standard"), _T("tv_wide"), _T("overscan"), _T("broadcast"), _T("extreme"), _T("ultra"), NULL};
-static const TCHAR* dongles[] =
+static const TCHAR *autoscale_rtg[] = { _T("resize"), _T("scale"), _T("center"), _T("integer"), 0 };
+static const TCHAR *autoscalelimit[] = { _T("1/1"), _T("1/2"), _T("1/4"), _T("1/8"), 0 };
+static const TCHAR *joyportmodes[] = { _T(""), _T("mouse"), _T("mousenowheel"), _T("djoy"), _T("gamepad"), _T("ajoy"), _T("cdtvjoy"), _T("cd32joy"), _T("lightpen"), 0 };
+static const TCHAR *joyportsubmodes_lightpen[] = { _T(""), _T("trojan"), 0 };
+static const TCHAR *joyaf[] = { _T("none"), _T("normal"), _T("toggle"), _T("always"), 0 };
+static const TCHAR *epsonprinter[] = { _T("none"), _T("ascii"), _T("epson_matrix_9pin"), _T("epson_matrix_24pin"), _T("epson_matrix_48pin"), 0 };
+static const TCHAR *aspects[] = { _T("none"), _T("vga"), _T("tv"), 0 };
+static const TCHAR *vsyncmodes[] = { _T("false"), _T("true"), _T("autoswitch"), 0 };
+static const TCHAR *vsyncmodes2[] = { _T("normal"), _T("busywait"), 0 };
+static const TCHAR *filterapi[] = { _T("directdraw"), _T("direct3d"), _T("direct3d11"), _T("direct3d11"), 0};
+static const TCHAR *filterapiopts[] = { _T("hardware"), _T("software"), 0 };
+static const TCHAR *overscanmodes[] = { _T("tv_narrow"), _T("tv_standard"), _T("tv_wide"), _T("overscan"), _T("broadcast"), _T("extreme"), _T("ultra"), NULL};
+static const TCHAR *dongles[] =
 {
 	_T("none"),
 	_T("robocop 3"), _T("leaderboard"), _T("b.a.t. ii"), _T("italy'90 soccer"), _T("dames grand maitre"),
@@ -479,7 +479,7 @@ TCHAR *cfgfile_option_get(const TCHAR *s, const TCHAR *option)
 	return cfgfile_option_find_it(s, option, true);
 }
 
-bool cfgfile_option_get_bool(const TCHAR* s, const TCHAR* option)
+bool cfgfile_option_get_bool(const TCHAR *s, const TCHAR *option)
 {
 	TCHAR *d = cfgfile_option_find_it(s, option, true);
 	bool ret = d && (!_tcsicmp(d, _T("true")) || !_tcsicmp(d, _T("1")));
@@ -2340,9 +2340,12 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_dwrite(f, _T("gfx_monitorblankdelay"), _T("%d"), p->gfx_monitorblankdelay);
 
 #ifdef GFXFILTER
-	for (int j = 0; j < 2; j++) {
+	for (int j = 0; j < MAX_FILTERDATA; j++) {
 		struct gfx_filterdata *gf = &p->gf[j];
-		const TCHAR *ext = j == 0 ? NULL : _T("_rtg");
+		const TCHAR *ext = j == 0 ? NULL : (j == 1 ? _T("_rtg") : _T("_lace"));
+		if (j == 2) {
+			cfgfile_dwrite_bool(f, _T("gfx_filter_enable"), ext, gf->enable);
+		}
 		for (int i = 0; i <MAX_FILTERSHADERS; i++) {
 			if (gf->gfx_filtershader[i][0])
 				cfgfile_write_ext (f, _T("gfx_filter_pre"), ext, _T("D3D:%s"), gf->gfx_filtershader[i]);
@@ -3755,15 +3758,13 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 	}
 
 #ifdef GFXFILTER
-	for (int j = 0; j < 2; j++) {
+	for (int j = 0; j < MAX_FILTERDATA; j++) {
 		struct gfx_filterdata *gf = &p->gf[j];
-		const TCHAR *ext = j == 0 ? NULL : _T("_rtg");
-		if (cfgfile_strval (option, value, _T("gfx_filter_autoscale"), ext, &gf->gfx_filter_autoscale, j == 0 ? autoscale : autoscale_rtg, 0)
+		const TCHAR *ext = j == 0 ? NULL : (j == 1 ? _T("_rtg") : _T("_lace"));
+		if (cfgfile_strval (option, value, _T("gfx_filter_autoscale"), ext, &gf->gfx_filter_autoscale, j == 0 || j == 2 ? autoscale : autoscale_rtg, 0)
 			|| cfgfile_strval (option, value, _T("gfx_filter_keep_aspect"), ext, &gf->gfx_filter_keep_aspect, aspects, 0)
-			|| cfgfile_strval (option, value, _T("gfx_filter_autoscale_limit"), ext, &gf->gfx_filter_integerscalelimit, autoscalelimit, 0))
-			return 1;
-
-		if (cfgfile_floatval(option, value, _T("gfx_filter_vert_zoomf"), ext, &gf->gfx_filter_vert_zoom)
+			|| cfgfile_strval (option, value, _T("gfx_filter_autoscale_limit"), ext, &gf->gfx_filter_integerscalelimit, autoscalelimit, 0)
+			|| cfgfile_floatval(option, value, _T("gfx_filter_vert_zoomf"), ext, &gf->gfx_filter_vert_zoom)
 			|| cfgfile_floatval(option, value, _T("gfx_filter_horiz_zoomf"), ext, &gf->gfx_filter_horiz_zoom)
 			|| cfgfile_floatval(option, value, _T("gfx_filter_vert_zoom_multf"), ext, &gf->gfx_filter_vert_zoom_mult)
 			|| cfgfile_floatval(option, value, _T("gfx_filter_horiz_zoom_multf"), ext, &gf->gfx_filter_horiz_zoom_mult)
@@ -3788,8 +3789,11 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 			|| cfgfile_intval(option, value, _T("gfx_filter_noise"), ext, &gf->gfx_filter_noise, 1)
 			|| cfgfile_intval(option, value, _T("gfx_filter_bilinear"), ext, &gf->gfx_filter_bilinear, 1)
 			|| cfgfile_intval(option, value, _T("gfx_filter_keep_autoscale_aspect"), ext, &gf->gfx_filter_keep_autoscale_aspect, 1)
+			|| cfgfile_intval(option, value, _T("gfx_filter_enable"), ext, &gf->enable, 1)
 			|| cfgfile_string(option, value, _T("gfx_filter_mask"), ext, gf->gfx_filtermask[2 * MAX_FILTERSHADERS], sizeof gf->gfx_filtermask[2 * MAX_FILTERSHADERS] / sizeof (TCHAR)))
-			return 1;
+			{
+				return 1;
+			}
 	}
 #endif
 
@@ -3983,9 +3987,9 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 	}
 
 #ifdef GFXFILTER
-	for (int j = 0; j < 2; j++) {
+	for (int j = 0; j < MAX_FILTERDATA; j++) {
 		struct gfx_filterdata *gf = &p->gf[j];
-		if ((j == 0 && _tcscmp (option, _T("gfx_filter_overlay")) == 0) || (j == 1 && _tcscmp (option, _T("gfx_filter_overlay_rtg")) == 0)) {
+		if ((j == 0 && _tcscmp (option, _T("gfx_filter_overlay")) == 0) || (j == 1 && _tcscmp(option, _T("gfx_filter_overlay_rtg")) == 0) || (j == 2 && _tcscmp(option, _T("gfx_filter_overlay_lace")) == 0)) {
 			TCHAR *s = _tcschr (value, ',');
 			gf->gfx_filteroverlay_overscan = 0;
 			gf->gfx_filteroverlay_pos.x = 0;
@@ -4008,18 +4012,19 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		}
 
 		if ((j == 0 && (_tcscmp (option, _T("gfx_filtermask_pre")) == 0 || _tcscmp (option, _T("gfx_filtermask_post")) == 0)) ||
-			(j == 1 && (_tcscmp (option, _T("gfx_filtermask_pre_rtg")) == 0 || _tcscmp (option, _T("gfx_filtermask_post_rtg")) == 0))) {
-			if (_tcscmp (option, _T("gfx_filtermask_pre")) == 0 || _tcscmp (option, _T("gfx_filtermask_pre_rtg")) == 0) {
+			(j == 1 && (_tcscmp(option, _T("gfx_filtermask_pre_rtg")) == 0 || _tcscmp(option, _T("gfx_filtermask_post_rtg")) == 0)) ||
+			(j == 2 && (_tcscmp(option, _T("gfx_filtermask_pre_lace")) == 0 || _tcscmp(option, _T("gfx_filtermask_post_lace")) == 0))) {
+			if (_tcscmp(option, _T("gfx_filtermask_pre")) == 0 || _tcscmp(option, _T("gfx_filtermask_pre_rtg")) == 0 || _tcscmp(option, _T("gfx_filtermask_pre_lace")) == 0) {
 				for (int i = 0; i < MAX_FILTERSHADERS; i++) {
 					if (gf->gfx_filtermask[i][0] == 0) {
-						_tcscpy (gf->gfx_filtermask[i], value);
+						_tcscpy(gf->gfx_filtermask[i], value);
 						break;
 					}
 				}
 			} else {
 				for (int i = 0; i < MAX_FILTERSHADERS; i++) {
 					if (gf->gfx_filtermask[i + MAX_FILTERSHADERS][0] == 0) {
-						_tcscpy (gf->gfx_filtermask[i + MAX_FILTERSHADERS], value);
+						_tcscpy(gf->gfx_filtermask[i + MAX_FILTERSHADERS], value);
 						break;
 					}
 				}
@@ -4028,24 +4033,25 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		}
 
 		if ((j == 0 && (_tcscmp (option, _T("gfx_filter_pre")) == 0 || _tcscmp (option, _T("gfx_filter_post")) == 0)) ||
-			(j == 1 && (_tcscmp (option, _T("gfx_filter_pre_rtg")) == 0 || _tcscmp (option, _T("gfx_filter_post_rtg")) == 0))) {
-			TCHAR *s = _tcschr (value, ':');
+			(j == 1 && (_tcscmp (option, _T("gfx_filter_pre_rtg")) == 0 || _tcscmp (option, _T("gfx_filter_post_rtg")) == 0)) ||
+			(j == 2 && (_tcscmp(option, _T("gfx_filter_pre_lace")) == 0 || _tcscmp(option, _T("gfx_filter_post_lace")) == 0))) {
+			TCHAR *s = _tcschr(value, ':');
 			if (s) {
 				*s++ = 0;
 				if (!_tcscmp (value, _T("D3D"))) {
 					if (!p->gfx_api)
 						p->gfx_api = 1;
-					if (_tcscmp (option, _T("gfx_filter_pre")) == 0 || _tcscmp (option, _T("gfx_filter_pre_rtg")) == 0) {
+					if (_tcscmp(option, _T("gfx_filter_pre")) == 0 || _tcscmp(option, _T("gfx_filter_pre_rtg")) == 0 || _tcscmp(option, _T("gfx_filter_pre_lace")) == 0) {
 						for (int i = 0; i < MAX_FILTERSHADERS; i++) {
 							if (gf->gfx_filtershader[i][0] == 0) {
-								_tcscpy (gf->gfx_filtershader[i], s);
+								_tcscpy(gf->gfx_filtershader[i], s);
 								break;
 							}
 						}
 					} else {
 						for (int i = 0; i < MAX_FILTERSHADERS; i++) {
 							if (gf->gfx_filtershader[i + MAX_FILTERSHADERS][0] == 0) {
-								_tcscpy (gf->gfx_filtershader[i + MAX_FILTERSHADERS], s);
+								_tcscpy(gf->gfx_filtershader[i + MAX_FILTERSHADERS], s);
 								break;
 							}
 						}
@@ -4055,7 +4061,7 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 			return 1;
 		}
 
-		if ((j == 0 && _tcscmp (option, _T("gfx_filter")) == 0) || (j == 1 && _tcscmp (option, _T("gfx_filter_rtg")) == 0)) {
+		if ((j == 0 && _tcscmp (option, _T("gfx_filter")) == 0) || (j == 1 && _tcscmp(option, _T("gfx_filter_rtg")) == 0) || (j == 2 && _tcscmp(option, _T("gfx_filter_lace")) == 0)) {
 			TCHAR *s = _tcschr (value, ':');
 			gf->gfx_filter = 0;
 			if (s) {
@@ -4101,6 +4107,10 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 			cfgfile_strval(option, value, _T("gfx_filter_mode_rtg"), &gf->gfx_filter_filtermodeh, filtermode2, 0);
 			return 1;
 		}
+		if (j == 2 && _tcscmp(option, _T("gfx_filter_mode_lace")) == 0) {
+			cfgfile_strval(option, value, _T("gfx_filter_mode_lace"), &gf->gfx_filter_filtermodeh, filtermode2, 0);
+			return 1;
+		}
 		if (j == 0 && _tcscmp(option, _T("gfx_filter_mode2")) == 0) {
 			cfgfile_strval(option, value, _T("gfx_filter_mode2"), &gf->gfx_filter_filtermodev, filtermode2v, 0);
 			return 1;
@@ -4109,9 +4119,14 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 			cfgfile_strval(option, value, _T("gfx_filter_mode2_rtg"), &gf->gfx_filter_filtermodev, filtermode2v, 0);
 			return 1;
 		}
+		if (j == 2 && _tcscmp(option, _T("gfx_filter_mode2_lace")) == 0) {
+			cfgfile_strval(option, value, _T("gfx_filter_mode2_lace"), &gf->gfx_filter_filtermodev, filtermode2v, 0);
+			return 1;
+		}
 
 		if ((j == 0 && cfgfile_string (option, value, _T("gfx_filter_aspect_ratio"), tmpbuf, sizeof tmpbuf / sizeof (TCHAR))) ||
-			(j == 1 && cfgfile_string (option, value, _T("gfx_filter_aspect_ratio_rtg"), tmpbuf, sizeof tmpbuf / sizeof (TCHAR)))) {
+			(j == 1 && cfgfile_string(option, value, _T("gfx_filter_aspect_ratio_rtg"), tmpbuf, sizeof tmpbuf / sizeof(TCHAR))) ||
+			(j == 2 && cfgfile_string(option, value, _T("gfx_filter_aspect_ratio_lace"), tmpbuf, sizeof tmpbuf / sizeof(TCHAR)))) {
 			int v1, v2;
 			TCHAR *s;
 
@@ -8300,7 +8315,9 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 		f->gfx_filteroverlay_overscan = 0;
 		f->gfx_filter_left_border = -1;
 		f->gfx_filter_top_border = -1;
+		f->enable = true;
 	}
+	p->gf[2].enable = false;
 
 	p->rtg_horiz_zoom_mult = 1.0;
 	p->rtg_vert_zoom_mult = 1.0;
@@ -8591,9 +8608,9 @@ static void set_68020_compa (struct uae_prefs *p, int compa, int cd32)
 	case 0:
 		p->m68k_speed = 0;
 		if ((p->cpu_model == 68020 || p->cpu_model == 68030) && p->cachesize == 0) {
-			//p->cpu_cycle_exact = 1;
-			//p->cpu_memory_cycle_exact = 1;
-			//p->blitter_cycle_exact = 1;
+			p->cpu_cycle_exact = 1;
+			p->cpu_memory_cycle_exact = 1;
+			p->blitter_cycle_exact = 1;
 			if (p->cpu_model == 68020)
 				p->cpu_clock_multiplier = 4 << 8;
 			else
@@ -8603,8 +8620,8 @@ static void set_68020_compa (struct uae_prefs *p, int compa, int cd32)
 	case 1:
 		p->m68k_speed = 0;
 		if ((p->cpu_model == 68020 || p->cpu_model == 68030) && p->cachesize == 0) {
-			//p->blitter_cycle_exact = 1;
-			//p->cpu_memory_cycle_exact = 1;
+			p->blitter_cycle_exact = 1;
+			p->cpu_memory_cycle_exact = 1;
 			if (p->cpu_model == 68020)
 				p->cpu_clock_multiplier = 4 << 8;
 			else
@@ -8650,7 +8667,7 @@ static void set_68000_compa (struct uae_prefs *p, int compa)
 	switch (compa)
 	{
 	case 0:
-		//p->cpu_cycle_exact = p->cpu_memory_cycle_exact = p->blitter_cycle_exact = 1;
+		p->cpu_cycle_exact = p->cpu_memory_cycle_exact = p->blitter_cycle_exact = 1;
 		break;
 	case 1:
 		break;
@@ -8956,8 +8973,6 @@ static int bip_cd32 (struct uae_prefs *p, int config, int compa, int romcheck)
 		p->cs_rtc = 1;
 		break;
 	}
-
-	p->m68k_speed = M68K_SPEED_14MHZ_CYCLES;
 #endif
 	return 1;
 }
@@ -8989,9 +9004,6 @@ static int bip_a1200 (struct uae_prefs *p, int config, int compa, int romcheck)
 		break;
 	}
 	set_68020_compa (p, compa, 0);
-#ifdef AMIBERRY
-	p->m68k_speed = M68K_SPEED_14MHZ_CYCLES;
-#endif
 	return configure_rom (p, roms, romcheck);
 }
 

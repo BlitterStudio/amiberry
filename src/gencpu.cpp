@@ -1390,6 +1390,7 @@ static void fill_prefetch_full_ntx(int beopcode)
 					out("if(t1) opcode |= 0x10000;\n");
 			}
 			next_level_000();
+			set_ipl();
 			fill_prefetch_1(2);
 		} else {
 			fill_prefetch_1_empty(2);
@@ -6799,12 +6800,10 @@ static void gen_opcode (unsigned int opcode)
 			addcycles000(4);
 			out("MakeSR();\nregs.sr &= 0xFF00;\nregs.sr |= src & 0xFF;\n");
 			makefromsr();
-			set_ipl();
 		} else {
 			// MOVE TO SR
 			check_trace();
 			addcycles000(4);
-			set_ipl();
 			out("regs.sr = src;\n");
 			makefromsr_t0();
 		}
@@ -7258,6 +7257,7 @@ static void gen_opcode (unsigned int opcode)
 		} else {
 			addop_ce020(curi, 0, 0);
 			// smode must be first in case it is A7. Except if 68040!
+			set_ipl();
 			if (cpu_level == 4) {
 				genamode(NULL, Apdi, "7", sz_long, "old", 2, 0, GF_AA | GF_NOEXC3);
 				genamode(NULL, curi->smode, "srcreg", sz_long, "src", 1, 0, GF_AA);
@@ -7276,7 +7276,7 @@ static void gen_opcode (unsigned int opcode)
 				write_return_cycles(0);
 				out("}\n");
 			}
-			genastore_2("src", Apdi, "7", sz_long, "old", 0, GF_IPLMID);
+			genastore_2("src", Apdi, "7", sz_long, "old", 0, 0);
 			genastore("m68k_areg(regs, 7)", curi->smode, "srcreg", sz_long, "src");
 			out("m68k_areg(regs, 7) += offs;\n");
 			fill_prefetch_next_t();
@@ -7293,8 +7293,9 @@ static void gen_opcode (unsigned int opcode)
 			out("m68k_areg(regs, srcreg) = old;\n");
 		} else {
 			m68k_pc_offset = 4;
+			set_ipl();
 			genamode(curi, curi->smode, "srcreg", curi->size, "src", 1, 0, 0);
-			genamode(NULL, am_unknown, "src", sz_long, "old", 1, 0, GF_IPLMID);
+			genamode(NULL, am_unknown, "src", sz_long, "old", 1, 0, 0);
 			out("m68k_areg(regs, 7) = src + 4;\n");
 			m68k_pc_offset = 2;
 			genastore("old", curi->smode, "srcreg", curi->size, "src");

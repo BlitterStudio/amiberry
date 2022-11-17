@@ -2406,7 +2406,7 @@ static void MakeFromSR_x(int t0trace)
 	regs.t1 = (regs.sr >> 15) & 1;
 	regs.t0 = (regs.sr >> 14) & 1;
 	regs.s  = (regs.sr >> 13) & 1;
-	regs.m = (regs.sr >> 12) & 1;
+	regs.m  = (regs.sr >> 12) & 1;
 
 	if (regs.intmask != ((regs.sr >> 8) & 7)) {
 		int newimask = (regs.sr >> 8) & 7;
@@ -2416,7 +2416,7 @@ static void MakeFromSR_x(int t0trace)
 				regs.ipl[0] = 0;
 			}
 		} else {
-			if (regs.ipl[0] <= regs.intmask && regs.ipl_pin > newimask) {
+			if (regs.ipl_pin <= regs.intmask && regs.ipl_pin > newimask) {
 				set_special(SPCFLAG_INT);
 			}
 		}
@@ -2903,7 +2903,9 @@ kludge_me_do:
 		return;
 	}
 #ifdef JIT
-	set_special (SPCFLAG_END_COMPILE);
+	if (currprefs.cachesize) {
+		set_special(SPCFLAG_END_COMPILE);
+	}
 #endif
 	exception_check_trace(nr);
 }
@@ -3213,7 +3215,9 @@ static void Exception_normal (int nr)
 						}
 						m68k_setpc (newpc);
 #ifdef JIT
-						set_special (SPCFLAG_END_COMPILE);
+						if (currprefs.cachesize) {
+							set_special(SPCFLAG_END_COMPILE);
+						}
 #endif
 						exception_check_trace (nr);
 						return;
@@ -3367,7 +3371,9 @@ kludge_me_do:
 	m68k_setpc (newpc);
 	cache_default_data &= ~CACHE_DISABLE_ALLOCATE;
 #ifdef JIT
-	set_special (SPCFLAG_END_COMPILE);
+	if (currprefs.cachesize) {
+		set_special(SPCFLAG_END_COMPILE);
+	}
 #endif
 #ifdef DEBUGGER
 	branch_stack_push(currpc, nextpc);
@@ -4566,10 +4572,12 @@ void doint(void)
 		}
 		return;
 	}
-	if (currprefs.cpu_compatible && currprefs.cpu_model < 68020)
-		set_special (SPCFLAG_INT);
-	else
-		set_special (SPCFLAG_DOINT);
+	if (regs.ipl_pin > regs.intmask) {
+		if (currprefs.cpu_compatible && currprefs.cpu_model < 68020)
+			set_special(SPCFLAG_INT);
+		else
+			set_special(SPCFLAG_DOINT);
+	}
 }
 
 static void check_debugger(void)
@@ -4664,7 +4672,9 @@ static int do_specialties (int cycles)
 		do_copper();
 
 #ifdef JIT
-	unset_special(SPCFLAG_END_COMPILE);   /* has done its job */
+	if (currprefs.cachesize) {
+		unset_special(SPCFLAG_END_COMPILE);
+	}
 #endif
 
 	while ((regs.spcflags & SPCFLAG_BLTNASTY) && dmaen (DMA_BLITTER) && cycles > 0 && ((currprefs.waiting_blits && currprefs.cpu_model >= 68020) || !currprefs.blitter_cycle_exact)) {
@@ -5092,7 +5102,9 @@ static int do_specialties_thread(void)
 		return 1;
 
 #ifdef JIT
-	unset_special(SPCFLAG_END_COMPILE);   /* has done its job */
+	if (currprefs.cachesize) {
+		unset_special(SPCFLAG_END_COMPILE);
+	}
 #endif
 
 	if (regs.spcflags & SPCFLAG_DOTRACE)
@@ -7984,7 +7996,7 @@ static void fill_icache020 (uae_u32 addr, bool opcode)
 		// cache hit
 		regs.cacheholdingaddr020 = addr;
 		regs.cacheholdingdata020 = c->data;
-		regs.cacheholdingdata_valid = true;
+		regs.cacheholdingdata_valid = 1;
 		return;
 	}
 
@@ -8013,7 +8025,7 @@ static void fill_icache020 (uae_u32 addr, bool opcode)
 	}
 	regs.cacheholdingaddr020 = addr;
 	regs.cacheholdingdata020 = data;
-	regs.cacheholdingdata_valid = true;
+	regs.cacheholdingdata_valid = 1;
 }
 
 #if MORE_ACCURATE_68020_PIPELINE
@@ -9641,7 +9653,7 @@ static void write_dcache040(uae_u32 addr, uae_u32 val, int size, void (*store)(u
 	// Cache miss
 	// 040+ always caches whole line
 	// Writes misses in write-through mode don't allocate new cache lines
-	if (!(cs & CACHE_ENABLE_DATA) || (cs & CACHE_DISABLE_MMU) || (cs & CACHE_DISABLE_ALLOCATE) || !(cs & CACHE_ENABLE_COPYBACK) || (regs.cacr & 0x400000000)) {
+	if (!(cs & CACHE_ENABLE_DATA) || (cs & CACHE_DISABLE_MMU) || (cs & CACHE_DISABLE_ALLOCATE) || !(cs & CACHE_ENABLE_COPYBACK) || (regs.cacr & 0x40000000)) {
 nocache:
 		store(addr_o, val);
 		return;

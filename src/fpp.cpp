@@ -1113,6 +1113,7 @@ static bool fault_if_no_fpu (uae_u16 opcode, uae_u16 extra, uaecptr ea, bool eas
 		if (fpu_mmu_fixup) {
 			m68k_areg (regs, mmufixup[0].reg) = mmufixup[0].value;
 			mmufixup[0].reg = -1;
+			fpu_mmu_fixup = false;
 		}
 		fpu_op_illg(opcode, ea, easet, oldpc);
 		return true;
