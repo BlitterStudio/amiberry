@@ -1630,7 +1630,9 @@ kludge_me_do:
 		return;
 	}
 #ifdef JIT
-	set_special (SPCFLAG_END_COMPILE);
+	if (currprefs.cachesize) {
+		set_special(SPCFLAG_END_COMPILE);
+	}
 #endif
 	exception_check_trace (nr);
 }
@@ -1922,7 +1924,9 @@ kludge_me_do:
 	add_approximate_exception_cycles(nr);
 	m68k_setpc (newpc);
 #ifdef JIT
-	set_special (SPCFLAG_END_COMPILE);
+	if (currprefs.cachesize) {
+		set_special(SPCFLAG_END_COMPILE);
+	}
 #endif
 	regs.ipl_pin = intlev();
 	ipl_fetch();
@@ -2674,10 +2678,12 @@ void doint(void)
 			set_special(SPCFLAG_INT);
 		return;
 	}
-	if (currprefs.cpu_compatible && currprefs.cpu_model < 68020)
-		set_special (SPCFLAG_INT);
-	else
-		set_special (SPCFLAG_DOINT);
+	if (regs.ipl_pin > regs.intmask) {
+		if (currprefs.cpu_compatible && currprefs.cpu_model < 68020)
+			set_special(SPCFLAG_INT);
+		else
+			set_special(SPCFLAG_DOINT);
+	}
 }
 
 static int do_specialties (int cycles)
@@ -2745,7 +2751,9 @@ static int do_specialties (int cycles)
 		do_copper ();
 
 #ifdef JIT
-	unset_special (SPCFLAG_END_COMPILE);   /* has done its job */
+	if (currprefs.cachesize) {
+		unset_special(SPCFLAG_END_COMPILE);
+	}
 #endif
 
 	while ((regs.spcflags & SPCFLAG_BLTNASTY) && dmaen (DMA_BLITTER) && cycles > 0 && ((currprefs.waiting_blits && currprefs.cpu_model >= 68020) || !currprefs.blitter_cycle_exact)) {
@@ -2996,7 +3004,9 @@ static int do_specialties_thread(void)
 		return 1;
 
 #ifdef JIT
-	unset_special(SPCFLAG_END_COMPILE);   /* has done its job */
+	if (currprefs.cachesize) {
+		unset_special(SPCFLAG_END_COMPILE);
+	}
 #endif
 
 	if (regs.spcflags & SPCFLAG_DOTRACE)
