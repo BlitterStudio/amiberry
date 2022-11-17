@@ -1123,6 +1123,7 @@ static void m68k_set_stop(void)
 	if (regs.stopped)
 		return;
 	regs.stopped = 1;
+	set_special(SPCFLAG_STOP);
 	if (cpu_last_stop_vpos >= 0) {
 		cpu_last_stop_vpos = vpos;
 	}
@@ -1131,6 +1132,7 @@ static void m68k_set_stop(void)
 static void m68k_unset_stop(void)
 {
 	regs.stopped = 0;
+	unset_special(SPCFLAG_STOP);
 	if (cpu_last_stop_vpos >= 0) {
 		cpu_stopped_lines += vpos - cpu_last_stop_vpos;
 		cpu_last_stop_vpos = vpos;
@@ -2787,6 +2789,86 @@ static int do_specialties (int cycles)
 		Exception(3);
 	}
 
+	while (regs.spcflags & SPCFLAG_STOP) {
+
+		if (regs.s == 0 && currprefs.cpu_model <= 68010) {
+			// 68000/68010 undocumented special case:
+			// if STOP clears S-bit and T was not set:
+			// cause privilege violation exception, PC pointing to following instruction.
+			// If T was set before STOP: STOP works as documented.
+			m68k_unset_stop();
+			Exception(8);
+			break;
+		}
+
+	isstopped:
+		check_uae_int_request();
+		{
+			if (bsd_int_requested)
+				bsdsock_fake_int_handler ();
+		}
+
+		if (cpu_tracer > 0) {
+			cputrace.stopped = regs.stopped;
+			cputrace.intmask = regs.intmask;
+			cputrace.sr = regs.sr;
+			cputrace.state = 1;
+			cputrace.pc = m68k_getpc ();
+			cputrace.memoryoffset = 0;
+			cputrace.cyclecounter = cputrace.cyclecounter_pre = cputrace.cyclecounter_post = 0;
+			cputrace.readcounter = cputrace.writecounter = 0;
+		}
+
+		if (m68k_interrupt_delay) {
+			unset_special(SPCFLAG_INT);
+			if (time_for_interrupt ()) {
+				x_do_cycles(4 * cpucycleunit);
+				do_interrupt (regs.ipl);
+				break;
+			}
+		} else {
+			if (regs.spcflags & (SPCFLAG_INT | SPCFLAG_DOINT)) {
+				int intr = intlev ();
+				unset_special (SPCFLAG_INT | SPCFLAG_DOINT);
+#ifdef WITH_PPC
+				bool m68kint = true;
+				if (ppc_state) {
+					m68kint = ppc_interrupt(intr);
+				}
+				if (m68kint) {
+#endif
+					if (intr > 0 && intr > regs.intmask) {
+						do_interrupt(intr);
+						break;
+					}
+#ifdef WITH_PPC
+				}
+#endif
+			}
+		}
+
+		ipl_fetch();
+
+		x_do_cycles(4 * cpucycleunit);
+
+		if (regs.spcflags & SPCFLAG_COPPER) {
+			do_copper();
+		}
+
+		if (regs.spcflags & SPCFLAG_MODE_CHANGE) {
+			m68k_resumestopped();
+			return 1;
+		}
+
+#ifdef WITH_PPC
+		if (ppc_state) {
+			uae_ppc_execute_check();
+			uae_ppc_poll_check_halt();
+		}
+#endif
+
+	}
+
 	if (regs.spcflags & SPCFLAG_TRACE)
 		do_trace();
 
@@ -2910,6 +2992,8 @@ static void m68k_run_1_ce (void)
 					} else {
 						write_log (_T("CPU TRACE: STOPPED\n"));
 					}
+					if (r->stopped)
+						set_special (SPCFLAG_STOP);
 					set_cpu_tracer (false);
 					goto cont;
 				}
@@ -3031,7 +3115,10 @@ static int do_specialties_thread(void)
 			do_interrupt(ilvl);
 		}
 
-		break;
+		if (!(regs.spcflags & SPCFLAG_STOP))
+			break;
+
+		uae_sem_wait(&cpu_wakeup_sema);
 	}
 
 	return 0;
