@@ -124,12 +124,6 @@
 #include <stdint.h>
 
 #if defined(__x86_64__) || defined(CPU_AARCH64) || defined(CPU_AMD64)
-#define CPU_64_BIT 1
-#else
-#undef CPU_64_BIT
-#endif
-
-#if defined(__x86_64__) || defined(CPU_AARCH64) || defined(CPU_AMD64)
 #define SIZEOF_VOID_P 8
 #else
 #define SIZEOF_VOID_P 4
@@ -551,10 +545,6 @@ typedef int32_t uae_atomic;
 #define strcmpi(x,y) SDL_strcasecmp(x,y)
 #define stricmp(x,y) SDL_strcasecmp(x,y)
 
-#define M68K_SPEED_7MHZ_CYCLES 0
-#define M68K_SPEED_14MHZ_CYCLES 1024
-#define M68K_SPEED_25MHZ_CYCLES 128
-
 typedef int SOCKET;
 #define INVALID_SOCKET -1
 
@@ -587,4 +577,4 @@ typedef char TCHAR;
 #define _wunlink(x)         unlink(x)
 #define _istalnum(x)        isalnum(x)
 
-
+#define USE_SDL
