@@ -240,7 +240,7 @@ void fixup_cpu (struct uae_prefs *p)
 		p->cpu_frequency = 0;
 
 	//if (p->cpu_model >= 68020 && p->cpuboard_type && p->address_space_24 && cpuboard_32bit(p)) {
-	//	error_log (_T("24-bit address space is not supported with selected accelerator board configuration."));
+	//	error_log(_T("24-bit address space is not supported with selected accelerator board configuration."));
 	//	p->address_space_24 = 0;
 	//}
 	if (p->cpu_model >= 68040 && p->address_space_24) {

@@ -8373,12 +8373,7 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 	p->filesys_limit = 0;
 	p->filesys_max_name = 107;
 	p->filesys_max_file_size = 0x7fffffff;
-#ifdef AMIBERRY
-	p->fastmem[0].size = 0x00000000;
-	p->mbresmem_low.size = 0x00000000;
-	p->mbresmem_high.size = 0x00000000;
-	p->z3fastmem[0].size = 0x00000000;
-#endif
+
 	p->z3autoconfig_start = 0x10000000;
 	p->chipmem.size = 0x00080000;
 	p->chipmem.chipramtiming = true;
@@ -8712,11 +8707,7 @@ static int bip_a3000 (struct uae_prefs *p, int config, int compa, int romcheck)
 	p->floppy_speed = 0;
 	p->cpu_idle = 150;
 	p->cs_compatible = CP_A3000;
-#ifdef AMIBERRY
-	p->z3fastmem[0].size = 8 * 1024 * 1024;
-#else
-	p->mbresmem_low_size = 8 * 1024 * 1024;
-#endif
+	p->mbresmem_low.size = 8 * 1024 * 1024;
 	built_in_chipset_prefs (p);
 	p->cs_ciaatod = p->ntscmode ? 2 : 1;
 	return configure_rom (p, roms, romcheck);
@@ -8733,11 +8724,7 @@ static int bip_a4000 (struct uae_prefs *p, int config, int compa, int romcheck)
 
 	p->bogomem.size = 0;
 	p->chipmem.size = 0x200000;
-#ifdef AMIBERRY
-	p->z3fastmem[0].size = 8 * 1024 * 1024;
-#else
-	p->mbresmem_low_size = 8 * 1024 * 1024;
-#endif
+	p->mbresmem_low.size = 8 * 1024 * 1024;
 	p->cpu_model = 68030;
 	p->fpu_model = 68882;
 	switch (config)
@@ -8777,11 +8764,7 @@ static int bip_a4000t (struct uae_prefs *p, int config, int compa, int romcheck)
 
 	p->bogomem.size = 0;
 	p->chipmem.size = 0x200000;
-#ifdef AMIBERRY
-	p->z3fastmem[0].size = 8 * 1024 * 1024;
-#else
-	p->mbresmem_low_size = 8 * 1024 * 1024;
-#endif
+	p->mbresmem_low.size = 8 * 1024 * 1024;
 	p->cpu_model = 68030;
 	p->fpu_model = 68882;
 	if (config > 0) {
