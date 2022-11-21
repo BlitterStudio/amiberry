@@ -545,7 +545,7 @@ void signal_buserror(int signum, siginfo_t* info, void* ptr)
 	exit(1);
 }
 
-#else
+#elif defined(__arm__)
 
 enum {
 	ARM_REG_PC = 15,
