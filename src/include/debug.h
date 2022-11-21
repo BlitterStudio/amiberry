@@ -120,7 +120,8 @@ struct breakpoint_node {
 	uae_u32 mask;
 	int type;
 	int oper;
-    int enabled;
+	int enabled;
+	int cnt;
 };
 extern struct breakpoint_node bpnodes[BREAKPOINT_TOTAL];
 
@@ -289,6 +290,7 @@ extern struct dma_rec *last_dma_rec;
 extern void record_dma_read(uae_u16 reg, uae_u32 addr, int hpos, int vpos, int type, int extra);
 extern void record_dma_write(uae_u16 reg, uae_u32 v, uae_u32 addr, int hpos, int vpos, int type, int extra);
 extern void record_dma_read_value(uae_u32 v);
+extern void record_dma_read_value_pos(uae_u32 v, int hpos, int vpos);
 extern void record_dma_read_value_wide(uae_u64 v, bool quad);
 extern void record_dma_replace(int hpos, int vpos, int type, int extra);
 extern void record_dma_reset(int);
