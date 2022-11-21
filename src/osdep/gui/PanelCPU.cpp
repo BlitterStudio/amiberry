@@ -660,7 +660,16 @@ void RefreshPanelCPU()
 		optCPU68040->setSelected(true);
 	else if (changed_prefs.cpu_model == 68060)
 		optCPU68060->setSelected(true);
-	
+
+	if (changed_prefs.fpu_model == 68881)
+		optFPU68881->setSelected(true);
+	else if (changed_prefs.fpu_model == 68882)
+		optFPU68882->setSelected(true);
+	else if (changed_prefs.fpu_model >= 68040)
+		optFPUinternal->setSelected(true);
+	else
+		optFPUnone->setSelected(true);
+
 	if (changed_prefs.m68k_speed < 0)
 		optCPUSpeedFastest->setSelected(true);
 	else if (changed_prefs.m68k_speed >= 0)
