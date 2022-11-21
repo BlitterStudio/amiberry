@@ -380,7 +380,7 @@ static bool fp_exception_pending(bool pre)
 	if (support_exceptions && !jit_fpu()) {
 		if (regs.fp_exp_pend) {
 			if (warned > 0) {
-				write_log (_T("FPU ARITHMETIC EXCEPTION (%d) PC=%08x\n"), regs.fp_exp_pend, regs.instruction_pc);
+				write_log(_T("FPU ARITHMETIC EXCEPTION (%d) PC=%08x\n"), regs.fp_exp_pend, regs.instruction_pc);
 			}
 			regs.fpu_exp_pre = pre;
 			Exception(regs.fp_exp_pend);
@@ -392,7 +392,7 @@ static bool fp_exception_pending(bool pre)
 	// no arithmetic exceptions pending, check for unimplemented datatype
 	if (regs.fp_unimp_pend) {
 		if (warned > 0) {
-			write_log (_T("FPU unimplemented datatype exception (%s) PC=%08x\n"), pre ? _T("pre") : _T("mid/post"), regs.instruction_pc);
+			write_log(_T("FPU unimplemented datatype exception (%s) PC=%08x\n"), pre ? _T("pre") : _T("mid/post"), regs.instruction_pc);
 		}
 		if (currprefs.cpu_model == 68060 && fpu_mmu_fixup) {
 			m68k_areg(regs, mmufixup[0].reg) = mmufixup[0].value;
@@ -411,7 +411,7 @@ static void fp_unimp_instruction_exception_pending(void)
 {
 	if (regs.fp_unimp_ins) {
 		if (warned > 0) {
-			write_log (_T("FPU UNIMPLEMENTED INSTRUCTION/FPU DISABLED EXCEPTION PC=%08x\n"), M68K_GETPC);
+			write_log(_T("FPU UNIMPLEMENTED INSTRUCTION/FPU DISABLED EXCEPTION PC=%08x\n"), M68K_GETPC);
 		}
 		if (currprefs.cpu_model == 68060 && fpu_mmu_fixup) {
 			m68k_areg(regs, mmufixup[0].reg) = mmufixup[0].value;
@@ -666,7 +666,7 @@ static int fpsr_set_bsun(void)
 	regs.fpsr |= FPSR_AE_IOP;
 	
 	if (regs.fpcr & FPSR_BSUN) {
-		write_log (_T("FPU exception: BSUN! (FPSR: %08x, FPCR: %08x)\n"), regs.fpsr, regs.fpcr);
+		write_log(_T("FPU exception: BSUN! (FPSR: %08x, FPCR: %08x)\n"), regs.fpsr, regs.fpcr);
 		if (support_exceptions && !jit_fpu()) {
 			regs.fp_exp_pend = fpsr_get_vector(FPSR_BSUN);
 			fp_exception_pending(true);
@@ -986,7 +986,7 @@ static void fp_unimp_instruction(uae_u16 opcode, uae_u16 extra, uae_u32 ea, bool
 		}
 	}
 	if (warned > 0) {
-		write_log (_T("FPU unimplemented instruction: OP=%04X-%04X SRC=%08X-%08X-%08X EA=%08X PC=%08X\n"),
+		write_log(_T("FPU unimplemented instruction: OP=%04X-%04X SRC=%08X-%08X-%08X EA=%08X PC=%08X\n"),
 			opcode, extra, fsave_data.et[0],fsave_data.et[1],fsave_data.et[2], ea, oldpc);
  #if EXCEPTION_FPP == 0
 		warned--;
@@ -1063,7 +1063,7 @@ static void fp_unimp_datatype(uae_u16 opcode, uae_u16 extra, uae_u32 ea, bool ea
 		}
 	}
 	if (warned > 0) {
-		write_log (_T("FPU unimplemented datatype (%s): OP=%04X-%04X SRC=%08X-%08X-%08X EA=%08X PC=%08X\n"),
+		write_log(_T("FPU unimplemented datatype (%s): OP=%04X-%04X SRC=%08X-%08X-%08X EA=%08X PC=%08X\n"),
 			packed ? _T("packed") : _T("denormal"), opcode, extra,
 			packed ? fsave_data.fpt[2] : fsave_data.et[0], fsave_data.et[1], fsave_data.et[2], ea, oldpc);
 #if EXCEPTION_FPP == 0
@@ -1085,14 +1085,14 @@ static void fpu_op_illg(uae_u16 opcode, uae_u32 ea, bool easet, uaecptr oldpc)
 			return;
 	}
 	regs.fp_exception = true;
-	m68k_setpc (oldpc);
+	m68k_setpc(oldpc);
 	op_illg(opcode);
 }
 
 static void fpu_noinst(uae_u16 opcode, uaecptr pc)
 {
 #if EXCEPTION_FPP
-	write_log (_T("Unknown FPU instruction %04X %08X\n"), opcode, pc);
+	write_log(_T("Unknown FPU instruction %04X %08X\n"), opcode, pc);
 #endif
 	regs.fp_exception = true;
 	m68k_setpc(pc);
@@ -1104,11 +1104,11 @@ static bool if_no_fpu(void)
 	return (regs.pcr & 2) || currprefs.fpu_model <= 0;
 }
 
-static bool fault_if_no_fpu (uae_u16 opcode, uae_u16 extra, uaecptr ea, bool easet, uaecptr oldpc)
+static bool fault_if_no_fpu(uae_u16 opcode, uae_u16 extra, uaecptr ea, bool easet, uaecptr oldpc)
 {
 	if (if_no_fpu()) {
 #if EXCEPTION_FPP
-		write_log (_T("no FPU: %04X-%04X PC=%08X\n"), opcode, extra, oldpc);
+		write_log(_T("no FPU: %04X-%04X PC=%08X\n"), opcode, extra, oldpc);
 #endif
 		if (fpu_mmu_fixup) {
 			m68k_areg (regs, mmufixup[0].reg) = mmufixup[0].value;
@@ -1410,7 +1410,7 @@ static bool fault_if_no_6888x (uae_u16 opcode, uae_u16 extra, uaecptr oldpc)
 {
 	if (currprefs.cpu_model < 68040 && currprefs.fpu_model <= 0) {
 #if EXCEPTION_FPP
-		write_log (_T("6888x no FPU: %04X-%04X PC=%08X\n"), opcode, extra, oldpc);
+		write_log(_T("6888x no FPU: %04X-%04X PC=%08X\n"), opcode, extra, oldpc);
 #endif
 		m68k_setpc (oldpc);
 		regs.fp_exception = true;
@@ -1754,7 +1754,7 @@ static int put_fp_value2(fpdata *value, uae_u32 opcode, uae_u16 extra, uaecptr o
 
 #if DEBUG_FPP
 	if (!isinrom ())
-		write_log (_T("PUTFP: %04X %04X\n"), opcode, extra);
+		write_log(_T("PUTFP: %04X %04X\n"), opcode, extra);
 #endif
 #if 0
 	if (!(extra & 0x4000)) {
@@ -2591,7 +2591,7 @@ void fpuop_restore (uae_u32 opcode)
 
 #if FPU_LOG
 	if (!isinrom())
-		write_log (_T("FRESTORE %04x %08x\n"), opcode, M68K_GETPC);
+		write_log(_T("FRESTORE %04x %08x\n"), opcode, M68K_GETPC);
 #endif
 
 	if (fault_if_no_6888x (opcode, 0, pc))
@@ -2640,7 +2640,7 @@ retry:
 				regs.fp_exp_pend = 48 + v;
 			}
 		} else if (ff) {
-			write_log (_T("FRESTORE invalid frame format %02x %08x ADDR=%08x\n"), ff, d, ad_orig);
+			write_log(_T("FRESTORE invalid frame format %02x %08x ADDR=%08x\n"), ff, d, ad_orig);
 			Exception(14);
 			return;
 		} else {
@@ -2695,7 +2695,7 @@ retry:
 						uae_u32 tmpsrc[3], tmpdst[3];
 						fpp_from_exten_fmovem(&src, &tmpsrc[0], &tmpsrc[1], &tmpsrc[2]);
 						fpp_from_exten_fmovem(&dst, &tmpdst[0], &tmpdst[1], &tmpdst[2]);
-						write_log (_T("FRESTORE src = %08X %08X %08X, dst = %08X %08X %08X, extra = %04X\n"),
+						write_log(_T("FRESTORE src = %08X %08X %08X, dst = %08X %08X %08X, extra = %04X\n"),
 								   tmpsrc[0], tmpsrc[1], tmpsrc[2], tmpdst[0], tmpdst[1], tmpdst[2], cmdreg1b);
 #endif
 						fpsr_clear_status();
@@ -2707,7 +2707,7 @@ retry:
 						
 						fpsr_check_arithmetic_exception(0, &src, regs.fp_opword, cmdreg1b, regs.fp_ea, regs.fp_ea_set, 0xffffffff);
 					} else {
-						write_log (_T("FRESTORE resume of opclass %d instruction not supported %08x\n"), opclass, ad_orig);
+						write_log(_T("FRESTORE resume of opclass %d instruction not supported %08x\n"), opclass, ad_orig);
 					}
 				}
 
@@ -2720,7 +2720,7 @@ retry:
 				regs.fpu_state = 1;
 				regs.fpu_exp_state = 0;
 			} else {
-				write_log (_T("FRESTORE invalid frame size %02x %08x %08x\n"), frame_size, d, ad_orig);
+				write_log(_T("FRESTORE invalid frame size %02x %08x %08x\n"), frame_size, d, ad_orig);
 
 				Exception(14);
 				return;
@@ -2734,7 +2734,7 @@ retry:
 				fpu_model = 68881;
 				goto retry;
 			}
-			write_log (_T("FRESTORE 68040 (%d) invalid frame version %02x %08x %08x\n"), fpu_model, frame_version, d, ad_orig);
+			write_log(_T("FRESTORE 68040 (%d) invalid frame version %02x %08x %08x\n"), fpu_model, frame_version, d, ad_orig);
 			Exception(14);
 			return;
 		}
@@ -2773,10 +2773,10 @@ retry:
 					regs.fp_exp_pend = 0;
 				}
 			} else if (frame_size == 0xB4 || frame_size == 0xD4) {
-				write_log (_T("FRESTORE of busy frame not supported %08x\n"), ad_orig);
+				write_log(_T("FRESTORE of busy frame not supported %08x\n"), ad_orig);
 				ad += frame_size;
 			} else {
-				write_log (_T("FRESTORE invalid frame size %02x %08x %08x\n"), frame_size, d, ad_orig);
+				write_log(_T("FRESTORE invalid frame size %02x %08x %08x\n"), frame_size, d, ad_orig);
 				Exception(14);
 				return;
 			}
@@ -2788,7 +2788,7 @@ retry:
 				fpu_model = 68040;
 				goto retry;
 			}
-			write_log (_T("FRESTORE 6888x (%d) invalid frame version %02x %08x %08x\n"), fpu_model, frame_version, d, ad_orig);
+			write_log(_T("FRESTORE 6888x (%d) invalid frame version %02x %08x %08x\n"), fpu_model, frame_version, d, ad_orig);
 			Exception(14);
 			return;
 		}
@@ -3138,7 +3138,7 @@ static bool fp_arithmetic(fpdata *src, fpdata *dst, int extra)
 			return false;
 		}
 		default:
-			write_log (_T("Unknown FPU arithmetic function (%02x)\n"), extra & 0x7f);
+			write_log(_T("Unknown FPU arithmetic function (%02x)\n"), extra & 0x7f);
 			return false;
 	}
 
@@ -3164,7 +3164,7 @@ static void fpuop_arithmetic2 (uae_u32 opcode, uae_u16 extra)
 
 #if DEBUG_FPP
 	if (!isinrom ())
-		write_log (_T("FPP %04x %04x at %08x\n"), opcode & 0xffff, extra, pc);
+		write_log(_T("FPP %04x %04x at %08x\n"), opcode & 0xffff, extra, pc);
 #endif
 	if (fault_if_no_6888x(opcode, extra, pc))
 		return;

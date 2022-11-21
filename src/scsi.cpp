@@ -14,7 +14,7 @@
 #include "filesys.h"
 #include "blkdev.h"
 #include "zfile.h"
-//#include "debug.h"
+#include "debug.h"
 #include "memory.h"
 #include "scsi.h"
 #include "autoconf.h"

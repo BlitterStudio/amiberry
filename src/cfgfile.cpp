@@ -31,7 +31,7 @@
 #include "disk.h"
 #include "blkdev.h"
 #include "statusline.h"
-//#include "debug.h"
+#include "debug.h"
 #include "calc.h"
 #include "gfxboard.h"
 //#include "cpuboard.h"
@@ -6304,6 +6304,9 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		} else if (!_tcscmp (tmpbuf, _T("68040"))) {
 			p->cpu_model = 68040;
 			p->fpu_model = 68040;
+		} else if (!_tcscmp (tmpbuf, _T("68060"))) {
+			p->cpu_model = 68060;
+			p->fpu_model = 68060;
 		}
 		return 1;
 	}
@@ -8290,7 +8293,7 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 	p->cs_ciatype[1] = 0;
 	p->cs_memorypatternfill = true;
 
-	for (int i = APMODE_NATIVE; i <= APMODE_RTG; i++) {
+	for (int i = 0; i < MAX_FILTERDATA; i++) {
 		struct gfx_filterdata *f = &p->gf[i];
 		f->gfx_filter = 0;
 		f->gfx_filter_scanlineratio = (1 << 4) | 1;
@@ -9276,12 +9279,15 @@ int built_in_prefs (struct uae_prefs *p, int model, int config, int compa, int r
 		v = bip_cdtv (p, config, compa, romcheck);
 		break;
 	case 10:
-		v = bip_arcadia(p, config, compa, romcheck);
+		v = bip_alg(p, config, compa, romcheck);
 		break;
 	case 11:
-		v = bip_casablanca(p, config, compa, romcheck);
+		v = bip_arcadia(p, config, compa, romcheck);
 		break;
 	case 12:
+		v = bip_casablanca(p, config, compa, romcheck);
+		break;
+	case 13:
 		v = bip_super (p, config, compa, romcheck);
 		break;
 	}

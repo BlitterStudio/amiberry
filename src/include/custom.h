@@ -81,6 +81,7 @@ STATIC_INLINE int dmaen(unsigned int dmamask)
 	return (dmamask & dmacon) && (dmacon & 0x200);
 }
 
+#define SPCFLAG_CPUINRESET 2
 #define SPCFLAG_COPPER 4
 #define SPCFLAG_INT 8
 #define SPCFLAG_BRK 16
@@ -252,7 +253,7 @@ struct customhack {
 };
 extern void alloc_cycle_ext(int, int);
 extern bool alloc_cycle_blitter(int hpos, uaecptr *ptr, int, int);
-extern uaecptr alloc_cycle_blitter_conflict_or(void);
+extern uaecptr alloc_cycle_blitter_conflict_or(int);
 extern bool ispal(int *lines);
 extern bool isvga(void);
 extern int current_maxvpos(void);

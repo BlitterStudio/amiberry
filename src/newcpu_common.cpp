@@ -802,9 +802,9 @@ int getDivu68kCycles (uae_u32 dividend, uae_u16 divisor)
 			dividend <<= 1;
 
 			// If carry from shift
-			if ((uae_s32)temp < 0)
+			if ((uae_s32)temp < 0) {
 				dividend -= hdivisor;
-			else {
+			} else {
 				mcycles += 2;
 				if (dividend >= hdivisor) {
 					dividend -= hdivisor;
@@ -918,7 +918,7 @@ void divbyzero_special (bool issigned, uae_s32 dst)
 /* DIVU overflow
  *
  * 68000: V=1, N=1, C=0, Z=0
- * 68010: V=1, N=1, C=0, Z=0
+ * 68010: V=1, N=(dividend >=0 or divisor >= 0), C=0, Z=0
  * 68020: V=1, C=0, Z=0, N=X
  * 68040: V=1, C=0, NZ not modified.
  * 68060: V=1, C=0, NZ not modified.
@@ -941,7 +941,11 @@ void setdivuflags(uae_u32 dividend, uae_u16 divisor)
 			SET_NFLG(1);
 	} else if (currprefs.cpu_model == 68010) {
 		SET_VFLG(1);
-		SET_NFLG(1);
+		if ((uae_s32)dividend < 0 && (uae_s16)divisor < 0) {
+			SET_NFLG(0);
+		} else {
+			SET_NFLG(1);
+		}
 		SET_ZFLG(0);
 		SET_CFLG(0);
 	} else {
@@ -957,6 +961,7 @@ void setdivuflags(uae_u32 dividend, uae_u16 divisor)
  * DIVS overflow
  *
  * 68000: V=1, C=0, N=1, Z=0
+ * 68010: V=1, C=0, N=0, Z=
  * 68020: V=1, C=0, ZN = X
  * 68040: V=1, C=0. NZ not modified.
  * 68060: V=1, C=0, NZ not modified.

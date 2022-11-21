@@ -36,7 +36,7 @@ int disk_debug_track = -1;
 //#include "execlib.h"
 #include "savestate.h"
 #include "cia.h"
-//#include "debug.h"
+#include "debug.h"
 #ifdef FDI2RAW
 #include "fdi2raw.h"
 #endif
@@ -2944,7 +2944,7 @@ static void floppy_get_rootblock (uae_u8 *dst, int block, const TCHAR *disk_name
 	dst[12+3] = 0x48; // size of hash table
 	dst[312] = dst[313] = dst[314] = dst[315] = (uae_u8)0xff; // bitmap valid
 	dst[316+2] = (block + 1) >> 8; dst[316+3] = (block + 1) & 255; // bitmap pointer
-	char* s = ua((disk_name && disk_name[0] != '\0') ? disk_name : _T("empty"));
+	char *s = ua ((disk_name && disk_name[0] != '\0') ? disk_name : _T("empty"));
 	dst[432] = (uae_u8)strlen (s); // name length
 	strcpy ((char*)dst + 433, s); // name
 	xfree (s);
@@ -3315,9 +3315,12 @@ static void DISK_check_change (void)
 			*/
 			setdskchangetime(drv, 2 * 50 * 312);
 		}
-		if (currprefs.floppyslots[i].dfxtype != changed_prefs.floppyslots[i].dfxtype) {
+		if (currprefs.floppyslots[i].dfxtype != changed_prefs.floppyslots[i].dfxtype ||
+			currprefs.floppyslots[i].dfxsubtype != changed_prefs.floppyslots[i].dfxsubtype) {
 			int old = currprefs.floppyslots[i].dfxtype;
 			currprefs.floppyslots[i].dfxtype = changed_prefs.floppyslots[i].dfxtype;
+			currprefs.floppyslots[i].dfxsubtype = changed_prefs.floppyslots[i].dfxsubtype;
+			_tcscpy(currprefs.floppyslots[i].dfxsubtypeid, changed_prefs.floppyslots[i].dfxsubtypeid);
 #ifdef FLOPPYBRIDGE
 			if (old >= DRV_FB || currprefs.floppyslots[i].dfxtype >= DRV_FB) {
 				floppybridge_init(&currprefs);
@@ -4815,34 +4818,35 @@ void DISK_update_adkcon (int hpos, uae_u16 v)
 		bitoffset = 0;
 }
 
-void DSKSYNC (int hpos, uae_u16 v)
+void DSKSYNC(int hpos, uae_u16 v)
 {
 	if (v == dsksync)
 		return;
-	DISK_update (hpos);
+	DISK_update(hpos);
 	dsksync = v;
 }
 
-STATIC_INLINE bool iswrite (void)
+STATIC_INLINE bool iswrite(void)
 {
 	return dskdmaen == DSKDMA_WRITE;
 }
 
-void DSKDAT (uae_u16 v)
+void DSKDAT(uae_u16 v)
 {
 	if (fifo_inuse[2]) {
-		write_log (_T("DSKDAT: FIFO overflow!\n"));
+		write_log(_T("DSKDAT: FIFO overflow!\n"));
 		return;
 	}
 	fifo_inuse[2] = fifo_inuse[1];
 	fifo[2] = fifo[1];
 	fifo_inuse[1] = fifo_inuse[0];
 	fifo[1] = fifo[0];
-	fifo_inuse[0] = iswrite () ? 2 : 1;
+	fifo_inuse[0] = iswrite() ? 2 : 1;
 	fifo[0] = v;
 	fifo_filled = 1;
 }
-uae_u16 DSKDATR (void)
+
+uae_u16 DSKDATR(void)
 {
 	int i;
 	uae_u16 v = 0;
@@ -4854,14 +4858,14 @@ uae_u16 DSKDATR (void)
 		}
 	}
 	if (i < 0) {
-		write_log (_T("DSKDATR: FIFO underflow!\n"));
-	} else 	if (dskdmaen > 0 && dskdmaen < 3 && dsklength <= 0 && disk_fifostatus () < 0) {
-		disk_dmafinished ();
+		write_log(_T("DSKDATR: FIFO underflow!\n"));
+	} else 	if (dskdmaen > 0 && dskdmaen < 3 && dsklength <= 0 && disk_fifostatus() < 0) {
+		disk_dmafinished();
 	}
 	return v;
 }
 
-uae_u16 disk_dmal (void)
+uae_u16 disk_dmal(void)
 {
 	uae_u16 dmal = 0;
 	if (dskdmaen) {
@@ -4878,27 +4882,29 @@ uae_u16 disk_dmal (void)
 	}
 	return dmal;
 }
-uaecptr disk_getpt (void)
+
+uaecptr disk_getpt(void)
 {
 	uaecptr pt = dskpt;
 	dskpt += 2;
-	return pt;
-}
-void DSKPTH (uae_u16 v)
-{
-	dskpt = (dskpt & 0xffff) | ((uae_u32) v << 16);
+	return pt & ~1;
 }
 
-void DSKPTL (uae_u16 v)
+void DSKPTH(uae_u16 v)
 {
-	dskpt = (dskpt & ~0xffff) | (v);
+	dskpt = (dskpt & 0x0000ffff) | ((uae_u32) v << 16);
 }
 
-void DISK_free (void)
+void DSKPTL(uae_u16 v)
+{
+	dskpt = (dskpt & 0xffff0000) | (v & 0x0000fffe);
+}
+
+void DISK_free(void)
 {
 	for (int dr = 0; dr < MAX_FLOPPY_DRIVES; dr++) {
 		drive *drv = &floppy[dr];
-		drive_image_free (drv);
+		drive_image_free(drv);
 	}
 }
 

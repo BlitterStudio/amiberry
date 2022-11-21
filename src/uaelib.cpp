@@ -23,7 +23,7 @@
 #include "autoconf.h"
 #include "traps.h"
 #include "disk.h"
-//#include "debug.h"
+#include "debug.h"
 #include "gensound.h"
 #include "picasso96.h"
 #include "filesys.h"
@@ -422,7 +422,7 @@ static uae_u32 uaelib_demux_common(TrapContext *ctx, uae_u32 ARG0, uae_u32 ARG1,
 		if (!currprefs.maprom)
 			return 0xffffffff;
 		/* Disable possible ROM protection */
-		//unprotect_maprom();
+		unprotect_maprom();
 		return currprefs.maprom;
 		case 81: return cfgfile_uaelib(ctx, ARG1, ARG2, ARG3, ARG4);
 		case 82: return cfgfile_uaelib_modify(ctx, ARG1, ARG2, ARG3, ARG4, ARG5);

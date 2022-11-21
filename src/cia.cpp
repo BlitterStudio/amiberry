@@ -33,7 +33,7 @@
 //#include "parallel.h"
 #include "akiko.h"
 #include "cdtv.h"
-//#include "debug.h"
+#include "debug.h"
 //#include "arcadia.h"
 #include "audio.h"
 #include "keyboard.h"
@@ -2259,11 +2259,14 @@ static void cia_wait_post(int cianummask, uaecptr addr, uae_u32 value, bool rw)
 		do_cycles(12 * E_CYCLE_UNIT);
 	} else {
 		// Last 6 cycles of E-clock
-#ifdef AMIBERRY
-		do_cycles(e_clock_end * E_CYCLE_UNIT);
-#else
-		x_do_cycles_post(e_clock_end * E_CYCLE_UNIT, value);
-#endif
+		// IPL fetch that got delayed by CIA access?
+		if (cia_now_evt == regs.ipl_evt && currprefs.cpu_model <= 68010) {
+			int phase = cia_cycles((e_clock_end - 2) * E_CYCLE_UNIT, 4, value, 1);
+			regs.ipl[0] = regs.ipl_pin;
+			cia_cycles(2 * E_CYCLE_UNIT, phase, value, 1);
+		} else {
+			cia_cycles(e_clock_end * E_CYCLE_UNIT, 4, value, 1);
+		}
 #if CIA_IRQ_PROCESS_DELAY
 		if (currprefs.cpu_memory_cycle_exact) {
 			cia_interrupt_disabled &= ~cianummask;

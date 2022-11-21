@@ -23,7 +23,7 @@
 #include "memory.h"
 #include "custom.h"
 #include "newcpu.h"
-//#include "debug.h"
+#include "debug.h"
 #include "cdtv.h"
 #include "blkdev.h"
 #include "gui.h"
