@@ -679,7 +679,6 @@ struct uae_prefs
 	int collision_level;
 	int leds_on_screen;
 #ifdef AMIBERRY
-	int fast_copper;
 	int multithreaded_drawing;
 #endif
 	int leds_on_screen_mask[2];

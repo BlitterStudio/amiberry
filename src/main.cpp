@@ -357,13 +357,6 @@ void fixup_cpu (struct uae_prefs *p)
 		p->cpu_data_cache = false;
 		error_log(_T("Data cache emulation requires Indirect UAE Boot ROM."));
 	}
-
-#ifdef AMIBERRY
-	if (p->cpu_memory_cycle_exact && p->fast_copper != 0) {
-		p->fast_copper = 0;
-		error_log(_T("Cycle-exact mode not compatible with fast copper."));
-	}
-#endif
 }
 
 void fixup_prefs (struct uae_prefs *p, bool userconfig)
