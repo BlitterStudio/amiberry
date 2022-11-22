@@ -3391,7 +3391,7 @@ int main(int argc, char* argv[])
 	fix_trailing(savestate_dir);
 	snprintf(savestate_fname, sizeof savestate_fname, "%s/default.ads", savestate_dir);
 	logging_init();
-
+#if defined (CPU_arm)
 	memset(&action, 0, sizeof action);
 	action.sa_sigaction = signal_segv;
 	action.sa_flags = SA_SIGINFO;
@@ -3423,7 +3423,7 @@ int main(int argc, char* argv[])
 		printf("Failed to set signal handler (SIGTERM).\n");
 		abort();
 	}
-
+#endif
 	//alloc_AmigaMem();
 	RescanROMs();
 	uae_time_calibrate();
