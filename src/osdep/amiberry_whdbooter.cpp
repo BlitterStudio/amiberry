@@ -466,11 +466,14 @@ void cd_auto_prefs(uae_prefs* prefs, char* filepath)
 
 void set_input_settings(uae_prefs* prefs, game_options game_detail, const bool is_cd32)
 {
+	// APPLY SPECIAL CONFIG E.G. MOUSE OR ALT. JOYSTICK SETTINGS
+	clear_jports(prefs);
+
 	//  CD32
-	if (is_cd32	&& (strcmpi(game_detail.port0, "nul") == 0 || strcmpi(game_detail.port0, "cd32") == 0))
+	if (is_cd32 || strcmpi(game_detail.port0, "cd32") == 0)
 		prefs->jports[0].mode = 7;
 
-	if (is_cd32	&& (strcmpi(game_detail.port1, "nul") == 0 || strcmpi(game_detail.port1, "cd32") == 0))
+	if (is_cd32	|| strcmpi(game_detail.port1, "cd32") == 0)
 		prefs->jports[1].mode = 7;
 
 	// JOY
@@ -484,9 +487,6 @@ void set_input_settings(uae_prefs* prefs, game_options game_detail, const bool i
 		prefs->jports[0].mode = 2;
 	if (strcmpi(game_detail.port1, "mouse") == 0)
 		prefs->jports[1].mode = 2;
-
-	// APPLY SPECIAL CONFIG E.G. MOUSE OR ALT. JOYSTICK SETTINGS
-	clear_jports(prefs);
 
 	// WHAT IS THE MAIN CONTROL?
 	// PORT 0 - MOUSE GAMES
