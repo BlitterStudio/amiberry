@@ -31,8 +31,8 @@ extern char last_loaded_config[MAX_DPATH];
 
 // Use configs with 8MB Fast RAM, to make it likely
 // that WHDLoad preload will cache everything.
-#  define A600_CONFIG  3 // 8MB fast ram
-#  define A1200_CONFIG 2 // 8MB fast ram
+#define A600_CONFIG  3 // 8MB fast ram
+#define A1200_CONFIG 2 // 8MB fast ram
 
 static const char *rtb_files[] = {
 	"kick33180.A500.RTB",
@@ -73,6 +73,22 @@ struct game_options
 	TCHAR cpu_exact[256] = "nul\0";
 };
 
+char whdbootpath[MAX_DPATH];
+char boot_path[MAX_DPATH];
+char save_path[MAX_DPATH];
+char config_path[MAX_DPATH];
+char whd_path[MAX_DPATH];
+char kick_path[MAX_DPATH];
+
+char uae_config[255];
+char whd_config[255];
+char whd_startup[255];
+
+char game_name[MAX_DPATH];
+char selected_slave[MAX_DPATH];
+char subpath[MAX_DPATH];
+auto use_slave_libs = false;
+
 static TCHAR* parse_text(const TCHAR* s)
 {
 	if (*s == '"' || *s == '\'')
@@ -90,14 +106,6 @@ static TCHAR* parse_text(const TCHAR* s)
 		return d;
 	}
 	return my_strdup(s);
-}
-
-static TCHAR* parse_text_path(const TCHAR* s)
-{
-	auto* s2 = parse_text(s);
-	auto* const s3 = target_expand_environment(s2, nullptr, 0);
-	xfree(s2);
-	return s3;
 }
 
 void remove_char(char* array, int len, int index)
@@ -216,7 +224,7 @@ game_options get_game_settings(const char* HW)
 	return output_detail;
 }
 
-void make_rom_symlink(const char* kick_short, char* kick_path, int kick_numb, struct uae_prefs* p)
+void make_rom_symlink(const char* kick_short, int kick_numb, struct uae_prefs* p)
 {
 	char kick_long[MAX_DPATH];
 	int roms[2] = { -1,-1 };
@@ -235,8 +243,9 @@ void make_rom_symlink(const char* kick_short, char* kick_path, int kick_numb, st
 
 	if (!my_existsfile(kick_long))
 	{
-		roms[0] = kick_numb; // kickstart 1.2 A500
-		if (const auto rom_test = configure_rom(p, roms, 0); rom_test == 1)
+		roms[0] = kick_numb;
+		const auto rom_test = configure_rom(p, roms, 0);
+		if (rom_test == 1)
 		{
 			int r = symlink(p->romfile, kick_long);
 			// VFAT filesystems do not support creation of symlinks.
@@ -250,7 +259,6 @@ void make_rom_symlink(const char* kick_short, char* kick_path, int kick_numb, st
 
 static void symlink_rtb(const char* ext_path)
 {
-	char kick_path[MAX_DPATH];
 	char src[MAX_DPATH];
 	char dst[MAX_DPATH];
 
@@ -271,9 +279,6 @@ static void symlink_rtb(const char* ext_path)
 
 void symlink_roms(struct uae_prefs* prefs)
 {
-	//      *** KICKSTARTS ***
-	//
-	char kick_path[MAX_DPATH];
 	char tmp[MAX_DPATH];
 	char tmp2[MAX_DPATH];
 
@@ -288,21 +293,21 @@ void symlink_roms(struct uae_prefs* prefs)
 
 	if (!my_existsdir(kick_path)) {
 		// otherwise, use the old route
-		get_whdbootpath(tmp, MAX_DPATH);
-		snprintf(kick_path, MAX_DPATH, "%sgame-data/Devs/Kickstarts", tmp);
+		get_whdbootpath(whdbootpath, MAX_DPATH);
+		snprintf(kick_path, MAX_DPATH, "%sgame-data/Devs/Kickstarts", whdbootpath);
 	}
 	write_log("WHDBoot - using kickstarts from %s\n", kick_path);
 
 	// These are all the kickstart rom files found in skick346.lha
 	//   http://aminet.net/package/util/boot/skick346
 
-	make_rom_symlink("kick33180.A500", kick_path, 5, prefs);
-	make_rom_symlink("kick34005.A500", kick_path, 6, prefs);
-	make_rom_symlink("kick37175.A500", kick_path, 7, prefs);
-	make_rom_symlink("kick39106.A1200", kick_path, 11, prefs);
-	make_rom_symlink("kick40063.A600", kick_path, 14, prefs);
-	make_rom_symlink("kick40068.A1200", kick_path, 15, prefs);
-	make_rom_symlink("kick40068.A4000", kick_path, 16, prefs);
+	make_rom_symlink("kick33180.A500", 5, prefs);
+	make_rom_symlink("kick34005.A500", 6, prefs);
+	make_rom_symlink("kick37175.A500", 7, prefs);
+	make_rom_symlink("kick39106.A1200", 11, prefs);
+	make_rom_symlink("kick40063.A600", 14, prefs);
+	make_rom_symlink("kick40068.A1200", 15, prefs);
+	make_rom_symlink("kick40068.A4000", 16, prefs);
 
 	// Symlink rom.key also
 	// source file
@@ -319,38 +324,71 @@ void symlink_roms(struct uae_prefs* prefs)
 	}
 }
 
-void cd_auto_prefs(struct uae_prefs* prefs, char* filepath)
+void get_game_name(char* filepath)
 {
-	TCHAR game_name[MAX_DPATH];
-	TCHAR* txt2;
-	TCHAR tmp[MAX_DPATH];
-	char config_path[MAX_DPATH];
-	char whd_config[255];
-
-	get_configuration_path(config_path, MAX_DPATH);
-
-	//      *** GAME DETECTION ***
-	write_log("\nCD Autoload: %s  \n\n", filepath);
-
 	extract_filename(filepath, last_loaded_config);
 	extract_filename(filepath, game_name);
 	remove_file_extension(game_name);
+}
+
+void set_jport_modes(uae_prefs* prefs, const bool is_cd32)
+{
+	if (is_cd32)
+	{
+		prefs->jports[0].mode = 7;
+		prefs->jports[1].mode = 7;
+	}
+	else
+	{
+		// JOY
+		prefs->jports[1].mode = 3;
+		// MOUSE
+		prefs->jports[0].mode = 2;
+	}
+}
+void clear_jports(uae_prefs* prefs)
+{
+	for (auto& jport : prefs->jports)
+	{
+		jport.id = JPORT_NONE;
+		jport.idc.configname[0] = 0;
+		jport.idc.name[0] = 0;
+		jport.idc.shortid[0] = 0;
+	}
+}
+
+void build_uae_config_filename()
+{
+	strcpy(uae_config, config_path);
+	strcat(uae_config, game_name);
+	strcat(uae_config, ".uae");
+}
+
+void parse_cfg_line(uae_prefs* prefs, const std::string& line_string)
+{
+	char* line = my_strdup(line_string.c_str());
+	cfgfile_parse_line(prefs, line, 0);
+	xfree(line);
+}
+
+void cd_auto_prefs(uae_prefs* prefs, char* filepath)
+{
+	TCHAR tmp[MAX_DPATH];
+
+	write_log("\nCD Autoload: %s  \n\n", filepath);
+
+	get_configuration_path(config_path, MAX_DPATH);
+	get_game_name(filepath);
 
 	// LOAD GAME SPECIFICS FOR EXISTING .UAE - USE SHA1 IF AVAILABLE
 	//  CONFIG LOAD IF .UAE IS IN CONFIG PATH
-	strcpy(whd_config, config_path);
-	strcat(whd_config, game_name);
-	strcat(whd_config, ".uae");
+	build_uae_config_filename();
 
-	if (my_existsfile(whd_config))
+	if (my_existsfile(uae_config))
 	{
-		target_cfgfile_load(prefs, whd_config, CONFIG_TYPE_ALL, 0);
+		target_cfgfile_load(prefs, uae_config, CONFIG_TYPE_ALL, 0);
 		return;
 	}
-
-	// LOAD HOST OPTIONS
-	char whd_path[MAX_DPATH];
-	get_whdbootpath(whd_path, MAX_DPATH);
 
 	prefs->start_gui = false;
 
@@ -379,128 +417,780 @@ void cd_auto_prefs(struct uae_prefs* prefs, char* filepath)
 
 	// enable CD
 	_stprintf(tmp, "cd32cd=1");
-	txt2 = parse_text_path(_T(tmp));
-	cfgfile_parse_line(prefs, txt2, 0);
+	cfgfile_parse_line(prefs, parse_text(tmp), 0);
 
 	// mount the image
 	_stprintf(tmp, "cdimage0=%s,image", filepath);
-	txt2 = parse_text_path(_T(tmp));
-	cfgfile_parse_line(prefs, txt2, 0);
+	cfgfile_parse_line(prefs, parse_text(tmp), 0);
 
 	//APPLY THE SETTINGS FOR MOUSE/JOYSTICK ETC
-	// CD32
-	if (is_cd32)
-	{
-		prefs->jports[0].mode = 7;
-		prefs->jports[1].mode = 7;
-	}
-	else
-	{
-		// JOY
-		prefs->jports[1].mode = 3;
-		// MOUSE
-		prefs->jports[0].mode = 2;
-	}
+	set_jport_modes(prefs, is_cd32);
 
 	// APPLY SPECIAL CONFIG E.G. MOUSE OR ALT. JOYSTICK SETTINGS
-	for (auto& jport : prefs->jports)
-	{
-		jport.id = JPORT_NONE;
-		jport.idc.configname[0] = 0;
-		jport.idc.name[0] = 0;
-		jport.idc.shortid[0] = 0;
-	}
+	clear_jports(prefs);
 
 	// WHAT IS THE MAIN CONTROL?
 	// PORT 0 - MOUSE
+	std::string line_string;
 	if (is_cd32 && strcmpi(amiberry_options.default_controller2, "") != 0)
 	{
-		_stprintf(txt2, "%s=%s", _T("joyport0"), _T(amiberry_options.default_controller2));
-		cfgfile_parse_line(prefs, txt2, 0);
+		line_string = "joyport0=";
+		line_string.append(amiberry_options.default_controller2);
+		parse_cfg_line(prefs, line_string);
 	}
 	else if (strcmpi(amiberry_options.default_mouse1, "") != 0)
 	{
-		_stprintf(txt2, "%s=%s", _T("joyport0"), _T(amiberry_options.default_mouse1));
-		cfgfile_parse_line(prefs, txt2, 0);
+		line_string = "joyport0=";
+		line_string.append(amiberry_options.default_mouse1);
+		parse_cfg_line(prefs, line_string);
 	}
 	else
 	{
-		_stprintf(txt2, "%s=mouse", _T("joyport0"));
-		cfgfile_parse_line(prefs, txt2, 0);
+		line_string = "joyport0=mouse";
+		parse_cfg_line(prefs, line_string);
 	}
 
 	// PORT 1 - JOYSTICK
 	if (strcmpi(amiberry_options.default_controller1, "") != 0)
 	{
-		_stprintf(txt2, "%s=%s", _T("joyport1"), _T(amiberry_options.default_controller1));
-		cfgfile_parse_line(prefs, txt2, 0);
+		line_string = "joyport1=";
+		line_string.append(amiberry_options.default_controller1);
+		parse_cfg_line(prefs, line_string);
 	}
 	else
 	{
-		_stprintf(txt2, "%s=joy1", _T("joyport1"));
-		cfgfile_parse_line(prefs, txt2, 0);
+		line_string = "joyport1=joy1";
+		parse_cfg_line(prefs, line_string);
 	}
 }
 
-void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
+void set_input_settings(uae_prefs* prefs, game_options game_detail, const bool is_cd32)
 {
-	TCHAR game_name[MAX_DPATH];
-	TCHAR* txt2 = nullptr;
+	//  CD32
+	if (is_cd32	&& (strcmpi(game_detail.port0, "nul") == 0 || strcmpi(game_detail.port0, "cd32") == 0))
+		prefs->jports[0].mode = 7;
+
+	if (is_cd32	&& (strcmpi(game_detail.port1, "nul") == 0 || strcmpi(game_detail.port1, "cd32") == 0))
+		prefs->jports[1].mode = 7;
+
+	// JOY
+	if (strcmpi(game_detail.port0, "joy") == 0)
+		prefs->jports[0].mode = 0;
+	if (strcmpi(game_detail.port1, "joy") == 0)
+		prefs->jports[1].mode = 0;
+
+	// MOUSE
+	if (strcmpi(game_detail.port0, "mouse") == 0)
+		prefs->jports[0].mode = 2;
+	if (strcmpi(game_detail.port1, "mouse") == 0)
+		prefs->jports[1].mode = 2;
+
+	// APPLY SPECIAL CONFIG E.G. MOUSE OR ALT. JOYSTICK SETTINGS
+	clear_jports(prefs);
+
+	// WHAT IS THE MAIN CONTROL?
+	// PORT 0 - MOUSE GAMES
+	std::string line_string;
+	if (strcmpi(game_detail.control, "mouse") == 0 && strcmpi(amiberry_options.default_mouse1, "") != 0)
+	{
+		line_string = "joyport0=";
+		line_string.append(amiberry_options.default_mouse1);
+		parse_cfg_line(prefs, line_string);
+	}
+	// PORT 0 - JOYSTICK GAMES
+	else if (strcmpi(amiberry_options.default_controller2, "") != 0)
+	{
+		line_string = "joyport0=";
+		line_string.append(amiberry_options.default_controller2);
+		parse_cfg_line(prefs, line_string);
+	}
+	else
+	{
+		line_string = "joyport0=mouse";
+		parse_cfg_line(prefs, line_string);
+	}
+
+	// PORT 1 - MOUSE GAMES
+	if (strcmpi(game_detail.control, "mouse") == 0 && strcmpi(amiberry_options.default_mouse2, "") != 0)
+	{
+		line_string = "joyport1=";
+		line_string.append(amiberry_options.default_mouse2);
+		parse_cfg_line(prefs, line_string);
+	}
+	// PORT 1 - JOYSTICK GAMES
+	else if (strcmpi(amiberry_options.default_controller1, "") != 0)
+	{
+		line_string = "joyport1=";
+		line_string.append(amiberry_options.default_controller1);
+		parse_cfg_line(prefs, line_string);
+	}
+	else
+	{
+		line_string = "joyport1=joy1";
+		parse_cfg_line(prefs, line_string);
+	}
+
+	// PARALLEL PORT GAMES
+	if (strcmpi(amiberry_options.default_controller3, "") != 0)
+	{
+		line_string = "joyport2=";
+		line_string.append(amiberry_options.default_controller3);
+		parse_cfg_line(prefs, line_string);
+	}
+	if (strcmpi(amiberry_options.default_controller4, "") != 0)
+	{
+		line_string = "joyport3=";
+		line_string.append(amiberry_options.default_controller4);
+		parse_cfg_line(prefs, line_string);
+	}
+}
+
+void parse_gfx_settings(uae_prefs* prefs, game_options game_detail)
+{
+	std::string line_string;
+	// SCREEN AUTO-HEIGHT
+	if (strcmpi(game_detail.scr_autoheight, "true") == 0)
+	{
+		line_string = "amiberry.gfx_auto_crop=true";
+		parse_cfg_line(prefs, line_string);
+	}
+	else if (strcmpi(game_detail.scr_autoheight, "false") == 0)
+	{
+		line_string = "amiberry.gfx_auto_crop=false";
+		parse_cfg_line(prefs, line_string);
+	}
+
+	// SCREEN CENTER/HEIGHT/WIDTH
+	if (strcmpi(game_detail.scr_centerh, "smart") == 0)
+	{
+#ifdef USE_DISPMANX
+			line_string = "gfx_center_horizontal=smart";
+			parse_cfg_line(prefs, line_string);
+#else
+		if (prefs->gfx_auto_crop)
+		{
+			// Disable if using Auto-Crop, otherwise the output won't be correct
+			line_string = "gfx_center_horizontal=none";
+			parse_cfg_line(prefs, line_string);
+		}
+		else
+		{
+			line_string = "gfx_center_horizontal=smart";
+			parse_cfg_line(prefs, line_string);
+		}
+#endif
+	}
+	else if (strcmpi(game_detail.scr_centerh, "none") == 0)
+	{
+		line_string = "gfx_center_horizontal=none";
+		parse_cfg_line(prefs, line_string);
+	}
+
+	if (strcmpi(game_detail.scr_centerv, "smart") == 0)
+	{
+#ifdef USE_DISPMANX
+			line_string = "gfx_center_vertical=smart";
+			parse_cfg_line(prefs, line_string);
+#else
+		if (prefs->gfx_auto_crop)
+		{
+			// Disable if using Auto-Crop, otherwise the output won't be correct
+			line_string = "gfx_center_vertical=none";
+			parse_cfg_line(prefs, line_string);
+		}
+		else
+		{
+			line_string = "gfx_center_vertical=smart";
+			parse_cfg_line(prefs, line_string);
+		}
+#endif
+	}
+	else if (strcmpi(game_detail.scr_centerv, "none") == 0)
+	{
+		line_string = "gfx_center_vertical=none";
+		parse_cfg_line(prefs, line_string);
+	}
+
+	if (strcmpi(game_detail.scr_height, "nul") != 0)
+	{
+#ifdef USE_DISPMANX
+			line_string = "gfx_height=";
+			line_string.append(game_detail.scr_height);
+			parse_cfg_line(prefs, line_string);
+
+			line_string = "gfx_height_windowed=";
+			line_string.append(game_detail.scr_height);
+			parse_cfg_line(prefs, line_string);
+
+			line_string = "gfx_height_fullscreen=";
+			line_string.append(game_detail.scr_height);
+			parse_cfg_line(prefs, line_string);
+#else
+		if (prefs->gfx_auto_crop)
+		{
+			// If using Auto-Crop, bypass any screen Height adjustments as they are not needed and will cause issues
+			line_string = "gfx_height=768";
+			parse_cfg_line(prefs, line_string);
+
+			line_string = "gfx_height_windowed=768";
+			parse_cfg_line(prefs, line_string);
+
+			line_string = "gfx_height_fullscreen=768";
+			parse_cfg_line(prefs, line_string);
+		}
+		else
+		{
+			line_string = "gfx_height=";
+			line_string.append(game_detail.scr_height);
+			parse_cfg_line(prefs, line_string);
+
+			line_string = "gfx_height_windowed=";
+			line_string.append(game_detail.scr_height);
+			parse_cfg_line(prefs, line_string);
+
+			line_string = "gfx_height_fullscreen=";
+			line_string.append(game_detail.scr_height);
+			parse_cfg_line(prefs, line_string);
+		}
+#endif
+	}
+
+	if (strcmpi(game_detail.scr_width, "nul") != 0)
+	{
+#ifdef USE_DISPMANX
+			line_string = "gfx_width=";
+			line_string.append(game_detail.scr_width);
+			parse_cfg_line(prefs, line_string);
+
+			line_string = "gfx_width_windowed=";
+			line_string.append(game_detail.scr_width);
+			parse_cfg_line(prefs, line_string);
+
+			line_string = "gfx_width_fullscreen=";
+			line_string.append(game_detail.scr_width);
+			parse_cfg_line(prefs, line_string);
+#else
+		if (prefs->gfx_auto_crop)
+		{
+			// If using Auto-Crop, bypass any screen Width adjustments as they are not needed and will cause issues
+			line_string = "gfx_width=720";
+			parse_cfg_line(prefs, line_string);
+
+			line_string = "gfx_width_windowed=720";
+			parse_cfg_line(prefs, line_string);
+
+			line_string = "gfx_width_fullscreen=720";
+			parse_cfg_line(prefs, line_string);
+		}
+		else
+		{
+			line_string = "gfx_width=";
+			line_string.append(game_detail.scr_width);
+			parse_cfg_line(prefs, line_string);
+
+			line_string = "gfx_width_windowed=";
+			line_string.append(game_detail.scr_width);
+			parse_cfg_line(prefs, line_string);
+
+			line_string = "gfx_width_fullscreen=";
+			line_string.append(game_detail.scr_width);
+			parse_cfg_line(prefs, line_string);
+		}
+#endif
+	}
+
+	if (strcmpi(game_detail.scr_offseth, "nul") != 0)
+	{
+#ifdef USE_DISPMANX
+			line_string = "amiberry.gfx_horizontal_offset=";
+			line_string.append(game_detail.scr_offseth);
+			parse_cfg_line(prefs, line_string);
+#else
+		if (prefs->gfx_auto_crop)
+		{
+			line_string = "amiberry.gfx_horizontal_offset=0";
+			parse_cfg_line(prefs, line_string);
+		}
+		else
+		{
+			line_string = "amiberry.gfx_horizontal_offset=";
+			line_string.append(game_detail.scr_offseth);
+			parse_cfg_line(prefs, line_string);
+		}
+#endif
+	}
+
+	if (strcmpi(game_detail.scr_offsetv, "nul") != 0)
+	{
+#ifdef USE_DISPMANX
+			line_string = "amiberry.gfx_vertical_offset=";
+			line_string.append(game_detail.scr_offsetv);
+			parse_cfg_line(prefs, line_string);
+#else
+		if (prefs->gfx_auto_crop)
+		{
+			line_string = "amiberry.gfx_vertical_offset=0";
+			parse_cfg_line(prefs, line_string);
+		}
+		else
+		{
+			line_string = "amiberry.gfx_vertical_offset=";
+			line_string.append(game_detail.scr_offsetv);
+			parse_cfg_line(prefs, line_string);
+		}
+#endif
+	}
+}
+
+void set_compatibility_settings(uae_prefs* prefs, game_options game_detail, const bool a600_available)
+{
+	std::string line_string;
+	// CPU 68020/040
+	if (strcmpi(game_detail.cpu, "68020") == 0 || strcmpi(game_detail.cpu, "68040") == 0)
+	{
+		line_string = "cpu_type=";
+		line_string.append(game_detail.cpu);
+		parse_cfg_line(prefs, line_string);
+	}
+
+	// CPU 68000/010 [requires a600 rom)]
+	if ((strcmpi(game_detail.cpu, "68000") == 0 || strcmpi(game_detail.cpu, "68010") == 0) && a600_available)
+	{
+		line_string = "cpu_type=";
+		line_string.append(game_detail.cpu);
+		parse_cfg_line(prefs, line_string);
+
+		line_string = "chipmem_size=4";
+		parse_cfg_line(prefs, line_string);
+	}
+
+	// CPU SPEED
+	if (strcmpi(game_detail.clock, "7") == 0)
+	{
+		line_string = "cpu_speed=real";
+		parse_cfg_line(prefs, line_string);
+	}
+	else if (strcmpi(game_detail.clock, "14") == 0)
+	{
+		line_string = "finegrain_cpu_speed=1024";
+		parse_cfg_line(prefs, line_string);
+	}
+	else if (strcmpi(game_detail.clock, "28") == 0 || strcmpi(game_detail.clock, "25") == 0)
+	{
+		line_string = "finegrain_cpu_speed=128";
+		parse_cfg_line(prefs, line_string);
+	}
+	else if (strcmpi(game_detail.clock, "max") == 0)
+	{
+		line_string = "cpu_speed=max";
+		parse_cfg_line(prefs, line_string);
+	}
+
+	// COMPATIBLE CPU
+	if (strcmpi(game_detail.cpu_comp, "true") == 0)
+	{
+		line_string = "cpu_compatible=true";
+		parse_cfg_line(prefs, line_string);
+	}
+	else if (strcmpi(game_detail.cpu_comp, "false") == 0)
+	{
+		line_string = "cpu_compatible=false";
+		parse_cfg_line(prefs, line_string);
+	}
+
+	// COMPATIBLE CPU
+	if (strcmpi(game_detail.cpu_24bit, "false") == 0 || strcmpi(game_detail.z3, "nul") != 0)
+	{
+		line_string = "cpu_24bit_addressing=false";
+		parse_cfg_line(prefs, line_string);
+	}
+
+	// CYCLE-EXACT CPU
+	if (strcmpi(game_detail.cpu_exact, "true") == 0)
+	{
+		line_string = "cpu_cycle_exact=true";
+		parse_cfg_line(prefs, line_string);
+	}
+
+	// FAST / Z3 MEMORY REQUIREMENTS
+	if (strcmpi(game_detail.fast, "nul") != 0)
+	{
+		line_string = "fastmem_size=";
+		line_string.append(game_detail.fast);
+		parse_cfg_line(prefs, line_string);
+	}
+	if (strcmpi(game_detail.z3, "nul") != 0)
+	{
+		line_string = "z3mem_size=";
+		line_string.append(game_detail.z3);
+		parse_cfg_line(prefs, line_string);
+	}
+
+	// FAST COPPER
+	if (strcmpi(game_detail.fastcopper, "true") == 0)
+	{
+		line_string = "fast_copper=true";
+		parse_cfg_line(prefs, line_string);
+	}
+
+	// BLITTER=IMMEDIATE/WAIT/NORMAL
+	if (strcmpi(game_detail.blitter, "immediate") == 0)
+	{
+		line_string = "immediate_blits=true";
+		parse_cfg_line(prefs, line_string);
+	}
+	else if (strcmpi(game_detail.blitter, "normal") == 0)
+	{
+		line_string = "waiting_blits=disabled";
+		parse_cfg_line(prefs, line_string);
+	}
+
+	// JIT
+	if (strcmpi(game_detail.jit, "true") == 0)
+	{
+		line_string = "cachesize=16384";
+		parse_cfg_line(prefs, line_string);
+
+		line_string = "cpu_compatible=false";
+		parse_cfg_line(prefs, line_string);
+
+		line_string = "cpu_cycle_exact=false";
+		parse_cfg_line(prefs, line_string);
+
+		line_string = "cpu_memory_cycle_exact=false";
+		parse_cfg_line(prefs, line_string);
+
+		line_string = "address_space_24=false";
+		parse_cfg_line(prefs, line_string);
+	}
+
+	// NTSC
+	if (strcmpi(game_detail.ntsc, "true") == 0)
+	{
+		line_string = "ntsc=true";
+		parse_cfg_line(prefs, line_string);
+	}
+
+	// SPRITE COLLISION
+	if (strcmpi(game_detail.sprites, "nul") != 0)
+	{
+		line_string = "collision_level=";
+		line_string.append(game_detail.sprites);
+		parse_cfg_line(prefs, line_string);
+	}
+
+	// Screen settings, only if allowed to override the defaults from amiberry.conf
+	if (amiberry_options.allow_display_settings_from_xml)
+	{
+		parse_gfx_settings(prefs, game_detail);
+	}
+}
+
+game_options parse_settings_from_xml(uae_prefs* prefs, char* filepath)
+{
+	game_options game_detail;
+	tinyxml2::XMLDocument doc;
+	auto error = false;
+	write_log("WHDBooter - Loading whdload_db.xml\n");
+	write_log("WHDBooter - Searching whdload_db.xml for %s\n", game_name);
+
+	auto* f = fopen(whd_config, _T("rb"));
+	if (f)
+	{
+		auto err = doc.LoadFile(f);
+		if (err != tinyxml2::XML_SUCCESS)
+		{
+			write_log(_T("Failed to parse '%s':  %d\n"), whd_config, err);
+			error = true;
+		}
+		fclose(f);
+	}
+	else
+	{
+		error = true;
+	}
+
+	if (!error)
+	{
+		auto sha1 = my_get_sha1_of_file(filepath);
+		std::transform(sha1.begin(), sha1.end(), sha1.begin(), ::tolower);
+		auto* game_node = doc.FirstChildElement("whdbooter");
+		game_node = game_node->FirstChildElement("game");
+		while (game_node != nullptr)
+		{
+			// Ideally we'd just match by sha1, but filename has worked up until now, so try that first
+			// then fall back to sha1 if a user has renamed the file!
+			//
+			int found = 0;
+			if (game_node->Attribute("filename", game_name))
+			{
+				found = 1;
+			}
+			if (game_node->Attribute("sha1", sha1.c_str()))
+			{
+				found = 1;
+			}
+
+			if (found)
+			{
+				// now get the <hardware> and <custom_controls> items
+				// get hardware
+				auto* temp_node = game_node->FirstChildElement("hardware");
+				if (temp_node)
+				{
+					const auto* hardware = temp_node->GetText();
+					if (hardware)
+					{
+						game_detail = get_game_settings(hardware);
+						write_log("WHDBooter - Game H/W Settings: \n%s\n", hardware);
+					}
+				}
+					
+				// get custom controls
+				temp_node = game_node->FirstChildElement("custom_controls");
+				if (temp_node)
+				{
+					const auto* custom_settings = temp_node->GetText();
+					if (custom_settings)
+					{
+						write_log("WHDBooter - Game Custom Settings: \n%s\n", custom_settings);
+						parse_custom_settings(prefs, custom_settings);
+					}
+				}
+
+				if (strlen(selected_slave) == 0)
+				{
+					temp_node = game_node->FirstChildElement("slave_default");
+
+					// use a selected slave if we have one
+					if (strlen(prefs->whdbootprefs.slave) != 0)
+					{
+						strcpy(selected_slave, prefs->whdbootprefs.slave);
+						write_log("WHDBooter - Config Selected Slave: %s \n", selected_slave);
+					}
+					// otherwise use the XML default
+					else if (temp_node->GetText() != nullptr)
+					{
+						_stprintf(selected_slave, "%s", temp_node->GetText());
+						write_log("WHDBooter - Default Slave: %s\n", selected_slave);
+					}
+
+					temp_node = game_node->FirstChildElement("subpath");
+
+					if (temp_node->GetText() != nullptr)
+					{
+						_stprintf(subpath, "%s",	temp_node->GetText());
+						write_log("WHDBooter - SubPath:  %s\n", subpath);
+					}
+				}
+
+				// get slave_libraries
+				temp_node = game_node->FirstChildElement("slave_libraries");
+				if (temp_node->GetText() != nullptr)
+				{
+					if (strcmpi(temp_node->GetText(), "true") == 0)
+						use_slave_libs = true;
+
+					write_log("WHDBooter - Libraries:  %s\n", subpath);
+				}
+				break;
+			}
+			game_node = game_node->NextSiblingElement();
+		}
+	}
+	return game_detail;
+}
+
+void create_startup_sequence(uae_prefs* prefs)
+{
+	std::ostringstream whd_bootscript;
+	whd_bootscript << "FAILAT 999\n";
+
+	if (use_slave_libs)
+	{
+		whd_bootscript << "DH3:C/Assign LIBS: DH3:LIBS/ ADD\n";
+	}
+
+	whd_bootscript << "IF NOT EXISTS WHDLoad\n";
+	whd_bootscript << "DH3:C/Assign C: DH3:C/ ADD\n";
+	whd_bootscript << "ENDIF\n";
+
+	whd_bootscript << "CD \"Games:" << subpath << "\"\n";
+	whd_bootscript << "WHDLoad SLAVE=\"Games:" << subpath << "/" << selected_slave << "\"";
+
+	// Write Cache
+	if (prefs->whdbootprefs.writecache)
+	{
+		whd_bootscript << " PRELOAD NOREQ ";
+	}
+	else
+	{
+		whd_bootscript << " PRELOAD NOREQ NOWRITECACHE ";
+	}
+
+	// CUSTOM options
+	if (prefs->whdbootprefs.custom1 > 0)
+	{
+		whd_bootscript << " CUSTOM1=" << prefs->whdbootprefs.custom1;
+	}
+	if (prefs->whdbootprefs.custom2 > 0)
+	{
+		whd_bootscript << " CUSTOM2=" << prefs->whdbootprefs.custom2;
+	}
+	if (prefs->whdbootprefs.custom3 > 0)
+	{
+		whd_bootscript << " CUSTOM3=" << prefs->whdbootprefs.custom3;
+	}
+	if (prefs->whdbootprefs.custom4 > 0)
+	{
+		whd_bootscript << " CUSTOM4=" << prefs->whdbootprefs.custom4;
+	}
+	if (prefs->whdbootprefs.custom5 > 0)
+	{
+		whd_bootscript << " CUSTOM5=" << prefs->whdbootprefs.custom5;
+	}
+	if (strlen(prefs->whdbootprefs.custom) != 0)
+	{
+		whd_bootscript << " CUSTOM=\"" << prefs->whdbootprefs.custom << "\"";
+	}
+
+	// BUTTONWAIT
+	if (prefs->whdbootprefs.buttonwait == true)
+	{
+		whd_bootscript << " BUTTONWAIT";
+	}
+
+	// SPLASH
+	if (prefs->whdbootprefs.showsplash != true)
+	{
+		whd_bootscript << " SPLASHDELAY=0";
+	}
+
+	// CONFIGDELAY
+	if (prefs->whdbootprefs.configdelay != 0)
+	{
+		whd_bootscript << " CONFIGDELAY=" << prefs->whdbootprefs.configdelay;
+	}
+
+	// SPECIAL SAVE PATH
+	whd_bootscript << " SAVEPATH=Saves:Savegames/ SAVEDIR=\"" << subpath << "\"";
+	whd_bootscript << '\n';
+
+	// Launches utility program to quit the emulator (via UAE trap in RTAREA)
+	if (prefs->whdbootprefs.quit_on_exit)
+	{
+		whd_bootscript << "DH0:C/AmiQuit\n";
+	}
+
+	write_log("WHDBooter - Created Startup-Sequence  \n\n%s\n", whd_bootscript.str().c_str());
+	write_log("WHDBooter - Saved Auto-Startup to %s\n", whd_startup);
+
+	ofstream myfile(whd_startup);
+	if (myfile.is_open())
+	{
+		myfile << whd_bootscript.str();
+		myfile.close();
+	}
+}
+
+bool is_a600_available(uae_prefs* prefs)
+{
+	int roms[2] = { -1,-1 };
+	roms[0] = 15; // kickstart 2.05 A600HD
+	const auto rom_test = configure_rom(prefs, roms, 0);
+	return rom_test == 1;
+}
+
+void set_booter_drives(uae_prefs* prefs, char* filepath)
+{
 	TCHAR tmp[MAX_DPATH];
-	TCHAR whdbootpath[MAX_DPATH];
-	char boot_path[MAX_DPATH];
-	char save_path[MAX_DPATH];
-	char config_path[MAX_DPATH];
-	char whd_path[MAX_DPATH];
-	char kick_path[MAX_DPATH];
 
-	char uae_config[255];
-	char whd_config[255];
-	char whd_startup[255];
+	if (strlen(selected_slave) != 0) // new booter solution
+	{
+		snprintf(boot_path, MAX_DPATH, "/tmp/amiberry/");
 
-	char selected_slave[MAX_DPATH];
-	// note!! this should be global later on, and only collected from the XML if set to 'nothing'
-	char subpath[MAX_DPATH];
+		_stprintf(tmp, _T("filesystem2=rw,DH0:DH0:%s,10"), boot_path);
+		cfgfile_parse_line(prefs, parse_text(tmp), 0);
 
-	auto use_slave_libs = false;
+		_stprintf(tmp, _T("uaehf0=dir,rw,DH0:DH0::%s,10"), boot_path);
+		cfgfile_parse_line(prefs, parse_text(tmp), 0);
 
+		snprintf(boot_path, MAX_DPATH, "%sboot-data.zip", whdbootpath);
+		if (!my_existsfile(boot_path))
+			snprintf(boot_path, MAX_DPATH, "%sboot-data/", whdbootpath);
+
+		_stprintf(tmp, _T("filesystem2=rw,DH3:DH3:%s,-10"), boot_path);
+		cfgfile_parse_line(prefs, parse_text(tmp), 0);
+
+		_stprintf(tmp, _T("uaehf0=dir,rw,DH3:DH3::%s,-10"), boot_path);
+		cfgfile_parse_line(prefs, parse_text(tmp), 0);
+	}
+	else // revert to original booter is no slave was set
+	{
+		snprintf(boot_path, MAX_DPATH, "%sboot-data.zip", whdbootpath);
+		if (!my_existsfile(boot_path))
+			snprintf(boot_path, MAX_DPATH, "%sboot-data/", whdbootpath);
+
+		_stprintf(tmp, _T("filesystem2=rw,DH0:DH0:%s,10"), boot_path);
+		cfgfile_parse_line(prefs, parse_text(tmp), 0);
+
+		_stprintf(tmp, _T("uaehf0=dir,rw,DH0:DH0::%s,10"), boot_path);
+		cfgfile_parse_line(prefs, parse_text(tmp), 0);
+	}
+
+	//set the Second (game data) drive
+	_stprintf(tmp, "filesystem2=rw,DH1:Games:\"%s\",0", filepath);
+	cfgfile_parse_line(prefs, parse_text(tmp), 0);
+
+	_stprintf(tmp, "uaehf1=dir,rw,DH1:Games:\"%s\",0", filepath);
+	cfgfile_parse_line(prefs, parse_text(tmp), 0);
+
+	//set the third (save data) drive
+	snprintf(whd_path, MAX_DPATH, "%s/", save_path);
+
+	if (my_existsdir(save_path))
+	{
+		_stprintf(tmp, "filesystem2=rw,DH2:Saves:%s,0", save_path);
+		cfgfile_parse_line(prefs, parse_text(tmp), 0);
+
+		_stprintf(tmp, "uaehf2=dir,rw,DH2:Saves:%s,0", save_path);
+		cfgfile_parse_line(prefs, parse_text(tmp), 0);
+	}
+}
+
+void whdload_auto_prefs(uae_prefs* prefs, char* filepath)
+{
 	write_log("WHDBooter Launched\n");
 	strcpy(selected_slave, "");
 
 	get_configuration_path(config_path, MAX_DPATH);
-
 	get_whdbootpath(whdbootpath, MAX_DPATH);
 	get_savedatapath(save_path, MAX_DPATH, 0 );
-
-	//      *** KICKSTARTS ***
 
 	symlink_roms(prefs);
 
 	// this allows A600HD to be used to slow games down
-	int roms[2] = {-1,-1};
-	roms[0] = 15; // kickstart 2.05 A600HD  ..  10
-	const auto rom_test = configure_rom(prefs, roms, 0); // returns 0 or 1 if found or not found
-	const auto a600_available = rom_test;
-
-	if (a600_available == true)
+	const auto a600_available = is_a600_available(prefs);
+	if (a600_available)
 	{
 		write_log("WHDBooter - Host: A600 ROM Available \n");
 	}
 
-	//      *** GAME DETECTION ***
-
 	// REMOVE THE FILE PATH AND EXTENSION
 	const auto* const filename = my_getfilepart(filepath);
-	// SOMEWHERE HERE WE NEED TO SET THE GAME 'NAME' FOR SAVESTATE ETC PURPOSES
-	extract_filename(filepath, last_loaded_config);
-	extract_filename(filepath, game_name);
-	remove_file_extension(game_name);
+	get_game_name(filepath);
 
 	// LOAD GAME SPECIFICS FOR EXISTING .UAE - USE SHA1 IF AVAILABLE
 	//  CONFIG LOAD IF .UAE IS IN CONFIG PATH
-	strcpy(uae_config, config_path);
-	strcat(uae_config, game_name);
-	strcat(uae_config, ".uae");
+	build_uae_config_filename();
+
+	// if we have a config file, we will use it
+	// we will need it for the WHDLoad options too.
+	if (my_existsfile(uae_config))
+	{
+		write_log("WHDBooter -  %s found. Loading Config for WHDload options.\n", uae_config);
+		target_cfgfile_load(&currprefs, uae_config, CONFIG_TYPE_ALL, 0);
+	}
 
 	// setups for tmp folder.
 	my_mkdir("/tmp/amiberry");
@@ -516,232 +1206,29 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	// are we using save-data/ ?
 	snprintf(kick_path, MAX_DPATH, "%s/Kickstarts", save_path);
 
-	// if we have a config file, we will use it
-	// we will need it for the WHDLoad options too.
-	if (my_existsfile(uae_config))
-	{
-		write_log("WHDBooter -  %s found. Loading Config for WHDload options.\n", uae_config);
-		target_cfgfile_load(&currprefs, uae_config, CONFIG_TYPE_ALL, 0);
-	}
-
-	// LOAD GAME SPECIFICS - USE SHA1 IF AVAILABLE
+	// LOAD GAME SPECIFICS
 	snprintf(whd_path, MAX_DPATH, "%sgame-data/", whdbootpath);
 	game_options game_detail;
-
-	// EDIT THE FILE NAME TO USE HERE
 
 	strcpy(whd_config, whd_path);
 	strcat(whd_config, "whdload_db.xml");
 
-	if (my_existsfile(whd_config)) // use XML database
+	if (my_existsfile(whd_config))
 	{
-		tinyxml2::XMLDocument doc;
-		auto error = false;
-		write_log("WHDBooter - Loading whdload_db.xml\n");
-		write_log("WHDBooter - Searching whdload_db.xml for %s\n", game_name);
-
-		auto* f = fopen(whd_config, _T("rb"));
-		if (f)
-		{
-			auto err = doc.LoadFile(f);
-			if (err != tinyxml2::XML_SUCCESS)
-			{
-				write_log(_T("Failed to parse '%s':  %d\n"), whd_config, err);
-				error = true;
-			}
-			fclose(f);
-		}
-		else
-		{
-			error = true;
-		}
-
-		if (!error)
-		{
-			auto sha1 = my_get_sha1_of_file(filepath);
-			std::transform(sha1.begin(), sha1.end(), sha1.begin(), ::tolower);
-			auto* game_node = doc.FirstChildElement("whdbooter");
-			game_node = game_node->FirstChildElement("game");
-			while (game_node != nullptr)
-			{
-				// Ideally we'd just match by sha1, but filename has worked up until now, so try that first
-				// then fall back to sha1 if a user has renamed the file!
-				//
-				int found = 0;
-				if (game_node->Attribute("filename", game_name))
-				{
-					found = 1;
-				}
-				if (game_node->Attribute("sha1", sha1.c_str()))
-				{
-					found = 1;
-				}
-
-				if (found)
-				{
-					// now get the <hardware> and <custom_controls> items
-					// get hardware
-					auto* temp_node = game_node->FirstChildElement("hardware");
-					if (temp_node)
-					{
-						const auto* hardware = temp_node->GetText();
-						if (hardware)
-						{
-							game_detail = get_game_settings(hardware);
-							write_log("WHDBooter - Game H/W Settings: \n%s\n", hardware);
-						}
-					}
-					
-					// get custom controls
-					temp_node = game_node->FirstChildElement("custom_controls");
-					if (temp_node)
-					{
-						const auto* custom_settings = temp_node->GetText();
-						if (custom_settings)
-						{
-							write_log("WHDBooter - Game Custom Settings: \n%s\n", custom_settings);
-							parse_custom_settings(prefs, custom_settings);
-						}
-					}
-
-					if (strlen(selected_slave) == 0)
-					{
-						temp_node = game_node->FirstChildElement("slave_default");
-
-						// use a selected slave if we have one
-						if (strlen(prefs->whdbootprefs.slave) != 0)
-						{
-							strcpy(selected_slave, prefs->whdbootprefs.slave);
-							write_log("WHDBooter - Config Selected Slave: %s \n", selected_slave);
-						}
-						// otherwise use the XML default
-						else if (temp_node->GetText() != nullptr)
-						{
-							_stprintf(selected_slave, "%s", temp_node->GetText());
-							write_log("WHDBooter - Default Slave: %s\n", selected_slave);
-						}
-
-						temp_node = game_node->FirstChildElement("subpath");
-
-						if (temp_node->GetText() != nullptr)
-						{
-							_stprintf(subpath, "%s",	temp_node->GetText());
-							write_log("WHDBooter - SubPath:  %s\n", subpath);
-						}
-					}
-
-					// get slave_libraries
-					temp_node = game_node->FirstChildElement("slave_libraries");
-					if (temp_node->GetText() != nullptr)
-					{
-						if (strcmpi(temp_node->GetText(), "true") == 0)
-							use_slave_libs = true;
-
-						write_log("WHDBooter - Libraries:  %s\n", subpath);
-					}
-					break;
-				}
-				game_node = game_node->NextSiblingElement();
-			}
-		}
+		game_detail = parse_settings_from_xml(prefs, filepath);
 	}
 	else
-		write_log("WHDBooter -  Could not load whdload_db.xml - does not exist?\n");
-
-	// currently, we have selected a slave, so we create a startup-sequence
-	if (strlen(selected_slave) != 0)
 	{
-		std::ostringstream whd_bootscript;
-		whd_bootscript << "FAILAT 999\n";
-
-		if (use_slave_libs)
-		{
-			whd_bootscript << "DH3:C/Assign LIBS: DH3:LIBS/ ADD\n";
-		}
-
-		whd_bootscript << "IF NOT EXISTS WHDLoad\n";
-		whd_bootscript << "DH3:C/Assign C: DH3:C/ ADD\n";
-		whd_bootscript << "ENDIF\n";
-
-		whd_bootscript << "CD \"Games:" << subpath << "\"\n";
-		whd_bootscript << "WHDLoad SLAVE=\"Games:" << subpath << "/" << selected_slave << "\"";
-
-		// Write Cache
-		if (prefs->whdbootprefs.writecache)
-		{
-			whd_bootscript << " PRELOAD NOREQ ";
-		}
-		else
-		{
-			whd_bootscript << " PRELOAD NOREQ NOWRITECACHE ";
-		}
-
-		// CUSTOM options
-		if (prefs->whdbootprefs.custom1 > 0)
-		{
-			whd_bootscript << " CUSTOM1=" << prefs->whdbootprefs.custom1;
-		}
-		if (prefs->whdbootprefs.custom2 > 0)
-		{
-			whd_bootscript << " CUSTOM2=" << prefs->whdbootprefs.custom2;
-		}
-		if (prefs->whdbootprefs.custom3 > 0)
-		{
-			whd_bootscript << " CUSTOM3=" << prefs->whdbootprefs.custom3;
-		}
-		if (prefs->whdbootprefs.custom4 > 0)
-		{
-			whd_bootscript << " CUSTOM4=" << prefs->whdbootprefs.custom4;
-		}
-		if (prefs->whdbootprefs.custom5 > 0)
-		{
-			whd_bootscript << " CUSTOM5=" << prefs->whdbootprefs.custom5;
-		}
-		if (strlen(prefs->whdbootprefs.custom) != 0)
-		{
-			whd_bootscript << " CUSTOM=\"" << prefs->whdbootprefs.custom << "\"";
-		}
-
-		// BUTTONWAIT
-		if (prefs->whdbootprefs.buttonwait == true)
-		{
-			whd_bootscript << " BUTTONWAIT";
-		}
-
-		// SPLASH
-		if (prefs->whdbootprefs.showsplash != true)
-		{
-			whd_bootscript << " SPLASHDELAY=0";
-		}
-
-		// CONFIGDELAY
-		if (prefs->whdbootprefs.configdelay != 0)
-		{
-			whd_bootscript << " CONFIGDELAY=" << prefs->whdbootprefs.configdelay;
-		}
-
-		// SPECIAL SAVE PATH
-		whd_bootscript << " SAVEPATH=Saves:Savegames/ SAVEDIR=\"" << subpath << "\"";
-		whd_bootscript << '\n';
-
-		// Launches utility program to quit the emulator (via UAE trap in RTAREA)
-		if (prefs->whdbootprefs.quit_on_exit)
-		{
-			whd_bootscript << "DH0:C/AmiQuit\n";
-		}
-
-		write_log("WHDBooter - Created Startup-Sequence  \n\n%s\n", whd_bootscript.str().c_str());
-		write_log("WHDBooter - Saved Auto-Startup to %s\n", whd_startup);
-
-		ofstream myfile(whd_startup);
-		if (myfile.is_open())
-		{
-			myfile << whd_bootscript.str();
-			myfile.close();
-		}
+		write_log("WHDBooter -  Could not load whdload_db.xml - does not exist?\n");
 	}
 
-	// now we should have a startup-file (if we don't, we are going to use the original booter)
+	// If we have a slave, create a startup-sequence
+	if (strlen(selected_slave) != 0)
+	{
+		create_startup_sequence(prefs);
+	}
+
+	// now we should have a startup-sequence file (if we don't, we are going to use the original booter)
 	if (my_existsfile(whd_startup))
 	{
 		// create a symlink to WHDLoad in /tmp/amiberry/
@@ -789,7 +1276,7 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	write_log("WHDBooter - Host: Mouse 2        : %s  \n", amiberry_options.default_mouse2);
 #endif
 
-	// so remember, we already loaded a .uae config, so we don't need to do the below manual setup for hardware
+	// if we already loaded a .uae config, we don't need to do the below manual setup for hardware
 	if (my_existsfile(uae_config))
 	{
 		write_log("WHDBooter - %s found; ignoring WHD Quickstart setup.\n", uae_config);
@@ -800,504 +1287,30 @@ void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath)
 	//    SET UNIVERSAL DEFAULTS
 	prefs->start_gui = false;
 
-	if ((strcmpi(game_detail.cpu, "68000") == 0 || strcmpi(game_detail.cpu, "68010") == 0) && a600_available != 0)
+	// DO CHECKS FOR AGA / CD32
+	const auto is_aga = strstr(filename, "AGA") != nullptr || strcmpi(game_detail.chipset, "AGA") == 0;
+	const auto is_cd32 = strstr(filename, "CD32") != nullptr || strcmpi(game_detail.chipset, "CD32") == 0;
+
+	if (is_aga || is_cd32)
+	{
+		// SET THE BASE AMIGA (Expanded A1200)
+		built_in_prefs(prefs, 4, A1200_CONFIG, 0, 0);
+		_tcscpy(prefs->description, _T("AutoBoot Configuration [WHDLoad] [AGA]"));
+	}
+	else
+	{
 		// SET THE BASE AMIGA (Expanded A600)
 		built_in_prefs(prefs, 2, A600_CONFIG, 0, 0);
-	else
-		// SET THE BASE AMIGA (Expanded A1200)
-	{
-		built_in_prefs(prefs, 4, A1200_CONFIG, 0, 0);
-		if (strcmpi(game_detail.fast, "nul") != 0 && (strcmpi(game_detail.cpu, "nul") == 0))
-			strcpy(game_detail.cpu, _T("68020"));
-	}
-
-	// DO CHECKS FOR AGA / CD32
-	const int is_aga = strstr(filename, "_AGA") != nullptr || strcmpi(game_detail.chipset, "AGA") == 0;
-	const int is_cd32 = strstr(filename, "_CD32") != nullptr || strcmpi(game_detail.chipset, "CD32") == 0;
-
-	// A1200 no AGA
-	if (!static_cast<bool>(is_aga) && !static_cast<bool>(is_cd32))
-	{
 		_tcscpy(prefs->description, _T("AutoBoot Configuration [WHDLoad]"));
-
-		prefs->cs_compatible = CP_A600;
-		built_in_chipset_prefs(prefs);
-		prefs->chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
-	}
-		// A1200
-	else
-		_tcscpy(prefs->description, _T("AutoBoot Configuration [WHDLoad] [AGA]"));
-
-	//SET THE WHD BOOTER AND GAME DATA
-	if (strlen(selected_slave) != 0) // new booter solution
-	{
-		snprintf(boot_path, MAX_DPATH, "/tmp/amiberry/");
-
-		_stprintf(tmp, _T("filesystem2=rw,DH0:DH0:%s,10"), boot_path);
-		txt2 = parse_text_path(_T(tmp));
-		cfgfile_parse_line(prefs, txt2, 0);
-
-		_stprintf(tmp, _T("uaehf0=dir,rw,DH0:DH0::%s,10"), boot_path);
-		txt2 = parse_text_path(_T(tmp));
-		cfgfile_parse_line(prefs, txt2, 0);
-
-		snprintf(boot_path, MAX_DPATH, "%sboot-data.zip", whdbootpath);
-		if (!my_existsfile(boot_path))
-			snprintf(boot_path, MAX_DPATH, "%sboot-data/", whdbootpath);
-
-		_stprintf(tmp, _T("filesystem2=rw,DH3:DH3:%s,-10"), boot_path);
-		txt2 = parse_text_path(_T(tmp));
-		cfgfile_parse_line(prefs, txt2, 0);
-
-		_stprintf(tmp, _T("uaehf0=dir,rw,DH3:DH3::%s,-10"), boot_path);
-		txt2 = parse_text_path(_T(tmp));
-		cfgfile_parse_line(prefs, txt2, 0);
 	}
 
-	else // revert to original booter is no slave was set
-	{
-		snprintf(boot_path, MAX_DPATH, "%sboot-data.zip", whdbootpath);
-		if (!my_existsfile(boot_path))
-			snprintf(boot_path, MAX_DPATH, "%sboot-data/", whdbootpath);
-
-		_stprintf(tmp, _T("filesystem2=rw,DH0:DH0:%s,10"), boot_path);
-		txt2 = parse_text_path(_T(tmp));
-		cfgfile_parse_line(prefs, txt2, 0);
-
-		_stprintf(tmp, _T("uaehf0=dir,rw,DH0:DH0::%s,10"), boot_path);
-		txt2 = parse_text_path(_T(tmp));
-		cfgfile_parse_line(prefs, txt2, 0);
-	}
-
-	//set the Second (game data) drive
-	_stprintf(tmp, "filesystem2=rw,DH1:Games:\"%s\",0", filepath);
-	txt2 = parse_text_path(_T(tmp));
-	cfgfile_parse_line(prefs, txt2, 0);
-
-	_stprintf(tmp, "uaehf1=dir,rw,DH1:Games:\"%s\",0", filepath);
-	txt2 = parse_text_path(_T(tmp));
-	cfgfile_parse_line(prefs, txt2, 0);
-
-	//set the third (save data) drive
-	snprintf(whd_path, MAX_DPATH, "%s/", save_path);
-
-	if (my_existsdir(save_path))
-	{
-		_stprintf(tmp, "filesystem2=rw,DH2:Saves:%s,0", save_path);
-		txt2 = parse_text_path(_T(tmp));
-		cfgfile_parse_line(prefs, txt2, 0);
-
-		_stprintf(tmp, "uaehf2=dir,rw,DH2:Saves:%s,0", save_path);
-		txt2 = parse_text_path(_T(tmp));
-		cfgfile_parse_line(prefs, txt2, 0);
-	}
+	// SET THE WHD BOOTER AND GAME DATA
+	set_booter_drives(prefs, filepath);
 
 	// APPLY THE SETTINGS FOR MOUSE/JOYSTICK ETC
-	//  CD32
-	if (static_cast<bool>(is_cd32)
-		&& (strcmpi(game_detail.port0, "nul") == 0 || strcmpi(game_detail.port0, "cd32") == 0))
-		prefs->jports[0].mode = 7;
+	set_input_settings(prefs, game_detail, is_cd32);
 
-	if (static_cast<bool>(is_cd32)
-		&& (strcmpi(game_detail.port1, "nul") == 0 || strcmpi(game_detail.port1, "cd32") == 0))
-		prefs->jports[1].mode = 7;
-
-	// JOY
-	if (strcmpi(game_detail.port0, "joy") == 0)
-		prefs->jports[0].mode = 0;
-	if (strcmpi(game_detail.port1, "joy") == 0)
-		prefs->jports[1].mode = 0;
-
-	// MOUSE
-	if (strcmpi(game_detail.port0, "mouse") == 0)
-		prefs->jports[0].mode = 2;
-	if (strcmpi(game_detail.port1, "mouse") == 0)
-		prefs->jports[1].mode = 2;
-
-	// APPLY SPECIAL CONFIG E.G. MOUSE OR ALT. JOYSTICK SETTINGS
-	for (auto& jport : prefs->jports)
-	{
-		jport.id = JPORT_NONE;
-		jport.idc.configname[0] = 0;
-		jport.idc.name[0] = 0;
-		jport.idc.shortid[0] = 0;
-	}
-
-	// WHAT IS THE MAIN CONTROL?
-	// PORT 0 - MOUSE GAMES
-	if (strcmpi(game_detail.control, "mouse") == 0 && strcmpi(amiberry_options.default_mouse1, "") != 0)
-	{
-		_stprintf(txt2, "%s=%s", _T("joyport0"), _T(amiberry_options.default_mouse1));
-		cfgfile_parse_line(prefs, txt2, 0);
-		write_log("WHDBooter Option (Mouse Control): %s\n", txt2);
-	}
-
-	// PORT 0 - JOYSTICK GAMES
-	else if (strcmpi(amiberry_options.default_controller2, "") != 0)
-	{
-		_stprintf(txt2, "%s=%s", _T("joyport0"), _T(amiberry_options.default_controller2));
-		cfgfile_parse_line(prefs, txt2, 0);
-		write_log("WHDBooter Option (Joystick Control): %s\n", txt2);
-	}
-	else
-	{
-		_stprintf(txt2, "%s=mouse", _T("joyport0"));
-		cfgfile_parse_line(prefs, txt2, 0);
-		write_log("WHDBooter Option (Default Mouse): %s\n", txt2);
-	}
-
-	// PORT 1 - MOUSE GAMES
-	if (strcmpi(game_detail.control, "mouse") == 0 && strcmpi(amiberry_options.default_mouse2, "") != 0)
-	{
-		_stprintf(txt2, "%s=%s", _T("joyport1"), _T(amiberry_options.default_mouse2));
-		cfgfile_parse_line(prefs, txt2, 0);
-		write_log("WHDBooter Option (Mouse Control): %s\n", txt2);
-	}
-	// PORT 1 - JOYSTICK GAMES
-	else if (strcmpi(amiberry_options.default_controller1, "") != 0)
-	{
-		_stprintf(txt2, "%s=%s", _T("joyport1"), _T(amiberry_options.default_controller1));
-		cfgfile_parse_line(prefs, txt2, 0);
-		write_log("WHDBooter Option (Joystick Control): %s\n", txt2);
-	}
-	else
-	{
-		_stprintf(txt2, "%s=joy1", _T("joyport1"));
-		cfgfile_parse_line(prefs, txt2, 0);
-		write_log("WHDBooter Option (Default Joystick): %s\n", txt2);
-	}
-
-	// PARALLEL PORT GAMES
-	if (strcmpi(amiberry_options.default_controller3, "") != 0)
-	{
-		_stprintf(txt2, "%s=%s", _T("joyport2"), _T(amiberry_options.default_controller3));
-		cfgfile_parse_line(prefs, txt2, 0);
-	}
-	if (strcmpi(amiberry_options.default_controller4, "") != 0)
-	{
-		_stprintf(txt2, "%s=%s", _T("joyport3"), _T(amiberry_options.default_controller4));
-		cfgfile_parse_line(prefs, txt2, 0);
-	}
-
-	//      *** GAME-SPECIFICS ***
 	//  SET THE GAME COMPATIBILITY SETTINGS
-	//
 	// BLITTER, SPRITES, MEMORY, JIT, BIG CPU ETC
-
-	// CPU 68020/040
-	if (strcmpi(game_detail.cpu, "68020") == 0 || strcmpi(game_detail.cpu, "68040") == 0)
-	{
-		_stprintf(txt2, "cpu_type=%s", game_detail.cpu);
-		cfgfile_parse_line(prefs, txt2, 0);
-	}
-
-	// CPU 68000/010 [requires a600 rom)]
-	if ((strcmpi(game_detail.cpu, "68000") == 0 || strcmpi(game_detail.cpu, "68010") == 0) && a600_available != 0)
-	{
-		_stprintf(txt2, "cpu_type=%s", game_detail.cpu);
-		cfgfile_parse_line(prefs, txt2, 0);
-
-		_stprintf(txt2, "chipmem_size=4");
-		cfgfile_parse_line(prefs, txt2, 0);
-	}
-
-	// CPU SPEED
-	if (strcmpi(game_detail.clock, "7") == 0)
-	{
-		_stprintf(txt2, "cpu_speed=real");
-		cfgfile_parse_line(prefs, txt2, 0);
-	}
-	else if (strcmpi(game_detail.clock, "14") == 0)
-	{
-		_stprintf(txt2, "finegrain_cpu_speed=1024");
-		cfgfile_parse_line(prefs, txt2, 0);
-	}
-	else if (strcmpi(game_detail.clock, "28") == 0 || strcmpi(game_detail.clock, "25") == 0)
-	{
-		_stprintf(txt2, "finegrain_cpu_speed=128");
-		cfgfile_parse_line(prefs, txt2, 0);
-	}
-	else if (strcmpi(game_detail.clock, "max") == 0)
-	{
-		_stprintf(txt2, "cpu_speed=max");
-		cfgfile_parse_line(prefs, txt2, 0);
-	}
-
-	// COMPATIBLE CPU
-	if (strcmpi(game_detail.cpu_comp, "true") == 0)
-	{
-		_stprintf(txt2, "cpu_compatible=true");
-		cfgfile_parse_line(prefs, txt2, 0);
-	}
-	else if (strcmpi(game_detail.cpu_comp, "false") == 0)
-	{
-		_stprintf(txt2, "cpu_compatible=false");
-		cfgfile_parse_line(prefs, txt2, 0);
-	}
-
-	// COMPATIBLE CPU
-	if (strcmpi(game_detail.cpu_24bit, "false") == 0 || strcmpi(game_detail.z3, "nul") != 0)
-	{
-		_stprintf(txt2, "cpu_24bit_addressing=false");
-		cfgfile_parse_line(prefs, txt2, 0);
-	}
-
-	// CYCLE-EXACT CPU
-	if (strcmpi(game_detail.cpu_exact, "true") == 0)
-	{
-		_stprintf(txt2, "cpu_cycle_exact=true");
-		cfgfile_parse_line(prefs, txt2, 0);
-	}
-
-	// FAST / Z3 MEMORY REQUIREMENTS
-	int temp_ram;
-	if (strcmpi(game_detail.fast, "nul") != 0)
-	{
-		temp_ram = atol(game_detail.fast);
-		_stprintf(txt2, "fastmem_size=%d", temp_ram);
-		cfgfile_parse_line(prefs, txt2, 0);
-	}
-	if (strcmpi(game_detail.z3, "nul") != 0)
-	{
-		temp_ram = atol(game_detail.z3);
-		_stprintf(txt2, "z3mem_size=%d", temp_ram);
-		cfgfile_parse_line(prefs, txt2, 0);
-	}
-
-	// FAST COPPER
-	if (strcmpi(game_detail.fastcopper, "true") == 0)
-	{
-		_stprintf(txt2, "fast_copper=true");
-		cfgfile_parse_line(prefs, txt2, 0);
-	}
-
-	// BLITTER=IMMEDIATE/WAIT/NORMAL
-	if (strcmpi(game_detail.blitter, "immediate") == 0)
-	{
-		_stprintf(txt2, "immediate_blits=true");
-		cfgfile_parse_line(prefs, txt2, 0);
-	}
-	else if (strcmpi(game_detail.blitter, "normal") == 0)
-	{
-		_stprintf(txt2, "waiting_blits=disabled");
-		cfgfile_parse_line(prefs, txt2, 0);
-	}
-
-	// CHIPSET OVERWRITE
-	if (strcmpi(game_detail.chipset, "ocs") == 0)
-	{
-		prefs->cs_compatible = CP_A600;
-		built_in_chipset_prefs(prefs);
-		prefs->chipset_mask = 0;
-	}
-	else if (strcmpi(game_detail.chipset, "ecs") == 0)
-	{
-		prefs->cs_compatible = CP_A600;
-		built_in_chipset_prefs(prefs);
-		prefs->chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
-	}
-	else if (strcmpi(game_detail.chipset, "aga") == 0)
-	{
-		prefs->cs_compatible = CP_A1200;
-		built_in_chipset_prefs(prefs);
-		prefs->chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE | CSMASK_AGA;
-	}
-
-	// JIT
-	if (strcmpi(game_detail.jit, "true") == 0)
-	{
-		_stprintf(txt2, "cachesize=16384");
-		cfgfile_parse_line(prefs, txt2, 0);
-		_stprintf(txt2, "cpu_compatible=false");
-		cfgfile_parse_line(prefs, txt2, 0);
-		_stprintf(txt2, "cpu_cycle_exact=false");
-		cfgfile_parse_line(prefs, txt2, 0);
-		_stprintf(txt2, "cpu_memory_cycle_exact=false");
-		cfgfile_parse_line(prefs, txt2, 0);
-		_stprintf(txt2, "address_space_24=false");
-		cfgfile_parse_line(prefs, txt2, 0);
-	}
-
-	// NTSC
-	if (strcmpi(game_detail.ntsc, "true") == 0)
-	{
-		_stprintf(txt2, "ntsc=true");
-		cfgfile_parse_line(prefs, txt2, 0);
-	}
-
-	// SPRITE COLLISION
-	if (strcmpi(game_detail.sprites, "nul") != 0)
-	{
-		_stprintf(txt2, "collision_level=%s", game_detail.sprites);
-		cfgfile_parse_line(prefs, txt2, 0);
-	}
-
-	// Screen settings, only if allowed to override the defaults from amiberry.conf
-	if (amiberry_options.allow_display_settings_from_xml)
-	{
-		// SCREEN AUTO-HEIGHT
-		if (strcmpi(game_detail.scr_autoheight, "true") == 0)
-		{
-			_stprintf(txt2, "amiberry.gfx_auto_crop=true");
-			cfgfile_parse_line(prefs, txt2, 0);
-		}
-		else if (strcmpi(game_detail.scr_autoheight, "false") == 0)
-		{
-			_stprintf(txt2, "amiberry.gfx_auto_crop=false");
-			cfgfile_parse_line(prefs, txt2, 0);
-		}
-
-		// SCREEN CENTER/HEIGHT/WIDTH
-		if (strcmpi(game_detail.scr_centerh, "smart") == 0)
-		{
-#ifdef USE_DISPMANX
-			_stprintf(txt2, "gfx_center_horizontal=smart");
-			cfgfile_parse_line(prefs, txt2, 0);
-#else
-			if (prefs->gfx_auto_crop)
-			{
-				// Disable if using Auto-Crop, otherwise the output won't be correct
-				_stprintf(txt2, "gfx_center_horizontal=none");
-				cfgfile_parse_line(prefs, txt2, 0);
-			}
-			else
-			{
-				_stprintf(txt2, "gfx_center_horizontal=smart");
-				cfgfile_parse_line(prefs, txt2, 0);
-			}
-#endif
-		}
-		else if (strcmpi(game_detail.scr_centerh, "none") == 0)
-		{
-			_stprintf(txt2, "gfx_center_horizontal=none");
-			cfgfile_parse_line(prefs, txt2, 0);
-		}
-
-		if (strcmpi(game_detail.scr_centerv, "smart") == 0)
-		{
-#ifdef USE_DISPMANX
-			_stprintf(txt2, "gfx_center_vertical=smart");
-			cfgfile_parse_line(prefs, txt2, 0);
-#else
-			if (prefs->gfx_auto_crop)
-			{
-				// Disable if using Auto-Crop, otherwise the output won't be correct
-				_stprintf(txt2, "gfx_center_vertical=none");
-				cfgfile_parse_line(prefs, txt2, 0);
-			}
-			else
-			{
-				_stprintf(txt2, "gfx_center_vertical=smart");
-				cfgfile_parse_line(prefs, txt2, 0);
-			}
-#endif
-		}
-		else if (strcmpi(game_detail.scr_centerv, "none") == 0)
-		{
-			_stprintf(txt2, "gfx_center_vertical=none");
-			cfgfile_parse_line(prefs, txt2, 0);
-		}
-
-		if (strcmpi(game_detail.scr_height, "nul") != 0)
-		{
-#ifdef USE_DISPMANX
-			_stprintf(txt2, "gfx_height=%s", game_detail.scr_height);
-			cfgfile_parse_line(prefs, txt2, 0);
-			_stprintf(txt2, "gfx_height_windowed=%s", game_detail.scr_height);
-			cfgfile_parse_line(prefs, txt2, 0);
-			_stprintf(txt2, "gfx_height_fullscreen=%s", game_detail.scr_height);
-			cfgfile_parse_line(prefs, txt2, 0);
-#else
-			if (prefs->gfx_auto_crop)
-			{
-				// If using Auto-Crop, bypass any screen Height adjustments as they are not needed and will cause issues
-				_stprintf(txt2, "gfx_height=%s", "768");
-				cfgfile_parse_line(prefs, txt2, 0);
-				_stprintf(txt2, "gfx_height_windowed=%s", "768");
-				cfgfile_parse_line(prefs, txt2, 0);
-				_stprintf(txt2, "gfx_height_fullscreen=%s", "768");
-				cfgfile_parse_line(prefs, txt2, 0);
-			}
-			else
-			{
-				_stprintf(txt2, "gfx_height=%s", game_detail.scr_height);
-				cfgfile_parse_line(prefs, txt2, 0);
-				_stprintf(txt2, "gfx_height_windowed=%s", game_detail.scr_height);
-				cfgfile_parse_line(prefs, txt2, 0);
-				_stprintf(txt2, "gfx_height_fullscreen=%s", game_detail.scr_height);
-				cfgfile_parse_line(prefs, txt2, 0);
-			}
-#endif
-		}
-
-		if (strcmpi(game_detail.scr_width, "nul") != 0)
-		{
-#ifdef USE_DISPMANX
-			_stprintf(txt2, "gfx_width=%s", game_detail.scr_width);
-			cfgfile_parse_line(prefs, txt2, 0);
-			_stprintf(txt2, "gfx_width_windowed=%s", game_detail.scr_width);
-			cfgfile_parse_line(prefs, txt2, 0);
-			_stprintf(txt2, "gfx_width_fullscreen=%s", game_detail.scr_width);
-			cfgfile_parse_line(prefs, txt2, 0);
-#else
-			if (prefs->gfx_auto_crop)
-			{
-				// If using Auto-Crop, bypass any screen Width adjustments as they are not needed and will cause issues
-				_stprintf(txt2, "gfx_width=%s", "720");
-				cfgfile_parse_line(prefs, txt2, 0);
-				_stprintf(txt2, "gfx_width_windowed=%s", "720");
-				cfgfile_parse_line(prefs, txt2, 0);
-				_stprintf(txt2, "gfx_width_fullscreen=%s", "720");
-				cfgfile_parse_line(prefs, txt2, 0);
-			}
-			else
-			{
-				_stprintf(txt2, "gfx_width=%s", game_detail.scr_width);
-				cfgfile_parse_line(prefs, txt2, 0);
-				_stprintf(txt2, "gfx_width_windowed=%s", game_detail.scr_width);
-				cfgfile_parse_line(prefs, txt2, 0);
-				_stprintf(txt2, "gfx_width_fullscreen=%s", game_detail.scr_width);
-				cfgfile_parse_line(prefs, txt2, 0);
-			}
-#endif
-		}
-
-		if (strcmpi(game_detail.scr_offseth, "nul") != 0)
-		{
-#ifdef USE_DISPMANX
-			_stprintf(txt2, "amiberry.gfx_horizontal_offset=%s", game_detail.scr_offseth);
-			cfgfile_parse_line(prefs, txt2, 0);
-#else
-			if (prefs->gfx_auto_crop)
-			{
-				_stprintf(txt2, "amiberry.gfx_horizontal_offset=%s", "0");
-				cfgfile_parse_line(prefs, txt2, 0);
-			}
-			else
-			{
-				_stprintf(txt2, "amiberry.gfx_horizontal_offset=%s", game_detail.scr_offseth);
-				cfgfile_parse_line(prefs, txt2, 0);
-			}
-#endif
-		}
-
-		if (strcmpi(game_detail.scr_offsetv, "nul") != 0)
-		{
-#ifdef USE_DISPMANX
-			_stprintf(txt2, "amiberry.gfx_vertical_offset=%s", game_detail.scr_offsetv);
-			cfgfile_parse_line(prefs, txt2, 0);
-#else
-			if (prefs->gfx_auto_crop)
-			{
-				_stprintf(txt2, "amiberry.gfx_vertical_offset=%s", "0");
-				cfgfile_parse_line(prefs, txt2, 0);
-			}
-			else
-			{
-				_stprintf(txt2, "amiberry.gfx_vertical_offset=%s", game_detail.scr_offsetv);
-				cfgfile_parse_line(prefs, txt2, 0);
-			}
-#endif
-		}
-	}
+	set_compatibility_settings(prefs, game_detail, a600_available);
 }
