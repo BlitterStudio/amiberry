@@ -9028,8 +9028,10 @@ static int bip_a600 (struct uae_prefs *p, int config, int compa, int romcheck)
 	if (config == 1)
 		p->chipmem.size = 0x200000;
 	if (config == 2)
+		p->chipmem.size = 0x200000;
 		p->fastmem[0].size = 0x400000;
 	if (config == 3)
+		p->chipmem.size = 0x200000;
 		p->fastmem[0].size = 0x800000;
 	p->chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
 	return configure_rom (p, roms, romcheck);
