@@ -29,6 +29,7 @@ static gcn::Window* wndShowMessage;
 static gcn::Button* cmdOK;
 static gcn::Button* cmdCancel;
 static gcn::TextBox* txtMessageText;
+static gcn::Label* lblText1;
 static gcn::Label* lblText2;
 
 class ShowMessageActionListener : public gcn::ActionListener
@@ -194,6 +195,8 @@ static void InitShowMessage(const std::string& message)
 	txtMessageText = new gcn::TextBox(message);
 	txtMessageText->setBackgroundColor(gui_baseCol);
 	txtMessageText->setEditable(false);
+	lblText1 = new gcn::Label("");
+	lblText1->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER, LABEL_HEIGHT);
 	lblText2 = new gcn::Label("");
 	lblText2->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER, LABEL_HEIGHT);
 
@@ -212,7 +215,8 @@ static void InitShowMessage(const std::string& message)
 	cmdCancel->addActionListener(showMessageActionListener);
 
 	wndShowMessage->add(txtMessageText, DISTANCE_BORDER, DISTANCE_BORDER);
-	wndShowMessage->add(lblText2, DISTANCE_BORDER, DISTANCE_BORDER + txtMessageText->getHeight() + 4);
+	wndShowMessage->add(lblText1, DISTANCE_BORDER, DISTANCE_BORDER + txtMessageText->getHeight() + 4);
+	wndShowMessage->add(lblText2, DISTANCE_BORDER, lblText1->getY() + lblText1->getHeight() + 4);
 	wndShowMessage->add(cmdOK);
 	wndShowMessage->add(cmdCancel);
 
@@ -229,6 +233,7 @@ static void ExitShowMessage()
 	gui_top->remove(wndShowMessage);
 
 	delete txtMessageText;
+	delete lblText1;
 	delete lblText2;
 	delete cmdOK;
 	delete cmdCancel;
@@ -337,57 +342,57 @@ static void ShowMessageWaitInputLoop()
 				case SDLK_LCTRL:
 					hotkey.modifiers.lctrl = true;
 					delimiter = SDL_GetKeyName(event.key.keysym.sym);
-					caption = lblText2->getCaption();
-					lblText2->setCaption(caption + " " + delimiter);
+					caption = lblText1->getCaption();
+					lblText1->setCaption(caption + " " + delimiter);
 					break;
 				case SDLK_RCTRL:
 					hotkey.modifiers.rctrl = true;
 					delimiter = SDL_GetKeyName(event.key.keysym.sym);
-					caption = lblText2->getCaption();
-					lblText2->setCaption(caption + " " + delimiter);
+					caption = lblText1->getCaption();
+					lblText1->setCaption(caption + " " + delimiter);
 					break;
 				case SDLK_LALT:
 					hotkey.modifiers.lalt = true;
 					delimiter = SDL_GetKeyName(event.key.keysym.sym);
-					caption = lblText2->getCaption();
-					lblText2->setCaption(caption + " " + delimiter);
+					caption = lblText1->getCaption();
+					lblText1->setCaption(caption + " " + delimiter);
 					break;
 				case SDLK_RALT:
 					hotkey.modifiers.ralt = true;
 					delimiter = SDL_GetKeyName(event.key.keysym.sym);
-					caption = lblText2->getCaption();
-					lblText2->setCaption(caption + " " + delimiter);
+					caption = lblText1->getCaption();
+					lblText1->setCaption(caption + " " + delimiter);
 					break;
 				case SDLK_LSHIFT:
 					hotkey.modifiers.lshift = true;
 					delimiter = SDL_GetKeyName(event.key.keysym.sym);
-					caption = lblText2->getCaption();
-					lblText2->setCaption(caption + " " + delimiter);
+					caption = lblText1->getCaption();
+					lblText1->setCaption(caption + " " + delimiter);
 					break;
 				case SDLK_RSHIFT:
 					hotkey.modifiers.rshift = true;
 					delimiter = SDL_GetKeyName(event.key.keysym.sym);
-					caption = lblText2->getCaption();
-					lblText2->setCaption(caption + " " + delimiter);
+					caption = lblText1->getCaption();
+					lblText1->setCaption(caption + " " + delimiter);
 					break;
 				case SDLK_LGUI:
 					hotkey.modifiers.lgui = true;
 					delimiter = SDL_GetKeyName(event.key.keysym.sym);
-					caption = lblText2->getCaption();
-					lblText2->setCaption(caption + " " + delimiter);
+					caption = lblText1->getCaption();
+					lblText1->setCaption(caption + " " + delimiter);
 					break;
 				case SDLK_RGUI:
 					hotkey.modifiers.rgui = true;
 					delimiter = SDL_GetKeyName(event.key.keysym.sym);
-					caption = lblText2->getCaption();
-					lblText2->setCaption(caption + " " + delimiter);
+					caption = lblText1->getCaption();
+					lblText1->setCaption(caption + " " + delimiter);
 					break;
 
 				default:
 					hotkey.scancode = event.key.keysym.scancode;
 					hotkey.key_name = delimiter = SDL_GetKeyName(event.key.keysym.sym);
-					caption = lblText2->getCaption();
-					lblText2->setCaption(caption + " " + delimiter);
+					caption = lblText1->getCaption();
+					lblText1->setCaption(caption + " " + delimiter);
 					break;
 				}
 			}
@@ -411,66 +416,66 @@ static void ShowMessageWaitInputLoop()
 				case SDLK_LCTRL:
 					hotkey.modifiers.lctrl = false;
 					delimiter = SDL_GetKeyName(event.key.keysym.sym);
-					caption = lblText2->getCaption();
+					caption = lblText1->getCaption();
 					if ((pos = caption.find(delimiter)) != std::string::npos)
 						caption.erase(0, pos + delimiter.length());
-					lblText2->setCaption(caption);
+					lblText1->setCaption(caption);
 					break;
 				case SDLK_RCTRL:
 					hotkey.modifiers.rctrl = false;
 					delimiter = SDL_GetKeyName(event.key.keysym.sym);
-					caption = lblText2->getCaption();
+					caption = lblText1->getCaption();
 					if ((pos = caption.find(delimiter)) != std::string::npos)
 						caption.erase(0, pos + delimiter.length());
-					lblText2->setCaption(caption);
+					lblText1->setCaption(caption);
 					break;
 				case SDLK_LALT:
 					hotkey.modifiers.lalt = false;
 					delimiter = SDL_GetKeyName(event.key.keysym.sym);
-					caption = lblText2->getCaption();
+					caption = lblText1->getCaption();
 					if ((pos = caption.find(delimiter)) != std::string::npos)
 						caption.erase(0, pos + delimiter.length());
-					lblText2->setCaption(caption);
+					lblText1->setCaption(caption);
 					break;
 				case SDLK_RALT:
 					hotkey.modifiers.ralt = false;
 					delimiter = SDL_GetKeyName(event.key.keysym.sym);
-					caption = lblText2->getCaption();
+					caption = lblText1->getCaption();
 					if ((pos = caption.find(delimiter)) != std::string::npos)
 						caption.erase(0, pos + delimiter.length());
-					lblText2->setCaption(caption);
+					lblText1->setCaption(caption);
 					break;
 				case SDLK_LSHIFT:
 					hotkey.modifiers.lshift = false;
 					delimiter = SDL_GetKeyName(event.key.keysym.sym);
-					caption = lblText2->getCaption();
+					caption = lblText1->getCaption();
 					if ((pos = caption.find(delimiter)) != std::string::npos)
 						caption.erase(0, pos + delimiter.length());
-					lblText2->setCaption(caption);
+					lblText1->setCaption(caption);
 					break;
 				case SDLK_RSHIFT:
 					hotkey.modifiers.rshift = false;
 					delimiter = SDL_GetKeyName(event.key.keysym.sym);
-					caption = lblText2->getCaption();
+					caption = lblText1->getCaption();
 					if ((pos = caption.find(delimiter)) != std::string::npos)
 						caption.erase(0, pos + delimiter.length());
-					lblText2->setCaption(caption);
+					lblText1->setCaption(caption);
 					break;
 				case SDLK_LGUI:
 					hotkey.modifiers.lgui = false;
 					delimiter = SDL_GetKeyName(event.key.keysym.sym);
-					caption = lblText2->getCaption();
+					caption = lblText1->getCaption();
 					if ((pos = caption.find(delimiter)) != std::string::npos)
 						caption.erase(0, pos + delimiter.length());
-					lblText2->setCaption(caption);
+					lblText1->setCaption(caption);
 					break;
 				case SDLK_RGUI:
 					hotkey.modifiers.rgui = false;
 					delimiter = SDL_GetKeyName(event.key.keysym.sym);
-					caption = lblText2->getCaption();
+					caption = lblText1->getCaption();
 					if ((pos = caption.find(delimiter)) != std::string::npos)
 						caption.erase(0, pos + delimiter.length());
-					lblText2->setCaption(caption);
+					lblText1->setCaption(caption);
 					break;
 				default:
 					dialogFinished = true;
@@ -695,7 +700,7 @@ static void ShowMessageLoop()
 	}
 }
 
-bool ShowMessage(const char* title, const char* line1, const char* line2, const char* button1, const char* button2)
+bool ShowMessage(const std::string& title, const std::string& line1, const std::string& line2, const std::string& line3, const std::string& button1, const std::string& button2)
 {
 	dialogResult = false;
 	dialogFinished = false;
@@ -704,10 +709,11 @@ bool ShowMessage(const char* title, const char* line1, const char* line2, const 
 
 	wndShowMessage->setCaption(title);
 	txtMessageText->setText(line1);
-	lblText2->setCaption(line2);
+	lblText1->setCaption(line2);
+	lblText2->setCaption(line3);
 	cmdOK->setCaption(button1);
 	cmdCancel->setCaption(button2);
-	if (strlen(button2) == 0)
+	if (button2.length() == 0)
 	{
 		cmdCancel->setVisible(false);
 		cmdCancel->setEnabled(false);

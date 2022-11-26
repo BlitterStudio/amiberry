@@ -53,10 +53,10 @@ static struct
 	int marker;
 	std::string input;
 } s_arrBindingDisplay[] = {
-	{ 387, 167, 0.0, MARKER_BUTTON, "Button A"}, /* SDL_CONTROLLER_BUTTON_A */
-	{ 431, 132, 0.0, MARKER_BUTTON, "Button B"}, /* SDL_CONTROLLER_BUTTON_B */
-	{ 342, 132, 0.0, MARKER_BUTTON, "Button X"}, /* SDL_CONTROLLER_BUTTON_X */
-	{ 389, 101, 0.0, MARKER_BUTTON, "Button Y"}, /* SDL_CONTROLLER_BUTTON_Y */
+	{ 387, 167, 0.0, MARKER_BUTTON, "Button A (South)"}, /* SDL_CONTROLLER_BUTTON_A */
+	{ 431, 132, 0.0, MARKER_BUTTON, "Button B (East)"}, /* SDL_CONTROLLER_BUTTON_B */
+	{ 342, 132, 0.0, MARKER_BUTTON, "Button X (West)"}, /* SDL_CONTROLLER_BUTTON_X */
+	{ 389, 101, 0.0, MARKER_BUTTON, "Button Y (North)"}, /* SDL_CONTROLLER_BUTTON_Y */
 	{ 174, 132, 0.0, MARKER_BUTTON, "Button Back"}, /* SDL_CONTROLLER_BUTTON_BACK */
 	{ 232, 128, 0.0, MARKER_BUTTON, "Button Guide"}, /* SDL_CONTROLLER_BUTTON_GUIDE */
 	{ 289, 132, 0.0, MARKER_BUTTON, "Button Start"}, /* SDL_CONTROLLER_BUTTON_START */

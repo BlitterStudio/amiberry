@@ -784,7 +784,7 @@ void gui_message(const char* format, ...)
 	va_end(parms);
 
 	graphics_subshutdown();
-	ShowMessage(_T(""), msg, _T(""), _T("Ok"), _T(""));
+	ShowMessage("", msg, "", "", "Ok", "");
 }
 
 void notify_user(int msg)
