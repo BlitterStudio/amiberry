@@ -104,10 +104,10 @@ public:
 					}
 				}
 				if (savestate_state != STATE_DORESTORE)
-					ShowMessage("Loading savestate", "Statefile doesn't exist.", "", "Ok", "");
+					ShowMessage("Loading savestate", "Statefile doesn't exist.", "", "", "Ok", "");
 			}
 			else
-				ShowMessage("Loading savestate", "Emulation hasn't started yet.", "", "Ok", "");
+				ShowMessage("Loading savestate", "Emulation hasn't started yet.", "", "", "Ok", "");
 
 			cmdLoadState->requestFocus();
 		}
@@ -120,13 +120,13 @@ public:
 			if (mon->screen_is_picasso)
 			{
 				unsafe = true;
-				unsafe_confirmed = ShowMessage("Warning: P96 detected", "P96 is enabled. Savestates might be unsafe! Proceed anyway?", "", "Proceed", "Cancel");
+				unsafe_confirmed = ShowMessage("Warning: P96 detected", "P96 is enabled. Savestates might be unsafe! Proceed anyway?", "", "", "Proceed", "Cancel");
 			}
 			// Check if we have JIT enabled
 			if (changed_prefs.cachesize > 0)
 			{
 				unsafe = true;
-				unsafe_confirmed = ShowMessage("Warning: JIT detected", "JIT is enabled. Savestates might be unsafe! Proceed anyway?", "", "Proceed", "Cancel");
+				unsafe_confirmed = ShowMessage("Warning: JIT detected", "JIT is enabled. Savestates might be unsafe! Proceed anyway?", "", "", "Proceed", "Cancel");
 			}
 			//------------------------------------------
 			// Save current state
@@ -140,7 +140,7 @@ public:
 				gui_running = false;
 			}
 			else
-				ShowMessage("Saving state", "Emulation hasn't started yet.", "", "Ok", "");
+				ShowMessage("Saving state", "Emulation hasn't started yet.", "", "", "Ok", "");
 
 			cmdSaveState->requestFocus();
 		}

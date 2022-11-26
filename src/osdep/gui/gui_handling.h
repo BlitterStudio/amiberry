@@ -315,7 +315,7 @@ void focus_bug_workaround(gcn::Window* wnd);
 
 void disable_resume(void);
 
-bool ShowMessage(const char* title, const char* line1, const char* line2, const char* button1, const char* button2);
+bool ShowMessage(const std::string& title, const std::string& line1, const std::string& line2, const std::string& line3, const std::string& button1, const std::string& button2);
 amiberry_hotkey ShowMessageForInput(const char* title, const char* line1, const char* button1);
 bool SelectFolder(const char* title, char* value);
 bool SelectFile(const char* title, char* value, const char* filter[], bool create = false);
