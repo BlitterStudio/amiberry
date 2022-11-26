@@ -10,6 +10,7 @@
 #include "options.h"
 #include "uae.h"
 #include "gui_handling.h"
+#include "tinyxml2.h"
 
 static gcn::Label* lblSystemROMs;
 static gcn::TextField* txtSystemROMs;
@@ -134,44 +135,42 @@ public:
 		RefreshPanelCustom();
 		RefreshPanelROM();
 
-		ShowMessage("Rescan Paths", "Scan complete,", "ROMs updated, Joysticks (re)initialized, Symlinks recreated.", "Ok", "");
+		ShowMessage("Rescan Paths", "Scan complete,", "ROMs updated, Joysticks (re)initialized, Symlinks recreated.", "", "Ok", "");
 		cmdRescanROMs->requestFocus();
 	}
 };
 
 static RescanROMsButtonActionListener* rescanROMsButtonActionListener;
 
-int date_cmp(const char* d1, const char* d2)
+std::string get_xml_timestamp(const std::string& xml_filename)
 {
-	// compare years
-	auto rc = strncmp(d1 + 0, d2 + 0, 4);
-	if (rc != 0)
-		return rc;
+	std::string result;
+	tinyxml2::XMLDocument doc;
+	auto error = false;
 
-	auto n = 0;
-
-	for (auto m = 0; m < 5; ++m)
+	auto* f = fopen(xml_filename.c_str(), _T("rb"));
+	if (f)
 	{
-		switch (m)
+		auto err = doc.LoadFile(f);
+		if (err != tinyxml2::XML_SUCCESS)
 		{
-		case 0: n = 5;
-			break; // compare months
-		case 1: n = 8;
-			break; // compare days
-		case 2: n = 14;
-			break; // compare hours
-		case 3: n = 17;
-			break; // compare minutes
-		case 4: n = 20;
-			break; // compare seconds
+			write_log(_T("Failed to parse '%s':  %d\n"), xml_filename, err);
+			error = true;
 		}
-
-		rc = strncmp(d1 + n, d2 + n, 2);
-		if (rc != 0)
-			return rc;
+		fclose(f);
 	}
-
-	return strncmp(d1, d2, 2);
+	else
+	{
+		error = true;
+	}
+	if (!error)
+	{
+		auto* whdbooter = doc.FirstChildElement("whdbooter");
+		result = whdbooter->Attribute("timestamp");
+	}
+	if (!result.empty()) 
+		return result;
+	return "";
 }
 
 class DownloadXMLButtonActionListener : public gcn::ActionListener
@@ -198,13 +197,17 @@ public:
 		download_rtb("kick40068.A4000.RTB");
 
 		destination = prefix_with_whdboot_path("game-data/whdload_db.xml");
+		const auto old_timestamp = get_xml_timestamp(destination);
 		write_log("Downloading %s ...\n", destination.c_str());
 		const auto result = download_file("https://github.com/HoraceAndTheSpider/Amiberry-XML-Builder/blob/master/whdload_db.xml?raw=true", destination);
 
 		if (result)
-			ShowMessage("XML Downloader", "Updated XML downloaded.", "", "Ok", "");
+		{
+			const auto new_timestamp = get_xml_timestamp(destination);
+			ShowMessage("XML Downloader", "Updated XML downloaded.", "Previous timestamp: " + old_timestamp, "New timestamp: " + new_timestamp, "Ok", "");
+		}
 		else
-			ShowMessage("XML Downloader", "Failed to download files!", "Please check the log for more details.", "Ok", "");
+			ShowMessage("XML Downloader", "Failed to download files!", "Please check the log for more details.", "", "Ok", "");
 		
 		cmdDownloadXML->requestFocus();
 	}
@@ -228,10 +231,10 @@ public:
 		if (result)
 		{
 			import_joysticks();
-			ShowMessage("Game Controllers DB", "Latest version of Game Controllers DB downloaded.", "", "Ok", "");
+			ShowMessage("Game Controllers DB", "Latest version of Game Controllers DB downloaded.", "", "", "Ok", "");
 		}
 		else
-			ShowMessage("Game Controllers DB", "Failed to download file!", "Please check the log for more information", "Ok", "");
+			ShowMessage("Game Controllers DB", "Failed to download file!", "Please check the log for more information", "", "Ok", "");
 
 		cmdDownloadCtrlDb->requestFocus();
 	}

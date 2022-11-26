@@ -154,7 +154,7 @@ public:
 			if (i >= 0 && strcmp(ConfigFilesList[i]->Name, OPTIONSFILENAME) != 0)
 			{
 				snprintf(msg, 256, "Do you want to delete '%s' ?", ConfigFilesList[i]->Name);
-				if (ShowMessage("Delete Configuration", msg, "", "Yes", "No"))
+				if (ShowMessage("Delete Configuration", msg, "", "", "Yes", "No"))
 				{
 					remove(ConfigFilesList[i]->FullPath);
 					if (!strcmp(last_active_config, ConfigFilesList[i]->Name))

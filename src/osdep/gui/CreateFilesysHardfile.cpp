@@ -529,7 +529,7 @@ bool CreateFilesysHardfile()
 				_tcscpy(init_path + _tcslen(init_path) - 4, _T(".vhd"));
 			const bool result = vhd_create(init_path, size * 1024 * 1024, 0);
 			if (!result) {
-				ShowMessage("Create Hardfile", "Unable to create new VHD file.", "", "Ok", "");
+				ShowMessage("Create Hardfile", "Unable to create new VHD file.", "", "", "Ok", "");
 				ExitCreateFilesysHardfile();
 				dialogResult = false;
 			}
@@ -538,7 +538,7 @@ bool CreateFilesysHardfile()
 			FILE* newFile = fopen(init_path, "wb");
 			if (!newFile)
 			{
-				ShowMessage("Create Hardfile", "Unable to create new file.", "", "Ok", "");
+				ShowMessage("Create Hardfile", "Unable to create new file.", "", "", "Ok", "");
 				ExitCreateFilesysHardfile();
 				return false;
 			}
@@ -550,7 +550,7 @@ bool CreateFilesysHardfile()
 			else
 			{
 				fclose(newFile);
-				ShowMessage("Create Hardfile", "Unable to create new file size.", "", "Ok", "");
+				ShowMessage("Create Hardfile", "Unable to create new file size.", "", "", "Ok", "");
 				ExitCreateFilesysHardfile();
 				dialogResult = false;
 			}

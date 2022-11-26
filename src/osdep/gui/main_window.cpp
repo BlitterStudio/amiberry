@@ -1407,7 +1407,7 @@ void run_gui()
 		gui_widgets_init();
 		if (_tcslen(startup_message) > 0)
 		{
-			ShowMessage(startup_title, startup_message, _T(""), _T("Ok"), _T(""));
+			ShowMessage(startup_title, startup_message, "", "", "Ok", "");
 			_tcscpy(startup_title, _T(""));
 			_tcscpy(startup_message, _T(""));
 			cmdStart->requestFocus();
