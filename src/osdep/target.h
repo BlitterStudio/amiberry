@@ -95,7 +95,9 @@ string prefix_with_application_directory_path(string currentpath);
 
 extern void get_configuration_path(char* out, int size);
 extern void set_configuration_path(char* newpath);
-
+extern void set_nvram_path(char* newpath);
+extern void set_screenshot_path(char* newpath);
+extern void set_savestate_path(char* newpath);
 extern void get_controllers_path(char* out, int size);
 extern void set_controllers_path(char* newpath);
 

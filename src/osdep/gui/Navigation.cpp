@@ -58,8 +58,11 @@ static NavigationMap navMap[] =
 
 	// PanelPaths
 	{"cmdSystemROMs", "Paths", "Paths", "cmdRescanROMs", "cmdConfigPath"},
-	{"cmdConfigPath", "Paths", "Paths", "cmdSystemROMs", "cmdControllersPath"},
-	{"cmdControllersPath", "Paths", "Paths", "cmdConfigPath", "cmdRetroArchFile"},
+	{"cmdConfigPath", "Paths", "Paths", "cmdSystemROMs", "cmdNvramFiles"},
+	{"cmdNvramFiles", "Paths", "Paths", "cmdConfigPath", "cmdScreenshotFiles"},
+	{"cmdScreenshotFiles", "Paths", "Paths", "cmdNvramFiles", "cmdStateFiles"},
+	{"cmdStateFiles", "Paths", "Paths", "cmdScreenshotFiles", "cmdControllersPath"},
+	{"cmdControllersPath", "Paths", "Paths", "cmdStateFiles", "cmdRetroArchFile"},
 	{"cmdRetroArchFile", "Paths", "Paths", "cmdControllersPath", "chkEnableLogging"},
 	{"chkEnableLogging", "Paths", "Paths", "cmdRetroArchFile", "cmdLogfilePath"},
 	{"cmdLogfilePath", "Paths", "Paths", "chkEnableLogging", "cmdRescanROMs"},
