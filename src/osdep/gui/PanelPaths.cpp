@@ -24,6 +24,18 @@ static gcn::Label* lblConfigPath;
 static gcn::TextField* txtConfigPath;
 static gcn::Button* cmdConfigPath;
 
+static gcn::Label* lblNvramFiles;
+static gcn::TextField* txtNvramFiles;
+static gcn::Button* cmdNvramFiles;
+
+static gcn::Label* lblScreenshotFiles;
+static gcn::TextField* txtScreenshotFiles;
+static gcn::Button* cmdScreenshotFiles;
+
+static gcn::Label* lblStateFiles;
+static gcn::TextField* txtStateFiles;
+static gcn::Button* cmdStateFiles;
+
 static gcn::Label* lblRetroArchFile;
 static gcn::TextField* txtRetroArchFile;
 static gcn::Button* cmdRetroArchFile;
@@ -50,8 +62,6 @@ public:
 			if (SelectFolder("Folder for System ROMs", tmp))
 			{
 				set_rom_path(tmp);
-				save_amiberry_settings();
-				RefreshPanelPaths();
 			}
 			cmdSystemROMs->requestFocus();
 		}
@@ -61,11 +71,35 @@ public:
 			if (SelectFolder("Folder for configuration files", tmp))
 			{
 				set_configuration_path(tmp);
-				save_amiberry_settings();
-				RefreshPanelPaths();
-				RefreshPanelConfig();
 			}
 			cmdConfigPath->requestFocus();
+		}
+		else if (actionEvent.getSource() == cmdNvramFiles)
+		{
+			get_nvram_path(tmp, MAX_DPATH);
+			if (SelectFolder("Folder for NVRAM files", tmp))
+			{
+				set_nvram_path(tmp);
+			}
+			cmdNvramFiles->requestFocus();
+		}
+		else if (actionEvent.getSource() == cmdScreenshotFiles)
+		{
+			get_screenshot_path(tmp, MAX_DPATH);
+			if (SelectFolder("Folder for Screenshot files", tmp))
+			{
+				set_screenshot_path(tmp);
+			}
+			cmdScreenshotFiles->requestFocus();
+		}
+		else if (actionEvent.getSource() == cmdStateFiles)
+		{
+			get_savestate_path(tmp, MAX_DPATH);
+			if (SelectFolder("Folder for Save state files", tmp))
+			{
+				set_savestate_path(tmp);
+			}
+			cmdStateFiles->requestFocus();
 		}
 		else if (actionEvent.getSource() == cmdControllersPath)
 		{
@@ -73,8 +107,6 @@ public:
 			if (SelectFolder("Folder for controller files", tmp))
 			{
 				set_controllers_path(tmp);
-				save_amiberry_settings();
-				RefreshPanelPaths();
 			}
 			cmdControllersPath->requestFocus();
 		}
@@ -86,8 +118,6 @@ public:
 			if (SelectFile("Select RetroArch Config File", tmp, filter))
 			{
 				set_retroarch_file(tmp);
-				save_amiberry_settings();
-				RefreshPanelPaths();
 			}
 			cmdRetroArchFile->requestFocus();
 		}
@@ -99,11 +129,13 @@ public:
 			if (SelectFile("Select Amiberry Log file", tmp, filter, true))
 			{
 				set_logfile_path(tmp);
-				save_amiberry_settings();
-				RefreshPanelPaths();
 			}
 			cmdLogfilePath->requestFocus();
 		}
+
+		save_amiberry_settings();
+		RefreshPanelPaths();
+		RefreshPanelConfig();
 	}
 };
 
@@ -269,6 +301,36 @@ void InitPanelPaths(const config_category& category)
 	cmdConfigPath->setBaseColor(gui_baseCol);
 	cmdConfigPath->addActionListener(folderButtonActionListener);
 
+	lblNvramFiles = new gcn::Label("NVRAM files:");
+	txtNvramFiles = new gcn::TextField();
+	txtNvramFiles->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
+	txtNvramFiles->setBackgroundColor(colTextboxBackground);
+
+	cmdNvramFiles = new gcn::Button("...");
+	cmdNvramFiles->setId("cmdNvramFiles");
+	cmdNvramFiles->setBaseColor(gui_baseCol);
+	cmdNvramFiles->addActionListener(folderButtonActionListener);
+
+	lblScreenshotFiles = new gcn::Label("Screenshots:");
+	txtScreenshotFiles = new gcn::TextField();
+	txtScreenshotFiles->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
+	txtScreenshotFiles->setBackgroundColor(colTextboxBackground);
+
+	cmdScreenshotFiles = new gcn::Button("...");
+	cmdScreenshotFiles->setId("cmdScreenshotFiles");
+	cmdScreenshotFiles->setBaseColor(gui_baseCol);
+	cmdScreenshotFiles->addActionListener(folderButtonActionListener);
+
+	lblStateFiles = new gcn::Label("Save state files:");
+	txtStateFiles = new gcn::TextField();
+	txtStateFiles->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
+	txtStateFiles->setBackgroundColor(colTextboxBackground);
+
+	cmdStateFiles = new gcn::Button("...");
+	cmdStateFiles->setId("cmdStateFiles");
+	cmdStateFiles->setBaseColor(gui_baseCol);
+	cmdStateFiles->addActionListener(folderButtonActionListener);
+
 	lblControllersPath = new gcn::Label("Controller files:");
 	txtControllersPath = new gcn::TextField();
 	txtControllersPath->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
@@ -319,6 +381,24 @@ void InitPanelPaths(const config_category& category)
 	category.panel->add(cmdConfigPath, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X, yPos);
 	yPos += txtConfigPath->getHeight() + DISTANCE_NEXT_Y;
 
+	category.panel->add(lblNvramFiles, DISTANCE_BORDER, yPos);
+	yPos += lblNvramFiles->getHeight() + DISTANCE_NEXT_Y / 2;
+	category.panel->add(txtNvramFiles, DISTANCE_BORDER, yPos);
+	category.panel->add(cmdNvramFiles, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X, yPos);
+	yPos += txtNvramFiles->getHeight() + DISTANCE_NEXT_Y;
+
+	category.panel->add(lblScreenshotFiles, DISTANCE_BORDER, yPos);
+	yPos += lblScreenshotFiles->getHeight() + DISTANCE_NEXT_Y / 2;
+	category.panel->add(txtScreenshotFiles, DISTANCE_BORDER, yPos);
+	category.panel->add(cmdScreenshotFiles, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X, yPos);
+	yPos += txtScreenshotFiles->getHeight() + DISTANCE_NEXT_Y;
+
+	category.panel->add(lblStateFiles, DISTANCE_BORDER, yPos);
+	yPos += lblStateFiles->getHeight() + DISTANCE_NEXT_Y / 2;
+	category.panel->add(txtStateFiles, DISTANCE_BORDER, yPos);
+	category.panel->add(cmdStateFiles, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X, yPos);
+	yPos += txtStateFiles->getHeight() + DISTANCE_NEXT_Y;
+
 	category.panel->add(lblControllersPath, DISTANCE_BORDER, yPos);
 	yPos += lblControllersPath->getHeight() + DISTANCE_NEXT_Y / 2;
 	category.panel->add(txtControllersPath, DISTANCE_BORDER, yPos);
@@ -329,12 +409,10 @@ void InitPanelPaths(const config_category& category)
 	yPos += lblRetroArchFile->getHeight() + DISTANCE_NEXT_Y / 2;
 	category.panel->add(txtRetroArchFile, DISTANCE_BORDER, yPos);
 	category.panel->add(cmdRetroArchFile, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X, yPos);
+	yPos += txtRetroArchFile->getHeight() + DISTANCE_NEXT_Y;
 
-	yPos += txtRetroArchFile->getHeight() + DISTANCE_NEXT_Y * 2;
-
-	category.panel->add(chkEnableLogging, DISTANCE_BORDER, yPos);
-	yPos += chkEnableLogging->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(lblLogfilePath, DISTANCE_BORDER, yPos);
+	category.panel->add(chkEnableLogging, lblLogfilePath->getX() + lblLogfilePath->getWidth() + DISTANCE_NEXT_X * 3, yPos);
 	yPos += lblLogfilePath->getHeight() + DISTANCE_NEXT_Y / 2;
 	category.panel->add(txtLogfilePath, DISTANCE_BORDER, yPos);
 	category.panel->add(cmdLogfilePath, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X, yPos);
@@ -379,6 +457,18 @@ void ExitPanelPaths()
 	delete txtConfigPath;
 	delete cmdConfigPath;
 
+	delete lblNvramFiles;
+	delete txtNvramFiles;
+	delete cmdNvramFiles;
+
+	delete lblScreenshotFiles;
+	delete txtScreenshotFiles;
+	delete cmdScreenshotFiles;
+
+	delete lblStateFiles;
+	delete txtStateFiles;
+	delete cmdStateFiles;
+
 	delete lblControllersPath;
 	delete txtControllersPath;
 	delete cmdControllersPath;
@@ -412,6 +502,15 @@ void RefreshPanelPaths()
 
 	get_configuration_path(tmp, MAX_DPATH);
 	txtConfigPath->setText(tmp);
+
+	get_nvram_path(tmp, MAX_DPATH);
+	txtNvramFiles->setText(tmp);
+
+	get_screenshot_path(tmp, MAX_DPATH);
+	txtScreenshotFiles->setText(tmp);
+
+	get_savestate_path(tmp, MAX_DPATH);
+	txtStateFiles->setText(tmp);
 
 	get_controllers_path(tmp, MAX_DPATH);
 	txtControllersPath->setText(tmp);

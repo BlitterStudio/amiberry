@@ -2315,6 +2315,21 @@ void set_configuration_path(char* newpath)
 	strncpy(config_path, newpath, MAX_DPATH - 1);
 }
 
+void set_nvram_path(char* newpath)
+{
+	strncpy(nvram_dir, newpath, MAX_DPATH - 1);
+}
+
+void set_screenshot_path(char* newpath)
+{
+	strncpy(screenshot_dir, newpath, MAX_DPATH - 1);
+}
+
+void set_savestate_path(char* newpath)
+{
+	strncpy(savestate_dir, newpath, MAX_DPATH - 1);
+}
+
 void get_controllers_path(char* out, int size)
 {
 	fix_trailing(controllers_path);
