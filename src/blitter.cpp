@@ -1481,7 +1481,7 @@ static bool decide_blitter_idle(int lasthpos, int hpos, uaecptr addr, uae_u32 va
 	return false;
 }
 
-uae_u16 blitter_pipe[256];
+uae_u16 blitter_pipe[256+1];
 
 static bool decide_blitter_maybe_write2(int until_hpos, uaecptr addr, uae_u32 value)
 {

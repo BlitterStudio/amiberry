@@ -12,8 +12,6 @@
 #include "custom.h"
 #include "sampler.h"
 
-//#include "dxwrap.h"
-
 #include <sounddep/sound.h>
 
 #include <math.h>

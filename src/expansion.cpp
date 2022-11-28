@@ -34,7 +34,7 @@
 //#include "ncr_scsi.h"
 //#include "ncr9x_scsi.h"
 #include "scsi.h"
-//include "debug.h"
+#include "debug.h"
 #include "gayle.h"
 //#include "idecontrollers.h"
 #include "cpuboard.h"

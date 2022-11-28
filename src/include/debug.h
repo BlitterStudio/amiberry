@@ -275,6 +275,7 @@ extern struct dma_rec *last_dma_rec;
 #define DMA_EVENT_CPUINS	0x80000000
 #define DMA_EVENT2_IPL		0x00000001
 #define DMA_EVENT2_IPLSAMPLE 0x00000002
+#define DMA_EVENT2_COPPERUSE 0x00000004
 
 #define DMARECORD_REFRESH 1
 #define DMARECORD_CPU 2
@@ -295,6 +296,7 @@ extern void record_dma_read_value_wide(uae_u64 v, bool quad);
 extern void record_dma_replace(int hpos, int vpos, int type, int extra);
 extern void record_dma_reset(int);
 extern void record_dma_event(uae_u32 evt, int hpos, int vpos);
+extern void record_dma_event2(uae_u32 evt, int hpos, int vpos);
 extern void record_dma_event_data(uae_u32 evt, int hpos, int vpos, uae_u32 data);
 extern void record_dma_clear(int hpos, int vpos);
 extern bool record_dma_check(int hpos, int vpos);

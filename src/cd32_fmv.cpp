@@ -18,7 +18,7 @@
 #include "zfile.h"
 #include "cd32_fmv.h"
 #include "uae.h"
-//#include "debug.h"
+#include "debug.h"
 #include "custom.h"
 #include "audio.h"
 #include "devices.h"

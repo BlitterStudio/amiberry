@@ -307,7 +307,7 @@ static int trap_thread (void *arg)
 
 	/* Good bye, cruel world... */
 
-  /* dummy return value */
+	/* dummy return value */
 	return 0;
 }
 

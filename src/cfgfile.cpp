@@ -498,7 +498,7 @@ bool cfgfile_option_get_nbool(const TCHAR *s, const TCHAR *option)
 static void trim_wsa (char *s)
 {
 	/* Delete trailing whitespace.  */
-	int len = strlen(s);
+	int len = uaestrlen(s);
 	while (len > 0 && strcspn (s + len - 1, "\t \r\n") == 0)
 		s[--len] = '\0';
 }

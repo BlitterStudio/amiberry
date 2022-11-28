@@ -192,7 +192,7 @@ void cia_adjust_eclock_phase(int diff)
 		internaleclockphase += 20;
 	}
 	internaleclockphase %= 20;
-	write_log("CIA E-clock phase %d\n", internaleclockphase);
+	//write_log("CIA E-clock phase %d\n", internaleclockphase);
 }
 
 static void set_eclockphase(void)
@@ -765,12 +765,12 @@ static void CIA_sync_interrupt(int num, uae_u8 icr)
 	struct CIA *c = &cia[num];
 
 	if (acc_mode()) {
-		c->icr2 |= icr;
-		if ((c->icr1 & ICR_MASK) == (c->icr2 & ICR_MASK)) {
-			return;
-		}
 		if (!(icr & c->imask)) {
 			c->icr1 |= icr;
+			return;
+		}
+		c->icr2 |= icr;
+		if ((c->icr1 & ICR_MASK) == (c->icr2 & ICR_MASK)) {
 			return;
 		}
 		int syncdelay = 0;
@@ -1051,8 +1051,9 @@ static void CIA_tod_inc(bool irq, int num)
 {
 	struct CIA *c = &cia[num];
 	c->tod_event_state = 3; // done
-	if (!c->todon)
+	if (!c->todon) {
 		return;
+	}
 	c->tod++;
 	c->tod &= 0xFFFFFF;
 	cia_checkalarm(true, irq, num);
@@ -1061,8 +1062,9 @@ static void CIA_tod_inc(bool irq, int num)
 static void CIA_tod_inc_event(uae_u32 num)
 {
 	struct CIA *c = &cia[num];
-	if (c->tod_event_state != 2)
+	if (c->tod_event_state != 2) {
 		return;
+	}
 	CIA_tod_inc(true, num);
 }
 
@@ -1098,12 +1100,18 @@ static void CIA_tod_check(int num)
 	event2_newevent_xx(-1, -hpos * CYCLE_UNIT, num, CIA_tod_inc_event);
 }
 
-static void CIA_tod_handler(int hoffset, int num)
+static void CIA_tod_handler(int hoffset, int num, bool delayedevent)
 {
 	struct CIA *c = &cia[num];
 	c->tod_event_state = 0;
 	c->tod_offset = tod_inc_delay(hoffset);
 	if (c->tod_offset >= maxhpos) {
+		if (!delayedevent) {
+			return;
+		}
+		// crossed scanline, increase in next line
+		c->tod_offset -= maxhpos;
+		c->tod_event_state = 4;
 		return;
 	}
 	c->tod_event_state = 1; // TOD inc needed
@@ -1123,11 +1131,11 @@ void CIAA_tod_handler(int hoffset)
 		return;
 	}
 #endif
-	CIA_tod_handler(hoffset, 0);
+	CIA_tod_handler(hoffset, 0, true);
 }
 void CIAB_tod_handler(int hoffset)
 {
-	CIA_tod_handler(hoffset, 1);
+	CIA_tod_handler(hoffset, 1, false);
 }
 
 void keyboard_connected(bool connect)
@@ -1176,8 +1184,13 @@ static void check_keyboard(void)
 static void cia_delayed_tod(int num)
 {
 	struct CIA *c = &cia[num];
-	if (c->tod_event_state == 1)
+	if (c->tod_event_state == 4) {
+		c->tod_event_state = 1;
+		return;
+	}
+	if (c->tod_event_state == 1) {
 		CIA_tod_inc(false, num);
+	}
 	c->tod_event_state = 0;
 	c->tod_offset = -1;
 }

@@ -53,7 +53,7 @@ static frame_time_t lastcycle;
 static uae_u32 cycleoffset;
 
 static uae_u32 pcs[16];
-static uae_u32 pcs2[16];
+static uae_u64 pcs2[16];
 extern void activate_debugger (void);
 static int warned;
 
@@ -236,7 +236,7 @@ static int inprec_pstart (uae_u8 type)
 				if (warned > 0) {
 					warned--;
 					for (int i = 0; i < 7; i++)
-						write_log (_T("%08x (%08x) "), pcs[i], pcs2[i]);
+						write_log (_T("%08x (%016llx) "), pcs[i], pcs2[i]);
 					write_log (_T("\n"));
 				}
 				cycleoffset = (uae_u32)(cycles - cycles2);
@@ -644,10 +644,10 @@ void inprec_playdebug_cpu (int mode)
 			}
 			err = 1;
 		} else {
-			memmove (pcs + 1, pcs, 15 * 4);
+			memmove(pcs + 1, pcs, 15 * sizeof(uae_u32));
 			pcs[0] = pc1;
-			memmove (pcs2 + 1, pcs2, 15 * 4);
-			pcs2[0] = get_cycles ();
+			memmove(pcs2 + 1, pcs2, 15 * sizeof(uae_u64));
+			pcs2[0] = get_cycles();
 		}
 		if (v1 != v2) {
 			if (warned > 0) {
@@ -871,7 +871,7 @@ static int savedisk (const TCHAR *path, const TCHAR *file, uae_u8 *data, uae_u8 
 			char *fn = uutf8 (filename);
 			strcpy ((char*)outdata + 2, fn);
 			xfree (fn);
-			len = 2 + strlen ((char*)outdata + 2) + 1;
+			len = 2 + uaestrlen((char*)outdata + 2) + 1;
 		}
 	}
 	xfree (fname);

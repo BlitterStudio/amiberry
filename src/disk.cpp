@@ -199,6 +199,7 @@ typedef struct {
 	int num_tracks, write_num_tracks, num_secs, num_heads;
 	int hard_num_cyls;
 	bool dskeject;
+	int dskeject_time;
 	bool dskchange;
 	int dskchange_time;
 	bool dskready;
@@ -237,6 +238,20 @@ typedef struct {
 } drive;
 
 #define MIN_STEPLIMIT_CYCLE (CYCLE_UNIT * 140)
+
+static const TCHAR *drivetypes[] = {
+	_T("none"),
+	_T("35dd"),
+	_T("35hd"),
+	_T("525sd"),
+	_T("35ddescom"),
+	_T("pc525_40"),
+	_T("pc525_80"),
+	_T("pc525_4080"),
+	_T("525dd"),
+	_T("floppybridge"),
+	NULL
+};
 
 static uae_u16 bigmfmbufw[0x4000 * DDHDMULT];
 static drive floppy[MAX_FLOPPY_DRIVES];
@@ -288,8 +303,8 @@ static int dirhash (const uae_char *name)
 	uae_u32 hash;
 	int i;
 
-	hash = strlen(name);
-	for(i = 0; i < strlen(name); i++) {
+	hash = uaestrlen(name);
+	for(i = 0; i < uaestrlen(name); i++) {
 		hash = hash * 13;
 		hash = hash + toupper(name[i]);
 		hash = hash & 0x7ff;
@@ -847,6 +862,7 @@ static void reset_drive (int num)
 	if (num == 0 && currprefs.floppyslots[num].dfxtype == 0)
 		drv->indexhackmode = 1;
 	drv->dskchange_time = 0;
+	drv->dskeject_time = 0;
 	drv->dskchange = false;
 	drv->dskready_down_time = 0;
 	drv->dskready_up_time = 0;
@@ -1733,8 +1749,11 @@ static void set_steplimit (drive *drv)
 	drv->steplimitcycle = get_cycles();
 }
 
-static bool drive_empty (drive * drv)
+static bool drive_empty(drive * drv)
 {
+	if (drv->dskeject_time > 0) {
+		return true;
+	}
 #ifdef FLOPPYBRIDGE
 	if (drv->bridge) {
 		bool v = drv->bridge->isDiskInDrive();
@@ -1748,7 +1767,7 @@ static bool drive_empty (drive * drv)
 	return drv->diskfile == 0 && drv->dskchange_time >= 0;
 }
 
-static void drive_step (drive *drv, int step_direction)
+static void drive_step(drive *drv, int step_direction)
 {
 #ifdef CATWEASEL
 	if (drv->catweasel) {
@@ -1824,7 +1843,7 @@ static void drive_step (drive *drv, int step_direction)
 		write_log (_T(" ->step %d"), drv->cyl);
 }
 
-static bool drive_track0 (drive * drv)
+static bool drive_track0(drive * drv)
 {
 #ifdef FLOPPYBRIDGE
 	if (drv->bridge) {
@@ -1841,6 +1860,9 @@ static bool drive_track0 (drive * drv)
 
 static bool drive_diskchange(drive *drv)
 {
+	if (drv->dskeject_time > 0 && drv->dskchange) {
+		return true;
+	}
 #ifdef FLOPPYBRIDGE
 	if (drv->bridge) {
 		bool v = drv->bridge->hasDiskChanged();
@@ -3307,6 +3329,8 @@ static void DISK_check_change (void)
 		currprefs.floppy_read_only = changed_prefs.floppy_read_only;
 	for (int i = 0; i < MAX_FLOPPY_DRIVES; i++) {
 		drive *drv = floppy + i;
+		bool dc = false;
+
 		if (drv->dskeject) {
 			drive_eject(drv);
 			/* set dskchange_time, disk_insert() will be
@@ -3324,9 +3348,14 @@ static void DISK_check_change (void)
 #ifdef FLOPPYBRIDGE
 			if (old >= DRV_FB || currprefs.floppyslots[i].dfxtype >= DRV_FB) {
 				floppybridge_init(&currprefs);
-		}
+				dc = true;
+			}
 #endif
-			reset_drive (i);
+			reset_drive(i);
+			if (dc) {
+				drv->dskeject_time = 2 * 50 * 312;
+				drv->dskchange = true;
+			}
 #ifdef RETROPLATFORM
 			rp_floppy_device_enable (i, currprefs.floppyslots[i].dfxtype >= 0);
 #endif
@@ -3339,16 +3368,16 @@ static void DISK_check_change (void)
 	}
 }
 
-void DISK_vsync (void)
+void DISK_vsync(void)
 {
-	DISK_check_change ();
+	DISK_check_change();
 	for (int i = 0; i < MAX_FLOPPY_DRIVES; i++) {
 		drive *drv = floppy + i;
 		if (drv->selected_delay > 0) {
 			drv->selected_delay--;
 		}
 		if (drv->dskchange_time == 0 && _tcscmp (currprefs.floppyslots[i].df, changed_prefs.floppyslots[i].df))
-			disk_insert (i, changed_prefs.floppyslots[i].df, changed_prefs.floppyslots[i].forcedwriteprotect);
+			disk_insert(i, changed_prefs.floppyslots[i].df, changed_prefs.floppyslots[i].forcedwriteprotect);
 	}
 }
 
@@ -4258,11 +4287,11 @@ static void disk_dma_debugmsg (void)
 
 /* this is very unoptimized. DSKBYTR is used very rarely, so it should not matter. */
 
-uae_u16 DSKBYTR (int hpos)
+uae_u16 DSKBYTR(int hpos)
 {
 	uae_u16 v;
 
-	DISK_update (hpos);
+	DISK_update(hpos);
 	v = dskbytr_val;
 	dskbytr_val &= ~0x8000;
 	if (word == dsksync && cycles_in_range(dsksync_cycles)) {
@@ -4276,7 +4305,7 @@ uae_u16 DSKBYTR (int hpos)
 	if (dsklen & 0x4000)
 		v |= 0x2000;
 	if (disk_debug_logging > 2)
-		write_log (_T("DSKBYTR=%04X hpos=%d\n"), v, hpos);
+		write_log(_T("DSKBYTR=%04X PC=%08x\n"), v, M68K_GETPC);
 	for (int dr = 0; dr < MAX_FLOPPY_DRIVES; dr++) {
 		drive *drv = &floppy[dr];
 		if (drv->motoroff)
@@ -4290,9 +4319,11 @@ uae_u16 DSKBYTR (int hpos)
 			drv->track_access_done = true;
 			if (disk_debug_mode & DISK_DEBUG_PIO) {
 				if (disk_debug_track < 0 || disk_debug_track == 2 * drv->cyl + side) {
-					disk_dma_debugmsg ();
-					write_log (_T("DSKBYTR=%04X\n"), v);
-					//activate_debugger ();
+					disk_dma_debugmsg();
+					write_log(_T("DSKBYTR=%04X\n"), v);
+#ifdef DEBUGGER
+					activate_debugger();
+#endif
 					break;
 				}
 			}
@@ -4301,7 +4332,7 @@ uae_u16 DSKBYTR (int hpos)
 	return v;
 }
 
-static void DISK_start (void)
+static void DISK_start(void)
 {
 	int dr;
 
@@ -4309,9 +4340,14 @@ static void DISK_start (void)
 		dumpdisk(_T("DSKLEN"));
 	}
 
-	for (int i = 0; i < 3; i++)
+	for (int i = 0; i < 3; i++) {
 		fifo_inuse[i] = false;
+	}
 	fifo_filled = 0;
+
+	if (dskdmaen == DSKDMA_WRITE) {
+		word = 0;
+	}
 
 	for (dr = 0; dr < MAX_FLOPPY_DRIVES; dr++) {
 		drive *drv = &floppy[dr];
@@ -4332,9 +4368,8 @@ static void DISK_start (void)
 			}
 
 			if (dskdmaen == DSKDMA_WRITE) {
-				word = 0;
 				drv->tracklen = floppy_writemode > 0 ? FLOPPY_WRITE_MAXLEN : FLOPPY_WRITE_LEN * drv->ddhd * 8 * 2;
-				drv->trackspeed = get_floppy_speed ();
+				drv->trackspeed = get_floppy_speed();
 				drv->skipoffset = -1;
 				updatemfmpos (drv);
 			}
@@ -4387,14 +4422,17 @@ void DISK_hsync (void)
 			if (drv->dskready_up_time == 0 && !drv->motoroff)
 				drv->dskready = true;
 		}
+		if (drv->dskeject_time > 0) {
+			drv->dskeject_time--;
+		}
 		/* delay until new disk image is inserted */
 		if (drv->dskchange_time > 0) {
 			drv->dskchange_time--;
 			if (drv->dskchange_time == 0) {
-				drive_insert (drv, &currprefs, dr, drv->newname, false, drv->newnamewriteprotected);
+				drive_insert(drv, &currprefs, dr, drv->newname, false, drv->newnamewriteprotected);
 				if (disk_debug_logging > 0)
-					write_log (_T("delayed insert, drive %d, image '%s'\n"), dr, drv->newname);
-				update_drive_gui (dr, false);
+					write_log(_T("delayed insert, drive %d, image '%s'\n"), dr, drv->newname);
+				update_drive_gui(dr, false);
 			}
 		}
 
@@ -4433,7 +4471,7 @@ void DISK_update (int tohpos)
 	int cycles;
 
 	if (disk_hpos < 0) {
-		disk_hpos = - disk_hpos;
+		disk_hpos = -disk_hpos;
 		return;
 	}
 
@@ -4444,11 +4482,13 @@ void DISK_update (int tohpos)
 	if (tohpos != maxhpos || cycles / 256 != maxhpos)
 		write_log (_T("%d %d %d\n"), tohpos, cycles / 256, disk_hpos / 256);
 #endif
-	if (cycles <= 0)
+	if (cycles <= 0) {
 		return;
+	}
 	disk_hpos += cycles;
-	if (disk_hpos >= (maxhpos << 8))
+	if (disk_hpos >= (maxhpos << 8)) {
 		disk_hpos %= 1 << 8;
+	}
 
 	for (dr = 0; dr < MAX_FLOPPY_DRIVES; dr++) {
 		drive *drv = &floppy[dr];
@@ -4505,8 +4545,12 @@ void DISK_update (int tohpos)
 			}
 		}
 		/* no floppy selected and no DMA */
-		if ((selected | disabled) == 15 && dskdmaen < DSKDMA_WRITE) {
-			//disk_doupdate_read_reallynothing(cycles, true);
+		if ((selected | disabled) == 15) {
+			if (dskdmaen < DSKDMA_WRITE) {
+				disk_doupdate_read_reallynothing(cycles, false);
+			} else if (dskdmaen == DSKDMA_WRITE) {
+				disk_doupdate_write(cycles, get_floppy_speed());
+			}
 		}
 	}
 
@@ -4610,7 +4654,9 @@ void DSKLEN (uae_u16 v, int hpos)
 			if (!(selected & (1 << dr))) {
 				if (disk_debug_track < 0 || disk_debug_track == 2 * drv->cyl + side) {
 					disk_dma_debugmsg ();
-					//activate_debugger ();
+#ifdef DEBUGGER
+					activate_debugger ();
+#endif
 					break;
 				}
 			}
@@ -4869,13 +4915,21 @@ uae_u16 disk_dmal(void)
 {
 	uae_u16 dmal = 0;
 	if (dskdmaen) {
-		if (dskdmaen == 3) {
+		if (dskdmaen == DSKDMA_WRITE) {
+			if (vpos == 123)
+				write_log("1");
 			dmal = (1 + 2) * (fifo_inuse[0] ? 1 : 0) + (4 + 8) * (fifo_inuse[1] ? 1 : 0) + (16 + 32) * (fifo_inuse[2] ? 1 : 0);
 			dmal ^= 63;
-			if (dsklength == 2)
+			dmal = (((dmal >> 4) & 3) << 0) | (((dmal >> 2) & 3) << 2) | (((dmal >> 0) & 3) << 4);
+			if (dsklength == 2) {
 				dmal &= ~(16 + 32);
-			if (dsklength == 1)
+			}
+			if (dsklength == 1 && dmal) {
 				dmal &= ~(16 + 32 + 4 + 8);
+			}
+			while (dmal && !(dmal & (1 + 2))) {
+				dmal >>= 2;
+			}
 		} else {
 			dmal = 16 * (fifo_inuse[0] ? 1 : 0) + 4 * (fifo_inuse[1] ? 1 : 0) + 1 * (fifo_inuse[2] ? 1 : 0);
 		}

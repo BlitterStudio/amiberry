@@ -179,7 +179,7 @@ static int do_read (struct cdunit *cdu, struct cdtoc *t, uae_u8 *data, int secto
 		}
 		if (audio && size == 2352)
 			type = CD_TRACK_AUDIO;
-		if (cdrom_read_data(cdu->chd_cdf, sector + (uint32_t)t->offset, tmpbuf, type, true)) {
+		if (cdrom_read_data(cdu->chd_cdf, sector + (uint32_t)t->offset, tmpbuf, type, false)) {
 			memcpy(data, tmpbuf + offset, size);
 			return 1;
 		}

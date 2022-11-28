@@ -4138,7 +4138,9 @@ static bool inputdevice_handle_inputcode_immediate(int code, int state)
 	switch(code)
 	{
 		case AKS_ENTERDEBUGGER:
-			//activate_debugger ();
+#ifdef DEBUGGER
+			activate_debugger ();
+#endif
 			return true;
 	}
 	return false;
@@ -4614,7 +4616,9 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 		set_config_changed ();
 		break;
 	case AKS_ENTERDEBUGGER:
-		//activate_debugger ();
+#ifdef DEBUGGER
+		activate_debugger ();
+#endif
 		break;
 	case AKS_STATESAVEDIALOG:
 		if (s) {

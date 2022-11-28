@@ -34,7 +34,7 @@
 //#include "enforcer.h"
 #include "threaddep/thread.h"
 #include "gayle.h"
-//#include "debug.h"
+#include "debug.h"
 //#include "debugmem.h"
 #include "gfxboard.h"
 #include "cpuboard.h"
@@ -1187,10 +1187,12 @@ uae_u8 *REGPARAM2 default_xlate (uaecptr addr)
 				uaecptr a2 = addr - 32;
 				uaecptr a3 = m68k_getpc () - 32;
 				write_log (_T("Your Amiga program just did something terribly stupid %08X PC=%08X\n"), addr, M68K_GETPC);
-				//if (debugging || DEBUG_STUPID) {
-				//	activate_debugger ();
-				//	m68k_dumpstate(NULL, 0xffffffff);
-				//}
+#ifdef DEBUGGER
+				if (debugging || DEBUG_STUPID) {
+					activate_debugger ();
+					m68k_dumpstate(NULL, 0xffffffff);
+				}
+#endif
 				for (i = 0; i < 10; i++) {
 					write_log (_T("%08X "), i >= 5 ? a3 : a2);
 					for (j = 0; j < 16; j += 2) {
@@ -1486,7 +1488,7 @@ static int read_kickstart(struct zfile *f, uae_u8 *mem, int size, int dochecksum
 		zfile_fseek(f, 0, SEEK_SET);
 	}
 	oldpos = zfile_ftell32(f);
-	i = zfile_fread (buffer, 1, sizeof(buffer), f);
+	i = zfile_fread32(buffer, 1, sizeof(buffer), f);
 	if (i < sizeof(buffer))
 		return 0;
 	if (!memcmp(buffer, "KICK", 4)) {
@@ -1516,7 +1518,7 @@ static int read_kickstart(struct zfile *f, uae_u8 *mem, int size, int dochecksum
 		mem[size - 17] = size >>  0;
 	}
 
-	i = zfile_fread (mem, 1, size, f);
+	i = zfile_fread32(mem, 1, size, f);
 
 	if (kickdisk && i > ROM_SIZE_256)
 		i = ROM_SIZE_256;
@@ -3779,7 +3781,7 @@ void loadboardfile(addrbank *ab, struct boardloadfile * lf)
 		else if (lf->loadoffset + size > ab->allocated_size)
 			size = ab->allocated_size - lf->loadoffset;
 		if (size > 0) {
-			int total = zfile_fread(ab->baseaddr + lf->loadoffset, 1, size, zf);
+			int total = zfile_fread32(ab->baseaddr + lf->loadoffset, 1, size, zf);
 			write_log(_T("Expansion file '%s': load %u bytes, offset %u, start addr %08x\n"),
 				lf->loadfile, total, lf->loadoffset, ab->start + lf->loadoffset);
 		}

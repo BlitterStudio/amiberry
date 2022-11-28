@@ -2234,6 +2234,15 @@ uae_s64 zfile_fseek (struct zfile *z, uae_s64 offset, int mode)
 	return 1;
 }
 
+uae_s32 zfile_fread32(void *b, size_t l1, size_t l2, struct zfile *z)
+{
+	size_t s = zfile_fread(b, l1, l2, z);
+	if (s >= (1 << 31)) {
+		return 0;
+	}
+	return (int)s;
+}
+
 size_t zfile_fread(void *b, size_t l1, size_t l2, struct zfile *z)
 {
 	if (z->zfileread)
@@ -2370,9 +2379,9 @@ TCHAR *zfile_fgets (TCHAR *s, int size, struct zfile *z)
 			p++;
 		}
 		*p = 0;
-		if (size > strlen (s2) + 1)
-			size = strlen (s2) + 1;
-		au_copy (s, size, s2);
+		if (size > uaestrlen(s2) + 1)
+			size = uaestrlen(s2) + 1;
+		au_copy(s, size, s2);
 		return s + size;
 	} else {
 		bool alloc = false;
@@ -2393,9 +2402,9 @@ TCHAR *zfile_fgets (TCHAR *s, int size, struct zfile *z)
 			}
 			return NULL;
 		}
-		if (size > strlen (s2) + 1)
-			size = strlen (s2) + 1;
-		au_copy (s, size, s2);
+		if (size > uaestrlen(s2) + 1)
+			size = uaestrlen(s2) + 1;
+		au_copy(s, size, s2);
 		if (alloc) {
 			xfree(s2);
 		}

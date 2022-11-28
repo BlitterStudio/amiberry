@@ -39,7 +39,7 @@
 #include "drawing.h"
 #include "savestate.h"
 #include "ar.h"
-//#include "debug.h"
+#include "debug.h"
 #include "akiko.h"
 #if defined(ENFORCER)
 #include "enforcer.h"
@@ -503,6 +503,7 @@ enum copper_states {
 	COP_strobe_delay2,
 	COP_strobe_delay3,
 	COP_strobe_delay4,
+	COP_strobe_delay5,
 	COP_strobe_delay1x,
 	COP_strobe_delay2x,
 	COP_strobe_extra, // just to skip current cycle when CPU wrote to COPJMP
@@ -4541,20 +4542,21 @@ static void vdiw_change(uae_u32 v)
 	vdiwstate_bpl = v != 0;
 }
 
+/* Take care of the vertical DIW.  */
 static void decide_vline(void)
 {
 	bool forceoff = (vb_start_line == 1 && !harddis_v);
+	bool start = vpos == plffirstline && !forceoff;
+	// VB start line forces vertical display window off (if HARDDIS=0)
+	bool end = vpos == plflastline || forceoff;
 
-	/* Take care of the vertical DIW.  */
-	if (vpos == plffirstline && !forceoff) {
+	if (start && !end) {
 		if (vdiwstate != diw_states::DIW_waiting_stop) {
 			event2_newevent_xx(-1, CYCLE_UNIT, 1, vdiw_change);
 		}
 		vdiwstate = diw_states::DIW_waiting_stop;
 		SET_LINE_CYCLEBASED;
-	}
-	// VB start line forces vertical display window off (if HARDDIS=0)
-	if (vpos == plflastline || forceoff) {
+	} else if (end) {
 		if (vdiwstate != diw_states::DIW_waiting_start) {
 			event2_newevent_xx(-1, CYCLE_UNIT, 0, vdiw_change);
 		}
@@ -7578,12 +7580,14 @@ static void COPJMP(int num, int vblank)
 			cop_state.state = COP_strobe_delay2;
 			switch (cop_state.state_prev)
 			{
-				case copper_states::COP_read2:
 				case copper_states::COP_read1:
 					// Wake up is delayed by 1 copper cycle if copper is currently loading words
 					cop_state.state = COP_strobe_delay3;
 					break;
-
+				case copper_states::COP_read2:
+					// Wake up is delayed by 1 copper cycle if copper is currently loading words
+					cop_state.state = COP_strobe_delay4;
+					break;
 			}
 		} else {
 			cop_state.state = copper_access ? COP_strobe_delay1 : COP_strobe_extra;
@@ -9671,6 +9675,7 @@ static void do_copper_fetch(int hpos, uae_u16 id)
 	switch (cop_state.state)
 	{
 	case COP_strobe_delay1:
+	case COP_strobe_delay3:
 	{
 		// fake MOVE phase 1
 #ifdef DEBUGGER
@@ -9691,12 +9696,22 @@ static void do_copper_fetch(int hpos, uae_u16 id)
 		}
 #endif
 		cop_state.ip += 2;
-		cop_state.state = COP_strobe_delay2;
+		if (cop_state.state == COP_strobe_delay3) {
+			cop_state.state = COP_strobe_delay5;
+			if (cop_state.strobe == 1) {
+				cop_state.ip = cop1lc;
+			} else {
+				cop_state.ip = cop2lc;
+			}
+			cop_state.strobe = 0;
+		} else {
+			cop_state.state = COP_strobe_delay2;
+		}
 		alloc_cycle(hpos, CYCLE_COPPER);
 		break;
 	}
 	case COP_strobe_delay2:
-	case COP_strobe_delay3:
+	case COP_strobe_delay4:
 	{
 		// fake MOVE phase 2
 #ifdef DEBUGGER
@@ -9711,8 +9726,8 @@ static void do_copper_fetch(int hpos, uae_u16 id)
 			record_dma_read_value(cop_state.ir[1]);
 		}
 #endif
-		if (cop_state.state == COP_strobe_delay3) {
-			cop_state.state = COP_strobe_delay4;
+		if (cop_state.state == COP_strobe_delay4) {
+			cop_state.state = COP_strobe_delay5;
 		} else {
 			cop_state.state = COP_read1;
 		}
@@ -9726,10 +9741,11 @@ static void do_copper_fetch(int hpos, uae_u16 id)
 		alloc_cycle(hpos, CYCLE_COPPER);
 	}
 	break;
-	case COP_strobe_delay4:
+	case COP_strobe_delay5:
 	{
 		// COPJMP when previous instruction is mid-cycle
 		cop_state.state = COP_read1;
+		//record_dma_event2(DMA_EVENT2_COPPERUSE, hpos, vpos);
 		alloc_cycle(hpos, CYCLE_COPPER);
 	}
 	break;
@@ -10062,6 +10078,7 @@ static void update_copper(int until_hpos)
 		case COP_strobe_delay2:
 		case COP_strobe_delay3:
 		case COP_strobe_delay4:
+		case COP_strobe_delay5:
 			// Second cycle after COPJMP does basically skipped MOVE (MOVE to 1FE)
 			// Cycle is used and needs to be free.
 			copper_cant_read(hpos, CYCLE_PIPE_COPPER);
@@ -15014,19 +15031,22 @@ void check_prefs_changed_custom(void)
 	}
 
 #ifdef GFXFILTER
-	struct gfx_filterdata *fd = &currprefs.gf[0];
-	struct gfx_filterdata *fdcp = &changed_prefs.gf[0];
+	for (int i = 0; i < 2; i++) {
+		int idx = i == 0 ? 0 : 2;
+		struct gfx_filterdata *fd = &currprefs.gf[idx];
+		struct gfx_filterdata *fdcp = &changed_prefs.gf[idx];
 
-	fd->gfx_filter_horiz_zoom = fdcp->gfx_filter_horiz_zoom;
-	fd->gfx_filter_vert_zoom = fdcp->gfx_filter_vert_zoom;
-	fd->gfx_filter_horiz_offset = fdcp->gfx_filter_horiz_offset;
-	fd->gfx_filter_vert_offset = fdcp->gfx_filter_vert_offset;
-	fd->gfx_filter_scanlines = fdcp->gfx_filter_scanlines;
+		fd->gfx_filter_horiz_zoom = fdcp->gfx_filter_horiz_zoom;
+		fd->gfx_filter_vert_zoom = fdcp->gfx_filter_vert_zoom;
+		fd->gfx_filter_horiz_offset = fdcp->gfx_filter_horiz_offset;
+		fd->gfx_filter_vert_offset = fdcp->gfx_filter_vert_offset;
+		fd->gfx_filter_scanlines = fdcp->gfx_filter_scanlines;
 
-	fd->gfx_filter_left_border = fdcp->gfx_filter_left_border;
-	fd->gfx_filter_right_border = fdcp->gfx_filter_right_border;
-	fd->gfx_filter_top_border = fdcp->gfx_filter_top_border;
-	fd->gfx_filter_bottom_border = fdcp->gfx_filter_bottom_border;
+		fd->gfx_filter_left_border = fdcp->gfx_filter_left_border;
+		fd->gfx_filter_right_border = fdcp->gfx_filter_right_border;
+		fd->gfx_filter_top_border = fdcp->gfx_filter_top_border;
+		fd->gfx_filter_bottom_border = fdcp->gfx_filter_bottom_border;
+	}
 #endif
 }
 
