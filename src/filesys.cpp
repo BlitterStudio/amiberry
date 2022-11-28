@@ -749,13 +749,13 @@ static void striplength (TCHAR *s, int len)
 		return;
 	s[len] = 0;
 }
-static void fixcharset (TCHAR *s)
+static void fixcharset(TCHAR *s)
 {
 	char tmp[MAX_DPATH];
 	if (!s)
 		return;
-	ua_fs_copy (tmp, MAX_DPATH - 1, s, '_');
-	au_fs_copy (s, strlen (tmp) + 1, tmp);
+	ua_fs_copy(tmp, MAX_DPATH - 1, s, '_');
+	au_fs_copy(s, uaestrlen(tmp) + 1, tmp);
 }
 
 TCHAR *validatevolumename (TCHAR *s, const TCHAR *def)
@@ -1790,7 +1790,7 @@ static void set_volume_name(Unit *unit, struct mytimeval *tv)
 	char *s;
 
 	s = ua_fs (unit->ui.volname, -1);
-	namelen = strlen (s);
+	namelen = uaestrlen(s);
 	if (namelen >= 58)
 		namelen = 58;
 	put_byte(unit->volume + 64, namelen);
@@ -4052,7 +4052,7 @@ static void get_fileinfo(TrapContext *ctx, Unit *unit, dpacket *packet, uaecptr 
 	put_long_host(buf + 120, entrytype);
 
 	x2 = x = ua_fs (xs, -1);
-	n = strlen(x);
+	n = uaestrlen(x);
 	if (n > 107)
 		n = 107;
 	if (n > abs(currprefs.filesys_max_name))
@@ -4099,7 +4099,7 @@ static void get_fileinfo(TrapContext *ctx, Unit *unit, dpacket *packet, uaecptr 
 		if (!xs)
 			xs= _T("");
 		x2 = x = ua_fs(xs, -1);
-		n = strlen(x);
+		n = uaestrlen(x);
 		if (n > 78)
 			n = 78;
 		put_byte_host(buf + i, n); i++;
@@ -4382,7 +4382,7 @@ static int exalldo(TrapContext *ctx, uaecptr exalldata, uae_u32 exalldatasize, u
 	size2 = 4;
 	if (type >= 1) {
 		size2 += 4;
-		size += strlen(x) + 1;
+		size += uaestrlen(x) + 1;
 		size = (size + 3) & ~3;
 	}
 	if (type >= 2)
@@ -4404,7 +4404,7 @@ static int exalldo(TrapContext *ctx, uaecptr exalldata, uae_u32 exalldatasize, u
 		else
 			commentx = aino->comment;
 		comment = ua_fs(commentx, -1);
-		size += strlen(comment) + 1;
+		size += uaestrlen(comment) + 1;
 		size = (size + 3) & ~3;
 	}
 	if (type >= 7) {
@@ -9968,12 +9968,12 @@ static uae_u32 filesys_shellexecute2_process(int mode, TrapContext *ctx)
 			se2->file = strdup(tmp);
 		}
 		int size = ShellExecute2_Struct_Start + ShellExecute2_Struct_Start2;
-		size += 2 * (strlen(se2->file) + 1);
+		size += 2 * (uaestrlen(se2->file) + 1);
 		if (oldks) {
-			size += 4 + strlen(se2->currentdir) + 2; // CD_""\n
+			size += 4 + uaestrlen(se2->currentdir) + 2; // CD_""\n
 		}
-		size += strlen(se2->currentdir) + 1;
-		size += 2 * (strlen(se2->parms) + 1);
+		size += uaestrlen(se2->currentdir) + 1;
+		size += 2 * (uaestrlen(se2->parms) + 1);
 		size += 32; // space for tmp_out
 		size += 256; // space for out buffer
 		size++;

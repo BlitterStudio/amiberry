@@ -498,7 +498,7 @@ bool cfgfile_option_get_nbool(const TCHAR *s, const TCHAR *option)
 static void trim_wsa (char *s)
 {
 	/* Delete trailing whitespace.  */
-	int len = strlen(s);
+	int len = uaestrlen(s);
 	while (len > 0 && strcspn (s + len - 1, "\t \r\n") == 0)
 		s[--len] = '\0';
 }
@@ -6700,13 +6700,13 @@ int cfgfile_separate_linea (const TCHAR *filename, char *line, TCHAR *line1b, TC
 	*line2++ = '\0';
 
 	/* Get rid of whitespace.  */
-	i = strlen(line2);
+	i = uaestrlen(line2);
 	while (i > 0 && (line2[i - 1] == '\t' || line2[i - 1] == ' '
 		|| line2[i - 1] == '\r' || line2[i - 1] == '\n'))
 		line2[--i] = '\0';
 	line2 += strspn (line2, "\t \r\n");
 
-	i = strlen(line);
+	i = uaestrlen(line);
 	while (i > 0 && (line[i - 1] == '\t' || line[i - 1] == ' '
 		|| line[i - 1] == '\r' || line[i - 1] == '\n'))
 		line[--i] = '\0';
@@ -7932,7 +7932,7 @@ uae_u32 cfgfile_uaelib_modify(TrapContext *ctx, uae_u32 index, uae_u32 parms, ua
 	xfree (parms_in);
 	if (out && outsize > 0) {
 		parms_out = ua (out_p);
-		if (!trap_valid_address(ctx, out, strlen(parms_out) + 1 > outsize ? outsize : strlen(parms_out) + 1))
+		if (!trap_valid_address(ctx, out, strlen(parms_out) + 1 > outsize ? outsize : uaestrlen(parms_out) + 1))
 			return 0;
 		trap_put_string(ctx, parms_out, out, outsize - 1);
 	}
@@ -8315,7 +8315,9 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 		f->gfx_filteroverlay_overscan = 0;
 		f->gfx_filter_left_border = -1;
 		f->gfx_filter_top_border = -1;
+		f->enable = true;
 	}
+	p->gf[2].enable = false;
 
 	p->rtg_horiz_zoom_mult = 1.0;
 	p->rtg_vert_zoom_mult = 1.0;
@@ -8373,12 +8375,7 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 	p->filesys_limit = 0;
 	p->filesys_max_name = 107;
 	p->filesys_max_file_size = 0x7fffffff;
-#ifdef AMIBERRY
-	p->fastmem[0].size = 0x00000000;
-	p->mbresmem_low.size = 0x00000000;
-	p->mbresmem_high.size = 0x00000000;
-	p->z3fastmem[0].size = 0x00000000;
-#endif
+
 	p->z3autoconfig_start = 0x10000000;
 	p->chipmem.size = 0x00080000;
 	p->chipmem.chipramtiming = true;

@@ -393,6 +393,9 @@ struct apmode
 
 
 #define MAX_FILTERDATA 3
+#define GF_NORMAL 0
+#define GF_RTG 1
+#define GF_INTERLACE 2
 struct gfx_filterdata
 {
 	int enable;

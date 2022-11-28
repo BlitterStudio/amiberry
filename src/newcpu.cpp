@@ -3518,6 +3518,14 @@ static void m68k_run_jit(void)
 }
 #endif /* JIT */
 
+void cpu_inreset(void)
+{
+	set_special(SPCFLAG_STOP);
+	regs.s = 1;
+	regs.intmask = 7;
+	MakeSR();
+}
+
 void cpu_halt (int id)
 {
 	// id < 0: m68k halted, PPC active.

@@ -163,6 +163,7 @@ struct amigadisplay
 	bool picasso_requested_forced_on;
 	bool picasso_on;
 	bool interlace_on;
+	int gf_index;
 	int picasso_redraw_necessary;
 	int custom_frame_redraw_necessary;
 	int frame_redraw_necessary;

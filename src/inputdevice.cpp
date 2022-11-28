@@ -4138,7 +4138,9 @@ static bool inputdevice_handle_inputcode_immediate(int code, int state)
 	switch(code)
 	{
 		case AKS_ENTERDEBUGGER:
-			//activate_debugger ();
+#ifdef DEBUGGER
+			activate_debugger ();
+#endif
 			return true;
 	}
 	return false;
@@ -4168,15 +4170,15 @@ void inputdevice_add_inputcode (int code, int state, const TCHAR *s)
 	}
 }
 
-void inputdevice_do_keyboard (int code, int state)
+void inputdevice_do_keyboard(int code, int state)
 {
 #ifdef CDTV
 	if (code >= 0x72 && code <= 0x77) { // CDTV keys
-		if (cdtv_front_panel (-1)) {
+		if (cdtv_front_panel(-1)) {
 			// front panel active
 			if (!state)
 				return;
-			cdtv_front_panel (code - 0x72);
+			cdtv_front_panel(code - 0x72);
 			return;
 		}
 	}
@@ -4189,10 +4191,12 @@ void inputdevice_do_keyboard (int code, int state)
 				memset(keybuf, 0, sizeof(keybuf));
 				send_internalevent(INTERNALEVENT_KBRESET);
 				if (keyboard_reset_seq >= 5 * 50) {
+					custom_reset(true, true);
 					uae_reset(1, 1);
 				} else {
 					if (currprefs.cs_resetwarning && resetwarning_do(0))
 						return;
+					custom_reset(false, true);
 					uae_reset(0, 1);
 				}
 				keyboard_reset_seq = 0;
@@ -4200,7 +4204,7 @@ void inputdevice_do_keyboard (int code, int state)
 		}
 
 		if (key == AK_RESETWARNING) {
-			resetwarning_do (0);
+			resetwarning_do(0);
 			return;
 		} else if ((keybuf[AK_CTRL] || keybuf[AK_RCTRL]) && keybuf[AK_LAMI] && keybuf[AK_RAMI]) {
 			int r = keybuf[AK_LALT] | keybuf[AK_RALT];
@@ -4212,16 +4216,17 @@ void inputdevice_do_keyboard (int code, int state)
 				keyboard_reset_seq = 1;
 				if (!currprefs.cs_resetwarning || !resetwarning_do(0)) {
 					custom_reset(false, true);
+					cpu_inreset();
 				}
 			}
 		}
-		if (record_key ((uae_u8)((key << 1) | (key >> 7)))) {
+		if (record_key((uae_u8)((key << 1) | (key >> 7)))) {
 			if (inputdevice_logging & 1)
-				write_log (_T("Amiga key %02X %d\n"), key & 0x7f, key >> 7);
+				write_log(_T("Amiga key %02X %d\n"), key & 0x7f, key >> 7);
 		}
 		return;
 	}
-	inputdevice_add_inputcode (code, state, NULL);
+	inputdevice_add_inputcode(code, state, NULL);
 }
 
 #ifdef AMIBERRY

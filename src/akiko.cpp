@@ -1128,6 +1128,7 @@ static bool cdrom_add_command_byte(uae_u8 b)
 			write_log(_T(" checksum error"));
 #endif
 		cdrom_checksum_error = 1;
+		//activate_debugger ();
 	}
 #if AKIKO_DEBUG_IO_CMD
 	if (log_cd32 > 0)

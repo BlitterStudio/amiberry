@@ -739,7 +739,8 @@ void get_custom_raw_limits(int *pw, int *ph, int *pdx, int *pdy)
 
 void check_custom_limits(void)
 {
-	struct gfx_filterdata *fd = &currprefs.gf[0];
+	struct amigadisplay *ad = &adisplays[0];
+	struct gfx_filterdata *fd = &currprefs.gf[ad->gf_index];
 	int vls = visible_left_start;
 	int vrs = visible_right_stop;
 	int vts = visible_top_start;
@@ -769,7 +770,8 @@ void check_custom_limits(void)
 
 void set_custom_limits (int w, int h, int dx, int dy, bool blank)
 {
-	struct gfx_filterdata *fd = &currprefs.gf[0];
+	struct amigadisplay *ad = &adisplays[0];
+	struct gfx_filterdata *fd = &currprefs.gf[ad->gf_index];
 	int vls = visible_left_start;
 	int vrs = visible_right_stop;
 	int vts = visible_top_start;
@@ -3975,6 +3977,7 @@ int get_visible_left_border()
 static void center_image (void)
 {
 	struct amigadisplay *ad = &adisplays[0];
+	struct gfx_filterdata *fd = &currprefs.gf[ad->gf_index];
 	struct vidbuf_description *vidinfo = &ad->gfxvidinfo;
 	int prev_x_adjust = visible_left_border;
 	int prev_y_adjust = thisframe_y_adjust;
@@ -3983,7 +3986,7 @@ static void center_image (void)
 	int ew = vidinfo->drawbuffer.extrawidth;
 	int maxdiw = max_diwlastword;
 
-	if (currprefs.gfx_overscanmode <= OVERSCANMODE_OVERSCAN && currprefs.gfx_xcenter && !currprefs.gf[0].gfx_filter_autoscale && max_diwstop > 0) {
+	if (currprefs.gfx_overscanmode <= OVERSCANMODE_OVERSCAN && currprefs.gfx_xcenter && !fd->gfx_filter_autoscale && max_diwstop > 0) {
 
 		if (max_diwstop - min_diwstart < w && currprefs.gfx_xcenter == 2)
 			/* Try to center. */
@@ -4050,7 +4053,7 @@ static void center_image (void)
 #else
 	thisframe_y_adjust = minfirstline;
 #endif
-	if (currprefs.gfx_ycenter && !currprefs.gf[0].gfx_filter_autoscale) {
+	if (currprefs.gfx_ycenter && !fd->gfx_filter_autoscale) {
 
 		if (thisframe_first_drawn_line >= 0 && thisframe_last_drawn_line > thisframe_first_drawn_line) {
 
@@ -4929,10 +4932,13 @@ void check_prefs_picasso(void)
 		ad->picasso_requested_forced_on = false;
 		ad->picasso_on = ad->picasso_requested_on;
 
-		if (!ad->picasso_on)
+		if (!ad->picasso_on) {
 			clear_inhibit_frame(monid, IHF_PICASSO);
-		else
+			ad->gf_index = ad->interlace_on ? GF_INTERLACE : GF_NORMAL;
+		} else {
 			set_inhibit_frame(monid, IHF_PICASSO);
+			ad->gf_index = GF_RTG;
+		}
 
 		gfx_set_picasso_state(monid, ad->picasso_on);
 		picasso_enablescreen(monid, ad->picasso_requested_on);
@@ -5250,14 +5256,26 @@ bool notice_interlace_seen (int monid, bool lace)
 	}
 
 	if (changed) {
-		if (currprefs.gf[2].enable && memcmp(&currprefs.gf[0], &currprefs.gf[2], sizeof(struct gfx_filterdata))) {
-			changed_prefs.gf[0].changed = true;
-			changed_prefs.gf[2].changed = true;
-			ad->interlace_on = interlace_on;
-			set_config_changed();
+		if (currprefs.gf[GF_INTERLACE].enable && memcmp(&currprefs.gf[GF_NORMAL], &currprefs.gf[GF_INTERLACE], sizeof(struct gfx_filterdata))) {
+			changed_prefs.gf[GF_NORMAL].changed = true;
+			changed_prefs.gf[GF_INTERLACE].changed = true;
+			if (ad->interlace_on != interlace_on) {
+				ad->interlace_on = interlace_on;
+				set_config_changed();
+			}
 		} else {
 			ad->interlace_on = false;
 		}
+	}
+
+	if (!ad->picasso_on) {
+		if (ad->interlace_on) {
+			ad->gf_index = GF_INTERLACE;
+		} else {
+			ad->gf_index = GF_NORMAL;
+		}
+	} else {
+		ad->gf_index = GF_RTG;
 	}
 
 	return changed;
@@ -5428,6 +5446,7 @@ void drawing_init (void)
 	if (!isrestore ()) {
 		ad->picasso_on = 0;
 		ad->picasso_requested_on = 0;
+		ad->gf_index = GF_NORMAL;
 		gfx_set_picasso_state(0, 0);
 	}
 #endif

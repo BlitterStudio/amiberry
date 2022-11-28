@@ -1484,23 +1484,23 @@ static void descramble_alg(uae_u8 *data, int size)
 
 static const uae_char *kickstring = "exec.library";
 
-static int read_kickstart (struct zfile *f, uae_u8 *mem, int size, int dochecksum, int noalias)
+static int read_kickstart(struct zfile *f, uae_u8 *mem, int size, int dochecksum, int noalias)
 {
 	uae_char buffer[11];
 	int i, j, oldpos;
 	int cr = 0, kickdisk = 0;
 
 	if (size < 0) {
-		zfile_fseek (f, 0, SEEK_END);
+		zfile_fseek(f, 0, SEEK_END);
 		size = zfile_ftell32(f) & ~0x3ff;
-		zfile_fseek (f, 0, SEEK_SET);
+		zfile_fseek(f, 0, SEEK_SET);
 	}
 	oldpos = zfile_ftell32(f);
-	i = zfile_fread (buffer, 1, sizeof(buffer), f);
+	i = zfile_fread32(buffer, 1, sizeof(buffer), f);
 	if (i < sizeof(buffer))
 		return 0;
-	if (!memcmp (buffer, "KICK", 4)) {
-		zfile_fseek (f, 512, SEEK_SET);
+	if (!memcmp(buffer, "KICK", 4)) {
+		zfile_fseek(f, 512, SEEK_SET);
 		kickdisk = 1;
 #if 0
 	} else if (size >= ROM_SIZE_512 && !memcmp (buffer, "AMIG", 4)) {
@@ -1508,14 +1508,14 @@ static int read_kickstart (struct zfile *f, uae_u8 *mem, int size, int dochecksu
 		zfile_fseek (f, oldpos + 0x6c, SEEK_SET);
 		cr = 2;
 #endif
-	} else if (memcmp ((uae_char*)buffer, "AMIROMTYPE1", 11) != 0) {
-		zfile_fseek (f, oldpos, SEEK_SET);
+	} else if (memcmp((uae_char*)buffer, "AMIROMTYPE1", 11) != 0) {
+		zfile_fseek(f, oldpos, SEEK_SET);
 	} else {
 		cloanto_rom = 1;
 		cr = 1;
 	}
 
-	memset (mem, 0, size);
+	memset(mem, 0, size);
 	if (size >= 131072) {
 		for (i = 0; i < 8; i++) {
 			mem[size - 16 + i * 2 + 1] = 0x18 + i;
@@ -1526,7 +1526,7 @@ static int read_kickstart (struct zfile *f, uae_u8 *mem, int size, int dochecksu
 		mem[size - 17] = size >>  0;
 	}
 
-	i = zfile_fread (mem, 1, size, f);
+	i = zfile_fread32(mem, 1, size, f);
 
 	if (kickdisk && i > ROM_SIZE_256)
 		i = ROM_SIZE_256;
@@ -1537,17 +1537,17 @@ static int read_kickstart (struct zfile *f, uae_u8 *mem, int size, int dochecksu
 	}
 #endif
 	if (i < size - 20)
-		kickstart_fix_checksum (mem, size);
+		kickstart_fix_checksum(mem, size);
 	j = 1;
 	while (j < i)
 		j <<= 1;
 	i = j;
 
 	if (!noalias && i == size / 2)
-		memcpy (mem + size / 2, mem, size / 2);
+		memcpy(mem + size / 2, mem, size / 2);
 
 	if (cr) {
-		if (!decode_rom (mem, size, cr, i))
+		if (!decode_rom(mem, size, cr, i))
 			return 0;
 	}
 
@@ -1557,26 +1557,26 @@ static int read_kickstart (struct zfile *f, uae_u8 *mem, int size, int dochecksu
 	if (currprefs.cs_a1000ram && i < ROM_SIZE_256) {
 		int off = 0;
 		if (!a1000_bootrom)
-			a1000_bootrom = xcalloc (uae_u8, ROM_SIZE_256);
+			a1000_bootrom = xcalloc(uae_u8, ROM_SIZE_256);
 		while (off + i < ROM_SIZE_256) {
-			memcpy (a1000_bootrom + off, kickmem_bank.baseaddr, i);
+			memcpy(a1000_bootrom + off, kickmem_bank.baseaddr, i);
 			off += i;
 		}
-		memset (kickmem_bank.baseaddr, 0, kickmem_bank.allocated_size);
-		a1000_handle_kickstart (1);
+		memset(kickmem_bank.baseaddr, 0, kickmem_bank.allocated_size);
+		a1000_handle_kickstart(1);
 		dochecksum = 0;
 		i = ROM_SIZE_512;
 	}
 
 	for (j = 0; j < 256 && i >= ROM_SIZE_256; j++) {
-		if (!memcmp (mem + j, kickstring, strlen (kickstring) + 1))
+		if (!memcmp(mem + j, kickstring, strlen(kickstring) + 1))
 			break;
 	}
 
 	if (j == 256 || i < ROM_SIZE_256)
 		dochecksum = 0;
 	if (dochecksum)
-		kickstart_checksum (mem, size);
+		kickstart_checksum(mem, size);
 	return i;
 }
 
@@ -2245,13 +2245,18 @@ static void setmemorywidth(struct ramboard *mb, addrbank *ab)
 {
 	if (!ab || !ab->allocated_size)
 		return;
-	if (!mb->force16bit)
-		return;
-	for (int i = (ab->start >> 16); i < ((ab->start + ab->allocated_size) >> 16); i++) {
-		if (ce_banktype[i] == CE_MEMBANK_FAST32)
-			ce_banktype[i] = CE_MEMBANK_FAST16;
-		if (ce_banktype[i] == CE_MEMBANK_CHIP32)
-			ce_banktype[i] = CE_MEMBANK_CHIP16;
+	if (mb->force16bit) {
+		for (int i = (ab->start >> 16); i < ((ab->start + ab->allocated_size) >> 16); i++) {
+			if (ce_banktype[i] == CE_MEMBANK_FAST32)
+				ce_banktype[i] = CE_MEMBANK_FAST16;
+			if (ce_banktype[i] == CE_MEMBANK_CHIP32)
+				ce_banktype[i] = CE_MEMBANK_CHIP16;
+		}
+	}
+	if (mb->chipramtiming) {
+		for (int i = (ab->start >> 16); i < ((ab->start + ab->allocated_size) >> 16); i++) {
+			ce_banktype[i] = ce_banktype[0];
+		}
 	}
 }
 
@@ -3534,7 +3539,7 @@ void loadboardfile(addrbank *ab, struct boardloadfile * lf)
 		else if (lf->loadoffset + size > ab->allocated_size)
 			size = ab->allocated_size - lf->loadoffset;
 		if (size > 0) {
-			int total = zfile_fread(ab->baseaddr + lf->loadoffset, 1, size, zf);
+			int total = zfile_fread32(ab->baseaddr + lf->loadoffset, 1, size, zf);
 			write_log(_T("Expansion file '%s': load %u bytes, offset %u, start addr %08x\n"),
 				lf->loadfile, total, lf->loadoffset, ab->start + lf->loadoffset);
 		}
