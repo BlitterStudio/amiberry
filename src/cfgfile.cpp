@@ -8753,7 +8753,6 @@ static int bip_a4000 (struct uae_prefs *p, int config, int compa, int romcheck)
 	p->cpu_idle = 150;
 	p->cs_compatible = CP_A4000;
 	built_in_chipset_prefs (p);
-	p->cs_ciaatod = p->ntscmode ? 2 : 1;
 	return configure_rom (p, roms, romcheck);
 }
 static int bip_a4000t (struct uae_prefs *p, int config, int compa, int romcheck)
@@ -8790,7 +8789,6 @@ static int bip_a4000t (struct uae_prefs *p, int config, int compa, int romcheck)
 	p->cpu_idle = 150;
 	p->cs_compatible = CP_A4000T;
 	built_in_chipset_prefs (p);
-	p->cs_ciaatod = p->ntscmode ? 2 : 1;
 	return configure_rom (p, roms, romcheck);
 }
 
