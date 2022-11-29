@@ -186,7 +186,7 @@ std::string get_xml_timestamp(const std::string& xml_filename)
 		auto err = doc.LoadFile(f);
 		if (err != tinyxml2::XML_SUCCESS)
 		{
-			write_log(_T("Failed to parse '%s':  %d\n"), xml_filename, err);
+			write_log(_T("Failed to parse '%s':  %d\n"), xml_filename.c_str(), err);
 			error = true;
 		}
 		fclose(f);
