@@ -71,7 +71,7 @@ typedef unsigned long long uae_u64;
 #endif
 
 /* Use uaecptr to represent 32-bit (or 24-bit) addresses into the Amiga
- * address space. This is a 32-bit unsigned int regarless of host arch. */
+ * address space. This is a 32-bit unsigned int regardless of host arch. */
 
 typedef uae_u32 uaecptr;
 
