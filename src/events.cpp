@@ -463,7 +463,7 @@ void modify_eventcounter(int diff)
 
 	int hp1 = current_hpos();
 
-	cia_adjust_eclock_phase(diff);
+	//cia_adjust_eclock_phase(diff);
 
 	// adjust all existing timers
 	for (int i = 0; i < ev_max; i++) {
