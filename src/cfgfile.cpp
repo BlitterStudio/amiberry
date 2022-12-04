@@ -8855,7 +8855,7 @@ static int bip_cdtvcr (struct uae_prefs *p, int config, int compa, int romcheck)
 	set_68000_compa (p, compa);
 	p->cs_compatible = CP_CDTVCR;
 	built_in_chipset_prefs (p);
-	get_data_path (p->flashfile, sizeof (p->flashfile) / sizeof (TCHAR));
+	get_nvram_path(p->flashfile, sizeof (p->flashfile) / sizeof (TCHAR));
 	_tcscat (p->flashfile, _T("cdtv-cr.nvr"));
 	roms[0] = 9;
 	roms[1] = 10;
@@ -8893,7 +8893,7 @@ static int bip_cdtv (struct uae_prefs *p, int config, int compa, int romcheck)
 	set_68000_compa (p, compa);
 	p->cs_compatible = CP_CDTV;
 	built_in_chipset_prefs (p);
-	get_data_path (p->flashfile, sizeof (p->flashfile) / sizeof (TCHAR));
+	get_nvram_path(p->flashfile, sizeof (p->flashfile) / sizeof (TCHAR));
 	_tcscat (p->flashfile, _T("cdtv.nvr"));
 	roms[0] = 6;
 	roms[1] = 32;
@@ -8922,11 +8922,11 @@ static int bip_cd32 (struct uae_prefs *p, int config, int compa, int romcheck)
 	set_68020_compa (p, compa, 1);
 	p->cs_compatible = CP_CD32;
 	built_in_chipset_prefs (p);
-	get_data_path (p->flashfile, sizeof (p->flashfile) / sizeof (TCHAR));
+	get_nvram_path(p->flashfile, sizeof (p->flashfile) / sizeof (TCHAR));
 	_tcscat (p->flashfile, _T("cd32.nvr"));
 	roms[0] = 64;
 	roms[1] = -1;
-	if (!configure_rom (p, roms, 0)) {
+	if (!configure_rom (p, roms, 0)) { 
 		roms[0] = 18;
 		roms[1] = -1;
 		if (!configure_rom (p, roms, romcheck))
