@@ -19074,7 +19074,6 @@ void REGPARAM2 op_4848_23_ff(uae_u32 opcode)
 	int count_cycles = 0;
 	uae_u32 real_opcode = opcode;
 	uae_u32 srcreg = (real_opcode & 7);
-	m68k_incpci(2);
 	op_illg_noret(opcode);
 	return;
 }
@@ -21691,7 +21690,6 @@ void REGPARAM2 op_4e73_23_ff(uae_u32 opcode)
 		ipl_fetch_now();
 		MakeFromSR_T0();
 	}
-	MakeFromSR_intmask(regs.sr, newsr);
 	regs.sr = newsr;
 	intlev_load();
 	ipl_fetch_now();

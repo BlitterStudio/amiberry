@@ -16035,7 +16035,6 @@ uae_u32 REGPARAM2 op_4848_40_ff(uae_u32 opcode)
 {
 	uae_u32 real_opcode = opcode;
 	uae_u32 srcreg = (real_opcode & 7);
-	m68k_incpc(2);
 	op_illg(opcode);
 	return 0;
 }
@@ -18247,7 +18246,6 @@ uae_u32 REGPARAM2 op_4e73_40_ff(uae_u32 opcode)
 		oldsr = newsr;
 		MakeFromSR_T0();
 	}
-	MakeFromSR_intmask(regs.sr, newsr);
 	regs.sr = newsr;
 	MakeFromSR_T0();
 	if (newpc & 1) {
@@ -40621,7 +40619,6 @@ uae_u32 REGPARAM2 op_4e73_41_ff(uae_u32 opcode)
 		oldsr = newsr;
 		MakeFromSR_T0();
 	}
-	MakeFromSR_intmask(regs.sr, newsr);
 	regs.sr = newsr;
 	MakeFromSR_T0();
 	if (newpc & 1) {
@@ -43277,7 +43274,6 @@ uae_u32 REGPARAM2 op_4e73_42_ff(uae_u32 opcode)
 		oldsr = newsr;
 		MakeFromSR_T0();
 	}
-	MakeFromSR_intmask(regs.sr, newsr);
 	regs.sr = newsr;
 	MakeFromSR_T0();
 	if (newpc & 1) {
@@ -45242,7 +45238,6 @@ uae_u32 REGPARAM2 op_4e73_43_ff(uae_u32 opcode)
 		oldsr = newsr;
 		MakeFromSR_T0();
 	}
-	MakeFromSR_intmask(regs.sr, newsr);
 	regs.sr = newsr;
 	MakeFromSR_T0();
 	if (newpc & 1) {
@@ -49372,7 +49367,6 @@ uae_u32 REGPARAM2 op_4e73_44_ff(uae_u32 opcode)
 		oldsr = newsr;
 		MakeFromSR_T0();
 	}
-	MakeFromSR_intmask(regs.sr, newsr);
 	regs.sr = newsr;
 	MakeFromSR_T0();
 	if (newpc & 1) {

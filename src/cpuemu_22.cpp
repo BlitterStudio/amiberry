@@ -17519,7 +17519,6 @@ uae_u32 REGPARAM2 op_4848_22_ff(uae_u32 opcode)
 	int count_cycles = 0;
 	uae_u32 real_opcode = opcode;
 	uae_u32 srcreg = (real_opcode & 7);
-	m68k_incpci(2);
 	op_illg(opcode);
 	return (1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4;
 }
@@ -19983,7 +19982,6 @@ uae_u32 REGPARAM2 op_4e73_22_ff(uae_u32 opcode)
 		oldsr = newsr;
 		MakeFromSR_T0();
 	}
-	MakeFromSR_intmask(regs.sr, newsr);
 	regs.sr = newsr;
 	MakeFromSR_T0();
 	if (newpc & 1) {
