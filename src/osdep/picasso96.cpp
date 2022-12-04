@@ -76,7 +76,7 @@
 
 #define NOBLITTER 0
 #define NOBLITTER_BLIT 0
-#define NOBLITTER_ALL 1
+#define NOBLITTER_ALL 0
 
 #define CURSORMAXWIDTH 128
 #define CURSORMAXHEIGHT 128
@@ -1394,7 +1394,7 @@ static void picasso_handle_hsync(void)
 #define BLT_NAME BLIT_SRC_8
 #define BLT_NAME_MASK BLIT_SRC_MASK_8
 #define BLT_FUNC(s,d) *d = *s
-#define BLT_FUNC_MASK(s,d,mask) *d = ((*d) & ~mask) | (((*s) | (*d)) & mask)
+#define BLT_FUNC_MASK(s,d,mask) *d = ((*d) & ~mask) | ((*s) & mask)
 #include "p96_blit.cpp.in"
 #define BLT_NAME BLIT_NOTONLYDST_8
 #define BLT_NAME_MASK BLIT_NOTONLYDST_MASK_8
