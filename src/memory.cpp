@@ -2973,7 +2973,7 @@ void memory_reset (void)
 	}
 	//cpuboard_map();
 	map_banks_set(&kickmem_bank, 0xF8, 8, 0);
-	//if (currprefs.maprom) {
+	//if (currprefs.maprom) && _tcscmp(currprefs.romfile, _T(":AROS"))) {
 	//	if (!cpuboard_maprom())
 	//		map_banks_set(&kickram_bank, currprefs.maprom >> 16, extendedkickmem2a_bank.allocated_size ? 32 : (extendedkickmem_bank.allocated_size ? 16 : 8), 0);
 	//}

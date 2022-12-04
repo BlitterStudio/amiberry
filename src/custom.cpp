@@ -9321,6 +9321,9 @@ static bool copper_cant_read(int hpos, uae_u16 alloc)
 		if (alloc && !bitplane_dma_access(hpos, coffset) && !cycle_line_pipe[offset]) {
 			cycle_line_pipe[offset] = CYCLE_PIPE_NONE | CYCLE_PIPE_COPPER;
 			blitter_pipe[offset] = CYCLE_PIPE_COPPER;
+#ifdef DEBUGGER
+			record_dma_event2(DMA_EVENT2_COPPERUSE, offset, vpos);
+#endif
 		}
 		coffset++;
 	}

@@ -6703,13 +6703,13 @@ int cfgfile_separate_linea (const TCHAR *filename, char *line, TCHAR *line1b, TC
 	*line2++ = '\0';
 
 	/* Get rid of whitespace.  */
-	i = strlen(line2);
+	i = uaestrlen(line2);
 	while (i > 0 && (line2[i - 1] == '\t' || line2[i - 1] == ' '
 		|| line2[i - 1] == '\r' || line2[i - 1] == '\n'))
 		line2[--i] = '\0';
 	line2 += strspn (line2, "\t \r\n");
 
-	i = strlen(line);
+	i = uaestrlen(line);
 	while (i > 0 && (line[i - 1] == '\t' || line[i - 1] == ' '
 		|| line[i - 1] == '\r' || line[i - 1] == '\n'))
 		line[--i] = '\0';
@@ -8928,7 +8928,7 @@ static int bip_cd32 (struct uae_prefs *p, int config, int compa, int romcheck)
 	_tcscat (p->flashfile, _T("cd32.nvr"));
 	roms[0] = 64;
 	roms[1] = -1;
-	if (!configure_rom (p, roms, 0)) { 
+	if (!configure_rom (p, roms, 0)) {
 		roms[0] = 18;
 		roms[1] = -1;
 		if (!configure_rom (p, roms, romcheck))

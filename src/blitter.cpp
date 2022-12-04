@@ -1985,7 +1985,7 @@ void do_blitter(int hpos, int copper, uaecptr pc)
 		blit_firstline_cycles = blit_first_cycle + (blit_cyclecount * blt_info.hblitsize) * CYCLE_UNIT + cpu_cycles;
 	}
 
-	//if (memwatch_enabled) {
+	//if (memwatch_enabled || BLITTER_DEBUG) {
 		//blitter_debugsave(copper, pc);
 	//}
 

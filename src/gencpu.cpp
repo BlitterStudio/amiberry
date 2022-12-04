@@ -7168,7 +7168,6 @@ static void gen_opcode (unsigned int opcode)
 			out("oldsr = newsr;\n");
 			makefromsr_t0();
 			out("}\n");
-			out("MakeFromSR_intmask(regs.sr, newsr);\n");
 		    out("regs.sr = newsr;\n");
 			addcycles_ce020 (4);
 			makefromsr_t0();

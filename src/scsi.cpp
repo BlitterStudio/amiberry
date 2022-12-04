@@ -3,7 +3,7 @@
 *
 * SCSI and SASI emulation (not uaescsi.device)
 *
-* Copyright 2007-2015 Toni Wilen
+* Copyright 2007-2022 Toni Wilen
 *
 */
 
@@ -3094,8 +3094,10 @@ static uae_u32 ncr80_bget2(struct soft_scsi *ncr, uaecptr addr, int size)
 		if (ncr->subtype == 4) {
 			if ((addr & 0xc000) == 0xc000) {
 				v = read_684xx_dma(ncr, addr);
-			} else if (addr & 0x8000) {
-				addresstype = (addr & 1) ? 0 : 1;
+			} else if ((addr & 0x8001) == 0x8001) {
+				addresstype = 0;
+			} else if ((addr & 0x4001) == 0x4000) {
+				addresstype = 1;
 			}
 		} else if (ncr->subtype == 3) {
 			if ((addr & 0x8000) && !(addr & 1))

@@ -42,7 +42,6 @@ extern void activate_debugger(void);
 extern void activate_debugger_new(void);
 extern void activate_debugger_new_pc(uaecptr pc, int len);
 extern void deactivate_debugger (void);
-extern int notinrom (void);
 extern const TCHAR *debuginfo (int);
 extern void record_copper (uaecptr addr, uaecptr nextaddr, uae_u16 word1, uae_u16 word2, int hpos, int vpos);
 extern void record_copper_blitwait (uaecptr addr, int hpos, int vpos);

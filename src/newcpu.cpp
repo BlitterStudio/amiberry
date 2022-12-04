@@ -2088,15 +2088,15 @@ static void update_68k_cycles (void)
 		cycles_mult = CYCLES_DIV;
 		if (currprefs.cpu_model >= 68040) {
 			if (currprefs.mmu_model) {
-				cycles_mult = CYCLES_DIV / 20;
+				cycles_mult = CYCLES_DIV / 24;
 			} else {
-				cycles_mult = CYCLES_DIV / 12;
+				cycles_mult = CYCLES_DIV / 16;
 			}
 		} else if (currprefs.cpu_model >= 68020) {
 			if (currprefs.mmu_model) {
-				cycles_mult = CYCLES_DIV / 10;
+				cycles_mult = CYCLES_DIV / 12;
 			} else {
-				cycles_mult = CYCLES_DIV / 6;
+				cycles_mult = CYCLES_DIV / 8;
 			}
 		}
 
@@ -2108,7 +2108,7 @@ static void update_68k_cycles (void)
 			}
 		}
 	} else if (currprefs.m68k_speed < 0) {
-		cycles_mult = CYCLES_DIV / 20;
+		cycles_mult = CYCLES_DIV / 21;
 	} else {
 		if (currprefs.m68k_speed >= 0 && !currprefs.cpu_cycle_exact && !currprefs.cpu_compatible) {
 			if (currprefs.m68k_speed_throttle < 0) {
@@ -2118,6 +2118,7 @@ static void update_68k_cycles (void)
 			}
 		}
 	}
+	cycles_mult &= ~0x7f;
 
 	currprefs.cpu_clock_multiplier = changed_prefs.cpu_clock_multiplier;
 	currprefs.cpu_frequency = changed_prefs.cpu_frequency;
@@ -2311,7 +2312,7 @@ STATIC_INLINE void wait_memory_cycles (void)
 	}
 	if (regs.ce020extracycles >= 16) {
 		regs.ce020extracycles = 0;
-		x_do_cycles(4 * CYCLE_UNIT);
+		x_do_cycles(2 * cpucycleunit);
 	}
 }
 
@@ -2416,8 +2417,11 @@ static void MakeFromSR_x(int t0trace)
 				regs.ipl[0] = 0;
 			}
 		} else {
-			if (regs.ipl_pin <= regs.intmask && regs.ipl_pin > newimask) {
-				set_special(SPCFLAG_INT);
+			if (!currprefs.cachesize && regs.ipl_pin <= regs.intmask && regs.ipl_pin > newimask) {
+				if (currprefs.cpu_compatible && currprefs.cpu_model < 68020)
+					set_special(SPCFLAG_INT);
+				else
+					set_special(SPCFLAG_DOINT);
 			}
 		}
 		regs.intmask = newimask;
@@ -2497,22 +2501,6 @@ void REGPARAM2 MakeFromSR(void)
 void REGPARAM2 MakeFromSR_STOP(void)
 {
 	MakeFromSR_x(-1);
-}
-
-void REGPARAM2 MakeFromSR_intmask(uae_u16 oldsr, uae_u16 newsr)
-{
-#if 0
-	int oldlvl = (oldsr >> 8) & 7;
-	int newlvl = (newsr >> 8) & 7;
-	int ilvl = intlev();
-
-	// interrupt mask lowered and allows new interrupt to start?
-	if (newlvl < oldlvl && ilvl > 0 && ilvl > newlvl && ilvl <= oldlvl) {
-		if (currprefs.cpu_model >= 68020) {
-			unset_special(SPCFLAG_INT);
-		}
-	}
-#endif
 }
 
 static bool internalexception(int nr)
@@ -4572,7 +4560,8 @@ void doint(void)
 		}
 		return;
 	}
-	if (regs.ipl_pin > regs.intmask) {
+
+	if (regs.ipl_pin > regs.intmask || currprefs.cachesize) {
 		if (currprefs.cpu_compatible && currprefs.cpu_model < 68020)
 			set_special(SPCFLAG_INT);
 		else
@@ -6121,6 +6110,7 @@ static void m68k_run_2ce (void)
 		
 				wait_memory_cycles();
 				regs.instruction_cnt++;
+				regs.ce020extracycles++;
 
 		cont:
 				if (r->spcflags || regs.ipl[0] > 0) {
@@ -6246,13 +6236,13 @@ static void m68k_run_2p (void)
 
 				if (currprefs.cpu_memory_cycle_exact) {
 
+					evt_t c = get_cycles();
 					(*cpufunctbl[r->opcode])(r->opcode);
-					// 0% = no extra cycles
-					cpu_cycles = 4 * CYCLE_UNIT * cycles_mult;
-					cpu_cycles /= CYCLES_DIV;
-					cpu_cycles -= CYCLE_UNIT;
-					if (cpu_cycles <= 0)
+					c = get_cycles() - c;
+					cpu_cycles = 0;
+					if (c <= cpucycleunit) {
 						cpu_cycles = cpucycleunit;
+					}
 					regs.instruction_cnt++;
 
 				} else {

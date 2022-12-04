@@ -97,7 +97,7 @@ struct romdata *getromdatabypath (const TCHAR *path)
 	return NULL;
 }
 
-#define NEXT_ROM_ID 298
+#define NEXT_ROM_ID 299
 
 #if NEXT_ROM_ID >= MAX_ROMMGR_ROMS
 #error Increase MAX_ROMMGR_ROMS!
@@ -447,6 +447,8 @@ static struct romdata roms[] = {
 	{ _T("A4091 v40.13"), 40, 13, 40, 13, _T("A4091\0"), 32768, 58, 0, 0, ROMTYPE_A4091, 0, 0, _T("391592-02"),
 	0x54cb9e85, 0x3CE66919,0xF6FD6797,0x4923A12D,0x91B730F1,0xFFB4A7BA },
 
+	{ _T("SupraDrive 2000DMA"), 0, 0, 0, 0, _T("SUPRADMA\0"), 8192, 298, 0, 0, ROMTYPE_SUPRADMA, 0, 0, NULL,
+	0x0f040976, 0x9faa3201,0xd09e57bf,0xb0e95b45,0x4fff3b90,0xdf219105 },
 	{ _T("SupraDrive AMAB6"), 3, 8, 3, 8, _T("SUPRA\0"), 16384, 121, 0, 0, ROMTYPE_SUPRA, 0, 0, _T("AMAB6"),
 	0xf40bd349, 0x82168556,0x07525067,0xe9263431,0x1fb9c347,0xe737f247 },
 	{ _T("SupraDrive AMAB5"), 3, 0, 3, 0, _T("SUPRA\0"), 16384, 134, 0, 0, ROMTYPE_SUPRA, 0, 0, _T("AMAB5"),

@@ -73,10 +73,6 @@
 #include "rp.h"
 #endif
 
-#ifdef AMIBERRY
-static int g_packet_delay = 0;
-#endif
-
 #define KS12_BOOT_HACK 1
 
 #define UNIT_LED(unit) ((unit)->ui.unit_type == UNIT_CDFS ? LED_CD : LED_HD)
@@ -9090,7 +9086,7 @@ void filesys_install (void)
 	org (loop);
 
 	create_ks12_boot();
-	//create_68060_nofpu();
+	create_68060_nofpu();
 }
 
 uaecptr filesys_get_entry(int index)
