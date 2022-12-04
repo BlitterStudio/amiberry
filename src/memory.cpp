@@ -55,6 +55,7 @@ addrbank* get_mem_bank_real(uaecptr addr)
 #endif
 
 bool canbang;
+uaecptr highest_ram;
 static bool rom_write_enabled;
 #ifdef JIT
 /* Set by each memory handler that does not simply access real memory. */
@@ -3458,6 +3459,9 @@ void map_banks (addrbank *bank, int start, int size, int realsize)
 #ifdef WITH_PPC
 	ppc_generate_map_banks(bank, start, size);
 #endif
+	if ((bank->flags & ABFLAG_RAM) && !(bank->flags & ABFLAG_RTG) && ((start + size) << 16) > highest_ram) {
+		highest_ram = (start + size) << 16;
+	}
 }
 
 bool validate_banks_z3(addrbank *bank, int start, int size)

@@ -28,6 +28,7 @@ void free_shm (void);
 bool preinit_shm (void);
 extern bool canbang;
 extern bool jit_direct_compatible_memory;
+extern uaecptr highest_ram;
 
 #define Z3BASE_UAE 0x10000000
 #define Z3BASE_REAL 0x40000000
