@@ -4187,54 +4187,47 @@ static void init_drawing_frame (void)
 					if (frame_res_cnt == 0) {
 						int m = frame_res_detected * 2 + frame_res_lace_detected;
 						struct wh *dst = currprefs.gfx_apmode[0].gfx_fullscreen ? &changed_prefs.gfx_monitor[0].gfx_size_fs : &changed_prefs.gfx_monitor[0].gfx_size_win;
-						while (m < 3 * 2) {
-							struct wh *src = currprefs.gfx_apmode[0].gfx_fullscreen ? &currprefs.gfx_monitor[0].gfx_size_fs_xtra[m] : &currprefs.gfx_monitor[0].gfx_size_win_xtra[m];
-							if (src->width > 0 && src->height > 0) {
-								int nr = m >> 1;
-								int nl = (m & 1) == 0 ? 0 : 1;
-								int nr_o = nr;
-								int nl_o = nl;
+						struct wh *src = currprefs.gfx_apmode[0].gfx_fullscreen ? &currprefs.gfx_monitor[0].gfx_size_fs_xtra[m] : &currprefs.gfx_monitor[0].gfx_size_win_xtra[m];
+						int nr = m >> 1;
+						int nl = (m & 1) == 0 ? 0 : 1;
+						int nr_o = nr;
+						int nl_o = nl;
 
-								if (currprefs.gfx_autoresolution >= 100 && nl == 0 && nr > 0) {
-									nl = 1;
-								}
+						if (currprefs.gfx_autoresolution >= 100 && nl == 0 && nr > 0) {
+							nl = 1;
+						}
+						if (currprefs.gfx_autoresolution_minh < 0) {
+							if (nr < nl)
+								nr = nl;
+						} else if (nr < currprefs.gfx_autoresolution_minh) {
+							nr = currprefs.gfx_autoresolution_minh;
+						}
+						if (currprefs.gfx_autoresolution_minv < 0) {
+							if (nl < nr)
+								nl = nr;
+						} else if (nl < currprefs.gfx_autoresolution_minv) {
+							nl = currprefs.gfx_autoresolution_minv;
+						}
 
-								if (currprefs.gfx_autoresolution_minh < 0) {
-									if (nr < nl)
-										nr = nl;
-								} else if (nr < currprefs.gfx_autoresolution_minh) {
-									nr = currprefs.gfx_autoresolution_minh;
-								}
-								if (currprefs.gfx_autoresolution_minv < 0) {
-									if (nl < nr)
-										nl = nr;
-								} else if (nl < currprefs.gfx_autoresolution_minv) {
-									nl = currprefs.gfx_autoresolution_minv;
-								}
+						if (nr > vidinfo->gfx_resolution_reserved)
+							nr = vidinfo->gfx_resolution_reserved;
+						if (nl > vidinfo->gfx_vresolution_reserved)
+							nl = vidinfo->gfx_vresolution_reserved;
 
-								if (nr > vidinfo->gfx_resolution_reserved)
-									nr = vidinfo->gfx_resolution_reserved;
-								if (nl > vidinfo->gfx_vresolution_reserved)
-									nl = vidinfo->gfx_vresolution_reserved;
+						if (changed_prefs.gfx_resolution != nr || changed_prefs.gfx_vresolution != nl) {
+							changed_prefs.gfx_resolution = nr;
+							changed_prefs.gfx_vresolution = nl;
 
-								if (changed_prefs.gfx_resolution != nr || changed_prefs.gfx_vresolution != nl) {
-									changed_prefs.gfx_resolution = nr;
-									changed_prefs.gfx_vresolution = nl;
-
-									write_log (_T("RES -> %d (%d) LINE -> %d (%d) (%d - %d, %d - %d)\n"), nr, nr_o, nl, nl_o,
-										currprefs.gfx_autoresolution_minh, currprefs.gfx_autoresolution_minv,
-										vidinfo->gfx_resolution_reserved, vidinfo->gfx_vresolution_reserved);
-									set_config_changed ();
-								}
-								if (src->width > 0 && src->height > 0) {
-									if (memcmp (dst, src, sizeof *dst)) {
-										*dst = *src;
-										set_config_changed ();
-									}
-								}
-								break;
+							write_log(_T("RES -> %d (%d) LINE -> %d (%d) (%d - %d, %d - %d)\n"), nr, nr_o, nl, nl_o,
+								currprefs.gfx_autoresolution_minh, currprefs.gfx_autoresolution_minv,
+								vidinfo->gfx_resolution_reserved, vidinfo->gfx_vresolution_reserved);
+							set_config_changed();
+						}
+						if (src->width > 0 && src->height > 0) {
+							if (memcmp(dst, src, sizeof(*dst))) {
+								*dst = *src;
+								set_config_changed();
 							}
-							m++;
 						}
 						frame_res_cnt = currprefs.gfx_autoresolution_delay;
 					}
