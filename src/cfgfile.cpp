@@ -7501,7 +7501,9 @@ int parse_cmdline_option (struct uae_prefs *p, TCHAR c, const TCHAR *arg)
 	case 'w': p->m68k_speed = _tstoi (arg); break;
 
 	case 'G': p->start_gui = 0; break;
-	//case 'D': p->start_debugger = 1; break;
+#ifdef DEBUGGER
+	case 'D': p->start_debugger = 1; break;
+#endif
 
 	case 'n':
 		if (_tcschr (arg, 'i') != 0)
@@ -7790,9 +7792,12 @@ static int execcmdline(struct uae_prefs *prefs, int argv, TCHAR **argc, TCHAR *o
 						}
 					}
 					filesys_shellexecute2(cmd, NULL, NULL, 0, 0, 0, flags, NULL, 0, shellexec_cb, NULL);
-				} //else if (!_tcsicmp(argc[i], _T("dbg"))) {
-				//	debug_parser(argc[i + 1], out, outsize);
-				//}
+				}
+#ifdef DEBUGGER 
+                else if (!_tcsicmp(argc[i], _T("dbg"))) {
+					debug_parser(argc[i + 1], out, outsize);
+				}
+#endif
 				else if (!inputdevice_uaelib(argc[i], argc[i + 1])) {
 					if (!cfgfile_parse_uaelib_option(prefs, argc[i], argc[i + 1], 0)) {
 						if (!cfgfile_parse_option(prefs, argc[i], argc[i + 1], 0)) {
@@ -7935,7 +7940,7 @@ uae_u32 cfgfile_uaelib_modify(TrapContext *ctx, uae_u32 index, uae_u32 parms, ua
 	xfree (parms_in);
 	if (out && outsize > 0) {
 		parms_out = ua (out_p);
-		if (!trap_valid_address(ctx, out, strlen(parms_out) + 1 > outsize ? outsize : strlen(parms_out) + 1))
+		if (!trap_valid_address(ctx, out, strlen(parms_out) + 1 > outsize ? outsize : uaestrlen(parms_out) + 1))
 			return 0;
 		trap_put_string(ctx, parms_out, out, outsize - 1);
 	}
@@ -8738,6 +8743,15 @@ static int bip_a4000 (struct uae_prefs *p, int config, int compa, int romcheck)
 		p->cpu_model = 68040;
 		p->fpu_model = 68040;
 		break;
+		//case 2:
+		//p->cpu_model = 68060;
+		//p->fpu_model = 68060;
+		//p->ppc_mode = 1;
+		//cpuboard_setboard(p, BOARD_CYBERSTORM, BOARD_CYBERSTORM_SUB_PPC);
+		//p->cpuboardmem1.size = 128 * 1024 * 1024;
+		//int roms_ppc[] = { 98, -1 };
+		//configure_rom(p, roms_ppc, romcheck);
+		//break;
 	}
 	p->chipset_mask = CSMASK_AGA | CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
 	p->cpu_compatible = p->address_space_24 = 0;
@@ -9293,7 +9307,7 @@ int built_in_prefs (struct uae_prefs *p, int model, int config, int compa, int r
 		v = bip_super (p, config, compa, romcheck);
 		break;
 	}
-	if ((p->cpu_model >= 68020 || !p->cpu_cycle_exact || !p->cpu_memory_cycle_exact) && !p->immediate_blits)
+	if ((p->cpu_model >= 68020 || !p->cpu_memory_cycle_exact) && !p->immediate_blits)
 		p->waiting_blits = 1;
 	if (p->sound_filter_type == FILTER_SOUND_TYPE_A500 && (p->chipset_mask & CSMASK_AGA))
 		p->sound_filter_type = FILTER_SOUND_TYPE_A1200;

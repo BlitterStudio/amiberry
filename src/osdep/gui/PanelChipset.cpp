@@ -340,9 +340,14 @@ void RefreshPanelChipset()
 #else
 	chkMemoryCycleExact->setEnabled(changed_prefs.cpu_model >= 68020);
 #endif
-	if (changed_prefs.immediate_blits && changed_prefs.waiting_blits) {
+	if (changed_prefs.immediate_blits || (changed_prefs.cpu_memory_cycle_exact && changed_prefs.cpu_model <= 68010)) {
 		changed_prefs.waiting_blits = 0;
 		chkBlitWait->setSelected(false);
+		chkBlitWait->setEnabled(false);
+	}
+	else
+	{
+		chkBlitWait->setEnabled(true);
 	}
 	chkBlitImmed->setEnabled(!changed_prefs.cpu_cycle_exact);
 	chkMultithreadedDrawing->setEnabled(!emulating);
