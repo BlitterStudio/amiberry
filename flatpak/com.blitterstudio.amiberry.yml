@@ -1,0 +1,57 @@
+# /usr/bin/cmake -G "Ninja"   -DCMAKE_BUILD_TYPE:STRING="Debug" -DCMAKE_INSTALL_PREFIX:PATH="/mnt/d/Github/amiberry-x86/out/install/WSL-GCC-Debug"  /mnt/d/Github/amiberry-x86/CMakeLists.txt;
+# cd /mnt/d/Github/amiberry-x86/out/build/WSL-GCC-Debug;/usr/bin/cmake --build /mnt/d/Github/amiberry-x86/out/build/WSL-GCC-Debug --config Debug;
+app-id: com.blitterstudio.amiberry
+runtime: org.freedesktop.Platform
+runtime-version: "22.08"
+sdk: org.freedesktop.Sdk
+command: amiberry
+finish-args:
+  - --device=all
+  # X11 + XShm access
+  - --share=ipc
+  - --socket=x11
+  # Wayland access
+  - --socket=wayland
+  - --socket=fallback-x11
+  # Needs to talk to the network:
+  - --share=network
+  # Allow bluetooth (e.g. controllers)
+  - --allow=bluetooth
+  # Play sounds using PulseAudio
+  - --socket=pulseaudio
+  # Filesystem access
+  - --filesystem=host
+  
+modules:
+  - name: amiberry
+    buildsystem: simple
+    build-commands:
+      - make PLATFORM=x86-64
+      - cp amiberry /app/
+      - cp -R abr /app/
+      - cp -R conf /app/
+      - cp -R controllers /app/
+      - cp -R data /app/
+      - cp -R inputrecordings /app/
+      - cp -R kickstarts /app/
+      - cp -R nvram /app/
+      - cp -R savestates /app/
+      - cp -R screenshots /app/
+      - cp -R whdboot /app/
+      - mkdir -p /app/share/metainfo
+      - cp -r com.blitterstudio.amiberry.metainfo.xml /app/share/metainfo
+      - mkdir -p /app/share/applications
+      - cp -r com.blitterstudio.amiberry.desktop /app/share/applications
+      - mkdir -p /app/share/appdata
+      - cp -r com.blitterstudio.amiberry.metainfo.xml /app/share/appdata
+      - mkdir -p /app/share/icons/hicolor/scalable/apps
+      - cp -r com.blitterstudio.amiberry.svg /app/share/icons/hicolor/scalable/apps
+    sources:
+      - type: archive
+        path: amiberry-ng.tag.gz
+      - type: file
+        path: com.blitterstudio.amiberry.metainfo.xml
+      - type: file
+        path: com.blitterstudio.amiberry.desktop
+      - type: file
+        path: com.blitterstudio.amiberry.svg

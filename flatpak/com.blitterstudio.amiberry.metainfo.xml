@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.blitterstudio.amiberry</id>
+  
+  <name>Amiberry</name>
+  <summary>An Amiga emulator for Linux</summary>
+  
+  <metadata_license>FSFAP</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+    <control>touch</control>
+    <control>gamepad</control>
+  </supports>
+  
+  <description>
+    <p>
+      Amiberry is an optimized Amiga emulator for Linux (ARM, ARM64 and x86-64). It is based on WinUAE, with several unique features on top of it, like a WHDLoad booter.
+    </p>
+  </description>
+  
+  <launchable type="desktop-id">com.blitterstudio.amiberry.desktop</launchable>
+</component>
