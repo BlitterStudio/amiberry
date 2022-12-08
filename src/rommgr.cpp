@@ -97,7 +97,7 @@ struct romdata *getromdatabypath (const TCHAR *path)
 	return NULL;
 }
 
-#define NEXT_ROM_ID 299
+#define NEXT_ROM_ID 300
 
 #if NEXT_ROM_ID >= MAX_ROMMGR_ROMS
 #error Increase MAX_ROMMGR_ROMS!
@@ -447,7 +447,7 @@ static struct romdata roms[] = {
 	{ _T("A4091 v40.13"), 40, 13, 40, 13, _T("A4091\0"), 32768, 58, 0, 0, ROMTYPE_A4091, 0, 0, _T("391592-02"),
 	0x54cb9e85, 0x3CE66919,0xF6FD6797,0x4923A12D,0x91B730F1,0xFFB4A7BA },
 
-	{ _T("SupraDrive 2000DMA"), 0, 0, 0, 0, _T("SUPRADMA\0"), 8192, 298, 0, 0, ROMTYPE_SUPRADMA, 0, 0, NULL,
+	{ _T("SupraDrive 2000DMA"), 0, 0, 0, 0, _T("SUPRADMA\0"), 8192, 298, 0, 0, ROMTYPE_SUPRA, 0, 0, NULL,
 	0x0f040976, 0x9faa3201,0xd09e57bf,0xb0e95b45,0x4fff3b90,0xdf219105 },
 	{ _T("SupraDrive AMAB6"), 3, 8, 3, 8, _T("SUPRA\0"), 16384, 121, 0, 0, ROMTYPE_SUPRA, 0, 0, _T("AMAB6"),
 	0xf40bd349, 0x82168556,0x07525067,0xe9263431,0x1fb9c347,0xe737f247 },
@@ -457,6 +457,8 @@ static struct romdata roms[] = {
 	0xde7f3f1c, 0xc0acbfc8,0x6641a6c1,0x024870cc,0x519f8c4c,0xbdfe8c64 },
 	{ _T("SupraDrive AMAB3"), 0, 0, 0, 0, _T("SUPRA\0"), 8192, 136, 0, 0, ROMTYPE_SUPRA, 0, 0, _T("AMAB3"),
 	0x3ead39aa, 0x02fe79ee,0xef423098,0xec6add8c,0xb92f849f,0xc64bcd41 },
+	{ _T("SupraDrive AMAB2"), 0, 0, 0, 0, _T("SUPRA\0"), 8192, 299, 0, 0, ROMTYPE_SUPRA, 0, 0, _T("AMAB2"),
+	0x297c99f3, 0x8e5e8ea9,0xa203c3ad,0x6dd35e57,0xb1b01f38,0x9b31edda },
 
 	{ _T("Blizzard 1230-I/II"), 0, 0, 0, 0, _T("B1230MKII\0"), 32768, 163, 0, 0, ROMTYPE_CB_B1230MK2, 0, 0, NULL,
 	0xf307cd34, 0xd2f0bfe5, 0x6e84e9f2, 0x2dc11583, 0x30702fd7, 0xd59584ee },
@@ -1034,7 +1036,7 @@ void romlist_clear (void)
 }
 
 /* remove rom entries that need 2 or more roms but not everything required is present */
-static void romlist_cleanup (void)
+static void romlist_cleanup(void)
 {
 	int i = 0;
 	while (roms[i].name) {
@@ -1044,25 +1046,28 @@ static void romlist_cleanup (void)
 		int j = i;
 		int k = i;
 		while (rd->name && (rd->group >> 16) == grp && grp > 0) {
-			struct romlist *rl = romlist_getrl (rd);
+			struct romlist *rl = romlist_getrl(rd);
 			if (!rl)
 				ok = 0;
 			rd++;
 			j++;
 		}
 		if (ok == 0) {
-			while (i < j) {
-				struct romlist *rl2 = romlist_getrl (&roms[i]);
+			while (i < j && roms[i].name) {
+				struct romlist *rl2 = romlist_getrl(&roms[i]);
 				if (rl2) {
 					size_t cnt = romlist_cnt - (rl2 - rl) - 1;
-					write_log (_T("%s '%s' removed from romlist\n"), roms[k].name, rl2->path);
-					xfree (rl2->path);
+					write_log(_T("%s '%s' removed from romlist\n"), roms[k].name, rl2->path);
+					xfree(rl2->path);
 					if (cnt > 0)
-						memmove (rl2, rl2 + 1, cnt * sizeof (struct romlist));
+						memmove(rl2, rl2 + 1, cnt * sizeof (struct romlist));
 					romlist_cnt--;
 				}
 				i++;
 			}
+		}
+		if (!roms[i].name) {
+			break;
 		}
 		i++;
 	}
