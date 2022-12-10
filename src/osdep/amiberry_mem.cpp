@@ -1,15 +1,17 @@
 #include <cstdlib>
 #include <cstring>
 
+#include "sysconfig.h"
 #include "sysdeps.h"
 #include "options.h"
-#include "include/memory.h"
-#include "newcpu.h"
-#include "autoconf.h"
+#include "memory.h"
 #include "uae/mman.h"
 #include "uae/vm.h"
+#include "autoconf.h"
 #include "gfxboard.h"
 #include "cpuboard.h"
+#include "rommgr.h"
+#include "newcpu.h"
 #include <sys/mman.h>
 
 #include "gui.h"
@@ -187,7 +189,7 @@ static uae_u32 p96base_offset;
 static SYSTEM_INFO si;
 static uaecptr start_rtg = 0;
 static uaecptr end_rtg = 0;
-static uint32_t maxmem;
+int maxmem;
 bool jit_direct_compatible_memory;
 
 bool can_have_1gb()
@@ -236,9 +238,6 @@ static void clear_shm (void)
 
 bool preinit_shm (void)
 {
-#ifdef AMIBERRY
-	write_log("preinit_shm\n");
-#endif
 	uae_u64 total64;
 	uae_u64 totalphys64;
 #ifdef _WIN32
@@ -252,18 +251,22 @@ bool preinit_shm (void)
 #ifdef _WIN32
 		VirtualFree (natmem_reserved, 0, MEM_RELEASE);
 #else
-#ifdef AMIBERRY
 		free (natmem_reserved);
-#endif
 #endif
 	natmem_reserved = NULL;
 	natmem_offset = NULL;
-	GetSystemInfo (&si);
-#ifdef AMIBERRY
-	max_allowed_mman = 2048;
+#if 0
+	if (p96mem_offset) {
+#ifdef _WIN32
+		VirtualFree (p96mem_offset, 0, MEM_RELEASE);
 #else
-	max_allowed_mman = 512 + 256;
+		free (p96mem_offset);
 #endif
+	}
+	p96mem_offset = NULL;
+#endif
+	GetSystemInfo (&si);
+	max_allowed_mman = 512 + 256;
 #if 1
 	if (os_64bit) {
 //#ifdef WIN64
@@ -319,12 +322,7 @@ bool preinit_shm (void)
 		if (size64 > MAXZ3MEM32)
 			size64 = MAXZ3MEM32;
 	}
-#ifdef AMIBERRY
-	/* FIXME: check */
-	if (maxmem == 0) {
-#else
 	if (maxmem < 0) {
-#endif
 		size64 = MAXZ3MEM64;
 		if (!os_64bit) {
 			if (totalphys64 < 1536 * 1024 * 1024)
@@ -333,12 +331,12 @@ bool preinit_shm (void)
 				max_allowed_mman = 256;
 		}
 	} else if (maxmem > 0) {
-		size64 = maxmem * 1024 * 1024;
+		size64 = (uae_u64)maxmem * 1024 * 1024;
 	}
 	if (size64 < 8 * 1024 * 1024)
 		size64 = 8 * 1024 * 1024;
-	if (max_allowed_mman * 1024 * 1024 > size64)
-		max_allowed_mman = size64 / (1024 * 1024);
+	if ((uae_u64)max_allowed_mman * 1024 * 1024 > size64)
+		max_allowed_mman = (uae_u32)(size64 / (1024 * 1024));
 
 	uae_u32 natmem_size = (max_allowed_mman + 1) * 1024 * 1024;
 	if (natmem_size < 17 * 1024 * 1024)
@@ -356,8 +354,8 @@ bool preinit_shm (void)
 				  totalphys64 >> 20, total64 >> 20);
 	write_log(_T("MMAN: Attempting to reserve: %u MB\n"), natmem_size >> 20);
 
-	int vm_flags = UAE_VM_32BIT | UAE_VM_WRITE_WATCH;
 #ifdef AMIBERRY
+	int vm_flags = UAE_VM_32BIT | UAE_VM_WRITE_WATCH;
 	const auto jit_compiler = currprefs.cachesize > 0;
 	write_log("NATMEM: jit compiler %d\n", jit_compiler);
 	if (!jit_compiler) {
@@ -386,21 +384,9 @@ bool preinit_shm (void)
 	}
 	if (!natmem_reserved) {
 		unsigned int vaflags = MEM_RESERVE | MEM_WRITE_WATCH;
-#ifdef _WIN32
-#ifdef AMIBERRY
-		OSVERSIONINFO osVersion;
-		osVersion.dwOSVersionInfoSize = sizeof (OSVERSIONINFO);
-		bool os_vista = (osVersion.dwMajorVersion == 6 &&
-						 osVersion.dwMinorVersion == 0);
-#endif
-#ifndef _WIN64
-		if (!os_vista)
-			vaflags |= MEM_TOP_DOWN;
-#endif
-#endif
 		for (;;) {
 #ifdef AMIBERRY
-			natmem_reserved = (uae_u8 *) uae_vm_reserve(natmem_size, vm_flags);
+			natmem_reserved = (uae_u8 *) uae_vm_reserve(natmem_size, vaflags);
 #else
 			natmem_reserved = (uae_u8*)VirtualAlloc (NULL, natmem_size, vaflags, PAGE_READWRITE);
 #endif
@@ -411,7 +397,7 @@ bool preinit_shm (void)
 				write_log (_T("MMAN: Can't allocate 257M of virtual address space!?\n"));
 				natmem_size = 17 * 1024 * 1024;
 #ifdef AMIBERRY
-				natmem_reserved = (uae_u8 *) uae_vm_reserve(natmem_size, vm_flags);
+				natmem_reserved = (uae_u8 *) uae_vm_reserve(natmem_size, vaflags);
 #else
 				natmem_reserved = (uae_u8*)VirtualAlloc (NULL, natmem_size, vaflags, PAGE_READWRITE);
 #endif
@@ -577,13 +563,6 @@ static int doinit_shm (void)
 			end_rtg = aci->start + aci->size;
 		}
 	}
-#ifdef AMIBERRY
-	//write_log("NATMEM: size            0x%08x\n", size);
-	//write_log("NATMEM: z3size        + 0x%08x\n", z3size);
-	write_log("NATMEM: z3rtgmem_size + 0x%08x\n", z3rtgmem_size);
-	//write_log("NATMEM: othersize     + 0x%08x\n", othersize);
-	write_log("NATMEM: totalsize     = 0x%08x\n", totalsize);
-#endif
 
 	// rtg outside of natmem?
 	if (start_rtg > 0 && start_rtg < 0xffffffff && end_rtg > natmem_reserved_size) {
@@ -597,9 +576,6 @@ static int doinit_shm (void)
 			return -1;
 		}
 #ifdef _WIN64
-#ifdef AMIBERRY
-		/* FIXME: Check for FS-UAE. */
-#endif
 		// 64-bit can't do natmem_offset..
 		notify_user(NUMSG_NOMEMORY);
 		return -1;
@@ -641,10 +617,6 @@ static int doinit_shm (void)
 			}
 		}
 	}
-
-#ifdef AMIBERRY
-	write_log("NATMEM: JIT direct compatible: %d\n", jit_direct_compatible_memory);
-#endif
 
 	if (!natmem_offset) {
 		write_log (_T("MMAN: No special area could be allocated! err=%d\n"), GetLastError ());
@@ -1050,10 +1022,6 @@ bool uae_mman_info(addrbank* ab, struct uae_mman_data* md)
 
 void *uae_shmat (addrbank *ab, int shmid, void *shmaddr, int shmflg, struct uae_mman_data *md)
 {
-#ifdef AMIBERRY
-	write_log("uae_shmat shmid %d shmaddr %p, shmflg %d natmem_offset = %p\n",
-			shmid, shmaddr, shmflg, natmem_offset);
-#endif
 	void *result = (void *)-1;
 	bool got = false, readonly = false, maprom = false;
 	int p96special = FALSE;
@@ -1129,7 +1097,7 @@ void *uae_shmat (addrbank *ab, int shmid, void *shmaddr, int shmflg, struct uae_
 	return result;
 }
 
-void unprotect_maprom (void)
+void unprotect_maprom(void)
 {
 	bool protect = false;
 	for (int i = 0; i < MAX_SHMID; i++) {
@@ -1150,7 +1118,7 @@ void unprotect_maprom (void)
 	}
 }
 
-void protect_roms (bool protect)
+void protect_roms(bool protect)
 {
 	if (protect) {
 		// protect only if JIT enabled, always allow unprotect
@@ -1201,7 +1169,6 @@ void mman_set_barriers(bool disable)
 			size += 0x10000;
 		}
 		abprev = ab;
-
 		if (ab && ab->baseaddr == NULL && (ab->flags & ABFLAG_ALLOCINDIRECT)) {
 			unsigned int old;
 			if (disable || !currprefs.cachesize || currprefs.comptrustbyte || currprefs.comptrustword || currprefs.comptrustlong) {
@@ -1213,13 +1180,11 @@ void mman_set_barriers(bool disable)
 					VirtualProtect(addr + natmem_offset, size, ab->protectmode, &old);
 				}
 				write_log("%08x-%08x = access restored (%08x)\n", addr, size, ab->protectmode);
-			}
-			else {
+			} else {
 				if (VirtualProtect(addr + natmem_offset, size, PAGE_NOACCESS, &old)) {
 					ab->protectmode = old;
 					write_log("%08x-%08x = set to no access\n", addr, addr + size);
-				}
-				else {
+				} else {
 					size = 0x1000;
 					if (VirtualProtect(addr + natmem_offset, size, PAGE_NOACCESS, &old)) {
 						ab->protectmode = old;
