@@ -2000,7 +2000,7 @@ static void build_cpufunctbl (void)
 		cpuop_func **tmp = xmalloc(cpuop_func*, 65536);
 		memcpy(tmp, cpufunctbl, sizeof(cpuop_func*) * 65536);
 		for (int i = 0; i < 65536; i++) {
-			int offset = do_byteswap_16(i);
+			int offset = bswap_16(i);
 			cpufunctbl[offset] = tmp[i];
 		}
 		xfree(tmp);
@@ -5384,7 +5384,7 @@ static uae_u32 get_jit_opcode(void)
 	if (currprefs.cpu_compatible) {
 		opcode = get_word_020_prefetchf(m68k_getpc());
 #ifdef HAVE_GET_WORD_UNSWAPPED
-		opcode = do_byteswap_16(opcode);
+		opcode = bswap_16(opcode);
 #endif
 	} else {
 #ifdef HAVE_GET_WORD_UNSWAPPED
@@ -6688,7 +6688,7 @@ void m68k_disasm (uaecptr addr, uaecptr *nextpc, uaecptr lastpc, int cnt)
 		return;
 #ifdef DEBUGGER
 	m68k_disasm_2(buf, MAX_LINEWIDTH * pcnt, addr, NULL, 0, nextpc, cnt, NULL, NULL, lastpc, 0);
-#endif	
+#endif
 	write_log (_T("%s"), buf);
 	xfree (buf);
 }
