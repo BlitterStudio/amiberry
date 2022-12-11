@@ -249,22 +249,17 @@ bool preinit_shm (void)
 	uae_u32 max_allowed_mman;
 
 	if (natmem_reserved)
-#ifdef _WIN32
 		VirtualFree (natmem_reserved, 0, MEM_RELEASE);
-#else
-		free (natmem_reserved);
-#endif
+
 	natmem_reserved = NULL;
 	natmem_offset = NULL;
 
 	GetSystemInfo (&si);
 	max_allowed_mman = 512 + 256;
-
 	if (os_64bit) {
 		// Higher than 2G to support G-REX PCI VRAM
 		max_allowed_mman = 2560;
 	}
-
 	if (maxmem > max_allowed_mman)
 		max_allowed_mman = maxmem;
 
@@ -343,26 +338,19 @@ bool preinit_shm (void)
 				  totalphys64 >> 20, total64 >> 20);
 	write_log(_T("MMAN: Attempting to reserve: %u MB\n"), natmem_size >> 20);
 
-#ifdef AMIBERRY
-	int vm_flags = UAE_VM_32BIT | UAE_VM_WRITE_WATCH;
-	const auto jit_compiler = currprefs.cachesize > 0;
-	write_log("NATMEM: jit compiler %d\n", jit_compiler);
-	if (!jit_compiler) {
-		/* Not using the JIT compiler, so we do not need "32-bit memory". */
-		vm_flags &= ~UAE_VM_32BIT;
-	}
+#if 1
+	natmem_reserved = (uae_u8 *) uae_vm_reserve(natmem_size, UAE_VM_32BIT | UAE_VM_WRITE_WATCH);
+#else
+	natmem_size = 0x20000000;
+	natmem_reserved = (uae_u8 *) uae_vm_reserve_fixed(
+		(void *) 0x90000000, natmem_size, UAE_VM_32BIT | UAE_VM_WRITE_WATCH);
 #endif
-	natmem_reserved = (uae_u8 *) uae_vm_reserve(natmem_size, vm_flags);
 
 	if (!natmem_reserved) {
 		if (natmem_size <= 768 * 1024 * 1024) {
 			uae_u32 p = 0x78000000 - natmem_size;
 			for (;;) {
-#ifdef AMIBERRY
-				natmem_reserved = (uae_u8 *) uae_vm_reserve(natmem_size, vm_flags);
-#else
 				natmem_reserved = (uae_u8*) VirtualAlloc((void*)(intptr_t)p, natmem_size, MEM_RESERVE | MEM_WRITE_WATCH, PAGE_READWRITE);
-#endif
 				if (natmem_reserved)
 					break;
 				p -= 128 * 1024 * 1024;
@@ -374,22 +362,14 @@ bool preinit_shm (void)
 	if (!natmem_reserved) {
 		unsigned int vaflags = MEM_RESERVE | MEM_WRITE_WATCH;
 		for (;;) {
-#ifdef AMIBERRY
-			natmem_reserved = (uae_u8 *) uae_vm_reserve(natmem_size, vaflags);
-#else
 			natmem_reserved = (uae_u8*)VirtualAlloc (NULL, natmem_size, vaflags, PAGE_READWRITE);
-#endif
 			if (natmem_reserved)
 				break;
 			natmem_size -= 64 * 1024 * 1024;
 			if (!natmem_size) {
 				write_log (_T("MMAN: Can't allocate 257M of virtual address space!?\n"));
 				natmem_size = 17 * 1024 * 1024;
-#ifdef AMIBERRY
-				natmem_reserved = (uae_u8 *) uae_vm_reserve(natmem_size, vaflags);
-#else
 				natmem_reserved = (uae_u8*)VirtualAlloc (NULL, natmem_size, vaflags, PAGE_READWRITE);
-#endif
 				if (!natmem_size) {
 					write_log (_T("MMAN: Can't allocate 17M of virtual address space!? Something is seriously wrong\n"));
 					notify_user(NUMSG_NOMEMORY);
