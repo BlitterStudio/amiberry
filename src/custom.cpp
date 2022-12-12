@@ -421,6 +421,7 @@ int sprite_buffer_res;
 
 uae_u8 cycle_line_slot[MAX_CHIPSETSLOTS + RGA_PIPELINE_ADJUST];
 uae_u16 cycle_line_pipe[MAX_CHIPSETSLOTS + RGA_PIPELINE_ADJUST];
+static uae_u8 cycle_line_slot_last;
 
 static uae_s16 bpl1mod, bpl2mod, bpl1mod_prev, bpl2mod_prev;
 static int bpl1mod_hpos, bpl2mod_hpos;
@@ -5851,12 +5852,12 @@ void compute_vsynctime(void)
 
 	if (currprefs.turbo_emulation) {
 		if (currprefs.turbo_emulation_limit > 0) {
-			vsynctimebase = (int)(syncbase / currprefs.turbo_emulation_limit);
+			vsynctimebase = (frame_time_t)(syncbase / currprefs.turbo_emulation_limit);
 		} else {
 			vsynctimebase = 1;
 		}
 	} else {
-		vsynctimebase = (int)(syncbase / fake_vblank_hz);
+		vsynctimebase = (frame_time_t)(syncbase / fake_vblank_hz);
 	}
 	vsynctimebase_orig = vsynctimebase;
 
@@ -12012,6 +12013,7 @@ static void hsync_handler_pre(bool onvsync)
 	else
 		lol = 0;
 
+	cycle_line_slot_last = cycle_line_slot[maxhpos - 1];
 	set_hpos();
 
 	// to record decisions correctly between end of scanline and start of hsync
@@ -13844,9 +13846,15 @@ writeonly:
 			// - if last cycle was DMA cycle: DMA cycle data
 			// - if last cycle was not DMA cycle: FFFF or some ANDed old data.
 			//
-			int hp = (hpos - 1) % maxhpos;
-			c = cycle_line_slot[hp] & CYCLE_MASK;
-			bmdma = bitplane_dma_access(hp, 0);
+			if (hpos == 0) {
+				int hp = maxhpos - 1;
+				c = cycle_line_slot_last & CYCLE_MASK;
+				bmdma = bitplane_dma_access(hp, 0);
+			} else {
+				int hp = hpos - 1;
+				c = cycle_line_slot[hp] & CYCLE_MASK;
+				bmdma = bitplane_dma_access(hp, 0);
+			}
 			if (aga_mode) {
 				if (bmdma || (c > CYCLE_REFRESH && c < CYCLE_CPU)) {
 					v = regs.chipset_latch_rw;
