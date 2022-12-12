@@ -1177,7 +1177,7 @@ int uae_shmget (uae_key_t key, addrbank *ab, int shmflg)
 	int result = -1;
 
 	if ((key == UAE_IPC_PRIVATE) || ((shmflg & UAE_IPC_CREAT) && (find_shmkey (key) == -1))) {
-		write_log (_T("shmget of size %ud (%udk) for %s (%s)\n"), ab->reserved_size, ab->reserved_size >> 10, ab->label, ab->name);
+		write_log (_T("shmget of size %zd (%zdk) for %s (%s)\n"), ab->reserved_size, ab->reserved_size >> 10, ab->label, ab->name);
 		if ((result = get_next_shmkey ()) != -1) {
 			shmids[result].size = ab->reserved_size;
 			_tcscpy (shmids[result].name, ab->label);
