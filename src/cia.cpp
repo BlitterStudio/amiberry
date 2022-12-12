@@ -42,7 +42,6 @@
 #include "sampler.h"
 #include "dongle.h"
 #include "inputrecord.h"
-#include "autoconf.h"
 //#include "uae/ppc.h"
 #include "rommgr.h"
 #include "scsi.h"
@@ -166,9 +165,7 @@ static int kbstate, kblostsynccnt;
 static evt_t kbhandshakestart;
 static uae_u8 kbcode;
 
-#ifdef SERIAL_PORT
 static uae_u8 serbits;
-#endif
 static int warned = 100;
 
 static struct rtc_msm_data rtc_msm;
@@ -1799,20 +1796,32 @@ static uae_u8 ReadCIAB(uae_u32 addr, uae_u32 *flags)
 	switch (reg) {
 	case 0:
 		tmp = (c->pra & c->dra) | (c->dra ^ 0xff);
-#ifdef SERIAL_PORT
-		if (currprefs.use_serial) {
-			tmp &= 7;
-			tmp |= serial_readstatus(c->dra) & 0xf8;
-		}
+#ifdef PARALLEL_PORT
+		if (isprinter() > 0) {
+			tmp &= ~3; // clear BUSY and PAPEROUT
+			tmp |= 4; // set SELECT
+		} else if (isprinter() < 0) {
+			uae_u8 v;
+			tmp &= ~7;
+			parallel_direct_read_status(&v);
+			tmp |= v & 7;
+		} else if (parallel_port_scsi) {
+			tmp = parallel_port_scsi_read(1, c->pra, c->dra);
+		} else {
 #endif
-		// serial port in output mode
+			// serial port in output mode
 			if (c->t[0].cr & 0x40) {
 				tmp &= ~3;
 				tmp |= (c->sdr_cnt & 1) ? 2 : 0; // clock
 				tmp |= (c->sdr_buf & 0x80) ? 1 : 0; // data
 			}
 			tmp = handle_parport_joystick(1, tmp);
-
+#ifdef PARALLEL_PORT
+		}
+#endif
+#ifdef SERIAL_PORT
+		tmp = serial_readstatus(tmp, c->dra);
+#endif
 		tmp = dongle_cia_read(1, reg, c->pra, tmp);
 #if DONGLE_DEBUG > 0
 		if (notinrom())
@@ -1992,7 +2001,6 @@ static void WriteCIAA(uae_u16 addr, uae_u8 val, uae_u32 *flags)
 	}
 }
 
-#ifdef SERIAL_PORT
 static void write_ciab_serial(uae_u8 ndata, uae_u8 odata, uae_u8 ndir, uae_u8 odir)
 {
 	struct CIA *c = &cia[1];
@@ -2019,7 +2027,6 @@ static void write_ciab_serial(uae_u8 ndata, uae_u8 odata, uae_u8 ndir, uae_u8 od
 		CIA_sync_interrupt(1, icr);
 	}
 }
-#endif
 
 static void WriteCIAB(uae_u16 addr, uae_u8 val, uae_u32 *flags)
 {
@@ -2040,11 +2047,10 @@ static void WriteCIAB(uae_u16 addr, uae_u8 val, uae_u32 *flags)
 			write_log(_T("BFD000 W %02X %s\n"), val, debuginfo(0));
 #endif
 		dongle_cia_write(1, reg, c->dra, val);
-#ifdef SERIAL_PORT
 		write_ciab_serial(val, c->pra, c->dra, c->dra);
 		c->pra = val;
-		if (currprefs.use_serial)
-			serial_writestatus(c->pra, c->dra);
+#ifdef SERIAL_PORT
+		serial_writestatus(c->pra, c->dra);
 #endif
 #ifdef PARALLEL_PORT
 		if (isprinter() < 0) {
@@ -2072,9 +2078,7 @@ static void WriteCIAB(uae_u16 addr, uae_u8 val, uae_u32 *flags)
 			write_log(_T("BFD200 W %02X %s\n"), val, debuginfo(0));
 #endif
 		dongle_cia_write(1, reg, c->pra, val);
-#ifdef SERIAL_PORT
 		write_ciab_serial(c->pra, c->pra, val, c->dra);
-#endif
 		c->dra = val;
 #ifdef SERIAL_PORT
 		if (currprefs.use_serial)
@@ -2124,9 +2128,7 @@ void CIA_reset(void)
 #endif
 
 	kblostsynccnt = 0;
-#ifdef SERIAL_PORT
 	serbits = 0;
-#endif
 	resetwarning_phase = resetwarning_timer = 0;
 	heartbeat_cnt = 0;
 	cia[0].tod_event_state = 0;

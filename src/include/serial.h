@@ -18,12 +18,11 @@ extern void serial_dtr_off (void);
 extern void serial_dtr_on (void);
 
 extern uae_u16 SERDATR (void);
-extern int   SERDATS (void);
 extern void  SERPER (uae_u16 w);
 extern void  SERDAT (uae_u16 w);
 
 extern uae_u8 serial_writestatus (uae_u8, uae_u8);
-extern uae_u8 serial_readstatus (uae_u8);
+extern uae_u8 serial_readstatus (uae_u8, uae_u8);
 extern void serial_uartbreak (int);
 extern void serial_rbf_clear (void);
 extern uae_u16 serdat;
@@ -36,7 +35,6 @@ extern void serial_hsynchandler(void);
 extern void serial_rethink(void);
 
 extern int uaeser_getdatalength (void);
-extern int uaeser_getbytespending (void*);
 extern int uaeser_open (void*, void*, int);
 extern void uaeser_close (void*);
 extern int uaeser_read (void*, uae_u8 *data, uae_u32 len);
