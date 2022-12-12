@@ -409,6 +409,7 @@ OBJS = \
 	src/consolehook.o \
 	src/crc32.o \
 	src/custom.o \
+	src/debug.o \
 	src/def_icons.o \
 	src/devices.o \
 	src/disk.o \

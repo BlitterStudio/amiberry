@@ -54,6 +54,7 @@ LOCAL_SRC_FILES := src/akiko.cpp \
 					src/consolehook.cpp \
                     src/crc32.cpp \
                     src/custom.cpp \
+                    src/debug.cpp \
 					src/def_icons.cpp \
                     src/devices.cpp \
                     src/disk.cpp \

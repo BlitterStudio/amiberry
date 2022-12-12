@@ -46,6 +46,7 @@
 #endif
 #include "threaddep/thread.h"
 //#include "luascript.h"
+#include "crc32.h"
 #include "devices.h"
 #include "rommgr.h"
 //#include "specialmonitors.h"
@@ -94,7 +95,8 @@ extern uae_u16 serper;
 #endif
 
 #ifdef AMIBERRY
-int debug_sprite_mask = 0xff;
+extern int debug_sprite_mask;
+extern void memory_map_dump(void);
 #endif
 
 STATIC_INLINE bool nocustom (void)
@@ -13308,7 +13310,7 @@ void custom_reset(bool hardreset, bool keyboardreset)
 	target_reset();
 	devices_reset(hardreset);
 	write_log(_T("Reset at %08X. Chipset mask = %08X\n"), M68K_GETPC, currprefs.chipset_mask);
-	//memory_map_dump ();
+	memory_map_dump ();
 
 	bool ntsc = currprefs.ntscmode;
 

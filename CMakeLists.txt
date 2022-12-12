@@ -40,6 +40,7 @@ add_executable(${PROJECT_NAME}
 		src/consolehook.cpp
 		src/crc32.cpp
 		src/custom.cpp
+		src/debug.cpp
 		src/def_icons.cpp
 		src/devices.cpp
 		src/disk.cpp
@@ -284,7 +285,7 @@ add_executable(${PROJECT_NAME}
 #		src/jit/compstbl.cpp
 #		src/jit/compemu_fpp.cpp
 #		src/jit/compemu_support.cpp
-		)
+		 "src/debug.cpp")
 
 INCLUDE(FindPkgConfig)
 
