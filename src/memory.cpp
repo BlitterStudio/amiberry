@@ -1708,7 +1708,7 @@ static bool load_kickstart_replacement(void)
 	if (!f)
 		return false;
 #endif
-	
+
 	extendedkickmem_bank.reserved_size = ROM_SIZE_512;
 	extendedkickmem_bank.mask = ROM_SIZE_512 - 1;
 	extendedkickmem_bank.label = _T("rom_e0");
@@ -2866,7 +2866,7 @@ void memory_restore(void)
 {
 	last_address_space_24 = currprefs.address_space_24;
 #ifndef AMIBERRY
-	//cpuboard_map();
+	cpuboard_map();
 #endif
 	map_banks_set(&kickmem_bank, 0xF8, 8, 0);
 }
@@ -3012,12 +3012,12 @@ void memory_reset (void)
 	cpuboard_map();
 #endif
 	map_banks_set(&kickmem_bank, 0xF8, 8, 0);
-#ifndef AMIBERRY
 	if (currprefs.maprom && _tcscmp(currprefs.romfile, _T(":AROS"))) {
+#ifndef AMIBERRY
 		if (!cpuboard_maprom())
+#endif
 			map_banks_set(&kickram_bank, currprefs.maprom >> 16, extendedkickmem2a_bank.allocated_size ? 32 : (extendedkickmem_bank.allocated_size ? 16 : 8), 0);
 	}
-#endif
 	/* map beta Kickstarts at 0x200000/0xC00000/0xF00000 */
 	if (kickmem_bank.baseaddr[0] == 0x11 && kickmem_bank.baseaddr[2] == 0x4e && kickmem_bank.baseaddr[3] == 0xf9 && kickmem_bank.baseaddr[4] == 0x00) {
 		uae_u32 addr = kickmem_bank.baseaddr[5];
