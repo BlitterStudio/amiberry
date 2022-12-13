@@ -340,6 +340,9 @@ const char* remap_key_map_list_strings[] = {
 };
 
 constexpr int remap_key_map_list_size = std::size(remap_key_map_list);
+
+//#define	MAX_KEYCODES 256
+//static uae_u8 di_keycodes[MAX_INPUT_DEVICES][MAX_KEYCODES];
 static int keyboard_german;
 
 int keyhack (int scancode, int pressed, int num)
@@ -750,10 +753,10 @@ static void close_kb()
 
 static void release_keys(void)
 {
-	//int i, j;
+	SDL_PumpEvents();
 
-	//for (j = 0; j < MAX_INPUT_DEVICES; j++) {
-	//	for (i = 0; i < MAX_KEYCODES; i++) {
+	//for (int j = 0; j < MAX_INPUT_DEVICES; j++) {
+	//	for (int i = 0; i < MAX_KEYCODES; i++) {
 	//		if (di_keycodes[j][i]) {
 	//			di_keycodes[j][i] = 0;
 	//			my_kbd_handler(j, i, 0, true);
