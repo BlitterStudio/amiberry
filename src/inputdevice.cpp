@@ -2973,14 +2973,38 @@ end:
 	if (dir) {
 		if (!ad->picasso_on) {
 			int aw = 0, ah = 0, dx, dy;
-			get_custom_mouse_limits (&aw, &ah, &dx, &dy, dimensioninfo_dbl);
+			get_custom_mouse_limits(&aw, &ah, &dx, &dy, dimensioninfo_dbl);
 			x += dx;
 			y += dy;
+			float dx2, dy2, mx2, my2;
+			getgfxoffset(monid, &dx2, &dy2, &mx2, &my2);
+			if (mx2) {
+				x = (int)(x / mx2);
+			}
+			if (my2) {
+				y = (int)(y / my2);
+			}
+			x += (int)dx2;
+			y += (int)dy2;
 		}
-		if (!dmaen (DMA_SPRITE))
+		else {
+			float dx, dy, mx, my;
+			getgfxoffset(monid, &dx, &dy, &mx, &my);
+			if (mx) {
+				x = (int)(x / mx);
+			}
+			if (my) {
+				y = (int)(y / my);
+			}
+			x -= (int)dx;
+			y -= (int)dy;
+		}
+		if (!dmaen(DMA_SPRITE) && !ad->picasso_on) {
 			setmouseactivexy(0, x, y, 0);
-		else
+		}
+		else {
 			setmouseactivexy(0, x, y, dir);
+		}
 	}
 	return 1;
 }
