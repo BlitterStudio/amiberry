@@ -563,7 +563,9 @@ static void CIA_update_check(void)
 				ovfl[0] = 1;
 			}
 		}
+#ifndef AMIBERRY
 		assert(c->t[0].timer < 0x10000);
+#endif
 
 		// Timer B
 		cc = 0;
@@ -580,7 +582,9 @@ static void CIA_update_check(void)
 				}
 			}
 		}
+#ifndef AMIBERRY
 		assert(c->t[1].timer < 0x10000);
+#endif
 
 		// B INMODE=10 or 11
 		if (ovfl[0] && ((c->t[1].cr & (CR_INMODE | CR_INMODE1 | CR_START)) == (CR_INMODE1 | CR_START) || (c->t[1].cr & (CR_INMODE | CR_INMODE1 | CR_START)) == (CR_INMODE | CR_INMODE1 | CR_START))) {
