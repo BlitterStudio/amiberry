@@ -23,35 +23,45 @@ finish-args:
   - --filesystem=host
   
 modules:
-  - name: amiberry
-    buildsystem: simple
-    build-commands:
-      - make PLATFORM=x86-64
-      - cp amiberry /app/
-      - cp -R abr /app/
-      - cp -R conf /app/
-      - cp -R controllers /app/
-      - cp -R data /app/
-      - cp -R inputrecordings /app/
-      - cp -R kickstarts /app/
-      - cp -R nvram /app/
-      - cp -R savestates /app/
-      - cp -R screenshots /app/
-      - cp -R whdboot /app/
-      - mkdir -p /app/share/metainfo
-      - cp -r com.blitterstudio.amiberry.metainfo.xml /app/share/metainfo
-      - mkdir -p /app/share/applications
-      - cp -r com.blitterstudio.amiberry.desktop /app/share/applications
-      - mkdir -p /app/share/appdata
-      - cp -r com.blitterstudio.amiberry.metainfo.xml /app/share/appdata
-      - mkdir -p /app/share/icons/hicolor/scalable/apps
-      - cp -r com.blitterstudio.amiberry.svg /app/share/icons/hicolor/scalable/apps
+  - name: libmpeg2
+    buildsystem: autotools
     sources:
       - type: archive
-        path: amiberry-ng.tag.gz
+        url: http://libmpeg2.sourceforge.net/files/libmpeg2-0.5.1.tar.gz
+        sha256: dee22e893cb5fc2b2b6ebd60b88478ab8556cb3b93f9a0d7ce8f3b61851871d4
+  - name: amiberry
+    buildsystem: cmake-ninja
+    builddir: true
+    # build-commands:
+    #   - make PLATFORM=x86-64
+    #   - cp amiberry /app/
+    #   - cp -R abr /app/
+    #   - cp -R conf /app/
+    #   - cp -R controllers /app/
+    #   - cp -R data /app/
+    #   - cp -R inputrecordings /app/
+    #   - cp -R kickstarts /app/
+    #   - cp -R nvram /app/
+    #   - cp -R savestates /app/
+    #   - cp -R screenshots /app/
+    #   - cp -R whdboot /app/
+    #   - mkdir -p /app/share/metainfo
+    #   - cp -r com.blitterstudio.amiberry.metainfo.xml /app/share/metainfo
+    #   - mkdir -p /app/share/applications
+    #   - cp -r com.blitterstudio.amiberry.desktop /app/share/applications
+    #   - mkdir -p /app/share/appdata
+    #   - cp -r com.blitterstudio.amiberry.metainfo.xml /app/share/appdata
+    #   - mkdir -p /app/share/icons/hicolor/scalable/apps
+    #   - cp -r com.blitterstudio.amiberry.svg /app/share/icons/hicolor/scalable/apps
+    sources:
+      - type: git
+        # only-arches:
+        #   - "x86-64"
+        url: https://github.com/BlitterStudio/amiberry
+        branch: x86
       - type: file
         path: com.blitterstudio.amiberry.metainfo.xml
       - type: file
         path: com.blitterstudio.amiberry.desktop
-      - type: file
-        path: com.blitterstudio.amiberry.svg
+#      - type: file
+#        path: com.blitterstudio.amiberry.svg
