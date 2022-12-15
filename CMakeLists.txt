@@ -16,6 +16,7 @@ include_directories(
 )
 
 add_subdirectory(external/libguisan)
+add_subdirectory(external/libmpeg2)
 add_definitions(-DAMIBERRY -D_FILE_OFFSET_BITS=64 -DUSE_RENDER_THREAD)
 
 add_executable(${PROJECT_NAME}
@@ -285,24 +286,24 @@ add_executable(${PROJECT_NAME}
 #		src/jit/compstbl.cpp
 #		src/jit/compemu_fpp.cpp
 #		src/jit/compemu_support.cpp
-		 "src/debug.cpp")
+		)
 
 INCLUDE(FindPkgConfig)
 
-PKG_SEARCH_MODULE(SDL2 REQUIRED sdl2)
+PKG_SEARCH_MODULE(SDL2 REQUIRED SDL2)
 PKG_SEARCH_MODULE(SDL2IMAGE REQUIRED SDL2_image>=2.0.0)
 PKG_SEARCH_MODULE(SDL2TTF REQUIRED SDL2_ttf)
 
 find_package(FLAC REQUIRED)
 find_package(mpg123 REQUIRED)
 find_package(PNG REQUIRED)
-find_package(MPEG2)
+find_package(MPEG2 REQUIRED)
 
 INCLUDE_DIRECTORIES(${SDL2_INCLUDE_DIRS} ${SDL2IMAGE_INCLUDE_DIRS})
 TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE ${SDL2_LIBRARIES} ${SDL2IMAGE_LIBRARIES} ${SDL2TTF_LIBRARIES} FLAC::FLAC PNG::PNG mpg123 mpeg2convert mpeg2)
 
-target_include_directories(${PROJECT_NAME} PRIVATE ./external/libguisan/include)
-target_link_libraries(${PROJECT_NAME} PRIVATE guisan)
+target_include_directories(${PROJECT_NAME} PRIVATE ./external/libguisan/include ./external/libmpeg2/decoder ./external/libmpeg2/common)
+target_link_libraries(${PROJECT_NAME} PRIVATE guisan libmpeg2dec)
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 
                    COMMAND ${CMAKE_COMMAND} -E copy_directory
