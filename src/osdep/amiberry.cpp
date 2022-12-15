@@ -3365,6 +3365,14 @@ const TCHAR** uaenative_get_library_dirs(void)
 	return nats;
 }
 
+bool data_dir_exists(char* directory)
+{
+	if (directory == nullptr) return false;
+	std::string data_dir = "/data";
+	std::string check_for = directory + data_dir;
+	return my_existsdir(check_for.c_str());
+}
+
 int main(int argc, char* argv[])
 {
 	struct sigaction action{};
@@ -3373,10 +3381,15 @@ int main(int argc, char* argv[])
 	max_uae_height = 8192;
 
 	// Get startup path
-	auto env_dir = getenv("EXTERNAL_FILES_DIR");
-	if (env_dir != nullptr)
+	auto external_files_dir = getenv("EXTERNAL_FILES_DIR");
+	auto xdg_data_home = getenv("XDG_DATA_HOME");
+	if (external_files_dir != nullptr && data_dir_exists(external_files_dir))
 	{
-		strncpy(start_path_data, getenv("EXTERNAL_FILES_DIR"), MAX_DPATH - 1);
+		strncpy(start_path_data, external_files_dir, MAX_DPATH - 1);
+	}
+	else if (xdg_data_home != nullptr && data_dir_exists(xdg_data_home))
+	{
+		strncpy(start_path_data, xdg_data_home, MAX_DPATH -1);
 	}
 	else
 	{
