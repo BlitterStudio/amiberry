@@ -7,5 +7,5 @@ Comment=An Amiga emulator for Linux
 Categories=Game;Emulator;
 
 Icon=amiberry
-Exec=amiberry
+Exec=amiberry.sh
 Terminal=false

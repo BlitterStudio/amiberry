@@ -1,10 +1,13 @@
-# /usr/bin/cmake -G "Ninja"   -DCMAKE_BUILD_TYPE:STRING="Debug" -DCMAKE_INSTALL_PREFIX:PATH="/mnt/d/Github/amiberry-x86/out/install/WSL-GCC-Debug"  /mnt/d/Github/amiberry-x86/CMakeLists.txt;
+# cmake -G "Ninja" -DCMAKE_BUILD_TYPE:STRING="Debug" -DCMAKE_INSTALL_PREFIX:PATH="/mnt/d/Github/amiberry-x86/out/install/WSL-GCC-Debug"  /mnt/d/Github/amiberry-x86/CMakeLists.txt;
 # cd /mnt/d/Github/amiberry-x86/out/build/WSL-GCC-Debug;/usr/bin/cmake --build /mnt/d/Github/amiberry-x86/out/build/WSL-GCC-Debug --config Debug;
 app-id: com.blitterstudio.amiberry
+branch: x86
 runtime: org.freedesktop.Platform
 runtime-version: "22.08"
 sdk: org.freedesktop.Sdk
-command: amiberry
+command: amiberry.sh
+rename-icon: amiberry
+copy-icon: true
 finish-args:
   - --device=all
   # X11 + XShm access
@@ -24,13 +27,34 @@ finish-args:
   
 modules:
   - name: libmpeg2
-    buildsystem: autotools
+    config-opts:
+      - --disable-static
+    rm-configure: true
+    cleanup:
+      - /bin
+      - /include
+      - /lib/pkgconfig
+      - /lib/*.la
     sources:
       - type: archive
         url: http://libmpeg2.sourceforge.net/files/libmpeg2-0.5.1.tar.gz
         sha256: dee22e893cb5fc2b2b6ebd60b88478ab8556cb3b93f9a0d7ce8f3b61851871d4
+      - type: script
+        dest-filename: autogen.sh
+        commands:
+          - autoreconf -vfi
+
   - name: amiberry
+    only-arches:
+      - x86_64
+    post-install:
+      - install -Dp -m 755 amiberry /app/bin/amiberry
+# these should be moved elsewhere
+
     buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+#    buildsystem: simple
     builddir: true
     # build-commands:
     #   - make PLATFORM=x86-64
@@ -54,14 +78,58 @@ modules:
     #   - mkdir -p /app/share/icons/hicolor/scalable/apps
     #   - cp -r com.blitterstudio.amiberry.svg /app/share/icons/hicolor/scalable/apps
     sources:
-      - type: git
-        # only-arches:
-        #   - "x86-64"
-        url: https://github.com/BlitterStudio/amiberry
-        branch: x86
+#      - type: git
+#        url: https://github.com/BlitterStudio/amiberry
+#        branch: x86
+      - type: dir
+        path: ..
+
+  - name: icons
+    buildsystem: simple
+    build-commands:
+      - for i in 48 64 128 256;do mkdir -p /app/share/icons/hicolor/${i}x${i}/apps;done
+      - for i in 48 64 128 256;do install -Dm644 ${i}x${i}.png /app/share/icons/hicolor/${i}x${i}/apps/amiberry.png;done
+    sources:
       - type: file
         path: com.blitterstudio.amiberry.metainfo.xml
       - type: file
         path: com.blitterstudio.amiberry.desktop
+      - type: file
+        path: 48x48.png
+      - type: file
+        path: 64x64.png
+      - type: file
+        path: 128x128.png
+      - type: file
+        path: 256x256.png
 #      - type: file
 #        path: com.blitterstudio.amiberry.svg
+
+  - name: desktop
+    buildsystem: simple
+    build-commands:
+      - install -D -m644 -t /app/share/applications/ ${FLATPAK_ID}.desktop
+      - install -D -m644 -t /app/share/metainfo/ ${FLATPAK_ID}.metainfo.xml
+      - install -D -m755 -t /app/bin/ amiberry.sh
+      - mkdir -p /app/data
+      - cp -R abr /app/data
+      - cp -R conf /app/data
+      - cp -R controllers /app/data
+      - cp -R data /app/data
+      - cp -R inputrecordings /app/data
+      - cp -R kickstarts /app/data
+      - cp -R nvram /app/data
+      - cp -R savestates /app/data
+      - cp -R screenshots /app/data
+      - cp -R whdboot /app/data
+    sources:
+      - type: file
+        path: com.blitterstudio.amiberry.desktop
+      - type: file
+        path: com.blitterstudio.amiberry.metainfo.xml
+      - type: dir
+        path: ..
+      - type: script
+        dest-filename: amiberry.sh
+        commands:
+          - "if [ ! -e \"$XDG_DATA_HOME/data\" ]; then cp -R /app/data/* $XDG_DATA_HOME; fi; exec /app/bin/amiberry"
