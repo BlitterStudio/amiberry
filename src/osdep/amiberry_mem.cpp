@@ -653,7 +653,7 @@ void free_shm (void)
 {
 	resetmem (true);
 	clear_shm ();
-	for (int i = 0; i < MAX_RAM_BOARDS; i++) {
+	for (int i = 0; i < MAX_RTG_BOARDS; i++) {
 		ortgmem_type[i] = -1;
 	}
 }
