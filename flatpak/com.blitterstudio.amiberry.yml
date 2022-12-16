@@ -6,6 +6,8 @@ sdk: org.freedesktop.Sdk
 command: amiberry.sh
 rename-icon: amiberry
 copy-icon: true
+build-options:
+  no-debuginfo: true
 finish-args:
   - --device=all
   # X11 + XShm access
@@ -65,10 +67,8 @@ modules:
       - install -D -m644 -t /app/share/applications/ ${FLATPAK_ID}.desktop
       - install -D -m644 -t /app/share/metainfo/ ${FLATPAK_ID}.metainfo.xml
       - install -D -m755 -t /app/bin/ amiberry.sh
-      - for i in 32 48 64 128 256;do mkdir -p /app/share/icons/hicolor/${i}x${i}/apps;done
       - for i in 32 48 64 128 256;do install -Dm644 ${i}x${i}.png /app/share/icons/hicolor/${i}x${i}/apps/amiberry.png;done
-#     - mkdir -p /app/share/icons/hicolor/scalable/apps
-#     - cp -r com.blitterstudio.amiberry.svg /app/share/icons/hicolor/scalable/apps
+#     - install -Dm644 com.blitterstudio.amiberry.svg /app/share/icons/hicolor/scalable/apps/${FLATPAK_ID}.svg
       - mkdir -p /app/data
       - cp -R abr /app/data
       - cp -R conf /app/data
