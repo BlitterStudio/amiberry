@@ -1,5 +1,3 @@
-# cmake -G "Ninja" -DCMAKE_BUILD_TYPE:STRING="Debug" -DCMAKE_INSTALL_PREFIX:PATH="/mnt/d/Github/amiberry-x86/out/install/WSL-GCC-Debug"  /mnt/d/Github/amiberry-x86/CMakeLists.txt;
-# cd /mnt/d/Github/amiberry-x86/out/build/WSL-GCC-Debug;/usr/bin/cmake --build /mnt/d/Github/amiberry-x86/out/build/WSL-GCC-Debug --config Debug;
 app-id: com.blitterstudio.amiberry
 branch: x86
 runtime: org.freedesktop.Platform
@@ -54,57 +52,12 @@ modules:
       - -DCMAKE_BUILD_TYPE=Release
     builddir: true
     
-#    buildsystem: simple
-    # build-commands:
-    #   - make PLATFORM=x86-64
-    #   - cp amiberry /app/
-    #   - cp -R abr /app/
-    #   - cp -R conf /app/
-    #   - cp -R controllers /app/
-    #   - cp -R data /app/
-    #   - cp -R inputrecordings /app/
-    #   - cp -R kickstarts /app/
-    #   - cp -R nvram /app/
-    #   - cp -R savestates /app/
-    #   - cp -R screenshots /app/
-    #   - cp -R whdboot /app/
-    #   - mkdir -p /app/share/metainfo
-    #   - cp -r com.blitterstudio.amiberry.metainfo.xml /app/share/metainfo
-    #   - mkdir -p /app/share/applications
-    #   - cp -r com.blitterstudio.amiberry.desktop /app/share/applications
-    #   - mkdir -p /app/share/appdata
-    #   - cp -r com.blitterstudio.amiberry.metainfo.xml /app/share/appdata
-    #   - mkdir -p /app/share/icons/hicolor/scalable/apps
-    #   - cp -r com.blitterstudio.amiberry.svg /app/share/icons/hicolor/scalable/apps
     sources:
-#      - type: git
-#        url: https://github.com/BlitterStudio/amiberry
-#        branch: x86
+#     - type: git
+#       url: https://github.com/BlitterStudio/amiberry
+#       branch: x86
       - type: dir
         path: ..
-
-  - name: icons
-    buildsystem: simple
-    build-commands:
-      - for i in 32 48 64 128 256;do mkdir -p /app/share/icons/hicolor/${i}x${i}/apps;done
-      - for i in 32 48 64 128 256;do install -Dm644 ${i}x${i}.png /app/share/icons/hicolor/${i}x${i}/apps/amiberry.png;done
-    sources:
-      - type: file
-        path: com.blitterstudio.amiberry.metainfo.xml
-      - type: file
-        path: com.blitterstudio.amiberry.desktop
-      - type: file
-        path: 32x32.png
-      - type: file
-        path: 48x48.png
-      - type: file
-        path: 64x64.png
-      - type: file
-        path: 128x128.png
-      - type: file
-        path: 256x256.png
-#      - type: file
-#        path: com.blitterstudio.amiberry.svg
 
   - name: desktop
     buildsystem: simple
@@ -112,6 +65,10 @@ modules:
       - install -D -m644 -t /app/share/applications/ ${FLATPAK_ID}.desktop
       - install -D -m644 -t /app/share/metainfo/ ${FLATPAK_ID}.metainfo.xml
       - install -D -m755 -t /app/bin/ amiberry.sh
+      - for i in 32 48 64 128 256;do mkdir -p /app/share/icons/hicolor/${i}x${i}/apps;done
+      - for i in 32 48 64 128 256;do install -Dm644 ${i}x${i}.png /app/share/icons/hicolor/${i}x${i}/apps/amiberry.png;done
+#     - mkdir -p /app/share/icons/hicolor/scalable/apps
+#     - cp -r com.blitterstudio.amiberry.svg /app/share/icons/hicolor/scalable/apps
       - mkdir -p /app/data
       - cp -R abr /app/data
       - cp -R conf /app/data
@@ -130,6 +87,22 @@ modules:
         path: com.blitterstudio.amiberry.metainfo.xml
       - type: dir
         path: ..
+      - type: file
+        path: com.blitterstudio.amiberry.metainfo.xml
+      - type: file
+        path: com.blitterstudio.amiberry.desktop
+      - type: file
+        path: 32x32.png
+      - type: file
+        path: 48x48.png
+      - type: file
+        path: 64x64.png
+      - type: file
+        path: 128x128.png
+      - type: file
+        path: 256x256.png
+#     - type: file
+#       path: com.blitterstudio.amiberry.svg
       - type: script
         dest-filename: amiberry.sh
         commands:
