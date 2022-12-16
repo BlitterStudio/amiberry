@@ -49,13 +49,12 @@ modules:
       - x86_64
     post-install:
       - install -Dp -m 755 amiberry /app/bin/amiberry
-# these should be moved elsewhere
-
     buildsystem: cmake-ninja
     config-opts:
       - -DCMAKE_BUILD_TYPE=Release
-#    buildsystem: simple
     builddir: true
+    
+#    buildsystem: simple
     # build-commands:
     #   - make PLATFORM=x86-64
     #   - cp amiberry /app/
@@ -87,8 +86,8 @@ modules:
   - name: icons
     buildsystem: simple
     build-commands:
-      - for i in 48 64 128 256;do mkdir -p /app/share/icons/hicolor/${i}x${i}/apps;done
-      - for i in 48 64 128 256;do install -Dm644 ${i}x${i}.png /app/share/icons/hicolor/${i}x${i}/apps/amiberry.png;done
+      - for i in 32 48 64 128 256;do mkdir -p /app/share/icons/hicolor/${i}x${i}/apps;done
+      - for i in 32 48 64 128 256;do install -Dm644 ${i}x${i}.png /app/share/icons/hicolor/${i}x${i}/apps/amiberry.png;done
     sources:
       - type: file
         path: com.blitterstudio.amiberry.metainfo.xml
