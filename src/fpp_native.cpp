@@ -18,7 +18,9 @@
 #include "sysdeps.h"
 
 #define USE_HOST_ROUNDING 1
+#ifndef AMIBERRY
 #define SOFTFLOAT_CONVERSIONS 0
+#endif
 
 #include "options.h"
 #include "memory.h"
