@@ -118,7 +118,7 @@ uae_u32 uaerandgetseed(void)
 	return randseed;
 }
 
-void my_trim (TCHAR *s)
+void my_trim(TCHAR *s)
 {
 	while (_tcslen (s) > 0 && _tcscspn (s, _T("\t \r\n")) == 0)
 		memmove (s, s + 1, (_tcslen (s + 1) + 1) * sizeof (TCHAR));
@@ -341,6 +341,7 @@ void fixup_cpu (struct uae_prefs *p)
 #else
 	p->cachesize = 0;
 #endif
+
 
 	if (p->immediate_blits && p->waiting_blits) {
 		error_log (_T("Immediate blitter and waiting blits can't be enabled simultaneously.\n"));
@@ -694,8 +695,8 @@ void uae_reset (int hardreset, int keyboardreset)
 {
 #ifdef DEBUGGER
 	if (debug_dma) {
-		record_dma_reset();
-		record_dma_reset();
+		record_dma_reset(0);
+		record_dma_reset(0);
 	}
 #endif
 	currprefs.quitstatefile[0] = changed_prefs.quitstatefile[0] = 0;

@@ -8789,45 +8789,56 @@ static uae_u32 REGPARAM2 mousehack_done (TrapContext *ctx)
 		uaecptr ret = consolehook_beginio(ctx, trap_get_areg(ctx, 1));
 		trap_put_long(ctx, trap_get_areg(ctx, 7) + 4 * 4, ret);
 	} else if (mode == 200) {
-		//uae_u32 v;
-		//// a0 = data, d0 = length, a1 = task, d3 = stack size (in), stack ptr (out)
-		//// a2 = debugdata, d2 = debuglength
-		//// d4 = flags
-		//if ((trap_get_dreg(ctx, 4) & 3) != 1) {
-		//	write_log(_T("unsupported uaedbg version\n"));
-		//	return 0;
-		//}
-		//uae_u32 stack = trap_get_dreg(ctx, 3);
-		//v = debugmem_reloc(trap_get_areg(ctx, 0), trap_get_dreg(ctx, 0),
-		//	trap_get_areg(ctx, 2), trap_get_dreg(ctx, 2),
-		//	trap_get_areg(ctx, 1), &stack);
-		//trap_set_dreg(ctx, 2, stack);
-		//return v;
+#ifdef DEBUGGER
+		uae_u32 v;
+		// a0 = data, d0 = length, a1 = task, d3 = stack size (in), stack ptr (out)
+		// a2 = debugdata, d2 = debuglength
+		// d4 = flags
+		if ((trap_get_dreg(ctx, 4) & 3) != 1) {
+			write_log(_T("unsupported uaedbg version\n"));
+			return 0;
+		}
+		uae_u32 stack = trap_get_dreg(ctx, 3);
+		v = debugmem_reloc(trap_get_areg(ctx, 0), trap_get_dreg(ctx, 0),
+			trap_get_areg(ctx, 2), trap_get_dreg(ctx, 2),
+			trap_get_areg(ctx, 1), &stack);
+		trap_set_dreg(ctx, 2, stack);
+		return v;
+#endif
 	} else if (mode == 201) {
-		//debugmem_break(8);
+#ifdef DEBUGGER
+		debugmem_break(8);
+#endif
 		return 1;
 	} else if (mode == 202) {
 		// a0 = seglist, a1 = name, d2 = lock
-		//debugmem_addsegs(ctx, trap_get_areg(ctx, 0), trap_get_areg(ctx, 1), trap_get_dreg(ctx, 2), true);
+#ifdef DEBUGGER
+		debugmem_addsegs(ctx, trap_get_areg(ctx, 0), trap_get_areg(ctx, 1), trap_get_dreg(ctx, 2), true);
+#endif
 		return 1;
 	} else if (mode == 203) {
 		// a0 = seglist
-		//debugmem_remsegs(trap_get_areg(ctx, 0));
+#ifdef DEBUGGER
+		debugmem_remsegs(trap_get_areg(ctx, 0));
+#endif
 		return 1;
 	} else if (mode == 204 || mode == 206) {
 		// d0 = size, a1 = flags
-		//uae_u32 v = debugmem_allocmem(mode == 206, trap_get_dreg(ctx, 0), trap_get_areg(ctx, 1), trap_get_areg(ctx, 0));
-		//if (v) {
-		//	trap_set_areg(ctx, 0, v);
-		//	return v;
-		//}
-		//else {
-		//	trap_set_areg(ctx, 0, 0);
-		//	trap_set_dreg(ctx, 1, trap_get_areg(ctx, 1));
-		//	return trap_get_dreg(ctx, 0);
-		//}
+#ifdef DEBUGGER
+		uae_u32 v = debugmem_allocmem(mode == 206, trap_get_dreg(ctx, 0), trap_get_areg(ctx, 1), trap_get_areg(ctx, 0));
+		if (v) {
+			trap_set_areg(ctx, 0, v);
+			return v;
+		} else {
+			trap_set_areg(ctx, 0, 0);
+			trap_set_dreg(ctx, 1, trap_get_areg(ctx, 1));
+			return trap_get_dreg(ctx, 0);
+		}
+#endif
 	} else if (mode == 205 || mode == 207) {
-		//return debugmem_freemem(mode == 207, trap_get_areg(ctx, 1), trap_get_dreg(ctx, 0), trap_get_areg(ctx, 0));
+#ifdef DEBUGGER
+		return debugmem_freemem(mode == 207, trap_get_areg(ctx, 1), trap_get_dreg(ctx, 0), trap_get_areg(ctx, 0));
+#endif
 	} else if (mode == 208) {
 		// segtrack: bit 0
 		// fsdebug: bit 1
@@ -8838,18 +8849,25 @@ static uae_u32 REGPARAM2 mousehack_done (TrapContext *ctx)
 		return 0;
 	} else if (mode == 210) {
 		// debug trapcode
-		//debugmem_trap(trap_get_areg(ctx, 0));
+#ifdef DEBUGGER
+		debugmem_trap(trap_get_areg(ctx, 0));
+#endif
 	} else if (mode == 212) {
 		// a0 = seglist, a1 = name, d2 = lock
-		//debugmem_addsegs(ctx, trap_get_areg(ctx, 0), trap_get_areg(ctx, 1), trap_get_dreg(ctx, 2), false);
+#ifdef DEBUGGER
+		debugmem_addsegs(ctx, trap_get_areg(ctx, 0), trap_get_areg(ctx, 1), trap_get_dreg(ctx, 2), false);
+#endif
 		return 1;
 	} else if (mode == 213) {
 		// a0 = seglist
-		//debugmem_remsegs(trap_get_areg(ctx, 0));
+#ifdef DEBUGGER
+		debugmem_remsegs(trap_get_areg(ctx, 0));
+#endif
 		return 1;
 	} else if (mode == 299) {
-		//return debugmem_exit();
-
+#ifdef DEBUGGER
+		return debugmem_exit();
+#endif
 	} else {
 		write_log (_T("Unknown mousehack hook %d\n"), mode);
 	}

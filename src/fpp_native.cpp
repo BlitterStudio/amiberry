@@ -66,7 +66,7 @@ static const double twoto32 = 4294967296.0;
 #define	FPCR_PRECISION_DOUBLE	0x00000080
 #define FPCR_PRECISION_EXTENDED	0x00000000
 
-#ifdef WITH_SOFTFLOAT
+#ifdef SOFTFLOAT_CONVERSIONS
 static struct float_status fs;
 #endif
 static uae_u32 fpu_mode_control = 0;
@@ -1281,7 +1281,7 @@ static void fp_to_pack (fpdata *fpd, uae_u32 *wrd, int dummy)
 
 void fp_init_native(void)
 {
-#ifdef WITH_SOFTFLOAT
+#ifdef SOFTFLOAT_CONVERSIONS
 	set_floatx80_rounding_precision(80, &fs);
 	set_float_rounding_mode(float_round_to_zero, &fs);
 #endif

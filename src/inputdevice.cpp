@@ -2986,8 +2986,7 @@ end:
 			}
 			x += (int)dx2;
 			y += (int)dy2;
-		}
-		else {
+		} else {
 			float dx, dy, mx, my;
 			getgfxoffset(monid, &dx, &dy, &mx, &my);
 			if (mx) {
@@ -3001,8 +3000,7 @@ end:
 		}
 		if (!dmaen(DMA_SPRITE) && !ad->picasso_on) {
 			setmouseactivexy(0, x, y, 0);
-		}
-		else {
+		} else {
 			setmouseactivexy(0, x, y, dir);
 		}
 	}

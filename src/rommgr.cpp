@@ -97,7 +97,7 @@ struct romdata *getromdatabypath (const TCHAR *path)
 	return NULL;
 }
 
-#define NEXT_ROM_ID 300
+#define NEXT_ROM_ID 301
 
 #if NEXT_ROM_ID >= MAX_ROMMGR_ROMS
 #error Increase MAX_ROMMGR_ROMS!
@@ -447,18 +447,18 @@ static struct romdata roms[] = {
 	{ _T("A4091 v40.13"), 40, 13, 40, 13, _T("A4091\0"), 32768, 58, 0, 0, ROMTYPE_A4091, 0, 0, _T("391592-02"),
 	0x54cb9e85, 0x3CE66919,0xF6FD6797,0x4923A12D,0x91B730F1,0xFFB4A7BA },
 
-	{ _T("SupraDrive 2000DMA"), 0, 0, 0, 0, _T("SUPRADMA\0"), 8192, 298, 0, 0, ROMTYPE_SUPRA, 0, 0, NULL,
-	0x0f040976, 0x9faa3201,0xd09e57bf,0xb0e95b45,0x4fff3b90,0xdf219105 },
-	{ _T("SupraDrive AMAB6"), 3, 8, 3, 8, _T("SUPRA\0"), 16384, 121, 0, 0, ROMTYPE_SUPRA, 0, 0, _T("AMAB6"),
-	0xf40bd349, 0x82168556,0x07525067,0xe9263431,0x1fb9c347,0xe737f247 },
-	{ _T("SupraDrive AMAB5"), 3, 0, 3, 0, _T("SUPRA\0"), 16384, 134, 0, 0, ROMTYPE_SUPRA, 0, 0, _T("AMAB5"),
-	0x75e1b343, 0xf15de74b,0x4e2a9c99,0xa6dc4f6c,0x33f64c76,0x8c043d1c },
+	{ _T("SupraDrive AMAB6"), 3, 8, 3, 8, _T("SUPRA\0"), 8192, 121, 0, 0, ROMTYPE_SUPRA, 0, 0, _T("AMAB6"),
+	0x7ce693c2, 0x2f220f99,0xf4c61a81,0x915f04cc,0x8464d8d2,0xa15c65bc },
+	{ _T("SupraDrive AMAB5"), 3, 0, 3, 0, _T("SUPRA\0"), 8192, 134, 0, 0, ROMTYPE_SUPRA, 0, 0, _T("AMAB5"),
+	0xfac9a231, 0xa52290fb,0x56873c55,0x667c608e,0x8fe330ed,0xdefa1669 },
 	{ _T("SupraDrive AMAB4"), 0, 0, 0, 0, _T("SUPRA\0"), 8192, 135, 0, 0, ROMTYPE_SUPRA, 0, 0, _T("AMAB4"),
 	0xde7f3f1c, 0xc0acbfc8,0x6641a6c1,0x024870cc,0x519f8c4c,0xbdfe8c64 },
 	{ _T("SupraDrive AMAB3"), 0, 0, 0, 0, _T("SUPRA\0"), 8192, 136, 0, 0, ROMTYPE_SUPRA, 0, 0, _T("AMAB3"),
 	0x3ead39aa, 0x02fe79ee,0xef423098,0xec6add8c,0xb92f849f,0xc64bcd41 },
 	{ _T("SupraDrive AMAB2"), 0, 0, 0, 0, _T("SUPRA\0"), 8192, 299, 0, 0, ROMTYPE_SUPRA, 0, 0, _T("AMAB2"),
 	0x297c99f3, 0x8e5e8ea9,0xa203c3ad,0x6dd35e57,0xb1b01f38,0x9b31edda },
+	{ _T("SupraDrive 2000DMA (44-25B)"), 0, 0, 0, 0, _T("SUPRADMA\0"), 8192, 298, 0, 0, ROMTYPE_SUPRA, 0, 0, _T("44-25B"),
+	0x0f040976, 0x9faa3201,0xd09e57bf,0xb0e95b45,0x4fff3b90,0xdf219105 },
 
 	{ _T("Blizzard 1230-I/II"), 0, 0, 0, 0, _T("B1230MKII\0"), 32768, 163, 0, 0, ROMTYPE_CB_B1230MK2, 0, 0, NULL,
 	0xf307cd34, 0xd2f0bfe5, 0x6e84e9f2, 0x2dc11583, 0x30702fd7, 0xd59584ee },
@@ -745,7 +745,9 @@ static struct romdata roms[] = {
 	0x9cf8a7b7, 0x3df4667c,0xd3436367,0x7896da65,0x94994769,0x13bc6746, NULL, NULL },
 	{ _T("M.A.S.T. Fireball"), 0, 0, 0, 0, _T("MASTFB\0"), 8192, 265, 0, 0, ROMTYPE_MASTFB, 0, 0, NULL,
 	0xb475ff5f, 0x63609553,0x98b06812,0x23ade9ac,0x6ee31364,0x5375fce3, NULL, NULL },
-	{ _T("Hardital Synthesis"), 0, 0, 0, 0, _T("SYNTHESIS\0"), 32768, 266, 0, 0, ROMTYPE_SYNTHESIS, 0, 0, NULL,
+	{ _T("Hardital Synthesis v48.5"), 48, 5, 48, 5, _T("SYNTHESIS\0"), 32768, 300, 0, 0, ROMTYPE_SYNTHESIS, 0, 0, NULL,
+	0x9bd8065a, 0x1e886634,0x44d191eb,0x268ac86a,0x0f9fc99f,0x3e91b9dc, NULL, NULL },
+	{ _T("Hardital Synthesis v53.1"), 53, 1, 53, 1, _T("SYNTHESIS\0"), 32768, 266, 0, 0, ROMTYPE_SYNTHESIS, 0, 0, NULL,
 	0x667c7616, 0x0eb1cb38,0x3133f070,0x7cb57944,0xc516f236,0xbad4d4f6, NULL, NULL },
 	{ _T("Combitec HD20A/HD40A"), 0, 0, 0, 0, _T("HD20A\0"), 32768, 267, 0, 0, ROMTYPE_HD20A, 0, 0, NULL,
 	0x0e7391b4, 0x7c365adb,0x3496c479,0x5e94a166,0xd834254a,0x6112d91c, NULL, NULL },

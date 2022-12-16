@@ -10834,7 +10834,6 @@ static frame_time_t mavg(struct mavg_data *md, frame_time_t newval, int size)
 }
 
 #define MAVG_VSYNC_SIZE 128
-
 #ifdef DEBUGGER
 extern int log_vsync, debug_vsync_min_delay, debug_vsync_forced_delay;
 #endif
@@ -13310,7 +13309,7 @@ void custom_reset(bool hardreset, bool keyboardreset)
 	target_reset();
 	devices_reset(hardreset);
 	write_log(_T("Reset at %08X. Chipset mask = %08X\n"), M68K_GETPC, currprefs.chipset_mask);
-	memory_map_dump ();
+	memory_map_dump();
 
 	bool ntsc = currprefs.ntscmode;
 
