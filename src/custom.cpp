@@ -5558,6 +5558,21 @@ static void get_strobe_conflict_shift(int hpos)
 	delay_cycles = unalign << LORES_TO_SHRES_SHIFT;
 }
 
+static uae_u16 BPLCON0_Denise_mask(uae_u16 v)
+{
+	if (!ecs_denise) {
+		v &= ~0x00F1;
+	} else if (!aga_mode) {
+		v &= ~0x00B0;
+	}
+
+	v &= ~((currprefs.cs_color_burst ? 0x0000 : 0x0200) | 0x0100 | 0x0080 | 0x0020);
+#if SPRBORDER
+	v |= 1;
+#endif
+	return v;
+}
+
 static void reset_decisions_hsync_start(void)
 {
 	if (nodraw()) {
@@ -5685,6 +5700,13 @@ static void reset_decisions_hsync_start(void)
 	thisline_decision.bordersprite_seen = issprbrd(-1, bplcon0, bplcon3);
 	thisline_decision.xor_seen = (bplcon4 & 0xff00) != 0;
 	thisline_decision.nr_planes = toscr_nr_planes_agnus;
+
+	// workaround for glitches in faster modes
+	// update Denise state immediately if bitplane DMA is idle and shifters are empty
+	if (!bprun && !plane0 && !plane0p) {
+		bplcon0d = BPLCON0_Denise_mask(bplcon0);
+		toscr_nr_planes_shifter = GET_PLANES(bplcon0d);
+	}
 
 	toscr_nr_planes2 = GET_PLANES(bplcon0d);
 	if (isocs7planes()) {
@@ -8058,21 +8080,6 @@ static void BPLxPTL(int hpos, uae_u16 v, int num)
 	bplptx[num] = (bplptx[num] & 0xffff0000) | (v & 0x0000fffe);
 	dcheck_is_blit_dangerous ();
 	//write_log (_T("%d:%d:BPL%dPTL %08X COP=%08x\n"), hpos, vpos, num, bplpt[num], cop_state.ip);
-}
-
-static uae_u16 BPLCON0_Denise_mask(uae_u16 v)
-{
-	if (!ecs_denise) {
-		v &= ~0x00F1;
-	} else if (!aga_mode) {
-		v &= ~0x00B0;
-	}
-
-	v &= ~((currprefs.cs_color_burst ? 0x0000 : 0x0200) | 0x0100 | 0x0080 | 0x0020);
-#if SPRBORDER
-	v |= 1;
-#endif
-	return v;
 }
 
 static void BPLCON0_Denise(int hpos, uae_u16 v)
