@@ -2119,6 +2119,9 @@ static void update_68k_cycles (void)
 		}
 	}
 	cycles_mult &= ~0x7f;
+	if (cycles_mult < 0x80) {
+		cycles_mult = 0x80;
+	}
 
 	currprefs.cpu_clock_multiplier = changed_prefs.cpu_clock_multiplier;
 	currprefs.cpu_frequency = changed_prefs.cpu_frequency;
@@ -5910,6 +5913,7 @@ static void m68k_run_3ce (void)
 		check_debugger();
 		TRY(prb) {
 			while (!exit) {
+				evt_t c = get_cycles();
 				r->instruction_pc = m68k_getpc();
 				r->opcode = get_iword_cache_040(0);
 				// "prefetch"
@@ -5927,13 +5931,16 @@ static void m68k_run_3ce (void)
 						exit = true;
 				}
 
-				regs.instruction_cnt++;
 				// workaround for situation when all accesses are cached
-				extracycles++;
-				if (extracycles >= 8) {
-					extracycles = 0;
-					x_do_cycles(CYCLE_UNIT);
+				if (c == get_cycles()) {
+					extracycles++;
+					if (extracycles >= 4) {
+						extracycles = 0;
+						x_do_cycles(CYCLE_UNIT);
+					}
 				}
+
+				regs.instruction_cnt++;
 			}
 		} CATCH(prb) {
 			bus_error();
@@ -5970,10 +5977,10 @@ static void m68k_run_3p(void)
 
 				(*cpufunctbl_noret[r->opcode])(r->opcode);
 
-				cpu_cycles = 1 * CYCLE_UNIT;
+				cpu_cycles = 2 * CYCLE_UNIT;
 				cycles = adjust_cycles(cpu_cycles);
 				regs.instruction_cnt++;
-				do_cycles(cycles);
+				x_do_cycles(cycles);
 
 				if (r->spcflags) {
 					if (do_specialties(0))
