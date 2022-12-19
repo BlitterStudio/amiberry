@@ -16,7 +16,7 @@
 #include "traps.h"
 
 #define UAEMAJOR 5
-#define UAEMINOR 5
+#define UAEMINOR 4
 #define UAESUBREV 0
 
 #define MAX_AMIGADISPLAYS 1
@@ -392,13 +392,8 @@ struct apmode
 #define MAX_LUA_STATES 16
 
 
-#define MAX_FILTERDATA 3
-#define GF_NORMAL 0
-#define GF_RTG 1
-#define GF_INTERLACE 2
 struct gfx_filterdata
 {
-	int enable;
 	int gfx_filter;
 	TCHAR gfx_filtershader[2 * MAX_FILTERSHADERS + 1][MAX_DPATH];
 	TCHAR gfx_filtermask[2 * MAX_FILTERSHADERS + 1][MAX_DPATH];
@@ -423,7 +418,6 @@ struct gfx_filterdata
 	int gfx_filter_autoscale;
 	int gfx_filter_integerscalelimit;
 	int gfx_filter_keep_autoscale_aspect;
-	bool changed;
 };
 
 #define MAX_DUPLICATE_EXPANSION_BOARDS 5
@@ -457,7 +451,9 @@ struct boardromconfig
 	int device_order;
 	struct romconfig roms[MAX_BOARD_ROMS];
 };
+
 #define MAX_RTG_BOARDS 1
+
 struct rtgboardconfig
 {
 	int rtg_index;
@@ -497,7 +493,6 @@ struct ramboard
 	bool readonly;
 	bool nodma;
 	bool force16bit;
-	bool chipramtiming;
 	struct boardloadfile lf;
 };
 struct expansion_params
@@ -594,6 +589,7 @@ struct uae_prefs
 	bool sound_stereo_swap_paula;
 	bool sound_stereo_swap_ahi;
 	bool sound_auto;
+	bool sound_cdaudio;
 	bool sound_volcnt;
 
 	int sampler_freq;
@@ -649,7 +645,7 @@ struct uae_prefs
 	int gfx_overscanmode;
 	int gfx_monitorblankdelay;
 
-	struct gfx_filterdata gf[3];
+	struct gfx_filterdata gf[2];
 
 	float rtg_horiz_zoom_mult;
 	float rtg_vert_zoom_mult;
@@ -666,9 +662,6 @@ struct uae_prefs
 	int genlock_mix;
 	int genlock_scale;
 	int genlock_aspect;
-	int genlock_effects;
-	uae_u64 ecs_genlock_features_colorkey_mask[4];
-	uae_u8 ecs_genlock_features_plane_mask;
 	bool genlock_alpha;
 	TCHAR genlock_image_file[MAX_DPATH];
 	TCHAR genlock_video_file[MAX_DPATH];
@@ -749,6 +742,7 @@ struct uae_prefs
 	int cs_mbdmac;
 	bool cs_cdtvcr;
 	bool cs_df0idhw;
+	bool cs_slowmemisfast;
 	bool cs_resetwarning;
 	bool cs_denisenoehb;
 	bool cs_dipagnus;
@@ -769,7 +763,6 @@ struct uae_prefs
 	int cs_hvcsync;
 	int cs_eclockphase;
 	int cs_eclocksync;
-	bool cs_memorypatternfill;
 
 	struct boardromconfig expansionboard[MAX_EXPANSION_BOARDS];
 
@@ -1010,7 +1003,7 @@ extern void cfgfile_target_write_bool(struct zfile* f, const TCHAR* option, bool
 extern void cfgfile_target_dwrite_bool(struct zfile* f, const TCHAR* option, bool b);
 
 extern void cfgfile_write_str(struct zfile* f, const TCHAR* option, const TCHAR* value);
-//extern void cfgfile_write_str_escape(struct zfile* f, const TCHAR* option, const TCHAR* value);
+extern void cfgfile_write_str_escape(struct zfile* f, const TCHAR* option, const TCHAR* value);
 extern void cfgfile_dwrite_str(struct zfile* f, const TCHAR* option, const TCHAR* value);
 extern void cfgfile_dwrite_str_escape(struct zfile* f, const TCHAR* option, const TCHAR* value);
 extern void cfgfile_target_write_str(struct zfile* f, const TCHAR* option, const TCHAR* value);
@@ -1088,7 +1081,7 @@ extern void fixup_cpu(struct uae_prefs* prefs);
 extern void cfgfile_compatibility_romtype(struct uae_prefs* p);
 extern void cfgfile_compatibility_rtg(struct uae_prefs* p);
 extern bool cfgfile_detect_art(struct uae_prefs* p, TCHAR* path);
-extern const TCHAR *cfgfile_getconfigdata(size_t *len);
+extern const TCHAR* cfgfile_getconfigdata(int* len);
 extern bool cfgfile_createconfigstore(struct uae_prefs* p);
 extern void cfgfile_get_shader_config(struct uae_prefs* p, int rtg);
 

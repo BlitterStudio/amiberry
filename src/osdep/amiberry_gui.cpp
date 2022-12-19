@@ -698,10 +698,7 @@ void gui_led(int led, int on, int brightness)
 		temp_fd = open(TEMPERATURE, O_RDONLY);
 
 		if (temp_fd < 0)
-		{
-			write_log("TEMPERATURE: Could not open %s for reading, disabling feature\n", TEMPERATURE);
-			want_temp = 0;
-		}
+			write_log("TEMPERATURE: Could not open %s for reading\n", TEMPERATURE);
 	}
 
 	ioctl(0, KDGETLED, &kbd_led_status);

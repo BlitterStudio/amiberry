@@ -179,7 +179,7 @@ static int do_read (struct cdunit *cdu, struct cdtoc *t, uae_u8 *data, int secto
 		}
 		if (audio && size == 2352)
 			type = CD_TRACK_AUDIO;
-		if (cdrom_read_data(cdu->chd_cdf, sector + (uint32_t)t->offset, tmpbuf, type, false)) {
+		if (cdrom_read_data(cdu->chd_cdf, sector + (uint32_t)t->offset, tmpbuf, type, true)) {
 			memcpy(data, tmpbuf + offset, size);
 			return 1;
 		}
@@ -476,6 +476,7 @@ static bool cdda_play_func2 (struct cdunit *cdu, int *outpos)
 	int silentframes = 0;
 	bool foundsub;
 	int oldtrack = -1;
+	int mode = currprefs.sound_cdaudio;
 	bool restart = false;
 	bool first = true;
 
@@ -489,7 +490,7 @@ static bool cdda_play_func2 (struct cdunit *cdu, int *outpos)
 	cdu->cda_bufon[0] = cdu->cda_bufon[1] = 0;
 	bufnum = 0;
 
-	cdu->cda = new cda_audio (CDDA_BUFFERS, 2352, 44100);
+	cdu->cda = new cda_audio (CDDA_BUFFERS, 2352, 44100, mode != 0);
 
 	while (cdu->cdda_play > 0) {
 
@@ -593,12 +594,16 @@ static bool cdda_play_func2 (struct cdunit *cdu, int *outpos)
 			}
 		}
 
-		while (cdu->cda_bufon[bufnum] && cdu->cdda_play > 0) {
-			if (cd_audio_mode_changed) {
-				restart = true;
-				goto end;
+		if (mode) {
+			while (cdu->cda_bufon[bufnum] && cdu->cdda_play > 0) {
+				if (cd_audio_mode_changed) {
+					restart = true;
+					goto end;
+				}
+				sleep_millis(10);
 			}
-			sleep_millis(10);
+		} else {
+			cdu->cda->wait(bufnum);
 		}
 
 		cdu->cda_bufon[bufnum] = 0;
@@ -698,12 +703,22 @@ static bool cdda_play_func2 (struct cdunit *cdu, int *outpos)
 			if (idleframes <= 0)
 				cdu->cd_last_pos = cdda_pos;
 
-			if (cdu->cda_bufon[0] == 0 && cdu->cda_bufon[1] == 0) {
+			if (mode) {
+				if (cdu->cda_bufon[0] == 0 && cdu->cda_bufon[1] == 0) {
+					cdu->cda_bufon[bufnum] = 1;
+					next_cd_audio_buffer_callback(1 - bufnum, cdu);
+				}
+				audio_cda_volume(&cdu->cas, cdu->cdda_volume[0], cdu->cdda_volume[1]);
 				cdu->cda_bufon[bufnum] = 1;
-				next_cd_audio_buffer_callback(1 - bufnum, cdu);
+			} else {
+				cdu->cda_bufon[bufnum] = 1;
+				cdu->cda->setvolume (cdu->cdda_volume[0], cdu->cdda_volume[1]);
+				if (!cdu->cda->play (bufnum)) {
+					if (cdu->cdda_play > 0)
+						setstate (cdu, AUDIO_STATUS_PLAY_ERROR, -1);
+					goto end;
+				}
 			}
-			audio_cda_volume(&cdu->cas, cdu->cdda_volume[0], cdu->cdda_volume[1]);
-			cdu->cda_bufon[bufnum] = 1;
 
 			if (first) {
 				first = false;
@@ -734,9 +749,14 @@ static bool cdda_play_func2 (struct cdunit *cdu, int *outpos)
 
 end:
 	*outpos = cdda_pos;
-	next_cd_audio_buffer_callback(-1, cdu);
-	if (restart)
-		audio_cda_new_buffer(&cdu->cas, NULL, -1, -1, NULL, NULL);
+	if (mode) {
+		next_cd_audio_buffer_callback(-1, cdu);
+		if (restart)
+			audio_cda_new_buffer(&cdu->cas, NULL, -1, -1, NULL, NULL);
+	} else {
+		cdu->cda->wait (0);
+		cdu->cda->wait (1);
+	}
 
 	while (cdimage_unpack_active == 1)
 		sleep_millis(10);

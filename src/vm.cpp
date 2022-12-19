@@ -132,6 +132,52 @@ int uae_vm_page_size(void)
 	return page_size;
 }
 
+static void *try_alloc_32bit(uae_u32 size, int native_flags, int native_protect,
+							uae_u8 *p, uae_u8 *p_end)
+{
+	if (p_end <= p) {
+		return NULL;
+	}
+	if ((uintptr_t) p % uae_vm_page_size() != 0) {
+		/* Round up to the nearest page size */
+		p += uae_vm_page_size() - (uintptr_t) p % uae_vm_page_size();
+	}
+	void *address = NULL;
+	int step = uae_vm_page_size();
+	if (size > 1024 * 1024) {
+		/* Reserve some space for smaller allocations */
+		p += 32 * 1024 * 1024;
+		step = 1024 * 1024;
+	}
+#ifdef HAVE_MAP_32BIT
+	address = mmap(0, size, native_protect, native_flags | MAP_32BIT, -1, 0);
+	if (address == MAP_FAILED) {
+		address = NULL;
+	}
+#endif
+	while (address == NULL) {
+		if (p > p_end) {
+			break;
+		}
+#ifdef _WIN32
+		address = VirtualAlloc(p, size, native_flags, native_protect);
+#else
+		address = mmap(p, size, native_protect, native_flags, -1, 0);
+#ifdef LOG_ALLOCATIONS
+		write_log("VM: trying %p step is 0x%x = %p\n", p, step, address);
+#endif
+		if (address == MAP_FAILED) {
+			address = NULL;
+		} else if (((uintptr_t) address) + size > (uintptr_t) 0xffffffff) {
+			munmap(address, size);
+			address = NULL;
+		}
+#endif
+		p += step;
+	}
+	return address;
+}
+
 static void *uae_vm_alloc_with_flags(uae_u32 size, int flags, int protect)
 {
 	void *address = NULL;
@@ -147,14 +193,14 @@ static void *uae_vm_alloc_with_flags(uae_u32 size, int flags, int protect)
 #endif
 
 #ifdef _WIN32
-	int va_type = MEM_COMMIT | MEM_RESERVE;
+	int native_flags = MEM_COMMIT | MEM_RESERVE;
 	if (flags & UAE_VM_WRITE_WATCH) {
-		va_type |= MEM_WRITE_WATCH;
+		native_flags |= MEM_WRITE_WATCH;
 	}
-	int va_protect = protect_to_native(protect);
+	int native_protect = protect_to_native(protect);
 #else
-	int mmap_flags = MAP_PRIVATE | MAP_ANON;
-	int mmap_prot = protect_to_native(protect);
+	int native_flags = MAP_PRIVATE | MAP_ANON;
+	int native_protect = protect_to_native(protect);
 #endif
 
 #if defined(__x86_64__) || defined(CPU_AARCH64) || defined CPU_AMD64
@@ -163,43 +209,32 @@ static void *uae_vm_alloc_with_flags(uae_u32 size, int flags, int protect)
 	if (flags & UAE_VM_32BIT) {
 		/* Stupid algorithm to find available space, but should
 		 * work well enough when there is not a lot of allocations. */
-		int step = uae_vm_page_size();
-		uae_u8 *p = (uae_u8 *) 0x40000000;
-		uae_u8 *p_end = natmem_reserved - size;
-		if (size > 1024 * 1024) {
-			/* Reserve some space for smaller allocations */
-			p += 32 * 1024 * 1024;
-			step = 1024 * 1024;
+		/* FIXME: Consider allocating a bigger chunk of memory, and manually
+		 * keep track of allocations. */
+
+		if (!address) {
+			address = try_alloc_32bit(
+						size, native_flags, native_protect,
+						(uae_u8 *) 0x40000000, natmem_reserved - size);
 		}
-#ifdef HAVE_MAP_32BIT
-		address = mmap(0, size, mmap_prot, mmap_flags | MAP_32BIT, -1, 0);
-		if (address == MAP_FAILED) {
-			address = NULL;
+
+		if (!address && natmem_reserved < (uae_u8 *) 0x60000000) {
+			address = try_alloc_32bit(
+						size, native_flags, native_protect,
+						(uae_u8 *) natmem_reserved + natmem_reserved_size,
+						(uae_u8 *) 0xffffffff - size + 1);
 		}
-#endif
-		while (address == NULL) {
-			if (p > p_end) {
-				break;
-			}
-#ifdef _WIN32
-			address = VirtualAlloc(p, size, va_type, va_protect);
-#else
-			address = mmap(p, size, mmap_prot, mmap_flags, -1, 0);
-			// write_log("VM: trying %p step is 0x%x = %p\n", p, step, address);
-			if (address == MAP_FAILED) {
-				address = NULL;
-			} else if (((uintptr_t) address) + size > (uintptr_t) 0xffffffff) {
-				munmap(address, size);
-				address = NULL;
-			}
-#endif
-			p += step;
+		if (!address) {
+			address = try_alloc_32bit(
+						size, native_flags, native_protect,
+						(uae_u8 *) 0x20000000,
+						min((uae_u8 *) 0x40000000, natmem_reserved - size));
 		}
 	} else {
 #ifdef _WIN32
-		address = VirtualAlloc(NULL, size, va_type, va_protect);
+		address = VirtualAlloc(NULL, size, native_flags, native_protect);
 #else
-		address = mmap(0, size, mmap_prot, mmap_flags, -1, 0);
+		address = mmap(0, size, native_protect, native_flags, -1, 0);
 		if (address == MAP_FAILED) {
 			address = NULL;
 		}
@@ -340,7 +375,7 @@ void *uae_vm_reserve(uae_u32 size, int flags)
 #else
 	if (true) {
 #endif
-		uintptr_t try_addr = 0x80000000;
+		uintptr_t try_addr = 0xffffffff - size + 1;
 		while (address == NULL) {
 			address = try_reserve(try_addr, size, flags);
 			if (address == NULL) {

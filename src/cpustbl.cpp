@@ -1,14 +1,12 @@
-#include "sysconfig.h"
 #include "sysdeps.h"
 #include "options.h"
 #include "memory.h"
-#include "custom.h"
-#include "events.h"
 #include "newcpu.h"
 #include "cpu_prefetch.h"
 #include "cputbl.h"
 #define SET_ALWAYS_CFLG(x) SET_CFLG(x)
 #define SET_ALWAYS_NFLG(x) SET_NFLG(x)
+
 #ifdef CPUEMU_0
 const struct cputbl op_smalltbl_0[] = {
 { op_0000_0_ff, 0x0000, 4, { 0, 0 }, 0 }, /* OR */

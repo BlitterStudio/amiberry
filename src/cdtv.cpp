@@ -23,7 +23,7 @@
 #include "memory.h"
 #include "custom.h"
 #include "newcpu.h"
-#include "debug.h"
+//#include "debug.h"
 #include "cdtv.h"
 #include "blkdev.h"
 #include "gui.h"
@@ -598,8 +598,8 @@ static void cdrom_command_thread (uae_u8 b)
 		break;
 	case 0x83:
 		if (cdrom_command_cnt_in == 7) {
-			memcpy (cdrom_command_output, MODEL_NAME, uaestrlen(MODEL_NAME)); 
-			cdrom_command_accepted (uaestrlen(MODEL_NAME), s, &cdrom_command_cnt_in);
+			memcpy (cdrom_command_output, MODEL_NAME, strlen (MODEL_NAME)); 
+			cdrom_command_accepted (strlen (MODEL_NAME), s, &cdrom_command_cnt_in);
 			cd_finished = 1;
 		}
 	case 0x84:
@@ -1085,7 +1085,7 @@ void cdtv_getdmadata (uae_u32 *acr)
 	*acr = dmac_acr;
 }
 
-static void checkint_cdtv (void)
+static void checkint (void)
 {
 	int irq = 0;
 
@@ -1102,7 +1102,7 @@ static void checkint_cdtv (void)
 
 void cdtv_scsi_int (void)
 {
-	checkint_cdtv ();
+	checkint ();
 }
 void cdtv_scsi_clear_int (void)
 {
@@ -1111,7 +1111,7 @@ void cdtv_scsi_clear_int (void)
 
 static void rethink_cdtv (void)
 {
-	checkint_cdtv ();
+	checkint ();
 	tp_check_interrupts ();
 }
 
@@ -1137,7 +1137,7 @@ static void CDTV_hsync_handler (void)
 		dma_finished = 0;
 		cdtv_hsync = -1;
 	}
-	checkint_cdtv ();
+	checkint ();
 
 	if (cdrom_command_done) {
 		cdrom_command_done = 0;
@@ -1286,7 +1286,7 @@ static uae_u32 dmac_bget2 (uaecptr addr)
 	case 0x93:
 		//if (cdtvscsi) {
 		//	v = wdscsi_get (&wd_cdtv->wc, wd_cdtv);
-		//	checkint_cdtv ();
+		//	checkint ();
 		//}
 		break;
 	case 0xa1:
@@ -1389,13 +1389,13 @@ static void dmac_bput2 (uaecptr addr, uae_u32 b)
 	case 0x91:
 		//if (cdtvscsi) {
 		//	wdscsi_sasr (&wd_cdtv->wc, b);
-		//	checkint_cdtv ();
+		//	checkint ();
 		//}
 		break;
 	case 0x93:
 		//if (cdtvscsi) {
 		//	wdscsi_put (&wd_cdtv->wc, wd_cdtv, b);
-		//	checkint_cdtv ();
+		//	checkint ();
 		//}
 		break;
 	case 0xa1:
@@ -1419,7 +1419,7 @@ static void dmac_bput2 (uaecptr addr, uae_u32 b)
 	case 0xe4:
 	case 0xe5:
 		dmac_istr = 0;
-		checkint_cdtv ();
+		checkint ();
 		break;
 	case 0xe8:
 	case 0xe9:

@@ -611,12 +611,12 @@ static void setupcursor(void)
 #ifdef AMIBERRY
 
 #else
-	uae_u8 *dptr;
+	uae_u8* dptr;
 	int bpp = 4;
 	int pitch;
 	struct rtgboardconfig *rbc = &currprefs.rtgboards[0];
 
-	if (rbc->rtgmem_type >= GFXBOARD_HARDWARE || D3D_setcursor == NULL)
+	if (rbc->rtgmem_type >= GFXBOARD_HARDWARE || !currprefs.gfx_api)
 		return;
 	gfx_lock ();
 	setupcursor_needed = 1;
@@ -649,6 +649,8 @@ static void disablemouse (void)
 	cursordeactivate = 0;
 	if (!hwsprite)
 		return;
+	//if (!currprefs.gfx_api)
+		//return;
 #ifdef AMIBERRY
 	if (p96_cursor)
 		SDL_FreeCursor(p96_cursor);
@@ -662,8 +664,6 @@ static void mouseupdate(struct AmigaMonitor *mon)
 	struct picasso96_state_struct *state = &picasso96_state[mon->monitor_id];
 	int x = newcursor_x;
 	int y = newcursor_y;
-	float mx = currprefs.gf[1].gfx_filter_horiz_zoom_mult;
-	float my = currprefs.gf[1].gfx_filter_vert_zoom_mult;
 	int forced = 0;
 
 	if (!hwsprite)
@@ -676,15 +676,16 @@ static void mouseupdate(struct AmigaMonitor *mon)
 		}
 	}
 
+	//if (!currprefs.gfx_api)
+		//return;
 #ifdef AMIBERRY
 	SDL_WarpMouseInWindow(mon->sdl_window, x, y);
 #else
-	if (D3D_setcursor) {
-		if (currprefs.gf[1].gfx_filter_autoscale == RTG_MODE_CENTER) {
-			D3D_setcursor(mon->monitor_id, x, y, WIN32GFX_GetWidth(mon), WIN32GFX_GetHeight(mon), mx, my, cursorvisible, mon->scalepicasso == 2);
-		} else {
-			D3D_setcursor(mon->monitor_id, x, y, state->Width, state->Height, mx, my, cursorvisible, false);
-		}
+	if (currprefs.gf[1].gfx_filter_autoscale == RTG_MODE_CENTER) {
+		D3D_setcursor(mon->monitor_id, x, y, WIN32GFX_GetWidth(mon), WIN32GFX_GetHeight(mon), cursorvisible, mon->scalepicasso == 2);
+	} else {
+		D3D_setcursor(mon->monitor_id, x, y, state->Width, state->Height, cursorvisible, false);
+	}
 #endif
 }
 
@@ -1680,7 +1681,7 @@ STATIC_INLINE void putmousepixel (uae_u8 *d, int bpp, int idx)
 #ifdef AMIBERRY
 
 #else
-static void putwinmousepixel (HDC andDC, HDC xorDC, int x, int y, int c, uae_u32 *ct)
+static void putwinmousepixel(HDC andDC, HDC xorDC, int x, int y, int c, uae_u32* ct)
 {
 	if (c == 0) {
 		SetPixel (andDC, x, y, RGB (255, 255, 255));
@@ -1884,7 +1885,7 @@ int picasso_setwincursor(int monid)
 		return 1;
 	}
 #else
-	struct amigadisplay *ad = &adisplays[monid];
+	struct amigadisplay* ad = &adisplays[monid];
 	if (wincursor) {
 		SetCursor(wincursor);
 		return 1;
@@ -2490,7 +2491,7 @@ static void inituaegfx(TrapContext *ctx, uaecptr ABI)
 	if (0) {
 		// FIXME: fix hardware sprite via OpenGL?
 #else
-	if (D3D_setcursor && D3D_setcursor(0, -1, -1, -1, -1, 0, 0, false, false) && USE_HARDWARESPRITE && currprefs.rtg_hardwaresprite) {
+	if (currprefs.gfx_api && D3D_goodenough() > 0 && D3D_setcursor(0, -1, -1, -1, -1, false, false) && USE_HARDWARESPRITE && currprefs.rtg_hardwaresprite) {
 #endif
 		hwsprite = 1;
 		flags |= BIF_HARDWARESPRITE;
@@ -2521,7 +2522,6 @@ static void inituaegfx(TrapContext *ctx, uaecptr ABI)
 	if (USE_DACSWITCH && currprefs.rtg_dacswitch) {
 		flags |= BIF_DACSWITCH;
 	}
-
 	trap_put_long(ctx, ABI + PSSO_BoardInfo_Flags, flags);
 
 	trap_put_word(ctx, ABI + PSSO_BoardInfo_MaxHorResolution + 0, planar.width);
@@ -2870,9 +2870,11 @@ static void init_picasso_screen(int monid)
 	}
 	init_picasso_screen_called = 1;
 #ifdef AMIBERRY
-
+	// printf("FIXME: not calling mman_ResetWatch (p96ram_start + natmem_offset, gfxmem_bank.allocated);\n");
 #else	
-	mman_ResetWatch (gfxmem_bank.start + natmem_offset, gfxmem_bank.allocated_size);
+	//mman_ResetWatch (gfxmem_bank.start + natmem_offset, gfxmem_bank.allocated_size);
+	if (ResetWriteWatch(gfxmem_bank.start + regs.natmem_offset, gfxmem_bank.allocated_size))
+		write_log(_T("ResetWriteWatch() failed, %d\n"), GetLastError());
 #endif
 
 }
@@ -3020,7 +3022,7 @@ static uae_u32 picasso_SetSplitPosition(TrapContext *ctx)
 }
 
 #if defined (CPU_AARCH64) || defined (__x86_64__)
-static void do_xor8(uae_u8 *p, int w, uae_u32 v)
+static void do_xor8 (uae_u8* p, int w, uae_u32 v)
 {
 	while (ALIGN_POINTER_TO32(p) != 7 && w) {
 		*p ^= v;
@@ -3407,7 +3409,7 @@ STATIC_INLINE void PixelWrite(uae_u8 *mem, int bits, uae_u32 fgpen, int Bpp, uae
 * always 16 pixels (one word) and the height is calculated as 2^Size. The data must be shifted up
 * and to the left by XOffset and YOffset pixels at the beginning.
 */
-static uae_u32 REGPARAM2 picasso_BlitPattern(TrapContext *ctx)
+static uae_u32 REGPARAM2 picasso_BlitPattern (TrapContext *ctx)
 {
 	uaecptr rinf = trap_get_areg(ctx, 1);
 	uaecptr pinf = trap_get_areg(ctx, 2);
@@ -5445,11 +5447,11 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 			dstp = gfx_lock_picasso(monid, false);
 		}
 		if (dstp) {
-			maxy = vidinfo->height;
-			if (miny > vidinfo->height - TD_TOTAL_HEIGHT)
-				miny = vidinfo->height - TD_TOTAL_HEIGHT;
 			picasso_statusline(monid, dstp);
 		}
+		maxy = vidinfo->height;
+		if (miny > vidinfo->height - TD_TOTAL_HEIGHT)
+			miny = vidinfo->height - TD_TOTAL_HEIGHT;
 	}
 	if (maxy >= 0) {
 		if (doskip () && p96skipmode == 4) {

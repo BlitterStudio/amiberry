@@ -346,9 +346,9 @@ void alloc_colors_rgb (int rw, int gw, int bw, int rs, int gs, int bs, int aw, i
 		}
 		j += 256;
 
-		rc[i] = doColor(uae_gamma[j][0], rw, rs) | doAlpha(alpha, aw, as);
-		gc[i] = doColor(uae_gamma[j][1], gw, gs) | doAlpha(alpha, aw, as);
-		bc[i] = doColor(uae_gamma[j][2], bw, bs) | doAlpha(alpha, aw, as);
+		rc[i] = doColor (uae_gamma[j][0], rw, rs) | doAlpha (alpha, aw, as);
+		gc[i] = doColor (uae_gamma[j][1], gw, gs) | doAlpha (alpha, aw, as);
+		bc[i] = doColor (uae_gamma[j][2], bw, bs) | doAlpha (alpha, aw, as);
 		if (byte_swap) {
 			if (bpp <= 16) {
 				rc[i] = bswap_16 (rc[i]);
@@ -405,11 +405,6 @@ void alloc_colors64k(int monid, int rw, int gw, int bw, int rs, int gs, int bs, 
 			xcolors[i] |= xcolors[i] * 0x00010001;
 		}
 	}
-	fullblack = 0;
-	//if (gfx_hdr) {
-	//	fullblack = doAlpha(1, aw, as);
-	//}
-
 #if defined(AGA) || defined(GFXFILTER)
 	alloc_colors_rgb (rw, gw, bw, rs, gs, bs, aw, as, alpha, byte_swap, xredcolors, xgreencolors, xbluecolors);
 	/* copy original color table */

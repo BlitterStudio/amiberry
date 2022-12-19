@@ -217,5 +217,3 @@ Thumbs.db
 cmake-build-debug
 VSLinux/.vs
 .vs
-.flatpak-builder/
-.flatpak/

@@ -42,7 +42,7 @@ cda_audio::~cda_audio()
 	}
 }
 
-cda_audio::cda_audio(int num_sectors, int sectorsize, int samplerate)
+cda_audio::cda_audio(int num_sectors, int sectorsize, int samplerate, bool internalmode)
 {
 	active = false;
 	playing = false;
@@ -54,6 +54,9 @@ cda_audio::cda_audio(int num_sectors, int sectorsize, int samplerate)
 		buffers[i] = xcalloc(uae_u8, num_sectors * ((bufsize + 4095) & ~4095));
 	}
 	this->num_sectors = num_sectors;
+
+	if (internalmode)
+		return;
 
 	auto devname = sound_devices[currprefs.soundcard]->name;
 	const Uint8 channels = 2;

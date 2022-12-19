@@ -38,7 +38,7 @@
     <RemoteDebuggerWorkingDirectory>$(RemoteRootDir)/amiberry</RemoteDebuggerWorkingDirectory>
     <DebuggerFlavor>LinuxDebugger</DebuggerFlavor>
     <PreLaunchCommand>export DISPLAY=:0.0</PreLaunchCommand>
-    <RemoteTarget>-774427876;argon (username=, port=22, authentication=Password)</RemoteTarget>
+    <RemoteTarget>402471865;pi400 (username=, port=22, authentication=Password)</RemoteTarget>
     <RemoteDebuggerCommandArguments>
     </RemoteDebuggerCommandArguments>
   </PropertyGroup>

@@ -22,7 +22,7 @@
 #include "blitter.h"
 #include "blit.h"
 #include "savestate.h"
-#include "debug.h"
+//#include "debug.h"
 
 // 1 = logging
 // 2 = no wait detection

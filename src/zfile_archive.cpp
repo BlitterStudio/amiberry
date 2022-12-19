@@ -1177,7 +1177,7 @@ struct zvolume *archive_directory_plain (struct zfile *z)
 		char *an = ua (zai.name);
 		char *data = xmalloc (char, 1 + strlen (an) + 1 + 1 + 1);
 		sprintf (data, "\"%s\"\n", an);
-		zn = addfile (zv, z, _T("s/startup-sequence"), (uae_u8*)data, uaestrlen (data));
+		zn = addfile (zv, z, _T("s/startup-sequence"), (uae_u8*)data, strlen (data));
 		xfree (data);
 		xfree (an);
 	}

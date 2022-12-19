@@ -1215,9 +1215,6 @@
     <ClCompile Include="..\src\osdep\gui\ControllerMap.cpp">
       <Filter>src\osdep\gui</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\debug.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\archivers\7z\7zBuf.h">
@@ -2100,24 +2097,6 @@
       <Filter>src\archivers\chd</Filter>
     </ClInclude>
     <ClInclude Include="..\src\include\uae\uae_pragmas.h">
-      <Filter>src\include\uae</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\include\debug.h">
-      <Filter>src\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\include\debugmem.h">
-      <Filter>src\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\include\uae\api.h">
-      <Filter>src\include\uae</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\include\uae\attributes.h">
-      <Filter>src\include\uae</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\include\uae\log.h">
-      <Filter>src\include\uae</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\include\uae\memory.h">
       <Filter>src\include\uae</Filter>
     </ClInclude>
   </ItemGroup>

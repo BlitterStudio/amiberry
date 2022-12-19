@@ -96,6 +96,10 @@
 #define WITH_THREADED_CPU
 #define FLOPPYBRIDGE
 
+/* #define CUSTOM_SIMPLE */ /* simplified custom chipset emulation */
+/* #define CPUEMU_68000_ONLY */ /* drop 68010+ commands from CPUEMU_0 */
+/* #define ADDRESS_SPACE_24BIT */
+
 /* #define WITH_SCSI_IOCTL */
 /* #define WITH_SCSI_SPTI */
 
@@ -116,7 +120,13 @@
 
 #include <stdint.h>
 
-#if defined(__x86_64__) || defined(CPU_AARCH64) || defined(CPU_AMD64)
+#if defined(__x86_64__) || defined(CPU_AARCH64) || defined CPU_AMD64
+#define CPU_64_BIT 1
+#else
+#undef CPU_64_BIT
+#endif
+
+#if defined(__x86_64__) || defined(CPU_AARCH64) || defined CPU_AMD64
 #define SIZEOF_VOID_P 8
 #else
 #define SIZEOF_VOID_P 4
@@ -263,7 +273,7 @@ typedef int32_t uae_atomic;
 #define SIZEOF_INT 4
 
 /* The number of bytes in a long.  */
-#if defined(__x86_64__) || defined(CPU_AARCH64) || defined(CPU_AMD64)
+#if defined(__x86_64__) || defined(CPU_AARCH64) || defined CPU_AMD64
 #define SIZEOF_LONG 8
 #else
 #define SIZEOF_LONG 4
@@ -574,4 +584,4 @@ typedef char TCHAR;
 #define _wunlink(x)         unlink(x)
 #define _istalnum(x)        isalnum(x)
 
-#define USE_SDL
+

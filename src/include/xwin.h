@@ -18,7 +18,6 @@ typedef int (*allocfunc_type)(int, int, int, xcolnr*);
 
 extern xcolnr xcolors[4096];
 extern uae_u32 p96_rgbx16[65536];
-extern xcolnr fullblack;
 
 extern int graphics_setup(void);
 extern int graphics_init(bool);
@@ -162,8 +161,6 @@ struct amigadisplay
 	volatile bool picasso_requested_on;
 	bool picasso_requested_forced_on;
 	bool picasso_on;
-	bool interlace_on;
-	int gf_index;
 	int picasso_redraw_necessary;
 	int custom_frame_redraw_necessary;
 	int frame_redraw_necessary;

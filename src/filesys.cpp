@@ -38,7 +38,7 @@
 #include "fsusage.h"
 #include "native2amiga.h"
 #include "scsidev.h"
-#include "uaeserial.h"
+//#include "uaeserial.h"
 #include "fsdb.h"
 #include "zfile.h"
 #include "zarchive.h"
@@ -51,6 +51,7 @@
 #include "cdtv.h"
 #include "sana2.h"
 #include "bsdsocket.h"
+#include "uaeserial.h"
 #include "uaeresource.h"
 #include "inputdevice.h"
 #include "clipboard.h"
@@ -67,10 +68,14 @@
 #include "picasso96.h"
 //#include "cpuboard.h"
 #include "rommgr.h"
-#include "debug.h"
+//#include "debug.h"
 //#include "debugmem.h"
 #ifdef RETROPLATFORM
 #include "rp.h"
+#endif
+
+#ifdef AMIBERRY
+static int g_packet_delay = 0;
 #endif
 
 #define KS12_BOOT_HACK 1
@@ -744,13 +749,13 @@ static void striplength (TCHAR *s, int len)
 		return;
 	s[len] = 0;
 }
-static void fixcharset(TCHAR *s)
+static void fixcharset (TCHAR *s)
 {
 	char tmp[MAX_DPATH];
 	if (!s)
 		return;
-	ua_fs_copy(tmp, MAX_DPATH - 1, s, '_');
-	au_fs_copy(s, uaestrlen(tmp) + 1, tmp);
+	ua_fs_copy (tmp, MAX_DPATH - 1, s, '_');
+	au_fs_copy (s, strlen (tmp) + 1, tmp);
 }
 
 TCHAR *validatevolumename (TCHAR *s, const TCHAR *def)
@@ -1785,7 +1790,7 @@ static void set_volume_name(Unit *unit, struct mytimeval *tv)
 	char *s;
 
 	s = ua_fs (unit->ui.volname, -1);
-	namelen = uaestrlen(s);
+	namelen = strlen (s);
 	if (namelen >= 58)
 		namelen = 58;
 	put_byte(unit->volume + 64, namelen);
@@ -2395,14 +2400,6 @@ static void de_recycle_aino (Unit *unit, a_inode *aino)
 	unit->aino_cache_size--;
 }
 
-static void free_aino(a_inode *aino)
-{
-	xfree(aino->aname);
-	xfree(aino->comment);
-	xfree(aino->nname);
-	xfree(aino);
-}
-
 static void dispose_aino (Unit *unit, a_inode **aip, a_inode *aino)
 {
 	int hash = aino->uniq % MAX_AINO_HASH;
@@ -2420,7 +2417,10 @@ static void dispose_aino (Unit *unit, a_inode **aip, a_inode *aino)
 		isofs_dispose_inode (unit->ui.cdfs_superblock, aino->uniq_external);
 	}
 
-	free_aino(aino);
+	xfree (aino->aname);
+	xfree (aino->comment);
+	xfree (aino->nname);
+	xfree (aino);
 }
 
 static void free_all_ainos (Unit *u, a_inode *parent)
@@ -2705,7 +2705,7 @@ static TCHAR *get_nname (Unit *unit, a_inode *base, TCHAR *rel, TCHAR **modified
 	if (found == 0)
 		return found;
 	if (found == rel)
-		return build_nname(base->nname, rel);
+		return build_nname (base->nname, rel);
 
 	*modified_rel = found;
 	return build_nname (base->nname, found);
@@ -2829,49 +2829,41 @@ static void init_child_aino (Unit *unit, a_inode *base, a_inode *aino)
 	aino_test (aino);
 }
 
-static a_inode *new_child_aino(Unit *unit, a_inode *base, TCHAR *rel)
+static a_inode *new_child_aino (Unit *unit, a_inode *base, TCHAR *rel)
 {
 	TCHAR *modified_rel;
 	TCHAR *nn;
 	a_inode *aino = NULL;
 	int isvirtual = unit->volflags & (MYVOLUMEINFO_ARCHIVE | MYVOLUMEINFO_CDFS);
 
-	if (!isvirtual) {
-		aino = fsdb_lookup_aino_aname(base, rel);
-	}
-
-	if (aino == NULL) {
+	if (!isvirtual)
+		aino = fsdb_lookup_aino_aname (base, rel);
+	if (aino == 0) {
 		uae_u64 uniq_ext = 0;
-		nn = get_nname(unit, base, rel, &modified_rel, &uniq_ext);
-		if (nn == NULL) {
-			xfree(modified_rel);
+		nn = get_nname (unit, base, rel, &modified_rel, &uniq_ext);
+		if (nn == 0)
 			return 0;
-		}
 
-		aino = xcalloc(a_inode, 1);
-		if (aino == 0) {
-			xfree(modified_rel);
+		aino = xcalloc (a_inode, 1);
+		if (aino == 0)
 			return 0;
-		}
-
 		aino->uniq_external = uniq_ext;
-		aino->aname = modified_rel ? modified_rel : my_strdup(rel);
+		aino->aname = modified_rel ? modified_rel : my_strdup (rel);
 		aino->nname = nn;
 
 		aino->comment = 0;
 		aino->has_dbentry = 0;
 
-		if (!fill_file_attrs(unit, base, aino)) {
-			free_aino(aino);
+		if (!fill_file_attrs (unit, base, aino)) {
+			xfree (aino);
 			return 0;
 		}
-		if (aino->dir && !isvirtual) {
-			fsdb_clean_dir(aino);
-		}
+		if (aino->dir && !isvirtual)
+			fsdb_clean_dir (aino);
 	}
-	init_child_aino(unit, base, aino);
+	init_child_aino (unit, base, aino);
 
-	recycle_aino(unit, aino);
+	recycle_aino (unit, aino);
 	return aino;
 }
 
@@ -2883,7 +2875,7 @@ static a_inode *create_child_aino (Unit *unit, a_inode *base, TCHAR *rel, int is
 
 	aino->nname = create_nname (unit, base, rel);
 	if (!aino->nname) {
-		free_aino(aino);
+		free (aino);
 		return 0;
 	}
 	aino->aname = my_strdup (rel);
@@ -3214,7 +3206,13 @@ static void filesys_start_thread (UnitInfo *ui, int nr)
 		ui->back_pipe = xmalloc (smp_comm_pipe, 1);
 		init_comm_pipe (ui->unit_pipe, 400, 3);
 		init_comm_pipe (ui->back_pipe, 100, 1);
-		uae_start_thread (_T("filesys"), filesys_thread, (void *)ui, &ui->tid);
+#ifdef AMIBERRY
+		if (!uae_deterministic_mode()) {
+#endif
+			uae_start_thread (_T("filesys"), filesys_thread, (void *)ui, &ui->tid);
+#ifdef AMIBERRY
+		}
+#endif
 	}
 #endif
 	if (isrestore ()) {
@@ -3448,11 +3446,17 @@ static void	do_info(TrapContext *ctx, Unit *unit, dpacket *packet, uaecptr info,
 
 static void action_disk_info(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
+#ifdef AMIBERRY
+	g_packet_delay = 10;
+#endif
 	do_info(ctx, unit, packet, GET_PCK_ARG1 (packet) << 2, true);
 }
 
 static void action_info(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
+#ifdef AMIBERRY
+	g_packet_delay = 10;
+#endif
 	do_info(ctx, unit, packet, GET_PCK_ARG2 (packet) << 2, false);
 }
 
@@ -3716,6 +3720,10 @@ static void action_lock(TrapContext *ctx, Unit *unit, dpacket *packet)
 		mode = SHARED_LOCK;
 	}
 
+#ifdef AMIBERRY
+	g_packet_delay = 2;
+#endif
+
 	a = find_aino(ctx, unit, lock, bstr(ctx, unit, name), &err);
 	if (err == 0 && a->softlink) {
 		err = test_softlink (a);
@@ -3907,6 +3915,9 @@ static void action_free_lock(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
 	uaecptr lock = GET_PCK_ARG1 (packet) << 2;
 	a_inode *a;
+#ifdef AMIBERRY
+	g_packet_delay = 2;
+#endif
 
 	a = aino_from_lock(ctx, unit, lock);
 	if (a == 0) {
@@ -3953,6 +3964,9 @@ static uaecptr action_dup_lock_2(TrapContext *ctx, Unit *unit, dpacket *packet, 
 static void action_dup_lock(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
 	uaecptr lock = GET_PCK_ARG1 (packet) << 2;
+#ifdef AMIBERRY
+	g_packet_delay = 2;
+#endif
 	if (!lock) {
 		PUT_PCK_RES1 (packet, 0);
 		return;
@@ -4047,7 +4061,7 @@ static void get_fileinfo(TrapContext *ctx, Unit *unit, dpacket *packet, uaecptr 
 	put_long_host(buf + 120, entrytype);
 
 	x2 = x = ua_fs (xs, -1);
-	n = uaestrlen(x);
+	n = strlen (x);
 	if (n > 107)
 		n = 107;
 	if (n > abs(currprefs.filesys_max_name))
@@ -4094,7 +4108,7 @@ static void get_fileinfo(TrapContext *ctx, Unit *unit, dpacket *packet, uaecptr 
 		if (!xs)
 			xs= _T("");
 		x2 = x = ua_fs(xs, -1);
-		n = uaestrlen(x);
+		n = strlen(x);
 		if (n > 78)
 			n = 78;
 		put_byte_host(buf + i, n); i++;
@@ -4241,6 +4255,9 @@ static int action_lock_record(TrapContext *ctx, Unit *unit, dpacket *packet, uae
 
 	bool exclusive = mode == REC_EXCLUSIVE || mode == REC_EXCLUSIVE_IMMED;
 
+#ifdef AMIBERRY
+	g_packet_delay = 2;
+#endif
 	write_log (_T("action_lock_record('%s',%d,%d,%d,%d)\n"), k ? k->aino->nname : _T("null"), pos, len, mode, timeout);
 
 	if (!k || mode > REC_SHARED_IMMED) {
@@ -4377,7 +4394,7 @@ static int exalldo(TrapContext *ctx, uaecptr exalldata, uae_u32 exalldatasize, u
 	size2 = 4;
 	if (type >= 1) {
 		size2 += 4;
-		size += uaestrlen(x) + 1;
+		size += strlen (x) + 1;
 		size = (size + 3) & ~3;
 	}
 	if (type >= 2)
@@ -4398,8 +4415,8 @@ static int exalldo(TrapContext *ctx, uaecptr exalldata, uae_u32 exalldatasize, u
 			commentx = _T("");
 		else
 			commentx = aino->comment;
-		comment = ua_fs(commentx, -1);
-		size += uaestrlen(comment) + 1;
+		comment = ua_fs (commentx, -1);
+		size += strlen (comment) + 1;
 		size = (size + 3) & ~3;
 	}
 	if (type >= 7) {
@@ -5008,6 +5025,12 @@ static void do_find(TrapContext *ctx, Unit *unit, dpacket *packet, int mode, int
 			: O_RDWR)
 			| (create ? O_CREAT : 0)
 			| (create == 2 ? O_TRUNC : 0));
+	#ifdef AMIBERRY
+		if (openmode & O_CREAT) {
+			// this can be an expensive operation
+			g_packet_delay = 320;
+		}
+	#endif
 
 		fd = fs_openfile (unit, aino, openmode | O_BINARY);
 		if (fd == NULL) {
@@ -5183,6 +5206,9 @@ static void	action_read(TrapContext *ctx, Unit *unit, dpacket *packet)
 		/* PUT_PCK_RES2 (packet, EINVAL); */
 		return;
 	}
+#ifdef AMIBERRY
+	g_packet_delay = 100;
+#endif
 
 	gui_flicker_led (UNIT_LED(unit), unit->unit, 1);
 
@@ -5309,6 +5335,9 @@ static void action_write(TrapContext *ctx, Unit *unit, dpacket *packet)
 	}
 
 	gui_flicker_led (UNIT_LED(unit), unit->unit, 2);
+#ifdef AMIBERRY
+	g_packet_delay = 320;
+#endif
 
 	if (is_writeprotected(unit) || k->aino->vfso) {
 		PUT_PCK_RES1 (packet, DOS_FALSE);
@@ -5664,6 +5693,9 @@ static void	action_create_dir(TrapContext *ctx, Unit *unit, dpacket *packet)
 	a_inode *aino;
 	int err;
 
+#ifdef AMIBERRY
+	g_packet_delay = 320;
+#endif
 
 	if (is_writeprotected(unit)) {
 		PUT_PCK_RES1 (packet, DOS_FALSE);
@@ -5736,6 +5768,9 @@ static void	action_set_file_size(TrapContext *ctx, Unit *unit, dpacket *packet)
 	if (mode < 0)
 		whence = SEEK_SET;
 
+#ifdef AMIBERRY
+	g_packet_delay = 100;
+#endif
 
 	k = lookup_key (unit, GET_PCK_ARG1 (packet));
 	if (k == 0) {
@@ -5845,6 +5880,9 @@ static void	action_delete_object(TrapContext *ctx, Unit *unit, dpacket *packet)
 	a_inode *a;
 	int err;
 
+#ifdef AMIBERRY
+	g_packet_delay = 320;
+#endif
 
 	if (is_writeprotected(unit)) {
 		PUT_PCK_RES1 (packet, DOS_FALSE);
@@ -6328,6 +6366,9 @@ static void action_get_file_size64(TrapContext *ctx, Unit *unit, dpacket *packet
 		PUT_PCK64_RES2 (packet, ERROR_INVALID_LOCK);
 		return;
 	}
+#ifdef AMIBERRY
+	g_packet_delay = 50;
+#endif
 
 	filesize = key_filesize(k);
 	if (filesize >= 0) {
@@ -7097,8 +7138,20 @@ static void filesys_prepare_reset2 (void)
 			write_comm_pipe_int(uip[i].unit_pipe, 0, 0);
 			write_comm_pipe_int(uip[i].unit_pipe, 0, 0);
 			write_comm_pipe_int(uip[i].unit_pipe, 0, 1);
-			uae_sem_wait (&uip[i].reset_sync_sem);
-			uae_end_thread (&uip[i].tid);
+#ifdef AMIBERRY
+			if (uae_deterministic_mode()) {
+				while (comm_pipe_has_data(uip[i].unit_pipe)) {
+					// process remaining packets until all are done
+					filesys_hsync();
+				}
+			}
+			else {
+#endif
+				uae_sem_wait(&uip[i].reset_sync_sem);
+				uae_end_thread(&uip[i].tid);
+#ifdef AMIBERRY
+			}
+#endif
 		}
 	}
 #endif
@@ -8789,56 +8842,45 @@ static uae_u32 REGPARAM2 mousehack_done (TrapContext *ctx)
 		uaecptr ret = consolehook_beginio(ctx, trap_get_areg(ctx, 1));
 		trap_put_long(ctx, trap_get_areg(ctx, 7) + 4 * 4, ret);
 	} else if (mode == 200) {
-#ifdef DEBUGGER
-		uae_u32 v;
-		// a0 = data, d0 = length, a1 = task, d3 = stack size (in), stack ptr (out)
-		// a2 = debugdata, d2 = debuglength
-		// d4 = flags
-		if ((trap_get_dreg(ctx, 4) & 3) != 1) {
-			write_log(_T("unsupported uaedbg version\n"));
-			return 0;
-		}
-		uae_u32 stack = trap_get_dreg(ctx, 3);
-		v = debugmem_reloc(trap_get_areg(ctx, 0), trap_get_dreg(ctx, 0),
-			trap_get_areg(ctx, 2), trap_get_dreg(ctx, 2),
-			trap_get_areg(ctx, 1), &stack);
-		trap_set_dreg(ctx, 2, stack);
-		return v;
-#endif
+		//uae_u32 v;
+		//// a0 = data, d0 = length, a1 = task, d3 = stack size (in), stack ptr (out)
+		//// a2 = debugdata, d2 = debuglength
+		//// d4 = flags
+		//if ((trap_get_dreg(ctx, 4) & 3) != 1) {
+		//	write_log(_T("unsupported uaedbg version\n"));
+		//	return 0;
+		//}
+		//uae_u32 stack = trap_get_dreg(ctx, 3);
+		//v = debugmem_reloc(trap_get_areg(ctx, 0), trap_get_dreg(ctx, 0),
+		//	trap_get_areg(ctx, 2), trap_get_dreg(ctx, 2),
+		//	trap_get_areg(ctx, 1), &stack);
+		//trap_set_dreg(ctx, 2, stack);
+		//return v;
 	} else if (mode == 201) {
-#ifdef DEBUGGER
-		debugmem_break(8);
-#endif
+		//debugmem_break(8);
 		return 1;
 	} else if (mode == 202) {
 		// a0 = seglist, a1 = name, d2 = lock
-#ifdef DEBUGGER
-		debugmem_addsegs(ctx, trap_get_areg(ctx, 0), trap_get_areg(ctx, 1), trap_get_dreg(ctx, 2), true);
-#endif
+		//debugmem_addsegs(ctx, trap_get_areg(ctx, 0), trap_get_areg(ctx, 1), trap_get_dreg(ctx, 2), true);
 		return 1;
 	} else if (mode == 203) {
 		// a0 = seglist
-#ifdef DEBUGGER
-		debugmem_remsegs(trap_get_areg(ctx, 0));
-#endif
+		//debugmem_remsegs(trap_get_areg(ctx, 0));
 		return 1;
 	} else if (mode == 204 || mode == 206) {
 		// d0 = size, a1 = flags
-#ifdef DEBUGGER
-		uae_u32 v = debugmem_allocmem(mode == 206, trap_get_dreg(ctx, 0), trap_get_areg(ctx, 1), trap_get_areg(ctx, 0));
-		if (v) {
-			trap_set_areg(ctx, 0, v);
-			return v;
-		} else {
-			trap_set_areg(ctx, 0, 0);
-			trap_set_dreg(ctx, 1, trap_get_areg(ctx, 1));
-			return trap_get_dreg(ctx, 0);
-		}
-#endif
+		//uae_u32 v = debugmem_allocmem(mode == 206, trap_get_dreg(ctx, 0), trap_get_areg(ctx, 1), trap_get_areg(ctx, 0));
+		//if (v) {
+		//	trap_set_areg(ctx, 0, v);
+		//	return v;
+		//}
+		//else {
+		//	trap_set_areg(ctx, 0, 0);
+		//	trap_set_dreg(ctx, 1, trap_get_areg(ctx, 1));
+		//	return trap_get_dreg(ctx, 0);
+		//}
 	} else if (mode == 205 || mode == 207) {
-#ifdef DEBUGGER
-		return debugmem_freemem(mode == 207, trap_get_areg(ctx, 1), trap_get_dreg(ctx, 0), trap_get_areg(ctx, 0));
-#endif
+		//return debugmem_freemem(mode == 207, trap_get_areg(ctx, 1), trap_get_dreg(ctx, 0), trap_get_areg(ctx, 0));
 	} else if (mode == 208) {
 		// segtrack: bit 0
 		// fsdebug: bit 1
@@ -8849,30 +8891,27 @@ static uae_u32 REGPARAM2 mousehack_done (TrapContext *ctx)
 		return 0;
 	} else if (mode == 210) {
 		// debug trapcode
-#ifdef DEBUGGER
-		debugmem_trap(trap_get_areg(ctx, 0));
-#endif
+		//debugmem_trap(trap_get_areg(ctx, 0));
 	} else if (mode == 212) {
 		// a0 = seglist, a1 = name, d2 = lock
-#ifdef DEBUGGER
-		debugmem_addsegs(ctx, trap_get_areg(ctx, 0), trap_get_areg(ctx, 1), trap_get_dreg(ctx, 2), false);
-#endif
+		//debugmem_addsegs(ctx, trap_get_areg(ctx, 0), trap_get_areg(ctx, 1), trap_get_dreg(ctx, 2), false);
 		return 1;
 	} else if (mode == 213) {
 		// a0 = seglist
-#ifdef DEBUGGER
-		debugmem_remsegs(trap_get_areg(ctx, 0));
-#endif
+		//debugmem_remsegs(trap_get_areg(ctx, 0));
 		return 1;
 	} else if (mode == 299) {
-#ifdef DEBUGGER
-		return debugmem_exit();
-#endif
+		//return debugmem_exit();
+
 	} else {
 		write_log (_T("Unknown mousehack hook %d\n"), mode);
 	}
 	return 1;
 }
+
+#ifdef AMIBERRY // NL
+static int g_hsync_line = 0;
+#endif
 
 void filesys_vsync (void)
 {
@@ -8998,7 +9037,69 @@ void filesys_vsync (void)
 		setsystime_vblank ();
 		heartbeat_task &= ~1;
 	}
+
+#ifdef AMIBERRY // NL
+	g_hsync_line = 0;
+#endif
 }
+
+#ifdef AMIBERRY // NL
+#ifdef UAE_FILESYS_THREADS
+
+static void run_filesys_iterations(int max_count) {
+	UnitInfo *ui;
+	int count = 0;
+	while (count < max_count) {
+		int last_count = count;
+		for (int i = 0; i < MAX_FILESYSTEM_UNITS; i++) {
+			ui = mountinfo.ui + i;
+			if (!ui->unit_pipe) {
+				continue;
+			}
+			if (!comm_pipe_has_data(ui->unit_pipe)) {
+				continue;
+			}
+			count++;
+			filesys_iteration(ui);
+		}
+		if (count == last_count) {
+			// no more packets were processed
+			break;
+		}
+	}
+}
+
+void filesys_hsync() {
+	if (!uae_deterministic_mode()) {
+		return;
+	}
+	//printf("%d\n", g_hsync_line++);
+	static uint64_t counter = 0;
+	static uint64_t next = 0;
+	while (counter == next) {
+		// set packet delay to default value of 10, which means to process
+		// one packet every other hsync.
+		g_packet_delay = 10;
+		run_filesys_iterations(1);
+		// g_packet_delay was possibly modified by packet handlers
+
+		if (g_packet_delay >= 100) {
+			// ok, for testing, if g_packet_delay is large we try to wait
+			// approximately one frame until processing next package
+			g_packet_delay = 320;
+		}
+
+		if (g_packet_delay < 0) {
+			// should not happen..
+			g_packet_delay = 1;
+		}
+		next = counter + g_packet_delay;
+	}
+	counter++;
+}
+
+#endif // UAE_FILESYS_THREADS
+#endif // AMIBERRY
 
 void filesys_cleanup(void)
 {
@@ -9981,12 +10082,12 @@ static uae_u32 filesys_shellexecute2_process(int mode, TrapContext *ctx)
 			se2->file = strdup(tmp);
 		}
 		int size = ShellExecute2_Struct_Start + ShellExecute2_Struct_Start2;
-		size += 2 * (uaestrlen(se2->file) + 1);
+		size += 2 * (strlen(se2->file) + 1);
 		if (oldks) {
-			size += 4 + uaestrlen(se2->currentdir) + 2; // CD_""\n
+			size += 4 + strlen(se2->currentdir) + 2; // CD_""\n
 		}
-		size += uaestrlen(se2->currentdir) + 1;
-		size += 2 * (uaestrlen(se2->parms) + 1);
+		size += strlen(se2->currentdir) + 1;
+		size += 2 * (strlen(se2->parms) + 1);
 		size += 32; // space for tmp_out
 		size += 256; // space for out buffer
 		size++;

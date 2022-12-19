@@ -20,7 +20,7 @@
 #include "newcpu.h"
 #include "autoconf.h"
 #include "traps.h"
-#include "debug.h"
+//#include "debug.h"
 #include "threaddep/thread.h"
 #include "native2amiga.h"
 #include "inputdevice.h"
@@ -387,16 +387,16 @@ uae_u8 dbg (uaecptr addr)
 * backward.  store pointer at current address
 */
 
-uae_u32 ds_ansi(const uae_char *str)
+uae_u32 ds_ansi (const uae_char *str)
 {
 	int len;
 
 	if (!str)
-		return addr(rt_straddr);
-	len = uaestrlen(str) + 1;
+		return addr (rt_straddr);
+	len = strlen (str) + 1;
 	rt_straddr -= len;
-	strcpy((uae_char*)rtarea_bank.baseaddr + rt_straddr, str);
-	return addr(rt_straddr);
+	strcpy ((uae_char*)rtarea_bank.baseaddr + rt_straddr, str);
+	return addr (rt_straddr);
 }
 
 uae_u32 ds (const TCHAR *str)
@@ -418,7 +418,7 @@ uae_u32 ds_bstr_ansi (const uae_char *str)
 {
 	int len;
  
-	len = uaestrlen(str) + 2;
+	len = strlen (str) + 2;
 	rt_straddr -= len;
 	while (rt_straddr & 3)
 		rt_straddr--;

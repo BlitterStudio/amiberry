@@ -2094,13 +2094,11 @@ struct zfile *zfile_fopen_data (const TCHAR *name, uae_u64 size, const uae_u8 *d
 		return NULL;
 	}
 	l = zfile_create (NULL, name);
-	if (l) {
-		l->name = my_strdup(name ? name : _T(""));
-		l->data = xmalloc(uae_u8, (size_t)size);
-		l->size = size;
-		l->datasize = size;
-		memcpy(l->data, data, (size_t)size);
-	}
+	l->name = my_strdup (name ? name : _T(""));
+	l->data = xmalloc (uae_u8, (size_t)size);
+	l->size = size;
+	l->datasize = size;
+	memcpy (l->data, data, (size_t)size);
 	return l;
 }
 
@@ -2234,15 +2232,6 @@ uae_s64 zfile_fseek (struct zfile *z, uae_s64 offset, int mode)
 		return _fseeki64 (z->f, offset, mode);
 	}
 	return 1;
-}
-
-uae_s32 zfile_fread32(void *b, size_t l1, size_t l2, struct zfile *z)
-{
-	size_t s = zfile_fread(b, l1, l2, z);
-	if (s >= (1 << 31)) {
-		return 0;
-	}
-	return (int)s;
 }
 
 size_t zfile_fread(void *b, size_t l1, size_t l2, struct zfile *z)
@@ -2381,9 +2370,9 @@ TCHAR *zfile_fgets (TCHAR *s, int size, struct zfile *z)
 			p++;
 		}
 		*p = 0;
-		if (size > uaestrlen(s2) + 1)
-			size = uaestrlen(s2) + 1;
-		au_copy(s, size, s2);
+		if (size > strlen (s2) + 1)
+			size = strlen (s2) + 1;
+		au_copy (s, size, s2);
 		return s + size;
 	} else {
 		bool alloc = false;
@@ -2404,9 +2393,9 @@ TCHAR *zfile_fgets (TCHAR *s, int size, struct zfile *z)
 			}
 			return NULL;
 		}
-		if (size > uaestrlen(s2) + 1)
-			size = uaestrlen(s2) + 1;
-		au_copy(s, size, s2);
+		if (size > strlen (s2) + 1)
+			size = strlen (s2) + 1;
+		au_copy (s, size, s2);
 		if (alloc) {
 			xfree(s2);
 		}

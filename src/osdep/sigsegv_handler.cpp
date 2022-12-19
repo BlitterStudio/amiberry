@@ -36,7 +36,7 @@
 #endif
 #include "uae.h"
 
-#if !defined(__MACH__) && !defined(CPU_AMD64) && !defined(__x86_64__)
+#if !defined (__MACH__) && !defined (CPU_AMD64) && !defined (__x86_64__)
 #include <asm/sigcontext.h>
 #else
 #include <sys/ucontext.h>
@@ -545,7 +545,7 @@ void signal_buserror(int signum, siginfo_t* info, void* ptr)
 	exit(1);
 }
 
-#elif defined(__arm__)
+#else
 
 enum {
 	ARM_REG_PC = 15,

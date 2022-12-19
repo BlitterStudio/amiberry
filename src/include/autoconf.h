@@ -133,6 +133,9 @@ extern void filesys_flush_cache (void);
 extern void filesys_free_handles (void);
 extern void filesys_vsync (void);
 extern bool filesys_heartbeat(void);
+#ifdef AMIBERRY
+extern void filesys_hsync(void);
+#endif
 
 extern void filesys_install (void);
 extern void filesys_install_code (void);

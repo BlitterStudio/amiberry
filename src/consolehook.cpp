@@ -103,7 +103,7 @@ uaecptr consolehook_beginio(TrapContext *ctx, uaecptr request)
 		if (len == -1) {
 			dbuf = xmalloc(char, MAX_DPATH);
 			trap_get_string(ctx, dbuf, io_data, MAX_DPATH);
-			len = uaestrlen(dbuf);
+			len = strlen(dbuf);
 		} else {
 			dbuf = xmalloc(char, len);
 			trap_get_bytes(ctx, dbuf, io_data, len);
