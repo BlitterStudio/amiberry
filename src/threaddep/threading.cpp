@@ -76,3 +76,55 @@ SDL_threadID uae_thread_get_id()
 {
 	return SDL_GetThreadID(nullptr);
 }
+
+uae_atomic atomic_and(volatile uae_atomic* p, uae_u32 v)
+{
+#if defined(CPU_AARCH64)
+	__atomic_and_fetch(p, v, __ATOMIC_SEQ_CST);
+#else
+	return __sync_and_and_fetch(p, v);
+#endif
+}
+uae_atomic atomic_or(volatile uae_atomic* p, uae_u32 v)
+{
+#if defined(CPU_AARCH64)
+	__atomic_or_fetch(p, v, __ATOMIC_SEQ_CST);
+#else
+	return __sync_or_and_fetch(p, v);
+#endif
+}
+void atomic_set(volatile uae_atomic* p, uae_u32 v)
+{
+#if defined(CPU_AARCH64)
+	__atomic_store_n(p, v, __ATOMIC_SEQ_CST);
+#else
+	__sync_lock_test_and_set(p, v);
+#endif
+}
+uae_atomic atomic_inc(volatile uae_atomic* p)
+{
+#if defined(CPU_AARCH64)
+	return __atomic_add_fetch(p, 1, __ATOMIC_SEQ_CST);
+#else
+	return __sync_add_and_fetch(p, 1);
+#endif
+}
+uae_atomic atomic_dec(volatile uae_atomic* p)
+{
+#if defined(CPU_AARCH64)
+	return __atomic_sub_fetch(p, 1, __ATOMIC_SEQ_CST);
+#else
+	return __sync_sub_and_fetch(p, 1);
+#endif
+}
+
+uae_u32 atomic_bit_test_and_reset(volatile uae_atomic* p, uae_u32 v)
+{
+	uae_u32 mask = (1 << v);
+#if defined(CPU_AARCH64)
+	uae_u32 res = __atomic_fetch_and(p, ~mask, __ATOMIC_SEQ_CST);
+#else
+	uae_u32 res = __sync_fetch_and_and(p, ~mask);
+#endif
+	return (res & mask);
+}

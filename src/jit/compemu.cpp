@@ -19,9 +19,11 @@
 #define PART_8 1
 #endif
 
+#ifdef USE_JIT_FPU
 extern void comp_fpp_opp();
 extern void comp_fscc_opp();
 extern void comp_fbcc_opp();
+#endif
 
 #ifdef PART_1
 /* OR.B #<data>.B,Dn */

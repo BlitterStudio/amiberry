@@ -16,7 +16,7 @@
 #include "flashrom.h"
 #include "memory.h"
 #include "newcpu.h"
-//#include "debug.h"
+#include "debug.h"
 #include "gui.h"
 
 #define FLASH_LOG 0

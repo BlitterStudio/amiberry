@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 project(amiberry)
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_FLAGS "-fno-pie -fno-PIE -no-pie")
 
 # Needed so that cmake uses our find modules.
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
@@ -15,7 +16,7 @@ include_directories(
 )
 
 add_subdirectory(external/libguisan)
-add_definitions(-DAMIBERRY)
+add_definitions(-DAMIBERRY -D_FILE_OFFSET_BITS=64 -DUSE_RENDER_THREAD)
 
 add_executable(${PROJECT_NAME}
 		src/akiko.cpp
@@ -39,6 +40,7 @@ add_executable(${PROJECT_NAME}
 		src/consolehook.cpp
 		src/crc32.cpp
 		src/custom.cpp
+		src/debug.cpp
 		src/def_icons.cpp
 		src/devices.cpp
 		src/disk.cpp
@@ -288,7 +290,7 @@ add_executable(${PROJECT_NAME}
 
 INCLUDE(FindPkgConfig)
 
-PKG_SEARCH_MODULE(SDL2 REQUIRED sdl2)
+PKG_SEARCH_MODULE(SDL2 REQUIRED SDL2)
 PKG_SEARCH_MODULE(SDL2IMAGE REQUIRED SDL2_image>=2.0.0)
 PKG_SEARCH_MODULE(SDL2TTF REQUIRED SDL2_ttf)
 
@@ -297,9 +299,38 @@ find_package(mpg123 REQUIRED)
 find_package(PNG REQUIRED)
 
 INCLUDE_DIRECTORIES(${SDL2_INCLUDE_DIRS} ${SDL2IMAGE_INCLUDE_DIRS})
-TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE ${SDL2_LIBRARIES} ${SDL2IMAGE_LIBRARIES} FLAC::FLAC PNG::PNG png_static)
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE ${SDL2_LIBRARIES} ${SDL2IMAGE_LIBRARIES} ${SDL2TTF_LIBRARIES} FLAC::FLAC PNG::PNG mpg123 mpeg2convert mpeg2)
 
 target_include_directories(${PROJECT_NAME} PRIVATE ./external/libguisan/include)
 target_link_libraries(${PROJECT_NAME} PRIVATE guisan)
 
-
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory
+                       ${CMAKE_SOURCE_DIR}/abr $<TARGET_FILE_DIR:${PROJECT_NAME}>/abr)
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory
+                       ${CMAKE_SOURCE_DIR}/conf $<TARGET_FILE_DIR:${PROJECT_NAME}>/conf)
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory
+                       ${CMAKE_SOURCE_DIR}/controllers $<TARGET_FILE_DIR:${PROJECT_NAME}>/controllers)
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory
+                       ${CMAKE_SOURCE_DIR}/data $<TARGET_FILE_DIR:${PROJECT_NAME}>/data)
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 
+					COMMAND ${CMAKE_COMMAND} -E copy_directory
+						${CMAKE_SOURCE_DIR}/inputrecordings $<TARGET_FILE_DIR:${PROJECT_NAME}>/inputrecordings)
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory
+                    	${CMAKE_SOURCE_DIR}/kickstarts $<TARGET_FILE_DIR:${PROJECT_NAME}>/kickstarts)
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 
+					COMMAND ${CMAKE_COMMAND} -E copy_directory
+						${CMAKE_SOURCE_DIR}/nvram $<TARGET_FILE_DIR:${PROJECT_NAME}>/nvram)
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory
+                       ${CMAKE_SOURCE_DIR}/savestates $<TARGET_FILE_DIR:${PROJECT_NAME}>/savestates)
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory
+                       ${CMAKE_SOURCE_DIR}/screenshots $<TARGET_FILE_DIR:${PROJECT_NAME}>/screenshots)
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory
+                       ${CMAKE_SOURCE_DIR}/whdboot $<TARGET_FILE_DIR:${PROJECT_NAME}>/whdboot)

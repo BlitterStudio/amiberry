@@ -3,7 +3,7 @@
 *
 * SCSI and SASI emulation (not uaescsi.device)
 *
-* Copyright 2007-2015 Toni Wilen
+* Copyright 2007-2022 Toni Wilen
 *
 */
 
@@ -14,7 +14,7 @@
 #include "filesys.h"
 #include "blkdev.h"
 #include "zfile.h"
-//#include "debug.h"
+#include "debug.h"
 #include "memory.h"
 #include "scsi.h"
 #include "autoconf.h"
@@ -3094,8 +3094,10 @@ static uae_u32 ncr80_bget2(struct soft_scsi *ncr, uaecptr addr, int size)
 		if (ncr->subtype == 4) {
 			if ((addr & 0xc000) == 0xc000) {
 				v = read_684xx_dma(ncr, addr);
-			} else if (addr & 0x8000) {
-				addresstype = (addr & 1) ? 0 : 1;
+			} else if ((addr & 0x8001) == 0x8001) {
+				addresstype = 0;
+			} else if ((addr & 0x8001) == 0x0000) {
+				addresstype = 1;
 			}
 		} else if (ncr->subtype == 3) {
 			if ((addr & 0x8000) && !(addr & 1))
@@ -3111,7 +3113,7 @@ static uae_u32 ncr80_bget2(struct soft_scsi *ncr, uaecptr addr, int size)
 		}
 
 		if (addresstype == 1) {
-			v = ncr->rom[addr & 0x7fff];
+			v = ncr->rom[addr & 0x3fff];
 		} else if (addresstype == 0) {
 			reg = supra_reg(ncr, addr, false);
 			if (reg >= 0)
@@ -4372,7 +4374,7 @@ bool supra_init(struct autoconfig_info *aci)
 			uae_u8 b = ert->subtypes[aci->rc->subtype].autoconfig[i];
 			ew(scsi, i * 4, b);
 		}
-		load_rom_rc(aci->rc, ROMTYPE_SUPRA, 16384, 0, scsi->rom, 32768, LOADROM_EVENONLY_ODDONE | LOADROM_FILL);
+		load_rom_rc(aci->rc, ROMTYPE_SUPRA, 8192, 0, scsi->rom, 16384, LOADROM_EVENONLY_ODDONE);
 	}
 	aci->addrbank = scsi->bank;
 	return true;

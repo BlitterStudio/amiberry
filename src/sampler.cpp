@@ -12,8 +12,6 @@
 #include "custom.h"
 #include "sampler.h"
 
-//#include "dxwrap.h"
-
 #include <sounddep/sound.h>
 
 #include <math.h>
@@ -139,7 +137,7 @@ static void capture_free (void)
 	samplebuffer = nullptr;
 }
 
-static evt oldcycles;
+static evt_t oldcycles;
 static int oldoffset;
 
 uae_u8 sampler_getsample (int channel)

@@ -450,6 +450,7 @@ extern void exception2_fetch(uae_u32 opcode, int offset, int pcoffset);
 extern void m68k_reset(void);
 extern bool cpureset(void);
 extern void cpu_halt(int id);
+extern void cpu_inreset(void);
 extern int cpu_sleep_millis(int ms);
 extern void cpu_change(int newmodel);
 extern void cpu_fallback(int mode);

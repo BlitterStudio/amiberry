@@ -11,13 +11,12 @@
       "buildCommandArgs": "",
       "ctestCommandArgs": "",
       "inheritEnvironments": [ "linux_x64" ],
-      "wslPath": "${defaultWSLPath}",
-      "variables": []
+      "wslPath": "${defaultWSLPath}"
     },
     {
       "name": "WSL-GCC-Release",
       "generator": "Ninja",
-      "configurationType": "RelWithDebInfo",
+      "configurationType": "Release",
       "buildRoot": "${projectDir}\\out\\build\\${name}",
       "installRoot": "${projectDir}\\out\\install\\${name}",
       "cmakeExecutable": "cmake",
@@ -25,8 +24,7 @@
       "buildCommandArgs": "",
       "ctestCommandArgs": "",
       "inheritEnvironments": [ "linux_x64" ],
-      "wslPath": "${defaultWSLPath}",
-      "variables": []
+      "wslPath": "${defaultWSLPath}"
     }
   ]
 }

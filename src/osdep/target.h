@@ -24,8 +24,8 @@
 #define GETBDM(x) (((x) - (((x) / 10000) * 10000)) / 100)
 #define GETBDD(x) ((x) % 100)
 
-#define AMIBERRYVERSION _T("Amiberry v5.5b (2022-12-13)")
-#define AMIBERRYDATE MAKEBD(2022, 12, 13)
+#define AMIBERRYVERSION _T("Amiberry v5.5b (2022-12-19)")
+#define AMIBERRYDATE MAKEBD(2022, 12, 19)
 
 #define IHF_WINDOWHIDDEN 6
 
@@ -134,10 +134,8 @@ extern bool setpaused(int priority);
 extern void unsetminimized(int monid);
 extern void setminimized(int monid);
 
-
 extern void setpriority(int prio);
 void init_colors(int monid);
-
 
 #include <vector>
 #include <string>
@@ -184,76 +182,6 @@ STATIC_INLINE int max(int x, int y)
 {
 	return x > y ? x : y;
 }
-
-#if defined(CPU_AARCH64)
-
-STATIC_INLINE void atomic_and(volatile uae_atomic *p, uae_u32 v)
-{
-	__atomic_and_fetch(p, v, __ATOMIC_SEQ_CST);
-}
-STATIC_INLINE void atomic_or(volatile uae_atomic *p, uae_u32 v)
-{
-	__atomic_or_fetch(p, v, __ATOMIC_SEQ_CST);
-}
-STATIC_INLINE uae_atomic atomic_inc(volatile uae_atomic *p)
-{
-	return __atomic_add_fetch(p, 1, __ATOMIC_SEQ_CST);
-}
-STATIC_INLINE uae_atomic atomic_dec(volatile uae_atomic *p)
-{
-	return __atomic_sub_fetch(p, 1, __ATOMIC_SEQ_CST);
-}
-STATIC_INLINE uae_u32 atomic_bit_test_and_reset(volatile uae_atomic* p, uae_u32 v)
-{
-	uae_u32 mask = (1 << v);
-	uae_u32 res = __atomic_fetch_and(p, ~mask, __ATOMIC_SEQ_CST);
-	return (res & mask);
-}
-STATIC_INLINE void atomic_set(volatile uae_atomic* p, uae_u32 v)
-{
-	__atomic_store_n(p, v, __ATOMIC_SEQ_CST);
-}
-
-#else
-
-STATIC_INLINE uae_u32 atomic_fetch(volatile uae_atomic* p)
-{
-	return *p;
-}
-
-STATIC_INLINE void atomic_and(volatile uae_atomic* p, uae_u32 v)
-{
-	__sync_and_and_fetch(p, v);
-}
-
-STATIC_INLINE void atomic_or(volatile uae_atomic* p, uae_u32 v)
-{
-	__sync_or_and_fetch(p, v);
-}
-
-STATIC_INLINE uae_atomic atomic_inc(volatile uae_atomic* p)
-{
-	return __sync_add_and_fetch(p, 1);
-}
-
-STATIC_INLINE uae_atomic atomic_dec(volatile uae_atomic* p)
-{
-	return __sync_sub_and_fetch(p, 1);
-}
-
-STATIC_INLINE uae_u32 atomic_bit_test_and_reset(volatile uae_atomic* p, uae_u32 v)
-{
-	uae_u32 mask = (1 << v);
-	uae_u32 res = __sync_fetch_and_and(p, ~mask);
-	return (res & mask);
-}
-
-STATIC_INLINE void atomic_set(volatile uae_atomic* p, uae_u32 v)
-{
-	__sync_lock_test_and_set(p, v);
-}
-
-#endif
 
 #ifdef USE_JIT_FPU
 #ifdef __cplusplus
@@ -315,4 +243,3 @@ static inline int uae_deterministic_mode()
 	// Only returns 1 if using netplay mode (not implemented yet)
 	return 0;
 }
-

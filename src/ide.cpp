@@ -19,7 +19,7 @@
 #include "memory.h"
 #include "newcpu.h"
 #include "threaddep/thread.h"
-//#include "debug.h"
+#include "debug.h"
 #include "savestate.h"
 #include "scsi.h"
 #include "ide.h"
@@ -330,8 +330,8 @@ static void ps (struct ide_hdf *ide, int offset, const TCHAR *src, int max)
 	int i, len;
 	char *s;
 
-	s = ua (src);
-	len = strlen (s);
+	s = ua(src);
+	len = uaestrlen(s);
 	for (i = 0; i < max; i += 2) {
 		char c1 = ' ';
 		if (i < len)

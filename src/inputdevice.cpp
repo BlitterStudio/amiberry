@@ -38,7 +38,7 @@
 #include "uae.h"
 #include "picasso96.h"
 //#include "catweasel.h"
-//#include "debug.h"
+#include "debug.h"
 #include "ar.h"
 #include "gui.h"
 #include "disk.h"
@@ -161,6 +161,7 @@ static struct teststore testmode_wait[TESTMODE_MAX];
 static int bouncy;
 static frame_time_t bouncy_cycles;
 static int autopause;
+static int keyboard_reset_seq;
 
 #define HANDLE_IE_FLAG_CANSTOPPLAYBACK 1
 #define HANDLE_IE_FLAG_PLAYBACKEVENT 2
@@ -2985,8 +2986,7 @@ end:
 			}
 			x += (int)dx2;
 			y += (int)dy2;
-		}
-		else {
+		} else {
 			float dx, dy, mx, my;
 			getgfxoffset(monid, &dx, &dy, &mx, &my);
 			if (mx) {
@@ -3000,8 +3000,7 @@ end:
 		}
 		if (!dmaen(DMA_SPRITE) && !ad->picasso_on) {
 			setmouseactivexy(0, x, y, 0);
-		}
-		else {
+		} else {
 			setmouseactivexy(0, x, y, dir);
 		}
 	}
@@ -4161,7 +4160,9 @@ static bool inputdevice_handle_inputcode_immediate(int code, int state)
 	switch(code)
 	{
 		case AKS_ENTERDEBUGGER:
-			//activate_debugger ();
+#ifdef DEBUGGER
+			activate_debugger ();
+#endif
 			return true;
 	}
 	return false;
@@ -4191,15 +4192,15 @@ void inputdevice_add_inputcode (int code, int state, const TCHAR *s)
 	}
 }
 
-void inputdevice_do_keyboard (int code, int state)
+void inputdevice_do_keyboard(int code, int state)
 {
 #ifdef CDTV
 	if (code >= 0x72 && code <= 0x77) { // CDTV keys
-		if (cdtv_front_panel (-1)) {
+		if (cdtv_front_panel(-1)) {
 			// front panel active
 			if (!state)
 				return;
-			cdtv_front_panel (code - 0x72);
+			cdtv_front_panel(code - 0x72);
 			return;
 		}
 	}
@@ -4207,24 +4208,47 @@ void inputdevice_do_keyboard (int code, int state)
 	if (code < 0x80) {
 		uae_u8 key = code | (state ? 0x00 : 0x80);
 		keybuf[key & 0x7f] = (key & 0x80) ? 0 : 1;
+		if (keyboard_reset_seq) {
+			if (!(keybuf[AK_CTRL] || keybuf[AK_RCTRL]) || !keybuf[AK_LAMI] || !keybuf[AK_RAMI]) {
+				memset(keybuf, 0, sizeof(keybuf));
+				send_internalevent(INTERNALEVENT_KBRESET);
+				if (keyboard_reset_seq >= 5 * 50) {
+					custom_reset(true, true);
+					uae_reset(1, 1);
+				} else {
+					if (currprefs.cs_resetwarning && resetwarning_do(0))
+						return;
+					custom_reset(false, true);
+					uae_reset(0, 1);
+				}
+				keyboard_reset_seq = 0;
+			}
+		}
+
 		if (key == AK_RESETWARNING) {
-			resetwarning_do (0);
+			resetwarning_do(0);
 			return;
 		} else if ((keybuf[AK_CTRL] || keybuf[AK_RCTRL]) && keybuf[AK_LAMI] && keybuf[AK_RAMI]) {
 			int r = keybuf[AK_LALT] | keybuf[AK_RALT];
-			if (!r && currprefs.cs_resetwarning && resetwarning_do (1))
-				return;
-			memset (keybuf, 0, sizeof (keybuf));
-			send_internalevent (INTERNALEVENT_KBRESET);
-			uae_reset (r, 1);
+			if (r) {
+				send_internalevent(INTERNALEVENT_KBRESET);
+				uae_reset(1, 1);
+				keyboard_reset_seq = 0;
+			} else {
+				keyboard_reset_seq = 1;
+				if (!currprefs.cs_resetwarning || !resetwarning_do(0)) {
+					custom_reset(false, true);
+					cpu_inreset();
+				}
+			}
 		}
-		if (record_key ((uae_u8)((key << 1) | (key >> 7)))) {
+		if (record_key((uae_u8)((key << 1) | (key >> 7)))) {
 			if (inputdevice_logging & 1)
-				write_log (_T("Amiga key %02X %d\n"), key & 0x7f, key >> 7);
+				write_log(_T("Amiga key %02X %d\n"), key & 0x7f, key >> 7);
 		}
 		return;
 	}
-	inputdevice_add_inputcode (code, state, NULL);
+	inputdevice_add_inputcode(code, state, NULL);
 }
 
 #ifdef AMIBERRY
@@ -4417,7 +4441,17 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 		break;
 #ifdef AVIOUTPUT
 	case AKS_VIDEORECORD:
-		AVIOutput_Toggle (newstate, true);
+		AVIOutput_Toggle(newstate, true);
+		break;
+	case AKS_VIDEORECORDFILE:
+		if (s) {
+			_tcsncpy(avioutput_filename_gui, s, MAX_DPATH);
+			avioutput_filename_gui[MAX_DPATH - 1] = 0;
+			set_config_changed();
+		} else {
+			gui_display (7);
+			setsystime ();
+		}
 		break;
 #endif
 #ifdef ACTION_REPLAY
@@ -4604,7 +4638,9 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 		set_config_changed ();
 		break;
 	case AKS_ENTERDEBUGGER:
-		//activate_debugger ();
+#ifdef DEBUGGER
+		activate_debugger ();
+#endif
 		break;
 	case AKS_STATESAVEDIALOG:
 		if (s) {
@@ -5361,6 +5397,9 @@ void inputdevice_vsync (void)
 		if (!autopause) {
 			pausemode(1);
 		}
+	}
+	if (keyboard_reset_seq > 0) {
+		keyboard_reset_seq++;
 	}
 
 	input_frame++;
@@ -8273,7 +8312,7 @@ static int put_event_data (const struct inputdevice_functions *id, int devnum, i
 		uid->flags[i][sub] = flags;
 		uid->port[i][sub] = port;
 		xfree (uid->custom[i][sub]);
-		uid->custom[i][sub] = custom && custom[0] != '\0' ? stripstrdup(custom) : NULL;
+		uid->custom[i][sub] = custom && custom[0] != '\0' ? stripstrdup (custom) : NULL;
 		ret = i;
 	} else if (type == IDEV_WIDGET_AXIS) {
 		i = num - id->get_widget_first (devnum, type) + ID_AXIS_OFFSET;
@@ -8281,7 +8320,7 @@ static int put_event_data (const struct inputdevice_functions *id, int devnum, i
 		uid->flags[i][sub] = flags;
 		uid->port[i][sub] = port;
 		xfree (uid->custom[i][sub]);
-		uid->custom[i][sub] = custom && custom[0] != '\0' ? stripstrdup(custom) : NULL;
+		uid->custom[i][sub] = custom && custom[0] != '\0' ? stripstrdup (custom) : NULL;
 		ret = i;
 	} else if (type == IDEV_WIDGET_KEY) {
 		i = num - id->get_widget_first (devnum, type);
@@ -8289,7 +8328,7 @@ static int put_event_data (const struct inputdevice_functions *id, int devnum, i
 		uid->flags[i][sub] = flags;
 		uid->port[i][sub] = port;
 		xfree (uid->custom[i][sub]);
-		uid->custom[i][sub] = custom && custom[0] != '\0' ? stripstrdup(custom) : NULL;
+		uid->custom[i][sub] = custom && custom[0] != '\0' ? stripstrdup (custom) : NULL;
 		ret = i;
 	}
 	if (ret < 0)

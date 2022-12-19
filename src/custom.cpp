@@ -39,13 +39,14 @@
 #include "drawing.h"
 #include "savestate.h"
 #include "ar.h"
-//#include "debug.h"
+#include "debug.h"
 #include "akiko.h"
 #if defined(ENFORCER)
 #include "enforcer.h"
 #endif
 #include "threaddep/thread.h"
 //#include "luascript.h"
+#include "crc32.h"
 #include "devices.h"
 #include "rommgr.h"
 //#include "specialmonitors.h"
@@ -94,7 +95,8 @@ extern uae_u16 serper;
 #endif
 
 #ifdef AMIBERRY
-int debug_sprite_mask = 0xff;
+extern int debug_sprite_mask;
+extern void memory_map_dump(void);
 #endif
 
 STATIC_INLINE bool nocustom (void)
@@ -10601,7 +10603,6 @@ uae_u8 *restore_custom_extra(uae_u8 *src)
 	RL; // currprefs.cs_rtc_adjust = changed_prefs.cs_rtc_adjust = RL;
 
 	currprefs.cs_a1000ram = changed_prefs.cs_a1000ram = RBB;
-	currprefs.cs_slowmemisfast = changed_prefs.cs_slowmemisfast = RBB;
 
 	//currprefs.a2091rom.enabled = changed_prefs.a2091rom.enabled = RBB;
 	//currprefs.a4091rom.enabled = changed_prefs.a4091rom.enabled = RBB;
@@ -10645,6 +10646,8 @@ uae_u8 *restore_custom_extra(uae_u8 *src)
 	currprefs.cs_ciatype[0] = changed_prefs.cs_ciatype[0] = RBB;
 	currprefs.cs_ciatype[1] = changed_prefs.cs_ciatype[1] = RBB;
 
+	currprefs.cs_memorypatternfill = changed_prefs.cs_memorypatternfill = RBB;
+
 	return src;
 }
 
@@ -10663,7 +10666,6 @@ uae_u8 *save_custom_extra(size_t *len, uae_u8 *dstptr)
 	SL(currprefs.cs_rtc_adjust);
 
 	SB(currprefs.cs_a1000ram ? 1 : 0);
-	SB(currprefs.cs_slowmemisfast ? 1 : 0);
 
 	SB(is_board_enabled(&currprefs, ROMTYPE_A2091, 0) ? 1 : 0);
 	SB(is_board_enabled(&currprefs, ROMTYPE_A4091, 0) ? 1 : 0);
@@ -10704,6 +10706,7 @@ uae_u8 *save_custom_extra(size_t *len, uae_u8 *dstptr)
 	SB(currprefs.cs_romisslow ? 1 : 0);
 	SB(currprefs.cs_ciatype[0]);
 	SB(currprefs.cs_ciatype[1]);
+	SB(currprefs.cs_memorypatternfill);
 
 	*len = dst - dstbak;
 	return dstbak;
@@ -10849,7 +10852,6 @@ void check_prefs_changed_custom(void)
 	currprefs.cs_deniserev = changed_prefs.cs_deniserev;
 	currprefs.cs_mbdmac = changed_prefs.cs_mbdmac;
 	currprefs.cs_df0idhw = changed_prefs.cs_df0idhw;
-	currprefs.cs_slowmemisfast = changed_prefs.cs_slowmemisfast;
 	currprefs.cs_denisenoehb = changed_prefs.cs_denisenoehb;
 	currprefs.cs_z3autoconfig = changed_prefs.cs_z3autoconfig;
 	currprefs.cs_bytecustomwritebug = changed_prefs.cs_bytecustomwritebug;
@@ -10861,6 +10863,7 @@ void check_prefs_changed_custom(void)
 	currprefs.cs_eclocksync = changed_prefs.cs_eclocksync;
 	currprefs.cs_ciatype[0] = changed_prefs.cs_ciatype[0];
 	currprefs.cs_ciatype[1] = changed_prefs.cs_ciatype[1];
+	currprefs.cs_memorypatternfill = changed_prefs.cs_memorypatternfill;
 
 	if (currprefs.chipset_mask != changed_prefs.chipset_mask ||
 		currprefs.cs_dipagnus != changed_prefs.cs_dipagnus ||

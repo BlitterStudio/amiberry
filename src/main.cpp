@@ -33,7 +33,7 @@
 #endif
 #include "newcpu.h"
 #include "disk.h"
-//#include "debug.h"
+#include "debug.h"
 #include "xwin.h"
 #include "inputdevice.h"
 #include "keybuf.h"
@@ -48,7 +48,7 @@
 #include "consolehook.h"
 #include "gfxboard.h"
 //#include "luascript.h"
-//#include "uaenative.h"
+#include "uaenative.h"
 #include "tabletlibrary.h"
 #include "cpuboard.h"
 //#include "uae/ppc.h"
@@ -69,7 +69,7 @@
 #include "fsdb_host.h"
 #include "keyboard.h"
 
-static const char __ver[40] = "$VER: Amiberry 5.5b (2022-12-13)";
+static const char __ver[40] = "$VER: Amiberry 5.5b (2022-12-19)";
 long int version = 256 * 65536L * UAEMAJOR + 65536L * UAEMINOR + UAESUBREV;
 
 struct uae_prefs currprefs, changed_prefs;
@@ -87,22 +87,30 @@ static TCHAR optionsfile[MAX_DPATH];
 static uae_u32 randseed;
 static int oldhcounter;
 
+static uae_u32 xorshiftstate = 1;
+static uae_u32 xorshift32(void)
+{
+	uae_u32 x = xorshiftstate;
+	x ^= x << 13;
+	x ^= x >> 17;
+	x ^= x << 5;
+	xorshiftstate = x;
+	return xorshiftstate;
+}
+
 uae_u32 uaesrand(uae_u32 seed)
 {
 	oldhcounter = -1;
 	randseed = seed;
-	//randseed = 0x12345678;
-	//write_log (_T("seed=%08x\n"), randseed);
 	return randseed;
 }
 uae_u32 uaerand(void)
 {
 	if (oldhcounter != hsync_counter) {
-		srand(hsync_counter ^ randseed);
+		xorshiftstate = (hsync_counter ^ randseed) | 1;
 		oldhcounter = hsync_counter;
 	}
-	uae_u32 r = rand();
-	//write_log (_T("rand=%08x\n"), r);
+	uae_u32 r = xorshift32();
 	return r;
 }
 uae_u32 uaerandgetseed(void)
@@ -110,7 +118,7 @@ uae_u32 uaerandgetseed(void)
 	return randseed;
 }
 
-void my_trim (TCHAR *s)
+void my_trim(TCHAR *s)
 {
 	while (_tcslen (s) > 0 && _tcscspn (s, _T("\t \r\n")) == 0)
 		memmove (s, s + 1, (_tcslen (s + 1) + 1) * sizeof (TCHAR));
@@ -240,7 +248,7 @@ void fixup_cpu (struct uae_prefs *p)
 		p->cpu_frequency = 0;
 
 	//if (p->cpu_model >= 68020 && p->cpuboard_type && p->address_space_24 && cpuboard_32bit(p)) {
-	//	error_log (_T("24-bit address space is not supported with selected accelerator board configuration."));
+	//	error_log(_T("24-bit address space is not supported with selected accelerator board configuration."));
 	//	p->address_space_24 = 0;
 	//}
 	if (p->cpu_model >= 68040 && p->address_space_24) {
@@ -255,15 +263,20 @@ void fixup_cpu (struct uae_prefs *p)
 	switch (p->cpu_model)
 	{
 	case 68000:
+		break;
 	case 68010:
+		break;
 	case 68020:
+		break;
 	case 68030:
 		break;
 	case 68040:
 		if (p->fpu_model)
 			p->fpu_model = 68040;
 		break;
-	default:
+	case 68060:
+		if (p->fpu_model)
+			p->fpu_model = 68060;
 		break;
 	}
 
@@ -275,6 +288,9 @@ void fixup_cpu (struct uae_prefs *p)
 	if (p->cpu_model < 68020 && p->cachesize) {
 		p->cachesize = 0;
 		error_log (_T("JIT requires 68020 or better CPU."));
+	}
+	if (p->fpu_model == 0 && p->compfpu) {
+		p->compfpu = false;
 	}
 
 	if (!p->cpu_memory_cycle_exact && p->cpu_cycle_exact)
@@ -326,8 +342,13 @@ void fixup_cpu (struct uae_prefs *p)
 	p->cachesize = 0;
 #endif
 
+
 	if (p->immediate_blits && p->waiting_blits) {
 		error_log (_T("Immediate blitter and waiting blits can't be enabled simultaneously.\n"));
+		p->waiting_blits = 0;
+	}
+	if (p->cpu_memory_cycle_exact && p->cpu_model <= 68010 && p->waiting_blits) {
+		error_log(_T("Wait for blitter is not available in 68000/68010 cycle exact modes.\n"));
 		p->waiting_blits = 0;
 	}
 
@@ -335,7 +356,6 @@ void fixup_cpu (struct uae_prefs *p)
 		error_log(_T("Blitter cycle-exact requires at least CPU memory cycle-exact.\n"));
 		p->blitter_cycle_exact = 0;
 	}
-
 	if (p->cpu_memory_cycle_exact)
 		p->cpu_compatible = true;
 
@@ -469,6 +489,25 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 			error_log(_T("You can't use Zorro II RTG and more than 2MB chip at the same time."));
 			p->chipmem.size = 0x200000;
 		}
+#ifndef AMIBERRY // custom gfx boards not implemented yet
+		if (rbc->rtgmem_type >= GFXBOARD_HARDWARE) {
+			if (gfxboard_get_vram_min(rbc) > 0 && rbc->rtgmem_size < gfxboard_get_vram_min (rbc)) {
+				error_log(_T("Graphics card memory size %d (0x%x) smaller than minimum hardware supported %d (0x%x)."),
+					rbc->rtgmem_size, rbc->rtgmem_size, gfxboard_get_vram_min(rbc), gfxboard_get_vram_min(rbc));
+				rbc->rtgmem_size = gfxboard_get_vram_min (rbc);
+			}
+			if (p->address_space_24 && gfxboard_get_configtype(rbc) == 3) {
+				rbc->rtgmem_type = GFXBOARD_UAE_Z2;
+				rbc->rtgmem_size = 0;
+				error_log (_T("Z3 RTG and 24-bit address space are not compatible."));
+			}
+			if (gfxboard_get_vram_max(rbc) > 0 && rbc->rtgmem_size > gfxboard_get_vram_max(rbc)) {
+				error_log(_T("Graphics card memory size %d (0x%x) larger than maximum hardware supported %d (0x%x)."),
+					rbc->rtgmem_size, rbc->rtgmem_size, gfxboard_get_vram_max(rbc), gfxboard_get_vram_max(rbc));
+				rbc->rtgmem_size = gfxboard_get_vram_max(rbc);
+			}
+		}
+#endif
 		if (p->address_space_24 && rbc->rtgmem_size && rbc->rtgmem_type == GFXBOARD_UAE_Z3) {
 			error_log (_T("Z3 RTG and 24bit address space are not compatible."));
 			rbc->rtgmem_type = GFXBOARD_UAE_Z2;
@@ -661,10 +700,12 @@ static int default_config;
 
 void uae_reset (int hardreset, int keyboardreset)
 {
-	//if (debug_dma) {
-	//	record_dma_reset ();
-	//	record_dma_reset ();
-	//}
+#ifdef DEBUGGER
+	if (debug_dma) {
+		record_dma_reset(0);
+		record_dma_reset(0);
+	}
+#endif
 	currprefs.quitstatefile[0] = changed_prefs.quitstatefile[0] = 0;
 
 	if (quit_program == 0) {
@@ -679,7 +720,9 @@ void uae_reset (int hardreset, int keyboardreset)
 
 void uae_quit (void)
 {
-	//deactivate_debugger ();
+#ifdef DEBUGGER
+	deactivate_debugger ();
+#endif
 	if (quit_program != -UAE_QUIT)
 		quit_program = -UAE_QUIT;
 	target_quit ();
@@ -758,8 +801,7 @@ static void parse_cmdline_2 (int argc, TCHAR **argv)
 	for (auto i = 1; i < argc; i++) {
 		if (_tcsncmp(argv[i], _T("-cfgparam="), 10) == 0) {
 			cfgfile_addcfgparam(argv[i] + 10);
-		} else if (_tcscmp(argv[i], _T("-cfgparam")) == 0)
-		{
+		} else if (_tcscmp(argv[i], _T("-cfgparam")) == 0) {
 			if (i + 1 == argc)
 				write_log (_T("Missing argument for '-cfgparam' option.\n"));
 			else
@@ -1296,7 +1338,11 @@ static int real_main2 (int argc, TCHAR **argv)
 	gui_update ();
 
 	if (graphics_init (true)) {
-
+#ifdef DEBUGGER
+		setup_brkhandler ();
+		if (currprefs.start_debugger && debuggable ())
+			activate_debugger ();
+#endif
 		if (!init_audio ()) {
 			if (sound_available && currprefs.produce_sound > 1) {
 				write_log (_T("Sound driver unavailable: Sound output disabled\n"));

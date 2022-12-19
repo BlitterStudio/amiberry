@@ -54,6 +54,7 @@ LOCAL_SRC_FILES := src/akiko.cpp \
 					src/consolehook.cpp \
                     src/crc32.cpp \
                     src/custom.cpp \
+                    src/debug.cpp \
 					src/def_icons.cpp \
                     src/devices.cpp \
                     src/disk.cpp \
@@ -99,6 +100,7 @@ LOCAL_SRC_FILES := src/akiko.cpp \
                     src/traps.cpp \
 					src/uaeexe.cpp \
                     src/uaelib.cpp \
+                    src/uaeserial.cpp \
                     src/uaenative.cpp \
                     src/uaeresource.cpp \
 					src/uaeserial.cpp \
