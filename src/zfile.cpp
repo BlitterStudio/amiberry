@@ -2094,11 +2094,13 @@ struct zfile *zfile_fopen_data (const TCHAR *name, uae_u64 size, const uae_u8 *d
 		return NULL;
 	}
 	l = zfile_create (NULL, name);
-	l->name = my_strdup (name ? name : _T(""));
-	l->data = xmalloc (uae_u8, (size_t)size);
-	l->size = size;
-	l->datasize = size;
-	memcpy (l->data, data, (size_t)size);
+	if (l) {
+		l->name = my_strdup(name ? name : _T(""));
+		l->data = xmalloc(uae_u8, (size_t)size);
+		l->size = size;
+		l->datasize = size;
+		memcpy(l->data, data, (size_t)size);
+	}
 	return l;
 }
 

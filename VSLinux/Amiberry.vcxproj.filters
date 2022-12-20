@@ -1419,6 +1419,9 @@
     <ClCompile Include="..\src\osdep\gui\ControllerMap.cpp">
       <Filter>src\osdep\gui</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\debug.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\osdep\vkbd\vkbd.cpp">
       <Filter>src\osdep\vkbd</Filter>
     </ClCompile>
@@ -2305,6 +2308,12 @@
     </ClInclude>
     <ClInclude Include="..\src\include\uae\uae_pragmas.h">
       <Filter>src\include\uae</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\debug.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\debugmem.h">
+      <Filter>src\include</Filter>
     </ClInclude>
     <ClInclude Include="..\src\osdep\vkbd\vkbd.h">
       <Filter>src\osdep\vkbd</Filter>

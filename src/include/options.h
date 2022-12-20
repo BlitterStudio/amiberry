@@ -16,7 +16,7 @@
 #include "traps.h"
 
 #define UAEMAJOR 5
-#define UAEMINOR 5
+#define UAEMINOR 6
 #define UAESUBREV 0
 
 #define MAX_AMIGADISPLAYS 1
@@ -457,9 +457,7 @@ struct boardromconfig
 	int device_order;
 	struct romconfig roms[MAX_BOARD_ROMS];
 };
-
 #define MAX_RTG_BOARDS 1
-
 struct rtgboardconfig
 {
 	int rtg_index;

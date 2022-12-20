@@ -33,7 +33,7 @@
 #include "cpu_prefetch.h"
 #include "autoconf.h"
 #include "traps.h"
-//#include "debug.h"
+#include "debug.h"
 //#include "debugmem.h"
 #include "gui.h"
 #include "savestate.h"

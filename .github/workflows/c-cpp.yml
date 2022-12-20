@@ -33,7 +33,9 @@ jobs:
           conf/**
           controllers/**
           data/**
+          inputrecordings/**
           kickstarts/**
+          nvram/**
           savestates/**
           screenshots/**
           whdboot/**
@@ -88,7 +90,9 @@ jobs:
           conf/**
           controllers/**
           data/**
+          inputrecordings/**
           kickstarts/**
+          nvram/**
           savestates/**
           screenshots/**
           whdboot/**
@@ -143,7 +147,9 @@ jobs:
           conf/**
           controllers/**
           data/**
+          inputrecordings/**
           kickstarts/**
+          nvram/**
           savestates/**
           screenshots/**
           whdboot/**
@@ -198,7 +204,9 @@ jobs:
           conf/**
           controllers/**
           data/**
+          inputrecordings/**
           kickstarts/**
+          nvram/**
           savestates/**
           screenshots/**
           whdboot/**
@@ -249,7 +257,9 @@ jobs:
           conf/**
           controllers/**
           data/**
+          inputrecordings/**
           kickstarts/**
+          nvram/**
           savestates/**
           screenshots/**
           whdboot/**
@@ -304,7 +314,9 @@ jobs:
           conf/**
           controllers/**
           data/**
+          inputrecordings/**
           kickstarts/**
+          nvram/**
           savestates/**
           screenshots/**
           whdboot/**
@@ -401,7 +413,9 @@ jobs:
           conf/**
           controllers/**
           data/**
+          inputrecordings/**
           kickstarts/**
+          nvram/**
           savestates/**
           screenshots/**
           whdboot/**

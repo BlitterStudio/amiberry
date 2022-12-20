@@ -554,6 +554,7 @@
     <ClCompile Include="..\src\cpustbl.cpp" />
     <ClCompile Include="..\src\crc32.cpp" />
     <ClCompile Include="..\src\custom.cpp" />
+    <ClCompile Include="..\src\debug.cpp" />
     <ClCompile Include="..\src\def_icons.cpp" />
     <ClCompile Include="..\src\devices.cpp" />
     <ClCompile Include="..\src\disk.cpp" />
@@ -894,6 +895,8 @@
     <ClInclude Include="..\src\include\cpu_prefetch.h" />
     <ClInclude Include="..\src\include\crc32.h" />
     <ClInclude Include="..\src\include\custom.h" />
+    <ClInclude Include="..\src\include\debug.h" />
+    <ClInclude Include="..\src\include\debugmem.h" />
     <ClInclude Include="..\src\include\devices.h" />
     <ClInclude Include="..\src\include\disk.h" />
     <ClInclude Include="..\src\include\diskutil.h" />

@@ -32,7 +32,7 @@
 #include "uae.h"
 #include "gui.h"
 #include "xwin.h"
-//#include "debug.h"
+#include "debug.h"
 //#include "sndboard.h"
 #ifdef AVIOUTPUT
 #include "avioutput.h"

@@ -36,7 +36,7 @@ int disk_debug_track = -1;
 //#include "execlib.h"
 #include "savestate.h"
 #include "cia.h"
-//#include "debug.h"
+#include "debug.h"
 #ifdef FDI2RAW
 #include "fdi2raw.h"
 #endif
@@ -2966,7 +2966,7 @@ static void floppy_get_rootblock (uae_u8 *dst, int block, const TCHAR *disk_name
 	dst[12+3] = 0x48; // size of hash table
 	dst[312] = dst[313] = dst[314] = dst[315] = (uae_u8)0xff; // bitmap valid
 	dst[316+2] = (block + 1) >> 8; dst[316+3] = (block + 1) & 255; // bitmap pointer
-	char* s = ua((disk_name && disk_name[0] != '\0') ? disk_name : _T("empty"));
+	char *s = ua ((disk_name && disk_name[0] != '\0') ? disk_name : _T("empty"));
 	dst[432] = (uae_u8)strlen (s); // name length
 	strcpy ((char*)dst + 433, s); // name
 	xfree (s);
