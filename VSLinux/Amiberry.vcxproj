@@ -955,10 +955,14 @@
     <ClInclude Include="..\src\include\uaenative.h" />
     <ClInclude Include="..\src\include\uaeresource.h" />
     <ClInclude Include="..\src\include\uaeserial.h" />
+    <ClInclude Include="..\src\include\uae\api.h" />
+    <ClInclude Include="..\src\include\uae\attributes.h" />
     <ClInclude Include="..\src\include\uae\caps.h" />
     <ClInclude Include="..\src\include\uae\cdrom.h" />
     <ClInclude Include="..\src\include\uae\dlopen.h" />
     <ClInclude Include="..\src\include\uae\likely.h" />
+    <ClInclude Include="..\src\include\uae\log.h" />
+    <ClInclude Include="..\src\include\uae\memory.h" />
     <ClInclude Include="..\src\include\uae\mman.h" />
     <ClInclude Include="..\src\include\uae\string.h" />
     <ClInclude Include="..\src\include\uae\types.h" />

@@ -2,7 +2,7 @@
  * compiler/compemu.h - Public interface and definitions
  *
  * Copyright (c) 2001-2004 Milan Jurik of ARAnyM dev team (see AUTHORS)
- * 
+ *
  * Inspired by Christian Bauer's Basilisk II
  *
  * This file is part of the ARAnyM project which builds a new and powerful
@@ -32,11 +32,18 @@
 #ifndef COMPEMU_H
 #define COMPEMU_H
 
-#if defined(CPU_AARCH64)
+#include "sysconfig.h"
+#include "newcpu.h"
+
+#ifdef UAE
+#ifdef CPU_64_BIT
 typedef uae_u64 uintptr;
 typedef uae_s64 intptr;
 #else
 typedef uae_u32 uintptr;
+#endif
+/* FIXME: cpummu.cpp also checks for USE_JIT, possibly others */
+#define USE_JIT
 #endif
 
 #define JITPTR (uae_u32)(uintptr)
