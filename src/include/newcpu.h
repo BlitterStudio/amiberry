@@ -695,7 +695,6 @@ extern void REGPARAM3 MakeSR (void) REGPARAM;
 extern void REGPARAM3 MakeFromSR(void) REGPARAM;
 extern void REGPARAM3 MakeFromSR_T0(void) REGPARAM;
 extern void REGPARAM3 MakeFromSR_STOP(void) REGPARAM;
-extern void REGPARAM3 MakeFromSR_intmask(uae_u16 oldsr, uae_u16 newsr) REGPARAM;
 extern void REGPARAM3 Exception (int) REGPARAM;
 extern void REGPARAM3 Exception_cpu(int) REGPARAM;
 extern void REGPARAM3 Exception_cpu_oldpc(int, uaecptr) REGPARAM;
