@@ -34,7 +34,7 @@
 #include "autoconf.h"
 #include "traps.h"
 #include "debug.h"
-//#include "debugmem.h"
+#include "debugmem.h"
 #include "gui.h"
 #include "savestate.h"
 #include "blitter.h"
@@ -6735,10 +6735,10 @@ void m68k_dumpstate(uaecptr *nextpc, uaecptr prevpc)
 #endif
 	if (j > 0)
 		write_log (_T("\n"));
-		write_log (_T("T=%d%d S=%d M=%d X=%d N=%d Z=%d V=%d C=%d IMASK=%d STP=%d\n"),
-		regs.t1, regs.t0, regs.s, regs.m,
-		GET_XFLG (), GET_NFLG (), GET_ZFLG (),
-		GET_VFLG (), GET_CFLG (),
+		write_log (_T("SR=%04X T=%d%d S=%d M=%d X=%d N=%d Z=%d V=%d C=%d IM=%d STP=%d\n"),
+		regs.sr, regs.t1, regs.t0, regs.s, regs.m,
+		GET_XFLG(), GET_NFLG(), GET_ZFLG(),
+		GET_VFLG(), GET_CFLG(),
 		regs.intmask, regs.stopped);
 #ifdef FPUEMU
 	if (currprefs.fpu_model) {
