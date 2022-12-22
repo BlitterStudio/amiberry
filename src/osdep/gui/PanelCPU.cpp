@@ -94,9 +94,7 @@ string_list_model cpu_freq_list(cpu_freq_values, 5);
 
 static float getcpufreq(int m)
 {
-	float f;
-
-	f = changed_prefs.ntscmode ? 28636360.0f : 28375160.0f;
+	const float f = changed_prefs.ntscmode ? 28636360.0f : 28375160.0f;
 	return f * (m >> 8) / 8.0f;
 }
 
@@ -266,15 +264,15 @@ public:
 		if (changed_prefs.cpu_idle > 0)
 			changed_prefs.cpu_idle = (12 - changed_prefs.cpu_idle) * 15;
 
-		int freq_idx = cboCPUFrequency->getSelected();
-		int m = changed_prefs.cpu_clock_multiplier;
+		const int freq_idx = cboCPUFrequency->getSelected();
+		const int m = changed_prefs.cpu_clock_multiplier;
 		changed_prefs.cpu_frequency = 0;
 		changed_prefs.cpu_clock_multiplier = 0;
 		if (freq_idx < 5) {
 			changed_prefs.cpu_clock_multiplier = (1 << 8) << freq_idx;
 			if (changed_prefs.cpu_cycle_exact || changed_prefs.cpu_compatible) {
 				TCHAR txt[20];
-				double f = getcpufreq(changed_prefs.cpu_clock_multiplier);
+				const auto f = getcpufreq(changed_prefs.cpu_clock_multiplier);
 				_stprintf(txt, _T("%.6f"), f / 1000000.0);
 				lblCPUFrequencyMHz->setCaption(txt);
 			}
@@ -283,7 +281,7 @@ public:
 			}
 		}
 		else if (changed_prefs.cpu_cycle_exact) {
-			auto txt = lblCPUFrequencyMHz->getCaption();
+			const auto& txt = lblCPUFrequencyMHz->getCaption();
 			changed_prefs.cpu_clock_multiplier = 0;
 			changed_prefs.cpu_frequency = (int)(_tstof(txt.c_str()) * 1000000.0);
 			if (changed_prefs.cpu_frequency < 1 * 1000000)
@@ -308,34 +306,34 @@ void InitPanelCPU(const struct config_category& category)
 	cpuActionListener = new CPUActionListener();
 
 	optCPU68000 = new gcn::RadioButton("68000", "radiocpugroup");
-	optCPU68000->setId("68000");
+	optCPU68000->setId("optCPU68000");
 	optCPU68000->addActionListener(cpuActionListener);
 	optCPU68010 = new gcn::RadioButton("68010", "radiocpugroup");
-	optCPU68010->setId("68010");
+	optCPU68010->setId("optCPU68010");
 	optCPU68010->addActionListener(cpuActionListener);
 	optCPU68020 = new gcn::RadioButton("68020", "radiocpugroup");
-	optCPU68020->setId("68020");
+	optCPU68020->setId("optCPU68020");
 	optCPU68020->addActionListener(cpuActionListener);
 	optCPU68030 = new gcn::RadioButton("68030", "radiocpugroup");
-	optCPU68030->setId("68030");
+	optCPU68030->setId("optCPU68030");
 	optCPU68030->addActionListener(cpuActionListener);
 	optCPU68040 = new gcn::RadioButton("68040", "radiocpugroup");
-	optCPU68040->setId("68040");
+	optCPU68040->setId("optCPU68040");
 	optCPU68040->addActionListener(cpuActionListener);
 	optCPU68060 = new gcn::RadioButton("68060", "radiocpugroup");
-	optCPU68060->setId("68060");
+	optCPU68060->setId("optCPU68060");
 	optCPU68060->addActionListener(cpuActionListener);
 
 	chk24Bit = new gcn::CheckBox("24-bit addressing", true);
-	chk24Bit->setId("CPU24Bit");
+	chk24Bit->setId("chk24Bit");
 	chk24Bit->addActionListener(cpuActionListener);
 
 	chkCPUCompatible = new gcn::CheckBox("More compatible", true);
-	chkCPUCompatible->setId("CPUComp");
+	chkCPUCompatible->setId("chkCPUCompatible");
 	chkCPUCompatible->addActionListener(cpuActionListener);
 
 	chkJIT = new gcn::CheckBox("JIT", true);
-	chkJIT->setId("JIT");
+	chkJIT->setId("chkJIT");
 	chkJIT->addActionListener(cpuActionListener);
 
 	grpCPU = new gcn::Window("CPU");
@@ -357,19 +355,19 @@ void InitPanelCPU(const struct config_category& category)
 	category.panel->add(grpCPU);
 
 	optFPUnone = new gcn::RadioButton("None", "radiofpugroup");
-	optFPUnone->setId("FPUnone");
+	optFPUnone->setId("optFPUnone");
 	optFPUnone->addActionListener(cpuActionListener);
 
 	optFPU68881 = new gcn::RadioButton("68881", "radiofpugroup");
-	optFPU68881->setId("68881");
+	optFPU68881->setId("optFPU68881");
 	optFPU68881->addActionListener(cpuActionListener);
 
 	optFPU68882 = new gcn::RadioButton("68882", "radiofpugroup");
-	optFPU68882->setId("68882");
+	optFPU68882->setId("optFPU68882");
 	optFPU68882->addActionListener(cpuActionListener);
 
 	optFPUinternal = new gcn::RadioButton("CPU internal", "radiofpugroup");
-	optFPUinternal->setId("CPU internal");
+	optFPUinternal->setId("optFPUinternal");
 	optFPUinternal->addActionListener(cpuActionListener);
 
 	chkFPUStrict = new gcn::CheckBox("More compatible", true);
@@ -466,7 +464,7 @@ void InitPanelCPU(const struct config_category& category)
 	lblJitCacheSizeInfo = new gcn::Label("0 MB");
 
 	chkFPUJIT = new gcn::CheckBox("FPU Support", true);
-	chkFPUJIT->setId("FPUJIT");
+	chkFPUJIT->setId("chkFPUJIT");
 	chkFPUJIT->addActionListener(cpuActionListener);
 	chkConstantJump = new gcn::CheckBox("Constant jump");
 	chkConstantJump->setId("chkConstantJump");
