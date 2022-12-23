@@ -1,6 +1,3 @@
-[submodule "external/libmpeg2"]
-	path = external/libmpeg2
-	url = https://android.googlesource.com/platform/external/libmpeg2
 [submodule "external/capsimg"]
 	path = external/capsimg
 	url = https://github.com/FrodeSolheim/capsimg
