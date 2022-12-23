@@ -81,7 +81,7 @@ public:
 
 	int getNumberOfElements() override
 	{
-		return lstMRUCDList.size();
+		return static_cast<int>(lstMRUCDList.size());
 	}
 
 	int add_element(const char* elem) override
