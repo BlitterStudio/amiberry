@@ -289,8 +289,7 @@ void do_cycles_cpu_fastest(int cycles_to_add)
 				}
 			}
 		}
-		events_schedule();
-
+		events_schedule ();
 	}
 	currcycle += cycles_to_add;
 }

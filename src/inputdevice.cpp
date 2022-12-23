@@ -38,7 +38,7 @@
 #include "uae.h"
 #include "picasso96.h"
 //#include "catweasel.h"
-//#include "debug.h"
+#include "debug.h"
 #include "ar.h"
 #include "gui.h"
 #include "disk.h"
@@ -2986,8 +2986,7 @@ end:
 			}
 			x += (int)dx2;
 			y += (int)dy2;
-		}
-		else {
+		} else {
 			float dx, dy, mx, my;
 			getgfxoffset(monid, &dx, &dy, &mx, &my);
 			if (mx) {
@@ -3001,8 +3000,7 @@ end:
 		}
 		if (!dmaen(DMA_SPRITE) && !ad->picasso_on) {
 			setmouseactivexy(0, x, y, 0);
-		}
-		else {
+		} else {
 			setmouseactivexy(0, x, y, dir);
 		}
 	}
@@ -4640,7 +4638,9 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 		set_config_changed ();
 		break;
 	case AKS_ENTERDEBUGGER:
-		//activate_debugger ();
+#ifdef DEBUGGER
+		activate_debugger ();
+#endif
 		break;
 	case AKS_STATESAVEDIALOG:
 		if (s) {

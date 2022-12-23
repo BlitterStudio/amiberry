@@ -24,8 +24,8 @@
 #define GETBDM(x) (((x) - (((x) / 10000) * 10000)) / 100)
 #define GETBDD(x) ((x) % 100)
 
-#define AMIBERRYVERSION _T("Amiberry beta (2022-10-24)")
-#define AMIBERRYDATE MAKEBD(2022, 10, 24)
+#define AMIBERRYVERSION _T("Amiberry DEV beta (2022-12-20)")
+#define AMIBERRYDATE MAKEBD(2022, 12, 20)
 
 #define IHF_WINDOWHIDDEN 6
 
@@ -134,10 +134,8 @@ extern bool setpaused(int priority);
 extern void unsetminimized(int monid);
 extern void setminimized(int monid);
 
-
 extern void setpriority(int prio);
 void init_colors(int monid);
-
 
 #include <vector>
 #include <string>
@@ -315,4 +313,3 @@ static inline int uae_deterministic_mode()
 	// Only returns 1 if using netplay mode (not implemented yet)
 	return 0;
 }
-

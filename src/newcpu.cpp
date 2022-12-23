@@ -33,7 +33,7 @@
 #include "cpu_prefetch.h"
 #include "autoconf.h"
 #include "traps.h"
-//#include "debug.h"
+#include "debug.h"
 //#include "debugmem.h"
 #include "gui.h"
 #include "savestate.h"
@@ -2680,12 +2680,10 @@ void doint(void)
 			set_special(SPCFLAG_INT);
 		return;
 	}
-	if (regs.ipl_pin > regs.intmask) {
-		if (currprefs.cpu_compatible && currprefs.cpu_model < 68020)
-			set_special(SPCFLAG_INT);
-		else
-			set_special(SPCFLAG_DOINT);
-	}
+	if (currprefs.cpu_compatible && currprefs.cpu_model < 68020)
+		set_special (SPCFLAG_INT);
+	else
+		set_special (SPCFLAG_DOINT);
 }
 
 static int do_specialties (int cycles)
@@ -3518,9 +3516,14 @@ static void m68k_run_jit(void)
 }
 #endif /* JIT */
 
+static void check_halt(void)
+{
+	if (regs.halted)
+		do_specialties (0);
+}
+
 void cpu_inreset(void)
 {
-	set_special(SPCFLAG_STOP);
 	regs.s = 1;
 	regs.intmask = 7;
 	MakeSR();
@@ -3985,7 +3988,8 @@ void restore_cpu_finish (void)
 	fill_prefetch_quick ();
 	set_cycles (start_cycles);
 	events_schedule ();
-	//activate_debugger ();
+	if (regs.stopped)
+		set_special (SPCFLAG_STOP);
 }
 
 uae_u8 *save_cpu_trace(size_t *len, uae_u8 *dstptr)
@@ -4443,11 +4447,13 @@ bool cpureset (void)
 	m68k_reset_delay = currprefs.reset_delay;
 	set_special(SPCFLAG_CHECK);
 	send_internalevent(INTERNALEVENT_CPURESET);
-	//if (cpuboard_forced_hardreset()) {
-	//	custom_reset_cpu(false, false);
-	//	m68k_reset();
-	//	return true;
-	//}
+#ifndef AMIBERRY
+	if (cpuboard_forced_hardreset()) {
+		custom_reset_cpu(false, false);
+		m68k_reset();
+		return true;
+	}
+#endif
 	if ((currprefs.cpu_compatible || currprefs.cpu_memory_cycle_exact) && currprefs.cpu_model <= 68020) {
 		custom_reset_cpu(false, false);
 		return false;

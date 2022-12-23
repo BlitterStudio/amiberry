@@ -23,7 +23,7 @@
 #include "autoconf.h"
 #include "traps.h"
 #include "disk.h"
-//#include "debug.h"
+#include "debug.h"
 #include "gensound.h"
 #include "picasso96.h"
 #include "filesys.h"

@@ -20,7 +20,7 @@
 #include "newcpu.h"
 #include "autoconf.h"
 #include "traps.h"
-//#include "debug.h"
+#include "debug.h"
 #include "threaddep/thread.h"
 #include "native2amiga.h"
 #include "inputdevice.h"

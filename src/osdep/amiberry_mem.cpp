@@ -562,6 +562,7 @@ void protect_roms(bool protect)
 // allowing JIT direct to think it is directly accessible VRAM.
 void mman_set_barriers(bool disable)
 {
+#ifndef AMIBERRY // not implemented yet
 	addrbank *abprev = NULL;
 	for (int i = 0; i < MEMORY_BANKS; i++) {
 		uaecptr addr = i * 0x10000;
@@ -579,7 +580,7 @@ void mman_set_barriers(bool disable)
 			size += 0x10000;
 		}
 		abprev = ab;
-#ifndef AMIBERRY // not implemented yet
+
 		if (ab && ab->baseaddr == NULL && (ab->flags & ABFLAG_ALLOCINDIRECT)) {
 			DWORD old;
 			if (disable || !currprefs.cachesize || currprefs.comptrustbyte || currprefs.comptrustword || currprefs.comptrustlong) {
@@ -604,8 +605,8 @@ void mman_set_barriers(bool disable)
 				}
 			}
 		}
-#endif
 	}
+#endif
 }
 
 static int doinit_shm(void)
