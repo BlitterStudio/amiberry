@@ -33,7 +33,7 @@ struct controller_map
 static struct controller_map controller[] = {
 	{HD_CONTROLLER_TYPE_UAE, "UAE"},
 	{HD_CONTROLLER_TYPE_IDE_FIRST, "A600/A1200/A4000 IDE"},
-	{-1}};
+	{-1, ""}};
 
 static bool dialogResult = false;
 static bool dialogFinished = false;
@@ -260,16 +260,12 @@ public:
 				break;
 			}
 			current_hfdlg.ci.controller_type = controller[cboController->getSelected()].type;
-			sethardfile();
-
 		}
 		else if (actionEvent.getSource() == cboUnit) {
 			current_hfdlg.ci.controller_unit = cboUnit->getSelected();
-
 		}
 		else if (actionEvent.getSource() == chkReadWrite) {
 			current_hfdlg.ci.readonly = !chkReadWrite->isSelected();
-
 		}
 		else if (actionEvent.getSource() == chkAutoboot) {
 			char tmp[32];
