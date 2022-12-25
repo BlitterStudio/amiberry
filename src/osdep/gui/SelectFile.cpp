@@ -151,8 +151,8 @@ static void checkfoldername(char* current)
 	}
 	else
 	{
-		fileList->changeDir(".");
 		strncpy(workingDir, start_path_data, MAX_DPATH);
+		fileList->changeDir(workingDir);
 	}
 	txtCurrent->setText(workingDir);
 }

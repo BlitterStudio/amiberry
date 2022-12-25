@@ -114,8 +114,8 @@ static void checkfoldername(char* current)
 	}
 	else
 	{
-		dirList = ".";
 		strncpy(workingDir, start_path_data, MAX_DPATH);
+		dirList = workingDir;
 	}
 	txtCurrent->setText(workingDir);
 }
