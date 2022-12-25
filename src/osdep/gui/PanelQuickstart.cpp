@@ -72,7 +72,7 @@ public:
 
 	int getNumberOfElements() override
 	{
-		return types.size();
+		return static_cast<int>(types.size());
 	}
 
 	std::string getElementAt(int i) override

@@ -147,7 +147,11 @@ public:
 				if (strlen(changed_prefs.dfxlist[i]) > 0)
 					strncpy(tmp, changed_prefs.dfxlist[i], MAX_DPATH);
 				else
+				{
 					strncpy(tmp, current_dir, MAX_DPATH);
+					fix_trailing(tmp);
+				}
+				
 				if (SelectFile("Select disk image file", tmp, diskfile_filter))
 				{
 					if (strncmp(changed_prefs.dfxlist[i], tmp, MAX_DPATH) != 0)

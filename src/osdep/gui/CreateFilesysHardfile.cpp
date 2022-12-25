@@ -494,6 +494,7 @@ bool CreateFilesysHardfile()
 	CreateDefaultDevicename(tmp);
 	txtDevice->setText(tmp);
 	strroot.assign(current_dir);
+	strroot.append("/");
 	txtPath->setText(strroot);
 	fileSelected = false;
 
