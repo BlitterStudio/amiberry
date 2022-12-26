@@ -4,8 +4,8 @@ USERDIR=`echo ~`
 
 LONGVER=`cat src/osdep/target.h | grep AMIBERRYVERSION | awk -F '_T\\\(\\\"' '{print $2}' | awk -F '\\\"' '{printf $1}'`
 VERSION=`echo $LONGVER | awk -F v '{printf $2}' | awk '{print $1}'`
-MAJOR=`echo $VERSION | awk -F . '{printf $1}'`
-MINOR=`echo $VERSION | awk -F . '{printf $2}'`
+MAJOR=`echo $VERSION | awk -F . '{printf $1}' | sed 's/[^0-9]*//g'`
+MINOR=`echo $VERSION | awk -F . '{printf $2}' | sed 's/[^0-9]*//g'`
 
 echo "Removing old App directory"
 rm -Rf Amiberry.app
