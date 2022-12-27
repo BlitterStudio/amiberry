@@ -39,6 +39,8 @@
 
 #include "sysdeps.h"
 
+#ifdef JIT
+
 #include <cmath>
 #include <cstdio>
 #include <cassert>
@@ -2109,3 +2111,5 @@ void comp_fpp_opp(uae_u32 opcode, uae_u16 extra)
 	}
 	FAIL(1);
 }
+
+#endif

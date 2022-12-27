@@ -3691,7 +3691,10 @@ void fpu_reset (void)
 		use_long_double = false;
 	} else if (currprefs.fpu_mode < 0) {
 		use_long_double = true;
-		fp_init_native_80();
+		if (!fp_init_native_80()) {
+			use_long_double = false;
+			fp_init_softfloat(currprefs.fpu_model);
+		}
 #endif
 	} else {
 #ifdef MSVC_LONG_DOUBLE

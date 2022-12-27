@@ -18,7 +18,7 @@
 
 extern void fp_init_native(void);
 #ifdef MSVC_LONG_DOUBLE
-extern void fp_init_native_80(void);
+extern bool fp_init_native_80(void);
 #endif
 extern void fp_init_softfloat(int);
 extern void fpsr_set_exception(uae_u32 exception);

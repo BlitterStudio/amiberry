@@ -1358,12 +1358,12 @@ static int canstretch(struct AmigaMonitor* mon)
 	if (!mon->screen_is_picasso) {
 		if (!currprefs.gfx_windowed_resize)
 			return 0;
-		if (currprefs.gf[APMODE_NATIVE].gfx_filter_autoscale == AUTOSCALE_RESIZE)
+		if (currprefs.gf[GF_NORMAL].gfx_filter_autoscale == AUTOSCALE_RESIZE)
 			return 0;
 		return 1;
 	}
 	else {
-		if (currprefs.rtgallowscaling || currprefs.gf[APMODE_RTG].gfx_filter_autoscale)
+		if (currprefs.rtgallowscaling || currprefs.gf[GF_RTG].gfx_filter_autoscale)
 			return 1;
 	}
 	return 0;
@@ -1794,7 +1794,7 @@ void target_default_options(struct uae_prefs* p, int type)
 		//p->powersavedisabled = true;
 		p->sana2 = false;
 		p->rtgmatchdepth = true;
-		p->gf[APMODE_RTG].gfx_filter_autoscale = RTG_MODE_SCALE;
+		p->gf[GF_RTG].gfx_filter_autoscale = RTG_MODE_SCALE;
 		p->rtgallowscaling = false;
 		p->rtgscaleaspectratio = -1;
 		p->rtgvblankrate = 0;
@@ -1809,10 +1809,10 @@ void target_default_options(struct uae_prefs* p, int type)
 		p->gfx_api = 2;
 		if (p->gfx_api > 1)
 			p->color_mode = 5;
-		if (p->gf[APMODE_NATIVE].gfx_filter == 0 && p->gfx_api)
-			p->gf[APMODE_NATIVE].gfx_filter = 1;
-		if (p->gf[APMODE_RTG].gfx_filter == 0 && p->gfx_api)
-			p->gf[APMODE_RTG].gfx_filter = 1;
+		if (p->gf[GF_NORMAL].gfx_filter == 0 && p->gfx_api)
+			p->gf[GF_NORMAL].gfx_filter = 1;
+		if (p->gf[GF_RTG].gfx_filter == 0 && p->gfx_api)
+			p->gf[GF_RTG].gfx_filter = 1;
 		//WIN32GUI_LoadUIString(IDS_INPUT_CUSTOM, buf, sizeof buf / sizeof(TCHAR));
 		//for (int i = 0; i < GAMEPORT_INPUT_SETTINGS; i++)
 		//	_stprintf(p->input_config_name[i], buf, i + 1);
@@ -3344,7 +3344,8 @@ void* uaenative_get_uaevar(void)
 #ifdef _WIN32
 	uaevar.amigawnd = mon->hAmigaWnd;
 #endif
-	//uaevar.z3offset = uae_u32(get_real_address(z3fastmem_bank[0].start)) - z3fastmem_bank[0].start;
+	// WARNING: not 64-bit safe!
+    uaevar.z3offset = (uae_u32)(uae_u64)get_real_address(z3fastmem_bank[0].start) - z3fastmem_bank[0].start;
 	return &uaevar;
 }
 

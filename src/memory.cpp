@@ -35,7 +35,7 @@
 #include "threaddep/thread.h"
 #include "gayle.h"
 #include "debug.h"
-//#include "debugmem.h"
+#include "debugmem.h"
 #include "gfxboard.h"
 #include "cpuboard.h"
 //#include "uae/ppc.h"
