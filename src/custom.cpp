@@ -3137,7 +3137,8 @@ STATIC_INLINE void do_delays_3_aga_hr(int nbits, int fm)
 			if (cmd & TOSCR_SPC_HIRES_END) {
 				toscr_res_pixels_mask_hr = 1 >> toscr_res_pixels_shift_hr;
 			}
-			toscr_special_skip_ptr += 1 << toscr_res_pixels_shift_hr;
+			int sh = 1 << toscr_res_pixels_shift_hr;
+			toscr_special_skip_ptr += sh;
 			if (*toscr_special_skip_ptr == 0) {
 				toscr_special_skip_ptr = NULL;
 				break;

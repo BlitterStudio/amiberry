@@ -2110,7 +2110,7 @@ static void decode_pcdos (drive *drv)
 	while (dstmfmbuf - drv->bigmfmbuf < tracklen / 2)
 		*dstmfmbuf++ = 0x9254;
 	drv->skipoffset = 0;
-	drv->tracklen = (dstmfmbuf - drv->bigmfmbuf) * 16;
+	drv->tracklen = addrdiff(dstmfmbuf, drv->bigmfmbuf) * 16;
 	if (disk_debug_logging > 0)
 		write_log (_T("pcdos read track %d\n"), tr);
 }

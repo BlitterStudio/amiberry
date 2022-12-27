@@ -1458,7 +1458,7 @@ static void recursesfs (struct znode *zn, int root, TCHAR *name, int sfs2)
 				znnew = zvolume_addfile_abs (zv, &zai);
 				if (znnew) {
 					znnew->offset = block;
-					znnew->offset2 = p - adf->block;
+					znnew->offset2 = addrdiff(p, adf->block);
 				}
 			}
 			xfree (zai.comment);
