@@ -1007,6 +1007,8 @@ void write_inputdevice_config (struct uae_prefs *p, struct zfile *f)
 	cfgfile_dwrite_str (f, _T("input.keyboard_type"), kbtypes[p->input_keyboard_type]);
 	cfgfile_dwrite (f, _T("input.contact_bounce"), _T("%d"), p->input_contact_bounce);
 	cfgfile_dwrite (f, _T("input.devicematchflags"), _T("%d"), p->input_device_match_mask);
+
+#ifndef AMIBERRY // not used in Amiberry
 	for (id = 0; id < MAX_INPUT_SETTINGS; id++) {
 		TCHAR tmp[MAX_DPATH];
 		if (id < GAMEPORT_INPUT_SETTINGS) {
@@ -1021,6 +1023,7 @@ void write_inputdevice_config (struct uae_prefs *p, struct zfile *f)
 			write_kbr_config (f, id, i, &p->keyboard_settings[id][i], &idev[IDTYPE_KEYBOARD]);
 		write_config (f, id, 0, _T("internal"), &p->internalevent_settings[id][0], &idev[IDTYPE_INTERNALEVENT]);
 	}
+#endif
 }
 
 static uae_u64 getqual (const TCHAR **pp)
