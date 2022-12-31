@@ -2309,6 +2309,24 @@
     <ClInclude Include="..\src\osdep\vkbd\vkbd.h">
       <Filter>src\osdep\vkbd</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\include\debug.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\debugmem.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\uae\api.h">
+      <Filter>src\include\uae</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\uae\attributes.h">
+      <Filter>src\include\uae</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\uae\log.h">
+      <Filter>src\include\uae</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\uae\memory.h">
+      <Filter>src\include\uae</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Xml Include="..\abr\brainfile.xml">

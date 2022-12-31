@@ -78,9 +78,15 @@ using namespace std;
 #elif !defined(JIT)
 #define JITCALL
 #endif
+#ifdef AMIBERRY
+#define REGPARAM2
+#define REGPARAM3 
+#define REGPARAM
+#else
 #define REGPARAM
 #define REGPARAM2 JITCALL
 #define REGPARAM3 JITCALL
+#endif
 
 #if CPU_64_BIT
 #define addrdiff(a, b) ((int)((a) - (b)))

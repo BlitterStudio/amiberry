@@ -10,7 +10,7 @@
 
 ![Amiberry logo](https://i2.wp.com/blitterstudio.com/wp-content/uploads/2020/01/Logo-v3-1.png?resize=768%2C543&ssl=1)
 
-Amiberry is an optimized Amiga emulator, primarily targeted for ARM-based boards (like the Raspberry Pi) but also ported on x86 (macOS, Linux).
+Amiberry is an optimized Amiga emulator, primarily targeted for ARM-based boards (like the Raspberry Pi) but nowadays also ported on x86 (macOS, Linux).
 
 The core emulation comes from [WinUAE](https://www.winuae.net), and the main GUI is designed to look similar to that. However, not all WinUAE features are implemented, as Amiberry tries to achieve a balance between good performance on low-powered hardware and emulation accuracy.
 
@@ -20,14 +20,14 @@ It includes JIT support, to get high-performance results on CPU-intensive emulat
 
 ### Linux
 
-Amiberry has been tested on the following distros:
+Amiberry has been tested on the following Linux distros:
 
 - Debian/RPI-OS Buster and Bullseye ARM and x86 (32-bit and 64-bit)
 - Ubuntu ARM and x86 (64-bit)
 - Manjaro ARM (64-bit)
 - DietPi ARM (32-bit)
 - RetroPie ARM (32-bit)
-and several other distros.
+it should also work on several others.
 
 Some even include it in their app ecosystem (e.g. DietPi, RetroPie and others), so you can install and upgrade it directly from their menu system.
 
@@ -57,15 +57,21 @@ Or if you're using an Arch-based distro (e.g. Manjaro), the relevant package nam
 
       sudo pacman -S base-devel sdl2 sdl2_ttf sdl2_image flac mpg123 libmpeg2
 
+Additionally, please not that you will probably also need some Kickstart ROMs. Amiberry includes the AROS ROM, so you can start it up and use AROS with it directly, but most games will require a Kickstart 1.3 (for A500 emulation) or Kickstart 3.x (for A1200 emulation).
+
 ## Getting Amiberry
 
 ### Distro package management
 
-Several popular distros (like RetroPie, DietPi, Amibian, Pimiga and others) already include Amiberry either pre-installed, or through their package management systems. Please follow the methods provided in those distros for a smoother experience, and refer to their owners for support during this process.
+Several popular distros (like RetroPie, DietPi, Pimiga and others) already include Amiberry either pre-installed, or through their package management systems. Please follow the methods provided in those distros for a smoother experience, and refer to their owners for support during this process.
+
+### Flatpak
+
+A flatpak version is being tested and is planned to be made available soon.
 
 ### Standalone binaries
 
-The latest `stable` releases come with binaries for several different platforms, that you can download from the [Releases](https://github.com/midwan/amiberry/releases) area. If your platform is not included, then you will have to compile it yourself (or perhaps donate a board to me so I can include it!)
+The latest `stable` releases come with binaries for several different platforms, that you can download from the [Releases](https://github.com/midwan/amiberry/releases) area. If your platform is not included, or if you want to test a newer version than the stable release, then you will have to compile it yourself. Read on to see how to do that.
 
 ### Compile from source
 
@@ -80,37 +86,17 @@ Alternatively, you can of course compile the latest version of Amiberry from sou
 ### Then, choose a platform to compile for
 
 Amiberry's Makefile includes several targets, to cover various platforms.
-You can specify your platform using the following syntax:
+You will need to specify your platform using the following syntax:
 
       make PLATFORM=<platform>
 
-Where `<platform>` is one of the supported platforms.
+Where `<platform>` is one of the supported platforms. 
 
-Please consult the [relevant Wiki page](https://github.com/midwan/amiberry/wiki/Available-Platforms) for the full list of available platforms.
+If you have more than 1GB of RAM, you can also use multiple CPU cores to compile it faster, by adding `-j<cores>`, where `<cores>` is the number of CPU cores you want to use. For example, on a Raspberry Pi 4 (32-bit) with at least 2GB of RAM, you can use all four CPU cores with the following:
+
+      make -j4 PLATFORM=rpi4
+
+Please consult the [relevant Wiki page](https://github.com/BlitterStudio/amiberry/wiki/Available-Platforms) for the full list of available platforms, as there are many (and separate for 32-bit and 64-bit ones).
 Alternatively, you can also check the Makefile itself for a full list of supported platforms.
 
-For more documentation subjects, please check the [Wiki page](https://github.com/midwan/amiberry/wiki)
-
-## Contributors
-
-This project exists thanks to all the people who contribute. [[Contribute]](../.github/CONTRIBUTING.md).
-<a href="graphs/contributors"><img src="https://opencollective.com/amiberry/contributors.svg?width=890" /></a>
-
-## Backers
-
-Thank you to all our backers! 🙏 [[Become a backer](https://opencollective.com/amiberry#backer)]
-<a href="https://opencollective.com/amiberry#backers" target="_blank"><img src="https://opencollective.com/amiberry/backers.svg?width=890"></a>
-
-## Sponsors
-
-Support this project by becoming a sponsor. Your logo will show up here with a link to your website. [[Become a sponsor](https://opencollective.com/amiberry#sponsor)]
-<a href="https://opencollective.com/amiberry/sponsor/0/website" target="_blank"><img src="https://opencollective.com/amiberry/sponsor/0/avatar.svg"></a>
-<a href="https://opencollective.com/amiberry/sponsor/1/website" target="_blank"><img src="https://opencollective.com/amiberry/sponsor/1/avatar.svg"></a>
-<a href="https://opencollective.com/amiberry/sponsor/2/website" target="_blank"><img src="https://opencollective.com/amiberry/sponsor/2/avatar.svg"></a>
-<a href="https://opencollective.com/amiberry/sponsor/3/website" target="_blank"><img src="https://opencollective.com/amiberry/sponsor/3/avatar.svg"></a>
-<a href="https://opencollective.com/amiberry/sponsor/4/website" target="_blank"><img src="https://opencollective.com/amiberry/sponsor/4/avatar.svg"></a>
-<a href="https://opencollective.com/amiberry/sponsor/5/website" target="_blank"><img src="https://opencollective.com/amiberry/sponsor/5/avatar.svg"></a>
-<a href="https://opencollective.com/amiberry/sponsor/6/website" target="_blank"><img src="https://opencollective.com/amiberry/sponsor/6/avatar.svg"></a>
-<a href="https://opencollective.com/amiberry/sponsor/7/website" target="_blank"><img src="https://opencollective.com/amiberry/sponsor/7/avatar.svg"></a>
-<a href="https://opencollective.com/amiberry/sponsor/8/website" target="_blank"><img src="https://opencollective.com/amiberry/sponsor/8/avatar.svg"></a>
-<a href="https://opencollective.com/amiberry/sponsor/9/website" target="_blank"><img src="https://opencollective.com/amiberry/sponsor/9/avatar.svg"></a>
+For more documentation subjects, please check the [Wiki page](https://github.com/BlitterStudio/amiberry/wiki)

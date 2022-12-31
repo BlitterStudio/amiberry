@@ -1108,10 +1108,10 @@ void process_event(SDL_Event event)
 		return;
 		
 	case SDL_JOYDEVICEADDED:
-	case SDL_CONTROLLERDEVICEADDED:
+	//case SDL_CONTROLLERDEVICEADDED:
 	case SDL_JOYDEVICEREMOVED:
-	case SDL_CONTROLLERDEVICEREMOVED:
-		write_log("SDL Controller/Joystick device added or removed! Re-running import joysticks...\n");
+	//case SDL_CONTROLLERDEVICEREMOVED:
+		write_log("SDL2 Controller/Joystick added or removed, re-running import joysticks...\n");
 		import_joysticks();
 		if (inputdevice_devicechange(&currprefs))
 		{
