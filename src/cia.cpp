@@ -5,6 +5,7 @@
 *
 * Copyright 1995 Bernd Schmidt, Alessandro Bissacco
 * Copyright 1996, 1997 Stefan Reinauer, Christian Schmitt
+* Copyright 2022 Toni Wilen
 */
 
 
@@ -32,7 +33,7 @@
 //#include "parallel.h"
 #include "akiko.h"
 #include "cdtv.h"
-//#include "debug.h"
+#include "debug.h"
 //#include "arcadia.h"
 #include "audio.h"
 #include "keyboard.h"
@@ -41,7 +42,6 @@
 #include "sampler.h"
 #include "dongle.h"
 #include "inputrecord.h"
-#include "autoconf.h"
 //#include "uae/ppc.h"
 #include "rommgr.h"
 #include "scsi.h"
@@ -59,8 +59,35 @@
 #define DONGLE_DEBUG 0
 #define KB_DEBUG 0
 #define CLOCK_DEBUG 0
+#define CIA_EVERY_CYCLE_DEBUG 0
 
 #define TOD_HACK
+
+#define CIA_IRQ_PROCESS_DELAY 0
+
+#define CR_START 1
+#define CR_PBON 2
+#define CR_OUTMODE 4
+#define CR_RUNMODE 8
+#define CR_LOAD 0x10
+#define CR_INMODE 0x20
+#define CR_INMODE1 0x40
+#define CR_SPMODE 0x40
+#define CR_ALARM 0x80
+
+#define ICR_A 1
+#define ICR_B 2
+#define ICR_ALARM 4
+#define ICR_SP 8
+#define ICR_FLAG 0x10
+#define ICR_MASK 0x1f
+
+#define CIA_PIPE_ALL_BITS 2
+#define CIA_PIPE_ALL_MASK ((1 << CIA_PIPE_ALL_BITS) - 1)
+#define CIA_PIPE_INPUT 2
+#define CIA_PIPE_CLR1 1
+#define CIA_PIPE_CLR2 3
+#define CIA_PIPE_OUTPUT 1
 
 /* Akiko internal CIA differences:
 

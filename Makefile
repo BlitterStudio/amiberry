@@ -409,6 +409,7 @@ OBJS = \
 	src/consolehook.o \
 	src/crc32.o \
 	src/custom.o \
+	src/debug.o \
 	src/def_icons.o \
 	src/devices.o \
 	src/disk.o \
@@ -589,7 +590,7 @@ OBJS += src/osdep/arm_helper.o
 src/osdep/arm_helper.o: src/osdep/arm_helper.s
 	$(AS) $(CPUFLAGS) -o src/osdep/arm_helper.o -c src/osdep/arm_helper.s
 else ifeq ($(PLATFORM),$(filter $(PLATFORM),osx-m1))
-USE_JIT = 0
+	USE_JIT = 0
 OBJS += src/osdep/aarch64_helper_osx.o
 else ifeq ($(PLATFORM),$(filter $(PLATFORM),osx-x86))
 	USE_JIT = 0
@@ -657,6 +658,9 @@ cleanprofile:
 	
 guisan:
 	$(MAKE) -C external/libguisan
+
+gencpu:
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LDFLAGS) -o gencpu src/cpudefs.cpp src/gencpu.cpp src/readcpu.cpp src/osdep/charset.cpp
 
 capsimg:
 	cd external/capsimg && ./bootstrap && ./configure && $(MAKE)

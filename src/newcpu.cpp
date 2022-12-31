@@ -33,7 +33,7 @@
 #include "cpu_prefetch.h"
 #include "autoconf.h"
 #include "traps.h"
-//#include "debug.h"
+#include "debug.h"
 //#include "debugmem.h"
 #include "gui.h"
 #include "savestate.h"
@@ -3508,6 +3508,19 @@ static void m68k_run_jit(void)
 }
 #endif /* JIT */
 
+static void check_halt(void)
+{
+	if (regs.halted)
+		do_specialties (0);
+}
+
+void cpu_inreset(void)
+{
+	regs.s = 1;
+	regs.intmask = 7;
+	MakeSR();
+}
+
 void cpu_halt (int id)
 {
 	// id < 0: m68k halted, PPC active.
@@ -4422,11 +4435,13 @@ bool cpureset (void)
 	m68k_reset_delay = currprefs.reset_delay;
 	set_special(SPCFLAG_CHECK);
 	send_internalevent(INTERNALEVENT_CPURESET);
-	//if (cpuboard_forced_hardreset()) {
-	//	custom_reset_cpu(false, false);
-	//	m68k_reset();
-	//	return true;
-	//}
+#ifndef AMIBERRY
+	if (cpuboard_forced_hardreset()) {
+		custom_reset_cpu(false, false);
+		m68k_reset();
+		return true;
+	}
+#endif
 	if ((currprefs.cpu_compatible || currprefs.cpu_memory_cycle_exact) && currprefs.cpu_model <= 68020) {
 		custom_reset_cpu(false, false);
 		return false;

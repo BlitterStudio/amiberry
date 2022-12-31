@@ -1168,6 +1168,22 @@ int check_prefs_changed_gfx()
 			c |= c2;
 			monitors[i] = true;
 		}
+		if (&AMonitors[i].screen_is_picasso) {
+			struct gfx_filterdata* gfc = &changed_prefs.gf[1];
+			if (gfc->changed) {
+				gfc->changed = false;
+				c |= 16;
+			}
+		}
+		else {
+			struct gfx_filterdata* gfc1 = &changed_prefs.gf[0];
+			struct gfx_filterdata* gfc2 = &changed_prefs.gf[2];
+			if (gfc1->changed || gfc2->changed) {
+				gfc1->changed = false;
+				gfc2->changed = false;
+				c |= 16;
+			}
+		}
 	}
 	monitors[0] = true;
 
@@ -1185,10 +1201,11 @@ int check_prefs_changed_gfx()
 	c |= currprefs.gfx_api_options != changed_prefs.gfx_api_options ? (1 | 8 | 32) : 0;
 	c |= currprefs.lightboost_strobo != changed_prefs.lightboost_strobo ? (2 | 16) : 0;
 
-	for (int j = 0; j < 2; j++) {
+	for (int j = 0; j < MAX_FILTERDATA; j++) {
 		struct gfx_filterdata* gf = &currprefs.gf[j];
 		struct gfx_filterdata* gfc = &changed_prefs.gf[j];
 
+		c |= gf->gfx_filter != gfc->gfx_filter ? (2 | 8) : 0;
 		c |= gf->gfx_filter != gfc->gfx_filter ? (2 | 8) : 0;
 
 		for (int i = 0; i <= 2 * MAX_FILTERSHADERS; i++) {
@@ -1315,7 +1332,7 @@ int check_prefs_changed_gfx()
 			display_change_requested = 0;
 		}
 
-		for (int j = 0; j < 2; j++) {
+		for (int j = 0; j < MAX_FILTERDATA; j++) {
 			struct gfx_filterdata* gf = &currprefs.gf[j];
 			struct gfx_filterdata* gfc = &changed_prefs.gf[j];
 			memcpy(gf, gfc, sizeof(struct gfx_filterdata));

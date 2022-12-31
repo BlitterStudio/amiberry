@@ -2,10 +2,11 @@
 #if defined(JIT)
 #include "sysdeps.h"
 #include "options.h"
-#include "memory.h"
+#include "uae/memory.h"
+#include "readcpu.h"
 #include "newcpu.h"
-#include "custom.h"
 #include "comptbl.h"
+#include "debug.h"
 extern const struct comptbl op_smalltbl_0_comp_ff[] = {
 { op_0_0_comp_ff, 0x00000002, 0 }, /* OR */
 { op_10_0_comp_ff, 0x00000002, 16 }, /* OR */

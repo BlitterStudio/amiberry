@@ -134,10 +134,8 @@ extern bool setpaused(int priority);
 extern void unsetminimized(int monid);
 extern void setminimized(int monid);
 
-
 extern void setpriority(int prio);
 void init_colors(int monid);
-
 
 #include <vector>
 #include <string>
@@ -187,19 +185,19 @@ STATIC_INLINE int max(int x, int y)
 
 #if defined(CPU_AARCH64)
 
-STATIC_INLINE void atomic_and(volatile uae_atomic *p, uae_u32 v)
+STATIC_INLINE void atomic_and(volatile uae_atomic* p, uae_u32 v)
 {
 	__atomic_and_fetch(p, v, __ATOMIC_SEQ_CST);
 }
-STATIC_INLINE void atomic_or(volatile uae_atomic *p, uae_u32 v)
+STATIC_INLINE void atomic_or(volatile uae_atomic* p, uae_u32 v)
 {
 	__atomic_or_fetch(p, v, __ATOMIC_SEQ_CST);
 }
-STATIC_INLINE uae_atomic atomic_inc(volatile uae_atomic *p)
+STATIC_INLINE uae_atomic atomic_inc(volatile uae_atomic* p)
 {
 	return __atomic_add_fetch(p, 1, __ATOMIC_SEQ_CST);
 }
-STATIC_INLINE uae_atomic atomic_dec(volatile uae_atomic *p)
+STATIC_INLINE uae_atomic atomic_dec(volatile uae_atomic* p)
 {
 	return __atomic_sub_fetch(p, 1, __ATOMIC_SEQ_CST);
 }
@@ -315,4 +313,3 @@ static inline int uae_deterministic_mode()
 	// Only returns 1 if using netplay mode (not implemented yet)
 	return 0;
 }
-

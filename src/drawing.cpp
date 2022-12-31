@@ -51,7 +51,7 @@ happening, all ports should restrict window widths to be multiples of 16 pixels.
 #include "savestate.h"
 #include "statusline.h"
 #include "inputdevice.h"
-//#include "debug.h"
+#include "debug.h"
 #ifdef CD32
 #include "cd32_fmv.h"
 #endif
@@ -188,6 +188,7 @@ int xgreencolor_s, xgreencolor_b, xgreencolor_m;
 int xbluecolor_s, xbluecolor_b, xbluecolor_m;
 
 struct color_entry colors_for_drawing;
+xcolnr fullblack;
 static struct color_entry direct_colors_for_drawing;
 
 static xcolnr *p_acolors;

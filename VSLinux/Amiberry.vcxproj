@@ -470,6 +470,7 @@
     <ClCompile Include="..\src\cpustbl.cpp" />
     <ClCompile Include="..\src\crc32.cpp" />
     <ClCompile Include="..\src\custom.cpp" />
+    <ClCompile Include="..\src\debug.cpp" />
     <ClCompile Include="..\src\def_icons.cpp" />
     <ClCompile Include="..\src\devices.cpp" />
     <ClCompile Include="..\src\disk.cpp" />
@@ -809,6 +810,8 @@
     <ClInclude Include="..\src\include\cpu_prefetch.h" />
     <ClInclude Include="..\src\include\crc32.h" />
     <ClInclude Include="..\src\include\custom.h" />
+    <ClInclude Include="..\src\include\debug.h" />
+    <ClInclude Include="..\src\include\debugmem.h" />
     <ClInclude Include="..\src\include\devices.h" />
     <ClInclude Include="..\src\include\disk.h" />
     <ClInclude Include="..\src\include\diskutil.h" />
@@ -867,10 +870,14 @@
     <ClInclude Include="..\src\include\uaenative.h" />
     <ClInclude Include="..\src\include\uaeresource.h" />
     <ClInclude Include="..\src\include\uaeserial.h" />
+    <ClInclude Include="..\src\include\uae\api.h" />
+    <ClInclude Include="..\src\include\uae\attributes.h" />
     <ClInclude Include="..\src\include\uae\caps.h" />
     <ClInclude Include="..\src\include\uae\cdrom.h" />
     <ClInclude Include="..\src\include\uae\dlopen.h" />
     <ClInclude Include="..\src\include\uae\likely.h" />
+    <ClInclude Include="..\src\include\uae\log.h" />
+    <ClInclude Include="..\src\include\uae\memory.h" />
     <ClInclude Include="..\src\include\uae\mman.h" />
     <ClInclude Include="..\src\include\uae\string.h" />
     <ClInclude Include="..\src\include\uae\types.h" />

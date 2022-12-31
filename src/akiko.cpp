@@ -163,7 +163,7 @@
 #include "custom.h"
 #include "newcpu.h"
 #include "flashrom.h"
-//#include "debug.h"
+#include "debug.h"
 #include "rommgr.h"
 #include "devices.h"
 
@@ -462,7 +462,7 @@ static smp_comm_pipe requests;
 static volatile int akiko_thread_running;
 static uae_sem_t akiko_sem = 0, sub_sem = 0, cda_sem = 0;
 
-static void checkint (void)
+static void checkint_akiko (void)
 {
 	if (cdrom_intreq & cdrom_intena) {
 		irq ();
@@ -485,13 +485,13 @@ static void set_status (uae_u32 status)
 	}
 #endif
 	cdrom_intreq |= status;
-	checkint ();
+	checkint_akiko ();
 	cdrom_led ^= LED_CD_ACTIVE2;
 }
 
 static void rethink_akiko(void)
 {
-	checkint ();
+	checkint_akiko ();
 }
 
 static void cdaudiostop_do (void)

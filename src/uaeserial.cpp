@@ -83,6 +83,9 @@ int log_uaeserial = 0;
 #define io_SerFlags	0x4f	/* UBYTE see SerFlags bit definitions below  */
 #define io_Status	0x50	/* UWORD */
 
+#define SEXTF_MSPON 2
+#define SEXTF_MARK 1
+
 #define IOExtSerSize 82
 
 /* status of serial port, as follows:
@@ -448,15 +451,13 @@ void uaeser_signal(void* vdev, int sigmask)
 							io_actual += size;
 							io_data += size;
 							io_length -= size;
-						}
-						else if (status == 0) {
+						} else if (status == 0) {
 							if (io_actual == 0)
 								io_done = 0;
 							break;
 						}
 					}
-				}
-				else if (sigmask & 4) {
+				} else if (sigmask & 4) {
 					io_done = 1;
 					io_error = SerErr_DetectedBreak;
 				}
@@ -503,8 +504,9 @@ void uaeser_signal(void* vdev, int sigmask)
 
 static void cmd_reset(TrapContext* ctx, struct devstruct* dev, uae_u8* req)
 {
-	while (dev->ar)
+	while (dev->ar) {
 		abort_async(ctx, dev, dev->ar->arequest);
+	}
 	put_long_host(req + io_RBufLen, 8192);
 	put_long_host(req + io_ExtFlags, 0);
 	put_long_host(req + io_Baud, 57600);
@@ -554,8 +556,7 @@ static int dev_do_io(TrapContext* ctx, struct devstruct* dev, uae_u8* request, u
 	case SDCMD_BREAK:
 		if (get_byte_host(request + io_SerFlags) & SERF_QUEUEDBRK) {
 			async = 1;
-		}
-		else {
+		} else {
 			uaeser_break(dev->sysdata, get_long_host(request + io_BrkTime));
 		}
 		break;
@@ -614,8 +615,7 @@ static uae_u32 REGPARAM2 dev_beginio(TrapContext* ctx)
 		if (dev_do_io(ctx, dev, request, arequest, 1))
 			write_log(_T("device %s:%d command %d bug with IO_QUICK\n"), getdevname(), dev->unit, command);
 		err = get_byte_host(request + 31);
-	}
-	else {
+	} else {
 		put_byte_host(request + 30, get_byte_host(request + 30) & ~1);
 		trap_put_bytes(ctx, request + 8, arequest + 8, IOExtSerSize - 8);
 		uae_sem_wait(&pipe_sem);
@@ -650,15 +650,12 @@ static int dev_thread(void* devs)
 			uae_sem_post(&dev->sync_sem);
 			uae_sem_post(&change_sem);
 			return 0;
-		}
-		else if (get_async_request(dev, request, 1)) {
+		} else if (get_async_request(dev, request, 1)) {
 			uae_ReplyMsg(request);
 			release_async_request(dev, request);
-		}
-		else if (dev_do_io(ctx, dev, iobuf, request, 0) == 0) {
+		} else if (dev_do_io(ctx, dev, iobuf, request, 0) == 0) {
 			uae_ReplyMsg(request);
-		}
-		else {
+		} else {
 			add_async_request(dev, iobuf, request);
 			uaeser_trigger(dev->sysdata);
 		}
@@ -722,8 +719,7 @@ uaecptr uaeserialdev_startup(TrapContext* ctx, uaecptr resaddr)
 	trap_put_long(ctx, resaddr + 0x6, resaddr + 0x1A); /* Continue scan here */
 	if (kickstart_version >= 37) {
 		trap_put_long(ctx, resaddr + 0xA, 0x84010300 | AFTERDOS_PRI); /* RTF_AUTOINIT, RT_VERSION NT_LIBRARY, RT_PRI */
-	}
-	else {
+	} else {
 		trap_put_long(ctx, resaddr + 0xA, 0x81010305); /* RTF_AUTOINIT, RT_VERSION NT_LIBRARY, RT_PRI */
 	}
 	trap_put_long(ctx, resaddr + 0xE, ROM_uaeserialdev_resname);

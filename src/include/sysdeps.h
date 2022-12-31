@@ -40,19 +40,52 @@ using namespace std;
 #define UAE
 #endif
 
-#if defined(__x86_64__) || defined(_M_AMD64)
+#if defined(__arm__) || defined(_M_ARM)
+#define CPU_arm 1
+#define ARM_ASSEMBLY 1
+#elif defined(_M_ARM64) || defined(_M_ARM64EC) || defined(__aarch64__)
+#define CPU_arm 1
+#define CPU_64_BIT 1
+#define ARM_ASSEMBLY 1
+#elif defined(__x86_64__) || defined(_M_AMD64)
 #define CPU_x86_64 1
 #define CPU_64_BIT 1
 #define X86_64_ASSEMBLY 1
+#define SAHF_SETO_PROFITABLE
 #elif defined(__i386__) || defined(_M_IX86)
 #define CPU_i386 1
-#elif defined(__arm__) || defined(_M_ARM) || defined(__aarch64__)
-#define CPU_arm 1
-#define CPU_64_BIT 1
+#define X86_ASSEMBLY 1
+#define SAHF_SETO_PROFITABLE
 #elif defined(__powerpc__) || defined(_M_PPC)
 #define CPU_powerpc 1
 #else
 #error unrecognized CPU type
+#endif
+
+#ifdef _WIN32
+/* Parameters are passed in ECX, EDX for both x86 and x86-64 (RCX, RDX).
+ * For x86-64, __fastcall is the default, so it isn't really required. */
+#define JITCALL __fastcall
+#elif defined(CPU_x86_64)
+/* Parameters are passed in RDI, RSI by default (System V AMD64 ABI). */
+#define JITCALL
+#elif defined(HAVE_FUNC_ATTRIBUTE_REGPARM)
+/* Parameters are passed in EAX, EDX on x86 with regparm(2). */
+#define JITCALL __attribute__((regparm(2)))
+/* This was originally regparm(3), but as far as I can see only two register
+ * params are supported by the JIT code. It probably just worked anyway
+ * if all functions used max two arguments. */
+#elif !defined(JIT)
+#define JITCALL
+#endif
+#ifdef AMIBERRY
+#define REGPARAM2
+#define REGPARAM3 
+#define REGPARAM
+#else
+#define REGPARAM
+#define REGPARAM2 JITCALL
+#define REGPARAM3 JITCALL
 #endif
 
 #ifndef __STDC__
@@ -215,10 +248,6 @@ extern void to_upper (TCHAR *s, int len);
 #define FILEFLAG_SCRIPT  0x20
 #define FILEFLAG_PURE    0x40
 
-#define REGPARAM2
-#define REGPARAM3 
-#define REGPARAM
-
 #define abort() \
   do { \
 	printf ("Internal error; file %s, line %d\n", __FILE__, __LINE__); \
@@ -302,7 +331,8 @@ extern void mallocemu_free (void *ptr);
 #endif
 
 #ifdef X86_ASSEMBLY
-#define ASM_SYM_FOR_FUNC(a) __asm__(a)
+//#define ASM_SYM_FOR_FUNC(a) __asm__(a)
+#define ASM_SYM_FOR_FUNC(a)
 #else
 #define ASM_SYM_FOR_FUNC(a)
 #endif
@@ -440,6 +470,8 @@ STATIC_INLINE uae_u32 do_byteswap_16(uae_u32 v) {
 #define xfree(T) free(T)
 
 #endif
+
+#define DBLEQU(f, i) (abs ((f) - (i)) < 0.000001)
 
 #ifdef HAVE_VAR_ATTRIBUTE_UNUSED
 #define NOWARN_UNUSED(x) __attribute__((unused)) x
