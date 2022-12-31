@@ -8302,7 +8302,7 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 	p->cs_ciatype[1] = 0;
 	p->cs_memorypatternfill = true;
 
-	for (int i = APMODE_NATIVE; i <= APMODE_RTG; i++) {
+	for (int i = 0; i < MAX_FILTERDATA; i++) {
 		struct gfx_filterdata *f = &p->gf[i];
 		f->gfx_filter = 0;
 		f->gfx_filter_scanlineratio = (1 << 4) | 1;
