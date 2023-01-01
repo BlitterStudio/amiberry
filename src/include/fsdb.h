@@ -163,6 +163,7 @@ extern int my_truncate (const TCHAR *name, uae_u64 len);
 extern int dos_errno (void);
 extern int my_existslink(const char* name);
 extern int my_existsfile (const TCHAR *name);
+extern int my_existsfile2(const TCHAR* name);
 extern int my_existsdir (const TCHAR *name);
 extern FILE *my_opentext (const TCHAR*);
 
