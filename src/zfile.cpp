@@ -2004,7 +2004,7 @@ int zfile_exists (const TCHAR *name)
 {
 	struct zfile *z;
 
-	if (my_existsfile (name))
+	if (my_existsfile2 (name))
 		return 1;
 	z = zfile_fopen (name, _T("rb"), ZFD_NORMAL | ZFD_CHECKONLY);
 	if (!z)
@@ -3198,7 +3198,7 @@ struct zvolume *zfile_fopen_archive_root (const TCHAR *filename, int flags)
 		}
 		*p1 = 0;
 		lastp = p1;
-		if (my_existsfile (p2))
+		if (my_existsfile2 (p2))
 			return zfile_fopen_archive (p2, flags);
 		num++;
 	}

@@ -116,7 +116,7 @@ public:
 				strncat(tmp, txtFilename->getText().c_str(), MAX_DPATH - 2);
 				if (strstr(tmp, filefilter[0]) == nullptr)
 					strncat(tmp, filefilter[0], MAX_DPATH - 1);
-				if (my_existsfile(tmp) == 1)
+				if (my_existsfile2(tmp) == 1)
 					return; // File already exists
 				strncpy(workingDir, tmp, MAX_DPATH - 1);
 				dialogResult = true;

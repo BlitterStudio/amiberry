@@ -241,7 +241,7 @@ void make_rom_symlink(const char* kick_short, int kick_numb, struct uae_prefs* p
 		my_unlink(kick_long);
 	}
 
-	if (!my_existsfile(kick_long))
+	if (!my_existsfile2(kick_long))
 	{
 		roms[0] = kick_numb;
 		const auto rom_test = configure_rom(p, roms, 0);
@@ -272,7 +272,7 @@ static void symlink_rtb(const char* ext_path)
 		snprintf(src, MAX_DPATH, "%s/%s", kick_path, rtb_files[i]);
 		snprintf(dst, MAX_DPATH, "%s/%s", ext_path, rtb_files[i]);
 
-		if (!my_existsfile(dst)) symlink(src, dst);
+		if (!my_existsfile2(dst)) symlink(src, dst);
 		i++;
 	}
 }
@@ -317,7 +317,7 @@ void symlink_roms(struct uae_prefs* prefs)
 	// destination file (symlink)
 	snprintf(tmp2, MAX_DPATH, "%s/rom.key", kick_path);
 
-	if (my_existsfile(tmp)) {
+	if (my_existsfile2(tmp)) {
 		const int r = symlink(tmp, tmp2);
 		if (r < 0 && errno == EPERM)
 			copyfile(tmp2, tmp, true);
@@ -384,7 +384,7 @@ void cd_auto_prefs(uae_prefs* prefs, char* filepath)
 	//  CONFIG LOAD IF .UAE IS IN CONFIG PATH
 	build_uae_config_filename();
 
-	if (my_existsfile(uae_config))
+	if (my_existsfile2(uae_config))
 	{
 		target_cfgfile_load(prefs, uae_config, CONFIG_TYPE_ALL, 0);
 		return;
@@ -1116,7 +1116,7 @@ void set_booter_drives(uae_prefs* prefs, char* filepath)
 		cfgfile_parse_line(prefs, parse_text(tmp), 0);
 
 		snprintf(boot_path, MAX_DPATH, "%sboot-data.zip", whdbootpath);
-		if (!my_existsfile(boot_path))
+		if (!my_existsfile2(boot_path))
 			snprintf(boot_path, MAX_DPATH, "%sboot-data/", whdbootpath);
 
 		_stprintf(tmp, _T("filesystem2=rw,DH3:DH3:%s,-10"), boot_path);
@@ -1128,7 +1128,7 @@ void set_booter_drives(uae_prefs* prefs, char* filepath)
 	else // revert to original booter is no slave was set
 	{
 		snprintf(boot_path, MAX_DPATH, "%sboot-data.zip", whdbootpath);
-		if (!my_existsfile(boot_path))
+		if (!my_existsfile2(boot_path))
 			snprintf(boot_path, MAX_DPATH, "%sboot-data/", whdbootpath);
 
 		_stprintf(tmp, _T("filesystem2=rw,DH0:DH0:%s,10"), boot_path);
@@ -1186,7 +1186,7 @@ void whdload_auto_prefs(uae_prefs* prefs, char* filepath)
 
 	// if we have a config file, we will use it
 	// we will need it for the WHDLoad options too.
-	if (my_existsfile(uae_config))
+	if (my_existsfile2(uae_config))
 	{
 		write_log("WHDBooter -  %s found. Loading Config for WHDload options.\n", uae_config);
 		target_cfgfile_load(&currprefs, uae_config, CONFIG_TYPE_ALL, 0);
@@ -1213,7 +1213,7 @@ void whdload_auto_prefs(uae_prefs* prefs, char* filepath)
 	strcpy(whd_config, whd_path);
 	strcat(whd_config, "whdload_db.xml");
 
-	if (my_existsfile(whd_config))
+	if (my_existsfile2(whd_config))
 	{
 		game_detail = parse_settings_from_xml(prefs, filepath);
 	}
@@ -1229,7 +1229,7 @@ void whdload_auto_prefs(uae_prefs* prefs, char* filepath)
 	}
 
 	// now we should have a startup-sequence file (if we don't, we are going to use the original booter)
-	if (my_existsfile(whd_startup))
+	if (my_existsfile2(whd_startup))
 	{
 		// create a symlink to WHDLoad in /tmp/amiberry/
 		snprintf(whd_path, MAX_DPATH, "%sWHDLoad", whdbootpath);
@@ -1277,7 +1277,7 @@ void whdload_auto_prefs(uae_prefs* prefs, char* filepath)
 #endif
 
 	// if we already loaded a .uae config, we don't need to do the below manual setup for hardware
-	if (my_existsfile(uae_config))
+	if (my_existsfile2(uae_config))
 	{
 		write_log("WHDBooter - %s found; ignoring WHD Quickstart setup.\n", uae_config);
 		return;
