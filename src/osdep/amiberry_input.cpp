@@ -969,6 +969,7 @@ static int init_joystick()
 		auto retroarch_config_file = string(controllers_path);
 		const auto sanitized_name = sanitize_retroarch_name(did->joystick_name);
 		retroarch_config_file += sanitized_name + ".cfg";
+		write_log("Joystick name: '%s', sanitized to: '%s'\n", did->joystick_name.c_str(), sanitized_name.c_str());
 
 		if (my_existsfile(retroarch_config_file.c_str()))
 		{
@@ -979,36 +980,41 @@ static int init_joystick()
 		}
 		else
 		{
+			write_log("No Retroarch controller cfg file found, checking for mapping in retroarch.cfg\n");
 			// Check if values are in retroarch.cfg
 			char retroarch_file[MAX_DPATH];
 			get_retroarch_file(retroarch_file, MAX_DPATH);
 			if (my_existsfile(retroarch_file))
 			{
 				int found_player = -1;
-				for (auto p = 1; p < 5; p++) {
+				for (auto p = 1; p < 5; p++) 
+				{
 					const int pindex = find_retroarch(("input_player" + to_string(p) + "_joypad_index").c_str(), retroarch_file);
-					if (pindex == i) {
+					if (pindex == i) 
+					{
 						found_player = p;
 						break;
 					}
 				}
-				if (found_player != -1) {
+				if (found_player != -1) 
+				{
 					write_log("Controller index found in retroarch cfg, using that for mapping\n");
 					fill_blank_controller();
 					did->mapping = default_controller_map;
 					did->mapping = map_from_retroarch(did->mapping, retroarch_file, found_player);
 				}
-				else {
+				else 
+				{
+					write_log("No controller index found in retroarch cfg, using the default mapping\n");
 					fill_default_controller();
 					did->mapping = default_controller_map;
-					write_log("No controller index found in retroarch cfg, using the default mapping\n");
 				}
 			}
 			else
 			{
+				write_log("No Retroarch controller cfg file found, using the default mapping\n");
 				fill_default_controller();
 				did->mapping = default_controller_map;
-				write_log("No Retroarch controller cfg file found, using the default mapping\n");
 			}
 		}
 
