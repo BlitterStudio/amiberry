@@ -362,6 +362,18 @@ int my_existslink(const char* name)
 	return 0;
 }
 
+int my_existsfile2(const char* name)
+{
+	struct stat st {};
+	if (lstat(name, &st) == -1)
+	{
+		return 0;
+	}
+	if (!S_ISDIR(st.st_mode))
+		return 1;
+	return 0;
+}
+
 int my_existsfile(const char* name)
 {
 	struct stat st {};

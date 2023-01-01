@@ -280,7 +280,7 @@ static bool state_path_exists(const TCHAR *path, int type)
 {
 	if (type == SAVESTATE_PATH_VDIR)
 		return my_existsdir(path);
-	return my_existsfile(path);
+	return my_existsfile2(path);
 }
 
 static TCHAR *state_resolve_path(TCHAR *s, int type, bool newmode)

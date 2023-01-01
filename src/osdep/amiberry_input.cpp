@@ -730,7 +730,7 @@ static int init_kb()
 	// Check if we have a Retroarch file
 	char retroarch_file[MAX_DPATH];
 	get_retroarch_file(retroarch_file, MAX_DPATH);
-	if (my_existsfile(retroarch_file))
+	if (my_existsfile2(retroarch_file))
 	{
 		// Add as many keyboards as joysticks that are setup
 		// on arcade machines, you could have a 4 player ipac using all keyboard buttons
@@ -971,7 +971,7 @@ static int init_joystick()
 		retroarch_config_file += sanitized_name + ".cfg";
 		write_log("Joystick name: '%s', sanitized to: '%s'\n", did->joystick_name.c_str(), sanitized_name.c_str());
 
-		if (my_existsfile(retroarch_config_file.c_str()))
+		if (my_existsfile2(retroarch_config_file.c_str()))
 		{
 			write_log("Retroarch controller cfg file found, using that for mapping\n");
 			fill_blank_controller();
@@ -984,7 +984,7 @@ static int init_joystick()
 			// Check if values are in retroarch.cfg
 			char retroarch_file[MAX_DPATH];
 			get_retroarch_file(retroarch_file, MAX_DPATH);
-			if (my_existsfile(retroarch_file))
+			if (my_existsfile2(retroarch_file))
 			{
 				int found_player = -1;
 				for (auto p = 1; p < 5; p++) 

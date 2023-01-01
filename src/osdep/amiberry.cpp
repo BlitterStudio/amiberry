@@ -3614,7 +3614,7 @@ bool get_plugin_path(TCHAR* out, int len, const TCHAR* path)
 		strncat(out, "/", len - 1);
 		strncat(out, path, len - 1);
 		strncat(out, "/", len - 1);
-		return my_existsfile(out);
+		return my_existsfile2(out);
 	}
 	return TRUE;
 }
