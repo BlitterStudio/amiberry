@@ -10384,7 +10384,7 @@ static uae_u16 sprite_fetch(struct sprite *s, uaecptr pt, int hpos, int slot, in
 	}
 #endif
 #ifdef DEBUGGER
-	int num = (int)(s - &spr[0]);
+	int num = addrdiff(s, &spr[0]);
 	if (debug_dma) {
 		record_dma_read(num * 8 + 0x140 + mode * 4 + slot * 2, pt, hpos, vpos, DMARECORD_SPRITE, num);
 	}
