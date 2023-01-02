@@ -10875,8 +10875,8 @@ static bool framewait(void)
 
 			start = read_processor_time();
 			t = 0;
-			if ((int)start - (int)vsync_time >= 0 && (int)start - (int)vsync_time < vsynctimebase) {
-				t += (int)start - (int)vsync_time;
+			if (start - vsync_time >= 0 && start - vsync_time < vsynctimebase) {
+				t += start - vsync_time;
 			}
 
 			if (!frame_shown) {
@@ -11066,7 +11066,7 @@ static void fpscounter(bool frameok)
 	last = now - lastframetime;
 	lastframetime = now;
 
-	if (bogusframe || (int)last < 0) {
+	if (bogusframe || last < 0) {
 		return;
 	}
 
@@ -12065,7 +12065,7 @@ static bool sync_timeout_check(frame_time_t max)
 	return true;
 #else
 	frame_time_t rpt = read_processor_time();
-	return (int)rpt - (int)max <= 0;
+	return rpt - max <= 0;
 #endif
 }
 

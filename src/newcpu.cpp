@@ -5336,7 +5336,7 @@ static void run_cpu_thread(int (*f)(void *))
 
 		frame_time_t next = vsyncmintimepre + (vsynctimebase * vpos / (maxvpos + 1));
 		frame_time_t c = read_processor_time();
-		if ((int)next - (int)c > 0 && (int)next - (int)c < vsyncmaxtime * 2)
+		if (next - c > 0 && next - c < vsyncmaxtime * 2)
 			continue;
 
 		vp = vpos;
