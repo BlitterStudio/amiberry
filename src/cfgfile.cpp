@@ -5784,6 +5784,7 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		_tcscpy(tmpbuf, option);
 		tmpbuf[tmpp - option] = 0;
 		if (_tcscmp(tmpbuf, TARGET_NAME) == 0) {
+			option = tmpp + 1;
 			return target_parse_option(p, option, value, CONFIG_TYPE_HARDWARE);
 		}
 	}
