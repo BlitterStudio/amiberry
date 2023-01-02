@@ -130,8 +130,6 @@ static int fifo_inuse[3];
 static int dma_enable, bitoffset, syncoffset;
 static uae_u16 word, dsksync;
 static bool dsksync_on;
-static evt_t dsksync_cycles;
-#define WORDSYNC_TIME 11
 /* Always carried through to the next line.  */
 int disk_hpos;
 static int disk_jitter;
@@ -4083,7 +4081,6 @@ static int doreaddma (void)
 
 static void wordsync_detected(bool startup)
 {
-	dsksync_cycles = get_cycles() + WORDSYNC_TIME * CYCLE_UNIT;
 	if (dskdmaen != DSKDMA_OFF) {
 		if (disk_debug_logging && dma_enable == 0) {
 			int pos = -1;
@@ -4110,6 +4107,11 @@ static void wordsync_detected(bool startup)
 	}
 }
 
+static bool canloaddskbytr(void)
+{
+	return (bitoffset & 7) == 7 && (word & 0xff) != 0x00 && (word & 0xff) != 0xff;
+}
+
 static void disk_doupdate_read_reallynothing(int floppybits, bool state)
 {
 	while (floppybits >= get_floppy_speed()) {
@@ -4129,7 +4131,7 @@ static void disk_doupdate_read_reallynothing(int floppybits, bool state)
 				skipbit = true;
 			}
 		}
-		if (!skipbit && (bitoffset & 7) == 7 && !waszero) {
+		if (!skipbit && canloaddskbytr()) {
 			dskbytr_val = word & 0xff;
 			dskbytr_val |= 0x8000;
 		}
@@ -4164,7 +4166,7 @@ static void disk_doupdate_read_nothing(int floppybits)
 				skipbit = true;
 			}
 		}
-		if (!skipbit && (bitoffset & 7) == 7) {
+		if (!skipbit && canloaddskbytr()) {
 			dskbytr_val = word & 0xff;
 			dskbytr_val |= 0x8000;
 		}
@@ -4268,7 +4270,7 @@ static void disk_doupdate_read (drive * drv, int floppybits)
 			}
 		}
 
-		if (!skipbit && (bitoffset & 7) == 7) {
+		if (!skipbit && canloaddskbytr()) {
 			dskbytr_val = word & 0xff;
 			dskbytr_val |= 0x8000;
 		}
@@ -4305,7 +4307,7 @@ uae_u16 DSKBYTR(int hpos)
 	DISK_update(hpos);
 	v = dskbytr_val;
 	dskbytr_val &= ~0x8000;
-	if (word == dsksync && cycles_in_range(dsksync_cycles)) {
+	if (word == dsksync) {
 		v |= 0x1000;
 		if (disk_debug_logging > 1) {
 			dumpdisk(_T("DSKBYTR SYNC"));
