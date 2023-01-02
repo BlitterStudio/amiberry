@@ -9598,8 +9598,8 @@ static void decide_line(int endhpos)
 					decide_line_decision_fetches(hpos);
 					// Bitplane sequencer activated
 					bprun = -1;
-					if (plfstrt_sprite > hpos) {
-						plfstrt_sprite = hpos;
+					if (plfstrt_sprite > hpos + 1) {
+						plfstrt_sprite = hpos + 1;
 					}
 					bprun_start(hpos);
 					if (ddf_stopping) {
@@ -9699,9 +9699,8 @@ static void decide_line(int endhpos)
 				decide_line_decision_fetches(hpos);
 				// Bitplane sequencer activated
 				bprun = -1;
-				if (plfstrt_sprite > hpos) {
-					plfstrt_sprite = hpos;
-					plfstrt_sprite--;
+				if (plfstrt_sprite > hpos + 0) {
+					plfstrt_sprite = hpos + 0;
 				}
 				bprun_start(hpos);
 				if (ddf_stopping) {
