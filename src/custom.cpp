@@ -69,7 +69,7 @@
 #define ALL_SUBPIXEL 1
 
 #define RGA_COPPER_PIPELINE_DEPTH 2
-#define RGA_SPRITE_PIPELINE_DEPTH 3
+#define RGA_SPRITE_PIPELINE_DEPTH 2
 #define REFRESH_FIRST_HPOS 3
 #define DMAL_FIRST_HPOS 11
 #define SPR_FIRST_HPOS 25
@@ -409,6 +409,8 @@ struct sprite {
 static struct sprite spr[MAX_SPRITES];
 static int plfstrt_sprite;
 static int sprbplconflict, sprbplconflict_hpos;
+static int sprbplconflict2, sprbplconflict_hpos2;
+static uae_u16 sprbplconflict_dat;
 uaecptr sprite_0;
 int sprite_0_width, sprite_0_height, sprite_0_doubled;
 uae_u32 sprite_0_colors[4];
@@ -537,6 +539,10 @@ static uaecptr copper_bad_cycle_pc_old;
 static evt_t copper_bad_cycle_start;
 static uaecptr copper_bad_cycle_pc_new;
 
+static evt_t copper_dma_change_cycle;
+static evt_t blitter_dma_change_cycle;
+static evt_t sprite_dma_change_cycle_on, sprite_dma_change_cycle_off;
+
 /*
 * Statistics
 */
@@ -594,7 +600,7 @@ static uae_u16 dmal_alloc_mask;
 
 #define RGA_PIPELINE_OFFSET_BPL_WRITE 3
 #define RGA_PIPELINE_OFFSET_COPPER 2
-#define RGA_PIPELINE_OFFSET_SPRITE 3
+#define RGA_PIPELINE_OFFSET_SPRITE 2
 #define RGA_PIPELINE_OFFSET_DMAL 2
 
 struct custom_store custom_storage[256];
@@ -664,6 +670,11 @@ static int REGPARAM3 custom_wput_1(int, uaecptr, uae_u32, int) REGPARAM;
 /*
 * helper functions
 */
+
+static bool safecpu(void)
+{
+	return currprefs.cpu_model == 68000 && currprefs.cpu_cycle_exact && currprefs.blitter_cycle_exact && currprefs.m68k_speed == 0 && !(currprefs.cs_hacks & 16);
+}
 
 static void check_nocustom(void)
 {
@@ -796,11 +807,19 @@ void alloc_cycle_ext(int hpos, int type)
 	alloc_cycle(hpos, type);
 }
 
-uaecptr alloc_cycle_blitter_conflict_or(int hpos)
+uaecptr alloc_cycle_blitter_conflict_or(int hpos, int chnum, bool *skip)
 {
 	uaecptr orptr = 0;
 	if (copper_bad_cycle && line_start_cycles + hpos * CYCLE_UNIT == copper_bad_cycle) {
 		orptr = copper_bad_cycle_pc_old;
+	} else if (hpos == sprbplconflict_hpos2) {
+		uae_u16 bltdat = chnum == 4 ? 0x000 : (3 - chnum) * 2 + 0x70;
+		uae_u16 rga = bltdat & sprbplconflict2;
+		int spnum = (sprbplconflict2 - 0x140) / 8;
+		orptr = spr[spnum].pt;
+		if (rga != bltdat) {
+			*skip = true;
+		}
 	}
 	return orptr;
 }
@@ -809,12 +828,26 @@ bool alloc_cycle_blitter(int hpos, uaecptr *ptr, int chnum, int add)
 {
 	bool skipadd = false;
 	if (copper_bad_cycle && line_start_cycles + hpos * CYCLE_UNIT == copper_bad_cycle) {
-		write_log("Copper PT=%08x/%08x. Blitter CH=%d PT=%08x. Conflict bug!\n", copper_bad_cycle_pc_old, copper_bad_cycle_pc_new, chnum, *ptr);
+		write_log("Copper PT=%08x/%08x. Blitter CH=%d MOD=%d PT=%08x. Conflict bug!\n", copper_bad_cycle_pc_old, copper_bad_cycle_pc_new, chnum, add, *ptr);
 		cop_state.ip += add;
 		*ptr = copper_bad_cycle_pc_old;
 		skipadd = true;
 		copper_bad_cycle = 0;
-		//activate_debugger();
+	} else if (hpos == sprbplconflict_hpos2) {
+		uae_u16 v = chipmem_wget_indirect(*ptr);
+		uae_u16 bltdat = chnum == 4 ? 0x000 : (3 - chnum) * 2 + 0x70;
+		uae_u16 rga = bltdat & sprbplconflict2;
+		int spnum = (sprbplconflict2 - 0x140) / 8;
+		uaecptr pt = spr[spnum].pt;
+		spr[spnum].pt = *ptr + 2 + add;
+		custom_wput_1(hpos, rga, v, 1);
+#ifdef DEBUGGER
+		if (debug_dma) {
+			record_dma_read_value(v);
+			record_dma_read(rga, *ptr, hpos, vpos, DMARECORD_SPRITE, spnum);
+		}
+#endif
+		write_log("Sprite %d. Blitter CH=%d MOD=%d PT=%08x. Conflict bug!\n", spnum, chnum, add, *ptr);
 	}
 	alloc_cycle(hpos, CYCLE_BLITTER);
 	return skipadd;
@@ -5520,6 +5553,7 @@ static void reset_decisions_scanline_start(void)
 	/* Default to no bitplane DMA overriding sprite DMA */
 	plfstrt_sprite = 0x100;
 	sprbplconflict_hpos = -1;
+	sprbplconflict_hpos2 = -1;
 	bprun_end = 0;
 
 	// clear sprite allocations
@@ -7515,6 +7549,24 @@ static int test_copper_dangerous(uaecptr address)
 	return 0;
 }
 
+// if DMA was changed during same cycle: previous value is used
+static bool is_blitter_dma(void)
+{
+	bool dma = dmaen(DMA_BLITTER);
+	if (get_cycles() == blitter_dma_change_cycle) {
+		return dma == false;
+	}
+	return dma;
+}
+static bool is_copper_dma(void)
+{
+	bool dma = dmaen(DMA_COPPER);
+	if (get_cycles() == copper_dma_change_cycle) {
+		return dma == false;
+	}
+	return dma;
+}
+
 static void immediate_copper(int num)
 {
 	int pos = 0;
@@ -7527,7 +7579,7 @@ static void immediate_copper(int num)
 		if (oldpos > pos) {
 			pos = oldpos;
 		}
-		if (!dmaen(DMA_COPPER)) {
+		if (!is_copper_dma()) {
 			break;
 		}
 		if (cop_state.ip >= currprefs.chipmem.size &&
@@ -7596,7 +7648,7 @@ static void COPJMP(int num, int vblank)
 	if (!oldstrobe) {
 		cop_state.state_prev = cop_state.state;
 	}
-	if ((cop_state.state == COP_wait1 || cop_state.state == COP_waitforever) && !vblank && dmaen(DMA_COPPER)) {
+	if ((cop_state.state == COP_wait1 || cop_state.state == COP_waitforever) && !vblank && is_copper_dma()) {
 		if (blt_info.blit_main) {
 			static int warned = 100;
 			if (warned > 0) {
@@ -7605,7 +7657,7 @@ static void COPJMP(int num, int vblank)
 			}
 		}
 		int hp = current_hpos();
-		if ((hp & 1) && currprefs.cpu_model == 68000 && currprefs.cpu_cycle_exact && currprefs.blitter_cycle_exact && currprefs.m68k_speed == 0 && !(currprefs.cs_hacks & 16)) {
+		if ((hp & 1) && safecpu()) {
 			// CPU unaligned COPJMP while waiting
 			cop_state.state = COP_strobe_delay1x;
 			copper_bad_cycle_start = get_cycles();
@@ -7640,7 +7692,7 @@ static void COPJMP(int num, int vblank)
 		return;
 	}
 
-	if (dmaen(DMA_COPPER)) {
+	if (is_copper_dma()) {
 		compute_spcflag_copper();
 	} else if (wasstopped || (oldstrobe > 0 && oldstrobe != num && cop_state.state_prev == COP_wait1)) {
 		/* dma disabled, copper idle and accessed both COPxJMPs -> copper stops! */
@@ -7655,7 +7707,7 @@ STATIC_INLINE void COPCON(uae_u16 a)
 
 static void check_copper_stop(void)
 {
-	if (copper_enabled_thisline < 0 && !((dmacon & DMA_COPPER) && (dmacon & DMA_MASTER))) {
+	if (copper_enabled_thisline < 0 && !(is_copper_dma() && (dmacon & DMA_MASTER))) {
 		copper_enabled_thisline = 0;
 		unset_special(SPCFLAG_COPPER);
 	}
@@ -7674,9 +7726,7 @@ static void bitplane_dma_change(uae_u32 v)
 
 static void DMACON(int hpos, uae_u16 v)
 {
-	int oldcop, newcop;
 	uae_u16 changed;
-
 	uae_u16 oldcon = dmacon;
 
 	decide_line(hpos);
@@ -7690,14 +7740,32 @@ static void DMACON(int hpos, uae_u16 v)
 	if (changed)
 		write_log(_T("%04x -> %04x %08x\n"), oldcon, dmacon, m68k_getpc ());
 #endif
-	oldcop = (oldcon & DMA_COPPER) && (oldcon & DMA_MASTER);
-	newcop = (dmacon & DMA_COPPER) && (dmacon & DMA_MASTER);
 
-	if (oldcop != newcop) {
-		if (newcop && !oldcop) {
-			compute_spcflag_copper();
-		} else if (!newcop) {
-			copper_stop();
+	int oldcop = (oldcon & DMA_COPPER) && (oldcon & DMA_MASTER);
+	int newcop = (dmacon & DMA_COPPER) && (dmacon & DMA_MASTER);
+	if (oldcop != newcop && (copper_access || safecpu())) {
+		copper_dma_change_cycle = get_cycles();
+	}
+	if (newcop && !oldcop) {
+		compute_spcflag_copper();
+	}
+
+	int oldblt = (oldcon & DMA_BLITTER) && (oldcon & DMA_MASTER);
+	int newblt = (dmacon & DMA_BLITTER) && (dmacon & DMA_MASTER);
+	if (oldblt != newblt && (copper_access || safecpu())) {
+		if (copper_access) {
+			blitter_dma_change_cycle = get_cycles();
+		} else {
+			// because of CPU vs blitter emulation side-effect
+			blitter_dma_change_cycle = get_cycles() + CYCLE_UNIT;
+		}
+	}
+
+	int oldspr = (oldcon & DMA_SPRITE) && (oldcon & DMA_MASTER);
+	int newspr = (dmacon & DMA_SPRITE) && (dmacon & DMA_MASTER);
+	if (!oldspr && newspr) {
+		if (copper_access || safecpu()) {
+			sprite_dma_change_cycle_on = get_cycles() + CYCLE_UNIT;
 		}
 	}
 
@@ -7719,26 +7787,23 @@ static void DMACON(int hpos, uae_u16 v)
 	}
 #endif
 
-	if ((dmacon & DMA_BLITPRI) > (oldcon & DMA_BLITPRI) && (blt_info.blit_main || blt_info.blit_finald || blt_info.blit_queued))
+	if ((dmacon & DMA_BLITPRI) > (oldcon & DMA_BLITPRI) && (blt_info.blit_main || blt_info.blit_finald || blt_info.blit_queued)) {
 		set_special(SPCFLAG_BLTNASTY);
+	}
 
-	if (dmaen (DMA_BLITTER) && blt_info.blit_pending) {
+	if (dmaen(DMA_BLITTER) && blt_info.blit_pending) {
 		blitter_check_start();
 	}
 
 	if ((dmacon & (DMA_BLITPRI | DMA_BLITTER | DMA_MASTER)) != (DMA_BLITPRI | DMA_BLITTER | DMA_MASTER))
 		unset_special(SPCFLAG_BLTNASTY);
 
-	if (changed & (DMA_MASTER | 0x0f))
+	if (changed & (DMA_MASTER | DMA_AUD3 | DMA_AUD2 | DMA_AUD1 | DMA_AUD0)) {
 		audio_state_machine();
+	}
 
 	if (changed & (DMA_MASTER | DMA_BITPLANE)) {
-		if (dmaen(DMA_BITPLANE)) {
-			bitplane_dma_change(dmacon);
-		} else {
-			bitplane_dma_change(dmacon);
-			//event2_newevent_xx(-1, CYCLE_UNIT, dmacon, bitplane_dma_change);
-		}
+		bitplane_dma_change(dmacon);
 		SET_LINE_CYCLEBASED;
 	}
 }
@@ -9294,7 +9359,7 @@ bool bitplane_dma_access(int hpos, int offset)
 
 bool blitter_cant_access(int hpos)
 {
-	if (!dmaen(DMA_BLITTER)) {
+	if (!is_blitter_dma()) {
 		return true;
 	}
 	// bitplane dma check
@@ -9328,7 +9393,7 @@ bool blitter_cant_access(int hpos)
 
 static bool copper_cant_read(int hpos, uae_u16 alloc)
 {
-	if (!dmaen(DMA_COPPER)) {
+	if (!is_copper_dma()) {
 		return true;
 	}
 
@@ -10286,7 +10351,7 @@ next:
 
 static void compute_spcflag_copper(void)
 {
-	if (!dmaen(DMA_COPPER) || cop_state.state == COP_stop || cop_state.state == COP_waitforever || cop_state.state == COP_bltwait || cop_state.state == COP_bltwait2 || custom_disabled)
+	if (!is_copper_dma() || cop_state.state == COP_stop || cop_state.state == COP_waitforever || cop_state.state == COP_bltwait || cop_state.state == COP_bltwait2 || custom_disabled)
 		return;
 	if (cop_state.state == COP_wait1) {
 		int vp = vpos & (((cop_state.ir[1] >> 8) & 0x7F) | 0x80);
@@ -10496,6 +10561,17 @@ static void do_sprite_fetch(int hpos, uae_u16 dat)
 	decide_sprites(hpos, false, true);
 
 	sprite_fetch_full(s, hpos, slot, dmastate, &data, &data321, &data322);
+
+	// do pointer increase only
+	if (!(dat & CYCLE_PIPE_SPRITE)) {
+#ifdef DEBUGGER
+		if (debug_dma) {
+			record_dma_event(DMA_EVENT_SPECIAL, hpos, vpos);
+		}
+#endif
+		return;
+	}
+
 	int sprxp = s->xpos >> (sprite_buffer_res + 1);
 	if (dmastate) {
 		if (!slot) {
@@ -10575,12 +10651,6 @@ static void decide_sprites_fetch(int endhpos)
 	while (hpos < endhpos) {
 		if (hpos >= SPR_FIRST_HPOS - RGA_SPRITE_PIPELINE_DEPTH && hpos < SPR_FIRST_HPOS + MAX_SPRITES * 4) {
 
-			bool sprite_dma = (cycle_line_pipe[hpos] & CYCLE_PIPE_SPRITE) != 0;
-			if (sprite_dma) {
-				uae_u16 dat = cycle_line_pipe[hpos];
-				do_sprite_fetch(hpos, dat);
-			}
-
 			if (hpos < SPR_FIRST_HPOS + MAX_SPRITES * 4 - RGA_SPRITE_PIPELINE_DEPTH) {
 				int num = (hpos - (SPR_FIRST_HPOS - RGA_SPRITE_PIPELINE_DEPTH)) / 4;
 				int slot = (hpos - (SPR_FIRST_HPOS - RGA_SPRITE_PIPELINE_DEPTH)) & 3;
@@ -10629,9 +10699,17 @@ static void decide_sprites_fetch(int endhpos)
 								write_log(_T("sprite cycle already allocated! %02x\n"), cycle_line_pipe[offset]);
 							}
 #endif
-							if (bprun_end == hpos) {
+							evt_t t = line_start_cycles + hpos * CYCLE_UNIT;
+							if (t == sprite_dma_change_cycle_on) {
+								// if sprite DMA is switched on just when sprite DMA is decided, channel is still decided to it is not allocated!
+								sprbplconflict2 = 0x140 + num * 8 + slot + (s->dmacycle ? 4 : 0);
+								sprbplconflict_hpos = sprbplconflict_hpos2 = hpos + RGA_PIPELINE_OFFSET_SPRITE;
+								sprbplconflict_dat = dat & ~CYCLE_PIPE_SPRITE;
+							} else if (bprun_end == hpos) {
+								// last bitplane cycle is available for sprites (if bitplane ends before all sprites)
 								sprbplconflict = 0x140 + num * 8 + slot + (s->dmacycle ? 4 : 0);
 								sprbplconflict_hpos = hpos + RGA_PIPELINE_OFFSET_SPRITE;
+								sprbplconflict_dat = dat & ~CYCLE_PIPE_SPRITE;
 							} else {
 								cycle_line_pipe[offset] = dat;
 							}
@@ -10648,6 +10726,15 @@ static void decide_sprites_fetch(int endhpos)
 						}
 					}
 				}
+			}
+
+			bool sprite_dma = (cycle_line_pipe[hpos] & CYCLE_PIPE_SPRITE) != 0;
+			if (sprite_dma) {
+				uae_u16 dat = cycle_line_pipe[hpos];
+				do_sprite_fetch(hpos, dat);
+			}
+			if (hpos == sprbplconflict_hpos2) {
+				do_sprite_fetch(hpos, sprbplconflict_dat);
 			}
 		}
 		hpos++;
@@ -13353,6 +13440,9 @@ void custom_reset(bool hardreset, bool keyboardreset)
 	set_hcenter();
 	display_reset = 1;
 	copper_bad_cycle = 0;
+	copper_dma_change_cycle = -1;
+	blitter_dma_change_cycle = -1;
+	sprite_dma_change_cycle_on = -1;
 
 	if (hardreset || savestate_state) {
 		maxhpos = ntsc ? MAXHPOS_NTSC : MAXHPOS_PAL;
