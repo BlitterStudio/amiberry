@@ -129,6 +129,7 @@ static uae_u16 fifo[3];
 static int fifo_inuse[3];
 static int dma_enable, bitoffset, syncoffset;
 static uae_u16 word, dsksync;
+static bool dsksync_on;
 static evt_t dsksync_cycles;
 #define WORDSYNC_TIME 11
 /* Always carried through to the next line.  */
@@ -3755,7 +3756,7 @@ void dumpdisk (const TCHAR *name)
 
 static void disk_dmafinished (void)
 {
-	INTREQ (0x8000 | 0x0002);
+	INTREQ_INT(1, 0);
 	if (floppy_writemode > 0)
 		floppy_writemode = 0;
 	dskdmaen = DSKDMA_OFF;
@@ -3839,7 +3840,7 @@ void DISK_handler (uae_u32 data)
 			fetchnextrevolution (&floppy[3]);
 	}
 	if (flag & DISK_WORDSYNC)
-		INTREQ (0x8000 | 0x1000);
+		INTREQ_INT(12, 0);
 	if (flag & DISK_INDEXSYNC)
 		do_disk_index ();
 }
@@ -3907,8 +3908,8 @@ static void disk_doupdate_write(int floppybits, int trackspeed)
 					}
 					dsklength--;
 					if (dsklength <= 0) {
-#ifdef FLOPPYBRIDGE
 						// delay write DMA finished state until bridge has all pending data written
+#ifdef FLOPPYBRIDGE
 						if (!wasBridge) {
 							disk_dmafinished();
 						}
@@ -4099,7 +4100,10 @@ static void wordsync_detected(bool startup)
 		}
 		if (!startup)
 			dma_enable = 1;
-		INTREQ(0x8000 | 0x1000);
+		if (!dsksync_on) {
+			INTREQ_INT(12, 0);
+			dsksync_on = true;
+		}
 	}
 	if (adkcon & 0x0400) { // WORDSYNC
 		bitoffset = 15;
@@ -4108,14 +4112,14 @@ static void wordsync_detected(bool startup)
 
 static void disk_doupdate_read_reallynothing(int floppybits, bool state)
 {
-	bool done = false;
 	while (floppybits >= get_floppy_speed()) {
 		bool skipbit = false;
+		bool waszero = word == 0;
 		word <<= 1;
 		word |= (state ? 1 : 0);
 		doreaddma();
 		// MSBSYNC
-		if (adkcon & 0x200) {
+		if ((adkcon & 0x200) && !waszero) {
 			if ((word & 0x0001) == 0 && bitoffset == 0) {
 				word = 0;
 				skipbit = true;
@@ -4125,15 +4129,16 @@ static void disk_doupdate_read_reallynothing(int floppybits, bool state)
 				skipbit = true;
 			}
 		}
-		if (!skipbit && (bitoffset & 7) == 7) {
+		if (!skipbit && (bitoffset & 7) == 7 && !waszero) {
 			dskbytr_val = word & 0xff;
 			dskbytr_val |= 0x8000;
 		}
-		// Only because there is at least one demo that checks wrong bit
-		// and hangs unless DSKSYNC bit it set with zero DSKSYNC value...
-		if (!(INTREQR() & 0x1000) && !done && !(adkcon & 0x200) && word == dsksync) {
-			INTREQ(0x8000 | 0x1000);
-			done = true;
+		if (word != dsksync) {
+			dsksync_on = false;
+		}
+		if (!dsksync_on && !(adkcon & 0x200) && word == dsksync) {
+			INTREQ_INT(12, 0);
+			dsksync_on = true;
 		}
 		bitoffset++;
 		bitoffset &= 15;
@@ -4162,6 +4167,9 @@ static void disk_doupdate_read_nothing(int floppybits)
 		if (!skipbit && (bitoffset & 7) == 7) {
 			dskbytr_val = word & 0xff;
 			dskbytr_val |= 0x8000;
+		}
+		if (word != dsksync) {
+			dsksync_on = false;
 		}
 		if (!(adkcon & 0x200) && word == dsksync) {
 			wordsync_detected(false);
@@ -4266,6 +4274,9 @@ static void disk_doupdate_read (drive * drv, int floppybits)
 		}
 
 		// WORDSYNC
+		if (word != dsksync) {
+			dsksync_on = false;
+		}
 		if (!(adkcon & 0x200) && word == dsksync) {
 			wordsync_detected(false);
 		}
@@ -4397,8 +4408,12 @@ static void DISK_start(void)
 	}
 
 	dma_enable = (adkcon & 0x400) ? 0 : 1;
-	if (word == dsksync)
+	if (word != dsksync) {
+		dsksync_on = false;
+	}
+	if (word == dsksync) {
 		wordsync_detected(true);
+	}
 }
 
 static int linecounter;
@@ -4768,7 +4783,7 @@ void DSKLEN (uae_u16 v, int hpos)
 				}
 				drv->mfmpos = pos;
 				if (floppysupported)
-					INTREQ (0x8000 | 0x1000);
+					INTREQ_INT(12, 0);
 				done = 2;
 
 			} else if (dskdmaen == DSKDMA_WRITE) { /* TURBO write */
@@ -4839,7 +4854,7 @@ void DSKLEN (uae_u16 v, int hpos)
 				// AMAX speedup hack
 				done = 1;
 			} else {
-				INTREQ(0x8000 | 0x1000);
+				INTREQ_INT(12, 0);
 				done = 2;
 			}
 		}
@@ -4866,10 +4881,15 @@ void DISK_update_adkcon (int hpos, uae_u16 v)
 
 void DSKSYNC(int hpos, uae_u16 v)
 {
-	if (v == dsksync)
-		return;
-	DISK_update(hpos);
-	dsksync = v;
+	if (v != dsksync) {
+		DISK_update(hpos);
+		dsksync = v;
+		dsksync_on = false;
+	}
+	if (dsksync == word && !dsksync_on) {
+		INTREQ_INT(12, 0);
+		dsksync_on = true;
+	}
 }
 
 STATIC_INLINE bool iswrite(void)
