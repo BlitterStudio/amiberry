@@ -11934,7 +11934,7 @@ static void hsync_handlerh(bool onvsync)
 
 static void set_hpos(void)
 {
-	line_start_cycles = get_cycles();
+	line_start_cycles = (get_cycles() + CYCLE_UNIT - 1) & ~(CYCLE_UNIT - 1);
 	maxhposeven_prev = maxhposeven;
 	maxhpos = maxhpos_short + lol;
 	maxhposm1 = maxhpos - 1;
