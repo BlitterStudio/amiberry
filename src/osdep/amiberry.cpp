@@ -2614,11 +2614,11 @@ void read_directory(const char* path, std::vector<std::string>* dirs, std::vecto
 				}
 				else
 				{
-					if (files != nullptr)
+					if (files != nullptr && dent->d_name[0] != '.')
 						files->push_back(dent->d_name);
 				}
 			}
-			else if (files != nullptr)
+			else if (files != nullptr && dent->d_name[0] != '.')
 				files->push_back(dent->d_name);
 		}
 		if (dirs != nullptr && !dirs->empty() && (*dirs)[0] == ".")
