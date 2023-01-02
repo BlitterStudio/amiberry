@@ -389,7 +389,7 @@ jobs:
         artifacts: |
           amiberry-${{ steps.tag.outputs.tag }}-macOS-64bit-intel.zip
 
-  build-x86-64-ubuntu:
+  build-x86-64-debian:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -405,7 +405,7 @@ jobs:
           make -j8 PLATFORM=x86-64
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-x86-64-ubuntu
+        name: amiberry-x86-64-debian
         path: |
           amiberry
           capsimg.so
@@ -428,7 +428,7 @@ jobs:
         strip_v: false
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-x86-64-ubuntu.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
+      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-x86-64-debian.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
     - name: Create Changelog
       if: github.ref_type == 'tag'
       id: changelog
@@ -444,4 +444,4 @@ jobs:
         omitBodyDuringUpdate: true
         body: ${{ steps.changelog.outputs.changes }}
         artifacts: |
-          amiberry-${{ steps.tag.outputs.tag }}-x86-64-ubuntu.zip
+          amiberry-${{ steps.tag.outputs.tag }}-x86-64-debian.zip
