@@ -57,7 +57,7 @@ static uae_u32 emulib_Reset (void)
 */
 static uae_u32 emulib_EnableSound (uae_u32 val)
 {
-	if (!sound_available || currprefs.produce_sound == 2)
+	if (!sound_available || currprefs.produce_sound >= 2)
 		return 0;
 
 	currprefs.produce_sound = val;
