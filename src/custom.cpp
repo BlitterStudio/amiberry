@@ -841,6 +841,7 @@ bool alloc_cycle_blitter(int hpos, uaecptr *ptr, int chnum, int add)
 		uaecptr pt = spr[spnum].pt;
 		spr[spnum].pt = *ptr + 2 + add;
 		custom_wput_1(hpos, rga, v, 1);
+		sprbplconflict_hpos2 = -1;
 #ifdef DEBUGGER
 		if (debug_dma) {
 			record_dma_read_value(v);
@@ -10680,6 +10681,7 @@ static void decide_sprites_fetch(int endhpos)
 						if (hpos <= plfstrt_sprite) {
 							dodma = true;
 						} else {
+							// bitplane stole this cycle
 							if (slot == 2 && sprite_width > 16 && s->firstslotdone) {
 								event2_newevent_xx(-1, RGA_PIPELINE_OFFSET_SPRITE * CYCLE_UNIT, num | (s->dmastate ? 0x100 : 0), sprite_stolen_cycle);
 							}
@@ -10700,7 +10702,7 @@ static void decide_sprites_fetch(int endhpos)
 #endif
 							evt_t t = line_start_cycles + hpos * CYCLE_UNIT;
 							if (t == sprite_dma_change_cycle_on) {
-								// if sprite DMA is switched on just when sprite DMA is decided, channel is still decided to it is not allocated!
+								// if sprite DMA is switched on just when sprite DMA is decided, channel is still decided but it is not allocated!
 								sprbplconflict2 = 0x140 + num * 8 + slot + (s->dmacycle ? 4 : 0);
 								sprbplconflict_hpos = sprbplconflict_hpos2 = hpos + RGA_PIPELINE_OFFSET_SPRITE;
 								sprbplconflict_dat = dat & ~CYCLE_PIPE_SPRITE;
@@ -10733,7 +10735,11 @@ static void decide_sprites_fetch(int endhpos)
 				do_sprite_fetch(hpos, dat);
 			}
 			if (hpos == sprbplconflict_hpos2) {
-				do_sprite_fetch(hpos, sprbplconflict_dat);
+				decide_bpl_fetch(hpos + 1);
+				decide_blitter(hpos + 1);
+				if (hpos == sprbplconflict_hpos2) {
+					do_sprite_fetch(hpos, sprbplconflict_dat);
+				}
 			}
 		}
 		hpos++;
