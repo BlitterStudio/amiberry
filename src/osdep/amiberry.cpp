@@ -2070,9 +2070,42 @@ TCHAR* target_expand_environment(const TCHAR* path, TCHAR* out, int maxlen)
 	return out;
 }
 
-int target_parse_option(struct uae_prefs* p, const char* option, const char* value)
+static const TCHAR *obsolete[] = {
+	_T("killwinkeys"), _T("sound_force_primary"), _T("iconified_highpriority"),
+	_T("sound_sync"), _T("sound_tweak"), _T("directx6"), _T("sound_style"),
+	_T("file_path"), _T("iconified_nospeed"), _T("activepriority"), _T("magic_mouse"),
+	_T("filesystem_codepage"), _T("aspi"), _T("no_overlay"), _T("soundcard_exclusive"),
+	_T("specialkey"), _T("sound_speed_tweak"), _T("sound_lag"),
+	0
+};
+
+static int target_parse_option_hardware(struct uae_prefs *p, const TCHAR *option, const TCHAR *value)
 {
 	TCHAR tmpbuf[CONFIG_BLEN];
+	if (cfgfile_string(option, value, _T("rtg_vblank"), tmpbuf, sizeof tmpbuf / sizeof(TCHAR))) {
+		if (!_tcscmp(tmpbuf, _T("real"))) {
+			p->rtgvblankrate = -1;
+			return 1;
+		}
+		if (!_tcscmp(tmpbuf, _T("disabled"))) {
+			p->rtgvblankrate = -2;
+			return 1;
+		}
+		if (!_tcscmp(tmpbuf, _T("chipset"))) {
+			p->rtgvblankrate = 0;
+			return 1;
+		}
+		p->rtgvblankrate = _tstol(tmpbuf);
+		return 1;
+	}
+
+	return 0;
+}
+
+static int target_parse_option_host(struct uae_prefs *p, const TCHAR *option, const TCHAR *value)
+{
+	TCHAR tmpbuf[CONFIG_BLEN];
+	int v;
 	bool tbool;
 	
 	if (cfgfile_yesno(option, value, _T("middle_mouse"), &tbool)) {
@@ -2149,11 +2182,11 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 	}
 
 	if (cfgfile_string(option, value, _T("soundcardname"), tmpbuf, sizeof tmpbuf / sizeof(TCHAR))) {
-		int i, num;
+		int num;
 
 		num = p->soundcard;
 		p->soundcard = -1;
-		for (i = 0; i < MAX_SOUND_DEVICES && sound_devices[i]; i++) {
+		for (int i = 0; i < MAX_SOUND_DEVICES && sound_devices[i]; i++) {
 			if (i < num)
 				continue;
 			if (!_tcscmp(sound_devices[i]->cfgname, tmpbuf)) {
@@ -2162,7 +2195,7 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 			}
 		}
 		if (p->soundcard < 0) {
-			for (i = 0; i < MAX_SOUND_DEVICES && sound_devices[i]; i++) {
+			for (int i = 0; i < MAX_SOUND_DEVICES && sound_devices[i]; i++) {
 				if (!_tcscmp(sound_devices[i]->cfgname, tmpbuf)) {
 					p->soundcard = i;
 					break;
@@ -2170,7 +2203,7 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 			}
 		}
 		if (p->soundcard < 0) {
-			for (i = 0; i < MAX_SOUND_DEVICES && sound_devices[i]; i++) {
+			for (int i = 0; i < MAX_SOUND_DEVICES && sound_devices[i]; i++) {
 				if (!sound_devices[i]->prefix)
 					continue;
 				int prefixlen = _tcslen(sound_devices[i]->prefix);
@@ -2190,11 +2223,11 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 		return 1;
 	}
 	if (cfgfile_string(option, value, _T("samplersoundcardname"), tmpbuf, sizeof tmpbuf / sizeof(TCHAR))) {
-		int i, num;
+		int num;
 
 		num = p->samplersoundcard;
 		p->samplersoundcard = -1;
-		for (i = 0; i < MAX_SOUND_DEVICES && record_devices[i]; i++) {
+		for (int i = 0; i < MAX_SOUND_DEVICES && record_devices[i]; i++) {
 			if (i < num)
 				continue;
 			if (!_tcscmp(record_devices[i]->cfgname, tmpbuf)) {
@@ -2203,7 +2236,7 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 			}
 		}
 		if (p->samplersoundcard < 0) {
-			for (i = 0; i < MAX_SOUND_DEVICES && record_devices[i]; i++) {
+			for (int i = 0; i < MAX_SOUND_DEVICES && record_devices[i]; i++) {
 				if (!_tcscmp(record_devices[i]->cfgname, tmpbuf)) {
 					p->samplersoundcard = i;
 					break;
@@ -2213,24 +2246,7 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 		return 1;
 	}
 
-	if (cfgfile_string(option, value, _T("rtg_vblank"), tmpbuf, sizeof tmpbuf / sizeof(TCHAR))) {
-		if (!_tcscmp(tmpbuf, _T("real"))) {
-			p->rtgvblankrate = -1;
-			return 1;
-		}
-		if (!_tcscmp(tmpbuf, _T("disabled"))) {
-			p->rtgvblankrate = -2;
-			return 1;
-		}
-		if (!_tcscmp(tmpbuf, _T("chipset"))) {
-			p->rtgvblankrate = 0;
-			return 1;
-		}
-		p->rtgvblankrate = _tstol(tmpbuf);
-		return 1;
-	}
-
-	if (cfgfile_string(option, value, _T("rtg_scale_aspect_ratio"), tmpbuf, sizeof tmpbuf / sizeof(TCHAR))) {
+	if (cfgfile_string(option, value, _T("rtg_scale_aspect_ratio"), tmpbuf, sizeof tmpbuf / sizeof (TCHAR))) {
 		int v1, v2;
 		TCHAR* s;
 
@@ -2289,6 +2305,29 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 		return 1;
 	}
 
+	return 0;
+}
+
+int target_parse_option(struct uae_prefs *p, const TCHAR *option, const TCHAR *value, int type)
+{
+	int v = 0;
+	if (type & CONFIG_TYPE_HARDWARE) {
+		v = target_parse_option_hardware(p, option, value);
+	} else if (type & CONFIG_TYPE_HOST) {
+		v = target_parse_option_host(p, option, value);
+	}
+	if (v) {
+		return v;
+	}
+	
+	int i = 0;
+	while (obsolete[i]) {
+		if (!strcasecmp(obsolete[i], option)) {
+			write_log(_T("obsolete config entry '%s'\n"), option);
+			return 1;
+		}
+		i++;
+	}
 	return 0;
 }
 

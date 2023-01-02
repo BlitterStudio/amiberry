@@ -366,6 +366,32 @@ static const TCHAR *obsolete[] = {
 
 #define UNEXPANDED _T("$(FILE_PATH)")
 
+static void clearmountitems(struct uae_prefs *p)
+{
+	p->mountitems = 0;
+	for (int i = 0; i < MOUNT_CONFIG_SIZE; i++) {
+		p->mountconfig[i].configoffset = -1;
+		p->mountconfig[i].unitnum = -1;
+	}
+}
+
+void discard_prefs(struct uae_prefs *p, int type)
+{
+	struct strlist **ps = &p->all_lines;
+	while (*ps) {
+		struct strlist *s = *ps;
+		*ps = s->next;
+		xfree(s->value);
+		xfree(s->option);
+		xfree(s);
+	}
+	p->all_lines = NULL;
+	currprefs.all_lines = changed_prefs.all_lines = NULL;
+#ifdef FILESYS
+	filesys_cleanup();
+#endif
+	clearmountitems(p);
+}
 
 static TCHAR *cfgfile_unescape(const TCHAR *s, const TCHAR **endpos, TCHAR separator, bool min)
 {
@@ -3381,10 +3407,8 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 {
 	int i, v;
 	bool vb;
-	TCHAR *section = 0;
 	TCHAR *tmpp;
 	TCHAR tmpbuf[CONFIG_BLEN];
-	const TCHAR* tmp1;
 
 	if (_tcsncmp (option, _T("input."), 6) == 0 || _tcsncmp(option, _T("input_"), 6) == 0) {
 		read_inputdevice_config (p, option, value);
@@ -3392,6 +3416,7 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 	}
 
 #ifdef AMIBERRY
+	std::string tmp1;
 	std::string buffer;
 	// custom options LOADING
 	for (i = 0; i < MAX_JPORTS; ++i)
@@ -3490,17 +3515,17 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 			*tmpp = _totlower (*tmpp);
 	tmpp = _tcschr (option, '.');
 	if (tmpp) {
-		section = option;
+		TCHAR *section = option;
 		option = tmpp + 1;
 		*tmpp = '\0';
 		if (_tcscmp (section, TARGET_NAME) == 0) {
 			/* We special case the various path options here.  */
-			if (cfgfile_multipath (option, value, _T("rom_path"), &p->path_rom, p)
-				|| cfgfile_multipath (option, value, _T("floppy_path"), &p->path_floppy, p)
-				|| cfgfile_multipath (option, value, _T("cd_path"), &p->path_cd, p)
-				|| cfgfile_multipath (option, value, _T("hardfile_path"), &p->path_hardfile, p))
+			if (cfgfile_multipath(option, value, _T("rom_path"), &p->path_rom, p)
+				|| cfgfile_multipath(option, value, _T("floppy_path"), &p->path_floppy, p)
+				|| cfgfile_multipath(option, value, _T("cd_path"), &p->path_cd, p)
+				|| cfgfile_multipath(option, value, _T("hardfile_path"), &p->path_hardfile, p))
 				return 1;
-			return target_parse_option (p, option, value);
+			return target_parse_option(p, option, value, CONFIG_TYPE_HOST);
 		}
 		return 0;
 	}
@@ -5753,6 +5778,15 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 	uae_u32 utmpval;
 	bool dummybool;
 	TCHAR tmpbuf[CONFIG_BLEN];
+
+	const TCHAR *tmpp = _tcschr(option, '.');
+	if (tmpp) {
+		_tcscpy(tmpbuf, option);
+		tmpbuf[tmpp - option] = 0;
+		if (_tcscmp(tmpbuf, TARGET_NAME) == 0) {
+			return target_parse_option(p, option, value, CONFIG_TYPE_HARDWARE);
+		}
+	}
 
 	if (cfgfile_yesno(option, value, _T("cpu_compatible"), &p->cpu_compatible)) {
 		return 1;
@@ -8205,11 +8239,7 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 	p->uae_hide_autoconfig = false;
 	p->z3_mapping_mode = Z3MAPPING_AUTO;
 
-	p->mountitems = 0;
-	for (auto& i : p->mountconfig) {
-		i.configoffset = -1;
-		i.unitnum = -1;
-	}
+	clearmountitems(p);
 
 	p->jports[0].id = -1;
 	p->jports[1].id = -1;
