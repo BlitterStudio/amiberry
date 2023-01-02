@@ -12749,7 +12749,7 @@ static void check_vblank_copjmp(uae_u32 v)
 static void delayed_framestart(uae_u32 v)
 {
 	check_vblank_copjmp(0);
-	INTREQ_INT(5, 2); // total REFRESH_FIRST_HPOS + 1
+	INTREQ_INT(5, 0); // total REFRESH_FIRST_HPOS - 1 + 1 (in INTREQ_INT)
 }
 
 // this prepares for new line
@@ -12846,7 +12846,7 @@ static void hsync_handler_post(bool onvsync)
 		// copper and vblank trigger in same line
 		event2_newevent_xx(-1, 2 * CYCLE_UNIT, 0, delayed_framestart);
 	} else if (vb_start_line == 1) {
-		INTREQ_INT(5, REFRESH_FIRST_HPOS + 1);
+		INTREQ_INT(5, REFRESH_FIRST_HPOS - 1);
 	} else if (vpos == 0) {
 		event2_newevent_xx(-1, 2 * CYCLE_UNIT, 0, check_vblank_copjmp);
 	}
