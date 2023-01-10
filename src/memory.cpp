@@ -1213,7 +1213,7 @@ uae_u8 *REGPARAM2 default_xlate (uaecptr addr)
 				write_log (_T("Your Amiga program just did something terribly stupid %08X PC=%08X\n"), addr, M68K_GETPC);
 #ifdef DEBUGGER
 				if (debugging || DEBUG_STUPID) {
-					activate_debugger ();
+					activate_debugger();
 					m68k_dumpstate(NULL, 0xffffffff);
 				}
 #endif
@@ -1226,9 +1226,6 @@ uae_u8 *REGPARAM2 default_xlate (uaecptr addr)
 					write_log (_T("\n"));
 				}
 				memory_map_dump();
-#ifdef DEBUGGER
-				m68k_dumpstate(NULL, 0xffffffff);
-#endif
 			}
 			if (0 || (gary_toenb && (gary_nonrange(addr) || (size > 1 && gary_nonrange(addr + size - 1))))) {
 				hardware_exception2(addr, 0, true, true, size);
