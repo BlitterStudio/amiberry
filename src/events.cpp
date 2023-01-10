@@ -35,7 +35,6 @@ bool event_wait;
 frame_time_t vsyncmintime, vsyncmintimepre;
 frame_time_t vsyncmaxtime, vsyncwaittime;
 frame_time_t vsynctimebase;
-int event2_count;
 
 static void events_fast(void)
 {
@@ -303,6 +302,9 @@ void do_cycles_slow(int cycles_to_add)
 	currcycle += cycles_to_add;
 }
 
+static ev2 *last_event2;
+static ev2 dummy_event;
+
 void MISC_handler(void)
 {
 	static bool dorecheck;
@@ -323,17 +325,25 @@ void MISC_handler(void)
 		recheck = false;
 		mintime = EVT_MAX;
 		for (i = 0; i < ev2_max; i++) {
-			if (eventtab2[i].active) {
-				if (eventtab2[i].evtime == ct) {
-					eventtab2[i].active = false;
-					event2_count--;
-					eventtab2[i].handler(eventtab2[i].data);
-					if (dorecheck || eventtab2[i].active) {
+			ev2 *e = &eventtab2[i];
+			if (e->active) {
+				if (e->evtime == ct) {
+					e->active = false;
+					e->handler(e->data);
+					ev2 *e2 = e->next;
+					if (e2) {
+						e->next = NULL;
+						if (e2->active && e2->evtime == e->evtime + 1) {
+							e2->active = false;
+							e2->handler(e2->data);
+						}
+					}
+					if (dorecheck || e->active) {
 						recheck = true;
 						dorecheck = false;
 					}
 				} else {
-					evt_t eventtime = eventtab2[i].evtime - ct;
+					evt_t eventtime = e->evtime - ct;
 					if (eventtime < mintime)
 						mintime = eventtime;
 				}
@@ -341,14 +351,14 @@ void MISC_handler(void)
 		}
 	}
 	if (mintime < EVT_MAX) {
-		eventtab[ev_misc].active = true;
-		eventtab[ev_misc].oldcycles = ct;
-		eventtab[ev_misc].evtime = ct + mintime;
+		ev *e = &eventtab[ev_misc];
+		e->active = true;
+		e->oldcycles = ct;
+		e->evtime = ct + mintime;
 		events_schedule();
 	}
 	recursive--;
 }
-
 
 void event2_newevent_xx (int no, evt_t t, uae_u32 data, evfunc2 func)
 {
@@ -360,7 +370,6 @@ void event2_newevent_xx (int no, evt_t t, uae_u32 data, evfunc2 func)
 		no = next;
 		for (;;) {
 			if (!eventtab2[no].active) {
-				event2_count++;
 				break;
 			}
 			if (eventtab2[no].evtime == et && eventtab2[no].handler == func && eventtab2[no].data == data)
@@ -392,10 +401,17 @@ void event2_newevent_xx (int no, evt_t t, uae_u32 data, evfunc2 func)
 		}
 		next = no;
 	}
-	eventtab2[no].active = true;
-	eventtab2[no].evtime = et;
-	eventtab2[no].handler = func;
-	eventtab2[no].data = data;
+	ev2 *e = &eventtab2[no];
+	// if previous event has same expiry time, make sure it gets executed first.
+	if (last_event2->active && last_event2 != e && et == last_event2->evtime) {
+		last_event2->next = e;
+		et++;
+	}
+	e->active = true;
+	e->evtime = et;
+	e->handler = func;
+	e->data = data;
+	last_event2 = e;
 	MISC_handler();
 }
 
@@ -429,6 +445,10 @@ void event2_newevent_x_replace(evt_t t, uae_u32 data, evfunc2 func)
 	event2_newevent_xx(-1, t * CYCLE_UNIT, data, func);
 }
 
+void event_init(void)
+{
+	last_event2 = &dummy_event;
+}
 
 int current_hpos(void)
 {

@@ -56,6 +56,7 @@
 #ifdef JIT
 #include "jit/compemu.h"
 #endif
+//#include "disasm.h"
 #ifdef RETROPLATFORM
 #include "rp.h"
 #endif
@@ -270,9 +271,6 @@ void fixup_cpu (struct uae_prefs *p)
 
 	if (p->cpu_model < 68020 && p->cachesize) {
 		p->cachesize = 0;
-	if (p->fpu_model == 0 && p->compfpu) {
-		p->compfpu = false;
-	}
 		error_log (_T("JIT requires 68020 or better CPU."));
 	}
 	if (p->fpu_model == 0 && p->compfpu) {
@@ -1220,6 +1218,8 @@ static int real_main2 (int argc, TCHAR **argv)
 	//preinit_shm ();
 #endif
 #endif
+
+	event_init();
 
 	if (restart_config[0]) {
 		parse_cmdline_and_init_file(argc, argv);
