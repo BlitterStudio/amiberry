@@ -4841,6 +4841,9 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 		currprefs.gfx_auto_crop = !currprefs.gfx_auto_crop;
 		check_prefs_changed_gfx();
 		break;
+	case AKS_TOGGLE_VIRTUAL_KEYBOARD:
+		//TODO call virtual keyboard function to toggle on/off
+		break;
 	}
 end:
 	if (tracer_enable) {
