@@ -1092,15 +1092,15 @@ uae_u8 serial_readstatus(uae_u8 v, uae_u8 dir)
 		}
 	}
 
+	// SEL == RI
 	if (1) {
-		// SEL == RI
 		serbits |= 0x04;
 	} else {
 		serbits &= ~0x04;
 		serbits |= v & 0x04;
 	}
 
-	if (!(status & TIOCM_RI)) {
+	if (status & TIOCM_RI) {
 		serbits &= ~0x04;
 	}
 
