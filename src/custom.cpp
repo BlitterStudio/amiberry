@@ -10562,16 +10562,6 @@ static void do_sprite_fetch(int hpos, uae_u16 dat)
 
 	sprite_fetch_full(s, hpos, slot, dmastate, &data, &data321, &data322);
 
-	// do pointer increase only
-	if (!(dat & CYCLE_PIPE_SPRITE)) {
-#ifdef DEBUGGER
-		if (debug_dma) {
-			record_dma_event(DMA_EVENT_SPECIAL, hpos, vpos);
-		}
-#endif
-		return;
-	}
-
 	int sprxp = s->xpos >> (sprite_buffer_res + 1);
 	if (dmastate) {
 		if (!slot) {
@@ -10737,8 +10727,21 @@ static void decide_sprites_fetch(int endhpos)
 			if (hpos == sprbplconflict_hpos2) {
 				decide_bpl_fetch(hpos + 1);
 				decide_blitter(hpos + 1);
+				int num = sprbplconflict_dat & 7;
+				struct sprite *s = &spr[num];
+#ifdef DEBUGGER
+				int slot = (sprbplconflict_dat & 8) != 0;
+				int mode = (sprbplconflict_dat & 0x10) != 0;
+				if (debug_dma) {
+					record_dma_read(num * 8 + 0x140 + mode * 4 + slot * 2, s->pt, hpos, vpos, DMARECORD_SPRITE, num);
+					record_dma_event(DMA_EVENT_SPECIAL, hpos, vpos);
+				}
+				if (memwatch_enabled) {
+					debug_getpeekdma_chipram(s->pt, MW_MASK_SPR_0 << num, num * 8 + 0x140 + mode * 4 + slot * 2, num * 4 + 0x120);
+				}
+#endif
 				if (hpos == sprbplconflict_hpos2) {
-					do_sprite_fetch(hpos, sprbplconflict_dat);
+					s->pt += sprite_width / 8;
 				}
 			}
 		}
