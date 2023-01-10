@@ -15,6 +15,7 @@
 //extern int mainMenu_displayHires;
 //extern int mainMenu_vkbdLanguage;
 //extern int mainMenu_vkbdStyle;
+//TODO these should be configurable of course
 int mainMenu_displayHires = 1;
 int mainMenu_vkbdLanguage = 0;
 int mainMenu_vkbdStyle = 1;
