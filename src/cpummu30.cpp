@@ -37,6 +37,7 @@
 #include "debug.h"
 #include "cpummu030.h"
 #include "cputbl.h"
+#include "savestate.h"
 
 // Prefetch mode and prefetch bus error: always flush and refill prefetch pipeline
 #define MMU030_ALWAYS_FULL_PREFETCH 1
@@ -2634,22 +2635,24 @@ uaecptr mmu030_translate(uaecptr addr, bool super, bool data, bool write)
 /* MMU Reset */
 void mmu030_reset(int hardreset)
 {
-    /* A CPU reset causes the E-bits of TC and TT registers to be zeroed. */
-    mmu030.enabled = false;
-#if MMU_IPAGECACHE030
-	mmu030.mmu030_last_logical_address = 0xffffffff;
-#endif
-	regs.mmu_page_size = 0;
-	if (hardreset >= 0) {
-		tc_030 &= ~TC_ENABLE_TRANSLATION;
-		tt0_030 &= ~TT_ENABLE;
-		tt1_030 &= ~TT_ENABLE;
-	}
-	if (hardreset > 0) {
-		srp_030 = crp_030 = 0;
-		tt0_030 = tt1_030 = tc_030 = 0;
-        mmusr_030 = 0;
-        mmu030_flush_atc_all();
+	if (!savestate_state) {
+		/* A CPU reset causes the E-bits of TC and TT registers to be zeroed. */
+		mmu030.enabled = false;
+	#if MMU_IPAGECACHE030
+		mmu030.mmu030_last_logical_address = 0xffffffff;
+	#endif
+		regs.mmu_page_size = 0;
+		if (hardreset >= 0) {
+			tc_030 &= ~TC_ENABLE_TRANSLATION;
+			tt0_030 &= ~TT_ENABLE;
+			tt1_030 &= ~TT_ENABLE;
+		}
+		if (hardreset > 0) {
+			srp_030 = crp_030 = 0;
+			tt0_030 = tt1_030 = tc_030 = 0;
+			mmusr_030 = 0;
+			mmu030_flush_atc_all();
+		}
 	}
 	mmu030_set_funcs();
 }
