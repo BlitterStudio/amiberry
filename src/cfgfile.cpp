@@ -2193,13 +2193,13 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 			_stprintf (tmp1, _T("joyport%d"), i);
 			cfgfile_write (f, tmp1, tmp2);
 			_stprintf (tmp1, _T("joyport%dautofire"), i);
-			cfgfile_write (f, tmp1, joyaf[jp->autofire]);
+			cfgfile_write_strarr(f, tmp1, joyaf, jp->autofire);
 			if (i < 2 && jp->mode > 0) {
 				_stprintf (tmp1, _T("joyport%dmode"), i);
-				cfgfile_write (f, tmp1, joyportmodes[jp->mode]);
+				cfgfile_write_strarr(f, tmp1, joyportmodes, jp->mode);
 				if (jp->submode > 0 && jp->mode == 8) {
 					_stprintf(tmp1, _T("joyport%dsubmode"), i);
-					cfgfile_write(f, tmp1, joyportsubmodes_lightpen[jp->submode]);
+					cfgfile_write_strarr(f, tmp1, joyportsubmodes_lightpen, jp->submode);
 				}
 			}
 #ifdef AMIBERRY
