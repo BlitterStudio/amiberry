@@ -357,7 +357,7 @@ enum nln_how {
 };
 
 extern void hsync_record_line_state (int lineno, enum nln_how, int changed);
-extern void vsync_handle_redraw (int long_field, int lof_changed, uae_u16, uae_u16, bool drawlines);
+extern void vsync_handle_redraw (int long_field, int lof_changed, uae_u16, uae_u16, bool drawlines, bool initial);
 extern bool vsync_handle_check (void);
 extern void draw_lines(int end, int section);
 extern void init_hardware_for_drawing_frame (void);

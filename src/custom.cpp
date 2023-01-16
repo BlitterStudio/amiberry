@@ -170,6 +170,7 @@ static int nosignal_cnt, nosignal_status;
 static bool nosignal_trigger;
 int display_reset;
 static evt_t line_start_cycles;
+static bool initial_frame;
 
 #define LOF_TOGGLES_NEEDED 3
 //#define NLACE_CNT_NEEDED 50
@@ -11247,7 +11248,8 @@ static void vsync_handler_render(void)
 	if (!vsync_rendered) {
 		frame_time_t start, end;
 		start = read_processor_time();
-		vsync_handle_redraw(lof_store, lof_changed, bplcon0, bplcon3, isvsync_chipset() >= 0);
+		vsync_handle_redraw(lof_store, lof_changed, bplcon0, bplcon3, isvsync_chipset() >= 0, initial_frame);
+		initial_frame = false;
 		vsync_rendered = true;
 		end = read_processor_time();
 		frameskiptime += end - start;
@@ -13407,6 +13409,7 @@ void custom_reset(bool hardreset, bool keyboardreset)
 {
 	if (hardreset) {
 		board_prefs_changed(-1, -1);
+		initial_frame = true;
 	}
 
 	target_reset();
