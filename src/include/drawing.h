@@ -259,7 +259,7 @@ struct color_change {
 #define MAXVPOS_WRAPLINES 10
 
 /* No divisors for MAX_PIXELS_PER_LINE; we support AGA and SHRES sprites */
-#define MAX_SPR_PIXELS (((MAXVPOS + MAXVPOS_WRAPLINES) * 2 + 1) * MAX_PIXELS_PER_LINE)
+#define MAX_SPR_PIXELS ((((MAXVPOS + MAXVPOS_WRAPLINES) * 2 + 1) * MAX_PIXELS_PER_LINE) / 16)
 
 struct sprite_entry
 {
