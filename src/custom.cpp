@@ -14602,6 +14602,8 @@ uae_u8 *restore_custom(uae_u8 *src)
 	}
 	setextblank();
 
+	lof_prev_lastline = lof_lastline = lof_store != 0;
+
 	DISK_restore_custom(dskpt, dsklen, dskbytr);
 
 	return src;
