@@ -4649,7 +4649,7 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 	case AKS_STATESAVEDIALOG:
 		if (s) {
 			savestate_initsave (s, 1, true, true);
-			save_state (savestate_fname, _T("Description!"));
+			save_state (savestate_fname, STATE_SAVE_DESCRIPTION);
 		} else {
 			gui_display (5);
 		}

@@ -230,24 +230,22 @@ extern uae_u8 *restore_expansion_info_old(uae_u8*);
 #endif
 extern void restore_expansion_finish(void);
 
-extern uae_u8 *restore_action_replay (uae_u8 *);
-extern uae_u8 *save_action_replay (size_t *, uae_u8 *);
-extern uae_u8 *restore_hrtmon (uae_u8 *);
-extern uae_u8 *save_hrtmon (size_t *, uae_u8 *);
-extern void restore_ar_finish (void);
+extern uae_u8 *restore_action_replay(uae_u8 *);
+extern uae_u8 *save_action_replay(size_t *, uae_u8 *);
+extern uae_u8 *restore_hrtmon(uae_u8 *);
+extern uae_u8 *save_hrtmon(size_t *, uae_u8 *);
+extern void restore_ar_finish(void);
 
-extern void savestate_initsave (const TCHAR *filename, int docompress, int nodialogs, bool save);
-extern int save_state (const TCHAR *filename, const TCHAR *description);
-extern void restore_state (const TCHAR *filename);
+extern void savestate_initsave(const TCHAR *filename, int docompress, int nodialogs, bool save);
+extern int save_state(const TCHAR *filename, const TCHAR *description);
+extern void restore_state(const TCHAR *filename);
 extern bool savestate_restore_finish(void);
 extern void savestate_restore_final(void);
-extern void savestate_memorysave (void);
+extern void savestate_memorysave(void);
 
+extern void custom_prepare_savestate(void);
 
-extern void custom_save_state (void);
-extern void custom_prepare_savestate (void);
-
-extern bool savestate_check (void);
+extern bool savestate_check(void);
 
 #define STATE_SAVE 1
 #define STATE_RESTORE 2
@@ -256,24 +254,26 @@ extern bool savestate_check (void);
 #define STATE_REWIND 16
 #define STATE_DOREWIND 32
 
+#define STATE_SAVE_DESCRIPTION _T("Description!")
+
 extern int savestate_state;
 extern TCHAR savestate_fname[MAX_DPATH];
 extern struct zfile *savestate_file;
 
-STATIC_INLINE bool isrestore (void)
+STATIC_INLINE bool isrestore(void)
 {
 	return savestate_state == STATE_RESTORE || savestate_state == STATE_REWIND;
 }
 
-extern void savestate_quick (int slot, int save);
+extern void savestate_quick(int slot, int save);
 
-extern void savestate_capture (int);
-extern void savestate_free (void);
-extern void savestate_init (void);
-extern void savestate_rewind (void);
-extern int savestate_dorewind (int);
-extern void savestate_listrewind (void);
-extern void statefile_save_recording (const TCHAR*);
-extern void savestate_capture_request (void);
+extern void savestate_capture(int);
+extern void savestate_free(void);
+extern void savestate_init(void);
+extern void savestate_rewind(void);
+extern int savestate_dorewind(int);
+extern void savestate_listrewind(void);
+extern void statefile_save_recording(const TCHAR*);
+extern void savestate_capture_request(void);
 
 #endif /* UAE_SAVESTATE_H */
