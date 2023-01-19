@@ -242,6 +242,7 @@ extern void restore_state(const TCHAR *filename);
 extern bool savestate_restore_finish(void);
 extern void savestate_restore_final(void);
 extern void savestate_memorysave(void);
+extern bool is_savestate_incompatible(void);
 
 extern void custom_prepare_savestate(void);
 

@@ -67,6 +67,7 @@
 //#include "a2091.h"
 #include "devices.h"
 #include "fsdb.h"
+#include "gfxboard.h"
 
 int savestate_state = 0;
 static int savestate_first_capture;
@@ -97,11 +98,9 @@ struct staterecord
 
 static struct staterecord **staterecords;
 
-static void state_incompatible_warn (void)
+bool is_savestate_incompatible(void)
 {
-	static int warned;
 	int dowarn = 0;
-	int i;
 
 #ifdef BSDSOCKET
 	if (currprefs.socket_emu)
@@ -120,17 +119,27 @@ static void state_incompatible_warn (void)
 		dowarn = 1;
 #endif
 #ifdef FILESYS
-	for(i = 0; i < currprefs.mountitems; i++) {
+	for(int i = 0; i < currprefs.mountitems; i++) {
 		struct mountedinfo mi;
 		int type = get_filesys_unitconfig (&currprefs, i, &mi);
 		if (mi.ismounted && type != FILESYS_VIRTUAL && type != FILESYS_HARDFILE && type != FILESYS_HARDFILE_RDB)
 			dowarn = 1;
 	}
-#endif
-	if (!warned && dowarn) {
-		warned = 1;
-		notify_user (NUMSG_STATEHD);
+	if (currprefs.rtgboards[0].rtgmem_type >= GFXBOARD_HARDWARE) {
+		dowarn = 1;
 	}
+#ifndef AMIBERRY // we only have 1 RTG board on Amiberry
+	if (currprefs.rtgboards[1].rtgmem_size > 0) {
+		dowarn = 1;
+	}
+#endif
+#endif
+#ifdef WITH_PPC
+	if (currprefs.ppc_model) {
+		dowarn = 1;
+	}
+#endif
+	return dowarn != 0;
 }
 
 /* functions for reading/writing bytes, shorts and longs in big-endian
@@ -1191,11 +1200,13 @@ static int save_state_internal (struct zfile *f, const TCHAR *description, int c
 	}
 #endif
 
-	//dst = save_screenshot(0, &len);
-	//if (dst) {
-	//	save_chunk(f, dst, len, _T("PIC0"), 0);
-	//	xfree(dst);
-	//}
+#ifndef AMIBERRY // this doesn't do anything in WinUAE either
+	dst = save_screenshot(0, &len);
+	if (dst) {
+		save_chunk(f, dst, len, _T("PIC0"), 0);
+		xfree(dst);
+	}
+#endif
 
 	/* add fake END tag, makes it easy to strip CONF and LOG hunks */
 	/* move this if you want to use CONF or LOG hunks when restoring state */
@@ -1207,11 +1218,11 @@ static int save_state_internal (struct zfile *f, const TCHAR *description, int c
 		xfree(dst);
 	}
 	len = 30000;
-	//dst = save_log (TRUE, &len);
-	//if (dst) {
-	//	save_chunk (f, dst, len, _T("LOG "), comp);
-	//	xfree (dst);
-	//}
+	dst = save_log (TRUE, &len);
+	if (dst) {
+		save_chunk (f, dst, len, _T("LOG "), comp);
+		xfree (dst);
+	}
 
 	zfile_fwrite (endhunk, 1, 8, f);
 
@@ -1224,7 +1235,13 @@ int save_state (const TCHAR *filename, const TCHAR *description)
 	int comp = savestate_docompress;
 
 	if (!savestate_specialdump && !savestate_nodialogs) {
-		state_incompatible_warn ();
+		if (is_savestate_incompatible()) {
+			static int warned;
+			if (!warned) {
+				warned = 1;
+				notify_user(NUMSG_STATEHD);
+			}
+		}
 		if (!save_filesys_cando ()) {
 			gui_message (_T("Filesystem active. Try again later."));
 			return -1;
@@ -1269,7 +1286,7 @@ int save_state (const TCHAR *filename, const TCHAR *description)
 
 void savestate_quick (int slot, int save)
 {
-	int i, len = _tcslen (savestate_fname);
+	int i, len = _tcslen(savestate_fname);
 	i = len - 1;
 	while (i >= 0 && savestate_fname[i] != '_')
 		i--;
