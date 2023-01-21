@@ -2193,13 +2193,13 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 			_stprintf (tmp1, _T("joyport%d"), i);
 			cfgfile_write (f, tmp1, tmp2);
 			_stprintf (tmp1, _T("joyport%dautofire"), i);
-			cfgfile_write (f, tmp1, joyaf[jp->autofire]);
+			cfgfile_write_strarr(f, tmp1, joyaf, jp->autofire);
 			if (i < 2 && jp->mode > 0) {
 				_stprintf (tmp1, _T("joyport%dmode"), i);
-				cfgfile_write (f, tmp1, joyportmodes[jp->mode]);
+				cfgfile_write_strarr(f, tmp1, joyportmodes, jp->mode);
 				if (jp->submode > 0 && jp->mode == 8) {
 					_stprintf(tmp1, _T("joyport%dsubmode"), i);
-					cfgfile_write(f, tmp1, joyportsubmodes_lightpen[jp->submode]);
+					cfgfile_write_strarr(f, tmp1, joyportsubmodes_lightpen, jp->submode);
 				}
 			}
 #ifdef AMIBERRY
@@ -7753,6 +7753,19 @@ static int cmdlineparser (const TCHAR *s, TCHAR *outp[], int max)
 
 static bool cfgfile_parse_uaelib_option (struct uae_prefs *p, TCHAR *option, TCHAR *value, int type)
 {
+	TCHAR tmp[MAX_DPATH];
+	if (cfgfile_path(option, value, _T("statefile_save"), tmp, sizeof(tmp) / sizeof(TCHAR))) {
+		if (!savestate_state) {
+			savestate_state = STATE_SAVE;
+			get_savestate_path(savestate_fname, sizeof(savestate_fname) / sizeof(TCHAR));
+			_tcscat(savestate_fname, tmp);
+			if (_tcslen(savestate_fname) >= 4 && _tcsicmp(savestate_fname + _tcslen(savestate_fname) - 4, _T(".uss"))) {
+				_tcscat(savestate_fname, _T(".uss"));
+			}
+		}
+		return true;
+	}
+
 	return false;
 }
 

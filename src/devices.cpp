@@ -300,6 +300,12 @@ void virtualdevice_free(void)
 	// must be first
 	uae_ppc_free();
 #endif
+#ifdef FILESYS
+	filesys_cleanup();
+#endif
+#ifdef BSDSOCKET
+	bsdlib_reset();
+#endif
 	free_traps();
 	sampler_free();
 	inputdevice_close();
@@ -310,12 +316,6 @@ void virtualdevice_free(void)
 #endif
 #ifdef AUTOCONFIG
 	expansion_cleanup();
-#endif
-#ifdef FILESYS
-	filesys_cleanup();
-#endif
-#ifdef BSDSOCKET
-	bsdlib_reset();
 #endif
 	device_func_free();
 #ifdef WITH_LUA

@@ -170,6 +170,8 @@ static int nosignal_cnt, nosignal_status;
 static bool nosignal_trigger;
 int display_reset;
 static evt_t line_start_cycles;
+static bool initial_frame;
+static evt_t custom_color_write_cycle;
 
 #define LOF_TOGGLES_NEEDED 3
 //#define NLACE_CNT_NEEDED 50
@@ -563,7 +565,7 @@ static struct draw_info line_drawinfo[2][2 * (MAXVPOS + MAXVPOS_WRAPLINES) + 1];
 #define COLOR_TABLE_SIZE (MAXVPOS + MAXVPOS_WRAPLINES) * 2
 static struct color_entry color_tables[2][COLOR_TABLE_SIZE];
 
-static int next_sprite_entry = 0;
+static int next_sprite_entry = 0, last_sprite_entry = 0;
 static int prev_next_sprite_entry;
 static int next_sprite_forced = 1;
 
@@ -1011,6 +1013,10 @@ static void record_color_change2(int hpos, int regno, uae_u32 value)
 	color_change *cc;
 
 	if (line_disabled) {
+		return;
+	}
+
+	if (next_color_change > MAX_REG_CHANGE - 30) {
 		return;
 	}
 
@@ -5061,6 +5067,11 @@ static void record_sprite(int num, int sprxp, uae_u16 *data, uae_u16 *datb, unsi
 	unsigned int mask = 0;
 	int attachment;
 	int spr_width;
+
+	// do nothing if buffer is full (shouldn't happen normally)
+	if (next_sprite_entry >= last_sprite_entry) {
+		return;
+	}
 
 	half = 0;
 	dbl = sprite_buffer_res - sprres;
@@ -9230,6 +9241,13 @@ bool get_custom_color_reg(int colreg, uae_u8 *r, uae_u8 *g, uae_u8 *b)
 static void COLOR_WRITE(int hpos, uae_u16 v, int num)
 {
 	bool colzero = false;
+
+	// skip color register write color change state update if color register was already written in same cycle
+	// fast CPU modes can write tens of thousands of color registers in single frame.
+	evt_t c = get_cycles() & ~(CYCLE_UNIT - 1);
+	bool samecycle = c == custom_color_write_cycle;
+	custom_color_write_cycle = c;
+
 #ifdef AGA
 	if (aga_mode) {
 		int r,g,b;
@@ -9271,7 +9289,9 @@ static void COLOR_WRITE(int hpos, uae_u16 v, int num)
 		}
 
 		/* Call this with the old table still intact. */
-		record_color_change(hpos, colreg, cval);
+		if (!samecycle) {
+			record_color_change(hpos, colreg, cval);
+		}
 		remembered_color_entry = -1;
 		current_colors.color_regs_aga[colreg] = cval;
 		current_colors.acolors[colreg] = getxcolor(cval);
@@ -9294,7 +9314,9 @@ static void COLOR_WRITE(int hpos, uae_u16 v, int num)
 		}
 
 		/* Call this with the old table still intact. */
-		record_color_change(hpos, num, v);
+		if (!samecycle) {
+			record_color_change(hpos, num, v);
+		}
 		remembered_color_entry = -1;
 		current_colors.color_regs_ecs[num] = v;
 		current_colors.acolors[num] = getxcolor (v);
@@ -10830,6 +10852,7 @@ void init_hardware_for_drawing_frame(void)
 	}
 	prev_next_sprite_entry = next_sprite_entry;
 	next_sprite_entry = 0;
+	last_sprite_entry = MAX_SPR_PIXELS - 1;
 
 	next_lineno = calculate_lineno(vpos);
 	last_color_change = 0;
@@ -11247,7 +11270,8 @@ static void vsync_handler_render(void)
 	if (!vsync_rendered) {
 		frame_time_t start, end;
 		start = read_processor_time();
-		vsync_handle_redraw(lof_store, lof_changed, bplcon0, bplcon3, isvsync_chipset() >= 0);
+		vsync_handle_redraw(lof_store, lof_changed, bplcon0, bplcon3, isvsync_chipset() >= 0, initial_frame);
+		initial_frame = false;
 		vsync_rendered = true;
 		end = read_processor_time();
 		frameskiptime += end - start;
@@ -13407,6 +13431,7 @@ void custom_reset(bool hardreset, bool keyboardreset)
 {
 	if (hardreset) {
 		board_prefs_changed(-1, -1);
+		initial_frame = true;
 	}
 
 	target_reset();
@@ -13451,6 +13476,7 @@ void custom_reset(bool hardreset, bool keyboardreset)
 	copper_dma_change_cycle = -1;
 	blitter_dma_change_cycle = -1;
 	sprite_dma_change_cycle_on = -1;
+	custom_color_write_cycle = -1;
 
 	if (hardreset || savestate_state) {
 		maxhpos = ntsc ? MAXHPOS_NTSC : MAXHPOS_PAL;
@@ -14598,6 +14624,8 @@ uae_u8 *restore_custom(uae_u8 *src)
 		current_colors.extra |= 1 << CE_BORDERNTRANS;
 	}
 	setextblank();
+
+	lof_prev_lastline = lof_lastline = lof_store != 0;
 
 	DISK_restore_custom(dskpt, dsklen, dskbytr);
 

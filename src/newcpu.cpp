@@ -6508,15 +6508,19 @@ void m68k_go (int may_quit)
 			quit_program = 0;
 
 #ifdef SAVESTATE
-			if (savestate_state == STATE_DORESTORE)
+			if (savestate_state == STATE_DORESTORE) {
 				savestate_state = STATE_RESTORE;
-			if (savestate_state == STATE_RESTORE)
+			}
+			if (savestate_state == STATE_RESTORE) {
 				restore_state (savestate_fname);
-			else if (savestate_state == STATE_REWIND)
+				cpu_hardreset = 1;
+			} else if (savestate_state == STATE_REWIND) {
 				savestate_rewind ();
+			}
 #endif
-			if (cpu_hardreset)
+			if (cpu_hardreset) {
 				m68k_reset_restore();
+			}
 			prefs_changed_cpu();
 			build_cpufunctbl();
 			set_x_funcs();
@@ -6705,6 +6709,7 @@ void m68k_dumpstate(uaecptr *nextpc, uaecptr prevpc)
 	int i, j;
 	uaecptr pc = M68K_GETPC;
 
+	MakeSR();
 	for (i = 0; i < 8; i++){
 		write_log (_T("  D%d %08X "), i, m68k_dreg (regs, i));
 		if ((i & 3) == 3) write_log (_T("\n"));

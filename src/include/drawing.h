@@ -259,7 +259,7 @@ struct color_change {
 #define MAXVPOS_WRAPLINES 10
 
 /* No divisors for MAX_PIXELS_PER_LINE; we support AGA and SHRES sprites */
-#define MAX_SPR_PIXELS (((MAXVPOS + MAXVPOS_WRAPLINES) * 2 + 1) * MAX_PIXELS_PER_LINE)
+#define MAX_SPR_PIXELS ((((MAXVPOS + MAXVPOS_WRAPLINES) * 2 + 1) * MAX_PIXELS_PER_LINE) / 16)
 
 struct sprite_entry
 {
@@ -357,7 +357,7 @@ enum nln_how {
 };
 
 extern void hsync_record_line_state (int lineno, enum nln_how, int changed);
-extern void vsync_handle_redraw (int long_field, int lof_changed, uae_u16, uae_u16, bool drawlines);
+extern void vsync_handle_redraw (int long_field, int lof_changed, uae_u16, uae_u16, bool drawlines, bool initial);
 extern bool vsync_handle_check (void);
 extern void draw_lines(int end, int section);
 extern void init_hardware_for_drawing_frame (void);
