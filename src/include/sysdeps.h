@@ -88,6 +88,12 @@ using namespace std;
 #define REGPARAM3 JITCALL
 #endif
 
+#if CPU_64_BIT
+#define addrdiff(a, b) ((int)((a) - (b)))
+#else
+#define addrdiff(a, b) ((a) - (b))
+#endif
+
 #ifndef __STDC__
 #ifndef _MSC_VER
 #error "Your compiler is not ANSI. Get a real one."

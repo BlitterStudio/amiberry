@@ -3461,7 +3461,8 @@ static uae_u32 REGPARAM2 picasso_BlitPattern(TrapContext *ctx)
 
 		uae_u16 *tmplbuf = NULL;
 		if (indirect) {
-			tmplbuf = xcalloc(uae_u16, 1 << pattern.Size);
+			int size = 1 << pattern.Size;
+			tmplbuf = xcalloc(uae_u16, size);
 			trap_get_words(ctx, tmplbuf, pattern.AMemory, 1 << pattern.Size);
 		}
 
@@ -5204,8 +5205,8 @@ static void copyall(int monid, uae_u8 *src, uae_u8 *dst, int pwidth, int pheight
 
 uae_u8 *uaegfx_getrtgbuffer(int monid, int *widthp, int *heightp, int *pitch, int *depth, uae_u8 *palette)
 {
-	struct picasso_vidbuf_description* vidinfo = &picasso_vidinfo[monid];
-	struct picasso96_state_struct* state = &picasso96_state[monid];
+	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[monid];
+	struct picasso96_state_struct *state = &picasso96_state[monid];
 	uae_u8 *src = gfxmem_banks[monid]->start + regs.natmem_offset;
 	int off = state->XYOffset - gfxmem_banks[monid]->start;
 	int width, height, pixbytes;

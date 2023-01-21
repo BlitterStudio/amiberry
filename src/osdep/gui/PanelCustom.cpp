@@ -174,7 +174,6 @@ public:
 				// push it into the 'temp map'
 				temp_button_map[t] = remap_event_list[cboCustomButtonAction[t]->getSelected() - 1];
 
-				// push map back into changed_prefs
 				switch (SelectedFunction)
 				{
 				case 0:
@@ -187,8 +186,6 @@ public:
 					break;
 				}
 
-				// and here, we will scroll through the custom-map and 
-				// push it into the currprefs config file
 				inputdevice_updateconfig(nullptr, &changed_prefs);
 				RefreshPanelCustom();
 			}
@@ -217,7 +214,6 @@ public:
 				// and push it into the temp map
 				temp_axis_map[t] = remap_event_list[cboCustomAxisAction[t]->getSelected() - 1];
 
-				// push map back to changed_prefs
 				switch (SelectedFunction)
 				{
 				case 0:

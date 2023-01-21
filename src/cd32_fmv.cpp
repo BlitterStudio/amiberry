@@ -634,9 +634,9 @@ static void l64111_parse(void)
 	}
 
 	if (audio_frame_size && audio_data_remaining)
-		p += l64111_get_frame(p, L64111_FIFO_BYTES - (p - l64111_fifo));
+		p += l64111_get_frame(p, L64111_FIFO_BYTES - addrdiff(p, l64111_fifo));
 
-	while (p - l64111_fifo < L64111_FIFO_LOOKUP || ((p - l64111_fifo) & 1)) {
+	while (p - l64111_fifo < L64111_FIFO_LOOKUP || (addrdiff(p, l64111_fifo) & 1)) {
 		uae_u8 *op = p;
 		int size = 0;
 
@@ -671,16 +671,16 @@ static void l64111_parse(void)
 		}
 
 		if (audio_skip_size) {
-			int size = audio_skip_size > L64111_FIFO_BYTES - (p - l64111_fifo) ? L64111_FIFO_BYTES - (p - l64111_fifo) : audio_skip_size;
+			int size = audio_skip_size > L64111_FIFO_BYTES - addrdiff(p, l64111_fifo) ? L64111_FIFO_BYTES - addrdiff(p, l64111_fifo) : audio_skip_size;
 			p += size;
 			audio_skip_size -= size;
 		}
 		if (L64111_FIFO_BYTES - (p - l64111_fifo) > 0 && audio_data_remaining) {
 			if (audio_frame_size) {
-				p += l64111_get_frame(p, L64111_FIFO_BYTES - (p - l64111_fifo));
+				p += l64111_get_frame(p, L64111_FIFO_BYTES - addrdiff(p, l64111_fifo));
 			} else if (p[0] == 0xff && (p[1] & (0x80 | 0x40 | 0x20)) == (0x80 | 0x40 | 0x20)) {
 				if (parse_mp2_frame(p))
-					p += l64111_get_frame(p, L64111_FIFO_BYTES - (p - l64111_fifo));
+					p += l64111_get_frame(p, L64111_FIFO_BYTES - addrdiff(p, l64111_fifo));
 			}
 		}
 
@@ -690,7 +690,7 @@ static void l64111_parse(void)
 				audio_data_remaining--;
 		}
 	}
-	l64111_fifo_cnt = L64111_FIFO_BYTES - (p - l64111_fifo);
+	l64111_fifo_cnt = L64111_FIFO_BYTES - addrdiff(p, l64111_fifo);
 	if (l64111_fifo_cnt < 0)
 		l64111_fifo_cnt = 0;
 	if (l64111_fifo_cnt > 0)

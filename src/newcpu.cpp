@@ -34,7 +34,7 @@
 #include "autoconf.h"
 #include "traps.h"
 #include "debug.h"
-//#include "debugmem.h"
+#include "debugmem.h"
 #include "gui.h"
 #include "savestate.h"
 #include "blitter.h"
@@ -64,6 +64,7 @@ int pissoff = 0;
 
 #ifdef AMIBERRY
 extern void memory_map_dump(void);
+#define MAX_LINEWIDTH 10000
 #endif
 
 /* Opcode of faulting instruction */
@@ -1632,7 +1633,9 @@ kludge_me_do:
 		return;
 	}
 #ifdef JIT
-	set_special (SPCFLAG_END_COMPILE);
+	if (currprefs.cachesize) {
+		set_special(SPCFLAG_END_COMPILE);
+	}
 #endif
 	exception_check_trace (nr);
 }
@@ -1924,7 +1927,9 @@ kludge_me_do:
 	add_approximate_exception_cycles(nr);
 	m68k_setpc (newpc);
 #ifdef JIT
-	set_special (SPCFLAG_END_COMPILE);
+	if (currprefs.cachesize) {
+		set_special(SPCFLAG_END_COMPILE);
+	}
 #endif
 	regs.ipl_pin = intlev();
 	ipl_fetch();
@@ -2747,7 +2752,9 @@ static int do_specialties (int cycles)
 		do_copper ();
 
 #ifdef JIT
-	unset_special (SPCFLAG_END_COMPILE);   /* has done its job */
+	if (currprefs.cachesize) {
+		unset_special(SPCFLAG_END_COMPILE);
+	}
 #endif
 
 	while ((regs.spcflags & SPCFLAG_BLTNASTY) && dmaen (DMA_BLITTER) && cycles > 0 && ((currprefs.waiting_blits && currprefs.cpu_model >= 68020) || !currprefs.blitter_cycle_exact)) {
@@ -2774,11 +2781,11 @@ static int do_specialties (int cycles)
 	}
 
 	if (regs.spcflags & SPCFLAG_DOTRACE)
-		Exception (9);
+		Exception(9);
 
 	if (regs.spcflags & SPCFLAG_TRAP) {
 		unset_special (SPCFLAG_TRAP);
-		Exception (3);
+		Exception(3);
 	}
 
 	while (regs.spcflags & SPCFLAG_STOP) {
@@ -2862,7 +2869,7 @@ static int do_specialties (int cycles)
 	}
 
 	if (regs.spcflags & SPCFLAG_TRACE)
-		do_trace ();
+		do_trace();
 
 	if (regs.spcflags & SPCFLAG_UAEINT) {
 		check_uae_int_request();
@@ -2870,9 +2877,9 @@ static int do_specialties (int cycles)
 	}
 
 	if (m68k_interrupt_delay) {
-		if (time_for_interrupt ()) {
+		if (time_for_interrupt()) {
 			unset_special(SPCFLAG_INT);
-			do_interrupt (regs.ipl);
+			do_interrupt(regs.ipl);
 		}
 	} else {
 		if (regs.spcflags & SPCFLAG_INT) {
@@ -3080,7 +3087,9 @@ static int do_specialties_thread(void)
 		return 1;
 
 #ifdef JIT
-	unset_special(SPCFLAG_END_COMPILE);   /* has done its job */
+	if (currprefs.cachesize) {
+		unset_special(SPCFLAG_END_COMPILE);
+	}
 #endif
 
 	if (regs.spcflags & SPCFLAG_DOTRACE)
@@ -3537,9 +3546,13 @@ void cpu_halt (int id)
 		regs.halted = id;
 		gui_data.cpu_halted = id;
 		gui_led(LED_CPU, 0, -1);
+		if (id >= 0) {
 			regs.intmask = 7;
 			MakeSR ();
 			audio_deactivate ();
+			//if (debugging)
+			//	activate_debugger();
+		}
 	}
 	set_special(SPCFLAG_CHECK);
 }
@@ -3801,9 +3814,9 @@ void m68k_go (int may_quit)
 
 		set_x_funcs();
 		if (hardboot) {
-			custom_prepare ();
+			custom_prepare();
 			mman_set_barriers(false);
-			protect_roms (true);
+			protect_roms(true);
 		}
 		cpu_hardreset = false;
 		cpu_keyboardreset = false;
