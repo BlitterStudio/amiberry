@@ -7129,7 +7129,8 @@ static void compatibility_copy (struct uae_prefs *prefs, bool gameports)
 				default:
 				{
 					bool iscd32 = mode == JSEM_MODE_JOYSTICK_CD32 || (mode == JSEM_MODE_DEFAULT && prefs->cs_cd32cd);
-					input_get_default_joystick (joysticks, joy, i, af, mode, !gameports, false);
+					int jmode = iscd32 ? JSEM_MODE_JOYSTICK_CD32 : mode;
+					input_get_default_joystick(joysticks, joy, i, af, jmode, !gameports, false);
 					if (iscd32)
 						joymodes[i] = JSEM_MODE_JOYSTICK_CD32;
 					else if (mode == JSEM_MODE_GAMEPAD)
@@ -7139,7 +7140,7 @@ static void compatibility_copy (struct uae_prefs *prefs, bool gameports)
 					break;
 				}
 				case JSEM_MODE_JOYSTICK_ANALOG:
-					input_get_default_joystick_analog (joysticks, joy, i, af, !gameports, false);
+					input_get_default_joystick_analog(joysticks, joy, i, af, !gameports, false);
 					joymodes[i] = JSEM_MODE_JOYSTICK_ANALOG;
 					break;
 				case JSEM_MODE_MOUSE:
@@ -7159,12 +7160,12 @@ static void compatibility_copy (struct uae_prefs *prefs, bool gameports)
 #endif
 					break;
 				case JSEM_MODE_LIGHTPEN:
-					input_get_default_lightpen (joysticks, joy, i, af, !gameports, true, submode);
+					input_get_default_lightpen(joysticks, joy, i, af, !gameports, true, submode);
 					joymodes[i] = JSEM_MODE_LIGHTPEN;
 					break;
 				case JSEM_MODE_MOUSE_CDTV:
 					joymodes[i] = JSEM_MODE_MOUSE_CDTV;
-					input_get_default_joystick (joysticks, joy, i, af, mode, !gameports, false);
+					input_get_default_joystick(joysticks, joy, i, af, mode, !gameports, false);
 					break;
 
 				}
