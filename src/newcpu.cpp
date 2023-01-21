@@ -34,7 +34,7 @@
 #include "autoconf.h"
 #include "traps.h"
 #include "debug.h"
-//#include "debugmem.h"
+#include "debugmem.h"
 #include "gui.h"
 #include "savestate.h"
 #include "blitter.h"
@@ -64,6 +64,7 @@ int pissoff = 0;
 
 #ifdef AMIBERRY
 extern void memory_map_dump(void);
+#define MAX_LINEWIDTH 10000
 #endif
 
 /* Opcode of faulting instruction */

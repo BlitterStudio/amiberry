@@ -1485,6 +1485,9 @@ static void CIA_thi_write(int num, int tnum, uae_u8 val)
 
 	t->latch = (t->latch & 0xff) | (val << 8);
 
+	// If ONESHOT: Load and start timer.
+	// If CONTINUOUS: Load timer if not running.
+
 	if (!acc_mode()) {
 		// if inaccurate mode: do everything immediately
 
@@ -1506,15 +1509,15 @@ static void CIA_thi_write(int num, int tnum, uae_u8 val)
 	} else {
 		// if accurate mode: handle delays cycle-accurately
 
-		t->loaddelay |= 1 << 2;
-
 		if (!(t->cr & CR_START)) {
 			t->loaddelay |= 1 << 1;
+			t->loaddelay |= 1 << 2;
 		}
 
 		if (t->cr & CR_RUNMODE) {
 			t->cr |= CR_START;
 			t->loaddelay |= 0x01000000 << 1;
+			t->loaddelay |= 1 << 2;
 		}
 	}
 }

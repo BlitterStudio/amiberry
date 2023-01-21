@@ -2309,6 +2309,9 @@
     <ClInclude Include="..\src\include\uae\uae_pragmas.h">
       <Filter>src\include\uae</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\osdep\vkbd\vkbd.h">
+      <Filter>src\osdep\vkbd</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\include\debug.h">
       <Filter>src\include</Filter>
     </ClInclude>
@@ -2326,9 +2329,6 @@
     </ClInclude>
     <ClInclude Include="..\src\include\uae\memory.h">
       <Filter>src\include\uae</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\osdep\vkbd\vkbd.h">
-      <Filter>src\osdep\vkbd</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

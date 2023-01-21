@@ -3461,7 +3461,8 @@ static uae_u32 REGPARAM2 picasso_BlitPattern(TrapContext *ctx)
 
 		uae_u16 *tmplbuf = NULL;
 		if (indirect) {
-			tmplbuf = xcalloc(uae_u16, 1 << pattern.Size);
+			int size = 1 << pattern.Size;
+			tmplbuf = xcalloc(uae_u16, size);
 			trap_get_words(ctx, tmplbuf, pattern.AMemory, 1 << pattern.Size);
 		}
 

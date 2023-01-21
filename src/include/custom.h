@@ -253,7 +253,7 @@ struct customhack {
 };
 extern void alloc_cycle_ext(int, int);
 extern bool alloc_cycle_blitter(int hpos, uaecptr *ptr, int, int);
-extern uaecptr alloc_cycle_blitter_conflict_or(int);
+extern uaecptr alloc_cycle_blitter_conflict_or(int, int, bool*);
 extern bool ispal(int *lines);
 extern bool isvga(void);
 extern int current_maxvpos(void);

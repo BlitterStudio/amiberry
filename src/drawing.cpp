@@ -5002,7 +5002,7 @@ bool vsync_handle_check (void)
 	return changed != 0;
 }
 
-void vsync_handle_redraw(int long_field, int lof_changed, uae_u16 bplcon0p, uae_u16 bplcon3p, bool drawlines)
+void vsync_handle_redraw(int long_field, int lof_changed, uae_u16 bplcon0p, uae_u16 bplcon3p, bool drawlines, bool initial)
 {
 	int monid = 0;
 	struct amigadisplay *ad = &adisplays[monid];
@@ -5010,30 +5010,33 @@ void vsync_handle_redraw(int long_field, int lof_changed, uae_u16 bplcon0p, uae_
 	if (lof_changed || interlace_seen <= 0 || (currprefs.gfx_iscanlines && interlace_seen > 0) || last_redraw_point >= 2 || long_field || doublescan < 0) {
 		last_redraw_point = 0;
 
-		if (ad->framecnt == 0) {
+		if (!initial) {
+			if (ad->framecnt == 0) {
 #ifdef AMIBERRY
-			if (currprefs.multithreaded_drawing)
-			{
-				if (render_tid)
+				if (currprefs.multithreaded_drawing)
 				{
-					while (render_thread_busy)
-						sleep_micros(10);
-					write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_FRAME_DONE, 1);
-					uae_sem_wait(&render_sem);
+					if (render_tid)
+					{
+						while (render_thread_busy)
+							sleep_micros(10);
+						write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_FRAME_DONE, 1);
+						uae_sem_wait(&render_sem);
+					}
 				}
-			}
-			else
-			{
-				finish_drawing_frame(drawlines);
-			}
+				else
+				{
+					finish_drawing_frame(drawlines);
+				}
 #else
-			finish_drawing_frame(drawlines);
+				finish_drawing_frame(drawlines);
 #endif
 #ifdef AVIOUTPUT
-			if (!ad->picasso_on) {
-				frame_drawn(monid);
-			}
+				if (!ad->picasso_on) {
+					frame_drawn(monid);
+				}
 #endif
+			}
+			count_frame(monid);
 		}
 #if 0
 		if (interlace_seen > 0) {
@@ -5080,7 +5083,6 @@ void vsync_handle_redraw(int long_field, int lof_changed, uae_u16 bplcon0p, uae_
 			return;
 		}
 
-		count_frame(monid);
 
 		if (ad->framecnt == 0) {
 			init_drawing_frame();

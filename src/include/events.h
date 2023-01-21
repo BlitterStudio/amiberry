@@ -26,9 +26,9 @@ extern frame_time_t vsynctimebase, syncbase;
 extern void reset_frame_rate_hack(void);
 extern evt_t vsync_cycles;
 extern evt_t start_cycles;
-extern int event2_count;
 extern bool event_wait;
 
+extern void event_init(void);
 extern void compute_vsynctime(void);
 extern void init_eventtab(void);
 extern void do_cycles_ce(int cycles);
@@ -50,9 +50,6 @@ typedef void (*do_cycles_func)(int);
 extern do_cycles_func do_cycles;
 void do_cycles_cpu_fastest(int cycles_to_add);
 void do_cycles_cpu_norm(int cycles_to_add);
-
-typedef unsigned long int evt;
-
 struct ev
 {
 	bool active;
@@ -66,11 +63,12 @@ struct ev2
 	evt_t evtime;
 	uae_u32 data;
 	evfunc2 handler;
+	ev2 *next;
 };
 
 enum {
-    ev_cia, ev_audio, ev_misc, ev_hsync, ev_hsynch,
-    ev_max
+	ev_cia, ev_audio, ev_misc, ev_hsync, ev_hsynch,
+	ev_max
 };
 
 enum {
@@ -116,11 +114,15 @@ STATIC_INLINE void set_cycles (evt_t x)
 	currcycle = x;
 	eventtab[ev_hsync].oldcycles = x;
 	eventtab[ev_hsynch].active = 0;
+#ifdef EVT_DEBUG
+	if (currcycle & (CYCLE_UNIT - 1))
+		write_log (_T("%x\n"), currcycle);
+#endif
 }
 
 STATIC_INLINE int current_hpos_safe(void)
 {
-	int hp = (int)((get_cycles() - eventtab[ev_hsync].oldcycles)) / CYCLE_UNIT;
+    int hp = (int)((get_cycles() - eventtab[ev_hsync].oldcycles)) / CYCLE_UNIT;
 	return hp;
 }
 

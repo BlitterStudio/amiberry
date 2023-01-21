@@ -56,6 +56,7 @@
 #ifdef JIT
 #include "jit/compemu.h"
 #endif
+//#include "disasm.h"
 #ifdef RETROPLATFORM
 #include "rp.h"
 #endif
@@ -69,7 +70,7 @@
 #include "fsdb_host.h"
 #include "keyboard.h"
 
-static const char __ver[40] = "$VER: Amiberry DEV (2022-12-25)";
+static const char __ver[40] = "$VER: Amiberry DEV (2023-01-21)";
 long int version = 256 * 65536L * UAEMAJOR + 65536L * UAEMINOR + UAESUBREV;
 
 struct uae_prefs currprefs, changed_prefs;
@@ -140,23 +141,6 @@ TCHAR *my_strdup_trim (const TCHAR *s)
 	memcpy (out, s, len * sizeof (TCHAR));
 	out[len] = 0;
 	return out;
-}
-
-void discard_prefs(struct uae_prefs *p, int type)
-{
-	auto* ps = &p->all_lines;
-	while (*ps) {
-		auto* s = *ps;
-		*ps = s->next;
-		xfree (s->value);
-		xfree (s->option);
-		xfree (s);
-	}
-	p->all_lines = NULL;
-	currprefs.all_lines = changed_prefs.all_lines = NULL;
-#ifdef FILESYS
-	filesys_cleanup ();
-#endif
 }
 
 static void fixup_prefs_dim2(int monid, struct wh* wh)
@@ -287,9 +271,6 @@ void fixup_cpu (struct uae_prefs *p)
 
 	if (p->cpu_model < 68020 && p->cachesize) {
 		p->cachesize = 0;
-	if (p->fpu_model == 0 && p->compfpu) {
-		p->compfpu = false;
-	}
 		error_log (_T("JIT requires 68020 or better CPU."));
 	}
 	if (p->fpu_model == 0 && p->compfpu) {
@@ -320,6 +301,7 @@ void fixup_cpu (struct uae_prefs *p)
 		p->fpu_mode = 0;
 	}
 
+#ifdef JIT
 	if (p->comptrustbyte < 0 || p->comptrustbyte > 3) {
 		error_log(_T("Bad value for comptrustbyte parameter: value must be within 0..2."));
 		p->comptrustbyte = 1;
@@ -336,13 +318,10 @@ void fixup_cpu (struct uae_prefs *p)
 		error_log(_T("Bad value for comptrustnaddr parameter: value must be within 0..2."));
 		p->comptrustnaddr = 1;
 	}
-#ifdef JIT
 	if (p->cachesize < 0 || p->cachesize > MAX_JIT_CACHE || (p->cachesize > 0 && p->cachesize < MIN_JIT_CACHE)) {
 		error_log(_T("JIT Bad value for cachesize parameter: value must zero or within %d..%d."), MIN_JIT_CACHE, MAX_JIT_CACHE);
 		p->cachesize = 0;
 	}
-#else
-	p->cachesize = 0;
 #endif
 
 
@@ -1242,6 +1221,8 @@ static int real_main2 (int argc, TCHAR **argv)
 #ifdef NATMEM_OFFSET
 	//preinit_shm ();
 #endif
+
+	event_init();
 
 	if (restart_config[0]) {
 		parse_cmdline_and_init_file(argc, argv);

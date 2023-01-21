@@ -139,6 +139,7 @@ static int lf, hf;
 static void video_calc_gammatable(int monid)
 {
 	struct amigadisplay *ad = &adisplays[monid];
+	struct gfx_filterdata *fd = &currprefs.gf[ad->gf_index];
 	float bri, con, gam, gams[3];
 	float max = 255;
 
@@ -149,7 +150,7 @@ static void video_calc_gammatable(int monid)
 	gams[1] = gam + ((float)(1000 - currprefs.gfx_gamma_ch[1])) / 1000.0f;
 	gams[2] = gam + ((float)(1000 - currprefs.gfx_gamma_ch[2])) / 1000.0f;
 
-	lf = 64 * currprefs.gf[ad->picasso_on].gfx_filter_blur / 1000;
+	lf = 64 * currprefs.gf[ad->gf_index].gfx_filter_blur / 1000;
 	hf = 256 - lf * 2;
 
 	for (int i = 0; i < (256 * 3); i++) {
@@ -318,7 +319,7 @@ void alloc_colors_picasso (int rw, int gw, int bw, int rs, int gs, int bs, int r
 		int lbmask = (1 << blue_bits) - 1;
 		for (i = 65535; i >= 0; i--) {
 			uae_u32 r, g, b, c;
-			uae_u32 j = byte_swap ? bswap_16 (i) : i;
+			uae_u32 j = byte_swap ? bswap_16(i) : i;
 			r = (((j >>   red_shift) & lrmask) << lrbits) | lowbits (j,   red_shift, lrbits);
 			g = (((j >> green_shift) & lgmask) << lgbits) | lowbits (j, green_shift, lgbits);
 			b = (((j >>  blue_shift) & lbmask) << lbbits) | lowbits (j,  blue_shift, lbbits);
@@ -351,13 +352,13 @@ void alloc_colors_rgb (int rw, int gw, int bw, int rs, int gs, int bs, int aw, i
 		bc[i] = doColor(uae_gamma[j][2], bw, bs) | doAlpha(alpha, aw, as);
 		if (byte_swap) {
 			if (bpp <= 16) {
-				rc[i] = bswap_16 (rc[i]);
-				gc[i] = bswap_16 (gc[i]);
+				rc[i] = bswap_16(rc[i]);
+				gc[i] = bswap_16(gc[i]);
 				bc[i] = bswap_16 (bc[i]);
 			} else {
-				rc[i] = bswap_32 (rc[i]);
-				gc[i] = bswap_32 (gc[i]);
-				bc[i] = bswap_32 (bc[i]);
+				rc[i] = bswap_32(rc[i]);
+				gc[i] = bswap_32(gc[i]);
+				bc[i] = bswap_32(bc[i]);
 			}
 		}
 		if (bpp <= 16) {
@@ -457,9 +458,9 @@ void alloc_colors64k(int monid, int rw, int gw, int bw, int rs, int gs, int bs, 
 			xcolors[i] = doMask(r, 5, 11) | doMask(g, 6, 5) | doMask(b, 5, 0);
 			if (byte_swap) {
 				if (bpp <= 16)
-					xcolors[i] = bswap_16 (xcolors[i]);
+					xcolors[i] = bswap_16(xcolors[i]);
 				else
-					xcolors[i] = bswap_32 (xcolors[i]);
+					xcolors[i] = bswap_32(xcolors[i]);
 			}
 			if (bpp <= 16) {
 				/* Fill upper 16 bits of each colour value
