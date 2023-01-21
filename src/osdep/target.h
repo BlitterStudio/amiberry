@@ -30,6 +30,7 @@
 #define IHF_WINDOWHIDDEN 6
 
 extern std::string get_version_string();
+extern std::string get_sdl2_version_string();
 
 STATIC_INLINE FILE* uae_tfopen(const TCHAR* path, const TCHAR* mode)
 {

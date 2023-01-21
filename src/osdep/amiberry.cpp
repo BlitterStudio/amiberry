@@ -44,6 +44,8 @@
 #include "devices.h"
 #include <map>
 #include <parser.h>
+#include <sstream>
+
 #include "amiberry_input.h"
 #include "clipboard.h"
 #include "fsdb.h"
@@ -117,6 +119,18 @@ std::string get_version_string()
 {
 	std::string label_text = AMIBERRYVERSION;
 	return label_text;
+}
+
+std::string get_sdl2_version_string()
+{
+	SDL_version compiled;
+	SDL_version linked;
+	SDL_VERSION(&compiled);
+	SDL_GetVersion(&linked);
+	std::ostringstream sdl_compiled;
+	sdl_compiled << "Compiled against SDL2 v" << int(compiled.major) << "." << int(compiled.minor) << "." << int(compiled.patch);
+	sdl_compiled << ", Linked against SDL2 v" << int(linked.major) << "." << int(linked.minor) << "." << int(linked.patch);
+	return sdl_compiled.str();
 }
 
 amiberry_hotkey get_hotkey_from_config(std::string config_option)
@@ -1452,6 +1466,7 @@ void logging_init()
 		logging_started = 1;
 		first++;
 		write_log("%s Logfile\n\n", get_version_string().c_str());
+		write_log("%s\n", get_sdl2_version_string().c_str());
 	}
 }
 
