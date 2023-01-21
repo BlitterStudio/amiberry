@@ -654,9 +654,9 @@ void check_input()
 			break;
 
 		case SDL_JOYDEVICEADDED:
-		//case SDL_CONTROLLERDEVICEADDED:
+		case SDL_CONTROLLERDEVICEADDED:
 		case SDL_JOYDEVICEREMOVED:
-		//case SDL_CONTROLLERDEVICEREMOVED:
+		case SDL_CONTROLLERDEVICEREMOVED:
 			write_log("GUI: SDL2 Controller/Joystick added or removed, re-running import joysticks...\n");
 			import_joysticks();
 			if (inputdevice_devicechange(&currprefs))
