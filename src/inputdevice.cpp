@@ -49,6 +49,7 @@
 #include "zfile.h"
 #include "cia.h"
 #include "autoconf.h"
+#include "vkbd/vkbd.h"
 //#include "x86.h"
 #ifdef RETROPLATFORM
 #include "rp.h"
@@ -4841,7 +4842,7 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 		check_prefs_changed_gfx();
 		break;
 	case AKS_TOGGLE_VIRTUAL_KEYBOARD:
-		//TODO call virtual keyboard function to toggle on/off
+		vkbd_toggle();
 		break;
 	}
 end:
@@ -4897,6 +4898,56 @@ static uae_u64 isqual (int evt)
 	return ID_FLAG_QUALIFIER1 << (num * 2);
 }
 
+// Pass the joystick state (joybutton and joydir) to kvbd subsystem and clear them for simulator.
+static void handle_vkbd()
+{
+	if (!vkbd_is_active())
+	{
+		return;
+	}
+
+	joybutton;
+	
+	static int cnt = 0;
+	++cnt;
+	int vkbd_state = 0;
+	for(int joy = 0; joy < MAX_JPORTS; ++joy)
+	{
+		int mask_button = 1 << JOYBUTTON_1;
+		if (joybutton[joy] & mask_button)
+		{
+			vkbd_state |= VKBD_BUTTON;
+			joybutton[joy] &= ~mask_button;
+		}
+		if (joydir[joy] & DIR_LEFT)
+		{
+			vkbd_state |= VKBD_LEFT;
+			joydir[joy] &= ~DIR_LEFT;
+		}
+		if (joydir[joy] & DIR_RIGHT)
+		{
+			vkbd_state |= VKBD_RIGHT;
+			joydir[joy] &= ~DIR_RIGHT;
+		}
+		if (joydir[joy] & DIR_UP)
+		{
+			vkbd_state |= VKBD_UP;
+			joydir[joy] &= ~DIR_UP;
+		}
+		if (joydir[joy] & DIR_DOWN)
+		{
+			vkbd_state |= VKBD_DOWN;
+			joydir[joy] &= ~DIR_DOWN;
+		}
+	}
+	int code;
+	int pressed;
+	if (vkbd_process(vkbd_state, &code, &pressed))
+	{
+		inputdevice_do_keyboard(code, pressed);
+	}
+}
+
 static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 {
 	struct vidbuf_description *vidinfo = &adisplays[0].gfxvidinfo;
@@ -4907,19 +4958,28 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 	int autofire = (flags & HANDLE_IE_FLAG_AUTOFIRE) ? 1 : 0;
 
 	if (nr <= 0 || nr == INPUTEVENT_SPC_CUSTOM_EVENT)
+	{
+		handle_vkbd();
 		return 0;
+	}
 
 #ifdef _WIN32
 	// ignore normal GUI event if forced gui key is in use
 	if (nr == INPUTEVENT_SPC_ENTERGUI) {
 		if (currprefs.win32_guikey > 0)
+		{
+			handle_vkbd();
 			return 0;
+		}
 	}
 #endif
 
 	ie = &events[nr];
 	if (isqual (nr))
+	{
+		handle_vkbd();
 		return 0; // qualifiers do nothing
+	}
 	if (ie->unit == 0 && ie->data >= AKS_FIRST) {
 		isaks = true;
 	}
@@ -4927,10 +4987,16 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 #ifndef AMIBERRY
 	if (isaks) {
 		if (debug_trainer_event(ie->data, state))
+		{
+			handle_vkbd();
 			return 0;
+		}
 	} else {
 		if (debug_trainer_event(nr, state))
+		{
+			handle_vkbd();
 			return 0;
+		}
 	}
 #endif
 	if (!isaks) {
@@ -4943,7 +5009,10 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 			}
 		}
 		if (!(flags & HANDLE_IE_FLAG_PLAYBACKEVENT) && input_play)
+		{
+			handle_vkbd();
 			return 0;
+		}
 	}
 
 	if (flags & HANDLE_IE_FLAG_ALLOWOPPOSITE) {
@@ -4980,7 +5049,10 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 			if (flags & HANDLE_IE_FLAG_ABSOLUTE) {
 				lastmxy_abs[lpnum][unit] = extra;
 				if (!unit)
+				{
+					handle_vkbd();
 					return 1;
+				}
 				int x = lastmxy_abs[lpnum][0];
 				int y = lastmxy_abs[lpnum][1];
 				if (x <= 0 || x >= 65535 || y <= 0 || y >= 65535) {
@@ -5333,6 +5405,7 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 		inputdevice_do_keyboard (ie->data, state);
 		break;
 	}
+	handle_vkbd();
 	return 1;
 }
 

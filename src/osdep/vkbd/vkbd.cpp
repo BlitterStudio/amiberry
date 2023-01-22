@@ -9,26 +9,30 @@
 #include "uae.h"
 #include "amiberry_gfx.h"
 
-#define VKBD_MIN_HOLDING_TIME 200
-#define VKBD_MOVE_DELAY 50
+#define VKBD_X 20
+#define VKBD_Y 200
+using t_vkbd_sticky_key = struct
+{
+	int code; // amiga-side keycode
+	bool stuck; // is it currently stuck pressed?
+	bool can_switch; // de-bounce
+	unsigned char index; // index in vkbd_rect[]
+};
 
-//extern int mainMenu_displayHires;
-//extern int mainMenu_vkbdLanguage;
-//extern int mainMenu_vkbdStyle;
 //TODO these should be configurable of course
-int mainMenu_displayHires = 1;
-int mainMenu_vkbdLanguage = 0;
-int mainMenu_vkbdStyle = 1;
+static int mainMenu_displayHires = 1;
+static int mainMenu_vkbdLanguage = 0;
+static int mainMenu_vkbdStyle = 1;
+
+static bool vkbd_show = false;
 
 static int vkbd_x = VKBD_X;
 static int vkbd_y = VKBD_Y;
 static int vkbd_transparency = 255;
-static int vkbd_just_blinked = 0;
-static Uint32 vkbd_last_press_time = 0;
-static Uint32 vkbd_last_move_time = 0;
 
 // Keep track of keys that are sticky
-t_vkbd_sticky_key vkbd_sticky_key[] =
+#define NUM_STICKY 7 // number of sticky keys (shift, alt etc)
+static t_vkbd_sticky_key vkbd_sticky_key[] =
 {
 	{AK_LSH, false, true, 70},
 	{AK_RSH, false, true, 81},
@@ -39,20 +43,15 @@ t_vkbd_sticky_key vkbd_sticky_key[] =
 	{AK_RAMI, false, true, 88}
 };
 
-int vkbd_let_go_of_direction = 0;
-int vkbd_mode = 0;
-int vkbd_move = 0;
-int vkbd_key = KEYCODE_NOTHING;
-int vkbd_keysave = KEYCODE_NOTHING;
-
 static SDL_Texture* ksur;
 static SDL_Texture* ksurHires;
-//static SDL_Surface* canvas; // intermediate surface used to highlight sticky keys
-//static SDL_Surface* canvasHires; // intermediate surface used to highlight sticky keys
 static SDL_Texture* ksurShift;
 static SDL_Texture* ksurShiftHires;
 
-static int vkbd_actual = 0, vkbd_color = 0;
+static int actual_index = 0;
+
+static int previous_state = 0;
+
 
 using t_vkbd_rect = struct
 {
@@ -484,15 +483,6 @@ static t_vkbd_rect vkbd_rect_FR[] =
 	{{196, 37, 14, 11}, 48, 81, 65, 49, AK_NUMBERSIGN}, // 94 *	
 };
 
-void vkbd_reset_sticky_keys(void)
-{
-	for (int i = 0; i < NUM_STICKY; i++)
-	{
-		vkbd_sticky_key[i].can_switch = true;
-		vkbd_sticky_key[i].stuck = false;
-	}
-}
-
 int vkbd_init(void)
 {
 	char tmpchar[MAX_DPATH];
@@ -602,7 +592,9 @@ int vkbd_init(void)
 	SDL_SetTextureAlphaMod(ksur, vkbd_transparency);
 	SDL_SetTextureAlphaMod(ksurHires, vkbd_transparency);
 
-	vkbd_actual = 0;
+	actual_index = 0;
+	previous_state = 0;
+
 #if !defined(__PSP2__) && !defined(__SWITCH__) //no need to show keyboard on first startup
 	vkbd_redraw();
 #endif
@@ -614,12 +606,7 @@ int vkbd_init(void)
 	}
 	vkbd_x = (sdl_surface->w - w) / 2;
 	vkbd_y = sdl_surface->h - h;
-	vkbd_mode = 0;
-	vkbd_move = 0;
-	vkbd_last_press_time = 0;
-	vkbd_last_move_time = 0;
-	vkbd_key = KEYCODE_NOTHING;
-	vkbd_keysave = KEYCODE_NOTHING;
+
 	return 0;
 }
 
@@ -629,25 +616,43 @@ void vkbd_quit(void)
 	SDL_DestroyTexture(ksurShiftHires);
 	SDL_DestroyTexture(ksur);
 	SDL_DestroyTexture(ksurHires);
-	vkbd_mode = 0;
 	for (int i = 0; i < NUM_STICKY; i++)
 	{
 		vkbd_sticky_key[i].stuck = false;
 	}
 }
 
-void vkbd_redraw(void)
+static SDL_Rect GetKeyRect(int index)
 {
 	SDL_Rect r;
+	if (mainMenu_displayHires)
+	{
+		r.x = 2 * vkbd_rect[index].rect.x + 2;
+		r.w = 6;
+	}
+	else
+	{
+		r.x = vkbd_rect[index].rect.x + 1;
+		r.w = 3;
+	}
+	r.y = vkbd_rect[index].rect.y + 1;
+	r.h = 3;
+
+	r.x += vkbd_x;
+	r.y += vkbd_y;
+
+	return r;
+}
+
+static SDL_Texture* GetTextureToDraw()
+{
 	SDL_Texture* toDraw;
-	SDL_Texture* myCanvas;
 	if (mainMenu_displayHires)
 	{
 		if (vkbd_sticky_key[0].stuck || vkbd_sticky_key[1].stuck)
 			toDraw = ksurShiftHires;
 		else
 			toDraw = ksurHires;
-		myCanvas = ksurHires; //canvasHires;
 	}
 	else
 	{
@@ -655,58 +660,49 @@ void vkbd_redraw(void)
 			toDraw = ksurShift;
 		else
 			toDraw = ksur;
-		myCanvas = ksur; //canvas;
 	}
+	return toDraw;
+}
 
-	int w, h;
-	Uint32 format;
-	//SDL_QueryTexture(toDraw, &format, NULL, &w, &h);
-	// blit onto intermediate canvas
-	r.x = 0;
-	r.y = 0;
-	r.w = w;
-	r.h = h;
-	//SDL_BlitSurface(toDraw, nullptr, myCanvas, &r);
-	//SDL_RenderCopy(sdl_renderer, toDraw, nullptr, &r);
-
-	// highlight sticky keys that are pressed with a green dot
-	// do this on a canvas to ensure correct transparency on final blit
-	//Uint32 sticky_key_color = SDL_MapRGB(format, 0, 255, 0);
-	for (int i = 0; i < NUM_STICKY; i++)
+void vkbd_redraw(void)
+{
+	if (!vkbd_show)
 	{
-		if (vkbd_sticky_key[i].stuck == true)
-		{
-			int index = vkbd_sticky_key[i].index;
-			if (mainMenu_displayHires)
-			{
-				r.x = 2 * vkbd_rect[index].rect.x + 2;
-				r.w = 6;
-			}
-			else
-			{
-				r.x = vkbd_rect[index].rect.x + 1;
-				r.w = 3;
-			}
-			r.y = vkbd_rect[index].rect.y + 1;
-			r.h = 3;
-			//SDL_FillRect(myCanvas, &r, sticky_key_color);
-			SDL_SetTextureColorMod(myCanvas, 0, 255, 0);
-		}
+		return;
 	}
 
-	SDL_QueryTexture(myCanvas, &format, NULL, &w, &h);
-	if (vkbd_y > sdl_surface->h - h)
-		vkbd_y = sdl_surface->h - h;
+	SDL_Rect r;
+	SDL_Texture* toDraw = GetTextureToDraw();
 
-	vkbd_x = (sdl_surface->w - w) / 2;
-
+	int w = 0;
+	int h = 0;
+	SDL_QueryTexture(toDraw, nullptr, nullptr, &w, &h);
 	r.x = vkbd_x;
 	r.y = vkbd_y;
 	r.w = w;
 	r.h = h;
+	SDL_RenderCopy(sdl_renderer, toDraw, nullptr, &r);
 
-	//SDL_BlitSurface(myCanvas, nullptr, sdl_surface, &r);
-	SDL_RenderCopy(sdl_renderer, myCanvas, nullptr, &r);
+	Uint8 red = 100;
+	Uint8 green = 0;
+	Uint8 blue = 0;
+	Uint8 alpha = 100;
+	auto box = GetKeyRect(actual_index);
+	SDL_SetRenderDrawColor(sdl_renderer, red , green , blue, alpha);
+	SDL_RenderDrawRect(sdl_renderer, &box);
+	//SDL_SetRenderDrawColor(renderer, r , g , b, a);
+	//SDL_RenderFillRect(renderer, &box);
+
+}
+
+void vkbd_toggle(void)
+{
+	vkbd_show = !vkbd_show;
+}
+
+bool vkbd_is_active(void)
+{
+	return vkbd_show;
 }
 
 void vkbd_transparency_up(void)
@@ -800,101 +796,72 @@ void vkbd_displace_down(void)
 		vkbd_y = sdl_surface->h - h;
 }
 
-int vkbd_process(void)
+static bool switched_on(int state, int previous_state, int mask)
 {
-	Uint32 now = SDL_GetTicks();
-	SDL_Rect r;
+	return (state & mask) != (previous_state & mask) && (state & mask) != 0;
+}
 
-	vkbd_redraw();
-	if (vkbd_move & VKBD_BUTTON)
+static bool switched_off(int state, int previous_state, int mask)
+{
+	return (state & mask) != (previous_state & mask) && (state & mask) == 0;
+}
+
+bool vkbd_process(int state, int *keycode, int *pressed)
+{
+	bool up = switched_on(state, previous_state, VKBD_UP);
+	bool down = switched_on(state, previous_state, VKBD_DOWN);
+	bool left = switched_on(state, previous_state, VKBD_LEFT);
+	bool right = switched_on(state, previous_state, VKBD_RIGHT);
+
+	if (up)
 	{
-		vkbd_move = 0;
-		int amigaKeyCode = vkbd_rect[vkbd_actual].key;
-		//some keys are sticky
-		for (int i = 0; i < NUM_STICKY; i++)
+		actual_index = vkbd_rect[actual_index].up;
+	}
+	if (down)
+	{
+		actual_index = vkbd_rect[actual_index].down;
+	}
+	if (left)
+	{
+		actual_index = vkbd_rect[actual_index].left;
+	}
+	if (right)
+	{
+		actual_index = vkbd_rect[actual_index].right;
+	}
+	
+	bool result = false;
+	if (switched_on(state, previous_state, VKBD_BUTTON))
+	{
+		if (keycode)
 		{
-			if (amigaKeyCode == vkbd_sticky_key[i].code)
-			{
-				if (vkbd_sticky_key[i].can_switch)
-				{
-					vkbd_sticky_key[i].stuck = !vkbd_sticky_key[i].stuck;
-					vkbd_sticky_key[i].can_switch = false;
-					return amigaKeyCode;
-				}
-				return KEYCODE_NOTHING;
-			}
+			*keycode = vkbd_rect[actual_index].key;
 		}
-		return amigaKeyCode;
+		if (pressed)
+		{
+			*pressed = 1;
+		}
+		result = true;
+	}
+	else if (switched_off(state, previous_state, VKBD_BUTTON))
+	{
+		if (keycode)
+		{
+			*keycode = vkbd_rect[actual_index].key;
+		}
+		if (pressed)
+		{
+			*pressed = 0;
+		}
+		result = true;
 	}
 
-	if (vkbd_move & VKBD_BUTTON_BACKSPACE)
-	{
-		vkbd_move = 0;
-		return AK_BS;
-	}
-	if (vkbd_move & VKBD_BUTTON_SHIFT)
-	{
-		vkbd_move = 0;
-		// hotkey for shift toggle (arbitrarily use left shift here)
-		if (vkbd_sticky_key[0].can_switch)
-		{
-			vkbd_sticky_key[0].stuck = !vkbd_sticky_key[0].stuck;
-			vkbd_sticky_key[0].can_switch = false;
-			return AK_LSH;
-		}
-		return KEYCODE_NOTHING;
-	}
-	if (vkbd_move & VKBD_BUTTON_RESET_STICKY)
-	{
-		vkbd_move = 0;
-		// hotkey to reset all sticky keys at once
-		vkbd_reset_sticky_keys();
-		return KEYCODE_STICKY_RESET; // special return code to reset amiga keystate
-	}
-	if (vkbd_move & VKBD_LEFT || vkbd_move & VKBD_RIGHT || vkbd_move & VKBD_UP || vkbd_move & VKBD_DOWN)
-	{
-		if (vkbd_let_go_of_direction) //just pressing down
-			vkbd_last_press_time = now;
-		if (now - vkbd_last_press_time > VKBD_MIN_HOLDING_TIME
-			&& now - vkbd_last_move_time > VKBD_MOVE_DELAY
-			|| vkbd_let_go_of_direction)
-		{
-			vkbd_last_move_time = now;
-			if (vkbd_move & VKBD_LEFT)
-				vkbd_actual = vkbd_rect[vkbd_actual].left;
-			else if (vkbd_move & VKBD_RIGHT)
-				vkbd_actual = vkbd_rect[vkbd_actual].right;
-			if (vkbd_move & VKBD_UP)
-				vkbd_actual = vkbd_rect[vkbd_actual].up;
-			else if (vkbd_move & VKBD_DOWN)
-				vkbd_actual = vkbd_rect[vkbd_actual].down;
-		}
-		vkbd_let_go_of_direction = 0;
-	}
-	else
-		vkbd_let_go_of_direction = 1;
+	previous_state = state;
 
-	if (mainMenu_displayHires)
+	if (result)
 	{
-		r.x = vkbd_x + 2 * vkbd_rect[vkbd_actual].rect.x;
-		r.w = 2 * vkbd_rect[vkbd_actual].rect.w;
+		printf("pressed %d, pressed %d\n", *keycode, *pressed);
 	}
-	else
-	{
-		r.x = vkbd_x + vkbd_rect[vkbd_actual].rect.x;
-		r.w = vkbd_rect[vkbd_actual].rect.w;
-	}
-	r.y = vkbd_y + vkbd_rect[vkbd_actual].rect.y;
-	r.h = vkbd_rect[vkbd_actual].rect.h;
-	if (!vkbd_just_blinked)
-	{
-		SDL_FillRect(sdl_surface, &r, vkbd_color);
-		vkbd_just_blinked = 1;
-		//vkbd_color = ~vkbd_color;
-	}
-	else
-	{
-		vkbd_just_blinked = 0;
-	}
-	return KEYCODE_NOTHING; //nothing on the vkbd was pressed
+
+	return result;
 }

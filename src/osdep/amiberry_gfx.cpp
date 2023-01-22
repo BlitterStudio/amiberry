@@ -24,6 +24,7 @@
 #include "devices.h"
 #include "gfxboard.h"
 #include "threaddep/thread.h"
+#include "vkbd/vkbd.h"
 
 #include <png.h>
 #include <SDL_image.h>
@@ -366,6 +367,7 @@ static int display_thread(void* unused)
 			SDL_RenderClear(sdl_renderer);
 			SDL_UpdateTexture(amiga_texture, nullptr, sdl_surface->pixels, sdl_surface->pitch);
 			SDL_RenderCopyEx(sdl_renderer, amiga_texture, &crop_rect, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
+			vkbd_redraw();
 #endif
 #endif
 			flip_in_progress = false;
@@ -941,6 +943,8 @@ static void open_screen(struct uae_prefs* p)
 	picasso_refresh(mon->monitor_id);
 
 	setmouseactive(mon->monitor_id, -1);
+
+	vkbd_init();
 }
 
 void SDL2_toggle_vsync(bool vsync)
@@ -1796,6 +1800,7 @@ void show_screen(int monid, int mode)
 		SDL_RenderClear(sdl_renderer);
 		SDL_UpdateTexture(amiga_texture, nullptr, sdl_surface->pixels, sdl_surface->pitch);
 		SDL_RenderCopyEx(sdl_renderer, amiga_texture, &crop_rect, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
+		vkbd_redraw();
 		SDL_RenderPresent(sdl_renderer);
 #endif
 		flip_in_progress = false;
