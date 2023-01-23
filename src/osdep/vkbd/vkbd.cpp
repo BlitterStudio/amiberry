@@ -9,20 +9,17 @@
 #include "uae.h"
 #include "amiberry_gfx.h"
 
+#include <map>
+#include <vector>
+#include <set>
+
 #define VKBD_X 20
 #define VKBD_Y 200
-using t_vkbd_sticky_key = struct
-{
-	int code; // amiga-side keycode
-	bool stuck; // is it currently stuck pressed?
-	bool can_switch; // de-bounce
-	unsigned char index; // index in vkbd_rect[]
-};
 
 //TODO these should be configurable of course
-static int mainMenu_displayHires = 1;
-static int mainMenu_vkbdLanguage = 0;
-static int mainMenu_vkbdStyle = 1;
+static bool mainMenu_displayHires = true;
+static int mainMenu_vkbdLanguage = 1;
+static int mainMenu_vkbdStyle = 3;
 
 static bool vkbd_show = false;
 
@@ -30,18 +27,10 @@ static int vkbd_x = VKBD_X;
 static int vkbd_y = VKBD_Y;
 static int vkbd_transparency = 255;
 
-// Keep track of keys that are sticky
-#define NUM_STICKY 7 // number of sticky keys (shift, alt etc)
-static t_vkbd_sticky_key vkbd_sticky_key[] =
-{
-	{AK_LSH, false, true, 70},
-	{AK_RSH, false, true, 81},
-	{AK_CTRL, false, true, 54},
-	{AK_LALT, false, true, 85},
-	{AK_RALT, false, true, 89},
-	{AK_LAMI, false, true, 86},
-	{AK_RAMI, false, true, 88}
-};
+// Initialized in vkbd_init.
+static std::map<int,int> keyToIndex; 
+static std::set<int> pressed_sticky_keys;
+static std::set<int> sticky_keys;
 
 static SDL_Texture* ksur;
 static SDL_Texture* ksurHires;
@@ -49,9 +38,10 @@ static SDL_Texture* ksurShift;
 static SDL_Texture* ksurShiftHires;
 
 static int actual_index = 0;
-
+static bool actual_pressed = false;
 static int previous_state = 0;
 
+static SDL_Color pressed_key_color;
 
 using t_vkbd_rect = struct
 {
@@ -61,6 +51,7 @@ using t_vkbd_rect = struct
 };
 
 static t_vkbd_rect* vkbd_rect;
+static int vkbd_rect_size;
 
 //This is the new US keyboard, based directly on amiga-side keys
 //last four numbers: next keys in up,down,left,right directions
@@ -165,6 +156,8 @@ static t_vkbd_rect vkbd_rect_US[] =
 	{{226, 61, 14, 11}, 82, 12, 90, 92, AK_DN}, // 91 
 	{{241, 61, 14, 11}, 83, 13, 91, 69, AK_RT}, // 92
 };
+static int vkbd_rect_US_size = 92;
+
 
 //UK KEYBOARD
 static t_vkbd_rect vkbd_rect_UK[] =
@@ -270,6 +263,7 @@ static t_vkbd_rect vkbd_rect_UK[] =
 	// UK extra keys
 	{{31, 49, 14, 11}, 55, 86, 70, 71, AK_LTGT}, // 93	*
 };
+static int vkbd_rect_UK_size = 93;
 
 //GERMAN KEYBOARD
 static t_vkbd_rect vkbd_rect_GER[] =
@@ -377,6 +371,8 @@ static t_vkbd_rect vkbd_rect_GER[] =
 	{{196, 37, 14, 11}, 48, 81, 65, 49, AK_NUMBERSIGN}, // 94 *	
 };
 
+static int vkbd_rect_GER_size = 94;
+
 //FRENCH KEYBOARD
 static t_vkbd_rect vkbd_rect_FR[] =
 {
@@ -483,6 +479,9 @@ static t_vkbd_rect vkbd_rect_FR[] =
 	{{196, 37, 14, 11}, 48, 81, 65, 49, AK_NUMBERSIGN}, // 94 *	
 };
 
+static int vkbd_rect_FR_size = 94;
+
+
 int vkbd_init(void)
 {
 	char tmpchar[MAX_DPATH];
@@ -513,18 +512,22 @@ int vkbd_init(void)
 	case 1:
 		snprintf(vkbdLanguageString, 10, "UK");
 		vkbd_rect = vkbd_rect_UK;
+		vkbd_rect_size = vkbd_rect_UK_size;
 		break;
 	case 2:
 		snprintf(vkbdLanguageString, 10, "Ger");
 		vkbd_rect = vkbd_rect_GER;
+		vkbd_rect_size = vkbd_rect_GER_size;
 		break;
 	case 3:
 		snprintf(vkbdLanguageString, 10, "FR");
 		vkbd_rect = vkbd_rect_FR;
+		vkbd_rect_size = vkbd_rect_FR_size;
 		break;
 	default:
 		snprintf(vkbdLanguageString, 10, "US");
 		vkbd_rect = vkbd_rect_US;
+		vkbd_rect_size = vkbd_rect_US_size;
 		break;
 	}
 	snprintf(vkbdFileName, MAX_DPATH, "vkbd/vkbd%s%sLarge.png", vkdbStyleString, vkbdLanguageString);
@@ -587,8 +590,6 @@ int vkbd_init(void)
 	SDL_FreeSurface(tmp);
 
 	vkbd_transparency = 128; //default transparency is 128 for keyboard
-	//SDL_SetAlpha(canvas, SDL_SRCALPHA | SDL_RLEACCEL, vkbd_transparency);
-	//SDL_SetAlpha(canvasHires, SDL_SRCALPHA | SDL_RLEACCEL, vkbd_transparency);
 	SDL_SetTextureAlphaMod(ksur, vkbd_transparency);
 	SDL_SetTextureAlphaMod(ksurHires, vkbd_transparency);
 
@@ -599,13 +600,34 @@ int vkbd_init(void)
 	vkbd_redraw();
 #endif
 	int w, h;
-	SDL_QueryTexture(ksur, NULL, NULL, &w, &h);
-	for (int i = 0; i < NUM_STICKY; i++)
+	SDL_QueryTexture(mainMenu_displayHires ? ksurHires : ksur, NULL, NULL, &w, &h);
+	int renderedWidth, rendererHeight;
+	SDL_RenderGetLogicalSize(sdl_renderer, &renderedWidth, &rendererHeight);
+
+	vkbd_x = (renderedWidth - w) / 2;
+	vkbd_y = rendererHeight - h;
+
+	pressed_key_color.r = 200;
+	pressed_key_color.g = 200;
+	pressed_key_color.b = 0;
+	pressed_key_color.a = 100;
+
+	sticky_keys.clear();
+	sticky_keys.insert(AK_LSH);
+	sticky_keys.insert(AK_RSH);
+	sticky_keys.insert(AK_CTRL);
+	sticky_keys.insert(AK_LALT);
+	sticky_keys.insert(AK_RALT);
+	sticky_keys.insert(AK_LAMI);
+	sticky_keys.insert(AK_RAMI);
+
+	pressed_sticky_keys.clear();
+	
+	keyToIndex.clear();
+	for(int i = 0; i < vkbd_rect_size; ++i)
 	{
-		vkbd_sticky_key[i].stuck = false;
+		keyToIndex[vkbd_rect[i].key] = i;
 	}
-	vkbd_x = (sdl_surface->w - w) / 2;
-	vkbd_y = sdl_surface->h - h;
 
 	return 0;
 }
@@ -616,47 +638,37 @@ void vkbd_quit(void)
 	SDL_DestroyTexture(ksurShiftHires);
 	SDL_DestroyTexture(ksur);
 	SDL_DestroyTexture(ksurHires);
-	for (int i = 0; i < NUM_STICKY; i++)
-	{
-		vkbd_sticky_key[i].stuck = false;
-	}
 }
 
 static SDL_Rect GetKeyRect(int index)
 {
-	SDL_Rect r;
+	SDL_Rect rect;
+	rect = vkbd_rect[index].rect;
 	if (mainMenu_displayHires)
 	{
-		r.x = 2 * vkbd_rect[index].rect.x + 2;
-		r.w = 6;
+		rect.x *= 2;
+		rect.w *= 2;
 	}
-	else
-	{
-		r.x = vkbd_rect[index].rect.x + 1;
-		r.w = 3;
-	}
-	r.y = vkbd_rect[index].rect.y + 1;
-	r.h = 3;
-
-	r.x += vkbd_x;
-	r.y += vkbd_y;
-
-	return r;
+	rect.x += vkbd_x;
+	rect.y += vkbd_y;
+	return rect;
 }
 
 static SDL_Texture* GetTextureToDraw()
 {
 	SDL_Texture* toDraw;
+	bool shiftPressed = pressed_sticky_keys.find(AK_LSH) != pressed_sticky_keys.end() || 
+						pressed_sticky_keys.find(AK_RSH) != pressed_sticky_keys.end();
 	if (mainMenu_displayHires)
 	{
-		if (vkbd_sticky_key[0].stuck || vkbd_sticky_key[1].stuck)
+		if (shiftPressed)
 			toDraw = ksurShiftHires;
 		else
 			toDraw = ksurHires;
 	}
 	else
 	{
-		if (vkbd_sticky_key[0].stuck || vkbd_sticky_key[1].stuck)
+		if (shiftPressed)
 			toDraw = ksurShift;
 		else
 			toDraw = ksur;
@@ -683,16 +695,19 @@ void vkbd_redraw(void)
 	r.h = h;
 	SDL_RenderCopy(sdl_renderer, toDraw, nullptr, &r);
 
-	Uint8 red = 100;
-	Uint8 green = 0;
-	Uint8 blue = 0;
-	Uint8 alpha = 100;
-	auto box = GetKeyRect(actual_index);
-	SDL_SetRenderDrawColor(sdl_renderer, red , green , blue, alpha);
-	SDL_RenderDrawRect(sdl_renderer, &box);
-	//SDL_SetRenderDrawColor(renderer, r , g , b, a);
-	//SDL_RenderFillRect(renderer, &box);
+	// Draw currently selected key:
+	auto rect = GetKeyRect(actual_index);
+	SDL_SetRenderDrawColor(sdl_renderer, pressed_key_color.r, pressed_key_color.g, pressed_key_color.b, pressed_key_color.a);
+	SDL_SetRenderDrawBlendMode(sdl_renderer, SDL_BLENDMODE_BLEND);
+	SDL_RenderFillRect(sdl_renderer, &rect);
 
+	// Draw sticky keys:
+	for(auto key : pressed_sticky_keys)
+	{
+		auto index = keyToIndex[key];
+		auto rect = GetKeyRect(index);
+		SDL_RenderFillRect(sdl_renderer, &rect);
+	}
 }
 
 void vkbd_toggle(void)
@@ -806,62 +821,78 @@ static bool switched_off(int state, int previous_state, int mask)
 	return (state & mask) != (previous_state & mask) && (state & mask) == 0;
 }
 
-bool vkbd_process(int state, int *keycode, int *pressed)
+// For simplicity we don't allow movement (up/down/left/right) when the fire button is pressed.
+// For normal (non-sticky) keys button press/release events are send whenever the fire button is released.
+// For sticky keys, the key is toggled whenever the fire button goes from not pressed to pressed.
+void vkbd_process(int state, std::vector<int> &keycode, std::vector<int> &pressed)
 {
-	bool up = switched_on(state, previous_state, VKBD_UP);
-	bool down = switched_on(state, previous_state, VKBD_DOWN);
-	bool left = switched_on(state, previous_state, VKBD_LEFT);
-	bool right = switched_on(state, previous_state, VKBD_RIGHT);
+	keycode.clear();
+	pressed.clear();
 
-	if (up)
+	// Check button up event.
+	if (switched_off(state, previous_state, VKBD_BUTTON))
 	{
-		actual_index = vkbd_rect[actual_index].up;
+		actual_pressed = false;
+		auto actual_key = vkbd_rect[actual_index].key;
+		if (pressed_sticky_keys.find(actual_key) == pressed_sticky_keys.end())
+		{
+			keycode.push_back(actual_key);
+			pressed.push_back(0);
+		}
 	}
-	if (down)
+
+	if ((state & VKBD_BUTTON) == 0)
 	{
-		actual_index = vkbd_rect[actual_index].down;
+		bool up = switched_on(state, previous_state, VKBD_UP);
+		bool down = switched_on(state, previous_state, VKBD_DOWN);
+		bool left = switched_on(state, previous_state, VKBD_LEFT);
+		bool right = switched_on(state, previous_state, VKBD_RIGHT);
+		auto actual_key = vkbd_rect[actual_index].key;
+
+		if (up)
+		{
+			actual_index = vkbd_rect[actual_index].up;
+		}
+		if (down)
+		{
+			actual_index = vkbd_rect[actual_index].down;
+		}
+		if (left)
+		{
+			actual_index = vkbd_rect[actual_index].left;
+		}
+		if (right)
+		{
+			actual_index = vkbd_rect[actual_index].right;
+		}
 	}
-	if (left)
-	{
-		actual_index = vkbd_rect[actual_index].left;
-	}
-	if (right)
-	{
-		actual_index = vkbd_rect[actual_index].right;
-	}
-	
-	bool result = false;
+
 	if (switched_on(state, previous_state, VKBD_BUTTON))
 	{
-		if (keycode)
+		auto actual_key = vkbd_rect[actual_index].key;
+		if (sticky_keys.find(actual_key) != sticky_keys.end())
 		{
-			*keycode = vkbd_rect[actual_index].key;
+			actual_pressed = false;
+			if (pressed_sticky_keys.find(actual_key) != pressed_sticky_keys.end())
+			{
+				auto iter = pressed_sticky_keys.find(actual_key);
+				pressed_sticky_keys.erase(iter);
+				keycode.push_back(actual_key);
+				pressed.push_back(0);
+			}
+			else
+			{
+				pressed_sticky_keys.insert(actual_key);
+				keycode.push_back(actual_key);
+				pressed.push_back(1);
+			}
 		}
-		if (pressed)
+		else
 		{
-			*pressed = 1;
+			keycode.push_back(actual_key);
+			pressed.push_back(1);
+			actual_pressed = true;
 		}
-		result = true;
 	}
-	else if (switched_off(state, previous_state, VKBD_BUTTON))
-	{
-		if (keycode)
-		{
-			*keycode = vkbd_rect[actual_index].key;
-		}
-		if (pressed)
-		{
-			*pressed = 0;
-		}
-		result = true;
-	}
-
 	previous_state = state;
-
-	if (result)
-	{
-		printf("pressed %d, pressed %d\n", *keycode, *pressed);
-	}
-
-	return result;
 }
