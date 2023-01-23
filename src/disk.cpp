@@ -168,6 +168,8 @@ typedef struct {
 #define DRIVE_ID_35HD  0xAAAAAAAA
 #define DRIVE_ID_525SD 0x55555555 /* 40 track 5.25 drive , kickstart does not recognize this */
 
+#define MAXMFMBUF (0x4000 * DDHDMULT)
+
 typedef enum { ADF_NONE = -1, ADF_NORMAL, ADF_EXT1, ADF_EXT2, ADF_FDI, ADF_IPF, ADF_SCP, ADF_CATWEASEL, ADF_PCDOS, ADF_KICK, ADF_SKICK, ADF_NORMAL_HEADER, ADF_FLOPPYBRIDGE } drive_filetype;
 typedef struct {
 	int drvnum;
@@ -185,8 +187,8 @@ typedef struct {
 	int selected_delay;
 	bool wrprot;
 	bool forcedwrprot;
-	uae_u16 bigmfmbuf[0x4000 * DDHDMULT];
-	uae_u16 tracktiming[0x4000 * DDHDMULT];
+	uae_u16 bigmfmbuf[MAXMFMBUF];
+	uae_u16 tracktiming[MAXMFMBUF];
 	int multi_revolution;
 	int revolution_check;
 	int skipoffset;
@@ -253,7 +255,7 @@ static const TCHAR *drivetypes[] = {
 	NULL
 };
 
-static uae_u16 bigmfmbufw[0x4000 * DDHDMULT];
+static uae_u16 bigmfmbufw[MAXMFMBUF];
 static drive floppy[MAX_FLOPPY_DRIVES];
 static TCHAR dfxhistory[HISTORY_MAX][MAX_PREVIOUS_IMAGES][MAX_DPATH];
 
@@ -2798,8 +2800,8 @@ static int drive_write_ext2 (uae_u16 *bigmfmbuf, struct zfile *diskfile, trackid
 	}
 	diskfile_update (diskfile, ti, tracklen, TRACK_RAW);
 	for (i = 0; i < ti->len / 2; i++) {
-		uae_u16 *mfm = bigmfmbuf + i + offset;
-		uae_u16 *mfmw = bigmfmbufw + i + offset;
+		uae_u16 *mfm = bigmfmbuf + ((i + offset) % MAXMFMBUF);
+		uae_u16 *mfmw = bigmfmbufw + ((i + offset) % MAXMFMBUF);
 		uae_u8 *data = (uae_u8 *) mfm;
 		*mfmw = 256 * *data + *(data + 1);
 	}
@@ -4967,8 +4969,6 @@ uae_u16 disk_dmal(void)
 	uae_u16 dmal = 0;
 	if (dskdmaen) {
 		if (dskdmaen == DSKDMA_WRITE) {
-			if (vpos == 123)
-				write_log("1");
 			dmal = (1 + 2) * (fifo_inuse[0] ? 1 : 0) + (4 + 8) * (fifo_inuse[1] ? 1 : 0) + (16 + 32) * (fifo_inuse[2] ? 1 : 0);
 			dmal ^= 63;
 			dmal = (((dmal >> 4) & 3) << 0) | (((dmal >> 2) & 3) << 2) | (((dmal >> 0) & 3) << 4);
