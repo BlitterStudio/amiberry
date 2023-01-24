@@ -12,19 +12,19 @@ struct uae_shmid_ds {
 	uae_key_t key;
 	uae_u32 size;
 	uae_u32 rosize;
-	void* addr;
+	void *addr;
 	TCHAR name[MAX_DPATH];
-	void* attached;
+	void *attached;
 	int mode;
-	void* natmembase;
+	void *natmembase;
 	bool fake;
 	int maprom;
 };
 
-void* uae_shmat(addrbank* ab, int shmid, void* shmaddr, int shmflg, struct uae_mman_data* md);
-int uae_shmdt(const void* shmaddr);
-int uae_shmget(uae_key_t key, addrbank* ab, int shmflg);
-int uae_shmctl(int shmid, int cmd, struct uae_shmid_ds* buf);
+void *uae_shmat(addrbank *ab, int shmid, void *shmaddr, int shmflg, struct uae_mman_data *md);
+int uae_shmdt(const void *shmaddr);
+int uae_shmget(uae_key_t key, addrbank *ab, int shmflg);
+int uae_shmctl(int shmid, int cmd, struct uae_shmid_ds *buf);
 
 #define UAE_IPC_PRIVATE 0x01
 #define UAE_IPC_RMID    0x02
