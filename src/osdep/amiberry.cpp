@@ -1122,9 +1122,7 @@ void process_event(SDL_Event event)
 		return;
 		
 	case SDL_JOYDEVICEADDED:
-	//case SDL_CONTROLLERDEVICEADDED:
 	case SDL_JOYDEVICEREMOVED:
-	//case SDL_CONTROLLERDEVICEREMOVED:
 		write_log("SDL2 Controller/Joystick added or removed, re-running import joysticks...\n");
 		if (inputdevice_devicechange(&currprefs))
 		{
@@ -1135,33 +1133,33 @@ void process_event(SDL_Event event)
 
 	case SDL_CONTROLLERBUTTONDOWN:
 	case SDL_CONTROLLERBUTTONUP:
+		if (event.cbutton.button == enter_gui_button)
 		{
-			if (event.cbutton.button == enter_gui_button)
-			{
-				inputdevice_add_inputcode(AKS_ENTERGUI, event.cbutton.state == SDL_PRESSED, nullptr);
-				break;
-			}
-			if (quit_key.button && event.cbutton.button == quit_key.button)
-			{
-				uae_quit();
-				break;
-			}
-			if (action_replay_key.button && event.cbutton.button == action_replay_key.button)
-			{
-				inputdevice_add_inputcode(AKS_FREEZEBUTTON, event.cbutton.state == SDL_PRESSED, nullptr);
-				break;
-			}
-			if (fullscreen_key.button && event.cbutton.button == fullscreen_key.button)
-			{
-				inputdevice_add_inputcode(AKS_TOGGLEWINDOWEDFULLSCREEN, event.cbutton.state == SDL_PRESSED, nullptr);
-				break;
-			}
-			if (minimize_key.button && event.cbutton.button == minimize_key.button)
-			{
-				minimizewindow(0);
-				break;
-			}
+			inputdevice_add_inputcode(AKS_ENTERGUI, event.cbutton.state == SDL_PRESSED, nullptr);
+			break;
 		}
+		if (quit_key.button && event.cbutton.button == quit_key.button)
+		{
+			uae_quit();
+			break;
+		}
+		if (action_replay_key.button && event.cbutton.button == action_replay_key.button)
+		{
+			inputdevice_add_inputcode(AKS_FREEZEBUTTON, event.cbutton.state == SDL_PRESSED, nullptr);
+			break;
+		}
+		if (fullscreen_key.button && event.cbutton.button == fullscreen_key.button)
+		{
+			inputdevice_add_inputcode(AKS_TOGGLEWINDOWEDFULLSCREEN, event.cbutton.state == SDL_PRESSED, nullptr);
+			break;
+		}
+		if (minimize_key.button && event.cbutton.button == minimize_key.button)
+		{
+			minimizewindow(0);
+			break;
+		}
+
+		read_controller_button(event.cbutton.which, event.cbutton.button, event.cbutton.state);
 		return;
 
 	case SDL_JOYBUTTONDOWN:
@@ -1171,13 +1169,22 @@ void process_event(SDL_Event event)
 			hotkey_pressed = (event.jbutton.state == SDL_PRESSED);
 			break;
 		}
-
 		if (event.jbutton.button == did->mapping.menu_button && hotkey_pressed && event.jbutton.state == SDL_PRESSED)
 		{
 			hotkey_pressed = false;
 			inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
 			break;
 		}
+
+		read_joystick_button(event.jbutton.which, event.jbutton.button, event.jbutton.state);
+		return;
+
+	case SDL_JOYAXISMOTION:
+		read_joystick_axis(event.jaxis.which, event.jaxis.axis, event.jaxis.value);
+		return;
+
+	case SDL_JOYHATMOTION:
+		read_joystick_hat(event.jhat.which, event.jhat.hat, event.jhat.value);
 		return;
 
 	case SDL_KEYDOWN:
@@ -1422,10 +1429,10 @@ bool handle_events()
 			process_event(event);
 		}
 
-		// Keyboard and mouse read are handled in process_event in Amiberry
+		// Keyboard, mouse and joystick read events are handled in process_event in Amiberry
 		//inputdevicefunc_keyboard.read();
 		//inputdevicefunc_mouse.read();
-		inputdevicefunc_joystick.read();
+		//inputdevicefunc_joystick.read();
 		inputdevice_handle_inputcode();
 	}
 	if (was_paused && (!pause_emulation || quit_program))
