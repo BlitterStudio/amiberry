@@ -77,7 +77,7 @@ SDL_threadID uae_thread_get_id()
 	return SDL_GetThreadID(nullptr);
 }
 
-uae_atomic atomic_and(volatile uae_atomic* p, uae_u32 v)
+void atomic_and(volatile uae_atomic* p, uae_u32 v)
 {
 #if defined(CPU_AARCH64)
 	__atomic_and_fetch(p, v, __ATOMIC_SEQ_CST);
@@ -85,7 +85,7 @@ uae_atomic atomic_and(volatile uae_atomic* p, uae_u32 v)
 	return __sync_and_and_fetch(p, v);
 #endif
 }
-uae_atomic atomic_or(volatile uae_atomic* p, uae_u32 v)
+void atomic_or(volatile uae_atomic* p, uae_u32 v)
 {
 #if defined(CPU_AARCH64)
 	__atomic_or_fetch(p, v, __ATOMIC_SEQ_CST);
