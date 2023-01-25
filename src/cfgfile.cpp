@@ -9919,7 +9919,6 @@ int bip_a2000(struct uae_prefs* p, int rom)
 	p->bogomem.size = 0x00080000;
 	p->chipset_mask = 0;
 	p->cpu_compatible = false;
-	p->fast_copper = 0;
 	p->nr_floppies = 1;
 	p->floppyslots[1].dfxtype = DRV_NONE;
 	return configure_rom(p, roms, 0);

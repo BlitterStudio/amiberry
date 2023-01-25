@@ -19,6 +19,7 @@ static gcn::RadioButton* optCPU68040;
 static gcn::CheckBox* chk24Bit;
 static gcn::CheckBox* chkCPUCompatible;
 static gcn::CheckBox* chkJIT;
+
 static gcn::Window* grpFPU;
 static gcn::RadioButton* optFPUnone;
 static gcn::RadioButton* optFPU68881;
