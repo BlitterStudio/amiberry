@@ -592,7 +592,7 @@ static int NOINLINE linetoscr_16_stretch1_genlock(int spix, int dpix, int dpix_e
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
             *((uae_u32 *)&buf[dpix]) = out_val;
             dpix += 2;
         }
@@ -610,7 +610,7 @@ static int NOINLINE linetoscr_16_stretch1_genlock(int spix, int dpix, int dpix_e
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 15);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val & 15);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
             *((uae_u32 *)&buf[dpix]) = out_val;
             dpix += 2;
         }
@@ -629,7 +629,7 @@ static int NOINLINE linetoscr_16_stretch1_genlock(int spix, int dpix, int dpix_e
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(lookup[spix_val]);
-            genlock_buf[dpix + 1] = get_genlock_transparency(lookup[spix_val]);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
             *((uae_u32 *)&buf[dpix]) = out_val;
             dpix += 2;
         }
@@ -650,7 +650,7 @@ static int NOINLINE linetoscr_16_stretch1_genlock(int spix, int dpix, int dpix_e
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 31);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val & 31);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
             *((uae_u32 *)&buf[dpix]) = out_val;
             dpix += 2;
         }
@@ -668,7 +668,7 @@ static int NOINLINE linetoscr_16_stretch1_genlock(int spix, int dpix, int dpix_e
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
             *((uae_u32 *)&buf[dpix]) = out_val;
             dpix += 2;
         }
@@ -803,9 +803,9 @@ static int NOINLINE linetoscr_16_stretch2_genlock(int spix, int dpix, int dpix_e
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 2] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 3] = get_genlock_transparency(spix_val);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
+            genlock_buf[dpix + 2] = genlock_buf[dpix];
+            genlock_buf[dpix + 3] = genlock_buf[dpix];
             *((uae_u32 *)&buf[dpix]) = out_val;
             dpix += 2;
             *((uae_u32 *)&buf[dpix]) = out_val;
@@ -825,9 +825,9 @@ static int NOINLINE linetoscr_16_stretch2_genlock(int spix, int dpix, int dpix_e
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 15);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val & 15);
-            genlock_buf[dpix + 2] = get_genlock_transparency(spix_val & 15);
-            genlock_buf[dpix + 3] = get_genlock_transparency(spix_val & 15);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
+            genlock_buf[dpix + 2] = genlock_buf[dpix];
+            genlock_buf[dpix + 3] = genlock_buf[dpix];
             *((uae_u32 *)&buf[dpix]) = out_val;
             dpix += 2;
             *((uae_u32 *)&buf[dpix]) = out_val;
@@ -848,9 +848,9 @@ static int NOINLINE linetoscr_16_stretch2_genlock(int spix, int dpix, int dpix_e
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(lookup[spix_val]);
-            genlock_buf[dpix + 1] = get_genlock_transparency(lookup[spix_val]);
-            genlock_buf[dpix + 2] = get_genlock_transparency(lookup[spix_val]);
-            genlock_buf[dpix + 3] = get_genlock_transparency(lookup[spix_val]);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
+            genlock_buf[dpix + 2] = genlock_buf[dpix];
+            genlock_buf[dpix + 3] = genlock_buf[dpix];
             *((uae_u32 *)&buf[dpix]) = out_val;
             dpix += 2;
             *((uae_u32 *)&buf[dpix]) = out_val;
@@ -873,9 +873,9 @@ static int NOINLINE linetoscr_16_stretch2_genlock(int spix, int dpix, int dpix_e
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 31);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val & 31);
-            genlock_buf[dpix + 2] = get_genlock_transparency(spix_val & 31);
-            genlock_buf[dpix + 3] = get_genlock_transparency(spix_val & 31);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
+            genlock_buf[dpix + 2] = genlock_buf[dpix];
+            genlock_buf[dpix + 3] = genlock_buf[dpix];
             *((uae_u32 *)&buf[dpix]) = out_val;
             dpix += 2;
             *((uae_u32 *)&buf[dpix]) = out_val;
@@ -895,9 +895,9 @@ static int NOINLINE linetoscr_16_stretch2_genlock(int spix, int dpix, int dpix_e
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 2] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 3] = get_genlock_transparency(spix_val);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
+            genlock_buf[dpix + 2] = genlock_buf[dpix];
+            genlock_buf[dpix + 3] = genlock_buf[dpix];
             *((uae_u32 *)&buf[dpix]) = out_val;
             dpix += 2;
             *((uae_u32 *)&buf[dpix]) = out_val;
@@ -4102,10 +4102,10 @@ static int NOINLINE linetoscr_16_spr_genlock(int spix, int dpix, int dpix_end)
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -4128,10 +4128,10 @@ static int NOINLINE linetoscr_16_spr_genlock(int spix, int dpix, int dpix_end)
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 15);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -4155,10 +4155,10 @@ static int NOINLINE linetoscr_16_spr_genlock(int spix, int dpix, int dpix_end)
             genlock_buf[dpix] = get_genlock_transparency(lookup[spix_val]);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 1, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -4184,10 +4184,10 @@ static int NOINLINE linetoscr_16_spr_genlock(int spix, int dpix, int dpix_end)
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 31);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -4210,10 +4210,10 @@ static int NOINLINE linetoscr_16_spr_genlock(int spix, int dpix, int dpix_end)
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -4388,13 +4388,15 @@ static int NOINLINE linetoscr_16_stretch1_spr_genlock(int spix, int dpix, int dp
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
+                 genlock_buf[dpix + 1] = genlock_buf[dpix];
+
                 }
             }
             buf[dpix++] = out_val;
@@ -4416,13 +4418,15 @@ static int NOINLINE linetoscr_16_stretch1_spr_genlock(int spix, int dpix, int dp
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 15);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val & 15);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
+                 genlock_buf[dpix + 1] = genlock_buf[dpix];
+
                 }
             }
             buf[dpix++] = out_val;
@@ -4445,13 +4449,15 @@ static int NOINLINE linetoscr_16_stretch1_spr_genlock(int spix, int dpix, int dp
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(lookup[spix_val]);
-            genlock_buf[dpix + 1] = get_genlock_transparency(lookup[spix_val]);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 1, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
+                 genlock_buf[dpix + 1] = genlock_buf[dpix];
+
                 }
             }
             buf[dpix++] = out_val;
@@ -4476,13 +4482,15 @@ static int NOINLINE linetoscr_16_stretch1_spr_genlock(int spix, int dpix, int dp
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 31);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val & 31);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
+                 genlock_buf[dpix + 1] = genlock_buf[dpix];
+
                 }
             }
             buf[dpix++] = out_val;
@@ -4504,13 +4512,15 @@ static int NOINLINE linetoscr_16_stretch1_spr_genlock(int spix, int dpix, int dp
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
+                 genlock_buf[dpix + 1] = genlock_buf[dpix];
+
                 }
             }
             buf[dpix++] = out_val;
@@ -4696,15 +4706,21 @@ static int NOINLINE linetoscr_16_stretch2_spr_genlock(int spix, int dpix, int dp
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 2] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 3] = get_genlock_transparency(spix_val);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
+            genlock_buf[dpix + 2] = genlock_buf[dpix];
+            genlock_buf[dpix + 3] = genlock_buf[dpix];
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
+                 genlock_buf[dpix + 1] = genlock_buf[dpix];
+
+                 genlock_buf[dpix + 2] = genlock_buf[dpix];
+
+                 genlock_buf[dpix + 3] = genlock_buf[dpix];
+
                 }
             }
             buf[dpix++] = out_val;
@@ -4728,15 +4744,21 @@ static int NOINLINE linetoscr_16_stretch2_spr_genlock(int spix, int dpix, int dp
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 15);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val & 15);
-            genlock_buf[dpix + 2] = get_genlock_transparency(spix_val & 15);
-            genlock_buf[dpix + 3] = get_genlock_transparency(spix_val & 15);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
+            genlock_buf[dpix + 2] = genlock_buf[dpix];
+            genlock_buf[dpix + 3] = genlock_buf[dpix];
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
+                 genlock_buf[dpix + 1] = genlock_buf[dpix];
+
+                 genlock_buf[dpix + 2] = genlock_buf[dpix];
+
+                 genlock_buf[dpix + 3] = genlock_buf[dpix];
+
                 }
             }
             buf[dpix++] = out_val;
@@ -4761,15 +4783,21 @@ static int NOINLINE linetoscr_16_stretch2_spr_genlock(int spix, int dpix, int dp
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(lookup[spix_val]);
-            genlock_buf[dpix + 1] = get_genlock_transparency(lookup[spix_val]);
-            genlock_buf[dpix + 2] = get_genlock_transparency(lookup[spix_val]);
-            genlock_buf[dpix + 3] = get_genlock_transparency(lookup[spix_val]);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
+            genlock_buf[dpix + 2] = genlock_buf[dpix];
+            genlock_buf[dpix + 3] = genlock_buf[dpix];
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 1, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
+                 genlock_buf[dpix + 1] = genlock_buf[dpix];
+
+                 genlock_buf[dpix + 2] = genlock_buf[dpix];
+
+                 genlock_buf[dpix + 3] = genlock_buf[dpix];
+
                 }
             }
             buf[dpix++] = out_val;
@@ -4796,15 +4824,21 @@ static int NOINLINE linetoscr_16_stretch2_spr_genlock(int spix, int dpix, int dp
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 31);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val & 31);
-            genlock_buf[dpix + 2] = get_genlock_transparency(spix_val & 31);
-            genlock_buf[dpix + 3] = get_genlock_transparency(spix_val & 31);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
+            genlock_buf[dpix + 2] = genlock_buf[dpix];
+            genlock_buf[dpix + 3] = genlock_buf[dpix];
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
+                 genlock_buf[dpix + 1] = genlock_buf[dpix];
+
+                 genlock_buf[dpix + 2] = genlock_buf[dpix];
+
+                 genlock_buf[dpix + 3] = genlock_buf[dpix];
+
                 }
             }
             buf[dpix++] = out_val;
@@ -4828,15 +4862,21 @@ static int NOINLINE linetoscr_16_stretch2_spr_genlock(int spix, int dpix, int dp
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 2] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 3] = get_genlock_transparency(spix_val);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
+            genlock_buf[dpix + 2] = genlock_buf[dpix];
+            genlock_buf[dpix + 3] = genlock_buf[dpix];
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
+                 genlock_buf[dpix + 1] = genlock_buf[dpix];
+
+                 genlock_buf[dpix + 2] = genlock_buf[dpix];
+
+                 genlock_buf[dpix + 3] = genlock_buf[dpix];
+
                 }
             }
             buf[dpix++] = out_val;
@@ -5011,10 +5051,10 @@ static int NOINLINE linetoscr_16_shrink1_spr_genlock(int spix, int dpix, int dpi
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -5037,10 +5077,10 @@ static int NOINLINE linetoscr_16_shrink1_spr_genlock(int spix, int dpix, int dpi
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 15);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -5064,10 +5104,10 @@ static int NOINLINE linetoscr_16_shrink1_spr_genlock(int spix, int dpix, int dpi
             genlock_buf[dpix] = get_genlock_transparency(lookup[spix_val]);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 1, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -5093,10 +5133,10 @@ static int NOINLINE linetoscr_16_shrink1_spr_genlock(int spix, int dpix, int dpi
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 31);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -5119,10 +5159,10 @@ static int NOINLINE linetoscr_16_shrink1_spr_genlock(int spix, int dpix, int dpi
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -5351,10 +5391,10 @@ static int NOINLINE linetoscr_16_shrink1f_spr_genlock(int spix, int dpix, int dp
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -5386,10 +5426,10 @@ static int NOINLINE linetoscr_16_shrink1f_spr_genlock(int spix, int dpix, int dp
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 15);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -5422,10 +5462,10 @@ static int NOINLINE linetoscr_16_shrink1f_spr_genlock(int spix, int dpix, int dp
             genlock_buf[dpix] = get_genlock_transparency(lookup[spix_val]);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 1, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -5463,10 +5503,10 @@ static int NOINLINE linetoscr_16_shrink1f_spr_genlock(int spix, int dpix, int dp
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 31);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -5498,10 +5538,10 @@ static int NOINLINE linetoscr_16_shrink1f_spr_genlock(int spix, int dpix, int dp
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -5673,10 +5713,10 @@ static int NOINLINE linetoscr_16_shrink2_spr_genlock(int spix, int dpix, int dpi
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -5699,10 +5739,10 @@ static int NOINLINE linetoscr_16_shrink2_spr_genlock(int spix, int dpix, int dpi
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 15);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -5726,10 +5766,10 @@ static int NOINLINE linetoscr_16_shrink2_spr_genlock(int spix, int dpix, int dpi
             genlock_buf[dpix] = get_genlock_transparency(lookup[spix_val]);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 1, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -5755,10 +5795,10 @@ static int NOINLINE linetoscr_16_shrink2_spr_genlock(int spix, int dpix, int dpi
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 31);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -5781,10 +5821,10 @@ static int NOINLINE linetoscr_16_shrink2_spr_genlock(int spix, int dpix, int dpi
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -6091,10 +6131,10 @@ static int NOINLINE linetoscr_16_shrink2f_spr_genlock(int spix, int dpix, int dp
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -6138,10 +6178,10 @@ static int NOINLINE linetoscr_16_shrink2f_spr_genlock(int spix, int dpix, int dp
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 15);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -6186,10 +6226,10 @@ static int NOINLINE linetoscr_16_shrink2f_spr_genlock(int spix, int dpix, int dp
             genlock_buf[dpix] = get_genlock_transparency(lookup[spix_val]);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 1, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -6245,10 +6285,10 @@ static int NOINLINE linetoscr_16_shrink2f_spr_genlock(int spix, int dpix, int dp
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 31);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -6292,10 +6332,10 @@ static int NOINLINE linetoscr_16_shrink2f_spr_genlock(int spix, int dpix, int dp
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -7109,7 +7149,7 @@ static int NOINLINE linetoscr_16_stretch1_aga_genlock(int spix, int dpix, int dp
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
             *((uae_u32 *)&buf[dpix]) = out_val;
             dpix += 2;
         }
@@ -7127,7 +7167,7 @@ static int NOINLINE linetoscr_16_stretch1_aga_genlock(int spix, int dpix, int dp
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency((spix_val >> 2) & 63);
-            genlock_buf[dpix + 1] = get_genlock_transparency((spix_val >> 2) & 63);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
             *((uae_u32 *)&buf[dpix]) = out_val;
             dpix += 2;
         }
@@ -7153,7 +7193,7 @@ static int NOINLINE linetoscr_16_stretch1_aga_genlock(int spix, int dpix, int dp
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(lookup[spix_val]);
-            genlock_buf[dpix + 1] = get_genlock_transparency(lookup[spix_val]);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
             *((uae_u32 *)&buf[dpix]) = out_val;
             dpix += 2;
         }
@@ -7175,7 +7215,7 @@ static int NOINLINE linetoscr_16_stretch1_aga_genlock(int spix, int dpix, int dp
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 31);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val & 31);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
             *((uae_u32 *)&buf[dpix]) = out_val;
             dpix += 2;
         }
@@ -7308,9 +7348,9 @@ static int NOINLINE linetoscr_16_stretch2_aga_genlock(int spix, int dpix, int dp
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 2] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 3] = get_genlock_transparency(spix_val);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
+            genlock_buf[dpix + 2] = genlock_buf[dpix];
+            genlock_buf[dpix + 3] = genlock_buf[dpix];
             *((uae_u32 *)&buf[dpix]) = out_val;
             dpix += 2;
             *((uae_u32 *)&buf[dpix]) = out_val;
@@ -7330,9 +7370,9 @@ static int NOINLINE linetoscr_16_stretch2_aga_genlock(int spix, int dpix, int dp
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency((spix_val >> 2) & 63);
-            genlock_buf[dpix + 1] = get_genlock_transparency((spix_val >> 2) & 63);
-            genlock_buf[dpix + 2] = get_genlock_transparency((spix_val >> 2) & 63);
-            genlock_buf[dpix + 3] = get_genlock_transparency((spix_val >> 2) & 63);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
+            genlock_buf[dpix + 2] = genlock_buf[dpix];
+            genlock_buf[dpix + 3] = genlock_buf[dpix];
             *((uae_u32 *)&buf[dpix]) = out_val;
             dpix += 2;
             *((uae_u32 *)&buf[dpix]) = out_val;
@@ -7360,9 +7400,9 @@ static int NOINLINE linetoscr_16_stretch2_aga_genlock(int spix, int dpix, int dp
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(lookup[spix_val]);
-            genlock_buf[dpix + 1] = get_genlock_transparency(lookup[spix_val]);
-            genlock_buf[dpix + 2] = get_genlock_transparency(lookup[spix_val]);
-            genlock_buf[dpix + 3] = get_genlock_transparency(lookup[spix_val]);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
+            genlock_buf[dpix + 2] = genlock_buf[dpix];
+            genlock_buf[dpix + 3] = genlock_buf[dpix];
             *((uae_u32 *)&buf[dpix]) = out_val;
             dpix += 2;
             *((uae_u32 *)&buf[dpix]) = out_val;
@@ -7386,9 +7426,9 @@ static int NOINLINE linetoscr_16_stretch2_aga_genlock(int spix, int dpix, int dp
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 31);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val & 31);
-            genlock_buf[dpix + 2] = get_genlock_transparency(spix_val & 31);
-            genlock_buf[dpix + 3] = get_genlock_transparency(spix_val & 31);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
+            genlock_buf[dpix + 2] = genlock_buf[dpix];
+            genlock_buf[dpix + 3] = genlock_buf[dpix];
             *((uae_u32 *)&buf[dpix]) = out_val;
             dpix += 2;
             *((uae_u32 *)&buf[dpix]) = out_val;
@@ -10812,7 +10852,7 @@ static int NOINLINE linetoscr_16_stretch1_aga_spr_genlock(int spix, int dpix, in
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
             {
             uae_u32 out_val1 = out_val;
             uae_u32 out_val2 = out_val;
@@ -10828,6 +10868,7 @@ static int NOINLINE linetoscr_16_stretch1_aga_spr_genlock(int spix, int dpix, in
                 if (sprcol) {
                     out_val2 = p_acolors[sprcol];
                     genlock_buf[dpix + 1] = get_genlock_transparency(sprcol);
+
                 }
             }
             buf[dpix++] = out_val1;
@@ -10850,7 +10891,7 @@ static int NOINLINE linetoscr_16_stretch1_aga_spr_genlock(int spix, int dpix, in
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency((spix_val >> 2) & 63);
-            genlock_buf[dpix + 1] = get_genlock_transparency((spix_val >> 2) & 63);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
             {
             uae_u32 out_val1 = out_val;
             uae_u32 out_val2 = out_val;
@@ -10866,6 +10907,7 @@ static int NOINLINE linetoscr_16_stretch1_aga_spr_genlock(int spix, int dpix, in
                 if (sprcol) {
                     out_val2 = p_acolors[sprcol];
                     genlock_buf[dpix + 1] = get_genlock_transparency(sprcol);
+
                 }
             }
             buf[dpix++] = out_val1;
@@ -10896,7 +10938,7 @@ static int NOINLINE linetoscr_16_stretch1_aga_spr_genlock(int spix, int dpix, in
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(lookup[spix_val]);
-            genlock_buf[dpix + 1] = get_genlock_transparency(lookup[spix_val]);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
             {
             uae_u32 out_val1 = out_val;
             uae_u32 out_val2 = out_val;
@@ -10912,6 +10954,7 @@ static int NOINLINE linetoscr_16_stretch1_aga_spr_genlock(int spix, int dpix, in
                 if (sprcol) {
                     out_val2 = p_acolors[sprcol];
                     genlock_buf[dpix + 1] = get_genlock_transparency(sprcol);
+
                 }
             }
             buf[dpix++] = out_val1;
@@ -10938,7 +10981,7 @@ static int NOINLINE linetoscr_16_stretch1_aga_spr_genlock(int spix, int dpix, in
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 31);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val & 31);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
             {
             uae_u32 out_val1 = out_val;
             uae_u32 out_val2 = out_val;
@@ -10954,6 +10997,7 @@ static int NOINLINE linetoscr_16_stretch1_aga_spr_genlock(int spix, int dpix, in
                 if (sprcol) {
                     out_val2 = p_acolors[sprcol];
                     genlock_buf[dpix + 1] = get_genlock_transparency(sprcol);
+
                 }
             }
             buf[dpix++] = out_val1;
@@ -11221,9 +11265,9 @@ static int NOINLINE linetoscr_16_stretch2_aga_spr_genlock(int spix, int dpix, in
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 2] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 3] = get_genlock_transparency(spix_val);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
+            genlock_buf[dpix + 2] = genlock_buf[dpix];
+            genlock_buf[dpix + 3] = genlock_buf[dpix];
             {
             uae_u32 out_val1 = out_val;
             uae_u32 out_val2 = out_val;
@@ -11241,6 +11285,7 @@ static int NOINLINE linetoscr_16_stretch2_aga_spr_genlock(int spix, int dpix, in
                 if (sprcol) {
                     out_val2 = p_acolors[sprcol];
                     genlock_buf[dpix + 1] = get_genlock_transparency(sprcol);
+
                 }
             }
             if (spritepixels[dpix + 2].data) {
@@ -11248,6 +11293,7 @@ static int NOINLINE linetoscr_16_stretch2_aga_spr_genlock(int spix, int dpix, in
                 if (sprcol) {
                     out_val3 = p_acolors[sprcol];
                     genlock_buf[dpix + 2] = get_genlock_transparency(sprcol);
+
                 }
             }
             if (spritepixels[dpix + 3].data) {
@@ -11255,6 +11301,7 @@ static int NOINLINE linetoscr_16_stretch2_aga_spr_genlock(int spix, int dpix, in
                 if (sprcol) {
                     out_val4 = p_acolors[sprcol];
                     genlock_buf[dpix + 3] = get_genlock_transparency(sprcol);
+
                 }
             }
             buf[dpix++] = out_val1;
@@ -11279,9 +11326,9 @@ static int NOINLINE linetoscr_16_stretch2_aga_spr_genlock(int spix, int dpix, in
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency((spix_val >> 2) & 63);
-            genlock_buf[dpix + 1] = get_genlock_transparency((spix_val >> 2) & 63);
-            genlock_buf[dpix + 2] = get_genlock_transparency((spix_val >> 2) & 63);
-            genlock_buf[dpix + 3] = get_genlock_transparency((spix_val >> 2) & 63);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
+            genlock_buf[dpix + 2] = genlock_buf[dpix];
+            genlock_buf[dpix + 3] = genlock_buf[dpix];
             {
             uae_u32 out_val1 = out_val;
             uae_u32 out_val2 = out_val;
@@ -11299,6 +11346,7 @@ static int NOINLINE linetoscr_16_stretch2_aga_spr_genlock(int spix, int dpix, in
                 if (sprcol) {
                     out_val2 = p_acolors[sprcol];
                     genlock_buf[dpix + 1] = get_genlock_transparency(sprcol);
+
                 }
             }
             if (spritepixels[dpix + 2].data) {
@@ -11306,6 +11354,7 @@ static int NOINLINE linetoscr_16_stretch2_aga_spr_genlock(int spix, int dpix, in
                 if (sprcol) {
                     out_val3 = p_acolors[sprcol];
                     genlock_buf[dpix + 2] = get_genlock_transparency(sprcol);
+
                 }
             }
             if (spritepixels[dpix + 3].data) {
@@ -11313,6 +11362,7 @@ static int NOINLINE linetoscr_16_stretch2_aga_spr_genlock(int spix, int dpix, in
                 if (sprcol) {
                     out_val4 = p_acolors[sprcol];
                     genlock_buf[dpix + 3] = get_genlock_transparency(sprcol);
+
                 }
             }
             buf[dpix++] = out_val1;
@@ -11345,9 +11395,9 @@ static int NOINLINE linetoscr_16_stretch2_aga_spr_genlock(int spix, int dpix, in
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(lookup[spix_val]);
-            genlock_buf[dpix + 1] = get_genlock_transparency(lookup[spix_val]);
-            genlock_buf[dpix + 2] = get_genlock_transparency(lookup[spix_val]);
-            genlock_buf[dpix + 3] = get_genlock_transparency(lookup[spix_val]);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
+            genlock_buf[dpix + 2] = genlock_buf[dpix];
+            genlock_buf[dpix + 3] = genlock_buf[dpix];
             {
             uae_u32 out_val1 = out_val;
             uae_u32 out_val2 = out_val;
@@ -11365,6 +11415,7 @@ static int NOINLINE linetoscr_16_stretch2_aga_spr_genlock(int spix, int dpix, in
                 if (sprcol) {
                     out_val2 = p_acolors[sprcol];
                     genlock_buf[dpix + 1] = get_genlock_transparency(sprcol);
+
                 }
             }
             if (spritepixels[dpix + 2].data) {
@@ -11372,6 +11423,7 @@ static int NOINLINE linetoscr_16_stretch2_aga_spr_genlock(int spix, int dpix, in
                 if (sprcol) {
                     out_val3 = p_acolors[sprcol];
                     genlock_buf[dpix + 2] = get_genlock_transparency(sprcol);
+
                 }
             }
             if (spritepixels[dpix + 3].data) {
@@ -11379,6 +11431,7 @@ static int NOINLINE linetoscr_16_stretch2_aga_spr_genlock(int spix, int dpix, in
                 if (sprcol) {
                     out_val4 = p_acolors[sprcol];
                     genlock_buf[dpix + 3] = get_genlock_transparency(sprcol);
+
                 }
             }
             buf[dpix++] = out_val1;
@@ -11407,9 +11460,9 @@ static int NOINLINE linetoscr_16_stretch2_aga_spr_genlock(int spix, int dpix, in
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 31);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val & 31);
-            genlock_buf[dpix + 2] = get_genlock_transparency(spix_val & 31);
-            genlock_buf[dpix + 3] = get_genlock_transparency(spix_val & 31);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
+            genlock_buf[dpix + 2] = genlock_buf[dpix];
+            genlock_buf[dpix + 3] = genlock_buf[dpix];
             {
             uae_u32 out_val1 = out_val;
             uae_u32 out_val2 = out_val;
@@ -11427,6 +11480,7 @@ static int NOINLINE linetoscr_16_stretch2_aga_spr_genlock(int spix, int dpix, in
                 if (sprcol) {
                     out_val2 = p_acolors[sprcol];
                     genlock_buf[dpix + 1] = get_genlock_transparency(sprcol);
+
                 }
             }
             if (spritepixels[dpix + 2].data) {
@@ -11434,6 +11488,7 @@ static int NOINLINE linetoscr_16_stretch2_aga_spr_genlock(int spix, int dpix, in
                 if (sprcol) {
                     out_val3 = p_acolors[sprcol];
                     genlock_buf[dpix + 2] = get_genlock_transparency(sprcol);
+
                 }
             }
             if (spritepixels[dpix + 3].data) {
@@ -11441,6 +11496,7 @@ static int NOINLINE linetoscr_16_stretch2_aga_spr_genlock(int spix, int dpix, in
                 if (sprcol) {
                     out_val4 = p_acolors[sprcol];
                     genlock_buf[dpix + 3] = get_genlock_transparency(sprcol);
+
                 }
             }
             buf[dpix++] = out_val1;
@@ -13073,7 +13129,7 @@ static int NOINLINE linetoscr_32_stretch1_genlock(int spix, int dpix, int dpix_e
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
             buf[dpix++] = out_val;
             buf[dpix++] = out_val;
         }
@@ -13091,7 +13147,7 @@ static int NOINLINE linetoscr_32_stretch1_genlock(int spix, int dpix, int dpix_e
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 15);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val & 15);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
             buf[dpix++] = out_val;
             buf[dpix++] = out_val;
         }
@@ -13110,7 +13166,7 @@ static int NOINLINE linetoscr_32_stretch1_genlock(int spix, int dpix, int dpix_e
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(lookup[spix_val]);
-            genlock_buf[dpix + 1] = get_genlock_transparency(lookup[spix_val]);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
             buf[dpix++] = out_val;
             buf[dpix++] = out_val;
         }
@@ -13131,7 +13187,7 @@ static int NOINLINE linetoscr_32_stretch1_genlock(int spix, int dpix, int dpix_e
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 31);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val & 31);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
             buf[dpix++] = out_val;
             buf[dpix++] = out_val;
         }
@@ -13149,7 +13205,7 @@ static int NOINLINE linetoscr_32_stretch1_genlock(int spix, int dpix, int dpix_e
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
             buf[dpix++] = out_val;
             buf[dpix++] = out_val;
         }
@@ -13284,9 +13340,9 @@ static int NOINLINE linetoscr_32_stretch2_genlock(int spix, int dpix, int dpix_e
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 2] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 3] = get_genlock_transparency(spix_val);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
+            genlock_buf[dpix + 2] = genlock_buf[dpix];
+            genlock_buf[dpix + 3] = genlock_buf[dpix];
             buf[dpix++] = out_val;
             buf[dpix++] = out_val;
             buf[dpix++] = out_val;
@@ -13306,9 +13362,9 @@ static int NOINLINE linetoscr_32_stretch2_genlock(int spix, int dpix, int dpix_e
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 15);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val & 15);
-            genlock_buf[dpix + 2] = get_genlock_transparency(spix_val & 15);
-            genlock_buf[dpix + 3] = get_genlock_transparency(spix_val & 15);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
+            genlock_buf[dpix + 2] = genlock_buf[dpix];
+            genlock_buf[dpix + 3] = genlock_buf[dpix];
             buf[dpix++] = out_val;
             buf[dpix++] = out_val;
             buf[dpix++] = out_val;
@@ -13329,9 +13385,9 @@ static int NOINLINE linetoscr_32_stretch2_genlock(int spix, int dpix, int dpix_e
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(lookup[spix_val]);
-            genlock_buf[dpix + 1] = get_genlock_transparency(lookup[spix_val]);
-            genlock_buf[dpix + 2] = get_genlock_transparency(lookup[spix_val]);
-            genlock_buf[dpix + 3] = get_genlock_transparency(lookup[spix_val]);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
+            genlock_buf[dpix + 2] = genlock_buf[dpix];
+            genlock_buf[dpix + 3] = genlock_buf[dpix];
             buf[dpix++] = out_val;
             buf[dpix++] = out_val;
             buf[dpix++] = out_val;
@@ -13354,9 +13410,9 @@ static int NOINLINE linetoscr_32_stretch2_genlock(int spix, int dpix, int dpix_e
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 31);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val & 31);
-            genlock_buf[dpix + 2] = get_genlock_transparency(spix_val & 31);
-            genlock_buf[dpix + 3] = get_genlock_transparency(spix_val & 31);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
+            genlock_buf[dpix + 2] = genlock_buf[dpix];
+            genlock_buf[dpix + 3] = genlock_buf[dpix];
             buf[dpix++] = out_val;
             buf[dpix++] = out_val;
             buf[dpix++] = out_val;
@@ -13376,9 +13432,9 @@ static int NOINLINE linetoscr_32_stretch2_genlock(int spix, int dpix, int dpix_e
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 2] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 3] = get_genlock_transparency(spix_val);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
+            genlock_buf[dpix + 2] = genlock_buf[dpix];
+            genlock_buf[dpix + 3] = genlock_buf[dpix];
             buf[dpix++] = out_val;
             buf[dpix++] = out_val;
             buf[dpix++] = out_val;
@@ -14579,10 +14635,10 @@ static int NOINLINE linetoscr_32_spr_genlock(int spix, int dpix, int dpix_end)
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -14605,10 +14661,10 @@ static int NOINLINE linetoscr_32_spr_genlock(int spix, int dpix, int dpix_end)
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 15);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -14632,10 +14688,10 @@ static int NOINLINE linetoscr_32_spr_genlock(int spix, int dpix, int dpix_end)
             genlock_buf[dpix] = get_genlock_transparency(lookup[spix_val]);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 1, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -14661,10 +14717,10 @@ static int NOINLINE linetoscr_32_spr_genlock(int spix, int dpix, int dpix_end)
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 31);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -14687,10 +14743,10 @@ static int NOINLINE linetoscr_32_spr_genlock(int spix, int dpix, int dpix_end)
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -14865,13 +14921,15 @@ static int NOINLINE linetoscr_32_stretch1_spr_genlock(int spix, int dpix, int dp
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
+                 genlock_buf[dpix + 1] = genlock_buf[dpix];
+
                 }
             }
             buf[dpix++] = out_val;
@@ -14893,13 +14951,15 @@ static int NOINLINE linetoscr_32_stretch1_spr_genlock(int spix, int dpix, int dp
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 15);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val & 15);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
+                 genlock_buf[dpix + 1] = genlock_buf[dpix];
+
                 }
             }
             buf[dpix++] = out_val;
@@ -14922,13 +14982,15 @@ static int NOINLINE linetoscr_32_stretch1_spr_genlock(int spix, int dpix, int dp
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(lookup[spix_val]);
-            genlock_buf[dpix + 1] = get_genlock_transparency(lookup[spix_val]);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 1, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
+                 genlock_buf[dpix + 1] = genlock_buf[dpix];
+
                 }
             }
             buf[dpix++] = out_val;
@@ -14953,13 +15015,15 @@ static int NOINLINE linetoscr_32_stretch1_spr_genlock(int spix, int dpix, int dp
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 31);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val & 31);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
+                 genlock_buf[dpix + 1] = genlock_buf[dpix];
+
                 }
             }
             buf[dpix++] = out_val;
@@ -14981,13 +15045,15 @@ static int NOINLINE linetoscr_32_stretch1_spr_genlock(int spix, int dpix, int dp
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
+                 genlock_buf[dpix + 1] = genlock_buf[dpix];
+
                 }
             }
             buf[dpix++] = out_val;
@@ -15173,15 +15239,21 @@ static int NOINLINE linetoscr_32_stretch2_spr_genlock(int spix, int dpix, int dp
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 2] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 3] = get_genlock_transparency(spix_val);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
+            genlock_buf[dpix + 2] = genlock_buf[dpix];
+            genlock_buf[dpix + 3] = genlock_buf[dpix];
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
+                 genlock_buf[dpix + 1] = genlock_buf[dpix];
+
+                 genlock_buf[dpix + 2] = genlock_buf[dpix];
+
+                 genlock_buf[dpix + 3] = genlock_buf[dpix];
+
                 }
             }
             buf[dpix++] = out_val;
@@ -15205,15 +15277,21 @@ static int NOINLINE linetoscr_32_stretch2_spr_genlock(int spix, int dpix, int dp
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 15);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val & 15);
-            genlock_buf[dpix + 2] = get_genlock_transparency(spix_val & 15);
-            genlock_buf[dpix + 3] = get_genlock_transparency(spix_val & 15);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
+            genlock_buf[dpix + 2] = genlock_buf[dpix];
+            genlock_buf[dpix + 3] = genlock_buf[dpix];
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
+                 genlock_buf[dpix + 1] = genlock_buf[dpix];
+
+                 genlock_buf[dpix + 2] = genlock_buf[dpix];
+
+                 genlock_buf[dpix + 3] = genlock_buf[dpix];
+
                 }
             }
             buf[dpix++] = out_val;
@@ -15238,15 +15316,21 @@ static int NOINLINE linetoscr_32_stretch2_spr_genlock(int spix, int dpix, int dp
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(lookup[spix_val]);
-            genlock_buf[dpix + 1] = get_genlock_transparency(lookup[spix_val]);
-            genlock_buf[dpix + 2] = get_genlock_transparency(lookup[spix_val]);
-            genlock_buf[dpix + 3] = get_genlock_transparency(lookup[spix_val]);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
+            genlock_buf[dpix + 2] = genlock_buf[dpix];
+            genlock_buf[dpix + 3] = genlock_buf[dpix];
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 1, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
+                 genlock_buf[dpix + 1] = genlock_buf[dpix];
+
+                 genlock_buf[dpix + 2] = genlock_buf[dpix];
+
+                 genlock_buf[dpix + 3] = genlock_buf[dpix];
+
                 }
             }
             buf[dpix++] = out_val;
@@ -15273,15 +15357,21 @@ static int NOINLINE linetoscr_32_stretch2_spr_genlock(int spix, int dpix, int dp
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 31);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val & 31);
-            genlock_buf[dpix + 2] = get_genlock_transparency(spix_val & 31);
-            genlock_buf[dpix + 3] = get_genlock_transparency(spix_val & 31);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
+            genlock_buf[dpix + 2] = genlock_buf[dpix];
+            genlock_buf[dpix + 3] = genlock_buf[dpix];
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
+                 genlock_buf[dpix + 1] = genlock_buf[dpix];
+
+                 genlock_buf[dpix + 2] = genlock_buf[dpix];
+
+                 genlock_buf[dpix + 3] = genlock_buf[dpix];
+
                 }
             }
             buf[dpix++] = out_val;
@@ -15305,15 +15395,21 @@ static int NOINLINE linetoscr_32_stretch2_spr_genlock(int spix, int dpix, int dp
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 2] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 3] = get_genlock_transparency(spix_val);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
+            genlock_buf[dpix + 2] = genlock_buf[dpix];
+            genlock_buf[dpix + 3] = genlock_buf[dpix];
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
+                 genlock_buf[dpix + 1] = genlock_buf[dpix];
+
+                 genlock_buf[dpix + 2] = genlock_buf[dpix];
+
+                 genlock_buf[dpix + 3] = genlock_buf[dpix];
+
                 }
             }
             buf[dpix++] = out_val;
@@ -15488,10 +15584,10 @@ static int NOINLINE linetoscr_32_shrink1_spr_genlock(int spix, int dpix, int dpi
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -15514,10 +15610,10 @@ static int NOINLINE linetoscr_32_shrink1_spr_genlock(int spix, int dpix, int dpi
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 15);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -15541,10 +15637,10 @@ static int NOINLINE linetoscr_32_shrink1_spr_genlock(int spix, int dpix, int dpi
             genlock_buf[dpix] = get_genlock_transparency(lookup[spix_val]);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 1, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -15570,10 +15666,10 @@ static int NOINLINE linetoscr_32_shrink1_spr_genlock(int spix, int dpix, int dpi
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 31);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -15596,10 +15692,10 @@ static int NOINLINE linetoscr_32_shrink1_spr_genlock(int spix, int dpix, int dpi
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -15828,10 +15924,10 @@ static int NOINLINE linetoscr_32_shrink1f_spr_genlock(int spix, int dpix, int dp
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -15863,10 +15959,10 @@ static int NOINLINE linetoscr_32_shrink1f_spr_genlock(int spix, int dpix, int dp
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 15);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -15899,10 +15995,10 @@ static int NOINLINE linetoscr_32_shrink1f_spr_genlock(int spix, int dpix, int dp
             genlock_buf[dpix] = get_genlock_transparency(lookup[spix_val]);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 1, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -15940,10 +16036,10 @@ static int NOINLINE linetoscr_32_shrink1f_spr_genlock(int spix, int dpix, int dp
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 31);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -15975,10 +16071,10 @@ static int NOINLINE linetoscr_32_shrink1f_spr_genlock(int spix, int dpix, int dp
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -16150,10 +16246,10 @@ static int NOINLINE linetoscr_32_shrink2_spr_genlock(int spix, int dpix, int dpi
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -16176,10 +16272,10 @@ static int NOINLINE linetoscr_32_shrink2_spr_genlock(int spix, int dpix, int dpi
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 15);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -16203,10 +16299,10 @@ static int NOINLINE linetoscr_32_shrink2_spr_genlock(int spix, int dpix, int dpi
             genlock_buf[dpix] = get_genlock_transparency(lookup[spix_val]);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 1, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -16232,10 +16328,10 @@ static int NOINLINE linetoscr_32_shrink2_spr_genlock(int spix, int dpix, int dpi
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 31);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -16258,10 +16354,10 @@ static int NOINLINE linetoscr_32_shrink2_spr_genlock(int spix, int dpix, int dpi
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -16568,10 +16664,10 @@ static int NOINLINE linetoscr_32_shrink2f_spr_genlock(int spix, int dpix, int dp
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -16615,10 +16711,10 @@ static int NOINLINE linetoscr_32_shrink2f_spr_genlock(int spix, int dpix, int dp
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 15);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -16663,10 +16759,10 @@ static int NOINLINE linetoscr_32_shrink2f_spr_genlock(int spix, int dpix, int dp
             genlock_buf[dpix] = get_genlock_transparency(lookup[spix_val]);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 1, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -16722,10 +16818,10 @@ static int NOINLINE linetoscr_32_shrink2f_spr_genlock(int spix, int dpix, int dp
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 31);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -16769,10 +16865,10 @@ static int NOINLINE linetoscr_32_shrink2f_spr_genlock(int spix, int dpix, int dp
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
             if (spritepixels[dpix].data) {
                 sprcol = render_sprites (dpix, 0, sprpix_val, 0);
-                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 if (sprcol) {
                     uae_u32 spcol = p_acolors[sprcol];
                     out_val = spcol;
+                    genlock_buf[dpix] = get_genlock_transparency(sprcol);
                 }
             }
             buf[dpix++] = out_val;
@@ -17310,7 +17406,7 @@ static int NOINLINE linetoscr_32_stretch1_aga_genlock(int spix, int dpix, int dp
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
             buf[dpix++] = out_val;
             buf[dpix++] = out_val;
         }
@@ -17328,7 +17424,7 @@ static int NOINLINE linetoscr_32_stretch1_aga_genlock(int spix, int dpix, int dp
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency((spix_val >> 2) & 63);
-            genlock_buf[dpix + 1] = get_genlock_transparency((spix_val >> 2) & 63);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
             buf[dpix++] = out_val;
             buf[dpix++] = out_val;
         }
@@ -17354,7 +17450,7 @@ static int NOINLINE linetoscr_32_stretch1_aga_genlock(int spix, int dpix, int dp
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(lookup[spix_val]);
-            genlock_buf[dpix + 1] = get_genlock_transparency(lookup[spix_val]);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
             buf[dpix++] = out_val;
             buf[dpix++] = out_val;
         }
@@ -17376,7 +17472,7 @@ static int NOINLINE linetoscr_32_stretch1_aga_genlock(int spix, int dpix, int dp
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 31);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val & 31);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
             buf[dpix++] = out_val;
             buf[dpix++] = out_val;
         }
@@ -17509,9 +17605,9 @@ static int NOINLINE linetoscr_32_stretch2_aga_genlock(int spix, int dpix, int dp
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 2] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 3] = get_genlock_transparency(spix_val);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
+            genlock_buf[dpix + 2] = genlock_buf[dpix];
+            genlock_buf[dpix + 3] = genlock_buf[dpix];
             buf[dpix++] = out_val;
             buf[dpix++] = out_val;
             buf[dpix++] = out_val;
@@ -17531,9 +17627,9 @@ static int NOINLINE linetoscr_32_stretch2_aga_genlock(int spix, int dpix, int dp
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency((spix_val >> 2) & 63);
-            genlock_buf[dpix + 1] = get_genlock_transparency((spix_val >> 2) & 63);
-            genlock_buf[dpix + 2] = get_genlock_transparency((spix_val >> 2) & 63);
-            genlock_buf[dpix + 3] = get_genlock_transparency((spix_val >> 2) & 63);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
+            genlock_buf[dpix + 2] = genlock_buf[dpix];
+            genlock_buf[dpix + 3] = genlock_buf[dpix];
             buf[dpix++] = out_val;
             buf[dpix++] = out_val;
             buf[dpix++] = out_val;
@@ -17561,9 +17657,9 @@ static int NOINLINE linetoscr_32_stretch2_aga_genlock(int spix, int dpix, int dp
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(lookup[spix_val]);
-            genlock_buf[dpix + 1] = get_genlock_transparency(lookup[spix_val]);
-            genlock_buf[dpix + 2] = get_genlock_transparency(lookup[spix_val]);
-            genlock_buf[dpix + 3] = get_genlock_transparency(lookup[spix_val]);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
+            genlock_buf[dpix + 2] = genlock_buf[dpix];
+            genlock_buf[dpix + 3] = genlock_buf[dpix];
             buf[dpix++] = out_val;
             buf[dpix++] = out_val;
             buf[dpix++] = out_val;
@@ -17587,9 +17683,9 @@ static int NOINLINE linetoscr_32_stretch2_aga_genlock(int spix, int dpix, int dp
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 31);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val & 31);
-            genlock_buf[dpix + 2] = get_genlock_transparency(spix_val & 31);
-            genlock_buf[dpix + 3] = get_genlock_transparency(spix_val & 31);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
+            genlock_buf[dpix + 2] = genlock_buf[dpix];
+            genlock_buf[dpix + 3] = genlock_buf[dpix];
             buf[dpix++] = out_val;
             buf[dpix++] = out_val;
             buf[dpix++] = out_val;
@@ -19045,7 +19141,7 @@ static int NOINLINE linetoscr_32_stretch1_aga_spr_genlock(int spix, int dpix, in
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
             {
             uae_u32 out_val1 = out_val;
             uae_u32 out_val2 = out_val;
@@ -19061,6 +19157,7 @@ static int NOINLINE linetoscr_32_stretch1_aga_spr_genlock(int spix, int dpix, in
                 if (sprcol) {
                     out_val2 = p_acolors[sprcol];
                     genlock_buf[dpix + 1] = get_genlock_transparency(sprcol);
+
                 }
             }
             buf[dpix++] = out_val1;
@@ -19083,7 +19180,7 @@ static int NOINLINE linetoscr_32_stretch1_aga_spr_genlock(int spix, int dpix, in
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency((spix_val >> 2) & 63);
-            genlock_buf[dpix + 1] = get_genlock_transparency((spix_val >> 2) & 63);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
             {
             uae_u32 out_val1 = out_val;
             uae_u32 out_val2 = out_val;
@@ -19099,6 +19196,7 @@ static int NOINLINE linetoscr_32_stretch1_aga_spr_genlock(int spix, int dpix, in
                 if (sprcol) {
                     out_val2 = p_acolors[sprcol];
                     genlock_buf[dpix + 1] = get_genlock_transparency(sprcol);
+
                 }
             }
             buf[dpix++] = out_val1;
@@ -19129,7 +19227,7 @@ static int NOINLINE linetoscr_32_stretch1_aga_spr_genlock(int spix, int dpix, in
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(lookup[spix_val]);
-            genlock_buf[dpix + 1] = get_genlock_transparency(lookup[spix_val]);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
             {
             uae_u32 out_val1 = out_val;
             uae_u32 out_val2 = out_val;
@@ -19145,6 +19243,7 @@ static int NOINLINE linetoscr_32_stretch1_aga_spr_genlock(int spix, int dpix, in
                 if (sprcol) {
                     out_val2 = p_acolors[sprcol];
                     genlock_buf[dpix + 1] = get_genlock_transparency(sprcol);
+
                 }
             }
             buf[dpix++] = out_val1;
@@ -19171,7 +19270,7 @@ static int NOINLINE linetoscr_32_stretch1_aga_spr_genlock(int spix, int dpix, in
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 31);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val & 31);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
             {
             uae_u32 out_val1 = out_val;
             uae_u32 out_val2 = out_val;
@@ -19187,6 +19286,7 @@ static int NOINLINE linetoscr_32_stretch1_aga_spr_genlock(int spix, int dpix, in
                 if (sprcol) {
                     out_val2 = p_acolors[sprcol];
                     genlock_buf[dpix + 1] = get_genlock_transparency(sprcol);
+
                 }
             }
             buf[dpix++] = out_val1;
@@ -19454,9 +19554,9 @@ static int NOINLINE linetoscr_32_stretch2_aga_spr_genlock(int spix, int dpix, in
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 2] = get_genlock_transparency(spix_val);
-            genlock_buf[dpix + 3] = get_genlock_transparency(spix_val);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
+            genlock_buf[dpix + 2] = genlock_buf[dpix];
+            genlock_buf[dpix + 3] = genlock_buf[dpix];
             {
             uae_u32 out_val1 = out_val;
             uae_u32 out_val2 = out_val;
@@ -19474,6 +19574,7 @@ static int NOINLINE linetoscr_32_stretch2_aga_spr_genlock(int spix, int dpix, in
                 if (sprcol) {
                     out_val2 = p_acolors[sprcol];
                     genlock_buf[dpix + 1] = get_genlock_transparency(sprcol);
+
                 }
             }
             if (spritepixels[dpix + 2].data) {
@@ -19481,6 +19582,7 @@ static int NOINLINE linetoscr_32_stretch2_aga_spr_genlock(int spix, int dpix, in
                 if (sprcol) {
                     out_val3 = p_acolors[sprcol];
                     genlock_buf[dpix + 2] = get_genlock_transparency(sprcol);
+
                 }
             }
             if (spritepixels[dpix + 3].data) {
@@ -19488,6 +19590,7 @@ static int NOINLINE linetoscr_32_stretch2_aga_spr_genlock(int spix, int dpix, in
                 if (sprcol) {
                     out_val4 = p_acolors[sprcol];
                     genlock_buf[dpix + 3] = get_genlock_transparency(sprcol);
+
                 }
             }
             buf[dpix++] = out_val1;
@@ -19512,9 +19615,9 @@ static int NOINLINE linetoscr_32_stretch2_aga_spr_genlock(int spix, int dpix, in
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency((spix_val >> 2) & 63);
-            genlock_buf[dpix + 1] = get_genlock_transparency((spix_val >> 2) & 63);
-            genlock_buf[dpix + 2] = get_genlock_transparency((spix_val >> 2) & 63);
-            genlock_buf[dpix + 3] = get_genlock_transparency((spix_val >> 2) & 63);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
+            genlock_buf[dpix + 2] = genlock_buf[dpix];
+            genlock_buf[dpix + 3] = genlock_buf[dpix];
             {
             uae_u32 out_val1 = out_val;
             uae_u32 out_val2 = out_val;
@@ -19532,6 +19635,7 @@ static int NOINLINE linetoscr_32_stretch2_aga_spr_genlock(int spix, int dpix, in
                 if (sprcol) {
                     out_val2 = p_acolors[sprcol];
                     genlock_buf[dpix + 1] = get_genlock_transparency(sprcol);
+
                 }
             }
             if (spritepixels[dpix + 2].data) {
@@ -19539,6 +19643,7 @@ static int NOINLINE linetoscr_32_stretch2_aga_spr_genlock(int spix, int dpix, in
                 if (sprcol) {
                     out_val3 = p_acolors[sprcol];
                     genlock_buf[dpix + 2] = get_genlock_transparency(sprcol);
+
                 }
             }
             if (spritepixels[dpix + 3].data) {
@@ -19546,6 +19651,7 @@ static int NOINLINE linetoscr_32_stretch2_aga_spr_genlock(int spix, int dpix, in
                 if (sprcol) {
                     out_val4 = p_acolors[sprcol];
                     genlock_buf[dpix + 3] = get_genlock_transparency(sprcol);
+
                 }
             }
             buf[dpix++] = out_val1;
@@ -19578,9 +19684,9 @@ static int NOINLINE linetoscr_32_stretch2_aga_spr_genlock(int spix, int dpix, in
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(lookup[spix_val]);
-            genlock_buf[dpix + 1] = get_genlock_transparency(lookup[spix_val]);
-            genlock_buf[dpix + 2] = get_genlock_transparency(lookup[spix_val]);
-            genlock_buf[dpix + 3] = get_genlock_transparency(lookup[spix_val]);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
+            genlock_buf[dpix + 2] = genlock_buf[dpix];
+            genlock_buf[dpix + 3] = genlock_buf[dpix];
             {
             uae_u32 out_val1 = out_val;
             uae_u32 out_val2 = out_val;
@@ -19598,6 +19704,7 @@ static int NOINLINE linetoscr_32_stretch2_aga_spr_genlock(int spix, int dpix, in
                 if (sprcol) {
                     out_val2 = p_acolors[sprcol];
                     genlock_buf[dpix + 1] = get_genlock_transparency(sprcol);
+
                 }
             }
             if (spritepixels[dpix + 2].data) {
@@ -19605,6 +19712,7 @@ static int NOINLINE linetoscr_32_stretch2_aga_spr_genlock(int spix, int dpix, in
                 if (sprcol) {
                     out_val3 = p_acolors[sprcol];
                     genlock_buf[dpix + 2] = get_genlock_transparency(sprcol);
+
                 }
             }
             if (spritepixels[dpix + 3].data) {
@@ -19612,6 +19720,7 @@ static int NOINLINE linetoscr_32_stretch2_aga_spr_genlock(int spix, int dpix, in
                 if (sprcol) {
                     out_val4 = p_acolors[sprcol];
                     genlock_buf[dpix + 3] = get_genlock_transparency(sprcol);
+
                 }
             }
             buf[dpix++] = out_val1;
@@ -19640,9 +19749,9 @@ static int NOINLINE linetoscr_32_stretch2_aga_spr_genlock(int spix, int dpix, in
             spix++;
             out_val = dpix_val;
             genlock_buf[dpix] = get_genlock_transparency(spix_val & 31);
-            genlock_buf[dpix + 1] = get_genlock_transparency(spix_val & 31);
-            genlock_buf[dpix + 2] = get_genlock_transparency(spix_val & 31);
-            genlock_buf[dpix + 3] = get_genlock_transparency(spix_val & 31);
+            genlock_buf[dpix + 1] = genlock_buf[dpix];
+            genlock_buf[dpix + 2] = genlock_buf[dpix];
+            genlock_buf[dpix + 3] = genlock_buf[dpix];
             {
             uae_u32 out_val1 = out_val;
             uae_u32 out_val2 = out_val;
@@ -19660,6 +19769,7 @@ static int NOINLINE linetoscr_32_stretch2_aga_spr_genlock(int spix, int dpix, in
                 if (sprcol) {
                     out_val2 = p_acolors[sprcol];
                     genlock_buf[dpix + 1] = get_genlock_transparency(sprcol);
+
                 }
             }
             if (spritepixels[dpix + 2].data) {
@@ -19667,6 +19777,7 @@ static int NOINLINE linetoscr_32_stretch2_aga_spr_genlock(int spix, int dpix, in
                 if (sprcol) {
                     out_val3 = p_acolors[sprcol];
                     genlock_buf[dpix + 2] = get_genlock_transparency(sprcol);
+
                 }
             }
             if (spritepixels[dpix + 3].data) {
@@ -19674,6 +19785,7 @@ static int NOINLINE linetoscr_32_stretch2_aga_spr_genlock(int spix, int dpix, in
                 if (sprcol) {
                     out_val4 = p_acolors[sprcol];
                     genlock_buf[dpix + 3] = get_genlock_transparency(sprcol);
+
                 }
             }
             buf[dpix++] = out_val1;
