@@ -319,7 +319,7 @@ static const TCHAR *obsolete[] = {
 	_T("gfx_immediate_blits"), _T("gfx_ntsc"), _T("win32"), _T("gfx_filter_bits"),
 	_T("sound_pri_cutoff"), _T("sound_pri_time"), _T("sound_min_buff"), _T("sound_bits"),
 	_T("gfx_test_speed"), _T("gfxlib_replacement"), _T("enforcer"), _T("catweasel_io"),
-	_T("kickstart_key_file"), _T("sound_adjust"), _T("sound_latency"),
+	_T("kickstart_key_file"), _T("fast_copper"), _T("sound_adjust"), _T("sound_latency"),
 	_T("serial_hardware_dtrdsr"), _T("gfx_filter_upscale"),
 	_T("gfx_autoscale"), _T("parallel_sampler"), _T("parallel_ascii_emulation"),
 	_T("avoid_vid"), _T("avoid_dga"), _T("z3chipmem_size"), _T("state_replay_buffer"), _T("state_replay"),
@@ -2515,7 +2515,6 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_dwrite_strarr(f, _T("waiting_blits"), waitblits, p->waiting_blits);
 	cfgfile_dwrite (f, _T("blitter_throttle"), _T("%.8f"), p->blitter_speed_throttle);
 #ifdef AMIBERRY
-	cfgfile_write_bool (f, _T("fast_copper"), p->fast_copper);
 	cfgfile_write_bool(f, _T("multithreaded_drawing"), p->multithreaded_drawing);
 #endif
 	cfgfile_write_bool (f, _T("ntsc"), p->ntscmode);
@@ -5861,7 +5860,6 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 
 	if (cfgfile_yesno(option, value, _T("immediate_blits"), &p->immediate_blits)
 #ifdef AMIBERRY
-		|| cfgfile_yesno(option, value, _T("fast_copper"), &p->fast_copper)
 		|| cfgfile_yesno(option, value, _T("multithreaded_drawing"), &p->multithreaded_drawing)
 #endif
 		|| cfgfile_yesno(option, value, _T("fpu_no_unimplemented"), &p->fpu_no_unimplemented)
