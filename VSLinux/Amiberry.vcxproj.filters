@@ -969,9 +969,6 @@
     <ClCompile Include="..\src\fpp_native.cpp.in">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\linetoscr.cpp.in">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\p96_blit.cpp.in">
       <Filter>src</Filter>
     </ClCompile>
@@ -1424,6 +1421,9 @@
     </ClCompile>
     <ClCompile Include="..\src\osdep\vkbd\vkbd.cpp">
       <Filter>src\osdep\vkbd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\linetoscr.cpp">
+      <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

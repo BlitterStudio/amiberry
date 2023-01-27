@@ -605,7 +605,7 @@
     <ClCompile Include="..\src\jit\compemu_support.cpp" />
     <ClCompile Include="..\src\jit\compstbl.cpp" />
     <ClCompile Include="..\src\keybuf.cpp" />
-    <ClCompile Include="..\src\linetoscr.cpp.in" />
+    <ClCompile Include="..\src\linetoscr.cpp" />
     <ClCompile Include="..\src\machdep\support.cpp" />
     <ClCompile Include="..\src\main.cpp" />
     <ClCompile Include="..\src\memory.cpp" />
