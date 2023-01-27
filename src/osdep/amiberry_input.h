@@ -108,3 +108,4 @@ extern void read_joystick_axis(SDL_JoystickID id, int axis, int value);
 extern void read_joystick_hat(SDL_JoystickID id, int hat, int value);
 
 extern void read_controller_button(SDL_JoystickID id, int button, int state);
+extern void read_controller_axis(SDL_JoystickID id, int axis, int value);

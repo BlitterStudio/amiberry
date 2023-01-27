@@ -1179,8 +1179,18 @@ void process_event(SDL_Event event)
 		read_joystick_button(event.jbutton.which, event.jbutton.button, event.jbutton.state);
 		return;
 
+	case SDL_CONTROLLERAXISMOTION:
+		if (event.caxis.value > joystick_dead_zone || event.caxis.value < -joystick_dead_zone)
+			read_controller_axis(event.caxis.which, event.caxis.axis, event.caxis.value);
+		else
+			read_controller_axis(event.caxis.which, event.caxis.axis, 0);
+		return;
+
 	case SDL_JOYAXISMOTION:
-		read_joystick_axis(event.jaxis.which, event.jaxis.axis, event.jaxis.value);
+		if (event.jaxis.value > joystick_dead_zone || event.jaxis.value < -joystick_dead_zone)
+			read_joystick_axis(event.jaxis.which, event.jaxis.axis, event.jaxis.value);
+		else
+			read_joystick_axis(event.jaxis.which, event.jaxis.axis, 0);
 		return;
 
 	case SDL_JOYHATMOTION:

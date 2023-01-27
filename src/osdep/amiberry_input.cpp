@@ -1210,7 +1210,38 @@ void read_controller_button(SDL_JoystickID id, int button, int state)
 						static_cast<SDL_GameControllerButton>(did->mapping.reset_button)) & 1);
 			}
 
-			setjoybuttonstate(i, button + held_offset, state);
+ 			setjoybuttonstate(i, button + held_offset, state);
+		}
+	}
+}
+
+void read_controller_axis(SDL_JoystickID id, int axis, int value)
+{
+	for (auto i = 0; i < MAX_INPUT_DEVICES; i++)
+	{
+		const didata* did = &di_joystick[i];
+		if (did->name.empty() || did->joystick_id != id) continue;
+		if (did->mapping.is_retroarch || !did->is_controller) return;
+
+		if (isfocus() || currprefs.inactive_input & 4)
+		{
+			// If analog mouse mapping is used, the Left stick acts as a mouse
+			if (axis <= SDL_CONTROLLER_AXIS_LEFTY && did->mousemap > 0)
+			{
+				if (value > joystick_dead_zone || value < -joystick_dead_zone)
+					setmousestate(i, axis, value / 10000, 0);
+			}
+			else
+			{
+				if (invert_axis(axis, did))
+				{
+					value = value * -1;
+				}
+				if (axisold[i][axis] != value) {
+					setjoystickstate(i, axis, value, analog_upper_bound);
+					axisold[i][axis] = value;
+				}
+			}
 		}
 	}
 }
@@ -1264,6 +1295,7 @@ void read_joystick_axis(SDL_JoystickID id, int axis, int value)
 	{
 		const didata* did = &di_joystick[i];
 		if (did->name.empty() || did->joystick_id != id) continue;
+		if (!did->mapping.is_retroarch && did->is_controller) return;
 
 		if (isfocus() || currprefs.inactive_input & 4)
 		{
@@ -1271,7 +1303,7 @@ void read_joystick_axis(SDL_JoystickID id, int axis, int value)
 			if (axis <= SDL_CONTROLLER_AXIS_LEFTY && did->mousemap > 0)
 			{
 				if (value > joystick_dead_zone || value < -joystick_dead_zone)
-					setmousestate(i, axis, value / 1000, 0);
+					setmousestate(i, axis, value / 10000, 0);
 			}
 			else
 			{
