@@ -102,3 +102,10 @@ extern std::string sanitize_retroarch_name(std::string s);
 extern int find_retroarch(const TCHAR* find_setting, char* retroarch_file);
 extern bool find_retroarch_polarity(const TCHAR* find_setting, char* retroarch_file);
 extern host_input_button map_from_retroarch(host_input_button mapping, char* control_config, int player);
+
+extern void read_joystick_button(SDL_JoystickID id, int button, int state);
+extern void read_joystick_axis(SDL_JoystickID id, int axis, int value);
+extern void read_joystick_hat(SDL_JoystickID id, int hat, int value);
+
+extern void read_controller_button(SDL_JoystickID id, int button, int state);
+extern void read_controller_axis(SDL_JoystickID id, int axis, int value);
