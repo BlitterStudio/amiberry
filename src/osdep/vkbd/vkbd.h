@@ -1,26 +1,36 @@
 #ifndef VKBD_H
 #define VKBD_H
 
-#include <vector>
-
 #define VKBD_LEFT 1
 #define VKBD_RIGHT 2
 #define VKBD_UP 4
 #define VKBD_DOWN 8
 #define VKBD_BUTTON 16
+ 
+enum VkbdLanguage {
+    VKBD_LANGUAGE_UK,
+    VKBD_LANGUAGE_GER,
+    VKBD_LANGUAGE_FR,
+    VKBD_LANGUAGE_US
+};
 
-// special return codes for vkbd_process
-#define KEYCODE_NOTHING (-1234567)
+enum VkbdStyle {
+    VKBD_STYLE_WARM,
+    VKBD_STYLE_COOL,
+    VKBD_STYLE_DARK,
+    VKBD_STYLE_ORIG
+};
+
+void vkbd_set_hires(bool hires);
+void vkbd_set_language(VkbdLanguage language);
+void vkbd_set_style(VkbdStyle style);
+void vkbd_set_transparency(double transparency);
 
 int vkbd_init(void);
 void vkbd_quit(void);
 void vkbd_redraw(void);
 void vkbd_toggle(void);
-void vkbd_process(int state, std::vector<int> &keycode, std::vector<int> &pressed);
-void vkbd_displace_up(void);
-void vkbd_displace_down(void);
-void vkbd_transparency_up(void);
-void vkbd_transparency_down(void);
+bool vkbd_process(int state, int *keycode, int *pressed);
 bool vkbd_is_active(void);
 
 #endif // VKBD_H

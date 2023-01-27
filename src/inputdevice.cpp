@@ -4940,12 +4940,11 @@ static void handle_vkbd()
 			joydir[joy] &= ~DIR_DOWN;
 		}
 	}
-	std::vector<int> code;
-	std::vector<int> pressed;
-	vkbd_process(vkbd_state, code, pressed);
-	for(int i = 0; i < code.size(); ++i)
+	int code;
+	int pressed;
+	if (vkbd_process(vkbd_state, &code, &pressed))
 	{
-		inputdevice_do_keyboard(code[i], pressed[i]);
+		inputdevice_do_keyboard(code, pressed);
 	}
 }
 

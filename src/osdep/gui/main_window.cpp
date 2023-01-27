@@ -92,6 +92,9 @@ ConfigCategory categories[] = {
 	{"Savestates", "savestate.png", nullptr, nullptr, InitPanelSavestate, ExitPanelSavestate,
 		RefreshPanelSavestate, HelpPanelSavestate
 	},
+	{"Virtual Keyboard", "savestate.png", nullptr, nullptr, InitPanelVirtualKeyboard, 
+		ExitPanelVirtualKeyboard, RefreshPanelVirtualKeyboard, HelpPanelVirtualKeyboard
+	},
 #ifdef ANDROID
 	{ "OnScreen",         "screen.ico",    NULL, NULL, InitPanelOnScreen,  ExitPanelOnScreen, RefreshPanelOnScreen,  HelpPanelOnScreen },
 #endif
@@ -120,6 +123,7 @@ enum
 	PANEL_CUSTOM,
 	PANEL_MISC,
 	PANEL_SAVESTATES,
+	PANEL_VIRTUAL_KEYBOARD,
 #ifdef ANDROID
 	PANEL_ONSCREEN,
 #endif

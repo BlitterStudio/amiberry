@@ -301,6 +301,11 @@ void ExitPanelSavestate(void);
 void RefreshPanelSavestate(void);
 bool HelpPanelSavestate(std::vector<std::string>& helptext);
 
+void InitPanelVirtualKeyboard(const struct config_category &category);
+void ExitPanelVirtualKeyboard(void);
+void RefreshPanelVirtualKeyboard(void);
+bool HelpPanelVirtualKeyboard(std::vector<std::string>& helptext);
+
 #ifdef ANDROID
 void InitPanelOnScreen(const struct _ConfigCategory& category);
 void ExitPanelOnScreen(void);

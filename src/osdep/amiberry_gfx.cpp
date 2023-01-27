@@ -2197,6 +2197,8 @@ void graphics_leave()
 		SDL_DestroyWindow(mon->sdl_window);
 		mon->sdl_window = nullptr;
 	}
+
+	vkbd_quit();
 }
 
 void close_windows(struct AmigaMonitor* mon)
