@@ -1308,7 +1308,9 @@ void process_event(SDL_Event event)
 
 	case SDL_MOUSEMOTION:
 	{
-		int wm = event.motion.which;
+		// This will be useful when/if SDL2 supports more than 1 mouse.
+		// Currently, it always returns 0.
+		//auto wm = event.motion.which;
 
 		monitor_off = 0;
 		if (!mouseinside)
@@ -1319,33 +1321,18 @@ void process_event(SDL_Event event)
 			return;
 		}
 
-		if (wm < 0 && currprefs.input_tablet >= TABLET_MOUSEHACK)
+		if (currprefs.input_tablet >= TABLET_MOUSEHACK)
 		{
 			/* absolute */
 			setmousestate(0, 0, event.motion.x, 1);
 			setmousestate(0, 1, event.motion.y, 1);
 			return;
 		}
-
-		if (wm >= 0)
-		{
-			if (currprefs.input_tablet >= TABLET_MOUSEHACK)
-			{
-				/* absolute */
-				setmousestate(0, 0, event.motion.x, 1);
-				setmousestate(0, 1, event.motion.y, 1);
-				return;
-			}
-			if (!focus || !mouseactive)
-				return;
-			/* relative */
-			setmousestate(0, 0, event.motion.xrel, 0);
-			setmousestate(0, 1, event.motion.yrel, 0);
-		}
-		else if (isfocus() < 0 && currprefs.input_tablet >= TABLET_MOUSEHACK) {
-			setmousestate(0, 0, event.motion.x, 1);
-			setmousestate(0, 1, event.motion.y, 1);
-		}
+		if (!focus || !mouseactive)
+			return;
+		/* relative */
+		setmousestate(0, 0, event.motion.xrel, 0);
+		setmousestate(0, 1, event.motion.yrel, 0);
 	}
 	break;
 
