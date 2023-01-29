@@ -971,6 +971,7 @@ struct uae_prefs
 	int input_device_match_mask;
 
 	bool vkbd_hires;
+	bool vkbd_exit;
 	char vkbd_language[256];
 	char vkbd_style[256];
 	float vkbd_transparency;

@@ -15,6 +15,7 @@
 #include "vkbd/vkbd.h"
 
 static gcn::CheckBox * chkHires;
+static gcn::CheckBox * chkExit;
 static gcn::Slider * sldTransparency;
 static gcn::Label * lblTransparency;
 static gcn::Label * lblLanguage;
@@ -35,6 +36,29 @@ public:
 		auto value = sldTransparency->getValue();
 		changed_prefs.vkbd_transparency = value;
 		vkbd_set_transparency(value);
+	}
+};
+
+class ExitCheckboxActionListener : public gcn::ActionListener
+{
+public:
+	void action(const gcn::ActionEvent& actionEvent) override
+	{
+		update();
+	}
+
+	void update()
+	{
+		if (chkExit->isSelected())
+		{
+			changed_prefs.vkbd_exit = true;
+			vkbd_set_keyboard_has_exit_button(true);
+		}
+		else
+		{
+			changed_prefs.vkbd_exit = false;
+			vkbd_set_keyboard_has_exit_button(false);
+		}
 	}
 };
 
@@ -167,6 +191,7 @@ class StyleDropDownActionListener : public gcn::ActionListener
 };
 
 static HiresCheckboxActionListener * hiresChkActionListener;
+static ExitCheckboxActionListener * exitChkActionListener;
 static TransparencySliderActionListener * transparencySldActionListener;
 static LanguageDropDownActionListener * languageDrpActionListener;
 static StyleDropDownActionListener * styleDrpActionListener;
@@ -176,6 +201,10 @@ void InitPanelVirtualKeyboard(const struct config_category& category)
 	hiresChkActionListener = new HiresCheckboxActionListener();
 	chkHires = new gcn::CheckBox(_T("High-Resolution"));
 	chkHires->addActionListener(hiresChkActionListener);
+
+	exitChkActionListener = new ExitCheckboxActionListener();
+	chkExit = new gcn::CheckBox(_T("Quit button on keyboard"));
+	chkExit->addActionListener(exitChkActionListener);
 
 	transparencySldActionListener = new TransparencySliderActionListener();
 	sldTransparency = new gcn::Slider(0.0, 1.0);
@@ -204,26 +233,26 @@ void InitPanelVirtualKeyboard(const struct config_category& category)
 	drpStyle->addActionListener(styleDrpActionListener);
 
 
-	// First row:
 	int x = DISTANCE_BORDER;
 	int y = DISTANCE_BORDER;
     category.panel->add(chkHires, x, y);
 
-	// Second row
 	y += chkHires->getHeight() + DISTANCE_NEXT_Y;
+	x = DISTANCE_BORDER;
+	category.panel->add(chkExit, x, y);
+
+	y += chkExit->getHeight() + DISTANCE_NEXT_Y;
 	x = DISTANCE_BORDER;
 	category.panel->add(lblTransparency, x, y);
 	x += lblTransparency->getWidth() + DISTANCE_NEXT_X;
 	category.panel->add(sldTransparency, x, y);
 
-	// Third row
 	y += sldTransparency->getHeight() + DISTANCE_NEXT_Y;
 	x = DISTANCE_BORDER;
 	category.panel->add(lblLanguage, x, y);
 	x += lblLanguage->getWidth() + DISTANCE_NEXT_X;
 	category.panel->add(drpLanguage, x, y);
 
-	// Fourth row
 	y += drpLanguage->getHeight() + DISTANCE_NEXT_Y;
 	x = DISTANCE_BORDER;
 	category.panel->add(lblStyle, x, y);
@@ -236,6 +265,7 @@ void InitPanelVirtualKeyboard(const struct config_category& category)
 void ExitPanelVirtualKeyboard(void)
 {
     delete chkHires;
+	delete chkExit;
 	delete sldTransparency;
 	delete lblTransparency;
 	delete lblLanguage;
@@ -254,11 +284,13 @@ void ExitPanelVirtualKeyboard(void)
 void RefreshPanelVirtualKeyboard(void)
 {
 	chkHires->setSelected(changed_prefs.vkbd_hires);
+	chkExit->setSelected(changed_prefs.vkbd_exit);
 	sldTransparency->setValue(changed_prefs.vkbd_transparency);
 	drpLanguage->setSelected(languageListModel->getIndex(changed_prefs.vkbd_language));
 	drpStyle->setSelected(styleListModel->getIndex(changed_prefs.vkbd_style));
 
 	hiresChkActionListener->update();
+	exitChkActionListener->update();
 	transparencySldActionListener->update();
 	languageDrpActionListener->update();
 	styleDrpActionListener->update();

@@ -17,7 +17,7 @@
 using VkbdRect = struct
 {
 	SDL_Rect rect;
-	unsigned char up, down, left, right;
+	int up, down, left, right;
 	int key;
 };
 
@@ -28,6 +28,10 @@ static VkbdStyle vkbdStyle = VKBD_STYLE_ORIG;
 static double vkbdTransparency = 0.0;
 static int vkbdAlpha = 255;
 static double vkbdSlideDurationInSeconds = 1.0;
+static bool vkbdKeyboardHasExitButton = true;
+
+// All directions:
+const std::vector<int> vkbdDirections { VKBD_UP, VKBD_DOWN, VKBD_LEFT, VKBD_RIGHT};
 
 // Boolean that determines if keyboard is shown.
 static bool vkbdShow = false;
@@ -36,14 +40,13 @@ static bool vkbdShow = false;
 static std::chrono::time_point<std::chrono::system_clock> vkbdTimeLastRedraw;
 
 // Initialized in vkbd_init.
-static std::map<int,int> vkbdKeyToIndex; 
+static std::map<int,int> vkbdStickyKeyToIndex; 
 static std::set<int> vkbdPressedStickyKeys;
 static std::set<int> vkbdStickyKeys;
 static SDL_Texture * vkbdTexture = nullptr;
 static SDL_Texture * vkbdTextureShift = nullptr;
 
 static VkbdRect * vkbdRect;
-static int vkbdRectSize;
 
 // Acutal index in current t_vkbdRect
 static int vkbdActualIndex = 0;
@@ -69,6 +72,26 @@ static int vkbdEndY;
 static int vkbdStartX;
 static int vkbdStartY;
 
+// Following data is used to modify vkbdRect in case an exit button is provided on the keyboard.
+// This provides the data for the exit button.
+static VkbdRect vkbdExitButtonRect;
+
+// This is used as index for the exit button:
+static const int vkbdExitButtonIndex = -1;
+
+// These are other keys from which you can move into the exit button:
+const std::vector<std::pair<int,int>> vkbdExitButtonConnections {
+	std::make_pair(AK_ESC, VKBD_LEFT),
+	std::make_pair(AK_BACKQUOTE, VKBD_LEFT),
+	std::make_pair(AK_TAB, VKBD_LEFT),
+	std::make_pair(AK_CTRL, VKBD_LEFT),
+	std::make_pair(AK_LSH, VKBD_LEFT),
+	std::make_pair(AK_LALT, VKBD_LEFT),
+	std::make_pair(AK_NPMUL, VKBD_RIGHT), 
+	std::make_pair(AK_NPSUB, VKBD_RIGHT),
+	std::make_pair(AK_NPADD, VKBD_RIGHT),
+	std::make_pair(AK_ENT, VKBD_RIGHT)
+};
 
 //This is the new US keyboard, based directly on amiga-side keys
 //last four numbers: next keys in up,down,left,right directions
@@ -173,7 +196,6 @@ static VkbdRect vkbdRectUS[] =
 	{{226, 61, 14, 11}, 82, 12, 90, 92, AK_DN}, // 91 
 	{{241, 61, 14, 11}, 83, 13, 91, 69, AK_RT}, // 92
 };
-static int vkbdRectUSSize = 92;
 
 //UK KEYBOARD
 static VkbdRect vkbdRectUK[] =
@@ -279,7 +301,6 @@ static VkbdRect vkbdRectUK[] =
 	// UK extra keys
 	{{31, 49, 14, 11}, 55, 86, 70, 71, AK_LTGT}, // 93	*
 };
-static int vkbdRectUKSize = 93;
 
 //GERMAN KEYBOARD
 static VkbdRect vkbdRectGER[] =
@@ -387,8 +408,6 @@ static VkbdRect vkbdRectGER[] =
 	{{196, 37, 14, 11}, 48, 81, 65, 49, AK_NUMBERSIGN}, // 94 *	
 };
 
-static int vkbdRectGERSize = 94;
-
 //FRENCH KEYBOARD
 static VkbdRect vkbdRectFR[] =
 {
@@ -495,8 +514,6 @@ static VkbdRect vkbdRectFR[] =
 	{{196, 37, 14, 11}, 48, 81, 65, 49, AK_NUMBERSIGN}, // 94 *	
 };
 
-static int vkbdRectFRSize = 94;
-
 static std::string vkbd_get_filename(bool shift)
 {
 	std::string styleString;
@@ -532,8 +549,9 @@ static std::string vkbd_get_filename(bool shift)
 		break;
 	}
 
-	std::string hiresString = vkbdHires ? "Hires" : "";
-	std::string shiftString = shift ? "Shift" : "";
+	const std::string hiresString = vkbdHires ? "Hires" : "";
+	const std::string shiftString = shift ? "Shift" : "";
+	const std::string exitString = vkbdKeyboardHasExitButton ? "Quit" : "";
 
 	TCHAR data_dir[MAX_DPATH];
 	get_data_path(data_dir, sizeof(data_dir) / sizeof(TCHAR));
@@ -545,6 +563,7 @@ static std::string vkbd_get_filename(bool shift)
 	fileName += std::string("Large");
 	fileName += shiftString;
 	fileName += hiresString;
+	fileName += exitString;
 	fileName += std::string(".png");
 
 	return fileName;
@@ -567,32 +586,32 @@ static SDL_Texture * vkbd_create_keyboard_texture(bool shift)
 	return texture;
 }
 
+static int vkbd_find_index(int key)
+{
+	int index = 0;
+	while(vkbdRect[index].key != key)
+	{
+		++index;
+	}
+	return index;
+}
+
 void vkbd_update(bool createTextures)
 {
 	switch (vkbdLanguage)
 	{
 	case VKBD_LANGUAGE_UK:
 		vkbdRect = vkbdRectUK;
-		vkbdRectSize = vkbdRectUKSize;
 		break;
 	case VKBD_LANGUAGE_GER:
 		vkbdRect = vkbdRectGER;
-		vkbdRectSize = vkbdRectGERSize;
 		break;
 	case VKBD_LANGUAGE_FR:
 		vkbdRect = vkbdRectFR;
-		vkbdRectSize = vkbdRectFRSize;
 		break;
 	default:
 		vkbdRect = vkbdRectUS;
-		vkbdRectSize = vkbdRectUSSize;
 		break;
-	}
-
-	vkbdKeyToIndex.clear();
-	for(int i = 0; i < vkbdRectSize; ++i)
-	{
-		vkbdKeyToIndex[vkbdRect[i].key] = i;
 	}
 
 	if (createTextures || vkbdTexture != nullptr)
@@ -633,6 +652,34 @@ void vkbd_update(bool createTextures)
 	vkbdPressedKeyColor.g = 200;
 	vkbdPressedKeyColor.b = 0;
 	vkbdPressedKeyColor.a = 100;
+
+	vkbdStickyKeys.clear();
+	vkbdStickyKeys.insert(AK_LSH);
+	vkbdStickyKeys.insert(AK_RSH);
+	vkbdStickyKeys.insert(AK_CTRL);
+	vkbdStickyKeys.insert(AK_LALT);
+	vkbdStickyKeys.insert(AK_RALT);
+	vkbdStickyKeys.insert(AK_LAMI);
+	vkbdStickyKeys.insert(AK_RAMI);
+
+	vkbdPressedStickyKeys.clear();
+
+	vkbdStickyKeyToIndex.clear();
+	for(auto key : vkbdStickyKeys)
+	{
+		auto index = vkbd_find_index(key);
+		vkbdStickyKeyToIndex[key] = index;
+	}
+
+	vkbdExitButtonRect.rect.x = 301;
+	vkbdExitButtonRect.rect.y = 1;
+	vkbdExitButtonRect.rect.w = 14;
+	vkbdExitButtonRect.rect.h = 72;
+	vkbdExitButtonRect.down = vkbdExitButtonIndex;
+	vkbdExitButtonRect.up = vkbdExitButtonIndex;
+	vkbdExitButtonRect.right = vkbd_find_index(AK_LSH);
+	vkbdExitButtonRect.left = vkbd_find_index(AK_ENT);
+	vkbdExitButtonRect.key = AKS_QUIT;
 }
 
 
@@ -676,21 +723,15 @@ void vkbd_set_transparency(double transparency)
 	vkbd_update(false);
 }
 
+void vkbd_set_keyboard_has_exit_button(bool keyboardHasExitButton)
+{
+	vkbdKeyboardHasExitButton = keyboardHasExitButton;
+	vkbd_update(false);
+}
 
-int vkbd_init(void)
+void vkbd_init(void)
 {
 	vkbd_update(true);
-
-	vkbdStickyKeys.clear();
-	vkbdStickyKeys.insert(AK_LSH);
-	vkbdStickyKeys.insert(AK_RSH);
-	vkbdStickyKeys.insert(AK_CTRL);
-	vkbdStickyKeys.insert(AK_LALT);
-	vkbdStickyKeys.insert(AK_RALT);
-	vkbdStickyKeys.insert(AK_LAMI);
-	vkbdStickyKeys.insert(AK_RAMI);
-
-	vkbdPressedStickyKeys.clear();
 }
 
 void vkbd_quit(void)
@@ -706,10 +747,19 @@ void vkbd_quit(void)
 	}
 }
 
-static SDL_Rect vkbd_get_key_rect(int index)
+static const VkbdRect &vkbd_get_key_rect(int index)
+{
+	if (index == vkbdExitButtonIndex)
+	{
+		return vkbdExitButtonRect;
+	}
+	return vkbdRect[index];
+}
+
+static SDL_Rect vkbd_get_key_drawing_rect(int index)
 {
 	SDL_Rect rect;
-	rect = vkbdRect[index].rect;
+	rect = vkbd_get_key_rect(index).rect;
 	if (vkbdHires)
 	{
 		rect.x *= 2;
@@ -738,7 +788,7 @@ static void vkbd_update_current_xy()
 	const double sign = vkbdShow ? +1.0 : -1.0;
 	const int maxX = std::max(vkbdStartX, vkbdEndX);
 	const int maxY = std::max(vkbdStartY, vkbdEndY);
-	const int minX = std::min(vkbdStartX, vkbdEndX);
+	const int minX = std::min(vkbdStartX, vkbdEndX);	
 	const int minY = std::min(vkbdStartY, vkbdEndY);
 
 	vkbdCurrentX += static_cast<int>(speedX * diffSeconds * sign);
@@ -781,7 +831,7 @@ void vkbd_redraw(void)
 	SDL_RenderCopy(sdl_renderer, toDraw, nullptr, &rect);
 
 	// Draw currently selected key:
-	rect = vkbd_get_key_rect(vkbdActualIndex);
+	rect = vkbd_get_key_drawing_rect(vkbdActualIndex);
 	int alpha = static_cast<int>((1.0 - vkbdTransparency) * vkbdPressedKeyColor.a);
 	SDL_SetRenderDrawColor(sdl_renderer, vkbdPressedKeyColor.r, vkbdPressedKeyColor.g, vkbdPressedKeyColor.b, alpha);
 	SDL_RenderFillRect(sdl_renderer, &rect);
@@ -789,8 +839,8 @@ void vkbd_redraw(void)
 	// Draw sticky keys:
 	for(auto key : vkbdPressedStickyKeys)
 	{
-		auto index = vkbdKeyToIndex[key];
-		rect = vkbd_get_key_rect(index);
+		auto index = vkbdStickyKeyToIndex[key];
+		rect = vkbd_get_key_drawing_rect(index);
 		SDL_RenderFillRect(sdl_renderer, &rect);
 	}
 
@@ -817,6 +867,43 @@ static bool vkbd_switched_off(int state, int vkbdPreviousState, int mask)
 	return (state & mask) != (vkbdPreviousState & mask) && (state & mask) == 0;
 }
 
+static int vkbd_move(const VkbdRect &rect, int direction)
+{
+	switch(direction)
+	{
+		case VKBD_UP:
+			return rect.up;
+		case VKBD_DOWN:
+			return rect.down;
+		case VKBD_LEFT:
+			return rect.left;
+		case VKBD_RIGHT:
+			return rect.right;
+		default:
+			return 0;
+	}
+}
+static int vkbd_move(int actualIndex, int direction)
+{
+	if (actualIndex == vkbdExitButtonIndex)
+	{
+		return vkbd_move(vkbdExitButtonRect, direction);
+	}
+
+	const auto &rect = vkbd_get_key_rect(actualIndex);
+	auto key = rect.key;
+	
+	for(auto kvp : vkbdExitButtonConnections)
+	{
+		if (kvp.first == key && direction == kvp.second)
+		{
+			return vkbdExitButtonIndex;
+		}
+	}
+
+	return vkbd_move(rect, direction);
+}
+
 // For simplicity we don't allow movement (up/down/left/right) when the fire button is pressed.
 // For normal (non-sticky) keys button press/release events are send whenever the fire button is released.
 // For sticky keys, the key is toggled whenever the fire button goes from not pressed to pressed.
@@ -833,7 +920,7 @@ bool vkbd_process(int state, int *keycode, int *pressed)
 	if (vkbd_switched_off(state, vkbdPreviousState, VKBD_BUTTON))
 	{
 		vkbdActualPressed = false;
-		auto actual_key = vkbdRect[vkbdActualIndex].key;
+		auto actual_key = vkbd_get_key_rect(vkbdActualIndex).key;
 		if (vkbdPressedStickyKeys.find(actual_key) == vkbdPressedStickyKeys.end())
 		{
 			*keycode =actual_key;
@@ -844,33 +931,19 @@ bool vkbd_process(int state, int *keycode, int *pressed)
 
 	if ((state & VKBD_BUTTON) == 0)
 	{
-		bool up = vkbd_switched_on(state, vkbdPreviousState, VKBD_UP);
-		bool down = vkbd_switched_on(state, vkbdPreviousState, VKBD_DOWN);
-		bool left = vkbd_switched_on(state, vkbdPreviousState, VKBD_LEFT);
-		bool right = vkbd_switched_on(state, vkbdPreviousState, VKBD_RIGHT);
-		auto actual_key = vkbdRect[vkbdActualIndex].key;
-
-		if (up)
+		for(auto direction : vkbdDirections)
 		{
-			vkbdActualIndex = vkbdRect[vkbdActualIndex].up;
-		}
-		if (down)
-		{
-			vkbdActualIndex = vkbdRect[vkbdActualIndex].down;
-		}
-		if (left)
-		{
-			vkbdActualIndex = vkbdRect[vkbdActualIndex].left;
-		}
-		if (right)
-		{
-			vkbdActualIndex = vkbdRect[vkbdActualIndex].right;
+			bool on = vkbd_switched_on(state, vkbdPreviousState, direction);
+			if (on)
+			{
+				vkbdActualIndex = vkbd_move(vkbdActualIndex, direction);
+			}
 		}
 	}
 
 	if (vkbd_switched_on(state, vkbdPreviousState, VKBD_BUTTON))
 	{
-		auto actual_key = vkbdRect[vkbdActualIndex].key;
+		auto actual_key = vkbd_get_key_rect(vkbdActualIndex).key;
 		if (vkbdStickyKeys.find(actual_key) != vkbdStickyKeys.end())
 		{
 			vkbdActualPressed = false;
@@ -899,5 +972,11 @@ bool vkbd_process(int state, int *keycode, int *pressed)
 		}
 	}
 	vkbdPreviousState = state;
+
+	if (result && vkbdActualIndex == 93)
+	{
+		uae_quit();
+	}
+
 	return result;
 }

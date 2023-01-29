@@ -4906,10 +4906,6 @@ static void handle_vkbd()
 		return;
 	}
 
-	joybutton;
-	
-	static int cnt = 0;
-	++cnt;
 	int vkbd_state = 0;
 	for(int joy = 0; joy < MAX_JPORTS; ++joy)
 	{

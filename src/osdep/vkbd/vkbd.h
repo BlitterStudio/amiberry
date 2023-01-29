@@ -25,8 +25,9 @@ void vkbd_set_hires(bool hires);
 void vkbd_set_language(VkbdLanguage language);
 void vkbd_set_style(VkbdStyle style);
 void vkbd_set_transparency(double transparency);
+void vkbd_set_keyboard_has_exit_button(bool keyboardHasExitButton);
 
-int vkbd_init(void);
+void vkbd_init(void);
 void vkbd_quit(void);
 void vkbd_redraw(void);
 void vkbd_toggle(void);
