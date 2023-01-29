@@ -576,7 +576,7 @@ static SDL_Texture * vkbd_create_keyboard_texture(bool shift)
 
 	if (tmp == nullptr)
 	{
-		printf("Virtual Keyboard Bitmap Error: %s\n", SDL_GetError());
+		write_log(_T("Virtual Keyboard Bitmap Error: %s\n"), SDL_GetError());
 		return nullptr;
 	}
 
