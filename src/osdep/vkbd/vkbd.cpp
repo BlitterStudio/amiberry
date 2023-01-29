@@ -617,15 +617,15 @@ void vkbd_update(bool createTextures)
 
 	if (createTextures)
 	{	
-		int w, h;
-		SDL_QueryTexture(vkbdTexture, NULL, NULL, &w, &h);
+		int width, height;
+		SDL_QueryTexture(vkbdTexture, NULL, NULL, &width, &height);
 		int renderedWidth, rendererHeight;
 		SDL_RenderGetLogicalSize(sdl_renderer, &renderedWidth, &rendererHeight);
 
-		vkbdEndX = (renderedWidth - w) / 2;
-		vkbdEndY = rendererHeight - h;
+		vkbdEndX = (renderedWidth - width) / 2;
+		vkbdEndY = rendererHeight - height;
 
-		vkbdStartX = (renderedWidth - w) / 2;
+		vkbdStartX = (renderedWidth - width) / 2;
 		vkbdStartY = rendererHeight;
 	}
 
@@ -722,7 +722,7 @@ static SDL_Rect vkbd_get_key_rect(int index)
 
 static SDL_Texture* vkbd_get_texture_to_draw()
 {
-	bool shiftPressed = vkbdPressedStickyKeys.find(AK_LSH) != vkbdPressedStickyKeys.end() || 
+	const bool shiftPressed = vkbdPressedStickyKeys.find(AK_LSH) != vkbdPressedStickyKeys.end() || 
 						vkbdPressedStickyKeys.find(AK_RSH) != vkbdPressedStickyKeys.end();
 	SDL_Texture* toDraw = shiftPressed ? vkbdTextureShift : vkbdTexture;
 	return toDraw;
