@@ -4906,6 +4906,19 @@ static void handle_vkbd()
 		return;
 	}
 
+	for(int joy = 0; joy < MAX_JPORTS; ++joy)
+	{
+		oleft[joy] = 0;
+		oright[joy] = 0;
+		otop[joy] = 0;
+		obot[joy] = 0;
+		horizclear[joy] = 0;
+		vertclear[joy] = 0;
+		mouse_x[joy] = 0;
+		mouse_y[joy] = 0;
+	}
+
+
 	int vkbd_state = 0;
 	for(int joy = 0; joy < MAX_JPORTS; ++joy)
 	{
@@ -5115,7 +5128,7 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 	case 3: /* ->Parallel port joystick adapter port #1 */
 	case 4: /* ->Parallel port joystick adapter port #2 */
 		joy = ie->unit - 1;
-		if (ie->type & 4) {
+		if (ie->type & 4) {	
 			int old = joybutton[joy] & (1 << ie->data);
 
 			if (state) {
