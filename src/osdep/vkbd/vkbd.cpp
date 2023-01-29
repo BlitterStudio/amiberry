@@ -12,6 +12,7 @@
 #include <map>
 #include <vector>
 #include <set>
+#include <chrono>
 
 using VkbdRect = struct
 {
@@ -26,9 +27,13 @@ static VkbdLanguage vkbdLanguage = VKBD_LANGUAGE_US;
 static VkbdStyle vkbdStyle = VKBD_STYLE_ORIG;
 static double vkbdTransparency = 0.0;
 static int vkbdAlpha = 255;
+static double vkbdSlideDurationInSeconds = 1.0;
 
 // Boolean that determines if keyboard is shown.
-static bool vkbdShow = true;
+static bool vkbdShow = false;
+
+// Time when button was pressed to show virtual keyboard.
+static std::chrono::time_point<std::chrono::system_clock> vkbdTimeLastRedraw;
 
 // Initialized in vkbd_init.
 static std::map<int,int> vkbdKeyToIndex; 
@@ -52,8 +57,18 @@ static int vkbdPreviousState = 0;
 // Color that is used to color pressed keys.
 static SDL_Color vkbdPressedKeyColor;
 
-static int vkbdX;
-static int vkbdY;
+// Where the keyboard is currently drawn:
+static int vkbdCurrentX;
+static int vkbdCurrentY;
+
+// Where the keyboard is drawn when it is finished sliding:
+static int vkbdEndX;
+static int vkbdEndY;
+
+// Where the keyboard is drawn when is it starts sliding in:
+static int vkbdStartX;
+static int vkbdStartY;
+
 
 //This is the new US keyboard, based directly on amiga-side keys
 //last four numbers: next keys in up,down,left,right directions
@@ -607,8 +622,11 @@ void vkbd_update(bool createTextures)
 		int renderedWidth, rendererHeight;
 		SDL_RenderGetLogicalSize(sdl_renderer, &renderedWidth, &rendererHeight);
 
-		vkbdX = (renderedWidth - w) / 2;
-		vkbdY = rendererHeight - h;
+		vkbdEndX = (renderedWidth - w) / 2;
+		vkbdEndY = rendererHeight - h;
+
+		vkbdStartX = (renderedWidth - w) / 2;
+		vkbdStartY = rendererHeight;
 	}
 
 	vkbdPressedKeyColor.r = 200;
@@ -697,8 +715,8 @@ static SDL_Rect vkbd_get_key_rect(int index)
 		rect.x *= 2;
 		rect.w *= 2;
 	}
-	rect.x += vkbdX;
-	rect.y += vkbdY;
+	rect.x += vkbdCurrentX;
+	rect.y += vkbdCurrentY;
 	return rect;
 }
 
@@ -710,12 +728,36 @@ static SDL_Texture* vkbd_get_texture_to_draw()
 	return toDraw;
 }
 
+static void vkbd_update_current_xy()
+{
+	const auto now = std::chrono::system_clock::now();
+    const auto diff = now - vkbdTimeLastRedraw;
+	const double diffSeconds = std::chrono::duration_cast<std::chrono::milliseconds>(diff).count() / 1000.0;
+	const double speedX = (vkbdEndX - vkbdStartX) / vkbdSlideDurationInSeconds;
+	const double speedY = (vkbdEndY - vkbdStartY) / vkbdSlideDurationInSeconds;
+	const double sign = vkbdShow ? +1.0 : -1.0;
+	const int maxX = std::max(vkbdStartX, vkbdEndX);
+	const int maxY = std::max(vkbdStartY, vkbdEndY);
+	const int minX = std::min(vkbdStartX, vkbdEndX);
+	const int minY = std::min(vkbdStartY, vkbdEndY);
+
+	vkbdCurrentX += static_cast<int>(speedX * diffSeconds * sign);
+	vkbdCurrentX = std::max(minX, vkbdCurrentX);
+	vkbdCurrentX = std::min(maxX, vkbdCurrentX);
+
+	vkbdCurrentY += static_cast<int>(speedY * diffSeconds * sign);
+	vkbdCurrentY = std::max(minY, vkbdCurrentY);
+	vkbdCurrentY = std::min(maxY, vkbdCurrentY);
+}
+
 void vkbd_redraw(void)
 {
-	if (!vkbdShow)
+	if (!vkbdShow && vkbdCurrentX == vkbdStartX && vkbdCurrentY == vkbdStartY)
 	{
 		return;
 	}
+
+	vkbd_update_current_xy();
 
 	SDL_Texture* toDraw = vkbd_get_texture_to_draw();
 
@@ -728,10 +770,11 @@ void vkbd_redraw(void)
 	int h = 0;
 	SDL_QueryTexture(toDraw, nullptr, nullptr, &w, &h);
 	SDL_Rect rect;
-	rect.x = vkbdX;
-	rect.y = vkbdY;
+	rect.x = vkbdCurrentX;
+	rect.y = vkbdCurrentY;
 	rect.w = w;
 	rect.h = h;
+	
 	SDL_SetRenderDrawBlendMode(sdl_renderer, SDL_BLENDMODE_BLEND);
 	SDL_SetTextureBlendMode(toDraw, SDL_BLENDMODE_BLEND);
 	SDL_SetTextureAlphaMod(toDraw, vkbdAlpha);
@@ -756,6 +799,7 @@ void vkbd_redraw(void)
 void vkbd_toggle(void)
 {
 	vkbdShow = !vkbdShow;
+	vkbdTimeLastRedraw = std::chrono::system_clock::now();
 }
 
 bool vkbd_is_active(void)
@@ -778,6 +822,12 @@ static bool vkbd_switched_off(int state, int vkbdPreviousState, int mask)
 // For sticky keys, the key is toggled whenever the fire button goes from not pressed to pressed.
 bool vkbd_process(int state, int *keycode, int *pressed)
 {
+	if (!vkbdShow || vkbdCurrentX != vkbdEndX || vkbdCurrentY != vkbdEndY)
+	{
+		vkbdPreviousState = 0;
+		return false;
+	}
+
 	// Check button up event.
 	bool result = false;
 	if (vkbd_switched_off(state, vkbdPreviousState, VKBD_BUTTON))
