@@ -172,6 +172,8 @@ gcn::SDLTrueTypeFont* gui_font;
 gcn::Gui* uae_gui;
 gcn::Container* gui_top;
 gcn::Container* selectors;
+gcn::ScrollArea* selectorsScrollArea;
+
 gcn::Color gui_baseCol;
 gcn::Color colTextboxBackground;
 gcn::Color colSelectorInactive;
@@ -1286,19 +1288,29 @@ void gui_widgets_init()
 	// Create selector entries
 	//--------------------------------------------------
 	const auto workAreaHeight = GUI_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10;
+	const auto selectorWidth = 150;
+	const auto selectorHeight = 24;
 	selectors = new gcn::Container();
-	selectors->setSize(150, workAreaHeight);
+	selectors->setBorderSize(0);
 	selectors->setBaseColor(colSelectorInactive);
-	selectors->setBorderSize(1);
-	const auto panelStartX = DISTANCE_BORDER + selectors->getWidth() + 2 + 11;
 
+	const auto selectorScrollAreaWidth = selectorWidth + 12;
+	selectorsScrollArea = new gcn::ScrollArea();
+	selectorsScrollArea->setContent(selectors);
+	selectorsScrollArea->setBaseColor(colSelectorInactive);
+	selectorsScrollArea->setSize(selectorScrollAreaWidth, workAreaHeight);
+	selectorsScrollArea->setBorderSize(1);
+	
+	const auto panelStartX = DISTANCE_BORDER + selectorsScrollArea->getWidth() + 2 + 11;
+
+	double selectorsHeight = 0.0;
 	panelFocusListener = new PanelFocusListener();
 	for (i = 0; categories[i].category != nullptr; ++i)
 	{
 		categories[i].selector = new gcn::SelectorEntry(categories[i].category, prefix_with_data_path(categories[i].imagepath));
 		categories[i].selector->setActiveColor(colSelectorActive);
 		categories[i].selector->setInactiveColor(colSelectorInactive);
-		categories[i].selector->setSize(150, 24);
+		categories[i].selector->setSize(selectorWidth, selectorHeight);
 		categories[i].selector->addFocusListener(panelFocusListener);
 
 		categories[i].panel = new gcn::Container();
@@ -1307,7 +1319,11 @@ void gui_widgets_init()
 		categories[i].panel->setBaseColor(gui_baseCol);
 		categories[i].panel->setBorderSize(1);
 		categories[i].panel->setVisible(false);
+			
+		selectorsHeight += categories[i].selector->getHeight();
 	}
+
+	selectors->setSize(150, selectorsHeight);
 
 	//--------------------------------------------------
 	// Initialize panels
@@ -1334,7 +1350,8 @@ void gui_widgets_init()
 				 GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
 	gui_top->add(cmdStart, GUI_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH, GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
 
-	gui_top->add(selectors, DISTANCE_BORDER + 1, DISTANCE_BORDER + 1);
+	gui_top->add(selectorsScrollArea, DISTANCE_BORDER + 1, DISTANCE_BORDER + 1);
+
 	for (i = 0, yPos = 0; categories[i].category != nullptr; ++i, yPos += 24)
 	{
 		selectors->add(categories[i].selector, 0, yPos);

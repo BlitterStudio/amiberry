@@ -3,7 +3,7 @@
 
 #include "amiberry_gfx.h"
 
-#define DISTANCE_BORDER 15
+#define DISTANCE_BORDER 10
 #define DISTANCE_NEXT_X 15
 #define DISTANCE_NEXT_Y 15
 #define BUTTON_WIDTH 90
