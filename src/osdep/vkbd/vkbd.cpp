@@ -514,10 +514,9 @@ static VkbdRect vkbdRectFR[] =
 	{{196, 37, 14, 11}, 48, 81, 65, 49, AK_NUMBERSIGN}, // 94 *	
 };
 
-static std::string vkbd_get_filename(bool shift)
+static std::string vkbd_get_style_string()
 {
 	std::string styleString;
-	std::string languageString;
 	switch (vkbdStyle)
 	{
 	case VKBD_STYLE_WARM:
@@ -533,6 +532,12 @@ static std::string vkbd_get_filename(bool shift)
 		styleString = "Orig";
 		break;
 	}
+	return styleString;
+}
+
+static std::string vkbd_get_language_string()
+{
+	std::string languageString;
 	switch (vkbdLanguage)
 	{
 	case VKBD_LANGUAGE_UK:
@@ -548,10 +553,39 @@ static std::string vkbd_get_filename(bool shift)
 		languageString = "US";
 		break;
 	}
+	return languageString;
+}
 
-	const std::string hiresString = vkbdHires ? "Hires" : "";
+static std::string vkbd_get_hires_string()
+{
+	return vkbdHires ? "Hires" : "";
+}
+
+static std::string vkbd_get_exit_button_filename()
+{
+	const std::string styleString = vkbd_get_style_string();
+	const std::string hiresString = vkbd_get_hires_string();
+
+	TCHAR data_dir[MAX_DPATH];
+	get_data_path(data_dir, sizeof(data_dir) / sizeof(TCHAR));
+	
+	std::string fileName = data_dir;
+	fileName += std::string("vkbd/vkbd");
+	fileName += styleString;
+	fileName += std::string("Quit");
+	fileName += hiresString;
+	fileName += std::string(".png");
+
+	return fileName;
+
+}
+
+static std::string vkbd_get_keyboard_filename(bool shift)
+{
+	const std::string styleString = vkbd_get_style_string();
+	const std::string languageString = vkbd_get_language_string();
+	const std::string hiresString = vkbd_get_hires_string();
 	const std::string shiftString = shift ? "Shift" : "";
-	const std::string exitString = vkbdKeyboardHasExitButton ? "Quit" : "";
 
 	TCHAR data_dir[MAX_DPATH];
 	get_data_path(data_dir, sizeof(data_dir) / sizeof(TCHAR));
@@ -563,26 +597,99 @@ static std::string vkbd_get_filename(bool shift)
 	fileName += std::string("Large");
 	fileName += shiftString;
 	fileName += hiresString;
-	fileName += exitString;
 	fileName += std::string(".png");
 
 	return fileName;
 }
 
-static SDL_Texture * vkbd_create_keyboard_texture(bool shift)
+static SDL_Surface * vkbd_create_keyboard_surface(bool shift)
 {
-	auto fileName = vkbd_get_filename(shift);
-	auto tmp = IMG_Load(fileName.c_str());
+	auto fileName = vkbd_get_keyboard_filename(shift);
+	auto surf = IMG_Load(fileName.c_str());
 
-	if (tmp == nullptr)
+	if (surf == nullptr)
 	{
 		write_log(_T("Virtual Keyboard Bitmap Error: %s\n"), SDL_GetError());
+	}
+
+	return surf;
+}
+
+static SDL_Surface * vkbd_create_exit_button_surface()
+{
+	auto fileName = vkbd_get_exit_button_filename();
+	auto surf = IMG_Load(fileName.c_str());
+
+	if (surf == nullptr)
+	{
+		write_log(_T("Virtual Keyboard Bitmap Error: %s\n"), SDL_GetError());
+	}
+
+	return surf;
+}
+
+static SDL_Surface * vkbd_concat_surfaces(SDL_Surface * keyboard, SDL_Surface * exit)
+{
+	const int width = keyboard->w + exit->w;
+	const int height = std::max(keyboard->h, exit->h);
+	auto surf = SDL_CreateRGBSurface(0,width,height,32,0,0,0,0);
+	SDL_Rect srcRect;
+	srcRect.x = 0;
+	srcRect.y = 0;
+	srcRect.w = keyboard->w;
+	srcRect.h = keyboard->h;
+	SDL_Rect destRect;
+	destRect.x = 0;
+	destRect.y = 0;
+	destRect.w = keyboard->w;
+	destRect.h = keyboard->h;
+	SDL_BlitSurface(keyboard, &srcRect, surf, &destRect);
+	srcRect.x = 0;
+	srcRect.y = 0;
+	srcRect.w = exit->w;
+	srcRect.h = exit->h;
+	destRect.x = keyboard->w;
+	destRect.y = 0;
+	destRect.w = exit->w;
+	destRect.h = exit->h;
+	SDL_BlitSurface(exit, &srcRect, surf, &destRect);
+
+	return surf;
+}
+
+static SDL_Texture * vkbd_create_keyboard_texture(bool shift)
+{
+	auto keyboard = vkbd_create_keyboard_surface(shift);
+	if (keyboard == nullptr)
+	{
 		return nullptr;
 	}
 
-	auto texture = SDL_CreateTextureFromSurface(sdl_renderer, tmp);
-	SDL_FreeSurface(tmp);
+	SDL_Surface * surf;
+	if (vkbdKeyboardHasExitButton)
+	{
+		auto exit = vkbd_create_exit_button_surface();
+		if (exit == nullptr)
+		{
+			return nullptr;
+		}
 
+		surf = vkbd_concat_surfaces(keyboard, exit);	
+
+		if (surf == nullptr)
+		{
+			return nullptr;
+		}
+
+		SDL_FreeSurface(exit);
+	}
+	else
+	{
+		surf = keyboard;	
+	}
+
+	auto texture = SDL_CreateTextureFromSurface(sdl_renderer, surf);
+	SDL_FreeSurface(surf);
 	return texture;
 }
 
