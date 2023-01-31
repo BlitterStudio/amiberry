@@ -192,6 +192,7 @@ typedef struct { uae_u8 RGB[3]; } RGB;
 
 void atomic_and(volatile uae_atomic* p, uae_u32 v);
 void atomic_or(volatile uae_atomic* p, uae_u32 v);
+void atomic_set(volatile uae_atomic* p, uae_u32 v);
 uae_atomic atomic_inc(volatile uae_atomic* p);
 uae_atomic atomic_dec(volatile uae_atomic* p);
 uae_u32 atomic_bit_test_and_reset(volatile uae_atomic* p, uae_u32 v);
