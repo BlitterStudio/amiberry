@@ -1382,7 +1382,8 @@ void gui_widgets_halt()
 
 	delete panelFocusListener;
 	delete selectors;
-
+	delete selectorsScrollArea;
+	
 	delete cmdQuit;
 	delete cmdShutdown;
 	delete cmdReset;
