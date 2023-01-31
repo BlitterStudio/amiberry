@@ -1338,7 +1338,7 @@ void read_joystick_axis(SDL_JoystickID id, int axis, int value)
 					if (axis <= SDL_CONTROLLER_AXIS_LEFTY && did->mousemap > 0)
 					{
 						if (data > joystick_dead_zone || data < -joystick_dead_zone)
-							setmousestate(i, axis, data / 1000, 0);
+							setmousestate(i, axis, data / 10000, 0);
 					}
 					else
 					{
