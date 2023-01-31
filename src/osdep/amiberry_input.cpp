@@ -1267,20 +1267,24 @@ void read_joystick_button(SDL_JoystickID id, int button, int state)
 			if (did->mapping.hotkey_button == SDL_CONTROLLER_BUTTON_INVALID
 				|| SDL_JoystickGetButton(did->joystick, did->mapping.hotkey_button) & 1)
 			{
+				int button_state;
 				if (did->mapping.menu_button != SDL_CONTROLLER_BUTTON_INVALID)
 				{
-					setjoybuttonstate(i, retroarch_offset + 1,
-						SDL_JoystickGetButton(did->joystick, did->mapping.menu_button) & 1);
+					button_state = SDL_JoystickGetButton(did->joystick, did->mapping.menu_button);
+					if (button_state == 1) write_log("RetroArch Menu button pressed\n");
+					setjoybuttonstate(i, retroarch_offset + 1, button_state);
 				}
 				if (did->mapping.quit_button != SDL_CONTROLLER_BUTTON_INVALID)
 				{
-					setjoybuttonstate(i, retroarch_offset + 2,
-						SDL_JoystickGetButton(did->joystick, did->mapping.quit_button) & 1);
+					button_state = SDL_JoystickGetButton(did->joystick, did->mapping.quit_button);
+					if (button_state == 1) write_log("RetroArch Quit button pressed\n");
+					setjoybuttonstate(i, retroarch_offset + 2, button_state);
 				}
 				if (did->mapping.reset_button != SDL_CONTROLLER_BUTTON_INVALID)
 				{
-					setjoybuttonstate(i, retroarch_offset + 3,
-						SDL_JoystickGetButton(did->joystick, did->mapping.reset_button) & 1);
+					button_state = SDL_JoystickGetButton(did->joystick, did->mapping.reset_button);
+					if (button_state == 1) write_log("RetroArch Reset button pressed\n");
+					setjoybuttonstate(i, retroarch_offset + 3, button_state);
 				}
 			}
 
