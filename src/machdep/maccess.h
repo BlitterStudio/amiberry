@@ -65,4 +65,65 @@ static __inline__ void do_put_mem_byte(uint8_t* a, uint8_t v)
 #undef NO_INLINE_MEMORY_ACCESS
 #undef MD_HAVE_MEM_1_FUNCS
 
+/*
+ * Byte-swapping functions
+ */
+
+#ifdef ARMV6_ASSEMBLY
+
+STATIC_INLINE uae_u32 do_byteswap_32(uae_u32 v) {
+  __asm__ (
+	"rev %0, %0"
+	: "=r" (v) : "0" (v) ); return v;
+}
+
+STATIC_INLINE uae_u32 do_byteswap_16(uae_u32 v) {
+  __asm__ (
+	"revsh %0, %0\n\t"
+	"uxth %0, %0"
+	: "=r" (v) : "0" (v) ); return v;
+}
+#define bswap_16(x) do_byteswap_16(x)
+#define bswap_32(x) do_byteswap_32(x)
+
+#elif defined(CPU_AARCH64)
+
+STATIC_INLINE uae_u32 do_byteswap_32(uae_u32 v) {
+  __asm__ (
+	"rev %w0, %w0"
+	: "=r" (v) : "0" (v) ); return v;
+}
+
+STATIC_INLINE uae_u32 do_byteswap_16(uae_u32 v) {
+  __asm__ (
+	"rev16 %w0, %w0\n\t"
+	"uxth %w0, %w0"
+	: "=r" (v) : "0" (v) ); return v;
+}
+#define bswap_16(x) do_byteswap_16(x)
+#define bswap_32(x) do_byteswap_32(x)
+
+#else
+
+/* Try to use system bswap_16/bswap_32 functions. */
+#if defined HAVE_BSWAP_16 && defined HAVE_BSWAP_32
+# include <byteswap.h>
+#  ifdef HAVE_BYTESWAP_H
+#  include <byteswap.h>
+# endif
+#else
+/* Else, if using SDL, try SDL's endian functions. */
+#if defined (USE_SDL)
+#include <SDL_endian.h>
+#define bswap_16(x) SDL_Swap16(x)
+#define bswap_32(x) SDL_Swap32(x)
+#else
+/* Otherwise, we'll roll our own. */
+#define bswap_16(x) (((x) >> 8) | (((x) & 0xFF) << 8))
+#define bswap_32(x) (((x) << 24) | (((x) << 8) & 0x00FF0000) | (((x) >> 8) & 0x0000FF00) | ((x) >> 24))
+#endif
+#endif
+
+#endif /* ARMV6_ASSEMBLY*/
+
 #endif

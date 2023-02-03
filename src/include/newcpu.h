@@ -12,6 +12,8 @@
 #include "uae/types.h"
 #include "readcpu.h"
 #include "machdep/m68k.h"
+#include "events.h"
+#include "thread.h"
 
 extern const int areg_byteinc[];
 extern const int imm8_table[];

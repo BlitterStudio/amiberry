@@ -76,3 +76,4 @@ SDL_threadID uae_thread_get_id()
 {
 	return SDL_GetThreadID(nullptr);
 }
+
