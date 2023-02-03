@@ -9109,7 +9109,7 @@ void filesys_install (void)
 	org (loop);
 
 	create_ks12_boot();
-//	create_68060_nofpu();
+	create_68060_nofpu();
 }
 
 uaecptr filesys_get_entry(int index)
