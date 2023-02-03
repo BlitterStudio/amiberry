@@ -181,7 +181,7 @@ struct utimbuf
 };
 #endif
 
-/* If char has more then 8 bits, good night. */
+/* If char has more than 8 bits, good night. */
 typedef unsigned char uae_u8;
 typedef signed char uae_s8;
 typedef char uae_char;
