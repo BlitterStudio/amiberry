@@ -1159,42 +1159,75 @@ void process_event(SDL_Event event)
 			break;
 		}
 
-		read_controller_button(event.cbutton.which, event.cbutton.button, event.cbutton.state);
+		for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
+		{
+			did = &di_joystick[id];
+			if (did->name.empty() || did->joystick_id != event.cbutton.which) continue;
+			if (did->mapping.is_retroarch || !did->is_controller) continue;
+
+			read_controller_button(id, event.cbutton.button, event.cbutton.state);
+			return;
+		}
 		return;
 
 	case SDL_JOYBUTTONDOWN:
 	case SDL_JOYBUTTONUP:
-		if (event.jbutton.button == did->mapping.hotkey_button)
+		for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
 		{
-			hotkey_pressed = (event.jbutton.state == SDL_PRESSED);
-			break;
-		}
-		if (event.jbutton.button == did->mapping.menu_button && hotkey_pressed && event.jbutton.state == SDL_PRESSED)
-		{
-			hotkey_pressed = false;
-			inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
-			break;
-		}
+			did = &di_joystick[id];
+			if (did->name.empty() || did->joystick_id != id) continue;
+			if (!did->mapping.is_retroarch && did->is_controller) continue;
 
-		read_joystick_button(event.jbutton.which, event.jbutton.button, event.jbutton.state);
+			if (event.jbutton.button == did->mapping.hotkey_button)
+			{
+				hotkey_pressed = event.jbutton.state == SDL_PRESSED;
+				break;
+			}
+			if (event.jbutton.button == did->mapping.menu_button && hotkey_pressed && event.jbutton.state == SDL_PRESSED)
+			{
+				hotkey_pressed = false;
+				inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
+				break;
+			}
+
+			read_joystick_button(id, event.jbutton.button, event.jbutton.state);
+			return;
+		}
 		return;
 
 	case SDL_CONTROLLERAXISMOTION:
-		if (event.caxis.value > joystick_dead_zone || event.caxis.value < -joystick_dead_zone)
-			read_controller_axis(event.caxis.which, event.caxis.axis, event.caxis.value);
-		else
-			read_controller_axis(event.caxis.which, event.caxis.axis, 0);
+		for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
+		{
+			did = &di_joystick[id];
+			if (did->name.empty() || did->joystick_id != event.cbutton.which) continue;
+			if (did->mapping.is_retroarch || !did->is_controller) continue;
+
+			read_controller_axis(id, event.caxis.axis, event.caxis.value);
+			return;
+		}
 		return;
 
 	case SDL_JOYAXISMOTION:
-		if (event.jaxis.value > joystick_dead_zone || event.jaxis.value < -joystick_dead_zone)
+		for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
+		{
+			did = &di_joystick[id];
+			if (did->name.empty() || did->joystick_id != id) continue;
+			if (!did->mapping.is_retroarch && did->is_controller) continue;
+
 			read_joystick_axis(event.jaxis.which, event.jaxis.axis, event.jaxis.value);
-		else
-			read_joystick_axis(event.jaxis.which, event.jaxis.axis, 0);
+			return;
+		}
 		return;
 
 	case SDL_JOYHATMOTION:
-		read_joystick_hat(event.jhat.which, event.jhat.hat, event.jhat.value);
+		for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
+		{
+			did = &di_joystick[id];
+			if (did->name.empty() || did->joystick_id != id) continue;
+
+			read_joystick_hat(event.jhat.which, event.jhat.hat, event.jhat.value);
+			return;
+		}
 		return;
 
 	case SDL_KEYDOWN:
