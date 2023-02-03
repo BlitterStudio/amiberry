@@ -41,7 +41,7 @@ static smp_comm_pipe *volatile display_pipe = nullptr;
 static uae_sem_t display_sem = nullptr;
 static bool volatile display_thread_busy = false;
 #ifdef USE_DISPMANX
-static unsigned int current_vsync_frame = 0;
+static uae_u32 current_vsync_frame = 0;
 unsigned long time_per_frame = 20000; // Default for PAL (50 Hz): 20000 microsecs
 static int vsync_modulo = 1;
 #endif

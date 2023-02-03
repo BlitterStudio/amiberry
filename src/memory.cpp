@@ -2042,7 +2042,7 @@ static void init_mem_banks (void)
 	for (unsigned int i = 0; i < MEMORY_BANKS; i++)
 		put_mem_bank (i << 16, &dummy_bank, 0);
 #ifdef NATMEM_OFFSET
-	//delete_shmmaps(0, 0xFFFF0000);
+	//delete_shmmaps (0, 0xFFFF0000);
 #endif
 }
 
