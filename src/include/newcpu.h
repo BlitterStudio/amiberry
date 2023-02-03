@@ -13,6 +13,7 @@
 #include "readcpu.h"
 #include "machdep/m68k.h"
 #include "events.h"
+#include "thread.h"
 
 #ifdef WITH_SOFTFLOAT
 #include <softfloat/softfloat.h>
