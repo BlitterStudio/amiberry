@@ -82,7 +82,7 @@ void atomic_and(volatile uae_atomic* p, uae_u32 v)
 #if defined(CPU_AARCH64)
 	__atomic_and_fetch(p, v, __ATOMIC_SEQ_CST);
 #else
-	return __sync_and_and_fetch(p, v);
+	__sync_and_and_fetch(p, v);
 #endif
 }
 void atomic_or(volatile uae_atomic* p, uae_u32 v)
@@ -90,7 +90,7 @@ void atomic_or(volatile uae_atomic* p, uae_u32 v)
 #if defined(CPU_AARCH64)
 	__atomic_or_fetch(p, v, __ATOMIC_SEQ_CST);
 #else
-	return __sync_or_and_fetch(p, v);
+	__sync_or_and_fetch(p, v);
 #endif
 }
 void atomic_set(volatile uae_atomic* p, uae_u32 v)
