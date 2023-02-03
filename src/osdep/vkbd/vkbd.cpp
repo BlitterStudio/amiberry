@@ -495,6 +495,7 @@ void vkbd_reset_sticky_keys(void)
 
 int vkbd_init(void)
 {
+#ifndef USE_OPENGL
 	char tmpchar[MAX_DPATH];
 	char tmpchar2[MAX_DPATH];
 	char vkbdFileName[MAX_DPATH];
@@ -620,11 +621,13 @@ int vkbd_init(void)
 	vkbd_last_move_time = 0;
 	vkbd_key = KEYCODE_NOTHING;
 	vkbd_keysave = KEYCODE_NOTHING;
+#endif
 	return 0;
 }
 
 void vkbd_quit(void)
 {
+#ifndef USE_OPENGL
 	SDL_DestroyTexture(ksurShift);
 	SDL_DestroyTexture(ksurShiftHires);
 	SDL_DestroyTexture(ksur);
@@ -634,10 +637,12 @@ void vkbd_quit(void)
 	{
 		vkbd_sticky_key[i].stuck = false;
 	}
+#endif
 }
 
 void vkbd_redraw(void)
 {
+#ifndef USE_OPENGL
 	SDL_Rect r;
 	SDL_Texture* toDraw;
 	SDL_Texture* myCanvas;
@@ -707,6 +712,7 @@ void vkbd_redraw(void)
 
 	//SDL_BlitSurface(myCanvas, nullptr, sdl_surface, &r);
 	SDL_RenderCopy(sdl_renderer, myCanvas, nullptr, &r);
+#endif
 }
 
 void vkbd_transparency_up(void)
@@ -736,7 +742,7 @@ void vkbd_transparency_up(void)
 		SDL_SetTextureAlphaMod(ksur, vkbd_transparency);
 		SDL_SetTextureAlphaMod(ksurHires, vkbd_transparency);
 	}
-	else //fully opague
+	else //fully opaque
 	{
 		//SDL_SetAlpha(canvas, 0, 255);
 		//SDL_SetAlpha(canvasHires, 0, 255);
