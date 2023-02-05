@@ -243,59 +243,6 @@ jobs:
         artifacts: |
           amiberry-${{ steps.tag.outputs.tag }}-rpi4-sdl2-64bit-debian.zip
 
-  build-rpi4-sdl2-64bit-manjaro:
-    runs-on: [self-hosted, Linux, ARM64, manjaro]
-    steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: 'true'
-    - name: make capsimg
-      run: make capsimg
-    - name: build for RPI4 64-bit
-      run: make -j4 PLATFORM=rpi4-64-sdl2
-    - uses: actions/upload-artifact@v3
-      with:
-        name: amiberry-rpi4-sdl2-64bit-manjaro
-        path: |
-          amiberry
-          capsimg.so
-          abr/**
-          conf/**
-          controllers/**
-          data/**
-          inputrecordings/**
-          kickstarts/**
-          nvram/**
-          savestates/**
-          screenshots/**
-          whdboot/**
-    - name: Get tag
-      if: github.ref_type == 'tag'
-      id: tag
-      uses: dawidd6/action-get-tag@v1
-      with:
-        # Optionally strip `v` prefix
-        strip_v: false
-    - name: ZIP binaries
-      if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-rpi4-sdl2-64bit-manjaro.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
-    - name: Create Changelog
-      if: github.ref_type == 'tag'
-      id: changelog
-      uses: loopwerk/tag-changelog@v1
-      with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          config_file: .github/tag-changelog-config.js
-    - name: Create Release
-      if: github.ref_type == 'tag'
-      uses: ncipollo/release-action@v1
-      with:
-        allowUpdates: true
-        omitBodyDuringUpdate: true
-        body: ${{ steps.changelog.outputs.changes }}
-        artifacts: |
-          amiberry-${{ steps.tag.outputs.tag }}-rpi4-sdl2-64bit-manjaro.zip
-
   build-RK3399-sdl2-64bit-debian:
     runs-on: ubuntu-latest
     steps:
@@ -451,3 +398,109 @@ jobs:
         body: ${{ steps.changelog.outputs.changes }}
         artifacts: |
           amiberry-${{ steps.tag.outputs.tag }}-x86-64-debian.zip
+
+  build-rpi4-sdl2-64bit-manjaro:
+    runs-on: [self-hosted, Linux, ARM64, manjaro]
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'true'
+    - name: make capsimg
+      run: make capsimg
+    - name: build for RPI4 64-bit
+      run: make -j4 PLATFORM=rpi4-64-sdl2
+    - uses: actions/upload-artifact@v3
+      with:
+        name: amiberry-rpi4-sdl2-64bit-manjaro
+        path: |
+          amiberry
+          capsimg.so
+          abr/**
+          conf/**
+          controllers/**
+          data/**
+          inputrecordings/**
+          kickstarts/**
+          nvram/**
+          savestates/**
+          screenshots/**
+          whdboot/**
+    - name: Get tag
+      if: github.ref_type == 'tag'
+      id: tag
+      uses: dawidd6/action-get-tag@v1
+      with:
+        # Optionally strip `v` prefix
+        strip_v: false
+    - name: ZIP binaries
+      if: github.ref_type == 'tag'
+      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-rpi4-sdl2-64bit-manjaro.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
+    - name: Create Changelog
+      if: github.ref_type == 'tag'
+      id: changelog
+      uses: loopwerk/tag-changelog@v1
+      with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config_file: .github/tag-changelog-config.js
+    - name: Create Release
+      if: github.ref_type == 'tag'
+      uses: ncipollo/release-action@v1
+      with:
+        allowUpdates: true
+        omitBodyDuringUpdate: true
+        body: ${{ steps.changelog.outputs.changes }}
+        artifacts: |
+          amiberry-${{ steps.tag.outputs.tag }}-rpi4-sdl2-64bit-manjaro.zip
+  
+  build-RK3399-sdl2-64bit-manjaro:
+    runs-on: [self-hosted, Linux, ARM64, manjaro]
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'true'
+    - name: make capsimg
+      run: make capsimg
+    - name: build for RPI4 64-bit
+      run: make -j4 PLATFORM=n2
+    - uses: actions/upload-artifact@v3
+      with:
+        name: amiberry-rk3399-sdl2-64bit-manjaro
+        path: |
+          amiberry
+          capsimg.so
+          abr/**
+          conf/**
+          controllers/**
+          data/**
+          inputrecordings/**
+          kickstarts/**
+          nvram/**
+          savestates/**
+          screenshots/**
+          whdboot/**
+    - name: Get tag
+      if: github.ref_type == 'tag'
+      id: tag
+      uses: dawidd6/action-get-tag@v1
+      with:
+        # Optionally strip `v` prefix
+        strip_v: false
+    - name: ZIP binaries
+      if: github.ref_type == 'tag'
+      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-rk3399-sdl2-64bit-manjaro.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
+    - name: Create Changelog
+      if: github.ref_type == 'tag'
+      id: changelog
+      uses: loopwerk/tag-changelog@v1
+      with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config_file: .github/tag-changelog-config.js
+    - name: Create Release
+      if: github.ref_type == 'tag'
+      uses: ncipollo/release-action@v1
+      with:
+        allowUpdates: true
+        omitBodyDuringUpdate: true
+        body: ${{ steps.changelog.outputs.changes }}
+        artifacts: |
+          amiberry-${{ steps.tag.outputs.tag }}-rk3399-sdl2-64bit-manjaro.zip
