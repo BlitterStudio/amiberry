@@ -341,12 +341,12 @@ static int getsub_deinterleaved (uae_u8 *dst, struct cdunit *cdu, struct cdtoc *
 		// regenerate Q-subchannel
 		uae_u8 *s = dst + SUB_ENTRY_SIZE;
 		s[0] = (t->ctrl << 4) | (t->adr << 0);
-		s[1] = tobcd (t - &cdu->toc[0] + 1);
-		s[2] = tobcd (1);
-		int msf = lsn2msf (sector);
-		tolongbcd (s + 7, msf);
-		msf = lsn2msf (sector - t->address - 150);
-		tolongbcd (s + 3, msf);
+		s[1] = tobcd(addrdiff(t, &cdu->toc[0]) + 1);
+		s[2] = tobcd(1);
+		int msf = lsn2msf(sector);
+		tolongbcd(s + 7, msf);
+		msf = lsn2msf(addrdiff(sector, t->address) - 150);
+		tolongbcd(s + 3, msf);
 		ret = 2;
 	}
 	if (ret == 1) {
@@ -436,15 +436,15 @@ static int cdda_unpack_func (void *v)
 	return 0;
 }
 
-static void audio_unpack (struct cdunit *cdu, struct cdtoc *t)
+static void audio_unpack(struct cdunit *cdu, struct cdtoc *t)
 {
 	// do this even if audio is not compressed, t->handle also could be
 	// compressed and we want to unpack it in background too
 	while (cdimage_unpack_active == 1)
 		sleep_millis(10);
 	cdimage_unpack_active = 0;
-	write_comm_pipe_u32 (&unpack_pipe, cdu - &cdunits[0], 0);
-	write_comm_pipe_u32 (&unpack_pipe, t - &cdu->toc[0], 1);
+	write_comm_pipe_u32(&unpack_pipe, addrdiff(cdu, &cdunits[0]), 0);
+	write_comm_pipe_u32(&unpack_pipe, addrdiff(t, &cdu->toc[0]), 1);
 	while (cdimage_unpack_active == 0)
 		sleep_millis(10);
 }
@@ -1059,7 +1059,7 @@ static int command_rawread (int unitnum, uae_u8 *data, int sector, int size, int
 					p += SUB_CHANNEL_SIZE;
 				}
 			}
-			ret += p - data;
+			ret += addrdiff(p, data);
 			data = p;
 			sector++;
 		}

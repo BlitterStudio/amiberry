@@ -3,9 +3,15 @@ name: C/C++ CI
 on:
   workflow_dispatch:
   push:
-    branches: [ master ]
+    branches: 
+      - master
+      - dev
     tags: 
-      - v[1-9]+.[0-9]+.[0-9]
+      - v*.*.*
+  pull_request:
+    branches:
+      - master
+      - dev
 
 jobs:
 

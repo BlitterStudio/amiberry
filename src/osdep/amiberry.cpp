@@ -44,6 +44,8 @@
 #include "devices.h"
 #include <map>
 #include <parser.h>
+#include <sstream>
+
 #include "amiberry_input.h"
 #include "clipboard.h"
 #include "fsdb.h"
@@ -117,6 +119,18 @@ std::string get_version_string()
 {
 	std::string label_text = AMIBERRYVERSION;
 	return label_text;
+}
+
+std::string get_sdl2_version_string()
+{
+	SDL_version compiled;
+	SDL_version linked;
+	SDL_VERSION(&compiled);
+	SDL_GetVersion(&linked);
+	std::ostringstream sdl_compiled;
+	sdl_compiled << "Compiled against SDL2 v" << int(compiled.major) << "." << int(compiled.minor) << "." << int(compiled.patch);
+	sdl_compiled << ", Linked against SDL2 v" << int(linked.major) << "." << int(linked.minor) << "." << int(linked.patch);
+	return sdl_compiled.str();
 }
 
 amiberry_hotkey get_hotkey_from_config(std::string config_option)
@@ -1108,61 +1122,111 @@ void process_event(SDL_Event event)
 		return;
 		
 	case SDL_JOYDEVICEADDED:
-	//case SDL_CONTROLLERDEVICEADDED:
 	case SDL_JOYDEVICEREMOVED:
-	//case SDL_CONTROLLERDEVICEREMOVED:
 		write_log("SDL2 Controller/Joystick added or removed, re-running import joysticks...\n");
-		import_joysticks();
 		if (inputdevice_devicechange(&currprefs))
 		{
+			import_joysticks();
 			joystick_refresh_needed = true;
 		}
 		return;
 
 	case SDL_CONTROLLERBUTTONDOWN:
 	case SDL_CONTROLLERBUTTONUP:
+		if (event.cbutton.button == enter_gui_button)
 		{
-			if (event.cbutton.button == enter_gui_button)
-			{
-				inputdevice_add_inputcode(AKS_ENTERGUI, event.cbutton.state == SDL_PRESSED, nullptr);
-				break;
-			}
-			if (quit_key.button && event.cbutton.button == quit_key.button)
-			{
-				uae_quit();
-				break;
-			}
-			if (action_replay_key.button && event.cbutton.button == action_replay_key.button)
-			{
-				inputdevice_add_inputcode(AKS_FREEZEBUTTON, event.cbutton.state == SDL_PRESSED, nullptr);
-				break;
-			}
-			if (fullscreen_key.button && event.cbutton.button == fullscreen_key.button)
-			{
-				inputdevice_add_inputcode(AKS_TOGGLEWINDOWEDFULLSCREEN, event.cbutton.state == SDL_PRESSED, nullptr);
-				break;
-			}
-			if (minimize_key.button && event.cbutton.button == minimize_key.button)
-			{
-				minimizewindow(0);
-				break;
-			}
+			inputdevice_add_inputcode(AKS_ENTERGUI, event.cbutton.state == SDL_PRESSED, nullptr);
+			break;
+		}
+		if (quit_key.button && event.cbutton.button == quit_key.button)
+		{
+			uae_quit();
+			break;
+		}
+		if (action_replay_key.button && event.cbutton.button == action_replay_key.button)
+		{
+			inputdevice_add_inputcode(AKS_FREEZEBUTTON, event.cbutton.state == SDL_PRESSED, nullptr);
+			break;
+		}
+		if (fullscreen_key.button && event.cbutton.button == fullscreen_key.button)
+		{
+			inputdevice_add_inputcode(AKS_TOGGLEWINDOWEDFULLSCREEN, event.cbutton.state == SDL_PRESSED, nullptr);
+			break;
+		}
+		if (minimize_key.button && event.cbutton.button == minimize_key.button)
+		{
+			minimizewindow(0);
+			break;
+		}
+
+		for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
+		{
+			did = &di_joystick[id];
+			if (did->name.empty() || did->joystick_id != event.cbutton.which) continue;
+			if (did->mapping.is_retroarch || !did->is_controller) continue;
+
+			read_controller_button(id, event.cbutton.button, event.cbutton.state);
+			return;
 		}
 		return;
 
 	case SDL_JOYBUTTONDOWN:
 	case SDL_JOYBUTTONUP:
-		if (event.jbutton.button == did->mapping.hotkey_button)
+		for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
 		{
-			hotkey_pressed = (event.jbutton.state == SDL_PRESSED);
-			break;
-		}
+			did = &di_joystick[id];
+			if (did->name.empty() || did->joystick_id != id) continue;
+			if (!did->mapping.is_retroarch && did->is_controller) continue;
 
-		if (event.jbutton.button == did->mapping.menu_button && hotkey_pressed && event.jbutton.state == SDL_PRESSED)
+			if (event.jbutton.button == did->mapping.hotkey_button)
+			{
+				hotkey_pressed = event.jbutton.state == SDL_PRESSED;
+				break;
+			}
+			if (event.jbutton.button == did->mapping.menu_button && hotkey_pressed && event.jbutton.state == SDL_PRESSED)
+			{
+				hotkey_pressed = false;
+				inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
+				break;
+			}
+
+			read_joystick_button(id, event.jbutton.button, event.jbutton.state);
+			return;
+		}
+		return;
+
+	case SDL_CONTROLLERAXISMOTION:
+		for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
 		{
-			hotkey_pressed = false;
-			inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
-			break;
+			did = &di_joystick[id];
+			if (did->name.empty() || did->joystick_id != event.cbutton.which) continue;
+			if (did->mapping.is_retroarch || !did->is_controller) continue;
+
+			read_controller_axis(id, event.caxis.axis, event.caxis.value);
+			return;
+		}
+		return;
+
+	case SDL_JOYAXISMOTION:
+		for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
+		{
+			did = &di_joystick[id];
+			if (did->name.empty() || did->joystick_id != id) continue;
+			if (!did->mapping.is_retroarch && did->is_controller) continue;
+
+			read_joystick_axis(event.jaxis.which, event.jaxis.axis, event.jaxis.value);
+			return;
+		}
+		return;
+
+	case SDL_JOYHATMOTION:
+		for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
+		{
+			did = &di_joystick[id];
+			if (did->name.empty() || did->joystick_id != id) continue;
+
+			read_joystick_hat(event.jhat.which, event.jhat.hat, event.jhat.value);
+			return;
 		}
 		return;
 
@@ -1277,7 +1341,9 @@ void process_event(SDL_Event event)
 
 	case SDL_MOUSEMOTION:
 	{
-		int wm = event.motion.which;
+		// This will be useful when/if SDL2 supports more than 1 mouse.
+		// Currently, it always returns 0.
+		//auto wm = event.motion.which;
 
 		monitor_off = 0;
 		if (!mouseinside)
@@ -1288,33 +1354,18 @@ void process_event(SDL_Event event)
 			return;
 		}
 
-		if (wm < 0 && currprefs.input_tablet >= TABLET_MOUSEHACK)
+		if (currprefs.input_tablet >= TABLET_MOUSEHACK)
 		{
 			/* absolute */
 			setmousestate(0, 0, event.motion.x, 1);
 			setmousestate(0, 1, event.motion.y, 1);
 			return;
 		}
-
-		if (wm >= 0)
-		{
-			if (currprefs.input_tablet >= TABLET_MOUSEHACK)
-			{
-				/* absolute */
-				setmousestate(0, 0, event.motion.x, 1);
-				setmousestate(0, 1, event.motion.y, 1);
-				return;
-			}
-			if (!focus || !mouseactive)
-				return;
-			/* relative */
-			setmousestate(0, 0, event.motion.xrel, 0);
-			setmousestate(0, 1, event.motion.yrel, 0);
-		}
-		else if (isfocus() < 0 && currprefs.input_tablet >= TABLET_MOUSEHACK) {
-			setmousestate(0, 0, event.motion.x, 1);
-			setmousestate(0, 1, event.motion.y, 1);
-		}
+		if (!focus || !mouseactive)
+			return;
+		/* relative */
+		setmousestate(0, 0, event.motion.xrel, 0);
+		setmousestate(0, 1, event.motion.yrel, 0);
 	}
 	break;
 
@@ -1358,12 +1409,12 @@ static int canstretch(struct AmigaMonitor* mon)
 	if (!mon->screen_is_picasso) {
 		if (!currprefs.gfx_windowed_resize)
 			return 0;
-		if (currprefs.gf[APMODE_NATIVE].gfx_filter_autoscale == AUTOSCALE_RESIZE)
+		if (currprefs.gf[GF_NORMAL].gfx_filter_autoscale == AUTOSCALE_RESIZE)
 			return 0;
 		return 1;
 	}
 	else {
-		if (currprefs.rtgallowscaling || currprefs.gf[APMODE_RTG].gfx_filter_autoscale)
+		if (currprefs.rtgallowscaling || currprefs.gf[GF_RTG].gfx_filter_autoscale)
 			return 1;
 	}
 	return 0;
@@ -1408,10 +1459,10 @@ bool handle_events()
 			process_event(event);
 		}
 
-		// Keyboard and mouse read are handled in process_event in Amiberry
+		// Keyboard, mouse and joystick read events are handled in process_event in Amiberry
 		//inputdevicefunc_keyboard.read();
 		//inputdevicefunc_mouse.read();
-		inputdevicefunc_joystick.read();
+		//inputdevicefunc_joystick.read();
 		inputdevice_handle_inputcode();
 	}
 	if (was_paused && (!pause_emulation || quit_program))
@@ -1452,6 +1503,7 @@ void logging_init()
 		logging_started = 1;
 		first++;
 		write_log("%s Logfile\n\n", get_version_string().c_str());
+		write_log("%s\n", get_sdl2_version_string().c_str());
 	}
 }
 
@@ -1807,7 +1859,7 @@ void target_default_options(struct uae_prefs* p, int type)
 		//p->powersavedisabled = true;
 		p->sana2 = false;
 		p->rtgmatchdepth = true;
-		p->gf[APMODE_RTG].gfx_filter_autoscale = RTG_MODE_SCALE;
+		p->gf[GF_RTG].gfx_filter_autoscale = RTG_MODE_SCALE;
 		p->rtgallowscaling = false;
 		p->rtgscaleaspectratio = -1;
 		p->rtgvblankrate = 0;
@@ -1822,10 +1874,10 @@ void target_default_options(struct uae_prefs* p, int type)
 		p->gfx_api = 2;
 		if (p->gfx_api > 1)
 			p->color_mode = 5;
-		if (p->gf[APMODE_NATIVE].gfx_filter == 0 && p->gfx_api)
-			p->gf[APMODE_NATIVE].gfx_filter = 1;
-		if (p->gf[APMODE_RTG].gfx_filter == 0 && p->gfx_api)
-			p->gf[APMODE_RTG].gfx_filter = 1;
+		if (p->gf[GF_NORMAL].gfx_filter == 0 && p->gfx_api)
+			p->gf[GF_NORMAL].gfx_filter = 1;
+		if (p->gf[GF_RTG].gfx_filter == 0 && p->gfx_api)
+			p->gf[GF_RTG].gfx_filter = 1;
 		//WIN32GUI_LoadUIString(IDS_INPUT_CUSTOM, buf, sizeof buf / sizeof(TCHAR));
 		//for (int i = 0; i < GAMEPORT_INPUT_SETTINGS; i++)
 		//	_stprintf(p->input_config_name[i], buf, i + 1);
@@ -2085,9 +2137,42 @@ TCHAR* target_expand_environment(const TCHAR* path, TCHAR* out, int maxlen)
 	return out;
 }
 
-int target_parse_option(struct uae_prefs* p, const char* option, const char* value)
+static const TCHAR *obsolete[] = {
+	_T("killwinkeys"), _T("sound_force_primary"), _T("iconified_highpriority"),
+	_T("sound_sync"), _T("sound_tweak"), _T("directx6"), _T("sound_style"),
+	_T("file_path"), _T("iconified_nospeed"), _T("activepriority"), _T("magic_mouse"),
+	_T("filesystem_codepage"), _T("aspi"), _T("no_overlay"), _T("soundcard_exclusive"),
+	_T("specialkey"), _T("sound_speed_tweak"), _T("sound_lag"),
+	0
+};
+
+static int target_parse_option_hardware(struct uae_prefs *p, const TCHAR *option, const TCHAR *value)
 {
 	TCHAR tmpbuf[CONFIG_BLEN];
+	if (cfgfile_string(option, value, _T("rtg_vblank"), tmpbuf, sizeof tmpbuf / sizeof(TCHAR))) {
+		if (!_tcscmp(tmpbuf, _T("real"))) {
+			p->rtgvblankrate = -1;
+			return 1;
+		}
+		if (!_tcscmp(tmpbuf, _T("disabled"))) {
+			p->rtgvblankrate = -2;
+			return 1;
+		}
+		if (!_tcscmp(tmpbuf, _T("chipset"))) {
+			p->rtgvblankrate = 0;
+			return 1;
+		}
+		p->rtgvblankrate = _tstol(tmpbuf);
+		return 1;
+	}
+
+	return 0;
+}
+
+static int target_parse_option_host(struct uae_prefs *p, const TCHAR *option, const TCHAR *value)
+{
+	TCHAR tmpbuf[CONFIG_BLEN];
+	int v;
 	bool tbool;
 	
 	if (cfgfile_yesno(option, value, _T("middle_mouse"), &tbool)) {
@@ -2164,11 +2249,11 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 	}
 
 	if (cfgfile_string(option, value, _T("soundcardname"), tmpbuf, sizeof tmpbuf / sizeof(TCHAR))) {
-		int i, num;
+		int num;
 
 		num = p->soundcard;
 		p->soundcard = -1;
-		for (i = 0; i < MAX_SOUND_DEVICES && sound_devices[i]; i++) {
+		for (int i = 0; i < MAX_SOUND_DEVICES && sound_devices[i]; i++) {
 			if (i < num)
 				continue;
 			if (!_tcscmp(sound_devices[i]->cfgname, tmpbuf)) {
@@ -2177,7 +2262,7 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 			}
 		}
 		if (p->soundcard < 0) {
-			for (i = 0; i < MAX_SOUND_DEVICES && sound_devices[i]; i++) {
+			for (int i = 0; i < MAX_SOUND_DEVICES && sound_devices[i]; i++) {
 				if (!_tcscmp(sound_devices[i]->cfgname, tmpbuf)) {
 					p->soundcard = i;
 					break;
@@ -2185,7 +2270,7 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 			}
 		}
 		if (p->soundcard < 0) {
-			for (i = 0; i < MAX_SOUND_DEVICES && sound_devices[i]; i++) {
+			for (int i = 0; i < MAX_SOUND_DEVICES && sound_devices[i]; i++) {
 				if (!sound_devices[i]->prefix)
 					continue;
 				int prefixlen = _tcslen(sound_devices[i]->prefix);
@@ -2205,11 +2290,11 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 		return 1;
 	}
 	if (cfgfile_string(option, value, _T("samplersoundcardname"), tmpbuf, sizeof tmpbuf / sizeof(TCHAR))) {
-		int i, num;
+		int num;
 
 		num = p->samplersoundcard;
 		p->samplersoundcard = -1;
-		for (i = 0; i < MAX_SOUND_DEVICES && record_devices[i]; i++) {
+		for (int i = 0; i < MAX_SOUND_DEVICES && record_devices[i]; i++) {
 			if (i < num)
 				continue;
 			if (!_tcscmp(record_devices[i]->cfgname, tmpbuf)) {
@@ -2218,7 +2303,7 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 			}
 		}
 		if (p->samplersoundcard < 0) {
-			for (i = 0; i < MAX_SOUND_DEVICES && record_devices[i]; i++) {
+			for (int i = 0; i < MAX_SOUND_DEVICES && record_devices[i]; i++) {
 				if (!_tcscmp(record_devices[i]->cfgname, tmpbuf)) {
 					p->samplersoundcard = i;
 					break;
@@ -2228,24 +2313,7 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 		return 1;
 	}
 
-	if (cfgfile_string(option, value, _T("rtg_vblank"), tmpbuf, sizeof tmpbuf / sizeof(TCHAR))) {
-		if (!_tcscmp(tmpbuf, _T("real"))) {
-			p->rtgvblankrate = -1;
-			return 1;
-		}
-		if (!_tcscmp(tmpbuf, _T("disabled"))) {
-			p->rtgvblankrate = -2;
-			return 1;
-		}
-		if (!_tcscmp(tmpbuf, _T("chipset"))) {
-			p->rtgvblankrate = 0;
-			return 1;
-		}
-		p->rtgvblankrate = _tstol(tmpbuf);
-		return 1;
-	}
-
-	if (cfgfile_string(option, value, _T("rtg_scale_aspect_ratio"), tmpbuf, sizeof tmpbuf / sizeof(TCHAR))) {
+	if (cfgfile_string(option, value, _T("rtg_scale_aspect_ratio"), tmpbuf, sizeof tmpbuf / sizeof (TCHAR))) {
 		int v1, v2;
 		TCHAR* s;
 
@@ -2304,6 +2372,29 @@ int target_parse_option(struct uae_prefs* p, const char* option, const char* val
 		return 1;
 	}
 
+	return 0;
+}
+
+int target_parse_option(struct uae_prefs *p, const TCHAR *option, const TCHAR *value, int type)
+{
+	int v = 0;
+	if (type & CONFIG_TYPE_HARDWARE) {
+		v = target_parse_option_hardware(p, option, value);
+	} else if (type & CONFIG_TYPE_HOST) {
+		v = target_parse_option_host(p, option, value);
+	}
+	if (v) {
+		return v;
+	}
+	
+	int i = 0;
+	while (obsolete[i]) {
+		if (!strcasecmp(obsolete[i], option)) {
+			write_log(_T("obsolete config entry '%s'\n"), option);
+			return 1;
+		}
+		i++;
+	}
 	return 0;
 }
 
@@ -3359,7 +3450,8 @@ void* uaenative_get_uaevar(void)
 #ifdef _WIN32
 	uaevar.amigawnd = mon->hAmigaWnd;
 #endif
-	//uaevar.z3offset = uae_u32(get_real_address(z3fastmem_bank[0].start)) - z3fastmem_bank[0].start;
+	// WARNING: not 64-bit safe!
+    uaevar.z3offset = (uae_u32)(uae_u64)get_real_address(z3fastmem_bank[0].start) - z3fastmem_bank[0].start;
 	return &uaevar;
 }
 

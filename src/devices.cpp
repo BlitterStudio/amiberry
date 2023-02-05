@@ -300,22 +300,22 @@ void virtualdevice_free(void)
 	// must be first
 	uae_ppc_free();
 #endif
-	free_traps();
-	sampler_free();
-	inputdevice_close();
-	DISK_free();
-	//dump_counts ();
-#ifdef SERIAL_PORT
-	serial_exit();
-#endif
-#ifdef AUTOCONFIG
-	expansion_cleanup();
-#endif
 #ifdef FILESYS
 	filesys_cleanup();
 #endif
 #ifdef BSDSOCKET
 	bsdlib_reset();
+#endif
+	free_traps();
+	sampler_free();
+	inputdevice_close();
+	DISK_free();
+	//dump_counts();
+#ifdef SERIAL_PORT
+	serial_exit();
+#endif
+#ifdef AUTOCONFIG
+	expansion_cleanup();
 #endif
 	device_func_free();
 #ifdef WITH_LUA

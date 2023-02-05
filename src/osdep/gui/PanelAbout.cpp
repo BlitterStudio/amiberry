@@ -16,22 +16,14 @@ static gcn::Icon* icon;
 static gcn::Image* amiberryLogoImage;
 static gcn::TextBox* textBox;
 static gcn::ScrollArea* textBoxScrollArea;
-static SDL_version compiled;
-static SDL_version linked;
 
 void InitPanelAbout(const config_category& category)
 {
-	SDL_VERSION(&compiled);
-	SDL_GetVersion(&linked);
-	
 	amiberryLogoImage = gcn::Image::load(prefix_with_data_path("amiberry-logo.png"));
 	icon = new gcn::Icon(amiberryLogoImage);
 	lblEmulatorVersion = new gcn::Label(get_version_string());
 	lblCopyright = new gcn::Label("Copyright (C) 2016-2022 Dimitris Panokostas");
-	std::ostringstream sdl_compiled;
-	sdl_compiled << "Compiled against SDL2 v" << int(compiled.major) << "." << int(compiled.minor) << "." << int(compiled.patch);
-	sdl_compiled << ", Linked against SDL2 v" << int(linked.major) << "." << int(linked.minor) << "." << int(linked.patch);
-	lblSDL_compiled_version = new gcn::Label(sdl_compiled.str());
+	lblSDL_compiled_version = new gcn::Label(get_sdl2_version_string());
 	
 	textBox = new gcn::TextBox(
 		"This program is free software: you can redistribute it and/or modify\n"

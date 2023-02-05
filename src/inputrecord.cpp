@@ -135,7 +135,7 @@ static void inprec_rend (void)
 {
 	if (!input_record || !inprec_zf)
 		return;
-	int size = inprec_p - inprec_plast;
+	int size = addrdiff(inprec_p, inprec_plast);
 	inprec_plast[1] = size >> 8;
 	inprec_plast[2] = size >> 0;
 	flush ();
@@ -150,7 +150,7 @@ static bool inprec_realtime (bool stopstart)
 	write_log (_T("INPREC: play -> record\n"));
 	input_record = INPREC_RECORD_RERECORD;
 	input_play = 0;
-	int offset = inprec_p - inprec_buffer;
+	int offset = addrdiff(inprec_p, inprec_buffer);
 	zfile_fseek (inprec_zf, offset, SEEK_SET);
 	zfile_truncate (inprec_zf, offset);
 	xfree (inprec_buffer);
@@ -401,7 +401,7 @@ int inprec_open (const TCHAR *fname, const TCHAR *statefilename)
 		i = inprec_pu32 ();
 		while (i-- > 0)
 			inprec_pu8 ();
-		header_end = inprec_plastptr - inprec_buffer;
+		header_end = addrdiff(inprec_plastptr, inprec_buffer);
 		inprec_pstr (savestate_fname);
 		if (savestate_fname[0]) {
 			savestate_state = STATE_RESTORE;
@@ -445,7 +445,7 @@ int inprec_open (const TCHAR *fname, const TCHAR *statefilename)
 			}
 		}
 		inprec_p = inprec_plastptr;
-		header_end2 = inprec_plastptr - inprec_buffer;
+		header_end2 = addrdiff(inprec_plastptr,  inprec_buffer);
 		findlast ();
 	} else if (input_record) {
 		seed = uaesrand (seed);
@@ -749,7 +749,7 @@ int inprec_getposition (void)
 {
 	int pos = -1;
 	if (input_play == INPREC_PLAY_RERECORD) {
-		pos = inprec_p - inprec_buffer;
+		pos = addrdiff(inprec_p, inprec_buffer);
 	} else if (input_record) {
 		pos = zfile_ftell32(inprec_zf);
 	}

@@ -35,7 +35,7 @@
 #include "threaddep/thread.h"
 #include "gayle.h"
 #include "debug.h"
-//#include "debugmem.h"
+#include "debugmem.h"
 #include "gfxboard.h"
 #include "cpuboard.h"
 //#include "uae/ppc.h"
@@ -1234,7 +1234,7 @@ uae_u8 *REGPARAM2 default_xlate (uaecptr addr)
 				write_log (_T("Your Amiga program just did something terribly stupid %08X PC=%08X\n"), addr, M68K_GETPC);
 #ifdef DEBUGGER
 				if (debugging || DEBUG_STUPID) {
-					activate_debugger ();
+					activate_debugger();
 					m68k_dumpstate(NULL, 0xffffffff);
 				}
 #endif
@@ -1247,9 +1247,6 @@ uae_u8 *REGPARAM2 default_xlate (uaecptr addr)
 					write_log (_T("\n"));
 				}
 				memory_map_dump();
-#ifdef DEBUGGER
-				m68k_dumpstate(NULL, 0xffffffff);
-#endif
 			}
 			if (0 || (gary_toenb && (gary_nonrange(addr) || (size > 1 && gary_nonrange(addr + size - 1))))) {
 				hardware_exception2(addr, 0, true, true, size);
@@ -2045,7 +2042,7 @@ static void init_mem_banks (void)
 	for (unsigned int i = 0; i < MEMORY_BANKS; i++)
 		put_mem_bank (i << 16, &dummy_bank, 0);
 #ifdef NATMEM_OFFSET
-	//delete_shmmaps(0, 0xFFFF0000);
+	//delete_shmmaps (0, 0xFFFF0000);
 #endif
 }
 
@@ -2514,14 +2511,10 @@ void memory_clear (void)
 	if (savestate_state == STATE_RESTORE)
 		return;
 	
-	if (chipmem_bank.baseaddr) {
-		fillpattern(&chipmem_bank);
-	}
-
-	if (bogomem_bank.baseaddr) {
-		// TODO: slow RAM can have 16x chips even if Agnus is ECS.
-		fillpattern(&bogomem_bank);
-	}
+	if (chipmem_bank.baseaddr)
+		memset(chipmem_bank.baseaddr, 0, chipmem_bank.allocated_size);
+	if (bogomem_bank.baseaddr)
+		memset(bogomem_bank.baseaddr, 0, bogomem_bank.allocated_size);
 	
 	if (mem25bit_bank.baseaddr)
 		memset(mem25bit_bank.baseaddr, 0, mem25bit_bank.allocated_size);

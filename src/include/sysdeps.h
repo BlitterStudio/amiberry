@@ -88,6 +88,12 @@ using namespace std;
 #define REGPARAM3 JITCALL
 #endif
 
+#if CPU_64_BIT
+#define addrdiff(a, b) ((int)((a) - (b)))
+#else
+#define addrdiff(a, b) ((a) - (b))
+#endif
+
 #ifndef __STDC__
 #ifndef _MSC_VER
 #error "Your compiler is not ANSI. Get a real one."
@@ -175,7 +181,7 @@ struct utimbuf
 };
 #endif
 
-/* If char has more then 8 bits, good night. */
+/* If char has more than 8 bits, good night. */
 typedef unsigned char uae_u8;
 typedef signed char uae_s8;
 typedef char uae_char;
@@ -183,6 +189,14 @@ typedef char uae_char;
 typedef struct { uae_u8 RGB[3]; } RGB;
 
 #include "uae/types.h"
+
+#ifndef AMIBERRY // defined inline in thread.h
+uae_atomic atomic_and(volatile uae_atomic* p, uae_u32 v);
+uae_atomic atomic_or(volatile uae_atomic* p, uae_u32 v);
+uae_atomic atomic_inc(volatile uae_atomic* p);
+uae_atomic atomic_dec(volatile uae_atomic* p);
+uae_u32 atomic_bit_test_and_reset(volatile uae_atomic* p, uae_u32 v);
+#endif
 
 #ifdef HAVE_STRDUP
 #define my_strdup _tcsdup
@@ -393,67 +407,6 @@ extern void gui_message (const TCHAR *,...);
  * Best to leave this as it is.
  */
 #define CPU_EMU_SIZE 0
-
-/*
- * Byte-swapping functions
- */
-
-#ifdef ARMV6_ASSEMBLY
-
-STATIC_INLINE uae_u32 do_byteswap_32(uae_u32 v) {
-  __asm__ (
-	"rev %0, %0"
-	: "=r" (v) : "0" (v) ); return v;
-}
-
-STATIC_INLINE uae_u32 do_byteswap_16(uae_u32 v) {
-  __asm__ (
-	"revsh %0, %0\n\t"
-	"uxth %0, %0"
-	: "=r" (v) : "0" (v) ); return v;
-}
-#define bswap_16(x) do_byteswap_16(x)
-#define bswap_32(x) do_byteswap_32(x)
-
-#elif defined(CPU_AARCH64)
-
-STATIC_INLINE uae_u32 do_byteswap_32(uae_u32 v) {
-  __asm__ (
-	"rev %w0, %w0"
-	: "=r" (v) : "0" (v) ); return v;
-}
-
-STATIC_INLINE uae_u32 do_byteswap_16(uae_u32 v) {
-  __asm__ (
-	"rev16 %w0, %w0\n\t"
-	"uxth %w0, %w0"
-	: "=r" (v) : "0" (v) ); return v;
-}
-#define bswap_16(x) do_byteswap_16(x)
-#define bswap_32(x) do_byteswap_32(x)
-
-#else
-
-/* Try to use system bswap_16/bswap_32 functions. */
-#if defined HAVE_BSWAP_16 && defined HAVE_BSWAP_32
-# include <byteswap.h>
-#  ifdef HAVE_BYTESWAP_H
-#  include <byteswap.h>
-# endif
-#else
-/* Else, if using SDL, try SDL's endian functions. */
-#if defined (USE_SDL)
-#include <SDL_endian.h>
-#define bswap_16(x) SDL_Swap16(x)
-#define bswap_32(x) SDL_Swap32(x)
-#else
-/* Otherwise, we'll roll our own. */
-#define bswap_16(x) (((x) >> 8) | (((x) & 0xFF) << 8))
-#define bswap_32(x) (((x) << 24) | (((x) << 8) & 0x00FF0000) | (((x) >> 8) & 0x0000FF00) | ((x) >> 24))
-#endif
-#endif
-
-#endif /* ARMV6_ASSEMBLY*/
 
 #ifndef __cplusplus
 

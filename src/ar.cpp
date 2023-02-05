@@ -1363,7 +1363,7 @@ static void disable_rom_test (void)
 	*/
 
 	if (armodel == 1) {
-		uae_u16 search_value_rel = end_addr - start_addr;
+		uae_u16 search_value_rel = addrdiff(end_addr, start_addr);
 		addr = find_relative_word(start_addr, end_addr, search_value_rel);
 
 		if (addr) {
@@ -1375,7 +1375,7 @@ static void disable_rom_test (void)
 			}
 		}
 	} else {
-		uae_u32 search_value_abs = arrom_start + end_addr - start_addr;
+		uae_u32 search_value_abs = arrom_start + addrdiff(end_addr, start_addr);
 		addr = find_absolute_long (start_addr, end_addr, search_value_abs);
 
 		if (addr) {

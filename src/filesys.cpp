@@ -3087,13 +3087,11 @@ static void startup_update_unit (Unit *unit, UnitInfo *uinfo)
 	memcpy (&unit->ui, uinfo, sizeof (UnitInfo));
 	unit->ui.devname = uinfo->devname;
 #ifdef AMIBERRY
-	//printf("%p %s\n", uinfo->volname, uinfo->volname);
 	if (!uinfo->volname) {
 		// prevents a crash on linux/mac, when e.g. a cd-rom
 		// image was not found
 		uinfo->volname = my_strdup("");
 	}
-	//printf("%p %s\n", uinfo->volname, uinfo->volname);
 #endif
 	unit->ui.volname = my_strdup (uinfo->volname); /* might free later for rename */
 }
@@ -7048,6 +7046,17 @@ void filesys_free_handles (void)
 	}
 }
 
+static void free_shellexecute(void)
+{
+	shell_execute_data = 0;
+	shell_execute_process = 0;
+	shellexecute2_queued = 0;
+	for (int i = 0; i < SHELLEXEC_MAX; i++) {
+		struct ShellExecute2 *se2 = &shellexecute2[i];
+		shellexecute2_free(se2);
+	}
+}
+
 static void filesys_reset2 (void)
 {
 	Unit *u, *u1;
@@ -7071,14 +7080,7 @@ void filesys_reset (void)
 	load_injected_icons();
 	filesys_reset2 ();
 	initialize_mountinfo ();
-
-	shell_execute_data = 0;
-	shell_execute_process = 0;
-	shellexecute2_queued = 0;
-	for (int i = 0; i < SHELLEXEC_MAX; i++) {
-		struct ShellExecute2 *se2 = &shellexecute2[i];
-		shellexecute2_free(se2);
-	}
+	free_shellexecute();
 }
 
 static void filesys_prepare_reset2 (void)
@@ -9002,12 +9004,15 @@ void filesys_vsync (void)
 
 void filesys_cleanup(void)
 {
+	filesys_prepare_reset();
+	filesys_reset2();
 	filesys_free_handles();
 	free_mountinfo();
 	destroy_comm_pipe(&shellexecute_pipe);
 	uae_sem_destroy(&singlethread_int_sem);
 	uae_sem_destroy(&shellexec_sem);
 	shell_execute_data = 0;
+	free_shellexecute();
 }
 
 void filesys_install (void)
@@ -9104,7 +9109,7 @@ void filesys_install (void)
 	org (loop);
 
 	create_ks12_boot();
-	//create_68060_nofpu();
+	create_68060_nofpu();
 }
 
 uaecptr filesys_get_entry(int index)

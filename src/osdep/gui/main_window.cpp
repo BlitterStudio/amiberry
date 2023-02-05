@@ -453,12 +453,12 @@ void amiberry_gui_init()
 	}
 	SDL_RenderSetLogicalSize(sdl_renderer, GUI_WIDTH, GUI_HEIGHT);
 #else
-	setup_cursor();
+	//setup_cursor();
 
 	if (!mon->sdl_window)
 	{
 		Uint32 flags = SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
-		if (strcmpi(sdl_video_driver, "KMSDRM") == 0
+		if (sdl_video_driver != nullptr && strcmpi(sdl_video_driver, "KMSDRM") == 0
 			|| (sdl_mode.w < 800 && sdl_mode.h < 600))
 			flags = SDL_WINDOW_FULLSCREEN_DESKTOP;
 
@@ -664,9 +664,9 @@ void check_input()
 		case SDL_JOYDEVICEREMOVED:
 		//case SDL_CONTROLLERDEVICEREMOVED:
 			write_log("GUI: SDL2 Controller/Joystick added or removed, re-running import joysticks...\n");
-			import_joysticks();
 			if (inputdevice_devicechange(&currprefs))
 			{
+				import_joysticks();
 				joystick_refresh_needed = true;
 				RefreshPanelInput();
 			}
