@@ -181,7 +181,7 @@ struct utimbuf
 };
 #endif
 
-/* If char has more then 8 bits, good night. */
+/* If char has more than 8 bits, good night. */
 typedef unsigned char uae_u8;
 typedef signed char uae_s8;
 typedef char uae_char;
@@ -190,11 +190,13 @@ typedef struct { uae_u8 RGB[3]; } RGB;
 
 #include "uae/types.h"
 
+#ifndef AMIBERRY // defined inline in thread.h
 uae_atomic atomic_and(volatile uae_atomic* p, uae_u32 v);
 uae_atomic atomic_or(volatile uae_atomic* p, uae_u32 v);
 uae_atomic atomic_inc(volatile uae_atomic* p);
 uae_atomic atomic_dec(volatile uae_atomic* p);
 uae_u32 atomic_bit_test_and_reset(volatile uae_atomic* p, uae_u32 v);
+#endif
 
 #ifdef HAVE_STRDUP
 #define my_strdup _tcsdup
