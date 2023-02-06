@@ -24,7 +24,7 @@
 #define valloc(x) memalign(getpagesize(), x)
 #endif
 
-#if defined(__x86_64__) || defined(CPU_AARCH64)
+#if defined(__x86_64__) || defined(CPU_AARCH64) || defined(__MACH__)
 static int os_64bit = 1;
 #else
 static int os_64bit = 0;
