@@ -937,6 +937,10 @@ void vkbd_redraw(void)
 	SDL_SetTextureAlphaMod(toDraw, vkbdAlpha);
 	SDL_RenderCopy(sdl_renderer, toDraw, nullptr, &rect);
 
+	// Store color so we can restore later
+	SDL_Color color;
+	SDL_GetRenderDrawColor(sdl_renderer, &color.r, &color.g, &color.b, &color.a);
+	
 	// Draw currently selected key:
 	rect = vkbd_get_key_drawing_rect(vkbdActualIndex);
 	int alpha = static_cast<int>((1.0 - vkbdTransparency) * vkbdPressedKeyColor.a);
@@ -950,6 +954,8 @@ void vkbd_redraw(void)
 		rect = vkbd_get_key_drawing_rect(index);
 		SDL_RenderFillRect(sdl_renderer, &rect);
 	}
+
+	SDL_SetRenderDrawColor(sdl_renderer, color.r, color.g, color.b, color.a);
 
 }
 
@@ -1079,11 +1085,6 @@ bool vkbd_process(int state, int *keycode, int *pressed)
 		}
 	}
 	vkbdPreviousState = state;
-
-	if (result && vkbdActualIndex == 93)
-	{
-		uae_quit();
-	}
 
 	return result;
 }
