@@ -32,6 +32,7 @@ extern int doreadser, serstat;
 extern void serial_flush_buffer (void);
 
 extern void serial_hsynchandler(void);
+extern void serial_check_irq(void);
 extern void serial_rethink(void);
 
 extern int uaeser_getdatalength (void);
