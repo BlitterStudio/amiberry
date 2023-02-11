@@ -1032,9 +1032,6 @@
     <ClCompile Include="..\src\parser.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\serial_win32.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\external\libguisan\src\actionevent.cpp">
       <Filter>external\libguisan\src</Filter>
     </ClCompile>
@@ -1424,6 +1421,9 @@
     </ClCompile>
     <ClCompile Include="..\src\linetoscr.cpp">
       <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\osdep\amiberry_serial.cpp">
+      <Filter>src\osdep</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
