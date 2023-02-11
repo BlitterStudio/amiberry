@@ -262,6 +262,9 @@ void devices_hsync(void)
 	CIA_hsync_prehandler();
 
 	decide_blitter(-1);
+#ifdef AHI
+	ahi_hsync();
+#endif
 #ifdef SERIAL_PORT
 	serial_hsynchandler();
 #endif

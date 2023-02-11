@@ -642,3 +642,18 @@ void init_ahi()
 	}
 #endif
 }
+
+void ahi_hsync()
+{
+#ifdef AHI
+	if (ahi_on) {
+		static int count;
+		count++;
+		//15625/count freebuffer check
+		if (count > ahi_pollrate) {
+			ahi_updatesound(1);
+			count = 0;
+		}
+	}
+#endif
+}

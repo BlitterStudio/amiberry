@@ -427,11 +427,6 @@ static void serdatcopy(void)
 
 void serial_hsynchandler()
 {
-#ifdef AHI
-	extern void hsyncstuff(void);
-	hsyncstuff();
-#endif
-
 	if (lastbitcycle_active_hsyncs > 0)
 		lastbitcycle_active_hsyncs--;
 
@@ -776,30 +771,5 @@ int check(const sp_return result)
 }
 
 
-// TODO These should be moved somewhere more relevant
+// TODO This should be moved somewhere more relevant (PARALLEL support)
 int flashscreen = 0;
-
-void doflashscreen(void)
-{
-	flashscreen = 10;
-	init_colors(0);
-	picasso_refresh(0);
-	reset_drawing();
-}
-
-void hsyncstuff(void)
-{
-#ifdef AHI
-	{
-		if (ahi_on) {
-			static int count;
-			count++;
-			//15625/count freebuffer check
-			if (count > ahi_pollrate) {
-				ahi_updatesound(1);
-				count = 0;
-			}
-		}
-	}
-#endif
-}
