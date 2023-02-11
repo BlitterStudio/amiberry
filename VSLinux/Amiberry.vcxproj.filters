@@ -1218,6 +1218,9 @@
     <ClCompile Include="..\src\debug.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\osdep\amiberry_serial.cpp">
+      <Filter>src\osdep</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\archivers\7z\7zBuf.h">

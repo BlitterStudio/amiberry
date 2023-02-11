@@ -440,7 +440,6 @@ OBJS = \
 	src/main.o \
 	src/memory.o \
 	src/native2amiga.o \
-	src/parser.o \
 	src/rommgr.o \
 	src/rtc.o \
 	src/sampler.o \
@@ -449,14 +448,12 @@ OBJS = \
 	src/scsi.o \
 	src/scsiemul.o \
 	src/scsitape.o \
-	src/serial_win32.o \
 	src/statusline.o \
 	src/tabletlibrary.o \
 	src/tinyxml2.o \
 	src/traps.o \
 	src/uaeexe.o \
 	src/uaelib.o \
-	src/uaeserial.o \
 	src/uaenative.o \
 	src/uaeresource.o \
 	src/zfile.o \
@@ -533,6 +530,7 @@ OBJS = \
 	src/osdep/amiberry_gfx.o \
 	src/osdep/amiberry_gui.o \
 	src/osdep/amiberry_mem.o \
+	src/osdep/amiberry_serial.o \
 	src/osdep/amiberry_whdbooter.o \
 	src/osdep/sigsegv_handler.o \
 	src/osdep/retroarch.o \

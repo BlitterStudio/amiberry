@@ -85,7 +85,6 @@ LOCAL_SRC_FILES := src/akiko.cpp \
                     src/main.cpp \
                     src/memory.cpp \
                     src/native2amiga.cpp \
-                    src/parser.cpp \
                     src/rommgr.cpp \
                     src/rtc.cpp \
                     src/savestate.cpp \
@@ -93,14 +92,12 @@ LOCAL_SRC_FILES := src/akiko.cpp \
                     src/scsi.cpp \
 					src/scsiemul.cpp \
                     src/scsitape.cpp \
-                    src/serial_win32.cpp \
                     src/statusline.cpp \
 					src/tabletlibrary.cpp \
 					src/tinyxml2.cpp \
                     src/traps.cpp \
 					src/uaeexe.cpp \
                     src/uaelib.cpp \
-                    src/uaeserial.cpp \
                     src/uaenative.cpp \
                     src/uaeresource.cpp \
 					src/uaeserial.cpp \
@@ -217,6 +214,7 @@ LOCAL_SRC_FILES := src/akiko.cpp \
                     src/osdep/amiberry_gfx.cpp \
                     src/osdep/amiberry_gui.cpp \
                     src/osdep/amiberry_mem.cpp \
+					src/osdep/amiberry_serial.cpp \
                     src/osdep/amiberry_whdbooter.cpp \
                     src/osdep/sigsegv_handler.cpp \
 					src/osdep/retroarch.cpp \
@@ -281,7 +279,7 @@ LOCAL_SRC_FILES += src/newcpu.cpp \
                     src/jit/compemu_fpp.cpp \
                     src/jit/compemu_support.cpp
 
-LOCAL_SHARED_LIBRARIES := SDL2 SDL2_image SDL2_ttf SDL2_mixer mpg123 guisan
+LOCAL_SHARED_LIBRARIES := SDL2 SDL2_image SDL2_ttf SDL2_mixer mpg123 guisan serialport
 
 LOCAL_LDLIBS := -ldl -lGLESv1_CM -lGLESv2 -llog -lz
 
