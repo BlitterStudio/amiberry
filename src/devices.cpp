@@ -53,9 +53,6 @@
 #endif
 #include "drawing.h"
 //#include "videograb.h"
-#ifdef AHI
-#include "ahi_v1.h"
-#endif
 #include "rommgr.h"
 #include "newcpu.h"
 #ifdef RETROPLATFORM
@@ -218,11 +215,8 @@ void devices_reset(int hardreset)
 	uaeserialdev_reset();
 	uaeserialdev_start_threads();
 #endif
-#if defined (PARALLEL_PORT)
+#if defined (PARALLEL_PORT) || defined (AHI)
 	initparallel();
-#endif
-#if defined (AHI)
-	init_ahi();
 #endif
 	dongle_reset();
 	sampler_init();
@@ -262,9 +256,6 @@ void devices_hsync(void)
 	CIA_hsync_prehandler();
 
 	decide_blitter(-1);
-#ifdef AHI
-	ahi_hsync();
-#endif
 #ifdef SERIAL_PORT
 	serial_hsynchandler();
 #endif
