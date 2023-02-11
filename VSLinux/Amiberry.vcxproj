@@ -596,7 +596,6 @@
     <ClCompile Include="..\src\scsi.cpp" />
     <ClCompile Include="..\src\scsiemul.cpp" />
     <ClCompile Include="..\src\scsitape.cpp" />
-    <ClCompile Include="..\src\serial_win32.cpp" />
     <ClCompile Include="..\src\sinctable.cpp.in" />
     <ClCompile Include="..\src\sounddep\sound.cpp" />
     <ClCompile Include="..\src\statusline.cpp" />
