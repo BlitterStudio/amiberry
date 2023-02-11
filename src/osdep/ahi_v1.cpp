@@ -242,18 +242,7 @@ void setvolume_ahi (int vol)
 
 static int ahi_init_sound(void)
 {
-	//HRESULT hr;
-	//DSBUFFERDESC sound_buffer;
-	//DSCAPS DSCaps;
-
 	enumerate_sound_devices();
-	//wavfmt.wFormatTag = WAVE_FORMAT_PCM;
-	//wavfmt.nChannels = sound_channels_ahi;
-	//wavfmt.nSamplesPerSec = sound_freq_ahi;
-	//wavfmt.wBitsPerSample = sound_bits_ahi;
-	//wavfmt.nBlockAlign = wavfmt.wBitsPerSample / 8 * wavfmt.nChannels;
-	//wavfmt.nAvgBytesPerSec = wavfmt.nBlockAlign * sound_freq_ahi;
-	//wavfmt.cbSize = 0;
 
 	if (!amigablksize)
 		return 0;
@@ -275,11 +264,7 @@ static int ahi_init_sound(void)
 
 	if (ahi_dev == 0)
 		ahi_dev = SDL_OpenAudioDevice(devname, 0, &ahi_want, &ahi_have, 0);
-	
-	//if (sound_devices[currprefs.win32_soundcard]->type != SOUND_DEVICE_DS)
-	//	hr = DirectSoundCreate(NULL, &lpDS2, NULL);
-	//else
-	//	hr = DirectSoundCreate(&sound_devices[currprefs.win32_soundcard]->guid, &lpDS2, NULL);
+
 	if (ahi_dev == 0) {
 		write_log(_T("AHI: Failed to open selected SDL2 device: %s, retrying with default device\n"), SDL_GetError());
 		ahi_dev = SDL_OpenAudioDevice(nullptr, 0, &ahi_want, &ahi_have, 0);
@@ -292,48 +277,7 @@ static int ahi_init_sound(void)
 
 	SDL_PauseAudioDevice(ahi_dev, 0);
 
-	//memset(&sound_buffer, 0, sizeof(DSBUFFERDESC));
-	//sound_buffer.dwSize = sizeof(DSBUFFERDESC);
-	//sound_buffer.dwFlags = DSBCAPS_PRIMARYBUFFER;
-	//sound_buffer.dwBufferBytes = 0;
-	//sound_buffer.lpwfxFormat = NULL;
-
-	//DSCaps.dwSize = sizeof(DSCAPS);
-	//hr = IDirectSound_GetCaps(lpDS2, &DSCaps);
-	//if (SUCCEEDED(hr)) {
-	//	if (DSCaps.dwFlags & DSCAPS_EMULDRIVER)
-	//		write_log(_T("AHI: Your DirectSound Driver is emulated via WaveOut - yuck!\n"));
-	//}
-	//if (FAILED(IDirectSound_SetCooperativeLevel(lpDS2, hMainWnd, DSSCL_PRIORITY)))
-	//	return 0;
-	//hr = IDirectSound_CreateSoundBuffer(lpDS2, &sound_buffer, &lpDSBprimary2, NULL);
-	//if (FAILED(hr)) {
-	//	write_log(_T("AHI: CreateSoundBuffer() failure: %s\n"), DXError(hr));
-	//	return 0;
-	//}
-	//hr = IDirectSoundBuffer_SetFormat(lpDSBprimary2, &wavfmt);
-	//if (FAILED(hr)) {
-	//	write_log(_T("AHI: SetFormat() failure: %s\n"), DXError(hr));
-	//	return 0;
-	//}
-	//sound_buffer.dwBufferBytes = ahisndbufsize;
-	//sound_buffer.lpwfxFormat = &wavfmt;
-	//sound_buffer.dwFlags = DSBCAPS_CTRLFREQUENCY | DSBCAPS_CTRLVOLUME
-	//	| DSBCAPS_GETCURRENTPOSITION2 | DSBCAPS_GLOBALFOCUS | DSBCAPS_LOCSOFTWARE;
-	//sound_buffer.guid3DAlgorithm = GUID_NULL;
-	//hr = IDirectSound_CreateSoundBuffer(lpDS2, &sound_buffer, &lpDSB2, NULL);
-	//if (FAILED(hr)) {
-	//	write_log(_T("AHI: CreateSoundBuffer() failure: %s\n"), DXError(hr));
-	//	return 0;
-	//}
-
 	setvolume_ahi(0);
-
-	//hr = IDirectSoundBuffer_GetFormat(lpDSBprimary2, &wavfmt, 500, 0);
-	//if (FAILED(hr)) {
-	//	write_log(_T("AHI: GetFormat() failure: %s\n"), DXError(hr));
-	//	return 0;
-	//}
 
 	ahisndbufpt = reinterpret_cast<int*>(ahisndbuffer);
 	sndptrmax = ahisndbuffer + ahisndbufsize;
@@ -357,10 +301,11 @@ int ahi_open_sound (void)
 	return 0;
 }
 
-
+#ifndef AMIBERRY
 static void *bswap_buffer = NULL;
 static uae_u32 bswap_buffer_size = 0;
 static float syncdivisor;
+#endif
 
 uae_u32 REGPARAM2 ahi_demux (TrapContext *context)
 {
@@ -401,7 +346,6 @@ uae_u32 REGPARAM2 ahi_demux (TrapContext *context)
 
 	switch (opcode)
 	{
-		uae_u32 src, num_vars;
 		static int cap_pos, clipsize;
 		static TCHAR *clipdat;
 
@@ -547,7 +491,7 @@ uae_u32 REGPARAM2 ahi_demux (TrapContext *context)
 
 		if (OpenClipboard(0)) {
 			EmptyClipboard();
-			slen = _tcslen(s);
+			slen = uaetcslen(s);
 			if (p)
 				GlobalFree(p);
 			p = (LPTSTR)GlobalAlloc(GMEM_MOVEABLE, (slen + 1) * sizeof(TCHAR));
@@ -573,10 +517,10 @@ uae_u32 REGPARAM2 ahi_demux (TrapContext *context)
 		return 0;
 
 	case 20:
-		return 1; // enforcer_enable(m68k_dreg(regs, 1));
+		return 1; // return enforcer_enable(m68k_dreg(regs, 1));
 
 	case 21:
-		return 1; // enforcer_disable();
+		return 1; // return enforcer_disable();
 
 	case 25:
 		flushprinter ();
@@ -585,16 +529,16 @@ uae_u32 REGPARAM2 ahi_demux (TrapContext *context)
 	case 100: // open dll
 		return uaenative_open_library(context, UNI_FLAG_COMPAT);
 
-	case 101:	//get dll label
+	case 101: //get dll label
 		return uaenative_get_function(context, UNI_FLAG_COMPAT);
 
-	case 102:	//execute native code
+	case 102: //execute native code
 		return uaenative_call_function(context, UNI_FLAG_COMPAT);
 
-	case 103:	//close dll
+	case 103: //close dll
 		return uaenative_close_library(context, UNI_FLAG_COMPAT);
 
-	case 104:        //screenlost
+	case 104: //screenlost
 		{
 			static int oldnum = 0;
 			if (uaevar.changenum == oldnum)
@@ -604,9 +548,26 @@ uae_u32 REGPARAM2 ahi_demux (TrapContext *context)
 		}
 
 #ifndef CPU_64_BIT
-	case 105:   //returns memory offset
+	case 105: //returns memory offset
 		return (uae_u32)get_real_address(0);
 #endif
+
+	case 110:
+	{
+		put_long(m68k_areg(regs, 0), 0);
+		put_long(m68k_areg(regs, 0) + 4, 1e+9);
+	}
+	return 1;
+
+	case 111:
+	{
+		struct timespec ts {};
+		clock_gettime(CLOCK_MONOTONIC, &ts);
+		const auto time = int64_t(ts.tv_sec) * 1000000000 + ts.tv_nsec;
+		put_long(m68k_areg(regs, 0), uae_u32(time & 0xffffffff));
+		put_long(m68k_areg(regs, 0) + 4, uae_u32(time >> 32));
+			}
+	return 1;
 
 	case 200:
 		ahitweak = m68k_dreg (regs, 1);
@@ -618,7 +579,7 @@ uae_u32 REGPARAM2 ahi_demux (TrapContext *context)
 		return 1;
 
 	default:
-		return 0x12345678;     // Code for not supported function
+		return 0x12345678; // Code for not supported function
 	}
 }
 
