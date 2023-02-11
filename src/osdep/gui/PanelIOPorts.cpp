@@ -10,11 +10,9 @@
 #include "gui_handling.h"
 #include "sounddep/sound.h"
 
-#include <libserialport.h>
-
 #ifdef SERIAL_PORT
-static gcn::Label* lblSerialPort;
-static gcn::DropDown* cboSerialPort;
+static gcn::Window* grpSerialDevice;
+static gcn::TextField* txtSerialDevice;
 static gcn::CheckBox* chkSerialDirect;
 static gcn::CheckBox* chkRTSCTS;
 static gcn::CheckBox* chkUaeSerial;
@@ -65,7 +63,24 @@ static const char* listValues[] = { "none", "RoboCop 3", "Leader Board", "B.A.T.
 static string_list_model dongle_list(listValues, 13);
 
 static string_list_model sampler_list(nullptr, 0);
-static string_list_model serial_ports(nullptr, 0);
+
+#ifdef SERIAL_PORT
+class IOKeyListener : public gcn::KeyListener
+{
+public:
+	void keyPressed(gcn::KeyEvent& keyEvent) override
+	{
+		if (keyEvent.getSource() == txtSerialDevice)
+		{
+			snprintf(changed_prefs.sername, 256, "%s", txtSerialDevice->getText().c_str());
+			if (changed_prefs.sername[0])
+				changed_prefs.use_serial = true;
+			else
+				changed_prefs.use_serial = false;
+		}
+	}
+};
+#endif
 
 class IOActionListener : public gcn::ActionListener
 {
@@ -73,21 +88,8 @@ public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
 #ifdef SERIAL_PORT
-		if (actionEvent.getSource() == cboSerialPort)
-		{
-			const auto selected = cboSerialPort->getSelected();
-			if (selected == 0)
-			{
-				changed_prefs.sername[0] = 0;
-				changed_prefs.use_serial = false;
-			}
-			else
-			{
-				const auto port_name = serial_ports.getElementAt(selected);
-				snprintf(changed_prefs.sername, 256, "%s", port_name.c_str());
-				changed_prefs.use_serial = true;
-			}
-		}
+		if (actionEvent.getSource() == txtSerialDevice)
+			snprintf(changed_prefs.sername, 256, "%s", txtSerialDevice->getText().c_str());
 
 		else if (actionEvent.getSource() == chkSerialDirect)
 			changed_prefs.serial_direct = chkSerialDirect->isSelected();
@@ -115,6 +117,9 @@ public:
 };
 
 IOActionListener* ioActionListener;
+#ifdef SERIAL_PORT
+IOKeyListener* ioKeyListener;
+#endif
 
 void InitPanelIO(const config_category& category)
 {
@@ -131,43 +136,19 @@ void InitPanelIO(const config_category& category)
 			sampler_list.add_element(tmp);
 	}
 
-	serial_ports.clear_elements();
-	serial_ports.add_element("none");
-	/* A pointer to a null-terminated array of pointers to
-	* struct sp_port, which will contain the serial ports found.*/
-	struct sp_port** port_list;
-	/* Call sp_list_ports() to get the ports. The port_list
-	* pointer will be updated to refer to the array created. */
-	const enum sp_return result = sp_list_ports(&port_list);
-	if (result != SP_OK) 
-	{
-		write_log("sp_list_ports() failed!\n");
-	}
-	else
-	{
-		for (int i = 0; port_list[i] != NULL; i++)
-		{
-			const struct sp_port* port = port_list[i];
-
-			/* Get the name of the port. */
-			const char* port_name = sp_get_port_name(port);
-			serial_ports.add_element(port_name);
-		}
-		/* Free the array created by sp_list_ports(). */
-		sp_free_port_list(port_list);
-	}
-
 	ioActionListener = new IOActionListener();
+#ifdef SERIAL_PORT
+	ioKeyListener = new IOKeyListener();
+#endif
 
 #ifdef SERIAL_PORT
-	lblSerialPort = new gcn::Label("Serial port:");
-	lblSerialPort->setAlignment(gcn::Graphics::RIGHT);
-	cboSerialPort = new gcn::DropDown(&serial_ports);
-	cboSerialPort->setSize(350, cboSerialPort->getHeight());
-	cboSerialPort->setBaseColor(gui_baseCol);
-	cboSerialPort->setBackgroundColor(colTextboxBackground);
-	cboSerialPort->setId("cboSerialPort");
-	cboSerialPort->addActionListener(ioActionListener);
+	grpSerialDevice = new gcn::Window("Serial Port");
+	grpSerialDevice->setId("grpSerialDevice");
+
+	txtSerialDevice = new gcn::TextField();
+	txtSerialDevice->setId("txtSerialDevice");
+	txtSerialDevice->addActionListener(ioActionListener);
+	txtSerialDevice->addKeyListener(ioKeyListener);
 
 	chkSerialDirect = new gcn::CheckBox("Direct");
 	chkSerialDirect->setId("chkSerialDirect");
@@ -206,12 +187,18 @@ void InitPanelIO(const config_category& category)
 
 	auto posY = DISTANCE_BORDER;
 #ifdef SERIAL_PORT
-	category.panel->add(lblSerialPort, DISTANCE_BORDER, DISTANCE_BORDER);
-	category.panel->add(cboSerialPort, DISTANCE_BORDER + lblSerialPort->getWidth() + 8, DISTANCE_BORDER);
-	category.panel->add(chkRTSCTS, DISTANCE_BORDER, DISTANCE_BORDER * 3);
-	category.panel->add(chkSerialDirect, chkRTSCTS->getWidth() + chkRTSCTS->getX() + DISTANCE_NEXT_X, DISTANCE_BORDER * 3);
-	category.panel->add(chkUaeSerial, chkSerialDirect->getWidth() + chkSerialDirect->getX() + DISTANCE_NEXT_X, DISTANCE_BORDER * 3);
-	posY += chkUaeSerial->getY() + chkUaeSerial->getHeight() + DISTANCE_NEXT_Y * 2;
+	grpSerialDevice->setPosition(DISTANCE_BORDER, posY);
+	grpSerialDevice->setSize(450, TITLEBAR_HEIGHT + chkSerialDirect->getHeight() * 5);
+	grpSerialDevice->setTitleBarHeight(TITLEBAR_HEIGHT);
+	grpSerialDevice->setBaseColor(gui_baseCol);
+	txtSerialDevice->setSize(grpSerialDevice->getWidth() - DISTANCE_BORDER * 3, TEXTFIELD_HEIGHT);
+	txtSerialDevice->setBackgroundColor(colTextboxBackground);
+	grpSerialDevice->add(txtSerialDevice, DISTANCE_BORDER, DISTANCE_BORDER);
+	grpSerialDevice->add(chkRTSCTS, DISTANCE_BORDER, DISTANCE_BORDER * 3);
+	grpSerialDevice->add(chkSerialDirect, chkRTSCTS->getWidth() + chkRTSCTS->getX() + DISTANCE_NEXT_X, DISTANCE_BORDER * 3);
+	grpSerialDevice->add(chkUaeSerial, chkSerialDirect->getWidth() + chkSerialDirect->getX() + DISTANCE_NEXT_X, DISTANCE_BORDER * 3);
+	category.panel->add(grpSerialDevice);
+	posY += grpSerialDevice->getHeight() + DISTANCE_NEXT_Y * 2;
 #endif
 
 	category.panel->add(lblSampler, DISTANCE_BORDER, posY);
@@ -230,8 +217,10 @@ void ExitPanelIO()
 {
 	delete ioActionListener;
 #ifdef SERIAL_PORT
-	delete lblSerialPort;
-	delete cboSerialPort;
+	delete ioKeyListener;
+
+	delete grpSerialDevice;
+	delete txtSerialDevice;
 	delete chkRTSCTS;
 	delete chkSerialDirect;
 	delete chkUaeSerial;
@@ -249,19 +238,7 @@ void RefreshPanelIO()
 #ifdef SERIAL_PORT
 	chkRTSCTS->setSelected(changed_prefs.serial_hwctsrts);
 	chkSerialDirect->setSelected(changed_prefs.serial_direct);
-	cboSerialPort->setSelected(0);
-	if (changed_prefs.sername[0])
-	{
-		const auto serial_name = string(changed_prefs.sername);
-		for (int i = 0; i < serial_ports.getNumberOfElements(); i++)
-		{
-			if (serial_ports.getElementAt(i) == serial_name)
-			{
-				cboSerialPort->setSelected(i);
-				break;
-			}
-		}
-	}
+	txtSerialDevice->setText(changed_prefs.sername);
 	chkUaeSerial->setSelected(changed_prefs.uaeserial);
 #endif
 

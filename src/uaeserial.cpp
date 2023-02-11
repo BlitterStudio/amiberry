@@ -355,7 +355,8 @@ static int add_async_request(struct devstruct* dev, uae_u8* request, uaecptr are
 	ar->request = request;
 	if (!dev->ar) {
 		dev->ar = ar;
-	} else {
+	}
+	else {
 		ar2 = dev->ar;
 		while (ar2->next)
 			ar2 = ar2->next;

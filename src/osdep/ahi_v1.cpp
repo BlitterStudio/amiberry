@@ -28,7 +28,6 @@
 #include "memory.h"
 #include "events.h"
 #include "custom.h"
-#include "autoconf.h"
 #include "newcpu.h"
 #include "traps.h"
 #include "sounddep/sound.h"
@@ -580,9 +579,7 @@ uae_u32 REGPARAM2 ahi_demux (TrapContext *context)
 		return 1; // enforcer_disable();
 
 	case 25:
-#if defined (PARALLEL_PORT)
 		flushprinter ();
-#endif
 		return 0;
 
 	case 100: // open dll
@@ -597,7 +594,7 @@ uae_u32 REGPARAM2 ahi_demux (TrapContext *context)
 	case 103:	//close dll
 		return uaenative_close_library(context, UNI_FLAG_COMPAT);
 
-	case 104:  //screenlost
+	case 104:        //screenlost
 		{
 			static int oldnum = 0;
 			if (uaevar.changenum == oldnum)
@@ -626,34 +623,3 @@ uae_u32 REGPARAM2 ahi_demux (TrapContext *context)
 }
 
 #endif
-
-void init_ahi()
-{
-#ifdef AHI
-	if (uae_boot_rom_type) {
-		uaecptr a = here(); //this installs the ahisound
-		org(rtarea_base + 0xFFC0);
-		calltrap(deftrapres(ahi_demux, 0, _T("ahi_winuae")));
-		dw(RTS);
-		org(a);
-#ifdef AHI_V2
-		init_ahi_v2();
-#endif
-	}
-#endif
-}
-
-void ahi_hsync()
-{
-#ifdef AHI
-	if (ahi_on) {
-		static int count;
-		count++;
-		//15625/count freebuffer check
-		if (count > ahi_pollrate) {
-			ahi_updatesound(1);
-			count = 0;
-		}
-	}
-#endif
-}

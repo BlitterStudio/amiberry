@@ -35,7 +35,7 @@ static NavigationMap navMap[] =
 	{"Display", "cboScreenmode", "cboScreenmode", "Hardware info", "Sound"},
 	{"Sound", "cboSoundcard", "cboSoundcard", "Display", "Input"},
 	{"Input", "cboPort0mode", "cboPort0", "Sound", "IO Ports"},
-	{"IO Ports", "cboSerialPort", "cboSerialPort", "Input", "Custom controls"},
+	{"IO Ports", "txtSerialDevice", "txtSerialDevice", "Input", "Custom controls"},
 	{"Custom controls", "Right Trigger", "0: Mouse", "Input", "Disk swapper"},
 	{"Disk swapper", "cmdDiskSwapperDrv0", "cmdDiskSwapperAdd0", "Custom controls", "Miscellaneous"},
 	{"Miscellaneous", "chkMouseUntrap", "chkMouseUntrap", "Disk swapper", "Priority"},
@@ -343,11 +343,11 @@ static NavigationMap navMap[] =
 
 	// active		move left				move right			move up			move down
 	// PanelIO
-	{ "cboSerialPort", "", "", "cboProtectionDongle", "chkRTSCTS" },
-	{ "chkRTSCTS", "IO Ports", "chkSerialDirect", "cboSerialPort", "cboProtectionDongle" },
-	{ "chkSerialDirect", "chkRTSCTS", "chkUaeSerial", "cboSerialPort", "cboProtectionDongle" },
-	{ "chkUaeSerial", "chkSerialDirect", "IO Ports", "cboSerialPort", "cboProtectionDongle" },
-	{ "cboProtectionDongle", "IO Ports", "IO Ports", "chkRTSCTS", "cboSerialPort" },
+	{ "txtSerialDevice", "", "", "cboProtectionDongle", "chkRTSCTS" },
+	{ "chkRTSCTS", "IO Ports", "chkSerialDirect", "txtSerialDevice", "cboProtectionDongle" },
+	{ "chkSerialDirect", "chkRTSCTS", "chkUaeSerial", "txtSerialDevice", "cboProtectionDongle" },
+	{ "chkUaeSerial", "chkSerialDirect", "IO Ports", "txtSerialDevice", "cboProtectionDongle" },
+	{ "cboProtectionDongle", "IO Ports", "IO Ports", "chkRTSCTS", "txtSerialDevice" },
 
 	// PanelCustom
 	{ "0: Mouse", "Custom controls", "1: Joystick", "", "None" },

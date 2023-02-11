@@ -72,6 +72,7 @@ add_executable(${PROJECT_NAME}
 		src/main.cpp
 		src/memory.cpp
 		src/native2amiga.cpp
+		src/parser.cpp
 		src/rommgr.cpp
 		src/rtc.cpp
 		src/sampler.cpp
@@ -80,6 +81,7 @@ add_executable(${PROJECT_NAME}
 		src/scsi.cpp
 		src/scsiemul.cpp
 		src/scsitape.cpp
+		src/serial_win32.cpp
 		src/statusline.cpp
 		src/tabletlibrary.cpp
 		src/tinyxml2.cpp
@@ -88,6 +90,7 @@ add_executable(${PROJECT_NAME}
 		src/uaelib.cpp
 		src/uaenative.cpp
 		src/uaeresource.cpp
+		src/uaeserial.cpp
 		src/vm.cpp
 		src/zfile.cpp
 		src/zfile_archive.cpp
@@ -216,7 +219,6 @@ add_executable(${PROJECT_NAME}
 		src/osdep/amiberry_gfx.cpp
 		src/osdep/amiberry_gui.cpp
 		src/osdep/amiberry_mem.cpp
-		src/osdep/amiberry_serial.cpp
 		src/osdep/amiberry_whdbooter.cpp
 		src/osdep/sigsegv_handler.cpp
 		src/osdep/retroarch.cpp
@@ -298,7 +300,7 @@ find_package(mpg123 REQUIRED)
 find_package(PNG REQUIRED)
 
 INCLUDE_DIRECTORIES(${SDL2_INCLUDE_DIRS} ${SDL2IMAGE_INCLUDE_DIRS})
-TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE ${SDL2_LIBRARIES} ${SDL2IMAGE_LIBRARIES} ${SDL2TTF_LIBRARIES} FLAC::FLAC PNG::PNG mpg123 mpeg2convert mpeg2 serialport)
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE ${SDL2_LIBRARIES} ${SDL2IMAGE_LIBRARIES} ${SDL2TTF_LIBRARIES} FLAC::FLAC PNG::PNG mpg123 mpeg2convert mpeg2)
 
 target_include_directories(${PROJECT_NAME} PRIVATE ./external/libguisan/include)
 target_link_libraries(${PROJECT_NAME} PRIVATE guisan)
