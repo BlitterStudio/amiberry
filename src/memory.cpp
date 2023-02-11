@@ -2471,14 +2471,10 @@ void memory_clear (void)
 	if (savestate_state == STATE_RESTORE)
 		return;
 	
-	if (chipmem_bank.baseaddr) {
-		fillpattern(&chipmem_bank);
-	}
-
-	if (bogomem_bank.baseaddr) {
-		// TODO: slow RAM can have 16x chips even if Agnus is ECS.
-		fillpattern(&bogomem_bank);
-	}
+	if (chipmem_bank.baseaddr)
+		memset(chipmem_bank.baseaddr, 0, chipmem_bank.allocated_size);
+	if (bogomem_bank.baseaddr)
+		memset(bogomem_bank.baseaddr, 0, bogomem_bank.allocated_size);
 	
 	if (mem25bit_bank.baseaddr)
 		memset(mem25bit_bank.baseaddr, 0, mem25bit_bank.allocated_size);
