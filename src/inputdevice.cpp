@@ -4994,6 +4994,7 @@ static uae_u64 isqual (int evt)
 	return ID_FLAG_QUALIFIER1 << (num * 2);
 }
 
+#ifdef AMIBERRY
 // Pass the joystick state (joybutton and joydir) to kvbd subsystem and clear them for simulator.
 static void handle_vkbd()
 {
@@ -5010,8 +5011,6 @@ static void handle_vkbd()
 		obot[joy] = 0;
 		horizclear[joy] = 0;
 		vertclear[joy] = 0;
-		mouse_x[joy] = 0;
-		mouse_y[joy] = 0;
 	}
 
 
@@ -5052,6 +5051,7 @@ static void handle_vkbd()
 		inputdevice_do_keyboard(code, pressed);
 	}
 }
+#endif
 
 static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 {
@@ -5064,7 +5064,9 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 
 	if (nr <= 0 || nr == INPUTEVENT_SPC_CUSTOM_EVENT)
 	{
+#ifdef AMIBERRY
 		handle_vkbd();
+#endif
 		return 0;
 	}
 
@@ -5073,7 +5075,9 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 	if (nr == INPUTEVENT_SPC_ENTERGUI) {
 		if (currprefs.win32_guikey > 0)
 		{
+#ifdef AMIBERRY
 			handle_vkbd();
+#endif
 			return 0;
 		}
 	}
@@ -5082,7 +5086,9 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 	ie = &events[nr];
 	if (isqual (nr))
 	{
+#ifdef AMIBERRY
 		handle_vkbd();
+#endif
 		return 0; // qualifiers do nothing
 	}
 	if (ie->unit == 0 && ie->data >= AKS_FIRST) {
@@ -5093,13 +5099,11 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 	if (isaks) {
 		if (debug_trainer_event(ie->data, state))
 		{
-			handle_vkbd();
 			return 0;
 		}
 	} else {
 		if (debug_trainer_event(nr, state))
 		{
-			handle_vkbd();
 			return 0;
 		}
 	}
@@ -5115,7 +5119,9 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 		}
 		if (!(flags & HANDLE_IE_FLAG_PLAYBACKEVENT) && input_play)
 		{
+#ifdef AMIBERRY
 			handle_vkbd();
+#endif
 			return 0;
 		}
 	}
@@ -5155,7 +5161,9 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 				lastmxy_abs[lpnum][unit] = extra;
 				if (!unit)
 				{
+#ifdef AMIBERRY
 					handle_vkbd();
+#endif
 					return 1;
 				}
 				int x = lastmxy_abs[lpnum][0];
@@ -5510,7 +5518,9 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 		inputdevice_do_keyboard (ie->data, state);
 		break;
 	}
+#ifdef AMIBERRY
 	handle_vkbd();
+#endif
 	return 1;
 }
 

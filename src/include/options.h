@@ -970,13 +970,14 @@ struct uae_prefs
 	int input_contact_bounce;
 	int input_device_match_mask;
 
+#ifdef AMIBERRY
+
 	bool vkbd_hires;
 	bool vkbd_exit;
 	char vkbd_language[256];
 	char vkbd_style[256];
 	float vkbd_transparency;
 	
-#ifdef AMIBERRY
 	int drawbridge_driver;
 	bool drawbridge_connected_drive_b;
 	bool drawbridge_smartspeed;
