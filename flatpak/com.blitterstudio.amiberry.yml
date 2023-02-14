@@ -52,8 +52,8 @@ modules:
       - /lib/*.a
     sources:
       - type: archive
-        url: https://sigrok.org/gitweb/?p=libserialport.git;a=snapshot;h=348a6d353af8ac142f68fbf9fe0f4d070448d945;sf=zip
-        sha256: 62bad37cc652672755dc97d86e925031f867f066d5c9a4ffb1e4ea2cee64f902
+        url: https://sigrok.org/download/source/libserialport/libserialport-0.1.1.tar.gz
+        sha256: 4a2af9d9c3ff488e92fb75b4ba38b35bcf9b8a66df04773eba2a7bbf1fa7529d
 
   - name: amiberry
     only-arches:
