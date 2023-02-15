@@ -440,6 +440,7 @@ OBJS = \
 	src/main.o \
 	src/memory.o \
 	src/native2amiga.o \
+	src/parser.o \
 	src/rommgr.o \
 	src/rtc.o \
 	src/sampler.o \
@@ -456,6 +457,7 @@ OBJS = \
 	src/uaelib.o \
 	src/uaenative.o \
 	src/uaeresource.o \
+	src/uaeserial.o \
 	src/zfile.o \
 	src/zfile_archive.o \
 	src/archivers/chd/avhuff.o \

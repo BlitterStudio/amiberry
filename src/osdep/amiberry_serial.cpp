@@ -3,7 +3,7 @@
  *
  * Serial port implementation, using libserialport
  *
- * (c) 2023 Dimitris Panokostas <midwan@gmail.com>
+ * Copyright (c) 2023 Dimitris Panokostas <midwan@gmail.com>
  *
  */
 
@@ -15,22 +15,20 @@
 #include "custom.h"
 #include "events.h"
 #include "newcpu.h"
-#include "picasso96.h"
 #include "serial.h"
-#ifdef AHI
-#include "ahi_v1.h"
-#endif
-#include "xwin.h"
-#include "drawing.h"
 
 #include <libserialport.h>
+
+#define SERIAL_HSYNC_BEFORE_OVERFLOW 200
+#define SERIAL_BREAK_DELAY (20 * maxvpos)
+#define SERIAL_BREAK_TRANSMIT_DELAY 4
+
+#define SERIAL_WRITE_BUFFER 100
+#define SERIAL_READ_BUFFER 100
 
 /* A pointer to a struct sp_port, which will refer to
  * the port found. */
 sp_port* port;
-
-/* Helper function for error handling. */
-extern int check(sp_return result);
 
 static uae_u8 oldserbits;
 static int data_in_serdat; /* new data written to SERDAT */
@@ -45,7 +43,6 @@ static int dtr;
 static int serial_period_hsyncs, serial_period_hsync_counter;
 static int ninebit;
 static int lastbitcycle_active_hsyncs;
-static bool gotlogwrite;
 static unsigned int lastbitcycle;
 static int serial_recv_previous, serial_send_previous;
 static int serdatr_last_got;
@@ -64,11 +61,6 @@ static const int allowed_baudrates[] =
 { 0, 110, 300, 600, 1200, 2400, 4800, 9600, 14400,
 19200, 31400, 38400, 57600, 115200, 128000, 256000, -1 };
 
-#define SERIAL_HSYNC_BEFORE_OVERFLOW 200
-#define SERIAL_BREAK_DELAY (20 * maxvpos)
-#define SERIAL_BREAK_TRANSMIT_DELAY 4
-#define SERIAL_WRITE_BUFFER 100
-#define SERIAL_READ_BUFFER 100
 static uae_u8 outputbuffer[SERIAL_WRITE_BUFFER];
 static uae_u8 outputbufferout[SERIAL_WRITE_BUFFER];
 static uae_u8 inputbuffer[SERIAL_READ_BUFFER];
@@ -773,3 +765,7 @@ int check(const sp_return result)
 
 // TODO This should be moved somewhere more relevant (PARALLEL support)
 int flashscreen = 0;
+
+#ifdef UAESERIAL
+
+#endif
