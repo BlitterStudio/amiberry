@@ -36,7 +36,7 @@ static NavigationMap navMap[] =
 	{"Sound", "cboSoundcard", "cboSoundcard", "Display", "Input"},
 	{"Input", "cboPort0mode", "cboPort0", "Sound", "IO Ports"},
 	{"IO Ports", "cboSerialPort", "cboSerialPort", "Input", "Custom controls"},
-	{"Custom controls", "Right Trigger", "0: Mouse", "Input", "Disk swapper"},
+	{"Custom controls", "Right Trigger", "0: Mouse", "IO Ports", "Disk swapper"},
 	{"Disk swapper", "cmdDiskSwapperDrv0", "cmdDiskSwapperAdd0", "Custom controls", "Miscellaneous"},
 	{"Miscellaneous", "chkMouseUntrap", "chkMouseUntrap", "Disk swapper", "Priority"},
 #ifdef ANDROID
