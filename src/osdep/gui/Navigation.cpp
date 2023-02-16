@@ -36,7 +36,7 @@ static NavigationMap navMap[] =
 	{"Sound", "cboSoundcard", "cboSoundcard", "Display", "Input"},
 	{"Input", "cboPort0mode", "cboPort0", "Sound", "IO Ports"},
 	{"IO Ports", "txtSerialDevice", "txtSerialDevice", "Input", "Custom controls"},
-	{"Custom controls", "Right Trigger", "0: Mouse", "Input", "Disk swapper"},
+	{"Custom controls", "Right Trigger", "0: Mouse", "IO Ports", "Disk swapper"},
 	{"Disk swapper", "cmdDiskSwapperDrv0", "cmdDiskSwapperAdd0", "Custom controls", "Miscellaneous"},
 	{"Miscellaneous", "chkMouseUntrap", "chkMouseUntrap", "Disk swapper", "Priority"},
 #ifdef ANDROID
@@ -47,13 +47,14 @@ static NavigationMap navMap[] =
 	{ "Start",            "Help",           "Quit",           "OnScreen",       "Paths" },
 #else
 	{"Priority", "cboInactiveRunAtPrio", "cboActiveRunAtPrio", "Miscellaneous", "Savestates" },
-	{"Savestates", "State0", "State0", "Priority", "Quit"},
-	{"Shutdown", "Start", "Quit", "Savestates", "Paths"},
-	{"Quit", "Shutdown", "Restart", "Savestates", "Paths"},
-	{"Restart", "Quit", "Help", "Savestates", "Paths"},
-	{"Help", "Restart", "Reset", "Savestates", "Paths"},
-	{"Reset", "Help", "Start", "Savestates", "Paths"},
-	{"Start", "Reset", "Shutdown", "Savestates", "Paths"},
+	{"Savestates", "State0", "State0", "Priority", "Virtual Keyboard"},
+	{"Virtual Keyboard", "chkVkbdHires", "chkVkbdHires", "Savestates", "Quit"},
+	{"Shutdown", "Start", "Quit", "Virtual Keyboard", "Paths"},
+	{"Quit", "Shutdown", "Restart", "Virtual Keyboard", "Paths"},
+	{"Restart", "Quit", "Help", "Virtual Keyboard", "Paths"},
+	{"Help", "Restart", "Reset", "Virtual Keyboard", "Paths"},
+	{"Reset", "Help", "Start", "Virtual Keyboard", "Paths"},
+	{"Start", "Reset", "Shutdown", "Virtual Keyboard", "Paths"},
 #endif
 
 	// PanelPaths
@@ -541,6 +542,13 @@ static NavigationMap navMap[] =
 	{ "State14", "Savestates", "Savestates", "State13", "LoadState" },
 	{ "LoadState", "Savestates", "SaveState", "State14", "State0" },
 	{ "SaveState", "LoadState", "Savestates", "State14", "State0" },
+
+	// Virtual Keyboard
+	{ "chkVkbdHires", "Virtual Keyboard", "Virtual Keyboard", "cboVkbdStyle", "chkVkbdExit"},
+	{ "chkVkbdExit", "Virtual Keyboard", "Virtual Keyboard", "chkVkbdHires", "sldVkbdTransparency"},
+	{ "sldVkbdTransparency", "", "", "chkVkbdExit", "cboVkbdLanguage"},
+	{ "cboVkbdLanguage", "Virtual Keyboard", "Virtual Keyboard", "sldVkbdTransparency", "cboVkbdStyle"},
+	{ "cboVkbdStyle", "Virtual Keyboard", "Virtual Keyboard", "cboVkbdLanguage", "chkVkbdHires"},
 
 #ifdef ANDROID
 	// PanelOnScreen

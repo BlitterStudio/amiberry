@@ -571,8 +571,10 @@ OBJS = \
 	src/osdep/gui/PanelMisc.o \
 	src/osdep/gui/PanelPrio.o \
 	src/osdep/gui/PanelSavestate.o \
+	src/osdep/gui/PanelVirtualKeyboard.o \
 	src/osdep/gui/main_window.o \
-	src/osdep/gui/Navigation.o
+	src/osdep/gui/Navigation.o \
+	src/osdep/vkbd/vkbd.o
 
 ifeq ($(ANDROID), 1)
 OBJS += src/osdep/gui/androidsdl_event.o \
