@@ -12,13 +12,17 @@
 
 #include "uae/types.h"
 
+#ifdef AMIBERRY
+#include <libserialport.h>
+extern int check(sp_return result);
+#endif
+
 extern void serial_init (void);
 extern void serial_exit (void);
 extern void serial_dtr_off (void);
 extern void serial_dtr_on (void);
 
 extern uae_u16 SERDATR (void);
-extern int   SERDATS (void);
 extern void  SERPER (uae_u16 w);
 extern void  SERDAT (uae_u16 w);
 

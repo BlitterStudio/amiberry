@@ -24,7 +24,7 @@ export SDL_LDFLAGS := $(shell $(SDL_CONFIG) --libs)
 CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -Isrc/floppybridge -DAMIBERRY -D_FILE_OFFSET_BITS=64
 CFLAGS=-pipe -Wno-shift-overflow -Wno-narrowing
 USE_LD ?= gold
-LDFLAGS = $(SDL_LDFLAGS) -lSDL2_image -lSDL2_ttf -lguisan -Lexternal/libguisan/lib
+LDFLAGS = $(SDL_LDFLAGS) -lSDL2_image -lSDL2_ttf -lserialport -lguisan -Lexternal/libguisan/lib
 ifneq ($(strip $(USE_LD)),)
 	LDFLAGS += -fuse-ld=$(USE_LD)
 endif
@@ -224,7 +224,7 @@ else ifeq ($(PLATFORM),oga)
 
 # OS X (SDL2, 64-bit, M1)
 else ifeq ($(PLATFORM),osx-m1)
-	LDFLAGS = -L/usr/local/lib external/libguisan/dylib/libguisan.dylib -lSDL2_image -lSDL2_ttf -lpng -liconv -lz -lFLAC -L/opt/homebrew/lib/ -lmpg123 -lmpeg2 -lmpeg2convert $(SDL_LDFLAGS) -framework IOKit -framework Foundation
+	LDFLAGS = -L/usr/local/lib external/libguisan/dylib/libguisan.dylib -lSDL2_image -lSDL2_ttf -lpng -liconv -lz -lFLAC -L/opt/homebrew/lib/ -lmpg123 -lmpeg2 -lmpeg2convert -lserialport $(SDL_LDFLAGS) -framework IOKit -framework Foundation
 	CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -I/opt/homebrew/include -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -DAMIBERRY -D_FILE_OFFSET_BITS=64 -DCPU_AARCH64 $(SDL_CFLAGS) 
 	CXX=/usr/bin/c++
 #	DEBUG=1
@@ -232,8 +232,8 @@ else ifeq ($(PLATFORM),osx-m1)
 
 # OS X (SDL2, 64-bit, x86-64)
 else ifeq ($(PLATFORM),osx-x86)
-	LDFLAGS = -L/usr/local/lib external/libguisan/dylib/libguisan.dylib -lSDL2_image -lSDL2_ttf -lpng -liconv -lz -lFLAC -L/opt/homebrew/lib/ -lmpg123 -lmpeg2 -lmpeg2convert $(SDL_LDFLAGS) -framework IOKit -framework Foundation
-	CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -I/opt/homebrew/include -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -DAMIBERRY -D_FILE_OFFSET_BITS=64 $(SDL_CFLAGS) 
+	LDFLAGS = -L/usr/local/lib external/libguisan/dylib/libguisan.dylib -lSDL2_image -lSDL2_ttf -lpng -liconv -lz -lFLAC -lmpg123 -lmpeg2 -lmpeg2convert -lserialport $(SDL_LDFLAGS) -framework IOKit -framework Foundation
+	CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -I/usr/local/include -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -DAMIBERRY -D_FILE_OFFSET_BITS=64 $(SDL_CFLAGS) 
 	CXX=/usr/bin/c++
 #	DEBUG=1
 	APPBUNDLE=1
@@ -449,16 +449,15 @@ OBJS = \
 	src/scsi.o \
 	src/scsiemul.o \
 	src/scsitape.o \
-	src/serial_win32.o \
 	src/statusline.o \
 	src/tabletlibrary.o \
 	src/tinyxml2.o \
 	src/traps.o \
 	src/uaeexe.o \
 	src/uaelib.o \
-	src/uaeserial.o \
 	src/uaenative.o \
 	src/uaeresource.o \
+	src/uaeserial.o \
 	src/zfile.o \
 	src/zfile_archive.o \
 	src/archivers/chd/avhuff.o \
@@ -533,6 +532,7 @@ OBJS = \
 	src/osdep/amiberry_gfx.o \
 	src/osdep/amiberry_gui.o \
 	src/osdep/amiberry_mem.o \
+	src/osdep/amiberry_serial.o \
 	src/osdep/amiberry_whdbooter.o \
 	src/osdep/sigsegv_handler.o \
 	src/osdep/retroarch.o \
