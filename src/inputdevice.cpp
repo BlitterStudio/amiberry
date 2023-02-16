@@ -49,7 +49,6 @@
 #include "zfile.h"
 #include "cia.h"
 #include "autoconf.h"
-#include "vkbd/vkbd.h"
 //#include "x86.h"
 #ifdef RETROPLATFORM
 #include "rp.h"
@@ -66,6 +65,7 @@
 //#include "videograb.h"
 #ifdef AMIBERRY
 #include "amiberry_input.h"
+#include "vkbd/vkbd.h"
 #endif
 
 // 01 = host events
@@ -4995,7 +4995,7 @@ static uae_u64 isqual (int evt)
 }
 
 #ifdef AMIBERRY
-// Pass the joystick state (joybutton and joydir) to kvbd subsystem and clear them for simulator.
+// Pass the joystick state (joybutton and joydir) to vkbd subsystem and clear them for the emulator.
 static void handle_vkbd()
 {
 	if (!vkbd_is_active())
@@ -5003,7 +5003,8 @@ static void handle_vkbd()
 		return;
 	}
 
-	for(int joy = 0; joy < MAX_JPORTS; ++joy)
+	int vkbd_state = 0;
+	for (int joy = 0; joy < MAX_JPORTS; ++joy)
 	{
 		oleft[joy] = 0;
 		oright[joy] = 0;
@@ -5011,13 +5012,13 @@ static void handle_vkbd()
 		obot[joy] = 0;
 		horizclear[joy] = 0;
 		vertclear[joy] = 0;
-	}
 
+		int mask_button;
+		if (cd32_pad_enabled[joy])
+			mask_button = 1 << JOYBUTTON_CD32_RED;
+		else
+			mask_button = 1 << JOYBUTTON_1;
 
-	int vkbd_state = 0;
-	for(int joy = 0; joy < MAX_JPORTS; ++joy)
-	{
-		int mask_button = 1 << JOYBUTTON_1;
 		if (joybutton[joy] & mask_button)
 		{
 			vkbd_state |= VKBD_BUTTON;
@@ -5044,6 +5045,7 @@ static void handle_vkbd()
 			joydir[joy] &= ~DIR_DOWN;
 		}
 	}
+
 	int code;
 	int pressed;
 	if (vkbd_process(vkbd_state, &code, &pressed))
