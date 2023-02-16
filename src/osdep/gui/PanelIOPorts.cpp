@@ -204,15 +204,13 @@ void InitPanelIO(const config_category& category)
 	cboProtectionDongle->setId("cboProtectionDongle");
 	cboProtectionDongle->addActionListener(ioActionListener);
 
-	auto posY = DISTANCE_BORDER;
-#ifdef SERIAL_PORT
 	category.panel->add(lblSerialPort, DISTANCE_BORDER, DISTANCE_BORDER);
-	category.panel->add(cboSerialPort, DISTANCE_BORDER + lblSerialPort->getWidth() + 8, DISTANCE_BORDER);
-	category.panel->add(chkRTSCTS, DISTANCE_BORDER, DISTANCE_BORDER * 3);
-	category.panel->add(chkSerialDirect, chkRTSCTS->getWidth() + chkRTSCTS->getX() + DISTANCE_NEXT_X, DISTANCE_BORDER * 3);
-	category.panel->add(chkUaeSerial, chkSerialDirect->getWidth() + chkSerialDirect->getX() + DISTANCE_NEXT_X, DISTANCE_BORDER * 3);
-	posY += chkUaeSerial->getY() + chkUaeSerial->getHeight() + DISTANCE_NEXT_Y * 2;
-#endif
+	category.panel->add(cboSerialPort, DISTANCE_BORDER + lblProtectionDongle->getWidth() + 8, DISTANCE_BORDER);
+	int posY = cboSerialPort->getY() + cboSerialPort->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(chkRTSCTS, DISTANCE_BORDER, posY);
+	category.panel->add(chkSerialDirect, chkRTSCTS->getWidth() + chkRTSCTS->getX() + DISTANCE_NEXT_X, posY);
+	category.panel->add(chkUaeSerial, chkSerialDirect->getWidth() + chkSerialDirect->getX() + DISTANCE_NEXT_X, posY);
+	posY = chkRTSCTS->getY() + chkRTSCTS->getHeight() + DISTANCE_NEXT_Y * 2;
 
 	category.panel->add(lblSampler, DISTANCE_BORDER, posY);
 	category.panel->add(cboSampler, DISTANCE_BORDER + lblProtectionDongle->getWidth() + 8, posY);
