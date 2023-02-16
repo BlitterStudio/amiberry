@@ -3818,7 +3818,9 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 #ifndef AMIBERRY
 	if (cfgfile_multichoice(option, value, _T("debugging_features"), &p->debugging_features, debugfeatures))
 		return 1;
+#endif
 
+#ifdef AMIBERRY
 	if (cfgfile_yesno(option, value, _T("vkbd_hires"), &p->vkbd_hires) ||
 		cfgfile_yesno(option, value, _T("vkbd_exit"), &p->vkbd_exit) ||
 		cfgfile_floatval(option, value, _T("vkbd_transparency"), &p->vkbd_transparency) ||

@@ -14,14 +14,15 @@
 #include "gui_handling.h"
 #include "vkbd/vkbd.h"
 
-static gcn::CheckBox * chkHires;
-static gcn::CheckBox * chkExit;
-static gcn::Slider * sldTransparency;
-static gcn::Label * lblTransparency;
-static gcn::Label * lblLanguage;
-static gcn::DropDown * drpLanguage;
-static gcn::Label * lblStyle;
-static gcn::DropDown * drpStyle;
+static gcn::CheckBox* chkVkHires;
+static gcn::CheckBox* chkVkExit;
+static gcn::Slider* sldVkTransparency;
+static gcn::Label* lblVkTransparency;
+static gcn::Label* lblVkTransparencyValue;
+static gcn::Label* lblVkLanguage;
+static gcn::DropDown* cboVkLanguage;
+static gcn::Label* lblVkStyle;
+static gcn::DropDown* cboVkStyle;
 
 class TransparencySliderActionListener : public gcn::ActionListener
 {
@@ -29,11 +30,12 @@ public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		update();
+		RefreshPanelVirtualKeyboard();
 	}
 
 	static void update()
 	{
-		const auto value = sldTransparency->getValue();
+		const auto value = static_cast<float>(sldVkTransparency->getValue());
 		changed_prefs.vkbd_transparency = value;
 		vkbd_set_transparency(value);
 	}
@@ -45,11 +47,12 @@ public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		update();
+		RefreshPanelVirtualKeyboard();
 	}
 
 	static void update()
 	{
-		if (chkExit->isSelected())
+		if (chkVkExit->isSelected())
 		{
 			changed_prefs.vkbd_exit = true;
 			vkbd_set_keyboard_has_exit_button(true);
@@ -68,11 +71,12 @@ public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		update();
+		RefreshPanelVirtualKeyboard();
 	}
 
 	static void update()
 	{
-		if (chkHires->isSelected())
+		if (chkVkHires->isSelected())
 		{
 			changed_prefs.vkbd_hires = true;
 			vkbd_set_hires(true);
@@ -93,7 +97,7 @@ const std::vector<std::pair<VkbdLanguage,std::string>> languages {
 };
 
 const std::vector<std::pair<VkbdStyle, std::string>> styles {
-	std::make_pair(VKBD_STYLE_ORIG, "Orig"),
+	std::make_pair(VKBD_STYLE_ORIG, "Original"),
 	std::make_pair(VKBD_STYLE_WARM, "Warm"),
 	std::make_pair(VKBD_STYLE_COOL, "Cool"),
 	std::make_pair(VKBD_STYLE_DARK, "Dark"),
@@ -167,7 +171,7 @@ class LanguageDropDownActionListener : public gcn::ActionListener
 
 		static void update()
 		{
-			const int selected = drpLanguage->getSelected();
+			const int selected = cboVkLanguage->getSelected();
 			vkbd_set_language(languageListModel->getValueAt(selected));
 			_tcscpy(changed_prefs.vkbd_language, languageListModel->getElementAt(selected).c_str());
 		}
@@ -184,7 +188,7 @@ class StyleDropDownActionListener : public gcn::ActionListener
 
 		static void update()
 		{
-			const int selected = drpStyle->getSelected();
+			const int selected = cboVkStyle->getSelected();
 			vkbd_set_style(styleListModel->getValueAt(selected));
 			_tcscpy(changed_prefs.vkbd_style, styleListModel->getElementAt(selected).c_str());
 		}
@@ -199,79 +203,93 @@ static StyleDropDownActionListener * styleDrpActionListener;
 void InitPanelVirtualKeyboard(const struct config_category& category)
 {
 	hiresChkActionListener = new HiresCheckboxActionListener();
-	chkHires = new gcn::CheckBox(_T("High-Resolution"));
-	chkHires->addActionListener(hiresChkActionListener);
+	chkVkHires = new gcn::CheckBox(_T("High-Resolution"));
+	chkVkHires->setId("chkVkHires");
+	chkVkHires->addActionListener(hiresChkActionListener);
 
 	exitChkActionListener = new ExitCheckboxActionListener();
-	chkExit = new gcn::CheckBox(_T("Quit button on keyboard"));
-	chkExit->addActionListener(exitChkActionListener);
+	chkVkExit = new gcn::CheckBox(_T("Quit button on keyboard"));
+	chkVkExit->setId("chkVkExit");
+	chkVkExit->addActionListener(exitChkActionListener);
 
 	transparencySldActionListener = new TransparencySliderActionListener();
-	sldTransparency = new gcn::Slider(0.0, 1.0);
-	sldTransparency->setSize(70, SLIDER_HEIGHT);
-	sldTransparency->setBaseColor(gui_baseCol);
-	sldTransparency->setMarkerLength(20);
-	sldTransparency->setStepLength(0.01);
-	sldTransparency->addActionListener(transparencySldActionListener);
 
-	lblTransparency = new gcn::Label(_T("Transparency"));
+	lblVkTransparency = new gcn::Label(_T("Transparency:"));
+	sldVkTransparency = new gcn::Slider(0.0, 1.0);
+	sldVkTransparency->setSize(100, SLIDER_HEIGHT);
+	sldVkTransparency->setBaseColor(gui_baseCol);
+	sldVkTransparency->setMarkerLength(20);
+	sldVkTransparency->setStepLength(0.01);
+	sldVkTransparency->setId("sldVkTransparency");
+	sldVkTransparency->addActionListener(transparencySldActionListener);
+	lblVkTransparencyValue = new gcn::Label("1.00");
+	lblVkTransparencyValue->setAlignment(gcn::Graphics::LEFT);
 
-	lblLanguage = new gcn::Label(_T("Keyboard Layout"));
+
+	lblVkLanguage = new gcn::Label(_T("Keyboard Layout:"));
 
 	languageListModel = new EnumListModel<VkbdLanguage>(languages);
 	languageDrpActionListener = new LanguageDropDownActionListener();
-	drpLanguage = new gcn::DropDown();
-	drpLanguage->setListModel(languageListModel);
-	drpLanguage->addActionListener(languageDrpActionListener);
+	cboVkLanguage = new gcn::DropDown();
+	cboVkLanguage->setSize(150, cboVkLanguage->getHeight());
+	cboVkLanguage->setBaseColor(gui_baseCol);
+	cboVkLanguage->setBackgroundColor(colTextboxBackground);
+	cboVkLanguage->setId("cboVkLanguage");
+	cboVkLanguage->setListModel(languageListModel);
+	cboVkLanguage->addActionListener(languageDrpActionListener);
 
-	lblStyle = new gcn::Label(_T("Style"));
+	lblVkStyle = new gcn::Label(_T("Style:"));
 
 	styleListModel = new EnumListModel<VkbdStyle>(styles);
 	styleDrpActionListener = new StyleDropDownActionListener();
-	drpStyle = new gcn::DropDown();
-	drpStyle->setListModel(styleListModel);
-	drpStyle->addActionListener(styleDrpActionListener);
+	cboVkStyle = new gcn::DropDown();
+	cboVkStyle->setSize(150, cboVkStyle->getHeight());
+	cboVkStyle->setBaseColor(gui_baseCol);
+	cboVkStyle->setBackgroundColor(colTextboxBackground);
+	cboVkStyle->setId("cboVkStyle");
+	cboVkStyle->setListModel(styleListModel);
+	cboVkStyle->addActionListener(styleDrpActionListener);
 
 
 	int x = DISTANCE_BORDER;
 	int y = DISTANCE_BORDER;
-    category.panel->add(chkHires, x, y);
+    category.panel->add(chkVkHires, x, y);
 
-	y += chkHires->getHeight() + DISTANCE_NEXT_Y;
-	x = DISTANCE_BORDER;
-	category.panel->add(chkExit, x, y);
+	y += chkVkHires->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(chkVkExit, x, y);
 
-	y += chkExit->getHeight() + DISTANCE_NEXT_Y;
-	x = DISTANCE_BORDER;
-	category.panel->add(lblTransparency, x, y);
-	x += lblTransparency->getWidth() + DISTANCE_NEXT_X;
-	category.panel->add(sldTransparency, x, y);
+	y += chkVkExit->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(lblVkTransparency, x, y);
+	x += lblVkLanguage->getWidth() + DISTANCE_NEXT_X;
+	category.panel->add(sldVkTransparency, x, y);
+	category.panel->add(lblVkTransparencyValue, sldVkTransparency->getX() + sldVkTransparency->getWidth() + 8, y);
 
-	y += sldTransparency->getHeight() + DISTANCE_NEXT_Y;
+	y += sldVkTransparency->getHeight() + DISTANCE_NEXT_Y;
 	x = DISTANCE_BORDER;
-	category.panel->add(lblLanguage, x, y);
-	x += lblLanguage->getWidth() + DISTANCE_NEXT_X;
-	category.panel->add(drpLanguage, x, y);
+	category.panel->add(lblVkLanguage, x, y);
+	x += lblVkLanguage->getWidth() + DISTANCE_NEXT_X;
+	category.panel->add(cboVkLanguage, x, y);
 
-	y += drpLanguage->getHeight() + DISTANCE_NEXT_Y;
+	y += cboVkLanguage->getHeight() + DISTANCE_NEXT_Y;
 	x = DISTANCE_BORDER;
-	category.panel->add(lblStyle, x, y);
-	x += lblLanguage->getWidth() + DISTANCE_NEXT_X;
-	category.panel->add(drpStyle, x, y);
+	category.panel->add(lblVkStyle, x, y);
+	x += lblVkLanguage->getWidth() + DISTANCE_NEXT_X;
+	category.panel->add(cboVkStyle, x, y);
 
 	RefreshPanelVirtualKeyboard();
 }
 
 void ExitPanelVirtualKeyboard(void)
 {
-    delete chkHires;
-	delete chkExit;
-	delete sldTransparency;
-	delete lblTransparency;
-	delete lblLanguage;
-	delete drpLanguage;
-	delete lblStyle;
-	delete drpStyle;
+    delete chkVkHires;
+	delete chkVkExit;
+	delete sldVkTransparency;
+	delete lblVkTransparency;
+	delete lblVkTransparencyValue;
+	delete lblVkLanguage;
+	delete cboVkLanguage;
+	delete lblVkStyle;
+	delete cboVkStyle;
 
 	delete transparencySldActionListener;
 	delete hiresChkActionListener;
@@ -283,11 +301,14 @@ void ExitPanelVirtualKeyboard(void)
 
 void RefreshPanelVirtualKeyboard(void)
 {
-	chkHires->setSelected(changed_prefs.vkbd_hires);
-	chkExit->setSelected(changed_prefs.vkbd_exit);
-	sldTransparency->setValue(changed_prefs.vkbd_transparency);
-	drpLanguage->setSelected(languageListModel->getIndex(changed_prefs.vkbd_language));
-	drpStyle->setSelected(styleListModel->getIndex(changed_prefs.vkbd_style));
+	chkVkHires->setSelected(changed_prefs.vkbd_hires);
+	chkVkExit->setSelected(changed_prefs.vkbd_exit);
+	sldVkTransparency->setValue(changed_prefs.vkbd_transparency);
+	lblVkTransparencyValue->setCaption(std::to_string(changed_prefs.vkbd_transparency));
+	lblVkTransparencyValue->adjustSize();
+
+	cboVkLanguage->setSelected(languageListModel->getIndex(changed_prefs.vkbd_language));
+	cboVkStyle->setSelected(styleListModel->getIndex(changed_prefs.vkbd_style));
 
 	HiresCheckboxActionListener::update();
 	ExitCheckboxActionListener::update();
