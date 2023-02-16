@@ -356,7 +356,8 @@ public:
 	{
 		if (actionEvent.getSource() == cboSoundcard)
 		{
-			if (const int soundcard = cboSoundcard->getSelected(); soundcard != changed_prefs.soundcard)
+			const int soundcard = cboSoundcard->getSelected();
+			if (soundcard != changed_prefs.soundcard)
 				changed_prefs.soundcard = soundcard;
 		}
 		else if (actionEvent.getSource() == optSoundDisabled)
