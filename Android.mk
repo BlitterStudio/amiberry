@@ -255,7 +255,8 @@ LOCAL_SRC_FILES := src/akiko.cpp \
                     src/osdep/gui/main_window.cpp \
                     src/osdep/gui/Navigation.cpp \
                     src/osdep/gui/androidsdl_event.cpp \
-                    src/osdep/gui/PanelOnScreen.cpp
+                    src/osdep/gui/PanelOnScreen.cpp \
+                    src/osdep/vkbd/vkbd.cpp
 
 ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
     LOCAL_SRC_FILES += src/osdep/aarch64_helper_min.s

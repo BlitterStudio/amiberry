@@ -47,13 +47,14 @@ static NavigationMap navMap[] =
 	{ "Start",            "Help",           "Quit",           "OnScreen",       "Paths" },
 #else
 	{"Priority", "cboInactiveRunAtPrio", "cboActiveRunAtPrio", "Miscellaneous", "Savestates" },
-	{"Savestates", "State0", "State0", "Priority", "Quit"},
-	{"Shutdown", "Start", "Quit", "Savestates", "Paths"},
-	{"Quit", "Shutdown", "Restart", "Savestates", "Paths"},
-	{"Restart", "Quit", "Help", "Savestates", "Paths"},
-	{"Help", "Restart", "Reset", "Savestates", "Paths"},
-	{"Reset", "Help", "Start", "Savestates", "Paths"},
-	{"Start", "Reset", "Shutdown", "Savestates", "Paths"},
+	{"Savestates", "State0", "State0", "Priority", "Virtual Keyboard"},
+	{"Virtual Keyboard", "chkVkHires", "chkVkHires", "Savestates", "Quit"},
+	{"Shutdown", "Start", "Quit", "Virtual Keyboard", "Paths"},
+	{"Quit", "Shutdown", "Restart", "Virtual Keyboard", "Paths"},
+	{"Restart", "Quit", "Help", "Virtual Keyboard", "Paths"},
+	{"Help", "Restart", "Reset", "Virtual Keyboard", "Paths"},
+	{"Reset", "Help", "Start", "Virtual Keyboard", "Paths"},
+	{"Start", "Reset", "Shutdown", "Virtual Keyboard", "Paths"},
 #endif
 
 	// PanelPaths
@@ -541,6 +542,13 @@ static NavigationMap navMap[] =
 	{ "State14", "Savestates", "Savestates", "State13", "LoadState" },
 	{ "LoadState", "Savestates", "SaveState", "State14", "State0" },
 	{ "SaveState", "LoadState", "Savestates", "State14", "State0" },
+
+	// Virtual Keyboard
+	{ "chkVkHires", "Virtual Keyboard", "Virtual Keyboard", "cboVkStyle", "chkVkExit"},
+	{ "chkVkExit", "Virtual Keyboard", "Virtual Keyboard", "chkVkHires", "sldVkTransparency"},
+	{ "sldVkTransparency", "", "", "chkVkExit", "cboVkLanguage"},
+	{ "cboVkLanguage", "Virtual Keyboard", "Virtual Keyboard", "sldVkTransparency", "cboVkStyle"},
+	{ "cboVkStyle", "Virtual Keyboard", "Virtual Keyboard", "cboVkLanguage", "chkVkHires"},
 
 #ifdef ANDROID
 	// PanelOnScreen

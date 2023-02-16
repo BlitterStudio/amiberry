@@ -258,6 +258,7 @@ add_executable(${PROJECT_NAME}
 		src/osdep/gui/main_window.cpp
 		src/osdep/gui/Navigation.cpp
 		src/osdep/aarch64_helper.s
+		src/osdep/vkbd/vkbd.cpp
 		src/newcpu.cpp
 		src/newcpu_common.cpp
 		src/readcpu.cpp
