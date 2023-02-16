@@ -31,9 +31,9 @@ public:
 		update();
 	}
 
-	void update()
+	static void update()
 	{
-		auto value = sldTransparency->getValue();
+		const auto value = sldTransparency->getValue();
 		changed_prefs.vkbd_transparency = value;
 		vkbd_set_transparency(value);
 	}
@@ -47,7 +47,7 @@ public:
 		update();
 	}
 
-	void update()
+	static void update()
 	{
 		if (chkExit->isSelected())
 		{
@@ -70,7 +70,7 @@ public:
 		update();
 	}
 
-	void update()
+	static void update()
 	{
 		if (chkHires->isSelected())
 		{
@@ -103,7 +103,7 @@ template<class T>
 class EnumListModel : public gcn::ListModel
 {
 private:
-	std::vector<std::pair<T,std::string>> m_values;
+	std::vector<std::pair<T,std::string>> m_values{};
 public:
 	EnumListModel(const std::vector<std::pair<T,std::string>> values)
 		: m_values(values)
@@ -165,9 +165,9 @@ class LanguageDropDownActionListener : public gcn::ActionListener
 			update();
 		}
 
-		void update()
+		static void update()
 		{
-			int selected = drpLanguage->getSelected();
+			const int selected = drpLanguage->getSelected();
 			vkbd_set_language(languageListModel->getValueAt(selected));
 			_tcscpy(changed_prefs.vkbd_language, languageListModel->getElementAt(selected).c_str());
 		}
@@ -182,9 +182,9 @@ class StyleDropDownActionListener : public gcn::ActionListener
 			update();
 		}
 
-		void update()
+		static void update()
 		{
-			int selected = drpStyle->getSelected();
+			const int selected = drpStyle->getSelected();
 			vkbd_set_style(styleListModel->getValueAt(selected));
 			_tcscpy(changed_prefs.vkbd_style, styleListModel->getElementAt(selected).c_str());
 		}
@@ -289,11 +289,11 @@ void RefreshPanelVirtualKeyboard(void)
 	drpLanguage->setSelected(languageListModel->getIndex(changed_prefs.vkbd_language));
 	drpStyle->setSelected(styleListModel->getIndex(changed_prefs.vkbd_style));
 
-	hiresChkActionListener->update();
-	exitChkActionListener->update();
-	transparencySldActionListener->update();
-	languageDrpActionListener->update();
-	styleDrpActionListener->update();
+	HiresCheckboxActionListener::update();
+	ExitCheckboxActionListener::update();
+	TransparencySliderActionListener::update();
+	LanguageDropDownActionListener::update();
+	StyleDropDownActionListener::update();
 	
 	gui_update();
 }
