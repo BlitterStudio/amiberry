@@ -823,6 +823,36 @@ void vkbd_set_style(VkbdStyle style)
 	vkbd_update(false);
 }
 
+void vkbd_set_language(const std::string language)
+{
+	VkbdLanguage vkbd_language;
+	if (language == "FR")
+		vkbd_language = VKBD_LANGUAGE_FR;
+	else if (language == "UK")
+		vkbd_language = VKBD_LANGUAGE_UK;
+	else if (language == "DE")
+		vkbd_language = VKBD_LANGUAGE_GER;
+	else
+		vkbd_language = VKBD_LANGUAGE_US;
+
+	vkbd_set_language(vkbd_language);
+}
+
+void vkbd_set_style(const std::string style)
+{
+	VkbdStyle vkbd_style;
+	if (style == "Warm")
+		vkbd_style = VKBD_STYLE_WARM;
+	else if (style == "Cool")
+		vkbd_style = VKBD_STYLE_COOL;
+	else if (style == "Dark")
+		vkbd_style = VKBD_STYLE_DARK;
+	else
+		vkbd_style = VKBD_STYLE_ORIG;
+
+	vkbd_set_style(vkbd_style);
+}
+
 void vkbd_set_transparency(double transparency)
 {
 	vkbdTransparency = std::max(std::min(1.0, transparency), 0.0);

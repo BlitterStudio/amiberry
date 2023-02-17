@@ -1639,6 +1639,7 @@ int check_prefs_changed_gfx()
 #endif
 	}
 
+	// Virtual keyboard
 	if (currprefs.vkbd_enabled != changed_prefs.vkbd_enabled ||
 		currprefs.vkbd_hires != changed_prefs.vkbd_hires ||
 		currprefs.vkbd_transparency != changed_prefs.vkbd_transparency ||
@@ -1654,7 +1655,14 @@ int check_prefs_changed_gfx()
 		_tcscpy(currprefs.vkbd_style, changed_prefs.vkbd_style);
 
 		if (currprefs.vkbd_enabled)
+		{
 			vkbd_init();
+			vkbd_set_transparency(currprefs.vkbd_transparency);
+			vkbd_set_hires(currprefs.vkbd_hires);
+			vkbd_set_keyboard_has_exit_button(currprefs.vkbd_exit);
+			vkbd_set_language(string(currprefs.vkbd_language));
+			vkbd_set_style(string(currprefs.vkbd_style));
+		}
 		else
 			vkbd_quit();
 	}

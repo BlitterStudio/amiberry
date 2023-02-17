@@ -30,15 +30,8 @@ class TransparencySliderActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		update();
+		changed_prefs.vkbd_transparency = static_cast<int>(sldVkTransparency->getValue());
 		RefreshPanelVirtualKeyboard();
-	}
-
-	static void update()
-	{
-		const auto value = static_cast<float>(sldVkTransparency->getValue());
-		changed_prefs.vkbd_transparency = value;
-		vkbd_set_transparency(value);
 	}
 };
 
@@ -47,22 +40,8 @@ class ExitCheckboxActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		update();
+		changed_prefs.vkbd_exit = chkVkExit->isSelected();
 		RefreshPanelVirtualKeyboard();
-	}
-
-	static void update()
-	{
-		if (chkVkExit->isSelected())
-		{
-			changed_prefs.vkbd_exit = true;
-			vkbd_set_keyboard_has_exit_button(true);
-		}
-		else
-		{
-			changed_prefs.vkbd_exit = false;
-			vkbd_set_keyboard_has_exit_button(false);
-		}
 	}
 };
 
@@ -71,22 +50,8 @@ class HiresCheckboxActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		update();
+		changed_prefs.vkbd_hires = chkVkHires->isSelected();
 		RefreshPanelVirtualKeyboard();
-	}
-
-	static void update()
-	{
-		if (chkVkHires->isSelected())
-		{
-			changed_prefs.vkbd_hires = true;
-			vkbd_set_hires(true);
-		}
-		else
-		{
-			changed_prefs.vkbd_hires = false;
-			vkbd_set_hires(false);
-		}
 	}
 };
 
@@ -101,10 +66,10 @@ public:
 };
 
 const std::vector<std::pair<VkbdLanguage,std::string>> languages {
-	std::make_pair(VKBD_LANGUAGE_US, "United States"),
-	std::make_pair(VKBD_LANGUAGE_FR, "French"),
-	std::make_pair(VKBD_LANGUAGE_UK, "United Kingdom"),
-	std::make_pair(VKBD_LANGUAGE_GER, "German")
+	std::make_pair(VKBD_LANGUAGE_US, "US"),
+	std::make_pair(VKBD_LANGUAGE_FR, "FR"),
+	std::make_pair(VKBD_LANGUAGE_UK, "UK"),
+	std::make_pair(VKBD_LANGUAGE_GER, "DE")
 };
 
 const std::vector<std::pair<VkbdStyle, std::string>> styles {
@@ -168,41 +133,32 @@ public:
 	}
 };
 
-static EnumListModel<VkbdLanguage> * languageListModel;
-static EnumListModel<VkbdStyle> * styleListModel;
+static EnumListModel<VkbdLanguage>* languageListModel;
+static EnumListModel<VkbdStyle>* styleListModel;
 
 class LanguageDropDownActionListener : public gcn::ActionListener
 {
-	public:
+public:
 
-		void action(const gcn::ActionEvent& actionEvent) override
-		{
-			update();
-		}
-
-		static void update()
-		{
-			const int selected = cboVkLanguage->getSelected();
-			vkbd_set_language(languageListModel->getValueAt(selected));
-			_tcscpy(changed_prefs.vkbd_language, languageListModel->getElementAt(selected).c_str());
-		}
+	void action(const gcn::ActionEvent& actionEvent) override
+	{
+		const int selected = cboVkLanguage->getSelected();
+		_tcscpy(changed_prefs.vkbd_language, languageListModel->getElementAt(selected).c_str());
+		RefreshPanelVirtualKeyboard();
+	}
 };
 
 class StyleDropDownActionListener : public gcn::ActionListener
 {
-	public:
+public:
 
-		void action(const gcn::ActionEvent& actionEvent) override
-		{
-			update();
-		}
+	void action(const gcn::ActionEvent& actionEvent) override
+	{
+		const int selected = cboVkStyle->getSelected();
+		_tcscpy(changed_prefs.vkbd_style, styleListModel->getElementAt(selected).c_str());
+		RefreshPanelVirtualKeyboard();
+	}
 
-		static void update()
-		{
-			const int selected = cboVkStyle->getSelected();
-			vkbd_set_style(styleListModel->getValueAt(selected));
-			_tcscpy(changed_prefs.vkbd_style, styleListModel->getElementAt(selected).c_str());
-		}
 };
 
 static VkEnabledCheckboxActionListener* vkEnabledActionListener;
@@ -232,14 +188,14 @@ void InitPanelVirtualKeyboard(const struct config_category& category)
 	transparencySldActionListener = new TransparencySliderActionListener();
 
 	lblVkTransparency = new gcn::Label(_T("Transparency:"));
-	sldVkTransparency = new gcn::Slider(0.0, 1.0);
+	sldVkTransparency = new gcn::Slider(0, 100);
 	sldVkTransparency->setSize(100, SLIDER_HEIGHT);
 	sldVkTransparency->setBaseColor(gui_baseCol);
 	sldVkTransparency->setMarkerLength(20);
-	sldVkTransparency->setStepLength(0.01);
+	sldVkTransparency->setStepLength(1);
 	sldVkTransparency->setId("sldVkTransparency");
 	sldVkTransparency->addActionListener(transparencySldActionListener);
-	lblVkTransparencyValue = new gcn::Label("1.00");
+	lblVkTransparencyValue = new gcn::Label("100%");
 	lblVkTransparencyValue->setAlignment(gcn::Graphics::LEFT);
 
 
@@ -325,7 +281,7 @@ void RefreshPanelVirtualKeyboard(void)
 	chkVkHires->setSelected(changed_prefs.vkbd_hires);
 	chkVkExit->setSelected(changed_prefs.vkbd_exit);
 	sldVkTransparency->setValue(changed_prefs.vkbd_transparency);
-	lblVkTransparencyValue->setCaption(std::to_string(static_cast<int>(changed_prefs.vkbd_transparency * 100)) + "%");
+	lblVkTransparencyValue->setCaption(std::to_string(changed_prefs.vkbd_transparency) + "%");
 	lblVkTransparencyValue->adjustSize();
 
 	cboVkLanguage->setSelected(languageListModel->getIndex(changed_prefs.vkbd_language));
@@ -339,12 +295,6 @@ void RefreshPanelVirtualKeyboard(void)
 		lblVkTransparencyValue->setEnabled(true);
 		cboVkLanguage->setEnabled(true);
 		cboVkStyle->setEnabled(true);
-
-		HiresCheckboxActionListener::update();
-		ExitCheckboxActionListener::update();
-		TransparencySliderActionListener::update();
-		LanguageDropDownActionListener::update();
-		StyleDropDownActionListener::update();
 	}
 	else
 	{

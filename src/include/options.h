@@ -976,7 +976,7 @@ struct uae_prefs
 	bool vkbd_exit;
 	char vkbd_language[256];
 	char vkbd_style[256];
-	float vkbd_transparency;
+	int vkbd_transparency;
 	
 	int drawbridge_driver;
 	bool drawbridge_connected_drive_b;
@@ -1216,6 +1216,12 @@ struct amiberry_options
 	bool disable_shutdown_button = false;
 	bool allow_display_settings_from_xml = true;
 	int default_soundcard = 0;
+	bool default_vkbd_enabled;
+	bool default_vkbd_hires;
+	bool default_vkbd_exit;
+	char default_vkbd_language[256];
+	char default_vkbd_style[256];
+	int default_vkbd_transparency;
 };
 
 extern struct amiberry_options amiberry_options;

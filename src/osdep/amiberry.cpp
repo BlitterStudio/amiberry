@@ -2033,19 +2033,24 @@ void target_default_options(struct uae_prefs* p, int type)
 
 	if (amiberry_options.default_soundcard > 0) p->soundcard = amiberry_options.default_soundcard;
 
-#ifdef AMIBERRY
-	p->vkbd_enabled = false;
-	p->vkbd_hires = true;
-	p->vkbd_exit = false;
-	_tcscpy(p->vkbd_language, ""); // This will use the default language.
-	_tcscpy(p->vkbd_style, ""); // This will use the default theme.
-	p->vkbd_transparency = 0.5;
-#endif
+	// Virtual keyboard default options
+	p->vkbd_enabled = amiberry_options.default_vkbd_enabled;
+	p->vkbd_exit = amiberry_options.default_vkbd_exit;
+	p->vkbd_hires = amiberry_options.default_vkbd_hires;
+	if (amiberry_options.default_vkbd_language[0])
+		_tcscpy(p->vkbd_language, amiberry_options.default_vkbd_language);
+	else
+		_tcscpy(p->vkbd_language, ""); // This will use the default language.
+	if (amiberry_options.default_vkbd_style[0])
+		_tcscpy(p->vkbd_style, amiberry_options.default_vkbd_style);
+	else
+		_tcscpy(p->vkbd_style, ""); // This will use the default theme.
+	p->vkbd_transparency = amiberry_options.default_vkbd_transparency;
 }
 
 static const TCHAR* scsimode[] = { _T("SCSIEMU"), _T("SPTI"), _T("SPTI+SCSISCAN"), NULL };
-static const TCHAR* statusbarmode[] = { _T("none"), _T("normal"), _T("extended"), NULL };
-static const TCHAR* configmult[] = { _T("1x"), _T("2x"), _T("3x"), _T("4x"), _T("5x"), _T("6x"), _T("7x"), _T("8x"), NULL };
+//static const TCHAR* statusbarmode[] = { _T("none"), _T("normal"), _T("extended"), NULL };
+//static const TCHAR* configmult[] = { _T("1x"), _T("2x"), _T("3x"), _T("4x"), _T("5x"), _T("6x"), _T("7x"), _T("8x"), NULL };
 
 extern int scsiromselected;
 
@@ -2904,7 +2909,31 @@ void save_amiberry_settings(void)
 	// Default Sound Card (0=default, first one available in the system)
 	snprintf(buffer, MAX_DPATH, "default_soundcard=%d\n", amiberry_options.default_soundcard);
 	fputs(buffer, f);
-	
+
+	// Enable Virtual Keyboard by default
+	snprintf(buffer, MAX_DPATH, "default_vkbd_enabled=%s\n", amiberry_options.default_vkbd_enabled ? "yes" : "no");
+	fputs(buffer, f);
+
+	// Show the High-res version of the Virtual Keyboard by default
+	snprintf(buffer, MAX_DPATH, "default_vkbd_hires=%s\n", amiberry_options.default_vkbd_hires ? "yes" : "no");
+	fputs(buffer, f);
+
+	// Enable Quit functionality through Virtual Keyboard by default
+	snprintf(buffer, MAX_DPATH, "default_vkbd_exit=%s\n", amiberry_options.default_vkbd_exit ? "yes" : "no");
+	fputs(buffer, f);
+
+	// Default Language for the Virtual Keyboard
+	snprintf(buffer, MAX_DPATH, "default_vkbd_language=%s\n", amiberry_options.default_vkbd_language);
+	fputs(buffer, f);
+
+	// Default Style for the Virtual Keyboard
+	snprintf(buffer, MAX_DPATH, "default_vkbd_style=%s\n", amiberry_options.default_vkbd_style);
+	fputs(buffer, f);
+
+	// Default transparency for the Virtual Keyboard
+	snprintf(buffer, MAX_DPATH, "default_vkbd_transparency=%d\n", amiberry_options.default_vkbd_transparency);
+	fputs(buffer, f);
+
 	// Paths
 	snprintf(buffer, MAX_DPATH, "path=%s\n", current_dir);
 	fputs(buffer, f);
@@ -3150,6 +3179,12 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_yesno(option, value, "disable_shutdown_button", &amiberry_options.disable_shutdown_button);
 		ret |= cfgfile_yesno(option, value, "allow_display_settings_from_xml", &amiberry_options.allow_display_settings_from_xml);
 		ret |= cfgfile_intval(option, value, "default_soundcard", &amiberry_options.default_soundcard, 1);
+		ret |= cfgfile_yesno(option, value, "default_vkbd_enabled", &amiberry_options.default_vkbd_enabled);
+		ret |= cfgfile_yesno(option, value, "default_vkbd_hires", &amiberry_options.default_vkbd_hires);
+		ret |= cfgfile_yesno(option, value, "default_vkbd_exit", &amiberry_options.default_vkbd_exit);
+		ret |= cfgfile_string(option, value, "default_vkbd_language", amiberry_options.default_vkbd_language, sizeof amiberry_options.default_vkbd_language);
+		ret |= cfgfile_string(option, value, "default_vkbd_style", amiberry_options.default_vkbd_style, sizeof amiberry_options.default_vkbd_style);
+		ret |= cfgfile_intval(option, value, "default_vkbd_transparency", &amiberry_options.default_vkbd_transparency, 1);
 	}
 	return ret;
 }
