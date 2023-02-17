@@ -514,7 +514,7 @@ void InitPanelMisc(const config_category& category)
 
 	auto posY = DISTANCE_BORDER;
 	grpMiscOptions->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
-	grpMiscOptions->setSize(category.panel->getWidth() - category.panel->getWidth() / 3 - 50, 670);
+	grpMiscOptions->setSize(category.panel->getWidth() - category.panel->getWidth() / 3 - 50, 690);
 	grpMiscOptions->setBaseColor(gui_baseCol);
 	grpMiscOptions->add(chkMouseUntrap, DISTANCE_BORDER, posY);
 	posY += chkMouseUntrap->getHeight() + DISTANCE_NEXT_Y;
@@ -578,7 +578,7 @@ void InitPanelMisc(const config_category& category)
 	scrollArea->setBackgroundColor(gui_baseCol);
 	scrollArea->setBaseColor(gui_baseCol);
 	scrollArea->setWidth(category.panel->getWidth() - (category.panel->getWidth() / 3) - 35);
-	scrollArea->setHeight(490);
+	scrollArea->setHeight(520);
 	scrollArea->setBorderSize(1);
 	scrollArea->setFocusable(true);
 
