@@ -2032,6 +2032,15 @@ void target_default_options(struct uae_prefs* p, int type)
 	}
 
 	if (amiberry_options.default_soundcard > 0) p->soundcard = amiberry_options.default_soundcard;
+
+#ifdef AMIBERRY
+	p->vkbd_enabled = false;
+	p->vkbd_hires = true;
+	p->vkbd_exit = false;
+	_tcscpy(p->vkbd_language, ""); // This will use the default language.
+	_tcscpy(p->vkbd_style, ""); // This will use the default theme.
+	p->vkbd_transparency = 0.5;
+#endif
 }
 
 static const TCHAR* scsimode[] = { _T("SCSIEMU"), _T("SPTI"), _T("SPTI+SCSISCAN"), NULL };

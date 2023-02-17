@@ -14,6 +14,7 @@
 #include "gui_handling.h"
 #include "vkbd/vkbd.h"
 
+static gcn::CheckBox* chkVkEnabled;
 static gcn::CheckBox* chkVkHires;
 static gcn::CheckBox* chkVkExit;
 static gcn::Slider* sldVkTransparency;
@@ -86,6 +87,16 @@ public:
 			changed_prefs.vkbd_hires = false;
 			vkbd_set_hires(false);
 		}
+	}
+};
+
+class VkEnabledCheckboxActionListener : public gcn::ActionListener
+{
+public:
+	void action(const gcn::ActionEvent& actionEvent) override
+	{
+		changed_prefs.vkbd_enabled = chkVkEnabled->isSelected();
+		RefreshPanelVirtualKeyboard();
 	}
 };
 
@@ -194,14 +205,20 @@ class StyleDropDownActionListener : public gcn::ActionListener
 		}
 };
 
-static HiresCheckboxActionListener * hiresChkActionListener;
-static ExitCheckboxActionListener * exitChkActionListener;
-static TransparencySliderActionListener * transparencySldActionListener;
-static LanguageDropDownActionListener * languageDrpActionListener;
-static StyleDropDownActionListener * styleDrpActionListener;
+static VkEnabledCheckboxActionListener* vkEnabledActionListener;
+static HiresCheckboxActionListener* hiresChkActionListener;
+static ExitCheckboxActionListener* exitChkActionListener;
+static TransparencySliderActionListener* transparencySldActionListener;
+static LanguageDropDownActionListener* languageDrpActionListener;
+static StyleDropDownActionListener* styleDrpActionListener;
 
 void InitPanelVirtualKeyboard(const struct config_category& category)
 {
+	vkEnabledActionListener = new VkEnabledCheckboxActionListener();
+	chkVkEnabled = new gcn::CheckBox(_T("Virtual Keyboard enabled"));
+	chkVkEnabled->setId("chkVkEnabled");
+	chkVkEnabled->addActionListener(vkEnabledActionListener);
+
 	hiresChkActionListener = new HiresCheckboxActionListener();
 	chkVkHires = new gcn::CheckBox(_T("High-Resolution"));
 	chkVkHires->setId("chkVkHires");
@@ -253,6 +270,8 @@ void InitPanelVirtualKeyboard(const struct config_category& category)
 
 	int x = DISTANCE_BORDER;
 	int y = DISTANCE_BORDER;
+	category.panel->add(chkVkEnabled, x, y);
+	y += chkVkEnabled->getHeight() + DISTANCE_NEXT_Y;
     category.panel->add(chkVkHires, x, y);
 
 	y += chkVkHires->getHeight() + DISTANCE_NEXT_Y;
@@ -281,6 +300,7 @@ void InitPanelVirtualKeyboard(const struct config_category& category)
 
 void ExitPanelVirtualKeyboard(void)
 {
+	delete chkVkEnabled;
     delete chkVkHires;
 	delete chkVkExit;
 	delete sldVkTransparency;
@@ -301,22 +321,40 @@ void ExitPanelVirtualKeyboard(void)
 
 void RefreshPanelVirtualKeyboard(void)
 {
+	chkVkEnabled->setSelected(changed_prefs.vkbd_enabled);
 	chkVkHires->setSelected(changed_prefs.vkbd_hires);
 	chkVkExit->setSelected(changed_prefs.vkbd_exit);
 	sldVkTransparency->setValue(changed_prefs.vkbd_transparency);
-	lblVkTransparencyValue->setCaption(std::to_string(changed_prefs.vkbd_transparency));
+	lblVkTransparencyValue->setCaption(std::to_string(static_cast<int>(changed_prefs.vkbd_transparency * 100)) + "%");
 	lblVkTransparencyValue->adjustSize();
 
 	cboVkLanguage->setSelected(languageListModel->getIndex(changed_prefs.vkbd_language));
 	cboVkStyle->setSelected(styleListModel->getIndex(changed_prefs.vkbd_style));
 
-	HiresCheckboxActionListener::update();
-	ExitCheckboxActionListener::update();
-	TransparencySliderActionListener::update();
-	LanguageDropDownActionListener::update();
-	StyleDropDownActionListener::update();
-	
-	gui_update();
+	if (changed_prefs.vkbd_enabled)
+	{
+		chkVkHires->setEnabled(true);
+		chkVkExit->setEnabled(true);
+		sldVkTransparency->setEnabled(true);
+		lblVkTransparencyValue->setEnabled(true);
+		cboVkLanguage->setEnabled(true);
+		cboVkStyle->setEnabled(true);
+
+		HiresCheckboxActionListener::update();
+		ExitCheckboxActionListener::update();
+		TransparencySliderActionListener::update();
+		LanguageDropDownActionListener::update();
+		StyleDropDownActionListener::update();
+	}
+	else
+	{
+		chkVkHires->setEnabled(false);
+		chkVkExit->setEnabled(false);
+		sldVkTransparency->setEnabled(false);
+		lblVkTransparencyValue->setEnabled(false);
+		cboVkLanguage->setEnabled(false);
+		cboVkStyle->setEnabled(false);
+	}
 }
 
 bool HelpPanelVirtualKeyboard(std::vector<std::string>& helptext)
@@ -324,7 +362,14 @@ bool HelpPanelVirtualKeyboard(std::vector<std::string>& helptext)
 	helptext.clear();
 	helptext.emplace_back("Virtual keyboard can be used to input key presses using a controller.");
     helptext.emplace_back(" ");
-    helptext.emplace_back("Options for the virtual keyboard are configured here");
-    helptext.emplace_back("To enable the virtual keyboard map the 'Toggle Virtual Keyboard' custom event to a controller button");
+    helptext.emplace_back("Options for the virtual keyboard are configured here:");
+    helptext.emplace_back("To show the virtual keyboard, first Enable it here and then map the");
+	helptext.emplace_back("'Toggle Virtual Keyboard' custom event to a controller button.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("You can select a normal or a High-resolution version of the on-screen keyboard.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("You can optionally have a button on the on-screen keyboard, that Quits Amiberry.");
+	helptext.emplace_back("Additionally, you can change the transparency amount, the language and the ");
+	helptext.emplace_back("look it will have.");
 	return true;
 }

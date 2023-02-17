@@ -4938,7 +4938,8 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 		check_prefs_changed_gfx();
 		break;
 	case AKS_TOGGLE_VIRTUAL_KEYBOARD:
-		vkbd_toggle();
+		if (currprefs.vkbd_enabled)
+			vkbd_toggle();
 		break;
 	}
 end:

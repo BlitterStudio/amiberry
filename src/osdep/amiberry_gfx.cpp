@@ -367,7 +367,8 @@ static int display_thread(void* unused)
 			SDL_RenderClear(sdl_renderer);
 			SDL_UpdateTexture(amiga_texture, nullptr, sdl_surface->pixels, sdl_surface->pitch);
 			SDL_RenderCopyEx(sdl_renderer, amiga_texture, &crop_rect, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
-			vkbd_redraw();
+			if (currprefs.vkbd_enabled) 
+				vkbd_redraw();
 #endif
 #endif
 			flip_in_progress = false;
@@ -944,7 +945,8 @@ static void open_screen(struct uae_prefs* p)
 
 	setmouseactive(mon->monitor_id, -1);
 
-	vkbd_init();
+	if (currprefs.vkbd_enabled)
+		vkbd_init();
 }
 
 void SDL2_toggle_vsync(bool vsync)
@@ -1637,6 +1639,26 @@ int check_prefs_changed_gfx()
 #endif
 	}
 
+	if (currprefs.vkbd_enabled != changed_prefs.vkbd_enabled ||
+		currprefs.vkbd_hires != changed_prefs.vkbd_hires ||
+		currprefs.vkbd_transparency != changed_prefs.vkbd_transparency ||
+		currprefs.vkbd_exit != changed_prefs.vkbd_exit ||
+		_tcscmp(currprefs.vkbd_language, changed_prefs.vkbd_language) ||
+		_tcscmp(currprefs.vkbd_style, changed_prefs.vkbd_style))
+	{
+		currprefs.vkbd_enabled = changed_prefs.vkbd_enabled;
+		currprefs.vkbd_hires = changed_prefs.vkbd_hires;
+		currprefs.vkbd_transparency = changed_prefs.vkbd_transparency;
+		currprefs.vkbd_exit = changed_prefs.vkbd_exit;
+		_tcscpy(currprefs.vkbd_language, changed_prefs.vkbd_language);
+		_tcscpy(currprefs.vkbd_style, changed_prefs.vkbd_style);
+
+		if (currprefs.vkbd_enabled)
+			vkbd_init();
+		else
+			vkbd_quit();
+	}
+
 	return 0;
 }
 
@@ -1800,7 +1822,8 @@ void show_screen(int monid, int mode)
 		SDL_RenderClear(sdl_renderer);
 		SDL_UpdateTexture(amiga_texture, nullptr, sdl_surface->pixels, sdl_surface->pitch);
 		SDL_RenderCopyEx(sdl_renderer, amiga_texture, &crop_rect, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
-		vkbd_redraw();
+		if (currprefs.vkbd_enabled)
+			vkbd_redraw();
 		SDL_RenderPresent(sdl_renderer);
 #endif
 		flip_in_progress = false;
@@ -2198,7 +2221,8 @@ void graphics_leave()
 		mon->sdl_window = nullptr;
 	}
 
-	vkbd_quit();
+	if (currprefs.vkbd_enabled)
+		vkbd_quit();
 }
 
 void close_windows(struct AmigaMonitor* mon)

@@ -48,7 +48,7 @@ static NavigationMap navMap[] =
 #else
 	{"Priority", "cboInactiveRunAtPrio", "cboActiveRunAtPrio", "Miscellaneous", "Savestates" },
 	{"Savestates", "State0", "State0", "Priority", "Virtual Keyboard"},
-	{"Virtual Keyboard", "chkVkHires", "chkVkHires", "Savestates", "Quit"},
+	{"Virtual Keyboard", "chkVkEnabled", "chkVkEnabled", "Savestates", "Quit"},
 	{"Shutdown", "Start", "Quit", "Virtual Keyboard", "Paths"},
 	{"Quit", "Shutdown", "Restart", "Virtual Keyboard", "Paths"},
 	{"Restart", "Quit", "Help", "Virtual Keyboard", "Paths"},
@@ -544,11 +544,12 @@ static NavigationMap navMap[] =
 	{ "SaveState", "LoadState", "Savestates", "State14", "State0" },
 
 	// Virtual Keyboard
-	{ "chkVkHires", "Virtual Keyboard", "Virtual Keyboard", "cboVkStyle", "chkVkExit"},
+	{ "chkVkEnabled", "Virtual Keyboard", "Virtual Keyboard", "cboVkStyle", "chkVkHires"},
+	{ "chkVkHires", "Virtual Keyboard", "Virtual Keyboard", "chkVkEnabled", "chkVkExit"},
 	{ "chkVkExit", "Virtual Keyboard", "Virtual Keyboard", "chkVkHires", "sldVkTransparency"},
 	{ "sldVkTransparency", "", "", "chkVkExit", "cboVkLanguage"},
 	{ "cboVkLanguage", "Virtual Keyboard", "Virtual Keyboard", "sldVkTransparency", "cboVkStyle"},
-	{ "cboVkStyle", "Virtual Keyboard", "Virtual Keyboard", "cboVkLanguage", "chkVkHires"},
+	{ "cboVkStyle", "Virtual Keyboard", "Virtual Keyboard", "cboVkLanguage", "chkVkEnabled"},
 
 #ifdef ANDROID
 	// PanelOnScreen

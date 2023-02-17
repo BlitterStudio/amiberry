@@ -971,7 +971,7 @@ struct uae_prefs
 	int input_device_match_mask;
 
 #ifdef AMIBERRY
-
+	bool vkbd_enabled;
 	bool vkbd_hires;
 	bool vkbd_exit;
 	char vkbd_language[256];

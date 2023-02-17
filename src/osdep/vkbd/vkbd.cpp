@@ -54,7 +54,7 @@ static int vkbdActualIndex = 0;
 // If actual key is pressed.
 static bool vkbdActualPressed = false;
 
-// Mask indicating previous event. It's a mask consiting of VKBD_UP, VKBD_DOWN, VKBD_LEFT, VKBD_RIGHT and VKBD_BUTTON
+// Mask indicating previous event. It's a mask consisting of VKBD_UP, VKBD_DOWN, VKBD_LEFT, VKBD_RIGHT and VKBD_BUTTON
 static int vkbdPreviousState = 0;
 
 // Color that is used to color pressed keys.
@@ -955,7 +955,6 @@ void vkbd_redraw(void)
 	}
 
 	SDL_SetRenderDrawColor(sdl_renderer, color.r, color.g, color.b, color.a);
-
 }
 
 void vkbd_toggle(void)
