@@ -147,6 +147,9 @@
     <Text Include="..\controllers\gamecontrollerdb_user.txt">
       <Filter>controllers</Filter>
     </Text>
+    <Text Include="..\conf\gamecontrollerdb.txt">
+      <Filter>conf</Filter>
+    </Text>
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\data\35floppy.ico">
@@ -483,6 +486,9 @@
     </None>
     <None Include="..\external\libguisan\lib\.keep">
       <Filter>external\libguisan\lib</Filter>
+    </None>
+    <None Include="..\conf\amiberry-osx.conf">
+      <Filter>conf</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

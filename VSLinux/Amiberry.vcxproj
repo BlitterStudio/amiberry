@@ -229,6 +229,7 @@
     <Text Include="..\conf\dir.txt">
       <DeploymentContent>true</DeploymentContent>
     </Text>
+    <Text Include="..\conf\gamecontrollerdb.txt" />
     <Text Include="..\controllers\gamecontrollerdb_user.txt" />
     <Text Include="..\external\libguisan\CMakeLists.txt" />
     <Text Include="..\kickstarts\dir.txt">
@@ -344,6 +345,7 @@
     <Font Include="..\data\AmigaTopaz.ttf" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\conf\amiberry-osx.conf" />
     <None Include="..\conf\amiberry.conf">
       <DeploymentContent>true</DeploymentContent>
     </None>
