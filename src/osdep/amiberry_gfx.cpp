@@ -946,7 +946,14 @@ static void open_screen(struct uae_prefs* p)
 	setmouseactive(mon->monitor_id, -1);
 
 	if (currprefs.vkbd_enabled)
+	{
+		vkbd_set_transparency(static_cast<double>(currprefs.vkbd_transparency) / 100.0);
+		vkbd_set_hires(currprefs.vkbd_hires);
+		vkbd_set_keyboard_has_exit_button(currprefs.vkbd_exit);
+		vkbd_set_language(string(currprefs.vkbd_language));
+		vkbd_set_style(string(currprefs.vkbd_style));
 		vkbd_init();
+	}
 }
 
 void SDL2_toggle_vsync(bool vsync)
@@ -1656,12 +1663,12 @@ int check_prefs_changed_gfx()
 
 		if (currprefs.vkbd_enabled)
 		{
-			vkbd_init();
-			vkbd_set_transparency(currprefs.vkbd_transparency);
+			vkbd_set_transparency(static_cast<double>(currprefs.vkbd_transparency) / 100.0);
 			vkbd_set_hires(currprefs.vkbd_hires);
 			vkbd_set_keyboard_has_exit_button(currprefs.vkbd_exit);
 			vkbd_set_language(string(currprefs.vkbd_language));
 			vkbd_set_style(string(currprefs.vkbd_style));
+			vkbd_init();
 		}
 		else
 			vkbd_quit();
