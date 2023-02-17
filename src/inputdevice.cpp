@@ -5005,7 +5005,7 @@ static void handle_vkbd()
 	}
 
 	int vkbd_state = 0;
-	for (int joy = 0; joy < MAX_JPORTS; ++joy)
+	for (int joy = 0; joy < 2; ++joy)
 	{
 		oleft[joy] = 0;
 		oright[joy] = 0;
