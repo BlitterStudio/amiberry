@@ -92,7 +92,7 @@ ConfigCategory categories[] = {
 	{"Savestates", "savestate.png", nullptr, nullptr, InitPanelSavestate, ExitPanelSavestate,
 		RefreshPanelSavestate, HelpPanelSavestate
 	},
-	{"Virtual Keyboard", "savestate.png", nullptr, nullptr, InitPanelVirtualKeyboard, 
+	{"Virtual Keyboard", "keyboard.png", nullptr, nullptr, InitPanelVirtualKeyboard, 
 		ExitPanelVirtualKeyboard, RefreshPanelVirtualKeyboard, HelpPanelVirtualKeyboard
 	},
 #ifdef ANDROID

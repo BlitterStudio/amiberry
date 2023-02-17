@@ -261,6 +261,7 @@
     <Image Include="..\data\file.ico" />
     <Image Include="..\data\fixedfont.bmp" />
     <Image Include="..\data\joystick.ico" />
+    <Image Include="..\data\keyboard.png" />
     <Image Include="..\data\misc.ico" />
     <Image Include="..\data\paths.ico" />
     <Image Include="..\data\port.ico" />

@@ -443,6 +443,9 @@
     <Image Include="..\data\vkbd\vkbdWarmUSLargeShiftHires.png">
       <Filter>data\vkbd</Filter>
     </Image>
+    <Image Include="..\data\keyboard.png">
+      <Filter>data</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <Font Include="..\data\AmigaTopaz.ttf">
