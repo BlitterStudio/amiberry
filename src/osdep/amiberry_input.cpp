@@ -1207,6 +1207,12 @@ void read_controller_button(const int id, const int button, const int state)
 				SDL_GameControllerGetButton(did->controller,
 					static_cast<SDL_GameControllerButton>(did->mapping.reset_button)) & 1);
 		}
+		if (did->mapping.vkbd_button != SDL_CONTROLLER_BUTTON_INVALID)
+		{
+			setjoybuttonstate(id, retroarch_offset + 4,
+				SDL_GameControllerGetButton(did->controller,
+					static_cast<SDL_GameControllerButton>(did->mapping.vkbd_button)) & 1);
+		}
 
  		setjoybuttonstate(id, button + held_offset, state);
 	}
@@ -1269,6 +1275,11 @@ void read_joystick_button(const int id, const int button, const int state)
 			{
 				setjoybuttonstate(id, retroarch_offset + 3,
 					SDL_JoystickGetButton(did->joystick, did->mapping.reset_button) & 1);
+			}
+			if (did->mapping.vkbd_button != SDL_CONTROLLER_BUTTON_INVALID)
+			{
+				setjoybuttonstate(id, retroarch_offset + 4,
+					SDL_JoystickGetButton(did->joystick, did->mapping.vkbd_button) & 1);
 			}
 		}
 
@@ -1540,6 +1551,9 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 	
 	if (currprefs.use_retroarch_reset)
 		setid(uid, i, ID_BUTTON_OFFSET + retroarch_offset + 3, 0, port, INPUTEVENT_SPC_SOFTRESET, gp);
+
+	if (currprefs.use_retroarch_vkbd)
+		setid(uid, i, ID_BUTTON_OFFSET + retroarch_offset + 4, 0, port, INPUTEVENT_SPC_TOGGLE_VIRTUAL_KEYBOARD, gp);
 
 	if (i >= 0 && i < num_joystick)
 		return 1;

@@ -989,6 +989,7 @@ struct uae_prefs
 	bool use_retroarch_menu;
 	bool use_retroarch_reset;
 	bool use_retroarch_statebuttons;
+	bool use_retroarch_vkbd;
 
 	// probably can be removed now? unless they are used by the new whd selector
 	TCHAR whdload_path[MAX_DPATH];
@@ -1203,6 +1204,7 @@ struct amiberry_options
 	bool default_retroarch_quit = true;
 	bool default_retroarch_menu = true;
 	bool default_retroarch_reset = false;
+	bool default_retroarch_vkbd = false;
 	char default_controller1[128] = "joy1";
 	char default_controller2[128] = "joy2";
 	char default_controller3[128]{};

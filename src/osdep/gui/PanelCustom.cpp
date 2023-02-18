@@ -570,7 +570,19 @@ void RefreshPanelCustom()
 
 			else if (temp_button == did->mapping.vkbd_button
 				&& temp_button != -1
+				&& SelectedFunction == 1
+				&& changed_prefs.use_retroarch_vkbd
+				)
+			{
+				cboCustomButtonAction[n]->setListModel(&CustomEventList_Vkbd);
+				cboCustomButtonAction[n]->setEnabled(false);
+				lblCustomButtonAction[n]->setEnabled(false);
+			}
+
+			else if (temp_button == did->mapping.vkbd_button
+				&& temp_button != -1
 				&& SelectedFunction == 0
+				&& !did->mapping.is_retroarch
 				)
 			{
 				cboCustomButtonAction[n]->setListModel(&CustomEventList_Vkbd);

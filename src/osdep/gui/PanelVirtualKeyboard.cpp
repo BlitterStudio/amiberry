@@ -33,6 +33,8 @@ static gcn::TextField* txtVkSetHotkey;
 static gcn::Button* cmdVkSetHotkey;
 static gcn::ImageButton* cmdVkSetHotkeyClear;
 
+static gcn::CheckBox* chkRetroArchVkbd;
+
 class TransparencySliderActionListener : public gcn::ActionListener
 {
 public:
@@ -192,14 +194,19 @@ public:
 		}
 		else if (actionEvent.getSource() == cmdVkSetHotkeyClear)
 		{
-			txtVkSetHotkey->setText("");
-			memset(&changed_prefs.vkbd_toggle[0], 0, sizeof changed_prefs.vkbd_toggle);
+			const std::string button = "";
+			txtVkSetHotkey->setText(button);
+			strcpy(changed_prefs.vkbd_toggle, button.c_str());
 			for (int port = 0; port < 2; port++)
 			{
 				const auto host_joy_id = changed_prefs.jports[port].id - JSEM_JOYS;
 				didata* did = &di_joystick[host_joy_id];
 				did->mapping.vkbd_button = SDL_CONTROLLER_BUTTON_INVALID;
 			}
+		}
+		else if (actionEvent.getSource() == chkRetroArchVkbd)
+		{
+			changed_prefs.use_retroarch_vkbd = chkRetroArchVkbd->isSelected();
 		}
 		RefreshPanelVirtualKeyboard();
 		RefreshPanelCustom();
@@ -287,6 +294,10 @@ void InitPanelVirtualKeyboard(const struct config_category& category)
 	cmdVkSetHotkeyClear->setId("cmdVkSetHotkeyClear");
 	cmdVkSetHotkeyClear->addActionListener(vkHotkeyActionListener);
 
+	chkRetroArchVkbd = new gcn::CheckBox("Use RetroArch Vkbd button");
+	chkRetroArchVkbd->setId("chkRetroArchVkbd");
+	chkRetroArchVkbd->addActionListener(vkHotkeyActionListener);
+
 	int x = DISTANCE_BORDER;
 	int y = DISTANCE_BORDER;
 	category.panel->add(chkVkEnabled, x, y);
@@ -322,6 +333,10 @@ void InitPanelVirtualKeyboard(const struct config_category& category)
 	category.panel->add(cmdVkSetHotkey, txtVkSetHotkey->getX() + txtVkSetHotkey->getWidth() + 8, y);
 	category.panel->add(cmdVkSetHotkeyClear, cmdVkSetHotkey->getX() + cmdVkSetHotkey->getWidth() + 8, y);
 
+	y += txtVkSetHotkey->getHeight() + DISTANCE_NEXT_Y;
+	x = DISTANCE_BORDER;
+	category.panel->add(chkRetroArchVkbd, x, y);
+
 	RefreshPanelVirtualKeyboard();
 }
 
@@ -341,6 +356,7 @@ void ExitPanelVirtualKeyboard(void)
 	delete txtVkSetHotkey;
 	delete cmdVkSetHotkey;
 	delete cmdVkSetHotkeyClear;
+	delete chkRetroArchVkbd;
 
 	delete transparencySldActionListener;
 	delete hiresChkActionListener;
@@ -364,6 +380,7 @@ void RefreshPanelVirtualKeyboard(void)
 	cboVkStyle->setSelected(styleListModel->getIndex(changed_prefs.vkbd_style));
 
 	txtVkSetHotkey->setText(changed_prefs.vkbd_toggle);
+	chkRetroArchVkbd->setSelected(changed_prefs.use_retroarch_vkbd);
 
 	if (changed_prefs.vkbd_enabled)
 	{
@@ -379,6 +396,7 @@ void RefreshPanelVirtualKeyboard(void)
 		lblVkSetHotkey->setEnabled(true);
 		cmdVkSetHotkey->setEnabled(true);
 		cmdVkSetHotkeyClear->setEnabled(true);
+		chkRetroArchVkbd->setEnabled(true);
 	}
 	else
 	{
@@ -394,7 +412,12 @@ void RefreshPanelVirtualKeyboard(void)
 		lblVkSetHotkey->setEnabled(false);
 		cmdVkSetHotkey->setEnabled(false);
 		cmdVkSetHotkeyClear->setEnabled(false);
+		chkRetroArchVkbd->setEnabled(false);
 	}
+
+	lblVkSetHotkey->setEnabled(!chkRetroArchVkbd->isSelected());
+	cmdVkSetHotkey->setEnabled(!chkRetroArchVkbd->isSelected());
+	cmdVkSetHotkeyClear->setEnabled(!chkRetroArchVkbd->isSelected());
 }
 
 bool HelpPanelVirtualKeyboard(std::vector<std::string>& helptext)

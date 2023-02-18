@@ -1217,6 +1217,12 @@ void process_event(SDL_Event event)
 				inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
 				break;
 			}
+			if (event.jbutton.button == did->mapping.vkbd_button && hotkey_pressed && event.jbutton.state == SDL_PRESSED)
+			{
+				hotkey_pressed = false;
+				inputdevice_add_inputcode(AKS_TOGGLE_VIRTUAL_KEYBOARD, 1, nullptr);
+				break;
+			}
 
 			read_joystick_button(id, event.jbutton.button, event.jbutton.state);
 			return;
@@ -2043,6 +2049,7 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->use_retroarch_quit = amiberry_options.default_retroarch_quit;
 	p->use_retroarch_menu = amiberry_options.default_retroarch_menu;
 	p->use_retroarch_reset = amiberry_options.default_retroarch_reset;
+	p->use_retroarch_vkbd = amiberry_options.default_retroarch_vkbd;
 
 	p->whdbootprefs.buttonwait = amiberry_options.default_whd_buttonwait;
 	p->whdbootprefs.showsplash = amiberry_options.default_whd_showsplash;
@@ -2158,6 +2165,7 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_target_dwrite_bool(f, _T("use_retroarch_quit"), p->use_retroarch_quit);
 	cfgfile_target_dwrite_bool(f, _T("use_retroarch_menu"), p->use_retroarch_menu);
 	cfgfile_target_dwrite_bool(f, _T("use_retroarch_reset"), p->use_retroarch_reset);
+	cfgfile_target_dwrite_bool(f, _T("use_retroarch_vkbd"), p->use_retroarch_vkbd);
 
 	if (scsiromselected > 0)
 		cfgfile_target_write(f, _T("expansion_gui_page"), expansionroms[scsiromselected].name);
@@ -2256,6 +2264,7 @@ static int target_parse_option_host(struct uae_prefs *p, const TCHAR *option, co
 		|| cfgfile_yesno(option, value, _T("use_retroarch_quit"), &p->use_retroarch_quit)
 		|| cfgfile_yesno(option, value, _T("use_retroarch_menu"), &p->use_retroarch_menu)
 		|| cfgfile_yesno(option, value, _T("use_retroarch_reset"), &p->use_retroarch_reset)
+		|| cfgfile_yesno(option, value, _T("use_retroarch_vkbd"), &p->use_retroarch_vkbd)
 		|| cfgfile_intval(option, value, _T("sound_pullmode"), &p->sound_pullmode, 1)
 		|| cfgfile_intval(option, value, _T("samplersoundcard"), &p->samplersoundcard, 1)
 		|| cfgfile_intval(option, value, "kbd_led_num", &p->kbd_led_num, 1)
@@ -2281,7 +2290,7 @@ static int target_parse_option_host(struct uae_prefs *p, const TCHAR *option, co
 		|| cfgfile_intval(option, value, _T("vkbd_transparency"), &p->vkbd_transparency, 1)
 		|| cfgfile_string(option, value, _T("vkbd_language"), p->vkbd_language, sizeof p->vkbd_language)
 		|| cfgfile_string(option, value, _T("vkbd_style"), p->vkbd_style, sizeof p->vkbd_style)
-		|| cfgfile_string(option, value, "vkbd_toggle", p->vkbd_toggle, sizeof p->vkbd_toggle))
+		|| cfgfile_string(option, value, _T("vkbd_toggle"), p->vkbd_toggle, sizeof p->vkbd_toggle))
 		return 1;
 
 	if (cfgfile_string(option, value, _T("expansion_gui_page"), tmpbuf, sizeof tmpbuf / sizeof(TCHAR))) {
@@ -2900,6 +2909,10 @@ void save_amiberry_settings(void)
 	snprintf(buffer, MAX_DPATH, "default_retroarch_reset=%s\n", amiberry_options.default_retroarch_reset ? "yes" : "no");
 	fputs(buffer, f);
 
+	// Enable RetroArch Reset by default?
+	snprintf(buffer, MAX_DPATH, "default_retroarch_vkbd=%s\n", amiberry_options.default_retroarch_vkbd ? "yes" : "no");
+	fputs(buffer, f);
+
 	// Controller1
 	snprintf(buffer, MAX_DPATH, "default_controller1=%s\n", amiberry_options.default_controller1);
 	fputs(buffer, f);
@@ -3215,6 +3228,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_yesno(option, value, "default_retroarch_quit", &amiberry_options.default_retroarch_quit);
 		ret |= cfgfile_yesno(option, value, "default_retroarch_menu", &amiberry_options.default_retroarch_menu);
 		ret |= cfgfile_yesno(option, value, "default_retroarch_reset", &amiberry_options.default_retroarch_reset);
+		ret |= cfgfile_yesno(option, value, "default_retroarch_vkbd", &amiberry_options.default_retroarch_vkbd);
 		ret |= cfgfile_string(option, value, "default_controller1", amiberry_options.default_controller1, sizeof amiberry_options.default_controller1);
 		ret |= cfgfile_string(option, value, "default_controller2", amiberry_options.default_controller2, sizeof amiberry_options.default_controller2);
 		ret |= cfgfile_string(option, value, "default_controller3", amiberry_options.default_controller3, sizeof amiberry_options.default_controller3);

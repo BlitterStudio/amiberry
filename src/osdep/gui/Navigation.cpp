@@ -544,12 +544,15 @@ static NavigationMap navMap[] =
 	{ "SaveState", "LoadState", "Savestates", "State14", "State0" },
 
 	// Virtual Keyboard
-	{ "chkVkEnabled", "Virtual Keyboard", "Virtual Keyboard", "cboVkStyle", "chkVkHires"},
+	{ "chkVkEnabled", "Virtual Keyboard", "Virtual Keyboard", "chkRetroArchVkbd", "chkVkHires"},
 	{ "chkVkHires", "Virtual Keyboard", "Virtual Keyboard", "chkVkEnabled", "chkVkExit"},
 	{ "chkVkExit", "Virtual Keyboard", "Virtual Keyboard", "chkVkHires", "sldVkTransparency"},
 	{ "sldVkTransparency", "", "", "chkVkExit", "cboVkLanguage"},
 	{ "cboVkLanguage", "Virtual Keyboard", "Virtual Keyboard", "sldVkTransparency", "cboVkStyle"},
-	{ "cboVkStyle", "Virtual Keyboard", "Virtual Keyboard", "cboVkLanguage", "chkVkEnabled"},
+	{ "cboVkStyle", "Virtual Keyboard", "Virtual Keyboard", "cboVkLanguage", "cmdVkSetHotkey"},
+	{ "cmdVkSetHotkey",  "Virtual Keyboard", "cmdVkSetHotkeyClear", "cboVkStyle", "chkRetroArchVkbd"},
+	{ "cmdVkSetHotkeyClear", "cmdVkSetHotkey", "Virtual Keyboard", "cboVkStyle", "chkRetroArchVkbd"},
+	{ "chkRetroArchVkbd", "Virtual Keyboard", "Virtual Keyboard", "cmdVkSetHotkey", "chkVkEnabled"},
 
 #ifdef ANDROID
 	// PanelOnScreen
