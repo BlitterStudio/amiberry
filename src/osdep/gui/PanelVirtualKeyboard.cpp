@@ -369,19 +369,31 @@ void RefreshPanelVirtualKeyboard(void)
 	{
 		chkVkHires->setEnabled(true);
 		chkVkExit->setEnabled(true);
+		lblVkTransparency->setEnabled(true);
 		sldVkTransparency->setEnabled(true);
 		lblVkTransparencyValue->setEnabled(true);
+		lblVkLanguage->setEnabled(true);
 		cboVkLanguage->setEnabled(true);
+		lblVkStyle->setEnabled(true);
 		cboVkStyle->setEnabled(true);
+		lblVkSetHotkey->setEnabled(true);
+		cmdVkSetHotkey->setEnabled(true);
+		cmdVkSetHotkeyClear->setEnabled(true);
 	}
 	else
 	{
 		chkVkHires->setEnabled(false);
 		chkVkExit->setEnabled(false);
+		lblVkTransparency->setEnabled(false);
 		sldVkTransparency->setEnabled(false);
 		lblVkTransparencyValue->setEnabled(false);
+		lblVkLanguage->setEnabled(false);
 		cboVkLanguage->setEnabled(false);
+		lblVkStyle->setEnabled(false);
 		cboVkStyle->setEnabled(false);
+		lblVkSetHotkey->setEnabled(false);
+		cmdVkSetHotkey->setEnabled(false);
+		cmdVkSetHotkeyClear->setEnabled(false);
 	}
 }
 

@@ -247,6 +247,7 @@ void RefreshPanelIO()
 #ifdef SERIAL_PORT
 	chkRTSCTS->setSelected(changed_prefs.serial_hwctsrts);
 	chkSerialDirect->setSelected(changed_prefs.serial_direct);
+	chkUaeSerial->setSelected(changed_prefs.uaeserial);
 	cboSerialPort->setSelected(0);
 	if (changed_prefs.sername[0])
 	{
@@ -259,8 +260,16 @@ void RefreshPanelIO()
 				break;
 			}
 		}
+		chkRTSCTS->setEnabled(true);
+		chkSerialDirect->setEnabled(true);
+		chkUaeSerial->setEnabled(true);
 	}
-	chkUaeSerial->setSelected(changed_prefs.uaeserial);
+	else
+	{
+		chkRTSCTS->setEnabled(false);
+		chkSerialDirect->setEnabled(false);
+		chkUaeSerial->setEnabled(false);
+	}
 #endif
 
 	cboProtectionDongle->setSelected(changed_prefs.dongle);
@@ -272,6 +281,7 @@ void RefreshPanelIO()
 	const int sampler_idx = changed_prefs.samplersoundcard;
 	cboSampler->setSelected(sampler_idx + 1);
 	chkSamplerStereo->setSelected(changed_prefs.sampler_stereo);
+	chkSamplerStereo->setEnabled(sampler_idx >= 0);
 }
 
 bool HelpPanelIO(std::vector<std::string>& helptext)

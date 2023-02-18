@@ -993,12 +993,20 @@ void RefreshPanelSound()
 	lblPaulaVol->setEnabled(enabled);
 	lblPaulaVolInfo->setEnabled(enabled);
 	sldPaulaVol->setEnabled(enabled);
+
 	lblMasterVol->setEnabled(false);
 	lblMasterVolInfo->setEnabled(false);
 	sldMasterVol->setEnabled(false);
 	lblAHIVol->setEnabled(false);
 	lblAHIVolInfo->setEnabled(false);
 	sldAHIVol->setEnabled(false);
+
+	sldFloppySoundDisk->setEnabled(chkFloppySound->isSelected());
+	lblFloppySoundDisk->setEnabled(chkFloppySound->isSelected());
+	lblFloppySoundDiskInfo->setEnabled(chkFloppySound->isSelected());
+	sldFloppySoundEmpty->setEnabled(chkFloppySound->isSelected());
+	lblFloppySoundEmpty->setEnabled(chkFloppySound->isSelected());
+	lblFloppySoundEmptyInfo->setEnabled(chkFloppySound->isSelected());
 }
 
 bool HelpPanelSound(std::vector<std::string>& helptext)
