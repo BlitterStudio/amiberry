@@ -31,7 +31,7 @@ static double vkbdSlideDurationInSeconds = 1.0;
 static bool vkbdKeyboardHasExitButton = true;
 
 // All directions:
-const std::vector<int> vkbdDirections { VKBD_UP, VKBD_DOWN, VKBD_LEFT, VKBD_RIGHT};
+const std::vector<int> vkbdDirections{VKBD_UP, VKBD_DOWN, VKBD_LEFT, VKBD_RIGHT};
 
 // Boolean that determines if keyboard is shown.
 static bool vkbdShow = false;
@@ -40,13 +40,13 @@ static bool vkbdShow = false;
 static std::chrono::time_point<std::chrono::system_clock> vkbdTimeLastRedraw;
 
 // Initialized in vkbd_init.
-static std::map<int,int> vkbdStickyKeyToIndex; 
+static std::map<int, int> vkbdStickyKeyToIndex;
 static std::set<int> vkbdPressedStickyKeys;
 static std::set<int> vkbdStickyKeys;
-static SDL_Texture * vkbdTexture = nullptr;
-static SDL_Texture * vkbdTextureShift = nullptr;
+static SDL_Texture* vkbdTexture = nullptr;
+static SDL_Texture* vkbdTextureShift = nullptr;
 
-static VkbdRect * vkbdRect;
+static VkbdRect* vkbdRect;
 
 // Acutal index in current t_vkbdRect
 static int vkbdActualIndex = 0;
@@ -80,14 +80,14 @@ static VkbdRect vkbdExitButtonRect;
 static const int vkbdExitButtonIndex = -1;
 
 // These are other keys from which you can move into the exit button:
-const std::vector<std::pair<int,int>> vkbdExitButtonConnections {
+const std::vector<std::pair<int, int>> vkbdExitButtonConnections{
 	std::make_pair(AK_ESC, VKBD_LEFT),
 	std::make_pair(AK_BACKQUOTE, VKBD_LEFT),
 	std::make_pair(AK_TAB, VKBD_LEFT),
 	std::make_pair(AK_CTRL, VKBD_LEFT),
 	std::make_pair(AK_LSH, VKBD_LEFT),
 	std::make_pair(AK_LALT, VKBD_LEFT),
-	std::make_pair(AK_NPMUL, VKBD_RIGHT), 
+	std::make_pair(AK_NPMUL, VKBD_RIGHT),
 	std::make_pair(AK_NPSUB, VKBD_RIGHT),
 	std::make_pair(AK_NPADD, VKBD_RIGHT),
 	std::make_pair(AK_ENT, VKBD_RIGHT)
@@ -568,7 +568,7 @@ static std::string vkbd_get_exit_button_filename()
 
 	TCHAR data_dir[MAX_DPATH];
 	get_data_path(data_dir, sizeof(data_dir) / sizeof(TCHAR));
-	
+
 	std::string fileName = data_dir;
 	fileName += std::string("vkbd/vkbd");
 	fileName += styleString;
@@ -577,7 +577,6 @@ static std::string vkbd_get_exit_button_filename()
 	fileName += std::string(".png");
 
 	return fileName;
-
 }
 
 static std::string vkbd_get_keyboard_filename(bool shift)
@@ -589,7 +588,7 @@ static std::string vkbd_get_keyboard_filename(bool shift)
 
 	TCHAR data_dir[MAX_DPATH];
 	get_data_path(data_dir, sizeof(data_dir) / sizeof(TCHAR));
-	
+
 	std::string fileName = data_dir;
 	fileName += std::string("vkbd/vkbd");
 	fileName += styleString;
@@ -602,7 +601,7 @@ static std::string vkbd_get_keyboard_filename(bool shift)
 	return fileName;
 }
 
-static SDL_Surface * vkbd_create_keyboard_surface(bool shift)
+static SDL_Surface* vkbd_create_keyboard_surface(bool shift)
 {
 	const auto fileName = vkbd_get_keyboard_filename(shift);
 	const auto surf = IMG_Load(fileName.c_str());
@@ -615,7 +614,7 @@ static SDL_Surface * vkbd_create_keyboard_surface(bool shift)
 	return surf;
 }
 
-static SDL_Surface * vkbd_create_exit_button_surface()
+static SDL_Surface* vkbd_create_exit_button_surface()
 {
 	const auto fileName = vkbd_get_exit_button_filename();
 	const auto surf = IMG_Load(fileName.c_str());
@@ -628,11 +627,11 @@ static SDL_Surface * vkbd_create_exit_button_surface()
 	return surf;
 }
 
-static SDL_Surface * vkbd_concat_surfaces(SDL_Surface * keyboard, SDL_Surface * exit)
+static SDL_Surface* vkbd_concat_surfaces(SDL_Surface* keyboard, SDL_Surface* exit)
 {
 	const int width = keyboard->w + exit->w;
 	const int height = std::max(keyboard->h, exit->h);
-	const auto surf = SDL_CreateRGBSurface(0,width,height,32,0,0,0,0);
+	const auto surf = SDL_CreateRGBSurface(0, width, height, 32, 0, 0, 0, 0);
 	SDL_Rect srcRect;
 	srcRect.x = 0;
 	srcRect.y = 0;
@@ -657,7 +656,7 @@ static SDL_Surface * vkbd_concat_surfaces(SDL_Surface * keyboard, SDL_Surface * 
 	return surf;
 }
 
-static SDL_Texture * vkbd_create_keyboard_texture(bool shift)
+static SDL_Texture* vkbd_create_keyboard_texture(bool shift)
 {
 	const auto keyboard = vkbd_create_keyboard_surface(shift);
 	if (keyboard == nullptr)
@@ -665,7 +664,7 @@ static SDL_Texture * vkbd_create_keyboard_texture(bool shift)
 		return nullptr;
 	}
 
-	SDL_Surface * surf;
+	SDL_Surface* surf;
 	if (vkbdKeyboardHasExitButton)
 	{
 		const auto exit = vkbd_create_exit_button_surface();
@@ -674,7 +673,7 @@ static SDL_Texture * vkbd_create_keyboard_texture(bool shift)
 			return nullptr;
 		}
 
-		surf = vkbd_concat_surfaces(keyboard, exit);	
+		surf = vkbd_concat_surfaces(keyboard, exit);
 
 		if (surf == nullptr)
 		{
@@ -685,7 +684,7 @@ static SDL_Texture * vkbd_create_keyboard_texture(bool shift)
 	}
 	else
 	{
-		surf = keyboard;	
+		surf = keyboard;
 	}
 
 	const auto texture = SDL_CreateTextureFromSurface(sdl_renderer, surf);
@@ -696,7 +695,7 @@ static SDL_Texture * vkbd_create_keyboard_texture(bool shift)
 static int vkbd_find_index(int key)
 {
 	int index = 0;
-	while(vkbdRect[index].key != key)
+	while (vkbdRect[index].key != key)
 	{
 		++index;
 	}
@@ -742,9 +741,9 @@ void vkbd_update(bool createTextures)
 	}
 
 	if (createTextures)
-	{	
+	{
 		int width, height;
-		SDL_QueryTexture(vkbdTexture, NULL, NULL, &width, &height);
+		SDL_QueryTexture(vkbdTexture, nullptr, nullptr, &width, &height);
 		int renderedWidth, rendererHeight;
 		SDL_RenderGetLogicalSize(sdl_renderer, &renderedWidth, &rendererHeight);
 
@@ -772,9 +771,9 @@ void vkbd_update(bool createTextures)
 	vkbdPressedStickyKeys.clear();
 
 	vkbdStickyKeyToIndex.clear();
-	for(auto key : vkbdStickyKeys)
+	for (auto key : vkbdStickyKeys)
 	{
-		auto index = vkbd_find_index(key);
+		const auto index = vkbd_find_index(key);
 		vkbdStickyKeyToIndex[key] = index;
 	}
 
@@ -884,7 +883,7 @@ void vkbd_quit(void)
 	}
 }
 
-static const VkbdRect &vkbd_get_key_rect(int index)
+static const VkbdRect& vkbd_get_key_rect(int index)
 {
 	if (index == vkbdExitButtonIndex)
 	{
@@ -908,8 +907,8 @@ static SDL_Rect vkbd_get_key_drawing_rect(int index)
 
 static SDL_Texture* vkbd_get_texture_to_draw()
 {
-	const bool shiftPressed = vkbdPressedStickyKeys.find(AK_LSH) != vkbdPressedStickyKeys.end() || 
-						vkbdPressedStickyKeys.find(AK_RSH) != vkbdPressedStickyKeys.end();
+	const bool shiftPressed = vkbdPressedStickyKeys.find(AK_LSH) != vkbdPressedStickyKeys.end() ||
+		vkbdPressedStickyKeys.find(AK_RSH) != vkbdPressedStickyKeys.end();
 	SDL_Texture* toDraw = shiftPressed ? vkbdTextureShift : vkbdTexture;
 	return toDraw;
 }
@@ -917,14 +916,14 @@ static SDL_Texture* vkbd_get_texture_to_draw()
 static void vkbd_update_current_xy()
 {
 	const auto now = std::chrono::system_clock::now();
-    const auto diff = now - vkbdTimeLastRedraw;
+	const auto diff = now - vkbdTimeLastRedraw;
 	const double diffSeconds = std::chrono::duration_cast<std::chrono::milliseconds>(diff).count() / 1000.0;
 	const double speedX = (vkbdEndX - vkbdStartX) / vkbdSlideDurationInSeconds;
 	const double speedY = (vkbdEndY - vkbdStartY) / vkbdSlideDurationInSeconds;
 	const double sign = vkbdShow ? +1.0 : -1.0;
 	const int maxX = std::max(vkbdStartX, vkbdEndX);
 	const int maxY = std::max(vkbdStartY, vkbdEndY);
-	const int minX = std::min(vkbdStartX, vkbdEndX);	
+	const int minX = std::min(vkbdStartX, vkbdEndX);
 	const int minY = std::min(vkbdStartY, vkbdEndY);
 
 	vkbdCurrentX += static_cast<int>(speedX * diffSeconds * sign);
@@ -960,7 +959,7 @@ void vkbd_redraw(void)
 	rect.y = vkbdCurrentY;
 	rect.w = w;
 	rect.h = h;
-	
+
 	SDL_SetRenderDrawBlendMode(sdl_renderer, SDL_BLENDMODE_BLEND);
 	SDL_SetTextureBlendMode(toDraw, SDL_BLENDMODE_BLEND);
 	SDL_SetTextureAlphaMod(toDraw, vkbdAlpha);
@@ -969,7 +968,7 @@ void vkbd_redraw(void)
 	// Store color so we can restore later
 	SDL_Color color;
 	SDL_GetRenderDrawColor(sdl_renderer, &color.r, &color.g, &color.b, &color.a);
-	
+
 	// Draw currently selected key:
 	rect = vkbd_get_key_drawing_rect(vkbdActualIndex);
 	const int alpha = static_cast<int>((1.0 - vkbdTransparency) * vkbdPressedKeyColor.a);
@@ -977,7 +976,7 @@ void vkbd_redraw(void)
 	SDL_RenderFillRect(sdl_renderer, &rect);
 
 	// Draw sticky keys:
-	for(auto key : vkbdPressedStickyKeys)
+	for (auto key : vkbdPressedStickyKeys)
 	{
 		const auto index = vkbdStickyKeyToIndex[key];
 		rect = vkbd_get_key_drawing_rect(index);
@@ -1008,22 +1007,23 @@ static bool vkbd_switched_off(int state, int vkbdPreviousState, int mask)
 	return (state & mask) != (vkbdPreviousState & mask) && (state & mask) == 0;
 }
 
-static int vkbd_move(const VkbdRect &rect, int direction)
+static int vkbd_move(const VkbdRect& rect, int direction)
 {
-	switch(direction)
+	switch (direction)
 	{
-		case VKBD_UP:
-			return rect.up;
-		case VKBD_DOWN:
-			return rect.down;
-		case VKBD_LEFT:
-			return rect.left;
-		case VKBD_RIGHT:
-			return rect.right;
-		default:
-			return 0;
+	case VKBD_UP:
+		return rect.up;
+	case VKBD_DOWN:
+		return rect.down;
+	case VKBD_LEFT:
+		return rect.left;
+	case VKBD_RIGHT:
+		return rect.right;
+	default:
+		return 0;
 	}
 }
+
 static int vkbd_move(int actualIndex, int direction)
 {
 	if (actualIndex == vkbdExitButtonIndex)
@@ -1031,10 +1031,10 @@ static int vkbd_move(int actualIndex, int direction)
 		return vkbd_move(vkbdExitButtonRect, direction);
 	}
 
-	const auto &rect = vkbd_get_key_rect(actualIndex);
+	const auto& rect = vkbd_get_key_rect(actualIndex);
 	const auto key = rect.key;
-	
-	for(const auto kvp : vkbdExitButtonConnections)
+
+	for (const auto kvp : vkbdExitButtonConnections)
 	{
 		if (kvp.first == key && direction == kvp.second)
 		{
@@ -1048,7 +1048,7 @@ static int vkbd_move(int actualIndex, int direction)
 // For simplicity we don't allow movement (up/down/left/right) when the fire button is pressed.
 // For normal (non-sticky) keys button press/release events are send whenever the fire button is released.
 // For sticky keys, the key is toggled whenever the fire button goes from not pressed to pressed.
-bool vkbd_process(int state, int *keycode, int *pressed)
+bool vkbd_process(int state, int* keycode, int* pressed)
 {
 	if (!vkbdShow || vkbdCurrentX != vkbdEndX || vkbdCurrentY != vkbdEndY)
 	{
@@ -1064,7 +1064,7 @@ bool vkbd_process(int state, int *keycode, int *pressed)
 		const auto actual_key = vkbd_get_key_rect(vkbdActualIndex).key;
 		if (vkbdPressedStickyKeys.find(actual_key) == vkbdPressedStickyKeys.end())
 		{
-			*keycode =actual_key;
+			*keycode = actual_key;
 			*pressed = 0;
 			result = true;
 		}
@@ -1072,7 +1072,7 @@ bool vkbd_process(int state, int *keycode, int *pressed)
 
 	if ((state & VKBD_BUTTON) == 0)
 	{
-		for(const auto direction : vkbdDirections)
+		for (const auto direction : vkbdDirections)
 		{
 			const bool on = vkbd_switched_on(state, vkbdPreviousState, direction);
 			if (on)
@@ -1093,7 +1093,7 @@ bool vkbd_process(int state, int *keycode, int *pressed)
 				const auto iter = vkbdPressedStickyKeys.find(actual_key);
 				vkbdPressedStickyKeys.erase(iter);
 				*keycode = actual_key;
-				*pressed = 0;			
+				*pressed = 0;
 				result = true;
 			}
 			else
