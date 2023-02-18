@@ -2952,13 +2952,6 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	write_inputdevice_config (p, f);
 
 #ifdef AMIBERRY
-	cfgfile_write_bool(f, _T("vkbd_enabled"), p->vkbd_enabled);
-	cfgfile_write_bool(f, _T("vkbd_hires"), p->vkbd_hires);
-	cfgfile_write_bool(f, _T("vkbd_exit"), p->vkbd_exit);
-	cfgfile_write(f, _T("vkbd_transparency"), "%d", p->vkbd_transparency);
-	cfgfile_write_str(f, _T("vkbd_language"), p->vkbd_language);
-	cfgfile_write_str(f, _T("vkbd_style"), p->vkbd_style);
-
 	cfg_write(_T("; *** WHDLoad Booter. Options"), f);
 
 	cfgfile_write_str(f, _T("whdload_slave"), p->whdbootprefs.slave);
@@ -3820,16 +3813,6 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		return 1;
 #endif
 
-#ifdef AMIBERRY
-	if (cfgfile_yesno(option, value, _T("vkbd_enabled"), &p->vkbd_enabled) || 
-		cfgfile_yesno(option, value, _T("vkbd_hires"), &p->vkbd_hires) ||
-		cfgfile_yesno(option, value, _T("vkbd_exit"), &p->vkbd_exit) ||
-		cfgfile_intval(option, value, _T("vkbd_transparency"), &p->vkbd_transparency, 1) ||
-		cfgfile_string(option, value, _T("vkbd_language"), p->vkbd_language, sizeof(p->vkbd_language)) ||
-		cfgfile_string(option, value, _T("vkbd_style"), p->vkbd_style, sizeof(p->vkbd_style)))
-		return 1;
-#endif
-		
 	if (cfgfile_yesno(option, value, _T("gfx_api_hdr"), &vb)) {
 		if (vb && p->gfx_api == 2) {
 			p->gfx_api = 3;

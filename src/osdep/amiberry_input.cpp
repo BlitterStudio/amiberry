@@ -99,6 +99,7 @@ static void fill_default_controller()
 	default_controller_map.quit_button = SDL_CONTROLLER_BUTTON_INVALID;
 	default_controller_map.reset_button = SDL_CONTROLLER_BUTTON_INVALID;
 	default_controller_map.menu_button = SDL_CONTROLLER_BUTTON_INVALID;
+	default_controller_map.vkbd_button = SDL_CONTROLLER_BUTTON_INVALID;
 
 	default_controller_map.lstick_axis_y_invert = false;
 	default_controller_map.lstick_axis_x_invert = false;
@@ -122,6 +123,7 @@ static void fill_blank_controller()
 	default_controller_map.quit_button = SDL_CONTROLLER_BUTTON_INVALID;
 	default_controller_map.reset_button = SDL_CONTROLLER_BUTTON_INVALID;
 	default_controller_map.menu_button = SDL_CONTROLLER_BUTTON_INVALID;
+	default_controller_map.vkbd_button = SDL_CONTROLLER_BUTTON_INVALID;
 
 	default_controller_map.lstick_axis_y_invert = false;
 	default_controller_map.lstick_axis_x_invert = false;

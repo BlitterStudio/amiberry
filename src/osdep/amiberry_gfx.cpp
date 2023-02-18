@@ -1652,7 +1652,8 @@ int check_prefs_changed_gfx()
 		currprefs.vkbd_transparency != changed_prefs.vkbd_transparency ||
 		currprefs.vkbd_exit != changed_prefs.vkbd_exit ||
 		_tcscmp(currprefs.vkbd_language, changed_prefs.vkbd_language) ||
-		_tcscmp(currprefs.vkbd_style, changed_prefs.vkbd_style))
+		_tcscmp(currprefs.vkbd_style, changed_prefs.vkbd_style) ||
+		_tcscmp(currprefs.vkbd_toggle, changed_prefs.vkbd_toggle))
 	{
 		currprefs.vkbd_enabled = changed_prefs.vkbd_enabled;
 		currprefs.vkbd_hires = changed_prefs.vkbd_hires;
@@ -1660,6 +1661,7 @@ int check_prefs_changed_gfx()
 		currprefs.vkbd_exit = changed_prefs.vkbd_exit;
 		_tcscpy(currprefs.vkbd_language, changed_prefs.vkbd_language);
 		_tcscpy(currprefs.vkbd_style, changed_prefs.vkbd_style);
+		_tcscpy(currprefs.vkbd_toggle, changed_prefs.vkbd_toggle);
 
 		if (currprefs.vkbd_enabled)
 		{

@@ -6,12 +6,15 @@
 #include <SDL_image.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
+
 #include "SelectorEntry.hpp"
 
 #include "sysdeps.h"
-#include "gui.h"
-#include "savestate.h"
+#include "options.h"
 #include "gui_handling.h"
+#include "inputdevice.h"
+#include "amiberry_input.h"
+#include "fsdb_host.h"
 #include "vkbd/vkbd.h"
 
 static gcn::CheckBox* chkVkEnabled;
@@ -24,6 +27,11 @@ static gcn::Label* lblVkLanguage;
 static gcn::DropDown* cboVkLanguage;
 static gcn::Label* lblVkStyle;
 static gcn::DropDown* cboVkStyle;
+
+static gcn::Label* lblVkSetHotkey;
+static gcn::TextField* txtVkSetHotkey;
+static gcn::Button* cmdVkSetHotkey;
+static gcn::ImageButton* cmdVkSetHotkeyClear;
 
 class TransparencySliderActionListener : public gcn::ActionListener
 {
@@ -161,12 +169,50 @@ public:
 
 };
 
+class VkHotkeyActionListener : public gcn::ActionListener
+{
+public:
+
+	void action(const gcn::ActionEvent& actionEvent) override
+	{
+		if (actionEvent.getSource() == cmdVkSetHotkey)
+		{
+			const auto button = ShowMessageForInput("Press a button", "Press a button on your controller to set it as the Hotkey button", "Cancel");
+			if (!button.key_name.empty())
+			{
+				txtVkSetHotkey->setText(button.key_name);
+				_tcscpy(changed_prefs.vkbd_toggle, button.key_name.c_str());
+				for (int port = 0; port < 2; port++)
+				{
+					const auto host_joy_id = changed_prefs.jports[port].id - JSEM_JOYS;
+					didata* did = &di_joystick[host_joy_id];
+					did->mapping.vkbd_button = button.button;
+				}
+			}
+		}
+		else if (actionEvent.getSource() == cmdVkSetHotkeyClear)
+		{
+			txtVkSetHotkey->setText("");
+			memset(&changed_prefs.vkbd_toggle[0], 0, sizeof changed_prefs.vkbd_toggle);
+			for (int port = 0; port < 2; port++)
+			{
+				const auto host_joy_id = changed_prefs.jports[port].id - JSEM_JOYS;
+				didata* did = &di_joystick[host_joy_id];
+				did->mapping.vkbd_button = SDL_CONTROLLER_BUTTON_INVALID;
+			}
+		}
+		RefreshPanelVirtualKeyboard();
+		RefreshPanelCustom();
+	}
+};
+
 static VkEnabledCheckboxActionListener* vkEnabledActionListener;
 static HiresCheckboxActionListener* hiresChkActionListener;
 static ExitCheckboxActionListener* exitChkActionListener;
 static TransparencySliderActionListener* transparencySldActionListener;
 static LanguageDropDownActionListener* languageDrpActionListener;
 static StyleDropDownActionListener* styleDrpActionListener;
+static VkHotkeyActionListener* vkHotkeyActionListener;
 
 void InitPanelVirtualKeyboard(const struct config_category& category)
 {
@@ -198,13 +244,12 @@ void InitPanelVirtualKeyboard(const struct config_category& category)
 	lblVkTransparencyValue = new gcn::Label("100%");
 	lblVkTransparencyValue->setAlignment(gcn::Graphics::LEFT);
 
-
 	lblVkLanguage = new gcn::Label(_T("Keyboard Layout:"));
 
 	languageListModel = new EnumListModel<VkbdLanguage>(languages);
 	languageDrpActionListener = new LanguageDropDownActionListener();
 	cboVkLanguage = new gcn::DropDown();
-	cboVkLanguage->setSize(150, cboVkLanguage->getHeight());
+	cboVkLanguage->setSize(120, cboVkLanguage->getHeight());
 	cboVkLanguage->setBaseColor(gui_baseCol);
 	cboVkLanguage->setBackgroundColor(colTextboxBackground);
 	cboVkLanguage->setId("cboVkLanguage");
@@ -216,13 +261,31 @@ void InitPanelVirtualKeyboard(const struct config_category& category)
 	styleListModel = new EnumListModel<VkbdStyle>(styles);
 	styleDrpActionListener = new StyleDropDownActionListener();
 	cboVkStyle = new gcn::DropDown();
-	cboVkStyle->setSize(150, cboVkStyle->getHeight());
+	cboVkStyle->setSize(120, cboVkStyle->getHeight());
 	cboVkStyle->setBaseColor(gui_baseCol);
 	cboVkStyle->setBackgroundColor(colTextboxBackground);
 	cboVkStyle->setId("cboVkStyle");
 	cboVkStyle->setListModel(styleListModel);
 	cboVkStyle->addActionListener(styleDrpActionListener);
 
+	vkHotkeyActionListener = new VkHotkeyActionListener();
+
+	lblVkSetHotkey = new gcn::Label("Toggle button:");
+	lblVkSetHotkey->setAlignment(gcn::Graphics::RIGHT);
+	txtVkSetHotkey = new gcn::TextField();
+	txtVkSetHotkey->setEnabled(false);
+	txtVkSetHotkey->setSize(120, TEXTFIELD_HEIGHT);
+	txtVkSetHotkey->setBackgroundColor(colTextboxBackground);
+	cmdVkSetHotkey = new gcn::Button("...");
+	cmdVkSetHotkey->setId("cmdVkSetHotkey");
+	cmdVkSetHotkey->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	cmdVkSetHotkey->setBaseColor(gui_baseCol);
+	cmdVkSetHotkey->addActionListener(vkHotkeyActionListener);
+	cmdVkSetHotkeyClear = new gcn::ImageButton(prefix_with_data_path("delete.png"));
+	cmdVkSetHotkeyClear->setBaseColor(gui_baseCol);
+	cmdVkSetHotkeyClear->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	cmdVkSetHotkeyClear->setId("cmdVkSetHotkeyClear");
+	cmdVkSetHotkeyClear->addActionListener(vkHotkeyActionListener);
 
 	int x = DISTANCE_BORDER;
 	int y = DISTANCE_BORDER;
@@ -251,6 +314,14 @@ void InitPanelVirtualKeyboard(const struct config_category& category)
 	x += lblVkLanguage->getWidth() + DISTANCE_NEXT_X;
 	category.panel->add(cboVkStyle, x, y);
 
+	y += cboVkStyle->getHeight() + DISTANCE_NEXT_Y;
+	x = DISTANCE_BORDER;
+	category.panel->add(lblVkSetHotkey, x, y);
+	x += lblVkLanguage->getWidth() + DISTANCE_NEXT_X;
+	category.panel->add(txtVkSetHotkey, x, y);
+	category.panel->add(cmdVkSetHotkey, txtVkSetHotkey->getX() + txtVkSetHotkey->getWidth() + 8, y);
+	category.panel->add(cmdVkSetHotkeyClear, cmdVkSetHotkey->getX() + cmdVkSetHotkey->getWidth() + 8, y);
+
 	RefreshPanelVirtualKeyboard();
 }
 
@@ -266,6 +337,10 @@ void ExitPanelVirtualKeyboard(void)
 	delete cboVkLanguage;
 	delete lblVkStyle;
 	delete cboVkStyle;
+	delete lblVkSetHotkey;
+	delete txtVkSetHotkey;
+	delete cmdVkSetHotkey;
+	delete cmdVkSetHotkeyClear;
 
 	delete transparencySldActionListener;
 	delete hiresChkActionListener;
@@ -273,6 +348,7 @@ void ExitPanelVirtualKeyboard(void)
 	delete languageDrpActionListener;
 	delete styleListModel;
 	delete styleDrpActionListener;
+	delete vkHotkeyActionListener;
 }
 
 void RefreshPanelVirtualKeyboard(void)
@@ -286,6 +362,8 @@ void RefreshPanelVirtualKeyboard(void)
 
 	cboVkLanguage->setSelected(languageListModel->getIndex(changed_prefs.vkbd_language));
 	cboVkStyle->setSelected(styleListModel->getIndex(changed_prefs.vkbd_style));
+
+	txtVkSetHotkey->setText(changed_prefs.vkbd_toggle);
 
 	if (changed_prefs.vkbd_enabled)
 	{

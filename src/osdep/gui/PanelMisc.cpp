@@ -726,7 +726,9 @@ void RefreshPanelMisc()
 	cboKBDLed_scr->setSelected(changed_prefs.kbd_led_scr + 1);
 	cboKBDLed_cap->setSelected(changed_prefs.kbd_led_cap + 1);
 
-	txtOpenGUI->setText(strncmp(changed_prefs.open_gui, "", 1) != 0 ? changed_prefs.open_gui : "Click to map");
+	txtOpenGUI->setText(strncmp(changed_prefs.open_gui, "", 1) != 0 
+		? changed_prefs.open_gui
+		: "Click to map");
 	txtKeyForQuit->setText(strncmp(changed_prefs.quit_amiberry, "", 1) != 0
 		? changed_prefs.quit_amiberry
 		: "Click to map");

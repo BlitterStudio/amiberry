@@ -8868,6 +8868,7 @@ void inputdevice_copyconfig (struct uae_prefs *src, struct uae_prefs *dst)
 	dst->use_retroarch_quit = src->use_retroarch_quit;
 	dst->use_retroarch_menu = src->use_retroarch_menu;
 	dst->use_retroarch_reset = src->use_retroarch_reset;
+	strcpy(dst->vkbd_toggle, src->vkbd_toggle);
 #endif
 
 	for (int i = 0; i < MAX_JPORTS; i++) {

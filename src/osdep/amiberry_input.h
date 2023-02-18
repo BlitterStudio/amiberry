@@ -25,6 +25,7 @@ struct host_input_button {
 	int menu_button{};
 	int load_state_button{};
 	int save_state_button{};
+	int vkbd_button{};
 
 	int number_of_hats{};
 	int number_of_axis{};

@@ -974,9 +974,10 @@ struct uae_prefs
 	bool vkbd_enabled;
 	bool vkbd_hires;
 	bool vkbd_exit;
-	char vkbd_language[256];
-	char vkbd_style[256];
+	char vkbd_language[128];
+	char vkbd_style[128];
 	int vkbd_transparency;
+	char vkbd_toggle[128];
 	
 	int drawbridge_driver;
 	bool drawbridge_connected_drive_b;
@@ -1219,14 +1220,14 @@ struct amiberry_options
 	bool default_vkbd_enabled;
 	bool default_vkbd_hires;
 	bool default_vkbd_exit;
-	char default_vkbd_language[256];
-	char default_vkbd_style[256];
+	char default_vkbd_language[128] = "US";
+	char default_vkbd_style[128] = "Original";
 	int default_vkbd_transparency;
+	char default_vkbd_toggle[128] = "guide";
 };
 
 extern struct amiberry_options amiberry_options;
 #endif
-
 
 extern void import_joysticks(void);
 
