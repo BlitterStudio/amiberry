@@ -2928,11 +2928,13 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 		: p->keyboard_lang == KBD_LANG_IT ? _T("it")
 		: _T("FOO")));
 
-	cfgfile_dwrite (f, _T("state_replay_rate"), _T("%d"), p->statecapturerate);
-	cfgfile_dwrite (f, _T("state_replay_buffers"), _T("%d"), p->statecapturebuffersize);
-	cfgfile_dwrite_bool (f, _T("state_replay_autoplay"), p->inprec_autoplay);
-	cfgfile_dwrite_bool (f, _T("warp"), p->turbo_emulation);
-	cfgfile_dwrite (f, _T("warp_limit"), _T("%d"), p->turbo_emulation_limit);
+	cfgfile_dwrite(f, _T("state_replay_rate"), _T("%d"), p->statecapturerate);
+	cfgfile_dwrite(f, _T("state_replay_buffers"), _T("%d"), p->statecapturebuffersize);
+	cfgfile_dwrite_bool(f, _T("state_replay_autoplay"), p->inprec_autoplay);
+	cfgfile_dwrite_bool(f, _T("warp"), p->turbo_emulation);
+	cfgfile_dwrite(f, _T("warp_limit"), _T("%d"), p->turbo_emulation_limit);
+	cfgfile_dwrite_bool(f, _T("warpboot"), p->turbo_boot);
+	cfgfile_dwrite(f, _T("warpboot_delay"), _T("%d"), p->turbo_boot_delay);
 
 #ifdef FILESYS
 	write_filesys_config (p, f);
@@ -3680,6 +3682,7 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		|| cfgfile_intval (option, value, _T("sampler_buffer"), &p->sampler_buffer, 1)
 		|| cfgfile_intval(option, value, _T("warp_limit"), &p->turbo_emulation_limit, 1)
 		|| cfgfile_intval(option, value, _T("power_led_dim"), &p->power_led_dim, 1)
+		|| cfgfile_intval(option, value, _T("warpboot_delay"), &p->turbo_emulation_limit, 1)
 
 		|| cfgfile_intval(option, value, _T("gfx_frame_slices"), &p->gfx_display_sections, 1)
 		|| cfgfile_intval(option, value, _T("gfx_framerate"), &p->gfx_framerate, 1)
@@ -3770,6 +3773,7 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		|| cfgfile_yesno(option, value, _T("gfx_autoresolution_vga"), &p->gfx_autoresolution_vga)
 		|| cfgfile_yesno(option, value, _T("show_refresh_indicator"), &p->refresh_indicator)
 		|| cfgfile_yesno(option, value, _T("warp"), &p->turbo_emulation)
+		|| cfgfile_yesno(option, value, _T("warpboot"), &p->turbo_boot)
 		|| cfgfile_yesno(option, value, _T("headless"), &p->headless)
 		|| cfgfile_yesno(option, value, _T("clipboard_sharing"), &p->clipboard_sharing)
 		|| cfgfile_yesno(option, value, _T("native_code"), &p->native_code)
@@ -8348,6 +8352,8 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 	p->cpu_idle = 0;
 	p->turbo_emulation = 0;
 	p->turbo_emulation_limit = 0;
+	p->turbo_boot = 0;
+	p->turbo_boot_delay = 100;
 	p->headless = 0;
 	p->catweasel = 0;
 	p->tod_hack = 0;

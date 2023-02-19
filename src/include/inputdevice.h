@@ -315,8 +315,9 @@ extern void inputdevice_releasebuttons(void);
 
 extern void indicator_leds (int num, int state);
 
-extern void warpmode (int mode);
-extern void pausemode (int mode);
+extern void warpmode(int mode);
+extern void bootwarpmode(void);
+extern void pausemode(int mode);
 
 extern void inputdevice_add_inputcode (int code, int state, const TCHAR *);
 extern void inputdevice_handle_inputcode (void);

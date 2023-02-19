@@ -712,6 +712,8 @@ struct uae_prefs
 	bool rom_readwrite;
 	int turbo_emulation;
 	int turbo_emulation_limit;
+	bool turbo_boot;
+	int turbo_boot_delay;
 	bool headless;
 	int filesys_limit;
 	int filesys_max_name;

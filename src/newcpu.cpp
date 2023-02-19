@@ -3818,6 +3818,13 @@ void m68k_go (int may_quit)
 			mman_set_barriers(false);
 			protect_roms(true);
 		}
+		if ((cpu_keyboardreset || hardboot) && !restored) {
+			if (currprefs.turbo_boot) {
+				warpmode(1);
+				currprefs.turbo_emulation = changed_prefs.turbo_emulation = 2;
+
+			}
+		}
 		cpu_hardreset = false;
 		cpu_keyboardreset = false;
 		hardboot = 0;
