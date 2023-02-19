@@ -2137,6 +2137,10 @@ uae_u8 *save_akiko (size_t *len, uae_u8 *dstptr)
 	uae_u8 *dstbak, *dst;
 	int i;
 
+	if (!currprefs.cs_cd32cd && !currprefs.cs_cd32c2p && !currprefs.cs_cd32nvram) {
+		return NULL;
+	}
+
 	if (dstptr)
 		dstbak = dst = dstptr;
 	else

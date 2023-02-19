@@ -430,14 +430,18 @@ void event2_newevent_x_replace_exists(evt_t t, uae_u32 data, evfunc2 func)
 	}
 }
 
-
-void event2_newevent_x_replace(evt_t t, uae_u32 data, evfunc2 func)
+void event2_newevent_x_remove(evfunc2 func)
 {
 	for (int i = 0; i < ev2_max; i++) {
 		if (eventtab2[i].active && eventtab2[i].handler == func) {
 			eventtab2[i].active = false;
 		}
 	}
+}
+
+void event2_newevent_x_replace(evt_t t, uae_u32 data, evfunc2 func)
+{
+	event2_newevent_x_remove(func);
 	if (t <= 0) {
 		func(data);
 		return;
@@ -504,4 +508,16 @@ void modify_eventcounter(int diff)
 	int hp2 = current_hpos();
 
 	events_schedule();
+}
+
+void clear_events(void)
+{
+	nextevent = EVT_MAX;
+	for (int i = 0; i < ev_max; i++) {
+		eventtab[i].active = 0;
+		eventtab[i].oldcycles = get_cycles();
+	}
+	for (int i = 0; i < ev2_max; i++) {
+		eventtab2[i].active = 0;
+	}
 }

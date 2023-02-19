@@ -19056,7 +19056,7 @@ void REGPARAM2 op_4e72_24_ff(uae_u32 opcode)
 	checkint();
 	MakeFromSR_STOP();
 	do_cycles_stop(4);
-	m68k_setstopped();
+	m68k_setstopped(1);
 	return;
 }
 
@@ -40712,9 +40712,9 @@ void REGPARAM2 op_f800_24_ff(uae_u32 opcode)
 		return;
 	}
 	regs.sr = newsr;
-	MakeFromSR();
-	m68k_setstopped();
-	m68k_incpci(6);
+	checkint();
+	MakeFromSR_STOP();
+	m68k_setstopped(2);
 	return;
 }
 
@@ -42437,7 +42437,7 @@ void REGPARAM2 op_4e72_25_ff(uae_u32 opcode)
 	checkint();
 	MakeFromSR_STOP();
 	do_cycles_stop(4);
-	m68k_setstopped();
+	m68k_setstopped(1);
 	return;
 }
 

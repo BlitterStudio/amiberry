@@ -6,7 +6,8 @@
   * (c) 1995 Bernd Schmidt
   */
 
-#pragma once
+#ifndef UAE_KEYBOARD_H
+#define UAE_KEYBOARD_H
 
 /* First, two dummies */
 #define AK_mousestuff 0x100
@@ -143,4 +144,6 @@ enum aks {
 
 #define AKS_FIRST AKS_ENTERGUI
 
-extern int target_checkcapslock(int, int *);
+extern int target_checkcapslock (int, int *);
+
+#endif /* UAE_KEYBOARD_H */

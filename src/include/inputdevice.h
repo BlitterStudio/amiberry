@@ -303,6 +303,7 @@ extern void inputdevice_joyport_config_store(struct uae_prefs *p, const TCHAR *v
 extern int inputdevice_getjoyportdevice (int port, int val);
 extern void inputdevice_validate_jports (struct uae_prefs *p, int changedport, bool *fixedports);
 extern void inputdevice_fix_prefs(struct uae_prefs *p, bool userconfig);
+extern void inputdevice_jportcustom_fixup(TCHAR*);
 
 extern void inputdevice_init (void);
 extern void inputdevice_close (void);
@@ -316,6 +317,7 @@ extern void inputdevice_releasebuttons(void);
 extern void indicator_leds (int num, int state);
 
 extern void warpmode (int mode);
+extern void bootwarpmode(void);
 extern void pausemode (int mode);
 
 extern void inputdevice_add_inputcode (int code, int state, const TCHAR *);

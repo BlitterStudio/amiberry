@@ -97,7 +97,7 @@ struct romdata *getromdatabypath (const TCHAR *path)
 	return NULL;
 }
 
-#define NEXT_ROM_ID 301
+#define NEXT_ROM_ID 303
 
 #if NEXT_ROM_ID >= MAX_ROMMGR_ROMS
 #error Increase MAX_ROMMGR_ROMS!
@@ -977,10 +977,20 @@ static struct romdata roms[] = {
 	ALTROMPN(197, 1, 1, 131072, ROMTYPE_EVEN | ROMTYPE_8BIT, NULL, 0x09a133cf, 0x9b3ff630,0x35be8576,0xc88fb284,0xa25c2da5,0xdb0d5160)
 	ALTROMPN(197, 1, 2, 131072, ROMTYPE_ODD  | ROMTYPE_8BIT, NULL, 0x8b33263e, 0xa1df3823,0x6321af90,0xb522e2a7,0x83984fdf,0x02e4c597)
 	// zb_u2.bin,zb_u3.bin
-	{ _T("Web Picmatic Zorton Brothers (Los Justicieros)"), 0, 0, 0, 0, _T("ALG\0"), 131072, 198, 0, 0, ROMTYPE_ALG, 0, 0, NULL,
+	{ _T("Picmatic Zorton Brothers Ver. 1.00"), 0, 0, 0, 0, _T("ALG\0"), 131072, 198, 0, 0, ROMTYPE_ALG, 0, 0, NULL,
 	0x9cda09ae, 0x3353ae63,0x64b3d0b1,0x006db48e,0xa2bdc7b5,0x4946bbb9, NULL, NULL, 10 },
 	ALTROMPN(198, 1, 1, 65536, ROMTYPE_EVEN | ROMTYPE_8BIT, NULL, 0xf59cfc4a, 0x9fadf7f1,0xe23d6b4e,0x828bf2b3,0xde919d08,0x7c690a3f)
 	ALTROMPN(198, 1, 2, 65536, ROMTYPE_ODD  | ROMTYPE_8BIT, NULL, 0x938b25cb, 0xd0114bbc,0x588dcfce,0x6a469013,0xd0e35afb,0x93e38af5)
+	// zort_1-01_23-3-94_odd.u2, zort_1-01_23-3-94_even.u3
+	{ _T("Picmatic Zorton Brothers Ver. 1.01"), 0, 0, 0, 0, _T("ALG\0"), 131072, 301, 0, 0, ROMTYPE_ALG, 0, 0, NULL,
+	0x37d274c2, 0xb756f787,0xfca4c190,0x4813b1e4,0xddf36c24,0xc815c708, NULL, NULL, 10 },
+	ALTROMPN(301, 1, 2, 65536, ROMTYPE_EVEN  | ROMTYPE_8BIT, NULL, 0x6a051c6a, 0xf8daafab,0x068fef57,0xe47287bd,0x72be860b,0x84e2e75c)
+	ALTROMPN(301, 1, 1, 65536, ROMTYPE_ODD   | ROMTYPE_8BIT, NULL, 0x21e63949, 0x0a62ad10,0x8f8cfa00,0xdc8f03de,0xa2ff6f1b,0x277e8d5d)
+	// mspsl 200 odd 30394.u2, mspsl 200 even 30394.u3
+	{ _T("Picmatic Marbella Vice"), 0, 0, 0, 0, _T("ALG\0"), 131072, 302, 0, 0, ROMTYPE_ALG, 0, 0, NULL,
+	0xf78c8fa2, 0x07656cbf,0xdb6135f2,0x6add3b5f,0xa4ce5d46,0xdda706f9, NULL, NULL, 10 },
+	ALTROMPN(302, 1, 1, 65536, ROMTYPE_EVEN  | ROMTYPE_8BIT, NULL, 0x01c9a503, 0xf61ec2cd,0x241b2bf8,0xa982e81e,0x5a181786,0x01f0a0a0)
+	ALTROMPN(302, 1, 2, 65536, ROMTYPE_ODD   | ROMTYPE_8BIT, NULL, 0x78eb6fd6, 0xe4048180,0x95f03b6e,0x0746620f,0x5ce48c3f,0x7149b8a0)
 
 	{ NULL }
 

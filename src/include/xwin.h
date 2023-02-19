@@ -77,6 +77,7 @@ extern void alloc_colors_rgb(int rw, int gw, int bw, int rs, int gs, int bs, int
 extern void alloc_colors_picasso(int rw, int gw, int bw, int rs, int gs, int bs, int rgbfmt, uae_u32* rgbx16);
 extern float getvsyncrate(int monid, float hz, int* mult);
 
+
 /* The graphics code has a choice whether it wants to use a large buffer
  * for the whole display, or only a small buffer for a single line.
  * If you use a large buffer:

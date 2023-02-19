@@ -410,6 +410,12 @@ static void abort_async(TrapContext* ctx, struct devstruct* dev, uaecptr areques
 	uae_sem_post(&pipe_sem);
 }
 
+static bool eofmatch(uae_u8 v, uae_u32 term0, uae_u32 term1)
+{
+	return v == (term0 >> 24) || v == (term0 >> 16) || v == (term0 >> 8) || v == (term0 >> 0)
+		|| v == (term1 >> 24) || v == (term1 >> 16) || v == (term1 >> 8) || v == (term1 >> 0);
+}
+
 void uaeser_signal(void* vdev, int sigmask)
 {
 	TrapContext* ctx = NULL;

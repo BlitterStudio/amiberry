@@ -28,8 +28,6 @@
  * along with ARAnyM; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#include "sysconfig.h"
-#include "sysdeps.h"
 
 #ifdef UAE
 
@@ -59,6 +57,9 @@
 
 /* kludge for Brian, so he can compile under MSVC++ */
 #define USE_NORMAL_CALLING_CONVENTION 0
+
+#include "sysconfig.h"
+#include "sysdeps.h"
 
 #ifdef JIT
 

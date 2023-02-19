@@ -21671,7 +21671,7 @@ uae_u32 REGPARAM2 op_4e72_32_ff(uae_u32 opcode)
 	checkint();
 	MakeFromSR_STOP();
 	do_cycles_stop(4);
-	m68k_setstopped();
+	m68k_setstopped(1);
 	return (1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4;
 }
 

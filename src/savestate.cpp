@@ -622,6 +622,7 @@ void restore_state (const TCHAR *filename)
 	restore_header (chunk);
 	xfree (chunk);
 	devices_restore_start();
+	clear_events();
 	z2num = z3num = 0;
 	for (;;) {
 		name[0] = 0;
@@ -710,6 +711,8 @@ void restore_state (const TCHAR *filename)
 			end = restore_custom_extra (chunk);
 		else if (!_tcscmp (name, _T("CHPD")))
 			end = restore_custom_event_delay (chunk);
+		else if (!_tcscmp (name, _T("CHSL")))
+			end = restore_custom_slots (chunk);
 		else if (!_tcscmp (name, _T("AUD0")))
 			end = restore_audio (0, chunk);
 		else if (!_tcscmp (name, _T("AUD1")))
@@ -1029,11 +1032,13 @@ static int save_state_internal (struct zfile *f, const TCHAR *description, int c
 	dst = save_blitter_new (&len, 0);
 	save_chunk (f, dst, len, _T("BLTX"), 0);
 	xfree (dst);
-	if (new_blitter == false) {
-		dst = save_blitter (&len, 0);
-		save_chunk (f, dst, len, _T("BLIT"), 0);
-		xfree (dst);
-	}
+	dst = save_blitter (&len, 0, new_blitter);
+	save_chunk (f, dst, len, _T("BLIT"), 0);
+	xfree (dst);
+
+	dst = save_custom_slots(&len, 0);
+	save_chunk(f, dst, len, _T("CHSL"), 0);
+	xfree(dst);
 
 	dst = save_input (&len, 0);
 	save_chunk (f, dst, len, _T("CINP"), 0);

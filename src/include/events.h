@@ -37,6 +37,7 @@ extern void events_schedule(void);
 extern void do_cycles_slow(int cycles_to_add);
 extern void events_reset_syncline(void);
 extern void modify_eventcounter(int diff);
+extern void clear_events(void);
 
 extern bool is_cycle_ce(uaecptr);
 
@@ -68,7 +69,7 @@ enum {
 };
 
 enum {
-	ev2_blitter, ev2_disk, ev2_misc,
+	ev2_blitter, ev2_misc,
 	ev2_max = 12
 };
 
@@ -135,6 +136,7 @@ extern void MISC_handler(void);
 extern void event2_newevent_xx(int no, evt_t t, uae_u32 data, evfunc2 func);
 extern void event2_newevent_x_replace(evt_t t, uae_u32 data, evfunc2 func);
 extern void event2_newevent_x_replace_exists(evt_t t, uae_u32 data, evfunc2 func);
+extern void event2_newevent_x_remove(evfunc2 func);
 
 STATIC_INLINE void event2_newevent_x(int no, evt_t t, uae_u32 data, evfunc2 func)
 {
@@ -158,5 +160,11 @@ STATIC_INLINE void event2_remevent(int no)
 {
 	eventtab2[no].active = 0;
 }
+
+void event_audxdat_func(uae_u32);
+void event_setdsr(uae_u32);
+void event_CIA_synced_interrupt(uae_u32);
+void event_CIA_tod_inc_event(uae_u32);
+void event_DISK_handler(uae_u32 data);
 
 #endif /* UAE_EVENTS_H */

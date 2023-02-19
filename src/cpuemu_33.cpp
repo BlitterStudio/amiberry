@@ -19965,7 +19965,7 @@ uae_u32 REGPARAM2 op_4e72_33_ff(uae_u32 opcode)
 	checkint();
 	MakeFromSR_STOP();
 	do_cycles_stop(4);
-	m68k_setstopped();
+	m68k_setstopped(1);
 	return (1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4;
 }
 
@@ -41968,9 +41968,9 @@ uae_u32 REGPARAM2 op_f800_33_ff(uae_u32 opcode)
 		return (1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4;
 	}
 	regs.sr = newsr;
-	MakeFromSR();
-	m68k_setstopped();
-	m68k_incpci(6);
+	checkint();
+	MakeFromSR_STOP();
+	m68k_setstopped(2);
 	return (1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4;
 }
 

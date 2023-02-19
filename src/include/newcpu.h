@@ -283,6 +283,7 @@ struct cputracememory
 	uae_u32 addr;
 	uae_u32 data;
 	int mode;
+	uae_u32 flags;
 };
 
 struct cputracestruct
@@ -670,7 +671,7 @@ extern uae_u32 REGPARAM3 x_get_disp_ea_040(uae_u32 base, int idx) REGPARAM;
 extern uae_u32 REGPARAM3 x_get_bitfield (uae_u32 src, uae_u32 bdata[2], uae_s32 offset, int width) REGPARAM;
 extern void REGPARAM3 x_put_bitfield (uae_u32 dst, uae_u32 bdata[2], uae_u32 val, uae_s32 offset, int width) REGPARAM;
 
-extern void m68k_setstopped(void);
+extern void m68k_setstopped(int stoptype);
 extern void m68k_resumestopped(void);
 extern void m68k_cancel_idle(void);
 extern void do_cycles_stop(int);

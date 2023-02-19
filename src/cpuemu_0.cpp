@@ -19110,7 +19110,7 @@ uae_u32 REGPARAM2 op_4e72_0_ff(uae_u32 opcode)
 	checkint();
 	MakeFromSR_STOP();
 	do_cycles_stop(4);
-	m68k_setstopped();
+	m68k_setstopped(1);
 	return (4 * CYCLE_UNIT / 2 + count_cycles) | (((1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4) << 16);
 }
 
@@ -40755,10 +40755,10 @@ uae_u32 REGPARAM2 op_f800_0_ff(uae_u32 opcode)
 		return (8 * CYCLE_UNIT / 2 + count_cycles) | (((1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4) << 16);
 	}
 	regs.sr = newsr;
-	MakeFromSR();
-	m68k_setstopped();
-	m68k_incpc(6);
-	return (16 * CYCLE_UNIT / 2 + count_cycles) | (((1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4) << 16);
+	checkint();
+	MakeFromSR_STOP();
+	m68k_setstopped(2);
+	return (8 * CYCLE_UNIT / 2 + count_cycles) | (((1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4) << 16);
 }
 
 #endif
@@ -42498,7 +42498,7 @@ uae_u32 REGPARAM2 op_4e72_1_ff(uae_u32 opcode)
 	checkint();
 	MakeFromSR_STOP();
 	do_cycles_stop(4);
-	m68k_setstopped();
+	m68k_setstopped(1);
 	return (4 * CYCLE_UNIT / 2 + count_cycles) | (((1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4) << 16);
 }
 
@@ -45326,7 +45326,7 @@ uae_u32 REGPARAM2 op_4e72_2_ff(uae_u32 opcode)
 	checkint();
 	MakeFromSR_STOP();
 	do_cycles_stop(4);
-	m68k_setstopped();
+	m68k_setstopped(1);
 	return (4 * CYCLE_UNIT / 2 + count_cycles) | (((1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4) << 16);
 }
 
@@ -47394,7 +47394,7 @@ uae_u32 REGPARAM2 op_4e72_3_ff(uae_u32 opcode)
 	checkint();
 	MakeFromSR_STOP();
 	do_cycles_stop(4);
-	m68k_setstopped();
+	m68k_setstopped(1);
 	return (4 * CYCLE_UNIT / 2 + count_cycles) | (((1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4) << 16);
 }
 
@@ -51797,7 +51797,7 @@ uae_u32 REGPARAM2 op_4e72_4_ff(uae_u32 opcode)
 	regs.sr = sr;
 	MakeFromSR_STOP();
 	do_cycles_stop(4);
-	m68k_setstopped();
+	m68k_setstopped(1);
 	return (4 * CYCLE_UNIT / 2 + count_cycles) | (((1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4) << 16);
 }
 
@@ -60223,7 +60223,7 @@ uae_u32 REGPARAM2 op_4e72_5_ff(uae_u32 opcode)
 	regs.sr = sr;
 	MakeFromSR_STOP();
 	do_cycles_stop(4);
-	m68k_setstopped();
+	m68k_setstopped(1);
 	return (4 * CYCLE_UNIT / 2 + count_cycles) | (((1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4) << 16);
 }
 

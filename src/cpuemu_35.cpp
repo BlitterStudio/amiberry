@@ -24320,7 +24320,7 @@ void REGPARAM2 op_4e72_35_ff(uae_u32 opcode)
 	checkint();
 	MakeFromSR_STOP();
 	do_cycles_stop(4);
-	m68k_setstopped();
+	m68k_setstopped(1);
 	return;
 }
 

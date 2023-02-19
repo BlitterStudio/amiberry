@@ -341,6 +341,26 @@ enum
 #define OVERSCANMODE_EXTREME 5
 #define OVERSCANMODE_ULTRA 6
 
+#define AGNUSMODEL_AUTO 0
+#define AGNUSMODEL_VELVET 1
+#define AGNUSMODEL_A1000 2
+#define AGNUSMODEL_OCS 3
+#define AGNUSMODEL_ECS 4
+#define AGNUSMODEL_AGA 5
+
+#define AGNUSSIZE_AUTO 0
+#define AGNUSSIZE_512 1
+#define AGNUSSIZE_1M 2
+#define AGNUSSIZE_1024 3
+
+#define DENISEMODEL_AUTO 0
+#define DENISEMODEL_VELVET 1
+#define DENISEMODEL_A1000NOEHB 2
+#define DENISEMODEL_A1000 3
+#define DENISEMODEL_OCS 4
+#define DENISEMODEL_ECS 5
+#define DENISEMODEL_AGA 6
+
 #define MAX_FILTERSHADERS 4
 
 #define MAX_CHIPSET_REFRESH 10
@@ -711,6 +731,8 @@ struct uae_prefs
 	bool rom_readwrite;
 	int turbo_emulation;
 	int turbo_emulation_limit;
+	bool turbo_boot;
+	int turbo_boot_delay;
 	bool headless;
 	int filesys_limit;
 	int filesys_max_name;
@@ -749,9 +771,6 @@ struct uae_prefs
 	bool cs_cdtvcr;
 	bool cs_df0idhw;
 	bool cs_resetwarning;
-	bool cs_denisenoehb;
-	bool cs_dipagnus;
-	bool cs_agnusbltbusybug;
 	bool cs_ciatodbug;
 	bool cs_z3autoconfig;
 	bool cs_1mchipjumper;
@@ -768,6 +787,9 @@ struct uae_prefs
 	int cs_hvcsync;
 	int cs_eclockphase;
 	int cs_eclocksync;
+	int cs_agnusmodel;
+	int cs_agnussize;
+	int cs_denisemodel;
 	bool cs_memorypatternfill;
 
 	struct boardromconfig expansionboard[MAX_EXPANSION_BOARDS];

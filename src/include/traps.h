@@ -15,6 +15,7 @@
 
 #include "uae/types.h"
 
+
 #define TRAPCMD_MULTI 0
 #define TRAPCMD_PUT_LONG 1
 #define TRAPCMD_PUT_WORD 2
@@ -145,5 +146,6 @@ void trap_call_add_dreg(TrapContext *ctx, int reg, uae_u32 v);
 void trap_call_add_areg(TrapContext *ctx, int reg, uae_u32 v);
 uae_u32 trap_call_lib(TrapContext *ctx, uaecptr base, uae_s16 offset);
 uae_u32 trap_call_func(TrapContext *ctx, uaecptr func);
+
 
 #endif /* UAE_TRAPS_H */

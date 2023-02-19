@@ -42580,7 +42580,7 @@ void REGPARAM2 op_4e72_13_ff(uae_u32 opcode)
 	regs.sr = sr;
 	MakeFromSR_STOP();
 	do_cycles_stop(4);
-	m68k_setstopped();
+	m68k_setstopped(1);
 	return;
 }
 /* 4 (0/0) */
@@ -123259,7 +123259,7 @@ void REGPARAM2 op_4e72_14_ff(uae_u32 opcode)
 	regs.sr = sr;
 	MakeFromSR_STOP();
 	do_cycles_stop(4);
-	m68k_setstopped();
+	m68k_setstopped(1);
 	return;
 }
 /* 4 (0/0) */

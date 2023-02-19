@@ -361,6 +361,7 @@ static void set_trace (uaecptr addr, int accessmode, int size)
 	ctm->addr = addr;
 	ctm->data = 0xdeadf00d;
 	ctm->mode = accessmode | (size << 4);
+	ctm->flags = 1;
 	cputrace.cyclecounter_pre = -1;
 	if (accessmode == 1)
 		cputrace.writecounter++;
@@ -387,6 +388,7 @@ static void add_trace (uaecptr addr, uae_u32 val, int accessmode, int size)
 		else
 			cputrace.readcounter++;
 	}
+	ctm->flags = 0;
 	debug_trace ();
 	cputrace.cyclecounter_pre = cputrace.cyclecounter_post = 0;
 }
@@ -451,14 +453,33 @@ static bool get_trace (uaecptr addr, int accessmode, int size, uae_u32 *data)
 			else
 				cputrace.readcounter--;
 			if (cputrace.writecounter == 0 && cputrace.readcounter == 0) {
-				if (cputrace.cyclecounter_post) {
-					int c = cputrace.cyclecounter_post;
-					cputrace.cyclecounter_post = 0;
-					x_do_cycles (c);
-				} else if (cputrace.cyclecounter_pre) {
-					check_trace ();
+				if (ctm->flags & 4) {
+					if (cputrace.cyclecounter_post) {
+						int c = cputrace.cyclecounter_post;
+						cputrace.cyclecounter_post = 0;
+						x_do_cycles(c);
+						check_trace();
+						*data = ctm->data;
+						if ((ctm->flags & 1) && !(ctm->flags & 2)) {
+							return true; // argh, need to rerun the memory access..
+						}
+					}
+					// if cyclecounter_pre > 0, it gets handled during memory access rerun
+					check_trace();
 					*data = ctm->data;
-					return true; // argh, need to rerun the memory access..
+					if ((ctm->flags & 1) && !(ctm->flags & 2)) {
+						return true; // argh, need to rerun the memory access..
+					}
+				} else {
+					if (cputrace.cyclecounter_post) {
+						int c = cputrace.cyclecounter_post;
+						cputrace.cyclecounter_post = 0;
+						x_do_cycles(c);
+					} else if (cputrace.cyclecounter_pre) {
+						check_trace();
+						*data = ctm->data;
+						return true; // argh, need to rerun the memory access..
+					}
 				}
 			}
 			check_trace ();
@@ -688,11 +709,11 @@ static void cputracefunc_x_do_cycles(int cycles)
 	while (cycles >= CYCLE_UNIT) {
 		cputrace.cyclecounter += CYCLE_UNIT;
 		cycles -= CYCLE_UNIT;
-		x2_do_cycles (CYCLE_UNIT);
+		x2_do_cycles(CYCLE_UNIT);
 	}
 	if (cycles > 0) {
 		cputrace.cyclecounter += cycles;
-		x2_do_cycles (cycles);
+		x2_do_cycles(cycles);
 	}
 }
 
@@ -704,10 +725,10 @@ static void cputracefunc2_x_do_cycles(int cycles)
 	}
 	cycles -= cputrace.cyclecounter;
 	cputrace.cyclecounter = 0;
-	check_trace ();
+	check_trace();
 	x_do_cycles = x2_do_cycles;
 	if (cycles > 0)
-		x_do_cycles (cycles);
+		x_do_cycles(cycles);
 }
 
 static void cputracefunc_x_do_cycles_pre(int cycles)
@@ -717,10 +738,10 @@ static void cputracefunc_x_do_cycles_pre(int cycles)
 	while (cycles >= CYCLE_UNIT) {
 		cycles -= CYCLE_UNIT;
 		cputrace.cyclecounter_pre += CYCLE_UNIT;
-		x2_do_cycles (CYCLE_UNIT);
+		x2_do_cycles_pre(CYCLE_UNIT);
 	}
 	if (cycles > 0) {
-		x2_do_cycles (cycles);
+		x2_do_cycles_pre(cycles);
 		cputrace.cyclecounter_pre += cycles;
 	}
 	cputrace.cyclecounter_pre = 0;
@@ -747,26 +768,28 @@ static void cputracefunc2_x_do_cycles_pre (int cycles)
 		x_do_cycles (cycles);
 }
 
-static void cputracefunc_x_do_cycles_post (int cycles, uae_u32 v)
+static void cputracefunc_x_do_cycles_post(int cycles, uae_u32 v)
 {
 	if (cputrace.memoryoffset < 1) {
 #if CPUTRACE_DEBUG
 		write_log (_T("cputracefunc_x_do_cycles_post memoryoffset=%d!\n"), cputrace.memoryoffset);
 #endif
+		x2_do_cycles_post(cycles, v);
 		return;
 	}
 	struct cputracememory *ctm = &cputrace.ctm[cputrace.memoryoffset - 1];
 	ctm->data = v;
+	ctm->flags = 0;
 	cputrace.cyclecounter_post = cycles;
 	cputrace.cyclecounter_pre = 0;
 	while (cycles >= CYCLE_UNIT) {
 		cycles -= CYCLE_UNIT;
 		cputrace.cyclecounter_post -= CYCLE_UNIT;
-		x2_do_cycles (CYCLE_UNIT);
+		x2_do_cycles_post(CYCLE_UNIT, v);
 	}
 	if (cycles > 0) {
 		cputrace.cyclecounter_post -= cycles;
-		x2_do_cycles (cycles);
+		x2_do_cycles_post(cycles, v);
 	}
 	cputrace.cyclecounter_post = 0;
 }
@@ -2333,11 +2356,11 @@ void m68k_cancel_idle(void)
 	cpu_last_stop_vpos = -1;
 }
 
-static void m68k_set_stop(void)
+static void m68k_set_stop(int stoptype)
 {
 	if (regs.stopped)
 		return;
-	regs.stopped = 1;
+	regs.stopped = stoptype;
 	if (cpu_last_stop_vpos >= 0) {
 		cpu_last_stop_vpos = vpos;
 	}
@@ -3484,6 +3507,8 @@ static void do_interrupt (int nr)
 
 	assert (nr < 8 && nr >= 0);
 
+	intlev_ack(nr);
+
 	for (;;) {
 		Exception (nr + 24);
 		if (!currprefs.cpu_compatible || currprefs.cpu_model == 68060)
@@ -3787,7 +3812,7 @@ uae_u32 REGPARAM2 op_illg (uae_u32 opcode)
 		if (get_long (0x10) == 0) {
 			notify_user (NUMSG_KS68020);
 			uae_restart (-1, NULL);
-			m68k_setstopped();
+			m68k_setstopped(1);
 			return 4;
 		}
 	}
@@ -3795,7 +3820,7 @@ uae_u32 REGPARAM2 op_illg (uae_u32 opcode)
 #ifdef AUTOCONFIG
 	if (opcode == 0xFF0D && inrt) {
 		/* User-mode STOP replacement */
-		m68k_setstopped ();
+		m68k_setstopped(1);
 		return 4;
 	}
 
@@ -6609,6 +6634,13 @@ void m68k_go (int may_quit)
 			mman_set_barriers(false);
 			protect_roms(true);
 		}
+		if ((cpu_keyboardreset || hardboot) && !restored) {
+			if (currprefs.turbo_boot) {
+				warpmode(1);
+				currprefs.turbo_emulation = changed_prefs.turbo_emulation = 2;
+
+			}
+		}
 		cpu_hardreset = false;
 		cpu_keyboardreset = false;
 		hardboot = 0;
@@ -6664,6 +6696,12 @@ void m68k_go (int may_quit)
 		}
 #endif
 		run_func();
+
+		if (quit_program < 0) {
+			quit_program = -quit_program;
+		}
+		if (quit_program == UAE_QUIT)
+			break;
 	}
 	protect_roms(false);
 	mman_set_barriers(true);
@@ -6861,6 +6899,7 @@ void m68k_dumpcache (bool dc)
 
 #define CPUTYPE_EC 1
 #define CPUMODE_HALT 1
+#define CPUMODE_HALT2 2
 
 uae_u8 *restore_cpu (uae_u8 *src)
 {
@@ -6889,7 +6928,7 @@ uae_u8 *restore_cpu (uae_u8 *src)
 	regs.sr = restore_u16 ();
 	l = restore_u32 ();
 	if (l & CPUMODE_HALT) {
-		regs.stopped = 1;
+		regs.stopped = (l & CPUMODE_HALT2) ? 2 : 1;
 	} else {
 		regs.stopped = 0;
 	}
@@ -7145,7 +7184,7 @@ uae_u8 *save_cpu_trace(size_t *len, uae_u8 *dstptr)
 		save_u32 (cputrace.ctm[i].addr);
 		save_u32 (cputrace.ctm[i].data);
 		save_u32 (cputrace.ctm[i].mode);
-		write_log (_T("CPUT%d: %08x %08x %08x\n"), i, cputrace.ctm[i].addr, cputrace.ctm[i].data, cputrace.ctm[i].mode);
+		write_log (_T("CPUT%d: %08x %08x %08x %08x\n"), i, cputrace.ctm[i].addr, cputrace.ctm[i].data, cputrace.ctm[i].mode, cputrace.ctm[i].flags);
 	}
 	save_u32 ((uae_u32)cputrace.startcycles);
 
@@ -7178,6 +7217,10 @@ uae_u8 *save_cpu_trace(size_t *len, uae_u8 *dstptr)
 	save_u16(cputrace.writecounter);
 
 	save_u32(cputrace.startcycles >> 32);
+
+	for (int i = 0; i < cputrace.memoryoffset; i++) {
+		save_u32(cputrace.ctm[i].flags | 4);
+	}
 
 	*len = dst - dstbak;
 	cputrace.needendcycles = 1;
@@ -7266,15 +7309,18 @@ uae_u8 *restore_cpu_trace(uae_u8 *src)
 				cputrace.pipeline_r8[1] = restore_u16();
 				cputrace.pipeline_stop = restore_u16();
 			}
-			if (v & 64) {
-				cputrace.ird = restore_u16();
-				cputrace.read_buffer = restore_u16();
-				cputrace.write_buffer = restore_u16();
-			}
+		}
+		if (v & 64) {
+			cputrace.ird = restore_u16();
+			cputrace.read_buffer = restore_u16();
+			cputrace.write_buffer = restore_u16();
 		}
 
 		if (v & 128) {
 			cputrace.startcycles |= ((uae_u64)restore_u32()) << 32;
+			for (int i = 0; i < cputrace.memoryoffset; i++) {
+				cputrace.ctm[i].flags = restore_u32();
+			}
 		}
 	}
 
@@ -7370,7 +7416,7 @@ uae_u8 *save_cpu(size_t *len, uae_u8 *dstptr)
 	save_u32 (!regs.s ? regs.regs[15] : regs.usp);	/* USP */
 	save_u32 (regs.s ? regs.regs[15] : regs.isp);	/* ISP */
 	save_u16 (regs.sr);								/* SR/CCR */
-	save_u32 (regs.stopped ? CPUMODE_HALT : 0); /* flags */
+	save_u32 (regs.stopped == 1 ? CPUMODE_HALT : (regs.stopped == 2 ? (CPUMODE_HALT | CPUMODE_HALT2) : 0)); /* flags */
 	if (model >= 68010) {
 		save_u32 (regs.dfc);			/* DFC */
 		save_u32 (regs.sfc);			/* SFC */
@@ -7854,16 +7900,23 @@ void do_cycles_stop(int c)
 	}
 }
 
-void m68k_setstopped (void)
+void m68k_setstopped(int stoptype)
 {
-	m68k_set_stop();
+	m68k_set_stop(stoptype);
 }
 
 void m68k_resumestopped(void)
 {
-	if (!regs.stopped)
+	if (!regs.stopped) {
 		return;
-	m68k_incpci(4);
+	}
+	if (regs.stopped == 1) {
+		// STOP
+		m68k_incpci(4);
+	} else if (regs.stopped == 2) {
+		// LPSTOP
+		m68k_incpci(6);
+	}
 	m68k_unset_stop();
 }
 
