@@ -37,14 +37,14 @@ void InitPanelAbout(const config_category& category)
 		"GNU General Public License for more details.\n\n"
 
 		"You should have received a copy of the GNU General Public License\n"
-		"along with this program.If not, see https://www.gnu.org/licenses\n\n"
+		"along with this program. If not, see https://www.gnu.org/licenses\n\n"
 
 		"Credits:\n"
 		"Dimitris Panokostas (MiDWaN) - Amiberry author\n"
 		"Toni Wilen - WinUAE author\n"
 		"TomB - Original ARM port of UAE, JIT ARM updates\n"
 		"Rob Smith, Drawbridge floppy controller\n"
-		"Gareth Fare - Serial port implementation\n"
+		"Gareth Fare - Original Serial port implementation\n"
 		"Dom Cresswell (Horace & The Spider) - Controller and WHDBooter updates\n"
 		"Christer Solskogen - Makefile and testing\n"
 		"Gunnar Kristjansson - Amibian and inspiration\n"
@@ -61,7 +61,7 @@ void InitPanelAbout(const config_category& category)
 	textBoxScrollArea->setBackgroundColor(gui_baseCol);
 	textBoxScrollArea->setBaseColor(gui_baseCol);
 	textBoxScrollArea->setWidth(category.panel->getWidth() - DISTANCE_BORDER * 2);
-	textBoxScrollArea->setHeight(180);
+	textBoxScrollArea->setHeight(210);
 	textBoxScrollArea->setBorderSize(1);
 	
 	auto pos_y = DISTANCE_BORDER;

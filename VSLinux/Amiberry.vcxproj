@@ -207,7 +207,6 @@
     <RemoteReBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Release; make clean; make -j4 PLATFORM=rpi4-sdl2</RemoteReBuildCommandLine>
     <RemoteCleanCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Release; make clean</RemoteCleanCommandLine>
     <NMakePreprocessorDefinitions>ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;CPU_arm;ARM_HAS_DIV;USE_SDL2;_REENTRANT;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
-    <RemoteBuildOutputs />
     <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-Release</RemoteProjectDir>
     <IncrementalBuild>true</IncrementalBuild>
     <RemoteDeployDir>$(RemoteRootDir)/$(ProjectName)-Release</RemoteDeployDir>
@@ -218,7 +217,6 @@
     <RemoteReBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Release-dmx; make clean; make -j4 PLATFORM=rpi4</RemoteReBuildCommandLine>
     <RemoteCleanCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Release-dmx; make clean</RemoteCleanCommandLine>
     <NMakePreprocessorDefinitions>USE_DISPMANX;ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;CPU_arm;ARM_HAS_DIV;USE_SDL2;_REENTRANT;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
-    <RemoteBuildOutputs />
     <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-Release-dmx</RemoteProjectDir>
     <IncrementalBuild>true</IncrementalBuild>
     <RemoteDeployDir>$(RemoteRootDir)/$(ProjectName)-Release-dmx</RemoteDeployDir>
@@ -240,7 +238,6 @@
     <RemoteReBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Release-dmx; make clean; make -j4 PLATFORM=rpi4-64-dmx</RemoteReBuildCommandLine>
     <RemoteCleanCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Release-dmx; make clean</RemoteCleanCommandLine>
     <NMakePreprocessorDefinitions>USE_DISPMANX;CPU_AARCH64;AMIBERRY;USE_SDL2;_REENTRANT;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
-    <RemoteBuildOutputs />
     <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-Release</RemoteProjectDir>
     <IncrementalBuild>true</IncrementalBuild>
     <RemoteDeployDir>$(RemoteRootDir)/$(ProjectName)-Release-dmx</RemoteDeployDir>
@@ -249,6 +246,7 @@
     <Text Include="..\conf\dir.txt">
       <DeploymentContent>true</DeploymentContent>
     </Text>
+    <Text Include="..\conf\gamecontrollerdb.txt" />
     <Text Include="..\controllers\gamecontrollerdb_user.txt" />
     <Text Include="..\external\libguisan\CMakeLists.txt" />
     <Text Include="..\kickstarts\dir.txt">
@@ -280,6 +278,7 @@
     <Image Include="..\data\file.ico" />
     <Image Include="..\data\fixedfont.bmp" />
     <Image Include="..\data\joystick.ico" />
+    <Image Include="..\data\keyboard.png" />
     <Image Include="..\data\misc.ico" />
     <Image Include="..\data\paths.ico" />
     <Image Include="..\data\port.ico" />
@@ -295,6 +294,8 @@
     <Image Include="..\data\vkbd\vkbdCoolGerLargeHires.png" />
     <Image Include="..\data\vkbd\vkbdCoolGerLargeShift.png" />
     <Image Include="..\data\vkbd\vkbdCoolGerLargeShiftHires.png" />
+    <Image Include="..\data\vkbd\vkbdCoolQuit.png" />
+    <Image Include="..\data\vkbd\vkbdCoolQuitHires.png" />
     <Image Include="..\data\vkbd\vkbdCoolUKLarge.png" />
     <Image Include="..\data\vkbd\vkbdCoolUKLargeHires.png" />
     <Image Include="..\data\vkbd\vkbdCoolUKLargeShift.png" />
@@ -311,6 +312,8 @@
     <Image Include="..\data\vkbd\vkbdDarkGerLargeHires.png" />
     <Image Include="..\data\vkbd\vkbdDarkGerLargeShift.png" />
     <Image Include="..\data\vkbd\vkbdDarkGerLargeShiftHires.png" />
+    <Image Include="..\data\vkbd\vkbdDarkQuit.png" />
+    <Image Include="..\data\vkbd\vkbdDarkQuitHires.png" />
     <Image Include="..\data\vkbd\vkbdDarkUKLarge.png" />
     <Image Include="..\data\vkbd\vkbdDarkUKLargeHires.png" />
     <Image Include="..\data\vkbd\vkbdDarkUKLargeShift.png" />
@@ -327,6 +330,8 @@
     <Image Include="..\data\vkbd\vkbdOrigGerLargeHires.png" />
     <Image Include="..\data\vkbd\vkbdOrigGerLargeShift.png" />
     <Image Include="..\data\vkbd\vkbdOrigGerLargeShiftHires.png" />
+    <Image Include="..\data\vkbd\vkbdOrigQuit.png" />
+    <Image Include="..\data\vkbd\vkbdOrigQuitHires.png" />
     <Image Include="..\data\vkbd\vkbdOrigUKLarge.png" />
     <Image Include="..\data\vkbd\vkbdOrigUKLargeHires.png" />
     <Image Include="..\data\vkbd\vkbdOrigUKLargeShift.png" />
@@ -343,6 +348,8 @@
     <Image Include="..\data\vkbd\vkbdWarmGerLargeHires.png" />
     <Image Include="..\data\vkbd\vkbdWarmGerLargeShift.png" />
     <Image Include="..\data\vkbd\vkbdWarmGerLargeShiftHires.png" />
+    <Image Include="..\data\vkbd\vkbdWarmQuit.png" />
+    <Image Include="..\data\vkbd\vkbdWarmQuitHires.png" />
     <Image Include="..\data\vkbd\vkbdWarmUKLarge.png" />
     <Image Include="..\data\vkbd\vkbdWarmUKLargeHires.png" />
     <Image Include="..\data\vkbd\vkbdWarmUKLargeShift.png" />
@@ -356,6 +363,7 @@
     <Font Include="..\data\AmigaTopaz.ttf" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\conf\amiberry-osx.conf" />
     <None Include="..\conf\amiberry.conf">
       <DeploymentContent>true</DeploymentContent>
     </None>
@@ -620,6 +628,7 @@
     <ClCompile Include="..\src\osdep\amiberry_gui.cpp" />
     <ClCompile Include="..\src\osdep\amiberry_input.cpp" />
     <ClCompile Include="..\src\osdep\amiberry_mem.cpp" />
+    <ClCompile Include="..\src\osdep\amiberry_serial.cpp" />
     <ClCompile Include="..\src\osdep\amiberry_whdbooter.cpp" />
     <ClCompile Include="..\src\osdep\bsdsocket_host.cpp" />
     <ClCompile Include="..\src\osdep\cda_play.cpp" />
@@ -655,6 +664,7 @@
     <ClCompile Include="..\src\osdep\gui\PanelRTG.cpp" />
     <ClCompile Include="..\src\osdep\gui\PanelSavestate.cpp" />
     <ClCompile Include="..\src\osdep\gui\PanelSound.cpp" />
+    <ClCompile Include="..\src\osdep\gui\PanelVirtualKeyboard.cpp" />
     <ClCompile Include="..\src\osdep\gui\SelectFile.cpp" />
     <ClCompile Include="..\src\osdep\gui\SelectFolder.cpp" />
     <ClCompile Include="..\src\osdep\gui\SelectorEntry.cpp" />
@@ -680,7 +690,6 @@
     <ClCompile Include="..\src\scsi.cpp" />
     <ClCompile Include="..\src\scsiemul.cpp" />
     <ClCompile Include="..\src\scsitape.cpp" />
-    <ClCompile Include="..\src\serial_win32.cpp" />
     <ClCompile Include="..\src\sinctable.cpp.in" />
     <ClCompile Include="..\src\sounddep\sound.cpp" />
     <ClCompile Include="..\src\statusline.cpp" />

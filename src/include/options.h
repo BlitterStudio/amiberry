@@ -16,7 +16,7 @@
 #include "traps.h"
 
 #define UAEMAJOR 5
-#define UAEMINOR 6
+#define UAEMINOR 7
 #define UAESUBREV 0
 
 #define MAX_AMIGADISPLAYS 1
@@ -970,6 +970,14 @@ struct uae_prefs
 	int input_device_match_mask;
 
 #ifdef AMIBERRY
+	bool vkbd_enabled;
+	bool vkbd_hires;
+	bool vkbd_exit;
+	char vkbd_language[128];
+	char vkbd_style[128];
+	int vkbd_transparency;
+	char vkbd_toggle[128];
+	
 	int drawbridge_driver;
 	bool drawbridge_connected_drive_b;
 	bool drawbridge_smartspeed;
@@ -980,6 +988,7 @@ struct uae_prefs
 	bool use_retroarch_menu;
 	bool use_retroarch_reset;
 	bool use_retroarch_statebuttons;
+	bool use_retroarch_vkbd;
 
 	// probably can be removed now? unless they are used by the new whd selector
 	TCHAR whdload_path[MAX_DPATH];
@@ -1194,6 +1203,7 @@ struct amiberry_options
 	bool default_retroarch_quit = true;
 	bool default_retroarch_menu = true;
 	bool default_retroarch_reset = false;
+	bool default_retroarch_vkbd = false;
 	char default_controller1[128] = "joy1";
 	char default_controller2[128] = "joy2";
 	char default_controller3[128]{};
@@ -1208,11 +1218,17 @@ struct amiberry_options
 	bool disable_shutdown_button = false;
 	bool allow_display_settings_from_xml = true;
 	int default_soundcard = 0;
+	bool default_vkbd_enabled;
+	bool default_vkbd_hires;
+	bool default_vkbd_exit;
+	char default_vkbd_language[128] = "US";
+	char default_vkbd_style[128] = "Original";
+	int default_vkbd_transparency;
+	char default_vkbd_toggle[128] = "guide";
 };
 
 extern struct amiberry_options amiberry_options;
 #endif
-
 
 extern void import_joysticks(void);
 

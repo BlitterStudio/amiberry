@@ -12,6 +12,11 @@
 
 #include "uae/types.h"
 
+#ifdef AMIBERRY
+#include <libserialport.h>
+extern int check(sp_return result);
+#endif
+
 extern void serial_init (void);
 extern void serial_exit (void);
 extern void serial_dtr_off (void);

@@ -118,14 +118,14 @@
     <Filter Include="controllers">
       <UniqueIdentifier>{df45c870-bacf-40a0-882f-995733bbc653}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\osdep\vkbd">
-      <UniqueIdentifier>{481cac80-8d9f-45cc-9a3e-1ca77c063bae}</UniqueIdentifier>
-    </Filter>
     <Filter Include="data\floppy_sounds">
       <UniqueIdentifier>{f2f64642-8486-4d27-9f0b-ef314f752024}</UniqueIdentifier>
     </Filter>
     <Filter Include="data\vkbd">
-      <UniqueIdentifier>{bc8f1b9f-c930-42ee-bea8-1c25f61550a1}</UniqueIdentifier>
+      <UniqueIdentifier>{491d05fd-a7f0-46c1-8e87-83b624d18768}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\osdep\vkbd">
+      <UniqueIdentifier>{7ef6d7bc-cf2a-41e3-aa07-9f8fe33f1e32}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -146,6 +146,9 @@
     </Text>
     <Text Include="..\controllers\gamecontrollerdb_user.txt">
       <Filter>controllers</Filter>
+    </Text>
+    <Text Include="..\conf\gamecontrollerdb.txt">
+      <Filter>conf</Filter>
     </Text>
   </ItemGroup>
   <ItemGroup>
@@ -248,6 +251,12 @@
     <Image Include="..\data\vkbd\vkbdCoolGerLargeShiftHires.png">
       <Filter>data\vkbd</Filter>
     </Image>
+    <Image Include="..\data\vkbd\vkbdCoolQuit.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdCoolQuitHires.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
     <Image Include="..\data\vkbd\vkbdCoolUKLarge.png">
       <Filter>data\vkbd</Filter>
     </Image>
@@ -294,6 +303,12 @@
       <Filter>data\vkbd</Filter>
     </Image>
     <Image Include="..\data\vkbd\vkbdDarkGerLargeShiftHires.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdDarkQuit.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdDarkQuitHires.png">
       <Filter>data\vkbd</Filter>
     </Image>
     <Image Include="..\data\vkbd\vkbdDarkUKLarge.png">
@@ -344,6 +359,12 @@
     <Image Include="..\data\vkbd\vkbdOrigGerLargeShiftHires.png">
       <Filter>data\vkbd</Filter>
     </Image>
+    <Image Include="..\data\vkbd\vkbdOrigQuit.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdOrigQuitHires.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
     <Image Include="..\data\vkbd\vkbdOrigUKLarge.png">
       <Filter>data\vkbd</Filter>
     </Image>
@@ -392,6 +413,12 @@
     <Image Include="..\data\vkbd\vkbdWarmGerLargeShiftHires.png">
       <Filter>data\vkbd</Filter>
     </Image>
+    <Image Include="..\data\vkbd\vkbdWarmQuit.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\vkbd\vkbdWarmQuitHires.png">
+      <Filter>data\vkbd</Filter>
+    </Image>
     <Image Include="..\data\vkbd\vkbdWarmUKLarge.png">
       <Filter>data\vkbd</Filter>
     </Image>
@@ -415,6 +442,9 @@
     </Image>
     <Image Include="..\data\vkbd\vkbdWarmUSLargeShiftHires.png">
       <Filter>data\vkbd</Filter>
+    </Image>
+    <Image Include="..\data\keyboard.png">
+      <Filter>data</Filter>
     </Image>
   </ItemGroup>
   <ItemGroup>
@@ -459,6 +489,9 @@
     </None>
     <None Include="..\external\libguisan\lib\.keep">
       <Filter>external\libguisan\lib</Filter>
+    </None>
+    <None Include="..\conf\amiberry-osx.conf">
+      <Filter>conf</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -963,6 +996,9 @@
     <ClCompile Include="..\src\fpp_native.cpp.in">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\linetoscr.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\p96_blit.cpp.in">
       <Filter>src</Filter>
     </ClCompile>
@@ -1024,9 +1060,6 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\parser.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\serial_win32.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\external\libguisan\src\actionevent.cpp">
@@ -1413,11 +1446,14 @@
     <ClCompile Include="..\src\debug.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\osdep\amiberry_serial.cpp">
+      <Filter>src\osdep</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\osdep\vkbd\vkbd.cpp">
       <Filter>src\osdep\vkbd</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\linetoscr.cpp">
-      <Filter>src</Filter>
+    <ClCompile Include="..\src\osdep\gui\PanelVirtualKeyboard.cpp">
+      <Filter>src\osdep\gui</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -2303,9 +2339,6 @@
     <ClInclude Include="..\src\include\uae\uae_pragmas.h">
       <Filter>src\include\uae</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\osdep\vkbd\vkbd.h">
-      <Filter>src\osdep\vkbd</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\include\debug.h">
       <Filter>src\include</Filter>
     </ClInclude>
@@ -2323,6 +2356,9 @@
     </ClInclude>
     <ClInclude Include="..\src\include\uae\memory.h">
       <Filter>src\include\uae</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\osdep\vkbd\vkbd.h">
+      <Filter>src\osdep\vkbd</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

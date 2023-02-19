@@ -109,6 +109,7 @@ amiberry_hotkey quit_key;
 amiberry_hotkey action_replay_key;
 amiberry_hotkey fullscreen_key;
 amiberry_hotkey minimize_key;
+SDL_GameControllerButton vkbd_button;
 
 bool lctrl, rctrl, lalt, ralt, lshift, rshift, lgui, rgui;
 
@@ -195,6 +196,15 @@ void set_key_configs(struct uae_prefs* p)
 	enter_gui_button = SDL_GameControllerGetButtonFromString(p->open_gui);
 	if (enter_gui_button == SDL_CONTROLLER_BUTTON_INVALID)
 		enter_gui_button = SDL_GameControllerGetButtonFromString(amiberry_options.default_open_gui_key);
+	if (enter_gui_button != SDL_CONTROLLER_BUTTON_INVALID)
+	{
+		for (int port = 0; port < 2; port++)
+		{
+			const auto host_joy_id = p->jports[port].id - JSEM_JOYS;
+			didata* did = &di_joystick[host_joy_id];
+			did->mapping.menu_button = enter_gui_button;
+		}
+	}
 	
 	if (strncmp(p->quit_amiberry, "", 1) != 0)
 		quit_key = get_hotkey_from_config(p->quit_amiberry);
@@ -215,6 +225,19 @@ void set_key_configs(struct uae_prefs* p)
 
 	if (strncmp(p->minimize, "", 1) != 0)
 		minimize_key = get_hotkey_from_config(p->minimize);
+
+	vkbd_button = SDL_GameControllerGetButtonFromString(p->vkbd_toggle);
+	if (vkbd_button == SDL_CONTROLLER_BUTTON_INVALID)
+		vkbd_button = SDL_GameControllerGetButtonFromString(amiberry_options.default_vkbd_toggle);
+	if (vkbd_button != SDL_CONTROLLER_BUTTON_INVALID)
+	{
+		for (int port = 0; port < 2; port++)
+		{
+			const auto host_joy_id = p->jports[port].id - JSEM_JOYS;
+			didata* did = &di_joystick[host_joy_id];
+			did->mapping.vkbd_button = vkbd_button;
+		}
+	}
 }
 
 extern void signal_segv(int signum, siginfo_t* info, void* ptr);
@@ -1158,6 +1181,11 @@ void process_event(SDL_Event event)
 			minimizewindow(0);
 			break;
 		}
+		if (event.cbutton.button == vkbd_button)
+		{
+			inputdevice_add_inputcode(AKS_TOGGLE_VIRTUAL_KEYBOARD, event.cbutton.state == SDL_PRESSED, nullptr);
+			break;
+		}
 
 		for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
 		{
@@ -1187,6 +1215,12 @@ void process_event(SDL_Event event)
 			{
 				hotkey_pressed = false;
 				inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
+				break;
+			}
+			if (event.jbutton.button == did->mapping.vkbd_button && hotkey_pressed && event.jbutton.state == SDL_PRESSED)
+			{
+				hotkey_pressed = false;
+				inputdevice_add_inputcode(AKS_TOGGLE_VIRTUAL_KEYBOARD, 1, nullptr);
 				break;
 			}
 
@@ -2013,6 +2047,7 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->use_retroarch_quit = amiberry_options.default_retroarch_quit;
 	p->use_retroarch_menu = amiberry_options.default_retroarch_menu;
 	p->use_retroarch_reset = amiberry_options.default_retroarch_reset;
+	p->use_retroarch_vkbd = amiberry_options.default_retroarch_vkbd;
 
 	p->whdbootprefs.buttonwait = amiberry_options.default_whd_buttonwait;
 	p->whdbootprefs.showsplash = amiberry_options.default_whd_showsplash;
@@ -2030,11 +2065,26 @@ void target_default_options(struct uae_prefs* p, int type)
 	}
 
 	if (amiberry_options.default_soundcard > 0) p->soundcard = amiberry_options.default_soundcard;
+
+	// Virtual keyboard default options
+	p->vkbd_enabled = amiberry_options.default_vkbd_enabled;
+	p->vkbd_exit = amiberry_options.default_vkbd_exit;
+	p->vkbd_hires = amiberry_options.default_vkbd_hires;
+	if (amiberry_options.default_vkbd_language[0])
+		_tcscpy(p->vkbd_language, amiberry_options.default_vkbd_language);
+	else
+		_tcscpy(p->vkbd_language, ""); // This will use the default language.
+	if (amiberry_options.default_vkbd_style[0])
+		_tcscpy(p->vkbd_style, amiberry_options.default_vkbd_style);
+	else
+		_tcscpy(p->vkbd_style, ""); // This will use the default theme.
+	p->vkbd_transparency = amiberry_options.default_vkbd_transparency;
+	_tcscpy(p->vkbd_toggle, amiberry_options.default_vkbd_toggle);
 }
 
 static const TCHAR* scsimode[] = { _T("SCSIEMU"), _T("SPTI"), _T("SPTI+SCSISCAN"), NULL };
-static const TCHAR* statusbarmode[] = { _T("none"), _T("normal"), _T("extended"), NULL };
-static const TCHAR* configmult[] = { _T("1x"), _T("2x"), _T("3x"), _T("4x"), _T("5x"), _T("6x"), _T("7x"), _T("8x"), NULL };
+//static const TCHAR* statusbarmode[] = { _T("none"), _T("normal"), _T("extended"), NULL };
+//static const TCHAR* configmult[] = { _T("1x"), _T("2x"), _T("3x"), _T("4x"), _T("5x"), _T("6x"), _T("7x"), _T("8x"), NULL };
 
 extern int scsiromselected;
 
@@ -2113,9 +2163,18 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_target_dwrite_bool(f, _T("use_retroarch_quit"), p->use_retroarch_quit);
 	cfgfile_target_dwrite_bool(f, _T("use_retroarch_menu"), p->use_retroarch_menu);
 	cfgfile_target_dwrite_bool(f, _T("use_retroarch_reset"), p->use_retroarch_reset);
+	cfgfile_target_dwrite_bool(f, _T("use_retroarch_vkbd"), p->use_retroarch_vkbd);
 
 	if (scsiromselected > 0)
 		cfgfile_target_write(f, _T("expansion_gui_page"), expansionroms[scsiromselected].name);
+
+	cfgfile_write_bool(f, _T("vkbd_enabled"), p->vkbd_enabled);
+	cfgfile_write_bool(f, _T("vkbd_hires"), p->vkbd_hires);
+	cfgfile_write_bool(f, _T("vkbd_exit"), p->vkbd_exit);
+	cfgfile_write(f, _T("vkbd_transparency"), "%d", p->vkbd_transparency);
+	cfgfile_write_str(f, _T("vkbd_language"), p->vkbd_language);
+	cfgfile_write_str(f, _T("vkbd_style"), p->vkbd_style);
+	cfgfile_target_dwrite_str(f, _T("vkbd_toggle"), p->vkbd_toggle);
 }
 
 void target_restart(void)
@@ -2203,6 +2262,7 @@ static int target_parse_option_host(struct uae_prefs *p, const TCHAR *option, co
 		|| cfgfile_yesno(option, value, _T("use_retroarch_quit"), &p->use_retroarch_quit)
 		|| cfgfile_yesno(option, value, _T("use_retroarch_menu"), &p->use_retroarch_menu)
 		|| cfgfile_yesno(option, value, _T("use_retroarch_reset"), &p->use_retroarch_reset)
+		|| cfgfile_yesno(option, value, _T("use_retroarch_vkbd"), &p->use_retroarch_vkbd)
 		|| cfgfile_intval(option, value, _T("sound_pullmode"), &p->sound_pullmode, 1)
 		|| cfgfile_intval(option, value, _T("samplersoundcard"), &p->samplersoundcard, 1)
 		|| cfgfile_intval(option, value, "kbd_led_num", &p->kbd_led_num, 1)
@@ -2220,6 +2280,15 @@ static int target_parse_option_host(struct uae_prefs *p, const TCHAR *option, co
 		|| cfgfile_string(option, value, "fullscreen_toggle", p->fullscreen_toggle, sizeof p->fullscreen_toggle)
 		|| cfgfile_string(option, value, "minimize", p->minimize, sizeof p->minimize)
 		|| cfgfile_intval(option, value, _T("cpu_idle"), &p->cpu_idle, 1))
+		return 1;
+
+	if (cfgfile_yesno(option, value, _T("vkbd_enabled"), &p->vkbd_enabled)
+		|| cfgfile_yesno(option, value, _T("vkbd_hires"), &p->vkbd_hires)
+		|| cfgfile_yesno(option, value, _T("vkbd_exit"), &p->vkbd_exit)
+		|| cfgfile_intval(option, value, _T("vkbd_transparency"), &p->vkbd_transparency, 1)
+		|| cfgfile_string(option, value, _T("vkbd_language"), p->vkbd_language, sizeof p->vkbd_language)
+		|| cfgfile_string(option, value, _T("vkbd_style"), p->vkbd_style, sizeof p->vkbd_style)
+		|| cfgfile_string(option, value, _T("vkbd_toggle"), p->vkbd_toggle, sizeof p->vkbd_toggle))
 		return 1;
 
 	if (cfgfile_string(option, value, _T("expansion_gui_page"), tmpbuf, sizeof tmpbuf / sizeof(TCHAR))) {
@@ -2838,6 +2907,10 @@ void save_amiberry_settings(void)
 	snprintf(buffer, MAX_DPATH, "default_retroarch_reset=%s\n", amiberry_options.default_retroarch_reset ? "yes" : "no");
 	fputs(buffer, f);
 
+	// Enable RetroArch Reset by default?
+	snprintf(buffer, MAX_DPATH, "default_retroarch_vkbd=%s\n", amiberry_options.default_retroarch_vkbd ? "yes" : "no");
+	fputs(buffer, f);
+
 	// Controller1
 	snprintf(buffer, MAX_DPATH, "default_controller1=%s\n", amiberry_options.default_controller1);
 	fputs(buffer, f);
@@ -2893,7 +2966,35 @@ void save_amiberry_settings(void)
 	// Default Sound Card (0=default, first one available in the system)
 	snprintf(buffer, MAX_DPATH, "default_soundcard=%d\n", amiberry_options.default_soundcard);
 	fputs(buffer, f);
-	
+
+	// Enable Virtual Keyboard by default
+	snprintf(buffer, MAX_DPATH, "default_vkbd_enabled=%s\n", amiberry_options.default_vkbd_enabled ? "yes" : "no");
+	fputs(buffer, f);
+
+	// Show the High-res version of the Virtual Keyboard by default
+	snprintf(buffer, MAX_DPATH, "default_vkbd_hires=%s\n", amiberry_options.default_vkbd_hires ? "yes" : "no");
+	fputs(buffer, f);
+
+	// Enable Quit functionality through Virtual Keyboard by default
+	snprintf(buffer, MAX_DPATH, "default_vkbd_exit=%s\n", amiberry_options.default_vkbd_exit ? "yes" : "no");
+	fputs(buffer, f);
+
+	// Default Language for the Virtual Keyboard
+	snprintf(buffer, MAX_DPATH, "default_vkbd_language=%s\n", amiberry_options.default_vkbd_language);
+	fputs(buffer, f);
+
+	// Default Style for the Virtual Keyboard
+	snprintf(buffer, MAX_DPATH, "default_vkbd_style=%s\n", amiberry_options.default_vkbd_style);
+	fputs(buffer, f);
+
+	// Default transparency for the Virtual Keyboard
+	snprintf(buffer, MAX_DPATH, "default_vkbd_transparency=%d\n", amiberry_options.default_vkbd_transparency);
+	fputs(buffer, f);
+
+	// Default controller button for toggling the Virtual Keyboard
+	snprintf(buffer, MAX_DPATH, "default_vkbd_toggle=%s\n", amiberry_options.default_vkbd_toggle);
+	fputs(buffer, f);
+
 	// Paths
 	snprintf(buffer, MAX_DPATH, "path=%s\n", current_dir);
 	fputs(buffer, f);
@@ -3125,6 +3226,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_yesno(option, value, "default_retroarch_quit", &amiberry_options.default_retroarch_quit);
 		ret |= cfgfile_yesno(option, value, "default_retroarch_menu", &amiberry_options.default_retroarch_menu);
 		ret |= cfgfile_yesno(option, value, "default_retroarch_reset", &amiberry_options.default_retroarch_reset);
+		ret |= cfgfile_yesno(option, value, "default_retroarch_vkbd", &amiberry_options.default_retroarch_vkbd);
 		ret |= cfgfile_string(option, value, "default_controller1", amiberry_options.default_controller1, sizeof amiberry_options.default_controller1);
 		ret |= cfgfile_string(option, value, "default_controller2", amiberry_options.default_controller2, sizeof amiberry_options.default_controller2);
 		ret |= cfgfile_string(option, value, "default_controller3", amiberry_options.default_controller3, sizeof amiberry_options.default_controller3);
@@ -3139,6 +3241,13 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_yesno(option, value, "disable_shutdown_button", &amiberry_options.disable_shutdown_button);
 		ret |= cfgfile_yesno(option, value, "allow_display_settings_from_xml", &amiberry_options.allow_display_settings_from_xml);
 		ret |= cfgfile_intval(option, value, "default_soundcard", &amiberry_options.default_soundcard, 1);
+		ret |= cfgfile_yesno(option, value, "default_vkbd_enabled", &amiberry_options.default_vkbd_enabled);
+		ret |= cfgfile_yesno(option, value, "default_vkbd_hires", &amiberry_options.default_vkbd_hires);
+		ret |= cfgfile_yesno(option, value, "default_vkbd_exit", &amiberry_options.default_vkbd_exit);
+		ret |= cfgfile_string(option, value, "default_vkbd_language", amiberry_options.default_vkbd_language, sizeof amiberry_options.default_vkbd_language);
+		ret |= cfgfile_string(option, value, "default_vkbd_style", amiberry_options.default_vkbd_style, sizeof amiberry_options.default_vkbd_style);
+		ret |= cfgfile_intval(option, value, "default_vkbd_transparency", &amiberry_options.default_vkbd_transparency, 1);
+		ret |= cfgfile_string(option, value, "default_vkbd_toggle", amiberry_options.default_vkbd_toggle, sizeof amiberry_options.default_vkbd_toggle);
 	}
 	return ret;
 }

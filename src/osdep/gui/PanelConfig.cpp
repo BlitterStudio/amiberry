@@ -222,7 +222,7 @@ void InitPanelConfig(const struct config_category& category)
 	configsListActionListener = new ConfigsListActionListener();
 
 	lstConfigs = new gcn::ListBox(configsList);
-	lstConfigs->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER - 22, 232);
+	lstConfigs->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER - 22, 370);
 	lstConfigs->setBaseColor(colTextboxBackground);
 	lstConfigs->setBackgroundColor(colTextboxBackground);
 	lstConfigs->setSelectionColor(colSelectorActive);
@@ -233,7 +233,7 @@ void InitPanelConfig(const struct config_category& category)
 	scrAreaConfigs = new gcn::ScrollArea(lstConfigs);
 	scrAreaConfigs->setBorderSize(1);
 	scrAreaConfigs->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
-	scrAreaConfigs->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER - 2, 252);
+	scrAreaConfigs->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER - 2, 390);
 	scrAreaConfigs->setScrollbarWidth(20);
 	scrAreaConfigs->setBackgroundColor(colTextboxBackground);
 	scrAreaConfigs->setBaseColor(gui_baseCol);

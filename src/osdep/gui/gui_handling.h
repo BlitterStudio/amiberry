@@ -3,7 +3,7 @@
 
 #include "amiberry_gfx.h"
 
-#define DISTANCE_BORDER 15
+#define DISTANCE_BORDER 10
 #define DISTANCE_NEXT_X 15
 #define DISTANCE_NEXT_Y 15
 #define BUTTON_WIDTH 90
@@ -300,6 +300,11 @@ void InitPanelSavestate(const struct config_category& category);
 void ExitPanelSavestate(void);
 void RefreshPanelSavestate(void);
 bool HelpPanelSavestate(std::vector<std::string>& helptext);
+
+void InitPanelVirtualKeyboard(const struct config_category &category);
+void ExitPanelVirtualKeyboard(void);
+void RefreshPanelVirtualKeyboard(void);
+bool HelpPanelVirtualKeyboard(std::vector<std::string>& helptext);
 
 #ifdef ANDROID
 void InitPanelOnScreen(const struct _ConfigCategory& category);
