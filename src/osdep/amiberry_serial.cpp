@@ -146,7 +146,7 @@ static bool canreceive(void)
 	return false;
 }
 
-static void checkreceive_serial(void)
+static void checkreceive_serial (void)
 {
 #ifdef SERIAL_PORT
 	static int ninebitdata;
@@ -174,8 +174,7 @@ static void checkreceive_serial(void)
 				return;
 			}
 			break_delay = SERIAL_BREAK_TRANSMIT_DELAY;
-		}
-		else {
+		} else {
 			if (breakcond && !break_in_serdatr) {
 				break_in_serdatr = -1;
 				break_in_serdatr -= status;
@@ -201,17 +200,18 @@ static void checkreceive_serial(void)
 						break_in_serdatr++;
 					}
 					break;
-				}
-				ninebitdata = recdata;
-				if ((ninebitdata & ~1) != 0xa8) {
-					write_log(_T("SERIAL: 9-bit serial emulation sync lost, %02X != %02X\n"), ninebitdata & ~1, 0xa8);
-					ninebitdata = 0;
-					return;
+				} else {
+					ninebitdata = recdata;
+					if ((ninebitdata & ~1) != 0xa8) {
+						write_log(_T("SERIAL: 9-bit serial emulation sync lost, %02X != %02X\n"), ninebitdata & ~1, 0xa8);
+						ninebitdata = 0;
+						return;
+					}
+					continue;
 				}
 			}
 		}
-	}
-	else {
+	} else {
 		bool breakcond;
 		int status = readseravail(&breakcond);
 		if (break_in_serdatr == -1 || break_in_serdatr > 0) {
@@ -233,8 +233,7 @@ static void checkreceive_serial(void)
 				return;
 			}
 			break_delay = SERIAL_BREAK_TRANSMIT_DELAY;
-		}
-		else {
+		} else {
 			if (breakcond && !break_in_serdatr) {
 				break_in_serdatr = -1;
 				break_in_serdatr -= status;
@@ -326,8 +325,7 @@ static void checksend(void)
 		}
 		writeser(((serdatshift >> 8) & 1) | 0xa8);
 		writeser(serdatshift_masked);
-	}
-	else {
+	} else {
 		if (currprefs.serial_crlf) {
 			if (serdatshift_masked == 10 && serial_send_previous != 13) {
 				if (!checkserwrite(2)) {
@@ -348,8 +346,7 @@ static void checksend(void)
 	if (serial_period_hsyncs <= 1 || data_in_sershift == 2) {
 		data_in_sershift = 0;
 		serdatcopy();
-	}
-	else {
+	} else {
 		data_in_sershift = 3;
 	}
 }
@@ -371,8 +368,7 @@ static void sersend_ce(uae_u32 v)
 	if (checkshiftempty()) {
 		lastbitcycle = get_cycles() + ((serper & 0x7fff) + 1) * CYCLE_UNIT;
 		lastbitcycle_active_hsyncs = ((serper & 0x7fff) + 1) / maxhpos + 2;
-	}
-	else if (data_in_sershift == 1 || data_in_sershift == 2) {
+	} else if (data_in_sershift == 1 || data_in_sershift == 2) {
 		event2_newevent_x_replace(maxhpos, 0, sersend_ce);
 	}
 }
@@ -417,7 +413,7 @@ static void serdatcopy(void)
 	checksend();
 }
 
-void serial_hsynchandler()
+void serial_hsynchandler (void)
 {
 	if (lastbitcycle_active_hsyncs > 0)
 		lastbitcycle_active_hsyncs--;
@@ -431,8 +427,7 @@ void serial_hsynchandler()
 		checkreceive_serial();
 		//checkreceive_enet();
 		checkshiftempty();
-	}
-	else if ((serial_period_hsync_counter % serial_period_hsyncs) == 0 && !currprefs.cpu_cycle_exact) {
+	} else if ((serial_period_hsync_counter % serial_period_hsyncs) == 0 && !currprefs.cpu_cycle_exact) {
 		checkshiftempty();
 	}
 	if (break_in_serdatr > 1) {
@@ -566,7 +561,7 @@ void serial_dtr_off(void)
 #endif
 }
 
-void serial_flush_buffer(void)
+void serial_flush_buffer (void)
 {
 }
 
@@ -583,8 +578,7 @@ uae_u8 serial_readstatus(uae_u8 dir)
 		if (!(serbits & 0x20)) {
 			serbits |= 0x20;
 		}
-	}
-	else {
+	} else {
 		if (serbits & 0x20) {
 			serbits &= ~0x20;
 		}
@@ -641,6 +635,7 @@ uae_u8 serial_writestatus(uae_u8 newstate, uae_u8 dir)
 			}
 		}
 	}
+
 	if (logcnt > 0) {
 		if (((newstate ^ oldserbits) & 0x40) && !(dir & 0x40)) {
 			write_log(_T("SERIAL: warning, program tries to use RTS as an input! PC=%x\n"), M68K_GETPC);
@@ -701,7 +696,7 @@ void serial_close()
 	serdev = 0;
 }
 
-void serial_init()
+void serial_init(void)
 {
 #ifdef SERIAL_PORT
 	if (!currprefs.use_serial)
@@ -711,7 +706,7 @@ void serial_init()
 #endif
 }
 
-void serial_exit()
+void serial_exit (void)
 {
 #ifdef SERIAL_PORT
 	serial_close();
@@ -720,7 +715,7 @@ void serial_exit()
 	oldserbits = 0;
 }
 
-void serial_uartbreak(int v)
+void serial_uartbreak (int v)
 {
 	if (!serdev || !currprefs.use_serial)
 		return;
