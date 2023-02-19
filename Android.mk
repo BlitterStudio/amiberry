@@ -85,7 +85,7 @@ LOCAL_SRC_FILES := src/akiko.cpp \
                     src/main.cpp \
                     src/memory.cpp \
                     src/native2amiga.cpp \
-					src/parser.cpp \
+                    src/parser.cpp \
                     src/rommgr.cpp \
                     src/rtc.cpp \
                     src/savestate.cpp \

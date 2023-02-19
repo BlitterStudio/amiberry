@@ -257,6 +257,7 @@ add_executable(${PROJECT_NAME}
 		src/osdep/gui/PanelMisc.cpp
 		src/osdep/gui/PanelPrio.cpp
 		src/osdep/gui/PanelSavestate.cpp
+		src/osdep/gui/PanelVirtualKeyboard.cpp
 		src/osdep/gui/main_window.cpp
 		src/osdep/gui/Navigation.cpp
 		src/osdep/aarch64_helper.s
