@@ -1224,7 +1224,7 @@ void gui_widgets_init()
 	try
 	{
 #ifdef USE_OPENGL
-		gui_font = new gcn::ImageFont(prefix_with_data_path("fixedfont.bmp"), " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789");
+		gui_font = new gcn::ImageFont(prefix_with_data_path("rpgfont.png"), " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?-+/():;%&`'*#=[]\"");
 #else
 		gui_font = new gcn::SDLTrueTypeFont(prefix_with_data_path("AmigaTopaz.ttf"), 15);
 #endif
