@@ -35,6 +35,7 @@ static gcn::CheckBox* chkMinimizeInactive;
 static gcn::CheckBox* chkCaptureAlways;
 static gcn::CheckBox* chkHideAutoconfig;
 static gcn::CheckBox* chkScsiDisable;
+static gcn::CheckBox* chkWarpModeReset;
 
 static gcn::Label* lblNumLock;
 static gcn::DropDown* cboKBDLed_num;
@@ -203,6 +204,9 @@ public:
 
 		else if (actionEvent.getSource() == chkScsiDisable)
 			changed_prefs.scsidevicedisable = chkScsiDisable->isSelected();
+
+		else if (actionEvent.getSource() == chkWarpModeReset)
+			changed_prefs.turbo_boot = chkWarpModeReset->isSelected();
 
 		else if (actionEvent.getSource() == cboKBDLed_num)
 			changed_prefs.kbd_led_num = cboKBDLed_num->getSelected() - 1;
@@ -402,6 +406,10 @@ void InitPanelMisc(const config_category& category)
 	chkScsiDisable = new gcn::CheckBox("A600/A1200/A4000 IDE scsi.device disable");
 	chkScsiDisable->setId("chkScsiDisable");
 	chkScsiDisable->addActionListener(miscActionListener);
+
+	chkWarpModeReset = new gcn::CheckBox("Warp mode reset");
+	chkWarpModeReset->setId("chkWarpModeReset");
+	chkWarpModeReset->addActionListener(miscActionListener);
 	
 	lblNumLock = new gcn::Label("NumLock:");
 	lblNumLock->setAlignment(gcn::Graphics::RIGHT);
@@ -566,7 +574,9 @@ void InitPanelMisc(const config_category& category)
 	grpMiscOptions->add(chkScsiDisable, DISTANCE_BORDER, posY);
 	posY += chkScsiDisable->getHeight() + DISTANCE_NEXT_Y;
 	grpMiscOptions->add(chkAltTabRelease, DISTANCE_BORDER, posY);
-	posY += chkAltTabRelease->getHeight() + DISTANCE_NEXT_X;
+	posY += chkAltTabRelease->getHeight() + DISTANCE_NEXT_Y;
+	grpMiscOptions->add(chkWarpModeReset, DISTANCE_BORDER, posY);
+	posY += chkWarpModeReset->getHeight() + DISTANCE_NEXT_Y;
 	grpMiscOptions->add(chkRetroArchQuit, DISTANCE_BORDER, posY);
 	posY += chkRetroArchQuit->getHeight() + DISTANCE_NEXT_Y;
 	grpMiscOptions->add(chkRetroArchMenu, DISTANCE_BORDER, posY);
@@ -659,6 +669,7 @@ void ExitPanelMisc()
 	delete chkCaptureAlways;
 	delete chkHideAutoconfig;
 	delete chkScsiDisable;
+	delete chkWarpModeReset;
 	
 	delete lblScrLock;
 	delete lblNumLock;
@@ -721,6 +732,7 @@ void RefreshPanelMisc()
 	chkCaptureAlways->setSelected(changed_prefs.capture_always);
 	chkHideAutoconfig->setSelected(changed_prefs.uae_hide_autoconfig);
 	chkScsiDisable->setSelected(changed_prefs.scsidevicedisable);
+	chkWarpModeReset->setSelected(changed_prefs.turbo_boot);
 	
 	cboKBDLed_num->setSelected(changed_prefs.kbd_led_num + 1);
 	cboKBDLed_scr->setSelected(changed_prefs.kbd_led_scr + 1);
