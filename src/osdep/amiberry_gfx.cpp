@@ -24,6 +24,7 @@
 #include "devices.h"
 #include "gfxboard.h"
 #include "threaddep/thread.h"
+#include "vkbd/vkbd.h"
 
 #include <png.h>
 #include <SDL_image.h>
@@ -366,6 +367,8 @@ static int display_thread(void* unused)
 			SDL_RenderClear(sdl_renderer);
 			SDL_UpdateTexture(amiga_texture, nullptr, sdl_surface->pixels, sdl_surface->pitch);
 			SDL_RenderCopyEx(sdl_renderer, amiga_texture, &crop_rect, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
+			if (currprefs.vkbd_enabled) 
+				vkbd_redraw();
 #endif
 #endif
 			flip_in_progress = false;
@@ -941,6 +944,16 @@ static void open_screen(struct uae_prefs* p)
 	picasso_refresh(mon->monitor_id);
 
 	setmouseactive(mon->monitor_id, -1);
+
+	if (currprefs.vkbd_enabled)
+	{
+		vkbd_set_transparency(static_cast<double>(currprefs.vkbd_transparency) / 100.0);
+		vkbd_set_hires(currprefs.vkbd_hires);
+		vkbd_set_keyboard_has_exit_button(currprefs.vkbd_exit);
+		vkbd_set_language(string(currprefs.vkbd_language));
+		vkbd_set_style(string(currprefs.vkbd_style));
+		vkbd_init();
+	}
 }
 
 void SDL2_toggle_vsync(bool vsync)
@@ -1565,6 +1578,7 @@ int check_prefs_changed_gfx()
 		currprefs.use_retroarch_quit != changed_prefs.use_retroarch_quit ||
 		currprefs.use_retroarch_menu != changed_prefs.use_retroarch_menu ||
 		currprefs.use_retroarch_reset != changed_prefs.use_retroarch_reset ||
+		currprefs.use_retroarch_vkbd != changed_prefs.use_retroarch_vkbd ||
 		currprefs.sound_pullmode != changed_prefs.sound_pullmode ||
 		currprefs.kbd_led_num != changed_prefs.kbd_led_num ||
 		currprefs.kbd_led_scr != changed_prefs.kbd_led_scr ||
@@ -1598,6 +1612,7 @@ int check_prefs_changed_gfx()
 		currprefs.use_retroarch_quit = changed_prefs.use_retroarch_quit;
 		currprefs.use_retroarch_menu = changed_prefs.use_retroarch_menu;
 		currprefs.use_retroarch_reset = changed_prefs.use_retroarch_reset;
+		currprefs.use_retroarch_vkbd = changed_prefs.use_retroarch_vkbd;
 		currprefs.sound_pullmode = changed_prefs.sound_pullmode;
 		currprefs.kbd_led_num = changed_prefs.kbd_led_num;
 		currprefs.kbd_led_scr = changed_prefs.kbd_led_scr;
@@ -1631,6 +1646,40 @@ int check_prefs_changed_gfx()
 		serial_exit();
 		serial_init();
 #endif
+	}
+
+	// Virtual keyboard
+	if (currprefs.vkbd_enabled != changed_prefs.vkbd_enabled ||
+		currprefs.vkbd_hires != changed_prefs.vkbd_hires ||
+		currprefs.vkbd_transparency != changed_prefs.vkbd_transparency ||
+		currprefs.vkbd_exit != changed_prefs.vkbd_exit ||
+		_tcscmp(currprefs.vkbd_language, changed_prefs.vkbd_language) ||
+		_tcscmp(currprefs.vkbd_style, changed_prefs.vkbd_style) ||
+		_tcscmp(currprefs.vkbd_toggle, changed_prefs.vkbd_toggle))
+	{
+		currprefs.vkbd_enabled = changed_prefs.vkbd_enabled;
+		currprefs.vkbd_hires = changed_prefs.vkbd_hires;
+		currprefs.vkbd_transparency = changed_prefs.vkbd_transparency;
+		currprefs.vkbd_exit = changed_prefs.vkbd_exit;
+		_tcscpy(currprefs.vkbd_language, changed_prefs.vkbd_language);
+		_tcscpy(currprefs.vkbd_style, changed_prefs.vkbd_style);
+		_tcscpy(currprefs.vkbd_toggle, changed_prefs.vkbd_toggle);
+
+		if (currprefs.vkbd_enabled)
+		{
+			vkbd_set_transparency(static_cast<double>(currprefs.vkbd_transparency) / 100.0);
+			vkbd_set_hires(currprefs.vkbd_hires);
+			vkbd_set_keyboard_has_exit_button(currprefs.vkbd_exit);
+			vkbd_set_language(string(currprefs.vkbd_language));
+			vkbd_set_style(string(currprefs.vkbd_style));
+			vkbd_button = SDL_GameControllerGetButtonFromString(currprefs.vkbd_toggle);
+			vkbd_init();
+		}
+		else
+		{
+			vkbd_button = SDL_CONTROLLER_BUTTON_INVALID;
+			vkbd_quit();
+		}
 	}
 
 	return 0;
@@ -1796,6 +1845,8 @@ void show_screen(int monid, int mode)
 		SDL_RenderClear(sdl_renderer);
 		SDL_UpdateTexture(amiga_texture, nullptr, sdl_surface->pixels, sdl_surface->pitch);
 		SDL_RenderCopyEx(sdl_renderer, amiga_texture, &crop_rect, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
+		if (currprefs.vkbd_enabled)
+			vkbd_redraw();
 		SDL_RenderPresent(sdl_renderer);
 #endif
 		flip_in_progress = false;
@@ -1871,11 +1922,13 @@ void getgfxoffset(int monid, float* dxp, float* dyp, float* mxp, float* myp)
 	float dx = 0, dy = 0, mx = 1.0, my = 1.0;
 
 #ifdef AMIBERRY
+#ifndef USE_OPENGL
 	if (currprefs.gfx_auto_crop)
 	{
 		dx -= float(crop_rect.x);
 		dy -= float(crop_rect.y);
 	}
+#endif
 #endif
 
 	*dxp = dx;
@@ -2192,6 +2245,9 @@ void graphics_leave()
 		SDL_DestroyWindow(mon->sdl_window);
 		mon->sdl_window = nullptr;
 	}
+
+	if (currprefs.vkbd_enabled)
+		vkbd_quit();
 }
 
 void close_windows(struct AmigaMonitor* mon)

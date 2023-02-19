@@ -356,7 +356,8 @@ public:
 	{
 		if (actionEvent.getSource() == cboSoundcard)
 		{
-			if (const int soundcard = cboSoundcard->getSelected(); soundcard != changed_prefs.soundcard)
+			const int soundcard = cboSoundcard->getSelected();
+			if (soundcard != changed_prefs.soundcard)
 				changed_prefs.soundcard = soundcard;
 		}
 		else if (actionEvent.getSource() == optSoundDisabled)
@@ -992,12 +993,20 @@ void RefreshPanelSound()
 	lblPaulaVol->setEnabled(enabled);
 	lblPaulaVolInfo->setEnabled(enabled);
 	sldPaulaVol->setEnabled(enabled);
+
 	lblMasterVol->setEnabled(false);
 	lblMasterVolInfo->setEnabled(false);
 	sldMasterVol->setEnabled(false);
 	lblAHIVol->setEnabled(false);
 	lblAHIVolInfo->setEnabled(false);
 	sldAHIVol->setEnabled(false);
+
+	sldFloppySoundDisk->setEnabled(chkFloppySound->isSelected());
+	lblFloppySoundDisk->setEnabled(chkFloppySound->isSelected());
+	lblFloppySoundDiskInfo->setEnabled(chkFloppySound->isSelected());
+	sldFloppySoundEmpty->setEnabled(chkFloppySound->isSelected());
+	lblFloppySoundEmpty->setEnabled(chkFloppySound->isSelected());
+	lblFloppySoundEmptyInfo->setEnabled(chkFloppySound->isSelected());
 }
 
 bool HelpPanelSound(std::vector<std::string>& helptext)

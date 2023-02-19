@@ -72,6 +72,7 @@ add_executable(${PROJECT_NAME}
 		src/main.cpp
 		src/memory.cpp
 		src/native2amiga.cpp
+		src/parser.cpp
 		src/rommgr.cpp
 		src/rtc.cpp
 		src/sampler.cpp
@@ -88,7 +89,7 @@ add_executable(${PROJECT_NAME}
 		src/uaelib.cpp
 		src/uaenative.cpp
 		src/uaeresource.cpp
-#		src/uaeserial.cpp
+		src/uaeserial.cpp
 		src/vm.cpp
 		src/zfile.cpp
 		src/zfile_archive.cpp
@@ -256,6 +257,7 @@ add_executable(${PROJECT_NAME}
 		src/osdep/gui/PanelMisc.cpp
 		src/osdep/gui/PanelPrio.cpp
 		src/osdep/gui/PanelSavestate.cpp
+		src/osdep/gui/PanelVirtualKeyboard.cpp
 		src/osdep/gui/main_window.cpp
 		src/osdep/gui/Navigation.cpp
 		src/osdep/vkbd/vkbd.cpp

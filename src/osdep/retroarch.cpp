@@ -10,7 +10,7 @@
 #include <fstream>
 #include <algorithm>
 
-// Retroarch mapping reference: https://docs.libretro.com/guides/joypad-autoconfiguration/
+// Retroarch mapping reference: https://docs.libretro.com/guides/controller-autoconfiguration/
 
 const string retroarch_kb_button_list[] = {
 	"left", "right", "up", "down", "a", "b", "x", "y", "l", "r", "start"
@@ -306,6 +306,7 @@ host_input_button map_from_retroarch(host_input_button mapping, char* control_co
 	mapping.quit_button = find_retroarch("input_exit_emulator_btn", control_config);
 	mapping.reset_button = find_retroarch("input_reset_btn", control_config);
 	mapping.menu_button = find_retroarch("input_menu_toggle_btn", control_config);
+	mapping.vkbd_button = find_retroarch("input_osk_toggle_btn", control_config);
 
 	// RetroArch supports 15 buttons
 	for (auto b = 0; b < 15; b++)

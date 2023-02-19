@@ -91,6 +91,7 @@ static string_list_model CustomEventList_HotKey(nullptr, 0);
 static string_list_model CustomEventList_Menu(nullptr, 0);
 static string_list_model CustomEventList_Quit(nullptr, 0);
 static string_list_model CustomEventList_Reset(nullptr, 0);
+static string_list_model CustomEventList_Vkbd(nullptr, 0);
 
 const string label_button_list[] = {
 	"South:", "East:", "West:", "North:", "Select:", "Guide:", "Start:", "L.Stick:", "R.Stick:",
@@ -256,11 +257,13 @@ void InitPanelCustom(const config_category& category)
 	CustomEventList_Menu = CustomEventList;
 	CustomEventList_Quit = CustomEventList;
 	CustomEventList_Reset = CustomEventList;
+	CustomEventList_Vkbd = CustomEventList;
 
-	CustomEventList_HotKey.swap_first_element("None (HotKey)");
-	CustomEventList_Menu.swap_first_element("None (Menu)");
-	CustomEventList_Quit.swap_first_element("None (Quit)");
-	CustomEventList_Reset.swap_first_element("None (Reset)");
+	CustomEventList_HotKey.swap_first_element("In-Use (HotKey)");
+	CustomEventList_Menu.swap_first_element("In-Use (Menu)");
+	CustomEventList_Quit.swap_first_element("In-Use (Quit)");
+	CustomEventList_Reset.swap_first_element("In-Use (Reset)");
+	CustomEventList_Vkbd.swap_first_element("In-Use (VKBD)");
 
 	customActionListener = new CustomActionListener();
 	grpActionListener = new GroupActionListener();
@@ -561,6 +564,28 @@ void RefreshPanelCustom()
 				&& changed_prefs.use_retroarch_reset)
 			{
 				cboCustomButtonAction[n]->setListModel(&CustomEventList_Reset);
+				cboCustomButtonAction[n]->setEnabled(false);
+				lblCustomButtonAction[n]->setEnabled(false);
+			}
+
+			else if (temp_button == did->mapping.vkbd_button
+				&& temp_button != -1
+				&& SelectedFunction == 1
+				&& changed_prefs.use_retroarch_vkbd
+				)
+			{
+				cboCustomButtonAction[n]->setListModel(&CustomEventList_Vkbd);
+				cboCustomButtonAction[n]->setEnabled(false);
+				lblCustomButtonAction[n]->setEnabled(false);
+			}
+
+			else if (temp_button == did->mapping.vkbd_button
+				&& temp_button != -1
+				&& SelectedFunction == 0
+				&& !did->mapping.is_retroarch
+				)
+			{
+				cboCustomButtonAction[n]->setListModel(&CustomEventList_Vkbd);
 				cboCustomButtonAction[n]->setEnabled(false);
 				lblCustomButtonAction[n]->setEnabled(false);
 			}
