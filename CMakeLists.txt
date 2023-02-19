@@ -72,6 +72,7 @@ add_executable(${PROJECT_NAME}
 		src/main.cpp
 		src/memory.cpp
 		src/native2amiga.cpp
+		src/parser.cpp
 		src/rommgr.cpp
 		src/rtc.cpp
 		src/sampler.cpp
@@ -88,6 +89,7 @@ add_executable(${PROJECT_NAME}
 		src/uaelib.cpp
 		src/uaenative.cpp
 		src/uaeresource.cpp
+		src/uaeserial.cpp
 		src/vm.cpp
 		src/zfile.cpp
 		src/zfile_archive.cpp
@@ -296,8 +298,10 @@ PKG_SEARCH_MODULE(SDL2TTF REQUIRED SDL2_ttf)
 find_package(FLAC REQUIRED)
 find_package(mpg123 REQUIRED)
 find_package(PNG REQUIRED)
+find_library(LIBSERIALPORT_LIBRARIES serialport)
+find_path(LIBSERIALPORT_INCLUDE_DIR libserialport.h)
 
-INCLUDE_DIRECTORIES(${SDL2_INCLUDE_DIRS} ${SDL2IMAGE_INCLUDE_DIRS})
+INCLUDE_DIRECTORIES(${SDL2_INCLUDE_DIRS} ${SDL2IMAGE_INCLUDE_DIRS} ${LIBSERIALPORT_INCLUDE_DIR})
 TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE ${SDL2_LIBRARIES} ${SDL2IMAGE_LIBRARIES} ${SDL2TTF_LIBRARIES} FLAC::FLAC PNG::PNG mpg123 mpeg2convert mpeg2 serialport)
 
 target_include_directories(${PROJECT_NAME} PRIVATE ./external/libguisan/include)

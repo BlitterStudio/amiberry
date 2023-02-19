@@ -85,6 +85,7 @@ LOCAL_SRC_FILES := src/akiko.cpp \
                     src/main.cpp \
                     src/memory.cpp \
                     src/native2amiga.cpp \
+					src/parser.cpp \
                     src/rommgr.cpp \
                     src/rtc.cpp \
                     src/savestate.cpp \
@@ -98,9 +99,9 @@ LOCAL_SRC_FILES := src/akiko.cpp \
                     src/traps.cpp \
 					src/uaeexe.cpp \
                     src/uaelib.cpp \
+                    src/uaeserial.cpp \
                     src/uaenative.cpp \
                     src/uaeresource.cpp \
-					src/uaeserial.cpp \
                     src/zfile.cpp \
                     src/zfile_archive.cpp \
                     src/archivers/7z/7zAlloc.c \
@@ -214,7 +215,7 @@ LOCAL_SRC_FILES := src/akiko.cpp \
                     src/osdep/amiberry_gfx.cpp \
                     src/osdep/amiberry_gui.cpp \
                     src/osdep/amiberry_mem.cpp \
-					src/osdep/amiberry_serial.cpp \
+                    src/osdep/amiberry_serial.cpp \
                     src/osdep/amiberry_whdbooter.cpp \
                     src/osdep/sigsegv_handler.cpp \
 					src/osdep/retroarch.cpp \
