@@ -757,7 +757,7 @@ static int get_cia_sync_cycles(int *syncdelay)
 	return add;
 }
 
-static void CIA_synced_interrupt(uae_u32 v)
+void event_CIA_synced_interrupt(uae_u32 v)
 {
 	CIA_update();
 	CIA_calctimers();
@@ -779,7 +779,7 @@ static void CIA_sync_interrupt(int num, uae_u8 icr)
 		int syncdelay = 0;
 		int delay = get_cia_sync_cycles(&syncdelay);
 		delay += syncdelay;
-		event2_newevent_xx(-1, DIV10 + delay, num, CIA_synced_interrupt);
+		event2_newevent_xx(-1, DIV10 + delay, num, event_CIA_synced_interrupt);
 	} else {
 		c->icr1 |= icr;
 		CIA_check_ICR();
@@ -1062,7 +1062,7 @@ static void CIA_tod_inc(bool irq, int num)
 	cia_checkalarm(true, irq, num);
 }
 
-static void CIA_tod_inc_event(uae_u32 num)
+void event_CIA_tod_inc_event(uae_u32 num)
 {
 	struct CIA *c = &cia[num];
 	if (c->tod_event_state != 2) {
@@ -1100,7 +1100,7 @@ static void CIA_tod_check(int num)
 	}
 	// Not yet, add event to guarantee exact TOD inc position
 	c->tod_event_state = 2; // event active
-	event2_newevent_xx(-1, -hpos * CYCLE_UNIT, num, CIA_tod_inc_event);
+	event2_newevent_xx(-1, -hpos * CYCLE_UNIT, num, event_CIA_tod_inc_event);
 }
 
 static void CIA_tod_handler(int hoffset, int num, bool delayedevent)
@@ -1121,7 +1121,7 @@ static void CIA_tod_handler(int hoffset, int num, bool delayedevent)
 	if (checkalarm((c->tod + 1) & 0xffffff, c->alarm, true)) {
 		// causes interrupt on this line, add event
 		c->tod_event_state = 2; // event active
-		event2_newevent_xx(-1, c->tod_offset * CYCLE_UNIT, num, CIA_tod_inc_event);
+		event2_newevent_xx(-1, c->tod_offset * CYCLE_UNIT, num, event_CIA_tod_inc_event);
 	}
 }
 

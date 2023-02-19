@@ -604,8 +604,21 @@ struct flashrom_data
 	int sectorsize;
 	uae_u8 devicecode, mfgcode;
 	int flags;
+	int firstwriteoffset;
+	int lastwriteoffset;
 	struct zfile *zf;
 };
+
+static void setmodified(struct flashrom_data *fd, int offset)
+{
+	fd->modified = 1;
+	if (offset < fd->firstwriteoffset) {
+		fd->firstwriteoffset = offset;
+	}
+	if (offset > fd->lastwriteoffset) {
+		fd->lastwriteoffset = offset;
+	}
+}
 
 void *flash_new(uae_u8 *rom, int flashsize, int allocsize, uae_u8 mfgcode, uae_u8 devcode, struct zfile *zf, int flags)
 {
@@ -619,6 +632,8 @@ void *flash_new(uae_u8 *rom, int flashsize, int allocsize, uae_u8 mfgcode, uae_u
 	fd->devicecode = devcode;
 	fd->mfgcode = mfgcode;
 	fd->sectorsize = devcode == 0x20 ? 16384 : 65536;
+	fd->lastwriteoffset = 0;
+	fd->firstwriteoffset = allocsize;
 	return fd;
 }
 
@@ -628,7 +643,6 @@ void flash_free(void *fdv)
 	if (!fd)
 		return;
 	if (fd->zf && fd->modified) {
-		zfile_fseek(fd->zf, 0, SEEK_SET);
 		if (fd->flags & FLASHROM_EVERY_OTHER_BYTE) {
 			zfile_fseek(fd->zf, (fd->flags & FLASHROM_EVERY_OTHER_BYTE_ODD) ? 1 : 0, SEEK_SET);
 			for (int i = 0; i < fd->allocsize; i++) {
@@ -636,7 +650,8 @@ void flash_free(void *fdv)
 				zfile_fseek(fd->zf, 1, SEEK_CUR);
 			}
 		} else {
-			zfile_fwrite(fd->rom, fd->allocsize, 1, fd->zf);
+			zfile_fseek(fd->zf, fd->firstwriteoffset, SEEK_SET);
+			zfile_fwrite(fd->rom + fd->firstwriteoffset, fd->lastwriteoffset - fd->firstwriteoffset + 1, 1, fd->zf);
 		}
 	}
 	xfree(fdv);
@@ -692,9 +707,11 @@ bool flash_write(void *fdv, uaecptr addr, uae_u8 v)
 		}
 		if (addr >= fd->allocsize)
 			return false;
-		if (fd->rom[addr * other_byte_mult] != v)
-			fd->modified = 1;
-		fd->rom[addr * other_byte_mult] = v;
+		int a = addr * other_byte_mult;
+		if (fd->rom[a] != v) {
+			fd->rom[a] = v;
+			setmodified(fd, a);
+		}
 		gui_flicker_led (LED_MD, 0, 2);
 		return true;
 	}
@@ -726,11 +743,14 @@ bool flash_write(void *fdv, uaecptr addr, uae_u8 v)
 	if (addr2 == 0x2aaa && fd->state == 5 && v == 0x55)
 		fd->state = 6;
 	if (addr2 == 0x5555 && fd->state == 6 && v == 0x10) {
-		for (int i = 0; i < fd->allocsize; i++) {
-			fd->rom[i * other_byte_mult] = 0xff;
+		for (int i = 0; i < fd->allocsize; i++)  {
+			int a = i * other_byte_mult;
+			if (fd->rom[a] != 0xff) {
+				fd->rom[a] = 0xff;
+				setmodified(fd, a);
+			}
 		}
 		fd->state = 200;
-		fd->modified = 1;
 #if FLASH_LOG
 		write_log(_T("flash chip erased\n"), addr);
 #endif
@@ -740,11 +760,14 @@ bool flash_write(void *fdv, uaecptr addr, uae_u8 v)
 		int saddr = addr & ~(fd->sectorsize - 1);
 		if (saddr < fd->allocsize) {
 			for (int i = 0; i < fd->sectorsize; i++) {
-				fd->rom[(saddr + i) * other_byte_mult] = 0xff;
+				int a = (saddr + i) * other_byte_mult;
+				if (fd->rom[a] != 0xff) {
+					fd->rom[a] = 0xff;
+					setmodified(fd, a);
+				}
 			}
 		}
 		fd->state = 200;
-		fd->modified = 1;
 #if FLASH_LOG
 		write_log(_T("flash sector %d erased (%08x)\n"), saddr / fd->sectorsize, addr);
 #endif

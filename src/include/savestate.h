@@ -101,6 +101,7 @@ extern uae_u8 *save_custom(size_t *, uae_u8 *, int);
 extern uae_u8 *restore_custom_extra(uae_u8 *);
 extern uae_u8 *save_custom_extra(size_t *, uae_u8 *);
 extern void restore_custom_finish(void);
+extern void restore_custom_start(void);
 
 extern uae_u8 *restore_custom_sprite(int num, uae_u8 *src);
 extern uae_u8 *save_custom_sprite(int num, size_t *len, uae_u8 *);
@@ -111,8 +112,11 @@ extern uae_u8 *save_custom_agacolors(size_t *len, uae_u8 *);
 extern uae_u8 *restore_custom_event_delay (uae_u8 *src);
 extern uae_u8 *save_custom_event_delay(size_t *len, uae_u8 *dstptr);
 
+extern uae_u8 *restore_custom_slots(uae_u8 *src);
+extern uae_u8 *save_custom_slots(size_t *len, uae_u8 *dstptr);
+
 extern uae_u8 *restore_blitter (uae_u8 *src);
-extern uae_u8 *save_blitter (size_t *len, uae_u8 *);
+extern uae_u8 *save_blitter (size_t *len, uae_u8 *, bool);
 extern uae_u8 *restore_blitter_new (uae_u8 *src);
 extern uae_u8 *save_blitter_new (size_t *len, uae_u8 *);
 extern void restore_blitter_finish (void);
@@ -120,6 +124,7 @@ extern void restore_blitter_finish (void);
 extern uae_u8 *restore_audio(int, uae_u8 *);
 extern uae_u8 *save_audio(int, size_t *, uae_u8 *);
 extern void restore_audio_finish(void);
+extern void restore_audio_start(void);
 
 extern uae_u8 *restore_cia(int, uae_u8 *);
 extern uae_u8 *save_cia(int, size_t *, uae_u8 *);

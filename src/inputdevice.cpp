@@ -54,7 +54,6 @@
 #include "rp.h"
 #endif
 #include "dongle.h"
-#include "amiberry_gfx.h"
 #include "cdtv.h"
 #ifdef AVIOUTPUT
 #include "avioutput.h"
@@ -64,6 +63,7 @@
 #include "native2amiga_api.h"
 //#include "videograb.h"
 #ifdef AMIBERRY
+#include "amiberry_gfx.h"
 #include "amiberry_input.h"
 #include "vkbd/vkbd.h"
 #endif
@@ -1964,6 +1964,110 @@ void inputdevice_generate_jport_custom(struct uae_prefs *pr, int port)
 static int custom_autoswitch_joy[MAX_JPORTS_CUSTOM];
 static int custom_autoswitch_mouse[MAX_JPORTS_CUSTOM];
 
+void inputdevice_jportcustom_fixup(TCHAR *data)
+{
+	TCHAR olddata[MAX_DPATH];
+	TCHAR olddata2[MAX_DPATH];
+	TCHAR newdata[MAX_DPATH];
+	bool modified = false;
+
+	if (data[0] == 0) {
+		return;
+	}
+	_tcscpy(olddata, data);
+	_tcscpy(olddata2, data);
+	newdata[0] = 0;
+
+	TCHAR *bufp = olddata;
+	_tcscat(bufp, _T(" "));
+
+	for (;;) {
+		TCHAR *next = bufp;
+		TCHAR *startp = bufp;
+		const TCHAR *bufp2 = bufp;
+		TCHAR devtype;
+		int devindex;
+		int joystick = 0;
+		int num = -1;
+		int idtype = -1;
+		int odevindex = -1;
+		const TCHAR *pbufp = NULL;
+
+		while (next != NULL && *next != ' ' && *next != 0)
+			next++;
+		if (!next || *next == 0)
+			break;
+		*next++ = 0;
+		TCHAR *p = getstring(&bufp2);
+		if (!p)
+			goto skip;
+
+		pbufp = bufp2;
+		devindex = getnum(&bufp2);
+		odevindex = devindex;
+		if (*bufp == 0)
+			goto skip;
+		if (devindex < 0 || devindex >= MAX_INPUT_DEVICES)
+			goto skip;
+
+		devtype = _totupper(*p);
+		if (devtype == 'M') {
+			idtype = IDTYPE_MOUSE;
+		} else if (devtype == 'J') {
+			idtype = IDTYPE_JOYSTICK;
+		} else if (devtype == 'K') {
+			idtype = IDTYPE_KEYBOARD;
+		}
+
+		if (idtype < 0) {
+			goto skip;
+		}
+
+		if (newdata[0]) {
+			_tcscat(newdata, _T(" "));
+		}
+
+		if (gp_swappeddevices[devindex][idtype] >= 0) {
+			devindex = gp_swappeddevices[devindex][idtype];
+		}
+
+		// index changed?
+		if (devindex != odevindex) {
+			int idx = addrdiff(pbufp, startp);
+			TCHAR *p = olddata;
+			TCHAR *d = newdata + _tcslen(newdata);
+			if (devindex >= 10 && odevindex < 10) {
+				for (int i = 0; i < idx; i++) {
+					*d++ = *p++;
+				}
+				*d++ = '0' + (devindex / 10);
+				*d++ = '0' + (devindex % 10);
+				_tcscpy(d, &p[idx + 1]);
+			} else if (devindex < 10 && odevindex >= 10) {
+				for (int i = 0; i < idx; i++) {
+					*d++ = *p++;
+				}
+				*d++ = '0' + devindex;
+				_tcscpy(d, &p[idx + 1]);
+			} else {
+				startp[idx] = '0' + devindex;
+				_tcscat(newdata, startp);
+			}
+			modified = true;
+		} else {
+			_tcscat(newdata, startp);
+		}
+
+	skip:
+		bufp = next;
+	}
+
+	if (modified) {
+		_tcscpy(data, newdata);
+		write_log(_T("    '%s'\n -> '%s'\n"), olddata2, data);
+	}
+}
+
 void inputdevice_parse_jport_custom(struct uae_prefs *pr, int index, int port, TCHAR *outname)
 {
 	const TCHAR *eventstr = pr->jports_custom[index].custom;
@@ -3519,7 +3623,7 @@ static bool is_mouse_pullup (int joy)
 
 static int lightpen_port_number(void)
 {
-	return currprefs.cs_dipagnus ? 0 : 1;
+	return 0; //currprefs.cs_dipagnus ? 0 : 1;
 }
 
 static void charge_cap (int joy, int idx, int charge)
@@ -5621,6 +5725,14 @@ void inputdevice_vsync (void)
 		}
 	}
 	inputdevice_checkconfig ();
+
+	if (currprefs.turbo_emulation > 2) {
+		currprefs.turbo_emulation--;
+		changed_prefs.turbo_emulation = currprefs.turbo_emulation;
+		if (currprefs.turbo_emulation == 2) {
+			warpmode(0);
+		}
+	}
 }
 
 void inputdevice_reset (void)
@@ -8025,6 +8137,7 @@ bool inputdevice_devicechange (struct uae_prefs *prefs)
 	for (i = 0; i < MAX_JPORTS; i++) {
 		freejport(prefs, i);
 		fixedports[i] = false;
+		inputdevice_jportcustom_fixup(prefs->jports_custom[i].custom);
 	}
 
 	for (i = 0; i < MAX_JPORTS; i++) {
@@ -9546,30 +9659,28 @@ int getmousestate (int joy)
 	return mice[joy].enabled;
 }
 
-void warpmode (int mode)
+void bootwarpmode(void)
 {
-	int fr, fr2;
+	if (currprefs.turbo_emulation == 2) {
+		currprefs.turbo_emulation = changed_prefs.turbo_emulation = 2 + currprefs.turbo_boot_delay;
+	}
+}
 
-	fr = currprefs.gfx_framerate;
-	if (fr == 0)
-		fr = -1;
-	fr2 = currprefs.turbo_emulation;
-	if (fr2 == -1)
-		fr2 = 0;
-
+void warpmode(int mode)
+{
 	if (mode < 0) {
 		if (currprefs.turbo_emulation) {
-			changed_prefs.gfx_framerate = currprefs.gfx_framerate = fr2;
+			changed_prefs.gfx_framerate = currprefs.gfx_framerate = 1;
 			currprefs.turbo_emulation = 0;
 		} else {
-			currprefs.turbo_emulation = fr;
+			currprefs.turbo_emulation = 1;
 		}
 	} else if (mode == 0 && currprefs.turbo_emulation) {
 		if (currprefs.turbo_emulation > 0)
-			changed_prefs.gfx_framerate = currprefs.gfx_framerate = fr2;
+			changed_prefs.gfx_framerate = currprefs.gfx_framerate = 1;
 		currprefs.turbo_emulation = 0;
 	} else if (mode > 0 && !currprefs.turbo_emulation) {
-		currprefs.turbo_emulation = fr;
+		currprefs.turbo_emulation = 1;
 	}
 	if (currprefs.turbo_emulation) {
 		if (!currprefs.cpu_memory_cycle_exact && !currprefs.blitter_cycle_exact)
@@ -9583,9 +9694,6 @@ void warpmode (int mode)
 	rp_turbo_cpu (currprefs.turbo_emulation);
 #endif
 	changed_prefs.turbo_emulation = currprefs.turbo_emulation;
-#ifdef AMIBERRY
-	SDL2_toggle_vsync(!currprefs.turbo_emulation);
-#endif
 	set_config_changed ();
 	setsystime ();
 }

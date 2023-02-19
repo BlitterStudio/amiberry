@@ -142,6 +142,8 @@ STATIC_INLINE bool ce_is_borderntrans(uae_u16 data)
 	return (data & (1 << CE_BORDERNTRANS)) != 0;
 }
 
+#define VB_VB 0x20 // vblank
+#define VB_VS 0x10 // vsync
 #define VB_XBORDER 0x08 // forced border color or bblank
 #define VB_XBLANK 0x04 // forced bblank
 #define VB_PRGVB 0x02 // programmed vblank
