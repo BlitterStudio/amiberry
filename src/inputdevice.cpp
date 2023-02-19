@@ -5235,7 +5235,7 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 	case 3: /* ->Parallel port joystick adapter port #1 */
 	case 4: /* ->Parallel port joystick adapter port #2 */
 		joy = ie->unit - 1;
-		if (ie->type & 4) {	
+		if (ie->type & 4) {
 			int old = joybutton[joy] & (1 << ie->data);
 
 			if (state) {

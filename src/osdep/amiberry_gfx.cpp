@@ -1922,11 +1922,13 @@ void getgfxoffset(int monid, float* dxp, float* dyp, float* mxp, float* myp)
 	float dx = 0, dy = 0, mx = 1.0, my = 1.0;
 
 #ifdef AMIBERRY
+#ifndef USE_OPENGL
 	if (currprefs.gfx_auto_crop)
 	{
 		dx -= float(crop_rect.x);
 		dy -= float(crop_rect.y);
 	}
+#endif
 #endif
 
 	*dxp = dx;
