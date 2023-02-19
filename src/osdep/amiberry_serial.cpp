@@ -737,7 +737,7 @@ static void SERDAT_send(uae_u32 v)
 uae_u16 SERDATR(void)
 {
 	serdatr &= 0x03ff;
-	if (!data_in_serdat && (ser_accurate && get_cycles() >= data_in_serdat_delay)) {
+	if (!data_in_serdat && (!ser_accurate || (ser_accurate && get_cycles() >= data_in_serdat_delay))) {
 		serdatr |= 0x2000; // TBE (Transmit buffer empty)
 	}
 	if (!data_in_sershift && (serdatr & 0x2000)) {
@@ -978,6 +978,7 @@ void serial_close(void)
 	serxdevice_enabled = false;
 	serper_set = false;
 	ser_accurate = false;
+	data_in_serdat_delay = 0;
 }
 
 void serial_init(void)
