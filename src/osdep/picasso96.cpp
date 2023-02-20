@@ -2192,6 +2192,7 @@ static struct modeids mi[] =
 	5120,1440, 180,
 	5120,2160, 181,
 	1280, 600, 182,
+	1024, 600, 183,
 	-1,-1,0
 };
 
@@ -2286,7 +2287,7 @@ static int resolution_compare (const void *a, const void *b)
 	return ma->depth - mb->depth;
 }
 
-static int missmodes[] = { 320, 200, 320, 240, 320, 256, 640, 400, 640, 480, 640, 512, 800, 600, 1024, 768, 1280, 1024, -1 };
+static int missmodes[] = { 320, 200, 320, 240, 320, 256, 640, 400, 640, 480, 640, 512, 800, 600, 1024, 600, 1024, 768, 1280, 1024, -1 };
 
 static uaecptr uaegfx_card_install (TrapContext *ctx, uae_u32 size);
 
