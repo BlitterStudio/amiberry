@@ -276,13 +276,14 @@
     <Image Include="..\data\drive.ico" />
     <Image Include="..\data\expansion.ico" />
     <Image Include="..\data\file.ico" />
-    <Image Include="..\data\fixedfont.bmp" />
+    <Image Include="..\data\fixedfont.png" />
     <Image Include="..\data\joystick.ico" />
     <Image Include="..\data\keyboard.png" />
     <Image Include="..\data\misc.ico" />
     <Image Include="..\data\paths.ico" />
     <Image Include="..\data\port.ico" />
     <Image Include="..\data\quickstart.ico" />
+    <Image Include="..\data\rpgfont.png" />
     <Image Include="..\data\savestate.png" />
     <Image Include="..\data\screen.ico" />
     <Image Include="..\data\sound.ico" />

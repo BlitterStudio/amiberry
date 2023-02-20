@@ -212,9 +212,6 @@
     <Image Include="..\data\port.ico">
       <Filter>data</Filter>
     </Image>
-    <Image Include="..\data\fixedfont.bmp">
-      <Filter>data</Filter>
-    </Image>
     <Image Include="..\data\axis.png">
       <Filter>data</Filter>
     </Image>
@@ -444,6 +441,12 @@
       <Filter>data\vkbd</Filter>
     </Image>
     <Image Include="..\data\keyboard.png">
+      <Filter>data</Filter>
+    </Image>
+    <Image Include="..\data\fixedfont.png">
+      <Filter>data</Filter>
+    </Image>
+    <Image Include="..\data\rpgfont.png">
       <Filter>data</Filter>
     </Image>
   </ItemGroup>
