@@ -3546,13 +3546,13 @@ void cpu_halt (int id)
 		regs.halted = id;
 		gui_data.cpu_halted = id;
 		gui_led(LED_CPU, 0, -1);
-		if (id >= 0) {
+		//if (id >= 0) {
 			regs.intmask = 7;
 			MakeSR ();
 			audio_deactivate ();
 			//if (debugging)
 			//	activate_debugger();
-		}
+		//}
 	}
 	set_special(SPCFLAG_CHECK);
 }
