@@ -9138,7 +9138,7 @@ static void copydev (struct uae_input_device *dst, struct uae_input_device *src,
 		for (int j = 0; j < MAX_INPUT_DEVICE_EVENTS; j++) {
 			if (j == selectedwidget || selectedwidget < 0) {
 				for (int k = 0; k < MAX_INPUT_SUB_EVENT_ALL; k++) {
-					if (dst[i].custom)
+					if (dst[i].custom[0])
 						dst[i].custom[j][k] = my_strdup (dst[i].custom[j][k]);
 				}
 			}

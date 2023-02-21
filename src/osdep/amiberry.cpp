@@ -3799,7 +3799,7 @@ void toggle_mousegrab()
 bool get_plugin_path(TCHAR* out, int len, const TCHAR* path)
 {
 	if (strcmp(path, "floppysounds") == 0) {
-		if (floppy_sounds_dir) {
+		if (floppy_sounds_dir[0]) {
 			strncpy(out, floppy_sounds_dir, len);
 		}
 		else {
