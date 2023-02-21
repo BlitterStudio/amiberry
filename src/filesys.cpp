@@ -798,7 +798,7 @@ TCHAR *filesys_createvolname (const TCHAR *volname, const TCHAR *rootdir, struct
 		return nvol;
 	}
 
-	if ((!volname || _tcslen (volname) == 0) && path && archivehd >= 0) {
+	if ((!volname || _tcslen (volname) == 0) && path[0] && archivehd >= 0) {
 		p = my_strdup (path);
 		for (i = _tcslen (p) - 1; i >= 0; i--) {
 			TCHAR c = p[i];
