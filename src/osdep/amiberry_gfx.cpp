@@ -1181,7 +1181,7 @@ int check_prefs_changed_gfx()
 			c |= c2;
 			monitors[i] = true;
 		}
-		if (&AMonitors[i].screen_is_picasso) {
+		if (AMonitors[i].screen_is_picasso) {
 			struct gfx_filterdata* gfc = &changed_prefs.gf[1];
 			if (gfc->changed) {
 				gfc->changed = false;

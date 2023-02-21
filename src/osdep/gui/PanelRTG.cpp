@@ -123,7 +123,7 @@ public:
 		{
 			if (chkRtgAutoscale->isSelected())
 			{
-				changed_prefs.gf[1].gfx_filter_autoscale == RTG_MODE_SCALE;
+				changed_prefs.gf[1].gfx_filter_autoscale = RTG_MODE_SCALE;
 			}
 		}
 
@@ -134,7 +134,7 @@ public:
 		{
 			if (chkRtgAlwaysCenter->isSelected())
 			{
-				changed_prefs.gf[1].gfx_filter_autoscale == RTG_MODE_CENTER;
+				changed_prefs.gf[1].gfx_filter_autoscale = RTG_MODE_CENTER;
 			}
 		}
 
@@ -159,7 +159,7 @@ public:
 		v = cboRtg16bitModes->getSelected();
 		mask &= ~(RGBFF_R5G6B5PC | RGBFF_R5G5B5PC | RGBFF_R5G6B5 | RGBFF_R5G5B5 | RGBFF_B5G6R5PC | RGBFF_B5G5R5PC);
 		if (v == 1)
-			mask |= RGBFF_R5G6B5PC | RGBFF_R5G6B5PC | RGBFF_R5G5B5PC | RGBFF_R5G6B5 | RGBFF_R5G5B5 | RGBFF_B5G6R5PC | RGBFF_B5G5R5PC;
+			mask |= RGBFF_R5G6B5PC | RGBFF_R5G5B5PC | RGBFF_R5G6B5 | RGBFF_R5G5B5 | RGBFF_B5G6R5PC | RGBFF_B5G5R5PC;
 		if (v == 2)
 			mask |= RGBFF_R5G6B5PC;
 		if (v == 3)
