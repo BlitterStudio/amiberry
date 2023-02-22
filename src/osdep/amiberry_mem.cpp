@@ -24,6 +24,10 @@
 #define valloc(x) memalign(getpagesize(), x)
 #endif
 
+#ifdef __APPLE__
+#include <sys/sysctl.h>
+#endif
+
 #if defined(__x86_64__) || defined(CPU_AARCH64) || defined(__MACH__)
 static int os_64bit = 1;
 #else
