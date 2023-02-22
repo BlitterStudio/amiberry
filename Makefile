@@ -576,11 +576,6 @@ OBJS = \
 	src/osdep/gui/Navigation.o \
 	src/osdep/vkbd/vkbd.o
 
-ifeq ($(ANDROID), 1)
-OBJS += src/osdep/gui/androidsdl_event.o \
-	src/osdep/gui/PanelOnScreen.o
-endif
-
 USE_JIT=1
 
 ifdef AARCH64
