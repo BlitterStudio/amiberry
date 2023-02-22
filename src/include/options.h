@@ -993,10 +993,6 @@ struct uae_prefs
 	bool use_retroarch_statebuttons;
 	bool use_retroarch_vkbd;
 
-	// probably can be removed now? unless they are used by the new whd selector
-	TCHAR whdload_path[MAX_DPATH];
-	TCHAR whdload_file[MAX_DPATH];
-
 	struct whdbooter whdbootprefs;
 
 #endif
