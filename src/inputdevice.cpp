@@ -54,7 +54,6 @@
 #include "rp.h"
 #endif
 #include "dongle.h"
-#include "amiberry_gfx.h"
 #include "cdtv.h"
 #ifdef AVIOUTPUT
 #include "avioutput.h"
@@ -64,6 +63,7 @@
 #include "native2amiga_api.h"
 //#include "videograb.h"
 #ifdef AMIBERRY
+#include "amiberry_gfx.h"
 #include "amiberry_input.h"
 #include "vkbd/vkbd.h"
 #endif
@@ -9561,7 +9561,7 @@ void bootwarpmode(void)
 	}
 }
 
-void warpmode (int mode)
+void warpmode(int mode)
 {
 	if (mode < 0) {
 		if (currprefs.turbo_emulation) {

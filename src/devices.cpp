@@ -403,6 +403,7 @@ void virtualdevice_init (void)
 
 void devices_restore_start(void)
 {
+	restore_audio_start();
 	restore_cia_start();
 	restore_blkdev_start();
 	restore_blitter_start();

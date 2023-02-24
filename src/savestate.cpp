@@ -622,6 +622,7 @@ void restore_state (const TCHAR *filename)
 	restore_header (chunk);
 	xfree (chunk);
 	devices_restore_start();
+	clear_events();
 	z2num = z3num = 0;
 	for (;;) {
 		name[0] = 0;

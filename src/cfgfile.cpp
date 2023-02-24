@@ -203,7 +203,7 @@ static const TCHAR *vsyncmodes[] = { _T("false"), _T("true"), _T("autoswitch"), 
 static const TCHAR *vsyncmodes2[] = { _T("normal"), _T("busywait"), 0 };
 static const TCHAR *filterapi[] = { _T("directdraw"), _T("direct3d"), _T("direct3d11"), _T("direct3d11"), 0};
 static const TCHAR *filterapiopts[] = { _T("hardware"), _T("software"), 0 };
-static const TCHAR *overscanmodes[] = { _T("tv_narrow"), _T("tv_standard"), _T("tv_wide"), _T("overscan"), _T("broadcast"), _T("extreme"), _T("ultra"), NULL};
+static const TCHAR *overscanmodes[] = { _T("tv_narrow"), _T("tv_standard"), _T("tv_wide"), _T("overscan"), _T("broadcast"), _T("extreme"), _T("ultra"), _T("ultra_hv"), _T("ultra_csync"), NULL};
 static const TCHAR *dongles[] =
 {
 	_T("none"),
@@ -2909,13 +2909,14 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_dwrite_bool (f, _T("cpu_no_unimplemented"), p->int_no_unimplemented);
 	cfgfile_write_bool (f, _T("fpu_strict"), p->fpu_strict);
 	cfgfile_dwrite_bool (f, _T("fpu_softfloat"), p->fpu_mode > 0);
+#ifdef MSVC_LONG_DOUBLE
+	cfgfile_dwrite_bool(f, _T("fpu_msvc_long_double"), p->fpu_mode < 0);
+#endif
 
 	cfgfile_write_bool (f, _T("rtg_nocustom"), p->picasso96_nocustom);
 	cfgfile_write (f, _T("rtg_modes"), _T("0x%x"), p->picasso96_modeflags);
 
-#ifndef AMIBERRY
 	cfgfile_write_bool(f, _T("debug_mem"), p->debug_mem);
-#endif
 	cfgfile_write_bool(f, _T("log_illegal_mem"), p->illegal_mem);
 
 	cfgfile_dwrite_bool(f, _T("keyboard_connected"), p->keyboard_connected);
@@ -2928,11 +2929,11 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 		: p->keyboard_lang == KBD_LANG_IT ? _T("it")
 		: _T("FOO")));
 
-	cfgfile_dwrite(f, _T("state_replay_rate"), _T("%d"), p->statecapturerate);
-	cfgfile_dwrite(f, _T("state_replay_buffers"), _T("%d"), p->statecapturebuffersize);
-	cfgfile_dwrite_bool(f, _T("state_replay_autoplay"), p->inprec_autoplay);
-	cfgfile_dwrite_bool(f, _T("warp"), p->turbo_emulation);
-	cfgfile_dwrite(f, _T("warp_limit"), _T("%d"), p->turbo_emulation_limit);
+	cfgfile_dwrite (f, _T("state_replay_rate"), _T("%d"), p->statecapturerate);
+	cfgfile_dwrite (f, _T("state_replay_buffers"), _T("%d"), p->statecapturebuffersize);
+	cfgfile_dwrite_bool (f, _T("state_replay_autoplay"), p->inprec_autoplay);
+	cfgfile_dwrite_bool (f, _T("warp"), p->turbo_emulation);
+	cfgfile_dwrite (f, _T("warp_limit"), _T("%d"), p->turbo_emulation_limit);
 	cfgfile_dwrite_bool(f, _T("warpboot"), p->turbo_boot);
 	cfgfile_dwrite(f, _T("warpboot_delay"), _T("%d"), p->turbo_boot_delay);
 
@@ -8931,7 +8932,6 @@ static void bip_velvet(struct uae_prefs *p, int config, int compa, int romcheck)
 	built_in_chipset_prefs (p);
 	p->cs_denisenoehb = 1;
 	p->cs_cia6526 = 1;
-	p->chipmem.size = 0x40000;
 }
 
 static int bip_a1000 (struct uae_prefs *p, int config, int compa, int romcheck)
@@ -9131,7 +9131,6 @@ static int bip_a600 (struct uae_prefs *p, int config, int compa, int romcheck)
 	roms[3] = -1;
 	set_68000_compa (p, compa);
 	p->cs_compatible = CP_A600;
-	built_in_chipset_prefs (p);
 	p->bogomem.size = 0;
 	p->chipmem.size = 0x100000;
 	if (config > 0)
@@ -9145,6 +9144,7 @@ static int bip_a600 (struct uae_prefs *p, int config, int compa, int romcheck)
 		p->chipmem.size = 0x200000;
 		p->fastmem[0].size = 0x800000;
 	p->chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
+	built_in_chipset_prefs(p);
 	return configure_rom (p, roms, romcheck);
 }
 
@@ -9156,7 +9156,6 @@ static int bip_a500p (struct uae_prefs *p, int config, int compa, int romcheck)
 	roms[1] = -1;
 	set_68000_compa (p, compa);
 	p->cs_compatible = CP_A500P;
-	built_in_chipset_prefs (p);
 	p->bogomem.size = 0;
 	p->chipmem.size = 0x100000;
 	if (config > 0)
@@ -9166,6 +9165,7 @@ static int bip_a500p (struct uae_prefs *p, int config, int compa, int romcheck)
 	if (config == 2)
 		p->fastmem[0].size = 0x400000;
 	p->chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
+	built_in_chipset_prefs(p);
 	return configure_rom (p, roms, romcheck);
 }
 static int bip_a500 (struct uae_prefs *p, int config, int compa, int romcheck)
@@ -9925,7 +9925,6 @@ int bip_a2000(struct uae_prefs* p, int rom)
 	p->bogomem.size = 0x00080000;
 	p->chipset_mask = 0;
 	p->cpu_compatible = false;
-	p->fast_copper = 0;
 	p->nr_floppies = 1;
 	p->floppyslots[1].dfxtype = DRV_NONE;
 	return configure_rom(p, roms, 0);

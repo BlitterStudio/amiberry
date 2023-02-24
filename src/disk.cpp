@@ -3828,24 +3828,24 @@ void DISK_handler (uae_u32 data)
 {
 	int flag = data & 255;
 	int disk_sync_cycle = data >> 8;
-	int hpos = current_hpos ();
+	int hpos = current_hpos();
 
 	event2_remevent (ev2_disk);
-	DISK_update (disk_sync_cycle);
+	DISK_update(disk_sync_cycle);
 	if (!dskdmaen) {
 		if (flag & (DISK_REVOLUTION << 0))
-			fetchnextrevolution (&floppy[0]);
+			fetchnextrevolution(&floppy[0]);
 		if (flag & (DISK_REVOLUTION << 1))
-			fetchnextrevolution (&floppy[1]);
+			fetchnextrevolution(&floppy[1]);
 		if (flag & (DISK_REVOLUTION << 2))
-			fetchnextrevolution (&floppy[2]);
+			fetchnextrevolution(&floppy[2]);
 		if (flag & (DISK_REVOLUTION << 3))
-			fetchnextrevolution (&floppy[3]);
+			fetchnextrevolution(&floppy[3]);
 	}
 	if (flag & DISK_WORDSYNC)
 		INTREQ (0x8000 | 0x1000);
 	if (flag & DISK_INDEXSYNC)
-		do_disk_index ();
+		do_disk_index();
 }
 
 static void loaddskbytr(int bits, int speed)

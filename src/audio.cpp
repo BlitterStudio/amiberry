@@ -1354,12 +1354,10 @@ static void audio_event_reset (void)
 
 	last_cycles = get_cycles ();
 	next_sample_evtime = scaled_sample_evtime;
-	if (!isrestore ()) {
-		for (i = 0; i < AUDIO_CHANNELS_PAULA; i++)
-			zerostate (i);
-		for (i = 0; i < audio_total_extra_streams; i++)
-			audio_stream[i].evtime = MAX_EV;
-	}
+	for (i = 0; i < AUDIO_CHANNELS_PAULA; i++)
+		zerostate (i);
+	for (i = 0; i < audio_total_extra_streams; i++)
+		audio_stream[i].evtime = MAX_EV;
 	schedule_audio ();
 	events_schedule ();
 	samplecnt = 0;
@@ -1383,9 +1381,11 @@ int audio_activate (void)
 	int ret = 0;
 
 	if (!audio_work_to_do) {
-		restart_sound_buffer ();
+		restart_sound_buffer();
 		ret = 1;
-		audio_event_reset ();
+		if (!isrestore()) {
+			audio_event_reset();
+		}
 	}
 	audio_work_to_do = 4 * maxvpos_nom * 50;
 	return ret;
@@ -1466,7 +1466,7 @@ static void newsample(int nr, sample8_t sample)
 	}
 }
 
-static void setdsr(uae_u32 v)
+void event_setdsr(uae_u32 v)
 {
 	struct audio_channel_data* cdp = audio_channel + v;
 	cdp->dsr = true;
@@ -1489,9 +1489,9 @@ static void setdr(int nr, bool startup)
 
 		if (!startup && cdp->wlen == 1) {
 			if (!currprefs.cachesize && (cdp->per < PERIOD_LOW * CYCLE_UNIT || currprefs.cpu_compatible)) {
-				event2_newevent_xx(-1, 1 * CYCLE_UNIT, nr, setdsr);
+				event2_newevent_xx(-1, 1 * CYCLE_UNIT, nr, event_setdsr);
 			} else {
-				setdsr(nr);
+				event_setdsr(nr);
 			}
 #if DEBUG_AUDIO > 0
 			if (debugchannel(nr))
@@ -2347,7 +2347,7 @@ void audio_hsync (void)
 	previous_volcnt_update = 0;
 }
 
-static void audxdat_func(uae_u32 v)
+void event_audxdat_func(uae_u32 v)
 {
 	int nr = v & 3;
 	int chan_ena = (v & 0x80) != 0;
@@ -2428,12 +2428,12 @@ void AUDxDAT(int nr, uae_u16 v, uaecptr addr)
 			cyc = 1 * CYCLE_UNIT;
 		}
 		if (cyc > 0) {
-			event2_newevent_xx(-1, cyc, vv, audxdat_func);
+			event2_newevent_xx(-1, cyc, vv, event_audxdat_func);
 		} else {
-			audxdat_func(vv);
+			event_audxdat_func(vv);
 		}
 	} else {
-		audxdat_func(vv);
+		event_audxdat_func(vv);
 	}
 }
 void AUDxDAT(int nr, uae_u16 v)
@@ -2640,6 +2640,11 @@ void restore_audio_finish (void)
 	last_cycles = get_cycles ();
 	schedule_audio ();
 	events_schedule ();
+}
+
+void restore_audio_start(void)
+{
+	audio_event_reset();
 }
 
 uae_u8 *restore_audio (int nr, uae_u8 *src)

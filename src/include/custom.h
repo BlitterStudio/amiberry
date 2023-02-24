@@ -187,9 +187,9 @@ extern uae_u16 htotal, vtotal, beamcon0;
 // Extreme overscan superhires needs more.
 // must be divisible by 8
 #ifdef CUSTOM_SIMPLE
-#define MAX_WORDS_PER_LINE 50
+#define MAX_WORDS_PER_LINE 56
 #else
-#define MAX_WORDS_PER_LINE 100
+#define MAX_WORDS_PER_LINE 112
 #endif
 
 extern uae_u32 hirestab_h[256][2];
