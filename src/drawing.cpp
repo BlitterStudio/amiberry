@@ -2064,7 +2064,7 @@ static void dummy_worker (int start, int stop, int blank)
 }
 
 static int ham_decode_pixel;
-static unsigned int ham_lastcolor;
+static uae_u32 ham_lastcolor;
 
 /* Decode HAM in the invisible portion of the display (left of VISIBLE_LEFT_BORDER),
  * but don't draw anything in.  This is done to prepare HAM_LASTCOLOR for later,
@@ -2406,7 +2406,7 @@ Don't touch this if you don't know what you are doing.  */
 } while (0)
 
 
-#define GETLONG(P) (*(uae_u32 *)P)
+#define GETLONG32(P) (*(uae_u32*)P)
 #define GETLONG64(P) (*(uae_u64 *)P)
 
 #if (defined(CPU_AARCH64) || defined(USE_ARMNEON)) && !defined(ANDROID)
@@ -2441,7 +2441,7 @@ static pfield_doline_func pfield_doline_n[9]={
 
 #else
 
-STATIC_INLINE void pfield_doline_1 (uae_u32 *pixels, int wordcount, int planes)
+STATIC_INLINE void pfield_doline32_1(uae_u32 *pixels, int wordcount, int planes, uae_u8 *real_bplpt[8])
 {
 	while (wordcount-- > 0) {
 		uae_u32 b0, b1, b2, b3, b4, b5, b6, b7;
@@ -2449,15 +2449,15 @@ STATIC_INLINE void pfield_doline_1 (uae_u32 *pixels, int wordcount, int planes)
 		b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0, b7 = 0;
 		switch (planes) {
 #ifdef AGA
-		case 8: b0 = GETLONG (real_bplpt[7]); real_bplpt[7] += 4;
-		case 7: b1 = GETLONG (real_bplpt[6]); real_bplpt[6] += 4;
+		case 8: b0 = GETLONG32(real_bplpt[7]); real_bplpt[7] += 4;
+		case 7: b1 = GETLONG32(real_bplpt[6]); real_bplpt[6] += 4;
 #endif
-		case 6: b2 = GETLONG (real_bplpt[5]); real_bplpt[5] += 4;
-		case 5: b3 = GETLONG (real_bplpt[4]); real_bplpt[4] += 4;
-		case 4: b4 = GETLONG (real_bplpt[3]); real_bplpt[3] += 4;
-		case 3: b5 = GETLONG (real_bplpt[2]); real_bplpt[2] += 4;
-		case 2: b6 = GETLONG (real_bplpt[1]); real_bplpt[1] += 4;
-		case 1: b7 = GETLONG (real_bplpt[0]); real_bplpt[0] += 4;
+		case 6: b2 = GETLONG32(real_bplpt[5]); real_bplpt[5] += 4;
+		case 5: b3 = GETLONG32(real_bplpt[4]); real_bplpt[4] += 4;
+		case 4: b4 = GETLONG32(real_bplpt[3]); real_bplpt[3] += 4;
+		case 3: b5 = GETLONG32(real_bplpt[2]); real_bplpt[2] += 4;
+		case 2: b6 = GETLONG32(real_bplpt[1]); real_bplpt[1] += 4;
+		case 1: b7 = GETLONG32(real_bplpt[0]); real_bplpt[0] += 4;
 		}
 
 		MERGE(b0, b1, 0x55555555, 1);
@@ -2554,15 +2554,15 @@ STATIC_INLINE void pfield_doline_1 (uae_u32 *pixels, int wordcount, int planes)
 
 /* See above for comments on inlining.  These functions should _not_
 be inlined themselves.  */
-static void NOINLINE pfield_doline_n1 (uae_u32 *data, int count) { pfield_doline_1 (data, count, 1); }
-static void NOINLINE pfield_doline_n2 (uae_u32 *data, int count) { pfield_doline_1 (data, count, 2); }
-static void NOINLINE pfield_doline_n3 (uae_u32 *data, int count) { pfield_doline_1 (data, count, 3); }
-static void NOINLINE pfield_doline_n4 (uae_u32 *data, int count) { pfield_doline_1 (data, count, 4); }
-static void NOINLINE pfield_doline_n5 (uae_u32 *data, int count) { pfield_doline_1 (data, count, 5); }
-static void NOINLINE pfield_doline_n6 (uae_u32 *data, int count) { pfield_doline_1 (data, count, 6); }
+static void NOINLINE pfield_doline32_n1(uae_u32 *data, int count, uae_u8 *real_bplpt[8]) { pfield_doline32_1(data, count, 1, real_bplpt); }
+static void NOINLINE pfield_doline32_n2(uae_u32 *data, int count, uae_u8 *real_bplpt[8]) { pfield_doline32_1(data, count, 2, real_bplpt); }
+static void NOINLINE pfield_doline32_n3(uae_u32 *data, int count, uae_u8 *real_bplpt[8]) { pfield_doline32_1(data, count, 3, real_bplpt); }
+static void NOINLINE pfield_doline32_n4(uae_u32 *data, int count, uae_u8 *real_bplpt[8]) { pfield_doline32_1(data, count, 4, real_bplpt); }
+static void NOINLINE pfield_doline32_n5(uae_u32 *data, int count, uae_u8 *real_bplpt[8]) { pfield_doline32_1(data, count, 5, real_bplpt); }
+static void NOINLINE pfield_doline32_n6(uae_u32 *data, int count, uae_u8 *real_bplpt[8]) { pfield_doline32_1(data, count, 6, real_bplpt); }
 #ifdef AGA
-static void NOINLINE pfield_doline_n7 (uae_u32 *data, int count) { pfield_doline_1 (data, count, 7); }
-static void NOINLINE pfield_doline_n8 (uae_u32 *data, int count) { pfield_doline_1 (data, count, 8); }
+static void NOINLINE pfield_doline32_n7(uae_u32 *data, int count, uae_u8* real_bplpt[8]) { pfield_doline32_1(data, count, 7, real_bplpt); }
+static void NOINLINE pfield_doline32_n8(uae_u32 *data, int count, uae_u8 *real_bplpt[8]) { pfield_doline32_1(data, count, 8, real_bplpt); }
 #endif
 
 //static void NOINLINE pfield_doline64_n1(uae_u64 *data, int count) { pfield_doline64_1(data, count, 1); }
@@ -2602,15 +2602,15 @@ static void pfield_doline (int lineno)
 	switch (bplplanecnt) {
 	default: break;
 	case 0: memset(data, 0, wordcount * 32); break;
-	case 1: pfield_doline_n1(data, wordcount); break;
-	case 2: pfield_doline_n2(data, wordcount); break;
-	case 3: pfield_doline_n3(data, wordcount); break;
-	case 4: pfield_doline_n4(data, wordcount); break;
-	case 5: pfield_doline_n5(data, wordcount); break;
-	case 6: pfield_doline_n6(data, wordcount); break;
+	case 1: pfield_doline32_n1(data, wordcount, real_bplpt); break;
+	case 2: pfield_doline32_n2(data, wordcount, real_bplpt); break;
+	case 3: pfield_doline32_n3(data, wordcount, real_bplpt); break;
+	case 4: pfield_doline32_n4(data, wordcount, real_bplpt); break;
+	case 5: pfield_doline32_n5(data, wordcount, real_bplpt); break;
+	case 6: pfield_doline32_n6(data, wordcount, real_bplpt); break;
 #ifdef AGA
-	case 7: pfield_doline_n7(data, wordcount); break;
-	case 8: pfield_doline_n8(data, wordcount); break;
+	case 7: pfield_doline32_n7(data, wordcount, real_bplpt); break;
+	case 8: pfield_doline32_n8(data, wordcount, real_bplpt); break;
 #endif
 	}
 #endif /* USE_ARMNEON */
