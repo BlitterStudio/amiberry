@@ -26,6 +26,7 @@ extern frame_time_t vsynctimebase, syncbase;
 extern void reset_frame_rate_hack(void);
 extern evt_t vsync_cycles;
 extern evt_t start_cycles;
+extern int event2_count;
 extern bool event_wait;
 
 extern void event_init(void);

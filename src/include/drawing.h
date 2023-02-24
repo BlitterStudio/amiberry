@@ -22,7 +22,7 @@
 #define MAX_PLANES 6
 #endif
 
-#define AMIGA_WIDTH_MAX (754 / 2)
+#define AMIGA_WIDTH_MAX (752 / 2)
 #define AMIGA_HEIGHT_MAX (576 / 2)
 
 //#define NEWHSYNC
@@ -51,7 +51,7 @@ before it appears on-screen. (TW: display emulation now does this automatically)
 #define max_diwlastword (PIXEL_XPOS(0x1d4 >> 1))
 
 extern int lores_shift, shres_shift, interlace_seen;
-extern bool aga_mode;
+extern bool aga_mode, direct_rgb;
 extern int visible_left_border, visible_right_border;
 extern int detected_screen_resolution;
 
@@ -99,30 +99,20 @@ STATIC_INLINE int coord_window_to_diw_x(int x)
 #define CE_BORDERBLANK 0
 #define CE_BORDERNTRANS 1
 #define CE_BORDERSPRITE 2
-#define CE_EXTBLANKSET 3
 #define CE_SHRES_DELAY 4
 
-STATIC_INLINE bool ce_is_borderblank(uae_u16 data)
+STATIC_INLINE bool ce_is_borderblank(uae_u8 data)
 {
 	return (data & (1 << CE_BORDERBLANK)) != 0;
 }
-STATIC_INLINE bool ce_is_extblankset(uae_u16 data)
-{
-	return (data & (1 << CE_EXTBLANKSET)) != 0;
-}
-STATIC_INLINE bool ce_is_bordersprite(uae_u16 data)
+STATIC_INLINE bool ce_is_bordersprite(uae_u8 data)
 {
 	return (data & (1 << CE_BORDERSPRITE)) != 0;
 }
-STATIC_INLINE bool ce_is_borderntrans(uae_u16 data)
+STATIC_INLINE bool ce_is_borderntrans(uae_u8 data)
 {
 	return (data & (1 << CE_BORDERNTRANS)) != 0;
 }
-
-#define VB_XBORDER 0x08 // forced border color or bblank
-#define VB_XBLANK 0x04 // forced bblank
-#define VB_PRGVB 0x02 // programmed vblank
-#define VB_NOVB 0x01 // normal
 
 struct color_entry {
 	uae_u16 color_regs_ecs[32];
@@ -132,7 +122,7 @@ struct color_entry {
 	xcolnr acolors[256];
 	uae_u32 color_regs_aga[256];
 #endif
-	uae_u16 extra;
+	uae_u8 extra;
 };
 
 #ifdef AGA
@@ -152,7 +142,7 @@ struct color_entry {
 STATIC_INLINE xcolnr getxcolor(int c)
 {
 #ifdef AGA
-	if (aga_mode)
+	if (direct_rgb)
 		return CONVERT_RGB(c);
 	else
 #endif
@@ -217,8 +207,6 @@ STATIC_INLINE void color_reg_cpy (struct color_entry *dst, struct color_entry *s
 #define COLOR_CHANGE_BRDBLANK 0x80000000
 #define COLOR_CHANGE_SHRES_DELAY 0x40000000
 #define COLOR_CHANGE_HSYNC_HACK 0x20000000
-#define COLOR_CHANGE_BLANK 0x10000000
-#define COLOR_CHANGE_ACTBORDER (COLOR_CHANGE_BLANK | COLOR_CHANGE_BRDBLANK)
 #define COLOR_CHANGE_MASK 0xf0000000
 struct color_change {
 	int linepos;
@@ -345,7 +333,7 @@ extern void full_redraw_all(void);
 extern bool draw_frame (struct vidbuffer*);
 extern int get_custom_limits (int *pw, int *ph, int *pdx, int *pdy, int *prealh);
 extern void store_custom_limits (int w, int h, int dx, int dy);
-extern void set_custom_limits (int w, int h, int dx, int dy, bool blank);
+extern void set_custom_limits (int w, int h, int dx, int dy);
 extern void check_custom_limits (void);
 extern void get_custom_topedge (int *x, int *y, bool max);
 extern void get_custom_raw_limits (int *pw, int *ph, int *pdx, int *pdy);

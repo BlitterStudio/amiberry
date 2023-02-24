@@ -407,7 +407,7 @@ void alloc_colors64k(int monid, int rw, int gw, int bw, int rs, int gs, int bs, 
 			xcolors[i] |= xcolors[i] * 0x00010001;
 		}
 	}
-	fullblack = 0;
+	//fullblack = 0;
 	//if (gfx_hdr) {
 	//	fullblack = doAlpha(1, aw, as);
 	//}

@@ -28,8 +28,6 @@ To prevent extremely bad things (think pixels cut in half by window borders) fro
 happening, all ports should restrict window widths to be multiples of 16 pixels.  */
 
 #define SPRITE_DEBUG_HIDE 0
-#define BG_COLOR_DEBUG 0
-#define EXTBORDER_BLANK 0
 
 #include "sysconfig.h"
 #include "sysdeps.h"
@@ -59,6 +57,7 @@ happening, all ports should restrict window widths to be multiples of 16 pixels.
 #include "devices.h"
 #include "gfxboard.h"
 
+#define BG_COLOR_DEBUG 0
 //#define XLINECHECK
 
 struct amigadisplay adisplays[MAX_AMIGADISPLAYS];
@@ -90,9 +89,6 @@ static void pfield_set_linetoscr(void);
 
 int debug_bpl_mask = 0xff, debug_bpl_mask_one;
 
-static struct decision *dp_for_drawing;
-static struct draw_info *dip_for_drawing;
-
 static void lores_set(int lores)
 {
 	int old = lores_shift;
@@ -121,6 +117,7 @@ static void lores_reset (void)
 }
 
 bool aga_mode; /* mirror of chipset_mask & CSMASK_AGA */
+bool direct_rgb;
 
 /* The shift factor to apply when converting between Amiga coordinates and window
 coordinates.  Zero if the resolution is the same, positive if window coordinates
@@ -188,7 +185,6 @@ int xgreencolor_s, xgreencolor_b, xgreencolor_m;
 int xbluecolor_s, xbluecolor_b, xbluecolor_m;
 
 struct color_entry colors_for_drawing;
-xcolnr fullblack;
 static struct color_entry direct_colors_for_drawing;
 
 static xcolnr *p_acolors;
@@ -266,8 +262,6 @@ static int visible_left_start, visible_right_stop;
 static int visible_top_start, visible_bottom_stop;
 /* same for hblank */
 static int hblank_left_start, hblank_right_stop;
-static int hblank_left_start_hard, hblank_right_stop_hard;
-static bool exthblank, extborder, exthblanken, exthblankon;
 
 static int linetoscr_x_adjust_pixbytes, linetoscr_x_adjust_pixels;
 static int thisframe_y_adjust;
@@ -298,8 +292,6 @@ static uae_u8 ecs_genlock_features_mask;
 static bool ecs_genlock_features_colorkey;
 static int hsync_shift_hack;
 static bool sprite_smaller_than_64, sprite_smaller_than_64_inuse;
-static bool full_blank;
-static uae_u8 vb_state;
 
 uae_sem_t gui_sem;
 
@@ -554,7 +546,7 @@ void check_custom_limits(void)
 	set_blanking_limits();
 }
 
-void set_custom_limits (int w, int h, int dx, int dy, bool blank)
+void set_custom_limits (int w, int h, int dx, int dy)
 {
 	struct gfx_filterdata *fd = &currprefs.gf[0];
 	int vls = visible_left_start;
@@ -833,6 +825,9 @@ void get_custom_mouse_limits (int *pw, int *ph, int *pdx, int *pdy, int dbl)
 	*pdx = dx; *pdy = dy;
 }
 
+static struct decision *dp_for_drawing;
+static struct draw_info *dip_for_drawing;
+
 /* Record DIW of the current line for use by centering code.  */
 void record_diw_line (int plfstrt, int first, int last)
 {
@@ -870,15 +865,13 @@ static int sprite_playfield_start, sprite_end;
 static int may_require_hard_way;
 static int linetoscr_diw_start, linetoscr_diw_end;
 static int native_ddf_left, native_ddf_right;
-static int hamleftborderhidden;
 
 static int pixels_offset;
 static int src_pixel;
 /* How many pixels in window coordinates which are to the left of the left border.  */
 static int unpainted;
 
-// blank = -1: force normal border color even if borderblank is active
-static xcolnr getbgc(int blank)
+STATIC_INLINE xcolnr getbgc (int blank)
 {
 	return (blank >= 0 && (blank > 0 || hposblank || ce_is_borderblank(colors_for_drawing.extra))) ? 0 : colors_for_drawing.acolors[0];
 }
@@ -1019,7 +1012,7 @@ static void pfield_init_linetoscr (bool border)
 	}
 #endif
 
-	// AGA borderblank starts horizontally 1 shres pixel before bitplanes start
+	// AGA borderblank starts horizontally 1 hires pixel before bitplanes start, leaving 1 hires pixel background color gap
 	playfield_start_pre = playfield_start;
 	playfield_end_pre = playfield_end;
 	if (currprefs.chipset_hr && (currprefs.chipset_mask & CSMASK_AGA) && bplres > 0) {
@@ -1058,12 +1051,9 @@ static void pfield_init_linetoscr (bool border)
 	pixels_offset = MAX_PIXELS_PER_LINE - ddf_left;
 
 	leftborderhidden = playfield_start - native_ddf_left2;
-	hamleftborderhidden = 0;
 
-	if (hblank_left_start > playfield_start) {
+	if (hblank_left_start > playfield_start)
 		leftborderhidden += hblank_left_start - playfield_start;
-		hamleftborderhidden = hblank_left_start - playfield_start;
-	}
 
 	src_pixel = MAX_PIXELS_PER_LINE + res_shift_from_window(leftborderhidden);
 
@@ -1764,10 +1754,6 @@ static int pfield_do_nothing(int a, int b, int c)
 {
 	return a;
 }
-static int pfield_do_nothingb(int a, int b, int c, int d)
-{
-	return a;
-}
 
 /* AGA subpixel delay hack */
 static call_linetoscr pfield_do_linetoscr_shdelay_normal;
@@ -2087,9 +2073,9 @@ static unsigned int ham_lastcolor;
  */
 static void init_ham_decoding(void)
 {
-	int unpainted_amiga = unpainted + hamleftborderhidden;
+	int unpainted_amiga = unpainted;
 
-	ham_decode_pixel = src_pixel - hamleftborderhidden;
+	ham_decode_pixel = src_pixel;
 	ham_lastcolor = color_reg_get (&colors_for_drawing, 0);
 
 	if (!bplham) {
@@ -2133,7 +2119,6 @@ static void init_ham_decoding(void)
 		}
 #endif
 	} else {
-		if (!bpldualpf) {
 			/* OCS/ECS mode HAM6 */
 			while (unpainted_amiga-- > 0) {
 				int pv = pixdata.apixels[ham_decode_pixel++];
@@ -2143,21 +2128,6 @@ static void init_ham_decoding(void)
 				case 0x10: ham_lastcolor &= 0xFF0; ham_lastcolor |= (pv & 0xF); break;
 				case 0x20: ham_lastcolor &= 0x0FF; ham_lastcolor |= (pv & 0xF) << 8; break;
 				case 0x30: ham_lastcolor &= 0xF0F; ham_lastcolor |= (pv & 0xF) << 4; break;
-				}
-			}
-		} else {
-			/* OCS/ECS mode HAM6 + DPF */
-			while (unpainted_amiga-- > 0) {
-				int pv = pixdata.apixels[ham_decode_pixel++];
-				int *lookup = bpldualpfpri ? dblpf_ind2 : dblpf_ind1;
-				int idx = lookup[pv];
-				switch (pv & 0x30)
-				{
-				case 0x00: ham_lastcolor = colors_for_drawing.color_regs_ecs[idx] & 0xfff; break;
-				case 0x10: ham_lastcolor &= 0xFF0; ham_lastcolor |= (idx & 0xF); break;
-				case 0x20: ham_lastcolor &= 0x0FF; ham_lastcolor |= (idx & 0xF) << 8; break;
-				case 0x30: ham_lastcolor &= 0xF0F; ham_lastcolor |= (idx & 0xF) << 4; break;
-				}
 			}
 		}
 	}
@@ -2212,7 +2182,6 @@ static void decode_ham(int pix, int stoppos, int blank)
 		}
 #endif
 	} else {
-		if (!bpldualpf) {
 			/* OCS/ECS mode HAM6 */
 			while (todraw_amiga-- > 0) {
 				int pv = pixdata.apixels[ham_decode_pixel];
@@ -2224,22 +2193,6 @@ static void decode_ham(int pix, int stoppos, int blank)
 				case 0x30: ham_lastcolor &= 0xF0F; ham_lastcolor |= (pv & 0xF) << 4; break;
 				}
 				ham_linebuf[ham_decode_pixel++] = ham_lastcolor;
-			}
-		} else {
-			/* OCS/ECS mode HAM6 + DPF */
-			while (todraw_amiga-- > 0) {
-				int pv = pixdata.apixels[ham_decode_pixel];
-				int *lookup = bpldualpfpri ? dblpf_ind2 : dblpf_ind1;
-				int idx = lookup[pv];
-				switch (pv & 0x30)
-				{
-				case 0x00: ham_lastcolor = colors_for_drawing.color_regs_ecs[idx] & 0xfff; break;
-				case 0x10: ham_lastcolor &= 0xFF0; ham_lastcolor |= (idx & 0xF); break;
-				case 0x20: ham_lastcolor &= 0x0FF; ham_lastcolor |= (idx & 0xF) << 8; break;
-				case 0x30: ham_lastcolor &= 0xF0F; ham_lastcolor |= (idx & 0xF) << 4; break;
-				}
-				ham_linebuf[ham_decode_pixel++] = ham_lastcolor;
-			}
 		}
 	}
 }
@@ -2403,11 +2356,11 @@ static void clear_bitplane_border_aga(void)
 
 static void weird_bitplane_fix(int start, int end)
 {
+	int sh = lores_shift;
 	uae_u8 *p = pixdata.apixels + pixels_offset;
 
-	start = res_shift_from_window(start);
-	end = res_shift_from_window(end);
-
+	start >>= sh;
+	end >>= sh;
 	if (!bpldualpf) {
 		// HAM is unaffected (probably because plane 5 is HAM control bit)
 		if (bplham)
@@ -2772,8 +2725,8 @@ static void init_aspect_maps(void)
 
 	/* At least for this array the +1 is necessary. */
 	native2amiga_line_map_height = h;
-	amiga2aspect_line_map = xmalloc (int, (MAXVPOS + 1) * 2 + 1);
-	native2amiga_line_map = xmalloc (int, native2amiga_line_map_height);
+	amiga2aspect_line_map = xmalloc(int, (MAXVPOS + 1) * 2 + 1);
+	native2amiga_line_map = xmalloc(int, native2amiga_line_map_height);
 
 	for (i = 0; i < maxl; i++) {
 		int v = i - min_ypos_for_screen;
@@ -2930,13 +2883,6 @@ static void pfield_expand_dp_bplconx (int regno, int v)
 		dp_for_drawing->ham_seen = isham(v);
 		if (currprefs.chipset_hr && dp_for_drawing->bplres < currprefs.gfx_resolution)
 			dp_for_drawing->bplres = currprefs.gfx_resolution;
-		//extblankcheck();
-		break;
-	case 0x101: // BPLCON0 partial
-		dp_for_drawing->bplcon0 &= ~(0x0800 | 0x0400 | 0x0080 | 0x0001);
-		dp_for_drawing->bplcon0 |= v & (0x0800 | 0x0400 | 0x0080 | 0x0001);
-		dp_for_drawing->ham_seen = isham(v);
-		//extblankcheck();
 		break;
 	case 0x104: // BPLCON2
 		dp_for_drawing->bplcon2 = v;
@@ -2944,7 +2890,6 @@ static void pfield_expand_dp_bplconx (int regno, int v)
 #ifdef ECS_DENISE
 	case 0x106: // BPLCON3
 		dp_for_drawing->bplcon3 = v;
-		//extblankcheck();
 		break;
 #endif
 #ifdef AGA
@@ -3748,7 +3693,7 @@ void putpixel(uae_u8 *buf, uae_u8 *genlockbuf, int bpp, int x, xcolnr c8)
 		break;
 	case 4:
 		{
-			uae_u32 *p = (uae_u32*)buf + x;
+			uae_u32* p = (uae_u32*)buf + x;
 			*p = c8;
 			break;
 		}
@@ -3944,6 +3889,8 @@ static void refresh_indicator_update(struct vidbuffer *vb)
 	}
 }
 
+#define LARGEST_LINE_DEBUG 0
+
 static void draw_frame2(struct vidbuffer *vbin, struct vidbuffer *vbout)
 {
 #ifdef AMIBERRY
@@ -4005,8 +3952,8 @@ void draw_lines(int end, int section)
 		int y_end = -1;
 
 		vidinfo->outbuffer = vb;
-	if (!lockscr(vb, false, vb->last_drawn_line ? false : true, display_reset > 0))
-		return;
+		if (!lockscr(vb, false, vb->last_drawn_line ? false : true, display_reset > 0))
+			return;
 
 		for (; next_line_to_render < max_ypos_thisframe; ++next_line_to_render) {
 			int i1 = next_line_to_render + min_ypos_for_screen;
@@ -4463,12 +4410,18 @@ void hsync_record_line_state (int lineno, enum nln_how how, int changed)
 		if (lineno > 0) {
 			state[-1] = LINE_BLACK;
 		}
+		if (!interlace_seen && lineno == (maxvpos + lof_store) * 2 - 2) {
+			state[1] = LINE_BLACK;
+		}
 		break;
 	case nln_upper_black:
 		changed |= state[0] != LINE_DONE;
 		*state = changed ? LINE_DECIDED : LINE_DONE;
 		if (lineno > 0) {
 			state[-1] = LINE_DONE;
+		}
+		if (!interlace_seen && lineno == (maxvpos + lof_store) * 2 - 2) {
+			state[1] = LINE_DONE;
 		}
 		break;
 	}

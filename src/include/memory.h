@@ -468,6 +468,8 @@ extern uaecptr expamem_z3_pointer_real, expamem_z3_pointer_uae;
 extern uae_u32 expamem_z3_highram_real, expamem_z3_highram_uae;
 extern uae_u32 expamem_board_size;
 
+extern uae_u32 last_custom_value1;
+
 /* Default memory access functions */
 
 extern void dummy_put (uaecptr addr, int size, uae_u32 val);
