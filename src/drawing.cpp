@@ -3944,49 +3944,81 @@ static void draw_frame_extras(struct vidbuffer *vb, int y_start, int y_end)
 
 void draw_lines(int end, int section)
 {
-	struct amigadisplay* ad = &adisplays[0];
-	if (ad->framecnt == 0) {
-		struct vidbuf_description *vidinfo = &adisplays[0].gfxvidinfo;
-		struct vidbuffer* vb = &vidinfo->drawbuffer;
-		int y_start = -1;
-		int y_end = -1;
+	int monid = 0;
+	struct vidbuf_description *vidinfo = &adisplays[monid].gfxvidinfo;
+	struct vidbuffer *vb = &vidinfo->drawbuffer;
+	int y_start = -1;
+	int y_end = -1;
 
-		vidinfo->outbuffer = vb;
-		if (!lockscr(vb, false, vb->last_drawn_line ? false : true, display_reset > 0))
+	static bool section_toggle;
+
+	if (section == 0)
+		section_toggle = !section_toggle;
+
+	end -= minfirstline;
+	if (end < 0)
+		return;
+	end <<= linedbl;
+	if (min_ypos_for_screen > 0 && thisframe_y_adjust_real > 0) {
+		end += min_ypos_for_screen;
+		end -= thisframe_y_adjust_real;
+		if (end < 0)
 			return;
+	}
 
-		for (; next_line_to_render < max_ypos_thisframe; ++next_line_to_render) {
-			int i1 = next_line_to_render + min_ypos_for_screen;
-			int line = next_line_to_render + thisframe_y_adjust_real;
-			int whereline = amiga2aspect_line_map[i1];
-			int wherenext = amiga2aspect_line_map[i1 + 1];
+	//int section_color_cnt = 4;
+
+	vidinfo->outbuffer = vb;
+	if (!lockscr(vb, false, vb->last_drawn_line ? false : true, display_reset > 0))
+		return;
+
+	bool firstline = true;
+	int lastline = thisframe_y_adjust_real - (1 << linedbl);
+	while (vb->last_drawn_line < end) {
+		int i = vb->last_drawn_line;
+		int i1 = i + min_ypos_for_screen;
+		int line = i + thisframe_y_adjust_real;
+		int whereline = amiga2aspect_line_map[i1];
+		int wherenext = amiga2aspect_line_map[i1 + 1];
 
 #ifdef AMIBERRY
 		if (whereline >= vb->inheight || line >= linestate_first_undecided) {
 #else
 		if (whereline >= vb->inheight) {
 #endif
-				y_end = vb->inheight - 1;
-				break;
-			}
-			if (whereline < 0) {
-				continue;
-			}
-			if (y_start < 0) {
-				y_start = whereline;
-			}
-			
-			hposblank = 0;
-			pfield_draw_line(vb, line, whereline, wherenext);
-
-			vb->last_drawn_line++;
-			//if (vb->last_drawn_line == end) {
-			//	y_end = whereline;
-			//}
+			y_end = vb->inheight - 1;
+			break;
 		}
-		draw_frame_extras(vb, y_start, y_end + 1);
-		unlockscr(vb, y_start, y_end + 1);
+		if (whereline < 0) {
+			lastline = line;
+			continue;
+		}
+		if (y_start < 0) {
+			y_start = whereline;
+		}
+
+		if (firstline) {
+			if (lastline >= 0) {
+				// scan line - 1 events, it might have hblank enable for next line.
+				for (int j = 0; j < 2; j++) {
+					dip_for_drawing = curr_drawinfo + lastline;
+					do_color_changes(NULL, NULL, -1);
+					lastline++;
+				}
+			}
+			firstline = false;
+		}
+
+		hposblank = 0;
+		pfield_draw_line(vb, line, whereline, wherenext);
+
+		vb->last_drawn_line++;
+		if (vb->last_drawn_line == end) {
+			y_end = whereline;
+		}
 	}
+	draw_frame_extras(vb, y_start, y_end + 1);
+	unlockscr(vb, y_start, y_end + 1);
 }
 
 bool draw_frame (struct vidbuffer *vb)
