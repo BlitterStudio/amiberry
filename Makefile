@@ -248,6 +248,12 @@ else ifeq ($(PLATFORM),a64)
 else ifeq ($(PLATFORM),x86-64)
 	CPPFLAGS += -DUSE_RENDER_THREAD
 
+# RK3588 e.g. RockPi 5
+else ifeq ($(PLATFORM),rk3588)
+	CPUFLAGS ?= -mcpu=cortex-a76+fp
+	CPPFLAGS += $(CPPFLAGS64)
+	AARCH64 = 1
+
 # RK3288 e.g. Asus Tinker Board
 # RK3328 e.g. PINE64 Rock64 
 # RK3399 e.g. PINE64 RockPro64 
