@@ -5667,7 +5667,8 @@ static void inputdevice_checkconfig (void)
 		currprefs.input_autofire_linecnt != changed_prefs.input_autofire_linecnt ||
 		currprefs.input_autoswitch != changed_prefs.input_autoswitch ||
 		currprefs.input_device_match_mask != changed_prefs.input_device_match_mask ||
-		currprefs.input_mouse_speed != changed_prefs.input_mouse_speed) {
+		currprefs.input_mouse_speed != changed_prefs.input_mouse_speed ||
+		currprefs.input_tablet != changed_prefs.input_tablet) {
 
 			currprefs.input_selected_setting = changed_prefs.input_selected_setting;
 			currprefs.input_joymouse_multiplier = changed_prefs.input_joymouse_multiplier;
@@ -5678,6 +5679,7 @@ static void inputdevice_checkconfig (void)
 			currprefs.input_mouse_speed = changed_prefs.input_mouse_speed;
 			currprefs.input_autoswitch = changed_prefs.input_autoswitch;
 			currprefs.input_device_match_mask = changed_prefs.input_device_match_mask;
+			currprefs.input_tablet = changed_prefs.input_tablet;
 
 			inputdevice_updateconfig (&changed_prefs, &currprefs);
 	}

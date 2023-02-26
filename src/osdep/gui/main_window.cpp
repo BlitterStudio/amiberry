@@ -209,8 +209,11 @@ static int gui_create_rtarea_flag(uae_prefs* p)
 	if (count_HDs(p) > 0)
 		flag |= 1;
 
+	// We allow on-the-fly switching of this in Amiberry
+#ifndef AMIBERRY
 	if (p->input_tablet > 0)
 		flag |= 8;
+#endif
 
 	return flag;
 }
