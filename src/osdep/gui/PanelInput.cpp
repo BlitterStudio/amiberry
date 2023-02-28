@@ -386,7 +386,7 @@ void InitPanelInput(const config_category& category)
 		joys[i]->addActionListener(inputPortsActionListener);
 
 		joysaf[i] = new gcn::DropDown(&autoFireList);
-		joysaf[i]->setSize(150, joysaf[i]->getHeight());
+		joysaf[i]->setSize(200, joysaf[i]->getHeight());
 		joysaf[i]->setBaseColor(gui_baseCol);
 		joysaf[i]->setBackgroundColor(colTextboxBackground);
 		joysaf[i]->addActionListener(inputPortsActionListener);
@@ -394,7 +394,7 @@ void InitPanelInput(const config_category& category)
 		if (i < 2)
 		{
 			joysm[i] = new gcn::DropDown(&ctrlPortModeList);
-			joysm[i]->setSize(joysm[i]->getWidth(), joysm[i]->getHeight());
+			joysm[i]->setSize(150, joysm[i]->getHeight());
 			joysm[i]->setBaseColor(gui_baseCol);
 			joysm[i]->setBackgroundColor(colTextboxBackground);
 			joysm[i]->addActionListener(inputPortsActionListener);
