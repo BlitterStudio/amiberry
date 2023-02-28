@@ -617,6 +617,8 @@ static void setid(struct uae_input_device* uid, const int i, const int slot, con
 		uid[i].flags[slot][sub] |= ID_FLAG_TOGGLE;
 	if (af == JPORT_AF_ALWAYS)
 		uid[i].flags[slot][sub] |= ID_FLAG_INVERTTOGGLE;
+	if (af == JPORT_AF_TOGGLENOAF)
+		uid[i].flags[slot][sub] |= ID_FLAG_INVERT;
 }
 
 int input_get_default_mouse(struct uae_input_device* uid, const int i, const int port, const int af, const bool gp, bool wheel, bool joymouseswap)

@@ -373,6 +373,11 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 		p->chipmem.size = 0x200000;
 	}
 
+	if (p->chipmem.size == 0x180000 && p->cachesize) {
+		error_log(_T("JIT unsupported chipmem size %d (0x%x)."), p->chipmem.size, p->chipmem.size);
+		p->chipmem.size = 0x200000;
+	}
+
 	for (auto& i : p->fastmem) {
 		if ((i.size & i.size - 1) != 0
 			|| (i.size != 0 && (i.size < 0x10000 || i.size > 0x800000)))
@@ -443,6 +448,10 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 	if (p->chipmem.size > 0x200000 && (p->fastmem[0].size > 262144 || p->fastmem[1].size > 262144)) {
 		error_log(_T("You can't use fastmem and more than 2MB chip at the same time."));
 		p->chipmem.size = 0x200000;
+	}
+	if (p->bogomem.size == 0x180000 && p->cachesize) {
+		error_log(_T("JIT unsupported bogomem size %d (0x%x)."), p->bogomem.size, p->bogomem.size);
+		p->bogomem.size = 0x100000;
 	}
 	if (p->mem25bit.size > 128 * 1024 * 1024 || (p->mem25bit.size & 0xfffff)) {
 		p->mem25bit.size = 0;

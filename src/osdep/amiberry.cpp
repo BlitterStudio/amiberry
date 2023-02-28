@@ -634,12 +634,12 @@ static void amiberry_inactive(struct AmigaMonitor* mon, int minimized)
 				sound_closed = 1;
 			}
 			else if (currprefs.minimized_nosound) {
-				inputdevice_unacquire(true, currprefs.minimized_input);
+				inputdevice_unacquire(currprefs.minimized_input);
 				setsoundpaused();
 				sound_closed = -1;
 			}
 			else {
-				inputdevice_unacquire(true, currprefs.minimized_input);
+				inputdevice_unacquire(currprefs.minimized_input);
 			}
 		}
 		else if (mouseactive) {
@@ -664,12 +664,12 @@ static void amiberry_inactive(struct AmigaMonitor* mon, int minimized)
 			}
 			else if (currprefs.inactive_nosound)
 			{
-				inputdevice_unacquire(true, currprefs.inactive_input);
+				inputdevice_unacquire(currprefs.inactive_input);
 				setsoundpaused();
 				sound_closed = -1;
 			}
 			else {
-				inputdevice_unacquire(true, currprefs.inactive_input);
+				inputdevice_unacquire(currprefs.inactive_input);
 			}
 		}
 	}

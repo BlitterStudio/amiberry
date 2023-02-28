@@ -132,12 +132,13 @@ struct jport
 #define JPORT_AF_NORMAL 1
 #define JPORT_AF_TOGGLE 2
 #define JPORT_AF_ALWAYS 3
+#define JPORT_AF_TOGGLENOAF 4
 
 #define KBTYPE_AMIGA 0
 #define KBTYPE_PC1 1
 #define KBTYPE_PC2 2
 
-#define MAX_SPARE_DRIVES 10 //20
+#define MAX_SPARE_DRIVES 20
 #define MAX_CUSTOM_MEMORY_ADDRS 2
 
 #define CONFIG_TYPE_ALL -1
@@ -351,7 +352,7 @@ enum
 #define AGNUSSIZE_AUTO 0
 #define AGNUSSIZE_512 1
 #define AGNUSSIZE_1M 2
-#define AGNUSSIZE_1024 3
+#define AGNUSSIZE_2M 3
 
 #define DENISEMODEL_AUTO 0
 #define DENISEMODEL_VELVET 1
@@ -668,6 +669,7 @@ struct uae_prefs
 	bool gfx_windowed_resize;
 	int gfx_overscanmode;
 	int gfx_monitorblankdelay;
+	int gfx_rotation;
 
 	struct gfx_filterdata gf[3];
 
@@ -1053,6 +1055,9 @@ extern bool is_error_log(void);
 extern void default_prefs(struct uae_prefs*, bool, int);
 extern void discard_prefs(struct uae_prefs*, int);
 extern void copy_prefs(struct uae_prefs* src, struct uae_prefs* dst);
+extern void copy_inputdevice_prefs(struct uae_prefs *src, struct uae_prefs *dst);
+
+#ifdef AMIBERRY
 extern int bip_a500(struct uae_prefs* p, int rom);
 extern int bip_a500plus(struct uae_prefs* p, int rom);
 extern int bip_a1200(struct uae_prefs* p, int rom);
@@ -1060,6 +1065,7 @@ extern int bip_a2000(struct uae_prefs* p, int rom);
 extern int bip_a4000(struct uae_prefs* p, int rom);
 extern int bip_cd32(struct uae_prefs* p, int rom);
 extern int bip_cdtv(struct uae_prefs* p, int rom);
+#endif
 
 int parse_cmdline_option(struct uae_prefs*, TCHAR, const TCHAR*);
 
