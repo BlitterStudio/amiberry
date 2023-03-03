@@ -262,13 +262,6 @@ extern void to_upper (TCHAR *s, int len);
 #define FILEFLAG_SCRIPT  0x20
 #define FILEFLAG_PURE    0x40
 
-#define abort() \
-  do { \
-	printf ("Internal error; file %s, line %d\n", __FILE__, __LINE__); \
-	SDL_Quit(); \
-	(abort) (); \
-} while (0)
-
 #endif
 
 #ifdef DONT_HAVE_POSIX
