@@ -576,5 +576,3 @@ typedef char TCHAR;
 #endif
 #define _wunlink(x)         unlink(x)
 #define _istalnum(x)        isalnum(x)
-
-#define USE_SDL
