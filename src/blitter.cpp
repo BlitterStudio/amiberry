@@ -954,14 +954,18 @@ static void blitter_doit (void)
 		blitter_done(current_hpos());
 		return;
 	}
+#if BLITTER_DEBUG
 	if (log_blitter) {
 		if (!blitter_dontdo)
-	actually_do_blit();
+			actually_do_blit();
 		else
 			bltstate = BLT_done;
 	} else {
+#endif
 		actually_do_blit ();
+#if BLITTER_DEBUG
 	}
+#endif
 	blitter_done(current_hpos());
 }
 
@@ -1203,12 +1207,12 @@ void decide_blitter(int hpos)
 
 	if (bltstate == BLT_done)
 		return;
-
+#if BLITTER_DEBUG
 	if (log_blitter && blitter_delayed_debug) {
 		blitter_delayed_debug = 0;
 		blitter_dump();
 	}
-
+#endif
 	if (!blitter_cycle_exact)
 		return;
 
@@ -1393,8 +1397,10 @@ static void blit_bltset (int con)
 		bltstate = BLT_done;
 		blit_interrupt = 1;
 		write_log (_T("BLITTER: register modification during linedraw! %08x\n"), M68K_GETPC);
+#if BLITTER_DEBUG
 		if (log_blitter & 16)
 			activate_debugger ();
+#endif
 	}
 
 	if (blitline) {
@@ -1454,13 +1460,17 @@ static void blit_bltset (int con)
 		} else if (iseo && !isen) {
 			blit_frozen = 1;
 			write_log (_T("BLITTER: frozen! %d (%d) -> %d (%d) %08X\n"), original_ch, iseo, blit_ch, isen, M68K_GETPC);
+#if BLITTER_DEBUG
 			if (log_blitter & 16)
 				activate_debugger ();
+#endif
 		} else if (!iseo && isen) {
 			if (!dmaen (DMA_BLITTER)) // subtle shades / nuance bootblock bug
 				blit_frozen = 1;
+#if BLITTER_DEBUG
 			if (log_blitter)
 				write_log (_T("BLITTER: on the fly %d (%d) -> %d (%d) switch\n"), original_ch, iseo, blit_ch, isen);
+#endif
 		}
 	}
 
@@ -1474,8 +1484,10 @@ static void blit_bltset (int con)
 			if (changetable[o * 32 + n] < 10) {
 				changetable[o * 32 + n]++;
 				write_log (_T("BLITTER: channel mode changed while active (%02X->%02X) PC=%08x\n"), o, n, M68K_GETPC);
+#if BLITTER_DEBUG
 				if (log_blitter & 16)
 					activate_debugger ();
+#endif
 			}
 		}
 		if (blit_ch == 13 && original_ch == 1) {
@@ -1585,6 +1597,7 @@ static void do_blitter2(int hpos, int copper, uaecptr pc)
 	int cycles;
 	int cleanstart;
 
+#if BLITTER_DEBUG
 	if ((log_blitter & 2)) {
 		if (bltstate != BLT_done) {
 			if (blit_final) {
@@ -1593,6 +1606,7 @@ static void do_blitter2(int hpos, int copper, uaecptr pc)
 			}
 		}
 	}
+#endif
 
 	cleanstart = 0;
 	if (bltstate == BLT_done) {
@@ -1633,9 +1647,10 @@ static void do_blitter2(int hpos, int copper, uaecptr pc)
 		blitter_debugsave(copper, pc);
 #endif
 
+#if BLITTER_DEBUG
 	if ((log_blitter & 1) || ((log_blitter & 32) && !blitline)) {
 		blitter_dontdo = 0;
-		if (1) {
+		//if (1) {
 			int ch = 0;
 			if (blit_ch & 1)
 				ch++;
@@ -1650,8 +1665,9 @@ static void do_blitter2(int hpos, int copper, uaecptr pc)
 				blitdesc ? 1 : 0, blitfill, dmaen(DMA_BLITPRI) ? 1 : 0, M68K_GETPC, blitline,
 				dmacon, ((dmacon & (DMA_MASTER | DMA_BLITTER)) == (DMA_MASTER | DMA_BLITTER)) ? _T("") : _T(" off!"));
 			blitter_dump();
-		}
+		//}
 	}
+#endif
 
 	bltstate = BLT_init;
 	blit_slowdown = 0;
@@ -1683,9 +1699,11 @@ static void do_blitter2(int hpos, int copper, uaecptr pc)
 				blitter_doit();
 			return;
 		}
+#if BLITTER_DEBUG
 		if (log_blitter & 8) {
 			blitter_handler (0);
 		} else {
+#endif
 			blitter_hcounter1 = blitter_hcounter2 = 0;
 			blitter_vcounter1 = blitter_vcounter2 = 0;
 			if (blit_nod)
@@ -1694,7 +1712,9 @@ static void do_blitter2(int hpos, int copper, uaecptr pc)
 			blit_waitcyclecounter = copper;
 			blit_startcycles = 0;
 			blit_maxcyclecounter = blt_info.hblitsize * blt_info.vblitsize + 2;
+#if BLITTER_DEBUG
 		}
+#endif
 		return;
 	}
 
@@ -1780,6 +1800,7 @@ void maybe_blit (int hpos, int hack)
 #ifdef DEBUGGER
 		debugtest (DEBUGTEST_BLITTER, _T("program does not wait for blitter tc=%d\n"), blit_cyclecounter);
 #endif
+#if BLITTER_DEBUG
 		if (log_blitter)
 			warned = 0;
 		if (log_blitter & 2) {
@@ -1788,6 +1809,7 @@ void maybe_blit (int hpos, int hack)
 			//activate_debugger();
 			//blitter_done (hpos);
 		}
+#endif
 	}
 
 	if (blitter_cycle_exact) {
@@ -1800,8 +1822,10 @@ void maybe_blit (int hpos, int hack)
 
 	blitter_handler(0);
 end:;
+#if BLITTER_DEBUG
 	if (log_blitter)
 		blitter_delayed_debug = 1;
+#endif
 }
 
 void check_is_blit_dangerous (uaecptr *bplpt, int planes, int words)
@@ -2053,8 +2077,10 @@ uae_u8 *save_blitter_new(size_t *len, uae_u8 *dstptr)
 
 	if (bltstate != BLT_done) {
 		write_log(_T("BLITTER active while saving state\n"));
+#if BLITTER_DEBUG
 		if (log_blitter)
 			blitter_dump();
+#endif
 	}
 
 	save_u32 (blit_first_cycle);
