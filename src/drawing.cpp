@@ -4442,18 +4442,12 @@ void hsync_record_line_state (int lineno, enum nln_how how, int changed)
 		if (lineno > 0) {
 			state[-1] = LINE_BLACK;
 		}
-		if (!interlace_seen && lineno == (maxvpos + lof_store) * 2 - 2) {
-			state[1] = LINE_BLACK;
-		}
 		break;
 	case nln_upper_black:
 		changed |= state[0] != LINE_DONE;
 		*state = changed ? LINE_DECIDED : LINE_DONE;
 		if (lineno > 0) {
 			state[-1] = LINE_DONE;
-		}
-		if (!interlace_seen && lineno == (maxvpos + lof_store) * 2 - 2) {
-			state[1] = LINE_DONE;
 		}
 		break;
 	}

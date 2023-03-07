@@ -283,7 +283,7 @@ static int line_cyclebased, badmode, diw_change;
 static int bplcon1_fetch;
 static int hpos_is_zero_bplcon1_hack = -1;
 
-#define SET_LINE_CYCLEBASED line_cyclebased = 2;
+#define SET_LINE_CYCLEBASED line_cyclebased = 1;
 
 /* The display and data fetch windows */
 
@@ -1602,7 +1602,7 @@ static void toscr_2_2_hr(int nbits) { toscr_3_aga_hr(0, 1, nbits, 64 - 1); }
 static void toscr_2_2_hr_oe(int oddeven, int step, int nbits) { toscr_3_aga_hr(oddeven, step, nbits, 64 - 1); }
 #endif
 
-static void do_tosrc(int oddeven, int step, int nbits, int fm)
+STATIC_INLINE void do_tosrc(int oddeven, int step, int nbits, int fm)
 {
 	switch (fm) {
 	case 0:
@@ -1629,7 +1629,7 @@ static void do_tosrc(int oddeven, int step, int nbits, int fm)
 }
 
 #ifdef AGA
-static void do_tosrc_hr(int oddeven, int step, int nbits, int fm)
+STATIC_INLINE void do_tosrc_hr(int oddeven, int step, int nbits, int fm)
 {
 	switch (fm) {
 	case 0:
@@ -1891,7 +1891,7 @@ static void do_delays_fast_2_2(int nbits) { do_delays_fast_3_aga(nbits, 2); }
 
 
 // slower version, odd and even delays are different or crosses maxhpos
-static void do_delays (int nbits, int fm)
+STATIC_INLINE void do_delays (int nbits, int fm)
 {
 	switch (fm) {
 	case 0:
@@ -1909,7 +1909,7 @@ static void do_delays (int nbits, int fm)
 }
 
 // common optimized case: odd delay == even delay
-static void do_delays_fast (int nbits, int fm)
+STATIC_INLINE void do_delays_fast (int nbits, int fm)
 {
 	switch (fm) {
 	case 0:
@@ -1927,7 +1927,7 @@ static void do_delays_fast (int nbits, int fm)
 }
 
 #ifdef AGA
-static void do_delays_hr(int nbits, int fm)
+STATIC_INLINE void do_delays_hr(int nbits, int fm)
 {
 	switch (fm) {
 	case 0:
@@ -1942,7 +1942,7 @@ static void do_delays_hr(int nbits, int fm)
 	}
 }
 
-static void do_delays_fast_hr(int nbits, int fm)
+STATIC_INLINE void do_delays_fast_hr(int nbits, int fm)
 {
 	switch (fm) {
 	case 0:
@@ -2013,7 +2013,7 @@ static void toscr_right_edge_hr(int nbits, int fm)
 }
 
 
-static void toscr_1 (int nbits, int fm)
+STATIC_INLINE void toscr_1 (int nbits, int fm)
 {
 	if (delay_cycles + nbits >= delay_lastcycle[lol]) {
 		toscr_right_edge (nbits, fm);
@@ -2049,7 +2049,7 @@ static void toscr_1 (int nbits, int fm)
 	}
 }
 
-static void toscr_1_hr(int nbits, int fm)
+STATIC_INLINE void toscr_1_hr(int nbits, int fm)
 {
 	if (delay_cycles + nbits >= delay_lastcycle[lol]) {
 		toscr_right_edge_hr(nbits, fm);
@@ -3381,20 +3381,20 @@ static void decide_line(int hpos)
 	bool diw = diwstate == DIW_waiting_stop;
 
 	if (ecs) {
-		if (1) {
+		//if (1) {
 			if (last_decide_line_hpos < plfstrt && hpos >= plfstrt) {
 				ddfstop_matched = false;
 			}
-		}
+		//}
 	} else {
-		if (1) {
+		//if (1) {
 			if (last_decide_line_hpos < plfstrt && hpos >= plfstrt) {
 				ddfstop_matched = false;
 				// plfstrt==0 works strangely (Nakudemo / Vision-X)
 				if (plfstrt > -DDF_OFFSET)
 					ocs_agnus_ddf_enable_toggle = false;
 			}
-		}
+		//}
 	}
 
 	if (fetch_state == fetch_not_started || (aga_plf_passed_stop2 && plfstrt >= last_decide_line_hpos)) {
@@ -3415,7 +3415,7 @@ static void decide_line(int hpos)
 
 		if (ecs) {
 			// ECS DDFSTRT/STOP matching does not require DMA or DIW.
-			if (1) {
+			//if (1) {
 				if (last_decide_line_hpos < plfstrt && hpos >= plfstrt) {
 					// active == already started because ddfstop was not detected in last line
 					if (plf_state != plf_active) {
@@ -3424,24 +3424,24 @@ static void decide_line(int hpos)
 						plf_start_hpos = plfstrt + DDF_OFFSET;
 					}
 				}
-			}
-			if (1) {
+			//}
+			//if (1) {
 				if ((strtpassed && hpos >= plf_start_hpos) || (last_decide_line_hpos < plf_start_hpos && hpos >= plf_start_hpos)) {
 					if (plf_state == plf_passed_start) {
 						plf_state = plf_active;
 						hstart = plf_start_hpos;
 					}
 				}
-			}
+			//}
 		} else {
-			if (1) {
+			//if (1) {
 				int start = HARD_DDF_START_REAL;
 				if (last_decide_line_hpos < start && hpos >= start) {
 					if (!ocs_agnus_ddf_enable_toggle)
 						plf_state = plf_passed_enable;
 					ocs_agnus_ddf_enable_toggle = true;
 				}
-			}
+			//}
 			// OCS DDFSTRT/STOP matching requires DMA and DIW enabled.
 			if (dma && diw) {
 				if (last_decide_line_hpos < plfstrt && hpos >= plfstrt) {
@@ -3468,7 +3468,7 @@ static void decide_line(int hpos)
 			if (ecs) {
 				test = (plf_state == plf_active && (hpos >= HARD_DDF_START_REAL + DDF_OFFSET || HARD_DDF_LIMITS_DISABLED));
 				if (bpl_dma_off_when_active) {
-					if (plfstop < hstart) {
+					if (plfstop <= hstart) {
 						test = false;
 					}
 				}
@@ -3491,7 +3491,7 @@ static void decide_line(int hpos)
 				// if ECS: pre-set plf_end_hpos if we have already passed virtual ddfstop
 				if (ecs) {
 					// DDFSTRT=$18: always skip this condition. For some unknown reason.
-					if (last_decide_line_hpos < hstart && hstart >= plfstop && hstart - plfstop <= DDF_OFFSET && hstart != HARD_DDF_START_REAL + DDF_OFFSET) {
+					if (last_decide_line_hpos < hstart && hstart >= plfstop && hstart - plfstop <= DDF_OFFSET) {
 						plf_end_hpos = plfstop + DDF_OFFSET;
 						nextstate = plf_passed_stop;
 					}
@@ -3500,18 +3500,11 @@ static void decide_line(int hpos)
 						nextstate = plf_passed_stop;
 					}
 					if (bpl_dma_off_when_active) {
-#if 0
-						if ((bitplane_maybe_start_hpos < hstart && bitplane_maybe_start_hpos >= 0) && (currprefs.chipset_mask & CSMASK_AGA)) {
-							nextstate = plf_passed_stop2;
-						} else {
-#endif
+
 						nextstate = plf_passed_stop_act;
-#if 0
 					}
-#endif
-						bpl_dma_off_when_active = 0;
 				}
-				}
+				bpl_dma_off_when_active = 0;
 				if (nextstate != plf_end) {
 					plf_state = nextstate;
 					estimate_last_fetch_cycle(hstart);
@@ -3520,11 +3513,10 @@ static void decide_line(int hpos)
 				do_sprites (hpos);
 				return;
 			}
-
 		}
 
 		if (ecs) {
-			if (1) {
+			//if (1) {
 				// ddfstrt == ddfstop: ddfstrt wins.
 				if (plfstrt != plfstop && last_decide_line_hpos < plfstop && hpos >= plfstop && plfstop <= maxhpos - DDF_OFFSET) {
 					ddfstop_matched = true;
@@ -3536,7 +3528,7 @@ static void decide_line(int hpos)
 				if (last_decide_line_hpos < HARD_DDF_STOP && hpos >= HARD_DDF_STOP) {
 					plf_state = plf_passed_stop_act;
 				}
-			}
+			//}
 		} else {
 			if (dma && diw) {
 				if (last_decide_line_hpos < plfstop && hpos >= plfstop && plfstop <= maxhpos - DDF_OFFSET && plf_state != plf_wait) {
@@ -3751,12 +3743,16 @@ static void do_sprite_collisions(void)
 		int minp1 = minpos >> sprite_buffer_res;
 		int maxp1 = maxpos >> sprite_buffer_res;
 
-		if (maxp1 > hw_diwlast)
+		if (maxp1 > hw_diwlast) {
+			maxp1 = hw_diwlast;
 			maxpos = hw_diwlast << sprite_buffer_res;
+		}
 		if (maxp1 > thisline_decision.plfright * 2)
 			maxpos = thisline_decision.plfright * 2 << sprite_buffer_res;
-		if (minp1 < hw_diwfirst)
+		if (minp1 < hw_diwfirst) {
+			minp1 = hw_diwfirst;
 			minpos = hw_diwfirst << sprite_buffer_res;
+		}
 		if (minp1 < thisline_decision.plfleft * 2)
 			minpos = thisline_decision.plfleft * 2 << sprite_buffer_res;
 
@@ -6659,8 +6655,8 @@ static uae_u16 COLOR_READ(int num)
 		cval = ((cr & 15) << 8) | ((cg & 15) << 4) | ((cb & 15) << 0);
 	} else {
 		cval = ((cr >> 4) << 8) | ((cg >> 4) << 4) | ((cb >> 4) << 0);
-		if (color_regs_genlock[num])
-			cval |= 0x8000;
+		//if (color_regs_genlock[num])
+		//	cval |= 0x8000;
 	}
 	return cval;
 }
@@ -6722,9 +6718,9 @@ static void COLOR_WRITE(int hpos, uae_u16 v, int num)
 			cr = r + (r << 4);
 			cg = g + (g << 4);
 			cb = b + (b << 4);
-			color_regs_genlock[colreg] = v >> 15;
+			//color_regs_genlock[colreg] = v >> 15;
 		}
-		cval = (cr << 16) | (cg << 8) | cb | (color_regs_genlock[colreg] ? 0x80000000 : 0);
+		cval = (cr << 16) | (cg << 8) | cb;// | (color_regs_genlock[colreg] ? 0x80000000 : 0);
 		if (cval && colreg == 0)
 			colzero = true;
 
@@ -6747,7 +6743,7 @@ static void COLOR_WRITE(int hpos, uae_u16 v, int num)
 		if (!(currprefs.chipset_mask & CSMASK_ECS_DENISE)) {
 			v &= 0xfff;
 		}
-		color_regs_genlock[num] = v >> 15;
+		//color_regs_genlock[num] = v >> 15;
 		if (num && v == 0) {
 			colzero = true;
 		}
@@ -8193,7 +8189,7 @@ static bool framewait(void)
 		if (!currprefs.cpu_thread) {
 			while (!currprefs.turbo_emulation) {
 				float v = rpt_vsync(0) / (syncbase / 1000.0);
-				if (v >= -2)
+				if (v >= -3)
 					break;
 
 				maybe_process_pull_audio();
@@ -8213,11 +8209,11 @@ static bool framewait(void)
 			t += read_processor_time() - curr_time;
 		}
 		t += frameskipt_avg;
-		vsynctimeperline = (vstb - t) / 3;
-		if (vsynctimeperline < 0)
-			vsynctimeperline = 0;
-		else if (vsynctimeperline > vstb / 3)
-			vsynctimeperline = vstb / 3;
+		vsynctimeperline = (vstb - t) / 4;
+		if (vsynctimeperline < 1)
+			vsynctimeperline = 1;
+		else if (vsynctimeperline > vstb / 4)
+			vsynctimeperline = vstb / 4;
 
 		frame_shown = true;
 
@@ -8515,7 +8511,7 @@ static void vsync_handler_post(void)
 		compute_framesync();
 	}
 
-	vsync_check_vsyncmode();
+	//vsync_check_vsyncmode();
 
 	lof_changed = 0;
 	vposw_change = 0;
