@@ -4736,7 +4736,7 @@ void compute_framesync(void)
 
 	memset(line_decisions, 0, sizeof(line_decisions));
 	memset(line_drawinfo, 0, sizeof(line_drawinfo));
-	for (int i = 0; i < sizeof(line_decisions) / sizeof(*line_decisions); i++) {
+	for (int i = 0; i < std::size(line_decisions); i++) {
 		line_decisions[i].plfleft = -2;
 	}
 
@@ -4860,7 +4860,7 @@ static void init_hz(bool checkvposw)
 			htotal = MAXHPOS - 1;
 		maxhpos = htotal + 1;
 		vblank_hz_nom = vblank_hz = 227.0 * 312.0 * 50.0 / (maxvpos * maxhpos);
-		vblank_hz_shf = (float)vblank_hz;
+		vblank_hz_shf = vblank_hz;
 		vblank_hz_lof = (float)(227.0 * 313.0 * 50.0 / (maxvpos * maxhpos));
 		vblank_hz_lace = (float)(227.0 * 312.5 * 50.0 / (maxvpos * maxhpos));
 
@@ -5667,12 +5667,10 @@ void rethink_uae_int(void)
 		}
 	}
 
-	{
-		extern void bsdsock_fake_int_handler(void);
-		extern int volatile bsd_int_requested;
-		if (bsd_int_requested) {
-			bsdsock_fake_int_handler();
-		}
+	extern void bsdsock_fake_int_handler(void);
+	extern int volatile bsd_int_requested;
+	if (bsd_int_requested) {
+		bsdsock_fake_int_handler();
 	}
 	if (irq6) {
 		safe_interrupt_set(IRQ_SOURCE_UAE, 0, true);
@@ -6043,7 +6041,7 @@ static void BPL1MOD(int hpos, uae_u16 v)
 	// write to BPLxMOD one cycle before
 	// BPL fetch that also adds modulo:
 	// Old BPLxMOD value is added.
-	if (1 && (is_bitplane_dma(hpos + 1) & 1)) {
+	if (is_bitplane_dma(hpos + 1) & 1) {
 		dbpl1mod = v;
 		dbpl1mod_on = hpos + 1;
 	} else {
@@ -6059,7 +6057,7 @@ static void BPL2MOD(int hpos, uae_u16 v)
 		decide_line(hpos);
 		decide_fetch_safe(hpos);
 	}
-	if (1 && (is_bitplane_dma (hpos + 1) & 2)) {
+	if (is_bitplane_dma (hpos + 1) & 2) {
 		dbpl2mod = v;
 		dbpl2mod_on = hpos + 1;
 	} else {
@@ -8174,9 +8172,6 @@ static bool framewait(void)
 		}
 		vsyncmaxtime = curr_time + max;
 
-		if (0)
-			write_log (_T("%06d:%06d/%06d %d %d\n"), adjust, vsynctimeperline, vstb, max, maxvpos_display);
-	
 	} else {
 
 		int t = 0;
@@ -8572,12 +8567,6 @@ static void hsync_scandoubler(void)
 	debug_dma = 0;
 #endif
 
-	// this is not correct
-	if (0 && lof_store && (vpos & 1) && vpos == plflastline - 1) {
-		// blank last line if it is odd line
-		dmacon &= ~DMA_BITPLANE;
-	}
-
 	for (int i = 0; i < 8; i++) {
 		int diff;
 		bpltmp[i] = bplpt[i];
@@ -8646,7 +8635,9 @@ static void dmal_emu(uae_u32 v)
 	// Disk and Audio DMA bits are ignored by Agnus, Agnus only checks DMAL and master bit
 	if (!(dmacon & DMA_MASTER))
 		return;
+#ifdef DEBUGGER
 	int hpos = current_hpos();
+#endif
 	if (v >= 6) {
 		v -= 6;
 		int nr = v / 2;
@@ -8793,7 +8784,7 @@ static void set_hpos(void)
 // this finishes current line
 static void hsync_handler_pre(bool onvsync)
 {
-	int hpos = current_hpos();
+	//int hpos = current_hpos();
 
 	if (!nocustom()) {
 #ifdef AMIBERRY
@@ -8884,7 +8875,7 @@ void vsync_event_done(void)
 {
 	if (!isvsync_chipset()) {
 		events_reset_syncline();
-		return;
+		//return;
 	}
 	//if (currprefs.gfx_display_sections <= 1) {
 	//	if (vsync_vblank >= 85)
@@ -10210,9 +10201,7 @@ static void REGPARAM2 custom_lput (uaecptr addr, uae_u32 value)
 
 void custom_prepare_savestate(void)
 {
-	int i;
-
-	for (i = 0; i < ev2_max; i++) {
+	for (int i = 0; i < ev2_max; i++) {
 		if (eventtab2[i].active) {
 			eventtab2[i].active = 0;
 			eventtab2[i].handler(eventtab2[i].data);
@@ -11088,9 +11077,9 @@ static void sync_ce020 (void)
 uae_u32 wait_cpu_cycle_read(uaecptr addr, int mode)
 {
 	uae_u32 v = 0;
-	int hpos;
-
-	hpos = dma_cycle ();
+#ifdef DEBUGGER
+	int hpos = dma_cycle();
+#endif
 	x_do_cycles_pre(CYCLE_UNIT);
 
 #ifdef DEBUGGER
@@ -11141,10 +11130,11 @@ uae_u32 wait_cpu_cycle_read(uaecptr addr, int mode)
 uae_u32 wait_cpu_cycle_read_ce020 (uaecptr addr, int mode)
 {
 	uae_u32 v = 0;
-	int hpos;
 
 	sync_ce020 ();
-	hpos = dma_cycle ();
+#ifdef DEBUGGER
+	int hpos = dma_cycle();
+#endif
 	x_do_cycles_pre (CYCLE_UNIT);
 
 #ifdef DEBUGGER
@@ -11193,9 +11183,9 @@ uae_u32 wait_cpu_cycle_read_ce020 (uaecptr addr, int mode)
 
 void wait_cpu_cycle_write(uaecptr addr, int mode, uae_u32 v)
 {
-	int hpos;
-
-	hpos = dma_cycle ();
+#ifdef DEBUGGER
+	int hpos = dma_cycle();
+#endif
 	x_do_cycles_pre(CYCLE_UNIT);
 
 #ifdef DEBUGGER
@@ -11223,14 +11213,14 @@ void wait_cpu_cycle_write(uaecptr addr, int mode, uae_u32 v)
 
 	regs.chipset_latch_rw = v; // regs.chipset_latch_write = v;
 	SETIFCHIP
-		}
+}
 
 void wait_cpu_cycle_write_ce020 (uaecptr addr, int mode, uae_u32 v)
 {
-	int hpos;
-
 	sync_ce020 ();
-	hpos = dma_cycle ();
+#ifdef DEBUGGER
+	int hpos = dma_cycle();
+#endif
 	x_do_cycles_pre (CYCLE_UNIT);
 
 #ifdef DEBUGGER
