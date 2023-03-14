@@ -13314,9 +13314,7 @@ static void hsync_handler_post(bool onvsync)
 			if (regs.stopped && currprefs.cpu_idle) {
 				// CPU in STOP state: sleep if enough time left.
 				frame_time_t rpt = read_processor_time();
-#ifdef AMIBERRY
-				while (vsync_isdone(NULL) <= 0 && (int64_t)vsyncmintime - (int64_t)(rpt + vsynctimebase / 10) > 0 && (int64_t)vsyncmintime - (int64_t)rpt < vsynctimebase) {
-#endif
+				while (vsync_isdone(NULL) <= 0 && vsyncmintime - (rpt + vsynctimebase / 10) > 0 && vsyncmintime - rpt < vsynctimebase) {
 					maybe_process_pull_audio();
 //					if (!execute_other_cpu(rpt + vsynctimebase / 10)) {
 						if (cpu_sleep_millis(1) < 0)
@@ -13341,13 +13339,11 @@ static void hsync_handler_post(bool onvsync)
 			linecounter++;
 			events_reset_syncline();
 			if (vsync_isdone(NULL) <= 0 && !currprefs.turbo_emulation) {
-#ifdef AMIBERRY
-				if ((int64_t)vsyncmaxtime - (int64_t)vsyncmintime > 0) {
-					if ((int64_t)vsyncwaittime - (int64_t)vsyncmintime > 0) {
+				if (vsyncmaxtime - vsyncmintime > 0) {
+					if (vsyncwaittime - vsyncmintime > 0) {
 						frame_time_t rpt = read_processor_time();
 						/* Extra time left? Do some extra CPU emulation */
-						if ((int64_t)vsyncmintime - (int64_t)rpt > 0) {
-#endif
+						if (vsyncmintime - rpt > 0) {
 							if (regs.stopped && currprefs.cpu_idle && sleeps_remaining > 0) {
 								// STOP STATE: sleep.
 								cpu_sleep_millis(1);
@@ -13383,9 +13379,7 @@ static void hsync_handler_post(bool onvsync)
 		if (audio_is_pull() > 0 && !currprefs.turbo_emulation) {
 			maybe_process_pull_audio();
 			frame_time_t rpt = read_processor_time();
-#ifdef AMIBERRY
-			while (audio_pull_buffer() > 1 && (!isvsync() || (vsync_isdone(NULL) <= 0 && (int64_t)vsyncmintime - (int64_t)(rpt + vsynctimebase / 10) > 0 && (int64_t)vsyncmintime - (int64_t)rpt < vsynctimebase))) {
-#endif
+			while (audio_pull_buffer() > 1 && (!isvsync() || (vsync_isdone(NULL) <= 0 && vsyncmintime - (rpt + vsynctimebase / 10) > 0 && vsyncmintime - rpt < vsynctimebase))) {
 				cpu_sleep_millis(1);
 				maybe_process_pull_audio();
 				rpt = read_processor_time();
@@ -13397,9 +13391,7 @@ static void hsync_handler_post(bool onvsync)
 			if (vsync_isdone(NULL) <= 0 && !currprefs.turbo_emulation) {
 				frame_time_t rpt = read_processor_time();
 				// sleep if more than 2ms "free" time
-#ifdef AMIBERRY
-				while (vsync_isdone(NULL) <= 0 && (int64_t)vsyncmintime - (int64_t)(rpt + vsynctimebase / 10) > 0 && (int64_t)vsyncmintime - (int64_t)rpt < vsynctimebase) {
-#endif
+				while (vsync_isdone(NULL) <= 0 && vsyncmintime - (rpt + vsynctimebase / 10) > 0 && vsyncmintime - rpt < vsynctimebase) {
 					maybe_process_pull_audio();
 //					if (!execute_other_cpu(rpt + vsynctimebase / 10)) {
 						if (cpu_sleep_millis(1) < 0)
