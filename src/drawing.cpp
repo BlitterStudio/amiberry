@@ -907,12 +907,12 @@ int get_custom_limits (int *pw, int *ph, int *pdx, int *pdy, int *prealh)
 			ddffirstword_total = min;
 		if (ddflastword_total > max)
 			ddflastword_total = max;
-		if (0 && !aga_mode) {
-			if (ddffirstword_total > diwfirstword_total)
-				diwfirstword_total = ddffirstword_total;
-			if (ddflastword_total < diwlastword_total)
-				diwlastword_total = ddflastword_total;
-		}
+		//if (0 && !aga_mode) {
+		//	if (ddffirstword_total > diwfirstword_total)
+		//		diwfirstword_total = ddffirstword_total;
+		//	if (ddflastword_total < diwlastword_total)
+		//		diwlastword_total = ddflastword_total;
+		//}
 	}
 
 	w = diwlastword_total - diwfirstword_total;
@@ -4300,13 +4300,13 @@ static void init_drawing_frame (void)
 	frame_res = -1;
 	frame_res_lace = 0;
 
-	if (can_use_lores > AUTO_LORES_FRAMES && 0) {
-		lores_factor = 1;
-		lores_set(0);
-	} else {
+	//if (can_use_lores > AUTO_LORES_FRAMES && 0) {
+	//	lores_factor = 1;
+	//	lores_set(0);
+	//} else {
 		can_use_lores++;
 		lores_reset();
-	}
+	//}
 
 	init_hardware_for_drawing_frame ();
 
@@ -4359,8 +4359,8 @@ void putpixel(uae_u8 *buf, uae_u8 *genlockbuf, int bpp, int x, xcolnr c8)
 	if (x <= 0)
 		return;
 
-	if (genlockbuf)
-		genlockbuf[x] = 0xff;
+	//if (genlockbuf)
+	//	genlockbuf[x] = 0xff;
 
 	switch (bpp) {
 	case 1:

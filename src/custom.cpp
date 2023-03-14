@@ -4637,7 +4637,7 @@ static void decide_bpl_fetch(int endhpos)
 		return;
 	}
 
-	if (1 && (nodraw() || !bprun_pipeline_flush_delay)) {
+	if ((nodraw() || !bprun_pipeline_flush_delay)) {
 		if (hpos < endhpos) {
 			if (thisline_decision.plfleft >= 0) {
 				while (hpos < endhpos) {
@@ -5850,7 +5850,7 @@ static void reset_decisions_hsync_start(void)
 		get_strobe_conflict_shift(hpos);
 	}
 
-	if (1 && fetchmode >= 2 && !doflickerfix_active()) {
+	if (fetchmode >= 2 && !doflickerfix_active()) {
 		// handle bitplane data wrap around
 		bool toshift = false;
 		if ((exthblank || (beamcon0 & bemcon0_hsync_mask)) && (thisline_decision.bplres == 0 || currprefs.chipset_hr)) {
@@ -8371,14 +8371,14 @@ static void bplcon0_denise_change_early(int hpos, uae_u16 con0)
 			if (oldres == RES_HIRES && res == RES_LORES) {
 				toscr_special_skip_ptr = toscr_spc_aga_hires_to_lores;
 			}
-		} else if (1 && ecs_denise) {
+		} else if (ecs_denise) {
 			if (oldres == RES_LORES && res == RES_HIRES) {
 				toscr_special_skip_ptr = toscr_spc_ecs_lores_to_hires;
 			}
 			if (oldres == RES_HIRES && res == RES_LORES) {
 				toscr_special_skip_ptr = toscr_spc_ecs_hires_to_lores;
 			}
-		} else if (1) {
+		} else {
 			if (oldres == RES_LORES && res == RES_HIRES) {
 				toscr_special_skip_ptr = toscr_spc_ocs_lores_to_hires;
 			}
@@ -10246,7 +10246,7 @@ static int coppercomp(int hpos, bool blitwait)
 
 static void update_copper(int until_hpos)
 {
-	if (1 && (custom_disabled || !copper_enabled_thisline)) {
+	if ((custom_disabled || !copper_enabled_thisline)) {
 		last_copper_hpos = until_hpos;
 		return;
 	}
