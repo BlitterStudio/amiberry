@@ -6353,7 +6353,7 @@ static int NOINLINE linetoscr_16_aga_spronly(int spix, int dpix, int dpix_end, i
     uae_u16 *buf = (uae_u16 *) xlinebuffer;
     uae_u8 sprcol;
 
-    if (1) {
+    //if (1) {
         while (dpix < dpix_end) {
             uae_u32 sprpix_val;
             uae_u32 out_val;
@@ -6369,7 +6369,7 @@ static int NOINLINE linetoscr_16_aga_spronly(int spix, int dpix, int dpix_end, i
             }
             buf[dpix++] = out_val;
         }
-    }
+    //}
 
     return spix;
 }
@@ -6381,7 +6381,7 @@ static int NOINLINE linetoscr_16_stretch1_aga_spronly(int spix, int dpix, int dp
     uae_u16 *buf = (uae_u16 *) xlinebuffer;
     uae_u8 sprcol;
 
-    if (1) {
+    //if (1) {
         while (dpix < dpix_end) {
             uae_u32 sprpix_val;
             uae_u32 out_val;
@@ -6408,7 +6408,7 @@ static int NOINLINE linetoscr_16_stretch1_aga_spronly(int spix, int dpix, int dp
             buf[dpix++] = out_val2;
             }
         }
-    }
+    //}
 
     return spix;
 }
@@ -6420,7 +6420,7 @@ static int NOINLINE linetoscr_16_stretch2_aga_spronly(int spix, int dpix, int dp
     uae_u16 *buf = (uae_u16 *) xlinebuffer;
     uae_u8 sprcol;
 
-    if (1) {
+    //if (1) {
         while (dpix < dpix_end) {
             uae_u32 sprpix_val;
             uae_u32 out_val;
@@ -6463,7 +6463,7 @@ static int NOINLINE linetoscr_16_stretch2_aga_spronly(int spix, int dpix, int dp
             buf[dpix++] = out_val4;
             }
         }
-    }
+    //}
 
     return spix;
 }
@@ -6475,7 +6475,7 @@ static int NOINLINE linetoscr_16_shrink1_aga_spronly(int spix, int dpix, int dpi
     uae_u16 *buf = (uae_u16 *) xlinebuffer;
     uae_u8 sprcol;
 
-    if (1) {
+    //if (1) {
         while (dpix < dpix_end) {
             uae_u32 sprpix_val;
             uae_u32 out_val;
@@ -6491,7 +6491,7 @@ static int NOINLINE linetoscr_16_shrink1_aga_spronly(int spix, int dpix, int dpi
             }
             buf[dpix++] = out_val;
         }
-    }
+    //}
 
     return spix;
 }
@@ -6503,7 +6503,7 @@ static int NOINLINE linetoscr_16_shrink1f_aga_spronly(int spix, int dpix, int dp
     uae_u16 *buf = (uae_u16 *) xlinebuffer;
     uae_u8 sprcol;
 
-    if (1) {
+    //if (1) {
         while (dpix < dpix_end) {
             uae_u32 sprpix_val;
             uae_u32 out_val;
@@ -6519,7 +6519,7 @@ static int NOINLINE linetoscr_16_shrink1f_aga_spronly(int spix, int dpix, int dp
             }
             buf[dpix++] = out_val;
         }
-    }
+    //}
 
     return spix;
 }
@@ -6531,7 +6531,7 @@ static int NOINLINE linetoscr_16_shrink2_aga_spronly(int spix, int dpix, int dpi
     uae_u16 *buf = (uae_u16 *) xlinebuffer;
     uae_u8 sprcol;
 
-    if (1) {
+    //if (1) {
         while (dpix < dpix_end) {
             uae_u32 sprpix_val;
             uae_u32 out_val;
@@ -6547,7 +6547,7 @@ static int NOINLINE linetoscr_16_shrink2_aga_spronly(int spix, int dpix, int dpi
             }
             buf[dpix++] = out_val;
         }
-    }
+    //}
 
     return spix;
 }
@@ -6559,7 +6559,7 @@ static int NOINLINE linetoscr_16_shrink2f_aga_spronly(int spix, int dpix, int dp
     uae_u16 *buf = (uae_u16 *) xlinebuffer;
     uae_u8 sprcol;
 
-    if (1) {
+    //if (1) {
         while (dpix < dpix_end) {
             uae_u32 sprpix_val;
             uae_u32 out_val;
@@ -6575,7 +6575,7 @@ static int NOINLINE linetoscr_16_shrink2f_aga_spronly(int spix, int dpix, int dp
             }
             buf[dpix++] = out_val;
         }
-    }
+    //}
 
     return spix;
 }
@@ -16886,7 +16886,7 @@ static int NOINLINE linetoscr_32_aga_spronly(int spix, int dpix, int dpix_end, i
     uae_u32 *buf = (uae_u32 *) xlinebuffer;
     uae_u8 sprcol;
 
-    if (1) {
+    //if (1) {
         while (dpix < dpix_end) {
             uae_u32 sprpix_val;
             uae_u32 out_val;
@@ -16902,7 +16902,7 @@ static int NOINLINE linetoscr_32_aga_spronly(int spix, int dpix, int dpix_end, i
             }
             buf[dpix++] = out_val;
         }
-    }
+    //}
 
     return spix;
 }
@@ -16914,7 +16914,7 @@ static int NOINLINE linetoscr_32_stretch1_aga_spronly(int spix, int dpix, int dp
     uae_u32 *buf = (uae_u32 *) xlinebuffer;
     uae_u8 sprcol;
 
-    if (1) {
+    //if (1) {
         while (dpix < dpix_end) {
             uae_u32 sprpix_val;
             uae_u32 out_val;
@@ -16941,7 +16941,7 @@ static int NOINLINE linetoscr_32_stretch1_aga_spronly(int spix, int dpix, int dp
             buf[dpix++] = out_val2;
             }
         }
-    }
+    //}
 
     return spix;
 }
@@ -16953,7 +16953,7 @@ static int NOINLINE linetoscr_32_stretch2_aga_spronly(int spix, int dpix, int dp
     uae_u32 *buf = (uae_u32 *) xlinebuffer;
     uae_u8 sprcol;
 
-    if (1) {
+    //if (1) {
         while (dpix < dpix_end) {
             uae_u32 sprpix_val;
             uae_u32 out_val;
@@ -16996,7 +16996,7 @@ static int NOINLINE linetoscr_32_stretch2_aga_spronly(int spix, int dpix, int dp
             buf[dpix++] = out_val4;
             }
         }
-    }
+    //}
 
     return spix;
 }
@@ -17008,7 +17008,7 @@ static int NOINLINE linetoscr_32_shrink1_aga_spronly(int spix, int dpix, int dpi
     uae_u32 *buf = (uae_u32 *) xlinebuffer;
     uae_u8 sprcol;
 
-    if (1) {
+    //if (1) {
         while (dpix < dpix_end) {
             uae_u32 sprpix_val;
             uae_u32 out_val;
@@ -17024,7 +17024,7 @@ static int NOINLINE linetoscr_32_shrink1_aga_spronly(int spix, int dpix, int dpi
             }
             buf[dpix++] = out_val;
         }
-    }
+    //}
 
     return spix;
 }
@@ -17036,7 +17036,7 @@ static int NOINLINE linetoscr_32_shrink1f_aga_spronly(int spix, int dpix, int dp
     uae_u32 *buf = (uae_u32 *) xlinebuffer;
     uae_u8 sprcol;
 
-    if (1) {
+    //if (1) {
         while (dpix < dpix_end) {
             uae_u32 sprpix_val;
             uae_u32 out_val;
@@ -17052,7 +17052,7 @@ static int NOINLINE linetoscr_32_shrink1f_aga_spronly(int spix, int dpix, int dp
             }
             buf[dpix++] = out_val;
         }
-    }
+    //}
 
     return spix;
 }
@@ -17064,7 +17064,7 @@ static int NOINLINE linetoscr_32_shrink2_aga_spronly(int spix, int dpix, int dpi
     uae_u32 *buf = (uae_u32 *) xlinebuffer;
     uae_u8 sprcol;
 
-    if (1) {
+    //if (1) {
         while (dpix < dpix_end) {
             uae_u32 sprpix_val;
             uae_u32 out_val;
@@ -17080,7 +17080,7 @@ static int NOINLINE linetoscr_32_shrink2_aga_spronly(int spix, int dpix, int dpi
             }
             buf[dpix++] = out_val;
         }
-    }
+    //}
 
     return spix;
 }
@@ -17092,7 +17092,7 @@ static int NOINLINE linetoscr_32_shrink2f_aga_spronly(int spix, int dpix, int dp
     uae_u32 *buf = (uae_u32 *) xlinebuffer;
     uae_u8 sprcol;
 
-    if (1) {
+    //if (1) {
         while (dpix < dpix_end) {
             uae_u32 sprpix_val;
             uae_u32 out_val;
@@ -17108,7 +17108,7 @@ static int NOINLINE linetoscr_32_shrink2f_aga_spronly(int spix, int dpix, int dp
             }
             buf[dpix++] = out_val;
         }
-    }
+    //}
 
     return spix;
 }
