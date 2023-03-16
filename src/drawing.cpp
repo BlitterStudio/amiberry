@@ -2743,13 +2743,6 @@ static void decode_ham(int pix, int stoppos, int blank)
 static void decode_ham_border(int pix, int stoppos, int blank)
 {
 	ham_lastcolor = color_reg_get(&colors_for_drawing, 0);
-	if (pix >= stoppos) {
-		return;
-	}
-	// HAM decoding starts 1 pixel early
-	int todraw_amiga = res_shift_from_window(stoppos - pix) - 1;
-	int hdp = ham_decode_pixel + todraw_amiga;
-	decode_ham_pixel(hdp);
 }
 
 static void erase_ham_right_border(int pix, int stoppos, bool blank)
