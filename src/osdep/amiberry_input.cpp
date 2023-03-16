@@ -755,7 +755,7 @@ static void close_kb()
 {
 }
 
-static void release_keys(void)
+void release_keys(void)
 {
 	SDL_PumpEvents();
 

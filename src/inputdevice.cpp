@@ -162,7 +162,7 @@ static struct teststore testmode_wait[TESTMODE_MAX];
 static int bouncy;
 static frame_time_t bouncy_cycles;
 static int autopause;
-static int keyboard_reset_seq;
+static int keyboard_reset_seq, keyboard_reset_seq_mode;
 
 #define HANDLE_IE_FLAG_CANSTOPPLAYBACK 1
 #define HANDLE_IE_FLAG_PLAYBACKEVENT 2
@@ -4414,20 +4414,24 @@ void inputdevice_do_keyboard(int code, int state)
 	if (code < 0x80) {
 		uae_u8 key = code | (state ? 0x00 : 0x80);
 		keybuf[key & 0x7f] = (key & 0x80) ? 0 : 1;
-		if (keyboard_reset_seq) {
+		if (keyboard_reset_seq_mode) {
 			if (!(keybuf[AK_CTRL] || keybuf[AK_RCTRL]) || !keybuf[AK_LAMI] || !keybuf[AK_RAMI]) {
 				memset(keybuf, 0, sizeof(keybuf));
-				send_internalevent(INTERNALEVENT_KBRESET);
-				if (keyboard_reset_seq >= 5 * 50) {
-					custom_reset(true, true);
-					uae_reset(1, 1);
-				} else {
-					if (currprefs.cs_resetwarning && resetwarning_do(0))
-						return;
-					custom_reset(false, true);
-					uae_reset(0, 1);
+				if (keyboard_reset_seq >= 5 * 50 || keyboard_reset_seq_mode > 0) {
+					send_internalevent(INTERNALEVENT_KBRESET);
+					if (keyboard_reset_seq >= 5 * 50 || keyboard_reset_seq_mode == 2) {
+						custom_reset(true, true);
+						uae_reset(1, 1);
+					} else {
+						custom_reset(false, true);
+						uae_reset(0, 1);
+					}
+				} else if (keyboard_reset_seq_mode == -1) {
+					resetwarning_do(0);
 				}
 				keyboard_reset_seq = 0;
+				keyboard_reset_seq_mode = 0;
+				release_keys();
 			}
 			return;
 		}
@@ -4436,16 +4440,21 @@ void inputdevice_do_keyboard(int code, int state)
 			resetwarning_do(0);
 			return;
 		} else if ((keybuf[AK_CTRL] || keybuf[AK_RCTRL]) && keybuf[AK_LAMI] && keybuf[AK_RAMI]) {
+			keyboard_reset_seq = 0;
+			keyboard_reset_seq_mode = 0;
 			int r = keybuf[AK_LALT] | keybuf[AK_RALT];
 			if (r) {
-				send_internalevent(INTERNALEVENT_KBRESET);
-				uae_reset(1, 1);
-				keyboard_reset_seq = 0;
+				keyboard_reset_seq_mode = 2;
+				custom_reset(true, true);
+				cpu_inreset();
 			} else {
 				keyboard_reset_seq = 1;
-				if (!currprefs.cs_resetwarning || !resetwarning_do(0)) {
+				if (currprefs.cs_resetwarning) {
+					keyboard_reset_seq_mode = -1;
+				} else {
 					custom_reset(false, true);
 					cpu_inreset();
+					keyboard_reset_seq_mode = 1;
 				}
 			}
 		}
@@ -4456,6 +4465,14 @@ void inputdevice_do_keyboard(int code, int state)
 		return;
 	}
 	inputdevice_add_inputcode(code, state, NULL);
+}
+
+void inputdevice_do_kb_reset(int hardreset)
+{
+	send_internalevent(INTERNALEVENT_KBRESET);
+	uae_reset(hardreset, 1);
+	keyboard_reset_seq_mode = 0;
+	keyboard_reset_seq = 0;
 }
 
 #ifdef AMIBERRY

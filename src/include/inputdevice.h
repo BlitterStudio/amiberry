@@ -208,6 +208,7 @@ extern int inputdevice_get_device_total (int type);
 extern int inputdevice_get_widget_num (int devnum);
 extern int inputdevice_get_widget_type (int devnum, int num, TCHAR *name, bool inccode);
 extern int send_input_event (int nr, int state, int max, int autofire);
+extern void release_keys(void);
 
 extern int input_get_default_mouse (struct uae_input_device *uid, int num, int port, int af, bool gp, bool wheel, bool joymouseswap);
 extern int input_get_default_lightpen (struct uae_input_device *uid, int num, int port, int af, bool gp, bool joymouseswap, int submode);
@@ -267,7 +268,8 @@ extern void send_internalevent (int eventid);
 extern int inputdevice_translatekeycode (int keyboard, int scancode, int state, bool alwaysrelease);
 extern void inputdevice_checkqualifierkeycode (int keyboard, int scancode, int state);
 extern void inputdevice_setkeytranslation (struct uae_input_device_kbr_default **trans, int **kbmaps);
-extern void inputdevice_do_keyboard (int code, int state);
+extern void inputdevice_do_keyboard(int code, int state);
+extern void inputdevice_do_kb_reset(int);
 extern int inputdevice_iskeymapped (int keyboard, int scancode);
 extern int inputdevice_synccapslock (int, int*);
 extern void inputdevice_testrecord (int type, int num, int wtype, int wnum, int state, int max);
