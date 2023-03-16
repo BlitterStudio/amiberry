@@ -119,7 +119,7 @@ union cacheline {
 #define SCALE 2
 
 #define BYTES_PER_INST 10240  /* paranoid ;-) */
-#if defined(CPU_arm)
+#if defined(CPU_arm) || defined(CPU_AARCH64)
 #define LONGEST_68K_INST 256 /* The number of bytes the longest possible
 			       68k instruction takes */
 #else
@@ -133,18 +133,26 @@ union cacheline {
 			  for jump targets */
 
 #define INDIVIDUAL_INST 0
+#ifdef WINUAE_ARANYM
 #define FLAG_X    0x0010
 #define FLAG_N    0x0008
 #define FLAG_Z    0x0004
 #define FLAG_V    0x0002
 #define FLAG_C    0x0001
+#else
+#define FLAG_C    0x0010
+#define FLAG_V    0x0008
+#define FLAG_Z    0x0004
+#define FLAG_N    0x0002
+#define FLAG_X    0x0001
+#endif
 #define FLAG_CZNV (FLAG_C | FLAG_Z | FLAG_N | FLAG_V)
 #define FLAG_ALL  (FLAG_C | FLAG_Z | FLAG_N | FLAG_V | FLAG_X)
 #define FLAG_ZNV  (FLAG_Z | FLAG_N | FLAG_V)
 
 #define KILLTHERAT 1  /* Set to 1 to avoid some partial_rat_stalls */
 
-#if defined(CPU_arm)
+#if defined(CPU_arm) || defined(CPU_AARCH64)
 #define USE_DATA_BUFFER
 #define N_REGS 13  /* really 16, but 13 to 15 are SP, LR, PC */
 #else
@@ -161,6 +169,7 @@ union cacheline {
 extern void compiler_init(void);
 extern void compiler_exit(void);
 extern bool compiler_use_jit(void);
+
 extern void flush(int save_regs);
 void flush_reg(int reg);
 extern void set_target(uae_u8* t);
@@ -383,13 +392,9 @@ extern int touchcnt;
 /* What we expose to the outside */
 #define DECLARE_MIDFUNC(func) extern void func
 
-#if defined(CPU_arm)
-
+#if defined(CPU_arm) || defined(CPU_AARCH64)
 #include "compemu_midfunc_arm.h"
-
-#if defined(USE_JIT2)
 #include "compemu_midfunc_arm2.h"
-#endif
 #endif
 
 #if defined(CPU_i386) || defined(CPU_x86_64)
@@ -501,6 +506,10 @@ typedef struct blockinfo_t {
 #define BI_CHECKING 4
 #define BI_COMPILING 5
 #define BI_FINALIZING 6
+
+#ifdef AMIBERRY
+extern const int POPALLSPACE_SIZE;
+#endif
 
 void execute_normal(void);
 void exec_nostats(void);
