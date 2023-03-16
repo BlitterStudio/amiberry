@@ -1035,6 +1035,7 @@ static void addccmp(int pos, int reg, int v, int chpos)
 	}
 }
 
+#ifdef DEBUGGER
 static void syncdebugmarkers(int chpos)
 {
 	bool pal = (beamcon0 & BEAMCON0_PAL) != 0;
@@ -1252,6 +1253,7 @@ static void syncdebugmarkers(int chpos)
 		addccmp(hbstop_v2, RECORDED_REGISTER_CHANGE_OFFSET + 0x204, 0, chpos);
 	}
 }
+#endif
 
 static void record_color_change2(int hpos, int regno, uae_u32 value)
 {
@@ -1378,10 +1380,12 @@ static void record_color_change2(int hpos, int regno, uae_u32 value)
 		}
 	}
 
+#ifdef DEBUGGER
 	// inject hsync and end in color changes (ultra mode debug)
 	if (hsyncdebug) {
 		syncdebugmarkers(pos);
 	}
+#endif
 
 	if (regno != 0xffff) {
 		addcc(pos, regno, value);
@@ -1391,6 +1395,7 @@ static void record_color_change2(int hpos, int regno, uae_u32 value)
 		last_recorded_diw_hpos = pos;
 	}
 
+#ifdef DEBUGGER
 	int cchanges = next_color_change - start_color_change;
 	if (cchanges > 1 && hsyncdebug) {
 		if (cchanges == 2) {
@@ -1416,6 +1421,7 @@ static void record_color_change2(int hpos, int regno, uae_u32 value)
 			}
 		}
 	}
+#endif
 }
 
 static void sync_color_changes(int hpos)
@@ -3176,7 +3182,7 @@ STATIC_INLINE void do_delays_fast_3_aga(int nbits, int fm)
 	}
 }
 
-static void todisplay_copy_hr_oddeven(int oddeven, int fm)
+static bool todisplay_copy_hr_oddeven(int oddeven, int fm)
 {
 	if (todisplay_fetched & (oddeven + 1)) {
 		int i;
@@ -3195,7 +3201,9 @@ static void todisplay_copy_hr_oddeven(int oddeven, int fm)
 				i += 2;
 			}
 		}
+		return true;
 	}
+	return false;
 }
 
 STATIC_INLINE void do_delays_3_aga_hr2(int nbits, int fm)
@@ -3216,6 +3224,82 @@ STATIC_INLINE void do_delays_3_aga_hr2(int nbits, int fm)
 	}
 }
 
+// This is very very slow. But really rarely needed.
+static void pull_toscr_output_bits(int nbits, int planes, uae_u32 *ptrs)
+{
+	uae_u64 mask = (1 << nbits) - 1;
+	if (out_nbits >= nbits) {
+		for (int i = 0; i < planes; i++) {
+			ptrs[i] = (uae_u32)(outword64[i] & mask);
+		}
+		return;
+	}
+	int tbits = nbits - out_nbits;
+	uae_u64 tmask = (1 << tbits) - 1;
+	uae_u64 nmask = (1 << out_nbits) - 1;
+	uae_u8 *dataptr = line_data[next_lineno] + (out_offs - 2) * 4;
+	for (int i = 0; i < planes; i++) {
+		ptrs[i] = 0;
+		if (out_offs >= 2) {
+			uae_u64 *dataptr64 = (uae_u64*)dataptr;
+			uae_u64 vv = *dataptr64;
+			uae_u64 v = (vv >> 32) | (vv << 32);
+			ptrs[i] = (uae_u32)((v << out_nbits) & mask);
+			dataptr += MAX_WORDS_PER_LINE * 2;
+		}
+		ptrs[i] |= outword64[i] & nmask;
+	}
+}
+
+static void push_toscr_output_bits(int nbits, int planes, uae_u32 *ptrs)
+{
+	uae_u64 mask = (1 << nbits) - 1;
+	if (out_nbits >= nbits) {
+		for (int i = 0; i < planes; i++) {
+			outword64[i] &= ~mask;
+			outword64[i] |= ptrs[i];
+		}
+		return;
+	}
+	int tbits = nbits - out_nbits;
+	uae_u64 tmask = (1 << tbits) - 1;
+	uae_u64 nmask = (1 << out_nbits) - 1;
+	uae_u8 *dataptr = line_data[next_lineno] + (out_offs - 2) * 4;
+	for (int i = 0; i < planes; i++) {
+		if (out_offs >= 2) {
+			uae_u64 *dataptr64 = (uae_u64*)dataptr;
+			uae_u64 vv = *dataptr64;
+			uae_u64 v = (vv >> 32) | (vv << 32);
+			v &= ~tmask;
+			v |= (ptrs[i] >> out_nbits) & tmask;
+			vv = (v >> 32) | (v << 32);
+			*dataptr64 = vv;
+			dataptr += MAX_WORDS_PER_LINE * 2;
+		}
+		outword64[i] &= ~nmask;
+		outword64[i] |= ptrs[i] & nmask;
+		thisline_changed = 1;
+	}
+}
+
+STATIC_INLINE void toscr_1_hr_nbits(void)
+{
+	if (out_offs < MAX_WORDS_PER_LINE * 2 / 4 - 1) {
+		uae_u8 *dataptr = line_data[next_lineno] + out_offs * 4;
+		for (int i = 0; i < toscr_nr_planes2; i++) {
+			uae_u64 *dataptr64 = (uae_u64 *)dataptr;
+			uae_u64 v = (outword64[i] >> 32) | (outword64[i] << 32);
+			if (thisline_changed || *dataptr64 != v) {
+				thisline_changed = 1;
+				*dataptr64 = v;
+			}
+			dataptr += MAX_WORDS_PER_LINE * 2;
+		}
+		out_offs += 2;
+	}
+	out_nbits = 0;
+}
+
 #define TOSCR_SPC_LORES 1
 #define TOSCR_SPC_HIRES 2
 #define TOSCR_SPC_LORES_END 16
@@ -3225,6 +3309,9 @@ STATIC_INLINE void do_delays_3_aga_hr2(int nbits, int fm)
 #define TOSCR_SPC_CLEAR 256
 #define TOSCR_SPC_CLEAR2 512
 #define TOSCR_SPC_6HIRESTOLORES 1024
+#define TOSCR_SPC_SETHIRES 2048
+#define TOSCR_SPC_SETLORES 4096
+#define TOSCR_SPC_DUAL 8192
 #define TOSCR_SPC_MARK 16384
 #define TOSCR_SPC_SKIP 32768
 
@@ -3278,17 +3365,43 @@ static const uae_u16 toscr_spc_ecs_hires_to_lores[] =
 	0, 0, 0, 0
 };
 
+#if 0
 static const uae_u16 toscr_spc_ocs_lores_to_hires[] =
 {
-	TOSCR_SPC_LORES | TOSCR_SPC_HIRES_START | TOSCR_SPC_HIRES_END | TOSCR_SPC_CLEAR,
+	TOSCR_SPC_LORES | TOSCR_SPC_HIRES_START | TOSCR_SPC_HIRES_END | TOSCR_SPC_CLEAR | TOSCR_SPC_DUAL,
+	TOSCR_SPC_LORES | TOSCR_SPC_HIRES_START | TOSCR_SPC_HIRES_END | TOSCR_SPC_CLEAR | TOSCR_SPC_DUAL,
 	TOSCR_SPC_LORES | TOSCR_SPC_HIRES_START | TOSCR_SPC_HIRES_END,
 	TOSCR_SPC_LORES | TOSCR_SPC_HIRES_START | TOSCR_SPC_HIRES_END,
+	TOSCR_SPC_LORES | TOSCR_SPC_HIRES_START | TOSCR_SPC_HIRES_END | TOSCR_SPC_CLEAR | TOSCR_SPC_DUAL,
+	TOSCR_SPC_LORES | TOSCR_SPC_HIRES_START | TOSCR_SPC_HIRES_END | TOSCR_SPC_CLEAR | TOSCR_SPC_DUAL,
 	TOSCR_SPC_LORES | TOSCR_SPC_HIRES_START | TOSCR_SPC_HIRES_END,
-	TOSCR_SPC_LORES | TOSCR_SPC_HIRES_START | TOSCR_SPC_HIRES_END | TOSCR_SPC_CLEAR,
+	TOSCR_SPC_LORES | TOSCR_SPC_HIRES_START | TOSCR_SPC_HIRES_END,
+	TOSCR_SPC_LORES | TOSCR_SPC_HIRES_START | TOSCR_SPC_HIRES_END | TOSCR_SPC_CLEAR | TOSCR_SPC_DUAL,
+	TOSCR_SPC_LORES | TOSCR_SPC_HIRES_START | TOSCR_SPC_HIRES_END | TOSCR_SPC_CLEAR | TOSCR_SPC_DUAL,
 	TOSCR_SPC_LORES | TOSCR_SPC_HIRES_START | TOSCR_SPC_HIRES_END,
 	TOSCR_SPC_LORES | TOSCR_SPC_HIRES_START | TOSCR_SPC_HIRES_END,
-	TOSCR_SPC_LORES | TOSCR_SPC_HIRES_START | TOSCR_SPC_HIRES_END,
-	TOSCR_SPC_LORES | TOSCR_SPC_HIRES_START | TOSCR_SPC_HIRES_END | TOSCR_SPC_CLEAR,
+	TOSCR_SPC_LORES | TOSCR_SPC_HIRES_START | TOSCR_SPC_HIRES_END | TOSCR_SPC_CLEAR | TOSCR_SPC_DUAL,
+	TOSCR_SPC_LORES | TOSCR_SPC_HIRES_START | TOSCR_SPC_HIRES_END | TOSCR_SPC_CLEAR | TOSCR_SPC_DUAL,
+
+	0, 0, 0, 0
+};
+
+static const uae_u16 toscr_spc_ocs_hires_to_lores[] =
+{
+	TOSCR_SPC_LORES | TOSCR_SPC_LORES_START | TOSCR_SPC_LORES_END,
+	TOSCR_SPC_LORES | TOSCR_SPC_LORES_START | TOSCR_SPC_LORES_END,
+	TOSCR_SPC_LORES | TOSCR_SPC_LORES_START | TOSCR_SPC_LORES_END,
+	TOSCR_SPC_LORES | TOSCR_SPC_LORES_START | TOSCR_SPC_LORES_END,
+	TOSCR_SPC_LORES | TOSCR_SPC_LORES_START | TOSCR_SPC_LORES_END,
+	TOSCR_SPC_LORES | TOSCR_SPC_LORES_START | TOSCR_SPC_LORES_END,
+	TOSCR_SPC_LORES | TOSCR_SPC_LORES_START | TOSCR_SPC_LORES_END,
+	TOSCR_SPC_LORES | TOSCR_SPC_LORES_START | TOSCR_SPC_LORES_END,
+	0, 0, 0, 0
+};
+#else
+
+static const uae_u16 toscr_spc_ocs_lores_to_hires[] =
+{
 	TOSCR_SPC_LORES | TOSCR_SPC_HIRES_START | TOSCR_SPC_HIRES_END,
 	TOSCR_SPC_LORES | TOSCR_SPC_HIRES_START | TOSCR_SPC_HIRES_END,
 	TOSCR_SPC_LORES | TOSCR_SPC_HIRES_START | TOSCR_SPC_HIRES_END,
@@ -3298,6 +3411,7 @@ static const uae_u16 toscr_spc_ocs_lores_to_hires[] =
 	TOSCR_SPC_LORES | TOSCR_SPC_HIRES_START | TOSCR_SPC_HIRES_END,
 	0, 0, 0, 0
 };
+
 static const uae_u16 toscr_spc_ocs_hires_to_lores[] =
 {
 	TOSCR_SPC_HIRES | TOSCR_SPC_HIRES_START | TOSCR_SPC_LORES_END,
@@ -3310,64 +3424,167 @@ static const uae_u16 toscr_spc_ocs_hires_to_lores[] =
 	TOSCR_SPC_HIRES | TOSCR_SPC_HIRES_START | TOSCR_SPC_LORES_END,
 	0, 0, 0, 0
 };
+#endif
+
 
 static const uae_u16 *toscr_special_skip_ptr = NULL;
 
-STATIC_INLINE void toscr_1_hr_nbits(void)
+static int process_special_pixel(int delaypos, int fm, uae_u16 cmd)
 {
-	if (out_offs < MAX_WORDS_PER_LINE * 2 / 4 - 1) {
-		uae_u8 *dataptr = line_data[next_lineno] + out_offs * 4;
-		for (int i = 0; i < toscr_nr_planes2; i++) {
-			uae_u64 *dataptr64 = (uae_u64 *)dataptr;
-			uae_u64 v = (outword64[i] >> 32) | (outword64[i] << 32);
-			if (*dataptr64 != v) {
-				thisline_changed = 1;
-				*dataptr64 = v;
+	int ret = 0;
+	int delay1 = (bplcon1 & 0x0f) | ((bplcon1 & 0x0c00) >> 6);
+	int delay2 = ((bplcon1 >> 4) & 0x0f) | (((bplcon1 >> 4) & 0x0c00) >> 6);
+	int delaymask, shiftmask;
+	if (cmd & TOSCR_SPC_LORES) {
+		delaymask = fetchmode_mask >> 0;
+		shiftmask = 63;
+	} else {
+		delaymask = fetchmode_mask >> 1;
+		shiftmask = 31;
+	}
+	if (cmd & TOSCR_SPC_HIRES_START) {
+		toscr_res_pixels_mask_hr = 1 >> toscr_res_pixels_shift_hr;
+	}
+	if (cmd & TOSCR_SPC_LORES_START) {
+		toscr_res_pixels_mask_hr = 3 >> toscr_res_pixels_shift_hr;
+	}
+	int shifter[2];
+	shifter[0] = (delay1 & delaymask) << LORES_TO_SHRES_SHIFT;
+	shifter[1] = (delay2 & delaymask) << LORES_TO_SHRES_SHIFT;
+	for (int oddeven = 0; oddeven < 2; oddeven++) {
+		int delay = shifter[oddeven];
+		int diff = ((delay - delaypos) & shiftmask) >> toscr_res_pixels_shift_hr;
+		if (diff == 0) {
+			if (todisplay_copy_hr_oddeven(oddeven, fm)) {
+				ret |= 1 << oddeven;
 			}
-			dataptr += MAX_WORDS_PER_LINE * 2;
 		}
-		out_offs += 2;
+		do_tosrc_hr(oddeven, 2, 1, fm);
 	}
-	out_nbits = 0;
+	if (cmd & TOSCR_SPC_LORES_END) {
+		toscr_res_pixels_mask_hr = 3 >> toscr_res_pixels_shift_hr;
+	}
+	if (cmd & TOSCR_SPC_HIRES_END) {
+		toscr_res_pixels_mask_hr = 1 >> toscr_res_pixels_shift_hr;
+	}
+	return ret;
 }
 
-static void do_delays_queued(int bitoffset, int mode)
-{
-	if (out_nbits >= bitoffset) {
-
-
-	}
-}
-
+static void flush_display(int fm);
 STATIC_INLINE void do_delays_3_aga_hr(int nbits, int fm)
 {
+#if 0
+	if (0 && (toscr_special_skip_ptr == toscr_spc_ocs_hires_to_lores || toscr_special_skip_ptr == toscr_spc_ocs_lores_to_hires)) {
+		int difsize = 0;
+		if (toscr_special_res_change_count > 0) {
+			int delaypos = delay_cycles;
+			while (nbits > 0) {
+				if (toscr_special_res_change_count2 > 0) {
+					toscr_special_res_change_count2--;
+				}
+				uae_u16 cmd = 0;
+				if (toscr_special_skip_ptr == toscr_spc_ocs_hires_to_lores) {
+					if (toscr_special_res_change_count2 > 0) {
+						cmd = TOSCR_SPC_HIRES_START | TOSCR_SPC_LORES | TOSCR_SPC_LORES_END;
+					} else {
+						cmd = TOSCR_SPC_LORES_START | TOSCR_SPC_LORES | TOSCR_SPC_LORES_END;
+					}
+				} else if (toscr_special_skip_ptr == toscr_spc_ocs_lores_to_hires) {
+					if (toscr_special_res_change_count2 > 0) {
+						cmd = TOSCR_SPC_LORES_START | TOSCR_SPC_LORES | TOSCR_SPC_HIRES_END;
+					} else {
+						cmd = TOSCR_SPC_HIRES_START | TOSCR_SPC_LORES | TOSCR_SPC_HIRES_END;
+					}
+				}
+				if (process_special_pixel(delaypos, fm, cmd)) {
+					toscr_special_res_change_count_done = toscr_special_res_change_count;
+				}
+				delaypos += 1 << toscr_res_pixels_shift_hr;
+				nbits--;
+				difsize++;
+				toscr_special_res_change_count--;
+				if (toscr_special_res_change_count == 0) {
+					uae_u32 ptrs[MAX_PLANES];
+					if (toscr_special_skip_ptr == toscr_spc_ocs_hires_to_lores) {
+						int c = 8;
+						pull_toscr_output_bits(c, toscr_nr_planes_shifter, ptrs);
+						for(int i = 0; i < toscr_nr_planes_shifter; i++) {
+							uae_u32 v = ptrs[i];
+							for (int j = 0; j < c; j += 2) {
+								int m1 = 1 << (j + 1);
+								int m2 = 1 << (j + 0);
+								if (v & m1) {
+									v |= m2;
+								} else {
+									v &= ~m2;
+								}
+							}
+							ptrs[i] = v;
+						}
+						push_toscr_output_bits(c, toscr_nr_planes_shifter, ptrs);
+					} else if (toscr_special_skip_ptr == toscr_spc_ocs_lores_to_hires) {
+						int c = 8;
+						pull_toscr_output_bits(c, toscr_nr_planes_shifter, ptrs);
+						for (int i = 0; i < toscr_nr_planes_shifter; i++) {
+							uae_u32 v = ptrs[i];
+							for (int j = 0; j < c; j += 2) {
+								int m1 = 1 << (j + 0);
+								v &= ~m1;
+							}
+							ptrs[i] = v;
+							//ptrs[i] = 0x5555;
+						}
+						push_toscr_output_bits(c, toscr_nr_planes_shifter, ptrs);
+					}
+					toscr_special_skip_ptr = NULL;
+					break;
+				}
+			}
+		}
+		if (nbits > 0) {
+			delay_cycles += difsize * (1 << toscr_res_pixels_shift_hr);
+			do_delays_3_aga_hr2(nbits, fm);
+			delay_cycles -= difsize * (1 << toscr_res_pixels_shift_hr);
+		}
+	}
+#endif
 	if (toscr_special_skip_ptr) {
 		int difsize = 0;
 		int delaypos = delay_cycles;
 		while (nbits > 0) {
 			uae_u16 cmd = *toscr_special_skip_ptr;
-			if (cmd & TOSCR_SPC_6HIRESTOLORES) {
-			}
-			if (cmd & TOSCR_SPC_CLEAR) {
-				for (int i = 0; i < toscr_nr_planes_shifter; i++) {
-					todisplay2_aga[i] &= ~0x8000;
-				}
-			}
-			if (cmd & TOSCR_SPC_CLEAR2) {
-				for (int i = 0; i < toscr_nr_planes_shifter; i++) {
-					todisplay2_aga[i] &= 0xff00;
-				}
-			}
-			if ((cmd & TOSCR_SPC_MARK) && (vpos & 1)) {
-				for (int i = 0; i < toscr_nr_planes_shifter; i++) {
-					todisplay2_aga[i] ^= 0x8000;
-				}
-			}
 			if (cmd & TOSCR_SPC_SKIP) {
 				delay_cycles += difsize * (1 << toscr_res_pixels_shift_hr);
 				do_delays_3_aga_hr2(1, fm);
 				delay_cycles -= difsize * (1 << toscr_res_pixels_shift_hr);
+				delaypos += 1 << toscr_res_pixels_shift_hr;
+				nbits--;
+				difsize++;
+				toscr_special_skip_ptr++;
 			} else {
+				uae_u64 toda[MAX_PLANES];
+				if (cmd & TOSCR_SPC_DUAL) {
+					for (int i = 0; i < toscr_nr_planes_shifter; i++) {
+						toda[i] = todisplay2_aga[i];
+					}
+				}
+				if (cmd & TOSCR_SPC_CLEAR) {
+					for (int i = 0; i < toscr_nr_planes_shifter; i++) {
+						todisplay2_aga[i] &= ~0x8000;
+					}
+				}
+				if (cmd & TOSCR_SPC_CLEAR2) {
+					for (int i = 0; i < toscr_nr_planes_shifter; i++) {
+						todisplay2_aga[i] &= 0xff00;
+					}
+				}
+				if ((cmd & TOSCR_SPC_MARK) && (vpos & 1)) {
+					for (int i = 0; i < toscr_nr_planes_shifter; i++) {
+						todisplay2_aga[i] ^= 0x8000;
+					}
+				}
+				process_special_pixel(delaypos, fm, cmd);
+#if 0
 				int delay1 = (bplcon1 & 0x0f) | ((bplcon1 & 0x0c00) >> 6);
 				int delay2 = ((bplcon1 >> 4) & 0x0f) | (((bplcon1 >> 4) & 0x0c00) >> 6);
 				int delaymask, shiftmask;
@@ -3395,21 +3612,29 @@ STATIC_INLINE void do_delays_3_aga_hr(int nbits, int fm)
 					}
 					do_tosrc_hr(oddeven, 2, 1, fm);
 				}
-			}
-			delaypos += 1 << toscr_res_pixels_shift_hr;
-			nbits--;
-			difsize++;
-			if (cmd & TOSCR_SPC_LORES_END) {
-				toscr_res_pixels_mask_hr = 3 >> toscr_res_pixels_shift_hr;
-			}
-			if (cmd & TOSCR_SPC_HIRES_END) {
-				toscr_res_pixels_mask_hr = 1 >> toscr_res_pixels_shift_hr;
-			}
-			int sh = 1 << toscr_res_pixels_shift_hr;
-			toscr_special_skip_ptr += sh;
-			if (*toscr_special_skip_ptr == 0) {
-				toscr_special_skip_ptr = NULL;
-				break;
+				if (cmd & TOSCR_SPC_LORES_END) {
+					toscr_res_pixels_mask_hr = 3 >> toscr_res_pixels_shift_hr;
+				}
+				if (cmd & TOSCR_SPC_HIRES_END) {
+					toscr_res_pixels_mask_hr = 1 >> toscr_res_pixels_shift_hr;
+				}
+#endif
+				if (cmd & TOSCR_SPC_DUAL) {
+					for (int i = 0; i < toscr_nr_planes_shifter; i++) {
+						todisplay2_aga[i] = toda[i];
+					}
+				}
+
+				delaypos += 1 << toscr_res_pixels_shift_hr;
+				nbits--;
+				difsize++;
+
+				int sh = 1 << toscr_res_pixels_shift_hr;
+				toscr_special_skip_ptr += sh;
+				if (*toscr_special_skip_ptr == 0) {
+					toscr_special_skip_ptr = NULL;
+					break;
+				}
 			}
 		}
 		if (nbits > 0) {
@@ -3417,7 +3642,6 @@ STATIC_INLINE void do_delays_3_aga_hr(int nbits, int fm)
 			do_delays_3_aga_hr2(nbits, fm);
 			delay_cycles -= difsize * (1 << toscr_res_pixels_shift_hr);
 		}
-
 	} else {
 		do_delays_3_aga_hr2(nbits, fm);
 	}
@@ -3812,6 +4036,22 @@ static void quick_add_delay_cycles(int total)
 		}
 		delay_cycles += total2;
 		delay_cycles2 += total2;
+
+#if 0
+0		if (toscr_special_res_change_count > 0) {
+			int tot = total2;
+			while (tot > 0) {
+				if (toscr_special_res_change_count2 > 0) {
+					toscr_special_res_change_count2--;
+				}
+				toscr_special_res_change_count--;
+				if (toscr_special_res_change_count == 0) {
+					break;
+				}
+				tot--;
+			}
+		}
+#endif
 
 		if (toscr_special_skip_ptr) {
 			int tot = total2;
@@ -8513,6 +8753,39 @@ static void bpldmainit(int hpos, uae_u16 bplcon0)
 
 static void BPLCON0(int hpos, uae_u16 v);
 
+static void bplcon0_denise_reschange(int res, int oldres)
+{
+	flush_display(fetchmode);
+
+	toscr_res = res;
+	toscr_res_old = res;
+	update_toscr_vars();
+	compute_toscr_delay(bplcon1);
+
+	if (aga_mode) {
+		if (oldres == RES_LORES && res == RES_HIRES) {
+			toscr_special_skip_ptr = toscr_spc_aga_lores_to_hires;
+		}
+		if (oldres == RES_HIRES && res == RES_LORES) {
+			toscr_special_skip_ptr = toscr_spc_aga_hires_to_lores;
+		}
+	} else if (0 && ecs_denise) {
+		if (oldres == RES_LORES && res == RES_HIRES) {
+			toscr_special_skip_ptr = toscr_spc_ecs_lores_to_hires;
+		}
+		if (oldres == RES_HIRES && res == RES_LORES) {
+			toscr_special_skip_ptr = toscr_spc_ecs_hires_to_lores;
+		}
+	} else if (0) {
+		if (oldres == RES_LORES && res == RES_HIRES) {
+			toscr_special_skip_ptr = toscr_spc_ocs_lores_to_hires;
+		}
+		if (oldres == RES_HIRES && res == RES_LORES) {
+			toscr_special_skip_ptr = toscr_spc_ocs_hires_to_lores;
+		}
+	}
+}
+
 static void bplcon0_denise_change_early(int hpos, uae_u16 con0)
 {
 	uae_u16 dcon0 = BPLCON0_Denise_mask(con0);
@@ -8550,70 +8823,8 @@ static void bplcon0_denise_change_early(int hpos, uae_u16 con0)
 	toscr_nr_planes3 = np;
 
 	if (currprefs.chipset_hr && res != toscr_res) {
-		int oldres = toscr_res;
-		flush_display(fetchmode);
-		toscr_res = res;
-		toscr_res_old = res;
-		update_toscr_vars();
-		compute_toscr_delay(bplcon1);
-
-		if (aga_mode) {
-			if (oldres == RES_LORES && res == RES_HIRES) {
-				toscr_special_skip_ptr = toscr_spc_aga_lores_to_hires;
-			}
-			if (oldres == RES_HIRES && res == RES_LORES) {
-				toscr_special_skip_ptr = toscr_spc_aga_hires_to_lores;
-			}
-		} else if (1 && ecs_denise) {
-			if (oldres == RES_LORES && res == RES_HIRES) {
-				toscr_special_skip_ptr = toscr_spc_ecs_lores_to_hires;
-			}
-			if (oldres == RES_HIRES && res == RES_LORES) {
-				toscr_special_skip_ptr = toscr_spc_ecs_hires_to_lores;
-			}
-		} else if (1) {
-			if (oldres == RES_LORES && res == RES_HIRES) {
-				toscr_special_skip_ptr = toscr_spc_ocs_lores_to_hires;
-			}
-			if (oldres == RES_HIRES && res == RES_LORES) {
-				toscr_special_skip_ptr = toscr_spc_ocs_hires_to_lores;
-			}
-		}
+		bplcon0_denise_reschange(res, toscr_res);
 	}
-
-#if 0
-	// TODO: handle mid resolution switches pixel-accurately.
-	// OCS Denise, ECS Denise and AGA have different behavior
-	if (currprefs.chipset_hr) {
-		int res = GET_RES_DENISE(con0);
-		if (toscr_res != res && thisline_decision.plfleft >= 0) {
-			flush_display(fetchmode);
-			if (res == RES_HIRES) {
-				for (int i = 0; i < toscr_nr_planes2; i++) {
-					uae_u64 v = todisplay2_aga[i];
-					todisplay2_aga[i] = 0;
-					for (int j = 0, k = 1; j < 16; j += 2, k++) {
-						if (v & (1 << k)) {
-							todisplay2_aga[i] |= 1 << j;
-						}
-					}
-				}
-			} else if (res == RES_LORES) {
-				for (int i = 0; i < toscr_nr_planes2; i++) {
-					uae_u64 v1 = todisplay2_aga[i];
-					uae_u32 v2 = todisplay2[i];
-					todisplay2[i] = 0;
-					for (int j = 0, k = 0; j < 16; j += 2, k++) {
-						if (v2 & (1 << j)) {
-							todisplay2[i] |= 1 << k;
-						}
-					}
-				}
-			}
-		}
-	}
-#endif
-
 
 	if (isocs7planes()) {
 		if (toscr_nr_planes_shifter_new < 6) {
@@ -13506,9 +13717,7 @@ static void hsync_handler_post(bool onvsync)
 			if (regs.stopped && currprefs.cpu_idle) {
 				// CPU in STOP state: sleep if enough time left.
 				frame_time_t rpt = read_processor_time();
-#ifdef AMIBERRY
-				while (vsync_isdone(NULL) <= 0 && (int64_t)vsyncmintime - (int64_t)(rpt + vsynctimebase / 10) > 0 && (int64_t)vsyncmintime - (int64_t)rpt < vsynctimebase) {
-#endif
+				while (vsync_isdone(NULL) <= 0 && vsyncmintime - (rpt + vsynctimebase / 10) > 0 && vsyncmintime - rpt < vsynctimebase) {
 					maybe_process_pull_audio();
 //					if (!execute_other_cpu(rpt + vsynctimebase / 10)) {
 						if (cpu_sleep_millis(1) < 0)
@@ -13533,13 +13742,11 @@ static void hsync_handler_post(bool onvsync)
 			linecounter++;
 			events_reset_syncline();
 			if (vsync_isdone(NULL) <= 0 && !currprefs.turbo_emulation) {
-#ifdef AMIBERRY
-				if ((int64_t)vsyncmaxtime - (int64_t)vsyncmintime > 0) {
-					if ((int64_t)vsyncwaittime - (int64_t)vsyncmintime > 0) {
+				if (vsyncmaxtime - vsyncmintime > 0) {
+					if (vsyncwaittime - vsyncmintime > 0) {
 						frame_time_t rpt = read_processor_time();
 						/* Extra time left? Do some extra CPU emulation */
-						if ((int64_t)vsyncmintime - (int64_t)rpt > 0) {
-#endif
+						if (vsyncmintime - rpt > 0) {
 							if (regs.stopped && currprefs.cpu_idle && sleeps_remaining > 0) {
 								// STOP STATE: sleep.
 								cpu_sleep_millis(1);
@@ -13575,9 +13782,7 @@ static void hsync_handler_post(bool onvsync)
 		if (audio_is_pull() > 0 && !currprefs.turbo_emulation) {
 			maybe_process_pull_audio();
 			frame_time_t rpt = read_processor_time();
-#ifdef AMIBERRY
-			while (audio_pull_buffer() > 1 && (!isvsync() || (vsync_isdone(NULL) <= 0 && (int64_t)vsyncmintime - (int64_t)(rpt + vsynctimebase / 10) > 0 && (int64_t)vsyncmintime - (int64_t)rpt < vsynctimebase))) {
-#endif
+			while (audio_pull_buffer() > 1 && (!isvsync() || (vsync_isdone(NULL) <= 0 && vsyncmintime - (rpt + vsynctimebase / 10) > 0 && vsyncmintime - rpt < vsynctimebase))) {
 				cpu_sleep_millis(1);
 				maybe_process_pull_audio();
 				rpt = read_processor_time();
@@ -13589,9 +13794,7 @@ static void hsync_handler_post(bool onvsync)
 			if (vsync_isdone(NULL) <= 0 && !currprefs.turbo_emulation) {
 				frame_time_t rpt = read_processor_time();
 				// sleep if more than 2ms "free" time
-#ifdef AMIBERRY
-				while (vsync_isdone(NULL) <= 0 && (int64_t)vsyncmintime - (int64_t)(rpt + vsynctimebase / 10) > 0 && (int64_t)vsyncmintime - (int64_t)rpt < vsynctimebase) {
-#endif
+				while (vsync_isdone(NULL) <= 0 && vsyncmintime - (rpt + vsynctimebase / 10) > 0 && vsyncmintime - rpt < vsynctimebase) {
 					maybe_process_pull_audio();
 //					if (!execute_other_cpu(rpt + vsynctimebase / 10)) {
 						if (cpu_sleep_millis(1) < 0)
