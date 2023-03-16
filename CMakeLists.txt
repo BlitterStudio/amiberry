@@ -185,7 +185,6 @@ add_executable(${PROJECT_NAME}
 		src/archivers/wrp/warp.cpp
 		src/archivers/zip/unzip.cpp
 		src/caps/caps_amiberry.cpp
-		src/machdep/m68k.cpp
 		src/machdep/support.cpp
 		src/floppybridge/ArduinoFloppyBridge.cpp
 		src/floppybridge/ArduinoInterface.cpp

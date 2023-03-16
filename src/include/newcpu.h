@@ -80,7 +80,11 @@ struct cputbl {
 #ifdef JIT
 #define MIN_JIT_CACHE 128
 #define MAX_JIT_CACHE 16384
+#if defined (CPU_arm) || defined(CPU_AARCH64)
+typedef void compop_func (uae_u32) REGPARAM;
+#else
 typedef uae_u32 REGPARAM3 compop_func (uae_u32) REGPARAM;
+#endif
 
 #define COMP_OPCODE_ISJUMP      0x0001
 #define COMP_OPCODE_LONG_OPCODE 0x0002

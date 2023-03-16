@@ -521,7 +521,6 @@ OBJS = \
 	src/archivers/wrp/warp.o \
 	src/archivers/zip/unzip.o \
 	src/caps/caps_amiberry.o \
-	src/machdep/m68k.o \
 	src/machdep/support.o \
 	src/osdep/ahi_v1.o \
 	src/osdep/bsdsocket_host.o \
@@ -632,10 +631,16 @@ OBJS += src/newcpu.o \
 	src/cpuemu_50.o
 
 ifeq ($(USE_JIT),1)
+ifdef AARCH64
+OBJS += src/jit/compemu_arm.o \
+	src/jit/compstbl_arm.o
+else
 OBJS += src/jit/compemu.o \
-	src/jit/compstbl.o \
+	src/jit/compstbl.o
+endif
+
+OBJS += src/jit/compemu_support.o \
 	src/jit/compemu_fpp.o \
-	src/jit/compemu_support.o \
 	src/jit/exception_handler.o
 endif
 
@@ -679,6 +684,12 @@ guisan:
 
 gencpu:
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LDFLAGS) -o gencpu src/cpudefs.cpp src/gencpu.cpp src/readcpu.cpp src/osdep/charset.cpp
+
+gencomp:
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LDFLAGS) -o gencomp src/jit/gencomp.cpp src/cpudefs.cpp src/readcpu.cpp src/osdep/charset.cpp
+
+gencomp_arm:
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LDFLAGS) -o gencomp_arm src/jit/gencomp_arm.c src/cpudefs.cpp src/readcpu.cpp src/osdep/charset.cpp
 
 capsimg:
 	cd external/capsimg && ./bootstrap && ./configure && $(MAKE)

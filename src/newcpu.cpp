@@ -5689,7 +5689,11 @@ static void m68k_run_mmu060 (void)
 		check_debugger();
 		TRY (prb) {
 			for (;;) {
+#if defined(CPU_i386) || defined(CPU_x86_64)
 				f.cznv = regflags.cznv;
+#else // we assume CPU_arm or CPU_AARCH64 here
+				f.nzcv = regflags.nzcv;
+#endif
 				f.x = regflags.x;
 				regs.instruction_pc = m68k_getpc ();
 
@@ -5715,7 +5719,11 @@ static void m68k_run_mmu060 (void)
 			}
 		} CATCH (prb) {
 			m68k_setpci (regs.instruction_pc);
-			regflags.cznv = f.cznv;
+#if defined(CPU_i386) || defined(CPU_x86_64)
+				regflags.cznv = f.cznv;
+#else // we assume CPU_arm or CPU_AARCH64 here
+				regflags.nzcv = f.nzcv;
+#endif
 			regflags.x = f.x;
 			cpu_restore_fixup();
 			TRY (prb2) {
@@ -5743,7 +5751,11 @@ static void m68k_run_mmu040 (void)
 		check_debugger();
 		TRY (prb) {
 			for (;;) {
+#if defined(CPU_i386) || defined(CPU_x86_64)
 				f.cznv = regflags.cznv;
+#else // we assume CPU_arm or CPU_AARCH64 here
+				f.nzcv = regflags.nzcv;
+#endif
 				f.x = regflags.x;
 				mmu_restart = true;
 				regs.instruction_pc = m68k_getpc ();
@@ -5768,7 +5780,11 @@ static void m68k_run_mmu040 (void)
 
 			if (mmu_restart) {
 				/* restore state if instruction restart */
+#if defined(CPU_i386) || defined(CPU_x86_64)
 				regflags.cznv = f.cznv;
+#else // we assume CPU_arm or CPU_AARCH64 here
+				regflags.nzcv = f.nzcv;
+#endif
 				regflags.x = f.x;
 				m68k_setpci (regs.instruction_pc);
 			}
@@ -5803,7 +5819,11 @@ static void m68k_run_mmu030 (void)
 				int cnt;
 insretry:
 				regs.instruction_pc = m68k_getpc ();
+#if defined(CPU_i386) || defined(CPU_x86_64)
 				f.cznv = regflags.cznv;
+#else // we assume CPU_arm or CPU_AARCH64 here
+				f.nzcv = regflags.nzcv;
+#endif
 				f.x = regflags.x;
 
 				mmu030_state[0] = mmu030_state[1] = mmu030_state[2] = 0;
@@ -5906,7 +5926,11 @@ insretry:
 				mmufixup[0].reg = -1;
 				mmufixup[1].reg = -1;
 			} else {
+#if defined(CPU_i386) || defined(CPU_x86_64)
 				regflags.cznv = f.cznv;
+#else // we assume CPU_arm or CPU_AARCH64 here
+				regflags.nzcv = f.nzcv;
+#endif
 				regflags.x = f.x;
 				cpu_restore_fixup();
 			}
