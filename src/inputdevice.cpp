@@ -5268,6 +5268,11 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 			}
 			lightpen_enabled = true;
 			if (flags & HANDLE_IE_FLAG_ABSOLUTE) {
+				if (ie->data & IE_INVERT) {
+					if (extra >= 0) {
+						extra = 65535 - extra;
+					}
+				}
 				lastmxy_abs[lpnum][unit] = extra;
 				if (!unit)
 				{
@@ -5301,7 +5306,9 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 					max -= deadzone;
 					delta = state * currprefs.input_joymouse_multiplier / (10 * max);
 				}
-				if (ie->data)
+				if (ie->data & IE_INVERT)
+					delta = -delta;
+				if (unit)
 					lightpen_y[lpnum] += delta;
 				else
 					lightpen_x[lpnum] += delta;
@@ -5314,6 +5321,8 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 			} else {
 				if (state) {
 					int delta = currprefs.input_joymouse_speed;
+					if (ie->data & IE_INVERT)
+						delta = -delta;
 					if (ie->data & DIR_LEFT)
 						lightpen_x[lpnum] -= delta;
 					if (ie->data & DIR_RIGHT)
