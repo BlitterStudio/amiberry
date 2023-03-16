@@ -467,14 +467,18 @@ int current_hpos(void)
 // emulate VPOSHW writes changing cycle counter
 void modify_eventcounter(int diff)
 {
+	if (diff == 0) {
+		return;
+	}
 
 	int hpos = current_hpos();
 
-	if (hpos + diff < 0) {
-		return;
-	}
+	// fake >HTOTAL change delays
 	if (hpos + diff >= maxhpos) {
-		return;
+		int dd = maxhpos - (hpos + diff);
+		diff += dd;
+	} else if (hpos + diff < 0) {
+		diff = (maxhpos - (0x100 - hpos + diff));
 	}
 
 	int cdiff = diff * CYCLE_UNIT;
@@ -489,8 +493,6 @@ void modify_eventcounter(int diff)
 		currcycle += cdiff;
 	}
 
-	int hp1 = current_hpos();
-
 	cia_adjust_eclock_phase(diff);
 
 	// adjust all existing timers
@@ -504,8 +506,6 @@ void modify_eventcounter(int diff)
 	for (int i = 0; i < ev2_max; i++) {
 		eventtab2[i].evtime += cdiff;
 	}
-
-	int hp2 = current_hpos();
 
 	events_schedule();
 }

@@ -7500,7 +7500,6 @@ static void VPOSW(uae_u16 v)
 		lol = 0;
 	}
 	if (lof_changing) {
-		bool newlof = (v & 0x8000) != 0;
 		return;
 	}
 	vpos &= 0x00ff;
@@ -7522,6 +7521,7 @@ static void VPOSW(uae_u16 v)
 static void VHPOSW(uae_u16 v)
 {
 	int oldvpos = vpos;
+	int newvpos = vpos;
 #if 0
 	if (M68K_GETPC < 0xf00000 || 1)
 		write_log (_T("VHPOSW %04X PC=%08x\n"), v, M68K_GETPC);
@@ -7542,22 +7542,32 @@ static void VHPOSW(uae_u16 v)
 	int hnew = v & 0xff;
 	int hdiff = hnew - hpos;
 	if (copper_access && (hdiff & 1)) {
-		write_log("VHPOSW write with odd horizontal change. Possible copper confusion possible.\n");
+		write_log("VHPOSW write %04X. New horizontal value is odd. Copper confusion possible.\n", v);
 	}
 	modify_eventcounter(-(hdiff - 2));
 
 	v >>= 8;
-	vpos &= 0xff00;
-	vpos |= v;
-	if (vpos != oldvpos) {
-		cia_adjust_eclock_phase((vpos - oldvpos) * maxhpos);
+	newvpos &= 0xff00;
+	newvpos |= v;
+	if (newvpos != oldvpos) {
+		cia_adjust_eclock_phase((newvpos - oldvpos) * maxhpos);
 		vposw_change++;
+#ifdef DEBUGGER
+		record_dma_hsync(hpos + 2);
+		if (debug_dma) {
+			int vp = vpos;
+			vpos = newvpos;
+			record_dma_hsync(maxhpos);
+			vpos = vp;
+		}
+#endif
 	}
-	if (vpos < oldvpos) {
-		vpos = oldvpos;
-	} else if (vpos < minfirstline && oldvpos < minfirstline) {
-		vpos = oldvpos;
+	if (newvpos < oldvpos) {
+		newvpos = oldvpos;
+	} else if (newvpos < minfirstline && oldvpos < minfirstline) {
+		newvpos = oldvpos;
 	}
+	vpos = newvpos;
 	vb_check();
 #if 0
 	if (vpos < oldvpos)
