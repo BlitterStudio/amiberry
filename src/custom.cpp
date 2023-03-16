@@ -8023,6 +8023,11 @@ static void bitplane_dma_change(uae_u32 v)
 	dmacon_bpl = (v & DMA_BITPLANE) && (v & 0x200);
 }
 
+static void compute_spcflag_copper_delayed(uae_u32 v)
+{
+	compute_spcflag_copper();
+}
+
 static void DMACON(int hpos, uae_u16 v)
 {
 	uae_u16 changed;
@@ -8049,7 +8054,11 @@ static void DMACON(int hpos, uae_u16 v)
 		copper_dma_change_cycle = get_cycles();
 	}
 	if (newcop && !oldcop) {
-		compute_spcflag_copper();
+		if (copper_dma_change_cycle == get_cycles()) {
+			event2_newevent_xx(-1, CYCLE_UNIT, 0, compute_spcflag_copper_delayed);
+		} else {
+			compute_spcflag_copper();
+		}
 	}
 
 	int oldblt = (oldcon & DMA_BLITTER) && (oldcon & DMA_MASTER);
@@ -10139,7 +10148,7 @@ static void do_copper_fetch(int hpos, uae_u16 id)
 	{
 		// fake MOVE phase 2
 #ifdef DEBUGGER
-		uae_u16 reg = cop_state.ir[0] & 0x1FE;
+		uae_u16 reg = 0x8c; // COPINS
 		if (debug_dma) {
 			record_dma_read(reg, cop_state.ip, hpos, vpos, DMARECORD_COPPER, 0);
 		}
@@ -10148,6 +10157,7 @@ static void do_copper_fetch(int hpos, uae_u16 id)
 #ifdef DEBUGGER
 		if (debug_dma) {
 			record_dma_read_value(cop_state.ir[1]);
+			record_dma_event2(DMA_EVENT2_COPPERUSE, hpos, vpos);
 		}
 #endif
 		if (cop_state.state == COP_strobe_delay4) {
@@ -10683,7 +10693,7 @@ next:
 
 static void compute_spcflag_copper(void)
 {
-	if (!is_copper_dma() || cop_state.state == COP_stop || cop_state.state == COP_waitforever || cop_state.state == COP_bltwait || cop_state.state == COP_bltwait2 || custom_disabled)
+	if (cop_state.state == COP_stop || cop_state.state == COP_waitforever || cop_state.state == COP_bltwait || cop_state.state == COP_bltwait2 || custom_disabled)
 		return;
 	if (cop_state.state == COP_wait1) {
 		int vp = vpos & (((cop_state.ir[1] >> 8) & 0x7F) | 0x80);
