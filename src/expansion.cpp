@@ -2764,6 +2764,117 @@ void free_expansion_bank(addrbank *bank)
 	bank->reserved_size = 0;
 }
 
+struct autoconfig_info* expansion_get_bank_data(struct uae_prefs* p, uaecptr* addrp)
+{
+	uaecptr addr = *addrp;
+	static struct autoconfig_info acid;
+	struct autoconfig_info* aci = NULL;
+
+	if (addr >= 0x01000000 && currprefs.address_space_24) {
+		return NULL;
+	}
+	for (;;) {
+		addrbank* ab = &get_mem_bank(addr);
+		if (ab && ab != &dummy_bank) {
+			aci = expansion_get_autoconfig_by_address(p, addr, 0);
+			if (aci && expansion_get_autoconfig_by_address(p, addr - 1, 0) != aci) {
+				addrbank* ab2 = ab;
+				struct autoconfig_info* aci2;
+				int size = 0;
+				for (;;) {
+					addr += 65536;
+					size += 65536;
+					ab2 = &get_mem_bank(addr);
+					aci2 = expansion_get_autoconfig_by_address(p, addr, 0);
+					if (ab != ab2) {
+						break;
+					}
+					if (aci2 != aci) {
+						break;
+					}
+					if (aci->size > 0 && size >= aci->size) {
+						break;
+					}
+				}
+				*addrp = addr;
+				return aci;
+			}
+			uaecptr addr2 = addr;
+			aci = &acid;
+			memset(aci, 0, sizeof(struct autoconfig_info));
+			aci->autoconfig_bytes[0] = 0xff;
+			if (ab->sub_banks) {
+				uaecptr saddr = addr;
+				uaecptr saddr1 = saddr;
+				uaecptr saddr2 = saddr;
+				addrbank* sab1 = get_sub_bank(&saddr1);
+				for (;;) {
+					saddr2 = saddr1 + 1;
+					addrbank* sab2 = get_sub_bank(&saddr2);
+					if (sab1 != sab2 || (saddr1 & 65535) == 65535) {
+						aci->addrbank = sab1;
+						aci->start = addr;
+						aci->size = saddr2 - addr;
+						if (sab1->name) {
+							_tcscpy(aci->name, sab1->name);
+						}
+						addr = saddr2;
+						*addrp = addr;
+						break;
+					}
+					saddr1++;
+				}
+				if (aci->addrbank == &dummy_bank) {
+					addr = saddr2;
+					continue;
+				}
+				return aci;
+			}
+			else {
+				aci->addrbank = ab;
+				aci->start = addr;
+				aci->size = ab->allocated_size;
+				if (ab->name) {
+					_tcscpy(aci->name, ab->name);
+				}
+				addrbank* ab2 = ab;
+				int size = 0;
+				for (;;) {
+					addr += 65536;
+					size += 65536;
+					ab2 = &get_mem_bank(addr);
+					if (ab != ab2) {
+						break;
+					}
+					if (aci->size > 0 && size >= aci->size) {
+						break;
+					}
+				}
+			}
+			if (aci->size == 0) {
+				aci->size = addr - addr2;
+			}
+			*addrp = addr;
+			return aci;
+		}
+
+		for (;;) {
+			addr += 65536;
+			if (addr >= 0x01000000 && currprefs.address_space_24) {
+				return NULL;
+			}
+			if (addr < 65536) {
+				return NULL;
+			}
+			ab = &get_mem_bank(addr);
+			if (ab != NULL && ab != &dummy_bank) {
+				break;
+			}
+		}
+	}
+}
+
+
 struct autoconfig_info *expansion_get_autoconfig_data(struct uae_prefs *p, int index)
 {
 	if (index >= cardno)

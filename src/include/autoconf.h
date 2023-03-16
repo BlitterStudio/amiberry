@@ -156,6 +156,7 @@ extern void expansion_generate_autoconfig_info(struct uae_prefs *p);
 extern struct autoconfig_info *expansion_get_autoconfig_info(struct uae_prefs*, int romtype, int devnum);
 extern struct autoconfig_info *expansion_get_autoconfig_data(struct uae_prefs *p, int index);
 extern struct autoconfig_info *expansion_get_autoconfig_by_address(struct uae_prefs *p, uaecptr addr, int index);
+extern struct autoconfig_info *expansion_get_bank_data(struct uae_prefs *p, uaecptr *addr);
 extern void expansion_set_autoconfig_sort(struct uae_prefs *p);
 extern int expansion_autoconfig_move(struct uae_prefs *p, int index, int direction, bool test);
 extern bool expansion_can_move(struct uae_prefs *p, int index);

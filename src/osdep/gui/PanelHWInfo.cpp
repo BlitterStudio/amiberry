@@ -17,22 +17,24 @@
 
 #define MAX_INFOS 10
 
-enum { COL_TYPE, COL_NAME, COL_START, COL_SIZE, COL_ID, COL_COUNT };
+enum { COL_TYPE, COL_NAME, COL_START, COL_END, COL_SIZE, COL_ID, COL_COUNT };
 
 static const char* column_caption[] =
 {
 	"Type",
 	"Name",
 	"Start",
+	"End",
 	"Size",
 	"ID"
 };
 static const int COLUMN_SIZE[] =
 {
 	40, // Type
-	292, // Name
-	80, // Start
-	80, // Size
+	200, // Name
+	90, // Start
+	90, // End
+	90, // Size
 	90 // ID
 };
 
@@ -59,15 +61,21 @@ void RefreshPanelHWInfo(void)
 		}
 		if (!aci && highest_expamem <= Z3BASE_UAE)
 			break;
-
 		if (aci && aci->zorro >= 1 && aci->zorro <= 3)
 			_stprintf(tmp, _T("Z%d"), aci->zorro);
 		else
 			_tcscpy(tmp, _T("-"));
-		listCells[row][COL_TYPE]->setText(tmp);
 
+		listCells[row][COL_TYPE]->setText(tmp);
 		tmp[0] = 0;
-		if (aci)
+
+		if (aci && aci->parent_of_previous) {
+			_tcscat(tmp, _T(" - "));
+		}
+		if (aci && (aci->parent_address_space || aci->parent_romtype) && !aci->parent_of_previous) {
+			_tcscat(tmp, _T("? "));
+		}
+		if (aci && aci->name)
 			_tcscat(tmp, aci->name);
 		listCells[row][COL_NAME]->setText(tmp);
 
@@ -78,14 +86,22 @@ void RefreshPanelHWInfo(void)
 			else
 				_tcscpy(tmp, _T("-"));
 			listCells[row][COL_START]->setText(tmp);
+
+			if (aci->size != 0)
+				_stprintf(tmp, _T("0x%08x"), aci->start + aci->size - 1);
+			else
+				_tcscpy(tmp, _T("-"));
+			listCells[row][COL_END]->setText(tmp);
+
 			if (aci->size != 0)
 				_stprintf(tmp, _T("0x%08x"), aci->size);
 			else
 				_tcscpy(tmp, _T("-"));
 			listCells[row][COL_SIZE]->setText(tmp);
+
 			if (aci->autoconfig_bytes[0] != 0xff)
 				_stprintf(tmp, _T("0x%04x/0x%02x"),
-				          (aci->autoconfig_bytes[4] << 8) | aci->autoconfig_bytes[5], aci->autoconfig_bytes[1]);
+					(aci->autoconfig_bytes[4] << 8) | aci->autoconfig_bytes[5], aci->autoconfig_bytes[1]);
 			else
 				_tcscpy(tmp, _T("-"));
 			listCells[row][COL_ID]->setText(tmp);
@@ -94,6 +110,7 @@ void RefreshPanelHWInfo(void)
 		{
 			_stprintf(tmp, _T("0x%08x"), highest_expamem);
 			listCells[row][COL_START]->setText(tmp);
+			listCells[row][COL_END]->setText("");
 			listCells[row][COL_SIZE]->setText("");
 			listCells[row][COL_ID]->setText("");
 		}
@@ -160,7 +177,6 @@ void InitPanelHWInfo(const config_category& category)
 	RefreshPanelHWInfo();
 }
 
-
 void ExitPanelHWInfo()
 {
 	int col;
@@ -176,10 +192,9 @@ void ExitPanelHWInfo()
 	}
 }
 
-
 bool HelpPanelHWInfo(std::vector<std::string>& helptext)
 {
 	helptext.clear();
-	helptext.push_back("This panel shows the information about the configured hardware.");
+	helptext.emplace_back("This panel shows the information about the configured hardware.");
 	return true;
 }
