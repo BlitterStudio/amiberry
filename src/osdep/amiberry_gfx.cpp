@@ -831,9 +831,10 @@ static void open_screen(struct uae_prefs* p)
 		}
 #endif
 		if (isfullscreen() == 0 && !is_maximized)
+		{
 			SDL_SetWindowSize(mon->sdl_window, display_width, display_height);
-			// Center window, sigurbjornl 20220122
 			SDL_SetWindowPosition(mon->sdl_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+		}
 	}
 	else
 	{
@@ -868,7 +869,10 @@ static void open_screen(struct uae_prefs* p)
 		}
 #endif
 		if (isfullscreen() == 0 && !is_maximized)
+		{
 			SDL_SetWindowSize(mon->sdl_window, width, height);
+			SDL_SetWindowPosition(mon->sdl_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+		}
 	}
 
 	if (p->scaling_method == -1)
