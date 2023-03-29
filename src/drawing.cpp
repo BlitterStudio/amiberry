@@ -3733,8 +3733,6 @@ static void do_color_changes(line_draw_func worker_border, line_draw_func worker
 					colors_for_drawing.extra &= ~(1 << (CE_SHRES_DELAY_SHIFT + 1));
 					colors_for_drawing.extra |= (value & 3) << CE_SHRES_DELAY_SHIFT;
 					pfield_expand_dp_bplcon();
-				} else if (value & COLOR_CHANGE_HSYNC_HACK) {
-					hsync_shift_hack = (uae_s8)value;
 				}
 			}
 		}

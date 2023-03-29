@@ -321,6 +321,7 @@ int maxhpos_short = MAXHPOS_PAL;
 int maxvpos = MAXVPOS_PAL;
 int maxvpos_nom = MAXVPOS_PAL; // nominal value (same as maxvpos but "faked" maxvpos in fake 60hz modes)
 int maxvpos_display = MAXVPOS_PAL; // value used for display size
+static int maxhpos_temp; // line being >maxhpos due to VHPOSW tricks
 static int maxhpos_display = AMIGA_WIDTH_MAX;
 int maxvpos_display_vsync; // extra lines from top visible in bottom
 static int vblank_extraline;
@@ -430,8 +431,8 @@ static int sprite_width, sprres;
 static int sprite_sprctlmask;
 int sprite_buffer_res;
 
-uae_u8 cycle_line_slot[MAX_CHIPSETSLOTS + RGA_PIPELINE_ADJUST];
-uae_u16 cycle_line_pipe[MAX_CHIPSETSLOTS + RGA_PIPELINE_ADJUST];
+uae_u8 cycle_line_slot[MAX_CHIPSETSLOTS + RGA_PIPELINE_ADJUST + MAX_CHIPSETSLOTS_EXTRA];
+uae_u16 cycle_line_pipe[MAX_CHIPSETSLOTS + RGA_PIPELINE_ADJUST + MAX_CHIPSETSLOTS_EXTRA];
 static uae_u8 cycle_line_slot_last;
 
 static uae_s16 bpl1mod, bpl2mod, bpl1mod_prev, bpl2mod_prev;
@@ -646,7 +647,7 @@ static int toscr_delay_adjusted[2], toscr_delay_sh[2];
 static bool shdelay_disabled;
 static int delay_cycles, delay_cycles2;
 static int delay_lastcycle[2], delay_hsynccycle;
-static int hack_delay_shift;
+static int vhposr_delay_offset, vhposr_sprite_offset;
 static bool bplcon1_written;
 static bool bplcon0_planes_changed;
 static bool sprites_enabled_this_line;
@@ -1876,9 +1877,9 @@ static void clear_bitplane_pipeline(int type)
 #define ESTIMATED_FETCH_MODE 1
 #define OPTIMIZED_ESTIMATE 1
 
-static uae_s8 estimated_cycles_buf0[256];
-static uae_s8 estimated_cycles_buf1[256];
-static uae_s8 estimated_cycles_empty[256];
+static uae_s8 estimated_cycles_buf0[MAX_CHIPSETSLOTS + MAX_CHIPSETSLOTS_EXTRA];
+static uae_s8 estimated_cycles_buf1[MAX_CHIPSETSLOTS + MAX_CHIPSETSLOTS_EXTRA];
+static uae_s8 estimated_cycles_empty[MAX_CHIPSETSLOTS + MAX_CHIPSETSLOTS_EXTRA];
 static int estimate_cycles_empty_index = -1;
 static uae_u16 estimated_bplcon0, estimated_fm, estimated_plfstrt, estimated_plfstop;
 static uae_s8 *estimated_cycles = estimated_cycles_empty;
@@ -5140,7 +5141,7 @@ static void record_color_change(int hpos, int regno, uae_u32 value)
 		remember_ctable();
 	}
 
-	hpos += hack_delay_shift;
+	hpos += vhposr_delay_offset;
 
 	record_color_change2(hpos, regno, value);
 }
@@ -5221,8 +5222,7 @@ static bool isham(uae_u16 bplcon0)
 		// AGA only has 6 or 8 plane HAM
 		if (p == 6 || p == 8)
 			return 1;
-	}
-	else {
+	} else {
 		// OCS/ECS also supports 5 plane HAM
 		if (GET_RES_DENISE(bplcon0) > 0)
 			return 0;
@@ -5733,7 +5733,7 @@ static void decide_sprites(int hpos, bool usepointx, bool quick)
 	count = 0;
 	for (int i = 0; i < MAX_SPRITES; i++) {
 		struct sprite *s = &spr[i];
-		int xpos = (spr[i].xpos + hdiw_counter_sconflict) & hdiw_counter_sconflict_mask;
+		int xpos = (spr[i].xpos + hdiw_counter_sconflict + vhposr_sprite_offset) & hdiw_counter_sconflict_mask;
 		int sprxp = (fmode & 0x8000) ? (xpos & ~sscanmask) : xpos;
 		int hw_xp = sprxp >> sprite_buffer_res;
 		int pointx = usepointx && (s->ctl & sprite_sprctlmask) ? 0 : 1;
@@ -6049,7 +6049,6 @@ static void reset_decisions_scanline_start(void)
 	last_diw_hpos = 0;
 	last_diw_hpos2 = 0;
 	blt_info.finishhpos = -1;
-	hack_delay_shift = 0;
 
 	/* Default to no bitplane DMA overriding sprite DMA */
 	plfstrt_sprite = 0x100;
@@ -6139,6 +6138,9 @@ static void reset_decisions_hsync_start(void)
 	bpl2mod_hpos = -1;
 	last_recorded_diw_hpos = 0;
 	collision_hpos = 0;
+
+	vhposr_delay_offset = 0;
+	vhposr_sprite_offset = 0;
 
 	compute_toscr_delay(bplcon1);
 
@@ -7699,15 +7701,22 @@ static void vhpos_adj(uae_u16 *hpp, uae_u16 *vpp)
 
 static uae_u16 VPOSR(void)
 {
-	unsigned int csbit = 0;
+	uae_u16 csbit = 0;
 	uae_u16 vp = GETVPOS();
 	uae_u16 hp = GETHPOS();
-	int lof = lof_store;
+	int lofr = lof_store;
+	int lolr = lol;
 
-	if (vp + 1 == maxvpos + lof_store && (hp == maxhpos - 1 || hp == maxhpos - 2)) {
-		// lof toggles 2 cycles before maxhpos, so do fake toggle here.
-		if ((bplcon0 & 4) && CPU_ACCURATE) {
-			lof = lof ? 0 : 1;
+	if (hp == 0) {
+		// LOF and LOL toggles when HPOS=1
+		// Return pre-toggled value if VPOSR is read when HPOS=0
+		if (vp == 0) {
+			if ((bplcon0 & 4) && CPU_ACCURATE) {
+				lofr = lofr ? 0 : 1;
+			}
+		}
+		if (islinetoggle()) {
+			lolr = lolr ? 0 : 1;
 		}
 	}
 	vhpos_adj(&hp, &vp);
@@ -7732,11 +7741,10 @@ static uae_u16 VPOSR(void)
 
 	if (!ecs_agnus) {
 		vp &= 1;
+	} else {
+		vp |= lolr ? 0x80 : 0;
 	}
-	vp |= (lof ? 0x8000 : 0) | csbit;
-	if (ecs_agnus) {
-		vp |= lol ? 0x80 : 0;
-	}
+	vp |= (lofr ? 0x8000 : 0) | csbit;
 	hsyncdelay();
 #if 0
 	if (1 || (M68K_GETPC < 0x00f00000 || M68K_GETPC >= 0x10000000))
@@ -7780,7 +7788,7 @@ static void VPOSW(uae_u16 v)
 	vb_check();
 }
 
-static void VHPOSW(uae_u16 v)
+static void VHPOSW_delayed(uae_u32 v)
 {
 	int oldvpos = vpos;
 	int newvpos = vpos;
@@ -7789,24 +7797,79 @@ static void VHPOSW(uae_u16 v)
 		write_log (_T("VHPOSW %04X PC=%08x\n"), v, M68K_GETPC);
 #endif
 
-	if (currprefs.cpu_memory_cycle_exact && currprefs.cpu_model == 68000) {
-		/* Special hack for Smooth Copper in CoolFridge / Upfront demo */
-		int chp = current_hpos_safe() - 4;
-		int hp = v & 0xff;
-		if (chp >= 0x21 && chp <= 0x29 && hp == 0x2d) {
-			hack_delay_shift = 4;
-			record_color_change(chp, 0, COLOR_CHANGE_HSYNC_HACK | 6);
-			thisline_changed = 1;
-		}
+	int hpos_org = current_hpos();
+	int hpos = hpos_org;
+	int hnew = (v & 0xff);
+	int hnew_org = hnew;
+	bool newinc = false;
+	if (hpos == 0 || hpos == 1) {
+		hpos += maxhpos;
 	}
-
-	int hpos = current_hpos();
-	int hnew = v & 0xff;
+	if (hnew == 0 || hnew == 1) {
+		hnew += maxhpos;
+		newinc = true;
+	}
 	int hdiff = hnew - hpos;
+	//write_log("%02x %02x %d\n", hpos_org, hnew_org, hdiff);
 	if (copper_access && (hdiff & 1)) {
 		write_log("VHPOSW write %04X. New horizontal value is odd. Copper confusion possible.\n", v);
 	}
-	modify_eventcounter(-(hdiff - 2));
+
+	int hpos2 = 0;
+
+	delay_cycles += ((-hdiff * 8 - 2) & 7) << LORES_TO_SHRES_SHIFT;
+	if (hdiff & 1) {
+		vhposr_delay_offset = 1;
+	}
+	vhposr_sprite_offset += (hdiff * 4 - 2) << sprite_buffer_res;
+
+	if (newinc && hnew == maxhpos + 1) {
+		// 0000 -> 0001 (0 and 1 are part of previous line, vpos increases when hpos=1). No need to do anything
+	} else if (hnew >= maxhpos) {
+		// maxhpos check skip: counter counts until it wraps around 0xFF->0x00
+		int hdiff2 = (0x100 - hnew) - (maxhpos - hpos);
+		hdiff2 *= CYCLE_UNIT;
+		hdiff *= CYCLE_UNIT;
+		eventtab[ev_hsync].evtime += hdiff2;
+		eventtab[ev_hsync].oldcycles = get_cycles() - hnew * CYCLE_UNIT;
+		eventtab[ev_hsynch].evtime += hdiff2;
+		eventtab[ev_hsynch].oldcycles += hdiff2;
+		maxhpos_temp = 0x100;
+		hpos2 = current_hpos_safe();
+	} else {
+		hdiff = -hdiff;
+		hdiff *= CYCLE_UNIT;
+		for (;;) {
+			eventtab[ev_hsync].evtime += hdiff;
+			eventtab[ev_hsync].oldcycles += hdiff;
+			eventtab[ev_hsynch].evtime += hdiff;
+			eventtab[ev_hsynch].oldcycles += hdiff;
+			hpos2 = current_hpos_safe();
+			if (hpos2 >= 0 && hpos < 256) {
+				// don't allow line crossing, restore original value
+				break;
+			}
+			hdiff -= hdiff;
+		}
+		events_schedule();
+	}
+
+#ifdef DEBUGGER
+	if (newvpos == oldvpos && hdiff) {
+		record_dma_reoffset(vpos, hpos, hnew);
+	}
+#endif
+
+	if (hdiff) {
+		int hold = hpos;
+		memset(cycle_line_slot + MAX_CHIPSETSLOTS + RGA_PIPELINE_ADJUST, 0, sizeof(uae_u8) * MAX_CHIPSETSLOTS_EXTRA);
+		memset(cycle_line_pipe + MAX_CHIPSETSLOTS + RGA_PIPELINE_ADJUST, 0, sizeof(uae_u16) * MAX_CHIPSETSLOTS_EXTRA);
+		int total = (MAX_CHIPSETSLOTS + RGA_PIPELINE_ADJUST + MAX_CHIPSETSLOTS_EXTRA) - (hnew > hold ? hnew : hold);
+		if (total > 0) {
+			memmove(cycle_line_slot + hnew, cycle_line_slot + hold, total * sizeof(uae_u8));
+			memmove(cycle_line_pipe + hnew, cycle_line_pipe + hold, total * sizeof(uae_u16));
+		}
+	}
 
 	v >>= 8;
 	newvpos &= 0xff00;
@@ -7815,7 +7878,7 @@ static void VHPOSW(uae_u16 v)
 		cia_adjust_eclock_phase((newvpos - oldvpos) * maxhpos);
 		vposw_change++;
 #ifdef DEBUGGER
-		record_dma_hsync(hpos + 2);
+		record_dma_hsync(hpos_org);
 		if (debug_dma) {
 			int vp = vpos;
 			vpos = newvpos;
@@ -7831,10 +7894,16 @@ static void VHPOSW(uae_u16 v)
 	}
 	vpos = newvpos;
 	vb_check();
+
 #if 0
 	if (vpos < oldvpos)
 		vposback (oldvpos);
 #endif
+} 
+
+static void VHPOSW(uae_u16 v)
+{
+	event2_newevent_xx(-1, 2 * CYCLE_UNIT, v, VHPOSW_delayed);
 }
 
 static uae_u16 VHPOSR(void)
@@ -8799,7 +8868,7 @@ static void bplcon0_denise_reschange(int res, int oldres)
 		if (oldres == RES_HIRES && res == RES_LORES) {
 			toscr_special_skip_ptr = toscr_spc_ecs_hires_to_lores;
 		}
-	} else if (0) {
+	} else if (1) {
 		if (oldres == RES_LORES && res == RES_HIRES) {
 			toscr_special_skip_ptr = toscr_spc_ocs_lores_to_hires;
 		}
@@ -10323,11 +10392,9 @@ static void setstrobecopip(void)
 {
 	if (cop_state.strobe == 3) {
 		cop_state.ip = cop1lc | cop2lc;
-	}
-	else if (cop_state.strobe == 1) {
+	} else if (cop_state.strobe == 1) {
 		cop_state.ip = cop1lc;
-	}
-	else {
+	} else {
 		cop_state.ip = cop2lc;
 	}
 	cop_state.strobe = 0;
@@ -12602,7 +12669,7 @@ static void hsync_handlerh(bool onvsync)
 	events_schedule();
 }
 
-static void set_hpos(void)
+static void set_hpos()
 {
 	line_start_cycles = (get_cycles() + CYCLE_UNIT - 1) & ~(CYCLE_UNIT - 1);
 	maxhposeven_prev = maxhposeven;
@@ -12611,11 +12678,6 @@ static void set_hpos(void)
 	maxhposeven = (maxhpos & 1) == 0;
 	eventtab[ev_hsync].evtime = line_start_cycles + HSYNCTIME;
 	eventtab[ev_hsync].oldcycles = line_start_cycles;
-#ifdef DEBUGGER
-	if (debug_dma) {
-		record_dma_hsync(maxhpos);
-	}
-#endif
 }
 
 // this finishes current line
@@ -12671,6 +12733,20 @@ static void hsync_handler_pre(bool onvsync)
 
 	hsync_counter++;
 
+	int currentmaxhp = current_hpos();
+#ifdef DEBUGGER
+	if (debug_dma) {
+		record_dma_hsync(currentmaxhp);
+	}
+#endif
+	// just to be sure
+	if (currentmaxhp > 0) {
+		cycle_line_slot_last = cycle_line_slot[currentmaxhp - 1];
+	} else {
+		cycle_line_slot_last = 0;
+	}
+	set_hpos();
+
 	vpos_prev = vpos;
 	vpos++;
 	vpos_count++;
@@ -12695,9 +12771,6 @@ static void hsync_handler_pre(bool onvsync)
 		lol = lol ? 0 : 1;
 	else
 		lol = 0;
-
-	cycle_line_slot_last = cycle_line_slot[maxhpos - 1];
-	set_hpos();
 
 	// to record decisions correctly between end of scanline and start of hsync
 	if (!eventtab[ev_hsynch].active) {
@@ -13425,7 +13498,8 @@ static void delayed_framestart(uae_u32 v)
 // this prepares for new line
 static void hsync_handler_post(bool onvsync)
 {
-	memset(cycle_line_slot, 0, maxhpos + 1);
+	memset(cycle_line_slot, 0, maxhpos_temp > maxhpos ? maxhpos_temp + 1 : maxhpos + 1);
+	maxhpos_temp = 0;
 
 	// genlock active:
 	// vertical: interlaced = toggles every other field, non-interlaced = both fields (normal)
@@ -13926,7 +14000,7 @@ static void audio_evhandler2(void)
 	audio_evhandler();
 }
 
-void init_eventtab (void)
+void init_eventtab(void)
 {
 	if (!savestate_state) {
 		clear_events();
@@ -13944,13 +14018,13 @@ void init_eventtab (void)
 
 	eventtab2[ev2_blitter].handler = blitter_handler;
 
-	events_schedule ();
+	events_schedule();
 }
 
-void custom_prepare (void)
+void custom_prepare(void)
 {
-	set_hpos ();
-	hsync_handler_post (true);
+	set_hpos();
+	hsync_handler_post(true);
 }
 
 void custom_cpuchange(void)

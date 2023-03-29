@@ -271,8 +271,9 @@ bool get_ras_cas(uaecptr, int*, int*);
 
 #define RGA_PIPELINE_ADJUST 4
 #define MAX_CHIPSETSLOTS 256
-extern uae_u8 cycle_line_slot[MAX_CHIPSETSLOTS + RGA_PIPELINE_ADJUST];
-extern uae_u16 cycle_line_pipe[MAX_CHIPSETSLOTS + RGA_PIPELINE_ADJUST];
+#define MAX_CHIPSETSLOTS_EXTRA 12
+extern uae_u8 cycle_line_slot[MAX_CHIPSETSLOTS + RGA_PIPELINE_ADJUST + MAX_CHIPSETSLOTS_EXTRA];
+extern uae_u16 cycle_line_pipe[MAX_CHIPSETSLOTS + RGA_PIPELINE_ADJUST + MAX_CHIPSETSLOTS_EXTRA];
 
 #define CYCLE_PIPE_CPUSTEAL 0x8000
 #define CYCLE_PIPE_NONE 0x4000

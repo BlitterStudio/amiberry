@@ -36,7 +36,6 @@ extern void do_cycles_ce020(int cycles);
 extern void events_schedule(void);
 extern void do_cycles_slow(int cycles_to_add);
 extern void events_reset_syncline(void);
-extern void modify_eventcounter(int diff);
 extern void clear_events(void);
 
 extern bool is_cycle_ce(uaecptr);
