@@ -5575,7 +5575,7 @@ const struct expansionromtype expansionroms[] = {
 	//},
 	//{
 	//	_T("buddha"), _T("Buddha"), _T("Individual Computers"),
-	//	NULL, buddha_init, NULL, buddha_add_ide_unit, ROMTYPE_BUDDHA, 0, 0, BOARD_AUTOCONFIG_Z2, false,
+	//	NULL, buddha_init, NULL, buddha_add_ide_unit, ROMTYPE_BUDDHA | ROMTYPE_NONE, 0, 0, BOARD_AUTOCONFIG_Z2, false,
 	//	NULL, 0,
 	//	false, EXPANSIONTYPE_IDE,
 	//	0, 0, 0, false, NULL,
