@@ -8119,10 +8119,10 @@ static bool is_blitter_dma(void)
 	}
 	return dma;
 }
-static bool is_copper_dma(void)
+static bool is_copper_dma(bool checksame)
 {
 	bool dma = dmaen(DMA_COPPER);
-	if (get_cycles() == copper_dma_change_cycle) {
+	if (checksame && get_cycles() == copper_dma_change_cycle) {
 		return dma == false;
 	}
 	return dma;
@@ -8140,7 +8140,7 @@ static void immediate_copper(int num)
 		if (oldpos > pos) {
 			pos = oldpos;
 		}
-		if (!is_copper_dma()) {
+		if (!is_copper_dma(false)) {
 			break;
 		}
 		if (cop_state.ip >= currprefs.chipmem.size &&
@@ -8200,16 +8200,15 @@ static void compute_spcflag_copper(void);
 // normal COPJMP write: takes 2 more cycles
 static void COPJMP(int num, int vblank)
 {
-	int oldstrobe = cop_state.strobe;
 	bool wasstopped = cop_state.state == COP_stop && !vblank;
 
 	unset_special(SPCFLAG_COPPER);
 	cop_state.ignore_next = 0;
 
-	if (!oldstrobe) {
+	if (!cop_state.strobe) {
 		cop_state.state_prev = cop_state.state;
 	}
-	if ((cop_state.state == COP_wait1 || cop_state.state == COP_waitforever) && !vblank && is_copper_dma()) {
+	if ((cop_state.state == COP_wait1 || cop_state.state == COP_waitforever) && !vblank && is_copper_dma(false)) {
 		if (blt_info.blit_main) {
 			static int warned = 100;
 			if (warned > 0) {
@@ -8245,7 +8244,7 @@ static void COPJMP(int num, int vblank)
 	}
 	cop_state.vblankip = cop1lc;
 	copper_enabled_thisline = 0;
-	cop_state.strobe = num;
+	cop_state.strobe |= num;
 	cop_state.last_strobe = num;
 
 	if (custom_disabled) {
@@ -8253,11 +8252,11 @@ static void COPJMP(int num, int vblank)
 		return;
 	}
 
-	if (is_copper_dma()) {
-		compute_spcflag_copper();
-	} else if (wasstopped || (oldstrobe > 0 && oldstrobe != num && cop_state.state_prev == COP_wait1)) {
+	if (wasstopped) {
 		/* dma disabled, copper idle and accessed both COPxJMPs -> copper stops! */
 		cop_state.state = COP_stop;
+	} else if (is_copper_dma(false)) {
+		compute_spcflag_copper();
 	}
 }
 
@@ -8268,7 +8267,7 @@ STATIC_INLINE void COPCON(uae_u16 a)
 
 static void check_copper_stop(void)
 {
-	if (copper_enabled_thisline < 0 && !(is_copper_dma() && (dmacon & DMA_MASTER))) {
+	if (copper_enabled_thisline < 0 && !(is_copper_dma(false) && (dmacon & DMA_MASTER))) {
 		copper_enabled_thisline = 0;
 		unset_special(SPCFLAG_COPPER);
 	}
@@ -8321,6 +8320,8 @@ static void DMACON(int hpos, uae_u16 v)
 		} else {
 			compute_spcflag_copper();
 		}
+	} else if (!newcop && oldcop) {
+		compute_spcflag_copper();
 	}
 
 	int oldblt = (oldcon & DMA_BLITTER) && (oldcon & DMA_MASTER);
@@ -9964,7 +9965,7 @@ bool blitter_cant_access(int hpos)
 
 static bool copper_cant_read(int hpos, uae_u16 alloc)
 {
-	if (!is_copper_dma()) {
+	if (!is_copper_dma(true)) {
 		return true;
 	}
 
@@ -10318,6 +10319,20 @@ static void decide_line(int endhpos)
 	last_decide_line_hpos = endhpos;
 }
 
+static void setstrobecopip(void)
+{
+	if (cop_state.strobe == 3) {
+		cop_state.ip = cop1lc | cop2lc;
+	}
+	else if (cop_state.strobe == 1) {
+		cop_state.ip = cop1lc;
+	}
+	else {
+		cop_state.ip = cop2lc;
+	}
+	cop_state.strobe = 0;
+}
+
 /*
 	CPU write COPJMP wakeup sequence when copper is waiting:
 	- Idle cycle (can be used by other DMA channel)
@@ -10364,12 +10379,7 @@ static void do_copper_fetch(int hpos, uae_u16 id)
 		cop_state.ip += 2;
 		if (cop_state.state == COP_strobe_delay3) {
 			cop_state.state = COP_strobe_delay5;
-			if (cop_state.strobe == 1) {
-				cop_state.ip = cop1lc;
-			} else {
-				cop_state.ip = cop2lc;
-			}
-			cop_state.strobe = 0;
+			setstrobecopip();
 		} else {
 			cop_state.state = COP_strobe_delay2;
 		}
@@ -10399,12 +10409,7 @@ static void do_copper_fetch(int hpos, uae_u16 id)
 			cop_state.state = COP_read1;
 		}
 		// Next cycle finally reads from new pointer
-		if (cop_state.strobe == 1) {
-			cop_state.ip = cop1lc;
-		} else {
-			cop_state.ip = cop2lc;
-		}
-		cop_state.strobe = 0;
+		setstrobecopip();
 		alloc_cycle(hpos, CYCLE_COPPER);
 	}
 	break;
@@ -10438,12 +10443,7 @@ static void do_copper_fetch(int hpos, uae_u16 id)
 #endif
 		cop_state.state = COP_read1;
 		// Next cycle finally reads from new pointer
-		if (cop_state.strobe == 1) {
-			cop_state.ip = cop1lc;
-		} else {
-			cop_state.ip = cop2lc;
-		}
-		cop_state.strobe = 0;
+		setstrobecopip();
 		alloc_cycle(hpos, CYCLE_COPPER);
 		break;
 	case COP_start_delay:
@@ -10571,11 +10571,11 @@ static void do_copper_fetch(int hpos, uae_u16 id)
 			}
 
 			if (reg == 0x88) {
-				cop_state.strobe = 1;
+				cop_state.strobe |= 1;
 				cop_state.last_strobe = 1;
 				cop_state.state = COP_strobe_delay1;
 			} else if (reg == 0x8a) {
-				cop_state.strobe = 2;
+				cop_state.strobe |= 2;
 				cop_state.last_strobe = 2;
 				cop_state.state = COP_strobe_delay1;
 			} else {
@@ -10685,10 +10685,11 @@ static void update_copper(int until_hpos)
 	int hpos = last_copper_hpos;
 	while (hpos < until_hpos) {
 
+		int hp = hpos + 1;
 		// So we know about the fetch state.
-		decide_line(hpos + 1);
+		decide_line(hp);
 		// bitplane only, don't want blitter to steal our cycles.
-		decide_bpl_fetch(hpos + 1);
+		decide_bpl_fetch(hp);
 
 		// Handle copper DMA here if no bitplanes enabled.
 		// NOTE: can use odd cycles if DMA request was done during last cycle of line and it was even cycle (always in PAL).
@@ -10735,12 +10736,7 @@ static void update_copper(int until_hpos)
 				if (hpos == maxhposm1 && maxhposeven == COPPER_CYCLE_POLARITY) {
 					// if COP_strobe_delay2 would cross scanlines, it will be skipped!
 					cop_state.state = COP_read1;
-					if (cop_state.strobe == 1) {
-						cop_state.ip = cop1lc;
-					} else {
-						cop_state.ip = cop2lc;
-					}
-					cop_state.strobe = 0;
+					setstrobecopip();
 				} else {
 					copper_cant_read(hpos, CYCLE_PIPE_COPPER | 0x08);
 				}
@@ -10782,13 +10778,8 @@ static void update_copper(int until_hpos)
 					// early COPJMP processing
 					cop_state.state = COP_read1;
 					copper_bad_cycle_pc_old = cop_state.ip;
-					if (cop_state.strobe == 1) {
-						cop_state.ip = cop1lc;
-					} else {
-						cop_state.ip = cop2lc;
-					}
+					setstrobecopip();
 					copper_bad_cycle_pc_new = cop_state.ip;
-					cop_state.strobe = 0;
 				}
 			}
 			break;
@@ -10926,7 +10917,9 @@ next:
 
 static void compute_spcflag_copper(void)
 {
-	if (cop_state.state == COP_stop || cop_state.state == COP_waitforever || cop_state.state == COP_bltwait || cop_state.state == COP_bltwait2 || custom_disabled)
+	copper_enabled_thisline = 0;
+	unset_special(SPCFLAG_COPPER);
+	if (!is_copper_dma(false) || cop_state.state == COP_stop || cop_state.state == COP_waitforever || cop_state.state == COP_bltwait || cop_state.state == COP_bltwait2 || custom_disabled)
 		return;
 	if (cop_state.state == COP_wait1) {
 		int vp = vpos & (((cop_state.ir[1] >> 8) & 0x7F) | 0x80);
