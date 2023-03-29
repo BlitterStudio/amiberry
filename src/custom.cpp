@@ -5212,11 +5212,32 @@ static bool issprbrd(int hpos, uae_u16 bplcon0, uae_u16 bplcon3)
 	return brdsprt && !ce_is_borderblank(current_colors.extra);
 }
 
+static bool isham(uae_u16 bplcon0)
+{
+	int p = GET_PLANES(bplcon0);
+	if (!(bplcon0 & 0x800))
+		return 0;
+	if (aga_mode) {
+		// AGA only has 6 or 8 plane HAM
+		if (p == 6 || p == 8)
+			return 1;
+	}
+	else {
+		// OCS/ECS also supports 5 plane HAM
+		if (GET_RES_DENISE(bplcon0) > 0)
+			return 0;
+		if (p >= 5)
+			return 1;
+	}
+	return 0;
+}
+
 static void record_register_change(int hpos, int regno, uae_u16 value)
 {
 	if (regno == 0x0100 || regno == 0x0101) { // BPLCON0
-		if (value & 0x800)
-			thisline_decision.ham_seen = 1;
+		if (value & 0x800) {
+			thisline_decision.ham_seen |= isham(value);
+		}
 		thisline_decision.ehb_seen |= isehb(value, bplcon2);
 		isbrdblank(hpos, value, bplcon3);
 		issprbrd(hpos, value, bplcon3);
@@ -6213,7 +6234,7 @@ static void reset_decisions_hsync_start(void)
 	thisline_decision.plfleft = -1;
 	thisline_decision.plflinelen = -1;
 	thisline_decision.plfright = -1;
-	thisline_decision.ham_seen = (bplcon0 & 0x800) != 0;
+	thisline_decision.ham_seen = isham(bplcon0);
 	thisline_decision.ehb_seen = isehb(bplcon0, bplcon2);
 	thisline_decision.ham_at_start = (bplcon0 & 0x800) != 0;
 	thisline_decision.bordersprite_seen = issprbrd(-1, bplcon0, bplcon3);
