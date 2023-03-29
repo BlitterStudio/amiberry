@@ -4398,6 +4398,11 @@ void inputdevice_add_inputcode (int code, int state, const TCHAR *s)
 	}
 }
 
+static bool keyboardresetkeys(void)
+{
+	return (keybuf[AK_CTRL] || keybuf[AK_RCTRL]) && keybuf[AK_LAMI] && keybuf[AK_RAMI];
+}
+
 void inputdevice_do_keyboard(int code, int state)
 {
 #ifdef CDTV
@@ -4414,8 +4419,19 @@ void inputdevice_do_keyboard(int code, int state)
 	if (code < 0x80) {
 		uae_u8 key = code | (state ? 0x00 : 0x80);
 		keybuf[key & 0x7f] = (key & 0x80) ? 0 : 1;
-		if (keyboard_reset_seq_mode) {
-			if (!(keybuf[AK_CTRL] || keybuf[AK_RCTRL]) || !keybuf[AK_LAMI] || !keybuf[AK_RAMI]) {
+		if (keyboard_reset_seq_mode > 0) {
+			if (keyboard_reset_seq_mode == 3) {
+				if (keyboard_reset_seq >= 15 * 50) {
+					if (!keyboardresetkeys()) {
+						keyboard_reset_seq_mode = 0;
+					}
+					else {
+						keyboard_reset_seq_mode = 4;
+					}
+				}
+				return;
+			}
+			if (!keyboardresetkeys()) {
 				memset(keybuf, 0, sizeof(keybuf));
 				if (keyboard_reset_seq >= 5 * 50 || keyboard_reset_seq_mode > 0) {
 					send_internalevent(INTERNALEVENT_KBRESET);
@@ -4426,8 +4442,6 @@ void inputdevice_do_keyboard(int code, int state)
 						custom_reset(false, true);
 						uae_reset(0, 1);
 					}
-				} else if (keyboard_reset_seq_mode == -1) {
-					resetwarning_do(0);
 				}
 				keyboard_reset_seq = 0;
 				keyboard_reset_seq_mode = 0;
@@ -4437,9 +4451,11 @@ void inputdevice_do_keyboard(int code, int state)
 		}
 
 		if (key == AK_RESETWARNING) {
-			resetwarning_do(0);
+			if (resetwarning_do(0)) {
+				keyboard_reset_seq_mode = 3;
+			}
 			return;
-		} else if ((keybuf[AK_CTRL] || keybuf[AK_RCTRL]) && keybuf[AK_LAMI] && keybuf[AK_RAMI]) {
+		} else if (keyboardresetkeys()) {
 			keyboard_reset_seq = 0;
 			keyboard_reset_seq_mode = 0;
 			int r = keybuf[AK_LALT] | keybuf[AK_RALT];
@@ -4448,9 +4464,8 @@ void inputdevice_do_keyboard(int code, int state)
 				custom_reset(true, true);
 				cpu_inreset();
 			} else {
-				keyboard_reset_seq = 1;
-				if (currprefs.cs_resetwarning) {
-					keyboard_reset_seq_mode = -1;
+				if (currprefs.cs_resetwarning && resetwarning_do(0)) {
+					keyboard_reset_seq_mode = 3;
 				} else {
 					custom_reset(false, true);
 					cpu_inreset();
@@ -4458,21 +4473,29 @@ void inputdevice_do_keyboard(int code, int state)
 				}
 			}
 		}
-		if (record_key((uae_u8)((key << 1) | (key >> 7)))) {
-			if (inputdevice_logging & 1)
-				write_log(_T("Amiga key %02X %d\n"), key & 0x7f, key >> 7);
+		if (!keyboard_reset_seq_mode) {
+			if (record_key((uae_u8)((key << 1) | (key >> 7)))) {
+				if (inputdevice_logging & 1)
+					write_log(_T("Amiga key %02X %d\n"), key & 0x7f, key >> 7);
+			}
 		}
 		return;
 	}
 	inputdevice_add_inputcode(code, state, NULL);
 }
 
-void inputdevice_do_kb_reset(int hardreset)
+void inputdevice_do_kb_reset(void)
 {
-	send_internalevent(INTERNALEVENT_KBRESET);
-	uae_reset(hardreset, 1);
-	keyboard_reset_seq_mode = 0;
-	keyboard_reset_seq = 0;
+	custom_reset(false, true);
+	if (keyboard_reset_seq_mode == 3) {
+		if (!keyboardresetkeys()) {
+			keyboard_reset_seq_mode = 0;
+			uae_reset(0, 1);
+		}
+		else {
+			keyboard_reset_seq_mode = 4;
+		}
+	}
 }
 
 #ifdef AMIBERRY
@@ -5730,7 +5753,7 @@ void inputdevice_vsync (void)
 			pausemode(1);
 		}
 	}
-	if (keyboard_reset_seq > 0) {
+	if (keyboard_reset_seq_mode && keyboard_reset_seq > 0) {
 		keyboard_reset_seq++;
 	}
 

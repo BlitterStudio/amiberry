@@ -269,7 +269,7 @@ extern int inputdevice_translatekeycode (int keyboard, int scancode, int state, 
 extern void inputdevice_checkqualifierkeycode (int keyboard, int scancode, int state);
 extern void inputdevice_setkeytranslation (struct uae_input_device_kbr_default **trans, int **kbmaps);
 extern void inputdevice_do_keyboard(int code, int state);
-extern void inputdevice_do_kb_reset(int);
+extern void inputdevice_do_kb_reset(void);
 extern int inputdevice_iskeymapped (int keyboard, int scancode);
 extern int inputdevice_synccapslock (int, int*);
 extern void inputdevice_testrecord (int type, int num, int wtype, int wnum, int state, int max);
