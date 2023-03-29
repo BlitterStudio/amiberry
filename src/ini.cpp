@@ -571,6 +571,7 @@ bool ini_addstring(struct ini_data *ini, const TCHAR *section, const TCHAR *key,
 
 bool ini_delete(struct ini_data *ini, const TCHAR *section, const TCHAR *key)
 {
+	bool deleted = false;
 	for (int c = 0; c < ini->inilines; c++) {
 		struct ini_line *il = ini->inidata[c];
 		if (il && !_tcsicmp(section, il->section) && (key == NULL || !_tcsicmp(key, il->key))) {
@@ -580,9 +581,9 @@ bool ini_delete(struct ini_data *ini, const TCHAR *section, const TCHAR *key)
 			xfree(il);
 			ini->inidata[c] = NULL;
 			ini->modified = true;
-			return true;
+			deleted = true;
 		}
 	}
-	return false;
+	return deleted;
 }
 

@@ -43,11 +43,6 @@
 #define HDF_SUPPORT_DS 1
 #define HDF_SUPPORT_DS_PARTITION 0
 
-#define MAX_ASYNC_REQUESTS 50
-#define ASYNC_REQUEST_NONE 0
-#define ASYNC_REQUEST_TEMP 1
-#define ASYNC_REQUEST_CHANGEINT 10
-
 #undef DEBUGME
 #define hf_log(fmt, ...)
 #define hf_log2(fmt, ...)
