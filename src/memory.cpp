@@ -2478,7 +2478,7 @@ static void allocate_memory (void)
 		}
 	}
 
-	if (currprefs.cs_agnusmodel > 0) {
+	if (currprefs.cs_agnussize > AGNUSSIZE_AUTO) {
 		if (currprefs.cs_agnussize <= AGNUSSIZE_512) {
 			chipmem_full_mask = 0x80000 - 1;
 		} else if (currprefs.cs_agnussize == AGNUSSIZE_1M && chipmem_full_mask > 0x100000) {
