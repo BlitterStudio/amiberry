@@ -64,7 +64,7 @@ extern int vpos, lof_store;
 
 extern int n_frames;
 
-STATIC_INLINE int dmaen (unsigned int dmamask)
+STATIC_INLINE int dmaen(unsigned int dmamask)
 {
 	return (dmamask & dmacon) && (dmacon & 0x200);
 }

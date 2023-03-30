@@ -76,3 +76,5 @@ extern void epson_close (void);
 #define PARALLEL_MATRIX_EPSON9 2
 #define PARALLEL_MATRIX_EPSON24 3
 #define PARALLEL_MATRIX_EPSON48 4
+
+void finishjob (void);

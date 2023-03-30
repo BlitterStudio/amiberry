@@ -9386,7 +9386,6 @@ void init_eventtab (void)
 	eventtab[ev_audio].handler = audio_evhandler;
 
 	eventtab2[ev2_blitter].handler = blitter_handler;
-	eventtab2[ev2_disk].handler = DISK_handler;
 
 	events_schedule ();
 }
