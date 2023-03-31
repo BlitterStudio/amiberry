@@ -219,3 +219,4 @@ VSLinux/.vs
 .vs
 .flatpak-builder/
 .flatpak/
+Brewfile.lock.json
