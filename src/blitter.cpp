@@ -2224,9 +2224,9 @@ int blitnasty (void)
 {
 	int cycles, ccnt;
 	if (!blt_info.blit_main)
-		return 0;
+		return -1;
 	if (!dmaen(DMA_BLITTER))
-		return 0;
+		return -1;
 	if (blitter_cycle_exact) {
 		return -1;
 	}
