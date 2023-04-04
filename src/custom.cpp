@@ -13906,7 +13906,11 @@ static void hsync_handler_post(bool onvsync)
 	/* See if there's a chance of a copper wait ending this line.  */
 	compute_spcflag_copper();
 
-
+	// check reset and process it immediately, don't wait for vsync
+	if (quit_program == -UAE_RESET || quit_program == -UAE_RESET_KEYBOARD || quit_program == -UAE_RESET_HARD) {
+		quit_program = -quit_program;
+		set_special(SPCFLAG_BRK | SPCFLAG_MODE_CHANGE);
+	}
 
 
 #if 0
