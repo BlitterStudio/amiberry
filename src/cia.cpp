@@ -818,12 +818,12 @@ static bool cia_checkalarm(bool inc, bool irq, int num)
 {
 	struct CIA *c = &cia[num];
 
+#if 0
 	// hack: do not trigger alarm interrupt if KS code and both
 	// tod and alarm == 0. This incorrectly triggers on non-cycle exact
 	// modes. Real hardware value written to ciabtod by KS is always
 	// at least 1 or larger due to bus cycle delays when reading
 	// old value.
-#if 0
 	if (num) {
 		if (!currprefs.cpu_compatible && (munge24(m68k_getpc()) & 0xFFF80000) != 0xF80000) {
 			if (c->tod == 0 && c->alarm == 0)
@@ -939,7 +939,7 @@ static void do_tod_hack(bool dotod)
 		cia[0].tod++;
 		cia[0].tod &= 0x00ffffff;
 		tod_hack_tod_last = cia[0].tod;
-		cia_checkalarm(false, false, 0);
+		cia_checkalarm(false, true, 0);
 	}
 }
 
