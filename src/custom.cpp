@@ -321,11 +321,11 @@ int maxhpos_short = MAXHPOS_PAL;
 int maxvpos = MAXVPOS_PAL;
 int maxvpos_nom = MAXVPOS_PAL; // nominal value (same as maxvpos but "faked" maxvpos in fake 60hz modes)
 int maxvpos_display = MAXVPOS_PAL; // value used for display size
-static int maxhpos_temp; // line being >maxhpos due to VHPOSW tricks
 static int maxhpos_display = AMIGA_WIDTH_MAX;
 int maxvpos_display_vsync; // extra lines from top visible in bottom
 static int vblank_extraline;
 static int maxhposm1;
+int maxhposm0 = MAXHPOS_PAL;
 static bool maxhposeven, maxhposeven_prev;
 static int hsyncendpos, hsyncstartpos;
 int hsync_end_left_border;
@@ -1854,7 +1854,7 @@ static void clear_bitplane_pipeline(int type)
 	int safepos = hsyncstartpos_start_cycles - 1;
 	int count = RGA_PIPELINE_ADJUST + 1;
 	if (type) {
-		for (int i = 0; i < maxhpos + RGA_PIPELINE_ADJUST; i++) {
+		for (int i = 0; i < maxhposm0 + RGA_PIPELINE_ADJUST; i++) {
 			if (i < safepos || i >= safepos + count) {
 				uae_u16 v = cycle_line_pipe[i];
 				if (v & CYCLE_PIPE_BITPLANE) {
@@ -4752,6 +4752,13 @@ STATIC_INLINE int bpl_select_plane(int hpos, int plane, bool modulo)
 static void do_copper_fetch(int hpos, uae_u16 id);
 static void do_sprite_fetch(int hpos, uae_u16 dat);
 
+static void set_maxhpos(int maxhp)
+{
+	maxhposm0 = maxhp;
+	maxhposm1 = maxhp - 1;
+	maxhposeven = (maxhp & 1) == 0;
+}
+
 static void scandoubler_bpl_dma_start(void)
 {
 	if (!scandoubled_line && doflickerfix_active()) {
@@ -6057,7 +6064,7 @@ static void reset_decisions_scanline_start(void)
 	bprun_end = 0;
 
 	// clear sprite allocations
-	for (int i = 0; i < maxhpos; i++) {
+	for (int i = 0; i < maxhposm0; i++) {
 		uae_u16 v = cycle_line_pipe[i];
 		if (v & CYCLE_PIPE_SPRITE) {
 			cycle_line_pipe[i] = 0;
@@ -7688,7 +7695,7 @@ static void vhpos_adj(uae_u16 *hpp, uae_u16 *vpp)
 	uae_u16 vp = *vpp;
 
 	hp++;
-	if (hp == maxhpos) {
+	if (hp == maxhposm0) {
 		hp = 0;
 	} else if (hp == 1) {
 		// HP=0-1: VP = previous line.
@@ -7792,82 +7799,110 @@ static void VHPOSW_delayed(uae_u32 v)
 {
 	int oldvpos = vpos;
 	int newvpos = vpos;
+	int hpos_org = -1;
+
 #if 0
 	if (M68K_GETPC < 0xf00000 || 1)
 		write_log (_T("VHPOSW %04X PC=%08x\n"), v, M68K_GETPC);
 #endif
 
-	int hpos_org = current_hpos();
-	int hpos = hpos_org;
-	int hnew = (v & 0xff);
-	int hnew_org = hnew;
-	bool newinc = false;
-	if (hpos == 0 || hpos == 1) {
-		hpos += maxhpos;
-	}
-	if (hnew == 0 || hnew == 1) {
-		hnew += maxhpos;
-		newinc = true;
-	}
-	int hdiff = hnew - hpos;
-	//write_log("%02x %02x %d\n", hpos_org, hnew_org, hdiff);
-	if (copper_access && (hdiff & 1)) {
-		write_log("VHPOSW write %04X. New horizontal value is odd. Copper confusion possible.\n", v);
-	}
-
-	int hpos2 = 0;
-
-	delay_cycles += ((-hdiff * 8 - 2) & 7) << LORES_TO_SHRES_SHIFT;
-	if (hdiff & 1) {
-		vhposr_delay_offset = 1;
-	}
-	vhposr_sprite_offset += (hdiff * 4 - 2) << sprite_buffer_res;
-
-	if (newinc && hnew == maxhpos + 1) {
-		// 0000 -> 0001 (0 and 1 are part of previous line, vpos increases when hpos=1). No need to do anything
-	} else if (hnew >= maxhpos) {
-		// maxhpos check skip: counter counts until it wraps around 0xFF->0x00
-		int hdiff2 = (0x100 - hnew) - (maxhpos - hpos);
-		hdiff2 *= CYCLE_UNIT;
-		hdiff *= CYCLE_UNIT;
-		eventtab[ev_hsync].evtime += hdiff2;
-		eventtab[ev_hsync].oldcycles = get_cycles() - hnew * CYCLE_UNIT;
-		eventtab[ev_hsynch].evtime += hdiff2;
-		eventtab[ev_hsynch].oldcycles += hdiff2;
-		maxhpos_temp = 0x100;
-		hpos2 = current_hpos_safe();
-	} else {
-		hdiff = -hdiff;
-		hdiff *= CYCLE_UNIT;
-		for (;;) {
-			eventtab[ev_hsync].evtime += hdiff;
-			eventtab[ev_hsync].oldcycles += hdiff;
-			eventtab[ev_hsynch].evtime += hdiff;
-			eventtab[ev_hsynch].oldcycles += hdiff;
-			hpos2 = current_hpos_safe();
-			if (hpos2 >= 0 && hpos < 256) {
-				// don't allow line crossing, restore original value
-				break;
-			}
-			hdiff -= hdiff;
+	if ((currprefs.m68k_speed >= 0 && !currprefs.cachesize) || copper_access) {
+		hpos_org = current_hpos();
+		int hpos = hpos_org;
+		int hnew = (v & 0xff);
+		int hnew_org = hnew;
+		bool newinc = false;
+		if (hpos == 0 || hpos == 1) {
+			hpos += maxhpos;
 		}
-		events_schedule();
-	}
+		if (hnew == 0 || hnew == 1) {
+			hnew += maxhpos;
+			newinc = true;
+		}
+		int hdiff = hnew - hpos;
 
-#ifdef DEBUGGER
-	if (newvpos == oldvpos && hdiff) {
-		record_dma_reoffset(vpos, hpos, hnew);
-	}
-#endif
+		//write_log("%02x %02x %d\n", hpos_org, hnew_org, hdiff);
 
-	if (hdiff) {
-		int hold = hpos;
-		memset(cycle_line_slot + MAX_CHIPSETSLOTS + RGA_PIPELINE_ADJUST, 0, sizeof(uae_u8) * MAX_CHIPSETSLOTS_EXTRA);
-		memset(cycle_line_pipe + MAX_CHIPSETSLOTS + RGA_PIPELINE_ADJUST, 0, sizeof(uae_u16) * MAX_CHIPSETSLOTS_EXTRA);
-		int total = (MAX_CHIPSETSLOTS + RGA_PIPELINE_ADJUST + MAX_CHIPSETSLOTS_EXTRA) - (hnew > hold ? hnew : hold);
-		if (total > 0) {
-			memmove(cycle_line_slot + hnew, cycle_line_slot + hold, total * sizeof(uae_u8));
-			memmove(cycle_line_pipe + hnew, cycle_line_pipe + hold, total * sizeof(uae_u16));
+		if (hdiff <= -maxhpos / 2 || hdiff >= maxhpos / 2) {
+			hdiff = 0;
+		}
+		if (copper_access && (hdiff & 1)) {
+			write_log("VHPOSW write %04X. New horizontal value is odd. Copper confusion possible.\n", v);
+		}
+
+		if (hdiff) {
+			delay_cycles += ((-hdiff * 8 - 2) & 7) << LORES_TO_SHRES_SHIFT;
+			if (hdiff & 1) {
+				vhposr_delay_offset = 1;
+			}
+			vhposr_sprite_offset += (hdiff * 4 - 2) << sprite_buffer_res;
+
+			evt_t hsync_evtime = eventtab[ev_hsync].evtime;
+			evt_t hsync_oldcycles = eventtab[ev_hsync].oldcycles;
+			evt_t hsynch_evtime = eventtab[ev_hsynch].evtime;
+			evt_t hsynch_oldcycles = eventtab[ev_hsynch].oldcycles;
+
+			set_maxhpos(maxhpos);
+			if (newinc && hnew == maxhpos + 1) {
+				// 0000 -> 0001 (0 and 1 are part of previous line, vpos increases when hpos=1). No need to do anything
+			} else if (hpos < maxhpos && hnew >= maxhpos) {
+				// maxhpos check skip: counter counts until it wraps around 0xFF->0x00
+				int hdiff2 = (0x100 - hnew) - (maxhpos - hpos);
+				hdiff2 *= CYCLE_UNIT;
+				eventtab[ev_hsync].evtime += hdiff2;
+				eventtab[ev_hsync].oldcycles = get_cycles() - hnew * CYCLE_UNIT;
+				eventtab[ev_hsynch].evtime += hdiff2;
+				eventtab[ev_hsynch].oldcycles += hdiff2;
+				// mark current line lenght = 0x100
+				set_maxhpos(0x100);
+			} else if (hdiff) {
+				hdiff = -hdiff;
+				hdiff *= CYCLE_UNIT;
+				eventtab[ev_hsync].evtime += hdiff;
+				eventtab[ev_hsync].oldcycles += hdiff;
+				eventtab[ev_hsynch].evtime += hdiff;
+				eventtab[ev_hsynch].oldcycles += hdiff;
+			}
+
+			int hpos2 = current_hpos_safe();
+			if (hpos2 < 0 || hpos2 > 255) {
+				eventtab[ev_hsync].evtime = hsync_evtime;
+				eventtab[ev_hsync].oldcycles = hsync_oldcycles;
+				eventtab[ev_hsynch].evtime = hsynch_evtime;
+				eventtab[ev_hsynch].oldcycles = hsynch_oldcycles;
+				hdiff = 0;
+				hpos_org = -1;
+				set_maxhpos(maxhpos);
+			}
+
+			events_schedule();
+
+		#ifdef DEBUGGER
+			if (newvpos == oldvpos && hdiff) {
+				record_dma_reoffset(vpos, hpos, hnew);
+			}
+		#endif
+
+			if (hdiff) {
+				int hold = hpos;
+				memset(cycle_line_slot + MAX_CHIPSETSLOTS + RGA_PIPELINE_ADJUST, 0, sizeof(uae_u8) * MAX_CHIPSETSLOTS_EXTRA);
+				memset(cycle_line_pipe + MAX_CHIPSETSLOTS + RGA_PIPELINE_ADJUST, 0, sizeof(uae_u16) * MAX_CHIPSETSLOTS_EXTRA);
+				memset(blitter_pipe + MAX_CHIPSETSLOTS + RGA_PIPELINE_ADJUST, 0, sizeof(uae_u16) * MAX_CHIPSETSLOTS_EXTRA);
+				int total = (MAX_CHIPSETSLOTS + RGA_PIPELINE_ADJUST + MAX_CHIPSETSLOTS_EXTRA) - (hnew > hold ? hnew : hold);
+				if (total > 0) {
+					memmove(cycle_line_slot + hnew, cycle_line_slot + hold, total * sizeof(uae_u8));
+					memmove(cycle_line_pipe + hnew, cycle_line_pipe + hold, total * sizeof(uae_u16));
+					memmove(blitter_pipe + hnew, blitter_pipe + hold, total * sizeof(uae_u16));
+					if (hnew > hold) {
+						int t = hnew - hold;
+						memset(cycle_line_slot, 0, t * sizeof(uae_u8));
+						memset(cycle_line_pipe, 0, t * sizeof(uae_u16));
+						memset(blitter_pipe, 0, t * sizeof(uae_u16));
+					}
+				}
+				set_blitter_last(hnew + 1);
+				last_copper_hpos = hnew + 1;
+			}
 		}
 	}
 
@@ -7875,18 +7910,20 @@ static void VHPOSW_delayed(uae_u32 v)
 	newvpos &= 0xff00;
 	newvpos |= v;
 	if (newvpos != oldvpos) {
-		cia_adjust_eclock_phase((newvpos - oldvpos) * maxhpos);
 		vposw_change++;
 #ifdef DEBUGGER
-		record_dma_hsync(hpos_org);
-		if (debug_dma) {
-			int vp = vpos;
-			vpos = newvpos;
-			record_dma_hsync(maxhpos);
-			vpos = vp;
+		if (hpos_org >= 0) {
+			record_dma_hsync(hpos_org);
+			if (debug_dma) {
+				int vp = vpos;
+				vpos = newvpos;
+				record_dma_hsync(maxhpos);
+				vpos = vp;
+			}
 		}
 #endif
 	}
+	// don't allow backwards vpos (at least for now)
 	if (newvpos < oldvpos) {
 		newvpos = oldvpos;
 	} else if (newvpos < minfirstline && oldvpos < minfirstline) {
@@ -7894,11 +7931,6 @@ static void VHPOSW_delayed(uae_u32 v)
 	}
 	vpos = newvpos;
 	vb_check();
-
-#if 0
-	if (vpos < oldvpos)
-		vposback (oldvpos);
-#endif
 } 
 
 static void VHPOSW(uae_u16 v)
@@ -12669,13 +12701,12 @@ static void hsync_handlerh(bool onvsync)
 	events_schedule();
 }
 
-static void set_hpos()
+static void set_hpos(void)
 {
 	line_start_cycles = (get_cycles() + CYCLE_UNIT - 1) & ~(CYCLE_UNIT - 1);
 	maxhposeven_prev = maxhposeven;
 	maxhpos = maxhpos_short + lol;
-	maxhposm1 = maxhpos - 1;
-	maxhposeven = (maxhpos & 1) == 0;
+	set_maxhpos(maxhpos);
 	eventtab[ev_hsync].evtime = line_start_cycles + HSYNCTIME;
 	eventtab[ev_hsync].oldcycles = line_start_cycles;
 }
@@ -13498,8 +13529,7 @@ static void delayed_framestart(uae_u32 v)
 // this prepares for new line
 static void hsync_handler_post(bool onvsync)
 {
-	memset(cycle_line_slot, 0, maxhpos_temp > maxhpos ? maxhpos_temp + 1 : maxhpos + 1);
-	maxhpos_temp = 0;
+	memset(cycle_line_slot, 0, maxhposm1 + 1);
 
 	// genlock active:
 	// vertical: interlaced = toggles every other field, non-interlaced = both fields (normal)

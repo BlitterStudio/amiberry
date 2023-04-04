@@ -51,8 +51,7 @@ extern void blitter_check_start(void);
 extern void blitter_reset(void);
 extern void blitter_debugdump(void);
 extern void restore_blitter_start(void);
-
-extern uae_u16 blitter_pipe[256+1];
+extern void set_blitter_last(int);
 
 typedef void blitter_func(uaecptr, uaecptr, uaecptr, uaecptr, struct bltinfo *);
 

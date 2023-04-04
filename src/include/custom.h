@@ -144,7 +144,7 @@ extern uae_u16 INTREQR(void);
 #define EQU_ENDLINE_PAL 8
 #define EQU_ENDLINE_NTSC 10
 
-extern int maxhpos, maxhpos_short;
+extern int maxhpos, maxhposm0, maxhpos_short;
 extern int maxvpos, maxvpos_nom, maxvpos_display, maxvpos_display_vsync;
 extern int hsyncstartpos_hw, hsyncendpos_hw;
 extern int minfirstline, vblank_endline, numscrlines;
@@ -274,6 +274,7 @@ bool get_ras_cas(uaecptr, int*, int*);
 #define MAX_CHIPSETSLOTS_EXTRA 12
 extern uae_u8 cycle_line_slot[MAX_CHIPSETSLOTS + RGA_PIPELINE_ADJUST + MAX_CHIPSETSLOTS_EXTRA];
 extern uae_u16 cycle_line_pipe[MAX_CHIPSETSLOTS + RGA_PIPELINE_ADJUST + MAX_CHIPSETSLOTS_EXTRA];
+extern uae_u16 blitter_pipe[MAX_CHIPSETSLOTS + RGA_PIPELINE_ADJUST + MAX_CHIPSETSLOTS_EXTRA];
 
 #define CYCLE_PIPE_CPUSTEAL 0x8000
 #define CYCLE_PIPE_NONE 0x4000
@@ -291,7 +292,7 @@ extern int rga_pipeline_blitter;
 
 STATIC_INLINE int get_rga_pipeline(int hpos, int off)
 {
-	return (hpos + off) % maxhpos;
+	return (hpos + off) % maxhposm0;
 }
 
 struct custom_store
