@@ -296,7 +296,7 @@ public:
 			}
 			char tmp[MAX_DPATH];
 			strncpy(tmp, txtPath->getText().c_str(), MAX_DPATH);
-			default_hfdlg(&current_hfdlg);
+			//default_hfdlg(&current_hfdlg);
 			_tcscpy(current_hfdlg.ci.rootdir, tmp);
 			// Set RDB mode if IDE or SCSI
 			if (current_hfdlg.ci.controller_type > 0) {
@@ -902,8 +902,8 @@ bool EditFilesysHardfile(const int unit_no)
 	if (dialogResult)
 	{
 		extract_path(const_cast<char *>(txtPath->getText().c_str()), current_dir);
-
 		uaedev_config_info ci{};
+
 		memcpy(&ci, &current_hfdlg.ci, sizeof(uaedev_config_info));
 		uci = add_filesys_config(&changed_prefs, unit_no, &ci);
 		if (uci) {
