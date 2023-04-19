@@ -3508,13 +3508,19 @@ static void init_drawing_frame (void)
 				vidinfo->gfx_vresolution_reserved = VRES_DOUBLE;
 				graphics_reset(false);
 			}
-			int newres = largest_res;
-			if (htotal < 190)
-				newres = largest_res + 1;
-			if (newres < RES_HIRES)
+			int newres = RES_HIRES;
+			int hres = (2 * htotal) << largest_res;
+			if (hres > 1000) {
+				newres = RES_SUPERHIRES;
+			} else {
 				newres = RES_HIRES;
-			if (newres > RES_MAX)
+			}
+			if (newres < RES_HIRES) {
+				newres = RES_HIRES;
+			}
+			if (newres > RES_MAX) {
 				newres = RES_MAX;
+			}
 			if (changed_prefs.gfx_resolution != newres) {
 				autoswitch_old_resolution = RES_HIRES;
 				write_log(_T("Programmed mode autores = %d -> %d (%d)\n"), changed_prefs.gfx_resolution, newres, largest_res);
