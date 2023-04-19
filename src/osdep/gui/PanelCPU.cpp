@@ -241,9 +241,13 @@ public:
 			changed_prefs.comptrustword = trust_prev;
 			changed_prefs.comptrustlong = trust_prev;
 			changed_prefs.comptrustnaddr = trust_prev;
-			if (changed_prefs.fpu_mode > 0) {
+			if (changed_prefs.fpu_mode > 0 || changed_prefs.fpu_model == 0) {
 				changed_prefs.compfpu = false;
 				chkFPUJIT->setSelected(false);
+			}
+			else if (changed_prefs.fpu_model > 0) {
+				changed_prefs.compfpu = true;
+				chkFPUJIT->setSelected(true);
 			}
 		}
 		if (!changed_prefs.cachesize) {
