@@ -4276,7 +4276,9 @@ static void beginning_of_plane_block(int hpos)
 
 	// do not mistake end of bitplane as start of low value hblank programmed mode
 	if (bpl_shifter <= 0 && hpos > REFRESH_FIRST_HPOS) {
-		start_noborder(hpos + hpos_hsync_extra);
+		if (ecs_denise || (!ecs_denise && hpos >= OCS_DENISE_HBLANK_DISABLE_HPOS + 1)) {
+			start_noborder(hpos + hpos_hsync_extra);
+		}
 	}
 
 	hbstrt_bordercheck(hpos, true);
@@ -4946,6 +4948,7 @@ static void update_fetch(int until, int fm)
 	// Unrolled simple version of the for loop below.
 	if (bprun && !line_cyclebased && dmacon_bpl && !ddf_stopping
 		&& plane0
+		&& (ecs_denise || hpos >= OCS_DENISE_HBLANK_DISABLE_HPOS)
 		&& !currprefs.chipset_hr
 #ifdef DEBUGGER
 		&& !debug_dma
@@ -5190,6 +5193,10 @@ static bool isbrdblank(int hpos, uae_u16 bplcon0, uae_u16 bplcon3)
 	return brdblank;
 }
 
+static bool brdblankactive(void)
+{
+	return (bplcon0 & 1) && (bplcon3 & 0x20);
+}
 
 static bool brdspractive(void)
 {
@@ -5688,24 +5695,17 @@ static void calcsprite(void)
 		sprite_minx = tospritexdiw(thisline_decision.diwfirstword);
 	}
 	if (thisline_decision.diwlastword >= 0) {
-		sprite_maxx = tospritexdiw(thisline_decision.diwfirstword);
+		sprite_maxx = tospritexdiw(thisline_decision.diwlastword);
 	}
 	if (thisline_decision.plfleft >= 0) {
-		int min, max;
-		min = tospritexddf(thisline_decision.plfleft);
-		max = tospritexddf(thisline_decision.plfright);
+		int min = tospritexddf(thisline_decision.plfleft);
+		int max = tospritexddf(thisline_decision.plfright);
 		if (min > sprite_minx && min < max) { /* min < max = full line ddf */
-			if (ecs_denise) {
-				sprite_minx = min;
-			} else {
-				if (thisline_decision.plfleft >= 0x28) {
-					sprite_minx = min;
-				}
-			}
+			sprite_minx = min;
 		}
 		/* sprites are visible from first BPL1DAT write to end of line
 		 * ECS Denise/AGA: no limits
-		 * OCS Denise: BPL1DAT write only enables sprite if hpos >= 0x28 or so.
+		 * OCS Denise: BPL1DAT write only enables sprite if hpos >= 0x2e (OCS_DENISE_HBLANK_DISABLE_HPOS).
 		 * (undocumented feature)
 		 */
 	}
@@ -5755,6 +5755,11 @@ static void decide_sprites(int hpos, bool usepointx, bool quick)
 		}
 
 		if (!spr[i].armed) {
+			continue;
+		}
+
+		// ECS Denise and superhires resolution: sprites 4 to 7 are disabled.
+		if (!aga_mode && ecs_denise && GET_RES_AGNUS(bplcon0) == RES_SUPERHIRES && i >= 4) {
 			continue;
 		}
 
@@ -9160,7 +9165,8 @@ static void BPLxDAT_next(uae_u32 vv)
 	}
 
 	if (num == 0) {
-		if (ecs_denise || (!ecs_denise && hpos >= 0x2e)) {
+		// ECS/AGA: HSYNC start - 1: $0C is first possible.
+		if ((ecs_denise && hpos != hsyncstartpos_start_cycles - 1) || (!ecs_denise && hpos >= OCS_DENISE_HBLANK_DISABLE_HPOS)) {
 			beginning_of_plane_block(hpos);
 			bprun_pipeline_flush_delay = maxhpos;
 			if (bplcon0_planes_changed) {
@@ -11229,7 +11235,6 @@ static void do_sprite_fetch(int hpos, uae_u16 dat)
 
 	sprite_fetch_full(s, hpos, slot, dmastate, &data, &data321, &data322);
 
-	int sprxp = s->xpos >> (sprite_buffer_res + 1);
 	if (dmastate) {
 		if (!slot) {
 			SPRxDATA_1(data, num, hpos);

@@ -174,7 +174,7 @@ static uae_u32 clxtab[256];
 xcolnr xcolors[4096];
 
 struct spritepixelsbuf {
-	bool attach;
+	uae_u8 flags;
 	uae_u8 stdata;
 	uae_u16 stfmdata;
 	uae_u16 data;
@@ -1258,6 +1258,24 @@ static void pfield_init_linetoscr (bool border)
 	// This means "bordersprite" condition is possible under OCS/ECS too. Argh!
 
 	if (dip_for_drawing->nr_sprites) {
+		int gap = 0;
+		// OCS Denise: no "bordersprite"
+		if (aga_mode) {
+			// If AGA: "bordersprite" starts 0.5 lores pixels earlier
+			if (currprefs.chipset_hr) {
+				// 1 lores pixel
+				gap = 1 << lores_shift;
+				// 1 lores -> 1 hires but don't round to zero.
+				if (gap >= 2) {
+					gap /= 2;
+				}
+			} else {
+				gap = 1 << lores_shift;
+			}
+		} else if (ecs_denise) {
+			// If ECS Denise: "bordersprite" starts 1 lores pixel earlier
+			gap = 1 << lores_shift;
+		}
 		if (!ce_is_borderblank(colors_for_drawing.extra)) {
 			/* bordersprite off or not supported: sprites are visible until diw_end */
 			if (playfield_end < linetoscr_diw_end && hblank_right_stop > playfield_end) {
@@ -1269,24 +1287,27 @@ static void pfield_init_linetoscr (bool border)
 			}
 			int plfleft = dp_for_drawing->plfleft - DDF_OFFSET;
 			int left = coord_hw_to_window_x_lores(plfleft);
-			if (aga_mode) {
-				// If AGA: "bordersprite" starts 0.5 lores pixels earlier
-				if (currprefs.chipset_hr) {
-					left -= lores_shift > 0 ? 1 : 0;
-				} else {
-					left -= 1 << lores_shift;
+			int total = left - dp_for_drawing->diwfirstword;
+			if (total > 0 && gap > 0) {
+				if (gap > total) {
+					gap = total;
 				}
-			} else if (ecs_denise) {
-				// If ECS Denise: "bordersprite" starts 1 lores pixel earlier
-				left -= 1 << lores_shift;
+				left -= gap;
 			}
-			if (left < visible_left_border)
+			if (left < visible_left_border) {
 				left = visible_left_border;
+			}
 			if (left < playfield_start && left >= linetoscr_diw_start) {
 				playfield_start = left;
 			}
+			sprite_playfield_start = playfield_start;
 		} else {
-			sprite_playfield_start = 0;
+			if (!ce_is_bordersprite(colors_for_drawing.extra)) {
+				bool early = ((dp_for_drawing->plfleft >> 1) & 1) != 0;
+				int plfleft = dp_for_drawing->plfleft - DDF_OFFSET + (early ? 1 * 2 : 0);
+				sprite_playfield_start = coord_hw_to_window_x_lores(plfleft);
+				sprite_playfield_start -= gap;
+			}
 			if (playfield_end < linetoscr_diw_end && hblank_right_stop > playfield_end) {
 				playfield_end = linetoscr_diw_end;
 			}
@@ -1804,7 +1825,7 @@ static uae_u8 render_sprites(int pos, int dualpf, uae_u8 apixel, int aga)
 	plfmask = (plf_sprite_mask >> maskshift) >> maskshift;
 	v &= ~plfmask;
 	/* Extra 1 sprite pixel at DDFSTRT is only possible if at least 1 plane is active */
-	if ((bplplanecnt > 0 || pos >= sprite_playfield_start) && (pos < sprite_end) && (v != 0 || SPRITE_DEBUG)) {
+	if (pos >= sprite_playfield_start && pos < sprite_end && (v != 0 || SPRITE_DEBUG)) {
 		unsigned int vlo, vhi, col;
 		unsigned int v1 = v & 255;
 		/* OFFS determines the sprite pair with the highest priority that has
@@ -1826,7 +1847,7 @@ static uae_u8 render_sprites(int pos, int dualpf, uae_u8 apixel, int aga)
 #if SPRITE_DEBUG > 0
 		v ^= 8;
 #endif
-		if (spb->attach && (spb->stdata & (3 << offs))) {
+		if ((spb->flags & 1) && (spb->stdata & (3 << offs))) {
 			col = v;
 			if (aga)
 				col += sbasecol[1];
@@ -1874,19 +1895,66 @@ static uae_u8 render_sprites(int pos, int dualpf, uae_u8 apixel, int aga)
 
 #define PUTBPIX(x) buf[dpix] = (x);
 
-STATIC_INLINE uae_u32 shsprite (int dpix, uae_u32 spix_val, uae_u32 v, int spr)
+STATIC_INLINE uae_u32 shsprite(int dpix, uae_u32 spix_val, uae_u32 v, int add, int spr)
 {
-	uae_u8 sprcol;
+	uae_u8 sprcol1, sprcol2, off;
 	uae_u16 scol;
-	if (!spr)
+	if (!spr) {
 		return v;
-	sprcol = render_sprites (dpix, 0, spix_val, 0);
-	if (!sprcol)
-		return v;
-	/* good enough for now.. */ 
-	scol = colors_for_drawing.color_regs_ecs[sprcol] & 0xccc;
+	}
+	dpix &= ~1;
+	struct spritepixelsbuf *spb = &spritepixels[dpix];
+	int sdpix = dpix;
+	if (spb->flags & 2) {
+		sdpix -= add;
+	}
+	sprcol1 = render_sprites(sdpix, bpldualpf, spix_val, 0) & 3;
+	sprcol2 = render_sprites(sdpix + add, bpldualpf, spix_val, 0) & 3;
+	off = sprcol2 * 4 + sprcol1 + 16;
+	if ((dpix & add)) {
+		if (!sprcol2) {
+			return v;
+		}
+		scol = (colors_for_drawing.color_regs_ecs[off] & 0x333) << 2;
+	} else {
+		if (!sprcol1) {
+			return v;
+		}
+		scol = (colors_for_drawing.color_regs_ecs[off] & 0xccc) << 0;
+	}
 	scol |= scol >> 2;
 	return xcolors[scol];
+}
+
+static int NOINLINE linetoscr_32_sh_func(int spix, int dpix, int stoppos, int spr)
+{
+	uae_u32 *buf = (uae_u32 *)xlinebuffer;
+
+	while (dpix < stoppos) {
+		uae_u32 spix_val1, spix_val2;
+		uae_u16 v;
+		int off;
+		spix_val1 = pixdata.apixels[spix++];
+		spix_val2 = pixdata.apixels[spix++];
+		off = ((spix_val2 & 3) * 4) + (spix_val1 & 3) + ((spix_val1 | spix_val2) & 16);
+		v = (colors_for_drawing.color_regs_ecs[off] & 0xccc) << 0;
+		v |= v >> 2;
+		PUTBPIX(shsprite(dpix, spix_val1, xcolors[v], 2, spr));
+		dpix++;
+		v = (colors_for_drawing.color_regs_ecs[off] & 0x333) << 2;
+		v |= v >> 2;
+		PUTBPIX(shsprite(dpix, spix_val2, xcolors[v], 2, spr));
+		dpix++;
+	}
+	return spix;
+}
+static int linetoscr_32_sh_spr(int spix, int dpix, int stoppos)
+{
+	return linetoscr_32_sh_func(spix, dpix, stoppos, true);
+}
+static int linetoscr_32_sh(int spix, int dpix, int stoppos)
+{
+	return linetoscr_32_sh_func(spix, dpix, stoppos, false);
 }
 
 static int NOINLINE linetoscr_16_sh_func(int spix, int dpix, int stoppos, int spr)
@@ -1902,11 +1970,11 @@ static int NOINLINE linetoscr_16_sh_func(int spix, int dpix, int stoppos, int sp
 		off = ((spix_val2 & 3) * 4) + (spix_val1 & 3) + ((spix_val1 | spix_val2) & 16);
 		v = (colors_for_drawing.color_regs_ecs[off] & 0xccc) << 0;
 		v |= v >> 2;
-		PUTBPIX(shsprite (dpix, spix_val1, xcolors[v], spr));
+		PUTBPIX(shsprite (dpix, spix_val1, xcolors[v], 2, spr));
 		dpix++;
 		v = (colors_for_drawing.color_regs_ecs[off] & 0x333) << 2;
 		v |= v >> 2;
-		PUTBPIX(shsprite (dpix, spix_val2, xcolors[v], spr));
+		PUTBPIX(shsprite (dpix, spix_val2, xcolors[v], 2, spr));
 		dpix++;
 	}
 	return spix;
@@ -1918,36 +1986,6 @@ static int linetoscr_16_sh_spr(int spix, int dpix, int stoppos)
 static int linetoscr_16_sh(int spix, int dpix, int stoppos)
 {
 	return linetoscr_16_sh_func(spix, dpix, stoppos, false);
-}
-static int NOINLINE linetoscr_32_sh_func(int spix, int dpix, int stoppos, int spr)
-{
-	uae_u32 *buf = (uae_u32 *) xlinebuffer;
-
-	while (dpix < stoppos) {
-		uae_u32 spix_val1, spix_val2;
-		uae_u16 v;
-		int off;
-		spix_val1 = pixdata.apixels[spix++];
-		spix_val2 = pixdata.apixels[spix++];
-		off = ((spix_val2 & 3) * 4) + (spix_val1 & 3) + ((spix_val1 | spix_val2) & 16);
-		v = (colors_for_drawing.color_regs_ecs[off] & 0xccc) << 0;
-		v |= v >> 2;
-		PUTBPIX(shsprite (dpix, spix_val1, xcolors[v], spr));
-		dpix++;
-		v = (colors_for_drawing.color_regs_ecs[off] & 0x333) << 2;
-		v |= v >> 2;
-		PUTBPIX(shsprite (dpix, spix_val2, xcolors[v], spr));
-		dpix++;
-	}
-	return spix;
-}
-static int linetoscr_32_sh_spr(int spix, int dpix, int stoppos)
-{
-	return linetoscr_32_sh_func(spix, dpix, stoppos, true);
-}
-static int linetoscr_32_sh(int spix, int dpix, int stoppos)
-{
-	return linetoscr_32_sh_func(spix, dpix, stoppos, false);
 }
 static int NOINLINE linetoscr_32_shrink1_sh_func(int spix, int dpix, int stoppos, int spr)
 {
@@ -1962,7 +2000,7 @@ static int NOINLINE linetoscr_32_shrink1_sh_func(int spix, int dpix, int stoppos
 		off = ((spix_val2 & 3) * 4) + (spix_val1 & 3) + ((spix_val1 | spix_val2) & 16);
 		v = (colors_for_drawing.color_regs_ecs[off] & 0xccc) << 0;
 		v |= v >> 2;
-		PUTBPIX(shsprite (dpix, spix_val1, xcolors[v], spr));
+		PUTBPIX(shsprite (dpix, spix_val1, xcolors[v], 1, spr));
 		dpix++;
 	}
 	return spix;
@@ -1992,7 +2030,7 @@ static int NOINLINE linetoscr_32_shrink1f_sh_func(int spix, int dpix, int stoppo
 		v = (colors_for_drawing.color_regs_ecs[off] & 0x333) << 2;
 		v |= v >> 2;
 		dpix_val2 = xcolors[v];
-		PUTBPIX(shsprite (dpix, spix_val1, merge_2pixel32 (dpix_val1, dpix_val2), spr));
+		PUTBPIX(shsprite (dpix, spix_val1, merge_2pixel32 (dpix_val1, dpix_val2), 1, spr));
 		dpix++;
 	}
 	return spix;
@@ -2018,7 +2056,7 @@ static int NOINLINE linetoscr_16_shrink1_sh_func(int spix, int dpix, int stoppos
 		off = ((spix_val2 & 3) * 4) + (spix_val1 & 3) + ((spix_val1 | spix_val2) & 16);
 		v = (colors_for_drawing.color_regs_ecs[off] & 0xccc) << 0;
 		v |= v >> 2;
-		PUTBPIX(shsprite (dpix, spix_val1, xcolors[v], spr));
+		PUTBPIX(shsprite (dpix, spix_val1, xcolors[v], 1, spr));
 		dpix++;
 	}
 	return spix;
@@ -2048,7 +2086,7 @@ static int NOINLINE linetoscr_16_shrink1f_sh_func(int spix, int dpix, int stoppo
 		v = (colors_for_drawing.color_regs_ecs[off] & 0x333) << 2;
 		v |= v >> 2;
 		dpix_val2 = xcolors[v];
-		PUTBPIX(shsprite (dpix, spix_val1, merge_2pixel16 (dpix_val1, dpix_val2), spr));
+		PUTBPIX(shsprite (dpix, spix_val1, merge_2pixel16 (dpix_val1, dpix_val2), 1, spr));
 		dpix++;
 	}
 	return spix;
@@ -2074,7 +2112,7 @@ static int NOINLINE linetoscr_32_shrink2_sh_func(int spix, int dpix, int stoppos
 		off = ((spix_val2 & 3) * 4) + (spix_val1 & 3) + ((spix_val1 | spix_val2) & 16);
 		v = (colors_for_drawing.color_regs_ecs[off] & 0xccc) << 0;
 		v |= v >> 2;
-		PUTBPIX(shsprite (dpix, spix_val1, xcolors[v], spr));
+		PUTBPIX(shsprite (dpix, spix_val1, xcolors[v], 1, spr));
 		spix+=2;
 		dpix++;
 	}
@@ -2116,7 +2154,7 @@ static int NOINLINE linetoscr_32_shrink2f_sh_func(int spix, int dpix, int stoppo
 		v |= v >> 2;
 		dpix_val2 = xcolors[v];
 		dpix_val4 = merge_2pixel32 (dpix_val1, dpix_val2);
-		PUTBPIX(shsprite (dpix, spix_val1, merge_2pixel32 (dpix_val3, dpix_val4), spr));
+		PUTBPIX(shsprite (dpix, spix_val1, merge_2pixel32 (dpix_val3, dpix_val4), 1, spr));
 		dpix++;
 	}
 	return spix;
@@ -2142,7 +2180,7 @@ static int NOINLINE linetoscr_16_shrink2_sh_func(int spix, int dpix, int stoppos
 		off = ((spix_val2 & 3) * 4) + (spix_val1 & 3) + ((spix_val1 | spix_val2) & 16);
 		v = (colors_for_drawing.color_regs_ecs[off] & 0xccc) << 0;
 		v |= v >> 2;
-		PUTBPIX(shsprite (dpix, spix_val1, xcolors[v], spr));
+		PUTBPIX(shsprite (dpix, spix_val1, xcolors[v], 1, spr));
 		spix+=2;
 		dpix++;
 	}
@@ -2184,7 +2222,7 @@ static int NOINLINE linetoscr_16_shrink2f_sh_func (int spix, int dpix, int stopp
 		v |= v >> 2;
 		dpix_val2 = xcolors[v];
 		dpix_val4 = merge_2pixel32 (dpix_val1, dpix_val2);
-		PUTBPIX(shsprite (dpix, spix_val1, merge_2pixel16 (dpix_val3, dpix_val4), spr));
+		PUTBPIX(shsprite (dpix, spix_val1, merge_2pixel16 (dpix_val3, dpix_val4), 1, spr));
 		dpix++;
 	}
 	return spix;
@@ -2824,10 +2862,13 @@ STATIC_INLINE void draw_sprites_1(struct sprite_entry *e, int dualpf, int has_at
 
 	for (pos = epos; pos < emax; pos++, spr_pos++) {
 		if (spr_pos >= 0 && spr_pos < MAX_PIXELS_PER_LINE) {
-			spritepixels[spr_pos].data = buf[pos];
-			spritepixels[spr_pos].stdata = stbuf[pos];
-			spritepixels[spr_pos].stfmdata = stfmbuf[pos];
-			spritepixels[spr_pos].attach = has_attach;
+			struct spritepixelsbuf *sp = &spritepixels[spr_pos];
+			sp->data = buf[pos];
+			sp->stdata = stbuf[pos];
+			sp->stfmdata = stfmbuf[pos];
+			sp->flags = has_attach ? 1 : 0;
+			// ECS superhires sprite odd/even bit
+			sp->flags |= (pos & 2) ? 2 : 0;
 		}
 	}
 
