@@ -444,6 +444,7 @@ struct gfx_filterdata
 	int gfx_filter_autoscale;
 	int gfx_filter_integerscalelimit;
 	int gfx_filter_keep_autoscale_aspect;
+	int gfx_filter_rotation;
 	bool changed;
 };
 

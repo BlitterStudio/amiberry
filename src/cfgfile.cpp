@@ -247,7 +247,7 @@ static const TCHAR *unmapped[] = { _T("floating"), _T("zero"), _T("one"), 0 };
 static const TCHAR *ciatype[] = { _T("default"), _T("391078-01"), 0 };
 static const TCHAR *debugfeatures[] = { _T("segtracker"), _T("fsdebug"), 0 };
 static const TCHAR *hvcsync[] = { _T("hvcsync"), _T("csync"), _T("hvsync"), 0 };
-static const TCHAR* eclocksync[] = { _T("default"), _T("68000"), _T("Gayle"), _T("68000_opt"), 0 };
+static const TCHAR *eclocksync[] = { _T("default"), _T("68000"), _T("Gayle"), _T("68000_opt"), 0 };
 static const TCHAR *agnusmodel[] = { _T("default"), _T("velvet"), _T("a1000"), _T("ocs"), _T("ecs"), _T("aga"), 0 };
 static const TCHAR *agnussize[] = { _T("default"), _T("512k"), _T("1m"), _T("2m"), 0 };
 static const TCHAR *denisemodel[] = { _T("default"), _T("velvet"), _T("a1000_noehb"), _T("a1000"), _T("ocs"), _T("ecs"), _T("aga"), 0 };
@@ -2497,6 +2497,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 			cfgfile_dwrite_ext(f, _T("gfx_filter_overlay"), ext, _T("%s%s"),
 				gf->gfx_filteroverlay, _tcschr (gf->gfx_filteroverlay, ',') ? _T(",") : _T(""));
 		}
+		cfgfile_dwrite_ext(f, _T("gfx_filter_rotation"), ext, _T("%d"), gf->gfx_filter_rotation);
 	}
 	cfgfile_dwrite (f, _T("gfx_luminance"), _T("%d"), p->gfx_luminance);
 	cfgfile_dwrite (f, _T("gfx_contrast"), _T("%d"), p->gfx_contrast);
@@ -2935,11 +2936,11 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 		: p->keyboard_lang == KBD_LANG_IT ? _T("it")
 		: _T("FOO")));
 
-	cfgfile_dwrite (f, _T("state_replay_rate"), _T("%d"), p->statecapturerate);
-	cfgfile_dwrite (f, _T("state_replay_buffers"), _T("%d"), p->statecapturebuffersize);
-	cfgfile_dwrite_bool (f, _T("state_replay_autoplay"), p->inprec_autoplay);
-	cfgfile_dwrite_bool (f, _T("warp"), p->turbo_emulation);
-	cfgfile_dwrite (f, _T("warp_limit"), _T("%d"), p->turbo_emulation_limit);
+	cfgfile_dwrite(f, _T("state_replay_rate"), _T("%d"), p->statecapturerate);
+	cfgfile_dwrite(f, _T("state_replay_buffers"), _T("%d"), p->statecapturebuffersize);
+	cfgfile_dwrite_bool(f, _T("state_replay_autoplay"), p->inprec_autoplay);
+	cfgfile_dwrite_bool(f, _T("warp"), p->turbo_emulation);
+	cfgfile_dwrite(f, _T("warp_limit"), _T("%d"), p->turbo_emulation_limit);
 	cfgfile_dwrite_bool(f, _T("warpboot"), p->turbo_boot);
 	cfgfile_dwrite(f, _T("warpboot_delay"), _T("%d"), p->turbo_boot_delay);
 
@@ -3732,7 +3733,6 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		|| cfgfile_intval(option, value, _T("gfx_horizontal_extra"), &p->gfx_extrawidth, 1)
 		|| cfgfile_intval(option, value, _T("gfx_vertical_extra"), &p->gfx_extraheight, 1)
 		|| cfgfile_intval(option, value, _T("gfx_monitorblankdelay"), &p->gfx_monitorblankdelay, 1)
-		|| cfgfile_intval(option, value, _T("gfx_rotation"), &p->gfx_rotation, 1)
 
 		|| cfgfile_intval (option, value, _T("floppy0sound"), &p->floppyslots[0].dfxclick, 1)
 		|| cfgfile_intval (option, value, _T("floppy1sound"), &p->floppyslots[1].dfxclick, 1)
@@ -3820,6 +3820,12 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		|| cfgfile_strval(option, value, _T("magic_mousecursor"), &p->input_magic_mouse_cursor, magiccursors, 0)
 		|| cfgfile_strval (option, value, _T("absolute_mouse"), &p->input_tablet, abspointers, 0))
 		return 1;
+	if (cfgfile_intval(option, value, _T("gfx_rotation"), &p->gfx_rotation, 1)) {
+		p->gf[GF_NORMAL].gfx_filter_rotation = p->gfx_rotation;
+		p->gf[GF_INTERLACE].gfx_filter_rotation = p->gfx_rotation;
+		return 1;
+	}
+
 #ifndef AMIBERRY
 	if (cfgfile_multichoice(option, value, _T("debugging_features"), &p->debugging_features, debugfeatures))
 		return 1;
@@ -3873,6 +3879,7 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 			|| cfgfile_intval(option, value, _T("gfx_filter_bilinear"), ext, &gf->gfx_filter_bilinear, 1)
 			|| cfgfile_intval(option, value, _T("gfx_filter_keep_autoscale_aspect"), ext, &gf->gfx_filter_keep_autoscale_aspect, 1)
 			|| cfgfile_intval(option, value, _T("gfx_filter_enable"), ext, &gf->enable, 1)
+			|| cfgfile_intval(option, value, _T("gfx_filter_rotation"), ext, &gf->gfx_filter_rotation, 1)
 			|| cfgfile_string(option, value, _T("gfx_filter_mask"), ext, gf->gfx_filtermask[2 * MAX_FILTERSHADERS], sizeof gf->gfx_filtermask[2 * MAX_FILTERSHADERS] / sizeof (TCHAR)))
 			{
 				return 1;
