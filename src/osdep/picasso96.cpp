@@ -5438,9 +5438,9 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 		}
 	}
 
-	if (0 && flushlines) {
-		write_log (_T("%d:%d\n"), flushlines, matchcount);
-	}
+	//if (0 && flushlines) {
+	//	write_log (_T("%d:%d\n"), flushlines, matchcount);
+	//}
 
 	if (currprefs.leds_on_screen & STATUSLINE_RTG) {
 		if (dstp == NULL) {

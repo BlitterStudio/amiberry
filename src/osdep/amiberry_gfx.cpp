@@ -2557,8 +2557,8 @@ bool target_graphics_buffer_update(int monid)
 	auto rate_changed = false;
 
 	if (mon->screen_is_picasso) {
-		w = state->Width > vidinfo->width ? state->Width : vidinfo->width;
-		h = state->Height > vidinfo->height ? state->Height : vidinfo->height;
+		w = state->Width;
+		h = state->Height;
 	}
 	else {
 		struct vidbuffer* vb = avidinfo->drawbuffer.tempbufferinuse ? &avidinfo->tempbuffer : &avidinfo->drawbuffer;
