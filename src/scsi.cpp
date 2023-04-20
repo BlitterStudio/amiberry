@@ -188,11 +188,11 @@ bool scsi_emulate_analyze (struct scsi_data *sd)
 		data_len = 4;
 		break;
 	case 0x28: // READ(10)
-		data_len2 = ((sd->cmd[7] << 8) | (sd->cmd[8] << 0)) * (uae_s64)sd->blocksize;
+		data_len2 = ((sd->cmd[7] << 8) | (sd->cmd[8] << 0)) * sd->blocksize;
 		scsi_grow_buffer(sd, data_len2);
 	break;
 	case 0xa8: // READ(12)
-		data_len2 = ((sd->cmd[6] << 24) | (sd->cmd[7] << 16) | (sd->cmd[8] << 8) | (sd->cmd[9] << 0)) * (uae_s64)sd->blocksize;
+		data_len2 = ((sd->cmd[6] << 24) | (sd->cmd[7] << 16) | (sd->cmd[8] << 8) | (sd->cmd[9] << 0)) * sd->blocksize;
 		scsi_grow_buffer(sd, data_len2);
 	break;
 	case 0x0f: // WRITE SECTOR BUFFER
@@ -208,13 +208,13 @@ bool scsi_emulate_analyze (struct scsi_data *sd)
 	case 0x2a: // WRITE(10)
 		if (sd->device_type == UAEDEV_CD)
 			goto nocmd;
-		data_len = ((sd->cmd[7] << 8) | (sd->cmd[8] << 0)) * (uae_s64)sd->blocksize;
+		data_len = ((sd->cmd[7] << 8) | (sd->cmd[8] << 0)) * sd->blocksize;
 		scsi_grow_buffer(sd, data_len);
 	break;
 	case 0xaa: // WRITE(12)
 		if (sd->device_type == UAEDEV_CD)
 			goto nocmd;
-		data_len = ((sd->cmd[6] << 24) | (sd->cmd[7] << 16) | (sd->cmd[8] << 8) | (sd->cmd[9] << 0)) * (uae_s64)sd->blocksize;
+		data_len = ((sd->cmd[6] << 24) | (sd->cmd[7] << 16) | (sd->cmd[8] << 8) | (sd->cmd[9] << 0)) * sd->blocksize;
 		scsi_grow_buffer(sd, data_len);
 	break;
 	case 0xbe: // READ CD
@@ -230,7 +230,7 @@ bool scsi_emulate_analyze (struct scsi_data *sd)
 	break;
 	case 0x2f: // VERIFY
 		if (sd->cmd[1] & 2) {
-			sd->data_len = ((sd->cmd[7] << 8) | (sd->cmd[8] << 0)) * (uae_s64)sd->blocksize;
+			sd->data_len = ((sd->cmd[7] << 8) | (sd->cmd[8] << 0)) * sd->blocksize;
 			scsi_grow_buffer(sd, sd->data_len);
 			sd->direction = 1;
 		} else {
