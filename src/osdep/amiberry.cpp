@@ -2058,11 +2058,11 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->whdbootprefs.quit_on_exit = amiberry_options.default_whd_quit_on_exit;
 
 	// Disable Cycle-Exact modes that are not yet implemented
-	if (changed_prefs.cpu_cycle_exact || changed_prefs.cpu_memory_cycle_exact)
+	if (p->cpu_cycle_exact || p->cpu_memory_cycle_exact)
 	{
-		if (changed_prefs.cpu_model > 68010)
+		if (p->cpu_model > 68010)
 		{
-			changed_prefs.cpu_cycle_exact = changed_prefs.cpu_memory_cycle_exact = false;
+			p->cpu_cycle_exact = p->cpu_memory_cycle_exact = false;
 		}
 	}
 

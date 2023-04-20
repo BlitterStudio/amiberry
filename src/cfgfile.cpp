@@ -5828,7 +5828,7 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		return 1;
 	}
 	if (cfgfile_strval (option, value, _T("cycle_exact"), &tmpval, cycleexact, 0)) {
-		if (tmpval > 0) {
+		if (tmpval > 0 && p->cpu_model <= 68010) { // AMIBERRY only supports cycle exact in 68000-010 modes for now
 			p->blitter_cycle_exact = true;
 			p->cpu_cycle_exact = tmpval > 1;
 			p->cpu_memory_cycle_exact = true;
