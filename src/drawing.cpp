@@ -1893,7 +1893,49 @@ static uae_u8 render_sprites(int pos, int dualpf, uae_u8 apixel, int aga)
 
 #define PUTBPIX(x) buf[dpix] = (x);
 
-STATIC_INLINE uae_u32 shsprite(int dpix, uae_u32 spix_val, uae_u32 v, int add, int spr)
+static uae_u8 sh_render_sprites(int pos, int dualpf, uae_u8 apixel, int aga)
+{
+	struct spritepixelsbuf* spb = &spritepixels[pos];
+	unsigned int v = spb->data;
+	int* shift_lookup = dualpf ? (bpldualpfpri ? dblpf_ms2 : dblpf_ms1) : dblpf_ms;
+	int maskshift, plfmask;
+
+	if (exthblank) {
+		return 0;
+	}
+	if (extborder && ce_is_borderblank(colors_for_drawing.extra)) {
+		return 0;
+	}
+
+	maskshift = shift_lookup[apixel];
+	plfmask = (plf_sprite_mask >> maskshift) >> maskshift;
+	v &= ~plfmask;
+	if (pos >= sprite_playfield_start && pos < sprite_end && v != 0) {
+		uae_u32 col;
+		uae_u32 v1 = v & 255;
+		int offs;
+		if (v1 == 0)
+			offs = 4 + sprite_offs[v >> 8];
+		else
+			offs = sprite_offs[v1];
+		v >>= offs * 2;
+		v &= 15;
+		col = (v >> 0) & 3;
+		if (!col) {
+			col = (v >> 2) & 3;
+		}
+		// not correct
+		if ((spb->flags & 1) && (spb->stdata & (3 << offs))) {
+			int col1 = (v >> 0) & 3;
+			int col2 = (v >> 2) & 3;
+			col = col1 | col2;
+		}
+		return col;
+	}
+	return 0;
+}
+
+static uae_u32 shsprite(int dpix, uae_u32 spix_val, uae_u32 v, int add, int spr)
 {
 	uae_u8 sprcol1, sprcol2, off;
 	uae_u16 scol;
@@ -1906,16 +1948,17 @@ STATIC_INLINE uae_u32 shsprite(int dpix, uae_u32 spix_val, uae_u32 v, int add, i
 	if (spb->flags & 2) {
 		sdpix -= add;
 	}
-	sprcol1 = render_sprites(sdpix, bpldualpf, spix_val, 0) & 3;
-	sprcol2 = render_sprites(sdpix + add, bpldualpf, spix_val, 0) & 3;
-	off = sprcol2 * 4 + sprcol1 + 16;
+	int mask = 3;
+	sprcol1 = sh_render_sprites(sdpix, bpldualpf, spix_val, 0);
+	sprcol2 = sh_render_sprites(sdpix + add, bpldualpf, spix_val, 0);
+	off = (sprcol2 & mask) * 4 + (sprcol1 & mask) + 16;
 	if ((dpix & add)) {
-		if (!sprcol2) {
+		if (!(sprcol2 & mask)) {
 			return v;
 		}
 		scol = (colors_for_drawing.color_regs_ecs[off] & 0x333) << 2;
 	} else {
-		if (!sprcol1) {
+		if (!(sprcol1 & mask)) {
 			return v;
 		}
 		scol = (colors_for_drawing.color_regs_ecs[off] & 0xccc) << 0;

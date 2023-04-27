@@ -5627,7 +5627,7 @@ static void record_sprite(int num, int sprxp, uae_u16 *data, uae_u16 *datb, unsi
 
 	/* We have 8 bits per pixel in spixstate, two for every sprite pair.  The
 	low order bit records whether the attach bit was set for this pair.  */
-	if (attachment && !ecsshres ()) {
+	if (attachment) {
 		uae_u32 state = 0x01010101 << (num & ~1);
 		uae_u8 *stb1 = spixstate.stb + word_offs;
 		for (int i = 0; i < width; i += 8) {
