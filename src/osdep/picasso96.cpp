@@ -165,7 +165,7 @@ static bool delayed_set_switch;
 
 static int uaegfx_old, uaegfx_active;
 static uae_u32 reserved_gfxmem;
-static uaecptr uaegfx_resname,
+static uaecptr uaegfx_resname, uaegfx_prefix,
 	uaegfx_resid,
 	uaegfx_init,
 	uaegfx_base,
@@ -2430,7 +2430,8 @@ void picasso96_alloc (TrapContext *ctx)
 {
 	if (currprefs.rtgboards[0].rtgmem_type >= GFXBOARD_HARDWARE)
 		return;
-	uaegfx_resname = ds (_T("uaegfx.card"));
+	uaegfx_resname = ds(_T("uaegfx.card"));
+	uaegfx_prefix = ds(_T("UAE"));
 	if (uaegfx_old)
 		return;
 	picasso96_alloc2 (ctx);
@@ -2450,7 +2451,7 @@ static void inituaegfx(TrapContext *ctx, uaecptr ABI)
 	trap_put_long(ctx, ABI + PSSO_BoardInfo_BoardType, picasso96_BT);
 	trap_put_long(ctx, ABI + PSSO_BoardInfo_GraphicsControllerType, picasso96_GCT);
 	trap_put_long(ctx, ABI + PSSO_BoardInfo_PaletteChipType, picasso96_PCT);
-	trap_put_long(ctx, ABI + PSSO_BoardInfo_BoardName, uaegfx_resname);
+	trap_put_long(ctx, ABI + PSSO_BoardInfo_BoardName, uaegfx_prefix);
 
 	trap_put_long(ctx, ABI + PSSO_BoardInfo_MemoryClock, 200000000);
 
