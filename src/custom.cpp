@@ -10092,7 +10092,9 @@ static bool copper_cant_read(int hpos, uae_u16 alloc)
 			if (is_last_line()) {
 				dvpos = 0;
 			}
-			record_dma_event2(DMA_EVENT2_COPPERUSE, offset, dvpos);
+			if (debug_dma) {
+				record_dma_event2(DMA_EVENT2_COPPERUSE, offset, dvpos);
+			}
 #endif
 		}
 		coffset++;
@@ -10523,7 +10525,9 @@ static void do_copper_fetch(int hpos, uae_u16 id)
 		// COPJMP when previous instruction is mid-cycle
 		cop_state.state = COP_read1;
 #ifdef DEBUGGER
-		record_dma_event2(DMA_EVENT2_COPPERUSE, hpos, vpos);
+		if (debug_dma) {
+			record_dma_event2(DMA_EVENT2_COPPERUSE, hpos, vpos);
+		}
 #endif
 		alloc_cycle(hpos, CYCLE_COPPER);
 	}
