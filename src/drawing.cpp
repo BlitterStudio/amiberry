@@ -309,7 +309,6 @@ static bool ecs_genlock_features_active;
 static uae_u8 ecs_genlock_features_mask;
 static bool ecs_genlock_features_colorkey;
 static bool aga_genlock_features_zdclken;
-static int hsync_shift_hack;
 static bool sprite_smaller_than_64, sprite_smaller_than_64_inuse;
 static bool full_blank;
 static bool hsync_debug, vsync_debug, hblank_debug, vblank_debug;
@@ -1196,7 +1195,6 @@ static void pfield_init_linetoscr (bool border)
 	int native_ddf_left2;
 	bool expanded = false;
 
-	hsync_shift_hack = 0;
 	bplmaxplanecnt = dp_for_drawing->max_planes;
 	
 	if (border)
@@ -3778,17 +3776,6 @@ static void do_color_changes(line_draw_func worker_border, line_draw_func worker
 			}
 		}
 	}
-
-	if (vp >= 0 && hsync_shift_hack > 0) {
-		// hpos shift hack
-		int shift = (hsync_shift_hack << lores_shift) * vidinfo->drawbuffer.pixbytes;
-		if (shift) {
-			int firstpos = visible_left_border * vidinfo->drawbuffer.pixbytes;
-			int lastpos = (visible_left_border + vidinfo->drawbuffer.inwidth) * vidinfo->drawbuffer.pixbytes;
-			memmove(xlinebuffer + firstpos, xlinebuffer + firstpos + shift, lastpos - firstpos - shift);
-			memset(xlinebuffer + lastpos - shift, 0, shift);
-		}
-	}
 }
 
 STATIC_INLINE bool is_color_changes(struct draw_info *di)
@@ -5451,7 +5438,6 @@ void reset_drawing(void)
 	center_reset = 1;
 	ad->specialmonitoron = false;
 	bplcolorburst_field = 1;
-	hsync_shift_hack = 0;
 	ecs_genlock_features_active = false;
 	aga_genlock_features_zdclken = false;
 	ecs_genlock_features_colorkey = false;
