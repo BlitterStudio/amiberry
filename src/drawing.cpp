@@ -4214,7 +4214,7 @@ static void init_drawing_frame (void)
 			}
 			int newres = RES_HIRES;
 			int hres = (2 * htotal) << largest_res;
-			if (hres > 1000) {
+			if (hres > 1150) {
 				newres = RES_SUPERHIRES;
 			} else {
 				newres = RES_HIRES;
