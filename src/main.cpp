@@ -1257,7 +1257,7 @@ static int real_main2 (int argc, TCHAR **argv)
 	inputdevice_init ();
 
 	copy_prefs(&currprefs, &changed_prefs);
-
+	inputdevice_updateconfig(&currprefs, &changed_prefs);
 	inputdevice_config_change();
 
 	no_gui = ! currprefs.start_gui;

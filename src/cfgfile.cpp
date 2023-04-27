@@ -8519,7 +8519,7 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 	p->fpu_model = 0;
 	p->cpu_model = 68000;
 	p->m68k_speed_throttle = 0;
-	p->cpu_clock_multiplier = 0;
+	p->cpu_clock_multiplier = 2 * 256;
 	p->cpu_frequency = 0;
 	p->mmu_model = 0;
 	p->cpu060_revision = 6;

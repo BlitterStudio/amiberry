@@ -7754,7 +7754,10 @@ static void disableifempty (struct uae_prefs *prefs)
 		if (!input_get_default_keyboard(l))
 			disableifempty2 (&keyboards[l]);
 	}
+	// Configuration #1-#3
 	prefs->internalevent_settings[0]->enabled = true;
+	prefs->internalevent_settings[1]->enabled = true;
+	prefs->internalevent_settings[2]->enabled = true;
 }
 
 static void matchdevices(struct uae_prefs *p, struct inputdevice_functions *inf, struct uae_input_device *uid, int devnum, int match_mask)
