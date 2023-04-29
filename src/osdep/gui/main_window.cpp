@@ -656,7 +656,7 @@ void check_input()
 		case SDL_QUIT:
 			got_event = 1;
 			//-------------------------------------------------
-			// Quit entire program via SQL-Quit
+			// Quit entire program via SDL-Quit
 			//-------------------------------------------------
 			uae_quit();
 			gui_running = false;
