@@ -1,8 +1,16 @@
 /* Greaseweazle C++ Interface for reading and writing Amiga Disks
 *
-* By Robert Smith (@RobSmithDev)
+* Copyright (C) 2021-2023 Robert Smith (@RobSmithDev)
 * https://amiga.robsmithdev.co.uk
-* 
+*
+* This file is multi-licensed under the terms of the Mozilla Public
+* License Version 2.0 as published by Mozilla Corporation and the
+* GNU General Public License, version 2 or later, as published by the
+* Free Software Foundation.
+*
+* MPL2: https://www.mozilla.org/en-US/MPL/2.0/
+* GPL2: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
+*
 * Based on the excellent code by Keir Fraser <keir.xen@gmail.com>
 * https://github.com/keirf/Greaseweazle/
 * 
@@ -103,6 +111,9 @@ std::wstring findPortNumber() {
 			}
 		if (port.productName == L"Greaseweazle") score += 10;
 		if (port.instanceID.find(L"\\GW") != std::wstring::npos) score += 10;
+#ifdef __APPLE__
+		if (port.portName.find(L".usbmodem") != std::wstring::npos) score += 10;
+#endif		
 
 		// Keep this port if its achieved a place on our high score table
 		if (score > maxScore) {

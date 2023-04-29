@@ -1,20 +1,19 @@
-/* ArduinoFloppyReader (and writer)
+/* Serial/IO Library
 *
-* Copyright (C) 2017-2022 Robert Smith (@RobSmithDev)
+* Copyright (C) 2021-2023 Robert Smith (@RobSmithDev)
 * https://amiga.robsmithdev.co.uk
 *
-* This library is free software; you can redistribute it and/or
-* modify it under the terms of the GNU Library General Public
-* License as published by the Free Software Foundation; either
-* version 3 of the License, or (at your option) any later version.
+* This file is multi-licensed under the terms of the Mozilla Public
+* License Version 2.0 as published by Mozilla Corporation and the
+* GNU General Public License, version 2 or later, as published by the
+* Free Software Foundation.
 *
-* This library is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-* Library General Public License for more details.
-*
-* You should have received a copy of the GNU Library General Public
-* License along with this library; if not, see http://www.gnu.org/licenses/
+* MPL2: https://www.mozilla.org/en-US/MPL/2.0/
+* GPL2: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
+* 
+* This file, along with currently active and supported interfaces
+* are maintained from by GitHub repo at
+* https://github.com/RobSmithDev/FloppyDriveBridge
 */
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -28,7 +27,6 @@
 
 
 #include "SerialIO.h"
-
 
 #ifdef _WIN32
 #include <SetupAPI.h>
@@ -341,23 +339,31 @@ void SerialIO::enumSerialPorts(std::vector<SerialPortInformation>& serialPorts) 
 	}
 
 #else
-
+#ifdef __APPLE__
+	DIR* dir = opendir("/dev");
+#else
 	DIR* dir = opendir("/sys/class/tty");
+#endif	
 	if (!dir) return;
-
 	dirent* entry;
 	struct stat statbuf{};
 
 	while ((entry = readdir(dir))) {
+#ifdef __APPLE__
+		std::string tmp = entry->d_name;
+		if (tmp.substr(0,7) != "tty.usb") continue;
+		std::string name = "/dev/" + std::string(entry->d_name);
+		SerialPortInformation prt;
+		quicka2w(name, prt.portName);
+		serialPorts.push_back(prt);
+#else		
 		std::string deviceRoot = "/sys/class/tty/" + std::string(entry->d_name);
 		if (lstat(deviceRoot.c_str(), &statbuf) == -1) continue;
 		if (!S_ISLNK(statbuf.st_mode)) deviceRoot += "/device";
-
 		char target[PATH_MAX];
 		int len = readlink(deviceRoot.c_str(), target, sizeof(target));
 		if ((len <= 0) || (len >= PATH_MAX-1)) continue;
 		target[len] = '\0';
-
 		if (strstr(target, "virtual")) continue;
 		if (strstr(target, "bluetooth")) continue;
 
@@ -415,6 +421,7 @@ void SerialIO::enumSerialPorts(std::vector<SerialPortInformation>& serialPorts) 
 				break;
 			}
 		}
+#endif
 	}
 	closedir(dir);
 #endif
@@ -490,7 +497,11 @@ SerialIO::Response SerialIO::openPort(const std::wstring& portName) {
 #else
 	std::string apath;
 	quickw2a(portName, apath);
+#ifdef __APPLE__
+	m_portHandle = open(apath.c_str(), O_RDWR | O_NOCTTY | O_NDELAY);
+#else
 	m_portHandle = open(apath.c_str(), O_RDWR | O_NOCTTY);
+#endif
 	if (m_portHandle == -1) {
 		switch (errno) {
 		case ENOENT: return Response::rNotFound;
@@ -529,7 +540,7 @@ void SerialIO::closePort() {
 	m_portHandle = INVALID_HANDLE_VALUE;
 
 #else
-	close(m_portHandle);
+	if (m_portHandle>=0) close(m_portHandle);
 	m_portHandle = -1;
 #endif
 }
@@ -584,7 +595,6 @@ SerialIO::Response SerialIO::configurePort(const Configuration& configuration) {
 #ifdef cfmakeraw
 	cfmakeraw(&term);
 #endif
-
 	term.c_iflag &= ~ (IXON | IXOFF | IXANY | IGNBRK | BRKINT | PARMRK | INPCK | ISTRIP | INLCR | IGNCR | ICRNL);
 	term.c_lflag &= ~ (ISIG | ICANON | ECHO | ECHOE | ECHONL | IEXTEN);
 	term.c_oflag &= ~ (OPOST | ONLCR | OCRNL | ONOCR | ONLRET);
@@ -645,7 +655,6 @@ SerialIO::Response SerialIO::configurePort(const Configuration& configuration) {
 	ctsRtsFlags = CCTS_OFLOW;
 #endif
 #endif
-
 	if (configuration.ctsFlowControl) term.c_cflag |= ctsRtsFlags; else term.c_cflag &= ~ctsRtsFlags;
 
 	// Now try to set the baud rate
@@ -679,10 +688,11 @@ SerialIO::Response SerialIO::configurePort(const Configuration& configuration) {
 	serial.flags |= ASYNC_LOW_LATENCY;
 	ioctl(m_portHandle, TIOCSSERIAL, &serial);
 #endif
-
+#ifdef __APPLE__
+	if (ioctl(m_portHandle, IOSSIOSPEED, &baud) == -1) return Response::rUnknownError;
+#endif
 	setDTR(true);
 	setRTS(true);
-
 
 	return Response::rOK;
 #endif

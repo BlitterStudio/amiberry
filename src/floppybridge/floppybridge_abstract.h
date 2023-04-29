@@ -1,6 +1,6 @@
 /* floppybridge_abstract
 *
-* Copyright (C) 2021-2022 Robert Smith (@RobSmithDev)
+* Copyright (C) 2021-2023 Robert Smith (@RobSmithDev)
 * https://amiga.robsmithdev.co.uk
 *
 * This library defines a standard interface for connecting physical disk drives to *UAE
@@ -12,6 +12,7 @@
 * See the file COPYING for more details, or visit <http://unlicense.org>.
 *
 */
+
 
 /*
 * This file, along with currently active and supported interfaces
