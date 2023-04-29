@@ -1,6 +1,6 @@
 /* floppybridge_lib
 *
-* Copyright (C) 2021-2022 Robert Smith (@RobSmithDev)
+* Copyright (C) 2021-2023 Robert Smith (@RobSmithDev)
 * https://amiga.robsmithdev.co.uk
 *
 * This class connects to the external FloppyBridge DLL library rather than
@@ -25,6 +25,8 @@
 
 #ifdef AMIBERRY
 #include "FloppyBridge.h"
+#else
+#include "..\windows\FloppyBridge.h"
 #endif
 
 #define BRIDGE_STRING_MAX_LENGTH 255

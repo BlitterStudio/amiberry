@@ -1,7 +1,15 @@
 /* WinUAE Greaseweazle Interface for *UAE
 *
-* By Robert Smith (@RobSmithDev)
+* Copyright (C) 2021-2023 Robert Smith (@RobSmithDev)
 * https://amiga.robsmithdev.co.uk
+*
+* This file is multi-licensed under the terms of the Mozilla Public
+* License Version 2.0 as published by Mozilla Corporation and the
+* GNU General Public License, version 2 or later, as published by the
+* Free Software Foundation.
+*
+* MPL2: https://www.mozilla.org/en-US/MPL/2.0/
+* GPL2: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 *
 * This file, along with currently active and supported interfaces
 * are maintained from by GitHub repo at

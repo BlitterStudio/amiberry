@@ -1,23 +1,16 @@
 /* CommonBridgeTemplate for *UAE
 *
-* Copyright (C) 2021-2022 Robert Smith (@RobSmithDev)
+* Copyright (C) 2021-2023 Robert Smith (@RobSmithDev)
 * https://amiga.robsmithdev.co.uk
 *
-* This library is free software; you can redistribute it and/or
-* modify it under the terms of the GNU Library General Public
-* License as published by the Free Software Foundation; either
-* version 3 of the License, or (at your option) any later version.
+* This file is multi-licensed under the terms of the Mozilla Public
+* License Version 2.0 as published by Mozilla Corporation and the
+* GNU General Public License, version 2 or later, as published by the
+* Free Software Foundation.
 *
-* This library is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-* Library General Public License for more details.
+* MPL2: https://www.mozilla.org/en-US/MPL/2.0/
+* GPL2: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 *
-* You should have received a copy of the GNU Library General Public
-* License along with this library; if not, see http://www.gnu.org/licenses/
-*/
-
-/*
 * This file, along with currently active and supported interfaces
 * are maintained from by GitHub repo at
 * https://github.com/RobSmithDev/FloppyDriveBridge
@@ -99,7 +92,8 @@ CommonBridgeTemplate::CommonBridgeTemplate(BridgeMode bridgeMode, BridgeDensityM
 	m_currentWriteStartMfmPosition(0), m_delayStreaming(false), m_driveResetStatus(false), m_driveStreamingData(false), m_isCurrentlyHeadCheating(false), m_inHDMode(false),
 	m_control(nullptr), m_currentTrack(0), m_actualCurrentCylinder(0), m_writeProtected(false), m_diskInDrive(false), m_firstTrackMode(false), m_autocacheModifiedCurrentCylinder(false),
 	m_bridgeMode(bridgeMode), m_bridgeDensity(bridgeDensity), m_motorSpinningUp(false), m_motorIsReady(false), m_isMotorRunning(false), m_autoCacheMotorStatus(false), m_useSmartSpeed(useSmartSpeed),
-	m_queueSemaphore(0), m_readBufferAvailable(false), m_floppySide(DiskSurface::dsLower), m_actualFloppySide(DiskSurface::dsLower), m_shouldAutoCache(shouldAutoCache), m_pll(true, true) {
+	m_queueSemaphore(0), m_readBufferAvailable(false), m_floppySide(DiskSurface::dsLower), m_actualFloppySide(DiskSurface::dsLower), m_shouldAutoCache(shouldAutoCache), m_pll(true, true),
+	m_lastSeek(std::chrono::steady_clock::now()) {
 
 	memset(&m_mfmRead, 0, sizeof(m_mfmRead));;
 	m_pll.setRotationExtractor(&m_extractor);
@@ -390,7 +384,6 @@ void CommonBridgeTemplate::internalCheckDiskDensity(bool newDiskInserted) {
 	}
 	m_inHDMode = _getDriveTypeID() == DriveTypeID::dti35HD;
 }
-
 
 // Reset the previously setup queue
 void CommonBridgeTemplate::resetMFMCache() {
@@ -795,30 +788,45 @@ bool CommonBridgeTemplate::isMFMDataAvailable() {
 
 // Read a single bit from the data stream.   this should call triggerReadWriteAtIndex where appropriate
 bool CommonBridgeTemplate::getMFMBit(const int mfmPositionBits) {
-	if (!isReady()) return DRIVE_GARBAGE_VALUE;
+	if (m_bridgeMode != BridgeMode::bmStalling) {
+		if (!isReady()) return DRIVE_GARBAGE_VALUE;
+	} else {
+		if (!m_motorIsReady) return DRIVE_GARBAGE_VALUE;
+		if (!m_diskInDrive) return DRIVE_GARBAGE_VALUE;
+		//if (!m_motorSpinningUp) return DRIVE_GARBAGE_VALUE;
+	}
 	if (mfmPositionBits < 0) return false; // weird, but this shouldn't happen
 
-	// This shouldn't happen
-	if (m_mfmRead[m_currentTrack][(int)m_floppySide].current.amountReadInBits < 1) return DRIVE_GARBAGE_VALUE;
-
-	const int modPositionBit = mfmPositionBits % m_mfmRead[m_currentTrack][(int)m_floppySide].current.amountReadInBits;
-
-
-	// Internally manage loops until the data is ready
-	const int mfmPositionByte = modPositionBit >> 3;
-	const int mfmPositionBit = 7 - (modPositionBit & 7);
-
 	if (m_mfmRead[m_currentTrack][(int)m_floppySide].current.ready) {
+		// This shouldn't happen
+		if (m_mfmRead[m_currentTrack][(int)m_floppySide].current.amountReadInBits < 1) return DRIVE_GARBAGE_VALUE;
+
+		const int modPositionBit = mfmPositionBits % m_mfmRead[m_currentTrack][(int)m_floppySide].current.amountReadInBits;
+		// Internally manage loops until the data is ready
+		const int mfmPositionByte = modPositionBit >> 3;
+		const int mfmPositionBit = 7 - (modPositionBit & 7);
+
 		return (m_mfmRead[m_currentTrack][(int)m_floppySide].current.mfmBuffer[mfmPositionByte].mfmData & (1 << mfmPositionBit)) != 0;
 	}
 
 	// Given the reading is quick enough mostly this is ok.  It kinda simulates the drive settling time, just a little extended
 	if (m_bridgeMode != BridgeMode::bmStalling) return DRIVE_GARBAGE_VALUE;
 
+	// Allow a little bit of head settling time
+	if ((!m_mfmRead[m_currentTrack][(int)m_floppySide].current.ready) && (!m_writePending)) {
+		const auto timePassedSinceSeek = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - m_lastSeek).count();
+		if (timePassedSinceSeek < 5) 
+			return 0;
+	}
+	
 	// Try to wait for the data.  A full revolution should be about 200ms, but given its trying to INDEX align, worse case this could be approx 400ms.
 	// Average should be 300ms based on starting to read when the head is at least half way from the index.
 	const unsigned int DelayBetweenChecksMS = 5;
 	const auto DelayBetweenChecks = std::chrono::milliseconds(DelayBetweenChecksMS);
+
+	// Extra time if data was written.
+	const unsigned int dataWaitTime = (m_writePending || m_delayStreaming) ? 1500 : 450;
+
 	for (unsigned int a = 0; a < 450 / DelayBetweenChecksMS; a++) {
 		// Causes a delay of 5ms or until a buffer is made live
 		{
@@ -828,13 +836,18 @@ bool CommonBridgeTemplate::getMFMBit(const int mfmPositionBits) {
 
 		// No full buffer ready yet.
 		if (m_mfmRead[m_currentTrack][(int)m_floppySide].current.ready) {
+			if (m_mfmRead[m_currentTrack][(int)m_floppySide].current.amountReadInBits < 1) return 0;
+			const int modPositionBit = mfmPositionBits % m_mfmRead[m_currentTrack][(int)m_floppySide].current.amountReadInBits;
+			// Internally manage loops until the data is ready
+			const int mfmPositionByte = modPositionBit >> 3;
+			const int mfmPositionBit = 7 - (modPositionBit & 7);
 			// If a buffer is available, go for it!
 			return (m_mfmRead[m_currentTrack][(int)m_floppySide].current.mfmBuffer[mfmPositionByte].mfmData & (1 << mfmPositionBit)) != 0;
 		}
 	}
 
 	// If we get here, we give up and return nothing. So we behave like no data
-	return DRIVE_GARBAGE_VALUE;
+	return 0;
 }
 
 // Called if you do something which is classed as a manual check for disk presence etc
@@ -1036,6 +1049,7 @@ void CommonBridgeTemplate::processCommand(const QueueInfo& info) {
 		m_writeCompletePending = false;
 		m_motorIsReady = false;
 		m_isMotorRunning = false;		
+		m_lastSeek = std::chrono::steady_clock::now();
 		resetMFMCache();
 		{
 			std::lock_guard lock(m_driveResetStatusFlagLock);
@@ -1057,7 +1071,7 @@ void CommonBridgeTemplate::processCommand(const QueueInfo& info) {
 			// If it fails, simulate it
 			if (!performNoClickSeek()) {
 				setCurrentCylinder(1);
-				setCurrentCylinder(0);
+				setCurrentCylinder(0);				
 			}
 		}
 		break;
@@ -1286,6 +1300,7 @@ void CommonBridgeTemplate::handleNoClickStep(bool side) {
 	switchDiskSide(side);
 
 	queueCommand(QueueCommand::qcNoClickSeek);
+	m_lastSeek = std::chrono::steady_clock::now();
 }
 
 // Seek to a specific track
@@ -1322,6 +1337,8 @@ void CommonBridgeTemplate::gotoCylinder(int trackNumber, bool side) {
 
 		queueCommand(QueueCommand::qcGotoToTrack, trackNumber);
 	}
+
+	m_lastSeek = std::chrono::steady_clock::now();
 }
 
 // Reset and clear out any data we have received thus far
