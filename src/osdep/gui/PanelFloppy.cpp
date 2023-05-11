@@ -49,11 +49,11 @@ public:
 	DriveTypeListModel()
 	{
 		types.emplace_back("Disabled");
-		types.emplace_back("3.5'' DD");
-		types.emplace_back("3.5'' HD");
-		types.emplace_back("5.25'' (40)");
-		types.emplace_back("5.25'' (80)");
-		types.emplace_back("3.5'' ESCOM");
+		types.emplace_back("3.5\" DD");
+		types.emplace_back("3.5\" HD");
+		types.emplace_back("5.25\" (40)");
+		types.emplace_back("5.25\" (80)");
+		types.emplace_back("3.5\" ESCOM");
 		types.emplace_back("FB: Fast");
 		types.emplace_back("FB: Compatible");
 		types.emplace_back("FB: Turbo");
@@ -441,11 +441,11 @@ public:
 	{
 		if (actionEvent.getSource() == cmdCreateDDDisk)
 		{
-			// Create 3.5'' DD Disk
+			// Create 3.5" DD Disk
 			char tmp[MAX_DPATH];
 			char diskname[MAX_DPATH];
 			strncpy(tmp, current_dir, MAX_DPATH);
-			if (SelectFile("Create 3.5'' DD disk file", tmp, diskfile_filter, true))
+			if (SelectFile("Create 3.5\" DD disk file", tmp, diskfile_filter, true))
 			{
 				extract_filename(tmp, diskname);
 				remove_file_extension(diskname);
@@ -458,11 +458,11 @@ public:
 		}
 		else if (actionEvent.getSource() == cmdCreateHDDisk)
 		{
-			// Create 3.5'' HD Disk
+			// Create 3.5" HD Disk
 			char tmp[MAX_DPATH];
 			char diskname[MAX_DPATH];
 			strcpy(tmp, current_dir);
-			if (SelectFile("Create 3.5'' HD disk file", tmp, diskfile_filter, true))
+			if (SelectFile("Create 3.5\" HD disk file", tmp, diskfile_filter, true))
 			{
 				extract_filename(tmp, diskname);
 				remove_file_extension(diskname);
@@ -570,13 +570,13 @@ void InitPanelFloppy(const config_category& category)
 	cmdSaveForDisk->setId("cmdSaveForDisk");
 	cmdSaveForDisk->addActionListener(saveForDiskActionListener);
 
-	cmdCreateDDDisk = new gcn::Button("Create 3.5'' DD disk");
+	cmdCreateDDDisk = new gcn::Button("Create 3.5\" DD disk");
 	cmdCreateDDDisk->setSize(cmdCreateDDDisk->getWidth() + 10, BUTTON_HEIGHT);
 	cmdCreateDDDisk->setBaseColor(gui_baseCol);
 	cmdCreateDDDisk->setId("cmdCreateDDDisk");
 	cmdCreateDDDisk->addActionListener(createDiskActionListener);
 
-	cmdCreateHDDisk = new gcn::Button("Create 3.5'' HD disk");
+	cmdCreateHDDisk = new gcn::Button("Create 3.5\" HD disk");
 	cmdCreateHDDisk->setSize(cmdCreateHDDisk->getWidth() + 10, BUTTON_HEIGHT);
 	cmdCreateHDDisk->setBaseColor(gui_baseCol);
 	cmdCreateHDDisk->setId("cmdCreateHDDisk");
@@ -793,7 +793,7 @@ bool HelpPanelFloppy(std::vector<std::string>& helptext)
 {
 	helptext.clear();
 	helptext.emplace_back("You can enable/disable each drive by clicking the checkbox next to DFx or select");
-	helptext.emplace_back("the drive type in the dropdown control. \"3.5'' DD\" is the right choice for nearly");
+	helptext.emplace_back("the drive type in the dropdown control. \"3.5\" DD\" is the right choice for nearly");
 	helptext.emplace_back("all ADF and ADZ files.");
 	helptext.emplace_back("The option \"Write-protected\" indicates if the emulator can write to the ADF.");
 	helptext.emplace_back("Changing the write protection of the disk file may fail because of missing rights");
@@ -810,7 +810,7 @@ bool HelpPanelFloppy(std::vector<std::string>& helptext)
 	helptext.emplace_back("the disk in DF0. This configuration will be loaded each time you select the disk");
 	helptext.emplace_back("and have the option \"Load config with same name as disk\" enabled.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back(R"(With the buttons "Create 3.5'' DD disk" and "Create 3.5'' HD disk" you can)");
+	helptext.emplace_back(R"(With the buttons "Create 3.5\" DD disk" and "Create 3.5\" HD disk" you can)");
 	helptext.emplace_back("create a new and empty disk.");
 	return true;
 }

@@ -48,11 +48,11 @@ public:
 	QSDriveTypeListModel()
 	{
 		types.emplace_back("Disabled");
-		types.emplace_back("3.5'' DD");
-		types.emplace_back("3.5'' HD");
-		types.emplace_back("5.25'' (40)");
-		types.emplace_back("5.25'' (80)");
-		types.emplace_back("3.5'' ESCOM");
+		types.emplace_back("3.5\" DD");
+		types.emplace_back("3.5\" HD");
+		types.emplace_back("5.25\" (40)");
+		types.emplace_back("5.25\" (80)");
+		types.emplace_back("3.5\" ESCOM");
 		types.emplace_back("FB: Fast");
 		types.emplace_back("FB: Compatible");
 		types.emplace_back("FB: Turbo");
