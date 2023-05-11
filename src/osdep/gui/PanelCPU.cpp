@@ -533,28 +533,28 @@ void RefreshPanelCPU()
 bool HelpPanelCPU(std::vector<std::string>& helptext)
 {
 	helptext.clear();
-	helptext.emplace_back("Select the required Amiga CPU (68000 - 68040).");
-	helptext.emplace_back("If you select 68020, you can choose between 24-bit addressing (68EC020) or 32-bit");
-	helptext.emplace_back("addressing (68020). The option \"More compatible\" is only available if 68000 or 68010");
-	helptext.emplace_back("is selected and emulates simple prefetch of the 68000. This may improve compatibility");
-	helptext.emplace_back("in few situations but is not required for most games and demos.");
+	helptext.emplace_back("Select the required Amiga CPU (68000 - 68040). If you select 68020, you can choose");
+	helptext.emplace_back("between 24-bit (68EC020) or 32-bit (68020) addressing.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("The option \"More compatible\" is only available if 68000 or 68010 is selected, and");
+	helptext.emplace_back("emulates simple prefetch of the 68000. This may improve compatibility in certain");
+	helptext.emplace_back("situations, but is not normally required for most games and demos.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("JIT/JIT FPU enables the Just-in-time compiler. This may break compatibility in some games.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("The available FPU models depending on the selected CPU.");
-	helptext.emplace_back("The option \"More compatible\" activates more accurate rounding and compare of two floats.");
+	helptext.emplace_back("The available FPU models depend on the selected CPU type. The option \"More compatible\"");
+	helptext.emplace_back("activates a more accurate rounding method and compare of two floats.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("With \"CPU Speed\" you can choose the clock rate of the emulated Amiga.");
-	helptext.emplace_back("Use 7MHz for A500 or 14MHz for A1200 speed. Fastest Possible will give only the minimum time");
-	helptext.emplace_back("to the Chipset, using as much as possible for the CPU, which might result in dropping");
-	helptext.emplace_back("frames also.");
-	helptext.emplace_back("\"Cycle exact\" emulates 68000 and chipset cycle accurate. This is very slow and only required in few situations.");
+	helptext.emplace_back("With \"CPU Speed\" you can choose the clock rate of the emulated Amiga. Use 7MHz for A500,");
+	helptext.emplace_back("or 14MHz for A1200 speed. Fastest Possible will only give the minimum time to the Chipset,");
+	helptext.emplace_back("and maximum time as possible for the CPU, which may result in dropped frames.\"Cycle exact\"");
+	helptext.emplace_back("emulates 68000/chipset cycles accurately, is very slow and not required in most situations.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("You can use the CPU Idle slider to set how much the CPU emulation should sleep when idle.");
-	helptext.emplace_back("This is useful to keep the system temperature down.");
+	helptext.emplace_back("This is useful on some small devices, to help keep the system temperature down.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("In current version, you will not see a difference in the performance for 68020,");
-	helptext.emplace_back("68030 and 68040 CPUs. The CPU cycles for the opcodes are based on 68020. The different");
+	helptext.emplace_back("In current version, you will not see a difference in the performance for 68020, 68030 and");
+	helptext.emplace_back("68040 CPUs. The current CPU cycles for all the opcodes are based on 68020. The different");
 	helptext.emplace_back("cycles for 68030 and 68040 may come in a later version.");
 	return true;
 }
