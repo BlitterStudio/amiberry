@@ -1177,7 +1177,7 @@ void whdload_auto_prefs(uae_prefs* prefs, char* filepath)
 	}
 
 	// REMOVE THE FILE PATH AND EXTENSION
-	const auto* const filename = my_getfilepart(filepath);
+	const auto* filename = my_getfilepart(filepath);
 	get_game_name(filepath);
 
 	// LOAD GAME SPECIFICS FOR EXISTING .UAE - USE SHA1 IF AVAILABLE

@@ -597,7 +597,7 @@ const TCHAR* my_getfilepart(const TCHAR* filename)
 	p = _tcsrchr(filename, '/');
 	if (p)
 		return p + 1;
-	return p;
+	return filename;
 }
 
 int host_errno_to_dos_errno(int err)
