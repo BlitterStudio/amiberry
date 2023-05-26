@@ -137,7 +137,7 @@ public:
 	{
 		auto* const rom = mainROMList->get_rom_at(cboMainROM->getSelected());
 		if (rom != nullptr)
-			strncpy(changed_prefs.romfile, rom->Path, sizeof(changed_prefs.romfile));
+			strncpy(changed_prefs.romfile, rom->Path, sizeof changed_prefs.romfile);
 	}
 };
 
@@ -151,9 +151,9 @@ public:
 	{
 		auto* const rom = extROMList->get_rom_at(cboExtROM->getSelected());
 		if (rom != nullptr)
-			strncpy(changed_prefs.romextfile, rom->Path, sizeof(changed_prefs.romextfile));
+			strncpy(changed_prefs.romextfile, rom->Path, sizeof changed_prefs.romextfile);
 		else
-			strncpy(changed_prefs.romextfile, " ", sizeof(changed_prefs.romextfile));
+			strncpy(changed_prefs.romextfile, " ", sizeof changed_prefs.romextfile);
 	}
 };
 
