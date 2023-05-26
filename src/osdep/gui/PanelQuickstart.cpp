@@ -1187,6 +1187,7 @@ void RefreshPanelQuickstart(void)
 	for (auto i = 0; i < 2; ++i)
 	{
 		const auto drive_enabled = changed_prefs.floppyslots[i].dfxtype != DRV_NONE;
+		const auto disk_in_drive = strlen(changed_prefs.floppyslots[i].df) > 0;
 		if (i < 2)
 		{
 			chkqsDFx[i]->setSelected(drive_enabled);
@@ -1198,9 +1199,9 @@ void RefreshPanelQuickstart(void)
 			else
 				chkqsDFx[i]->setEnabled(prev_available);
 
-			cmdqsDFxInfo[i]->setEnabled(drive_enabled && nn < 5);
+			cmdqsDFxInfo[i]->setEnabled(drive_enabled && nn < 5 && disk_in_drive);
 			chkqsDFxWriteProtect[i]->setEnabled(drive_enabled && !changed_prefs.floppy_read_only && nn < 5);
-			cmdqsDFxEject[i]->setEnabled(drive_enabled && nn < 5);
+			cmdqsDFxEject[i]->setEnabled(drive_enabled && nn < 5 && disk_in_drive);
 			cmdqsDFxSelect[i]->setEnabled(drive_enabled && nn < 5);
 			cboqsDFxFile[i]->setEnabled(drive_enabled && nn < 5);
 		}
