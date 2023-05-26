@@ -1010,6 +1010,11 @@ void check_input()
 		case SDL_MOUSEBUTTONDOWN:
 		case SDL_MOUSEBUTTONUP:
 		case SDL_MOUSEMOTION:
+		case SDL_RENDER_TARGETS_RESET:
+		case SDL_RENDER_DEVICE_RESET:
+		case SDL_WINDOWEVENT:
+		case SDL_DISPLAYEVENT:
+		case SDL_SYSWMEVENT:
 			got_event = 1;
 			break;
 			
