@@ -23,10 +23,10 @@ static gcn::DropDown* cboDFxFile[4];
 static gcn::Label* lblDriveSpeed;
 static gcn::Label* lblDriveSpeedInfo;
 static gcn::Slider* sldDriveSpeed;
-static gcn::CheckBox* chkLoadConfig;
-static gcn::Button* cmdSaveForDisk;
+
 static gcn::Button* cmdCreateDDDisk;
 static gcn::Button* cmdCreateHDDisk;
+static gcn::Window* grpDrawBridge;
 static gcn::Label* lblDBDriver;
 static gcn::DropDown* cboDBDriver;
 static gcn::CheckBox* chkDBSmartSpeed;
@@ -213,9 +213,7 @@ class DFxCheckActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		if (actionEvent.getSource() == chkLoadConfig)
-			bLoadConfigForDisk = chkLoadConfig->isSelected();
-		else if (actionEvent.getSource() == chkDBSmartSpeed)
+		if (actionEvent.getSource() == chkDBSmartSpeed)
 		{
 			changed_prefs.drawbridge_smartspeed = chkDBSmartSpeed->isSelected();
 		}
@@ -313,13 +311,6 @@ public:
 						AddFileToDiskList(tmp, 1);
 						extract_path(tmp, current_dir);
 
-						if (i == 0 && chkLoadConfig->isSelected())
-						{
-							// Search for config of disk
-							extract_filename(changed_prefs.floppyslots[i].df, tmp);
-							remove_file_extension(tmp);
-							LoadConfigByName(tmp);
-						}
 						AdjustDropDownControls();
 					}
 				}
@@ -368,16 +359,6 @@ public:
 							bIgnoreListChange = true;
 							cboDFxFile[i]->setSelected(0);
 							bIgnoreListChange = false;
-
-							if (i == 0 && chkLoadConfig->isSelected())
-							{
-								// Search for config of disk
-								char tmp[MAX_DPATH];
-
-								extract_filename(changed_prefs.floppyslots[i].df, tmp);
-								remove_file_extension(tmp);
-								LoadConfigByName(tmp);
-							}
 						}
 					}
 				}
@@ -545,13 +526,6 @@ void InitPanelFloppy(const config_category& category)
 		cboDFxFile[i]->setBaseColor(gui_baseCol);
 		cboDFxFile[i]->setBackgroundColor(colTextboxBackground);
 		cboDFxFile[i]->addActionListener(diskFileActionListener);
-
-		if (i == 0)
-		{
-			chkLoadConfig = new gcn::CheckBox("Load config with same name as disk");
-			chkLoadConfig->setId("chkLoadDiskCfg");
-			chkLoadConfig->addActionListener(dfxCheckActionListener);
-		}
 	}
 
 	lblDriveSpeed = new gcn::Label("Floppy Drive Emulation Speed:");
@@ -563,12 +537,6 @@ void InitPanelFloppy(const config_category& category)
 	sldDriveSpeed->setId("sldDriveSpeed");
 	sldDriveSpeed->addActionListener(driveSpeedSliderActionListener);
 	lblDriveSpeedInfo = new gcn::Label(drive_speed_list[1]);
-
-	cmdSaveForDisk = new gcn::Button("Save config for disk");
-	cmdSaveForDisk->setSize(cmdSaveForDisk->getWidth() + 10, BUTTON_HEIGHT);
-	cmdSaveForDisk->setBaseColor(gui_baseCol);
-	cmdSaveForDisk->setId("cmdSaveForDisk");
-	cmdSaveForDisk->addActionListener(saveForDiskActionListener);
 
 	cmdCreateDDDisk = new gcn::Button("Create 3.5\" DD disk");
 	cmdCreateDDDisk->setSize(cmdCreateDDDisk->getWidth() + 10, BUTTON_HEIGHT);
@@ -619,11 +587,6 @@ void InitPanelFloppy(const config_category& category)
 		posY += cmdDFxEject[i]->getHeight() + 8;
 
 		category.panel->add(cboDFxFile[i], DISTANCE_BORDER, posY);
-		if (i == 0)
-		{
-			posY += cboDFxFile[i]->getHeight() + 8;
-			category.panel->add(chkLoadConfig, DISTANCE_BORDER, posY);
-		}
 		posY += cboDFxFile[i]->getHeight() + DISTANCE_NEXT_Y + 4;
 	}
 
@@ -636,18 +599,23 @@ void InitPanelFloppy(const config_category& category)
 	posY += sldDriveSpeed->getHeight() + DISTANCE_NEXT_Y;
 
 	posX = DISTANCE_BORDER;
-	category.panel->add(lblDBDriver, posX, posY);
-	category.panel->add(cboDBDriver, lblDBDriver->getX() + lblDBDriver->getWidth() + 8, posY);
-	posY += cboDBDriver->getHeight() + DISTANCE_NEXT_Y;
-	category.panel->add(chkDBSmartSpeed, posX, posY);
-	posY += chkDBSmartSpeed->getHeight() + DISTANCE_NEXT_Y;
-	category.panel->add(chkDBAutoCache, posX, posY);
-	posY += chkDBAutoCache->getHeight() + DISTANCE_NEXT_Y;
-	category.panel->add(chkDBCableDriveB, posX, posY);
+
+	grpDrawBridge = new gcn::Window("DrawBridge");
+	grpDrawBridge->setPosition(posX, posY);
+	grpDrawBridge->add(lblDBDriver, 10, 10);
+	grpDrawBridge->add(cboDBDriver, lblDBDriver->getX() + lblDBDriver->getWidth() + 8, 10);
+	grpDrawBridge->add(chkDBSmartSpeed, 10, 40);
+	grpDrawBridge->add(chkDBAutoCache, 10, 70);
+	grpDrawBridge->add(chkDBCableDriveB, 10, 100);
+	grpDrawBridge->setMovable(false);
+	grpDrawBridge->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, 160);
+	grpDrawBridge->setTitleBarHeight(TITLEBAR_HEIGHT);
+	grpDrawBridge->setBaseColor(gui_baseCol);
+
+	category.panel->add(grpDrawBridge);
 
 	posY = category.panel->getHeight() - DISTANCE_BORDER - BUTTON_HEIGHT;
-	category.panel->add(cmdSaveForDisk, DISTANCE_BORDER, posY);
-	category.panel->add(cmdCreateDDDisk, cmdSaveForDisk->getX() + cmdSaveForDisk->getWidth() + DISTANCE_NEXT_X, posY);
+	category.panel->add(cmdCreateDDDisk, DISTANCE_BORDER, posY);
 	category.panel->add(cmdCreateHDDisk, cmdCreateDDDisk->getX() + cmdCreateDDDisk->getWidth() + DISTANCE_NEXT_X, posY);
 
 	RefreshPanelFloppy();
@@ -666,11 +634,9 @@ void ExitPanelFloppy()
 		delete cmdDFxSelect[i];
 		delete cboDFxFile[i];
 	}
-	delete chkLoadConfig;
 	delete lblDriveSpeed;
 	delete sldDriveSpeed;
 	delete lblDriveSpeedInfo;
-	delete cmdSaveForDisk;
 	delete cmdCreateDDDisk;
 	delete cmdCreateHDDisk;
 	delete lblDBDriver;
@@ -678,6 +644,7 @@ void ExitPanelFloppy()
 	delete chkDBSmartSpeed;
 	delete chkDBAutoCache;
 	delete chkDBCableDriveB;
+	delete grpDrawBridge;
 
 	delete dfxCheckActionListener;
 	delete driveTypeActionListener;
@@ -726,6 +693,7 @@ void RefreshPanelFloppy()
 	for (i = 0; i < 4; ++i)
 	{
 		const auto driveEnabled = changed_prefs.floppyslots[i].dfxtype != DRV_NONE;
+		const auto disk_in_drive = strlen(changed_prefs.floppyslots[i].df) > 0;
 		chkDFx[i]->setSelected(driveEnabled);
 		const int nn = fromdfxtype(i, changed_prefs.floppyslots[i].dfxtype, changed_prefs.floppyslots[i].dfxsubtype);
 		cboDFxType[i]->setSelected(nn + 1);
@@ -734,8 +702,8 @@ void RefreshPanelFloppy()
 		cboDFxType[i]->setEnabled(prev_available);
 
 		chkDFxWriteProtect[i]->setEnabled(driveEnabled && !changed_prefs.floppy_read_only && nn < 5);
-		cmdDFxInfo[i]->setEnabled(driveEnabled && nn < 5);
-		cmdDFxEject[i]->setEnabled(driveEnabled && nn < 5);
+		cmdDFxInfo[i]->setEnabled(driveEnabled && nn < 5 && disk_in_drive);
+		cmdDFxEject[i]->setEnabled(driveEnabled && nn < 5 && disk_in_drive);
 		cmdDFxSelect[i]->setEnabled(driveEnabled && nn < 5);
 		cboDFxFile[i]->setEnabled(driveEnabled && nn < 5);
 
@@ -743,8 +711,6 @@ void RefreshPanelFloppy()
 		if (driveEnabled)
 			changed_prefs.nr_floppies = i + 1;
 	}
-
-	chkLoadConfig->setSelected(bLoadConfigForDisk);
 
 	for (i = 0; i <= 4; ++i)
 	{
@@ -792,25 +758,27 @@ void RefreshPanelFloppy()
 bool HelpPanelFloppy(std::vector<std::string>& helptext)
 {
 	helptext.clear();
-	helptext.emplace_back("You can enable/disable each drive by clicking the checkbox next to DFx or select");
-	helptext.emplace_back("the drive type in the dropdown control. \"3.5\" DD\" is the right choice for nearly");
-	helptext.emplace_back("all ADF and ADZ files.");
-	helptext.emplace_back("The option \"Write-protected\" indicates if the emulator can write to the ADF.");
+	helptext.emplace_back("You can enable/disable each drive by clicking the checkbox next to DFx or by selecting");
+	helptext.emplace_back(R"(the drive type in the dropdown control. The "3.5" DD" drive type is the right choice)");
+	helptext.emplace_back("for nearly all ADF and ADZ floppy image files.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("The option \"Write-protected\" indicates if the emulator can write to the ADF or not.");
 	helptext.emplace_back("Changing the write protection of the disk file may fail because of missing rights");
 	helptext.emplace_back("on the host filesystem.");
-	helptext.emplace_back("The button \"...\" opens a dialog to select the required disk file.");
-	helptext.emplace_back("With the dropdown control, you can select one of the disks you recently used.");
-	helptext.emplace_back("Details of the current floppy can be displayed with \"?\".");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("The \"...\" button opens a dialog to select the desired floppy disk file to load.");
+	helptext.emplace_back("With the dropdown control, you can select one of the disk files most recently used.");
+	helptext.emplace_back("Details of the currently loaded floppy file can be displayed with the \"?\" button.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("You can reduce the loading time for lot of games by increasing the floppy drive");
 	helptext.emplace_back("emulation speed. A few games will not load with higher drive speed and you have");
 	helptext.emplace_back("to select 100%.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("\"Save config for disk\" will create a new configuration file with the name of");
-	helptext.emplace_back("the disk in DF0. This configuration will be loaded each time you select the disk");
-	helptext.emplace_back("and have the option \"Load config with same name as disk\" enabled.");
+	helptext.emplace_back("If you select an \"FB\" floppy type as one of the drives, that will activate the");
+	helptext.emplace_back("DrawBridge-related options below. You can use these options to select which DrawBridge");
+	helptext.emplace_back("driver to use, as well as optionally enable some of the extra features the driver offers.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back(R"(With the buttons "Create 3.5\" DD disk" and "Create 3.5\" HD disk" you can)");
-	helptext.emplace_back("create a new and empty disk.");
+	helptext.emplace_back(R"(You can also use the "Create 3.5\" DD disk" and "Create 3.5\" HD disk", to make)");
+	helptext.emplace_back("a new and empty disk image, for use with the emulator.");
 	return true;
 }

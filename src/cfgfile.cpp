@@ -8490,10 +8490,10 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 	p->rtg_horiz_zoom_mult = 1.0;
 	p->rtg_vert_zoom_mult = 1.0;
 
-	_tcscpy (p->floppyslots[0].df, _T("df0.adf"));
-	_tcscpy (p->floppyslots[1].df, _T("df1.adf"));
-	_tcscpy (p->floppyslots[2].df, _T("df2.adf"));
-	_tcscpy (p->floppyslots[3].df, _T("df3.adf"));
+	_tcscpy (p->floppyslots[0].df, _T(""));
+	_tcscpy (p->floppyslots[1].df, _T(""));
+	_tcscpy (p->floppyslots[2].df, _T(""));
+	_tcscpy (p->floppyslots[3].df, _T(""));
 #ifndef AMIBERRY
 	for (int i = 0; i < MAX_LUA_STATES; i++) {
 		p->luafiles[i][0] = 0;
