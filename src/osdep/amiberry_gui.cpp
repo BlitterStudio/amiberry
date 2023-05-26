@@ -50,7 +50,7 @@ struct gui_msg
 
 struct gui_msg gui_msglist[] = {
   { NUMSG_NEEDEXT2,       "The software uses a non-standard floppy disk format. You may need to use a custom floppy disk image file instead of a standard one. This message will not appear again." },
-  { NUMSG_NOROM,          "Could not load system ROM, trying system ROM replacement." },
+  { NUMSG_NOROM,          "Could not load system ROM, trying AROS ROM replacement." },
   { NUMSG_NOROMKEY,       "Could not find system ROM key file." },
   { NUMSG_KSROMCRCERROR,  "System ROM checksum incorrect. The system ROM image file may be corrupt." },
   { NUMSG_KSROMREADERROR, "Error while reading system ROM." },
