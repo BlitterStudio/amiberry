@@ -35,6 +35,7 @@
 #include <vector>
 #include <deque>
 #include <mutex>
+#include <string>
 #include <condition_variable>
 #include "floppybridge_abstract.h"
 #include "RotationExtractor.h"

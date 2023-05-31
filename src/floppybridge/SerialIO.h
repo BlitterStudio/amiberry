@@ -26,6 +26,7 @@
 
 #include <string>
 #include <vector>
+#include <stdint.h>
 
 #ifdef _WIN32
 #ifdef USING_MFC
