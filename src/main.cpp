@@ -1328,8 +1328,6 @@ static int real_main2 (int argc, TCHAR **argv)
 	reset_frame_rate_hack ();
 	init_m68k (); /* must come after reset_frame_rate_hack (); */
 
-	gui_update ();
-
 	if (graphics_init (true)) {
 #ifdef DEBUGGER
 		setup_brkhandler ();
