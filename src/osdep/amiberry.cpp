@@ -1203,6 +1203,7 @@ void process_event(SDL_Event event)
 		for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
 		{
 			did = &di_joystick[id];
+			if (did->joystick_id != event.jbutton.which) continue;
 			if (did->name.empty() || did->joystick_id != id) continue;
 			if (!did->mapping.is_retroarch && did->is_controller) continue;
 
@@ -1245,6 +1246,7 @@ void process_event(SDL_Event event)
 		for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
 		{
 			did = &di_joystick[id];
+			if (did->joystick_id != event.jaxis.which) continue;
 			if (did->name.empty() || did->joystick_id != id) continue;
 			if (!did->mapping.is_retroarch && did->is_controller) continue;
 
@@ -1257,6 +1259,7 @@ void process_event(SDL_Event event)
 		for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
 		{
 			did = &di_joystick[id];
+			if (did->joystick_id != event.jhat.which) continue;
 			if (did->name.empty() || did->joystick_id != id) continue;
 
 			read_joystick_hat(event.jhat.which, event.jhat.hat, event.jhat.value);
