@@ -70,7 +70,7 @@
 #include "fsdb_host.h"
 #include "keyboard.h"
 
-static const char __ver[40] = "$VER: Amiberry 5.6.1 (2023-05-25)";
+static const char __ver[40] = "$VER: Amiberry 5.6.1 (2023-06-05)";
 long int version = 256 * 65536L * UAEMAJOR + 65536L * UAEMINOR + UAESUBREV;
 
 struct uae_prefs currprefs, changed_prefs;
@@ -1327,8 +1327,6 @@ static int real_main2 (int argc, TCHAR **argv)
 
 	reset_frame_rate_hack ();
 	init_m68k (); /* must come after reset_frame_rate_hack (); */
-
-	gui_update ();
 
 	if (graphics_init (true)) {
 #ifdef DEBUGGER
