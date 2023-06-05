@@ -811,7 +811,7 @@ static void open_screen(struct uae_prefs* p)
 		else
 		{
 			display_depth = 32;
-			pixel_format = SDL_PIXELFORMAT_RGBA32;
+			pixel_format = SDL_PIXELFORMAT_BGR888;
 		}
 
 #ifdef USE_OPENGL
@@ -838,10 +838,8 @@ static void open_screen(struct uae_prefs* p)
 	}
 	else
 	{
-		//display_depth = 16;
-		//pixel_format = SDL_PIXELFORMAT_RGB565;
 		display_depth = 32;
-		pixel_format = SDL_PIXELFORMAT_RGBA32;
+		pixel_format = SDL_PIXELFORMAT_BGR888;
 
 		if (p->gfx_correct_aspect == 0)
 		{
