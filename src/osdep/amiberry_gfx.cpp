@@ -519,7 +519,7 @@ void toggle_fullscreen(int monid, int mode)
 	// Dispmanx is full-window always
 #else
 	auto* const ad = &adisplays[monid];
-	auto* p = ad->picasso_on ? &currprefs.gfx_apmode[1].gfx_fullscreen : &currprefs.gfx_apmode[0].gfx_fullscreen;
+	auto* p = ad->picasso_on ? &changed_prefs.gfx_apmode[1].gfx_fullscreen : &changed_prefs.gfx_apmode[0].gfx_fullscreen;
 	const auto wfw = ad->picasso_on ? wasfullwindow_p : wasfullwindow_a;
 	auto v = *p;
 	static int prevmode = -1;
