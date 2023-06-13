@@ -416,7 +416,8 @@ static void gui_to_prefs(void)
 {
 	if (quit_program == -UAE_RESET_HARD) {
 		// copy all if hard reset
-		copy_prefs(&changed_prefs, &currprefs);
+		// disabled as this caused bug #1068
+		//copy_prefs(&changed_prefs, &currprefs);
 		memory_hardreset(2);
 	}
 	/* filesys hack */
