@@ -385,4 +385,10 @@ extern int inputdevice_testread_count (void);
 
 extern bool target_can_autoswitchdevice(void);
 
+bool key_specialpressed(void);
+bool key_shiftpressed(void);
+bool key_altpressed(void);
+bool key_ctrlpressed(void);
+bool key_winpressed(void);
+
 #endif /* UAE_INPUTDEVICE_H */

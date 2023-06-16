@@ -316,27 +316,6 @@ static int* kbmaps[] = {
 	kb_arcadia, kb_cdtv
 };
 
-static bool specialpressed()
-{
-	return (input_getqualifiers() & ID_FLAG_QUALIFIER_SPECIAL) != 0;
-}
-static bool shiftpressed()
-{
-	return (input_getqualifiers() & ID_FLAG_QUALIFIER_SHIFT) != 0;
-}
-static bool altpressed()
-{
-	return (input_getqualifiers() & ID_FLAG_QUALIFIER_ALT) != 0;
-}
-static bool ctrlpressed()
-{
-	return (input_getqualifiers() & ID_FLAG_QUALIFIER_CONTROL) != 0;
-}
-static bool winpressed()
-{
-	return (input_getqualifiers() & ID_FLAG_QUALIFIER_WIN) != 0;
-}
-
 static int capslockstate;
 static int host_capslockstate, host_numlockstate, host_scrolllockstate;
 
@@ -394,7 +373,7 @@ bool my_kbd_handler(int keyboard, int scancode, int newstate, bool alwaysrelease
 	}
 #endif
 #if 1
-	if (scancode == SDL_SCANCODE_F9 && specialpressed()) {
+	if (scancode == SDL_SCANCODE_F9 && key_specialpressed()) {
 		//if (newstate) {
 		//	extern int blop;
 		//	blop++;
@@ -404,11 +383,11 @@ bool my_kbd_handler(int keyboard, int scancode, int newstate, bool alwaysrelease
 #endif
 	scancode_new = scancode;
 
-	const bool ctrl_state = ctrlpressed();
-	const bool shift_state = shiftpressed();
-	const bool alt_state = altpressed();
-	const bool win_state = winpressed();
-	const bool special_state = specialpressed();
+	const bool ctrl_state = key_ctrlpressed();
+	const bool shift_state = key_shiftpressed();
+	const bool alt_state = key_altpressed();
+	const bool win_state = key_winpressed();
+	const bool special_state = key_specialpressed();
 
 	if (newstate) {
 		if (quit_key.scancode && scancode == quit_key.scancode)

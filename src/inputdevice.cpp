@@ -6137,6 +6137,27 @@ uae_u64 input_getqualifiers (void)
 	return qualifiers;
 }
 
+bool key_specialpressed(void)
+{
+	return (input_getqualifiers() & ID_FLAG_QUALIFIER_SPECIAL) != 0;
+}
+bool key_shiftpressed(void)
+{
+	return (input_getqualifiers() & ID_FLAG_QUALIFIER_SHIFT) != 0;
+}
+bool key_altpressed(void)
+{
+	return (input_getqualifiers() & ID_FLAG_QUALIFIER_ALT) != 0;
+}
+bool key_ctrlpressed(void)
+{
+	return (input_getqualifiers() & ID_FLAG_QUALIFIER_CONTROL) != 0;
+}
+bool key_winpressed(void)
+{
+	return (input_getqualifiers() & ID_FLAG_QUALIFIER_WIN) != 0;
+}
+
 static bool checkqualifiers (int evt, uae_u64 flags, uae_u64 *qualmask, uae_s16 events[MAX_INPUT_SUB_EVENT_ALL])
 {
 	int i, j;
@@ -9381,7 +9402,48 @@ void inputdevice_unacquire(void)
 	inputdevice_unacquire(0);
 }
 
-void inputdevice_testrecord (int type, int num, int wtype, int wnum, int state, int max)
+static void inputdevice_testrecord_info(int type, int num, int wtype, int wnum, int state, int max)
+{
+	//write_log (_T("%d %d %d %d %d/%d\n"), type, num, wtype, wnum, state, max);
+#if 0
+	TCHAR name[256];
+
+	if (type == IDTYPE_KEYBOARD) {
+		if (wnum >= 0x100) {
+			wnum = 0x100 - wnum;
+		}
+		else {
+			struct uae_input_device* na = &keyboards[num];
+			int j = 0;
+			while (j < MAX_INPUT_DEVICE_EVENTS && na->extra[j] >= 0) {
+				if (na->extra[j] == wnum) {
+					wnum = j;
+					break;
+				}
+				j++;
+			}
+			if (j >= MAX_INPUT_DEVICE_EVENTS || na->extra[j] < 0)
+				return;
+		}
+	}
+	int devnum2 = getdevnum(type, num);
+	int type2;
+	if (wnum >= 0 && wnum < MAX_INPUT_DEVICE_EVENTS)
+		type2 = idev[type].get_widget_first(num, wtype) + wnum;
+	else
+		type2 = wnum;
+	int state2 = state;
+
+	name[0] = 0;
+	int type3 = inputdevice_get_widget_type(devnum2, type2, name, false);
+	if (name[0]) {
+		const struct inputdevice_functions* idf = getidf(devnum2);
+		write_log(_T("%s %s\n"), idf->get_friendlyname(inputdevice_get_device_index(devnum2)), name);
+	}
+#endif
+}
+
+static void inputdevice_testrecord_test(int type, int num, int wtype, int wnum, int state, int max)
 {
 	//write_log (_T("%d %d %d %d %d/%d\n"), type, num, wtype, wnum, state, max);
 
@@ -9441,6 +9503,17 @@ void inputdevice_testrecord (int type, int num, int wtype, int wnum, int state, 
 	ts->testmode_state = state;
 	ts->testmode_max = max;
 	testmode_count++;
+}
+
+void inputdevice_testrecord(int type, int num, int wtype, int wnum, int state, int max)
+{
+	//write_log (_T("%d %d %d %d %d/%d\n"), type, num, wtype, wnum, state, max);
+	if (testmode) {
+		inputdevice_testrecord_test(type, num, wtype, wnum, state, max);
+	}
+	else if (key_specialpressed()) {
+		inputdevice_testrecord_info(type, num, wtype, wnum, state, max);
+	}
 }
 
 int inputdevice_istest (void)
