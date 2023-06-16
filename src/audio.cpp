@@ -1433,7 +1433,7 @@ static void setirq(int nr, int which)
 {
 #if DEBUG_AUDIO > 0
 	struct audio_channel_data *cdp = audio_channel + nr;
-	if (debugchannel (nr) && cdp->wlen > 1)
+	if (debugchannel (nr))
 		write_log (_T("SETIRQ%d (%d,%d) PC=%08X\n"), nr, which, isirq (nr) ? 1 : 0, M68K_GETPC);
 #endif
 	// audio interrupts are delayed by 1 CCK
@@ -1561,6 +1561,11 @@ static void loadper1(int nr)
 {
 	struct audio_channel_data *cdp = audio_channel + nr;
 	cdp->evtime = 1 * CYCLE_UNIT;
+#if DEBUG_AUDIO2 > 0
+	if (debugchannel(nr)) {
+		write_log(_T("LOADPERP%d: %d\n"), nr, cdp->evtime / CYCLE_UNIT);
+	}
+#endif
 }
 
 static void loadperm1(int nr)
@@ -1572,6 +1577,11 @@ static void loadperm1(int nr)
 	} else {
 		cdp->evtime = 65536 * CYCLE_UNIT + cdp->per;
 	}
+#if DEBUG_AUDIO2 > 0
+	if (debugchannel(nr)) {
+		write_log(_T("LOADPERM%d: %d\n"), nr, cdp->evtime / CYCLE_UNIT);
+	}
+#endif
 }
 
 static void loadper (int nr)
@@ -1582,6 +1592,11 @@ static void loadper (int nr)
 	cdp->data.mixvol = cdp->data.audvol;
 	if (cdp->evtime < CYCLE_UNIT)
 		write_log (_T("LOADPER%d bug %d\n"), nr, cdp->evtime);
+#if DEBUG_AUDIO2 > 0
+	if (debugchannel(nr)) {
+		write_log(_T("LOADPER%d: %d\n"), nr, cdp->evtime / CYCLE_UNIT);
+	}
+#endif
 }
 
 
