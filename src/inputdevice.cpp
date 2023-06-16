@@ -1503,8 +1503,20 @@ static const struct inputevent *readevent (const TCHAR *name, TCHAR **customp)
 	if (_tcslen (name) > 2 && name[0] == '\'') {
 		name++;
 		const TCHAR *end = name;
-		while (*end && *end != '\'')
+		bool equote = false;
+		while (*end) {
+			if (*end == '\"') {
+				if (!equote) {
+					equote = 1;
+				} else {
+					equote = 0;
+				}
+			}
+			if (!equote && *end == '\'') {
+				break;
+			}
 			end++;
+		}
 		if (!customp || *end == 0)
 			return NULL;
 		TCHAR *custom = my_strdup (name);
