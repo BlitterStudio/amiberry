@@ -568,6 +568,8 @@ struct uae_prefs
 	bool use_serial;
 	bool serial_demand;
 	bool serial_hwctsrts;
+	bool serial_rtsctsdtrdtecd;
+	bool serial_ri;
 	bool serial_direct;
 	int serial_stopbits;
 	int serial_crlf;

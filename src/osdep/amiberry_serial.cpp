@@ -831,61 +831,70 @@ uae_u8 serial_readstatus(uae_u8 v, uae_u8 dir)
 	//	}
 	//}
 	//else 
-		if (currprefs.use_serial) {
+	if (currprefs.use_serial) {
 #ifdef SERIAL_PORT
 		/* Read the current config from the port into that configuration. */
 		check(sp_get_signals(port, &signal));
 #endif
-	} else {
+	}
+	else {
 		return v;
 	}
 
-	if (!(signal & SP_SIG_DCD)) {
-		if (!(serbits & 0x20)) {
-			serbits |= 0x20;
+	if (currprefs.serial_rtsctsdtrdtecd) {
+		if (!(signal & SP_SIG_DCD)) {
+			if (!(serbits & 0x20)) {
+				serbits |= 0x20;
+			}
 		}
-	} else {
-		if (serbits & 0x20) {
-			serbits &= ~0x20;
+		else {
+			if (serbits & 0x20) {
+				serbits &= ~0x20;
+			}
 		}
-	}
 
-	if (!(signal & SP_SIG_DSR)) {
-		if (!(serbits & 0x08)) {
-			serbits |= 0x08;
+		if (!(signal & SP_SIG_DSR)) {
+			if (!(serbits & 0x08)) {
+				serbits |= 0x08;
+			}
 		}
-	}
-	else {
-		if (serbits & 0x08) {
-			serbits &= ~0x08;
+		else {
+			if (serbits & 0x08) {
+				serbits &= ~0x08;
+			}
 		}
-	}
 
-	if (!(signal & SP_SIG_CTS)) {
-		if (!(serbits & 0x10)) {
-			serbits |= 0x10;
+		if (!(signal & SP_SIG_CTS)) {
+			if (!(serbits & 0x10)) {
+				serbits |= 0x10;
+			}
 		}
-	}
-	else {
-		if (serbits & 0x10) {
-			serbits &= ~0x10;
+		else {
+			if (serbits & 0x10) {
+				serbits &= ~0x10;
+			}
 		}
 	}
 
 	// SEL == RI
 	if (1) {
 		serbits |= 0x04;
+		serbits |= v & 0x04;
+		if (currprefs.serial_ri && (signal & SP_SIG_RI)) {
+			serbits &= ~0x04;
+		}
+	} else if (currprefs.serial_ri) {
+		serbits |= 0x04;
+		if (signal & SP_SIG_RI) {
+			serbits &= ~0x04;
+		}
 	} else {
 		serbits &= ~0x04;
 		serbits |= v & 0x04;
 	}
 
-	if (signal & SP_SIG_RI) {
-		serbits &= ~0x04;
-	}
-
-	serbits &= 0x08 | 0x10 | 0x20;
-	oldserbits &= ~(0x08 | 0x10 | 0x20);
+	serbits &= 0x04 | 0x08 | 0x10 | 0x20;
+	oldserbits &= ~(0x04 | 0x08 | 0x10 | 0x20);
 	oldserbits |= serbits;
 
 	v = (v & (0x80 | 0x40 | 0x02 | 0x01)) | serbits;
@@ -900,13 +909,13 @@ uae_u8 serial_writestatus(uae_u8 newstate, uae_u8 dir)
 
 #ifdef SERIAL_PORT
 	if (currprefs.use_serial) {
-		if (((oldserbits ^ newstate) & 0x80) && (dir & 0x80)) {
+		if (currprefs.serial_rtsctsdtrdtecd && ((oldserbits ^ newstate) & 0x80) && (dir & 0x80)) {
 			if (newstate & 0x80)
 				serial_dtr_off();
 			else
 				serial_dtr_on();
 		}
-		if (!currprefs.serial_hwctsrts && (dir & 0x40)) {
+		if (!currprefs.serial_hwctsrts && currprefs.serial_rtsctsdtrdtecd && (dir & 0x40)) {
 			if ((oldserbits ^ newstate) & 0x40) {
 				if (newstate & 0x40) {
 					check(sp_set_flowcontrol(port, SP_FLOWCONTROL_NONE));

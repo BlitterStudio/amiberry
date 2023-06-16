@@ -18,6 +18,8 @@ static gcn::DropDown* cboSerialPort;
 static gcn::CheckBox* chkSerialDirect;
 static gcn::CheckBox* chkRTSCTS;
 static gcn::CheckBox* chkUaeSerial;
+static gcn::CheckBox* chkSerialStatus;
+static gcn::CheckBox* chkSerialStatusRi;
 #endif
 
 static gcn::Label* lblProtectionDongle;
@@ -97,6 +99,13 @@ public:
 
 		else if (actionEvent.getSource() == chkUaeSerial)
 			changed_prefs.uaeserial = chkUaeSerial->isSelected();
+
+		else if (actionEvent.getSource() == chkSerialStatus)
+			changed_prefs.serial_rtsctsdtrdtecd = chkSerialStatus->isSelected();
+
+		else if (actionEvent.getSource() == chkSerialStatusRi)
+			changed_prefs.serial_ri = chkSerialStatusRi->isSelected();
+
 #endif
 		else if (actionEvent.getSource() == cboProtectionDongle)
 			changed_prefs.dongle = cboProtectionDongle->getSelected();
@@ -173,13 +182,21 @@ void InitPanelIO(const config_category& category)
 	chkSerialDirect->setId("chkSerialDirect");
 	chkSerialDirect->addActionListener(ioActionListener);
 
-	chkRTSCTS = new gcn::CheckBox("RTS/CTS");
+	chkRTSCTS = new gcn::CheckBox("Host RTS/CTS");
 	chkRTSCTS->setId("chkRTSCTS");
 	chkRTSCTS->addActionListener(ioActionListener);
 
 	chkUaeSerial = new gcn::CheckBox("uaeserial.device");
 	chkUaeSerial->setId("chkUaeSerial");
 	chkUaeSerial->addActionListener(ioActionListener);
+
+	chkSerialStatus = new gcn::CheckBox("Serial status (RTS/CTS/DTR/DTE/CD)");
+	chkSerialStatus->setId("chkSerialStatus");
+	chkSerialStatus->addActionListener(ioActionListener);
+
+	chkSerialStatusRi = new gcn::CheckBox("Serial status: Ring Indicator");
+	chkSerialStatusRi->setId("chkSerialStatusRi");
+	chkSerialStatusRi->addActionListener(ioActionListener);
 #endif
 
 	lblSampler = new gcn::Label("Sampler:");
@@ -210,7 +227,10 @@ void InitPanelIO(const config_category& category)
 	category.panel->add(chkRTSCTS, DISTANCE_BORDER, posY);
 	category.panel->add(chkSerialDirect, chkRTSCTS->getWidth() + chkRTSCTS->getX() + DISTANCE_NEXT_X, posY);
 	category.panel->add(chkUaeSerial, chkSerialDirect->getWidth() + chkSerialDirect->getX() + DISTANCE_NEXT_X, posY);
-	posY = chkRTSCTS->getY() + chkRTSCTS->getHeight() + DISTANCE_NEXT_Y * 2;
+	posY = chkRTSCTS->getY() + chkRTSCTS->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(chkSerialStatus, DISTANCE_BORDER, posY);
+	category.panel->add(chkSerialStatusRi, chkSerialStatus->getWidth() + chkSerialStatus->getX() + DISTANCE_NEXT_X, posY);
+	posY = chkSerialStatus->getY() + chkSerialStatus->getHeight() + DISTANCE_NEXT_Y * 2;
 
 	category.panel->add(lblSampler, DISTANCE_BORDER, posY);
 	category.panel->add(cboSampler, DISTANCE_BORDER + lblProtectionDongle->getWidth() + 8, posY);
@@ -233,6 +253,8 @@ void ExitPanelIO()
 	delete chkRTSCTS;
 	delete chkSerialDirect;
 	delete chkUaeSerial;
+	delete chkSerialStatus;
+	delete chkSerialStatusRi;
 #endif
 
 	delete lblProtectionDongle;
@@ -248,6 +270,8 @@ void RefreshPanelIO()
 	chkRTSCTS->setSelected(changed_prefs.serial_hwctsrts);
 	chkSerialDirect->setSelected(changed_prefs.serial_direct);
 	chkUaeSerial->setSelected(changed_prefs.uaeserial);
+	chkSerialStatus->setSelected(changed_prefs.serial_rtsctsdtrdtecd);
+	chkSerialStatusRi->setSelected(changed_prefs.serial_ri);
 	cboSerialPort->setSelected(0);
 	if (changed_prefs.sername[0])
 	{
@@ -263,12 +287,16 @@ void RefreshPanelIO()
 		chkRTSCTS->setEnabled(true);
 		chkSerialDirect->setEnabled(true);
 		chkUaeSerial->setEnabled(true);
+		chkSerialStatus->setEnabled(true);
+		chkSerialStatusRi->setEnabled(true);
 	}
 	else
 	{
 		chkRTSCTS->setEnabled(false);
 		chkSerialDirect->setEnabled(false);
 		chkUaeSerial->setEnabled(false);
+		chkSerialStatus->setEnabled(false);
+		chkSerialStatusRi->setEnabled(false);
 	}
 #endif
 

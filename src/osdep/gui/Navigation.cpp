@@ -353,9 +353,11 @@ static NavigationMap navMap[] =
 	// active		move left				move right			move up			move down
 	// PanelIO
 	{ "cboSerialPort", "", "", "cboProtectionDongle", "chkRTSCTS" },
-	{ "chkRTSCTS", "IO Ports", "chkSerialDirect", "cboSerialPort", "cboProtectionDongle" },
-	{ "chkSerialDirect", "chkRTSCTS", "chkUaeSerial", "cboSerialPort", "cboProtectionDongle" },
-	{ "chkUaeSerial", "chkSerialDirect", "IO Ports", "cboSerialPort", "cboProtectionDongle" },
+	{ "chkRTSCTS", "IO Ports", "chkSerialDirect", "cboSerialPort", "chkSerialStatus" },
+	{ "chkSerialDirect", "chkRTSCTS", "chkUaeSerial", "cboSerialPort", "chkSerialStatus" },
+	{ "chkUaeSerial", "chkSerialDirect", "IO Ports", "cboSerialPort", "chkSerialStatus" },
+	{ "chkSerialStatus", "IO Ports", "chkSerialStatusRi", "chkUaeSerial", "cboProtectionDongle" },
+	{ "chkSerialStatusRi", "chkSerialStatus", "IO Ports", "chkSerialStatus", "cboProtectionDongle" },
 	{ "cboProtectionDongle", "IO Ports", "IO Ports", "chkRTSCTS", "cboSerialPort" },
 
 	// PanelCustom
