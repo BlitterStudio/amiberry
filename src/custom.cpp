@@ -7929,7 +7929,8 @@ static void VHPOSW_delayed(uae_u32 v)
 #endif
 	}
 	// don't allow backwards vpos (at least for now)
-	if (newvpos < oldvpos) {
+	// allow backwards if old vpos was out of range
+	if (newvpos < oldvpos && oldvpos <= maxvpos) {
 		newvpos = oldvpos;
 	} else if (newvpos < minfirstline && oldvpos < minfirstline) {
 		newvpos = oldvpos;
