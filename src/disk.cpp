@@ -2956,6 +2956,7 @@ static void drive_eject (drive * drv)
 	drv->dskready_up_time = 0;
 	drv->dskready_down_time = 0;
 	drv->forcedwrprot = false;
+	drv->useturbo = 0;
 	drv->crc32 = 0;
 	drive_settype_id (drv); /* Back to 35 DD */
 	if (disk_debug_logging > 0)
