@@ -4212,7 +4212,7 @@ static bool merge_blacklist2(const char *blacklist)
 
 			TCHAR *s = au(p);
 			bool found = false;
-			for (int i = 0; lookuptab[i].name; i++) {
+			for (int i = 0; lookuptab[i].name[0]; i++) {
 				if (!_tcsnicmp(s, lookuptab[i].name, len) && _tcslen(lookuptab[i].name) == len) {
 					int mnemo = lookuptab[i].mnemo;
 					for (int opcode = 0; opcode < 0xf000; opcode++) {
