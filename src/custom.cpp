@@ -7413,7 +7413,9 @@ static void init_hz(bool checkvposw)
 
 	compute_framesync();
 	devices_syncchange();
+	set_maxhpos(maxhpos);
 	display_reset = 2;
+	estimated_fm = 0xffff;
 
 #ifdef PICASSO96
 	init_hz_p96(0);
