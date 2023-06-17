@@ -1718,6 +1718,10 @@ void read_inputdevice_config (struct uae_prefs *pr, const TCHAR *option, TCHAR *
 		tid->disabled = getnum(&p);
 		tid->joystick = joystick;
 		tid->devtype = devtype;
+		if (tid->devtype == IDTYPE_INTERNALEVENT && devnum < INTERNALEVENT_COUNT) {
+			id = &pr->internalevent_settings[idnum][devnum];
+			id->enabled = tid->disabled == 0;
+		}
 		return;
 	}
 
