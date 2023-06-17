@@ -2688,7 +2688,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_write_strarr(f, _T("chipset_compatible"), cscompa, p->cs_compatible);
 	cfgfile_dwrite_strarr(f, _T("ciaatod"), ciaatodmode, p->cs_ciaatod);
 	cfgfile_dwrite_strarr(f, _T("rtc"), rtctype, p->cs_rtc);
-	cfgfile_dwrite (f, _T("chipset_rtc_adjust"), _T("%d"), p->cs_rtc_adjust);
+	cfgfile_dwrite(f, _T("chipset_rtc_adjust"), _T("%d"), p->cs_rtc_adjust);
 	cfgfile_dwrite_bool(f, _T("cia_overlay"), p->cs_ciaoverlay);	
 	cfgfile_dwrite_bool(f, _T("ksmirror_e0"), p->cs_ksmirror_e0);
 	cfgfile_dwrite_bool(f, _T("ksmirror_a8"), p->cs_ksmirror_a8);
@@ -2719,6 +2719,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_dwrite_strarr(f, _T("ciab_type"), ciatype, p->cs_ciatype[1]);
 	cfgfile_dwrite_strarr(f, _T("unmapped_address_space"), unmapped, p->cs_unmapped_space);
 	cfgfile_dwrite_bool(f, _T("memory_pattern"), p->cs_memorypatternfill);
+	cfgfile_dwrite_bool(f, _T("ipl_delay"), p->cs_ipldelay);
 	cfgfile_dwrite(f, _T("keyboard_handshake"), _T("%d"), currprefs.cs_kbhandshake);
 	cfgfile_dwrite(f, _T("chipset_hacks"), _T("0x%x"), p->cs_hacks);
 	cfgfile_dwrite(f, _T("eclockphase"), _T("%d"), p->cs_eclockphase);
@@ -6032,26 +6033,27 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		|| cfgfile_intval(option, value, _T("chipset_rtc_adjust"), &p->cs_rtc_adjust, 1))
 		return 1;
 
-	if (cfgfile_strval (option, value, _T("comp_trustbyte"), &p->comptrustbyte, compmode, 0)
-		|| cfgfile_strval (option, value, _T("rtc"), &p->cs_rtc, rtctype, 0)
-		|| cfgfile_strval (option, value, _T("ciaatod"), &p->cs_ciaatod, ciaatodmode, 0)
-		|| cfgfile_strval (option, value, _T("scsi"), &p->scsi, scsimode, 0)
-		|| cfgfile_strval (option, value, _T("comp_trustword"), &p->comptrustword, compmode, 0)
-		|| cfgfile_strval (option, value, _T("comp_trustlong"), &p->comptrustlong, compmode, 0)
-		|| cfgfile_strval (option, value, _T("comp_trustnaddr"), &p->comptrustnaddr, compmode, 0)
-		|| cfgfile_strval (option, value, _T("collision_level"), &p->collision_level, collmode, 0)
-		|| cfgfile_strval (option, value, _T("parallel_matrix_emulation"), &p->parallel_matrix_emulation, epsonprinter, 0)
-		//|| cfgfile_strval(option, value, _T("monitoremu"), &p->monitoremu, specialmonitorconfignames, 0)
+	if (cfgfile_strval(option, value, _T("comp_trustbyte"), &p->comptrustbyte, compmode, 0)
+		|| cfgfile_strval(option, value, _T("rtc"), &p->cs_rtc, rtctype, 0)
+		|| cfgfile_strval(option, value, _T("ciaatod"), &p->cs_ciaatod, ciaatodmode, 0)
+		|| cfgfile_strval(option, value, _T("scsi"), &p->scsi, scsimode, 0)
+		|| cfgfile_strval(option, value, _T("comp_trustword"), &p->comptrustword, compmode, 0)
+		|| cfgfile_strval(option, value, _T("comp_trustlong"), &p->comptrustlong, compmode, 0)
+		|| cfgfile_strval(option, value, _T("comp_trustnaddr"), &p->comptrustnaddr, compmode, 0)
+		|| cfgfile_strval(option, value, _T("collision_level"), &p->collision_level, collmode, 0)
+		|| cfgfile_strval(option, value, _T("parallel_matrix_emulation"), &p->parallel_matrix_emulation, epsonprinter, 0)
+		|| cfgfile_strval(option, value, _T("monitoremu"), &p->monitoremu, specialmonitorconfignames, 0)
 		|| cfgfile_strval(option, value, _T("genlockmode"), &p->genlock_image, genlockmodes, 0)
-		|| cfgfile_strval (option, value, _T("waiting_blits"), &p->waiting_blits, waitblits, 0)
-		|| cfgfile_strval (option, value, _T("floppy_auto_extended_adf"), &p->floppy_auto_ext2, autoext2, 0)
-		|| cfgfile_strval (option, value,  _T("z3mapping"), &p->z3_mapping_mode, z3mapping, 0)
-		|| cfgfile_strval (option, value,  _T("scsidev_mode"), &p->uaescsidevmode, uaescsidevmodes, 0)
+		|| cfgfile_strval(option, value, _T("waiting_blits"), &p->waiting_blits, waitblits, 0)
+		|| cfgfile_strval(option, value, _T("floppy_auto_extended_adf"), &p->floppy_auto_ext2, autoext2, 0)
+		|| cfgfile_strval(option, value,  _T("z3mapping"), &p->z3_mapping_mode, z3mapping, 0)
+		|| cfgfile_strval(option, value,  _T("scsidev_mode"), &p->uaescsidevmode, uaescsidevmodes, 0)
 		|| cfgfile_strval(option, value, _T("boot_rom_uae"), &p->boot_rom, uaebootrom, 0)
-		|| cfgfile_strval (option, value,  _T("serial_translate"), &p->serial_crlf, serialcrlf, 0)
+		|| cfgfile_strval(option, value,  _T("serial_translate"), &p->serial_crlf, serialcrlf, 0)
 		|| cfgfile_strval(option, value, _T("hvcsync"), &p->cs_hvcsync, hvcsync, 0)
 		|| cfgfile_strval(option, value, _T("unmapped_address_space"), &p->cs_unmapped_space, unmapped, 0)
 		|| cfgfile_yesno(option, value, _T("memory_pattern"), &p->cs_memorypatternfill)
+		|| cfgfile_yesno(option, value, _T("ipl_delay"), &p->cs_ipldelay)
 		|| cfgfile_strval(option, value, _T("ciaa_type"), &p->cs_ciatype[0], ciatype, 0)
 		|| cfgfile_strval(option, value, _T("ciab_type"), &p->cs_ciatype[1], ciatype, 0)
 		|| cfgfile_strboolval(option, value, _T("comp_flushmode"), &p->comp_hardflush, flushmode, 0)
@@ -8489,6 +8491,7 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 	p->cs_ciatype[0] = 0;
 	p->cs_ciatype[1] = 0;
 	p->cs_memorypatternfill = true;
+	p->cs_ipldelay = false;
 
 	for (int i = 0; i < MAX_FILTERDATA; i++) {
 		struct gfx_filterdata *f = &p->gf[i];

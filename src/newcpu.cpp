@@ -4510,10 +4510,12 @@ void ipl_fetch_next(void)
 {
 	evt_t c = get_cycles();
 
-	if (c - regs.ipl_pin_change_evt >= cpuipldelay4) {
+	evt_t cd = c - regs.ipl_pin_change_evt;
+	evt_t cdp = c - regs.ipl_pin_change_evt_p;
+	if (cd >= cpuipldelay4) {
 		regs.ipl[0] = regs.ipl_pin;
 		regs.ipl[1] = 0;
-	} else if (c - regs.ipl_pin_change_evt_p >= cpuipldelay2) {
+	} else if (cdp >= cpuipldelay2) {
 		regs.ipl[0] = regs.ipl_pin_p;
 		regs.ipl[1] = 0;
 	} else {
@@ -4574,7 +4576,7 @@ void doint(void)
 		// Paula does low to high IPL changes about 1.5 CPU clocks later than high to low.
 		// -> CPU detects IPL change 1 CCK later if any IPL pin has high to low transition.
 		// (In real world IPL is active low and delay is added if 0 to 1 transition)
-		if (m68k_accurate_ipl && regs.ipl_pin >= 0 && ipl >= 0 && (
+		if (currprefs.cs_ipldelay && m68k_accurate_ipl && regs.ipl_pin >= 0 && ipl >= 0 && (
 			((regs.ipl_pin & 1) && !(ipl & 1)) ||
 			((regs.ipl_pin & 2) && !(ipl & 2)) ||
 			((regs.ipl_pin & 4) && !(ipl & 4))

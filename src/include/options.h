@@ -786,6 +786,7 @@ struct uae_prefs
 	int cs_agnussize;
 	int cs_denisemodel;
 	bool cs_memorypatternfill;
+	bool cs_ipldelay;
 
 	struct boardromconfig expansionboard[MAX_EXPANSION_BOARDS];
 
