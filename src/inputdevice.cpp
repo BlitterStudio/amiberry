@@ -7347,41 +7347,42 @@ static void setjoyinputs (struct uae_prefs *prefs, int port)
 	//write_log (_T("joyinput %d = %p\n"), port, joyinputs[port]);
 }
 
-static void setautofire (struct uae_input_device *uid, int port, int af)
+static void setautofire (struct uae_input_device *uid, int port, int sub, int af, bool set)
 {
 	const int *afp = af_ports[port];
 	for (int k = 0; afp[k] >= 0; k++) {
 		for (int i = 0; i < MAX_INPUT_DEVICE_EVENTS; i++) {
 			for (int j = 0; j < MAX_INPUT_SUB_EVENT; j++) {
 				if (uid->eventid[i][j] == afp[k]) {
-					uid->flags[i][j] &= ~ID_FLAG_AUTOFIRE_MASK;
-					if (af >= JPORT_AF_NORMAL)
-						uid->flags[i][j] |= ID_FLAG_AUTOFIRE;
-					if (af == JPORT_AF_TOGGLE)
-						uid->flags[i][j] |= ID_FLAG_TOGGLE;
-					if (af == JPORT_AF_ALWAYS)
-						uid->flags[i][j] |= ID_FLAG_INVERTTOGGLE;
-					if (af == JPORT_AF_TOGGLENOAF)
-						uid->flags[i][j] |= ID_FLAG_INVERT;
+					if (!set) {
+						uid->flags[i][j] &= ~ID_FLAG_AUTOFIRE_MASK;
+					} else {
+						if (af >= JPORT_AF_NORMAL)
+							uid->flags[i][j] |= ID_FLAG_AUTOFIRE;
+						if (af == JPORT_AF_TOGGLE)
+							uid->flags[i][j] |= ID_FLAG_TOGGLE;
+						if (af == JPORT_AF_ALWAYS)
+							uid->flags[i][j] |= ID_FLAG_INVERTTOGGLE;
+						if (af == JPORT_AF_TOGGLENOAF)
+							uid->flags[i][j] |= ID_FLAG_INVERT;
+					}
 				}
 			}
 		}
 	}
 }
 
-static void setautofires (struct uae_prefs *prefs, int port, int af)
+static void setautofires (struct uae_prefs *prefs, int port, int sub, int af, bool set)
 {
 #ifdef RETROPLATFORM
 	// don't override custom AF autofire mappings
 	if (rp_isactive())
 		return;
 #endif
-	if (JSEM_ISCUSTOM(port, prefs))
-		return;
 	for (int l = 0; l < MAX_INPUT_DEVICES; l++) {
-		setautofire(&joysticks[l], port, af);
-		setautofire(&mice[l], port, af);
-		setautofire(&keyboards[l], port, af);
+		setautofire(&joysticks[l], port, sub, af, set);
+		setautofire(&mice[l], port, sub, af, set);
+		setautofire(&keyboards[l], port, sub, af, set);
 	}
 }
 
@@ -7766,7 +7767,7 @@ static void compatibility_copy (struct uae_prefs *prefs, bool gameports)
 			inputdevice_parse_jport_custom(prefs, prefs->jports[i].id - JSEM_CUSTOM, i, NULL);
 		}
 		if (gameports)
-			setautofires (prefs, i, prefs->jports[i].autofire);
+			setautofires (prefs, i, 0, prefs->jports[i].autofire, true);
 	}
 
 	for (i = 0; i < MAX_JPORTS; i++) {
