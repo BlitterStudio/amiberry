@@ -63,8 +63,13 @@ public:
 	}
 };
 
-static const char* listValues[] = { "none", "RoboCop 3", "Leader Board", "B.A.T. II", "Italy '90 Soccer", "Dames Grand-Maître", "Rugby Coach", "Cricket Captain", "Leviathan", "Music Master", "Logistics/SuperBase", "Scala MM (Red)", "Scala MM (Green)"};
-static string_list_model dongle_list(listValues, 13);
+static const char* listValues[] = {
+	"none", "RoboCop 3", "Leader Board", "B.A.T. II", "Italy '90 Soccer",
+	"Dames Grand-Maitre", "Rugby Coach", "Cricket Captain", "Leviathan",
+	"Music Master", "Logistics/SuperBase", "Scala MM (Red)", "Scala MM (Green)",
+	"Striker Manager", "Multi-player Soccer Manager", "Football Director 2"
+};
+static string_list_model dongle_list(listValues, 16);
 
 static string_list_model sampler_list(nullptr, 0);
 static string_list_model serial_ports(nullptr, 0);
