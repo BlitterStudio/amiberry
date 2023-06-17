@@ -76,6 +76,7 @@ extern uae_u16 dmacon;
 extern uae_u16 intena, intreq, intreqr;
 
 extern int vpos, lof_store, lof_display;
+extern int scandoubled_line;
 
 extern int n_frames;
 

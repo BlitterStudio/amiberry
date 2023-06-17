@@ -146,6 +146,7 @@ static int hpos_hsync_extra;
 static int vpos_count, vpos_count_diff;
 int lof_store; // real bit in custom registers
 int lof_display; // what display device thinks
+int scandoubled_line;
 static bool lof_lastline, lof_prev_lastline;
 static int lol, lol_prev;
 static int next_lineno;
@@ -156,7 +157,6 @@ static int vposw_change;
 static bool lof_lace;
 static bool prevlofs[3];
 static bool bplcon0_interlace_seen;
-static int scandoubled_line;
 static bool vsync_rendered, frame_rendered, frame_shown;
 static frame_time_t vsynctimeperline;
 static frame_time_t frameskiptime;
@@ -565,7 +565,8 @@ int bogusframe;
 
 /* Recording of custom chip register changes.  */
 static int current_change_set;
-static struct sprite_entry sprite_entries[2][MAX_SPR_PIXELS / 32];
+#define MAX_SPRITE_ENTRIES ((MAXVPOS + MAXVPOS_WRAPLINES) * 16)
+static struct sprite_entry sprite_entries[2][MAX_SPRITE_ENTRIES];
 static struct color_change color_changes[2][MAX_REG_CHANGE];
 
 struct decision line_decisions[2 * (MAXVPOS + MAXVPOS_WRAPLINES) + 1];
@@ -573,7 +574,7 @@ static struct draw_info line_drawinfo[2][2 * (MAXVPOS + MAXVPOS_WRAPLINES) + 1];
 #define COLOR_TABLE_SIZE (MAXVPOS + MAXVPOS_WRAPLINES) * 2
 static struct color_entry color_tables[2][COLOR_TABLE_SIZE];
 
-static int next_sprite_entry = 0, last_sprite_entry = 0;
+static int next_sprite_entry = 0, end_sprite_entry;
 static int prev_next_sprite_entry;
 static int next_sprite_forced = 1;
 static int spixels_max;
@@ -2222,6 +2223,11 @@ static void update_mirrors(void)
 		sprite_sprctlmask = 0x01 | 0x10;
 	} else {
 		sprite_sprctlmask = 0x01;
+	}
+	if (aga_mode) {
+		for (int i = 0; i < 256; i++) {
+			current_colors.acolors[i] = getxcolor(current_colors.color_regs_aga[i]);
+		}
 	}
 	set_chipset_mode();
 	hsyncdebug = 0;
@@ -5582,7 +5588,7 @@ static void record_sprite(int num, int sprxp, uae_u16 *data, uae_u16 *datb, unsi
 	int spr_width;
 
 	// do nothing if buffer is full (shouldn't happen normally)
-	if (next_sprite_entry >= last_sprite_entry) {
+	if (next_sprite_entry >= end_sprite_entry) {
 		return;
 	}
 	if (e->first_pixel >= spixels_max) {
@@ -5602,7 +5608,7 @@ static void record_sprite(int num, int sprxp, uae_u16 *data, uae_u16 *datb, unsi
 
 	/* Try to coalesce entries if they aren't too far apart  */
 	/* Don't coelesce 64-bit wide sprites, needed to support FMODE change tricks */
-	if (!next_sprite_forced && e[-1].max + spr_width >= sprxp) {
+	if (next_sprite_entry > 0 && !next_sprite_forced && e[-1].max + spr_width >= sprxp) {
 		e--;
 	} else {
 		next_sprite_entry++;
@@ -11546,7 +11552,7 @@ void init_hardware_for_drawing_frame(void)
 
 	prev_next_sprite_entry = next_sprite_entry;
 	next_sprite_entry = 0;
-	last_sprite_entry = MAX_SPR_PIXELS - 2;
+	end_sprite_entry = MAX_SPRITE_ENTRIES - 2;
 	spixels_max = sizeof(spixels) / sizeof(*spixels) - MAX_PIXELS_PER_LINE;
 
 	next_lineno = calculate_lineno(vpos);
@@ -12365,6 +12371,13 @@ static void hsync_scandoubler(int hpos)
 			}
 		}
 	}
+
+	uae_u8 cycle_line_slot_tmp[MAX_CHIPSETSLOTS];
+	uae_u16 cycle_line_pipe_tmp[MAX_CHIPSETSLOTS];
+
+	memcpy(cycle_line_slot_tmp, cycle_line_slot, sizeof(uae_u8) * MAX_CHIPSETSLOTS);
+	memcpy(cycle_line_pipe_tmp, cycle_line_pipe, sizeof(uae_u16) * MAX_CHIPSETSLOTS);
+
 	reset_decisions_scanline_start();
 	reset_scandoubler_sync(hpos);
 	reset_decisions_hsync_start();
@@ -12394,6 +12407,9 @@ static void hsync_scandoubler(int hpos)
 
 	dmacon = odmacon;
 	copper_enabled_thisline = ocop;
+
+	memcpy(cycle_line_slot, cycle_line_slot_tmp, sizeof(uae_u8) * MAX_CHIPSETSLOTS);
+	memcpy(cycle_line_pipe, cycle_line_pipe_tmp, sizeof(uae_u16) * MAX_CHIPSETSLOTS);
 
 	for (int i = 0; i < MAX_PLANES; i++) {
 		bplpt[i] = bpltmp[i];
@@ -14056,6 +14072,8 @@ static void hsync_handler(void)
 		lof_display = lof_store;
 		hstrobe_conflict = false;
 		hstrobe_conflict2 = false;
+		hdiw_counter_conflict = 0;
+		hdiw_counter_sconflict = 0;
 		reset_autoscale();
 	}
 	vsync_line = vs;
@@ -14926,7 +14944,7 @@ static int REGPARAM2 custom_wput_1 (int hpos, uaecptr addr, uae_u32 value, int n
 	case 0x1A4: case 0x1A6: case 0x1A8: case 0x1AA: case 0x1AC: case 0x1AE:
 	case 0x1B0: case 0x1B2: case 0x1B4: case 0x1B6: case 0x1B8: case 0x1BA:
 	case 0x1BC: case 0x1BE:
-		COLOR_WRITE (hpos, value & 0xFFF, (addr & 0x3E) / 2);
+		COLOR_WRITE(hpos, value & 0xFFF, (addr & 0x3E) / 2);
 		break;
 	case 0x120: case 0x124: case 0x128: case 0x12C:
 	case 0x130: case 0x134: case 0x138: case 0x13C:
@@ -15854,6 +15872,9 @@ uae_u8 *restore_custom_event_delay(uae_u8 *src)
 			case 9:
 				f = event_DISK_handler;
 				break;
+			case 10:
+				f = bitplane_dma_change;
+				break;
 			case 0:
 				write_log("ignored event type %d (%08x) restored\n", type, data);
 				break;
@@ -15911,6 +15932,8 @@ uae_u8 *save_custom_event_delay(size_t *len, uae_u8 *dstptr)
 				type = 8;
 			} else if (f == event_DISK_handler) {
 				type = 9;
+			} else if (f == bitplane_dma_change) {
+				type = 10;
 			} else {
 				write_log("unknown event2 handler %p\n", e->handler);
 				e->active = false;

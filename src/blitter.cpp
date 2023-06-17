@@ -1540,6 +1540,10 @@ static bool decide_blitter_maybe_write2(int until_hpos, uaecptr addr, uae_u32 va
 	bool written = false;
 	int hsync = until_hpos < 0;
 
+	if (scandoubled_line) {
+		return 0;
+	}
+
 	if (hsync && blt_delayed_irq) {
 		if (blt_delayed_irq > 0)
 			blt_delayed_irq--;
