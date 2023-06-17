@@ -12623,7 +12623,7 @@ static void hautoscale_check(void)
 			last_planes_vpos = vpos;
 		}
 		if (vpos >= minfirstline && first_planes_vpos == 0) {
-			first_planes_vpos = vpos > minfirstline ? vpos - 1 : vpos;
+			first_planes_vpos = vpos;
 		} else if (vpos >= current_maxvpos() - 1) {
 			last_planes_vpos = current_maxvpos();
 		}

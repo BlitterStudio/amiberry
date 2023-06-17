@@ -932,7 +932,7 @@ int get_custom_limits (int *pw, int *ph, int *pdx, int *pdy, int *prealh)
 		dbl2--;
 	}
 
-	h = y2 - y1;
+	h = y2 - y1 + 1;
 	dy = y1 - minfirstline;
 
 	if (first_planes_vpos == 0) {
