@@ -1239,9 +1239,17 @@ static bool diskfile_iswriteprotect (struct uae_prefs *p, const TCHAR *fname_in,
 	bool wrprot1 = 0, wrprot2 = 1;
 	uae_char buffer[25];
 	TCHAR outname[MAX_DPATH];
+	drive *drv = &floppy[num];
 
 	*needwritefile = 0;
 	*drvtype = DRV_35_DD;
+
+#ifdef FLOPPYBRIDGE
+	if (drv->bridge) {
+		return drive_writeprotected(drv);
+	}
+#endif
+
 	DISK_validate_filename (p, fname_in, num, outname, 1, &wrprot1, NULL, &zf1);
 	if (!zf1)
 		return 1;
