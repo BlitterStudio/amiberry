@@ -3071,12 +3071,18 @@ void memory_reset (void)
 		if (currprefs.cs_ide < 0)
 			map_banks (&gayle_bank, 0xDD, 1, 0);
 	}
-	if (currprefs.cs_rtc == 3) // A2000 clock
-		map_banks (&clock_bank, 0xD8, 4, 0);
-	if (currprefs.cs_rtc == 1 || currprefs.cs_rtc == 2 || currprefs.cs_cdtvram)
+	if (currprefs.cs_rtc == 3) { // A2000 clock
+		map_banks(&clock_bank, 0xD8, 4, 0);
+		clock_bank.startmask = 0xd80000;
+	}
+	if (currprefs.cs_rtc == 1 || currprefs.cs_rtc == 2 || currprefs.cs_cdtvram) {
 		map_banks (&clock_bank, 0xDC, 1, 0);
-	else if (currprefs.cs_ksmirror_a8 || currprefs.cs_ide > 0 || currprefs.cs_pcmcia)
-		map_banks (&clock_bank, 0xDC, 1, 0); /* none clock */
+		clock_bank.startmask = 0xdc0000;
+	}
+	else if (currprefs.cs_ksmirror_a8 || currprefs.cs_ide > 0 || currprefs.cs_pcmcia) {
+		map_banks(&clock_bank, 0xDC, 1, 0); /* none clock */
+		clock_bank.startmask = 0xdc0000;
+	}
 	if (currprefs.cs_fatgaryrev >= 0 || currprefs.cs_ramseyrev >= 0)
 		map_banks (&mbres_bank, 0xDE, 1, 0);
 #ifdef CD32

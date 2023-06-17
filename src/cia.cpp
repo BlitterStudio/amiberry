@@ -2664,7 +2664,7 @@ addrbank clock_bank = {
 	clock_lput, clock_wput, clock_bput,
 	default_xlate, default_check, NULL, NULL, _T("Battery backed up clock (none)"),
 	dummy_lgeti, dummy_wgeti,
-	ABFLAG_IO, S_READ, S_WRITE, NULL, 0x3f, 0xd80000
+	ABFLAG_IO, S_READ, S_WRITE, NULL, 0x3f, 0xdc0000
 };
 
 static uae_u8 getclockreg(int addr, struct tm *ct)
