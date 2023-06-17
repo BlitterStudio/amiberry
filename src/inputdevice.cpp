@@ -5718,6 +5718,7 @@ static void inputdevice_checkconfig (void)
 		if (currprefs.jports[i].id != changed_prefs.jports[i].id ||
 			currprefs.jports[i].mode != changed_prefs.jports[i].mode ||
 			currprefs.jports[i].submode != changed_prefs.jports[i].submode ||
+			currprefs.jports[i].autofire != changed_prefs.jports[i].autofire ||
 			_tcscmp(currprefs.jports_custom[i].custom, changed_prefs.jports_custom[i].custom))
 				changed = true;
 	}
