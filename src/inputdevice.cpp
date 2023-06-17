@@ -3499,7 +3499,7 @@ static void maybe_read_input(void)
 	if (inputread >= 0 && (vpos - inputread) <= maxvpos_display / 3) {
 		return;
 	}
-	if (input_record) {
+	if (input_record || savestate_state == STATE_DOSAVE) {
 		return;
 	}
 	inputread = vpos;
