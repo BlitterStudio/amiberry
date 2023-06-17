@@ -172,6 +172,7 @@ int display_reset;
 static evt_t line_start_cycles;
 static bool initial_frame;
 static evt_t custom_color_write_cycle;
+static int color_writes_num;
 
 #define LOF_TOGGLES_NEEDED 3
 //#define NLACE_CNT_NEEDED 50
@@ -6002,7 +6003,7 @@ static void finish_decisions(int hpos)
 		record_diw_line(thisline_decision.plfleft, diwfirstword, diwlastword);
 	}
 
-	dip->last_sprite_entry = next_sprite_entry;
+	dip->last_sprite_entry = next_sprite_entry - 1;
 	dip->last_color_change = next_color_change;
 
 	if (thisline_decision.ctable < 0) {
