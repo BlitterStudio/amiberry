@@ -564,7 +564,7 @@ int bogusframe;
 
 /* Recording of custom chip register changes.  */
 static int current_change_set;
-static struct sprite_entry sprite_entries[2][MAX_SPR_PIXELS / 16];
+static struct sprite_entry sprite_entries[2][MAX_SPR_PIXELS / 32];
 static struct color_change color_changes[2][MAX_REG_CHANGE];
 
 struct decision line_decisions[2 * (MAXVPOS + MAXVPOS_WRAPLINES) + 1];
@@ -575,6 +575,7 @@ static struct color_entry color_tables[2][COLOR_TABLE_SIZE];
 static int next_sprite_entry = 0, last_sprite_entry = 0;
 static int prev_next_sprite_entry;
 static int next_sprite_forced = 1;
+static int spixels_max;
 
 struct sprite_entry *curr_sprite_entries, *prev_sprite_entries;
 struct color_change *curr_color_changes, *prev_color_changes;
@@ -5581,6 +5582,9 @@ static void record_sprite(int num, int sprxp, uae_u16 *data, uae_u16 *datb, unsi
 
 	// do nothing if buffer is full (shouldn't happen normally)
 	if (next_sprite_entry >= last_sprite_entry) {
+		return;
+	}
+	if (e->first_pixel >= spixels_max) {
 		return;
 	}
 
@@ -11526,16 +11530,18 @@ void init_hardware_for_drawing_frame(void)
 		int first_pixel = prev_sprite_entries[0].first_pixel;
 		int npixels = prev_sprite_entries[prev_next_sprite_entry].first_pixel - first_pixel;
 		if (npixels > 0) {
-			memset(spixels + first_pixel, 0, npixels * sizeof * spixels);
-			memset(spixstate.stb + first_pixel, 0, npixels * sizeof * spixstate.stb);
+			memset(spixels + first_pixel, 0, npixels * sizeof *spixels);
+			memset(spixstate.stb + first_pixel, 0, npixels * sizeof *spixstate.stb);
 			if (aga_mode) {
-				memset(spixstate.stbfm + first_pixel, 0, npixels * sizeof * spixstate.stbfm);
+				memset(spixstate.stbfm + first_pixel, 0, npixels * sizeof *spixstate.stbfm);
 			}
 		}
 	}
+
 	prev_next_sprite_entry = next_sprite_entry;
 	next_sprite_entry = 0;
-	last_sprite_entry = MAX_SPR_PIXELS - 1;
+	last_sprite_entry = MAX_SPR_PIXELS - 2;
+	spixels_max = sizeof(spixels) / sizeof(*spixels) - MAX_PIXELS_PER_LINE;
 
 	next_lineno = calculate_lineno(vpos);
 	last_color_change = 0;
