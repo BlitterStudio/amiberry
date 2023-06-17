@@ -321,7 +321,7 @@ int maxhpos_short = MAXHPOS_PAL;
 int maxvpos = MAXVPOS_PAL;
 int maxvpos_nom = MAXVPOS_PAL; // nominal value (same as maxvpos but "faked" maxvpos in fake 60hz modes)
 int maxvpos_display = MAXVPOS_PAL; // value used for display size
-static int maxhpos_display = AMIGA_WIDTH_MAX;
+int maxhpos_display = AMIGA_WIDTH_MAX;
 int maxvpos_display_vsync; // extra lines from top visible in bottom
 static int vblank_extraline;
 static int maxhposm1;
@@ -12614,24 +12614,26 @@ static void reset_autoscale(void)
 	autoscale_bordercolors = 0;
 }
 
-static void hautoscale_check(void)
+static void hautoscale_check(int vp)
 {
+	int vp_start = vp;
+	int vp_end = vp + 1;
 	// border detection/autoscale
 	if (GET_PLANES(bplcon0) > 0 && dmaen(DMA_BITPLANE) && !vb_state && !vb_end_line && !vb_start_line) {
 		if (first_bplcon0 == 0) {
 			first_bplcon0 = bplcon0;
 		}
-		if (vpos > last_planes_vpos) {
-			last_planes_vpos = vpos;
+		if (vp_end > last_planes_vpos) {
+			last_planes_vpos = vp_end;
 		}
-		if (vpos >= minfirstline && first_planes_vpos == 0) {
-			first_planes_vpos = vpos;
-		} else if (vpos >= current_maxvpos() - 1) {
+		if (vp_start >= minfirstline && first_planes_vpos == 0) {
+			first_planes_vpos = vp_start;
+		} else if (vp_end >= current_maxvpos() - 1) {
 			last_planes_vpos = current_maxvpos();
 		}
 	}
 	if (diw_change == 0) {
-		if (vpos >= first_planes_vpos && vpos <= last_planes_vpos) {
+		if (vp_start >= first_planes_vpos && vp_end <= last_planes_vpos) {
 			int diwlastword_lores = diwlastword;
 			int diwfirstword_lores = diwfirstword;
 			if (diwlastword_lores > diwlastword_total) {
@@ -12657,7 +12659,7 @@ static void hautoscale_check(void)
 				ddflastword_total = plfstop + 2 * f;
 			}
 		}
-		if ((plffirstline < plffirstline_total || (plffirstline_total == minfirstline && vpos > minfirstline)) && plffirstline < maxvpos / 2) {
+		if ((plffirstline < plffirstline_total || (plffirstline_total == minfirstline && vp_start > minfirstline)) && plffirstline < maxvpos / 2) {
 			firstword_bplcon1 = bplcon1;
 			if (plffirstline < minfirstline) {
 				plffirstline_total = minfirstline;
@@ -12692,7 +12694,7 @@ static void hsync_handlerh(bool onvsync)
 
 		notice_resolution_seen(GET_RES_AGNUS(bplcon0), interlace_seen != 0);
 
-		hautoscale_check();
+		hautoscale_check(vposh);
 
 		int lineno = calculate_lineno(vposh);
 		next_lineno = lineno;
@@ -12700,6 +12702,7 @@ static void hsync_handlerh(bool onvsync)
 	}
 
 	vposh++;
+
 	hpos_hsync_extra = 0;
 	estimate_last_fetch_cycle(hpos);
 

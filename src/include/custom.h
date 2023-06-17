@@ -147,7 +147,7 @@ extern uae_u16 INTREQR(void);
 #define OCS_DENISE_HBLANK_DISABLE_HPOS 0x2d
 
 extern int maxhpos, maxhposm0, maxhpos_short;
-extern int maxvpos, maxvpos_nom, maxvpos_display, maxvpos_display_vsync;
+extern int maxvpos, maxvpos_nom, maxvpos_display, maxvpos_display_vsync, maxhpos_display;
 extern int hsyncstartpos_hw, hsyncendpos_hw;
 extern int minfirstline, vblank_endline, numscrlines;
 extern float vblank_hz, fake_vblank_hz;

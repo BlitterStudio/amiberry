@@ -882,11 +882,6 @@ int get_custom_limits (int *pw, int *ph, int *pdx, int *pdy, int *prealh)
 		if (!lof_display)
 			return ret;
 		interlace_count = 0;
-		/* program may have set last visible line as last possible line (CD32 boot screen) */
-		if (last_planes_vpos < maxvpos)
-			last_planes_vpos++;
-		if (plflastline_total < maxvpos)
-			plflastline_total++;
 	}
 
 	if (plflastline_total < 4)
@@ -932,7 +927,7 @@ int get_custom_limits (int *pw, int *ph, int *pdx, int *pdy, int *prealh)
 		dbl2--;
 	}
 
-	h = y2 - y1 + 1;
+	h = y2 - y1;
 	dy = y1 - minfirstline;
 
 	if (first_planes_vpos == 0) {
