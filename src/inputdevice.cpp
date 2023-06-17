@@ -3492,8 +3492,12 @@ static void inputdevice_read(void)
 
 static void maybe_read_input(void)
 {
-	if (inputread >= 0 && (vpos - inputread) <= maxvpos_display / 3)
+	if (inputread >= 0 && (vpos - inputread) <= maxvpos_display / 3) {
 		return;
+	}
+	if (input_record) {
+		return;
+	}
 	inputread = vpos;
 	inputdevice_read();
 }
@@ -3534,13 +3538,6 @@ uae_u16 JOY1DAT (void)
 	v = dongle_joydat (1, v);
 #ifndef AMIBERRY
 	v = alg_joydat(1, v);
-
-	if (inputrecord_debug & 2) {
-		if (input_record > 0)
-			inprec_recorddebug_cia (v, -1, m68k_getpc ());
-		else if (input_play > 0)
-			inprec_playdebug_cia (v, -1, m68k_getpc ());
-	}
 #endif
 	return v;
 }
@@ -4152,6 +4149,14 @@ int handle_custom_event (const TCHAR *custom, int append)
 	return 0;
 }
 
+void inputdevice_playevents(void)
+{
+	inprec_playdiskchange();
+	int nr, state, max, autofire;
+	while (inprec_playevent(&nr, &state, &max, &autofire))
+		handle_input_event(nr, state, max, (autofire ? HANDLE_IE_FLAG_AUTOFIRE : 0) | HANDLE_IE_FLAG_PLAYBACKEVENT);
+}
+
 void inputdevice_hsync (bool forceread)
 {
 	cap_check(true);
@@ -4223,10 +4228,7 @@ void inputdevice_hsync (bool forceread)
 			inputdevice_read();
 	}
 	if (input_play) {
-		inprec_playdiskchange ();
-		int nr, state, max, autofire;
-		while (inprec_playevent (&nr, &state, &max, &autofire))
-			handle_input_event (nr, state, max, (autofire ? HANDLE_IE_FLAG_AUTOFIRE : 0) | HANDLE_IE_FLAG_PLAYBACKEVENT);
+		inputdevice_playevents();
 		if (vpos == 0)
 			handle_msgpump(true);
 	}

@@ -377,6 +377,7 @@ extern int inputdevice_uaelib (const TCHAR *, const TCHAR *);
 extern int inputdevice_uaelib(const TCHAR *s, int parm, int max, bool autofire);
 extern int handle_custom_event (const TCHAR *custom, int append);
 extern int inputdevice_geteventid(const TCHAR *s);
+extern void inputdevice_playevents(void);
 
 extern int inputdevice_testread (int*, int*, int*, bool);
 extern int inputdevice_istest (void);

@@ -3502,9 +3502,9 @@ static void do_interrupt (int nr)
 #endif
 	if (inputrecord_debug & 2) {
 		if (input_record > 0)
-			inprec_recorddebug_cpu (2);
+			inprec_recorddebug_cpu(2, 0);
 		else if (input_play > 0)
-			inprec_playdebug_cpu (2);
+			inprec_playdebug_cpu(2, 0);
 	}
 
 	assert (nr < 8 && nr >= 0);
@@ -5020,9 +5020,9 @@ static void m68k_run_1_ce (void)
 
 				if (inputrecord_debug & 4) {
 					if (input_record > 0)
-						inprec_recorddebug_cpu (1);
+						inprec_recorddebug_cpu(1, r->opcode);
 					else if (input_play > 0)
-						inprec_playdebug_cpu (1);
+						inprec_playdebug_cpu(1, r->opcode);
 				}
 
 #ifdef DEBUGGER
@@ -6156,9 +6156,9 @@ static void m68k_run_2ce (void)
 
 				if (inputrecord_debug & 4) {
 					if (input_record > 0)
-						inprec_recorddebug_cpu (1);
+						inprec_recorddebug_cpu(1, r->opcode);
 					else if (input_play > 0)
-						inprec_playdebug_cpu (1);
+						inprec_playdebug_cpu(1, r->opcode);
 				}
 #ifdef DEBUGGER
 				if (debug_opcode_watch) {
@@ -6284,9 +6284,9 @@ static void m68k_run_2p (void)
 
 				if (inputrecord_debug & 4) {
 					if (input_record > 0)
-						inprec_recorddebug_cpu (1);
+						inprec_recorddebug_cpu(1, r->opcode);
 					else if (input_play > 0)
-						inprec_playdebug_cpu (1);
+						inprec_playdebug_cpu(1, r->opcode);
 				}
 #ifdef DEBUGGER
 				if (debug_opcode_watch) {
@@ -6582,15 +6582,15 @@ void m68k_go (int may_quit)
 				memory_clear ();
 				write_log (_T("hardreset, memory cleared\n"));
 			}
+#ifdef DEBUGGER
+			if (debug_dma) {
+				record_dma_reset(1);
+				record_dma_reset(1);
+			}
+#endif
 #ifdef SAVESTATE
 			/* We may have been restoring state, but we're done now.  */
 			if (isrestore ()) {
-#ifdef DEBUGGER
-				if (debug_dma) {
-					record_dma_reset(0);
-					record_dma_reset(0);
-				}
-#endif
 				restored = savestate_restore_finish ();
 				memory_map_dump ();
 				if (currprefs.mmu_model == 68030) {
