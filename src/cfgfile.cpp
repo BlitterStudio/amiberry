@@ -2177,6 +2177,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_write_bool(f, _T("comp_catchfault"), p->comp_catchfault);
 	cfgfile_write(f, _T("cachesize"), _T("%d"), p->cachesize);
 	cfgfile_dwrite_str(f, _T("jit_blacklist"), p->jitblacklist);
+	cfgfile_dwrite_bool(f, _T("jit_inhibit"), p->cachesize_inhibit);
 
 	for (i = 0; i < MAX_JPORTS; i++) {
 		struct jport *jp = &p->jports[i];
@@ -5964,12 +5965,13 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 #ifdef USE_JIT_FPU
 		|| cfgfile_yesno (option, value, _T("compfpu"), &p->compfpu)
 #endif
-		|| cfgfile_yesno (option, value, _T("rtg_nocustom"), &p->picasso96_nocustom)
-		|| cfgfile_yesno (option, value, _T("floppy_write_protect"), &p->floppy_read_only)
+		|| cfgfile_yesno(option, value, _T("jit_inhibit"), &p->cachesize_inhibit)
+		|| cfgfile_yesno(option, value, _T("rtg_nocustom"), &p->picasso96_nocustom)
+		|| cfgfile_yesno(option, value, _T("floppy_write_protect"), &p->floppy_read_only)
 		|| cfgfile_yesno(option, value, _T("harddrive_write_protect"), &p->harddrive_read_only)
 		|| cfgfile_yesno(option, value, _T("uae_hide_autoconfig"), &p->uae_hide_autoconfig)
 		|| cfgfile_yesno(option, value, _T("board_custom_order"), &p->autoconfig_custom_sort)
-		|| cfgfile_yesno (option, value, _T("uaeserial"), &p->uaeserial))
+		|| cfgfile_yesno(option, value, _T("uaeserial"), &p->uaeserial))
 		return 1;
 
 #ifdef SERIAL_PORT

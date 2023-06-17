@@ -623,6 +623,7 @@ struct uae_prefs
 	bool comp_constjump;
 	bool comp_catchfault;
 	int cachesize;
+	bool cachesize_inhibit;
 	TCHAR jitblacklist[MAX_DPATH];
 	bool fpu_strict;
 	int fpu_mode;

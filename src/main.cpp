@@ -269,6 +269,9 @@ void fixup_cpu (struct uae_prefs *p)
 		error_log(_T("Threaded CPU mode is not compatible with PPC emulation, More compatible or Cycle Exact modes. CPU type must be 68020 or higher."));
 	}
 
+	if (p->cachesize_inhibit) {
+		p->cachesize = 0;
+	}
 	if (p->cpu_model < 68020 && p->cachesize) {
 		p->cachesize = 0;
 		error_log (_T("JIT requires 68020 or better CPU."));
