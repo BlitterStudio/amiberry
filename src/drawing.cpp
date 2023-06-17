@@ -3701,6 +3701,10 @@ static void do_color_changes(line_draw_func worker_border, line_draw_func worker
 					if (nextpos_in_range > lastpos && lastpos < playfield_start) {
 						int t = nextpos_in_range <= playfield_start ? nextpos_in_range : playfield_start;
 						(*worker_border)(lastpos, t, 0);
+						// if playfield starts before hblank end: adjust back to playfield start
+						if (t > playfield_start) {
+							t = playfield_start;
+						}
 						lastpos = t;
 					}
 
