@@ -1971,9 +1971,21 @@ static bool waitingblits (void)
 	}
 
 	bool waited = false;
+	int waiting = 0;
+	int vpos_prev = vpos;
 	while ((blt_info.blit_main || blt_info.blit_finald) && dmaen (DMA_BLITTER)) {
 		waited = true;
 		x_do_cycles (8 * CYCLE_UNIT);
+		if (vpos_prev != vpos) {
+			vpos_prev = vpos;
+			waiting++;
+			if (waiting > maxvpos * 5) {
+				break;
+			}
+		}
+		if (blitter_cycle_exact && blit_cyclecounter > 0 && !shifter[0] && !shifter[1] && !shifter[2] && !shifter[3]) {
+			break;
+		}
 	}
 	if (warned && waited) {
 		warned--;
