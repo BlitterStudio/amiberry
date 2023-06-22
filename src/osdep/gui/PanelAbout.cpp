@@ -22,7 +22,7 @@ void InitPanelAbout(const config_category& category)
 	amiberryLogoImage = gcn::Image::load(prefix_with_data_path("amiberry-logo.png"));
 	icon = new gcn::Icon(amiberryLogoImage);
 	lblEmulatorVersion = new gcn::Label(get_version_string());
-	lblCopyright = new gcn::Label("Copyright (C) 2016-2022 Dimitris Panokostas");
+	lblCopyright = new gcn::Label("Copyright (C) 2016-2023 Dimitris Panokostas");
 	lblSDL_compiled_version = new gcn::Label(get_sdl2_version_string());
 	
 	textBox = new gcn::TextBox(
