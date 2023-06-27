@@ -138,7 +138,11 @@ struct jport
 #define KBTYPE_PC1 1
 #define KBTYPE_PC2 2
 
+#ifdef AMIBERRY
+#define MAX_SPARE_DRIVES 10
+#else
 #define MAX_SPARE_DRIVES 20
+#endif
 #define MAX_CUSTOM_MEMORY_ADDRS 2
 
 #define CONFIG_TYPE_ALL -1
