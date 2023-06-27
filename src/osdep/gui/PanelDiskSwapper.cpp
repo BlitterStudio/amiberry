@@ -384,10 +384,18 @@ void RefreshPanelDiskSwapper()
 bool HelpPanelDiskSwapper(std::vector<std::string>& helptext)
 {
 	helptext.clear();
-	helptext.emplace_back("There are 10 slots available in the Disk Swapper. You can insert a disk image on each slot,");
-	helptext.emplace_back("and then use the built-in hotkey combinations to swap them on the fly:");
+	helptext.emplace_back("The disk swapper mechanism is similar in concept to a playlist or a CD changer: Up to 10 disk");
+	helptext.emplace_back("images can be added to a list, for swapping them quickly.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("You can insert or eject a disk image on each slot, by using the relevant buttons on the left side.");
+	helptext.emplace_back("You can use the Remove All button, to eject all disk images from all slots simultaneously.");
+	helptext.emplace_back("Clicking on the Drive button to the right of each entry, will cycle through all enabled floppy drives.");
+	helptext.emplace_back("Once the disks have a drive name next to them, they will appear in the appropriate Floppy Drive slots.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("You can also use the following keyboard combinations to swap images on the fly:");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("To insert a disk image into drives DF0:-DF3: then press END+F1 - END+F4");
 	helptext.emplace_back("To eject a disk image from drives DF0:-DF3: then press Shift+END+F1 - Shift+END+F4");
+	helptext.emplace_back("To quickly swap an image into drive DF0:, use END + 1-0 (slots 1-10)");
 	return true;
 }
