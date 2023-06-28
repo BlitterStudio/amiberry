@@ -2158,12 +2158,12 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	if (scsiromselected > 0)
 		cfgfile_target_write(f, _T("expansion_gui_page"), expansionroms[scsiromselected].name);
 
-	cfgfile_write_bool(f, _T("vkbd_enabled"), p->vkbd_enabled);
-	cfgfile_write_bool(f, _T("vkbd_hires"), p->vkbd_hires);
-	cfgfile_write_bool(f, _T("vkbd_exit"), p->vkbd_exit);
-	cfgfile_write(f, _T("vkbd_transparency"), "%d", p->vkbd_transparency);
-	cfgfile_write_str(f, _T("vkbd_language"), p->vkbd_language);
-	cfgfile_write_str(f, _T("vkbd_style"), p->vkbd_style);
+	cfgfile_target_dwrite_bool(f, _T("vkbd_enabled"), p->vkbd_enabled);
+	cfgfile_target_dwrite_bool(f, _T("vkbd_hires"), p->vkbd_hires);
+	cfgfile_target_dwrite_bool(f, _T("vkbd_exit"), p->vkbd_exit);
+	cfgfile_target_dwrite(f, _T("vkbd_transparency"), "%d", p->vkbd_transparency);
+	cfgfile_target_dwrite_str(f, _T("vkbd_language"), p->vkbd_language);
+	cfgfile_target_dwrite_str(f, _T("vkbd_style"), p->vkbd_style);
 	cfgfile_target_dwrite_str(f, _T("vkbd_toggle"), p->vkbd_toggle);
 }
 
