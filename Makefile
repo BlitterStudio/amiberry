@@ -248,6 +248,11 @@ else ifeq ($(PLATFORM),a64)
 else ifeq ($(PLATFORM),x86-64)
 	CPPFLAGS += -DUSE_RENDER_THREAD
 
+# Generic EXPERIMENTAL riscv64 target
+else ifeq ($(PLATFORM),riscv64)
+	# USE_RENDER_THREAD fails under sway on VisionFive2
+	# CPPFLAGS += -DUSE_RENDER_THREAD
+
 # RK3588 e.g. RockPi 5
 else ifeq ($(PLATFORM),rk3588)
 	CPUFLAGS ?= -mcpu=cortex-a76+fp
@@ -600,6 +605,8 @@ OBJS += src/osdep/aarch64_helper_osx.o
 else ifeq ($(PLATFORM),$(filter $(PLATFORM),osx-x86))
 	USE_JIT = 0
 else ifeq ($(PLATFORM),$(filter $(PLATFORM),x86-64))
+	USE_JIT = 0
+else ifeq ($(PLATFORM),$(filter $(PLATFORM),riscv64))
 	USE_JIT = 0
 else
 OBJS += src/osdep/neon_helper.o

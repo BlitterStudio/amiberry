@@ -58,6 +58,9 @@ using namespace std;
 #define SAHF_SETO_PROFITABLE
 #elif defined(__powerpc__) || defined(_M_PPC)
 #define CPU_powerpc 1
+#elif defined(__riscv) && defined(__riscv_xlen) && __riscv_xlen == 64
+#define CPU_riscv64 1
+#define CPU_64_BIT 1
 #else
 #error unrecognized CPU type
 #endif
