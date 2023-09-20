@@ -18,7 +18,7 @@
 #define FILESYS /* filesys emulation */
 #define UAE_FILESYS_THREADS
 #define AUTOCONFIG /* autoconfig support, fast ram, harddrives etc.. */
-#if !defined (CPU_AMD64) && !defined (__x86_64__) && !defined (__MACH__)
+#if !defined (CPU_AMD64) && !defined (__x86_64__) && !defined(__riscv) && !defined (__MACH__)
 #define JIT /* JIT compiler support */
 #endif
 #if defined(ARMV6T2) || defined(CPU_AARCH64)
@@ -116,7 +116,7 @@
 
 #include <stdint.h>
 
-#if defined(__x86_64__) || defined(CPU_AARCH64) || defined(CPU_AMD64)
+#if defined(__x86_64__) || defined(CPU_AARCH64) || defined(CPU_AMD64) || defined(__LP64__)
 #define SIZEOF_VOID_P 8
 #else
 #define SIZEOF_VOID_P 4
@@ -263,7 +263,7 @@ typedef int32_t uae_atomic;
 #define SIZEOF_INT 4
 
 /* The number of bytes in a long.  */
-#if defined(__x86_64__) || defined(CPU_AARCH64) || defined(CPU_AMD64)
+#if defined(__x86_64__) || defined(CPU_AARCH64) || defined(CPU_AMD64) || defined(__LP64__)
 #define SIZEOF_LONG 8
 #else
 #define SIZEOF_LONG 4

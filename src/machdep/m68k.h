@@ -129,12 +129,12 @@ STATIC_INLINE int cctrue (int cc)
 
 #endif /* REGS_DEFINED */
 
-#elif defined(CPU_arm) && (defined(ARMV6_ASSEMBLY) || defined(CPU_AARCH64))
+#elif defined(CPU_riscv64) || defined(CPU_arm) && (defined(ARMV6_ASSEMBLY) || defined(CPU_AARCH64))
 
 #ifndef REGS_DEFINED
 
 struct flag_struct {
-#if defined (CPU_AARCH64)
+#if defined(CPU_riscv64) || defined (CPU_AARCH64)
 	uae_u64 nzcv;
 	uae_u64 x;
 #else
