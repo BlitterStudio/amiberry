@@ -66,7 +66,7 @@ jobs:
     - name: Run the build process with Docker
       uses: addnab/docker-run-action@v3
       with:
-        image: midwan/amiberry-docker-x86_64:buster
+        image: midwan/amiberry-debian-x86_64:buster
         options: -v ${{ github.workspace }}:/build
         run: |
           make capsimg
@@ -123,7 +123,7 @@ jobs:
     - name: Run the build process with Docker
       uses: addnab/docker-run-action@v3
       with:
-        image: midwan/amiberry-docker-x86_64:bullseye
+        image: midwan/amiberry-debian-x86_64:bullseye
         options: -v ${{ github.workspace }}:/build
         run: |
           make capsimg
