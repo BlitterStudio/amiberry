@@ -180,7 +180,7 @@ jobs:
     - name: Run the build process with Docker
       uses: addnab/docker-run-action@v3
       with:
-        image: midwan/amiberry-docker-x86_64:bookworm
+        image: midwan/amiberry-debian-x86_64:bookworm
         options: -v ${{ github.workspace }}:/build
         run: |
           make capsimg
@@ -400,7 +400,7 @@ jobs:
     - name: Run the build process with Docker
       uses: addnab/docker-run-action@v3
       with:
-        image: midwan/amiberry-docker-armhf:buster
+        image: midwan/amiberry-debian-armhf:buster
         options: -v ${{ github.workspace }}:/build
         run: |
           make capsimg
@@ -514,7 +514,7 @@ jobs:
     - name: Run the build process with Docker
       uses: addnab/docker-run-action@v3
       with:
-        image: midwan/amiberry-docker-armhf:bullseye
+        image: midwan/amiberry-debian-armhf:bullseye
         options: -v ${{ github.workspace }}:/build
         run: |
           make capsimg
@@ -628,7 +628,7 @@ jobs:
     - name: Run the build process with Docker
       uses: addnab/docker-run-action@v3
       with:
-        image: midwan/amiberry-docker-armhf:bookworm
+        image: midwan/amiberry-debian-armhf:bookworm
         options: -v ${{ github.workspace }}:/build
         run: |
           make capsimg
@@ -742,7 +742,7 @@ jobs:
     - name: Run the build process with Docker
       uses: addnab/docker-run-action@v3
       with:
-        image: midwan/amiberry-docker-armhf:buster
+        image: midwan/amiberry-debian-armhf:buster
         options: -v ${{ github.workspace }}:/build
         run: |
           make capsimg
@@ -856,7 +856,7 @@ jobs:
     - name: Run the build process with Docker
       uses: addnab/docker-run-action@v3
       with:
-        image: midwan/amiberry-docker-armhf:bullseye
+        image: midwan/amiberry-debian-armhf:bullseye
         options: -v ${{ github.workspace }}:/build
         run: |
           make capsimg
@@ -970,7 +970,7 @@ jobs:
     - name: Run the build process with Docker
       uses: addnab/docker-run-action@v3
       with:
-        image: midwan/amiberry-docker-armhf:bookworm
+        image: midwan/amiberry-debian-armhf:bookworm
         options: -v ${{ github.workspace }}:/build
         run: |
           make capsimg
