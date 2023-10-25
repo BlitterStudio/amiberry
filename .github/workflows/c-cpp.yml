@@ -334,6 +334,120 @@ jobs:
         artifacts: |
           amiberry-${{ steps.tag.outputs.tag }}-rk3399-sdl2-64bit-manjaro.zip
 
+  build-rpi5-sdl2-64bit-debian-bookworm:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'true'
+    - name: Run the build process with Docker
+      uses: addnab/docker-run-action@v3
+      with:
+        image: midwan/amiberry-debian-aarch64:bookworm
+        options: -v ${{ github.workspace }}:/build
+        run: |
+          make capsimg
+          make -j8 PLATFORM=rpi5-64-sdl2
+    - uses: actions/upload-artifact@v3
+      with:
+        name: amiberry-rpi5-sdl2-64bit-debian-bookworm
+        path: |
+          amiberry
+          capsimg.so
+          abr/**
+          conf/**
+          controllers/**
+          data/**
+          inputrecordings/**
+          kickstarts/**
+          nvram/**
+          savestates/**
+          screenshots/**
+          whdboot/**
+    - name: Get tag
+      if: github.ref_type == 'tag'
+      id: tag
+      uses: dawidd6/action-get-tag@v1
+      with:
+        # Optionally strip `v` prefix
+        strip_v: false
+    - name: ZIP binaries
+      if: github.ref_type == 'tag'
+      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-rpi5-sdl2-64bit-debian-bookworm.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
+    - name: Create Changelog
+      if: github.ref_type == 'tag'
+      id: changelog
+      uses: loopwerk/tag-changelog@v1
+      with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config_file: .github/tag-changelog-config.js
+    - name: Create Release
+      if: github.ref_type == 'tag'
+      uses: ncipollo/release-action@v1
+      with:
+        allowUpdates: true
+        omitBodyDuringUpdate: true
+        body: ${{ steps.changelog.outputs.changes }}
+        artifacts: |
+          amiberry-${{ steps.tag.outputs.tag }}-rpi5-sdl2-64bit-debian-bookworm.zip
+
+  build-rpi5-sdl2-32bit-debian-bookworm:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'true'
+    - name: Run the build process with Docker
+      uses: addnab/docker-run-action@v3
+      with:
+        image: midwan/amiberry-debian-armhf:bookworm
+        options: -v ${{ github.workspace }}:/build
+        run: |
+          make capsimg
+          make -j8 PLATFORM=rpi5-sdl2
+    - uses: actions/upload-artifact@v3
+      with:
+        name: amiberry-rpi5-sdl2-32bit-debian-bookworm
+        path: |
+          amiberry
+          capsimg.so
+          abr/**
+          conf/**
+          controllers/**
+          data/**
+          inputrecordings/**
+          kickstarts/**
+          nvram/**
+          savestates/**
+          screenshots/**
+          whdboot/**
+    - name: Get tag
+      if: github.ref_type == 'tag'
+      id: tag
+      uses: dawidd6/action-get-tag@v1
+      with:
+        # Optionally strip `v` prefix
+        strip_v: false
+    - name: ZIP binaries
+      if: github.ref_type == 'tag'
+      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-rpi5-sdl2-32bit-debian-bookworm.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
+    - name: Create Changelog
+      if: github.ref_type == 'tag'
+      id: changelog
+      uses: loopwerk/tag-changelog@v1
+      with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config_file: .github/tag-changelog-config.js
+    - name: Create Release
+      if: github.ref_type == 'tag'
+      uses: ncipollo/release-action@v1
+      with:
+        allowUpdates: true
+        omitBodyDuringUpdate: true
+        body: ${{ steps.changelog.outputs.changes }}
+        artifacts: |
+          amiberry-${{ steps.tag.outputs.tag }}-rpi5-sdl2-32bit-debian-bookworm.zip
+          
   build-rpi4-sdl2-64bit-debian-buster:
     runs-on: ubuntu-latest
     steps:
