@@ -370,33 +370,6 @@ static const TCHAR *obsolete[] = {
 
 #define UNEXPANDED _T("$(FILE_PATH)")
 
-static void clearmountitems(struct uae_prefs *p)
-{
-	p->mountitems = 0;
-	for (int i = 0; i < MOUNT_CONFIG_SIZE; i++) {
-		p->mountconfig[i].configoffset = -1;
-		p->mountconfig[i].unitnum = -1;
-	}
-}
-
-void discard_prefs(struct uae_prefs *p, int type)
-{
-	struct strlist **ps = &p->all_lines;
-	while (*ps) {
-		struct strlist *s = *ps;
-		*ps = s->next;
-		xfree(s->value);
-		xfree(s->option);
-		xfree(s);
-	}
-	p->all_lines = NULL;
-	currprefs.all_lines = changed_prefs.all_lines = NULL;
-#ifdef FILESYS
-	filesys_cleanup();
-#endif
-	clearmountitems(p);
-}
-
 static TCHAR *cfgfile_unescape(const TCHAR *s, const TCHAR **endpos, TCHAR separator, bool min)
 {
 	bool quoted = false;
@@ -423,28 +396,27 @@ static TCHAR *cfgfile_unescape(const TCHAR *s, const TCHAR **endpos, TCHAR separ
 			c = s[i + 1];
 			switch (c)
 			{
-			case 'X':
-			case 'x':
-				c2 = _totupper(s[i + 2]);
-				v = ((c2 >= 'A') ? c2 - 'A' : c2 - '0') << 4;
-				c2 = _totupper(s[i + 3]);
-				v |= (c2 >= 'A') ? c2 - 'A' : c2 - '0';
-				*p++ = c2;
-				i += 2;
-				break;
-			case 'r':
-				*p++ = '\r';
-				break;
-			case '\n':
-				*p++ = '\n';
-				break;
-			default:
-				*p++ = c;
-				break;
+                case 'X':
+                case 'x':
+                    c2 = _totupper(s[i + 2]);
+                    v = ((c2 >= 'A') ? c2 - 'A' : c2 - '0') << 4;
+                    c2 = _totupper(s[i + 3]);
+                    v |= (c2 >= 'A') ? c2 - 'A' : c2 - '0';
+                    *p++ = c2;
+                    i += 2;
+                    break;
+                case 'r':
+                    *p++ = '\r';
+                    break;
+                case 'n':
+                    *p++ = '\n';
+                    break;
+                default:
+                    *p++ = c;
+                    break;
 			}
 			i++;
-		}
-		else {
+		} else {
 			*p++ = c;
 		}
 	}
@@ -460,6 +432,33 @@ static TCHAR *cfgfile_unescape(const TCHAR *s, const TCHAR **endpos)
 static TCHAR *cfgfile_unescape_min(const TCHAR *s)
 {
 	return cfgfile_unescape(s, NULL, 0, true);
+}
+
+static void clearmountitems(struct uae_prefs *p)
+{
+    p->mountitems = 0;
+    for (int i = 0; i < MOUNT_CONFIG_SIZE; i++) {
+        p->mountconfig[i].configoffset = -1;
+        p->mountconfig[i].unitnum = -1;
+    }
+}
+
+void discard_prefs(struct uae_prefs *p, int type)
+{
+    struct strlist **ps = &p->all_lines;
+    while (*ps) {
+        struct strlist *s = *ps;
+        *ps = s->next;
+        xfree(s->value);
+        xfree(s->option);
+        xfree(s);
+    }
+    p->all_lines = NULL;
+    currprefs.all_lines = changed_prefs.all_lines = NULL;
+#ifdef FILESYS
+    filesys_cleanup();
+#endif
+    clearmountitems(p);
 }
 
 static TCHAR *cfgfile_option_find_it(const TCHAR *s, const TCHAR *option, bool checkequals)
@@ -5282,7 +5281,7 @@ static int cfgfile_parse_newfilesys (struct uae_prefs *p, int nr, int type, TCHA
 		// quoted special case
 		if (tmpp2[0] == '\"') {
 			const TCHAR *end;
-			TCHAR *n = cfgfile_unescape (tmpp2, &end, 0, false);
+			TCHAR *n = cfgfile_unescape (tmpp2, &end, 0, true);
 			if (!n)
 				goto invalid_fs;
 			_tcscpy (uci.rootdir, n);
@@ -5310,7 +5309,7 @@ static int cfgfile_parse_newfilesys (struct uae_prefs *p, int nr, int type, TCHA
 		// quoted special case
 		if (tmpp2[0] == '\"') {
 			const TCHAR *end;
-			TCHAR *n = cfgfile_unescape (tmpp2, &end, 0, false);
+			TCHAR *n = cfgfile_unescape (tmpp2, &end, 0, true);
 			if (!n)
 				goto invalid_fs;
 			_tcscpy (uci.rootdir, n);
@@ -7154,18 +7153,21 @@ static int cfgfile_load_2 (struct uae_prefs *p, const TCHAR *filename, bool real
 						}
 						if (s) {
 							s++;
-							bool quoted = false;
 							if (s[0] == '"') {
-								s++;
-								quoted = true;
+                                const TCHAR *end;
+                                TCHAR *n = cfgfile_unescape(s, &end, 0, true);
+                                _tcscpy(tmp, n);
+                                s = tmp;
+                                xfree(n);
+                            } else {
+                                const TCHAR *se = _tcschr(s, ',');
+                                if (se) {
+                                    tmp[se - tmp] = 0;
+                                }
 							}
-							const TCHAR *se = _tcschr(s, quoted ? '"' : ',');
-							if (se) {
-								tmp[se - tmp] = 0;
-								_tcscpy(p->mountconfig[0].ci.rootdir, s);
-								cfgfile_resolve_path_load(p->mountconfig[0].ci.rootdir, MAX_DPATH, isvsys ? PATH_DIR : PATH_HDF);
-								p->mountitems = 1;
-							}
+                            _tcscpy(p->mountconfig[0].ci.rootdir, s);
+                            cfgfile_resolve_path_load(p->mountconfig[0].ci.rootdir, MAX_DPATH, isvsys ? PATH_DIR : PATH_HDF);
+                            p->mountitems = 1;
 						}
 					}
 				}
