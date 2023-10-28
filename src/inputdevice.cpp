@@ -3103,12 +3103,16 @@ static void mousehack_helper (uae_u32 buttonmask)
 	int x, y;
 	//write_log (_T("mousehack_helper %08X\n"), buttonmask);
 
-	if (!(currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_tablet < TABLET_MOUSEHACK)
-		return;
+    if (quit_program) {
+        return;
+    }
+    if (!(currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_tablet < TABLET_MOUSEHACK) {
+        return;
+    }
 
 	get_mouse_position(&x, &y, lastmx, lastmy);
 
-	inputdevice_mh_abs (x, y, buttonmask);
+	inputdevice_mh_abs(x, y, buttonmask);
 }
 
 static int mouseedge_x, mouseedge_y, mouseedge_time;
