@@ -3630,7 +3630,6 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 				p->cdslots[i].type = type;
 				if (path[0] == 0 || !_tcsicmp(path, _T("empty")) || !_tcscmp(path, _T("."))) {
 					p->cdslots[i].name[0] = 0;
-					p->cdslots[i].inuse = false;
 				}
 				if (path != value) {
 					xfree(path);
