@@ -1089,7 +1089,7 @@ static void parse_cmdline_and_init_file(int argc, TCHAR **argv)
 
 	parse_cmdline(argc, argv);
 
-	fixup_prefs(&currprefs, false);
+    fixup_prefs(&currprefs, false);
 }
 
 /* Okay, this stuff looks strange, but it is here to encourage people who
