@@ -640,6 +640,7 @@ struct picasso96_state_struct
 	long		XYOffset;
 	bool        dualclut, advDragging;
 	int         HLineDBL, VLineDBL;
+    bool        ModeChanged;
 };
 
 extern void InitPicasso96(int monid);
