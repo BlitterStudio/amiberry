@@ -50,7 +50,7 @@ static void fixbuttons(struct didata* did)
 	write_log(_T("'%s' has no buttons, adding single default button\n"), did->name.c_str());
 	did->buttonmappings[0] = 0;
 	did->buttonsort[0] = 0;
-	did->buttonname[0] = my_strdup(_T("Button"));
+	did->buttonname[0] ="Button";
 	did->buttons++;
 }
 
@@ -59,9 +59,11 @@ static void addplusminus(struct didata* did, int i)
 	if (did->buttons + 1 >= ID_BUTTON_TOTAL)
 		return;
 	for (uae_s16 j = 0; j < 2; j++) {
-		TCHAR tmp[256];
-		_stprintf(tmp, _T("%s [%c]"), did->axisname[i], j ? '+' : '-');
-		did->buttonname[did->buttons] = my_strdup(tmp);
+		did->buttonname[did->buttons] = did->axisname[i] + " [";
+		if (j)
+			did->buttonname[did->buttons] += "+]";
+		else
+			did->buttonname[did->buttons] += "-]";
 		did->buttonmappings[did->buttons] = did->axismappings[i];
 		did->buttonsort[did->buttons] = 1000 + (did->axismappings[i] + did->axistype[i]) * 2 + j;
 		did->buttonaxisparent[did->buttons] = i;
@@ -473,17 +475,17 @@ static int init_mouse()
 	did->buttons = 3;
 	did->axles = 4;
 	did->axissort[0] = 0;
-	did->axisname[0] = my_strdup(_T("X Axis"));
+	did->axisname[0] = "X Axis";
 	did->axissort[1] = 1;
-	did->axisname[1] = my_strdup(_T("Y Axis"));
+	did->axisname[1] = "Y Axis";
 	if (did->axles > 2) {
 		did->axissort[2] = 2;
-		did->axisname[2] = my_strdup(_T("Wheel"));
+		did->axisname[2] = "Wheel";
 		addplusminus(did, 2);
 	}
 	if (did->axles > 3) {
 		did->axissort[3] = 3;
-		did->axisname[3] = my_strdup(_T("HWheel"));
+		did->axisname[3] = "HWheel";
 		addplusminus(did, 3);
 	}
 	return 1;
@@ -566,17 +568,17 @@ static int get_mouse_widget_type(const int mouse, const int num, TCHAR* name, ua
 	int realbuttons = did->buttons_real;
 	if (num >= axles + realbuttons && num < axles + buttons) {
 		if (name)
-			_tcscpy(name, did->buttonname[num - axles]);
+			_tcscpy(name, did->buttonname[num - axles].c_str());
 		return IDEV_WIDGET_BUTTONAXIS;
 	}
 	if (num >= axles && num < axles + realbuttons) {
 		if (name)
-			_tcscpy(name, did->buttonname[num - axles]);
+			_tcscpy(name, did->buttonname[num - axles].c_str());
 		return IDEV_WIDGET_BUTTON;
 	}
 	if (num < axles) {
 		if (name)
-			_tcscpy(name, did->axisname[num]);
+			_tcscpy(name, did->axisname[num].c_str());
 		return IDEV_WIDGET_AXIS;
 	}
 	return IDEV_WIDGET_NONE;
@@ -923,7 +925,7 @@ static int init_joystick()
 				did->buttonmappings[b] = b;
 				const auto button_name = SDL_GameControllerGetStringForButton(static_cast<SDL_GameControllerButton>(b));
 				if (button_name != nullptr)
-					did->buttonname[b] = my_strdup(button_name);
+					did->buttonname[b] = button_name;
 			}
 			for (uae_s16 a = 0; a < did->axles; a++)
 			{
@@ -931,7 +933,7 @@ static int init_joystick()
 				did->axismappings[a] = a;
 				const auto axis_name = SDL_GameControllerGetStringForAxis(static_cast<SDL_GameControllerAxis>(a));
 				if (axis_name != nullptr)
-					did->axisname[a] = my_strdup(axis_name);
+					did->axisname[a] = axis_name;
 				if (a == SDL_CONTROLLER_AXIS_LEFTX || a == SDL_CONTROLLER_AXIS_RIGHTX)
 					did->axistype[a] = AXISTYPE_POV_X;
 				else if (a == SDL_CONTROLLER_AXIS_LEFTY || a == SDL_CONTROLLER_AXIS_RIGHTY)
@@ -948,15 +950,13 @@ static int init_joystick()
 			{
 				did->buttonsort[b] = b;
 				did->buttonmappings[b] = b;
-				_stprintf(tmp, _T("Button %d"), b);
-				did->buttonname[b] = my_strdup(tmp);
+				did->buttonname[b] = "Button " + std::to_string(b);
 			}
 			for (uae_s16 a = 0; a < did->axles; a++)
 			{
 				did->axissort[a] = a;
 				did->axismappings[a] = a;
-				_stprintf(tmp, _T("Axis %d"), a);
-				did->axisname[a] = my_strdup(tmp);
+				did->axisname[a] = "Axis " + std::to_string(a);
 				if (a == SDL_CONTROLLER_AXIS_LEFTX || a == SDL_CONTROLLER_AXIS_RIGHTX)
 					did->axistype[a] = AXISTYPE_POV_X;
 				else if (a == SDL_CONTROLLER_AXIS_LEFTY || a == SDL_CONTROLLER_AXIS_RIGHTY)

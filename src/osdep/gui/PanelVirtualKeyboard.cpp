@@ -358,13 +358,16 @@ void ExitPanelVirtualKeyboard(void)
 	delete cmdVkSetHotkeyClear;
 	delete chkRetroArchVkbd;
 
-	delete transparencySldActionListener;
+	delete vkEnabledActionListener;
 	delete hiresChkActionListener;
-	delete languageListModel;
+	delete exitChkActionListener;
+	delete transparencySldActionListener;
 	delete languageDrpActionListener;
-	delete styleListModel;
 	delete styleDrpActionListener;
 	delete vkHotkeyActionListener;
+	
+	delete languageListModel;
+	delete styleListModel;
 }
 
 void RefreshPanelVirtualKeyboard(void)
