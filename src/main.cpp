@@ -1059,24 +1059,25 @@ static void parse_cmdline (int argc, TCHAR **argv)
 	}
 }
 
-static void parse_cmdline_and_init_file (int argc, TCHAR **argv)
+static void parse_cmdline_and_init_file(int argc, TCHAR **argv)
 {
 	_tcscpy (optionsfile, _T(""));
 
-	parse_cmdline_2 (argc, argv);
+	parse_cmdline_2(argc, argv);
 
-	_tcscat (optionsfile, restart_config);
+	_tcscat(optionsfile, restart_config);
 
-	if (! target_cfgfile_load (&currprefs, optionsfile, CONFIG_TYPE_DEFAULT, default_config)) {
-		write_log (_T("failed to load config '%s'\n"), optionsfile);
+	if (! target_cfgfile_load(&currprefs, optionsfile, CONFIG_TYPE_DEFAULT, default_config)) {
+		write_log(_T("failed to load config '%s'\n"), optionsfile);
 	}
 	else
 	{
 		config_loaded = true;
 	}
-	fixup_prefs (&currprefs, false);
 
-	parse_cmdline (argc, argv);
+	parse_cmdline(argc, argv);
+
+    fixup_prefs(&currprefs, false);
 }
 
 /* Okay, this stuff looks strange, but it is here to encourage people who
