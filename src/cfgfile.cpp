@@ -5825,17 +5825,6 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		if (p->cpu_model >= 68020 && p->cachesize > 0)
 			p->cpu_cycle_exact = p->cpu_memory_cycle_exact = p->blitter_cycle_exact = 0;
 		p->cpu_memory_cycle_exact = p->cpu_cycle_exact;
-		// pre-4.4.0 didn't support cpu multiplier in prefetch mode without cycle-exact
-		// set pre-4.4.0 defaults first
-		if (!p->cpu_cycle_exact && p->cpu_compatible && !p->cpu_clock_multiplier) {
-			if (p->cpu_model < 68020) {
-				p->cpu_clock_multiplier = 2 * 256;
-			} else if (p->cpu_model == 68020) {
-				p->cpu_clock_multiplier = 4 * 256;
-			} else {
-				p->cpu_clock_multiplier = 8 * 256;
-			}
-		}
 		return 1;
 	}
 	if (cfgfile_yesno (option, value, _T("blitter_cycle_exact"), &p->blitter_cycle_exact)) {
@@ -8555,7 +8544,7 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 	p->fpu_model = 0;
 	p->cpu_model = 68000;
 	p->m68k_speed_throttle = 0;
-	p->cpu_clock_multiplier = 2 * 256;
+	p->cpu_clock_multiplier = 0;
 	p->cpu_frequency = 0;
 	p->mmu_model = 0;
 	p->cpu060_revision = 6;
