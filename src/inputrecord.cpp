@@ -393,32 +393,32 @@ int inprec_open (const TCHAR *fname, const TCHAR *statefilename)
 	header_end2 = 0;
 	if (input_play) {
 		uae_u32 id;
-		zfile_fseek (inprec_zf, 0, SEEK_END);
+		zfile_fseek(inprec_zf, 0, SEEK_END);
 		inprec_size = zfile_ftell32(inprec_zf);
-		zfile_fseek (inprec_zf, 0, SEEK_SET);
+		zfile_fseek(inprec_zf, 0, SEEK_SET);
 		inprec_buffer = inprec_p = xmalloc (uae_u8, inprec_size);
-		zfile_fread (inprec_buffer, inprec_size, 1, inprec_zf);
+		zfile_fread(inprec_buffer, inprec_size, 1, inprec_zf);
 		inprec_plastptr = inprec_buffer;
 		id = inprec_pu32();
 		if (id != 'UAE\0') {
-			inprec_close (true);
+			inprec_close(true);
 			return 0;
 		}
-		int v = inprec_pu8 ();
+		int v = inprec_pu8();
 		if (v != 3) {
-			inprec_close (true);
+			inprec_close(true);
 			return 0;
 		}
-		inprec_pu8 ();
-		inprec_pu8 ();
-		inprec_pu8 ();
+		inprec_pu8();
+		inprec_pu8();
+		inprec_pu8();
 		seed = inprec_pu32();
-		seed = uaesrand (seed);
-		vsync_counter = inprec_pu32 ();
-		hsync_counter = inprec_pu32 ();
-		i = inprec_pu32 ();
+		seed = uaesetrandseed(seed);
+		vsync_counter = inprec_pu32();
+		hsync_counter = inprec_pu32();
+		i = inprec_pu32();
 		while (i-- > 0)
-			inprec_pu8 ();
+			inprec_pu8();
 		header_end = addrdiff(inprec_plastptr, inprec_buffer);
 		inprec_pstr (savestate_fname);
 		if (savestate_fname[0]) {
@@ -466,17 +466,17 @@ int inprec_open (const TCHAR *fname, const TCHAR *statefilename)
 		header_end2 = addrdiff(inprec_plastptr,  inprec_buffer);
 		findlast ();
 	} else if (input_record) {
-		seed = uaesrand (seed);
-		inprec_buffer = inprec_p = xmalloc (uae_u8, inprec_size);
-		inprec_ru32 ('UAE\0');
-		inprec_ru8 (3);
-		inprec_ru8 (UAEMAJOR);
-		inprec_ru8 (UAEMINOR);
-		inprec_ru8 (UAESUBREV);
-		inprec_ru32 (seed);
-		inprec_ru32 (vsync_counter);
-		inprec_ru32 (hsync_counter);
-		inprec_ru32 (0); // extra header size
+		seed = uaesetrandseed(seed);
+		inprec_buffer = inprec_p = xmalloc(uae_u8, inprec_size);
+		inprec_ru32('UAE\0');
+		inprec_ru8(3);
+		inprec_ru8(UAEMAJOR);
+		inprec_ru8(UAEMINOR);
+		inprec_ru8(UAESUBREV);
+		inprec_ru32(seed);
+		inprec_ru32(vsync_counter);
+		inprec_ru32(hsync_counter);
+		inprec_ru32(0); // extra header size
 		flush ();
 		header_end2 = header_end = zfile_ftell32(inprec_zf);
 	} else {
@@ -494,7 +494,7 @@ int inprec_open (const TCHAR *fname, const TCHAR *statefilename)
 
 void inprec_startup (void)
 {
-	uaesrand (seed);
+    uaesetrandseed(seed);
 }
 
 bool inprec_prepare_record (const TCHAR *statefilename)

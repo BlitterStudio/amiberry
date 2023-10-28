@@ -86,9 +86,8 @@ struct gui_info gui_data;
 static TCHAR optionsfile[MAX_DPATH];
 
 static uae_u32 randseed;
-static int oldhcounter;
 
-static uae_u32 xorshiftstate = 1;
+static uae_u32 xorshiftstate;
 static uae_u32 xorshift32(void)
 {
 	uae_u32 x = xorshiftstate;
@@ -99,24 +98,35 @@ static uae_u32 xorshift32(void)
 	return xorshiftstate;
 }
 
-uae_u32 uaesrand(uae_u32 seed)
-{
-	oldhcounter = -1;
-	randseed = seed;
-	return randseed;
-}
 uae_u32 uaerand(void)
 {
-	if (oldhcounter != hsync_counter) {
-		xorshiftstate = (hsync_counter ^ randseed) | 1;
-		oldhcounter = hsync_counter;
+    if (xorshiftstate == 0) {
+        xorshiftstate = randseed;
+        if (!xorshiftstate) {
+            randseed = 1;
+            xorshiftstate = 1;
+        }
 	}
 	uae_u32 r = xorshift32();
 	return r;
 }
+
 uae_u32 uaerandgetseed(void)
 {
-	return randseed;
+    if (!randseed) {
+        randseed = 1;
+        xorshiftstate = 1;
+    }
+    return randseed;
+}
+
+uae_u32 uaesetrandseed(uae_u32 seed)
+{
+    if (!seed) {
+        seed = 1;
+    }
+    randseed = seed;
+    xorshiftstate = seed;
 }
 
 void my_trim(TCHAR *s)
@@ -1305,6 +1315,12 @@ static int real_main2 (int argc, TCHAR **argv)
 #ifdef RETROPLATFORM
 	rp_fixup_options (&currprefs);
 #endif
+    if (currprefs.seed == 0) {
+        uae_u32 t = getlocaltime();
+        uaesetrandseed(t);
+    } else {
+        uaesetrandseed(currprefs.seed);
+    }
 	copy_prefs(&currprefs, &changed_prefs);
 	target_run ();
 	/* force sound settings change */

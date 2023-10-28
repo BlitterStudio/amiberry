@@ -6671,9 +6671,23 @@ void m68k_go (int may_quit)
 		}
 		cpu_hardreset = false;
 		cpu_keyboardreset = false;
-		hardboot = 0;
 		event_wait = true;
 		unset_special(SPCFLAG_MODE_CHANGE);
+
+        if (!restored && hardboot) {
+            uae_u32 s = uaerandgetseed();
+            uaesetrandseed(s);
+            write_log("rndseed = %08x (%u)\n", s, s);
+            // add random delay before CPU starts
+            int t = uaerand() & 0x7fff;
+            while (t > 255) {
+                x_do_cycles(255 * CYCLE_UNIT);
+                t -= 255;
+            }
+            x_do_cycles(t * CYCLE_UNIT);
+        }
+
+        hardboot = 0;
 
 #ifdef SAVESTATE
 		if (restored) {

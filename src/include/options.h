@@ -791,6 +791,7 @@ struct uae_prefs
 	int cs_denisemodel;
 	bool cs_memorypatternfill;
 	bool cs_ipldelay;
+    uae_u32 seed;
 
 	struct boardromconfig expansionboard[MAX_EXPANSION_BOARDS];
 

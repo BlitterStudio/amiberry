@@ -88,9 +88,9 @@ extern void fetch_inputfilepath (TCHAR *out, int size);
 extern void get_data_path (TCHAR *out, int size);
 extern void get_rom_path (TCHAR *out, int size);
 extern void get_video_path (TCHAR *out, int size);
-extern uae_u32 uaerand (void);
-extern uae_u32 uaesrand (uae_u32 seed);
-extern uae_u32 uaerandgetseed (void);
+extern uae_u32 uaerand(void);
+extern uae_u32 uaesetrandseed(uae_u32 seed);
+extern uae_u32 uaerandgetseed(void);
 
 /* the following prototypes should probably be moved somewhere else */
 
