@@ -50,13 +50,13 @@ struct didata {
 	uae_s16 buttons{}, buttons_real{};
 
 	uae_s16 axismappings[MAX_MAPPINGS]{};
-	TCHAR* axisname[MAX_MAPPINGS]{};
+	std::string axisname[MAX_MAPPINGS]{};
 	uae_s16 axissort[MAX_MAPPINGS]{};
 	uae_s16 axistype[MAX_MAPPINGS]{};
 	bool analogstick{};
 
 	uae_s16 buttonmappings[MAX_MAPPINGS]{};
-	TCHAR* buttonname[MAX_MAPPINGS]{};
+	std::string buttonname[MAX_MAPPINGS]{};
 	uae_s16 buttonsort[MAX_MAPPINGS]{};
 	uae_s16 buttonaxisparent[MAX_MAPPINGS]{};
 	uae_s16 buttonaxisparentdir[MAX_MAPPINGS]{};

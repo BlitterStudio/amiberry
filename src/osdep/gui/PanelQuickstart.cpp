@@ -1118,11 +1118,14 @@ void ExitPanelQuickstart(void)
 	delete amigaModelActionListener;
 	delete ntscButtonActionListener;
 	delete qsdfxCheckActionListener;
+	delete qsDriveTypeActionListener;
 	delete qsdfxButtonActionListener;
 	delete diskFileActionListener;
 	delete cdButtonActionListener;
 	delete cdFileActionListener;
 	delete quickstartModeActionListener;
+	delete whdloadActionListener;
+	delete whdloadButtonActionListener;
 }
 
 static void AdjustDropDownControls(void)
