@@ -127,6 +127,7 @@ uae_u32 uaesetrandseed(uae_u32 seed)
     }
     randseed = seed;
     xorshiftstate = seed;
+    return randseed;
 }
 
 void my_trim(TCHAR *s)
