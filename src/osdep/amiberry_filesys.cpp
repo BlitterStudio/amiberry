@@ -46,7 +46,7 @@ void utf8_to_latin1_string(std::string& input, std::string& output)
 	std::vector<char> buf(1024);
 	std::string dst;
 	
-	auto* iconv_ = iconv_open("ISO-8859-1", "UTF-8");
+	auto* iconv_ = iconv_open("ISO-8859-1//TRANSLIT", "UTF-8");
 	
 	while (0 < src_size) {
 		char* dst_ptr = &buf[0];
