@@ -458,6 +458,7 @@ struct flag_struct {
 #else
 	uae_u32 nzcv;
 	uae_u32 x;
+#endif
 };
 
 #define FLAGBIT_N   31
