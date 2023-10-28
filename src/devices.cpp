@@ -181,6 +181,9 @@ void devices_reset(int hardreset)
 	init_eventtab();
 	init_shm();
 	memory_reset();
+#ifdef AUTOCONFIG
+    rtarea_reset();
+#endif
 	DISK_reset();
 	CIA_reset();
 	a1000_reset();
@@ -227,9 +230,6 @@ void devices_reset(int hardreset)
 	dongle_reset();
 	sampler_init();
 	device_func_reset();
-#ifdef AUTOCONFIG
-	rtarea_reset();
-#endif
 #ifdef RETROPLATFORM
 	rp_reset();
 #endif
