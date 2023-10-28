@@ -2479,10 +2479,21 @@ static void allocate_memory (void)
 	}
 
 	if (currprefs.cs_agnussize > AGNUSSIZE_AUTO) {
-		if (currprefs.cs_agnussize <= AGNUSSIZE_512) {
-			chipmem_full_mask = 0x80000 - 1;
-		} else if (currprefs.cs_agnussize == AGNUSSIZE_1M && chipmem_full_mask > 0x100000) {
-			chipmem_full_mask = 0x100000 - 1;
+        if (currprefs.chipset_mask & CSMASK_ECS_AGNUS) {
+            // if ECS: allow smaller than select chip RAM size DMA range
+            if (currprefs.cs_agnussize <= AGNUSSIZE_512) {
+                chipmem_full_mask = 0x80000 - 1;
+            } else if (currprefs.cs_agnussize == AGNUSSIZE_1M && chipmem_full_mask > 0x100000) {
+                chipmem_full_mask = 0x100000 - 1;
+            }
+        } else {
+            // if OCS: allow larger than 512k DMA range
+            if (currprefs.cs_agnussize == AGNUSSIZE_1M && chipmem_bank.allocated_size >= 0x100000) {
+                chipmem_full_mask = 0x100000 - 1;
+            }
+            if (currprefs.cs_agnussize == AGNUSSIZE_2M && chipmem_bank.allocated_size >= 0x180000) {
+                chipmem_full_mask = 0x200000 - 1;
+            }
 		}
 	}
 
