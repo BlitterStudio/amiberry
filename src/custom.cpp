@@ -6139,6 +6139,16 @@ static uae_u16 BPLCON0_Denise_mask(uae_u16 v)
 	return v;
 }
 
+static uae_u16 BPLCON0_Agnus_mask(uae_u16 v)
+{
+    if (!ecs_agnus) {
+        v &= 0xff0e;
+    } else if (!aga_mode) {
+        v &= 0xffce;
+    }
+    return v;
+}
+
 static void reset_decisions_hsync_start(void)
 {
 	if (nodraw()) {
@@ -8999,12 +9009,7 @@ static void BPLCON0(int hpos, uae_u16 v)
 {
 	uae_u16 old = bplcon0;
 	bplcon0_saved = v;
-	if (!ecs_denise) {
-		v &= ~0x00F1;
-	} else if (!aga_mode) {
-		v &= ~0x00B0;
-	}
-	v &= ~0x0080;
+    v = BPLCON0_Agnus_mask(v);
 
 #if SPRBORDER
 	v |= 1;
