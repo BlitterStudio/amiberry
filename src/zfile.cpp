@@ -42,6 +42,22 @@ const TCHAR *uae_archive_extensions[] = { _T("zip"), _T("rar"), _T("7z"), _T("lh
 
 #define MAX_CACHE_ENTRIES 10
 
+const TCHAR *zfile_get_ext(const TCHAR *name)
+{
+	const TCHAR *sep = _tcsrchr(name, '\\');
+	if (!sep) {
+		sep = _tcsrchr(name, '/');
+	}
+	const TCHAR *ext = _tcsrchr(name, '.');
+	if (!ext) {
+		return NULL;
+	}
+	if (sep && ext < sep) {
+		return NULL;
+	}
+	return ext;
+}
+
 struct zdisktrack
 {
 	void *data;
@@ -277,12 +293,12 @@ static const TCHAR *diskimages[] = { _T("adf"), _T("adz"), _T("ipf"), _T("scp"),
 int zfile_gettype (struct zfile *z)
 {
 	uae_u8 buf[8];
-	TCHAR *ext;
+	const TCHAR *ext;
 	bool hdf = false;
 
 	if (!z || !z->name)
 		return ZFILE_UNKNOWN;
-	ext = _tcsrchr (z->name, '.');
+	ext = zfile_get_ext(z->name);
 	if (ext != NULL) {
 		int i;
 		ext++;
@@ -675,7 +691,7 @@ static struct zfile *extadf (struct zfile *z, int index, int *retcode)
 	uae_u8 buffer[2 + 2 + 4 + 4];
 	int outsize;
 	TCHAR newname[MAX_DPATH];
-	TCHAR *ext;
+	const TCHAR *ext;
 	int cantrunc = 0;
 	int done = 0;
 
@@ -692,7 +708,7 @@ static struct zfile *extadf (struct zfile *z, int index, int *retcode)
 	offs = 8 + 2 + 2 + tracks * (2 + 2 + 4 + 4);
 
 	_tcscpy (newname, zfile_getname (z));
-	ext = _tcsrchr (newname, '.');
+	ext = zfile_get_ext(newname);
 	if (ext) {
 		_tcscpy (newname + _tcslen (newname) - _tcslen (ext), _T(".std.adf"));
 	} else {
@@ -777,7 +793,7 @@ static struct zfile *fdi (struct zfile *z, int index, int *retcode)
 	int i, j, r;
 	struct zfile *zo;
 	TCHAR *orgname = zfile_getname (z);
-	TCHAR *ext = _tcsrchr (orgname, '.');
+	const TCHAR *ext = zfile_get_ext(orgname);
 	TCHAR newname[MAX_DPATH];
 	uae_u16 *amigamfmbuffer;
 	uae_u8 writebuffer_ok[32], *outbuf;
@@ -906,7 +922,7 @@ static struct zfile *ipf (struct zfile *z, int index, int *retcode)
 	int i, j, r;
 	struct zfile *zo;
 	TCHAR *orgname = zfile_getname (z);
-	TCHAR *ext = _tcsrchr (orgname, '.');
+	const TCHAR *ext = zfile_get_ext(orgname);
 	TCHAR newname[MAX_DPATH];
 	uae_u16 *amigamfmbuffer;
 	uae_u8 writebuffer_ok[32];
@@ -1236,7 +1252,7 @@ static struct zfile *dms (struct zfile *z, int index, int *retcode)
 	int ret;
 	struct zfile *zo;
 	TCHAR *orgname = zfile_getname (z);
-	TCHAR *ext = _tcsrchr (orgname, '.');
+	const TCHAR *ext = zfile_get_ext(orgname);
 	TCHAR newname[MAX_DPATH];
 	static int recursive;
 	int i;
@@ -1313,7 +1329,7 @@ int zfile_is_ignore_ext (const TCHAR *name)
 	int i;
 	const TCHAR *ext;
 
-	ext = _tcsrchr (name, '.');
+	ext = zfile_get_ext(name);
 	if (!ext)
 		return 0;
 	for (i = 0; uae_ignoreextensions[i]; i++) {
@@ -1327,9 +1343,10 @@ int zfile_is_diskimage (const TCHAR *name)
 {
 	int i;
 
-	const TCHAR *ext = _tcsrchr (name, '.');
-	if (!ext)
+	const TCHAR *ext = zfile_get_ext(name);
+	if (!ext) {
 		return 0;
+	}
 	i = 0;
 	while (uae_diskimageextensions[i]) {
 		if (!strcasecmp (ext, uae_diskimageextensions[i]))
@@ -1364,7 +1381,7 @@ static const int plugins_7z_m[] = {
 static int iszip (struct zfile *z, int mask)
 {
 	TCHAR *name = z->name;
-	TCHAR *ext = _tcsrchr (name, '.');
+	const TCHAR *ext = zfile_get_ext(name);
 	uae_u8 header[32];
 
 	if (!ext)
@@ -1446,7 +1463,7 @@ int iszip (struct zfile *z)
 struct zfile *zuncompress (struct znode *parent, struct zfile *z, int dodefault, int mask, int *retcode, int index)
 {
 	TCHAR *name = z->name;
-	TCHAR *ext = NULL;
+	const TCHAR *ext = NULL;
 	uae_u8 header[32];
 
 	if (retcode)
@@ -1454,7 +1471,7 @@ struct zfile *zuncompress (struct znode *parent, struct zfile *z, int dodefault,
 	if (!mask)
 		return NULL;
 	if (name) {
-		ext = _tcsrchr (name, '.');
+		ext = zfile_get_ext(name);
 		if (ext)
 			ext++;
 	}
@@ -2752,7 +2769,7 @@ static struct zvolume *zfile_fopen_archive_ext (struct znode *parent, struct zfi
 {
 	struct zvolume *zv = NULL;
 	TCHAR *name = zfile_getname (zf);
-	TCHAR *ext;
+	const TCHAR *ext;
 	uae_u8 header[7];
 
 	if (!name)
@@ -2763,7 +2780,7 @@ static struct zvolume *zfile_fopen_archive_ext (struct znode *parent, struct zfi
 	zfile_fread (header, sizeof (header), 1, zf);
 	zfile_fseek (zf, 0, SEEK_SET);
 
-	ext = _tcsrchr (name, '.');
+	ext = zfile_get_ext(name);
 	if (ext != NULL) {
 		ext++;
 		if (flags & ZFD_ARCHIVE) {
@@ -2886,7 +2903,7 @@ static int zfile_fopen_archive_recurse (struct zvolume *zv, int flags)
 	while (zn) {
 		int done = 0;
 		struct zfile *z;
-		TCHAR *ext = _tcsrchr (zn->name, '.');
+		const TCHAR *ext = zfile_get_ext(zn->name);
 		if (ext && !zn->vchild && zn->type == ZNODE_FILE) {
 			for (i = 0; !done && archive_extensions[i]; i++) {
 				if (!strcasecmp (ext + 1, archive_extensions[i])) {

@@ -171,7 +171,7 @@ struct zfile *archive_access_select (struct znode *parent, struct zfile *zf, uns
 				select = -1;
 			if (select && we_have_file < 10) {
 				struct zfile *zt = NULL;
-				TCHAR *ext = _tcsrchr (zn->fullname, '.');
+                const TCHAR *ext = zfile_get_ext(zn->fullname);
 				int whf = 1;
 				int ft = 0;
 				if (mask & ZFD_CD) {
