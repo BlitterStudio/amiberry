@@ -461,7 +461,7 @@ static void checksend(void)
 	}
 
 	if (serempty_enabled && !serxdevice_enabled) {
-		return;
+		goto end;
 	}
 
 #ifdef SERIAL_PORT
@@ -490,6 +490,7 @@ static void checksend(void)
 		serial_send_previous = serdatshift_masked;
 	}
 #endif
+end:
 	if (serial_period_hsyncs <= 1 || data_in_sershift == 2) {
 		data_in_sershift = 0;
 		serdatcopy();
