@@ -6509,6 +6509,14 @@ bool is_keyboardreset(void)
 	return  cpu_keyboardreset;
 }
 
+static void warpmode_reset(void)
+{
+    if (currprefs.turbo_boot && currprefs.turbo_emulation < 2) {
+        warpmode(1);
+        currprefs.turbo_emulation = changed_prefs.turbo_emulation = 2;
+    }
+}
+
 void m68k_go (int may_quit)
 {
 	int hardboot = 1;
@@ -6663,11 +6671,7 @@ void m68k_go (int may_quit)
 			protect_roms(true);
 		}
 		if ((cpu_keyboardreset || hardboot) && !restored) {
-			if (currprefs.turbo_boot) {
-				warpmode(1);
-				currprefs.turbo_emulation = changed_prefs.turbo_emulation = 2;
-
-			}
+            warpmode_reset();
 		}
 		cpu_hardreset = false;
 		cpu_keyboardreset = false;
@@ -7866,7 +7870,6 @@ void exception2_fetch(uae_u32 opcode, int offset, int pcoffset)
 	Exception(2);
 }
 
-
 bool cpureset (void)
 {
     /* RESET hasn't increased PC yet, 1 word offset */
@@ -7881,6 +7884,7 @@ bool cpureset (void)
 	set_special(SPCFLAG_CHECK);
 	unset_special(SPCFLAG_CPUINRESET);
 	send_internalevent(INTERNALEVENT_CPURESET);
+    warpmode_reset();
 #ifndef AMIBERRY
 	if (cpuboard_forced_hardreset()) {
 		custom_reset_cpu(false, false);
