@@ -1204,6 +1204,10 @@ static int get_current_channel(void)
 		}
 	} else {
 		// order is important when multiple bits in shift register
+		// A (if not also D)
+		if (shifter[0] && (bltcon0 & BLTCHA) && !shifter[3]) {
+			return 1;
+		}
 		// C
 		if (shifter[2] && (bltcon0 & BLTCHC)) {
 			return 3;
@@ -1212,10 +1216,6 @@ static int get_current_channel(void)
 		// normally would be D but becomes C.
 		if (shifter[3] && (bltcon0 & BLTCHC) && (shifter[0] || shifter[1])) {
 			return 3;
-		}
-		// A
-		if (shifter[0] && (bltcon0 & BLTCHA)) {
-			return 1;
 		}
 		// B
 		if (shifter[1] && (bltcon0 & BLTCHB)) {
@@ -1305,9 +1305,8 @@ static int blitter_next_cycle(void)
 	memset(shifter, 0, sizeof(shifter));
 
 	if (shifter_skip_b_old && !shifter_skip_b) {
-		// if B skip was disabled: A goes both to B and C
+		// if B skip was disabled: A goes to B
 		tmp[1] = tmp[0];
-		tmp[2] = tmp[0];
 		shifter_skip_b_old = shifter_skip_b;
 		blitchanged = true;
 	} else if (!shifter_skip_b_old && shifter_skip_b) {
@@ -1320,6 +1319,7 @@ static int blitter_next_cycle(void)
 	if (shifter_skip_y_old && !shifter_skip_y) {
 		// if Y skip was disabled: X goes both to Y and OUT
 		tmp[3] = tmp[2];
+		shifter_out = tmp[3];
 		shifter_skip_y_old = shifter_skip_y;
 		blitchanged = true;
 	} else if (!shifter_skip_y_old && shifter_skip_y) {
