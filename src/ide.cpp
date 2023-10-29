@@ -380,7 +380,7 @@ static bool ide_interrupt_do (struct ide_hdf *ide)
 		write_log (_T("IDE INT %02X -> %02X\n"), os, ide->regs.ide_status);
 	ide->intdrq = false;
 	ide->irq_delay = 0;
-	if (ide->regs.ide_devcon & 2)
+    if ((ide->regs.ide_devcon & 2) || ide->irq_inhibit)
 		return false;
 	ide->irq_new = true;
 	ide->irq = 1;
