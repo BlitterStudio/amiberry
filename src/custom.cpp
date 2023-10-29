@@ -12249,7 +12249,9 @@ static void vsync_check_vsyncmode(void)
 
 static void check_display_mode_change(void)
 {
+	struct amigadisplay *ad = &adisplays[0];
 	int vt, ht, hs, vs;
+
 	if (new_beamcon0 & BEAMCON0_VARBEAMEN) {
 		vt = vtotal;
 		ht = htotal;
@@ -12271,8 +12273,10 @@ static void check_display_mode_change(void)
 	// recalculate display if vtotal, htotal, hsync start or vsync start changed > 1
 	if ((abs(vt - vt_old) > 1 || abs(ht - ht_old) > 1 || abs(hs - hs_old) > 1 || abs(vs - vs_old) > 1)  && vt_old && ht_old) {
 		varsync_changed = 1;
-		nosignal_trigger = true;
-		display_reset = 2;
+		if (!ad->picasso_on) {
+			nosignal_trigger = true;
+			display_reset = 2;
+		}
 	}
 
 	vt_old = vt;
