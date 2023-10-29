@@ -1762,7 +1762,7 @@ bool cdtv_init(struct autoconfig_info *aci)
 
 	device_add_hsync(CDTV_hsync_handler);
 	device_add_rethink(rethink_cdtv);
-	device_add_exit(cdtv_free);
+	device_add_exit(cdtv_free, NULL);
 
 	return true;
 }

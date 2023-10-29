@@ -30,7 +30,7 @@ void device_add_rethink(DEVICE_VOID p);
 void device_add_check_config(DEVICE_VOID p);
 void device_add_reset(DEVICE_INT p);
 void device_add_reset_imm(DEVICE_INT p);
-void device_add_exit(DEVICE_VOID p);
+void device_add_exit(DEVICE_VOID p, DEVICE_VOID p2);
 
 #define IRQ_SOURCE_PCI 0
 #define IRQ_SOURCE_SOUND 1

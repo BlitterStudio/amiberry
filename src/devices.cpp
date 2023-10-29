@@ -94,6 +94,8 @@ static int device_rethink_cnt;
 static DEVICE_VOID device_rethinks[MAX_DEVICE_ITEMS];
 static int device_leave_cnt;
 static DEVICE_VOID device_leaves[MAX_DEVICE_ITEMS];
+static int device_leave_early_cnt;
+static DEVICE_VOID device_leaves_early[MAX_DEVICE_ITEMS];
 static int device_resets_cnt;
 static DEVICE_INT device_resets[MAX_DEVICE_ITEMS];
 static bool device_reset_done[MAX_DEVICE_ITEMS];
@@ -107,6 +109,7 @@ static void reset_device_items(void)
 	device_rethink_cnt = 0;
 	device_resets_cnt = 0;
 	device_leave_cnt = 0;
+    device_leave_early_cnt = 0;
 	memset(device_reset_done, 0, sizeof(device_reset_done));
 }
 
@@ -130,9 +133,14 @@ void device_add_check_config(DEVICE_VOID p)
 {
 	add_device_item(device_configs, &device_configs_cnt, p);
 }
-void device_add_exit(DEVICE_VOID p)
+void device_add_exit(DEVICE_VOID p, DEVICE_VOID p2)
 {
-	add_device_item(device_leaves, &device_leave_cnt, p);
+    if (p != NULL) {
+        add_device_item(device_leaves, &device_leave_cnt, p);
+    }
+    if (p2 != NULL) {
+        add_device_item(device_leaves_early, &device_leave_early_cnt, p2);
+    }
 }
 void device_add_reset(DEVICE_INT p)
 {
@@ -309,6 +317,9 @@ void virtualdevice_free(void)
 	// must be first
 	uae_ppc_free();
 #endif
+
+    execute_device_items(device_leaves_early, device_leave_early_cnt);
+
 #ifdef FILESYS
 	filesys_cleanup();
 #endif

@@ -6284,7 +6284,7 @@ void uaegfx_install_code (uaecptr start)
 
 	device_add_reset(picasso_reset);
 	device_add_hsync(picasso_handle_hsync);
-	device_add_exit(picasso_free);
+	device_add_exit(picasso_free, NULL);
 }
 
 #define UAEGFX_VERSION 3

@@ -2207,7 +2207,7 @@ static void gayle_init(void)
 	device_add_check_config(check_prefs_changed_gayle);
 	device_add_rethink(rethink_gayle);
 	device_add_hsync(gayle_hsync);
-	device_add_exit(gayle_free);
+	device_add_exit(gayle_free, NULL);
 }
 
 uae_u8 *save_gayle(size_t *len, uae_u8 *dstptr)
