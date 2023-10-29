@@ -33,6 +33,7 @@
 #include "cpummu.h"
 #include "cpummu030.h"
 #include "debug.h"
+#include "uae.h"
 
 #ifndef CPU_TESTER
 #define SUPPORT_MMU 1

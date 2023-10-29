@@ -38,6 +38,7 @@ extern void init_fpucw_x87(void);
 extern void init_fpucw_x87_80(void);
 #endif
 #endif
+extern void fpu_reset(void);
 
 #define PREC_NORMAL 0
 #define PREC_FLOAT 1

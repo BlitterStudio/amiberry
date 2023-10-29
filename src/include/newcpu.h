@@ -763,9 +763,6 @@ extern void fpuop_bcc(uae_u32, uaecptr, uae_u32);
 extern void fpuop_save(uae_u32);
 extern void fpuop_restore(uae_u32);
 extern uae_u32 fpp_get_fpsr (void);
-extern void fpu_reset (void);
-extern void fpux_save (int*);
-extern void fpux_restore (int*);
 extern bool fpu_get_constant(fpdata *fp, int cr);
 extern int fpp_cond(int condition);
 
