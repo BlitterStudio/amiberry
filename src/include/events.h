@@ -137,6 +137,7 @@ extern void event2_newevent_xx(int no, evt_t t, uae_u32 data, evfunc2 func);
 extern void event2_newevent_x_replace(evt_t t, uae_u32 data, evfunc2 func);
 extern void event2_newevent_x_replace_exists(evt_t t, uae_u32 data, evfunc2 func);
 extern void event2_newevent_x_remove(evfunc2 func);
+extern void event2_newevent_xx_ce(evt_t t, uae_u32 data, evfunc2 func);
 
 STATIC_INLINE void event2_newevent_x(int no, evt_t t, uae_u32 data, evfunc2 func)
 {

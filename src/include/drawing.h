@@ -89,7 +89,7 @@ STATIC_INLINE int PIXEL_XPOS(int xx)
 	return x;
 }
 
-#define min_diwlastword (0)
+#define min_diwlastword (PIXEL_XPOS(hsyncstartpos_start_cycles << CCK_SHRES_SHIFT))
 #define max_diwlastword (PIXEL_XPOS(denisehtotal))
 
 STATIC_INLINE int coord_window_to_hw_x(int x)

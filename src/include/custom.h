@@ -143,14 +143,15 @@ extern uae_u16 INTREQR(void);
 #define VSYNC_ENDLINE_PAL 5
 #define VSYNC_ENDLINE_NTSC 6
 #define EQU_ENDLINE_PAL 8
-#define EQU_ENDLINE_NTSC 10
+#define EQU_ENDLINE_NTSC 9
 
-#define OCS_DENISE_HBLANK_DISABLE_HPOS 0x2d
+#define OCS_DENISE_HBLANK_DISABLE_HPOS 0x2e
 
 extern int maxhpos, maxhposm0, maxhpos_short;
 extern int maxvpos, maxvpos_nom, maxvpos_display, maxvpos_display_vsync, maxhpos_display;
+extern int maxvsize_display;
 extern int hsyncstartpos_hw, hsyncendpos_hw;
-extern int minfirstline, vblank_endline, numscrlines;
+extern int minfirstline, minfirstline_linear, vblank_endline, numscrlines;
 extern float vblank_hz, fake_vblank_hz;
 extern float hblank_hz;
 extern int vblank_skip, doublescan;
