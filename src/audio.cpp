@@ -656,7 +656,7 @@ static void samplexx_sinc_handler (int *datasp, int ch_start, int ch_num)
 		else if (v < -32768)
 			v = -32768;
 		datasp[k] = v;
-	}
+    }
 }
 
 static void do_filter(int *data, int num)
@@ -744,6 +744,80 @@ static void get_extra_channels_sample6(int *data1, int *data2, int *data3, int *
 			idx += ch;
 		}
 	}
+}
+
+static void set_sound_buffers(void)
+{
+#if SOUNDSTUFF > 1
+	paula_sndbufpt_prev = paula_sndbufpt_start;
+	paula_sndbufpt_start = paula_sndbufpt;
+#endif
+}
+
+static void clear_sound_buffers(void)
+{
+	memset(paula_sndbuffer, 0, paula_sndbufsize);
+	paula_sndbufpt = paula_sndbuffer;
+}
+
+static void check_sound_buffers(void)
+{
+#if SOUNDSTUFF > 1
+	int len;
+#endif
+
+	if (active_sound_stereo == SND_4CH_CLONEDSTEREO) {
+		((uae_u16 *)paula_sndbufpt)[0] = ((uae_u16 *)paula_sndbufpt)[-2];
+		((uae_u16 *)paula_sndbufpt)[1] = ((uae_u16 *)paula_sndbufpt)[-1];
+		paula_sndbufpt = (uae_u16 *)(((uae_u8 *)paula_sndbufpt) + 2 * 2);
+	} else if (active_sound_stereo == SND_6CH_CLONEDSTEREO) {
+		uae_s16 *p = ((uae_s16 *)paula_sndbufpt);
+		uae_s32 sum;
+		p[2] = p[-2];
+		p[3] = p[-1];
+		sum = (uae_s32)(p[-2]) + (uae_s32)(p[-1]) + (uae_s32)(p[2]) + (uae_s32)(p[3]);
+		p[0] = sum / 8;
+		p[1] = sum / 8;
+		paula_sndbufpt = (uae_u16 *)(((uae_u8 *)paula_sndbufpt) + 4 * 2);
+	} else if (active_sound_stereo == SND_8CH_CLONEDSTEREO) {
+		uae_s16 *p = ((uae_s16 *)paula_sndbufpt);
+		uae_s32 sum;
+		p[2] = p[-2];
+		p[3] = p[-1];
+		p[4] = p[-2];
+		p[5] = p[-1];
+		sum = (uae_s32)(p[-2]) + (uae_s32)(p[-1]) + (uae_s32)(p[2]) + (uae_s32)(p[3]);
+		p[0] = sum / 8;
+		p[1] = sum / 8;
+		paula_sndbufpt = (uae_u16 *)(((uae_u8 *)paula_sndbufpt) + 6 * 2);
+	}
+#if SOUNDSTUFF > 1
+	if (outputsample == 0)
+		return;
+	len = paula_sndbufpt - paula_sndbufpt_start;
+	if (outputsample < 0) {
+		int i;
+		uae_s16 *p1 = (uae_s16 *)paula_sndbufpt_prev;
+		uae_s16 *p2 = (uae_s16 *)paula_sndbufpt_start;
+		for (i = 0; i < len; i++) {
+			*p1 = (*p1 + *p2) / 2;
+		}
+		paula_sndbufpt = paula_sndbufpt_start;
+	}
+#endif
+	if ((uae_u8 *)paula_sndbufpt - (uae_u8 *)paula_sndbuffer >= paula_sndbufsize) {
+		finish_sound_buffer();
+	}
+#if SOUNDSTUFF > 1
+	while (doublesample-- > 0) {
+		memcpy(paula_sndbufpt, paula_sndbufpt_start, len * 2);
+		paula_sndbufpt += len;
+		if ((uae_u8 *)paula_sndbufpt - (uae_u8 *)paula_sndbuffer >= paula_sndbufsize) {
+			finish_sound_buffer();
+			paula_sndbufpt = paula_sndbuffer;
+		}
+	}
+#endif
 }
 
 static void sample16i_sinc_handler (void)
@@ -984,20 +1058,24 @@ void sample16ss_handler (void)
 	do_filter(&data2, 3);
 	do_filter(&data3, 2);
 
-	if (currprefs.sound_stereo == SND_6CH)
+	if (active_sound_stereo >= SND_6CH)
 		make6ch(data0, data1, data2, data3, &data4, &data5);
 
 	get_extra_channels_sample6(&data0, &data1, &data3, &data2, &data4, &data5, 0);
 
 	set_sound_buffers ();
 	put_sound_word_right(data0);
-	put_sound_word_left (data1);
-	if (currprefs.sound_stereo == SND_6CH) {
+	put_sound_word_left(data1);
+	if (active_sound_stereo >= SND_6CH) {
+		PUT_SOUND_WORD(data4);
+		PUT_SOUND_WORD(data5);
+	}
+	if (active_sound_stereo >= SND_8CH) {
 		PUT_SOUND_WORD(data4);
 		PUT_SOUND_WORD(data5);
 	}
 	put_sound_word_right2(data3);
-	put_sound_word_left2 (data2);
+	put_sound_word_left2(data2);
 	check_sound_buffers ();
 }
 
@@ -1020,50 +1098,54 @@ static void sample16ss_anti_handler (void)
 	do_filter(&data2, 3);
 	do_filter(&data3, 2);
 
-	if (currprefs.sound_stereo == SND_6CH)
+	if (active_sound_stereo >= SND_6CH)
 		make6ch(data0, data1, data2, data3, &data4, &data5);
 
 	get_extra_channels_sample6(&data0, &data1, &data3, &data2, &data4, &data5, 0);
 
-	set_sound_buffers ();
+	set_sound_buffers();
 	put_sound_word_right(data0);
-	put_sound_word_left (data1);
-	if (currprefs.sound_stereo == SND_6CH) {
+	put_sound_word_left(data1);
+	if (active_sound_stereo >= SND_6CH) {
+		PUT_SOUND_WORD(data4);
+		PUT_SOUND_WORD(data5);
+	}
+	if (active_sound_stereo >= SND_8CH) {
 		PUT_SOUND_WORD(data4);
 		PUT_SOUND_WORD(data5);
 	}
 	put_sound_word_right2(data3);
-	put_sound_word_left2 (data2);
-	check_sound_buffers ();
+	put_sound_word_left2(data2);
+	check_sound_buffers();
 }
 
-static void sample16si_anti_handler (void)
+static void sample16si_anti_handler(void)
 {
 	int datas[AUDIO_CHANNELS_PAULA], data1, data2;
 
-	samplexx_anti_handler (datas, 0, AUDIO_CHANNELS_PAULA);
+	samplexx_anti_handler(datas, 0, AUDIO_CHANNELS_PAULA);
 	data1 = datas[0] + datas[3];
 	data2 = datas[1] + datas[2];
-	data1 = FINISH_DATA (data1, 15, 0);
-	data2 = FINISH_DATA (data2, 15, 1);
+	data1 = FINISH_DATA(data1, 15, 0);
+	data2 = FINISH_DATA(data2, 15, 1);
 
 	do_filter(&data1, 0);
 	do_filter(&data2, 1);
 
 	get_extra_channels_sample2(&data1, &data2, 1);
 
-	set_sound_buffers ();
+	set_sound_buffers();
 	put_sound_word_right(data1);
-	put_sound_word_left (data2);
-	check_sound_buffers ();
+	put_sound_word_left(data2);
+	check_sound_buffers();
 }
 
-static void sample16ss_sinc_handler (void)
+static void sample16ss_sinc_handler(void)
 {
 	int data0, data1, data2, data3, data4, data5;
 	int datas[AUDIO_CHANNELS_PAULA];
 
-	samplexx_sinc_handler (datas, 0, AUDIO_CHANNELS_PAULA);
+	samplexx_sinc_handler(datas, 0, AUDIO_CHANNELS_PAULA);
 	data0 = FINISH_DATA (datas[0], 16, 0);
 	data1 = FINISH_DATA (datas[1], 16, 0);
 	data2 = FINISH_DATA (datas[2], 16, 1);
@@ -1074,7 +1156,7 @@ static void sample16ss_sinc_handler (void)
 	do_filter(&data2, 3);
 	do_filter(&data3, 2);
 
-	if (currprefs.sound_stereo == SND_6CH)
+	if (active_sound_stereo >= SND_6CH)
 		make6ch(data0, data1, data2, data3, &data4, &data5);
 
 	get_extra_channels_sample6(&data0, &data1, &data3, &data2, &data4, &data5, 0);
@@ -1082,7 +1164,11 @@ static void sample16ss_sinc_handler (void)
 	set_sound_buffers ();
 	put_sound_word_right(data0);
 	put_sound_word_left (data1);
-	if (currprefs.sound_stereo == SND_6CH) {
+	if (active_sound_stereo >= SND_6CH) {
+		PUT_SOUND_WORD(data4);
+		PUT_SOUND_WORD(data5);
+	}
+	if (active_sound_stereo >= SND_8CH) {
 		PUT_SOUND_WORD(data4);
 		PUT_SOUND_WORD(data5);
 	}
@@ -1572,19 +1658,19 @@ static void loadperm1(int nr)
 {
 	struct audio_channel_data *cdp = audio_channel + nr;
 
-    if (cdp->per == CYCLE_UNIT) {
-        cdp->evtime = CYCLE_UNIT;
-        if (isirq(nr)) {
-            cdp->irqcheck = 1;
-        } else {
-            cdp->irqcheck = -1;
-        }
-    } else if (cdp->per > CYCLE_UNIT) {
+	if (cdp->per == CYCLE_UNIT) {
+		cdp->evtime = CYCLE_UNIT;
+		if (isirq(nr)) {
+			cdp->irqcheck = 1;
+		} else {
+			cdp->irqcheck = -1;
+		}
+	} else if (cdp->per > CYCLE_UNIT) {
 		cdp->evtime = cdp->per - 1 * CYCLE_UNIT;
-        cdp->state |= 0x10;
+		cdp->state |= 0x10;
 	} else {
-        cdp->evtime = 65536 * CYCLE_UNIT;
-        cdp->state |= 0x10;
+		cdp->evtime = 65536 * CYCLE_UNIT;
+		cdp->state |= 0x10;
 	}
 #if DEBUG_AUDIO2 > 0
 	if (debugchannel(nr)) {
@@ -2038,6 +2124,7 @@ void set_audio (void)
 	currprefs.produce_sound = changed_prefs.produce_sound;
 	currprefs.soundcard = changed_prefs.soundcard;
 	currprefs.sound_stereo = changed_prefs.sound_stereo;
+	active_sound_stereo = currprefs.sound_stereo;
 	currprefs.sound_auto = changed_prefs.sound_auto;
 	currprefs.sound_freq = changed_prefs.sound_freq;
 	currprefs.sound_maxbsiz = changed_prefs.sound_maxbsiz;
