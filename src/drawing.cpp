@@ -3655,6 +3655,7 @@ static void do_color_changes(line_draw_func worker_border, line_draw_func worker
 	int lastpos2 = lastpos;
 	int endpos = visible_left_border + vidinfo->drawbuffer.inwidth;
 	bool vbarea = vp < vblank_top_start || vp >= vblank_bottom_stop;
+	bool playfield_first = true;
 
 	extborder = false; // reset here because it always have start and end in same scanline
 	hcenter_debug = 0;
@@ -3663,6 +3664,7 @@ static void do_color_changes(line_draw_func worker_border, line_draw_func worker
 		exthblank = 0;
 	}
 	ehb_enable = true;
+
 	for (int i = dip_for_drawing->first_color_change; i <= dip_for_drawing->last_color_change; i++) {
 		int regno = curr_color_changes[i].regno;
 		uae_u32 value = curr_color_changes[i].value;
@@ -3700,10 +3702,6 @@ static void do_color_changes(line_draw_func worker_border, line_draw_func worker
 				if (nextpos_in_range > lastpos && lastpos < hblank_left) {
 					int t = nextpos_in_range <= hblank_left ? nextpos_in_range : hblank_left;
 					(*worker_border)(lastpos, t, 1);
-					// if playfield starts before hblank end: adjust back to playfield start
-					if (t > playfield_start) {
-						t = playfield_start;
-					}
 					lastpos = t;
 				}
 
@@ -3713,16 +3711,17 @@ static void do_color_changes(line_draw_func worker_border, line_draw_func worker
 					if (nextpos_in_range > lastpos && lastpos < playfield_start) {
 						int t = nextpos_in_range <= playfield_start ? nextpos_in_range : playfield_start;
 						(*worker_border)(lastpos, t, 0);
-						// if playfield starts before hblank end: adjust back to playfield start
-						if (t > playfield_start) {
-							t = playfield_start;
-						}
 						lastpos = t;
 					}
 
 					// playfield
 					if (nextpos_in_range > lastpos && lastpos >= playfield_start && lastpos < playfield_end) {
 						int t = nextpos_in_range <= playfield_end ? nextpos_in_range : playfield_end;
+						// always draw bitplanes from start position, bitplanes can start during hblank
+						if (playfield_first && lastpos > playfield_start) {
+							lastpos = playfield_start;
+						}
+						playfield_first = false;
 						if ((plf2pri >= 5 || plf1pri >= 5) && !aga_mode) {
 							weird_bitplane_fix(lastpos, t);
 						}
