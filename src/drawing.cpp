@@ -3596,7 +3596,11 @@ static void adjust_drawing_colors (int ctable, int need_full, bool blankcheck)
 			color_reg_cpy (&colors_for_drawing, curr_color_tables + ctable);
 			color_match_type = color_match_full;
 		} else {
-			memcpy (colors_for_drawing.acolors, curr_color_tables[ctable].acolors, sizeof colors_for_drawing.acolors);
+			if (aga_mode) {
+				memcpy(colors_for_drawing.acolors, curr_color_tables[ctable].acolors, sizeof(xcolnr) * 256);
+			} else {
+				memcpy(colors_for_drawing.acolors, curr_color_tables[ctable].acolors, sizeof(xcolnr) * 32);
+			}
 			colors_for_drawing.extra = curr_color_tables[ctable].extra;
 			color_match_type = color_match_acolors;
 		}
@@ -5248,7 +5252,21 @@ void vsync_handle_redraw(int long_field, int lof_changed, uae_u16 bplcon0p, uae_
 	gui_flicker_led (-1, 0, 0);
 }
 
-void hsync_record_line_state (int lineno, enum nln_how how, int changed)
+void hsync_record_line_state_last(int lineno, enum nln_how how, int changed)
+{
+	uae_u8 *state = linestate + lineno;
+
+	switch (how) {
+		case nln_upper_black:
+		case nln_upper_black_always:
+		case nln_lower_black:
+		case nln_lower_black_always:
+		hsync_record_line_state(lineno, how, 0);
+		break;
+	}
+}
+
+void hsync_record_line_state(int lineno, enum nln_how how, int changed)
 {
 	struct amigadisplay *ad = &adisplays[0];
 	uae_u8 *state;

@@ -568,6 +568,7 @@ frame_time_t lastframetime;
 uae_u32 hsync_counter, vsync_counter;
 frame_time_t idletime;
 int bogusframe;
+static int display_vsync_counter;
 
 /* Recording of custom chip register changes.  */
 static int current_change_set;
@@ -11682,7 +11683,7 @@ static int calculate_lineno(int vp)
 		lineno++;
 	} else if (!interlace_seen && doublescan <= 0 && currprefs.gfx_vresolution && currprefs.gfx_pscanlines > 1) {
 		lineno *= 2;
-		if (vsync_counter & 1) {
+		if (display_vsync_counter & 1) {
 			lineno++;
 			nextline_how = currprefs.gfx_pscanlines == 3 ? nln_lower_black_always : nln_lower_black;
 		} else {
@@ -14294,6 +14295,7 @@ static void hsync_handler(void)
 
 	}
 	if (vpos == maxvpos_display_vsync) {
+		hsync_record_line_state_last(next_lineno, nextline_how, 0);
 		inputdevice_read_msg(true);
 		vsync_display_render();
 		vsync_display_rendered = false;
@@ -14301,6 +14303,7 @@ static void hsync_handler(void)
 		hstrobe_conflict = false;
 		minfirstline_linear = minfirstline;
 		reset_autoscale();
+		display_vsync_counter++;
 	}
 	vsync_line = vs;
 	hsync_handler_post(vs);
@@ -14440,6 +14443,7 @@ void custom_reset(bool hardreset, bool keyboardreset)
 		extra_cycle = 0;
 		hsync_counter = 0;
 		vsync_counter = 0;
+		display_vsync_counter = 0;
 		currprefs.chipset_mask = changed_prefs.chipset_mask;
 		update_mirrors();
 		blitter_reset();

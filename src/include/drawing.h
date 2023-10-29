@@ -357,7 +357,8 @@ enum nln_how {
 	nln_lower_black_always
 };
 
-extern void hsync_record_line_state (int lineno, enum nln_how, int changed);
+extern void hsync_record_line_state(int lineno, enum nln_how, int changed);
+extern void hsync_record_line_state_last(int lineno, enum nln_how, int changed);
 extern void vsync_handle_redraw (int long_field, int lof_changed, uae_u16, uae_u16, bool drawlines, bool initial);
 extern bool vsync_handle_check (void);
 extern void draw_lines(int end, int section);
