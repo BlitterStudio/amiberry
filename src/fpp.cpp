@@ -3743,8 +3743,8 @@ uae_u8 *restore_fpu (uae_u8 *src)
 	int i;
 	uae_u32 flags;
 
-	fpu_reset();
 	changed_prefs.fpu_model = currprefs.fpu_model = restore_u32 ();
+	fpu_reset();
 	flags = restore_u32 ();
 	for (i = 0; i < 8; i++) {
 		w1 = restore_u16 () << 16;

@@ -6949,6 +6949,8 @@ uae_u8 *restore_cpu (uae_u8 *src)
 	int flags, model;
 	uae_u32 l;
 
+	changed_prefs.fpu_model = currprefs.fpu_model = 0;
+	changed_prefs.mmu_model = currprefs.mmu_model = 0;
 	currprefs.cpu_model = changed_prefs.cpu_model = model = restore_u32 ();
 	flags = restore_u32 ();
 	changed_prefs.address_space_24 = 0;
