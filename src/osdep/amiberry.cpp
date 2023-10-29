@@ -1183,7 +1183,7 @@ void process_event(SDL_Event event)
 		}
 		if (event.cbutton.button == vkbd_button)
 		{
-			inputdevice_add_inputcode(AKS_TOGGLE_VIRTUAL_KEYBOARD, event.cbutton.state == SDL_PRESSED, nullptr);
+			inputdevice_add_inputcode(AKS_OSK, event.cbutton.state == SDL_PRESSED, nullptr);
 			break;
 		}
 
@@ -1221,7 +1221,7 @@ void process_event(SDL_Event event)
 			if (event.jbutton.button == did->mapping.vkbd_button && hotkey_pressed && event.jbutton.state == SDL_PRESSED)
 			{
 				hotkey_pressed = false;
-				inputdevice_add_inputcode(AKS_TOGGLE_VIRTUAL_KEYBOARD, 1, nullptr);
+				inputdevice_add_inputcode(AKS_OSK, 1, nullptr);
 				break;
 			}
 
