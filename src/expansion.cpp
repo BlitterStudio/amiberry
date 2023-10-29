@@ -2874,7 +2874,6 @@ struct autoconfig_info* expansion_get_bank_data(struct uae_prefs* p, uaecptr* ad
 	}
 }
 
-
 struct autoconfig_info *expansion_get_autoconfig_data(struct uae_prefs *p, int index)
 {
 	if (index >= cardno)
@@ -4412,7 +4411,7 @@ static const struct expansionsubromtype supra_sub[] = {
 		{ 0xc1, 1, 0x00, 0x00, 0x04, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
 	},
 	{
-		_T("A2000 DMA"), _T("dma"), ROMTYPE_NONE | ROMTYPE_SUPRADMA,
+		_T("2000 DMA"), _T("dma"), ROMTYPE_NONE | ROMTYPE_SUPRA,
 		1056, 2, 0, false, EXPANSIONTYPE_DMA24,
 		{ 0xd1, 3, 0x00, 0x00, 0x04, 0x20, 0x00, 0x00, 0x00, 0x00, 0x40, 0x00 },
 	},
@@ -5070,8 +5069,8 @@ static const struct expansionboardsettings nexus_settings[] = {
 };
 static const struct expansionboardsettings buddha_settings[] = {
 	{
-		_T("Model\0") _T("Buddha\0") _T("Catweasel Z2\0"),
-		_T("model\0") _T("buddha\0") _T("cwz2\0"),
+		_T("Model\0") _T("Buddha\0") _T("Buddha plus one\0") _T("Catweasel Z2\0"),
+		_T("model\0") _T("buddha\0") _T("buddhaplusone\0") _T("cwz2\0"),
 		true, false, 0
 	},
 	{
@@ -5610,7 +5609,7 @@ const struct expansionromtype expansionroms[] = {
 	//	{ 0xd1, 0x31, 0x00, 0x00, 0x08, 0x40, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00 },
 	//},
 	{
-		_T("kommos"), _T("Kommos A500/A2000 SCSI"), _T("Jürgen Kommos"),
+		_T("kommos"), _T("Kommos A500/A2000 SCSI"), _T("JÃ¶rgen Kommos"),
 		NULL, kommos_init, NULL, kommos_add_scsi_unit, ROMTYPE_KOMMOS, 0, 0, BOARD_NONAUTOCONFIG_BEFORE, true,
 		NULL, 0,
 		false, EXPANSIONTYPE_SCSI
@@ -5829,7 +5828,7 @@ const struct expansionromtype expansionroms[] = {
 	//	true, 0, alf3_settings
 	//},
 	{
-		_T("promigos"), _T("Promigos"), _T("Flesch und Hörnemann"),
+		_T("promigos"), _T("Promigos"), _T("Flesch und HÃ¶rnemann"),
 		NULL, promigos_init, NULL, promigos_add_scsi_unit, ROMTYPE_PROMIGOS | ROMTYPE_NOT, 0, 0, BOARD_NONAUTOCONFIG_BEFORE, true,
 		NULL, 0,
 		false, EXPANSIONTYPE_CUSTOM | EXPANSIONTYPE_SCSI
