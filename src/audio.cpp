@@ -56,7 +56,7 @@
 #define TEST_MISSED_DMA 0
 #define TEST_MANUAL_AUDIO 0
 
-#define PERIOD_MIN 4
+#define PERIOD_MIN 1
 #define PERIOD_MIN_NONCE 60
 
 #define PERIOD_LOW 124
@@ -1572,10 +1572,19 @@ static void loadperm1(int nr)
 {
 	struct audio_channel_data *cdp = audio_channel + nr;
 
-	if (cdp->per > CYCLE_UNIT) {
+    if (cdp->per == CYCLE_UNIT) {
+        cdp->evtime = CYCLE_UNIT;
+        if (isirq(nr)) {
+            cdp->irqcheck = 1;
+        } else {
+            cdp->irqcheck = -1;
+        }
+    } else if (cdp->per > CYCLE_UNIT) {
 		cdp->evtime = cdp->per - 1 * CYCLE_UNIT;
+        cdp->state |= 0x10;
 	} else {
-		cdp->evtime = 65536 * CYCLE_UNIT + cdp->per;
+        cdp->evtime = 65536 * CYCLE_UNIT;
+        cdp->state |= 0x10;
 	}
 #if DEBUG_AUDIO2 > 0
 	if (debugchannel(nr)) {
@@ -1818,7 +1827,6 @@ static bool audio_state_channel2 (int nr, bool perfin)
 			if (chan_ena) {
 				loadper(nr);
 			} else {
-				cdp->state |= 0x10;
 				loadperm1(nr);
 			}
 			cdp->pbufldl = false;
