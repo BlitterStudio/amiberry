@@ -1405,12 +1405,6 @@ void Exception_build_stack_frame(uae_u32 oldpc, uae_u32 currpc, uae_u32 ssw, int
 {
 	int i;
 
-#if 0
-	if (nr < 24 || nr > 31) { // do not print debugging for interrupts
-		write_log(_T("Building exception stack frame (format %X)\n"), format);
-	}
-#endif
-
 	switch (format) {
 	case 0x0: // four word stack frame
 	case 0x1: // throwaway four word stack frame
@@ -1616,41 +1610,41 @@ void Exception_build_stack_frame(uae_u32 oldpc, uae_u32 currpc, uae_u32 ssw, int
 	x_put_word(m68k_areg(regs, 7), regs.sr);
 }
 
-void Exception_build_stack_frame_common(uae_u32 oldpc, uae_u32 currpc, uae_u32 ssw, int nr)
+void Exception_build_stack_frame_common(uae_u32 oldpc, uae_u32 currpc, uae_u32 ssw, int nr, int vector_nr)
 {
 	if (nr == 5 || nr == 6 || nr == 7 || nr == 9) {
 		if (nr == 9)
 			oldpc = regs.trace_pc;
 		if (currprefs.cpu_model <= 68010)
-			Exception_build_stack_frame(oldpc, currpc, regs.mmu_ssw, nr, 0x0);
+			Exception_build_stack_frame(oldpc, currpc, regs.mmu_ssw, vector_nr, 0x0);
 		else
-			Exception_build_stack_frame(oldpc, currpc, regs.mmu_ssw, nr, 0x2);
+			Exception_build_stack_frame(oldpc, currpc, regs.mmu_ssw, vector_nr, 0x2);
 	} else if (nr == 60 || nr == 61) {
-		Exception_build_stack_frame(oldpc, regs.instruction_pc, regs.mmu_ssw, nr, 0x0);
+		Exception_build_stack_frame(oldpc, regs.instruction_pc, regs.mmu_ssw, vector_nr, 0x0);
 	} else if (nr >= 48 && nr <= 55) {
 		if (regs.fpu_exp_pre) {
 			if (currprefs.cpu_model == 68060 && nr == 55 && regs.fp_unimp_pend == 2) { // packed decimal real
-				Exception_build_stack_frame(regs.fp_ea, regs.instruction_pc, 0, nr, 0x2);
+				Exception_build_stack_frame(regs.fp_ea, regs.instruction_pc, 0, vector_nr, 0x2);
 			} else {
-				Exception_build_stack_frame(oldpc, regs.instruction_pc, 0, nr, 0x0);
+				Exception_build_stack_frame(oldpc, regs.instruction_pc, 0, vector_nr, 0x0);
 			}
 		} else { /* post-instruction */
 			if (currprefs.cpu_model == 68060 && nr == 55 && regs.fp_unimp_pend == 2) { // packed decimal real
-				Exception_build_stack_frame(regs.fp_ea, currpc, 0, nr, 0x2);
+				Exception_build_stack_frame(regs.fp_ea, currpc, 0, vector_nr, 0x2);
 			} else {
-				Exception_build_stack_frame(oldpc, currpc, 0, nr, 0x3);
+				Exception_build_stack_frame(oldpc, currpc, 0, vector_nr, 0x3);
 			}
 		}
 	} else if (nr == 11 && regs.fp_unimp_ins) {
 		regs.fp_unimp_ins = false;
 		if ((currprefs.cpu_model == 68060 && (currprefs.fpu_model == 0 || (regs.pcr & 2))) ||
 			(currprefs.cpu_model == 68040 && currprefs.fpu_model == 0)) {
-			Exception_build_stack_frame(regs.fp_ea, currpc, regs.instruction_pc, nr, 0x4);
+			Exception_build_stack_frame(regs.fp_ea, currpc, regs.instruction_pc, vector_nr, 0x4);
 		} else {
-			Exception_build_stack_frame(regs.fp_ea, currpc, regs.mmu_ssw, nr, 0x2);
+			Exception_build_stack_frame(regs.fp_ea, currpc, regs.mmu_ssw, vector_nr, 0x2);
 		}
 	} else {
-		Exception_build_stack_frame(oldpc, currpc, regs.mmu_ssw, nr, 0x0);
+		Exception_build_stack_frame(oldpc, currpc, regs.mmu_ssw, vector_nr, 0x0);
 	}
 }
 
