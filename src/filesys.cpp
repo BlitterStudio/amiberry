@@ -1260,8 +1260,8 @@ static bool add_ide_unit(int type, int unit, struct uaedev_config_info *uci)
 					cpuboard_hd = 1;
 					if (ert->add) {
 						struct romconfig *rc = get_device_romconfig(&currprefs, ert->romtype, uci->controller_type_unit);
-						write_log(_T("Adding IDE %s '%s' unit %d ('%s')\n"), getunittype(uci),
-							ert->name, unit, uci->rootdir);
+						write_log(_T("Adding IDE %s '%s' unit %d, controller %d ('%s')\n"), getunittype(uci),
+							ert->name, unit, uci->controller_type_unit, uci->rootdir);
 						ert->add(unit, uci, rc);
 						if ((ert->romtype & ROMTYPE_MASK) == ROMTYPE_MB_IDE) {
 							gayle_ide_in_use = true;
