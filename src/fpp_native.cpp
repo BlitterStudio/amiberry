@@ -584,8 +584,6 @@ static const TCHAR *fp_print(fpdata *fpd, int mode)
 	} else if(isnan(fpd->fp)) {
 		_stprintf(fsout, _T("%c%s"), n ? '-' : '+', _T("nan"));
 	} else {
-		if(n)
-			fpd->fp *= -1.0;
 #ifdef USE_LONG_DOUBLE
 		_stprintf(fsout, _T("#%Le"), fpd->fp);
 #else
