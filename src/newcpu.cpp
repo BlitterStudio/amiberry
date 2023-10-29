@@ -6,7 +6,7 @@
 * (c) 1995 Bernd Schmidt
 */
 
-#define MMUOP_DEBUG 2
+#define MMUOP_DEBUG 0
 #define DEBUG_CD32CDTVIO 0
 #define EXCEPTION3_DEBUGGER 0
 #define CPUTRACE_DEBUG 0
@@ -6832,12 +6832,10 @@ void m68k_dumpstate(uaecptr *nextpc, uaecptr prevpc)
 	if (currprefs.fpu_model) {
 		uae_u32 fpsr;
 		for (i = 0; i < 8; i++) {
-			if (!(i & 1))
-				write_log(_T("%d: "), i);
+			write_log(_T("%d: "), i);
 			write_log (_T("%s "), fpp_print(&regs.fp[i], -1));
 			write_log (_T("%s "), fpp_print(&regs.fp[i], 0));
-			if (i & 1)
-				write_log (_T("\n"));
+			write_log (_T("\n"));
 		}
 		fpsr = fpp_get_fpsr ();
 		write_log (_T("FPSR: %08X FPCR: %08x FPIAR: %08x N=%d Z=%d I=%d NAN=%d\n"),
