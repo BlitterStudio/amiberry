@@ -231,6 +231,7 @@ public:
 		else if (jitena && !oldcache) {
 			changed_prefs.cachesize = MAX_JIT_CACHE;
 			changed_prefs.cpu_cycle_exact = false;
+            changed_prefs.blitter_cycle_exact = false;
 			changed_prefs.cpu_memory_cycle_exact = false;
 			if (!cachesize_prev)
 				trust_prev = 0;
