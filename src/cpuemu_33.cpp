@@ -17654,12 +17654,14 @@ uae_u32 REGPARAM2 op_4890_33_ff(uae_u32 opcode)
 	srca = m68k_areg(regs, dstreg);
 	uae_u16 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
 	while (dmask) {
-		put_word_mmu060(srca, m68k_dreg (regs, movem_index1[dmask]));
+		int predec = 0;
+		put_word_mmu060(srca, m68k_dreg (regs, movem_index1[dmask]) - predec);
 		srca += 2;
 		dmask = movem_next[dmask];
 	}
 	while (amask) {
-		put_word_mmu060(srca, m68k_areg (regs, movem_index1[amask]));
+		int predec = 0;
+		put_word_mmu060(srca, m68k_areg (regs, movem_index1[amask]) - predec);
 		srca += 2;
 		amask = movem_next[amask];
 	}
@@ -17680,12 +17682,14 @@ uae_u32 REGPARAM2 op_48a0_33_ff(uae_u32 opcode)
 	uae_u16 amask = mask & 0xff, dmask = (mask >> 8) & 0xff;
 	while (amask) {
 		srca -= 2;
-		put_word_mmu060(srca, m68k_areg (regs, movem_index2[amask]));
+		int predec = movem_index2[amask] != dstreg ? 0 : 2;
+		put_word_mmu060(srca, m68k_areg (regs, movem_index2[amask]) - predec);
 		amask = movem_next[amask];
 	}
 	while (dmask) {
 		srca -= 2;
-		put_word_mmu060(srca, m68k_dreg (regs, movem_index2[dmask]));
+		int predec = 0;
+		put_word_mmu060(srca, m68k_dreg (regs, movem_index2[dmask]) - predec);
 		dmask = movem_next[dmask];
 	}
 	m68k_areg(regs, dstreg) = srca;
@@ -17705,12 +17709,14 @@ uae_u32 REGPARAM2 op_48a8_33_ff(uae_u32 opcode)
 	srca = m68k_areg(regs, dstreg) + (uae_s32)(uae_s16)get_iword_mmu060(4);
 	uae_u16 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
 	while (dmask) {
-		put_word_mmu060(srca, m68k_dreg (regs, movem_index1[dmask]));
+		int predec = 0;
+		put_word_mmu060(srca, m68k_dreg (regs, movem_index1[dmask]) - predec);
 		srca += 2;
 		dmask = movem_next[dmask];
 	}
 	while (amask) {
-		put_word_mmu060(srca, m68k_areg (regs, movem_index1[amask]));
+		int predec = 0;
+		put_word_mmu060(srca, m68k_areg (regs, movem_index1[amask]) - predec);
 		srca += 2;
 		amask = movem_next[amask];
 	}
@@ -17731,12 +17737,14 @@ uae_u32 REGPARAM2 op_48b0_33_ff(uae_u32 opcode)
 	srca = x_get_disp_ea_020(m68k_areg(regs, dstreg), 0);
 	uae_u16 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
 	while (dmask) {
-		put_word_mmu060(srca, m68k_dreg (regs, movem_index1[dmask]));
+		int predec = 0;
+		put_word_mmu060(srca, m68k_dreg (regs, movem_index1[dmask]) - predec);
 		srca += 2;
 		dmask = movem_next[dmask];
 	}
 	while (amask) {
-		put_word_mmu060(srca, m68k_areg (regs, movem_index1[amask]));
+		int predec = 0;
+		put_word_mmu060(srca, m68k_areg (regs, movem_index1[amask]) - predec);
 		srca += 2;
 		amask = movem_next[amask];
 	}
@@ -17753,12 +17761,14 @@ uae_u32 REGPARAM2 op_48b8_33_ff(uae_u32 opcode)
 	srca = (uae_s32)(uae_s16)get_iword_mmu060(4);
 	uae_u16 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
 	while (dmask) {
-		put_word_mmu060(srca, m68k_dreg (regs, movem_index1[dmask]));
+		int predec = 0;
+		put_word_mmu060(srca, m68k_dreg (regs, movem_index1[dmask]) - predec);
 		srca += 2;
 		dmask = movem_next[dmask];
 	}
 	while (amask) {
-		put_word_mmu060(srca, m68k_areg (regs, movem_index1[amask]));
+		int predec = 0;
+		put_word_mmu060(srca, m68k_areg (regs, movem_index1[amask]) - predec);
 		srca += 2;
 		amask = movem_next[amask];
 	}
@@ -17776,12 +17786,14 @@ uae_u32 REGPARAM2 op_48b9_33_ff(uae_u32 opcode)
 	srca = get_ilong_mmu060(4);
 	uae_u16 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
 	while (dmask) {
-		put_word_mmu060(srca, m68k_dreg (regs, movem_index1[dmask]));
+		int predec = 0;
+		put_word_mmu060(srca, m68k_dreg (regs, movem_index1[dmask]) - predec);
 		srca += 2;
 		dmask = movem_next[dmask];
 	}
 	while (amask) {
-		put_word_mmu060(srca, m68k_areg (regs, movem_index1[amask]));
+		int predec = 0;
+		put_word_mmu060(srca, m68k_areg (regs, movem_index1[amask]) - predec);
 		srca += 2;
 		amask = movem_next[amask];
 	}
@@ -17818,12 +17830,14 @@ uae_u32 REGPARAM2 op_48d0_33_ff(uae_u32 opcode)
 	srca = m68k_areg(regs, dstreg);
 	uae_u16 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
 	while (dmask) {
-		put_long_mmu060(srca, m68k_dreg (regs, movem_index1[dmask]));
+		int predec = 0;
+		put_long_mmu060(srca, m68k_dreg (regs, movem_index1[dmask]) - predec);
 		srca += 4;
 		dmask = movem_next[dmask];
 	}
 	while (amask) {
-		put_long_mmu060(srca, m68k_areg (regs, movem_index1[amask]));
+		int predec = 0;
+		put_long_mmu060(srca, m68k_areg (regs, movem_index1[amask]) - predec);
 		srca += 4;
 		amask = movem_next[amask];
 	}
@@ -17844,12 +17858,14 @@ uae_u32 REGPARAM2 op_48e0_33_ff(uae_u32 opcode)
 	uae_u16 amask = mask & 0xff, dmask = (mask >> 8) & 0xff;
 	while (amask) {
 		srca -= 4;
-		put_long_mmu060(srca, m68k_areg (regs, movem_index2[amask]));
+		int predec = movem_index2[amask] != dstreg ? 0 : 4;
+		put_long_mmu060(srca, m68k_areg (regs, movem_index2[amask]) - predec);
 		amask = movem_next[amask];
 	}
 	while (dmask) {
 		srca -= 4;
-		put_long_mmu060(srca, m68k_dreg (regs, movem_index2[dmask]));
+		int predec = 0;
+		put_long_mmu060(srca, m68k_dreg (regs, movem_index2[dmask]) - predec);
 		dmask = movem_next[dmask];
 	}
 	m68k_areg(regs, dstreg) = srca;
@@ -17869,12 +17885,14 @@ uae_u32 REGPARAM2 op_48e8_33_ff(uae_u32 opcode)
 	srca = m68k_areg(regs, dstreg) + (uae_s32)(uae_s16)get_iword_mmu060(4);
 	uae_u16 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
 	while (dmask) {
-		put_long_mmu060(srca, m68k_dreg (regs, movem_index1[dmask]));
+		int predec = 0;
+		put_long_mmu060(srca, m68k_dreg (regs, movem_index1[dmask]) - predec);
 		srca += 4;
 		dmask = movem_next[dmask];
 	}
 	while (amask) {
-		put_long_mmu060(srca, m68k_areg (regs, movem_index1[amask]));
+		int predec = 0;
+		put_long_mmu060(srca, m68k_areg (regs, movem_index1[amask]) - predec);
 		srca += 4;
 		amask = movem_next[amask];
 	}
@@ -17895,12 +17913,14 @@ uae_u32 REGPARAM2 op_48f0_33_ff(uae_u32 opcode)
 	srca = x_get_disp_ea_020(m68k_areg(regs, dstreg), 0);
 	uae_u16 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
 	while (dmask) {
-		put_long_mmu060(srca, m68k_dreg (regs, movem_index1[dmask]));
+		int predec = 0;
+		put_long_mmu060(srca, m68k_dreg (regs, movem_index1[dmask]) - predec);
 		srca += 4;
 		dmask = movem_next[dmask];
 	}
 	while (amask) {
-		put_long_mmu060(srca, m68k_areg (regs, movem_index1[amask]));
+		int predec = 0;
+		put_long_mmu060(srca, m68k_areg (regs, movem_index1[amask]) - predec);
 		srca += 4;
 		amask = movem_next[amask];
 	}
@@ -17917,12 +17937,14 @@ uae_u32 REGPARAM2 op_48f8_33_ff(uae_u32 opcode)
 	srca = (uae_s32)(uae_s16)get_iword_mmu060(4);
 	uae_u16 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
 	while (dmask) {
-		put_long_mmu060(srca, m68k_dreg (regs, movem_index1[dmask]));
+		int predec = 0;
+		put_long_mmu060(srca, m68k_dreg (regs, movem_index1[dmask]) - predec);
 		srca += 4;
 		dmask = movem_next[dmask];
 	}
 	while (amask) {
-		put_long_mmu060(srca, m68k_areg (regs, movem_index1[amask]));
+		int predec = 0;
+		put_long_mmu060(srca, m68k_areg (regs, movem_index1[amask]) - predec);
 		srca += 4;
 		amask = movem_next[amask];
 	}
@@ -17940,12 +17962,14 @@ uae_u32 REGPARAM2 op_48f9_33_ff(uae_u32 opcode)
 	srca = get_ilong_mmu060(4);
 	uae_u16 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
 	while (dmask) {
-		put_long_mmu060(srca, m68k_dreg (regs, movem_index1[dmask]));
+		int predec = 0;
+		put_long_mmu060(srca, m68k_dreg (regs, movem_index1[dmask]) - predec);
 		srca += 4;
 		dmask = movem_next[dmask];
 	}
 	while (amask) {
-		put_long_mmu060(srca, m68k_areg (regs, movem_index1[amask]));
+		int predec = 0;
+		put_long_mmu060(srca, m68k_areg (regs, movem_index1[amask]) - predec);
 		srca += 4;
 		amask = movem_next[amask];
 	}

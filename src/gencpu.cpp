@@ -4350,7 +4350,12 @@ static void movem_mmu060 (const char *code, int size, bool put, bool aipi, bool 
 			if (apdi)
 				out("srca -= %d;\n", size);
 			if (put) {
-				out("%s, m68k_%creg (regs, %s[%cmask]));\n", code, reg, index, reg);
+				if (apdi && !i) {
+					out("int predec = movem_index2[amask] != dstreg ? 0 : %d;\n", size);
+				} else {
+					out("int predec = 0;\n");
+				}
+				out("%s, m68k_%creg (regs, %s[%cmask]) - predec);\n", code, reg, index, reg);
 			} else {
 				out("m68k_%creg (regs, %s[%cmask]) = %s;\n", reg, index, reg, code);
 			}
@@ -4398,7 +4403,12 @@ static void movem_mmu040 (const char *code, int size, bool put, bool aipi, bool 
 		if (apdi)
 			out("srca -= %d;\n", size);
 		if (put) {
-			out("%s, m68k_%creg (regs, %s[%cmask]));\n", code, reg, index, reg);
+			if (apdi && !i) {
+				out("int predec = movem_index2[amask] != dstreg ? 0 : %d;\n", size);
+			} else {
+				out("int predec = 0;\n");
+			}
+			out("%s, m68k_%creg (regs, %s[%cmask]) - predec);\n", code, reg, index, reg);
 		} else {
 			out("m68k_%creg (regs, %s[%cmask]) = %s;\n", reg, index, reg, code);
 		}
@@ -4455,7 +4465,12 @@ static void movem_mmu030 (const char *code, int size, bool put, bool aipi, bool 
 			out("val = %smmu030_data_buffer_out;\n", size == 2 ? "(uae_s32)(uae_s16)" : "");
 		out("} else {\n");
 		if (put) {
-			out("mmu030_data_buffer_out = m68k_%creg(regs, %s[%cmask]);\n", reg, index, reg);
+			if (apdi && !i) {
+				out("int predec = movem_index2[amask] != dstreg ? 0 : %d;\n", size);
+			} else {
+				out("int predec = 0;\n");
+			}
+			out("mmu030_data_buffer_out = m68k_%creg(regs, %s[%cmask]) - predec;\n", reg, index, reg);
 			if (MMU68030_LAST_WRITE) {
 				// last write?
 				if (dphase == i)
@@ -4750,9 +4765,7 @@ static void genmovemle(uae_u16 opcode)
 		if (table68k[opcode].dmode == Apdi) {
 			out("uae_u16 amask = mask & 0xff, dmask = (mask >> 8) & 0xff;\n");
 			movem_ex3(1);
-			if (!using_mmu) {
-				out("int type = %d;\n", cpu_level > 1);
-			}
+			out("int type = %d;\n", cpu_level > 1);
 			out("while (amask) {\n");
 			out("srca -= %d;\n", size);
 

@@ -19454,7 +19454,8 @@ uae_u32 REGPARAM2 op_4890_34_ff(uae_u32 opcode)
 			if (mmu030_state[1] & MMU030_STATEFLAG1_MOVEM2) {
 				mmu030_state[1] &= ~MMU030_STATEFLAG1_MOVEM2;
 			} else {
-				mmu030_data_buffer_out = m68k_dreg(regs, movem_index1[dmask]);
+				int predec = 0;
+				mmu030_data_buffer_out = m68k_dreg(regs, movem_index1[dmask]) - predec;
 				if(!amask && !nextmask) {
 					regs.irc = get_iword_mmu030c_opcode_state(4);
 					m68k_incpci(4);
@@ -19477,7 +19478,8 @@ uae_u32 REGPARAM2 op_4890_34_ff(uae_u32 opcode)
 			if (mmu030_state[1] & MMU030_STATEFLAG1_MOVEM2) {
 				mmu030_state[1] &= ~MMU030_STATEFLAG1_MOVEM2;
 			} else {
-				mmu030_data_buffer_out = m68k_areg(regs, movem_index1[amask]);
+				int predec = 0;
+				mmu030_data_buffer_out = m68k_areg(regs, movem_index1[amask]) - predec;
 				if(!dmask && !nextmask) {
 					regs.irc = get_iword_mmu030c_opcode_state(4);
 					m68k_incpci(4);
@@ -19522,7 +19524,8 @@ uae_u32 REGPARAM2 op_48a0_34_ff(uae_u32 opcode)
 			if (mmu030_state[1] & MMU030_STATEFLAG1_MOVEM2) {
 				mmu030_state[1] &= ~MMU030_STATEFLAG1_MOVEM2;
 			} else {
-				mmu030_data_buffer_out = m68k_areg(regs, movem_index2[amask]);
+				int predec = movem_index2[amask] != dstreg ? 0 : 2;
+				mmu030_data_buffer_out = m68k_areg(regs, movem_index2[amask]) - predec;
 				if(!dmask && !nextmask) {
 					regs.irc = get_iword_mmu030c_opcode_state(4);
 					m68k_incpci(4);
@@ -19546,7 +19549,8 @@ uae_u32 REGPARAM2 op_48a0_34_ff(uae_u32 opcode)
 			if (mmu030_state[1] & MMU030_STATEFLAG1_MOVEM2) {
 				mmu030_state[1] &= ~MMU030_STATEFLAG1_MOVEM2;
 			} else {
-				mmu030_data_buffer_out = m68k_dreg(regs, movem_index2[dmask]);
+				int predec = 0;
+				mmu030_data_buffer_out = m68k_dreg(regs, movem_index2[dmask]) - predec;
 				if(!amask && !nextmask) {
 					regs.irc = get_iword_mmu030c_opcode_state(4);
 					m68k_incpci(4);
@@ -19591,7 +19595,8 @@ uae_u32 REGPARAM2 op_48a8_34_ff(uae_u32 opcode)
 			if (mmu030_state[1] & MMU030_STATEFLAG1_MOVEM2) {
 				mmu030_state[1] &= ~MMU030_STATEFLAG1_MOVEM2;
 			} else {
-				mmu030_data_buffer_out = m68k_dreg(regs, movem_index1[dmask]);
+				int predec = 0;
+				mmu030_data_buffer_out = m68k_dreg(regs, movem_index1[dmask]) - predec;
 				if(!amask && !nextmask) {
 					regs.irc = get_iword_mmu030c_opcode_state(6);
 					m68k_incpci(6);
@@ -19614,7 +19619,8 @@ uae_u32 REGPARAM2 op_48a8_34_ff(uae_u32 opcode)
 			if (mmu030_state[1] & MMU030_STATEFLAG1_MOVEM2) {
 				mmu030_state[1] &= ~MMU030_STATEFLAG1_MOVEM2;
 			} else {
-				mmu030_data_buffer_out = m68k_areg(regs, movem_index1[amask]);
+				int predec = 0;
+				mmu030_data_buffer_out = m68k_areg(regs, movem_index1[amask]) - predec;
 				if(!dmask && !nextmask) {
 					regs.irc = get_iword_mmu030c_opcode_state(6);
 					m68k_incpci(6);
@@ -19659,7 +19665,8 @@ uae_u32 REGPARAM2 op_48b0_34_ff(uae_u32 opcode)
 			if (mmu030_state[1] & MMU030_STATEFLAG1_MOVEM2) {
 				mmu030_state[1] &= ~MMU030_STATEFLAG1_MOVEM2;
 			} else {
-				mmu030_data_buffer_out = m68k_dreg(regs, movem_index1[dmask]);
+				int predec = 0;
+				mmu030_data_buffer_out = m68k_dreg(regs, movem_index1[dmask]) - predec;
 				if(!amask && !nextmask) {
 					regs.irc = get_iword_mmu030c_opcode_state(0);
 					regs.instruction_pc = m68k_getpci();
@@ -19681,7 +19688,8 @@ uae_u32 REGPARAM2 op_48b0_34_ff(uae_u32 opcode)
 			if (mmu030_state[1] & MMU030_STATEFLAG1_MOVEM2) {
 				mmu030_state[1] &= ~MMU030_STATEFLAG1_MOVEM2;
 			} else {
-				mmu030_data_buffer_out = m68k_areg(regs, movem_index1[amask]);
+				int predec = 0;
+				mmu030_data_buffer_out = m68k_areg(regs, movem_index1[amask]) - predec;
 				if(!dmask && !nextmask) {
 					regs.irc = get_iword_mmu030c_opcode_state(0);
 					regs.instruction_pc = m68k_getpci();
@@ -19721,7 +19729,8 @@ uae_u32 REGPARAM2 op_48b8_34_ff(uae_u32 opcode)
 			if (mmu030_state[1] & MMU030_STATEFLAG1_MOVEM2) {
 				mmu030_state[1] &= ~MMU030_STATEFLAG1_MOVEM2;
 			} else {
-				mmu030_data_buffer_out = m68k_dreg(regs, movem_index1[dmask]);
+				int predec = 0;
+				mmu030_data_buffer_out = m68k_dreg(regs, movem_index1[dmask]) - predec;
 				if(!amask && !nextmask) {
 					regs.irc = get_iword_mmu030c_opcode_state(6);
 					m68k_incpci(6);
@@ -19744,7 +19753,8 @@ uae_u32 REGPARAM2 op_48b8_34_ff(uae_u32 opcode)
 			if (mmu030_state[1] & MMU030_STATEFLAG1_MOVEM2) {
 				mmu030_state[1] &= ~MMU030_STATEFLAG1_MOVEM2;
 			} else {
-				mmu030_data_buffer_out = m68k_areg(regs, movem_index1[amask]);
+				int predec = 0;
+				mmu030_data_buffer_out = m68k_areg(regs, movem_index1[amask]) - predec;
 				if(!dmask && !nextmask) {
 					regs.irc = get_iword_mmu030c_opcode_state(6);
 					m68k_incpci(6);
@@ -19786,7 +19796,8 @@ uae_u32 REGPARAM2 op_48b9_34_ff(uae_u32 opcode)
 			if (mmu030_state[1] & MMU030_STATEFLAG1_MOVEM2) {
 				mmu030_state[1] &= ~MMU030_STATEFLAG1_MOVEM2;
 			} else {
-				mmu030_data_buffer_out = m68k_dreg(regs, movem_index1[dmask]);
+				int predec = 0;
+				mmu030_data_buffer_out = m68k_dreg(regs, movem_index1[dmask]) - predec;
 				if(!amask && !nextmask) {
 					regs.irc = get_iword_mmu030c_opcode_state(8);
 					m68k_incpci(8);
@@ -19809,7 +19820,8 @@ uae_u32 REGPARAM2 op_48b9_34_ff(uae_u32 opcode)
 			if (mmu030_state[1] & MMU030_STATEFLAG1_MOVEM2) {
 				mmu030_state[1] &= ~MMU030_STATEFLAG1_MOVEM2;
 			} else {
-				mmu030_data_buffer_out = m68k_areg(regs, movem_index1[amask]);
+				int predec = 0;
+				mmu030_data_buffer_out = m68k_areg(regs, movem_index1[amask]) - predec;
 				if(!dmask && !nextmask) {
 					regs.irc = get_iword_mmu030c_opcode_state(8);
 					m68k_incpci(8);
@@ -19871,7 +19883,8 @@ uae_u32 REGPARAM2 op_48d0_34_ff(uae_u32 opcode)
 			if (mmu030_state[1] & MMU030_STATEFLAG1_MOVEM2) {
 				mmu030_state[1] &= ~MMU030_STATEFLAG1_MOVEM2;
 			} else {
-				mmu030_data_buffer_out = m68k_dreg(regs, movem_index1[dmask]);
+				int predec = 0;
+				mmu030_data_buffer_out = m68k_dreg(regs, movem_index1[dmask]) - predec;
 				if(!amask && !nextmask) {
 					regs.irc = get_iword_mmu030c_opcode_state(4);
 					m68k_incpci(4);
@@ -19894,7 +19907,8 @@ uae_u32 REGPARAM2 op_48d0_34_ff(uae_u32 opcode)
 			if (mmu030_state[1] & MMU030_STATEFLAG1_MOVEM2) {
 				mmu030_state[1] &= ~MMU030_STATEFLAG1_MOVEM2;
 			} else {
-				mmu030_data_buffer_out = m68k_areg(regs, movem_index1[amask]);
+				int predec = 0;
+				mmu030_data_buffer_out = m68k_areg(regs, movem_index1[amask]) - predec;
 				if(!dmask && !nextmask) {
 					regs.irc = get_iword_mmu030c_opcode_state(4);
 					m68k_incpci(4);
@@ -19939,7 +19953,8 @@ uae_u32 REGPARAM2 op_48e0_34_ff(uae_u32 opcode)
 			if (mmu030_state[1] & MMU030_STATEFLAG1_MOVEM2) {
 				mmu030_state[1] &= ~MMU030_STATEFLAG1_MOVEM2;
 			} else {
-				mmu030_data_buffer_out = m68k_areg(regs, movem_index2[amask]);
+				int predec = movem_index2[amask] != dstreg ? 0 : 4;
+				mmu030_data_buffer_out = m68k_areg(regs, movem_index2[amask]) - predec;
 				if(!dmask && !nextmask) {
 					regs.irc = get_iword_mmu030c_opcode_state(4);
 					m68k_incpci(4);
@@ -19963,7 +19978,8 @@ uae_u32 REGPARAM2 op_48e0_34_ff(uae_u32 opcode)
 			if (mmu030_state[1] & MMU030_STATEFLAG1_MOVEM2) {
 				mmu030_state[1] &= ~MMU030_STATEFLAG1_MOVEM2;
 			} else {
-				mmu030_data_buffer_out = m68k_dreg(regs, movem_index2[dmask]);
+				int predec = 0;
+				mmu030_data_buffer_out = m68k_dreg(regs, movem_index2[dmask]) - predec;
 				if(!amask && !nextmask) {
 					regs.irc = get_iword_mmu030c_opcode_state(4);
 					m68k_incpci(4);
@@ -20008,7 +20024,8 @@ uae_u32 REGPARAM2 op_48e8_34_ff(uae_u32 opcode)
 			if (mmu030_state[1] & MMU030_STATEFLAG1_MOVEM2) {
 				mmu030_state[1] &= ~MMU030_STATEFLAG1_MOVEM2;
 			} else {
-				mmu030_data_buffer_out = m68k_dreg(regs, movem_index1[dmask]);
+				int predec = 0;
+				mmu030_data_buffer_out = m68k_dreg(regs, movem_index1[dmask]) - predec;
 				if(!amask && !nextmask) {
 					regs.irc = get_iword_mmu030c_opcode_state(6);
 					m68k_incpci(6);
@@ -20031,7 +20048,8 @@ uae_u32 REGPARAM2 op_48e8_34_ff(uae_u32 opcode)
 			if (mmu030_state[1] & MMU030_STATEFLAG1_MOVEM2) {
 				mmu030_state[1] &= ~MMU030_STATEFLAG1_MOVEM2;
 			} else {
-				mmu030_data_buffer_out = m68k_areg(regs, movem_index1[amask]);
+				int predec = 0;
+				mmu030_data_buffer_out = m68k_areg(regs, movem_index1[amask]) - predec;
 				if(!dmask && !nextmask) {
 					regs.irc = get_iword_mmu030c_opcode_state(6);
 					m68k_incpci(6);
@@ -20076,7 +20094,8 @@ uae_u32 REGPARAM2 op_48f0_34_ff(uae_u32 opcode)
 			if (mmu030_state[1] & MMU030_STATEFLAG1_MOVEM2) {
 				mmu030_state[1] &= ~MMU030_STATEFLAG1_MOVEM2;
 			} else {
-				mmu030_data_buffer_out = m68k_dreg(regs, movem_index1[dmask]);
+				int predec = 0;
+				mmu030_data_buffer_out = m68k_dreg(regs, movem_index1[dmask]) - predec;
 				if(!amask && !nextmask) {
 					regs.irc = get_iword_mmu030c_opcode_state(0);
 					regs.instruction_pc = m68k_getpci();
@@ -20098,7 +20117,8 @@ uae_u32 REGPARAM2 op_48f0_34_ff(uae_u32 opcode)
 			if (mmu030_state[1] & MMU030_STATEFLAG1_MOVEM2) {
 				mmu030_state[1] &= ~MMU030_STATEFLAG1_MOVEM2;
 			} else {
-				mmu030_data_buffer_out = m68k_areg(regs, movem_index1[amask]);
+				int predec = 0;
+				mmu030_data_buffer_out = m68k_areg(regs, movem_index1[amask]) - predec;
 				if(!dmask && !nextmask) {
 					regs.irc = get_iword_mmu030c_opcode_state(0);
 					regs.instruction_pc = m68k_getpci();
@@ -20138,7 +20158,8 @@ uae_u32 REGPARAM2 op_48f8_34_ff(uae_u32 opcode)
 			if (mmu030_state[1] & MMU030_STATEFLAG1_MOVEM2) {
 				mmu030_state[1] &= ~MMU030_STATEFLAG1_MOVEM2;
 			} else {
-				mmu030_data_buffer_out = m68k_dreg(regs, movem_index1[dmask]);
+				int predec = 0;
+				mmu030_data_buffer_out = m68k_dreg(regs, movem_index1[dmask]) - predec;
 				if(!amask && !nextmask) {
 					regs.irc = get_iword_mmu030c_opcode_state(6);
 					m68k_incpci(6);
@@ -20161,7 +20182,8 @@ uae_u32 REGPARAM2 op_48f8_34_ff(uae_u32 opcode)
 			if (mmu030_state[1] & MMU030_STATEFLAG1_MOVEM2) {
 				mmu030_state[1] &= ~MMU030_STATEFLAG1_MOVEM2;
 			} else {
-				mmu030_data_buffer_out = m68k_areg(regs, movem_index1[amask]);
+				int predec = 0;
+				mmu030_data_buffer_out = m68k_areg(regs, movem_index1[amask]) - predec;
 				if(!dmask && !nextmask) {
 					regs.irc = get_iword_mmu030c_opcode_state(6);
 					m68k_incpci(6);
@@ -20203,7 +20225,8 @@ uae_u32 REGPARAM2 op_48f9_34_ff(uae_u32 opcode)
 			if (mmu030_state[1] & MMU030_STATEFLAG1_MOVEM2) {
 				mmu030_state[1] &= ~MMU030_STATEFLAG1_MOVEM2;
 			} else {
-				mmu030_data_buffer_out = m68k_dreg(regs, movem_index1[dmask]);
+				int predec = 0;
+				mmu030_data_buffer_out = m68k_dreg(regs, movem_index1[dmask]) - predec;
 				if(!amask && !nextmask) {
 					regs.irc = get_iword_mmu030c_opcode_state(8);
 					m68k_incpci(8);
@@ -20226,7 +20249,8 @@ uae_u32 REGPARAM2 op_48f9_34_ff(uae_u32 opcode)
 			if (mmu030_state[1] & MMU030_STATEFLAG1_MOVEM2) {
 				mmu030_state[1] &= ~MMU030_STATEFLAG1_MOVEM2;
 			} else {
-				mmu030_data_buffer_out = m68k_areg(regs, movem_index1[amask]);
+				int predec = 0;
+				mmu030_data_buffer_out = m68k_areg(regs, movem_index1[amask]) - predec;
 				if(!dmask && !nextmask) {
 					regs.irc = get_iword_mmu030c_opcode_state(8);
 					m68k_incpci(8);
