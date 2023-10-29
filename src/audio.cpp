@@ -1522,7 +1522,7 @@ static void loaddat (int nr, bool modper)
 			return;
 		if (modper && audap) {
 			if (cdp->dat == 0)
-				cdp[1].per = 65536 * CYCLE_UNIT;
+                cdp[1].per = 65536 * CYCLE_UNIT;
 			else if (cdp->dat > PERIOD_MIN)
 				cdp[1].per = cdp->dat * CYCLE_UNIT;
 			else
@@ -1922,7 +1922,10 @@ void audio_reset (void)
 			audio_stream[i].evtime = MAX_EV;
 		}
 	}
-
+	audio_total_extra_streams = 0;
+	for (int i = 0; i < AUDIO_CHANNEL_STREAMS; i++) {
+		audio_extra_streams[i] = 0;
+	}
 	last_cycles = get_cycles ();
 	next_sample_evtime = scaled_sample_evtime;
 	schedule_audio ();
@@ -1949,6 +1952,7 @@ static int sound_prefs_changed (void)
 		|| changed_prefs.sound_volume_cd != currprefs.sound_volume_cd
 		|| changed_prefs.sound_volume_master != currprefs.sound_volume_master
 		|| changed_prefs.sound_volume_board != currprefs.sound_volume_board
+		|| changed_prefs.sound_volume_midi != currprefs.sound_volume_midi
 		|| changed_prefs.sound_stereo_swap_paula != currprefs.sound_stereo_swap_paula
 		|| changed_prefs.sound_stereo_swap_ahi != currprefs.sound_stereo_swap_ahi
 		|| changed_prefs.sound_filter != currprefs.sound_filter
@@ -2037,6 +2041,7 @@ void set_audio (void)
 	currprefs.sound_volume_paula = changed_prefs.sound_volume_paula;
 	currprefs.sound_volume_master = changed_prefs.sound_volume_master;
 	currprefs.sound_volume_board = changed_prefs.sound_volume_board;
+	currprefs.sound_volume_midi = changed_prefs.sound_volume_midi;
 	currprefs.sound_volume_cd = changed_prefs.sound_volume_cd;
 	currprefs.sound_stereo_swap_paula = changed_prefs.sound_stereo_swap_paula;
 	currprefs.sound_stereo_swap_ahi = changed_prefs.sound_stereo_swap_ahi;
@@ -2147,10 +2152,6 @@ void set_audio (void)
 		} else {
 			cdp->data.mixvol = 0;
 		}
-	}
-	audio_total_extra_streams = 0;
-	for (int i = 0; i < AUDIO_CHANNEL_STREAMS; i++) {
-		audio_extra_streams[i] = 0;
 	}
 	set_extra_prehandler();
 
