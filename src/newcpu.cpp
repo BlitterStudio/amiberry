@@ -2188,6 +2188,7 @@ static void prefs_changed_cpu (void)
 	check_prefs_changed_comp(false);
 	currprefs.cpu_model = changed_prefs.cpu_model;
 	currprefs.fpu_model = changed_prefs.fpu_model;
+	currprefs.fpu_revision = changed_prefs.fpu_revision;
 	if (currprefs.mmu_model != changed_prefs.mmu_model) {
 		int oldmmu = currprefs.mmu_model;
 		currprefs.mmu_model = changed_prefs.mmu_model;
@@ -2243,6 +2244,7 @@ static int check_prefs_changed_cpu2(void)
 	if (changed
 		|| currprefs.cpu_model != changed_prefs.cpu_model
 		|| currprefs.fpu_model != changed_prefs.fpu_model
+		|| currprefs.fpu_revision != changed_prefs.fpu_revision
 		|| currprefs.mmu_model != changed_prefs.mmu_model
 		|| currprefs.mmu_ec != changed_prefs.mmu_ec
 		|| currprefs.cpu_data_cache != changed_prefs.cpu_data_cache
