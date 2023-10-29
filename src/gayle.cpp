@@ -1425,8 +1425,9 @@ static void check_sram_flush (int addr)
 			int start = pcmcia_write_min & mask;
 			int end = (pcmcia_write_max + blocksize - 1) & mask;
 			int len = end - start;
+			uae_u32 error = 0;
 			if (len > 0) {
-				hdf_write (&pcmcia_disk->hfd, pcmcia_common + start, start, len);
+				hdf_write (&pcmcia_disk->hfd, pcmcia_common + start, start, len, &error);
 				pcmcia_write_min = -1;
 				pcmcia_write_max = -1;
 			}
@@ -1511,6 +1512,7 @@ static int initpcmcia (const TCHAR *path, int readonly, int type, int reset, str
 
 		if (!pcmcia_disk->hfd.drive_empty) {
 			int extrasize = 0;
+			uae_u32 error = 0;
 			pcmcia_common_size = (int)pcmcia_disk->hfd.virtsize;
 			if (pcmcia_disk->hfd.virtsize > 4 * 1024 * 1024) {
 				write_log (_T("PCMCIA SRAM: too large device, %llu bytes\n"), pcmcia_disk->hfd.virtsize);
@@ -1521,10 +1523,10 @@ static int initpcmcia (const TCHAR *path, int readonly, int type, int reset, str
 				pcmcia_common_size = 4 * 1024 * 1024;
 			}
 			pcmcia_common = xcalloc (uae_u8, pcmcia_common_size);
-			hdf_read (&pcmcia_disk->hfd, pcmcia_common, 0, pcmcia_common_size);
+			hdf_read (&pcmcia_disk->hfd, pcmcia_common, 0, pcmcia_common_size, &error);
 			pcmcia_card = 1;
 			if (extrasize >= 512 && extrasize < 1 * 1024 * 1024) {
-				hdf_read(&pcmcia_disk->hfd, pcmcia_attrs, pcmcia_common_size, extrasize);
+				hdf_read(&pcmcia_disk->hfd, pcmcia_attrs, pcmcia_common_size, extrasize, &error);
 				write_log(_T("PCMCIA SRAM: Attribute data read %ld bytes\n"), extrasize);
 				pcmcia_attrs_full = 1;
 			} else {
