@@ -1312,7 +1312,7 @@ static void zerostate (int nr)
 	cdp->state = 0;
 	cdp->irqcheck = 0;
 	cdp->evtime = MAX_EV;
-	cdp->intreq2 = 0;
+	cdp->intreq2 = false;
 	cdp->dmaenstore = false;
 	cdp->dmaofftime_active = 0;
 	cdp->volcnt = 0;
@@ -1653,6 +1653,7 @@ static bool audio_state_channel2 (int nr, bool perfin)
 		write_log (_T("%d:DMA=%d IRQ=%d PC=%08x\n"), nr, chan_ena, isirq (nr) ? 1 : 0, M68K_GETPC);
 	}
 #endif
+
 	switch (cdp->state)
 	{
 	case 0:
@@ -1672,57 +1673,57 @@ static bool audio_state_channel2 (int nr, bool perfin)
 			cdp->have_dat = false;
 #endif
 #if DEBUG_AUDIO > 0
-			if (debugchannel (nr)) {
-				write_log (_T("%d:0>1: LEN=%d PC=%08x\n"), nr, cdp->wlen, M68K_GETPC);
+			if (debugchannel(nr)) {
+				write_log(_T("%d:0>1: LEN=%d PC=%08x\n"), nr, cdp->wlen, M68K_GETPC);
 			}
 #endif
 		} else if (cdp->dat_written && !isirq (nr)) {
 			cdp->state = 2;
-			setirq (nr, 0);
-			loaddat (nr);
+			setirq(nr, 0);
+			loaddat(nr);
 			if (usehacks() && cdp->per < 10 * CYCLE_UNIT) {
 				static int warned = 100;
 				// make sure audio.device AUDxDAT startup returns to idle state before DMA is enabled
-				newsample (nr, (cdp->dat2 >> 0) & 0xff);
-				zerostate (nr);
+				newsample(nr, (cdp->dat2 >> 0) & 0xff);
+				zerostate(nr);
 				if (warned > 0) {
 					write_log(_T("AUD%d: forced idle state PER=%d PC=%08x\n"), nr, cdp->per, M68K_GETPC);
 					warned--;
 				}
 			} else {
 				cdp->pbufldl = true;
-				audio_state_channel2 (nr, false);
+				audio_state_channel2(nr, false);
 			}
 		} else {
-			zerostate (nr);
+			zerostate(nr);
 		}
 		break;
 	case 1:
 		cdp->evtime = MAX_EV;
 		if (!chan_ena) {
-			zerostate (nr);
+			zerostate(nr);
 			return true;
 		}
 		if (!cdp->dat_written)
 			return true;
 #if TEST_AUDIO > 0
-		if (debugchannel (nr) && !cdp->have_dat)
-			write_log (_T("%d: state 1 but no have_dat\n"), nr);
+		if (debugchannel(nr) && !cdp->have_dat)
+			write_log(_T("%d: state 1 but no have_dat\n"), nr);
 		cdp->have_dat = false;
 		cdp->losample = cdp->hisample = false;
 #endif
-		setirq (nr, 10);
+		setirq(nr, 10);
 		setdr(nr, false);
 		if (cdp->wlen != 1)
 			cdp->wlen = (cdp->wlen - 1) & 0xffff;
 		cdp->state = 5;
 		if (sampleripper_enabled)
-			do_samplerip (cdp);
+			do_samplerip(cdp);
 		break;
 	case 5:
 		cdp->evtime = MAX_EV;
 		if (!chan_ena) {
-			zerostate (nr);
+			zerostate(nr);
 			return true;
 		}
 		if (!cdp->dat_written)
@@ -1735,25 +1736,25 @@ static bool audio_state_channel2 (int nr, bool perfin)
 			cdp->ptx_written = 0;
 			cdp->lc = cdp->ptx;
 		}
-		loaddat (nr);
+		loaddat(nr);
 		if (napnav)
 			setdr(nr, false);
 		cdp->state = 2;
-		loadper (nr);
+		loadper(nr);
 		cdp->pbufldl = true;
-		cdp->intreq2 = 0;
+		cdp->intreq2 = false;
 		cdp->volcnt = 0;
-		audio_state_channel2 (nr, false);
+		audio_state_channel2(nr, false);
 		break;
 	case 2:
 		if (cdp->pbufldl) {
 #if TEST_AUDIO > 0
-			if (debugchannel (nr) && cdp->hisample == false)
-				write_log (_T("%d: high sample used twice\n"), nr);
+			if (debugchannel(nr) && cdp->hisample == false)
+				write_log(_T("%d: high sample used twice\n"), nr);
 			cdp->hisample = false;
 #endif
-			newsample (nr, (cdp->dat2 >> 8) & 0xff);
-			loadper (nr);
+			newsample(nr, (cdp->dat2 >> 8) & 0xff);
+			loadper(nr);
 			cdp->pbufldl = false;
 		}
 		if (!perfin)
@@ -1772,20 +1773,20 @@ static bool audio_state_channel2 (int nr, bool perfin)
 #endif
 
 		if (audap)
-			loaddat (nr, true);
+			loaddat(nr, true);
 		if (chan_ena) {
 			if (audap)
 				setdr(nr, false);
 			if (cdp->intreq2 && audap)
-				setirq (nr, 21);
+				setirq(nr, 21);
 		} else {
 			if (audap)
-				setirq (nr, 22);
+				setirq(nr, 22);
 		}
 		cdp->pbufldl = true;
 		cdp->irqcheck = 0;
 		cdp->state = 3;
-		audio_state_channel2 (nr, false);
+		audio_state_channel2(nr, false);
 		break;
 
 	case 3 + 0x10: // manual audio period==1 cycle
@@ -1804,11 +1805,11 @@ static bool audio_state_channel2 (int nr, bool perfin)
 	case 3:
 		if (cdp->pbufldl) {
 #if TEST_AUDIO > 0
-			if (debugchannel (nr) && cdp->losample == false)
-				write_log (_T("%d: low sample used twice\n"), nr);
+			if (debugchannel(nr) && cdp->losample == false)
+				write_log(_T("%d: low sample used twice\n"), nr);
 			cdp->losample = false;
 #endif
-			newsample (nr, (cdp->dat2 >> 0) & 0xff);
+			newsample(nr, (cdp->dat2 >> 0) & 0xff);
 			if (chan_ena) {
 				loadper(nr);
 			} else {
@@ -1834,11 +1835,13 @@ static bool audio_state_channel2 (int nr, bool perfin)
 
 		if (chan_ena) {
 			loaddat (nr);
-			if (cdp->intreq2 && napnav)
-				setirq (nr, 31);
 			if (napnav)
 				setdr(nr, false);
+			if (cdp->intreq2 && napnav)
+				setirq(nr, 31);
 		} else {
+			if (napnav)
+				setirq(nr, 32);
 			// cycle-accurate period check was not needed, do delayed check
 			if (!cdp->irqcheck) {
 				cdp->irqcheck = isirq(nr);
@@ -1846,19 +1849,17 @@ static bool audio_state_channel2 (int nr, bool perfin)
 			if (cdp->irqcheck > 0) {
 #if DEBUG_AUDIO > 0
 				if (debugchannel (nr))
-					write_log (_T("%d: IDLE\n"), nr);
+					write_log(_T("%d: IDLE\n"), nr);
 #endif			
-				zerostate (nr);
+				zerostate(nr);
 				return true;
 			}
-			loaddat (nr);
-			if (napnav)
-				setirq (nr, 32);
+			loaddat(nr);
 		}
-		cdp->intreq2 = 0;
+		cdp->intreq2 = false;
 		cdp->pbufldl = true;
 		cdp->state = 2;
-		audio_state_channel2 (nr, false);
+		audio_state_channel2(nr, false);
 		break;
 	}
 	return true;
