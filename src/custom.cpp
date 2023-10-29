@@ -12522,6 +12522,9 @@ static void reset_scandoubler_sync(int hpos)
 	bprun = 0;
 	bprun_cycle = 0;
 	ddf_stopping = 0;
+	int hnew = hpos - (REFRESH_FIRST_HPOS - HARDWIRED_DMA_TRIGGER_HPOS + 2);
+	hdiw_denisecounter = ((hnew + 0) & 0xff) << CCK_SHRES_SHIFT;
+	last_sprite_hpos = last_sprite_point = (((hnew + 0) & 0xff) << 1) + 1;
 }
 
 
