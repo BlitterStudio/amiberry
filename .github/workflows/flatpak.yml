@@ -1,0 +1,23 @@
+name: flatpak
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [preview]
+  pull_request:
+
+jobs:
+  flatpak:
+    name: "Flatpak"
+    runs-on: ubuntu-latest
+    container:
+      image: bilelmoussaoui/flatpak-github-actions:freedesktop-23.08
+      options: --privileged
+    steps:
+    - uses: actions/checkout@v4
+    - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+      with:
+        bundle: amiberry.flatpak
+        manifest-path: ./flatpak/com.blitterstudio.amiberry.yml
+        cache-key: flatpak-builder-${{ github.sha }}
+        arch: x86_64
