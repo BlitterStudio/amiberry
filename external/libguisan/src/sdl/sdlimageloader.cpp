@@ -87,15 +87,24 @@ namespace gcn
 				std::string("Not enough memory to load: ") + filename);
 		}
 
-		Image* image = new SDLImage(surface, true, mRenderer);
+		mImage = new SDLImage(surface, true, mRenderer);
 
 		if (convertToDisplayFormat)
 		{
-			image->convertToDisplayFormat();
+            mImage->convertToDisplayFormat();
 		}
 
-		return image;
+		return mImage;
 	}
+
+    void SDLImageLoader::free()
+    {
+        if (mImage != nullptr)
+        {
+            delete mImage;
+            mImage = nullptr;
+        }
+    }
 
 	void SDLImageLoader::setRenderer(SDL_Renderer* renderer)
 	{
