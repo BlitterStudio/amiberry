@@ -4,6 +4,7 @@
 #include <guisan/basiccontainer.hpp>
 #include <guisan/platform.hpp>
 #include <guisan/widgetlistener.hpp>
+#include <guisan/image.hpp>
 
 #include <string>
 
@@ -38,6 +39,7 @@ namespace gcn
 		Container* container;
 		Icon* icon;
 		Label* label;
+        gcn::Image* image;
 
 		Color inactiveColor;
 		Color activeColor;

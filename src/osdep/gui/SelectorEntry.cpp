@@ -17,8 +17,8 @@ namespace gcn
 		label = new Label(caption);
 		label->setHeight(16);
 
-		auto* img = Image::load(imagepath);
-		icon = new Icon(img);
+		image = Image::load(imagepath);
+		icon = new Icon(image);
 		icon->setSize(16, 16);
 
 		container->add(icon, 4, 4);
@@ -34,6 +34,7 @@ namespace gcn
 		removeWidgetListener(this);
 		delete container;
 		delete label;
+        image->free();
 		delete icon;
 	}
 

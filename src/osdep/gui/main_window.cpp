@@ -584,6 +584,7 @@ void amiberry_gui_halt()
 	delete uae_gui;
 	uae_gui = nullptr;
 	delete gui_imageLoader;
+    gui_imageLoader = nullptr;
 	delete gui_input;
 	gui_input = nullptr;
 	delete gui_graphics;
