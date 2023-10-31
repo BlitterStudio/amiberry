@@ -1,7 +1,7 @@
 app-id: com.blitterstudio.amiberry
 branch: preview
 runtime: org.freedesktop.Platform
-runtime-version: "23.08"
+runtime-version: "22.08"
 sdk: org.freedesktop.Sdk
 command: amiberry.sh
 rename-icon: amiberry
