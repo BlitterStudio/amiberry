@@ -1717,7 +1717,10 @@ static bool load_kickstart_replacement(void)
 	}
 	struct zfile* f = zfile_fopen_data(path, arosrom_len, arosrom);
 	if (!f)
+	{
+		xfree(arosrom);
 		return false;
+	}
 #else
 	f = zfile_fopen_data(_T("aros.gz"), arosrom_len, arosrom);
 	if (!f)
@@ -1736,6 +1739,7 @@ static bool load_kickstart_replacement(void)
 
 #ifdef AMIBERRY
 	zfile_fclose(f);
+	xfree(arosrom);
 	get_rom_path(path, MAX_DPATH);
 	strcat(path, "aros-rom.bin");
 	arosrom = zfile_load_file(path, &arosrom_len);
@@ -1746,7 +1750,10 @@ static bool load_kickstart_replacement(void)
 	}
 	f = zfile_fopen_data(path, arosrom_len, arosrom);
 	if (!f)
+	{
+		xfree(arosrom);
 		return false;
+	}
 #endif
 	
 	kickmem_bank.reserved_size = ROM_SIZE_512;
@@ -1754,6 +1761,7 @@ static bool load_kickstart_replacement(void)
 	read_kickstart(f, kickmem_bank.baseaddr, ROM_SIZE_512, 1, 0);
 
 	zfile_fclose(f);
+	xfree(arosrom);
 
 	seriallog = -1;
 
