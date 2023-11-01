@@ -215,6 +215,7 @@ Thumbs.db
 *___jb_old___
 *.orig
 cmake-build-debug
+cmake-build-release
 VSLinux/.vs
 .vs
 .flatpak-builder/

@@ -16,7 +16,7 @@ include_directories(
 )
 
 add_subdirectory(external/libguisan)
-add_definitions(-DAMIBERRY -D_FILE_OFFSET_BITS=64 -DUSE_RENDER_THREAD)
+add_definitions(-DAMIBERRY -D_FILE_OFFSET_BITS=64 -DUSE_RENDER_THREAD -DUSE_JIT=0)
 
 add_executable(${PROJECT_NAME}
 		src/akiko.cpp
@@ -55,7 +55,6 @@ add_executable(${PROJECT_NAME}
 		src/filesys.cpp
 		src/flashrom.cpp
 		src/fpp.cpp
-		src/fpp_native.cpp
 		src/fsdb.cpp
 		src/fsusage.cpp
 		src/gayle.cpp
@@ -90,7 +89,6 @@ add_executable(${PROJECT_NAME}
 		src/uaenative.cpp
 		src/uaeresource.cpp
 		src/uaeserial.cpp
-		src/vm.cpp
 		src/zfile.cpp
 		src/zfile_archive.cpp
 		src/archivers/7z/7zAlloc.c
@@ -185,7 +183,6 @@ add_executable(${PROJECT_NAME}
 		src/archivers/wrp/warp.cpp
 		src/archivers/zip/unzip.cpp
 		src/caps/caps_amiberry.cpp
-		src/machdep/m68k.cpp
 		src/machdep/support.cpp
 		src/floppybridge/ArduinoFloppyBridge.cpp
 		src/floppybridge/ArduinoInterface.cpp
@@ -260,34 +257,18 @@ add_executable(${PROJECT_NAME}
 		src/osdep/gui/PanelVirtualKeyboard.cpp
 		src/osdep/gui/main_window.cpp
 		src/osdep/gui/Navigation.cpp
-		src/osdep/aarch64_helper.s
 		src/osdep/vkbd/vkbd.cpp
 		src/newcpu.cpp
 		src/newcpu_common.cpp
 		src/readcpu.cpp
 		src/cpudefs.cpp
 		src/cpustbl.cpp
-		src/cpummu.cpp
-		src/cpummu30.cpp
 		src/cpuemu_0.cpp
+		src/cpuemu_4.cpp
 		src/cpuemu_11.cpp
 		src/cpuemu_13.cpp
-		src/cpuemu_20.cpp
-		src/cpuemu_21.cpp
-		src/cpuemu_22.cpp
-		src/cpuemu_23.cpp
-		src/cpuemu_24.cpp
-		src/cpuemu_31.cpp
-		src/cpuemu_32.cpp
-		src/cpuemu_33.cpp
-		src/cpuemu_34.cpp
-		src/cpuemu_35.cpp
 		src/cpuemu_40.cpp
-		src/cpuemu_50.cpp
-		src/jit/compemu.cpp
-		src/jit/compstbl.cpp
-		src/jit/compemu_fpp.cpp
-		src/jit/compemu_support.cpp
+		src/cpuemu_44.cpp
 		)
 
 INCLUDE(FindPkgConfig)
