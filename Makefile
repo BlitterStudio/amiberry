@@ -35,6 +35,11 @@ ifdef USE_OPENGL
 	LDFLAGS += -lGL
 endif
 
+ifdef USE_LTO
+	CFLAGS += -flto
+	LDFLAGS += -flto
+endif
+
 # Use libgpiod to control GPIO LEDs?
 ifdef USE_GPIOD
 	CFLAGS += -DUSE_GPIOD
