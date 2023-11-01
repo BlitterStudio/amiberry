@@ -4456,7 +4456,7 @@ static void reset_decisions(void)
 	scanlinecount++;
 }
 
-int vsynctimebase_orig;
+frame_time_t vsynctimebase_orig;
 
 void compute_vsynctime(void)
 {

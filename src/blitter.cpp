@@ -78,7 +78,7 @@ static int blit_maxcyclecounter, blit_slowdown, blit_totalcyclecounter;
 static int blit_startcycles, blit_misscyclecounter;
 
 #ifdef CPUEMU_13
-extern uae_u8 cycle_line[256];
+extern uae_u8 cycle_line[256 + 1];
 #endif
 
 static evt_t blit_firstline_cycles;
