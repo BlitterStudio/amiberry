@@ -1,7 +1,11 @@
 #pragma once
 #include "options.h"
 
+#ifdef AMIBERRY
+#define MAX_MAPPINGS 128
+#else
 #define MAX_MAPPINGS 256
+#endif
 
 #define AXISTYPE_NORMAL 0
 #define AXISTYPE_POV_X 1
@@ -49,18 +53,18 @@ struct didata {
 	uae_s16 axles{};
 	uae_s16 buttons{}, buttons_real{};
 
-	uae_s16 axismappings[MAX_MAPPINGS]{};
-	std::string axisname[MAX_MAPPINGS]{};
-	uae_s16 axissort[MAX_MAPPINGS]{};
-	uae_s16 axistype[MAX_MAPPINGS]{};
+	std::array<uae_s16, MAX_MAPPINGS> axismappings;
+	std::array<std::string, MAX_MAPPINGS> axisname;
+	std::array<uae_s16, MAX_MAPPINGS> axissort;
+	std::array<uae_s16, MAX_MAPPINGS> axistype;
 	bool analogstick{};
 
-	uae_s16 buttonmappings[MAX_MAPPINGS]{};
-	std::string buttonname[MAX_MAPPINGS]{};
-	uae_s16 buttonsort[MAX_MAPPINGS]{};
-	uae_s16 buttonaxisparent[MAX_MAPPINGS]{};
-	uae_s16 buttonaxisparentdir[MAX_MAPPINGS]{};
-	uae_s16 buttonaxistype[MAX_MAPPINGS]{};
+	std::array<uae_s16, MAX_MAPPINGS> buttonmappings;
+	std::array<std::string, MAX_MAPPINGS> buttonname;
+	std::array<uae_s16, MAX_MAPPINGS> buttonsort;
+	std::array<uae_s16, MAX_MAPPINGS> buttonaxisparent;
+	std::array<uae_s16, MAX_MAPPINGS> buttonaxisparentdir;
+	std::array<uae_s16, MAX_MAPPINGS> buttonaxistype;
 };
 
 //Analog joystick dead zone
