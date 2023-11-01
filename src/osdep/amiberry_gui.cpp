@@ -787,7 +787,6 @@ void gui_message(const char* format, ...)
 	vsprintf(msg, format, parms);
 	va_end(parms);
 
-	graphics_subshutdown();
 	ShowMessage("", msg, "", "", "Ok", "");
 }
 
