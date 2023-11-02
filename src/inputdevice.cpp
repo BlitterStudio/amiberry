@@ -3103,15 +3103,14 @@ static void mousehack_helper (uae_u32 buttonmask)
 	int x, y;
 	//write_log (_T("mousehack_helper %08X\n"), buttonmask);
 
-    if (quit_program) {
-        return;
-    }
-    if (!(currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_tablet < TABLET_MOUSEHACK) {
-        return;
-    }
+	if (quit_program) {
+		return;
+	}
+	if (!(currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_tablet < TABLET_MOUSEHACK) {
+		return;
+	}
 
 	get_mouse_position(&x, &y, lastmx, lastmy);
-
 	inputdevice_mh_abs(x, y, buttonmask);
 }
 
@@ -4446,8 +4445,7 @@ void inputdevice_do_keyboard(int code, int state)
 				if (keyboard_reset_seq >= 15 * 50) {
 					if (!keyboardresetkeys()) {
 						keyboard_reset_seq_mode = 0;
-					}
-					else {
+					} else {
 						keyboard_reset_seq_mode = 4;
 					}
 				}
@@ -4513,8 +4511,7 @@ void inputdevice_do_kb_reset(void)
 		if (!keyboardresetkeys()) {
 			keyboard_reset_seq_mode = 0;
 			uae_reset(0, 1);
-		}
-		else {
+		} else {
 			keyboard_reset_seq_mode = 4;
 		}
 	}
@@ -5431,7 +5428,6 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 					bouncy_cycles = get_cycles () + CYCLE_UNIT * currprefs.input_contact_bounce;
 				}
 			}
-
 
 		} else if (ie->type & 8) {
 
@@ -9423,8 +9419,7 @@ static void inputdevice_testrecord_info(int type, int num, int wtype, int wnum, 
 	if (type == IDTYPE_KEYBOARD) {
 		if (wnum >= 0x100) {
 			wnum = 0x100 - wnum;
-		}
-		else {
+		} else {
 			struct uae_input_device* na = &keyboards[num];
 			int j = 0;
 			while (j < MAX_INPUT_DEVICE_EVENTS && na->extra[j] >= 0) {
@@ -9522,8 +9517,7 @@ void inputdevice_testrecord(int type, int num, int wtype, int wnum, int state, i
 	//write_log (_T("%d %d %d %d %d/%d\n"), type, num, wtype, wnum, state, max);
 	if (testmode) {
 		inputdevice_testrecord_test(type, num, wtype, wnum, state, max);
-	}
-	else if (key_specialpressed()) {
+	} else if (key_specialpressed()) {
 		inputdevice_testrecord_info(type, num, wtype, wnum, state, max);
 	}
 }

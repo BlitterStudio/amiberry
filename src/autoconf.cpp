@@ -341,11 +341,11 @@ void rtarea_reset(void)
 		memset(p + RTAREA_HEARTBEAT, 0, 0x10000 - RTAREA_HEARTBEAT);
 		memset(p + RTAREA_VARIABLES, 0, RTAREA_VARIABLES_SIZE);
 	}
-    if (rt_addr_reset) {
-        rt_addr_reset = false;
-        rt_addr_restart = rt_addr;
-    }
-    rt_addr = rt_addr_restart;
+	if (rt_addr_reset) {
+		rt_addr_reset = false;
+		rt_addr_restart = rt_addr;
+	}
+	rt_addr = rt_addr_restart;
 	trap_reset();
 	absolute_rom_address = 0;
 }
@@ -593,7 +593,7 @@ void rtarea_init(void)
 
 	rt_straddr = 0xFF00 - 2;
 	rt_addr = 0;
-    rt_addr_reset = true;
+	rt_addr_reset = true;
 
 	rt_trampoline_ptr = rtarea_base + RTAREA_TRAMPOLINE;
 	trap_entry = 0;

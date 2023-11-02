@@ -92,7 +92,7 @@ struct ide_hdf
 	uae_u8 multiple_mode;
 	int irq_delay;
 	int irq;
-    bool irq_inhibit;
+	bool irq_inhibit;
 	bool irq_new;
 	int num;
 	int blocksize;

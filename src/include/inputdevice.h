@@ -81,8 +81,6 @@ struct inputevent {
 	int portid;
 };
 
-#define INPUTDEVICE_ALLOWSAMEJPORT 0
-
 #define MAX_INPUT_QUALIFIERS (8 + 5)
 
 /* event flags */

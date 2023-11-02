@@ -890,7 +890,7 @@ static void fp_log2(fpdata *a, fpdata *b)
 static void fp_abs(fpdata *a, fpdata *b, int prec)
 {
 	fp_set_prec(prec);
-    a->fp = fabsl(b->fp);
+	a->fp = fabsl(b->fp);
 	fp_reset_prec(a);
 }
 static void fp_cosh(fpdata *a, fpdata *b)

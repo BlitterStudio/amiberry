@@ -109,7 +109,7 @@ static void reset_device_items(void)
 	device_rethink_cnt = 0;
 	device_resets_cnt = 0;
 	device_leave_cnt = 0;
-    device_leave_early_cnt = 0;
+	device_leave_early_cnt = 0;
 	memset(device_reset_done, 0, sizeof(device_reset_done));
 }
 
@@ -135,12 +135,12 @@ void device_add_check_config(DEVICE_VOID p)
 }
 void device_add_exit(DEVICE_VOID p, DEVICE_VOID p2)
 {
-    if (p != NULL) {
-        add_device_item(device_leaves, &device_leave_cnt, p);
-    }
-    if (p2 != NULL) {
-        add_device_item(device_leaves_early, &device_leave_early_cnt, p2);
-    }
+	if (p != NULL) {
+		add_device_item(device_leaves, &device_leave_cnt, p);
+	}
+	if (p2 != NULL) {
+		add_device_item(device_leaves_early, &device_leave_early_cnt, p2);
+	}
 }
 void device_add_reset(DEVICE_INT p)
 {
@@ -190,7 +190,7 @@ void devices_reset(int hardreset)
 	init_shm();
 	memory_reset();
 #ifdef AUTOCONFIG
-    rtarea_reset();
+	rtarea_reset();
 #endif
 	DISK_reset();
 	CIA_reset();
@@ -318,7 +318,7 @@ void virtualdevice_free(void)
 	uae_ppc_free();
 #endif
 
-    execute_device_items(device_leaves_early, device_leave_early_cnt);
+	execute_device_items(device_leaves_early, device_leave_early_cnt);
 
 #ifdef FILESYS
 	filesys_cleanup();
@@ -439,6 +439,9 @@ void devices_pause(void)
 {
 #ifdef WITH_PPC
 	uae_ppc_pause(1);
+#endif
+#ifdef WITH_DSP
+	dsp_pause(1);
 #endif
 	blkdev_entergui();
 #ifdef RETROPLATFORM

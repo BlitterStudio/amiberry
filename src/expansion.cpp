@@ -2829,8 +2829,7 @@ struct autoconfig_info* expansion_get_bank_data(struct uae_prefs* p, uaecptr* ad
 					continue;
 				}
 				return aci;
-			}
-			else {
+			} else {
 				aci->addrbank = ab;
 				aci->start = addr;
 				aci->size = ab->allocated_size;
@@ -5293,6 +5292,14 @@ const struct expansionromtype expansionroms[] = {
 		NULL, 0,
 		false, EXPANSIONTYPE_INTERNAL
 	},
+#ifdef WITH_DSP
+	{
+		_T("dsp3210"), _T("DSP3210"), _T("AT&T"),
+		NULL, dsp_init, NULL, NULL, ROMTYPE_DSP3210 | ROMTYPE_NOT, 0, 0, BOARD_NONAUTOCONFIG_BEFORE, true,
+		NULL, 0,
+		false, EXPANSIONTYPE_INTERNAL
+	},
+#endif
 
 	/* PCI Bridgeboards */
 

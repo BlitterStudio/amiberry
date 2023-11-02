@@ -20,5 +20,4 @@ extern void setcapslockstate (int);
 extern void keybuf_inject(const uae_char*);
 extern void keybuf_ignore_next_release(void);
 extern void keybuf_vsync(void);
-
 #endif /* UAE_KEYBUF_H */
