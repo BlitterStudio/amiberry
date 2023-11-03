@@ -2098,7 +2098,7 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_target_dwrite(f, _T("minimized_input"), _T("%d"), p->minimized_input);
 	cfgfile_target_dwrite_bool(f, _T("inactive_minimize"), p->minimize_inactive);
 	cfgfile_target_dwrite_bool(f, _T("active_capture_automatically"), p->capture_always);
-	cfgfile_target_dwrite_bool(f, _T("start_iconified"), p->start_minimized);
+	cfgfile_target_dwrite_bool(f, _T("start_minimized"), p->start_minimized);
 	cfgfile_target_dwrite_bool(f, _T("start_not_captured"), p->start_uncaptured);
 
 	cfgfile_target_dwrite_bool(f, _T("rtg_match_depth"), p->rtgmatchdepth);
