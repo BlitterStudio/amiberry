@@ -3579,6 +3579,11 @@ bool data_dir_exists(char* directory)
 
 int main(int argc, char* argv[])
 {
+    for (auto i = 1; i < argc; i++) {
+        if (_tcscmp(argv[i], _T("-h")) == 0 || _tcscmp(argv[i], _T("--help")) == 0)
+            usage();
+    }
+
 	struct sigaction action{};
 
 	max_uae_width = 8192;
