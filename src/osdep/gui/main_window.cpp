@@ -460,7 +460,7 @@ void amiberry_gui_init()
 
 	if (!mon->sdl_window)
 	{
-		Uint32 flags = SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
+		Uint32 flags = SDL_WINDOW_RESIZABLE;
 		if (sdl_video_driver != nullptr && strcmpi(sdl_video_driver, "KMSDRM") == 0
 			|| (sdl_mode.w < 800 && sdl_mode.h < 600))
 			flags = SDL_WINDOW_FULLSCREEN_DESKTOP;
@@ -469,6 +469,10 @@ void amiberry_gui_init()
 			flags |= SDL_WINDOW_BORDERLESS;
 		if (currprefs.main_alwaysontop)
 			flags |= SDL_WINDOW_ALWAYS_ON_TOP;
+        if (currprefs.start_minimized)
+            flags |= SDL_WINDOW_HIDDEN;
+        else
+            flags |= SDL_WINDOW_SHOWN;
 		flags |= SDL_WINDOW_ALLOW_HIGHDPI;
 
 #ifdef USE_OPENGL
