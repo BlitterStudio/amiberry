@@ -3587,8 +3587,8 @@ const TCHAR** uaenative_get_library_dirs(void)
 bool data_dir_exists(char* directory)
 {
 	if (directory == nullptr) return false;
-	std::string data_dir = "/data";
-	std::string check_for = directory + data_dir;
+	std::string dataDir = "/data";
+	std::string check_for = directory + dataDir;
 	return my_existsdir(check_for.c_str());
 }
 
