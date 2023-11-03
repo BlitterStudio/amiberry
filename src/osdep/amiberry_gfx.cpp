@@ -2082,11 +2082,15 @@ int graphics_init(bool mousecapture)
 			else if (currprefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN)
 				sdl_window_mode = SDL_WINDOW_FULLSCREEN;
 			else
-				sdl_window_mode = SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
+				sdl_window_mode =  SDL_WINDOW_RESIZABLE;
 			if (currprefs.borderless)
 				sdl_window_mode |= SDL_WINDOW_BORDERLESS;
 			if (currprefs.main_alwaysontop)
 				sdl_window_mode |= SDL_WINDOW_ALWAYS_ON_TOP;
+            if (currprefs.start_minimized)
+                sdl_window_mode |= SDL_WINDOW_HIDDEN;
+            else
+                sdl_window_mode |= SDL_WINDOW_SHOWN;
 			// Set Window allow high DPI by default
 			sdl_window_mode |= SDL_WINDOW_ALLOW_HIGHDPI;
 #ifdef USE_OPENGL
