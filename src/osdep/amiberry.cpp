@@ -3602,14 +3602,6 @@ int main(int argc, char* argv[])
 
 	rename_old_adfdir();
 	init_amiberry_paths();
-	// Parse command line to get possibly set amiberry_config.
-	// Do not remove used args yet.
-	if (!parse_amiberry_cmd_line(&argc, argv, 0))
-	{
-		printf("Error in Amiberry command line option parsing.\n");
-		usage();
-		abort();
-	}
 	load_amiberry_settings();
 	// Parse command line and remove used amiberry specific args
 	// and modify both argc & argv accordingly
