@@ -59,11 +59,11 @@ static void addplusminus(struct didata* did, int i)
 	if (did->buttons + 1 >= ID_BUTTON_TOTAL)
 		return;
 	for (uae_s16 j = 0; j < 2; j++) {
-		did->buttonname[did->buttons] = did->axisname[i] + " [";
+		did->buttonname[did->buttons] = did->axisname[i];
 		if (j)
-			did->buttonname[did->buttons] += "+]";
+			did->buttonname[did->buttons] += " [+]";
 		else
-			did->buttonname[did->buttons] += "-]";
+			did->buttonname[did->buttons] += " [-]";
 		did->buttonmappings[did->buttons] = did->axismappings[i];
 		did->buttonsort[did->buttons] = 1000 + (did->axismappings[i] + did->axistype[i]) * 2 + j;
 		did->buttonaxisparent[did->buttons] = i;
