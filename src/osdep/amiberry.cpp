@@ -2724,8 +2724,9 @@ void read_directory(const char* path, std::vector<std::string>* dirs, std::vecto
 		{
 			if (dent->d_type == DT_DIR)
 			{
-				if (dirs != nullptr)
-					dirs->push_back(dent->d_name);
+                if (dirs != nullptr
+                    && (dent->d_name[0] != '.' || (dent->d_name[0] == '.' && dent->d_name[1] == '.')))
+                    dirs->emplace_back(dent->d_name);
 			}
 			else if (dent->d_type == DT_LNK)
 			{
@@ -2733,17 +2734,18 @@ void read_directory(const char* path, std::vector<std::string>* dirs, std::vecto
 				stat(dent->d_name, &stbuf);
 				if (S_ISDIR(stbuf.st_mode))
 				{
-					if (dirs != nullptr)
-						dirs->push_back(dent->d_name);
+                    if (dirs != nullptr
+                        && (dent->d_name[0] != '.' || (dent->d_name[0] == '.' && dent->d_name[1] == '.')))
+                        dirs->emplace_back(dent->d_name);
 				}
 				else
 				{
 					if (files != nullptr && dent->d_name[0] != '.')
-						files->push_back(dent->d_name);
+						files->emplace_back(dent->d_name);
 				}
 			}
 			else if (files != nullptr && dent->d_name[0] != '.')
-				files->push_back(dent->d_name);
+				files->emplace_back(dent->d_name);
 		}
 		if (dirs != nullptr && !dirs->empty() && (*dirs)[0] == ".")
 			dirs->erase(dirs->begin());
