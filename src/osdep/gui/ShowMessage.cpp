@@ -85,11 +85,11 @@ static void InitShowMessage(const std::string& message)
 		flags |= SDL_WINDOW_OPENGL;
 #endif
 		mon->sdl_window = SDL_CreateWindow("Amiberry",
-			SDL_WINDOWPOS_CENTERED,
-			SDL_WINDOWPOS_CENTERED,
-			GUI_WIDTH,
-			GUI_HEIGHT,
-			flags);
+		                                   SDL_WINDOWPOS_CENTERED,
+		                                   SDL_WINDOWPOS_CENTERED,
+		                                   GUI_WIDTH,
+		                                   GUI_HEIGHT,
+		                                   flags);
 		check_error_sdl(mon->sdl_window == nullptr, "Unable to create window:");
 	}
 #ifdef USE_OPENGL
@@ -121,14 +121,14 @@ static void InitShowMessage(const std::string& message)
 				SDL_SetWindowSize(mon->sdl_window, GUI_WIDTH, GUI_HEIGHT);
 		}
 	}
-	
+
 	// make the scaled rendering look smoother (linear scaling).
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 #ifndef USE_OPENGL
 	if (gui_texture == nullptr)
 	{
 		gui_texture = SDL_CreateTexture(sdl_renderer, gui_screen->format->format, SDL_TEXTUREACCESS_STREAMING,
-			gui_screen->w, gui_screen->h);
+		                                gui_screen->w, gui_screen->h);
 		check_error_sdl(gui_texture == nullptr, "Unable to create texture from Surface");
 	}
 
@@ -141,7 +141,7 @@ static void InitShowMessage(const std::string& message)
 
 	SDL_SetRelativeMouseMode(SDL_FALSE);
 	SDL_ShowCursor(SDL_ENABLE);
-	
+
 	if (gui_graphics == nullptr)
 	{
 #ifdef USE_OPENGL
@@ -183,7 +183,7 @@ static void InitShowMessage(const std::string& message)
 #endif
 		gcn::Widget::setGlobalFont(gui_font);
 	}
-	
+
 	wndShowMessage = new gcn::Window("Message");
 	wndShowMessage->setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
 	wndShowMessage->setPosition((GUI_WIDTH - DIALOG_WIDTH) / 2, (GUI_HEIGHT - DIALOG_HEIGHT) / 2);
@@ -292,7 +292,7 @@ static void ExitShowMessage()
 			SDL_GL_DeleteContext(gl_context);
 			gl_context = nullptr;
 		}
-		
+
 		if (cursor != nullptr)
 		{
 			SDL_FreeCursor(cursor);
@@ -399,7 +399,7 @@ static void ShowMessageWaitInputLoop()
 			break;
 
 		case SDL_CONTROLLERBUTTONDOWN:
-		//case SDL_JOYBUTTONDOWN:
+			//case SDL_JOYBUTTONDOWN:
 			got_event = 1;
 			hotkey.button = event.cbutton.button;
 			hotkey.key_name = SDL_GameControllerGetStringForButton(
@@ -481,17 +481,21 @@ static void ShowMessageWaitInputLoop()
 					dialogFinished = true;
 					break;
 				}
-			}			
+			}
 			break;
-		case SDL_CONTROLLERBUTTONUP:
 		case SDL_JOYBUTTONUP:
+		case SDL_CONTROLLERBUTTONUP:
 		case SDL_MOUSEBUTTONDOWN:
 		case SDL_MOUSEBUTTONUP:
 		case SDL_MOUSEMOTION:
-		case SDL_MOUSEWHEEL:
+		case SDL_RENDER_TARGETS_RESET:
+		case SDL_RENDER_DEVICE_RESET:
+		case SDL_WINDOWEVENT:
+		case SDL_DISPLAYEVENT:
+		case SDL_SYSWMEVENT:
 			got_event = 1;
 			break;
-			
+
 		default:
 			break;
 		}
@@ -514,7 +518,6 @@ static void ShowMessageWaitInputLoop()
 		// Finally we update the screen.
 		update_gui_screen();
 	}
-
 }
 
 static void navigate_left_right()
@@ -568,7 +571,7 @@ static void ShowMessageLoop()
 			{
 				got_event = 1;
 				const int hat = SDL_JoystickGetHat(gui_joystick, 0);
-				
+
 				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_A]) ||
 					SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_B]))
 				{
@@ -605,14 +608,16 @@ static void ShowMessageLoop()
 						navigate_left_right();
 						break;
 					}
-					if (event.jaxis.value < -joystick_dead_zone && last_x != -1)
-					{
-						last_x = -1;
-						navigate_left_right();
+					if (event.jaxis.value<-joystick_dead_zone && last_x != -1)
+					                      {
+						                      last_x = -1;
+						                      navigate_left_right();
 						break;
-					}
+					
+					                      }
 					if (event.jaxis.value > -joystick_dead_zone && event.jaxis.value < joystick_dead_zone)
-						last_x = 0;
+					                      last_x = 0;
+				
 				}
 			}
 			break;
@@ -700,7 +705,8 @@ static void ShowMessageLoop()
 	}
 }
 
-bool ShowMessage(const std::string& title, const std::string& line1, const std::string& line2, const std::string& line3, const std::string& button1, const std::string& button2)
+bool ShowMessage(const std::string& title, const std::string& line1, const std::string& line2, const std::string& line3,
+                 const std::string& button1, const std::string& button2)
 {
 	dialogResult = false;
 	dialogFinished = false;
@@ -746,7 +752,7 @@ amiberry_hotkey ShowMessageForInput(const char* title, const char* line1, const 
 	dialogFinished = false;
 
 	InitShowMessage(line1);
-	
+
 	wndShowMessage->setCaption(title);
 	txtMessageText->setText(line1);
 	cmdOK->setVisible(false);
@@ -760,11 +766,11 @@ amiberry_hotkey ShowMessageForInput(const char* title, const char* line1, const 
 	uae_gui->draw();
 	update_gui_screen();
 
-	hotkey.modifiers.lctrl = hotkey.modifiers.rctrl = 
-		hotkey.modifiers.lalt = hotkey.modifiers.ralt = 
-		hotkey.modifiers.lshift = hotkey.modifiers.rshift = 
+	hotkey.modifiers.lctrl = hotkey.modifiers.rctrl =
+		hotkey.modifiers.lalt = hotkey.modifiers.ralt =
+		hotkey.modifiers.lshift = hotkey.modifiers.rshift =
 		hotkey.modifiers.lgui = hotkey.modifiers.rgui = false;
-	
+
 	while (!dialogFinished)
 	{
 		const auto start = SDL_GetPerformanceCounter();
@@ -791,6 +797,6 @@ amiberry_hotkey ShowMessageForInput(const char* title, const char* line1, const 
 		hotkey.modifiers_string = hotkey.modifiers_string + "LGUI+";
 	if (hotkey.modifiers.rgui)
 		hotkey.modifiers_string = hotkey.modifiers_string + "RGUI+";
-	
+
 	return hotkey;
 }
