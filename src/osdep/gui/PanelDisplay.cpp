@@ -87,6 +87,7 @@ static gcn::Label* lblScreenmode;
 static gcn::DropDown* cboScreenmode;
 static gcn::Label* lblFullscreen;
 static gcn::DropDown* cboFullscreen;
+static gcn::CheckBox* chkVsync;
 
 static gcn::Window* grpCentering;
 static gcn::CheckBox* chkHorizontal;
@@ -154,6 +155,9 @@ public:
 
 		else if (actionEvent.getSource() == chkBorderless)
 			changed_prefs.borderless = chkBorderless->isSelected();
+
+		else if (actionEvent.getSource() == chkVsync)
+			changed_prefs.gfx_apmode[0].gfx_vsync = chkVsync->isSelected();
 
 		else if (actionEvent.getSource() == sldHOffset)
 		{
@@ -395,6 +399,10 @@ void InitPanelDisplay(const config_category& category)
 	chkBorderless->setId("chkBorderless");
 	chkBorderless->addActionListener(amigaScreenActionListener);
 
+	chkVsync = new gcn::CheckBox("VSync");
+	chkVsync->setId("chkVsync");
+	chkVsync->addActionListener(amigaScreenActionListener);
+
 	lblHOffset = new gcn::Label("H. Offset:");
 	lblHOffset->setAlignment(gcn::Graphics::LEFT);
 	sldHOffset = new gcn::Slider(-60, 60);
@@ -510,7 +518,8 @@ void InitPanelDisplay(const config_category& category)
 	posY += sldAmigaHeight->getHeight() + DISTANCE_NEXT_Y;
 	grpAmigaScreen->add(chkAutoCrop, DISTANCE_BORDER, posY);
 	grpAmigaScreen->add(chkBorderless, chkAutoCrop->getX() + chkAutoCrop->getWidth() + DISTANCE_NEXT_X, posY);
-	posY += chkAutoCrop->getHeight() + DISTANCE_NEXT_Y;
+	grpAmigaScreen->add(chkVsync, chkBorderless->getX() + chkBorderless->getWidth() + DISTANCE_NEXT_X, posY);
+	posY += chkVsync->getHeight() + DISTANCE_NEXT_Y;
 	grpAmigaScreen->add(lblHOffset, DISTANCE_BORDER, posY);
 	grpAmigaScreen->add(sldHOffset, lblHOffset->getX() + lblHOffset->getWidth() + DISTANCE_NEXT_X, posY);
 	grpAmigaScreen->add(lblHOffsetValue, sldHOffset->getX() + sldHOffset->getWidth() + 8, posY + 2);
@@ -520,7 +529,7 @@ void InitPanelDisplay(const config_category& category)
 	grpAmigaScreen->add(lblVOffsetValue, sldVOffset->getX() + sldVOffset->getWidth() + 8, posY + 2);
 
 	grpAmigaScreen->setMovable(false);
-	grpAmigaScreen->setSize(lblAmigaWidth->getX() + lblAmigaWidth->getWidth() + sldAmigaWidth->getWidth() + lblAmigaWidth->getWidth() + txtAmigaHeight->getWidth() + DISTANCE_BORDER, TITLEBAR_HEIGHT + lblVOffset->getY() + lblVOffset->getHeight() + DISTANCE_NEXT_Y);
+	grpAmigaScreen->setSize(chkVsync->getX() + chkVsync->getWidth() + DISTANCE_BORDER, TITLEBAR_HEIGHT + lblVOffset->getY() + lblVOffset->getHeight() + DISTANCE_NEXT_Y);
 	grpAmigaScreen->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpAmigaScreen->setBaseColor(gui_baseCol);
 	category.panel->add(grpAmigaScreen);
@@ -671,6 +680,7 @@ void ExitPanelDisplay()
 	delete cboScreenmode;
 	delete lblFullscreen;
 	delete cboFullscreen;
+	delete chkVsync;
 
 	delete optSingle;
 	delete optDouble;
@@ -748,6 +758,7 @@ void RefreshPanelDisplay()
 	}
 #endif
 	chkBorderless->setSelected(changed_prefs.borderless);
+	chkVsync->setSelected(changed_prefs.gfx_apmode[0].gfx_vsync);
 
 	sldHOffset->setValue(changed_prefs.gfx_horizontal_offset);
 	lblHOffsetValue->setCaption(std::to_string(changed_prefs.gfx_horizontal_offset));
