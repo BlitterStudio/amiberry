@@ -598,7 +598,7 @@ static void set_vblanking_limits(void)
 	bool hardwired = true;
 	if (ecs_agnus) {
 		hardwired = (new_beamcon0 & BEAMCON0_VARVBEN) == 0;
-		// ECS Denise with exhblank: always use thisline_decision.vb blanking method
+		// ECS Denise with exthblank: always use thisline_decision.vb blanking method
 		if (ecs_denise && !aga_mode && exthblank) {
 			hardwired = false;
 		}
