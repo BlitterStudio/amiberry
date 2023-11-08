@@ -399,7 +399,7 @@ static USHORT Process_Track(struct zfile *fi, struct zfile *fo, UCHAR *b1, UCHAR
 
 
 
-static USHORT Unpack_Track_2(UCHAR *b1, UCHAR *b2, USHORT pklen2, USHORT unpklen, UCHAR cmode, UCHAR flags){
+static USHORT Unpack_Track_2(UCHAR *b1, UCHAR *b2, USHORT pklen1, USHORT pklen2, USHORT unpklen, UCHAR cmode, UCHAR flags){
 	switch (cmode){
 		case 0:
 			/*   No Compression   */
@@ -407,24 +407,24 @@ static USHORT Unpack_Track_2(UCHAR *b1, UCHAR *b2, USHORT pklen2, USHORT unpklen
 			break;
 		case 1:
 			/*   Simple Compression   */
-			if (Unpack_RLE(b1,b2,unpklen)) return ERR_BADDECR;
+			if (Unpack_RLE(b1,b2, pklen1,unpklen)) return ERR_BADDECR;
 			break;
 		case 2:
 			/*   Quick Compression   */
-			if (Unpack_QUICK(b1,b2,pklen2)) return ERR_BADDECR;
-			if (Unpack_RLE(b2,b1,unpklen)) return ERR_BADDECR;
+			if (Unpack_QUICK(b1,b2,pklen1,pklen2)) return ERR_BADDECR;
+			if (Unpack_RLE(b2,b1,pklen2,unpklen)) return ERR_BADDECR;
 			memcpy(b2,b1,(size_t)unpklen);
 			break;
 		case 3:
 			/*   Medium Compression   */
-			if (Unpack_MEDIUM(b1,b2,pklen2)) return ERR_BADDECR;
-			if (Unpack_RLE(b2,b1,unpklen)) return ERR_BADDECR;
+			if (Unpack_MEDIUM(b1,b2,pklen1,pklen2)) return ERR_BADDECR;
+			if (Unpack_RLE(b2,b1,pklen2,unpklen)) return ERR_BADDECR;
 			memcpy(b2,b1,(size_t)unpklen);
 			break;
 		case 4:
 			/*   Deep Compression   */
-			if (Unpack_DEEP(b1,b2,pklen2)) return ERR_BADDECR;
-			if (Unpack_RLE(b2,b1,unpklen)) return ERR_BADDECR;
+			if (Unpack_DEEP(b1,b2,pklen1,pklen2)) return ERR_BADDECR;
+			if (Unpack_RLE(b2,b1,pklen2,unpklen)) return ERR_BADDECR;
 			memcpy(b2,b1,(size_t)unpklen);
 			break;
 		case 5:
@@ -432,15 +432,15 @@ static USHORT Unpack_Track_2(UCHAR *b1, UCHAR *b2, USHORT pklen2, USHORT unpklen
 			/*   Heavy Compression   */
 			if (cmode==5) {
 				/*   Heavy 1   */
-				if (Unpack_HEAVY(b1,b2,flags & 7,pklen2)) return ERR_BADDECR;
+				if (Unpack_HEAVY(b1,b2,flags & 7,pklen1,pklen2)) return ERR_BADDECR;
 			} else {
 				/*   Heavy 2   */
-				if (Unpack_HEAVY(b1,b2,flags | 8,pklen2)) return ERR_BADDECR;
+				if (Unpack_HEAVY(b1,b2,flags | 8,pklen1,pklen2)) return ERR_BADDECR;
 			}
 			if (flags & 4) {
 				memset(b1,0,unpklen);
 				/*  Unpack with RLE only if this flag is set  */
-				if (Unpack_RLE(b2,b1,unpklen)) return ERR_BADDECR;
+				if (Unpack_RLE(b2,b1,pklen2,unpklen)) return ERR_BADDECR;
 				memcpy(b2,b1,(size_t)unpklen);
 			}
 			break;
@@ -471,13 +471,14 @@ static USHORT Unpack_Track(UCHAR *b1, UCHAR *b2, USHORT pklen2, USHORT unpklen, 
 	static USHORT pass;
 	int maybeencrypted;
 	int pwrounds;
-	UCHAR *tmp;
-	USHORT prevpass = 0;
+	int firstpass = -1;
+	UCHAR *tmp, *tmp_dms_text;
+	USHORT prevpass = pass;
 
 	if (passfound) {
 		if (number != 80)
 			dms_decrypt(b1, pklen1, b1);
-		r = Unpack_Track_2(b1, b2, pklen2, unpklen, cmode, flags);
+		r = Unpack_Track_2(b1, b2, pklen1, pklen2, unpklen, cmode, flags);
 		if (r == NO_PROBLEM) {
 			if (usum1 == dms_Calc_CheckSum(b2,(ULONG)unpklen))
 				return NO_PROBLEM;
@@ -490,19 +491,27 @@ static USHORT Unpack_Track(UCHAR *b1, UCHAR *b2, USHORT pklen2, USHORT unpklen, 
 	passretries--;
 	pwrounds = 0;
 	maybeencrypted = 0;
-	tmp = (unsigned char*)malloc (pklen1);
+	tmp = xmalloc(UCHAR, pklen1);
+	tmp_dms_text = xmalloc(UCHAR, 0x3fc8);
 	memcpy (tmp, b1, pklen1);
 	memset(b2, 0, unpklen);
+	memcpy(tmp_dms_text, dms_text, 0x3fc8);
 	for (;;) {
-		r = Unpack_Track_2(b1, b2, pklen2, unpklen, cmode, flags);
+		r = Unpack_Track_2(b1, b2, pklen1, pklen2, unpklen, cmode, flags);
 		if (r == NO_PROBLEM) {
 			if (usum1 == dms_Calc_CheckSum(b2,(ULONG)unpklen)) {
 				passfound = maybeencrypted;
 				if (passfound)
 					write_log (_T("DMS: decryption key = 0x%04X\n"), prevpass);
-				err = NO_PROBLEM;
-				pass = prevpass;
-				break;
+				// if bootblock does not have "DOS", check other keys too
+				if (number > 0 || firstpass == pass || (b2[0] == 'D' && b2[1] == 'O' && b2[2] == 'S')) {
+					err = NO_PROBLEM;
+					pass = prevpass;
+					break;
+				}
+				if (firstpass < 0) {
+					firstpass = pass;
+				}
 			}
 		}
 		if (number == 80 || !enc) {
@@ -515,13 +524,20 @@ static USHORT Unpack_Track(UCHAR *b1, UCHAR *b2, USHORT pklen2, USHORT unpklen, 
 		pass++;
 		dms_decrypt(b1, pklen1, tmp);
 		pwrounds++;
-		if (pwrounds == 65536) {
-			err = ERR_CSUM;
-			passfound = 0;
-			break;
+		if (pwrounds >= 65536) {
+			if (firstpass < 0) {
+				err = ERR_CSUM;
+				passfound = 0;
+				break;
+			}
+			pass = firstpass;
+			PWDCRC = pass;
+			dms_decrypt(b1, pklen1, tmp);
 		}
+		memcpy(dms_text, tmp_dms_text, 0x3fc8);
 	}
-	free (tmp);
+	xfree(tmp_dms_text);
+	xfree(tmp);
 	return err;
 }
 

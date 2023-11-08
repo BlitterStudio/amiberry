@@ -12,11 +12,10 @@
 #include "cdata.h"
 #include "u_rle.h"
 
-
-
-USHORT Unpack_RLE(UCHAR *in, UCHAR *out, USHORT origsize){
+USHORT Unpack_RLE(UCHAR *in, UCHAR *out, USHORT pklen1, USHORT origsize){
 	USHORT n;
 	UCHAR a,b, *outend;
+	UCHAR *inp = in + pklen1;
 
 	outend = out+origsize;
 	while (out<outend){
@@ -26,6 +25,7 @@ USHORT Unpack_RLE(UCHAR *in, UCHAR *out, USHORT origsize){
 			*out++ = a;
 		else {
 			a = *in++;
+			if (in > inp) return 1;
 			if (b == 0xff) {
 				n = *in++;
 				n = (USHORT)((n<<8) + *in++);
@@ -36,7 +36,6 @@ USHORT Unpack_RLE(UCHAR *in, UCHAR *out, USHORT origsize){
 			out += n;
 		}
 	}
+
 	return 0;
 }
-
-
