@@ -9860,7 +9860,7 @@ void warpmode(int mode)
 		currprefs.turbo_emulation = 1;
 	}
 	if (currprefs.turbo_emulation) {
-		if (!currprefs.cpu_memory_cycle_exact && !currprefs.blitter_cycle_exact)
+		if (!currprefs.cpu_memory_cycle_exact && !currprefs.blitter_cycle_exact && currprefs.gfx_overscanmode < OVERSCANMODE_ULTRA)
 			changed_prefs.gfx_framerate = currprefs.gfx_framerate = 10;
 		pause_sound ();
 	} else {
