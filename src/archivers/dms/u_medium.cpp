@@ -7,7 +7,6 @@
  *
  */
 
-
 #include <string.h>
 
 #include "cdata.h"
@@ -15,18 +14,13 @@
 #include "getbits.h"
 #include "tables.h"
 
-
 #define MBITMASK 0x3fff
-
 
 USHORT dms_medium_text_loc;
 
-
-
-USHORT Unpack_MEDIUM(UCHAR *in, UCHAR *out, USHORT origsize){
+USHORT Unpack_MEDIUM(UCHAR *in, UCHAR *out, USHORT pklen1, USHORT origsize){
 	USHORT i, j, c;
 	UCHAR u, *outend;
-
 
 	initbitbuf(in);
 
@@ -52,7 +46,8 @@ USHORT Unpack_MEDIUM(UCHAR *in, UCHAR *out, USHORT origsize){
 	}
 	dms_medium_text_loc = (USHORT)((dms_medium_text_loc+66) & MBITMASK);
 
-	return 0;
+	in += pklen1;
+	if (dms_indata == in + 2 || dms_indata == in + 1 || dms_indata == in + 0) return 0;
+
+	return 1;
 }
-
-
