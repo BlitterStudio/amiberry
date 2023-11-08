@@ -246,14 +246,16 @@ void *eeprom93xx_new(const uae_u8 *memory, int nwords, struct zfile *zf)
 	}
 
 	eeprom = (eeprom93xx_eeprom_t *)xcalloc(eeprom93xx_eeprom_t, 1);
-	eeprom->size = nwords;
-	eeprom->addrbits = addrbits;
-	for (int i = 0; i < nwords; i++) {
-		eeprom->contents[i] = (memory[i * 2 + 0] << 8) | memory[i * 2 + 1];
+	if (eeprom) {
+		eeprom->size = nwords;
+		eeprom->addrbits = addrbits;
+		for (int i = 0; i < nwords; i++) {
+			eeprom->contents[i] = (memory[i * 2 + 0] << 8) | memory[i * 2 + 1];
+		}
+		/* Output DO is tristate, read results in 1. */
+		eeprom->eedo = 1;
+	//	write_log("eeprom = 0x%p, nwords = %u\n", eeprom, nwords);
 	}
-	/* Output DO is tristate, read results in 1. */
-	eeprom->eedo = 1;
-//	write_log("eeprom = 0x%p, nwords = %u\n", eeprom, nwords);
 	return eeprom;
 }
 
@@ -541,16 +543,16 @@ void *eeprom_new(uae_u8 *memory, int size, struct zfile *zf)
     bitbang_i2c_interface *s;
 
     s = xcalloc(bitbang_i2c_interface, 1);
+	if (s) {
+		eeprom_reset(s);
 
-	eeprom_reset(s);
-
-	s->memory = memory;
-	s->size = size;
-	s->zf = zf;
-	s->addressbitmask = (size / 256) - 1;
-	s->device_address = 0xa0;
-	s->device_address_mask = 0xf0;
-
+		s->memory = memory;
+		s->size = size;
+		s->zf = zf;
+		s->addressbitmask = (size / 256) - 1;
+		s->device_address = 0xa0;
+		s->device_address_mask = 0xf0;
+	}
     return s;
 }
 
@@ -559,18 +561,19 @@ void *i2c_new(uae_u8 device_address, int size, uae_u8 (*read_func)(uae_u8 addr),
 	bitbang_i2c_interface *s;
 
 	s = xcalloc(bitbang_i2c_interface, 1);
+	if (s) {
+		eeprom_reset(s);
 
-	eeprom_reset(s);
+		s->memory = NULL;
+		s->size = size;
+		s->zf = NULL;
+		s->addressbitmask = 0;
+		s->device_address = 0xa2;
+		s->device_address_mask = 0xff;
 
-	s->memory = NULL;
-	s->size = size;
-	s->zf = NULL;
-	s->addressbitmask = 0;
-	s->device_address = 0xa2;
-	s->device_address_mask = 0xff;
-
-	s->read_func = read_func;
-	s->write_func = write_func;
+		s->read_func = read_func;
+		s->write_func = write_func;
+	}
 	return s;
 }
 
@@ -602,10 +605,16 @@ struct flashrom_data
 	int state;
 	int modified;
 	int sectorsize;
+	int pagesize;
 	uae_u8 devicecode, mfgcode;
 	int flags;
+	int writeprot;
+	int lastpagewrite;
 	int firstwriteoffset;
 	int lastwriteoffset;
+	uae_u8 page[128];
+	bool mpage[128];
+	bool pagemodified;
 	struct zfile *zf;
 };
 
@@ -623,17 +632,22 @@ static void setmodified(struct flashrom_data *fd, int offset)
 void *flash_new(uae_u8 *rom, int flashsize, int allocsize, uae_u8 mfgcode, uae_u8 devcode, struct zfile *zf, int flags)
 {
 	struct flashrom_data *fd = xcalloc(struct flashrom_data, 1);
-	fd->flashsize = flashsize;
-	fd->allocsize = allocsize;
-	fd->mask = fd->flashsize - 1;
-	fd->zf = zf;
-	fd->rom = rom;
-	fd->flags = flags;
-	fd->devicecode = devcode;
-	fd->mfgcode = mfgcode;
-	fd->sectorsize = devcode == 0x20 ? 16384 : 65536;
-	fd->lastwriteoffset = 0;
-	fd->firstwriteoffset = allocsize;
+	if (fd) {
+		fd->flashsize = flashsize;
+		fd->allocsize = allocsize;
+		fd->mask = fd->flashsize - 1;
+		fd->zf = zf;
+		fd->rom = rom;
+		fd->flags = flags;
+		fd->devicecode = devcode;
+		fd->pagesize = mfgcode == 0xbf ? 128 : 64;
+		fd->mfgcode = mfgcode;
+		fd->sectorsize = devcode == 0x20 ? 16384 : 65536;
+		fd->lastwriteoffset = 0;
+		fd->firstwriteoffset = allocsize;
+		fd->writeprot = (flags & FLASHROM_DATA_PROTECT) ? 1 : 0;
+		fd->lastpagewrite = -1;
+	}
 	return fd;
 }
 
@@ -645,13 +659,36 @@ void flash_free(void *fdv)
 	if (fd->zf && fd->modified) {
 		if (fd->flags & FLASHROM_EVERY_OTHER_BYTE) {
 			zfile_fseek(fd->zf, (fd->flags & FLASHROM_EVERY_OTHER_BYTE_ODD) ? 1 : 0, SEEK_SET);
-			for (int i = 0; i < fd->allocsize; i++) {
+			int last = fd->lastwriteoffset + 1;
+			last += 511;
+			last &= ~511;
+			if (last > fd->allocsize) {
+				last = fd->allocsize;
+			}
+			for (int i = 0; i < last; i++) {
 				zfile_fwrite(&fd->rom[i * 2], 1, 1, fd->zf);
 				zfile_fseek(fd->zf, 1, SEEK_CUR);
 			}
+		} else if (fd->flags & FLASHROM_SKIP_EVERY_OTHER_BYTE) {
+			zfile_fseek(fd->zf, 0, SEEK_SET);
+			int last = fd->lastwriteoffset + 1;
+			last += 511;
+			last &= ~511;
+			if (last > fd->allocsize) {
+				last = fd->allocsize;
+			}
+			for (int i = 0; i <  last / 2; i++) {
+				zfile_fwrite(&fd->rom[i * 2], 1, 1, fd->zf);
+			}
 		} else {
-			zfile_fseek(fd->zf, fd->firstwriteoffset, SEEK_SET);
-			zfile_fwrite(fd->rom + fd->firstwriteoffset, fd->lastwriteoffset - fd->firstwriteoffset + 1, 1, fd->zf);
+			uae_s32 msize = zfile_ftell32(fd->zf);
+			if (msize > fd->lastwriteoffset) {
+				zfile_fseek(fd->zf, fd->firstwriteoffset, SEEK_SET);
+				zfile_fwrite(fd->rom + fd->firstwriteoffset, fd->lastwriteoffset - fd->firstwriteoffset + 1, 1, fd->zf);
+			} else {
+				zfile_fseek(fd->zf, 0, SEEK_SET);
+				zfile_fwrite(fd->rom, fd->lastwriteoffset + 1, 1, fd->zf);
+			}
 		}
 	}
 	xfree(fdv);
@@ -673,76 +710,126 @@ bool flash_active(void *fdv, uaecptr addr)
 	return fd->state != 0;
 }
 
+static void writeflash(struct flashrom_data *fd, int addr, uae_u8 v)
+{
+	if (!(fd->flags & FLASHROM_PARALLEL_EEPROM)) {
+		fd->state = 100;
+		if (fd->writeprot <= 0) {
+			if (fd->rom[addr] != v) {
+				fd->rom[addr] = v;
+				fd->modified = 1;
+			}
+			if (fd->modified) {
+				setmodified(fd, addr);
+			}
+			gui_flicker_led(LED_MD, 0, 2);
+		}
+	} else {
+		int page = addr & ~(fd->pagesize - 1);
+		int mpage = addr & (fd->pagesize - 1);
+		if (fd->lastpagewrite != page) {
+			memset(fd->mpage, 0, sizeof(fd->mpage));
+			fd->pagemodified = false;
+			fd->lastpagewrite = page;
+		}
+		if (fd->writeprot <= 0) {
+			fd->page[mpage] = v;
+			fd->mpage[mpage] = true;
+			fd->pagemodified = true;
+			gui_flicker_led(LED_MD, 0, 2);
+		}
+		fd->state = 7 + 1;
+	}
+}
+
 bool flash_write(void *fdv, uaecptr addr, uae_u8 v)
 {
 	struct flashrom_data *fd = (struct flashrom_data*)fdv;
-	int oldstate;
-	uae_u32 addr2;
 	int other_byte_mult = 1;
 
 	if (!fd)
 		return false;
 
-	if (fd->flags & FLASHROM_EVERY_OTHER_BYTE) {
+	if (fd->flags & (FLASHROM_SKIP_EVERY_OTHER_BYTE | FLASHROM_EVERY_OTHER_BYTE)) {
 		addr >>= 1;
 		other_byte_mult = 2;
 	}
 
-	oldstate = fd->state;
+	if (addr * other_byte_mult >= fd->allocsize) {
+		return false;
+	}
+
+	int oldstate = fd->state;
+	bool det = false;
 
 #if FLASH_LOG > 1
 	write_log(_T("flash write %08x %02x (%d) PC=%08x\n"), addr, v, fd->state, m68k_getpc());
 #endif
 
 	addr &= fd->mask;
-	addr2 = addr & 0xffff;
 
-	if (fd->state >= 7 && fd->state < 7 + 64) {
-		if (!(fd->flags & FLASHROM_PARALLEL_EEPROM)) {
-			fd->state = 100;
-		} else {
-			fd->state++;
-			if (fd->state >= 7 + 64)
-				fd->state = 100;
-		}
-		if (addr >= fd->allocsize)
-			return false;
+	if (fd->state == 7 || fd->state == 8) {
 		int a = addr * other_byte_mult;
-		if (fd->rom[a] != v) {
-			fd->rom[a] = v;
-			setmodified(fd, a);
-		}
-		gui_flicker_led (LED_MD, 0, 2);
+		writeflash(fd, a, v);
 		return true;
 	}
 
-	if (v == 0xf0) {
+	if (v == 0xf0 && fd->state > 0 && fd->state < 7) {
 		fd->state = 0;
 		return false;
 	}
 
 	// unlock
-	if (addr2 == 0x5555 && fd->state <= 2 && v == 0xaa)
+	if (addr == 0x5555 && fd->state <= 2 && v == 0xaa) {
 		fd->state = 1;
-	if (addr2 == 0x2aaa && fd->state == 1 && v == 0x55)
+		det = true;
+	}
+	if (addr == 0x2aaa && fd->state == 1 && v == 0x55) {
 		fd->state = 2;
+		det = true;
+	}
+
+	// software id exit and reset first byte
+	if (addr == 0x5555 && fd->state == 3 && v == 0xaa) {
+		fd->state = 1;
+		det = true;
+	}
 
 	// autoselect
-	if (addr2 == 0x5555 && fd->state == 2 && v == 0x90)
+	if (addr == 0x5555 && fd->state == 2 && v == 0x90) {
 		fd->state = 3;
+		det = true;
+	}
 
-	// program
-	if (addr2 == 0x5555 && fd->state == 2 && v == 0xa0)
+	// data protect enable
+	if (addr == 0x5555 && fd->state == 2 && v == 0xa0) {
 		fd->state = 7;
+		det = true;
+		fd->writeprot = -1;
+		return false;
+	}
 
-	// chip/sector erase
-	if (addr2 == 0x5555 && fd->state == 2 && v == 0x80)
+	// data protect disable
+	if (addr == 0x5555 && fd->state == 6 && v == 0x20) {
+		fd->state = 0;
+		fd->writeprot = 0;
+		return false;
+	}
+
+	// chip/sector erase/protect disable
+	if (addr == 0x5555 && fd->state == 2 && v == 0x80) {
 		fd->state = 4;
-	if (addr2 == 0x5555 && fd->state == 4 && v == 0xaa)
+		det = true;
+	}
+	if (addr == 0x5555 && fd->state == 4 && v == 0xaa) {
 		fd->state = 5;
-	if (addr2 == 0x2aaa && fd->state == 5 && v == 0x55)
+		det = true;
+	}
+	if (addr == 0x2aaa && fd->state == 5 && v == 0x55) {
 		fd->state = 6;
-	if (addr2 == 0x5555 && fd->state == 6 && v == 0x10) {
+		det = true;
+	}
+	if (addr == 0x5555 && fd->state == 6 && v == 0x10) {
 		for (int i = 0; i < fd->allocsize; i++)  {
 			int a = i * other_byte_mult;
 			if (fd->rom[a] != 0xff) {
@@ -775,8 +862,15 @@ bool flash_write(void *fdv, uaecptr addr, uae_u8 v)
 		return true;
 	}
 
-	if (fd->state == oldstate)
+	if (fd->state == oldstate || !det) {
 		fd->state = 0;
+	}
+
+	if (!det && (fd->flags & FLASHROM_PARALLEL_EEPROM)) {
+		int a = addr * other_byte_mult;
+		writeflash(fd, a, v);
+		return true;
+	}
 	return false;
 }
 
@@ -792,12 +886,32 @@ uae_u32 flash_read(void *fdv, uaecptr addr)
 	if (!fd)
 		return 0;
 
-	if (fd->flags & FLASHROM_EVERY_OTHER_BYTE) {
+	if (fd->flags & (FLASHROM_EVERY_OTHER_BYTE | FLASHROM_SKIP_EVERY_OTHER_BYTE)) {
 		addr >>= 1;
 		other_byte_mult = 2;
 	}
 
+	if (addr * other_byte_mult >= fd->allocsize) {
+		return 0xff;
+	}
+
 	addr &= fd->mask;
+
+	// write data in pagebuffer when any read is done
+	if ((fd->flags & FLASHROM_PARALLEL_EEPROM) && fd->pagemodified) {
+		fd->pagemodified = false;
+		for (int i = 0; i < fd->pagesize; i++) {
+			int offset = fd->lastpagewrite + i;
+			if (fd->mpage[i]) {
+				if (fd->rom[offset] != fd->page[i]) {
+					fd->rom[offset] = fd->page[i];
+					setmodified(fd, offset);
+				}
+				fd->mpage[i] = false;
+			}
+		}
+	}
+
 	if (fd->state == 3) {
 		uae_u8 a = addr & 0xff;
 		if (a == 0)
@@ -820,14 +934,12 @@ uae_u32 flash_read(void *fdv, uaecptr addr)
 		if (fd->state & 1)
 			v ^= 0x40;
 		fd->state++;
-		if (fd->state >= 110)
+		if (fd->state >= 110) {
 			fd->state = 0;
+		}
 	} else {
 		fd->state = 0;
-		if (addr >= fd->allocsize)
-			v = 0xff;
-		else
-			v = fd->rom[addr * other_byte_mult];
+		v = fd->rom[addr * other_byte_mult];
 	}
 #if FLASH_LOG > 1
 	write_log(_T("flash read %08x = %02X (%d) PC=%08x\n"), oaddr, v, fd->state, m68k_getpc());

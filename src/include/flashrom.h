@@ -26,6 +26,8 @@ int eeprom_i2c_set(void *i2c, int line, int level);
 #define FLASHROM_EVERY_OTHER_BYTE 1
 #define FLASHROM_EVERY_OTHER_BYTE_ODD 2
 #define FLASHROM_PARALLEL_EEPROM 4
+#define FLASHROM_SKIP_EVERY_OTHER_BYTE 8
+#define FLASHROM_DATA_PROTECT 16
 
 void *i2c_new(uae_u8 device_address, int size, uae_u8(*read_func)(uae_u8 addr), void(*write_func)(uae_u8 addr, uae_u8 v));
 void i2c_free(void *i2c);

@@ -1930,7 +1930,7 @@ static struct zfile *get_kickstart_filehandle(struct uae_prefs *p)
 	struct zfile *f;
 	TCHAR tmprom[MAX_DPATH], tmprom2[MAX_DPATH];
 
-	f = read_rom_name(p->romfile);
+	f = read_rom_name(p->romfile, false);
 	_tcscpy(tmprom, p->romfile);
 	_tcscpy(tmprom2, p->romfile);
 	if (f == NULL) {
@@ -2487,21 +2487,21 @@ static void allocate_memory (void)
 	}
 
 	if (currprefs.cs_agnussize > AGNUSSIZE_AUTO) {
-        if (currprefs.chipset_mask & CSMASK_ECS_AGNUS) {
-            // if ECS: allow smaller than select chip RAM size DMA range
-            if (currprefs.cs_agnussize <= AGNUSSIZE_512) {
-                chipmem_full_mask = 0x80000 - 1;
-            } else if (currprefs.cs_agnussize == AGNUSSIZE_1M && chipmem_full_mask > 0x100000) {
-                chipmem_full_mask = 0x100000 - 1;
-            }
-        } else {
-            // if OCS: allow larger than 512k DMA range
-            if (currprefs.cs_agnussize == AGNUSSIZE_1M && chipmem_bank.allocated_size >= 0x100000) {
-                chipmem_full_mask = 0x100000 - 1;
-            }
-            if (currprefs.cs_agnussize == AGNUSSIZE_2M && chipmem_bank.allocated_size >= 0x180000) {
-                chipmem_full_mask = 0x200000 - 1;
-            }
+		if (currprefs.chipset_mask & CSMASK_ECS_AGNUS) {
+			// if ECS: allow smaller than select chip RAM size DMA range
+			if (currprefs.cs_agnussize <= AGNUSSIZE_512) {
+				chipmem_full_mask = 0x80000 - 1;
+			} else if (currprefs.cs_agnussize == AGNUSSIZE_1M && chipmem_full_mask > 0x100000) {
+				chipmem_full_mask = 0x100000 - 1;
+			}
+		} else {
+			// if OCS: allow larger than 512k DMA range
+			if (currprefs.cs_agnussize == AGNUSSIZE_1M && chipmem_bank.allocated_size >= 0x100000) {
+				chipmem_full_mask = 0x100000 - 1;
+			}
+			if (currprefs.cs_agnussize == AGNUSSIZE_2M && chipmem_bank.allocated_size >= 0x180000) {
+				chipmem_full_mask = 0x200000 - 1;
+			}
 		}
 	}
 
@@ -3091,7 +3091,7 @@ void memory_reset (void)
 			map_banks (&gayle_bank, 0xDD, 1, 0);
 	}
 	if (currprefs.cs_rtc == 3) { // A2000 clock
-		map_banks(&clock_bank, 0xD8, 4, 0);
+		map_banks (&clock_bank, 0xD8, 4, 0);
 		clock_bank.startmask = 0xd80000;
 	}
 	if (currprefs.cs_rtc == 1 || currprefs.cs_rtc == 2 || currprefs.cs_cdtvram) {
@@ -3099,7 +3099,7 @@ void memory_reset (void)
 		clock_bank.startmask = 0xdc0000;
 	}
 	else if (currprefs.cs_ksmirror_a8 || currprefs.cs_ide > 0 || currprefs.cs_pcmcia) {
-		map_banks(&clock_bank, 0xDC, 1, 0); /* none clock */
+		map_banks (&clock_bank, 0xDC, 1, 0); /* none clock */
 		clock_bank.startmask = 0xdc0000;
 	}
 	if (currprefs.cs_fatgaryrev >= 0 || currprefs.cs_ramseyrev >= 0)
