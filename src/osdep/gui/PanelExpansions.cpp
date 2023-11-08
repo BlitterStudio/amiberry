@@ -1213,10 +1213,28 @@ void RefreshPanelExpansions()
 
 bool HelpPanelExpansions(std::vector<std::string>& helptext)
 {
-	helptext.clear();
-	helptext.emplace_back("\"bsdsocket.library\" enables network functions (i.e. for web browsers in OS3.9).");
-	helptext.emplace_back("You don't need to use a TCP stack (e.g. AmiTCP/Genesis/Roadshow) when this option is enabled.");
-	helptext.emplace_back(" ");
-	//TODO
-	return true;
+    helptext.clear();
+    helptext.emplace_back("Some of these expansions will be set automatically for you, depending on the model of");
+    helptext.emplace_back("Amiga you chose to emulate (ie; the internal IDE for A1200 models).");
+    helptext.emplace_back(" ");
+    helptext.emplace_back("Please note that many of the options here are not yet fully functional, since they are");
+    helptext.emplace_back("currently stripped down in Amiberry. They may be added in future versions, but for now ");
+    helptext.emplace_back("only the most commonly used options are available.");
+    helptext.emplace_back(" ");
+    helptext.emplace_back("Here you can enable a few expansion options that are commonly used:");
+    helptext.emplace_back(" ");
+    helptext.emplace_back("\"bsdsocket.library\" enables network functions (ie; for web browsers in OS3.9).");
+    helptext.emplace_back("When this option is enabled, you do not need to use a native Amiga TCP stack (ie;");
+    helptext.emplace_back("AmiTCP/Genesis/Roadshow), as the Amiga applications you run will see your emulated");
+    helptext.emplace_back("Amiga as being connected to the network Amiberry is running on.");
+    helptext.emplace_back(" ");
+    helptext.emplace_back("\"uaescsi.device\" enables the uaescsi.device, which can be used to connect to hard");
+    helptext.emplace_back("drives inside the emulation.");
+    helptext.emplace_back(" ");
+    helptext.emplace_back("\"CD32 Full Motion Video cartridge\" enables the FMV module for the CD32, which is");
+    helptext.emplace_back("only useful if you're emulating a CD32 of course.");
+    helptext.emplace_back(" ");
+    helptext.emplace_back("\"uaenet.device\" is currently disabled. ");
+    helptext.emplace_back(" ");
+    return true;
 }
