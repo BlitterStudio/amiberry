@@ -7,17 +7,58 @@ on:
   pull_request:
 
 jobs:
-  flatpak:
+  build-flatpak:
     name: "Flatpak"
     runs-on: ubuntu-latest
     container:
       image: bilelmoussaoui/flatpak-github-actions:freedesktop-23.08
       options: --privileged
+
     steps:
     - uses: actions/checkout@v4
-    - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+
+    - name: Generate AppStream XML
+      run: |
+        chmod +x ./flatpak/generate-metainfo.sh
+        ./flatpak/generate-metainfo.sh ./flatpak
+        cat ./flatpak/com.blitterstudio.amiberry.metainfo.xml
+
+    - name: Build Flatpak
+      uses: flatpak/flatpak-github-actions/flatpak-builder@v6.1
       with:
         bundle: amiberry.flatpak
         manifest-path: ./flatpak/com.blitterstudio.amiberry.yml
-        cache-key: flatpak-builder-${{ github.sha }}
         arch: x86_64
+        build-bundle: true
+        verbose: true
+        branch: preview
+        cache: true
+        restore-cache: true
+        cache-key: flatpak-builder-${{ github.sha }}
+
+    - name: Upload Flatpak
+      uses: actions/upload-artifact@v3
+      with:
+        name: "linux-flatpak"
+        path: "amiberry.flatpak"
+
+  create-release:
+    needs: [build-flatpak]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/preview'
+    steps:
+      - name: Download Flatpak artifact
+        uses: actions/download-artifact@v1
+        with:
+          name: "linux-flatpak"
+
+      - name: Create Preview release
+        if: github.ref == 'refs/heads/preview'
+        uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "preview"
+          prerelease: true
+          title: "Latest Preview Build"
+          files: |
+            linux-flatpak/amiberry.flatpak
