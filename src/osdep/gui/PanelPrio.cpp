@@ -336,7 +336,7 @@ bool HelpPanelPrio(std::vector<std::string>& helptext)
 	helptext.emplace_back("scenarios. In most cases, the default settings work fine here.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("\"When Active\" - Set the priority options for when Amiberry is currently active.");
-	helptext.emplace_back("     \|");
+	helptext.emplace_back("     |");
 	helptext.emplace_back("  \"Mouse uncaptured\" - Set what Amiberry does when active and mouse capture is lost.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("\"When Inactive\" - Set the priority options for when Amiberry is currently inactive.");
