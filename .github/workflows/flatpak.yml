@@ -19,6 +19,7 @@ jobs:
 
     - name: Generate AppStream XML
       run: |
+        chmod +x ./flatpak/generate-metainfo.sh
         ./flatpak/generate-metainfo.sh ./flatpak
         cat ./flatpak/com.blitterstudio.amiberry.metainfo.xml
 
