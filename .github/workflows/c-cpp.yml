@@ -1137,24 +1137,24 @@ jobs:
           omitBodyDuringUpdate: true
           body: ${{ steps.changelog.outputs.changes }}
           artifacts: |
-            amiberry.flatpak
-            amiberry-${{ steps.tag.outputs.tag }}-macOS-x86_64.zip
-            amiberry-${{ steps.tag.outputs.tag }}-debian-buster-x86_64.zip
-            amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-x86_64.zip
-            amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-x86_64.zip
-            amiberry-${{ steps.tag.outputs.tag }}-manjaro-aarch64-rpi4.zip
-            amiberry-${{ steps.tag.outputs.tag }}-manjaro-aarch64-rk3399.zip
-            amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-aarch64-rpi5.zip
-            amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-armhf-rpi5.zip
-            amiberry-${{ steps.tag.outputs.tag }}-debian-buster-aarch64-rpi4.zip
-            amiberry-${{ steps.tag.outputs.tag }}-debian-buster-armhf-rpi4.zip
-            amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-aarch64-rpi4.zip
-            amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-armhf-rpi4.zip
-            amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-aarch64-rpi4.zip
-            amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-armhf-rpi4.zip
-            amiberry-${{ steps.tag.outputs.tag }}-debian-buster-aarch64-rpi3.zip
-            amiberry-${{ steps.tag.outputs.tag }}-debian-buster-armhf-rpi3.zip
-            amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-aarch64-rpi3.zip
-            amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-armhf-rpi3.zip
-            amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-aarch64-rpi3.zip
-            amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-armhf-rpi3.zip
+            linux-flatpak/amiberry.flatpak
+            macOS-x86_64/amiberry-${{ steps.tag.outputs.tag }}-macOS-x86_64.zip
+            debian-buster-x86_64/amiberry-${{ steps.tag.outputs.tag }}-debian-buster-x86_64.zip
+            debian-bullseye-x86_64/amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-x86_64.zip
+            debian-bookworm-x86_64/amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-x86_64.zip
+            manjaro-aarch64-rpi4/amiberry-${{ steps.tag.outputs.tag }}-manjaro-aarch64-rpi4.zip
+            manjaro-aarch64-rk3399/amiberry-${{ steps.tag.outputs.tag }}-manjaro-aarch64-rk3399.zip
+            debian-bookworm-aarch64-rpi5/amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-aarch64-rpi5.zip
+            debian-bookworm-armhf-rpi5/amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-armhf-rpi5.zip
+            debian-buster-aarch64-rpi4/amiberry-${{ steps.tag.outputs.tag }}-debian-buster-aarch64-rpi4.zip
+            debian-buster-armhf-rpi4/amiberry-${{ steps.tag.outputs.tag }}-debian-buster-armhf-rpi4.zip
+            debian-bullseye-aarch64-rpi4/amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-aarch64-rpi4.zip
+            debian-bullseye-armhf-rpi4/amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-armhf-rpi4.zip
+            debian-bookworm-aarch64-rpi4/amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-aarch64-rpi4.zip
+            debian-bookworm-armhf-rpi4/amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-armhf-rpi4.zip
+            debian-buster-aarch64-rpi3/amiberry-${{ steps.tag.outputs.tag }}-debian-buster-aarch64-rpi3.zip
+            debian-buster-armhf-rpi3/amiberry-${{ steps.tag.outputs.tag }}-debian-buster-armhf-rpi3.zip
+            debian-bullseye-aarch64-rpi3/amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-aarch64-rpi3.zip
+            debian-bullseye-armhf-rpi3/amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-armhf-rpi3.zip
+            debian-bookworm-aarch64-rpi3/amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-aarch64-rpi3.zip
+            debian-bookworm-armhf-rpi3/amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-armhf-rpi3.zip
