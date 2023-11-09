@@ -51,8 +51,8 @@ modules:
       - /lib/*.la
       - /lib/*.a
     sources:
-      - type: dir
-        path: ../external/libserialport
+      - type: archive
+        path: ../external/libserialport/libserialport-0.1.1.tar.gz
 
   - name: amiberry
     only-arches:
