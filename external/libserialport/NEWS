@@ -1,0 +1,81 @@
+0.1.1 (2016-01-27)
+------------------
+
+Note: This release does NOT change the libserialport API or ABI in
+      backwards-incompatible ways. Programs using libserialport should
+      continue to work fine without recompiling or relinking.
+
+ * New API calls:
+   - sp_get_port_description(): Obtain a user friendly port description.
+   - sp_get_port_transport(): Obtain the underlying transport type.
+   - sp_get_port_usb_bus_address(): Obtain the USB bus number & device address.
+   - sp_get_port_usb_vid_pid(): Obtain the USB VID and PID.
+   - sp_get_port_usb_manufacturer(): Obtain the USB manufacturer string.
+   - sp_get_port_usb_product(): Obtain the USB product string.
+   - sp_get_port_usb_serial(): Obtain the USB serial number string.
+   - sp_get_port_bluetooth_address(): Obtain the Bluetooth MAC address.
+   - sp_blocking_read_next(): Read bytes from the specified serial port,
+     returning as soon as any data is available.
+ * API related additions:
+   - enum sp_mode: Add SP_MODE_READ_WRITE.
+   - Add enum sp_transport with the following enum entries:
+     SP_TRANSPORT_NATIVE, SP_TRANSPORT_USB, SP_TRANSPORT_BLUETOOTH.
+ * Fix the build on platforms where port enumeration and/or port
+   metadata is not available or implemented.
+ * Build system:
+   - Don't set/override "user variables" such as CFLAGS or LDFLAGS, since
+     those are meant to be controlled by the "user" (bug #577).
+   - Modernize and cleanup autotools setup.
+ * Remove trailing commas in libserialport.h enum definitions to allow
+   the code to build with the -pedantic compiler option.
+ * Fix various issues to allow successful builds with -std=c99.
+ * Fix various (non-fatal) compiler warnings.
+ * Fix various memory leaks (bug #419, among others).
+ * Fix a potential overflow of the timeout parameter of poll().
+ * Fix ReadFile() ERROR_IO_PENDING in sp_nonblocking_read() (bug #707).
+ * Fix a glibc >= 2.20 compiler warning for deprecated _BSD_SOURCE (bug #716).
+ * Rename a 'signals' parameter to 'signal_mask' to avoid a conflict with Qt.
+ * Fix two potential segfaults in sp_get_port_handle() and sp_get_config_*()
+   (which only occurred if the user incorrectly passed in a NULL argument).
+ * sp_list_ports(): Actually set list_ptr NULL as documented.
+ * Use "Port not open" debug message when a closed port is used (bug #710).
+ * Linux:
+   - The libudev requirement has been dropped (/sys is now used directly).
+   - Fix a build issue in the get_termios_get_ioctl() call (bug #396).
+   - Fix sp_flush() so that it only flushes the requested buffers.
+   - Fix a build error if BOTHER is not available (bug #363).
+   - If present, add the USB "description" for better port identification.
+   - Handle the case when /sys/class/tty/ entries are not symlinks.
+ * Windows:
+   - MinGW-w64 (mingw-w64.sf.net) is now required for building, and MinGW
+     (mingw.org) is no longer supported (bug #393).
+   - Fix a build issue due to a missing <initguid.h> #include.
+   - Fix a build issue due to the missing -lsetupapi linker argument.
+   - Use libtool's -no-undefined option to allow shared (DLL) builds.
+   - Fix a compile error due to multiply or not defined GUIDs (bug #416).
+   - Fix a build issue related to the SP_PRIV/SP_API macros (bug #553).
+   - Fix a bug where an uninitialized pointer was free()'d (bug #512).
+   - Fix a bug wrt the SetupDiOpenDevRegKey() return code (bug #499).
+   - Fix a bug wrt restart of RX/error wait operations after read (bug #421).
+   - Fix a bug wrt WaitCommEvents() and/or fAbortOnError handling (bug #341).
+   - Fix USB iSerial queries on USB composite devices.
+   - Strip CR/LF from end of system error messages (bug #585).
+   - Avoid unnecessary calls to the SetCommTimeouts() function (bug #586).
+   - Fix a bug in the Windows implementation of sp_blocking_read_next().
+   - Fix an ERROR_SEM_TIMEOUT related issue in sp_blocking_write().
+ * FreeBSD:
+   - Implement serial port enumeration for FreeBSD systems.
+ * Android:
+   - Fix a portability issue wrt the unavailable 'serial_struct' (bug #376).
+   - Fix a portability issue wrt a readlinkat() call (bug #377).
+ * Mac OS X:
+   - Fix port listing on Mac OS X 10.11 (El Capitan).
+ * README: Various documentation updates and fixes.
+ * AUTHORS: Add/update list of contributors.
+ * Doxygen API docs: Various documentation updates and fixes.
+
+0.1.0 (2014-05-06)
+------------------
+
+ * Initial release.
+

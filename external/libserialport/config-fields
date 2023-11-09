@@ -1,0 +1,9 @@
+baudrate,int,baud rate,Baud rate in bits per second
+bits,int,data bits,Number of data bits
+parity,enum sp_parity,parity setting,Parity setting
+stopbits,int,stop bits,Number of stop bits
+rts,enum sp_rts,RTS pin behaviour,RTS pin mode
+cts,enum sp_cts,CTS pin behaviour,CTS pin mode
+dtr,enum sp_dtr,DTR pin behaviour,DTR pin mode
+dsr,enum sp_dsr,DSR pin behaviour,DSR pin mode
+xon_xoff,enum sp_xonxoff,XON/XOFF configuration,XON/XOFF mode
