@@ -1086,32 +1086,12 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           config_file: .github/tag-changelog-config.js
 
-      - name: Download a Build Artifact
-        uses: actions/download-artifact@v2.1.1
-        with:
-          name: |
-            "macOS-x86_64"
-            "debian-buster-x86_64"
-            "debian-bullseye-x86_64"
-            "debian-bookworm-x86_64"
-            "manjaro-aarch64-rpi4"
-            "manjaro-aarch64-rk3399"
-            "debian-bookworm-aarch64-rpi5"
-            "debian-bookworm-armhf-rpi5"
-            "debian-buster-aarch64-rpi4"
-            "debian-buster-armhf-rpi4"
-            "debian-bullseye-aarch64-rpi4"
-            "debian-bullseye-armhf-rpi4"
-            "debian-bookworm-aarch64-rpi4"
-            "debian-bookworm-armhf-rpi4"
-            "debian-buster-aarch64-rpi3"
-            "debian-buster-armhf-rpi3"
-            "debian-bullseye-aarch64-rpi3"
-            "debian-bullseye-armhf-rpi3"
-            "debian-bookworm-aarch64-rpi3"
-            "debian-bookworm-armhf-rpi3"
-            "linux-flatpak"
-            
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v3
+
+      - name: Display structure of downloaded files
+        run: ls -R
+
       - name: Create Release
         if: github.ref_type == 'tag'
         uses: ncipollo/release-action@v1
