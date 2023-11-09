@@ -590,7 +590,7 @@ static void CIA_update_check(void)
 		assert(c->t[1].timer < 0x10000);
 #endif
 
-		// B INMODE=10 or 11
+		// B INMODE=10 or 11 (B counting A underflows)
 		if (ovfl[0] && ((c->t[1].cr & (CR_INMODE | CR_INMODE1 | CR_START)) == (CR_INMODE1 | CR_START) || (c->t[1].cr & (CR_INMODE | CR_INMODE1 | CR_START)) == (CR_INMODE | CR_INMODE1 | CR_START))) {
 			c->t[1].inputpipe |= CIA_PIPE_INPUT;
 		}
@@ -676,6 +676,7 @@ static void CIA_calctimers(void)
 	for (int num = 0; num < 2; num++) {
 		struct CIA *c = &cia[num];
 		int idx = num * 2;
+		bool counting[2] = { false, false };
 
 		if ((c->t[0].cr & (CR_INMODE | CR_START)) == CR_START) {
 			int pipe = bitstodelay(c->t[0].inputpipe);
@@ -683,6 +684,7 @@ static void CIA_calctimers(void)
 			if (!timevals[idx + 0]) {
 				timevals[idx + 0] = DIV10;
 			}
+			counting[0] = true;
 		}
 
 		if ((c->t[1].cr & (CR_INMODE | CR_INMODE1 | CR_START)) == CR_START) {
@@ -691,6 +693,7 @@ static void CIA_calctimers(void)
 			if (!timevals[idx + 1]) {
 				timevals[idx + 1] = DIV10;
 			}
+			counting[1] = true;
 		}
 
 		for (int tn = 0; tn < 2; tn++) {
@@ -699,7 +702,9 @@ static void CIA_calctimers(void)
 			int tnidx = idx + tn;
 			if (t->cr & CR_START) {
 				if (t->inputpipe != CIA_PIPE_ALL_MASK) {
-					timerspecial = true;
+					if (counting[tn] || t->inputpipe != 0) {
+						timerspecial = true;
+					}
 				}
 			} else {
 				if (t->inputpipe != 0) {
@@ -1483,6 +1488,15 @@ static uae_u8 ReadCIAReg(int num, int reg)
 	return 0xff;
 }
 
+static bool CIA_timer_inmode(int num, uae_u8 cr)
+{
+	if (num) {
+		return (cr & (CR_INMODE | CR_INMODE1)) != 0;
+	} else {
+		return (cr & CR_INMODE) != 0;
+	}
+}
+
 static void CIA_thi_write(int num, int tnum, uae_u8 val)
 {
 	struct CIA *c = &cia[num];
@@ -1502,12 +1516,16 @@ static void CIA_thi_write(int num, int tnum, uae_u8 val)
 
 		if (t->cr & CR_RUNMODE) {
 			t->cr |= CR_START;
-			t->inputpipe = CIA_PIPE_ALL_MASK;
+			if (!CIA_timer_inmode(tnum, t->cr)) {
+				t->inputpipe = CIA_PIPE_ALL_MASK;
+			}
 		}
 
 		if (t->cr & CR_START) {
-			if (t->timer <= 1) {
-				t->preovfl = true;
+			if (!CIA_timer_inmode(tnum, t->cr)) {
+				if (t->timer <= 1) {
+					t->preovfl = true;
+				}
 			}
 		}
 
@@ -1547,9 +1565,11 @@ static void CIA_cr_write(int num, int tnum, uae_u8 val)
 			t->timer = t->latch;
 		}
 		if (val & CR_START) {
-			t->inputpipe = CIA_PIPE_ALL_MASK;
-			if (t->timer <= 1) {
-				t->preovfl = true;
+			if (!CIA_timer_inmode(tnum, val)) {
+				t->inputpipe = CIA_PIPE_ALL_MASK;
+				if (t->timer <= 1) {
+					t->preovfl = true;
+				}
 			}
 		} else {
 			t->inputpipe = 0; 
