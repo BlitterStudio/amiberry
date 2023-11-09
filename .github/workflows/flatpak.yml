@@ -7,7 +7,7 @@ on:
   pull_request:
 
 jobs:
-  flatpak:
+  build-flatpak:
     name: "Flatpak"
     runs-on: ubuntu-latest
     container:
@@ -43,7 +43,7 @@ jobs:
         path: "amiberry.flatpak"
 
   create-release:
-    needs: [flatpak]
+    needs: [build-flatpak]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/preview'
     steps:
