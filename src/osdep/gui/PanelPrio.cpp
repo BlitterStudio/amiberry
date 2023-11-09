@@ -331,6 +331,17 @@ void RefreshPanelPrio()
 bool HelpPanelPrio(std::vector<std::string>& helptext)
 {
 	helptext.clear();
-	//todo
+	helptext.emplace_back(" ");
+	helptext.emplace_back("In this panel you can configure the task priority for Amiberry, under different usage");
+	helptext.emplace_back("scenarios. In most cases, the default settings work fine here.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("\"When Active\" - Set the priority options for when Amiberry is currently active.");
+	helptext.emplace_back("     \|");
+	helptext.emplace_back("  \"Mouse uncaptured\" - Set what Amiberry does when active and mouse capture is lost.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("\"When Inactive\" - Set the priority options for when Amiberry is currently inactive.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("\"When Minimized\" - Set the priority options for when Amiberry is minimized.");
+	helptext.emplace_back(" ");
 	return true;
 }
