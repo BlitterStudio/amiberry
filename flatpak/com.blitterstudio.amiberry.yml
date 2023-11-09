@@ -1,5 +1,5 @@
 app-id: com.blitterstudio.amiberry
-branch: preview
+branch: master
 runtime: org.freedesktop.Platform
 runtime-version: "22.08"
 sdk: org.freedesktop.Sdk
