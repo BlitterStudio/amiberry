@@ -15,21 +15,25 @@ on:
 
 jobs:
 
-  build-macOS-64bit-intel:
+  build-macOS-x86_64:
     runs-on: [self-hosted, macOS, X64]
     steps:
     - uses: actions/checkout@v3
       with:
         submodules: 'true'
+
     - name: make capsimg
       run: make capsimg
+
     - name: make for macOS X64
       run: make -j4 PLATFORM=osx-x86
+
     - uses: actions/upload-artifact@v3
       with:
         name: amiberry-macOS-64bit-intel
         path: |
           Amiberry.app/**
+
     - name: Get tag
       if: github.ref_type == 'tag'
       id: tag
@@ -37,32 +41,25 @@ jobs:
       with:
         # Optionally strip `v` prefix
         strip_v: false
+
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-macOS-64bit-intel.zip Amiberry.app
-    - name: Create Changelog
-      if: github.ref_type == 'tag'
-      id: changelog
-      uses: loopwerk/tag-changelog@v1
-      with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          config_file: .github/tag-changelog-config.js
-    - name: Create Release
-      if: github.ref_type == 'tag'
-      uses: ncipollo/release-action@v1
-      with:
-        allowUpdates: true
-        omitBodyDuringUpdate: true
-        body: ${{ steps.changelog.outputs.changes }}
-        artifacts: |
-          amiberry-${{ steps.tag.outputs.tag }}-macOS-64bit-intel.zip
+      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-macOS-x86_64.zip Amiberry.app
 
-  build-x86-64-debian-buster:
+    - name: Upload artifact
+      if: github.ref_type == 'tag'
+      uses: actions/upload-artifact@v3
+      with:
+        name: "macOS-x86_64"
+        path: amiberry-${{ steps.tag.outputs.tag }}-macOS-x86_64.zip
+
+  build-debian-buster-x86_64:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
       with:
         submodules: 'true'
+
     - name: Run the build process with Docker
       uses: addnab/docker-run-action@v3
       with:
@@ -71,9 +68,10 @@ jobs:
         run: |
           make capsimg
           make -j8 PLATFORM=x86-64
+
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-x86-64-debian-buster
+        name: amiberry-debian-buster-x86_64
         path: |
           amiberry
           capsimg.so
@@ -87,6 +85,7 @@ jobs:
           savestates/**
           screenshots/**
           whdboot/**
+
     - name: Get tag
       if: github.ref_type == 'tag'
       id: tag
@@ -94,32 +93,25 @@ jobs:
       with:
         # Optionally strip `v` prefix
         strip_v: false
+
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-x86-64-debian-buster.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
-    - name: Create Changelog
-      if: github.ref_type == 'tag'
-      id: changelog
-      uses: loopwerk/tag-changelog@v1
-      with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          config_file: .github/tag-changelog-config.js
-    - name: Create Release
-      if: github.ref_type == 'tag'
-      uses: ncipollo/release-action@v1
-      with:
-        allowUpdates: true
-        omitBodyDuringUpdate: true
-        body: ${{ steps.changelog.outputs.changes }}
-        artifacts: |
-          amiberry-${{ steps.tag.outputs.tag }}-x86-64-debian-buster.zip
+      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-debian-buster-x86_64.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
 
-  build-x86-64-debian-bullseye:
+    - name: Upload artifact
+      if: github.ref_type == 'tag'
+      uses: actions/upload-artifact@v3
+      with:
+        name: "debian-buster-x86_64"
+        path: amiberry-${{ steps.tag.outputs.tag }}-debian-buster-x86_64.zip
+
+  build-debian-bullseye-x86_64:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
       with:
         submodules: 'true'
+
     - name: Run the build process with Docker
       uses: addnab/docker-run-action@v3
       with:
@@ -128,9 +120,10 @@ jobs:
         run: |
           make capsimg
           make -j8 PLATFORM=x86-64
+
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-x86-64-debian-bullseye
+        name: amiberry-debian-bullseye-x86_64
         path: |
           amiberry
           capsimg.so
@@ -144,6 +137,7 @@ jobs:
           savestates/**
           screenshots/**
           whdboot/**
+
     - name: Get tag
       if: github.ref_type == 'tag'
       id: tag
@@ -151,32 +145,25 @@ jobs:
       with:
         # Optionally strip `v` prefix
         strip_v: false
+
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-x86-64-debian-bullseye.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
-    - name: Create Changelog
-      if: github.ref_type == 'tag'
-      id: changelog
-      uses: loopwerk/tag-changelog@v1
-      with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          config_file: .github/tag-changelog-config.js
-    - name: Create Release
-      if: github.ref_type == 'tag'
-      uses: ncipollo/release-action@v1
-      with:
-        allowUpdates: true
-        omitBodyDuringUpdate: true
-        body: ${{ steps.changelog.outputs.changes }}
-        artifacts: |
-          amiberry-${{ steps.tag.outputs.tag }}-x86-64-debian-bullseye.zip
+      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-x86_64.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
 
-  build-x86-64-debian-bookworm:
+    - name: Upload artifact
+      if: github.ref_type == 'tag'
+      uses: actions/upload-artifact@v3
+      with:
+        name: "debian-bullseye-x86_64"
+        path: amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-x86_64.zip
+
+  build-debian-bookworm-x86_64:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
       with:
         submodules: 'true'
+
     - name: Run the build process with Docker
       uses: addnab/docker-run-action@v3
       with:
@@ -185,9 +172,10 @@ jobs:
         run: |
           make capsimg
           make -j8 PLATFORM=x86-64
+
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-x86-64-debian-bookworm
+        name: amiberry-debian-bookworm-x86_64
         path: |
           amiberry
           capsimg.so
@@ -201,6 +189,7 @@ jobs:
           savestates/**
           screenshots/**
           whdboot/**
+
     - name: Get tag
       if: github.ref_type == 'tag'
       id: tag
@@ -208,39 +197,34 @@ jobs:
       with:
         # Optionally strip `v` prefix
         strip_v: false
+
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-x86-64-debian-bookworm.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
-    - name: Create Changelog
-      if: github.ref_type == 'tag'
-      id: changelog
-      uses: loopwerk/tag-changelog@v1
-      with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          config_file: .github/tag-changelog-config.js
-    - name: Create Release
-      if: github.ref_type == 'tag'
-      uses: ncipollo/release-action@v1
-      with:
-        allowUpdates: true
-        omitBodyDuringUpdate: true
-        body: ${{ steps.changelog.outputs.changes }}
-        artifacts: |
-          amiberry-${{ steps.tag.outputs.tag }}-x86-64-debian-bookworm.zip
+      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-x86_64.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
 
-  build-rpi4-sdl2-64bit-manjaro:
+    - name: Upload artifact
+      if: github.ref_type == 'tag'
+      uses: actions/upload-artifact@v3
+      with:
+        name: "debian-bookworm-x86_64"
+        path: amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-x86_64.zip
+
+  build-manjaro-aarch64-rpi4:
     runs-on: [self-hosted, Linux, ARM64, manjaro]
     steps:
     - uses: actions/checkout@v3
       with:
         submodules: 'true'
+
     - name: make capsimg
       run: make capsimg
+
     - name: build for RPI4 64-bit
       run: make -j4 PLATFORM=rpi4-64-sdl2
+
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-rpi4-sdl2-64bit-manjaro
+        name: amiberry-manjaro-aarch64-rpi4
         path: |
           amiberry
           capsimg.so
@@ -254,6 +238,7 @@ jobs:
           savestates/**
           screenshots/**
           whdboot/**
+
     - name: Get tag
       if: github.ref_type == 'tag'
       id: tag
@@ -261,27 +246,19 @@ jobs:
       with:
         # Optionally strip `v` prefix
         strip_v: false
+
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-rpi4-sdl2-64bit-manjaro.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
-    - name: Create Changelog
+      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-manjaro-aarch64-rpi4.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
+
+    - name: Upload artifact
       if: github.ref_type == 'tag'
-      id: changelog
-      uses: loopwerk/tag-changelog@v1
+      uses: actions/upload-artifact@v3
       with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          config_file: .github/tag-changelog-config.js
-    - name: Create Release
-      if: github.ref_type == 'tag'
-      uses: ncipollo/release-action@v1
-      with:
-        allowUpdates: true
-        omitBodyDuringUpdate: true
-        body: ${{ steps.changelog.outputs.changes }}
-        artifacts: |
-          amiberry-${{ steps.tag.outputs.tag }}-rpi4-sdl2-64bit-manjaro.zip
+        name: "manjaro-aarch64-rpi4"
+        path: amiberry-${{ steps.tag.outputs.tag }}-manjaro-aarch64-rpi4.zip
   
-  build-RK3399-sdl2-64bit-manjaro:
+  build-manjaro-aarch64-rk3399:
     runs-on: [self-hosted, Linux, ARM64, manjaro]
     steps:
     - uses: actions/checkout@v3
@@ -289,11 +266,13 @@ jobs:
         submodules: 'true'
     - name: make capsimg
       run: make capsimg
+
     - name: build for RPI4 64-bit
       run: make -j4 PLATFORM=n2
+
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-rk3399-sdl2-64bit-manjaro
+        name: amiberry-manjaro-aarch64-rk3399
         path: |
           amiberry
           capsimg.so
@@ -307,6 +286,7 @@ jobs:
           savestates/**
           screenshots/**
           whdboot/**
+
     - name: Get tag
       if: github.ref_type == 'tag'
       id: tag
@@ -314,32 +294,25 @@ jobs:
       with:
         # Optionally strip `v` prefix
         strip_v: false
+
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-rk3399-sdl2-64bit-manjaro.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
-    - name: Create Changelog
-      if: github.ref_type == 'tag'
-      id: changelog
-      uses: loopwerk/tag-changelog@v1
-      with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          config_file: .github/tag-changelog-config.js
-    - name: Create Release
-      if: github.ref_type == 'tag'
-      uses: ncipollo/release-action@v1
-      with:
-        allowUpdates: true
-        omitBodyDuringUpdate: true
-        body: ${{ steps.changelog.outputs.changes }}
-        artifacts: |
-          amiberry-${{ steps.tag.outputs.tag }}-rk3399-sdl2-64bit-manjaro.zip
+      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-manjaro-aarch64-rk3399.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
 
-  build-rpi5-sdl2-64bit-debian-bookworm:
+    - name: Upload artifact
+      if: github.ref_type == 'tag'
+      uses: actions/upload-artifact@v3
+      with:
+        name: "manjaro-aarch64-rk3399"
+        path: amiberry-${{ steps.tag.outputs.tag }}-manjaro-aarch64-rk3399.zip
+
+  build-debian-bookworm-aarch64-rpi5:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
       with:
         submodules: 'true'
+
     - name: Run the build process with Docker
       uses: addnab/docker-run-action@v3
       with:
@@ -348,9 +321,10 @@ jobs:
         run: |
           make capsimg
           make -j8 PLATFORM=rpi5-64-sdl2
+
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-rpi5-sdl2-64bit-debian-bookworm
+        name: amiberry-debian-bookworm-aarch64-rpi5
         path: |
           amiberry
           capsimg.so
@@ -364,6 +338,7 @@ jobs:
           savestates/**
           screenshots/**
           whdboot/**
+
     - name: Get tag
       if: github.ref_type == 'tag'
       id: tag
@@ -371,32 +346,25 @@ jobs:
       with:
         # Optionally strip `v` prefix
         strip_v: false
+
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-rpi5-sdl2-64bit-debian-bookworm.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
-    - name: Create Changelog
-      if: github.ref_type == 'tag'
-      id: changelog
-      uses: loopwerk/tag-changelog@v1
-      with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          config_file: .github/tag-changelog-config.js
-    - name: Create Release
-      if: github.ref_type == 'tag'
-      uses: ncipollo/release-action@v1
-      with:
-        allowUpdates: true
-        omitBodyDuringUpdate: true
-        body: ${{ steps.changelog.outputs.changes }}
-        artifacts: |
-          amiberry-${{ steps.tag.outputs.tag }}-rpi5-sdl2-64bit-debian-bookworm.zip
+      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-aarch64-rpi5.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
 
-  build-rpi5-sdl2-32bit-debian-bookworm:
+    - name: Upload artifact
+      if: github.ref_type == 'tag'
+      uses: actions/upload-artifact@v3
+      with:
+        name: "debian-bookworm-aarch64-rpi5"
+        path: amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-aarch64-rpi5.zip
+
+  build-debian-bookworm-armhf-rpi5:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
       with:
         submodules: 'true'
+
     - name: Run the build process with Docker
       uses: addnab/docker-run-action@v3
       with:
@@ -405,9 +373,10 @@ jobs:
         run: |
           make capsimg
           make -j8 PLATFORM=rpi5-sdl2
+
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-rpi5-sdl2-32bit-debian-bookworm
+        name: amiberry-debian-bookworm-armhf-rpi5
         path: |
           amiberry
           capsimg.so
@@ -421,6 +390,7 @@ jobs:
           savestates/**
           screenshots/**
           whdboot/**
+
     - name: Get tag
       if: github.ref_type == 'tag'
       id: tag
@@ -428,32 +398,26 @@ jobs:
       with:
         # Optionally strip `v` prefix
         strip_v: false
+
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-rpi5-sdl2-32bit-debian-bookworm.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
-    - name: Create Changelog
+      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-armhf-rpi5.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
+
+    - name: Upload artifact
       if: github.ref_type == 'tag'
-      id: changelog
-      uses: loopwerk/tag-changelog@v1
+      uses: actions/upload-artifact@v3
       with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          config_file: .github/tag-changelog-config.js
-    - name: Create Release
-      if: github.ref_type == 'tag'
-      uses: ncipollo/release-action@v1
-      with:
-        allowUpdates: true
-        omitBodyDuringUpdate: true
-        body: ${{ steps.changelog.outputs.changes }}
-        artifacts: |
-          amiberry-${{ steps.tag.outputs.tag }}-rpi5-sdl2-32bit-debian-bookworm.zip
+        name: "debian-bookworm-armhf-rpi5"
+        path: amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-armhf-rpi5.zip
           
-  build-rpi4-sdl2-64bit-debian-buster:
+
+  build-debian-buster-aarch64-rpi4:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
       with:
         submodules: 'true'
+
     - name: Run the build process with Docker
       uses: addnab/docker-run-action@v3
       with:
@@ -462,9 +426,10 @@ jobs:
         run: |
           make capsimg
           make -j8 PLATFORM=rpi4-64-sdl2
+
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-rpi4-sdl2-64bit-debian-buster
+        name: amiberry-debian-buster-aarch64-rpi4
         path: |
           amiberry
           capsimg.so
@@ -478,6 +443,7 @@ jobs:
           savestates/**
           screenshots/**
           whdboot/**
+
     - name: Get tag
       if: github.ref_type == 'tag'
       id: tag
@@ -485,32 +451,25 @@ jobs:
       with:
         # Optionally strip `v` prefix
         strip_v: false
+
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-rpi4-sdl2-64bit-debian-buster.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
-    - name: Create Changelog
-      if: github.ref_type == 'tag'
-      id: changelog
-      uses: loopwerk/tag-changelog@v1
-      with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          config_file: .github/tag-changelog-config.js
-    - name: Create Release
-      if: github.ref_type == 'tag'
-      uses: ncipollo/release-action@v1
-      with:
-        allowUpdates: true
-        omitBodyDuringUpdate: true
-        body: ${{ steps.changelog.outputs.changes }}
-        artifacts: |
-          amiberry-${{ steps.tag.outputs.tag }}-rpi4-sdl2-64bit-debian-buster.zip
+      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-debian-buster-aarch64-rpi4.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
 
-  build-rpi4-sdl2-32bit-debian-buster:
+    - name: Upload artifact
+      if: github.ref_type == 'tag'
+      uses: actions/upload-artifact@v3
+      with:
+        name: "debian-buster-aarch64-rpi4"
+        path: amiberry-${{ steps.tag.outputs.tag }}-debian-buster-aarch64-rpi4.zip
+
+  build-debian-buster-armhf-rpi4:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
       with:
         submodules: 'true'
+
     - name: Run the build process with Docker
       uses: addnab/docker-run-action@v3
       with:
@@ -519,9 +478,10 @@ jobs:
         run: |
           make capsimg
           make -j8 PLATFORM=rpi4-sdl2
+
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-rpi4-sdl2-32bit-debian-buster
+        name: amiberry-debian-buster-armhf-rpi4
         path: |
           amiberry
           capsimg.so
@@ -535,6 +495,7 @@ jobs:
           savestates/**
           screenshots/**
           whdboot/**
+
     - name: Get tag
       if: github.ref_type == 'tag'
       id: tag
@@ -542,32 +503,25 @@ jobs:
       with:
         # Optionally strip `v` prefix
         strip_v: false
+
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-rpi4-sdl2-32bit-debian-buster.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
-    - name: Create Changelog
-      if: github.ref_type == 'tag'
-      id: changelog
-      uses: loopwerk/tag-changelog@v1
-      with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          config_file: .github/tag-changelog-config.js
-    - name: Create Release
-      if: github.ref_type == 'tag'
-      uses: ncipollo/release-action@v1
-      with:
-        allowUpdates: true
-        omitBodyDuringUpdate: true
-        body: ${{ steps.changelog.outputs.changes }}
-        artifacts: |
-          amiberry-${{ steps.tag.outputs.tag }}-rpi4-sdl2-32bit-debian-buster.zip
+      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-debian-buster-armhf-rpi4.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
 
-  build-rpi4-sdl2-64bit-debian-bullseye:
+    - name: Upload artifact
+      if: github.ref_type == 'tag'
+      uses: actions/upload-artifact@v3
+      with:
+        name: "debian-buster-armhf-rpi4"
+        path: amiberry-${{ steps.tag.outputs.tag }}-debian-buster-armhf-rpi4.zip
+
+  build-debian-bullseye-aarch64-rpi4:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
       with:
         submodules: 'true'
+
     - name: Run the build process with Docker
       uses: addnab/docker-run-action@v3
       with:
@@ -576,9 +530,10 @@ jobs:
         run: |
           make capsimg
           make -j8 PLATFORM=rpi4-64-sdl2
+
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-rpi4-sdl2-64bit-debian-bullseye
+        name: amiberry-debian-bullseye-aarch64-rpi4
         path: |
           amiberry
           capsimg.so
@@ -592,6 +547,7 @@ jobs:
           savestates/**
           screenshots/**
           whdboot/**
+
     - name: Get tag
       if: github.ref_type == 'tag'
       id: tag
@@ -599,32 +555,25 @@ jobs:
       with:
         # Optionally strip `v` prefix
         strip_v: false
+
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-rpi4-sdl2-64bit-debian-bullseye.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
-    - name: Create Changelog
-      if: github.ref_type == 'tag'
-      id: changelog
-      uses: loopwerk/tag-changelog@v1
-      with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          config_file: .github/tag-changelog-config.js
-    - name: Create Release
-      if: github.ref_type == 'tag'
-      uses: ncipollo/release-action@v1
-      with:
-        allowUpdates: true
-        omitBodyDuringUpdate: true
-        body: ${{ steps.changelog.outputs.changes }}
-        artifacts: |
-          amiberry-${{ steps.tag.outputs.tag }}-rpi4-sdl2-64bit-debian-bullseye.zip
+      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-aarch64-rpi4.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
 
-  build-rpi4-sdl2-32bit-debian-bullseye:
+    - name: Upload artifact
+      if: github.ref_type == 'tag'
+      uses: actions/upload-artifact@v3
+      with:
+        name: "debian-bullseye-aarch64-rpi4"
+        path: amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-aarch64-rpi4.zip
+
+  build-debian-bullseye-armhf-rpi4:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
       with:
         submodules: 'true'
+
     - name: Run the build process with Docker
       uses: addnab/docker-run-action@v3
       with:
@@ -633,9 +582,10 @@ jobs:
         run: |
           make capsimg
           make -j8 PLATFORM=rpi4-sdl2
+
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-rpi4-sdl2-32bit-debian-bullseye
+        name: amiberry-debian-bullseye-armhf-rpi4
         path: |
           amiberry
           capsimg.so
@@ -649,6 +599,7 @@ jobs:
           savestates/**
           screenshots/**
           whdboot/**
+
     - name: Get tag
       if: github.ref_type == 'tag'
       id: tag
@@ -656,32 +607,25 @@ jobs:
       with:
         # Optionally strip `v` prefix
         strip_v: false
+
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-rpi4-sdl2-32bit-debian-bullseye.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
-    - name: Create Changelog
-      if: github.ref_type == 'tag'
-      id: changelog
-      uses: loopwerk/tag-changelog@v1
-      with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          config_file: .github/tag-changelog-config.js
-    - name: Create Release
-      if: github.ref_type == 'tag'
-      uses: ncipollo/release-action@v1
-      with:
-        allowUpdates: true
-        omitBodyDuringUpdate: true
-        body: ${{ steps.changelog.outputs.changes }}
-        artifacts: |
-          amiberry-${{ steps.tag.outputs.tag }}-rpi4-sdl2-32bit-debian-bullseye.zip
+      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-armhf-rpi4.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
 
-  build-rpi4-sdl2-64bit-debian-bookworm:
+    - name: Upload artifact
+      if: github.ref_type == 'tag'
+      uses: actions/upload-artifact@v3
+      with:
+        name: "debian-bullseye-armhf-rpi4"
+        path: amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-armhf-rpi4.zip
+
+  build-debian-bookworm-aarch64-rpi4:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
       with:
         submodules: 'true'
+
     - name: Run the build process with Docker
       uses: addnab/docker-run-action@v3
       with:
@@ -690,9 +634,10 @@ jobs:
         run: |
           make capsimg
           make -j8 PLATFORM=rpi4-64-sdl2
+
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-rpi4-sdl2-64bit-debian-bookworm
+        name: amiberry-debian-bookworm-aarch64-rpi4
         path: |
           amiberry
           capsimg.so
@@ -706,6 +651,7 @@ jobs:
           savestates/**
           screenshots/**
           whdboot/**
+
     - name: Get tag
       if: github.ref_type == 'tag'
       id: tag
@@ -713,32 +659,25 @@ jobs:
       with:
         # Optionally strip `v` prefix
         strip_v: false
+
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-rpi4-sdl2-64bit-debian-bookworm.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
-    - name: Create Changelog
-      if: github.ref_type == 'tag'
-      id: changelog
-      uses: loopwerk/tag-changelog@v1
-      with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          config_file: .github/tag-changelog-config.js
-    - name: Create Release
-      if: github.ref_type == 'tag'
-      uses: ncipollo/release-action@v1
-      with:
-        allowUpdates: true
-        omitBodyDuringUpdate: true
-        body: ${{ steps.changelog.outputs.changes }}
-        artifacts: |
-          amiberry-${{ steps.tag.outputs.tag }}-rpi4-sdl2-64bit-debian-bookworm.zip
+      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-aarch64-rpi4.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
 
-  build-rpi4-sdl2-32bit-debian-bookworm:
+    - name: Upload artifact
+      if: github.ref_type == 'tag'
+      uses: actions/upload-artifact@v3
+      with:
+        name: "debian-bookworm-aarch64-rpi4"
+        path: amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-aarch64-rpi4.zip
+
+  build-debian-bookworm-armhf-rpi4:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
       with:
         submodules: 'true'
+
     - name: Run the build process with Docker
       uses: addnab/docker-run-action@v3
       with:
@@ -747,9 +686,10 @@ jobs:
         run: |
           make capsimg
           make -j8 PLATFORM=rpi4-sdl2
+
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-rpi4-sdl2-32bit-debian-bookworm
+        name: amiberry-debian-bookworm-armhf-rpi4
         path: |
           amiberry
           capsimg.so
@@ -763,6 +703,7 @@ jobs:
           savestates/**
           screenshots/**
           whdboot/**
+
     - name: Get tag
       if: github.ref_type == 'tag'
       id: tag
@@ -770,32 +711,25 @@ jobs:
       with:
         # Optionally strip `v` prefix
         strip_v: false
+
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-rpi4-sdl2-32bit-debian-bookworm.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
-    - name: Create Changelog
-      if: github.ref_type == 'tag'
-      id: changelog
-      uses: loopwerk/tag-changelog@v1
-      with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          config_file: .github/tag-changelog-config.js
-    - name: Create Release
-      if: github.ref_type == 'tag'
-      uses: ncipollo/release-action@v1
-      with:
-        allowUpdates: true
-        omitBodyDuringUpdate: true
-        body: ${{ steps.changelog.outputs.changes }}
-        artifacts: |
-          amiberry-${{ steps.tag.outputs.tag }}-rpi4-sdl2-32bit-debian-bookworm.zip
+      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-armhf-rpi4.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
 
-  build-rpi3-sdl2-64bit-debian-buster:
+    - name: Upload artifact
+      if: github.ref_type == 'tag'
+      uses: actions/upload-artifact@v3
+      with:
+        name: "debian-bookworm-armhf-rpi4"
+        path: amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-armhf-rpi4.zip
+
+  build-debian-buster-aarch64-rpi3:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
       with:
         submodules: 'true'
+
     - name: Run the build process with Docker
       uses: addnab/docker-run-action@v3
       with:
@@ -804,9 +738,10 @@ jobs:
         run: |
           make capsimg
           make -j8 PLATFORM=rpi3-64-sdl2
+
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-rpi3-sdl2-64bit-debian-buster
+        name: amiberry-debian-buster-aarch64-rpi3
         path: |
           amiberry
           capsimg.so
@@ -820,6 +755,7 @@ jobs:
           savestates/**
           screenshots/**
           whdboot/**
+
     - name: Get tag
       if: github.ref_type == 'tag'
       id: tag
@@ -827,32 +763,25 @@ jobs:
       with:
         # Optionally strip `v` prefix
         strip_v: false
+
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-rpi3-sdl2-64bit-debian-buster.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
-    - name: Create Changelog
-      if: github.ref_type == 'tag'
-      id: changelog
-      uses: loopwerk/tag-changelog@v1
-      with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          config_file: .github/tag-changelog-config.js
-    - name: Create Release
-      if: github.ref_type == 'tag'
-      uses: ncipollo/release-action@v1
-      with:
-        allowUpdates: true
-        omitBodyDuringUpdate: true
-        body: ${{ steps.changelog.outputs.changes }}
-        artifacts: |
-          amiberry-${{ steps.tag.outputs.tag }}-rpi3-sdl2-64bit-debian-buster.zip
+      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-debian-buster-aarch64-rpi3.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
 
-  build-rpi3-sdl2-32bit-debian-buster:
+    - name: Upload artifact
+      if: github.ref_type == 'tag'
+      uses: actions/upload-artifact@v3
+      with:
+        name: "debian-buster-aarch64-rpi3"
+        path: amiberry-${{ steps.tag.outputs.tag }}-debian-buster-aarch64-rpi3.zip
+
+  build-debian-buster-armhf-rpi3:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
       with:
         submodules: 'true'
+
     - name: Run the build process with Docker
       uses: addnab/docker-run-action@v3
       with:
@@ -861,9 +790,10 @@ jobs:
         run: |
           make capsimg
           make -j8 PLATFORM=rpi3-sdl2
+
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-rpi3-sdl2-32bit-debian-buster
+        name: amiberry-debian-buster-armhf-rpi3
         path: |
           amiberry
           capsimg.so
@@ -877,6 +807,7 @@ jobs:
           savestates/**
           screenshots/**
           whdboot/**
+
     - name: Get tag
       if: github.ref_type == 'tag'
       id: tag
@@ -884,32 +815,25 @@ jobs:
       with:
         # Optionally strip `v` prefix
         strip_v: false
+
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-rpi3-sdl2-32bit-debian-buster.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
-    - name: Create Changelog
-      if: github.ref_type == 'tag'
-      id: changelog
-      uses: loopwerk/tag-changelog@v1
-      with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          config_file: .github/tag-changelog-config.js
-    - name: Create Release
-      if: github.ref_type == 'tag'
-      uses: ncipollo/release-action@v1
-      with:
-        allowUpdates: true
-        omitBodyDuringUpdate: true
-        body: ${{ steps.changelog.outputs.changes }}
-        artifacts: |
-          amiberry-${{ steps.tag.outputs.tag }}-rpi3-sdl2-32bit-debian-buster.zip
+      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-debian-buster-armhf-rpi3.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
 
-  build-rpi3-sdl2-64bit-debian-bullseye:
+    - name: Upload artifact
+      if: github.ref_type == 'tag'
+      uses: actions/upload-artifact@v3
+      with:
+        name: "debian-buster-armhf-rpi3"
+        path: amiberry-${{ steps.tag.outputs.tag }}-debian-buster-armhf-rpi3.zip
+
+  build-debian-bullseye-aarch64-rpi3:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
       with:
         submodules: 'true'
+
     - name: Run the build process with Docker
       uses: addnab/docker-run-action@v3
       with:
@@ -918,9 +842,10 @@ jobs:
         run: |
           make capsimg
           make -j8 PLATFORM=rpi3-64-sdl2
+
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-rpi3-sdl2-64bit-debian-bullseye
+        name: amiberry-debian-bullseye-aarch64-rpi3
         path: |
           amiberry
           capsimg.so
@@ -934,6 +859,7 @@ jobs:
           savestates/**
           screenshots/**
           whdboot/**
+
     - name: Get tag
       if: github.ref_type == 'tag'
       id: tag
@@ -941,32 +867,25 @@ jobs:
       with:
         # Optionally strip `v` prefix
         strip_v: false
+
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-rpi3-sdl2-64bit-debian-bullseye.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
-    - name: Create Changelog
-      if: github.ref_type == 'tag'
-      id: changelog
-      uses: loopwerk/tag-changelog@v1
-      with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          config_file: .github/tag-changelog-config.js
-    - name: Create Release
-      if: github.ref_type == 'tag'
-      uses: ncipollo/release-action@v1
-      with:
-        allowUpdates: true
-        omitBodyDuringUpdate: true
-        body: ${{ steps.changelog.outputs.changes }}
-        artifacts: |
-          amiberry-${{ steps.tag.outputs.tag }}-rpi3-sdl2-64bit-debian-bullseye.zip
+      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-aarch64-rpi3.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
 
-  build-rpi3-sdl2-32bit-debian-bullseye:
+    - name: Upload artifact
+      if: github.ref_type == 'tag'
+      uses: actions/upload-artifact@v3
+      with:
+        name: "debian-bullseye-aarch64-rpi3"
+        path: amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-aarch64-rpi3.zip
+
+  build-debian-bullseye-armhf-rpi3:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
       with:
         submodules: 'true'
+
     - name: Run the build process with Docker
       uses: addnab/docker-run-action@v3
       with:
@@ -975,9 +894,10 @@ jobs:
         run: |
           make capsimg
           make -j8 PLATFORM=rpi3-sdl2
+
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-rpi3-sdl2-32bit-debian-bullseye
+        name: amiberry-debian-bullseye-armhf-rpi3
         path: |
           amiberry
           capsimg.so
@@ -991,6 +911,7 @@ jobs:
           savestates/**
           screenshots/**
           whdboot/**
+
     - name: Get tag
       if: github.ref_type == 'tag'
       id: tag
@@ -998,32 +919,25 @@ jobs:
       with:
         # Optionally strip `v` prefix
         strip_v: false
+
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-rpi3-sdl2-32bit-debian-bullseye.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
-    - name: Create Changelog
-      if: github.ref_type == 'tag'
-      id: changelog
-      uses: loopwerk/tag-changelog@v1
-      with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          config_file: .github/tag-changelog-config.js
-    - name: Create Release
-      if: github.ref_type == 'tag'
-      uses: ncipollo/release-action@v1
-      with:
-        allowUpdates: true
-        omitBodyDuringUpdate: true
-        body: ${{ steps.changelog.outputs.changes }}
-        artifacts: |
-          amiberry-${{ steps.tag.outputs.tag }}-rpi3-sdl2-32bit-debian-bullseye.zip
+      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-armhf-rpi3.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
 
-  build-rpi3-sdl2-64bit-debian-bookworm:
+    - name: Upload artifact
+      if: github.ref_type == 'tag'
+      uses: actions/upload-artifact@v3
+      with:
+        name: "debian-bullseye-armhf-rpi3"
+        path: amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-armhf-rpi3.zip
+
+  build-debian-bookworm-aarch64-rpi3:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
       with:
         submodules: 'true'
+
     - name: Run the build process with Docker
       uses: addnab/docker-run-action@v3
       with:
@@ -1032,9 +946,10 @@ jobs:
         run: |
           make capsimg
           make -j8 PLATFORM=rpi3-64-sdl2
+
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-rpi3-sdl2-64bit-debian-bookworm
+        name: amiberry-debian-bookworm-aarch64-rpi3
         path: |
           amiberry
           capsimg.so
@@ -1048,6 +963,7 @@ jobs:
           savestates/**
           screenshots/**
           whdboot/**
+
     - name: Get tag
       if: github.ref_type == 'tag'
       id: tag
@@ -1055,32 +971,25 @@ jobs:
       with:
         # Optionally strip `v` prefix
         strip_v: false
+
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-rpi3-sdl2-64bit-debian-bookworm.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
-    - name: Create Changelog
-      if: github.ref_type == 'tag'
-      id: changelog
-      uses: loopwerk/tag-changelog@v1
-      with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          config_file: .github/tag-changelog-config.js
-    - name: Create Release
-      if: github.ref_type == 'tag'
-      uses: ncipollo/release-action@v1
-      with:
-        allowUpdates: true
-        omitBodyDuringUpdate: true
-        body: ${{ steps.changelog.outputs.changes }}
-        artifacts: |
-          amiberry-${{ steps.tag.outputs.tag }}-rpi3-sdl2-64bit-debian-bookworm.zip
+      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-aarch64-rpi3.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
 
-  build-rpi3-sdl2-32bit-debian-bookworm:
+    - name: Upload artifact
+      if: github.ref_type == 'tag'
+      uses: actions/upload-artifact@v3
+      with:
+        name: "debian-bookworm-aarch64-rpi3"
+        path: amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-aarch64-rpi3.zip
+
+  build-debian-bookworm-armhf-rpi3:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
       with:
         submodules: 'true'
+
     - name: Run the build process with Docker
       uses: addnab/docker-run-action@v3
       with:
@@ -1089,9 +998,10 @@ jobs:
         run: |
           make capsimg
           make -j8 PLATFORM=rpi3-sdl2
+
     - uses: actions/upload-artifact@v3
       with:
-        name: amiberry-rpi3-sdl2-32bit-debian-bookworm
+        name: amiberry-debian-bookworm-armhf-rpi3
         path: |
           amiberry
           capsimg.so
@@ -1105,6 +1015,7 @@ jobs:
           savestates/**
           screenshots/**
           whdboot/**
+
     - name: Get tag
       if: github.ref_type == 'tag'
       id: tag
@@ -1112,22 +1023,92 @@ jobs:
       with:
         # Optionally strip `v` prefix
         strip_v: false
+
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-rpi3-sdl2-32bit-debian-bookworm.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
-    - name: Create Changelog
+      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-armhf-rpi3.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
+
+    - name: Upload artifact
       if: github.ref_type == 'tag'
-      id: changelog
-      uses: loopwerk/tag-changelog@v1
+      uses: actions/upload-artifact@v3
       with:
+        name: "debian-bookworm-armhf-rpi3"
+        path: amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-armhf-rpi3.zip
+
+  build-flatpak-x86_64:
+    runs-on: ubuntu-latest
+    container:
+      image: bilelmoussaoui/flatpak-github-actions:freedesktop-23.08
+      options: --privileged
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Flatpak
+        uses: flatpak/flatpak-github-actions/flatpak-builder@v6.1
+        with:
+          bundle: amiberry.flatpak
+          manifest-path: ./flatpak/com.blitterstudio.amiberry.yml
+          arch: x86_64
+          build-bundle: true
+          verbose: true
+          branch: preview
+          cache: true
+          restore-cache: true
+          cache-key: flatpak-builder-${{ github.sha }}
+
+      - name: Upload Flatpak
+        uses: actions/upload-artifact@v3
+        with:
+          name: "linux-flatpak"
+          path: "amiberry.flatpak"
+
+  create-release:
+    needs: [build-macOS-x86_64, build-debian-buster-x86_64, build-debian-bullseye-x86_64, build-debian-bookworm-x86_64, build-manjaro-aarch64-rpi4, build-manjaro-aarch64-rk3399, build-debian-bookworm-aarch64-rpi5, build-debian-bookworm-armhf-rpi5, build-debian-buster-aarch64-rpi4, build-debian-buster-armhf-rpi4, build-debian-bullseye-aarch64-rpi4, build-debian-bullseye-armhf-rpi4, build-debian-bookworm-aarch64-rpi4, build-debian-bookworm-armhf-rpi4, build-debian-buster-aarch64-rpi3, build-debian-buster-armhf-rpi3, build-debian-bullseye-aarch64-rpi3, build-debian-bullseye-armhf-rpi3, build-debian-bookworm-aarch64-rpi3, build-debian-bookworm-armhf-rpi3, build-flatpak-x86_64]
+    runs-on: ubuntu-latest
+    if: github.ref_type == 'tag'
+    steps:
+      - name: Get tag
+        if: github.ref_type == 'tag'
+        id: tag
+        uses: dawidd6/action-get-tag@v1
+        with:
+          # Optionally strip `v` prefix
+          strip_v: false
+
+      - name: Create Changelog
+        if: github.ref_type == 'tag'
+        id: changelog
+        uses: loopwerk/tag-changelog@v1
+        with:
           token: ${{ secrets.GITHUB_TOKEN }}
           config_file: .github/tag-changelog-config.js
-    - name: Create Release
-      if: github.ref_type == 'tag'
-      uses: ncipollo/release-action@v1
-      with:
-        allowUpdates: true
-        omitBodyDuringUpdate: true
-        body: ${{ steps.changelog.outputs.changes }}
-        artifacts: |
-          amiberry-${{ steps.tag.outputs.tag }}-rpi3-sdl2-32bit-debian-bookworm.zip
+
+      - name: Create Release
+        if: github.ref_type == 'tag'
+        uses: ncipollo/release-action@v1
+        with:
+          allowUpdates: true
+          omitBodyDuringUpdate: true
+          body: ${{ steps.changelog.outputs.changes }}
+          artifacts: |
+            amiberry-${{ steps.tag.outputs.tag }}-macOS-x86_64.zip
+            amiberry-${{ steps.tag.outputs.tag }}-debian-buster-x86_64.zip
+            amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-x86_64.zip
+            amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-x86_64.zip
+            amiberry-${{ steps.tag.outputs.tag }}-manjaro-aarch64-rpi4.zip
+            amiberry-${{ steps.tag.outputs.tag }}-manjaro-aarch64-rk3399.zip
+            amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-aarch64-rpi5.zip
+            amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-armhf-rpi5.zip
+            amiberry-${{ steps.tag.outputs.tag }}-debian-buster-aarch64-rpi4.zip
+            amiberry-${{ steps.tag.outputs.tag }}-debian-buster-armhf-rpi4.zip
+            amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-aarch64-rpi4.zip
+            amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-armhf-rpi4.zip
+            amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-aarch64-rpi4.zip
+            amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-armhf-rpi4.zip
+            amiberry-${{ steps.tag.outputs.tag }}-debian-buster-aarch64-rpi3.zip
+            amiberry-${{ steps.tag.outputs.tag }}-debian-buster-armhf-rpi3.zip
+            amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-aarch64-rpi3.zip
+            amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-armhf-rpi3.zip
+            amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-aarch64-rpi3.zip
+            amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-armhf-rpi3.zip
