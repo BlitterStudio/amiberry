@@ -8,7 +8,10 @@
 
   <metadata_license>FSFAP</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
+  <update_contact>midwan_AT_gmail.com</update_contact>
   <url type="homepage">https://amiberry.com</url>
+  <url type="help">https://github.com/BlitterStudio/amiberry/wiki</url>
+  <url type="vcs-browser">https://github.com/BlitterStudio/amiberry/wiki</url>
 
   <supports>
     <control>pointing</control>
@@ -18,11 +21,9 @@
   </supports>
 
   <description>
-    <p>
-      Amiberry is an optimized Amiga emulator for Linux (ARM, ARM64 and x86-64). 
-      It is based on the latest WinUAE, with several unique features on top of it, 
-      like a WHDLoad booter, custom controls, Host-Run functionality and more.
-    </p>
+    <p>Amiberry is an optimized Amiga emulator for Linux (ARM, ARM64 and x86-64).</p>
+    <p>It is based on the latest WinUAE, with several unique features on top of it,</p>
+    <p>like a WHDLoad booter, custom controls, Host-Run functionality and more.</p>
   </description>
   <screenshots>
     <screenshot type="default">
@@ -30,6 +31,6 @@
     </screenshot>
   </screenshots>
   <releases>
-    <release version="5.6.1" date="2023-06-21"/>
+    <release version="5.6.2" date="2023-11-09"/>
   </releases>
 </component>
