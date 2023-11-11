@@ -160,12 +160,6 @@ extern gcn::SDLGraphics* gui_graphics;
 extern gcn::SDLTrueTypeFont* gui_font;
 #endif
 
-#ifdef USE_DISPMANX
-extern DISPMANX_RESOURCE_HANDLE_T gui_resource;
-extern DISPMANX_RESOURCE_HANDLE_T black_gui_resource;
-extern DISPMANX_ELEMENT_HANDLE_T gui_element;
-extern int element_present;
-#else
 #ifdef USE_OPENGL
 extern SDL_GLContext gl_context;
 #else
@@ -173,7 +167,6 @@ extern SDL_Texture* gui_texture;
 #endif
 extern SDL_Cursor* cursor;
 extern SDL_Surface* cursor_surface;
-#endif
 
 extern char current_dir[MAX_DPATH];
 extern char last_loaded_config[MAX_DPATH];

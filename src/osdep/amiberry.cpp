@@ -1769,7 +1769,6 @@ void target_fixup_options(struct uae_prefs* p)
 	// Always use these pixel formats, for optimal performance
 	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5PC | RGBFF_R8G8B8A8;
 
-#if !defined USE_DISPMANX
 	if (p->gfx_auto_crop)
 	{
 		// Make sure that Width/Height are set to max, and Auto-Center disabled
@@ -1777,13 +1776,6 @@ void target_fixup_options(struct uae_prefs* p)
 		p->gfx_monitor[0].gfx_size.height = p->gfx_monitor[0].gfx_size_win.height = 568;
 		p->gfx_xcenter = p->gfx_ycenter = 0;
 	}
-#endif
-
-#ifdef USE_DISPMANX
-	// Always disable Virtual Mouse mode on Dispmanx, as it doesn't work as expected in some cases
-	if (p->input_tablet > 0)
-		p->input_tablet = TABLET_OFF;
-#endif
 #endif
 	
 	if (p->rtgboards[0].rtgmem_type >= GFXBOARD_HARDWARE) {
@@ -1936,10 +1928,8 @@ void target_default_options(struct uae_prefs* p, int type)
 	if (amiberry_options.default_auto_crop)
 	{
 		p->gfx_auto_crop = amiberry_options.default_auto_crop;
-#if !defined USE_DISPMANX
 		p->gfx_monitor[0].gfx_size.width = p->gfx_monitor[0].gfx_size_win.width = 720;
 		p->gfx_monitor[0].gfx_size.height = p->gfx_monitor[0].gfx_size_win.height = 568;
-#endif
 	}
 	
 	p->gfx_correct_aspect = amiberry_options.default_correct_aspect_ratio;
@@ -1984,18 +1974,12 @@ void target_default_options(struct uae_prefs* p, int type)
 		p->gfx_vresolution = VRES_NONDOUBLE;
 		p->gfx_pscanlines = 0;
 	}
-#if !defined USE_DISPMANX
+
 	if (amiberry_options.default_horizontal_centering)
-#else
-	if (amiberry_options.default_horizontal_centering && !p->gfx_auto_crop)
-#endif
 		p->gfx_xcenter = 2;
 
-#if !defined USE_DISPMANX
+
 	if (amiberry_options.default_vertical_centering)
-#else
-	if (amiberry_options.default_vertical_centering && !p->gfx_auto_crop)
-#endif
 		p->gfx_ycenter = 2;
 
 	if (amiberry_options.default_frameskip)
@@ -3667,18 +3651,7 @@ int main(int argc, char* argv[])
 	RescanROMs();
 	uae_time_calibrate();
 	
-	if (
-#ifdef USE_DISPMANX
-		SDL_Init(SDL_INIT_TIMER
-			| SDL_INIT_AUDIO
-			| SDL_INIT_JOYSTICK
-			| SDL_INIT_HAPTIC
-			| SDL_INIT_GAMECONTROLLER
-			| SDL_INIT_EVENTS) != 0
-#else
-		SDL_Init(SDL_INIT_EVERYTHING) != 0
-#endif
-		)
+	if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
 	{
 		write_log("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
 		abort();

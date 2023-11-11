@@ -137,20 +137,13 @@ SDL_Joystick* gui_joystick;
 SDL_Surface* gui_screen;
 SDL_Event gui_event;
 SDL_Event touch_event;
-#ifdef USE_DISPMANX
-DISPMANX_RESOURCE_HANDLE_T gui_resource;
-DISPMANX_RESOURCE_HANDLE_T black_gui_resource;
-DISPMANX_ELEMENT_HANDLE_T gui_element;
-DISPMANX_ELEMENT_HANDLE_T gui_black_element;
-int element_present = 0;
-#else
+
 #ifdef USE_OPENGL
 #else
 SDL_Texture* gui_texture;
 #endif
 SDL_Cursor* cursor;
 SDL_Surface* cursor_surface;
-#endif
 
 /*
 * Gui SDL stuff we need
@@ -269,13 +262,11 @@ void cap_fps(Uint64 start)
 	int refresh_rate;
 	const auto end = SDL_GetPerformanceCounter();
 	const auto elapsed_ms = static_cast<float>(end - start) / static_cast<float>(SDL_GetPerformanceFrequency()) * 1000.0f;
-#ifdef USE_DISPMANX
-	refresh_rate = 60;
-#else
+
 	refresh_rate = sdl_mode.refresh_rate;
 	if (refresh_rate < 50) refresh_rate = 50;
 	if (refresh_rate > 60) refresh_rate = 60;
-#endif
+
 	float d = 0.0f;
 	if (refresh_rate == 60)
 		d = floor(16.666f - elapsed_ms);
@@ -287,12 +278,7 @@ void cap_fps(Uint64 start)
 
 void update_gui_screen()
 {
-#ifdef USE_DISPMANX
-	vc_dispmanx_resource_write_data(gui_resource, rgb_mode, gui_screen->pitch, gui_screen->pixels, &blit_rect);
-	updateHandle = vc_dispmanx_update_start(0);
-	vc_dispmanx_element_change_source(updateHandle, gui_element, gui_resource);
-	vc_dispmanx_update_submit_sync(updateHandle);
-#elif USE_OPENGL
+#ifdef USE_OPENGL
 	const AmigaMonitor* mon = &AMonitors[0];
 	SDL_GL_SwapWindow(mon->sdl_window);
 #else
@@ -307,8 +293,6 @@ void update_gui_screen()
 #endif
 }
 
-#ifdef USE_DISPMANX
-#else
 void setup_cursor()
 {
 	cursor_surface = SDL_LoadBMP(prefix_with_data_path("cursor.bmp").c_str());
@@ -347,83 +331,12 @@ void setup_cursor()
 
 	SDL_SetCursor(cursor);	
 }
-#endif
-
-void init_dispmanx_gui()
-{
-#ifdef USE_DISPMANX
-	if (!displayHandle)
-		displayHandle = vc_dispmanx_display_open(0);
-	rgb_mode = VC_IMAGE_RGB565;
-	uint32_t vc_gui_image_ptr;
-	if (!gui_resource)
-		gui_resource = vc_dispmanx_resource_create(rgb_mode, GUI_WIDTH, GUI_HEIGHT, &vc_gui_image_ptr);
-	if (!black_gui_resource)
-		black_gui_resource = vc_dispmanx_resource_create(rgb_mode, GUI_WIDTH, GUI_HEIGHT, &vc_gui_image_ptr);
-	
-	vc_dispmanx_rect_set(&blit_rect, 0, 0, GUI_WIDTH, GUI_HEIGHT);
-	vc_dispmanx_resource_write_data(gui_resource, rgb_mode, gui_screen->pitch, gui_screen->pixels, &blit_rect);
-	vc_dispmanx_resource_write_data(black_gui_resource, rgb_mode, gui_screen->pitch, gui_screen->pixels, &blit_rect);
-	vc_dispmanx_rect_set(&src_rect, 0, 0, GUI_WIDTH << 16, GUI_HEIGHT << 16);
-	vc_dispmanx_rect_set(&black_rect, 0, 0, modeInfo.width, modeInfo.height);
-	// Full screen destination rectangle
-	//vc_dispmanx_rect_set(&dst_rect, 0, 0, modeInfo.width, modeInfo.height);
-
-	// Scaled display with correct Aspect Ratio
-	const auto want_aspect = static_cast<float>(GUI_WIDTH) / static_cast<float>(GUI_HEIGHT);
-	const auto real_aspect = static_cast<float>(modeInfo.width) / static_cast<float>(modeInfo.height);
-
-	SDL_Rect viewport;
-	if (want_aspect > real_aspect)
-	{
-		const auto scale = static_cast<float>(modeInfo.width) / static_cast<float>(GUI_WIDTH);
-		viewport.x = 0;
-		viewport.w = modeInfo.width;
-		viewport.h = static_cast<int>(std::ceil(GUI_HEIGHT * scale));
-		viewport.y = (modeInfo.height - viewport.h) / 2;
-	}
-	else
-	{
-		const auto scale = static_cast<float>(modeInfo.height) / static_cast<float>(GUI_HEIGHT);
-		viewport.y = 0;
-		viewport.h = modeInfo.height;
-		viewport.w = static_cast<int>(std::ceil(GUI_WIDTH * scale));
-		viewport.x = (modeInfo.width - viewport.w) / 2;
-	}
-	vc_dispmanx_rect_set(&dst_rect, viewport.x, viewport.y, viewport.w, viewport.h);
-
-	if (!element_present)
-	{
-		element_present = 1;
-		updateHandle = vc_dispmanx_update_start(0);
-
-		VC_DISPMANX_ALPHA_T alpha;
-		alpha.flags = DISPMANX_FLAGS_ALPHA_FROM_SOURCE;
-		alpha.opacity = 255;
-		alpha.mask = 0;
-
-		if (!gui_black_element)
-			gui_black_element = vc_dispmanx_element_add(updateHandle, displayHandle, 0,
-				&black_rect, black_gui_resource, &src_rect, DISPMANX_PROTECTION_NONE, &alpha,
-				nullptr, DISPMANX_NO_ROTATE);
-
-		if (!gui_element)
-			gui_element = vc_dispmanx_element_add(updateHandle, displayHandle, 1,
-				&dst_rect, gui_resource, &src_rect, DISPMANX_PROTECTION_NONE, &alpha,
-				nullptr, DISPMANX_NO_ROTATE);
-
-		vc_dispmanx_update_submit_sync(updateHandle);
-	}
-#endif
-}
 
 void amiberry_gui_init()
 {
 	AmigaMonitor* mon = &AMonitors[0];
-#ifndef USE_DISPMANX
 	sdl_video_driver = SDL_GetCurrentVideoDriver();
 	SDL_GetCurrentDisplayMode(0, &sdl_mode);
-#endif
 
 // we will grab the surface from the window directly, for OpenGL
 #ifndef USE_OPENGL
@@ -436,26 +349,7 @@ void amiberry_gui_init()
 		check_error_sdl(gui_screen == nullptr, "Unable to create GUI surface:");
 	}
 #endif
-#ifdef USE_DISPMANX
-	init_dispmanx_gui();
-	
-	if (!mon->sdl_window)
-	{
-		mon->sdl_window = SDL_CreateWindow("Amiberry GUI",
-			SDL_WINDOWPOS_CENTERED,
-			SDL_WINDOWPOS_CENTERED,
-			GUI_WIDTH,
-			GUI_HEIGHT,
-			SDL_WINDOW_FULLSCREEN_DESKTOP);
-		check_error_sdl(mon->sdl_window == nullptr, "Unable to create window:");
-	}
-	if (sdl_renderer == nullptr)
-	{
-		sdl_renderer = SDL_CreateRenderer(mon->sdl_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-		check_error_sdl(sdl_renderer == nullptr, "Unable to create a renderer:");
-	}
-	SDL_RenderSetLogicalSize(sdl_renderer, GUI_WIDTH, GUI_HEIGHT);
-#else
+
 	//setup_cursor();
 
 	if (!mon->sdl_window)
@@ -548,7 +442,6 @@ void amiberry_gui_init()
 	else
 		SDL_RenderSetLogicalSize(sdl_renderer, GUI_HEIGHT, GUI_WIDTH);
 #endif
-#endif
 
 	SDL_SetRelativeMouseMode(SDL_FALSE);
 	SDL_ShowCursor(SDL_ENABLE);
@@ -600,35 +493,7 @@ void amiberry_gui_halt()
 		gui_screen = nullptr;
 	}
 #endif
-#ifdef USE_DISPMANX
-	if (element_present == 1)
-	{
-		updateHandle = vc_dispmanx_update_start(0);
-		vc_dispmanx_element_remove(updateHandle, gui_element);
-		vc_dispmanx_element_remove(updateHandle, gui_black_element);
-		vc_dispmanx_update_submit_sync(updateHandle);
-		gui_element = 0;
-		gui_black_element = 0;
-		element_present = 0;
-	}
-	
-	if (gui_resource)
-	{
-		vc_dispmanx_resource_delete(gui_resource);
-		gui_resource = 0;
-	}
-
-	if (black_gui_resource)
-	{
-		vc_dispmanx_resource_delete(black_gui_resource);
-		black_gui_resource = 0;
-	}
-	//if (displayHandle)
-	//{
-	//	vc_dispmanx_display_close(displayHandle);
-	//	displayHandle = 0;
-	//}
-#elif USE_OPENGL
+#ifdef USE_OPENGL
 	if (cursor != nullptr)
 	{
 		SDL_FreeCursor(cursor);

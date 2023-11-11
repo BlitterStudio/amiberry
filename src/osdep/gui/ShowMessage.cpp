@@ -57,27 +57,7 @@ static void InitShowMessage(const std::string& message)
 		check_error_sdl(gui_screen == nullptr, "Unable to create SDL surface:");
 	}
 #endif
-#ifdef USE_DISPMANX
-	if (!displayHandle)
-		init_dispmanx_gui();
 
-	if (!mon->sdl_window)
-	{
-		mon->sdl_window = SDL_CreateWindow("Amiberry",
-			SDL_WINDOWPOS_CENTERED,
-			SDL_WINDOWPOS_CENTERED,
-			GUI_WIDTH,
-			GUI_HEIGHT,
-			SDL_WINDOW_FULLSCREEN_DESKTOP);
-		check_error_sdl(mon->sdl_window == nullptr, "Unable to create window:");
-	}
-	if (sdl_renderer == nullptr)
-	{
-		sdl_renderer = SDL_CreateRenderer(mon->sdl_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-		check_error_sdl(sdl_renderer == nullptr, "Unable to create a renderer:");
-		SDL_RenderSetLogicalSize(sdl_renderer, GUI_WIDTH, GUI_HEIGHT);
-	}
-#else
 	if (!mon->sdl_window)
 	{
 		Uint32 flags = SDL_WINDOW_FULLSCREEN_DESKTOP;
@@ -136,7 +116,6 @@ static void InitShowMessage(const std::string& message)
 		SDL_RenderSetLogicalSize(sdl_renderer, GUI_WIDTH, GUI_HEIGHT);
 	else
 		SDL_RenderSetLogicalSize(sdl_renderer, GUI_HEIGHT, GUI_WIDTH);
-#endif
 #endif
 
 	SDL_SetRelativeMouseMode(SDL_FALSE);
@@ -261,32 +240,7 @@ static void ExitShowMessage()
 			gui_screen = nullptr;
 		}
 #endif
-#ifdef USE_DISPMANX
-		if (element_present == 1)
-		{
-			element_present = 0;
-			updateHandle = vc_dispmanx_update_start(0);
-			vc_dispmanx_element_remove(updateHandle, gui_element);
-			gui_element = 0;
-			vc_dispmanx_element_remove(updateHandle, blackscreen_element);
-			blackscreen_element = 0;
-			vc_dispmanx_update_submit_sync(updateHandle);
-		}
-
-		if (gui_resource)
-		{
-			vc_dispmanx_resource_delete(gui_resource);
-			gui_resource = 0;
-		}
-
-		if (black_gui_resource)
-		{
-			vc_dispmanx_resource_delete(black_gui_resource);
-			black_gui_resource = 0;
-		}
-		if (displayHandle)
-			vc_dispmanx_display_close(displayHandle);
-#elif USE_OPENGL
+#ifdef USE_OPENGL
 		if (gl_context != nullptr)
 		{
 			SDL_GL_DeleteContext(gl_context);

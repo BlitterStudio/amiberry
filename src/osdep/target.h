@@ -63,9 +63,6 @@ extern int emulating;
 extern bool config_loaded;
 
 extern int z3_base_adr;
-#ifdef USE_DISPMANX
-extern unsigned long time_per_frame;
-#endif
 extern bool volatile flip_in_progress;
 
 void amiberry_gui_init();

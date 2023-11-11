@@ -563,10 +563,6 @@ void parse_gfx_settings(uae_prefs* prefs, game_options game_detail)
 	// SCREEN CENTER/HEIGHT/WIDTH
 	if (strcmpi(game_detail.scr_centerh, "smart") == 0)
 	{
-#ifdef USE_DISPMANX
-			line_string = "gfx_center_horizontal=smart";
-			parse_cfg_line(prefs, line_string);
-#else
 		if (prefs->gfx_auto_crop)
 		{
 			// Disable if using Auto-Crop, otherwise the output won't be correct
@@ -578,7 +574,6 @@ void parse_gfx_settings(uae_prefs* prefs, game_options game_detail)
 			line_string = "gfx_center_horizontal=smart";
 			parse_cfg_line(prefs, line_string);
 		}
-#endif
 	}
 	else if (strcmpi(game_detail.scr_centerh, "none") == 0)
 	{
@@ -588,10 +583,6 @@ void parse_gfx_settings(uae_prefs* prefs, game_options game_detail)
 
 	if (strcmpi(game_detail.scr_centerv, "smart") == 0)
 	{
-#ifdef USE_DISPMANX
-			line_string = "gfx_center_vertical=smart";
-			parse_cfg_line(prefs, line_string);
-#else
 		if (prefs->gfx_auto_crop)
 		{
 			// Disable if using Auto-Crop, otherwise the output won't be correct
@@ -603,7 +594,6 @@ void parse_gfx_settings(uae_prefs* prefs, game_options game_detail)
 			line_string = "gfx_center_vertical=smart";
 			parse_cfg_line(prefs, line_string);
 		}
-#endif
 	}
 	else if (strcmpi(game_detail.scr_centerv, "none") == 0)
 	{
@@ -613,19 +603,6 @@ void parse_gfx_settings(uae_prefs* prefs, game_options game_detail)
 
 	if (strcmpi(game_detail.scr_height, "nul") != 0)
 	{
-#ifdef USE_DISPMANX
-			line_string = "gfx_height=";
-			line_string.append(game_detail.scr_height);
-			parse_cfg_line(prefs, line_string);
-
-			line_string = "gfx_height_windowed=";
-			line_string.append(game_detail.scr_height);
-			parse_cfg_line(prefs, line_string);
-
-			line_string = "gfx_height_fullscreen=";
-			line_string.append(game_detail.scr_height);
-			parse_cfg_line(prefs, line_string);
-#else
 		if (prefs->gfx_auto_crop)
 		{
 			// If using Auto-Crop, bypass any screen Height adjustments as they are not needed and will cause issues
@@ -652,24 +629,10 @@ void parse_gfx_settings(uae_prefs* prefs, game_options game_detail)
 			line_string.append(game_detail.scr_height);
 			parse_cfg_line(prefs, line_string);
 		}
-#endif
 	}
 
 	if (strcmpi(game_detail.scr_width, "nul") != 0)
 	{
-#ifdef USE_DISPMANX
-			line_string = "gfx_width=";
-			line_string.append(game_detail.scr_width);
-			parse_cfg_line(prefs, line_string);
-
-			line_string = "gfx_width_windowed=";
-			line_string.append(game_detail.scr_width);
-			parse_cfg_line(prefs, line_string);
-
-			line_string = "gfx_width_fullscreen=";
-			line_string.append(game_detail.scr_width);
-			parse_cfg_line(prefs, line_string);
-#else
 		if (prefs->gfx_auto_crop)
 		{
 			// If using Auto-Crop, bypass any screen Width adjustments as they are not needed and will cause issues
@@ -696,16 +659,10 @@ void parse_gfx_settings(uae_prefs* prefs, game_options game_detail)
 			line_string.append(game_detail.scr_width);
 			parse_cfg_line(prefs, line_string);
 		}
-#endif
 	}
 
 	if (strcmpi(game_detail.scr_offseth, "nul") != 0)
 	{
-#ifdef USE_DISPMANX
-			line_string = "amiberry.gfx_horizontal_offset=";
-			line_string.append(game_detail.scr_offseth);
-			parse_cfg_line(prefs, line_string);
-#else
 		if (prefs->gfx_auto_crop)
 		{
 			line_string = "amiberry.gfx_horizontal_offset=0";
@@ -717,16 +674,10 @@ void parse_gfx_settings(uae_prefs* prefs, game_options game_detail)
 			line_string.append(game_detail.scr_offseth);
 			parse_cfg_line(prefs, line_string);
 		}
-#endif
 	}
 
 	if (strcmpi(game_detail.scr_offsetv, "nul") != 0)
 	{
-#ifdef USE_DISPMANX
-			line_string = "amiberry.gfx_vertical_offset=";
-			line_string.append(game_detail.scr_offsetv);
-			parse_cfg_line(prefs, line_string);
-#else
 		if (prefs->gfx_auto_crop)
 		{
 			line_string = "amiberry.gfx_vertical_offset=0";
@@ -738,7 +689,6 @@ void parse_gfx_settings(uae_prefs* prefs, game_options game_detail)
 			line_string.append(game_detail.scr_offsetv);
 			parse_cfg_line(prefs, line_string);
 		}
-#endif
 	}
 }
 

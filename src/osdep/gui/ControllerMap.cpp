@@ -15,10 +15,6 @@
 #include "fsdb_host.h"
 #include <string>
 
-#ifdef USE_DISPMANX
-
-#endif
-
 #define SCREEN_WIDTH 640
 #define SCREEN_HEIGHT 500
 
@@ -467,9 +463,7 @@ BMergeAxisBindings(int iIndex)
 static void
 WatchJoystick(SDL_Joystick* joystick)
 {
-#ifdef USE_DISPMANX
-	
-#elif USE_OPENGL
+#ifdef USE_OPENGL
 	//TODO need implementation
 #else
 	SDL_Texture* button, *axis, *marker;
@@ -487,9 +481,7 @@ WatchJoystick(SDL_Joystick* joystick)
 	background_back_image = gcn::Image::load(prefix_with_data_path("controllermap_back.png"));
 	background_back_icon = new gcn::Icon(background_back_image);
 
-#ifdef USE_DISPMANX
-
-#elif USE_OPENGL
+#ifdef USE_OPENGL
 	//TODO need implementation
 #else
 	button = LoadTexture(sdl_renderer, prefix_with_data_path("button.png").c_str(), SDL_TRUE);
@@ -527,16 +519,14 @@ WatchJoystick(SDL_Joystick* joystick)
 		switch (s_arrBindingDisplay[iElement].marker)
 		{
 		case MARKER_AXIS:
-#ifdef USE_DISPMANX
-#elif USE_OPENGL
+#ifdef USE_OPENGL
 			//TODO need implementation
 #else
 			marker = axis;
 #endif
 			break;
 		case MARKER_BUTTON:
-#ifdef USE_DISPMANX
-#elif USE_OPENGL
+#ifdef USE_OPENGL
 			//TODO need implementation
 #else
 			marker = button;
@@ -551,9 +541,7 @@ WatchJoystick(SDL_Joystick* joystick)
 
 		dst.x = s_arrBindingDisplay[iElement].x + x_offset;
 		dst.y = s_arrBindingDisplay[iElement].y + y_offset;
-#ifdef USE_DISPMANX
-		
-#elif USE_OPENGL
+#ifdef USE_OPENGL
 		//TODO need implementation
 #else
 		SDL_QueryTexture(marker, nullptr, nullptr, &dst.w, &dst.h);
@@ -594,12 +582,7 @@ WatchJoystick(SDL_Joystick* joystick)
 		SDL_RenderClear(sdl_renderer);
 #endif
 		uae_gui->draw();
-#ifdef USE_DISPMANX
-		vc_dispmanx_resource_write_data(gui_resource, rgb_mode, gui_screen->pitch, gui_screen->pixels, &blit_rect);
-		updateHandle = vc_dispmanx_update_start(0);
-		vc_dispmanx_element_change_source(updateHandle, gui_element, gui_resource);
-		vc_dispmanx_update_submit_sync(updateHandle);
-#elif USE_OPENGL
+#ifdef USE_OPENGL
 		const AmigaMonitor* mon = &AMonitors[0];
 		SDL_GL_SwapWindow(mon->sdl_window);
 
@@ -904,9 +887,7 @@ WatchJoystick(SDL_Joystick* joystick)
 
 	SDL_free(s_arrAxisState);
 	s_arrAxisState = nullptr;
-#ifdef USE_DISPMANX
-
-#elif USE_OPENGL
+#ifdef USE_OPENGL
 	//TODO need implementation
 #else
 	SDL_DestroyTexture(axis);
@@ -941,12 +922,7 @@ show_controller_map(int device, bool map_touchpad)
 				break;
 			}
 		}
-#ifdef USE_DISPMANX
-		vc_dispmanx_resource_write_data(gui_resource, rgb_mode, gui_screen->pitch, gui_screen->pixels, &blit_rect);
-		updateHandle = vc_dispmanx_update_start(0);
-		vc_dispmanx_element_change_source(updateHandle, gui_element, gui_resource);
-		vc_dispmanx_update_submit_sync(updateHandle);
-#elif USE_OPENGL
+#ifdef USE_OPENGL
 		const AmigaMonitor* mon = &AMonitors[0];
 		SDL_GL_SwapWindow(mon->sdl_window);
 #else
