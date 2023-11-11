@@ -214,12 +214,12 @@ public:
 		//  download WHDLoad executable
 		destination = prefix_with_whdboot_path("WHDLoad");
 		write_log("Downloading %s ...\n", destination.c_str());
-		download_file("https://github.com/midwan/amiberry/blob/master/whdboot/WHDLoad?raw=true", destination);
+		download_file("https://github.com/midwan/amiberry/blob/master/whdboot/WHDLoad?raw=true", destination, false);
 
 		//  download boot-data.zip
 		destination = prefix_with_whdboot_path("boot-data.zip");
 		write_log("Downloading %s ...\n", destination.c_str());
-		download_file("https://github.com/midwan/amiberry/blob/master/whdboot/boot-data.zip?raw=true", destination);
+		download_file("https://github.com/midwan/amiberry/blob/master/whdboot/boot-data.zip?raw=true", destination, false);
 
 		// download kickstart RTB files for maximum compatibility
 		download_rtb("kick33180.A500.RTB");
@@ -231,7 +231,7 @@ public:
 		destination = prefix_with_whdboot_path("game-data/whdload_db.xml");
 		const auto old_timestamp = get_xml_timestamp(destination);
 		write_log("Downloading %s ...\n", destination.c_str());
-		const auto result = download_file("https://github.com/HoraceAndTheSpider/Amiberry-XML-Builder/blob/master/whdload_db.xml?raw=true", destination);
+		const auto result = download_file("https://github.com/HoraceAndTheSpider/Amiberry-XML-Builder/blob/master/whdload_db.xml?raw=true", destination, true);
 
 		if (result)
 		{
@@ -258,7 +258,7 @@ public:
 		destination += "gamecontrollerdb.txt";
 		write_log("Downloading % ...\n", destination.c_str());
 		const auto* const url = "https://raw.githubusercontent.com/gabomdq/SDL_GameControllerDB/master/gamecontrollerdb.txt";
-		const auto result = download_file(url, destination);
+		const auto result = download_file(url, destination, true);
 
 		if (result)
 		{
