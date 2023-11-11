@@ -369,8 +369,8 @@ extern void init_dispmanx_gui();
 extern void update_gui_screen();
 extern void cap_fps(Uint64 start);
 extern long get_file_size(const std::string& filename);
-extern bool download_file(const std::string& source, const std::string& destination);
-extern void download_rtb(std::string filename);
+extern bool download_file(const std::string& source, const std::string& destination, bool keep_backup);
+extern void download_rtb(const std::string& filename);
 
 extern int fromdfxtype(int num, int dfx, int subtype);
 extern int todfxtype(int num, int dfx, int* subtype);

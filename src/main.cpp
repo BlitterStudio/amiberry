@@ -1068,7 +1068,7 @@ static void parse_cmdline_and_init_file (int argc, TCHAR **argv)
 * of start_program () and leave_program () if you need to do anything special.
 * Add #ifdefs around these as appropriate.
 */
-static void do_start_program (void)
+static void do_start_program ()
 {
 	if (quit_program == -UAE_QUIT)
 		return;
@@ -1090,12 +1090,12 @@ static void do_start_program (void)
 	}
 }
 
-static void start_program (void)
+static void start_program ()
 {
 	do_start_program ();
 }
 
-static void leave_program (void)
+static void leave_program ()
 {
 	do_leave_program ();
 }
@@ -1107,7 +1107,7 @@ long get_file_size(const std::string& filename)
 	return rc == 0 ? static_cast<long>(stat_buf.st_size) : -1;
 }
 
-bool file_exists(std::string file)
+bool file_exists(const std::string& file)
 {
 	#ifdef USE_OLDGCC
 	namespace fs = std::experimental::filesystem;
@@ -1118,7 +1118,7 @@ bool file_exists(std::string file)
 	return (fs::exists(f));
 }
 
-bool download_file(const std::string& source, const std::string& destination)
+bool download_file(const std::string& source, const std::string& destination, bool keep_backup)
 {
 	// homebrew installs in different locations on OSX Intel vs OSX Apple Silicon
 #if defined (__MACH__) && defined (__arm64__)	
@@ -1183,7 +1183,18 @@ bool download_file(const std::string& source, const std::string& destination)
 
 	if (file_exists(tmp))
 	{
-		write_log("Tmp file will now be renamed: %s\n", tmp.c_str());
+		if (file_exists(destination) && keep_backup)
+		{
+			write_log("Backup requested, renaming destination file %s to .bak\n", destination.c_str());
+			std::string new_filename = destination.substr(0, destination.find_last_of('.')).append(".bak");
+			if (std::rename(destination.c_str(), new_filename.c_str()) < 0)
+			{
+				write_log(strerror(errno));
+				write_log("\n");
+			}
+		}
+
+		write_log("Renaming downloaded temporary file %s to final destination\n", tmp.c_str());
 		if (std::rename(tmp.c_str(), destination.c_str()) < 0)
 		{
 			write_log(strerror(errno));
@@ -1195,7 +1206,7 @@ bool download_file(const std::string& source, const std::string& destination)
 	return false;
 }
 
-void download_rtb(const std::string filename)
+void download_rtb(const std::string& filename)
 {
 	std::string destination_filename = "save-data/Kickstarts/" + filename;
 	const std::string destination = prefix_with_whdboot_path(destination_filename);
@@ -1203,7 +1214,7 @@ void download_rtb(const std::string filename)
 	{
 		write_log("Downloading %s ...\n", destination.c_str());
 		const std::string url = "https://github.com/midwan/amiberry/blob/master/whdboot/save-data/Kickstarts/" + filename + "?raw=true";
-		download_file(url,  destination);
+		download_file(url,  destination, false);
 	}
 }
 
