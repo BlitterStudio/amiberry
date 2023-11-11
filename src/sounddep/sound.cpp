@@ -415,7 +415,7 @@ static int open_sound()
 		return 0;
 	currprefs.sound_freq = changed_prefs.sound_freq = sdp->freq;
 	if (ch != sdp->channels)
-        active_sound_stereo = get_audio_stereomode(sdp->channels);
+		active_sound_stereo = get_audio_stereomode(sdp->channels);
 
 	set_volume(currprefs.sound_volume_master, sdp->mute);
 	if (get_audio_amigachannels(active_sound_stereo) == 4)

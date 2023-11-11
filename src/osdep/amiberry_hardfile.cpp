@@ -311,24 +311,24 @@ static int hdf_seek(struct hardfiledata *hfd, uae_u64 offset, bool write)
 		{
 			if (hfd->virtual_rdb)
 				return -1;
-            if (write) {
-                gui_message (_T("hd: tried to seek out of bounds! (%I64X >= %I64X - %I64X)\n"), offset, hfd->physsize, hfd->virtual_size);
-                abort ();
-            }
-            write_log(_T("hd: tried to seek out of bounds! (%I64X >= %I64X - %I64X)\n"), offset, hfd->physsize, hfd->virtual_size);
-            return -1;
+			if (write) {
+                		gui_message (_T("hd: tried to seek out of bounds! (%I64X >= %I64X - %I64X)\n"), offset, hfd->physsize, hfd->virtual_size);
+                		abort ();
+			}
+			write_log(_T("hd: tried to seek out of bounds! (%I64X >= %I64X - %I64X)\n"), offset, hfd->physsize, hfd->virtual_size);
+			return -1;
 		}
 		offset += hfd->offset;
 		if (offset & (hfd->ci.blocksize - 1))
 		{
-            if (write) {
-                gui_message (_T("hd: poscheck failed, offset=%I64X not aligned to blocksize=%d! (%I64X & %04X = %04X)\n"),
+			if (write) {
+                		gui_message (_T("hd: poscheck failed, offset=%I64X not aligned to blocksize=%d! (%I64X & %04X = %04X)\n"),
                              offset, hfd->ci.blocksize, offset, hfd->ci.blocksize, offset & (hfd->ci.blocksize - 1));
-                abort ();
-            }
-            write_log(_T("hd: poscheck failed, offset=%I64X not aligned to blocksize=%d! (%I64X & %04X = %04X)\n"),
-                      offset, hfd->ci.blocksize, offset, hfd->ci.blocksize, offset & (hfd->ci.blocksize - 1));
-            return -1;
+                		abort ();
+			}
+			write_log(_T("hd: poscheck failed, offset=%I64X not aligned to blocksize=%d! (%I64X & %04X = %04X)\n"),
+			offset, hfd->ci.blocksize, offset, hfd->ci.blocksize, offset & (hfd->ci.blocksize - 1));
+			return -1;
 		}
 	}
 	
@@ -407,12 +407,12 @@ static int hdf_read_2(struct hardfiledata *hfd, void *buffer, uae_u64 offset, in
 {
 	auto outlen = 0;
 
-    if (len == 0) {
-        return 0;
-    }
-    if (offset == 0) {
-        hfd->cache_valid = 0;
-    }
+	if (len == 0) {
+		return 0;
+	}
+	if (offset == 0) {
+		hfd->cache_valid = 0;
+	}
 	auto coffset = isincache(hfd, offset, len);
 	if (coffset >= 0)
 	{
@@ -423,19 +423,19 @@ static int hdf_read_2(struct hardfiledata *hfd, void *buffer, uae_u64 offset, in
 	if (offset + CACHE_SIZE > hfd->offset + (hfd->physsize - hfd->virtual_size))
 		hfd->cache_offset = hfd->offset + (hfd->physsize - hfd->virtual_size) - CACHE_SIZE;
 	if (hdf_seek(hfd, hfd->cache_offset, false)) {
-        *error = 45;
-        return 0;
-    }
+		*error = 45;
+		return 0;
+	}
 	poscheck(hfd, CACHE_SIZE);
 	if (hfd->handle_valid == HDF_HANDLE_LINUX)
 		outlen = fread(hfd->cache, 1, CACHE_SIZE, hfd->handle->h);
 	else if (hfd->handle_valid == HDF_HANDLE_ZFILE)
 		outlen = zfile_fread(hfd->cache, 1, CACHE_SIZE, hfd->handle->zf);
 	hfd->cache_valid = 0;
-    if (outlen != CACHE_SIZE) {
-        *error = 45;
-        return 0;
-    }
+	if (outlen != CACHE_SIZE) {
+		*error = 45;
+		return 0;
+	}
 	hfd->cache_valid = 1;
 	coffset = isincache(hfd, offset, len);
 	if (coffset >= 0)
@@ -445,7 +445,7 @@ static int hdf_read_2(struct hardfiledata *hfd, void *buffer, uae_u64 offset, in
 	}
 	write_log(_T("hdf_read: cache bug! offset=%I64d len=%d\n"), offset, len);
 	hfd->cache_valid = 0;
-    *error = 45;
+	*error = 45;
 	return 0;
 }
 
@@ -453,18 +453,18 @@ int hdf_read_target(struct hardfiledata *hfd, void *buffer, uae_u64 offset, int 
 {
 	int got = 0;
 	uae_u8 *p = (uae_u8*)buffer;
-    uae_u32 error2 = 0;
+	uae_u32 error2 = 0;
 
-    if (error) {
-        *error = 0;
-    } else {
-        error = &error2;
-    }
+	if (error) {
+		*error = 0;
+	} else {
+		error = &error2;
+	}
 
-    if (hfd->drive_empty) {
-        *error = 29;
-        return 0;
-    }
+	if (hfd->drive_empty) {
+		*error = 29;
+		return 0;
+	}
 
 	while (len > 0)
 	{
@@ -507,23 +507,23 @@ static int hdf_write_2(struct hardfiledata *hfd, void *buffer, uae_u64 offset, i
 {
 	auto outlen = 0;
 
-    if (hfd->ci.readonly) {
-        *error = 28;
-        return 0;
-    }
-    if (hfd->dangerous) {
-        *error = 28;
-        return 0;
-    }
-    if (len == 0) {
-        return 0;
-    }
+	if (hfd->ci.readonly) {
+		*error = 28;
+		return 0;
+	}
+	if (hfd->dangerous) {
+		*error = 28;
+		return 0;
+	}
+	if (len == 0) {
+		return 0;
+	}
 
-    hfd->cache_valid = 0;
-    if (hdf_seek(hfd, hfd->cache_offset, true)) {
-        *error = 45;
-        return 0;
-    }
+	hfd->cache_valid = 0;
+	if (hdf_seek(hfd, hfd->cache_offset, true)) {
+		*error = 45;
+		return 0;
+	}
 	poscheck(hfd, len);
 	memcpy(hfd->cache, buffer, len);
 	if (hfd->handle_valid == HDF_HANDLE_LINUX)
@@ -543,10 +543,10 @@ static int hdf_write_2(struct hardfiledata *hfd, void *buffer, uae_u64 offset, i
 				memset(tmp, 0xa1, tmplen);
 				hdf_seek(hfd, offset, true);
 				int outlen2 = fread(tmp, 1, tmplen, hfd->handle->h);
-                if (memcmp (hfd->cache, tmp, cmplen) != 0 || outlen != len) {
-                    gui_message (_T("\"%s\"\n\nblock zero write failed! Make sure Amiberry has Administrator privileges."), name);
-                    *error = 45;
-                }
+				if (memcmp (hfd->cache, tmp, cmplen) != 0 || outlen != len) {
+					gui_message (_T("\"%s\"\n\nblock zero write failed! Make sure Amiberry has Administrator privileges."), name);
+					*error = 45;
+				}
 				xfree(tmp);
 			}
 		}
@@ -560,13 +560,13 @@ int hdf_write_target(struct hardfiledata *hfd, void *buffer, uae_u64 offset, int
 {
 	auto got = 0;
 	auto* p = (uae_u8*)buffer;
-    uae_u32 error2 = 0;
+	uae_u32 error2 = 0;
 
-    if (error) {
-        *error = 0;
-    } else {
-        error = &error2;
-    }
+	if (error) {
+		*error = 0;
+	} else {
+		error = &error2;
+	}
 
 	if (hfd->drive_empty || hfd->physsize == 0)
 		return 0;

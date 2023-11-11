@@ -369,17 +369,17 @@ void fixup_cpu (struct uae_prefs *p)
 		error_log(_T("Data cache emulation requires Indirect UAE Boot ROM."));
 	}
 
-    // pre-4.4.0 didn't support cpu multiplier in prefetch mode without cycle-exact
-    // set pre-4.4.0 defaults first
-    if (!p->cpu_cycle_exact && p->cpu_compatible && !p->cpu_clock_multiplier && p->config_version) {
-        if (p->cpu_model < 68020) {
-            p->cpu_clock_multiplier = 2 * 256;
-        } else if (p->cpu_model == 68020) {
-            p->cpu_clock_multiplier = 4 * 256;
-        } else {
-            p->cpu_clock_multiplier = 8 * 256;
-        }
-    }
+	// pre-4.4.0 didn't support cpu multiplier in prefetch mode without cycle-exact
+	// set pre-4.4.0 defaults first
+	if (!p->cpu_cycle_exact && p->cpu_compatible && !p->cpu_clock_multiplier && p->config_version) {
+		if (p->cpu_model < 68020) {
+			p->cpu_clock_multiplier = 2 * 256;
+		} else if (p->cpu_model == 68020) {
+			p->cpu_clock_multiplier = 4 * 256;
+		} else {
+			p->cpu_clock_multiplier = 8 * 256;
+		}
+	}
 
 }
 
@@ -1077,7 +1077,7 @@ static void parse_cmdline_and_init_file(int argc, TCHAR **argv)
 
 	parse_cmdline(argc, argv);
 
-    fixup_prefs(&currprefs, false);
+	fixup_prefs(&currprefs, false);
 }
 
 /* Okay, this stuff looks strange, but it is here to encourage people who

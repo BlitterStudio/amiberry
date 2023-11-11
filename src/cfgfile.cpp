@@ -396,24 +396,24 @@ static TCHAR *cfgfile_unescape(const TCHAR *s, const TCHAR **endpos, TCHAR separ
 			c = s[i + 1];
 			switch (c)
 			{
-                case 'X':
-                case 'x':
-                    c2 = _totupper(s[i + 2]);
-                    v = ((c2 >= 'A') ? c2 - 'A' : c2 - '0') << 4;
-                    c2 = _totupper(s[i + 3]);
-                    v |= (c2 >= 'A') ? c2 - 'A' : c2 - '0';
-                    *p++ = c2;
-                    i += 2;
-                    break;
-                case 'r':
-                    *p++ = '\r';
-                    break;
-                case 'n':
-                    *p++ = '\n';
-                    break;
-                default:
-                    *p++ = c;
-                    break;
+			case 'X':
+			case 'x':
+				c2 = _totupper(s[i + 2]);
+				v = ((c2 >= 'A') ? c2 - 'A' : c2 - '0') << 4;
+				c2 = _totupper(s[i + 3]);
+				v |= (c2 >= 'A') ? c2 - 'A' : c2 - '0';
+				*p++ = c2;
+				i += 2;
+				break;
+			case 'r':
+				*p++ = '\r';
+				break;
+			case '\n':
+				*p++ = '\n';
+				break;
+			default:
+				*p++ = c;
+				break;
 			}
 			i++;
 		} else {
@@ -2726,9 +2726,9 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_dwrite_strarr(f, _T("agnusmodel"), agnusmodel, p->cs_agnusmodel);
 	cfgfile_dwrite_strarr(f, _T("agnussize"), agnussize, p->cs_agnussize);
 	cfgfile_dwrite_strarr(f, _T("denisemodel"), denisemodel, p->cs_denisemodel);
-    if (p->seed) {
-        cfgfile_write(f, _T("rndseed"), _T("%d"), p->seed);
-    }
+	if (p->seed) {
+		cfgfile_write(f, _T("rndseed"), _T("%d"), p->seed);
+	}
 
 	if (is_board_enabled(p, ROMTYPE_CD32CART, 0)) {
 		cfgfile_dwrite_bool(f, _T("cd32fmv"), true);
@@ -6020,8 +6020,8 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		|| cfgfile_intval(option, value, _T("genlock_mix"), &p->genlock_mix, 1)
 		|| cfgfile_intval(option, value, _T("keyboard_handshake"), &p->cs_kbhandshake, 1)
 		|| cfgfile_intval(option, value, _T("eclockphase"), &p->cs_eclockphase, 1)
-        || cfgfile_intval(option, value, _T("chipset_rtc_adjust"), &p->cs_rtc_adjust, 1)
-        || cfgfile_intval(option, value, _T("rndseed"), &p->seed, 1))
+		|| cfgfile_intval(option, value, _T("chipset_rtc_adjust"), &p->cs_rtc_adjust, 1)
+		|| cfgfile_intval(option, value, _T("rndseed"), &p->seed, 1))
 		return 1;
 
 	if (cfgfile_strval(option, value, _T("comp_trustbyte"), &p->comptrustbyte, compmode, 0)
@@ -7154,20 +7154,20 @@ static int cfgfile_load_2 (struct uae_prefs *p, const TCHAR *filename, bool real
 						if (s) {
 							s++;
 							if (s[0] == '"') {
-                                const TCHAR *end;
-                                TCHAR *n = cfgfile_unescape(s, &end, 0, true);
-                                _tcscpy(tmp, n);
-                                s = tmp;
-                                xfree(n);
-                            } else {
-                                const TCHAR *se = _tcschr(s, ',');
-                                if (se) {
-                                    tmp[se - tmp] = 0;
-                                }
+								const TCHAR *end;
+								TCHAR *n = cfgfile_unescape(s, &end, 0, true);
+								_tcscpy(tmp, n);
+								s = tmp;
+								xfree(n);
+							} else {
+								const TCHAR *se = _tcschr(s, ',');
+								if (se) {
+									tmp[se - tmp] = 0;
+								}
 							}
-                            _tcscpy(p->mountconfig[0].ci.rootdir, s);
-                            cfgfile_resolve_path_load(p->mountconfig[0].ci.rootdir, MAX_DPATH, isvsys ? PATH_DIR : PATH_HDF);
-                            p->mountitems = 1;
+								_tcscpy(p->mountconfig[0].ci.rootdir, s);
+								cfgfile_resolve_path_load(p->mountconfig[0].ci.rootdir, MAX_DPATH, isvsys ? PATH_DIR : PATH_HDF);
+								p->mountitems = 1;
 						}
 					}
 				}

@@ -237,7 +237,7 @@ struct calcstack
 {
 	TCHAR *s;
 	double val;
-    TCHAR *vals;
+	TCHAR *vals;
 };
 
 static double stacktoval(struct calcstack *st)

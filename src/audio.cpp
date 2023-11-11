@@ -656,7 +656,7 @@ static void samplexx_sinc_handler (int *datasp, int ch_start, int ch_num)
 		else if (v < -32768)
 			v = -32768;
 		datasp[k] = v;
-    }
+	}
 }
 
 static void do_filter(int *data, int num)
@@ -1599,7 +1599,7 @@ static void loaddat (int nr, bool modper)
 			return;
 		if (modper && audap) {
 			if (cdp->dat == 0)
-                cdp[1].per = 65536 * CYCLE_UNIT;
+				cdp[1].per = 65536 * CYCLE_UNIT;
 			else if (cdp->dat > PERIOD_MIN)
 				cdp[1].per = cdp->dat * CYCLE_UNIT;
 			else

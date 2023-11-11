@@ -115,7 +115,7 @@ void updatehdfinfo(bool force, bool defaults)
 {
 	uae_u8 id[512] = { 0 };
 	uae_u32 i;
-    uae_u32 error = 0;
+	uae_u32 error = 0;
 
 	uae_u64 bsize = 0;
 	if (force) {

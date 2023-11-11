@@ -109,12 +109,12 @@ public:
 	{
 		mode.emplace_back("Mono");
 		mode.emplace_back("Stereo");
-        //mode.emplace_back("Cloned stereo (4 channels)");
-        //mode.emplace_back("4 Channels");
-        //mode.emplace_back("Cloned stereo (5.1)");
-        //mode.emplace_back("5.1 Channels");
-        //mode.emplace_back("Cloned stereo (7.1)");
-        //mode.emplace_back("7.1 channels");
+		//mode.emplace_back("Cloned stereo (4 channels)");
+		//mode.emplace_back("4 Channels");
+		//mode.emplace_back("Cloned stereo (5.1)");
+		//mode.emplace_back("5.1 Channels");
+		//mode.emplace_back("Cloned stereo (7.1)");
+		//mode.emplace_back("7.1 channels");
 	}
 
 	int getNumberOfElements() override
