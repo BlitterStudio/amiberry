@@ -238,7 +238,7 @@ constexpr int remap_event_list[] = {
 	INPUTEVENT_SPC_MOUSEMAP_PORT1_LEFT, INPUTEVENT_SPC_MOUSEMAP_PORT1_RIGHT,
 	INPUTEVENT_SPC_MOUSE_SPEED_DOWN, INPUTEVENT_SPC_MOUSE_SPEED_UP, INPUTEVENT_SPC_SHUTDOWN,
 	INPUTEVENT_SPC_WARP, INPUTEVENT_SPC_TOGGLE_JIT, INPUTEVENT_SPC_TOGGLE_JIT_FPU,
-	INPUTEVENT_SPC_AUTO_CROP_IMAGE, INPUTEVENT_SPC_TOGGLE_VIRTUAL_KEYBOARD
+	INPUTEVENT_SPC_AUTO_CROP_IMAGE, INPUTEVENT_SPC_OSK
 };
 
 constexpr int remap_event_list_size = std::size(remap_event_list);
@@ -619,6 +619,8 @@ static void setid(struct uae_input_device* uid, const int i, const int slot, con
 		uid[i].flags[slot][sub] |= ID_FLAG_TOGGLE;
 	if (af == JPORT_AF_ALWAYS)
 		uid[i].flags[slot][sub] |= ID_FLAG_INVERTTOGGLE;
+	if (af == JPORT_AF_TOGGLENOAF)
+		uid[i].flags[slot][sub] |= ID_FLAG_INVERT;
 }
 
 int input_get_default_mouse(struct uae_input_device* uid, const int i, const int port, const int af, const bool gp, bool wheel, bool joymouseswap)
@@ -755,7 +757,7 @@ static void close_kb()
 {
 }
 
-static void release_keys(void)
+void release_keys(void)
 {
 	SDL_PumpEvents();
 
@@ -1553,7 +1555,7 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 		setid(uid, i, ID_BUTTON_OFFSET + retroarch_offset + 3, 0, port, INPUTEVENT_SPC_SOFTRESET, gp);
 
 	if (currprefs.use_retroarch_vkbd)
-		setid(uid, i, ID_BUTTON_OFFSET + retroarch_offset + 4, 0, port, INPUTEVENT_SPC_TOGGLE_VIRTUAL_KEYBOARD, gp);
+		setid(uid, i, ID_BUTTON_OFFSET + retroarch_offset + 4, 0, port, INPUTEVENT_SPC_OSK, gp);
 
 	if (i >= 0 && i < num_joystick)
 		return 1;

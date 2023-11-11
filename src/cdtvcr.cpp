@@ -1043,7 +1043,7 @@ bool cdtvcr_init(struct autoconfig_info *aci)
 
 	device_add_hsync(CDTVCR_hsync_handler);
 	device_add_rethink(rethink_cdtvcr);
-	device_add_exit(cdtvcr_free);
+	device_add_exit(cdtvcr_free, NULL);
 
 	return true;
 }

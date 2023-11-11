@@ -86,9 +86,8 @@ struct gui_info gui_data;
 static TCHAR optionsfile[MAX_DPATH];
 
 static uae_u32 randseed;
-static int oldhcounter;
 
-static uae_u32 xorshiftstate = 1;
+static uae_u32 xorshiftstate;
 static uae_u32 xorshift32(void)
 {
 	uae_u32 x = xorshiftstate;
@@ -99,24 +98,36 @@ static uae_u32 xorshift32(void)
 	return xorshiftstate;
 }
 
-uae_u32 uaesrand(uae_u32 seed)
-{
-	oldhcounter = -1;
-	randseed = seed;
-	return randseed;
-}
 uae_u32 uaerand(void)
 {
-	if (oldhcounter != hsync_counter) {
-		xorshiftstate = (hsync_counter ^ randseed) | 1;
-		oldhcounter = hsync_counter;
+    if (xorshiftstate == 0) {
+        xorshiftstate = randseed;
+        if (!xorshiftstate) {
+            randseed = 1;
+            xorshiftstate = 1;
+        }
 	}
 	uae_u32 r = xorshift32();
 	return r;
 }
+
 uae_u32 uaerandgetseed(void)
 {
-	return randseed;
+    if (!randseed) {
+        randseed = 1;
+        xorshiftstate = 1;
+    }
+    return randseed;
+}
+
+uae_u32 uaesetrandseed(uae_u32 seed)
+{
+    if (!seed) {
+        seed = 1;
+    }
+    randseed = seed;
+    xorshiftstate = seed;
+    return randseed;
 }
 
 void my_trim(TCHAR *s)
@@ -269,6 +280,9 @@ void fixup_cpu (struct uae_prefs *p)
 		error_log(_T("Threaded CPU mode is not compatible with PPC emulation, More compatible or Cycle Exact modes. CPU type must be 68020 or higher."));
 	}
 
+	if (p->cachesize_inhibit) {
+		p->cachesize = 0;
+	}
 	if (p->cpu_model < 68020 && p->cachesize) {
 		p->cachesize = 0;
 		error_log (_T("JIT requires 68020 or better CPU."));
@@ -353,6 +367,18 @@ void fixup_cpu (struct uae_prefs *p)
 	if (p->cpu_data_cache && (p->uaeboard != 3 && need_uae_boot_rom(p))) {
 		p->cpu_data_cache = false;
 		error_log(_T("Data cache emulation requires Indirect UAE Boot ROM."));
+	}
+
+	// pre-4.4.0 didn't support cpu multiplier in prefetch mode without cycle-exact
+	// set pre-4.4.0 defaults first
+	if (!p->cpu_cycle_exact && p->cpu_compatible && !p->cpu_clock_multiplier && p->config_version) {
+		if (p->cpu_model < 68020) {
+			p->cpu_clock_multiplier = 2 * 256;
+		} else if (p->cpu_model == 68020) {
+			p->cpu_clock_multiplier = 4 * 256;
+		} else {
+			p->cpu_clock_multiplier = 8 * 256;
+		}
 	}
 
 #ifdef AMIBERRY
@@ -1039,24 +1065,25 @@ static void parse_cmdline (int argc, TCHAR **argv)
 	}
 }
 
-static void parse_cmdline_and_init_file (int argc, TCHAR **argv)
+static void parse_cmdline_and_init_file(int argc, TCHAR **argv)
 {
 	_tcscpy (optionsfile, _T(""));
 
-	parse_cmdline_2 (argc, argv);
+	parse_cmdline_2(argc, argv);
 
-	_tcscat (optionsfile, restart_config);
+	_tcscat(optionsfile, restart_config);
 
-	if (! target_cfgfile_load (&currprefs, optionsfile, CONFIG_TYPE_DEFAULT, default_config)) {
-		write_log (_T("failed to load config '%s'\n"), optionsfile);
+	if (! target_cfgfile_load(&currprefs, optionsfile, CONFIG_TYPE_DEFAULT, default_config)) {
+		write_log(_T("failed to load config '%s'\n"), optionsfile);
 	}
 	else
 	{
 		config_loaded = true;
 	}
-	fixup_prefs (&currprefs, false);
 
-	parse_cmdline (argc, argv);
+	parse_cmdline(argc, argv);
+
+	fixup_prefs(&currprefs, false);
 }
 
 /* Okay, this stuff looks strange, but it is here to encourage people who
@@ -1271,7 +1298,7 @@ static int real_main2 (int argc, TCHAR **argv)
 	inputdevice_init ();
 
 	copy_prefs(&currprefs, &changed_prefs);
-
+	inputdevice_updateconfig(&currprefs, &changed_prefs);
 	inputdevice_config_change();
 
 	no_gui = ! currprefs.start_gui;
@@ -1313,6 +1340,12 @@ static int real_main2 (int argc, TCHAR **argv)
 #ifdef RETROPLATFORM
 	rp_fixup_options (&currprefs);
 #endif
+    if (currprefs.seed == 0) {
+        uae_u32 t = getlocaltime();
+        uaesetrandseed(t);
+    } else {
+        uaesetrandseed(currprefs.seed);
+    }
 	copy_prefs(&currprefs, &changed_prefs);
 	target_run ();
 	/* force sound settings change */

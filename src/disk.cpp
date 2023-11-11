@@ -1239,9 +1239,17 @@ static bool diskfile_iswriteprotect (struct uae_prefs *p, const TCHAR *fname_in,
 	bool wrprot1 = 0, wrprot2 = 1;
 	uae_char buffer[25];
 	TCHAR outname[MAX_DPATH];
+	drive *drv = &floppy[num];
 
 	*needwritefile = 0;
 	*drvtype = DRV_35_DD;
+
+#ifdef FLOPPYBRIDGE
+	if (drv->bridge) {
+		return drive_writeprotected(drv);
+	}
+#endif
+
 	DISK_validate_filename (p, fname_in, num, outname, 1, &wrprot1, NULL, &zf1);
 	if (!zf1)
 		return 1;
@@ -1562,7 +1570,7 @@ static int drive_insert (drive *drv, struct uae_prefs *p, int dnum, const TCHAR 
 		sd = 0;
 
 		bool can40 = dfxtype == DRV_525_DD || dfxtype == DRV_525_SD || dfxtype == DRV_PC_525_ONLY_40 || dfxtype == DRV_PC_525_40_80;
-		bool can80 = dfxtype == DRV_35_DD || dfxtype == DRV_35_DD_ESCOM || dfxtype == DRV_35_HD || dfxtype == DRV_PC_35_ONLY_80 || dfxtype == DRV_PC_525_40_80;
+		bool can80 = dfxtype == DRV_35_DD || dfxtype == DRV_35_DD_ESCOM  || dfxtype == DRV_35_HD || dfxtype == DRV_PC_35_ONLY_80 || dfxtype == DRV_PC_525_40_80;
 		bool drv525 = dfxtype == DRV_525_DD || dfxtype == DRV_PC_525_ONLY_40 || dfxtype == DRV_PC_525_40_80;
 
 		for (side = 2; side > 0; side--) {
@@ -2956,6 +2964,7 @@ static void drive_eject (drive * drv)
 	drv->dskready_up_time = 0;
 	drv->dskready_down_time = 0;
 	drv->forcedwrprot = false;
+	drv->useturbo = 0;
 	drv->crc32 = 0;
 	drive_settype_id (drv); /* Back to 35 DD */
 	if (disk_debug_logging > 0)

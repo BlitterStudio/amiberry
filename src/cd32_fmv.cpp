@@ -1592,7 +1592,7 @@ addrbank *cd32_fmv_init (struct autoconfig_info *aci)
 
 	device_add_hsync(cd32_fmv_hsync_handler);
 	device_add_vsync_pre(cd32_fmv_vsync_handler);
-	device_add_exit(cd32_fmv_free);
+	device_add_exit(cd32_fmv_free, NULL);
 	device_add_rethink(rethink_cd32fmv);
 
 	return &fmv_rom_bank;

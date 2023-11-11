@@ -51,6 +51,9 @@ extern bool target_isrelativemode(void);
 extern uae_u32 getlocaltime (void);
 extern bool isguiactive(void);
 extern bool is_mainthread(void);
+ extern void fpu_reset(void);
+ extern void fpux_save(int*);
+ extern void fpux_restore(int*);
 extern void replace(std::string& str, const std::string& from, const std::string& to);
 
 extern int quit_program;
@@ -88,9 +91,9 @@ extern void fetch_inputfilepath (TCHAR *out, int size);
 extern void get_data_path (TCHAR *out, int size);
 extern void get_rom_path (TCHAR *out, int size);
 extern void get_video_path (TCHAR *out, int size);
-extern uae_u32 uaerand (void);
-extern uae_u32 uaesrand (uae_u32 seed);
-extern uae_u32 uaerandgetseed (void);
+extern uae_u32 uaerand(void);
+extern uae_u32 uaesetrandseed(uae_u32 seed);
+extern uae_u32 uaerandgetseed(void);
 
 /* the following prototypes should probably be moved somewhere else */
 

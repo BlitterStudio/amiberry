@@ -96,7 +96,7 @@ struct inputevent {
 #define ID_FLAG_SET_ONOFF_VAL2 512
 
 #define ID_FLAG_GAMEPORTSCUSTOM_MASK (ID_FLAG_GAMEPORTSCUSTOM1 | ID_FLAG_GAMEPORTSCUSTOM2)
-#define ID_FLAG_AUTOFIRE_MASK (ID_FLAG_TOGGLE | ID_FLAG_INVERTTOGGLE | ID_FLAG_AUTOFIRE)
+#define ID_FLAG_AUTOFIRE_MASK (ID_FLAG_TOGGLE | ID_FLAG_INVERTTOGGLE | ID_FLAG_INVERT | ID_FLAG_AUTOFIRE)
 
 #define ID_FLAG_QUALIFIER1          0x000000100000000ULL
 #define ID_FLAG_QUALIFIER1_R        0x000000200000000ULL
@@ -206,6 +206,7 @@ extern int inputdevice_get_device_total (int type);
 extern int inputdevice_get_widget_num (int devnum);
 extern int inputdevice_get_widget_type (int devnum, int num, TCHAR *name, bool inccode);
 extern int send_input_event (int nr, int state, int max, int autofire);
+extern void release_keys(void);
 
 extern int input_get_default_mouse (struct uae_input_device *uid, int num, int port, int af, bool gp, bool wheel, bool joymouseswap);
 extern int input_get_default_lightpen (struct uae_input_device *uid, int num, int port, int af, bool gp, bool joymouseswap, int submode);
@@ -265,7 +266,8 @@ extern void send_internalevent (int eventid);
 extern int inputdevice_translatekeycode (int keyboard, int scancode, int state, bool alwaysrelease);
 extern void inputdevice_checkqualifierkeycode (int keyboard, int scancode, int state);
 extern void inputdevice_setkeytranslation (struct uae_input_device_kbr_default **trans, int **kbmaps);
-extern void inputdevice_do_keyboard (int code, int state);
+extern void inputdevice_do_keyboard(int code, int state);
+extern void inputdevice_do_kb_reset(void);
 extern int inputdevice_iskeymapped (int keyboard, int scancode);
 extern int inputdevice_synccapslock (int, int*);
 extern void inputdevice_testrecord (int type, int num, int wtype, int wnum, int state, int max);
@@ -303,6 +305,7 @@ extern void inputdevice_joyport_config_store(struct uae_prefs *p, const TCHAR *v
 extern int inputdevice_getjoyportdevice (int port, int val);
 extern void inputdevice_validate_jports (struct uae_prefs *p, int changedport, bool *fixedports);
 extern void inputdevice_fix_prefs(struct uae_prefs *p, bool userconfig);
+extern void inputdevice_jportcustom_fixup(struct uae_prefs *p, TCHAR*, int);
 
 extern void inputdevice_init (void);
 extern void inputdevice_close (void);
@@ -310,7 +313,7 @@ extern void inputdevice_default_prefs (struct uae_prefs *p);
 
 extern void inputdevice_acquire (int allmode);
 extern void inputdevice_unacquire(void);
-extern void inputdevice_unacquire(bool emulationactive, int inputmask);
+extern void inputdevice_unacquire(int inputmask);
 extern void inputdevice_releasebuttons(void);
 
 extern void indicator_leds (int num, int state);
@@ -372,6 +375,7 @@ extern int inputdevice_uaelib (const TCHAR *, const TCHAR *);
 extern int inputdevice_uaelib(const TCHAR *s, int parm, int max, bool autofire);
 extern int handle_custom_event (const TCHAR *custom, int append);
 extern int inputdevice_geteventid(const TCHAR *s);
+extern void inputdevice_playevents(void);
 
 extern int inputdevice_testread (int*, int*, int*, bool);
 extern int inputdevice_istest (void);
@@ -379,5 +383,11 @@ extern void inputdevice_settest (int);
 extern int inputdevice_testread_count (void);
 
 extern bool target_can_autoswitchdevice(void);
+
+bool key_specialpressed(void);
+bool key_shiftpressed(void);
+bool key_altpressed(void);
+bool key_ctrlpressed(void);
+bool key_winpressed(void);
 
 #endif /* UAE_INPUTDEVICE_H */

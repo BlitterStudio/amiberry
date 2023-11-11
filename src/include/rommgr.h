@@ -1,7 +1,7 @@
 #ifndef UAE_ROMMGR_H
 #define UAE_ROMMGR_H
 
-#define MAX_ROMMGR_ROMS 310
+#define MAX_ROMMGR_ROMS 320
 
 extern int decode_cloanto_rom_do(uae_u8 *mem, int size, int real_size);
 
@@ -206,23 +206,7 @@ extern int decode_cloanto_rom_do(uae_u8 *mem, int size, int real_size);
 #define ROMTYPE_DEVHD		0x0010008c
 #define ROMTYPE_CSMK1SCSI	0x0010008d
 #define ROMTYPE_GVPA1208	0x0010008e
-
-#define ROMTYPE_FLOPYBRDGE0 0x001000D0
-#define ROMTYPE_FLOPYBRDGE1 0x001000D1
-#define ROMTYPE_FLOPYBRDGE2 0x001000D2
-#define ROMTYPE_FLOPYBRDGE3 0x001000D3
-#define ROMTYPE_FLOPYBRDGE4 0x001000D4
-#define ROMTYPE_FLOPYBRDGE5 0x001000D5
-#define ROMTYPE_FLOPYBRDGE6 0x001000D6
-#define ROMTYPE_FLOPYBRDGE7 0x001000D7
-#define ROMTYPE_FLOPYBRDGE8 0x001000D8
-#define ROMTYPE_FLOPYBRDGE9 0x001000D9
-#define ROMTYPE_FLOPYBRDGEA 0x001000DA
-#define ROMTYPE_FLOPYBRDGEB 0x001000DB
-#define ROMTYPE_FLOPYBRDGEC 0x001000DC
-#define ROMTYPE_FLOPYBRDGED 0x001000DD
-#define ROMTYPE_FLOPYBRDGEE 0x001000DE
-#define ROMTYPE_FLOPYBRDGEF 0x001000DF
+#define ROMTYPE_DSP3210		0x0010008f
 
 #define ROMTYPE_NOT			0x00800000
 #define ROMTYPE_QUAD		0x01000000
@@ -290,9 +274,9 @@ extern struct romlist *getromlistbyromdata (const struct romdata *rd);
 extern void romlist_add (const TCHAR *path, struct romdata *rd);
 extern TCHAR *romlist_get (const struct romdata *rd);
 extern void romlist_clear (void);
-extern struct zfile *read_rom (struct romdata *rd);
-extern struct zfile *read_rom_name (const TCHAR *filename);
-extern struct zfile *read_device_from_romconfig(struct romconfig *rc, uae_u32 romtype);
+extern struct zfile *read_rom(struct romdata *rd, bool rw = false);
+extern struct zfile *read_rom_name(const TCHAR *filename, bool rw = false);
+extern struct zfile *read_device_from_romconfig(struct romconfig *rc, uae_u32 romtype, bool rw = false);
 
 extern int load_keyring (struct uae_prefs *p, const TCHAR *path);
 extern uae_u8 *target_load_keyfile (struct uae_prefs *p, const TCHAR *path, int *size, TCHAR *name);
@@ -330,6 +314,7 @@ void board_prefs_changed(int romtype, int devnum);
 #define LOADROM_ZEROFILL 8
 #define LOADROM_ODDFILL(x) ((x << 16) | LOADROM_EVENONLY)
 bool load_rom_rc(struct romconfig *rc, uae_u32 romtype, int maxfilesize, int fileoffset, uae_u8 *rom, int maxromsize, int flags);
+struct zfile *load_rom_rc_zfile(struct romconfig *rc, uae_u32 romtype, int maxfilesize, int fileoffset, uae_u8 *rom, int maxromsize, int flags);
 struct zfile *flashromfile_open(const TCHAR *name);
 
 #define EXPANSION_ORDER_MAX 10000

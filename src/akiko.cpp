@@ -2125,7 +2125,7 @@ int akiko_init(void)
 		device_add_rethink(rethink_akiko);
 	}
 
-	device_add_exit(akiko_free);
+	device_add_exit(akiko_free, NULL);
 
 	return 1;
 }

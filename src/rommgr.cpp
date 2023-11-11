@@ -97,7 +97,7 @@ struct romdata *getromdatabypath (const TCHAR *path)
 	return NULL;
 }
 
-#define NEXT_ROM_ID 309
+#define NEXT_ROM_ID 311
 
 #if NEXT_ROM_ID >= MAX_ROMMGR_ROMS
 #error Increase MAX_ROMMGR_ROMS!
@@ -603,7 +603,9 @@ static struct romdata roms[] = {
 	0xf495879a, 0xa3bd0202, 0xe14aa5b6, 0x49d3ce88, 0x22975950, 0x6500dbc2, NULL, NULL },
 	{ _T("ICD AdSCSI 2000 v1.6 (icddisk v1.0)"), 1, 6, 1, 6, _T("ADSCSI\0"), 32768, 133, 0, 0, ROMTYPE_ADSCSI, 0, 0, NULL,
 	0x7dba3e1f, 0x1e05f284, 0xd59a1e5d, 0x4e4de44e, 0x6f075175, 0x625cd6c0, NULL, NULL },
-	{ _T("ICD AdSCSI 2000 v2.? (icddisk v33.0)"), 0, 0, 0, 0, _T("ADSCSI\0"), 32768, 232, 0, 0, ROMTYPE_ADSCSI, 0, 0, NULL,
+	{ _T("ICD AdSCSI 2000 v2.01 (icddisk v32.1)"), 0, 0, 0, 0, _T("ADSCSI\0"), 32768, 309, 0, 0, ROMTYPE_ADSCSI, 0, 0, NULL,
+	0x0860a46d, 0xf6bd0520, 0x06d50449, 0x4efd48da, 0xe6a58d7b, 0x774c9eef, NULL, NULL },
+	{ _T("ICD AdSCSI 2000 v2.1 (icddisk v33.0)"), 0, 0, 0, 0, _T("ADSCSI\0"), 32768, 232, 0, 0, ROMTYPE_ADSCSI, 0, 0, NULL,
 	0x3184ec04, 0xf8ab84b0, 0x4853404f, 0x840085ce, 0x5fe992e3, 0x5dc443da, NULL, NULL },
 	{ _T("ICD AdSCSI 2000 v2.2 (icddisk v34.0)"), 2, 2, 2, 2, _T("ADSCSI\0"), 32768, 233, 0, 0, ROMTYPE_ADSCSI, 0, 0, NULL,
 	0x6881cd2f, 0x482fab24, 0xdf39446b, 0xa8662c7e, 0x67f11854, 0x895a46d9, NULL, NULL },
@@ -658,6 +660,8 @@ static struct romdata roms[] = {
 	0x756103b1, 0x7f1335ea,0xf5b7ce73,0xc5231173,0x261da5aa,0xe7249645, NULL, NULL },
 	{ _T("AlfaPower v6.10"), 6, 10, 6, 10, _T("ALFAPOWER\0"), 32768, 117, 0, 0, ROMTYPE_ALFA, 0, 0, NULL,
 	0x1cfb0a0b, 0xc7275eda,0x547d6664,0x5c4eb7a0,0x3b5cef37,0xa498365a, NULL, NULL },
+	{ _T("AlfaPower v8.2"), 8, 2, 8, 2, _T("ALFAPOWERPLUS\0"), 32768, 310, 0, 0, ROMTYPE_ALFAPLUS, 0, 0, NULL,
+	0x42b570db, 0xf7d3f6bf,0x83ef13f9,0x438bf0d3,0x790d2f69,0xc26dcabe, NULL, NULL },
 	{ _T("AlfaPower v8.3"), 8, 3, 8, 3, _T("ALFAPOWERPLUS\0"), 32768, 118, 0, 0, ROMTYPE_ALFAPLUS, 0, 0, NULL,
 	0xe8201bad, 0xdefea015,0x596fce32,0x11e84397,0x23046a31,0x5a7726dc, NULL, NULL },
 	{ _T("Masoboshi MC-702 v2.201"), 2, 201, 2, 201, _T("MASOBOSHI\0"), 32768, 120, 0, 0, ROMTYPE_MASOBOSHI, 0, 0, NULL,
@@ -1917,7 +1921,7 @@ static void descramble (const struct romdata *rd, uae_u8 *data, int size, int od
 		descramble_nordicpro (data, size, odd);
 }
 
-static int read_rom_file (uae_u8 *buf, const struct romdata *rd)
+static int read_rom_file(uae_u8 *buf, const struct romdata *rd, bool rw)
 {
 	struct zfile *zf;
 	struct romlist *rl = romlist_getrl (rd);
@@ -1925,7 +1929,7 @@ static int read_rom_file (uae_u8 *buf, const struct romdata *rd)
 
 	if (!rl || rl->path[0] == '\0')
 		return 0;
-	zf = zfile_fopen (rl->path, _T("rb"), ZFD_NORMAL);
+	zf = zfile_fopen (rl->path, rw ? _T("rb+") : _T("rb"), ZFD_NORMAL);
 	if (!zf)
 		return 0;
 	addkeydir (rl->path);
@@ -2001,7 +2005,7 @@ static void alg_descramble(struct romdata *rd, uae_u8 *buf, int size)
 	}
 }
 
-struct zfile *read_rom(struct romdata *prd)
+struct zfile *read_rom(struct romdata *prd, bool rw)
 {
 	struct romdata *rd2 = prd;
 	struct romdata *rd = prd;
@@ -2039,7 +2043,7 @@ struct zfile *read_rom(struct romdata *prd)
 		for (i = 0; i < 2; i++) {
 			memset (buf, 0, size);
 			if (!(flags & (ROMTYPE_EVEN | ROMTYPE_ODD))) {
-				read_rom_file (buf, rd);
+				read_rom_file(buf, rd, rw);
 				if (flags & ROMTYPE_CD32) {
 					memcpy (buf2, buf, size);
 					mergecd32 (buf, buf2, size);
@@ -2049,14 +2053,14 @@ struct zfile *read_rom(struct romdata *prd)
 			} else if (flags & ROMTYPE_QUAD) {
 				if (i == 0) {
 					for (int k = 0; k < 4; k++) {
-						read_rom_file (buf2, rd2 + k + 1);
+						read_rom_file(buf2, rd2 + k + 1, rw);
 						for (j = 0; j < size; j += 4)
 							buf[j + k] = buf2[j / 4];
 					}
 				} else {
 					for (int kk = 0; kk < 2; kk++) {
 						for (int k = 0; k < 2; k++) {
-							read_rom_file (buf2, rd2 + k + kk * 2 + 1);
+							read_rom_file(buf2, rd2 + k + kk * 2 + 1, rw);
 							for (j = 0; j < size / 2; j += 2) {
 								buf[j + k + kk * (rd2->size / 2)] = buf2[j / 2];
 							}
@@ -2075,14 +2079,14 @@ struct zfile *read_rom(struct romdata *prd)
 				else
 					rdpair = rd;
 				if (flags & ROMTYPE_8BIT) {
-					read_rom_file (buf2, rd);
+					read_rom_file(buf2, rd, rw);
 					if (flags & ROMTYPE_BYTESWAP)
 						byteswap (buf2, romsize);
 					if (flags & ROMTYPE_SCRAMBLED)
 						descramble (rd, buf2, romsize, odd);
 					for (j = 0; j < size; j += 2)
 						buf[j + odd] = buf2[j / 2];
-					read_rom_file (buf2, rdpair);
+					read_rom_file(buf2, rdpair, rw);
 					if (flags & ROMTYPE_BYTESWAP)
 						byteswap (buf2, romsize);
 					if (flags & ROMTYPE_SCRAMBLED)
@@ -2090,7 +2094,7 @@ struct zfile *read_rom(struct romdata *prd)
 					for (j = 0; j < size; j += 2)
 						buf[j + (1 - odd)] = buf2[j / 2];
 				} else {
-					read_rom_file (buf2, rd);
+					read_rom_file(buf2, rd, rw);
 					if (flags & ROMTYPE_BYTESWAP)
 						byteswap (buf2, romsize);
 					if (flags & ROMTYPE_SCRAMBLED)
@@ -2099,7 +2103,7 @@ struct zfile *read_rom(struct romdata *prd)
 						buf[j + 2 * odd + 0] = buf2[j / 2 + 0];
 						buf[j + 2 * odd + 1] = buf2[j / 2 + 1];
 					}
-					read_rom_file (buf2, rdpair);
+					read_rom_file(buf2, rdpair, rw);
 					if (flags & ROMTYPE_BYTESWAP)
 						byteswap (buf2, romsize);
 					if (flags & ROMTYPE_SCRAMBLED)
@@ -2229,7 +2233,7 @@ static struct zfile *rom_fopen2(const TCHAR *name, const TCHAR *mode, int mask)
 	return f;
 }
 
-struct zfile *read_rom_name (const TCHAR *filename)
+struct zfile *read_rom_name(const TCHAR *filename, bool rw)
 {
 	struct zfile *f;
 
@@ -2241,7 +2245,7 @@ struct zfile *read_rom_name (const TCHAR *filename)
 				return f;
 		}
 	}
-	f = rom_fopen2(filename, _T("rb"), ZFD_NORMAL);
+	f = rom_fopen2(filename, rw ? _T("rb+") : _T("rb"), ZFD_NORMAL);
 	if (f) {
 		uae_u8 tmp[11] = { 0 };
 		zfile_fread(tmp, sizeof tmp, 1, f);
@@ -2596,19 +2600,19 @@ static bool isspecialrom(const TCHAR *name)
 	return false;
 }
 
-struct zfile *read_device_from_romconfig(struct romconfig *rc, uae_u32 romtype)
+struct zfile *read_device_from_romconfig(struct romconfig *rc, uae_u32 romtype, bool rw)
 {
 	struct zfile *z = NULL;
 	if (isspecialrom(rc->romfile))
 		return z;
-	z = read_rom_name (rc->romfile);
+	z = read_rom_name(rc->romfile, rw);
 	if (z)
 		return z;
 	if (romtype) {
 		struct romlist *rl = getromlistbyromtype(romtype, NULL);
 		if (rl) {
 			struct romdata *rd = rl->rd;
-			z = read_rom(rd);
+			z = read_rom(rd, rw);
 		}
 	}
 	return z;
@@ -2622,7 +2626,7 @@ struct zfile *read_device_rom(struct uae_prefs *p, int romtype, int devnum, int 
 		const TCHAR *romname = brc->roms[idx].romfile;
 		if (isspecialrom(romname))
 			return NULL;
-		struct zfile *z = read_rom_name (romname);
+		struct zfile *z = read_rom_name (romname, false);
 		if (!z && roms) {
 			struct romlist *rl = getromlistbyids(roms, romname);
 			if (rl) {
@@ -2723,13 +2727,16 @@ static struct zfile *parse_trumpcard_driver(struct zfile *z)
 	return zd;
 }
 
-bool load_rom_rc(struct romconfig *rc, uae_u32 romtype, int maxfilesize, int fileoffset, uae_u8 *rom, int maxromsize, int flags)
+static bool load_rom_rc1(struct romconfig *rc, uae_u32 romtype, int maxfilesize, int fileoffset, uae_u8 *rom, int maxromsize, int flags, struct zfile **zf)
 {
+	if (zf) {
+		*zf = NULL;
+	}
 	if (flags & LOADROM_ONEFILL)
 		memset(rom, 0xff, maxromsize);
 	if (flags & LOADROM_ZEROFILL)
 		memset(rom, 0x00, maxromsize);
-	struct zfile *f = read_device_from_romconfig(rc, romtype);
+	struct zfile *f = read_device_from_romconfig(rc, romtype, zf != NULL);
 	if (!f)
 		return false;
 	TCHAR *ext = _tcsrchr(zfile_getname(f), '.');
@@ -2770,7 +2777,11 @@ bool load_rom_rc(struct romconfig *rc, uae_u32 romtype, int maxfilesize, int fil
 	}
 	if (f)
 		write_log(_T("ROM '%s' loaded, %d bytes.\n"), zfile_getname(f), bytes);
-	zfile_fclose(f);
+	if (!zf) {
+		zfile_fclose(f);
+	} else {
+		*zf = f;
+	}
 	int posend = pos;
 	if (!(flags & LOADROM_FILL))
 		return true;
@@ -2783,6 +2794,19 @@ bool load_rom_rc(struct romconfig *rc, uae_u32 romtype, int maxfilesize, int fil
 			oldpos = 0;
 	}
 	return true;
+}
+
+bool load_rom_rc(struct romconfig *rc, uae_u32 romtype, int maxfilesize, int fileoffset, uae_u8 *rom, int maxromsize, int flags)
+{
+	return load_rom_rc1(rc, romtype, maxfilesize, fileoffset, rom, maxromsize, flags, NULL);
+}
+struct zfile *load_rom_rc_zfile(struct romconfig *rc, uae_u32 romtype, int maxfilesize, int fileoffset, uae_u8 *rom, int maxromsize, int flags)
+{
+	struct zfile *zf = NULL;
+	if (!load_rom_rc1(rc, romtype, maxfilesize, fileoffset, rom, maxromsize, flags, &zf)) {
+		return NULL;
+	}
+	return zf;
 }
 
 struct zfile *flashromfile_open(const TCHAR *name)

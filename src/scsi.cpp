@@ -4327,7 +4327,7 @@ static struct soft_scsi *getscsi(struct romconfig *rc)
 {
 	device_add_rethink(ncr80_rethink);
 	device_add_reset(soft_scsi_reset);
-	device_add_exit(soft_scsi_free);
+	device_add_exit(soft_scsi_free, NULL);
 	if (rc->unitdata)
 		return (struct soft_scsi *)rc->unitdata;
 	return NULL;

@@ -634,12 +634,12 @@ static void amiberry_inactive(struct AmigaMonitor* mon, int minimized)
 				sound_closed = 1;
 			}
 			else if (currprefs.minimized_nosound) {
-				inputdevice_unacquire(true, currprefs.minimized_input);
+				inputdevice_unacquire(currprefs.minimized_input);
 				setsoundpaused();
 				sound_closed = -1;
 			}
 			else {
-				inputdevice_unacquire(true, currprefs.minimized_input);
+				inputdevice_unacquire(currprefs.minimized_input);
 			}
 		}
 		else if (mouseactive) {
@@ -664,12 +664,12 @@ static void amiberry_inactive(struct AmigaMonitor* mon, int minimized)
 			}
 			else if (currprefs.inactive_nosound)
 			{
-				inputdevice_unacquire(true, currprefs.inactive_input);
+				inputdevice_unacquire(currprefs.inactive_input);
 				setsoundpaused();
 				sound_closed = -1;
 			}
 			else {
-				inputdevice_unacquire(true, currprefs.inactive_input);
+				inputdevice_unacquire(currprefs.inactive_input);
 			}
 		}
 	}
@@ -1183,7 +1183,7 @@ void process_event(SDL_Event event)
 		}
 		if (event.cbutton.button == vkbd_button)
 		{
-			inputdevice_add_inputcode(AKS_TOGGLE_VIRTUAL_KEYBOARD, event.cbutton.state == SDL_PRESSED, nullptr);
+			inputdevice_add_inputcode(AKS_OSK, event.cbutton.state == SDL_PRESSED, nullptr);
 			break;
 		}
 
@@ -1221,7 +1221,7 @@ void process_event(SDL_Event event)
 			if (event.jbutton.button == did->mapping.vkbd_button && hotkey_pressed && event.jbutton.state == SDL_PRESSED)
 			{
 				hotkey_pressed = false;
-				inputdevice_add_inputcode(AKS_TOGGLE_VIRTUAL_KEYBOARD, 1, nullptr);
+				inputdevice_add_inputcode(AKS_OSK, 1, nullptr);
 				break;
 			}
 

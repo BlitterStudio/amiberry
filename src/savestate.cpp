@@ -1547,14 +1547,14 @@ void savestate_capture (int force)
 	struct staterecord *st;
 	bool firstcapture = false;
 
-#ifdef FILESYS
-	if (nr_units ())
-		return;
-#endif
 	if (!staterecords)
 		return;
 	if (!input_record)
 		return;
+#ifdef FILESYS
+	if (nr_units())
+		return;
+#endif
 	if (currprefs.statecapturerate && hsync_counter == 0 && input_record == INPREC_RECORD_START && savestate_first_capture > 0) {
 		// first capture
 		force = true;

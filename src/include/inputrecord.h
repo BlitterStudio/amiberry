@@ -21,9 +21,11 @@ extern int inputrecord_debug;
 //#define INPREC_VSYNC 6
 //#define INPREC_CIAVSYNC 7
 #define INPREC_EVENT 8
+#define INPREC_DEBUG_START 0x60
+#define INPREC_DEBUG 0x60
 #define INPREC_CIADEBUG 0x61
-#define INPREC_DEBUG 0x62
-#define INPREC_DEBUG2 0x63
+#define INPREC_CPUDEBUG 0x62
+#define INPREC_DEBUG_END 0x6f
 #define INPREC_STOP 0x7d
 #define INPREC_END 0x7e
 #define INPREC_QUIT 0x7f
@@ -50,8 +52,8 @@ extern void inprec_recorddiskchange (int nr, const TCHAR *fname, bool writeprote
 
 extern void inprec_recorddebug (uae_u32);
 extern void inprec_playdebug (uae_u32);
-extern void inprec_recorddebug_cpu (int);
-extern void inprec_playdebug_cpu (int);
+extern void inprec_recorddebug_cpu (int, uae_u16);
+extern void inprec_playdebug_cpu (int, uae_u16);
 extern void inprec_recorddebug_cia (uae_u32, uae_u32, uae_u32);
 extern void inprec_playdebug_cia (uae_u32, uae_u32, uae_u32);
 

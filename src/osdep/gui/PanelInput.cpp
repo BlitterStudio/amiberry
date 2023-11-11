@@ -111,8 +111,8 @@ public:
 static string_list_model ctrlPortList(nullptr, 0);
 static int portListIDs[MAX_INPUT_DEVICES + JSEM_LASTKBD + 1];
 
-const char* autoFireValues[] = { "No autofire", "Autofire", "Autofire (toggle)", "Autofire (always)" };
-string_list_model autoFireList(autoFireValues, 4);
+const char* autoFireValues[] = { "No autofire (normal)", "Autofire", "Autofire (toggle)", "Autofire (always)", "No autofire (toggle)"};
+string_list_model autoFireList(autoFireValues, 5);
 
 const char* autoFireRateValues[] = { "Off", "Slow", "Medium", "Fast" };
 string_list_model autoFireRateList(autoFireRateValues, 4);

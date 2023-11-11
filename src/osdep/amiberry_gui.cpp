@@ -922,6 +922,7 @@ void hardfile_testrdb (struct hfdlg_vals* hdf)
 {
 	uae_u8 id[512];
 	struct hardfiledata hfd{};
+	uae_u32 error = 0;
 
 	memset(id, 0, sizeof id);
 	memset(&hfd, 0, sizeof hfd);
@@ -929,10 +930,15 @@ void hardfile_testrdb (struct hfdlg_vals* hdf)
 	hfd.ci.blocksize = 512;
 	if (hdf_open(&hfd, hdf->ci.rootdir) > 0) {
 		for (auto i = 0; i < 16; i++) {
-			hdf_read_rdb(&hfd, id, i * 512, 512);
+			hdf_read_rdb (&hfd, id, i * 512, 512, &error);
+			if (!error && i == 0 && !memcmp (id + 2, "CIS", 3)) {
+				hdf->ci.controller_type = HD_CONTROLLER_TYPE_CUSTOM_FIRST;
+				hdf->ci.controller_type_unit = 0;
+				break;
+			}
 			auto babe = id[0] == 0xBA && id[1] == 0xBE; // A2090
-			if (!memcmp(id, "RDSK\0\0\0", 7) || !memcmp(id, "CDSK\0\0\0", 7) || !memcmp(id, "DRKS\0\0", 6) ||
-				(id[0] == 0x53 && id[1] == 0x10 && id[2] == 0x9b && id[3] == 0x13 && id[4] == 0 && id[5] == 0) || babe) {
+			if (!error && (!memcmp(id, "RDSK\0\0\0", 7) || !memcmp(id, "CDSK\0\0\0", 7) || !memcmp(id, "DRKS\0\0", 6) ||
+				(id[0] == 0x53 && id[1] == 0x10 && id[2] == 0x9b && id[3] == 0x13 && id[4] == 0 && id[5] == 0) || babe)) {
 				// RDSK or ADIDE "encoded" RDSK
 				auto blocksize = 512;
 				if (!babe)

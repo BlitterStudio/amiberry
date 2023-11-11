@@ -2764,6 +2764,115 @@ void free_expansion_bank(addrbank *bank)
 	bank->reserved_size = 0;
 }
 
+struct autoconfig_info* expansion_get_bank_data(struct uae_prefs* p, uaecptr* addrp)
+{
+	uaecptr addr = *addrp;
+	static struct autoconfig_info acid;
+	struct autoconfig_info* aci = NULL;
+
+	if (addr >= 0x01000000 && currprefs.address_space_24) {
+		return NULL;
+	}
+	for (;;) {
+		addrbank* ab = &get_mem_bank(addr);
+		if (ab && ab != &dummy_bank) {
+			aci = expansion_get_autoconfig_by_address(p, addr, 0);
+			if (aci && expansion_get_autoconfig_by_address(p, addr - 1, 0) != aci) {
+				addrbank* ab2 = ab;
+				struct autoconfig_info* aci2;
+				int size = 0;
+				for (;;) {
+					addr += 65536;
+					size += 65536;
+					ab2 = &get_mem_bank(addr);
+					aci2 = expansion_get_autoconfig_by_address(p, addr, 0);
+					if (ab != ab2) {
+						break;
+					}
+					if (aci2 != aci) {
+						break;
+					}
+					if (aci->size > 0 && size >= aci->size) {
+						break;
+					}
+				}
+				*addrp = addr;
+				return aci;
+			}
+			uaecptr addr2 = addr;
+			aci = &acid;
+			memset(aci, 0, sizeof(struct autoconfig_info));
+			aci->autoconfig_bytes[0] = 0xff;
+			if (ab->sub_banks) {
+				uaecptr saddr = addr;
+				uaecptr saddr1 = saddr;
+				uaecptr saddr2 = saddr;
+				addrbank* sab1 = get_sub_bank(&saddr1);
+				for (;;) {
+					saddr2 = saddr1 + 1;
+					addrbank* sab2 = get_sub_bank(&saddr2);
+					if (sab1 != sab2 || (saddr1 & 65535) == 65535) {
+						aci->addrbank = sab1;
+						aci->start = addr;
+						aci->size = saddr2 - addr;
+						if (sab1->name) {
+							_tcscpy(aci->name, sab1->name);
+						}
+						addr = saddr2;
+						*addrp = addr;
+						break;
+					}
+					saddr1++;
+				}
+				if (aci->addrbank == &dummy_bank) {
+					addr = saddr2;
+					continue;
+				}
+				return aci;
+			} else {
+				aci->addrbank = ab;
+				aci->start = addr;
+				aci->size = ab->allocated_size;
+				if (ab->name) {
+					_tcscpy(aci->name, ab->name);
+				}
+				addrbank* ab2 = ab;
+				int size = 0;
+				for (;;) {
+					addr += 65536;
+					size += 65536;
+					ab2 = &get_mem_bank(addr);
+					if (ab != ab2) {
+						break;
+					}
+					if (aci->size > 0 && size >= aci->size) {
+						break;
+					}
+				}
+			}
+			if (aci->size == 0) {
+				aci->size = addr - addr2;
+			}
+			*addrp = addr;
+			return aci;
+		}
+
+		for (;;) {
+			addr += 65536;
+			if (addr >= 0x01000000 && currprefs.address_space_24) {
+				return NULL;
+			}
+			if (addr < 65536) {
+				return NULL;
+			}
+			ab = &get_mem_bank(addr);
+			if (ab != NULL && ab != &dummy_bank) {
+				break;
+			}
+		}
+	}
+}
+
 struct autoconfig_info *expansion_get_autoconfig_data(struct uae_prefs *p, int index)
 {
 	if (index >= cardno)
@@ -4301,7 +4410,7 @@ static const struct expansionsubromtype supra_sub[] = {
 		{ 0xc1, 1, 0x00, 0x00, 0x04, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
 	},
 	{
-		_T("A2000 DMA"), _T("dma"), ROMTYPE_NONE | ROMTYPE_SUPRADMA,
+		_T("2000 DMA"), _T("dma"), ROMTYPE_NONE | ROMTYPE_SUPRA,
 		1056, 2, 0, false, EXPANSIONTYPE_DMA24,
 		{ 0xd1, 3, 0x00, 0x00, 0x04, 0x20, 0x00, 0x00, 0x00, 0x00, 0x40, 0x00 },
 	},
@@ -4959,8 +5068,8 @@ static const struct expansionboardsettings nexus_settings[] = {
 };
 static const struct expansionboardsettings buddha_settings[] = {
 	{
-		_T("Model\0") _T("Buddha\0") _T("Catweasel Z2\0"),
-		_T("model\0") _T("buddha\0") _T("cwz2\0"),
+		_T("Model\0") _T("Buddha\0") _T("Buddha plus one\0") _T("Catweasel Z2\0"),
+		_T("model\0") _T("buddha\0") _T("buddhaplusone\0") _T("cwz2\0"),
 		true, false, 0
 	},
 	{
@@ -5183,6 +5292,14 @@ const struct expansionromtype expansionroms[] = {
 		NULL, 0,
 		false, EXPANSIONTYPE_INTERNAL
 	},
+#ifdef WITH_DSP
+	{
+		_T("dsp3210"), _T("DSP3210"), _T("AT&T"),
+		NULL, dsp_init, NULL, NULL, ROMTYPE_DSP3210 | ROMTYPE_NOT, 0, 0, BOARD_NONAUTOCONFIG_BEFORE, true,
+		NULL, 0,
+		false, EXPANSIONTYPE_INTERNAL
+	},
+#endif
 
 	/* PCI Bridgeboards */
 
@@ -5464,7 +5581,7 @@ const struct expansionromtype expansionroms[] = {
 	//},
 	//{
 	//	_T("buddha"), _T("Buddha"), _T("Individual Computers"),
-	//	NULL, buddha_init, NULL, buddha_add_ide_unit, ROMTYPE_BUDDHA, 0, 0, BOARD_AUTOCONFIG_Z2, false,
+	//	NULL, buddha_init, NULL, buddha_add_ide_unit, ROMTYPE_BUDDHA | ROMTYPE_NONE, 0, 0, BOARD_AUTOCONFIG_Z2, false,
 	//	NULL, 0,
 	//	false, EXPANSIONTYPE_IDE,
 	//	0, 0, 0, false, NULL,
@@ -5499,7 +5616,7 @@ const struct expansionromtype expansionroms[] = {
 	//	{ 0xd1, 0x31, 0x00, 0x00, 0x08, 0x40, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00 },
 	//},
 	{
-		_T("kommos"), _T("Kommos A500/A2000 SCSI"), _T("Jürgen Kommos"),
+		_T("kommos"), _T("Kommos A500/A2000 SCSI"), _T("JÃ¶rgen Kommos"),
 		NULL, kommos_init, NULL, kommos_add_scsi_unit, ROMTYPE_KOMMOS, 0, 0, BOARD_NONAUTOCONFIG_BEFORE, true,
 		NULL, 0,
 		false, EXPANSIONTYPE_SCSI
@@ -5718,7 +5835,7 @@ const struct expansionromtype expansionroms[] = {
 	//	true, 0, alf3_settings
 	//},
 	{
-		_T("promigos"), _T("Promigos"), _T("Flesch und Hörnemann"),
+		_T("promigos"), _T("Promigos"), _T("Flesch und HÃ¶rnemann"),
 		NULL, promigos_init, NULL, promigos_add_scsi_unit, ROMTYPE_PROMIGOS | ROMTYPE_NOT, 0, 0, BOARD_NONAUTOCONFIG_BEFORE, true,
 		NULL, 0,
 		false, EXPANSIONTYPE_CUSTOM | EXPANSIONTYPE_SCSI

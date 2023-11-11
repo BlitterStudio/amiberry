@@ -1998,14 +1998,15 @@ static void bus_error(void)
 
 static void do_interrupt (int nr)
 {
-	//if (debug_dma)
-	//	record_dma_event (DMA_EVENT_CPUIRQ, current_hpos (), vpos);
-
+#ifdef DEBUGGER
+	if (debug_dma)
+		record_dma_event(DMA_EVENT_CPUIRQ, current_hpos (), vpos);
+#endif
 	if (inputrecord_debug & 2) {
 		if (input_record > 0)
-			inprec_recorddebug_cpu (2);
+			inprec_recorddebug_cpu(2, 0);
 		else if (input_play > 0)
-			inprec_playdebug_cpu (2);
+			inprec_playdebug_cpu(2, 0);
 	}
 
 	m68k_unset_stop();
@@ -3025,16 +3026,23 @@ static void m68k_run_1_ce (void)
 
 				if (inputrecord_debug & 4) {
 					if (input_record > 0)
-						inprec_recorddebug_cpu (1);
+						inprec_recorddebug_cpu(1, r->opcode);
 					else if (input_play > 0)
-						inprec_playdebug_cpu (1);
+						inprec_playdebug_cpu(1, r->opcode);
 				}
 
-				//if (debug_opcode_watch) {
-				//	debug_trainer_match();
-				//}
+#ifdef DEBUGGER
+				if (debug_opcode_watch) {
+					debug_trainer_match();
+				}
+#endif
 
 				r->instruction_pc = m68k_getpc ();
+#ifdef DEBUGGER
+				if (debug_dma) {
+					record_dma_event_data(DMA_EVENT_CPUINS, current_hpos(), vpos, r->opcode);
+				}
+#endif
 
 				(*cpufunctbl[r->opcode])(r->opcode);
 				regs.instruction_cnt++;

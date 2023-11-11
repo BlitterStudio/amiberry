@@ -67,17 +67,6 @@ struct strlist
 
 #define INTERNALEVENT_COUNT 1
 
-#if 0
-struct uae_input_device_event
-{
-	uae_s16 eventid[MAX_INPUT_SUB_EVENT_ALL];
-	TCHAR* custom[MAX_INPUT_SUB_EVENT_ALL];
-	uae_u64 flags[MAX_INPUT_SUB_EVENT_ALL];
-	uae_u8 port[MAX_INPUT_SUB_EVENT_ALL];
-	uae_s16 extra;
-};
-#endif
-
 struct uae_input_device
 {
 	TCHAR* name;
@@ -448,6 +437,7 @@ struct gfx_filterdata
 	int gfx_filter_autoscale;
 	int gfx_filter_integerscalelimit;
 	int gfx_filter_keep_autoscale_aspect;
+	int gfx_filter_rotation;
 	bool changed;
 };
 
@@ -582,6 +572,8 @@ struct uae_prefs
 	bool use_serial;
 	bool serial_demand;
 	bool serial_hwctsrts;
+	bool serial_rtsctsdtrdtecd;
+	bool serial_ri;
 	bool serial_direct;
 	int serial_stopbits;
 	int serial_crlf;
@@ -635,6 +627,7 @@ struct uae_prefs
 	bool comp_constjump;
 	bool comp_catchfault;
 	int cachesize;
+	bool cachesize_inhibit;
 	TCHAR jitblacklist[MAX_DPATH];
 	bool fpu_strict;
 	int fpu_mode;
@@ -798,6 +791,8 @@ struct uae_prefs
 	int cs_eclockphase;
 	int cs_eclocksync;
 	bool cs_memorypatternfill;
+	bool cs_ipldelay;
+	uae_u32 seed;
 
 	struct boardromconfig expansionboard[MAX_EXPANSION_BOARDS];
 
