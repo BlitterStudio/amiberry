@@ -18,7 +18,7 @@ jobs:
   build-macOS-x86_64:
     runs-on: [self-hosted, macOS, X64]
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: 'true'
 
@@ -28,7 +28,9 @@ jobs:
     - name: make for macOS X64
       run: make -j4 PLATFORM=osx-x86
 
-    - uses: actions/upload-artifact@v3
+    - name: Upload artifact
+      if: github.ref_type != 'tag'
+      uses: actions/upload-artifact@v3
       with:
         name: amiberry-macOS-64bit-intel
         path: |
@@ -56,7 +58,7 @@ jobs:
   build-debian-buster-x86_64:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: 'true'
 
@@ -69,7 +71,9 @@ jobs:
           make capsimg
           make -j8 PLATFORM=x86-64
 
-    - uses: actions/upload-artifact@v3
+    - name: Upload artifact
+      if: github.ref_type != 'tag'
+      uses: actions/upload-artifact@v3
       with:
         name: amiberry-debian-buster-x86_64
         path: |
@@ -108,7 +112,7 @@ jobs:
   build-debian-bullseye-x86_64:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: 'true'
 
@@ -121,7 +125,9 @@ jobs:
           make capsimg
           make -j8 PLATFORM=x86-64
 
-    - uses: actions/upload-artifact@v3
+    - name: Upload artifact
+      if: github.ref_type != 'tag'
+      uses: actions/upload-artifact@v3
       with:
         name: amiberry-debian-bullseye-x86_64
         path: |
@@ -160,7 +166,7 @@ jobs:
   build-debian-bookworm-x86_64:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: 'true'
 
@@ -173,7 +179,9 @@ jobs:
           make capsimg
           make -j8 PLATFORM=x86-64
 
-    - uses: actions/upload-artifact@v3
+    - name: Upload artifact
+      if: github.ref_type != 'tag'
+      uses: actions/upload-artifact@v3
       with:
         name: amiberry-debian-bookworm-x86_64
         path: |
@@ -212,7 +220,7 @@ jobs:
   build-manjaro-aarch64-rpi4:
     runs-on: [self-hosted, Linux, ARM64, manjaro]
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: 'true'
 
@@ -222,7 +230,9 @@ jobs:
     - name: build for RPI4 64-bit
       run: make -j4 PLATFORM=rpi4-64-sdl2
 
-    - uses: actions/upload-artifact@v3
+    - name: Upload artifact
+      if: github.ref_type != 'tag'
+      uses: actions/upload-artifact@v3
       with:
         name: amiberry-manjaro-aarch64-rpi4
         path: |
@@ -261,7 +271,7 @@ jobs:
   build-manjaro-aarch64-rk3399:
     runs-on: [self-hosted, Linux, ARM64, manjaro]
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: 'true'
     - name: make capsimg
@@ -270,7 +280,9 @@ jobs:
     - name: build for RPI4 64-bit
       run: make -j4 PLATFORM=n2
 
-    - uses: actions/upload-artifact@v3
+    - name: Upload artifact
+      if: github.ref_type != 'tag'
+      uses: actions/upload-artifact@v3
       with:
         name: amiberry-manjaro-aarch64-rk3399
         path: |
@@ -309,7 +321,7 @@ jobs:
   build-debian-bookworm-aarch64-rpi5:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: 'true'
 
@@ -322,7 +334,9 @@ jobs:
           make capsimg
           make -j8 PLATFORM=rpi5-64-sdl2
 
-    - uses: actions/upload-artifact@v3
+    - name: Upload artifact
+      if: github.ref_type != 'tag'
+      uses: actions/upload-artifact@v3
       with:
         name: amiberry-debian-bookworm-aarch64-rpi5
         path: |
@@ -361,7 +375,7 @@ jobs:
   build-debian-bookworm-armhf-rpi5:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: 'true'
 
@@ -374,7 +388,9 @@ jobs:
           make capsimg
           make -j8 PLATFORM=rpi5-sdl2
 
-    - uses: actions/upload-artifact@v3
+    - name: Upload artifact
+      if: github.ref_type != 'tag'
+      uses: actions/upload-artifact@v3
       with:
         name: amiberry-debian-bookworm-armhf-rpi5
         path: |
@@ -414,7 +430,7 @@ jobs:
   build-debian-buster-aarch64-rpi4:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: 'true'
 
@@ -427,7 +443,9 @@ jobs:
           make capsimg
           make -j8 PLATFORM=rpi4-64-sdl2
 
-    - uses: actions/upload-artifact@v3
+    - name: Upload artifact
+      if: github.ref_type != 'tag'
+      uses: actions/upload-artifact@v3
       with:
         name: amiberry-debian-buster-aarch64-rpi4
         path: |
@@ -466,7 +484,7 @@ jobs:
   build-debian-buster-armhf-rpi4:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: 'true'
 
@@ -479,7 +497,9 @@ jobs:
           make capsimg
           make -j8 PLATFORM=rpi4-sdl2
 
-    - uses: actions/upload-artifact@v3
+    - name: Upload artifact
+      if: github.ref_type != 'tag'
+      uses: actions/upload-artifact@v3
       with:
         name: amiberry-debian-buster-armhf-rpi4
         path: |
@@ -518,7 +538,7 @@ jobs:
   build-debian-bullseye-aarch64-rpi4:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: 'true'
 
@@ -531,7 +551,9 @@ jobs:
           make capsimg
           make -j8 PLATFORM=rpi4-64-sdl2
 
-    - uses: actions/upload-artifact@v3
+    - name: Upload artifact
+      if: github.ref_type != 'tag'
+      uses: actions/upload-artifact@v3
       with:
         name: amiberry-debian-bullseye-aarch64-rpi4
         path: |
@@ -570,7 +592,7 @@ jobs:
   build-debian-bullseye-armhf-rpi4:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: 'true'
 
@@ -583,7 +605,9 @@ jobs:
           make capsimg
           make -j8 PLATFORM=rpi4-sdl2
 
-    - uses: actions/upload-artifact@v3
+    - name: Upload artifact
+      if: github.ref_type != 'tag'
+      uses: actions/upload-artifact@v3
       with:
         name: amiberry-debian-bullseye-armhf-rpi4
         path: |
@@ -622,7 +646,7 @@ jobs:
   build-debian-bookworm-aarch64-rpi4:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: 'true'
 
@@ -635,7 +659,9 @@ jobs:
           make capsimg
           make -j8 PLATFORM=rpi4-64-sdl2
 
-    - uses: actions/upload-artifact@v3
+    - name: Upload artifact
+      if: github.ref_type != 'tag'
+      uses: actions/upload-artifact@v3
       with:
         name: amiberry-debian-bookworm-aarch64-rpi4
         path: |
@@ -674,7 +700,7 @@ jobs:
   build-debian-bookworm-armhf-rpi4:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: 'true'
 
@@ -687,7 +713,9 @@ jobs:
           make capsimg
           make -j8 PLATFORM=rpi4-sdl2
 
-    - uses: actions/upload-artifact@v3
+    - name: Upload artifact
+      if: github.ref_type != 'tag'
+      uses: actions/upload-artifact@v3
       with:
         name: amiberry-debian-bookworm-armhf-rpi4
         path: |
@@ -726,7 +754,7 @@ jobs:
   build-debian-buster-aarch64-rpi3:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: 'true'
 
@@ -739,7 +767,9 @@ jobs:
           make capsimg
           make -j8 PLATFORM=rpi3-64-sdl2
 
-    - uses: actions/upload-artifact@v3
+    - name: Upload artifact
+      if: github.ref_type != 'tag'
+      uses: actions/upload-artifact@v3
       with:
         name: amiberry-debian-buster-aarch64-rpi3
         path: |
@@ -778,7 +808,7 @@ jobs:
   build-debian-buster-armhf-rpi3:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: 'true'
 
@@ -791,7 +821,9 @@ jobs:
           make capsimg
           make -j8 PLATFORM=rpi3-sdl2
 
-    - uses: actions/upload-artifact@v3
+    - name: Upload artifact
+      if: github.ref_type != 'tag'
+      uses: actions/upload-artifact@v3
       with:
         name: amiberry-debian-buster-armhf-rpi3
         path: |
@@ -830,7 +862,7 @@ jobs:
   build-debian-bullseye-aarch64-rpi3:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: 'true'
 
@@ -843,7 +875,9 @@ jobs:
           make capsimg
           make -j8 PLATFORM=rpi3-64-sdl2
 
-    - uses: actions/upload-artifact@v3
+    - name: Upload artifact
+      if: github.ref_type != 'tag'
+      uses: actions/upload-artifact@v3
       with:
         name: amiberry-debian-bullseye-aarch64-rpi3
         path: |
@@ -882,7 +916,7 @@ jobs:
   build-debian-bullseye-armhf-rpi3:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: 'true'
 
@@ -895,7 +929,9 @@ jobs:
           make capsimg
           make -j8 PLATFORM=rpi3-sdl2
 
-    - uses: actions/upload-artifact@v3
+    - name: Upload artifact
+      if: github.ref_type != 'tag'
+      uses: actions/upload-artifact@v3
       with:
         name: amiberry-debian-bullseye-armhf-rpi3
         path: |
@@ -934,7 +970,7 @@ jobs:
   build-debian-bookworm-aarch64-rpi3:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: 'true'
 
@@ -947,7 +983,9 @@ jobs:
           make capsimg
           make -j8 PLATFORM=rpi3-64-sdl2
 
-    - uses: actions/upload-artifact@v3
+    - name: Upload artifact
+      if: github.ref_type != 'tag'
+      uses: actions/upload-artifact@v3
       with:
         name: amiberry-debian-bookworm-aarch64-rpi3
         path: |
@@ -986,7 +1024,7 @@ jobs:
   build-debian-bookworm-armhf-rpi3:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: 'true'
 
@@ -999,7 +1037,9 @@ jobs:
           make capsimg
           make -j8 PLATFORM=rpi3-sdl2
 
-    - uses: actions/upload-artifact@v3
+    - name: Upload artifact
+      if: github.ref_type != 'tag'
+      uses: actions/upload-artifact@v3
       with:
         name: amiberry-debian-bookworm-armhf-rpi3
         path: |
@@ -1068,6 +1108,8 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref_type == 'tag'
     steps:
+      - uses: actions/checkout@v4
+      
       - name: Get tag
         if: github.ref_type == 'tag'
         id: tag
@@ -1084,6 +1126,9 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           config_file: .github/tag-changelog-config.js
 
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v3
+
       - name: Create Release
         if: github.ref_type == 'tag'
         uses: ncipollo/release-action@v1
@@ -1092,23 +1137,24 @@ jobs:
           omitBodyDuringUpdate: true
           body: ${{ steps.changelog.outputs.changes }}
           artifacts: |
-            amiberry-${{ steps.tag.outputs.tag }}-macOS-x86_64.zip
-            amiberry-${{ steps.tag.outputs.tag }}-debian-buster-x86_64.zip
-            amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-x86_64.zip
-            amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-x86_64.zip
-            amiberry-${{ steps.tag.outputs.tag }}-manjaro-aarch64-rpi4.zip
-            amiberry-${{ steps.tag.outputs.tag }}-manjaro-aarch64-rk3399.zip
-            amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-aarch64-rpi5.zip
-            amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-armhf-rpi5.zip
-            amiberry-${{ steps.tag.outputs.tag }}-debian-buster-aarch64-rpi4.zip
-            amiberry-${{ steps.tag.outputs.tag }}-debian-buster-armhf-rpi4.zip
-            amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-aarch64-rpi4.zip
-            amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-armhf-rpi4.zip
-            amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-aarch64-rpi4.zip
-            amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-armhf-rpi4.zip
-            amiberry-${{ steps.tag.outputs.tag }}-debian-buster-aarch64-rpi3.zip
-            amiberry-${{ steps.tag.outputs.tag }}-debian-buster-armhf-rpi3.zip
-            amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-aarch64-rpi3.zip
-            amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-armhf-rpi3.zip
-            amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-aarch64-rpi3.zip
-            amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-armhf-rpi3.zip
+            linux-flatpak/amiberry.flatpak
+            macOS-x86_64/amiberry-${{ steps.tag.outputs.tag }}-macOS-x86_64.zip
+            debian-buster-x86_64/amiberry-${{ steps.tag.outputs.tag }}-debian-buster-x86_64.zip
+            debian-bullseye-x86_64/amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-x86_64.zip
+            debian-bookworm-x86_64/amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-x86_64.zip
+            manjaro-aarch64-rpi4/amiberry-${{ steps.tag.outputs.tag }}-manjaro-aarch64-rpi4.zip
+            manjaro-aarch64-rk3399/amiberry-${{ steps.tag.outputs.tag }}-manjaro-aarch64-rk3399.zip
+            debian-bookworm-aarch64-rpi5/amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-aarch64-rpi5.zip
+            debian-bookworm-armhf-rpi5/amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-armhf-rpi5.zip
+            debian-buster-aarch64-rpi4/amiberry-${{ steps.tag.outputs.tag }}-debian-buster-aarch64-rpi4.zip
+            debian-buster-armhf-rpi4/amiberry-${{ steps.tag.outputs.tag }}-debian-buster-armhf-rpi4.zip
+            debian-bullseye-aarch64-rpi4/amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-aarch64-rpi4.zip
+            debian-bullseye-armhf-rpi4/amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-armhf-rpi4.zip
+            debian-bookworm-aarch64-rpi4/amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-aarch64-rpi4.zip
+            debian-bookworm-armhf-rpi4/amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-armhf-rpi4.zip
+            debian-buster-aarch64-rpi3/amiberry-${{ steps.tag.outputs.tag }}-debian-buster-aarch64-rpi3.zip
+            debian-buster-armhf-rpi3/amiberry-${{ steps.tag.outputs.tag }}-debian-buster-armhf-rpi3.zip
+            debian-bullseye-aarch64-rpi3/amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-aarch64-rpi3.zip
+            debian-bullseye-armhf-rpi3/amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-armhf-rpi3.zip
+            debian-bookworm-aarch64-rpi3/amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-aarch64-rpi3.zip
+            debian-bookworm-armhf-rpi3/amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-armhf-rpi3.zip
