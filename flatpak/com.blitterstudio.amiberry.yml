@@ -51,8 +51,8 @@ modules:
       - /lib/*.a
     sources:
       - type: archive
-		url: https://github.com/BlitterStudio/amiberry/raw/master/external/libserialport/libserialport-0.1.1.tar.gz
-		sha256: 4e3573e3bdbb6b0a872f32c4826d1b6b630dcc3eeb5f05d0501bb79d738a09ea
+        url: https://github.com/BlitterStudio/amiberry/raw/master/external/libserialport/libserialport-0.1.1.tar.gz
+        sha256: 4e3573e3bdbb6b0a872f32c4826d1b6b630dcc3eeb5f05d0501bb79d738a09ea
 
   - name: amiberry
     only-arches:
