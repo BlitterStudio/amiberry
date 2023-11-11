@@ -66,7 +66,8 @@ modules:
     
     sources:
       - type: archive
-        url: https://github.com/BlitterStudio/amiberry/archive/refs/heads/preview.zip
+        url: https://github.com/BlitterStudio/amiberry/archive/refs/tags/latest-preview.tar.gz
+        sha256: c003c228e77d9dc5042a1167460a8c7e80572250b08da0e6c059864b43452d2f
 
   - name: desktop
     buildsystem: simple
