@@ -271,6 +271,16 @@ add_executable(${PROJECT_NAME}
 		src/cpuemu_44.cpp
 		)
 
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
+    target_sources(${PROJECT_NAME} PRIVATE 
+	src/osdep/aarch64_helper.s
+	src/jit/compemu.cpp
+	src/jit/compstbl.cpp
+	src/jit/compemu_fpp.cpp
+	src/jit/compemu_support.cpp
+	)
+endif()
+
 INCLUDE(FindPkgConfig)
 
 PKG_SEARCH_MODULE(SDL2 REQUIRED SDL2)
