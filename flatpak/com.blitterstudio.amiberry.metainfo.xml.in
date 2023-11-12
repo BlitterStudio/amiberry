@@ -7,6 +7,7 @@
   <summary>An Amiga emulator for Linux</summary>
 
   <metadata_license>FSFAP</metadata_license>
+  <content_rating type="oars-1.0" />
   <project_license>GPL-3.0-or-later</project_license>
   <update_contact>midwan_AT_gmail.com</update_contact>
   <url type="homepage">https://amiberry.com</url>
