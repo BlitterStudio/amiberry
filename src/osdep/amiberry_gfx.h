@@ -147,3 +147,4 @@ void SDL2_toggle_vsync(bool vsync);
 extern void auto_crop_image();
 
 extern SDL_GameControllerButton vkbd_button;
+extern bool sdl2_thread_changed;

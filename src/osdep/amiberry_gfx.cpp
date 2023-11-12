@@ -96,6 +96,7 @@ static int deskhz;
 
 #ifdef AMIBERRY
 bool vsync_changed = false;
+bool sdl2_thread_changed = false;
 #endif
 
 // Check if the requested Amiga resolution can be displayed with the current Screen mode as a direct multiple
@@ -1003,7 +1004,7 @@ int check_prefs_changed_gfx()
 	c |= currprefs.multithreaded_drawing != changed_prefs.multithreaded_drawing ? (512) : 0;
 #endif
 	
-	if (display_change_requested || c)
+	if (display_change_requested || c || sdl2_thread_changed)
 	{
 		bool setpause = false;
 		bool dontcapture = false;
@@ -1128,7 +1129,13 @@ int check_prefs_changed_gfx()
 		currprefs.rtgallowscaling = changed_prefs.rtgallowscaling;
 		currprefs.rtgscaleaspectratio = changed_prefs.rtgscaleaspectratio;
 		currprefs.rtgvblankrate = changed_prefs.rtgvblankrate;
-		
+
+		if (sdl2_thread_changed)
+		{
+			graphics_leave();
+			graphics_init(true);
+			sdl2_thread_changed = false;
+		}
 		bool unacquired = false;
 		for (int monid = MAX_AMIGAMONITORS - 1; monid >= 0; monid--) {
 			if (!monitors[monid])

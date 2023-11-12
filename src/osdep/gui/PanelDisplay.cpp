@@ -124,6 +124,8 @@ static gcn::Label* lblBrightness;
 static gcn::Slider* sldBrightness;
 static gcn::Label* lblBrightnessValue;
 
+static gcn::CheckBox* chkSdl2Thread;
+
 class AmigaScreenActionListener : public gcn::ActionListener
 {
 public:
@@ -237,7 +239,10 @@ public:
 
 		else if (actionEvent.getSource() == chkFilterLowRes)
 			changed_prefs.gfx_lores_mode = chkFilterLowRes->isSelected() ? 1 : 0;
-		
+
+		else if (actionEvent.getSource() == chkSdl2Thread)
+			set_sdl2_thread_enabled(chkSdl2Thread->isSelected());
+
 		RefreshPanelDisplay();
 	}
 };
@@ -470,6 +475,10 @@ void InitPanelDisplay(const config_category& category)
 	lblBrightnessValue = new gcn::Label("0.0");
 	lblBrightnessValue->setAlignment(gcn::Graphics::LEFT);
 
+	chkSdl2Thread = new gcn::CheckBox("Use SDL2 multi-threaded rendering");
+	chkSdl2Thread->setId("chkSdl2Thread");
+	chkSdl2Thread->addActionListener(amigaScreenActionListener);
+
 	lblScreenmode = new gcn::Label("Screen mode:");
 	lblScreenmode->setAlignment(gcn::Graphics::RIGHT);
 	cboScreenmode = new gcn::DropDown(&fullscreen_modes_list);
@@ -634,6 +643,9 @@ void InitPanelDisplay(const config_category& category)
 	category.panel->add(lblBrightness, DISTANCE_BORDER, posY);
 	category.panel->add(sldBrightness, lblBrightness->getX() + lblBrightness->getWidth() + DISTANCE_NEXT_X, posY);
 	category.panel->add(lblBrightnessValue, sldBrightness->getX() + sldBrightness->getWidth() + 8, posY);
+	posY += lblBrightness->getHeight() + DISTANCE_NEXT_Y;
+
+	category.panel->add(chkSdl2Thread, DISTANCE_BORDER, posY);
 
 	RefreshPanelDisplay();
 }
@@ -696,6 +708,7 @@ void ExitPanelDisplay()
 	delete lblResolution;
 	delete cboResolution;
 	delete chkFilterLowRes;
+	delete chkSdl2Thread;
 }
 
 void RefreshPanelDisplay()
@@ -772,6 +785,8 @@ void RefreshPanelDisplay()
 	
 	chkAspect->setSelected(changed_prefs.gfx_correct_aspect);
 	chkFilterLowRes->setSelected(changed_prefs.gfx_lores_mode);
+
+	chkSdl2Thread->setSelected(get_sdl2_thread_enabled());
 
 	if (changed_prefs.gfx_apmode[0].gfx_fullscreen == GFX_WINDOW)
 	{
@@ -941,6 +956,9 @@ bool HelpPanelDisplay(std::vector<std::string>& helptext)
 	helptext.emplace_back(" ");
 	helptext.emplace_back("\"Brightness\" - Allows adjustment of the output image brightness, from -200 to 200.");
 	helptext.emplace_back(" ");
+	helptext.emplace_back("\"Use SDL2 multi-threaded rendering\" - Enables multi-threaded drawing using SDL2.");
+	helptext.emplace_back("Provides a performance benefit, however not all systems support it.");
+    helptext.emplace_back("Disable this if you notice problems, like a black screen when starting emulation.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("\"Line Mode\" - These options define how the Amiga screen is drawn.");
 	helptext.emplace_back(" ");
