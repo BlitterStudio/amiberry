@@ -16,7 +16,7 @@ include_directories(
 )
 
 add_subdirectory(external/libguisan)
-add_definitions(-DAMIBERRY -D_FILE_OFFSET_BITS=64 -DUSE_RENDER_THREAD -DUSE_JIT=0)
+add_definitions(-DAMIBERRY -D_FILE_OFFSET_BITS=64)
 
 add_executable(${PROJECT_NAME}
 		src/akiko.cpp
