@@ -32,6 +32,6 @@
     </screenshot>
   </screenshots>
   <releases>
-    <release version="@GIT_VERSION@" date="@GIT_DATE@" />
+    <release version="v6.0.0" date="2023-11-12" />
   </releases>
 </component>
