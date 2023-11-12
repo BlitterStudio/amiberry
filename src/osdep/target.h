@@ -109,6 +109,8 @@ extern int get_savedatapath(char* out, int size, const int force_internal);
 extern void get_whdbootpath(char* out, int size);
 extern void set_whdbootpath(char* newpath);
 
+extern bool get_sdl2_thread_enabled();
+extern void set_sdl2_thread_enabled(bool enabled);
 extern bool get_logfile_enabled();
 extern void set_logfile_enabled(bool enabled);
 extern void get_logfile_path(char* out, int size);

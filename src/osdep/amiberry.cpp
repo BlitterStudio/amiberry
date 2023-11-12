@@ -2539,6 +2539,17 @@ void set_logfile_enabled(bool enabled)
 	amiberry_options.write_logfile = enabled;
 }
 
+bool get_sdl2_thread_enabled()
+{
+	return amiberry_options.use_sdl2_render_thread;
+}
+
+void set_sdl2_thread_enabled(bool enabled)
+{
+	amiberry_options.use_sdl2_render_thread = enabled;
+	sdl2_thread_changed = true;
+}
+
 // Returns 1 if savedatapath is overridden
 // if force_internal == true, the non-overridden whdbootpath based save-data path will be returned
 int get_savedatapath(char* out, int size, const int force_internal)
