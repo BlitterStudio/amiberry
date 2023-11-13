@@ -115,7 +115,6 @@ void updatehdfinfo(bool force, bool defaults)
 {
 	uae_u8 id[512] = { 0 };
 	uae_u32 i;
-	uae_u32 error = 0;
 
 	uae_u64 bsize = 0;
 	if (force) {
@@ -130,7 +129,7 @@ void updatehdfinfo(bool force, bool defaults)
 		current_hfdlg.dostype = 0;
 		if (hdf_open(&hfd, current_hfdlg.ci.rootdir) > 0) {
 			for (i = 0; i < 16; i++) {
-				hdf_read(&hfd, id, static_cast<uae_u64>(i) * 512, 512, &error);
+				hdf_read(&hfd, id, static_cast<uae_u64>(i) * 512, 512);
 				bsize = hfd.virtsize;
 				current_hfdlg.size = hfd.virtsize;
 				if (!memcmp(id, "RDSK", 4) || !memcmp(id, "CDSK", 4)) {
@@ -140,7 +139,7 @@ void updatehdfinfo(bool force, bool defaults)
 				}
 			}
 			if (i == 16) {
-				hdf_read(&hfd, id, 0, 512, &error);
+				hdf_read(&hfd, id, 0, 512);
 				current_hfdlg.dostype = (id[0] << 24) | (id[1] << 16) | (id[2] << 8) | (id[3] << 0);
 			}
 		}
