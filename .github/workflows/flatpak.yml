@@ -5,6 +5,7 @@ on:
   push:
     branches: [preview]
   pull_request:
+    branches: [preview]
 
 jobs:
   build-flatpak:
