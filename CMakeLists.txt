@@ -16,7 +16,26 @@ include_directories(
 )
 
 add_subdirectory(external/libguisan)
-add_definitions(-DAMIBERRY -D_FILE_OFFSET_BITS=64 -DUSE_RENDER_THREAD)
+add_definitions(-DAMIBERRY -D_FILE_OFFSET_BITS=64)
+
+include(CheckSymbolExists)
+function(detect_architecture symbol arch)
+	if (NOT DEFINED ARCHITECTURE)
+		set(CMAKE_REQUIRED_QUIET 1)
+		check_symbol_exists("${symbol}" "" ARCHITECTURE_${arch})
+		unset(CMAKE_REQUIRED_QUIET)
+
+		# The output variable needs to be unique across invocations otherwise
+		# CMake's crazy scope rules will keep it defined
+		if (ARCHITECTURE_${arch})
+			set(ARCHITECTURE "${arch}" PARENT_SCOPE)
+		endif()
+	endif()
+endfunction()
+
+detect_architecture("__x86_64__" x86_64)
+detect_architecture("__aarch64__" arm64)
+message(STATUS "Target architecture: ${ARCHITECTURE}")
 
 add_executable(${PROJECT_NAME}
 		src/akiko.cpp
@@ -287,6 +306,10 @@ add_executable(${PROJECT_NAME}
 #		src/jit/compemu_fpp.cpp
 #		src/jit/compemu_support.cpp
 		)
+
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR ARCHITECTURE MATCHES "arm64")
+	add_definitions(-DCPU_AARCH64)
+endif()
 
 INCLUDE(FindPkgConfig)
 
