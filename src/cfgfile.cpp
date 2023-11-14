@@ -8896,13 +8896,19 @@ static int bip_a3000 (struct uae_prefs *p, int config, int compa, int romcheck)
 }
 static int bip_a4000 (struct uae_prefs *p, int config, int compa, int romcheck)
 {
-	int roms[8];
+	int roms[11];
 
 	roms[0] = 16;
 	roms[1] = 31;
 	roms[2] = 13;
 	roms[3] = 12;
-	roms[4] = -1;
+	roms[4] = 46;
+	roms[5] = 278;
+	roms[6] = 283;
+	roms[7] = 288;
+	roms[8] = 293;
+	roms[9] = 306;
+	roms[10] = -1;
 
 	p->bogomem.size = 0;
 	p->chipmem.size = 0x200000;
@@ -8949,12 +8955,15 @@ static int bip_a4000 (struct uae_prefs *p, int config, int compa, int romcheck)
 }
 static int bip_a4000t (struct uae_prefs *p, int config, int compa, int romcheck)
 {
-	int roms[8];
+	int roms[7];
 
-	roms[0] = 16;
-	roms[1] = 31;
-	roms[2] = 13;
-	roms[3] = -1;
+	roms[0] = 17;
+	roms[1] = 279;
+	roms[2] = 284;
+	roms[3] = 289;
+	roms[4] = 294;
+	roms[5] = 307;
+	roms[6] = -1;
 
 	p->bogomem.size = 0;
 	p->chipmem.size = 0x200000;
@@ -9160,14 +9169,18 @@ static int bip_cd32 (struct uae_prefs *p, int config, int compa, int romcheck)
 
 static int bip_a1200 (struct uae_prefs *p, int config, int compa, int romcheck)
 {
-	int roms[4];
+	int roms[8];
 	int roms_bliz[2];
 
 	buildin_default_prefs_68020 (p);
 	roms[0] = 11;
 	roms[1] = 15;
-	roms[2] = 31;
-	roms[3] = -1;
+	roms[2] = 276;
+	roms[3] = 281;
+	roms[4] = 286;
+	roms[5] = 291;
+	roms[6] = 304;
+	roms[7] = -1;
 	roms_bliz[0] = -1;
 	roms_bliz[1] = -1;
 	p->cs_rtc = 0;
