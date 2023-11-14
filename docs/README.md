@@ -67,7 +67,7 @@ Several popular distros (like RetroPie, DietPi, Pimiga and others) already inclu
 
 ### Flatpak
 
-A flatpak version is being tested and is planned to be made available soon.
+A flatpak version is available on [Flathub](https://flathub.org/apps/com.blitterstudio.amiberry)
 
 ### Standalone binaries
 
