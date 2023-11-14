@@ -796,7 +796,7 @@ WatchJoystick(SDL_Joystick* joystick)
 
 			if (iIndex < SDL_CONTROLLER_BUTTON_MAX)
 			{
-				SDL_GameControllerButton eButton = static_cast<SDL_GameControllerButton>(iIndex);
+				auto eButton = static_cast<SDL_GameControllerButton>(iIndex);
 				SDL_strlcat(mapping, SDL_GameControllerGetStringForButton(eButton), SDL_arraysize(mapping));
 			}
 			else

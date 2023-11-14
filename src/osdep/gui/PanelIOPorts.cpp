@@ -35,13 +35,15 @@ class string_list_model : public gcn::ListModel
 public:
 	string_list_model(const char* entries[], const int count)
 	{
-		for (auto i = 0; i < count; ++i)
-			values.emplace_back(entries[i]);
+		for (auto i = 0; i < count; ++i) {
+			if (entries != nullptr && entries[i] != nullptr)
+				values.emplace_back(entries[i]);
+		}
 	}
 
 	int getNumberOfElements() override
 	{
-		return values.size();
+		return int(values.size());
 	}
 
 	int add_element(const char* elem) override
@@ -159,7 +161,7 @@ void InitPanelIO(const config_category& category)
 	}
 	else
 	{
-		for (int i = 0; port_list[i] != NULL; i++)
+		for (int i = 0; port_list[i] != nullptr; i++)
 		{
 			const struct sp_port* port = port_list[i];
 

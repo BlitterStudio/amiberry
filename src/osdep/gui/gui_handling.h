@@ -197,48 +197,48 @@ void RefreshPanelAbout();
 bool HelpPanelAbout(std::vector<std::string>& helptext);
 
 void InitPanelPaths(const struct config_category& category);
-void ExitPanelPaths(void);
-void RefreshPanelPaths(void);
+void ExitPanelPaths();
+void RefreshPanelPaths();
 bool HelpPanelPaths(std::vector<std::string>& helptext);
 
 void InitPanelQuickstart(const struct config_category& category);
-void ExitPanelQuickstart(void);
-void RefreshPanelQuickstart(void);
+void ExitPanelQuickstart();
+void RefreshPanelQuickstart();
 bool HelpPanelQuickstart(std::vector<std::string>& helptext);
 
 void InitPanelConfig(const struct config_category& category);
-void ExitPanelConfig(void);
-void RefreshPanelConfig(void);
+void ExitPanelConfig();
+void RefreshPanelConfig();
 bool HelpPanelConfig(std::vector<std::string>& helptext);
 
 void InitPanelCPU(const struct config_category& category);
-void ExitPanelCPU(void);
-void RefreshPanelCPU(void);
+void ExitPanelCPU();
+void RefreshPanelCPU();
 bool HelpPanelCPU(std::vector<std::string>& helptext);
 
 void InitPanelChipset(const struct config_category& category);
-void ExitPanelChipset(void);
-void RefreshPanelChipset(void);
+void ExitPanelChipset();
+void RefreshPanelChipset();
 bool HelpPanelChipset(std::vector<std::string>& helptext);
 
 void InitPanelROM(const struct config_category& category);
-void ExitPanelROM(void);
-void RefreshPanelROM(void);
+void ExitPanelROM();
+void RefreshPanelROM();
 bool HelpPanelROM(std::vector<std::string>& helptext);
 
 void InitPanelRAM(const struct config_category& category);
-void ExitPanelRAM(void);
-void RefreshPanelRAM(void);
+void ExitPanelRAM();
+void RefreshPanelRAM();
 bool HelpPanelRAM(std::vector<std::string>& helptext);
 
 void InitPanelFloppy(const struct config_category& category);
-void ExitPanelFloppy(void);
-void RefreshPanelFloppy(void);
+void ExitPanelFloppy();
+void RefreshPanelFloppy();
 bool HelpPanelFloppy(std::vector<std::string>& helptext);
 
 void InitPanelHD(const struct config_category& category);
-void ExitPanelHD(void);
-void RefreshPanelHD(void);
+void ExitPanelHD();
+void RefreshPanelHD();
 bool HelpPanelHD(std::vector<std::string>& helptext);
 
 void InitPanelExpansions(const struct config_category& category);
@@ -247,8 +247,8 @@ void RefreshPanelExpansions();
 bool HelpPanelExpansions(std::vector<std::string>& helptext);
 
 void InitPanelRTG(const struct config_category& category);
-void ExitPanelRTG(void);
-void RefreshPanelRTG(void);
+void ExitPanelRTG();
+void RefreshPanelRTG();
 bool HelpPanelRTG(std::vector<std::string>& helptext);
 
 void InitPanelHWInfo(const struct config_category& category);
@@ -257,68 +257,68 @@ void RefreshPanelHWInfo();
 bool HelpPanelHWInfo(std::vector<std::string>& helptext);
 
 void InitPanelDisplay(const struct config_category& category);
-void ExitPanelDisplay(void);
-void RefreshPanelDisplay(void);
+void ExitPanelDisplay();
+void RefreshPanelDisplay();
 bool HelpPanelDisplay(std::vector<std::string>& helptext);
 
 void InitPanelSound(const struct config_category& category);
-void ExitPanelSound(void);
-void RefreshPanelSound(void);
+void ExitPanelSound();
+void RefreshPanelSound();
 bool HelpPanelSound(std::vector<std::string>& helptext);
 
 void InitPanelInput(const struct config_category& category);
-void ExitPanelInput(void);
-void RefreshPanelInput(void);
+void ExitPanelInput();
+void RefreshPanelInput();
 bool HelpPanelInput(std::vector<std::string>& helptext);
 
 void InitPanelIO(const struct config_category& category);
-void ExitPanelIO(void);
-void RefreshPanelIO(void);
+void ExitPanelIO();
+void RefreshPanelIO();
 bool HelpPanelIO(std::vector<std::string>& helptext);
 
 void InitPanelCustom(const struct config_category& category);
-void ExitPanelCustom(void);
-void RefreshPanelCustom(void);
+void ExitPanelCustom();
+void RefreshPanelCustom();
 bool HelpPanelCustom(std::vector<std::string>& helptext);
 
 void InitPanelDiskSwapper(const struct config_category& category);
-void ExitPanelDiskSwapper(void);
-void RefreshPanelDiskSwapper(void);
+void ExitPanelDiskSwapper();
+void RefreshPanelDiskSwapper();
 bool HelpPanelDiskSwapper(std::vector<std::string>& helptext);
 
 void InitPanelMisc(const struct config_category& category);
-void ExitPanelMisc(void);
-void RefreshPanelMisc(void);
+void ExitPanelMisc();
+void RefreshPanelMisc();
 bool HelpPanelMisc(std::vector<std::string>& helptext);
 
 void InitPanelPrio(const struct config_category& category);
-void ExitPanelPrio(void);
-void RefreshPanelPrio(void);
+void ExitPanelPrio();
+void RefreshPanelPrio();
 bool HelpPanelPrio(std::vector<std::string>& helptext);
 
 void InitPanelSavestate(const struct config_category& category);
-void ExitPanelSavestate(void);
-void RefreshPanelSavestate(void);
+void ExitPanelSavestate();
+void RefreshPanelSavestate();
 bool HelpPanelSavestate(std::vector<std::string>& helptext);
 
 void InitPanelVirtualKeyboard(const struct config_category &category);
-void ExitPanelVirtualKeyboard(void);
-void RefreshPanelVirtualKeyboard(void);
+void ExitPanelVirtualKeyboard();
+void RefreshPanelVirtualKeyboard();
 bool HelpPanelVirtualKeyboard(std::vector<std::string>& helptext);
 
 #ifdef ANDROID
 void InitPanelOnScreen(const struct _ConfigCategory& category);
-void ExitPanelOnScreen(void);
-void RefreshPanelOnScreen(void);
+void ExitPanelOnScreen();
+void RefreshPanelOnScreen();
 bool HelpPanelOnScreen(std::vector<std::string> &helptext);
 #endif
 
-void refresh_all_panels(void);
-void register_refresh_func(void (*func)(void));
+void refresh_all_panels();
+void register_refresh_func(void (*func)());
 
 void focus_bug_workaround(gcn::Window* wnd);
 
-void disable_resume(void);
+void disable_resume();
 
 bool ShowMessage(const std::string& title, const std::string& line1, const std::string& line2, const std::string& line3, const std::string& button1, const std::string& button2);
 amiberry_hotkey ShowMessageForInput(const char* title, const char* line1, const char* button1);
@@ -327,7 +327,7 @@ bool SelectFile(const char* title, char* value, const char* filter[], bool creat
 bool EditFilesysVirtual(int unit_no);
 bool EditFilesysHardfile(int unit_no);
 bool EditFilesysHardDrive(int unit_no);
-bool CreateFilesysHardfile(void);
+bool CreateFilesysHardfile();
 void ShowHelp(const char* title, const std::vector<std::string>& text);
 void ShowDiskInfo(const char* title, const std::vector<std::string>& text);
 std::string show_controller_map(int device, bool map_touchpad);
@@ -354,7 +354,7 @@ void PushFakeKey(SDL_Keycode inKey);
 extern void CreateDefaultDevicename(char* name);
 extern bool DevicenameExists(const char* name);
 extern int tweakbootpri(int bp, int ab, int dnm);
-STATIC_INLINE bool is_hdf_rdb(void)
+STATIC_INLINE bool is_hdf_rdb()
 {
 	return current_hfdlg.ci.sectors == 0 && current_hfdlg.ci.surfaces == 0 && current_hfdlg.ci.reserved == 0;
 }

@@ -197,9 +197,9 @@ static int numModelConfigs = 0;
 static bool bIgnoreListChange = true;
 static char whdload_file[MAX_DPATH];
 
-static void AdjustDropDownControls(void);
+static void AdjustDropDownControls();
 
-static void CountModelConfigs(void)
+static void CountModelConfigs()
 {
 	numModelConfigs = 0;
 	if (quickstart_model >= 0 && quickstart_model < numModels)
@@ -262,7 +262,7 @@ static void SetControlState(const int model)
 	cboCDFile->setVisible(cd_visible);
 }
 
-static void AdjustPrefs(void)
+static void AdjustPrefs()
 {
 	built_in_prefs(&changed_prefs, quickstart_model, quickstart_conf, 0, 0);
 	switch (quickstart_model)
@@ -366,7 +366,7 @@ public:
 
 	int getNumberOfElements() override
 	{
-		return lstMRUDiskList.size();
+		return int(lstMRUDiskList.size());
 	}
 
 	int add_element(const char* elem) override
@@ -398,7 +398,7 @@ public:
 
 	int getNumberOfElements() override
 	{
-		return lstMRUCDList.size();
+		return int(lstMRUCDList.size());
 	}
 
 	int add_element(const char* elem) override
@@ -430,7 +430,7 @@ public:
 
 	int getNumberOfElements() override
 	{
-		return lstMRUWhdloadList.size();
+		return int(lstMRUWhdloadList.size());
 	}
 
 	int add_element(const char* elem) override
@@ -1086,7 +1086,7 @@ void InitPanelQuickstart(const config_category& category)
 	RefreshPanelQuickstart();
 }
 
-void ExitPanelQuickstart(void)
+void ExitPanelQuickstart()
 {
 	delete lblModel;
 	delete cboModel;
@@ -1128,7 +1128,7 @@ void ExitPanelQuickstart(void)
 	delete whdloadButtonActionListener;
 }
 
-static void AdjustDropDownControls(void)
+static void AdjustDropDownControls()
 {
 	bIgnoreListChange = true;
 
@@ -1178,7 +1178,7 @@ static void AdjustDropDownControls(void)
 	bIgnoreListChange = false;
 }
 
-void RefreshPanelQuickstart(void)
+void RefreshPanelQuickstart()
 {
 	auto prev_available = true;
 
@@ -1191,23 +1191,22 @@ void RefreshPanelQuickstart(void)
 	{
 		const auto drive_enabled = changed_prefs.floppyslots[i].dfxtype != DRV_NONE;
 		const auto disk_in_drive = strlen(changed_prefs.floppyslots[i].df) > 0;
-		if (i < 2)
-		{
-			chkqsDFx[i]->setSelected(drive_enabled);
-			const int nn = fromdfxtype(i, changed_prefs.floppyslots[i].dfxtype, changed_prefs.floppyslots[i].dfxsubtype);
-			cboqsDFxType[i]->setSelected(nn + 1);
-			chkqsDFxWriteProtect[i]->setSelected(disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df, i));
-			if (i == 0)
-				chkqsDFx[i]->setEnabled(false);
-			else
-				chkqsDFx[i]->setEnabled(prev_available);
 
-			cmdqsDFxInfo[i]->setEnabled(drive_enabled && nn < 5 && disk_in_drive);
-			chkqsDFxWriteProtect[i]->setEnabled(drive_enabled && !changed_prefs.floppy_read_only && nn < 5);
-			cmdqsDFxEject[i]->setEnabled(drive_enabled && nn < 5 && disk_in_drive);
-			cmdqsDFxSelect[i]->setEnabled(drive_enabled && nn < 5);
-			cboqsDFxFile[i]->setEnabled(drive_enabled && nn < 5);
-		}
+		chkqsDFx[i]->setSelected(drive_enabled);
+		const int nn = fromdfxtype(i, changed_prefs.floppyslots[i].dfxtype, changed_prefs.floppyslots[i].dfxsubtype);
+		cboqsDFxType[i]->setSelected(nn + 1);
+		chkqsDFxWriteProtect[i]->setSelected(disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df, i));
+		if (i == 0)
+			chkqsDFx[i]->setEnabled(false);
+		else
+			chkqsDFx[i]->setEnabled(prev_available);
+
+		cmdqsDFxInfo[i]->setEnabled(drive_enabled && nn < 5 && disk_in_drive);
+		chkqsDFxWriteProtect[i]->setEnabled(drive_enabled && !changed_prefs.floppy_read_only && nn < 5);
+		cmdqsDFxEject[i]->setEnabled(drive_enabled && nn < 5 && disk_in_drive);
+		cmdqsDFxSelect[i]->setEnabled(drive_enabled && nn < 5);
+		cboqsDFxFile[i]->setEnabled(drive_enabled && nn < 5);
+
 		prev_available = drive_enabled;
 		if (drive_enabled)
 			changed_prefs.nr_floppies = i + 1;

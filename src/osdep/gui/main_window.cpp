@@ -228,9 +228,9 @@ void gui_restart()
 	gui_running = false;
 }
 
-static void (*refresh_func_after_draw)(void) = nullptr;
+static void (*refresh_func_after_draw)() = nullptr;
 
-void register_refresh_func(void (*func)(void))
+void register_refresh_func(void (*func)())
 {
 	refresh_func_after_draw = func;
 }
@@ -943,11 +943,11 @@ void check_input()
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_PRESSED;
 #ifdef USE_OPENGL
-			touch_event.button.x = gui_graphics->getTargetPlaneWidth() * gui_event.tfinger.x;
-			touch_event.button.y = gui_graphics->getTargetPlaneHeight() * gui_event.tfinger.y;
+			touch_event.button.x = gui_graphics->getTargetPlaneWidth() * int(gui_event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTargetPlaneHeight() * int(gui_event.tfinger.y);
 #else
-			touch_event.button.x = gui_graphics->getTarget()->w * gui_event.tfinger.x;
-			touch_event.button.y = gui_graphics->getTarget()->h * gui_event.tfinger.y;
+			touch_event.button.x = gui_graphics->getTarget()->w * int(gui_event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTarget()->h * int(gui_event.tfinger.y);
 #endif
 			gui_input->pushInput(touch_event);
 			break;
@@ -960,11 +960,11 @@ void check_input()
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_RELEASED;
 #ifdef USE_OPENGL
-			touch_event.button.x = gui_graphics->getTargetPlaneWidth() * gui_event.tfinger.x;
-			touch_event.button.y = gui_graphics->getTargetPlaneHeight() * gui_event.tfinger.y;
+			touch_event.button.x = gui_graphics->getTargetPlaneWidth() * int(gui_event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTargetPlaneHeight() * int(gui_event.tfinger.y);
 #else
-			touch_event.button.x = gui_graphics->getTarget()->w * gui_event.tfinger.x;
-			touch_event.button.y = gui_graphics->getTarget()->h * gui_event.tfinger.y;
+			touch_event.button.x = gui_graphics->getTarget()->w * int(gui_event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTarget()->h * int(gui_event.tfinger.y);
 #endif
 			gui_input->pushInput(touch_event);
 			break;
@@ -976,11 +976,11 @@ void check_input()
 			touch_event.motion.which = 0;
 			touch_event.motion.state = 0;
 #ifdef USE_OPENGL
-			touch_event.motion.x = gui_graphics->getTargetPlaneWidth() * gui_event.tfinger.x;
-			touch_event.motion.y = gui_graphics->getTargetPlaneHeight() * gui_event.tfinger.y;
+			touch_event.motion.x = gui_graphics->getTargetPlaneWidth() * int(gui_event.tfinger.x);
+			touch_event.motion.y = gui_graphics->getTargetPlaneHeight() * int(gui_event.tfinger.y);
 #else
-			touch_event.motion.x = gui_graphics->getTarget()->w * gui_event.tfinger.x;
-			touch_event.motion.y = gui_graphics->getTarget()->h * gui_event.tfinger.y;
+			touch_event.motion.x = gui_graphics->getTarget()->w * int(gui_event.tfinger.x);
+			touch_event.motion.y = gui_graphics->getTarget()->h * int(gui_event.tfinger.y);
 #endif
 			gui_input->pushInput(touch_event);
 			break;

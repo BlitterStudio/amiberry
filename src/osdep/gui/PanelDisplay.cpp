@@ -23,7 +23,7 @@ public:
 
 	int getNumberOfElements() override
 	{
-		return values.size();
+		return int(values.size());
 	}
 
 	int add_element(const char* Elem) override
