@@ -221,9 +221,9 @@ void gui_restart()
 	gui_running = false;
 }
 
-static void (*refresh_func_after_draw)(void) = nullptr;
+static void (*refresh_func_after_draw)() = nullptr;
 
-void register_refresh_func(void (*func)(void))
+void register_refresh_func(void (*func)())
 {
 	refresh_func_after_draw = func;
 }
@@ -259,11 +259,10 @@ static void show_help_requested()
 
 void cap_fps(Uint64 start)
 {
-	int refresh_rate;
 	const auto end = SDL_GetPerformanceCounter();
 	const auto elapsed_ms = static_cast<float>(end - start) / static_cast<float>(SDL_GetPerformanceFrequency()) * 1000.0f;
 
-	refresh_rate = sdl_mode.refresh_rate;
+	int refresh_rate = sdl_mode.refresh_rate;
 	if (refresh_rate < 50) refresh_rate = 50;
 	if (refresh_rate > 60) refresh_rate = 60;
 
@@ -273,7 +272,7 @@ void cap_fps(Uint64 start)
 	else
 		d = floor(20.000f - elapsed_ms);
 
-	if( d > 0.0f ) SDL_Delay( d );
+	if( d > 0.0f ) SDL_Delay( Uint32(d) );
 }
 
 void update_gui_screen()
@@ -807,11 +806,11 @@ void check_input()
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_PRESSED;
 #ifdef USE_OPENGL
-			touch_event.button.x = gui_graphics->getTargetPlaneWidth() * gui_event.tfinger.x;
-			touch_event.button.y = gui_graphics->getTargetPlaneHeight() * gui_event.tfinger.y;
+			touch_event.button.x = gui_graphics->getTargetPlaneWidth() * int(gui_event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTargetPlaneHeight() * int(gui_event.tfinger.y);
 #else
-			touch_event.button.x = gui_graphics->getTarget()->w * gui_event.tfinger.x;
-			touch_event.button.y = gui_graphics->getTarget()->h * gui_event.tfinger.y;
+			touch_event.button.x = gui_graphics->getTarget()->w * int(gui_event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTarget()->h * int(gui_event.tfinger.y);
 #endif
 			gui_input->pushInput(touch_event);
 			break;
@@ -824,11 +823,11 @@ void check_input()
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_RELEASED;
 #ifdef USE_OPENGL
-			touch_event.button.x = gui_graphics->getTargetPlaneWidth() * gui_event.tfinger.x;
-			touch_event.button.y = gui_graphics->getTargetPlaneHeight() * gui_event.tfinger.y;
+			touch_event.button.x = gui_graphics->getTargetPlaneWidth() * int(gui_event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTargetPlaneHeight() * int(gui_event.tfinger.y);
 #else
-			touch_event.button.x = gui_graphics->getTarget()->w * gui_event.tfinger.x;
-			touch_event.button.y = gui_graphics->getTarget()->h * gui_event.tfinger.y;
+			touch_event.button.x = gui_graphics->getTarget()->w * int(gui_event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTarget()->h * int(gui_event.tfinger.y);
 #endif
 			gui_input->pushInput(touch_event);
 			break;
@@ -840,11 +839,11 @@ void check_input()
 			touch_event.motion.which = 0;
 			touch_event.motion.state = 0;
 #ifdef USE_OPENGL
-			touch_event.motion.x = gui_graphics->getTargetPlaneWidth() * gui_event.tfinger.x;
-			touch_event.motion.y = gui_graphics->getTargetPlaneHeight() * gui_event.tfinger.y;
+			touch_event.motion.x = gui_graphics->getTargetPlaneWidth() * int(gui_event.tfinger.x);
+			touch_event.motion.y = gui_graphics->getTargetPlaneHeight() * int(gui_event.tfinger.y);
 #else
-			touch_event.motion.x = gui_graphics->getTarget()->w * gui_event.tfinger.x;
-			touch_event.motion.y = gui_graphics->getTarget()->h * gui_event.tfinger.y;
+			touch_event.motion.x = gui_graphics->getTarget()->w * int(gui_event.tfinger.x);
+			touch_event.motion.y = gui_graphics->getTarget()->h * int(gui_event.tfinger.y);
 #endif
 			gui_input->pushInput(touch_event);
 			break;

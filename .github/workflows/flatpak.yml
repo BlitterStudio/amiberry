@@ -5,6 +5,7 @@ on:
   push:
     branches: [preview]
   pull_request:
+    branches: [preview]
 
 jobs:
   build-flatpak:
@@ -15,26 +16,20 @@ jobs:
       options: --privileged
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Build Flatpak
-      uses: flatpak/flatpak-github-actions/flatpak-builder@v6.1
-      with:
-        bundle: amiberry.flatpak
-        manifest-path: ./flatpak/com.blitterstudio.amiberry.yml
-        arch: x86_64
-        build-bundle: true
-        verbose: true
-        branch: preview
-        cache: true
-        restore-cache: true
-        cache-key: flatpak-builder-${{ github.sha }}
-
-    - name: Upload Flatpak
-      uses: actions/upload-artifact@v3
-      with:
-        name: "linux-flatpak"
-        path: "amiberry.flatpak"
+      - name: Build Flatpak
+        uses: flatpak/flatpak-github-actions/flatpak-builder@v6.1
+        with:
+          bundle: amiberry.flatpak
+          manifest-path: ./flatpak/com.blitterstudio.amiberry.yml
+          arch: x86_64
+          build-bundle: true
+          verbose: true
+          branch: preview
+          cache: true
+          restore-cache: true
+          cache-key: flatpak-builder-${{ github.sha }}
 
   create-release:
     needs: [build-flatpak]
@@ -44,7 +39,7 @@ jobs:
       - name: Download Flatpak artifact
         uses: actions/download-artifact@v1
         with:
-          name: "linux-flatpak"
+          name: "amiberry-x86_64"
 
       - name: Create Preview release
         if: github.ref == 'refs/heads/preview'
@@ -55,4 +50,4 @@ jobs:
           prerelease: true
           title: "Latest Preview Build"
           files: |
-            linux-flatpak/amiberry.flatpak
+            amiberry-x86_64/amiberry.flatpak

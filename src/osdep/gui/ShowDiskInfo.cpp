@@ -29,14 +29,14 @@ class InfoListModel : public gcn::ListModel
 	std::vector<std::string> lines{};
 
 public:
-	InfoListModel(const std::vector<std::string>& helptext)
+	explicit InfoListModel(const std::vector<std::string>& helptext)
 	{
 		lines = helptext;
 	}
 
 	int getNumberOfElements() override
 	{
-		return lines.size();
+		return int(lines.size());
 	}
 
 	int add_element(const char* elem) override
@@ -119,7 +119,7 @@ static void InitShowDiskInfo(const std::vector<std::string>& infotext)
 }
 
 
-static void ExitShowDiskInfo(void)
+static void ExitShowDiskInfo()
 {
 	wndShowDiskInfo->releaseModalFocus();
 	gui_top->remove(wndShowDiskInfo);
@@ -135,7 +135,7 @@ static void ExitShowDiskInfo(void)
 }
 
 
-static void ShowDiskInfoLoop(void)
+static void ShowDiskInfoLoop()
 {
 	auto got_event = 0;
 	SDL_Event event;
@@ -193,11 +193,11 @@ static void ShowDiskInfoLoop(void)
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_PRESSED;
 #ifdef USE_OPENGL
-			touch_event.button.x = gui_graphics->getTargetPlaneWidth() * event.tfinger.x;
-			touch_event.button.y = gui_graphics->getTargetPlaneHeight() * event.tfinger.y;
+			touch_event.button.x = gui_graphics->getTargetPlaneWidth() * int(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTargetPlaneHeight() * int(event.tfinger.y);
 #else
-			touch_event.button.x = gui_graphics->getTarget()->w * event.tfinger.x;
-			touch_event.button.y = gui_graphics->getTarget()->h * event.tfinger.y;
+			touch_event.button.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
 #endif
 			gui_input->pushInput(touch_event);
 			break;
@@ -210,11 +210,11 @@ static void ShowDiskInfoLoop(void)
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_RELEASED;
 #ifdef USE_OPENGL
-			touch_event.button.x = gui_graphics->getTargetPlaneWidth() * event.tfinger.x;
-			touch_event.button.y = gui_graphics->getTargetPlaneHeight() * event.tfinger.y;
+			touch_event.button.x = gui_graphics->getTargetPlaneWidth() * int(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTargetPlaneHeight() * int(event.tfinger.y);
 #else
-			touch_event.button.x = gui_graphics->getTarget()->w * event.tfinger.x;
-			touch_event.button.y = gui_graphics->getTarget()->h * event.tfinger.y;
+			touch_event.button.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
 #endif
 			gui_input->pushInput(touch_event);
 			break;
@@ -226,11 +226,11 @@ static void ShowDiskInfoLoop(void)
 			touch_event.motion.which = 0;
 			touch_event.motion.state = 0;
 #ifdef USE_OPENGL
-			touch_event.motion.x = gui_graphics->getTargetPlaneWidth() * event.tfinger.x;
-			touch_event.motion.y = gui_graphics->getTargetPlaneHeight() * event.tfinger.y;
+			touch_event.motion.x = gui_graphics->getTargetPlaneWidth() * int(event.tfinger.x);
+			touch_event.motion.y = gui_graphics->getTargetPlaneHeight() * int(event.tfinger.y);
 #else
-			touch_event.motion.x = gui_graphics->getTarget()->w * event.tfinger.x;
-			touch_event.motion.y = gui_graphics->getTarget()->h * event.tfinger.y;
+			touch_event.motion.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
+			touch_event.motion.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
 #endif
 			gui_input->pushInput(touch_event);
 			break;

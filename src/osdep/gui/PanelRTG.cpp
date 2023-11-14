@@ -23,7 +23,7 @@ public:
 
 	int getNumberOfElements() override
 	{
-		return values.size();
+		return int(values.size());
 	}
 
 	int add_element(const char* elem) override
@@ -95,15 +95,15 @@ public:
 		
 		if (action_event.getSource() == cboBoard)
 		{
-			auto v = cboBoard->getSelected();
-			if (v == 0)
+			auto selected_board = cboBoard->getSelected();
+			if (selected_board == 0)
 			{
 				changed_prefs.rtgboards[0].rtgmem_type = 1;
 				changed_prefs.rtgboards[0].rtgmem_size = 0;
 			}
 			else
 			{
-				changed_prefs.rtgboards[0].rtgmem_type = gfxboard_get_id_from_index(v - 1);
+				changed_prefs.rtgboards[0].rtgmem_type = gfxboard_get_id_from_index(selected_board - 1);
 				if (changed_prefs.rtgboards[0].rtgmem_size == 0)
 					changed_prefs.rtgboards[0].rtgmem_size = 4096 * 1024;
 			}
@@ -186,7 +186,7 @@ public:
 		if (v == 5)
 			mask |= RGBFF_B8G8R8A8;
 
-		changed_prefs.picasso96_modeflags = mask;
+		changed_prefs.picasso96_modeflags = int(mask);
 		
 		RefreshPanelRTG();
 	}
@@ -344,8 +344,7 @@ void InitPanelRTG(const config_category& category)
 	category.panel->add(cboRtgRefreshRate, DISTANCE_BORDER, posY);
 	category.panel->add(cboRtgBufferMode, cboRtgRefreshRate->getX() + cboRtgRefreshRate->getWidth() + DISTANCE_NEXT_X * 2, posY);
 	category.panel->add(cboRtgAspectRatio, cboRtgBufferMode->getX() + cboRtgBufferMode->getWidth() + DISTANCE_NEXT_X * 2, posY);
-	posY += cboRtgRefreshRate->getHeight() + DISTANCE_NEXT_Y;
-	
+
 	RefreshPanelRTG();
 }
 
@@ -400,18 +399,19 @@ void RefreshPanelRTG()
 
 		int mem_size = 0;
 		switch (rbc->rtgmem_size) {
-		case 0x00000000: mem_size = 0; break;
-		case 0x00100000: mem_size = 1; break;
-		case 0x00200000: mem_size = 2; break;
-		case 0x00400000: mem_size = 3; break;
-		case 0x00800000: mem_size = 4; break;
-		case 0x01000000: mem_size = 5; break;
-		case 0x02000000: mem_size = 6; break;
-		case 0x04000000: mem_size = 7; break;
-		case 0x08000000: mem_size = 8; break;
-		case 0x10000000: mem_size = 9; break;
-		case 0x20000000: mem_size = 10; break;
-		case 0x40000000: mem_size = 11; break;
+			case 0x00000000: mem_size = 0; break;
+			case 0x00100000: mem_size = 1; break;
+			case 0x00200000: mem_size = 2; break;
+			case 0x00400000: mem_size = 3; break;
+			case 0x00800000: mem_size = 4; break;
+			case 0x01000000: mem_size = 5; break;
+			case 0x02000000: mem_size = 6; break;
+			case 0x04000000: mem_size = 7; break;
+			case 0x08000000: mem_size = 8; break;
+			case 0x10000000: mem_size = 9; break;
+			case 0x20000000: mem_size = 10; break;
+			case 0x40000000: mem_size = 11; break;
+			default: break;
 		}
 		sldGfxmem->setValue(mem_size);
 		lblGfxsize->setCaption(memsize_names[msi_gfx[mem_size]]);

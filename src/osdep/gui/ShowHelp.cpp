@@ -35,14 +35,14 @@ class HelpListModel : public gcn::ListModel
 	std::vector<std::string> lines{};
 
 public:
-	HelpListModel(const std::vector<std::string>& helptext)
+	explicit HelpListModel(const std::vector<std::string>& helptext)
 	{
 		lines = helptext;
 	}
 
 	int getNumberOfElements() override
 	{
-		return lines.size();
+		return int(lines.size());
 	}
 
 	int add_element(const char* elem) override
@@ -123,7 +123,7 @@ static void InitShowHelp(const std::vector<std::string>& helptext)
 	cmdOK->requestFocus();
 }
 
-static void ExitShowHelp(void)
+static void ExitShowHelp()
 {
 	wndShowHelp->releaseModalFocus();
 	gui_top->remove(wndShowHelp);
@@ -138,7 +138,7 @@ static void ExitShowHelp(void)
 	delete wndShowHelp;
 }
 
-static void ShowHelpLoop(void)
+static void ShowHelpLoop()
 {
 	auto got_event = 0;
 	SDL_Event event;
@@ -196,11 +196,11 @@ static void ShowHelpLoop(void)
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_PRESSED;
 #ifdef USE_OPENGL
-			touch_event.button.x = gui_graphics->getTargetPlaneWidth() * event.tfinger.x;
-			touch_event.button.y = gui_graphics->getTargetPlaneHeight() * event.tfinger.y;
+			touch_event.button.x = gui_graphics->getTargetPlaneWidth() * int(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTargetPlaneHeight() * int(event.tfinger.y);
 #else
-			touch_event.button.x = gui_graphics->getTarget()->w * event.tfinger.x;
-			touch_event.button.y = gui_graphics->getTarget()->h * event.tfinger.y;
+			touch_event.button.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
 #endif
 			gui_input->pushInput(touch_event);
 			break;
@@ -213,11 +213,11 @@ static void ShowHelpLoop(void)
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_RELEASED;
 #ifdef USE_OPENGL
-			touch_event.button.x = gui_graphics->getTargetPlaneWidth() * event.tfinger.x;
-			touch_event.button.y = gui_graphics->getTargetPlaneHeight() * event.tfinger.y;
+			touch_event.button.x = gui_graphics->getTargetPlaneWidth() * int(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTargetPlaneHeight() * int(event.tfinger.y);
 #else
-			touch_event.button.x = gui_graphics->getTarget()->w * event.tfinger.x;
-			touch_event.button.y = gui_graphics->getTarget()->h * event.tfinger.y;
+			touch_event.button.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
 #endif
 			gui_input->pushInput(touch_event);
 			break;
@@ -229,11 +229,11 @@ static void ShowHelpLoop(void)
 			touch_event.motion.which = 0;
 			touch_event.motion.state = 0;
 #ifdef USE_OPENGL
-			touch_event.motion.x = gui_graphics->getTargetPlaneWidth() * event.tfinger.x;
-			touch_event.motion.y = gui_graphics->getTargetPlaneHeight() * event.tfinger.y;
+			touch_event.motion.x = gui_graphics->getTargetPlaneWidth() * int(event.tfinger.x);
+			touch_event.motion.y = gui_graphics->getTargetPlaneHeight() * int(event.tfinger.y);
 #else
-			touch_event.motion.x = gui_graphics->getTarget()->w * event.tfinger.x;
-			touch_event.motion.y = gui_graphics->getTarget()->h * event.tfinger.y;
+			touch_event.motion.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
+			touch_event.motion.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
 #endif
 			gui_input->pushInput(touch_event);
 			break;

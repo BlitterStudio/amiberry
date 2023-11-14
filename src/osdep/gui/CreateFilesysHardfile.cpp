@@ -63,7 +63,7 @@ public:
 		{
 			if (actionEvent.getSource() == cmdOK)
 			{
-				if (txtDevice->getText().length() <= 0)
+				if (txtDevice->getText().empty())
 				{
 					wndCreateFilesysHardfile->setCaption("Please enter a device name.");
 					return;
@@ -384,11 +384,11 @@ static void CreateFilesysHardfileLoop()
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_PRESSED;
 #ifdef USE_OPENGL
-			touch_event.button.x = gui_graphics->getTargetPlaneWidth() * event.tfinger.x;
-			touch_event.button.y = gui_graphics->getTargetPlaneHeight() * event.tfinger.y;
+			touch_event.button.x = gui_graphics->getTargetPlaneWidth() * int(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTargetPlaneHeight() * int(event.tfinger.y);
 #else
-			touch_event.button.x = gui_graphics->getTarget()->w * event.tfinger.x;
-			touch_event.button.y = gui_graphics->getTarget()->h * event.tfinger.y;
+			touch_event.button.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
 #endif
 			gui_input->pushInput(touch_event);
 			break;
@@ -401,11 +401,11 @@ static void CreateFilesysHardfileLoop()
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_RELEASED;
 #ifdef USE_OPENGL
-			touch_event.button.x = gui_graphics->getTargetPlaneWidth() * event.tfinger.x;
-			touch_event.button.y = gui_graphics->getTargetPlaneHeight() * event.tfinger.y;
+			touch_event.button.x = gui_graphics->getTargetPlaneWidth() * int(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTargetPlaneHeight() * int(event.tfinger.y);
 #else
-			touch_event.button.x = gui_graphics->getTarget()->w * event.tfinger.x;
-			touch_event.button.y = gui_graphics->getTarget()->h * event.tfinger.y;
+			touch_event.button.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
 #endif
 			gui_input->pushInput(touch_event);
 			break;
@@ -417,11 +417,11 @@ static void CreateFilesysHardfileLoop()
 			touch_event.motion.which = 0;
 			touch_event.motion.state = 0;
 #ifdef USE_OPENGL
-			touch_event.motion.x = gui_graphics->getTargetPlaneWidth() * event.tfinger.x;
-			touch_event.motion.y = gui_graphics->getTargetPlaneHeight() * event.tfinger.y;
+			touch_event.motion.x = gui_graphics->getTargetPlaneWidth() * int(event.tfinger.x);
+			touch_event.motion.y = gui_graphics->getTargetPlaneHeight() * int(event.tfinger.y);
 #else
-			touch_event.motion.x = gui_graphics->getTarget()->w * event.tfinger.x;
-			touch_event.motion.y = gui_graphics->getTarget()->h * event.tfinger.y;
+			touch_event.motion.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
+			touch_event.motion.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
 #endif
 			gui_input->pushInput(touch_event);
 			break;

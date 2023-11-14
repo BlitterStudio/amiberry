@@ -99,7 +99,7 @@ endif
 # SDL2 targets
 #
 # Raspberry Pi 1/2/3/4/5 (SDL2)
-else ifeq ($(PLATFORM),$(filter $(PLATFORM),rpi1-sdl2 rpi2-sdl2 rpi3-sdl2 rpi4-sdl2 rpi5-sdl2))
+ifeq ($(PLATFORM),$(filter $(PLATFORM),rpi1-sdl2 rpi2-sdl2 rpi3-sdl2 rpi4-sdl2 rpi5-sdl2))
 	CPPFLAGS += $(CPPFLAGS32)
 	ifeq ($(PLATFORM),$(filter $(PLATFORM), rpi2-sdl2 rpi3-sdl2 rpi4-sdl2 rpi5-sdl2))
 	   CPPFLAGS += $(NEON_FLAGS)

@@ -75,13 +75,15 @@ class string_list_model : public gcn::ListModel
 public:
 	string_list_model(const char* entries[], const int count)
 	{
-		for (auto i = 0; i < count; ++i)
-			values.emplace_back(entries[i]);
+		for (auto i = 0; i < count; ++i) {
+			if (entries != nullptr && entries[i] != nullptr)
+				values.emplace_back(entries[i]);
+		}
 	}
 
 	int getNumberOfElements() override
 	{
-		return values.size();
+		return int(values.size());
 	}
 
 	int add_element(const char* elem) override
@@ -230,7 +232,7 @@ public:
 		}
 		else if (actionEvent.getSource() == cmdKeyOpenGUIClear)
 		{
-			std::string hotkey = "";
+			std::string hotkey;
 			strcpy(changed_prefs.open_gui, hotkey.c_str());
 			strcpy(currprefs.open_gui, hotkey.c_str());
 			RefreshPanelMisc();
@@ -249,7 +251,7 @@ public:
 		}
 		else if (actionEvent.getSource() == cmdKeyForQuitClear)
 		{
-			std::string hotkey = "";
+			std::string hotkey;
 			strcpy(changed_prefs.quit_amiberry, hotkey.c_str());
 			strcpy(currprefs.quit_amiberry, hotkey.c_str());
 			RefreshPanelMisc();
@@ -268,7 +270,7 @@ public:
 		}
 		else if (actionEvent.getSource() == cmdKeyActionReplayClear)
 		{
-			std::string hotkey = "";
+			std::string hotkey;
 			strcpy(changed_prefs.action_replay, hotkey.c_str());
 			strcpy(currprefs.action_replay, hotkey.c_str());
 			RefreshPanelMisc();
@@ -287,7 +289,7 @@ public:
 		}
 		else if (actionEvent.getSource() == cmdKeyFullScreenClear)
 		{
-			std::string hotkey = "";
+			std::string hotkey;
 			strcpy(changed_prefs.fullscreen_toggle, hotkey.c_str());
 			strcpy(currprefs.fullscreen_toggle, hotkey.c_str());
 			RefreshPanelMisc();
@@ -306,7 +308,7 @@ public:
 		}
 		else if (actionEvent.getSource() == cmdKeyMinimizeClear)
 		{
-			std::string hotkey = "";
+			std::string hotkey;
 			strcpy(changed_prefs.minimize, hotkey.c_str());
 			strcpy(currprefs.minimize, hotkey.c_str());
 			RefreshPanelMisc();

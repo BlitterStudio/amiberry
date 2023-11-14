@@ -1,5 +1,5 @@
-#include <string.h>
-#include <stdio.h>
+#include <cstring>
+#include <cstdio>
 
 #include <guisan.hpp>
 #include <SDL_ttf.h>
@@ -64,7 +64,7 @@ public:
 
 	int getNumberOfElements() override
 	{
-		return configs.size();
+		return int(configs.size());
 	}
 
 	int add_element(const char* elem) override
@@ -85,7 +85,7 @@ public:
 		return configs[i];
 	}
 
-	void InitConfigsList(void)
+	void InitConfigsList()
 	{
 		configs.clear();
 		for (auto& i : ConfigFilesList)
