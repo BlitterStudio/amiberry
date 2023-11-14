@@ -632,7 +632,7 @@ bool HandleNavigation(int direction)
 	{
 		gcn::Widget* activeWidget = focusHdl->getFocused();
 
-		if (activeWidget != nullptr && activeWidget->getId().length() > 0)
+		if (activeWidget != nullptr && !activeWidget->getId().empty())
 		{
 			std::string activeName = activeWidget->getId();
 			auto bFoundEnabled = false;
@@ -665,7 +665,7 @@ bool HandleNavigation(int direction)
 						default:
 							break;
 						}
-						if (searchFor.length() > 0)
+						if (!searchFor.empty())
 						{
 							focusTarget = gui_top->findWidgetById(searchFor);
 							if (focusTarget != nullptr)

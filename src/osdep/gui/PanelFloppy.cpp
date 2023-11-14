@@ -38,7 +38,6 @@ static const char* drive_speed_list[] = {"Turbo", "100% (compatible)", "200%", "
 static const int drive_speed_values[] = {0, 100, 200, 400, 800};
 
 static void AdjustDropDownControls();
-static bool bLoadConfigForDisk = false;
 static bool bIgnoreListChange = false;
 
 class DriveTypeListModel : public gcn::ListModel
@@ -134,7 +133,7 @@ public:
 
 	int getNumberOfElements() override
 	{
-		return lstMRUDiskList.size();
+		return int(lstMRUDiskList.size());
 	}
 
 	int add_element(const char* elem) override
@@ -727,7 +726,7 @@ void RefreshPanelFloppy()
 	chkDBAutoCache->setEnabled(false);
 	chkDBSmartSpeed->setEnabled(false);
 	chkDBCableDriveB->setEnabled(false);
-	for (i = 0; i <= 4; ++i)
+	for (i = 0; i < 4; ++i)
 	{
 		// is DrawBridge selected?
 		if (changed_prefs.floppyslots[i].dfxtype == DRV_FB)

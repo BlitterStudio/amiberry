@@ -44,14 +44,13 @@ static gcn::TextField* txtCurrent;
 static gcn::Label* lblFilename;
 static gcn::TextField* txtFilename;
 
-
 class SelectFileListModel : public gcn::ListModel
 {
 	std::vector<std::string> dirs{};
 	std::vector<std::string> files{};
 
 public:
-	SelectFileListModel(const char* path)
+	explicit SelectFileListModel(const char* path)
 	{
 		changeDir(path);
 	}
@@ -109,7 +108,7 @@ public:
 			if (createNew)
 			{
 				char tmp[MAX_DPATH];
-				if (txtFilename->getText().length() <= 0)
+				if (txtFilename->getText().empty())
 					return;
 				strncpy(tmp, workingDir, MAX_DPATH - 1);
 				strncat(tmp, "/", MAX_DPATH - 1);
@@ -508,11 +507,11 @@ static void SelectFileLoop()
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_PRESSED;
 #ifdef USE_OPENGL
-			touch_event.button.x = float(gui_graphics->getTargetPlaneWidth()) * event.tfinger.x;
-			touch_event.button.y = float(gui_graphics->getTargetPlaneHeight()) * event.tfinger.y;
+			touch_event.button.x = gui_graphics->getTargetPlaneWidth() * int(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTargetPlaneHeight() * int(event.tfinger.y);
 #else
-			touch_event.button.x = float(gui_graphics->getTarget()->w) * event.tfinger.x;
-			touch_event.button.y = float(gui_graphics->getTarget()->h) * event.tfinger.y;
+			touch_event.button.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
 #endif
 			gui_input->pushInput(touch_event);
 			break;
@@ -525,11 +524,11 @@ static void SelectFileLoop()
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_RELEASED;
 #ifdef USE_OPENGL
-			touch_event.button.x = float(gui_graphics->getTargetPlaneWidth()) * event.tfinger.x;
-			touch_event.button.y = float(gui_graphics->getTargetPlaneHeight()) * event.tfinger.y;
+			touch_event.button.x = gui_graphics->getTargetPlaneWidth() * int(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTargetPlaneHeight() * int(event.tfinger.y);
 #else
-			touch_event.button.x = float(gui_graphics->getTarget()->w) * event.tfinger.x;
-			touch_event.button.y = float(gui_graphics->getTarget()->h) * event.tfinger.y;
+			touch_event.button.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
 #endif
 			gui_input->pushInput(touch_event);
 			break;
@@ -541,11 +540,11 @@ static void SelectFileLoop()
 			touch_event.motion.which = 0;
 			touch_event.motion.state = 0;
 #ifdef USE_OPENGL
-			touch_event.motion.x = float(gui_graphics->getTargetPlaneWidth()) * event.tfinger.x;
-			touch_event.motion.y = float(gui_graphics->getTargetPlaneHeight()) * event.tfinger.y;
+			touch_event.button.x = gui_graphics->getTargetPlaneWidth() * int(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTargetPlaneHeight() * int(event.tfinger.y);
 #else
-			touch_event.motion.x = float(gui_graphics->getTarget()->w) * event.tfinger.x;
-			touch_event.motion.y = float(gui_graphics->getTarget()->h) * event.tfinger.y;
+			touch_event.button.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
 #endif
 			gui_input->pushInput(touch_event);
 			break;

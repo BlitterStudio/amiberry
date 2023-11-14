@@ -297,56 +297,56 @@ static void ShowMessageWaitInputLoop()
 					hotkey.modifiers.lctrl = true;
 					delimiter = SDL_GetKeyName(event.key.keysym.sym);
 					caption = lblText1->getCaption();
-					lblText1->setCaption(caption + " " + delimiter);
+					lblText1->setCaption(caption.append(" ").append(delimiter));
 					break;
 				case SDLK_RCTRL:
 					hotkey.modifiers.rctrl = true;
 					delimiter = SDL_GetKeyName(event.key.keysym.sym);
 					caption = lblText1->getCaption();
-					lblText1->setCaption(caption + " " + delimiter);
+					lblText1->setCaption(caption.append(" ").append(delimiter));
 					break;
 				case SDLK_LALT:
 					hotkey.modifiers.lalt = true;
 					delimiter = SDL_GetKeyName(event.key.keysym.sym);
 					caption = lblText1->getCaption();
-					lblText1->setCaption(caption + " " + delimiter);
+					lblText1->setCaption(caption.append(" ").append(delimiter));
 					break;
 				case SDLK_RALT:
 					hotkey.modifiers.ralt = true;
 					delimiter = SDL_GetKeyName(event.key.keysym.sym);
 					caption = lblText1->getCaption();
-					lblText1->setCaption(caption + " " + delimiter);
+					lblText1->setCaption(caption.append(" ").append(delimiter));
 					break;
 				case SDLK_LSHIFT:
 					hotkey.modifiers.lshift = true;
 					delimiter = SDL_GetKeyName(event.key.keysym.sym);
 					caption = lblText1->getCaption();
-					lblText1->setCaption(caption + " " + delimiter);
+					lblText1->setCaption(caption.append(" ").append(delimiter));
 					break;
 				case SDLK_RSHIFT:
 					hotkey.modifiers.rshift = true;
 					delimiter = SDL_GetKeyName(event.key.keysym.sym);
 					caption = lblText1->getCaption();
-					lblText1->setCaption(caption + " " + delimiter);
+					lblText1->setCaption(caption.append(" ").append(delimiter));
 					break;
 				case SDLK_LGUI:
 					hotkey.modifiers.lgui = true;
 					delimiter = SDL_GetKeyName(event.key.keysym.sym);
 					caption = lblText1->getCaption();
-					lblText1->setCaption(caption + " " + delimiter);
+					lblText1->setCaption(caption.append(" ").append(delimiter));
 					break;
 				case SDLK_RGUI:
 					hotkey.modifiers.rgui = true;
 					delimiter = SDL_GetKeyName(event.key.keysym.sym);
 					caption = lblText1->getCaption();
-					lblText1->setCaption(caption + " " + delimiter);
+					lblText1->setCaption(caption.append(" ").append(delimiter));
 					break;
 
 				default:
 					hotkey.scancode = event.key.keysym.scancode;
 					hotkey.key_name = delimiter = SDL_GetKeyName(event.key.keysym.sym);
 					caption = lblText1->getCaption();
-					lblText1->setCaption(caption + " " + delimiter);
+					lblText1->setCaption(caption.append(" ").append(delimiter));
 					break;
 				}
 			}
@@ -584,11 +584,11 @@ static void ShowMessageLoop()
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_PRESSED;
 #ifdef USE_OPENGL
-			touch_event.button.x = gui_graphics->getTargetPlaneWidth() * event.tfinger.x;
-			touch_event.button.y = gui_graphics->getTargetPlaneHeight() * event.tfinger.y;
+			touch_event.button.x = gui_graphics->getTargetPlaneWidth() * int(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTargetPlaneHeight() * int(event.tfinger.y);
 #else
-			touch_event.button.x = gui_graphics->getTarget()->w * event.tfinger.x;
-			touch_event.button.y = gui_graphics->getTarget()->h * event.tfinger.y;
+			touch_event.button.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
 #endif
 			gui_input->pushInput(touch_event);
 			break;
@@ -601,11 +601,11 @@ static void ShowMessageLoop()
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_RELEASED;
 #ifdef USE_OPENGL
-			touch_event.button.x = gui_graphics->getTargetPlaneWidth() * event.tfinger.x;
-			touch_event.button.y = gui_graphics->getTargetPlaneHeight() * event.tfinger.y;
+			touch_event.button.x = gui_graphics->getTargetPlaneWidth() * int(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTargetPlaneHeight() * int(event.tfinger.y);
 #else
-			touch_event.button.x = gui_graphics->getTarget()->w * event.tfinger.x;
-			touch_event.button.y = gui_graphics->getTarget()->h * event.tfinger.y;
+			touch_event.button.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
 #endif
 			gui_input->pushInput(touch_event);
 			break;
@@ -617,11 +617,11 @@ static void ShowMessageLoop()
 			touch_event.motion.which = 0;
 			touch_event.motion.state = 0;
 #ifdef USE_OPENGL
-			touch_event.motion.x = gui_graphics->getTargetPlaneWidth() * event.tfinger.x;
-			touch_event.motion.y = gui_graphics->getTargetPlaneHeight() * event.tfinger.y;
+			touch_event.button.x = gui_graphics->getTargetPlaneWidth() * int(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTargetPlaneHeight() * int(event.tfinger.y);
 #else
-			touch_event.motion.x = gui_graphics->getTarget()->w * event.tfinger.x;
-			touch_event.motion.y = gui_graphics->getTarget()->h * event.tfinger.y;
+			touch_event.button.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
 #endif
 			gui_input->pushInput(touch_event);
 			break;
@@ -673,7 +673,7 @@ bool ShowMessage(const std::string& title, const std::string& line1, const std::
 	lblText2->setCaption(line3);
 	cmdOK->setCaption(button1);
 	cmdCancel->setCaption(button2);
-	if (button2.length() == 0)
+	if (button2.empty())
 	{
 		cmdCancel->setVisible(false);
 		cmdCancel->setEnabled(false);

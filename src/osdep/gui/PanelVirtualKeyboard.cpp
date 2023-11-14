@@ -95,7 +95,7 @@ class EnumListModel : public gcn::ListModel
 private:
 	std::vector<std::pair<T,std::string>> m_values{};
 public:
-	EnumListModel(const std::vector<std::pair<T,std::string>> values)
+	explicit EnumListModel(const std::vector<std::pair<T,std::string>> values)
 		: m_values(values)
 	{
 
@@ -194,7 +194,7 @@ public:
 		}
 		else if (actionEvent.getSource() == cmdVkSetHotkeyClear)
 		{
-			const std::string button = "";
+			const std::string button;
 			txtVkSetHotkey->setText(button);
 			strcpy(changed_prefs.vkbd_toggle, button.c_str());
 			for (int port = 0; port < 2; port++)
@@ -340,7 +340,7 @@ void InitPanelVirtualKeyboard(const struct config_category& category)
 	RefreshPanelVirtualKeyboard();
 }
 
-void ExitPanelVirtualKeyboard(void)
+void ExitPanelVirtualKeyboard()
 {
 	delete chkVkEnabled;
     delete chkVkHires;
@@ -370,7 +370,7 @@ void ExitPanelVirtualKeyboard(void)
 	delete styleListModel;
 }
 
-void RefreshPanelVirtualKeyboard(void)
+void RefreshPanelVirtualKeyboard()
 {
 	chkVkEnabled->setSelected(changed_prefs.vkbd_enabled);
 	chkVkHires->setSelected(changed_prefs.vkbd_hires);

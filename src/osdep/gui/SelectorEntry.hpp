@@ -24,7 +24,7 @@ namespace gcn
 	public:
 		SelectorEntry(const std::string& caption, const std::string& imagepath);
 
-		virtual ~SelectorEntry();
+		~SelectorEntry() override;
 
 		void draw(Graphics* graphics) override;
 

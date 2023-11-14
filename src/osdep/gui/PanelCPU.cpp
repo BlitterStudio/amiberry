@@ -67,7 +67,7 @@ public:
 
 	int getNumberOfElements() override
 	{
-		return values.size();
+		return int(values.size());
 	}
 
 	int add_element(const char* Elem) override
@@ -95,7 +95,7 @@ string_list_model cpu_freq_list(cpu_freq_values, 5);
 static float getcpufreq(int m)
 {
 	const float f = changed_prefs.ntscmode ? 28636360.0f : 28375160.0f;
-	return f * (m >> 8) / 8.0f;
+	return f * float(m >> 8) / 8.0f;
 }
 
 class CPUActionListener : public gcn::ActionListener
@@ -112,27 +112,27 @@ public:
 			changed_prefs.m68k_speed_throttle = 0;
 
 		int newcpu = optCPU68000->isSelected()
-			             ? 68000
-			             : optCPU68010->isSelected()
-			             ? 68010
-			             : optCPU68020->isSelected()
-			             ? 68020
-			             : optCPU68030->isSelected()
-			             ? 68030
-			             : optCPU68040->isSelected()
-			             ? 68040
-			             : optCPU68060->isSelected()
-			             ? 68060
-			             : 0;
+						 ? 68000
+						 : optCPU68010->isSelected()
+						 ? 68010
+						 : optCPU68020->isSelected()
+						 ? 68020
+						 : optCPU68030->isSelected()
+						 ? 68030
+						 : optCPU68040->isSelected()
+						 ? 68040
+						 : optCPU68060->isSelected()
+						 ? 68060
+						 : 0;
 		int newfpu = optFPUnone->isSelected()
-			             ? 0
-			             : optFPU68881->isSelected()
-			             ? 1
-			             : optFPU68882->isSelected()
-			             ? 2
-			             : optFPUinternal->isSelected()
-			             ? 3
-			             : 0;
+						 ? 0
+						 : optFPU68881->isSelected()
+						 ? 1
+						 : optFPU68882->isSelected()
+						 ? 2
+						 : optFPUinternal->isSelected()
+						 ? 3
+						 : 0;
 
 		// When switching away from 68000, disable 24 bit addressing.
 		int oldcpu = changed_prefs.cpu_model;
@@ -142,46 +142,49 @@ public:
 		changed_prefs.mmu_model = 0;
 		changed_prefs.mmu_ec = false;
 		changed_prefs.cpu_data_cache = false;
+
 		switch (newcpu)
 		{
-		case 68000:
-		case 68010:
-			changed_prefs.fpu_model = newfpu == 0 ? 0 : (newfpu == 2 ? 68882 : 68881);
-			if (changed_prefs.cpu_compatible || changed_prefs.cpu_memory_cycle_exact)
-				changed_prefs.fpu_model = 0;
-			if (newcpu != oldcpu)
-				changed_prefs.address_space_24 = 1;
-			break;
-		case 68020:
-			changed_prefs.fpu_model = newfpu == 0 ? 0 : (newfpu == 2 ? 68882 : 68881);
-			break;
-		case 68030:
-			if (newcpu != oldcpu)
-				changed_prefs.address_space_24 = 0;
-			changed_prefs.fpu_model = newfpu == 0 ? 0 : (newfpu == 2 ? 68882 : 68881);
-			changed_prefs.mmu_ec = false; //ischecked(hDlg, IDC_MMUENABLEEC);
-			changed_prefs.mmu_model = 0; //changed_prefs.mmu_ec || ischecked(hDlg, IDC_MMUENABLE) ? 68030 : 0;
-			if (changed_prefs.cpu_compatible)
-				changed_prefs.cpu_data_cache = false; //ischecked(hDlg, IDC_CPUDATACACHE);
-			break;
-		case 68040:
-			changed_prefs.fpu_model = newfpu ? 68040 : 0;
-			changed_prefs.address_space_24 = 0;
-			if (changed_prefs.fpu_model)
-				changed_prefs.fpu_model = 68040;
-			changed_prefs.mmu_ec = false; //ischecked(hDlg, IDC_MMUENABLEEC);
-			changed_prefs.mmu_model = 0; //changed_prefs.mmu_ec || ischecked(hDlg, IDC_MMUENABLE) ? 68040 : 0;
-			if (changed_prefs.cpu_compatible)
-				changed_prefs.cpu_data_cache = false; //ischecked(hDlg, IDC_CPUDATACACHE);
-			break;
-		case 68060:
-			changed_prefs.fpu_model = newfpu ? 68060 : 0;
-			changed_prefs.address_space_24 = 0;
-			changed_prefs.mmu_ec = false; //ischecked(hDlg, IDC_MMUENABLEEC);
-			changed_prefs.mmu_model = 0; //changed_prefs.mmu_ec || ischecked(hDlg, IDC_MMUENABLE) ? 68060 : 0;
-			if (changed_prefs.cpu_compatible)
-				changed_prefs.cpu_data_cache = false; //ischecked(hDlg, IDC_CPUDATACACHE);
-			break;
+			case 68000:
+			case 68010:
+				changed_prefs.fpu_model = newfpu == 0 ? 0 : (newfpu == 2 ? 68882 : 68881);
+				if (changed_prefs.cpu_compatible || changed_prefs.cpu_memory_cycle_exact)
+					changed_prefs.fpu_model = 0;
+				if (newcpu != oldcpu)
+					changed_prefs.address_space_24 = true;
+				break;
+			case 68020:
+				changed_prefs.fpu_model = newfpu == 0 ? 0 : (newfpu == 2 ? 68882 : 68881);
+				break;
+			case 68030:
+				if (newcpu != oldcpu)
+					changed_prefs.address_space_24 = false;
+				changed_prefs.fpu_model = newfpu == 0 ? 0 : (newfpu == 2 ? 68882 : 68881);
+				changed_prefs.mmu_ec = false; //ischecked(hDlg, IDC_MMUENABLEEC);
+				changed_prefs.mmu_model = 0; //changed_prefs.mmu_ec || ischecked(hDlg, IDC_MMUENABLE) ? 68030 : 0;
+				if (changed_prefs.cpu_compatible)
+					changed_prefs.cpu_data_cache = false; //ischecked(hDlg, IDC_CPUDATACACHE);
+				break;
+			case 68040:
+				changed_prefs.fpu_model = newfpu ? 68040 : 0;
+				changed_prefs.address_space_24 = false;
+				if (changed_prefs.fpu_model)
+					changed_prefs.fpu_model = 68040;
+				changed_prefs.mmu_ec = false; //ischecked(hDlg, IDC_MMUENABLEEC);
+				changed_prefs.mmu_model = 0; //changed_prefs.mmu_ec || ischecked(hDlg, IDC_MMUENABLE) ? 68040 : 0;
+				if (changed_prefs.cpu_compatible)
+					changed_prefs.cpu_data_cache = false; //ischecked(hDlg, IDC_CPUDATACACHE);
+				break;
+			case 68060:
+				changed_prefs.fpu_model = newfpu ? 68060 : 0;
+				changed_prefs.address_space_24 = false;
+				changed_prefs.mmu_ec = false; //ischecked(hDlg, IDC_MMUENABLEEC);
+				changed_prefs.mmu_model = 0; //changed_prefs.mmu_ec || ischecked(hDlg, IDC_MMUENABLE) ? 68060 : 0;
+				if (changed_prefs.cpu_compatible)
+					changed_prefs.cpu_data_cache = false; //ischecked(hDlg, IDC_CPUDATACACHE);
+				break;
+			default:
+				break;
 		}
 
 		if (newcpu != oldcpu && changed_prefs.cpu_compatible) {

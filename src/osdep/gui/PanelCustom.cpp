@@ -51,13 +51,15 @@ private:
 public:
 	string_list_model(const char* entries[], const int count)
 	{
-		for (auto i = 0; i < count; ++i)
-			values.emplace_back(entries[i]);
+		for (auto i = 0; i < count; ++i) {
+			if (entries != nullptr && entries[i] != nullptr)
+				values.emplace_back(entries[i]);
+		}
 	}
 
 	int getNumberOfElements() override
 	{
-		return values.size();
+		return int(values.size());
 	}
 
 	int add_element(const char* elem) override
@@ -568,21 +570,15 @@ void RefreshPanelCustom()
 				lblCustomButtonAction[n]->setEnabled(false);
 			}
 
-			else if (temp_button == did->mapping.vkbd_button
+			else if ((temp_button == did->mapping.vkbd_button
 				&& temp_button != -1
 				&& SelectedFunction == 1
-				&& changed_prefs.use_retroarch_vkbd
-				)
-			{
-				cboCustomButtonAction[n]->setListModel(&CustomEventList_Vkbd);
-				cboCustomButtonAction[n]->setEnabled(false);
-				lblCustomButtonAction[n]->setEnabled(false);
-			}
-
-			else if (temp_button == did->mapping.vkbd_button
+				&& changed_prefs.use_retroarch_vkbd)
+				||
+				(temp_button == did->mapping.vkbd_button
 				&& temp_button != -1
 				&& SelectedFunction == 0
-				&& !did->mapping.is_retroarch
+				&& !did->mapping.is_retroarch)
 				)
 			{
 				cboCustomButtonAction[n]->setListModel(&CustomEventList_Vkbd);

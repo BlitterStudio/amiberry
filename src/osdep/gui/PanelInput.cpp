@@ -80,13 +80,15 @@ class string_list_model : public gcn::ListModel
 public:
 	string_list_model(const char* entries[], const int count)
 	{
-		for (auto i = 0; i < count; ++i)
-			values.emplace_back(entries[i]);
+		for (auto i = 0; i < count; ++i) {
+			if (entries != nullptr && entries[i] != nullptr)
+				values.emplace_back(entries[i]);
+		}
 	}
 
 	int getNumberOfElements() override
 	{
-		return values.size();
+		return int(values.size());
 	}
 
 	int add_element(const char* elem) override
@@ -255,9 +257,9 @@ public:
 				changed = 1;
 		}
 		if (changed)
-			inputdevice_validate_jports(&changed_prefs, changedport, NULL);
+			inputdevice_validate_jports(&changed_prefs, changedport, nullptr);
 
-		inputdevice_updateconfig(NULL, &changed_prefs);
+		inputdevice_updateconfig(nullptr, &changed_prefs);
 		inputdevice_config_change();
 		RefreshPanelInput();
 		RefreshPanelCustom();
@@ -597,7 +599,7 @@ void InitPanelInput(const config_category& category)
 	portsubmodes[8] = 2;
 	portsubmodes[9] = -1;
 
-	inputdevice_updateconfig(NULL, &changed_prefs);
+	inputdevice_updateconfig(nullptr, &changed_prefs);
 	RefreshPanelInput();
 }
 

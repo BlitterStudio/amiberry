@@ -31,14 +31,14 @@ class ROMListModel : public gcn::ListModel
 	int ROMType;
 
 public:
-	ROMListModel(const int romtype)
+	explicit ROMListModel(const int romtype)
 	{
 		ROMType = romtype;
 	}
 
 	int getNumberOfElements() override
 	{
-		return roms.size();
+		return int(roms.size());
 	}
 
 	int add_element(const char* elem) override
@@ -84,7 +84,7 @@ public:
 			if (lstAvailableROMs[i]->ROMType & ROMType)
 			{
 				if (!stricmp(lstAvailableROMs[i]->Path, current))
-					currIdx = roms.size();
+					currIdx = int(roms.size());
 				roms.emplace_back(lstAvailableROMs[i]->Name);
 				idxToAvailableROMs.push_back(i);
 			}
@@ -110,10 +110,10 @@ public:
 
 	int getNumberOfElements() override
 	{
-		return values.size();
+		return int(values.size());
 	}
 
-	int add_element(const char* Elem)
+	int add_element(const char* Elem) override
 	{
 		values.emplace_back(Elem);
 		return 0;
