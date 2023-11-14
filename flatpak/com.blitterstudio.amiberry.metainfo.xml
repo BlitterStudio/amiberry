@@ -12,7 +12,7 @@
   <update_contact>midwan_AT_gmail.com</update_contact>
   <url type="homepage">https://amiberry.com</url>
   <url type="help">https://github.com/BlitterStudio/amiberry/wiki</url>
-  <url type="vcs-browser">https://github.com/BlitterStudio/amiberry/wiki</url>
+  <url type="vcs-browser">https://github.com/BlitterStudio/amiberry</url>
 
   <supports>
     <control>pointing</control>
@@ -23,8 +23,8 @@
 
   <description>
     <p>Amiberry is an optimized Amiga emulator for Linux (ARM, ARM64 and x86-64).</p>
-    <p>It is based on the latest WinUAE, with several unique features on top of it,</p>
-    <p>like a WHDLoad booter, custom controls, Host-Run functionality and more.</p>
+    <p>It is based on the latest WinUAE, with several unique features on top of it,
+      like a WHDLoad booter, custom controls, Host-Run functionality and more.</p>
   </description>
   <screenshots>
     <screenshot type="default">
