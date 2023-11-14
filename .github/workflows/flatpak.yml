@@ -39,7 +39,7 @@ jobs:
       - name: Download Flatpak artifact
         uses: actions/download-artifact@v1
         with:
-          name: "linux-flatpak"
+          name: "amiberry-x86_64"
 
       - name: Create Preview release
         if: github.ref == 'refs/heads/preview'
