@@ -266,7 +266,7 @@ static void InitSelectFile(const char* title)
 		lblFilename->setAlignment(gcn::Graphics::LEFT);
 		lblFilename->setPosition(DISTANCE_BORDER, scrAreaFiles->getY() + scrAreaFiles->getHeight() + DISTANCE_NEXT_Y);
 		txtFilename = new gcn::TextField();
-		txtFilename->setSize(120, TEXTFIELD_HEIGHT);
+		txtFilename->setSize(350, TEXTFIELD_HEIGHT);
 		txtFilename->setId("Filename");
 		txtFilename->setPosition(lblFilename->getX() + lblFilename->getWidth() + DISTANCE_NEXT_X, lblFilename->getY());
 

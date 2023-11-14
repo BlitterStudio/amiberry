@@ -63,7 +63,7 @@ public:
 		{
 			if (actionEvent.getSource() == cmdOK)
 			{
-				if (txtDevice->getText().length() <= 0)
+				if (txtDevice->getText().empty())
 				{
 					wndCreateFilesysHardfile->setCaption("Please enter a device name.");
 					return;
