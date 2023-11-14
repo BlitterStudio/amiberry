@@ -182,6 +182,16 @@ namespace gcn
 		 */
 		[[nodiscard]] virtual bool isDroppedDown() const;
 
+		/**
+		* Sets the DropDown Widget to dropped-down mode.
+		*/
+		virtual void dropDown();
+
+		/**
+		* Sets the DropDown Widget to folded-up mode.
+		*/
+		virtual void foldUp();
+
 		// Inherited from Widget
 
 		void draw(Graphics* graphics) override;
@@ -249,16 +259,6 @@ namespace gcn
 		* @param graphics a Graphics object to draw with.
 		*/
 		virtual void drawButton(Graphics* graphics);
-
-		/**
-		* Sets the DropDown Widget to dropped-down mode.
-		*/
-		virtual void dropDown();
-
-		/**
-		* Sets the DropDown Widget to folded-up mode.
-		*/
-		virtual void foldUp();
 
 		bool mDroppedDown;
 

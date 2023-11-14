@@ -424,7 +424,7 @@ namespace gcn
 		auto* widget = parent;
 
 		// If a widget has modal mouse input focus then it will
-		// always be returned from getMouseEventSource, but we only wan't to send
+		// always be returned from getMouseEventSource, but we only want to send
 		// mouse entered events if the mouse has actually entered the widget with
 		// modal mouse input focus, hence we need to check if that's the case. If
 		// it's not we should simply ignore to send any mouse entered events.
