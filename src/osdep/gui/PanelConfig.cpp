@@ -151,7 +151,7 @@ public:
 			//-----------------------------------------------
 			char msg[256];
 			i = lstConfigs->getSelected();
-			if (i >= 0 && strcmp(ConfigFilesList[i]->Name, OPTIONSFILENAME) != 0)
+			if (i >= 0 && ConfigFilesList[i]->Name[0] != '\0')
 			{
 				snprintf(msg, 256, "Do you want to delete '%s' ?", ConfigFilesList[i]->Name);
 				if (ShowMessage("Delete Configuration", msg, "", "", "Yes", "No"))
