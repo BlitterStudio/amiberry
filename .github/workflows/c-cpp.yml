@@ -1081,7 +1081,7 @@ jobs:
         name: "debian-bookworm-armhf-rpi3"
         path: amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-armhf-rpi3.zip
 
-  build-flatpak-x86_64:
+  build-flatpak:
     runs-on: ubuntu-latest
     container:
       image: bilelmoussaoui/flatpak-github-actions:freedesktop-23.08
@@ -1120,8 +1120,14 @@ jobs:
           restore-cache: true
           cache-key: flatpak-builder-${{ github.sha }}
 
+      - name: Upload Flatpak
+        uses: actions/upload-artifact@v3
+        with:
+          name: "flatpak"
+          path: "amiberry.flatpak"
+
   create-release:
-    needs: [build-macOS-x86_64, build-debian-buster-x86_64, build-debian-bullseye-x86_64, build-debian-bookworm-x86_64, build-manjaro-aarch64-rpi4, build-manjaro-aarch64-rk3399, build-debian-bookworm-aarch64-rpi5, build-debian-bookworm-armhf-rpi5, build-debian-buster-aarch64-rpi4, build-debian-buster-armhf-rpi4, build-debian-bullseye-aarch64-rpi4, build-debian-bullseye-armhf-rpi4, build-debian-bookworm-aarch64-rpi4, build-debian-bookworm-armhf-rpi4, build-debian-buster-aarch64-rpi3, build-debian-buster-armhf-rpi3, build-debian-bullseye-aarch64-rpi3, build-debian-bullseye-armhf-rpi3, build-debian-bookworm-aarch64-rpi3, build-debian-bookworm-armhf-rpi3, build-flatpak-x86_64]
+    needs: [build-macOS-x86_64, build-debian-buster-x86_64, build-debian-bullseye-x86_64, build-debian-bookworm-x86_64, build-manjaro-aarch64-rpi4, build-manjaro-aarch64-rk3399, build-debian-bookworm-aarch64-rpi5, build-debian-bookworm-armhf-rpi5, build-debian-buster-aarch64-rpi4, build-debian-buster-armhf-rpi4, build-debian-bullseye-aarch64-rpi4, build-debian-bullseye-armhf-rpi4, build-debian-bookworm-aarch64-rpi4, build-debian-bookworm-armhf-rpi4, build-debian-buster-aarch64-rpi3, build-debian-buster-armhf-rpi3, build-debian-bullseye-aarch64-rpi3, build-debian-bullseye-armhf-rpi3, build-debian-bookworm-aarch64-rpi3, build-debian-bookworm-armhf-rpi3, build-flatpak]
     runs-on: ubuntu-latest
     if: github.ref_type == 'tag'
     steps:
@@ -1154,7 +1160,7 @@ jobs:
           omitBodyDuringUpdate: true
           body: ${{ steps.changelog.outputs.changes }}
           artifacts: |
-            linux-flatpak/amiberry.flatpak
+            flatpak/amiberry.flatpak
             macOS-x86_64/amiberry-${{ steps.tag.outputs.tag }}-macOS-x86_64.zip
             debian-buster-x86_64/amiberry-${{ steps.tag.outputs.tag }}-debian-buster-x86_64.zip
             debian-bullseye-x86_64/amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-x86_64.zip
