@@ -31,7 +31,16 @@
   </description>
   <screenshots>
     <screenshot type="default">
-      <image>https://i0.wp.com/blitterstudio.com/wp-content/uploads/2022/12/Screenshot_GUI.png</image>
+      <image>https://user-images.githubusercontent.com/3877365/282777854-399ca178-18a1-4e1a-ab7b-9163d5835b51.png</image>
+      <caption>Amiberry GUI (Quickstart panel)</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://user-images.githubusercontent.com/3877365/282777821-c2f1d912-8f64-4244-9fef-981beeb7d407.png</image>
+      <caption>Amiberry running a classic A500 configuration</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://user-images.githubusercontent.com/3877365/282777836-6e37cf55-68ff-4dcd-9092-bbee8a8a6af0.png</image>
+      <caption>Amiberry running an A1200 configuration</caption>
     </screenshot>
   </screenshots>
   <releases>
