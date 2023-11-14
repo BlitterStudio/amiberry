@@ -12,7 +12,7 @@
   <update_contact>midwan_AT_gmail.com</update_contact>
   <url type="homepage">https://amiberry.com</url>
   <url type="help">https://github.com/BlitterStudio/amiberry/wiki</url>
-  <url type="vcs-browser">https://github.com/BlitterStudio/amiberry/wiki</url>
+  <url type="vcs-browser">https://github.com/BlitterStudio/amiberry</url>
 
   <supports>
     <control>pointing</control>
