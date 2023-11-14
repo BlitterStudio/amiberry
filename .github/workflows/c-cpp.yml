@@ -16,44 +16,50 @@ on:
 jobs:
 
   build-macOS-x86_64:
-    runs-on: [self-hosted, macOS, X64]
+    runs-on: macos-latest
     steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: 'true'
+      - name: Check out repository code
+        uses: actions/checkout@v4
+        with:
+          submodules: 'true'
 
-    - name: make capsimg
-      run: make capsimg
+      - name: Install dependencies
+        run: |
+          brew update
+          brew install sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport dylibbundler wget
 
-    - name: make for macOS X64
-      run: make -j4 PLATFORM=osx-x86
+      - name: make capsimg
+        run: make capsimg
 
-    - name: Upload artifact
-      if: github.ref_type != 'tag'
-      uses: actions/upload-artifact@v3
-      with:
-        name: amiberry-macOS-64bit-intel
-        path: |
-          Amiberry.app/**
+      - name: make for macOS X64
+        run: make -j4 PLATFORM=osx-x86
 
-    - name: Get tag
-      if: github.ref_type == 'tag'
-      id: tag
-      uses: dawidd6/action-get-tag@v1
-      with:
-        # Optionally strip `v` prefix
-        strip_v: false
+      - name: Upload artifact
+        if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@v3
+        with:
+          name: amiberry-macOS-64bit-intel
+          path: |
+            Amiberry.app/**
 
-    - name: ZIP binaries
-      if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ steps.tag.outputs.tag }}-macOS-x86_64.zip Amiberry.app
+      - name: Get tag
+        if: github.ref_type == 'tag'
+        id: tag
+        uses: dawidd6/action-get-tag@v1
+        with:
+          # Optionally strip `v` prefix
+          strip_v: false
 
-    - name: Upload artifact
-      if: github.ref_type == 'tag'
-      uses: actions/upload-artifact@v3
-      with:
-        name: "macOS-x86_64"
-        path: amiberry-${{ steps.tag.outputs.tag }}-macOS-x86_64.zip
+      - name: ZIP binaries
+        if: github.ref_type == 'tag'
+        run: zip -r amiberry-${{ steps.tag.outputs.tag }}-macOS-x86_64.zip Amiberry.app
+
+      - name: Upload artifact
+        if: github.ref_type == 'tag'
+        uses: actions/upload-artifact@v3
+        with:
+          name: "macOS-x86_64"
+          path: amiberry-${{ steps.tag.outputs.tag }}-macOS-x86_64.zip
 
   build-debian-buster-x86_64:
     runs-on: ubuntu-latest
