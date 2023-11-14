@@ -54,8 +54,6 @@ modules:
         commit: 348a6d353af8ac142f68fbf9fe0f4d070448d945
 
   - name: amiberry
-    only-arches:
-      - x86_64
     post-install:
       - install -Dp -m 755 amiberry /app/bin/amiberry
       - install -D -m644 -t /app/share/applications/ flatpak/${FLATPAK_ID}.desktop
