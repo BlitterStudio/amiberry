@@ -31,12 +31,6 @@ jobs:
         restore-cache: true
         cache-key: flatpak-builder-${{ github.sha }}
 
-    - name: Upload Flatpak
-      uses: actions/upload-artifact@v3
-      with:
-        name: "linux-flatpak"
-        path: "amiberry.flatpak"
-
   create-release:
     needs: [build-flatpak]
     runs-on: ubuntu-latest
@@ -56,4 +50,4 @@ jobs:
           prerelease: true
           title: "Latest Preview Build"
           files: |
-            linux-flatpak/amiberry.flatpak
+            amiberry-x86_64/amiberry.flatpak
