@@ -597,7 +597,19 @@ static void EditFilesysHardfileLoop()
 			switch (event.key.keysym.sym)
 			{
 			case VK_ESCAPE:
-				dialogFinished = true;
+				if (cboController->isDroppedDown() || cboUnit->isDroppedDown())
+				{
+					cboController->foldUp();
+					cboController->releaseModalFocus();
+					cboController->releaseModalMouseInputFocus();
+					cboUnit->foldUp();
+					cboUnit->releaseModalFocus();
+					cboUnit->releaseModalMouseInputFocus();
+				}
+				else
+				{
+					dialogFinished = true;
+				}
 				break;
 
 			case VK_UP:

@@ -757,7 +757,6 @@ void check_input()
 					gui_running = false;
 					break;
 
-
 				case VK_Green:
 				case VK_Blue:
 					//------------------------------------------------
