@@ -353,31 +353,56 @@ void amiberry_gui_init()
 
 	if (!mon->sdl_window)
 	{
-		Uint32 flags = SDL_WINDOW_RESIZABLE;
-		if (sdl_video_driver != nullptr && strcmpi(sdl_video_driver, "KMSDRM") == 0
-			|| (sdl_mode.w < 800 && sdl_mode.h < 600))
-			flags = SDL_WINDOW_FULLSCREEN_DESKTOP;
-
-		if (currprefs.borderless)
-			flags |= SDL_WINDOW_BORDERLESS;
-		if (currprefs.main_alwaysontop)
-			flags |= SDL_WINDOW_ALWAYS_ON_TOP;
-        if (currprefs.start_minimized)
-            flags |= SDL_WINDOW_HIDDEN;
-        else
-            flags |= SDL_WINDOW_SHOWN;
-		flags |= SDL_WINDOW_ALLOW_HIGHDPI;
-
+        Uint32 sdl_window_mode;
+        if (sdl_mode.w >= 800 && sdl_mode.h >= 600 && strcmpi(sdl_video_driver, "KMSDRM") != 0)
+        {
+            // Only enable Windowed mode if we're running under x11 and the resolution is at least 800x600
+            if (currprefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLWINDOW)
+                sdl_window_mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
+            else if (currprefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN)
+                sdl_window_mode = SDL_WINDOW_FULLSCREEN;
+            else
+                sdl_window_mode =  SDL_WINDOW_RESIZABLE;
+            if (currprefs.borderless)
+                sdl_window_mode |= SDL_WINDOW_BORDERLESS;
+            if (currprefs.main_alwaysontop)
+                sdl_window_mode |= SDL_WINDOW_ALWAYS_ON_TOP;
+            if (currprefs.start_minimized)
+                sdl_window_mode |= SDL_WINDOW_HIDDEN;
+            else
+                sdl_window_mode |= SDL_WINDOW_SHOWN;
+            // Set Window allow high DPI by default
+            sdl_window_mode |= SDL_WINDOW_ALLOW_HIGHDPI;
 #ifdef USE_OPENGL
-		flags |= SDL_WINDOW_OPENGL;
+            sdl_window_mode |= SDL_WINDOW_OPENGL;
 #endif
+        }
+        else
+        {
+            // otherwise go for Full-window
+            sdl_window_mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
+        }
 
-		mon->sdl_window = SDL_CreateWindow("Amiberry",
-			SDL_WINDOWPOS_CENTERED,
-			SDL_WINDOWPOS_CENTERED,
-			GUI_WIDTH,
-			GUI_HEIGHT,
-			flags);
+        if (amiberry_options.rotation_angle != 0 && amiberry_options.rotation_angle != 180)
+        {
+            mon->sdl_window = SDL_CreateWindow("Amiberry",
+                                               SDL_WINDOWPOS_CENTERED,
+                                               SDL_WINDOWPOS_CENTERED,
+                                               GUI_HEIGHT,
+                                               GUI_WIDTH,
+                                               sdl_window_mode);
+        }
+        else
+        {
+            mon->sdl_window = SDL_CreateWindow("Amiberry",
+                                               SDL_WINDOWPOS_CENTERED,
+                                               SDL_WINDOWPOS_CENTERED,
+                                               GUI_WIDTH,
+                                               GUI_HEIGHT,
+                                               sdl_window_mode);
+        }
+        check_error_sdl(mon->sdl_window == nullptr, "Unable to create window:");
+
 
 		auto* const icon_surface = IMG_Load(prefix_with_data_path("amiberry.png").c_str());
 		if (icon_surface != nullptr)
