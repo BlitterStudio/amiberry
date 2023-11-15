@@ -945,18 +945,17 @@ static int init_joystick()
 		}
 		else
 		{
-			TCHAR tmp[100];
 			for (uae_s16 b = 0; b < did->buttons; b++)
 			{
 				did->buttonsort[b] = b;
 				did->buttonmappings[b] = b;
-				did->buttonname[b] = "Button " + std::to_string(b);
+				did->buttonname[b] = std::string("Button ").append(std::to_string(b));
 			}
 			for (uae_s16 a = 0; a < did->axles; a++)
 			{
 				did->axissort[a] = a;
 				did->axismappings[a] = a;
-				did->axisname[a] = "Axis " + std::to_string(a);
+				did->axisname[a] = std::string("Axis ").append(std::to_string(a));
 				if (a == SDL_CONTROLLER_AXIS_LEFTX || a == SDL_CONTROLLER_AXIS_RIGHTX)
 					did->axistype[a] = AXISTYPE_POV_X;
 				else if (a == SDL_CONTROLLER_AXIS_LEFTY || a == SDL_CONTROLLER_AXIS_RIGHTY)
@@ -970,9 +969,9 @@ static int init_joystick()
 		fixbuttons(did);
 		fixthings(did);
 
-		auto retroarch_config_file = string(controllers_path);
-		const auto sanitized_name = sanitize_retroarch_name(did->joystick_name);
-		retroarch_config_file += sanitized_name + ".cfg";
+		auto retroarch_config_file = std::string(controllers_path);
+		auto sanitized_name = sanitize_retroarch_name(did->joystick_name);
+		retroarch_config_file += sanitized_name.append(".cfg") ;
 		write_log("Joystick name: '%s', sanitized to: '%s'\n", did->joystick_name.c_str(), sanitized_name.c_str());
 
 		if (my_existsfile2(retroarch_config_file.c_str()))
@@ -993,7 +992,7 @@ static int init_joystick()
 				int found_player = -1;
 				for (auto p = 1; p < 5; p++) 
 				{
-					const int pindex = find_retroarch(("input_player" + to_string(p) + "_joypad_index").c_str(), retroarch_file);
+					const int pindex = find_retroarch((std::string("input_player").append(to_string(p)).append(std::string("_joypad_index"))).c_str(), retroarch_file);
 					if (pindex == i) 
 					{
 						found_player = p;
