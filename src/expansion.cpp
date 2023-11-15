@@ -25,30 +25,46 @@
 #include "cdtv.h"
 #include "cdtvcr.h"
 #include "threaddep/thread.h"
-//#include "a2091.h"
-//#include "a2065.h"
+#ifdef A2091
+#include "a2091.h"
+#endif
+#ifdef A2065
+#include "a2065.h"
+#endif
 #include "gfxboard.h"
 #ifdef CD32
 #include "cd32_fmv.h"
 #endif
-//#include "ncr_scsi.h"
-//#include "ncr9x_scsi.h"
+#ifdef NCR
+#include "ncr_scsi.h"
+#endif
+#ifdef NCR9X
+#include "ncr9x_scsi.h"
+#endif
 #include "scsi.h"
 #include "debug.h"
 #include "gayle.h"
-//#include "idecontrollers.h"
+#include "idecontrollers.h"
 #include "cpuboard.h"
 //#include "sndboard.h"
-//#include "uae/ppc.h"
+#ifdef WITH_PPC
+#include "uae/ppc.h"
+#endif
 #include "autoconf.h"
 //#include "specialmonitors.h"
 #include "inputdevice.h"
-//#include "pci.h"
-//#include "x86.h"
+#ifdef WITH_PCI
+#include "pci.h"
+#endif
+#ifdef WITH_X86
+#include "x86.h"
+#endif
 #include "filesys.h"
 #include "ethernet.h"
 #include "sana2.h"
-//#include "arcadia.h"
+#ifdef ARCADIA
+#include "arcadia.h"
+#endif
 #include "devices.h"
 
 #ifdef AMIBERRY
@@ -282,7 +298,7 @@ bool expamem_z3hack(struct uae_prefs *p)
 		return true;
 	if (z3hack_override == Z3MAPPING_REAL)
 		return false;
-	return p->z3_mapping_mode == Z3MAPPING_UAE;
+	return p->z3_mapping_mode == Z3MAPPING_UAE || cpuboard_memorytype(p) == BOARD_MEMORY_BLIZZARD_12xx;
 }
 
 /* Ugly hack for >2M chip RAM in single pool
@@ -3597,7 +3613,7 @@ static void expansion_add_autoconfig(struct uae_prefs *p)
 		// This may require first 128k slot.
 		cards_set[cardno].flags = 1;
 		cards_set[cardno].name = _T("CPUBoard");
-		//cards_set[cardno].initrc = cpuboard_autoconfig_init;
+		cards_set[cardno].initrc = cpuboard_autoconfig_init;
 		cards_set[cardno].zorro = BOARD_NONAUTOCONFIG_BEFORE;
 		cards_set[cardno].cst = &cpuboards[p->cpuboard_type].subtypes[p->cpuboard_subtype];;
 		cards_set[cardno++].map = NULL;
@@ -4269,12 +4285,12 @@ static const struct expansionsubromtype a2091_sub[] = {
 	{
 		_T("DMAC-01"), _T("dmac01"), 0,
 		commodore, commodore_a2091_ram, 0, true,
-		0
+		{ 0 }
 	},
 	{
 		_T("DMAC-02"), _T("dmac02"), 0,
 		commodore, commodore_a2091_ram, 0, true,
-		0
+		{ 0 }
 	},
 	{
 		NULL
@@ -4284,17 +4300,17 @@ static const struct expansionsubromtype gvp1_sub[] = {
 	{
 		_T("Impact A2000-1/X"), _T("a2000-1"), 0,
 		1761, 8, 0, false,
-		0
+		{ 0 }
 	},
 	{
 		_T("Impact A2000-HC"), _T("a2000-hc"), 0,
 		1761, 8, 0, false,
-		0
+		{ 0 }
 	},
 	{
 		_T("Impact A2000-HC+2"), _T("a2000-hc+"), 0,
 		1761, 8, 0, false,
-		0
+		{ 0 }
 	},
 	{
 		NULL
@@ -4304,12 +4320,12 @@ static const struct expansionsubromtype masoboshi_sub[] = {
 	{
 		_T("MC-302"), _T("mc-302"), 0,
 		2157, 3, 0, false,
-		0
+		{ 0 }
 	},
 	{
 		_T("MC-702"), _T("mc-702"), 0,
 		2157, 3, 0, false,
-		0
+		{ 0 }
 	},
 	{
 		NULL
@@ -4319,12 +4335,12 @@ static const struct expansionsubromtype rochard_sub[] = {
 	{
 		_T("IDE"), _T("ide"), 0,
 		2144, 2, 0, false,
-		0
+		{ 0 }
 	},
 	{
 		_T("IDE+SCSI"), _T("scsi"), 0,
 		2144, 2, 0, false,
-		0
+		{ 0 }
 	},
 	{
 		NULL
@@ -4335,12 +4351,12 @@ static const struct expansionsubromtype trifecta_sub[] = {
 	{
 		_T("EC (IDE)"), _T("ec"), 0, // IDE-only
 		2071, 32, 0, false,
-		0
+		{ 0 }
 	},
 	{
 		_T("LX (IDE + SCSI)"), _T("lx"), 0, // IDE+SCSI
 		2071, 32, 0, false,
-		0
+		{ 0 }
 	},
 	{
 		NULL
@@ -5247,12 +5263,12 @@ const struct expansionromtype expansionroms[] = {
 		NULL, 0,
 		false, EXPANSIONTYPE_INTERNAL | EXPANSIONTYPE_DMA24
 	},
-	//{
-	//	_T("cdtvscsi"), _T("CDTV SCSI"), _T("Commodore"),
-	//	NULL, cdtvscsi_init, NULL, cdtv_add_scsi_unit, ROMTYPE_CDTVSCSI | ROMTYPE_NOT, 0, 0, BOARD_NONAUTOCONFIG_AFTER_Z2, true,
-	//	NULL, 0,
-	//	false, EXPANSIONTYPE_INTERNAL | EXPANSIONTYPE_SCSI
-	//},
+	{
+		_T("cdtvscsi"), _T("CDTV SCSI"), _T("Commodore"),
+		NULL, cdtvscsi_init, NULL, cdtv_add_scsi_unit, ROMTYPE_CDTVSCSI | ROMTYPE_NOT, 0, 0, BOARD_NONAUTOCONFIG_AFTER_Z2, true,
+		NULL, 0,
+		false, EXPANSIONTYPE_INTERNAL | EXPANSIONTYPE_SCSI
+	},
 	{
 		_T("cdtvsram"), _T("CDTV SRAM"), _T("Commodore"),
 		NULL, cdtvsram_init, NULL, NULL, ROMTYPE_CDTVSRAM | ROMTYPE_NOT, 0, 0, BOARD_NONAUTOCONFIG_BEFORE, true,
@@ -5267,18 +5283,18 @@ const struct expansionromtype expansionroms[] = {
 		NULL, 0,
 		false, EXPANSIONTYPE_INTERNAL | EXPANSIONTYPE_DMA24
 	},
-	//{
-	//	_T("scsi_a3000"), _T("A3000 SCSI"), _T("Commodore"),
-	//	NULL, a3000scsi_init, NULL, a3000_add_scsi_unit, ROMTYPE_SCSI_A3000 | ROMTYPE_NOT, 0, 0, BOARD_NONAUTOCONFIG_AFTER_Z2, true,
-	//	NULL, 0,
-	//	false, EXPANSIONTYPE_INTERNAL | EXPANSIONTYPE_SCSI
-	//},
-	//{
-	//	_T("scsi_a4000t"), _T("A4000T SCSI"), _T("Commodore"),
-	//	NULL, a4000t_scsi_init, NULL, a4000t_add_scsi_unit, ROMTYPE_SCSI_A4000T | ROMTYPE_NOT, 0, 0, BOARD_NONAUTOCONFIG_BEFORE, true,
-	//	NULL, 0,
-	//	false, EXPANSIONTYPE_INTERNAL | EXPANSIONTYPE_SCSI
-	//},
+	{
+		_T("scsi_a3000"), _T("A3000 SCSI"), _T("Commodore"),
+		NULL, a3000scsi_init, NULL, a3000_add_scsi_unit, ROMTYPE_SCSI_A3000 | ROMTYPE_NOT, 0, 0, BOARD_NONAUTOCONFIG_AFTER_Z2, true,
+		NULL, 0,
+		false, EXPANSIONTYPE_INTERNAL | EXPANSIONTYPE_SCSI
+	},
+//	{
+//		_T("scsi_a4000t"), _T("A4000T SCSI"), _T("Commodore"),
+//		NULL, a4000t_scsi_init, NULL, a4000t_add_scsi_unit, ROMTYPE_SCSI_A4000T | ROMTYPE_NOT, 0, 0, BOARD_NONAUTOCONFIG_BEFORE, true,
+//		NULL, 0,
+//		false, EXPANSIONTYPE_INTERNAL | EXPANSIONTYPE_SCSI
+//	},
 	{
 		_T("ide_mb"), _T("A600/A1200/A4000 IDE"), _T("Commodore"),
 		NULL, gayle_ide_init, NULL, gayle_add_ide_unit, ROMTYPE_MB_IDE | ROMTYPE_NOT, 0, 0, BOARD_NONAUTOCONFIG_BEFORE, true,
@@ -5363,18 +5379,24 @@ const struct expansionromtype expansionroms[] = {
 		false, 0, NULL,
 		{ 0xd1, 0x30, 0x00, 0x00, 0x08, 0x40, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00 },
 	},
-	//{
-	//	_T("blizzardscsikitiii"), _T("SCSI Kit III"), _T("Phase 5"),
-	//	NULL, NULL, NULL, cpuboard_ncr9x_add_scsi_unit, ROMTYPE_BLIZKIT3, 0, 0, 0, true,
-	//	NULL, 0,
-	//	false, EXPANSIONTYPE_SCSI
-	//},
-	//{
-	//	_T("blizzardscsikitiv"), _T("SCSI Kit IV"), _T("Phase 5"),
-	//	NULL, NULL, NULL, cpuboard_ncr9x_add_scsi_unit, ROMTYPE_BLIZKIT4, 0, 0, 0, true,
-	//	NULL, 0,
-	//	false, EXPANSIONTYPE_SCSI
-	//},
+//	{
+//		_T("blizzardscsikitiii"), _T("SCSI Kit III"), _T("Phase 5"),
+//		NULL, NULL, NULL, cpuboard_ncr9x_add_scsi_unit, ROMTYPE_BLIZKIT3, 0, 0, 0, true,
+//		NULL, 0,
+//		false, EXPANSIONTYPE_SCSI
+//	},
+//	{
+//		_T("blizzardscsikitiv"), _T("SCSI Kit IV"), _T("Phase 5"),
+//		NULL, NULL, NULL, cpuboard_ncr9x_add_scsi_unit, ROMTYPE_BLIZKIT4, 0, 0, 0, true,
+//		NULL, 0,
+//		false, EXPANSIONTYPE_SCSI
+//	},
+//	{
+//		_T("csmk1cyberscsi"), _T("CyberSCSI module"), _T("Phase 5"),
+//		NULL, NULL, NULL, cpuboard_ncr9x_add_scsi_unit, ROMTYPE_CSMK1SCSI, 0, 0, 0, true,
+//		NULL, 0,
+//		false, EXPANSIONTYPE_SCSI
+//	},
 	//{
 	//	_T("accessx"), _T("AccessX"), _T("Breitfeld Computersysteme"),
 	//	NULL, accessx_init, NULL, accessx_add_ide_unit, ROMTYPE_ACCESSX, 0, 0, BOARD_AUTOCONFIG_Z2, false,
@@ -5430,37 +5452,37 @@ const struct expansionromtype expansionroms[] = {
 		false, 0, NULL,
 		{ 0xc1, 0x0c, 0x00, 0x00, 0x03, 0xec, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
 	},
-	//{
-	//	_T("a2090a"), _T("A2090a"), _T("Commodore"),
-	//	NULL, a2090_init, NULL, a2090_add_scsi_unit, ROMTYPE_A2090 | ROMTYPE_NONE, 0, 0, BOARD_AUTOCONFIG_Z2, false,
-	//	NULL, 0,
-	//	true, EXPANSIONTYPE_SCSI | EXPANSIONTYPE_CUSTOM_SECONDARY | EXPANSIONTYPE_DMA24,
-	//	0, 0, 0, false, NULL,
-	//	false, 0, a2090a_settings
-	//},
-	//{
-	//	_T("a2090b"), _T("A2090 Combitec"), _T("Commodore"),
-	//	a2090b_preinit, a2090b_init, NULL, a2090_add_scsi_unit, ROMTYPE_A2090B | ROMTYPE_NONE, 0, 0, BOARD_AUTOCONFIG_Z2, true,
-	//	NULL, 0,
-	//	true, EXPANSIONTYPE_SCSI | EXPANSIONTYPE_CUSTOM_SECONDARY | EXPANSIONTYPE_DMA24,
-	//	0, 0, 0, false, NULL,
-	//	false, 0, a2090a_settings
-	//},
-	//{
-	//	_T("a2091"), _T("A590/A2091"), _T("Commodore"),
-	//	NULL, a2091_init, NULL, a2091_add_scsi_unit, ROMTYPE_A2091 | ROMTYPE_NONE, 0, 0, BOARD_AUTOCONFIG_Z2, false,
-	//	a2091_sub, 1,
-	//	true, EXPANSIONTYPE_SCSI | EXPANSIONTYPE_CUSTOM_SECONDARY | EXPANSIONTYPE_DMA24,
-	//	commodore, commodore_a2091, 0, true, NULL
-	//},
-	//{
-	//	_T("a4091"), _T("A4091"), _T("Commodore"),
-	//	NULL, ncr710_a4091_autoconfig_init, NULL, a4091_add_scsi_unit, ROMTYPE_A4091, 0, 0, BOARD_AUTOCONFIG_Z3, false,
-	//	NULL, 0,
-	//	false, EXPANSIONTYPE_SCSI,
-	//	0, 0, 0, false, NULL,
-	//	true, 0, a4091_settings
-	//},
+	{
+		_T("a2090a"), _T("A2090a"), _T("Commodore"),
+		NULL, a2090_init, NULL, a2090_add_scsi_unit, ROMTYPE_A2090 | ROMTYPE_NONE, 0, 0, BOARD_AUTOCONFIG_Z2, false,
+		NULL, 0,
+		true, EXPANSIONTYPE_SCSI | EXPANSIONTYPE_CUSTOM_SECONDARY | EXPANSIONTYPE_DMA24,
+		0, 0, 0, false, NULL,
+		false, 0, a2090a_settings
+	},
+	{
+		_T("a2090b"), _T("A2090 Combitec"), _T("Commodore"),
+		a2090b_preinit, a2090b_init, NULL, a2090_add_scsi_unit, ROMTYPE_A2090B | ROMTYPE_NONE, 0, 0, BOARD_AUTOCONFIG_Z2, true,
+		NULL, 0,
+		true, EXPANSIONTYPE_SCSI | EXPANSIONTYPE_CUSTOM_SECONDARY | EXPANSIONTYPE_DMA24,
+		0, 0, 0, false, NULL,
+		false, 0, a2090a_settings
+	},
+	{
+		_T("a2091"), _T("A590/A2091"), _T("Commodore"),
+		NULL, a2091_init, NULL, a2091_add_scsi_unit, ROMTYPE_A2091 | ROMTYPE_NONE, 0, 0, BOARD_AUTOCONFIG_Z2, false,
+		a2091_sub, 1,
+		true, EXPANSIONTYPE_SCSI | EXPANSIONTYPE_CUSTOM_SECONDARY | EXPANSIONTYPE_DMA24,
+		commodore, commodore_a2091, 0, true, NULL
+	},
+//	{
+//		_T("a4091"), _T("A4091"), _T("Commodore"),
+//		NULL, ncr710_a4091_autoconfig_init, NULL, a4091_add_scsi_unit, ROMTYPE_A4091, 0, 0, BOARD_AUTOCONFIG_Z3, false,
+//		NULL, 0,
+//		false, EXPANSIONTYPE_SCSI,
+//		0, 0, 0, false, NULL,
+//		true, 0, a4091_settings
+//	},
 	//{
 	//	_T("comspec"), _T("SA series"), _T("Comspec Communications"),
 	//	comspec_preinit, comspec_init, NULL, comspec_add_scsi_unit, ROMTYPE_COMSPEC, 0, 0, BOARD_AUTOCONFIG_Z2, true,
@@ -5606,15 +5628,6 @@ const struct expansionromtype expansionroms[] = {
 		true, 0, NULL,
 		{  0xd1, 0x34, 0x00, 0x00, 0x08, 0x40, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00 },
 	},
-	//{
-	//	_T("trumpcardat"), _T("Trumpcard 500AT"), _T("IVS"),
-	//	NULL, trumpcard500at_init, NULL, trumpcard500at_add_ide_unit, ROMTYPE_IVST500AT, 0, 0, BOARD_AUTOCONFIG_Z2, false,
-	//	NULL, 0,
-	//	true, EXPANSIONTYPE_IDE,
-	//	2112, 4, 0, false, NULL,
-	//	true, 0, NULL,
-	//	{ 0xd1, 0x31, 0x00, 0x00, 0x08, 0x40, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00 },
-	//},
 	{
 		_T("kommos"), _T("Kommos A500/A2000 SCSI"), _T("Jörgen Kommos"),
 		NULL, kommos_init, NULL, kommos_add_scsi_unit, ROMTYPE_KOMMOS, 0, 0, BOARD_NONAUTOCONFIG_BEFORE, true,
@@ -5826,14 +5839,6 @@ const struct expansionromtype expansionroms[] = {
 		NULL, 0,
 		false, EXPANSIONTYPE_CUSTOM | EXPANSIONTYPE_SCSI
 	},
-	//{
-	//	_T("alf3"), _T("A.L.F.3"), _T("Elaborate Bytes"),
-	//	NULL, ncr_alf3_autoconfig_init, NULL, alf3_add_scsi_unit, ROMTYPE_ALF3 | ROMTYPE_NONE, 0, 0, BOARD_AUTOCONFIG_Z2, false,
-	//	NULL, 0,
-	//	true, EXPANSIONTYPE_SCSI,
-	//	0, 0, 0, false, NULL,
-	//	true, 0, alf3_settings
-	//},
 	{
 		_T("promigos"), _T("Promigos"), _T("Flesch und Hörnemann"),
 		NULL, promigos_init, NULL, promigos_add_scsi_unit, ROMTYPE_PROMIGOS | ROMTYPE_NOT, 0, 0, BOARD_NONAUTOCONFIG_BEFORE, true,
@@ -6371,17 +6376,17 @@ static const struct cpuboardsubtype gvpboard_sub[] = {
 	}
 };
 static const struct cpuboardsubtype blizzardboard_sub[] = {
-	//{
-	//	_T("Blizzard 1230 I/II"),
-	//	_T("Blizzard1230II"),
-	//	ROMTYPE_CB_B1230MK2, 0, 3,
-	//	cpuboard_ncr9x_add_scsi_unit, EXPANSIONTYPE_SCSI,
-	//	BOARD_MEMORY_BLIZZARD_12xx,
-	//	64 * 1024 * 1024,
-	//	0,
-	//	NULL, NULL, 0, 0,
-	//	blizzardboard_settings_mk2
-	//},
+//	{
+//		_T("Blizzard 1230 I/II"),
+//		_T("Blizzard1230II"),
+//		ROMTYPE_CB_B1230MK2, 0, 3,
+//		cpuboard_ncr9x_add_scsi_unit, EXPANSIONTYPE_SCSI,
+//		BOARD_MEMORY_BLIZZARD_12xx,
+//		64 * 1024 * 1024,
+//		0,
+//		NULL, NULL, 0, 0,
+//		blizzardboard_settings_mk2
+//	},
 	{
 		_T("Blizzard 1230 III"),
 		_T("Blizzard1230III"),
@@ -6439,38 +6444,41 @@ static const struct cpuboardsubtype blizzardboard_sub[] = {
 	}
 };
 static const struct cpuboardsubtype cyberstormboard_sub[] = {
-	//{
-	//	_T("CyberStorm MK I"),
-	//	_T("CyberStormMK1"),
-	//	ROMTYPE_CB_CSMK1, 0, 4,
-	//	cpuboard_ncr9x_add_scsi_unit, EXPANSIONTYPE_SCSI,
-	//	BOARD_MEMORY_HIGHMEM,
-	//	128 * 1024 * 1024
-	//},
-	//{
-	//	_T("CyberStorm MK II"),
-	//	_T("CyberStormMK2"),
-	//	ROMTYPE_CB_CSMK2, 0, 4,
-	//	cpuboard_ncr9x_add_scsi_unit, EXPANSIONTYPE_SCSI | EXPANSIONTYPE_FALLBACK_DISABLE | EXPANSIONTYPE_HAS_FALLBACK,
-	//	BOARD_MEMORY_HIGHMEM,
-	//	128 * 1024 * 1024
-	//},
-	//{
-	//	_T("CyberStorm MK III"),
-	//	_T("CyberStormMK3"),
-	//	ROMTYPE_CB_CSMK3, 0, 4,
-	//	cyberstorm_add_scsi_unit, EXPANSIONTYPE_SCSI,
-	//	BOARD_MEMORY_HIGHMEM,
-	//	128 * 1024 * 1024
-	//},
-	//{
-	//	_T("CyberStorm PPC"),
-	//	_T("CyberStormPPC"),
-	//	ROMTYPE_CB_CSPPC, 0, 4,
-	//	cyberstorm_add_scsi_unit, EXPANSIONTYPE_SCSI,
-	//	BOARD_MEMORY_HIGHMEM,
-	//	128 * 1024 * 1024
-	//},
+	{
+		_T("CyberStorm MK I"),
+		_T("CyberStormMK1"),
+		ROMTYPE_CB_CSMK1 | ROMTYPE_NONE, 0, 4,
+		NULL, 0,
+		BOARD_MEMORY_HIGHMEM,
+		128 * 1024 * 1024,
+		0,
+		NULL, NULL, 0, 0,
+		NULL
+	},
+//	{
+//		_T("CyberStorm MK II"),
+//		_T("CyberStormMK2"),
+//		ROMTYPE_CB_CSMK2, 0, 4,
+//		cpuboard_ncr9x_add_scsi_unit, EXPANSIONTYPE_SCSI | EXPANSIONTYPE_FALLBACK_DISABLE | EXPANSIONTYPE_HAS_FALLBACK,
+//		BOARD_MEMORY_HIGHMEM,
+//		128 * 1024 * 1024
+//	},
+//	{
+//		_T("CyberStorm MK III"),
+//		_T("CyberStormMK3"),
+//		ROMTYPE_CB_CSMK3, 0, 4,
+//		cyberstorm_add_scsi_unit, EXPANSIONTYPE_SCSI,
+//		BOARD_MEMORY_HIGHMEM,
+//		128 * 1024 * 1024
+//	},
+//	{
+//		_T("CyberStorm PPC"),
+//		_T("CyberStormPPC"),
+//		ROMTYPE_CB_CSPPC, 0, 4,
+//		cyberstorm_add_scsi_unit, EXPANSIONTYPE_SCSI,
+//		BOARD_MEMORY_HIGHMEM,
+//		128 * 1024 * 1024
+//	},
 	{
 		NULL
 	}
@@ -6571,23 +6579,23 @@ static const struct expansionboardsettings a26x0board_settings[] = {
 		NULL
 	}
 };
-//static const struct cpuboardsubtype commodore_sub[] = {
-//	{
-//		_T("A2620/A2630"),
-//		_T("A2630"),
-//		ROMTYPE_CB_A26x0, 0, 2,
-//		NULL, 0,
-//		BOARD_MEMORY_25BITMEM,
-//		128 * 1024 * 1024,
-//		0,
-//		NULL, NULL, 0, 0,
-//		a26x0board_settings,
-//		cpuboard_io_special
-//	},
-//	{
-//		NULL
-//	}
-//};
+static const struct cpuboardsubtype commodore_sub[] = {
+	{
+		_T("A2620/A2630"),
+		_T("A2630"),
+		ROMTYPE_CB_A26x0, 0, 2,
+		NULL, 0,
+		BOARD_MEMORY_25BITMEM,
+		128 * 1024 * 1024,
+		0,
+		NULL, NULL, 0, 0,
+		a26x0board_settings,
+		cpuboard_io_special
+	},
+	{
+		NULL
+	}
+};
 
 static const struct expansionboardsettings cpuboard_dkb_cobra_settings[] = {
 	{
@@ -6800,23 +6808,23 @@ static const struct cpuboardsubtype dceboard_sub[] = {
 	}
 };
 
-//static const struct cpuboardsubtype harms_sub[] = {
-//	{
-//		_T("Professional 3000"),
-//		_T("harms3kp"),
-//		ROMTYPE_CB_HARMS3KP, 0, 2,
-//		NULL, 0,
-//		BOARD_MEMORY_25BITMEM,
-//		128 * 1024 * 1024,
-//		0,
-//		NULL, NULL, 0, 0,
-//		NULL, //a26x0board_settings,
-//		cpuboard_io_special
-//	},
-//	{
-//		NULL
-//	}
-//};
+static const struct cpuboardsubtype harms_sub[] = {
+	{
+		_T("Professional 3000"),
+		_T("harms3kp"),
+		ROMTYPE_CB_HARMS3KP, 0, 2,
+		NULL, 0,
+		BOARD_MEMORY_25BITMEM,
+		128 * 1024 * 1024,
+		0,
+		NULL, NULL, 0, 0,
+		NULL, //a26x0board_settings,
+		cpuboard_io_special
+	},
+	{
+		NULL
+	}
+};
 
 static const struct cpuboardsubtype dummy_sub[] = {
 	{ NULL }
@@ -6833,11 +6841,11 @@ const struct cpuboardtype cpuboards[] = {
 		_T("ACT"),
 		apollo_sub, 0
 	},
-	//{
-	//	BOARD_COMMODORE,
-	//	_T("Commodore"),
-	//	commodore_sub, 0
-	//},
+	{
+		BOARD_COMMODORE,
+		_T("Commodore"),
+		commodore_sub, 0
+	},
 	{
 		BOARD_DCE,
 		_T("DCE"),
@@ -6903,11 +6911,11 @@ const struct cpuboardtype cpuboards[] = {
 		_T("Hardital"),
 		hardital_sub, 0
 	},
-	//{
-	//	BOARD_HARMS,
-	//	_T("Harms"),
-	//	harms_sub, 0
-	//},
+	{
+		BOARD_HARMS,
+		_T("Harms"),
+		harms_sub, 0
+	},
 	{
 		0
 	}

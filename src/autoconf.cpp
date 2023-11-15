@@ -24,7 +24,9 @@
 #include "threaddep/thread.h"
 #include "native2amiga.h"
 #include "inputdevice.h"
-//#include "uae/ppc.h"
+#ifdef WITH_PPC
+#include "uae/ppc.h"
+#endif
 #include "devices.h"
 
 /* Commonly used autoconfig strings */

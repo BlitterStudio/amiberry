@@ -15,7 +15,9 @@
 #include "events.h"
 #include "memory.h"
 #include "newcpu.h"
-//#include "uae/ppc.h"
+#ifdef WITH_PPC
+#include "uae/ppc.h"
+#endif
 #include "xwin.h"
 //#include "x86.h"
 #include "audio.h"

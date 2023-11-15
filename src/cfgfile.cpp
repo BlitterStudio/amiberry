@@ -34,7 +34,7 @@
 #include "debug.h"
 #include "calc.h"
 #include "gfxboard.h"
-//#include "cpuboard.h"
+#include "cpuboard.h"
 //#include "luascript.h"
 #include "ethernet.h"
 #include "native2amiga_api.h"
@@ -2793,7 +2793,6 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_writeramboard(p, f, _T("bogomem"), 0, &p->bogomem);
 
 	if (p->cpuboard_type) {
-#ifndef AMIBERRY
 		const struct cpuboardtype *cbt = &cpuboards[p->cpuboard_type];
 		const struct cpuboardsubtype *cbst = &cbt->subtypes[p->cpuboard_subtype];
 		const struct expansionboardsettings *cbs = cbst->settings;
@@ -2803,7 +2802,6 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 			cfgfile_write_rom_settings(cbs, tmp, p->cpuboard_settings, NULL);
 			cfgfile_dwrite_str(f, _T("cpuboard_settings"), tmp);
 		}
-#endif
 	} else {
 		cfgfile_dwrite_str(f, _T("cpuboard_type"), _T("none"));
 	}
@@ -8731,8 +8729,8 @@ static void buildin_default_prefs (struct uae_prefs *p)
 	p->cpuboard_subtype = 0;
 #ifdef AMIBERRY
 	p->sound_volume_cd = 0;
-    p->mbresmem_low.size = 0;
-    p->mbresmem_high.size = 0;
+	p->mbresmem_low.size = 0;
+	p->mbresmem_high.size = 0;
 #endif
 	p->chipmem.size = 0x00080000;
 	p->chipmem.chipramtiming = true;
@@ -8942,11 +8940,13 @@ static int bip_a4000 (struct uae_prefs *p, int config, int compa, int romcheck)
 		case 2:
 		p->cpu_model = 68060;
 		p->fpu_model = 68060;
-		//p->ppc_mode = 1;
-		//cpuboard_setboard(p, BOARD_CYBERSTORM, BOARD_CYBERSTORM_SUB_PPC);
-		//p->cpuboardmem1.size = 128 * 1024 * 1024;
-		//int roms_ppc[] = { 98, -1 };
-		//configure_rom(p, roms_ppc, romcheck);
+#ifdef WITH_PPC
+		p->ppc_mode = 1;
+		cpuboard_setboard(p, BOARD_CYBERSTORM, BOARD_CYBERSTORM_SUB_PPC);
+		p->cpuboardmem1.size = 128 * 1024 * 1024;
+		int roms_ppc[] = { 98, -1 };
+		configure_rom(p, roms_ppc, romcheck);
+#endif
 		break;
 	}
 	p->chipset_mask = CSMASK_AGA | CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
@@ -9205,6 +9205,21 @@ static int bip_a1200 (struct uae_prefs *p, int config, int compa, int romcheck)
 		p->fastmem[0].size = 0x800000;
 		p->cs_rtc = 1;
 		break;
+#ifdef WITH_PPC
+		case 5:
+		cpuboard_setboard(p, BOARD_BLIZZARD, BOARD_BLIZZARD_SUB_PPC);
+		p->cpuboardmem1.size = 256 * 1024 * 1024;
+		p->cpu_model = 68060;
+		p->fpu_model = 68060;
+		p->ppc_mode = 1;
+		p->cs_rtc = 1;
+		roms[0] = 15;
+		roms[1] = 11;
+		roms[2] = -1;
+		roms_bliz[0] = 100;
+		configure_rom(p, roms_bliz, romcheck);
+		break;
+#endif
 	}
 	set_68020_compa (p, compa, 0);
 	return configure_rom (p, roms, romcheck);

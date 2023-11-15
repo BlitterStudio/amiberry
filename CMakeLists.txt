@@ -38,6 +38,7 @@ detect_architecture("__aarch64__" arm64)
 message(STATUS "Target architecture: ${ARCHITECTURE}")
 
 add_executable(${PROJECT_NAME}
+		src/a2091.cpp
 		src/akiko.cpp
 		src/ar.cpp
 		src/audio.cpp
@@ -57,6 +58,7 @@ add_executable(${PROJECT_NAME}
 		src/cfgfile.cpp
 		src/cia.cpp
 		src/consolehook.cpp
+		src/cpuboard.cpp
 		src/crc32.cpp
 		src/custom.cpp
 		src/debug.cpp
@@ -83,6 +85,8 @@ add_executable(${PROJECT_NAME}
 		src/hardfile.cpp
 		src/hrtmon.rom.cpp
 		src/ide.cpp
+		src/idecontrollers.cpp
+		src/identify.cpp
 		src/ini.cpp
 		src/inputdevice.cpp
 		src/inputrecord.cpp
@@ -91,6 +95,8 @@ add_executable(${PROJECT_NAME}
 		src/main.cpp
 		src/memory.cpp
 		src/native2amiga.cpp
+		src/ncr9x_scsi.cpp
+		src/ncr_scsi.cpp
 		src/parser.cpp
 		src/rommgr.cpp
 		src/rtc.cpp
