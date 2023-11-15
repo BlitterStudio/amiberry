@@ -3921,6 +3921,7 @@ static int scsi_thread (void *wdv)
 		wd_execute_cmd(wds, cmd, msg, unit);
 	}
 	wds->scsi_thread_running = -1;
+	return 0;
 }
 
 void init_wd_scsi (struct wd_state *wd, bool dma24bit)
