@@ -11,7 +11,6 @@ kickstarts/*.key
 VisualGDB/VisualGDB/Debug
 VisualGDB/VisualGDB/Release
 VisualGDB/Amiberry/VisualGDB
-VisualGDB/VisualGDB/Debug
 VisualGDBCache
 CodeDB
 *.opensdf
@@ -192,7 +191,6 @@ Thumbs.db
 *.npd
 *.rsp
 *.alldeps
-*.log
 *.lck
 *.psf
 *.000
