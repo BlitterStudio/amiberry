@@ -73,7 +73,7 @@
 /* #define ARCHIVEACCESS */ /* ArchiveAccess decompression library */
 /* #define LOGITECHLCD */ /* Logitech G15 LCD */
 #define SAVESTATE /* State file support */
-/* #define A2091 */ /* A590/A2091 SCSI */
+#define A2091 /* A590/A2091 SCSI */
 /* #define A2065 */ /* A2065 Ethernet card */
 /* #define GFXBOARD */ /* Hardware graphics board */
 /* #define NCR */ /* A4000T/A4091, 53C710/53C770 SCSI */

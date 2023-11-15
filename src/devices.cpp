@@ -12,10 +12,12 @@
 #include "scsidev.h"
 #include "sana2.h"
 #include "clipboard.h"
-//#include "cpuboard.h"
+#include "cpuboard.h"
 //#include "sndboard.h"
 #include "statusline.h"
-//#include "uae/ppc.h"
+#ifdef WITH_PPC
+#include "uae/ppc.h"
+#endif
 #ifdef CD32
 #include "cd32_fmv.h"
 #include "akiko.h"
@@ -60,6 +62,9 @@
 #include "newcpu.h"
 #ifdef RETROPLATFORM
 #include "rp.h"
+#endif
+#ifdef WITH_DSP
+#include "dsp3210/dsp_glue.h"
 #endif
 
 #define MAX_DEVICE_ITEMS 64
@@ -293,7 +298,7 @@ void devices_rethink(void)
 
 	rethink_uae_int();
 	/* cpuboard_rethink must be last */
-	//cpuboard_rethink();
+	cpuboard_rethink();
 }
 
 void devices_update_sound(float clk, float syncadjust)
@@ -302,6 +307,9 @@ void devices_update_sound(float clk, float syncadjust)
 	//update_sndboard_sound (clk / syncadjust);
 	update_cda_sound(clk / syncadjust);
 	//x86_update_sound(clk / syncadjust);
+#ifdef WITH_MIDIEMU
+	midi_update_sound(clk / syncadjust);
+#endif
 }
 
 void devices_update_sync(float svpos, float syncadjust)

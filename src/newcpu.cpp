@@ -130,6 +130,11 @@ static uae_u64 fake_srp_030, fake_crp_030;
 static uae_u32 fake_tt0_030, fake_tt1_030, fake_tc_030;
 static uae_u16 fake_mmusr_030;
 
+static int fallback_cpu_model, fallback_mmu_model, fallback_fpu_model;
+static bool fallback_cpu_compatible, fallback_cpu_address_space_24;
+static struct regstruct fallback_regs;
+static int fallback_new_cpu_model;
+
 int cpu_last_stop_vpos, cpu_stopped_lines;
 
 static void exception3_notinstruction(uae_u32 opcode, uaecptr addr);
@@ -2138,6 +2143,37 @@ static void m68k_reset(bool hardreset)
 	regs.pcr = 0;
 
 	fill_prefetch ();
+}
+
+void cpu_change(int newmodel)
+{
+	if (newmodel == currprefs.cpu_model)
+		return;
+	fallback_new_cpu_model = newmodel;
+	cpu_halt(CPU_HALT_ACCELERATOR_CPU_FALLBACK);
+}
+
+void cpu_fallback(int mode)
+{
+	int fallbackmodel;
+	if (currprefs.chipset_mask & CSMASK_AGA) {
+		fallbackmodel = 68020;
+	} else {
+		fallbackmodel = 68000;
+	}
+	if (mode < 0) {
+		if (currprefs.cpu_model > fallbackmodel) {
+			cpu_change(fallbackmodel);
+		} else if (fallback_new_cpu_model) {
+			cpu_change(fallback_new_cpu_model);
+		}
+	} else if (mode == 0) {
+		cpu_change(fallbackmodel);
+	} else if (mode) {
+		if (fallback_cpu_model) {
+			cpu_change(fallback_cpu_model);
+		}
+	}
 }
 
 uae_u32 REGPARAM2 op_illg (uae_u32 opcode)

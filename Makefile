@@ -415,6 +415,7 @@ C_OBJS= \
 	src/archivers/chd/utf8proc.o
 
 OBJS = \
+	src/a2091.o \
 	src/akiko.o \
 	src/ar.o \
 	src/audio.o \
@@ -434,6 +435,7 @@ OBJS = \
 	src/cfgfile.o \
 	src/cia.o \
 	src/consolehook.o \
+	src/cpuboard.o \
 	src/crc32.o \
 	src/custom.o \
 	src/debug.o \
@@ -459,6 +461,8 @@ OBJS = \
 	src/hardfile.o \
 	src/hrtmon.rom.o \
 	src/ide.o \
+	src/idecontrollers.o \
+	src/identify.o \
 	src/ini.o \
 	src/inputdevice.o \
 	src/inputrecord.o \
@@ -467,6 +471,8 @@ OBJS = \
 	src/main.o \
 	src/memory.o \
 	src/native2amiga.o \
+	src/ncr9x_scsi.o \
+	src/ncr_scsi.o \
 	src/parser.o \
 	src/rommgr.o \
 	src/rtc.o \
