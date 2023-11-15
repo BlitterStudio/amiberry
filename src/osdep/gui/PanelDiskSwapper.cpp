@@ -404,6 +404,18 @@ bool HelpPanelDiskSwapper(std::vector<std::string>& helptext)
 	helptext.emplace_back("- To insert a disk image into drives DF0:-DF3: then press END+F1 - END+F4");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("- To eject a disk image from drives DF0:-DF3: then press Shift+END+F1 - Shift+END+F4");
-	helptext.emplace_back(" ");
+    helptext.emplace_back(" ");
+    helptext.emplace_back("Additionally, you can control disk swapper actions, by assigning a Custom Event to");
+    helptext.emplace_back("the required game-controller buttons, in the \"Custom controls\" configuration panel.");
+    helptext.emplace_back(" ");
+    helptext.emplace_back("The available custom events for disk swapper actions are:");
+    helptext.emplace_back(" ");
+    helptext.emplace_back("- Next slot in Disk Swapper");
+    helptext.emplace_back("- Previous slot in Disk Swapper");
+    helptext.emplace_back("- Insert disk in current Disk Swapper slot in DF0:");
+    helptext.emplace_back("- Insert disk in current Disk Swapper slot in DF1:");
+    helptext.emplace_back("- Insert disk in current Disk Swapper slot in DF2:");
+    helptext.emplace_back("- Insert disk in current Disk Swapper slot in DF3:");
+    helptext.emplace_back(" ");
 	return true;
 }
