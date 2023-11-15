@@ -8731,6 +8731,8 @@ static void buildin_default_prefs (struct uae_prefs *p)
 	p->cpuboard_subtype = 0;
 #ifdef AMIBERRY
 	p->sound_volume_cd = 0;
+    p->mbresmem_low.size = 0;
+    p->mbresmem_high.size = 0;
 #endif
 	p->chipmem.size = 0x00080000;
 	p->chipmem.chipramtiming = true;
