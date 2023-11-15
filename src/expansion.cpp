@@ -4285,12 +4285,12 @@ static const struct expansionsubromtype a2091_sub[] = {
 	{
 		_T("DMAC-01"), _T("dmac01"), 0,
 		commodore, commodore_a2091_ram, 0, true,
-		{ 0 }
+		 0
 	},
 	{
 		_T("DMAC-02"), _T("dmac02"), 0,
 		commodore, commodore_a2091_ram, 0, true,
-		{ 0 }
+		 0
 	},
 	{
 		NULL
@@ -4300,17 +4300,17 @@ static const struct expansionsubromtype gvp1_sub[] = {
 	{
 		_T("Impact A2000-1/X"), _T("a2000-1"), 0,
 		1761, 8, 0, false,
-		{ 0 }
+		 0
 	},
 	{
 		_T("Impact A2000-HC"), _T("a2000-hc"), 0,
 		1761, 8, 0, false,
-		{ 0 }
+		 0
 	},
 	{
 		_T("Impact A2000-HC+2"), _T("a2000-hc+"), 0,
 		1761, 8, 0, false,
-		{ 0 }
+		 0
 	},
 	{
 		NULL
@@ -4320,12 +4320,12 @@ static const struct expansionsubromtype masoboshi_sub[] = {
 	{
 		_T("MC-302"), _T("mc-302"), 0,
 		2157, 3, 0, false,
-		{ 0 }
+		 0
 	},
 	{
 		_T("MC-702"), _T("mc-702"), 0,
 		2157, 3, 0, false,
-		{ 0 }
+		 0
 	},
 	{
 		NULL
@@ -4335,12 +4335,12 @@ static const struct expansionsubromtype rochard_sub[] = {
 	{
 		_T("IDE"), _T("ide"), 0,
 		2144, 2, 0, false,
-		{ 0 }
+		 0
 	},
 	{
 		_T("IDE+SCSI"), _T("scsi"), 0,
 		2144, 2, 0, false,
-		{ 0 }
+		 0
 	},
 	{
 		NULL
@@ -4351,12 +4351,12 @@ static const struct expansionsubromtype trifecta_sub[] = {
 	{
 		_T("EC (IDE)"), _T("ec"), 0, // IDE-only
 		2071, 32, 0, false,
-		{ 0 }
+		 0
 	},
 	{
 		_T("LX (IDE + SCSI)"), _T("lx"), 0, // IDE+SCSI
 		2071, 32, 0, false,
-		{ 0 }
+		 0
 	},
 	{
 		NULL
