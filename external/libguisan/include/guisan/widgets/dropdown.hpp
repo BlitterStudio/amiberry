@@ -185,12 +185,12 @@ namespace gcn
 		/**
 		* Sets the DropDown Widget to dropped-down mode.
 		*/
-		virtual void dropDown();
+		void dropDown();
 
 		/**
 		* Sets the DropDown Widget to folded-up mode.
 		*/
-		virtual void foldUp();
+		void foldUp();
 
 		// Inherited from Widget
 
