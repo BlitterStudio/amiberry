@@ -793,9 +793,13 @@ void RefreshPanelDisplay()
 	
 	chkAspect->setSelected(changed_prefs.gfx_correct_aspect);
 	chkFilterLowRes->setSelected(changed_prefs.gfx_lores_mode);
-
+#ifdef USE_DISPMANX
+	chkSdl2Thread->setEnabled(false);
+	chkSdl2Thread->setSelected(false);
+#else
 	chkSdl2Thread->setEnabled(strcmpi(sdl_video_driver, "KMSDRM") != 0);
 	chkSdl2Thread->setSelected(get_sdl2_thread_enabled());
+#endif
 
 	if (changed_prefs.gfx_apmode[0].gfx_fullscreen == GFX_WINDOW)
 	{
