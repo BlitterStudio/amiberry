@@ -604,6 +604,12 @@ void RefreshPanelHD()
 	cmdCDSelectFile->setEnabled(changed_prefs.cdslots[0].inuse);
 	cboCDFile->setEnabled(changed_prefs.cdslots[0].inuse);
 	chkCDTurbo->setSelected(changed_prefs.cd_speed == 0);
+
+	if (changed_prefs.cdslots[0].inuse && changed_prefs.cdslots[0].name[0])
+	{
+		struct device_info di = { 0 };
+		blkdev_get_info(&changed_prefs, 0, &di);
+	}
 }
 
 
