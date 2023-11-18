@@ -2395,6 +2395,8 @@ void screenshot(int monid, int mode, int doprepare)
 
 	if (strlen(currprefs.floppyslots[0].df) > 0)
 		extract_filename(currprefs.floppyslots[0].df, tmp);
+	else if (currprefs.cdslots[0].inuse && strlen(currprefs.cdslots[0].name) > 0)
+		extract_filename(currprefs.cdslots[0].name, tmp);
 	else
 		strncpy(tmp, "default.uae", MAX_DPATH - 1);
 
