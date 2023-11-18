@@ -992,7 +992,7 @@ static int init_joystick()
 				int found_player = -1;
 				for (auto p = 1; p < 5; p++) 
 				{
-					const int pindex = find_retroarch((std::string("input_player").append(to_string(p)).append(std::string("_joypad_index"))).c_str(), retroarch_file);
+					const int pindex = find_retroarch((std::string("input_player").append(to_string(p)).append(std::string("_joypad_index"))), retroarch_file);
 					if (pindex == i) 
 					{
 						found_player = p;

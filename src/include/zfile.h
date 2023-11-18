@@ -1,5 +1,4 @@
  /*
- /*
   * UAE - The Un*x Amiga Emulator
   *
   * routines to handle compressed file automatically

@@ -189,12 +189,12 @@ static TCHAR* amigatopc(const char* txt)
 #endif
 		if (c == 0x9b)
 		{
-			i = parsecsi(txt, i + 1, len);
+			i = parsecsi(txt, int(i) + 1, int(len));
 			continue;
 		}
 		if (c == 0x1b && i + 1 < len && txt[i + 1] == '[')
 		{
-			i = parsecsi(txt, i + 2, len);
+			i = parsecsi(txt, int(i) + 2, int(len));
 			continue;
 		}
 		txt2[j++] = c;
@@ -740,10 +740,10 @@ static void from_iff(TrapContext* ctx, uaecptr data, uae_u32 len)
 	if (!trap_valid_address(ctx, data, len))
 		return;
 	auto* const buf = xmalloc(uae_u8, (len + 3) & ~3);
-	trap_get_bytes(ctx, buf, data, (len + 3) & ~3);
+	trap_get_bytes(ctx, buf, data, int(len + 3) & ~3);
 
 	if (clipboard_debug)
-		debugwrite(ctx, _T("clipboard_a2p"), data, len);
+		debugwrite(ctx, _T("clipboard_a2p"), data, int(len));
 	if (!memcmp("FORM", buf, 4))
 	{
 		if (!memcmp("FTXT", buf + 8, 4))

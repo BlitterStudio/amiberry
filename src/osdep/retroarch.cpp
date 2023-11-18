@@ -12,11 +12,11 @@
 
 // Retroarch mapping reference: https://docs.libretro.com/guides/controller-autoconfiguration/
 
-const string retroarch_kb_button_list[] = {
+const std::string retroarch_kb_button_list[] = {
 	"left", "right", "up", "down", "a", "b", "x", "y", "l", "r", "start"
 };
 
-const string retroarch_button_list[] = {
+const std::string retroarch_button_list[] = {
 	"input_b_btn", "input_a_btn", "input_y_btn", "input_x_btn",
 	"input_select_btn", "input_menu_toggle_btn",	"input_start_btn",
 	"input_l3_btn", "input_r3_btn", "input_l_btn", "input_r_btn",
@@ -24,12 +24,12 @@ const string retroarch_button_list[] = {
 	"", "", "", "", "", ""
 };
 
-const string retroarch_axis_list[] = {
+const std::string retroarch_axis_list[] = {
 	"input_l_x_plus_axis", "input_l_y_plus_axis", "input_r_x_plus_axis", "input_r_y_plus_axis",
 	"input_l2_axis", "input_r2_axis"
 };
 
-const string controller_button_list[] = {
+const std::string controller_button_list[] = {
 	"a", "b", "x", "y",
 	"back", "guide", "start",
 	"leftstick", "rightstick", "leftshoulder", "rightshoulder",
@@ -37,12 +37,12 @@ const string controller_button_list[] = {
 	"", "", "", "", "", ""
 };
 
-const string controller_axis_list[] = {
+const std::string controller_axis_list[] = {
 	"leftx", "lefty", "rightx", "righty",
 	"lefttrigger", "righttrigger"
 };
 
-int find_retroarch(const TCHAR* find_setting, char* retroarch_file)
+int find_retroarch(const std::string& find_setting, char* retroarch_file)
 {
 	// opening file and parsing
 	std::ifstream read_file(retroarch_file);
@@ -55,7 +55,7 @@ int find_retroarch(const TCHAR* find_setting, char* retroarch_file)
 	{
 		if (line.length() > 1)
 		{
-			if (strncmp(find_setting, "count_hats", 10) == 0)
+			if (find_setting == "count_hats")
 			{
 				auto param = line.substr(line.find(delimiter) + delimiter.length(), line.length());
 				// remove leading "
@@ -96,16 +96,16 @@ int find_retroarch(const TCHAR* find_setting, char* retroarch_file)
 					button = abs(atol(param.c_str()));
 				}
 
-				if (strcmp(option.c_str(), find_setting) == 0)
+				if (option == find_setting)
 					break;
 			}
 		}
 	}
-	write_log("Controller Detection: %s : %d\n", find_setting, button);
+	write_log("Controller Detection: %s : %d\n", find_setting.c_str(), button);
 	return button;
 }
 
-bool find_retroarch_polarity(const TCHAR* find_setting, char* retroarch_file)
+bool find_retroarch_polarity(const std::string& find_setting, char* retroarch_file)
 {
 	// opening file and parsing
 	std::ifstream read_file(retroarch_file);
@@ -134,7 +134,7 @@ bool find_retroarch_polarity(const TCHAR* find_setting, char* retroarch_file)
 					param.erase(param.length() - 1, 1);
 
 				// ok, this is the 'normal' storing of values
-				if (strcmp(option.c_str(), find_setting) == 0)
+				if (option == find_setting)
 				{
 					//  time to get the output value
 					if (param.at(0) == '-')
@@ -149,7 +149,7 @@ bool find_retroarch_polarity(const TCHAR* find_setting, char* retroarch_file)
 	return button;
 }
 
-const TCHAR* find_retroarch_key(const TCHAR* find_setting_prefix, int player, const TCHAR* suffix, char* retroarch_file)
+const TCHAR* find_retroarch_key(const std::string& find_setting_prefix, int player, const TCHAR* suffix, char* retroarch_file)
 {
 	// opening file and parsing
 	std::ifstream read_file(retroarch_file);
@@ -291,12 +291,12 @@ bool init_kb_from_retroarch(int index, char* retroarch_file)
 	return valid;
 }
 
-const TCHAR* ra_player_input(std::string retroarch_string, int player)
+std::string ra_player_input(std::string retroarch_string, int player)
 {
 	if (player != -1 && retroarch_string.find("input_") == 0)
 		retroarch_string.replace(0, 6, "input_player" + to_string(player) + "_");
 
-	return retroarch_string.c_str();
+	return retroarch_string;
 }
 
 host_input_button map_from_retroarch(host_input_button mapping, char* control_config, int player)
