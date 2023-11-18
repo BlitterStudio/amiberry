@@ -89,7 +89,7 @@ static int picasso96_PCT = PCT_Unknown;
 static void picasso_flushpixels(int index, uae_u8* src, int offset, bool render);
 
 int p96refresh_active;
-bool have_done_picasso = 1; /* For the JIT compiler */
+bool have_done_picasso = true; /* For the JIT compiler */
 int p96syncrate;
 static int p96hsync_counter;
 
@@ -117,7 +117,7 @@ struct picasso_vidbuf_description picasso_vidinfo[MAX_AMIGAMONITORS];
 static struct PicassoResolution *newmodes;
 
 /* These are the maximum resolutions... They are filled in by GetSupportedResolutions() */
-/* have to fill this in, otherwise problems occur on the Amiga side P96 s/w which expects
+/* have to fill this in, otherwise problems occur on the Amiga side P96 s/w which expects */
 /* data here. */
 static struct ScreenResolution planar = { 320, 240 };
 static struct ScreenResolution chunky = { 640, 480 };

@@ -2680,7 +2680,7 @@ uae_u8 *restore_audio (int nr, uae_u8 *src)
 	acd->len = restore_u16 ();
 	acd->wlen = restore_u16 ();
 	uae_u16 p = restore_u16 ();
-	acd->per = p ? p * CYCLE_UNIT : PERIOD_MAX;
+	acd->per = p ? p * CYCLE_UNIT : int(PERIOD_MAX);
 	acd->dat = acd->dat2 = restore_u16 ();
 	acd->lc = restore_u32 ();
 	acd->pt = restore_u32 ();

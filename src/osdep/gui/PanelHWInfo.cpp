@@ -42,7 +42,7 @@ static gcn::Label* lblList[COL_COUNT];
 static gcn::Container* listEntry[MAX_INFOS];
 static gcn::TextField* listCells[MAX_INFOS][COL_COUNT];
 
-void RefreshPanelHWInfo(void)
+void RefreshPanelHWInfo()
 {
 	int row, col;
 	uaecptr highest_expamem = 0;
@@ -75,7 +75,7 @@ void RefreshPanelHWInfo(void)
 		if (aci && (aci->parent_address_space || aci->parent_romtype) && !aci->parent_of_previous) {
 			_tcscat(tmp, _T("? "));
 		}
-		if (aci && aci->name)
+		if (aci && aci->name[0])
 			_tcscat(tmp, aci->name);
 		listCells[row][COL_NAME]->setText(tmp);
 
