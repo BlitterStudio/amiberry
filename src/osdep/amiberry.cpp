@@ -581,7 +581,7 @@ void setmouseactive(int monid, int active)
 	setmouseactive2(mon, active, true);
 }
 
-static void amiberry_active(struct AmigaMonitor* mon, int minimized)
+static void amiberry_active(struct AmigaMonitor* mon)
 {
 	monitor_off = 0;
 	
@@ -617,7 +617,7 @@ static void amiberry_active(struct AmigaMonitor* mon, int minimized)
 	clipboard_active(1, 1);
 }
 
-static void amiberry_inactive(struct AmigaMonitor* mon, int minimized)
+static void amiberry_inactive(struct AmigaMonitor* mon)
 {
 	focus = 0;
 	recapture = 0;
@@ -1080,7 +1080,7 @@ void process_event(SDL_Event event)
 		{
 		case SDL_WINDOWEVENT_FOCUS_GAINED:
 			focus = 1;
-			amiberry_active(mon, minimized);
+			amiberry_active(mon);
 			unsetminimized(mon->monitor_id);
 			return;
 		case SDL_WINDOWEVENT_MINIMIZED:
@@ -1088,11 +1088,11 @@ void process_event(SDL_Event event)
 			{
 				write_log(_T("SIZE_MINIMIZED\n"));
 				setminimized(mon->monitor_id);
-				amiberry_inactive(mon, minimized);
+				amiberry_inactive(mon);
 			}
 			return;
 		case SDL_WINDOWEVENT_RESTORED:
-			amiberry_active(mon, minimized);
+			amiberry_active(mon);
 			unsetminimized(mon->monitor_id);
 			return;
 		case SDL_WINDOWEVENT_MOVED:
@@ -1115,7 +1115,7 @@ void process_event(SDL_Event event)
 			return;
 		case SDL_WINDOWEVENT_FOCUS_LOST:
 			focus = 0;
-			amiberry_inactive(mon, minimized);
+			amiberry_inactive(mon);
 			if (isfullscreen() <= 0 && currprefs.minimize_inactive)
 				minimizewindow(mon->monitor_id);
 			return;
