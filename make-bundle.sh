@@ -16,6 +16,8 @@ mkdir -p Amiberry.app/Contents/Frameworks
 mkdir -p Amiberry.app/Contents/Resources
 # Copy executable into App bundle
 cp amiberry Amiberry.app/Contents/MacOS/Amiberry
+# Copy capsimg.so into App bundle
+cp capsimg.so Amiberry.app/Contents/MacOS/capsimg.so
 # Copy init script into the bundle
 cp macos_init_amiberry.zsh Amiberry.app/Contents/Resources
 chmod +x Amiberry.app/Contents/Resources/macos_init_amiberry.zsh
@@ -24,17 +26,16 @@ cat Info.plist.template | sed -e "s/LONGVERSION/$LONGVER/" | sed -e "s/VERSION/$
 # Self-sign binary
 export CODE_SIGN_ENTITLEMENTS=Entitlements.plist
 codesign --entitlements=Entitlements.plist --force -s - Amiberry.app
-# Copy OSX specific conf template into the bundle
+# Copy directories into the bundle
+cp -R abr Amiberry.app/Contents/Resources/abr
 cp -R conf Amiberry.app/Contents/Resources/Configurations
-# Copy controllers into the bundle
 cp -R controllers Amiberry.app/Contents/Resources/Controllers
-# Copy kickstarts into the bundle
-cp -R kickstarts Amiberry.app/Contents/Resources/Kickstarts
-# Copy data into the bundle
 cp -R data Amiberry.app/Contents/Resources/Data
-# Copy docs into the bundle
-cp -R docs Amiberry.app/Contents/Resources/Docs
-# Copy whdboot into the bundle
+cp -R inputrecordings Amiberry.app/Contents/Resources/Inputrecordings
+cp -R kickstarts Amiberry.app/Contents/Resources/Kickstarts
+cp -R nvram Amiberry.app/Contents/Resources/Nvram
+cp -R savestates Amiberry.app/Contents/Resources/Savestates
+cp -R screenshots Amiberry.app/Contents/Resources/Screenshots
 cp -R whdboot Amiberry.app/Contents/Resources/Whdboot
 
 # Overwrite default conf with OSX specific one
