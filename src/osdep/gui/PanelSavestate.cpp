@@ -432,13 +432,14 @@ void RefreshPanelSavestate()
 bool HelpPanelSavestate(std::vector<std::string>& helptext)
 {
 	helptext.clear();
-	helptext.emplace_back("Savestates are stored with the name of the disk in drive DF0 attached");
-	helptext.emplace_back("with the selected number.");
+	helptext.emplace_back("Savestates are stored with the name of the disk in drive DF0, or if no");
+	helptext.emplace_back("disk is inserted, the name of the last loaded .uae config.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("When you hold left shoulder button and press 'l' during emulation, ");
 	helptext.emplace_back("the state of the last active number will be loaded. Hold left shoulder ");
 	helptext.emplace_back("button and press 's' to save the current state in the last active slot.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("Note: Savestates might not work with HDDs, JIT or RTG.");
+	helptext.emplace_back("Note: Savestates may or may not work with HDDs, JIT or RTG. They were");
+	helptext.emplace_back("designed to work with floppy disk images.");
 	return true;
 }
