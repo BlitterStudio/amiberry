@@ -118,7 +118,7 @@ static const int msi_mb[] = { 0, 5, 6, 7, 8, 9, 10, 11, 12 };
 #define MIN_SOUND_MEM 0
 #define MAX_SOUND_MEM 10
 
-static const char* diskfile_filter[] = { ".adf", ".adz", ".fdi", ".ipf", ".zip", ".dms", ".gz", ".xz", ".scp", "\0" };
+static const char* diskfile_filter[] = { ".adf", ".adz", ".fdi", ".ipf", ".zip", ".dms", ".gz", ".xz", ".scp", ".zip", ".7z", ".lha", ".lzh", ".lzx", "\0" };
 static const char* harddisk_filter[] = { ".hdf", ".hdz", ".lha", "zip", ".vhd", ".chd", ".7z", "\0" };
 static const char* cdfile_filter[] = { ".cue", ".ccd", ".iso", ".mds", ".nrg", ".chd", "\0" };
 static const char* whdload_filter[] = { ".lha", "\0" };
