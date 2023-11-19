@@ -3363,7 +3363,11 @@ void init_macos_amiberry_folders(std::string macos_amiberry_directory)
 	if (!my_existsdir(directory.c_str()))
 		my_mkdir(directory.c_str());
 
-	directory = macos_amiberry_directory + "/Docs";
+	directory = macos_amiberry_directory + "/Inputrecordings";
+	if (!my_existsdir(directory.c_str()))
+		my_mkdir(directory.c_str());
+
+	directory = macos_amiberry_directory + "/Nvram";
 	if (!my_existsdir(directory.c_str()))
 		my_mkdir(directory.c_str());
 }
