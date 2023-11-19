@@ -61,6 +61,9 @@ static amiga_plugin_lookup_function plugin_lookup;
 }
 #endif
 
+#ifdef __MACH__
+#include <mach-o/dyld.h>
+#endif
 UAE_DLHANDLE uae_dlopen_plugin(const TCHAR *name)
 {
 #if defined(AMIBERRY)
@@ -73,7 +76,27 @@ UAE_DLHANDLE uae_dlopen_plugin(const TCHAR *name)
 		return NULL;
 	}
 */
+#ifdef __MACH__
+	char exepath[MAX_DPATH];
+	uint32_t size = sizeof exepath;
+	std::string directory;
+	if (_NSGetExecutablePath(exepath, &size) == 0)
+	{
+		size_t last_slash_idx = string(exepath).rfind('/');
+		if (std::string::npos != last_slash_idx)
+		{
+			directory = string(exepath).substr(0, last_slash_idx);
+		}
+		last_slash_idx = directory.rfind('/');
+		if (std::string::npos != last_slash_idx)
+		{
+			directory = directory.substr(0, last_slash_idx);
+		}
+	}
+	UAE_DLHANDLE handle = uae_dlopen(directory.append("/MacOS/capsimg.so").c_str());
+#else
 	UAE_DLHANDLE handle = uae_dlopen("./capsimg.so");
+#endif // __MACH__
 #elif defined(WINUAE)
 	TCHAR path[MAX_DPATH];
 	_tcscpy(path, name);
