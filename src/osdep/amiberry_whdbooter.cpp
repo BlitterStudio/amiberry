@@ -5,29 +5,26 @@
  *
  */
 #include <algorithm>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <sstream>
 #include <sys/types.h>
 #include <sys/stat.h>
-
 #include "sysdeps.h"
 #include "uae.h"
 #include "options.h"
 #include "custom.h"
 #include "rommgr.h"
-
-extern FILE* debugfile;
-
 #include "fsdb.h"
 #include "tinyxml2.h"
+#include <fstream>
+
+extern FILE* debugfile;
 
 extern void SetLastActiveConfig(const char* filename);
 extern char current_dir[MAX_DPATH];
 extern char last_loaded_config[MAX_DPATH];
-
-#include <fstream>
 
 // Use configs with 8MB Fast RAM, to make it likely
 // that WHDLoad preload will cache everything.
@@ -232,7 +229,7 @@ void make_rom_symlink(const char* kick_short, int kick_numb, struct uae_prefs* p
 	// do the checks...
 	snprintf(kick_long, MAX_DPATH, "%s/%s", kick_path, kick_short);
 
-	// this should sort any broken links (only remove if a link, not a file.. see vfat handling of link below)
+	// this should sort any broken links (only remove if a link, not a file. See vfat handling of link below)
 	// Only remove file IF it is a symlink.
 	// On VFAT USB stick, the roms are copied not symlinked, which takes a long time, also the user
 	// may have provided their own rom files, so we do not want to remove and replace those.
@@ -1095,8 +1092,7 @@ void create_startup_sequence(uae_prefs* prefs)
 
 bool is_a600_available(uae_prefs* prefs)
 {
-	int roms[2] = { -1,-1 };
-	roms[0] = 15; // kickstart 2.05 A600HD
+	int roms[3] = { 10, 9, -1 }; // kickstart 2.05 A600HD
 	const auto rom_test = configure_rom(prefs, roms, 0);
 	return rom_test == 1;
 }
