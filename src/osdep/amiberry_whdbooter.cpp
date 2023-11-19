@@ -70,7 +70,7 @@ struct game_options
 	TCHAR cpu_exact[256] = "nul\0";
 };
 
-char whdbootpath[MAX_DPATH];
+char whdboot_path[MAX_DPATH];
 char boot_path[MAX_DPATH];
 char save_path[MAX_DPATH];
 char config_path[MAX_DPATH];
@@ -83,7 +83,7 @@ char whd_startup[255];
 
 char game_name[MAX_DPATH];
 char selected_slave[MAX_DPATH];
-char subpath[MAX_DPATH];
+char sub_path[MAX_DPATH];
 auto use_slave_libs = false;
 
 static TCHAR* parse_text(const TCHAR* s)
@@ -103,13 +103,6 @@ static TCHAR* parse_text(const TCHAR* s)
 		return d;
 	}
 	return my_strdup(s);
-}
-
-void remove_char(char* array, int len, int index)
-{
-	for (auto i = index; i < len - 1; ++i)
-		array[i] = array[i + 1];
-	array[len - 1] = 0;
 }
 
 std::string trim_full_line(std::string full_line)
@@ -290,8 +283,8 @@ void symlink_roms(struct uae_prefs* prefs)
 
 	if (!my_existsdir(kick_path)) {
 		// otherwise, use the old route
-		get_whdbootpath(whdbootpath, MAX_DPATH);
-		snprintf(kick_path, MAX_DPATH, "%sgame-data/Devs/Kickstarts", whdbootpath);
+		get_whdbootpath(whdboot_path, MAX_DPATH);
+		snprintf(kick_path, MAX_DPATH, "%sgame-data/Devs/Kickstarts", whdboot_path);
 	}
 	write_log("WHDBoot - using kickstarts from %s\n", kick_path);
 
@@ -926,8 +919,8 @@ game_options parse_settings_from_xml(uae_prefs* prefs, char* filepath)
 
 					if (temp_node->GetText() != nullptr)
 					{
-						_stprintf(subpath, "%s",	temp_node->GetText());
-						write_log("WHDBooter - SubPath:  %s\n", subpath);
+						_stprintf(sub_path, "%s", temp_node->GetText());
+						write_log("WHDBooter - SubPath:  %s\n", sub_path);
 					}
 				}
 
@@ -938,7 +931,7 @@ game_options parse_settings_from_xml(uae_prefs* prefs, char* filepath)
 					if (strcmpi(temp_node->GetText(), "true") == 0)
 						use_slave_libs = true;
 
-					write_log("WHDBooter - Libraries:  %s\n", subpath);
+					write_log("WHDBooter - Libraries:  %s\n", sub_path);
 				}
 				break;
 			}
@@ -962,8 +955,8 @@ void create_startup_sequence(uae_prefs* prefs)
 	whd_bootscript << "DH3:C/Assign C: DH3:C/ ADD\n";
 	whd_bootscript << "ENDIF\n";
 
-	whd_bootscript << "CD \"Games:" << subpath << "\"\n";
-	whd_bootscript << "WHDLoad SLAVE=\"Games:" << subpath << "/" << selected_slave << "\"";
+	whd_bootscript << "CD \"Games:" << sub_path << "\"\n";
+	whd_bootscript << "WHDLoad SLAVE=\"Games:" << sub_path << "/" << selected_slave << "\"";
 
 	// Write Cache
 	if (prefs->whdbootprefs.writecache)
@@ -1002,13 +995,13 @@ void create_startup_sequence(uae_prefs* prefs)
 	}
 
 	// BUTTONWAIT
-	if (prefs->whdbootprefs.buttonwait == true)
+	if (prefs->whdbootprefs.buttonwait)
 	{
 		whd_bootscript << " BUTTONWAIT";
 	}
 
 	// SPLASH
-	if (prefs->whdbootprefs.showsplash != true)
+	if (!prefs->whdbootprefs.showsplash)
 	{
 		whd_bootscript << " SPLASHDELAY=0";
 	}
@@ -1020,7 +1013,7 @@ void create_startup_sequence(uae_prefs* prefs)
 	}
 
 	// SPECIAL SAVE PATH
-	whd_bootscript << " SAVEPATH=Saves:Savegames/ SAVEDIR=\"" << subpath << "\"";
+	whd_bootscript << " SAVEPATH=Saves:Savegames/ SAVEDIR=\"" << sub_path << "\"";
 	whd_bootscript << '\n';
 
 	// Launches utility program to quit the emulator (via UAE trap in RTAREA)
@@ -1061,9 +1054,9 @@ void set_booter_drives(uae_prefs* prefs, char* filepath)
 		_stprintf(tmp, _T("uaehf0=dir,rw,DH0:DH0::%s,10"), boot_path);
 		cfgfile_parse_line(prefs, parse_text(tmp), 0);
 
-		snprintf(boot_path, MAX_DPATH, "%sboot-data.zip", whdbootpath);
+		snprintf(boot_path, MAX_DPATH, "%sboot-data.zip", whdboot_path);
 		if (!my_existsfile2(boot_path))
-			snprintf(boot_path, MAX_DPATH, "%sboot-data/", whdbootpath);
+			snprintf(boot_path, MAX_DPATH, "%sboot-data/", whdboot_path);
 
 		_stprintf(tmp, _T("filesystem2=rw,DH3:DH3:%s,-10"), boot_path);
 		cfgfile_parse_line(prefs, parse_text(tmp), 0);
@@ -1073,9 +1066,9 @@ void set_booter_drives(uae_prefs* prefs, char* filepath)
 	}
 	else // revert to original booter is no slave was set
 	{
-		snprintf(boot_path, MAX_DPATH, "%sboot-data.zip", whdbootpath);
+		snprintf(boot_path, MAX_DPATH, "%sboot-data.zip", whdboot_path);
 		if (!my_existsfile2(boot_path))
-			snprintf(boot_path, MAX_DPATH, "%sboot-data/", whdbootpath);
+			snprintf(boot_path, MAX_DPATH, "%sboot-data/", whdboot_path);
 
 		_stprintf(tmp, _T("filesystem2=rw,DH0:DH0:%s,10"), boot_path);
 		cfgfile_parse_line(prefs, parse_text(tmp), 0);
@@ -1110,7 +1103,7 @@ void whdload_auto_prefs(uae_prefs* prefs, char* filepath)
 	strcpy(selected_slave, "");
 
 	get_configuration_path(config_path, MAX_DPATH);
-	get_whdbootpath(whdbootpath, MAX_DPATH);
+	get_whdbootpath(whdboot_path, MAX_DPATH);
 	get_savedatapath(save_path, MAX_DPATH, 0 );
 
 	symlink_roms(prefs);
@@ -1134,7 +1127,7 @@ void whdload_auto_prefs(uae_prefs* prefs, char* filepath)
 	// we will need it for the WHDLoad options too.
 	if (my_existsfile2(uae_config))
 	{
-		write_log("WHDBooter -  %s found. Loading Config for WHDload options.\n", uae_config);
+		write_log("WHDBooter -  %s found. Loading Config for WHDLoad options.\n", uae_config);
 		target_cfgfile_load(&currprefs, uae_config, CONFIG_TYPE_ALL, 0);
 	}
 
@@ -1147,13 +1140,13 @@ void whdload_auto_prefs(uae_prefs* prefs, char* filepath)
 	remove(whd_startup);
 
 	// LOAD HOST OPTIONS
-	snprintf(whd_path, MAX_DPATH, "%sWHDLoad", whdbootpath);
+	snprintf(whd_path, MAX_DPATH, "%sWHDLoad", whdboot_path);
 
 	// are we using save-data/ ?
 	snprintf(kick_path, MAX_DPATH, "%s/Kickstarts", save_path);
 
 	// LOAD GAME SPECIFICS
-	snprintf(whd_path, MAX_DPATH, "%sgame-data/", whdbootpath);
+	snprintf(whd_path, MAX_DPATH, "%sgame-data/", whdboot_path);
 	game_options game_detail;
 
 	strcpy(whd_config, whd_path);
@@ -1178,11 +1171,11 @@ void whdload_auto_prefs(uae_prefs* prefs, char* filepath)
 	if (my_existsfile2(whd_startup))
 	{
 		// create a symlink to WHDLoad in /tmp/amiberry/
-		snprintf(whd_path, MAX_DPATH, "%sWHDLoad", whdbootpath);
+		snprintf(whd_path, MAX_DPATH, "%sWHDLoad", whdboot_path);
 		symlink(whd_path, "/tmp/amiberry/c/WHDLoad");
 
 		// Create a symlink to AmiQuit in /tmp/amiberry/
-		snprintf(whd_path, MAX_DPATH, "%sAmiQuit", whdbootpath);
+		snprintf(whd_path, MAX_DPATH, "%sAmiQuit", whdboot_path);
 		symlink(whd_path, "/tmp/amiberry/c/AmiQuit");
 
 		// create a symlink for DEVS in /tmp/amiberry/
