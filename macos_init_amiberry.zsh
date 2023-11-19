@@ -43,11 +43,35 @@ for file in $CWD_VAR/../Resources/Data/**/*(.); do
 	fi
 done
 
-for file in $CWD_VAR/../Resources/Docs/**/*(.); do
-	if [[ ! -f "$USERDIR/Documents/Amiberry/Docs${file##*/Docs}" ]]; then
-		echo "Copying $file to $USERDIR/Documents/Amiberry/Docs${file##*/Docs}"
-		mkdir -p $(dirname "$USERDIR/Documents/Amiberry/Docs${file##*/Docs}")
-		cp $file "$USERDIR/Documents/Amiberry/Docs${file##*/Docs}"
+for file in $CWD_VAR/../Resources/Savestates/**/*(.); do
+	if [[ ! -f "$USERDIR/Documents/Amiberry/Savestates${file##*/Savestates}" ]]; then
+		echo "Copying $file to $USERDIR/Documents/Amiberry/Savestates${file##*/Savestates}"
+		mkdir -p $(dirname "$USERDIR/Documents/Amiberry/Savestates${file##*/Savestates}")
+		cp $file "$USERDIR/Documents/Amiberry/Savestates${file##*/Savestates}"
+	fi
+done
+
+for file in $CWD_VAR/../Resources/Inputrecordings/**/*(.); do
+	if [[ ! -f "$USERDIR/Documents/Amiberry/Inputrecordings${file##*/Inputrecordings}" ]]; then
+		echo "Copying $file to $USERDIR/Documents/Amiberry/Inputrecordings${file##*/Inputrecordings}"
+		mkdir -p $(dirname "$USERDIR/Documents/Amiberry/Inputrecordings${file##*/Inputrecordings}")
+		cp $file "$USERDIR/Documents/Amiberry/Inputrecordings${file##*/Inputrecordings}"
+	fi
+done
+
+for file in $CWD_VAR/../Resources/Screenshots/**/*(.); do
+	if [[ ! -f "$USERDIR/Documents/Amiberry/Screenshots${file##*/Screenshots}" ]]; then
+		echo "Copying $file to $USERDIR/Documents/Amiberry/Screenshots${file##*/Screenshots}"
+		mkdir -p $(dirname "$USERDIR/Documents/Amiberry/Screenshots${file##*/Screenshots}")
+		cp $file "$USERDIR/Documents/Amiberry/Screenshots${file##*/Screenshots}"
+	fi
+done
+
+for file in $CWD_VAR/../Resources/Nvram/**/*(.); do
+	if [[ ! -f "$USERDIR/Documents/Amiberry/Nvram${file##*/Nvram}" ]]; then
+		echo "Copying $file to $USERDIR/Documents/Amiberry/Nvram${file##*/Nvram}"
+		mkdir -p $(dirname "$USERDIR/Documents/Amiberry/Nvram${file##*/Nvram}")
+		cp $file "$USERDIR/Documents/Amiberry/Nvram${file##*/Nvram}"
 	fi
 done
 
