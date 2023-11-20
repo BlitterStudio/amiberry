@@ -17,7 +17,7 @@ mkdir -p Amiberry.app/Contents/Resources
 # Copy executable into App bundle
 cp amiberry Amiberry.app/Contents/MacOS/Amiberry
 # Copy capsimg.so into App bundle
-cp capsimg.so Amiberry.app/Contents/MacOS/capsimg.so
+cp capsimg.so Amiberry.app/Contents/Resources/capsimg.so
 # Copy init script into the bundle
 cp macos_init_amiberry.zsh Amiberry.app/Contents/Resources
 chmod +x Amiberry.app/Contents/Resources/macos_init_amiberry.zsh
@@ -27,7 +27,7 @@ cat Info.plist.template | sed -e "s/LONGVERSION/$LONGVER/" | sed -e "s/VERSION/$
 export CODE_SIGN_ENTITLEMENTS=Entitlements.plist
 codesign --entitlements=Entitlements.plist --force -s - Amiberry.app
 # Copy directories into the bundle
-cp -R abr Amiberry.app/Contents/Resources/abr
+cp -R abr Amiberry.app/Contents/Resources/Abr
 cp -R conf Amiberry.app/Contents/Resources/Configurations
 cp -R controllers Amiberry.app/Contents/Resources/Controllers
 cp -R data Amiberry.app/Contents/Resources/Data
@@ -39,8 +39,7 @@ cp -R screenshots Amiberry.app/Contents/Resources/Screenshots
 cp -R whdboot Amiberry.app/Contents/Resources/Whdboot
 
 # Overwrite default conf with OSX specific one
-mkdir Amiberry.app/Contents/Resources/conf
-cat conf/amiberry-osx.conf | sed -e "s#USERDIR#$USERDIR#g" >Amiberry.app/Contents/Resources/conf/amiberry.conf
+cat conf/amiberry-osx.conf | sed -e "s#USERDIR#$USERDIR#g" >Amiberry.app/Contents/Resources/Configurations/amiberry.conf
 # Use dylibbundler to install into app if exists
 dylibbundler -od -b -x Amiberry.app/Contents/MacOS/Amiberry -d Amiberry.app/Contents/libs/ -s external/libguisan/dylib/
 if [ $? -gt 0 ]; then
