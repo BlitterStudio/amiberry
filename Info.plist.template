@@ -14,7 +14,7 @@
 		<key>CFBundleIconName</key>
 		<string>AppIcon</string>
 		<key>CFBundleIconFile</key>
-		<string>docs/resources/icon.png</string>
+		<string>data/amiberry.png</string>
 		<key>UIPrerenderedIcon</key>
 		<true/>
 		<key>CFBundleShortVersionString</key>
