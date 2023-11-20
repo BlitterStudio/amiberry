@@ -12683,6 +12683,7 @@ static void dmal_emu(uae_u32 val)
 		AUDxDAT(nr, dat, pt);
 	} else if (dmalpos >= 0 && dmalpos < 6) {
 		uae_u16 dat = 0;
+		int s = (dmalpos / 2);
 		int w = (dmalbits & 3) == 3;
 		// disk_fifostatus() needed in >100% disk speed modes
 		if (w) {
@@ -12717,7 +12718,7 @@ static void dmal_emu(uae_u32 val)
 			// read from disk
 			if (disk_fifostatus() >= 0) {
 				uaecptr pt = disk_getpt();
-				dat = DSKDATR();
+				dat = DSKDATR(s);
 				if (dmal_ce) {
 #ifdef DEBUGGER
 					if (debug_dma) {

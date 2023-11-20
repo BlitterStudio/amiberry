@@ -104,7 +104,7 @@ extern void DSKSYNC (int, uae_u16);
 extern void DSKPTL (uae_u16);
 extern void DSKPTH (uae_u16);
 extern void DSKDAT (uae_u16);
-extern uae_u16 DSKDATR (void);
+extern uae_u16 DSKDATR (int);
 extern uae_u16 disk_dmal (void);
 extern uaecptr disk_getpt (void);
 extern int disk_fifostatus (void);
