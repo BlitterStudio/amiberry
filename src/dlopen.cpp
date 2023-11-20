@@ -93,7 +93,7 @@ UAE_DLHANDLE uae_dlopen_plugin(const TCHAR *name)
 			directory = directory.substr(0, last_slash_idx);
 		}
 	}
-	UAE_DLHANDLE handle = uae_dlopen(directory.append("/MacOS/capsimg.so").c_str());
+	UAE_DLHANDLE handle = uae_dlopen(directory.append("/Resources/capsimg.so").c_str());
 #else
 	UAE_DLHANDLE handle = uae_dlopen("./capsimg.so");
 #endif // __MACH__
