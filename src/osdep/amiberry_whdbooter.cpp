@@ -735,22 +735,30 @@ void parse_gfx_settings(uae_prefs* prefs, game_options game_detail)
 void set_compatibility_settings(uae_prefs* prefs, game_options game_detail, const bool a600_available)
 {
 	std::string line_string;
-	// CPU 68020/040
-	if (strcmpi(game_detail.cpu, "68020") == 0 || strcmpi(game_detail.cpu, "68040") == 0)
+	// CPU 68020/040 or no A600 ROM available
+	if (strcmpi(game_detail.cpu, "68020") == 0 || strcmpi(game_detail.cpu, "68040") == 0 || !a600_available)
 	{
 		line_string = "cpu_type=";
-		line_string.append(game_detail.cpu);
+		line_string.append(a600_available ? game_detail.cpu : "68020");
 		parse_cfg_line(prefs, line_string);
 	}
 
 	// CPU 68000/010 [requires a600 rom)]
-	if ((strcmpi(game_detail.cpu, "68000") == 0 || strcmpi(game_detail.cpu, "68010") == 0) && a600_available)
+	else if ((strcmpi(game_detail.cpu, "68000") == 0 || strcmpi(game_detail.cpu, "68010") == 0) && a600_available)
 	{
 		line_string = "cpu_type=";
 		line_string.append(game_detail.cpu);
 		parse_cfg_line(prefs, line_string);
 
 		line_string = "chipmem_size=4";
+		parse_cfg_line(prefs, line_string);
+	}
+
+	// Fallback for any invalid values - 68020 CPU
+	else
+	{
+		write_log("Invalid CPU value, falling back to 68020!\n");
+		line_string = "cpu_type=68020";
 		parse_cfg_line(prefs, line_string);
 	}
 
@@ -1162,7 +1170,11 @@ void whdload_auto_prefs(uae_prefs* prefs, char* filepath)
 	const auto a600_available = is_a600_available(prefs);
 	if (a600_available)
 	{
-		write_log("WHDBooter - Host: A600 ROM Available \n");
+		write_log("WHDBooter - Host: A600 ROM available, will use it for non-AGA titles\n");
+	}
+	else
+	{
+		write_log("WHDBooter - Host: A600 ROM not found, falling back to A1200 config for all titles\n");
 	}
 
 	// REMOVE THE FILE PATH AND EXTENSION
@@ -1173,8 +1185,8 @@ void whdload_auto_prefs(uae_prefs* prefs, char* filepath)
 	//  CONFIG LOAD IF .UAE IS IN CONFIG PATH
 	build_uae_config_filename();
 
-	// if we have a config file, we will use it
-	// we will need it for the WHDLoad options too.
+	// If we have a config file, we will use it.
+	// We will need it for the WHDLoad options too.
 	if (my_existsfile2(uae_config))
 	{
 		write_log("WHDBooter -  %s found. Loading Config for WHDLoad options.\n", uae_config);
@@ -1280,7 +1292,7 @@ void whdload_auto_prefs(uae_prefs* prefs, char* filepath)
 	const auto is_aga = strstr(filename, "AGA") != nullptr || strcmpi(game_detail.chipset, "AGA") == 0;
 	const auto is_cd32 = strstr(filename, "CD32") != nullptr || strcmpi(game_detail.chipset, "CD32") == 0;
 
-	if (is_aga || is_cd32)
+	if (is_aga || is_cd32 || !a600_available)
 	{
 		// SET THE BASE AMIGA (Expanded A1200)
 		built_in_prefs(prefs, 4, A1200_CONFIG, 0, 0);
