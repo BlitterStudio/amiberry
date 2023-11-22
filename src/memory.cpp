@@ -2617,9 +2617,7 @@ static void allocate_memory (void)
 	bogo_filepos = 0;
 	a3000lmem_filepos = 0;
 	a3000hmem_filepos = 0;
-#ifndef AMIBERRY // support for CPU boards is not implemented yet
 	cpuboard_init();
-#endif
 }
 
 static void setmemorywidth(struct ramboard *mb, addrbank *ab)
@@ -2783,9 +2781,7 @@ void map_overlay (int chip)
 	initramboard(&chipmem_bank, &currprefs.chipmem);
 	overlay_state = chip;
 	fill_ce_banks();
-#ifndef AMIBERRY
 	cpuboard_overlay_override();
-#endif
 	if (!isrestore() && valid_address(regs.pc, 4)) {
 		m68k_setpc_normal(m68k_getpc());
 	}
@@ -2870,9 +2866,7 @@ void memory_clear (void)
 	if (a3000hmem_bank.baseaddr)
 		memset(a3000hmem_bank.baseaddr, 0, a3000hmem_bank.allocated_size);
 	expansion_clear ();
-#ifndef AMIBERRY
 	cpuboard_clear();
-#endif
 }
 
 static void restore_roms(void)
@@ -2976,9 +2970,7 @@ void reload_roms(void)
 void memory_restore(void)
 {
 	last_address_space_24 = currprefs.address_space_24;
-#ifndef AMIBERRY
 	cpuboard_map();
-#endif
 	map_banks_set(&kickmem_bank, 0xF8, 8, 0);
 }
 
@@ -3018,9 +3010,7 @@ void memory_reset (void)
 	currprefs.cs_fatgaryrev = changed_prefs.cs_fatgaryrev;
 	currprefs.cs_ramseyrev = changed_prefs.cs_ramseyrev;
 	currprefs.cs_unmapped_space = changed_prefs.cs_unmapped_space;
-#ifndef AMIBERRY
 	cpuboard_reset(mem_hardreset);
-#endif
 
 	gayleorfatgary = ((currprefs.chipset_mask & CSMASK_AGA) || currprefs.cs_pcmcia || currprefs.cs_ide > 0 || currprefs.cs_mbdmac) && !currprefs.cs_cd32cd;
 
@@ -3125,14 +3115,10 @@ void memory_reset (void)
 	if (debugmem_bank.baseaddr) {
 		map_banks(&debugmem_bank, debugmem_bank.start >> 16, debugmem_bank.allocated_size >> 16, 0);
 	}
-#ifndef AMIBERRY
 	cpuboard_map();
-#endif
 	map_banks_set(&kickmem_bank, 0xF8, 8, 0);
 	if (currprefs.maprom && _tcscmp(currprefs.romfile, _T(":AROS"))) {
-#ifndef AMIBERRY
 		if (!cpuboard_maprom())
-#endif
 			map_banks_set(&kickram_bank, currprefs.maprom >> 16, extendedkickmem2a_bank.allocated_size ? 32 : (extendedkickmem_bank.allocated_size ? 16 : 8), 0);
 	}
 	/* map beta Kickstarts at 0x200000/0xC00000/0xF00000 */
@@ -3286,9 +3272,7 @@ void memory_init (void)
 	}
 	_tcscpy (currprefs.romfile, _T("<none>"));
 	currprefs.romextfile[0] = 0;
-#ifndef AMIBERRY
 	cpuboard_reset(1);
-#endif
 
 #ifdef ACTION_REPLAY
 	action_replay_unload (0);
@@ -3323,9 +3307,7 @@ void memory_cleanup (void)
 	custmem1_bank.baseaddr = NULL;
 	custmem2_bank.baseaddr = NULL;
 
-#ifndef AMIBERRY
 	cpuboard_cleanup();
-#endif
 #ifdef ACTION_REPLAY
 	action_replay_cleanup();
 #endif

@@ -3591,18 +3591,14 @@ static void m68k_reset2(bool hardreset)
 	}
 #endif
 	regs.s = 1;
-#ifndef AMIBERRY
 	if (currprefs.cpuboard_type) {
 		uaecptr stack;
 		v = cpuboard_get_reset_pc(&stack);
 		m68k_areg(regs, 7) = stack;
 	} else {
-#endif
 		v = get_long(4);
 		m68k_areg(regs, 7) = get_long(0);
-#ifndef AMIBERRY
 	}
-#endif
 
 	m68k_setpc_normal(v);
 	regs.m = 0;
@@ -7885,13 +7881,11 @@ bool cpureset (void)
 	unset_special(SPCFLAG_CPUINRESET);
 	send_internalevent(INTERNALEVENT_CPURESET);
 	warpmode_reset();
-#ifndef AMIBERRY
 	if (cpuboard_forced_hardreset()) {
 		custom_reset_cpu(false, false);
 		m68k_reset();
 		return true;
 	}
-#endif
 	if ((currprefs.cpu_compatible || currprefs.cpu_memory_cycle_exact) && currprefs.cpu_model <= 68020) {
 		custom_reset_cpu(false, false);
 		return false;
@@ -10193,9 +10187,7 @@ uae_u32 sfc_nommu_get_byte(uaecptr addr)
 {
 	uae_u32 v;
 	ismoves_nommu = true;
-#ifndef AMIBERRY
 	if (!cpuboard_fc_check(addr, &v, 0, false))
-#endif
 		v = x_get_byte(addr);
 	ismoves_nommu = false;
 	return v;
@@ -10204,9 +10196,7 @@ uae_u32 sfc_nommu_get_word(uaecptr addr)
 {
 	uae_u32 v;
 	ismoves_nommu = true;
-#ifndef AMIBERRY
 	if (!cpuboard_fc_check(addr, &v, 1, false))
-#endif
 		v = x_get_word(addr);
 	ismoves_nommu = false;
 	return v;
@@ -10215,9 +10205,7 @@ uae_u32 sfc_nommu_get_long(uaecptr addr)
 {
 	uae_u32 v;
 	ismoves_nommu = true;
-#ifndef AMIBERRY
 	if (!cpuboard_fc_check(addr, &v, 2, false))
-#endif
 		v = x_get_long(addr);
 	ismoves_nommu = false;
 	return v;
@@ -10225,27 +10213,21 @@ uae_u32 sfc_nommu_get_long(uaecptr addr)
 void dfc_nommu_put_byte(uaecptr addr, uae_u32 v)
 {
 	ismoves_nommu = true;
-#ifndef AMIBERRY
 	if (!cpuboard_fc_check(addr, &v, 0, true))
-#endif
 		x_put_byte(addr, v);
 	ismoves_nommu = false;
 }
 void dfc_nommu_put_word(uaecptr addr, uae_u32 v)
 {
 	ismoves_nommu = true;
-#ifndef AMIBERRY
 	if (!cpuboard_fc_check(addr, &v, 1, true))
-#endif
 		x_put_word(addr, v);
 	ismoves_nommu = false;
 }
 void dfc_nommu_put_long(uaecptr addr, uae_u32 v)
 {
 	ismoves_nommu = true;
-#ifndef AMIBERRY
 	if (!cpuboard_fc_check(addr, &v, 2, true))
-#endif
 		x_put_long(addr, v);
 	ismoves_nommu = false;
 }

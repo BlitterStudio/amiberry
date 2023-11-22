@@ -60,6 +60,9 @@
 #endif
 #include "rommgr.h"
 #include "newcpu.h"
+#ifdef WITH_MIDIEMU
+#include "midiemu.h"
+#endif
 #ifdef RETROPLATFORM
 #include "rp.h"
 #endif

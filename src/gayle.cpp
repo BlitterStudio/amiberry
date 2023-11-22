@@ -25,12 +25,12 @@
 #include "gui.h"
 #include "threaddep/thread.h"
 //#include "a2091.h"
-//#include "ncr_scsi.h"
-//#include "ncr9x_scsi.h"
+#include "ncr_scsi.h"
+#include "ncr9x_scsi.h"
 #include "blkdev.h"
 #include "scsi.h"
 #include "ide.h"
-//#include "idecontrollers.h"
+#include "idecontrollers.h"
 //#include "pci_hw.h"
 #include "debug.h"
 #include "autoconf.h"
@@ -514,8 +514,9 @@ static void gayle_write (uaecptr addr, int val)
 	uaecptr oaddr = addr;
 	int got = 0;
 	if (currprefs.cs_ide == IDE_A600A1200) {
-		if ((addr & 0xA0000) != 0xA0000)
+		if ((addr & 0xA0000) != 0xA0000) {
 			return;
+		}
 	}
 	addr &= 0xffff;
 	if (currprefs.cs_pcmcia) {
@@ -540,7 +541,6 @@ static void gayle_write (uaecptr addr, int val)
 				write_log (_T("PCMCIA CONFIG WRITE %08X=%02X PC=%08X\n"), oaddr, (uae_u32)val & 0xff, M68K_GETPC);
 		}
 	}
-
 	if (GAYLE_LOG)
 		write_log (_T("GAYLE_WRITE %08X=%02X PC=%08X\n"), oaddr, (uae_u32)val & 0xff, M68K_GETPC);
 	if (!got)
