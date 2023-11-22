@@ -4180,7 +4180,7 @@ static bool read_fpu_opcode(const char *p, size_t len)
 	
 	for (i = 0; i < (sizeof(jit_opcodes) / sizeof(jit_opcodes[0])); i++)
 	{
-		if (len == strlen(jit_opcodes[i].name) && strnicmp(jit_opcodes[i].name, p, len) == 0)
+		if (len == strlen(jit_opcodes[i].name) && _tcsnicmp(jit_opcodes[i].name, p, len) == 0)
 		{
 			*jit_opcodes[i].disabled = true;
 			jit_log("<JIT compiler> : disabled %s", jit_opcodes[i].name);
