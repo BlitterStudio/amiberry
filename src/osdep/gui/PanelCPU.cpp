@@ -613,22 +613,21 @@ void RefreshPanelCPU()
 	lblCpuIdleInfo->setEnabled(sldCpuIdle->isEnabled());
 
 	bool cpu_based_enable = changed_prefs.cpu_model >= 68020 && changed_prefs.address_space_24 == 0;
-	bool jitenable = cpu_based_enable && !changed_prefs.mmu_model;
+	bool jit_enable = cpu_based_enable && !changed_prefs.mmu_model;
 #ifndef JIT
-	jitenable = false;
+	jit_enable = false;
 #endif
-	bool enable = jitenable && changed_prefs.cachesize;
 
-	optDirect->setEnabled(enable);
-	optIndirect->setEnabled(enable);
-	chkHardFlush->setEnabled(enable);
-	chkConstantJump->setEnabled(enable);
-	chkFPUJIT->setEnabled(enable);
-	chkCatchExceptions->setEnabled(enable);
-	chkNoFlags->setEnabled(enable);
-	lblJitCacheSizeInfo->setEnabled(enable);
-	sldJitCacheSize->setEnabled(enable);
-	chkJIT->setEnabled(enable);
+	optDirect->setEnabled(jit_enable);
+	optIndirect->setEnabled(jit_enable);
+	chkHardFlush->setEnabled(jit_enable);
+	chkConstantJump->setEnabled(jit_enable);
+	chkFPUJIT->setEnabled(jit_enable);
+	chkCatchExceptions->setEnabled(jit_enable);
+	chkNoFlags->setEnabled(jit_enable);
+	lblJitCacheSizeInfo->setEnabled(jit_enable);
+	sldJitCacheSize->setEnabled(jit_enable);
+	chkJIT->setEnabled(jit_enable);
 	chkCPUCompatible->setEnabled(!changed_prefs.cpu_memory_cycle_exact && !(changed_prefs.cachesize && changed_prefs.cpu_model >= 68040));
 	chkFPUStrict->setEnabled(changed_prefs.fpu_model > 0);
 

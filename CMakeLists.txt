@@ -307,10 +307,10 @@ add_executable(${PROJECT_NAME}
 		src/cpuemu_35.cpp
 		src/cpuemu_40.cpp
 		src/cpuemu_50.cpp
-#		src/jit/compemu.cpp
-#		src/jit/compstbl.cpp
-#		src/jit/compemu_fpp.cpp
-#		src/jit/compemu_support.cpp
+		src/jit/compemu.cpp
+		src/jit/compstbl.cpp
+		src/jit/compemu_fpp.cpp
+		src/jit/compemu_support.cpp
 		)
 
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR ARCHITECTURE MATCHES "arm64")

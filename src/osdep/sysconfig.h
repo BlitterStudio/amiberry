@@ -18,12 +18,10 @@
 #define FILESYS /* filesys emulation */
 #define UAE_FILESYS_THREADS
 #define AUTOCONFIG /* autoconfig support, fast ram, harddrives etc.. */
-#if !defined(CPU_AARCH64) && !defined (CPU_AMD64) && !defined (__x86_64__) && !defined(__riscv) && !defined (__MACH__)
+#if !defined(__riscv) && !defined (__MACH__)
 #define JIT /* JIT compiler support */
+#define USE_JIT_FPU
 #endif
-//#if defined(ARMV6T2) || defined(CPU_AARCH64)
-//#define USE_JIT_FPU
-//#endif
 //#define NOFLAGS_SUPPORT_GENCPU
 #define NOFLAGS_SUPPORT_GENCOMP
 //#define HAVE_GET_WORD_UNSWAPPED

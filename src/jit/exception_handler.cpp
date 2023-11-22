@@ -24,7 +24,6 @@ static uae_u8 *veccode;
 #endif
 
 #if defined(_WIN32) && defined(CPU_x86_64)
-
 typedef LPEXCEPTION_POINTERS CONTEXT_T;
 #define HAVE_CONTEXT_T 1
 #define CONTEXT_RIP(context) (context->ContextRecord->Rip)
@@ -130,6 +129,28 @@ typedef void *CONTEXT_T;
 #define CONTEXT_RBP(context) (((ucontext_t *) context)->uc_mcontext->__ss.__ebp)
 #define CONTEXT_RSI(context) (((ucontext_t *) context)->uc_mcontext->__ss.__esi)
 #define CONTEXT_RDI(context) (((ucontext_t *) context)->uc_mcontext->__ss.__edi)
+
+#elif defined (AMIBERRY) && defined(CPU_x86_64)
+
+typedef void *CONTEXT_T;
+#define HAVE_CONTEXT_T 1
+#define CONTEXT_RIP(context) (((struct ucontext_t *) context)->uc_mcontext.gregs[REG_RIP])
+#define CONTEXT_RAX(context) (((struct ucontext_t *) context)->uc_mcontext.gregs[REG_RAX])
+#define CONTEXT_RCX(context) (((struct ucontext_t *) context)->uc_mcontext.gregs[REG_RCX])
+#define CONTEXT_RDX(context) (((struct ucontext_t *) context)->uc_mcontext.gregs[REG_RDX])
+#define CONTEXT_RBX(context) (((struct ucontext_t *) context)->uc_mcontext.gregs[REG_RBX])
+#define CONTEXT_RSP(context) (((struct ucontext_t *) context)->uc_mcontext.gregs[REG_RSP])
+#define CONTEXT_RBP(context) (((struct ucontext_t *) context)->uc_mcontext.gregs[REG_RBP])
+#define CONTEXT_RSI(context) (((struct ucontext_t *) context)->uc_mcontext.gregs[REG_RSI])
+#define CONTEXT_RDI(context) (((struct ucontext_t *) context)->uc_mcontext.gregs[REG_RDI])
+#define CONTEXT_R8(context)  (((struct ucontext_t *) context)->uc_mcontext.gregs[REG_R8])
+#define CONTEXT_R9(context)  (((struct ucontext_t *) context)->uc_mcontext.gregs[REG_R9])
+#define CONTEXT_R10(context) (((struct ucontext_t *) context)->uc_mcontext.gregs[REG_R10])
+#define CONTEXT_R11(context) (((struct ucontext_t *) context)->uc_mcontext.gregs[REG_R11])
+#define CONTEXT_R12(context) (((struct ucontext_t *) context)->uc_mcontext.gregs[REG_R12])
+#define CONTEXT_R13(context) (((struct ucontext_t *) context)->uc_mcontext.gregs[REG_R13])
+#define CONTEXT_R14(context) (((struct ucontext_t *) context)->uc_mcontext.gregs[REG_R14])
+#define CONTEXT_R15(context) (((struct ucontext_t *) context)->uc_mcontext.gregs[REG_R15])
 
 #endif
 
@@ -538,10 +559,10 @@ static int handle_access(uintptr_t fault_addr, CONTEXT_T context)
 			raw_mov_b_ri(r, get_byte(addr));
 			break;
 		case 2:
-			raw_mov_w_ri(r, do_byteswap_16(get_word(addr)));
+			raw_mov_w_ri(r, bswap_16(get_word(addr)));
 			break;
 		case 4:
-			raw_mov_l_ri(r, do_byteswap_32(get_long(addr)));
+			raw_mov_l_ri(r, bswap_32(get_long(addr)));
 			break;
 		default:
 			abort();
@@ -552,10 +573,10 @@ static int handle_access(uintptr_t fault_addr, CONTEXT_T context)
 			put_byte(addr, *((uae_u8 *) pr));
 			break;
 		case 2:
-			put_word(addr, do_byteswap_16(*((uae_u16 *) pr)));
+			put_word(addr, bswap_16(*((uae_u16 *) pr)));
 			break;
 		case 4:
-			put_long(addr, do_byteswap_32(*((uae_u32 *) pr)));
+			put_long(addr, bswap_32(*((uae_u32 *) pr)));
 			break;
 		default: abort();
 		}
