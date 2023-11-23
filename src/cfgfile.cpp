@@ -483,14 +483,12 @@ static TCHAR *cfgfile_option_find_it(const TCHAR *s, const TCHAR *option, bool c
 		if (!_tcsicmp(p, option)) {
 			if (checkequals && tmpp2) {
 				if (tmpp2[0] == '"') {
-					TCHAR* n = cfgfile_unescape_min(tmpp2);
-					_tcscpy(tmpp2, n);
-					xfree(n);
-					return tmpp2;
+					TCHAR *n = cfgfile_unescape_min(tmpp2);
+					return n;
 				}
-				return tmpp2;
+				return my_strdup(tmpp2);
 			}
-			return p;
+			return my_strdup(p);
 		}
 		p = tmpp;
 	}
