@@ -237,7 +237,7 @@ static struct romdata* scan_single_rom_2(struct zfile* f)
 	return rd;
 }
 
-static int isromext(char* path)
+static int isromext(const char* path)
 {
 	if (!path)
 		return 0;
@@ -269,13 +269,13 @@ static int scan_rom_2(struct zfile* f, void* dummy)
 	return 0;
 }
 
-static void scan_rom(char *path)
+static void scan_rom(const std::string& path)
 {
-	if (!isromext(path)) {
+	if (!isromext(path.c_str())) {
 		//write_log("ROMSCAN: skipping file '%s', unknown extension\n", path);
 		return;
 	}
-	zfile_zopen(path, scan_rom_2, 0);
+	zfile_zopen(path.c_str(), scan_rom_2, nullptr);
 }
 
 void SymlinkROMs()
@@ -285,6 +285,7 @@ void SymlinkROMs()
 
 void RescanROMs()
 {
+	vector<string> dirs;
 	vector<string> files;
 	char path[MAX_DPATH];
 
@@ -294,15 +295,30 @@ void RescanROMs()
 	get_rom_path(path, MAX_DPATH);
 
 	load_keyring(&changed_prefs, path);
-	read_directory(path, nullptr, &files);
+	read_directory(path, &dirs, &files);
+
+	// Root level scan
 	for (auto & file : files)
 	{
-		char tmppath[MAX_DPATH];
-		strncpy(tmppath, path, MAX_DPATH - 1);
-		strncat(tmppath, file.c_str(), MAX_DPATH - 1);
-		scan_rom(tmppath);
+		std::string tmp_path = std::string(path).append(file);
+		scan_rom(tmp_path);
 	}
 
+	// Recursive scan
+	for (auto & dir : dirs)
+	{
+		if (dir != "..")
+		{
+			std::string full_path = std::string(path).append(dir);
+			read_directory(full_path.c_str(), nullptr, &files);
+			for (auto & file : files)
+			{
+				std::string tmp_path = full_path.append(file);
+				scan_rom(tmp_path);
+			}
+		}
+	}
+	
 	auto id = 1;
 	for (;;) {
 		auto* rd = getromdatabyid(id);
