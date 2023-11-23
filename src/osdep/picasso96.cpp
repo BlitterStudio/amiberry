@@ -218,10 +218,10 @@ STATIC_INLINE void endianswap(uae_u32* vp, int bpp)
 	switch (bpp)
 	{
 	case 2:
-		*vp = bswap_16(v);
+		*vp = uae_bswap_16(v);
 		break;
 	case 4:
-		*vp = bswap_32(v);
+		*vp = uae_bswap_32(v);
 		break;
 	}
 }

@@ -1037,7 +1037,7 @@ static inline void emit_block(const uae_u8 *block, uae_u32 blocklen)
 
 static inline uae_u32 reverse32(uae_u32 v)
 {
-	return bswap_32(v);
+	return uae_bswap_32(v);
 }
 
 void set_target(uae_u8* t)
@@ -4630,7 +4630,7 @@ int failure;
 #else
 static inline unsigned int get_opcode_cft_map(unsigned int f)
 {
-	return bswap_16(f);
+	return uae_bswap_16(f);
 }
 #define DO_GET_OPCODE(a) (get_opcode_cft_map((uae_u16)*(a)))
 #endif

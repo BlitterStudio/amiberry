@@ -1826,7 +1826,7 @@ static uae_u32 opcode_swap(uae_u16 opcode)
 {
 	if (!need_opcode_swap)
 		return opcode;
-	return bswap_16(opcode);
+	return uae_bswap_16(opcode);
 }
 
 uae_u32 REGPARAM2 op_illg_1(uae_u32 opcode)
@@ -2025,7 +2025,7 @@ static void build_cpufunctbl (void)
 		cpuop_func **tmp = xmalloc(cpuop_func*, 65536);
 		memcpy(tmp, cpufunctbl, sizeof(cpuop_func*) * 65536);
 		for (int i = 0; i < 65536; i++) {
-			int offset = bswap_16(i);
+			int offset = uae_bswap_16(i);
 			cpufunctbl[offset] = tmp[i];
 		}
 		xfree(tmp);
@@ -5411,7 +5411,7 @@ static uae_u32 get_jit_opcode(void)
 	if (currprefs.cpu_compatible) {
 		opcode = get_word_020_prefetchf(m68k_getpc());
 #ifdef HAVE_GET_WORD_UNSWAPPED
-		opcode = bswap_16(opcode);
+		opcode = uae_bswap_16(opcode);
 #endif
 	} else {
 #ifdef HAVE_GET_WORD_UNSWAPPED
