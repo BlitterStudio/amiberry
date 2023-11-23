@@ -46,10 +46,14 @@
 #include "audio.h"
 #include "fpp.h"
 #include "statusline.h"
-//#include "uae/ppc.h"
+#ifdef WITH_PPC
+#include "uae/ppc.h"
+#endif
 #include "cpuboard.h"
 #include "threaddep/thread.h"
-//#include "x86.h"
+#ifdef WITH_X86
+#include "x86.h"
+#endif
 #include "bsdsocket.h"
 #include "devices.h"
 #ifdef JIT
@@ -2780,8 +2784,10 @@ static void Exception_ce000 (int nr)
 			cpu_halt (CPU_HALT_DOUBLE_FAULT);
 			return;
 		}
-		//write_log(_T("Exception %d (%08x %x) at %x -> %x!\n"),
-		//	nr, last_op_for_exception_3, last_addr_for_exception_3, currpc, get_long_debug(4 * nr));
+#ifdef DEBUGGER
+		write_log(_T("Exception %d (%08x %x) at %x -> %x!\n"),
+			nr, last_op_for_exception_3, last_addr_for_exception_3, currpc, get_long_debug(4 * nr));
+#endif
 		if (currprefs.cpu_model == 68000) {
 			// 68000 bus/address error
 			uae_u16 mode = (sv ? 4 : 0) | last_fc_for_exception_3;
@@ -3033,7 +3039,9 @@ static void Exception_mmu (int nr, uaecptr oldpc)
 			Exception_build_stack_frame(regs.mmu_fault_addr, currpc, regs.mmu_fslw, vector_nr, 0x4);
 	} else if (nr == 3) { // address error
         Exception_build_stack_frame(last_fault_for_exception_3, currpc, 0, vector_nr, 0x2);
-		//write_log (_T("Exception %d (%x) at %x -> %x!\n"), nr, last_fault_for_exception_3, currpc, get_long_debug (regs.vbr + 4 * nr));
+#ifdef DEBUGGER
+		write_log (_T("Exception %d (%x) at %x -> %x!\n"), nr, last_fault_for_exception_3, currpc, get_long_debug (regs.vbr + 4 * nr));
+#endif
 	} else if (regs.m && interrupt) { /* M + Interrupt */
 		Exception_build_stack_frame(oldpc, currpc, regs.mmu_ssw, vector_nr, 0x0);
 		MakeSR();
@@ -3296,7 +3304,9 @@ static void Exception_normal (int nr)
 				Exception_build_stack_frame(oldpc, currpc, ssw, vector_nr, 0x08);
 				used_exception_build_stack_frame = true;
 			}
-			//write_log (_T("Exception %d (%x) at %x -> %x!\n"), nr, regs.instruction_pc, currpc, get_long_debug (regs.vbr + 4 * vector_nr));
+#ifdef DEBUGGER
+			write_log (_T("Exception %d (%x) at %x -> %x!\n"), nr, regs.instruction_pc, currpc, get_long_debug (regs.vbr + 4 * vector_nr));
+#endif
 		} else if (regs.m && interrupt) { /* M + Interrupt */
 			m68k_areg (regs, 7) -= 2;
 			x_put_word (m68k_areg (regs, 7), vector_nr * 4);
@@ -3325,7 +3335,9 @@ static void Exception_normal (int nr)
 			mode |= last_notinstruction_for_exception_3 ? 8 : 0;
 			exception_in_exception = -1;
 			Exception_build_68000_address_error_stack_frame(mode, last_op_for_exception_3, last_fault_for_exception_3, last_addr_for_exception_3);
-			//write_log (_T("Exception %d (%x) at %x -> %x!\n"), nr, last_fault_for_exception_3, currpc, get_long_debug (regs.vbr + 4 * vector_nr));
+#ifdef DEBUGGER
+			write_log (_T("Exception %d (%x) at %x -> %x!\n"), nr, last_fault_for_exception_3, currpc, get_long_debug (regs.vbr + 4 * vector_nr));
+#endif
 			goto kludge_me_do;
 		}
 	}
@@ -3836,7 +3848,9 @@ uae_u32 REGPARAM2 op_illg (uae_u32 opcode)
 			Exception(8);
 		} else {
 			if (warned < 20) {
-				//write_log(_T("B-Trap %04X at %08X -> %08X\n"), opcode, pc, get_long_debug(regs.vbr + 0x2c));
+#ifdef DEBUGGER
+				write_log(_T("B-Trap %04X at %08X -> %08X\n"), opcode, pc, get_long_debug(regs.vbr + 0x2c));
+#endif
 				warned++;
 			}
 			Exception(0xB);
@@ -3846,7 +3860,9 @@ uae_u32 REGPARAM2 op_illg (uae_u32 opcode)
 	}
 	if ((opcode & 0xF000) == 0xA000) {
 		if (warned < 20) {
-			//write_log(_T("A-Trap %04X at %08X -> %08X\n"), opcode, pc, get_long_debug(regs.vbr + 0x28));
+#ifdef DEBUGGER
+			write_log(_T("A-Trap %04X at %08X -> %08X\n"), opcode, pc, get_long_debug(regs.vbr + 0x28));
+#endif
 			warned++;
 		}
 		Exception (0xA);
@@ -3854,7 +3870,9 @@ uae_u32 REGPARAM2 op_illg (uae_u32 opcode)
 		return 4;
 	}
 	if (warned < 20) {
-		//write_log (_T("Illegal instruction: %04x at %08X -> %08X\n"), opcode, pc, get_long_debug(regs.vbr + 0x10));
+#ifdef DEBUGGER
+		write_log (_T("Illegal instruction: %04x at %08X -> %08X\n"), opcode, pc, get_long_debug(regs.vbr + 0x10));
+#endif
 		warned++;
 		//activate_debugger_new();
 	}
@@ -4269,7 +4287,6 @@ static void check_uae_int_request(void)
 
 void safe_interrupt_set(int num, int id, bool i6)
 {
-#ifndef AMIBERRY
 	if (!is_mainthread()) {
 		set_special_exter(SPCFLAG_UAEINT);
 		volatile uae_atomic *p;
@@ -4280,7 +4297,6 @@ void safe_interrupt_set(int num, int id, bool i6)
 		atomic_or(p, 1 << id);
 		atomic_or(&uae_interrupt, 1);
 	} else {
-#endif
 		int inum = i6 ? 13 : 3;
 		uae_u16 v = 1 << inum;
 		if (currprefs.cpu_cycle_exact || currprefs.cpu_compatible) {
@@ -4288,9 +4304,7 @@ void safe_interrupt_set(int num, int id, bool i6)
 		} else if (!(intreq & v)) {
 			INTREQ_0(0x8000 | v);
 		}
-#ifndef AMIBERRY
 	}
-#endif
 }
 
 int cpu_sleep_millis(int ms)
@@ -5120,6 +5134,7 @@ static volatile uae_u32 cpu_thread_indirect_addr;
 static volatile uae_u32 cpu_thread_indirect_val;
 static volatile uae_u32 cpu_thread_indirect_size;
 static volatile uae_u32 cpu_thread_reset;
+static SDL_Thread* cpu_thread;
 static SDL_threadID cpu_thread_tid;
 
 static bool m68k_cs_initialized;
@@ -5179,9 +5194,8 @@ extern addrbank *thread_mem_banks[MEMORY_BANKS];
 
 uae_u32 process_cpu_indirect_memory_read(uae_u32 addr, int size)
 {
-#ifndef AMIBERRY
-	// Do direct access if call is from filesystem etc thread 
-	if (cpu_thread_tid != uae_thread_get_id()) {
+	// Do direct access if call is from filesystem etc thread
+	if (cpu_thread_tid != uae_thread_get_id(nullptr)) {
 		uae_u32 data = 0;
 		addrbank *ab = thread_mem_banks[bankindex(addr)];
 		switch (size)
@@ -5198,7 +5212,6 @@ uae_u32 process_cpu_indirect_memory_read(uae_u32 addr, int size)
 		}
 		return data;
 	}
-#endif
 
 	cpu_thread_indirect_mode = 2;
 	cpu_thread_indirect_addr = addr;
@@ -5211,8 +5224,7 @@ uae_u32 process_cpu_indirect_memory_read(uae_u32 addr, int size)
 
 void process_cpu_indirect_memory_write(uae_u32 addr, uae_u32 data, int size)
 {
-#ifndef AMIBERRY
-	if (cpu_thread_tid != uae_thread_get_id()) {
+	if (cpu_thread_tid != uae_thread_get_id(nullptr)) {
 		addrbank *ab = thread_mem_banks[bankindex(addr)];
 		switch (size)
 		{
@@ -5228,7 +5240,7 @@ void process_cpu_indirect_memory_write(uae_u32 addr, uae_u32 data, int size)
 		}
 		return;
 	}
-#endif
+
 	cpu_thread_indirect_mode = 1;
 	cpu_thread_indirect_addr = addr;
 	cpu_thread_indirect_size = size;
@@ -5249,7 +5261,7 @@ static void run_cpu_thread(int (*f)(void *))
 	uae_sem_init(&cpu_out_sema, 0, 0);
 	uae_sem_init(&cpu_wakeup_sema, 0, 0);
 
-	if (!uae_start_thread(_T("cpu"), f, NULL, NULL))
+	if (!uae_start_thread(_T("cpu"), f, NULL, &cpu_thread))
 		return;
 	while (!cpu_thread_active) {
 		sleep_millis(1);
@@ -5380,12 +5392,10 @@ static void run_cpu_thread(int (*f)(void *))
 void custom_reset_cpu(bool hardreset, bool keyboardreset)
 {
 #ifdef WITH_THREADED_CPU
-#ifndef AMIBERRY
-	if (cpu_thread_tid != uae_thread_get_id()) {
+	if (cpu_thread_tid != uae_thread_get_id(nullptr)) {
 		custom_reset(hardreset, keyboardreset);
 		return;
 	}
-#endif
 	cpu_thread_reset = 1 | (hardreset ? 2 : 0) | (keyboardreset ? 4 : 0);
 	uae_sem_post(&cpu_wakeup_sema);
 	uae_sem_wait(&cpu_in_sema);
@@ -5501,7 +5511,7 @@ typedef void compiled_handler (void);
 #ifdef WITH_THREADED_CPU
 static int cpu_thread_run_jit(void *v)
 {
-	cpu_thread_tid = uae_thread_get_id();
+	cpu_thread_tid = uae_thread_get_id(cpu_thread);
 	cpu_thread_active = 1;
 #ifdef USE_STRUCTURED_EXCEPTION_HANDLING
 	__try
@@ -6339,7 +6349,7 @@ static int cpu_thread_run_2(void *v)
 	bool exit = false;
 	struct regstruct *r = &regs;
 
-	cpu_thread_tid = uae_thread_get_id();
+	cpu_thread_tid = uae_thread_get_id(cpu_thread);
 
 	cpu_thread_active = 1;
 	while (!exit) {
