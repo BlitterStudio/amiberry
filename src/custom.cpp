@@ -4947,11 +4947,6 @@ STATIC_INLINE void one_fetch_cycle(int pos, int fm)
 
 static void update_fetch(int until, int fm)
 {
-#ifdef AMIBERRY
-	if (nodraw())
-		return;
-#endif
-
 	int hpos = last_fetch_hpos;
 
 	if (hpos >= until) {
@@ -11876,22 +11871,20 @@ static bool framewait(void)
 
 		curr_time = read_processor_time();
 		vsyncwaittime = vsyncmaxtime = curr_time + vsynctimebase;
-		if (!nodraw()) {
-			if (!frame_rendered && !ad->picasso_on) {
-				frame_rendered = crender_screen(0, 1, false);
-			}
+		if (!frame_rendered && !ad->picasso_on) {
+			frame_rendered = crender_screen(0, 1, false);
+		}
 
-			start = read_processor_time();
-			t = 0;
-			if (start - vsync_time >= 0 && start - vsync_time < vsynctimebase) {
-				t += start - vsync_time;
-			}
+		start = read_processor_time();
+		t = 0;
+		if (start - vsync_time >= 0 && start - vsync_time < vsynctimebase) {
+			t += start - vsync_time;
+		}
 
-			if (!frame_shown) {
-				show_screen(0, 1);
-				if (currprefs.gfx_apmode[0].gfx_strobo) {
-					show_screen(0, 4);
-				}
+		if (!frame_shown) {
+			show_screen(0, 1);
+			if (currprefs.gfx_apmode[0].gfx_strobo) {
+				show_screen(0, 4);
 			}
 		}
 
@@ -11964,7 +11957,7 @@ static bool framewait(void)
 				if (vsyncwaittime - curr_time <= 0 || vsyncwaittime - curr_time > 2 * vsynctimebase) {
 					break;
 				}
-				//rtg_vsynccheck ();
+				rtg_vsynccheck ();
 				if (cpu_sleep_millis(1) < 0) {
 					curr_time = read_processor_time();
 					break;
@@ -12009,13 +12002,13 @@ static bool framewait(void)
 				float v = rpt_vsync(clockadjust) / (syncbase / 1000.0f);
 				if (v >= -FRAMEWAIT_MIN_MS)
 					break;
-				//rtg_vsynccheck();
+				rtg_vsynccheck();
 				maybe_process_pull_audio();
 				if (cpu_sleep_millis(1) < 0)
 					break;
 			}
 			while (rpt_vsync(clockadjust) < 0) {
-				//rtg_vsynccheck();
+				rtg_vsynccheck();
 				if (audio_is_pull_event()) {
 					maybe_process_pull_audio();
 					break;
@@ -12168,11 +12161,8 @@ static void vsync_handler_render(void)
 	}
 
 	bool frameok = framewait();
-#ifdef AMIBERRY
-	if (!ad->picasso_on && !nodraw()) {
-#else
+	
 	if (!ad->picasso_on) {
-#endif
 		if (!frame_rendered && vblank_hz_state) {
 			frame_rendered = crender_screen(0, 1, false);
 		}
@@ -12181,10 +12171,7 @@ static void vsync_handler_render(void)
 		}
 	}
 
-#ifdef AMIBERRY
-	if (!nodraw() || ad->picasso_on)
-#endif
-		fpscounter(frameok);
+	fpscounter(frameok);
 
 	bool waspaused = false;
 	while (handle_events()) {
