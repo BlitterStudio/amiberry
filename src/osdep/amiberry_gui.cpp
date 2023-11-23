@@ -241,17 +241,19 @@ static int isromext(const char* path)
 {
 	if (!path)
 		return 0;
-	auto* ext = strrchr(path, '.');
+	auto* ext = _tcsrchr(path, '.');
 	if (!ext)
 		return 0;
 	ext++;
 
-	if (!stricmp(ext, "rom") || !stricmp(ext, "adf") || !stricmp(ext, "key")
-		|| !stricmp(ext, "a500") || !stricmp(ext, "a1200") || !stricmp(ext, "a4000"))
+	if (!_tcsicmp(ext, "rom") || !_tcsicmp(ext, "adf") || !_tcsicmp(ext, "key")
+		|| !_tcsicmp(ext, "a500") || !_tcsicmp(ext, "a1200") || !_tcsicmp(ext, "a4000"))
+		return 1;
+	if (_tcslen (ext) >= 2 && toupper(ext[0]) == 'U' && isdigit (ext[1]))
 		return 1;
 	for (auto i = 0; uae_archive_extensions[i]; i++)
 	{
-		if (!stricmp(ext, uae_archive_extensions[i]))
+		if (!_tcsicmp(ext, uae_archive_extensions[i]))
 			return 1;
 	}
 	return 0;
@@ -313,12 +315,12 @@ void RescanROMs()
 			read_directory(full_path.c_str(), nullptr, &files);
 			for (auto & file : files)
 			{
-				std::string tmp_path = full_path.append(file);
-				scan_rom(tmp_path);
+				std::string tmp_path = full_path;
+				scan_rom(tmp_path.append("/").append(file));
 			}
 		}
 	}
-	
+
 	auto id = 1;
 	for (;;) {
 		auto* rd = getromdatabyid(id);
