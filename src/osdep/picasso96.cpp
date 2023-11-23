@@ -65,6 +65,8 @@
 #include "native2amiga.h"
 #include "drawing.h"
 #include "inputdevice.h"
+#include "debug.h"
+//#include "registry.h"
 #ifdef RETROPLATFORM
 #include "rp.h"
 #endif
@@ -73,6 +75,7 @@
 #include "clipboard.h"
 #include "gfxboard.h"
 #include "devices.h"
+#include "statusline.h"
 
 #define NOBLITTER 0
 #define NOBLITTER_BLIT 0
@@ -662,8 +665,8 @@ static void mouseupdate(struct AmigaMonitor *mon)
 	struct picasso96_state_struct *state = &picasso96_state[mon->monitor_id];
 	int x = newcursor_x;
 	int y = newcursor_y;
-	float mx = currprefs.gf[1].gfx_filter_horiz_zoom_mult;
-	float my = currprefs.gf[1].gfx_filter_vert_zoom_mult;
+	float mx = currprefs.gf[GF_RTG].gfx_filter_horiz_zoom_mult;
+	float my = currprefs.gf[GF_RTG].gfx_filter_vert_zoom_mult;
 	int forced = 0;
 
 	if (!hwsprite)
@@ -680,7 +683,7 @@ static void mouseupdate(struct AmigaMonitor *mon)
 	SDL_WarpMouseInWindow(mon->sdl_window, x, y);
 #else
 	if (D3D_setcursor) {
-		if (currprefs.gf[1].gfx_filter_autoscale == RTG_MODE_CENTER) {
+		if (currprefs.gf[GF_RTG].gfx_filter_autoscale == RTG_MODE_CENTER) {
 			D3D_setcursor(mon->monitor_id, x, y, WIN32GFX_GetWidth(mon), WIN32GFX_GetHeight(mon), mx, my, cursorvisible, mon->scalepicasso == 2);
 		} else {
 			D3D_setcursor(mon->monitor_id, x, y, state->Width, state->Height, mx, my, cursorvisible, false);
@@ -737,7 +740,9 @@ static void rtg_render(void)
 			if (vidinfo->full_refresh > 0)
 				vidinfo->full_refresh--;
 		}
-		//gfxboard_vsync_handler(full, true);
+#ifndef AMIBERRY
+		gfxboard_vsync_handler(full, true);
+#endif
 		if (currprefs.rtg_multithread && uaegfx_active) {
 			if (ad->pending_render) {
 				ad->pending_render = false;
@@ -962,7 +967,11 @@ void picasso_refresh(int monid)
 	rtg_clear(monid);
 
 	if (currprefs.rtgboards[0].rtgmem_type >= GFXBOARD_HARDWARE) {
-		//gfxboard_refresh(monid);
+#ifdef AMIBERRY
+		picasso_refresh(monid);
+#else
+		gfxboard_refresh(monid);
+#endif
 		unlockrtg();
 		return;
 	}
@@ -1175,7 +1184,9 @@ static void picasso_handle_hsync(void)
 				}
 				picasso_trigger_vblank();
 			}
-			//gfxboard_vsync_handler(false, false);
+#ifndef AMIBERRY
+			gfxboard_vsync_handler(false, false);
+#endif
 		} else {
 			picasso_handle_vsync2(mon);
 		}
@@ -2923,7 +2934,7 @@ static uae_u32 REGPARAM2 picasso_SetGC (TrapContext *ctx)
 	state->VirtualHeight = state->Height; /* in case SetPanning doesn't get called */
 
 	uae_u8 d = trap_get_byte(ctx, modeinfo + PSSO_ModeInfo_Depth);
-	if (d != state->GC_Depth) {
+	if (d != state->GC_Depth && isfullscreen() > 0 && currprefs.rtgmatchdepth) {
 		state->ModeChanged = true;
 	}
 	state->GC_Depth = d;
@@ -3037,7 +3048,7 @@ static uae_u32 picasso_SetSplitPosition(TrapContext *ctx)
 	return 1;
 }
 
-#if defined (CPU_AARCH64) || defined (__x86_64__)
+#ifdef CPU_64_BIT
 static void do_xor8(uae_u8 *p, int w, uae_u32 v)
 {
 	while (ALIGN_POINTER_TO32(p) != 7 && w) {
@@ -4313,7 +4324,6 @@ static uae_u32 REGPARAM2 picasso_BlitPlanar2Direct(TrapContext *ctx)
 	return result;
 }
 
-#include "statusline.h"
 void picasso_statusline(int monid, uae_u8 *dst)
 {
 	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[monid];
