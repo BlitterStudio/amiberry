@@ -237,21 +237,23 @@ static struct romdata* scan_single_rom_2(struct zfile* f)
 	return rd;
 }
 
-static int isromext(char* path)
+static int isromext(const char* path)
 {
 	if (!path)
 		return 0;
-	auto* ext = strrchr(path, '.');
+	auto* ext = _tcsrchr(path, '.');
 	if (!ext)
 		return 0;
 	ext++;
 
-	if (!stricmp(ext, "rom") || !stricmp(ext, "adf") || !stricmp(ext, "key")
-		|| !stricmp(ext, "a500") || !stricmp(ext, "a1200") || !stricmp(ext, "a4000"))
+	if (!_tcsicmp(ext, "rom") || !_tcsicmp(ext, "adf") || !_tcsicmp(ext, "key")
+		|| !_tcsicmp(ext, "a500") || !_tcsicmp(ext, "a1200") || !_tcsicmp(ext, "a4000"))
+		return 1;
+	if (_tcslen (ext) >= 2 && toupper(ext[0]) == 'U' && isdigit (ext[1]))
 		return 1;
 	for (auto i = 0; uae_archive_extensions[i]; i++)
 	{
-		if (!stricmp(ext, uae_archive_extensions[i]))
+		if (!_tcsicmp(ext, uae_archive_extensions[i]))
 			return 1;
 	}
 	return 0;
@@ -269,13 +271,13 @@ static int scan_rom_2(struct zfile* f, void* dummy)
 	return 0;
 }
 
-static void scan_rom(char *path)
+static void scan_rom(const std::string& path)
 {
-	if (!isromext(path)) {
+	if (!isromext(path.c_str())) {
 		//write_log("ROMSCAN: skipping file '%s', unknown extension\n", path);
 		return;
 	}
-	zfile_zopen(path, scan_rom_2, 0);
+	zfile_zopen(path.c_str(), scan_rom_2, nullptr);
 }
 
 void SymlinkROMs()
@@ -285,6 +287,7 @@ void SymlinkROMs()
 
 void RescanROMs()
 {
+	vector<string> dirs;
 	vector<string> files;
 	char path[MAX_DPATH];
 
@@ -294,13 +297,28 @@ void RescanROMs()
 	get_rom_path(path, MAX_DPATH);
 
 	load_keyring(&changed_prefs, path);
-	read_directory(path, nullptr, &files);
+	read_directory(path, &dirs, &files);
+
+	// Root level scan
 	for (auto & file : files)
 	{
-		char tmppath[MAX_DPATH];
-		strncpy(tmppath, path, MAX_DPATH - 1);
-		strncat(tmppath, file.c_str(), MAX_DPATH - 1);
-		scan_rom(tmppath);
+		std::string tmp_path = std::string(path).append(file);
+		scan_rom(tmp_path);
+	}
+
+	// Recursive scan
+	for (auto & dir : dirs)
+	{
+		if (dir != "..")
+		{
+			std::string full_path = std::string(path).append(dir);
+			read_directory(full_path.c_str(), nullptr, &files);
+			for (auto & file : files)
+			{
+				std::string tmp_path = full_path;
+				scan_rom(tmp_path.append("/").append(file));
+			}
+		}
 	}
 
 	auto id = 1;
