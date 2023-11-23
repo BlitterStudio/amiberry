@@ -530,6 +530,16 @@ static void remove_extra_file(const char* path, const char* name)
 	xfree(p);
 }
 
+bool my_isfilehidden (const TCHAR *path)
+{
+	return false;
+}
+
+void my_setfilehidden (const TCHAR *path, bool hidden)
+{
+
+}
+
 int my_rmdir(const TCHAR* path)
 {
 	remove_extra_file(path, "Thumbs.db");

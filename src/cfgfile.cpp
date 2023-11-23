@@ -436,29 +436,29 @@ static TCHAR *cfgfile_unescape_min(const TCHAR *s)
 
 static void clearmountitems(struct uae_prefs *p)
 {
-    p->mountitems = 0;
-    for (int i = 0; i < MOUNT_CONFIG_SIZE; i++) {
-        p->mountconfig[i].configoffset = -1;
-        p->mountconfig[i].unitnum = -1;
-    }
+	p->mountitems = 0;
+	for (int i = 0; i < MOUNT_CONFIG_SIZE; i++) {
+		p->mountconfig[i].configoffset = -1;
+		p->mountconfig[i].unitnum = -1;
+	}
 }
 
 void discard_prefs(struct uae_prefs *p, int type)
 {
-    struct strlist **ps = &p->all_lines;
-    while (*ps) {
-        struct strlist *s = *ps;
-        *ps = s->next;
-        xfree(s->value);
-        xfree(s->option);
-        xfree(s);
-    }
-    p->all_lines = NULL;
-    currprefs.all_lines = changed_prefs.all_lines = NULL;
+	struct strlist **ps = &p->all_lines;
+	while (*ps) {
+		struct strlist *s = *ps;
+		*ps = s->next;
+		xfree(s->value);
+		xfree(s->option);
+		xfree(s);
+	}
+	p->all_lines = NULL;
+	currprefs.all_lines = changed_prefs.all_lines = NULL;
 #ifdef FILESYS
-    filesys_cleanup();
+	filesys_cleanup();
 #endif
-    clearmountitems(p);
+	clearmountitems(p);
 }
 
 static TCHAR *cfgfile_option_find_it(const TCHAR *s, const TCHAR *option, bool checkequals)
@@ -3630,6 +3630,9 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 				p->cdslots[i].type = type;
 				if (path[0] == 0 || !_tcsicmp(path, _T("empty")) || !_tcscmp(path, _T("."))) {
 					p->cdslots[i].name[0] = 0;
+#ifndef AMIBERRY
+					p->cdslots[i].inuse = false;
+#endif
 				}
 				if (path != value) {
 					xfree(path);
@@ -3824,6 +3827,7 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		|| cfgfile_strval(option, value, _T("magic_mousecursor"), &p->input_magic_mouse_cursor, magiccursors, 0)
 		|| cfgfile_strval (option, value, _T("absolute_mouse"), &p->input_tablet, abspointers, 0))
 		return 1;
+
 	if (cfgfile_intval(option, value, _T("gfx_rotation"), &p->gfx_rotation, 1)) {
 		p->gf[GF_NORMAL].gfx_filter_rotation = p->gfx_rotation;
 		p->gf[GF_INTERLACE].gfx_filter_rotation = p->gfx_rotation;
@@ -5648,7 +5652,9 @@ static bool cfgfile_read_board_rom(struct uae_prefs *p, const TCHAR *option, con
 				if (buf2[0]) {
 					if (ert->deviceflags & EXPANSIONTYPE_NET) {
 						// make sure network settings are available before parsing net "rom" entries
-						//ethernet_updateselection();
+#ifndef AMIBERRY // Not implemented yet
+						ethernet_updateselection();
+#endif
 					}
 					brc = get_device_rom_new(p, ert->romtype, j, &idx);
 					_tcscpy(brc->roms[idx].romfile, buf2);
@@ -5773,7 +5779,7 @@ static void addbcromtype(struct uae_prefs *p, int romtype, bool add, const TCHAR
 	}
 }
 
-#ifndef AMIBERRY
+#ifndef AMIBERRY // Not implemented yet
 static void addbcromtypenet(struct uae_prefs *p, int romtype, const TCHAR *netname, int devnum)
 {
 	int is = is_device_rom(p, romtype, devnum);
@@ -6031,7 +6037,9 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		|| cfgfile_strval(option, value, _T("comp_trustnaddr"), &p->comptrustnaddr, compmode, 0)
 		|| cfgfile_strval(option, value, _T("collision_level"), &p->collision_level, collmode, 0)
 		|| cfgfile_strval(option, value, _T("parallel_matrix_emulation"), &p->parallel_matrix_emulation, epsonprinter, 0)
-		//|| cfgfile_strval(option, value, _T("monitoremu"), &p->monitoremu, specialmonitorconfignames, 0)
+#ifndef AMIBERRY
+		|| cfgfile_strval(option, value, _T("monitoremu"), &p->monitoremu, specialmonitorconfignames, 0)
+#endif
 		|| cfgfile_strval(option, value, _T("genlockmode"), &p->genlock_image, genlockmodes, 0)
 		|| cfgfile_strval(option, value, _T("waiting_blits"), &p->waiting_blits, waitblits, 0)
 		|| cfgfile_strval(option, value, _T("floppy_auto_extended_adf"), &p->floppy_auto_ext2, autoext2, 0)
@@ -6615,7 +6623,7 @@ void cfgfile_compatibility_rtg(struct uae_prefs *p)
 			}
 		}
 	}
-#ifndef AMIBERRY
+#ifndef AMIBERRY // Only 1 RTG board in Amiberry for now
 	int rtgs[MAX_RTG_BOARDS] = { 0 };
 	for (int i = 0; i < MAX_RTG_BOARDS; i++) {
 		if (p->rtgboards[i].rtgmem_size && !rtgs[i]) {
@@ -6683,9 +6691,11 @@ void cfgfile_compatibility_romtype(struct uae_prefs *p)
 
 	if (p->config_version < ((3 << 16) | (4 << 8) | (0 << 0))) {
 		// 3.3.0 or older
-		//addbcromtypenet(p, ROMTYPE_A2065, p->a2065name, 0);
-		//addbcromtypenet(p, ROMTYPE_NE2KPCMCIA, p->ne2000pcmcianame, 0);
-		//addbcromtypenet(p, ROMTYPE_NE2KPCI, p->ne2000pciname, 0);
+#ifndef AMIBERRY
+		addbcromtypenet(p, ROMTYPE_A2065, p->a2065name, 0);
+		addbcromtypenet(p, ROMTYPE_NE2KPCMCIA, p->ne2000pcmcianame, 0);
+		addbcromtypenet(p, ROMTYPE_NE2KPCI, p->ne2000pciname, 0);
+#endif
 	}
 
 	static const int restricted_net[] = {
@@ -7163,9 +7173,9 @@ static int cfgfile_load_2 (struct uae_prefs *p, const TCHAR *filename, bool real
 									tmp[se - tmp] = 0;
 								}
 							}
-								_tcscpy(p->mountconfig[0].ci.rootdir, s);
-								cfgfile_resolve_path_load(p->mountconfig[0].ci.rootdir, MAX_DPATH, isvsys ? PATH_DIR : PATH_HDF);
-								p->mountitems = 1;
+							_tcscpy(p->mountconfig[0].ci.rootdir, s);
+							cfgfile_resolve_path_load(p->mountconfig[0].ci.rootdir, MAX_DPATH, isvsys ? PATH_DIR : PATH_HDF);
+							p->mountitems = 1;
 						}
 					}
 				}
@@ -7266,24 +7276,25 @@ end:
 	return v;
 }
 
-//void cfgfile_backup(const TCHAR* path)
-//{
-//	TCHAR dpath[MAX_DPATH];
-//
-//	get_configuration_path(dpath, sizeof(dpath) / sizeof(TCHAR));
-//	_tcscat(dpath, _T("configuration.backup"));
-//	bool hidden = my_isfilehidden(dpath);
-//	my_unlink(dpath);
-//	my_rename(path, dpath);
-//	if (hidden)
-//		my_setfilehidden(dpath, hidden);
-//}
+void cfgfile_backup(const TCHAR *path)
+{
+	TCHAR dpath[MAX_DPATH];
+
+	get_configuration_path(dpath, sizeof(dpath) / sizeof(TCHAR));
+	_tcscat(dpath, _T("configuration.backup"));
+	bool hidden = my_isfilehidden(dpath);
+	my_unlink(dpath);
+	my_rename(path, dpath);
+	if (hidden)
+		my_setfilehidden(dpath, hidden);
+}
 
 int cfgfile_save (struct uae_prefs *p, const TCHAR *filename, int type)
 {
 	struct zfile *fh;
 
-	fh = zfile_fopen (filename, _T("w"), ZFD_NORMAL);
+	cfgfile_backup (filename);
+	fh = zfile_fopen (filename, _T("w, ccs=UTF-8"), ZFD_NORMAL);
 	if (! fh)
 		return 0;
 
@@ -7953,7 +7964,7 @@ static int execcmdline(struct uae_prefs *prefs, int argv, TCHAR **argc, TCHAR *o
 					filesys_shellexecute2(cmd, NULL, NULL, 0, 0, 0, flags, NULL, 0, shellexec_cb, NULL);
 				}
 #ifdef DEBUGGER 
-                else if (!_tcsicmp(argc[i], _T("dbg"))) {
+		else if (!_tcsicmp(argc[i], _T("dbg"))) {
 					debug_parser(argc[i + 1], out, outsize);
 				}
 #endif
