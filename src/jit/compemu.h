@@ -86,7 +86,7 @@ union cacheline {
 #error implementation in progress
 #endif
 
-/* (gb) When on, this option can save save up to 30% compilation time
+/* (gb) When on, this option can save up to 30% compilation time
  *  when many lazy flushes occur (e.g. apps in MacOS 8.x).
  */
 #define USE_SEPARATE_BIA 1
@@ -97,7 +97,7 @@ union cacheline {
 /* Use code inlining, aka follow-up of constant jumps */
 #define USE_INLINING 1
 
-/* Inlining requires the chained checksuming information */
+/* Inlining requires the chained checksum information */
 #if USE_INLINING
 #undef  USE_CHECKSUM_INFO
 #define USE_CHECKSUM_INFO 1
