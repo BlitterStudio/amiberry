@@ -15458,10 +15458,10 @@ uae_u8 *restore_custom(uae_u8 *src)
 	RW;						/* 03A STRVHBL */
 	RW;						/* 03C STRHOR */
 	RW;						/* 03E STRLONG */
-	BLTCON0(0, RW);	/* 040 BLTCON0 */
-	BLTCON1(0, RW);	/* 042 BLTCON1 */
-	BLTAFWM(0, RW);	/* 044 BLTAFWM */
-	BLTALWM(0, RW);	/* 046 BLTALWM */
+	BLTCON0(0, RW);			/* 040 BLTCON0 */
+	BLTCON1(0, RW);			/* 042 BLTCON1 */
+	BLTAFWM(0, RW);			/* 044 BLTAFWM */
+	BLTALWM(0, RW);			/* 046 BLTALWM */
 	BLTCPTH(0, RW);BLTCPTL(0, RW);	/* 048-04B BLTCPT */
 	BLTBPTH(0, RW);BLTBPTL(0, RW);	/* 04C-04F BLTBPT */
 	BLTAPTH(0, RW);BLTAPTL(0, RW);	/* 050-053 BLTAPT */
@@ -15470,17 +15470,17 @@ uae_u8 *restore_custom(uae_u8 *src)
 	RW;						/* 05A BLTCON0L */
 	blt_info.vblitsize = RW;/* 05C BLTSIZV */
 	blt_info.hblitsize = RW;/* 05E BLTSIZH */
-	BLTCMOD(0, RW);	/* 060 BLTCMOD */
-	BLTBMOD(0, RW);	/* 062 BLTBMOD */
-	BLTAMOD(0, RW);	/* 064 BLTAMOD */
-	BLTDMOD(0, RW);	/* 066 BLTDMOD */
+	BLTCMOD(0, RW);			/* 060 BLTCMOD */
+	BLTBMOD(0, RW);			/* 062 BLTBMOD */
+	BLTAMOD(0, RW);			/* 064 BLTAMOD */
+	BLTDMOD(0, RW);			/* 066 BLTDMOD */
 	RW;						/* 068 ? */
 	RW;						/* 06A ? */
 	RW;						/* 06C ? */
 	RW;						/* 06E ? */
-	BLTCDAT(0, RW);	/* 070 BLTCDAT */
-	BLTBDAT(0, RW);	/* 072 BLTBDAT */
-	BLTADAT(0, RW);	/* 074 BLTADAT */
+	BLTCDAT(0, RW);			/* 070 BLTCDAT */
+	BLTBDAT(0, RW);			/* 072 BLTBDAT */
+	BLTADAT(0, RW);			/* 074 BLTADAT */
 	RW;						/* 076 ? */
 	RW;						/* 078 ? */
 	RW;						/* 07A ? */
@@ -15496,7 +15496,7 @@ uae_u8 *restore_custom(uae_u8 *src)
 	ddfstrt = RW;			/* 092 DDFSTRT */
 	ddfstop = RW;			/* 094 DDFSTOP */
 	dmacon = RW & ~(0x2000|0x4000); /* 096 DMACON */
-	CLXCON(-1, RW);	/* 098 CLXCON */
+	CLXCON(-1, RW);			/* 098 CLXCON */
 	intena = RW;			/* 09A INTENA */
 	intreq = RW;			/* 09C INTREQ */
 	adkcon = RW;			/* 09E ADKCON */
@@ -15527,10 +15527,10 @@ uae_u8 *restore_custom(uae_u8 *src)
 	vsstop = RW;			/* 1CA VSSTOP */
 	vbstrt = RW;			/* 1CC VBSTRT */
 	vbstop = RW;			/* 1CE VBSTOP */
-	SPRHSTRT(-1, RW);	/* 1D0 SPRHSTART */
-	SPRHSTOP(-1, RW);	/* 1D2 SPRHSTOP */
-	BPLHSTRT(-1, RW);	/* 1D4 BPLHSTRT */
-	BPLHSTOP(-1, RW);	/* 1D6 BPLHSTOP */
+	SPRHSTRT(-1, RW);		/* 1D0 SPRHSTART */
+	SPRHSTOP(-1, RW);		/* 1D2 SPRHSTOP */
+	BPLHSTRT(-1, RW);		/* 1D4 BPLHSTRT */
+	BPLHSTOP(-1, RW);		/* 1D6 BPLHSTOP */
 	hhpos = RW;				/* 1D8 HHPOSW */
 	RW;						/* 1DA HHPOSR */
 	new_beamcon0 = RW;		/* 1DC BEAMCON0 */

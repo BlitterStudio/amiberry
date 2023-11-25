@@ -471,6 +471,9 @@ void devices_unpause(void)
 #ifdef WITH_PPC
 	uae_ppc_pause(0);
 #endif
+#ifdef WITH_DSP
+	dsp_pause(0);
+#endif
 	//pausevideograb(0);
 	//ethernet_pause(0);
 }
