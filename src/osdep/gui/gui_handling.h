@@ -146,9 +146,14 @@ extern bool gui_running;
 extern ConfigCategory categories[];
 extern gcn::Gui* uae_gui;
 extern gcn::Container* gui_top;
+
+// GUI Colors
+extern amiberry_gui_theme gui_theme;
 extern gcn::Color gui_baseCol;
 extern gcn::Color colTextboxBackground;
+extern gcn::Color colSelectorInactive;
 extern gcn::Color colSelectorActive;
+
 extern gcn::SDLInput* gui_input;
 extern SDL_Surface* gui_screen;
 extern SDL_Joystick* gui_joystick;
