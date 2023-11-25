@@ -14,6 +14,7 @@
 #include "uae/types.h"
 
 #include "traps.h"
+#include "guisan/color.hpp"
 
 #define UAEMAJOR 5
 #define UAEMINOR 6
@@ -1190,6 +1191,16 @@ struct amiberry_hotkey
 	hotkey_modifiers modifiers;
 };
 
+struct amiberry_gui_theme
+{
+	gcn::Color base_color;
+	gcn::Color selector_inactive;
+	gcn::Color selector_active;
+	gcn::Color textbox_background;
+	std::string font_name;
+	int font_size;
+};
+
 struct amiberry_options
 {
 	bool quickstart_start = true;
@@ -1249,6 +1260,12 @@ struct amiberry_options
 	char default_vkbd_style[128] = "Original";
 	int default_vkbd_transparency;
 	char default_vkbd_toggle[128] = "guide";
+	char gui_theme_font_name[128] = "AmigaTopaz.ttf";
+	int gui_theme_font_size = 15;
+	char gui_theme_base_color[128] = "170, 170, 170";
+	char gui_theme_selector_inactive[128] = "170, 170, 170";
+	char gui_theme_selector_active[128] = "103, 136, 187";
+	char gui_theme_textbox_background[128] = "220, 220, 220";
 };
 
 extern struct amiberry_options amiberry_options;
