@@ -214,8 +214,11 @@ Thumbs.db
 *.orig
 cmake-build-debug
 cmake-build-release
+cmake-build-minsizerel
+cmake-build-relwithdebinfo
 VSLinux/.vs
 .vs
 .flatpak-builder/
 .flatpak/
 Brewfile.lock.json
+
