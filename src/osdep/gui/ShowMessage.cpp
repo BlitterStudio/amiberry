@@ -1,5 +1,7 @@
 #include <cstdio>
 #include <cstring>
+#include <cstdlib>
+#include <iostream>
 
 #include <guisan.hpp>
 #include <SDL_ttf.h>
@@ -167,20 +169,30 @@ static void InitShowMessage(const std::string& message)
 	{
 		gui_top = new gcn::Container();
 		gui_top->setDimension(gcn::Rectangle(0, 0, GUI_WIDTH, GUI_HEIGHT));
-		gui_baseCol = gcn::Color(170, 170, 170);
+		gui_baseCol = gui_theme.base_color;
 		gui_top->setBaseColor(gui_baseCol);
 		uae_gui->setTop(gui_top);
 	}
 	if (gui_font == nullptr)
 	{
 		TTF_Init();
-#ifdef USE_OPENGL
-		gui_font = new gcn::ImageFont(prefix_with_data_path("rpgfont.png"), " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?-+/():;%&`'*#=[]\"");
 
+		try
+		{
+#ifdef USE_OPENGL
+			gui_font = new gcn::ImageFont(prefix_with_data_path("rpgfont.png"), " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?-+/():;%&`'*#=[]\"");
 #else
-		gui_font = new gcn::SDLTrueTypeFont(prefix_with_data_path("AmigaTopaz.ttf"), 15);
-		gui_font->setAntiAlias(false);
+			gui_font = new gcn::SDLTrueTypeFont(prefix_with_data_path(gui_theme.font_name), gui_theme.font_size);
+			gui_font->setAntiAlias(false);
 #endif
+		}
+		catch (exception& ex)
+		{
+			cout << ex.what() << '\n';
+			write_log("An error occurred while trying to open the GUI font! Exception: %s\n", ex.what());
+			abort();
+		}
+
 		gcn::Widget::setGlobalFont(gui_font);
 	}
 

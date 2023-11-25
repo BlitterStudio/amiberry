@@ -14,6 +14,7 @@
 #include "uae/types.h"
 
 #include "traps.h"
+#include "guisan/color.hpp"
 
 #define UAEMAJOR 5
 #define UAEMINOR 6
@@ -1188,6 +1189,16 @@ struct amiberry_hotkey
 	std::string key_name;
 	std::string modifiers_string;
 	hotkey_modifiers modifiers;
+};
+
+struct amiberry_gui_theme
+{
+	gcn::Color base_color = gcn::Color(170, 170, 170);
+	gcn::Color selector_inactive = gcn::Color(170, 170, 170);
+	gcn::Color selector_active = gcn::Color(103, 136, 187);
+	gcn::Color textbox_background = gcn::Color(220, 220, 220);
+	std::string font_name = "AmigaTopaz.ttf";
+	int font_size = 15;
 };
 
 struct amiberry_options

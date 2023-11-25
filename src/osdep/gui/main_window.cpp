@@ -174,10 +174,12 @@ gcn::Container* gui_top;
 gcn::Container* selectors;
 gcn::ScrollArea* selectorsScrollArea;
 
+// GUI Colors
 gcn::Color gui_baseCol;
 gcn::Color colTextboxBackground;
 gcn::Color colSelectorInactive;
 gcn::Color colSelectorActive;
+
 gcn::FocusHandler* focusHdl;
 gcn::Widget* activeWidget;
 
@@ -1238,10 +1240,10 @@ void gui_widgets_init()
 	//-------------------------------------------------
 	// Define base colors
 	//-------------------------------------------------
-	gui_baseCol = gcn::Color(170, 170, 170);
-	colSelectorInactive = gcn::Color(170, 170, 170);
-	colSelectorActive = gcn::Color(103, 136, 187);
-	colTextboxBackground = gcn::Color(220, 220, 220);
+	gui_baseCol = gui_theme.base_color;
+	colSelectorInactive = gui_theme.selector_inactive;
+	colSelectorActive = gui_theme.selector_active;
+	colTextboxBackground = gui_theme.textbox_background;
 
 	//-------------------------------------------------
 	// Create container for main page
@@ -1263,7 +1265,8 @@ void gui_widgets_init()
 #ifdef USE_OPENGL
 		gui_font = new gcn::ImageFont(prefix_with_data_path("rpgfont.png"), " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?-+/():;%&`'*#=[]\"");
 #else
-		gui_font = new gcn::SDLTrueTypeFont(prefix_with_data_path("AmigaTopaz.ttf"), 15);
+		gui_font = new gcn::SDLTrueTypeFont(prefix_with_data_path(gui_theme.font_name), gui_theme.font_size);
+		gui_font->setAntiAlias(false);
 #endif
 	}
 	catch (exception& ex)
@@ -1274,9 +1277,6 @@ void gui_widgets_init()
 	}
 
 	gcn::Widget::setGlobalFont(gui_font);
-#ifndef USE_OPENGL
-	gui_font->setAntiAlias(false);
-#endif
 
 	//--------------------------------------------------
 	// Create main buttons

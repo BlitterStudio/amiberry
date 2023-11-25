@@ -103,6 +103,7 @@ int relativepaths = 0;
 int saveimageoriginalpath = 0;
 
 struct amiberry_options amiberry_options = {};
+struct amiberry_gui_theme gui_theme = {};
 amiberry_hotkey enter_gui_key;
 SDL_GameControllerButton enter_gui_button;
 amiberry_hotkey quit_key;
@@ -3205,7 +3206,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_string(option, value, "inputrecordings_dir", input_dir, sizeof input_dir);
 		ret |= cfgfile_string(option, value, "screenshot_dir", screenshot_dir, sizeof screenshot_dir);
 		ret |= cfgfile_string(option, value, "nvram_dir", nvram_dir, sizeof nvram_dir);
-		// NOTE: amiberry_config is a "read only", ie. it's not written in
+		// NOTE: amiberry_config is a "read only", i.e. it's not written in
 		// save_amiberry_settings(). It's purpose is to provide -o amiberry_config=path
 		// command line option.
 		ret |= cfgfile_string(option, value, "amiberry_config", amiberry_conf_file, sizeof amiberry_conf_file);
