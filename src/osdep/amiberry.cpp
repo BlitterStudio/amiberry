@@ -135,6 +135,17 @@ std::string get_sdl2_version_string()
 	return sdl_compiled.str();
 }
 
+std::vector<int> parse_color_string(std::string input)
+{
+	std::vector<int> result;
+	std::stringstream ss(input);
+	std::string token;
+	while (std::getline(ss, token, ',')) {
+		result.push_back(std::stoi(token));
+	}
+	return result;
+}
+
 amiberry_hotkey get_hotkey_from_config(std::string config_option)
 {
 	amiberry_hotkey hotkey = {};
@@ -2086,6 +2097,110 @@ void target_default_options(struct uae_prefs* p, int type)
 		_tcscpy(p->vkbd_style, ""); // This will use the default theme.
 	p->vkbd_transparency = amiberry_options.default_vkbd_transparency;
 	_tcscpy(p->vkbd_toggle, amiberry_options.default_vkbd_toggle);
+
+	//
+	// GUI Theme section
+	//
+	// Font name
+	if (amiberry_options.gui_theme_font_name[0])
+		gui_theme.font_name = std::string(amiberry_options.gui_theme_font_name);
+	else
+		gui_theme.font_name = "AmigaTopaz.ttf";
+
+	// Font size
+	gui_theme.font_size = amiberry_options.gui_theme_font_size > 0 ? amiberry_options.gui_theme_font_size : 15;
+
+	// Base Color
+	if (amiberry_options.gui_theme_base_color[0])
+	{
+		// parse string as comma-separated numbers
+		std::vector<int> result = parse_color_string(amiberry_options.gui_theme_base_color);
+		if (result.size() == 3)
+		{
+			gui_theme.base_color = gcn::Color(result[0], result[1], result[2]);
+		}
+		else if (result.size() == 4)
+		{
+			gui_theme.base_color = gcn::Color(result[0], result[1], result[2], result[3]);
+		}
+		else
+		{
+			gui_theme.base_color = gcn::Color(170, 170, 170);
+		}
+	}
+	else
+	{
+		gui_theme.base_color = gcn::Color(170, 170, 170);
+	}
+
+	// Selector Inactive
+	if (amiberry_options.gui_theme_selector_inactive[0])
+	{
+		// parse string as comma-separated numbers
+		std::vector<int> result = parse_color_string(amiberry_options.gui_theme_selector_inactive);
+		if (result.size() == 3)
+		{
+			gui_theme.selector_inactive = gcn::Color(result[0], result[1], result[2]);
+		}
+		else if (result.size() == 4)
+		{
+			gui_theme.selector_inactive = gcn::Color(result[0], result[1], result[2], result[3]);
+		}
+		else
+		{
+			gui_theme.selector_inactive = gcn::Color(170, 170, 170);
+		}
+	}
+	else
+	{
+		gui_theme.selector_inactive = gcn::Color(170, 170, 170);
+	}
+
+	// Selector Active
+	if (amiberry_options.gui_theme_selector_active[0])
+	{
+		// parse string as comma-separated numbers
+		std::vector<int> result = parse_color_string(amiberry_options.gui_theme_selector_active);
+		if (result.size() == 3)
+		{
+			gui_theme.selector_active = gcn::Color(result[0], result[1], result[2]);
+		}
+		else if (result.size() == 4)
+		{
+			gui_theme.selector_active = gcn::Color(result[0], result[1], result[2], result[3]);
+		}
+		else
+		{
+			gui_theme.selector_active = gcn::Color(103, 136, 187);
+		}
+	}
+	else
+	{
+		gui_theme.selector_active = gcn::Color(103, 136, 187);
+	}
+
+	// Textbox Background
+	if (amiberry_options.gui_theme_textbox_background[0])
+	{
+		// parse string as comma-separated numbers
+		std::vector<int> result = parse_color_string(amiberry_options.gui_theme_textbox_background);
+		if (result.size() == 3)
+		{
+			gui_theme.textbox_background = gcn::Color(result[0], result[1], result[2]);
+		}
+		else if (result.size() == 4)
+		{
+			gui_theme.textbox_background = gcn::Color(result[0], result[1], result[2], result[3]);
+		}
+		else
+		{
+			gui_theme.textbox_background = gcn::Color(220, 220, 220);
+		}
+	}
+	else
+	{
+		gui_theme.textbox_background = gcn::Color(220, 220, 220);
+	}
 }
 
 static const TCHAR* scsimode[] = { _T("SCSIEMU"), _T("SPTI"), _T("SPTI+SCSISCAN"), NULL };
@@ -3014,6 +3129,30 @@ void save_amiberry_settings(void)
 	snprintf(buffer, MAX_DPATH, "default_vkbd_toggle=%s\n", amiberry_options.default_vkbd_toggle);
 	fputs(buffer, f);
 
+	// GUI Theme: Font name
+	snprintf(buffer, MAX_DPATH, "gui_theme_font_name=%s\n", amiberry_options.gui_theme_font_name);
+	fputs(buffer, f);
+
+	// GUI Theme: Font size
+	snprintf(buffer, MAX_DPATH, "gui_theme_font_size=%d\n", amiberry_options.gui_theme_font_size);
+	fputs(buffer, f);
+
+	// GUI Theme: Base color
+	snprintf(buffer, MAX_DPATH, "gui_theme_base_color=%s\n", amiberry_options.gui_theme_base_color);
+	fputs(buffer, f);
+
+	// GUI Theme: Selector Inactive color
+	snprintf(buffer, MAX_DPATH, "gui_theme_selector_inactive=%s\n", amiberry_options.gui_theme_selector_inactive);
+	fputs(buffer, f);
+
+	// GUI Theme: Selector Active color
+	snprintf(buffer, MAX_DPATH, "gui_theme_selector_active=%s\n", amiberry_options.gui_theme_selector_active);
+	fputs(buffer, f);
+
+	// GUI Theme: Textbox Background color
+	snprintf(buffer, MAX_DPATH, "gui_theme_textbox_background=%s\n", amiberry_options.gui_theme_textbox_background);
+	fputs(buffer, f);
+
 	// Paths
 	snprintf(buffer, MAX_DPATH, "path=%s\n", current_dir);
 	fputs(buffer, f);
@@ -3267,6 +3406,12 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_string(option, value, "default_vkbd_style", amiberry_options.default_vkbd_style, sizeof amiberry_options.default_vkbd_style);
 		ret |= cfgfile_intval(option, value, "default_vkbd_transparency", &amiberry_options.default_vkbd_transparency, 1);
 		ret |= cfgfile_string(option, value, "default_vkbd_toggle", amiberry_options.default_vkbd_toggle, sizeof amiberry_options.default_vkbd_toggle);
+		ret |= cfgfile_string(option, value, "gui_theme_font_name", amiberry_options.gui_theme_font_name, sizeof amiberry_options.gui_theme_font_name);
+		ret |= cfgfile_intval(option, value, "gui_theme_font_size", &amiberry_options.gui_theme_font_size, 1);
+		ret |= cfgfile_string(option, value, "gui_theme_base_color", amiberry_options.gui_theme_base_color, sizeof amiberry_options.gui_theme_base_color);
+		ret |= cfgfile_string(option, value, "gui_theme_selector_inactive", amiberry_options.gui_theme_selector_inactive, sizeof amiberry_options.gui_theme_selector_inactive);
+		ret |= cfgfile_string(option, value, "gui_theme_selector_active", amiberry_options.gui_theme_selector_active, sizeof amiberry_options.gui_theme_selector_active);
+		ret |= cfgfile_string(option, value, "gui_theme_textbox_background", amiberry_options.gui_theme_textbox_background, sizeof amiberry_options.gui_theme_textbox_background);
 	}
 	return ret;
 }
