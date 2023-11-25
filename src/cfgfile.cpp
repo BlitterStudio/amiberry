@@ -5357,14 +5357,14 @@ static int cfgfile_parse_newfilesys (struct uae_prefs *p, int nr, int type, TCHA
 				if (getintval2 (&tmpp2, &uci.highcyl, ',', false)) {
 					getintval (&tmpp2, &uci.pcyls, '/');
 					getintval (&tmpp2, &uci.pheads, '/');
-					getintval2 (&tmpp2, &uci.psecs, '/', true);
+					getintval2 (&tmpp2, &uci.psecs, ',', true);
 					if (uci.pheads && uci.psecs) {
 						uci.physical_geometry = true;
 					} else {
 						uci.pheads = uci.psecs = uci.pcyls = 0;
 						uci.physical_geometry = false;
 					}
-					if (tmpp2[0]) {
+					if (tmpp2 && tmpp2[0]) {
 						if (tmpp2[0] == '\"') {
 							n = cfgfile_unescape (tmpp2, &end, 0, false);
 							if (!n)
