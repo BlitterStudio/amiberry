@@ -689,21 +689,35 @@ void RefreshPanelCustom()
 bool HelpPanelCustom(std::vector<std::string>& helptext)
 {
 	helptext.clear();
-	helptext.emplace_back("Set up Custom input actions for each Amiga port, such as Keyboard remapping,");
-	helptext.emplace_back("or emulator functions.");
+	helptext.emplace_back("In this panel you can customize the controls for your gamepad/joystick and assign any");
+	helptext.emplace_back("of the several available input events to each button. Of course, this panel requires");
+	helptext.emplace_back("a joystick or controller to be connected, in order for the dropdowns to be enabled.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("Select the port which you wish to re-map with 'Joystick Port'.");
-	helptext.emplace_back("The currently selected Input Device will then be displayed under 'Input Device'.");
+	helptext.emplace_back("The available customization options include functions such as:");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("Buttons which are not available on this device (detected with RetroArch ");
-	helptext.emplace_back("configuration files) are unavailable to remap.");
+	helptext.emplace_back("- Standard joystick inputs");
+	helptext.emplace_back("- Parallel port Joystick inputs");
+	helptext.emplace_back("- CD32 gamepad inputs");
+	helptext.emplace_back("- All keyboard keys");
+	helptext.emplace_back("- Various emulator functions (ie; Autocrop, Quit, Reset, Enter GUI)");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("The HotKey button (used for secondary functions) is also unavailable for custom options. ");
-	helptext.emplace_back("The actions performed by pressing the HotKey with other buttons can also be remapped.");
-	helptext.emplace_back("Pre-defined functions such as Quit/Reset/Menu will be displayed as the 'default' option.");
+	helptext.emplace_back("Furthermore, this panel will display different information depending on if you are using");
+	helptext.emplace_back("a RetroArch mapping (ie; like RetroPie) or not. If this is a RetroArch mapping, then a");
+	helptext.emplace_back("\"[R]\" indicator will appear next to the controller's name to show that.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("The Function of the individual buttons are selectable via the marked drop-down boxes.");
+	helptext.emplace_back("When Retroarch mapping is used, the already mapped/assigned buttons will be disabled and");
+	helptext.emplace_back("you cannot change them from this panel. On standard (non-Retroarch) mappings, a \"[N]\"");
+	helptext.emplace_back("indicator will appear, and you can change the mappings to any of the options available.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("You can also remap the game controllers D-Pad to act like the Left Analog stick.");
+	helptext.emplace_back("To change a mapping option, select the port which you wish to re-map, and the functions");
+	helptext.emplace_back("of the individual buttons are selectable via the marked drop-down boxes.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("You can also assign a Hotkey which can be used in combination with the buttons, which");
+	helptext.emplace_back("provides an extra set of custom controls. The controls used while the Hotkey button is");
+	helptext.emplace_back("pressed can be seen if you switch from \"None\" to the \"Hotkey\" option. The Hotkey itself");
+	helptext.emplace_back("can also be assigned from here as well.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("You can also remap the game controller D-Pad to act like the Left Analog joystick.");
+	helptext.emplace_back(" ");
 	return true;
 }
