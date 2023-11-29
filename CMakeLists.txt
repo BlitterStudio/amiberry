@@ -236,6 +236,7 @@ add_executable(${PROJECT_NAME}
 	src/osdep/writelog.cpp
 	src/osdep/amiberry.cpp
 	src/osdep/ahi_v2.cpp
+	src/osdep/amiberry_dbus.cpp
 	src/osdep/amiberry_filesys.cpp
 	src/osdep/amiberry_input.cpp
 	src/osdep/amiberry_gfx.cpp
@@ -314,6 +315,13 @@ PKG_SEARCH_MODULE(SDL2 REQUIRED SDL2)
 PKG_SEARCH_MODULE(SDL2IMAGE REQUIRED SDL2_image>=2.0.0)
 PKG_SEARCH_MODULE(SDL2TTF REQUIRED SDL2_ttf)
 
+if(DEFINED USE_DBUS)
+	add_definitions(-DUSE_DBUS)
+	pkg_check_modules(DBUS REQUIRED dbus-1)
+	include_directories(${DBUS_INCLUDE_DIRS})
+	link_directories(${DBUS_LIBRARY_DIRS})
+endif()
+
 find_package(FLAC REQUIRED)
 find_package(mpg123 REQUIRED)
 find_package(PNG REQUIRED)
@@ -321,7 +329,7 @@ find_library(LIBSERIALPORT_LIBRARIES serialport)
 find_path(LIBSERIALPORT_INCLUDE_DIR libserialport.h)
 
 INCLUDE_DIRECTORIES(${SDL2_INCLUDE_DIRS} ${SDL2IMAGE_INCLUDE_DIRS} ${LIBSERIALPORT_INCLUDE_DIR})
-TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE ${SDL2_LIBRARIES} ${SDL2IMAGE_LIBRARIES} ${SDL2TTF_LIBRARIES} FLAC::FLAC PNG::PNG mpg123 mpeg2convert mpeg2 serialport)
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE ${SDL2_LIBRARIES} ${SDL2IMAGE_LIBRARIES} ${SDL2TTF_LIBRARIES} ${DBUS_LIBRARIES} FLAC::FLAC PNG::PNG mpg123 mpeg2convert mpeg2 serialport)
 
 target_include_directories(${PROJECT_NAME} PRIVATE ./external/libguisan/include)
 target_link_libraries(${PROJECT_NAME} PRIVATE guisan)
