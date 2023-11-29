@@ -1,17 +1,39 @@
 # Specify "make PLATFORM=<platform>" to compile for a specific target.
 # Check the supported list of platforms below for a full list
 
-# Optional parameters
+#
+## Optional parameters
+## Uncomment these to enable them, or specify them from the command line
+## For example: "make PLATFORM=<xyz> -DDEBUG=1" will enable Debug builds
+#
+
+# Create Debug build, instead of Release one
 #DEBUG=1
+
+# Profiler options
 #GCC_PROFILE=1
 #GEN_PROFILE=1
 #USE_PROFILE=1
+
+# Enable LTO
 #USE_LTO=1
+
+# Memory Sanitizer
 #SANITIZE=1
+
+# Use GPIOD to control the GPIO pins, on a device that has them (e.g. Raspberry Pi)
+# This allows the use of certain pins as external LEDs for activity
 #USE_GPIOD=1
+
+# Experimental OpenGL(ES) target
+# Note: the GUI cannot render TTF fonts when this option is enabled, so it will use
+# a bitmap font instead (included in the data directory)
 #USE_OPENGL=1
 
-#enable to compile on a version of GCC older than 8.0
+# Use DBUS features, to control Amiberry functions from another application
+#USE_DBUS=1
+
+# Compile on a version of GCC older than 8.0
 #USE_OLDGCC=1
 
 #
@@ -44,6 +66,14 @@ endif
 ifdef USE_GPIOD
 	CFLAGS += -DUSE_GPIOD
 	LDFLAGS += -lgpiod
+endif
+
+# Use DBUS to control the emulator?
+ifdef USE_DBUS
+	DBUS_CFLAGS := $(shell pkg-config dbus-1 --cflags)
+	DBUS_LIBS := $(shell pkg-config dbus-1 --libs)
+	CFLAGS += $(DBUS_CFLAGS) -DUSE_DBUS
+	LDFLAGS += $(DBUS_LIBS)
 endif
 
 ifndef DEBUG
@@ -116,6 +146,17 @@ else ifeq ($(PLATFORM),orangepi-pc)
 		# quote: The assembly code in bn_mul.h is optimized for the ARM platform and uses some registers, including r7 to efficiently do an operation. GCC also uses r7 as the frame pointer under ARM Thumb assembly.
 		CFLAGS += -fomit-frame-pointer
 	endif
+
+# OrangePi Zero (SDL2)
+else ifeq ($(PLATFORM),orangepi-zero)
+	CPUFLAGS = -mcpu=cortex-a53
+	CPPFLAGS += $(CPPFLAGS64) -DUSE_RENDER_THREAD
+	AARCH64 = 1
+	ifdef DEBUG
+		# Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
+		# quote: The assembly code in bn_mul.h is optimized for the ARM platform and uses some registers, including r7 to efficiently do an operation. GCC also uses r7 as the frame pointer under ARM Thumb assembly.
+		CFLAGS += -fomit-frame-pointer
+endif
 
 # Odroid XU4 (SDL2)
 else ifeq ($(PLATFORM),xu4)
@@ -531,6 +572,7 @@ OBJS = \
 	src/osdep/writelog.o \
 	src/osdep/amiberry.o \
 	src/osdep/ahi_v2.o \
+	src/osdep/amiberry_dbus.o \
 	src/osdep/amiberry_filesys.o \
 	src/osdep/amiberry_input.o \
 	src/osdep/amiberry_gfx.o \

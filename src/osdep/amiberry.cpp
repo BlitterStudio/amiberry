@@ -74,6 +74,10 @@ struct gpiod_line* lineGreen;  // Green LED
 struct gpiod_line* lineYellow; // Yellow LED
 #endif
 
+#ifdef USE_DBUS
+#include "amiberry_dbus.h"
+#endif
+
 #ifdef FLOPPYBRIDGE
 std::string drawbridge_profiles = "1|Fast[0|0|COM0|0|0]2|Compatible[0|0|COM0|1|0]3|Turbo[0|0|COM0|2|0]4|Accurate[0|0|COM0|3|0]";
 #endif
@@ -1492,6 +1496,10 @@ bool handle_events()
 {
 	const AmigaMonitor* mon = &AMonitors[0];
 	static auto was_paused = 0;
+
+#ifdef USE_DBUS
+	DBusHandle();
+#endif
 
 	if (pause_emulation)
 	{
@@ -3744,6 +3752,11 @@ int main(int argc, char* argv[])
 			print_version();
 		}
 	}
+
+#ifdef USE_DBUS
+	DBusSetup();
+#endif
+
 	max_uae_width = 8192;
 	max_uae_height = 8192;
 
