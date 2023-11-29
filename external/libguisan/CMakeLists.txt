@@ -25,6 +25,9 @@ add_library(guisan STATIC
         src/rectangle.cpp
         src/selectionevent.cpp
         src/widget.cpp
+        src/opengl/opengl.cpp
+        src/opengl/openglgraphics.cpp
+        src/opengl/openglimage.cpp
         src/sdl/sdl.cpp
         src/sdl/sdl2graphics.cpp
         src/sdl/sdlgraphics.cpp

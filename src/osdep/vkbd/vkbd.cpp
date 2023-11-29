@@ -656,6 +656,10 @@ static SDL_Surface* vkbd_concat_surfaces(SDL_Surface* keyboard, SDL_Surface* exi
 	return surf;
 }
 
+#ifdef USE_OPENGL
+	//TODO needs implementation
+
+#else
 static SDL_Texture* vkbd_create_keyboard_texture(bool shift)
 {
 	const auto keyboard = vkbd_create_keyboard_surface(shift);
@@ -691,6 +695,7 @@ static SDL_Texture* vkbd_create_keyboard_texture(bool shift)
 	SDL_FreeSurface(surf);
 	return texture;
 }
+#endif
 
 static int vkbd_find_index(int key)
 {
@@ -719,7 +724,9 @@ void vkbd_update(bool createTextures)
 		vkbdRect = vkbdRectUS;
 		break;
 	}
-
+#ifdef USE_OPENGL
+	//TODO needs implementation
+#else
 	if (createTextures || vkbdTexture != nullptr)
 	{
 		if (vkbdTexture != nullptr)
@@ -753,6 +760,7 @@ void vkbd_update(bool createTextures)
 		vkbdStartX = (renderedWidth - width) / 2;
 		vkbdStartY = rendererHeight;
 	}
+#endif
 
 	vkbdPressedKeyColor.r = 200;
 	vkbdPressedKeyColor.g = 200;
@@ -960,6 +968,10 @@ void vkbd_redraw(void)
 	rect.w = w;
 	rect.h = h;
 
+#ifdef USE_OPENGL
+	//TODO needs implementation
+
+#else
 	SDL_SetRenderDrawBlendMode(sdl_renderer, SDL_BLENDMODE_BLEND);
 	SDL_SetTextureBlendMode(toDraw, SDL_BLENDMODE_BLEND);
 	SDL_SetTextureAlphaMod(toDraw, vkbdAlpha);
@@ -984,6 +996,7 @@ void vkbd_redraw(void)
 	}
 
 	SDL_SetRenderDrawColor(sdl_renderer, color.r, color.g, color.b, color.a);
+#endif
 }
 
 void vkbd_toggle(void)
