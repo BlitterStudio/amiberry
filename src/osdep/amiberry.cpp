@@ -112,15 +112,18 @@ amiberry_hotkey fullscreen_key;
 amiberry_hotkey minimize_key;
 SDL_GameControllerButton vkbd_button;
 
-bool lctrl, rctrl, lalt, ralt, lshift, rshift, lgui, rgui;
-
+bool lctrl_pressed, rctrl_pressed, lalt_pressed, ralt_pressed, lshift_pressed, rshift_pressed, lgui_pressed, rgui_pressed;
 bool hotkey_pressed = false;
 bool mouse_grabbed = false;
 
 std::string get_version_string()
 {
-	std::string label_text = AMIBERRYVERSION;
-	return label_text;
+	return AMIBERRYVERSION;
+}
+
+std::string get_copyright_notice()
+{
+	return COPYRIGHT;
 }
 
 std::string get_sdl2_version_string()
@@ -166,21 +169,21 @@ amiberry_hotkey get_hotkey_from_config(std::string config_option)
 	while ((pos = config_option.find(delimiter)) != std::string::npos)
 	{
 		token = config_option.substr(0, pos);
-		if (token.compare(lctrl) == 0)
+		if (token == lctrl)
 			hotkey.modifiers.lctrl = true;
-		if (token.compare(rctrl) == 0)
+		if (token == rctrl)
 			hotkey.modifiers.rctrl = true;
-		if (token.compare(lalt) == 0)
+		if (token == lalt)
 			hotkey.modifiers.lalt = true;
-		if (token.compare(ralt) == 0)
+		if (token == ralt)
 			hotkey.modifiers.ralt = true;
-		if (token.compare(lshift) == 0)
+		if (token == lshift)
 			hotkey.modifiers.lshift = true;
-		if (token.compare(rshift) == 0)
+		if (token == rshift)
 			hotkey.modifiers.rshift = true;
-		if (token.compare(lgui) == 0)
+		if (token == lgui)
 			hotkey.modifiers.lgui = true;
-		if (token.compare(rgui) == 0)
+		if (token == rgui)
 			hotkey.modifiers.rgui = true;
 
 		config_option.erase(0, pos + delimiter.length());
@@ -766,7 +769,7 @@ int isfocus()
 	return 0;
 }
 
-static void activationtoggle(int monid, bool inactiveonly)
+void activationtoggle(int monid, bool inactiveonly)
 {
 	if (mouseactive) {
 		if ((isfullscreen() > 0) || (isfullscreen() < 0 && currprefs.minimize_inactive)) {
@@ -1471,7 +1474,7 @@ static int canstretch(struct AmigaMonitor* mon)
 
 int handle_msgpump(bool vblank)
 {
-	lctrl = rctrl = lalt = ralt = lshift = rshift = lgui = rgui = false;
+	lctrl_pressed = rctrl_pressed = lalt_pressed = ralt_pressed = lshift_pressed = rshift_pressed = lgui_pressed = rgui_pressed = false;
 	auto got_event = 0;
 	SDL_Event event;
 
@@ -1501,7 +1504,7 @@ bool handle_events()
 			// we got just paused, report it to caller.
 			return true;
 		}
-		lctrl = rctrl = lalt = ralt = lshift = rshift = lgui = rgui = false;
+		lctrl_pressed = rctrl_pressed = lalt_pressed = ralt_pressed = lshift_pressed = rshift_pressed = lgui_pressed = rgui_pressed = false;
 		SDL_Event event;
 		while (SDL_PollEvent(&event))
 		{
@@ -3764,6 +3767,14 @@ int main(int argc, char* argv[])
 
 	struct sigaction action{};
 
+	if(argc == 2)
+	{
+		std::string two(argv[1]);
+		if(two == "-v" || two == "--version")
+		{
+			print_version();
+		}
+	}
 	max_uae_width = 8192;
 	max_uae_height = 8192;
 

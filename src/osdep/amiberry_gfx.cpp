@@ -146,8 +146,6 @@ static char screenshot_filename_default[MAX_DPATH] =
 };
 char* screenshot_filename = &screenshot_filename_default[0];
 FILE* screenshot_file = nullptr;
-static void create_screenshot();
-static int save_thumb(char* path);
 int delay_savestate_frame = 0;
 static volatile bool vsync_active;
 
@@ -2347,7 +2345,7 @@ static int save_png(const SDL_Surface* surface, char* path)
 	return 1;
 }
 
-static void create_screenshot()
+void create_screenshot()
 {
 	if (amiberry_options.use_sdl2_render_thread)
 		wait_for_display_thread();
@@ -2371,7 +2369,7 @@ static void create_screenshot()
 	}
 }
 
-static int save_thumb(char* path)
+int save_thumb(char* path)
 {
 	if (amiberry_options.use_sdl2_render_thread)
 		wait_for_display_thread();
