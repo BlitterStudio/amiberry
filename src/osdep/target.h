@@ -20,12 +20,14 @@
 #define GETBDM(x) (((x) - (((x) / 10000) * 10000)) / 100)
 #define GETBDD(x) ((x) % 100)
 
-#define AMIBERRYVERSION _T("Amiberry v6.0.1 preview (2023-11-23)")
-#define AMIBERRYDATE MAKEBD(2023, 11, 23)
+#define AMIBERRYVERSION _T("Amiberry v6.0.1 preview (2023-11-29)")
+#define AMIBERRYDATE MAKEBD(2023, 11, 29)
+#define COPYRIGHT _T("Copyright (C) 2016-2023 Dimitris Panokostas")
 
 #define IHF_WINDOWHIDDEN 6
 
 extern std::string get_version_string();
+extern std::string get_copyright_notice();
 extern std::string get_sdl2_version_string();
 
 STATIC_INLINE FILE* uae_tfopen(const TCHAR* path, const TCHAR* mode)
@@ -46,8 +48,12 @@ extern bool my_kbd_handler(int, int, int, bool);
 extern void clearallkeys();
 extern int getcapslock();
 
-void releasecapture(struct AmigaMonitor*);
+extern void releasecapture(struct AmigaMonitor*);
+extern void enablecapture(int monid);
 extern void disablecapture();
+extern void activationtoggle(int monid, bool inactiveonly);
+extern void create_screenshot();
+extern int save_thumb(char* path);
 
 extern amiberry_hotkey enter_gui_key;
 extern SDL_GameControllerButton enter_gui_button;
@@ -99,7 +105,7 @@ extern void set_controllers_path(char* newpath);
 extern void get_retroarch_file(char* out, int size);
 extern void set_retroarch_file(char* newpath);
 
-extern int get_savedatapath(char* out, int size, const int force_internal);
+extern int get_savedatapath(char* out, int size, int force_internal);
 extern void get_whdbootpath(char* out, int size);
 extern void set_whdbootpath(char* newpath);
 
@@ -235,8 +241,3 @@ struct sound_device
 extern struct sound_device* sound_devices[MAX_SOUND_DEVICES];
 extern struct sound_device* record_devices[MAX_SOUND_DEVICES];
 
-static inline int uae_deterministic_mode()
-{
-	// Only returns 1 if using netplay mode (not implemented yet)
-	return 0;
-}

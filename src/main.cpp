@@ -70,7 +70,7 @@
 #include "fsdb_host.h"
 #include "keyboard.h"
 
-static const char __ver[40] = "$VER: Amiberry v6.0.1 (2023-11-23)";
+static const char __ver[40] = "$VER: Amiberry v6.0.1 (2023-11-29)";
 long int version = 256 * 65536L * UAEMAJOR + 65536L * UAEMINOR + UAESUBREV;
 
 struct uae_prefs currprefs, changed_prefs;
@@ -775,6 +775,12 @@ void uae_restart (int opengui, const TCHAR *cfgfile)
 	target_restart ();
 }
 
+void print_version()
+{
+	std::cout << get_version_string() << "\n" << get_copyright_notice() << std::endl;
+	exit(0);
+}
+
 void usage()
 {
 	std::cout << __ver << std::endl;
@@ -827,7 +833,7 @@ void usage()
 	std::cout << "amiberry --config conf/A500.uae --statefile savestates/game.uss -s use_gui=no" << std::endl;
 	std::cout << "This will load the conf/A500.uae configuration file, with the save state named game." << std::endl;
 	std::cout << "It will override 'use_gui' to 'no', so that it enters emulation directly." << std::endl;
-	exit(1);
+	exit(0);
 }
 
 static void parse_cmdline_2 (int argc, TCHAR **argv)
