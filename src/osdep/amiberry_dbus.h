@@ -6,6 +6,8 @@
 
 #ifdef USE_DBUS
 
+#define AMIBERRY_DBUS_INTERFACE "com.blitterstudio.amiberry"
+
 #include "sysdeps.h"
 #include "options.h"
 #include "target.h"
