@@ -24,26 +24,26 @@ void DBusHandle()
 		bool respond = false;
 
 		dbus_error_init(&err);
-		dbus_connection_read_write(dbusconn,0);
+		dbus_connection_read_write(dbusconn, 0);
 
 		std::vector<std::string> responses; // array of string to return
 
 		while((msg = dbus_connection_pop_message(dbusconn)))
 		{
-			if(dbus_message_is_method_call(msg,"com.amigakit.a600gs.amiberry.API","QUIT"))
+			if(dbus_message_is_method_call(msg, AMIBERRY_DBUS_INTERFACE, "QUIT"))
 			{
 				std::cout << "DBUS: Received QUIT" << std::endl;
 				respond = false;
 				uae_quit();
 			}
-			if(dbus_message_is_method_call(msg,"com.amigakit.a600gs.amiberry.API","PAUSE"))
+			if(dbus_message_is_method_call(msg, AMIBERRY_DBUS_INTERFACE, "PAUSE"))
 			{
 				std::cout << "DBUS: Received PAUSE" << std::endl;
 				setpaused(3);
 				activationtoggle(0, true);
 				respond = true;
 			}
-			if(dbus_message_is_method_call(msg,"com.amigakit.a600gs.amiberry.API","RESUME"))
+			if(dbus_message_is_method_call(msg, AMIBERRY_DBUS_INTERFACE, "RESUME"))
 			{
 				std::cout << "DBUS: Received RESUME" << std::endl;
 				respond = false;
@@ -52,7 +52,7 @@ void DBusHandle()
 				dbus_message_unref(msg);
 				return;
 			}
-			if(dbus_message_is_method_call(msg,"com.amigakit.a600gs.amiberry.API","RESET"))
+			if(dbus_message_is_method_call(msg, AMIBERRY_DBUS_INTERFACE, "RESET"))
 			{
 				std::cout << "DBUS: Received RESET" << std::endl;
 				bool error = false;
@@ -60,7 +60,7 @@ void DBusHandle()
 				bool keyboard = false;
 				bool hard = false;
 
-				dbus_message_get_args(msg,&err,DBUS_TYPE_STRING, &type,DBUS_TYPE_INVALID);
+				dbus_message_get_args(msg, &err, DBUS_TYPE_STRING, &type, DBUS_TYPE_INVALID);
 				respond = false;
 				if(dbus_error_is_set(&err))
 				{
@@ -89,12 +89,12 @@ void DBusHandle()
 					uae_reset(hard,keyboard);
 				}
 			}
-			if(dbus_message_is_method_call(msg,"com.amigakit.a600gs.amiberry.API","SCREENSHOT"))
+			if(dbus_message_is_method_call(msg, AMIBERRY_DBUS_INTERFACE, "SCREENSHOT"))
 			{
 				std::cout << "DBUS: Received SCREENSHOT" << std::endl;
 				bool error = false;
 				char *filename = nullptr;
-				dbus_message_get_args(msg,&err,DBUS_TYPE_STRING, &filename, DBUS_TYPE_INVALID);
+				dbus_message_get_args(msg, &err, DBUS_TYPE_STRING, &filename, DBUS_TYPE_INVALID);
 				respond = true;
 				if(dbus_error_is_set(&err))
 				{
@@ -116,13 +116,13 @@ void DBusHandle()
 					}
 				}
 			}
-			if(dbus_message_is_method_call(msg,"com.amigakit.a600gs.amiberry.API","SAVESTATE"))
+			if(dbus_message_is_method_call(msg, AMIBERRY_DBUS_INTERFACE, "SAVESTATE"))
 			{
 				std::cout << "DBUS: Received SAVESTATE" << std::endl;
 				bool error = false;
 				char *statefilename = nullptr;
 				char *configfilename = nullptr;
-				dbus_message_get_args(msg,&err,DBUS_TYPE_STRING, &statefilename,DBUS_TYPE_STRING, &configfilename, DBUS_TYPE_INVALID);
+				dbus_message_get_args(msg, &err, DBUS_TYPE_STRING, &statefilename, DBUS_TYPE_STRING, &configfilename, DBUS_TYPE_INVALID);
 				respond = true;
 				if(dbus_error_is_set(&err))
 				{
@@ -133,7 +133,7 @@ void DBusHandle()
 				}
 				if(!error)
 				{
-					std::cout << "SF: " << statefilename << "\nCF: " << configfilename <<std::endl;
+					std::cout << "SF: " << statefilename << "\nCF: " << configfilename << std::endl;
 					if(statefilename)
 					{
 						savestate_initsave(statefilename, 1, true, true);
@@ -141,8 +141,7 @@ void DBusHandle()
 					}
 					if(configfilename)
 					{
-						strncpy(changed_prefs.description, "a600gs autosave",sizeof(changed_prefs.description));
-
+						strncpy(changed_prefs.description, "autosave", sizeof(changed_prefs.description));
 						cfgfile_save(&changed_prefs, configfilename, 0);
 					}
 					if(!statefilename || !configfilename)
@@ -151,13 +150,13 @@ void DBusHandle()
 					}
 				}
 			}
-			if(dbus_message_is_method_call(msg,"com.amigakit.a600gs.amiberry.API","DISKSWAP"))
+			if(dbus_message_is_method_call(msg, AMIBERRY_DBUS_INTERFACE, "DISKSWAP"))
 			{
 				std::cout << "DBUS: Received DISKSWAP" << std::endl;
 				bool error = false;
 				char *disknumstr = nullptr;
 				char *drivenumstr = nullptr;
-				dbus_message_get_args(msg,&err,DBUS_TYPE_STRING, &disknumstr,DBUS_TYPE_STRING, &drivenumstr, DBUS_TYPE_INVALID);
+				dbus_message_get_args(msg, &err, DBUS_TYPE_STRING, &disknumstr,DBUS_TYPE_STRING, &drivenumstr, DBUS_TYPE_INVALID);
 				respond = true;
 				if(dbus_error_is_set(&err))
 				{
@@ -180,8 +179,7 @@ void DBusHandle()
 
 					if( (disknum >= 0) && (disknum < MAX_SPARE_DRIVES) && (drivenum >= 0) && (drivenum <= 3) )
 					{
-						int i;
-						for (i = 0; i < 4; i++) {
+						for (int i = 0; i < 4; i++) {
 							if (!_tcscmp(currprefs.floppyslots[i].df, currprefs.dfxlist[disknum]))
 								changed_prefs.floppyslots[i].df[0] = 0;
 						}
@@ -194,12 +192,12 @@ void DBusHandle()
 					}
 				}
 			}
-			if(dbus_message_is_method_call(msg,"com.amigakit.a600gs.amiberry.API","QUERYDISKSWAP"))
+			if(dbus_message_is_method_call(msg, AMIBERRY_DBUS_INTERFACE, "QUERYDISKSWAP"))
 			{
 				std::cout << "DBUS: Received QUERYDISKSWAP" << std::endl;
 				bool error = false;
 				char *drivenumstr = nullptr;
-				dbus_message_get_args(msg,&err,DBUS_TYPE_STRING, &drivenumstr, DBUS_TYPE_INVALID);
+				dbus_message_get_args(msg, &err, DBUS_TYPE_STRING, &drivenumstr, DBUS_TYPE_INVALID);
 				respond = true;
 
 				if(dbus_error_is_set(&err))
@@ -221,8 +219,7 @@ void DBusHandle()
 					drivenum = atol(drivenumstr);
 					if((drivenum >= 0) && (drivenum <= 3))
 					{
-						int i;
-						for(i = 0; i < MAX_SPARE_DRIVES; i++)
+						for(int i = 0; i < MAX_SPARE_DRIVES; i++)
 						{
 							if(!_tcscmp(currprefs.floppyslots[drivenum].df, currprefs.dfxlist[i]))
 							{
@@ -248,14 +245,14 @@ void DBusHandle()
 
 					if(!responses.empty())
 					{
-						for(auto r : responses)
+						for(const auto& r : responses)
 						{
 							const char *cstr = r.c_str();
 							dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &cstr);
 						}
 						responses.clear();
 					}
-					dbus_connection_send(dbusconn,reply,&serial);
+					dbus_connection_send(dbusconn, reply, &serial);
 					dbus_connection_flush(dbusconn);
 					dbus_message_unref(reply);
 				}
@@ -290,7 +287,7 @@ void DBusSetup()
 		return;
 	}
 
-	result = dbus_bus_request_name(dbusconn, "com.amigakit.a600gs.amiberry",DBUS_NAME_FLAG_REPLACE_EXISTING, &err);
+	result = dbus_bus_request_name(dbusconn, AMIBERRY_DBUS_INTERFACE, DBUS_NAME_FLAG_REPLACE_EXISTING, &err);
 
 	if(dbus_error_is_set(&err))
 	{
