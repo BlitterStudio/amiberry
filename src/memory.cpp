@@ -2982,6 +2982,17 @@ void memory_restore(void)
 	map_banks_set(&kickmem_bank, 0xF8, 8, 0);
 }
 
+static void kickmem_init(void)
+{
+	if (!kickmem_bank.baseaddr) {
+		kickmem_bank.reserved_size = ROM_SIZE_512;
+		mapped_malloc(&kickmem_bank);
+		if (kickmem_bank.baseaddr) {
+			memset(kickmem_bank.baseaddr, 0, ROM_SIZE_512);
+		}
+	}
+}
+
 void memory_reset (void)
 {
 	int bnk, bnk_end;
@@ -2999,8 +3010,10 @@ void memory_reset (void)
 		need_hardreset = true;
 	last_address_space_24 = changed_prefs.address_space_24;
 
-	if (mem_hardreset > 2)
-		memory_init ();
+	if (mem_hardreset > 2) {
+		memory_init();
+	}
+	kickmem_init();
 
 	memset(ce_cachable, CACHE_ENABLE_INS, sizeof ce_cachable);
 
@@ -3254,7 +3267,6 @@ void memory_reset (void)
 	write_log (_T("memory init end\n"));
 }
 
-
 void memory_init (void)
 {
 	init_mem_banks ();
@@ -3279,11 +3291,7 @@ void memory_init (void)
 	custmem1_bank.baseaddr = NULL;
 	custmem2_bank.baseaddr = NULL;
 
-	kickmem_bank.reserved_size = ROM_SIZE_512;
-	mapped_malloc (&kickmem_bank);
-	if (kickmem_bank.baseaddr) {
-		memset(kickmem_bank.baseaddr, 0, ROM_SIZE_512);
-	}
+	kickmem_init();
 	_tcscpy (currprefs.romfile, _T("<none>"));
 	currprefs.romextfile[0] = 0;
 #ifndef AMIBERRY
