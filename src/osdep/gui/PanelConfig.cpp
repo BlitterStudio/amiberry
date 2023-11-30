@@ -288,19 +288,15 @@ void InitPanelConfig(const struct config_category& category)
 	button_x += BUTTON_WIDTH + DISTANCE_NEXT_X;
 	button_x = category.panel->getWidth() - DISTANCE_BORDER - BUTTON_WIDTH;
 	category.panel->add(cmdDelete, button_x, buttonY);
-	
-	if (strlen(last_active_config) == 0)
+
+	if (strlen(last_loaded_config) > 0)
 	{
-		if (strlen(last_loaded_config) == 0)
-			strncpy(last_active_config, OPTIONSFILENAME, MAX_DPATH);
-		else
-		{
-			strcpy(last_active_config, last_loaded_config);
-			remove_file_extension(last_active_config);
-		}
+		strcpy(last_active_config, last_loaded_config);
+		remove_file_extension(last_active_config);
+		txtName->setText(last_active_config);
+		txtDesc->setText(changed_prefs.description);
 	}
-	txtName->setText(last_active_config);
-	txtDesc->setText(changed_prefs.description);
+
 	ensureVisible = -1;
 	RefreshPanelConfig();
 }
