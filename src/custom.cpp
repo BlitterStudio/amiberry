@@ -362,7 +362,7 @@ uae_u16 bemcon0_hsync_mask, bemcon0_vsync_mask;
 static uae_u16 beamcon0_saved;
 static uae_u16 bplcon0_saved, bplcon1_saved, bplcon2_saved;
 static uae_u16 bplcon3_saved, bplcon4_saved;
-static int varsync_changed;
+static int varsync_changed, varsync_maybe_changed[2];
 static uae_u16 vt_old, ht_old, hs_old, vs_old;
 uae_u16 vtotal, htotal;
 static int maxvpos_stored, maxhpos_stored;
@@ -8958,9 +8958,22 @@ static void varsync(int reg, bool resync)
 #endif
 	thisline_changed = 1;
 	updateextblk();
+
+	// VB
+	if ((reg == 0x1cc || reg == 0x1ce) && (beamcon0 & BEAMCON0_VARVBEN)) {
+		// check VB and HB changes only if there are no many changes per frame
+		varsync_maybe_changed[0]++;
+	}
+	// HB
+	if ((reg == 0x1c4 || reg == 0x1c6) && exthblank) {
+		// check VB and HB changes only if there are no many changes per frame
+		varsync_maybe_changed[1]++;
+	}
+
 	if (!resync) {
 		return;
 	}
+
 	// TOTAL
 	if ((reg == 0x1c0 || reg == 0x1c8) && (beamcon0 & BEAMCON0_VARBEAMEN)) {
 		varsync_changed = 1;
@@ -8979,6 +8992,12 @@ static void varsync(int reg, bool resync)
 	if ((reg == 0x1de || reg == 0x1c2) && (beamcon0 & bemcon0_hsync_mask)) {
 		varsync_changed = 1;
 	}
+
+	if (varsync_changed) {
+		varsync_maybe_changed[0] = 0;
+		varsync_maybe_changed[1] = 0;
+	}
+
 	if (varsync_changed) {
 		init_beamcon0(false);
 	}
@@ -11161,7 +11180,7 @@ static void update_copper(int until_hpos)
 				int comp = coppercomp(hpos, true);
 				if (comp < 0) {
 					// If we need to wait for later scanline or blitter: no need to emulate copper cycle-by-cycle
-					if (cop_state.ir[0] == 0xFFFF && cop_state.ir[1] == 0xFFFE) {
+					if (cop_state.ir[0] == 0xFFFF && cop_state.ir[1] == 0xFFFE && maxhpos < 250) {
 						cop_state.state = COP_waitforever;
 					}
 					copper_enabled_thisline = 0;
@@ -12246,7 +12265,9 @@ static void vsync_display_render(void)
 
 static void vsync_check_vsyncmode(void)
 {
-	if (varsync_changed == 1) {
+	if ((varsync_maybe_changed[0] >= 1 && varsync_maybe_changed[0] <= 4) || (varsync_maybe_changed[1] >= 1 && varsync_maybe_changed[1] <= 4)) {
+		init_hz_normal();
+	} else if (varsync_changed == 1) {
 		init_hz_normal();
 	} else if (vpos_count > 0 && abs(vpos_count - vpos_count_diff) > 1 && vposw_change && vposw_change < 4) {
 		init_hz_vposw();
@@ -12257,6 +12278,8 @@ static void vsync_check_vsyncmode(void)
 	if (varsync_changed > 0) {
 		varsync_changed--;
 	}
+	varsync_maybe_changed[0] = 0;
+	varsync_maybe_changed[1] = 0;
 }
 
 static void check_display_mode_change(void)
