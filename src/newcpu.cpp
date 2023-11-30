@@ -3812,7 +3812,7 @@ uae_u32 REGPARAM2 op_illg (uae_u32 opcode)
 	if (opcode == 0x4E7B && inrom) {
 		if (get_long (0x10) == 0) {
 			notify_user (NUMSG_KS68020);
-			uae_restart (-1, NULL);
+			uae_restart(&currprefs, -1, NULL);
 			m68k_setstopped(1);
 			return 4;
 		}

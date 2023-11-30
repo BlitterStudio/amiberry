@@ -2911,17 +2911,17 @@ static void restore_roms(void)
 			write_log (_T("Known ROM '%s' loaded\n"), rd->name);
 #if 1
 			if ((rd->cpu & 8) && changed_prefs.cpu_model < 68030) {
-				notify_user (NUMSG_KS68030PLUS);
-				uae_restart (-1, NULL);
+				notify_user(NUMSG_KS68030PLUS);
+				uae_restart(&currprefs, -1, NULL);
 			} else if ((rd->cpu & 3) == 3 && changed_prefs.cpu_model != 68030) {
-				notify_user (NUMSG_KS68030);
-				uae_restart (-1, NULL);
+				notify_user(NUMSG_KS68030);
+				uae_restart(&currprefs, -1, NULL);
 			} else if ((rd->cpu & 3) == 1 && changed_prefs.cpu_model < 68020) {
-				notify_user (NUMSG_KS68EC020);
-				uae_restart (-1, NULL);
+				notify_user(NUMSG_KS68EC020);
+				uae_restart(&currprefs, -1, NULL);
 			} else if ((rd->cpu & 3) == 2 && (changed_prefs.cpu_model < 68020 || changed_prefs.address_space_24)) {
-				notify_user (NUMSG_KS68020);
-				uae_restart (-1, NULL);
+				notify_user(NUMSG_KS68020);
+				uae_restart(&currprefs, -1, NULL);
 			}
 #endif
 			if (rd->cloanto)

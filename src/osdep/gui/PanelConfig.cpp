@@ -32,7 +32,7 @@ bool LoadConfigByName(const char* name)
 	{
 		if (emulating)
 		{
-			uae_restart(-1, config->FullPath);
+			uae_restart(&changed_prefs, -1, config->FullPath);
 		}
 		else
 		{
