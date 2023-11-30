@@ -11321,12 +11321,16 @@ static void cursorsprite(void)
 	if (!dmaen(DMA_SPRITE) || first_planes_vpos == 0) {
 		return;
 	}
-	sprite_0 = spr[0].pt;
-	sprite_0_height = spr[0].vstop - spr[0].vstart;
+	struct sprite *s = &spr[0];
+	sprite_0 = s->pt;
+	sprite_0_height = s->vstop - s->vstart;
 	sprite_0_colors[0] = 0;
 	sprite_0_doubled = 0;
 	if (sprres == 0) {
 		sprite_0_doubled = 1;
+	}
+	if (spr[0].dblscan) {
+		sprite_0_height /= 2;
 	}
 	if (aga_mode) {
 		int sbasecol = ((bplcon4 >> 4) & 15) << 4;
