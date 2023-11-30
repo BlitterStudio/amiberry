@@ -297,17 +297,18 @@ static void idecontroller_hsync(void)
 	}
 }
 
-static void reset_ide(struct ide_board *board)
+static void reset_ide(struct ide_board *board, int hardreset)
 {
 	board->configured = 0;
 	board->intena = false;
 	board->enabled = false;
+	board->hardreset = hardreset != 0;
 }
 
 static void idecontroller_reset(int hardreset)
 {
 	for (int i = 0; ide_boards[i]; i++) {
-		reset_ide(ide_boards[i]);
+		reset_ide(ide_boards[i], hardreset);
 	}
 }
 
@@ -685,6 +686,14 @@ static uae_u32 ide_read_byte(struct ide_board *board, uaecptr addr)
 //			} else {
 //				v = 0;
 //			}
+//		if (p1) {
+//			if (addr == 0xf42 && board->hardreset) {
+//				v |= 0x80;
+//			}
+//			if (addr & 2) {
+//				v |= 1 << 5;
+//			}
+//		}
 //		} else if (addr >= 0x7fc && addr <= 0x7ff) {
 //			v = board->userdata;
 //		} else {
@@ -1461,6 +1470,9 @@ static void ide_write_byte(struct ide_board *board, uaecptr addr, uae_u8 v)
 //					board->userdata &= 0xfff0ffff;
 //					board->userdata |= cnt << 16;
 //				}
+//			if (addr == 0xf42 && p1 && (v & 0xf0) == 0x60) {
+//				board->hardreset = false;
+//			}
 //			} else if (addr >= 0x7fc && addr <= 0x7ff) {
 //				board->userdata &= ~0xff;
 //				board->userdata |= v;
@@ -2543,14 +2555,18 @@ static void rochard_add_ide_unit(int ch, struct uaedev_config_info *ci, struct r
 bool buddha_init(struct autoconfig_info *aci)
 {
 	const struct expansionromtype *ert = get_device_expansion_rom(ROMTYPE_BUDDHA);
+	bool p1 = (aci->rc->device_settings & 3) == 1;
 
 	ide_add_reset();
 	if (!aci->doinit) {
-		aci->autoconfigp = ert->autoconfig;
+		if (p1) {
+			load_rom_rc(aci->rc, ROMTYPE_BUDDHA, 65536, 0, aci->autoconfig_raw, sizeof aci->autoconfig_raw, LOADROM_EVENONLY_ODDONE);
+		} else {
+			aci->autoconfigp = ert->autoconfig;
+		}
 		return true;
 	}
 	struct ide_board *ide = getide(aci);
-	bool p1 = (aci->rc->device_settings & 3) == 1;
 
 	ide->configured = 0;
 	ide->bank = &ide_bank_generic;
@@ -2569,8 +2585,6 @@ bool buddha_init(struct autoconfig_info *aci)
 		uae_u8 b = ert->autoconfig[i];
 		if (i == 1 && (aci->rc->device_settings & 3) == 2)
 			b = 42;
-		if (i == 9 && p1)
-			b = 6;
 		ew(ide, i * 4, b);
 	}
 	aci->addrbank = ide->bank;

@@ -48,6 +48,7 @@ struct ide_board
 	bool irq;
 	bool intena;
 	bool enabled;
+	bool hardreset;
 	bool intlev6;
 	bool flashenabled;
 	int state;
