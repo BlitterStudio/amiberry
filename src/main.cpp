@@ -1357,7 +1357,9 @@ static int real_main2 (int argc, TCHAR **argv)
 	/* force sound settings change */
 	currprefs.produce_sound = 0;
 
-	//savestate_init ();
+#ifdef SAVESTATE
+	savestate_init ();
+#endif
 	keybuf_init (); /* Must come after init_joystick */
 
 	memory_hardreset (2);
