@@ -2905,17 +2905,17 @@ static void restore_roms(void)
 			write_log (_T("Known ROM '%s' loaded\n"), rd->name);
 #if 1
 			if ((rd->cpu & 8) && changed_prefs.cpu_model < 68030) {
-				notify_user (NUMSG_KS68030PLUS);
-				uae_restart (-1, NULL);
+				notify_user(NUMSG_KS68030PLUS);
+				uae_restart(&currprefs, -1, NULL);
 			} else if ((rd->cpu & 3) == 3 && changed_prefs.cpu_model != 68030) {
-				notify_user (NUMSG_KS68030);
-				uae_restart (-1, NULL);
+				notify_user(NUMSG_KS68030);
+				uae_restart(&currprefs, -1, NULL);
 			} else if ((rd->cpu & 3) == 1 && changed_prefs.cpu_model < 68020) {
-				notify_user (NUMSG_KS68EC020);
-				uae_restart (-1, NULL);
+				notify_user(NUMSG_KS68EC020);
+				uae_restart(&currprefs, -1, NULL);
 			} else if ((rd->cpu & 3) == 2 && (changed_prefs.cpu_model < 68020 || changed_prefs.address_space_24)) {
-				notify_user (NUMSG_KS68020);
-				uae_restart (-1, NULL);
+				notify_user(NUMSG_KS68020);
+				uae_restart(&currprefs, -1, NULL);
 			}
 #endif
 			if (rd->cloanto)
@@ -2974,6 +2974,17 @@ void memory_restore(void)
 	map_banks_set(&kickmem_bank, 0xF8, 8, 0);
 }
 
+static void kickmem_init(void)
+{
+	if (!kickmem_bank.baseaddr) {
+		kickmem_bank.reserved_size = ROM_SIZE_512;
+		mapped_malloc(&kickmem_bank);
+		if (kickmem_bank.baseaddr) {
+			memset(kickmem_bank.baseaddr, 0, ROM_SIZE_512);
+		}
+	}
+}
+
 void memory_reset (void)
 {
 	int bnk, bnk_end;
@@ -2991,8 +3002,10 @@ void memory_reset (void)
 		need_hardreset = true;
 	last_address_space_24 = changed_prefs.address_space_24;
 
-	if (mem_hardreset > 2)
-		memory_init ();
+	if (mem_hardreset > 2) {
+		memory_init();
+	}
+	kickmem_init();
 
 	memset(ce_cachable, CACHE_ENABLE_INS, sizeof ce_cachable);
 
@@ -3240,7 +3253,6 @@ void memory_reset (void)
 	write_log (_T("memory init end\n"));
 }
 
-
 void memory_init (void)
 {
 	init_mem_banks ();
@@ -3265,11 +3277,7 @@ void memory_init (void)
 	custmem1_bank.baseaddr = NULL;
 	custmem2_bank.baseaddr = NULL;
 
-	kickmem_bank.reserved_size = ROM_SIZE_512;
-	mapped_malloc (&kickmem_bank);
-	if (kickmem_bank.baseaddr) {
-		memset(kickmem_bank.baseaddr, 0, ROM_SIZE_512);
-	}
+	kickmem_init();
 	_tcscpy (currprefs.romfile, _T("<none>"));
 	currprefs.romextfile[0] = 0;
 	cpuboard_reset(1);

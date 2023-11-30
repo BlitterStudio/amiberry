@@ -764,7 +764,7 @@ void uae_quit (void)
 }
 
 /* 0 = normal, 1 = nogui, -1 = disable nogui, -2 = autorestart */
-void uae_restart (int opengui, const TCHAR *cfgfile)
+void uae_restart(struct uae_prefs *p, int opengui, const TCHAR *cfgfile)
 {
 	uae_quit ();
 	restart_program = opengui == -2 ? 4 : (opengui > 0 ? 1 : (opengui == 0 ? 2 : 3));
@@ -773,6 +773,8 @@ void uae_restart (int opengui, const TCHAR *cfgfile)
 	if (cfgfile)
 		_tcscpy (restart_config, cfgfile);
 	target_restart ();
+	p->gfx_apmode[0].gfx_fullscreen = GFX_WINDOW;
+	p->gfx_apmode[1].gfx_fullscreen = GFX_WINDOW;
 }
 
 void print_version()
@@ -1359,7 +1361,7 @@ static int real_main2 (int argc, TCHAR **argv)
 #ifdef NATMEM_OFFSET
 	if (!init_shm ()) {
 		if (currprefs.start_gui)
-			uae_restart(-1, NULL);
+			uae_restart(&currprefs, -1, NULL);
 		return 0;
 	}
 #endif

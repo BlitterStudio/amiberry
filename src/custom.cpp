@@ -362,7 +362,7 @@ uae_u16 bemcon0_hsync_mask, bemcon0_vsync_mask;
 static uae_u16 beamcon0_saved;
 static uae_u16 bplcon0_saved, bplcon1_saved, bplcon2_saved;
 static uae_u16 bplcon3_saved, bplcon4_saved;
-static int varsync_changed;
+static int varsync_changed, varsync_maybe_changed[2];
 static uae_u16 vt_old, ht_old, hs_old, vs_old;
 uae_u16 vtotal, htotal;
 static int maxvpos_stored, maxhpos_stored;
@@ -431,7 +431,7 @@ int sprite_0_width, sprite_0_height, sprite_0_doubled;
 uae_u32 sprite_0_colors[4];
 static uae_u8 magic_sprite_mask = 0xff;
 
-static int hardwired_vbstop;
+static int hardwired_vbstrt, hardwired_vbstop;
 
 static int last_sprite_point, last_sprite_point_abs;
 static int nr_armed;
@@ -7108,6 +7108,7 @@ static void init_beamcon0(bool fakehz)
 		minfirstline = VBLANK_ENDLINE_PAL;
 		vblank_hz_nom = vblank_hz = VBLANK_HZ_PAL;
 		hardwired_vbstop = VBLANK_STOP_PAL;
+		hardwired_vbstrt = maxvpos;
 		equ_vblank_endline = EQU_ENDLINE_PAL;
 		equ_vblank_toggle = true;
 		vblank_hz_shf = clk / ((maxvpos + 0.0f) * maxhpos);
@@ -7119,6 +7120,7 @@ static void init_beamcon0(bool fakehz)
 		minfirstline = VBLANK_ENDLINE_NTSC;
 		vblank_hz_nom = vblank_hz = VBLANK_HZ_NTSC;
 		hardwired_vbstop = VBLANK_STOP_NTSC;
+		hardwired_vbstrt = maxvpos;
 		equ_vblank_endline = EQU_ENDLINE_NTSC;
 		equ_vblank_toggle = false;
 		vblank_hz_shf = clk / ((maxvpos + 0.0f) * (maxhpos + 0.5f));
@@ -7812,7 +7814,7 @@ static void vb_check(void)
 			vb_state = true;
 		}
 	} else {
-		if (vpos == maxvpos + lof_store - 1) {
+		if (vpos == hardwired_vbstrt + lof_store - 1) {
 			vb_start_line = 1;
 			vb_state = true;
 		}
@@ -8951,9 +8953,22 @@ static void varsync(int reg, bool resync)
 #endif
 	thisline_changed = 1;
 	updateextblk();
+
+	// VB
+	if ((reg == 0x1cc || reg == 0x1ce) && (beamcon0 & BEAMCON0_VARVBEN)) {
+		// check VB and HB changes only if there are no many changes per frame
+		varsync_maybe_changed[0]++;
+	}
+	// HB
+	if ((reg == 0x1c4 || reg == 0x1c6) && exthblank) {
+		// check VB and HB changes only if there are no many changes per frame
+		varsync_maybe_changed[1]++;
+	}
+
 	if (!resync) {
 		return;
 	}
+
 	// TOTAL
 	if ((reg == 0x1c0 || reg == 0x1c8) && (beamcon0 & BEAMCON0_VARBEAMEN)) {
 		varsync_changed = 1;
@@ -8972,6 +8987,12 @@ static void varsync(int reg, bool resync)
 	if ((reg == 0x1de || reg == 0x1c2) && (beamcon0 & bemcon0_hsync_mask)) {
 		varsync_changed = 1;
 	}
+
+	if (varsync_changed) {
+		varsync_maybe_changed[0] = 0;
+		varsync_maybe_changed[1] = 0;
+	}
+
 	if (varsync_changed) {
 		init_beamcon0(false);
 	}
@@ -11154,7 +11175,7 @@ static void update_copper(int until_hpos)
 				int comp = coppercomp(hpos, true);
 				if (comp < 0) {
 					// If we need to wait for later scanline or blitter: no need to emulate copper cycle-by-cycle
-					if (cop_state.ir[0] == 0xFFFF && cop_state.ir[1] == 0xFFFE) {
+					if (cop_state.ir[0] == 0xFFFF && cop_state.ir[1] == 0xFFFE && maxhpos < 250) {
 						cop_state.state = COP_waitforever;
 					}
 					copper_enabled_thisline = 0;
@@ -11316,12 +11337,16 @@ static void cursorsprite(void)
 	if (!dmaen(DMA_SPRITE) || first_planes_vpos == 0) {
 		return;
 	}
-	sprite_0 = spr[0].pt;
-	sprite_0_height = spr[0].vstop - spr[0].vstart;
+	struct sprite *s = &spr[0];
+	sprite_0 = s->pt;
+	sprite_0_height = s->vstop - s->vstart;
 	sprite_0_colors[0] = 0;
 	sprite_0_doubled = 0;
 	if (sprres == 0) {
 		sprite_0_doubled = 1;
+	}
+	if (spr[0].dblscan) {
+		sprite_0_height /= 2;
 	}
 	if (aga_mode) {
 		int sbasecol = ((bplcon4 >> 4) & 15) << 4;
@@ -12227,7 +12252,9 @@ static void vsync_display_render(void)
 
 static void vsync_check_vsyncmode(void)
 {
-	if (varsync_changed == 1) {
+	if ((varsync_maybe_changed[0] >= 1 && varsync_maybe_changed[0] <= 4) || (varsync_maybe_changed[1] >= 1 && varsync_maybe_changed[1] <= 4)) {
+		init_hz_normal();
+	} else if (varsync_changed == 1) {
 		init_hz_normal();
 	} else if (vpos_count > 0 && abs(vpos_count - vpos_count_diff) > 1 && vposw_change && vposw_change < 4) {
 		init_hz_vposw();
@@ -12238,6 +12265,8 @@ static void vsync_check_vsyncmode(void)
 	if (varsync_changed > 0) {
 		varsync_changed--;
 	}
+	varsync_maybe_changed[0] = 0;
+	varsync_maybe_changed[1] = 0;
 }
 
 static void check_display_mode_change(void)

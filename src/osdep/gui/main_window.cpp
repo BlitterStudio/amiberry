@@ -1040,7 +1040,7 @@ public:
 				strncat(tmp, OPTIONSFILENAME, MAX_DPATH - 1);
 				strncat(tmp, ".uae", MAX_DPATH - 10);
 			}
-			uae_restart(-1, tmp);
+			uae_restart(&changed_prefs, -1, tmp);
 			gui_running = false;
 		}
 		else if (actionEvent.getSource() == cmdStart)
