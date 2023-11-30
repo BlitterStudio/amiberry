@@ -4755,6 +4755,7 @@ void DSKLEN (uae_u16 v, int hpos)
 	int prevdatalen = dsklength;
 	int noselected = 0;
 	int motormask;
+	bool weirddma = false;
 
 	DISK_update (hpos);
 
@@ -4775,6 +4776,7 @@ void DSKLEN (uae_u16 v, int hpos)
 		}
 		dskdmaen = DSKDMA_READ;
 		DISK_start ();
+		weirddma = dsklength < 544 * 11 * 2;
 	}
 	if (!(v & 0x8000)) {
 		if (dskdmaen != DSKDMA_OFF) {
@@ -4922,6 +4924,8 @@ void DSKLEN (uae_u16 v, int hpos)
 #endif
 				continue;
 			if (selected & (1 << dr))
+				continue;
+			if (drv->useturbo && weirddma)
 				continue;
 
 			pos = drv->mfmpos & ~15;
