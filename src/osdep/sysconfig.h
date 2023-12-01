@@ -19,8 +19,9 @@
 #define UAE_FILESYS_THREADS
 #define AUTOCONFIG /* autoconfig support, fast ram, harddrives etc.. */
 #if !defined(__riscv) && !defined (__MACH__)
-#define JIT /* JIT compiler support */
-#define USE_JIT_FPU
+// DISABLED until this works 100%
+//#define JIT /* JIT compiler support */
+//#define USE_JIT_FPU
 #endif
 //#define NOFLAGS_SUPPORT_GENCPU
 #define NOFLAGS_SUPPORT_GENCOMP
