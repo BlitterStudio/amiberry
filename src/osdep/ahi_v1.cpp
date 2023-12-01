@@ -33,7 +33,9 @@
 #include "traps.h"
 #include "sounddep/sound.h"
 #include "parser.h"
-//#include "enforcer.h"
+#ifdef ENFORCER
+#include "enforcer.h"
+#endif
 #include "ahi_v1.h"
 #include "picasso96.h"
 #include "uaenative.h"

@@ -499,8 +499,11 @@ static int get_buddha_reg(uaecptr addr, struct ide_board *board, int *portnum, i
 		return reg;
 	*portnum = (addr - 0x800) / 0x200;
 	if ((board->aci->rc->device_settings & 3) == 1) {
-		if ((addr & 0xc0) == 0x80) {
+		if ((addr & (0x80 | 0x40)) == 0x80) {
 			return IDE_DATA;
+		}
+		if ((addr & (0x80 | 0x40)) == 0xc0) {
+			return -1;
 		}
 	}
 	reg = (addr >> 2) & 15;
@@ -1115,8 +1118,9 @@ static uae_u32 ide_read_word(struct ide_board *board, uaecptr addr)
 			int portnum;
 			int regnum = get_buddha_reg(addr, board, &portnum, NULL);
 			if (regnum == IDE_DATA) {
-				if (board->ide[portnum])
+				if (board->ide[portnum]) {
 					v = get_ide_reg_multi(board, IDE_DATA, portnum, 1);
+				}
 			} else {
 				v = ide_read_byte(board, addr) << 8;
 				v |= ide_read_byte(board, addr + 1);

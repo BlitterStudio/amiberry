@@ -123,8 +123,10 @@ struct breakpoint_node {
 	uae_u32 mask;
 	int type;
 	int oper;
+	bool opersigned;
 	int enabled;
 	int cnt;
+	int chain;
 };
 extern struct breakpoint_node bpnodes[BREAKPOINT_TOTAL];
 
@@ -224,6 +226,7 @@ extern struct peekdma peekdma_data;
 struct dma_rec
 {
 	int hpos, vpos;
+	int dhpos;
     uae_u16 reg;
     uae_u64 dat;
 	uae_u16 size;
@@ -322,6 +325,42 @@ extern void debug_draw(uae_u8 *buf, int bpp, int line, int width, int height, ua
 #define TRACE_CHECKONLY 10
 
 #else
+
+#define MAX_LINEWIDTH 10000
+
+#define MW_MASK_CPU_I			0x00000001
+#define MW_MASK_CPU_D_R			0x00000002
+#define MW_MASK_CPU_D_W			0x00000004
+#define MW_MASK_BLITTER_A		0x00000008
+#define MW_MASK_BLITTER_B		0x00000010
+#define MW_MASK_BLITTER_C		0x00000020
+#define MW_MASK_BLITTER_D_N		0x00000040
+#define MW_MASK_BLITTER_D_L		0x00000080
+#define MW_MASK_BLITTER_D_F		0x00000100
+#define MW_MASK_COPPER			0x00000200
+#define MW_MASK_DISK			0x00000400
+#define MW_MASK_AUDIO_0			0x00000800
+#define MW_MASK_AUDIO_1			0x00001000
+#define MW_MASK_AUDIO_2			0x00002000
+#define MW_MASK_AUDIO_3			0x00004000
+#define MW_MASK_BPL_0			0x00008000
+#define MW_MASK_BPL_1			0x00010000
+#define MW_MASK_BPL_2			0x00020000
+#define MW_MASK_BPL_3			0x00040000
+#define MW_MASK_BPL_4			0x00080000
+#define MW_MASK_BPL_5			0x00100000
+#define MW_MASK_BPL_6			0x00200000
+#define MW_MASK_BPL_7			0x00400000
+#define MW_MASK_SPR_0			0x00800000
+#define MW_MASK_SPR_1			0x01000000
+#define MW_MASK_SPR_2			0x02000000
+#define MW_MASK_SPR_3			0x04000000
+#define MW_MASK_SPR_4			0x08000000
+#define MW_MASK_SPR_5			0x10000000
+#define MW_MASK_SPR_6			0x20000000
+#define MW_MASK_SPR_7			0x40000000
+#define MW_MASK_NONE			0x80000000
+#define MW_MASK_ALL				(MW_MASK_NONE - 1)
 
 STATIC_INLINE void activate_debugger (void) { };
 

@@ -30,29 +30,24 @@
 #include "gui.h"
 #include "cdtv.h"
 #include "akiko.h"
-//#include "arcadia.h"
-//#include "enforcer.h"
+#ifdef ARCADIA
+#include "arcadia.h"
+#endif
+#ifdef ENFORCER
+#include "enforcer.h"
+#endif
 #include "threaddep/thread.h"
 #include "gayle.h"
 #include "debug.h"
 #include "debugmem.h"
 #include "gfxboard.h"
 #include "cpuboard.h"
-//#include "uae/ppc.h"
+#ifdef WITH_PPC
+#include "uae/ppc.h"
+#endif
 #include "devices.h"
 #include "inputdevice.h"
 //#include "casablanca.h"
-
-extern uae_u8* natmem_offset, * natmem_offset_end;
-
-#ifdef AMIBERRY
-extern void memory_map_dump(void);
-addrbank* get_mem_bank_real(uaecptr addr)
-{
-	addrbank* ab = &get_mem_bank(addr);
-	return ab;
-}
-#endif
 
 bool canbang;
 uaecptr highest_ram;
@@ -1311,7 +1306,9 @@ uae_u8 *REGPARAM2 default_xlate (uaecptr addr)
 					}
 					write_log (_T("\n"));
 				}
+#ifdef DEBUGGER
 				memory_map_dump();
+#endif
 			}
 			if (0 || (gary_toenb && (gary_nonrange(addr) || (size > 1 && gary_nonrange(addr + size - 1))))) {
 				hardware_exception2(addr, 0, true, true, size);
@@ -1686,12 +1683,8 @@ static bool load_extendedkickstart (const TCHAR *romextfile, int type)
 		extendedkickmem_type = EXTENDED_ROM_ARCADIA;
 		return false;
 	}
-	if (is_alg_rom(romextfile)) {
-		type = EXTENDED_ROM_ALG;
-
-	}
 #endif
-	f = read_rom_name (romextfile);
+	f = read_rom_name (romextfile, false);
 	if (!f) {
 		notify_user (NUMSG_NOEXTROM);
 		return false;
@@ -2991,7 +2984,9 @@ void memory_reset (void)
 	bool gayleorfatgary;
 
 	highest_ram = 0;
-	//alg_flag = 0;
+#ifdef ARCADIA
+	alg_flag = 0;
+#endif
 	need_hardreset = false;
 	rom_write_enabled = true;
 #ifdef JIT
@@ -3173,7 +3168,7 @@ void memory_reset (void)
 		break;
 #endif
 	case EXTENDED_ROM_ALG:
-#ifndef AMIBERRY
+#ifdef ARCADIA
 		map_banks_set(&extendedkickmem_bank, 0xF0, 4, 0);
 		alg_map_banks();
 #endif
@@ -3425,7 +3420,7 @@ static addrbank *get_bank_cpu_thread(addrbank *bank)
 		at = xcalloc(addrbank_thread, 1);
 	thread_banks[thread_banks_used++] = at;
 	at->orig = bank;
-	memcpy(&at->ab, bank, sizeof at->ab);
+	memcpy(&at->ab, bank, sizeof (addrbank));
 	addrbank *tb = &at->ab;
 	tb->jit_read_flag = S_READ;
 	tb->jit_write_flag = S_WRITE;

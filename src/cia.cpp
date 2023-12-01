@@ -30,11 +30,15 @@
 #include "inputdevice.h"
 #include "zfile.h"
 #include "ar.h"
-//#include "parallel.h"
+#ifdef PARALLEL_PORT
+#include "parallel.h"
+#endif
 #include "akiko.h"
 #include "cdtv.h"
 #include "debug.h"
-//#include "arcadia.h"
+#ifdef ARCADIA
+#include "arcadia.h"
+#endif
 #include "audio.h"
 #include "keyboard.h"
 #include "uae.h"
@@ -1732,7 +1736,9 @@ static uae_u8 ReadCIAA(uae_u32 addr, uae_u32 *flags)
 		v |= handle_joystick_buttons(c->pra, c->dra);
 		v |= (c->pra | (c->dra ^ 3)) & 0x03;
 		v = dongle_cia_read(0, reg, c->dra, v);
-		//v = alg_joystick_buttons(c->pra, c->dra, v);
+#ifdef ARCADIA
+		v = alg_joystick_buttons(c->pra, c->dra, v);
+#endif
 
 		// 391078-01 CIA: output mode bits always return PRA contents
 		if (currprefs.cs_ciatype[0]) {
@@ -1767,14 +1773,17 @@ static uae_u8 ReadCIAA(uae_u32 addr, uae_u32 *flags)
 		} else if (arcadia_bios) {
 			tmp = arcadia_parport(0, c->prb, c->drb);
 #endif
-		} else
+		} else if (currprefs.samplersoundcard >= 0) {
+			tmp = sampler_getsample((c->pra & 4) ? 1 : 0);
 #endif
-			if (currprefs.samplersoundcard >= 0) {
 
-				tmp = sampler_getsample((c->pra & 4) ? 1 : 0);
-			} else {
-				tmp = handle_parport_joystick (0, tmp);
-				tmp = dongle_cia_read (1, reg, c->drb, tmp);
+		} else if (parallel_port_scsi) {
+
+			tmp = parallel_port_scsi_read(0, c->prb, c->drb);
+
+		} else {
+			tmp = handle_parport_joystick (0, tmp);
+			tmp = dongle_cia_read (1, reg, c->drb, tmp);
 #if DONGLE_DEBUG > 0
 			if (notinrom())
 				write_log(_T("BFE101 R %02X %s\n"), tmp, debuginfo(0));
@@ -1846,7 +1855,6 @@ static uae_u8 ReadCIAB(uae_u32 addr, uae_u32 *flags)
 		} else if (parallel_port_scsi) {
 			tmp = parallel_port_scsi_read(1, c->pra, c->dra);
 		} else {
-#endif
 			// serial port in output mode
 			if (c->t[0].cr & 0x40) {
 				tmp &= ~3;
@@ -1854,7 +1862,6 @@ static uae_u8 ReadCIAB(uae_u32 addr, uae_u32 *flags)
 				tmp |= (c->sdr_buf & 0x80) ? 1 : 0; // data
 			}
 			tmp = handle_parport_joystick(1, tmp);
-#ifdef PARALLEL_PORT
 		}
 #endif
 #ifdef SERIAL_PORT

@@ -586,4 +586,3 @@ bool ini_delete(struct ini_data *ini, const TCHAR *section, const TCHAR *key)
 	}
 	return deleted;
 }
-

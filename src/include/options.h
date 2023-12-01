@@ -458,12 +458,12 @@ struct romconfig
 	int device_id;
 	int device_settings;
 	int subtype;
-	void* unitdata;
+	void *unitdata;
 	TCHAR configtext[ROMCONFIG_CONFIGTEXT_LEN];
 	uae_u16 manufacturer;
 	uae_u8 product;
 	uae_u8 autoconfig[16];
-	struct boardromconfig* back;
+	struct boardromconfig *back;
 };
 #define MAX_BOARD_ROMS 2
 struct boardromconfig
@@ -555,7 +555,7 @@ struct whdbooter
 
 struct uae_prefs
 {
-	struct strlist* all_lines;
+	struct strlist *all_lines;
 
 	TCHAR description[256];
 	TCHAR category[256];
@@ -956,7 +956,9 @@ struct uae_prefs
 	int samplersoundcard;
 	bool blankmonitors;
 	bool right_control_is_right_win_key;
-
+#ifdef WITH_SLIRP
+	struct slirp_redir slirp_redirs[MAX_SLIRP_REDIRS];
+#endif
 	int statecapturerate, statecapturebuffersize;
 
 	TCHAR open_gui[256];
@@ -983,7 +985,9 @@ struct uae_prefs
 	int input_mouse_untrap;
 	int input_magic_mouse_cursor;
 	int input_keyboard_type;
-	int input_autoswitch;
+	bool input_autoswitch;
+	bool input_autoswitchleftright;
+	bool input_advancedmultiinput;
 	struct uae_input_device joystick_settings[MAX_INPUT_SETTINGS][MAX_INPUT_DEVICES];
 	struct uae_input_device mouse_settings[MAX_INPUT_SETTINGS][MAX_INPUT_DEVICES];
 	struct uae_input_device keyboard_settings[MAX_INPUT_SETTINGS][MAX_INPUT_DEVICES];

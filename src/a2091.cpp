@@ -46,7 +46,7 @@
 #include "rtc.h"
 #include "devices.h"
 #ifdef WITH_DSP
-//#include "dsp3210/dsp_glue.h"
+#include "dsp3210/dsp_glue.h"
 #endif
 
 #define DMAC_8727_ROM_VECTOR 0x8000

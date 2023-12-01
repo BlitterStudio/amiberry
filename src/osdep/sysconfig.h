@@ -39,8 +39,8 @@
 #define CD32 /* CD32 emulation */
 #endif
 #define CDTV /* CDTV emulation */
-/* #define PARALLEL_PORT */ /* parallel port emulation */
-/* #define PARALLEL_DIRECT */ /* direct parallel port emulation */
+#define PARALLEL_PORT /* parallel port emulation */
+#define PARALLEL_DIRECT /* direct parallel port emulation */
 #define SERIAL_PORT  /* serial port emulation */
 /* #define SERIAL_ENET */ /* serial port UDP transport */
 #define SCSIEMU /* uaescsi.device emulation */
@@ -75,7 +75,7 @@
 #define FDI2RAW /* FDI 1.0 and 2.x image support */
 /* #define AVIOUTPUT */ /* Avioutput support */
 /* #define PROWIZARD */ /* Pro-Wizard module ripper */
-/* #define ARCADIA */ /* Arcadia arcade system */
+#define ARCADIA /* Arcadia arcade system */
 /* #define ARCHIVEACCESS */ /* ArchiveAccess decompression library */
 /* #define LOGITECHLCD */ /* Logitech G15 LCD */
 #define SAVESTATE /* State file support */
@@ -101,6 +101,9 @@
 /* #define WITH_X86 */
 #define WITH_THREADED_CPU
 #define FLOPPYBRIDGE
+
+/* vpar virtual parallel port */
+#define WITH_VPAR 1
 
 /* #define WITH_SCSI_IOCTL */
 /* #define WITH_SCSI_SPTI */
@@ -152,6 +155,9 @@ typedef int32_t uae_atomic;
 
 /* Define to 1 if you have the `inet_ntoa' function. */
 #define HAVE_INET_NTOA 1
+
+/* Define to 1 if you have POSIX serial support */
+#define POSIX_SERIAL 1
 
 /* Define if you have the getmntent function.  */
 #define HAVE_GETMNTENT 1

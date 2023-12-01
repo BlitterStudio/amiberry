@@ -297,6 +297,7 @@ static char ripper_path[MAX_DPATH];
 static char input_dir[MAX_DPATH];
 static char screenshot_dir[MAX_DPATH];
 static char nvram_dir[MAX_DPATH];
+static char video_dir[MAX_DPATH];
 static char amiberry_conf_file[MAX_DPATH];
 
 char last_loaded_config[MAX_DPATH] = {'\0'};
@@ -2599,6 +2600,11 @@ void set_nvram_path(char* newpath)
 	strncpy(nvram_dir, newpath, MAX_DPATH - 1);
 }
 
+void set_video_path(char* newpath)
+{
+	strncpy(video_dir, newpath, MAX_DPATH - 1);
+}
+
 void set_screenshot_path(char* newpath)
 {
 	strncpy(screenshot_dir, newpath, MAX_DPATH - 1);
@@ -2739,6 +2745,12 @@ void get_screenshot_path(char* out, int size)
 {
 	fix_trailing(screenshot_dir);
 	strncpy(out, screenshot_dir, size - 1);
+}
+
+void get_video_path(char* out, int size)
+{
+	fix_trailing(video_dir);
+	strncpy(out, video_dir, size - 1);
 }
 
 int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int isdefault)
@@ -3187,6 +3199,9 @@ void save_amiberry_settings(void)
 	snprintf(buffer, MAX_DPATH, "nvram_dir=%s\n", nvram_dir);
 	fputs(buffer, f);
 
+	snprintf(buffer, MAX_DPATH, "video_dir=%s\n", video_dir);
+	fputs(buffer, f);
+
 	// The number of ROMs in the last scan
 	snprintf(buffer, MAX_DPATH, "ROMs=%zu\n", lstAvailableROMs.size());
 	fputs(buffer, f);
@@ -3330,6 +3345,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_string(option, value, "inputrecordings_dir", input_dir, sizeof input_dir);
 		ret |= cfgfile_string(option, value, "screenshot_dir", screenshot_dir, sizeof screenshot_dir);
 		ret |= cfgfile_string(option, value, "nvram_dir", nvram_dir, sizeof nvram_dir);
+		ret |= cfgfile_string(option, value, "video_dir", video_dir, sizeof video_dir);
 		// NOTE: amiberry_config is a "read only", i.e. it's not written in
 		// save_amiberry_settings(). It's purpose is to provide -o amiberry_config=path
 		// command line option.
@@ -3608,6 +3624,7 @@ static void init_amiberry_paths(void)
 	snprintf(input_dir, MAX_DPATH, "%s/inputrecordings/", start_path_data);
 	snprintf(screenshot_dir, MAX_DPATH, "%s/screenshots/", start_path_data);
 	snprintf(nvram_dir, MAX_DPATH, "%s/nvram/", start_path_data);
+	snprintf(video_dir, MAX_DPATH, "%s/videos/", start_path_data);
 }
 
 void load_amiberry_settings(void)

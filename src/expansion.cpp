@@ -68,9 +68,8 @@
 #include "arcadia.h"
 #endif
 #include "devices.h"
-
-#ifdef AMIBERRY
-extern void memory_map_dump(void);
+#ifdef WITH_DSP
+#include "dsp3210/dsp_glue.h"
 #endif
 
 #define CARD_FLAG_CAN_Z3 1
@@ -425,7 +424,9 @@ static addrbank *expamem_init_last (void)
 {
 	expamem_init_clear2 ();
 	write_log (_T("Memory map after autoconfig:\n"));
+#ifdef DEBUGGER
 	memory_map_dump ();
+#endif
 	mman_set_barriers(false);
 	return NULL;
 }

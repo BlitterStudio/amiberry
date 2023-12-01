@@ -23,6 +23,8 @@
 #include "custom.h"
 #include "savestate.h"
 
+int key_swap_hack2 = false;
+
 static int kpb_first, kpb_last;
 
 #define KEYBUF_SIZE 256
@@ -277,6 +279,17 @@ int record_key_direct (int kc)
 {
 	int kpb_next = kpb_first + 1;
 	int kcd = (kc << 7) | (kc >> 1);
+
+	if (key_swap_hack2) {
+		// $0D <> $0C
+		if ((kcd & 0x7f) == 0x0c) {
+			kcd = 0x0d | (kcd & 0x80);
+			kc = (kcd << 1) | (kcd >> 7);
+		} else if ((kcd & 0x7f) == 0x0d) {
+			kcd = 0x0c | (kcd & 0x80);
+			kc = (kcd << 1) | (kcd >> 7);
+		}
+	}
 
 	if (ignore_next_release) {
 		ignore_next_release = false;

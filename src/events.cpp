@@ -19,7 +19,9 @@
 #include "uae/ppc.h"
 #endif
 #include "xwin.h"
-//#include "x86.h"
+#ifdef WITH_X86
+#include "x86.h"
+#endif
 #include "audio.h"
 #include "cia.h"
 

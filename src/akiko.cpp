@@ -198,11 +198,15 @@ static void *cd32_eeprom;
 static uae_u8 cd32_i2c_direction;
 static bool cd32_i2c_data_scl, cd32_i2c_data_sda;
 struct zfile *cd32_flashfile;
-//extern uae_u8 *cubo_nvram;
+#ifdef ARCADIA
+extern uae_u8 *cubo_nvram;
+#endif
 
 static void nvram_read (void)
 {
-	//cubo_nvram = NULL;
+#ifdef ARCADIA
+	cubo_nvram = NULL;
+#endif
 	zfile_fclose(cd32_flashfile);
 	cd32_flashfile = NULL;
 	eeprom_free(cd32_eeprom);
@@ -219,9 +223,11 @@ static void nvram_read (void)
 		cd32_nvram = xmalloc(uae_u8, maxlen);
 	}
 	memset(cd32_nvram, 0, maxlen);
-	//if (is_board_enabled(&currprefs, ROMTYPE_CUBO, 0)) {
-	//	cubo_nvram = cd32_nvram + currprefs.cs_cd32nvram_size;
-	//}
+#ifdef ARCADIA
+	if (is_board_enabled(&currprefs, ROMTYPE_CUBO, 0)) {
+		cubo_nvram = cd32_nvram + currprefs.cs_cd32nvram_size;
+	}
+#endif
 	TCHAR path[MAX_DPATH];
 	cfgfile_resolve_path_out_load(currprefs.flashfile, path, MAX_DPATH, PATH_ROM);
 	cd32_flashfile = zfile_fopen (path, _T("rb+"), ZFD_NORMAL);
@@ -229,8 +235,10 @@ static void nvram_read (void)
 		cd32_flashfile = zfile_fopen (path, _T("wb"), 0);
 	if (cd32_flashfile) {
 		size_t size = zfile_fread(cd32_nvram, 1, currprefs.cs_cd32nvram_size, cd32_flashfile);
-		//if (size == currprefs.cs_cd32nvram_size && maxlen > currprefs.cs_cd32nvram_size)
-		//	size += zfile_fread(cubo_nvram, 1, maxlen - currprefs.cs_cd32nvram_size, cd32_flashfile);
+#ifdef ARCADIA
+		if (size == currprefs.cs_cd32nvram_size && maxlen > currprefs.cs_cd32nvram_size)
+			size += zfile_fread(cubo_nvram, 1, maxlen - currprefs.cs_cd32nvram_size, cd32_flashfile);
+#endif
 		if (size < maxlen)
 			zfile_fwrite(cd32_nvram + size, 1, maxlen - size, cd32_flashfile);
 	}
@@ -2105,7 +2113,7 @@ int akiko_init(void)
 		if(akiko_sem != 0)
 			uae_sem_destroy(&akiko_sem);
 		akiko_sem = 0;
-		uae_sem_init (&akiko_sem, 0, 1);
+		uae_sem_init(&akiko_sem, 0, 1);
 		if(sub_sem != 0)
 			uae_sem_destroy(&sub_sem);
 		sub_sem = 0;

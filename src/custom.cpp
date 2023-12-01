@@ -45,7 +45,9 @@
 #include "enforcer.h"
 #endif
 #include "threaddep/thread.h"
-//#include "luascript.h"
+#ifdef WITH_LUA
+#include "luascript.h"
+#endif
 #include "crc32.h"
 #include "devices.h"
 #include "rommgr.h"
@@ -94,19 +96,6 @@
 #ifdef SERIAL_PORT
 extern uae_u16 serper;
 #endif
-
-#ifdef AMIBERRY
-extern int debug_sprite_mask;
-extern void memory_map_dump(void);
-#endif
-
-STATIC_INLINE bool nocustom (void)
-{
-	struct amigadisplay *ad = &adisplays[0];
-	if (ad->picasso_on && currprefs.picasso96_nocustom)
-		return true;
-	return false;
-}
 
 static void uae_abort (const TCHAR *format,...)
 {
@@ -5764,10 +5753,11 @@ static void decide_sprites2(int start, int end, int *countp, int *nrs, int *posn
 		if (sprxp < 0) {
 			continue;
 		}
-
+#ifdef DEBUGGER
 		if (!((debug_sprite_mask & magic_sprite_mask) & (1 << i))) {
 			continue;
 		}
+#endif
 
 		if (!spr[i].armed) {
 			continue;
@@ -14409,7 +14399,9 @@ void custom_reset(bool hardreset, bool keyboardreset)
 	target_reset();
 	devices_reset(hardreset);
 	write_log(_T("Reset at %08X. Chipset mask = %08X\n"), M68K_GETPC, currprefs.chipset_mask);
+#ifdef DEBUGGER
 	memory_map_dump();
+#endif
 
 	bool ntsc = currprefs.ntscmode;
 

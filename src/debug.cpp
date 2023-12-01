@@ -219,3 +219,9 @@ void memory_map_dump (void)
 {
 	memory_map_dump_2(1);
 }
+
+addrbank *get_mem_bank_real(uaecptr addr)
+{
+	addrbank *ab = &get_mem_bank(addr);
+	return ab;
+}

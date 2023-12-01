@@ -156,7 +156,7 @@ else ifeq ($(PLATFORM),orangepi-zero)
 		# Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
 		# quote: The assembly code in bn_mul.h is optimized for the ARM platform and uses some registers, including r7 to efficiently do an operation. GCC also uses r7 as the frame pointer under ARM Thumb assembly.
 		CFLAGS += -fomit-frame-pointer
-endif
+	endif
 
 # Odroid XU4 (SDL2)
 else ifeq ($(PLATFORM),xu4)
@@ -430,6 +430,7 @@ OBJS = \
 	src/akiko.o \
 	src/amax.o \
 	src/ar.o \
+	src/arcadia.o \
 	src/audio.o \
 	src/autoconf.o \
 	src/blitfunc.o \
@@ -584,8 +585,11 @@ OBJS = \
 	src/osdep/amiberry_serial.o \
 	src/osdep/amiberry_uaenet.o \
 	src/osdep/amiberry_whdbooter.o \
+	src/osdep/ioport.o \
 	src/osdep/sigsegv_handler.o \
+	src/osdep/socket.o \
 	src/osdep/retroarch.o \
+	src/osdep/vpar.o \
 	src/sounddep/sound.o \
 	src/threaddep/threading.o \
 	src/osdep/gui/ControllerMap.o \

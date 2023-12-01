@@ -43,6 +43,7 @@ add_executable(${PROJECT_NAME}
 		src/akiko.cpp
 		src/amax.cpp
 		src/ar.cpp
+		src/arcadia.cpp
 		src/audio.cpp
 		src/autoconf.cpp
 		src/blitfunc.cpp
@@ -249,8 +250,11 @@ add_executable(${PROJECT_NAME}
 		src/osdep/amiberry_serial.cpp
 		src/osdep/amiberry_uaenet.cpp
 		src/osdep/amiberry_whdbooter.cpp
+		src/osdep/ioport.cpp
 		src/osdep/sigsegv_handler.cpp
+		src/osdep/socket.cpp
 		src/osdep/retroarch.cpp
+		src/osdep/vpar.cpp
 		src/sounddep/sound.cpp
 		src/threaddep/threading.cpp
 		src/osdep/gui/ControllerMap.cpp

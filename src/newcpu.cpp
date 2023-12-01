@@ -66,11 +66,6 @@ bool check_prefs_changed_comp (bool checkonly) { return false; }
 /* For faster JIT cycles handling */
 int pissoff = 0;
 
-#ifdef AMIBERRY
-extern void memory_map_dump(void);
-#define MAX_LINEWIDTH 10000
-#endif
-
 /* Opcode of faulting instruction */
 static uae_u32 last_op_for_exception_3;
 /* PC at fault time */
@@ -3749,13 +3744,17 @@ static void cpu_do_fallback(void)
 		memcpy(&regs, &fallback_regs, sizeof(regs));
 		restore_banks();
 		memory_restore();
+#ifdef DEBUGGER
 		memory_map_dump();
+#endif
 		m68k_setpc(fallback_regs.pc);
 	} else {
 		// 68000/010/EC020
 		memory_restore();
 		expansion_cpu_fallback();
+#ifdef DEBUGGER
 		memory_map_dump();
+#endif
 	}
 }
 
@@ -5240,7 +5239,6 @@ void process_cpu_indirect_memory_write(uae_u32 addr, uae_u32 data, int size)
 		}
 		return;
 	}
-
 	cpu_thread_indirect_mode = 1;
 	cpu_thread_indirect_addr = addr;
 	cpu_thread_indirect_size = size;
@@ -6607,7 +6605,9 @@ void m68k_go (int may_quit)
 			/* We may have been restoring state, but we're done now.  */
 			if (isrestore ()) {
 				restored = savestate_restore_finish ();
+#ifdef DEBUGGER
 				memory_map_dump ();
+#endif
 				if (currprefs.mmu_model == 68030) {
 					mmu030_decode_tc (tc_030, true);
 				} else if (currprefs.mmu_model >= 68040) {

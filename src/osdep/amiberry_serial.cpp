@@ -1058,6 +1058,3 @@ int check(const sp_return result)
 	}
 }
 
-
-// TODO This should be moved somewhere more relevant (PARALLEL support)
-int flashscreen = 0;

@@ -44,10 +44,14 @@
 #include "zarchive.h"
 #include "gui.h"
 #include "gayle.h"
-//#include "idecontrollers.h"
+#include "idecontrollers.h"
 #include "savestate.h"
-//#include "a2091.h"
-//#include "ncr_scsi.h"
+#ifdef A2091
+#include "a2091.h"
+#endif
+#ifdef NCR
+#include "ncr_scsi.h"
+#endif
 #include "cdtv.h"
 #include "sana2.h"
 #include "bsdsocket.h"
@@ -65,7 +69,7 @@
 #include "cia.h"
 #include "newcpu.h"
 #include "picasso96.h"
-//#include "cpuboard.h"
+#include "cpuboard.h"
 #include "rommgr.h"
 #include "debug.h"
 //#include "debugmem.h"
@@ -1359,7 +1363,7 @@ static void initialize_mountinfo (void)
 	}
 
 	// init all controllers first
-	//add_cpuboard_unit_init();
+	add_cpuboard_unit_init();
 	for (int i = 0; expansionroms[i].name; i++) {
 		const struct expansionromtype *ert = &expansionroms[i];
 		for (int j = 0; j < MAX_DUPLICATE_EXPANSION_BOARDS; j++) {
@@ -2702,11 +2706,12 @@ static TCHAR *get_nname (Unit *unit, a_inode *base, TCHAR *rel, TCHAR **modified
 	/* See if we have a file that has the same name as the aname we are
 	* looking for.  */
 	found = fsdb_search_dir (base->nname, rel);
-	if (found == 0)
+	if (found == 0) {
 		return found;
-	if (found == rel)
+	}
+	if (found == rel) {
 		return build_nname(base->nname, rel);
-
+	}
 	*modified_rel = found;
 	return build_nname (base->nname, found);
 }
