@@ -425,6 +425,7 @@ C_OBJS= \
 	src/archivers/chd/utf8proc.o
 
 OBJS = \
+	src/a2065.o \
 	src/a2091.o \
 	src/akiko.o \
 	src/ar.o \
@@ -457,6 +458,7 @@ OBJS = \
 	src/dongle.o \
 	src/drawing.o \
 	src/driveclick.o \
+	src/ethernet.o \
 	src/events.o \
 	src/expansion.o \
 	src/fdi2raw.o \
@@ -579,6 +581,7 @@ OBJS = \
 	src/osdep/amiberry_gui.o \
 	src/osdep/amiberry_mem.o \
 	src/osdep/amiberry_serial.o \
+	src/osdep/amiberry_uaenet.o \
 	src/osdep/amiberry_whdbooter.o \
 	src/osdep/sigsegv_handler.o \
 	src/osdep/retroarch.o \

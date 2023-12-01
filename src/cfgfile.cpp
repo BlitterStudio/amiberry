@@ -5861,7 +5861,6 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		return 1;
 	}
 
-
 	if (cfgfile_string(option, value, _T("a2065"), p->a2065name, sizeof p->a2065name / sizeof(TCHAR))) {
 		if (p->a2065name[0])
 			addbcromtype(p, ROMTYPE_A2065, true, NULL, 0);
@@ -6687,14 +6686,14 @@ void cfgfile_compatibility_romtype(struct uae_prefs *p)
 	}
 	p->cs_cd32fmv = get_device_romconfig(p, ROMTYPE_CD32CART, 0) != NULL;
 
+#ifndef AMIBERRY
 	if (p->config_version < ((3 << 16) | (4 << 8) | (0 << 0))) {
 		// 3.3.0 or older
-#ifndef AMIBERRY
 		addbcromtypenet(p, ROMTYPE_A2065, p->a2065name, 0);
 		addbcromtypenet(p, ROMTYPE_NE2KPCMCIA, p->ne2000pcmcianame, 0);
 		addbcromtypenet(p, ROMTYPE_NE2KPCI, p->ne2000pciname, 0);
-#endif
 	}
+#endif
 
 	static const int restricted_net[] = {
 		ROMTYPE_A2065, ROMTYPE_NE2KPCMCIA, ROMTYPE_NE2KPCI, ROMTYPE_NE2KISA,
