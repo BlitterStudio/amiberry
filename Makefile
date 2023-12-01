@@ -440,6 +440,7 @@ OBJS = \
 	src/blkdev_cdimage.o \
 	src/bsdsocket.o \
 	src/calc.o \
+	src/casablanca.o \
 	src/cd32_fmv.o \
 	src/cd32_fmv_genlock.o \
 	src/cdrom.o \

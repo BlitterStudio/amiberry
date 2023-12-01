@@ -47,7 +47,7 @@
 #endif
 #include "devices.h"
 #include "inputdevice.h"
-//#include "casablanca.h"
+#include "casablanca.h"
 
 bool canbang;
 uaecptr highest_ram;
@@ -2717,10 +2717,10 @@ void map_overlay (int chip)
 	if (chip < 0)
 		chip = overlay_state;
 
-	//if (currprefs.cs_compatible == CP_CASABLANCA) {
-	//	casablanca_map_overlay();
-	//	return;
-	//}
+	if (currprefs.cs_compatible == CP_CASABLANCA) {
+		casablanca_map_overlay();
+		return;
+	}
 
 	size = chipmem_bank.allocated_size >= 0x180000 ? (chipmem_bank.allocated_size >> 16) : 32;
 	if (bogomem_aliasing)

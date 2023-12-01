@@ -53,6 +53,7 @@ add_executable(${PROJECT_NAME}
 		src/blkdev_cdimage.cpp
 		src/bsdsocket.cpp
 		src/calc.cpp
+		src/casablanca.cpp
 		src/cd32_fmv.cpp
 		src/cd32_fmv_genlock.cpp
 		src/cdrom.cpp
