@@ -354,12 +354,27 @@ void RefreshPanelConfig()
 bool HelpPanelConfig(std::vector<std::string>& helptext)
 {
 	helptext.clear();
-	helptext.emplace_back("To load a configuration, select the entry in the list and then click on \"Load\".");
-	helptext.emplace_back("If you double-click on an entry in the list, the emulation starts with this configuration.");
+	helptext.emplace_back("In this panel you can see a list of all your previously saved configurations. You can");
+	helptext.emplace_back(R"("Load", "Save" or "Delete" configurations from this list, using the buttons as are)");
+	helptext.emplace_back("detailed below.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("If you want to create a new configuration, set all options, enter a new name in");
-	helptext.emplace_back(R"("Name", optionally provide a short description and then click on "Save".)");
+	helptext.emplace_back("A Configuration file (.uae) contains all the emulator settings available in it. Loading");
+	helptext.emplace_back("such a file, will apply those settings to Amiberry immediately. Accordingly, you can Save");
+	helptext.emplace_back("your current settings in a file here, for future use.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("\"Delete\" will delete the selected configuration.");
+	helptext.emplace_back("Please note the \"default\" config name is special for Amiberry, since if it exists, it will");
+	helptext.emplace_back("be loaded automatically on startup. This will override the emulator options Amiberry sets");
+	helptext.emplace_back("internally at startup, and may impact on compatibility when using the Quickstart panel.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("To load a configuration, select the entry in the list and then click on \"Load\". Note that");
+	helptext.emplace_back("if you double-click on an entry in the list, the emulation starts with this configuration.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("To create/save a new configuration, set all emulator options required, then enter a new");
+	helptext.emplace_back(R"("Name", optionally provide a short description, and then click on "Save".)");
+	helptext.emplace_back("When trying to Save a configuration, if the supplied filename already exists, it will be");
+	helptext.emplace_back("automatically renamed to \"configuration.backup\", to keep as a backup.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("To delete the currently selected file from the disk (and the list), click on \"Delete\"");
+	helptext.emplace_back(" ");
 	return true;
 }
