@@ -81,7 +81,7 @@
 /* #define LOGITECHLCD */ /* Logitech G15 LCD */
 #define SAVESTATE /* State file support */
 #define A2091 /* A590/A2091 SCSI */
-/* #define A2065 */ /* A2065 Ethernet card */
+#define A2065 /* A2065 Ethernet card */
 /* #define GFXBOARD */ /* Hardware graphics board */
 /* #define NCR */ /* A4000T/A4091, 53C710/53C770 SCSI */
 /* #define NCR9X */ /* 53C9X SCSI */
@@ -147,6 +147,12 @@ typedef int32_t uae_atomic;
 
 /* Define to empty if the keyword does not work.  */
 /* #undef const */
+
+/* Define to 1 if you have the `inet_aton' function. */
+#define HAVE_INET_ATON 1
+
+/* Define to 1 if you have the `inet_ntoa' function. */
+#define HAVE_INET_NTOA 1
 
 /* Define if you have the getmntent function.  */
 #define HAVE_GETMNTENT 1

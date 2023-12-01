@@ -53,6 +53,7 @@
 #include "floppybridge/floppybridge_lib.h"
 #include "threaddep/thread.h"
 #include "uae/uae.h"
+#include "sana2.h"
 
 #ifdef __MACH__
 #include <string>
@@ -60,6 +61,9 @@
 
 #ifdef AHI
 #include "ahi_v1.h"
+#include "sana2.h"
+#include "ethernet.h"
+
 #ifdef AHI_v2
 #include "ahi_v2.h"
 #endif
@@ -3987,4 +3991,16 @@ void drawbridge_update_profiles(uae_prefs* p)
 	floppybridge_set_config(drawbridge_profiles.c_str());
 	floppybridge_init(p);
 #endif
+}
+
+static struct netdriverdata *ndd[MAX_TOTAL_NET_DEVICES + 1];
+static int net_enumerated;
+
+struct netdriverdata **target_ethernet_enumerate(void)
+{
+	if (net_enumerated)
+		return ndd;
+	ethernet_enumerate(ndd, 0);
+	net_enumerated = 1;
+	return ndd;
 }
