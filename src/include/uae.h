@@ -52,9 +52,9 @@ extern bool target_isrelativemode(void);
 extern uae_u32 getlocaltime (void);
 extern bool isguiactive(void);
 extern bool is_mainthread(void);
- extern void fpu_reset(void);
- extern void fpux_save(int*);
- extern void fpux_restore(int*);
+extern void fpu_reset(void);
+extern void fpux_save(int*);
+extern void fpux_restore(int*);
 extern void replace(std::string& str, const std::string& from, const std::string& to);
 
 extern int quit_program;

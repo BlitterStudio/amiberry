@@ -13,19 +13,19 @@ int uae_start_thread(const char* name, uae_thread_function fn, void* arg, uae_th
 	auto result = 1;
 	if (name != nullptr) {
 		write_log("uae_start_thread \"%s\" function at %p arg %p\n", name,
-			fn, arg);
-	}
-	else
+		          fn, arg);
+	} else {
 		name = "StartThread";
+	}
 	
-	auto* thread_id = SDL_CreateThread(fn, name, arg);
-	if (thread_id == nullptr)
+	auto* thread = SDL_CreateThread(fn, name, arg);
+	if (thread == nullptr)
 	{
-		write_log("ERROR creating thread\n");
+		write_log("ERROR creating thread, %s\n", SDL_GetError());
 		result = 0;
 	}
 	if (tid) {
-		*tid = thread_id;
+		*tid = thread;
 	}
 	return result;
 }
@@ -47,7 +47,7 @@ void uae_end_thread(uae_thread_id* thread)
 
 int uae_sem_init(uae_sem_t* sem, int dummy, int initial_state)
 {
-	if(*sem)
+	if (*sem)
 	{
 		SDL_SemPost(*sem);
 	}
@@ -72,8 +72,8 @@ void uae_set_thread_priority(uae_thread_id* id, int pri)
 	SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH);
 }
 
-SDL_threadID uae_thread_get_id()
+SDL_threadID uae_thread_get_id(SDL_Thread *thread)
 {
-	return SDL_GetThreadID(nullptr);
+	return SDL_GetThreadID(thread);
 }
 

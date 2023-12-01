@@ -4947,11 +4947,6 @@ STATIC_INLINE void one_fetch_cycle(int pos, int fm)
 
 static void update_fetch(int until, int fm)
 {
-#ifdef AMIBERRY
-	if (nodraw())
-		return;
-#endif
-
 	int hpos = last_fetch_hpos;
 
 	if (hpos >= until) {
@@ -11901,22 +11896,20 @@ static bool framewait(void)
 
 		curr_time = read_processor_time();
 		vsyncwaittime = vsyncmaxtime = curr_time + vsynctimebase;
-		if (!nodraw()) {
-			if (!frame_rendered && !ad->picasso_on) {
-				frame_rendered = crender_screen(0, 1, false);
-			}
+		if (!frame_rendered && !ad->picasso_on) {
+			frame_rendered = crender_screen(0, 1, false);
+		}
 
-			start = read_processor_time();
-			t = 0;
-			if (start - vsync_time >= 0 && start - vsync_time < vsynctimebase) {
-				t += start - vsync_time;
-			}
+		start = read_processor_time();
+		t = 0;
+		if (start - vsync_time >= 0 && start - vsync_time < vsynctimebase) {
+			t += start - vsync_time;
+		}
 
-			if (!frame_shown) {
-				show_screen(0, 1);
-				if (currprefs.gfx_apmode[0].gfx_strobo) {
-					show_screen(0, 4);
-				}
+		if (!frame_shown) {
+			show_screen(0, 1);
+			if (currprefs.gfx_apmode[0].gfx_strobo) {
+				show_screen(0, 4);
 			}
 		}
 
@@ -11989,7 +11982,7 @@ static bool framewait(void)
 				if (vsyncwaittime - curr_time <= 0 || vsyncwaittime - curr_time > 2 * vsynctimebase) {
 					break;
 				}
-				//rtg_vsynccheck ();
+				rtg_vsynccheck ();
 				if (cpu_sleep_millis(1) < 0) {
 					curr_time = read_processor_time();
 					break;
@@ -12034,13 +12027,13 @@ static bool framewait(void)
 				float v = rpt_vsync(clockadjust) / (syncbase / 1000.0f);
 				if (v >= -FRAMEWAIT_MIN_MS)
 					break;
-				//rtg_vsynccheck();
+				rtg_vsynccheck();
 				maybe_process_pull_audio();
 				if (cpu_sleep_millis(1) < 0)
 					break;
 			}
 			while (rpt_vsync(clockadjust) < 0) {
-				//rtg_vsynccheck();
+				rtg_vsynccheck();
 				if (audio_is_pull_event()) {
 					maybe_process_pull_audio();
 					break;
@@ -12193,11 +12186,8 @@ static void vsync_handler_render(void)
 	}
 
 	bool frameok = framewait();
-#ifdef AMIBERRY
-	if (!ad->picasso_on && !nodraw()) {
-#else
+	
 	if (!ad->picasso_on) {
-#endif
 		if (!frame_rendered && vblank_hz_state) {
 			frame_rendered = crender_screen(0, 1, false);
 		}
@@ -12206,10 +12196,7 @@ static void vsync_handler_render(void)
 		}
 	}
 
-#ifdef AMIBERRY
-	if (!nodraw() || ad->picasso_on)
-#endif
-		fpscounter(frameok);
+	fpscounter(frameok);
 
 	bool waspaused = false;
 	while (handle_events()) {
@@ -15500,10 +15487,10 @@ uae_u8 *restore_custom(uae_u8 *src)
 	RW;						/* 03A STRVHBL */
 	RW;						/* 03C STRHOR */
 	RW;						/* 03E STRLONG */
-	BLTCON0(0, RW);	/* 040 BLTCON0 */
-	BLTCON1(0, RW);	/* 042 BLTCON1 */
-	BLTAFWM(0, RW);	/* 044 BLTAFWM */
-	BLTALWM(0, RW);	/* 046 BLTALWM */
+	BLTCON0(0, RW);			/* 040 BLTCON0 */
+	BLTCON1(0, RW);			/* 042 BLTCON1 */
+	BLTAFWM(0, RW);			/* 044 BLTAFWM */
+	BLTALWM(0, RW);			/* 046 BLTALWM */
 	BLTCPTH(0, RW);BLTCPTL(0, RW);	/* 048-04B BLTCPT */
 	BLTBPTH(0, RW);BLTBPTL(0, RW);	/* 04C-04F BLTBPT */
 	BLTAPTH(0, RW);BLTAPTL(0, RW);	/* 050-053 BLTAPT */
@@ -15512,17 +15499,17 @@ uae_u8 *restore_custom(uae_u8 *src)
 	RW;						/* 05A BLTCON0L */
 	blt_info.vblitsize = RW;/* 05C BLTSIZV */
 	blt_info.hblitsize = RW;/* 05E BLTSIZH */
-	BLTCMOD(0, RW);	/* 060 BLTCMOD */
-	BLTBMOD(0, RW);	/* 062 BLTBMOD */
-	BLTAMOD(0, RW);	/* 064 BLTAMOD */
-	BLTDMOD(0, RW);	/* 066 BLTDMOD */
+	BLTCMOD(0, RW);			/* 060 BLTCMOD */
+	BLTBMOD(0, RW);			/* 062 BLTBMOD */
+	BLTAMOD(0, RW);			/* 064 BLTAMOD */
+	BLTDMOD(0, RW);			/* 066 BLTDMOD */
 	RW;						/* 068 ? */
 	RW;						/* 06A ? */
 	RW;						/* 06C ? */
 	RW;						/* 06E ? */
-	BLTCDAT(0, RW);	/* 070 BLTCDAT */
-	BLTBDAT(0, RW);	/* 072 BLTBDAT */
-	BLTADAT(0, RW);	/* 074 BLTADAT */
+	BLTCDAT(0, RW);			/* 070 BLTCDAT */
+	BLTBDAT(0, RW);			/* 072 BLTBDAT */
+	BLTADAT(0, RW);			/* 074 BLTADAT */
 	RW;						/* 076 ? */
 	RW;						/* 078 ? */
 	RW;						/* 07A ? */
@@ -15538,7 +15525,7 @@ uae_u8 *restore_custom(uae_u8 *src)
 	ddfstrt = RW;			/* 092 DDFSTRT */
 	ddfstop = RW;			/* 094 DDFSTOP */
 	dmacon = RW & ~(0x2000|0x4000); /* 096 DMACON */
-	CLXCON(-1, RW);	/* 098 CLXCON */
+	CLXCON(-1, RW);			/* 098 CLXCON */
 	intena = RW;			/* 09A INTENA */
 	intreq = RW;			/* 09C INTREQ */
 	adkcon = RW;			/* 09E ADKCON */
@@ -15569,10 +15556,10 @@ uae_u8 *restore_custom(uae_u8 *src)
 	vsstop = RW;			/* 1CA VSSTOP */
 	vbstrt = RW;			/* 1CC VBSTRT */
 	vbstop = RW;			/* 1CE VBSTOP */
-	SPRHSTRT(-1, RW);	/* 1D0 SPRHSTART */
-	SPRHSTOP(-1, RW);	/* 1D2 SPRHSTOP */
-	BPLHSTRT(-1, RW);	/* 1D4 BPLHSTRT */
-	BPLHSTOP(-1, RW);	/* 1D6 BPLHSTOP */
+	SPRHSTRT(-1, RW);		/* 1D0 SPRHSTART */
+	SPRHSTOP(-1, RW);		/* 1D2 SPRHSTOP */
+	BPLHSTRT(-1, RW);		/* 1D4 BPLHSTRT */
+	BPLHSTOP(-1, RW);		/* 1D6 BPLHSTOP */
 	hhpos = RW;				/* 1D8 HHPOSW */
 	RW;						/* 1DA HHPOSR */
 	new_beamcon0 = RW;		/* 1DC BEAMCON0 */

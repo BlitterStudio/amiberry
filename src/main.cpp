@@ -100,12 +100,12 @@ static uae_u32 xorshift32(void)
 
 uae_u32 uaerand(void)
 {
-    if (xorshiftstate == 0) {
-        xorshiftstate = randseed;
-        if (!xorshiftstate) {
-            randseed = 1;
-            xorshiftstate = 1;
-        }
+	if (xorshiftstate == 0) {
+		xorshiftstate = randseed;
+		if (!xorshiftstate) {
+			randseed = 1;
+			xorshiftstate = 1;
+		}
 	}
 	uae_u32 r = xorshift32();
 	return r;
@@ -113,11 +113,11 @@ uae_u32 uaerand(void)
 
 uae_u32 uaerandgetseed(void)
 {
-    if (!randseed) {
-        randseed = 1;
-        xorshiftstate = 1;
-    }
-    return randseed;
+	if (!randseed) {
+		randseed = 1;
+		xorshiftstate = 1;
+	}
+	return randseed;
 }
 
 void uaerandomizeseed(void)
@@ -132,12 +132,12 @@ void uaerandomizeseed(void)
 
 uae_u32 uaesetrandseed(uae_u32 seed)
 {
-    if (!seed) {
-        seed = 1;
-    }
-    randseed = seed;
-    xorshiftstate = seed;
-    return randseed;
+	if (!seed) {
+		seed = 1;
+	}
+	randseed = seed;
+	xorshiftstate = seed;
+	return randseed;
 }
 
 void my_trim(TCHAR *s)
@@ -252,10 +252,10 @@ void fixup_cpu (struct uae_prefs *p)
 	if (p->cpu_frequency == 1000000)
 		p->cpu_frequency = 0;
 
-	//if (p->cpu_model >= 68020 && p->cpuboard_type && p->address_space_24 && cpuboard_32bit(p)) {
-	//	error_log(_T("24-bit address space is not supported with selected accelerator board configuration."));
-	//	p->address_space_24 = 0;
-	//}
+	if (p->cpu_model >= 68020 && p->cpuboard_type && p->address_space_24 && cpuboard_32bit(p)) {
+		error_log (_T("24-bit address space is not supported with selected accelerator board configuration."));
+		p->address_space_24 = 0;
+	}
 	if (p->cpu_model >= 68040 && p->address_space_24) {
 		error_log (_T("24-bit address space is not supported with 68040/060 configurations."));
 		p->address_space_24 = false;
@@ -402,7 +402,21 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 
 	read_kickstart_version(p);
 
-	if (((p->chipmem.size & p->chipmem.size - 1) != 0 && p->chipmem.size != 0x180000)
+	if (p->cpuboard_type && p->cpuboardmem1.size > cpuboard_maxmemory(p)) {
+		error_log(_T("Unsupported accelerator board memory size %d (0x%x).\n"), p->cpuboardmem1.size, p->cpuboardmem1.size);
+		p->cpuboardmem1.size = cpuboard_maxmemory(p);
+	}
+	if (cpuboard_memorytype(p) == BOARD_MEMORY_HIGHMEM) {
+		p->mbresmem_high.size = p->cpuboardmem1.size;
+	} else if (cpuboard_memorytype(p) == BOARD_MEMORY_Z2) {
+		p->fastmem[0].size = p->cpuboardmem1.size;
+	} else if (cpuboard_memorytype(p) == BOARD_MEMORY_25BITMEM) {
+		p->mem25bit.size = p->cpuboardmem1.size;
+	} else if (cpuboard_memorytype(p) == BOARD_MEMORY_CUSTOM_32) {
+		p->mem25bit.size = 0;
+	}
+
+	if (((p->chipmem.size & (p->chipmem.size - 1)) != 0 && p->chipmem.size != 0x180000)
 		|| p->chipmem.size < 0x20000
 		|| p->chipmem.size > 0x800000)
 	{

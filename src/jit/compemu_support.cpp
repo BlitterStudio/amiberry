@@ -28,6 +28,7 @@
  * along with ARAnyM; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+#include "sysdeps.h"
 
 #ifdef UAE
 
@@ -1036,7 +1037,7 @@ static inline void emit_block(const uae_u8 *block, uae_u32 blocklen)
 
 static inline uae_u32 reverse32(uae_u32 v)
 {
-	return bswap_32(v);
+	return uae_bswap_32(v);
 }
 
 void set_target(uae_u8* t)
@@ -4179,7 +4180,7 @@ static bool read_fpu_opcode(const char *p, size_t len)
 	
 	for (i = 0; i < (sizeof(jit_opcodes) / sizeof(jit_opcodes[0])); i++)
 	{
-		if (len == strlen(jit_opcodes[i].name) && strnicmp(jit_opcodes[i].name, p, len) == 0)
+		if (len == strlen(jit_opcodes[i].name) && _tcsnicmp(jit_opcodes[i].name, p, len) == 0)
 		{
 			*jit_opcodes[i].disabled = true;
 			jit_log("<JIT compiler> : disabled %s", jit_opcodes[i].name);
@@ -4629,7 +4630,7 @@ int failure;
 #else
 static inline unsigned int get_opcode_cft_map(unsigned int f)
 {
-	return bswap_16(f);
+	return uae_bswap_16(f);
 }
 #define DO_GET_OPCODE(a) (get_opcode_cft_map((uae_u16)*(a)))
 #endif

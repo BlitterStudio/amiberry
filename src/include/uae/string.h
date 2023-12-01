@@ -34,7 +34,7 @@
 #define _tcsdup SDL_strdup
 #define _tcsftime strftime
 #define _tcsftime strftime
-#define _tcsicmp stricmp
+#define _tcsicmp strcasecmp
 #define _tcslen SDL_strlen
 #define uaestrlen SDL_strlen
 #define _tcsncat strncat

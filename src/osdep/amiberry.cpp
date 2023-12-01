@@ -86,6 +86,7 @@ struct gpiod_line* lineYellow; // Yellow LED
 std::string drawbridge_profiles = "1|Fast[0|0|COM0|0|0]2|Compatible[0|0|COM0|1|0]3|Turbo[0|0|COM0|2|0]4|Accurate[0|0|COM0|3|0]";
 #endif
 
+SDL_threadID mainthreadid;
 static int logging_started;
 int log_scsi;
 int uaelib_debug;
@@ -3747,6 +3748,7 @@ int main(int argc, char* argv[])
     }
 
 	struct sigaction action{};
+	mainthreadid = uae_thread_get_id(nullptr);
 
 	if(argc == 2)
 	{
@@ -3991,6 +3993,11 @@ void drawbridge_update_profiles(uae_prefs* p)
 	floppybridge_set_config(drawbridge_profiles.c_str());
 	floppybridge_init(p);
 #endif
+}
+
+bool is_mainthread()
+{
+	return uae_thread_get_id(nullptr) == mainthreadid;
 }
 
 static struct netdriverdata *ndd[MAX_TOTAL_NET_DEVICES + 1];
