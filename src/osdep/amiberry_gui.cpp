@@ -423,6 +423,14 @@ void disk_selection(const int drive, uae_prefs* prefs)
 	}
 }
 
+bool gui_ask_disk(int drv, TCHAR *name)
+{
+	_tcscpy(changed_prefs.floppyslots[drv].df, name);
+	disk_selection(drv, &changed_prefs);
+	_tcscpy(name, changed_prefs.floppyslots[drv].df);
+	return true;
+}
+
 static void prefs_to_gui()
 {
 	/* filesys hack */
