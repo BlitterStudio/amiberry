@@ -426,16 +426,33 @@ void RefreshPanelVirtualKeyboard()
 bool HelpPanelVirtualKeyboard(std::vector<std::string>& helptext)
 {
 	helptext.clear();
-	helptext.emplace_back("Virtual keyboard can be used to input key presses using a controller.");
-    helptext.emplace_back(" ");
-    helptext.emplace_back("Options for the virtual keyboard are configured here:");
-    helptext.emplace_back("To show the virtual keyboard, first Enable it here and then map the");
-	helptext.emplace_back("'Toggle Virtual Keyboard' custom event to a controller button.");
+	helptext.emplace_back("In this panel, you can configure the various options for Amiberry's On-screen (virtual)");
+	helptext.emplace_back("keyboard. The virtual keyboard can be used to input key presses using a game controller.");
+	helptext.emplace_back("Any options you change here can be saved to the currently loaded configuration .uae file.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("You can select a normal or a High-resolution version of the on-screen keyboard.");
+	helptext.emplace_back("\"Virtual Keyboard enabled\": controls if the on-screen keyboard will be enabled or not.");
+	helptext.emplace_back(" All the options below this, depend on this being enabled first.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("You can optionally have a button on the on-screen keyboard, that Quits Amiberry.");
-	helptext.emplace_back("Additionally, you can change the transparency amount, the language and the ");
-	helptext.emplace_back("look it will have.");
+	helptext.emplace_back("\"High-Resolution\": If enabled, Amiberry will use a larger keyboard image when showing");
+	helptext.emplace_back(" the on-screen keyboard, which can be useful for high resolution displays.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back(R"("Quit button on keyboard": If enabled, an extra "Quit" button will be shown on the)");
+	helptext.emplace_back(" on-screen keyboard, allowing you to Quit the emulator from there.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("\"Transparency\": The amount of transparency the on-screen keyboard will have when shown.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("\"Keyboard Layout\": You can choose the desired keyboard layout, from a range of options.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("\"Style\": You can choose from a few different themes available for the on-screen keyboard.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("\"Toggle button\": You can choose which controller button will be used, to toggle the on-");
+	helptext.emplace_back(" screen keyboard off or on.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("Please note; In cases where you want Amiberry to always start with the virtual on-screen");
+	helptext.emplace_back("keyboard enabled, you can set the above options as defaults in your amiberry.conf file.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("\"Use Retroarch Vkbd button\": This option allows you choose to use the RetroArch mapping");
+	helptext.emplace_back(" of the \"vkbd\" button, if found. This is only useful in RetroArch environments.");
+	helptext.emplace_back(" ");
 	return true;
 }
