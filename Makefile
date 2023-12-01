@@ -453,14 +453,17 @@ OBJS = \
 	src/crc32.o \
 	src/custom.o \
 	src/debug.o \
+	src/debugmem.o \
 	src/def_icons.o \
 	src/devices.o \
+	src/disasm.o \
 	src/disk.o \
 	src/diskutil.o \
 	src/dlopen.o \
 	src/dongle.o \
 	src/drawing.o \
 	src/driveclick.o \
+	src/enforcer.o \
 	src/ethernet.o \
 	src/events.o \
 	src/expansion.o \

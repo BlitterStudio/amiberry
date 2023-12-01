@@ -72,7 +72,7 @@
 #include "cpuboard.h"
 #include "rommgr.h"
 #include "debug.h"
-//#include "debugmem.h"
+#include "debugmem.h"
 #ifdef RETROPLATFORM
 #include "rp.h"
 #endif

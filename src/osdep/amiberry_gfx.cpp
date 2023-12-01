@@ -36,6 +36,8 @@
 #include "fsdb_host.h"
 #include "sampler.h"
 
+int log_vsync = 0, debug_vsync_min_delay = 0, debug_vsync_forced_delay = 0;
+
 static bool force_auto_crop = false;
 static uae_thread_id display_tid = nullptr;
 static smp_comm_pipe *volatile display_pipe = nullptr;

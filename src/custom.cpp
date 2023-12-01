@@ -10031,7 +10031,7 @@ void dump_aga_custom(void)
 		rgb2 = current_colors.color_regs_aga[c2];
 		rgb3 = current_colors.color_regs_aga[c3];
 		rgb4 = current_colors.color_regs_aga[c4];
-		write_log (_T("%3d %08X %3d %08X %3d %08X %3d %08X\n"),
+		console_out_f (_T("%3d %08X %3d %08X %3d %08X %3d %08X\n"),
 			c1, rgb1, c2, rgb2, c3, rgb3, c4, rgb4);
 	}
 }
@@ -14718,7 +14718,7 @@ void custom_reset(bool hardreset, bool keyboardreset)
 void custom_dumpstate(int mode)
 {
 	if (!mode) {
-		write_log(_T("VPOS: %03d ($%03x) HPOS: %03d ($%03x) COP: $%08x\n"),
+		console_out_f(_T("VPOS: %03d ($%03x) HPOS: %03d ($%03x) COP: $%08x\n"),
 			vpos, vpos, current_hpos(), current_hpos(),
 			cop_state.ip);
 	}
@@ -14726,22 +14726,22 @@ void custom_dumpstate(int mode)
 
 void dumpcustom(void)
 {
-	write_log(_T("DMACON: $%04x INTENA: $%04x ($%04x) INTREQ: $%04x ($%04x) VPOS: %03d ($%03x) HPOS: %03d ($%03x)\n"),
+	console_out_f(_T("DMACON: $%04x INTENA: $%04x ($%04x) INTREQ: $%04x ($%04x) VPOS: %03d ($%03x) HPOS: %03d ($%03x)\n"),
 		DMACONR(current_hpos()),
 		intena, intena, intreq, intreq, vpos, vpos, current_hpos(), current_hpos());
-	write_log(_T("INT: $%04x IPL: %d\n"), intena & intreq, intlev());
-	write_log(_T("COP1LC: $%08x, COP2LC: $%08x COPPTR: $%08x\n"), cop1lc, cop2lc, cop_state.ip);
-	write_log(_T("DIWSTRT: $%04x DIWSTOP: $%04x DDFSTRT: $%04x DDFSTOP: $%04x\n"),
+	console_out_f(_T("INT: $%04x IPL: %d\n"), intena & intreq, intlev());
+	console_out_f(_T("COP1LC: $%08x, COP2LC: $%08x COPPTR: $%08x\n"), cop1lc, cop2lc, cop_state.ip);
+	console_out_f(_T("DIWSTRT: $%04x DIWSTOP: $%04x DDFSTRT: $%04x DDFSTOP: $%04x\n"),
 		diwstrt, diwstop, ddfstrt, ddfstop);
-	write_log(_T("BPLCON 0: $%04x 1: $%04x 2: $%04x 3: $%04x 4: $%04x LOF=%d/%d HDIW=%d VDIW=%d\n"),
+	console_out_f(_T("BPLCON 0: $%04x 1: $%04x 2: $%04x 3: $%04x 4: $%04x LOF=%d/%d HDIW=%d VDIW=%d\n"),
 		bplcon0, bplcon1, bplcon2, bplcon3, bplcon4,
 		lof_display, lof_store,
 		hdiwstate == diw_states::DIW_waiting_start ? 0 : 1, vdiwstate == diw_states::DIW_waiting_start ? 0 : 1);
 	if (timeframes && vsync_counter) {
-		write_log(_T("Average frame time: %.2f ms [frames: %d time: %d]\n"),
+		console_out_f(_T("Average frame time: %.2f ms [frames: %d time: %d]\n"),
 			(double)frametime / timeframes, vsync_counter, frametime);
 		if (total_skipped)
-			write_log(_T("Skipped frames: %d\n"), total_skipped);
+			console_out_f(_T("Skipped frames: %d\n"), total_skipped);
 	}
 }
 

@@ -2099,7 +2099,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 		}
 	}
 
-#ifndef AMIBERRY
+#ifdef WITH_LUA
 	for (i = 0; i < MAX_LUA_STATES; i++) {
 		if (p->luafiles[i][0]) {
 			cfgfile_write_str (f, _T("lua"), p->luafiles[i]);
@@ -2767,7 +2767,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 		}
 		cfgfile_writeramboard(p, f, _T("fastmem"), i, &p->fastmem[i]);
 	}
-#ifndef AMIBERRY
+#ifdef DEBUGGER
 	cfgfile_write(f, _T("debugmem_start"), _T("0x%x"), p->debugmem_start);
 	cfgfile_write(f, _T("debugmem_size"), _T("%d"), p->debugmem_size / 0x100000);
 #endif
@@ -8525,7 +8525,7 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 	_tcscpy (p->floppyslots[1].df, _T(""));
 	_tcscpy (p->floppyslots[2].df, _T(""));
 	_tcscpy (p->floppyslots[3].df, _T(""));
-#ifndef AMIBERRY
+#ifdef WITH_LUA
 	for (int i = 0; i < MAX_LUA_STATES; i++) {
 		p->luafiles[i][0] = 0;
 	}

@@ -348,8 +348,20 @@ extern void mallocemu_free (void *ptr);
 #endif
 
 extern void write_log (const TCHAR *,...);
+
+extern void flush_log (void);
+extern TCHAR *setconsolemode (TCHAR *buffer, int maxlen);
+extern void close_console (void);
+extern void reopen_console (void);
+extern void activate_console (void);
+extern void console_out (const TCHAR *);
+extern void console_out_f (const TCHAR *, ...);
+extern void console_flush (void);
+extern int console_get (TCHAR *, int);
+extern bool console_isch (void);
 extern TCHAR console_getch(void);
 extern void f_out(FILE*, const TCHAR*, ...);
+extern TCHAR* buf_out (TCHAR *buffer, int *bufsize, const TCHAR *format, ...);
 extern void gui_message (const TCHAR *,...);
 
 #ifndef O_BINARY

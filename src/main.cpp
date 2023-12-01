@@ -60,7 +60,7 @@
 #ifdef JIT
 #include "jit/compemu.h"
 #endif
-//#include "disasm.h"
+#include "disasm.h"
 #ifdef RETROPLATFORM
 #include "rp.h"
 #endif
@@ -1426,11 +1426,12 @@ static int real_main2 (int argc, TCHAR **argv)
 	init_m68k (); /* must come after reset_frame_rate_hack (); */
 
 	if (graphics_init (true)) {
-#ifdef DEBUGGER
-		setup_brkhandler ();
-		if (currprefs.start_debugger && debuggable ())
-			activate_debugger ();
-#endif
+	// This never gets triggered anyway
+//#ifdef DEBUGGER
+//		setup_brkhandler ();
+//		if (currprefs.start_debugger && debuggable ())
+//			activate_debugger ();
+//#endif
 		if (!init_audio ()) {
 			if (sound_available && currprefs.produce_sound > 1) {
 				write_log (_T("Sound driver unavailable: Sound output disabled\n"));

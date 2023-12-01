@@ -68,7 +68,7 @@ uae_u32 addstr(TrapContext *ctx, uae_u32 * dst, const TCHAR *src)
 	uae_u32 res = *dst;
 	int len;
 	char *s = ua(src);
-	len = strlen(s) + 1;
+	len = uaestrlen(s) + 1;
 	if (trap_is_indirect()) {
 		trap_put_bytes(ctx, dst, res, len);
 	} else {
@@ -82,7 +82,7 @@ uae_u32 addstr_ansi(TrapContext *ctx, uae_u32 * dst, const uae_char *src)
 {
 	uae_u32 res = *dst;
 	int len;
-	len = strlen (src) + 1;
+	len = uaestrlen (src) + 1;
 	if (trap_is_indirect()) {
 		trap_put_bytes(ctx, dst, res, len);
 	} else {

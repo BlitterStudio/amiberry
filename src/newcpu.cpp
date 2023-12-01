@@ -26,7 +26,7 @@
 #include "memory.h"
 #include "custom.h"
 #include "newcpu.h"
-//#include "disasm.h"
+#include "disasm.h"
 #include "cpummu.h"
 #include "cpummu030.h"
 #include "cputbl.h"
@@ -2561,7 +2561,7 @@ static void exception_debug (int nr)
 #ifdef DEBUGGER
 	if (!exception_debugging)
 		return;
-	write_log (_T("Exception %d, PC=%08X\n"), nr, M68K_GETPC);
+	console_out_f (_T("Exception %d, PC=%08X\n"), nr, M68K_GETPC);
 #endif
 }
 
@@ -6790,7 +6790,7 @@ void m68k_disasm (uaecptr addr, uaecptr *nextpc, uaecptr lastpc, int cnt)
 #ifdef DEBUGGER
 	m68k_disasm_2(buf, MAX_LINEWIDTH * pcnt, addr, NULL, 0, nextpc, cnt, NULL, NULL, lastpc, 0);
 #endif
-	write_log (_T("%s"), buf);
+	console_out_f (_T("%s"), buf);
 	xfree (buf);
 }
 
@@ -6801,12 +6801,12 @@ void m68k_dumpstate(uaecptr *nextpc, uaecptr prevpc)
 
 	MakeSR();
 	for (i = 0; i < 8; i++){
-		write_log (_T("  D%d %08X "), i, m68k_dreg (regs, i));
-		if ((i & 3) == 3) write_log (_T("\n"));
+		console_out_f (_T("  D%d %08X "), i, m68k_dreg (regs, i));
+		if ((i & 3) == 3) console_out_f (_T("\n"));
 	}
 	for (i = 0; i < 8; i++){
-		write_log (_T("  A%d %08X "), i, m68k_areg (regs, i));
-		if ((i & 3) == 3) write_log (_T("\n"));
+		console_out_f (_T("  A%d %08X "), i, m68k_areg (regs, i));
+		if ((i & 3) == 3) console_out_f (_T("\n"));
 	}
 	if (regs.s == 0)
 		regs.usp = m68k_areg (regs, 7);
@@ -6815,22 +6815,22 @@ void m68k_dumpstate(uaecptr *nextpc, uaecptr prevpc)
 	if (regs.s && regs.m == 0)
 		regs.isp = m68k_areg (regs, 7);
 	j = 2;
-	write_log (_T("USP  %08X ISP  %08X "), regs.usp, regs.isp);
+	console_out_f (_T("USP  %08X ISP  %08X "), regs.usp, regs.isp);
 #ifdef DEBUGGER
 	for (i = 0; m2cregs[i].regno>= 0; i++) {
 		if (!movec_illg (m2cregs[i].regno)) {
 			if (!_tcscmp (m2cregs[i].regname, _T("USP")) || !_tcscmp (m2cregs[i].regname, _T("ISP")))
 				continue;
 			if (j > 0 && (j % 4) == 0)
-				write_log (_T("\n"));
-			write_log (_T("%-4s %08X "), m2cregs[i].regname, val_move2c (m2cregs[i].regno));
+				console_out_f (_T("\n"));
+			console_out_f (_T("%-4s %08X "), m2cregs[i].regname, val_move2c (m2cregs[i].regno));
 			j++;
 		}
 	}
 #endif
 	if (j > 0)
-		write_log (_T("\n"));
-		write_log (_T("SR=%04X T=%d%d S=%d M=%d X=%d N=%d Z=%d V=%d C=%d IM=%d STP=%d\n"),
+		console_out_f (_T("\n"));
+		console_out_f (_T("SR=%04X T=%d%d S=%d M=%d X=%d N=%d Z=%d V=%d C=%d IM=%d STP=%d\n"),
 		regs.sr, regs.t1, regs.t0, regs.s, regs.m,
 		GET_XFLG(), GET_NFLG(), GET_ZFLG(),
 		GET_VFLG(), GET_CFLG(),
@@ -6839,13 +6839,13 @@ void m68k_dumpstate(uaecptr *nextpc, uaecptr prevpc)
 	if (currprefs.fpu_model) {
 		uae_u32 fpsr;
 		for (i = 0; i < 8; i++) {
-			write_log(_T("%d: "), i);
-			write_log (_T("%s "), fpp_print(&regs.fp[i], -1));
-			write_log (_T("%s "), fpp_print(&regs.fp[i], 0));
-			write_log (_T("\n"));
+			console_out_f(_T("%d: "), i);
+			console_out_f (_T("%s "), fpp_print(&regs.fp[i], -1));
+			console_out_f (_T("%s "), fpp_print(&regs.fp[i], 0));
+			console_out_f (_T("\n"));
 		}
 		fpsr = fpp_get_fpsr ();
-		write_log (_T("FPSR: %08X FPCR: %08x FPIAR: %08x N=%d Z=%d I=%d NAN=%d\n"),
+		console_out_f (_T("FPSR: %08X FPCR: %08x FPIAR: %08x N=%d Z=%d I=%d NAN=%d\n"),
 			fpsr, regs.fpcr, regs.fpiar,
 			(fpsr & 0x8000000) != 0,
 			(fpsr & 0x4000000) != 0,
@@ -6854,13 +6854,13 @@ void m68k_dumpstate(uaecptr *nextpc, uaecptr prevpc)
 	}
 #endif
 	if (currprefs.mmu_model == 68030) {
-		write_log (_T("SRP: %llX CRP: %llX\n"), srp_030, crp_030);
-		write_log (_T("TT0: %08X TT1: %08X TC: %08X\n"), tt0_030, tt1_030, tc_030);
+		console_out_f (_T("SRP: %llX CRP: %llX\n"), srp_030, crp_030);
+		console_out_f (_T("TT0: %08X TT1: %08X TC: %08X\n"), tt0_030, tt1_030, tc_030);
 	}
 	if (currprefs.cpu_compatible) {
-		write_log(_T("Prefetch"));
+		console_out_f(_T("Prefetch"));
 		if (currprefs.cpu_model == 68020 || currprefs.cpu_model == 68030) {
-			write_log(_T(" %08x %08x (%d)"),
+			console_out_f(_T(" %08x %08x (%d)"),
 				regs.cacheholdingaddr020, regs.cacheholdingdata020, regs.cacheholdingdata_valid);
 		}
 		for (int i = 0; i < 3; i++) {
@@ -6874,9 +6874,9 @@ void m68k_dumpstate(uaecptr *nextpc, uaecptr prevpc)
 			dp = table68k + w;
 			for (lookup = lookuptab; lookup->mnemo != dp->mnemo; lookup++)
 				;
-			write_log(_T(" %04x (%s)"), w, lookup->name);
+			console_out_f(_T(" %04x (%s)"), w, lookup->name);
 		}
-		write_log (_T(" Chip latch %08X\n"), regs.chipset_latch_rw);
+		console_out_f (_T(" Chip latch %08X\n"), regs.chipset_latch_rw);
 	}
 	if (prevpc != 0xffffffff && pc - prevpc < 100) {
 		while (prevpc < pc) {
@@ -6885,7 +6885,7 @@ void m68k_dumpstate(uaecptr *nextpc, uaecptr prevpc)
 	}
 	m68k_disasm (pc, nextpc, pc, 1);
 	if (nextpc)
-		write_log (_T("Next PC: %08x\n"), *nextpc);
+		console_out_f (_T("Next PC: %08x\n"), *nextpc);
 }
 
 void m68k_dumpcache (bool dc)
@@ -6902,9 +6902,9 @@ void m68k_dumpcache (bool dc)
 				fc = c->tag & 1;
 				addr = c->tag & ~1;
 				addr |= s << 2;
-				write_log (_T("%08X%c:%08X%c"), addr, fc ? 'S' : 'U', c->data, c->valid ? '*' : ' ');
+				console_out_f (_T("%08X%c:%08X%c"), addr, fc ? 'S' : 'U', c->data, c->valid ? '*' : ' ');
 			}
-			write_log (_T("\n"));
+			console_out_f (_T("\n"));
 		}
 	} else if (currprefs.cpu_model == 68030) {
 		for (int i = 0; i < CACHELINES030; i++) {
@@ -6918,11 +6918,11 @@ void m68k_dumpcache (bool dc)
 			}
 			addr = c->tag & ~1;
 			addr |= i << 4;
-			write_log (_T("%08X %d: "), addr, fc);
+			console_out_f (_T("%08X %d: "), addr, fc);
 			for (int j = 0; j < 4; j++) {
-				write_log (_T("%08X%c "), c->data[j], c->valid[j] ? '*' : ' ');
+				console_out_f (_T("%08X%c "), c->data[j], c->valid[j] ? '*' : ' ');
 			}
-			write_log (_T("\n"));
+			console_out_f (_T("\n"));
 		}
 	} else if (currprefs.cpu_model >= 68040) {
 		uae_u32 tagmask = dc ? cachedtag04060mask : cacheitag04060mask;

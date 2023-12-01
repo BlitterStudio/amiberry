@@ -14,7 +14,7 @@
 //#define USE_SOFT_LONG_DOUBLE
 #define PACKAGE_STRING "AMIBERRY"
 
-/* #define DEBUGGER */
+#define DEBUGGER
 #define FILESYS /* filesys emulation */
 #define UAE_FILESYS_THREADS
 #define AUTOCONFIG /* autoconfig support, fast ram, harddrives etc.. */
@@ -32,7 +32,7 @@
 /* #define CATWEASEL */ /* Catweasel MK2/3 support */
 #define AHI /* AHI sound emulation */
 //#define AHI_v2 // AHI v2 was never completed on the Amiga-side
-/* #define ENFORCER */ /* UAE Enforcer */
+#define ENFORCER /* UAE Enforcer */
 #define ECS_DENISE /* ECS DENISE new features */
 #define AGA /* AGA chipset emulation (ECS_DENISE must be enabled) */
 #ifndef ANDROID

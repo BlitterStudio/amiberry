@@ -514,6 +514,11 @@ void updatewinrect(struct AmigaMonitor* mon, bool allowfullscreen)
 	}
 }
 
+bool ismouseactive (void)
+{
+	return mouseactive > 0;
+}
+
 //TODO: Tablet only
 void target_inputdevice_unacquire(void)
 {

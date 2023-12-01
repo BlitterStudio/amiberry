@@ -356,31 +356,31 @@ static void blitter_debugsave(int copper, uaecptr pc)
 
 static void blitter_dump (void)
 {
-	//int chipsize = currprefs.chipmem.size;
-	//console_out_f(_T("PT A=%08X B=%08X C=%08X D=%08X\n"), bltapt, bltbpt, bltcpt, bltdpt);
-	//console_out_f(_T("CON0=%04X CON1=%04X DAT A=%04X B=%04X C=%04X\n"),
-	//	bltcon0, bltcon1, blt_info.bltadat, blt_info.bltbdat, blt_info.bltcdat);
-	//console_out_f(_T("AFWM=%04X ALWM=%04X MOD A=%04X B=%04X C=%04X D=%04X\n"),
-	//	blt_info.bltafwm, blt_info.bltalwm,
-	//	blt_info.bltamod & 0xffff, blt_info.bltbmod & 0xffff, blt_info.bltcmod & 0xffff, blt_info.bltdmod & 0xffff);
-	//console_out_f(_T("PC=%08X DMA=%d\n"), m68k_getpc(), dmaen (DMA_BLITTER));
+	int chipsize = currprefs.chipmem.size;
+	console_out_f(_T("PT A=%08X B=%08X C=%08X D=%08X\n"), bltapt, bltbpt, bltcpt, bltdpt);
+	console_out_f(_T("CON0=%04X CON1=%04X DAT A=%04X B=%04X C=%04X\n"),
+		bltcon0, bltcon1, blt_info.bltadat, blt_info.bltbdat, blt_info.bltcdat);
+	console_out_f(_T("AFWM=%04X ALWM=%04X MOD A=%04X B=%04X C=%04X D=%04X\n"),
+		blt_info.bltafwm, blt_info.bltalwm,
+		blt_info.bltamod & 0xffff, blt_info.bltbmod & 0xffff, blt_info.bltcmod & 0xffff, blt_info.bltdmod & 0xffff);
+	console_out_f(_T("PC=%08X DMA=%d\n"), m68k_getpc(), dmaen (DMA_BLITTER));
 
-	//if (((bltcon0 & 0x800) && bltapt >= chipsize) || ((bltcon0 & 0x400) && bltbpt >= chipsize) ||
-	//	((bltcon0 & 0x200) && bltcpt >= chipsize) || ((bltcon0 & 0x100) && bltdpt >= chipsize))
-	//	console_out_f(_T("PT outside of chipram\n"));
+	if (((bltcon0 & BLTCHA) && bltapt >= chipsize) || ((bltcon0 & BLTCHB) && bltbpt >= chipsize) ||
+		((bltcon0 & BLTCHC) && bltcpt >= chipsize) || ((bltcon0 & BLTCHD) && bltdpt >= chipsize))
+		console_out_f(_T("PT outside of chipram\n"));
 }
 
 void blitter_debugdump(void)
 {
-	//console_out(_T("Blitter registers at start:\n"));
-	//console_out_f(_T("PT A=%08X B=%08X C=%08X D=%08X\n"), debug_bltapt, debug_bltbpt, debug_bltcpt, debug_bltdpt);
-	//console_out_f(_T("CON0=%04X CON1=%04X DAT A=%04X B=%04X C=%04X\n"),
-	//	debug_bltcon0, debug_bltcon1, debug_bltadat, debug_bltbdat, debug_bltcdat);
-	//console_out_f(_T("AFWM=%04X ALWM=%04X MOD A=%04X B=%04X C=%04X D=%04X\n"),
-	//	debug_bltafwm, debug_bltalwm, debug_bltamod, debug_bltbmod, debug_bltcmod, debug_bltdmod);
-	//console_out_f(_T("COP=%d PC=%08X\n"), debug_bltcop, debug_bltpc);
-	//console_out(_T("Blitter registers now:\n"));
-	//blitter_dump();
+	console_out(_T("Blitter registers at start:\n"));
+	console_out_f(_T("PT A=%08X B=%08X C=%08X D=%08X\n"), debug_bltapt, debug_bltbpt, debug_bltcpt, debug_bltdpt);
+	console_out_f(_T("CON0=%04X CON1=%04X DAT A=%04X B=%04X C=%04X\n"),
+		debug_bltcon0, debug_bltcon1, debug_bltadat, debug_bltbdat, debug_bltcdat);
+	console_out_f(_T("AFWM=%04X ALWM=%04X MOD A=%04X B=%04X C=%04X D=%04X\n"),
+		debug_bltafwm, debug_bltalwm, debug_bltamod, debug_bltbmod, debug_bltcmod, debug_bltdmod);
+	console_out_f(_T("COP=%d PC=%08X\n"), debug_bltcop, debug_bltpc);
+	console_out(_T("Blitter registers now:\n"));
+	blitter_dump();
 }
 
 static void markidlecycle(int hpos)

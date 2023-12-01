@@ -66,14 +66,17 @@ add_executable(${PROJECT_NAME}
 		src/crc32.cpp
 		src/custom.cpp
 		src/debug.cpp
+		src/debugmem.cpp
 		src/def_icons.cpp
 		src/devices.cpp
+		src/disasm.cpp
 		src/disk.cpp
 		src/diskutil.cpp
 		src/dlopen.cpp
 		src/dongle.cpp
 		src/drawing.cpp
 		src/driveclick.cpp
+		src/enforcer.cpp
 		src/ethernet.cpp
 		src/events.cpp
 		src/expansion.cpp
