@@ -38,7 +38,9 @@
 #include "audio.h"
 #include "keyboard.h"
 #include "uae.h"
-//#include "amax.h"
+#ifdef AMAX
+#include "amax.h"
+#endif
 #include "sampler.h"
 #include "dongle.h"
 #include "inputrecord.h"

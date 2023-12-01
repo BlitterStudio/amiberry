@@ -428,6 +428,7 @@ OBJS = \
 	src/a2065.o \
 	src/a2091.o \
 	src/akiko.o \
+	src/amax.o \
 	src/ar.o \
 	src/audio.o \
 	src/autoconf.o \

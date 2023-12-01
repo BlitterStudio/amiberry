@@ -41,7 +41,9 @@ int disk_debug_track = -1;
 #ifdef FDI2RAW
 #include "fdi2raw.h"
 #endif
-//#include "catweasel.h"
+#ifdef CATWEASEL
+#include "catweasel.h"
+#endif
 #ifdef DRIVESOUND
 #include "driveclick.h"
 #endif
@@ -53,7 +55,9 @@ int disk_debug_track = -1;
 #endif
 #include "crc32.h"
 #include "inputrecord.h"
-//#include "amax.h"
+#ifdef AMAX
+#include "amax.h"
+#endif
 #ifdef RETROPLATFORM
 #include "rp.h"
 #endif
@@ -3633,10 +3637,11 @@ uae_u8 DISK_status_ciaa(void)
 	for (int dr = 0; dr < MAX_FLOPPY_DRIVES; dr++) {
 		drive *drv = floppy + dr;
 		if (drv->amax) {
-			//if (amax_active())
-				//st = amax_disk_status (st);
-		}
-		else if (!((selected | disabled) & (1 << dr))) {
+#ifdef AMAX
+			if (amax_active())
+				st = amax_disk_status (st);
+#endif
+		} else if (!((selected | disabled) & (1 << dr))) {
 			if (drive_running(drv)) {
 				if (drv->catweasel) {
 #ifdef CATWEASEL
@@ -4215,8 +4220,8 @@ static int doreaddma (void)
 				// Paula bug: when dsklength reaches zero, FIFO status is checked too early.
 				if (disk_fifostatus() < 0 && dsklength == 0) {
 					disk_dmafinished();
-			} else {
-				DSKDAT (word);
+				} else {
+					DSKDAT (word);
 #if DISK_DEBUG_X > 1
 					write_log("buffer load %d %d\n", floppy[0].mfmpos, dsklength);
 #endif
@@ -4759,7 +4764,7 @@ void DSKLEN (uae_u16 v, int hpos)
 		if (dskdmaen == DSKDMA_READ && !(v & 0x4000)) {
 			// update only currently active DMA length, don't change DMA state
 			if ((prevlen & 0x3fff) != (v & 0x3fff)) {
-			write_log(_T("warning: Disk read DMA length rewrite %d -> %d. (%04x) PC=%08x\n"), prevlen & 0x3fff, v & 0x3fff, v, M68K_GETPC);
+				write_log(_T("warning: Disk read DMA length rewrite %d -> %d. (%04x) PC=%08x\n"), prevlen & 0x3fff, v & 0x3fff, v, M68K_GETPC);
 			}
 			return;
 		}
@@ -5343,7 +5348,9 @@ void DISK_init (void)
 #endif
 	if (disk_empty (0))
 		write_log (_T("No disk in drive 0.\n"));
-	//amax_init ();
+#ifdef AMAX
+	amax_init ();
+#endif
 }
 
 void DISK_reset (void)

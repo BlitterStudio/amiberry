@@ -41,6 +41,7 @@ add_executable(${PROJECT_NAME}
 		src/a2065.cpp
 		src/a2091.cpp
 		src/akiko.cpp
+		src/amax.cpp
 		src/ar.cpp
 		src/audio.cpp
 		src/autoconf.cpp

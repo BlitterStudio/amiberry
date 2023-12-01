@@ -86,7 +86,7 @@
 /* #define NCR */ /* A4000T/A4091, 53C710/53C770 SCSI */
 /* #define NCR9X */ /* 53C9X SCSI */
 /* #define SANA2 */ /* SANA2 network driver */
-/* #define AMAX */ /* A-Max ROM adapater emulation */
+#define AMAX /* A-Max ROM adapter emulation */
 /* #define RETROPLATFORM */ /* Cloanto RetroPlayer support */
 #define WITH_CHD
 /* #define WITH_LUA */ /* lua scripting */
