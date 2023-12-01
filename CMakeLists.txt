@@ -38,6 +38,7 @@ detect_architecture("__aarch64__" arm64)
 message(STATUS "Target architecture: ${ARCHITECTURE}")
 
 add_executable(${PROJECT_NAME}
+		src/a2065.cpp
 		src/a2091.cpp
 		src/akiko.cpp
 		src/ar.cpp
@@ -70,6 +71,7 @@ add_executable(${PROJECT_NAME}
 		src/dongle.cpp
 		src/drawing.cpp
 		src/driveclick.cpp
+		src/ethernet.cpp
 		src/events.cpp
 		src/expansion.cpp
 		src/fdi2raw.cpp
@@ -244,6 +246,7 @@ add_executable(${PROJECT_NAME}
 		src/osdep/amiberry_gui.cpp
 		src/osdep/amiberry_mem.cpp
 		src/osdep/amiberry_serial.cpp
+		src/osdep/amiberry_uaenet.cpp
 		src/osdep/amiberry_whdbooter.cpp
 		src/osdep/sigsegv_handler.cpp
 		src/osdep/retroarch.cpp
