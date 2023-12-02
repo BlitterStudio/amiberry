@@ -12,32 +12,30 @@
 #define DRIVESOUND
 /* #define GFXFILTER */
 //#define USE_SOFT_LONG_DOUBLE
-#define PACKAGE_STRING "AMIBERRY"
+#define PACKAGE_STRING "Amiberry"
+
+#if defined(CPU_x86_64)
+#define JIT /* JIT compiler support */
+#define USE_JIT_FPU
+#endif
 
 #define DEBUGGER
 #define FILESYS /* filesys emulation */
 #define UAE_FILESYS_THREADS
 #define AUTOCONFIG /* autoconfig support, fast ram, harddrives etc.. */
-#if !defined(__riscv) && !defined (__MACH__)
-// DISABLED until this works 100%
-//#define JIT /* JIT compiler support */
-//#define USE_JIT_FPU
-#endif
 //#define NOFLAGS_SUPPORT_GENCPU
 #define NOFLAGS_SUPPORT_GENCOMP
 //#define HAVE_GET_WORD_UNSWAPPED
 #define NATMEM_OFFSET natmem_offset
 #define USE_NORMAL_CALLING_CONVENTION 0
-#define USE_X86_FPUCW 1
+//#define USE_X86_FPUCW 1
 /* #define CATWEASEL */ /* Catweasel MK2/3 support */
 #define AHI /* AHI sound emulation */
 //#define AHI_v2 // AHI v2 was never completed on the Amiga-side
 #define ENFORCER /* UAE Enforcer */
 #define ECS_DENISE /* ECS DENISE new features */
 #define AGA /* AGA chipset emulation (ECS_DENISE must be enabled) */
-#ifndef ANDROID
 #define CD32 /* CD32 emulation */
-#endif
 #define CDTV /* CDTV emulation */
 #define PARALLEL_PORT /* parallel port emulation */
 #define PARALLEL_DIRECT /* direct parallel port emulation */
@@ -47,7 +45,6 @@
 #define UAESERIAL /* uaeserial.device emulation */
 #define FPUEMU /* FPU emulation */
 #define FPU_UAE
-/* #define WITH_SOFTFLOAT */
 #define MMUEMU /* Aranym 68040 MMU */
 #define FULLMMU /* Aranym 68040 MMU */
 #define CPUEMU_0 /* generic 680x0 emulation */
@@ -100,7 +97,10 @@
 /* #define WITH_PCI */
 /* #define WITH_X86 */
 #define WITH_THREADED_CPU
+/* #define WITH_SOFTFLOAT */
 #define FLOPPYBRIDGE
+//#define WITH_MIDIEMU
+//#define WITH_DSP
 
 /* vpar virtual parallel port */
 #define WITH_VPAR 1

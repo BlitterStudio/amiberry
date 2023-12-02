@@ -133,19 +133,11 @@ union cacheline {
 			  for jump targets */
 
 #define INDIVIDUAL_INST 0
-#ifdef WINUAE_ARANYM
 #define FLAG_X    0x0010
 #define FLAG_N    0x0008
 #define FLAG_Z    0x0004
 #define FLAG_V    0x0002
 #define FLAG_C    0x0001
-#else
-#define FLAG_C    0x0010
-#define FLAG_V    0x0008
-#define FLAG_Z    0x0004
-#define FLAG_N    0x0002
-#define FLAG_X    0x0001
-#endif
 #define FLAG_CZNV (FLAG_C | FLAG_Z | FLAG_N | FLAG_V)
 #define FLAG_ALL  (FLAG_C | FLAG_Z | FLAG_N | FLAG_V | FLAG_X)
 #define FLAG_ZNV  (FLAG_Z | FLAG_N | FLAG_V)
