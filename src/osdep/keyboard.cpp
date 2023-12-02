@@ -129,7 +129,7 @@ static struct uae_input_device_kbr_default keytrans_amiga[] = {
 	{ SDL_SCANCODE_END, INPUTEVENT_SPC_QUALIFIER_SPECIAL },
 	{ SDL_SCANCODE_PAUSE, INPUTEVENT_SPC_PAUSE, 0, INPUTEVENT_SPC_SINGLESTEP, ID_FLAG_QUALIFIER_SPECIAL | ID_FLAG_QUALIFIER_CONTROL, INPUTEVENT_SPC_IRQ7, ID_FLAG_QUALIFIER_SPECIAL | ID_FLAG_QUALIFIER_SHIFT, INPUTEVENT_SPC_WARP, ID_FLAG_QUALIFIER_SPECIAL },
 
-	//{ SDL_SCANCODE_F12, INPUTEVENT_SPC_ENTERGUI },
+	{ SDL_SCANCODE_F12, INPUTEVENT_SPC_ENTERGUI, 0, INPUTEVENT_SPC_ENTERDEBUGGER, ID_FLAG_QUALIFIER_SPECIAL, INPUTEVENT_SPC_ENTERDEBUGGER, ID_FLAG_QUALIFIER_SHIFT, INPUTEVENT_SPC_TOGGLEDEFAULTSCREEN, ID_FLAG_QUALIFIER_CONTROL },
 
 	{ SDL_SCANCODE_AUDIOSTOP, INPUTEVENT_KEY_CDTV_STOP },
 	{ SDL_SCANCODE_AUDIOPLAY, INPUTEVENT_KEY_CDTV_PLAYPAUSE },
@@ -367,18 +367,20 @@ bool my_kbd_handler(int keyboard, int scancode, int newstate, bool alwaysrelease
 
 	// Amiberry uses qualifiers for Quit also, so we handle this piece below
 #ifndef AMIBERRY
-	if (amode && quit_key.scancode && scancode == quit_key.scancode) {
+	if (amode && scancode == SDL_SCANCODE_F11 && currprefs.ctrl_F11_is_quit && key_ctrlpressed()) {
+		if (!quit_ok())
+			return true;
 		uae_quit();
 		return true;
 	}
-#endif
-#if 1
+
 	if (scancode == SDL_SCANCODE_F9 && key_specialpressed()) {
-		//if (newstate) {
-		//	extern int blop;
-		//	blop++;
-		//}
-		return true;
+		extern bool toggle_3d_debug(void);
+		if (newstate) {
+			if (toggle_3d_debug()) {
+				return true;
+			}
+		}
 	}
 #endif
 	scancode_new = scancode;
