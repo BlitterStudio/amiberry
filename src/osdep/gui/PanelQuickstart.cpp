@@ -109,9 +109,6 @@ static amigamodels amodels[] = {
 			"Basic non-expanded configuration",
 			"2 MB Chip RAM expanded configuration",
 			"4 MB Fast RAM expanded configuration",
-#ifdef ANDROID
-		 " ", " ", " ",
-#endif
 			"\0"
 		}
 	},
@@ -121,9 +118,6 @@ static amigamodels amodels[] = {
 			"2 MB Chip RAM expanded configuration",
 			"4 MB Fast RAM expanded configuration",
 			"8 MB Fast RAM expanded configuration"
-#ifdef ANDROID
-		 " ", " ", " ",
-#endif
 			"\0"
 		}
 	},
@@ -136,13 +130,10 @@ static amigamodels amodels[] = {
 		}
 	},
 	{
-		4, "Amiga 1200", {
+		5, "Amiga 1200", {
 			"Basic non-expanded configuration",
 			"4 MB Fast RAM expanded configuration",
 			"8 MB Fast RAM expanded configuration"
-#ifdef ANDROID
-		 " ", " ", " ", " ",
-#endif
 			"\0"
 		}
 	},
@@ -158,9 +149,6 @@ static amigamodels amodels[] = {
 		1, "Amiga 4000", {
 			"68030, 3.1 ROM, 2MB Chip + 8MB Fast",
 			"68040, 3.1 ROM, 2MB Chip + 8MB Fast",
-#ifdef ANDROID
-		 " ", " ", " ", " ",
-#endif
 			"\0"
 		}
 	},
@@ -172,19 +160,16 @@ static amigamodels amodels[] = {
 		}
 	},
 	{
-		3, "CD32", {
+		4, "CD32", {
 			"CD32",
 			"CD32 with Full Motion Video cartridge",
 			"Cubo CD32",
 			"CD32, 8MB Fast"
-#ifdef ANDROID
-		 " ", " ", " ", " ",
-#endif
 			"\0"
 		}
 	},
 	{
-		3, "CDTV", {
+		4, "CDTV", {
 			"CDTV",
 			"\0"
 		}
@@ -273,10 +258,19 @@ static void AdjustPrefs()
 	case 3: // A1000
 	case 4: // A1200
 	case 5: // A3000
+		// df0 always active
+		changed_prefs.floppyslots[0].dfxtype = DRV_35_DD;
+		changed_prefs.floppyslots[1].dfxtype = DRV_NONE;
+
+		// No CD available
+		changed_prefs.cdslots[0].inuse = false;
+		changed_prefs.cdslots[0].type = SCSI_UNIT_DISABLED;
+		break;
 	case 6: // A4000
 	case 7: // A4000T
 		// df0 always active
-		changed_prefs.floppyslots[0].dfxtype = DRV_35_DD;
+		changed_prefs.floppyslots[0].dfxtype = DRV_35_HD;
+		changed_prefs.floppyslots[1].dfxtype = DRV_NONE;
 
 		// No CD available
 		changed_prefs.cdslots[0].inuse = false;

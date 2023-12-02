@@ -1874,18 +1874,18 @@ void target_default_options(struct uae_prefs* p, int type)
 	//TCHAR buf[MAX_DPATH];
 	if (type == 2 || type == 0 || type == 3) {
 		//p->logfile = 0;
-		p->active_nocapture_pause = 0;
-		p->active_nocapture_nosound = 0;
-		p->minimized_nosound = 1;
-		p->minimized_pause = 1;
+		p->active_nocapture_pause = false;
+		p->active_nocapture_nosound = false;
+		p->minimized_nosound = true;
+		p->minimized_pause = true;
 		p->minimized_input = 0;
-		p->inactive_nosound = 0;
-		p->inactive_pause = 0;
+		p->inactive_nosound = false;
+		p->inactive_pause = false;
 		p->inactive_input = 0;
 		//p->ctrl_F11_is_quit = 0;
 		p->soundcard = 0;
 		p->samplersoundcard = -1;
-		p->minimize_inactive = 0;
+		p->minimize_inactive = false;
 		p->capture_always = true;
 		p->start_minimized = false;
 		p->start_uncaptured = false;
@@ -1897,10 +1897,10 @@ void target_default_options(struct uae_prefs* p, int type)
 		p->main_alwaysontop = false;
 		p->gui_alwaysontop = false;
 		//p->guikey = -1;
-		p->automount_removable = 0;
+		p->automount_removable = false;
 		//p->automount_drives = 0;
 		//p->automount_removabledrives = 0;
-		p->automount_cddrives = 0;
+		p->automount_cddrives = false;
 		//p->automount_netdrives = 0;
 		//p->kbledmode = 1;
 		p->uaescsimode = UAESCSI_CDEMU;
@@ -1924,9 +1924,9 @@ void target_default_options(struct uae_prefs* p, int type)
 		p->gfx_api = 2;
 		if (p->gfx_api > 1)
 			p->color_mode = 5;
-		if (p->gf[GF_NORMAL].gfx_filter == 0 && p->gfx_api)
+		if (p->gf[GF_NORMAL].gfx_filter == 0)
 			p->gf[GF_NORMAL].gfx_filter = 1;
-		if (p->gf[GF_RTG].gfx_filter == 0 && p->gfx_api)
+		if (p->gf[GF_RTG].gfx_filter == 0)
 			p->gf[GF_RTG].gfx_filter = 1;
 		//WIN32GUI_LoadUIString(IDS_INPUT_CUSTOM, buf, sizeof buf / sizeof(TCHAR));
 		//for (int i = 0; i < GAMEPORT_INPUT_SETTINGS; i++)
@@ -1939,7 +1939,7 @@ void target_default_options(struct uae_prefs* p, int type)
 		//p->midioutdev = -2;
 		//p->midiindev = 0;
 		//p->midirouter = false;
-		p->automount_removable = 0;
+		p->automount_removable = false;
 		//p->automount_drives = 0;
 		//p->automount_removabledrives = 0;
 		p->automount_cddrives = true;
@@ -2012,7 +2012,6 @@ void target_default_options(struct uae_prefs* p, int type)
 	if (amiberry_options.default_horizontal_centering)
 		p->gfx_xcenter = 2;
 
-
 	if (amiberry_options.default_vertical_centering)
 		p->gfx_ycenter = 2;
 
@@ -2062,15 +2061,6 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->whdbootprefs.configdelay = amiberry_options.default_whd_configdelay;
 	p->whdbootprefs.writecache = amiberry_options.default_whd_writecache;
 	p->whdbootprefs.quit_on_exit = amiberry_options.default_whd_quit_on_exit;
-
-	// Disable Cycle-Exact modes that are not yet implemented
-	if (p->cpu_cycle_exact || p->cpu_memory_cycle_exact)
-	{
-		if (p->cpu_model > 68010)
-		{
-			p->cpu_cycle_exact = p->cpu_memory_cycle_exact = false;
-		}
-	}
 
 	if (amiberry_options.default_soundcard > 0) p->soundcard = amiberry_options.default_soundcard;
 
@@ -2548,6 +2538,17 @@ static int target_parse_option_host(struct uae_prefs *p, const TCHAR *option, co
 			p->use_serial = true;
 		else
 			p->use_serial = false;
+		return 1;
+	}
+
+	if (cfgfile_string_escape(option, value, _T("parallel_port"), &p->prtname[0], 256)) {
+		if (!_tcscmp(p->prtname, _T("none")))
+			p->prtname[0] = 0;
+		if (!_tcscmp(p->prtname, _T("default"))) {
+			p->prtname[0] = 0;
+			//unsigned long size = 256;
+			//GetDefaultPrinter(p->prtname, &size);
+		}
 		return 1;
 	}
 
