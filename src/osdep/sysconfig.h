@@ -14,7 +14,7 @@
 //#define USE_SOFT_LONG_DOUBLE
 #define PACKAGE_STRING "Amiberry"
 
-#if defined(CPU_x86_64)
+#if defined(__x86_64__) || defined(_M_AMD64)
 #define JIT /* JIT compiler support */
 #define USE_JIT_FPU
 #endif
