@@ -139,6 +139,30 @@ FILE* screenshot_file = nullptr;
 int delay_savestate_frame = 0;
 static volatile bool vsync_active;
 
+static void update_leds(int monid)
+{
+	static uae_u32 rc[256], gc[256], bc[256], a[256];
+	static int done;
+	int osdx, osdy;
+
+	if (!done) {
+		for (int i = 0; i < 256; i++) {
+			rc[i] = i << 0;
+			gc[i] = i << 8;
+			bc[i] = i << 16;
+			a[i] = i << 24;
+		}
+		done = 1;
+	}
+
+	statusline_getpos(monid, &osdx, &osdy, sdl_surface->w, sdl_surface->h);
+	int m = statusline_get_multiplier(monid) / 100;
+	for (int y = 0; y < TD_TOTAL_HEIGHT * m; y++) {
+		uae_u8 *buf = (uae_u8*)sdl_surface->pixels + (y + osdy) * sdl_surface->pitch;
+		draw_status_line_single(monid, buf, 32 / 8, y, sdl_surface->w, rc, gc, bc, a);
+	}
+}
+
 static int display_thread(void* unused)
 {
 	for (;;) {
@@ -158,6 +182,7 @@ static int display_thread(void* unused)
 		case DISPLAY_SIGNAL_SHOW:
 			vsync_active = true;
 #ifndef USE_OPENGL
+			update_leds(0);
 			SDL_RenderClear(sdl_renderer);
 			SDL_UpdateTexture(amiga_texture, nullptr, sdl_surface->pixels, sdl_surface->pitch);
 			SDL_RenderCopyEx(sdl_renderer, amiga_texture, &crop_rect, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
@@ -493,30 +518,6 @@ static void updatepicasso96(struct AmigaMonitor* mon)
 	vidinfo->offset = 0;
 	vidinfo->splitypos = -1;
 #endif
-}
-
-static void update_leds(int monid)
-{
-	static uae_u32 rc[256], gc[256], bc[256], a[256];
-	static int done;
-	int osdx, osdy;
-
-	if (!done) {
-		for (int i = 0; i < 256; i++) {
-			rc[i] = i << 0;
-			gc[i] = i << 8;
-			bc[i] = i << 16;
-			a[i] = i << 24;
-		}
-		done = 1;
-	}
-
-	statusline_getpos(monid, &osdx, &osdy, sdl_surface->w, sdl_surface->h);
-	int m = statusline_get_multiplier(monid) / 100;
-	for (int y = 0; y < TD_TOTAL_HEIGHT * m; y++) {
-		uae_u8 *buf = (uae_u8*)sdl_surface->pixels + (y + osdy) * sdl_surface->pitch;
-		draw_status_line_single(monid, buf, 32 / 8, y, sdl_surface->w, rc, gc, bc, a);
-	}
 }
 
 static void open_screen(struct uae_prefs* p)
