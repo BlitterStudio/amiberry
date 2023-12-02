@@ -165,6 +165,8 @@ static void update_leds(int monid)
 
 static int display_thread(void* unused)
 {
+	struct amigadisplay* ad = &adisplays[0];
+	bool rtg = ad->picasso_on;
 	for (;;) {
 		display_thread_busy = false;
 		auto signal = read_comm_pipe_u32_blocking(display_pipe);
@@ -180,9 +182,14 @@ static int display_thread(void* unused)
 			break;
 
 		case DISPLAY_SIGNAL_SHOW:
+			// RTG status line is handled in P96 code, this is for native modes only
+			if ((currprefs.leds_on_screen & STATUSLINE_CHIPSET) && !rtg)
+			{
+				update_leds(0);
+			}
+
 			vsync_active = true;
 #ifndef USE_OPENGL
-			update_leds(0);
 			SDL_RenderClear(sdl_renderer);
 			SDL_UpdateTexture(amiga_texture, nullptr, sdl_surface->pixels, sdl_surface->pitch);
 			SDL_RenderCopyEx(sdl_renderer, amiga_texture, &crop_rect, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
