@@ -495,6 +495,30 @@ static void updatepicasso96(struct AmigaMonitor* mon)
 #endif
 }
 
+static void update_leds(int monid)
+{
+	static uae_u32 rc[256], gc[256], bc[256], a[256];
+	static int done;
+	int osdx, osdy;
+
+	if (!done) {
+		for (int i = 0; i < 256; i++) {
+			rc[i] = i << 0;
+			gc[i] = i << 8;
+			bc[i] = i << 16;
+			a[i] = i << 24;
+		}
+		done = 1;
+	}
+
+	statusline_getpos(monid, &osdx, &osdy, sdl_surface->w, sdl_surface->h);
+	int m = statusline_get_multiplier(monid) / 100;
+	for (int y = 0; y < TD_TOTAL_HEIGHT * m; y++) {
+		uae_u8 *buf = (uae_u8*)sdl_surface->pixels + (y + osdy) * sdl_surface->pitch;
+		draw_status_line_single(monid, buf, 32 / 8, y, sdl_surface->w, rc, gc, bc, a);
+	}
+}
+
 static void open_screen(struct uae_prefs* p)
 {
 	struct AmigaMonitor* mon = &AMonitors[0];
@@ -641,6 +665,7 @@ static void open_screen(struct uae_prefs* p)
 	check_error_sdl(amiga_texture == nullptr, "Unable to create texture");
 #endif
 
+	statusline_set_multiplier(mon->monitor_id, display_width, display_height);
 	setpriority(p->active_capture_priority);
 	updatepicasso96(mon);
 
@@ -1437,8 +1462,11 @@ bool render_screen(int monid, int mode, bool immediate)
 
 void show_screen(int monid, int mode)
 {
+	struct amigadisplay* ad = &adisplays[monid];
+	bool rtg = ad->picasso_on;
+
 	const auto start = read_processor_time();
-		
+
 	if (amiberry_options.use_sdl2_render_thread)
 	{
 		wait_for_display_thread();
@@ -1453,6 +1481,11 @@ void show_screen(int monid, int mode)
 	}
 	else 
 	{
+		// RTG status line is handled in P96 code, this is for native modes only
+		if ((currprefs.leds_on_screen & STATUSLINE_CHIPSET) && !rtg)
+		{
+			update_leds(monid);
+		}
 		flip_in_progress = true;
 #ifdef USE_OPENGL
 		//Initialize clear color
@@ -1482,7 +1515,6 @@ void show_screen(int monid, int mode)
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
 		SDL_GL_SwapWindow(mon->sdl_window);
-		
 #else
 		SDL_RenderClear(sdl_renderer);
 		SDL_UpdateTexture(amiga_texture, nullptr, sdl_surface->pixels, sdl_surface->pitch);
@@ -1493,7 +1525,6 @@ void show_screen(int monid, int mode)
 #endif
 		flip_in_progress = false;
 	}
-
 
 	last_synctime = read_processor_time();
 	idletime += last_synctime - start;

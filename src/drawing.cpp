@@ -255,10 +255,8 @@ typedef void (*line_draw_func)(int, int, int);
 #define LINESTATE_SIZE ((MAXVPOS + MAXVPOS_WRAPLINES) * 2 + 1)
 
 #ifdef AMIBERRY
-static int next_line_to_render = 0;
 static int linestate_first_undecided = 0;
 #endif
-
 static uae_u8 linestate[LINESTATE_SIZE];
 
 uae_u8 line_data[(MAXVPOS + MAXVPOS_WRAPLINES) * 2][MAX_PLANES * MAX_WORDS_PER_LINE * 2];
@@ -3933,14 +3931,13 @@ static void pfield_draw_line(struct vidbuffer *vb, int lineno, int gfx_ypos, int
 	}
 	sprite_smaller_than_64_inuse = false;
 
-	//dh = dh_line;
-	//xlinebuffer = vidinfo->drawbuffer.linemem;
-	//if (xlinebuffer == 0 && do_double
-	//	&& (border == 0 || have_color_changes))
-	//	xlinebuffer = vidinfo->drawbuffer.emergmem, dh = dh_emerg;
-	//if (xlinebuffer == 0)
-	//	xlinebuffer = row_map[gfx_ypos], dh = dh_buf;
-	xlinebuffer = row_map[gfx_ypos];
+	dh = dh_line;
+	xlinebuffer = vidinfo->drawbuffer.linemem;
+	if (xlinebuffer == 0 && do_double
+		&& (border == 0 || have_color_changes))
+		xlinebuffer = vidinfo->drawbuffer.emergmem, dh = dh_emerg;
+	if (xlinebuffer == 0)
+		xlinebuffer = row_map[gfx_ypos], dh = dh_buf;
 	xlinebuffer -= linetoscr_x_adjust_pixbytes;
 	xlinebuffer_genlock = row_map_genlock[gfx_ypos] - linetoscr_x_adjust_pixels;
 
@@ -4505,7 +4502,7 @@ static void draw_status_line(int monid, int line, int statusy)
 	if (!buf)
 		return;
 	if (statusy < 0)
-		return; //statusline_render(monid, buf, vidinfo->drawbuffer.pixbytes, vidinfo->drawbuffer.rowbytes, vidinfo->drawbuffer.outwidth, TD_TOTAL_HEIGHT, xredcolors, xgreencolors, xbluecolors, NULL);
+		statusline_render(monid, buf, vidinfo->drawbuffer.pixbytes, vidinfo->drawbuffer.rowbytes, vidinfo->drawbuffer.outwidth, TD_TOTAL_HEIGHT, xredcolors, xgreencolors, xbluecolors, NULL);
 	else
 		draw_status_line_single(monid, buf, vidinfo->drawbuffer.pixbytes, statusy, vidinfo->drawbuffer.outwidth, xredcolors, xgreencolors, xbluecolors, NULL);
 }
@@ -4517,7 +4514,9 @@ static void draw_debug_status_line(int monid, int line)
 	if (xlinebuffer == 0)
 		xlinebuffer = row_map[line];
 	xlinebuffer_genlock = row_map_genlock[line];
-	//debug_draw(xlinebuffer, vidinfo->drawbuffer.pixbytes, line, vidinfo->drawbuffer.outwidth, vidinfo->drawbuffer.outheight, xredcolors, xgreencolors, xbluecolors);
+#ifdef DEBUGGER
+	debug_draw(xlinebuffer, vidinfo->drawbuffer.pixbytes, line, vidinfo->drawbuffer.outwidth, vidinfo->drawbuffer.outheight, xredcolors, xgreencolors, xbluecolors);
+#endif
 }
 
 #define LIGHTPEN_HEIGHT 12
@@ -4739,15 +4738,14 @@ static void draw_frame2(struct vidbuffer *vbin, struct vidbuffer *vbout)
 
 static void draw_frame_extras(struct vidbuffer *vb, int y_start, int y_end)
 {
-	if ((currprefs.leds_on_screen & STATUSLINE_CHIPSET)) {
-		int slx, sly;
-		int mult = statusline_get_multiplier(vb->monitor_id) / 100;
-		statusline_getpos(vb->monitor_id, &slx, &sly, vb->outwidth, vb->outheight);
-		for (int i = 0; i < TD_TOTAL_HEIGHT * mult; i++) {
-			int line = sly + i;
-			draw_status_line(vb->monitor_id, line, i);
+#ifdef DEBUGGER
+	if (debug_dma > 1 || debug_heatmap > 1) {
+		for (int i = 0; i < vb->outheight; i++) {
+			int line = i;
+			draw_debug_status_line(vb->monitor_id, line);
 		}
 	}
+#endif
 
 	if (lightpen_active) {
 		if (lightpen_active & 1) {
@@ -5042,7 +5040,6 @@ static void finish_drawing_frame(bool drawlines)
 
 	unlockscr(vb, display_reset ? -2 : -1, -1);
 #ifdef AMIBERRY
-	next_line_to_render = 0;
 	auto_crop_image();
 #endif
 }
