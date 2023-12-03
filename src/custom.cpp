@@ -8889,6 +8889,7 @@ static void ADKCON(int hpos, uae_u16 v)
 	DISK_update(hpos);
 	DISK_update_adkcon(hpos, v);
 	setclr(&adkcon, v);
+	DISK_update_predict();
 	audio_update_adkmasks();
 #ifdef SERIAL_PORT
 	if ((v >> 11) & 1) {
