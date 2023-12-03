@@ -248,7 +248,7 @@ else ifeq ($(PLATFORM),oga)
 	CPPFLAGS += $(CPPFLAGS64)
 	AARCH64 = 1
 
-# OS X (SDL2, 64-bit, M1)
+# macOS Apple Silicon (SDL2, 64-bit, M1)
 else ifeq ($(PLATFORM),osx-m1)
 	LDFLAGS = -L/usr/local/lib external/libguisan/dylib/libguisan.dylib -lSDL2_image -lSDL2_ttf -lpng -liconv -lz -lFLAC -L/opt/homebrew/lib/ -lmpg123 -lmpeg2 -lmpeg2convert -lserialport $(SDL_LDFLAGS) -framework IOKit -framework Foundation
 	CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -I/opt/homebrew/include -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -DAMIBERRY -D_FILE_OFFSET_BITS=64 -DCPU_AARCH64 $(SDL_CFLAGS) 
@@ -256,7 +256,7 @@ else ifeq ($(PLATFORM),osx-m1)
 #	DEBUG=1
 	APPBUNDLE=1
 
-# OS X (SDL2, 64-bit, x86-64)
+# macOS intel (SDL2, 64-bit, x86-64)
 else ifeq ($(PLATFORM),osx-x86)
 	LDFLAGS = -L/usr/local/lib external/libguisan/dylib/libguisan.dylib -lSDL2_image -lSDL2_ttf -lpng -liconv -lz -lFLAC -lmpg123 -lmpeg2 -lmpeg2convert -lserialport $(SDL_LDFLAGS) -framework IOKit -framework Foundation
 	CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -I/usr/local/include -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -DAMIBERRY -D_FILE_OFFSET_BITS=64 $(SDL_CFLAGS) 
@@ -270,9 +270,9 @@ else ifeq ($(PLATFORM),a64)
 	CPPFLAGS += $(CPPFLAGS64)
 	AARCH64 = 1
 
-# Generic EXPERIMENTAL x86-64 target
+# Generic x86-64 target
 else ifeq ($(PLATFORM),x86-64)
-	CPPFLAGS += -DUSE_RENDER_THREAD
+	# CPPFLAGS += -DUSE_RENDER_THREAD
 
 # Generic EXPERIMENTAL riscv64 target
 else ifeq ($(PLATFORM),riscv64)
