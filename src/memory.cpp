@@ -2238,7 +2238,6 @@ bool mapped_malloc (addrbank *ab)
 {
 	int id;
 	void *answer;
-	shmpiece *x;
 	bool rtgmem = (ab->flags & ABFLAG_RTG) != 0;
 	static int recurse;
 
@@ -2310,16 +2309,29 @@ bool mapped_malloc (addrbank *ab)
 		answer = ab->baseaddr;
 	}
 	if (answer != (void *) -1) {
-		x = xmalloc (shmpiece, 1);
+		shmpiece *xx = shm_start;
+		shmpiece *x = NULL;
+		// if we already have shmpiece for this address space: reuse it
+		while (xx) {
+			if (answer == xx->native_address) {
+				x = xx;
+				break;
+			}
+			xx = xx->next;
+		}
+		if (!x) {
+			// no old shmpice: allocate new
+			x = xcalloc(shmpiece, 1);
+			x->next = shm_start;
+			x->prev = NULL;
+			if (x->next)
+				x->next->prev = x;
+			shm_start = x;
+		}
 		x->native_address = (uae_u8*)answer;
 		x->id = id;
 		x->size = ab->reserved_size;
 		x->name = ab->label;
-		x->next = shm_start;
-		x->prev = NULL;
-		if (x->next)
-			x->next->prev = x;
-		shm_start = x;
 		ab->baseaddr = x->native_address;
 		if (ab->baseaddr) {
 			if (md.hasbarrier) {
@@ -3255,7 +3267,6 @@ void memory_init (void)
 
 	chipmem_bank.reserved_size = 0;
 	bogomem_bank.reserved_size = 0;
-	kickmem_bank.baseaddr = NULL;
 	extendedkickmem_bank.baseaddr = NULL;
 	extendedkickmem_bank.reserved_size = 0;
 	extendedkickmem2a_bank.baseaddr = NULL;
@@ -3272,6 +3283,7 @@ void memory_init (void)
 	custmem1_bank.baseaddr = NULL;
 	custmem2_bank.baseaddr = NULL;
 
+	mapped_free(&kickmem_bank);
 	kickmem_init();
 	_tcscpy (currprefs.romfile, _T("<none>"));
 	currprefs.romextfile[0] = 0;
