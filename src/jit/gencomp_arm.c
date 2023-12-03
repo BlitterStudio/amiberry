@@ -4642,8 +4642,6 @@ gen_opcode(unsigned long int opcode) {
 		failure;
 		break;
 #endif
-
-#ifdef WINUAE_ARANYM
 	case i_EMULOP_RETURN:
 		isjump;
 		failure;
@@ -4662,8 +4660,6 @@ gen_opcode(unsigned long int opcode) {
 		isjump;
 		failure;
 		break;
-#endif
-
 	default:
 		assert(0);
 		break;
