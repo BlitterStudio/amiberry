@@ -2420,6 +2420,10 @@ static uaecptr check_boot_rom (struct uae_prefs *p, int *boot_rom_type)
 		return b;
 	if (nr_directory_units (p))
 		return b;
+#ifdef WIN32
+	if (p->win32_automount_drives || p->win32_automount_cddrives || p->win32_automount_netdrives || p->win32_automount_removable)
+		return b;
+#endif
 	if (p->socket_emu)
 		return b;
 	if (p->uaeserial)
