@@ -15,8 +15,10 @@
 #define PACKAGE_STRING "Amiberry"
 
 #if defined(__x86_64__) || defined(_M_AMD64)
+#ifndef __MACH__ // not for macOS yet
 #define JIT /* JIT compiler support */
 #define USE_JIT_FPU
+#endif
 #endif
 
 #define DEBUGGER
