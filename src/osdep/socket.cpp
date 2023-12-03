@@ -103,7 +103,7 @@ uae_socket uae_tcp_listen(const TCHAR *host, const TCHAR *port, int flags)
 		}
 	}
 
-	err = bind(s, socketinfo->ai_addr, socketinfo->ai_addrlen);
+	err = ::bind(s, socketinfo->ai_addr, socketinfo->ai_addrlen);
 	if (err < 0) {
 		write_log(_T("TCP: bind() failed, %s:%s: %d\n"),
 		          host, port, uae_socket_error());
