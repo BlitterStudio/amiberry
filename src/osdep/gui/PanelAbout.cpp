@@ -98,7 +98,33 @@ void RefreshPanelAbout()
 bool HelpPanelAbout(std::vector<std::string>& helptext)
 {
 	helptext.clear();
-	helptext.emplace_back("Here you can see the version information as well as");
-	helptext.emplace_back("the people behind the development of this emulator.");
+	helptext.emplace_back("This panel contains information about the version of Amiberry, when it was changed,");
+	helptext.emplace_back("which version of SDL2 it was compiled against and currently using.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("Furthermore, you can also find the GPLv3 license notice here, and if you scroll down");
+	helptext.emplace_back("all the credits to the people behind the development of this emulator as well.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("At the bottom of the screen, there are a few buttons available regardless of which");
+	helptext.emplace_back("panel you have selected. Those are: ");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("\"Shutdown\": allows you to shutdown the whole system Amiberry is running on. This");
+	helptext.emplace_back(" option can be disabled if you wish, by setting \'disable_shutdown_button=yes\' in");
+	helptext.emplace_back(" in your amiberry.conf file.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("\"Quit\": This quits Amiberry, as you'd expect.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("\"Restart\": This button will stop emulation (if running), reload Amiberry and reset");
+	helptext.emplace_back(" the configuration. This has a similar effect as if you Quit and start Amiberry again.");
+	helptext.emplace_back(" It can be useful if you want to change a setting that cannot be changed on-the-fly,");
+	helptext.emplace_back(" and you don't want to quit and start the Amiberry again to do that.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("\"Help\": This will display some on-screen help/documentation, relating to the Panel");
+	helptext.emplace_back(" you are currently in.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("\"Reset\": This button will trigger a hard reset of the emulation, which will reboot");
+	helptext.emplace_back(" with the current settings. ");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("\"Start\": This button starts the emulation, using the current settings you have set.");
+	helptext.emplace_back(" ");
 	return true;
 }
