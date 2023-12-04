@@ -1227,7 +1227,11 @@ bool HelpPanelQuickstart(std::vector<std::string>& helptext)
 	helptext.emplace_back("you want to use.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("After selecting the Amiga model, you can choose from a small list of standard");
-	helptext.emplace_back("configurations for this model to start with.");
+	helptext.emplace_back("configurations for this model to start with. Depending on the model selected,");
+	helptext.emplace_back("the floppy or CD drive options will be enabled for you, which you can use to");
+	helptext.emplace_back("insert any floppy disk or CD images, accordingly.");
+	helptext.emplace_back("If you need more advanced control over the hardware you want to emulate, you");
+	helptext.emplace_back("can always use the rest of the GUI for that.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("You can reset the current configuration to your selected model, by clicking the");
 	helptext.emplace_back("Set Configuration button.");
