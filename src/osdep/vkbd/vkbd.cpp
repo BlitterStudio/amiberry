@@ -970,7 +970,6 @@ void vkbd_redraw(void)
 
 #ifdef USE_OPENGL
 	//TODO needs implementation
-
 #else
 	SDL_SetRenderDrawBlendMode(sdl_renderer, SDL_BLENDMODE_BLEND);
 	SDL_SetTextureBlendMode(toDraw, SDL_BLENDMODE_BLEND);

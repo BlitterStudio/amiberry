@@ -145,6 +145,7 @@ extern int getrefreshrate(int monid, int width, int height);
 void SDL2_guimode(int monid, int guion);
 void SDL2_toggle_vsync(bool vsync);
 extern void auto_crop_image();
+extern bool vkbd_allowed(int monid);
 
 extern SDL_GameControllerButton vkbd_button;
 extern bool sdl2_thread_changed;

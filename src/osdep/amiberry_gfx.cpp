@@ -163,6 +163,12 @@ static void update_leds(int monid)
 	}
 }
 
+bool vkbd_allowed(int monid)
+{
+	struct AmigaMonitor *mon = &AMonitors[monid];
+	return currprefs.vkbd_enabled && !mon->screen_is_picasso;
+}
+
 static int display_thread(void* unused)
 {
 	struct amigadisplay* ad = &adisplays[0];
@@ -193,7 +199,7 @@ static int display_thread(void* unused)
 			SDL_RenderClear(sdl_renderer);
 			SDL_UpdateTexture(amiga_texture, nullptr, sdl_surface->pixels, sdl_surface->pitch);
 			SDL_RenderCopyEx(sdl_renderer, amiga_texture, &crop_rect, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
-			if (currprefs.vkbd_enabled) 
+			if (vkbd_allowed(0))
 				vkbd_redraw();
 #endif
 			flip_in_progress = false;
@@ -696,7 +702,7 @@ static void open_screen(struct uae_prefs* p)
 
 	setmouseactive(mon->monitor_id, -1);
 
-	if (currprefs.vkbd_enabled)
+	if (vkbd_allowed(0))
 	{
 		vkbd_set_transparency(static_cast<double>(currprefs.vkbd_transparency) / 100.0);
 		vkbd_set_hires(currprefs.vkbd_hires);
@@ -1409,7 +1415,8 @@ int check_prefs_changed_gfx()
 			vkbd_set_language(string(currprefs.vkbd_language));
 			vkbd_set_style(string(currprefs.vkbd_style));
 			vkbd_button = SDL_GameControllerGetButtonFromString(currprefs.vkbd_toggle);
-			vkbd_init();
+			if (vkbd_allowed(0))
+				vkbd_init();
 		}
 		else
 		{
@@ -1527,7 +1534,7 @@ void show_screen(int monid, int mode)
 		SDL_RenderClear(sdl_renderer);
 		SDL_UpdateTexture(amiga_texture, nullptr, sdl_surface->pixels, sdl_surface->pitch);
 		SDL_RenderCopyEx(sdl_renderer, amiga_texture, &crop_rect, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
-		if (currprefs.vkbd_enabled)
+		if (vkbd_allowed(monid))
 			vkbd_redraw();
 		SDL_RenderPresent(sdl_renderer);
 #endif

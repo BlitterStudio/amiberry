@@ -428,6 +428,11 @@ bool HelpPanelVirtualKeyboard(std::vector<std::string>& helptext)
 	helptext.clear();
 	helptext.emplace_back("In this panel, you can configure the various options for Amiberry's On-screen (virtual)");
 	helptext.emplace_back("keyboard. The virtual keyboard can be used to input key presses using a game controller.");
+	helptext.emplace_back("This feature is only useful on native screen modes modes (e.g. ECS/AGA), which games use.");
+	helptext.emplace_back("For example, you can use it when a game requires you to press a keyboard key, and you only");
+	helptext.emplace_back("a controller connected.");
+	helptext.emplace_back("The Virtual Keyboard is not usable on RTG screen modes.");
+	helptext.emplace_back(" ");
 	helptext.emplace_back("Any options you change here can be saved to the currently loaded configuration .uae file.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("\"Virtual Keyboard enabled\": controls if the on-screen keyboard will be enabled or not.");

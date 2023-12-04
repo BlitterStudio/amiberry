@@ -5117,7 +5117,7 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 		check_prefs_changed_gfx();
 		break;
 	case AKS_OSK:
-		if (currprefs.vkbd_enabled)
+		if (vkbd_allowed(0))
 			vkbd_toggle();
 		break;
 	}
@@ -5178,10 +5178,7 @@ static uae_u64 isqual (int evt)
 // Pass the joystick state (joybutton and joydir) to vkbd subsystem and clear them for the emulator.
 static void handle_vkbd()
 {
-	if (!vkbd_is_active())
-	{
-		return;
-	}
+	if (!vkbd_is_active()) return;
 
 	int vkbd_state = 0;
 	for (int joy = 0; joy < 2; ++joy)
@@ -5246,9 +5243,6 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 
 	if (nr <= 0 || nr == INPUTEVENT_SPC_CUSTOM_EVENT)
 	{
-#ifdef AMIBERRY
-		handle_vkbd();
-#endif
 		return 0;
 	}
 
@@ -5257,9 +5251,6 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 	if (nr == INPUTEVENT_SPC_ENTERGUI) {
 		if (currprefs.win32_guikey > 0)
 		{
-#ifdef AMIBERRY
-			handle_vkbd();
-#endif
 			return 0;
 		}
 	}
@@ -5268,9 +5259,6 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 	ie = &events[nr];
 	if (isqual (nr))
 	{
-#ifdef AMIBERRY
-		handle_vkbd();
-#endif
 		return 0; // qualifiers do nothing
 	}
 	if (ie->unit == 0 && ie->data >= AKS_FIRST) {
@@ -5301,9 +5289,6 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 		}
 		if (!(flags & HANDLE_IE_FLAG_PLAYBACKEVENT) && input_play)
 		{
-#ifdef AMIBERRY
-			handle_vkbd();
-#endif
 			return 0;
 		}
 	}
@@ -5348,9 +5333,6 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 				lastmxy_abs[lpnum][unit] = extra;
 				if (!unit)
 				{
-#ifdef AMIBERRY
-					handle_vkbd();
-#endif
 					return 1;
 				}
 				int x = lastmxy_abs[lpnum][0];
@@ -5709,7 +5691,8 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 		break;
 	}
 #ifdef AMIBERRY
-	handle_vkbd();
+	if (vkbd_allowed(0) && vkbd_is_active())
+		handle_vkbd();
 #endif
 	return 1;
 }
