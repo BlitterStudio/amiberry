@@ -27,8 +27,8 @@ enum VkbdStyle
 extern void vkbd_set_hires(bool hires);
 extern void vkbd_set_language(VkbdLanguage language);
 extern void vkbd_set_style(VkbdStyle style);
-extern void vkbd_set_language(std::string language);
-extern void vkbd_set_style(std::string style);
+extern void vkbd_set_language(const std::string& language);
+extern void vkbd_set_style(const std::string& style);
 extern void vkbd_set_transparency(double transparency);
 extern void vkbd_set_keyboard_has_exit_button(bool keyboardHasExitButton);
 
