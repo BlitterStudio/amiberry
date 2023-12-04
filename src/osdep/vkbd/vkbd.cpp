@@ -658,7 +658,6 @@ static SDL_Surface* vkbd_concat_surfaces(SDL_Surface* keyboard, SDL_Surface* exi
 
 #ifdef USE_OPENGL
 	//TODO needs implementation
-
 #else
 static SDL_Texture* vkbd_create_keyboard_texture(bool shift)
 {
@@ -830,7 +829,7 @@ void vkbd_set_style(VkbdStyle style)
 	vkbd_update(false);
 }
 
-void vkbd_set_language(const std::string language)
+void vkbd_set_language(const std::string& language)
 {
 	VkbdLanguage vkbd_language;
 	if (language == "FR")
@@ -845,7 +844,7 @@ void vkbd_set_language(const std::string language)
 	vkbd_set_language(vkbd_language);
 }
 
-void vkbd_set_style(const std::string style)
+void vkbd_set_style(const std::string& style)
 {
 	VkbdStyle vkbd_style;
 	if (style == "Warm")
@@ -1057,7 +1056,7 @@ static int vkbd_move(int actualIndex, int direction)
 	return vkbd_move(rect, direction);
 }
 
-// For simplicity we don't allow movement (up/down/left/right) when the fire button is pressed.
+// For simplicity, we don't allow movement (up/down/left/right) when the fire button is pressed.
 // For normal (non-sticky) keys button press/release events are send whenever the fire button is released.
 // For sticky keys, the key is toggled whenever the fire button goes from not pressed to pressed.
 bool vkbd_process(int state, int* keycode, int* pressed)
