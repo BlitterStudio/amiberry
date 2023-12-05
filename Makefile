@@ -272,7 +272,9 @@ else ifeq ($(PLATFORM),a64)
 
 # Generic x86-64 target
 else ifeq ($(PLATFORM),x86-64)
-	# CPPFLAGS += -DUSE_RENDER_THREAD
+	CPPFLAGS += -DUSE_RENDER_THREAD
+	CFLAGS += -fno-pie
+	LDFLAGS += -no-pie
 
 # Generic EXPERIMENTAL riscv64 target
 else ifeq ($(PLATFORM),riscv64)
@@ -650,7 +652,7 @@ OBJS += src/osdep/aarch64_helper_osx.o
 else ifeq ($(PLATFORM),$(filter $(PLATFORM),osx-x86))
 	USE_JIT = 0
 else ifeq ($(PLATFORM),$(filter $(PLATFORM),x86-64))
-	USE_JIT = 0
+	USE_JIT = 1
 else ifeq ($(PLATFORM),$(filter $(PLATFORM),riscv64))
 	USE_JIT = 0
 else
