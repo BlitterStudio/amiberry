@@ -114,7 +114,8 @@ bool HelpPanelAbout(std::vector<std::string>& helptext)
 	helptext.emplace_back("\"Quit\": This quits Amiberry, as you'd expect.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("\"Restart\": This button will stop emulation (if running), reload Amiberry and reset");
-	helptext.emplace_back(" the configuration. This has a similar effect as if you Quit and start Amiberry again.");
+	helptext.emplace_back(" the currently loaded configuration. This has a similar effect as if you Quit and start");
+	helptext.emplace_back(" Amiberry again.");
 	helptext.emplace_back(" It can be useful if you want to change a setting that cannot be changed on-the-fly,");
 	helptext.emplace_back(" and you don't want to quit and start the Amiberry again to do that.");
 	helptext.emplace_back(" ");
