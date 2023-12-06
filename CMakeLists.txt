@@ -1,9 +1,12 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.20)
 project(amiberry)
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS "-fno-pie -fno-PIE -no-pie")
 
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_C_FLAGS "-O3 -pipe -fno-pie")
+set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS}")
+set(CMAKE_EXE_LINKER_FLAGS "-no-pie -fuse-ld=gold -Wl,--gc-sections -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed")
 # Needed so that cmake uses our find modules.
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
@@ -351,26 +354,25 @@ endif()
 
 if(DEFINED WITH_MIDI)
 	add_definitions(-DWITH_MIDI)
-	find_library(PORTMIDI_LIBRARIES portmidi)
+	find_library(PORTMIDI_LIBRARIES REQUIRED portmidi)
 endif()
 
 find_package(FLAC REQUIRED)
 find_package(mpg123 REQUIRED)
 find_package(PNG REQUIRED)
+find_package(ZLIB REQUIRED)
 find_library(LIBSERIALPORT_LIBRARIES serialport)
 find_path(LIBSERIALPORT_INCLUDE_DIR libserialport.h)
 
-INCLUDE_DIRECTORIES(${SDL2_INCLUDE_DIRS} ${SDL2IMAGE_INCLUDE_DIRS} ${LIBSERIALPORT_INCLUDE_DIR})
+INCLUDE_DIRECTORIES(${SDL2IMAGE_INCLUDE_DIRS} ${LIBSERIALPORT_INCLUDE_DIR})
 target_include_directories(${PROJECT_NAME} PRIVATE ./external/libguisan/include)
 
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE guisan SDL2 SDL2_image SDL2_ttf ${DBUS_LIBRARIES} FLAC png mpg123 mpeg2convert mpeg2 serialport z)
 if(DEFINED USE_OPENGL)
-	TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE guisan ${SDL2_LIBRARIES} ${SDL2IMAGE_LIBRARIES} ${SDL2TTF_LIBRARIES} ${DBUS_LIBRARIES} FLAC::FLAC PNG::PNG mpg123 mpeg2convert mpeg2 serialport OpenGL::GL)
-else()
-	if(DEFINED WITH_MIDI)
-		TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE guisan ${SDL2_LIBRARIES} ${SDL2IMAGE_LIBRARIES} ${SDL2TTF_LIBRARIES} ${DBUS_LIBRARIES} FLAC::FLAC PNG::PNG mpg123 mpeg2convert mpeg2 serialport portmidi)
-	else()
-		TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE guisan ${SDL2_LIBRARIES} ${SDL2IMAGE_LIBRARIES} ${SDL2TTF_LIBRARIES} ${DBUS_LIBRARIES} FLAC::FLAC PNG::PNG mpg123 mpeg2convert mpeg2 serialport)
-	endif()
+	TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE ${TARGET_LINK_LIBRARIES} OpenGL::GL)
+endif()
+if(DEFINED WITH_MIDI)
+	TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE ${TARGET_LINK_LIBRARIES} portmidi)
 endif()
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 
