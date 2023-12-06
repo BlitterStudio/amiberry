@@ -529,6 +529,7 @@ extern const int POPALLSPACE_SIZE;
 void execute_normal(void);
 void exec_nostats(void);
 void do_nothing(void);
+void execute_exception(uae_u32 cycles);
 
 #else
 
