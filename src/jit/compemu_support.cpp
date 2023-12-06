@@ -341,6 +341,10 @@ static inline int end_block(uae_u32 opcode)
 }
 #endif
 
+#ifdef AMIBERRY // Added for the AARCH64 JIT implementation
+static bool flags_carry_inverted = false;
+#endif
+
 static inline bool is_const_jump(uae_u32 opcode)
 {
 	return (prop[opcode].cflow == fl_const_jump);
@@ -398,6 +402,13 @@ static void* popall_cache_miss=NULL;
 static void* popall_recompile_block=NULL;
 static void* popall_check_checksum=NULL;
 
+#ifdef AMIBERRY // Used by the AARCH64 JIT implementation
+static void* popall_execute_normal_setpc = NULL;
+static void* popall_check_checksum_setpc = NULL;
+static void* popall_exec_nostats_setpc = NULL;
+static void* popall_execute_exception = NULL;
+#endif
+
 /* The 68k only ever executes from even addresses. So right now, we
  * waste half the entries in this array
  * UPDATE: We now use those entries to store the start of the linked
@@ -426,13 +437,25 @@ static smallstate empty_ss;
 static smallstate default_ss;
 static int optlev;
 
-static int writereg(int r, int size);
+#if defined(CPU_AARCH64)
+static int writereg(int r);
+static void unlock2(int r);
+static void setlock(int r);
+static int readreg(int r);
+static void prepare_for_call_1(void);
+static void prepare_for_call_2(void);
+#else
 static void unlock2(int r);
 static void setlock(int r);
 static int readreg_specific(int r, int size, int spec);
 static int writereg_specific(int r, int size, int spec);
+#endif
 
+#if defined(AMIBERRY) && defined(CPU_AARCH64)
+static void write_jmp_target(uae_u32* jmpaddr, uintptr a);
+#else
 static void inline write_jmp_target(uae_u32 *jmpaddr, cpuop_func* a);
+#endif
 
 uae_u32 m68k_pc_offset;
 
@@ -676,7 +699,11 @@ static inline void remove_deps(blockinfo* bi)
 
 static inline void adjust_jmpdep(dependency* d, cpuop_func* a)
 {
+#if defined(CPU_AARCH64)
+	write_jmp_target(d->jmp_off, (uintptr)a);
+#else
 	write_jmp_target(d->jmp_off, a);
+#endif
 }
 
 /********************************************************************
@@ -1132,11 +1159,15 @@ static inline void reset_data_buffer(void)
 /********************************************************************
  * Getting the information about the target CPU                     *
  ********************************************************************/
-
-#if defined(CPU_arm)
-#include "codegen_arm.cpp"
+#ifdef AMIBERRY // Used by the AARCH64 JIT implementation
+STATIC_INLINE void clobber_flags(void);
 #endif
-#if defined(CPU_i386) || defined(CPU_x86_64)
+
+#if defined(CPU_AARCH64)
+#include "codegen_arm64.cpp"
+#elif defined(CPU_arm)
+#include "codegen_arm.cpp"
+#elif defined(CPU_i386) || defined(CPU_x86_64)
 #include "codegen_x86.cpp"
 #endif
 
@@ -1156,9 +1187,16 @@ static void make_flags_live_internal(void)
 	}
 	if (live.flags_on_stack==VALID) {
 		int tmp;
+#if defined (CPU_AARCH64)
+		tmp = readreg(FLAGTMP);
+#else
 		tmp=readreg_specific(FLAGTMP,4,FLAG_NREG2);
+#endif
 		raw_reg_to_flags(tmp);
 		unlock2(tmp);
+#if defined (CPU_AARCH64)
+		flags_carry_inverted = false;
+#endif
 
 		live.flags_in_flags=VALID;
 		return;
@@ -1169,17 +1207,28 @@ static void make_flags_live_internal(void)
 
 static void flags_to_stack(void)
 {
-	if (live.flags_on_stack==VALID)
+	if (live.flags_on_stack == VALID) {
+#if defined (CPU_AARCH64)
+		flags_carry_inverted = false;
+#endif
 		return;
+	}
 	if (!live.flags_are_important) {
-		live.flags_on_stack=VALID;
+		live.flags_on_stack = VALID;
+#if defined (CPU_AARCH64)
+		flags_carry_inverted = false;
+#endif
 		return;
 	}
 	Dif (live.flags_in_flags!=VALID)
 		jit_abort("flags_to_stack != VALID");
 	else  {
 		int tmp;
+#if defined (CPU_AARCH64)
+		tmp = writereg(FLAGTMP);
+#else
 		tmp=writereg_specific(FLAGTMP,4,FLAG_NREG1);
+#endif
 		raw_flags_to_reg(tmp);
 		unlock2(tmp);
 	}
@@ -1519,12 +1568,16 @@ static inline void log_visused(int r)
 
 static inline void do_load_reg(int n, int r)
 {
+#if defined(CPU_AARCH64)
+	compemu_raw_mov_l_rm(n, (uintptr)live.state[r].mem);
+#else
 	if (r == FLAGTMP)
 		raw_load_flagreg(n);
 	else if (r == FLAGX)
 		raw_load_flagx(n);
 	else
 		compemu_raw_mov_l_rm(n, JITPTR  live.state[r].mem);
+#endif
 }
 
 #if 0
@@ -1639,6 +1692,9 @@ static void tomem(int r)
 	}
 
 	if (live.state[r].status==DIRTY) {
+#ifdef CPU_AARCH64
+		compemu_raw_mov_l_mr((uintptr)live.state[r].mem, live.state[r].realreg);
+#else
 		switch (live.state[r].dirtysize) {
 		case 1: compemu_raw_mov_b_mr(JITPTR live.state[r].mem,rr); break;
 		case 2: compemu_raw_mov_w_mr(JITPTR live.state[r].mem,rr); break;
@@ -1646,6 +1702,7 @@ static void tomem(int r)
 		default: abort();
 		}
 		log_vwrite(r);
+#endif
 		set_status(r,CLEAN);
 		live.state[r].dirtysize=0;
 	}
@@ -1756,6 +1813,121 @@ static inline uae_u32 get_offset(int r)
 	return live.state[r].val;
 }
 
+#ifdef AMIBERRY
+static int alloc_reg_hinted(int r, int willclobber, int hint)
+{
+	int bestreg = -1;
+	uae_s32 when = 2000000000;
+	int i;
+
+	for (i = N_REGS - 1; i >= 0; i--) {
+		if (!live.nat[i].locked) {
+			uae_s32 badness = live.nat[i].touched;
+			if (live.nat[i].nholds == 0)
+				badness = 0;
+			if (i == hint)
+				badness -= 200000000;
+			if (badness < when) {
+				bestreg = i;
+				when = badness;
+				if (live.nat[i].nholds == 0 && hint < 0)
+					break;
+				if (i == hint)
+					break;
+			}
+		}
+	}
+
+	if (live.nat[bestreg].nholds > 0) {
+		free_nreg(bestreg);
+	}
+
+	if (!willclobber) {
+		if (live.state[r].status != UNDEF) {
+			if (isconst(r)) {
+				compemu_raw_mov_l_ri(bestreg, live.state[r].val);
+				live.state[r].val = 0;
+				set_status(r, DIRTY);
+			} else {
+				do_load_reg(bestreg, r);
+				set_status(r, CLEAN);
+			}
+		} else {
+			live.state[r].val = 0;
+			set_status(r, CLEAN);
+		}
+	} else { /* this is the easiest way, but not optimal. */
+		live.state[r].val = 0;
+		set_status(r, DIRTY);
+	}
+	live.state[r].realreg = bestreg;
+	live.state[r].realind = 0;
+	live.nat[bestreg].touched = touchcnt++;
+	live.nat[bestreg].holds[0] = r;
+	live.nat[bestreg].nholds = 1;
+
+	return bestreg;
+}
+#endif
+
+#ifdef AMIBERRY
+static int alloc_reg_hinted(int r, int willclobber, int hint)
+{
+	int bestreg = -1;
+	uae_s32 when = 2000000000;
+	int i;
+
+	for (i = N_REGS - 1; i >= 0; i--) {
+		if (!live.nat[i].locked) {
+			uae_s32 badness = live.nat[i].touched;
+			if (live.nat[i].nholds == 0)
+				badness = 0;
+			if (i == hint)
+				badness -= 200000000;
+			if (badness < when) {
+				bestreg = i;
+				when = badness;
+				if (live.nat[i].nholds == 0 && hint < 0)
+					break;
+				if (i == hint)
+					break;
+			}
+		}
+	}
+
+	if (live.nat[bestreg].nholds > 0) {
+		free_nreg(bestreg);
+	}
+
+	if (!willclobber) {
+		if (live.state[r].status != UNDEF) {
+			if (isconst(r)) {
+				compemu_raw_mov_l_ri(bestreg, live.state[r].val);
+				live.state[r].val = 0;
+				set_status(r, DIRTY);
+			} else {
+				do_load_reg(bestreg, r);
+				set_status(r, CLEAN);
+			}
+		} else {
+			live.state[r].val = 0;
+			set_status(r, CLEAN);
+		}
+	} else { /* this is the easiest way, but not optimal. */
+		live.state[r].val = 0;
+		set_status(r, DIRTY);
+	}
+	live.state[r].realreg = bestreg;
+	live.state[r].realind = 0;
+	live.nat[bestreg].touched = touchcnt++;
+	live.nat[bestreg].holds[0] = r;
+	live.nat[bestreg].nholds = 1;
+
+	return bestreg;
+}
+#endif
+
+#if !defined(CPU_AARCH64)
 static int alloc_reg_hinted(int r, int size, int willclobber, int hint)
 {
 	int bestreg;
@@ -1875,6 +2047,7 @@ static int alloc_reg_hinted(int r, int size, int willclobber, int hint)
 
 	return bestreg;
 }
+#endif
 
 /*
 static int alloc_reg(int r, int size, int willclobber)
@@ -1921,7 +2094,6 @@ static void mov_nregs(int d, int s)
 
 	live.nat[s].nholds=0;
 }
-
 
 static inline void make_exclusive(int r, int size, int spec)
 {
@@ -2109,7 +2281,73 @@ static inline int readreg_general(int r, int size, int spec, int can_offset)
 	return answer;
 }
 
+#ifdef AMIBERRY
+static inline void make_exclusive(int r, int needcopy)
+{
+	reg_status oldstate;
+	int rr = live.state[r].realreg;
+	int nr;
+	int nind;
 
+	if (!isinreg(r))
+		return;
+	if (live.nat[rr].nholds == 1)
+		return;
+
+	/* We have to split the register */
+	oldstate = live.state[r];
+
+	setlock(rr); /* Make sure this doesn't go away */
+	/* Forget about r being in the register rr */
+	disassociate(r);
+	/* Get a new register, that we will clobber completely */
+	nr = alloc_reg_hinted(r, 1, -1);
+	nind = live.state[r].realind;
+	live.state[r] = oldstate;   /* Keep all the old state info */
+	live.state[r].realreg = nr;
+	live.state[r].realind = nind;
+
+	if (needcopy) {
+		compemu_raw_mov_l_rr(nr, rr);  /* Make another copy */
+	}
+	unlock2(rr);
+}
+
+static inline int readreg_general(int r, int spec)
+{
+	int answer = -1;
+
+	if (live.state[r].status == UNDEF) {
+		jit_log("WARNING: Unexpected read of undefined register %d", r);
+	}
+
+	if (isinreg(r)) {
+		answer = live.state[r].realreg;
+	} else {
+		/* the value is in memory to start with */
+		answer = alloc_reg_hinted(r, 0, spec);
+	}
+
+	if (spec >= 0 && spec != answer) {
+		/* Too bad */
+		mov_nregs(spec, answer);
+		answer = spec;
+	}
+	live.nat[answer].locked++;
+	live.nat[answer].touched = touchcnt++;
+	return answer;
+}
+
+static int readreg(int r)
+{
+	return readreg_general(r, -1);
+}
+
+static int readreg_specific(int r, int spec)
+{
+	return readreg_general(r, spec);
+}
+#endif
 
 static int readreg(int r, int size)
 {
@@ -2208,6 +2446,27 @@ static inline int writereg_general(int r, int size, int spec)
 	return answer;
 }
 
+#ifdef AMIBERRY
+static int writereg(int r)
+{
+	int answer = -1;
+
+	make_exclusive(r, 0);
+	if (isinreg(r)) {
+		answer = live.state[r].realreg;
+	} else {
+		/* the value is in memory to start with */
+		answer = alloc_reg_hinted(r, 1, -1);
+	}
+
+	live.nat[answer].locked++;
+	live.nat[answer].touched = touchcnt++;
+	live.state[r].val = 0;
+	set_status(r, DIRTY);
+	return answer;
+}
+#endif
+
 static int writereg(int r, int size)
 {
 	return writereg_general(r,size,-1);
@@ -2282,6 +2541,32 @@ static inline int rmw_general(int r, int wsize, int rsize, int spec)
 	}
 	return answer;
 }
+
+#ifdef AMIBERRY
+static int rmw(int r)
+{
+	int answer = -1;
+
+	if (live.state[r].status == UNDEF) {
+		jit_log("WARNING: Unexpected read of undefined register %d", r);
+	}
+	make_exclusive(r, 1);
+
+	if (isinreg(r)) {
+		answer = live.state[r].realreg;
+	} else {
+		/* the value is in memory to start with */
+		answer = alloc_reg_hinted(r, 0, -1);
+	}
+
+	set_status(r, DIRTY);
+
+	live.nat[answer].locked++;
+	live.nat[answer].touched = touchcnt++;
+
+	return answer;
+}
+#endif
 
 static int rmw(int r, int wsize, int rsize)
 {
@@ -2633,7 +2918,11 @@ static void prepare_for_call_2(void)
 {
 	int i;
 	for (i=0;i<N_REGS;i++)
-		if (!call_saved[i] && live.nat[i].nholds>0)
+#if defined(CPU_AARCH64)
+			if (live.nat[i].nholds > 0) // in aarch64: first 18 regs not call saved
+#else
+			if (!call_saved[i] && live.nat[i].nholds > 0)
+#endif
 			free_nreg(i);
 
 	for (i=0;i<N_FREGS;i++)
@@ -2646,15 +2935,13 @@ static void prepare_for_call_2(void)
 }
 #endif
 
-#if defined(CPU_arm)
+#if defined(CPU_AARCH64)
+#include "compemu_midfunc_arm64.cpp"
+#include "compemu_midfunc_arm64_2.cpp"
+#elif defined(CPU_arm)
 #include "compemu_midfunc_arm.cpp"
-
-#if defined(USE_JIT2)
 #include "compemu_midfunc_arm2.cpp"
-#endif
-#endif
-
-#if defined(CPU_i386) || defined(CPU_x86_64)
+#elif defined(CPU_i386) || defined(CPU_x86_64)
 #include "compemu_midfunc_x86.cpp"
 #endif
 
@@ -3065,6 +3352,9 @@ static void init_comp(void)
 #endif
 	live.state[FLAGTMP].needflush=NF_TOMEM;
 	set_status(FLAGTMP,INMEM);
+#ifdef AMIBERRY
+	flags_carry_inverted = false;
+#endif
 
 	live.state[NEXT_HANDLER].needflush=NF_HANDLER;
 	set_status(NEXT_HANDLER,UNDEF);
@@ -3121,6 +3411,9 @@ static void init_comp(void)
 	live.flags_are_important=1;
 
 	raw_fp_init();
+#ifdef AMIBERRY
+	regs.jit_exception = 0;
+#endif
 }
 
 void flush_reg(int reg)
@@ -3232,8 +3525,10 @@ static void freescratch(void)
 {
 	int i;
 	for (i=0;i<N_REGS;i++)
-#if defined(CPU_arm)
-		if (live.nat[i].locked && i != REG_WORK1 && i != REG_WORK2)
+#if defined(CPU_AARCH64)
+			if (live.nat[i].locked && i > 5 && i < 18)
+#elif defined(CPU_arm)
+		if (live.nat[i].locked && i != REG_WORK1 && i != REG_WORK2 && i != 10 && i != 11 && i != 12)
 #else
 		if (live.nat[i].locked && i != ESP_INDEX
 #if defined(UAE) && defined(CPU_x86_64)
@@ -3994,6 +4289,11 @@ static inline void create_popalls(void)
 	compemu_raw_jmp(uae_p32(do_nothing));
 
 	align_target(align_jumps);
+#if defined(AMIBERRY) && defined(CPU_AARCH64)
+	popall_execute_normal_setpc = get_target();
+	uintptr idx = (uintptr) & (regs.pc_p) - (uintptr)&regs;
+	STR_xXi(REG_WORK1, R_REGSTRUCT, idx);
+#endif
 	popall_execute_normal=get_target();
 	raw_inc_sp(stack_space);
 	raw_pop_preserved_regs();
@@ -4012,12 +4312,20 @@ static inline void create_popalls(void)
 	compemu_raw_jmp(uae_p32(recompile_block));
 
 	align_target(align_jumps);
+#if defined(AMIBERRY) && defined(CPU_AARCH64)
+	popall_exec_nostats_setpc = get_target();
+	STR_xXi(REG_WORK1, R_REGSTRUCT, idx);
+#endif
 	popall_exec_nostats=get_target();
 	raw_inc_sp(stack_space);
 	raw_pop_preserved_regs();
 	compemu_raw_jmp(uae_p32(exec_nostats));
 
 	align_target(align_jumps);
+#if defined(AMIBERRY) && defined(CPU_AARCH64)
+	popall_check_checksum_setpc = get_target();
+	STR_xXi(REG_WORK1, R_REGSTRUCT, idx);
+#endif
 	popall_check_checksum=get_target();
 	raw_inc_sp(stack_space);
 	raw_pop_preserved_regs();

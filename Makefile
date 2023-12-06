@@ -575,6 +575,19 @@ OBJS = \
 	src/archivers/zip/unzip.o \
 	src/caps/caps_amiberry.o \
 	src/machdep/support.o \
+	src/floppybridge/ArduinoFloppyBridge.o \
+	src/floppybridge/ArduinoInterface.o \
+	src/floppybridge/CommonBridgeTemplate.o \
+	src/floppybridge/floppybridge_lib.o \
+	src/floppybridge/ftdi.o \
+	src/floppybridge/GreaseWeazleBridge.o \
+	src/floppybridge/GreaseWeazleInterface.o \
+	src/floppybridge/pll.o \
+	src/floppybridge/RotationExtractor.o \
+	src/floppybridge/SerialIO.o \
+	src/floppybridge/SuperCardProBridge.o \
+	src/floppybridge/SuperCardProInterface.o \
+	src/floppybridge/FloppyBridge.o \
 	src/osdep/ahi_v1.o \
 	src/osdep/bsdsocket_host.o \
 	src/osdep/cda_play.o \
@@ -641,7 +654,33 @@ OBJS = \
 	src/osdep/gui/PanelVirtualKeyboard.o \
 	src/osdep/gui/main_window.o \
 	src/osdep/gui/Navigation.o \
-	src/osdep/vkbd/vkbd.o
+	src/osdep/vkbd/vkbd.o \
+	src/newcpu.o \
+	src/newcpu_common.o \
+	src/readcpu.o \
+	src/cpudefs.o \
+	src/cpustbl.o \
+	src/cpummu.o \
+	src/cpummu30.o \
+	src/cpuemu_0.o \
+	src/cpuemu_11.o \
+	src/cpuemu_13.o \
+	src/cpuemu_20.o \
+	src/cpuemu_21.o \
+	src/cpuemu_22.o \
+	src/cpuemu_23.o \
+	src/cpuemu_24.o \
+	src/cpuemu_31.o \
+	src/cpuemu_32.o \
+	src/cpuemu_33.o \
+	src/cpuemu_34.o \
+	src/cpuemu_35.o \
+	src/cpuemu_40.o \
+	src/cpuemu_50.o \
+	src/jit/compemu.o \
+	src/jit/compstbl.o \
+	src/jit/compemu_support.o \
+	src/jit/compemu_fpp.o
 
 USE_JIT=1
 
@@ -667,57 +706,6 @@ OBJS += src/osdep/neon_helper.o
 src/osdep/neon_helper.o: src/osdep/neon_helper.s
 	$(AS) $(CPUFLAGS) -o src/osdep/neon_helper.o -c src/osdep/neon_helper.s
 endif
-
-OBJS += src/newcpu.o \
-	src/newcpu_common.o \
-	src/readcpu.o \
-	src/cpudefs.o \
-	src/cpustbl.o \
-	src/cpummu.o \
-	src/cpummu30.o \
-	src/cpuemu_0.o \
-	src/cpuemu_11.o \
-	src/cpuemu_13.o \
-	src/cpuemu_20.o \
-	src/cpuemu_21.o \
-	src/cpuemu_22.o \
-	src/cpuemu_23.o \
-	src/cpuemu_24.o \
-	src/cpuemu_31.o \
-	src/cpuemu_32.o \
-	src/cpuemu_33.o \
-	src/cpuemu_34.o \
-	src/cpuemu_35.o \
-	src/cpuemu_40.o \
-	src/cpuemu_50.o
-
-ifeq ($(USE_JIT),1)
-ifdef AARCH64
-OBJS += src/jit/compemu_arm.o \
-	src/jit/compstbl_arm.o
-else
-OBJS += src/jit/compemu.o \
-	src/jit/compstbl.o
-endif
-
-OBJS += src/jit/compemu_support.o \
-	src/jit/compemu_fpp.o \
-	src/jit/exception_handler.o
-endif
-
-OBJS += src/floppybridge/ArduinoFloppyBridge.o \
-		src/floppybridge/ArduinoInterface.o \
-		src/floppybridge/CommonBridgeTemplate.o \
-		src/floppybridge/floppybridge_lib.o \
-		src/floppybridge/ftdi.o \
-		src/floppybridge/GreaseWeazleBridge.o \
-		src/floppybridge/GreaseWeazleInterface.o \
-		src/floppybridge/pll.o \
-		src/floppybridge/RotationExtractor.o \
-		src/floppybridge/SerialIO.o \
-		src/floppybridge/SuperCardProBridge.o \
-		src/floppybridge/SuperCardProInterface.o \
-		src/floppybridge/FloppyBridge.o
 
 DEPS = $(OBJS:%.o=%.d) $(C_OBJS:%.o=%.d)
 
