@@ -34,8 +34,6 @@
 #include "vpar.h"
 #include "ahi_v1.h"
 
-#include <libserialport.h>
-
 #ifdef POSIX_SERIAL
 #include <termios.h>
 #include <unistd.h>
@@ -66,10 +64,6 @@ struct termios tios;
 int parallel_mode = 0;
 static uae_socket parallel_tcp_listener = UAE_SOCKET_INVALID;
 static uae_socket parallel_tcp = UAE_SOCKET_INVALID;
-
-#ifdef WITH_MIDI
-static int midi_ready = 0;
-#endif
 
 static bool parallel_tcp_connected(void)
 {
@@ -141,7 +135,6 @@ void parallel_poll_ack(void)
 	vpar_update();
 #endif
 }
-
 
 void parallel_exit(void)
 {
@@ -403,65 +396,6 @@ void uaeser_close(void* vsd)
 	uae_sem_destroy(&sd->change_sem);
 
 	uaeser_initdata(sd, sd->user);
-}
-
-static SOCKET serialsocket = UAE_SOCKET_INVALID;
-static SOCKET serialconn = UAE_SOCKET_INVALID;
-static BOOL tcpserial;
-
-static bool tcp_is_connected (void)
-{
-	if (serialsocket == UAE_SOCKET_INVALID) {
-		return false;
-	}
-	if (serialconn == UAE_SOCKET_INVALID) {
-		if (uae_socket_select_read(serialsocket)) {
-			serialconn = uae_socket_accept(serialsocket);
-			if (serialconn != UAE_SOCKET_INVALID) {
-				write_log(_T("TCP: Serial connection accepted\n"));
-			}
-		}
-	}
-	return serialconn != UAE_SOCKET_INVALID;
-}
-
-static void tcp_disconnect (void)
-{
-	if (serialconn == UAE_SOCKET_INVALID) {
-		return;
-	}
-	uae_socket_close(serialconn);
-	serialconn = UAE_SOCKET_INVALID;
-	write_log(_T("TCP: Serial disconnect\n"));
-}
-
-static void closetcp (void)
-{
-	if (serialconn != UAE_SOCKET_INVALID) {
-		uae_socket_close(serialconn);
-		serialconn = UAE_SOCKET_INVALID;
-	}
-	if (serialsocket != UAE_SOCKET_INVALID) {
-		uae_socket_close(serialsocket);
-		serialsocket = UAE_SOCKET_INVALID;
-	}
-	// WSACleanup ();
-}
-
-static int opentcp (const TCHAR *sername)
-{
-	serialsocket = uae_tcp_listen_uri(sername, "1234", UAE_SOCKET_DEFAULT);
-	if (serialsocket == UAE_SOCKET_INVALID) {
-		return 0;
-	}
-	if (_tcsicmp(uae_uri_path(sername), _T("/wait")) == 0) {
-		while (tcp_is_connected() == false) {
-			Sleep(1000);
-			write_log(_T("TCP: Waiting for serial connection...\n"));
-		}
-	}
-	tcpserial = TRUE;
-	return 1;
 }
 
 void initparallel (void)

@@ -240,6 +240,7 @@ add_executable(${PROJECT_NAME}
 		src/osdep/clipboard.cpp
 		src/osdep/amiberry_hardfile.cpp
 		src/osdep/keyboard.cpp
+		src/osdep/midi.cpp
 		src/osdep/mp3decoder.cpp
 		src/osdep/picasso96.cpp
 		src/osdep/writelog.cpp
@@ -348,6 +349,11 @@ if(DEFINED USE_DBUS)
 	link_directories(${DBUS_LIBRARY_DIRS})
 endif()
 
+if(DEFINED WITH_MIDI)
+	add_definitions(-DWITH_MIDI)
+	find_library(PORTMIDI_LIBRARIES portmidi)
+endif()
+
 find_package(FLAC REQUIRED)
 find_package(mpg123 REQUIRED)
 find_package(PNG REQUIRED)
@@ -360,7 +366,11 @@ target_include_directories(${PROJECT_NAME} PRIVATE ./external/libguisan/include)
 if(DEFINED USE_OPENGL)
 	TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE guisan ${SDL2_LIBRARIES} ${SDL2IMAGE_LIBRARIES} ${SDL2TTF_LIBRARIES} ${DBUS_LIBRARIES} FLAC::FLAC PNG::PNG mpg123 mpeg2convert mpeg2 serialport OpenGL::GL)
 else()
-	TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE guisan ${SDL2_LIBRARIES} ${SDL2IMAGE_LIBRARIES} ${SDL2TTF_LIBRARIES} ${DBUS_LIBRARIES} FLAC::FLAC PNG::PNG mpg123 mpeg2convert mpeg2 serialport)
+	if(DEFINED WITH_MIDI)
+		TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE guisan ${SDL2_LIBRARIES} ${SDL2IMAGE_LIBRARIES} ${SDL2TTF_LIBRARIES} ${DBUS_LIBRARIES} FLAC::FLAC PNG::PNG mpg123 mpeg2convert mpeg2 serialport portmidi)
+	else()
+		TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE guisan ${SDL2_LIBRARIES} ${SDL2IMAGE_LIBRARIES} ${SDL2TTF_LIBRARIES} ${DBUS_LIBRARIES} FLAC::FLAC PNG::PNG mpg123 mpeg2convert mpeg2 serialport)
+	endif()
 endif()
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 

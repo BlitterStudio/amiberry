@@ -76,6 +76,12 @@ ifdef USE_DBUS
 	LDFLAGS += $(DBUS_LIBS)
 endif
 
+# Use MIDI support with PortMidi library?
+ifdef WITH_MIDI
+	CFLAGS += -DWITH_MIDI
+	LDFLAGS += -lportmidi
+endif
+
 ifndef DEBUG
 	CFLAGS += -O3
 else
@@ -577,6 +583,7 @@ OBJS = \
 	src/osdep/clipboard.o \
 	src/osdep/amiberry_hardfile.o \
 	src/osdep/keyboard.o \
+	src/osdep/midi.o \
 	src/osdep/mp3decoder.o \
 	src/osdep/picasso96.o \
 	src/osdep/writelog.o \

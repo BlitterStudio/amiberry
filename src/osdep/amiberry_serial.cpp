@@ -18,7 +18,15 @@
 #include "cia.h"
 #include "serial.h"
 
+#ifdef WITH_MIDI
+#include "midi.h"
+#endif
+
 #include <libserialport.h>
+
+#ifdef WITH_MIDI
+static int midi_ready = 0;
+#endif
 
 /* A pointer to a struct sp_port, which will refer to
  * the port found. */
@@ -93,8 +101,73 @@ static bool breakpending = false;
 /* We'll allow a 1 second timeout for send and receive. */
 unsigned int timeout = 1000;
 
+#include "uae/socket.h"
+
+static SOCKET serialsocket = UAE_SOCKET_INVALID;
+static SOCKET serialconn = UAE_SOCKET_INVALID;
+static BOOL tcpserial;
+
+static bool tcp_is_connected (void)
+{
+	if (serialsocket == UAE_SOCKET_INVALID) {
+		return false;
+	}
+	if (serialconn == UAE_SOCKET_INVALID) {
+		if (uae_socket_select_read(serialsocket)) {
+			serialconn = uae_socket_accept(serialsocket);
+			if (serialconn != UAE_SOCKET_INVALID) {
+				write_log(_T("TCP: Serial connection accepted\n"));
+			}
+		}
+	}
+	return serialconn != UAE_SOCKET_INVALID;
+}
+
+static void tcp_disconnect (void)
+{
+	if (serialconn == UAE_SOCKET_INVALID) {
+		return;
+	}
+	uae_socket_close(serialconn);
+	serialconn = UAE_SOCKET_INVALID;
+	write_log(_T("TCP: Serial disconnect\n"));
+}
+
+static void closetcp (void)
+{
+	if (serialconn != UAE_SOCKET_INVALID) {
+		uae_socket_close(serialconn);
+		serialconn = UAE_SOCKET_INVALID;
+	}
+	if (serialsocket != UAE_SOCKET_INVALID) {
+		uae_socket_close(serialsocket);
+		serialsocket = UAE_SOCKET_INVALID;
+	}
+	// WSACleanup ();
+}
+
+static int opentcp (const TCHAR *sername)
+{
+	serialsocket = uae_tcp_listen_uri(sername, "1234", UAE_SOCKET_DEFAULT);
+	if (serialsocket == UAE_SOCKET_INVALID) {
+		return 0;
+	}
+	if (_tcsicmp(uae_uri_path(sername), _T("/wait")) == 0) {
+		while (tcp_is_connected() == false) {
+			Sleep(1000);
+			write_log(_T("TCP: Waiting for serial connection...\n"));
+		}
+	}
+	tcpserial = TRUE;
+	return 1;
+}
+
 int openser (const TCHAR *sername)
 {
+	if (_tcsnicmp(sername, _T("tcp:"), 4) == 0) {
+		return opentcp(sername);
+	}
+
 	/* Call sp_get_port_by_name() to find the port. The port
 	* pointer will be updated to refer to the port found. */
 	check(sp_get_port_by_name(sername, &port));
@@ -117,6 +190,20 @@ int openser (const TCHAR *sername)
 
 void closeser ()
 {
+	if (tcpserial) {
+		closetcp();
+		tcpserial = FALSE;
+	}
+#ifdef WITH_MIDI
+	if (midi_ready) {
+		midi_close();
+		midi_ready = 0;
+		//need for camd Midi Stuff(it close midi and reopen it but serial.c think the baudrate
+		//is the same and do not open midi), so setting serper to different value helps
+		extern uae_u16 serper;
+		serper = 0x30;
+	}
+#endif
 	if (serdev)
 	{
 		check(sp_close(port));
@@ -214,30 +301,52 @@ static TCHAR dochar(int v)
 
 int readser(int* buffer)
 {
-	if (!currprefs.use_serial)
-		return 0;
-	if (dataininput > dataininputcnt) {
-		*buffer = inputbuffer[dataininputcnt++];
-		return 1;
-	}
-	dataininput = 0;
-	dataininputcnt = 0;
-	if (serdev) {
-		const int bytes = check(sp_input_waiting(port));
-		if (bytes) {
-			int len = bytes;
-			if (len > sizeof(inputbuffer))
-				len = sizeof(inputbuffer);
-			dataininput = check(sp_blocking_read(port, inputbuffer, len, timeout));
-			dataininputcnt = 0;
-			if(!dataininput)
-			{
-				return 0;
+	if (tcpserial) {
+		if (tcp_is_connected()) {
+			char buf[1];
+			buf[0] = 0;
+			int err = uae_socket_read(serialconn, buf, 1);
+			if (err == 1) {
+				*buffer = buf[0];
+				//write_log(_T(" %02X "), buf[0]);
+				return 1;
+			} else {
+				tcp_disconnect();
 			}
-			return readser(buffer);
 		}
+		return 0;
+#ifdef WITH_MIDI
+	} else if (midi_ready) {
+		uae_u8 ch;
+		int res = midi_recv_byte(&ch);
+		*buffer = ch;
+		return res;
+#endif
+	} else {
+		if (!currprefs.use_serial)
+			return 0;
+		if (dataininput > dataininputcnt) {
+			*buffer = inputbuffer[dataininputcnt++];
+			return 1;
+		}
+		dataininput = 0;
+		dataininputcnt = 0;
+		if (serdev) {
+			const int bytes = check(sp_input_waiting(port));
+			if (bytes) {
+				int len = bytes;
+				if (len > sizeof(inputbuffer))
+					len = sizeof(inputbuffer);
+				dataininput = check(sp_blocking_read(port, inputbuffer, len, timeout));
+				dataininputcnt = 0;
+				if (!dataininput) {
+					return 0;
+				}
+				return readser(buffer);
+			}
+		}
+		return 0;
 	}
-	return 0;
 }
 
 void flushser(void)
@@ -251,19 +360,36 @@ int readseravail(bool* breakcond)
 {
 	if (breakcond)
 		*breakcond = false;
-
-	if (!currprefs.use_serial)
-		return 0;
-	if (dataininput > dataininputcnt)
-		return 1;
-	if (serdev) {
-		if (breakcond && breakpending) {
-			*breakcond = true;
-			breakpending = false;
+	if (tcpserial) {
+		if (tcp_is_connected()) {
+			int err = uae_socket_select_read(serialconn);
+			if (err == UAE_SELECT_ERROR) {
+				tcp_disconnect();
+				return 0;
+			}
+			if (err > 0)
+				return 1;
 		}
-		const int bytes = check(sp_input_waiting(port));
-		if (bytes > 0)
-			return bytes;
+		return 0;
+#ifdef WITH_MIDI
+	} else if (midi_ready) {
+		if (midi_has_byte())
+			return 1;
+#endif
+	} else {
+		if (!currprefs.use_serial)
+			return 0;
+		if (dataininput > dataininputcnt)
+			return 1;
+		if (serdev) {
+			if (breakcond && breakpending) {
+				*breakcond = true;
+				breakpending = false;
+			}
+			const int bytes = check(sp_input_waiting(port));
+			if (bytes > 0)
+				return bytes;
+		}
 	}
 	return 0;
 }
@@ -425,23 +551,40 @@ void writeser_flush(void)
 
 void writeser(int c)
 {
-	if (!serdev || !currprefs.use_serial)
-		return;
-	if (datainoutput + 1 < sizeof(outputbuffer)) {
-		outputbuffer[datainoutput++] = c;
+	if (tcpserial) {
+		if (tcp_is_connected()) {
+			char buf[1];
+			buf[0] = (char) c;
+			if (uae_socket_write(serialconn, buf, 1) != 1) {
+				tcp_disconnect();
+			}
+		}
+#ifdef WITH_MIDI
+	} else if (midi_ready) {
+		midi_send_byte((uint8_t) c);
+#endif
+	} else {
+		if (!serdev || !currprefs.use_serial)
+			return;
+		if (datainoutput + 1 < sizeof(outputbuffer)) {
+			outputbuffer[datainoutput++] = c;
+		} else {
+			write_log(_T("serial output buffer overflow, data will be lost\n"));
+			datainoutput = 0;
+		}
+		outser();
 	}
-	else {
-		write_log(_T("serial output buffer overflow, data will be lost\n"));
-		datainoutput = 0;
-	}
-	outser();
 }
 
 int checkserwrite(int spaceneeded)
 {
 	if (!serdev || !currprefs.use_serial)
 		return 1;
-
+#ifdef WITH_MIDI
+	if (midi_ready) {
+		return 1;
+	}
+#endif
 	outser();
 	if (datainoutput + spaceneeded >= sizeof(outputbuffer))
 		return 0;
@@ -684,6 +827,23 @@ void SERPER(uae_u16 w)
 	serial_send_previous = -1;
 #ifdef SERIAL_PORT
 	check(sp_set_baudrate(port, baud));
+#endif
+
+#ifdef WITH_MIDI
+	if (baud == 31400) {
+		/* MIDI baud-rate */
+		if (!midi_ready) {
+			/* try to open midi devices */
+			if (midi_open()) {
+				midi_ready = 1;
+			}
+		}
+	} else {
+		if (midi_ready) {
+			midi_close();
+			midi_ready = 0;
+		}
+	}
 #endif
 
 	// mid transmit period change
