@@ -1813,64 +1813,7 @@ static inline uae_u32 get_offset(int r)
 	return live.state[r].val;
 }
 
-#ifdef AMIBERRY
-static int alloc_reg_hinted(int r, int willclobber, int hint)
-{
-	int bestreg = -1;
-	uae_s32 when = 2000000000;
-	int i;
-
-	for (i = N_REGS - 1; i >= 0; i--) {
-		if (!live.nat[i].locked) {
-			uae_s32 badness = live.nat[i].touched;
-			if (live.nat[i].nholds == 0)
-				badness = 0;
-			if (i == hint)
-				badness -= 200000000;
-			if (badness < when) {
-				bestreg = i;
-				when = badness;
-				if (live.nat[i].nholds == 0 && hint < 0)
-					break;
-				if (i == hint)
-					break;
-			}
-		}
-	}
-
-	if (live.nat[bestreg].nholds > 0) {
-		free_nreg(bestreg);
-	}
-
-	if (!willclobber) {
-		if (live.state[r].status != UNDEF) {
-			if (isconst(r)) {
-				compemu_raw_mov_l_ri(bestreg, live.state[r].val);
-				live.state[r].val = 0;
-				set_status(r, DIRTY);
-			} else {
-				do_load_reg(bestreg, r);
-				set_status(r, CLEAN);
-			}
-		} else {
-			live.state[r].val = 0;
-			set_status(r, CLEAN);
-		}
-	} else { /* this is the easiest way, but not optimal. */
-		live.state[r].val = 0;
-		set_status(r, DIRTY);
-	}
-	live.state[r].realreg = bestreg;
-	live.state[r].realind = 0;
-	live.nat[bestreg].touched = touchcnt++;
-	live.nat[bestreg].holds[0] = r;
-	live.nat[bestreg].nholds = 1;
-
-	return bestreg;
-}
-#endif
-
-#ifdef AMIBERRY
+#ifdef CPU_AARCH64
 static int alloc_reg_hinted(int r, int willclobber, int hint)
 {
 	int bestreg = -1;
@@ -2281,7 +2224,7 @@ static inline int readreg_general(int r, int size, int spec, int can_offset)
 	return answer;
 }
 
-#ifdef AMIBERRY
+#ifdef CPU_AARCH64
 static inline void make_exclusive(int r, int needcopy)
 {
 	reg_status oldstate;
@@ -2446,7 +2389,7 @@ static inline int writereg_general(int r, int size, int spec)
 	return answer;
 }
 
-#ifdef AMIBERRY
+#ifdef CPU_AARCH64
 static int writereg(int r)
 {
 	int answer = -1;
@@ -2542,7 +2485,7 @@ static inline int rmw_general(int r, int wsize, int rsize, int spec)
 	return answer;
 }
 
-#ifdef AMIBERRY
+#ifdef CPU_AARCH64
 static int rmw(int r)
 {
 	int answer = -1;
