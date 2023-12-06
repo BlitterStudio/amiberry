@@ -4,14 +4,10 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - master
-      - dev
-    tags:
-      - v*.*.*
+      - preview
   pull_request:
     branches:
-      - master
-      - dev
+      - preview
 
 jobs:
 
@@ -26,7 +22,7 @@ jobs:
       - name: Install dependencies
         run: |
           brew update
-          brew install sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport dylibbundler wget
+          brew install sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi dylibbundler wget
 
       - name: make capsimg
         run: make capsimg
@@ -378,61 +374,6 @@ jobs:
           name: "debian-bookworm-aarch64-rpi5"
           path: amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-aarch64-rpi5.zip
 
-  build-debian-bookworm-armhf-rpi5:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: 'true'
-
-      - name: Run the build process with Docker
-        uses: addnab/docker-run-action@v3
-        with:
-          image: midwan/amiberry-debian-armhf:bookworm
-          options: -v ${{ github.workspace }}:/build
-          run: |
-            make capsimg
-            make -j8 PLATFORM=rpi5-sdl2
-
-      - name: Upload artifact
-        if: github.ref_type != 'tag'
-        uses: actions/upload-artifact@v3
-        with:
-          name: amiberry-debian-bookworm-armhf-rpi5
-          path: |
-            amiberry
-            capsimg.so
-            abr/**
-            conf/**
-            controllers/**
-            data/**
-            inputrecordings/**
-            kickstarts/**
-            nvram/**
-            savestates/**
-            screenshots/**
-            whdboot/**
-
-      - name: Get tag
-        if: github.ref_type == 'tag'
-        id: tag
-        uses: dawidd6/action-get-tag@v1
-        with:
-          # Optionally strip `v` prefix
-          strip_v: false
-
-      - name: ZIP binaries
-        if: github.ref_type == 'tag'
-        run: zip -r amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-armhf-rpi5.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
-
-      - name: Upload artifact
-        if: github.ref_type == 'tag'
-        uses: actions/upload-artifact@v3
-        with:
-          name: "debian-bookworm-armhf-rpi5"
-          path: amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-armhf-rpi5.zip
-
-
   build-debian-buster-aarch64-rpi4:
     runs-on: ubuntu-latest
     steps:
@@ -486,60 +427,6 @@ jobs:
         with:
           name: "debian-buster-aarch64-rpi4"
           path: amiberry-${{ steps.tag.outputs.tag }}-debian-buster-aarch64-rpi4.zip
-
-  build-debian-buster-armhf-rpi4:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: 'true'
-
-      - name: Run the build process with Docker
-        uses: addnab/docker-run-action@v3
-        with:
-          image: midwan/amiberry-debian-armhf:buster
-          options: -v ${{ github.workspace }}:/build
-          run: |
-            make capsimg
-            make -j8 PLATFORM=rpi4-sdl2
-
-      - name: Upload artifact
-        if: github.ref_type != 'tag'
-        uses: actions/upload-artifact@v3
-        with:
-          name: amiberry-debian-buster-armhf-rpi4
-          path: |
-            amiberry
-            capsimg.so
-            abr/**
-            conf/**
-            controllers/**
-            data/**
-            inputrecordings/**
-            kickstarts/**
-            nvram/**
-            savestates/**
-            screenshots/**
-            whdboot/**
-
-      - name: Get tag
-        if: github.ref_type == 'tag'
-        id: tag
-        uses: dawidd6/action-get-tag@v1
-        with:
-          # Optionally strip `v` prefix
-          strip_v: false
-
-      - name: ZIP binaries
-        if: github.ref_type == 'tag'
-        run: zip -r amiberry-${{ steps.tag.outputs.tag }}-debian-buster-armhf-rpi4.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
-
-      - name: Upload artifact
-        if: github.ref_type == 'tag'
-        uses: actions/upload-artifact@v3
-        with:
-          name: "debian-buster-armhf-rpi4"
-          path: amiberry-${{ steps.tag.outputs.tag }}-debian-buster-armhf-rpi4.zip
 
   build-debian-bullseye-aarch64-rpi4:
     runs-on: ubuntu-latest
@@ -595,60 +482,6 @@ jobs:
           name: "debian-bullseye-aarch64-rpi4"
           path: amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-aarch64-rpi4.zip
 
-  build-debian-bullseye-armhf-rpi4:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: 'true'
-
-      - name: Run the build process with Docker
-        uses: addnab/docker-run-action@v3
-        with:
-          image: midwan/amiberry-debian-armhf:bullseye
-          options: -v ${{ github.workspace }}:/build
-          run: |
-            make capsimg
-            make -j8 PLATFORM=rpi4-sdl2
-
-      - name: Upload artifact
-        if: github.ref_type != 'tag'
-        uses: actions/upload-artifact@v3
-        with:
-          name: amiberry-debian-bullseye-armhf-rpi4
-          path: |
-            amiberry
-            capsimg.so
-            abr/**
-            conf/**
-            controllers/**
-            data/**
-            inputrecordings/**
-            kickstarts/**
-            nvram/**
-            savestates/**
-            screenshots/**
-            whdboot/**
-
-      - name: Get tag
-        if: github.ref_type == 'tag'
-        id: tag
-        uses: dawidd6/action-get-tag@v1
-        with:
-          # Optionally strip `v` prefix
-          strip_v: false
-
-      - name: ZIP binaries
-        if: github.ref_type == 'tag'
-        run: zip -r amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-armhf-rpi4.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
-
-      - name: Upload artifact
-        if: github.ref_type == 'tag'
-        uses: actions/upload-artifact@v3
-        with:
-          name: "debian-bullseye-armhf-rpi4"
-          path: amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-armhf-rpi4.zip
-
   build-debian-bookworm-aarch64-rpi4:
     runs-on: ubuntu-latest
     steps:
@@ -702,60 +535,6 @@ jobs:
         with:
           name: "debian-bookworm-aarch64-rpi4"
           path: amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-aarch64-rpi4.zip
-
-  build-debian-bookworm-armhf-rpi4:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: 'true'
-
-      - name: Run the build process with Docker
-        uses: addnab/docker-run-action@v3
-        with:
-          image: midwan/amiberry-debian-armhf:bookworm
-          options: -v ${{ github.workspace }}:/build
-          run: |
-            make capsimg
-            make -j8 PLATFORM=rpi4-sdl2
-
-      - name: Upload artifact
-        if: github.ref_type != 'tag'
-        uses: actions/upload-artifact@v3
-        with:
-          name: amiberry-debian-bookworm-armhf-rpi4
-          path: |
-            amiberry
-            capsimg.so
-            abr/**
-            conf/**
-            controllers/**
-            data/**
-            inputrecordings/**
-            kickstarts/**
-            nvram/**
-            savestates/**
-            screenshots/**
-            whdboot/**
-
-      - name: Get tag
-        if: github.ref_type == 'tag'
-        id: tag
-        uses: dawidd6/action-get-tag@v1
-        with:
-          # Optionally strip `v` prefix
-          strip_v: false
-
-      - name: ZIP binaries
-        if: github.ref_type == 'tag'
-        run: zip -r amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-armhf-rpi4.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
-
-      - name: Upload artifact
-        if: github.ref_type == 'tag'
-        uses: actions/upload-artifact@v3
-        with:
-          name: "debian-bookworm-armhf-rpi4"
-          path: amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-armhf-rpi4.zip
 
   build-debian-buster-aarch64-rpi3:
     runs-on: ubuntu-latest
@@ -811,60 +590,6 @@ jobs:
           name: "debian-buster-aarch64-rpi3"
           path: amiberry-${{ steps.tag.outputs.tag }}-debian-buster-aarch64-rpi3.zip
 
-  build-debian-buster-armhf-rpi3:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: 'true'
-
-      - name: Run the build process with Docker
-        uses: addnab/docker-run-action@v3
-        with:
-          image: midwan/amiberry-debian-armhf:buster
-          options: -v ${{ github.workspace }}:/build
-          run: |
-            make capsimg
-            make -j8 PLATFORM=rpi3-sdl2
-
-      - name: Upload artifact
-        if: github.ref_type != 'tag'
-        uses: actions/upload-artifact@v3
-        with:
-          name: amiberry-debian-buster-armhf-rpi3
-          path: |
-            amiberry
-            capsimg.so
-            abr/**
-            conf/**
-            controllers/**
-            data/**
-            inputrecordings/**
-            kickstarts/**
-            nvram/**
-            savestates/**
-            screenshots/**
-            whdboot/**
-
-      - name: Get tag
-        if: github.ref_type == 'tag'
-        id: tag
-        uses: dawidd6/action-get-tag@v1
-        with:
-          # Optionally strip `v` prefix
-          strip_v: false
-
-      - name: ZIP binaries
-        if: github.ref_type == 'tag'
-        run: zip -r amiberry-${{ steps.tag.outputs.tag }}-debian-buster-armhf-rpi3.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
-
-      - name: Upload artifact
-        if: github.ref_type == 'tag'
-        uses: actions/upload-artifact@v3
-        with:
-          name: "debian-buster-armhf-rpi3"
-          path: amiberry-${{ steps.tag.outputs.tag }}-debian-buster-armhf-rpi3.zip
-
   build-debian-bullseye-aarch64-rpi3:
     runs-on: ubuntu-latest
     steps:
@@ -918,60 +643,6 @@ jobs:
         with:
           name: "debian-bullseye-aarch64-rpi3"
           path: amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-aarch64-rpi3.zip
-
-  build-debian-bullseye-armhf-rpi3:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: 'true'
-
-      - name: Run the build process with Docker
-        uses: addnab/docker-run-action@v3
-        with:
-          image: midwan/amiberry-debian-armhf:bullseye
-          options: -v ${{ github.workspace }}:/build
-          run: |
-            make capsimg
-            make -j8 PLATFORM=rpi3-sdl2
-
-      - name: Upload artifact
-        if: github.ref_type != 'tag'
-        uses: actions/upload-artifact@v3
-        with:
-          name: amiberry-debian-bullseye-armhf-rpi3
-          path: |
-            amiberry
-            capsimg.so
-            abr/**
-            conf/**
-            controllers/**
-            data/**
-            inputrecordings/**
-            kickstarts/**
-            nvram/**
-            savestates/**
-            screenshots/**
-            whdboot/**
-
-      - name: Get tag
-        if: github.ref_type == 'tag'
-        id: tag
-        uses: dawidd6/action-get-tag@v1
-        with:
-          # Optionally strip `v` prefix
-          strip_v: false
-
-      - name: ZIP binaries
-        if: github.ref_type == 'tag'
-        run: zip -r amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-armhf-rpi3.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
-
-      - name: Upload artifact
-        if: github.ref_type == 'tag'
-        uses: actions/upload-artifact@v3
-        with:
-          name: "debian-bullseye-armhf-rpi3"
-          path: amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-armhf-rpi3.zip
 
   build-debian-bookworm-aarch64-rpi3:
     runs-on: ubuntu-latest
@@ -1027,62 +698,8 @@ jobs:
           name: "debian-bookworm-aarch64-rpi3"
           path: amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-aarch64-rpi3.zip
 
-  build-debian-bookworm-armhf-rpi3:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: 'true'
-
-      - name: Run the build process with Docker
-        uses: addnab/docker-run-action@v3
-        with:
-          image: midwan/amiberry-debian-armhf:bookworm
-          options: -v ${{ github.workspace }}:/build
-          run: |
-            make capsimg
-            make -j8 PLATFORM=rpi3-sdl2
-
-      - name: Upload artifact
-        if: github.ref_type != 'tag'
-        uses: actions/upload-artifact@v3
-        with:
-          name: amiberry-debian-bookworm-armhf-rpi3
-          path: |
-            amiberry
-            capsimg.so
-            abr/**
-            conf/**
-            controllers/**
-            data/**
-            inputrecordings/**
-            kickstarts/**
-            nvram/**
-            savestates/**
-            screenshots/**
-            whdboot/**
-
-      - name: Get tag
-        if: github.ref_type == 'tag'
-        id: tag
-        uses: dawidd6/action-get-tag@v1
-        with:
-          # Optionally strip `v` prefix
-          strip_v: false
-
-      - name: ZIP binaries
-        if: github.ref_type == 'tag'
-        run: zip -r amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-armhf-rpi3.zip amiberry capsimg.so abr conf controllers data kickstarts savestates screenshots whdboot
-
-      - name: Upload artifact
-        if: github.ref_type == 'tag'
-        uses: actions/upload-artifact@v3
-        with:
-          name: "debian-bookworm-armhf-rpi3"
-          path: amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-armhf-rpi3.zip
-
   create-release:
-    needs: [build-macOS-x86_64, build-debian-buster-x86_64, build-debian-bullseye-x86_64, build-debian-bookworm-x86_64, build-manjaro-aarch64-rpi4, build-manjaro-aarch64-rk3399, build-debian-bookworm-aarch64-rpi5, build-debian-bookworm-armhf-rpi5, build-debian-buster-aarch64-rpi4, build-debian-buster-armhf-rpi4, build-debian-bullseye-aarch64-rpi4, build-debian-bullseye-armhf-rpi4, build-debian-bookworm-aarch64-rpi4, build-debian-bookworm-armhf-rpi4, build-debian-buster-aarch64-rpi3, build-debian-buster-armhf-rpi3, build-debian-bullseye-aarch64-rpi3, build-debian-bullseye-armhf-rpi3, build-debian-bookworm-aarch64-rpi3, build-debian-bookworm-armhf-rpi3]
+    needs: [build-macOS-x86_64, build-debian-buster-x86_64, build-debian-bullseye-x86_64, build-debian-bookworm-x86_64, build-manjaro-aarch64-rpi4, build-manjaro-aarch64-rk3399, build-debian-bookworm-aarch64-rpi5, build-debian-buster-aarch64-rpi4, build-debian-bullseye-aarch64-rpi4, build-debian-bookworm-aarch64-rpi4, build-debian-buster-aarch64-rpi3, build-debian-bullseye-aarch64-rpi3, build-debian-bookworm-aarch64-rpi3]
     runs-on: ubuntu-latest
     if: github.ref_type == 'tag'
     steps:
@@ -1122,16 +739,9 @@ jobs:
             manjaro-aarch64-rpi4/amiberry-${{ steps.tag.outputs.tag }}-manjaro-aarch64-rpi4.zip
             manjaro-aarch64-rk3399/amiberry-${{ steps.tag.outputs.tag }}-manjaro-aarch64-rk3399.zip
             debian-bookworm-aarch64-rpi5/amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-aarch64-rpi5.zip
-            debian-bookworm-armhf-rpi5/amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-armhf-rpi5.zip
             debian-buster-aarch64-rpi4/amiberry-${{ steps.tag.outputs.tag }}-debian-buster-aarch64-rpi4.zip
-            debian-buster-armhf-rpi4/amiberry-${{ steps.tag.outputs.tag }}-debian-buster-armhf-rpi4.zip
             debian-bullseye-aarch64-rpi4/amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-aarch64-rpi4.zip
-            debian-bullseye-armhf-rpi4/amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-armhf-rpi4.zip
             debian-bookworm-aarch64-rpi4/amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-aarch64-rpi4.zip
-            debian-bookworm-armhf-rpi4/amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-armhf-rpi4.zip
             debian-buster-aarch64-rpi3/amiberry-${{ steps.tag.outputs.tag }}-debian-buster-aarch64-rpi3.zip
-            debian-buster-armhf-rpi3/amiberry-${{ steps.tag.outputs.tag }}-debian-buster-armhf-rpi3.zip
             debian-bullseye-aarch64-rpi3/amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-aarch64-rpi3.zip
-            debian-bullseye-armhf-rpi3/amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-armhf-rpi3.zip
             debian-bookworm-aarch64-rpi3/amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-aarch64-rpi3.zip
-            debian-bookworm-armhf-rpi3/amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-armhf-rpi3.zip
