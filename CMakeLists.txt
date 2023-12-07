@@ -362,7 +362,7 @@ endif()
 
 if(DEFINED WITH_MIDI)
 	add_definitions(-DWITH_MIDI)
-	find_library(PORTMIDI_LIBRARIES REQUIRED portmidi)
+	find_library(PORTMIDI_LIBRARIES portmidi REQUIRED)
 endif()
 
 find_package(FLAC REQUIRED)
