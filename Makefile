@@ -643,7 +643,7 @@ OBJS = \
 	src/osdep/gui/Navigation.o \
 	src/osdep/vkbd/vkbd.o
 
-USE_JIT=1
+USE_JIT=0
 
 ifdef AARCH64
 OBJS += src/osdep/aarch64_helper.o
