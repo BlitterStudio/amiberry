@@ -1,8 +1,19 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.20)
 project(amiberry)
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS "-fno-pie -fno-PIE -no-pie")
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_C_FLAGS_RELEASE "-O3 -pipe")
+set(CMAKE_C_FLAGS_DEBUG "-Og -g -rdynamic -funwind-tables -DDEBUG -Wl,--export-dynamic -pipe")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
+set(CMAKE_EXE_LINKER_FLAGS "-no-pie -fuse-ld=gold -Wl,--gc-sections -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed")
+
+set(default_build_type "RELEASE")
+
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+	 set(CMAKE_BUILD_TYPE "${default_build_type}")
+endif()
 
 # Needed so that cmake uses our find modules.
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
@@ -16,7 +27,7 @@ include_directories(
 )
 
 add_subdirectory(external/libguisan)
-add_definitions(-DAMIBERRY -D_FILE_OFFSET_BITS=64)
+add_definitions(-fno-pie -DAMIBERRY -D_FILE_OFFSET_BITS=64)
 
 include(CheckSymbolExists)
 function(detect_architecture symbol arch)
@@ -351,26 +362,25 @@ endif()
 
 if(DEFINED WITH_MIDI)
 	add_definitions(-DWITH_MIDI)
-	find_library(PORTMIDI_LIBRARIES portmidi)
+	find_library(PORTMIDI_LIBRARIES REQUIRED portmidi)
 endif()
 
 find_package(FLAC REQUIRED)
 find_package(mpg123 REQUIRED)
 find_package(PNG REQUIRED)
-find_library(LIBSERIALPORT_LIBRARIES serialport)
+find_package(ZLIB REQUIRED)
+find_library(LIBSERIALPORT_LIBRARIES serialport REQUIRED)
 find_path(LIBSERIALPORT_INCLUDE_DIR libserialport.h)
 
-INCLUDE_DIRECTORIES(${SDL2_INCLUDE_DIRS} ${SDL2IMAGE_INCLUDE_DIRS} ${LIBSERIALPORT_INCLUDE_DIR})
+INCLUDE_DIRECTORIES(${SDL2IMAGE_INCLUDE_DIRS} ${LIBSERIALPORT_INCLUDE_DIR})
 target_include_directories(${PROJECT_NAME} PRIVATE ./external/libguisan/include)
 
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE guisan SDL2 SDL2_image SDL2_ttf ${DBUS_LIBRARIES} FLAC png mpg123 mpeg2convert mpeg2 serialport z)
 if(DEFINED USE_OPENGL)
-	TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE guisan ${SDL2_LIBRARIES} ${SDL2IMAGE_LIBRARIES} ${SDL2TTF_LIBRARIES} ${DBUS_LIBRARIES} FLAC::FLAC PNG::PNG mpg123 mpeg2convert mpeg2 serialport OpenGL::GL)
-else()
-	if(DEFINED WITH_MIDI)
-		TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE guisan ${SDL2_LIBRARIES} ${SDL2IMAGE_LIBRARIES} ${SDL2TTF_LIBRARIES} ${DBUS_LIBRARIES} FLAC::FLAC PNG::PNG mpg123 mpeg2convert mpeg2 serialport portmidi)
-	else()
-		TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE guisan ${SDL2_LIBRARIES} ${SDL2IMAGE_LIBRARIES} ${SDL2TTF_LIBRARIES} ${DBUS_LIBRARIES} FLAC::FLAC PNG::PNG mpg123 mpeg2convert mpeg2 serialport)
-	endif()
+	TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE ${TARGET_LINK_LIBRARIES} OpenGL::GL)
+endif()
+if(DEFINED WITH_MIDI)
+	TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE ${TARGET_LINK_LIBRARIES} portmidi)
 endif()
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 

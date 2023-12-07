@@ -682,7 +682,7 @@ OBJS = \
 	src/jit/compemu_support.o \
 	src/jit/compemu_fpp.o
 
-USE_JIT=1
+USE_JIT=0
 
 ifdef AARCH64
 OBJS += src/osdep/aarch64_helper.o
