@@ -1107,7 +1107,7 @@ static void CIA_tod_check(int num)
 	struct CIA *c = &cia[num];
 
 	CIA_tod_event_check(num);
-	if (!c->todon || c->tod_event_state > 1 || c->tod_offset < 0)
+	if (!c->todon || c->tod_event_state != 1 || c->tod_offset < 0)
 		return;
 	int hpos = current_hpos();
 	hpos -= c->tod_offset;
