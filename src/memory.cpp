@@ -3306,21 +3306,18 @@ void memory_cleanup (void)
 	mapped_free(&a3000hmem_bank);
 	mapped_free(&bogomem_bank);
 	mapped_free(&kickmem_bank);
+	mapped_free(&kickram_bank);
+	mapped_free(&extendedkickmem_bank);
+	mapped_free(&extendedkickmem2a_bank);
+	mapped_free(&extendedkickmem2b_bank);
 	xfree(a1000_bootrom);
 	mapped_free(&chipmem_bank);
 	mapped_free(&custmem1_bank);
 	mapped_free(&custmem2_bank);
 	mapped_free(&fakeuaebootrom_bank);
 
-	bogomem_bank.baseaddr = NULL;
-	kickmem_bank.baseaddr = NULL;
-	mem25bit_bank.baseaddr = NULL;
-	a3000lmem_bank.baseaddr = a3000hmem_bank.baseaddr = NULL;
 	a1000_bootrom = NULL;
 	a1000_kickstart_mode = 0;
-	chipmem_bank.baseaddr = NULL;
-	custmem1_bank.baseaddr = NULL;
-	custmem2_bank.baseaddr = NULL;
 
 	cpuboard_cleanup();
 #ifdef ACTION_REPLAY
