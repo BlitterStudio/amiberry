@@ -3318,6 +3318,9 @@ static void disk_insert_2 (int num, const TCHAR *name, bool forced, bool forcedw
 	} else if (!drive_empty(drv) || drv->dskchange_time > 0) {
 		// delay eject so that it is always called when emulation is active
 		drv->dskeject = true;
+	} else if (drv->dskchange) {
+		// eject + insert without exiting GUI
+		drv->dskeject = true;
 	} else {
 		setdskchangetime (drv, 1 * 312);
 	}
