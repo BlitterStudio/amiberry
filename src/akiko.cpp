@@ -1996,7 +1996,7 @@ static void patchrom(void)
 {
 	if (currprefs.cs_cd32cd && (currprefs.cpu_model > 68020 || currprefs.cachesize || currprefs.m68k_speed != 0)) {
 		uae_u8 *p = extendedkickmem_bank.baseaddr;
-		if (p) {
+		if (p && extendedkickmem_bank.allocated_size >= 524288) {
 			for (int i = 0; i < 524288 - 512; i++) {
 				if (!memcmp(p + i, patchdata2, sizeof(patchdata2)))
 					return;				
