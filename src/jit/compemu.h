@@ -297,6 +297,17 @@ typedef struct {
 #define FS2 10
 #define FS3 11
 
+#ifdef AMIBERRY // Used by the AARCH64 JIT implementation
+#define SCRATCH_F64_1  1
+#define SCRATCH_F64_2  2
+#define SCRATCH_F64_3  3
+#define SCRATCH_F64_4  4
+#define SCRATCH_F32_1  2
+#define SCRATCH_F32_2  4
+#define SCRATCH_F32_3  6
+#define SCRATCH_F32_4  8
+#endif
+
 typedef struct {
   uae_u32 touched;
   uae_s8 holds[VREGS];
@@ -348,6 +359,12 @@ typedef struct {
 
 extern int touchcnt;
 
+#ifdef AMIBERRY // used by the AARCH64 JIT implementation
+#define IM8 uae_s32
+#define IM16 uae_s32
+#define IM32 uae_s32
+#define IMPTR uintptr
+#endif
 #define IMM  uae_s32
 #define RR1  uae_u32
 #define RR2  uae_u32
@@ -377,9 +394,15 @@ extern int touchcnt;
 #define FRW  uae_u32
 
 #define MIDFUNC(nargs,func,args) void func args
+#ifdef AMIBERRY
+#define MENDFUNC(nargs,func,args)
+#endif
 #define COMPCALL(func) func
 
 #define LOWFUNC(flags,mem,nargs,func,args) static inline void func args
+#ifdef AMIBERRY // used by AARCH64 JIT implementation
+#define LENDFUNC(flags,mem,nargs,func,args)
+#endif
 
 /* What we expose to the outside */
 #define DECLARE_MIDFUNC(func) extern void func
@@ -506,6 +529,7 @@ extern const int POPALLSPACE_SIZE;
 void execute_normal(void);
 void exec_nostats(void);
 void do_nothing(void);
+void execute_exception(uae_u32 cycles);
 
 #else
 

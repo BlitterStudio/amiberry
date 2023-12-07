@@ -5404,6 +5404,18 @@ void custom_reset_cpu(bool hardreset, bool keyboardreset)
 
 #ifdef JIT  /* Completely different run_2 replacement */
 
+#ifdef AMIBERRY // Used by the AARCH64 JIT implementation
+void execute_exception(uae_u32 cycles)
+{
+	countdown -= cycles;
+	Exception_cpu(regs.jit_exception);
+	regs.jit_exception = 0;
+	cpu_cycles = adjust_cycles(4 * CYCLE_UNIT / 2);
+	do_cycles(cpu_cycles);
+	// after leaving this function, we fall back to execute_normal()
+}
+#endif
+
 void do_nothing (void)
 {
 	if (!currprefs.cpu_thread) {

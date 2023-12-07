@@ -2082,6 +2082,14 @@ static inline void raw_emit_nop(void)
   NOP();
 }
 
+/*************************************************************************
+ * Handling mistaken direct memory access (removed from ARAnyM sources)  *
+ *************************************************************************/
+
+#ifdef UAE
+#include "exception_handler.cpp"
+#endif
+
 #ifdef UAE
 static
 #endif

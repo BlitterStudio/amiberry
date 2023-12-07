@@ -277,6 +277,12 @@ struct regstruct
 	int ce020_tail;
 	evt_t ce020_tail_cycles;
 	int memory_waitstate_cycles;
+
+#ifdef AMIBERRY // Used by the AARCH64 JIT implementation
+#ifdef JIT
+	uae_u32 jit_exception;
+#endif
+#endif
 };
 
 extern struct regstruct regs;
