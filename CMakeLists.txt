@@ -15,6 +15,10 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 	 set(CMAKE_BUILD_TYPE "${default_build_type}")
 endif()
 
+if(WITH_LTO)
+	set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+endif()
+
 # Needed so that cmake uses our find modules.
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
@@ -348,22 +352,13 @@ PKG_SEARCH_MODULE(SDL2 REQUIRED SDL2)
 PKG_SEARCH_MODULE(SDL2IMAGE REQUIRED SDL2_image>=2.0.0)
 PKG_SEARCH_MODULE(SDL2TTF REQUIRED SDL2_ttf)
 
-if(DEFINED USE_OPENGL)
-	add_definitions(-DUSE_OPENGL)
-	find_package(OpenGL REQUIRED)
-endif()
-
-if(DEFINED USE_DBUS)
+if(USE_DBUS)
 	add_definitions(-DUSE_DBUS)
 	pkg_check_modules(DBUS REQUIRED dbus-1)
 	include_directories(${DBUS_INCLUDE_DIRS})
 	link_directories(${DBUS_LIBRARY_DIRS})
 endif()
 
-if(DEFINED WITH_MIDI)
-	add_definitions(-DWITH_MIDI)
-	find_library(PORTMIDI_LIBRARIES portmidi REQUIRED)
-endif()
 
 find_package(FLAC REQUIRED)
 find_package(mpg123 REQUIRED)
@@ -376,10 +371,14 @@ INCLUDE_DIRECTORIES(${SDL2IMAGE_INCLUDE_DIRS} ${LIBSERIALPORT_INCLUDE_DIR})
 target_include_directories(${PROJECT_NAME} PRIVATE ./external/libguisan/include)
 
 TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE guisan SDL2 SDL2_image SDL2_ttf ${DBUS_LIBRARIES} FLAC png mpg123 mpeg2convert mpeg2 serialport z)
-if(DEFINED USE_OPENGL)
+if(USE_OPENGL)
+	add_definitions(-DUSE_OPENGL)
+	find_package(OpenGL REQUIRED)
 	TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE ${TARGET_LINK_LIBRARIES} OpenGL::GL)
 endif()
-if(DEFINED WITH_MIDI)
+if(WITH_MIDI)
+	add_definitions(-DWITH_MIDI)
+	find_library(PORTMIDI_LIBRARIES portmidi REQUIRED)
 	TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE ${TARGET_LINK_LIBRARIES} portmidi)
 endif()
 
