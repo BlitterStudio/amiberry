@@ -98,10 +98,42 @@ public:
 			else
 			{
 				const auto port_name = serial_ports_list.getElementAt(selected);
-				snprintf(changed_prefs.sername, 256, "%s", port_name.c_str());
+				_sntprintf(changed_prefs.sername, 256, "%s", port_name.c_str());
 				changed_prefs.use_serial = true;
 			}
 		}
+
+		else if (actionEvent.getSource() == cboMidiOut)
+		{
+			const auto selected = cboMidiOut->getSelected();
+			if (selected == 0)
+			{
+				changed_prefs.midioutdev[0] = 0;
+				changed_prefs.midiindev[0] = 0;
+			}
+			else
+			{
+				const auto port_name = midi_out_ports_list.getElementAt(selected);
+				_sntprintf(changed_prefs.midioutdev, 256, "%s", port_name.c_str());
+			}
+		}
+
+		else if (actionEvent.getSource() == cboMidiIn)
+		{
+			const auto selected = cboMidiIn->getSelected();
+			if (selected == 0)
+			{
+				changed_prefs.midiindev[0] = 0;
+			}
+			else
+			{
+				const auto port_name = midi_in_ports_list.getElementAt(selected);
+				_sntprintf(changed_prefs.midiindev, 256, "%s", port_name.c_str());
+			}
+		}
+
+		else if (actionEvent.getSource() == chkMidiRoute)
+			changed_prefs.midirouter = chkMidiRoute->isSelected();
 
 		else if (actionEvent.getSource() == chkSerialDirect)
 			changed_prefs.serial_direct = chkSerialDirect->isSelected();
@@ -362,22 +394,36 @@ void RefreshPanelIO()
 		chkSerialStatusRi->setEnabled(false);
 	}
 
+	chkMidiRoute->setEnabled(false);
 	if (changed_prefs.midioutdev[0])
 	{
-		//todo
+		const auto midi_out_name = string(changed_prefs.midioutdev);
+		for (int i = 0; i < midi_out_ports_list.getNumberOfElements(); i++)
+		{
+			if (midi_out_ports_list.getElementAt(i) == midi_out_name)
+			{
+				cboMidiOut->setSelected(i);
+				break;
+			}
+		}
+		cboMidiIn->setEnabled(true);
+		if (changed_prefs.midiindev[0])
+		{
+			const auto midi_in_name = string(changed_prefs.midiindev);
+			for (int i = 0; i < midi_in_ports_list.getNumberOfElements(); i++)
+			{
+				if (midi_in_ports_list.getElementAt(i) == midi_in_name)
+				{
+					cboMidiIn->setSelected(i);
+					chkMidiRoute->setEnabled(true);
+					break;
+				}
+			}
+		}
 	}
 	else
 	{
-		//todo
-	}
-
-	if (changed_prefs.midiindev[0])
-	{
-		//todo
-	}
-	else
-	{
-		//todo
+		cboMidiIn->setEnabled(false);
 	}
 
 	cboProtectionDongle->setSelected(changed_prefs.dongle);
