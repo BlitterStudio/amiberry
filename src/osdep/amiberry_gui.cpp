@@ -43,7 +43,8 @@ int emulating = 0;
 bool config_loaded = false;
 int gui_active;
 
-struct serparportinfo *comports[MAX_SERPAR_PORTS];
+//struct serparportinfo *comports[MAX_SERPAR_PORTS];
+std::vector<std::string> serial_ports;
 struct midiportinfo *midiinportinfo[MAX_MIDI_PORTS];
 struct midiportinfo *midioutportinfo[MAX_MIDI_PORTS];
 

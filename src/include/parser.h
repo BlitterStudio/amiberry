@@ -53,15 +53,19 @@ struct midiportinfo
 extern struct midiportinfo *midiinportinfo[MAX_MIDI_PORTS];
 extern struct midiportinfo *midioutportinfo[MAX_MIDI_PORTS];
 
-#define MAX_SERPAR_PORTS 100
-struct serparportinfo
-{
-    TCHAR *dev;
-    TCHAR *cfgname;
-    TCHAR *name;
-};
-extern struct serparportinfo *comports[MAX_SERPAR_PORTS];
-extern struct serparportinfo *parports[MAX_SERPAR_PORTS];
+// In Amiberry, we use libserialport and a more modern structure to hold the results
+// Therefore, these are not needed
+//
+//#define MAX_SERPAR_PORTS 100
+//struct serparportinfo
+//{
+//    TCHAR *dev;
+//    TCHAR *cfgname;
+//    TCHAR *name;
+//};
+//extern struct serparportinfo *comports[MAX_SERPAR_PORTS];
+//extern struct serparportinfo *parports[MAX_SERPAR_PORTS];
+extern std::vector<std::string> serial_ports;
 
 extern int enumserialports (void);
 extern int enummidiports (void);

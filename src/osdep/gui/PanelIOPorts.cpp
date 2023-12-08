@@ -9,6 +9,7 @@
 #include "options.h"
 #include "gui_handling.h"
 #include "sounddep/sound.h"
+#include "parser.h"
 
 #include <libserialport.h>
 
@@ -74,7 +75,7 @@ static const char* listValues[] = {
 static string_list_model dongle_list(listValues, 16);
 
 static string_list_model sampler_list(nullptr, 0);
-static string_list_model serial_ports(nullptr, 0);
+static string_list_model serial_ports_list(nullptr, 0);
 
 class IOActionListener : public gcn::ActionListener
 {
@@ -92,7 +93,7 @@ public:
 			}
 			else
 			{
-				const auto port_name = serial_ports.getElementAt(selected);
+				const auto port_name = serial_ports_list.getElementAt(selected);
 				snprintf(changed_prefs.sername, 256, "%s", port_name.c_str());
 				changed_prefs.use_serial = true;
 			}
@@ -147,38 +148,21 @@ void InitPanelIO(const config_category& category)
 			sampler_list.add_element(tmp);
 	}
 
-	serial_ports.clear_elements();
-	serial_ports.add_element("none");
-	/* A pointer to a null-terminated array of pointers to
-	* struct sp_port, which will contain the serial ports found.*/
-	struct sp_port** port_list;
-	/* Call sp_list_ports() to get the ports. The port_list
-	* pointer will be updated to refer to the array created. */
-	const enum sp_return result = sp_list_ports(&port_list);
-	if (result != SP_OK) 
-	{
-		write_log("sp_list_ports() failed!\n");
+	serial_ports_list.clear_elements();
+	serial_ports_list.add_element("none");
+	for(const auto& i : serial_ports) {
+		serial_ports_list.add_element(i.c_str());
 	}
-	else
-	{
-		for (int i = 0; port_list[i] != nullptr; i++)
-		{
-			const struct sp_port* port = port_list[i];
-
-			/* Get the name of the port. */
-			const char* port_name = sp_get_port_name(port);
-			serial_ports.add_element(port_name);
-		}
-		/* Free the array created by sp_list_ports(). */
-		sp_free_port_list(port_list);
-	}
+	// Add TCP ports also
+	serial_ports_list.add_element("TCP://0.0.0.0:1234");
+	serial_ports_list.add_element("TCP://0.0.0.0:1234/wait");
 
 	ioActionListener = new IOActionListener();
 
 #ifdef SERIAL_PORT
 	lblSerialPort = new gcn::Label("Serial port:");
 	lblSerialPort->setAlignment(gcn::Graphics::RIGHT);
-	cboSerialPort = new gcn::DropDown(&serial_ports);
+	cboSerialPort = new gcn::DropDown(&serial_ports_list);
 	cboSerialPort->setSize(350, cboSerialPort->getHeight());
 	cboSerialPort->setBaseColor(gui_baseCol);
 	cboSerialPort->setBackgroundColor(colTextboxBackground);
@@ -283,9 +267,9 @@ void RefreshPanelIO()
 	if (changed_prefs.sername[0])
 	{
 		const auto serial_name = string(changed_prefs.sername);
-		for (int i = 0; i < serial_ports.getNumberOfElements(); i++)
+		for (int i = 0; i < serial_ports_list.getNumberOfElements(); i++)
 		{
-			if (serial_ports.getElementAt(i) == serial_name)
+			if (serial_ports_list.getElementAt(i) == serial_name)
 			{
 				cboSerialPort->setSelected(i);
 				break;

@@ -496,8 +496,34 @@ void hsyncstuff (void)
 
 int enumserialports (void)
 {
-	//TODO
-	return 0;
+	int cnt = 0;
+	/* A pointer to a null-terminated array of pointers to
+	* struct sp_port, which will contain the serial ports found.*/
+	struct sp_port** port_list;
+
+	write_log (_T("Serial port enumeration..\n"));
+	/* Call sp_list_ports() to get the ports. The port_list
+	* pointer will be updated to refer to the array created. */
+	const enum sp_return result = sp_list_ports(&port_list);
+	if (result != SP_OK)
+	{
+		write_log("sp_list_ports() failed!\n");
+		return cnt;
+	}
+	else
+	{
+		for (int i = 0; port_list[i] != nullptr; i++)
+		{
+			cnt++;
+			const struct sp_port* port = port_list[i];
+
+			/* Get the name of the port. */
+			serial_ports.emplace_back(sp_get_port_name(port));
+		}
+		/* Free the array created by sp_list_ports(). */
+		sp_free_port_list(port_list);
+	}
+	return cnt;
 }
 
 int enummidiports (void)
