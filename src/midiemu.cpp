@@ -219,7 +219,8 @@ int midi_emu_open(const TCHAR *id)
 	}
 	const char *s = mt32emu_get_library_version_string();
 	write_log("mt32emu version: %s\n", s);
-	mt32context = mt32emu_create_context((mt32emu_report_handler_i)NULL, NULL);
+	mt32emu_report_handler_i handler;
+	mt32context = mt32emu_create_context(handler, NULL);
 	if (!mt32context) {
 		write_log("mt32emu_create_context() failed\n");
 		return 0;
