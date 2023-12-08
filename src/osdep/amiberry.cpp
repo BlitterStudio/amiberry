@@ -1939,8 +1939,6 @@ void target_default_options(struct uae_prefs* p, int type)
 	}
 	if (type == 1 || type == 0 || type == 3) {
 		p->uaescsimode = UAESCSI_CDEMU;
-		p->midioutdev = -2;
-		p->midiindev = 0;
 		//p->midirouter = false;
 		p->automount_removable = false;
 		//p->automount_drives = 0;
@@ -2191,25 +2189,24 @@ static const TCHAR* scsimode[] = { _T("SCSIEMU"), _T("SPTI"), _T("SPTI+SCSISCAN"
 //static const TCHAR* statusbarmode[] = { _T("none"), _T("normal"), _T("extended"), NULL };
 //static const TCHAR* configmult[] = { _T("1x"), _T("2x"), _T("3x"), _T("4x"), _T("5x"), _T("6x"), _T("7x"), _T("8x"), NULL };
 
-static struct midiportinfo *getmidiport (struct midiportinfo **mi, int devid)
-{
-	for (int i = 0; i < MAX_MIDI_PORTS; i++) {
-		if (mi[i] != NULL && mi[i]->devid == devid)
-			return mi[i];
-	}
-	return NULL;
-}
+//static struct midiportinfo *getmidiport (struct midiportinfo **mi, int devid)
+//{
+//	for (int i = 0; i < MAX_MIDI_PORTS; i++) {
+//		if (mi[i] != NULL && mi[i]->devid == devid)
+//			return mi[i];
+//	}
+//	return NULL;
+//}
 
 extern int scsiromselected;
 
 void target_save_options(struct zfile* f, struct uae_prefs* p)
 {
-	struct midiportinfo *midp;
+	//struct midiportinfo *midp;
 
 	cfgfile_target_write_bool(f, _T("middle_mouse"), (p->input_mouse_untrap & MOUSEUNTRAP_MIDDLEBUTTON) != 0);
 	cfgfile_target_dwrite_bool(f, _T("map_drives_auto"), p->automount_removable);
 	cfgfile_target_dwrite_bool(f, _T("map_cd_drives"), p->automount_cddrives);
-	cfgfile_target_dwrite_str(f, _T("serial_port"), p->sername[0] ? p->sername : _T("none"));
 
 	cfgfile_target_dwrite(f, _T("active_priority"), _T("%d"), p->active_capture_priority);
 	cfgfile_target_dwrite_bool(f, _T("active_not_captured_nosound"), p->active_nocapture_nosound);
@@ -2227,6 +2224,10 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_target_dwrite_bool(f, _T("start_minimized"), p->start_minimized);
 	cfgfile_target_dwrite_bool(f, _T("start_not_captured"), p->start_uncaptured);
 
+#ifdef AMIBERRY
+	cfgfile_target_dwrite_str_escape(f, _T("midiout_device_name"), p->midioutdev[0] ? p->midioutdev : _T("none"));
+	cfgfile_target_dwrite_str_escape(f, _T("midiin_device_name"), p->midiindev[0] ? p->midiindev : _T("none"));
+#else
 	cfgfile_target_dwrite (f, _T("midiout_device"), _T("%d"), p->midioutdev);
 	cfgfile_target_dwrite (f, _T("midiin_device"), _T("%d"), p->midiindev);
 
@@ -2243,6 +2244,8 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 		cfgfile_target_dwrite_str_escape(f, _T("midiin_device_name"), _T("none"));
 	else
 		cfgfile_target_dwrite_str_escape(f, _T("midiin_device_name"), midp->name);
+#endif
+
 	cfgfile_target_dwrite_bool (f, _T("midirouter"), p->midirouter);
 
 	cfgfile_target_dwrite_bool(f, _T("rtg_match_depth"), p->rtgmatchdepth);
@@ -2385,9 +2388,9 @@ static int target_parse_option_host(struct uae_prefs *p, const TCHAR *option, co
 	    || cfgfile_yesno(option, value, _T("minimized_pause"), &p->minimized_pause)
 	    || cfgfile_yesno(option, value, _T("minimized_nosound"), &p->minimized_nosound)
 	    || cfgfile_intval(option, value, _T("minimized_input"), &p->minimized_input, 1)
-	    || cfgfile_intval(option, value, _T("midi_device"), &p->midioutdev, 1)
-	    || cfgfile_intval(option, value, _T("midiout_device"), &p->midioutdev, 1)
-	    || cfgfile_intval(option, value, _T("midiin_device"), &p->midiindev, 1)
+	    || cfgfile_string(option, value, _T("midi_device"), p->midioutdev, sizeof p->midioutdev)
+	    || cfgfile_string(option, value, _T("midiout_device_name"), p->midioutdev, sizeof p->midioutdev)
+	    || cfgfile_string(option, value, _T("midiin_device_name"), p->midiindev, sizeof p->midiindev)
 	    || cfgfile_yesno(option, value, _T("midirouter"), &p->midirouter)
 	    || cfgfile_yesno(option, value, _T("right_control_is_right_win"), &p->right_control_is_right_win_key)
 	    || cfgfile_yesno(option, value, _T("always_on_top"), &p->main_alwaysontop)
@@ -2588,26 +2591,26 @@ static int target_parse_option_host(struct uae_prefs *p, const TCHAR *option, co
 		return 1;
 	}
 
-	if (cfgfile_string_escape(option, value, _T("midiout_device_name"), tmpbuf, 256)) {
-		p->midioutdev = -2;
-		if (!_tcsicmp (tmpbuf, _T("default")) || (midioutportinfo[0] && !_tcsicmp (tmpbuf, midioutportinfo[0]->name)))
-			p->midioutdev = -1;
-		for (int i = 0; i < MAX_MIDI_PORTS && midioutportinfo[i]; i++) {
-			if (!_tcsicmp (midioutportinfo[i]->name, tmpbuf)) {
-				p->midioutdev = midioutportinfo[i]->devid;
-			}
-		}
-		return 1;
-	}
-	if (cfgfile_string_escape(option, value, _T("midiin_device_name"), tmpbuf, 256)) {
-		p->midiindev = -1;
-		for (int i = 0; i < MAX_MIDI_PORTS && midiinportinfo[i]; i++) {
-			if (!_tcsicmp (midiinportinfo[i]->name, tmpbuf)) {
-				p->midiindev = midiinportinfo[i]->devid;
-			}
-		}
-		return 1;
-	}
+//	if (cfgfile_string_escape(option, value, _T("midiout_device_name"), tmpbuf, 256)) {
+//		p->midioutdev = -2;
+//		if (!_tcsicmp (tmpbuf, _T("default")) || (midioutportinfo[0] && !_tcsicmp (tmpbuf, midioutportinfo[0]->name)))
+//			p->midioutdev = -1;
+//		for (int i = 0; i < MAX_MIDI_PORTS && midioutportinfo[i]; i++) {
+//			if (!_tcsicmp (midioutportinfo[i]->name, tmpbuf)) {
+//				p->midioutdev = midioutportinfo[i]->devid;
+//			}
+//		}
+//		return 1;
+//	}
+//	if (cfgfile_string_escape(option, value, _T("midiin_device_name"), tmpbuf, 256)) {
+//		p->midiindev = -1;
+//		for (int i = 0; i < MAX_MIDI_PORTS && midiinportinfo[i]; i++) {
+//			if (!_tcsicmp (midiinportinfo[i]->name, tmpbuf)) {
+//				p->midiindev = midiinportinfo[i]->devid;
+//			}
+//		}
+//		return 1;
+//	}
 
 	return 0;
 }

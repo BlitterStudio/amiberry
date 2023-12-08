@@ -951,8 +951,13 @@ struct uae_prefs
 	bool borderless;
 	bool automount_removable;
 	bool automount_cddrives;
-	int midioutdev;
-	int midiindev;
+
+	// We use the device name in Amiberry
+//	int midioutdev;
+//	int midiindev;
+	TCHAR midioutdev[256];
+	TCHAR midiindev[256];
+
 	bool midirouter;
 	int uaescsimode;
 	int soundcard;

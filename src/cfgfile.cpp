@@ -2232,7 +2232,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 		std::array<int, SDL_CONTROLLER_BUTTON_MAX> custom_button_map{};
 		const TCHAR* custom_name;
 		
-		// get all of the custom actions
+		// get all the custom actions
 		for (auto n = 0; n < SDL_CONTROLLER_BUTTON_MAX; ++n) // loop through all buttons
 		{
 			for (auto m = 0; m < 2; m++)

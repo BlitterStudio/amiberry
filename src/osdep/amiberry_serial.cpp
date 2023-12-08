@@ -864,7 +864,7 @@ void serial_hsynchandler (void)
 int setbaud(int baud, int org_baud)
 {
 #ifdef WITH_MIDI
-	if (org_baud == 31400 && currprefs.midioutdev >= -1) {
+	if (org_baud == 31400 && _tcscmp(currprefs.midioutdev, "none") != 0) {
 		/* MIDI baud-rate */
 #ifdef WITH_MIDIEMU
 		if (currprefs.midioutdev >= 0) {

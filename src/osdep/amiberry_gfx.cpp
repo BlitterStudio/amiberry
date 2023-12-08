@@ -1393,12 +1393,12 @@ int check_prefs_changed_gfx()
 #endif
 	}
 
-	if (currprefs.midiindev != changed_prefs.midiindev ||
-	    currprefs.midioutdev != changed_prefs.midioutdev ||
+	if (_tcscmp(currprefs.midiindev, changed_prefs.midiindev) ||
+		_tcscmp(currprefs.midioutdev, changed_prefs.midioutdev) ||
 	    currprefs.midirouter != changed_prefs.midirouter)
 	{
-		currprefs.midiindev = changed_prefs.midiindev;
-		currprefs.midioutdev = changed_prefs.midioutdev;
+		_tcscpy(currprefs.midiindev, changed_prefs.midiindev);
+		_tcscpy(currprefs.midioutdev, changed_prefs.midioutdev);
 		currprefs.midirouter = changed_prefs.midirouter;
 
 #ifdef SERIAL_PORT

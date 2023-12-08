@@ -44,9 +44,12 @@ bool config_loaded = false;
 int gui_active;
 
 //struct serparportinfo *comports[MAX_SERPAR_PORTS];
+//struct midiportinfo *midiinportinfo[MAX_MIDI_PORTS];
+//struct midiportinfo *midioutportinfo[MAX_MIDI_PORTS];
+
 std::vector<std::string> serial_ports;
-struct midiportinfo *midiinportinfo[MAX_MIDI_PORTS];
-struct midiportinfo *midioutportinfo[MAX_MIDI_PORTS];
+std::vector<std::string> midi_in_ports;
+std::vector<std::string> midi_out_ports;
 
 struct gui_msg
 {

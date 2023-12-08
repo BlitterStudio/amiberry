@@ -44,18 +44,18 @@ int shmem_serial_state(void);
 extern void unload_ghostscript (void);
 extern int load_ghostscript (void);
 
-#define MAX_MIDI_PORTS 100
-struct midiportinfo
-{
-	TCHAR *name;
-	unsigned int devid;
-};
-extern struct midiportinfo *midiinportinfo[MAX_MIDI_PORTS];
-extern struct midiportinfo *midioutportinfo[MAX_MIDI_PORTS];
-
 // In Amiberry, we use libserialport and a more modern structure to hold the results
 // Therefore, these are not needed
 //
+//#define MAX_MIDI_PORTS 100
+//struct midiportinfo
+//{
+//	TCHAR *name;
+//	unsigned int devid;
+//};
+//extern struct midiportinfo *midiinportinfo[MAX_MIDI_PORTS];
+//extern struct midiportinfo *midioutportinfo[MAX_MIDI_PORTS];
+
 //#define MAX_SERPAR_PORTS 100
 //struct serparportinfo
 //{
@@ -65,7 +65,10 @@ extern struct midiportinfo *midioutportinfo[MAX_MIDI_PORTS];
 //};
 //extern struct serparportinfo *comports[MAX_SERPAR_PORTS];
 //extern struct serparportinfo *parports[MAX_SERPAR_PORTS];
+
 extern std::vector<std::string> serial_ports;
+extern std::vector<std::string> midi_in_ports;
+extern std::vector<std::string> midi_out_ports;
 
 extern int enumserialports (void);
 extern int enummidiports (void);

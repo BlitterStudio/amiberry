@@ -43,6 +43,10 @@
 #include <netdb.h>
 #endif
 
+#ifdef WITH_MIDI
+#include "portmidi.h"
+#endif
+
 #include "uae/socket.h"
 
 #if !defined B300 || !defined B1200 || !defined B2400 || !defined B4800 || !defined B9600
@@ -528,6 +532,26 @@ int enumserialports (void)
 
 int enummidiports (void)
 {
-	//TODO
-	return 0;
+	int total = 0;
+
+#ifdef WITH_MIDI
+	total = Pm_CountDevices();
+	write_log(_T("MIDI: found devices: %d\n"), total);
+	for(int i=0; i<total; i++) {
+		const PmDeviceInfo *info = Pm_GetDeviceInfo(i);
+		write_log(_T("MIDI: %d: '%s', '%s'  %s %s\n"),
+		          i, info->interf, info->name,
+		          info->input ? "IN" : "  ",
+		          info->output ? "OUT" : "  ");
+
+		if(info->input) {
+			midi_in_ports.emplace_back(info->name);
+		}
+		if(info->output) {
+			midi_out_ports.emplace_back(info->name);
+		}
+	}
+#endif
+
+	return total;
 }
