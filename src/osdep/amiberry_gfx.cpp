@@ -38,6 +38,9 @@
 #ifdef WITH_MIDI
 #include "midi.h"
 #endif
+#ifdef WITH_MIDIEMU
+#include "midiemu.h"
+#endif
 
 int log_vsync = 0, debug_vsync_min_delay = 0, debug_vsync_forced_delay = 0;
 

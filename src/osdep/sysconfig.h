@@ -101,7 +101,7 @@
 #define WITH_THREADED_CPU
 /* #define WITH_SOFTFLOAT */
 #define FLOPPYBRIDGE
-//#define WITH_MIDIEMU
+#define WITH_MIDIEMU
 //#define WITH_DSP
 
 /* vpar virtual parallel port */

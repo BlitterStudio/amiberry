@@ -1,0 +1,7 @@
+Emulation engine:
+- Accurate partial allocator which should handle partial pairs.
+- Bit-perfect LA32 model. Improved LA32 emulation, especially in regard to TVA/TVF ramping speed.
+  Several patches (including standard ones) still sound incorrect during the attack phase.
+
+Code:
+- Adding more comments regarding emulation specifics and used approaches

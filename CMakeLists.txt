@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.18)
 project(amiberry)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -31,6 +31,7 @@ include_directories(
 )
 
 add_subdirectory(external/libguisan)
+add_subdirectory(external/mt32emu)
 add_definitions(-fno-pie -DAMIBERRY -D_FILE_OFFSET_BITS=64)
 
 include(CheckSymbolExists)
@@ -117,6 +118,7 @@ add_executable(${PROJECT_NAME}
 		src/keybuf.cpp
 		src/main.cpp
 		src/memory.cpp
+		src/midiemu.cpp
 		src/native2amiga.cpp
 		src/ncr9x_scsi.cpp
 		src/ncr_scsi.cpp
@@ -368,9 +370,9 @@ find_library(LIBSERIALPORT_LIBRARIES serialport REQUIRED)
 find_path(LIBSERIALPORT_INCLUDE_DIR libserialport.h)
 
 INCLUDE_DIRECTORIES(${SDL2IMAGE_INCLUDE_DIRS} ${LIBSERIALPORT_INCLUDE_DIR})
-target_include_directories(${PROJECT_NAME} PRIVATE ./external/libguisan/include)
+target_include_directories(${PROJECT_NAME} PRIVATE ./external/libguisan/include ./external/mt32emu/src)
 
-TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE guisan SDL2 SDL2_image SDL2_ttf ${DBUS_LIBRARIES} FLAC png mpg123 mpeg2convert mpeg2 serialport z)
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE guisan mt32emu SDL2 SDL2_image SDL2_ttf ${DBUS_LIBRARIES} FLAC png mpg123 mpeg2convert mpeg2 serialport z)
 if(USE_OPENGL)
 	add_definitions(-DUSE_OPENGL)
 	find_package(OpenGL REQUIRED)

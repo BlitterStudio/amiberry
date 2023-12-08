@@ -1,0 +1,37 @@
+function(build_version_map INTERFACE_HEADER VERSION_SCRIPT)
+
+file(STRINGS ${INTERFACE_HEADER} PUBLIC_C_DEFINITIONS REGEX "^MT32EMU_EXPORT_V")
+
+foreach(DEFINITION ${PUBLIC_C_DEFINITIONS})
+  string(REGEX MATCH "MT32EMU_EXPORT_V[(]([1-9][0-9]*[.][0-9]+)[)]" TAGGED_EXPORT ${DEFINITION})
+  list(APPEND VERSION_TAGS ${CMAKE_MATCH_1})
+endforeach()
+list(REMOVE_DUPLICATES VERSION_TAGS)
+# FIXME: Tags should be sorted in natural order; use if(VERSION_LESS)? In CMake 3.18, the COMPARE NATURAL option appeared.
+list(SORT VERSION_TAGS)
+
+file(REMOVE ${VERSION_SCRIPT})
+
+foreach(VERSION_TAG ${VERSION_TAGS})
+  unset(SYMBOLS)
+  string(REPLACE "." "_" VERSION_TAG_ID ${VERSION_TAG})
+  string(REPLACE "." "\\." VERSION_TAG_REGEX ${VERSION_TAG})
+  file(APPEND ${VERSION_SCRIPT} "MT32EMU_${VERSION_TAG} {\n  mt32emu_${VERSION_TAG_ID};\n\n")
+  foreach(DEFINITION ${PUBLIC_C_DEFINITIONS})
+    if(DEFINITION MATCHES "^MT32EMU_EXPORT_V[(]${VERSION_TAG_REGEX}[)].*(mt32emu_[^ (]*)[(].*")
+      list(APPEND SYMBOLS ${CMAKE_MATCH_1})
+    endif()
+  endforeach()
+  list(SORT SYMBOLS)
+  foreach(SYMBOL ${SYMBOLS})
+    file(APPEND ${VERSION_SCRIPT} "  ${SYMBOL};\n")
+  endforeach()
+  if(NOT PREV_VERSION_TAG)
+    file(APPEND ${VERSION_SCRIPT} "};\n\n")
+  else()
+    file(APPEND ${VERSION_SCRIPT} "} MT32EMU_${PREV_VERSION_TAG};\n\n")
+  endif()
+  set(PREV_VERSION_TAG ${VERSION_TAG})
+endforeach(VERSION_TAG ${VERSION_TAGS})
+
+endfunction(build_version_map)
