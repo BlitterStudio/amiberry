@@ -1404,7 +1404,9 @@ int check_prefs_changed_gfx()
 #ifdef SERIAL_PORT
 		serial_exit();
 		serial_init();
+#ifdef WITH_MIDI
 		Midi_Reopen();
+#endif
 #endif
 #ifdef WITH_MIDIEMU
 		midi_emu_reopen();
