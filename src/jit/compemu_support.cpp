@@ -1160,8 +1160,8 @@ static inline void reset_data_buffer(void)
 /********************************************************************
  * Getting the information about the target CPU                     *
  ********************************************************************/
-#ifdef AMIBERRY // Used by the AARCH64 JIT implementation
-STATIC_INLINE void clobber_flags(void);
+#ifdef CPU_AARCH64 // Used by the AARCH64 JIT implementation
+static inline void clobber_flags(void);
 #endif
 
 #if defined(CPU_AARCH64)
