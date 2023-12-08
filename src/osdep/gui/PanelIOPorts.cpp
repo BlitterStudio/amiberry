@@ -395,11 +395,38 @@ void RefreshPanelIO()
 bool HelpPanelIO(std::vector<std::string>& helptext)
 {
 	helptext.clear();
-	helptext.emplace_back("Serial Port emulates the Amiga UART through a hardware based UART device on the host.");
-	helptext.emplace_back("For example /dev/ttyUSB0. For use on emulator to emulator use Direct ON and RTS/CTS OFF.");
-	helptext.emplace_back("For emulator to physical device configurations the opposite should apply.");
+	helptext.emplace_back("In this panel, you can configure the various I/O Ports that Amiberry can emulate.");
+	helptext.emplace_back("Some of these options will depend on what hardware you have available in your system");
+	helptext.emplace_back("(e.g. serial ports).");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("Protection dongle emulation allows you to emulate such a dongle, which some software");
-	helptext.emplace_back("required in order to work.");
+	helptext.emplace_back("Sampler: This dropdown will be populated with any Recording devices detected in your");
+	helptext.emplace_back("         system. You can select such a device, to use it as a Sampler in the emulated");
+	helptext.emplace_back("         Amiga.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("Serial Port: If you have any physical serial ports connected to your computer,");
+	helptext.emplace_back("         they will be shown in this dropdown. You can select one, to use as the");
+	helptext.emplace_back("         emulated Amiga serial port. You can also use USB to Serial adapters for ");
+	helptext.emplace_back("         this purpose. Only standard 7/8-bit serial protocols are supported, as the");
+	helptext.emplace_back("         9-bit serial protocol is not supported by PC hardware.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("RTS/CTS: If you require handshake signals, you can enable this checkbox. This is usually");
+	helptext.emplace_back("         required by certain hardware, like modems or other physical devices.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("Direct: If you are connecting directly to another instance of Amiberry, you can use");
+	helptext.emplace_back("        this option, to emulate a null-modem cable connection. Some games supported");
+	helptext.emplace_back("        this feature.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("uaeserial.device: You can use this option if you want to use multiple serial ports,");
+	helptext.emplace_back("         by mapping Amiga side unit X = host serial port X");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("MIDI Out/In: If you have any MIDI devices connected, you can select them here.");
+	helptext.emplace_back("         Amiberry uses the PortMidi library to send and receive MIDI messages.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("Route MIDI In to MIDI Out: This option will reroute the MIDI In to the MIDI Out port,");
+	helptext.emplace_back("         as the name implies.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("Protection Dongle: This option allows you to emulate such a dongle, which some");
+	helptext.emplace_back("         software required in order to work.");
+	helptext.emplace_back(" ");
 	return true;
 }
