@@ -29,6 +29,7 @@
 #include "xwin.h"
 #include "drawing.h"
 #include "fsdb.h"
+#include "parser.h"
 
 #ifdef AMIBERRY
 #ifndef __MACH__
@@ -41,6 +42,10 @@
 int emulating = 0;
 bool config_loaded = false;
 int gui_active;
+
+struct serparportinfo *comports[MAX_SERPAR_PORTS];
+struct midiportinfo *midiinportinfo[MAX_MIDI_PORTS];
+struct midiportinfo *midioutportinfo[MAX_MIDI_PORTS];
 
 struct gui_msg
 {

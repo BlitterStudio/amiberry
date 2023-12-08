@@ -9,7 +9,7 @@
 
 #define PRTBUFSIZE 65536
 
-int setbaud(long baud );
+int setbaud(int baud, int origbaud);
 void getserstat(int *status);
 void setserstat(int mask, int onoff);
 int readser(int *buffer);
@@ -32,6 +32,7 @@ bool shmem_serial_create(void);
 int shmem_serial_state(void);
 
 #define SERIAL_INTERNAL _T("INTERNAL_SERIAL")
+#define SERIAL_LOOPBACK _T("LOOPBACK_SERIAL")
 
 #define TIOCM_CAR 1
 #define TIOCM_DSR 2

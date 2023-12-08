@@ -568,4 +568,12 @@ int Midi_Parse(midi_direction_e direction, uint8_t *c)
 	return result;
 }
 
+void Midi_Reopen(void)
+{
+	if (midi_ready) {
+		Midi_Close();
+		Midi_Open();
+	}
+}
+
 #endif /* WITH_MIDI */

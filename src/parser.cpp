@@ -463,13 +463,10 @@ void hsyncstuff (void)
 		}
 	} //end ahi_sound
 #endif
-
-#ifdef AMIBERRY
-	/* DISABLED FOR NOW */
-#else
+#if 0 // Not implemented in Amiberry
 #ifdef PARALLEL_PORT
 	keycheck++;
-	if (keycheck >= 1000)
+	if(keycheck >= 1000)
 	{
 		if (prtopen)
 			flushprtbuf ();
@@ -477,10 +474,10 @@ void hsyncstuff (void)
 			if (flashscreen > 0) {
 				flashscreen--;
 				if (flashscreen == 0) {
-					init_colors ();
+					init_colors(0);
 					reset_drawing ();
-					picasso_refresh ();
-					flush_screen (gfxvidinfo.outbuffer, 0, 0);
+					picasso_refresh(0);
+					//flush_screen (gfxvidinfo.outbuffer, 0, 0);
 				}
 			}
 		}
@@ -495,4 +492,16 @@ void hsyncstuff (void)
 	}
 #endif
 #endif
+}
+
+int enumserialports (void)
+{
+	//TODO
+	return 0;
+}
+
+int enummidiports (void)
+{
+	//TODO
+	return 0;
 }

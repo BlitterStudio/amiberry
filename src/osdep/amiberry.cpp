@@ -43,6 +43,7 @@
 #include "gfxboard.h"
 #include "devices.h"
 #include <map>
+#include "ioport.h"
 #include <parser.h>
 #include <sstream>
 
@@ -94,6 +95,8 @@ int pissoff_value = 15000 * CYCLE_UNIT;
 
 extern FILE* debugfile;
 SDL_Cursor* normalcursor;
+
+int paraport_mask;
 
 int pause_emulation;
 
@@ -1936,8 +1939,8 @@ void target_default_options(struct uae_prefs* p, int type)
 	}
 	if (type == 1 || type == 0 || type == 3) {
 		p->uaescsimode = UAESCSI_CDEMU;
-		//p->midioutdev = -2;
-		//p->midiindev = 0;
+		p->midioutdev = -2;
+		p->midiindev = 0;
 		//p->midirouter = false;
 		p->automount_removable = false;
 		//p->automount_drives = 0;
@@ -2188,10 +2191,21 @@ static const TCHAR* scsimode[] = { _T("SCSIEMU"), _T("SPTI"), _T("SPTI+SCSISCAN"
 //static const TCHAR* statusbarmode[] = { _T("none"), _T("normal"), _T("extended"), NULL };
 //static const TCHAR* configmult[] = { _T("1x"), _T("2x"), _T("3x"), _T("4x"), _T("5x"), _T("6x"), _T("7x"), _T("8x"), NULL };
 
+static struct midiportinfo *getmidiport (struct midiportinfo **mi, int devid)
+{
+	for (int i = 0; i < MAX_MIDI_PORTS; i++) {
+		if (mi[i] != NULL && mi[i]->devid == devid)
+			return mi[i];
+	}
+	return NULL;
+}
+
 extern int scsiromselected;
 
 void target_save_options(struct zfile* f, struct uae_prefs* p)
 {
+	struct midiportinfo *midp;
+
 	cfgfile_target_write_bool(f, _T("middle_mouse"), (p->input_mouse_untrap & MOUSEUNTRAP_MIDDLEBUTTON) != 0);
 	cfgfile_target_dwrite_bool(f, _T("map_drives_auto"), p->automount_removable);
 	cfgfile_target_dwrite_bool(f, _T("map_cd_drives"), p->automount_cddrives);
@@ -2212,6 +2226,24 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_target_dwrite_bool(f, _T("active_capture_automatically"), p->capture_always);
 	cfgfile_target_dwrite_bool(f, _T("start_minimized"), p->start_minimized);
 	cfgfile_target_dwrite_bool(f, _T("start_not_captured"), p->start_uncaptured);
+
+	cfgfile_target_dwrite (f, _T("midiout_device"), _T("%d"), p->midioutdev);
+	cfgfile_target_dwrite (f, _T("midiin_device"), _T("%d"), p->midiindev);
+
+	midp = getmidiport (midioutportinfo, p->midioutdev);
+	if (p->midioutdev < -1)
+		cfgfile_target_dwrite_str_escape(f, _T("midiout_device_name"), _T("none"));
+	else if (p->midioutdev == -1 || midp == NULL)
+		cfgfile_target_dwrite_str_escape(f, _T("midiout_device_name"), _T("default"));
+	else
+		cfgfile_target_dwrite_str_escape(f, _T("midiout_device_name"), midp->name);
+
+	midp = getmidiport (midiinportinfo, p->midiindev);
+	if (p->midiindev < 0 || midp == NULL)
+		cfgfile_target_dwrite_str_escape(f, _T("midiin_device_name"), _T("none"));
+	else
+		cfgfile_target_dwrite_str_escape(f, _T("midiin_device_name"), midp->name);
+	cfgfile_target_dwrite_bool (f, _T("midirouter"), p->midirouter);
 
 	cfgfile_target_dwrite_bool(f, _T("rtg_match_depth"), p->rtgmatchdepth);
 	cfgfile_target_dwrite_bool(f, _T("rtg_scale_allow"), p->rtgallowscaling);
@@ -2342,46 +2374,50 @@ static int target_parse_option_host(struct uae_prefs *p, const TCHAR *option, co
 		return 1;
 	}
 	if (cfgfile_yesno(option, value, _T("map_drives_auto"), &p->automount_removable)
-		|| cfgfile_yesno(option, value, _T("map_cd_drives"), &p->automount_cddrives)
-		|| cfgfile_yesno(option, value, _T("borderless"), &p->borderless)
-		|| cfgfile_yesno(option, value, _T("blank_monitors"), &p->blankmonitors)
-		|| cfgfile_yesno(option, value, _T("active_nocapture_pause"), &p->active_nocapture_pause)
-		|| cfgfile_yesno(option, value, _T("active_nocapture_nosound"), &p->active_nocapture_nosound)
-		|| cfgfile_yesno(option, value, _T("inactive_pause"), &p->inactive_pause)
-		|| cfgfile_yesno(option, value, _T("inactive_nosound"), &p->inactive_nosound)
-		|| cfgfile_intval(option, value, _T("inactive_input"), &p->inactive_input, 1)
-		|| cfgfile_yesno(option, value, _T("minimized_pause"), &p->minimized_pause)
-		|| cfgfile_yesno(option, value, _T("minimized_nosound"), &p->minimized_nosound)
-		|| cfgfile_intval(option, value, _T("minimized_input"), &p->minimized_input, 1)
-		|| cfgfile_yesno(option, value, _T("right_control_is_right_win"), &p->right_control_is_right_win_key)
-		|| cfgfile_yesno(option, value, _T("always_on_top"), &p->main_alwaysontop)
-		|| cfgfile_yesno(option, value, _T("gui_always_on_top"), &p->gui_alwaysontop)
-		|| cfgfile_intval(option, value, _T("drawbridge_driver"), &p->drawbridge_driver, 1)
-		|| cfgfile_yesno(option, value, _T("drawbridge_smartspeed"), &p->drawbridge_smartspeed)
-		|| cfgfile_yesno(option, value, _T("drawbridge_autocache"), &p->drawbridge_autocache)
-		|| cfgfile_yesno(option, value, _T("drawbridge_connected_drive_b"), &p->drawbridge_connected_drive_b)
-		|| cfgfile_yesno(option, value, _T("alt_tab_release"), &p->alt_tab_release)
-		|| cfgfile_yesno(option, value, _T("use_retroarch_quit"), &p->use_retroarch_quit)
-		|| cfgfile_yesno(option, value, _T("use_retroarch_menu"), &p->use_retroarch_menu)
-		|| cfgfile_yesno(option, value, _T("use_retroarch_reset"), &p->use_retroarch_reset)
-		|| cfgfile_yesno(option, value, _T("use_retroarch_vkbd"), &p->use_retroarch_vkbd)
-		|| cfgfile_intval(option, value, _T("sound_pullmode"), &p->sound_pullmode, 1)
-		|| cfgfile_intval(option, value, _T("samplersoundcard"), &p->samplersoundcard, 1)
-		|| cfgfile_intval(option, value, "kbd_led_num", &p->kbd_led_num, 1)
-		|| cfgfile_intval(option, value, "kbd_led_scr", &p->kbd_led_scr, 1)
-		|| cfgfile_intval(option, value, "kbd_led_cap", &p->kbd_led_cap, 1)
-		|| cfgfile_intval(option, value, "gfx_horizontal_offset", &p->gfx_horizontal_offset, 1)
-		|| cfgfile_intval(option, value, "gfx_vertical_offset", &p->gfx_vertical_offset, 1)
-		|| cfgfile_yesno(option, value, _T("gfx_auto_height"), &p->gfx_auto_crop)
-		|| cfgfile_yesno(option, value, _T("gfx_auto_crop"), &p->gfx_auto_crop)
-		|| cfgfile_intval(option, value, "gfx_correct_aspect", &p->gfx_correct_aspect, 1)
-		|| cfgfile_intval(option, value, "scaling_method", &p->scaling_method, 1)
-		|| cfgfile_string(option, value, "open_gui", p->open_gui, sizeof p->open_gui)
-		|| cfgfile_string(option, value, "quit_amiberry", p->quit_amiberry, sizeof p->quit_amiberry)
-		|| cfgfile_string(option, value, "action_replay", p->action_replay, sizeof p->action_replay)
-		|| cfgfile_string(option, value, "fullscreen_toggle", p->fullscreen_toggle, sizeof p->fullscreen_toggle)
-		|| cfgfile_string(option, value, "minimize", p->minimize, sizeof p->minimize)
-		|| cfgfile_intval(option, value, _T("cpu_idle"), &p->cpu_idle, 1))
+	    || cfgfile_yesno(option, value, _T("map_cd_drives"), &p->automount_cddrives)
+	    || cfgfile_yesno(option, value, _T("borderless"), &p->borderless)
+	    || cfgfile_yesno(option, value, _T("blank_monitors"), &p->blankmonitors)
+	    || cfgfile_yesno(option, value, _T("active_nocapture_pause"), &p->active_nocapture_pause)
+	    || cfgfile_yesno(option, value, _T("active_nocapture_nosound"), &p->active_nocapture_nosound)
+	    || cfgfile_yesno(option, value, _T("inactive_pause"), &p->inactive_pause)
+	    || cfgfile_yesno(option, value, _T("inactive_nosound"), &p->inactive_nosound)
+	    || cfgfile_intval(option, value, _T("inactive_input"), &p->inactive_input, 1)
+	    || cfgfile_yesno(option, value, _T("minimized_pause"), &p->minimized_pause)
+	    || cfgfile_yesno(option, value, _T("minimized_nosound"), &p->minimized_nosound)
+	    || cfgfile_intval(option, value, _T("minimized_input"), &p->minimized_input, 1)
+	    || cfgfile_intval(option, value, _T("midi_device"), &p->midioutdev, 1)
+	    || cfgfile_intval(option, value, _T("midiout_device"), &p->midioutdev, 1)
+	    || cfgfile_intval(option, value, _T("midiin_device"), &p->midiindev, 1)
+	    || cfgfile_yesno(option, value, _T("midirouter"), &p->midirouter)
+	    || cfgfile_yesno(option, value, _T("right_control_is_right_win"), &p->right_control_is_right_win_key)
+	    || cfgfile_yesno(option, value, _T("always_on_top"), &p->main_alwaysontop)
+	    || cfgfile_yesno(option, value, _T("gui_always_on_top"), &p->gui_alwaysontop)
+	    || cfgfile_intval(option, value, _T("drawbridge_driver"), &p->drawbridge_driver, 1)
+	    || cfgfile_yesno(option, value, _T("drawbridge_smartspeed"), &p->drawbridge_smartspeed)
+	    || cfgfile_yesno(option, value, _T("drawbridge_autocache"), &p->drawbridge_autocache)
+	    || cfgfile_yesno(option, value, _T("drawbridge_connected_drive_b"), &p->drawbridge_connected_drive_b)
+	    || cfgfile_yesno(option, value, _T("alt_tab_release"), &p->alt_tab_release)
+	    || cfgfile_yesno(option, value, _T("use_retroarch_quit"), &p->use_retroarch_quit)
+	    || cfgfile_yesno(option, value, _T("use_retroarch_menu"), &p->use_retroarch_menu)
+	    || cfgfile_yesno(option, value, _T("use_retroarch_reset"), &p->use_retroarch_reset)
+	    || cfgfile_yesno(option, value, _T("use_retroarch_vkbd"), &p->use_retroarch_vkbd)
+	    || cfgfile_intval(option, value, _T("sound_pullmode"), &p->sound_pullmode, 1)
+	    || cfgfile_intval(option, value, _T("samplersoundcard"), &p->samplersoundcard, 1)
+	    || cfgfile_intval(option, value, "kbd_led_num", &p->kbd_led_num, 1)
+	    || cfgfile_intval(option, value, "kbd_led_scr", &p->kbd_led_scr, 1)
+	    || cfgfile_intval(option, value, "kbd_led_cap", &p->kbd_led_cap, 1)
+	    || cfgfile_intval(option, value, "gfx_horizontal_offset", &p->gfx_horizontal_offset, 1)
+	    || cfgfile_intval(option, value, "gfx_vertical_offset", &p->gfx_vertical_offset, 1)
+	    || cfgfile_yesno(option, value, _T("gfx_auto_height"), &p->gfx_auto_crop)
+	    || cfgfile_yesno(option, value, _T("gfx_auto_crop"), &p->gfx_auto_crop)
+	    || cfgfile_intval(option, value, "gfx_correct_aspect", &p->gfx_correct_aspect, 1)
+	    || cfgfile_intval(option, value, "scaling_method", &p->scaling_method, 1)
+	    || cfgfile_string(option, value, "open_gui", p->open_gui, sizeof p->open_gui)
+	    || cfgfile_string(option, value, "quit_amiberry", p->quit_amiberry, sizeof p->quit_amiberry)
+	    || cfgfile_string(option, value, "action_replay", p->action_replay, sizeof p->action_replay)
+	    || cfgfile_string(option, value, "fullscreen_toggle", p->fullscreen_toggle, sizeof p->fullscreen_toggle)
+	    || cfgfile_string(option, value, "minimize", p->minimize, sizeof p->minimize)
+	    || cfgfile_intval(option, value, _T("cpu_idle"), &p->cpu_idle, 1))
 		return 1;
 
 	if (cfgfile_yesno(option, value, _T("vkbd_enabled"), &p->vkbd_enabled)
@@ -2548,6 +2584,27 @@ static int target_parse_option_host(struct uae_prefs *p, const TCHAR *option, co
 			p->prtname[0] = 0;
 			//unsigned long size = 256;
 			//GetDefaultPrinter(p->prtname, &size);
+		}
+		return 1;
+	}
+
+	if (cfgfile_string_escape(option, value, _T("midiout_device_name"), tmpbuf, 256)) {
+		p->midioutdev = -2;
+		if (!_tcsicmp (tmpbuf, _T("default")) || (midioutportinfo[0] && !_tcsicmp (tmpbuf, midioutportinfo[0]->name)))
+			p->midioutdev = -1;
+		for (int i = 0; i < MAX_MIDI_PORTS && midioutportinfo[i]; i++) {
+			if (!_tcsicmp (midioutportinfo[i]->name, tmpbuf)) {
+				p->midioutdev = midioutportinfo[i]->devid;
+			}
+		}
+		return 1;
+	}
+	if (cfgfile_string_escape(option, value, _T("midiin_device_name"), tmpbuf, 256)) {
+		p->midiindev = -1;
+		for (int i = 0; i < MAX_MIDI_PORTS && midiinportinfo[i]; i++) {
+			if (!_tcsicmp (midiinportinfo[i]->name, tmpbuf)) {
+				p->midiindev = midiinportinfo[i]->devid;
+			}
 		}
 		return 1;
 	}
@@ -3927,7 +3984,6 @@ int main(int argc, char* argv[])
 		kbd_led_status &= ~0x04;
 #endif
 
-
 #ifdef USE_GPIOD
 	// Open GPIO chip
 	chip = gpiod_chip_open_by_name(chipname);
@@ -3942,7 +3998,18 @@ int main(int argc, char* argv[])
 	gpiod_line_request_output(lineGreen, "amiberry", 0);
 	gpiod_line_request_output(lineYellow, "amiberry", 0);
 #endif
-
+#ifdef CATWEASEL
+	catweasel_init ();
+#endif
+#ifdef PARALLEL_DIRECT
+	paraport_mask = paraport_init ();
+#endif
+#ifdef SERIAL_PORT
+	enumserialports();
+#endif
+#ifdef WITH_MIDI
+	enummidiports();
+#endif
 	real_main(argc, argv);
 
 #ifdef USE_GPIOD

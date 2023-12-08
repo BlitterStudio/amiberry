@@ -54,7 +54,7 @@
 //#include "fpu/exceptions.h"
 //#include "fpu/rounding.h"
 
-#define DEBUG 0
+//#define DEBUG 0
 #include "debug.h"
 
 struct jit_disable_opcodes jit_disable;

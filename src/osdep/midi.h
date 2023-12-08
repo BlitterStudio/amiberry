@@ -15,8 +15,12 @@ typedef enum
 	midi_output
 } midi_direction_e;
 
+
+static int midi_ready = 0;
+
 extern int Midi_Parse (midi_direction_e direction, uint8_t *c);
-int Midi_Open(void);
-void Midi_Close(void);
+extern int Midi_Open(void);
+extern void Midi_Close(void);
+extern void Midi_Reopen(void);
 
 #endif

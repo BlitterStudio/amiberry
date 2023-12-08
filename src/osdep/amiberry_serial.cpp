@@ -8,7 +8,11 @@
  */
 
 #include "sysconfig.h"
+#ifdef SERIAL_ENET
+#include "enet/enet.h"
+#endif
 #include "sysdeps.h"
+
 #include "options.h"
 #include "uae.h"
 #include "memory.h"
@@ -17,16 +21,22 @@
 #include "newcpu.h"
 #include "cia.h"
 #include "serial.h"
+#ifdef ENFORCER
+#include "enforcer.h"
+#endif
+#ifdef ARCADIA
+#include "arcadia.h"
+#endif
+#ifdef PARALLEL_PORT
+#include "parallel.h"
+#endif
+#include "parser.h"
 
 #ifdef WITH_MIDI
 #include "midi.h"
 #endif
 
 #include <libserialport.h>
-
-#ifdef WITH_MIDI
-static int midi_ready = 0;
-#endif
 
 /* A pointer to a struct sp_port, which will refer to
  * the port found. */
@@ -749,9 +759,90 @@ static void serdatcopy(void)
 
 void serial_hsynchandler (void)
 {
+#ifdef AHI
+	extern void hsyncstuff(void);
+	hsyncstuff();
+#endif
+#ifdef ARCADIA
+	if (alg_flag || currprefs.genlock_image >= 7) {
+		if (data_in_serdatr) {
+			return;
+		}
+		int ch = ld_serial_write();
+		if (ch >= 0) {
+			serdatr = ch | 0x100;
+			serdatr_last_got = 0;
+			serial_rx_irq();
+		}
+	}
+#endif
+	if (cubo_enabled) {
+		if (data_in_serdatr) {
+			return;
+		}
+		int ch = touch_serial_write();
+		if (ch >= 0) {
+			serdatr = ch | 0x100;
+			serdatr_last_got = 0;
+			serial_rx_irq();
+		}
+	}
+//	if (seriallog > 1 && !data_in_serdatr && gotlogwrite) {
+//		int ch = read_log();
+//		if (ch > 0) {
+//			serdatr = ch | 0x100;
+//			serial_rx_irq();
+//		}
+//	}
 	if (lastbitcycle_active_hsyncs > 0)
 		lastbitcycle_active_hsyncs--;
-
+#ifdef SERIAL_MAP
+	if (sermap2 && sermap_enabled) {
+		if (!data_in_serdatr) {
+			for (;;) {
+				uae_u32 v = shmem_serial_receive();
+				if (v == 0xffffffff) {
+					break;
+				}
+				if (!(v & 0xffff0000)) {
+					serdatr = (uae_u16)v;
+					serial_rx_irq();
+					break;
+				} else if ((v & 0x80000000) == 0x80000000) {
+					sermap_flags &= 0x0fff0000;
+					sermap_flags |= v & 0xffff;
+				} else if ((v & 0x40000000) == 0x40000000) {
+					if (v & (0x10000 | 0x20000)) {
+						sermap_flags &= ~(0x10000 | 0x20000);
+						sermap_flags |= v & (0x10000 | 0x20000);
+						break;
+					}
+				}
+			}
+		}
+		// break on
+		if (sermap_flags & 0x20000) {
+			break_in_serdatr = maxvpos;
+		}
+		if (break_in_serdatr) {
+			serdatr = 0;
+			if (break_delay == 0) {
+				serial_rx_irq();
+				break_delay = SERIAL_BREAK_TRANSMIT_DELAY;
+			}
+			if (break_delay > 0) {
+				break_delay--;
+			}
+		}
+		// break off
+		if (break_in_serdatr == 1) {
+			break_in_serdatr = 0;
+			break_delay = 0;
+			serdatr |= 0x100;
+			serial_rx_irq();
+		}
+	}
+#endif
 	if (data_in_serdatr)
 		serdatr_last_got++;
 	if (serial_period_hsyncs == 0)
@@ -771,8 +862,46 @@ void serial_hsynchandler (void)
 	}
 }
 
+int setbaud(int baud, int org_baud)
+{
+#ifdef WITH_MIDI
+	if (org_baud == 31400 && currprefs.midioutdev >= -1) {
+		/* MIDI baud-rate */
+#ifdef WITH_MIDIEMU
+		if (currprefs.midioutdev >= 0) {
+			TCHAR *name = midioutportinfo[currprefs.midioutdev]->name;
+			if (!_tcsncmp(name, _T("Munt "), 5)) {
+				midi_emu_open(name);
+				return 1;
+			}
+		}
+#endif
+		if (!midi_ready) {
+			/* try to open midi devices */
+			if (midi_open()) {
+				midi_ready = 1;
+			}
+		}
+	} else {
+		if (midi_ready) {
+			midi_close();
+			midi_ready = 0;
+		}
+#ifdef WITH_MIDIEMU
+		if (midi_emu) {
+			midi_emu_close();
+		}
+#endif
+	}
+#endif
+	if (!currprefs.use_serial)
+		return 1;
+	return check(sp_set_baudrate(port, baud));
+}
+
 void SERPER(uae_u16 w)
 {
+	int baud = 0, mbaud = 0;
 	int oldper = serper;
 
 	if (serper == w && serper_set)  /* don't set baudrate if it's already ok */
@@ -794,10 +923,11 @@ void SERPER(uae_u16 w)
 	int i = 0;
 	while (allowed_baudrates[i] >= 0 && per > allowed_baudrates[i] * 100 / 97)
 		i++;
-	int baud = allowed_baudrates[i];
+	baud = allowed_baudrates[i];
 	if (baud <= 0) {
 		baud = allowed_baudrates[1];
 	}
+	mbaud = baud;
 
 	serial_period_hsyncs = (((serper & 0x7fff) + 1) * (1 + 8 + ninebit + 1 - 1)) / maxhpos;
 	if (serial_period_hsyncs <= 0)
@@ -826,24 +956,7 @@ void SERPER(uae_u16 w)
 	serial_recv_previous = -1;
 	serial_send_previous = -1;
 #ifdef SERIAL_PORT
-	check(sp_set_baudrate(port, baud));
-#endif
-
-#ifdef WITH_MIDI
-	if (baud == 31400) {
-		/* MIDI baud-rate */
-		if (!midi_ready) {
-			/* try to open midi devices */
-			if (midi_open()) {
-				midi_ready = 1;
-			}
-		}
-	} else {
-		if (midi_ready) {
-			midi_close();
-			midi_ready = 0;
-		}
-	}
+	setbaud(baud, mbaud);
 #endif
 
 	// mid transmit period change

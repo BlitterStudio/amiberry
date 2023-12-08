@@ -35,6 +35,9 @@
 
 #include "fsdb_host.h"
 #include "sampler.h"
+#ifdef WITH_MIDI
+#include "midi.h"
+#endif
 
 int log_vsync = 0, debug_vsync_min_delay = 0, debug_vsync_forced_delay = 0;
 
@@ -1387,6 +1390,24 @@ int check_prefs_changed_gfx()
 #ifdef SERIAL_PORT
 		serial_exit();
 		serial_init();
+#endif
+	}
+
+	if (currprefs.midiindev != changed_prefs.midiindev ||
+	    currprefs.midioutdev != changed_prefs.midioutdev ||
+	    currprefs.midirouter != changed_prefs.midirouter)
+	{
+		currprefs.midiindev = changed_prefs.midiindev;
+		currprefs.midioutdev = changed_prefs.midioutdev;
+		currprefs.midirouter = changed_prefs.midirouter;
+
+#ifdef SERIAL_PORT
+		serial_exit();
+		serial_init();
+		Midi_Reopen();
+#endif
+#ifdef WITH_MIDIEMU
+		midi_emu_reopen();
 #endif
 	}
 

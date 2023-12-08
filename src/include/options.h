@@ -951,6 +951,9 @@ struct uae_prefs
 	bool borderless;
 	bool automount_removable;
 	bool automount_cddrives;
+	int midioutdev;
+	int midiindev;
+	bool midirouter;
 	int uaescsimode;
 	int soundcard;
 	int samplersoundcard;
