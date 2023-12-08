@@ -1,5 +1,3 @@
- #include <cstring>
-
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
@@ -11,24 +9,29 @@
 #include "sounddep/sound.h"
 #include "parser.h"
 
-#include <libserialport.h>
+static gcn::Window* grpParallelPort;
+static gcn::Window* grpSerialPort;
+static gcn::Window* grpMidi;
+static gcn::Window* grpDongle;
 
-#ifdef SERIAL_PORT
-static gcn::Label* lblSerialPort;
+static gcn::Label* lblSampler;
+static gcn::DropDown* cboSampler;
+static gcn::CheckBox* chkSamplerStereo;
+
 static gcn::DropDown* cboSerialPort;
 static gcn::CheckBox* chkSerialDirect;
 static gcn::CheckBox* chkRTSCTS;
 static gcn::CheckBox* chkUaeSerial;
 static gcn::CheckBox* chkSerialStatus;
 static gcn::CheckBox* chkSerialStatusRi;
-#endif
 
-static gcn::Label* lblProtectionDongle;
+static gcn::Label* lblMidiIn;
+static gcn::DropDown* cboMidiIn;
+static gcn::Label* lblMidiOut;
+static gcn::DropDown* cboMidiOut;
+static gcn::CheckBox* chkMidiRoute;
+
 static gcn::DropDown* cboProtectionDongle;
-
-static gcn::Label* lblSampler;
-static gcn::DropDown* cboSampler;
-static gcn::CheckBox* chkSamplerStereo;
 
 class string_list_model : public gcn::ListModel
 {
@@ -76,13 +79,14 @@ static string_list_model dongle_list(listValues, 16);
 
 static string_list_model sampler_list(nullptr, 0);
 static string_list_model serial_ports_list(nullptr, 0);
+static string_list_model midi_in_ports_list(nullptr, 0);
+static string_list_model midi_out_ports_list(nullptr, 0);
 
 class IOActionListener : public gcn::ActionListener
 {
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-#ifdef SERIAL_PORT
 		if (actionEvent.getSource() == cboSerialPort)
 		{
 			const auto selected = cboSerialPort->getSelected();
@@ -114,7 +118,6 @@ public:
 		else if (actionEvent.getSource() == chkSerialStatusRi)
 			changed_prefs.serial_ri = chkSerialStatusRi->isSelected();
 
-#endif
 		else if (actionEvent.getSource() == cboProtectionDongle)
 			changed_prefs.dongle = cboProtectionDongle->getSelected();
 		else if (actionEvent.getSource() == cboSampler)
@@ -157,11 +160,47 @@ void InitPanelIO(const config_category& category)
 	serial_ports_list.add_element("TCP://0.0.0.0:1234");
 	serial_ports_list.add_element("TCP://0.0.0.0:1234/wait");
 
+	midi_in_ports_list.clear_elements();
+	midi_in_ports_list.add_element("none");
+	for(const auto& i : midi_in_ports) {
+		midi_in_ports_list.add_element(i.c_str());
+	}
+
+	midi_out_ports_list.clear_elements();
+	midi_out_ports_list.add_element("none");
+	for(const auto& i : midi_out_ports) {
+		midi_out_ports_list.add_element(i.c_str());
+	}
+
 	ioActionListener = new IOActionListener();
 
-#ifdef SERIAL_PORT
-	lblSerialPort = new gcn::Label("Serial port:");
-	lblSerialPort->setAlignment(gcn::Graphics::RIGHT);
+	auto posY = DISTANCE_BORDER;
+
+	lblSampler = new gcn::Label("Sampler:");
+	lblSampler->setAlignment(gcn::Graphics::RIGHT);
+	cboSampler = new gcn::DropDown(&sampler_list);
+	cboSampler->setSize(350, cboSampler->getHeight());
+	cboSampler->setBaseColor(gui_baseCol);
+	cboSampler->setBackgroundColor(colTextboxBackground);
+	cboSampler->setId("cboSampler");
+	cboSampler->addActionListener(ioActionListener);
+
+	chkSamplerStereo = new gcn::CheckBox("Stereo sampler");
+	chkSamplerStereo->setId("chkSamplerStereo");
+	chkSamplerStereo->addActionListener(ioActionListener);
+
+	grpParallelPort = new gcn::Window("Parallel Port");
+	grpParallelPort->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
+	grpParallelPort->add(lblSampler, DISTANCE_BORDER, posY);
+	grpParallelPort->add(cboSampler, DISTANCE_BORDER + lblSampler->getWidth() + 8, posY);
+	posY += lblSampler->getHeight() + DISTANCE_NEXT_Y;
+	grpParallelPort->add(chkSamplerStereo, DISTANCE_BORDER, posY);
+	grpParallelPort->setMovable(false);
+	grpParallelPort->setTitleBarHeight(TITLEBAR_HEIGHT);
+	grpParallelPort->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, TITLEBAR_HEIGHT + chkSamplerStereo->getY() + chkSamplerStereo->getHeight() + DISTANCE_NEXT_Y);
+	grpParallelPort->setBaseColor(gui_baseCol);
+	category.panel->add(grpParallelPort);
+
 	cboSerialPort = new gcn::DropDown(&serial_ports_list);
 	cboSerialPort->setSize(350, cboSerialPort->getHeight());
 	cboSerialPort->setBaseColor(gui_baseCol);
@@ -188,23 +227,59 @@ void InitPanelIO(const config_category& category)
 	chkSerialStatusRi = new gcn::CheckBox("Serial status: Ring Indicator");
 	chkSerialStatusRi->setId("chkSerialStatusRi");
 	chkSerialStatusRi->addActionListener(ioActionListener);
-#endif
 
-	lblSampler = new gcn::Label("Sampler:");
-	lblSampler->setAlignment(gcn::Graphics::RIGHT);
-	cboSampler = new gcn::DropDown(&sampler_list);
-	cboSampler->setSize(350, cboSampler->getHeight());
-	cboSampler->setBaseColor(gui_baseCol);
-	cboSampler->setBackgroundColor(colTextboxBackground);
-	cboSampler->setId("cboSampler");
-	cboSampler->addActionListener(ioActionListener);
+	grpSerialPort = new gcn::Window("Serial Port");
+	grpSerialPort->setPosition(DISTANCE_BORDER, grpParallelPort->getY() + grpParallelPort->getHeight() + DISTANCE_NEXT_Y);
+	grpSerialPort->add(cboSerialPort, cboSampler->getX(), DISTANCE_BORDER);
+	posY = cboSerialPort->getY() + cboSerialPort->getHeight() + DISTANCE_NEXT_Y;
+	grpSerialPort->add(chkRTSCTS, DISTANCE_BORDER, posY);
+	grpSerialPort->add(chkSerialDirect, chkRTSCTS->getWidth() + chkRTSCTS->getX() + DISTANCE_NEXT_X, posY);
+	grpSerialPort->add(chkUaeSerial, chkSerialDirect->getWidth() + chkSerialDirect->getX() + DISTANCE_NEXT_X, posY);
+	posY = chkRTSCTS->getY() + chkRTSCTS->getHeight() + DISTANCE_NEXT_Y;
+	grpSerialPort->add(chkSerialStatus, DISTANCE_BORDER, posY);
+	grpSerialPort->add(chkSerialStatusRi, chkSerialStatus->getWidth() + chkSerialStatus->getX() + DISTANCE_NEXT_X, posY);
+	grpSerialPort->setMovable(false);
+	grpSerialPort->setTitleBarHeight(TITLEBAR_HEIGHT);
+	grpSerialPort->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, TITLEBAR_HEIGHT +chkSerialStatus->getY() + chkSerialStatus->getHeight() + DISTANCE_NEXT_Y);
+	grpSerialPort->setBaseColor(gui_baseCol);
+	category.panel->add(grpSerialPort, DISTANCE_BORDER, grpParallelPort->getY() + grpParallelPort->getHeight() + DISTANCE_NEXT_Y);
 
-	chkSamplerStereo = new gcn::CheckBox("Stereo sampler");
-	chkSamplerStereo->setId("chkSamplerStereo");
-	chkSamplerStereo->addActionListener(ioActionListener);
+	lblMidiOut = new gcn::Label("Out:");
+	lblMidiOut->setAlignment(gcn::Graphics::RIGHT);
+	cboMidiOut = new gcn::DropDown(&midi_out_ports_list);
+	cboMidiOut->setSize(200, cboMidiOut->getHeight());
+	cboMidiOut->setBaseColor(gui_baseCol);
+	cboMidiOut->setBackgroundColor(colTextboxBackground);
+	cboMidiOut->setId("cboMidiOut");
+	cboMidiOut->addActionListener(ioActionListener);
 
-	lblProtectionDongle = new gcn::Label("Protection Dongle:");
-	lblProtectionDongle->setAlignment(gcn::Graphics::RIGHT);
+	lblMidiIn = new gcn::Label("In:");
+	lblMidiIn->setAlignment(gcn::Graphics::RIGHT);
+	cboMidiIn = new gcn::DropDown(&midi_in_ports_list);
+	cboMidiIn->setSize(200, cboMidiIn->getHeight());
+	cboMidiIn->setBaseColor(gui_baseCol);
+	cboMidiIn->setBackgroundColor(colTextboxBackground);
+	cboMidiIn->setId("cboMidiIn");
+	cboMidiIn->addActionListener(ioActionListener);
+
+	chkMidiRoute = new gcn::CheckBox("Route MIDI In to MIDI Out");
+	chkMidiRoute->setId("chkMidiRoute");
+	chkMidiRoute->addActionListener(ioActionListener);
+
+	grpMidi = new gcn::Window("MIDI");
+	grpMidi->setPosition(DISTANCE_BORDER, grpSerialPort->getY() + grpSerialPort->getHeight() + DISTANCE_NEXT_Y);
+	grpMidi->add(lblMidiOut, DISTANCE_BORDER, DISTANCE_BORDER);
+	grpMidi->add(cboMidiOut, cboSampler->getX(), DISTANCE_BORDER);
+	grpMidi->add(lblMidiIn, cboMidiOut->getX() + cboMidiOut->getWidth() + DISTANCE_NEXT_X * 3, DISTANCE_BORDER);
+	grpMidi->add(cboMidiIn, lblMidiIn->getX() + lblMidiIn->getWidth() + 8, DISTANCE_BORDER);
+	posY = cboSampler->getY() + cboSampler->getHeight() + DISTANCE_NEXT_Y;
+	grpMidi->add(chkMidiRoute, DISTANCE_BORDER, posY);
+	grpMidi->setMovable(false);
+	grpMidi->setTitleBarHeight(TITLEBAR_HEIGHT);
+	grpMidi->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, TITLEBAR_HEIGHT + chkMidiRoute->getY() + chkMidiRoute->getHeight() + DISTANCE_NEXT_Y);
+	grpMidi->setBaseColor(gui_baseCol);
+	category.panel->add(grpMidi, DISTANCE_BORDER, grpSerialPort->getY() + grpSerialPort->getHeight() + DISTANCE_NEXT_Y);
+
 	cboProtectionDongle = new gcn::DropDown(&dongle_list);
 	cboProtectionDongle->setSize(350, cboProtectionDongle->getHeight());
 	cboProtectionDongle->setBaseColor(gui_baseCol);
@@ -212,25 +287,14 @@ void InitPanelIO(const config_category& category)
 	cboProtectionDongle->setId("cboProtectionDongle");
 	cboProtectionDongle->addActionListener(ioActionListener);
 
-	category.panel->add(lblSerialPort, DISTANCE_BORDER, DISTANCE_BORDER);
-	category.panel->add(cboSerialPort, DISTANCE_BORDER + lblProtectionDongle->getWidth() + 8, DISTANCE_BORDER);
-	int posY = cboSerialPort->getY() + cboSerialPort->getHeight() + DISTANCE_NEXT_Y;
-	category.panel->add(chkRTSCTS, DISTANCE_BORDER, posY);
-	category.panel->add(chkSerialDirect, chkRTSCTS->getWidth() + chkRTSCTS->getX() + DISTANCE_NEXT_X, posY);
-	category.panel->add(chkUaeSerial, chkSerialDirect->getWidth() + chkSerialDirect->getX() + DISTANCE_NEXT_X, posY);
-	posY = chkRTSCTS->getY() + chkRTSCTS->getHeight() + DISTANCE_NEXT_Y;
-	category.panel->add(chkSerialStatus, DISTANCE_BORDER, posY);
-	category.panel->add(chkSerialStatusRi, chkSerialStatus->getWidth() + chkSerialStatus->getX() + DISTANCE_NEXT_X, posY);
-	posY = chkSerialStatus->getY() + chkSerialStatus->getHeight() + DISTANCE_NEXT_Y * 2;
-
-	category.panel->add(lblSampler, DISTANCE_BORDER, posY);
-	category.panel->add(cboSampler, DISTANCE_BORDER + lblProtectionDongle->getWidth() + 8, posY);
-	posY += lblSampler->getHeight() + DISTANCE_NEXT_Y;
-	category.panel->add(chkSamplerStereo, DISTANCE_BORDER, posY);
-	posY += chkSamplerStereo->getHeight() + DISTANCE_NEXT_Y * 2;
-
-	category.panel->add(lblProtectionDongle, DISTANCE_BORDER, posY);
-	category.panel->add(cboProtectionDongle, DISTANCE_BORDER + lblProtectionDongle->getWidth() + 8, posY);
+	grpDongle = new gcn::Window("Protection Dongle");
+	grpDongle->setPosition(DISTANCE_BORDER, grpMidi->getY() + grpMidi->getHeight() + DISTANCE_NEXT_Y);
+	grpDongle->add(cboProtectionDongle, cboSampler->getX(), DISTANCE_BORDER);
+	grpDongle->setMovable(false);
+	grpDongle->setTitleBarHeight(TITLEBAR_HEIGHT);
+	grpDongle->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, category.panel->getHeight() - grpParallelPort->getHeight() - grpSerialPort->getHeight() - grpMidi->getHeight() - TITLEBAR_HEIGHT * 3);
+	grpDongle->setBaseColor(gui_baseCol);
+	category.panel->add(grpDongle, DISTANCE_BORDER, grpMidi->getY() + grpMidi->getHeight() + DISTANCE_NEXT_Y);
 
 	RefreshPanelIO();
 }
@@ -238,26 +302,34 @@ void InitPanelIO(const config_category& category)
 void ExitPanelIO()
 {
 	delete ioActionListener;
-#ifdef SERIAL_PORT
-	delete lblSerialPort;
+
+	delete lblSampler;
+	delete cboSampler;
+	delete chkSamplerStereo;
+
 	delete cboSerialPort;
 	delete chkRTSCTS;
 	delete chkSerialDirect;
 	delete chkUaeSerial;
 	delete chkSerialStatus;
 	delete chkSerialStatusRi;
-#endif
 
-	delete lblProtectionDongle;
+	delete lblMidiIn;
+	delete cboMidiIn;
+	delete lblMidiOut;
+	delete cboMidiOut;
+	delete chkMidiRoute;
+
 	delete cboProtectionDongle;
-	delete lblSampler;
-	delete cboSampler;
-	delete chkSamplerStereo;
+
+	delete grpParallelPort;
+	delete grpSerialPort;
+	delete grpMidi;
+	delete grpDongle;
 }
 
 void RefreshPanelIO()
 {
-#ifdef SERIAL_PORT
 	chkRTSCTS->setSelected(changed_prefs.serial_hwctsrts);
 	chkSerialDirect->setSelected(changed_prefs.serial_direct);
 	chkUaeSerial->setSelected(changed_prefs.uaeserial);
@@ -289,7 +361,24 @@ void RefreshPanelIO()
 		chkSerialStatus->setEnabled(false);
 		chkSerialStatusRi->setEnabled(false);
 	}
-#endif
+
+	if (changed_prefs.midioutdev[0])
+	{
+		//todo
+	}
+	else
+	{
+		//todo
+	}
+
+	if (changed_prefs.midiindev[0])
+	{
+		//todo
+	}
+	else
+	{
+		//todo
+	}
 
 	cboProtectionDongle->setSelected(changed_prefs.dongle);
 

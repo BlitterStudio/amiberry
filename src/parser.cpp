@@ -539,7 +539,7 @@ int enummidiports (void)
 	write_log(_T("MIDI: found devices: %d\n"), total);
 	for(int i=0; i<total; i++) {
 		const PmDeviceInfo *info = Pm_GetDeviceInfo(i);
-		write_log(_T("MIDI: %d: '%s', '%s'  %s %s\n"),
+		write_log(_T("MIDI: %d: '%s', '%s' %s %s\n"),
 		          i, info->interf, info->name,
 		          info->input ? "IN" : "  ",
 		          info->output ? "OUT" : "  ");
@@ -551,6 +551,13 @@ int enummidiports (void)
 			midi_out_ports.emplace_back(info->name);
 		}
 	}
+#endif
+
+#ifdef WITH_MIDIEMU
+	midi_out_ports.emplace_back(midi_emu_available(_T("MT-32")), "Munt MT-32", "Munt MT-32 (Missing ROMs)");
+	total++;
+	midi_out_ports.emplace_back(midi_emu_available(_T("CM-32L")), "Munt CM-32L", "Munt CM-32L (Missing ROMs)");
+	total++;
 #endif
 
 	return total;

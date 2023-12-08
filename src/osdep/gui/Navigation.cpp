@@ -35,17 +35,10 @@ static NavigationMap navMap[] =
 	{"Display", "cboScreenmode", "cboScreenmode", "Hardware info", "Sound"},
 	{"Sound", "cboSoundcard", "cboSoundcard", "Display", "Input"},
 	{"Input", "cboPort0mode", "cboPort0", "Sound", "IO Ports"},
-	{"IO Ports", "cboSerialPort", "cboSerialPort", "Input", "Custom controls"},
+	{"IO Ports", "cboSampler", "cboSampler", "Input", "Custom controls"},
 	{"Custom controls", "Right Trigger", "0: Mouse", "IO Ports", "Disk swapper"},
 	{"Disk swapper", "cmdDiskSwapperDrv0", "cmdDiskSwapperAdd0", "Custom controls", "Miscellaneous"},
 	{"Miscellaneous", "chkMouseUntrap", "chkMouseUntrap", "Disk swapper", "Priority"},
-#ifdef ANDROID
-	{ "Savestates",       "State0",         "State0",         "Miscellaneous",  "OnScreen" },
-	{ "OnScreen",         "OnScrButton3",   "OnScrCtrl",      "Savestates",     "Shutdown" },
-	{ "Quit",             "Start",          "Help",           "OnScreen",       "Paths" },
-	{ "Help",             "Quit",           "Start",          "OnScreen",       "Paths" },
-	{ "Start",            "Help",           "Quit",           "OnScreen",       "Paths" },
-#else
 	{"Priority", "cboInactiveRunAtPrio", "cboActiveRunAtPrio", "Miscellaneous", "Savestates" },
 	{"Savestates", "State0", "State0", "Priority", "Virtual Keyboard"},
 	{"Virtual Keyboard", "chkVkEnabled", "chkVkEnabled", "Savestates", "Quit"},
@@ -55,7 +48,6 @@ static NavigationMap navMap[] =
 	{"Help", "Restart", "Reset", "Virtual Keyboard", "Paths"},
 	{"Reset", "Help", "Start", "Virtual Keyboard", "Paths"},
 	{"Start", "Reset", "Shutdown", "Virtual Keyboard", "Paths"},
-#endif
 
 	// PanelPaths
 	{"cmdSystemROMs", "Paths", "Paths", "cmdRescanROMs", "cmdConfigPath"},
@@ -352,15 +344,19 @@ static NavigationMap navMap[] =
 	{ "optNative", "optBoth", "optHost", "chkMouseHack", "cboPort0" },
 	{ "optHost", "optNative", "", "chkMouseHack", "cboPort0" },
 
-	// active		move left				move right			move up			move down
+	// active		move left		move right			move up			move down
 	// PanelIO
-	{ "cboSerialPort", "", "", "cboProtectionDongle", "chkRTSCTS" },
+	{ "cboSampler", "IO Ports", "IO Ports", "cboProtectionDongle", "cboSerialPort" },
+	{ "cboSerialPort", "IO Ports", "IO Ports", "cboSampler", "chkRTSCTS" },
 	{ "chkRTSCTS", "IO Ports", "chkSerialDirect", "cboSerialPort", "chkSerialStatus" },
 	{ "chkSerialDirect", "chkRTSCTS", "chkUaeSerial", "cboSerialPort", "chkSerialStatus" },
 	{ "chkUaeSerial", "chkSerialDirect", "IO Ports", "cboSerialPort", "chkSerialStatus" },
-	{ "chkSerialStatus", "IO Ports", "chkSerialStatusRi", "chkUaeSerial", "cboProtectionDongle" },
-	{ "chkSerialStatusRi", "chkSerialStatus", "IO Ports", "chkSerialStatus", "cboProtectionDongle" },
-	{ "cboProtectionDongle", "IO Ports", "IO Ports", "chkRTSCTS", "cboSerialPort" },
+	{ "chkSerialStatus", "IO Ports", "chkSerialStatusRi", "chkRTSCTS", "cboMidiOut" },
+	{ "chkSerialStatusRi", "chkSerialStatus", "IO Ports", "chkUaeSerial", "cboMidiIn" },
+	{ "cboMidiOut", "IO Ports", "cboMidiIn", "chkSerialStatus", "chkMidiRoute" },
+	{ "cboMidiIn", "cboMidiOut", "chkSerialStatusRi", "chkSerialStatusRi", "chkMidiRoute" },
+	{ "chkMidiRoute", "IO Ports", "IO Ports", "cboMidiOut", "cboProtectionDongle" },
+	{ "cboProtectionDongle", "IO Ports", "IO Ports", "chkMidiRoute", "cboSampler" },
 
 	// PanelCustom
 	{ "0: Mouse", "Custom controls", "1: Joystick", "", "None" },
@@ -436,7 +432,6 @@ static NavigationMap navMap[] =
 		// Right column bottom
 	{ "cboCustomAxisAction4", "cboCustomAxisAction1", "Custom controls", "cboCustomButtonAction14", "cboCustomAxisAction5" },
 	{ "cboCustomAxisAction5", "cboCustomAxisAction2", "Custom controls", "cboCustomAxisAction4", "cmdSetHotkey" },
-
 #endif
 
 	// PanelDiskSwapper
@@ -565,22 +560,6 @@ static NavigationMap navMap[] =
 	{ "cmdVkSetHotkey",  "Virtual Keyboard", "cmdVkSetHotkeyClear", "cboVkStyle", "chkRetroArchVkbd"},
 	{ "cmdVkSetHotkeyClear", "cmdVkSetHotkey", "Virtual Keyboard", "cboVkStyle", "chkRetroArchVkbd"},
 	{ "chkRetroArchVkbd", "Virtual Keyboard", "Virtual Keyboard", "cmdVkSetHotkey", "chkVkEnabled"},
-
-#ifdef ANDROID
-	// PanelOnScreen
-	{ "OnScrCtrl",      "OnScreen",       "OnScrButton3", "DisableMenuVKeyb", "OnScrTextInput" },
-	{ "OnScrButton3",   "OnScrCtrl",      "OnScreen",     "CustomPos",     "OnScrButton4" },
-	{ "OnScrTextInput", "OnScreen",       "OnScrButton4", "OnScrCtrl",      "OnScrDpad" },
-	{ "OnScrButton4",   "OnScrTextInput", "OnScreen",     "OnScrButton3",   "OnScrButton5" },
-	{ "OnScrDpad",      "OnScreen",       "OnScrButton5", "OnScrTextInput", "OnScrButton1" },
-	{ "OnScrButton5",   "OnScrDpad",      "OnScreen",     "OnScrButton4",   "OnScrButton6" },
-	{ "OnScrButton1",   "OnScreen",       "OnScrButton6", "OnScrDpad",      "OnScrButton2" },
-	{ "OnScrButton6",   "OnScrButton1",   "OnScreen",     "OnScrButton5",   "CustomPos" },
-	{ "OnScrButton2",   "OnScreen",       "CustomPos",    "OnScrButton1",   "FloatJoy" },
-	{ "CustomPos",      "OnScrButton2",   "OnScreen",     "OnScrButton6",   "Reset" },
-	{ "FloatJoy",       "OnScreen",       "CustomPos",    "OnScrButton2",   "DisableMenuVKeyb" },
-	{ "DisableMenuVKeyb","OnScreen",       "CustomPos",    "FloatJoy",       "Shutdown" },
-#endif
 
 	//  active            move left         move right        move up           move down
 	// EditFilesysVirtual
