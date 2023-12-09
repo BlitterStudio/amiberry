@@ -346,11 +346,9 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR ARCHITECTURE MATCHES "arm64")
 	add_definitions(-DCPU_AARCH64)
 endif()
 
-INCLUDE(FindPkgConfig)
-
-PKG_SEARCH_MODULE(SDL2 REQUIRED SDL2)
-PKG_SEARCH_MODULE(SDL2IMAGE REQUIRED SDL2_image>=2.0.0)
-PKG_SEARCH_MODULE(SDL2TTF REQUIRED SDL2_ttf)
+find_package(SDL2 REQUIRED )
+find_package(SDL2_IMAGE REQUIRED sdl2_image)
+find_package(SDL2_TTF REQUIRED sdl2_ttf)
 
 if(USE_DBUS)
 	add_definitions(-DUSE_DBUS)
@@ -358,7 +356,6 @@ if(USE_DBUS)
 	include_directories(${DBUS_INCLUDE_DIRS})
 	link_directories(${DBUS_LIBRARY_DIRS})
 endif()
-
 
 find_package(FLAC REQUIRED)
 find_package(mpg123 REQUIRED)
