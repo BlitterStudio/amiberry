@@ -35,6 +35,9 @@
 #ifdef WITH_MIDI
 #include "midi.h"
 #endif
+#ifdef WITH_MIDIEMU
+#include "midiemu.h"
+#endif
 
 #include <libserialport.h>
 
@@ -212,6 +215,11 @@ void closeser ()
 		//is the same and do not open midi), so setting serper to different value helps
 		extern uae_u16 serper;
 		serper = 0x30;
+	}
+#endif
+#ifdef WITH_MIDIEMU
+	if (midi_emu) {
+		midi_emu_close();
 	}
 #endif
 	if (serdev)
@@ -569,6 +577,11 @@ void writeser(int c)
 				tcp_disconnect();
 			}
 		}
+#ifdef WITH_MIDIEMU
+	} else if (midi_emu) {
+		uae_u8 b = (uae_u8)c;
+		midi_emu_parse(&b, 1);
+#endif
 #ifdef WITH_MIDI
 	} else if (midi_ready) {
 		midi_send_byte((uint8_t) c);
@@ -867,10 +880,9 @@ int setbaud(int baud, int org_baud)
 	if (org_baud == 31400 && _tcscmp(currprefs.midioutdev, "none") != 0) {
 		/* MIDI baud-rate */
 #ifdef WITH_MIDIEMU
-		if (currprefs.midioutdev >= 0) {
-			TCHAR *name = midioutportinfo[currprefs.midioutdev]->name;
-			if (!_tcsncmp(name, _T("Munt "), 5)) {
-				midi_emu_open(name);
+		if (currprefs.midioutdev[0]) {
+			if (!_tcsncmp(currprefs.midioutdev, _T("Munt "), 5)) {
+				midi_emu_open(currprefs.midioutdev);
 				return 1;
 			}
 		}

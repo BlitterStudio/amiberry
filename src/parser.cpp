@@ -46,6 +46,9 @@
 #ifdef WITH_MIDI
 #include "portmidi.h"
 #endif
+#ifdef WITH_MIDIEMU
+#include "midiemu.h"
+#endif
 
 #include "uae/socket.h"
 
@@ -554,9 +557,9 @@ int enummidiports (void)
 #endif
 
 #ifdef WITH_MIDIEMU
-	midi_out_ports.emplace_back(midi_emu_available(_T("MT-32")), "Munt MT-32", "Munt MT-32 (Missing ROMs)");
+	midi_out_ports.emplace_back(midi_emu_available(_T("MT-32")) ? "Munt MT-32" : "Munt MT-32 (Missing ROMs)");
 	total++;
-	midi_out_ports.emplace_back(midi_emu_available(_T("CM-32L")), "Munt CM-32L", "Munt CM-32L (Missing ROMs)");
+	midi_out_ports.emplace_back(midi_emu_available(_T("CM-32L")) ? "Munt CM-32L" : "Munt CM-32L (Missing ROMs)");
 	total++;
 #endif
 

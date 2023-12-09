@@ -139,7 +139,7 @@ static void timer_callback(PtTimestamp timestamp, void *userData)
 	}
 }
 
-static void parse_config(const char *cfg)
+static void parse_config(uae_prefs *cfg)
 {
 	// set defaults
 	in_dev_id = Pm_GetDefaultInputDeviceID();
@@ -147,51 +147,25 @@ static void parse_config(const char *cfg)
 
 	int num = Pm_CountDevices();
 
-	// split cfg string into out and in separated by comma
-	char *out_str = NULL;
-	char *in_str = NULL;
-	if(cfg != NULL) {
-		char *cfg_str = strdup(cfg);
-		in_str = strchr(cfg_str, ',');
-		if(in_str != NULL) {
-			*in_str = '\0';
-			in_str++;
-		}
-		out_str = cfg_str;
-
-		// search device
-		for(int i=0;i<num;i++) {
-			const PmDeviceInfo *info = Pm_GetDeviceInfo(i);
-			if(info->input) {
-				if(in_str != NULL) {
-					if(strcmp(in_str, info->name) == 0) {
-						in_dev_id = i;
-					}
-				}
-			}
-			if(info->output) {
-				if(out_str != NULL) {
-					if(strcmp(out_str, info->name) == 0) {
-						out_dev_id = i;
-					}
-				}
-			}
-		}
-
-		free(out_str);
-	}
-
-	// show devices
-	write_log(_T("MIDI: found devices: %d\n"), num);
-	for(int i=0;i<num;i++) {
+	// search device
+	for(int i = 0; i < num; i++) {
 		const PmDeviceInfo *info = Pm_GetDeviceInfo(i);
-		write_log(_T("MIDI: %d: '%s', '%s'  %s %s %s %s\n"),
-			i, info->interf, info->name,
-			info->input ? "IN" : "  ",
-			(i==in_dev_id) ? "*" : " ",
-			info->output ? "OUT" : "  ",
-			(i==out_dev_id) ? "*" : " ");
+		if(info->input) {
+			if(cfg->midiindev[0]) {
+				if(strcmp(cfg->midiindev, info->name) == 0) {
+					in_dev_id = i;
+				}
+			}
+		}
+		if(info->output) {
+			if(cfg->midioutdev[0]) {
+				if(strcmp(cfg->midioutdev, info->name) == 0) {
+					out_dev_id = i;
+				}
+			}
+		}
 	}
+
 }
 
 static PortMidiStream *open_out_stream(void)
@@ -236,7 +210,7 @@ static PortMidiStream *open_in_stream(void)
 	return NULL;
 }
 
-static int midi_open_with_config(const char *cfg)
+static int midi_open_with_config(uae_prefs *cfg)
 {
 	write_log(_T("midi_open(%s)\n"), cfg);
 
@@ -277,12 +251,7 @@ static int midi_open_with_config(const char *cfg)
 
 int midi_open(void)
 {
-	/* any config given? */
-	const char *midi_cfg = NULL;
-	if (_tcsnicmp(currprefs.sername, "midi:", 5) == 0) {
-		midi_cfg = currprefs.sername + 5;
-	}
-	return midi_open_with_config(midi_cfg);
+	return midi_open_with_config(&currprefs);
 }
 
 void midi_close(void)
@@ -554,18 +523,6 @@ int Midi_Open(void)
 void Midi_Close(void)
 {
 	midi_close();
-}
-
-int Midi_Parse(midi_direction_e direction, uint8_t *c)
-{
-	// Result in WinUAE is always 0
-	int result = 0;
-	if (direction == midi_output) {
-		midi_send_byte(*c);
-	} else {
-		// FIXME: Log warning?
-	}
-	return result;
 }
 
 void Midi_Reopen(void)
