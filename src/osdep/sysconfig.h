@@ -2,7 +2,7 @@
 #pragma once
 #define SUPPORT_THREADS
 
-#include <limits.h>
+#include <climits>
 #ifdef PATH_MAX
 #define MAX_DPATH PATH_MAX
 #else
@@ -15,11 +15,13 @@
 #define PACKAGE_STRING "Amiberry"
 
 #if defined(__x86_64__) || defined(_M_AMD64)
-#ifndef __MACH__ // not for macOS yet
+#ifndef __MACH__ // not for macOS
 #define JIT /* JIT compiler support */
 #define USE_JIT_FPU
 #endif
 #endif
+
+#define AMIBERRY
 
 #define DEBUGGER
 #define FILESYS /* filesys emulation */

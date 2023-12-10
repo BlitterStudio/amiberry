@@ -30,7 +30,7 @@ include_directories(
 
 set(libmt32emu_SHARED FALSE)
 add_subdirectory(external/mt32emu)
-add_definitions(-fno-pie -DAMIBERRY -D_FILE_OFFSET_BITS=64)
+add_definitions(-fno-pie -D_FILE_OFFSET_BITS=64)
 
 include(CheckSymbolExists)
 function(detect_architecture symbol arch)

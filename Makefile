@@ -43,7 +43,7 @@ SDL_CONFIG ?= sdl2-config
 export SDL_CFLAGS := $(shell $(SDL_CONFIG) --cflags)
 export SDL_LDFLAGS := $(shell $(SDL_CONFIG) --libs)
 
-CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -Isrc/floppybridge -Iexternal/mt32emu/src -DAMIBERRY -D_FILE_OFFSET_BITS=64
+CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -Isrc/floppybridge -Iexternal/mt32emu/src -D_FILE_OFFSET_BITS=64
 CFLAGS=-pipe -Wno-shift-overflow -Wno-narrowing
 USE_LD ?= gold
 LDFLAGS = $(SDL_LDFLAGS) -lSDL2_image -lSDL2_ttf -lserialport -lportmidi -lguisan -Lexternal/libguisan/lib -lmt32emu -Lexternal/mt32emu
@@ -251,7 +251,7 @@ else ifeq ($(PLATFORM),oga)
 # macOS Apple Silicon (SDL2, 64-bit, M1)
 else ifeq ($(PLATFORM),osx-m1)
 	LDFLAGS = -L/usr/local/lib external/libguisan/dylib/libguisan.dylib -Lexternal/mt32emu -lSDL2_image -lSDL2_ttf -lpng -liconv -lz -lFLAC -L/opt/homebrew/lib/ -lmpg123 -lmpeg2 -lmpeg2convert -lserialport -lportmidi -lmt32emu $(SDL_LDFLAGS) -framework IOKit -framework Foundation
-	CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -I/opt/homebrew/include -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -Iexternal/mt32emu/src -DAMIBERRY -D_FILE_OFFSET_BITS=64 -DCPU_AARCH64 $(SDL_CFLAGS)
+	CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -I/opt/homebrew/include -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -Iexternal/mt32emu/src -D_FILE_OFFSET_BITS=64 -DCPU_AARCH64 $(SDL_CFLAGS)
 	CXX=/usr/bin/c++
 #	DEBUG=1
 	APPBUNDLE=1
@@ -259,7 +259,7 @@ else ifeq ($(PLATFORM),osx-m1)
 # macOS intel (SDL2, 64-bit, x86-64)
 else ifeq ($(PLATFORM),osx-x86)
 	LDFLAGS = -L/usr/local/lib external/libguisan/dylib/libguisan.dylib -Lexternal/mt32emu -lSDL2_image -lSDL2_ttf -lpng -liconv -lz -lFLAC -lmpg123 -lmpeg2 -lmpeg2convert -lserialport -lportmidi -lmt32emu $(SDL_LDFLAGS) -framework IOKit -framework Foundation
-	CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -I/usr/local/include -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -Iexternal/mt32emu/src -DAMIBERRY -D_FILE_OFFSET_BITS=64 $(SDL_CFLAGS)
+	CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -I/usr/local/include -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -Iexternal/mt32emu/src -D_FILE_OFFSET_BITS=64 $(SDL_CFLAGS)
 	CXX=/usr/bin/c++
 #	DEBUG=1
 	APPBUNDLE=1
