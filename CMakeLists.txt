@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 3.18)
 project(amiberry)
-
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_FLAGS_RELEASE "-O3 -pipe")
@@ -21,7 +20,6 @@ endif()
 
 # Needed so that cmake uses our find modules.
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
-
 include_directories(
 		src
 		src/osdep
@@ -30,7 +28,6 @@ include_directories(
 		src/archivers
 )
 
-add_subdirectory(external/libguisan)
 set(libmt32emu_SHARED FALSE)
 add_subdirectory(external/mt32emu)
 add_definitions(-fno-pie -DAMIBERRY -D_FILE_OFFSET_BITS=64)
@@ -349,9 +346,9 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR ARCHITECTURE MATCHES "arm64")
 	add_definitions(-DCPU_AARCH64)
 endif()
 
-find_package(SDL2 REQUIRED )
-find_package(SDL2_IMAGE REQUIRED sdl2_image)
-find_package(SDL2_TTF REQUIRED sdl2_ttf)
+find_package(SDL2 REQUIRED CONFIG REQUIRED COMPONENTS SDL2)
+find_package(SDL2_image REQUIRED)
+find_package(SDL2_ttf REQUIRED)
 
 if(USE_DBUS)
 	add_definitions(-DUSE_DBUS)
@@ -365,12 +362,11 @@ find_package(mpg123 REQUIRED)
 find_package(PNG REQUIRED)
 find_package(ZLIB REQUIRED)
 find_library(LIBSERIALPORT_LIBRARIES serialport REQUIRED)
-find_path(LIBSERIALPORT_INCLUDE_DIR libserialport.h)
 
-INCLUDE_DIRECTORIES(${SDL2IMAGE_INCLUDE_DIRS} ${LIBSERIALPORT_INCLUDE_DIR})
-target_include_directories(${PROJECT_NAME} PRIVATE ./external/libguisan/include ./external/mt32emu/src)
+add_subdirectory(external/libguisan)
+target_include_directories(${PROJECT_NAME} PRIVATE ${SDL2_INCLUDE_DIRS} ./external/libguisan/include ./external/mt32emu/src )
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE SDL2 SDL2_image SDL2_ttf guisan mt32emu ${DBUS_LIBRARIES} FLAC png mpg123 mpeg2convert mpeg2 serialport z )
 
-TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE guisan mt32emu SDL2 SDL2_image SDL2_ttf ${DBUS_LIBRARIES} FLAC png mpg123 mpeg2convert mpeg2 serialport z)
 if(USE_OPENGL)
 	add_definitions(-DUSE_OPENGL)
 	find_package(OpenGL REQUIRED)

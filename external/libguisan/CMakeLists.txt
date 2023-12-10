@@ -56,12 +56,8 @@ add_library(guisan STATIC
         src/widgets/textfield.cpp
         src/widgets/togglebutton.cpp
         src/widgets/window.cpp)
-target_include_directories(guisan PRIVATE ./include)
+target_include_directories(guisan PRIVATE ${SDL2_INCLUDE_DIRS} ./include)
 
-find_package(SDL2 REQUIRED )
-find_package(SDL2_IMAGE REQUIRED sdl2_image)
-
-INCLUDE_DIRECTORIES(${SDL2_INCLUDE_DIRS} ${SDL2IMAGE_INCLUDE_DIRS})
-TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${SDL2_LIBRARIES} ${SDL2IMAGE_LIBRARIES})
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${SDL2IMAGE_LIBRARIES})
 
 install(TARGETS guisan DESTINATION ./lib)
