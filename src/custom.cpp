@@ -7171,7 +7171,7 @@ static void init_beamcon0(bool fakehz)
 			int hp2 = maxhpos * 2;
 			if (exthblank) {
 
-				int hb = 0;
+				int hb = 1;
 				int hbstrtx = (hbstrt & 0xff) * 2;
 				int hbstopx = (hbstop & 0xff) * 2;
 				if (aga_mode) {
@@ -7192,8 +7192,8 @@ static void init_beamcon0(bool fakehz)
 				if (hbstopx > hp2 / 2) {
 					hbstopx = 0;
 				}
-				if (hb < 0) {
-					hb = 0;
+				if (hb < 1) {
+					hb = 1;
 				}
 
 #if 0
@@ -7207,8 +7207,8 @@ static void init_beamcon0(bool fakehz)
 					hsz = hsstop - hsstrt;
 				}
 #endif
-				maxhpos_display = maxhpos - (hb / 2);
-				hsstop_detect = hbstopx;
+				maxhpos_display = maxhpos - ((hb + 1) / 2);
+				hsstop_detect = hbstopx - 1;
 
 			} else {
 
