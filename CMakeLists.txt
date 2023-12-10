@@ -8,11 +8,11 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
 set(CMAKE_EXE_LINKER_FLAGS "-no-pie -fuse-ld=gold -Wl,--gc-sections -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed")
 
-set(default_build_type "RELEASE")
-
-if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-	 set(CMAKE_BUILD_TYPE "${default_build_type}")
-endif()
+# Set build type to "Release" if user did not specify any build type yet
+# Other possible values: Debug, Release, RelWithDebInfo and MinSizeRel
+if(NOT CMAKE_BUILD_TYPE)
+        set(CMAKE_BUILD_TYPE Release)
+endif(NOT CMAKE_BUILD_TYPE)
 
 if(WITH_LTO)
 	set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
