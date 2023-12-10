@@ -255,11 +255,7 @@ static void ShowDiskInfoLoop()
 		//-------------------------------------------------
 		// Send event to guisan-controls
 		//-------------------------------------------------
-#ifdef ANDROID
-		androidsdl_event(event, gui_input);
-#else
 		gui_input->pushInput(event);
-#endif
 	}
 
 	if (got_event)

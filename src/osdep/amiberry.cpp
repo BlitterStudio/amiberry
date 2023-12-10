@@ -15,10 +15,7 @@
 #include <csignal>
 
 #include <algorithm>
-#ifndef ANDROID
 #include <execinfo.h>
-#endif
-
 #include "sysdeps.h"
 #include "options.h"
 #include "audio.h"
@@ -4031,7 +4028,7 @@ int main(int argc, char* argv[])
 	ClearAvailableROMList();
 	romlist_clear();
 	free_keyring();
-	//free_AmigaMem();
+
 	lstMRUDiskList.clear();
 	lstMRUCDList.clear();
 	lstMRUWhdloadList.clear();

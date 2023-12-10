@@ -90,10 +90,6 @@ SDL_Rect renderQuad;
 static int dx = 0, dy = 0;
 const char* sdl_video_driver;
 
-#ifdef ANDROID
-#include <android/log.h>
-#endif
-
 static int display_width;
 static int display_height;
 static int display_depth;

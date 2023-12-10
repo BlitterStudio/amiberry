@@ -20,10 +20,6 @@
 #include "sys/sysinfo.h"
 #endif
 
-#ifdef ANDROID
-#define valloc(x) memalign(getpagesize(), x)
-#endif
-
 #ifdef __APPLE__
 #include <sys/sysctl.h>
 #endif

@@ -27,10 +27,6 @@
 
 #include "cda_play.h"
 
-#ifdef ANDROID
-#include <android/log.h>
-#endif
-
 struct sound_dp
 {
 	SDL_AudioDeviceID dev;

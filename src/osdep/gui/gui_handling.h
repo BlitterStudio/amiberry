@@ -304,13 +304,6 @@ void ExitPanelVirtualKeyboard();
 void RefreshPanelVirtualKeyboard();
 bool HelpPanelVirtualKeyboard(std::vector<std::string>& helptext);
 
-#ifdef ANDROID
-void InitPanelOnScreen(const struct _ConfigCategory& category);
-void ExitPanelOnScreen();
-void RefreshPanelOnScreen();
-bool HelpPanelOnScreen(std::vector<std::string> &helptext);
-#endif
-
 void refresh_all_panels();
 void register_refresh_func(void (*func)());
 

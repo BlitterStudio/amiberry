@@ -198,13 +198,10 @@ void InitPanelRTG(const config_category& category)
 {
 	int sld_width;
 	int marker_length;
-#ifdef ANDROID
-	sldWidth = 150;
-	markerLength = 30;
-#else
+
 	sld_width = 110;
 	marker_length = 20;
-#endif
+
 	rtg_action_listener = new RTGActionListener();
 
 	lblBoard = new gcn::Label("Board:");

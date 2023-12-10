@@ -396,14 +396,6 @@ void write_log(const char* format, ...)
 {
 	if (amiberry_options.write_logfile)
 	{
-		// Redirect logging to Android's logcat
-#ifdef ANDROID
-		va_list parms;
-		va_start(parms, format);
-		SDL_Log(format, parms);
-		va_end(parms);
-#else
-
 		TCHAR buffer[WRITE_LOG_BUF_SIZE];
 
 		va_list parms{};
@@ -415,8 +407,6 @@ void write_log(const char* format, ...)
 			fflush(debugfile);
 		}
 		va_end(parms);
-
-#endif
 	}
 }
 

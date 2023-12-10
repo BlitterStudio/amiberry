@@ -18,7 +18,7 @@ Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
 #include "sysconfig.h"
 #include "sysdeps.h"
 
-#include <stdlib.h>
+#include <cstdlib>
 #include <sys/types.h>
 
 #ifdef HAVE_SYS_STAT_H
@@ -294,15 +294,9 @@ int get_fs_usage (const TCHAR *path, const TCHAR *disk, struct fs_usage *fsp)
 #ifdef STAT_STATVFS		/* SVR4 */
 # define CONVERT_BLOCKS(B) \
 	adjust_blocks ((B), fsd.f_frsize ? fsd.f_frsize : fsd.f_bsize, 512)
-#ifdef ANDROID
-	struct statfs fsd;
 
-	if (statfs (path, &fsd) < 0)
-#else
 	struct statvfs fsd{};
-
 	if (statvfs (path, &fsd) < 0)
-#endif
 		return -1;
 	/* f_frsize isn't guaranteed to be supported.  */
 
