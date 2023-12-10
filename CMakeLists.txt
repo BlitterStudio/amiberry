@@ -51,6 +51,16 @@ detect_architecture("__x86_64__" x86_64)
 detect_architecture("__aarch64__" arm64)
 message(STATUS "Target architecture: ${ARCHITECTURE}")
 
+if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+	set(MACOS TRUE)
+	message(STATUS "macOS platform detected")
+	if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR ARCHITECTURE MATCHES "arm64")
+		set(CMAKE_EXE_LINKER_FLAGS "-L/usr/local/lib external/libguisan/dylib/libguisan.dylib -L/opt/homebrew/lib/ -framework IOKit -framework Foundation")
+	else()
+		set(CMAKE_EXE_LINKER_FLAGS "-L/usr/local/lib external/libguisan/dylib/libguisan.dylib -framework IOKit -framework Foundation")
+	endif()
+endif()
+
 add_executable(${PROJECT_NAME}
 		src/a2065.cpp
 		src/a2091.cpp
