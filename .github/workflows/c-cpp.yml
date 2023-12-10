@@ -5,13 +5,11 @@ on:
   push:
     branches: 
       - master
-      - dev
     tags: 
       - v*.*.*
   pull_request:
     branches:
       - master
-      - dev
 
 jobs:
 
@@ -25,7 +23,6 @@ jobs:
 
       - name: Install dependencies
         run: |
-          brew update
           brew install sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport dylibbundler wget
 
       - name: make capsimg
