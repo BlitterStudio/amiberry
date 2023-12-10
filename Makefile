@@ -46,7 +46,7 @@ export SDL_LDFLAGS := $(shell $(SDL_CONFIG) --libs)
 CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -Isrc/floppybridge -Iexternal/mt32emu/src -DAMIBERRY -D_FILE_OFFSET_BITS=64
 CFLAGS=-pipe -Wno-shift-overflow -Wno-narrowing
 USE_LD ?= gold
-LDFLAGS = $(SDL_LDFLAGS) -lSDL2_image -lSDL2_ttf -lserialport -lguisan -Lexternal/libguisan/lib -lmt32emu -Lexternal/mt32emu
+LDFLAGS = $(SDL_LDFLAGS) -lSDL2_image -lSDL2_ttf -lserialport -lportmidi -lguisan -Lexternal/libguisan/lib -lmt32emu -Lexternal/mt32emu
 ifneq ($(strip $(USE_LD)),)
 	LDFLAGS += -fuse-ld=$(USE_LD)
 endif
@@ -74,12 +74,6 @@ ifdef USE_DBUS
 	DBUS_LIBS := $(shell pkg-config dbus-1 --libs)
 	CFLAGS += $(DBUS_CFLAGS) -DUSE_DBUS
 	LDFLAGS += $(DBUS_LIBS)
-endif
-
-# Use MIDI support with PortMidi library?
-ifdef WITH_MIDI
-	CFLAGS += -DWITH_MIDI
-	LDFLAGS += -lportmidi
 endif
 
 ifndef DEBUG

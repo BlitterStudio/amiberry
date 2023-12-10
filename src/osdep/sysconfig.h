@@ -104,6 +104,9 @@
 #define WITH_MIDIEMU
 //#define WITH_DSP
 
+// Use portmidi library for MIDI devices
+#define WITH_MIDI
+
 /* vpar virtual parallel port */
 #define WITH_VPAR 1
 
