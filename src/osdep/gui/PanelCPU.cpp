@@ -209,6 +209,7 @@ public:
 				changed_prefs.cachesize = MAX_JIT_CACHE;
 				changed_prefs.compfpu = true;
 				changed_prefs.cpu_cycle_exact = false;
+				changed_prefs.blitter_cycle_exact = false;
 				changed_prefs.cpu_memory_cycle_exact = false;
 				changed_prefs.address_space_24 = false;
 			}
