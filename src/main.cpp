@@ -793,8 +793,6 @@ void uae_restart(struct uae_prefs *p, int opengui, const TCHAR *cfgfile)
 	if (cfgfile)
 		_tcscpy (restart_config, cfgfile);
 	target_restart ();
-	p->gfx_apmode[0].gfx_fullscreen = GFX_WINDOW;
-	p->gfx_apmode[1].gfx_fullscreen = GFX_WINDOW;
 }
 
 void print_version()
