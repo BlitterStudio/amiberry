@@ -6190,9 +6190,9 @@ static uae_u16 BPLCON0_Denise_mask(uae_u16 v)
 static uae_u16 BPLCON0_Agnus_mask(uae_u16 v)
 {
 	if (!ecs_agnus) {
-		v &= 0xff0e;
+		v &= 0xff0f;
 	} else if (!aga_mode) {
-		v &= 0xffce;
+		v &= 0xffcf;
 	}
 	return v;
 }
