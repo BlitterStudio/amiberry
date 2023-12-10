@@ -10,7 +10,7 @@
 
 ![Amiberry logo](https://i2.wp.com/blitterstudio.com/wp-content/uploads/2020/01/Logo-v3-1.png?resize=768%2C543&ssl=1)
 
-Amiberry is an optimized Amiga emulator, primarily targeted for ARM-based boards (like the Raspberry Pi) but nowadays also ported on x86 (macOS, Linux).
+Amiberry is an optimized Amiga emulator, for ARM, ARM64 (like the Raspberry Pi), x86_64 (macOS, Linux) and RISC-V platforms.
 
 The core emulation comes from [WinUAE](https://www.winuae.net), and the main GUI is designed to look similar to that. However, not all WinUAE features are implemented, as Amiberry tries to achieve a balance between good performance on low-powered hardware and emulation accuracy.
 
@@ -22,7 +22,7 @@ It includes JIT support, to get high-performance results on CPU-intensive emulat
 
 Amiberry has been tested on the following Linux distros:
 
-- Debian/RPI-OS Buster and Bullseye ARM and x86 (32-bit and 64-bit)
+- Debian/RPI-OS Buster, Bullseye and Bookworm ARM and x86_64
 - Ubuntu ARM and x86 (64-bit)
 - Manjaro ARM (64-bit)
 - DietPi ARM (32-bit)
@@ -35,8 +35,8 @@ Some even include it in their app ecosystem (e.g. DietPi, RetroPie and others), 
 
 Amiberry has experimental support for macOS, and has been tested on:
 
-- Catalina (x86)
-- Monterey (x86 and M1)
+- Catalina (x86_64)
+- Monterey (x86_64 and M1)
 
 You will need to install the required libraries using Homebrew.
 If you want to compile it from source, please refer to the [relevant wiki page.](https://github.com/BlitterStudio/amiberry/wiki/Compiling-for-OSX)
@@ -47,15 +47,15 @@ Amiberry requires the [SDL2 framework](https://libsdl.org) for graphics display,
 
 If you just want to just run the Amiberry binary, you can install the required libraries on Debian/Raspbian/Ubuntu derived distros like this:
 
-      sudo apt install libsdl2-2.0-0 libsdl2-ttf-2.0-0 libsdl2-image-2.0-0 flac mpg123 libmpeg2-4 libserialport0
+      sudo apt install libsdl2-2.0-0 libsdl2-ttf-2.0-0 libsdl2-image-2.0-0 flac mpg123 libmpeg2-4 libserialport0 libportmidi
 
 If you want to compile Amiberry from source, you'll need the `-dev` version of the same packages instead. For example, on Debian-based distros:
 
-      sudo apt install libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev libflac-dev libmpg123-dev libpng-dev libmpeg2-4-dev libserialport-dev
+      sudo apt install libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev libflac-dev libmpg123-dev libpng-dev libmpeg2-4-dev libserialport-dev libportmidi-dev
 
 Or if you're using an Arch-based distro (e.g. Manjaro), the relevant package names are these (these include the `dev` versions by default):
 
-      sudo pacman -S base-devel sdl2 sdl2_ttf sdl2_image flac mpg123 libmpeg2 libserialport
+      sudo pacman -S base-devel sdl2 sdl2_ttf sdl2_image flac mpg123 libmpeg2 libserialport libportmidi
 
 Additionally, please note that you will probably also need some Kickstart ROMs. Amiberry includes the AROS ROM, so you can start it up and use AROS with it directly, but most games will require a Kickstart 1.3 (for A500 emulation) or Kickstart 3.x (for A1200 emulation).
 
