@@ -4010,9 +4010,7 @@ int main(int argc, char* argv[])
 #ifdef SERIAL_PORT
 	enumserialports();
 #endif
-#ifdef WITH_MIDI
 	enummidiports();
-#endif
 	real_main(argc, argv);
 
 #ifdef USE_GPIOD
