@@ -482,7 +482,7 @@ static void fpp_log2(fpdata *a, fpdata *b)
 }
 static void fpp_abs(fpdata *a, fpdata *b, int prec)
 {
-	a->fp = b->fp < 0.0 ? -b->fp : b->fp;
+	a->fp = abs(b->fp);
 	if (prec == PREC_FLOAT)
 		fpp_round_single(a);
 }
