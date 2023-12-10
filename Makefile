@@ -43,10 +43,10 @@ SDL_CONFIG ?= sdl2-config
 export SDL_CFLAGS := $(shell $(SDL_CONFIG) --cflags)
 export SDL_LDFLAGS := $(shell $(SDL_CONFIG) --libs)
 
-CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -Isrc/floppybridge -DAMIBERRY -D_FILE_OFFSET_BITS=64
+CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -Isrc/floppybridge -Iexternal/mt32emu/src -DAMIBERRY -D_FILE_OFFSET_BITS=64
 CFLAGS=-pipe -Wno-shift-overflow -Wno-narrowing
 USE_LD ?= gold
-LDFLAGS = $(SDL_LDFLAGS) -lSDL2_image -lSDL2_ttf -lserialport -lguisan -Lexternal/libguisan/lib
+LDFLAGS = $(SDL_LDFLAGS) -lSDL2_image -lSDL2_ttf -lserialport -lguisan -Lexternal/libguisan/lib -lmt32emu -Lexternal/mt32emu
 ifneq ($(strip $(USE_LD)),)
 	LDFLAGS += -fuse-ld=$(USE_LD)
 endif
@@ -366,7 +366,7 @@ PROG   = amiberry
 #
 # SDL2 options
 #
-all: guisan $(PROG)
+all: guisan mt32emu $(PROG)
 
 export CFLAGS := $(CPUFLAGS) $(CFLAGS) $(EXTRA_CFLAGS)
 export CXXFLAGS = $(CFLAGS) -std=gnu++17
@@ -497,6 +497,7 @@ OBJS = \
 	src/keybuf.o \
 	src/main.o \
 	src/memory.o \
+	src/midiemu.o \
 	src/native2amiga.o \
 	src/ncr9x_scsi.o \
 	src/ncr_scsi.o \
@@ -723,6 +724,7 @@ endif
 clean:
 	$(RM) $(PROG) $(PROG)-debug $(C_OBJS) $(OBJS) $(ASMS) $(DEPS)
 	$(MAKE) -C external/libguisan clean
+	cmake --build external/mt32emu/build --target clean
 
 cleanprofile:
 	$(RM) $(OBJS:%.o=%.gcda)
@@ -730,6 +732,11 @@ cleanprofile:
 	
 guisan:
 	$(MAKE) -C external/libguisan
+
+mt32emu:
+	cmake -DCMAKE_BUILD_TYPE=Release -Dlibmt32emu_SHARED=FALSE -S external/mt32emu -B external/mt32emu/build
+	cmake --build external/mt32emu/build --target all
+	cp external/mt32emu/build/libmt32emu.a external/mt32emu/
 
 gencpu:
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LDFLAGS) -o gencpu src/cpudefs.cpp src/gencpu.cpp src/readcpu.cpp src/osdep/charset.cpp
