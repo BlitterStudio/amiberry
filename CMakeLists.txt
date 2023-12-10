@@ -362,20 +362,16 @@ find_package(mpg123 REQUIRED)
 find_package(PNG REQUIRED)
 find_package(ZLIB REQUIRED)
 find_library(LIBSERIALPORT_LIBRARIES serialport REQUIRED)
+find_library(PORTMIDI_LIBRARIES portmidi REQUIRED)
 
 add_subdirectory(external/libguisan)
 target_include_directories(${PROJECT_NAME} PRIVATE ${SDL2_INCLUDE_DIRS} ./external/libguisan/include ./external/mt32emu/src )
-TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE SDL2 SDL2_image SDL2_ttf guisan mt32emu ${DBUS_LIBRARIES} FLAC png mpg123 mpeg2convert mpeg2 serialport z )
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE SDL2 SDL2_image SDL2_ttf guisan mt32emu ${DBUS_LIBRARIES} FLAC portmidi png mpg123 mpeg2convert mpeg2 serialport z )
 
 if(USE_OPENGL)
 	add_definitions(-DUSE_OPENGL)
 	find_package(OpenGL REQUIRED)
 	TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE ${TARGET_LINK_LIBRARIES} OpenGL::GL)
-endif()
-if(WITH_MIDI)
-	add_definitions(-DWITH_MIDI)
-	find_library(PORTMIDI_LIBRARIES portmidi REQUIRED)
-	TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE ${TARGET_LINK_LIBRARIES} portmidi)
 endif()
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 
