@@ -3361,9 +3361,9 @@ static void mouseupdate (int pct, bool vsync)
 			/* if v != 0, record mouse wheel key presses
 			 * according to the NewMouse standard */
 			if (v3 > 0)
-				record_key (0x7a << 1);
+				record_key(0x7a << 1, true);
 			else if (v3 < 0)
-				record_key (0x7b << 1);
+				record_key(0x7b << 1, true);
 			if (!mouse_deltanoreset[i][2])
 				mouse_delta[i][2] = 0;
 #ifndef AMIBERRY
@@ -3992,7 +3992,7 @@ static void inject_events (const TCHAR *str)
 					}
 					if (kc != 0xff) {
 						//write_log (_T("%s\n"), cf);
-						record_key (kc);
+						record_key(kc, false);
 					}
 				}
 			}
@@ -4001,8 +4001,8 @@ static void inject_events (const TCHAR *str)
 			if ((ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9')) {
 				for (int i = 1; events[i].name; i++) {
 					if (events[i].allow_mask == AM_K && events[i].name[1] == 0 && events[i].name[0] == ch) {
-						record_key (events[i].data << 1);
-						record_key ((events[i].data << 1) | 0x01);
+						record_key(events[i].data << 1, false);
+						record_key((events[i].data << 1) | 0x01, false);
 						//write_log (_T("%c\n"), ch);
 					}
 				}
@@ -4013,7 +4013,7 @@ static void inject_events (const TCHAR *str)
 	while (--keycnt >= 0) {
 		uae_u8 kc = keys[keycnt];
 		if (kc != 0xff)
-			record_key (kc | 0x01);
+			record_key(kc | 0x01, false);
 	}
 }
 
@@ -4507,7 +4507,7 @@ void inputdevice_do_keyboard(int code, int state)
 			}
 		}
 		if (!keyboard_reset_seq_mode) {
-			if (record_key((uae_u8)((key << 1) | (key >> 7)))) {
+			if (record_key((uae_u8)((key << 1) | (key >> 7)), false)) {
 				if (inputdevice_logging & 1)
 					write_log(_T("Amiga key %02X %d\n"), key & 0x7f, key >> 7);
 			}
@@ -8532,7 +8532,7 @@ static void sendmmcodes (int code, int newstate)
 	uae_u8 b;
 
 	b = RAW_STEALTH | IECODE_UP_PREFIX;
-	record_key (((b << 1) | (b >> 7)) & 0xff);
+	record_key(((b << 1) | (b >> 7)) & 0xff, true);
 	b = IECODE_UP_PREFIX;
 	if ((code >> 8) == 0x01)
 		b |= STEALTHF_E0KEY;
@@ -8540,11 +8540,11 @@ static void sendmmcodes (int code, int newstate)
 		b |= STEALTHF_E1KEY;
 	if (!newstate)
 		b |= STEALTHF_UPSTROKE;
-	record_key(((b << 1) | (b >> 7)) & 0xff);
+	record_key(((b << 1) | (b >> 7)) & 0xff, true);
 	b = ((code >> 4) & 0x0f) | IECODE_UP_PREFIX;
-	record_key(((b << 1) | (b >> 7)) & 0xff);
+	record_key(((b << 1) | (b >> 7)) & 0xff, true);
 	b = (code & 0x0f) | IECODE_UP_PREFIX;
-	record_key(((b << 1) | (b >> 7)) & 0xff);
+	record_key(((b << 1) | (b >> 7)) & 0xff, true);
 }
 
 // main keyboard press/release entry point
