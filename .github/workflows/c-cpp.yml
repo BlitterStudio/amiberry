@@ -378,6 +378,7 @@ jobs:
         path: amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-aarch64-rpi5.zip
 
   build-debian-bookworm-armhf-rpi5:
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -487,6 +488,7 @@ jobs:
         path: amiberry-${{ steps.tag.outputs.tag }}-debian-buster-aarch64-rpi4.zip
 
   build-debian-buster-armhf-rpi4:
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -595,6 +597,7 @@ jobs:
         path: amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-aarch64-rpi4.zip
 
   build-debian-bullseye-armhf-rpi4:
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -703,6 +706,7 @@ jobs:
         path: amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-aarch64-rpi4.zip
 
   build-debian-bookworm-armhf-rpi4:
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -811,6 +815,7 @@ jobs:
         path: amiberry-${{ steps.tag.outputs.tag }}-debian-buster-aarch64-rpi3.zip
 
   build-debian-buster-armhf-rpi3:
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -919,6 +924,7 @@ jobs:
         path: amiberry-${{ steps.tag.outputs.tag }}-debian-bullseye-aarch64-rpi3.zip
 
   build-debian-bullseye-armhf-rpi3:
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -1027,6 +1033,7 @@ jobs:
         path: amiberry-${{ steps.tag.outputs.tag }}-debian-bookworm-aarch64-rpi3.zip
 
   build-debian-bookworm-armhf-rpi3:
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
