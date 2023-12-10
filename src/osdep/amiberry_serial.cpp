@@ -887,7 +887,7 @@ int setbaud(int baud, int org_baud)
 			}
 		}
 #endif
-		if (!midi_ready) {
+		if (currprefs.midioutdev[0] && !midi_ready) {
 			/* try to open midi devices */
 			if (midi_open()) {
 				midi_ready = 1;
