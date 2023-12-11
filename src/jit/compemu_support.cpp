@@ -1701,7 +1701,9 @@ static void tomem(int r)
 	}
 
 	if (live.state[r].status==DIRTY) {
+#ifdef CPU_AARCH64
 		compemu_raw_mov_l_mr((uintptr)live.state[r].mem, live.state[r].realreg);
+#endif
 		switch (live.state[r].dirtysize) {
 		case 1: compemu_raw_mov_b_mr(JITPTR live.state[r].mem,rr); break;
 		case 2: compemu_raw_mov_w_mr(JITPTR live.state[r].mem,rr); break;
