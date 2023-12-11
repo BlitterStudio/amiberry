@@ -10,7 +10,7 @@
 
 ![Amiberry logo](https://i2.wp.com/blitterstudio.com/wp-content/uploads/2020/01/Logo-v3-1.png?resize=768%2C543&ssl=1)
 
-Amiberry is an optimized Amiga emulator, primarily targeted for ARM-based boards (like the Raspberry Pi) but nowadays also ported on x86 (macOS, Linux).
+Amiberry is an optimized Amiga emulator, for ARM, ARM64, x86_64 (macOS and Linux) and RISC-V platforms.
 
 The core emulation comes from [WinUAE](https://www.winuae.net), and the main GUI is designed to look similar to that. However, not all WinUAE features are implemented, as Amiberry tries to achieve a balance between good performance on low-powered hardware and emulation accuracy.
 
@@ -22,7 +22,7 @@ It includes JIT support, to get high-performance results on CPU-intensive emulat
 
 Amiberry has been tested on the following Linux distros:
 
-- Debian/RPI-OS Buster and Bullseye ARM and x86 (32-bit and 64-bit)
+- Debian/RPI-OS Buster, Bullseye and Bookworm ARM and x86_64
 - Ubuntu ARM and x86 (64-bit)
 - Manjaro ARM (64-bit)
 - DietPi ARM (32-bit)
@@ -35,8 +35,8 @@ Some even include it in their app ecosystem (e.g. DietPi, RetroPie and others), 
 
 Amiberry has experimental support for macOS, and has been tested on:
 
-- Catalina (x86)
-- Monterey (x86 and M1)
+- Catalina (x86_64)
+- Monterey (x86_64 and M1)
 
 You will need to install the required libraries using Homebrew.
 If you want to compile it from source, please refer to the [relevant wiki page.](https://github.com/BlitterStudio/amiberry/wiki/Compiling-for-OSX)
