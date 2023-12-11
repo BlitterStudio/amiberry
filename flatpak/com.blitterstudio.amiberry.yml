@@ -20,7 +20,7 @@ finish-args:
   - --socket=pulseaudio
   # Filesystem access
   - --filesystem=host
-  
+
 modules:
   - name: libmpeg2
     config-opts:
@@ -74,7 +74,7 @@ modules:
     buildsystem: cmake-ninja
     config-opts:
       - -DCMAKE_BUILD_TYPE=Release
-    
+
     sources:
       - type: git
         url: https://github.com/BlitterStudio/amiberry
