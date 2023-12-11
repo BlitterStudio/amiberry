@@ -147,11 +147,15 @@ union cacheline {
 #if defined(CPU_AARCH64)
 #define N_REGS 18   /* really 32, but 29 to 31 are FP, LR, SP; 18 has special meaning; 27 holds memstart and 28 holds regs-struct */
 #else
-#if defined(CPU_x86_64)
+#if defined(CPU_arm)
 #define USE_DATA_BUFFER
+#define N_REGS 13  /* really 16, but 13 to 15 are SP, LR, PC */
+#else
+#if defined(CPU_x86_64)
 #define N_REGS 16 /* really only 15, but they are numbered 0-3,5-15 */
 #else
 #define N_REGS 8  /* really only 7, but they are numbered 0,1,2,3,5,6,7 */
+#endif
 #endif
 #endif
 
