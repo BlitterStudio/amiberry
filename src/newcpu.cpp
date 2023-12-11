@@ -5404,7 +5404,7 @@ void custom_reset_cpu(bool hardreset, bool keyboardreset)
 
 #ifdef JIT  /* Completely different run_2 replacement */
 
-#ifdef AMIBERRY // Used by the AARCH64 JIT implementation
+#ifdef CPU_AARCH64 // Used by the AARCH64 JIT implementation
 void execute_exception(uae_u32 cycles)
 {
 	countdown -= cycles;

@@ -297,7 +297,7 @@ typedef struct {
 #define FS2 10
 #define FS3 11
 
-#ifdef AMIBERRY // Used by the AARCH64 JIT implementation
+#ifdef CPU_AARCH64 // Used by the AARCH64 JIT implementation
 #define SCRATCH_F64_1  1
 #define SCRATCH_F64_2  2
 #define SCRATCH_F64_3  3
@@ -359,7 +359,7 @@ typedef struct {
 
 extern int touchcnt;
 
-#ifdef AMIBERRY // used by the AARCH64 JIT implementation
+#ifdef CPU_AARCH64 // used by the AARCH64 JIT implementation
 #define IM8 uae_s32
 #define IM16 uae_s32
 #define IM32 uae_s32
@@ -394,13 +394,13 @@ extern int touchcnt;
 #define FRW  uae_u32
 
 #define MIDFUNC(nargs,func,args) void func args
-#ifdef AMIBERRY
+#ifdef CPU_AARCH64
 #define MENDFUNC(nargs,func,args)
 #endif
 #define COMPCALL(func) func
 
 #define LOWFUNC(flags,mem,nargs,func,args) static inline void func args
-#ifdef AMIBERRY // used by AARCH64 JIT implementation
+#ifdef CPU_AARCH64 // used by AARCH64 JIT implementation
 #define LENDFUNC(flags,mem,nargs,func,args)
 #endif
 
@@ -522,7 +522,7 @@ typedef struct blockinfo_t {
 #define BI_COMPILING 5
 #define BI_FINALIZING 6
 
-#ifdef AMIBERRY
+#ifdef CPU_AARCH64
 extern const int POPALLSPACE_SIZE;
 #endif
 

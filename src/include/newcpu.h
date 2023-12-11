@@ -278,7 +278,7 @@ struct regstruct
 	evt_t ce020_tail_cycles;
 	int memory_waitstate_cycles;
 
-#ifdef AMIBERRY // Used by the AARCH64 JIT implementation
+#ifdef CPU_AARCH64 // Used by the AARCH64 JIT implementation
 #ifdef JIT
 	uae_u32 jit_exception;
 #endif

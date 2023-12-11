@@ -341,7 +341,7 @@ static inline int end_block(uae_u32 opcode)
 }
 #endif
 
-#ifdef AMIBERRY // Added for the AARCH64 JIT implementation
+#ifdef CPU_AARCH64 // Added for the AARCH64 JIT implementation
 bool may_raise_exception = false;
 static bool flags_carry_inverted = false;
 #endif
@@ -403,7 +403,7 @@ static void* popall_cache_miss=NULL;
 static void* popall_recompile_block=NULL;
 static void* popall_check_checksum=NULL;
 
-#ifdef AMIBERRY // Used by the AARCH64 JIT implementation
+#ifdef CPU_AARCH64 // Used by the AARCH64 JIT implementation
 static void* popall_execute_normal_setpc = NULL;
 static void* popall_check_checksum_setpc = NULL;
 static void* popall_exec_nostats_setpc = NULL;
@@ -452,7 +452,7 @@ static int readreg_specific(int r, int size, int spec);
 static int writereg_specific(int r, int size, int spec);
 #endif
 
-#if defined(AMIBERRY) && defined(CPU_AARCH64)
+#if defined(CPU_AARCH64)
 static void write_jmp_target(uae_u32* jmpaddr, uintptr a);
 #else
 static void inline write_jmp_target(uae_u32 *jmpaddr, cpuop_func* a);
