@@ -13,7 +13,7 @@ int uae_start_thread(const char* name, uae_thread_function fn, void* arg, uae_th
 	auto result = 1;
 	if (name != nullptr) {
 		write_log("uae_start_thread \"%s\" function at %p arg %p\n", name,
-		          fn, arg);
+			fn, arg);
 	} else {
 		name = "StartThread";
 	}

@@ -10,7 +10,7 @@
 
 ![Amiberry logo](https://i2.wp.com/blitterstudio.com/wp-content/uploads/2020/01/Logo-v3-1.png?resize=768%2C543&ssl=1)
 
-Amiberry is an optimized Amiga emulator, for ARM, ARM64 (like the Raspberry Pi), x86_64 (macOS, Linux) and RISC-V platforms.
+Amiberry is an optimized Amiga emulator, for ARM64, x86_64 (macOS and Linux) and RISC-V platforms.
 
 The core emulation comes from [WinUAE](https://www.winuae.net), and the main GUI is designed to look similar to that. However, not all WinUAE features are implemented, as Amiberry tries to achieve a balance between good performance on low-powered hardware and emulation accuracy.
 

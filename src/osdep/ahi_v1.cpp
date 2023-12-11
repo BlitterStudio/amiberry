@@ -520,10 +520,18 @@ uae_u32 REGPARAM2 ahi_demux (TrapContext *context)
 		return 0;
 
 	case 20:
+#ifdef ENFORCER
 		return enforcer_enable(m68k_dreg(regs, 1));
+#else
+		return 1;
+#endif
 
 	case 21:
+#ifdef ENFORCER
 		return enforcer_disable();
+#else
+		return 1;
+#endif
 
 	case 25:
 #if defined (PARALLEL_PORT)

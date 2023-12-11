@@ -3918,7 +3918,6 @@ int main(int argc, char* argv[])
 		abort();
 	}
 #endif
-	//alloc_AmigaMem();
 	RescanROMs();
 	uae_time_calibrate();
 	
