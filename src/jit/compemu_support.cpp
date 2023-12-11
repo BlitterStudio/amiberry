@@ -246,7 +246,7 @@ static int reg_count_compare(const void *ap, const void *bp)
 #ifdef PROFILE_COMPILE_TIME
 #include <time.h>
 static uae_u32 compile_count	= 0;
-static clock_t compile_time		= 0;
+static clock_t compile_time	= 0;
 static clock_t emul_start_time	= 0;
 static clock_t emul_end_time	= 0;
 #endif
@@ -388,12 +388,24 @@ static int redo_current_block;
 #ifdef UAE
 int segvcount=0;
 #endif
+#ifdef CPU_AARCH64
+uae_u8* current_compile_p = NULL;
+#else
 static uae_u8* current_compile_p=NULL;
+#endif
 static uae_u8* max_compile_start;
+#ifdef CPU_AARCH64
+uae_u8* compiled_code = NULL;
+#else
 static uae_u8* compiled_code=NULL;
+#endif
 static uae_s32 reg_alloc_run;
 const int POPALLSPACE_SIZE = 2048; /* That should be enough space */
+#ifdef CPU_AARCH64
+uae_u8* popallspace = NULL;
+#else
 static uae_u8 *popallspace=NULL;
+#endif
 
 void* pushall_call_handler=NULL;
 static void* popall_do_nothing=NULL;
@@ -418,8 +430,13 @@ static void* popall_execute_exception = NULL;
 static cacheline cache_tags[TAGSIZE];
 static int cache_enabled=0;
 static blockinfo* hold_bi[MAX_HOLD_BI];
+#ifdef CPU_AARCH64
+blockinfo* active;
+blockinfo* dormant;
+#else
 static blockinfo* active;
 static blockinfo* dormant;
+#endif
 
 #ifdef NOFLAGS_SUPPORT_GENCOMP
 /* 68040 */
@@ -654,7 +671,11 @@ static inline void add_to_cl_list(blockinfo* bi)
 	cache_tags[cl].handler=bi->handler_to_use;
 }
 
+#ifdef CPU_AARCH64
+void raise_in_cl_list(blockinfo* bi)
+#else
 static inline void raise_in_cl_list(blockinfo* bi)
+#endif
 {
 	remove_from_cl_list(bi);
 	add_to_cl_list(bi);
@@ -731,7 +752,11 @@ static inline void set_dhtu(blockinfo* bi, cpuop_func *dh)
 	}
 }
 
+#ifdef CPU_AARCH64
+void invalidate_block(blockinfo* bi)
+#else
 static inline void invalidate_block(blockinfo* bi)
+#endif
 {
 	int i;
 
@@ -3452,6 +3477,51 @@ void flush_reg(int reg)
 #endif
 
 /* Only do this if you really mean it! The next call should be to init!*/
+#ifdef CPU_AARCH64
+static void flush(int save_regs)
+{
+	int i;
+
+	flush_flags(); /* low level */
+	sync_m68k_pc(); /* mid level */
+
+	if (save_regs) {
+#ifdef USE_JIT_FPU
+		for (i = 0; i < VFREGS; i++) {
+			if (live.fate[i].needflush == NF_SCRATCH || live.fate[i].status == CLEAN) {
+				f_disassociate(i);
+			}
+		}
+#endif
+		for (i = 0; i <= FLAGTMP; i++) {
+			switch (live.state[i].status) {
+				case INMEM:
+					if (live.state[i].val) {
+						write_log("JIT: flush INMEM and val != 0!\n");
+					}
+					break;
+				case CLEAN:
+				case DIRTY:
+					tomem(i);
+					break;
+				case ISCONST:
+					if (i != PC_P)
+						writeback_const(i);
+					break;
+				default:
+					break;
+			}
+		}
+#ifdef USE_JIT_FPU
+		for (i = 0; i <= FP_RESULT; i++) {
+			if (live.fate[i].status == DIRTY) {
+				f_evict(i);
+			}
+		}
+#endif
+	}
+}
+#else
 void flush(int save_regs)
 {
 	int i;
@@ -3484,6 +3554,7 @@ void flush(int save_regs)
 		jit_log("Warning! flush with needflags=1!");
 	}
 }
+#endif
 
 #if 0
 static void flush_keepflags(void)
@@ -3525,12 +3596,38 @@ static void flush_keepflags(void)
 }
 #endif
 
+#ifdef CPU_AARCH64
+int alloc_scratch(void)
+{
+	for(int i = 0; i < SCRATCH_REGS; ++i) {
+		if (live.scratch_in_use[i] == 0) {
+			live.scratch_in_use[i] = 1;
+			return S1 + i;
+		}
+	}
+	jit_log("Running out of scratch register.");
+	abort();
+}
+
+void release_scratch(int i)
+{
+	if (i < S1 || i >= S1 + SCRATCH_REGS)
+		jit_log("release_scratch(): %d is not a scratch reg.", i);
+	if(live.scratch_in_use[i - S1]) {
+		forget_about(i);
+		live.scratch_in_use[i - S1] = 0;
+	} else {
+		jit_log("release_scratch(): %d not in use.", i);
+	}
+}
+#endif
+
 static void freescratch(void)
 {
 	int i;
 	for (i=0;i<N_REGS;i++)
 #if defined(CPU_AARCH64)
-			if (live.nat[i].locked && i > 5 && i < 18)
+		if (live.nat[i].locked && i > 5 && i < 18)
 #elif defined(CPU_arm)
 		if (live.nat[i].locked && i != REG_WORK1 && i != REG_WORK2 && i != 10 && i != 11 && i != 12)
 #else
@@ -3544,6 +3641,15 @@ static void freescratch(void)
 			jit_log("Warning! %d is locked",i);
 		}
 
+#ifdef CPU_AARCH64
+	for (i = S1; i < VREGS; i++)
+		forget_about(i);
+	for (i = 0; i < SCRATCH_REGS; ++i)
+		live.scratch_in_use[i] = 0;
+
+	f_forget_about(FS1);
+
+#else
 	for (i=0;i<VREGS;i++)
 		if (live.state[i].needflush==NF_SCRATCH) {
 			forget_about(i);
@@ -3553,6 +3659,7 @@ static void freescratch(void)
 		if (live.fate[i].needflush==NF_SCRATCH) {
 			f_forget_about(i);
 		}
+#endif
 }
 
 /********************************************************************
@@ -3565,6 +3672,13 @@ void register_branch(uae_u32 not_taken, uae_u32 taken, uae_u8 cond)
 	taken_pc_p=taken;
 	branch_cc=cond;
 }
+
+#ifdef CPU_AARCH64
+void register_possible_exception(void)
+{
+	may_raise_exception = true;
+}
+#endif
 
 /* Note: get_handler may fail in 64 Bit environments, if direct_handler_to_use is
  * outside 32 bit
@@ -3665,43 +3779,45 @@ static inline void writemem(int address, int source, int offset, int size, int t
 #endif
 #endif // CPU_AARCH64
 
+#ifdef CPU_AARCH64
+void writebyte(int address, int source)
+{
+	if (special_mem & S_WRITE)
+		writemem_special(address, source, SIZEOF_VOID_P * 5);
+	else
+		writemem_real(address, source, 1);
+}
+#else
 void writebyte(int address, int source, int tmp)
 {
 #ifdef UAE
 	if ((special_mem & S_WRITE) || distrust_byte())
-#ifdef CPU_AARCH64
-		writemem_special(address, source, SIZEOF_VOID_P * 5);
-#else
 		writemem_special(address, source, 5 * SIZEOF_VOID_P, 1, tmp);
-#endif
 	else
 #endif
-#ifdef CPU_AARCH64
-		writemem_real(address, source, 1);
-#else
 		writemem_real(address,source,1,tmp,0);
-#endif
 }
+#endif
 
+#ifdef CPU_AARCH64
+void writeword(int address, int source)
+{
+	if (special_mem & S_WRITE)
+		writemem_special(address, source, SIZEOF_VOID_P * 4);
+	else
+		writemem_real(address, source, 2);
+}
+#else
 static inline void writeword_general(int address, int source, int tmp,
 	int clobber)
 {
 #ifdef UAE
 	if ((special_mem & S_WRITE) || distrust_word())
-#ifdef CPU_AARCH64
-		writemem_special(address, source, SIZEOF_VOID_P * 4);
-#else
 		writemem_special(address, source, 4 * SIZEOF_VOID_P, 2, tmp);
-#endif
 	else
 #endif
-#ifdef CPU_AARCH64
-		writemem_real(address, source, 2);
-#else
 		writemem_real(address,source,2,tmp,clobber);
-#endif
 }
-
 void writeword_clobber(int address, int source, int tmp)
 {
 	writeword_general(address,source,tmp,1);
@@ -3711,24 +3827,45 @@ void writeword(int address, int source, int tmp)
 {
 	writeword_general(address,source,tmp,0);
 }
+#endif
 
+#ifdef CPU_AARCH64
+void writelong(int address, int source)
+{
+	if (special_mem & S_WRITE)
+		writemem_special(address, source, SIZEOF_VOID_P * 3);
+	else
+		writemem_real(address, source, 4);
+}
+
+// Now the same for clobber variant
+void writeword_clobber(int address, int source)
+{
+	if (special_mem & S_WRITE)
+		writemem_special(address, source, SIZEOF_VOID_P * 4);
+	else
+		writemem_real(address, source, 2);
+	forget_about(source);
+}
+
+void writelong_clobber(int address, int source)
+{
+	if (special_mem & S_WRITE)
+		writemem_special(address, source, SIZEOF_VOID_P * 3);
+	else
+		writemem_real(address, source, 4);
+	forget_about(source);
+}
+#else
 static inline void writelong_general(int address, int source, int tmp,
 	int clobber)
 {
 #ifdef UAE
 	if ((special_mem & S_WRITE) || distrust_long())
-#ifdef CPU_AARCH64
-		writemem_special(address, source, SIZEOF_VOID_P * 3);
-#else
 		writemem_special(address, source, 3 * SIZEOF_VOID_P, 4, tmp);
-#endif
 	else
 #endif
-#ifdef CPU_AARCH64
-		writemem_real(address, source, 4);
-#else
 		writemem_real(address,source,4,tmp,clobber);
-#endif
 }
 
 void writelong_clobber(int address, int source, int tmp)
@@ -3740,6 +3877,8 @@ void writelong(int address, int source, int tmp)
 {
 	writelong_general(address,source,tmp,0);
 }
+#endif
+
 
 
 
@@ -3819,44 +3958,47 @@ static inline void readmem(int address, int dest, int offset, int size, int tmp)
 	forget_about(tmp);
 }
 #endif
-
 #endif
 
+#ifdef CPU_AARCH64
+void readbyte(int address, int dest)
+{
+	if (special_mem & S_READ)
+		readmem_special(address, dest, SIZEOF_VOID_P * 2);
+	else
+		readmem_real(address, dest, 1);
+}
+#else
 void readbyte(int address, int dest, int tmp)
 {
 #ifdef UAE
 	if ((special_mem & S_READ) || distrust_byte())
-#ifdef CPU_AARCH64
-		readmem_special(address, dest, SIZEOF_VOID_P * 2);
-#else
 		readmem_special(address, dest, 2 * SIZEOF_VOID_P, 1, tmp);
-#endif
 	else
 #endif
-#ifdef CPU_AARCH64
-		readmem_real(address, dest, 1);
-#else
 		readmem_real(address,dest,1,tmp);
-#endif
 }
+#endif
 
+#ifdef CPU_AARCH64
+void readword(int address, int dest)
+{
+	if (special_mem & S_READ)
+		readmem_special(address, dest, SIZEOF_VOID_P * 1);
+	else
+		readmem_real(address, dest, 2);
+}
+#else
 void readword(int address, int dest, int tmp)
 {
 #ifdef UAE
 	if ((special_mem & S_READ) || distrust_word())
-#ifdef CPU_AARCH64
-		readmem_special(address, dest, SIZEOF_VOID_P * 1);
-#else
 		readmem_special(address, dest, 1 * SIZEOF_VOID_P, 2, tmp);
-#endif
 	else
 #endif
-#ifdef CPU_AARCH64
-		readmem_real(address, dest, 2);
-#else
 		readmem_real(address,dest,2,tmp);
-#endif
 }
+#endif
 
 #ifdef CPU_AARCH64
 void readlong(int address, int dest)
@@ -3982,7 +4124,11 @@ void get_n_addr_jmp(int address, int dest, int tmp)
 
 /* base is a register, but dp is an actual value. 
    target is a register, as is tmp */
+#ifdef CPU_AARCH64
+void calc_disp_ea_020(int base, uae_u32 dp, int target)
+#else
 void calc_disp_ea_020(int base, uae_u32 dp, int target, int tmp)
+#endif
 {
 	int reg = (dp >> 12) & 15;
 	int regd_shift=(dp >> 9) & 3;
@@ -4076,7 +4222,9 @@ void calc_disp_ea_020(int base, uae_u32 dp, int target, int tmp)
 			lea_l_brr_indexed(target,base,reg,1<<regd_shift,(uae_s32)((uae_s8)dp));
 		}
 	}
+#ifndef CPU_AARCH64
 	forget_about(tmp);
+#endif
 }
 
 void set_cache_state(int enabled)

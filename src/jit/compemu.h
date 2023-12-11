@@ -144,17 +144,22 @@ union cacheline {
 
 #define KILLTHERAT 1  /* Set to 1 to avoid some partial_rat_stalls */
 
-#if defined(CPU_arm) || defined(CPU_AARCH64)
-#define USE_DATA_BUFFER
-#define N_REGS 13  /* really 16, but 13 to 15 are SP, LR, PC */
+#if defined(CPU_AARCH64)
+#define N_REGS 18   /* really 32, but 29 to 31 are FP, LR, SP; 18 has special meaning; 27 holds memstart and 28 holds regs-struct */
 #else
 #if defined(CPU_x86_64)
+#define USE_DATA_BUFFER
 #define N_REGS 16 /* really only 15, but they are numbered 0-3,5-15 */
 #else
 #define N_REGS 8  /* really only 7, but they are numbered 0,1,2,3,5,6,7 */
 #endif
 #endif
+
+#ifdef CPU_AARCH64
+#define N_FREGS 16  // We use 10 regs: 6 - FP_RESULT, 7 - SCRATCH, 8-15 - Amiga regs FP0-FP7
+#else
 #define N_FREGS 6 /* That leaves us two positions on the stack to play with */
+#endif
 
 /* Functions exposed to newcpu, or to what was moved from newcpu.c to
  * compemu_support.c */
@@ -162,7 +167,9 @@ extern void compiler_init(void);
 extern void compiler_exit(void);
 extern bool compiler_use_jit(void);
 
+#ifndef CPU_AARCH64
 extern void flush(int save_regs);
+#endif
 void flush_reg(int reg);
 extern void set_target(uae_u8* t);
 extern uae_u8* get_target(void);
@@ -243,8 +250,13 @@ extern uae_u32 needed_flags;
 extern uae_u8* comp_pc_p;
 extern void* pushall_call_handler;
 
+#ifdef CPU_AARCH64
+#define VREGS 22
+#define VFREGS 10
+#else
 #define VREGS 32
 #define VFREGS 16
+#endif
 
 #define INMEM 1
 #define CLEAN 2
@@ -279,6 +291,12 @@ typedef struct {
 #define FLAGX 17
 #define FLAGTMP 18
 #define NEXT_HANDLER 19
+#ifdef CPU_AARCH64
+#define S1 19
+#define S2 20
+#define S3 21
+#define SCRATCH_REGS 3
+#else
 #define S1 20
 #define S2 21
 #define S3 22
@@ -291,6 +309,7 @@ typedef struct {
 #define S10 29
 #define S11 30
 #define S12 31
+#endif
 
 #define FP_RESULT 8
 #define FS1 9
@@ -341,6 +360,9 @@ typedef struct {
     uae_u32 flags_on_stack;
     uae_u32 flags_in_flags;
     uae_u32 flags_are_important;
+#ifdef CPU_AARCH64
+  uae_u32 scratch_in_use[SCRATCH_REGS];
+#endif
     /* FPU part */
     freg_status fate[VFREGS];
     fn_status   fat[N_FREGS];
@@ -365,10 +387,10 @@ extern int touchcnt;
 #define IM32 uae_s32
 #define IMPTR uintptr
 #endif
-#define IMM  uae_s32
-#define RR1  uae_u32
-#define RR2  uae_u32
-#define RR4  uae_u32
+#define IMM uae_s32
+#define RR1 uae_u32
+#define RR2 uae_u32
+#define RR4 uae_u32
 /*
   R1, R2, R4 collides with ARM registers defined in ucontext
 #define R1  uae_u32
@@ -423,6 +445,20 @@ extern int failure;
 
 /* Convenience functions exposed to gencomp */
 extern uae_u32 m68k_pc_offset;
+#ifdef CPU_AARCH64
+extern void readbyte(int address, int dest);
+extern void readword(int address, int dest);
+extern void readlong(int address, int dest);
+extern void writebyte(int address, int source);
+extern void writeword(int address, int source);
+extern void writelong(int address, int source);
+extern void writeword_clobber(int address, int source);
+extern void writelong_clobber(int address, int source);
+extern void get_n_addr(int address, int dest);
+extern void get_n_addr_jmp(int address, int dest);
+extern void calc_disp_ea_020(int base, uae_u32 dp, int target);
+extern void register_possible_exception(void);
+#else
 extern void readbyte(int address, int dest, int tmp);
 extern void readword(int address, int dest, int tmp);
 extern void readlong(int address, int dest, int tmp);
@@ -434,6 +470,7 @@ extern void writelong_clobber(int address, int source, int tmp);
 extern void get_n_addr(int address, int dest, int tmp);
 extern void get_n_addr_jmp(int address, int dest, int tmp);
 extern void calc_disp_ea_020(int base, uae_u32 dp, int target, int tmp);
+#endif
 /* Set native Z flag only if register is zero */
 extern void set_zero(int r, int tmp);
 extern int kill_rodent(int r);
@@ -452,6 +489,10 @@ extern bool disasm_this_inst;
 #define comp_get_iword(o) do_get_mem_word((uae_u16 *)(comp_pc_p + (o)))
 #define comp_get_ilong(o) do_get_mem_long((uae_u32 *)(comp_pc_p + (o)))
 
+#ifdef CPU_AARCH64
+extern int alloc_scratch(void);
+extern void release_scratch(int i);
+#endif
 struct blockinfo_t;
 
 typedef struct dep_t {
