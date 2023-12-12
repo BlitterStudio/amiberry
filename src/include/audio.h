@@ -83,6 +83,8 @@ enum {
 	SND_4CH,
 	SND_6CH_CLONEDSTEREO,
 	SND_6CH,
+	SND_8CH_CLONEDSTEREO,
+	SND_8CH,
 	SND_NONE
 };
 
@@ -98,19 +100,21 @@ static inline int get_audio_stereomode (int channels)
 		return SND_4CH;
 	case 6:
 		return SND_6CH;
+	case 8:
+		return SND_8CH;
 	}
 	return SND_STEREO;
 }
 
 STATIC_INLINE int get_audio_nativechannels (int stereomode)
 {
-	int ch[] = { 1, 2, 4, 4, 6, 6, 0 };
+	int ch[] = { 1, 2, 4, 4, 6, 6, 8, 8, 0 };
 	return ch[stereomode];
 }
 
 STATIC_INLINE int get_audio_amigachannels (int stereomode)
 {
-	int ch[] = { 1, 2, 2, 4, 2, 4, 0 };
+	int ch[] = { 1, 2, 2, 4, 2, 4, 2, 4, 0 };
 	return ch[stereomode];
 }
 

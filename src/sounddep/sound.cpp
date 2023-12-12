@@ -27,10 +27,6 @@
 
 #include "cda_play.h"
 
-#ifdef ANDROID
-#include <android/log.h>
-#endif
-
 struct sound_dp
 {
 	SDL_AudioDeviceID dev;
@@ -64,6 +60,7 @@ static int statuscnt;
 uae_u16 paula_sndbuffer[SND_MAX_BUFFER];
 uae_u16* paula_sndbufpt;
 int paula_sndbufsize;
+int active_sound_stereo;
 
 #ifdef AMIBERRY
 void sdl2_audio_callback(void* userdata, Uint8* stream, int len);
@@ -408,19 +405,19 @@ static int open_sound()
 		currprefs.soundcard = changed_prefs.soundcard = 0;
 	if (num == 0)
 		return 0;
-	const auto ch = get_audio_nativechannels(currprefs.sound_stereo);
+	const auto ch = get_audio_nativechannels(active_sound_stereo);
 	const auto ret = open_sound_device(sdp, currprefs.soundcard, size, currprefs.sound_freq, ch);
 	if (!ret)
 		return 0;
 	currprefs.sound_freq = changed_prefs.sound_freq = sdp->freq;
 	if (ch != sdp->channels)
-		currprefs.sound_stereo = changed_prefs.sound_stereo = get_audio_stereomode(sdp->channels);
+		active_sound_stereo = get_audio_stereomode(sdp->channels);
 
 	set_volume(currprefs.sound_volume_master, sdp->mute);
-	if (get_audio_amigachannels(currprefs.sound_stereo) == 4)
+	if (get_audio_amigachannels(active_sound_stereo) == 4)
 		sample_handler = sample16ss_handler;
 	else
-		sample_handler = get_audio_ismono(currprefs.sound_stereo) ? sample16_handler : sample16s_handler;
+		sample_handler = get_audio_ismono(active_sound_stereo) ? sample16_handler : sample16s_handler;
 
 	sdp->obtainedfreq = currprefs.sound_freq;
 
@@ -737,9 +734,9 @@ void finish_sound_buffer()
 		return;
 	}
 	if (currprefs.sound_stereo_swap_paula) {
-		if (get_audio_nativechannels(currprefs.sound_stereo) == 2 || get_audio_nativechannels(currprefs.sound_stereo) == 4)
+		if (get_audio_nativechannels(active_sound_stereo) == 2 || get_audio_nativechannels(active_sound_stereo) == 4)
 			channelswap(reinterpret_cast<uae_s16*>(paula_sndbuffer), bufsize / 2);
-		else if (get_audio_nativechannels(currprefs.sound_stereo) == 6)
+		else if (get_audio_nativechannels(active_sound_stereo) >= 6)
 			channelswap6(reinterpret_cast<uae_s16*>(paula_sndbuffer), bufsize / 2);
 	}
 #ifdef DRIVESOUND
