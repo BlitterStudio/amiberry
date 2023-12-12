@@ -735,7 +735,7 @@ endif
 
 clean:
 	$(RM) $(PROG) $(PROG)-debug $(C_OBJS) $(OBJS) $(ASMS) $(DEPS)
-	$(MAKE) -C external/libguisan clean && rm external/libguisan/libguisan.a
+	$(MAKE) -C external/libguisan clean && rm -f external/libguisan/libguisan.a
 	cmake --build external/mt32emu/build --target clean && rm external/mt32emu/libmt32emu.a
 
 cleanprofile:
@@ -747,7 +747,7 @@ guisan:
 
 mt32emu:
 	cmake -DCMAKE_BUILD_TYPE=Release -Dlibmt32emu_SHARED=FALSE -S external/mt32emu -B external/mt32emu/build
-	cmake --build external/mt32emu/build --target all
+	cmake --build external/mt32emu/build --target all --parallel
 	cp external/mt32emu/build/libmt32emu.a external/mt32emu/
 
 gencpu:
