@@ -222,3 +222,5 @@ VSLinux/.vs
 .flatpak/
 Brewfile.lock.json
 
+cmake-build-debug-remote-host
+cmake-build-release-remote-host
