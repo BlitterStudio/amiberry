@@ -467,6 +467,13 @@ bool HelpPanelIO(std::vector<std::string>& helptext)
 	helptext.emplace_back(" ");
 	helptext.emplace_back("MIDI Out/In: If you have any MIDI devices connected, you can select them here.");
 	helptext.emplace_back("         Amiberry uses the PortMidi library to send and receive MIDI messages.");
+	helptext.emplace_back("         Amiberry also offers the option to emulate a Roland MT-32 MIDI device,");
+	helptext.emplace_back("         if you have the required ROMs installed. The dropdown will indicate if");
+	helptext.emplace_back("         the required ROM files were detected or not. Please note that the path");
+	helptext.emplace_back("         Amiberry will look for, is hardcoded to be \"<kickstarts dir>/mt32-roms\".");
+	helptext.emplace_back("         If the ROMs were detected, you can set the MIDI Out to an MT-32 option and");
+	helptext.emplace_back("         use any software that makes use of it (e.g. several Sierra games).");
+	helptext.emplace_back("         The audio output is mixed with Paula's output.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("Route MIDI In to MIDI Out: This option will reroute the MIDI In to the MIDI Out port,");
 	helptext.emplace_back("         as the name implies.");
