@@ -644,6 +644,82 @@ static void REGPARAM2 chipmem_bput_ce2 (uaecptr addr, uae_u32 b)
 
 #endif
 
+static uae_u32 chipmem_noise(uae_u32 addr)
+{
+	// not yet implemented
+	return 0;
+}
+
+static uae_u32 REGPARAM2 chipmem_lget_limit(uaecptr addr)
+{
+	uae_u32 *m;
+
+	addr &= chipmem_bank.mask;
+	if (addr >= 0x180000 - 3) {
+		return chipmem_noise(addr);
+	}
+	m = (uae_u32 *)(chipmem_bank.baseaddr + addr);
+	return do_get_mem_long(m);
+}
+
+static uae_u32 REGPARAM2 chipmem_wget_limit(uaecptr addr)
+{
+	uae_u16 *m, v;
+
+	addr &= chipmem_bank.mask;
+	if (addr >= 0x180000 - 1) {
+		return chipmem_noise(addr);
+	}
+	m = (uae_u16 *)(chipmem_bank.baseaddr + addr);
+	v = do_get_mem_word(m);
+	return v;
+}
+
+static uae_u32 REGPARAM2 chipmem_bget_limit(uaecptr addr)
+{
+	uae_u8 v;
+	addr &= chipmem_bank.mask;
+	if (addr >= 0x180000) {
+		return chipmem_noise(addr);
+	}
+	v = chipmem_bank.baseaddr[addr];
+	return v;
+}
+
+void REGPARAM2 chipmem_lput_limit(uaecptr addr, uae_u32 l)
+{
+	uae_u32 *m;
+
+	addr &= chipmem_bank.mask;
+	if (addr >= 0x180000) {
+		return;
+	}
+	m = (uae_u32 *)(chipmem_bank.baseaddr + addr);
+	do_put_mem_long(m, l);
+}
+
+void REGPARAM2 chipmem_wput_limit(uaecptr addr, uae_u32 w)
+{
+	uae_u16 *m;
+
+	addr &= chipmem_bank.mask;
+	if (addr >= 0x180000) {
+		return;
+	}
+	m = (uae_u16 *)(chipmem_bank.baseaddr + addr);
+	do_put_mem_word(m, w);
+}
+
+void REGPARAM2 chipmem_bput_limit(uaecptr addr, uae_u32 b)
+{
+	addr &= chipmem_bank.mask;
+	if (addr >= 0x180000) {
+		return;
+	}
+	chipmem_bank.baseaddr[addr] = b;
+}
+
+
 static uae_u32 REGPARAM2 chipmem_lget (uaecptr addr)
 {
 	uae_u32 *m;
@@ -680,19 +756,6 @@ void REGPARAM2 chipmem_lput (uaecptr addr, uae_u32 l)
 	do_put_mem_long (m, l);
 }
 
-#ifdef AMIBERRY
-void REGPARAM2 chipmem_lput_fc(uaecptr addr, uae_u32 l)
-{
-	uae_u32* m;
-
-	addr &= chipmem_bank.mask;
-	if (eventtab[ev_copper].active)
-		check_copperlist_write(addr);
-	m = (uae_u32*)(chipmem_bank.baseaddr + addr);
-	do_put_mem_long(m, l);
-}
-#endif
-
 void REGPARAM2 chipmem_wput (uaecptr addr, uae_u32 w)
 {
 	uae_u16 *m;
@@ -702,34 +765,11 @@ void REGPARAM2 chipmem_wput (uaecptr addr, uae_u32 w)
 	do_put_mem_word (m, w);
 }
 
-#ifdef AMIBERRY
-void REGPARAM2 chipmem_wput_fc(uaecptr addr, uae_u32 w)
-{
-	uae_u16* m;
-
-	addr &= chipmem_bank.mask;
-	if (eventtab[ev_copper].active)
-		check_copperlist_write(addr);
-	m = (uae_u16*)(chipmem_bank.baseaddr + addr);
-	do_put_mem_word(m, w);
-}
-#endif
-
 void REGPARAM2 chipmem_bput (uaecptr addr, uae_u32 b)
 {
 	addr &= chipmem_bank.mask;
 	chipmem_bank.baseaddr[addr] = b;
 }
-
-#ifdef AMIBERRY
-void REGPARAM2 chipmem_bput_fc(uaecptr addr, uae_u32 b)
-{
-	addr &= chipmem_bank.mask;
-	if (eventtab[ev_copper].active)
-		check_copperlist_write(addr);
-	chipmem_bank.baseaddr[addr] = b;
-}
-#endif
 
 /* cpu chipmem access inside agnus addressable ram but no ram available */
 static uae_u32 chipmem_dummy (void)
@@ -759,12 +799,6 @@ static uae_u32 REGPARAM2 chipmem_dummy_wget (uaecptr addr)
 static uae_u32 REGPARAM2 chipmem_dummy_lget (uaecptr addr)
 {
 	return (chipmem_dummy () << 16) | chipmem_dummy ();
-}
-
-static uae_u32 chipmem_noise(uae_u32 addr)
-{
-	// not yet implemented
-	return 0;
 }
 
 static uae_u32 REGPARAM2 chipmem_agnus_lget (uaecptr addr)
@@ -979,6 +1013,22 @@ void chipmem_setindirect(void)
 		chipmem_bput_indirect = chipmem_agnus_bput;
 		chipmem_check_indirect = chipmem_check;
 		chipmem_xlate_indirect = chipmem_xlate;
+	}
+
+	if (currprefs.chipmem.size == 0x180000) {
+		chipmem_bank.bget = chipmem_bget_limit;
+		chipmem_bank.wget = chipmem_wget_limit;
+		chipmem_bank.lget = chipmem_lget_limit;
+		chipmem_bank.bput = chipmem_bput_limit;
+		chipmem_bank.wput = chipmem_wput_limit;
+		chipmem_bank.lput = chipmem_lput_limit;
+	} else {
+		chipmem_bank.bget = chipmem_bget;
+		chipmem_bank.wget = chipmem_wget;
+		chipmem_bank.lget = chipmem_lget;
+		chipmem_bank.bput = chipmem_bput;
+		chipmem_bank.wput = chipmem_wput;
+		chipmem_bank.lput = chipmem_lput;
 	}
 }
 
@@ -2540,10 +2590,14 @@ void memory_clear (void)
 	if (savestate_state == STATE_RESTORE)
 		return;
 	
-	if (chipmem_bank.baseaddr)
-		memset(chipmem_bank.baseaddr, 0, chipmem_bank.allocated_size);
-	if (bogomem_bank.baseaddr)
-		memset(bogomem_bank.baseaddr, 0, bogomem_bank.allocated_size);
+	if (chipmem_bank.baseaddr) {
+		fillpattern(&chipmem_bank);
+	}
+
+	if (bogomem_bank.baseaddr) {
+		// TODO: slow RAM can have 16x chips even if Agnus is ECS.
+		fillpattern(&bogomem_bank);
+	}
 	
 	if (mem25bit_bank.baseaddr)
 		memset(mem25bit_bank.baseaddr, 0, mem25bit_bank.allocated_size);
