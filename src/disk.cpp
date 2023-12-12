@@ -4174,7 +4174,10 @@ void DISK_update_predict(void)
 		}
 	}
 	if (finaleventflag && (finaleventcycle >> 8) < maxhpos) {
-		event2_newevent_x_replace((finaleventcycle - startcycle) >> 8, finaleventflag, event_DISK_handler);
+		int dist = (finaleventcycle - startcycle) >> 8;
+		if (dist > 0) {
+			event2_newevent_x_replace(dist, finaleventflag, event_DISK_handler);
+		}
 	}
 }
 
