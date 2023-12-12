@@ -11,13 +11,182 @@
 
 #undef SERIAL_ENET
 
+#include "config.h"
 #include "sysdeps.h"
 #include "options.h"
+#include "events.h"
+#include "uae.h"
+#include "memory.h"
+#include "custom.h"
+#include "autoconf.h"
+#include "newcpu.h"
+#include "traps.h"
+#include "picasso96.h"
 #include "threaddep/thread.h"
 #include "serial.h"
 #include "parser.h"
+#include "ioport.h"
+#include "parallel.h"
+#include "cia.h"
+#include "savestate.h"
+#include "xwin.h"
+#include "drawing.h"
+#include "vpar.h"
+#include "ahi_v1.h"
 
-#include <libserialport.h>
+#ifdef POSIX_SERIAL
+#include <termios.h>
+#include <unistd.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <sys/select.h>
+#include <netdb.h>
+#endif
+
+#ifdef WITH_MIDI
+#include "portmidi.h"
+#endif
+#ifdef WITH_MIDIEMU
+#include "midiemu.h"
+#endif
+
+#include "uae/socket.h"
+
+#if !defined B300 || !defined B1200 || !defined B2400 || !defined B4800 || !defined B9600
+#undef POSIX_SERIAL
+#endif
+#if !defined B19200 || !defined B57600 || !defined B115200 || !defined B230400
+#undef POSIX_SERIAL
+#endif
+
+#ifdef POSIX_SERIAL
+struct termios tios;
+#endif
+
+#define MIN_PRTBYTES 10
+
+#define PARALLEL_MODE_NONE 0
+#define PARALLEL_MODE_TCP_PRINTER 1
+
+int parallel_mode = 0;
+static uae_socket parallel_tcp_listener = UAE_SOCKET_INVALID;
+static uae_socket parallel_tcp = UAE_SOCKET_INVALID;
+
+static bool parallel_tcp_connected(void)
+{
+	if (parallel_tcp_listener == UAE_SOCKET_INVALID) {
+		return false;
+	}
+	if (parallel_tcp == UAE_SOCKET_INVALID) {
+		if (uae_socket_select_read(parallel_tcp_listener)) {
+			parallel_tcp = uae_socket_accept(parallel_tcp_listener);
+			if (parallel_tcp != UAE_SOCKET_INVALID) {
+				write_log(_T("TCP: Parallel connection accepted\n"));
+			}
+		}
+	}
+	return parallel_tcp != UAE_SOCKET_INVALID;
+}
+
+static void parallel_tcp_disconnect(void)
+{
+	if (parallel_tcp == UAE_SOCKET_INVALID) {
+		return;
+	}
+	uae_socket_close(parallel_tcp);
+	parallel_tcp = UAE_SOCKET_INVALID;
+	write_log(_T("TCP: Parallel disconnect\n"));
+}
+
+static void parallel_tcp_open(const TCHAR *name)
+{
+	parallel_tcp_listener = uae_tcp_listen_uri(
+			name, "1235", UAE_SOCKET_DEFAULT);
+	if (parallel_tcp_listener != UAE_SOCKET_INVALID) {
+		parallel_mode = PARALLEL_MODE_TCP_PRINTER;
+		if (_tcsicmp(uae_uri_path(name), _T("/wait")) == 0) {
+			while (parallel_tcp_connected() == false) {
+				sleep_millis(1000);
+				write_log(_T("TCP: Waiting for parallel connection...\n"));
+			}
+		}
+	}
+}
+
+static void parallel_tcp_close(void)
+{
+	if (parallel_tcp_listener == UAE_SOCKET_INVALID) {
+		return;
+	}
+	parallel_tcp_disconnect();
+	uae_socket_close(parallel_tcp_listener);
+	parallel_tcp_listener = UAE_SOCKET_INVALID;
+	write_log("TCP: Parallel listener socket closed\n");
+}
+
+void parallel_ack(void)
+{
+	if (0) {
+#ifdef WITH_VPAR
+		} else if (vpar_enabled()) {
+		/* Do nothing, acking is instead done via parallel_poll_ack. */
+#endif
+	} else {
+		cia_parallelack();
+	}
+}
+
+void parallel_poll_ack(void)
+{
+#ifdef WITH_VPAR
+	vpar_update();
+#endif
+}
+
+void parallel_exit(void)
+{
+	parallel_tcp_close();
+#ifdef WITH_VPAR
+	vpar_close();
+#endif
+}
+
+int isprinter (void)
+{
+	if (parallel_mode == PARALLEL_MODE_TCP_PRINTER) {
+		return 1;
+	}
+#ifdef WITH_VPAR
+	if (par_fd >= 0) {
+        return par_mode;
+    }
+#endif
+	return 0;
+}
+
+void flushprinter (void)
+{
+	// not implemented
+}
+
+void doprinter (uae_u8 val)
+{
+	if (parallel_mode == PARALLEL_MODE_TCP_PRINTER) {
+		if (parallel_tcp_connected()) {
+			if (uae_socket_write(parallel_tcp, &val, 1) != 1) {
+				parallel_tcp_disconnect ();
+			}
+		}
+	}
+
+#ifdef WITH_VPAR
+	if (par_fd >= 0) {
+        if (write(par_fd, &val, 1) != 1) {
+            write_log("VPAR: Writing one byte failed\n");
+        }
+    }
+#endif
+}
 
 struct uaeserialdata
 {
@@ -234,4 +403,165 @@ void uaeser_close(void* vsd)
 	uae_sem_destroy(&sd->change_sem);
 
 	uaeser_initdata(sd, sd->user);
+}
+
+void initparallel (void)
+{
+#ifdef AMIBERRY
+	write_log("initparallel\n");
+#endif
+	if (_tcsnicmp(currprefs.prtname, "tcp:", 4) == 0) {
+		parallel_tcp_open(currprefs.prtname);
+	} else {
+#ifdef WITH_VPAR
+		vpar_open();
+#endif
+	}
+
+#ifdef AHI
+	if (uae_boot_rom_type) {
+#ifdef AMIBERRY
+		write_log("installing ahi_winuae\n");
+#endif
+		uaecptr a = here (); //this install the ahisound
+		org (rtarea_base + 0xFFC0);
+		calltrap (deftrapres (ahi_demux, 0, _T("ahi_winuae")));
+		dw (RTS);
+		org (a);
+#ifdef AHI_V2
+		init_ahi_v2 ();
+#endif
+	}
+#endif
+}
+
+int flashscreen = 0;
+
+void doflashscreen (void)
+{
+#ifdef AMIBERRY
+
+#else
+	flashscreen = 10;
+	init_colors ();
+	picasso_refresh ();
+	reset_drawing ();
+	flush_screen (gfxvidinfo.outbuffer, 0, 0);
+#endif
+}
+
+void hsyncstuff (void)
+//only generate Interrupts when
+//writebuffer is complete flushed
+//check state of lwin rwin
+{
+	static int keycheck = 0;
+
+#ifdef AHI
+	{ //begin ahi_sound
+		static int count;
+		if (ahi_on) {
+			count++;
+			//15625/count freebuffer check
+			if (count > ahi_pollrate) {
+				ahi_updatesound (1);
+				count = 0;
+			}
+		}
+	} //end ahi_sound
+#endif
+#if 0 // Not implemented in Amiberry
+#ifdef PARALLEL_PORT
+	keycheck++;
+	if(keycheck >= 1000)
+	{
+		if (prtopen)
+			flushprtbuf ();
+		{
+			if (flashscreen > 0) {
+				flashscreen--;
+				if (flashscreen == 0) {
+					init_colors(0);
+					reset_drawing ();
+					picasso_refresh(0);
+					//flush_screen (gfxvidinfo.outbuffer, 0, 0);
+				}
+			}
+		}
+		keycheck = 0;
+	}
+	if (currprefs.parallel_autoflush_time && !currprefs.parallel_postscript_detection) {
+		parflush++;
+		if (parflush / ((currprefs.ntscmode ? MAXVPOS_NTSC : MAXVPOS_PAL) * MAXHPOS_PAL / maxhpos) >= currprefs.parallel_autoflush_time * 50) {
+			flushprinter ();
+			parflush = 0;
+		}
+	}
+#endif
+#endif
+}
+
+int enumserialports (void)
+{
+	int cnt = 0;
+	/* A pointer to a null-terminated array of pointers to
+	* struct sp_port, which will contain the serial ports found.*/
+	struct sp_port** port_list;
+
+	write_log (_T("Serial port enumeration..\n"));
+	/* Call sp_list_ports() to get the ports. The port_list
+	* pointer will be updated to refer to the array created. */
+	const enum sp_return result = sp_list_ports(&port_list);
+	if (result != SP_OK)
+	{
+		write_log("sp_list_ports() failed!\n");
+		return cnt;
+	}
+	else
+	{
+		for (int i = 0; port_list[i] != nullptr; i++)
+		{
+			cnt++;
+			const struct sp_port* port = port_list[i];
+
+			/* Get the name of the port. */
+			serial_ports.emplace_back(sp_get_port_name(port));
+		}
+		/* Free the array created by sp_list_ports(). */
+		sp_free_port_list(port_list);
+	}
+	return cnt;
+}
+
+int enummidiports (void)
+{
+	int total = 0;
+
+#ifdef WITH_MIDI
+	total = Pm_CountDevices();
+	write_log(_T("MIDI: found devices: %d\n"), total);
+	for(int i=0; i<total; i++) {
+		const PmDeviceInfo *info = Pm_GetDeviceInfo(i);
+		write_log(_T("MIDI: %d: '%s', '%s' %s %s\n"),
+		          i, info->interf, info->name,
+		          info->input ? "IN" : "  ",
+		          info->output ? "OUT" : "  ");
+
+		if(info->input) {
+			midi_in_ports.emplace_back(info->name);
+		}
+		if(info->output) {
+			midi_out_ports.emplace_back(info->name);
+		}
+	}
+#endif
+
+#ifdef WITH_MIDIEMU
+	midi_out_ports.emplace_back(midi_emu_available(_T("MT-32")) ? "Munt MT-32" : "Munt MT-32 (Missing ROMs)");
+	total++;
+	midi_out_ports.emplace_back(midi_emu_available(_T("CM-32L")) ? "Munt CM-32L" : "Munt CM-32L (Missing ROMs)");
+	total++;
+#endif
+
+	return total;
 }

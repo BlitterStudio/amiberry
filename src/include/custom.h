@@ -95,7 +95,7 @@ extern int joy0button, joy1button;
 extern void INTREQ(uae_u16);
 extern bool INTREQ_0(uae_u16);
 extern void INTREQ_f(uae_u16);
-extern void send_interrupt(int num, int delay);
+extern void INTREQ_INT(int num, int delay);
 extern void rethink_uae_int(void);
 extern uae_u16 INTREQR(void);
 

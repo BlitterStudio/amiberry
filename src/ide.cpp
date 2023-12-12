@@ -1033,7 +1033,7 @@ static void do_process_rw_command (struct ide_hdf *ide)
 		if (IDE_LOG > 1)
 			write_log(_T("IDE%d write finished, %d bytes\n"), ide->num, ide->start_nsec * ide->blocksize);
 		ide->intdrq = false;
-		hdf_write (&ide->hdhfd.hfd, ide->secbuf, ide->start_lba * ide->blocksize, ide->start_nsec * ide->blocksize);
+		hdf_write(&ide->hdhfd.hfd, ide->secbuf, ide->start_lba * ide->blocksize, ide->start_nsec * ide->blocksize);
 	}
 
 end:

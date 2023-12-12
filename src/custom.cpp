@@ -5,7 +5,7 @@
 *
 * Copyright 1995-2002 Bernd Schmidt
 * Copyright 1995 Alessandro Bissacco
-* Copyright 2000-2015 Toni Wilen
+* Copyright 2000-2023 Toni Wilen
 */
 
 #include "sysconfig.h"
@@ -45,7 +45,9 @@
 #include "enforcer.h"
 #endif
 #include "threaddep/thread.h"
-//#include "luascript.h"
+#ifdef WITH_LUA
+#include "luascript.h"
+#endif
 #include "crc32.h"
 #include "devices.h"
 #include "rommgr.h"
@@ -5683,7 +5685,7 @@ void rethink_uae_int(void)
 static void rethink_intreq(void)
 {
 #ifdef SERIAL_PORT
-	serial_check_irq();
+	serial_rethink();
 #endif
 	devices_rethink();
 }
@@ -5694,7 +5696,7 @@ static void send_interrupt_do(uae_u32 v)
 }
 
 // external delayed interrupt (4 CCKs minimum)
-void send_interrupt(int num, int delay)
+void INTREQ_INT(int num, int delay)
 {
 	if (delay > 0 && (currprefs.cpu_cycle_exact || currprefs.cpu_compatible)) {
 		event2_newevent_xx(-1, delay, num, send_interrupt_do);
@@ -8638,6 +8640,8 @@ static void dmal_emu(uae_u32 v)
 #ifdef DEBUGGER
 	int hpos = current_hpos();
 #endif
+	int dmalpos = v >> 8;
+
 	if (v >= 6) {
 		v -= 6;
 		int nr = v / 2;
@@ -8653,6 +8657,7 @@ static void dmal_emu(uae_u32 v)
 		AUDxDAT(nr, dat, pt);
 	} else {
 		uae_u16 dat = 0;
+		int s = (dmalpos / 2);
 		int w = v & 1;
 		uaecptr pt = disk_getpt();
 		// disk_fifostatus() needed in >100% disk speed modes
@@ -8666,7 +8671,7 @@ static void dmal_emu(uae_u32 v)
 		} else {
 			// read from disk
 			if (disk_fifostatus() >= 0) {
-				dat = DSKDATR();
+				dat = DSKDATR(s);
 				chipmem_wput_indirect(pt, dat);
 			}
 		}
@@ -8971,10 +8976,10 @@ static void hsync_handler_post(bool onvsync)
 	// A1000 DIP Agnus (8361): vblank interrupt is triggered on line 1!
 	if (currprefs.cs_dipagnus) {
 		if (vpos == 1)
-			send_interrupt (5, 1 * CYCLE_UNIT);
+			INTREQ_INT (5, 1 * CYCLE_UNIT);
 	} else {
 		if (vpos == 0)
-			send_interrupt (5, 1 * CYCLE_UNIT);
+			INTREQ_INT (5, 1 * CYCLE_UNIT);
 	}
 
 	// lastline - 1?
@@ -10886,16 +10891,10 @@ void check_prefs_changed_custom(void)
 		chipmem_bank.jit_write_flag = S_WRITE;
 	else
 		chipmem_bank.jit_write_flag = 0;
-	if (currprefs.fast_copper) {
-		chipmem_bank.lput = chipmem_lput_fc;
-		chipmem_bank.wput = chipmem_wput_fc;
-		chipmem_bank.bput = chipmem_bput_fc;
-	}
-	else {
-		chipmem_bank.lput = chipmem_lput;
-		chipmem_bank.wput = chipmem_wput;
-		chipmem_bank.bput = chipmem_bput;
-	}
+
+	chipmem_bank.lput = chipmem_lput;
+	chipmem_bank.wput = chipmem_wput;
+	chipmem_bank.bput = chipmem_bput;
 #endif
 
 	if (!currprefs.keyboard_connected && changed_prefs.keyboard_connected) {

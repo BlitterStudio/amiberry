@@ -1,0 +1,93 @@
+Developers
+----------
+
+Dean "Canadacow" Beeler
+ - Original author of the MT-32 emulator.
+
+Jerome "KingGuppy" Fisher
+ - Extensive modifications to the MT-32 emulator. Many bugfixes. Many cool ideas and loads of code.
+   SMF2WAV conversion tool. Cross-platform UI-enabled application. Digital captures, analysis.
+
+"Mok"
+ - Through study of the original ROMs, provided information to greatly increase emulation accuracy.
+
+Tristan
+ - Original author of the ALSA driver.
+
+"SergM"
+ - Improved waveform generation and performance. High-level models of LA32 and reverb chips. Bugfixes.
+   Reimplemented Windows driver. Help with UI-enabled application.
+
+Contributors
+------------
+
+Jonathan Gevaryahu
+ - Sent his MT-32 all the way from Pennsylvania, USA to Australia to get ROM dumps.
+   Help with reverb analysis. LA32 ROM analysing.
+
+"The Guru" (http://unemulated.emuunlim.com/)
+ - Dumped the ROMs of the device above.
+
+Laust "Talus" Brock-Nannestad
+ - Dumped the CM-32L ROMs.
+
+"balrog"
+ - Helping with analysis, obtaining and dumping RWI-modded and v2.04 ROMs, supplying us with his costly logic analyzer. :)
+   LA32 ROM analysing.
+
+"Sarayan"
+ - Reversed some LA32 circuits and internal LA32 ROMs. LA32 ROM analysing.
+
+"IssaUt"
+ - Dumped the MT-32 v2.07 control ROM.
+
+"Cloudschatze"
+ - Dumped the CM-32LN v1.00 control ROM. Helped with analysis of quirks of the 3rd-gen devices.
+
+Martin Lukasek
+ - Dumped the MT-32 v2.06 control ROM.
+
+"sdhizumi"
+ - Dumped the MT-32 v2.03 control ROM.
+
+Also thanks go to Kaminari Redux, NewRisingSun, robertmo, ripsaw8080, Mau1wurf1977 and other inhabitants of VOGONS
+for their suggestions and help with debugging.
+
+Third-party code incorporated in library
+----------------------------------------
+
+The library incorporates a fast C++ implementation of SHA1 algorithm with a small memory footprint
+(https://code.google.com/archive/p/smallsha1/). Copyright (c) 2011, Micael Hildenborg.
+Distributed under the BSD 3-clause license as stated below.
+
+ Copyright (c) 2011, Micael Hildenborg
+ All rights reserved.
+
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions are met:
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+    * Neither the name of Micael Hildenborg nor the
+      names of its contributors may be used to endorse or promote products
+      derived from this software without specific prior written permission.
+
+ THIS SOFTWARE IS PROVIDED BY Micael Hildenborg ''AS IS'' AND ANY
+ EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ DISCLAIMED. IN NO EVENT SHALL Micael Hildenborg BE LIABLE FOR ANY
+ DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+Other code contributions
+------------------------
+
+We are grateful to many other contributors to the library code who submitted pull requests
+at GitHub with bug fixes, suggestions and improvements. See the main code repository
+(https://github.com/munt/munt/) to find detailed information.

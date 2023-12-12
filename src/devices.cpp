@@ -7,7 +7,9 @@
 #include "threaddep/thread.h"
 #include "memory.h"
 #include "audio.h"
-//#include "gfxboard.h"
+#ifdef GFXBOARD
+#include "gfxboard.h"
+#endif
 #include "scsi.h"
 #include "scsidev.h"
 #include "sana2.h"
@@ -49,10 +51,16 @@
 #include "uaenative.h"
 #endif
 #include "tabletlibrary.h"
-//#include "luascript.h"
+#ifdef WITH_LUA
+#include "luascript.h"
+#endif
 #ifdef DRIVESOUND
 #include "driveclick.h"
 #endif
+#ifdef WITH_X86
+#include "x86.h"
+#endif
+#include "ethernet.h"
 #include "drawing.h"
 //#include "videograb.h"
 #ifdef AHI
@@ -60,6 +68,9 @@
 #endif
 #include "rommgr.h"
 #include "newcpu.h"
+#ifdef WITH_MIDIEMU
+#include "midiemu.h"
+#endif
 #ifdef RETROPLATFORM
 #include "rp.h"
 #endif
@@ -218,7 +229,7 @@ void devices_reset(int hardreset)
 #ifdef DRIVESOUND
 	driveclick_reset();
 #endif
-	//ethernet_reset();
+	ethernet_reset();
 #ifdef FILESYS
 	filesys_prepare_reset();
 	filesys_reset();
@@ -306,7 +317,9 @@ void devices_update_sound(float clk, float syncadjust)
 	update_sound (clk);
 	//update_sndboard_sound (clk / syncadjust);
 	update_cda_sound(clk / syncadjust);
-	//x86_update_sound(clk / syncadjust);
+#ifdef WITH_X86
+	x86_update_sound(clk / syncadjust);
+#endif
 #ifdef WITH_MIDIEMU
 	midi_update_sound(clk / syncadjust);
 #endif
@@ -349,7 +362,9 @@ void virtualdevice_free(void)
 #ifdef WITH_LUA
 	uae_lua_free();
 #endif
-	//gfxboard_free();
+#ifdef GFXBOARD
+	gfxboard_free();
+#endif
 	savestate_free();
 	memory_cleanup();
 	free_shm();
@@ -357,7 +372,7 @@ void virtualdevice_free(void)
 #ifdef DRIVESOUND
 	driveclick_free();
 #endif
-	//ethernet_enumerate_free();
+	ethernet_enumerate_free();
 	rtarea_free();
 
 	execute_device_items(device_leaves, device_leave_cnt);
@@ -439,7 +454,9 @@ void devices_restore_start(void)
 
 void devices_syncchange(void)
 {
-	//x86_bridge_sync_change();
+#ifdef WITH_X86
+	x86_bridge_sync_change();
+#endif
 }
 
 void devices_pause(void)
@@ -455,7 +472,7 @@ void devices_pause(void)
 	rp_pause(1);
 #endif
 	//pausevideograb(1);
-	//ethernet_pause(1);
+	ethernet_pause(1);
 }
 
 void devices_unpause(void)
@@ -467,8 +484,11 @@ void devices_unpause(void)
 #ifdef WITH_PPC
 	uae_ppc_pause(0);
 #endif
+#ifdef WITH_DSP
+	dsp_pause(0);
+#endif
 	//pausevideograb(0);
-	//ethernet_pause(0);
+	ethernet_pause(0);
 }
 
 void devices_unsafeperiod(void)

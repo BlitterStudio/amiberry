@@ -20,10 +20,6 @@
 #include "amiberry_gfx.h"
 #include "amiberry_input.h"
 
-#ifdef ANDROID
-#include "androidsdl_event.h"
-#endif
-
 #define DIALOG_WIDTH 520
 #define DIALOG_HEIGHT 400
 
@@ -499,11 +495,7 @@ static void SelectFolderLoop()
 		//-------------------------------------------------
 		// Send event to guisan-controls
 		//-------------------------------------------------
-#ifdef ANDROID
-		androidsdl_event(event, gui_input);
-#else
 		gui_input->pushInput(event);
-#endif
 	}
 
 	if (got_event)

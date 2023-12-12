@@ -27,7 +27,7 @@
 #include "cpuboard.h"
 #include "flashrom.h"
 #include "autoconf.h"
-#ifndef AMIBERRY
+#ifdef WITH_QEMU_CPU
 #include "qemuvga/qemuuaeglue.h"
 #include "qemuvga/queue.h"
 #include "qemuvga/scsi/scsi.h"

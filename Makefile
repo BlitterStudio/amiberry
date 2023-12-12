@@ -43,10 +43,10 @@ SDL_CONFIG ?= sdl2-config
 export SDL_CFLAGS := $(shell $(SDL_CONFIG) --cflags)
 export SDL_LDFLAGS := $(shell $(SDL_CONFIG) --libs)
 
-CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -Isrc/floppybridge -DAMIBERRY -D_FILE_OFFSET_BITS=64
+CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -Isrc/floppybridge -Iexternal/mt32emu/src -D_FILE_OFFSET_BITS=64
 CFLAGS=-pipe -Wno-shift-overflow -Wno-narrowing
 USE_LD ?= gold
-LDFLAGS = $(SDL_LDFLAGS) -lSDL2_image -lSDL2_ttf -lserialport -lguisan -Lexternal/libguisan/lib
+LDFLAGS = $(SDL_LDFLAGS) -lSDL2_image -lSDL2_ttf -lserialport -lportmidi -lguisan -Lexternal/libguisan/lib -lmt32emu -Lexternal/mt32emu
 ifneq ($(strip $(USE_LD)),)
 	LDFLAGS += -fuse-ld=$(USE_LD)
 endif
@@ -279,18 +279,18 @@ else ifeq ($(PLATFORM),oga)
 	CPPFLAGS += $(CPPFLAGS64)
 	AARCH64 = 1
 
-# OS X (SDL2, 64-bit, M1)
+# macOS Apple Silicon (SDL2, 64-bit, M1)
 else ifeq ($(PLATFORM),osx-m1)
-	LDFLAGS = -L/usr/local/lib external/libguisan/dylib/libguisan.dylib -lSDL2_image -lSDL2_ttf -lpng -liconv -lz -lFLAC -L/opt/homebrew/lib/ -lmpg123 -lmpeg2 -lmpeg2convert -lserialport $(SDL_LDFLAGS) -framework IOKit -framework Foundation
-	CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -I/opt/homebrew/include -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -DAMIBERRY -D_FILE_OFFSET_BITS=64 -DCPU_AARCH64 $(SDL_CFLAGS) 
+	LDFLAGS = -L/usr/local/lib external/libguisan/dylib/libguisan.dylib -Lexternal/mt32emu -lSDL2_image -lSDL2_ttf -lpng -liconv -lz -lFLAC -L/opt/homebrew/lib/ -lmpg123 -lmpeg2 -lmpeg2convert -lserialport -lportmidi -lmt32emu $(SDL_LDFLAGS) -framework IOKit -framework Foundation
+	CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -I/opt/homebrew/include -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -Iexternal/mt32emu/src -D_FILE_OFFSET_BITS=64 -DCPU_AARCH64 $(SDL_CFLAGS)
 	CXX=/usr/bin/c++
 #	DEBUG=1
 	APPBUNDLE=1
 
-# OS X (SDL2, 64-bit, x86-64)
+# macOS intel (SDL2, 64-bit, x86-64)
 else ifeq ($(PLATFORM),osx-x86)
-	LDFLAGS = -L/usr/local/lib external/libguisan/dylib/libguisan.dylib -lSDL2_image -lSDL2_ttf -lpng -liconv -lz -lFLAC -lmpg123 -lmpeg2 -lmpeg2convert -lserialport $(SDL_LDFLAGS) -framework IOKit -framework Foundation
-	CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -I/usr/local/include -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -DAMIBERRY -D_FILE_OFFSET_BITS=64 $(SDL_CFLAGS) 
+	LDFLAGS = -L/usr/local/lib external/libguisan/dylib/libguisan.dylib -Lexternal/mt32emu -lSDL2_image -lSDL2_ttf -lpng -liconv -lz -lFLAC -lmpg123 -lmpeg2 -lmpeg2convert -lserialport -lportmidi -lmt32emu $(SDL_LDFLAGS) -framework IOKit -framework Foundation
+	CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -I/usr/local/include -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -Iexternal/mt32emu/src -D_FILE_OFFSET_BITS=64 $(SDL_CFLAGS)
 	CXX=/usr/bin/c++
 #	DEBUG=1
 	APPBUNDLE=1
@@ -301,9 +301,11 @@ else ifeq ($(PLATFORM),a64)
 	CPPFLAGS += $(CPPFLAGS64)
 	AARCH64 = 1
 
-# Generic EXPERIMENTAL x86-64 target
+# Generic x86-64 target
 else ifeq ($(PLATFORM),x86-64)
 	CPPFLAGS += -DUSE_RENDER_THREAD
+	CFLAGS += -fno-pie
+	LDFLAGS += -no-pie
 
 # Generic EXPERIMENTAL riscv64 target
 else ifeq ($(PLATFORM),riscv64)
@@ -389,7 +391,7 @@ PROG   = amiberry
 #
 # SDL2 options
 #
-all: guisan $(PROG)
+all: guisan mt32emu $(PROG)
 
 export CFLAGS := $(CPUFLAGS) $(CFLAGS) $(EXTRA_CFLAGS)
 export CXXFLAGS = $(CFLAGS) -std=gnu++17
@@ -456,9 +458,12 @@ C_OBJS= \
 	src/archivers/chd/utf8proc.o
 
 OBJS = \
+	src/a2065.o \
 	src/a2091.o \
 	src/akiko.o \
+	src/amax.o \
 	src/ar.o \
+	src/arcadia.o \
 	src/audio.o \
 	src/autoconf.o \
 	src/blitfunc.o \
@@ -468,6 +473,7 @@ OBJS = \
 	src/blkdev_cdimage.o \
 	src/bsdsocket.o \
 	src/calc.o \
+	src/casablanca.o \
 	src/cd32_fmv.o \
 	src/cd32_fmv_genlock.o \
 	src/cdrom.o \
@@ -488,6 +494,7 @@ OBJS = \
 	src/dongle.o \
 	src/drawing.o \
 	src/driveclick.o \
+	src/ethernet.o \
 	src/events.o \
 	src/expansion.o \
 	src/fdi2raw.o \
@@ -511,6 +518,7 @@ OBJS = \
 	src/keybuf.o \
 	src/main.o \
 	src/memory.o \
+	src/midiemu.o \
 	src/native2amiga.o \
 	src/ncr9x_scsi.o \
 	src/ncr_scsi.o \
@@ -588,6 +596,19 @@ OBJS = \
 	src/archivers/zip/unzip.o \
 	src/caps/caps_amiberry.o \
 	src/machdep/support.o \
+	src/floppybridge/ArduinoFloppyBridge.o \
+	src/floppybridge/ArduinoInterface.o \
+	src/floppybridge/CommonBridgeTemplate.o \
+	src/floppybridge/floppybridge_lib.o \
+	src/floppybridge/ftdi.o \
+	src/floppybridge/GreaseWeazleBridge.o \
+	src/floppybridge/GreaseWeazleInterface.o \
+	src/floppybridge/pll.o \
+	src/floppybridge/RotationExtractor.o \
+	src/floppybridge/SerialIO.o \
+	src/floppybridge/SuperCardProBridge.o \
+	src/floppybridge/SuperCardProInterface.o \
+	src/floppybridge/FloppyBridge.o \
 	src/osdep/ahi_v1.o \
 	src/osdep/bsdsocket_host.o \
 	src/osdep/cda_play.o \
@@ -596,6 +617,7 @@ OBJS = \
 	src/osdep/clipboard.o \
 	src/osdep/amiberry_hardfile.o \
 	src/osdep/keyboard.o \
+	src/osdep/midi.o \
 	src/osdep/mp3decoder.o \
 	src/osdep/picasso96.o \
 	src/osdep/writelog.o \
@@ -608,9 +630,13 @@ OBJS = \
 	src/osdep/amiberry_gui.o \
 	src/osdep/amiberry_mem.o \
 	src/osdep/amiberry_serial.o \
+	src/osdep/amiberry_uaenet.o \
 	src/osdep/amiberry_whdbooter.o \
+	src/osdep/ioport.o \
 	src/osdep/sigsegv_handler.o \
+	src/osdep/socket.o \
 	src/osdep/retroarch.o \
+	src/osdep/vpar.o \
 	src/sounddep/sound.o \
 	src/threaddep/threading.o \
 	src/osdep/gui/ControllerMap.o \
@@ -649,7 +675,18 @@ OBJS = \
 	src/osdep/gui/PanelVirtualKeyboard.o \
 	src/osdep/gui/main_window.o \
 	src/osdep/gui/Navigation.o \
-	src/osdep/vkbd/vkbd.o
+	src/osdep/vkbd/vkbd.o \
+	src/newcpu.o \
+	src/newcpu_common.o \
+	src/readcpu.o \
+	src/cpudefs.o \
+	src/cpustbl.o \
+	src/cpuemu_0.o \
+	src/cpuemu_4.o \
+	src/cpuemu_11.o \
+	src/cpuemu_13.o \
+	src/cpuemu_40.o \
+	src/cpuemu_44.o
 
 USE_JIT=1
 
@@ -676,38 +713,12 @@ src/osdep/neon_helper.o: src/osdep/neon_helper.s
 	$(AS) $(CPUFLAGS) -o src/osdep/neon_helper.o -c src/osdep/neon_helper.s
 endif
 
-OBJS += src/newcpu.o \
-	src/newcpu_common.o \
-	src/readcpu.o \
-	src/cpudefs.o \
-	src/cpustbl.o \
-	src/cpuemu_0.o \
-	src/cpuemu_4.o \
-	src/cpuemu_11.o \
-	src/cpuemu_13.o \
-	src/cpuemu_40.o \
-	src/cpuemu_44.o
-
 ifeq ($(USE_JIT),1)
 OBJS += src/jit/compemu.o \
 	src/jit/compstbl.o \
 	src/jit/compemu_fpp.o \
 	src/jit/compemu_support.o
 endif
-
-OBJS += src/floppybridge/ArduinoFloppyBridge.o \
-		src/floppybridge/ArduinoInterface.o \
-		src/floppybridge/CommonBridgeTemplate.o \
-		src/floppybridge/floppybridge_lib.o \
-		src/floppybridge/ftdi.o \
-		src/floppybridge/GreaseWeazleBridge.o \
-		src/floppybridge/GreaseWeazleInterface.o \
-		src/floppybridge/pll.o \
-		src/floppybridge/RotationExtractor.o \
-		src/floppybridge/SerialIO.o \
-		src/floppybridge/SuperCardProBridge.o \
-		src/floppybridge/SuperCardProInterface.o \
-		src/floppybridge/FloppyBridge.o
 
 DEPS = $(OBJS:%.o=%.d) $(C_OBJS:%.o=%.d)
 
@@ -724,7 +735,8 @@ endif
 
 clean:
 	$(RM) $(PROG) $(PROG)-debug $(C_OBJS) $(OBJS) $(ASMS) $(DEPS)
-	$(MAKE) -C external/libguisan clean
+	$(MAKE) -C external/libguisan clean && rm external/libguisan/libguisan.a
+	cmake --build external/mt32emu/build --target clean && rm external/mt32emu/libmt32emu.a
 
 cleanprofile:
 	$(RM) $(OBJS:%.o=%.gcda)
@@ -733,8 +745,19 @@ cleanprofile:
 guisan:
 	$(MAKE) -C external/libguisan
 
+mt32emu:
+	cmake -DCMAKE_BUILD_TYPE=Release -Dlibmt32emu_SHARED=FALSE -S external/mt32emu -B external/mt32emu/build
+	cmake --build external/mt32emu/build --target all
+	cp external/mt32emu/build/libmt32emu.a external/mt32emu/
+
 gencpu:
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LDFLAGS) -o gencpu src/cpudefs.cpp src/gencpu.cpp src/readcpu.cpp src/osdep/charset.cpp
+
+gencomp:
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LDFLAGS) -o gencomp src/jit/gencomp.cpp src/cpudefs.cpp src/readcpu.cpp src/osdep/charset.cpp
+
+gencomp_arm:
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LDFLAGS) -o gencomp_arm src/jit/gencomp_arm.c src/cpudefs.cpp src/readcpu.cpp src/osdep/charset.cpp
 
 capsimg:
 	cd external/capsimg && ./bootstrap && ./configure && $(MAKE)

@@ -18,8 +18,12 @@ Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
 #include "sysconfig.h"
 #include "sysdeps.h"
 
-#include <stdlib.h>
+#include <cstdlib>
 #include <sys/types.h>
+
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
 
 #if defined(STAT_STATVFS) && !defined(__ANDROID__)
 #include <sys/statvfs.h>
@@ -90,6 +94,8 @@ int get_fs_usage (const TCHAR *path, const TCHAR *disk, struct fs_usage *fsp)
 }
 
 #else /* ! _WIN32 */
+
+int statfs ();
 
 #if HAVE_UNISTD_H
 # include <unistd.h>
@@ -288,15 +294,9 @@ int get_fs_usage (const TCHAR *path, const TCHAR *disk, struct fs_usage *fsp)
 #ifdef STAT_STATVFS		/* SVR4 */
 # define CONVERT_BLOCKS(B) \
 	adjust_blocks ((B), fsd.f_frsize ? fsd.f_frsize : fsd.f_bsize, 512)
-#ifdef ANDROID
-	struct statfs fsd;
 
-	if (statfs (path, &fsd) < 0)
-#else
-	struct statvfs fsd;
-
+	struct statvfs fsd{};
 	if (statvfs (path, &fsd) < 0)
-#endif
 		return -1;
 	/* f_frsize isn't guaranteed to be supported.  */
 
@@ -313,5 +313,34 @@ int get_fs_usage (const TCHAR *path, const TCHAR *disk, struct fs_usage *fsp)
 	return 0;
 }
 #endif
+
+#if defined(_AIX) && defined(_I386)
+/* AIX PS/2 does not supply statfs.  */
+
+int
+	statfs (path, fsb)
+	TCHAR *path;
+struct statfs *fsb;
+{
+	struct stat stats;
+	struct dustat fsd;
+
+	if (stat (path, &stats))
+		return -1;
+	if (dustat (stats.st_dev, 0, &fsd, sizeof (fsd)))
+		return -1;
+	fsb->f_type   = 0;
+	fsb->f_bsize  = fsd.du_bsize;
+	fsb->f_blocks = fsd.du_fsize - fsd.du_isize;
+	fsb->f_bfree  = fsd.du_tfree;
+	fsb->f_bavail = fsd.du_tfree;
+	fsb->f_files  = (fsd.du_isize - 2) * fsd.du_inopb;
+	fsb->f_ffree  = fsd.du_tinode;
+	fsb->f_fsid.val[0] = fsd.du_site;
+	fsb->f_fsid.val[1] = fsd.du_pckno;
+	return 0;
+}
+
+#endif /* _AIX && _I386 */
 
 #endif /* ! _WIN32 */

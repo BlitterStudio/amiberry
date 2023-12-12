@@ -1,8 +1,7 @@
-
 #pragma once
 #define SUPPORT_THREADS
 
-#include <limits.h>
+#include <climits>
 #ifdef PATH_MAX
 #define MAX_DPATH PATH_MAX
 #else
@@ -12,31 +11,37 @@
 #define DRIVESOUND
 /* #define GFXFILTER */
 //#define USE_SOFT_LONG_DOUBLE
-#define PACKAGE_STRING "AMIBERRY"
+#define PACKAGE_STRING "Amiberry"
 
-/* #define DEBUGGER */
-#define FILESYS /* filesys emulation */
-#define UAE_FILESYS_THREADS
-#define AUTOCONFIG /* autoconfig support, fast ram, harddrives etc.. */
 #if !defined (CPU_AMD64) && !defined (__x86_64__) && !defined(__riscv) && !defined (__MACH__)
 #define JIT /* JIT compiler support */
 #endif
 #if defined(ARMV6T2) || defined(CPU_AARCH64)
 #define USE_JIT_FPU
 #endif
+
+#define AMIBERRY
+
+/* #define DEBUGGER */
+#define FILESYS /* filesys emulation */
+#define UAE_FILESYS_THREADS
+#define AUTOCONFIG /* autoconfig support, fast ram, harddrives etc.. */
+//#define NOFLAGS_SUPPORT_GENCPU
+#define NOFLAGS_SUPPORT_GENCOMP
+//#define HAVE_GET_WORD_UNSWAPPED
 #define NATMEM_OFFSET regs.natmem_offset
+#define USE_NORMAL_CALLING_CONVENTION 0
+//#define USE_X86_FPUCW 1
 /* #define CATWEASEL */ /* Catweasel MK2/3 support */
 #define AHI /* AHI sound emulation */
 //#define AHI_v2 // AHI v2 was never completed on the Amiga-side
 /* #define ENFORCER */ /* UAE Enforcer */
 #define ECS_DENISE /* ECS DENISE new features */
 #define AGA /* AGA chipset emulation (ECS_DENISE must be enabled) */
-#ifndef ANDROID
 #define CD32 /* CD32 emulation */
-#endif
 #define CDTV /* CDTV emulation */
-/* #define PARALLEL_PORT */ /* parallel port emulation */
-/* #define PARALLEL_DIRECT */ /* direct parallel port emulation */
+#define PARALLEL_PORT /* parallel port emulation */
+//#define PARALLEL_DIRECT /* direct parallel port emulation */
 #define SERIAL_PORT  /* serial port emulation */
 /* #define SERIAL_ENET */ /* serial port UDP transport */
 #define SCSIEMU /* uaescsi.device emulation */
@@ -69,17 +74,17 @@
 #define FDI2RAW /* FDI 1.0 and 2.x image support */
 /* #define AVIOUTPUT */ /* Avioutput support */
 /* #define PROWIZARD */ /* Pro-Wizard module ripper */
-/* #define ARCADIA */ /* Arcadia arcade system */
+#define ARCADIA /* Arcadia arcade system */
 /* #define ARCHIVEACCESS */ /* ArchiveAccess decompression library */
 /* #define LOGITECHLCD */ /* Logitech G15 LCD */
 #define SAVESTATE /* State file support */
 #define A2091 /* A590/A2091 SCSI */
-/* #define A2065 */ /* A2065 Ethernet card */
+#define A2065 /* A2065 Ethernet card */
 /* #define GFXBOARD */ /* Hardware graphics board */
 /* #define NCR */ /* A4000T/A4091, 53C710/53C770 SCSI */
 /* #define NCR9X */ /* 53C9X SCSI */
 /* #define SANA2 */ /* SANA2 network driver */
-/* #define AMAX */ /* A-Max ROM adapater emulation */
+#define AMAX /* A-Max ROM adapter emulation */
 /* #define RETROPLATFORM */ /* Cloanto RetroPlayer support */
 #define WITH_CHD
 /* #define WITH_LUA */ /* lua scripting */
@@ -94,7 +99,16 @@
 /* #define WITH_PCI */
 /* #define WITH_X86 */
 #define WITH_THREADED_CPU
+/* #define WITH_SOFTFLOAT */
 #define FLOPPYBRIDGE
+#define WITH_MIDIEMU
+//#define WITH_DSP
+
+// Use portmidi library for MIDI devices
+#define WITH_MIDI
+
+/* vpar virtual parallel port */
+#define WITH_VPAR 1
 
 /* #define WITH_SCSI_IOCTL */
 /* #define WITH_SCSI_SPTI */
@@ -140,6 +154,15 @@ typedef int32_t uae_atomic;
 
 /* Define to empty if the keyword does not work.  */
 /* #undef const */
+
+/* Define to 1 if you have the `inet_aton' function. */
+#define HAVE_INET_ATON 1
+
+/* Define to 1 if you have the `inet_ntoa' function. */
+#define HAVE_INET_NTOA 1
+
+/* Define to 1 if you have POSIX serial support */
+#define POSIX_SERIAL 1
 
 /* Define if you have the getmntent function.  */
 #define HAVE_GETMNTENT 1

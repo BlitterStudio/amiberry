@@ -69,8 +69,8 @@ static int console_thread (void *v)
 		c[0] = 0;
 		c[1] = 0;
 		ua_copy (c, 1, &wc);
-		record_key_direct ((0x10 << 1) | 0);
-		record_key_direct ((0x10 << 1) | 1);
+		record_key_direct((0x10 << 1) | 0, false);
+		record_key_direct((0x10 << 1) | 1, false);
 	}
 	return 0;
 }

@@ -21,7 +21,9 @@
 #include "newcpu.h"
 #include "savestate.h"
 #include "zfile.h"
-//#include "catweasel.h"
+#ifdef CATWEASEL
+#include "catweasel.h"
+#endif
 #include "cdtv.h"
 #include "cdtvcr.h"
 #include "threaddep/thread.h"
@@ -66,9 +68,8 @@
 #include "arcadia.h"
 #endif
 #include "devices.h"
-
-#ifdef AMIBERRY
-extern void memory_map_dump(void);
+#ifdef WITH_DSP
+#include "dsp3210/dsp_glue.h"
 #endif
 
 #define CARD_FLAG_CAN_Z3 1
@@ -423,7 +424,9 @@ static addrbank *expamem_init_last (void)
 {
 	expamem_init_clear2 ();
 	write_log (_T("Memory map after autoconfig:\n"));
+#ifdef DEBUGGER
 	memory_map_dump ();
+#endif
 	mman_set_barriers(false);
 	return NULL;
 }
@@ -2417,6 +2420,10 @@ static uaecptr check_boot_rom (struct uae_prefs *p, int *boot_rom_type)
 		return b;
 	if (nr_directory_units (p))
 		return b;
+#ifdef WIN32
+	if (p->win32_automount_drives || p->win32_automount_cddrives || p->win32_automount_netdrives || p->win32_automount_removable)
+		return b;
+#endif
 	if (p->socket_emu)
 		return b;
 	if (p->uaeserial)
@@ -2780,22 +2787,22 @@ void free_expansion_bank(addrbank *bank)
 	bank->reserved_size = 0;
 }
 
-struct autoconfig_info* expansion_get_bank_data(struct uae_prefs* p, uaecptr* addrp)
+struct autoconfig_info *expansion_get_bank_data(struct uae_prefs *p, uaecptr *addrp)
 {
 	uaecptr addr = *addrp;
 	static struct autoconfig_info acid;
-	struct autoconfig_info* aci = NULL;
+	struct autoconfig_info *aci = NULL;
 
 	if (addr >= 0x01000000 && currprefs.address_space_24) {
 		return NULL;
 	}
 	for (;;) {
-		addrbank* ab = &get_mem_bank(addr);
+		addrbank *ab = &get_mem_bank(addr);
 		if (ab && ab != &dummy_bank) {
 			aci = expansion_get_autoconfig_by_address(p, addr, 0);
 			if (aci && expansion_get_autoconfig_by_address(p, addr - 1, 0) != aci) {
-				addrbank* ab2 = ab;
-				struct autoconfig_info* aci2;
+				addrbank *ab2 = ab;
+				struct autoconfig_info *aci2;
 				int size = 0;
 				for (;;) {
 					addr += 65536;
@@ -2823,10 +2830,10 @@ struct autoconfig_info* expansion_get_bank_data(struct uae_prefs* p, uaecptr* ad
 				uaecptr saddr = addr;
 				uaecptr saddr1 = saddr;
 				uaecptr saddr2 = saddr;
-				addrbank* sab1 = get_sub_bank(&saddr1);
+				addrbank *sab1 = get_sub_bank(&saddr1);
 				for (;;) {
 					saddr2 = saddr1 + 1;
-					addrbank* sab2 = get_sub_bank(&saddr2);
+					addrbank *sab2 = get_sub_bank(&saddr2);
 					if (sab1 != sab2 || (saddr1 & 65535) == 65535) {
 						aci->addrbank = sab1;
 						aci->start = addr;
@@ -2852,7 +2859,7 @@ struct autoconfig_info* expansion_get_bank_data(struct uae_prefs* p, uaecptr* ad
 				if (ab->name) {
 					_tcscpy(aci->name, ab->name);
 				}
-				addrbank* ab2 = ab;
+				addrbank *ab2 = ab;
 				int size = 0;
 				for (;;) {
 					addr += 65536;
@@ -4934,72 +4941,72 @@ static struct expansionboardsettings *netsettings[] = {
 	NULL
 };
 
-//struct netdriverdata **target_ethernet_enumerate(void);
+struct netdriverdata **target_ethernet_enumerate(void);
 
-//uae_u32 ethernet_getselection(const TCHAR *name)
-//{
-//	struct netdriverdata **ndd = target_ethernet_enumerate();
-//	if (!ndd)
-//		return 0;
-//	for (int i = 0; ndd && i < MAX_TOTAL_NET_DEVICES; i++) {
-//		if (ndd[i] && !_tcsicmp(ndd[i]->name, name))
-//			return i << 16;
-//	}
-//	return 0;
-//}
+uae_u32 ethernet_getselection(const TCHAR *name)
+{
+	struct netdriverdata **ndd = target_ethernet_enumerate();
+	if (!ndd)
+		return 0;
+	for (int i = 0; ndd && i < MAX_TOTAL_NET_DEVICES; i++) {
+		if (ndd[i] && !_tcsicmp(ndd[i]->name, name))
+			return i << 16;
+	}
+	return 0;
+}
 
-//const TCHAR *ethernet_getselectionname(uae_u32 settings)
-//{
-//	struct netdriverdata **ndd = target_ethernet_enumerate();
-//	if (!ndd)
-//		return 0;
-//	settings = (settings >> 16) & 255;
-//	for (int i = 0; ndd && i < MAX_TOTAL_NET_DEVICES; i++) {
-//		if (i == settings)
-//			return ndd[i]->name;
-//	}
-//	return _T("slirp");
-//}
+const TCHAR *ethernet_getselectionname(uae_u32 settings)
+{
+	struct netdriverdata **ndd = target_ethernet_enumerate();
+	if (!ndd)
+		return 0;
+	settings = (settings >> 16) & 255;
+	for (int i = 0; ndd && i < MAX_TOTAL_NET_DEVICES; i++) {
+		if (i == settings)
+			return ndd[i]->name;
+	}
+	return _T("slirp");
+}
 
-//void ethernet_updateselection(void)
-//{
-//	static int updated;
-//	if (updated)
-//		return;
-//	updated = 1;
-//	struct netdriverdata **ndd = target_ethernet_enumerate();
-//	if (!ndd)
-//		return;
-//	static TCHAR tmp1[MAX_DPATH];
-//	static TCHAR tmp2[MAX_DPATH];
-//	_tcscpy(tmp1, _T("Network mode"));
-//	_tcscpy(tmp2, _T("netmode"));
-//	TCHAR *p1 = tmp1 + _tcslen(tmp1) + 1;
-//	TCHAR *p2 = tmp2 + _tcslen(tmp2) + 1;
-//	for (int i = 0; ndd && i < MAX_TOTAL_NET_DEVICES; i++) {
-//		if (ndd[i]) {
-//			TCHAR mac[20];
-//			mac[0] = 0;
-//			if (ndd[i]->type == UAENET_SLIRP || ndd[i]->type == UAENET_SLIRP_INBOUND) {
-//				_stprintf(mac, _T(" xx:xx:xx:%02X:%02X:%02X"),
-//					ndd[i]->mac[3], ndd[i]->mac[4], ndd[i]->mac[5]);
-//			}
-//			_stprintf(p1, _T("%s%s"), ndd[i]->desc, mac[0] ? mac : _T(""));
-//			p1 += _tcslen(p1) + 1;
-//			_tcscpy(p2, ndd[i]->name);
-//			p2 += _tcslen(p2) + 1;
-//		}
-//	}
-//	*p1 = 0;
-//	*p2 = 0;
-//	for (int i = 0; netsettings[i]; i++) {
-//		struct expansionboardsettings *ebs = netsettings[i];
-//		int j;
-//		for (j = 0; ebs[j].name; j++);
-//		ebs[j].name = tmp1;
-//		ebs[j].configname = tmp2;
-//	}
-//}
+void ethernet_updateselection(void)
+{
+	static int updated;
+	if (updated)
+		return;
+	updated = 1;
+	struct netdriverdata **ndd = target_ethernet_enumerate();
+	if (!ndd)
+		return;
+	static TCHAR tmp1[MAX_DPATH];
+	static TCHAR tmp2[MAX_DPATH];
+	_tcscpy(tmp1, _T("Network mode"));
+	_tcscpy(tmp2, _T("netmode"));
+	TCHAR *p1 = tmp1 + _tcslen(tmp1) + 1;
+	TCHAR *p2 = tmp2 + _tcslen(tmp2) + 1;
+	for (int i = 0; ndd && i < MAX_TOTAL_NET_DEVICES; i++) {
+		if (ndd[i]) {
+			TCHAR mac[20];
+			mac[0] = 0;
+			if (ndd[i]->type == UAENET_SLIRP || ndd[i]->type == UAENET_SLIRP_INBOUND) {
+				_stprintf(mac, _T(" xx:xx:xx:%02X:%02X:%02X"),
+					ndd[i]->mac[3], ndd[i]->mac[4], ndd[i]->mac[5]);
+			}
+			_stprintf(p1, _T("%s%s"), ndd[i]->desc, mac[0] ? mac : _T(""));
+			p1 += _tcslen(p1) + 1;
+			_tcscpy(p2, ndd[i]->name);
+			p2 += _tcslen(p2) + 1;
+		}
+	}
+	*p1 = 0;
+	*p2 = 0;
+	for (int i = 0; netsettings[i]; i++) {
+		struct expansionboardsettings *ebs = netsettings[i];
+		int j;
+		for (j = 0; ebs[j].name; j++);
+		ebs[j].name = tmp1;
+		ebs[j].configname = tmp2;
+	}
+}
 
 static void fastlane_memory_callback(struct romconfig *rc, uae_u8 *ac, int size)
 {
@@ -6094,15 +6101,15 @@ const struct expansionromtype expansionroms[] = {
 #endif
 
 		/* Network */
-	//{
-	//	_T("a2065"), _T("A2065"), _T("Commodore"),
-	//	NULL, a2065_init, NULL, NULL, ROMTYPE_A2065 | ROMTYPE_NOT, 0, 0, BOARD_AUTOCONFIG_Z2, true,
-	//	NULL, 0,
-	//	false, EXPANSIONTYPE_NET,
-	//	0, 0, 0, false, NULL,
-	//	false, 0, ethernet_settings,
-	//	{ 0xc1, 0x70, 0x00, 0x00, 0x02, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }
-	//},
+	{
+		_T("a2065"), _T("A2065"), _T("Commodore"),
+		NULL, a2065_init, NULL, NULL, ROMTYPE_A2065 | ROMTYPE_NOT, 0, 0, BOARD_AUTOCONFIG_Z2, true,
+		NULL, 0,
+		false, EXPANSIONTYPE_NET,
+		0, 0, 0, false, NULL,
+		false, 0, ethernet_settings,
+		{ 0xc1, 0x70, 0x00, 0x00, 0x02, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }
+	},
 	//{
 	//	_T("ariadne"), _T("Ariadne"), _T("Village Tronic"),
 	//	NULL, ariadne_init, NULL, NULL, ROMTYPE_ARIADNE | ROMTYPE_NOT, 0, 0, BOARD_AUTOCONFIG_Z2, true,

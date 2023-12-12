@@ -30,11 +30,11 @@ using namespace std;
 #include <string.h>
 #include <ctype.h>
 #endif
-#include <stdio.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <assert.h>
-#include <limits.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cerrno>
+#include <cassert>
+#include <climits>
 
 #ifndef UAE
 #define UAE
@@ -103,7 +103,7 @@ using namespace std;
 #endif
 #endif
 
-#include <stdarg.h>
+#include <cstdarg>
 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
@@ -117,7 +117,7 @@ using namespace std;
 #include <strings.h>
 #endif
 #ifdef HAVE_STRING_H
-#include <string.h>
+#include <cstring>
 #endif
 
 #ifdef HAVE_UNISTD_H
@@ -137,7 +137,7 @@ using namespace std;
 
 #if TIME_WITH_SYS_TIME
 # include <sys/time.h>
-# include <time.h>
+# include <ctime>
 #else
 # if HAVE_SYS_TIME_H
 #  include <sys/time.h>
@@ -169,8 +169,8 @@ using namespace std;
 # include <sys/utime.h>
 #endif
 
-#include <errno.h>
-#include <assert.h>
+#include <cerrno>
+#include <cassert>
 
 #ifdef __NeXT__
 #define S_IRUSR S_IREAD
@@ -348,8 +348,20 @@ extern void mallocemu_free (void *ptr);
 #endif
 
 extern void write_log (const TCHAR *,...);
+
+extern void flush_log (void);
+extern TCHAR *setconsolemode (TCHAR *buffer, int maxlen);
+extern void close_console (void);
+extern void reopen_console (void);
+extern void activate_console (void);
+extern void console_out (const TCHAR *);
+extern void console_out_f (const TCHAR *, ...);
+extern void console_flush (void);
+extern int console_get (TCHAR *, int);
+extern bool console_isch (void);
 extern TCHAR console_getch(void);
 extern void f_out(FILE*, const TCHAR*, ...);
+extern TCHAR* buf_out (TCHAR *buffer, int *bufsize, const TCHAR *format, ...);
 extern void gui_message (const TCHAR *,...);
 
 #ifndef O_BINARY

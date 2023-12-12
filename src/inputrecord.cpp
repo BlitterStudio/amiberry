@@ -494,7 +494,7 @@ int inprec_open (const TCHAR *fname, const TCHAR *statefilename)
 
 void inprec_startup (void)
 {
-    uaesetrandseed(seed);
+	uaesetrandseed(seed);
 }
 
 bool inprec_prepare_record (const TCHAR *statefilename)

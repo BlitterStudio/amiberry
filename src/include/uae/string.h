@@ -20,6 +20,7 @@
 #ifdef _WIN32
 /* Using the real _tcs* functions */
 #else
+#define _istxdigit isxdigit
 #define _istdigit SDL_isdigit
 #define _istspace SDL_isspace
 #define _istupper isupper
@@ -34,7 +35,7 @@
 #define _tcsdup SDL_strdup
 #define _tcsftime strftime
 #define _tcsftime strftime
-#define _tcsicmp stricmp
+#define _tcsicmp strcasecmp
 #define _tcslen SDL_strlen
 #define uaestrlen SDL_strlen
 #define _tcsncat strncat

@@ -1,5 +1,3 @@
- #include <cstring>
-
 #include <guisan.hpp>
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
@@ -9,25 +7,31 @@
 #include "options.h"
 #include "gui_handling.h"
 #include "sounddep/sound.h"
+#include "parser.h"
 
-#include <libserialport.h>
+static gcn::Window* grpParallelPort;
+static gcn::Window* grpSerialPort;
+static gcn::Window* grpMidi;
+static gcn::Window* grpDongle;
 
-#ifdef SERIAL_PORT
-static gcn::Label* lblSerialPort;
+static gcn::Label* lblSampler;
+static gcn::DropDown* cboSampler;
+static gcn::CheckBox* chkSamplerStereo;
+
 static gcn::DropDown* cboSerialPort;
 static gcn::CheckBox* chkSerialDirect;
 static gcn::CheckBox* chkRTSCTS;
 static gcn::CheckBox* chkUaeSerial;
 static gcn::CheckBox* chkSerialStatus;
 static gcn::CheckBox* chkSerialStatusRi;
-#endif
 
-static gcn::Label* lblProtectionDongle;
+static gcn::Label* lblMidiIn;
+static gcn::DropDown* cboMidiIn;
+static gcn::Label* lblMidiOut;
+static gcn::DropDown* cboMidiOut;
+static gcn::CheckBox* chkMidiRoute;
+
 static gcn::DropDown* cboProtectionDongle;
-
-static gcn::Label* lblSampler;
-static gcn::DropDown* cboSampler;
-static gcn::CheckBox* chkSamplerStereo;
 
 class string_list_model : public gcn::ListModel
 {
@@ -74,14 +78,15 @@ static const char* listValues[] = {
 static string_list_model dongle_list(listValues, 16);
 
 static string_list_model sampler_list(nullptr, 0);
-static string_list_model serial_ports(nullptr, 0);
+static string_list_model serial_ports_list(nullptr, 0);
+static string_list_model midi_in_ports_list(nullptr, 0);
+static string_list_model midi_out_ports_list(nullptr, 0);
 
 class IOActionListener : public gcn::ActionListener
 {
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-#ifdef SERIAL_PORT
 		if (actionEvent.getSource() == cboSerialPort)
 		{
 			const auto selected = cboSerialPort->getSelected();
@@ -92,11 +97,43 @@ public:
 			}
 			else
 			{
-				const auto port_name = serial_ports.getElementAt(selected);
-				snprintf(changed_prefs.sername, 256, "%s", port_name.c_str());
+				const auto port_name = serial_ports_list.getElementAt(selected);
+				_sntprintf(changed_prefs.sername, 256, "%s", port_name.c_str());
 				changed_prefs.use_serial = true;
 			}
 		}
+
+		else if (actionEvent.getSource() == cboMidiOut)
+		{
+			const auto selected = cboMidiOut->getSelected();
+			if (selected == 0)
+			{
+				changed_prefs.midioutdev[0] = 0;
+				changed_prefs.midiindev[0] = 0;
+			}
+			else
+			{
+				const auto port_name = midi_out_ports_list.getElementAt(selected);
+				_sntprintf(changed_prefs.midioutdev, 256, "%s", port_name.c_str());
+			}
+		}
+
+		else if (actionEvent.getSource() == cboMidiIn)
+		{
+			const auto selected = cboMidiIn->getSelected();
+			if (selected == 0)
+			{
+				changed_prefs.midiindev[0] = 0;
+			}
+			else
+			{
+				const auto port_name = midi_in_ports_list.getElementAt(selected);
+				_sntprintf(changed_prefs.midiindev, 256, "%s", port_name.c_str());
+			}
+		}
+
+		else if (actionEvent.getSource() == chkMidiRoute)
+			changed_prefs.midirouter = chkMidiRoute->isSelected();
 
 		else if (actionEvent.getSource() == chkSerialDirect)
 			changed_prefs.serial_direct = chkSerialDirect->isSelected();
@@ -113,7 +150,6 @@ public:
 		else if (actionEvent.getSource() == chkSerialStatusRi)
 			changed_prefs.serial_ri = chkSerialStatusRi->isSelected();
 
-#endif
 		else if (actionEvent.getSource() == cboProtectionDongle)
 			changed_prefs.dongle = cboProtectionDongle->getSelected();
 		else if (actionEvent.getSource() == cboSampler)
@@ -147,38 +183,57 @@ void InitPanelIO(const config_category& category)
 			sampler_list.add_element(tmp);
 	}
 
-	serial_ports.clear_elements();
-	serial_ports.add_element("none");
-	/* A pointer to a null-terminated array of pointers to
-	* struct sp_port, which will contain the serial ports found.*/
-	struct sp_port** port_list;
-	/* Call sp_list_ports() to get the ports. The port_list
-	* pointer will be updated to refer to the array created. */
-	const enum sp_return result = sp_list_ports(&port_list);
-	if (result != SP_OK) 
-	{
-		write_log("sp_list_ports() failed!\n");
+	serial_ports_list.clear_elements();
+	serial_ports_list.add_element("none");
+	for(const auto& i : serial_ports) {
+		serial_ports_list.add_element(i.c_str());
 	}
-	else
-	{
-		for (int i = 0; port_list[i] != nullptr; i++)
-		{
-			const struct sp_port* port = port_list[i];
+	// Add TCP ports also
+	serial_ports_list.add_element("TCP://0.0.0.0:1234");
+	serial_ports_list.add_element("TCP://0.0.0.0:1234/wait");
 
-			/* Get the name of the port. */
-			const char* port_name = sp_get_port_name(port);
-			serial_ports.add_element(port_name);
-		}
-		/* Free the array created by sp_list_ports(). */
-		sp_free_port_list(port_list);
+	midi_in_ports_list.clear_elements();
+	midi_in_ports_list.add_element("none");
+	for(const auto& i : midi_in_ports) {
+		midi_in_ports_list.add_element(i.c_str());
+	}
+
+	midi_out_ports_list.clear_elements();
+	midi_out_ports_list.add_element("none");
+	for(const auto& i : midi_out_ports) {
+		midi_out_ports_list.add_element(i.c_str());
 	}
 
 	ioActionListener = new IOActionListener();
 
-#ifdef SERIAL_PORT
-	lblSerialPort = new gcn::Label("Serial port:");
-	lblSerialPort->setAlignment(gcn::Graphics::RIGHT);
-	cboSerialPort = new gcn::DropDown(&serial_ports);
+	auto posY = DISTANCE_BORDER;
+
+	lblSampler = new gcn::Label("Sampler:");
+	lblSampler->setAlignment(gcn::Graphics::RIGHT);
+	cboSampler = new gcn::DropDown(&sampler_list);
+	cboSampler->setSize(350, cboSampler->getHeight());
+	cboSampler->setBaseColor(gui_baseCol);
+	cboSampler->setBackgroundColor(colTextboxBackground);
+	cboSampler->setId("cboSampler");
+	cboSampler->addActionListener(ioActionListener);
+
+	chkSamplerStereo = new gcn::CheckBox("Stereo sampler");
+	chkSamplerStereo->setId("chkSamplerStereo");
+	chkSamplerStereo->addActionListener(ioActionListener);
+
+	grpParallelPort = new gcn::Window("Parallel Port");
+	grpParallelPort->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
+	grpParallelPort->add(lblSampler, DISTANCE_BORDER, posY);
+	grpParallelPort->add(cboSampler, DISTANCE_BORDER + lblSampler->getWidth() + 8, posY);
+	posY += lblSampler->getHeight() + DISTANCE_NEXT_Y;
+	grpParallelPort->add(chkSamplerStereo, DISTANCE_BORDER, posY);
+	grpParallelPort->setMovable(false);
+	grpParallelPort->setTitleBarHeight(TITLEBAR_HEIGHT);
+	grpParallelPort->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, TITLEBAR_HEIGHT + chkSamplerStereo->getY() + chkSamplerStereo->getHeight() + DISTANCE_NEXT_Y);
+	grpParallelPort->setBaseColor(gui_baseCol);
+	category.panel->add(grpParallelPort);
+
+	cboSerialPort = new gcn::DropDown(&serial_ports_list);
 	cboSerialPort->setSize(350, cboSerialPort->getHeight());
 	cboSerialPort->setBaseColor(gui_baseCol);
 	cboSerialPort->setBackgroundColor(colTextboxBackground);
@@ -204,23 +259,59 @@ void InitPanelIO(const config_category& category)
 	chkSerialStatusRi = new gcn::CheckBox("Serial status: Ring Indicator");
 	chkSerialStatusRi->setId("chkSerialStatusRi");
 	chkSerialStatusRi->addActionListener(ioActionListener);
-#endif
 
-	lblSampler = new gcn::Label("Sampler:");
-	lblSampler->setAlignment(gcn::Graphics::RIGHT);
-	cboSampler = new gcn::DropDown(&sampler_list);
-	cboSampler->setSize(350, cboSampler->getHeight());
-	cboSampler->setBaseColor(gui_baseCol);
-	cboSampler->setBackgroundColor(colTextboxBackground);
-	cboSampler->setId("cboSampler");
-	cboSampler->addActionListener(ioActionListener);
+	grpSerialPort = new gcn::Window("Serial Port");
+	grpSerialPort->setPosition(DISTANCE_BORDER, grpParallelPort->getY() + grpParallelPort->getHeight() + DISTANCE_NEXT_Y);
+	grpSerialPort->add(cboSerialPort, cboSampler->getX(), DISTANCE_BORDER);
+	posY = cboSerialPort->getY() + cboSerialPort->getHeight() + DISTANCE_NEXT_Y;
+	grpSerialPort->add(chkRTSCTS, DISTANCE_BORDER, posY);
+	grpSerialPort->add(chkSerialDirect, chkRTSCTS->getWidth() + chkRTSCTS->getX() + DISTANCE_NEXT_X, posY);
+	grpSerialPort->add(chkUaeSerial, chkSerialDirect->getWidth() + chkSerialDirect->getX() + DISTANCE_NEXT_X, posY);
+	posY = chkRTSCTS->getY() + chkRTSCTS->getHeight() + DISTANCE_NEXT_Y;
+	grpSerialPort->add(chkSerialStatus, DISTANCE_BORDER, posY);
+	grpSerialPort->add(chkSerialStatusRi, chkSerialStatus->getWidth() + chkSerialStatus->getX() + DISTANCE_NEXT_X, posY);
+	grpSerialPort->setMovable(false);
+	grpSerialPort->setTitleBarHeight(TITLEBAR_HEIGHT);
+	grpSerialPort->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, TITLEBAR_HEIGHT +chkSerialStatus->getY() + chkSerialStatus->getHeight() + DISTANCE_NEXT_Y);
+	grpSerialPort->setBaseColor(gui_baseCol);
+	category.panel->add(grpSerialPort, DISTANCE_BORDER, grpParallelPort->getY() + grpParallelPort->getHeight() + DISTANCE_NEXT_Y);
 
-	chkSamplerStereo = new gcn::CheckBox("Stereo sampler");
-	chkSamplerStereo->setId("chkSamplerStereo");
-	chkSamplerStereo->addActionListener(ioActionListener);
+	lblMidiOut = new gcn::Label("Out:");
+	lblMidiOut->setAlignment(gcn::Graphics::RIGHT);
+	cboMidiOut = new gcn::DropDown(&midi_out_ports_list);
+	cboMidiOut->setSize(200, cboMidiOut->getHeight());
+	cboMidiOut->setBaseColor(gui_baseCol);
+	cboMidiOut->setBackgroundColor(colTextboxBackground);
+	cboMidiOut->setId("cboMidiOut");
+	cboMidiOut->addActionListener(ioActionListener);
 
-	lblProtectionDongle = new gcn::Label("Protection Dongle:");
-	lblProtectionDongle->setAlignment(gcn::Graphics::RIGHT);
+	lblMidiIn = new gcn::Label("In:");
+	lblMidiIn->setAlignment(gcn::Graphics::RIGHT);
+	cboMidiIn = new gcn::DropDown(&midi_in_ports_list);
+	cboMidiIn->setSize(200, cboMidiIn->getHeight());
+	cboMidiIn->setBaseColor(gui_baseCol);
+	cboMidiIn->setBackgroundColor(colTextboxBackground);
+	cboMidiIn->setId("cboMidiIn");
+	cboMidiIn->addActionListener(ioActionListener);
+
+	chkMidiRoute = new gcn::CheckBox("Route MIDI In to MIDI Out");
+	chkMidiRoute->setId("chkMidiRoute");
+	chkMidiRoute->addActionListener(ioActionListener);
+
+	grpMidi = new gcn::Window("MIDI");
+	grpMidi->setPosition(DISTANCE_BORDER, grpSerialPort->getY() + grpSerialPort->getHeight() + DISTANCE_NEXT_Y);
+	grpMidi->add(lblMidiOut, DISTANCE_BORDER, DISTANCE_BORDER);
+	grpMidi->add(cboMidiOut, cboSampler->getX(), DISTANCE_BORDER);
+	grpMidi->add(lblMidiIn, cboMidiOut->getX() + cboMidiOut->getWidth() + DISTANCE_NEXT_X * 3, DISTANCE_BORDER);
+	grpMidi->add(cboMidiIn, lblMidiIn->getX() + lblMidiIn->getWidth() + 8, DISTANCE_BORDER);
+	posY = cboSampler->getY() + cboSampler->getHeight() + DISTANCE_NEXT_Y;
+	grpMidi->add(chkMidiRoute, DISTANCE_BORDER, posY);
+	grpMidi->setMovable(false);
+	grpMidi->setTitleBarHeight(TITLEBAR_HEIGHT);
+	grpMidi->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, TITLEBAR_HEIGHT + chkMidiRoute->getY() + chkMidiRoute->getHeight() + DISTANCE_NEXT_Y);
+	grpMidi->setBaseColor(gui_baseCol);
+	category.panel->add(grpMidi, DISTANCE_BORDER, grpSerialPort->getY() + grpSerialPort->getHeight() + DISTANCE_NEXT_Y);
+
 	cboProtectionDongle = new gcn::DropDown(&dongle_list);
 	cboProtectionDongle->setSize(350, cboProtectionDongle->getHeight());
 	cboProtectionDongle->setBaseColor(gui_baseCol);
@@ -228,25 +319,14 @@ void InitPanelIO(const config_category& category)
 	cboProtectionDongle->setId("cboProtectionDongle");
 	cboProtectionDongle->addActionListener(ioActionListener);
 
-	category.panel->add(lblSerialPort, DISTANCE_BORDER, DISTANCE_BORDER);
-	category.panel->add(cboSerialPort, DISTANCE_BORDER + lblProtectionDongle->getWidth() + 8, DISTANCE_BORDER);
-	int posY = cboSerialPort->getY() + cboSerialPort->getHeight() + DISTANCE_NEXT_Y;
-	category.panel->add(chkRTSCTS, DISTANCE_BORDER, posY);
-	category.panel->add(chkSerialDirect, chkRTSCTS->getWidth() + chkRTSCTS->getX() + DISTANCE_NEXT_X, posY);
-	category.panel->add(chkUaeSerial, chkSerialDirect->getWidth() + chkSerialDirect->getX() + DISTANCE_NEXT_X, posY);
-	posY = chkRTSCTS->getY() + chkRTSCTS->getHeight() + DISTANCE_NEXT_Y;
-	category.panel->add(chkSerialStatus, DISTANCE_BORDER, posY);
-	category.panel->add(chkSerialStatusRi, chkSerialStatus->getWidth() + chkSerialStatus->getX() + DISTANCE_NEXT_X, posY);
-	posY = chkSerialStatus->getY() + chkSerialStatus->getHeight() + DISTANCE_NEXT_Y * 2;
-
-	category.panel->add(lblSampler, DISTANCE_BORDER, posY);
-	category.panel->add(cboSampler, DISTANCE_BORDER + lblProtectionDongle->getWidth() + 8, posY);
-	posY += lblSampler->getHeight() + DISTANCE_NEXT_Y;
-	category.panel->add(chkSamplerStereo, DISTANCE_BORDER, posY);
-	posY += chkSamplerStereo->getHeight() + DISTANCE_NEXT_Y * 2;
-
-	category.panel->add(lblProtectionDongle, DISTANCE_BORDER, posY);
-	category.panel->add(cboProtectionDongle, DISTANCE_BORDER + lblProtectionDongle->getWidth() + 8, posY);
+	grpDongle = new gcn::Window("Protection Dongle");
+	grpDongle->setPosition(DISTANCE_BORDER, grpMidi->getY() + grpMidi->getHeight() + DISTANCE_NEXT_Y);
+	grpDongle->add(cboProtectionDongle, cboSampler->getX(), DISTANCE_BORDER);
+	grpDongle->setMovable(false);
+	grpDongle->setTitleBarHeight(TITLEBAR_HEIGHT);
+	grpDongle->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, category.panel->getHeight() - grpParallelPort->getHeight() - grpSerialPort->getHeight() - grpMidi->getHeight() - TITLEBAR_HEIGHT * 3);
+	grpDongle->setBaseColor(gui_baseCol);
+	category.panel->add(grpDongle, DISTANCE_BORDER, grpMidi->getY() + grpMidi->getHeight() + DISTANCE_NEXT_Y);
 
 	RefreshPanelIO();
 }
@@ -254,26 +334,34 @@ void InitPanelIO(const config_category& category)
 void ExitPanelIO()
 {
 	delete ioActionListener;
-#ifdef SERIAL_PORT
-	delete lblSerialPort;
+
+	delete lblSampler;
+	delete cboSampler;
+	delete chkSamplerStereo;
+
 	delete cboSerialPort;
 	delete chkRTSCTS;
 	delete chkSerialDirect;
 	delete chkUaeSerial;
 	delete chkSerialStatus;
 	delete chkSerialStatusRi;
-#endif
 
-	delete lblProtectionDongle;
+	delete lblMidiIn;
+	delete cboMidiIn;
+	delete lblMidiOut;
+	delete cboMidiOut;
+	delete chkMidiRoute;
+
 	delete cboProtectionDongle;
-	delete lblSampler;
-	delete cboSampler;
-	delete chkSamplerStereo;
+
+	delete grpParallelPort;
+	delete grpSerialPort;
+	delete grpMidi;
+	delete grpDongle;
 }
 
 void RefreshPanelIO()
 {
-#ifdef SERIAL_PORT
 	chkRTSCTS->setSelected(changed_prefs.serial_hwctsrts);
 	chkSerialDirect->setSelected(changed_prefs.serial_direct);
 	chkUaeSerial->setSelected(changed_prefs.uaeserial);
@@ -283,9 +371,9 @@ void RefreshPanelIO()
 	if (changed_prefs.sername[0])
 	{
 		const auto serial_name = string(changed_prefs.sername);
-		for (int i = 0; i < serial_ports.getNumberOfElements(); i++)
+		for (int i = 0; i < serial_ports_list.getNumberOfElements(); i++)
 		{
-			if (serial_ports.getElementAt(i) == serial_name)
+			if (serial_ports_list.getElementAt(i) == serial_name)
 			{
 				cboSerialPort->setSelected(i);
 				break;
@@ -305,7 +393,38 @@ void RefreshPanelIO()
 		chkSerialStatus->setEnabled(false);
 		chkSerialStatusRi->setEnabled(false);
 	}
-#endif
+
+	chkMidiRoute->setEnabled(false);
+	if (changed_prefs.midioutdev[0])
+	{
+		const auto midi_out_name = string(changed_prefs.midioutdev);
+		for (int i = 0; i < midi_out_ports_list.getNumberOfElements(); i++)
+		{
+			if (midi_out_ports_list.getElementAt(i) == midi_out_name)
+			{
+				cboMidiOut->setSelected(i);
+				break;
+			}
+		}
+		cboMidiIn->setEnabled(true);
+		if (changed_prefs.midiindev[0])
+		{
+			const auto midi_in_name = string(changed_prefs.midiindev);
+			for (int i = 0; i < midi_in_ports_list.getNumberOfElements(); i++)
+			{
+				if (midi_in_ports_list.getElementAt(i) == midi_in_name)
+				{
+					cboMidiIn->setSelected(i);
+					chkMidiRoute->setEnabled(true);
+					break;
+				}
+			}
+		}
+	}
+	else
+	{
+		cboMidiIn->setEnabled(false);
+	}
 
 	cboProtectionDongle->setSelected(changed_prefs.dongle);
 
@@ -322,11 +441,38 @@ void RefreshPanelIO()
 bool HelpPanelIO(std::vector<std::string>& helptext)
 {
 	helptext.clear();
-	helptext.emplace_back("Serial Port emulates the Amiga UART through a hardware based UART device on the host.");
-	helptext.emplace_back("For example /dev/ttyUSB0. For use on emulator to emulator use Direct ON and RTS/CTS OFF.");
-	helptext.emplace_back("For emulator to physical device configurations the opposite should apply.");
+	helptext.emplace_back("In this panel, you can configure the various I/O Ports that Amiberry can emulate.");
+	helptext.emplace_back("Some of these options will depend on what hardware you have available in your system");
+	helptext.emplace_back("(e.g. serial ports).");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("Protection dongle emulation allows you to emulate such a dongle, which some software");
-	helptext.emplace_back("required in order to work.");
+	helptext.emplace_back("Sampler: This dropdown will be populated with any Recording devices detected in your");
+	helptext.emplace_back("         system. You can select such a device, to use it as a Sampler in the emulated");
+	helptext.emplace_back("         Amiga.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("Serial Port: If you have any physical serial ports connected to your computer,");
+	helptext.emplace_back("         they will be shown in this dropdown. You can select one, to use as the");
+	helptext.emplace_back("         emulated Amiga serial port. You can also use USB to Serial adapters for ");
+	helptext.emplace_back("         this purpose. Only standard 7/8-bit serial protocols are supported, as the");
+	helptext.emplace_back("         9-bit serial protocol is not supported by PC hardware.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("RTS/CTS: If you require handshake signals, you can enable this checkbox. This is usually");
+	helptext.emplace_back("         required by certain hardware, like modems or other physical devices.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("Direct: If you are connecting directly to another instance of Amiberry, you can use");
+	helptext.emplace_back("        this option, to emulate a null-modem cable connection. Some games supported");
+	helptext.emplace_back("        this feature.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("uaeserial.device: You can use this option if you want to use multiple serial ports,");
+	helptext.emplace_back("         by mapping Amiga side unit X = host serial port X");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("MIDI Out/In: If you have any MIDI devices connected, you can select them here.");
+	helptext.emplace_back("         Amiberry uses the PortMidi library to send and receive MIDI messages.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("Route MIDI In to MIDI Out: This option will reroute the MIDI In to the MIDI Out port,");
+	helptext.emplace_back("         as the name implies.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("Protection Dongle: This option allows you to emulate such a dongle, which some");
+	helptext.emplace_back("         software required in order to work.");
+	helptext.emplace_back(" ");
 	return true;
 }

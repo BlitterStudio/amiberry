@@ -23,10 +23,10 @@
 #include <vector>
 #include <string>
 
-#ifdef AMIBERRY
-#include "FloppyBridge.h"
-#else
+#ifdef _WIN32
 #include "..\windows\FloppyBridge.h"
+#else
+#include "FloppyBridge.h"
 #endif
 
 #define BRIDGE_STRING_MAX_LENGTH 255

@@ -41,15 +41,9 @@
 #else
 #include <sys/ucontext.h>
 #endif
-#include <signal.h>
+#include <csignal>
 #include <dlfcn.h>
-#ifndef ANDROID
 #include <execinfo.h>
-#else
-int backtrace(void**,int){ return 0; }
-char** backtrace_symbols(void* const*,int){return NULL; }
-void backtrace_symbols_fd(void* const*,int,int){} 
-#endif
 #include <SDL.h>
 
 #ifdef JIT
@@ -449,7 +443,7 @@ void signal_segv(int signum, siginfo_t* info, void* ptr)
 		--max_signals;
 		if (max_signals <= 0) {
 			target_startup_msg(_T("Exception"), _T("Too many access violations. Please turn off JIT."));
-			uae_restart(1, NULL);
+			uae_restart(&currprefs, 1, NULL);
 			return;
 		}
 	}
@@ -864,7 +858,7 @@ void signal_segv(int signum, siginfo_t* info, void* ptr)
 		--max_signals;
 		if (max_signals <= 0) {
 			target_startup_msg(_T("Exception"), _T("Too many access violations. Please turn off JIT."));
-			uae_restart(1, NULL);
+			uae_restart(&currprefs, 1, NULL);
 			return;
 		}
 	}

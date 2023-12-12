@@ -481,7 +481,7 @@ static void blitter_interrupt(int hpos, int done)
 	if (!done && (!blitter_cycle_exact || immediate_blits || currprefs.cpu_model >= 68030 || currprefs.cachesize || currprefs.m68k_speed < 0))
 		return;
 	blit_interrupt = 1;
-	send_interrupt (6, 4 * CYCLE_UNIT);
+	INTREQ_INT (6, 4 * CYCLE_UNIT);
 #ifdef DEBUGGER
 	if (debug_dma)
 		record_dma_event (DMA_EVENT_BLITIRQ, hpos, vpos);
@@ -1190,7 +1190,7 @@ void decide_blitter(int hpos)
 			blt_delayed_irq--;
 		if (blt_delayed_irq <= 0) {
 			blt_delayed_irq = 0;
-			send_interrupt(6, 2 * CYCLE_UNIT);
+			INTREQ_INT(6, 2 * CYCLE_UNIT);
 		}
 	}
 

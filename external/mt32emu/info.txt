@@ -1,0 +1,6 @@
+libmt32emu is a part of the Munt project, a multi-platform software synthesiser
+emulating (approximately) pre-GM MIDI devices such as the Roland MT-32, CM-32L,
+CM-64 and LAPC-I. In no way endorsed by or affiliated with Roland Corp.
+
+libmt32emu is a C/C++ library intended for developers wishing to integrate
+an MT-32 emulator into a driver or an application.

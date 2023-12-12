@@ -35,7 +35,9 @@
 #include "calc.h"
 #include "gfxboard.h"
 #include "cpuboard.h"
-//#include "luascript.h"
+#ifdef WITH_LUA
+#include "luascript.h"
+#endif
 #include "ethernet.h"
 #include "native2amiga_api.h"
 #include "ini.h"
@@ -2097,7 +2099,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 		}
 	}
 
-#ifndef AMIBERRY
+#ifdef WITH_LUA
 	for (i = 0; i < MAX_LUA_STATES; i++) {
 		if (p->luafiles[i][0]) {
 			cfgfile_write_str (f, _T("lua"), p->luafiles[i]);
@@ -2230,7 +2232,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 		std::array<int, SDL_CONTROLLER_BUTTON_MAX> custom_button_map{};
 		const TCHAR* custom_name;
 		
-		// get all of the custom actions
+		// get all the custom actions
 		for (auto n = 0; n < SDL_CONTROLLER_BUTTON_MAX; ++n) // loop through all buttons
 		{
 			for (auto m = 0; m < 2; m++)
@@ -2763,7 +2765,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 		}
 		cfgfile_writeramboard(p, f, _T("fastmem"), i, &p->fastmem[i]);
 	}
-#ifndef AMIBERRY
+#ifdef DEBUGGER
 	cfgfile_write(f, _T("debugmem_start"), _T("0x%x"), p->debugmem_start);
 	cfgfile_write(f, _T("debugmem_size"), _T("%d"), p->debugmem_size / 0x100000);
 #endif
@@ -3626,7 +3628,7 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 				p->cdslots[i].type = type;
 				if (path[0] == 0 || !_tcsicmp(path, _T("empty")) || !_tcscmp(path, _T("."))) {
 					p->cdslots[i].name[0] = 0;
-#ifndef AMIBERRY
+#ifndef AMIBERRY // Don't disable the CD drive
 					p->cdslots[i].inuse = false;
 #endif
 				}
@@ -3644,7 +3646,7 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		}
 	}
 
-#ifndef AMIBERRY
+#ifdef WITH_LUA
 	if (!_tcsicmp (option, _T("lua"))) {
 		for (i = 0; i < MAX_LUA_STATES; i++) {
 			if (!p->luafiles[i][0]) {
@@ -3830,7 +3832,7 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		return 1;
 	}
 
-#ifndef AMIBERRY
+#ifdef DEBUGGER
 	if (cfgfile_multichoice(option, value, _T("debugging_features"), &p->debugging_features, debugfeatures))
 		return 1;
 #endif
@@ -5648,9 +5650,7 @@ static bool cfgfile_read_board_rom(struct uae_prefs *p, const TCHAR *option, con
 				if (buf2[0]) {
 					if (ert->deviceflags & EXPANSIONTYPE_NET) {
 						// make sure network settings are available before parsing net "rom" entries
-#ifndef AMIBERRY // Not implemented yet
 						ethernet_updateselection();
-#endif
 					}
 					brc = get_device_rom_new(p, ert->romtype, j, &idx);
 					_tcscpy(brc->roms[idx].romfile, buf2);
@@ -5775,7 +5775,6 @@ static void addbcromtype(struct uae_prefs *p, int romtype, bool add, const TCHAR
 	}
 }
 
-#ifndef AMIBERRY // Not implemented yet
 static void addbcromtypenet(struct uae_prefs *p, int romtype, const TCHAR *netname, int devnum)
 {
 	int is = is_device_rom(p, romtype, devnum);
@@ -5796,7 +5795,6 @@ static void addbcromtypenet(struct uae_prefs *p, int romtype, const TCHAR *netna
 		}
 	}
 }
-#endif
 
 static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCHAR *value)
 {
@@ -5837,7 +5835,7 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		return 1;
 	}
 	if (cfgfile_strval (option, value, _T("cycle_exact"), &tmpval, cycleexact, 0)) {
-		if (tmpval > 0 && p->cpu_model <= 68010) { // AMIBERRY only supports cycle exact in 68000-010 modes for now
+		if (tmpval > 0) {
 			p->blitter_cycle_exact = true;
 			p->cpu_cycle_exact = tmpval > 1;
 			p->cpu_memory_cycle_exact = true;
@@ -5858,7 +5856,6 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		p->cpu_clock_multiplier = (int)(_tstof (tmpbuf) * 256.0);
 		return 1;
 	}
-
 
 	if (cfgfile_string(option, value, _T("a2065"), p->a2065name, sizeof p->a2065name / sizeof(TCHAR))) {
 		if (p->a2065name[0])
@@ -6667,14 +6664,14 @@ void cfgfile_compatibility_romtype(struct uae_prefs *p)
 	}
 	p->cs_cd32fmv = get_device_romconfig(p, ROMTYPE_CD32CART, 0) != NULL;
 
+#ifndef AMIBERRY
 	if (p->config_version < ((3 << 16) | (4 << 8) | (0 << 0))) {
 		// 3.3.0 or older
-#ifndef AMIBERRY
 		addbcromtypenet(p, ROMTYPE_A2065, p->a2065name, 0);
 		addbcromtypenet(p, ROMTYPE_NE2KPCMCIA, p->ne2000pcmcianame, 0);
 		addbcromtypenet(p, ROMTYPE_NE2KPCI, p->ne2000pciname, 0);
-#endif
 	}
+#endif
 
 	static const int restricted_net[] = {
 		ROMTYPE_A2065, ROMTYPE_NE2KPCMCIA, ROMTYPE_NE2KPCI, ROMTYPE_NE2KISA,
@@ -7625,7 +7622,7 @@ int parse_cmdline_option (struct uae_prefs *p, TCHAR c, const TCHAR *arg)
 	case 'r': cmdpath (p->romfile, arg, 255); break;
 	case 'K': cmdpath (p->romextfile, arg, 255); break;
 	case 'p': _tcsncpy (p->prtname, arg, 255); p->prtname[255] = 0; break;
-/*  case 'I': _tcsncpy (p->sername, arg, 255); p->sername[255] = 0; currprefs.use_serial = 1; break; */
+	/*  case 'I': _tcsncpy (p->sername, arg, 255); p->sername[255] = 0; currprefs.use_serial = 1; break; */
 	case 'm': case 'M': parse_filesys_spec (p, c == 'M', arg); break;
 	case 'W': parse_hardfile_spec (p, arg); break;
 	case 'S': parse_sound_spec (p, arg); break;
@@ -8508,7 +8505,7 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 	_tcscpy (p->floppyslots[1].df, _T(""));
 	_tcscpy (p->floppyslots[2].df, _T(""));
 	_tcscpy (p->floppyslots[3].df, _T(""));
-#ifndef AMIBERRY
+#ifdef WITH_LUA
 	for (int i = 0; i < MAX_LUA_STATES; i++) {
 		p->luafiles[i][0] = 0;
 	}
