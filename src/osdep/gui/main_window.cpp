@@ -26,11 +26,6 @@
 #include "amiberry_input.h"
 #include "inputdevice.h"
 
-#if defined(ANDROID)
-#include "androidsdl_event.h"
-#include <android/log.h>
-#endif
-
 bool ctrl_state = false, shift_state = false, alt_state = false, win_state = false;
 int last_x = 0;
 int last_y = 0;
@@ -95,9 +90,7 @@ ConfigCategory categories[] = {
 	{"Virtual Keyboard", "keyboard.png", nullptr, nullptr, InitPanelVirtualKeyboard, 
 		ExitPanelVirtualKeyboard, RefreshPanelVirtualKeyboard, HelpPanelVirtualKeyboard
 	},
-#ifdef ANDROID
-	{ "OnScreen",         "screen.ico",    NULL, NULL, InitPanelOnScreen,  ExitPanelOnScreen, RefreshPanelOnScreen,  HelpPanelOnScreen },
-#endif
+
 	{nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr}
 };
 
@@ -124,9 +117,6 @@ enum
 	PANEL_MISC,
 	PANEL_SAVESTATES,
 	PANEL_VIRTUAL_KEYBOARD,
-#ifdef ANDROID
-	PANEL_ONSCREEN,
-#endif
 	NUM_PANELS
 };
 
@@ -1176,7 +1166,7 @@ public:
 				strncat(tmp, OPTIONSFILENAME, MAX_DPATH - 1);
 				strncat(tmp, ".uae", MAX_DPATH - 10);
 			}
-			uae_restart(-1, tmp);
+			uae_restart(&changed_prefs, -1, tmp);
 			gui_running = false;
 		}
 		else if (actionEvent.getSource() == cmdStart)

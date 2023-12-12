@@ -1,0 +1,378 @@
+2023-10-11:
+
+	2.7.1 released.
+
+	* Fixed initialisation of ROMInfo objects which caused crashes of client applications
+	  when accessing the static ROM data. Currently, only builds with clang-17.0 are affected
+	  which is used in MSYS2 environment. (#115)
+
+2022-07-23:
+
+	2.7.0 released.
+
+	* Added support for MT-32 control ROM v.2.03. (#92)
+	* Provided two new functions for retrieving names of all standard timbres and their
+	  "sound groups". These also make it easier to retrieve names of custom timbres. (#91)
+
+2022-04-16:
+
+	2.6.3 released.
+
+	* To improve portability on some systems where multiple ABIs are supported with different
+	  calling conventions (notably 32-bit Windows), all the public C functions now declare
+	  the C calling convention explicitly, that makes a shared library build compatible with
+	  a project who utilises another calling convention. (#89)
+	* Function mt32emu_configure_midi_event_queue_sysex_storage from the C-compatible API
+	  is now correctly exported in the declaration. Previously, it was only accessible when
+	  building the library statically or via the plugin-like API. (#90)
+
+2022-03-06:
+
+	2.6.0 released.
+
+	* Added support for three more control ROMs: MT-32 v.2.06, v.2.07 and CM-32LN v.1.00.
+	* Improved CMake build script for mt32emu. Notably:
+	  * The build script now populates the relevant library target properties, so that linking
+	    the mt32emu target in a dependent project is sufficient for the build to succeed,
+	    without necessity to use any extra variables.
+	  * A complete CMake package with configuration, version and targets files is now installed
+	    onto the target system. This package simplifies configuration of the other projects,
+	    yet facilitates reliable builds with optional transitive library dependencies.
+	  * Rewritten find-modules for libraries soxr and samplerate from scratch, so that they now
+	    behave more uniformly yet can be used with added convenience.
+	  * Updated the description of the module FindMT32EMU.cmake. It now creates the IMPORTED
+	    target MT32Emu::mt32emu upon success, similarly to the other scripts. Note, this module
+	    is not recommended for use with mt32emu version 2.6 and above. (#65)
+	* Introduced display emulation support that goes beyond the existing low-level API intended
+	  for retrieving the synth state details. The startup banner and the SysEx checksum error
+	  are now shown. We now also take care of the control ROM version to emulate the most
+	  prominent quirks. Additionally, there is a limited support for displaying the emulated LCD
+	  on narrow hardware LCDs that have width of 16 characters only. (#66)
+	* Fixed emulation of a TVA quirk the old-gen devices exhibit when playing a partial with
+	  zero TVA ENV SUSTAIN LEVEL. (#82)
+	* Introduced support for configuring per-part volume levels that override the levels set via
+	  MIDI messages. (#85)
+
+2021-08-07:
+
+	2.5.3 released.
+
+	* Fixed possible access to uninitialised rhythm timbre memory when using MT-32 control ROM.
+	  With control ROMs 2.04 and above, the entire rhythm timbre memory is now initialised
+	  as the real devices do. Those timbres that do not exist in MT-32 models are now muted.
+	  With control ROMs 1.xx, the timbres 30..59 are mapped to 0..29 that should correspond
+	  to the behaviour of real units. The other 4 timbres are muted to avoid undefined behaviour
+	  the real hardware exhibits. (#72)
+
+2021-07-18:
+
+	2.5.2 released.
+
+	* Fixed compilation of client programs written in C when the automatic runtime version check
+	  is enabled with the preprocessor macro MT32EMU_RUNTIME_VERSION_CHECK 2. This may be needed
+	  on systems where symbol versioning is unavailable. (#71)
+	* Tweaked AUTHORS.txt to contain the entire license of embedded third-party code.
+
+2021-05-22:
+
+	2.5.1 released.
+
+	* Fixed incorrect delete statement in ROMImage dtor, affects memory deallocations
+	  of full ROMImages created by merging partial ones. (#60)
+
+2021-04-02:
+
+	2.5.0 released.
+
+	* Added support for partial ROM images that may be dumped from several supported hardware
+	  models. Previously, those had to be either concatenated or interleaved for the emulation
+	  engine to accept. (#44)
+	* Added a few API extensions to better handle ROM images that can now be either full and /
+	  or partial, including iteration over several ROM files to find ones compatible with
+	  particular model of hardware units. (#47)
+	* Various improvements in build and packaging, in particular:
+	  * added generation of pkg-config file; (#43)
+	  * started symbol versioning for fine-grained documenting API changes yet to simplify
+	    looking up the minimum version of the library required by a caller application; (#46)
+	  * a new build option libmt32emu_WITH_VERSION_TAGGING enables tagging the shared object
+	    with the library version and facilitates an automatic runtime version check
+	    in the client application; (#46)
+	  * for the GNU and Clang compilers, a new build option libmt32emu_WITH_SYMBOL_VERSIONING
+	    is now available that adds versions of version tags and C-compatible API symbols
+	    on supported platforms (e.g. Linux, FreeBSD, Solaris). (#46)
+	* Fixed undefined behaviour that the TVP emulation code may exhibit. (#51)
+
+2021-01-17:
+
+	2.4.2 released.
+
+	* Reworked the support for accessing ROM files with localised pathnames introduced in 2.3.0.
+	  Since it is not really necessary in majority of cases but may nevertheless update global
+	  C and C++ locale settings, it must now be explicitly enabled with the new CMake option
+	  libmt32emu_INSTALL_DEFAULT_LOCALE. Also, it no longer touches the global C++ locale
+	  even if enabled, since that appears to have no positive effect. So far, it has been found
+	  useful for building shared library with some old versions of MS VC when linking C runtime
+	  statically.
+
+2020-10-07:
+
+	2.4.1 released.
+
+	* Fixed a bug that caused loss of the least significant bit of PCM samples
+	  loaded from ROMs.
+
+2020-03-29:
+
+	2.4.0 released.
+
+	* In addition to already existing options intended to improve
+	  audio output quality in contrast to somewhat degrading emulation
+	  accuracy, the two more quirks of LA-32 are now configurable.
+	  NicePanning enlarges the allowed value range for the pan setting,
+	  providing for smoother panning.
+	  NicePartialMixing disables occasional counter-phase mixing of partials
+	  making the timbres that contain closely sounding partials be
+	  mixed in a more predictable way.
+	* Improved emulation of the pitch overflow quirks of the MT-32 GEN0
+	  by disabling the upper-bound check that is only applied during the base
+	  pitch calculations by modern units. Specifically, this fixes the "starfall"
+	  timbre playing at wrong pitch in the WILLY BEAMISH intro when using
+	  ROMs of the MT-32 GEN0 (discovered by eddieduff at Sourceforge).
+	* Fixed compilation errors when setting various preprocessor definitions
+	  intended for debugging.
+	* Converted compiler definition MT32EMU_REDUCE_REVERB_MEMORY to a runtime
+	  configuration option. This allows the client to ensure that reverb mode
+	  changes are safe for rendering in a realtime thread.
+	* Improved the implementation of the internal MIDI event queue. Notably,
+	  added a new storage mechanism for the payload of SysEx events that
+	  does not require memory allocations while pushing events to the queue.
+
+2017-12-24:
+
+	2.3.0 released.
+
+	* Improved emulation of partial allocator. It still handles individual partials as entities and not pairs,
+	  but now it keeps inactive partials on a stack rather than assigns the first free partial sorted by index.
+	  This behaviour better corresponds to how the real units allocate partials though.
+	* Fixed various issues with accessing ROM files with localised pathnames.
+	* Fixed old thinko about MIDI channel mapping when a MIDI channel is assigned to multiple parts.
+	  In this case, the messages received on that MIDI channel are now handled by all the parts.
+	* Changed semantic of the build option libmt32emu_WITH_INTERNAL_RESAMPLER. When disabled, the built-in
+	  resampler support is no longer included in the build implicitly. In case no external resampler library is
+	  found, a simple stub is used instead, that either outputs at the internal synth sample rate or is muted.
+	  This is mainly intended to reduce the library size when the sample rate conversion is handled externally.
+
+2017-07-29:
+
+	2.2.0 released.
+
+	* Added emulation of a number of MT-32 GEN0 quirks that is enabled when loading e.g. Control ROM v1.07,
+	  so many patches specific for old MT-32 are now played correctly. Thanks go to NewRisingSun for providing
+	  the test set of those patches. See http://www.vogons.org/viewtopic.php?p=578873#p578873 for more details.
+	* Fixed sample format conversion implementation, so that integer samples are converted to normalised
+	  float samples as well as float samples are still converted to full-range integer ones.
+	  LA32FloatWaveGenerator now produces output at 0.25 volume that corresponds to the fact that each partial
+	  in LA32 uses only 14-bit samples. Still, no clamping is applied in DACInputMode_NICE mode for floats,
+	  so the output samples may overshoot a little for tunes with the volume set too high.
+	* Introduced "Nice Amp Ramp" mode intended to improve emulation of amplitude ramp in sustain phase.
+	  Quick changes of volume or expression on a MIDI channel may result in amp jumps on real hardware.
+	  When "Nice Amp Ramp" mode is enabled (default), amp changes gradually instead. Otherwise,
+	  the emulation accuracy is preserved.
+
+2017-04-09:
+
+	2.1.0 released.
+
+	* Added sample rate conversion feature that allows converting the synthesiser output to any desired sample rate.
+	  It can either utilise an external library (e.g. libsoxr or libsamplerate) or use an internal implementation.
+	  This behaviour is controlled by a build option libmt32emu_WITH_INTERNAL_RESAMPLER (enabled by default).
+	  The internal implementation is derived from that previously added in mt32emu-qt application and aims
+	  to provide for good performance yet lower the added latency at the expense of phase linearity.
+	* The types of the rendering engine and of the wave generator can now be triggered in runtime. Nuked
+	  MT32EMU_USE_FLOAT_SAMPLES preprocessor definition.
+
+2017-03-05:
+
+	2.0.4 released.
+
+	* Fixed API Configuration compatibility check for mode MT32EMU_API_TYPE 3.
+
+2017-02-27:
+
+	2.0.3 released.
+
+	* Renderer now uses pre-allocated temporary sample buffers thus reducing the amount of memory used on the stack.
+
+2017-02-25:
+
+	2.0.2 released.
+
+	* Fixed a bug in handling of the rhythm part that enabled playing uninitialised timbres when using MT-32 control ROMs
+	  and setting timbre numbers >= 94 in the rhythm set up area.
+
+2016-12-11:
+
+	2.0.1 released.
+
+	* Disambiguated names of classes ReportHandler and MidiReceiver. In cpp_interface.h, these classes are now named
+	  IReportHandler and IMidiReceiver in accordance. This fixes linkage errors that may previously arise
+	  when an implementation attempted to extend one of these classes.
+	* Various other minor code improvements that render no functional changes.
+
+2016-10-22:
+
+	2.0.0 released.
+
+	* Introduced support for sound groups. Callback ReportHandler::onProgramChanged() now supply correct sound group name
+	  instead of just the index of the timbre bank.
+	* Reworked ControlROMFeatureSet. MT-32 GEN0 quirk "Pitch Envelope Overflow" exploited in Colonel's Bequest timbre "Lightning"
+	  is now emulated when loading one of control ROMs v.1.04-1.07.
+	* Improved current loose implementation of SysEx handshake communication. Specifically, disabled the check for partial
+	  activity, as that caused SysEx messages to be ignored without any feedback.
+	* API and build changes:
+	  - minimum required version of Cmake raised to 2.8.12;
+	  - clarified existing C++ API, mt32emu.h no longer used internally but intended for clients;
+	  - encapsulated MT32EMU_USE_FLOAT_SAMPLES definition, API provides rendering in both 16-bit signed integer and float
+	    formats, sample conversion applies implicitly when needed;
+	  - introduced C-compatible API as a facade, that allows using the library with programs written in other languages
+	    as well as provides for consistent well-defined ABI for the library as a shared object;
+	  - C-compatible API also involves COM-like interfaces to simplify usage of the library as a plugin loaded in run-time;
+	  - three new build options libmt32emu_SHARED, libmt32emu_C_INTERFACE and libmt32emu_CPP_INTERFACE intended
+	    to configure whether to build a statically or dynamically linked library, whether to include C-compatible API,
+	    and whether to expose C++ classes (old-fashioned compiler-specific ABI).
+
+2014-12-21:
+
+	1.5.0 released.
+
+	* Introduced support for emulation of analogue circuits of the hardware units.
+	* Synth renderer now produces output at different sample rates depending on the analogue circuits emulation mode in effect.
+	* Introduced full-featured MIDI stream parser class which can be used on incoming raw MIDI stream.
+	* Removed internal Portaudio copy and related build option munt_WITH_INTERNAL_PORTAUDIO as it becomes obsolete.
+	* Minimum required version of Cmake is now 2.8.4. Added support for version 3.0.2.
+	* Clarified API. Internal classes and structures are no longer defined in mt32emu.h file.
+	  Reduced number of headers installed. Some preprocessor definitions which control debugging output and optimisations
+	  moved to dedicated header file internals.h. Introduced a few wrapper methods in Synth to facilitate synth state
+	  visualisation and monitoring while avoiding direct access to internal classes.
+
+2014-06-09:
+
+	1.4.0 released.
+
+	* Reworked core rendering engine:
+	  - reduced memory consumption;
+	  - implemented accurate emulation of the LA32 output bit shift depending on the unit generation;
+	  - output gain is now applied after the possible bit shift as it should, assuming the output gain
+	    is the gain of output analogue amplifier, so presence of the overdrives doesn't dependent on it.
+	* Fixed integer overflow that may occur in the reverb model with time and level values set near
+	  the maximum and loud input signal (doesn't occur when MT32EMU_USE_FLOAT_SAMPLES set to 1).
+	* Improved reverb model:
+	  - added BReverb settings tuned for accurate emulation of MT-32 version of reverb chip;
+	  - effective settings of the reverb model are selected depending on the used control ROM version (can be overridden).
+	* Improved project build:
+	  - doc files are now installed to folder share/doc/munt under the installation prefix;
+	  - introduced build options munt_WITH_MT32EMU_SMF2WAV and munt_WITH_MT32EMU_QT to control build of subcomponents;
+	  - renamed build option WITH_INTERNAL_PORTAUDIO -> munt_WITH_INTERNAL_PORTAUDIO for consistency.
+
+2013-09-21:
+
+	1.3.0 released.
+
+	* Incorporated a timestamped MIDI event queue and renderer support:
+	  - nuked prerenderer while retaining graceful partial abortion;
+	  - added fair emulation of the MIDI interface delays;
+	  - extended the synth interface to facilitate the rendering loop in realtime MIDI player implementations;
+	  - dependent projects updated in accordance.
+	* Partial allocation made dynamic. Preprocessor definition MT32EMU_MAX_PARTIALS removed.
+	* Removed inaccurate reverb models. Preprocessor definition MT32EMU_BOSS_REVERB_PRECISE_MODE added.
+	* More accurate ring modulator model, added emulation of integer overflow (exploited in distortion guitar-like patches)
+	* Added preprocessor definition MT32EMU_USE_FLOAT_SAMPLES to control whether to use float samples throughout the emulation.
+	* Fixed several issues in FileStream which lead to inability to reopen a file.
+	* Fixed memory leaks caused by incorrect memory handling of ROM files (most notable in the Windows driver).
+	* Minor change in panning. It is implemented without floats and divisions in the accurate emulation mode.
+	* Added reverse stereo option which inverts MIDI panning. Reverb remains unchanged.
+	* Code refactoring.
+	* Revived ALSA driver as a light-weight emulation facility, mainly for consistency with Windows driver being self-contained.
+	  The rendering engine left untouched, so it may still sound wrong with PulseAudio.
+	* Some improvements in mt32emu_win32drv_setup, fixed several bugs and security issues,
+	  better MIDI driver registering algorithm.
+
+2013-03-24:
+
+	1.2.0 released.
+
+	* Major wave generator rework by SergM. The wave generator now modularised and ready for integration
+	  with other emulation software. With the help of Lord_Nightmare, Balrog and Sarayan, LA32 internals became clearer,
+	  which allows to further improve the emulation accuracy. Still, we are not precise yet but very close now.
+	  The output wave now has about the same FFT spectrum as the original digitally captured waves. As the wave
+	  generation engine is completely new, some bugs probably still exist, though.
+
+2013-02-11:
+
+	1.1.1 released.
+
+	* Bugfix in mixer. Weird timbres which have ring modulation structures but with only partial were mixed incorrectly.
+	  Test timbre: "TinCan1" in Dune2 (completely muted).
+
+2013-01-19:
+
+	1.1.0 released.
+
+	* Refined computations of pulse widths.
+	* Removed STL dependency. The only STL class used by mt32emu library now reimplemented as a simplest linked list.
+	* Some improvements in mt32emu_win32drv_setup regarding driver cleanup and directory handling.
+	* Minor sources cleanup towards easier mt32emu library integration into other applications.
+
+2012-12-25:
+
+	1.0.0 released.
+
+	* Thanks to the reverse engineering efforts of Mok, KingGuppy and SergM various things are now accurate.
+	  These include MIDI event processing, time variant pitch, amplifier and filter envelopes, partial allocation, etc.
+	* Fixed many inaccuracies in MIDI event processing.
+	* Waveforms are now generated on the fly. Waveform cache files are no longer necessary and can be deleted.
+	  New waveform generation engine closely resembles LA32 synthesis and demand significantly less computational resources.
+	* Ring modulation approach simplified and made accurate.
+	* Mixer now approximately resembles the LA32 feature - inverted mixing of partials. This is particularly noticeable
+	  for patches containing closely sounding partials which are capable to subtract each other.
+	* Added emulation of the data lines shift between the LA32 chip and the DAC.
+	* The overall emulation is now close to indistinguishable to a listener.
+	* Internal emulation sample rate is fixed to 32000 Hz - LA32 working sample rate. There are plenty of thing bound
+	  to this value which can not be easily adapted to sample rate changes and as such, will break the emulation accuracy.
+	  An additional resampler is now required to convert the sample rate to any arbitrary value.
+	* Added accurate reverberation model of the Boss reverb chip.
+	* Changed building tools. CMake is now required to build the library.
+	* Removed some obsolete stuff in API (ExternalInterface, SynthProperties struc).
+	* Changed report API. A C++ ReportHandler class is now used providing for better convenience.
+	* Changed file handling routines. ROM files are now loaded entirely at the initialisation and verified using SHA1 digests.
+	  Broken or unknown ROM files cannot be used anymore.
+
+2005-07-04:
+
+	0.1.3 released.
+
+	* Added support for most of the extended capabilities of the CM-32L/LAPC-I (more rhythm timbres, more rhythm key mappings, more PCM samples).
+	* The control ROM is now identified by searching for matching ID strings at various locations in the file. There are now a lot of safety checks to help ensure that a bad ROM will not crash the emulator.
+	* Three control ROM versions are now identified and mapped out - an original MT-32 control ROM, an original CM-32L ROM, and the Blue Ridge modified MT-32 ROM.
+	* Now supports the expression controller properly.
+	* Sustain is now turned off correctly again.
+	* "All Notes Off" no longer stops notes held by the sustain controller.
+	* Implemented "Reset all controllers".
+	* Stereo pan positions are no longer inverted.
+	* Volume, pitch, filter and envelopes are now more accurately calculated. Overall, the sound emulation is much more accurate.
+	* Waveforms are now slightly more accurate (in terms of pitch), necessitating a regeneration.
+	* Handling of unusual sysex messages has been improved (fixes sysex messages from Java's MIDI classes on Windows).
+	* Fixed a reverb bug during periods of silence.
+	* Master tuning is now properly initialised to 0x4A (442Hz).
+
+2004-12-05:
+
+	0.1.2 released.
+
+2004-12-01:
+
+	0.1.1 released.
+
+2004-11-30:
+
+	0.1.0 released.

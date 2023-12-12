@@ -13,6 +13,7 @@
 * For more details visit <http://unlicense.org>.
 *
 */
+#include "sysconfig.h"
 
 #include "floppybridge_lib.h"
 #include <string>

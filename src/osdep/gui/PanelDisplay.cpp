@@ -342,6 +342,8 @@ public:
 		{
 			changed_prefs.gfx_iscanlines = 2;
 		}
+
+		RefreshPanelDisplay();
 	}
 };
 

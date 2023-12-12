@@ -41,11 +41,7 @@
  * Virtual Key for (Left shoulder) button
  * default: RSHIFT (303)
  */
-#ifdef ANDROID
-#define VK_L SDLK_F13
-#else
 #define VK_LShoulder SDLK_RSHIFT
-#endif
 
 /*
  * Virtual Key for (Right shoulder) button

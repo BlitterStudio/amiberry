@@ -390,4 +390,6 @@ bool key_altpressed(void);
 bool key_ctrlpressed(void);
 bool key_winpressed(void);
 
+extern int key_swap_hack, key_swap_hack2;
+
 #endif /* UAE_INPUTDEVICE_H */

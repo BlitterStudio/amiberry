@@ -5,6 +5,7 @@
 *
 * Copyright 1995 Bernd Schmidt, Alessandro Bissacco
 * Copyright 1996, 1997 Stefan Reinauer, Christian Schmitt
+* Copyright 2022 Toni Wilen
 */
 
 
@@ -29,15 +30,21 @@
 #include "inputdevice.h"
 #include "zfile.h"
 #include "ar.h"
-//#include "parallel.h"
+#ifdef PARALLEL_PORT
+#include "parallel.h"
+#endif
 #include "akiko.h"
 #include "cdtv.h"
 #include "debug.h"
-//#include "arcadia.h"
+#ifdef ARCADIA
+#include "arcadia.h"
+#endif
 #include "audio.h"
 #include "keyboard.h"
 #include "uae.h"
-//#include "amax.h"
+#ifdef AMAX
+#include "amax.h"
+#endif
 #include "sampler.h"
 #include "dongle.h"
 #include "inputrecord.h"
@@ -1283,7 +1290,7 @@ static uae_u8 ReadCIAB (uae_u32 addr, uae_u32 *flags)
 #ifdef SERIAL_PORT
 		if (currprefs.use_serial) {
 			tmp &= 7;
-			tmp |= serial_readstatus(ciabdra) & 0xf8;
+			tmp |= serial_readstatus(tmp, ciabdra) & 0xf8;
 		}
 #endif
 		// serial port in output mode

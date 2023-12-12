@@ -24,7 +24,8 @@
 #include <sys/sysctl.h>
 #endif
 
-#if defined(LINUX) && defined(CPU_x86_64)
+//#if defined(LINUX) && defined(CPU_x86_64)
+#if defined(CPU_x86_64) && !defined(__APPLE__)
 #define HAVE_MAP_32BIT 1
 #endif
 
@@ -157,7 +158,7 @@ static void *uae_vm_alloc_with_flags(uae_u32 size, int flags, int protect)
 	int mmap_prot = protect_to_native(protect);
 #endif
 
-#ifndef CPU_64_BIT
+#if !defined(CPU_64_BIT) or defined(__APPLE__)
 	flags &= ~UAE_VM_32BIT;
 #endif
 	if (flags & UAE_VM_32BIT) {

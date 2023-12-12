@@ -9,7 +9,7 @@
 
 #define PRTBUFSIZE 65536
 
-int setbaud(long baud );
+int setbaud(int baud, int origbaud);
 void getserstat(int *status);
 void setserstat(int mask, int onoff);
 int readser(int *buffer);
@@ -32,6 +32,7 @@ bool shmem_serial_create(void);
 int shmem_serial_state(void);
 
 #define SERIAL_INTERNAL _T("INTERNAL_SERIAL")
+#define SERIAL_LOOPBACK _T("LOOPBACK_SERIAL")
 
 #define TIOCM_CAR 1
 #define TIOCM_DSR 2
@@ -43,24 +44,31 @@ int shmem_serial_state(void);
 extern void unload_ghostscript (void);
 extern int load_ghostscript (void);
 
-#define MAX_MIDI_PORTS 100
-struct midiportinfo
-{
-	TCHAR *name;
-	unsigned int devid;
-};
-extern struct midiportinfo *midiinportinfo[MAX_MIDI_PORTS];
-extern struct midiportinfo *midioutportinfo[MAX_MIDI_PORTS];
+// In Amiberry, we use libserialport and a more modern structure to hold the results
+// Therefore, these are not needed
+//
+//#define MAX_MIDI_PORTS 100
+//struct midiportinfo
+//{
+//	TCHAR *name;
+//	unsigned int devid;
+//};
+//extern struct midiportinfo *midiinportinfo[MAX_MIDI_PORTS];
+//extern struct midiportinfo *midioutportinfo[MAX_MIDI_PORTS];
 
-#define MAX_SERPAR_PORTS 100
-struct serparportinfo
-{
-    TCHAR *dev;
-    TCHAR *cfgname;
-    TCHAR *name;
-};
-extern struct serparportinfo *comports[MAX_SERPAR_PORTS];
-extern struct serparportinfo *parports[MAX_SERPAR_PORTS];
+//#define MAX_SERPAR_PORTS 100
+//struct serparportinfo
+//{
+//    TCHAR *dev;
+//    TCHAR *cfgname;
+//    TCHAR *name;
+//};
+//extern struct serparportinfo *comports[MAX_SERPAR_PORTS];
+//extern struct serparportinfo *parports[MAX_SERPAR_PORTS];
+
+extern std::vector<std::string> serial_ports;
+extern std::vector<std::string> midi_in_ports;
+extern std::vector<std::string> midi_out_ports;
 
 extern int enumserialports (void);
 extern int enummidiports (void);

@@ -611,10 +611,10 @@ static uae_u32 vhd_checksum (uae_u8 *p, int offset)
 static int hdf_write2 (struct hardfiledata *hfd, void *buffer, uae_u64 offset, int len);
 static int hdf_read2 (struct hardfiledata *hfd, void *buffer, uae_u64 offset, int len);
 
-static void hdf_init_cache (struct hardfiledata *hfd)
+static void hdf_init_cache(struct hardfiledata *hfd)
 {
 }
-static void hdf_flush_cache (struct hardfiledata *hdf)
+static void hdf_flush_cache(struct hardfiledata *hdf)
 {
 }
 
@@ -1083,9 +1083,10 @@ end:
 	return ret;
 }
 
-static int hdf_read2 (struct hardfiledata *hfd, void *buffer, uae_u64 offset, int len)
+static int hdf_read2(struct hardfiledata *hfd, void *buffer, uae_u64 offset, int len)
 {
 	int ret = 0, extra = 0;
+
 	if (offset < hfd->virtual_size) {
 		uae_s64 len2 = offset + len <= hfd->virtual_size ? len : hfd->virtual_size - offset;
 		if (len > INT_MAX) {

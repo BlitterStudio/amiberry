@@ -44,17 +44,13 @@
 #endif
 #include <netinet/in.h>
 #include <netinet/tcp.h>
-#include <stddef.h>
+#include <cstddef>
 #include <netdb.h>
 
-#include <signal.h>
+#include <csignal>
 #include <arpa/inet.h>
 
-
 #define WAITSIGNAL  waitsig (ctx, sb)
-#ifdef ANDROID
-#define IPPROTO_ENCAP 98
-#endif
 
 /* Sigqueue is unsafe on SMP machines.
  * Temporary work-around.

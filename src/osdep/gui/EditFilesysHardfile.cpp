@@ -18,10 +18,6 @@
 #include "amiberry_gfx.h"
 #include "amiberry_input.h"
 
-#ifdef ANDROID
-#include "androidsdl_event.h"
-#endif
-
 #define DIALOG_WIDTH 620
 #define DIALOG_HEIGHT 280
 

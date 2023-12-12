@@ -23,6 +23,8 @@
 #define FIRST_JOY_AXIS	   0
 #define FIRST_JOY_BUTTON	MAX_JOY_AXES
 
+int key_swap_hack = 0;
+
 static struct didata di_mouse[MAX_INPUT_DEVICES];
 static struct didata di_keyboard[MAX_INPUT_DEVICES];
 struct didata di_joystick[MAX_INPUT_DEVICES];

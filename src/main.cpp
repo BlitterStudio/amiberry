@@ -47,16 +47,20 @@
 #include "blkdev.h"
 #include "consolehook.h"
 #include "gfxboard.h"
-//#include "luascript.h"
+#ifdef WITH_LUA
+#include "luascript.h"
+#endif
 #include "uaenative.h"
 #include "tabletlibrary.h"
 #include "cpuboard.h"
-//#include "uae/ppc.h"
+#ifdef WITH_PPC
+#include "uae/ppc.h"
+#endif
 #include "devices.h"
 #ifdef JIT
 #include "jit/compemu.h"
 #endif
-//#include "disasm.h"
+#include "disasm.h"
 #ifdef RETROPLATFORM
 #include "rp.h"
 #endif
@@ -100,12 +104,12 @@ static uae_u32 xorshift32(void)
 
 uae_u32 uaerand(void)
 {
-    if (xorshiftstate == 0) {
-        xorshiftstate = randseed;
-        if (!xorshiftstate) {
-            randseed = 1;
-            xorshiftstate = 1;
-        }
+	if (xorshiftstate == 0) {
+		xorshiftstate = randseed;
+		if (!xorshiftstate) {
+			randseed = 1;
+			xorshiftstate = 1;
+		}
 	}
 	uae_u32 r = xorshift32();
 	return r;
@@ -113,21 +117,31 @@ uae_u32 uaerand(void)
 
 uae_u32 uaerandgetseed(void)
 {
-    if (!randseed) {
-        randseed = 1;
-        xorshiftstate = 1;
-    }
-    return randseed;
+	if (!randseed) {
+		randseed = 1;
+		xorshiftstate = 1;
+	}
+	return randseed;
+}
+
+void uaerandomizeseed(void)
+{
+	if (currprefs.seed == 0) {
+		uae_u32 t = getlocaltime();
+		uaesetrandseed(t);
+	} else {
+		uaesetrandseed(currprefs.seed);
+	}
 }
 
 uae_u32 uaesetrandseed(uae_u32 seed)
 {
-    if (!seed) {
-        seed = 1;
-    }
-    randseed = seed;
-    xorshiftstate = seed;
-    return randseed;
+	if (!seed) {
+		seed = 1;
+	}
+	randseed = seed;
+	xorshiftstate = seed;
+	return randseed;
 }
 
 void my_trim(TCHAR *s)
@@ -143,39 +157,39 @@ TCHAR *my_strdup_trim (const TCHAR *s)
 {
 	if (s[0] == 0)
 		return my_strdup(s);
-	while (_tcscspn (s, _T("\t \r\n")) == 0)
+	while (_tcscspn(s, _T("\t \r\n")) == 0)
 		s++;
-	int len = _tcslen (s);
-	while (len > 0 && _tcscspn (s + len - 1, _T("\t \r\n")) == 0)
+	int len = _tcslen(s);
+	while (len > 0 && _tcscspn(s + len - 1, _T("\t \r\n")) == 0)
 		len--;
-	auto* out = xmalloc (TCHAR, len + 1);
-	memcpy (out, s, len * sizeof (TCHAR));
+	auto* out = xmalloc(TCHAR, len + 1);
+	memcpy(out, s, len * sizeof (TCHAR));
 	out[len] = 0;
 	return out;
 }
 
-static void fixup_prefs_dim2(int monid, struct wh* wh)
+static void fixup_prefs_dim2(int monid, struct wh *wh)
 {
 	if (wh->special)
 		return;
 	if (wh->width < 160) {
 		if (!monid)
-			error_log(_T("Width (%d) must be at least 160."), wh->width);
+			error_log (_T("Width (%d) must be at least 160."), wh->width);
 		wh->width = 160;
 	}
 	if (wh->height < 128) {
 		if (!monid)
-			error_log(_T("Height (%d) must be at least 128."), wh->height);
+			error_log (_T("Height (%d) must be at least 128."), wh->height);
 		wh->height = 128;
 	}
 	if (wh->width > max_uae_width) {
 		if (!monid)
-			error_log(_T("Width (%d) max is %d."), wh->width, max_uae_width);
+			error_log (_T("Width (%d) max is %d."), wh->width, max_uae_width);
 		wh->width = max_uae_width;
 	}
 	if (wh->height > max_uae_height) {
 		if (!monid)
-			error_log(_T("Height (%d) max is %d."), wh->height, max_uae_height);
+			error_log (_T("Height (%d) max is %d."), wh->height, max_uae_height);
 		wh->height = max_uae_height;
 	}
 }
@@ -242,10 +256,10 @@ void fixup_cpu (struct uae_prefs *p)
 	if (p->cpu_frequency == 1000000)
 		p->cpu_frequency = 0;
 
-	//if (p->cpu_model >= 68020 && p->cpuboard_type && p->address_space_24 && cpuboard_32bit(p)) {
-	//	error_log(_T("24-bit address space is not supported with selected accelerator board configuration."));
-	//	p->address_space_24 = 0;
-	//}
+	if (p->cpu_model >= 68020 && p->cpuboard_type && p->address_space_24 && cpuboard_32bit(p)) {
+		error_log (_T("24-bit address space is not supported with selected accelerator board configuration."));
+		p->address_space_24 = 0;
+	}
 	if (p->cpu_model >= 68040 && p->address_space_24) {
 		error_log (_T("24-bit address space is not supported with 68040/060 configurations."));
 		p->address_space_24 = false;
@@ -279,6 +293,22 @@ void fixup_cpu (struct uae_prefs *p)
 		p->cpu_thread = false;
 		error_log(_T("Threaded CPU mode is not compatible with PPC emulation, More compatible or Cycle Exact modes. CPU type must be 68020 or higher."));
 	}
+
+#ifdef WITH_PPC
+	// 1 = "automatic" PPC config
+	if (p->ppc_mode == 1) {
+		cpuboard_setboard(p,  BOARD_CYBERSTORM, BOARD_CYBERSTORM_SUB_PPC);
+		if (p->cs_compatible == CP_A1200) {
+			cpuboard_setboard(p,  BOARD_BLIZZARD, BOARD_BLIZZARD_SUB_PPC);
+		} else if (p->cs_compatible != CP_A4000 && p->cs_compatible != CP_A4000T && p->cs_compatible != CP_A3000 && p->cs_compatible != CP_A3000T) {
+			if ((p->cs_ide == IDE_A600A1200 || p->cs_pcmcia) && p->cs_mbdmac <= 0) {
+				cpuboard_setboard(p,  BOARD_BLIZZARD, BOARD_BLIZZARD_SUB_PPC);
+			}
+		}
+		if (p->cpuboardmem1.size < 8 * 1024 * 1024)
+			p->cpuboardmem1.size = 8 * 1024 * 1024;
+	}
+#endif
 
 	if (p->cachesize_inhibit) {
 		p->cachesize = 0;
@@ -398,7 +428,21 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 
 	read_kickstart_version(p);
 
-	if (((p->chipmem.size & p->chipmem.size - 1) != 0 && p->chipmem.size != 0x180000)
+	if (p->cpuboard_type && p->cpuboardmem1.size > cpuboard_maxmemory(p)) {
+		error_log(_T("Unsupported accelerator board memory size %d (0x%x).\n"), p->cpuboardmem1.size, p->cpuboardmem1.size);
+		p->cpuboardmem1.size = cpuboard_maxmemory(p);
+	}
+	if (cpuboard_memorytype(p) == BOARD_MEMORY_HIGHMEM) {
+		p->mbresmem_high.size = p->cpuboardmem1.size;
+	} else if (cpuboard_memorytype(p) == BOARD_MEMORY_Z2) {
+		p->fastmem[0].size = p->cpuboardmem1.size;
+	} else if (cpuboard_memorytype(p) == BOARD_MEMORY_25BITMEM) {
+		p->mem25bit.size = p->cpuboardmem1.size;
+	} else if (cpuboard_memorytype(p) == BOARD_MEMORY_CUSTOM_32) {
+		p->mem25bit.size = 0;
+	}
+
+	if (((p->chipmem.size & (p->chipmem.size - 1)) != 0 && p->chipmem.size != 0x180000)
 		|| p->chipmem.size < 0x20000
 		|| p->chipmem.size > 0x800000)
 	{
@@ -746,7 +790,7 @@ void uae_quit (void)
 }
 
 /* 0 = normal, 1 = nogui, -1 = disable nogui, -2 = autorestart */
-void uae_restart (int opengui, const TCHAR *cfgfile)
+void uae_restart(struct uae_prefs *p, int opengui, const TCHAR *cfgfile)
 {
 	uae_quit ();
 	restart_program = opengui == -2 ? 4 : (opengui > 0 ? 1 : (opengui == 0 ? 2 : 3));
@@ -1089,7 +1133,7 @@ static void parse_cmdline_and_init_file(int argc, TCHAR **argv)
 
 	parse_cmdline(argc, argv);
 
-    fixup_prefs(&currprefs, false);
+	fixup_prefs(&currprefs, false);
 }
 
 /* Okay, this stuff looks strange, but it is here to encourage people who
@@ -1334,7 +1378,7 @@ static int real_main2 (int argc, TCHAR **argv)
 #ifdef NATMEM_OFFSET
 	if (!init_shm ()) {
 		if (currprefs.start_gui)
-			uae_restart(-1, NULL);
+			uae_restart(&currprefs, -1, NULL);
 		return 0;
 	}
 #endif
@@ -1346,12 +1390,7 @@ static int real_main2 (int argc, TCHAR **argv)
 #ifdef RETROPLATFORM
 	rp_fixup_options (&currprefs);
 #endif
-    if (currprefs.seed == 0) {
-        uae_u32 t = getlocaltime();
-        uaesetrandseed(t);
-    } else {
-        uaesetrandseed(currprefs.seed);
-    }
+	uaerandomizeseed();
 	copy_prefs(&currprefs, &changed_prefs);
 	target_run ();
 	/* force sound settings change */
@@ -1362,6 +1401,9 @@ static int real_main2 (int argc, TCHAR **argv)
 #endif
 	keybuf_init (); /* Must come after init_joystick */
 
+#ifdef DEBUGGER
+	disasm_init();
+#endif
 	memory_hardreset (2);
 	memory_reset ();
 
@@ -1381,11 +1423,12 @@ static int real_main2 (int argc, TCHAR **argv)
 	init_m68k (); /* must come after reset_frame_rate_hack (); */
 
 	if (graphics_init (true)) {
-#ifdef DEBUGGER
-		setup_brkhandler ();
-		if (currprefs.start_debugger && debuggable ())
-			activate_debugger ();
-#endif
+	// This never gets triggered anyway
+//#ifdef DEBUGGER
+//		setup_brkhandler ();
+//		if (currprefs.start_debugger && debuggable ())
+//			activate_debugger ();
+//#endif
 		if (!init_audio ()) {
 			if (sound_available && currprefs.produce_sound > 1) {
 				write_log (_T("Sound driver unavailable: Sound output disabled\n"));

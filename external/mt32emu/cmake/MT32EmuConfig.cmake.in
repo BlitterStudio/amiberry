@@ -1,0 +1,20 @@
+set(libmt32emu_EXT_DEPENDENCY @libmt32emu_EXT_DEPENDENCY@)
+if(libmt32emu_EXT_DEPENDENCY)
+  include(${CMAKE_CURRENT_LIST_DIR}/CheckDependencies.cmake)
+endif()
+unset(libmt32emu_EXT_DEPENDENCY)
+
+if(MT32Emu_FOUND STREQUAL FALSE)
+  return()
+endif()
+
+include(${CMAKE_CURRENT_LIST_DIR}/MT32EmuTargets.cmake)
+
+# The variables below are populated for compatibility only. Usage of the imported target is encouraged.
+set(MT32EMU_FOUND TRUE)
+set(MT32EMU_VERSION @libmt32emu_VERSION@)
+get_target_property(MT32EMU_INCLUDE_DIR MT32Emu::mt32emu INTERFACE_INCLUDE_DIRECTORIES)
+set(MT32EMU_INCLUDE_DIRS ${MT32EMU_INCLUDE_DIR})
+set(MT32EMU_LIBRARY MT32Emu::mt32emu)
+set(MT32EMU_EXT_LIBS "")
+set(MT32EMU_LIBRARIES MT32Emu::mt32emu)

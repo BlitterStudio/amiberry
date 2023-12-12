@@ -33,7 +33,9 @@
 #include "traps.h"
 #include "sounddep/sound.h"
 #include "parser.h"
-//#include "enforcer.h"
+#ifdef ENFORCER
+#include "enforcer.h"
+#endif
 #include "ahi_v1.h"
 #include "picasso96.h"
 #include "uaenative.h"
@@ -492,7 +494,7 @@ uae_u32 REGPARAM2 ahi_demux (TrapContext *context)
 
 		if (OpenClipboard(0)) {
 			EmptyClipboard();
-			slen = _tcslen(s);
+			slen = uaetcslen(s);
 			if (p)
 				GlobalFree(p);
 			p = (LPTSTR)GlobalAlloc(GMEM_MOVEABLE, (slen + 1) * sizeof(TCHAR));
@@ -518,10 +520,18 @@ uae_u32 REGPARAM2 ahi_demux (TrapContext *context)
 		return 0;
 
 	case 20:
-		return 1; // return enforcer_enable(m68k_dreg(regs, 1));
+#ifdef ENFORCER
+		return enforcer_enable(m68k_dreg(regs, 1));
+#else
+		return 1;
+#endif
 
 	case 21:
-		return 1; // return enforcer_disable();
+#ifdef ENFORCER
+		return enforcer_disable();
+#else
+		return 1;
+#endif
 
 	case 25:
 #if defined (PARALLEL_PORT)

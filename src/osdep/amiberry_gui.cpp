@@ -29,6 +29,7 @@
 #include "xwin.h"
 #include "drawing.h"
 #include "fsdb.h"
+#include "parser.h"
 
 #ifdef AMIBERRY
 #ifndef __MACH__
@@ -41,6 +42,14 @@
 int emulating = 0;
 bool config_loaded = false;
 int gui_active;
+
+//struct serparportinfo *comports[MAX_SERPAR_PORTS];
+//struct midiportinfo *midiinportinfo[MAX_MIDI_PORTS];
+//struct midiportinfo *midioutportinfo[MAX_MIDI_PORTS];
+
+std::vector<std::string> serial_ports;
+std::vector<std::string> midi_in_ports;
+std::vector<std::string> midi_out_ports;
 
 struct gui_msg
 {
@@ -421,6 +430,14 @@ void disk_selection(const int drive, uae_prefs* prefs)
 			extract_path(tmp, current_dir);
 		}
 	}
+}
+
+bool gui_ask_disk(int drv, TCHAR *name)
+{
+	_tcscpy(changed_prefs.floppyslots[drv].df, name);
+	disk_selection(drv, &changed_prefs);
+	_tcscpy(name, changed_prefs.floppyslots[drv].df);
+	return true;
 }
 
 static void prefs_to_gui()

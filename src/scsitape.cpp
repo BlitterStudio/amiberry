@@ -17,7 +17,9 @@
 #include "zfile.h"
 #include "memory.h"
 #include "threaddep/thread.h"
-//#include "a2091.h"
+#ifdef A2091
+#include "a2091.h"
+#endif
 #include "fsdb.h"
 
 int log_tapeemu = 1;

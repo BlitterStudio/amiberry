@@ -446,16 +446,22 @@ static struct zfile *archive_do_zip (struct znode *zn, struct zfile *z, int flag
 	if (z) {
 		int err = -1;
 		if (!(flags & FILE_DELAYEDOPEN) || z->size <= PEEK_BYTES) {
-			err = unzReadCurrentFile (uz, z->data, z->datasize);
+			write_log (_T("ZIP: unpacking %s, flags=%d\n"), name, flags);
+			err = unzReadCurrentFile (uz, z->data, (unsigned int)z->datasize);
+			write_log (_T("ZIP: unpacked, code=%d\n"), err);
 		} else {
 			z->archiveparent = zfile_dup (zn->volume->archive);
 			if (z->archiveparent) {
+				write_log (_T("ZIP: delayed open '%s'\n"), name);
 				xfree (z->archiveparent->name);
 				z->archiveparent->name = my_strdup (tmp);
 				z->datasize = PEEK_BYTES;
-				err = unzReadCurrentFile (uz, z->data, z->datasize);
+				err = unzReadCurrentFile (uz, z->data, (unsigned int)z->datasize);
+				write_log (_T("ZIP: unpacked, code=%d\n"), err);
 			} else {
-				err = unzReadCurrentFile (uz, z->data, z->datasize);
+				write_log (_T("ZIP: unpacking %s (failed DELAYEDOPEN)\n"), name);
+				err = unzReadCurrentFile (uz, z->data, (unsigned int)z->datasize);
+				write_log (_T("ZIP: unpacked, code=%d\n"), err);
 			}
 		}
 	}
@@ -2235,6 +2241,7 @@ struct zfile *archive_unpackzfile (struct zfile *zf)
 	struct zfile *zout = NULL;
 	if (!zf->archiveparent)
 		return NULL;
+	write_log (_T("delayed unpack '%s'\n"), zf->name);
 	zf->datasize = zf->size;
 	switch (zf->archiveid)
 	{

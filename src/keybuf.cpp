@@ -23,6 +23,8 @@
 #include "custom.h"
 #include "savestate.h"
 
+int key_swap_hack2 = false;
+
 static int kpb_first, kpb_last;
 
 #define KEYBUF_SIZE 256
@@ -175,17 +177,17 @@ static void keytoscancode(int key, bool release)
 	v = (v << 1) | (v >> 7);
 	q |= mask;
 	if (release) {
-		record_key(v);
+		record_key(v, false);
 		if (q & 0x7f) {
 			q = (q << 1) | (q >> 7);
-			record_key(q);
+			record_key(q, false);
 		}
 	} else {
 		if (q & 0x7f) {
 			q = (q << 1) | (q >> 7);
-			record_key(q);
+			record_key(q, false);
 		}
-		record_key(v);
+		record_key(v, false);
 	}
 }
 
@@ -261,27 +263,53 @@ void keybuf_vsync(void)
 	if (delayed_released_time > 0) {
 		delayed_released_time--;
 		if (delayed_released_time == 0) {
-			record_key(delayed_released_code);
+			record_key(delayed_released_code, false);
 		}
 	}
 }
 
-int record_key (int kc)
+int record_key(int kc, bool direct)
 {
 	if (pause_emulation)
 		return 0;
-	return record_key_direct (kc);
+	return record_key_direct(kc, direct);
 }
 
-int record_key_direct (int kc)
+static void keyswap(int *kcdp, int *kcp, uae_u8 k1, uae_u8 k2)
+{
+	int kcd = *kcdp;
+	int kc = *kcp;
+	if ((kcd & 0x7f) == k1) {
+		kcd = k2 | (kcd & 0x80);
+		kc = (kcd << 1) | (kcd >> 7);
+	} else if ((kcd & 0x7f) == k2) {
+		kcd = k1 | (kcd & 0x80);
+		kc = (kcd << 1) | (kcd >> 7);
+	}
+	*kcdp = kcd;
+	*kcp = kc;
+}
+
+int record_key_direct(int kc, bool direct)
 {
 	int kpb_next = kpb_first + 1;
 	int kcd = (kc << 7) | (kc >> 1);
 
-	if (ignore_next_release) {
-		ignore_next_release = false;
-		if (kcd & 0x80) {
-			return 0;
+	if (!direct) {
+		if (key_swap_hack2) {
+			// $0D <> $0C
+			keyswap(&kcd, &kc, 0x0d, 0x0c);
+		}
+		if (key_swap_hack == 2) {
+			// $2B <> $0D
+			keyswap(&kcd, &kc, 0x2b, 0x0d);
+		}
+
+		if (ignore_next_release) {
+			ignore_next_release = false;
+			if (kcd & 0x80) {
+				return 0;
+			}
 		}
 	}
 

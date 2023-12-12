@@ -24,18 +24,25 @@
 #include "uae.h"
 #include "gui.h"
 #include "threaddep/thread.h"
-//#include "a2091.h"
-//#include "ncr_scsi.h"
-//#include "ncr9x_scsi.h"
+#ifdef A2091
+#include "a2091.h"
+#endif
+#include "ncr_scsi.h"
+#include "ncr9x_scsi.h"
 #include "blkdev.h"
 #include "scsi.h"
 #include "ide.h"
-//#include "idecontrollers.h"
-//#include "pci_hw.h"
+#include "idecontrollers.h"
+#ifdef WITH_PCI
+#include "pci_hw.h"
+#endif
 #include "debug.h"
 #include "autoconf.h"
 #include "rommgr.h"
 #include "devices.h"
+#ifdef WITH_DSP
+#include "dsp3210/dsp_glue.h"
+#endif
 
 #define PCMCIA_SRAM 1
 #define PCMCIA_IDE 2
@@ -475,6 +482,15 @@ static int gayle_read (uaecptr addr)
 	uaecptr oaddr = addr;
 	uae_u32 v = 0;
 	int got = 0;
+#ifdef WITH_DSP
+	if (is_dsp_installed) {
+		uaecptr daddr = addr & 0xffff;
+		if (daddr == 0x5f || daddr == 0x80) {
+			v = dsp_read();
+			return v;
+		}
+	}
+#endif
 	if (currprefs.cs_ide == IDE_A600A1200) {
 		if ((addr & 0xA0000) != 0xA0000)
 			return 0;
@@ -513,9 +529,18 @@ static void gayle_write (uaecptr addr, int val)
 {
 	uaecptr oaddr = addr;
 	int got = 0;
+#ifdef WITH_DSP
+	if (is_dsp_installed) {
+		uaecptr daddr = addr & 0xffff;
+		if (daddr  == 0x5f || daddr == 0x80) {
+			dsp_write(val);
+		}
+	}
+#endif
 	if (currprefs.cs_ide == IDE_A600A1200) {
-		if ((addr & 0xA0000) != 0xA0000)
+		if ((addr & 0xA0000) != 0xA0000) {
 			return;
+		}
 	}
 	addr &= 0xffff;
 	if (currprefs.cs_pcmcia) {
@@ -540,7 +565,6 @@ static void gayle_write (uaecptr addr, int val)
 				write_log (_T("PCMCIA CONFIG WRITE %08X=%02X PC=%08X\n"), oaddr, (uae_u32)val & 0xff, M68K_GETPC);
 		}
 	}
-
 	if (GAYLE_LOG)
 		write_log (_T("GAYLE_WRITE %08X=%02X PC=%08X\n"), oaddr, (uae_u32)val & 0xff, M68K_GETPC);
 	if (!got)
@@ -1006,8 +1030,10 @@ static uae_u8 *pcmcia_common;
 static uae_u8 *pcmcia_attrs;
 static int pcmcia_write_min, pcmcia_write_max;
 static uae_u16 pcmcia_idedata;
-//static const struct pci_board *ne2000;
-//static struct pci_board_state *ne2000_board_state;
+#ifdef WITH_PCI
+static const struct pci_board *ne2000;
+static struct pci_board_state *ne2000_board_state;
+#endif
 
 static uaecptr from_gayle_pcmcmia(uaecptr addr)
 {

@@ -15,10 +15,6 @@
 #include "amiberry_gfx.h"
 #include "amiberry_input.h"
 
-#ifdef ANDROID
-#include "androidsdl_event.h"
-#endif
-
 #define DIALOG_WIDTH 620
 #define DIALOG_HEIGHT 202
 
@@ -464,11 +460,7 @@ static void CreateFilesysHardfileLoop()
 		//-------------------------------------------------
 		// Send event to gui-controls
 		//-------------------------------------------------
-#ifdef ANDROID
-		androidsdl_event(event, gui_input);
-#else
 		gui_input->pushInput(event);
-#endif
 	}
 
 	if (got_event)

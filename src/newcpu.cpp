@@ -2200,7 +2200,7 @@ uae_u32 REGPARAM2 op_illg (uae_u32 opcode)
 	if (opcode == 0x4E7B && inrom) {
 		if (get_long (0x10) == 0) {
 			notify_user (NUMSG_KS68020);
-			uae_restart (-1, NULL);
+			uae_restart(&currprefs, -1, NULL);
 			m68k_setstopped();
 			return 4;
 		}
@@ -3121,6 +3121,7 @@ static volatile uae_u32 cpu_thread_indirect_addr;
 static volatile uae_u32 cpu_thread_indirect_val;
 static volatile uae_u32 cpu_thread_indirect_size;
 static volatile uae_u32 cpu_thread_reset;
+static SDL_Thread* cpu_thread;
 static SDL_threadID cpu_thread_tid;
 
 static bool m68k_cs_initialized;
@@ -3184,7 +3185,7 @@ extern addrbank *thread_mem_banks[MEMORY_BANKS];
 uae_u32 process_cpu_indirect_memory_read(uae_u32 addr, int size)
 {
 	// Do direct access if call is from filesystem etc thread 
-	if (cpu_thread_tid != uae_thread_get_id()) {
+	if (cpu_thread_tid != uae_thread_get_id(nullptr)) {
 		uae_u32 data = 0;
 		addrbank *ab = thread_mem_banks[bankindex(addr)];
 		switch (size)
@@ -3213,7 +3214,7 @@ uae_u32 process_cpu_indirect_memory_read(uae_u32 addr, int size)
 
 void process_cpu_indirect_memory_write(uae_u32 addr, uae_u32 data, int size)
 {
-	if (cpu_thread_tid != uae_thread_get_id()) {
+	if (cpu_thread_tid != uae_thread_get_id(nullptr)) {
 		addrbank *ab = thread_mem_banks[bankindex(addr)];
 		switch (size)
 		{
@@ -3249,7 +3250,7 @@ static void run_cpu_thread(int (*f)(void*))
 	uae_sem_init(&cpu_out_sema, 0, 0);
 	uae_sem_init(&cpu_wakeup_sema, 0, 0);
 
-	if (!uae_start_thread(_T("cpu"), f, NULL, NULL))
+	if (!uae_start_thread(_T("cpu"), f, NULL, &cpu_thread))
 		return;
 	while (!cpu_thread_active) {
 		sleep_millis(1);
@@ -3380,7 +3381,7 @@ static void run_cpu_thread(int (*f)(void*))
 void custom_reset_cpu(bool hardreset, bool keyboardreset)
 {
 #ifdef WITH_THREADED_CPU
-	if (cpu_thread_tid != uae_thread_get_id()) {
+	if (cpu_thread_tid != uae_thread_get_id(nullptr)) {
 		custom_reset(hardreset, keyboardreset);
 		return;
 	}
@@ -3491,7 +3492,7 @@ typedef void compiled_handler (void);
 #ifdef WITH_THREADED_CPU
 static int cpu_thread_run_jit(void *v)
 {
-	cpu_thread_tid = uae_thread_get_id();
+	cpu_thread_tid = uae_thread_get_id(cpu_thread);
 	cpu_thread_active = 1;
 #ifdef USE_STRUCTURED_EXCEPTION_HANDLING
 	__try
@@ -3607,7 +3608,7 @@ static int cpu_thread_run_2(void *v)
 	bool exit = false;
 	struct regstruct *r = &regs;
 
-	cpu_thread_tid = uae_thread_get_id();
+	cpu_thread_tid = uae_thread_get_id(cpu_thread);
 
 	cpu_thread_active = 1;
 	while (!exit) {

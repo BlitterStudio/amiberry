@@ -30,31 +30,33 @@
 #include "gui.h"
 #include "cdtv.h"
 #include "akiko.h"
-//#include "arcadia.h"
-//#include "enforcer.h"
+#ifdef ARCADIA
+#include "arcadia.h"
+#endif
+#ifdef ENFORCER
+#include "enforcer.h"
+#endif
 #include "threaddep/thread.h"
 #include "gayle.h"
 #include "debug.h"
 #include "debugmem.h"
 #include "gfxboard.h"
 #include "cpuboard.h"
-//#include "uae/ppc.h"
+#ifdef WITH_PPC
+#include "uae/ppc.h"
+#endif
 #include "devices.h"
 #include "inputdevice.h"
-//#include "casablanca.h"
-
-extern uae_u8* natmem_offset, * natmem_offset_end;
+#include "casablanca.h"
 
 #ifdef AMIBERRY
-extern void memory_map_dump(void);
 addrbank* get_mem_bank_real(uaecptr addr)
 {
 	addrbank* ab = &get_mem_bank(addr);
 	return ab;
 }
 #endif
-
-bool canbang = true;
+bool canbang;
 uaecptr highest_ram;
 static bool rom_write_enabled;
 #ifdef JIT
@@ -78,6 +80,25 @@ static bool canjit (void)
 	if (currprefs.cpu_model < 68020 || currprefs.address_space_24)
 		return false;
 	return true;
+}
+static bool needmman (void)
+{
+	if (!jit_direct_compatible_memory)
+		return false;
+#ifdef _WIN32
+	return true;
+#endif
+	if (canjit ())
+		return true;
+	return false;
+}
+
+static void nocanbang (void)
+{
+	if (canbang) {
+		write_log(_T("Switching JIT direct off!\n"));
+	}
+	canbang = 0;
 }
 
 uae_u8 ce_banktype[65536];
@@ -1246,7 +1267,9 @@ uae_u8 *REGPARAM2 default_xlate (uaecptr addr)
 					}
 					write_log (_T("\n"));
 				}
+#ifdef DEBUGGER
 				memory_map_dump();
+#endif
 			}
 			if (0 || (gary_toenb && (gary_nonrange(addr) || (size > 1 && gary_nonrange(addr + size - 1))))) {
 				hardware_exception2(addr, 0, true, true, size);
@@ -1480,14 +1503,6 @@ void a3000_fakekick (int map)
 	protect_roms (true);
 }
 
-static bool is_alg_rom(const TCHAR *name)
-{
-	struct romdata *rd = getromdatabypath(name);
-	if (!rd)
-		return false;
-	return (rd->type & ROMTYPE_ALG) != 0;
-}
-
 static void descramble_alg(uae_u8 *data, int size)
 {
 	uae_u8 *tbuf = xmalloc(uae_u8, size);
@@ -1629,12 +1644,8 @@ static bool load_extendedkickstart (const TCHAR *romextfile, int type)
 		extendedkickmem_type = EXTENDED_ROM_ARCADIA;
 		return false;
 	}
-	if (is_alg_rom(romextfile)) {
-		type = EXTENDED_ROM_ALG;
-
-	}
 #endif
-	f = read_rom_name (romextfile);
+	f = read_rom_name (romextfile, false);
 	if (!f) {
 		notify_user (NUMSG_NOEXTROM);
 		return false;
@@ -1642,6 +1653,13 @@ static bool load_extendedkickstart (const TCHAR *romextfile, int type)
 	zfile_fseek (f, 0, SEEK_END);
 	size = zfile_ftell32(f);
 	extendedkickmem_bank.reserved_size = ROM_SIZE_512;
+#ifdef ARCADIA
+	struct romdata *rd = get_alg_rom(romextfile);
+	if (rd) {
+		size = rd->size;
+		type = EXTENDED_ROM_ALG;
+	}
+#endif
 	off = 0;
 	if (type == 0) {
 		if (currprefs.cs_cd32cd) {
@@ -2144,10 +2162,13 @@ static void allocate_memory (void)
 		memsize = chipmem_bank.reserved_size = chipmem_full_size = currprefs.chipmem.size;
 		chipmem_full_mask = chipmem_bank.mask = chipmem_bank.reserved_size - 1;
 		chipmem_bank.start = chipmem_start_addr;
-		if (!currprefs.cachesize && memsize < 0x100000)
+		if (!currprefs.cachesize && memsize < 0x100000) {
 			memsize = 0x100000;
-		if (memsize > 0x100000 && memsize < 0x200000)
+		}
+		if (memsize == 0x180000) {
 			memsize = 0x200000;
+			chipmem_full_mask = chipmem_bank.mask = memsize - 1;
+		}
 		chipmem_bank.reserved_size = memsize;
 		mapped_malloc (&chipmem_bank);
 		chipmem_bank.reserved_size = currprefs.chipmem.size;
@@ -2172,6 +2193,10 @@ static void allocate_memory (void)
 				chipmem_full_mask = 0x80000 - 1;
 			}
 		}
+	}
+
+	if (currprefs.cachesize) {
+		chipmem_full_mask = chipmem_bank.mask = chipmem_bank.allocated_size - 1;
 	}
 
 	if (bogomem_bank.reserved_size != currprefs.bogomem.size || bogoreset) {
@@ -2282,9 +2307,7 @@ static void allocate_memory (void)
 	bogo_filepos = 0;
 	a3000lmem_filepos = 0;
 	a3000hmem_filepos = 0;
-#ifndef AMIBERRY // support for CPU boards is not implemented yet
 	cpuboard_init();
-#endif
 }
 
 static void setmemorywidth(struct ramboard *mb, addrbank *ab)
@@ -2391,10 +2414,10 @@ void map_overlay (int chip)
 	if (chip < 0)
 		chip = overlay_state;
 
-	//if (currprefs.cs_compatible == CP_CASABLANCA) {
-	//	casablanca_map_overlay();
-	//	return;
-	//}
+	if (currprefs.cs_compatible == CP_CASABLANCA) {
+		casablanca_map_overlay();
+		return;
+	}
 
 	size = chipmem_bank.allocated_size >= 0x180000 ? (chipmem_bank.allocated_size >> 16) : 32;
 	if (bogomem_aliasing)
@@ -2448,9 +2471,7 @@ void map_overlay (int chip)
 	initramboard(&chipmem_bank, &currprefs.chipmem);
 	overlay_state = chip;
 	fill_ce_banks();
-#ifndef AMIBERRY
 	cpuboard_overlay_override();
-#endif
 	if (!isrestore() && valid_address(regs.pc, 4)) {
 		m68k_setpc_normal(m68k_getpc());
 	}
@@ -2531,9 +2552,7 @@ void memory_clear (void)
 	if (a3000hmem_bank.baseaddr)
 		memset(a3000hmem_bank.baseaddr, 0, a3000hmem_bank.allocated_size);
 	expansion_clear ();
-#ifndef AMIBERRY
 	cpuboard_clear();
-#endif
 }
 
 static void restore_roms(void)
@@ -2572,17 +2591,17 @@ static void restore_roms(void)
 			write_log (_T("Known ROM '%s' loaded\n"), rd->name);
 #if 1
 			if ((rd->cpu & 8) && changed_prefs.cpu_model < 68030) {
-				notify_user (NUMSG_KS68030PLUS);
-				uae_restart (-1, NULL);
+				notify_user(NUMSG_KS68030PLUS);
+				uae_restart(&currprefs, -1, NULL);
 			} else if ((rd->cpu & 3) == 3 && changed_prefs.cpu_model != 68030) {
-				notify_user (NUMSG_KS68030);
-				uae_restart (-1, NULL);
+				notify_user(NUMSG_KS68030);
+				uae_restart(&currprefs, -1, NULL);
 			} else if ((rd->cpu & 3) == 1 && changed_prefs.cpu_model < 68020) {
-				notify_user (NUMSG_KS68EC020);
-				uae_restart (-1, NULL);
+				notify_user(NUMSG_KS68EC020);
+				uae_restart(&currprefs, -1, NULL);
 			} else if ((rd->cpu & 3) == 2 && (changed_prefs.cpu_model < 68020 || changed_prefs.address_space_24)) {
-				notify_user (NUMSG_KS68020);
-				uae_restart (-1, NULL);
+				notify_user(NUMSG_KS68020);
+				uae_restart(&currprefs, -1, NULL);
 			}
 #endif
 			if (rd->cloanto)
@@ -2637,10 +2656,19 @@ void reload_roms(void)
 void memory_restore(void)
 {
 	last_address_space_24 = currprefs.address_space_24;
-#ifndef AMIBERRY
 	cpuboard_map();
-#endif
 	map_banks_set(&kickmem_bank, 0xF8, 8, 0);
+}
+
+static void kickmem_init(void)
+{
+	if (!kickmem_bank.baseaddr) {
+		kickmem_bank.reserved_size = ROM_SIZE_512;
+		mapped_malloc(&kickmem_bank);
+		if (kickmem_bank.baseaddr) {
+			memset(kickmem_bank.baseaddr, 0, ROM_SIZE_512);
+		}
+	}
 }
 
 void memory_reset (void)
@@ -2649,7 +2677,9 @@ void memory_reset (void)
 	bool gayleorfatgary;
 
 	highest_ram = 0;
-	//alg_flag = 0;
+#ifdef ARCADIA
+	alg_flag = 0;
+#endif
 	need_hardreset = false;
 	rom_write_enabled = true;
 #ifdef JIT
@@ -2660,8 +2690,10 @@ void memory_reset (void)
 		need_hardreset = true;
 	last_address_space_24 = changed_prefs.address_space_24;
 
-	if (mem_hardreset > 2)
-		memory_init ();
+	if (mem_hardreset > 2) {
+		memory_init();
+	}
+	kickmem_init();
 
 	memset(ce_cachable, CACHE_ENABLE_INS, sizeof ce_cachable);
 
@@ -2679,9 +2711,7 @@ void memory_reset (void)
 	currprefs.cs_fatgaryrev = changed_prefs.cs_fatgaryrev;
 	currprefs.cs_ramseyrev = changed_prefs.cs_ramseyrev;
 	currprefs.cs_unmapped_space = changed_prefs.cs_unmapped_space;
-#ifndef AMIBERRY
 	cpuboard_reset(mem_hardreset);
-#endif
 
 	gayleorfatgary = ((currprefs.chipset_mask & CSMASK_AGA) || currprefs.cs_pcmcia || currprefs.cs_ide > 0 || currprefs.cs_mbdmac) && !currprefs.cs_cd32cd;
 
@@ -2751,12 +2781,18 @@ void memory_reset (void)
 		if (currprefs.cs_ide < 0)
 			map_banks (&gayle_bank, 0xDD, 1, 0);
 	}
-	if (currprefs.cs_rtc == 3) // A2000 clock
+	if (currprefs.cs_rtc == 3) { // A2000 clock
 		map_banks (&clock_bank, 0xD8, 4, 0);
-	if (currprefs.cs_rtc == 1 || currprefs.cs_rtc == 2 || currprefs.cs_cdtvram)
+		clock_bank.startmask = 0xd80000;
+	}
+	if (currprefs.cs_rtc == 1 || currprefs.cs_rtc == 2 || currprefs.cs_cdtvram) {
 		map_banks (&clock_bank, 0xDC, 1, 0);
-	else if (currprefs.cs_ksmirror_a8 || currprefs.cs_ide > 0 || currprefs.cs_pcmcia)
+		clock_bank.startmask = 0xdc0000;
+	}
+	else if (currprefs.cs_ksmirror_a8 || currprefs.cs_ide > 0 || currprefs.cs_pcmcia) {
 		map_banks (&clock_bank, 0xDC, 1, 0); /* none clock */
+		clock_bank.startmask = 0xdc0000;
+	}
 	if (currprefs.cs_fatgaryrev >= 0 || currprefs.cs_ramseyrev >= 0)
 		map_banks (&mbres_bank, 0xDE, 1, 0);
 #ifdef CD32
@@ -2780,14 +2816,10 @@ void memory_reset (void)
 	if (debugmem_bank.baseaddr) {
 		map_banks(&debugmem_bank, debugmem_bank.start >> 16, debugmem_bank.allocated_size >> 16, 0);
 	}
-#ifndef AMIBERRY
 	cpuboard_map();
-#endif
 	map_banks_set(&kickmem_bank, 0xF8, 8, 0);
 	if (currprefs.maprom && _tcscmp(currprefs.romfile, _T(":AROS"))) {
-#ifndef AMIBERRY
 		if (!cpuboard_maprom())
-#endif
 			map_banks_set(&kickram_bank, currprefs.maprom >> 16, extendedkickmem2a_bank.allocated_size ? 32 : (extendedkickmem_bank.allocated_size ? 16 : 8), 0);
 	}
 	/* map beta Kickstarts at 0x200000/0xC00000/0xF00000 */
@@ -2829,7 +2861,7 @@ void memory_reset (void)
 		break;
 #endif
 	case EXTENDED_ROM_ALG:
-#ifndef AMIBERRY
+#ifdef ARCADIA
 		map_banks_set(&extendedkickmem_bank, 0xF0, 4, 0);
 		alg_map_banks();
 #endif
@@ -2909,7 +2941,6 @@ void memory_reset (void)
 	write_log (_T("memory init end\n"));
 }
 
-
 void memory_init (void)
 {
 	init_mem_banks ();
@@ -2917,7 +2948,6 @@ void memory_init (void)
 
 	chipmem_bank.reserved_size = 0;
 	bogomem_bank.reserved_size = 0;
-	kickmem_bank.baseaddr = NULL;
 	extendedkickmem_bank.baseaddr = NULL;
 	extendedkickmem_bank.reserved_size = 0;
 	extendedkickmem2a_bank.baseaddr = NULL;
@@ -2934,16 +2964,11 @@ void memory_init (void)
 	custmem1_bank.baseaddr = NULL;
 	custmem2_bank.baseaddr = NULL;
 
-	kickmem_bank.reserved_size = ROM_SIZE_512;
-	mapped_malloc (&kickmem_bank);
-	if (kickmem_bank.baseaddr) {
-		memset(kickmem_bank.baseaddr, 0, ROM_SIZE_512);
-	}
+	mapped_free(&kickmem_bank);
+	kickmem_init();
 	_tcscpy (currprefs.romfile, _T("<none>"));
 	currprefs.romextfile[0] = 0;
-#ifndef AMIBERRY
 	cpuboard_reset(1);
-#endif
 
 #ifdef ACTION_REPLAY
 	action_replay_unload (0);
@@ -2975,9 +3000,7 @@ void memory_cleanup (void)
 	a1000_bootrom = NULL;
 	a1000_kickstart_mode = 0;
 
-#ifndef AMIBERRY
 	cpuboard_cleanup();
-#endif
 #ifdef ACTION_REPLAY
 	action_replay_cleanup();
 #endif
@@ -3087,7 +3110,7 @@ static addrbank *get_bank_cpu_thread(addrbank *bank)
 		at = xcalloc(addrbank_thread, 1);
 	thread_banks[thread_banks_used++] = at;
 	at->orig = bank;
-	memcpy(&at->ab, bank, sizeof at->ab);
+	memcpy(&at->ab, bank, sizeof (addrbank));
 	addrbank *tb = &at->ab;
 	tb->jit_read_flag = S_READ;
 	tb->jit_write_flag = S_WRITE;
