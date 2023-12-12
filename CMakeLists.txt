@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.18)
 project(amiberry)
-enable_language(C ASM)
+enable_language(C CXX ASM)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -9,6 +9,8 @@ set(CMAKE_C_FLAGS_DEBUG "-Og -g -rdynamic -funwind-tables -DDEBUG -Wl,--export-d
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
 set(CMAKE_EXE_LINKER_FLAGS "-no-pie -fuse-ld=gold -Wl,--gc-sections -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed")
+set(CMAKE_ASM_COMPILER "${CMAKE_C_COMPILER}")
+set(CMAKE_ASM_COMPILER_ARG1 "${CMAKE_C_COMPILER_ARG1}")
 
 # Set build type to "Release" if user did not specify any build type yet
 # Other possible values: Debug, Release, RelWithDebInfo and MinSizeRel
@@ -32,7 +34,8 @@ include_directories(
 
 set(libmt32emu_SHARED FALSE)
 add_subdirectory(external/mt32emu)
-add_definitions(-fno-pie -D_FILE_OFFSET_BITS=64)
+add_compile_options(-fno-pie)
+add_compile_definitions(_FILE_OFFSET_BITS=64)
 
 include(CheckSymbolExists)
 function(detect_architecture symbol arch)
