@@ -8930,7 +8930,7 @@ static void BEAMCON0(int hpos, uae_u16 v)
 	}
 }
 
-static void varsync(int reg, bool resync)
+static void varsync(int reg, bool resync, int oldval)
 {
 	struct amigadisplay *ad = &adisplays[0];
 	if (!ecs_agnus) {
@@ -8947,8 +8947,11 @@ static void varsync(int reg, bool resync)
 
 	// VB
 	if ((reg == 0x1cc || reg == 0x1ce) && (beamcon0 & BEAMCON0_VARVBEN)) {
-		// check VB and HB changes only if there are no many changes per frame
-		varsync_maybe_changed[0]++;
+		// check for >1 because of interlace modes
+		if ((reg == 0x1cc && abs(vbstrt - oldval) > 1) || (reg == 0x1ce && abs(vbstop - oldval) > 1)) {
+			// check VB and HB changes only if there are no many changes per frame
+			varsync_maybe_changed[0]++;
+		}
 	}
 	// HB
 	if ((reg == 0x1c4 || reg == 0x1c6) && exthblank) {
@@ -15239,76 +15242,78 @@ static int REGPARAM2 custom_wput_1 (int hpos, uaecptr addr, uae_u32 value, int n
 		if (htotal != value) {
 			sync_changes(hpos);
 			htotal = value & (MAXHPOS_ROWS - 1);
-			varsync(addr, 1);
+			varsync(addr, 1, -1);
 		}
 		break;
 	case 0x1C2:
 		if (hsstop != value) {
 			sync_changes(hpos);
 			hsstop = value & (MAXHPOS_ROWS - 1);
-			varsync(addr, 1);
+			varsync(addr, 1, -1);
 		}
 		break;
 	case 0x1C4:
 		if (hbstrt != value) {
 			sync_changes(hpos);
 			hbstrt = value & 0x7ff;
-			varsync(addr, 0);
+			varsync(addr, 0, -1);
 		}
 		break;
 	case 0x1C6:
 		if (hbstop != value) {
 			sync_changes(hpos);
 			hbstop = value & 0x7ff;
-			varsync(addr, 0);
+			varsync(addr, 0, -1);
 		}
 		break;
 	case 0x1C8:
 		if (vtotal != value) {
 			vtotal = value & (MAXVPOS_LINES_ECS - 1);
-			varsync(addr, 1);
+			varsync(addr, 1, -1);
 		}
 		break;
 	case 0x1CA:
 		if (vsstop != value) {
 			sync_changes(hpos);
 			vsstop = value & (MAXVPOS_LINES_ECS - 1);
-			varsync(addr, 1);
+			varsync(addr, 1, -1);
 		}
 		break;
 	case 0x1CC:
 		if (vbstrt != value) {
 			sync_changes(hpos);
+			uae_u16 old = vbstrt;
 			vbstrt = value & (MAXVPOS_LINES_ECS - 1);
-			varsync(addr, 0);
+			varsync(addr, 0, old);
 		}
 		break;
 	case 0x1CE:
 		if (vbstop != value) {
 			sync_changes(hpos);
+			uae_u16 old = vbstop;
 			vbstop = value & (MAXVPOS_LINES_ECS - 1);
-			varsync(addr, 0);
+			varsync(addr, 0, old);
 		}
 		break;
 	case 0x1DE:
 		if (hsstrt != value) {
 			sync_changes(hpos);
 			hsstrt = value & (MAXHPOS_ROWS - 1);
-			varsync(addr, 1);
+			varsync(addr, 1, -1);
 		}
 		break;
 	case 0x1E0:
 		if (vsstrt != value) {
 			sync_changes(hpos);
 			vsstrt = value & (MAXVPOS_LINES_ECS - 1);
-			varsync(addr, 1);
+			varsync(addr, 1, -1);
 		}
 		break;
 	case 0x1E2:
 		if (hcenter != value) {
 			sync_changes(hpos);
 			hcenter = value & (MAXHPOS_ROWS - 1);
-			varsync(addr, 0);
+			varsync(addr, 0, -1);
 		}
 		break;
 
