@@ -68,6 +68,7 @@ static msg_buffer_t *buffer_init(int size)
 		free(buf);
 		return NULL;
 	}
+	buf->sem = nullptr;
 	uae_sem_init(&buf->sem, 0, 1);
 	buf->wr_off = 0;
 	buf->rd_off = 0;
