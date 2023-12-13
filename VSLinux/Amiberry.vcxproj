@@ -172,7 +172,7 @@
     <RemoteBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug; make -j4 DEBUG=1 PLATFORM=rpi5-64-sdl2</RemoteBuildCommandLine>
     <RemoteReBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug; make clean; make -j4 DEBUG=1 PLATFORM=rpi5-64-sdl2</RemoteReBuildCommandLine>
     <RemoteCleanCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug; make clean</RemoteCleanCommandLine>
-    <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\archivers;..\src\floppybridge;..\external\libguisan\include;..\external\mt32emu\src;/usr/include/SDL2;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
+    <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\threaddep;..\src\archivers;..\src\floppybridge;..\external\libguisan\include;..\external\mt32emu\src;/usr/include/SDL2;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
     <NMakePreprocessorDefinitions>DEBUG;CPU_AARCH64;_REENTRANT;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <RemoteBuildOutputs />
     <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-Debug</RemoteProjectDir>
