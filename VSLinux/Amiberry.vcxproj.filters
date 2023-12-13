@@ -127,6 +127,33 @@
     <Filter Include="src\osdep\vkbd">
       <UniqueIdentifier>{7ef6d7bc-cf2a-41e3-aa07-9f8fe33f1e32}</UniqueIdentifier>
     </Filter>
+    <Filter Include="external\mt32emu">
+      <UniqueIdentifier>{6607c649-f842-48e0-8fdb-cb896e22cb9c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="external\mt32emu\cmake">
+      <UniqueIdentifier>{cb5ca255-8458-4227-913f-cbef5f746a2a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="external\mt32emu\src">
+      <UniqueIdentifier>{ee2db193-a3bc-401d-b3f3-62c621e1b662}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="external\mt32emu\src\c_interface">
+      <UniqueIdentifier>{48a3fb56-c562-45e2-9bfc-f5974170c02c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="external\mt32emu\src\sha1">
+      <UniqueIdentifier>{6506a2de-b504-4a43-a967-5eac30ebc17f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="external\mt32emu\src\srchelper">
+      <UniqueIdentifier>{08253883-456d-4f02-88e2-9d6e87a55f4e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="external\mt32emu\src\srchelper\srctools">
+      <UniqueIdentifier>{d2b34bd2-a1ef-476c-b0ae-a0a09d952a57}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="external\mt32emu\src\srchelper\srctools\src">
+      <UniqueIdentifier>{8c1908c8-96c7-43d0-8056-27d10e7302ce}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="external\mt32emu\src\srchelper\srctools\include">
+      <UniqueIdentifier>{5170f72d-47a2-4147-a681-ef1852d1b06d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\conf\dir.txt">
@@ -149,6 +176,27 @@
     </Text>
     <Text Include="..\conf\gamecontrollerdb.txt">
       <Filter>conf</Filter>
+    </Text>
+    <Text Include="..\external\mt32emu\AUTHORS.txt">
+      <Filter>external\mt32emu</Filter>
+    </Text>
+    <Text Include="..\external\mt32emu\CMakeLists.txt">
+      <Filter>external\mt32emu</Filter>
+    </Text>
+    <Text Include="..\external\mt32emu\COPYING.LESSER.txt">
+      <Filter>external\mt32emu</Filter>
+    </Text>
+    <Text Include="..\external\mt32emu\COPYING.txt">
+      <Filter>external\mt32emu</Filter>
+    </Text>
+    <Text Include="..\external\mt32emu\info.txt">
+      <Filter>external\mt32emu</Filter>
+    </Text>
+    <Text Include="..\external\mt32emu\NEWS.txt">
+      <Filter>external\mt32emu</Filter>
+    </Text>
+    <Text Include="..\external\mt32emu\TODO.txt">
+      <Filter>external\mt32emu</Filter>
     </Text>
   </ItemGroup>
   <ItemGroup>
@@ -484,14 +532,56 @@
     <None Include="..\external\libguisan\Makefile">
       <Filter>external\libguisan</Filter>
     </None>
-    <None Include="..\external\libguisan\Android.mk">
-      <Filter>external\libguisan</Filter>
-    </None>
     <None Include="..\external\libguisan\lib\.keep">
       <Filter>external\libguisan\lib</Filter>
     </None>
     <None Include="..\conf\amiberry-osx.conf">
       <Filter>conf</Filter>
+    </None>
+    <None Include="..\external\mt32emu\README.md">
+      <Filter>external\mt32emu</Filter>
+    </None>
+    <None Include="..\external\mt32emu\cmake\build_version_map.cmake">
+      <Filter>external\mt32emu\cmake</Filter>
+    </None>
+    <None Include="..\external\mt32emu\cmake\CheckDependencies.cmake">
+      <Filter>external\mt32emu\cmake</Filter>
+    </None>
+    <None Include="..\external\mt32emu\cmake\FindSampleRate.cmake">
+      <Filter>external\mt32emu\cmake</Filter>
+    </None>
+    <None Include="..\external\mt32emu\cmake\FindSOXR.cmake">
+      <Filter>external\mt32emu\cmake</Filter>
+    </None>
+    <None Include="..\external\mt32emu\cmake\MT32EmuConfig.cmake.in">
+      <Filter>external\mt32emu\cmake</Filter>
+    </None>
+    <None Include="..\external\mt32emu\cmake\project_data.cmake">
+      <Filter>external\mt32emu\cmake</Filter>
+    </None>
+    <None Include="..\external\mt32emu\src\config.h.in">
+      <Filter>external\mt32emu\src</Filter>
+    </None>
+    <None Include="..\external\mt32emu\src\mt32emu.pc.in">
+      <Filter>external\mt32emu\src</Filter>
+    </None>
+    <None Include="..\src\filesys.asm">
+      <Filter>src</Filter>
+    </None>
+    <None Include="..\src\filesys.sh">
+      <Filter>src</Filter>
+    </None>
+    <None Include="..\src\filesys_helpers.asm">
+      <Filter>src</Filter>
+    </None>
+    <None Include="..\src\table68k">
+      <Filter>src</Filter>
+    </None>
+    <None Include="..\src\osdep\aarch64_helper_min.s">
+      <Filter>src\osdep</Filter>
+    </None>
+    <None Include="..\src\osdep\aarch64_helper_osx.s">
+      <Filter>src\osdep</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -1455,6 +1545,177 @@
     <ClCompile Include="..\src\osdep\gui\PanelVirtualKeyboard.cpp">
       <Filter>src\osdep\gui</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\osdep\amiberry_uaenet.cpp">
+      <Filter>src\osdep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\osdep\ioport.cpp">
+      <Filter>src\osdep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\osdep\midi.cpp">
+      <Filter>src\osdep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\osdep\socket.cpp">
+      <Filter>src\osdep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\osdep\vpar.cpp">
+      <Filter>src\osdep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\a2065.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\a2091.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\amax.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\arcadia.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ethernet.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\midiemu.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ncr_scsi.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ncr9x_scsi.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\external\mt32emu\src\Analog.cpp">
+      <Filter>external\mt32emu\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\external\mt32emu\src\BReverbModel.cpp">
+      <Filter>external\mt32emu\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\external\mt32emu\src\Display.cpp">
+      <Filter>external\mt32emu\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\external\mt32emu\src\File.cpp">
+      <Filter>external\mt32emu\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\external\mt32emu\src\FileStream.cpp">
+      <Filter>external\mt32emu\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\external\mt32emu\src\LA32FloatWaveGenerator.cpp">
+      <Filter>external\mt32emu\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\external\mt32emu\src\LA32Ramp.cpp">
+      <Filter>external\mt32emu\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\external\mt32emu\src\LA32WaveGenerator.cpp">
+      <Filter>external\mt32emu\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\external\mt32emu\src\MidiStreamParser.cpp">
+      <Filter>external\mt32emu\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\external\mt32emu\src\Part.cpp">
+      <Filter>external\mt32emu\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\external\mt32emu\src\Partial.cpp">
+      <Filter>external\mt32emu\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\external\mt32emu\src\PartialManager.cpp">
+      <Filter>external\mt32emu\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\external\mt32emu\src\Poly.cpp">
+      <Filter>external\mt32emu\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\external\mt32emu\src\ROMInfo.cpp">
+      <Filter>external\mt32emu\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\external\mt32emu\src\SampleRateConverter.cpp">
+      <Filter>external\mt32emu\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\external\mt32emu\src\Synth.cpp">
+      <Filter>external\mt32emu\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\external\mt32emu\src\Tables.cpp">
+      <Filter>external\mt32emu\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\external\mt32emu\src\TVA.cpp">
+      <Filter>external\mt32emu\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\external\mt32emu\src\TVF.cpp">
+      <Filter>external\mt32emu\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\external\mt32emu\src\TVP.cpp">
+      <Filter>external\mt32emu\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\external\mt32emu\src\VersionTagging.cpp">
+      <Filter>external\mt32emu\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\external\mt32emu\src\c_interface\c_interface.cpp">
+      <Filter>external\mt32emu\src\c_interface</Filter>
+    </ClCompile>
+    <ClCompile Include="..\external\mt32emu\src\sha1\sha1.cpp">
+      <Filter>external\mt32emu\src\sha1</Filter>
+    </ClCompile>
+    <ClCompile Include="..\external\mt32emu\src\srchelper\InternalResampler.cpp">
+      <Filter>external\mt32emu\src\srchelper</Filter>
+    </ClCompile>
+    <ClCompile Include="..\external\mt32emu\src\srchelper\SamplerateAdapter.cpp">
+      <Filter>external\mt32emu\src\srchelper</Filter>
+    </ClCompile>
+    <ClCompile Include="..\external\mt32emu\src\srchelper\SoxrAdapter.cpp">
+      <Filter>external\mt32emu\src\srchelper</Filter>
+    </ClCompile>
+    <ClCompile Include="..\external\mt32emu\src\srchelper\srctools\src\FIRResampler.cpp">
+      <Filter>external\mt32emu\src\srchelper\srctools\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\external\mt32emu\src\srchelper\srctools\src\IIR2xResampler.cpp">
+      <Filter>external\mt32emu\src\srchelper\srctools\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\external\mt32emu\src\srchelper\srctools\src\LinearResampler.cpp">
+      <Filter>external\mt32emu\src\srchelper\srctools\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\external\mt32emu\src\srchelper\srctools\src\ResamplerModel.cpp">
+      <Filter>external\mt32emu\src\srchelper\srctools\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\external\mt32emu\src\srchelper\srctools\src\SincResampler.cpp">
+      <Filter>external\mt32emu\src\srchelper\srctools\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\casablanca.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\build68k.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\cpuboard.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\debugmem.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\disasm.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\enforcer.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\gencpu.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\idecontrollers.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\identify.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\osdep\amiberry_dbus.cpp">
+      <Filter>src\osdep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\jit\codegen_x86.cpp">
+      <Filter>src\jit</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\jit\compemu_midfunc_x86.cpp">
+      <Filter>src\jit</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\jit\gencomp.cpp">
+      <Filter>src\jit</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\archivers\7z\7zBuf.h">
@@ -2359,6 +2620,213 @@
     </ClInclude>
     <ClInclude Include="..\src\osdep\vkbd\vkbd.h">
       <Filter>src\osdep\vkbd</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\osdep\ioport.h">
+      <Filter>src\osdep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\osdep\midi.h">
+      <Filter>src\osdep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\osdep\vpar.h">
+      <Filter>src\osdep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\a2065.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\a2091.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\amax.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\arcadia.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\casablanca.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\disasm.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\enforcer.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\idecontrollers.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\identify.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\midiemu.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\ncr_scsi.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\ncr9x_scsi.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\sndboard.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\specialmonitors.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\uae\byteswap.h">
+      <Filter>src\include\uae</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\uae\slirp.h">
+      <Filter>src\include\uae</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\uae\socket.h">
+      <Filter>src\include\uae</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\Analog.h">
+      <Filter>external\mt32emu\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\BReverbModel.h">
+      <Filter>external\mt32emu\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\config.h">
+      <Filter>external\mt32emu\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\Display.h">
+      <Filter>external\mt32emu\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\Enumerations.h">
+      <Filter>external\mt32emu\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\File.h">
+      <Filter>external\mt32emu\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\FileStream.h">
+      <Filter>external\mt32emu\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\globals.h">
+      <Filter>external\mt32emu\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\internals.h">
+      <Filter>external\mt32emu\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\LA32FloatWaveGenerator.h">
+      <Filter>external\mt32emu\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\LA32Ramp.h">
+      <Filter>external\mt32emu\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\LA32WaveGenerator.h">
+      <Filter>external\mt32emu\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\MemoryRegion.h">
+      <Filter>external\mt32emu\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\MidiEventQueue.h">
+      <Filter>external\mt32emu\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\MidiStreamParser.h">
+      <Filter>external\mt32emu\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\mmath.h">
+      <Filter>external\mt32emu\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\mt32emu.h">
+      <Filter>external\mt32emu\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\Part.h">
+      <Filter>external\mt32emu\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\Partial.h">
+      <Filter>external\mt32emu\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\PartialManager.h">
+      <Filter>external\mt32emu\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\Poly.h">
+      <Filter>external\mt32emu\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\ROMInfo.h">
+      <Filter>external\mt32emu\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\SampleRateConverter.h">
+      <Filter>external\mt32emu\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\Structures.h">
+      <Filter>external\mt32emu\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\Synth.h">
+      <Filter>external\mt32emu\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\Tables.h">
+      <Filter>external\mt32emu\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\TVA.h">
+      <Filter>external\mt32emu\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\TVF.h">
+      <Filter>external\mt32emu\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\TVP.h">
+      <Filter>external\mt32emu\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\Types.h">
+      <Filter>external\mt32emu\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\VersionTagging.h">
+      <Filter>external\mt32emu\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\c_interface\c_interface.h">
+      <Filter>external\mt32emu\src\c_interface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\c_interface\c_types.h">
+      <Filter>external\mt32emu\src\c_interface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\c_interface\cpp_interface.h">
+      <Filter>external\mt32emu\src\c_interface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\sha1\sha1.h">
+      <Filter>external\mt32emu\src\sha1</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\srchelper\InternalResampler.h">
+      <Filter>external\mt32emu\src\srchelper</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\srchelper\SamplerateAdapter.h">
+      <Filter>external\mt32emu\src\srchelper</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\srchelper\SoxrAdapter.h">
+      <Filter>external\mt32emu\src\srchelper</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\srchelper\srctools\include\FIRResampler.h">
+      <Filter>external\mt32emu\src\srchelper\srctools\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\srchelper\srctools\include\FloatSampleProvider.h">
+      <Filter>external\mt32emu\src\srchelper\srctools\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\srchelper\srctools\include\IIR2xResampler.h">
+      <Filter>external\mt32emu\src\srchelper\srctools\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\srchelper\srctools\include\LinearResampler.h">
+      <Filter>external\mt32emu\src\srchelper\srctools\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\srchelper\srctools\include\ResamplerModel.h">
+      <Filter>external\mt32emu\src\srchelper\srctools\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\srchelper\srctools\include\ResamplerStage.h">
+      <Filter>external\mt32emu\src\srchelper\srctools\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\mt32emu\src\srchelper\srctools\include\SincResampler.h">
+      <Filter>external\mt32emu\src\srchelper\srctools\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\osdep\amiberry_dbus.h">
+      <Filter>src\osdep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\jit\codegen_x86.h">
+      <Filter>src\jit</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\jit\compemu_midfunc_x86.h">
+      <Filter>src\jit</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\jit\flags_x86.h">
+      <Filter>src\jit</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
