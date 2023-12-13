@@ -212,7 +212,7 @@ static PortMidiStream *open_in_stream(void)
 
 static int midi_open_with_config(uae_prefs *cfg)
 {
-	write_log(_T("midi_open(%s)\n"), cfg);
+	write_log(_T("midi_open()\n"));
 
 	// setup timer
 	PtError err = Pt_Start(1, timer_callback, NULL);
