@@ -4334,11 +4334,11 @@ static void movem_mmu060 (const char *code, int size, bool put, bool aipi, bool 
 			out("%cmask = movem_next[%cmask];\n", reg, reg);
 			out("}\n");
 		}
-		if (aipi || apdi)
-			out("m68k_areg(regs, dstreg) = srca;\n");
 		out("while (--idx >= 0) {\n");
 		out("regs.regs[tmpreg[idx]] = tmp[idx];\n");
 		out("}\n");
+		if (aipi || apdi)
+			out("m68k_areg(regs, dstreg) = srca;\n");
 	} else {
 		for (int i = 0; i < 2; i++) {
 			char reg;
@@ -4352,12 +4352,12 @@ static void movem_mmu060 (const char *code, int size, bool put, bool aipi, bool 
 			if (put) {
 				if (apdi && !i) {
 					out("int predec = movem_index2[amask] != dstreg ? 0 : %d;\n", size);
+					out("%s, m68k_%creg(regs, %s[%cmask]) - predec);\n", code, reg, index, reg);
 				} else {
-					out("int predec = 0;\n");
+					out("%s, m68k_%creg(regs, %s[%cmask]));\n", code, reg, index, reg);
 				}
-				out("%s, m68k_%creg (regs, %s[%cmask]) - predec);\n", code, reg, index, reg);
 			} else {
-				out("m68k_%creg (regs, %s[%cmask]) = %s;\n", reg, index, reg, code);
+				out("m68k_%creg(regs, %s[%cmask]) = %s;\n", reg, index, reg, code);
 			}
 			if (!apdi)
 				out("srca += %d;\n", size);
@@ -4405,12 +4405,12 @@ static void movem_mmu040 (const char *code, int size, bool put, bool aipi, bool 
 		if (put) {
 			if (apdi && !i) {
 				out("int predec = movem_index2[amask] != dstreg ? 0 : %d;\n", size);
+				out("%s, m68k_%creg(regs, %s[%cmask]) - predec);\n", code, reg, index, reg);
 			} else {
-				out("int predec = 0;\n");
+				out("%s, m68k_%creg(regs, %s[%cmask]));\n", code, reg, index, reg);
 			}
-			out("%s, m68k_%creg (regs, %s[%cmask]) - predec);\n", code, reg, index, reg);
 		} else {
-			out("m68k_%creg (regs, %s[%cmask]) = %s;\n", reg, index, reg, code);
+			out("m68k_%creg(regs, %s[%cmask]) = %s;\n", reg, index, reg, code);
 		}
 		if (!apdi)
 			out("srca += %d;\n", size);
@@ -4492,7 +4492,7 @@ static void movem_mmu030 (const char *code, int size, bool put, bool aipi, bool 
 		}
 		out("}\n");
 		if (!put) {
-			out("m68k_%creg (regs, %s[%cmask]) = val;\n", reg, index, reg);
+			out("m68k_%creg(regs, %s[%cmask]) = val;\n", reg, index, reg);
 		}
 		out("mmu030_state[0]++;\n");
 		out("}\n");
