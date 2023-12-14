@@ -2339,11 +2339,15 @@ uae_u32 m68k_disasm_2(TCHAR *buf, int bufsize, uaecptr pc, uae_u16 *bufpc, int b
 						_stprintf(p, _T(" %s%d"), disasm_fpreg, (extra >> 10) & 7);
 					}
 					p = instrname + _tcslen(instrname);
-					if ((extra & 0x4000) || (((extra >> 7) & 7) != ((extra >> 10) & 7)))
-						_stprintf(p, _T(",%s%d"), disasm_fpreg, (extra >> 7) & 7);
 					if (ins >= 0x30 && ins < 0x38) { // FSINCOS
 						p = instrname + _tcslen(instrname);
 						_stprintf(p, _T(",%s%d"), disasm_fpreg, extra & 7);
+						p = instrname + _tcslen(instrname);
+						_stprintf(p, _T(",%s%d"), disasm_fpreg, (extra >> 7) & 7);
+					} else {
+						if ((extra & 0x4000) || (((extra >> 7) & 7) != ((extra >> 10) & 7))) {
+							_stprintf(p, _T(",%s%d"), disasm_fpreg, (extra >> 7) & 7);
+						}
 					}
 				}
 				if (ins >= 0x40 && currprefs.fpu_model >= 68881 && fpuopcodes[ins]) {
