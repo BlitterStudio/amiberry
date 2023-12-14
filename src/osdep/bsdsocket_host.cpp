@@ -1356,7 +1356,7 @@ uae_u32 host_IoctlSocket(TrapContext *ctx, SB, uae_u32 sd, uae_u32 request, uae_
 	write_log("Ioctl code is %x, flags are %ld\n", request, flags);
 
 	switch (request) {
-	case 0x8004667B: /* FIOGETOWN */
+	case 0x4004667B: /* FIOGETOWN */
 		sb->ownertask = get_long (arg);
 		return 0;
 
