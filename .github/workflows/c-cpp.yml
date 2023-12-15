@@ -8,6 +8,7 @@ on:
       - preview
     tags: 
       - v*.*.*
+      - preview-v*.*.*
   pull_request:
     branches:
       - master
@@ -191,6 +192,7 @@ jobs:
         path: amiberry-${{ github.ref_name }}-debian-bookworm-x86_64.zip
 
   build-manjaro-aarch64-rpi4:
+    if: github.ref == 'refs/heads/master' && github.ref_type == 'tag'
     runs-on: [self-hosted, Linux, ARM64, manjaro]
     steps:
     - uses: actions/checkout@v4
@@ -234,6 +236,7 @@ jobs:
         path: amiberry-${{ github.ref_name }}-manjaro-aarch64-rpi4.zip
   
   build-manjaro-aarch64-rk3399:
+    if: github.ref == 'refs/heads/master' && github.ref_type == 'tag'
     runs-on: [self-hosted, Linux, ARM64, manjaro]
     steps:
     - uses: actions/checkout@v4
@@ -649,6 +652,7 @@ jobs:
         path: amiberry-${{ github.ref_name }}-debian-bookworm-armhf-rpi4.zip
 
   build-debian-buster-aarch64-rpi3:
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -742,6 +746,7 @@ jobs:
         path: amiberry-${{ github.ref_name }}-debian-buster-armhf-rpi3.zip
 
   build-debian-bullseye-aarch64-rpi3:
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -835,6 +840,7 @@ jobs:
         path: amiberry-${{ github.ref_name }}-debian-bullseye-armhf-rpi3.zip
 
   build-debian-bookworm-aarch64-rpi3:
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -930,7 +936,7 @@ jobs:
   create-release:
     needs: [build-macOS-x86_64, build-debian-buster-x86_64, build-debian-bullseye-x86_64, build-debian-bookworm-x86_64, build-manjaro-aarch64-rpi4, build-manjaro-aarch64-rk3399, build-debian-bookworm-aarch64-rpi5, build-debian-bookworm-armhf-rpi5, build-debian-buster-aarch64-rpi4, build-debian-buster-armhf-rpi4, build-debian-bullseye-aarch64-rpi4, build-debian-bullseye-armhf-rpi4, build-debian-bookworm-aarch64-rpi4, build-debian-bookworm-armhf-rpi4, build-debian-buster-aarch64-rpi3, build-debian-buster-armhf-rpi3, build-debian-bullseye-aarch64-rpi3, build-debian-bullseye-armhf-rpi3, build-debian-bookworm-aarch64-rpi3, build-debian-bookworm-armhf-rpi3]
     runs-on: ubuntu-latest
-    if: github.ref_type == 'tag'
+    if: github.ref == 'refs/heads/master' && github.ref_type == 'tag'
     steps:
       - uses: actions/checkout@v4
       
@@ -973,3 +979,39 @@ jobs:
             debian-bullseye-armhf-rpi3/amiberry-${{ github.ref_name }}-debian-bullseye-armhf-rpi3.zip
             debian-bookworm-aarch64-rpi3/amiberry-${{ github.ref_name }}-debian-bookworm-aarch64-rpi3.zip
             debian-bookworm-armhf-rpi3/amiberry-${{ github.ref_name }}-debian-bookworm-armhf-rpi3.zip
+
+  create-prerelease:
+    needs: [build-macOS-x86_64, build-debian-buster-x86_64, build-debian-bullseye-x86_64, build-debian-bookworm-x86_64, build-debian-bookworm-aarch64-rpi5, build-debian-buster-aarch64-rpi4, build-debian-bullseye-aarch64-rpi4, build-debian-bookworm-aarch64-rpi4]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/preview' && github.ref_type == 'tag'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create Changelog
+        if: github.ref_type == 'tag'
+        id: changelog
+        uses: loopwerk/tag-changelog@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config_file: .github/tag-changelog-config.js
+
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v3
+
+      - name: Create PreRelease
+        if: github.ref_type == 'tag'
+        uses: ncipollo/release-action@v1
+        with:
+          prerelease: true
+          allowUpdates: true
+          omitBodyDuringUpdate: true
+          body: ${{ steps.changelog.outputs.changes }}
+          artifacts: |
+            macOS-x86_64/amiberry-${{ github.ref_name }}-macOS-x86_64.zip
+            debian-buster-x86_64/amiberry-${{ github.ref_name }}-debian-buster-x86_64.zip
+            debian-bullseye-x86_64/amiberry-${{ github.ref_name }}-debian-bullseye-x86_64.zip
+            debian-bookworm-x86_64/amiberry-${{ github.ref_name }}-debian-bookworm-x86_64.zip
+            debian-bookworm-aarch64-rpi5/amiberry-${{ github.ref_name }}-debian-bookworm-aarch64-rpi5.zip
+            debian-buster-aarch64-rpi4/amiberry-${{ github.ref_name }}-debian-buster-aarch64-rpi4.zip
+            debian-bullseye-aarch64-rpi4/amiberry-${{ github.ref_name }}-debian-bullseye-aarch64-rpi4.zip
+            debian-bookworm-aarch64-rpi4/amiberry-${{ github.ref_name }}-debian-bookworm-aarch64-rpi4.zip
