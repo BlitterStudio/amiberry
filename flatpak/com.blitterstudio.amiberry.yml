@@ -26,12 +26,6 @@ modules:
     config-opts:
       - --disable-static
     rm-configure: true
-    cleanup:
-      - /bin
-      - /include
-      - /lib/pkgconfig
-      - "*.la"
-      - "*.a"
     sources:
       - type: archive
         url: https://libmpeg2.sourceforge.net/files/libmpeg2-0.5.1.tar.gz
@@ -40,26 +34,29 @@ modules:
         dest-filename: autogen.sh
         commands:
           - autoreconf -vfi
+    cleanup:
+      - /bin
+      - /include
+      - /lib/pkgconfig
+      - "*.la"
+      - "*.a"
 
   - name: libserialport
     buildsystem: autotools
-    cleanup:
-      - /include
-      - "*.la"
-      - "*.a"
     sources:
       - type: git
         url: https://github.com/sigrokproject/libserialport
         tag: libserialport-0.1.1
         commit: 348a6d353af8ac142f68fbf9fe0f4d070448d945
+    cleanup:
+      - /include
+      - "*.la"
+      - "*.a"
 
   - name: portmidi
     buildsystem: cmake-ninja
     config-opts:
       - -DCMAKE_BUILD_TYPE=Release
-      - -DCMAKE_LIBRARY_OUTPUT_DIRECTORY=/app/lib
-      - -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY=/app/lib
-      - -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=/app/bin
     sources:
       - type: git
         url: https://github.com/PortMidi/PortMidi
