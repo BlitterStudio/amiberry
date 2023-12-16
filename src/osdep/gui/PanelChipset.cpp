@@ -262,7 +262,7 @@ void InitPanelChipset(const struct config_category& category)
 	grpOptions->add(chkBlitImmed, 10, 10);
 	grpOptions->add(chkBlitWait, 10, 40);
 	grpOptions->setMovable(false);
-	grpOptions->setSize(chkBlitWait->getWidth() + DISTANCE_BORDER + 10, 125);
+	grpOptions->setSize(chkBlitImmed->getWidth() + DISTANCE_BORDER + DISTANCE_NEXT_X, 125);
 	grpOptions->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpOptions->setBaseColor(gui_baseCol);
 
