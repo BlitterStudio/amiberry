@@ -1010,7 +1010,7 @@ void RefreshPanelSound()
 	lblAHIVol->setEnabled(enabled);
 	lblAHIVolInfo->setEnabled(enabled);
 	sldAHIVol->setEnabled(enabled);
-	
+
 	lblMIDIVol->setEnabled(enabled);
 	sldMIDIVol->setEnabled(enabled);
 	lblMIDIVolInfo->setEnabled(enabled);
