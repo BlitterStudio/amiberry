@@ -19,7 +19,13 @@ static gcn::RadioButton* optCPU68040;
 static gcn::RadioButton* optCPU68060;
 static gcn::CheckBox* chk24Bit;
 static gcn::CheckBox* chkCPUCompatible;
+static gcn::CheckBox* chkCpuDataCache;
 static gcn::CheckBox* chkJIT;
+
+static gcn::Window* grpMMU;
+static gcn::RadioButton* optMMUNone;
+static gcn::RadioButton* optMMUEnabled;
+static gcn::RadioButton* optMMUEC;
 
 static gcn::Window* grpFPU;
 static gcn::RadioButton* optFPUnone;
@@ -111,6 +117,9 @@ public:
 		if (changed_prefs.m68k_speed_throttle > 0 && changed_prefs.m68k_speed < 0)
 			changed_prefs.m68k_speed_throttle = 0;
 
+		// 0 = Host (64-bit), -1 = Host (80-bit), 1 = Softfloat (80-bit)
+		changed_prefs.fpu_mode = 0;
+
 		int newcpu = optCPU68000->isSelected()
 						 ? 68000
 						 : optCPU68010->isSelected()
@@ -160,28 +169,28 @@ public:
 				if (newcpu != oldcpu)
 					changed_prefs.address_space_24 = false;
 				changed_prefs.fpu_model = newfpu == 0 ? 0 : (newfpu == 2 ? 68882 : 68881);
-				changed_prefs.mmu_ec = false; //ischecked(hDlg, IDC_MMUENABLEEC);
-				changed_prefs.mmu_model = 0; //changed_prefs.mmu_ec || ischecked(hDlg, IDC_MMUENABLE) ? 68030 : 0;
+				changed_prefs.mmu_ec = optMMUEC->isSelected();
+				changed_prefs.mmu_model = changed_prefs.mmu_ec || optMMUEnabled->isSelected() ? 68030 : 0;
 				if (changed_prefs.cpu_compatible)
-					changed_prefs.cpu_data_cache = false; //ischecked(hDlg, IDC_CPUDATACACHE);
+					changed_prefs.cpu_data_cache = chkCpuDataCache->isSelected();
 				break;
 			case 68040:
 				changed_prefs.fpu_model = newfpu ? 68040 : 0;
 				changed_prefs.address_space_24 = false;
 				if (changed_prefs.fpu_model)
 					changed_prefs.fpu_model = 68040;
-				changed_prefs.mmu_ec = false; //ischecked(hDlg, IDC_MMUENABLEEC);
-				changed_prefs.mmu_model = 0; //changed_prefs.mmu_ec || ischecked(hDlg, IDC_MMUENABLE) ? 68040 : 0;
+				changed_prefs.mmu_ec = optMMUEC->isSelected();
+				changed_prefs.mmu_model = changed_prefs.mmu_ec || optMMUEnabled->isSelected() ? 68040 : 0;
 				if (changed_prefs.cpu_compatible)
-					changed_prefs.cpu_data_cache = false; //ischecked(hDlg, IDC_CPUDATACACHE);
+					changed_prefs.cpu_data_cache = chkCpuDataCache->isSelected();
 				break;
 			case 68060:
 				changed_prefs.fpu_model = newfpu ? 68060 : 0;
 				changed_prefs.address_space_24 = false;
-				changed_prefs.mmu_ec = false; //ischecked(hDlg, IDC_MMUENABLEEC);
-				changed_prefs.mmu_model = 0; //changed_prefs.mmu_ec || ischecked(hDlg, IDC_MMUENABLE) ? 68060 : 0;
+				changed_prefs.mmu_ec = optMMUEC->isSelected();
+				changed_prefs.mmu_model = changed_prefs.mmu_ec || optMMUEnabled->isSelected() ? 68060 : 0;
 				if (changed_prefs.cpu_compatible)
-					changed_prefs.cpu_data_cache = false; //ischecked(hDlg, IDC_CPUDATACACHE);
+					changed_prefs.cpu_data_cache = chkCpuDataCache->isSelected();
 				break;
 			default:
 				break;
@@ -261,7 +270,7 @@ public:
 			changed_prefs.fpu_mode = 0;
 		}
 		if (oldcache == 0 && changed_prefs.cachesize > 0) {
-			canbang = 1;
+			canbang = true;
 		}
 		if (changed_prefs.cachesize && changed_prefs.cpu_model >= 68040) {
 			changed_prefs.cpu_compatible = false;
@@ -340,6 +349,10 @@ void InitPanelCPU(const struct config_category& category)
 	chkCPUCompatible->setId("chkCPUCompatible");
 	chkCPUCompatible->addActionListener(cpuActionListener);
 
+	chkCpuDataCache = new gcn::CheckBox("Data cache");
+	chkCpuDataCache->setId("chkCpuDataCache");
+	chkCpuDataCache->addActionListener(cpuActionListener);
+
 	chkJIT = new gcn::CheckBox("JIT", true);
 	chkJIT->setId("chkJIT");
 	chkJIT->addActionListener(cpuActionListener);
@@ -354,13 +367,34 @@ void InitPanelCPU(const struct config_category& category)
 	grpCPU->add(optCPU68060, 10, 160);
 	grpCPU->add(chk24Bit, 10, 200);
 	grpCPU->add(chkCPUCompatible, 10, 230);
-	grpCPU->add(chkJIT, 10, 260);
+	grpCPU->add(chkCpuDataCache, 10, 260);
+	grpCPU->add(chkJIT, 10, 290);
 	grpCPU->setMovable(false);
-	grpCPU->setSize(chk24Bit->getWidth() + 20, 315);
+	grpCPU->setSize(chk24Bit->getWidth() + 20, TITLEBAR_HEIGHT + 290 + chkJIT->getHeight() + DISTANCE_NEXT_Y);
 	grpCPU->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpCPU->setBaseColor(gui_baseCol);
-
 	category.panel->add(grpCPU);
+
+	optMMUNone = new gcn::RadioButton("None", "radiommugroup");
+	optMMUNone->setId("optMMUNone");
+	optMMUNone->addActionListener(cpuActionListener);
+	optMMUEnabled = new gcn::RadioButton("MMU", "radiommugroup");
+	optMMUEnabled->setId("optMMUEnabled");
+	optMMUEnabled->addActionListener(cpuActionListener);
+	optMMUEC = new gcn::RadioButton("EC", "radiommugroup");
+	optMMUEC->setId("optMMUEC");
+	optMMUEC->addActionListener(cpuActionListener);
+
+	grpMMU = new gcn::Window("MMU");
+	grpMMU->setPosition(grpCPU->getX(), grpCPU->getY() + grpCPU->getHeight() + DISTANCE_NEXT_Y / 2);
+	grpMMU->add(optMMUNone, 10, 10);
+	grpMMU->add(optMMUEnabled, 10, 40);
+	grpMMU->add(optMMUEC, optMMUEnabled->getX() + optMMUEnabled->getWidth() + DISTANCE_NEXT_X, 40);
+	grpMMU->setMovable(false);
+	grpMMU->setSize(grpCPU->getWidth(), TITLEBAR_HEIGHT + 40 + optMMUEnabled->getHeight() + DISTANCE_NEXT_Y);
+	grpMMU->setTitleBarHeight(TITLEBAR_HEIGHT);
+	grpMMU->setBaseColor(gui_baseCol);
+	category.panel->add(grpMMU);
 
 	optFPUnone = new gcn::RadioButton("None", "radiofpugroup");
 	optFPUnone->setId("optFPUnone");
@@ -383,14 +417,14 @@ void InitPanelCPU(const struct config_category& category)
 	chkFPUStrict->addActionListener(cpuActionListener);
 
 	grpFPU = new gcn::Window("FPU");
-	grpFPU->setPosition(grpCPU->getX(), grpCPU->getY() + grpCPU->getHeight() + DISTANCE_NEXT_Y / 2);
+	grpFPU->setPosition(grpMMU->getX(), grpMMU->getY() + grpMMU->getHeight() + DISTANCE_NEXT_Y / 2);
 	grpFPU->add(optFPUnone, 10, 10);
 	grpFPU->add(optFPU68881, 10, 40);
 	grpFPU->add(optFPU68882, 10, 70);
 	grpFPU->add(optFPUinternal, 10, 100);
 	grpFPU->add(chkFPUStrict, 10, 130);
 	grpFPU->setMovable(false);
-	grpFPU->setSize(grpCPU->getWidth(), 185);
+	grpFPU->setSize(grpCPU->getWidth(), TITLEBAR_HEIGHT + 130 + chkFPUStrict->getHeight() + DISTANCE_NEXT_Y);
 	grpFPU->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpFPU->setBaseColor(gui_baseCol);
 	category.panel->add(grpFPU);
@@ -525,9 +559,15 @@ void ExitPanelCPU()
 	delete optCPU68060;
 	delete chk24Bit;
 	delete chkCPUCompatible;
+	delete chkCpuDataCache;
 	delete chkJIT;
 	delete grpCPU;
 	delete cpuActionListener;
+
+	delete optMMUNone;
+	delete optMMUEnabled;
+	delete optMMUEC;
+	delete grpMMU;
 
 	delete optFPUnone;
 	delete optFPU68881;
@@ -617,16 +657,17 @@ void RefreshPanelCPU()
 #ifndef JIT
 	jit_enable = false;
 #endif
+	bool enable = jit_enable && changed_prefs.cachesize;
 
-	optDirect->setEnabled(jit_enable);
-	optIndirect->setEnabled(jit_enable);
-	chkHardFlush->setEnabled(jit_enable);
-	chkConstantJump->setEnabled(jit_enable);
-	chkFPUJIT->setEnabled(jit_enable);
-	chkCatchExceptions->setEnabled(jit_enable);
-	chkNoFlags->setEnabled(jit_enable);
-	lblJitCacheSizeInfo->setEnabled(jit_enable);
-	sldJitCacheSize->setEnabled(jit_enable);
+	optDirect->setEnabled(enable);
+	optIndirect->setEnabled(enable);
+	chkHardFlush->setEnabled(enable);
+	chkConstantJump->setEnabled(enable);
+	chkFPUJIT->setEnabled(enable && changed_prefs.fpu_model > 0);
+	chkCatchExceptions->setEnabled(enable);
+	chkNoFlags->setEnabled(enable);
+	lblJitCacheSizeInfo->setEnabled(enable);
+	sldJitCacheSize->setEnabled(enable);
 	chkJIT->setEnabled(jit_enable);
 	chkCPUCompatible->setEnabled(!changed_prefs.cpu_memory_cycle_exact && !(changed_prefs.cachesize && changed_prefs.cpu_model >= 68040));
 	chkFPUStrict->setEnabled(changed_prefs.fpu_model > 0);
@@ -646,6 +687,7 @@ void RefreshPanelCPU()
 
 	chkCPUCompatible->setSelected(changed_prefs.cpu_compatible);
 	chk24Bit->setSelected(changed_prefs.address_space_24);
+	chkCpuDataCache->setSelected(changed_prefs.cpu_data_cache);
 	chkFPUStrict->setSelected(changed_prefs.fpu_strict);
 
 	sldCpuIdle->setValue(changed_prefs.cpu_idle == 0 ? 0 : 12 - changed_prefs.cpu_idle / 15);
@@ -700,7 +742,7 @@ void RefreshPanelCPU()
 	chkCatchExceptions->setSelected(changed_prefs.comp_catchfault);
 	chkNoFlags->setSelected(changed_prefs.compnf);
 #ifdef USE_JIT_FPU
-	chkFPUJIT->setSelected(changed_prefs.compfpu);
+	chkFPUJIT->setSelected(changed_prefs.compfpu && changed_prefs.fpu_model > 0);
 #else
 	chkFPUJIT->setSelected(false);
 #endif
@@ -711,6 +753,22 @@ void RefreshPanelCPU()
 #else
 	chkJIT->setSelected(false);
 #endif
+
+	bool mmu = ((changed_prefs.cpu_model == 68060 && changed_prefs.mmu_model == 68060) ||
+			(changed_prefs.cpu_model == 68040 && changed_prefs.mmu_model == 68040) ||
+			(changed_prefs.cpu_model == 68030 && changed_prefs.mmu_model == 68030)) &&
+					changed_prefs.cachesize == 0;
+	if (!mmu)
+	{
+		optMMUNone->setSelected(true);
+	}
+	else
+	{
+		if (changed_prefs.mmu_ec)
+			optMMUEC->setSelected(true);
+		else
+			optMMUEnabled->setSelected(true);
+	}
 }
 
 bool HelpPanelCPU(std::vector<std::string>& helptext)

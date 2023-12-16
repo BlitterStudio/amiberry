@@ -15,6 +15,8 @@
 #define DROPDOWN_HEIGHT 20
 #define SLIDER_HEIGHT 20
 #define TITLEBAR_HEIGHT 24
+#define SELECTOR_WIDTH 165
+#define SELECTOR_HEIGHT 24
 #include <guisan/sdl/sdlinput.hpp>
 
 #ifdef USE_OPENGL
@@ -356,7 +358,6 @@ extern int delay_savestate_frame;
 extern int last_x;
 extern int last_y;
 
-extern void init_dispmanx_gui();
 extern void update_gui_screen();
 extern void cap_fps(Uint64 start);
 extern long get_file_size(const std::string& filename);
