@@ -312,7 +312,7 @@ void InitPanelDiskSwapper(const config_category& category)
 		}
 		diskSwapperListEntry[row]->add(cmdDiskSwapperListDrive[row], posX, 2);
 		category.panel->add(diskSwapperListEntry[row], DISTANCE_BORDER, posY);
-		posY += diskSwapperListEntry[row]->getHeight() + 5;
+		posY += diskSwapperListEntry[row]->getHeight() + 3;
 	}
 
 	posY += DISTANCE_NEXT_Y / 2;
