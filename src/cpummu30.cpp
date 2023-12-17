@@ -333,7 +333,7 @@ static bool mmu_op30_invea(uae_u32 opcode)
 	return false;
 }
 
-bool mmu_op30_pmove (uaecptr pc, uae_u32 opcode, uae_u16 next, uaecptr extra)
+int mmu_op30_pmove(uaecptr pc, uae_u32 opcode, uae_u16 next, uaecptr extra)
 {
 	int preg = (next >> 10) & 31;
 	int rw = (next >> 9) & 1;
@@ -341,13 +341,13 @@ bool mmu_op30_pmove (uaecptr pc, uae_u32 opcode, uae_u16 next, uaecptr extra)
  	int unused = (next & 0xff);
    
 	if (mmu_op30_invea(opcode))
-		return true;
+		return 1;
 	// unused low 8 bits must be zeroed
 	if (unused)
-		return true;
+		return 1;
 	// read and fd set?
 	if (rw && fd)
-		return true;
+		return 1;
 
 #if MMU030_OP_DBG_MSG
     switch (preg) {
@@ -393,7 +393,7 @@ bool mmu_op30_pmove (uaecptr pc, uae_u32 opcode, uae_u16 next, uaecptr extra)
             else {
                 tc_030 = x_get_long (extra);
                 if (mmu030_decode_tc(tc_030, true))
-					return true;
+					return -1;
             }
             break;
         case 0x12: // SRP
@@ -404,7 +404,7 @@ bool mmu_op30_pmove (uaecptr pc, uae_u32 opcode, uae_u16 next, uaecptr extra)
                 srp_030 = (uae_u64)x_get_long (extra) << 32;
                 srp_030 |= x_get_long (extra + 4);
                 if (mmu030_decode_rp(srp_030))
-					return true;
+					return -1;
             }
             break;
         case 0x13: // CRP
@@ -415,13 +415,13 @@ bool mmu_op30_pmove (uaecptr pc, uae_u32 opcode, uae_u16 next, uaecptr extra)
                 crp_030 = (uae_u64)x_get_long (extra) << 32;
                 crp_030 |= x_get_long (extra + 4);
                 if (mmu030_decode_rp(crp_030))
-					return true;
+					return -1;
             }
             break;
         case 0x18: // MMUSR
 			if (fd) {
 				// FD must be always zero when MMUSR read or write
-				return true;
+				return 1;
 			}
             if (rw)
                 x_put_word (extra, mmusr_030);
@@ -446,14 +446,14 @@ bool mmu_op30_pmove (uaecptr pc, uae_u32 opcode, uae_u16 next, uaecptr extra)
             break;
         default:
             write_log (_T("Bad PMOVE at %08x\n"),m68k_getpc());
-            return true;
+            return 1;
 	}
     
     if (!fd && !rw && preg != 0x18) {
         mmu030_flush_atc_all();
     }
 	tt_enabled = (tt0_030 & TT_ENABLE) || (tt1_030 & TT_ENABLE);
-	return false;
+	return 0;
 }
 
 bool mmu_op30_ptest (uaecptr pc, uae_u32 opcode, uae_u16 next, uaecptr extra)

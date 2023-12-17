@@ -53,9 +53,9 @@ extern struct mmu030_access mmu030_ad[MAX_MMU030_ACCESS + 1];
 
 void mmu030_page_fault(uaecptr addr, bool read, int flags, uae_u32 fc);
 
-bool mmu_op30_pmove (uaecptr pc, uae_u32 opcode, uae_u16 next, uaecptr extra);
-bool mmu_op30_ptest (uaecptr pc, uae_u32 opcode, uae_u16 next, uaecptr extra);
-bool mmu_op30_pflush (uaecptr pc, uae_u32 opcode, uae_u16 next, uaecptr extra);
+int mmu_op30_pmove(uaecptr pc, uae_u32 opcode, uae_u16 next, uaecptr extra);
+bool mmu_op30_ptest(uaecptr pc, uae_u32 opcode, uae_u16 next, uaecptr extra);
+bool mmu_op30_pflush(uaecptr pc, uae_u32 opcode, uae_u16 next, uaecptr extra);
 
 typedef struct {
     uae_u32 addr_base;

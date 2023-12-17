@@ -4085,10 +4085,10 @@ static bool mmu_op30fake_pflush (uaecptr pc, uae_u32 opcode, uae_u16 next, uaecp
 }
 
 // 68030 (68851) MMU instructions only
-bool mmu_op30 (uaecptr pc, uae_u32 opcode, uae_u16 extra, uaecptr extraa)
+bool mmu_op30(uaecptr pc, uae_u32 opcode, uae_u16 extra, uaecptr extraa)
 {
 	int type = extra >> 13;
-	bool fline = false;
+	int fline = 0;
 
 	switch (type)
 	{
@@ -4096,28 +4096,28 @@ bool mmu_op30 (uaecptr pc, uae_u32 opcode, uae_u16 extra, uaecptr extraa)
 	case 2:
 	case 3:
 		if (currprefs.mmu_model)
-			fline = mmu_op30_pmove (pc, opcode, extra, extraa); 
+			fline = mmu_op30_pmove(pc, opcode, extra, extraa); 
 		else
-			fline = mmu_op30fake_pmove (pc, opcode, extra, extraa);
+			fline = mmu_op30fake_pmove(pc, opcode, extra, extraa);
 	break;
 	case 1:
 		if (currprefs.mmu_model)
-			fline = mmu_op30_pflush (pc, opcode, extra, extraa); 
+			fline = mmu_op30_pflush(pc, opcode, extra, extraa); 
 		else
-			fline = mmu_op30fake_pflush (pc, opcode, extra, extraa);
+			fline = mmu_op30fake_pflush(pc, opcode, extra, extraa);
 	break;
 	case 4:
 		if (currprefs.mmu_model)
-			fline = mmu_op30_ptest (pc, opcode, extra, extraa);
+			fline = mmu_op30_ptest(pc, opcode, extra, extraa);
 		else
-			fline = mmu_op30fake_ptest (pc, opcode, extra, extraa);
+			fline = mmu_op30fake_ptest(pc, opcode, extra, extraa);
 	break;
 	}
-	if (fline) {
+	if (fline > 0) {
 		m68k_setpc(pc);
 		op_illg(opcode);
 	}
-	return fline;	
+	return fline != 0;	
 }
 
 /* check if an address matches a ttr */
