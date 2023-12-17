@@ -717,8 +717,8 @@ endif
 
 clean:
 	$(RM) $(PROG) $(PROG)-debug $(C_OBJS) $(OBJS) $(ASMS) $(DEPS)
-	$(MAKE) -C external/libguisan clean && rm external/libguisan/libguisan.a
-	cmake --build external/mt32emu/build --target clean && rm external/mt32emu/libmt32emu.a
+	$(MAKE) -C external/libguisan clean && rm -f external/libguisan/libguisan.a
+	cmake --build external/mt32emu/build --target clean && rm -f external/mt32emu/libmt32emu.a
 
 cleanprofile:
 	$(RM) $(OBJS:%.o=%.gcda)
