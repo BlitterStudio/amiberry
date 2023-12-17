@@ -4193,10 +4193,6 @@ int disk_fifostatus (void)
 static int doreaddma (void)
 {
 	if (dmaen(DMA_DISK) && bitoffset == 15 && dma_enable && dskdmaen == DSKDMA_READ && dsklength >= 0) {
-		if (dsklength == 0) {
-			disk_dmafinished();
-			return 1;
-		}
 		if (dsklength > 0) {
 			// fast disk modes, just flush the fifo
 			if (currprefs.floppy_speed > 100 && fifo_inuse[0] && fifo_inuse[1] && fifo_inuse[2]) {
