@@ -38,6 +38,10 @@ static gcn::Label* lblRetroArchFile;
 static gcn::TextField* txtRetroArchFile;
 static gcn::Button* cmdRetroArchFile;
 
+static gcn::Label* lblWHDBootPath;
+static gcn::TextField* txtWHDBootPath;
+static gcn::Button* cmdWHDBootPath;
+
 static gcn::CheckBox* chkEnableLogging;
 static gcn::Label* lblLogfilePath;
 static gcn::TextField* txtLogfilePath;
@@ -118,6 +122,16 @@ public:
 				set_retroarch_file(tmp);
 			}
 			cmdRetroArchFile->requestFocus();
+		}
+
+		else if (actionEvent.getSource() == cmdWHDBootPath)
+		{
+			get_whdbootpath(tmp, MAX_DPATH);
+			if (SelectFolder("Folder for WHDBoot files", tmp))
+			{
+				set_whdbootpath(tmp);
+			}
+			cmdWHDBootPath->requestFocus();
 		}
 
 		else if (actionEvent.getSource() == cmdLogfilePath)
@@ -351,6 +365,17 @@ void InitPanelPaths(const config_category& category)
 	cmdRetroArchFile->setBaseColor(gui_baseCol);
 	cmdRetroArchFile->addActionListener(folderButtonActionListener);
 
+	lblWHDBootPath = new gcn::Label("WHDBoot files:");
+	txtWHDBootPath = new gcn::TextField();
+	txtWHDBootPath->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
+	txtWHDBootPath->setBackgroundColor(colTextboxBackground);
+
+	cmdWHDBootPath = new gcn::Button("...");
+	cmdWHDBootPath->setId("cmdWHDBootPath");
+	cmdWHDBootPath->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	cmdWHDBootPath->setBaseColor(gui_baseCol);
+	cmdWHDBootPath->addActionListener(folderButtonActionListener);
+
 	enableLoggingActionListener = new EnableLoggingActionListener();
 	chkEnableLogging = new gcn::CheckBox("Enable logging", true);
 	chkEnableLogging->setId("chkEnableLogging");
@@ -408,6 +433,13 @@ void InitPanelPaths(const config_category& category)
 	category.panel->add(txtRetroArchFile, DISTANCE_BORDER, yPos);
 	category.panel->add(cmdRetroArchFile, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X, yPos);
 	yPos += txtRetroArchFile->getHeight() + DISTANCE_NEXT_Y;
+
+	category.panel->add(lblWHDBootPath, DISTANCE_BORDER, yPos);
+	yPos += lblWHDBootPath->getHeight() + DISTANCE_NEXT_Y / 2;
+	category.panel->add(txtWHDBootPath, DISTANCE_BORDER, yPos);
+	category.panel->add(cmdWHDBootPath, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X, yPos);
+
+	yPos += txtWHDBootPath->getHeight() + DISTANCE_NEXT_Y * 5;
 
 	category.panel->add(lblLogfilePath, DISTANCE_BORDER, yPos);
 	category.panel->add(chkEnableLogging, lblLogfilePath->getX() + lblLogfilePath->getWidth() + DISTANCE_NEXT_X * 3, yPos);
@@ -475,6 +507,10 @@ void ExitPanelPaths()
 	delete txtRetroArchFile;
 	delete cmdRetroArchFile;
 
+	delete lblWHDBootPath;
+	delete txtWHDBootPath;
+	delete cmdWHDBootPath;
+
 	delete chkEnableLogging;
 	delete lblLogfilePath;
 	delete txtLogfilePath;
@@ -515,6 +551,9 @@ void RefreshPanelPaths()
 
 	get_retroarch_file(tmp, MAX_DPATH);
 	txtRetroArchFile->setText(tmp);
+
+	get_whdbootpath(tmp, MAX_DPATH);
+	txtWHDBootPath->setText(tmp);
 
 	chkEnableLogging->setSelected(get_logfile_enabled());
 	get_logfile_path(tmp, MAX_DPATH);

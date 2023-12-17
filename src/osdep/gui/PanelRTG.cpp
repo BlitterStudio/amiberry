@@ -97,7 +97,7 @@ public:
 			auto selected_board = cboBoard->getSelected();
 			if (selected_board == 0)
 			{
-				changed_prefs.rtgboards[0].rtgmem_type = 1;
+				changed_prefs.rtgboards[0].rtgmem_type = GFXBOARD_UAE_Z3;
 				changed_prefs.rtgboards[0].rtgmem_size = 0;
 			}
 			else
@@ -112,7 +112,6 @@ public:
 		else if (action_event.getSource() == sldGfxmem)
 		{
 			changed_prefs.rtgboards[0].rtgmem_size = memsizes[msi_gfx[static_cast<int>(sldGfxmem->getValue())]];
-			changed_prefs.rtgboards[0].rtgmem_type = GFXBOARD_UAE_Z3;
 		}
 
 		else if (action_event.getSource() == chkRtgMatchDepth)
@@ -195,33 +194,29 @@ RTGActionListener* rtg_action_listener;
 
 void InitPanelRTG(const config_category& category)
 {
-	int sld_width;
-	int marker_length;
-
-	sld_width = 110;
-	marker_length = 20;
+	int marker_length = 20;
 
 	rtg_action_listener = new RTGActionListener();
 
-	lblBoard = new gcn::Label("Board:");
+	lblBoard = new gcn::Label("RTG Graphics Board:");
 	lblBoard->setAlignment(gcn::Graphics::LEFT);
 
 	cboBoard = new gcn::DropDown(&rtg_boards_list);
-	cboBoard->setSize(250, cboBoard->getHeight());
+	cboBoard->setSize(300, cboBoard->getHeight());
 	cboBoard->setBaseColor(gui_baseCol);
 	cboBoard->setBackgroundColor(colTextboxBackground);
 	cboBoard->setId("cboBoard");
 	cboBoard->addActionListener(rtg_action_listener);
 
 	lblGfxmem = new gcn::Label("VRAM size:");
+	lblGfxsize = new gcn::Label("None   ");
 	sldGfxmem = new gcn::Slider(0, 8);
-	sldGfxmem->setSize(sld_width, SLIDER_HEIGHT);
+	sldGfxmem->setSize(cboBoard->getWidth() - lblGfxmem->getWidth() - lblGfxsize->getWidth(), SLIDER_HEIGHT);
 	sldGfxmem->setBaseColor(gui_baseCol);
 	sldGfxmem->setMarkerLength(marker_length);
 	sldGfxmem->setStepLength(1);
 	sldGfxmem->setId("Gfxmem");
 	sldGfxmem->addActionListener(rtg_action_listener);
-	lblGfxsize = new gcn::Label("None   ");
 
 	chkRtgMatchDepth = new gcn::CheckBox("Match host and RTG color depth if possible");
 	chkRtgMatchDepth->setId("chkRtgMatchDepth");
@@ -301,7 +296,7 @@ void InitPanelRTG(const config_category& category)
 	auto posY = DISTANCE_BORDER;
 	
 	category.panel->add(lblBoard, DISTANCE_BORDER, posY);
-	category.panel->add(lblRtgColorModes, lblBoard->getX() + lblBoard->getWidth() + DISTANCE_NEXT_X * 20, posY);
+	category.panel->add(lblRtgColorModes, lblBoard->getX() + lblBoard->getWidth() + DISTANCE_NEXT_X * 18, posY);
 	posY += lblBoard->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(cboBoard, DISTANCE_BORDER, posY);
@@ -310,7 +305,7 @@ void InitPanelRTG(const config_category& category)
 
 	category.panel->add(lblGfxmem, DISTANCE_BORDER, posY);
 	category.panel->add(sldGfxmem, lblGfxmem->getWidth() + DISTANCE_NEXT_X + 8, posY);
-	category.panel->add(lblGfxsize, lblGfxmem->getWidth() + DISTANCE_NEXT_X + sldGfxmem->getWidth() + 12, posY);
+	category.panel->add(lblGfxsize, sldGfxmem->getX() + sldGfxmem->getWidth() + 8, posY);
 	category.panel->add(cboRtg32bitModes, cboRtg16bitModes->getX(), posY);
 	posY += sldGfxmem->getHeight() + DISTANCE_NEXT_Y * 2;
 

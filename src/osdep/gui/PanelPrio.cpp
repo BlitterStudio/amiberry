@@ -209,7 +209,7 @@ void InitPanelPrio(const config_category& category)
 	grpWhenActive->add(chkActiveDisableSound, DISTANCE_BORDER, posY);
 	grpWhenActive->setMovable(false);
 	grpWhenActive->setTitleBarHeight(TITLEBAR_HEIGHT);
-	grpWhenActive->setSize(cboActiveRunAtPrio->getWidth() + DISTANCE_BORDER * 2, TITLEBAR_HEIGHT + chkActiveDisableSound->getY() + chkActiveDisableSound->getHeight() + DISTANCE_NEXT_Y * 3);
+	grpWhenActive->setSize(cboActiveRunAtPrio->getWidth() + DISTANCE_BORDER * 3, TITLEBAR_HEIGHT + chkActiveDisableSound->getY() + chkActiveDisableSound->getHeight() + DISTANCE_NEXT_Y * 3);
 	grpWhenActive->setBaseColor(gui_baseCol);
 	category.panel->add(grpWhenActive);
 	

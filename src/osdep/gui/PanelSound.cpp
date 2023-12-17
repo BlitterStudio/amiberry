@@ -54,6 +54,8 @@ static gcn::Label* lblSoundBufferSize;
 static gcn::RadioButton* optSoundPull;
 static gcn::RadioButton* optSoundPush;
 static gcn::DropDown* cboSoundcard;
+static gcn::Label* lblSwapChannels;
+static gcn::DropDown* cboSwapChannels;
 
 static int curr_separation_idx;
 static int curr_stereodelay_idx;
@@ -99,6 +101,45 @@ public:
 };
 
 static string_list_model soundcard_list(nullptr, 0);
+
+class SwapChannelsListModel : public gcn::ListModel
+{
+	std::vector<std::string> options{};
+
+public:
+	SwapChannelsListModel()
+	{
+		options.emplace_back("-");
+		options.emplace_back("Paula only");
+		options.emplace_back("AHI only");
+		options.emplace_back("Both");
+	}
+
+	int getNumberOfElements() override
+	{
+		return int(options.size());
+	}
+
+	int add_element(const char* elem) override
+	{
+		options.emplace_back(elem);
+		return 0;
+	}
+
+	void clear_elements() override
+	{
+		options.clear();
+	}
+
+	std::string getElementAt(int i) override
+	{
+		if (i < 0 || i >= static_cast<int>(options.size()))
+			return "---";
+		return options[i];
+	}
+};
+
+static SwapChannelsListModel swap_channels_list;
 
 class ChannelModeListModel : public gcn::ListModel
 {
@@ -403,6 +444,31 @@ public:
 			}
 		}
 
+		else if (actionEvent.getSource() == cboSwapChannels)
+		{
+			switch (cboSwapChannels->getSelected())
+			{
+			case 0:
+				changed_prefs.sound_stereo_swap_paula = false;
+				changed_prefs.sound_stereo_swap_ahi = false;
+				break;
+			case 1:
+				changed_prefs.sound_stereo_swap_paula = true;
+				changed_prefs.sound_stereo_swap_ahi = false;
+				break;
+			case 2:
+				changed_prefs.sound_stereo_swap_paula = false;
+				changed_prefs.sound_stereo_swap_ahi = true;
+				break;
+			case 3:
+				changed_prefs.sound_stereo_swap_paula = true;
+				changed_prefs.sound_stereo_swap_ahi = true;
+				break;
+			default:
+				break;
+			}
+		}
+
 		else if (actionEvent.getSource() == cboInterpolation)
 			changed_prefs.sound_interpol = cboInterpolation->getSelected();
 
@@ -572,16 +638,25 @@ void InitPanelSound(const config_category& category)
 	lblFrequency = new gcn::Label("Frequency:");
 	lblFrequency->setAlignment(gcn::Graphics::RIGHT);
 	cboFrequency = new gcn::DropDown(&frequency_type_list);
-	cboFrequency->setSize(150, cboFrequency->getHeight());
+	cboFrequency->setSize(90, cboFrequency->getHeight());
 	cboFrequency->setBaseColor(gui_baseCol);
 	cboFrequency->setBackgroundColor(colTextboxBackground);
 	cboFrequency->setId("cboFrequency");
 	cboFrequency->addActionListener(sound_action_listener);
 
+	lblSwapChannels = new gcn::Label("Swap channels:");
+	lblSwapChannels->setAlignment(gcn::Graphics::RIGHT);
+	cboSwapChannels = new gcn::DropDown(&swap_channels_list);
+	cboSwapChannels->setSize(95, cboSwapChannels->getHeight());
+	cboSwapChannels->setBaseColor(gui_baseCol);
+	cboSwapChannels->setBackgroundColor(colTextboxBackground);
+	cboSwapChannels->setId("cboSwapChannels");
+	cboSwapChannels->addActionListener(sound_action_listener);
+
 	lblChannelMode = new gcn::Label("Channel mode:");
 	lblChannelMode->setAlignment(gcn::Graphics::RIGHT);
 	cboChannelMode = new gcn::DropDown(&channel_mode_list);
-	cboChannelMode->setSize(150, cboChannelMode->getHeight());
+	cboChannelMode->setSize(200, cboChannelMode->getHeight());
 	cboChannelMode->setBaseColor(gui_baseCol);
 	cboChannelMode->setBackgroundColor(colTextboxBackground);
 	cboChannelMode->setId("cboChannelMode");
@@ -770,11 +845,13 @@ void InitPanelSound(const config_category& category)
 	posY = cboChannelMode->getY() + cboChannelMode->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(lblFrequency, lblChannelMode->getX(), posY);
 	category.panel->add(cboFrequency, lblChannelMode->getX(), lblFrequency->getY() + lblFrequency->getHeight() + 10);
-	category.panel->add(lblSeparation, cboChannelMode->getX() + cboChannelMode->getWidth() + DISTANCE_NEXT_X * 3, lblChannelMode->getY());
+	category.panel->add(lblSwapChannels, cboFrequency->getX() + cboFrequency->getWidth() + DISTANCE_NEXT_X, posY);
+	category.panel->add(cboSwapChannels, cboFrequency->getX() + cboFrequency->getWidth() + DISTANCE_NEXT_X, cboFrequency->getY());
+	category.panel->add(lblSeparation, cboChannelMode->getX() + cboChannelMode->getWidth() + DISTANCE_NEXT_X * 2, lblChannelMode->getY());
 	category.panel->add(cboSeparation, lblSeparation->getX(), lblSeparation->getY() + lblSeparation->getHeight() + 10);
 	category.panel->add(lblStereoDelay, cboSeparation->getX(), lblFrequency->getY());
 	category.panel->add(cboStereoDelay, lblStereoDelay->getX(), cboFrequency->getY());
-	category.panel->add(lblInterpolation, cboSeparation->getX() + cboSeparation->getWidth() + DISTANCE_NEXT_X * 3, lblSeparation->getY());
+	category.panel->add(lblInterpolation, cboSeparation->getX() + cboSeparation->getWidth() + DISTANCE_NEXT_X * 2, lblSeparation->getY());
 	category.panel->add(cboInterpolation, lblInterpolation->getX(), lblInterpolation->getY() + lblInterpolation->getHeight() + 10);
 	category.panel->add(lblFilter, lblInterpolation->getX(), lblFrequency->getY());
 	category.panel->add(cboFilter, cboInterpolation->getX(), cboFrequency->getY());
@@ -789,6 +866,8 @@ void InitPanelSound(const config_category& category)
 
 void ExitPanelSound()
 {
+	delete lblSwapChannels;
+	delete cboSwapChannels;
 	delete cboSoundcard;
 	delete optSoundDisabled;
 	delete optSoundDisabledEmu;
@@ -898,6 +977,26 @@ void RefreshPanelSound()
 	default:
 		cboFrequency->setSelected(3);
 		break;
+	}
+
+	if (changed_prefs.sound_stereo_swap_paula || changed_prefs.sound_stereo_swap_ahi)
+	{
+		if (changed_prefs.sound_stereo_swap_paula && changed_prefs.sound_stereo_swap_ahi)
+		{
+			cboSwapChannels->setSelected(3);
+		}
+		else if (changed_prefs.sound_stereo_swap_ahi)
+		{
+			cboSwapChannels->setSelected(2);
+		}
+		else if (changed_prefs.sound_stereo_swap_paula)
+		{
+			cboSwapChannels->setSelected(1);
+		}
+	}
+	else
+	{
+		cboSwapChannels->setSelected(0);
 	}
 
 	cboInterpolation->setSelected(changed_prefs.sound_interpol);

@@ -13,7 +13,7 @@
 #include "blkdev.h"
 #include "gui_handling.h"
 
-#define MAX_INFOS 10
+#define MAX_INFOS 20
 
 enum { COL_TYPE, COL_NAME, COL_START, COL_END, COL_SIZE, COL_ID, COL_COUNT };
 
