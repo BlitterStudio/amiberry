@@ -1,7 +1,5 @@
 #include <guisan.hpp>
-#include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
-#include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
 
 #include "sysdeps.h"
@@ -21,6 +19,8 @@ static gcn::CheckBox* chkMemoryCycleExact;
 static gcn::Label* lblChipset;
 static gcn::DropDown* cboChipset;
 static gcn::Window* grpOptions;
+static gcn::CheckBox* chkKeyboardConnected;
+static gcn::CheckBox* chkSubpixelEmu;
 static gcn::CheckBox* chkBlitImmed;
 static gcn::CheckBox* chkBlitWait;
 static gcn::CheckBox* chkMultithreadedDrawing;
@@ -94,6 +94,8 @@ class ChipsetActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
+		changed_prefs.keyboard_connected = chkKeyboardConnected->isSelected();
+		changed_prefs.chipset_hr = chkSubpixelEmu->isSelected();
 		changed_prefs.immediate_blits = chkBlitImmed->isSelected();
 		changed_prefs.waiting_blits = chkBlitWait->isSelected();
 
@@ -229,6 +231,10 @@ void InitPanelChipset(const struct config_category& category)
 	cboChipset->setId("cboChipset");
 	cboChipset->addActionListener(chipsetActionListener);
 
+	chkMultithreadedDrawing = new gcn::CheckBox("Multithreaded Drawing");
+	chkMultithreadedDrawing->setId("chkMultithreadedDrawing");
+	chkMultithreadedDrawing->addActionListener(chipsetActionListener);
+
 	grpChipset = new gcn::Window("Chipset");
 	grpChipset->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
 	grpChipset->add(optOCS, 10, 10);
@@ -239,15 +245,24 @@ void InitPanelChipset(const struct config_category& category)
 	grpChipset->add(chkNTSC, 165, 70);
 	grpChipset->add(chkCycleExact, 10, 120);
 	grpChipset->add(chkMemoryCycleExact, 10, 150);
-	grpChipset->add(lblChipset, 80, 180);
-	grpChipset->add(cboChipset, 80 + lblChipset->getWidth() + 10, 180);
+	grpChipset->add(lblChipset, 60, 180);
+	grpChipset->add(cboChipset, 60 + lblChipset->getWidth() + 10, 180);
+	grpChipset->add(chkMultithreadedDrawing, 10, 250);
 
 	grpChipset->setMovable(false);
-	grpChipset->setSize(350, 300);
+	grpChipset->setSize(cboChipset->getX() + cboChipset->getWidth() + DISTANCE_BORDER, TITLEBAR_HEIGHT + 250 + chkMultithreadedDrawing->getHeight() + DISTANCE_NEXT_Y * 2);
 	grpChipset->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpChipset->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpChipset);
+
+	chkKeyboardConnected = new gcn::CheckBox("Keyboard connected");
+	chkKeyboardConnected->setId("chkKeyboardConnected");
+	chkKeyboardConnected->addActionListener(chipsetActionListener);
+
+	chkSubpixelEmu = new gcn::CheckBox("Subpixel Display emulation");
+	chkSubpixelEmu->setId("chkSubpixelEmu");
+	chkSubpixelEmu->addActionListener(chipsetActionListener);
 
 	chkBlitImmed = new gcn::CheckBox("Immediate Blitter");
 	chkBlitImmed->setId("chkBlitImmed");
@@ -258,20 +273,17 @@ void InitPanelChipset(const struct config_category& category)
 	chkBlitWait->addActionListener(chipsetActionListener);
 
 	grpOptions = new gcn::Window("Options");
-	grpOptions->setPosition(DISTANCE_BORDER + grpChipset->getWidth() + DISTANCE_NEXT_X, DISTANCE_BORDER);
-	grpOptions->add(chkBlitImmed, 10, 10);
-	grpOptions->add(chkBlitWait, 10, 40);
+	grpOptions->setPosition(DISTANCE_BORDER + grpChipset->getWidth() + DISTANCE_BORDER, DISTANCE_BORDER);
+	grpOptions->add(chkKeyboardConnected, 10, 10);
+	grpOptions->add(chkSubpixelEmu, 10, 40);
+	grpOptions->add(chkBlitImmed, 10, 70);
+	grpOptions->add(chkBlitWait, 10, 100);
 	grpOptions->setMovable(false);
-	grpOptions->setSize(chkBlitImmed->getWidth() + DISTANCE_BORDER + DISTANCE_NEXT_X, 125);
+	grpOptions->setSize(chkSubpixelEmu->getWidth() + DISTANCE_BORDER + DISTANCE_NEXT_X, TITLEBAR_HEIGHT + 100 + chkBlitWait->getHeight() + DISTANCE_NEXT_Y);
 	grpOptions->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpOptions->setBaseColor(gui_baseCol);
 
 	category.panel->add(grpOptions);
-
-	chkMultithreadedDrawing = new gcn::CheckBox("Multithreaded Drawing");
-	chkMultithreadedDrawing->setId("chkMultithreadedDrawing");
-	chkMultithreadedDrawing->addActionListener(chipsetActionListener);
-	grpChipset->add(chkMultithreadedDrawing, 10, 250);
 
 	optCollNone = new gcn::RadioButton("None", "radioccollisiongroup");
 	optCollNone->setId("optCollNone");
@@ -296,7 +308,7 @@ void InitPanelChipset(const struct config_category& category)
 	grpCollisionLevel->add(optCollPlayfield, 10, 70);
 	grpCollisionLevel->add(optCollFull, 10, 100);
 	grpCollisionLevel->setMovable(false);
-	grpCollisionLevel->setSize(grpChipset->getWidth(), 165);
+	grpCollisionLevel->setSize(grpChipset->getWidth(), TITLEBAR_HEIGHT + 100 + optCollFull->getHeight() + DISTANCE_NEXT_Y);
 	grpCollisionLevel->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpCollisionLevel->setBaseColor(gui_baseCol);
 
@@ -320,6 +332,8 @@ void ExitPanelChipset()
 	delete grpChipset;
 	delete chipsetActionListener;
 
+	delete chkKeyboardConnected;
+	delete chkSubpixelEmu;
 	delete chkBlitImmed;
 	delete chkBlitWait;
 	delete grpOptions;
@@ -365,6 +379,8 @@ void RefreshPanelChipset()
 		optAGA->setSelected(true);
 
 	chkNTSC->setSelected(changed_prefs.ntscmode);
+	chkKeyboardConnected->setSelected(changed_prefs.keyboard_connected);
+	chkSubpixelEmu->setSelected(changed_prefs.chipset_hr);
 	chkBlitImmed->setSelected(changed_prefs.immediate_blits);
 	chkBlitWait->setSelected(changed_prefs.waiting_blits);
 
@@ -390,9 +406,7 @@ void RefreshPanelChipset()
 		}
 	}
 	cboChipset->setSelected(idx);
-
 	chkMultithreadedDrawing->setSelected(changed_prefs.multithreaded_drawing);
-	
 }
 
 bool HelpPanelChipset(std::vector<std::string>& helptext)
@@ -405,8 +419,14 @@ bool HelpPanelChipset(std::vector<std::string>& helptext)
 	helptext.emplace_back("for the specified Amiga model. For some games, you have to switch to \"NTSC\"");
 	helptext.emplace_back("(60 Hz instead of 50 Hz) for correct timing.");
 	helptext.emplace_back(" ");
+	helptext.emplace_back("The \"Multithreaded drawing\" option, will enable some Amiberry optimizations");
+	helptext.emplace_back("that will help the performance when drawing lines on native screen modes.");
+	helptext.emplace_back("In some cases, this might cause screen tearing artifacts, so you can choose to");
+	helptext.emplace_back("disable this option when needed. Note that it cannot be changed once emulation has");
+	helptext.emplace_back("started.");
+	helptext.emplace_back(" ");
 	helptext.emplace_back(R"(If you see graphic issues in a game, try the "Immediate" or "Wait for blitter")");
-	helptext.emplace_back("Blitter options and/or disable \"Fast copper\".");
+	helptext.emplace_back("Blitter options.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back(R"(For "Collision Level", select "Sprites and Sprites vs. Playfield" which is fine)");
 	helptext.emplace_back("for nearly all games.");

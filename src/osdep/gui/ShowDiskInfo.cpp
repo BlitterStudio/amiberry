@@ -97,7 +97,7 @@ static void InitShowDiskInfo(const std::vector<std::string>& infotext)
 	scrAreaInfo->setPosition(DISTANCE_BORDER, 10 + TEXTFIELD_HEIGHT + 10);
 	scrAreaInfo->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4,
 	                     DIALOG_HEIGHT - 3 * DISTANCE_BORDER - BUTTON_HEIGHT - DISTANCE_NEXT_Y - 10);
-	scrAreaInfo->setScrollbarWidth(20);
+	scrAreaInfo->setScrollbarWidth(SCROLLBAR_WIDTH);
 	scrAreaInfo->setBaseColor(gui_baseCol);
 	scrAreaInfo->setBackgroundColor(gui_baseCol);
 

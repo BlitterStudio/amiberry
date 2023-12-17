@@ -1,7 +1,6 @@
 #include <cstring>
 
 #include <guisan.hpp>
-#include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include "SelectorEntry.hpp"
 
@@ -11,7 +10,6 @@
 #include "fsdb_host.h"
 #include "statusline.h"
 
-static gcn::ScrollArea* scrollArea;
 static gcn::Window* grpMiscOptions;
 
 static gcn::CheckBox* chkAltTabRelease;
@@ -524,7 +522,6 @@ void InitPanelMisc(const config_category& category)
 
 	auto posY = DISTANCE_BORDER;
 	grpMiscOptions->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
-	grpMiscOptions->setSize(category.panel->getWidth() - category.panel->getWidth() / 3 - 50, 690);
 	grpMiscOptions->setBaseColor(gui_baseCol);
 	grpMiscOptions->add(chkMouseUntrap, DISTANCE_BORDER, posY);
 	posY += chkMouseUntrap->getHeight() + DISTANCE_NEXT_Y;
@@ -584,19 +581,12 @@ void InitPanelMisc(const config_category& category)
 	grpMiscOptions->add(chkRetroArchMenu, DISTANCE_BORDER, posY);
 	posY += chkRetroArchMenu->getHeight() + DISTANCE_NEXT_Y;
 	grpMiscOptions->add(chkRetroArchReset, DISTANCE_BORDER, posY);
-	
-	scrollArea = new gcn::ScrollArea(grpMiscOptions);
-	scrollArea->setId("scrlMisc");
-	scrollArea->setBackgroundColor(gui_baseCol);
-	scrollArea->setBaseColor(gui_baseCol);
-	scrollArea->setWidth(category.panel->getWidth() - (category.panel->getWidth() / 3) - 35);
-	scrollArea->setHeight(520);
-	scrollArea->setBorderSize(1);
-	scrollArea->setFocusable(true);
 
-	category.panel->add(scrollArea, DISTANCE_BORDER, DISTANCE_BORDER);
+	grpMiscOptions->setSize(category.panel->getWidth() - category.panel->getWidth() / 3 - 40, category.panel->getHeight() - DISTANCE_BORDER * 2);
 
-	const auto column2_x = scrollArea->getWidth() + DISTANCE_NEXT_X * 2;
+	category.panel->add(grpMiscOptions, DISTANCE_BORDER, DISTANCE_BORDER);
+
+	const auto column2_x = grpMiscOptions->getWidth() + DISTANCE_NEXT_X * 2;
 	posY = DISTANCE_BORDER;
 	
 	category.panel->add(lblOpenGUI, column2_x, posY);
@@ -708,7 +698,6 @@ void ExitPanelMisc()
 	delete miscActionListener;
 
 	delete grpMiscOptions;
-	delete scrollArea;
 }
 
 void RefreshPanelMisc()

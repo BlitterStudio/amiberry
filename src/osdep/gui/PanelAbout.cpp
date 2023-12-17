@@ -1,8 +1,5 @@
 #include <guisan.hpp>
-#include <SDL_ttf.h>
-#include <sstream>
 #include <guisan/sdl.hpp>
-#include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
 
 #include "sysdeps.h"
@@ -61,7 +58,7 @@ void InitPanelAbout(const config_category& category)
 	textBoxScrollArea->setBackgroundColor(gui_baseCol);
 	textBoxScrollArea->setBaseColor(gui_baseCol);
 	textBoxScrollArea->setWidth(category.panel->getWidth() - DISTANCE_BORDER * 2);
-	textBoxScrollArea->setHeight(210);
+
 	textBoxScrollArea->setBorderSize(1);
 	
 	auto pos_y = DISTANCE_BORDER;
@@ -74,7 +71,7 @@ void InitPanelAbout(const config_category& category)
 	pos_y += lblCopyright->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(lblSDL_compiled_version, DISTANCE_BORDER, pos_y);
 	pos_y += lblSDL_compiled_version->getHeight() + DISTANCE_NEXT_Y;
-
+	textBoxScrollArea->setHeight(category.panel->getHeight() - DISTANCE_BORDER - pos_y);
 	category.panel->add(textBoxScrollArea, DISTANCE_BORDER, pos_y);
 
 	RefreshPanelAbout();

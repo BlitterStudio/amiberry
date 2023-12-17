@@ -25,29 +25,6 @@ static gcn::TextField* txtDesc;
 static gcn::ListBox* lstConfigs;
 static gcn::ScrollArea* scrAreaConfigs;
 
-bool LoadConfigByName(const char* name)
-{
-	auto* config = SearchConfigInList(name);
-	if (config != nullptr)
-	{
-		if (emulating)
-		{
-			uae_restart(&changed_prefs, -1, config->FullPath);
-		}
-		else
-		{
-			txtName->setText(config->Name);
-			txtDesc->setText(config->Description);
-			target_cfgfile_load(&changed_prefs, config->FullPath, 0, 0);
-			strncpy(last_active_config, config->Name, MAX_DPATH);
-			disable_resume();
-			refresh_all_panels();
-		}
-	}
-
-	return false;
-}
-
 void SetLastActiveConfig(const char* filename)
 {
 	extract_filename(filename, last_active_config);
@@ -221,23 +198,6 @@ void InitPanelConfig(const struct config_category& category)
 	configsList->InitConfigsList();
 	configsListActionListener = new ConfigsListActionListener();
 
-	lstConfigs = new gcn::ListBox(configsList);
-	lstConfigs->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER - 22, 370);
-	lstConfigs->setBaseColor(colTextboxBackground);
-	lstConfigs->setBackgroundColor(colTextboxBackground);
-	lstConfigs->setSelectionColor(colSelectorActive);
-	lstConfigs->setWrappingEnabled(true);
-	lstConfigs->setId("ConfigList");
-	lstConfigs->addActionListener(configsListActionListener);
-
-	scrAreaConfigs = new gcn::ScrollArea(lstConfigs);
-	scrAreaConfigs->setBorderSize(1);
-	scrAreaConfigs->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
-	scrAreaConfigs->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER - 2, 390);
-	scrAreaConfigs->setScrollbarWidth(20);
-	scrAreaConfigs->setBackgroundColor(colTextboxBackground);
-	scrAreaConfigs->setBaseColor(gui_baseCol);
-
 	lblName = new gcn::Label("Name:");
 	lblName->setSize(lblName->getWidth(), lblName->getHeight());
 	lblName->setAlignment(gcn::Graphics::RIGHT);
@@ -251,15 +211,6 @@ void InitPanelConfig(const struct config_category& category)
 	txtDesc = new gcn::TextField();
 	txtDesc->setSize(300, TEXTFIELD_HEIGHT);
 	txtDesc->setBackgroundColor(colTextboxBackground);
-	
-	category.panel->add(scrAreaConfigs);
-	category.panel->add(lblName, DISTANCE_BORDER,
-	                    scrAreaConfigs->getY() + scrAreaConfigs->getHeight() + DISTANCE_NEXT_Y);
-	category.panel->add(txtName, DISTANCE_BORDER + lblDesc->getWidth() + 8,
-	                    scrAreaConfigs->getY() + scrAreaConfigs->getHeight() + DISTANCE_NEXT_Y);
-	category.panel->add(lblDesc, DISTANCE_BORDER, txtName->getY() + txtName->getHeight() + DISTANCE_NEXT_Y);
-	category.panel->add(txtDesc, DISTANCE_BORDER + lblDesc->getWidth() + 8,
-	                    txtName->getY() + txtName->getHeight() + DISTANCE_NEXT_Y);
 
 	cmdLoad = new gcn::Button("Load");
 	cmdLoad->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
@@ -278,6 +229,31 @@ void InitPanelConfig(const struct config_category& category)
 	cmdDelete->setBaseColor(gui_baseCol);
 	cmdDelete->setId("CfgDelete");
 	cmdDelete->addActionListener(configButtonActionListener);
+
+	int list_width = category.panel->getWidth() - 2 * DISTANCE_BORDER - SCROLLBAR_WIDTH - 2;
+	int list_height = category.panel->getHeight() - 2 * DISTANCE_BORDER - 2 * lblName->getHeight() - 3 * DISTANCE_NEXT_Y - 2 * BUTTON_HEIGHT;
+	lstConfigs = new gcn::ListBox(configsList);
+	lstConfigs->setSize(list_width, list_height);
+	lstConfigs->setBaseColor(colTextboxBackground);
+	lstConfigs->setBackgroundColor(colTextboxBackground);
+	lstConfigs->setSelectionColor(colSelectorActive);
+	lstConfigs->setWrappingEnabled(true);
+	lstConfigs->setId("ConfigList");
+	lstConfigs->addActionListener(configsListActionListener);
+
+	scrAreaConfigs = new gcn::ScrollArea(lstConfigs);
+	scrAreaConfigs->setBorderSize(1);
+	scrAreaConfigs->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
+	scrAreaConfigs->setSize(lstConfigs->getWidth() + SCROLLBAR_WIDTH, lstConfigs->getHeight() + DISTANCE_NEXT_Y);
+	scrAreaConfigs->setScrollbarWidth(SCROLLBAR_WIDTH);
+	scrAreaConfigs->setBackgroundColor(colTextboxBackground);
+	scrAreaConfigs->setBaseColor(gui_baseCol);
+
+	category.panel->add(scrAreaConfigs);
+	category.panel->add(lblName, DISTANCE_BORDER, scrAreaConfigs->getY() + scrAreaConfigs->getHeight() + DISTANCE_NEXT_Y);
+	category.panel->add(txtName, DISTANCE_BORDER + lblDesc->getWidth() + 8, lblName->getY());
+	category.panel->add(lblDesc, DISTANCE_BORDER, txtName->getY() + txtName->getHeight() + DISTANCE_NEXT_Y);
+	category.panel->add(txtDesc, DISTANCE_BORDER + lblDesc->getWidth() + 8, lblDesc->getY());
 
 	auto button_x = DISTANCE_BORDER;
 	const auto buttonY = category.panel->getHeight() - DISTANCE_BORDER - BUTTON_HEIGHT;

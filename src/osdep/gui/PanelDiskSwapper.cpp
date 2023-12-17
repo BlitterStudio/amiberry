@@ -1,7 +1,6 @@
 #include <cstring>
 
 #include <guisan.hpp>
-#include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include "SelectorEntry.hpp"
 
@@ -385,7 +384,7 @@ bool HelpPanelDiskSwapper(std::vector<std::string>& helptext)
 {
 	helptext.clear();
 	helptext.emplace_back("The disk swapper mechanism is similar in concept to a playlist or a CD changer: A total");
-	helptext.emplace_back("of up to 10 disk images can be added to the slot list, for swapping them quickly using");
+	helptext.emplace_back("of up to 20 disk images can be added to the slot list, for swapping them quickly using");
 	helptext.emplace_back("the hotkey combinations detailed below.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("You can insert or eject a disk image on each slot, by using the relevant buttons");

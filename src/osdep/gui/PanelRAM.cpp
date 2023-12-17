@@ -1,7 +1,5 @@
 #include <guisan.hpp>
-#include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
-#include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
 #include "sysdeps.h"
 #include "options.h"
@@ -22,16 +20,15 @@ static gcn::Slider* sldFastmem;
 static gcn::Label* lblZ3mem;
 static gcn::Label* lblZ3size;
 static gcn::Slider* sldZ3mem;
-//static gcn::Label* lblZ3chip;
-//static gcn::Label* lblZ3chip_size;
-//static gcn::Slider* sldZ3chip;
+static gcn::Label* lblZ3chip;
+static gcn::Label* lblZ3chip_size;
+static gcn::Slider* sldZ3chip;
 static gcn::Label* lblMbResLowmem;
 static gcn::Label* lblMbResLowsize;
 static gcn::Slider* sldMbResLowmem;
 static gcn::Label* lblMbResHighmem;
 static gcn::Label* lblMbResHighsize;
 static gcn::Slider* sldMbResHighmem;
-
 
 class MemorySliderActionListener : public gcn::ActionListener
 {
@@ -64,12 +61,12 @@ public:
 				changed_prefs.z3fastmem[0].size = max_z3fastmem;
 		}
 
-		//else if (actionEvent.getSource() == sldZ3chip)
-		//{
-		//	changed_prefs.z3chipmem.size = memsizes[msi_z3chip[static_cast<int>(sldZ3chip->getValue())]];
-		//	if (changed_prefs.z3chipmem.size > max_z3fastmem)
-		//		changed_prefs.z3chipmem.size = max_z3fastmem;
-		//}
+		else if (actionEvent.getSource() == sldZ3chip)
+		{
+			changed_prefs.z3chipmem.size = memsizes[msi_z3chip[static_cast<int>(sldZ3chip->getValue())]];
+			if (changed_prefs.z3chipmem.size > max_z3fastmem)
+				changed_prefs.z3chipmem.size = max_z3fastmem;
+		}
 
 		else if (actionEvent.getSource() == sldMbResLowmem)
 		{
@@ -141,18 +138,18 @@ void InitPanelRAM(const config_category& category)
 	sldZ3mem->addActionListener(memorySliderActionListener);
 	lblZ3size = new gcn::Label("None");
 
-	//lblZ3chip = new gcn::Label("32-bit Chip RAM:");
-	//if (can_have_1gb())
-	//	sldZ3chip = new gcn::Slider(0, 9);
-	//else
-	//	sldZ3chip = new gcn::Slider(0, 8);
-	//sldZ3chip->setSize(sld_width, SLIDER_HEIGHT);
-	//sldZ3chip->setBaseColor(gui_baseCol);
-	//sldZ3chip->setMarkerLength(marker_length);
-	//sldZ3chip->setStepLength(1);
-	//sldZ3chip->setId("sldZ3chip");
-	//sldZ3chip->addActionListener(memorySliderActionListener);
-	//lblZ3chip_size = new gcn::Label("None");
+	lblZ3chip = new gcn::Label("32-bit Chip RAM:");
+	if (can_have_1gb())
+		sldZ3chip = new gcn::Slider(0, 9);
+	else
+		sldZ3chip = new gcn::Slider(0, 8);
+	sldZ3chip->setSize(sld_width, SLIDER_HEIGHT);
+	sldZ3chip->setBaseColor(gui_baseCol);
+	sldZ3chip->setMarkerLength(marker_length);
+	sldZ3chip->setStepLength(1);
+	sldZ3chip->setId("sldZ3chip");
+	sldZ3chip->addActionListener(memorySliderActionListener);
+	lblZ3chip_size = new gcn::Label("None");
 
 	lblMbResLowmem = new gcn::Label("Motherboard Fast RAM:");
 	sldMbResLowmem = new gcn::Slider(0, 7);
@@ -198,10 +195,10 @@ void InitPanelRAM(const config_category& category)
 	grpRAM->add(lblZ3size, lblMbResHighmem->getWidth() + DISTANCE_NEXT_X + sldZ3mem->getWidth() + 12, posY);
 	posY += sldZ3mem->getHeight() + DISTANCE_NEXT_Y;
 
-	//grpRAM->add(lblZ3chip, 10, posY);
-	//grpRAM->add(sldZ3chip, lblMbResHighmem->getWidth() + DISTANCE_NEXT_X, posY);
-	//grpRAM->add(lblZ3chip_size, lblMbResHighmem->getWidth() + DISTANCE_NEXT_X + sldZ3chip->getWidth() + 12, posY);
-	//posY += sldZ3chip->getHeight() + DISTANCE_NEXT_Y;
+	grpRAM->add(lblZ3chip, 10, posY);
+	grpRAM->add(sldZ3chip, lblMbResHighmem->getWidth() + DISTANCE_NEXT_X, posY);
+	grpRAM->add(lblZ3chip_size, lblMbResHighmem->getWidth() + DISTANCE_NEXT_X + sldZ3chip->getWidth() + 12, posY);
+	posY += sldZ3chip->getHeight() + DISTANCE_NEXT_Y;
 
 	grpRAM->add(lblMbResLowmem, 10, posY);
 	grpRAM->add(sldMbResLowmem, lblMbResHighmem->getWidth() + DISTANCE_NEXT_X, posY);
@@ -215,7 +212,7 @@ void InitPanelRAM(const config_category& category)
 	posY += sldMbResHighmem->getHeight() + DISTANCE_NEXT_Y;
 
 	grpRAM->setMovable(false);
-	grpRAM->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, posY + DISTANCE_BORDER * 2);
+	grpRAM->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, TITLEBAR_HEIGHT + posY + DISTANCE_BORDER * 2);
 	grpRAM->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpRAM->setBaseColor(gui_baseCol);
 
@@ -239,9 +236,9 @@ void ExitPanelRAM()
 	delete lblZ3mem;
 	delete sldZ3mem;
 	delete lblZ3size;
-	//delete lblZ3chip;
-	//delete sldZ3chip;
-	//delete lblZ3chip_size;
+	delete lblZ3chip;
+	delete sldZ3chip;
+	delete lblZ3chip_size;
 	delete lblMbResLowmem;
 	delete sldMbResLowmem;
 	delete lblMbResLowsize;
@@ -251,7 +248,6 @@ void ExitPanelRAM()
 	delete grpRAM;
 	delete memorySliderActionListener;
 }
-
 
 void RefreshPanelRAM()
 {
@@ -298,11 +294,11 @@ void RefreshPanelRAM()
 		lblZ3size->setEnabled(false);
 		lblZ3size->setCaption("N/A");
 		lblZ3size->adjustSize();
-		//sldZ3chip->setEnabled(false);
-		//lblZ3chip->setEnabled(false);
-		//lblZ3chip_size->setEnabled(false);
-		//lblZ3chip_size->setCaption("N/A");
-		//lblZ3chip_size->adjustSize();
+		sldZ3chip->setEnabled(false);
+		lblZ3chip->setEnabled(false);
+		lblZ3chip_size->setEnabled(false);
+		lblZ3chip_size->setCaption("N/A");
+		lblZ3chip_size->adjustSize();
 	}
 	else
 	{
@@ -326,23 +322,23 @@ void RefreshPanelRAM()
 			}
 		}
 
-		//sldZ3chip->setEnabled(true);
-		//lblZ3chip->setEnabled(true);
-		//lblZ3chip_size->setEnabled(true);
-		//if (can_have_1gb())
-		//	counter = 10;
-		//else
-		//	counter = 9;
-		//for (i = 0; i < counter; ++i)
-		//{
-		//	if (changed_prefs.z3chipmem.size == memsizes[msi_z3chip[i]])
-		//	{
-		//		sldZ3chip->setValue(i);
-		//		lblZ3chip_size->setCaption(memsize_names[msi_z3chip[i]]);
-		//		lblZ3chip_size->adjustSize();
-		//		break;;
-		//	}
-		//}
+		sldZ3chip->setEnabled(true);
+		lblZ3chip->setEnabled(true);
+		lblZ3chip_size->setEnabled(true);
+		if (can_have_1gb())
+			counter = 10;
+		else
+			counter = 9;
+		for (i = 0; i < counter; ++i)
+		{
+			if (changed_prefs.z3chipmem.size == memsizes[msi_z3chip[i]])
+			{
+				sldZ3chip->setValue(i);
+				lblZ3chip_size->setCaption(memsize_names[msi_z3chip[i]]);
+				lblZ3chip_size->adjustSize();
+				break;;
+			}
+		}
 	}
 
 	for (i = 0; i < 8; ++i)

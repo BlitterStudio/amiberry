@@ -192,7 +192,7 @@ static void InitSelectFolder(const char* title)
 	scrAreaFolders->setBorderSize(1);
 	scrAreaFolders->setPosition(DISTANCE_BORDER, 10 + TEXTFIELD_HEIGHT + 10);
 	scrAreaFolders->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, 272);
-	scrAreaFolders->setScrollbarWidth(30);
+	scrAreaFolders->setScrollbarWidth(SCROLLBAR_WIDTH);
 	scrAreaFolders->setBaseColor(gui_baseCol);
 
 	wndSelectFolder->add(cmdOK);

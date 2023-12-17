@@ -2,9 +2,7 @@
 #include <cstdio>
 
 #include <guisan.hpp>
-#include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
-#include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
 
 #include "sysdeps.h"
@@ -595,7 +593,7 @@ void InitPanelFloppy(const config_category& category)
 	category.panel->add(sldDriveSpeed, posX, posY);
 	posX += sldDriveSpeed->getWidth() + DISTANCE_NEXT_X;
 	category.panel->add(lblDriveSpeedInfo, posX, posY);
-	posY += sldDriveSpeed->getHeight() + DISTANCE_NEXT_Y;
+	posY += sldDriveSpeed->getHeight() + DISTANCE_NEXT_Y * 2;
 
 	posX = DISTANCE_BORDER;
 
@@ -607,7 +605,7 @@ void InitPanelFloppy(const config_category& category)
 	grpDrawBridge->add(chkDBAutoCache, 10, 70);
 	grpDrawBridge->add(chkDBCableDriveB, 10, 100);
 	grpDrawBridge->setMovable(false);
-	grpDrawBridge->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, 160);
+	grpDrawBridge->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, TITLEBAR_HEIGHT + 100 + chkDBCableDriveB->getHeight() + DISTANCE_NEXT_Y);
 	grpDrawBridge->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpDrawBridge->setBaseColor(gui_baseCol);
 
