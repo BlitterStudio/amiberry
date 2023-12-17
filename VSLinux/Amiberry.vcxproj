@@ -392,6 +392,7 @@
     <None Include="..\src\aks.def" />
     <None Include="..\src\filesys.asm" />
     <None Include="..\src\filesys.sh" />
+    <None Include="..\src\filesys_bootrom.cpp.in" />
     <None Include="..\src\filesys_helpers.asm" />
     <None Include="..\src\inputevents.def">
       <DeploymentContent>true</DeploymentContent>
@@ -692,9 +693,7 @@
     <ClCompile Include="..\src\jit\compemu_prefs.cpp" />
     <ClCompile Include="..\src\jit\compemu_support.cpp" />
     <ClCompile Include="..\src\jit\compstbl.cpp" />
-    <ClCompile Include="..\src\jit\exception_handler.cpp" />
     <ClCompile Include="..\src\jit\gencomp.cpp" />
-    <ClCompile Include="..\src\jit\gencomp_arm.c" />
     <ClCompile Include="..\src\keybuf.cpp" />
     <ClCompile Include="..\src\linetoscr.cpp" />
     <ClCompile Include="..\src\machdep\support.cpp" />
@@ -1145,9 +1144,7 @@
     <ClInclude Include="..\src\jit\compemu_midfunc_arm2.h" />
     <ClInclude Include="..\src\jit\compemu_midfunc_x86.h" />
     <ClInclude Include="..\src\jit\comptbl.h" />
-    <ClInclude Include="..\src\jit\flags_arm.h" />
     <ClInclude Include="..\src\jit\flags_x86.h" />
-    <ClInclude Include="..\src\jit\memory-uae.h" />
     <ClInclude Include="..\src\machdep\m68k.h" />
     <ClInclude Include="..\src\machdep\maccess.h" />
     <ClInclude Include="..\src\machdep\rpt.h" />

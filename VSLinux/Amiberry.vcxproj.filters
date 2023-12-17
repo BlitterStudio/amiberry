@@ -260,9 +260,6 @@
     <Image Include="..\data\port.ico">
       <Filter>data</Filter>
     </Image>
-    <Image Include="..\data\fixedfont.bmp">
-      <Filter>data</Filter>
-    </Image>
     <Image Include="..\data\axis.png">
       <Filter>data</Filter>
     </Image>
@@ -494,6 +491,12 @@
     <Image Include="..\data\keyboard.png">
       <Filter>data</Filter>
     </Image>
+    <Image Include="..\data\fixedfont.png">
+      <Filter>data</Filter>
+    </Image>
+    <Image Include="..\data\rpgfont.png">
+      <Filter>data</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <Font Include="..\data\AmigaTopaz.ttf">
@@ -513,15 +516,6 @@
     </None>
     <None Include="..\conf\amiberry.conf">
       <Filter>conf</Filter>
-    </None>
-    <None Include="..\src\jit\codegen_armA64.cpp.in">
-      <Filter>src\jit</Filter>
-    </None>
-    <None Include="..\src\jit\compemu_midfunc_armA64.cpp.in">
-      <Filter>src\jit</Filter>
-    </None>
-    <None Include="..\src\jit\compemu_midfunc_armA64_2.cpp.in">
-      <Filter>src\jit</Filter>
     </None>
     <None Include="..\src\osdep\aarch64_helper.s">
       <Filter>src\osdep</Filter>
@@ -583,6 +577,9 @@
     <None Include="..\src\osdep\aarch64_helper_osx.s">
       <Filter>src\osdep</Filter>
     </None>
+    <None Include="..\src\filesys_bootrom.cpp.in">
+      <Filter>src</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\akiko.cpp">
@@ -628,9 +625,6 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\cpuemu_0.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\cpuemu_4.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\cpuemu_11.cpp">
@@ -822,18 +816,6 @@
     <ClCompile Include="..\src\archivers\zip\unzip.cpp">
       <Filter>src\archivers\zip</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\jit\compemu.cpp">
-      <Filter>src\jit</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\jit\compemu_fpp.cpp">
-      <Filter>src\jit</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\jit\compemu_support.cpp">
-      <Filter>src\jit</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\jit\compstbl.cpp">
-      <Filter>src\jit</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\machdep\support.cpp">
       <Filter>src\machdep</Filter>
     </ClCompile>
@@ -960,9 +942,6 @@
     <ClCompile Include="..\src\cpuemu_40.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\cpuemu_44.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\def_icons.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -1080,12 +1059,6 @@
     <ClCompile Include="..\src\osdep\amiberry_whdbooter.cpp">
       <Filter>src\osdep</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\filesys_bootrom.cpp.in">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\fpp_native.cpp.in">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\linetoscr.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -1094,15 +1067,6 @@
     </ClCompile>
     <ClCompile Include="..\src\sinctable.cpp.in">
       <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\jit\codegen_arm.cpp.in">
-      <Filter>src\jit</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\jit\compemu_midfunc_arm.cpp.in">
-      <Filter>src\jit</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\jit\compemu_midfunc_arm2.cpp.in">
-      <Filter>src\jit</Filter>
     </ClCompile>
     <ClCompile Include="..\src\caps\caps_amiberry.cpp">
       <Filter>src\caps</Filter>
@@ -1707,14 +1671,89 @@
     <ClCompile Include="..\src\osdep\amiberry_dbus.cpp">
       <Filter>src\osdep</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\jit\codegen_arm.cpp">
+      <Filter>src\jit</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\jit\codegen_arm64.cpp">
+      <Filter>src\jit</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\jit\codegen_x86.cpp">
+      <Filter>src\jit</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\jit\compemu.cpp">
+      <Filter>src\jit</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\jit\compemu_fpp.cpp">
+      <Filter>src\jit</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\jit\compemu_midfunc_arm.cpp">
+      <Filter>src\jit</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\jit\compemu_midfunc_arm2.cpp">
+      <Filter>src\jit</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\jit\compemu_midfunc_arm64.cpp">
+      <Filter>src\jit</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\jit\compemu_midfunc_arm64_2.cpp">
       <Filter>src\jit</Filter>
     </ClCompile>
     <ClCompile Include="..\src\jit\compemu_midfunc_x86.cpp">
       <Filter>src\jit</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\jit\compemu_prefs.cpp">
+      <Filter>src\jit</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\jit\compemu_support.cpp">
+      <Filter>src\jit</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\jit\compstbl.cpp">
+      <Filter>src\jit</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\jit\gencomp.cpp">
       <Filter>src\jit</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\cpuemu_20.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\cpuemu_21.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\cpuemu_22.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\cpuemu_23.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\cpuemu_24.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\cpuemu_31.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\cpuemu_32.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\cpuemu_33.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\cpuemu_34.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\cpuemu_35.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\cpuemu_50.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\cpummu.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\cpummu30.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\fpp_native.cpp">
+      <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1847,9 +1886,6 @@
     <ClInclude Include="..\src\include\filesys.h">
       <Filter>src\include</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\include\flags_arm.h">
-      <Filter>src\include</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\include\fsdb.h">
       <Filter>src\include</Filter>
     </ClInclude>
@@ -1927,21 +1963,6 @@
     </ClInclude>
     <ClInclude Include="..\src\include\zfile.h">
       <Filter>src\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\jit\codegen_arm.h">
-      <Filter>src\jit</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\jit\compemu.h">
-      <Filter>src\jit</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\jit\compemu_midfunc_arm.h">
-      <Filter>src\jit</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\jit\compemu_midfunc_arm2.h">
-      <Filter>src\jit</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\jit\comptbl.h">
-      <Filter>src\jit</Filter>
     </ClInclude>
     <ClInclude Include="..\src\machdep\m68k.h">
       <Filter>src\machdep</Filter>
@@ -2107,12 +2128,6 @@
     </ClInclude>
     <ClInclude Include="..\src\include\cputbl.h">
       <Filter>src\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\jit\aarch64.h">
-      <Filter>src\jit</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\jit\codegen_armA64.h">
-      <Filter>src\jit</Filter>
     </ClInclude>
     <ClInclude Include="..\src\include\uae\vm.h">
       <Filter>src\include\uae</Filter>
@@ -2819,14 +2834,38 @@
     <ClInclude Include="..\src\osdep\amiberry_dbus.h">
       <Filter>src\osdep</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\jit\aarch64.h">
+      <Filter>src\jit</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\jit\codegen_arm.h">
+      <Filter>src\jit</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\jit\codegen_arm64.h">
+      <Filter>src\jit</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\jit\codegen_x86.h">
+      <Filter>src\jit</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\jit\compemu.h">
+      <Filter>src\jit</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\jit\compemu_midfunc_arm.h">
+      <Filter>src\jit</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\jit\compemu_midfunc_arm2.h">
       <Filter>src\jit</Filter>
     </ClInclude>
     <ClInclude Include="..\src\jit\compemu_midfunc_x86.h">
       <Filter>src\jit</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\jit\comptbl.h">
+      <Filter>src\jit</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\jit\flags_x86.h">
       <Filter>src\jit</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\cputbl.h">
+      <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
