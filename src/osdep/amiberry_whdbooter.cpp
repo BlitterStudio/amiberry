@@ -43,48 +43,48 @@ static const char *rtb_files[] = {
 
 struct game_options
 {
-	TCHAR port0[256] = "nul\0";
-	TCHAR port1[256] = "nul\0";
-	TCHAR control[256] = "nul\0";
-	TCHAR control2[256] = "nul\0";
-	TCHAR fastcopper[256] = "nul\0";
-	TCHAR cpu[256] = "nul\0";
-	TCHAR blitter[256] = "nul\0";
-	TCHAR clock[256] = "nul\0";
-	TCHAR chipset[256] = "nul\0";
-	TCHAR jit[256] = "nul\0";
-	TCHAR cpu_comp[256] = "nul\0";
-	TCHAR cpu_24bit[256] = "nul\0";
-	TCHAR sprites[256] = "nul\0";
-	TCHAR scr_height[256] = "nul\0";
-	TCHAR scr_width[256] = "nul\0";
-	TCHAR scr_autoheight[256] = "nul\0";
-	TCHAR scr_centerh[256] = "nul\0";
-	TCHAR scr_centerv[256] = "nul\0";
-	TCHAR scr_offseth[256] = "nul\0";
-	TCHAR scr_offsetv[256] = "nul\0";
-	TCHAR ntsc[256] = "nul\0";
-	TCHAR chip[256] = "nul\0";
-	TCHAR fast[256] = "nul\0";
-	TCHAR z3[256] = "nul\0";
-	TCHAR cpu_exact[256] = "nul\0";
+	TCHAR port0[256] = _T("nul\0");
+	TCHAR port1[256] = _T("nul\0");
+	TCHAR control[256] = _T("nul\0");
+	TCHAR control2[256] = _T("nul\0");
+	TCHAR fastcopper[256] = _T("nul\0");
+	TCHAR cpu[256] = _T("nul\0");
+	TCHAR blitter[256] = _T("nul\0");
+	TCHAR clock[256] = _T("nul\0");
+	TCHAR chipset[256] = _T("nul\0");
+	TCHAR jit[256] = _T("nul\0");
+	TCHAR cpu_comp[256] = _T("nul\0");
+	TCHAR cpu_24bit[256] = _T("nul\0");
+	TCHAR sprites[256] = _T("nul\0");
+	TCHAR scr_height[256] = _T("nul\0");
+	TCHAR scr_width[256] = _T("nul\0");
+	TCHAR scr_autoheight[256] = _T("nul\0");
+	TCHAR scr_centerh[256] = _T("nul\0");
+	TCHAR scr_centerv[256] = _T("nul\0");
+	TCHAR scr_offseth[256] = _T("nul\0");
+	TCHAR scr_offsetv[256] = _T("nul\0");
+	TCHAR ntsc[256] = _T("nul\0");
+	TCHAR chip[256] = _T("nul\0");
+	TCHAR fast[256] = _T("nul\0");
+	TCHAR z3[256] = _T("nul\0");
+	TCHAR cpu_exact[256] = _T("nul\0");
 };
 
-char whdboot_path[MAX_DPATH];
-char boot_path[MAX_DPATH];
-char save_path[MAX_DPATH];
-char config_path[MAX_DPATH];
-char whd_path[MAX_DPATH];
-char kick_path[MAX_DPATH];
+TCHAR whdboot_path[MAX_DPATH];
+TCHAR boot_path[MAX_DPATH];
+TCHAR save_path[MAX_DPATH];
+TCHAR config_path[MAX_DPATH];
+TCHAR whd_path[MAX_DPATH];
+TCHAR kick_path[MAX_DPATH];
 
-char uae_config[255];
-char whd_config[255];
-char whd_startup[255];
+TCHAR uae_config[255];
+TCHAR whd_config[255];
+TCHAR whd_startup[255];
 
-char game_name[MAX_DPATH];
-char selected_slave[MAX_DPATH];
-char sub_path[MAX_DPATH];
-auto use_slave_libs = false;
+TCHAR game_name[MAX_DPATH];
+TCHAR selected_slave[MAX_DPATH];
+TCHAR sub_path[MAX_DPATH];
+TCHAR use_slave_libs = false;
 
 static TCHAR* parse_text(const TCHAR* s)
 {
@@ -149,6 +149,13 @@ std::string find_substring(const std::string& search_string, const std::string& 
 	return "nul";
 }
 
+void parse_cfg_line(uae_prefs* prefs, const std::string& line_string)
+{
+	TCHAR* line = my_strdup(line_string.c_str());
+	cfgfile_parse_line(prefs, line, 0);
+	xfree(line);
+}
+
 void parse_custom_settings(uae_prefs* p, const char* settings)
 {
 	const std::string lf = "\n";
@@ -165,10 +172,7 @@ void parse_custom_settings(uae_prefs* p, const char* settings)
 		std::string line = full_line.substr(start + 1, end - start - 1);
 		if (line.find(check) != std::string::npos)
 		{
-			const auto cstr = new char[line.length() + 1];
-			strcpy(cstr, line.c_str());
-			cfgfile_parse_line(p, cstr, 0);
-			delete[] cstr;
+			parse_cfg_line(p, line);
 		}
 
 		if (end < full_line.size())
@@ -186,30 +190,30 @@ std::string find_whdload_game_option(const TCHAR* find_setting, const char* whd_
 game_options get_game_settings(const char* HW)
 {
 	game_options output_detail;
-	strcpy(output_detail.port0, find_whdload_game_option("PORT0", HW).c_str());
-	strcpy(output_detail.port1, find_whdload_game_option("PORT1", HW).c_str());
-	strcpy(output_detail.control, find_whdload_game_option("PRIMARY_CONTROL", HW).c_str());
-	strcpy(output_detail.control2, find_whdload_game_option("SECONDARY_CONTROL", HW).c_str());
-	strcpy(output_detail.fastcopper, find_whdload_game_option("FAST_COPPER", HW).c_str());
-	strcpy(output_detail.cpu, find_whdload_game_option("CPU", HW).c_str());
-	strcpy(output_detail.blitter, find_whdload_game_option("BLITTER", HW).c_str());
-	strcpy(output_detail.clock, find_whdload_game_option("CLOCK", HW).c_str());
-	strcpy(output_detail.chipset, find_whdload_game_option("CHIPSET", HW).c_str());
-	strcpy(output_detail.jit, find_whdload_game_option("JIT", HW).c_str());
-	strcpy(output_detail.cpu_24bit, find_whdload_game_option("CPU_24BITADDRESSING", HW).c_str());
-	strcpy(output_detail.cpu_comp, find_whdload_game_option("CPU_COMPATIBLE", HW).c_str());
-	strcpy(output_detail.sprites, find_whdload_game_option("SPRITES", HW).c_str());
-	strcpy(output_detail.scr_height, find_whdload_game_option("SCREEN_HEIGHT", HW).c_str());
-	strcpy(output_detail.scr_width, find_whdload_game_option("SCREEN_WIDTH", HW).c_str());
-	strcpy(output_detail.scr_autoheight, find_whdload_game_option("SCREEN_AUTOHEIGHT", HW).c_str());
-	strcpy(output_detail.scr_centerh, find_whdload_game_option("SCREEN_CENTERH", HW).c_str());
-	strcpy(output_detail.scr_centerv, find_whdload_game_option("SCREEN_CENTERV", HW).c_str());
-	strcpy(output_detail.scr_offseth, find_whdload_game_option("SCREEN_OFFSETH", HW).c_str());
-	strcpy(output_detail.scr_offsetv, find_whdload_game_option("SCREEN_OFFSETV", HW).c_str());
-	strcpy(output_detail.ntsc, find_whdload_game_option("NTSC", HW).c_str());
-	strcpy(output_detail.fast, find_whdload_game_option("FAST_RAM", HW).c_str());
-	strcpy(output_detail.z3, find_whdload_game_option("Z3_RAM", HW).c_str());
-	strcpy(output_detail.cpu_exact, find_whdload_game_option("CPU_EXACT", HW).c_str());
+	_tcscpy(output_detail.port0, find_whdload_game_option("PORT0", HW).c_str());
+	_tcscpy(output_detail.port1, find_whdload_game_option("PORT1", HW).c_str());
+	_tcscpy(output_detail.control, find_whdload_game_option("PRIMARY_CONTROL", HW).c_str());
+	_tcscpy(output_detail.control2, find_whdload_game_option("SECONDARY_CONTROL", HW).c_str());
+	_tcscpy(output_detail.fastcopper, find_whdload_game_option("FAST_COPPER", HW).c_str());
+	_tcscpy(output_detail.cpu, find_whdload_game_option("CPU", HW).c_str());
+	_tcscpy(output_detail.blitter, find_whdload_game_option("BLITTER", HW).c_str());
+	_tcscpy(output_detail.clock, find_whdload_game_option("CLOCK", HW).c_str());
+	_tcscpy(output_detail.chipset, find_whdload_game_option("CHIPSET", HW).c_str());
+	_tcscpy(output_detail.jit, find_whdload_game_option("JIT", HW).c_str());
+	_tcscpy(output_detail.cpu_24bit, find_whdload_game_option("CPU_24BITADDRESSING", HW).c_str());
+	_tcscpy(output_detail.cpu_comp, find_whdload_game_option("CPU_COMPATIBLE", HW).c_str());
+	_tcscpy(output_detail.sprites, find_whdload_game_option("SPRITES", HW).c_str());
+	_tcscpy(output_detail.scr_height, find_whdload_game_option("SCREEN_HEIGHT", HW).c_str());
+	_tcscpy(output_detail.scr_width, find_whdload_game_option("SCREEN_WIDTH", HW).c_str());
+	_tcscpy(output_detail.scr_autoheight, find_whdload_game_option("SCREEN_AUTOHEIGHT", HW).c_str());
+	_tcscpy(output_detail.scr_centerh, find_whdload_game_option("SCREEN_CENTERH", HW).c_str());
+	_tcscpy(output_detail.scr_centerv, find_whdload_game_option("SCREEN_CENTERV", HW).c_str());
+	_tcscpy(output_detail.scr_offseth, find_whdload_game_option("SCREEN_OFFSETH", HW).c_str());
+	_tcscpy(output_detail.scr_offsetv, find_whdload_game_option("SCREEN_OFFSETV", HW).c_str());
+	_tcscpy(output_detail.ntsc, find_whdload_game_option("NTSC", HW).c_str());
+	_tcscpy(output_detail.fast, find_whdload_game_option("FAST_RAM", HW).c_str());
+	_tcscpy(output_detail.z3, find_whdload_game_option("Z3_RAM", HW).c_str());
+	_tcscpy(output_detail.cpu_exact, find_whdload_game_option("CPU_EXACT", HW).c_str());
 
 	return output_detail;
 }
@@ -220,7 +224,7 @@ void make_rom_symlink(const char* kick_short, int kick_numb, struct uae_prefs* p
 	int roms[2] = { -1,-1 };
 
 	// do the checks...
-	snprintf(kick_long, MAX_DPATH, "%s/%s", kick_path, kick_short);
+	_sntprintf(kick_long, MAX_DPATH, "%s/%s", kick_path, kick_short);
 
 	// this should sort any broken links (only remove if a link, not a file. See vfat handling of link below)
 	// Only remove file IF it is a symlink.
@@ -247,44 +251,24 @@ void make_rom_symlink(const char* kick_short, int kick_numb, struct uae_prefs* p
 	}
 }
 
-static void symlink_rtb(const char* ext_path)
-{
-	char src[MAX_DPATH];
-	char dst[MAX_DPATH];
-
-	// Get non-external whdboot kickstarts dir, which contains master RTB files
-	get_savedatapath(src, MAX_DPATH, 1);
-	snprintf(kick_path, MAX_DPATH, "%s/Kickstarts", src);
-
-	int i = 0;
-	while (*rtb_files[i] != '\0') {
-
-		snprintf(src, MAX_DPATH, "%s/%s", kick_path, rtb_files[i]);
-		snprintf(dst, MAX_DPATH, "%s/%s", ext_path, rtb_files[i]);
-
-		if (!my_existsfile2(dst)) symlink(src, dst);
-		i++;
-	}
-}
-
 void symlink_roms(struct uae_prefs* prefs)
 {
-	char tmp[MAX_DPATH];
-	char tmp2[MAX_DPATH];
+	TCHAR tmp[MAX_DPATH];
+	TCHAR tmp2[MAX_DPATH];
 
 	write_log("SymLink Kickstart ROMs for Booter\n");
 
 	// here we can do some checks for Kickstarts we might need to make symlinks for
-	strncpy(current_dir, start_path_data, MAX_DPATH);
+	_tcsncpy(current_dir, start_path_data, MAX_DPATH);
 
 	// are we using save-data/ ?
 	get_savedatapath(tmp, MAX_DPATH, 1);
-	snprintf(kick_path, MAX_DPATH, "%s/Kickstarts", tmp);
+	_sntprintf(kick_path, MAX_DPATH, _T("%s/Kickstarts"), tmp);
 
 	if (!my_existsdir(kick_path)) {
 		// otherwise, use the old route
 		get_whdbootpath(whdboot_path, MAX_DPATH);
-		snprintf(kick_path, MAX_DPATH, "%sgame-data/Devs/Kickstarts", whdboot_path);
+		_sntprintf(kick_path, MAX_DPATH, _T("%sgame-data/Devs/Kickstarts"), whdboot_path);
 	}
 	write_log("WHDBoot - using kickstarts from %s\n", kick_path);
 
@@ -302,10 +286,10 @@ void symlink_roms(struct uae_prefs* prefs)
 	// Symlink rom.key also
 	// source file
 	get_rom_path(tmp2, MAX_DPATH);
-	snprintf(tmp, MAX_DPATH, "%s/rom.key", tmp2);
+	_sntprintf(tmp, MAX_DPATH, _T("%s/rom.key"), tmp2);
 
 	// destination file (symlink)
-	snprintf(tmp2, MAX_DPATH, "%s/rom.key", kick_path);
+	_sntprintf(tmp2, MAX_DPATH, _T("%s/rom.key"), kick_path);
 
 	if (my_existsfile2(tmp)) {
 		const int r = symlink(tmp, tmp2);
@@ -349,16 +333,9 @@ void clear_jports(uae_prefs* prefs)
 
 void build_uae_config_filename()
 {
-	strcpy(uae_config, config_path);
-	strcat(uae_config, game_name);
-	strcat(uae_config, ".uae");
-}
-
-void parse_cfg_line(uae_prefs* prefs, const std::string& line_string)
-{
-	char* line = my_strdup(line_string.c_str());
-	cfgfile_parse_line(prefs, line, 0);
-	xfree(line);
+	_tcscpy(uae_config, config_path);
+	_tcscat(uae_config, game_name);
+	_tcscat(uae_config, ".uae");
 }
 
 void cd_auto_prefs(uae_prefs* prefs, char* filepath)
@@ -382,8 +359,8 @@ void cd_auto_prefs(uae_prefs* prefs, char* filepath)
 
 	prefs->start_gui = false;
 
-	const auto is_cdtv = strstr(filepath, "CDTV") != nullptr || strstr(filepath, "cdtv") != nullptr;
-	const auto is_cd32 = strstr(filepath, "CD32") != nullptr || strstr(filepath, "cd32") != nullptr;
+	const auto is_cdtv = _tcsstr(filepath, _T("CDTV")) != nullptr || _tcsstr(filepath, _T("cdtv")) != nullptr;
+	const auto is_cd32 = _tcsstr(filepath, _T("CD32")) != nullptr || _tcsstr(filepath, _T("cd32")) != nullptr;
 
 	// CD32
 	if (is_cd32)
@@ -913,7 +890,7 @@ game_options parse_settings_from_xml(uae_prefs* prefs, char* filepath)
 					// use a selected slave if we have one
 					if (strlen(prefs->whdbootprefs.slave) != 0)
 					{
-						strcpy(selected_slave, prefs->whdbootprefs.slave);
+						_tcscpy(selected_slave, prefs->whdbootprefs.slave);
 						write_log("WHDBooter - Config Selected Slave: %s \n", selected_slave);
 					}
 					// otherwise use the XML default
@@ -1054,7 +1031,7 @@ void set_booter_drives(uae_prefs* prefs, char* filepath)
 
 	if (strlen(selected_slave) != 0) // new booter solution
 	{
-		snprintf(boot_path, MAX_DPATH, "/tmp/amiberry/");
+		_sntprintf(boot_path, MAX_DPATH, "/tmp/amiberry/");
 
 		_stprintf(tmp, _T("filesystem2=rw,DH0:DH0:%s,10"), boot_path);
 		cfgfile_parse_line(prefs, parse_text(tmp), 0);
@@ -1062,9 +1039,9 @@ void set_booter_drives(uae_prefs* prefs, char* filepath)
 		_stprintf(tmp, _T("uaehf0=dir,rw,DH0:DH0::%s,10"), boot_path);
 		cfgfile_parse_line(prefs, parse_text(tmp), 0);
 
-		snprintf(boot_path, MAX_DPATH, "%sboot-data.zip", whdboot_path);
+		_sntprintf(boot_path, MAX_DPATH, "%sboot-data.zip", whdboot_path);
 		if (!my_existsfile2(boot_path))
-			snprintf(boot_path, MAX_DPATH, "%sboot-data/", whdboot_path);
+			_sntprintf(boot_path, MAX_DPATH, "%sboot-data/", whdboot_path);
 
 		_stprintf(tmp, _T("filesystem2=rw,DH3:DH3:%s,-10"), boot_path);
 		cfgfile_parse_line(prefs, parse_text(tmp), 0);
@@ -1074,9 +1051,9 @@ void set_booter_drives(uae_prefs* prefs, char* filepath)
 	}
 	else // revert to original booter is no slave was set
 	{
-		snprintf(boot_path, MAX_DPATH, "%sboot-data.zip", whdboot_path);
+		_sntprintf(boot_path, MAX_DPATH, "%sboot-data.zip", whdboot_path);
 		if (!my_existsfile2(boot_path))
-			snprintf(boot_path, MAX_DPATH, "%sboot-data/", whdboot_path);
+			_sntprintf(boot_path, MAX_DPATH, "%sboot-data/", whdboot_path);
 
 		_stprintf(tmp, _T("filesystem2=rw,DH0:DH0:%s,10"), boot_path);
 		cfgfile_parse_line(prefs, parse_text(tmp), 0);
@@ -1093,7 +1070,7 @@ void set_booter_drives(uae_prefs* prefs, char* filepath)
 	cfgfile_parse_line(prefs, parse_text(tmp), 0);
 
 	//set the third (save data) drive
-	snprintf(whd_path, MAX_DPATH, "%s/", save_path);
+	_sntprintf(whd_path, MAX_DPATH, "%s/", save_path);
 
 	if (my_existsdir(save_path))
 	{
@@ -1108,7 +1085,7 @@ void set_booter_drives(uae_prefs* prefs, char* filepath)
 void whdload_auto_prefs(uae_prefs* prefs, char* filepath)
 {
 	write_log("WHDBooter Launched\n");
-	strcpy(selected_slave, "");
+	_tcscpy(selected_slave, "");
 
 	get_configuration_path(config_path, MAX_DPATH);
 	get_whdbootpath(whdboot_path, MAX_DPATH);
@@ -1148,21 +1125,21 @@ void whdload_auto_prefs(uae_prefs* prefs, char* filepath)
 	my_mkdir("/tmp/amiberry/s");
 	my_mkdir("/tmp/amiberry/c");
 	my_mkdir("/tmp/amiberry/devs");
-	strcpy(whd_startup, "/tmp/amiberry/s/startup-sequence");
+	_tcscpy(whd_startup, "/tmp/amiberry/s/startup-sequence");
 	remove(whd_startup);
 
 	// LOAD HOST OPTIONS
-	snprintf(whd_path, MAX_DPATH, "%sWHDLoad", whdboot_path);
+	_sntprintf(whd_path, MAX_DPATH, "%sWHDLoad", whdboot_path);
 
 	// are we using save-data/ ?
-	snprintf(kick_path, MAX_DPATH, "%s/Kickstarts", save_path);
+	_sntprintf(kick_path, MAX_DPATH, "%s/Kickstarts", save_path);
 
 	// LOAD GAME SPECIFICS
-	snprintf(whd_path, MAX_DPATH, "%sgame-data/", whdboot_path);
+	_sntprintf(whd_path, MAX_DPATH, "%sgame-data/", whdboot_path);
 	game_options game_detail;
 
-	strcpy(whd_config, whd_path);
-	strcat(whd_config, "whdload_db.xml");
+	_tcscpy(whd_config, whd_path);
+	_tcscat(whd_config, "whdload_db.xml");
 
 	if (my_existsfile2(whd_config))
 	{
@@ -1183,11 +1160,11 @@ void whdload_auto_prefs(uae_prefs* prefs, char* filepath)
 	if (my_existsfile2(whd_startup))
 	{
 		// create a symlink to WHDLoad in /tmp/amiberry/
-		snprintf(whd_path, MAX_DPATH, "%sWHDLoad", whdboot_path);
+		_sntprintf(whd_path, MAX_DPATH, "%sWHDLoad", whdboot_path);
 		symlink(whd_path, "/tmp/amiberry/c/WHDLoad");
 
 		// Create a symlink to AmiQuit in /tmp/amiberry/
-		snprintf(whd_path, MAX_DPATH, "%sAmiQuit", whdboot_path);
+		_sntprintf(whd_path, MAX_DPATH, "%sAmiQuit", whdboot_path);
 		symlink(whd_path, "/tmp/amiberry/c/AmiQuit");
 
 		// create a symlink for DEVS in /tmp/amiberry/
@@ -1239,8 +1216,8 @@ void whdload_auto_prefs(uae_prefs* prefs, char* filepath)
 	prefs->start_gui = false;
 
 	// DO CHECKS FOR AGA / CD32
-	const auto is_aga = strstr(filename, "AGA") != nullptr || strcmpi(game_detail.chipset, "AGA") == 0;
-	const auto is_cd32 = strstr(filename, "CD32") != nullptr || strcmpi(game_detail.chipset, "CD32") == 0;
+	const auto is_aga = _tcsstr(filename, "AGA") != nullptr || strcmpi(game_detail.chipset, "AGA") == 0;
+	const auto is_cd32 = _tcsstr(filename, "CD32") != nullptr || strcmpi(game_detail.chipset, "CD32") == 0;
 
 	if (is_aga || is_cd32 || !a600_available)
 	{
