@@ -681,10 +681,17 @@ void set_compatibility_settings(uae_prefs* prefs, game_options game_detail, cons
 		parse_cfg_line(prefs, line_string);
 	}
 
+	// Invalid or no CPU value specified, but A600 ROM is available? Use 68000
+	else if (a600_available)
+	{
+		write_log("Invalid or no CPU value, A600 ROM available, using CPU: 68000\n");
+		line_string = "cpu_type=68000";
+		parse_cfg_line(prefs, line_string);
+	}
 	// Fallback for any invalid values - 68020 CPU
 	else
 	{
-		write_log("Invalid CPU value, falling back to 68020!\n");
+		write_log("Invalid or no CPU value, A600 ROM NOT found, falling back to CPU: 68020\n");
 		line_string = "cpu_type=68020";
 		parse_cfg_line(prefs, line_string);
 	}
