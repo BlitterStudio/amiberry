@@ -659,14 +659,14 @@ void parse_gfx_settings(uae_prefs* prefs, game_options game_detail)
 	}
 }
 
-void set_compatibility_settings(uae_prefs* prefs, game_options game_detail, const bool a600_available)
+void set_compatibility_settings(uae_prefs* prefs, game_options game_detail, const bool a600_available, const bool use_aga)
 {
 	std::string line_string;
 	// CPU 68020/040 or no A600 ROM available
-	if (strcmpi(game_detail.cpu, "68020") == 0 || strcmpi(game_detail.cpu, "68040") == 0 || !a600_available)
+	if (strcmpi(game_detail.cpu, "68020") == 0 || strcmpi(game_detail.cpu, "68040") == 0 || use_aga)
 	{
 		line_string = "cpu_type=";
-		line_string.append(a600_available ? game_detail.cpu : "68020");
+		line_string.append(use_aga ? "68020" : game_detail.cpu);
 		parse_cfg_line(prefs, line_string);
 	}
 
@@ -682,7 +682,7 @@ void set_compatibility_settings(uae_prefs* prefs, game_options game_detail, cons
 	}
 
 	// Invalid or no CPU value specified, but A600 ROM is available? Use 68000
-	else if (a600_available)
+	else if (a600_available && !use_aga)
 	{
 		write_log("Invalid or no CPU value, A600 ROM available, using CPU: 68000\n");
 		line_string = "cpu_type=68000";
@@ -1240,5 +1240,5 @@ void whdload_auto_prefs(uae_prefs* prefs, char* filepath)
 
 	//  SET THE GAME COMPATIBILITY SETTINGS
 	// BLITTER, SPRITES, MEMORY, JIT, BIG CPU ETC
-	set_compatibility_settings(prefs, game_detail, a600_available);
+	set_compatibility_settings(prefs, game_detail, a600_available, is_aga || is_cd32);
 }
