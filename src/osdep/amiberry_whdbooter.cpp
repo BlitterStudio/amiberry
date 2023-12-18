@@ -699,17 +699,17 @@ void set_compatibility_settings(uae_prefs* prefs, game_options game_detail, cons
 	// CPU SPEED
 	if (strcmpi(game_detail.clock, "7") == 0)
 	{
-		line_string = "cpu_speed=real";
+		line_string = "cpu_multiplier=2";
 		parse_cfg_line(prefs, line_string);
 	}
 	else if (strcmpi(game_detail.clock, "14") == 0)
 	{
-		line_string = "finegrain_cpu_speed=1024";
+		line_string = "cpu_multiplier=4";
 		parse_cfg_line(prefs, line_string);
 	}
 	else if (strcmpi(game_detail.clock, "28") == 0 || strcmpi(game_detail.clock, "25") == 0)
 	{
-		line_string = "finegrain_cpu_speed=128";
+		line_string = "cpu_multiplier=8";
 		parse_cfg_line(prefs, line_string);
 	}
 	else if (strcmpi(game_detail.clock, "max") == 0)
@@ -758,13 +758,6 @@ void set_compatibility_settings(uae_prefs* prefs, game_options game_detail, cons
 		parse_cfg_line(prefs, line_string);
 	}
 
-	// FAST COPPER
-	if (strcmpi(game_detail.fastcopper, "true") == 0)
-	{
-		line_string = "fast_copper=true";
-		parse_cfg_line(prefs, line_string);
-	}
-
 	// BLITTER=IMMEDIATE/WAIT/NORMAL
 	if (strcmpi(game_detail.blitter, "immediate") == 0)
 	{
@@ -773,7 +766,7 @@ void set_compatibility_settings(uae_prefs* prefs, game_options game_detail, cons
 	}
 	else if (strcmpi(game_detail.blitter, "normal") == 0)
 	{
-		line_string = "waiting_blits=disabled";
+		line_string = "waiting_blits=automatic";
 		parse_cfg_line(prefs, line_string);
 	}
 
