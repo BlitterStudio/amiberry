@@ -12179,6 +12179,9 @@ static void vsync_handler_render(void)
 		frameskiptime += end - start;
 	}
 
+	linear_vpos = vpos;
+	next_lineno = calculate_lineno(linear_vpos);
+
 	bool frameok = framewait();
 	
 	if (!ad->picasso_on) {
