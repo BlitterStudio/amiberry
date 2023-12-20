@@ -3514,10 +3514,9 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 
 static int parse_amiberry_cmd_line(int *argc, char* argv[], int remove_used_args)
 {
-	int i, j;
 	char arg_copy[CONFIG_BLEN];
 
-	for (i = 0; i < *argc; i++)
+	for (int i = 0; i < *argc; i++)
 	{
 		if (strncmp(argv[i], "-o", 3) == 0)
 		{
@@ -3538,7 +3537,7 @@ static int parse_amiberry_cmd_line(int *argc, char* argv[], int remove_used_args
 			if (!remove_used_args)
 				continue;
 			// shift all args after the found one by 2
-			for (j = i + 2; j < *argc; j++)
+			for (int j = i + 2; j < *argc; j++)
 			{
 				argv[j - 2] = argv[j];
 			}
