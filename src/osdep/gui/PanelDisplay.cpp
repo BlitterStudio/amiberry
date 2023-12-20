@@ -127,26 +127,40 @@ class AmigaScreenActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
+		AmigaMonitor* mon = &AMonitors[0];
+
 		if (actionEvent.getSource() == sldAmigaWidth)
 		{
 			if (changed_prefs.gfx_monitor[0].gfx_size_win.width != amigawidth_values[static_cast<int>(sldAmigaWidth->getValue())])
 				changed_prefs.gfx_monitor[0].gfx_size_win.width = amigawidth_values[static_cast<int>(sldAmigaWidth->getValue())];
+
+			mon->amigawin_rect.w = mon->amigawin_rect.h = 0;
 		}
 		else if (actionEvent.getSource() == sldAmigaHeight)
 		{
 			if (changed_prefs.gfx_monitor[0].gfx_size_win.height != amigaheight_values[static_cast<int>(sldAmigaHeight->getValue())])
 				changed_prefs.gfx_monitor[0].gfx_size_win.height = amigaheight_values[static_cast<int>(sldAmigaHeight->getValue())];
+
+			mon->amigawin_rect.w = mon->amigawin_rect.h = 0;
 		}
 		else if (actionEvent.getSource() == txtAmigaWidth)
+		{
 			changed_prefs.gfx_monitor[0].gfx_size_win.width = std::stoi(txtAmigaWidth->getText());
+			mon->amigawin_rect.w = mon->amigawin_rect.h = 0;
+		}
 		else if (actionEvent.getSource() == txtAmigaHeight)
+		{
 			changed_prefs.gfx_monitor[0].gfx_size_win.height = std::stoi(txtAmigaHeight->getText());
+			mon->amigawin_rect.w = mon->amigawin_rect.h = 0;
+		}
 
 		else if (actionEvent.getSource() == chkAutoCrop)
 		{
 			changed_prefs.gfx_auto_crop = chkAutoCrop->isSelected();
 			changed_prefs.gfx_monitor[0].gfx_size_win.width = 720;
 			changed_prefs.gfx_monitor[0].gfx_size_win.height = 568;
+
+			mon->amigawin_rect.w = mon->amigawin_rect.h = 0;
 		}
 
 		else if (actionEvent.getSource() == chkBorderless)
@@ -711,6 +725,8 @@ void ExitPanelDisplay()
 
 void RefreshPanelDisplay()
 {
+	AmigaMonitor* mon = &AMonitors[0];
+
 	chkFrameskip->setSelected(changed_prefs.gfx_framerate > 1);
 	sldRefresh->setEnabled(chkFrameskip->isSelected());
 	sldRefresh->setValue(changed_prefs.gfx_framerate);
@@ -752,6 +768,13 @@ void RefreshPanelDisplay()
 			break;
 		}
 	}
+
+	if (mon->amigawin_rect.w && mon->amigawin_rect.h)
+	{
+		txtAmigaWidth->setText(std::to_string(mon->amigawin_rect.w));
+		txtAmigaHeight->setText(std::to_string(mon->amigawin_rect.h));
+	}
+
 	chkAutoCrop->setSelected(changed_prefs.gfx_auto_crop);
 
 	if (changed_prefs.gfx_auto_crop)

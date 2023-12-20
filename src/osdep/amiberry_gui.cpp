@@ -603,6 +603,8 @@ void gui_display(int shortcut)
 
 	if (shortcut == -1)
 	{
+		AmigaMonitor* mon = &AMonitors[0];
+		updatewinrect(mon, false);
 		graphics_subshutdown();
 
 		prefs_to_gui();

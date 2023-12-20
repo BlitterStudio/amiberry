@@ -243,25 +243,25 @@ void update_win_fs_mode(int monid, struct uae_prefs* p)
 		const bool is_fullwindow = window_flags & SDL_WINDOW_FULLSCREEN_DESKTOP;
 		const bool is_fullscreen = window_flags & SDL_WINDOW_FULLSCREEN;
 
-		if (p->gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN)
+		if (p->gfx_apmode[monid].gfx_fullscreen == GFX_FULLSCREEN)
 		{
-			p->gfx_monitor[0].gfx_size = p->gfx_monitor[0].gfx_size_win;
+			p->gfx_monitor[monid].gfx_size = p->gfx_monitor[monid].gfx_size_fs;
 			// Switch to Fullscreen mode, if we don't have it already
 			if (!is_fullscreen)
 			{
 				SDL_SetWindowFullscreen(mon->sdl_window, SDL_WINDOW_FULLSCREEN);
-				SDL_SetWindowSize(mon->sdl_window, p->gfx_monitor[0].gfx_size_fs.width, p->gfx_monitor[0].gfx_size_fs.height);
+				SDL_SetWindowSize(mon->sdl_window, p->gfx_monitor[monid].gfx_size_fs.width, p->gfx_monitor[monid].gfx_size_fs.height);
 			}
 		}
-		else if (p->gfx_apmode[0].gfx_fullscreen == GFX_FULLWINDOW)
+		else if (p->gfx_apmode[monid].gfx_fullscreen == GFX_FULLWINDOW)
 		{
-			p->gfx_monitor[0].gfx_size = p->gfx_monitor[0].gfx_size_win;
+			p->gfx_monitor[monid].gfx_size = p->gfx_monitor[monid].gfx_size_win;
 			if (!is_fullwindow)
 				SDL_SetWindowFullscreen(mon->sdl_window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 		}
 		else
 		{
-			p->gfx_monitor[0].gfx_size = p->gfx_monitor[0].gfx_size_win;
+			p->gfx_monitor[monid].gfx_size = p->gfx_monitor[monid].gfx_size_win;
 			// Switch to Window mode, if we don't have it already - but not for KMSDRM
 			if ((is_fullscreen || is_fullwindow) 
 				&& strcmpi(sdl_video_driver, "KMSDRM") != 0)
@@ -273,8 +273,8 @@ void update_win_fs_mode(int monid, struct uae_prefs* p)
 
 	if (mon->screen_is_picasso)
 	{
-		display_width = picasso96_state[0].Width ? picasso96_state[0].Width : 640;
-		display_height = picasso96_state[0].Height ? picasso96_state[0].Height : 480;
+		display_width = picasso96_state[monid].Width ? picasso96_state[monid].Width : 640;
+		display_height = picasso96_state[monid].Height ? picasso96_state[monid].Height : 480;
 	}
 	else
 	{
@@ -283,8 +283,8 @@ void update_win_fs_mode(int monid, struct uae_prefs* p)
 		if (currprefs.gfx_vresolution > avidinfo->gfx_vresolution_reserved)
 			avidinfo->gfx_vresolution_reserved = currprefs.gfx_vresolution;
 
-		display_width = p->gfx_monitor[0].gfx_size.width / 2 << p->gfx_resolution;
-		display_height = p->gfx_monitor[0].gfx_size.height / 2 << p->gfx_vresolution;
+		display_width = p->gfx_monitor[monid].gfx_size.width / 2 << p->gfx_resolution;
+		display_height = p->gfx_monitor[monid].gfx_size.height / 2 << p->gfx_vresolution;
 
 		force_auto_crop = true;
 	}
@@ -591,7 +591,15 @@ static void open_screen(struct uae_prefs* p)
 #endif
 		if (isfullscreen() == 0 && !is_maximized)
 		{
-			SDL_SetWindowSize(mon->sdl_window, display_width, display_height);
+			if (mon->amigawin_rect.x && mon->amigawin_rect.y)
+				SDL_SetWindowPosition(mon->sdl_window, mon->amigawin_rect.x, mon->amigawin_rect.y);
+			else
+				SDL_SetWindowPosition(mon->sdl_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+
+			if (mon->amigawin_rect.w && mon->amigawin_rect.h)
+				SDL_SetWindowSize(mon->sdl_window, mon->amigawin_rect.w, mon->amigawin_rect.h);
+			else
+				SDL_SetWindowSize(mon->sdl_window, display_width, display_height);
 		}
 	}
 	else
@@ -626,7 +634,15 @@ static void open_screen(struct uae_prefs* p)
 #endif
 		if (isfullscreen() == 0 && !is_maximized)
 		{
-			SDL_SetWindowSize(mon->sdl_window, width, height);
+			if (mon->amigawin_rect.x && mon->amigawin_rect.y)
+				SDL_SetWindowPosition(mon->sdl_window, mon->amigawin_rect.x, mon->amigawin_rect.y);
+			else
+				SDL_SetWindowPosition(mon->sdl_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+
+			if (mon->amigawin_rect.w && mon->amigawin_rect.h)
+				SDL_SetWindowSize(mon->sdl_window, mon->amigawin_rect.w, mon->amigawin_rect.h);
+			else
+				SDL_SetWindowSize(mon->sdl_window, width, height);
 		}
 	}
 
