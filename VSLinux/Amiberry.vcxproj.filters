@@ -517,12 +517,6 @@
     <None Include="..\conf\amiberry.conf">
       <Filter>conf</Filter>
     </None>
-    <None Include="..\src\osdep\aarch64_helper.s">
-      <Filter>src\osdep</Filter>
-    </None>
-    <None Include="..\src\osdep\arm_helper.s">
-      <Filter>src\osdep</Filter>
-    </None>
     <None Include="..\external\libguisan\Makefile">
       <Filter>external\libguisan</Filter>
     </None>
@@ -570,12 +564,6 @@
     </None>
     <None Include="..\src\table68k">
       <Filter>src</Filter>
-    </None>
-    <None Include="..\src\osdep\aarch64_helper_min.s">
-      <Filter>src\osdep</Filter>
-    </None>
-    <None Include="..\src\osdep\aarch64_helper_osx.s">
-      <Filter>src\osdep</Filter>
     </None>
     <None Include="..\src\filesys_bootrom.cpp.in">
       <Filter>src</Filter>

@@ -44,13 +44,13 @@ export SDL_CFLAGS := $(shell $(SDL_CONFIG) --cflags)
 export SDL_LDFLAGS := $(shell $(SDL_CONFIG) --libs)
 
 CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -Isrc/floppybridge -Iexternal/mt32emu/src -D_FILE_OFFSET_BITS=64
-CFLAGS=-pipe -Wno-shift-overflow -Wno-narrowing
+CFLAGS=-pipe -Wno-shift-overflow -Wno-narrowing -fno-pie
 USE_LD ?= gold
 LDFLAGS = $(SDL_LDFLAGS) -lSDL2_image -lSDL2_ttf -lserialport -lportmidi -lguisan -Lexternal/libguisan/lib -lmt32emu -Lexternal/mt32emu
 ifneq ($(strip $(USE_LD)),)
 	LDFLAGS += -fuse-ld=$(USE_LD)
 endif
-LDFLAGS += -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed -lpthread -lz -lpng -lrt -lFLAC -lmpg123 -ldl -lmpeg2convert -lmpeg2 -lstdc++fs
+LDFLAGS += -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed -lpthread -lz -lpng -lrt -lFLAC -lmpg123 -ldl -lmpeg2convert -lmpeg2 -lstdc++fs -no-pie
 
 ifdef USE_OPENGL
 	CFLAGS += -DUSE_OPENGL
@@ -273,8 +273,6 @@ else ifeq ($(PLATFORM),a64)
 # Generic x86-64 target
 else ifeq ($(PLATFORM),x86-64)
 	CPPFLAGS += -DUSE_RENDER_THREAD
-	CFLAGS += -fno-pie
-	LDFLAGS += -no-pie
 
 # Generic EXPERIMENTAL riscv64 target
 else ifeq ($(PLATFORM),riscv64)
@@ -676,31 +674,6 @@ OBJS = \
 	src/jit/compstbl.o \
 	src/jit/compemu_support.o \
 	src/jit/compemu_fpp.o
-
-USE_JIT=0
-
-ifdef AARCH64
-OBJS += src/osdep/aarch64_helper.o
-src/osdep/aarch64_helper.o: src/osdep/aarch64_helper.s
-	$(AS) $(CPUFLAGS) -o src/osdep/aarch64_helper.o -c src/osdep/aarch64_helper.s
-else ifeq ($(PLATFORM),$(filter $(PLATFORM),rpi1 rpi1-sdl2))
-OBJS += src/osdep/arm_helper.o
-src/osdep/arm_helper.o: src/osdep/arm_helper.s
-	$(AS) $(CPUFLAGS) -o src/osdep/arm_helper.o -c src/osdep/arm_helper.s
-else ifeq ($(PLATFORM),$(filter $(PLATFORM),osx-m1))
-	USE_JIT = 0
-OBJS += src/osdep/aarch64_helper_osx.o
-else ifeq ($(PLATFORM),$(filter $(PLATFORM),osx-x86))
-	USE_JIT = 0
-else ifeq ($(PLATFORM),$(filter $(PLATFORM),x86-64))
-	USE_JIT = 1
-else ifeq ($(PLATFORM),$(filter $(PLATFORM),riscv64))
-	USE_JIT = 0
-else
-OBJS += src/osdep/neon_helper.o
-src/osdep/neon_helper.o: src/osdep/neon_helper.s
-	$(AS) $(CPUFLAGS) -o src/osdep/neon_helper.o -c src/osdep/neon_helper.s
-endif
 
 DEPS = $(OBJS:%.o=%.d) $(C_OBJS:%.o=%.d)
 

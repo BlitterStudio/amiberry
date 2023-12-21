@@ -397,10 +397,6 @@
     <None Include="..\src\inputevents.def">
       <DeploymentContent>true</DeploymentContent>
     </None>
-    <None Include="..\src\osdep\aarch64_helper.s" />
-    <None Include="..\src\osdep\aarch64_helper_min.s" />
-    <None Include="..\src\osdep\aarch64_helper_osx.s" />
-    <None Include="..\src\osdep\arm_helper.s" />
     <None Include="..\src\osdep\neon_helper.s" />
     <None Include="..\src\table68k" />
   </ItemGroup>
