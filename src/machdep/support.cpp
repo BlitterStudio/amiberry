@@ -7,11 +7,10 @@
 
 static int qpcdivisor = 0;
 
-/* Returns elapsed time in microseconds since start of emulator. */
 uae_time_t uae_time()
 {
 	frame_time_t t;
-	auto counter = SDL_GetPerformanceCounter();
+	const auto counter = SDL_GetPerformanceCounter();
 	if (qpcdivisor == 0)
 		t = static_cast<frame_time_t>(counter);
 	else
@@ -23,7 +22,6 @@ uae_time_t uae_time()
 
 void uae_time_calibrate()
 {
-	// Initialize timebase
 	auto freq = SDL_GetPerformanceFrequency();
 	// limit to 10MHz
 	qpcdivisor = 0;
