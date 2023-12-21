@@ -57,6 +57,10 @@ Or if you're using an Arch-based distro (e.g. Manjaro), the relevant package nam
 
       sudo pacman -S base-devel cmake sdl2 sdl2_ttf sdl2_image flac mpg123 libmpeg2 libserialport libportmidi
 
+if you have an AUR helper like [yay](https://github.com/Jguer/yay), you can build and run [Amiberry](https://aur.archlinux.org/packages/amiberry) through:
+
+      yay -S amiberry
+
 Additionally, please note that you will probably also need some Kickstart ROMs. Amiberry includes the AROS ROM, so you can start it up and use AROS with it directly, but most games will require a Kickstart 1.3 (for A500 emulation) or Kickstart 3.x (for A1200 emulation).
 
 ## Getting Amiberry
