@@ -167,7 +167,12 @@ public:
 			changed_prefs.borderless = chkBorderless->isSelected();
 
 		else if (actionEvent.getSource() == chkVsync)
-			changed_prefs.gfx_apmode[0].gfx_vsync = chkVsync->isSelected();
+		{
+			if (chkVsync->isSelected())
+				changed_prefs.gfx_apmode[0].gfx_vsync = 2;
+			else
+				changed_prefs.gfx_apmode[0].gfx_vsync = 0;
+		}
 
 		else if (actionEvent.getSource() == sldHOffset)
 		{
@@ -786,7 +791,7 @@ void RefreshPanelDisplay()
 	}
 
 	chkBorderless->setSelected(changed_prefs.borderless);
-	chkVsync->setSelected(changed_prefs.gfx_apmode[0].gfx_vsync);
+	chkVsync->setSelected(changed_prefs.gfx_apmode[0].gfx_vsync > 0);
 
 	sldHOffset->setValue(changed_prefs.gfx_horizontal_offset);
 	lblHOffsetValue->setCaption(std::to_string(changed_prefs.gfx_horizontal_offset));

@@ -2215,8 +2215,6 @@ bool vsync_switchmode(int monid, int hz)
 void vsync_clear()
 {
 	vsync_active = false;
-	//if (waitvblankevent)
-	//	ResetEvent(waitvblankevent);
 }
 
 int vsync_isdone(frame_time_t* dt)
