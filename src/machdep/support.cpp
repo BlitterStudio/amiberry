@@ -9,15 +9,15 @@ static int qpcdivisor = 0;
 
 uae_time_t uae_time()
 {
-	frame_time_t t;
+	Uint64 t;
 	const auto counter = SDL_GetPerformanceCounter();
 	if (qpcdivisor == 0)
-		t = static_cast<frame_time_t>(counter);
+		t = counter;
 	else
-		t = static_cast<frame_time_t>(counter >> qpcdivisor);
+		t = counter >> qpcdivisor;
 	if (!t)
 		t++;
-	return t;
+	return static_cast<frame_time_t>(t);
 }
 
 void uae_time_calibrate()

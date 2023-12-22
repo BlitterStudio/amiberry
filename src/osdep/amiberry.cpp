@@ -314,13 +314,13 @@ void sleep_micros (int ms)
 
 void sleep_millis(int ms)
 {
-	usleep(ms * 1000);
+	SDL_Delay(ms);
 }
 
 int sleep_millis_main(int ms)
 {
 	const auto start = read_processor_time();
-	usleep(ms * 1000);
+	SDL_Delay(ms);
 	idletime += read_processor_time() - start;
 	return 0;
 }
