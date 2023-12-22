@@ -7853,7 +7853,7 @@ MIDFUNC(3,jnf_MEM_READMEMBANK,(W4 dest, RR4 adr, IM8 offset))
 	unlock2(adr);
 	prepare_for_call_2();
 
-	uintptr idx = (uintptr)(&mem_banks) - (uintptr)(&regs);
+	uintptr idx = (uintptr)(&regs.mem_banks) - (uintptr)(&regs);
 	LDR_xXi(REG_WORK2, R_REGSTRUCT, idx);
 	LSR_wwi(REG_WORK1, adr, 16);
 	LDR_xXxLSLi(REG_WORK3, REG_WORK2, REG_WORK1, 1); // 1 means shift by 3
@@ -7884,7 +7884,7 @@ MIDFUNC(3,jnf_MEM_WRITEMEMBANK,(RR4 adr, RR4 source, IM8 offset))
 	unlock2(source);
 	prepare_for_call_2();
 
-	uintptr idx = (uintptr)(&mem_banks) - (uintptr)(&regs);
+	uintptr idx = (uintptr)(&regs.mem_banks) - (uintptr)(&regs);
 	LDR_xXi(REG_WORK2, R_REGSTRUCT, idx);
 	LSR_wwi(REG_WORK1, adr, 16);
 	LDR_xXxLSLi(REG_WORK3, REG_WORK2, REG_WORK1, 1); // 1 means shift by 3

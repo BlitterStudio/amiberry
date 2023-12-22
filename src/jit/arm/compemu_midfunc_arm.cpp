@@ -1,6 +1,7 @@
 /*
- * compiler/compemu_midfunc_armA64.cpp - Native MIDFUNCS for AARCH64
+ * compiler/compemu_midfunc_arm.cpp - Native MIDFUNCS for ARM
  *
+ * Copyright (c) 2014 Jens Heitmann of ARAnyM dev team (see AUTHORS)
  * Copyright (c) 2019 TomB
  *
  * Inspired by Christian Bauer's Basilisk II
@@ -30,27 +31,6 @@
  *  	File is included by compemu_support.cpp
  *
  */
-
-static inline int f_rmw(int r)
-{
-	int n;
-
-	if (f_isinreg(r)) {
-		n = live.fate[r].realreg;
-	} else {
-		n = f_alloc_reg(r, 0);
-	}
-	live.fate[r].status = DIRTY;
-	return n;
-}
-
-static void fflags_into_flags_internal(void)
-{
-	int r = f_readreg(FP_RESULT);
-	raw_fflags_into_flags(r);
-	f_unlock(r);
-	live_flags();
-}
 
 /********************************************************************
  * CPU functions exposed to gencomp. Both CREATE and EMIT time      *
@@ -161,7 +141,7 @@ static void fflags_into_flags_internal(void)
 	unlock2(d);											\
 	if(!s_is_d)											\
 		unlock2(s);
-
+	
 
 MIDFUNC(0,live_flags,(void))
 {
@@ -185,13 +165,10 @@ MENDFUNC(0,make_flags_live,(void))
 
 MIDFUNC(2,mov_l_mi,(IMPTR d, IM32 s))
 {
-	/* d points always to memory in regs struct */
-	LOAD_U32(REG_WORK2, s);
-	uintptr idx = d - (uintptr) &regs;
-	if(d == (uintptr) &(regs.pc_p) || d == (uintptr) &(regs.pc_oldp))
-		STR_xXi(REG_WORK2, R_REGSTRUCT, idx);
-	else
-		STR_wXi(REG_WORK2, R_REGSTRUCT, idx);
+  /* d points always to memory in regs struct */
+  LOAD_U32(REG_WORK2, s);
+  uintptr idx = d - (uintptr) &regs;
+  STR_rRI(REG_WORK2, R_REGSTRUCT, idx);
 }
 MENDFUNC(2,mov_l_mi,(IMPTR d, IM32 s))
 
@@ -207,14 +184,14 @@ MIDFUNC(4,disp_ea20_target_add,(RW4 target, RR4 reg, IM8 shift, IM8 extend))
 
 	reg = readreg(reg);
 	target = rmw(target);
-
+	
 	if(extend) {
 		SIGNED16_REG_2_REG(REG_WORK1, reg);
-		ADD_wwwLSLi(target, target, REG_WORK1, shift & 0x1f);
+		ADD_rrrLSLi(target, target, REG_WORK1, shift & 0x1f);
 	} else {
-		ADD_wwwLSLi(target, target, reg, shift & 0x1f);
+		ADD_rrrLSLi(target, target, reg, shift & 0x1f);
 	}
-
+	
 	unlock2(target);
 	unlock2(reg);
 }
@@ -232,14 +209,14 @@ MIDFUNC(4,disp_ea20_target_mov,(W4 target, RR4 reg, IM8 shift, IM8 extend))
 
 	reg = readreg(reg);
 	target = writereg(target);
-
+	
 	if(extend) {
 		SIGNED16_REG_2_REG(REG_WORK1, reg);
-		LSL_wwi(target, REG_WORK1, shift & 0x1f);
+		LSL_rri(target, REG_WORK1, shift & 0x1f);
 	} else {
-		LSL_wwi(target, reg, shift & 0x1f);
+		LSL_rri(target, reg, shift & 0x1f);
 	}
-
+	
 	unlock2(target);
 	unlock2(reg);
 }
@@ -247,7 +224,7 @@ MENDFUNC(4,disp_ea20_target_mov,(W4 target, RR4 reg, IM8 shift, IM8 extend))
 
 MIDFUNC(2,sign_extend_16_rr,(W4 d, RR2 s))
 {
-	// Only used in calc_disp_ea_020() -> flags not relevant and never modified
+  // Only used in calc_disp_ea_020() -> flags not relevant and never modified
 	if (isconst(s)) {
 		set_const(d, (uae_s32)(uae_s16)live.state[s].val);
 		return;
@@ -281,15 +258,13 @@ MIDFUNC(3,lea_l_brr,(W4 d, RR4 s, IM32 offset))
 		s = readreg(s);
 		d = writereg(d);
 	}
-
-	if(offset >= 0 && offset <= 0xfff) {
-		ADD_wwi(d, s, offset);
-	} else if(offset >= -0xfff && offset < 0) {
-		SUB_wwi(d, s, -offset);
-	} else {
-		LOAD_U32(REG_WORK1, offset);
-		ADD_www(d, s, REG_WORK1);
-	}
+	
+  if(CHECK32(offset)) {
+    ADD_rri(d, s, offset);
+  } else {
+    LOAD_U32(REG_WORK1, offset);
+  	ADD_rrr(d, s, REG_WORK1);
+  }
 
 	EXIT_REGS(d,s);
 }
@@ -302,37 +277,37 @@ MIDFUNC(5,lea_l_brr_indexed,(W4 d, RR4 s, RR4 index, IM8 factor, IM8 offset))
 		return;
 	}
 	if (isconst(s) && isconst(index)) {
-		set_const(d, live.state[s].val + (uae_s32)(uae_s8)offset + live.state[index].val * factor);
-		return;
+	  set_const(d, live.state[s].val + (uae_s32)(uae_s8)offset + live.state[index].val * factor);
+	  return;
 	}
-
+	
 	s = readreg(s);
 	if(d == index) {
-		d = index = rmw(d);
+	  d = index = rmw(d);
 	} else {
-		index = readreg(index);
-		d = writereg(d);
-	}
+	  index = readreg(index);
+	  d = writereg(d);
+  }
 
 	int shft;
 	switch(factor) {
-		case 1: shft=0; break;
-		case 2: shft=1; break;
-		case 4: shft=2; break;
-		case 8: shft=3; break;
-		default: abort();
+  	case 1: shft=0; break;
+  	case 2: shft=1; break;
+  	case 4: shft=2; break;
+  	case 8: shft=3; break;
+  	default: abort();
 	}
 
-	if(offset >= 0 && offset <= 127) {
-		ADD_wwi(REG_WORK1, s, offset);
-	} else {
-		SUB_wwi(REG_WORK1, s, -offset);
-	}
-	ADD_wwwLSLi(d, REG_WORK1, index, shft);
+  if(offset >= 0 && offset <= 127) {
+    ADD_rri(REG_WORK1, s, offset);
+  } else {
+    SUB_rri(REG_WORK1, s, -offset);
+  }
+	ADD_rrrLSLi(d, REG_WORK1, index, shft);
 
 	unlock2(d);
-	if(d != index)
-		unlock2(index);
+  if(d != index)
+	  unlock2(index);
 	unlock2(s);
 }
 MENDFUNC(5,lea_l_brr_indexed,(W4 d, RR4 s, RR4 index, IM8 factor, IM8 offset))
@@ -340,32 +315,32 @@ MENDFUNC(5,lea_l_brr_indexed,(W4 d, RR4 s, RR4 index, IM8 factor, IM8 offset))
 MIDFUNC(4,lea_l_rr_indexed,(W4 d, RR4 s, RR4 index, IM8 factor))
 {
 	if (isconst(s) && isconst(index)) {
-		set_const(d, live.state[s].val + live.state[index].val * factor);
-		return;
+	  set_const(d, live.state[s].val + live.state[index].val * factor);
+	  return;
 	}
 
 	s = readreg(s);
 	if(d == index) {
-		d = index = rmw(d);
+	  d = index = rmw(d);
 	} else {
-		index = readreg(index);
-		d = writereg(d);
-	}
+	  index = readreg(index);
+	  d = writereg(d);
+  }
 
 	int shft;
 	switch(factor) {
-		case 1: shft=0; break;
-		case 2: shft=1; break;
-		case 4: shft=2; break;
-		case 8: shft=3; break;
-		default: abort();
+  	case 1: shft=0; break;
+  	case 2: shft=1; break;
+  	case 4: shft=2; break;
+  	case 8: shft=3; break;
+  	default: abort();
 	}
 
-	ADD_wwwLSLi(d, s, index, shft);
+	ADD_rrrLSLi(d, s, index, shft);
 
 	unlock2(d);
-	if(d != index)
-		unlock2(index);
+  if(d != index)
+	  unlock2(index);
 	unlock2(s);
 }
 MENDFUNC(4,lea_l_rr_indexed,(W4 d, RR4 s, RR4 index, IM8 factor))
@@ -397,19 +372,16 @@ MENDFUNC(2,mov_l_rr,(W4 d, RR4 s))
 
 MIDFUNC(2,mov_l_mr,(IMPTR d, RR4 s))
 {
-	/* d points always to memory in regs struct */
+  /* d points always to memory in regs struct */
 	if (isconst(s)) {
 		COMPCALL(mov_l_mi)(d, live.state[s].val);
 		return;
 	}
-
+	
 	s = readreg(s);
 
-	uintptr idx = d - (uintptr) &regs;
-	if(d == (uintptr)&regs.pc_oldp || d == (uintptr)&regs.pc_p)
-		STR_xXi(s, R_REGSTRUCT, idx);
-	else
-		STR_wXi(s, R_REGSTRUCT, idx);
+  uintptr idx = d - (uintptr) &regs;
+  STR_rRI(s, R_REGSTRUCT, idx);
 
 	unlock2(s);
 }
@@ -417,11 +389,11 @@ MENDFUNC(2,mov_l_mr,(IMPTR d, RR4 s))
 
 MIDFUNC(2,mov_l_rm,(W4 d, IMPTR s))
 {
-	/* s points always to memory in regs struct */
+  /* s points always to memory in regs struct */
 	d = writereg(d);
 
-	uintptr idx = s - (uintptr) &regs;
-	LDR_wXi(d, R_REGSTRUCT, idx);
+  uintptr idx = s - (uintptr) &regs;
+  LDR_rRI(d, R_REGSTRUCT, idx);
 
 	unlock2(d);
 }
@@ -435,27 +407,27 @@ MENDFUNC(2,mov_l_ri,(W4 d, IM32 s))
 
 MIDFUNC(2,mov_b_ri,(W1 d, IM8 s))
 {
-	if(d < 16) {
-		if (isconst(d)) {
-			set_const(d, (live.state[d].val & 0xffffff00) | (s & 0x000000ff));
-			return;
-		}
-		d = rmw(d);
+  if(d < 16) {
+	  if (isconst(d)) {
+		  set_const(d, (live.state[d].val & 0xffffff00) | (s & 0x000000ff));
+		  return;
+	  }
+	  d = rmw(d);
 
-		MOV_xi(REG_WORK1, (s & 0xff));
-		BFI_xxii(d, REG_WORK1, 0, 8);
-
-		unlock2(d);
-	} else {
-		set_const(d, s & 0xff);
-	}
+		BIC_rri(d, d, 0xff);
+		ORR_rri(d, d, (s & 0xff));
+	
+	  unlock2(d);
+  } else {
+    set_const(d, s & 0xff);
+  }
 }
 MENDFUNC(2,mov_b_ri,(W1 d, IM8 s))
 
 MIDFUNC(2,sub_l_ri,(RW4 d, IM8 i))
 {
 	if (!i)
-		return;
+	  return;
 	if (isconst(d)) {
 		live.state[d].val -= i;
 		return;
@@ -463,7 +435,7 @@ MIDFUNC(2,sub_l_ri,(RW4 d, IM8 i))
 
 	d = rmw(d);
 
-	SUB_xxi(d, d, i);
+  SUB_rri(d, d, i);
 
 	unlock2(d);
 }
@@ -471,16 +443,16 @@ MENDFUNC(2,sub_l_ri,(RW4 d, IM8 i))
 
 MIDFUNC(2,sub_w_ri,(RW2 d, IM8 i))
 {
-	// This function is only called with i = 1
+  // This function is only called with i = 1
 	// Caller needs flags...
 	clobber_flags();
 
 	d = rmw(d);
 
-	LSL_wwi(REG_WORK2, d, 16);
+	LSL_rri(REG_WORK2, d, 16);
 
-	SUBS_wwish(REG_WORK2, REG_WORK2, (i & 0xff) << 4, 1);
-	BFXIL_xxii(d, REG_WORK2, 16, 16);
+	SUBS_rri(REG_WORK2, REG_WORK2, (i & 0xff) << 16);
+  PKHTB_rrrASRi(d, d, REG_WORK2, 16);
 
 	unlock2(d);
 }
@@ -490,7 +462,7 @@ MENDFUNC(2,sub_w_ri,(RW2 d, IM8 i))
 MIDFUNC(1,forget_about,(W4 r))
 {
 	if (isinreg(r))
-		disassociate(r);
+	  disassociate(r);
 	live.state[r].val = 0;
 	set_status(r, UNDEF);
 }
@@ -506,7 +478,7 @@ MIDFUNC(2,arm_ADD_l,(RW4 d, RR4 s))
 
 	s = readreg(s);
 	d = rmw(d);
-	ADD_www(d, d, s);
+	ADD_rrr(d, d, s);
 	unlock2(d);
 	unlock2(s);
 }
@@ -521,8 +493,8 @@ MIDFUNC(2,arm_ADD_ldiv8,(RW4 d, RR4 s))
 
 	s = readreg(s);
 	d = rmw(d);
-	ASR_wwi(REG_WORK1, s, 5);
-	ADD_wwwLSLi(d, d, REG_WORK1, 2);
+	ASR_rri(REG_WORK1, s, 5);
+	ADD_rrrLSLi(d, d, REG_WORK1, 2);
 	unlock2(d);
 	unlock2(s);
 }
@@ -530,8 +502,8 @@ MENDFUNC(2,arm_ADD_ldiv8,(RW4 d, RR4 s))
 
 MIDFUNC(2,arm_ADD_l_ri,(RW4 d, IM32 i))
 {
-	if (!i)
-		return;
+	if (!i) 
+	  return;
 	if (isconst(d)) {
 		live.state[d].val += i;
 		return;
@@ -539,113 +511,71 @@ MIDFUNC(2,arm_ADD_l_ri,(RW4 d, IM32 i))
 
 	d = rmw(d);
 
-	if(i >= 0 && i <= 0xfff) {
-		ADD_xxi(d, d, i);
+	if(CHECK32(i)) {
+		ADD_rri(d, d, i);
 	} else {
-		if(i > -0x7fff && i < 0x7fff) {
-			SIGNED16_IMM_2_REG(REG_WORK1, i);
-		} else {
-			LOAD_U32(REG_WORK1, i);
-			SXTW_xw(REG_WORK1, REG_WORK1);
-		}
-		ADD_xxx(d, d, REG_WORK1);
-	}
-
+    LOAD_U32(REG_WORK1, i);
+		ADD_rrr(d, d, REG_WORK1);
+  }
+	
 	unlock2(d);
 }
 MENDFUNC(2,arm_ADD_l_ri,(RW4 d, IM32 i))
 
 MIDFUNC(2,arm_ADD_l_ri8,(RW4 d, IM8 i))
 {
-	if (!i)
-		return;
+	if (!i) 
+	  return;
 	if (isconst(d)) {
 		live.state[d].val += i;
 		return;
 	}
 
 	d = rmw(d);
-	ADD_xxi(d, d, i);
+	ADD_rri(d, d, i);
 	unlock2(d);
 }
 MENDFUNC(2,arm_ADD_l_ri8,(RW4 d, IM8 i))
 
 MIDFUNC(2,arm_SUB_l_ri8,(RW4 d, IM8 i))
 {
-	if (!i)
-		return;
+	if (!i) 
+	  return;
 	if (isconst(d)) {
 		live.state[d].val -= i;
 		return;
 	}
 
 	d = rmw(d);
-	SUB_xxi(d, d, i);
+	SUB_rri(d, d, i);
 	unlock2(d);
 }
 MENDFUNC(2,arm_SUB_l_ri8,(RW4 d, IM8 i))
 
 
-#ifdef JIT_DEBUG
-#include "aarch64.h"
-
-void disam_range(void *start, void *stop)
-{
-  char disbuf[256];
-  uint64_t disptr = (uint64_t)start;
-  while(disptr < (uint64_t)stop) {
-    disasm(disptr, disbuf);
-    write_log("%016llx  %s\n", disptr, disbuf);
-    disptr += 4;
-  }
-}
-
-#endif
-
 STATIC_INLINE void flush_cpu_icache(void *start, void *stop)
 {
-#ifdef JIT_DEBUG
-	if((uae_u64)stop - (uae_u64)start > 4) {
-    if(disasm_this) {
-      char disbuf[256];
-      uint64_t disptr = (uint64_t)start;
-      while(disptr < (uint64_t)stop) {
-        disasm(disptr, disbuf);
-        write_log("%016llx  %s\n", disptr, disbuf);
-        disptr += 4;
-      }
-      disasm_this = false;
-    }
-  }
-#endif
-
-	//__builtin___clear_cache(start, stop);
-	__clear_cache(start, stop);
+	register void *_beg __asm ("a1") = start;
+	register void *_end __asm ("a2") = stop;
+	register void *_flg __asm ("a3") = 0;
+	#ifdef __ARM_EABI__
+	   register unsigned long _scno __asm ("r7") = 0xf0002;
+	   __asm __volatile ("swi 0x0		@ sys_cacheflush"
+                            : "=r" (_beg)
+                            : "0" (_beg), "r" (_end), "r" (_flg), "r" (_scno));
+	#else
+	   __asm __volatile ("swi 0x9f0002		@ sys_cacheflush"
+		   		    : "=r" (_beg)
+		   		    : "0" (_beg), "r" (_end), "r" (_flg));
+	#endif
 }
 
 
-static inline void write_jmp_target(uae_u32 *jmpaddr, uintptr a)
+STATIC_INLINE void write_jmp_target(uae_u32* jmpaddr, uintptr a) 
 {
-	uintptr off = (a - (uintptr)jmpaddr) >> 2;
-	if((*(jmpaddr) & 0xfc000000) == 0x14000000) {
-		/* branch always */
-		off = off & 0x3ffffff;
-		*(jmpaddr) = (*(jmpaddr) & 0xfc000000) | off;
-	} else if((*(jmpaddr) & 0x7c000000) == 0x34000000) {
-		/* TBZ/TBNZ/CBZ/CBNZ */
-		if((a > (uintptr)jmpaddr && off > 0x1fff) || (a < (uintptr)jmpaddr && (~off) > 0x1fff))
-			write_log("JIT: TBZ/TBNZ branch to target too long.\n");
-		off = off & 0x3fff;
-		*(jmpaddr) = (*(jmpaddr) & 0xfffc001f) | (off << 5);
-	} else {
-		/* conditional branch */
-		if((a > (uintptr)jmpaddr && off > 0x3ffff) || (a < (uintptr)jmpaddr && (~off) > 0x3ffff))
-			write_log("JIT: Branch to target too long.\n");
-		off = off & 0x7ffff;
-		*(jmpaddr) = (*(jmpaddr) & 0xff00001f) | (off << 5);
-	}
-
-	flush_cpu_icache((void *)jmpaddr, (void *)&jmpaddr[1]);
+	uintptr off = ((uintptr)a - (uintptr)jmpaddr - 8) >> 2;
+	*(jmpaddr) = (*(jmpaddr) & 0xff000000) | (off & 0x00ffffff);
+  flush_cpu_icache((void *)jmpaddr, (void *)&jmpaddr[1]);
 }
 
 
@@ -685,40 +615,40 @@ MENDFUNC(2,fmov_rr,(FW d, FR s))
 MIDFUNC(2,fmov_l_rr,(FW d, RR4 s))
 {
 	s = readreg(s);
-	d = f_writereg(d);
-	raw_fmov_l_rr(d, s);
+  d = f_writereg(d);
+  raw_fmov_l_rr(d, s);
 	f_unlock(d);
-	unlock2(s);
+  unlock2(s);
 }
 MENDFUNC(2,fmov_l_rr,(FW d, RR4 s))
 
 MIDFUNC(2,fmov_s_rr,(FW d, RR4 s))
 {
 	s = readreg(s);
-	d = f_writereg(d);
-	raw_fmov_s_rr(d, s);
+  d = f_writereg(d);
+  raw_fmov_s_rr(d, s);
 	f_unlock(d);
-	unlock2(s);
+  unlock2(s);
 }
 MENDFUNC(2,fmov_s_rr,(FW d, RR4 s))
 
 MIDFUNC(2,fmov_w_rr,(FW d, RR2 s))
 {
 	s = readreg(s);
-	d = f_writereg(d);
-	raw_fmov_w_rr(d, s);
+  d = f_writereg(d);
+  raw_fmov_w_rr(d, s);
 	f_unlock(d);
-	unlock2(s);
+  unlock2(s);
 }
 MENDFUNC(2,fmov_w_rr,(FW d, RR2 s))
 
 MIDFUNC(2,fmov_b_rr,(FW d, RR1 s))
 {
 	s = readreg(s);
-	d = f_writereg(d);
-	raw_fmov_b_rr(d, s);
+  d = f_writereg(d);
+  raw_fmov_b_rr(d, s);
 	f_unlock(d);
-	unlock2(s);
+  unlock2(s);
 }
 MENDFUNC(2,fmov_b_rr,(FW d, RR1 s))
 
@@ -726,11 +656,11 @@ MIDFUNC(3,fmov_d_rrr,(FW d, RR4 s1, RR4 s2))
 {
 	s1 = readreg(s1);
 	s2 = readreg(s2);
-	d = f_writereg(d);
-	raw_fmov_d_rrr(d, s1, s2);
+  d = f_writereg(d);
+  raw_fmov_d_rrr(d, s1, s2);
 	f_unlock(d);
-	unlock2(s2);
-	unlock2(s1);
+  unlock2(s2);
+  unlock2(s1);
 }
 MENDFUNC(3,fmov_d_rrr,(FW d, RR4 s1, RR4 s2))
 
@@ -750,19 +680,19 @@ MIDFUNC(2,fmov_l_ri,(FW d, IM32 i))
 			fmov_d_ri_100(d);
 			break;
 		default:
-			d = f_writereg(d);
-			compemu_raw_mov_l_ri(REG_WORK1, i);
-			raw_fmov_l_rr(d, REG_WORK1);
+		  d = f_writereg(d);
+		  compemu_raw_mov_l_ri(REG_WORK1, i);
+		  raw_fmov_l_rr(d, REG_WORK1);
 			f_unlock(d);
-	}
+	} 
 }
 MENDFUNC(2,fmov_l_ri,(FW d, IM32 i))
 
 MIDFUNC(2,fmov_s_ri,(FW d, IM32 i))
 {
-	d = f_writereg(d);
-	compemu_raw_mov_l_ri(REG_WORK1, i);
-	raw_fmov_s_rr(d, REG_WORK1);
+  d = f_writereg(d);
+  compemu_raw_mov_l_ri(REG_WORK1, i);
+  raw_fmov_s_rr(d, REG_WORK1);
 	f_unlock(d);
 }
 MENDFUNC(2,fmov_s_ri,(FW d, IM32 i))
@@ -770,20 +700,20 @@ MENDFUNC(2,fmov_s_ri,(FW d, IM32 i))
 MIDFUNC(2,fmov_to_l_rr,(W4 d, FR s))
 {
 	s = f_readreg(s);
-	d = writereg(d);
-	raw_fmov_to_l_rr(d, s);
+  d = writereg(d);
+  raw_fmov_to_l_rr(d, s);
 	unlock2(d);
-	f_unlock(s);
+  f_unlock(s);
 }
 MENDFUNC(2,fmov_to_l_rr,(W4 d, FR s))
 
 MIDFUNC(2,fmov_to_s_rr,(W4 d, FR s))
 {
 	s = f_readreg(s);
-	d = writereg(d);
-	raw_fmov_to_s_rr(d, s);
+  d = writereg(d);
+  raw_fmov_to_s_rr(d, s);
 	unlock2(d);
-	f_unlock(s);
+  f_unlock(s);
 }
 MENDFUNC(2,fmov_to_s_rr,(W4 d, FR s))
 
@@ -792,9 +722,9 @@ MIDFUNC(2,fmov_to_w_rr,(W4 d, FR s))
 	s = f_readreg(s);
 	INIT_WREG_w(d);
 
-	raw_fmov_to_w_rr(d, s, targetIsReg);
+  raw_fmov_to_w_rr(d, s, targetIsReg);
 	unlock2(d);
-	f_unlock(s);
+  f_unlock(s);
 }
 MENDFUNC(2,fmov_to_w_rr,(W4 d, FR s))
 
@@ -803,9 +733,9 @@ MIDFUNC(2,fmov_to_b_rr,(W4 d, FR s))
 	s = f_readreg(s);
 	INIT_WREG_b(d);
 
-	raw_fmov_to_b_rr(d, s, targetIsReg);
+  raw_fmov_to_b_rr(d, s, targetIsReg);
 	unlock2(d);
-	f_unlock(s);
+  f_unlock(s);
 }
 MENDFUNC(2,fmov_to_b_rr,(W4 d, FR s))
 
@@ -868,12 +798,12 @@ MENDFUNC(2,fmov_rm,(FW r, MEMR m))
 MIDFUNC(3,fmov_to_d_rrr,(W4 d1, W4 d2, FR s))
 {
 	s = f_readreg(s);
-	d1 = writereg(d1);
-	d2 = writereg(d2);
-	raw_fmov_to_d_rrr(d1, d2, s);
+  d1 = writereg(d1);
+  d2 = writereg(d2);
+  raw_fmov_to_d_rrr(d1, d2, s);
 	unlock2(d2);
 	unlock2(d1);
-	f_unlock(s);
+  f_unlock(s);
 }
 MENDFUNC(3,fmov_to_d_rrr,(W4 d1, W4 d2, FR s))
 
@@ -1027,49 +957,49 @@ MENDFUNC(2,fmovs_rr,(FW d, FR s))
 
 MIDFUNC(3,ffunc_rr,(double (*func)(double), FW d, FR s))
 {
-	clobber_flags();
+  clobber_flags();
 
 	s = f_readreg(s);
 	int reald = f_writereg(d);
 
-	prepare_for_call_1();
+  prepare_for_call_1();
 
 	f_unlock(s);
 	f_unlock(reald);
 
-	prepare_for_call_2();
+  prepare_for_call_2();
 
 	raw_ffunc_rr(func, reald, s);
 
-	live.fat[reald].holds[live.fat[s].nholds] = d;
-	live.fat[reald].nholds = 1;
+  live.fat[reald].holds = d;
+  live.fat[reald].nholds = 1;
 
-	live.fate[d].realreg = reald;
-	live.fate[d].status = DIRTY;
+  live.fate[d].realreg = reald;
+  live.fate[d].status = DIRTY;
 }
 MENDFUNC(3,ffunc_rr,(double (*func)(double), FW d, FR s))
 
 MIDFUNC(3,fpowx_rr,(uae_u32 x, FW d, FR s))
 {
-	clobber_flags();
+  clobber_flags();
 
 	s = f_readreg(s);
 	int reald = f_writereg(d);
 
-	prepare_for_call_1();
+  prepare_for_call_1();
 
 	f_unlock(s);
 	f_unlock(reald);
 
-	prepare_for_call_2();
+  prepare_for_call_2();
 
 	raw_fpowx_rr(x, reald, s);
 
-	live.fat[reald].holds[live.fat[s].nholds] = d;
-	live.fat[reald].nholds = 1;
+  live.fat[reald].holds = d;
+  live.fat[reald].nholds = 1;
 
-	live.fate[d].realreg = reald;
-	live.fate[d].status = DIRTY;
+  live.fate[d].realreg = reald;
+  live.fate[d].status = DIRTY;
 }
 MENDFUNC(3,fpowx_rr,(uae_u32 x, FW d, FR s))
 
@@ -1082,11 +1012,11 @@ MENDFUNC(1,fflags_into_flags,())
 
 MIDFUNC(2,fp_from_exten_mr,(RR4 adr, FR s))
 {
-	clobber_flags();
+  clobber_flags();
 
 	adr = readreg(adr);
 	s = f_readreg(s);
-	raw_fp_from_exten_mr(adr, s);
+  raw_fp_from_exten_mr(adr, s);
 	f_unlock(s);
 	unlock2(adr);
 }
@@ -1094,11 +1024,11 @@ MENDFUNC(2,fp_from_exten_mr,(RR4 adr, FR s))
 
 MIDFUNC(2,fp_to_exten_rm,(FW d, RR4 adr))
 {
-	clobber_flags();
+  clobber_flags();
 
 	adr = readreg(adr);
 	d = f_writereg(d);
-	raw_fp_to_exten_rm(d, adr);
+  raw_fp_to_exten_rm(d, adr);
 	unlock2(adr);
 	f_unlock(d);
 }
@@ -1108,7 +1038,7 @@ MIDFUNC(2,fp_from_double_mr,(RR4 adr, FR s))
 {
 	adr = readreg(adr);
 	s = f_readreg(s);
-	raw_fp_from_double_mr(adr, s);
+  raw_fp_from_double_mr(adr, s);
 	f_unlock(s);
 	unlock2(adr);
 }
@@ -1118,7 +1048,7 @@ MIDFUNC(2,fp_to_double_rm,(FW d, RR4 adr))
 {
 	adr = readreg(adr);
 	d = f_writereg(d);
-	raw_fp_to_double_rm(d, adr);
+  raw_fp_to_double_rm(d, adr);
 	unlock2(adr);
 	f_unlock(d);
 }

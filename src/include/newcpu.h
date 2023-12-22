@@ -180,6 +180,13 @@ typedef struct
 #endif
 } fpdata;
 
+#ifdef CPU_AARCH64
+#ifdef JIT
+#include "jit/comptbl.h"
+#include "jit/compemu.h"
+#endif
+#endif
+
 struct regstruct
 {
 	uae_u32 regs[16];
@@ -276,7 +283,15 @@ struct regstruct
 
 #ifdef CPU_AARCH64 // Used by the AARCH64 JIT implementation
 #ifdef JIT
+	/* store scratch regs also in this struct to avoid load of mem pointer */
+	uae_u32 scratchregs[VREGS - S1];
+	fpu_register scratchfregs[VFREGS - 8];
 	uae_u32 jit_exception;
+
+	/* pointer to real arrays/structs for easier access in JIT */
+	uae_u32* raw_cputbl_count;
+	uintptr mem_banks;
+	uintptr cache_tags;
 #endif
 #endif
 };
@@ -844,7 +859,11 @@ extern cpuop_func_noret *cpufunctbl_noret[65536] ASM_SYM_FOR_FUNC("cpufunctbl_no
 extern cpuop_func *cpufunctbl[65536] ASM_SYM_FOR_FUNC("cpufunctbl");
 
 #ifdef JIT
+#ifdef CPU_AARCH64
+extern void flush_icache(int);
+#else
 extern void (*flush_icache)(int);
+#endif
 extern void compemu_reset(void);
 #else
 #define flush_icache(int) do {} while (0)

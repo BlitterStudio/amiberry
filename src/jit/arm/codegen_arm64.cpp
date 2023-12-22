@@ -200,6 +200,17 @@ STATIC_INLINE void raw_reg_to_flags(int r)
 //
 // compuemu_support used raw calls
 //
+LOWFUNC(WRITE,RMW,2,compemu_raw_inc_opcount,(IM16 op))
+{
+  uintptr idx = (uintptr) &(regs.raw_cputbl_count) - (uintptr) &regs;
+  LDR_xXi(REG_WORK2, R_REGSTRUCT, idx);
+  MOV_xi(REG_WORK3, op);
+  LDR_wXxLSLi(REG_WORK1, REG_WORK2, REG_WORK3, 1);
+  ADD_wwi(REG_WORK1, REG_WORK1, 1);
+  STR_wXxLSLi(REG_WORK1, REG_WORK2, REG_WORK3, 1);
+}
+LENDFUNC(WRITE,RMW,1,compemu_raw_inc_opcount,(IM16 op))
+
 LOWFUNC(WRITE,READ,1,compemu_raw_cmp_pc,(IMPTR s))
 {
 	/* s is always >= NATMEM_OFFSET and < NATMEM_OFFSET + max. Amiga mem */
@@ -457,7 +468,7 @@ STATIC_INLINE void compemu_raw_jmp(uintptr t)
 	} else {
 		LDR_xPCi(REG_WORK1, 8);
 		BR_x(REG_WORK1);
-		emit_quad(t);
+		emit_longlong(t);
 	}
 }
 
@@ -465,7 +476,7 @@ STATIC_INLINE void compemu_raw_jmp_pc_tag(void)
 {
 	uintptr idx = (uintptr)&regs.pc_p - (uintptr)&regs;
 	LDRH_wXi(REG_WORK1, R_REGSTRUCT, idx);
-	idx = (uintptr)&cache_tags - (uintptr)&regs;
+	idx = (uintptr)&regs.cache_tags - (uintptr)&regs;
 	LDR_xXi(REG_WORK2, R_REGSTRUCT, idx);
 	LDR_xXxLSLi(REG_WORK1, REG_WORK2, REG_WORK1, 1);
 	BR_x(REG_WORK1);
@@ -530,7 +541,7 @@ LOWFUNC(NONE,NONE,2,compemu_raw_endblock_pc_inreg,(RR4 rr_pc, IM32 cycles))
 
 	TBNZ_xii(REG_WORK1, 31, 5); // test sign and branch if set (negative)
 	UBFIZ_xxii(rr_pc, rr_pc, 0, 16);  // apply TAGMASK
-	offs = (uintptr)(&cache_tags) - (uintptr)&regs;
+	offs = (uintptr)(&regs.cache_tags) - (uintptr)&regs;
 	LDR_xXi(REG_WORK1, R_REGSTRUCT, offs);
 	LDR_xXxLSLi(REG_WORK1, REG_WORK1, rr_pc, 3); // cacheline holds pointer -> multiply with 8
 	BR_x(REG_WORK1);
@@ -567,7 +578,7 @@ STATIC_INLINE uae_u32* compemu_raw_endblock_pc_isconst(IM32 cycles, IMPTR v)
 	B_i(0);
 	write_jmp_target(branchadd, (uintptr)popall_do_nothing);
 
-	emit_quad(v);
+	emit_longlong(v);
 
 	return tba;
 }
