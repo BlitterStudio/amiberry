@@ -1747,6 +1747,11 @@ int graphics_init(bool mousecapture)
 	{
 		write_log("Current Display mode: bpp %i\t%s\t%i x %i\t%iHz\n", SDL_BITSPERPIXEL(sdl_mode.format), SDL_GetPixelFormatName(sdl_mode.format), sdl_mode.w, sdl_mode.h, sdl_mode.refresh_rate);
 		vsync_vblank = sdl_mode.refresh_rate;
+
+		mon->currentmode.native_width = sdl_mode.w;
+		mon->currentmode.native_height = sdl_mode.h;
+		mon->currentmode.native_depth = SDL_BITSPERPIXEL(sdl_mode.format);
+		mon->currentmode.freq = sdl_mode.refresh_rate;
 	}
 
 	write_log("Creating Amiberry window...\n");
