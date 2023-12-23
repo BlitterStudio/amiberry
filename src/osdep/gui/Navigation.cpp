@@ -304,7 +304,7 @@ static NavigationMap navMap[] =
 	{ "chkAutoSwitching", "Sound", "sldPaulaVol", "sndEmulate", "cboChannelMode" },
 	{ "cboChannelMode", "Sound", "cboSeparation", "chkAutoSwitching", "cboFrequency" },
 	{ "cboFrequency", "Sound", "cboSwapChannels", "cboChannelMode", "chkFloppySound" },
-    { "cboSwapChannels", "cboFrequency", "cboStereoDelay", "cboChannelMode", "chkFloppySound" },
+	{ "cboSwapChannels", "cboFrequency", "cboStereoDelay", "cboChannelMode", "chkFloppySound" },
 	{ "cboInterpol", "cboSeparation", "Sound", "sldMIDIVol", "cboFilter" },
 	{ "cboFilter", "cboStereoDelay", "Sound", "cboInterpol", "sldSoundBufferSize" },
 	{ "cboSeparation", "cboChannelMode", "cboInterpol", "chkAutoSwitching", "cboStereoDelay" },
