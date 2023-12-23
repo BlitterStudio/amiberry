@@ -2070,6 +2070,7 @@ void target_default_options(struct uae_prefs* p, int type)
 	_tcscpy(p->action_replay, amiberry_options.default_ar_key);
 	_tcscpy(p->fullscreen_toggle, amiberry_options.default_fullscreen_toggle_key);
 
+	p->drawbridge_serial_auto = true;
 	p->drawbridge_smartspeed = false;
 	p->drawbridge_autocache = false;
 	p->drawbridge_connected_drive_b = false;
@@ -2318,6 +2319,8 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_target_dwrite_str(f, _T("minimize"), p->minimize);
 
 	cfgfile_target_dwrite(f, _T("drawbridge_driver"), _T("%d"), p->drawbridge_driver);
+	cfgfile_target_dwrite_bool(f, _T("drawbridge_serial_autodetect"), p->drawbridge_serial_auto);
+	cfgfile_target_write_str(f, _T("drawbridge_serial_port"), p->drawbridge_serial_port);
 	cfgfile_target_dwrite_bool(f, _T("drawbridge_smartspeed"), p->drawbridge_smartspeed);
 	cfgfile_target_dwrite_bool(f, _T("drawbridge_autocache"), p->drawbridge_autocache);
 	cfgfile_target_dwrite_bool(f, _T("drawbridge_connected_drive_b"), p->drawbridge_connected_drive_b);
@@ -2424,6 +2427,8 @@ static int target_parse_option_host(struct uae_prefs *p, const TCHAR *option, co
 	    || cfgfile_yesno(option, value, _T("always_on_top"), &p->main_alwaysontop)
 	    || cfgfile_yesno(option, value, _T("gui_always_on_top"), &p->gui_alwaysontop)
 	    || cfgfile_intval(option, value, _T("drawbridge_driver"), &p->drawbridge_driver, 1)
+		|| cfgfile_yesno(option, value, _T("drawbridge_serial_autodetect"), &p->drawbridge_serial_auto)
+		|| cfgfile_string(option, value, _T("drawbridge_serial_port"), p->drawbridge_serial_port, sizeof p->drawbridge_serial_port)
 	    || cfgfile_yesno(option, value, _T("drawbridge_smartspeed"), &p->drawbridge_smartspeed)
 	    || cfgfile_yesno(option, value, _T("drawbridge_autocache"), &p->drawbridge_autocache)
 	    || cfgfile_yesno(option, value, _T("drawbridge_connected_drive_b"), &p->drawbridge_connected_drive_b)
@@ -4113,14 +4118,36 @@ bool get_plugin_path(TCHAR* out, int len, const TCHAR* path)
 void drawbridge_update_profiles(uae_prefs* p)
 {
 #ifdef FLOPPYBRIDGE
-	const char driver = '0' + p->drawbridge_driver;
-	drawbridge_profiles[7] = driver;
-	drawbridge_profiles[33] = driver;
-	drawbridge_profiles[54] = driver;
-	drawbridge_profiles[78] = driver;
+	unsigned int flags = (p->drawbridge_autocache ? 1 : 0) | (p->drawbridge_connected_drive_b & 1) << 1 | (p->drawbridge_serial_auto ? 4 : 0) | (p->drawbridge_smartspeed ? 8 : 0);
 
-	floppybridge_set_config(drawbridge_profiles.c_str());
-	floppybridge_init(p);
+	std::string profile_name_fast = "Fast";
+	std::string profile_name_comp = "Compatible";
+	std::string profile_name_turbo = "Turbo";
+	std::string profile_name_stalling = "Stalling";
+
+	std::string bridge_mode_fast = "0";
+	std::string bridge_mode_comp = "1";
+	std::string bridge_mode_turbo = "2";
+	std::string bridge_mode_stalling = "3";
+	std::string bridge_density_auto = "0";
+
+	std::string serial_port = p->drawbridge_serial_port;
+	if (serial_port.empty())
+		serial_port = "COM0";
+
+	std::string tmp;
+	// Fast
+	tmp = std::string("1") + "|" + profile_name_fast + "[" + std::to_string(p->drawbridge_driver) + "|" + std::to_string(flags) + "|" + serial_port + "|" + bridge_mode_fast + "|" + bridge_density_auto + "]";
+	// Compatible
+	tmp += std::string("2") + "|" + profile_name_comp + "[" + std::to_string(p->drawbridge_driver) + "|" + std::to_string(flags) + "|" + serial_port + "|" + bridge_mode_comp + "|" + bridge_density_auto + "]";
+	// Turbo
+	tmp += std::string("3") + "|" + profile_name_turbo + "[" + std::to_string(p->drawbridge_driver) + "|" + std::to_string(flags) + "|" + serial_port + "|" + bridge_mode_turbo + "|" + bridge_density_auto + "]";
+	// Stalling
+	tmp += std::string("4") + "|" + profile_name_stalling + "[" + std::to_string(p->drawbridge_driver) + "|" + std::to_string(flags) + "|" + serial_port + "|" + bridge_mode_stalling + "|" + bridge_density_auto + "]";
+
+	floppybridge_set_config(tmp.c_str());
+	if (quit_program != UAE_QUIT)
+		floppybridge_init(p);
 #endif
 }
 

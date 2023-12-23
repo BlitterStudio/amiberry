@@ -1012,6 +1012,8 @@ struct uae_prefs
 	char vkbd_toggle[128];
 	
 	int drawbridge_driver;
+	bool drawbridge_serial_auto;
+	TCHAR drawbridge_serial_port[256];
 	bool drawbridge_connected_drive_b;
 	bool drawbridge_smartspeed;
 	bool drawbridge_autocache;

@@ -4616,7 +4616,7 @@ void DISK_hsync (void)
 
 #ifdef FLOPPYBRIDGE
 		if (drv->bridge && drv->writepending) {
-			// With bridge we wait for the disk to commit the data before fireing the DMA
+			// With bridge we wait for the disk to commit the data before firing the DMA
 			if (drv->bridge->isWriteComplete()) {
 				disk_dmafinished();
 				drv->writepending = false;
@@ -5281,12 +5281,6 @@ static void floppybridge_init2(struct uae_prefs *p)
 					bridge = FloppyBridgeAPI::createDriverFromProfileID(id);
 				}
 				if (bridge) {
-#ifdef AMIBERRY
-					bridge->setComPortAutoDetect(true);
-					bridge->setAutoCacheMode(currprefs.drawbridge_autocache);
-					bridge->setSmartSpeedEnabled(currprefs.drawbridge_smartspeed);
-					bridge->setDriveCableSelection(currprefs.drawbridge_connected_drive_b);
-#endif
 					if (!bridge->initialise()) {
 						const char *errorMessage = bridge->getLastErrorMessage();
 						const char *name = bridge->getDriverInfo()->name;
@@ -5313,7 +5307,6 @@ static void floppybridge_init2(struct uae_prefs *p)
 			floppy[dr].bridge = NULL;
 			bridge_driver[dr] = NULL;
 		}
-
 	}
 }
 

@@ -597,7 +597,7 @@ bool FloppyBridgeAPI::getConfigAsString(char** config) const
 {
 	return BRIDGE_GetConfigString(m_handle, config);
 }
-// Applies the config to the currently driver.  Returns TRUE if successful.
+// Applies the config to the current driver.  Returns TRUE if successful.
 bool FloppyBridgeAPI::setConfigFromString(char* config) const
 {
 	return BRIDGE_SetConfigFromString(m_handle, config);

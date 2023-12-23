@@ -10,6 +10,7 @@
 #include "disk.h"
 #include "gui_handling.h"
 #include "floppybridge/floppybridge_lib.h"
+#include "parser.h"
 
 static gcn::CheckBox* chkDFx[4];
 static gcn::DropDown* cboDFxType[4];
@@ -27,6 +28,8 @@ static gcn::Button* cmdCreateHDDisk;
 static gcn::Window* grpDrawBridge;
 static gcn::Label* lblDBDriver;
 static gcn::DropDown* cboDBDriver;
+static gcn::CheckBox* chkDBSerialAuto;
+static gcn::DropDown* cboDBSerialPort;
 static gcn::CheckBox* chkDBSmartSpeed;
 static gcn::CheckBox* chkDBAutoCache;
 static gcn::CheckBox* chkDBCableDriveB;
@@ -51,10 +54,10 @@ public:
 		types.emplace_back("5.25\" (40)");
 		types.emplace_back("5.25\" (80)");
 		types.emplace_back("3.5\" ESCOM");
-		types.emplace_back("FB: Fast");
-		types.emplace_back("FB: Compatible");
-		types.emplace_back("FB: Turbo");
-		types.emplace_back("FB: Accurate");
+		types.emplace_back("DB: Fast");
+		types.emplace_back("DB: Compatible");
+		types.emplace_back("DB: Turbo");
+		types.emplace_back("DB: Stalling");
 	}
 
 	int add_element(const char* elem) override
@@ -131,7 +134,7 @@ public:
 
 	int getNumberOfElements() override
 	{
-		return int(lstMRUDiskList.size());
+		return static_cast<int>(lstMRUDiskList.size());
 	}
 
 	int add_element(const char* elem) override
@@ -154,6 +157,44 @@ public:
 };
 
 static DiskfileListModel diskfileList;
+
+class string_list_model : public gcn::ListModel
+{
+	std::vector<std::string> values{};
+public:
+	string_list_model(const char* entries[], const int count)
+	{
+		for (auto i = 0; i < count; ++i) {
+			if (entries != nullptr && entries[i] != nullptr)
+				values.emplace_back(entries[i]);
+		}
+	}
+
+	int getNumberOfElements() override
+	{
+		return static_cast<int>(values.size());
+	}
+
+	int add_element(const char* elem) override
+	{
+		values.emplace_back(elem);
+		return 0;
+	}
+
+	void clear_elements() override
+	{
+		values.clear();
+	}
+
+	std::string getElementAt(int i) override
+	{
+		if (i < 0 || i >= static_cast<int>(values.size()))
+			return "---";
+		return values[i];
+	}
+};
+
+static string_list_model serial_ports_list(nullptr, 0);
 
 class DriveTypeActionListener : public gcn::ActionListener
 {
@@ -188,7 +229,7 @@ public:
 
 static DriveTypeActionListener* driveTypeActionListener;
 
-class DriverActionListener : public gcn::ActionListener
+class DFxCheckActionListener : public gcn::ActionListener
 {
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
@@ -196,21 +237,25 @@ public:
 		if (actionEvent.getSource() == cboDBDriver)
 		{
 			changed_prefs.drawbridge_driver = cboDBDriver->getSelected();
-			drawbridge_update_profiles(&changed_prefs);
 		}
-		RefreshPanelFloppy();
-		RefreshPanelQuickstart();
-	}
-};
-
-static DriverActionListener* driverActionListener;
-
-class DFxCheckActionListener : public gcn::ActionListener
-{
-public:
-	void action(const gcn::ActionEvent& actionEvent) override
-	{
-		if (actionEvent.getSource() == chkDBSmartSpeed)
+		else if (actionEvent.getSource() == chkDBSerialAuto)
+		{
+			changed_prefs.drawbridge_serial_auto = chkDBSerialAuto->isSelected();
+		}
+		else if (actionEvent.getSource() == cboDBSerialPort)
+		{
+			const auto selected = cboDBSerialPort->getSelected();
+			if (selected == 0)
+			{
+				changed_prefs.drawbridge_serial_port[0] = 0;
+			}
+			else
+			{
+				const auto port_name = serial_ports_list.getElementAt(selected);
+				_sntprintf(changed_prefs.drawbridge_serial_port, 256, "%s", port_name.c_str());
+			}
+		}
+		else if (actionEvent.getSource() == chkDBSmartSpeed)
 		{
 			changed_prefs.drawbridge_smartspeed = chkDBSmartSpeed->isSelected();
 		}
@@ -464,9 +509,14 @@ void InitPanelFloppy(const config_category& category)
 	int i;
 	const auto textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER;
 
+	serial_ports_list.clear_elements();
+	serial_ports_list.add_element("none");
+	for(const auto& i : serial_ports) {
+		serial_ports_list.add_element(i.c_str());
+	}
+
 	dfxCheckActionListener = new DFxCheckActionListener();
 	driveTypeActionListener = new DriveTypeActionListener();
-	driverActionListener = new DriverActionListener();
 	dfxButtonActionListener = new DFxButtonActionListener();
 	diskFileActionListener = new DiskFileActionListener();
 	driveSpeedSliderActionListener = new DriveSpeedSliderActionListener();
@@ -553,7 +603,18 @@ void InitPanelFloppy(const config_category& category)
 	cboDBDriver->setSize(350, cboDBDriver->getHeight());
 	cboDBDriver->setBaseColor(gui_baseCol);
 	cboDBDriver->setBackgroundColor(colTextboxBackground);
-	cboDBDriver->addActionListener(driverActionListener);
+	cboDBDriver->addActionListener(dfxCheckActionListener);
+
+	chkDBSerialAuto = new gcn::CheckBox("DrawBridge: Auto-Detect serial port");
+	chkDBSerialAuto->setId("chkDBSerialAuto");
+	chkDBSerialAuto->addActionListener(dfxCheckActionListener);
+
+	cboDBSerialPort = new gcn::DropDown(&serial_ports_list);
+	cboDBSerialPort->setSize(200, cboDBSerialPort->getHeight());
+	cboDBSerialPort->setBaseColor(gui_baseCol);
+	cboDBSerialPort->setBackgroundColor(colTextboxBackground);
+	cboDBSerialPort->setId("cboDBSerialPort");
+	cboDBSerialPort->addActionListener(dfxCheckActionListener);
 
 	chkDBSmartSpeed = new gcn::CheckBox("DrawBridge: Smart Speed (Dynamically switch on Turbo)");
 	chkDBSmartSpeed->setId("chkDBSmartSpeed");
@@ -600,12 +661,14 @@ void InitPanelFloppy(const config_category& category)
 	grpDrawBridge = new gcn::Window("DrawBridge");
 	grpDrawBridge->setPosition(posX, posY);
 	grpDrawBridge->add(lblDBDriver, 10, 10);
-	grpDrawBridge->add(cboDBDriver, lblDBDriver->getX() + lblDBDriver->getWidth() + 8, 10);
-	grpDrawBridge->add(chkDBSmartSpeed, 10, 40);
-	grpDrawBridge->add(chkDBAutoCache, 10, 70);
-	grpDrawBridge->add(chkDBCableDriveB, 10, 100);
+	grpDrawBridge->add(cboDBDriver, lblDBDriver->getX() + lblDBDriver->getWidth() + 8, lblDBDriver->getY());
+	grpDrawBridge->add(chkDBSerialAuto, lblDBDriver->getX(), lblDBDriver->getY() + lblDBDriver->getHeight() + DISTANCE_NEXT_Y);
+	grpDrawBridge->add(cboDBSerialPort, chkDBSerialAuto->getX() + chkDBSerialAuto->getWidth() + DISTANCE_NEXT_X, chkDBSerialAuto->getY());
+	grpDrawBridge->add(chkDBSmartSpeed, lblDBDriver->getX(), chkDBSerialAuto->getY() + chkDBSerialAuto->getHeight() + DISTANCE_NEXT_Y);
+	grpDrawBridge->add(chkDBAutoCache, lblDBDriver->getX(), chkDBSmartSpeed->getY() + chkDBSmartSpeed->getHeight() + DISTANCE_NEXT_Y);
+	grpDrawBridge->add(chkDBCableDriveB, lblDBDriver->getX(), chkDBAutoCache->getY() + chkDBAutoCache->getHeight() + DISTANCE_NEXT_Y);
 	grpDrawBridge->setMovable(false);
-	grpDrawBridge->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, TITLEBAR_HEIGHT + 100 + chkDBCableDriveB->getHeight() + DISTANCE_NEXT_Y);
+	grpDrawBridge->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, TITLEBAR_HEIGHT + chkDBCableDriveB->getY() + chkDBCableDriveB->getHeight() + DISTANCE_NEXT_Y);
 	grpDrawBridge->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpDrawBridge->setBaseColor(gui_baseCol);
 
@@ -638,6 +701,8 @@ void ExitPanelFloppy()
 	delete cmdCreateHDDisk;
 	delete lblDBDriver;
 	delete cboDBDriver;
+	delete chkDBSerialAuto;
+	delete cboDBSerialPort;
 	delete chkDBSmartSpeed;
 	delete chkDBAutoCache;
 	delete chkDBCableDriveB;
@@ -645,7 +710,6 @@ void ExitPanelFloppy()
 
 	delete dfxCheckActionListener;
 	delete driveTypeActionListener;
-	delete driverActionListener;
 	delete dfxButtonActionListener;
 	delete diskFileActionListener;
 	delete driveSpeedSliderActionListener;
@@ -721,6 +785,8 @@ void RefreshPanelFloppy()
 
 	lblDBDriver->setEnabled(false);
 	cboDBDriver->setEnabled(false);
+	chkDBSerialAuto->setEnabled(false);
+	cboDBSerialPort->setEnabled(false);
 	chkDBAutoCache->setEnabled(false);
 	chkDBSmartSpeed->setEnabled(false);
 	chkDBCableDriveB->setEnabled(false);
@@ -732,20 +798,40 @@ void RefreshPanelFloppy()
 			lblDBDriver->setEnabled(true);
 			cboDBDriver->setEnabled(true);
 			cboDBDriver->setSelected(changed_prefs.drawbridge_driver);
+			chkDBSerialAuto->setSelected(changed_prefs.drawbridge_serial_auto);
 			chkDBAutoCache->setSelected(changed_prefs.drawbridge_autocache);
 			chkDBSmartSpeed->setSelected(changed_prefs.drawbridge_smartspeed);
 			chkDBCableDriveB->setSelected(changed_prefs.drawbridge_connected_drive_b);
 
 			if (!driver_list.empty())
 			{
-				unsigned int config_options = driver_list[cboDBDriver->getSelected()].configOptions;
+				const unsigned int config_options = driver_list[cboDBDriver->getSelected()].configOptions;
 
+				if (config_options & FloppyBridgeAPI::ConfigOption_AutoDetectComport)
+					chkDBSerialAuto->setEnabled(true);
+				if (config_options & FloppyBridgeAPI::ConfigOption_ComPort)
+					cboDBSerialPort->setEnabled(true);
 				if (config_options & FloppyBridgeAPI::ConfigOption_AutoCache)
 					chkDBAutoCache->setEnabled(true);
 				if (config_options & FloppyBridgeAPI::ConfigOption_SmartSpeed)
 					chkDBSmartSpeed->setEnabled(true);
 				if (config_options & FloppyBridgeAPI::ConfigOption_DriveABCable)
 					chkDBCableDriveB->setEnabled(true);
+
+				cboDBSerialPort->setSelected(0);
+				if (changed_prefs.drawbridge_serial_port[0])
+				{
+					const auto serial_name = std::string(changed_prefs.drawbridge_serial_port);
+					for (int s = 0; s < serial_ports_list.getNumberOfElements(); s++)
+					{
+						if (serial_ports_list.getElementAt(s) == serial_name)
+						{
+							cboDBSerialPort->setSelected(s);
+							break;
+						}
+					}
+				}
+				cboDBSerialPort->setEnabled(!chkDBSerialAuto->isSelected());
 			}
 			break;
 		}
