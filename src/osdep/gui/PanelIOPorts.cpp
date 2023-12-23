@@ -46,7 +46,7 @@ public:
 
 	int getNumberOfElements() override
 	{
-		return int(values.size());
+		return static_cast<int>(values.size());
 	}
 
 	int add_element(const char* elem) override
@@ -369,7 +369,7 @@ void RefreshPanelIO()
 	cboSerialPort->setSelected(0);
 	if (changed_prefs.sername[0])
 	{
-		const auto serial_name = string(changed_prefs.sername);
+		const auto serial_name = std::string(changed_prefs.sername);
 		for (int i = 0; i < serial_ports_list.getNumberOfElements(); i++)
 		{
 			if (serial_ports_list.getElementAt(i) == serial_name)

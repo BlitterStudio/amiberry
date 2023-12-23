@@ -458,6 +458,26 @@ static void gui_to_prefs(void)
 	/* filesys hack */
 	currprefs.mountitems = changed_prefs.mountitems;
 	memcpy(&currprefs.mountconfig, &changed_prefs.mountconfig, MOUNT_CONFIG_SIZE * sizeof(struct uaedev_config_info));
+
+#ifdef AMIBERRY
+	if (currprefs.drawbridge_driver != changed_prefs.drawbridge_driver ||
+		currprefs.drawbridge_serial_auto != changed_prefs.drawbridge_serial_auto ||
+		_tcsicmp(currprefs.drawbridge_serial_port, changed_prefs.drawbridge_serial_port) != 0 ||
+		currprefs.drawbridge_smartspeed != changed_prefs.drawbridge_smartspeed ||
+		currprefs.drawbridge_autocache != changed_prefs.drawbridge_autocache ||
+		currprefs.drawbridge_connected_drive_b != changed_prefs.drawbridge_connected_drive_b)
+	{
+		currprefs.drawbridge_driver = changed_prefs.drawbridge_driver;
+		currprefs.drawbridge_serial_auto = changed_prefs.drawbridge_serial_auto;
+		_tcscpy(currprefs.drawbridge_serial_port, changed_prefs.drawbridge_serial_port);
+		currprefs.drawbridge_smartspeed = changed_prefs.drawbridge_smartspeed;
+		currprefs.drawbridge_autocache = changed_prefs.drawbridge_autocache;
+		currprefs.drawbridge_connected_drive_b = changed_prefs.drawbridge_connected_drive_b;
+		if (quit_program != UAE_QUIT)
+			drawbridge_update_profiles(&currprefs);
+	}
+#endif
+
 	fixup_prefs(&changed_prefs, true);
 	update_win_fs_mode(0, &changed_prefs);
 }

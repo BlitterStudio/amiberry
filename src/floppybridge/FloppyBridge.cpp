@@ -99,7 +99,7 @@ bool BridgeConfig::fromString(char* serialisedOptions) {
     // Parse
     if (params.size() < 5) return false;
 
-    // Validate its for this bridge
+    // Validate it's for this bridge
     bridgeIndex = atoi(params[0].c_str());
 
     unsigned int i = atoi(params[1].c_str());
