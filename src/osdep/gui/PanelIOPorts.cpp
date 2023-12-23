@@ -1,5 +1,4 @@
 #include <guisan.hpp>
-#include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include "SelectorEntry.hpp"
 
@@ -229,7 +228,7 @@ void InitPanelIO(const config_category& category)
 	grpParallelPort->add(chkSamplerStereo, DISTANCE_BORDER, posY);
 	grpParallelPort->setMovable(false);
 	grpParallelPort->setTitleBarHeight(TITLEBAR_HEIGHT);
-	grpParallelPort->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, TITLEBAR_HEIGHT + chkSamplerStereo->getY() + chkSamplerStereo->getHeight() + DISTANCE_NEXT_Y);
+	grpParallelPort->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, TITLEBAR_HEIGHT + chkSamplerStereo->getY() + chkSamplerStereo->getHeight() + DISTANCE_NEXT_Y * 3);
 	grpParallelPort->setBaseColor(gui_baseCol);
 	category.panel->add(grpParallelPort);
 
@@ -272,7 +271,7 @@ void InitPanelIO(const config_category& category)
 	grpSerialPort->add(chkSerialStatusRi, chkSerialStatus->getWidth() + chkSerialStatus->getX() + DISTANCE_NEXT_X, posY);
 	grpSerialPort->setMovable(false);
 	grpSerialPort->setTitleBarHeight(TITLEBAR_HEIGHT);
-	grpSerialPort->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, TITLEBAR_HEIGHT +chkSerialStatus->getY() + chkSerialStatus->getHeight() + DISTANCE_NEXT_Y);
+	grpSerialPort->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, TITLEBAR_HEIGHT + chkSerialStatus->getY() + chkSerialStatus->getHeight() + DISTANCE_NEXT_Y * 4);
 	grpSerialPort->setBaseColor(gui_baseCol);
 	category.panel->add(grpSerialPort, DISTANCE_BORDER, grpParallelPort->getY() + grpParallelPort->getHeight() + DISTANCE_NEXT_Y);
 
@@ -308,7 +307,7 @@ void InitPanelIO(const config_category& category)
 	grpMidi->add(chkMidiRoute, DISTANCE_BORDER, posY);
 	grpMidi->setMovable(false);
 	grpMidi->setTitleBarHeight(TITLEBAR_HEIGHT);
-	grpMidi->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, TITLEBAR_HEIGHT + chkMidiRoute->getY() + chkMidiRoute->getHeight() + DISTANCE_NEXT_Y);
+	grpMidi->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, TITLEBAR_HEIGHT + chkMidiRoute->getY() + chkMidiRoute->getHeight() + DISTANCE_NEXT_Y * 4);
 	grpMidi->setBaseColor(gui_baseCol);
 	category.panel->add(grpMidi, DISTANCE_BORDER, grpSerialPort->getY() + grpSerialPort->getHeight() + DISTANCE_NEXT_Y);
 

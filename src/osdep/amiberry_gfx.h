@@ -11,7 +11,7 @@
 #define RTG_MODE_INTEGER_SCALE 3
 
 #define GUI_WIDTH  800
-#define GUI_HEIGHT 600
+#define GUI_HEIGHT 720
 
 #define DISPLAY_SIGNAL_SETUP 				1
 #define DISPLAY_SIGNAL_SUBSHUTDOWN 			2
@@ -150,8 +150,6 @@ extern void update_win_fs_mode(int monid, struct uae_prefs* p);
 extern void gfx_lock(void);
 extern void gfx_unlock(void);
 
-void DX_Fill(struct AmigaMonitor*, int dstx, int dsty, int width, int height, uae_u32 color);
-void DX_Blit(int x, int y, int w, int h);
 struct MultiDisplay* getdisplay(struct uae_prefs* p, int monid);
 extern int getrefreshrate(int monid, int width, int height);
 void SDL2_guimode(int monid, int guion);

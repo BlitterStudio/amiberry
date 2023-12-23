@@ -274,7 +274,7 @@ void cap_fps(Uint64 start)
 	else
 		d = floor(20.000f - elapsed_ms);
 
-	if( d > 0.0f ) SDL_Delay( d );
+	if( d > 0.0f ) SDL_Delay( Uint32(d) );
 }
 
 void update_gui_screen()
@@ -298,48 +298,6 @@ void update_gui_screen()
 	SDL_RenderPresent(sdl_renderer);
 #endif
 }
-
-#ifdef USE_DISPMANX
-#else
-void setup_cursor()
-{
-	cursor_surface = SDL_LoadBMP(prefix_with_data_path("cursor.bmp").c_str());
-	if (!cursor_surface)
-	{
-		// Load failed. Log error.
-		write_log("Could not load cursor bitmap: %s\n", SDL_GetError());
-		return;
-	}
-	
-	auto* formatted_surface = SDL_ConvertSurfaceFormat(cursor_surface, SDL_PIXELFORMAT_RGBA8888, 0);
-	if (formatted_surface != nullptr)
-	{
-		SDL_FreeSurface(cursor_surface);
-
-		if (cursor != nullptr)
-		{
-			SDL_FreeCursor(cursor);
-			cursor = nullptr;
-		}
-		
-		// Create new cursor with surface
-		cursor = SDL_CreateColorCursor(formatted_surface, 0, 0);
-		SDL_FreeSurface(formatted_surface);
-	}
-
-	if (!cursor)
-	{
-		// Cursor creation failed. Log error and free surface
-		write_log("Could not create color cursor: %s\n", SDL_GetError());
-		cursor_surface = nullptr;
-		formatted_surface = nullptr;
-		SDL_SetCursor(SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW));
-		return;
-	}
-
-	SDL_SetCursor(cursor);	
-}
-#endif
 
 void init_dispmanx_gui()
 {
@@ -600,8 +558,6 @@ void amiberry_gui_init()
 
 void amiberry_gui_halt()
 {
-	AmigaMonitor* mon = &AMonitors[0];
-	
 	delete uae_gui;
 	uae_gui = nullptr;
 	delete gui_imageLoader;
@@ -640,11 +596,6 @@ void amiberry_gui_halt()
 		vc_dispmanx_resource_delete(black_gui_resource);
 		black_gui_resource = 0;
 	}
-	//if (displayHandle)
-	//{
-	//	vc_dispmanx_display_close(displayHandle);
-	//	displayHandle = 0;
-	//}
 #elif USE_OPENGL
 	if (cursor != nullptr)
 	{
@@ -1241,6 +1192,7 @@ void gui_widgets_init()
 	gui_top = new gcn::Container();
 	gui_top->setDimension(gcn::Rectangle(0, 0, GUI_WIDTH, GUI_HEIGHT));
 	gui_top->setBaseColor(gui_baseCol);
+	gui_top->setBackgroundColor(gui_baseCol);
 	uae_gui->setTop(gui_top);
 
 #ifndef USE_OPENGL
@@ -1314,30 +1266,30 @@ void gui_widgets_init()
 	//--------------------------------------------------
 	// Create selector entries
 	//--------------------------------------------------
-	const auto workAreaHeight = GUI_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10;
-	const auto selectorWidth = 150;
-	const auto selectorHeight = 24;
+	const auto workAreaHeight = GUI_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - DISTANCE_NEXT_Y;
 	selectors = new gcn::Container();
 	selectors->setBorderSize(0);
 	selectors->setBaseColor(colSelectorInactive);
+	selectors->setBackgroundColor(gui_baseCol);
 
-	const auto selectorScrollAreaWidth = selectorWidth + 12;
+	const auto selectorScrollAreaWidth = SELECTOR_WIDTH + 2;
 	selectorsScrollArea = new gcn::ScrollArea();
 	selectorsScrollArea->setContent(selectors);
 	selectorsScrollArea->setBaseColor(colSelectorInactive);
+	selectorsScrollArea->setBackgroundColor(gui_baseCol);
 	selectorsScrollArea->setSize(selectorScrollAreaWidth, workAreaHeight);
 	selectorsScrollArea->setBorderSize(1);
 	
-	const auto panelStartX = DISTANCE_BORDER + selectorsScrollArea->getWidth() + 2 + 11;
+	const auto panelStartX = DISTANCE_BORDER + selectorsScrollArea->getWidth() + DISTANCE_BORDER;
 
-	double selectorsHeight = 0.0;
+	int selectorsHeight = 0;
 	panelFocusListener = new PanelFocusListener();
 	for (i = 0; categories[i].category != nullptr; ++i)
 	{
 		categories[i].selector = new gcn::SelectorEntry(categories[i].category, prefix_with_data_path(categories[i].imagepath));
 		categories[i].selector->setActiveColor(colSelectorActive);
 		categories[i].selector->setInactiveColor(colSelectorInactive);
-		categories[i].selector->setSize(selectorWidth, selectorHeight);
+		categories[i].selector->setSize(SELECTOR_WIDTH, SELECTOR_HEIGHT);
 		categories[i].selector->addFocusListener(panelFocusListener);
 
 		categories[i].panel = new gcn::Container();
@@ -1350,7 +1302,7 @@ void gui_widgets_init()
 		selectorsHeight += categories[i].selector->getHeight();
 	}
 
-	selectors->setSize(150, selectorsHeight);
+	selectors->setSize(SELECTOR_WIDTH, selectorsHeight);
 
 	//--------------------------------------------------
 	// Initialize panels
@@ -1364,9 +1316,7 @@ void gui_widgets_init()
 	//--------------------------------------------------
 	// Place everything on main form
 	//--------------------------------------------------
-#ifndef ANDROID
 	gui_top->add(cmdShutdown, DISTANCE_BORDER, GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
-#endif
 	gui_top->add(cmdQuit, DISTANCE_BORDER + BUTTON_WIDTH + DISTANCE_NEXT_X,
 				 GUI_HEIGHT - DISTANCE_BORDER - BUTTON_HEIGHT);
 	gui_top->add(cmdRestart, DISTANCE_BORDER + 2 * BUTTON_WIDTH + 2 * DISTANCE_NEXT_X,
@@ -1379,7 +1329,7 @@ void gui_widgets_init()
 
 	gui_top->add(selectorsScrollArea, DISTANCE_BORDER + 1, DISTANCE_BORDER + 1);
 
-	for (i = 0, yPos = 0; categories[i].category != nullptr; ++i, yPos += 24)
+	for (i = 0, yPos = 0; categories[i].category != nullptr; ++i, yPos += SELECTOR_HEIGHT)
 	{
 		selectors->add(categories[i].selector, 0, yPos);
 		gui_top->add(categories[i].panel, panelStartX, DISTANCE_BORDER + 1);

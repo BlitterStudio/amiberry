@@ -1,8 +1,4 @@
-#include <cstdio>
-#include <cstdlib>
-
 #include <guisan.hpp>
-#include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include "SelectorEntry.hpp"
 
@@ -173,7 +169,12 @@ public:
 			changed_prefs.borderless = chkBorderless->isSelected();
 
 		else if (actionEvent.getSource() == chkVsync)
-			changed_prefs.gfx_apmode[0].gfx_vsync = chkVsync->isSelected();
+		{
+			if (chkVsync->isSelected())
+				changed_prefs.gfx_apmode[0].gfx_vsync = 2;
+			else
+				changed_prefs.gfx_apmode[0].gfx_vsync = 0;
+		}
 
 		else if (actionEvent.getSource() == sldHOffset)
 		{
@@ -554,7 +555,7 @@ void InitPanelDisplay(const config_category& category)
 	grpAmigaScreen->add(lblVOffsetValue, sldVOffset->getX() + sldVOffset->getWidth() + 8, posY + 2);
 
 	grpAmigaScreen->setMovable(false);
-	grpAmigaScreen->setSize(chkVsync->getX() + chkVsync->getWidth() + DISTANCE_BORDER, TITLEBAR_HEIGHT + lblVOffset->getY() + lblVOffset->getHeight() + DISTANCE_NEXT_Y);
+	grpAmigaScreen->setSize(chkVsync->getX() + chkVsync->getWidth() + DISTANCE_BORDER + DISTANCE_NEXT_X * 3, TITLEBAR_HEIGHT + lblVOffset->getY() + lblVOffset->getHeight() + DISTANCE_NEXT_Y);
 	grpAmigaScreen->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpAmigaScreen->setBaseColor(gui_baseCol);
 	category.panel->add(grpAmigaScreen);
@@ -565,7 +566,7 @@ void InitPanelDisplay(const config_category& category)
 	grpCentering->setMovable(false);
 	grpCentering->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpCentering->setBaseColor(gui_baseCol);
-	grpCentering->setSize(chkHorizontal->getX() + chkHorizontal->getWidth() + DISTANCE_BORDER * 5, TITLEBAR_HEIGHT + chkVertical->getY() + chkVertical->getHeight() + DISTANCE_NEXT_Y);
+	grpCentering->setSize(chkHorizontal->getX() + chkHorizontal->getWidth() + DISTANCE_BORDER * 8, TITLEBAR_HEIGHT + chkVertical->getY() + chkVertical->getHeight() + DISTANCE_NEXT_Y);
 	grpCentering->setPosition(category.panel->getWidth() - DISTANCE_BORDER - grpCentering->getWidth(), DISTANCE_BORDER);
 	category.panel->add(grpCentering);	
 	posY = DISTANCE_BORDER + grpAmigaScreen->getHeight() + DISTANCE_NEXT_Y;
@@ -796,7 +797,7 @@ void RefreshPanelDisplay()
 	}
 #endif
 	chkBorderless->setSelected(changed_prefs.borderless);
-	chkVsync->setSelected(changed_prefs.gfx_apmode[0].gfx_vsync);
+	chkVsync->setSelected(changed_prefs.gfx_apmode[0].gfx_vsync > 0);
 
 	sldHOffset->setValue(changed_prefs.gfx_horizontal_offset);
 	lblHOffsetValue->setCaption(std::to_string(changed_prefs.gfx_horizontal_offset));

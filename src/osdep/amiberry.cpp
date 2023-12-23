@@ -314,13 +314,13 @@ void sleep_micros (int ms)
 
 void sleep_millis(int ms)
 {
-	usleep(ms * 1000);
+	SDL_Delay(ms);
 }
 
 int sleep_millis_main(int ms)
 {
 	const auto start = read_processor_time();
-	usleep(ms * 1000);
+	SDL_Delay(ms);
 	idletime += read_processor_time() - start;
 	return 0;
 }
@@ -1800,7 +1800,6 @@ void target_fixup_options(struct uae_prefs* p)
 	}
 	
 #ifdef AMIBERRY
-	p->rtgboards[0].rtgmem_type = GFXBOARD_UAE_Z3;
 	if (z3_base_adr == Z3BASE_REAL)
 	{
 		// map Z3 memory at real address (0x40000000)

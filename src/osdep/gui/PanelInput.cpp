@@ -1,8 +1,5 @@
 #include <guisan.hpp>
-#include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
-#include <guisan/sdl/sdltruetypefont.hpp>
-
 #include "SelectorEntry.hpp"
 
 #include "sysdeps.h"
@@ -563,7 +560,7 @@ void InitPanelInput(const config_category& category)
 	category.panel->add(lblPort0mousemode, DISTANCE_BORDER, posY);
 	category.panel->add(joysmm[0], lblPort0mousemode->getX() + lblPort0mousemode->getWidth() + 8, posY);
 
-	category.panel->add(lblDigitalJoyMouseSpeed, joysmm[0]->getX() + joysmm[0]->getWidth() + DISTANCE_NEXT_X * 2, posY);
+	category.panel->add(lblDigitalJoyMouseSpeed, joysmm[0]->getX() + joysmm[0]->getWidth() + DISTANCE_NEXT_X, posY);
 	category.panel->add(sldDigitalJoyMouseSpeed, lblDigitalJoyMouseSpeed->getX() + lblDigitalJoyMouseSpeed->getWidth() + 8, posY);
 	category.panel->add(lblDigitalJoyMouseSpeedInfo, sldDigitalJoyMouseSpeed->getX() + sldDigitalJoyMouseSpeed->getWidth() + 8, posY);
 	posY += lblDigitalJoyMouseSpeed->getHeight() + DISTANCE_NEXT_Y;
@@ -571,7 +568,7 @@ void InitPanelInput(const config_category& category)
 	category.panel->add(lblPort1mousemode, DISTANCE_BORDER, posY);
 	category.panel->add(joysmm[1], lblPort1mousemode->getX() + lblPort1mousemode->getWidth() + 8, posY);
 
-	category.panel->add(lblAnalogJoyMouseSpeed, joysmm[1]->getX() + joysmm[1]->getWidth() + DISTANCE_NEXT_X * 2, posY);
+	category.panel->add(lblAnalogJoyMouseSpeed, joysmm[1]->getX() + joysmm[1]->getWidth() + DISTANCE_NEXT_X, posY);
 	category.panel->add(sldAnalogJoyMouseSpeed, sldDigitalJoyMouseSpeed->getX(), posY);
 	category.panel->add(lblAnalogJoyMouseSpeedInfo, sldAnalogJoyMouseSpeed->getX() + sldAnalogJoyMouseSpeed->getWidth() + 8, posY);
 	posY += lblAnalogJoyMouseSpeed->getHeight() + DISTANCE_NEXT_Y;
@@ -579,7 +576,7 @@ void InitPanelInput(const config_category& category)
 	category.panel->add(lblAutofireRate, DISTANCE_BORDER, posY);
 	category.panel->add(cboAutofireRate, DISTANCE_BORDER + lblAutofireRate->getWidth() + 8, posY);
 
-	category.panel->add(lblMouseSpeed, joysmm[1]->getX() + joysmm[1]->getWidth() + DISTANCE_NEXT_X * 2, posY);
+	category.panel->add(lblMouseSpeed, joysmm[1]->getX() + joysmm[1]->getWidth() + DISTANCE_NEXT_X, posY);
 	category.panel->add(sldMouseSpeed, sldAnalogJoyMouseSpeed->getX(), posY);
 	category.panel->add(lblMouseSpeedInfo, sldMouseSpeed->getX() + sldMouseSpeed->getWidth() + 8, posY);
 	posY += lblMouseSpeed->getHeight() + DISTANCE_NEXT_Y * 2;

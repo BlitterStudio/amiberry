@@ -2,10 +2,8 @@
 #include <cstdio>
 
 #include <guisan.hpp>
-#include <SDL_ttf.h>
 #include <SDL_image.h>
 #include <guisan/sdl.hpp>
-#include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
 
 #include "sysdeps.h"
@@ -217,7 +215,7 @@ void InitPanelSavestate(const config_category& category)
 
 	lblTimestamp = new gcn::Label("Thu Aug 23 14:55:02 2001");
 
-	grpNumber = new gcn::Window("Number");
+	grpNumber = new gcn::Window("Slot");
 	grpNumber->add(optState0, 10, 10);
 	grpNumber->add(optState1, optState0->getX(), optState0->getY() + optState0->getHeight() + DISTANCE_NEXT_Y);
 	grpNumber->add(optState2, optState0->getX(), optState1->getY() + optState1->getHeight() + DISTANCE_NEXT_Y);
@@ -234,32 +232,32 @@ void InitPanelSavestate(const config_category& category)
 	grpNumber->add(optState13, optState0->getX(), optState12->getY() + optState12->getHeight() + DISTANCE_NEXT_Y);
 	grpNumber->add(optState14, optState0->getX(), optState13->getY() + optState13->getHeight() + DISTANCE_NEXT_Y);
 	grpNumber->setMovable(false);
-	grpNumber->setSize(BUTTON_WIDTH, optState14->getY() + TITLEBAR_HEIGHT * 2 + DISTANCE_NEXT_Y);
+	grpNumber->setSize(BUTTON_WIDTH - 20, TITLEBAR_HEIGHT + optState14->getY() + optState14->getHeight() + DISTANCE_NEXT_Y);
 	grpNumber->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpNumber->setBaseColor(gui_baseCol);
 
-	grpScreenshot = new gcn::Window("State screen");
+	grpScreenshot = new gcn::Window("State screenshot");
 	grpScreenshot->setMovable(false);
-	grpScreenshot->setSize(464, 410);
+	grpScreenshot->setSize(category.panel->getWidth() - grpNumber->getWidth() - DISTANCE_BORDER * 2 - DISTANCE_NEXT_X, grpNumber->getHeight());
 	grpScreenshot->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpScreenshot->setBaseColor(gui_baseCol);
 
 	cmdLoadState = new gcn::Button("Load State");
 	cmdLoadState->setSize(BUTTON_WIDTH + 10, BUTTON_HEIGHT);
 	cmdLoadState->setBaseColor(gui_baseCol);
-	cmdLoadState->setId("LoadState");
+	cmdLoadState->setId("cmdLoadState");
 	cmdLoadState->addActionListener(savestateActionListener);
 
 	cmdSaveState = new gcn::Button("Save State");
 	cmdSaveState->setSize(BUTTON_WIDTH + 10, BUTTON_HEIGHT);
 	cmdSaveState->setBaseColor(gui_baseCol);
-	cmdSaveState->setId("SaveState");
+	cmdSaveState->setId("cmdSaveState");
 	cmdSaveState->addActionListener(savestateActionListener);
 
 	category.panel->add(grpNumber, DISTANCE_BORDER, DISTANCE_BORDER);
 	category.panel->add(grpScreenshot, grpNumber->getX() + grpNumber->getWidth() + DISTANCE_NEXT_X, DISTANCE_BORDER);
 	category.panel->add(lblTimestamp, grpScreenshot->getX(), grpScreenshot->getY() + grpScreenshot->getHeight() + DISTANCE_NEXT_Y);
-	const auto posY = category.panel->getHeight() - DISTANCE_BORDER - BUTTON_HEIGHT;
+	const auto posY = lblTimestamp->getY() + lblTimestamp->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(cmdLoadState, grpScreenshot->getX(), posY);
 	category.panel->add(cmdSaveState, cmdLoadState->getX() + cmdLoadState->getWidth() + DISTANCE_NEXT_X, posY);
 

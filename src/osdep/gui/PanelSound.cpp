@@ -1,9 +1,7 @@
-#include <stdio.h>
+#include <cstdio>
 
 #include <guisan.hpp>
-#include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
-#include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
 
 #include "sysdeps.h"
@@ -16,7 +14,7 @@ static gcn::Window* grpSound;
 static gcn::RadioButton* optSoundDisabled;
 static gcn::RadioButton* optSoundDisabledEmu;
 static gcn::RadioButton* optSoundEmulated;
-static gcn::RadioButton* optSoundEmulatedBest;
+static gcn::CheckBox* chkAutoSwitching;
 static gcn::Label* lblChannelMode;
 static gcn::DropDown* cboChannelMode;
 static gcn::Label* lblFrequency;
@@ -30,9 +28,6 @@ static gcn::DropDown* cboSeparation;
 static gcn::Label* lblStereoDelay;
 static gcn::DropDown* cboStereoDelay;
 static gcn::Window* grpVolume;
-static gcn::Label* lblMasterVol;
-static gcn::Label* lblMasterVolInfo;
-static gcn::Slider* sldMasterVol;
 static gcn::Label* lblPaulaVol;
 static gcn::Label* lblPaulaVolInfo;
 static gcn::Slider* sldPaulaVol;
@@ -42,6 +37,9 @@ static gcn::Slider* sldCDVol;
 static gcn::Label* lblAHIVol;
 static gcn::Label* lblAHIVolInfo;
 static gcn::Slider* sldAHIVol;
+static gcn::Label* lblMIDIVol;
+static gcn::Label* lblMIDIVolInfo;
+static gcn::Slider* sldMIDIVol;
 static gcn::Window* grpFloppySound;
 static gcn::CheckBox* chkFloppySound;
 static gcn::Label* lblFloppySoundEmpty;
@@ -56,6 +54,8 @@ static gcn::Label* lblSoundBufferSize;
 static gcn::RadioButton* optSoundPull;
 static gcn::RadioButton* optSoundPush;
 static gcn::DropDown* cboSoundcard;
+static gcn::Label* lblSwapChannels;
+static gcn::DropDown* cboSwapChannels;
 
 static int curr_separation_idx;
 static int curr_stereodelay_idx;
@@ -101,6 +101,45 @@ public:
 };
 
 static string_list_model soundcard_list(nullptr, 0);
+
+class SwapChannelsListModel : public gcn::ListModel
+{
+	std::vector<std::string> options{};
+
+public:
+	SwapChannelsListModel()
+	{
+		options.emplace_back("-");
+		options.emplace_back("Paula only");
+		options.emplace_back("AHI only");
+		options.emplace_back("Both");
+	}
+
+	int getNumberOfElements() override
+	{
+		return int(options.size());
+	}
+
+	int add_element(const char* elem) override
+	{
+		options.emplace_back(elem);
+		return 0;
+	}
+
+	void clear_elements() override
+	{
+		options.clear();
+	}
+
+	std::string getElementAt(int i) override
+	{
+		if (i < 0 || i >= static_cast<int>(options.size()))
+			return "---";
+		return options[i];
+	}
+};
+
+static SwapChannelsListModel swap_channels_list;
 
 class ChannelModeListModel : public gcn::ListModel
 {
@@ -374,8 +413,9 @@ public:
 			changed_prefs.produce_sound = 1;
 		else if (actionEvent.getSource() == optSoundEmulated)
 			changed_prefs.produce_sound = 2;
-		else if (actionEvent.getSource() == optSoundEmulatedBest)
-			changed_prefs.produce_sound = 3;
+
+		else if (actionEvent.getSource() == chkAutoSwitching)
+			changed_prefs.sound_auto = chkAutoSwitching->isSelected();
 
 		else if (actionEvent.getSource() == cboChannelMode)
 			changed_prefs.sound_stereo = cboChannelMode->getSelected();
@@ -398,6 +438,31 @@ public:
 				break;
 			case 4:
 				changed_prefs.sound_freq = 48000;
+				break;
+			default:
+				break;
+			}
+		}
+
+		else if (actionEvent.getSource() == cboSwapChannels)
+		{
+			switch (cboSwapChannels->getSelected())
+			{
+			case 0:
+				changed_prefs.sound_stereo_swap_paula = false;
+				changed_prefs.sound_stereo_swap_ahi = false;
+				break;
+			case 1:
+				changed_prefs.sound_stereo_swap_paula = true;
+				changed_prefs.sound_stereo_swap_ahi = false;
+				break;
+			case 2:
+				changed_prefs.sound_stereo_swap_paula = false;
+				changed_prefs.sound_stereo_swap_ahi = true;
+				break;
+			case 3:
+				changed_prefs.sound_stereo_swap_paula = true;
+				changed_prefs.sound_stereo_swap_ahi = true;
 				break;
 			default:
 				break;
@@ -457,12 +522,6 @@ public:
 					changed_prefs.sound_mixed_stereo_delay = -1;
 			}
 		}
-		else if (actionEvent.getSource() == sldMasterVol)
-		{
-			const auto newvol = 100 - static_cast<int>(sldMasterVol->getValue());
-			if (changed_prefs.sound_volume_master != newvol)
-				changed_prefs.sound_volume_master = newvol;
-		}	
 		else if (actionEvent.getSource() == sldPaulaVol)
 		{
 			const auto newvol = 100 - static_cast<int>(sldPaulaVol->getValue());
@@ -477,9 +536,15 @@ public:
 		}
 		else if (actionEvent.getSource() == sldAHIVol)
 		{
-		const auto newvol = 100 - static_cast<int>(sldAHIVol->getValue());
-		if (changed_prefs.sound_volume_board != newvol)
-			changed_prefs.sound_volume_board = newvol;
+			const auto newvol = 100 - static_cast<int>(sldAHIVol->getValue());
+			if (changed_prefs.sound_volume_board != newvol)
+				changed_prefs.sound_volume_board = newvol;
+		}
+		else if (actionEvent.getSource() == sldMIDIVol)
+		{
+			const auto newvol = 100 - static_cast<int>(sldMIDIVol->getValue());
+			if (changed_prefs.sound_volume_midi != newvol)
+				changed_prefs.sound_volume_midi = newvol;
 		}
 		else if (actionEvent.getSource() == chkFloppySound)
 		{
@@ -566,23 +631,32 @@ void InitPanelSound(const config_category& category)
 	optSoundEmulated->setId("sndEmulate");
 	optSoundEmulated->addActionListener(sound_action_listener);
 
-	optSoundEmulatedBest = new gcn::RadioButton("Enabled, most accurate", "radiosoundgroup");
-	optSoundEmulatedBest->setId("sndEmuBest");
-	optSoundEmulatedBest->addActionListener(sound_action_listener);
+	chkAutoSwitching = new gcn::CheckBox("Automatic switching");
+	chkAutoSwitching->setId("chkAutoSwitching");
+	chkAutoSwitching->addActionListener(sound_action_listener);
 
 	lblFrequency = new gcn::Label("Frequency:");
 	lblFrequency->setAlignment(gcn::Graphics::RIGHT);
 	cboFrequency = new gcn::DropDown(&frequency_type_list);
-	cboFrequency->setSize(150, cboFrequency->getHeight());
+	cboFrequency->setSize(90, cboFrequency->getHeight());
 	cboFrequency->setBaseColor(gui_baseCol);
 	cboFrequency->setBackgroundColor(colTextboxBackground);
 	cboFrequency->setId("cboFrequency");
 	cboFrequency->addActionListener(sound_action_listener);
 
+	lblSwapChannels = new gcn::Label("Swap channels:");
+	lblSwapChannels->setAlignment(gcn::Graphics::RIGHT);
+	cboSwapChannels = new gcn::DropDown(&swap_channels_list);
+	cboSwapChannels->setSize(95, cboSwapChannels->getHeight());
+	cboSwapChannels->setBaseColor(gui_baseCol);
+	cboSwapChannels->setBackgroundColor(colTextboxBackground);
+	cboSwapChannels->setId("cboSwapChannels");
+	cboSwapChannels->addActionListener(sound_action_listener);
+
 	lblChannelMode = new gcn::Label("Channel mode:");
 	lblChannelMode->setAlignment(gcn::Graphics::RIGHT);
 	cboChannelMode = new gcn::DropDown(&channel_mode_list);
-	cboChannelMode->setSize(150, cboChannelMode->getHeight());
+	cboChannelMode->setSize(200, cboChannelMode->getHeight());
 	cboChannelMode->setBaseColor(gui_baseCol);
 	cboChannelMode->setBackgroundColor(colTextboxBackground);
 	cboChannelMode->setId("cboChannelMode");
@@ -624,17 +698,6 @@ void InitPanelSound(const config_category& category)
 	cboStereoDelay->setId("cboStereoDelay");
 	cboStereoDelay->addActionListener(sound_action_listener);
 
-	lblMasterVol = new gcn::Label("Master Volume:");
-	lblMasterVol->setAlignment(gcn::Graphics::RIGHT);
-	sldMasterVol = new gcn::Slider(0, 100);
-	sldMasterVol->setSize(150, SLIDER_HEIGHT);
-	sldMasterVol->setBaseColor(gui_baseCol);
-	sldMasterVol->setMarkerLength(20);
-	sldMasterVol->setStepLength(10);
-	sldMasterVol->setId("sldMasterVol");
-	sldMasterVol->addActionListener(sound_action_listener);
-	lblMasterVolInfo = new gcn::Label("100 %");
-	
 	lblPaulaVol = new gcn::Label("Paula Volume:");
 	lblPaulaVol->setAlignment(gcn::Graphics::RIGHT);
 	sldPaulaVol = new gcn::Slider(0, 100);
@@ -655,7 +718,7 @@ void InitPanelSound(const config_category& category)
 	sldCDVol->setStepLength(10);
 	sldCDVol->setId("sldCDVol");
 	sldCDVol->addActionListener(sound_action_listener);
-	lblCDVolInfo = new gcn::Label("80 %");
+	lblCDVolInfo = new gcn::Label("100 %");
 
 	lblAHIVol = new gcn::Label("AHI Volume:");
 	lblAHIVol->setAlignment(gcn::Graphics::RIGHT);
@@ -667,7 +730,18 @@ void InitPanelSound(const config_category& category)
 	sldAHIVol->setId("sldAHIVol");
 	sldAHIVol->addActionListener(sound_action_listener);
 	lblAHIVolInfo = new gcn::Label("100 %");
-	
+
+	lblMIDIVol = new gcn::Label("MIDI Volume:");
+	lblMIDIVol->setAlignment(gcn::Graphics::RIGHT);
+	sldMIDIVol = new gcn::Slider(0, 100);
+	sldMIDIVol->setSize(150, SLIDER_HEIGHT);
+	sldMIDIVol->setBaseColor(gui_baseCol);
+	sldMIDIVol->setMarkerLength(20);
+	sldMIDIVol->setStepLength(10);
+	sldMIDIVol->setId("sldMIDIVol");
+	sldMIDIVol->addActionListener(sound_action_listener);
+	lblMIDIVolInfo = new gcn::Label("100 %");
+
 	chkFloppySound = new gcn::CheckBox("Enable floppy drive sound");
 	chkFloppySound->setId("chkFloppySound");
 	chkFloppySound->addActionListener(sound_action_listener);
@@ -713,25 +787,25 @@ void InitPanelSound(const config_category& category)
 	grpSound->add(optSoundDisabled, 10, 10);
 	grpSound->add(optSoundDisabledEmu, optSoundDisabled->getX(), 40);
 	grpSound->add(optSoundEmulated, optSoundDisabled->getX(), 70);
-	grpSound->add(optSoundEmulatedBest, optSoundDisabled->getX(), 100);
+	grpSound->add(chkAutoSwitching, optSoundDisabled->getY(), 100);
 	grpSound->setMovable(false);
-	grpSound->setSize(optSoundEmulatedBest->getWidth() + DISTANCE_BORDER + 10, optSoundEmulatedBest->getY() + optSoundEmulatedBest->getHeight() + 10 + DISTANCE_NEXT_Y * 2);
+	grpSound->setSize(optSoundDisabledEmu->getWidth() + DISTANCE_BORDER + 10, chkAutoSwitching->getY() + chkAutoSwitching->getHeight() + DISTANCE_NEXT_Y * 3);
 	grpSound->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpSound->setBaseColor(gui_baseCol);
 
 	grpVolume = new gcn::Window("Volume");
-	grpVolume->add(lblMasterVol, 10, 10);
-	grpVolume->add(sldMasterVol, lblMasterVol->getX() + lblMasterVol->getWidth() + 8, lblMasterVol->getY());
-	grpVolume->add(lblMasterVolInfo, sldMasterVol->getX() + sldMasterVol->getWidth() + 8, sldMasterVol->getY());
-	grpVolume->add(lblPaulaVol, lblMasterVol->getX(), lblMasterVol->getY() + lblMasterVol->getHeight() + DISTANCE_NEXT_Y);
-	grpVolume->add(sldPaulaVol, sldMasterVol->getX(), lblPaulaVol->getY());
+	grpVolume->add(lblPaulaVol, 10, 10);
+	grpVolume->add(sldPaulaVol, lblPaulaVol->getX() + lblPaulaVol->getWidth() + 8, lblPaulaVol->getY());
 	grpVolume->add(lblPaulaVolInfo, sldPaulaVol->getX() + sldPaulaVol->getWidth() + 10, sldPaulaVol->getY());
-	grpVolume->add(lblCDVol, lblMasterVol->getX(), lblPaulaVol->getY() + lblPaulaVol->getHeight() + DISTANCE_NEXT_Y);
-	grpVolume->add(sldCDVol, sldMasterVol->getX(), lblCDVol->getY());
+	grpVolume->add(lblCDVol, lblPaulaVol->getX(), lblPaulaVol->getY() + lblPaulaVol->getHeight() + DISTANCE_NEXT_Y);
+	grpVolume->add(sldCDVol, sldPaulaVol->getX(), lblCDVol->getY());
 	grpVolume->add(lblCDVolInfo, sldCDVol->getX() + sldCDVol->getWidth() + 8, sldCDVol->getY());
-	grpVolume->add(lblAHIVol, lblMasterVol->getX(), lblCDVol->getY() + lblCDVol->getHeight() + DISTANCE_NEXT_Y);
-	grpVolume->add(sldAHIVol, sldMasterVol->getX(), lblAHIVol->getY());
+	grpVolume->add(lblAHIVol, lblPaulaVol->getX(), lblCDVol->getY() + lblCDVol->getHeight() + DISTANCE_NEXT_Y);
+	grpVolume->add(sldAHIVol, sldPaulaVol->getX(), lblAHIVol->getY());
 	grpVolume->add(lblAHIVolInfo, sldAHIVol->getX() + sldAHIVol->getWidth() + 8, sldAHIVol->getY());
+	grpVolume->add(lblMIDIVol, lblPaulaVol->getX(), lblAHIVol->getY() + lblAHIVol->getHeight() + DISTANCE_NEXT_Y);
+	grpVolume->add(sldMIDIVol, sldPaulaVol->getX(), lblMIDIVol->getY());
+	grpVolume->add(lblMIDIVolInfo, sldMIDIVol->getX() + sldMIDIVol->getWidth() + 8, sldMIDIVol->getY());
 	grpVolume->setMovable(false);
 	grpVolume->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2 - grpSound->getWidth() - DISTANCE_NEXT_X, grpSound->getHeight());
 	grpVolume->setTitleBarHeight(TITLEBAR_HEIGHT);
@@ -771,11 +845,13 @@ void InitPanelSound(const config_category& category)
 	posY = cboChannelMode->getY() + cboChannelMode->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(lblFrequency, lblChannelMode->getX(), posY);
 	category.panel->add(cboFrequency, lblChannelMode->getX(), lblFrequency->getY() + lblFrequency->getHeight() + 10);
-	category.panel->add(lblSeparation, cboChannelMode->getX() + cboChannelMode->getWidth() + DISTANCE_NEXT_X * 3, lblChannelMode->getY());
+	category.panel->add(lblSwapChannels, cboFrequency->getX() + cboFrequency->getWidth() + DISTANCE_NEXT_X, posY);
+	category.panel->add(cboSwapChannels, cboFrequency->getX() + cboFrequency->getWidth() + DISTANCE_NEXT_X, cboFrequency->getY());
+	category.panel->add(lblSeparation, cboChannelMode->getX() + cboChannelMode->getWidth() + DISTANCE_NEXT_X * 2, lblChannelMode->getY());
 	category.panel->add(cboSeparation, lblSeparation->getX(), lblSeparation->getY() + lblSeparation->getHeight() + 10);
 	category.panel->add(lblStereoDelay, cboSeparation->getX(), lblFrequency->getY());
 	category.panel->add(cboStereoDelay, lblStereoDelay->getX(), cboFrequency->getY());
-	category.panel->add(lblInterpolation, cboSeparation->getX() + cboSeparation->getWidth() + DISTANCE_NEXT_X * 3, lblSeparation->getY());
+	category.panel->add(lblInterpolation, cboSeparation->getX() + cboSeparation->getWidth() + DISTANCE_NEXT_X * 2, lblSeparation->getY());
 	category.panel->add(cboInterpolation, lblInterpolation->getX(), lblInterpolation->getY() + lblInterpolation->getHeight() + 10);
 	category.panel->add(lblFilter, lblInterpolation->getX(), lblFrequency->getY());
 	category.panel->add(cboFilter, cboInterpolation->getX(), cboFrequency->getY());
@@ -790,15 +866,14 @@ void InitPanelSound(const config_category& category)
 
 void ExitPanelSound()
 {
+	delete lblSwapChannels;
+	delete cboSwapChannels;
 	delete cboSoundcard;
 	delete optSoundDisabled;
 	delete optSoundDisabledEmu;
 	delete optSoundEmulated;
-	delete optSoundEmulatedBest;
+	delete chkAutoSwitching;
 	delete grpSound;
-	delete lblMasterVol;
-	delete lblMasterVolInfo;
-	delete sldMasterVol;
 	delete lblPaulaVol;
 	delete lblPaulaVolInfo;
 	delete sldPaulaVol;
@@ -808,6 +883,9 @@ void ExitPanelSound()
 	delete lblAHIVol;
 	delete lblAHIVolInfo;
 	delete sldAHIVol;
+	delete lblMIDIVol;
+	delete sldMIDIVol;
+	delete lblMIDIVolInfo;
 	delete grpVolume;
 	delete lblChannelMode;
 	delete cboChannelMode;
@@ -869,15 +947,14 @@ void RefreshPanelSound()
 		optSoundDisabledEmu->setSelected(true);
 		break;
 	case 2:
-		optSoundEmulated->setSelected(true);
-		break;
 	case 3:
-		optSoundEmulatedBest->setSelected(true);
+		optSoundEmulated->setSelected(true);
 		break;
 	default:
 		break;
 	}
 
+	chkAutoSwitching->setSelected(changed_prefs.sound_auto);
 	cboChannelMode->setSelected(changed_prefs.sound_stereo);
 	
 	switch (changed_prefs.sound_freq)
@@ -900,6 +977,26 @@ void RefreshPanelSound()
 	default:
 		cboFrequency->setSelected(3);
 		break;
+	}
+
+	if (changed_prefs.sound_stereo_swap_paula || changed_prefs.sound_stereo_swap_ahi)
+	{
+		if (changed_prefs.sound_stereo_swap_paula && changed_prefs.sound_stereo_swap_ahi)
+		{
+			cboSwapChannels->setSelected(3);
+		}
+		else if (changed_prefs.sound_stereo_swap_ahi)
+		{
+			cboSwapChannels->setSelected(2);
+		}
+		else if (changed_prefs.sound_stereo_swap_paula)
+		{
+			cboSwapChannels->setSelected(1);
+		}
+	}
+	else
+	{
+		cboSwapChannels->setSelected(0);
 	}
 
 	cboInterpolation->setSelected(changed_prefs.sound_interpol);
@@ -938,10 +1035,6 @@ void RefreshPanelSound()
 	cboStereoDelay->setSelected(curr_stereodelay_idx);
 	cboStereoDelay->setEnabled(changed_prefs.sound_stereo >= 1);
 
-	sldMasterVol->setValue(100 - changed_prefs.sound_volume_master);
-	snprintf(tmp, sizeof tmp - 1, "%d %%", 100 - changed_prefs.sound_volume_master);
-	lblMasterVolInfo->setCaption(tmp);
-	
 	sldPaulaVol->setValue(100 - changed_prefs.sound_volume_paula);
 	snprintf(tmp, sizeof tmp - 1, "%d %%", 100 - changed_prefs.sound_volume_paula);
 	lblPaulaVolInfo->setCaption(tmp);
@@ -957,6 +1050,10 @@ void RefreshPanelSound()
 	sldAHIVol->setValue(100 - changed_prefs.sound_volume_board);
 	snprintf(tmp, sizeof tmp - 1, "%d %%", 100 - changed_prefs.sound_volume_board);
 	lblAHIVolInfo->setCaption(tmp);
+
+	sldMIDIVol->setValue(100 - changed_prefs.sound_volume_midi);
+	snprintf(tmp, sizeof tmp - 1, "%d %%", 100 - changed_prefs.sound_volume_midi);
+	lblMIDIVolInfo->setCaption(tmp);
 
 	chkFloppySound->setSelected(changed_prefs.floppyslots[0].dfxclick == 1);
 	
@@ -998,16 +1095,22 @@ void RefreshPanelSound()
 	cboSeparation->setEnabled(enabled);
 	lblStereoDelay->setEnabled(enabled);
 	cboStereoDelay->setEnabled(enabled);
+
 	lblPaulaVol->setEnabled(enabled);
 	lblPaulaVolInfo->setEnabled(enabled);
 	sldPaulaVol->setEnabled(enabled);
 
-	lblMasterVol->setEnabled(false);
-	lblMasterVolInfo->setEnabled(false);
-	sldMasterVol->setEnabled(false);
-	lblAHIVol->setEnabled(false);
-	lblAHIVolInfo->setEnabled(false);
-	sldAHIVol->setEnabled(false);
+	lblCDVol->setEnabled(enabled);
+	lblCDVolInfo->setEnabled(enabled);
+	sldCDVol->setEnabled(enabled);
+
+	lblAHIVol->setEnabled(enabled);
+	lblAHIVolInfo->setEnabled(enabled);
+	sldAHIVol->setEnabled(enabled);
+
+	lblMIDIVol->setEnabled(enabled);
+	sldMIDIVol->setEnabled(enabled);
+	lblMIDIVolInfo->setEnabled(enabled);
 
 	sldFloppySoundDisk->setEnabled(chkFloppySound->isSelected());
 	lblFloppySoundDisk->setEnabled(chkFloppySound->isSelected());

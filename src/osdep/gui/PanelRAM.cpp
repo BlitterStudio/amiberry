@@ -1,7 +1,5 @@
 #include <guisan.hpp>
-#include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
-#include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
 #include "sysdeps.h"
 #include "options.h"
@@ -215,7 +213,7 @@ void InitPanelRAM(const config_category& category)
 	posY += sldMbResHighmem->getHeight() + DISTANCE_NEXT_Y;
 
 	grpRAM->setMovable(false);
-	grpRAM->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, posY + DISTANCE_BORDER * 2);
+	grpRAM->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, TITLEBAR_HEIGHT + posY + DISTANCE_BORDER * 2);
 	grpRAM->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpRAM->setBaseColor(gui_baseCol);
 
@@ -251,7 +249,6 @@ void ExitPanelRAM()
 	delete grpRAM;
 	delete memorySliderActionListener;
 }
-
 
 void RefreshPanelRAM()
 {

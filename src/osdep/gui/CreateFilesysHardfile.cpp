@@ -3,7 +3,6 @@
 
 #include <guisan.hpp>
 #include <guisan/sdl.hpp>
-#include <guisan/sdl/sdltruetypefont.hpp>
 
 #include "SelectorEntry.hpp"
 

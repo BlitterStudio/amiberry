@@ -5,9 +5,7 @@
 #include <dirent.h>
 
 #include <guisan.hpp>
-#include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
-#include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
 
 #include "sysdeps.h"
@@ -250,7 +248,7 @@ static void InitSelectFile(const char* title)
 	scrAreaFiles->setBorderSize(1);
 	scrAreaFiles->setPosition(DISTANCE_BORDER, 10 + TEXTFIELD_HEIGHT + 10);
 	scrAreaFiles->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, 272);
-	scrAreaFiles->setScrollbarWidth(30);
+	scrAreaFiles->setScrollbarWidth(SCROLLBAR_WIDTH);
 	scrAreaFiles->setBaseColor(gui_baseCol);
 
 	if (createNew)

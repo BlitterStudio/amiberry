@@ -522,7 +522,7 @@ int my_truncate(const TCHAR* name, uae_u64 len)
 static void remove_extra_file(const char* path, const char* name)
 {
 	auto* p = (TCHAR*)malloc(MAX_DPATH);
-	strcpy(p, path);
+	_tcscpy(p, path);
 	fix_trailing(p);
 	strcat(p, name);
 	

@@ -2,7 +2,6 @@
 #include <cstdio>
 
 #include <guisan.hpp>
-#include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include "SelectorEntry.hpp"
 

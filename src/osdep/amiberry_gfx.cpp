@@ -1885,7 +1885,6 @@ void show_screen(int monid, int mode)
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
 		SDL_GL_SwapWindow(mon->sdl_window);
-		
 #else
 		SDL_RenderClear(sdl_renderer);
 		SDL_UpdateTexture(amiga_texture, nullptr, sdl_surface->pixels, sdl_surface->pitch);
@@ -2588,8 +2587,6 @@ bool vsync_switchmode(int monid, int hz)
 void vsync_clear()
 {
 	vsync_active = false;
-	//if (waitvblankevent)
-	//	ResetEvent(waitvblankevent);
 }
 
 int vsync_isdone(frame_time_t* dt)

@@ -1,7 +1,12 @@
 #ifndef GUI_HANDLING_H
 #define GUI_HANDLING_H
 
+#include <guisan/sdl/sdlinput.hpp>
 #include "amiberry_gfx.h"
+#ifdef USE_OPENGL
+#include <guisan/opengl.hpp>
+#endif
+#include "options.h"
 
 #define DISTANCE_BORDER 10
 #define DISTANCE_NEXT_X 15
@@ -15,13 +20,9 @@
 #define DROPDOWN_HEIGHT 20
 #define SLIDER_HEIGHT 20
 #define TITLEBAR_HEIGHT 24
-#include <guisan/sdl/sdlinput.hpp>
-
-#ifdef USE_OPENGL
-#include <guisan/opengl.hpp>
-#endif
-
-#include "options.h"
+#define SELECTOR_WIDTH 165
+#define SELECTOR_HEIGHT 24
+#define SCROLLBAR_WIDTH 20
 
 static const TCHAR* memsize_names[] = {
 	/* 0 */ _T("none"),
@@ -176,8 +177,6 @@ extern SDL_GLContext gl_context;
 #else
 extern SDL_Texture* gui_texture;
 #endif
-extern SDL_Cursor* cursor;
-extern SDL_Surface* cursor_surface;
 #endif
 
 extern char current_dir[MAX_DPATH];
@@ -330,9 +329,6 @@ void ShowHelp(const char* title, const std::vector<std::string>& text);
 void ShowDiskInfo(const char* title, const std::vector<std::string>& text);
 std::string show_controller_map(int device, bool map_touchpad);
 
-bool LoadConfigByName(const char* name);
-ConfigFileInfo* SearchConfigInList(const char* name);
-
 extern void read_directory(const char* path, vector<string>* dirs, vector<string>* files);
 extern void FilterFiles(vector<string>* files, const char* filter[]);
 
@@ -363,7 +359,9 @@ extern int delay_savestate_frame;
 extern int last_x;
 extern int last_y;
 
+#ifdef USE_DISPMANX
 extern void init_dispmanx_gui();
+#endif
 extern void update_gui_screen();
 extern void cap_fps(Uint64 start);
 extern long get_file_size(const std::string& filename);

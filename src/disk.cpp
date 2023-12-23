@@ -129,7 +129,7 @@ static uae_u8 writesecheadbuffer[16 * MAX_SECTORS];
 static int dskdmaen, dsklength, dsklength2, dsklen, dsklen2;
 static uae_u16 dskbytr_val, dskbytr_val_prev;
 static bool dskbytr_delay;
-static uae_u32 dskpt;
+static uae_u32 dskpt, dskpt_start;
 static bool fifo_filled;
 static uae_u16 fifo[3];
 static int fifo_inuse[3];
@@ -3793,7 +3793,7 @@ static void disk_dmafinished (void)
 	dsklen = 0;
 	if (disk_debug_logging > 0) {
 		int dr;
-		write_log (_T("disk dma finished %08X MFMpos="), dskpt);
+		write_log(_T("disk dma finished %08X-%08X (%04X, %d) MFMpos="), dskpt_start, dskpt, (dskpt - dskpt_start) / 2, (dskpt - dskpt_start) / 2);
 		for (dr = 0; dr < MAX_FLOPPY_DRIVES; dr++)
 			write_log (_T("%d%s"), floppy[dr].mfmpos, dr < MAX_FLOPPY_DRIVES - 1 ? _T(",") : _T(""));
 		write_log (_T("\n"));
@@ -3910,7 +3910,11 @@ static void do_disk_index (void)
 void event_DISK_handler(uae_u32 data)
 {
 	int flag = data & 255;
-	DISK_update(current_hpos());
+	int hpos = current_hpos();
+#if DISK_DEBUG_X > 0
+	write_log("disk event %02x %d %d\n", flag, hpos, disk_hpos >> 8);
+#endif
+	DISK_update(hpos);
 	DISK_update_predict();
 }
 
@@ -4193,10 +4197,6 @@ int disk_fifostatus (void)
 static int doreaddma (void)
 {
 	if (dmaen(DMA_DISK) && bitoffset == 15 && dma_enable && dskdmaen == DSKDMA_READ && dsklength >= 0) {
-		if (dsklength == 0) {
-			disk_dmafinished();
-			return 1;
-		}
 		if (dsklength > 0) {
 			// fast disk modes, just flush the fifo
 			if (currprefs.floppy_speed > 100 && fifo_inuse[0] && fifo_inuse[1] && fifo_inuse[2]) {
@@ -4512,6 +4512,7 @@ static void DISK_start(void)
 		fifo_inuse[i] = false;
 	}
 	fifo_filled = 0;
+	dskpt_start = dskpt;
 
 	if (dskdmaen == DSKDMA_WRITE) {
 		word = 0;

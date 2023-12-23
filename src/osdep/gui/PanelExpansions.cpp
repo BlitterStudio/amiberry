@@ -2,7 +2,6 @@
 #include <cstdlib>
 
 #include <guisan.hpp>
-#include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include "SelectorEntry.hpp"
 
@@ -1082,7 +1081,7 @@ void InitPanelExpansions(const config_category& category)
 	//grpExpansionBoard->add(cboExpansionBoardSelector, chkScsiRomSelected->getX(), cboExpansionBoardItemSelector->getY());
 	//TODO add items here
 	grpExpansionBoard->setMovable(false);
-	grpExpansionBoard->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, 200);
+	grpExpansionBoard->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, 250);
 	grpExpansionBoard->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpExpansionBoard->setBaseColor(gui_baseCol);
 	category.panel->add(grpExpansionBoard);
@@ -1094,7 +1093,7 @@ void InitPanelExpansions(const config_category& category)
 	grpAcceleratorBoard->add(cboCpuBoardRomFile, cboCpuBoardType->getX() + cboCpuBoardType->getWidth() + DISTANCE_NEXT_X * 3, cboCpuBoardType->getY());
 	//TODO add items here
 	grpAcceleratorBoard->setMovable(false);
-	grpAcceleratorBoard->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, 150);
+	grpAcceleratorBoard->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, 200);
 	grpAcceleratorBoard->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpAcceleratorBoard->setBaseColor(gui_baseCol);
 	category.panel->add(grpAcceleratorBoard);
@@ -1108,7 +1107,7 @@ void InitPanelExpansions(const config_category& category)
 	grpMiscExpansions->add(chkScsi, DISTANCE_BORDER, posY);
 	grpMiscExpansions->add(chkCD32Fmv, posX, posY);
 	grpMiscExpansions->setMovable(false);
-	grpMiscExpansions->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, 110);
+	grpMiscExpansions->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, TITLEBAR_HEIGHT + posY + chkCD32Fmv->getHeight() + DISTANCE_NEXT_Y);
 	grpMiscExpansions->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpMiscExpansions->setBaseColor(gui_baseCol);
 	category.panel->add(grpMiscExpansions);
