@@ -8359,10 +8359,7 @@ static void vsync_handler_pre(void)
 	// GUI check here, must be after frame rendering
 	devices_vsync_pre();
 
-#ifdef AMIBERRY
-	if (!nodraw() || ad->picasso_on)
-#endif
-		fpscounter(frameok);
+	fpscounter(frameok);
 
 	bool waspaused = false;
 	while (handle_events()) {
