@@ -11,15 +11,19 @@
 
 typedef uae_s64 uae_time_t;
 
-void uae_time_init(void);
 void uae_time_calibrate(void);
-uae_time_t uae_time(void);
-
 typedef uae_time_t frame_time_t;
 
-static inline frame_time_t read_processor_time(void)
+extern int64_t g_uae_epoch;
+
+/* Returns elapsed time in microseconds since start of emulator. */
+static __inline__ frame_time_t read_processor_time (void)
 {
-	return uae_time();
+	int64_t time;
+	struct timespec ts{};
+	clock_gettime (CLOCK_MONOTONIC, &ts);
+	time = (int64_t) ts.tv_sec * 1000000 + ts.tv_nsec / 1000;
+	return time - g_uae_epoch;
 }
 
 #endif /* _RPT_H_ */
