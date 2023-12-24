@@ -169,12 +169,7 @@ public:
 			changed_prefs.borderless = chkBorderless->isSelected();
 
 		else if (actionEvent.getSource() == chkVsync)
-		{
-			if (chkVsync->isSelected())
-				changed_prefs.gfx_apmode[0].gfx_vsync = 2;
-			else
-				changed_prefs.gfx_apmode[0].gfx_vsync = 0;
-		}
+			changed_prefs.gfx_apmode[0].gfx_vsync = chkVsync->isSelected();
 
 		else if (actionEvent.getSource() == sldHOffset)
 		{
