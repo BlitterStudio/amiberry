@@ -11976,7 +11976,7 @@ static bool framewait(void)
 				if (vsyncwaittime - curr_time <= 0 || vsyncwaittime - curr_time > 2 * vsynctimebase) {
 					break;
 				}
-				rtg_vsynccheck ();
+				//rtg_vsynccheck (); //no-op
 				if (cpu_sleep_millis(1) < 0) {
 					curr_time = read_processor_time();
 					break;
@@ -12021,13 +12021,13 @@ static bool framewait(void)
 				float v = rpt_vsync(clockadjust) / (syncbase / 1000.0f);
 				if (v >= -FRAMEWAIT_MIN_MS)
 					break;
-				rtg_vsynccheck();
+				//rtg_vsynccheck(); //no-op
 				maybe_process_pull_audio();
 				if (cpu_sleep_millis(1) < 0)
 					break;
 			}
 			while (rpt_vsync(clockadjust) < 0) {
-				rtg_vsynccheck();
+				//rtg_vsynccheck(); //no-op
 				if (audio_is_pull_event()) {
 					maybe_process_pull_audio();
 					break;
