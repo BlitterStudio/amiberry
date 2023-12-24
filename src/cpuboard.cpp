@@ -1717,8 +1717,12 @@ void cpuboard_map(void)
 //
 //	if (is_mtec_ematrix530(&currprefs) || is_sx32pro(&currprefs) || is_apollo(&currprefs) || is_dce_typhoon2(&currprefs)) {
 //		if (cpuboardmem1_bank.allocated_size) {
-//			map_banks(&cpuboardmem1_bank, cpuboardmem1_bank.start >> 16, 0x08000000 >> 16, cpuboardmem1_bank.allocated_size >> 16);
-//		}
+			//uae_u32 max = 0x08000000;
+			//// don't cross 0x08000000
+			//if (cpuboardmem1_bank.start < 0x08000000 && cpuboardmem1_bank.start + max > 0x08000000 && cpuboardmem1_bank.start + cpuboardmem1_bank.allocated_size < 0x08000000) {
+			//	max = 0x08000000 - cpuboardmem1_bank.start;
+			//}
+			//map_banks(&cpuboardmem1_bank, cpuboardmem1_bank.start >> 16, max >> 16, cpuboardmem1_bank.allocated_size >> 16);//		}
 //		if (cpuboardmem2_bank.allocated_size && cpuboardmem2_bank.start < 0x18000000) {
 //			map_banks(&cpuboardmem2_bank, cpuboardmem2_bank.start >> 16, cpuboardmem2_bank.allocated_size >> 16, 0);
 //		}

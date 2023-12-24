@@ -309,7 +309,7 @@ void do_cycles_cpu_norm(int cycles_to_add)
 {
 	while ((nextevent - currcycle) <= cycles_to_add)
 	{
-		cycles_to_add -= (nextevent - currcycle);
+		cycles_to_add -= (int)(nextevent - currcycle);
 		currcycle = nextevent;
 
 		for (auto& i : eventtab)
@@ -385,7 +385,16 @@ void MISC_handler(void)
 	recursive--;
 }
 
-void event2_newevent_xx (int no, evt_t t, uae_u32 data, evfunc2 func)
+void event2_newevent_xx_ce(evt_t t, uae_u32 data, evfunc2 func)
+{
+	if (!currprefs.cpu_memory_cycle_exact) {
+		func(data);
+		return;
+	}
+	event2_newevent_xx(-1, t, data, func);
+}
+
+void event2_newevent_xx(int no, evt_t t, uae_u32 data, evfunc2 func)
 {
 	evt_t et;
 	static int next = ev2_misc;

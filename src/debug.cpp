@@ -21,11 +21,11 @@
 #include "newcpu.h"
 #include "cpu_prefetch.h"
 #include "debug.h"
-//#include "disasm.h"
+#include "disasm.h"
 #include "debugmem.h"
 #include "cia.h"
 #include "xwin.h"
-//#include "identify.h"
+#include "identify.h"
 #include "audio.h"
 #include "sounddep/sound.h"
 #include "disk.h"
@@ -41,10 +41,14 @@
 #include "cpummu.h"
 #include "cpummu030.h"
 #include "ar.h"
-//#include "pci.h"
-//#include "ppc/ppcd.h"
-//#include "uae/io.h"
-//#include "uae/ppc.h"
+#ifdef WITH_PCI
+#include "pci.h"
+#endif
+#ifdef WITH_PPC
+#include "ppc/ppcd.h"
+#include "uae/io.h"
+#include "uae/ppc.h"
+#endif
 #include "drawing.h"
 #include "devices.h"
 #include "blitter.h"

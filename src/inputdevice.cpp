@@ -4807,7 +4807,7 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 		changed_prefs.cdslots[0].inuse = false;
 		break;
 	case AKS_IRQ7:
-		//IRQ_forced(7, 0);
+		//IRQ_forced(7, -1);
 		break;
 	case AKS_PAUSE:
 		pausemode(newstate > 0 ? 1 : newstate);
