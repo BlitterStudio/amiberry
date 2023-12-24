@@ -133,9 +133,7 @@ static float SDL2_getrefreshrate(int monid)
 	return static_cast<float>(mode.refresh_rate);
 }
 
-struct PicassoResolution* DisplayModes;
 struct MultiDisplay Displays[MAX_DISPLAYS];
-
 struct AmigaMonitor AMonitors[MAX_AMIGAMONITORS];
 
 static int display_change_requested;
@@ -182,6 +180,30 @@ void vsync_callback(unsigned int a, void* b)
 }
 #endif
 
+static void update_leds(int monid)
+{
+	static uae_u32 rc[256], gc[256], bc[256], a[256];
+	static int done;
+	int osdx, osdy;
+
+	if (!done) {
+		for (int i = 0; i < 256; i++) {
+			rc[i] = i << 0;
+			gc[i] = i << 8;
+			bc[i] = i << 16;
+			a[i] = i << 24;
+		}
+		done = 1;
+	}
+
+	statusline_getpos(monid, &osdx, &osdy, sdl_surface->w, sdl_surface->h);
+	int m = statusline_get_multiplier(monid) / 100;
+	for (int y = 0; y < TD_TOTAL_HEIGHT * m; y++) {
+		uae_u8 *buf = (uae_u8*)sdl_surface->pixels + (y + osdy) * sdl_surface->pitch;
+		draw_status_line_single(monid, buf, 32 / 8, y, sdl_surface->w, rc, gc, bc, a);
+	}
+}
+
 bool vkbd_allowed(int monid)
 {
 	struct AmigaMonitor *mon = &AMonitors[monid];
@@ -191,6 +213,8 @@ bool vkbd_allowed(int monid)
 static int display_thread(void* unused)
 {
 	struct AmigaMonitor* mon = &AMonitors[0];
+	struct amigadisplay* ad = &adisplays[0];
+	bool rtg = ad->picasso_on;
 #ifdef USE_DISPMANX
 	uint32_t vc_image_ptr;
 	SDL_Rect viewport;
@@ -350,6 +374,12 @@ static int display_thread(void* unused)
 			break;
 
 		case DISPLAY_SIGNAL_SHOW:
+			// RTG status line is handled in P96 code, this is for native modes only
+			if ((currprefs.leds_on_screen & STATUSLINE_CHIPSET) && !rtg)
+			{
+				update_leds(0);
+			}
+
 			vsync_active = true;
 #ifdef USE_DISPMANX
 			if (current_resource_amigafb == 1)
@@ -635,6 +665,9 @@ static struct MultiDisplay* getdisplay2(struct uae_prefs* p, int index)
 
 struct MultiDisplay* getdisplay(struct uae_prefs* p, int monid)
 {
+	struct AmigaMonitor* mon = &AMonitors[monid];
+	if (monid > 0 && mon->md)
+		return mon->md;
 	return getdisplay2(p, -1);
 }
 
@@ -951,6 +984,7 @@ static void open_screen(struct uae_prefs* p)
 #endif
 #endif
 
+	statusline_set_multiplier(mon->monitor_id, display_width, display_height);
 	setpriority(p->active_capture_priority);
 	updatepicasso96(mon);
 
@@ -1132,7 +1166,7 @@ void graphics_reset(bool forced)
 		display_change_requested = 2;
 	}
 	else {
-		// full reset if display size can't changed.
+		// full reset if display size can't be changed.
 		if (currprefs.gfx_api) {
 			display_change_requested = 3;
 		}
@@ -1771,6 +1805,9 @@ bool render_screen(int monid, int mode, bool immediate)
 void show_screen(int monid, int mode)
 {
 	struct AmigaMonitor* mon = &AMonitors[monid];
+	struct amigadisplay* ad = &adisplays[monid];
+	bool rtg = ad->picasso_on;
+
 	const auto start = read_processor_time();
 		
 #ifdef USE_DISPMANX
@@ -1847,6 +1884,11 @@ void show_screen(int monid, int mode)
 	}
 	else 
 	{
+		// RTG status line is handled in P96 code, this is for native modes only
+		if ((currprefs.leds_on_screen & STATUSLINE_CHIPSET) && !rtg)
+		{
+			update_leds(monid);
+		}
 		flip_in_progress = true;
 #ifdef USE_OPENGL
 		//Initialize clear color
@@ -2086,6 +2128,11 @@ int graphics_init(bool mousecapture)
 	{
 		write_log("Current Display mode: bpp %i\t%s\t%i x %i\t%iHz\n", SDL_BITSPERPIXEL(sdl_mode.format), SDL_GetPixelFormatName(sdl_mode.format), sdl_mode.w, sdl_mode.h, sdl_mode.refresh_rate);
 		vsync_vblank = sdl_mode.refresh_rate;
+
+		mon->currentmode.native_width = sdl_mode.w;
+		mon->currentmode.native_height = sdl_mode.h;
+		mon->currentmode.native_depth = SDL_BITSPERPIXEL(sdl_mode.format);
+		mon->currentmode.freq = sdl_mode.refresh_rate;
 	}
 
 	write_log("Creating Amiberry window...\n");
@@ -2459,12 +2506,15 @@ static int currVSyncRate = 0;
 #endif
 bool vsync_switchmode(int monid, int hz)
 {
+	struct AmigaMonitor* mon = &AMonitors[monid];
 	static struct PicassoResolution* oldmode;
 	static int oldhz;
-	int w = sdl_surface->w;
-	int h = sdl_surface->h;
+	int w = mon->currentmode.native_width;
+	int h = mon->currentmode.native_height;
+	int d = mon->currentmode.native_depth / 8;
+	struct MultiDisplay* md = getdisplay(&currprefs, monid);
 	struct PicassoResolution* found;
-	int newh, i, cnt;
+	int newh, cnt;
 	bool preferdouble = false, preferlace = false;
 	bool lace = false;
 
@@ -2511,11 +2561,10 @@ bool vsync_switchmode(int monid, int hz)
 				lacecheck = true;
 
 			for (int extra = 1; extra >= -1 && !found; extra--) {
-				for (i = 0; DisplayModes[i].depth >= 0 && !found; i++) {
-					struct PicassoResolution* r = &DisplayModes[i];
-					if (r->res.width == w && (r->res.height == newh + cnt || r->res.height == newh - cnt)) {
-						int j;
-						for (j = 0; r->refresh[j] > 0; j++) {
+				for (int i = 0; md->DisplayModes[i].depth >= 0 && !found; i++) {
+					struct PicassoResolution* r = &md->DisplayModes[i];
+					if (r->res.width == w && (r->res.height == newh + cnt || r->res.height == newh - cnt) && r->depth == d) {
+						for (int j = 0; r->refresh[j] > 0; j++) {
 							if (doublecheck) {
 								if (r->refreshtype[j] & REFRESH_RATE_LACE)
 									continue;
@@ -2561,11 +2610,11 @@ bool vsync_switchmode(int monid, int hz)
 		return false;
 	}
 	else {
-		newh = int(found->res.height);
-		changed_prefs.gfx_monitor[0].gfx_size_fs.height = newh;
+		newh = static_cast<int>(found->res.height);
+		changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_fs.height = newh;
 		changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_refreshrate = hz;
 		changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_interlaced = lace;
-		if (changed_prefs.gfx_monitor[0].gfx_size_fs.height != currprefs.gfx_monitor[0].gfx_size_fs.height ||
+		if (changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_fs.height != currprefs.gfx_monitor[mon->monitor_id].gfx_size_fs.height ||
 			changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_refreshrate != currprefs.gfx_apmode[APMODE_NATIVE].gfx_refreshrate) {
 			write_log(_T("refresh rate changed to %d%s, new screenmode %dx%d\n"), hz, lace ? _T("i") : _T("p"), w, newh);
 			set_config_changed();
@@ -2846,7 +2895,7 @@ void sortdisplays()
 	struct MultiDisplay* md;
 	int i, idx;
 	char tmp[200];
-	
+
 #ifdef USE_DISPMANX	
 	int w = 800;
 	int h = 600;

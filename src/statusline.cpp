@@ -163,11 +163,7 @@ void draw_status_line_single(int monid, uae_u8 *buf, int bpp, int y, int totalwi
 	struct amigadisplay *ad = &adisplays[monid];
 	int x_start, j, led, border;
 	uae_u32 c1, c2, cb;
-#ifdef AMIBERRY
-	int mult = currprefs.leds_on_screen & STATUSLINE_CHIPSET ? 1 : statusline_mult[ad->picasso_on ? 1 : 0] / 100;
-#else
 	int mult = td_custom ? 1 : statusline_mult[ad->picasso_on ? 1 : 0] / 100;
-#endif
 
 	if (!mult)
 		return;
@@ -372,6 +368,7 @@ void draw_status_line_single(int monid, uae_u8 *buf, int bpp, int y, int totalwi
 				num3 = 17;
 				am = 1;
 			}
+#ifdef AMIBERRY // Board Temperature, if available
 		} else if (led == LED_TEMP) {
 			pos = 11;
 			int temp = gui_data.temperature;
@@ -383,6 +380,7 @@ void draw_status_line_single(int monid, uae_u8 *buf, int bpp, int y, int totalwi
 			num1 = -1;
 			num2 = temp / 10;
 			num3 = temp % 10;
+#endif
 		} else {
 			continue;
 		}
@@ -464,6 +462,7 @@ bool has_statusline_updated(void)
 static void statusline_update_notification(void)
 {
 	statusline_had_changed = true;
+	statusline_updated(0);
 }
 
 void statusline_clear(void)
@@ -573,3 +572,15 @@ void statusline_single_erase(int monid, uae_u8 *buf, int bpp, int y, int totalwi
 {
 	memset(buf, 0, bpp * totalwidth);
 }
+
+#ifdef AMIBERRY // no-op for now
+void statusline_updated(int monid)
+{
+
+}
+
+void statusline_render(int monid, uae_u8 *buf, int bpp, int pitch, int width, int height, uae_u32 *rc, uae_u32 *gc, uae_u32 *bc, uae_u32 *alpha)
+{
+
+}
+#endif
