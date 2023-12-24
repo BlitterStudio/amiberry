@@ -4623,7 +4623,7 @@ static void gen_direct_drawing_table(void)
 }
 
 #ifdef AMIBERRY
-static int render_thread(void *unused)
+static int drawing_thread(void *unused)
 {
 	for (;;) {
 		render_thread_busy = false;
@@ -4636,7 +4636,7 @@ static int render_thread(void *unused)
 			if (!flip_in_progress)
 #endif
 				draw_lines(0, 0);
-			break;
+				break;
 
 		case RENDER_SIGNAL_FRAME_DONE:
 #ifdef USE_DISPMANX
@@ -4647,11 +4647,11 @@ static int render_thread(void *unused)
 			uae_sem_post(&render_sem);
 			break;
 
-		case RENDER_SIGNAL_QUIT:
-			render_tid = nullptr;
-			return 0;
-		default:
-			break;
+			case RENDER_SIGNAL_QUIT:
+				render_tid = nullptr;
+				return 0;
+			default:
+				break;
 		}
 	}
 }
@@ -4681,7 +4681,7 @@ void drawing_init (void)
 			uae_sem_init(&render_sem, 0, 0);
 		}
 		if (render_tid == nullptr && render_pipe != nullptr && render_sem != nullptr) {
-			uae_start_thread(_T("render"), render_thread, nullptr, &render_tid);
+			uae_start_thread(_T("render"), drawing_thread, nullptr, &render_tid);
 		}
 	}
 #endif
