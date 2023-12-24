@@ -75,10 +75,10 @@ typedef enum
 #define RENDER_SIGNAL_PARTIAL 1
 #define RENDER_SIGNAL_FRAME_DONE 2
 #define RENDER_SIGNAL_QUIT 3
-static uae_thread_id render_tid = nullptr;
-static smp_comm_pipe *volatile render_pipe = nullptr;
-static uae_sem_t render_sem = nullptr;
-static bool volatile render_thread_busy = false;
+static uae_thread_id drawing_tid = nullptr;
+static smp_comm_pipe *volatile drawing_pipe = nullptr;
+static uae_sem_t drawing_sem = nullptr;
+static bool volatile drawing_thread_busy = false;
 #endif
 
 extern int sprite_buffer_res;
@@ -4330,12 +4330,12 @@ void vsync_handle_redraw(int long_field, int lof_changed, uae_u16 bplcon0p, uae_
 #ifdef AMIBERRY
 			if (currprefs.multithreaded_drawing)
 			{
-				if (render_tid)
+				if (drawing_tid)
 				{
-					while (render_thread_busy)
+					while (drawing_thread_busy)
 						sleep_micros(10);
-					write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_FRAME_DONE, 1);
-					uae_sem_wait(&render_sem);
+					write_comm_pipe_u32(drawing_pipe, RENDER_SIGNAL_FRAME_DONE, 1);
+					uae_sem_wait(&drawing_sem);
 				}
 			}
 			else
@@ -4351,19 +4351,19 @@ void vsync_handle_redraw(int long_field, int lof_changed, uae_u16 bplcon0p, uae_
 #ifdef AMIBERRY
 			if (currprefs.multithreaded_drawing)
 			{
-				if (render_tid)
+				if (drawing_tid)
 				{
-					while (render_thread_busy)
+					while (drawing_thread_busy)
 						sleep_micros(1);
-					write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_QUIT, 1);
-					while (render_tid != nullptr) {
+					write_comm_pipe_u32(drawing_pipe, RENDER_SIGNAL_QUIT, 1);
+					while (drawing_tid != nullptr) {
 						sleep_micros(10);
 					}
-					destroy_comm_pipe(render_pipe);
-					xfree(render_pipe);
-					render_pipe = nullptr;
-					uae_sem_destroy(&render_sem);
-					render_sem = nullptr;
+					destroy_comm_pipe(drawing_pipe);
+					xfree(drawing_pipe);
+					drawing_pipe = nullptr;
+					uae_sem_destroy(&drawing_sem);
+					drawing_sem = nullptr;
 				}
 			}
 #endif
@@ -4461,13 +4461,13 @@ void hsync_record_line_state (int lineno, enum nln_how how, int changed)
 	linestate_first_undecided = lineno + 1;
 	if (currprefs.multithreaded_drawing)
 	{
-		if (render_tid && linestate_first_undecided > 3 && !render_thread_busy) {
+		if (drawing_tid && linestate_first_undecided > 3 && !drawing_thread_busy) {
 			if (currprefs.gfx_vresolution) {
 				if (!(linestate_first_undecided & 0x3e))
-					write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_PARTIAL, 1);
+					write_comm_pipe_u32(drawing_pipe, RENDER_SIGNAL_PARTIAL, 1);
 			}
 			else if (!(linestate_first_undecided & 0x1f))
-				write_comm_pipe_u32(render_pipe, RENDER_SIGNAL_PARTIAL, 1);
+				write_comm_pipe_u32(drawing_pipe, RENDER_SIGNAL_PARTIAL, 1);
 		}
 	}
 #endif
@@ -4626,9 +4626,9 @@ static void gen_direct_drawing_table(void)
 static int drawing_thread(void *unused)
 {
 	for (;;) {
-		render_thread_busy = false;
-		const auto signal = read_comm_pipe_u32_blocking(render_pipe);
-		render_thread_busy = true;
+		drawing_thread_busy = false;
+		const auto signal = read_comm_pipe_u32_blocking(drawing_pipe);
+		drawing_thread_busy = true;
 		switch (signal) {
 
 		case RENDER_SIGNAL_PARTIAL:
@@ -4644,11 +4644,11 @@ static int drawing_thread(void *unused)
 				sleep_micros(1);
 #endif
 			finish_drawing_frame(true);
-			uae_sem_post(&render_sem);
+			uae_sem_post(&drawing_sem);
 			break;
 
 			case RENDER_SIGNAL_QUIT:
-				render_tid = nullptr;
+				drawing_tid = nullptr;
 				return 0;
 			default:
 				break;
@@ -4673,15 +4673,15 @@ void drawing_init (void)
 #ifdef AMIBERRY
 	if (currprefs.multithreaded_drawing)
 	{
-		if (render_pipe == nullptr) {
-			render_pipe = xmalloc(smp_comm_pipe, 1);
-			init_comm_pipe(render_pipe, 20, 1);
+		if (drawing_pipe == nullptr) {
+			drawing_pipe = xmalloc(smp_comm_pipe, 1);
+			init_comm_pipe(drawing_pipe, 20, 1);
 		}
-		if (render_sem == nullptr) {
-			uae_sem_init(&render_sem, 0, 0);
+		if (drawing_sem == nullptr) {
+			uae_sem_init(&drawing_sem, 0, 0);
 		}
-		if (render_tid == nullptr && render_pipe != nullptr && render_sem != nullptr) {
-			uae_start_thread(_T("render"), drawing_thread, nullptr, &render_tid);
+		if (drawing_tid == nullptr && drawing_pipe != nullptr && drawing_sem != nullptr) {
+			uae_start_thread(_T("drawing"), drawing_thread, nullptr, &drawing_tid);
 		}
 	}
 #endif
