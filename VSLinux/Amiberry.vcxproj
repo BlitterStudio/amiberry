@@ -17,22 +17,6 @@
       <Configuration>Debug</Configuration>
       <Platform>ARM64</Platform>
     </ProjectConfiguration>
-    <ProjectConfiguration Include="Debux-DMX|ARM">
-      <Configuration>Debux-DMX</Configuration>
-      <Platform>ARM</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Debux-DMX|ARM64">
-      <Configuration>Debux-DMX</Configuration>
-      <Platform>ARM64</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release-DMX|ARM">
-      <Configuration>Release-DMX</Configuration>
-      <Platform>ARM</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release-DMX|ARM64">
-      <Configuration>Release-DMX</Configuration>
-      <Platform>ARM64</Platform>
-    </ProjectConfiguration>
     <ProjectConfiguration Include="Release|ARM">
       <Configuration>Release</Configuration>
       <Platform>ARM</Platform>
@@ -65,12 +49,6 @@
     <PlatformToolset>Remote_GCC_1_0</PlatformToolset>
     <RemoteProjectRelDir>$(MSBuildProjectName)-Debug</RemoteProjectRelDir>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debux-DMX|ARM'" Label="Configuration">
-    <UseDebugLibraries>true</UseDebugLibraries>
-    <ConfigurationType>Makefile</ConfigurationType>
-    <PlatformToolset>Remote_GCC_1_0</PlatformToolset>
-    <RemoteProjectRelDir>$(MSBuildProjectName)-Debug-dmx</RemoteProjectRelDir>
-  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
     <ConfigurationType>Makefile</ConfigurationType>
@@ -86,30 +64,15 @@
     <ConfigurationType>Makefile</ConfigurationType>
     <RemoteProjectRelDir>$(MSBuildProjectName)-Debug</RemoteProjectRelDir>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debux-DMX|ARM64'" Label="Configuration">
-    <UseDebugLibraries>true</UseDebugLibraries>
-    <ConfigurationType>Makefile</ConfigurationType>
-    <RemoteProjectRelDir>$(MSBuildProjectName)-Debug-dmx</RemoteProjectRelDir>
-  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
     <ConfigurationType>Makefile</ConfigurationType>
     <RemoteProjectRelDir>$(MSBuildProjectName)-Release</RemoteProjectRelDir>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-DMX|ARM'" Label="Configuration">
-    <UseDebugLibraries>false</UseDebugLibraries>
-    <ConfigurationType>Makefile</ConfigurationType>
-    <RemoteProjectRelDir>$(MSBuildProjectName)-Release-dmx</RemoteProjectRelDir>
-  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
     <ConfigurationType>Makefile</ConfigurationType>
     <RemoteProjectRelDir>$(MSBuildProjectName)-Release</RemoteProjectRelDir>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-DMX|ARM64'" Label="Configuration">
-    <UseDebugLibraries>false</UseDebugLibraries>
-    <ConfigurationType>Makefile</ConfigurationType>
-    <RemoteProjectRelDir>$(MSBuildProjectName)-Release-dmx</RemoteProjectRelDir>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings" />
@@ -156,18 +119,6 @@
     <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-Debug</RemoteProjectDir>
     <RemoteDeployDir>$(RemoteRootDir)/$(ProjectName)-Debug</RemoteDeployDir>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debux-DMX|ARM'">
-    <RemoteBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug-dmx; make -j4 DEBUG=1 PLATFORM=rpi4</RemoteBuildCommandLine>
-    <RemoteReBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug-dmx; make clean; make -j4 DEBUG=1 PLATFORM=rpi4</RemoteReBuildCommandLine>
-    <RemoteCleanCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug-dmx; make clean</RemoteCleanCommandLine>
-    <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\threaddep;..\src\archivers;..\external\libguisan\include;/usr/include/SDL2;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
-    <NMakePreprocessorDefinitions>DEBUG;USE_DISPMANX;ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;CPU_arm;ARM_HAS_DIV;USE_SDL2;_REENTRANT;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
-    <RemoteBuildOutputs />
-    <AdditionalSourcesToCopyMapping />
-    <IncrementalBuild>true</IncrementalBuild>
-    <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-Debug-dmx</RemoteProjectDir>
-    <RemoteDeployDir>$(RemoteRootDir)/$(ProjectName)-Debug-dmx</RemoteDeployDir>
-  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
     <RemoteBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug; make -j4 DEBUG=1 PLATFORM=rpi5-64-sdl2</RemoteBuildCommandLine>
     <RemoteReBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug; make clean; make -j4 DEBUG=1 PLATFORM=rpi5-64-sdl2</RemoteReBuildCommandLine>
@@ -190,17 +141,6 @@
     <IncrementalBuild>true</IncrementalBuild>
     <RemoteDeployDir>$(RemoteRootDir)/$(ProjectName)-Debug</RemoteDeployDir>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debux-DMX|ARM64'">
-    <RemoteBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug-dmx; make -j4 DEBUG=1 PLATFORM=rpi4-64-dmx</RemoteBuildCommandLine>
-    <RemoteReBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug-dmx; make clean; make -j4 DEBUG=1 PLATFORM=rpi4-64-dmx</RemoteReBuildCommandLine>
-    <RemoteCleanCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug-dmx; make clean</RemoteCleanCommandLine>
-    <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\archivers;..\external\libguisan\include;/usr/include/SDL2;/opt/vc/include;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
-    <NMakePreprocessorDefinitions>DEBUG;USE_DISPMANX;CPU_AARCH64;AMIBERRY;USE_SDL2;_REENTRANT;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
-    <RemoteBuildOutputs />
-    <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-Debug-dmx</RemoteProjectDir>
-    <IncrementalBuild>true</IncrementalBuild>
-    <RemoteDeployDir>$(RemoteRootDir)/$(ProjectName)-Debug-dmx</RemoteDeployDir>
-  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
     <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\threaddep;..\src\archivers;..\external\libguisan\include;/usr/include/SDL2;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
     <RemoteBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Release; make -j4 PLATFORM=rpi4-sdl2</RemoteBuildCommandLine>
@@ -210,16 +150,6 @@
     <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-Release</RemoteProjectDir>
     <IncrementalBuild>true</IncrementalBuild>
     <RemoteDeployDir>$(RemoteRootDir)/$(ProjectName)-Release</RemoteDeployDir>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-DMX|ARM'">
-    <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\threaddep;..\src\archivers;..\external\libguisan\include;/usr/include/SDL2;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
-    <RemoteBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Release-dmx; make -j4 PLATFORM=rpi4</RemoteBuildCommandLine>
-    <RemoteReBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Release-dmx; make clean; make -j4 PLATFORM=rpi4</RemoteReBuildCommandLine>
-    <RemoteCleanCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Release-dmx; make clean</RemoteCleanCommandLine>
-    <NMakePreprocessorDefinitions>USE_DISPMANX;ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;CPU_arm;ARM_HAS_DIV;USE_SDL2;_REENTRANT;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
-    <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-Release-dmx</RemoteProjectDir>
-    <IncrementalBuild>true</IncrementalBuild>
-    <RemoteDeployDir>$(RemoteRootDir)/$(ProjectName)-Release-dmx</RemoteDeployDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
     <RemoteBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Release; make -j4 PLATFORM=rpi4-64-sdl2</RemoteBuildCommandLine>
@@ -231,16 +161,6 @@
     <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-Release</RemoteProjectDir>
     <IncrementalBuild>true</IncrementalBuild>
     <RemoteDeployDir>$(RemoteRootDir)/$(ProjectName)-Release</RemoteDeployDir>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-DMX|ARM64'">
-    <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\archivers;..\external\libguisan\include;/usr/include/SDL2;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
-    <RemoteBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Release-dmx; make -j4 PLATFORM=rpi4-64-dmx</RemoteBuildCommandLine>
-    <RemoteReBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Release-dmx; make clean; make -j4 PLATFORM=rpi4-64-dmx</RemoteReBuildCommandLine>
-    <RemoteCleanCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Release-dmx; make clean</RemoteCleanCommandLine>
-    <NMakePreprocessorDefinitions>USE_DISPMANX;CPU_AARCH64;AMIBERRY;USE_SDL2;_REENTRANT;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
-    <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-Release</RemoteProjectDir>
-    <IncrementalBuild>true</IncrementalBuild>
-    <RemoteDeployDir>$(RemoteRootDir)/$(ProjectName)-Release-dmx</RemoteDeployDir>
   </PropertyGroup>
   <ItemGroup>
     <Text Include="..\conf\dir.txt">
@@ -1182,11 +1102,6 @@
       <Command>cp $(RemoteRootDir)/$(ProjectName)-Debug/amiberry $(RemoteRootDir)/amiberry/$(MSBuildProjectName)-Debug</Command>
     </RemotePostBuildEvent>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debux-DMX|ARM'">
-    <RemotePostBuildEvent>
-      <Command>cp $(RemoteRootDir)/$(ProjectName)-Debug/amiberry $(RemoteRootDir)/amiberry/$(MSBuildProjectName)-Debug-dmx</Command>
-    </RemotePostBuildEvent>
-  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
     <RemotePostBuildEvent>
       <Command>cp $(RemoteRootDir)/$(ProjectName)-Debug/amiberry $(RemoteRootDir)/amiberry/$(MSBuildProjectName)-Debug</Command>
@@ -1195,11 +1110,6 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-OpenGL|ARM64'">
     <RemotePostBuildEvent>
       <Command>cp $(RemoteRootDir)/$(ProjectName)-Debug/amiberry $(RemoteRootDir)/amiberry/$(MSBuildProjectName)-Debug-opengl</Command>
-    </RemotePostBuildEvent>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debux-DMX|ARM64'">
-    <RemotePostBuildEvent>
-      <Command>cp $(RemoteRootDir)/$(ProjectName)-Debug-dmx/amiberry $(RemoteRootDir)/amiberry/$(MSBuildProjectName)-Debug-dmx</Command>
     </RemotePostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
@@ -1224,17 +1134,6 @@
       <CppLanguageStandard>gnu++1y</CppLanguageStandard>
     </ClCompile>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debux-DMX|ARM'">
-    <RemotePostBuildEvent>
-      <Message>Copy binary to launch location</Message>
-    </RemotePostBuildEvent>
-    <ClCompile>
-      <CLanguageStandard>gnu11</CLanguageStandard>
-    </ClCompile>
-    <ClCompile>
-      <CppLanguageStandard>gnu++1y</CppLanguageStandard>
-    </ClCompile>
-  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
     <RemotePostBuildEvent>
       <Message>Copy binary to launch location</Message>
@@ -1257,32 +1156,9 @@
       <CppLanguageStandard>c++17</CppLanguageStandard>
     </ClCompile>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debux-DMX|ARM64'">
-    <RemotePostBuildEvent>
-      <Message>Copy binary to launch location</Message>
-    </RemotePostBuildEvent>
-    <ClCompile>
-      <CLanguageStandard>gnu11</CLanguageStandard>
-    </ClCompile>
-    <ClCompile>
-      <CppLanguageStandard>c++17</CppLanguageStandard>
-    </ClCompile>
-  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
     <RemotePostBuildEvent>
       <Command>cp $(RemoteRootDir)/$(ProjectName)-Release/amiberry $(RemoteRootDir)/amiberry/$(MSBuildProjectName)-Release</Command>
-      <Message>Copy binary to launch location</Message>
-    </RemotePostBuildEvent>
-    <ClCompile>
-      <CLanguageStandard>gnu11</CLanguageStandard>
-    </ClCompile>
-    <ClCompile>
-      <CppLanguageStandard>gnu++1y</CppLanguageStandard>
-    </ClCompile>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-DMX|ARM'">
-    <RemotePostBuildEvent>
-      <Command>cp $(RemoteRootDir)/$(ProjectName)-Release-dmx/amiberry $(RemoteRootDir)/amiberry/$(MSBuildProjectName)-Release-dmx</Command>
       <Message>Copy binary to launch location</Message>
     </RemotePostBuildEvent>
     <ClCompile>
@@ -1302,18 +1178,6 @@
     </ClCompile>
     <ClCompile>
       <CppLanguageStandard>c++17</CppLanguageStandard>
-    </ClCompile>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-DMX|ARM64'">
-    <RemotePostBuildEvent>
-      <Command>cp $(RemoteRootDir)/$(ProjectName)-Release-dmx/amiberry $(RemoteRootDir)/amiberry/$(MSBuildProjectName)-Release-dmx</Command>
-      <Message>Copy binary to launch location</Message>
-    </RemotePostBuildEvent>
-    <ClCompile>
-      <CLanguageStandard>gnu11</CLanguageStandard>
-    </ClCompile>
-    <ClCompile>
-      <CppLanguageStandard>gnu++1y</CppLanguageStandard>
     </ClCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

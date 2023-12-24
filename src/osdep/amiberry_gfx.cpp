@@ -1041,7 +1041,7 @@ void auto_crop_image()
 
 			// Adjust new Height for Line mode option
 			new_height = new_height << currprefs.gfx_vresolution;
-\
+
 			last_x = x;
 			const int y = (vstrt - minfirstline) << currprefs.gfx_vresolution > 0 ? (vstrt - minfirstline) << currprefs.gfx_vresolution : 0;
 
