@@ -22,7 +22,7 @@
  * along with ARAnyM; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
- /* 
+/*
   * UAE - The Un*x Amiga Emulator
   *
   * MC68000 emulation - machine dependent bits
@@ -52,8 +52,8 @@
    on the target.  */
 struct flag_struct {
 #if defined(CPU_x86_64)
-    uint64 cznv;
-    uint64 x;
+	uint64 cznv;
+	uint64 x;
 #else
     uint32 cznv;
     uint32 x;

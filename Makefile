@@ -703,7 +703,7 @@ guisan:
 
 mt32emu:
 	cmake -DCMAKE_BUILD_TYPE=Release -Dlibmt32emu_SHARED=FALSE -S external/mt32emu -B external/mt32emu/build
-	cmake --build external/mt32emu/build --target all
+	cmake --build external/mt32emu/build --target all --parallel
 	cp external/mt32emu/build/libmt32emu.a external/mt32emu/
 
 gencpu:
