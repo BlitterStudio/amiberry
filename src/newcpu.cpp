@@ -4316,7 +4316,7 @@ int cpu_sleep_millis(int ms)
 	if (state)
 		uae_ppc_spinlock_release();
 #endif
-#ifdef WITH_X86
+#if defined (WITH_X86) || defined (AMIBERRY)
 //	if (x86_turbo_on) {
 //		execute_other_cpu(read_processor_time() + vsynctimebase / 20);
 //	} else {
@@ -4641,7 +4641,7 @@ static int do_specialties (int cycles)
 
 	if (regs.spcflags & SPCFLAG_MODE_CHANGE)
 		return 1;
-	
+
 	if (regs.spcflags & SPCFLAG_CHECK) {
 		if (regs.halted) {
 			if (regs.halted == CPU_HALT_ACCELERATOR_CPU_FALLBACK) {
@@ -7892,7 +7892,7 @@ void exception2_fetch(uae_u32 opcode, int offset, int pcoffset)
 
 bool cpureset (void)
 {
-    /* RESET hasn't increased PC yet, 1 word offset */
+	/* RESET hasn't increased PC yet, 1 word offset */
 	uaecptr pc;
 	uaecptr ksboot = 0xf80002 - 2;
 	uae_u16 ins;

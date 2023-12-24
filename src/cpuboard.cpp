@@ -2365,7 +2365,9 @@ bool cpuboard_io_special(int addr, uae_u32 *val, int size, bool write)
 				if (w & 2) {
 					if (currprefs.mmu_model == 68030) {
 						// HACK!
+#ifdef CPUEMU_22
 						mmu030_fake_prefetch = 0x4ed0;
+#endif
 					}
 					map_banks(&kickmem_bank, 0xF8, 8, 0);
 					write_log(_T("A2630 boot rom unmapped\n"));

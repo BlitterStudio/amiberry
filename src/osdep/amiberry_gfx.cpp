@@ -121,9 +121,7 @@ static float SDL2_getrefreshrate(int monid)
 	return static_cast<float>(mode.refresh_rate);
 }
 
-struct PicassoResolution* DisplayModes;
 struct MultiDisplay Displays[MAX_DISPLAYS];
-
 struct AmigaMonitor AMonitors[MAX_AMIGAMONITORS];
 
 static int display_change_requested;
@@ -395,6 +393,9 @@ static struct MultiDisplay* getdisplay2(struct uae_prefs* p, int index)
 
 struct MultiDisplay* getdisplay(struct uae_prefs* p, int monid)
 {
+	struct AmigaMonitor* mon = &AMonitors[monid];
+	if (monid > 0 && mon->md)
+		return mon->md;
 	return getdisplay2(p, -1);
 }
 
@@ -869,7 +870,7 @@ void graphics_reset(bool forced)
 		display_change_requested = 2;
 	}
 	else {
-		// full reset if display size can't changed.
+		// full reset if display size can't be changed.
 		if (currprefs.gfx_api) {
 			display_change_requested = 3;
 		}
@@ -2110,12 +2111,15 @@ void screenshot(int monid, int mode, int doprepare)
 
 bool vsync_switchmode(int monid, int hz)
 {
+	struct AmigaMonitor* mon = &AMonitors[monid];
 	static struct PicassoResolution* oldmode;
 	static int oldhz;
-	int w = sdl_surface->w;
-	int h = sdl_surface->h;
+	int w = mon->currentmode.native_width;
+	int h = mon->currentmode.native_height;
+	int d = mon->currentmode.native_depth / 8;
+	struct MultiDisplay* md = getdisplay(&currprefs, monid);
 	struct PicassoResolution* found;
-	int newh, i, cnt;
+	int newh, cnt;
 	bool preferdouble = false, preferlace = false;
 	bool lace = false;
 
@@ -2145,11 +2149,10 @@ bool vsync_switchmode(int monid, int hz)
 				lacecheck = true;
 
 			for (int extra = 1; extra >= -1 && !found; extra--) {
-				for (i = 0; DisplayModes[i].depth >= 0 && !found; i++) {
-					struct PicassoResolution* r = &DisplayModes[i];
-					if (r->res.width == w && (r->res.height == newh + cnt || r->res.height == newh - cnt)) {
-						int j;
-						for (j = 0; r->refresh[j] > 0; j++) {
+				for (int i = 0; md->DisplayModes[i].depth >= 0 && !found; i++) {
+					struct PicassoResolution* r = &md->DisplayModes[i];
+					if (r->res.width == w && (r->res.height == newh + cnt || r->res.height == newh - cnt) && r->depth == d) {
+						for (int j = 0; r->refresh[j] > 0; j++) {
 							if (doublecheck) {
 								if (r->refreshtype[j] & REFRESH_RATE_LACE)
 									continue;
@@ -2195,11 +2198,11 @@ bool vsync_switchmode(int monid, int hz)
 		return false;
 	}
 	else {
-		newh = int(found->res.height);
-		changed_prefs.gfx_monitor[0].gfx_size_fs.height = newh;
+		newh = static_cast<int>(found->res.height);
+		changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_fs.height = newh;
 		changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_refreshrate = hz;
 		changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_interlaced = lace;
-		if (changed_prefs.gfx_monitor[0].gfx_size_fs.height != currprefs.gfx_monitor[0].gfx_size_fs.height ||
+		if (changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_fs.height != currprefs.gfx_monitor[mon->monitor_id].gfx_size_fs.height ||
 			changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_refreshrate != currprefs.gfx_apmode[APMODE_NATIVE].gfx_refreshrate) {
 			write_log(_T("refresh rate changed to %d%s, new screenmode %dx%d\n"), hz, lace ? _T("i") : _T("p"), w, newh);
 			set_config_changed();

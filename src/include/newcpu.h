@@ -152,8 +152,8 @@ struct cache040
 
 struct mmufixup
 {
-    int reg;
-    uae_u32 value;
+	int reg;
+	uae_u32 value;
 };
 extern struct mmufixup mmufixup[2];
 
