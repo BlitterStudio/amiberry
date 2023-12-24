@@ -214,7 +214,7 @@ static int display_thread(void* unused)
 {
 	struct AmigaMonitor* mon = &AMonitors[0];
 	struct amigadisplay* ad = &adisplays[0];
-	bool rtg = ad->picasso_on;
+
 #ifdef USE_DISPMANX
 	uint32_t vc_image_ptr;
 	SDL_Rect viewport;
@@ -375,7 +375,7 @@ static int display_thread(void* unused)
 
 		case DISPLAY_SIGNAL_SHOW:
 			// RTG status line is handled in P96 code, this is for native modes only
-			if ((currprefs.leds_on_screen & STATUSLINE_CHIPSET) && !rtg)
+			if ((currprefs.leds_on_screen & STATUSLINE_CHIPSET) && !ad->picasso_on)
 			{
 				update_leds(0);
 			}
@@ -882,13 +882,11 @@ static void open_screen(struct uae_prefs* p)
 			else
 				SDL_SetWindowPosition(mon->sdl_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 
-			if (mon->amigawin_rect.w && mon->amigawin_rect.h)
-				SDL_SetWindowSize(mon->sdl_window, mon->amigawin_rect.w, mon->amigawin_rect.h);
-			else
-				SDL_SetWindowSize(mon->sdl_window, display_width, display_height);
+			mon->amigawin_rect.w = mon->amigawin_rect.h = 0;
+			SDL_SetWindowSize(mon->sdl_window, display_width, display_height);
 		}
 	}
-	else
+	else // Native screen mode
 	{
 		display_depth = 32;
 		pixel_format = SDL_PIXELFORMAT_BGR888;
