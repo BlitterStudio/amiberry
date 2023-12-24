@@ -15,10 +15,6 @@
 
 #define OPTIONSFILENAME _T("default")
 
-#if !defined(ARMV6T2) && !defined(CPU_AARCH64)
-#undef USE_JIT_FPU
-#endif
-
 #define MAKEBD(x,y,z) ((((x) - 2000) * 10000 + (y)) * 100 + (z))
 #define GETBDY(x) ((x) / 1000000 + 2000)
 #define GETBDM(x) (((x) - (((x) / 10000) * 10000)) / 100)

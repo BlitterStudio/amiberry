@@ -13,11 +13,11 @@
 //#define USE_SOFT_LONG_DOUBLE
 #define PACKAGE_STRING "Amiberry"
 
-#if !defined (CPU_AMD64) && !defined (__x86_64__) && !defined(__riscv) && !defined (__MACH__)
-#define JIT /* JIT compiler support */
-#endif
 #if defined(ARMV6T2) || defined(CPU_AARCH64)
+#ifndef __MACH__ // not for macOS
+#define JIT /* JIT compiler support */
 #define USE_JIT_FPU
+#endif
 #endif
 
 #define AMIBERRY
@@ -47,7 +47,7 @@
 #define SCSIEMU /* uaescsi.device emulation */
 #define UAESERIAL /* uaeserial.device emulation */
 #define FPUEMU /* FPU emulation */
-/* #define FPU_UAE */
+#define FPU_UAE
 /* #define WITH_SOFTFLOAT */
 /* #define MMUEMU */ /* Aranym 68040 MMU */
 /* #define FULLMMU */ /* Aranym 68040 MMU */
