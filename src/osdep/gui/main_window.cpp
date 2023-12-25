@@ -460,7 +460,6 @@ void amiberry_gui_init()
         }
         check_error_sdl(mon->sdl_window == nullptr, "Unable to create window:");
 
-
 		auto* const icon_surface = IMG_Load(prefix_with_data_path("amiberry.png").c_str());
 		if (icon_surface != nullptr)
 		{

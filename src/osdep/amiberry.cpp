@@ -1800,18 +1800,10 @@ void target_fixup_options(struct uae_prefs* p)
 	}
 	
 #ifdef AMIBERRY
-	if (z3_base_adr == Z3BASE_REAL)
-	{
-		// map Z3 memory at real address (0x40000000)
-		p->z3_mapping_mode = Z3MAPPING_REAL;
-		p->z3autoconfig_start = z3_base_adr;
-	}
-	else
-	{
-		// map Z3 memory at UAE address (0x10000000)
-		p->z3_mapping_mode = Z3MAPPING_UAE;
-		p->z3autoconfig_start = z3_base_adr;
-	}
+	// Some old configs might have lower values there. Ensure they are updated
+	if (p->gfx_api < 2)
+		p->gfx_api = 2;
+
 	// Always use these pixel formats, for optimal performance
 	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5PC | RGBFF_R8G8B8A8;
 
