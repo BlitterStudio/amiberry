@@ -570,7 +570,7 @@ static void open_screen(struct uae_prefs* p)
 		else
 		{
 			display_depth = 32;
-			pixel_format = SDL_PIXELFORMAT_BGR888;
+			pixel_format = SDL_PIXELFORMAT_RGBA32;
 		}
 
 #ifdef USE_OPENGL
@@ -591,19 +591,15 @@ static void open_screen(struct uae_prefs* p)
 #endif
 		if (isfullscreen() == 0 && !is_maximized)
 		{
-			if (mon->amigawin_rect.x && mon->amigawin_rect.y)
-				SDL_SetWindowPosition(mon->sdl_window, mon->amigawin_rect.x, mon->amigawin_rect.y);
-			else
-				SDL_SetWindowPosition(mon->sdl_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
-
-			mon->amigawin_rect.w = mon->amigawin_rect.h = 0;
+			mon->amigawin_rect.x = mon->amigawin_rect.y = mon->amigawin_rect.w = mon->amigawin_rect.h = 0;
+			SDL_SetWindowPosition(mon->sdl_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 			SDL_SetWindowSize(mon->sdl_window, display_width, display_height);
 		}
 	}
 	else // Native screen mode
 	{
 		display_depth = 32;
-		pixel_format = SDL_PIXELFORMAT_BGR888;
+		pixel_format = SDL_PIXELFORMAT_RGBA32;
 
 		if (p->gfx_correct_aspect == 0)
 		{

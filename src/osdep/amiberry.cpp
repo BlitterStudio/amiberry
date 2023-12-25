@@ -1800,6 +1800,10 @@ void target_fixup_options(struct uae_prefs* p)
 	}
 	
 #ifdef AMIBERRY
+	// Some old configs might have lower values there. Ensure they are updated
+	if (p->gfx_api < 2)
+		p->gfx_api = 2;
+
 	// Always use these pixel formats, for optimal performance
 	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5PC | RGBFF_R8G8B8A8;
 
