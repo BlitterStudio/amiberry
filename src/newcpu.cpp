@@ -5252,7 +5252,7 @@ void process_cpu_indirect_memory_write(uae_u32 addr, uae_u32 data, int size)
 
 static void run_cpu_thread(int (*f)(void *))
 {
-	int framecnt = -1;
+	uae_u32 framecnt = -1;
 	int vp = 0;
 	int intlev_prev = 0;
 

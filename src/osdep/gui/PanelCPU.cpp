@@ -47,6 +47,8 @@ static gcn::Label* lblCPUFrequency;
 static gcn::DropDown* cboCPUFrequency;
 static gcn::Label* lblCPUFrequencyMHz;
 
+static gcn::CheckBox* chkCPUMultiThread;
+
 static gcn::Window* grpAdvJitSettings;
 static gcn::Label* lblJitCacheSize;
 static gcn::Slider* sldJitCacheSize;
@@ -308,6 +310,8 @@ public:
 			}
 		}
 
+		changed_prefs.cpu_thread = chkCPUMultiThread->isSelected();
+
 		RefreshPanelCPU();
 		RefreshPanelRAM();
 		RefreshPanelChipset();
@@ -481,11 +485,16 @@ void InitPanelCPU(const struct config_category& category)
 	cboCPUFrequency->setId("cboCPUFrequency");
 	lblCPUFrequencyMHz = new gcn::Label("50 MHz");
 
+	chkCPUMultiThread = new gcn::CheckBox("Multi-threaded CPU");
+	chkCPUMultiThread->setId("chkCPUMultiThread");
+	chkCPUMultiThread->addActionListener(cpuActionListener);
+
 	grpCPUCycleExact = new gcn::Window("Cycle-Exact CPU Emulation Speed");
 	grpCPUCycleExact->setPosition(grpCPUSpeed->getX(), grpCPUSpeed->getY() + grpCPUSpeed->getHeight() + DISTANCE_NEXT_Y / 2);
 	grpCPUCycleExact->add(lblCPUFrequency, 10, 10);
 	grpCPUCycleExact->add(cboCPUFrequency, lblCPUFrequency->getX() + lblCPUFrequency->getWidth() + DISTANCE_NEXT_X / 2, 10);
 	grpCPUCycleExact->add(lblCPUFrequencyMHz, cboCPUFrequency->getX() + cboCPUFrequency->getWidth() + DISTANCE_NEXT_X, 10);
+	grpCPUCycleExact->add(chkCPUMultiThread, lblCPUFrequency->getX(), lblCPUFrequency->getY() + lblCPUFrequency->getHeight() + DISTANCE_NEXT_Y * 4);
 	grpCPUCycleExact->setMovable(false);
 	grpCPUCycleExact->setSize(grpCPUSpeed->getWidth(), 140);
 	grpCPUCycleExact->setTitleBarHeight(TITLEBAR_HEIGHT);
@@ -589,6 +598,7 @@ void ExitPanelCPU()
 	delete lblCPUFrequency;
 	delete cboCPUFrequency;
 	delete lblCPUFrequencyMHz;
+	delete chkCPUMultiThread;
 
 	delete lblJitCacheSize;
 	delete sldJitCacheSize;
@@ -767,6 +777,12 @@ void RefreshPanelCPU()
 		else
 			optMMUEnabled->setSelected(true);
 	}
+
+	bool no_thread = (changed_prefs.cpu_compatible || changed_prefs.ppc_mode || changed_prefs.cpu_memory_cycle_exact || changed_prefs.cpu_model < 68020);
+	// Disabled until this is fixed upstream (WinUAE) - it doesn't work as expected yet (black screen)
+	chkCPUMultiThread->setEnabled(false);
+	//chkCPUMultiThread->setEnabled(!no_thread && !emulating);
+	chkCPUMultiThread->setSelected(changed_prefs.cpu_thread);
 }
 
 bool HelpPanelCPU(std::vector<std::string>& helptext)
