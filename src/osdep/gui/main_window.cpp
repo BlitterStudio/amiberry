@@ -1145,7 +1145,7 @@ void gui_widgets_init()
 	selectorsScrollArea = new gcn::ScrollArea();
 	selectorsScrollArea->setContent(selectors);
 	selectorsScrollArea->setBaseColor(colSelectorInactive);
-	selectorsScrollArea->setBackgroundColor(gui_baseCol);
+	selectorsScrollArea->setBackgroundColor(colSelectorInactive);
 	selectorsScrollArea->setSize(selectorScrollAreaWidth, workAreaHeight);
 	selectorsScrollArea->setBorderSize(1);
 	
