@@ -428,7 +428,7 @@ void InitPanelDisplay(const config_category& category)
 
 	lblVOffset = new gcn::Label("V. Offset:");
 	lblVOffset->setAlignment(gcn::Graphics::LEFT);
-	sldVOffset = new gcn::Slider(-20, 20);
+	sldVOffset = new gcn::Slider(-60, 60);
 	sldVOffset->setSize(135, SLIDER_HEIGHT);
 	sldVOffset->setBaseColor(gui_baseCol);
 	sldVOffset->setMarkerLength(20);
