@@ -74,6 +74,7 @@ static gcn::CheckBox* chkRtgAllowScaling;
 static gcn::CheckBox* chkRtgAlwaysCenter;
 static gcn::CheckBox* chkRtgHardwareInterrupt;
 static gcn::CheckBox* chkRtgHardwareSprite;
+static gcn::CheckBox* chkRtgMultithreaded;
 static gcn::Label* lblRtgRefreshRate;
 static gcn::DropDown* cboRtgRefreshRate;
 static gcn::Label* lblRtgBufferMode;
@@ -141,6 +142,9 @@ public:
 
 		else if (action_event.getSource() == chkRtgHardwareSprite)
 			changed_prefs.rtg_hardwaresprite = chkRtgHardwareSprite->isSelected();
+
+		else if (action_event.getSource() == chkRtgMultithreaded)
+			changed_prefs.rtg_multithread = chkRtgMultithreaded->isSelected();
 
 		else if (action_event.getSource() == cboRtgRefreshRate)
 			changed_prefs.rtgvblankrate = cboRtgRefreshRate->getSelected() == 0 ? 0 :
@@ -247,6 +251,10 @@ void InitPanelRTG(const config_category& category)
 	chkRtgHardwareSprite->addActionListener(rtg_action_listener);
 	chkRtgHardwareSprite->setEnabled(false); // Not implemented yet
 
+	chkRtgMultithreaded = new gcn::CheckBox("Multithreaded");
+	chkRtgMultithreaded->setId("chkRtgMultithreaded");
+	chkRtgMultithreaded->addActionListener(rtg_action_listener);
+
 	lblRtgRefreshRate = new gcn::Label("Refresh rate:");
 	lblRtgRefreshRate->setAlignment(gcn::Graphics::LEFT);
 	cboRtgRefreshRate = new gcn::DropDown(&rtg_refreshrates_list);
@@ -325,7 +333,10 @@ void InitPanelRTG(const config_category& category)
 	posY += chkRtgHardwareInterrupt->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(chkRtgHardwareSprite, DISTANCE_BORDER, posY);
-	posY += chkRtgHardwareSprite->getHeight() + DISTANCE_NEXT_Y * 2;
+	posY += chkRtgHardwareSprite->getHeight() + DISTANCE_NEXT_Y;
+
+	category.panel->add(chkRtgMultithreaded, DISTANCE_BORDER, posY);
+	posY += chkRtgMultithreaded->getHeight() + DISTANCE_NEXT_Y * 2;
 
 	category.panel->add(lblRtgRefreshRate, DISTANCE_BORDER, posY);
 	category.panel->add(lblRtgBufferMode, lblRtgRefreshRate->getX() + lblRtgRefreshRate->getWidth() + DISTANCE_NEXT_X * 5, posY);
@@ -352,6 +363,7 @@ void ExitPanelRTG()
 	delete chkRtgAlwaysCenter;
 	delete chkRtgHardwareInterrupt;
 	delete chkRtgHardwareSprite;
+	delete chkRtgMultithreaded;
 	delete lblRtgRefreshRate;
 	delete cboRtgRefreshRate;
 	delete lblRtgBufferMode;
@@ -414,6 +426,7 @@ void RefreshPanelRTG()
 	chkRtgAllowScaling->setSelected(changed_prefs.rtgallowscaling);
 	chkRtgHardwareInterrupt->setSelected(changed_prefs.rtg_hardwareinterrupt);
 	chkRtgHardwareSprite->setSelected(changed_prefs.rtg_hardwaresprite);
+	chkRtgMultithreaded->setSelected(changed_prefs.rtg_multithread);
 
 	if (changed_prefs.rtgvblankrate <= 0 ||
 		changed_prefs.rtgvblankrate == 50 ||

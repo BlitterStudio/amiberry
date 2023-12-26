@@ -35,6 +35,8 @@
 
 #include <stdlib.h>
 
+#include "uae.h"
+
 #if defined(PICASSO96)
 
 #define MULTIDISPLAY 0
@@ -240,7 +242,7 @@ extern int rtg_index;
 
 void lockrtg(void)
 {
-	if (currprefs.rtg_multithread && render_pipe)
+	if (currprefs.rtg_multithread && render_tid && render_cs)
 #ifdef _WIN32
 		EnterCriticalSection(&render_cs);
 #else
@@ -250,7 +252,7 @@ void lockrtg(void)
 
 void unlockrtg(void)
 {
-	if (currprefs.rtg_multithread && render_pipe)
+	if (currprefs.rtg_multithread && render_tid && render_cs)
 #ifdef _WIN32
 		LeaveCriticalSection(&render_cs);
 #else
@@ -945,7 +947,7 @@ static void rtg_render(void)
 #ifndef AMIBERRY
 		gfxboard_vsync_handler(full, true);
 #endif
-		if (currprefs.rtg_multithread && uaegfx_active) {
+		if (currprefs.rtg_multithread && uaegfx_active && quit_program == 0) {
 			if (ad->pending_render) {
 				ad->pending_render = false;
 				gfx_unlock_picasso(mon->monitor_id, true);
@@ -5809,9 +5811,9 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 		}
 	}
 
-	if (0 && flushlines) {
-		write_log (_T("%d:%d\n"), flushlines, matchcount);
-	}
+	//if (0 && flushlines) {
+	//	write_log (_T("%d:%d\n"), flushlines, matchcount);
+	//}
 
 	if (currprefs.leds_on_screen & STATUSLINE_RTG) {
 		if (dstp == NULL) {
@@ -6613,9 +6615,11 @@ static void picasso_reset2(int monid)
 	struct picasso96_state_struct *state = &picasso96_state[monid];
 	if (!monid && currprefs.rtg_multithread) {
 		if (!render_pipe) {
-			uae_sem_init(&render_cs, 0, 0);
 			render_pipe = xmalloc(smp_comm_pipe, 1);
 			init_comm_pipe(render_pipe, 10, 1);
+		}
+		if (render_cs == nullptr) {
+			uae_sem_init(&render_cs, 0, -1);
 		}
 		if (render_thread_state <= 0) {
 			render_thread_state = 0;

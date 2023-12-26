@@ -244,8 +244,9 @@ static NavigationMap navMap[] =
 	{ "chkRtgAllowScaling", "RTG board", "", "chkRtgAutoscale", "chkRtgAlwaysCenter" },
 	{ "chkRtgAlwaysCenter", "RTG board", "", "chkRtgAllowScaling", "chkRtgHardwareInterrupt" },
 	{ "chkRtgHardwareInterrupt", "RTG board", "", "chkRtgAlwaysCenter", "chkRtgHardwareSprite" },
-	{ "chkRtgHardwareSprite", "RTG board", "", "chkRtgHardwareInterrupt", "cboRtgRefreshRate" },
-	{ "cboRtgRefreshRate", "RTG board", "cboRtgBufferMode", "chkRtgHardwareSprite", "cboBoard" },
+	{ "chkRtgHardwareSprite", "RTG board", "", "chkRtgHardwareInterrupt", "chkRtgMultithreaded" },
+	{ "chkRtgMultithreaded", "RTG board", "", "chkRtgHardwareSprite", "cboRtgRefreshRate" },
+	{ "cboRtgRefreshRate", "RTG board", "cboRtgBufferMode", "chkRtgMultithreaded", "cboBoard" },
 	{ "cboRtgBufferMode", "cboRtgRefreshRate", "cboRtgAspectRatio", "chkRtgHardwareSprite", "cboBoard" },
 	{ "cboRtgAspectRatio", "cboRtgBufferMode", "RTG board", "chkRtgHardwareSprite", "cboBoard" },
 
