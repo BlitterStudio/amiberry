@@ -4235,7 +4235,12 @@ static void wordsync_detected(bool startup)
 	if (dskdmaen != DSKDMA_OFF) {
 		int prev_dma_enabled = dma_enable;
 		if (!startup) {
-			dma_enable = 1;
+			if (!dma_enable) {
+				dma_enable = 1;
+				if (dsklength == 0) {
+					disk_dmafinished();
+				}
+			}
 		}
 		if (disk_debug_logging) {
 			int pos = -1;
