@@ -446,7 +446,13 @@ static inline int cctrue(int cc)
 
 #endif /* SAHF_SETO_PROFITABLE */
 
-#elif defined(CPU_riscv64) || defined(CPU_arm) && (defined(ARMV6_ASSEMBLY) || defined(CPU_AARCH64))
+#elif defined(CPU_riscv64) || defined(CPU_arm) || defined(CPU_AARCH64)
+
+#ifdef __cplusplus
+# include <cstdlib>
+#else
+# include <stdlib.h>
+#endif
 
 /*
  * Machine dependent structure for holding the 68k CCR flags
@@ -492,37 +498,34 @@ struct flag_struct {
 
 #define COPY_CARRY()	(regflags.x = regflags.nzcv >> (FLAGBIT_C - FLAGBIT_X))
 
-extern struct flag_struct regflags __asm__ ("regflags");
+extern struct flag_struct regflags __asm__("regflags");
 
-
-/*
- * Test CCR condition
- */
 static inline int cctrue(int cc)
 {
-    unsigned int nzcv = regflags.nzcv;
-    switch(cc){
-     case 0: return 1;                       /* T */
-     case 1: return 0;                       /* F */
-     case 2: return (nzcv & (FLAGVAL_C | FLAGVAL_Z)) == 0; /* !GET_CFLG && !GET_ZFLG;  HI */
-     case 3: return (nzcv & (FLAGVAL_C | FLAGVAL_Z)) != 0; /* GET_CFLG || GET_ZFLG;    LS */
-     case 4: return (nzcv & FLAGVAL_C) == 0; /* !GET_CFLG;               CC */
-     case 5: return (nzcv & FLAGVAL_C) != 0; /* GET_CFLG;                CS */
-     case 6: return (nzcv & FLAGVAL_Z) == 0; /* !GET_ZFLG;               NE */
-     case 7: return (nzcv & FLAGVAL_Z) != 0; /* GET_ZFLG;                EQ */
-     case 8: return (nzcv & FLAGVAL_V) == 0; /* !GET_VFLG;               VC */
-     case 9: return (nzcv & FLAGVAL_V) != 0; /* GET_VFLG;                VS */
-     case 10:return (nzcv & FLAGVAL_N) == 0; /* !GET_NFLG;               PL */
-     case 11:return (nzcv & FLAGVAL_N) != 0; /* GET_NFLG;                MI */
-     case 12:return (((nzcv << (FLAGBIT_N - FLAGBIT_V)) ^ nzcv) & FLAGVAL_N) == 0; /* GET_NFLG == GET_VFLG;             GE */
-     case 13:return (((nzcv << (FLAGBIT_N - FLAGBIT_V)) ^ nzcv) & FLAGVAL_N) != 0; /* GET_NFLG != GET_VFLG;             LT */
-     case 14: nzcv &= (FLAGVAL_N | FLAGVAL_Z | FLAGVAL_V);
-        return (((nzcv << (FLAGBIT_N - FLAGBIT_V)) ^ nzcv) & (FLAGVAL_N | FLAGVAL_Z)) == 0; /* !GET_ZFLG && (GET_NFLG == GET_VFLG);  GT */
-     case 15: nzcv &= (FLAGVAL_N | FLAGVAL_Z | FLAGVAL_V);
-        return (((nzcv << (FLAGBIT_N - FLAGBIT_V)) ^ nzcv) & (FLAGVAL_N | FLAGVAL_Z)) != 0; /* GET_ZFLG || (GET_NFLG != GET_VFLG);   LE */
-    }
-    return 0;
+	unsigned int nzcv = regflags.nzcv;
+	switch (cc) {
+	case 0: return 1;                       /* T */
+	case 1: return 0;                       /* F */
+	case 2: return (nzcv & (FLAGVAL_C | FLAGVAL_Z)) == 0; /* !GET_CFLG && !GET_ZFLG;  HI */
+	case 3: return (nzcv & (FLAGVAL_C | FLAGVAL_Z)) != 0; /* GET_CFLG || GET_ZFLG;    LS */
+	case 4: return (nzcv & FLAGVAL_C) == 0; /* !GET_CFLG;               CC */
+	case 5: return (nzcv & FLAGVAL_C) != 0; /* GET_CFLG;                CS */
+	case 6: return (nzcv & FLAGVAL_Z) == 0; /* !GET_ZFLG;               NE */
+	case 7: return (nzcv & FLAGVAL_Z) != 0; /* GET_ZFLG;                EQ */
+	case 8: return (nzcv & FLAGVAL_V) == 0; /* !GET_VFLG;               VC */
+	case 9: return (nzcv & FLAGVAL_V) != 0; /* GET_VFLG;                VS */
+	case 10:return (nzcv & FLAGVAL_N) == 0; /* !GET_NFLG;               PL */
+	case 11:return (nzcv & FLAGVAL_N) != 0; /* GET_NFLG;                MI */
+	case 12:return (((nzcv << (FLAGBIT_N - FLAGBIT_V)) ^ nzcv) & FLAGVAL_N) == 0; /* GET_NFLG == GET_VFLG;             GE */
+	case 13:return (((nzcv << (FLAGBIT_N - FLAGBIT_V)) ^ nzcv) & FLAGVAL_N) != 0; /* GET_NFLG != GET_VFLG;             LT */
+	case 14: nzcv &= (FLAGVAL_N | FLAGVAL_Z | FLAGVAL_V);
+		return (((nzcv << (FLAGBIT_N - FLAGBIT_V)) ^ nzcv) & (FLAGVAL_N | FLAGVAL_Z)) == 0; /* !GET_ZFLG && (GET_NFLG == GET_VFLG);  GT */
+	case 15: nzcv &= (FLAGVAL_N | FLAGVAL_Z | FLAGVAL_V);
+		return (((nzcv << (FLAGBIT_N - FLAGBIT_V)) ^ nzcv) & (FLAGVAL_N | FLAGVAL_Z)) != 0; /* GET_ZFLG || (GET_NFLG != GET_VFLG);   LE */
+	}
+	return 0;
 }
+
 
 #define optflag_testl(v) do {\
   __asm__ __volatile__ ("tst %[rv],%[rv]\n\t" \

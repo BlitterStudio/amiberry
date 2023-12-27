@@ -84,7 +84,7 @@
     <RemoteReBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug; make clean; make -j4 DEBUG=1 PLATFORM=rpi4-sdl2</RemoteReBuildCommandLine>
     <RemoteCleanCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug; make clean</RemoteCleanCommandLine>
     <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\threaddep;..\src\archivers;..\external\libguisan\include;/usr/include/SDL2;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
-    <NMakePreprocessorDefinitions>DEBUG;ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;CPU_arm;ARM_HAS_DIV;USE_SDL2;_REENTRANT;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+    <NMakePreprocessorDefinitions>DEBUG;ARMV6T2;AMIBERRY;CPU_arm;ARM_HAS_DIV;USE_SDL2;_REENTRANT;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <RemoteBuildOutputs>
     </RemoteBuildOutputs>
     <AdditionalSourcesToCopyMapping>
@@ -100,7 +100,7 @@
     <RemoteReBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug; make clean; make -j4 DEBUG=1 PLATFORM=rpi4-sdl2</RemoteReBuildCommandLine>
     <RemoteCleanCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug; make clean</RemoteCleanCommandLine>
     <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\threaddep;..\src\archivers;..\external\libguisan\include;/usr/include/SDL2;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
-    <NMakePreprocessorDefinitions>DEBUG;ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;CPU_arm;ARM_HAS_DIV;USE_SDL2;_REENTRANT;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+    <NMakePreprocessorDefinitions>DEBUG;ARMV6T2;AMIBERRY;CPU_arm;ARM_HAS_DIV;USE_SDL2;_REENTRANT;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <RemoteBuildOutputs />
     <AdditionalSourcesToCopyMapping />
     <IncrementalBuild>true</IncrementalBuild>
@@ -112,7 +112,7 @@
     <RemoteReBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug; make clean; make -j4 DEBUG=1 PLATFORM=rpi4-sdl2</RemoteReBuildCommandLine>
     <RemoteCleanCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Debug; make clean</RemoteCleanCommandLine>
     <NMakeIncludeSearchPath>..\src;..\src\include;..\src\osdep;..\src\threaddep;..\src\archivers;..\external\libguisan\include;/usr/include/SDL2;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
-    <NMakePreprocessorDefinitions>DEBUG;ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;CPU_arm;ARM_HAS_DIV;USE_SDL2;_REENTRANT;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+    <NMakePreprocessorDefinitions>DEBUG;ARMV6T2;AMIBERRY;CPU_arm;ARM_HAS_DIV;USE_SDL2;_REENTRANT;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <RemoteBuildOutputs />
     <AdditionalSourcesToCopyMapping />
     <IncrementalBuild>true</IncrementalBuild>
@@ -146,7 +146,7 @@
     <RemoteBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Release; make -j4 PLATFORM=rpi4-sdl2</RemoteBuildCommandLine>
     <RemoteReBuildCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Release; make clean; make -j4 PLATFORM=rpi4-sdl2</RemoteReBuildCommandLine>
     <RemoteCleanCommandLine>cd $(RemoteRootDir)/$(ProjectName)-Release; make clean</RemoteCleanCommandLine>
-    <NMakePreprocessorDefinitions>ARMV6T2;USE_ARMNEON;ARMV6_ASSEMBLY;AMIBERRY;CPU_arm;ARM_HAS_DIV;USE_SDL2;_REENTRANT;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+    <NMakePreprocessorDefinitions>ARMV6T2;AMIBERRY;CPU_arm;ARM_HAS_DIV;USE_SDL2;_REENTRANT;_FILE_OFFSET_BITS=64;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <RemoteProjectDir>$(RemoteRootDir)/$(ProjectName)-Release</RemoteProjectDir>
     <IncrementalBuild>true</IncrementalBuild>
     <RemoteDeployDir>$(RemoteRootDir)/$(ProjectName)-Release</RemoteDeployDir>

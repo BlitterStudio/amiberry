@@ -87,18 +87,13 @@ ifdef USE_OLDGCC
 endif
 
 #Common flags for all 32bit targets
-CPPFLAGS32=-DARMV6_ASSEMBLY -DARMV6T2
+CPPFLAGS32=-DARMV6T2
 
 #Common flags for all 64bit targets
 CPPFLAGS64=-DCPU_AARCH64
 
 #Neon flags
-NEON_FLAGS=-DUSE_ARMNEON -DARM_HAS_DIV
-
-# Raspberry Pi 1 CPU flags
-ifneq (,$(findstring rpi1,$(PLATFORM)))
-	CPUFLAGS = -mcpu=arm1176jzf-s -mfpu=vfp
-endif
+NEON_FLAGS=-DARM_HAS_DIV
 
 # Raspberry Pi 2 CPU flags
 ifneq (,$(findstring rpi2,$(PLATFORM)))
@@ -128,13 +123,11 @@ endif
 #
 # SDL2 targets
 #
-# Raspberry Pi 1/2/3/4/5 (SDL2)
-ifeq ($(PLATFORM),$(filter $(PLATFORM),rpi1-sdl2 rpi2-sdl2 rpi3-sdl2 rpi4-sdl2 rpi5-sdl2))
+# Raspberry Pi 2/3/4/5 (SDL2)
+ifeq ($(PLATFORM),$(filter $(PLATFORM),rpi2-sdl2 rpi3-sdl2 rpi4-sdl2 rpi5-sdl2))
 	CPPFLAGS += $(CPPFLAGS32)
-	ifeq ($(PLATFORM),$(filter $(PLATFORM), rpi2-sdl2 rpi3-sdl2 rpi4-sdl2 rpi5-sdl2))
-	   CPPFLAGS += $(NEON_FLAGS)
-	   HAVE_NEON = 1
-	endif
+	CPPFLAGS += $(NEON_FLAGS)
+	HAVE_NEON = 1
 
 # OrangePi (SDL2)
 else ifeq ($(PLATFORM),orangepi-pc)
