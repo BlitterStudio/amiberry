@@ -304,6 +304,9 @@ static bool gary_nonrange(uaecptr addr)
 		return false;
 	if (addr >= 0xe80000 && addr < 0xf80000)
 		return false;
+	if (expansion_get_autoconfig_by_address(&currprefs, addr, 0)) {
+		return false;
+	}
 	return true;
 }
 
