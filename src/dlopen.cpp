@@ -78,6 +78,7 @@ UAE_DLHANDLE uae_dlopen_plugin(const TCHAR *name)
 	_tcscat(path, LT_MODULE_EXT);
 	UAE_DLHANDLE handle = WIN32_LoadLibrary(path);
 #elif defined (__MACH__)
+	TCHAR path[MAX_DPATH];
 	char exepath[MAX_DPATH];
 	uint32_t size = sizeof exepath;
 	std::string directory;
@@ -94,7 +95,9 @@ UAE_DLHANDLE uae_dlopen_plugin(const TCHAR *name)
 			directory = directory.substr(0, last_slash_idx);
 		}
 	}
-	UAE_DLHANDLE handle = uae_dlopen(directory.append("/Resources/").append(name).c_str());
+	_tcscpy(path, directory.append("/Resources/").append(name).c_str());
+	_tcscat(path, LT_MODULE_EXT);
+	UAE_DLHANDLE handle = uae_dlopen(path);
 #else
 	TCHAR path[MAX_DPATH];
 	std::string directory = string(start_path_data);
