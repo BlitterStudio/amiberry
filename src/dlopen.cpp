@@ -1,6 +1,8 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
+#include "uae/api.h"
 #include "uae/dlopen.h"
+#include "uae/log.h"
 
 #ifdef _WIN32
 #include "windows.h"
@@ -9,6 +11,13 @@
 #endif
 #ifdef WINUAE
 #include "od-win32/win32.h"
+#endif
+
+#ifdef AMIBERRY
+#include "uae.h"
+#endif
+#ifdef __MACH__
+#include <mach-o/dyld.h>
 #endif
 
 UAE_DLHANDLE uae_dlopen(const TCHAR *path)
@@ -51,32 +60,24 @@ void uae_dlclose(UAE_DLHANDLE handle)
 #endif
 }
 
-#ifdef AMIBERRY
-#include "uae/uae.h"
-static amiga_plugin_lookup_function plugin_lookup;
-/*UAE_EXTERN_C*/ void amiga_set_plugin_lookup_function(
-		amiga_plugin_lookup_function function)
-{
-	plugin_lookup = function;
-}
-#endif
-
-#ifdef __MACH__
-#include <mach-o/dyld.h>
-#endif
 UAE_DLHANDLE uae_dlopen_plugin(const TCHAR *name)
 {
-#if defined(AMIBERRY)
+#if defined(FSUAE)
 	const TCHAR *path = NULL;
 	if (plugin_lookup) {
 		path = plugin_lookup(name);
 	}
-/*	if (path == NULL or path[0] == _T('\0')) {
+	if (path == NULL or path[0] == _T('\0')) {
 		write_log(_T("DLOPEN: Could not find plugin \"%s\"\n"), name);
 		return NULL;
 	}
-*/
-#ifdef __MACH__
+	UAE_DLHANDLE handle = uae_dlopen(path);
+#elif defined(WINUAE)
+	TCHAR path[MAX_DPATH];
+	_tcscpy(path, name);
+	_tcscat(path, LT_MODULE_EXT);
+	UAE_DLHANDLE handle = WIN32_LoadLibrary(path);
+#elif defined (__MACH__)
 	char exepath[MAX_DPATH];
 	uint32_t size = sizeof exepath;
 	std::string directory;
@@ -93,18 +94,11 @@ UAE_DLHANDLE uae_dlopen_plugin(const TCHAR *name)
 			directory = directory.substr(0, last_slash_idx);
 		}
 	}
-	UAE_DLHANDLE handle = uae_dlopen(directory.append("/Resources/capsimg.so").c_str());
-#else
-	UAE_DLHANDLE handle = uae_dlopen("./capsimg.so");
-#endif // __MACH__
-#elif defined(WINUAE)
-	TCHAR path[MAX_DPATH];
-	_tcscpy(path, name);
-	_tcscat(path, LT_MODULE_EXT);
-	UAE_DLHANDLE handle = WIN32_LoadLibrary(path);
+	UAE_DLHANDLE handle = uae_dlopen(directory.append("/Resources/").append(name).c_str());
 #else
 	TCHAR path[MAX_DPATH];
-	_tcscpy(path, name);
+	std::string directory = string(start_path_data);
+	_tcscpy(path, directory.append("/").append(name).c_str());
 #ifdef _WIN64
 	_tcscat(path, _T("_x64"));
 #endif
@@ -124,6 +118,6 @@ void uae_dlopen_patch_common(UAE_DLHANDLE handle)
 	ptr = uae_dlsym(handle, "uae_log");
 	if (ptr) {
 		write_log(_T("DLOPEN: Patching common functions\n"));
-//		*((uae_log_function *)ptr) = &uae_log;
+		*((uae_log_function *)ptr) = &write_log;
 	}
 }

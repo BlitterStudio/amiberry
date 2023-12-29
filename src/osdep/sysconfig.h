@@ -305,6 +305,10 @@ typedef int32_t uae_atomic;
 #define HAVE_ISNAN
 #define HAVE_ISINF
 
+#ifndef LT_MODULE_EXT
+#define LT_MODULE_EXT _T(".so")
+#endif
+
 /* Define if you have the bcopy function.  */
 #define HAVE_BCOPY 1
 
