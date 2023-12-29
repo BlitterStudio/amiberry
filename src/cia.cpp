@@ -1264,6 +1264,7 @@ static void calc_led(int old_led)
 static void led_vsync(void)
 {
 	int v;
+	bool ledonoff;
 
 	calc_led(led);
 	if (led_cycles_on && !led_cycles_off)
@@ -1276,6 +1277,7 @@ static void led_vsync(void)
 		v = 255;
 	if (v < 0)
 		v = 0;
+	ledonoff = v > 96;
 	if (currprefs.power_led_dim && v < currprefs.power_led_dim)
 		v = currprefs.power_led_dim;
 	if (v > 255)
@@ -1283,8 +1285,8 @@ static void led_vsync(void)
 	gui_data.powerled_brightness = v;
 	led_cycles_on = 0;
 	led_cycles_off = 0;
-	if (led_old_brightness != gui_data.powerled_brightness) {
-		gui_data.powerled = gui_data.powerled_brightness > 96;
+	if (led_old_brightness != gui_data.powerled_brightness || ledonoff != gui_data.powerled) {
+		gui_data.powerled = ledonoff;
 		gui_led (LED_POWER, gui_data.powerled, gui_data.powerled_brightness);
 		led_filter_audio();
 	}
