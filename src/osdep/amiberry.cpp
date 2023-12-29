@@ -3601,7 +3601,7 @@ void init_macos_amiberry_folders(std::string macos_amiberry_directory)
 	if (!my_existsdir(directory.c_str()))
 		my_mkdir(directory.c_str());
 
-	directory = macos_amiberry_directory + "/Data/Floppy_Sounds";
+	directory = macos_amiberry_directory + "/Data/floppy_sounds";
 	if (!my_existsdir(directory.c_str()))
 		my_mkdir(directory.c_str());
 
