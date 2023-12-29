@@ -1309,18 +1309,27 @@ static bool isrecognizedext(const TCHAR *name)
 
 static void update_disk_statusline(int num)
 {
-	//drive *drv = &floppy[num];
-	//if (!drv->diskfile)
-	//	return;
-	//const TCHAR *fname = zfile_getoriginalname(drv->diskfile);
-	//if (!fname)
-	//	fname = zfile_getname(drv->diskfile);
-	//if (!fname)
-	//	fname = _T("?");
-	//if (disk_info_data.diskname[0])
-	//	statusline_add_message(STATUSTYPE_FLOPPY, _T("DF%d: [%s] %s"), num, disk_info_data.diskname, my_getfilepart(fname));
-	//else
-	//	statusline_add_message(STATUSTYPE_FLOPPY, _T("DF%d: %s"), num, my_getfilepart(fname));
+	drive *drv = &floppy[num];
+#ifdef FLOPPYBRIDGE
+	if (drv->bridge) {
+		const char *name = drv->bridge->getDriverInfo()->name;
+		TCHAR *n = au(name);
+		statusline_add_message(STATUSTYPE_FLOPPY, _T("DF%d: %s"), num, n);
+		xfree(n);
+		return;
+	}
+#endif
+	if (!drv->diskfile)
+		return;
+	const TCHAR *fname = zfile_getoriginalname(drv->diskfile);
+	if (!fname)
+		fname = zfile_getname(drv->diskfile);
+	if (!fname)
+		fname = _T("?");
+	if (disk_info_data.diskname[0])
+		statusline_add_message(STATUSTYPE_FLOPPY, _T("DF%d: [%s] %s"), num, disk_info_data.diskname, my_getfilepart(fname));
+	else
+		statusline_add_message(STATUSTYPE_FLOPPY, _T("DF%d: %s"), num, my_getfilepart(fname));
 }
 
 static int drive_insert (drive *drv, struct uae_prefs *p, int dnum, const TCHAR *fname_in, bool fake, bool forcedwriteprotect)
@@ -1353,7 +1362,9 @@ static int drive_insert (drive *drv, struct uae_prefs *p, int dnum, const TCHAR 
 	drv->indexoffset = 0;
 	if (!fake) {
 		drv->dskeject = false;
-		//gui_disk_image_change (dnum, outname, drv->wrprot);
+#ifdef RETROPLATFORM
+		gui_disk_image_change (dnum, outname, drv->wrprot);
+#endif
 	}
 
 	if (!drv->motoroff) {
@@ -2959,8 +2970,8 @@ static void drive_eject (drive * drv)
 	if (isfloppysound (drv))
 		driveclick_insert(drv->drvnum, 1);
 #endif
-	//if (drv->diskfile || drv->filetype >= 0)
-		//statusline_add_message(STATUSTYPE_FLOPPY, _T("DF%d: -"), drv - floppy);
+	if (drv->diskfile || drv->filetype >= 0)
+		statusline_add_message(STATUSTYPE_FLOPPY, _T("DF%d: -"), drv - floppy);
 	drive_image_free(drv);
 	drv->dskeject = false;
 	drv->dskchange = true;
@@ -2975,7 +2986,9 @@ static void drive_eject (drive * drv)
 	drive_settype_id (drv); /* Back to 35 DD */
 	if (disk_debug_logging > 0)
 		write_log (_T("eject drive %ld\n"), drv - &floppy[0]);
-	//gui_disk_image_change(drv->drvnum, NULL, drv->wrprot);
+#ifdef RETROPLATFORM
+	gui_disk_image_change(drv->drvnum, NULL, drv->wrprot);
+#endif
 	inprec_recorddiskchange (drv->drvnum, NULL, false);
 }
 
@@ -3911,6 +3924,7 @@ void event_DISK_handler(uae_u32 data)
 {
 	int flag = data & 255;
 	int hpos = current_hpos();
+
 #if DISK_DEBUG_X > 0
 	write_log("disk event %02x %d %d\n", flag, hpos, disk_hpos >> 8);
 #endif
@@ -4004,8 +4018,8 @@ static int disk_doupdate_write(int floppybits, int trackspeed)
 					}
 					dsklength--;
 					if (dsklength <= 0) {
-						// delay write DMA finished state until bridge has all pending data written
 #ifdef FLOPPYBRIDGE
+						// delay write DMA finished state until bridge has all pending data written
 						if (!wasBridge) {
 							disk_dmafinished();
 						}
@@ -4735,7 +4749,6 @@ void DISK_update (int tohpos)
 			}
 		}
 	}
-
 	if (!done_jitter) {
 		update_jitter();
 		done_jitter = true;
