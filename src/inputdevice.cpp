@@ -5978,13 +5978,13 @@ static int switchdevice (struct uae_input_device *id, int num, bool buttonmode)
 			write_log (_T("inputdevice gameports change '%s':%d->%d %d,%d\n"), name, num, newport, currprefs.input_selected_setting, currprefs.jports[newport].id);
 #endif
 			inputdevice_unacquire ();
-			//if (fname) {
-			//	if (newslot >= 0) {
-			//		statusline_add_message(STATUSTYPE_INPUT, _T("Port %d: Custom %d"), newport, newslot + 1);
-			//	} else {
-			//		statusline_add_message(STATUSTYPE_INPUT, _T("Port %d: %s"), newport, fname);
-			//	}
-			//}
+			if (fname) {
+				if (newslot >= 0) {
+					statusline_add_message(STATUSTYPE_INPUT, _T("Port %d: Custom %d"), newport, newslot + 1);
+				} else {
+					statusline_add_message(STATUSTYPE_INPUT, _T("Port %d: %s"), newport, fname);
+				}
+			}
 
 			if (currprefs.input_selected_setting != GAMEPORT_INPUT_SETTINGS && currprefs.jports[newport].id > JPORT_NONE) {
 				// disable old device
@@ -6125,8 +6125,8 @@ static int switchdevice (struct uae_input_device *id, int num, bool buttonmode)
 		}
 		write_log (_T("inputdevice input change '%s':%d->%d\n"), name, num, newport);
 		inputdevice_unacquire ();
-		//if (fname)
-		//	statusline_add_message(STATUSTYPE_INPUT, _T("Port %d: %s"), newport, fname);
+		if (fname)
+			statusline_add_message(STATUSTYPE_INPUT, _T("Port %d: %s"), newport, fname);
 		inputdevice_copyconfig (&currprefs, &changed_prefs);
 		inputdevice_validate_jports (&changed_prefs, -1, NULL);
 		inputdevice_copyconfig (&changed_prefs, &currprefs);
