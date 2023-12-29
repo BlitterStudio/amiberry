@@ -80,10 +80,6 @@ struct gpiod_line* lineYellow; // Yellow LED
 #include "amiberry_dbus.h"
 #endif
 
-#ifdef FLOPPYBRIDGE
-std::string drawbridge_profiles = "1|Fast[0|0|COM0|0|0]2|Compatible[0|0|COM0|1|0]3|Turbo[0|0|COM0|2|0]4|Accurate[0|0|COM0|3|0]";
-#endif
-
 SDL_threadID mainthreadid;
 static int logging_started;
 int log_scsi;
@@ -203,7 +199,6 @@ amiberry_hotkey get_hotkey_from_config(std::string config_option)
 	
 	return hotkey;
 }
-
 
 void set_key_configs(struct uae_prefs* p)
 {
