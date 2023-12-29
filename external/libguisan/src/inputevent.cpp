@@ -74,6 +74,7 @@ namespace gcn
 		  mMetaPressed(isMetaPressed),
 		  mIsConsumed(false)
 	{
+
 	}
 
 	bool InputEvent::isShiftPressed() const

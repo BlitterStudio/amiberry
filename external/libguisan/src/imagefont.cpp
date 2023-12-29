@@ -74,7 +74,7 @@ namespace gcn
 		mFilename = filename;
 		mImage = Image::load(filename, false);
 
-		const auto separator = mImage->getPixel(0, 0);
+		const Color separator = mImage->getPixel(0, 0);
 
 		int i;
 		for (i = 0;
@@ -98,11 +98,12 @@ namespace gcn
 		}
 
 		mHeight = j;
-		auto x = 0, y = 0;
+		int x = 0, y = 0;
+		unsigned char k;
 
 		for (i = 0; i < static_cast<int>(glyphs.size()); ++i)
 		{
-			const unsigned char k = glyphs.at(i);
+			k = glyphs.at(i);
 			addGlyph(k, x, y, separator);
 		}
 
@@ -120,7 +121,7 @@ namespace gcn
 		mFilename = filename;
 		mImage = Image::load(filename, false);
 
-		const auto separator = mImage->getPixel(0, 0);
+		const Color separator = mImage->getPixel(0, 0);
 
 		int i;
 		for (i = 0; separator == mImage->getPixel(i, 0)
@@ -143,7 +144,7 @@ namespace gcn
 		}
 
 		mHeight = j;
-		auto x = 0, y = 0;
+		int x = 0, y = 0;
 
 		for (i = glyphsFrom; i < glyphsTo + 1; i++)
 		{
@@ -182,7 +183,7 @@ namespace gcn
 							 int x, int y)
 	{
 		// This is needed for drawing the Glyph in the middle if we have spacing
-		const auto yoffset = getRowSpacing() >> 1;
+		const int yoffset = getRowSpacing() >> 1;
 
 		if (mGlyph[glyph].width == 0)
 		{
@@ -291,11 +292,11 @@ namespace gcn
 
 	int ImageFont::getWidth(const std::string& text) const
 	{
-		auto size = 0;
+		int size = 0;
 
-		for (auto i : text)
+		for (unsigned int i = 0; i < text.size(); ++i)
 		{
-			size += getWidth(i);
+			size += getWidth(text.at(i));
 		}
 
 		return size - mGlyphSpacing;
@@ -303,9 +304,9 @@ namespace gcn
 
 	int ImageFont::getStringIndexAt(const std::string& text, int x)
 	{
-		auto size = 0;
+		int size = 0;
 
-		for (auto i = 0; i < static_cast<int>(text.size()); ++i)
+		for (unsigned int i = 0; i < text.size(); ++i)
 		{
 			size += getWidth(text.at(i));
 

@@ -71,25 +71,25 @@ namespace gcn
 		: mIsMoving(false)
 	{
 		setBorderSize(1);
-		Window::setPadding(2);
-		Window::setTitleBarHeight(getFont()->getHeight() + 2);
-		Window::setAlignment(Graphics::CENTER);
+		setPadding(2);
+		setTitleBarHeight(getFont()->getHeight() + 2);
+		setAlignment(Graphics::CENTER);
 		addMouseListener(this);
 		setMovable(true);
-		Window::setOpaque(true);
+		setOpaque(true);
 	}
 
 	Window::Window(const std::string& caption)
 		: mIsMoving(false)
 	{
-		Window::setCaption(caption);
+		setCaption(caption);
 		setBorderSize(1);
-		Window::setPadding(2);
-		Window::setTitleBarHeight(getFont()->getHeight() + 2);
-		Window::setAlignment(Graphics::CENTER);
+		setPadding(2);
+		setTitleBarHeight(getFont()->getHeight() + 2);
+		setAlignment(Graphics::CENTER);
 		addMouseListener(this);
 		setMovable(true);
-		Window::setOpaque(true);
+		setOpaque(true);
 	}
 
 	Window::~Window()
@@ -137,16 +137,17 @@ namespace gcn
 
 	void Window::draw(Graphics* graphics)
 	{
-		const auto faceColor = getBaseColor();
-		const auto alpha = getBaseColor().a;
+		const Color faceColor = getBaseColor();
+		Color highlightColor, shadowColor;
+		const int alpha = getBaseColor().a;
 		//int width = getWidth() + getBorderSize() * 2 - 1;
 		//int height = getHeight() + getBorderSize() * 2 - 1;
-		auto highlightColor = faceColor + 0x303030;
+		highlightColor = faceColor + 0x303030;
 		highlightColor.a = alpha;
-		auto shadowColor = faceColor - 0x303030;
+		shadowColor = faceColor - 0x303030;
 		shadowColor.a = alpha;
 
-		auto d = getChildrenArea();
+		Rectangle d = getChildrenArea();
 
 		// Fill the background around the content
 		graphics->setColor(faceColor);
@@ -204,20 +205,20 @@ namespace gcn
 
 		drawChildren(graphics);
 
-		int text_x;
+		int textX;
 
-		const auto text_y = (static_cast<int>(getTitleBarHeight()) - getFont()->getHeight()) / 2;
+		const int textY = (static_cast<int>(getTitleBarHeight()) - getFont()->getHeight()) / 2;
 
 		switch (getAlignment())
 		{
 		case Graphics::LEFT:
-			text_x = 4;
+			textX = 4;
 			break;
 		case Graphics::CENTER:
-			text_x = getWidth() / 2;
+			textX = getWidth() / 2;
 			break;
 		case Graphics::RIGHT:
-			text_x = getWidth() - 4;
+			textX = getWidth() - 4;
 			break;
 		default:
 			throw GCN_EXCEPTION("Unknown alignment.");
@@ -226,22 +227,24 @@ namespace gcn
 		graphics->setColor(getForegroundColor());
 		graphics->setFont(getFont());
 		graphics->pushClipArea(Rectangle(0, 0, getWidth(), static_cast<int>(getTitleBarHeight() - 1)));
-		graphics->drawText(getCaption(), text_x, text_y, getAlignment());
+		graphics->drawText(getCaption(), textX, textY, getAlignment());
 		graphics->popClipArea();
 	}
 
 	void Window::drawBorder(Graphics* graphics)
 	{
-		const auto faceColor = getBaseColor();
-		const auto alpha = getBaseColor().a;
-		const auto width = getWidth() + static_cast<int>(getBorderSize()) * 2 - 1;
-		const auto height = getHeight() + static_cast<int>(getBorderSize()) * 2 - 1;
-		auto highlightColor = faceColor + 0x303030;
+		Color faceColor = getBaseColor();
+		Color highlightColor, shadowColor;
+		int alpha = getBaseColor().a;
+		int width = getWidth() + getBorderSize() * 2 - 1;
+		int height = getHeight() + getBorderSize() * 2 - 1;
+		highlightColor = faceColor + 0x303030;
 		highlightColor.a = alpha;
-		auto shadowColor = faceColor - 0x303030;
+		shadowColor = faceColor - 0x303030;
 		shadowColor.a = alpha;
 
-		for (auto i = 0; i < static_cast<int>(getBorderSize()); ++i)
+		unsigned int i;
+		for (i = 0; i < getBorderSize(); ++i)
 		{
 			graphics->setColor(highlightColor);
 			graphics->drawLine(i, i, width - i, i);
@@ -259,7 +262,7 @@ namespace gcn
 			return;
 		}
 
-		if (getParent() != nullptr)
+		if (getParent() != NULL)
 		{
 			getParent()->moveToTop(this);
 		}
@@ -321,7 +324,7 @@ namespace gcn
 
 	void Window::resizeToContent()
 	{
-		auto w = 0, h = 0;
+		int w = 0, h = 0;
 		for (auto& mWidget : mWidgets)
 		{
 			if (mWidget->getX() + mWidget->getWidth() > w)
@@ -335,7 +338,6 @@ namespace gcn
 			}
 		}
 
-		setSize(w + 2 * static_cast<int>(getPadding()),
-				h + static_cast<int>(getPadding()) + static_cast<int>(getTitleBarHeight()));
+		setSize(w + 2 * static_cast<int>(getPadding()), h + static_cast<int>(getPadding()) + static_cast<int>(getTitleBarHeight()));
 	}
 }

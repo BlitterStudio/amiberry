@@ -78,8 +78,7 @@ namespace gcn
 		/**
 		 * Destructor.
 		 */
-		virtual ~DeathListener()
-		= default;
+		virtual ~DeathListener() { }
 
 		/**
 		 * Called when a widget dies. It is used to be able to receive

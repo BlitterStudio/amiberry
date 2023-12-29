@@ -134,7 +134,7 @@ namespace gcn
 		 * @return the policy for the horizontal scrollbar policy. See enum with
 		 *         policies.
 		 */
-		[[nodiscard]] unsigned int getHorizontalScrollPolicy() const;
+		unsigned int getHorizontalScrollPolicy() const;
 
 		/**
 		 * Sets the vertical scrollbar policy. See enum with policies.
@@ -150,7 +150,7 @@ namespace gcn
 		 * @return the policy for the vertical scrollbar. See enum with
 		 *         policies.
 		 */
-		[[nodiscard]] unsigned int getVerticalScrollPolicy() const;
+		unsigned int getVerticalScrollPolicy() const;
 
 		/**
 		 * Sets the horizontal and vertical scrollbar policy. See enum with policies.
@@ -173,7 +173,7 @@ namespace gcn
 		 * Gets the amount that is scrolled vertically.
 		 * @return the scroll amount on vertical scroll.
 		 */
-		[[nodiscard]] int getVerticalScrollAmount() const;
+		int getVerticalScrollAmount() const;
 
 		/**
 		 * Sets the amount to scroll horizontally.
@@ -187,7 +187,7 @@ namespace gcn
 		 *
 		 * @return the scroll amount on horizontal scroll.
 		 */
-		[[nodiscard]] int getHorizontalScrollAmount() const;
+		int getHorizontalScrollAmount() const;
 
 		/**
 		 * Sets the amount to scroll horizontally and vertically.
@@ -223,7 +223,7 @@ namespace gcn
 
 		 * @return the width of the ScrollBar.
 		 */
-		[[nodiscard]] int getScrollbarWidth() const;
+		int getScrollbarWidth() const;
 
 		/**
 		 * Sets the amount to scroll in pixels when the left scroll button is
@@ -255,7 +255,7 @@ namespace gcn
 		 *
 		 * @return the amount to scroll when the left scroll button is pushed.
 		 */
-		[[nodiscard]] int getLeftButtonScrollAmount() const;
+		int getLeftButtonScrollAmount() const;
 
 		/**
 		 * Gets the amount to scroll in pixels when the right scroll button is
@@ -263,7 +263,7 @@ namespace gcn
 		 *
 		 * @return the amount to scroll when the right scroll button is pushed.
 		 */
-		[[nodiscard]] int getRightButtonScrollAmount() const;
+		int getRightButtonScrollAmount() const;
 
 		/**
 		 * Gets the amount to scroll in pixels when the up scroll button is
@@ -271,7 +271,7 @@ namespace gcn
 		 *
 		 * @return the amount to scroll when the up scroll button is pushed.
 		 */
-		[[nodiscard]] int getUpButtonScrollAmount() const;
+		int getUpButtonScrollAmount() const;
 
 		/**
 		 * Gets the amount to scroll in pixels when the down scroll button is
@@ -279,44 +279,44 @@ namespace gcn
 		 *
 		 * @return the amount to scroll when the down scroll button is pushed.
 		 */
-		[[nodiscard]] int getDownButtonScrollAmount() const;
+		int getDownButtonScrollAmount() const;
 
 
 		// Inherited from BasicContainer
 
-		void showWidgetPart(Widget* widget, Rectangle area) override;
+		virtual void showWidgetPart(Widget* widget, Rectangle area);
 
-		Rectangle getChildrenArea() override;
+		virtual Rectangle getChildrenArea();
 
-		Widget* getWidgetAt(int x, int y) override;
+		virtual Widget* getWidgetAt(int x, int y);
 
 
 		// Inherited from Widget
 
-		void draw(Graphics* graphics) override;
+		virtual void draw(Graphics* graphics);
 
-		void drawBorder(Graphics* graphics) override;
+		virtual void drawBorder(Graphics* graphics);
 
-		void logic() override;
+		virtual void logic();
 
-		void setWidth(int width) override;
+		void setWidth(int width);
 
-		void setHeight(int height) override;
+		void setHeight(int height);
 
-		void setDimension(const Rectangle& dimension) override;
+		void setDimension(const Rectangle& dimension);
 
 
 		// Inherited from MouseListener
 
-		void mousePressed(MouseEvent& mouseEvent) override;
+		virtual void mousePressed(MouseEvent& mouseEvent);
 
-		void mouseReleased(MouseEvent& mouseEvent) override;
+		virtual void mouseReleased(MouseEvent& mouseEvent);
 
-		void mouseDragged(MouseEvent& mouseEvent) override;
+		virtual void mouseDragged(MouseEvent& mouseEvent);
 
-		void mouseWheelMovedUp(MouseEvent& mouseEvent) override;
+		virtual void mouseWheelMovedUp(MouseEvent& mouseEvent);
 
-		void mouseWheelMovedDown(MouseEvent& mouseEvent) override;
+		virtual void mouseWheelMovedDown(MouseEvent& mouseEvent);
 
 
 		/**
@@ -410,42 +410,42 @@ namespace gcn
 		 *
 		 * @return the dimension of the up button.
 		 */
-		Rectangle getUpButtonDimension() const;
+		Rectangle getUpButtonDimension();
 
 		/**
 		 * Gets the down button dimension.
 		 *
 		 * @return the dimension of the down button.
 		 */
-		Rectangle getDownButtonDimension() const;
+		Rectangle getDownButtonDimension();
 
 		/**
 		 * Gets the left button dimension.
 		 *
 		 * @return the dimension of the left button.
 		 */
-		Rectangle getLeftButtonDimension() const;
+		Rectangle getLeftButtonDimension();
 
 		/**
 		 * Gets the right button dimension.
 		 *
 		 * @return the dimension of the right button.
 		 */
-		Rectangle getRightButtonDimension() const;
+		Rectangle getRightButtonDimension();
 
 		/**
 		 * Gets the vertical scrollbar dimension.
 		 *
 		 * @return the dimension of the vertical scrollbar.
 		 */
-		Rectangle getVerticalBarDimension() const;
+		Rectangle getVerticalBarDimension();
 
 		/**
 		 * Gets the horizontal scrollbar dimension.
 		 *
 		 * @return the dimension of the horizontal scrollbar.
 		 */
-		Rectangle getHorizontalBarDimension() const;
+		Rectangle getHorizontalBarDimension();
 
 		/**
 		 * Gets the vertical marker dimension.
@@ -466,8 +466,8 @@ namespace gcn
 		int mScrollbarWidth;
 		unsigned int mHPolicy;
 		unsigned int mVPolicy;
-		bool mVBarVisible{};
-		bool mHBarVisible{};
+		bool mVBarVisible;
+		bool mHBarVisible;
 		bool mUpButtonPressed;
 		bool mDownButtonPressed;
 		bool mLeftButtonPressed;
@@ -478,8 +478,8 @@ namespace gcn
 		int mRightButtonScrollAmount;
 		bool mIsVerticalMarkerDragged;
 		bool mIsHorizontalMarkerDragged;
-		int mHorizontalMarkerDragOffset{};
-		int mVerticalMarkerDragOffset{};
+		int mHorizontalMarkerDragOffset;
+		int mVerticalMarkerDragOffset;
 	};
 }
 

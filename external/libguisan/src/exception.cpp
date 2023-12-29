@@ -58,9 +58,6 @@
  * For comments regarding functions please see the header file.
  */
 
-#include <utility>
-
-
 #include "guisan/exception.hpp"
 
 namespace gcn
@@ -71,25 +68,28 @@ namespace gcn
 		  mFilename("?"),
 		  mLine(0)
 	{
+
 	}
 
-	Exception::Exception(std::string message)
+	Exception::Exception(const std::string& message)
 		: mFunction("?"),
-		  mMessage(std::move(message)),
+		  mMessage(message),
 		  mFilename("?"),
 		  mLine(0)
 	{
+
 	}
 
-	Exception::Exception(std::string message,
-	                     std::string function,
-	                     std::string filename,
+	Exception::Exception(const std::string& message,
+	                     const std::string& function,
+	                     const std::string& filename,
 	                     int line)
-		: mFunction(std::move(function)),
-		  mMessage(std::move(message)),
-		  mFilename(std::move(filename)),
+		: mFunction(function),
+		  mMessage(message),
+		  mFilename(filename),
 		  mLine(line)
 	{
+
 	}
 
 	const std::string& Exception::getFunction() const

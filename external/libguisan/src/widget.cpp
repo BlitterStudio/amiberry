@@ -76,7 +76,7 @@
 
 namespace gcn
 {
-	Font* Widget::mGlobalFont = nullptr;
+	Font* Widget::mGlobalFont = NULL;
 	DefaultFont Widget::mDefaultFont;
 	std::list<Widget*> Widget::mWidgets;
 
@@ -85,16 +85,16 @@ namespace gcn
 		  mBackgroundColor(0xffffff),
 		  mBaseColor(0xDDDDE3),
 		  mSelectionColor(0xc3d9ff),
-		  mFocusHandler(nullptr),
-		  mInternalFocusHandler(nullptr),
-		  mParent(nullptr),
+		  mFocusHandler(NULL),
+		  mInternalFocusHandler(NULL),
+		  mParent(NULL),
 		  mBorderSize(0),
 		  mFocusable(false),
 		  mVisible(true),
 		  mTabIn(true),
 		  mTabOut(true),
 		  mEnabled(true),
-		  mCurrentFont(nullptr)
+		  mCurrentFont(NULL)
 	{
 		mWidgets.push_back(this);
 	}
@@ -107,7 +107,7 @@ namespace gcn
 			mDeathListener->death(event);
 		}
 
-		Widget::_setFocusHandler(nullptr);
+		_setFocusHandler(NULL);
 
 		mWidgets.remove(this);
 	}
@@ -124,7 +124,7 @@ namespace gcn
 
 	void Widget::setWidth(int width)
 	{
-		auto newDimension = mDimension;
+		Rectangle newDimension = mDimension;
 		newDimension.width = width;
 
 		setDimension(newDimension);
@@ -137,7 +137,7 @@ namespace gcn
 
 	void Widget::setHeight(int height)
 	{
-		auto newDimension = mDimension;
+		Rectangle newDimension = mDimension;
 		newDimension.height = height;
 
 		setDimension(newDimension);
@@ -150,7 +150,7 @@ namespace gcn
 
 	void Widget::setX(int x)
 	{
-		auto newDimension = mDimension;
+		Rectangle newDimension = mDimension;
 		newDimension.x = x;
 
 		setDimension(newDimension);
@@ -163,7 +163,7 @@ namespace gcn
 
 	void Widget::setY(int y)
 	{
-		auto newDimension = mDimension;
+		Rectangle newDimension = mDimension;
 		newDimension.y = y;
 
 		setDimension(newDimension);
@@ -176,7 +176,7 @@ namespace gcn
 
 	void Widget::setPosition(int x, int y)
 	{
-		auto newDimension = mDimension;
+		Rectangle newDimension = mDimension;
 		newDimension.x = x;
 		newDimension.y = y;
 
@@ -185,7 +185,7 @@ namespace gcn
 
 	void Widget::setDimension(const Rectangle& dimension)
 	{
-		const auto oldDimension = mDimension;
+		const Rectangle oldDimension = mDimension;
 		mDimension = dimension;
 
 		if (mDimension.width != oldDimension.width
@@ -253,7 +253,7 @@ namespace gcn
 
 	void Widget::requestFocus()
 	{
-		if (mFocusHandler == nullptr)
+		if (mFocusHandler == NULL)
 		{
 			throw GCN_EXCEPTION("No focushandler set (did you add the widget to the gui?).");
 		}
@@ -301,7 +301,7 @@ namespace gcn
 
 	bool Widget::isVisible() const
 	{
-		if (getParent() == nullptr)
+		if (getParent() == NULL)
 		{
 			return mVisible;
 		}
@@ -431,7 +431,7 @@ namespace gcn
 
 	void Widget::getAbsolutePosition(int& x, int& y) const
 	{
-		if (getParent() == nullptr)
+		if (getParent() == NULL)
 		{
 			x = mDimension.x;
 			y = mDimension.y;
@@ -458,9 +458,9 @@ namespace gcn
 
 	Font* Widget::getFont() const
 	{
-		if (mCurrentFont == nullptr)
+		if (mCurrentFont == NULL)
 		{
-			if (mGlobalFont == nullptr)
+			if (mGlobalFont == NULL)
 			{
 				return &mDefaultFont;
 			}
@@ -477,7 +477,7 @@ namespace gcn
 
 		for (auto& mWidget : mWidgets)
 		{
-			if (mWidget->mCurrentFont == nullptr)
+			if (mWidget->mCurrentFont == NULL)
 			{
 				mWidget->fontChanged();
 			}
@@ -525,7 +525,7 @@ namespace gcn
 
 	void Widget::setSize(int width, int height)
 	{
-		auto newDimension = mDimension;
+		Rectangle newDimension = mDimension;
 		newDimension.width = width;
 		newDimension.height = height;
 
@@ -544,7 +544,7 @@ namespace gcn
 
 	void Widget::requestModalFocus()
 	{
-		if (mFocusHandler == nullptr)
+		if (mFocusHandler == NULL)
 		{
 			throw GCN_EXCEPTION("No focushandler set (did you add the widget to the gui?).");
 		}
@@ -554,7 +554,7 @@ namespace gcn
 
 	void Widget::requestModalMouseInputFocus()
 	{
-		if (mFocusHandler == nullptr)
+		if (mFocusHandler == NULL)
 		{
 			throw GCN_EXCEPTION("No focushandler set (did you add the widget to the gui?).");
 		}
@@ -564,7 +564,7 @@ namespace gcn
 
 	void Widget::releaseModalFocus()
 	{
-		if (mFocusHandler == nullptr)
+		if (mFocusHandler == NULL)
 		{
 			return;
 		}
@@ -574,7 +574,7 @@ namespace gcn
 
 	void Widget::releaseModalMouseInputFocus()
 	{
-		if (mFocusHandler == nullptr)
+		if (mFocusHandler == NULL)
 		{
 			return;
 		}
@@ -584,12 +584,12 @@ namespace gcn
 
 	bool Widget::hasModalFocus() const
 	{
-		if (mFocusHandler == nullptr)
+		if (mFocusHandler == NULL)
 		{
 			throw GCN_EXCEPTION("No focushandler set (did you add the widget to the gui?).");
 		}
 
-		if (getParent() != nullptr)
+		if (getParent() != NULL)
 		{
 			return mFocusHandler->getModalFocused() == this || getParent()->hasModalFocus();
 		}
@@ -599,12 +599,12 @@ namespace gcn
 
 	bool Widget::hasModalMouseInputFocus() const
 	{
-		if (mFocusHandler == nullptr)
+		if (mFocusHandler == NULL)
 		{
 			throw GCN_EXCEPTION("No focushandler set (did you add the widget to the gui?).");
 		}
 
-		if (getParent() != nullptr)
+		if (getParent() != NULL)
 		{
 			return mFocusHandler->getModalMouseInputFocused() == this || getParent()->hasModalMouseInputFocus();
 		}
@@ -614,7 +614,7 @@ namespace gcn
 
 	Widget* Widget::getWidgetAt(int x, int y)
 	{
-		return nullptr;
+		return NULL;
 	}
 
 	const std::list<MouseListener*>& Widget::_getMouseListeners()
@@ -652,7 +652,7 @@ namespace gcn
 		mId = id;
 	}
 
-	const std::string& Widget::getId() const
+	const std::string& Widget::getId()
 	{
 		return mId;
 	}

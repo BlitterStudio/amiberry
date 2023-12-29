@@ -78,7 +78,7 @@ namespace gcn
         /**
          * Destructor.
          */
-        virtual ~ActionListener() = default;
+        virtual ~ActionListener() { }
 
         /**
          * Called when an action is received from a Widget. It is used

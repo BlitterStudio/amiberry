@@ -124,9 +124,7 @@ namespace gcn
 		 *
 		 * @param graphics a Graphics object to draw with.
 		 */
-		virtual void drawBorder(Graphics* graphics)
-		{
-		}
+		virtual void drawBorder(Graphics* graphics) { }
 
 		/**
 		 * Called for all widgets in the gui each time Gui::logic is called.
@@ -134,9 +132,7 @@ namespace gcn
 		 *
 		 * @see Gui
 		 */
-		virtual void logic()
-		{
-		}
+		virtual void logic() { }
 
 		/**
 		 * Gets the widget parent container.
@@ -144,35 +140,35 @@ namespace gcn
 		 * @return the widget parent container. Returns NULL if the widget
 		 *         has no parent.
 		 */
-		[[nodiscard]] virtual Widget* getParent() const;
+		virtual Widget* getParent() const;
 
 		/**
 		 * Sets the width of the widget in pixels.
 		 *
 		 * @param width the widget width in pixels.
 		 */
-		virtual void setWidth(int width);
+		void setWidth(int width);
 
 		/**
 		 * Gets the width of the widget in pixels.
 		 *
 		 * @return the widget with in pixels.
 		 */
-		[[nodiscard]] int getWidth() const;
+		int getWidth() const;
 
 		/**
 		 * Sets the height of the widget in pixels.
 		 *
 		 * @param height the widget height in pixels.
 		 */
-		virtual void setHeight(int height);
+		void setHeight(int height);
 
 		/**
 		 * Gets the height of the widget in pixels.
 		 *
 		 * @return the widget height in pixels.
 		 */
-		[[nodiscard]] auto getHeight() const -> int;
+		int getHeight() const;
 
 		/**
 		 * Sets the size of the widget.
@@ -180,7 +176,7 @@ namespace gcn
 		 * @param width the width.
 		 * @param height the height.
 		 */
-		virtual void setSize(int width, int height);
+		void setSize(int width, int height);
 
 		/**
 		 * Set the widget x coordinate. It is relateive to it's parent.
@@ -194,7 +190,7 @@ namespace gcn
 		 *
 		 * @return the widget x coordinate.
 		 */
-		[[nodiscard]] int getX() const;
+		int getX() const;
 
 		/**
 		 * Set the widget y coordinate. It is relative to it's parent.
@@ -208,7 +204,7 @@ namespace gcn
 		 *
 		 * @return the widget y coordinate.
 		 */
-		[[nodiscard]] int getY() const;
+		int getY() const;
 
 		/**
 		 * Sets the widget position. It is relative to it's parent.
@@ -223,7 +219,7 @@ namespace gcn
 		 *
 		 * @param dimension the widget dimension.
 		 */
-		virtual void setDimension(const Rectangle& dimension);
+		void setDimension(const Rectangle& dimension);
 
 		/**
 		 * Sets the size of the border, or the width if you so like. The size
@@ -243,14 +239,14 @@ namespace gcn
 		 * @return the size of the border.
 		 * @see drawBorder
 		 */
-		[[nodiscard]] unsigned int getBorderSize() const;
+		unsigned int getBorderSize() const;
 
 		/**
 		 * Gets the dimension of the widget. It is relative to it's parent.
 		 *
 		 * @return the widget dimension.
 		 */
-		[[nodiscard]] const Rectangle& getDimension() const;
+		 const Rectangle& getDimension() const;
 
 		/**
 		 * Sets a widgets focusability.
@@ -264,14 +260,14 @@ namespace gcn
 		 *
 		 * @return true if the widget is focusable.
 		 */
-		[[nodiscard]] bool isFocusable() const;
+		bool isFocusable() const;
 
 		/**
 		 * Checks if the widget is focused.
 		 *
 		 * @return true if the widget currently has focus.
 		 */
-		[[nodiscard]] virtual bool isFocused() const;
+		virtual bool isFocused() const;
 
 		/**
 		 * Sets the widget to be disabled or enabled. A disabled
@@ -279,14 +275,14 @@ namespace gcn
 		 *
 		 * @param enabled true if widget is enabled.
 		 */
-		virtual void setEnabled(bool enabled);
+		void setEnabled(bool enabled);
 
 		/**
 		 * Checks if a widget is disabled or not.
 		 *
 		 * @return true if the widget should be enabled.
 		 */
-		[[nodiscard]] bool isEnabled() const;
+		bool isEnabled() const;
 
 		/**
 		 * Sets the widget to be visible.
@@ -300,7 +296,7 @@ namespace gcn
 		 *
 		 * @return true if the widget is visible.
 		 */
-		[[nodiscard]] bool isVisible() const;
+		bool isVisible() const;
 
 		/**
 		 * Sets the base color. The base color is the background
@@ -308,56 +304,56 @@ namespace gcn
 		 *
 		 * @param color the baseground color.
 		 */
-		virtual void setBaseColor(const Color& color);
+		void setBaseColor(const Color& color);
 
 		/**
 		 * Gets the base color.
 		 *
 		 * @return the foreground color.
 		 */
-		[[nodiscard]] const Color& getBaseColor() const;
+		const Color& getBaseColor() const;
 
 		/**
 		 * Sets the foreground color.
 		 *
 		 * @param color the foreground color.
 		 */
-		virtual void setForegroundColor(const Color& color);
+		void setForegroundColor(const Color& color);
 
 		/**
 		 * Gets the foreground color.
 		 *
 		 * @return the foreground color.
 		 */
-		[[nodiscard]] const Color& getForegroundColor() const;
+		 const Color& getForegroundColor() const;
 
 		/**
 		 * Sets the background color.
 		 *
 		 * @param color the background Color.
 		 */
-		virtual void setBackgroundColor(const Color& color);
+		void setBackgroundColor(const Color& color);
 
 		/**
 		 * Gets the background color.
 		 *
 		 * @return the background color.
 		 */
-		[[nodiscard]] const Color& getBackgroundColor() const;
+		const Color& getBackgroundColor() const;
 
 		/**
 		 * Sets the selection color.
 		 *
 		 * @param color the selection color.
 		 */
-		virtual void setSelectionColor(const Color& color);
+		void setSelectionColor(const Color& color);
 
 		/**
 		 * Gets the selection color.
 		 *
 		 * @return the selection color.
 		 */
-		[[nodiscard]] const Color& getSelectionColor() const;
+		const Color& getSelectionColor() const;
 
 		/**
 		 * Requests focus for the widget. A widget will only recieve focus
@@ -513,7 +509,7 @@ namespace gcn
 		 *
 		 * @return the action event identifier.
 		 */
-		[[nodiscard]] const std::string& getActionEventId() const;
+		const std::string& getActionEventId() const;
 
 		/**
 		 * Gets the absolute position on the screen for the widget.
@@ -542,7 +538,7 @@ namespace gcn
 		 *
 		 * @return the used Font.
 		 */
-		[[nodiscard]] Font* getFont() const;
+		Font* getFont() const;
 
 		/**
 		 * Sets the global font to be used by default for all widgets.
@@ -556,16 +552,14 @@ namespace gcn
 		 *
 		 * @param font the Font.
 		 */
-		virtual void setFont(Font* font);
+		void setFont(Font* font);
 
 		/**
 		 * Called when the font has changed. If the change is global,
 		 * this function will only be called if the widget don't have a
 		 * font already set.
 		 */
-		virtual void fontChanged()
-		{
-		}
+		virtual void fontChanged() { }
 
 		/**
 		 * Checks whether a widget exists or not, that is if it still exists
@@ -583,7 +577,7 @@ namespace gcn
 		 *
 		 * @return true if tab in is enabled.
 		 */
-		[[nodiscard]] bool isTabInEnabled() const;
+		bool isTabInEnabled() const;
 
 		/**
 		 * Sets tab in enabled. Tab in means that you can set focus
@@ -603,7 +597,7 @@ namespace gcn
 		 *
 		 * @return true if tab out is enabled.
 		 */
-		[[nodiscard]] bool isTabOutEnabled() const;
+		bool isTabOutEnabled() const;
 
 		/**
 		 * Sets tab out enabled. Tab out means that you can lose
@@ -650,14 +644,14 @@ namespace gcn
 		/**
 		 * Checks if the widget or it's parent has modal focus.
 		 */
-		[[nodiscard]] virtual bool hasModalFocus() const;
+		virtual bool hasModalFocus() const;
 
 		/**
 		 * Checks if the widget or it's parent has modal mouse input focus.
 		 *
 		 * @since 0.6.0
 		 */
-		[[nodiscard]] virtual bool hasModalMouseInputFocus() const;
+		virtual bool hasModalMouseInputFocus() const;
 
 		/**
 		 * Gets a widget from a certain position in the widget.
@@ -721,7 +715,7 @@ namespace gcn
 		 *
 		 * @param focusHandler the FocusHandler to be used.
 		 */
-		virtual void setInternalFocusHandler(FocusHandler* focusHandler);
+		void setInternalFocusHandler(FocusHandler* focusHandler);
 
 		/**
 		 * Moves a widget to the top of this widget. The moved widget will be
@@ -729,9 +723,7 @@ namespace gcn
 		 *
 		 * @param widget the widget to move.
 		 */
-		virtual void moveToTop(Widget* widget)
-		{
-		};
+		virtual void moveToTop(Widget* widget) { };
 
 		/**
 		 * Moves a widget in this widget to the bottom of this widget.
@@ -739,23 +731,17 @@ namespace gcn
 		 *
 		 * @param widget the widget to move.
 		 */
-		virtual void moveToBottom(Widget* widget)
-		{
-		};
+		virtual void moveToBottom(Widget* widget) { };
 
 		/**
 		 * Focuses the next widget in the widget.
 		 */
-		virtual void focusNext()
-		{
-		};
+		virtual void focusNext() { };
 
 		/**
 		 * Focuses the previous widget in the widget.
 		 */
-		virtual void focusPrevious()
-		{
-		};
+		virtual void focusPrevious() { };
 
 		/**
 		 * Tries to show a specific part of a widget by moving it. Used if the
@@ -764,9 +750,7 @@ namespace gcn
 		 * @param widget the target widget.
 		 * @param area the area to show.
 		 */
-		virtual void showWidgetPart(Widget* widget, Rectangle area)
-		{
-		};
+		virtual void showWidgetPart(Widget* widget, Rectangle area) { };
 
 		/**
 		 * Sets an id of a widget. An id can be useful if a widget needs to be
@@ -788,7 +772,7 @@ namespace gcn
 		 * @param id the id to set to the widget.
 		 * @see BasicContainer::findWidgetById
 		 */
-		const std::string& getId() const;
+		const std::string& getId();
 
 	protected:
 		/**

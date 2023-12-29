@@ -90,8 +90,7 @@ namespace gcn
 		/**
 		 * Destructor.
 		 */
-		virtual ~FocusHandler()
-		= default;;
+		virtual ~FocusHandler() { }
 
 		/**
 		 * Sets focus to a widget. A focus event will also be sent to the widget's
@@ -143,7 +142,7 @@ namespace gcn
 		 * @return the Widget with focus. NULL will be returned if
 		 *         no Widget has focus.
 		 */
-		[[nodiscard]] virtual Widget* getFocused() const;
+		virtual Widget* getFocused() const;
 
 		/**
 		 * Gets the widget with modal focus.
@@ -151,7 +150,7 @@ namespace gcn
 		 * @return the Widget with modal focus. NULL will be returned
 		 *         if no Widget has modal focus.
 		 */
-		[[nodiscard]] virtual Widget* getModalFocused() const;
+		virtual Widget* getModalFocused() const;
 
 		/**
 		 * Gets the widget with modal mouse input focus.
@@ -159,7 +158,7 @@ namespace gcn
 		 * @return the widget with modal mouse input focus. NULL will be returned
 		 *         if no widget has modal mouse input focus.
 		 */
-		[[nodiscard]] virtual Widget* getModalMouseInputFocused() const;
+		virtual Widget* getModalMouseInputFocused() const;
 
 		/**
 		 * Focuses the next Widget. If no Widget has focus the first

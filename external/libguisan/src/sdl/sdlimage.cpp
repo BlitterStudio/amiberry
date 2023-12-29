@@ -97,7 +97,7 @@ namespace gcn
 
 	int SDLImage::getWidth() const
 	{
-		if (mSurface == nullptr)
+		if (mSurface == NULL)
 		{
 			throw GCN_EXCEPTION("Trying to get the width of a non loaded image.");
 		}
@@ -107,7 +107,7 @@ namespace gcn
 
 	int SDLImage::getHeight() const
 	{
-		if (mSurface == nullptr)
+		if (mSurface == NULL)
 		{
 			throw GCN_EXCEPTION("Trying to get the height of a non loaded image.");
 		}
@@ -117,7 +117,7 @@ namespace gcn
 
 	Color SDLImage::getPixel(int x, int y)
 	{
-		if (mSurface == nullptr)
+		if (mSurface == NULL)
 		{
 			throw GCN_EXCEPTION("Trying to get a pixel from a non loaded image.");
 		}
@@ -127,7 +127,7 @@ namespace gcn
 
 	void SDLImage::putPixel(int x, int y, const Color& color)
 	{
-		if (mSurface == nullptr)
+		if (mSurface == NULL)
 		{
 			throw GCN_EXCEPTION("Trying to put a pixel in a non loaded image.");
 		}
@@ -137,14 +137,13 @@ namespace gcn
 
 	void SDLImage::convertToDisplayFormat()
 	{
-		if (mSurface == nullptr)
+		if (mSurface == NULL)
 		{
 			throw GCN_EXCEPTION("Trying to convert a non loaded image to display format.");
 		}
 
 		int i;
-		auto hasPink = false;
-		auto hasAlpha = false;
+		bool hasPink = false;
 
 		unsigned int surfaceMask = SDL_PIXELFORMAT_RGBX8888;
 
@@ -171,9 +170,9 @@ namespace gcn
 			}
 		}
 
-		auto* tmp = SDL_ConvertSurfaceFormat(mSurface, surfaceMask, 0);
+		SDL_Surface* tmp = SDL_ConvertSurfaceFormat(mSurface, surfaceMask, 0);
 		SDL_FreeSurface(mSurface);
-		mSurface = nullptr;
+		mSurface = NULL;
 
 		if (hasPink)
 		{
@@ -188,7 +187,7 @@ namespace gcn
 
 		if (mRenderer)
 		{
-			auto* tmpTexture = SDL_CreateTextureFromSurface(mRenderer, tmp);
+			SDL_Texture* tmpTexture = SDL_CreateTextureFromSurface(mRenderer, tmp);
 			SDL_SetTextureBlendMode(tmpTexture, SDL_BLENDMODE_BLEND);
 			SDL_DestroyTexture(mTexture);
 			mTexture = tmpTexture;

@@ -102,7 +102,7 @@ namespace gcn
 		 * @param opaque True if the container should be opaque, false otherwise.
 		 * @see isOpaque
 		 */
-		virtual void setOpaque(bool opaque);
+		void setOpaque(bool opaque);
 
 		/**
 		 * Checks if the container is opaque or not.
@@ -110,7 +110,7 @@ namespace gcn
 		 * @return true if the container is opaque, false otherwise.
 		 * @see setOpaque
 		 */
-		[[nodiscard]] bool isOpaque() const;
+		bool isOpaque() const;
 
 		/**
 		 * Adds a widget to the container.
@@ -118,7 +118,7 @@ namespace gcn
 		 * @param widget The widget to add.
 		 * @see remove, clear
 		 */
-		void add(Widget* widget) override;
+		virtual void add(Widget* widget);
 
 		/**
 		 * Adds a widget to the container and also specifies the widget's
@@ -140,14 +140,14 @@ namespace gcn
 		 *                   container.
 		 * @see add, clear
 		 */
-		void remove(Widget* widget) override;
+		virtual void remove(Widget* widget);
 
 		/**
 		 * Clears the container of all widgets.
 		 *
 		 * @see add, remove
 		 */
-		void clear() override;
+		virtual void clear();
 
 		/**
 		 * Finds a widget given an id.
@@ -157,14 +157,14 @@ namespace gcn
 		 *         is found.
 		 * @see Widget::setId
 		 */
-		Widget* findWidgetById(const std::string& id) override;
+		virtual Widget* findWidgetById(const std::string& id);
 
 
 		// Inherited from Widget
 
-		void draw(Graphics* graphics) override;
+		virtual void draw(Graphics* graphics);
 
-		void drawBorder(Graphics* graphics) override;
+		virtual void drawBorder(Graphics* graphics);
 
 	protected:
 		/**

@@ -101,8 +101,7 @@ namespace gcn
 		/**
 		 * Destructor.
 		 */
-		virtual ~ListBox()
-		= default;
+		virtual ~ListBox() { }
 
 		/**
 		 * Gets the selected item as an index in the list model.
@@ -110,7 +109,7 @@ namespace gcn
 		 * @return the selected item as an index in the list model.
 		 * @see setSelected
 		 */
-		[[nodiscard]] int getSelected() const;
+		int getSelected() const;
 
 		/**
 		* Sets the selected item. The selected item is represented by
@@ -135,7 +134,7 @@ namespace gcn
 		 * @return the list model used.
 		 * @see setListModel
 		 */
-		[[nodiscard]] ListModel* getListModel() const;
+		ListModel* getListModel();
 
 		/**
 		 * Adjusts the size of the list box to fit it's list model.
@@ -153,7 +152,7 @@ namespace gcn
 		 * @return true if wrapping is enabled, false otherwise.
 		 * @see setWrappingEnabled
 		 */
-		[[nodiscard]] bool isWrappingEnabled() const;
+		bool isWrappingEnabled() const;
 
 		/**
 		 * Sets the list box to wrap or not when selecting items with a keyboard.
@@ -188,27 +187,27 @@ namespace gcn
 
 		// Inherited from Widget
 
-		void draw(Graphics* graphics) override;
+		virtual void draw(Graphics* graphics);
 
-		void drawBorder(Graphics* graphics) override;
+		virtual void drawBorder(Graphics* graphics);
 
-		void logic() override;
+		virtual void logic();
 
 
 		// Inherited from KeyListener
 
-		void keyPressed(KeyEvent& keyEvent) override;
+		virtual void keyPressed(KeyEvent& keyEvent);
 
 
 		// Inherited from MouseListener
 
-		void mousePressed(MouseEvent& mouseEvent) override;
+		virtual void mousePressed(MouseEvent& mouseEvent);
 
-		void mouseWheelMovedUp(MouseEvent& mouseEvent) override;
+		virtual void mouseWheelMovedUp(MouseEvent& mouseEvent);
 
-		void mouseWheelMovedDown(MouseEvent& mouseEvent) override;
+		virtual void mouseWheelMovedDown(MouseEvent& mouseEvent);
 
-		void mouseDragged(MouseEvent& mouseEvent) override;
+		virtual void mouseDragged(MouseEvent& mouseEvent);
 
 
 	protected:
@@ -223,7 +222,7 @@ namespace gcn
 		/**
 		 * The list model to use.
 		 */
-		ListModel* mListModel{};
+		ListModel* mListModel;
 
 		/**
 		 * The selected item as an index in the list model.

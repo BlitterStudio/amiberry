@@ -123,7 +123,7 @@ pqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"); @endcode
 		 * @throws Exception when glyph bondaries are incorrect or the font
 		 *                   file is corrupt or if no ImageLoader exists.
 		 */
-		explicit ImageFont(const std::string& filename, unsigned char glyphsFrom = 32,
+		ImageFont(const std::string& filename, unsigned char glyphsFrom = 32,
 		                   unsigned char glyphsTo = 126);
 
 		/**
@@ -184,19 +184,19 @@ pqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"); @endcode
 		 * @param glyph the glyph which width will be returned
 		 * @return the width of a glyph
 		 */
-		[[nodiscard]] virtual int getWidth(unsigned char glyph) const;
+		virtual int getWidth(unsigned char glyph) const;
 
 
 		// Inherited from Font
 
-		[[nodiscard]] int getWidth(const std::string& text) const override;
+		virtual int getWidth(const std::string& text) const;
 
-		void drawString(Graphics* graphics, const std::string& text,
-						int x, int y) override;
+		virtual void drawString(Graphics* graphics, const std::string& text,
+						int x, int y);
 
-		[[nodiscard]] int getHeight() const override;
+		virtual int getHeight() const;
 
-		int getStringIndexAt(const std::string& text, int x) override;
+		virtual int getStringIndexAt(const std::string& text, int x);
 
 	protected:
 		void addGlyph(unsigned char c, int& x, int& y, const Color& separator);

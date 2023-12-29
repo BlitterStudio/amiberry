@@ -132,14 +132,14 @@ namespace gcn
 		 *
 		 * @return the image width
 		 */
-		[[nodiscard]] virtual int getWidth() const = 0;
+		virtual int getWidth() const = 0;
 
 		/**
 		 * Gets the height of the Image.
 		 *
 		 * @return the image height
 		 */
-		[[nodiscard]] virtual int getHeight() const = 0;
+		virtual int getHeight() const = 0;
 
 		/**
 		 * Gets the color of a pixel at coordinate (x, y) in the image.

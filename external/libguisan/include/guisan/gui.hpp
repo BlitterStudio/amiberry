@@ -117,7 +117,7 @@ namespace gcn
 		 *
 		 * @return the top widget. NULL if no top widget has been set.
 		 */
-		[[nodiscard]] virtual Widget* getTop() const;
+		virtual Widget* getTop() const;
 
 		/**
 		 * Sets the Graphics object to use for drawing.
@@ -133,7 +133,7 @@ namespace gcn
 		 *  @return the Graphics object used for drawing. NULL if no
 		 *          Graphics object has been set.
 		 */
-		[[nodiscard]] virtual Graphics* getGraphics() const;
+		virtual Graphics* getGraphics() const;
 
 		/**
 		 * Sets the Input object to use for input handling.
@@ -149,7 +149,7 @@ namespace gcn
 		 *  @return the Input object used for handling input. NULL if no
 		 *          Input object has been set.
 		 */
-		[[nodiscard]] virtual Input* getInput() const;
+		virtual Input* getInput() const;
 
 		/**
 		 * Performs the Gui logic. By calling this function all logic

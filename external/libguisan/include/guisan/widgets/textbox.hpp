@@ -103,14 +103,14 @@ namespace gcn
 		 * Gets the text.
 		 * @return the text of the TextBox.
 		 */
-		[[nodiscard]] std::string getText() const;
+		std::string getText() const;
 
 		/**
 		 * Gets the row of a text.
 		 *
 		 * @return the text of a certain row in the TextBox.
 		 */
-		[[nodiscard]] const std::string& getTextRow(int row) const;
+		const std::string& getTextRow(int row) const;
 
 		/**
 		 * Sets the text of a certain row in a TextBox.
@@ -125,14 +125,14 @@ namespace gcn
 		 *
 		 * @return the number of rows in the text.
 		 */
-		[[nodiscard]] unsigned int getNumberOfRows() const;
+		unsigned int getNumberOfRows() const;
 
 		/**
 		 * Gets the caret position in the text.
 		 *
 		 * @return the caret position in the text.
 		 */
-		[[nodiscard]] unsigned int getCaretPosition() const;
+		unsigned int getCaretPosition() const;
 
 		/**
 		 * Sets the position of the caret in the text.
@@ -146,7 +146,7 @@ namespace gcn
 		 *
 		 * @return the row the caret is in in the text.
 		 */
-		[[nodiscard]] unsigned int getCaretRow() const;
+		unsigned int getCaretRow() const;
 
 		/**
 		 * Sets the row the caret should be in in the text.
@@ -160,7 +160,7 @@ namespace gcn
 		 *
 		 * @return the column the caret is in in the text.
 		 */
-		[[nodiscard]] unsigned int getCaretColumn() const;
+		unsigned int getCaretColumn() const;
 
 		/**
 		 * Sets the column the caret should be in in the text.
@@ -187,7 +187,7 @@ namespace gcn
 		 *
 		 * @return true it the TextBox is editable.
 		 */
-		[[nodiscard]] bool isEditable() const;
+		bool isEditable() const;
 
 		/**
 		 * Sets if the TextBox should be editable or not.
@@ -201,14 +201,14 @@ namespace gcn
 		 *
 		 * @param row a row.
 		 */
-		virtual void addRow(std::string row);
+		virtual void addRow(const std::string row);
 
 		/**
 		 * Checks if the TextBox is opaque
 		 *
 		 * @return true if the TextBox is opaque
 		 */
-		[[nodiscard]] bool isOpaque() const;
+		bool isOpaque();
 
 		/**
 		 * Sets the TextBox to be opaque.
@@ -220,23 +220,23 @@ namespace gcn
 
 		// Inherited from Widget
 
-		void draw(Graphics* graphics) override;
+		virtual void draw(Graphics* graphics);
 
-		void drawBorder(Graphics* graphics) override;
+		virtual void drawBorder(Graphics* graphics);
 
-		void fontChanged() override;
+		virtual void fontChanged();
 
 
 		// Inherited from KeyListener
 
-		void keyPressed(KeyEvent& keyEvent) override;
+		virtual void keyPressed(KeyEvent& keyEvent);
 
 
 		// Inherited from MouseListener
 
-		void mousePressed(MouseEvent& mouseEvent) override;
+		virtual void mousePressed(MouseEvent& mouseEvent);
 
-		void mouseDragged(MouseEvent& mouseEvent) override;
+		virtual void mouseDragged(MouseEvent& mouseEvent);
 
 	protected:
 		/**

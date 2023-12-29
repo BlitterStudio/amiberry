@@ -106,7 +106,7 @@ namespace gcn
 		 * @param x the point x coordinate.
 		 * @param y the point y coordinate.
 		 */
-		[[nodiscard]] bool isPointInRect(int x, int y) const;
+		bool isPointInRect(int x, int y) const;
 
 		int x;
 		int y;

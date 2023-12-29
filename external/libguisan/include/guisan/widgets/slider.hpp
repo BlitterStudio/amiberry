@@ -94,8 +94,7 @@ namespace gcn
 		/**
 		 * Destructor.
 		 */
-		virtual ~Slider()
-		= default;
+		virtual ~Slider() { }
 
 		/**
 		 * Sets the scale.
@@ -110,7 +109,7 @@ namespace gcn
 		 *
 		 * @return the scale start.
 		 */
-		[[nodiscard]] double getScaleStart() const;
+		double getScaleStart() const;
 
 		/**
 		 * Sets the scale start.
@@ -124,7 +123,7 @@ namespace gcn
 		 *
 		 * @return the scale end.
 		 */
-		[[nodiscard]] double getScaleEnd() const;
+		double getScaleEnd() const;
 
 		/**
 		 * Sets the scale end.
@@ -138,7 +137,7 @@ namespace gcn
 		 *
 		 * @return the current value.
 		 */
-		[[nodiscard]] double getValue() const;
+		double getValue() const;
 
 		/**
 		 * Sets the current value.
@@ -152,7 +151,7 @@ namespace gcn
 		 *
 		 * @param graphics a graphics object to draw with.
 		 */
-		virtual void drawMarker(Graphics* graphics);
+		virtual void drawMarker(gcn::Graphics* graphics);
 
 		/**
 		 * Sets the length of the marker.
@@ -166,7 +165,7 @@ namespace gcn
 		 *
 		 * @return the length of the marker.
 		 */
-		[[nodiscard]] int getMarkerLength() const;
+		int getMarkerLength() const;
 
 		/**
 		 * Sets the orientation of the slider. A slider can be drawn verticaly
@@ -181,7 +180,7 @@ namespace gcn
 		 *
 		 * @return the orientation of the slider.
 		 */
-		[[nodiscard]] unsigned int getOrientation() const;
+		unsigned int getOrientation() const;
 
 		/**
 		 * Sets the step length. Step length is used when the keys left and
@@ -196,30 +195,30 @@ namespace gcn
 		 *
 		 * @return the step length.
 		 */
-		[[nodiscard]] double getStepLength() const;
+		double getStepLength() const;
 
 
 		// Inherited from Widget
 
-		void draw(Graphics* graphics) override;
+		virtual void draw(gcn::Graphics* graphics);
 
-		void drawBorder(Graphics* graphics) override;
+		virtual void drawBorder(gcn::Graphics* graphics);
 
 
 		// Inherited from MouseListener.
 
-		void mousePressed(MouseEvent& mouseEvent) override;
+		virtual void mousePressed(MouseEvent& mouseEvent);
 
-		void mouseDragged(MouseEvent& mouseEvent) override;
+		virtual void mouseDragged(MouseEvent& mouseEvent);
 
-		void mouseWheelMovedUp(MouseEvent& mouseEvent) override;
+		virtual void mouseWheelMovedUp(MouseEvent& mouseEvent);
 
-		void mouseWheelMovedDown(MouseEvent& mouseEvent) override;
+		virtual void mouseWheelMovedDown(MouseEvent& mouseEvent);
 
 
 		// Inherited from KeyListener
 
-		void keyPressed(KeyEvent& keyEvent) override;
+		virtual void keyPressed(KeyEvent& keyEvent);
 
 		/**
 		 * Draw orientations for the slider. It can be drawn vertically or
@@ -238,7 +237,7 @@ namespace gcn
 		 * @param v the position to convert.
 		 * @return the value corresponding to the position.
 		 */
-		[[nodiscard]] virtual double markerPositionToValue(int v) const;
+		virtual double markerPositionToValue(int v) const;
 
 		/**
 		 * Converts a value to a marker position.
@@ -246,22 +245,22 @@ namespace gcn
 		 * @param value the value to convert.
 		 * @return the position corresponding to the value.
 		 */
-		[[nodiscard]] virtual int valueToMarkerPosition(double value) const;
+		virtual int valueToMarkerPosition(double value) const;
 
 		/**
 		 * Gets the marker position for the current value.
 		 *
 		 * @return the marker position for the current value.
 		 */
-		[[nodiscard]] virtual int getMarkerPosition() const;
+		virtual int getMarkerPosition() const;
 
 		bool mMouseDrag;
-		double mValue{};
-		double mStepLength{};
-		int mMarkerLength{};
+		double mValue;
+		double mStepLength;
+		int mMarkerLength;
 		double mScaleStart;
 		double mScaleEnd;
-		unsigned int mOrientation{};
+		unsigned int mOrientation;
 	};
 }
 

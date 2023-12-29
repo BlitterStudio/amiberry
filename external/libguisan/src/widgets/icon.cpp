@@ -70,16 +70,16 @@ namespace gcn
 	{
 		mImage = Image::load(filename);
 		mInternalImage = true;
-		Widget::setHeight(mImage->getHeight());
-		Widget::setWidth(mImage->getWidth());
+		setHeight(mImage->getHeight());
+		setWidth(mImage->getWidth());
 	}
 
 	Icon::Icon(Image* image)
 	{
 		mImage = image;
 		mInternalImage = false;
-		Widget::setHeight(mImage->getHeight());
-		Widget::setWidth(mImage->getWidth());
+		setHeight(mImage->getHeight());
+		setWidth(mImage->getWidth());
 	}
 
 	Icon::~Icon()
@@ -97,16 +97,18 @@ namespace gcn
 
 	void Icon::drawBorder(Graphics* graphics)
 	{
-		const auto faceColor = getBaseColor();
-		const auto alpha = getBaseColor().a;
-		const auto width = getWidth() + static_cast<int>(getBorderSize()) * 2 - 1;
-		const auto height = getHeight() + static_cast<int>(getBorderSize()) * 2 - 1;
-		auto highlightColor = faceColor + 0x303030;
+		Color faceColor = getBaseColor();
+		Color highlightColor, shadowColor;
+		int alpha = getBaseColor().a;
+		int width = getWidth() + static_cast<int>(getBorderSize()) * 2 - 1;
+		int height = getHeight() + static_cast<int>(getBorderSize()) * 2 - 1;
+		highlightColor = faceColor + 0x303030;
 		highlightColor.a = alpha;
-		auto shadowColor = faceColor - 0x303030;
+		shadowColor = faceColor - 0x303030;
 		shadowColor.a = alpha;
 
-		for (auto i = 0; i < static_cast<int>(getBorderSize()); ++i)
+		unsigned int i;
+		for (i = 0; i < getBorderSize(); ++i)
 		{
 			graphics->setColor(shadowColor);
 			graphics->drawLine(i, i, width - i, i);

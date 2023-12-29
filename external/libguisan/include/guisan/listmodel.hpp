@@ -75,8 +75,7 @@ namespace gcn
 		/**
 		 * Destructor.
 		 */
-		virtual ~ListModel()
-		= default;
+		virtual ~ListModel() { }
 
 		/**
 		 * Gets the number of elements in the ListModel.
@@ -97,8 +96,7 @@ namespace gcn
 		virtual int add_element(const char* elem) = 0;
 
 		// Clear all elements
-		virtual void clear_elements()
-		{}
+		virtual void clear_elements() { }
 	};
 }
 

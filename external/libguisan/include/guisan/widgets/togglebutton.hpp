@@ -96,7 +96,7 @@ namespace gcn
 		 * @return True if the button is selected, false otherwise.
 		 * @see setSelected
 		 */
-		[[nodiscard]] bool isSelected() const;
+		bool isSelected() const;
 
 		/**
 		 * Sets the button to be selected.
@@ -109,17 +109,17 @@ namespace gcn
 
 		//Inherited from Widget
 
-		void draw(Graphics* graphics) override;
+		virtual void draw(Graphics* graphics);
 
 
 		// Inherited from MouseListener
 
-		void mouseReleased(MouseEvent& mouseEvent) override;
+		virtual void mouseReleased(MouseEvent& mouseEvent);
 
 
 		// Inherited from KeyListener
 
-		void keyReleased(KeyEvent& keyEvent) override;
+		virtual void keyReleased(KeyEvent& keyEvent);
 
 	protected:
 		/**

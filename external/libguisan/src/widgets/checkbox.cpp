@@ -98,23 +98,25 @@ namespace gcn
 		else
 			graphics->setColor(Color(128, 128, 128));
 
-		const auto h = getHeight() + getHeight() / 2;
+		const int h = getHeight() + getHeight() / 2;
 
 		graphics->drawText(getCaption(), h - 2, 1);
 	}
 
 	void CheckBox::drawBorder(Graphics* graphics)
 	{
-		const auto faceColor = getBaseColor();
-		const auto alpha = getBaseColor().a;
-		const auto width = getWidth() + static_cast<int>(getBorderSize()) * 2 - 1;
-		const auto height = getHeight() + static_cast<int>(getBorderSize()) * 2 - 1;
-		auto highlightColor = faceColor + 0x303030;
+		Color faceColor = getBaseColor();
+		Color highlightColor, shadowColor;
+		int alpha = getBaseColor().a;
+		int width = getWidth() + static_cast<int>(getBorderSize()) * 2 - 1;
+		int height = getHeight() + static_cast<int>(getBorderSize()) * 2 - 1;
+		highlightColor = faceColor + 0x303030;
 		highlightColor.a = alpha;
-		auto shadowColor = faceColor - 0x303030;
+		shadowColor = faceColor - 0x303030;
 		shadowColor.a = alpha;
 
-		for (auto i = 0; i < static_cast<int>(getBorderSize()); ++i)
+		unsigned int i;
+		for (i = 0; i < getBorderSize(); ++i)
 		{
 			graphics->setColor(shadowColor);
 			graphics->drawLine(i, i, width - i, i);
@@ -127,13 +129,13 @@ namespace gcn
 
 	void CheckBox::drawBox(Graphics* graphics)
 	{
-		const auto h = getHeight() - 2;
-		const auto alpha = getBaseColor().a;
-		auto faceColor = getBaseColor();
+		const int h = getHeight() - 2;
+		const int alpha = getBaseColor().a;
+		Color faceColor = getBaseColor();
 		faceColor.a = alpha;
-		auto highlightColor = faceColor + 0x303030;
+		Color highlightColor = faceColor + 0x303030;
 		highlightColor.a = alpha;
-		auto shadowColor = faceColor - 0x303030;
+		Color shadowColor = faceColor - 0x303030;
 		shadowColor.a = alpha;
 
 		graphics->setColor(shadowColor);
@@ -144,7 +146,7 @@ namespace gcn
 		graphics->drawLine(h, 1, h, h);
 		graphics->drawLine(1, h, h - 1, h);
 
-		auto backCol = getBackgroundColor();
+		Color backCol = getBackgroundColor();
 		if (!isEnabled())
 			backCol = backCol - 0x303030;
 		graphics->setColor(backCol);
@@ -189,7 +191,7 @@ namespace gcn
 
 	void CheckBox::keyPressed(KeyEvent& keyEvent)
 	{
-		const auto key = keyEvent.getKey();
+		const Key key = keyEvent.getKey();
 
 		if (key.getValue() == Key::ENTER ||
 			key.getValue() == Key::SPACE)
@@ -214,7 +216,7 @@ namespace gcn
 
 	void CheckBox::adjustSize()
 	{
-		const auto height = getFont()->getHeight() + 2;
+		const int height = getFont()->getHeight() + 2;
 
 		setHeight(height);
 		setWidth(getFont()->getWidth(mCaption) + height + height / 2);

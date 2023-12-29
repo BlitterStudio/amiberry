@@ -67,7 +67,7 @@ namespace gcn
 	/**
 	 * A simple button that displays an image instead of a caption.
 	 */
-	class GCN_CORE_DECLSPEC ImageButton : public Button
+	class GCN_CORE_DECLSPEC ImageButton : public gcn::Button
 	{
 	public:
 		/**
@@ -92,29 +92,29 @@ namespace gcn
 		/**
 		 * Adjusts the size of the image button to fit the image.
 		 */
-		void adjustSize() override;
+		void adjustSize();
 
 		/**
 		 * Sets the image to display.
 		 *
 		 * @param image The image to display.
 		 */
-		virtual void setImage(Image* image);
+		void setImage(Image* image);
 
 		/**
 		 * Gets the image of the image button.
 		 *
 		 * @return The image of the image button.
 		 */
-		virtual Image* getImage();
+		Image* getImage();
 
 
 		// Inherited from Widget
 
-		void draw(Graphics* graphics) override;
+		void draw(gcn::Graphics* graphics);
 
 	protected:
-		Image* mImage;
+		gcn::Image* mImage;
 
 		/**
 		 * True if the image has been loaded internally, false otherwise.

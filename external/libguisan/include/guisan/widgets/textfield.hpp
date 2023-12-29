@@ -99,7 +99,7 @@ namespace gcn
 		 *
 		 * @return the text of the TextField.
 		 */
-		[[nodiscard]] const std::string& getText() const;
+		const std::string& getText() const;
 
 		/**
 		 * Draws the caret (the little marker in the text that shows where the
@@ -137,28 +137,28 @@ namespace gcn
 		 *
 		 * @return the caret position.
 		 */
-		[[nodiscard]] unsigned int getCaretPosition() const;
+		unsigned int getCaretPosition() const;
 
 
 		// Inherited from Widget
 
-		void fontChanged() override;
+		virtual void fontChanged();
 
-		void draw(Graphics* graphics) override;
+		virtual void draw(Graphics* graphics);
 
-		void drawBorder(Graphics* graphics) override;
+		virtual void drawBorder(Graphics* graphics);
 
 
 		// Inherited from MouseListener
 
-		void mousePressed(MouseEvent& mouseEvent) override;
+		virtual void mousePressed(MouseEvent& mouseEvent);
 
-		void mouseDragged(MouseEvent& mouseEvent) override;
+		virtual void mouseDragged(MouseEvent& mouseEvent);
 
 
 		// Inherited from KeyListener
 
-		void keyPressed(KeyEvent& keyEvent) override;
+		virtual void keyPressed(KeyEvent& keyEvent);
 
 	protected:
 		/**

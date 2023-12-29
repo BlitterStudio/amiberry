@@ -69,16 +69,16 @@ namespace gcn
 	{
 		mImage = Image::load(filename);
 		mInternalImage = true;
-		Widget::setWidth(mImage->getWidth() + mImage->getWidth() / 2);
-		Widget::setHeight(mImage->getHeight() + mImage->getHeight() / 2);
+		setWidth(mImage->getWidth() + mImage->getWidth() / 2);
+		setHeight(mImage->getHeight() + mImage->getHeight() / 2);
 	}
 
 	ImageButton::ImageButton(Image* image)
 	{
 		mImage = image;
 		mInternalImage = false;
-		Widget::setWidth(mImage->getWidth() + mImage->getWidth() / 2);
-		Widget::setHeight(mImage->getHeight() + mImage->getHeight() / 2);
+		setWidth(mImage->getWidth() + mImage->getWidth() / 2);
+		setHeight(mImage->getHeight() + mImage->getHeight() / 2);
 	}
 
 	ImageButton::~ImageButton()
@@ -108,9 +108,9 @@ namespace gcn
 
 	void ImageButton::draw(Graphics* graphics)
 	{
-		auto faceColor = getBaseColor();
-		Color highlightColor, shadowColor;
-		const auto alpha = getBaseColor().a;
+		gcn::Color faceColor = getBaseColor();
+		gcn::Color highlightColor, shadowColor;
+		const int alpha = getBaseColor().a;
 
 		if (isPressed())
 		{
@@ -142,16 +142,16 @@ namespace gcn
 
 		graphics->setColor(getForegroundColor());
 
-		const auto text_x = getWidth() / 2 - mImage->getWidth() / 2;
-		const auto text_y = getHeight() / 2 - mImage->getHeight() / 2;
+		const int textX = getWidth() / 2 - mImage->getWidth() / 2;
+		const int textY = getHeight() / 2 - mImage->getHeight() / 2;
 
 		if (isPressed())
 		{
-			graphics->drawImage(mImage, text_x + 1, text_y + 1);
+			graphics->drawImage(mImage, textX + 1, textY + 1);
 		}
 		else
 		{
-			graphics->drawImage(mImage, text_x, text_y);
+			graphics->drawImage(mImage, textX, textY);
 
 			if (isFocused())
 			{

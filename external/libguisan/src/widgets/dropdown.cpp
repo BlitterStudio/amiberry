@@ -71,16 +71,16 @@ namespace gcn
 					   ScrollArea* scrollArea,
 					   ListBox* listBox)
 	{
-		Widget::setWidth(100);
+		setWidth(100);
 		setFocusable(true);
 		mDroppedDown = false;
 		mPushed = false;
 		mIsDragged = false;
 
-		BasicContainer::setInternalFocusHandler(&mInternalFocusHandler);
+		setInternalFocusHandler(&mInternalFocusHandler);
 
-		mInternalScrollArea = (scrollArea == nullptr);
-		mInternalListBox = (listBox == nullptr);
+		mInternalScrollArea = (scrollArea == NULL);
+		mInternalListBox = (listBox == NULL);
 
 		if (mInternalScrollArea)
 		{
@@ -101,7 +101,7 @@ namespace gcn
 		}
 
 		mScrollArea->setContent(mListBox);
-		BasicContainer::add(mScrollArea);
+		add(mScrollArea);
 
 		mListBox->addActionListener(this);
 		mListBox->addSelectionListener(this);
@@ -132,7 +132,7 @@ namespace gcn
 		if (mInternalListBox)
 			delete mListBox;
 
-		BasicContainer::setInternalFocusHandler(nullptr);
+		setInternalFocusHandler(NULL);
 	}
 
 	void DropDown::draw(Graphics* graphics)
@@ -148,15 +148,15 @@ namespace gcn
 			h = getHeight();
 		}
 
-		const auto alpha = getBaseColor().a;
-		auto faceColor = getBaseColor();
+		int alpha = getBaseColor().a;
+		Color faceColor = getBaseColor();
 		faceColor.a = alpha;
-		auto highlightColor = faceColor + 0x303030;
+		Color highlightColor = faceColor + 0x303030;
 		highlightColor.a = alpha;
-		auto shadowColor = faceColor - 0x303030;
+		Color shadowColor = faceColor - 0x303030;
 		shadowColor.a = alpha;
 
-		auto backCol = getBackgroundColor();
+		Color backCol = getBackgroundColor();
 		if (!isEnabled())
 			backCol = backCol - 0x303030;
 		graphics->setColor(backCol);
@@ -196,16 +196,18 @@ namespace gcn
 
 	void DropDown::drawBorder(Graphics* graphics)
 	{
-		const auto faceColor = getBaseColor();
-		const auto alpha = getBaseColor().a;
-		const auto width = getWidth() + static_cast<int>(getBorderSize()) * 2 - 1;
-		const auto height = getHeight() + static_cast<int>(getBorderSize()) * 2 - 1;
-		auto highlightColor = faceColor + 0x303030;
+		Color faceColor = getBaseColor();
+		Color highlightColor, shadowColor;
+		int alpha = getBaseColor().a;
+		int width = getWidth() + static_cast<int>(getBorderSize()) * 2 - 1;
+		int height = getHeight() + static_cast<int>(getBorderSize()) * 2 - 1;
+		highlightColor = faceColor + 0x303030;
 		highlightColor.a = alpha;
-		auto shadowColor = faceColor - 0x303030;
+		shadowColor = faceColor - 0x303030;
 		shadowColor.a = alpha;
 
-		for (auto i = 0; i < static_cast<int>(getBorderSize()); ++i)
+		unsigned int i;
+		for (i = 0; i < getBorderSize(); ++i)
 		{
 			graphics->setColor(shadowColor);
 			graphics->drawLine(i, i, width - i, i);
@@ -220,7 +222,7 @@ namespace gcn
 	{
 		Color faceColor, highlightColor, shadowColor;
 		int offset;
-		const auto alpha = getBaseColor().a;
+		const int alpha = getBaseColor().a;
 
 		if (mPushed)
 		{
@@ -252,8 +254,8 @@ namespace gcn
 		{
 			h = getHeight();
 		}
-		const auto x = getWidth() - h;
-		const auto y = 0;
+		const int x = getWidth() - h;
+		const int y = 0;
 
 		graphics->setColor(faceColor);
 		graphics->fillRectangle(Rectangle(x + 1,
@@ -286,10 +288,11 @@ namespace gcn
 		else
 			graphics->setColor(Color(128, 128, 128));
 
-		const auto hh = h / 3;
-		const auto hx = x + h / 2;
-		const auto hy = y + (h * 2) / 3;
-		for (auto i = 0; i < hh; i++)
+		int i;
+		const int hh = h / 3;
+		const int hx = x + h / 2;
+		const int hy = y + (h * 2) / 3;
+		for (i = 0; i < hh; i++)
 		{
 			graphics->drawLine(hx - i + offset,
 							   hy - i + offset,
@@ -321,7 +324,7 @@ namespace gcn
 		if (keyEvent.isConsumed())
 			return;
 		
-		const auto key = keyEvent.getKey();
+		const Key key = keyEvent.getKey();
 
 		if ((key.getValue() == Key::ENTER || key.getValue() == Key::SPACE)
 			&& !mDroppedDown)
@@ -429,21 +432,21 @@ namespace gcn
 		adjustHeight();
 	}
 
-	ListModel* DropDown::getListModel() const
+	ListModel* DropDown::getListModel()
 	{
 		return mListBox->getListModel();
 	}
 
 	void DropDown::adjustHeight()
 	{
-		if (mScrollArea == nullptr)
+		if (mScrollArea == NULL)
 			throw GCN_EXCEPTION("Scroll Area has been deleted.");
 
-		if (mListBox == nullptr)
+		if (mListBox == NULL)
 			throw GCN_EXCEPTION("List box has been deleted.");
 
-		const auto listBoxHeight = mListBox->getHeight();
-		const auto h2 = getFont()->getHeight() + 2;
+		const int listBoxHeight = mListBox->getHeight();
+		const int h2 = getFont()->getHeight() + 2;
 
 		setHeight(h2);
 
@@ -452,7 +455,7 @@ namespace gcn
 
 		if (mDroppedDown && getParent())
 		{
-			const auto h = getParent()->getChildrenArea().height - getY();
+			const int h = getParent()->getChildrenArea().height - getY();
 
 			if (listBoxHeight > h - h2 - 2)
 			{
@@ -489,7 +492,7 @@ namespace gcn
 		mListBox->requestFocus();
 	}
 
-	bool DropDown::isDroppedDown() const
+	bool DropDown::isDroppedDown()
 	{
 		return mDroppedDown;
 	}
@@ -515,7 +518,7 @@ namespace gcn
 	{
 		if (event.getSource() == mScrollArea)
 		{
-			mScrollArea = nullptr;
+			mScrollArea = NULL;
 		}
 		BasicContainer::death(event);
 	}

@@ -58,9 +58,6 @@
  * For comments regarding functions please see the header file.
  */
 
-#include <utility>
-
-
 #include "guisan/widgets/button.hpp"
 
 #include "guisan/exception.hpp"
@@ -80,7 +77,7 @@ namespace gcn
 		  mSpacing(4)
 	{
 		setFocusable(true);
-		Button::adjustSize();
+		adjustSize();
 		setBorderSize(1);
 
 		addMouseListener(this);
@@ -88,8 +85,8 @@ namespace gcn
 		addFocusListener(this);
 	}
 
-	Button::Button(std::string caption)
-		: mCaption(std::move(caption)),
+	Button::Button(const std::string& caption)
+		: mCaption(caption),
 		  mHasMouse(false),
 		  mKeyPressed(false),
 		  mMousePressed(false),
@@ -97,7 +94,7 @@ namespace gcn
 		  mSpacing(4)
 	{
 		setFocusable(true);
-		Button::adjustSize();
+		adjustSize();
 		setBorderSize(1);
 
 		addMouseListener(this);
@@ -137,9 +134,9 @@ namespace gcn
 
 	void Button::draw(Graphics* graphics)
 	{
-		auto faceColor = getBaseColor();
+		Color faceColor = getBaseColor();
 		Color highlightColor, shadowColor;
-		const auto alpha = getBaseColor().a;
+		int alpha = getBaseColor().a;
 
 		if (isPressed())
 		{
@@ -174,19 +171,19 @@ namespace gcn
 		else
 			graphics->setColor(Color(128, 128, 128));
 
-		int text_x;
-		const auto text_y = getHeight() / 2 - getFont()->getHeight() / 2;
+		int textX;
+		int textY = getHeight() / 2 - getFont()->getHeight() / 2;
 
 		switch (getAlignment())
 		{
 		case Graphics::LEFT:
-			text_x = static_cast<int>(mSpacing);
+			textX = static_cast<int>(mSpacing);
 			break;
 		case Graphics::CENTER:
-			text_x = getWidth() / 2;
+			textX = getWidth() / 2;
 			break;
 		case Graphics::RIGHT:
-			text_x = getWidth() - static_cast<int>(mSpacing);
+			textX = getWidth() - static_cast<int>(mSpacing);
 			break;
 		default:
 			throw GCN_EXCEPTION("Unknown alignment.");
@@ -196,11 +193,11 @@ namespace gcn
 
 		if (isPressed())
 		{
-			graphics->drawText(getCaption(), text_x + 1, text_y + 1, getAlignment());
+			graphics->drawText(getCaption(), textX + 1, textY + 1, getAlignment());
 		}
 		else
 		{
-			graphics->drawText(getCaption(), text_x, text_y, getAlignment());
+			graphics->drawText(getCaption(), textX, textY, getAlignment());
 
 			if (isFocused())
 			{
@@ -212,16 +209,18 @@ namespace gcn
 
 	void Button::drawBorder(Graphics* graphics)
 	{
-		const auto faceColor = getBaseColor();
-		const auto alpha = getBaseColor().a;
-		const auto width = getWidth() + static_cast<int>(getBorderSize()) * 2 - 1;
-		const auto height = getHeight() + static_cast<int>(getBorderSize()) * 2 - 1;
-		auto highlightColor = faceColor + 0x303030;
+		Color faceColor = getBaseColor();
+        Color highlightColor, shadowColor;
+		int alpha = getBaseColor().a;
+		int width = getWidth() + static_cast<int>(getBorderSize()) * 2 - 1;
+		int height = getHeight() + static_cast<int>(getBorderSize()) * 2 - 1;
+		highlightColor = faceColor + 0x303030;
 		highlightColor.a = alpha;
-		auto shadowColor = faceColor - 0x303030;
+		shadowColor = faceColor - 0x303030;
 		shadowColor.a = alpha;
 
-		for (auto i = 0; i < static_cast<int>(getBorderSize()); ++i)
+		unsigned int i;
+		for (i = 0; i < getBorderSize(); ++i)
 		{
 			graphics->setColor(shadowColor);
 			graphics->drawLine(i, i, width - i, i);
@@ -289,7 +288,7 @@ namespace gcn
 
 	void Button::keyPressed(KeyEvent& keyEvent)
 	{
-		const auto key = keyEvent.getKey();
+		const Key key = keyEvent.getKey();
 
 		if (key.getValue() == Key::ENTER
 			|| key.getValue() == Key::SPACE)
@@ -301,7 +300,7 @@ namespace gcn
 
 	void Button::keyReleased(KeyEvent& keyEvent)
 	{
-		const auto key = keyEvent.getKey();
+		const Key key = keyEvent.getKey();
 
 		if ((key.getValue() == Key::ENTER
 				|| key.getValue() == Key::SPACE)

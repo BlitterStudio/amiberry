@@ -58,17 +58,15 @@
  * For comments regarding functions please see the header file.
  */
 
-#include <utility>
-
-
 #include "guisan/actionevent.hpp"
 
 namespace gcn
 {
-	ActionEvent::ActionEvent(Widget* source, std::string id)
+	ActionEvent::ActionEvent(Widget* source, const std::string& id)
 		: Event(source),
-		  mId(std::move(id))
+		  mId(id)
 	{
+
 	}
 
 	ActionEvent::~ActionEvent()

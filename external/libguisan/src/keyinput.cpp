@@ -71,6 +71,7 @@ namespace gcn
 		  mMetaPressed(false),
 		  mNumericPad(false)
 	{
+
 	}
 
 	void KeyInput::setType(int type)

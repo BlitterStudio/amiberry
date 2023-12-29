@@ -67,7 +67,7 @@ namespace gcn
 	 * @author Walluce Pinkham
 	 * @author Olof Naessén
 	 */
-	class GCN_EXTENSION_DECLSPEC SDLTrueTypeFont : public Font
+	class GCN_EXTENSION_DECLSPEC SDLTrueTypeFont: public Font
 	{
 	public:
 
@@ -131,16 +131,16 @@ namespace gcn
 
 		// Inherited from Font
 
-		[[nodiscard]] int getWidth(const std::string& text) const override;
+		virtual int getWidth(const std::string& text) const;
 
-		[[nodiscard]] int getHeight() const override;
+		virtual int getHeight() const;
 
-		void drawString(Graphics* graphics, const std::string& text, int x, int y) override;
+		virtual void drawString(Graphics* graphics, const std::string& text, int x, int y);
 
 	protected:
-		TTF_Font* mFont;
+		TTF_Font *mFont;
 
-		int mHeight{};
+		int mHeight;
 		int mGlyphSpacing;
 		int mRowSpacing;
 

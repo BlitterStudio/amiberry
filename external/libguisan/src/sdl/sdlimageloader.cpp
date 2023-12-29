@@ -70,18 +70,18 @@ namespace gcn
 	Image* SDLImageLoader::load(const std::string& filename,
 	                            bool convertToDisplayFormat)
 	{
-		auto* loadedSurface = loadSDLSurface(filename);
+		SDL_Surface* loadedSurface = loadSDLSurface(filename);
 
-		if (loadedSurface == nullptr)
+		if (loadedSurface == NULL)
 		{
 			throw GCN_EXCEPTION(
 				std::string("Unable to load image file: ") + filename);
 		}
 
-		auto* surface = convertToStandardFormat(loadedSurface);
+		SDL_Surface* surface = convertToStandardFormat(loadedSurface);
 		SDL_FreeSurface(loadedSurface);
 
-		if (surface == nullptr)
+		if (surface == NULL)
 		{
 			throw GCN_EXCEPTION(
 				std::string("Not enough memory to load: ") + filename);
@@ -136,13 +136,13 @@ namespace gcn
 		amask = 0xff000000;
 #endif
 
-		auto* colorSurface = SDL_CreateRGBSurface(SDL_SWSURFACE,
+		SDL_Surface* colorSurface = SDL_CreateRGBSurface(SDL_SWSURFACE,
 		                                          0, 0, 32,
 		                                          rmask, gmask, bmask, amask);
 
-		SDL_Surface* tmp = nullptr;
+		SDL_Surface* tmp = NULL;
 
-		if (colorSurface != nullptr)
+		if (colorSurface != NULL)
 		{
 			tmp = SDL_ConvertSurface(surface, colorSurface->format,
 			                         SDL_SWSURFACE);

@@ -61,11 +61,12 @@
 
 #include "platform.hpp"
 
-extern "C" {
-/**
- * Exists to be able to check for Guichan GLUT with autotools.
- */
-GCN_EXTENSION_DECLSPEC extern void gcnGLUT();
+extern "C"
+{
+    /**
+     * Exists to be able to check for Guichan GLUT with autotools.
+     */
+    GCN_EXTENSION_DECLSPEC extern void gcnGLUT();
 }
 
 #endif // end GCN_GLUT_HPP

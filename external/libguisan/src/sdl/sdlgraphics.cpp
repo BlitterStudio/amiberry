@@ -105,9 +105,9 @@ namespace gcn
 	bool SDLGraphics::pushClipArea(Rectangle area)
 	{
 		SDL_Rect rect;
-		const auto result = Graphics::pushClipArea(area);
+		const bool result = Graphics::pushClipArea(area);
 
-		const auto& carea = mClipStack.top();
+		const ClipRectangle& carea = mClipStack.top();
 		rect.x = carea.x;
 		rect.y = carea.y;
 		rect.w = carea.width;
@@ -127,7 +127,7 @@ namespace gcn
 			return;
 		}
 
-		const auto& carea = mClipStack.top();
+		const ClipRectangle& carea = mClipStack.top();
 		SDL_Rect rect;
 		rect.x = carea.x;
 		rect.y = carea.y;
@@ -152,7 +152,7 @@ namespace gcn
 				"called a draw function outside of _beginDraw() and _endDraw()?");
 		}
 
-		const auto& top = mClipStack.top();
+		const ClipRectangle& top = mClipStack.top();
 		SDL_Rect src;
 		SDL_Rect dst;
 		src.x = srcX;
@@ -162,9 +162,9 @@ namespace gcn
 		dst.x = dstX + top.xOffset;
 		dst.y = dstY + top.yOffset;
 
-		const auto* srcImage = dynamic_cast<const SDLImage*>(image);
+		const SDLImage* srcImage = dynamic_cast<const SDLImage*>(image);
 
-		if (srcImage == nullptr)
+		if (srcImage == NULL)
 		{
 			throw GCN_EXCEPTION("Trying to draw an image of unknown format, must be an SDLImage.");
 		}
@@ -180,9 +180,9 @@ namespace gcn
 				"called a draw function outside of _beginDraw() and _endDraw()?");
 		}
 
-		const auto& top = mClipStack.top();
+		const ClipRectangle& top = mClipStack.top();
 
-		auto area = rectangle;
+		Rectangle area = rectangle;
 		area.x += top.xOffset;
 		area.y += top.yOffset;
 
@@ -193,15 +193,15 @@ namespace gcn
 
 		if (mAlpha)
 		{
-			const auto x1 = area.x > top.x ? area.x : top.x;
-			const auto y1 = area.y > top.y ? area.y : top.y;
-			const auto x2 = area.x + area.width < top.x + top.width ? area.x + area.width : top.x + top.width;
-			const auto y2 = area.y + area.height < top.y + top.height ? area.y + area.height : top.y + top.height;
+			const int x1 = area.x > top.x ? area.x : top.x;
+			const int y1 = area.y > top.y ? area.y : top.y;
+			const int x2 = area.x + area.width < top.x + top.width ? area.x + area.width : top.x + top.width;
+			const int y2 = area.y + area.height < top.y + top.height ? area.y + area.height : top.y + top.height;
 
 			SDL_LockSurface(mTarget);
-			for (auto y = y1; y < y2; y++)
+			for (int y = y1; y < y2; y++)
 			{
-				for (auto x = x1; x < x2; x++)
+				for (int x = x1; x < x2; x++)
 				{
 					SDLputPixelAlpha(mTarget, x, y, mColor);
 				}
@@ -216,7 +216,7 @@ namespace gcn
 			rect.w = area.width;
 			rect.h = area.height;
 
-			const auto color = SDL_MapRGBA(mTarget->format, mColor.r, mColor.g, mColor.b, mColor.a);
+			const Uint32 color = SDL_MapRGBA(mTarget->format, mColor.r, mColor.g, mColor.b, mColor.a);
 			SDL_FillRect(mTarget, &rect, color);
 		}
 	}
@@ -229,7 +229,7 @@ namespace gcn
 				"called a draw function outside of _beginDraw() and _endDraw()?");
 		}
 
-		const auto& top = mClipStack.top();
+		const ClipRectangle& top = mClipStack.top();
 
 		x += top.xOffset;
 		y += top.yOffset;
@@ -254,7 +254,7 @@ namespace gcn
 			throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
 				"called a draw function outside of _beginDraw() and _endDraw()?");
 		}
-		const auto& top = mClipStack.top();
+		const ClipRectangle& top = mClipStack.top();
 
 		x1 += top.xOffset;
 		y += top.yOffset;
@@ -292,9 +292,9 @@ namespace gcn
 
 		SDL_LockSurface(mTarget);
 
-		auto p = static_cast<Uint8*>(mTarget->pixels) + y * mTarget->pitch + x1 * bpp;
+		Uint8 *p = static_cast<Uint8*>(mTarget->pixels) + y * mTarget->pitch + x1 * bpp;
 
-		auto pixel = SDL_MapRGB(mTarget->format, mColor.r, mColor.g, mColor.b);
+		Uint32 pixel = SDL_MapRGB(mTarget->format, mColor.r, mColor.g, mColor.b);
 
 		switch (bpp)
 		{
@@ -309,7 +309,7 @@ namespace gcn
 
 		case 2:
 			{
-				auto* q = reinterpret_cast<Uint16*>(p);
+				Uint16* q = reinterpret_cast<Uint16*>(p);
 				for (; x1 <= x2; ++x1)
 				{
 					*(q++) = pixel;
@@ -344,7 +344,7 @@ namespace gcn
 
 		case 4:
 			{
-				auto* q = reinterpret_cast<Uint32*>(p);
+				Uint32* q = reinterpret_cast<Uint32*>(p);
 				for (; x1 <= x2; ++x1)
 				{
 					if (mAlpha)
@@ -371,7 +371,7 @@ namespace gcn
 			throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
 				"called a draw function outside of _beginDraw() and _endDraw()?");
 		}
-		const auto& top = mClipStack.top();
+		const ClipRectangle& top = mClipStack.top();
 
 		x += top.xOffset;
 		y1 += top.yOffset;
@@ -409,9 +409,9 @@ namespace gcn
 
 		SDL_LockSurface(mTarget);
 
-		auto* p = static_cast<Uint8*>(mTarget->pixels) + y1 * mTarget->pitch + x * bpp;
+		Uint8* p = static_cast<Uint8*>(mTarget->pixels) + y1 * mTarget->pitch + x * bpp;
 
-		auto pixel = SDL_MapRGB(mTarget->format, mColor.r, mColor.g, mColor.b);
+		Uint32 pixel = SDL_MapRGB(mTarget->format, mColor.r, mColor.g, mColor.b);
 
 		switch (bpp)
 		{
@@ -483,10 +483,10 @@ namespace gcn
 
 	void SDLGraphics::drawRectangle(const Rectangle& rectangle)
 	{
-		const auto x1 = rectangle.x;
-		const auto x2 = rectangle.x + rectangle.width - 1;
-		const auto y1 = rectangle.y;
-		const auto y2 = rectangle.y + rectangle.height - 1;
+		const int x1 = rectangle.x;
+		const int x2 = rectangle.x + rectangle.width - 1;
+		const int y1 = rectangle.y;
+		const int y2 = rectangle.y + rectangle.height - 1;
 
 		drawHLine(x1, y1, x2);
 		drawHLine(x1, y2, x2);
@@ -513,7 +513,7 @@ namespace gcn
 			throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
 				"called a draw function outside of _beginDraw() and _endDraw()?");
 		}
-		const auto& top = mClipStack.top();
+		const ClipRectangle& top = mClipStack.top();
 
 		x1 += top.xOffset;
 		y1 += top.yOffset;
@@ -522,8 +522,8 @@ namespace gcn
 
 		// Draw a line with Bresenham
 
-		const auto dx = ABS(x2 - x1);
-		const auto dy = ABS(y2 - y1);
+		const int dx = ABS(x2 - x1);
+		const int dy = ABS(y2 - y1);
 
 		if (dx > dy)
 		{
@@ -542,10 +542,10 @@ namespace gcn
 
 			if (y1 < y2)
 			{
-				auto y = y1;
-				auto p = 0;
+				int y = y1;
+				int p = 0;
 
-				for (auto x = x1; x <= x2; x++)
+				for (int x = x1; x <= x2; x++)
 				{
 					if (top.isPointInRect(x, y))
 					{
@@ -570,10 +570,10 @@ namespace gcn
 			}
 			else
 			{
-				auto y = y1;
-				auto p = 0;
+				int y = y1;
+				int p = 0;
 
-				for (auto x = x1; x <= x2; x++)
+				for (int x = x1; x <= x2; x++)
 				{
 					if (top.isPointInRect(x, y))
 					{
@@ -614,10 +614,10 @@ namespace gcn
 
 			if (x1 < x2)
 			{
-				auto x = x1;
-				auto p = 0;
+				int x = x1;
+				int p = 0;
 
-				for (auto y = y1; y <= y2; y++)
+				for (int y = y1; y <= y2; y++)
 				{
 					if (top.isPointInRect(x, y))
 					{
@@ -642,10 +642,10 @@ namespace gcn
 			}
 			else
 			{
-				auto x = x1;
-				auto p = 0;
+				int x = x1;
+				int p = 0;
 
-				for (auto y = y1; y <= y2; y++)
+				for (int y = y1; y <= y2; y++)
 				{
 					if (top.isPointInRect(x, y))
 					{
@@ -691,7 +691,7 @@ namespace gcn
 			throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
 				"called a draw function outside of _beginDraw() and _endDraw()?");
 		}
-		const auto& top = mClipStack.top();
+		const ClipRectangle& top = mClipStack.top();
 
 		destination.x += top.xOffset;
 		destination.y += top.yOffset;

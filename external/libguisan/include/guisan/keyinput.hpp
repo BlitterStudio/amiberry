@@ -73,8 +73,7 @@ namespace gcn
 		/**
 		 * Constructor.
 		 */
-		KeyInput()
-		= default;;
+		KeyInput() { }
 
 		/**
 		 * Constructor.
@@ -96,7 +95,7 @@ namespace gcn
 		 *
 		 * @return the input type.
 		 */
-		[[nodiscard]] int getType() const;
+		int getType() const;
 
 		/**
 		 * Sets the key the input concerns.
@@ -110,7 +109,7 @@ namespace gcn
 		 *
 		 * @return the Key the input concerns.
 		 */
-		[[nodiscard]] const Key& getKey() const;
+		const Key& getKey() const;
 
 		/**
 		 * Checks whether shift is pressed.
@@ -118,7 +117,7 @@ namespace gcn
 		 * @return true if shift was pressed at the same time as the key.
 		 * @since 0.6.0
 		 */
-		[[nodiscard]] bool isShiftPressed() const;
+		bool isShiftPressed() const;
 
 		/**
 		 * Sets the shift pressed flag.
@@ -134,7 +133,7 @@ namespace gcn
 		 * @return true if control was pressed at the same time as the key.
 		 * @since 0.6.0
 		 */
-		[[nodiscard]] bool isControlPressed() const;
+		bool isControlPressed() const;
 
 		/**
 		 * Sets the control pressed flag.
@@ -150,7 +149,7 @@ namespace gcn
 		 * @return true if alt was pressed at the same time as the key.
 		 * @since 0.6.0
 		 */
-		[[nodiscard]] bool isAltPressed() const;
+		bool isAltPressed() const;
 
 		/**
 		 * Sets the alt pressed flag.
@@ -166,7 +165,7 @@ namespace gcn
 		 * @return true if meta was pressed at the same time as the key.
 		 * @since 0.6.0
 		 */
-		[[nodiscard]] bool isMetaPressed() const;
+		bool isMetaPressed() const;
 
 		/**
 		 * Sets the meta pressed flag.
@@ -182,7 +181,7 @@ namespace gcn
 		 * @return true if key pressed at the numeric pad.
 		 * @since 0.6.0
 		 */
-		[[nodiscard]] bool isNumericPad() const;
+		bool isNumericPad() const;
 
 		/**
 		 * Sets the numeric pad flag.
@@ -204,13 +203,13 @@ namespace gcn
 
 	protected:
 		Key mKey;
-		int mType{};
-		int mButton{};
-		bool mShiftPressed{};
-		bool mControlPressed{};
-		bool mAltPressed{};
-		bool mMetaPressed{};
-		bool mNumericPad{};
+		int mType;
+		int mButton;
+		bool mShiftPressed;
+		bool mControlPressed;
+		bool mAltPressed;
+		bool mMetaPressed;
+		bool mNumericPad;
 	};
 }
 

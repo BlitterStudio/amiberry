@@ -239,7 +239,6 @@ namespace gcn
               break;
 
           case 3:
-              unsigned int c;
               if(SDL_BYTEORDER == SDL_BIG_ENDIAN)
               {
                   unsigned int r = (p[0] * (255 - color.a) + color.r * color.a) >> 8;
