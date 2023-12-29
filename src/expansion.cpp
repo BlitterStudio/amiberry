@@ -610,6 +610,7 @@ void expamem_shutup(addrbank *mapped)
 		mapped->start = 0xffffffff;
 		boardmessage(mapped, false);
 	}
+	expamem_next(mapped, NULL);
 }
 
 void expamem_next(addrbank *mapped, addrbank *next)
