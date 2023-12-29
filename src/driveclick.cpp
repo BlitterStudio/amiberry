@@ -535,30 +535,34 @@ void driveclick_check_prefs (void)
 int driveclick_loadresource(struct drvsample* sp, int drivetype)
 {
 	auto ok = 1;
-	TCHAR* sample;
+	TCHAR sample[MAX_DPATH];
 	for (auto type = 0; type < DS_END; type++) {
 		auto* s = sp + type;
 		switch (type) {
 		case 0:
-			sample = strdup("data/floppy_sounds/drive_click.wav");
+			get_floppy_sounds_path(sample, MAX_DPATH);
+			_tcscat(sample, "drive_click.wav");
 			break;
 		case 1:
-			sample = strdup("data/floppy_sounds/drive_spin.wav");
+			get_floppy_sounds_path(sample, MAX_DPATH);
+			_tcscat(sample, "drive_spin.wav");
 			break;
 		case 2:
-			sample = strdup("data/floppy_sounds/drive_spinnd.wav");
+			get_floppy_sounds_path(sample, MAX_DPATH);
+			_tcscat(sample, "drive_spinnd.wav");
 			break;
 		case 3:
-			sample = strdup("data/floppy_sounds/drive_startup.wav");
+			get_floppy_sounds_path(sample, MAX_DPATH);
+			_tcscat(sample, "drive_startup.wav");
 			break;
 		case 4:
-			sample = strdup("data/floppy_sounds/drive_snatch.wav");
+			get_floppy_sounds_path(sample, MAX_DPATH);
+			_tcscat(sample, "drive_snatch.wav");
 			break;
 		default:
 			continue;
 		}
 		ok = loadsample(sample, s);
-		free(sample);
 	}
 	return ok;
 }

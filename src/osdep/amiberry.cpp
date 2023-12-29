@@ -2825,6 +2825,12 @@ void get_video_path(char* out, int size)
 	strncpy(out, video_dir, size - 1);
 }
 
+void get_floppy_sounds_path(char* out, int size)
+{
+	fix_trailing(floppy_sounds_dir);
+	_tcsncpy(out, floppy_sounds_dir, size - 1);
+}
+
 int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int isdefault)
 {
 	auto result = 0;
@@ -3644,35 +3650,14 @@ void macos_copy_amiberry_files_to_userdir(std::string macos_amiberry_directory)
 		sprintf(command, "%s/%s", directory.c_str(), "Resources/macos_init_amiberry.zsh");
 		system(command);
 	}
-	
 }
 #endif
 
 static void init_amiberry_paths(void)
 {
 	strncpy(current_dir, start_path_data, MAX_DPATH - 1);
-	snprintf(config_path, MAX_DPATH, "%s/conf/", start_path_data);
-	snprintf(controllers_path, MAX_DPATH, "%s/controllers/", start_path_data);
-	snprintf(retroarch_file, MAX_DPATH, "%s/conf/retroarch.cfg", start_path_data);
-	snprintf(whdboot_path, MAX_DPATH, "%s/whdboot/", start_path_data);
-	snprintf(logfile_path, MAX_DPATH, "%s/amiberry.log", start_path_data);
-
-#ifdef ANDROID
-	char afepath[MAX_DPATH];
-	snprintf(afepath, MAX_DPATH, "%s/Android/data/com.cloanto.amigaforever.essentials/files/rom/", getenv("SDCARD"));
-	DIR* afedir = opendir(afepath);
-	if (afedir) {
-		snprintf(rom_path, MAX_DPATH, "%s", afepath);
-		closedir(afedir);
-	}
-	else
-		snprintf(rom_path, MAX_DPATH, "%s/kickstarts/", start_path_data);
-#else
-	snprintf(rom_path, MAX_DPATH, "%s/kickstarts/", start_path_data);
-#endif
-	snprintf(rp9_path, MAX_DPATH, "%s/rp9/", start_path_data);
 #ifdef __MACH__
-	// Open amiberry.conf from Application Data directory
+	// MacOS stores these files under the user Documents/Amiberry folder
 	const std::string macos_home_directory = getenv("HOME");
 	const std::string macos_amiberry_directory = macos_home_directory + "/Documents/Amiberry";
 	if (!my_existsdir(macos_amiberry_directory.c_str()))
@@ -3681,14 +3666,28 @@ static void init_amiberry_paths(void)
 		init_macos_amiberry_folders(macos_amiberry_directory);
 		macos_copy_amiberry_files_to_userdir(macos_amiberry_directory);
 	}
-
-	snprintf(amiberry_conf_file, MAX_DPATH, "%s", (macos_amiberry_directory + "/Configurations/amiberry.conf").c_str());
-	write_log("Using configuration: %s\n", (macos_amiberry_directory + "/Configurations/amiberry.conf").c_str());
+	snprintf(config_path, MAX_DPATH, "%s", (macos_amiberry_directory + "/Configurations/").c_str());
+	snprintf(controllers_path, MAX_DPATH, "%s", (macos_amiberry_directory + "/Controllers/").c_str());
+	snprintf(data_dir, MAX_DPATH, "%s", (macos_amiberry_directory + "/Data/").c_str());
+	snprintf(whdboot_path, MAX_DPATH, "%s", (macos_amiberry_directory + "/Whdboot/").c_str());
+	snprintf(logfile_path, MAX_DPATH, "%s", (macos_amiberry_directory + "/Amiberry.log").c_str());
+	snprintf(rom_path, MAX_DPATH, "%s", (macos_amiberry_directory + "/Kickstarts/").c_str());
+	snprintf(rp9_path, MAX_DPATH, "%s", (macos_amiberry_directory + "/RP9/").c_str());
+	snprintf(saveimage_dir, MAX_DPATH, "%s", (macos_amiberry_directory + "/Savestates/").c_str());
+	snprintf(savestate_dir, MAX_DPATH, "%s", (macos_amiberry_directory + "/Savestates/").c_str());
+	snprintf(ripper_path, MAX_DPATH, "%s", (macos_amiberry_directory + "/Ripper/").c_str());
+	snprintf(input_dir, MAX_DPATH, "%s", (macos_amiberry_directory + "/Inputrecordings/").c_str());
+	snprintf(screenshot_dir, MAX_DPATH, "%s", (macos_amiberry_directory + "/Screenshots/").c_str());
+	snprintf(nvram_dir, MAX_DPATH, "%s", (macos_amiberry_directory + "/Nvram/").c_str());
+	snprintf(video_dir, MAX_DPATH, "%s", (macos_amiberry_directory + "/Videos/").c_str());
 #else
-	snprintf(amiberry_conf_file, MAX_DPATH, "%s/conf/amiberry.conf", start_path_data);
-#endif
-	snprintf(floppy_sounds_dir, MAX_DPATH, "%s/data/floppy_sounds/", start_path_data);
+	snprintf(config_path, MAX_DPATH, "%s/conf/", start_path_data);
+	snprintf(controllers_path, MAX_DPATH, "%s/controllers/", start_path_data);
 	snprintf(data_dir, MAX_DPATH, "%s/data/", start_path_data);
+	snprintf(whdboot_path, MAX_DPATH, "%s/whdboot/", start_path_data);
+	snprintf(logfile_path, MAX_DPATH, "%s/amiberry.log", start_path_data);
+	snprintf(rom_path, MAX_DPATH, "%s/kickstarts/", start_path_data);
+	snprintf(rp9_path, MAX_DPATH, "%s/rp9/", start_path_data);
 	snprintf(saveimage_dir, MAX_DPATH, "%s/savestates/", start_path_data);
 	snprintf(savestate_dir, MAX_DPATH, "%s/savestates/", start_path_data);
 	snprintf(ripper_path, MAX_DPATH, "%s/ripper/", start_path_data);
@@ -3696,6 +3695,10 @@ static void init_amiberry_paths(void)
 	snprintf(screenshot_dir, MAX_DPATH, "%s/screenshots/", start_path_data);
 	snprintf(nvram_dir, MAX_DPATH, "%s/nvram/", start_path_data);
 	snprintf(video_dir, MAX_DPATH, "%s/videos/", start_path_data);
+#endif
+	snprintf(amiberry_conf_file, MAX_DPATH, "%s/amiberry.conf", config_path);
+	snprintf(retroarch_file, MAX_DPATH, "%s/retroarch.cfg", config_path);
+	snprintf(floppy_sounds_dir, MAX_DPATH, "%s/floppy_sounds/", data_dir);
 }
 
 void load_amiberry_settings(void)
