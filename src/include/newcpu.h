@@ -346,6 +346,25 @@ extern int cpucycleunit, cpuipldelay2, cpuipldelay4;
 extern int m68k_pc_indirect;
 extern bool m68k_interrupt_delay;
 
+#define SPCFLAG_CPUINRESET 2
+#define SPCFLAG_COPPER 4
+#define SPCFLAG_INT 8
+#define SPCFLAG_BRK 16
+#define SPCFLAG_UAEINT 32
+#define SPCFLAG_TRACE 64
+#define SPCFLAG_DOTRACE 128
+#define SPCFLAG_DOINT 256 /* arg, JIT fails without this.. */
+#define SPCFLAG_BLTNASTY 512
+#define SPCFLAG_EXEC 1024
+#define SPCFLAG_ACTION_REPLAY 2048
+#define SPCFLAG_TRAP 4096 /* enforcer-hack */
+#define SPCFLAG_MODE_CHANGE 8192
+#ifdef JIT
+#define SPCFLAG_END_COMPILE 16384
+#endif
+#define SPCFLAG_CHECK 32768
+#define SPCFLAG_MMURESTART 65536
+
 extern void safe_interrupt_set(int, int, bool);
 
 STATIC_INLINE void set_special_exter(uae_u32 x)

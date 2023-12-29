@@ -4638,11 +4638,12 @@ static void debug_cpu_stop(void)
 static int do_specialties (int cycles)
 {
 	uaecptr pc = m68k_getpc();
+	uae_atomic spcflags = regs.spcflags;
 
-	if (regs.spcflags & SPCFLAG_MODE_CHANGE)
+	if (spcflags & SPCFLAG_MODE_CHANGE)
 		return 1;
-
-	if (regs.spcflags & SPCFLAG_CHECK) {
+	
+	if (spcflags & SPCFLAG_CHECK) {
 		if (regs.halted) {
 			if (regs.halted == CPU_HALT_ACCELERATOR_CPU_FALLBACK) {
 				return 1;
@@ -4656,8 +4657,10 @@ static int do_specialties (int cycles)
 			int vsyncstate = -1;
 			while (vsynccnt > 0 && !quit_program) {
 				x_do_cycles(8 * CYCLE_UNIT);
-				if (regs.spcflags & SPCFLAG_COPPER)
+				spcflags = regs.spcflags;
+				if (spcflags & SPCFLAG_COPPER) {
 					do_copper();
+				}
 				if (vsync_counter != vsyncstate) {
 					vsyncstate = vsync_counter;
 					vsynccnt--;
@@ -4670,7 +4673,7 @@ static int do_specialties (int cycles)
 
 #ifdef ACTION_REPLAY
 #ifdef ACTION_REPLAY_HRTMON
-	if ((regs.spcflags & SPCFLAG_ACTION_REPLAY) && hrtmon_flag != ACTION_REPLAY_INACTIVE) {
+	if ((spcflags & SPCFLAG_ACTION_REPLAY) && hrtmon_flag != ACTION_REPLAY_INACTIVE) {
 		int isinhrt = pc >= hrtmem_start && pc < hrtmem_start + hrtmem_size;
 		/* exit from HRTMon? */
 		if (hrtmon_flag == ACTION_REPLAY_ACTIVE && !isinhrt)
@@ -4682,7 +4685,7 @@ static int do_specialties (int cycles)
 			hrtmon_enter();
 	}
 #endif
-	if ((regs.spcflags & SPCFLAG_ACTION_REPLAY) && action_replay_flag != ACTION_REPLAY_INACTIVE) {
+	if ((spcflags & SPCFLAG_ACTION_REPLAY) && action_replay_flag != ACTION_REPLAY_INACTIVE) {
 		/*if (action_replay_flag == ACTION_REPLAY_ACTIVE && !is_ar_pc_in_rom ())*/
 		/*	write_log (_T("PC:%p\n"), m68k_getpc ());*/
 
@@ -4701,26 +4704,28 @@ static int do_specialties (int cycles)
 	}
 #endif
 
-	if (regs.spcflags & SPCFLAG_COPPER)
+	if (spcflags & SPCFLAG_COPPER) {
 		do_copper();
+	}
 
 #ifdef JIT
-	if (regs.spcflags & SPCFLAG_END_COMPILE) {
+	if (spcflags & SPCFLAG_END_COMPILE) {
 		unset_special(SPCFLAG_END_COMPILE);
 	}
 #endif
 
-	while ((regs.spcflags & SPCFLAG_CPUINRESET)) {
+	while (spcflags & SPCFLAG_CPUINRESET) {
 		x_do_cycles(4 * CYCLE_UNIT);
-		if (regs.spcflags & SPCFLAG_COPPER) {
+		spcflags = regs.spcflags;
+		if (spcflags & SPCFLAG_COPPER) {
 			do_copper();
 		}
-		if (!(regs.spcflags & SPCFLAG_CPUINRESET) || (regs.spcflags & SPCFLAG_BRK) || (regs.spcflags & SPCFLAG_MODE_CHANGE)) {
+		if (!(spcflags & SPCFLAG_CPUINRESET) || (spcflags & SPCFLAG_BRK) || (spcflags & SPCFLAG_MODE_CHANGE)) {
 			break;
 		}
 	}
 
-	while ((regs.spcflags & SPCFLAG_BLTNASTY) && dmaen (DMA_BLITTER) && cycles > 0 && ((currprefs.waiting_blits && currprefs.cpu_model >= 68020) || !currprefs.blitter_cycle_exact)) {
+	while ((spcflags & SPCFLAG_BLTNASTY) && dmaen (DMA_BLITTER) && cycles > 0 && ((currprefs.waiting_blits && currprefs.cpu_model >= 68020) || !currprefs.blitter_cycle_exact)) {
 		int c = blitnasty();
 		if (c < 0) {
 			break;
@@ -4732,7 +4737,8 @@ static int do_specialties (int cycles)
 			c = 4;
 		}
 		x_do_cycles(c * CYCLE_UNIT);
-		if (regs.spcflags & SPCFLAG_COPPER)
+		spcflags = regs.spcflags;
+		if (spcflags & SPCFLAG_COPPER)
 			do_copper();
 #ifdef WITH_PPC
 		if (ppc_state)  {
@@ -4743,43 +4749,51 @@ static int do_specialties (int cycles)
 #endif
 	}
 
-	if (regs.spcflags & SPCFLAG_DOTRACE)
-		Exception(9);
-
-	if (regs.spcflags & SPCFLAG_TRAP) {
-		unset_special (SPCFLAG_TRAP);
-		Exception(3);
-	}
-
-	if (regs.spcflags & SPCFLAG_TRACE)
-		do_trace();
-
-	if (regs.spcflags & SPCFLAG_UAEINT) {
-		check_uae_int_request();
-		unset_special(SPCFLAG_UAEINT);
-	}
-
-	if (m68k_interrupt_delay) {
-		int ipl = time_for_interrupt();
-		if (ipl) {
-			unset_special(SPCFLAG_INT);
-			do_interrupt(ipl);
-		}
+	if (spcflags & SPCFLAG_MMURESTART) {
+		// can't have interrupt when 040/060 CPU reruns faulted instruction
+		unset_special(SPCFLAG_MMURESTART);
 	} else {
-		if (regs.spcflags & SPCFLAG_INT) {
-			int intr = intlev();
-			unset_special (SPCFLAG_INT | SPCFLAG_DOINT);
-			if (intr > 0 && (intr > regs.intmask || intr == 7))
-				do_interrupt(intr);
+
+		if (spcflags & SPCFLAG_DOTRACE) {
+			Exception(9);
+		}
+
+		if (spcflags & SPCFLAG_TRAP) {
+			unset_special (SPCFLAG_TRAP);
+			Exception(3);
+		}
+
+		if (spcflags & SPCFLAG_TRACE) {
+			do_trace();
+		}
+
+		if (spcflags & SPCFLAG_UAEINT) {
+			check_uae_int_request();
+			unset_special(SPCFLAG_UAEINT);
+		}
+
+		if (m68k_interrupt_delay) {
+			int ipl = time_for_interrupt();
+			if (ipl) {
+				unset_special(SPCFLAG_INT);
+				do_interrupt(ipl);
+			}
+		} else {
+			if (spcflags & SPCFLAG_INT) {
+				int intr = intlev();
+				unset_special (SPCFLAG_INT | SPCFLAG_DOINT);
+				if (intr > 0 && (intr > regs.intmask || intr == 7))
+					do_interrupt(intr);
+			}
+		}
+
+		if (spcflags & SPCFLAG_DOINT) {
+			unset_special(SPCFLAG_DOINT);
+			set_special(SPCFLAG_INT);
 		}
 	}
 
-	if (regs.spcflags & SPCFLAG_DOINT) {
-		unset_special(SPCFLAG_DOINT);
-		set_special(SPCFLAG_INT);
-	}
-
-	if (regs.spcflags & SPCFLAG_BRK) {
+	if (spcflags & SPCFLAG_BRK) {
 		unset_special(SPCFLAG_BRK);
 #ifdef DEBUGGER
 		if (debugging) {
@@ -5142,7 +5156,9 @@ static bool m68k_cs_initialized;
 
 static int do_specialties_thread(void)
 {
-	if (regs.spcflags & SPCFLAG_MODE_CHANGE)
+	uae_atomic spcflags = regs.spcflags;
+
+	if (spcflags & SPCFLAG_MODE_CHANGE)
 		return 1;
 
 #ifdef JIT
@@ -5151,20 +5167,20 @@ static int do_specialties_thread(void)
 	}
 #endif
 
-	if (regs.spcflags & SPCFLAG_DOTRACE)
+	if (spcflags & SPCFLAG_DOTRACE)
 		Exception(9);
 
-	if (regs.spcflags & SPCFLAG_TRAP) {
+	if (spcflags & SPCFLAG_TRAP) {
 		unset_special(SPCFLAG_TRAP);
 		Exception(3);
 	}
 
-	if (regs.spcflags & SPCFLAG_TRACE)
+	if (spcflags & SPCFLAG_TRACE)
 		do_trace();
 
 	for (;;) {
 
-		if (regs.spcflags & (SPCFLAG_BRK | SPCFLAG_MODE_CHANGE)) {
+		if (spcflags & (SPCFLAG_BRK | SPCFLAG_MODE_CHANGE)) {
 			return 1;
 		}
 
