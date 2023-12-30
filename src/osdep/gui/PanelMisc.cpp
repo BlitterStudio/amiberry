@@ -3,6 +3,7 @@
 #include <guisan.hpp>
 #include <guisan/sdl.hpp>
 #include "SelectorEntry.hpp"
+#include "StringListModel.h"
 
 #include "sysdeps.h"
 #include "options.h"
@@ -67,44 +68,8 @@ static gcn::TextField* txtKeyMinimize;
 static gcn::Button* cmdKeyMinimize;
 static gcn::ImageButton* cmdKeyMinimizeClear;
 
-class string_list_model : public gcn::ListModel
-{
-	std::vector<std::string> values{};
-public:
-	string_list_model(const char* entries[], const int count)
-	{
-		for (auto i = 0; i < count; ++i) {
-			if (entries != nullptr && entries[i] != nullptr)
-				values.emplace_back(entries[i]);
-		}
-	}
-
-	int getNumberOfElements() override
-	{
-		return int(values.size());
-	}
-
-	int add_element(const char* elem) override
-	{
-		values.emplace_back(elem);
-		return 0;
-	}
-
-	void clear_elements() override
-	{
-		values.clear();
-	}
-	
-	std::string getElementAt(int i) override
-	{
-		if (i < 0 || i >= static_cast<int>(values.size()))
-			return "---";
-		return values[i];
-	}
-};
-
-static const char* listValues[] = { "none", "POWER", "DF0", "DF1", "DF2", "DF3", "HD", "CD" };
-static string_list_model KBDLedList(listValues, 8);
+static const std::vector<std::string> listValues = { "none", "POWER", "DF0", "DF1", "DF2", "DF3", "HD", "CD" };
+static gcn::StringListModel KBDLedList(listValues);
 
 class MiscActionListener : public gcn::ActionListener
 {

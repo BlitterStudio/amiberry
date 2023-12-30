@@ -1,6 +1,7 @@
 #include <guisan.hpp>
 #include <guisan/sdl.hpp>
 #include "SelectorEntry.hpp"
+#include "StringListModel.h"
 
 #include "sysdeps.h"
 #include "options.h"
@@ -27,42 +28,8 @@ static gcn::CheckBox* chkMinimizedPauseEmulation;
 static gcn::CheckBox* chkMinimizedDisableSound;
 static gcn::CheckBox* chkMinimizedDisableControllers;
 
-class string_list_model : public gcn::ListModel
-{
-	std::vector<std::string> values{};
-public:
-	string_list_model(const char* entries[], const int count)
-	{
-		for (auto i = 0; i < count; ++i)
-			values.emplace_back(entries[i]);
-	}
-
-	int getNumberOfElements() override
-	{
-		return int(values.size());
-	}
-
-	int add_element(const char* elem) override
-	{
-		values.emplace_back(elem);
-		return 0;
-	}
-
-	void clear_elements() override
-	{
-		values.clear();
-	}
-	
-	std::string getElementAt(int i) override
-	{
-		if (i < 0 || i >= static_cast<int>(values.size()))
-			return "---";
-		return values[i];
-	}
-};
-
-static const char* prio_values[] = { "Low", "Normal", "High" };
-static string_list_model prio_values_list(prio_values, 3);
+static const std::vector<std::string> prio_values = { "Low", "Normal", "High" };
+static gcn::StringListModel prio_values_list(prio_values);
 
 class PrioActionListener : public gcn::ActionListener
 {

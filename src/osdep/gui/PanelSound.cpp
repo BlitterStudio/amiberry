@@ -3,6 +3,7 @@
 #include <guisan.hpp>
 #include <guisan/sdl.hpp>
 #include "SelectorEntry.hpp"
+#include "StringListModel.h"
 
 #include "sysdeps.h"
 #include "options.h"
@@ -59,342 +60,31 @@ static gcn::DropDown* cboSwapChannels;
 
 static int curr_separation_idx;
 static int curr_stereodelay_idx;
-
 static int numdevs;
-
 static const int sndbufsizes[] = { 1024, 2048, 3072, 4096, 6144, 8192, 12288, 16384, 32768, 65536, -1 };
 
-class string_list_model : public gcn::ListModel
-{
-	std::vector<std::string> values{};
-public:
-	string_list_model(const char* entries[], const int count)
-	{
-		for (auto i = 0; i < count; ++i) {
-			if (entries != nullptr && entries[i] != nullptr)
-				values.emplace_back(entries[i]);
-		}
-	}
+static gcn::StringListModel soundcard_list;
 
-	int getNumberOfElements() override
-	{
-		return int(values.size());
-	}
+static const std::vector<std::string> swap_channels = { "-", "Paula only", "AHI only", "Both" };
+static gcn::StringListModel swap_channels_list(swap_channels);
 
-	int add_element(const char* elem) override
-	{
-		values.emplace_back(elem);
-		return 0;
-	}
+static const std::vector<std::string> channel_modes = { "Mono", "Stereo", "Cloned stereo (4 channels)", "4 Channels", "Cloned stereo (5.1)", "5.1 Channels", "Cloned stereo (7.1)", "7.1 channels" };
+static gcn::StringListModel channel_mode_list(channel_modes);
 
-	void clear_elements() override
-	{
-		values.clear();
-	}
+static const std::vector<std::string> separation = { "100%", "90%", "80%", "70%", "60%", "50%", "40%", "30%", "20%", "10%", "0%" };
+static gcn::StringListModel separation_list(separation);
 
-	std::string getElementAt(int i) override
-	{
-		if (i < 0 || i >= static_cast<int>(values.size()))
-			return "---";
-		return values[i];
-	}
-};
+static const std::vector<std::string> stereo_delay = { "-", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10" };
+static gcn::StringListModel stereo_delay_list(stereo_delay);
 
-static string_list_model soundcard_list(nullptr, 0);
+static const std::vector<std::string> frequency = { "11025", "22050", "32000", "44100", "48000" };
+static gcn::StringListModel frequency_type_list(frequency);
 
-class SwapChannelsListModel : public gcn::ListModel
-{
-	std::vector<std::string> options{};
+static const std::vector<std::string> interpolation = { "Disabled", "Anti", "Sinc", "RH", "Crux" };
+static gcn::StringListModel interpolation_type_list(interpolation);
 
-public:
-	SwapChannelsListModel()
-	{
-		options.emplace_back("-");
-		options.emplace_back("Paula only");
-		options.emplace_back("AHI only");
-		options.emplace_back("Both");
-	}
-
-	int getNumberOfElements() override
-	{
-		return int(options.size());
-	}
-
-	int add_element(const char* elem) override
-	{
-		options.emplace_back(elem);
-		return 0;
-	}
-
-	void clear_elements() override
-	{
-		options.clear();
-	}
-
-	std::string getElementAt(int i) override
-	{
-		if (i < 0 || i >= static_cast<int>(options.size()))
-			return "---";
-		return options[i];
-	}
-};
-
-static SwapChannelsListModel swap_channels_list;
-
-class ChannelModeListModel : public gcn::ListModel
-{
-	std::vector<std::string> mode{};
-
-public:
-	ChannelModeListModel()
-	{
-		mode.emplace_back("Mono");
-		mode.emplace_back("Stereo");
-		//mode.emplace_back("Cloned stereo (4 channels)");
-		//mode.emplace_back("4 Channels");
-		//mode.emplace_back("Cloned stereo (5.1)");
-		//mode.emplace_back("5.1 Channels");
-		//mode.emplace_back("Cloned stereo (7.1)");
-		//mode.emplace_back("7.1 channels");
-	}
-
-	int getNumberOfElements() override
-	{
-		return int(mode.size());
-	}
-
-	int add_element(const char* elem) override
-	{
-		mode.emplace_back(elem);
-		return 0;
-	}
-
-	void clear_elements() override
-	{
-		mode.clear();
-	}
-	
-	std::string getElementAt(int i) override
-	{
-		if (i < 0 || i >= static_cast<int>(mode.size()))
-			return "---";
-		return mode[i];
-	}
-};
-
-static ChannelModeListModel channel_mode_list;
-
-class SeparationListModel : public gcn::ListModel
-{
-	std::vector<std::string> mode{};
-
-public:
-	SeparationListModel()
-	{
-		mode.emplace_back("100%");
-		mode.emplace_back("90%");
-		mode.emplace_back("80%");
-		mode.emplace_back("70%");
-		mode.emplace_back("60%");
-		mode.emplace_back("50%");
-		mode.emplace_back("40%");
-		mode.emplace_back("30%");
-		mode.emplace_back("20%");
-		mode.emplace_back("10%");
-		mode.emplace_back("0%");
-	}
-
-	int add_element(const char* elem) override
-	{
-		mode.emplace_back(elem);
-		return 0;
-	}
-
-	void clear_elements() override
-	{
-		mode.clear();
-	}
-	
-	int getNumberOfElements() override
-	{
-		return int(mode.size());
-	}
-
-	std::string getElementAt(int i) override
-	{
-		if (i < 0 || i >= static_cast<int>(mode.size()))
-			return "---";
-		return mode[i];
-	}
-};
-
-static SeparationListModel separation_list;
-
-class StereoDelayListModel : public gcn::ListModel
-{
-	std::vector<std::string> mode{};
-
-public:
-	StereoDelayListModel()
-	{
-		mode.emplace_back("-");
-		mode.emplace_back("1");
-		mode.emplace_back("2");
-		mode.emplace_back("3");
-		mode.emplace_back("4");
-		mode.emplace_back("5");
-		mode.emplace_back("6");
-		mode.emplace_back("7");
-		mode.emplace_back("8");
-		mode.emplace_back("9");
-		mode.emplace_back("10");
-	}
-
-	int add_element(const char* elem) override
-	{
-		mode.emplace_back(elem);
-		return 0;
-	}
-
-	void clear_elements() override
-	{
-		mode.clear();
-	}
-	
-	int getNumberOfElements() override
-	{
-		return int(mode.size());
-	}
-
-	std::string getElementAt(int i) override
-	{
-		if (i < 0 || i >= static_cast<int>(mode.size()))
-			return "---";
-		return mode[i];
-	}
-};
-
-static StereoDelayListModel stereo_delay_list;
-
-class FrequencyListModel : public gcn::ListModel
-{
-	std::vector<std::string> freq{};
-
-public:
-	FrequencyListModel()
-	{
-		freq.emplace_back("11025");
-		freq.emplace_back("22050");
-		freq.emplace_back("32000");
-		freq.emplace_back("44100");
-		freq.emplace_back("48000");
-	}
-
-	int getNumberOfElements() override
-	{
-		return int(freq.size());
-	}
-
-	int add_element(const char* elem) override
-	{
-		freq.emplace_back(elem);
-		return 0;
-	}
-
-	void clear_elements() override
-	{
-		freq.clear();
-	}
-	
-	std::string getElementAt(const int i) override
-	{
-		if (i < 0 || i >= static_cast<int>(freq.size()))
-			return "---";
-		return freq[i];
-	}
-};
-
-static FrequencyListModel frequency_type_list;
-
-class InterpolationListModel : public gcn::ListModel
-{
-	std::vector<std::string> entry{};
-
-public:
-	InterpolationListModel()
-	{
-		entry.emplace_back("Disabled");
-		entry.emplace_back("Anti");
-		entry.emplace_back("Sinc");
-		entry.emplace_back("RH");
-		entry.emplace_back("Crux");
-	}
-
-	int getNumberOfElements() override
-	{
-		return int(entry.size());
-	}
-
-	int add_element(const char* elem) override
-	{
-		entry.emplace_back(elem);
-		return 0;
-	}
-
-	void clear_elements() override
-	{
-		entry.clear();
-	}
-	
-	std::string getElementAt(const int i) override
-	{
-		if (i < 0 || i >= static_cast<int>(entry.size()))
-			return "---";
-		return entry[i];
-	}
-};
-
-static InterpolationListModel interpolation_type_list;
-
-class FilterListModel : public gcn::ListModel
-{
-	std::vector<std::string> entry{};
-
-public:
-	FilterListModel()
-	{
-		entry.emplace_back("Always off");
-		entry.emplace_back("Emulated (A500)");
-		entry.emplace_back("Emulated (A1200)");
-		entry.emplace_back("Always on (A500)");
-		entry.emplace_back("Always on (A1200)");
-	}
-
-	int add_element(const char* elem) override
-	{
-		entry.emplace_back(elem);
-		return 0;
-	}
-
-	void clear_elements() override
-	{
-		entry.clear();
-	}
-	
-	int getNumberOfElements() override
-	{
-		return int(entry.size());
-	}
-
-	std::string getElementAt(const int i) override
-	{
-		if (i < 0 || i >= static_cast<int>(entry.size()))
-			return "---";
-		return entry[i];
-	}
-};
-
-static FilterListModel filter_type_list;
+static const std::vector<std::string> filter = { "Always off", "Emulated (A500)", "Emulated (A1200)", "Always on (A500)", "Always on (A1200)" };
+static gcn::StringListModel filter_type_list(filter);
 
 class SoundActionListener : public gcn::ActionListener
 {
@@ -598,14 +288,14 @@ static SoundActionListener* sound_action_listener;
 void InitPanelSound(const config_category& category)
 {
 	numdevs = enumerate_sound_devices();
-	soundcard_list.clear_elements();
+	soundcard_list.clear();
 	for (int card = 0; card < numdevs; card++) {
 		TCHAR tmp[MAX_DPATH];
 		int type = sound_devices[card]->type;
 		_stprintf(tmp, _T("%s: %s"),
 			type == SOUND_DEVICE_SDL2 ? _T("SDL2") : (type == SOUND_DEVICE_DS ? _T("DSOUND") : (type == SOUND_DEVICE_AL ? _T("OpenAL") : (type == SOUND_DEVICE_PA ? _T("PortAudio") : (type == SOUND_DEVICE_WASAPI ? _T("WASAPI") : _T("WASAPI EX"))))),
 			sound_devices[card]->name);
-		soundcard_list.add_element(tmp);
+		soundcard_list.add(tmp);
 	}
 	if (numdevs == 0)
 		changed_prefs.produce_sound = 0; // No sound card in system

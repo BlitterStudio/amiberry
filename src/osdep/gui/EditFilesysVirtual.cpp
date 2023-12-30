@@ -15,7 +15,7 @@
 #include "amiberry_gfx.h"
 #include "amiberry_input.h"
 
-#define DIALOG_WIDTH 520
+#define DIALOG_WIDTH 550
 #define DIALOG_HEIGHT 202
 
 extern std::string volName;
@@ -37,7 +37,6 @@ static gcn::CheckBox* chkReadWrite;
 static gcn::CheckBox* chkAutoboot;
 static gcn::Label* lblBootPri;
 static gcn::TextField* txtBootPri;
-
 
 class FilesysVirtualActionListener : public gcn::ActionListener
 {
@@ -138,7 +137,7 @@ static void InitEditFilesysVirtual()
 	lblPath = new gcn::Label("Path:");
 	lblPath->setAlignment(gcn::Graphics::RIGHT);
 	txtPath = new gcn::TextField();
-	txtPath->setSize(338, TEXTFIELD_HEIGHT);
+	txtPath->setSize(380, TEXTFIELD_HEIGHT);
 	txtPath->setId("txtVirtPath");
 	
 	cmdPath = new gcn::Button("...");
@@ -195,7 +194,6 @@ static void InitEditFilesysVirtual()
 	txtDevice->requestFocus();
 }
 
-
 static void ExitEditFilesysVirtual()
 {
 	wndEditFilesysVirtual->releaseModalFocus();
@@ -219,7 +217,6 @@ static void ExitEditFilesysVirtual()
 
 	delete wndEditFilesysVirtual;
 }
-
 
 static void EditFilesysVirtualLoop()
 {

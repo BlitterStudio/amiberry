@@ -96,7 +96,6 @@ public:
 	explicit EnumListModel(const std::vector<std::pair<T,std::string>> values)
 		: m_values(values)
 	{
-
 	}
 
 	int getNumberOfElements() override
@@ -104,12 +103,11 @@ public:
 		return m_values.size();
 	}
 
-	int add_element(const char* elem) override
+	void add(const std::string& elem) override
 	{
-		return 0;
 	}
 
-	void clear_elements() override
+	void clear() override
 	{
 	}
 	

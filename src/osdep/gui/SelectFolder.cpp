@@ -65,13 +65,12 @@ public:
 		return int(dirs.size());
 	}
 
-	int add_element(const char* elem) override
+	void add(const std::string& elem) override
 	{
 		dirs.emplace_back(elem);
-		return 0;
 	}
 
-	void clear_elements() override
+	void clear() override
 	{
 		dirs.clear();
 	}
@@ -93,7 +92,6 @@ public:
 
 static SelectDirListModel dirList(".");
 
-
 static void checkfoldername(char* current)
 {
 	char actualpath [MAX_DPATH];
@@ -113,7 +111,6 @@ static void checkfoldername(char* current)
 	}
 	txtCurrent->setText(workingDir);
 }
-
 
 class ListBoxActionListener : public gcn::ActionListener
 {
@@ -205,7 +202,6 @@ static void InitSelectFolder(const char* title)
 	lstFolders->requestFocus();
 	lstFolders->setSelected(0);
 }
-
 
 static void ExitSelectFolder()
 {
@@ -509,7 +505,6 @@ static void SelectFolderLoop()
 		update_gui_screen();
 	}
 }
-
 
 bool SelectFolder(const char* title, char* value)
 {

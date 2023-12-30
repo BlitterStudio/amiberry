@@ -4,63 +4,30 @@
 #include <guisan.hpp>
 #include <guisan/sdl.hpp>
 #include "SelectorEntry.hpp"
+#include "StringListModel.h"
 
 #include "sysdeps.h"
 #include "options.h"
 #include "gfxboard.h"
 #include "gui_handling.h"
 
-class string_list_model : public gcn::ListModel
-{
-	std::vector<std::string> values{};
-public:
-	string_list_model(const char* entries[], const int count)
-	{
-		for (auto i = 0; i < count; ++i)
-			values.emplace_back(entries[i]);
-	}
+static const std::vector<std::string> rtg_boards = { "-", "UAE [Zorro II]", "UAE [Zorro III]" };
+static gcn::StringListModel rtg_boards_list(rtg_boards);
 
-	int getNumberOfElements() override
-	{
-		return int(values.size());
-	}
+static const std::vector<std::string> rtg_refreshrates = { "Chipset", "Default", "50", "60", "70", "75" };
+static gcn::StringListModel rtg_refreshrates_list(rtg_refreshrates);
 
-	int add_element(const char* elem) override
-	{
-		values.emplace_back(elem);
-		return 0;
-	}
+static const std::vector<std::string> rtg_buffermodes = { "Double buffering", "Triple buffering" };
+static gcn::StringListModel rtg_buffermodes_list(rtg_buffermodes);
 
-	void clear_elements() override
-	{
-		values.clear();
-	}
-	
-	std::string getElementAt(const int i) override
-	{
-		if (i < 0 || i >= static_cast<int>(values.size()))
-			return "---";
-		return values[i];
-	}
-};
+static const std::vector<std::string> rtg_aspectratios = { "Disabled", "Automatic" };
+static gcn::StringListModel rtg_aspectratios_list(rtg_aspectratios);
 
-const char* rtg_boards[] = { "-", "UAE [Zorro II]", "UAE [Zorro III]" };
-string_list_model rtg_boards_list(rtg_boards, 3);
+static const std::vector<std::string> rtg_16bit_modes = { "(15/16bit)", "All", "R5G6B5PC (*)", "R5G5B5PC", "R5G6B5", "R5G5B5", "B5G6R5PC", "B5G5R5PC" };
+static gcn::StringListModel rtg_16bit_modes_list(rtg_16bit_modes);
 
-const char* rtg_refreshrates[] = { "Chipset", "Default", "50", "60", "70", "75" };
-string_list_model rtg_refreshrates_list(rtg_refreshrates, 6);
-
-const char* rtg_buffermodes[] = { "Double buffering", "Triple buffering" };
-string_list_model rtg_buffermodes_list(rtg_buffermodes, 2);
-
-const char* rtg_aspectratios[] = { "Disabled", "Automatic" };
-string_list_model rtg_aspectratios_list(rtg_aspectratios, 2);
-
-const char* rtg_16bit_modes[] = { "(15/16bit)", "All", "R5G6B5PC (*)", "R5G5B5PC", "R5G6B5", "R5G5B5", "B5G6R5PC", "B5G5R5PC" };
-string_list_model rtg_16bit_modes_list(rtg_16bit_modes, 8);
-
-const char* rtg_32bit_modes[] = { "(32bit)", "All", "A8R8G8B8", "A8B8G8R8", "R8G8B8A8 (*)", "B8G8R8A8" };
-string_list_model rtg_32bit_modes_list(rtg_32bit_modes, 6);
+static const std::vector<std::string> rtg_32bit_modes = { "(32bit)", "All", "A8R8G8B8", "A8B8G8R8", "R8G8B8A8 (*)", "B8G8R8A8" };
+static gcn::StringListModel rtg_32bit_modes_list(rtg_32bit_modes);
 
 
 static gcn::Label* lblBoard;
@@ -148,7 +115,7 @@ public:
 
 		else if (action_event.getSource() == cboRtgRefreshRate)
 			changed_prefs.rtgvblankrate = cboRtgRefreshRate->getSelected() == 0 ? 0 :
-			cboRtgRefreshRate->getSelected() == 1 ? -1 : atoi(rtg_refreshrates[cboRtgRefreshRate->getSelected()]);
+			cboRtgRefreshRate->getSelected() == 1 ? -1 : std::stoi(rtg_refreshrates[cboRtgRefreshRate->getSelected()]);
 		
 		else if (action_event.getSource() == cboRtgBufferMode)
 			changed_prefs.gfx_apmode[1].gfx_backbuffers = cboRtgBufferMode->getSelected() + 1;

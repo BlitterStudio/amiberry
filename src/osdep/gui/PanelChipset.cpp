@@ -1,6 +1,7 @@
 #include <guisan.hpp>
 #include <guisan/sdl.hpp>
 #include "SelectorEntry.hpp"
+#include "StringListModel.h"
 
 #include "sysdeps.h"
 #include "options.h"
@@ -57,37 +58,7 @@ static chipset chipsets[] = {
 	{-1, ""}
 };
 
-static const int numChipsets = 17;
-
-class ChipsetListModel : public gcn::ListModel
-{
-public:
-	ChipsetListModel()
-	= default;
-
-	int getNumberOfElements() override
-	{
-		return numChipsets;
-	}
-
-	int add_element(const char* elem) override
-	{
-		return 0;
-	}
-
-	void clear_elements() override
-	{
-	}
-	
-	std::string getElementAt(int i) override
-	{
-		if (i < 0 || i >= numChipsets)
-			return "---";
-		return chipsets[i].name;
-	}
-};
-
-static ChipsetListModel chipsetList;
+static gcn::StringListModel chipsetList;
 
 class ChipsetActionListener : public gcn::ActionListener
 {
@@ -188,6 +159,10 @@ static ChipsetActionListener* chipsetActionListener;
 
 void InitPanelChipset(const struct config_category& category)
 {
+	chipsetList.clear();
+	for (int i = 0; chipsets[i].compatible >= 0; ++i)
+		chipsetList.add(chipsets[i].name);
+
 	chipsetActionListener = new ChipsetActionListener();
 
 	optOCS = new gcn::RadioButton("OCS", "radiochipsetgroup");
@@ -397,7 +372,7 @@ void RefreshPanelChipset()
 	chkMemoryCycleExact->setSelected(changed_prefs.cpu_memory_cycle_exact);
 
 	auto idx = 0;
-	for (auto i = 0; i < numChipsets; ++i)
+	for (auto i = 0; i < chipsetList.getNumberOfElements(); ++i)
 	{
 		if (chipsets[i].compatible == changed_prefs.cs_compatible)
 		{

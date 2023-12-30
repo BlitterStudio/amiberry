@@ -1,6 +1,7 @@
 #include <guisan.hpp>
 #include <guisan/sdl.hpp>
 #include "SelectorEntry.hpp"
+#include "StringListModel.h"
 
 #include "sysdeps.h"
 #include "options.h"
@@ -32,54 +33,17 @@ static gcn::CheckBox* chkMidiRoute;
 
 static gcn::DropDown* cboProtectionDongle;
 
-class string_list_model : public gcn::ListModel
-{
-	std::vector<std::string> values{};
-public:
-	string_list_model(const char* entries[], const int count)
-	{
-		for (auto i = 0; i < count; ++i) {
-			if (entries != nullptr && entries[i] != nullptr)
-				values.emplace_back(entries[i]);
-		}
-	}
-
-	int getNumberOfElements() override
-	{
-		return static_cast<int>(values.size());
-	}
-
-	int add_element(const char* elem) override
-	{
-		values.emplace_back(elem);
-		return 0;
-	}
-
-	void clear_elements() override
-	{
-		values.clear();
-	}
-
-	std::string getElementAt(int i) override
-	{
-		if (i < 0 || i >= static_cast<int>(values.size()))
-			return "---";
-		return values[i];
-	}
-};
-
-static const char* listValues[] = {
+static const std::vector<std::string> listValues = {
 	"none", "RoboCop 3", "Leader Board", "B.A.T. II", "Italy '90 Soccer",
 	"Dames Grand-Maitre", "Rugby Coach", "Cricket Captain", "Leviathan",
 	"Music Master", "Logistics/SuperBase", "Scala MM (Red)", "Scala MM (Green)",
 	"Striker Manager", "Multi-player Soccer Manager", "Football Director 2"
 };
-static string_list_model dongle_list(listValues, 16);
-
-static string_list_model sampler_list(nullptr, 0);
-static string_list_model serial_ports_list(nullptr, 0);
-static string_list_model midi_in_ports_list(nullptr, 0);
-static string_list_model midi_out_ports_list(nullptr, 0);
+static gcn::StringListModel dongle_list(listValues);
+static gcn::StringListModel sampler_list;
+static gcn::StringListModel serial_ports_list;
+static gcn::StringListModel midi_in_ports_list;
+static gcn::StringListModel midi_out_ports_list;
 
 class IOActionListener : public gcn::ActionListener
 {
@@ -170,8 +134,8 @@ IOActionListener* ioActionListener;
 void InitPanelIO(const config_category& category)
 {
 	enumerate_sound_devices();
-	sampler_list.clear_elements();
-	sampler_list.add_element("none");
+	sampler_list.clear();
+	sampler_list.add("none");
 	for (int card = 0; card < MAX_SOUND_DEVICES && record_devices[card]; card++) {
 		int type = record_devices[card]->type;
 		TCHAR tmp[MAX_DPATH];
@@ -179,28 +143,28 @@ void InitPanelIO(const config_category& category)
 			type == SOUND_DEVICE_SDL2 ? _T("SDL2") : (type == SOUND_DEVICE_DS ? _T("DSOUND") : (type == SOUND_DEVICE_AL ? _T("OpenAL") : (type == SOUND_DEVICE_PA ? _T("PortAudio") : _T("WASAPI")))),
 			record_devices[card]->name);
 		if (type == SOUND_DEVICE_SDL2)
-			sampler_list.add_element(tmp);
+			sampler_list.add(tmp);
 	}
 
-	serial_ports_list.clear_elements();
-	serial_ports_list.add_element("none");
+	serial_ports_list.clear();
+	serial_ports_list.add("none");
 	for(const auto& i : serial_ports) {
-		serial_ports_list.add_element(i.c_str());
+		serial_ports_list.add(i);
 	}
 	// Add TCP ports also
-	serial_ports_list.add_element("TCP://0.0.0.0:1234");
-	serial_ports_list.add_element("TCP://0.0.0.0:1234/wait");
+	serial_ports_list.add("TCP://0.0.0.0:1234");
+	serial_ports_list.add("TCP://0.0.0.0:1234/wait");
 
-	midi_in_ports_list.clear_elements();
-	midi_in_ports_list.add_element("none");
+	midi_in_ports_list.clear();
+	midi_in_ports_list.add("none");
 	for(const auto& i : midi_in_ports) {
-		midi_in_ports_list.add_element(i.c_str());
+		midi_in_ports_list.add(i.c_str());
 	}
 
-	midi_out_ports_list.clear_elements();
-	midi_out_ports_list.add_element("none");
+	midi_out_ports_list.clear();
+	midi_out_ports_list.add("none");
 	for(const auto& i : midi_out_ports) {
-		midi_out_ports_list.add_element(i.c_str());
+		midi_out_ports_list.add(i);
 	}
 
 	ioActionListener = new IOActionListener();

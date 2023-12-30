@@ -4,6 +4,7 @@
 #include <guisan.hpp>
 #include <guisan/sdl.hpp>
 #include "SelectorEntry.hpp"
+#include "StringListModel.h"
 
 #include "sysdeps.h"
 #include "options.h"
@@ -19,56 +20,19 @@ static gcn::Window* grpMiscExpansions;
 
 static int scsiromselect_table[300];
 
-class string_list_model : public gcn::ListModel
-{
-	std::vector<std::string> values{};
-public:
-	string_list_model()
-	= default;
-	
-	string_list_model(const char* entries[], const int count)
-	{
-		for (auto i = 0; i < count; ++i)
-			values.emplace_back(entries[i]);
-	}
+static gcn::StringListModel scsirom_select_cat_list;
+static gcn::StringListModel scsirom_select_list;
+static gcn::StringListModel scsirom_subselect_list;
+static gcn::StringListModel expansionboard_itemselector_list;
+static gcn::StringListModel scsi_romid_list;
+static gcn::StringListModel scsirom_selectnum_list;
+static gcn::StringListModel scsirom_file_list;
 
-	int getNumberOfElements() override
-	{
-		return int(values.size());
-	}
-
-	int add_element(const char* elem) override
-	{
-		values.emplace_back(elem);
-		return 0;
-	}
-
-	void clear_elements() override
-	{
-		values.clear();
-	}
-	
-	std::string getElementAt(const int i) override
-	{
-		if (i < 0 || i >= static_cast<int>(values.size()))
-			return "---";
-		return values[i];
-	}
-};
-
-string_list_model scsirom_select_cat_list;
-string_list_model scsirom_select_list;
-string_list_model scsirom_subselect_list;
-string_list_model expansionboard_itemselector_list;
-string_list_model scsi_romid_list;
-string_list_model scsirom_selectnum_list;
-string_list_model scsirom_file_list;
-
-string_list_model cpuboards_list;
-string_list_model cpuboards_subtype_list;
-string_list_model cpuboard_romfile_list;
-string_list_model acceleratorboard_itemselector_list;
-string_list_model acceleratorboard_selector_list;
+static gcn::StringListModel cpuboards_list;
+static gcn::StringListModel cpuboards_subtype_list;
+static gcn::StringListModel cpuboard_romfile_list;
+static gcn::StringListModel acceleratorboard_itemselector_list;
+static gcn::StringListModel acceleratorboard_selector_list;
 
 static gcn::DropDown* cboScsiRomSelectCat;
 static gcn::DropDown* cboScsiRomSelect;
@@ -125,13 +89,13 @@ struct expansionrom_gui
 static expansionrom_gui expansion_gui_item;
 static expansionrom_gui accelerator_gui_item;
 
-static void gui_add_string(int *table, string_list_model *item, int id, const TCHAR *str)
+static void gui_add_string(int *table, gcn::StringListModel *item, int id, const TCHAR *str)
 {
 	while (*table >= 0)
 		table++;
 	*table++ = id;
 	*table = -1;
-	item->add_element(str); //SendDlgItemMessage(hDlg, item, CB_ADDSTRING, 0, (LPARAM)str);
+	item->add(str); //SendDlgItemMessage(hDlg, item, CB_ADDSTRING, 0, (LPARAM)str);
 }
 static void gui_set_string_cursor(int* table, gcn::DropDown* item, int id)
 {
@@ -232,10 +196,10 @@ retry:
 	}
 	if (reset) {
 		auto list_model = itemselector->getListModel();
-		list_model->clear_elements();
+		list_model->clear();
 		for (int i = 0; ebs[i].name; i++) {
 			eb = &ebs[i];
-			list_model->add_element(eb->name);
+			list_model->add(eb->name);
 		}
 		itemselector->setSelected(item);
 	}
@@ -250,12 +214,12 @@ retry:
 	}
 	else if (eb->type == EXPANSIONBOARD_MULTI) {
 		auto list_model = selector->getListModel();
-		list_model->clear_elements();
+		list_model->clear();
 		int itemcnt = -1;
 		const TCHAR* p = eb->name;
 		while (p[0]) {
 			if (itemcnt >= 0) {
-				list_model->add_element(p);
+				list_model->add(p);
 			}
 			itemcnt++;
 			p += _tcslen(p) + 1;
@@ -393,7 +357,7 @@ static void init_expansion2(bool init)
 		bool matched = false;
 		int* idtab;
 		int total = 0;		
-		scsirom_select_list.clear_elements(); //SendDlgItemMessage(hDlg, IDC_SCSIROMSELECT, CB_RESETCONTENT, 0, 0);
+		scsirom_select_list.clear(); //SendDlgItemMessage(hDlg, IDC_SCSIROMSELECT, CB_RESETCONTENT, 0, 0);
 		scsiromselect_table[0] = -1;
 		for (int i = 0; expansionroms[i].name; i++)
 		{
@@ -503,7 +467,7 @@ static void init_expansion2(bool init)
 		gui_set_string_cursor(scsiromselect_table, cboScsiRomSelect, scsiromselected);
 	cboScsiRomSelectCat->setSelected(scsiromselectedcatnum); //SendDlgItemMessage(hDlg, IDC_SCSIROMSELECTCAT, CB_SETCURSEL, scsiromselectedcatnum, 0);
 
-	scsi_romid_list.clear_elements(); //SendDlgItemMessage(hDlg, IDC_SCSIROMID, CB_RESETCONTENT, 0, 0);
+	scsi_romid_list.clear(); //SendDlgItemMessage(hDlg, IDC_SCSIROMID, CB_RESETCONTENT, 0, 0);
 	int index;
 	boardromconfig* brc = get_device_rom(&changed_prefs, int(expansionroms[scsiromselected].romtype), scsiromselectednum, &index);
 	const expansionromtype* ert = &expansionroms[scsiromselected];
@@ -511,11 +475,11 @@ static void init_expansion2(bool init)
 		for (int i = 0; i < 8; i++) {
 			TCHAR tmp[10];
 			_stprintf(tmp, _T("%d"), i);
-			scsi_romid_list.add_element(tmp); //SendDlgItemMessage(hDlg, IDC_SCSIROMID, CB_ADDSTRING, 0, (LPARAM)tmp);
+			scsi_romid_list.add(tmp); //SendDlgItemMessage(hDlg, IDC_SCSIROMID, CB_ADDSTRING, 0, (LPARAM)tmp);
 		}
 	}
 	else {
-		scsi_romid_list.add_element(_T("-")); //SendDlgItemMessage(hDlg, IDC_SCSIROMID, CB_ADDSTRING, 0, (LPARAM)_T("-"));
+		scsi_romid_list.add(_T("-")); //SendDlgItemMessage(hDlg, IDC_SCSIROMID, CB_ADDSTRING, 0, (LPARAM)_T("-"));
 		cboScsiRomId->setSelected(0); //SendDlgItemMessage(hDlg, IDC_SCSIROMID, CB_SETCURSEL, 0, 0);
 		cboScsiRomId->setEnabled(false); //ew(hDlg, IDC_SCSIROMID, 0);
 	}
@@ -523,10 +487,10 @@ static void init_expansion2(bool init)
 
 static void updatecpuboardsubtypes()
 {
-	cpuboards_subtype_list.clear_elements();
+	cpuboards_subtype_list.clear();
 	for (int i = 0; cpuboards[changed_prefs.cpuboard_type].subtypes[i].name; i++)
 	{
-		cpuboards_subtype_list.add_element(cpuboards[changed_prefs.cpuboard_type].subtypes[i].name);
+		cpuboards_subtype_list.add(cpuboards[changed_prefs.cpuboard_type].subtypes[i].name);
 	}
 
 	const expansionboardsettings* cbs = cpuboards[changed_prefs.cpuboard_type].subtypes[changed_prefs.cpuboard_subtype].settings;
@@ -599,7 +563,7 @@ static void values_to_expansion2_expansion_roms()
 		chkScsiRomFileAutoboot->setSelected(false); //setchecked(hDlg, IDC_SCSIROMFILEAUTOBOOT, false);
 		chkScsiRomFilePcmcia->setSelected(false); //setchecked(hDlg, IDC_SCSIROMFILEPCMCIA, false);
 		auto list_model = cboScsiRomFile->getListModel();
-		list_model->clear_elements(); //SendDlgItemMessage(hDlg, IDC_SCSIROMFILE, CB_RESETCONTENT, 0, 0);
+		list_model->clear(); //SendDlgItemMessage(hDlg, IDC_SCSIROMFILE, CB_RESETCONTENT, 0, 0);
 		cboScsiRomFile->setEnabled(false); //ew(hDlg, IDC_SCSIROMFILE, false);
 		btnScsiRomChooser->setEnabled(false); //ew(hDlg, IDC_SCSIROMCHOOSER, false);
 		//ew(hDlg, IDC_SCSIROM24BITDMA, 0);
@@ -637,16 +601,16 @@ static void values_to_expansion2_expansion_settings()
 
 static void values_to_expansion2dlg_sub()
 {
-	cpuboards_subtype_list.clear_elements(); //SendDlgItemMessage(hDlg, IDC_CPUBOARDROMSUBSELECT, CB_RESETCONTENT, 0, 0);
+	cpuboards_subtype_list.clear(); //SendDlgItemMessage(hDlg, IDC_CPUBOARDROMSUBSELECT, CB_RESETCONTENT, 0, 0);
 	cboCpuBoardSubType->setEnabled(false); //ew(hDlg, IDC_CPUBOARDROMSUBSELECT, false);
 
-	scsirom_subselect_list.clear_elements(); //SendDlgItemMessage(hDlg, IDC_SCSIROMSUBSELECT, CB_RESETCONTENT, 0, 0);
+	scsirom_subselect_list.clear(); //SendDlgItemMessage(hDlg, IDC_SCSIROMSUBSELECT, CB_RESETCONTENT, 0, 0);
 	const expansionromtype* er = &expansionroms[scsiromselected];
 	const expansionsubromtype* srt = er->subtypes;
 	int deviceflags = er->deviceflags;
 	cboScsiRomSubSelect->setEnabled(srt != nullptr); //ew(hDlg, IDC_SCSIROMSUBSELECT, srt != NULL);
 	while (srt && srt->name) {
-		scsirom_subselect_list.add_element(srt->name); //SendDlgItemMessage(hDlg, IDC_SCSIROMSUBSELECT, CB_ADDSTRING, 0, (LPARAM)srt->name);
+		scsirom_subselect_list.add(srt->name); //SendDlgItemMessage(hDlg, IDC_SCSIROMSUBSELECT, CB_ADDSTRING, 0, (LPARAM)srt->name);
 		srt++;
 	}
 	int index;
@@ -660,14 +624,14 @@ static void values_to_expansion2dlg_sub()
 		cboScsiRomSubSelect->setSelected(0); //SendDlgItemMessage(hDlg, IDC_SCSIROMSUBSELECT, CB_SETCURSEL, 0, 0);
 		cboScsiRomId->setSelected(0); //SendDlgItemMessage(hDlg, IDC_SCSIROMID, CB_SETCURSEL, 0, 0);
 	}
-	scsirom_selectnum_list.clear_elements(); //SendDlgItemMessage(hDlg, IDC_SCSIROMSELECTNUM, CB_RESETCONTENT, 0, 0);
+	scsirom_selectnum_list.clear(); //SendDlgItemMessage(hDlg, IDC_SCSIROMSELECTNUM, CB_RESETCONTENT, 0, 0);
 	if (deviceflags & EXPANSIONTYPE_CLOCKPORT) {
-		scsirom_selectnum_list.add_element(_T("-")); //SendDlgItemMessage(hDlg, IDC_SCSIROMSELECTNUM, CB_ADDSTRING, 0, (LPARAM)_T("-"));
+		scsirom_selectnum_list.add(_T("-")); //SendDlgItemMessage(hDlg, IDC_SCSIROMSELECTNUM, CB_ADDSTRING, 0, (LPARAM)_T("-"));
 	}
 	for (int i = 0; i < MAX_AVAILABLE_DUPLICATE_EXPANSION_BOARDS; i++) {
 		TCHAR tmp[10];
 		_stprintf(tmp, _T("%d"), i + 1);
-		scsirom_selectnum_list.add_element(tmp); //SendDlgItemMessage(hDlg, IDC_SCSIROMSELECTNUM, CB_ADDSTRING, 0, (LPARAM)tmp);
+		scsirom_selectnum_list.add(tmp); //SendDlgItemMessage(hDlg, IDC_SCSIROMSELECTNUM, CB_ADDSTRING, 0, (LPARAM)tmp);
 	}
 	cboScsiRomSelectNum->setSelected(scsiromselectednum); //SendDlgItemMessage(hDlg, IDC_SCSIROMSELECTNUM, CB_SETCURSEL, scsiromselectednum, 0);
 	if ((er->zorro < 2 || er->singleonly) && !(deviceflags & EXPANSIONTYPE_CLOCKPORT)) {
@@ -772,26 +736,26 @@ static void values_from_expansion2dlg()
 static void expansion2dlgproc()
 {
 	//Populate CPU boards list
-	cpuboards_list.clear_elements();
+	cpuboards_list.clear();
 	for (int i = 0; cpuboards[i].name; i++)
 	{
-		cpuboards_list.add_element(cpuboards[i].name);
+		cpuboards_list.add(cpuboards[i].name);
 	}
 
 	//Populate Expansion Categories
-	scsirom_select_cat_list.clear_elements();
-	scsirom_select_cat_list.add_element("Built-in expansions");
-	scsirom_select_cat_list.add_element("SCSI controllers");
-	scsirom_select_cat_list.add_element("IDE controllers");
-	scsirom_select_cat_list.add_element("SASI controllers");
-	scsirom_select_cat_list.add_element("Custom controllers");
-	scsirom_select_cat_list.add_element("PCI bridgeboards");
-	scsirom_select_cat_list.add_element("x86 Bridgeboards");
-	scsirom_select_cat_list.add_element("Graphics boards");
-	scsirom_select_cat_list.add_element("Sound cards");
-	scsirom_select_cat_list.add_element("Network adapters");
-	scsirom_select_cat_list.add_element("Disk controllers");
-	scsirom_select_cat_list.add_element("x86 bridgeboard expansions");
+	scsirom_select_cat_list.clear();
+	scsirom_select_cat_list.add("Built-in expansions");
+	scsirom_select_cat_list.add("SCSI controllers");
+	scsirom_select_cat_list.add("IDE controllers");
+	scsirom_select_cat_list.add("SASI controllers");
+	scsirom_select_cat_list.add("Custom controllers");
+	scsirom_select_cat_list.add("PCI bridgeboards");
+	scsirom_select_cat_list.add("x86 Bridgeboards");
+	scsirom_select_cat_list.add("Graphics boards");
+	scsirom_select_cat_list.add("Sound cards");
+	scsirom_select_cat_list.add("Network adapters");
+	scsirom_select_cat_list.add("Disk controllers");
+	scsirom_select_cat_list.add("x86 bridgeboard expansions");
 
 	reset_expansionrom_gui(&expansion_gui_item, cboExpansionBoardItemSelector, cboExpansionBoardSelector, chkExpansionBoardCheckbox, txtExpansionBoardStringBox);
 	reset_expansionrom_gui(&accelerator_gui_item, cboAcceleratorBoardItemSelector, cboAcceleratorBoardSelector, chkAcceleratorBoardCheckbox, nullptr);
@@ -1177,7 +1141,7 @@ void RefreshPanelExpansions()
 	}
 	else {
 		auto list_model = cboCpuBoardRomFile->getListModel();
-		list_model->clear_elements(); //SendDlgItemMessage(hDlg, IDC_CPUBOARDROMFILE, CB_RESETCONTENT, 0, 0);
+		list_model->clear(); //SendDlgItemMessage(hDlg, IDC_CPUBOARDROMFILE, CB_RESETCONTENT, 0, 0);
 	}
 
 	gui_set_string_cursor(scsiromselect_table, cboScsiRomSelect, scsiromselected);

@@ -1,6 +1,7 @@
 #include <guisan.hpp>
 #include <guisan/sdl.hpp>
 #include "SelectorEntry.hpp"
+#include "StringListModel.h"
 
 #include "sysdeps.h"
 #include "options.h"
@@ -61,42 +62,8 @@ static gcn::RadioButton* optIndirect;
 static gcn::CheckBox* chkNoFlags;
 static gcn::CheckBox* chkCatchExceptions;
 
-class string_list_model : public gcn::ListModel
-{
-	std::vector<std::string> values{};
-public:
-	string_list_model(const char* entries[], const int count)
-	{
-		for (auto i = 0; i < count; ++i)
-			values.emplace_back(entries[i]);
-	}
-
-	int getNumberOfElements() override
-	{
-		return int(values.size());
-	}
-
-	int add_element(const char* Elem) override
-	{
-		values.emplace_back(Elem);
-		return 0;
-	}
-
-	void clear_elements() override
-	{
-		values.clear();
-	}
-
-	std::string getElementAt(const int i) override
-	{
-		if (i < 0 || i >= static_cast<int>(values.size()))
-			return "---";
-		return values[i];
-	}
-};
-
-const char* cpu_freq_values[] = { "1x", "2x (A500)", "4x (A1200)", "8x", "16x" };
-string_list_model cpu_freq_list(cpu_freq_values, 5);
+static const std::vector<std::string> cpu_freq_values = { "1x", "2x (A500)", "4x (A1200)", "8x", "16x" };
+static gcn::StringListModel cpu_freq_list(cpu_freq_values);
 
 static float getcpufreq(int m)
 {
@@ -616,6 +583,7 @@ void ExitPanelCPU()
 void RefreshPanelCPU()
 {
 	int idx = 5;
+
 	if (changed_prefs.cpu_clock_multiplier >= 1 << 8) {
 		idx = 0;
 		while (idx < 4) {

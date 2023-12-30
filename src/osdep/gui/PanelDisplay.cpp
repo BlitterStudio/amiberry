@@ -1,45 +1,12 @@
 #include <guisan.hpp>
 #include <guisan/sdl.hpp>
 #include "SelectorEntry.hpp"
+#include "StringListModel.h"
 
 #include "sysdeps.h"
 #include "options.h"
 #include "custom.h"
 #include "gui_handling.h"
-
-class string_list_model : public gcn::ListModel
-{
-	std::vector<std::string> values{};
-public:
-	string_list_model(const char* entries[], const int count)
-	{
-		for (auto i = 0; i < count; ++i)
-			values.emplace_back(entries[i]);
-	}
-
-	int getNumberOfElements() override
-	{
-		return int(values.size());
-	}
-
-	int add_element(const char* Elem) override
-	{
-		values.emplace_back(Elem);
-		return 0;
-	}
-
-	void clear_elements() override
-	{
-		values.clear();
-	}
-	
-	std::string getElementAt(const int i) override
-	{
-		if (i < 0 || i >= static_cast<int>(values.size()))
-			return "---";
-		return values[i];
-	}
-};
 
 const int amigawidth_values[] = { 640, 704, 720 };
 const int amigaheight_values[] = { 400, 480, 512, 568 };
@@ -48,17 +15,17 @@ const int amigaheight_values[] = { 400, 480, 512, 568 };
 
 const int fullscreen_width_values[] = { 640, 720, 800, 1024, 1280, 1280, 1920 };
 const int fullscreen_height_values[] = { 480, 576, 600, 768, 720, 1024, 1080 };
-const char* fullscreen_resolutions[] = { "640x480", "720x576", "800x600", "1024x768", "1280x720", "1280x1024", "1920x1080" };
-string_list_model fullscreen_resolutions_list(fullscreen_resolutions, 7);
+static const std::vector<std::string> fullscreen_resolutions = { "640x480", "720x576", "800x600", "1024x768", "1280x720", "1280x1024", "1920x1080" };
+static gcn::StringListModel fullscreen_resolutions_list(fullscreen_resolutions);
 
-const char* fullscreen_modes[] = { "Windowed", "Fullscreen", "Full-window" };
-string_list_model fullscreen_modes_list(fullscreen_modes, 3);
+static const std::vector<std::string> fullscreen_modes = { "Windowed", "Fullscreen", "Full-window" };
+static gcn::StringListModel fullscreen_modes_list(fullscreen_modes);
 
-const char* resolution[] = { "LowRes", "HighRes (normal)", "SuperHighRes" };
-string_list_model resolution_list(resolution, 3);
+static const std::vector<std::string> resolution = { "LowRes", "HighRes (normal)", "SuperHighRes" };
+static gcn::StringListModel resolution_list(resolution);
 
-const char* scaling_method[] = { "Auto", "Pixelated", "Smooth" };
-string_list_model scaling_method_list(scaling_method, 3);
+static const std::vector<std::string> scaling_method = { "Auto", "Pixelated", "Smooth" };
+static gcn::StringListModel scaling_method_list(scaling_method);
 
 static gcn::Window* grpAmigaScreen;
 static gcn::Label* lblAmigaWidth;

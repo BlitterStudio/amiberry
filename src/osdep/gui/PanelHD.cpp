@@ -4,6 +4,7 @@
 #include <guisan.hpp>
 #include <guisan/sdl.hpp>
 #include "SelectorEntry.hpp"
+#include "StringListModel.h"
 
 #include "sysdeps.h"
 #include "options.h"
@@ -71,38 +72,18 @@ static int GetHDType(const int index)
 	return type;
 }
 
+static gcn::StringListModel cdfileList;
 
-class CDfileListModel : public gcn::ListModel
+static void RefreshCDListModel()
 {
-public:
-	CDfileListModel()
-	= default;
-
-	int getNumberOfElements() override
+	cdfileList.clear();
+	for(const auto & i : lstMRUCDList)
 	{
-		return static_cast<int>(lstMRUCDList.size());
-	}
-
-	int add_element(const char* elem) override
-	{
-		return 0;
-	}
-
-	void clear_elements() override
-	{
-	}
-	
-	string getElementAt(const int i) override
-	{
-		if (i < 0 || i >= static_cast<int>(lstMRUCDList.size()))
-			return "---";
-		const std::string full_path = lstMRUCDList[i];
+		const std::string full_path = i;
 		const std::string filename = full_path.substr(full_path.find_last_of("/\\") + 1);
-		return filename + " { " + full_path + " }";
+		cdfileList.add(std::string(filename).append(" { ").append(full_path).append(" }"));
 	}
-};
-
-static CDfileListModel cdfileList;
+}
 
 class HDRemoveActionListener : public gcn::ActionListener
 {
@@ -124,7 +105,6 @@ public:
 };
 
 static HDRemoveActionListener* hdRemoveActionListener;
-
 
 class HDEditActionListener : public gcn::ActionListener
 {
@@ -159,7 +139,6 @@ public:
 };
 
 static HDEditActionListener* hdEditActionListener;
-
 
 class HDAddActionListener : public gcn::ActionListener
 {
@@ -276,6 +255,7 @@ public:
 					AddFileToCDList(tmp, 1);
 					extract_path(tmp, current_dir);
 
+					RefreshCDListModel();
 					AdjustDropDownControls();
 				}
 			}
@@ -317,6 +297,7 @@ public:
 					changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
 					lstMRUCDList.erase(lstMRUCDList.begin() + idx);
 					lstMRUCDList.insert(lstMRUCDList.begin(), changed_prefs.cdslots[0].name);
+					RefreshCDListModel();
 					bIgnoreListChange = true;
 					cboCDFile->setSelected(0);
 					bIgnoreListChange = false;
@@ -334,6 +315,8 @@ void InitPanelHD(const config_category& category)
 	int row, col;
 	auto posY = DISTANCE_BORDER / 2;
 	std::string id_string;
+
+	RefreshCDListModel();
 
 	hdRemoveActionListener = new HDRemoveActionListener();
 	hdEditActionListener = new HDEditActionListener();

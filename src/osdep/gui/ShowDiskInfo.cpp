@@ -5,6 +5,7 @@
 #include <sstream>
 
 #include "SelectorEntry.hpp"
+#include "StringListModel.h"
 
 #include "sysconfig.h"
 #include "sysdeps.h"
@@ -22,41 +23,7 @@ static gcn::Button* cmdOK;
 static gcn::ListBox* lstInfo;
 static gcn::ScrollArea* scrAreaInfo;
 
-class InfoListModel : public gcn::ListModel
-{
-	std::vector<std::string> lines{};
-
-public:
-	explicit InfoListModel(const std::vector<std::string>& helptext)
-	{
-		lines = helptext;
-	}
-
-	int getNumberOfElements() override
-	{
-		return int(lines.size());
-	}
-
-	int add_element(const char* elem) override
-	{
-		lines.emplace_back(elem);
-		return 0;
-	}
-
-	void clear_elements() override
-	{
-		lines.clear();
-	}
-	
-	std::string getElementAt(const int i) override
-	{
-		if (i >= 0 && i < lines.size())
-			return lines[i];
-		return "";
-	}
-};
-
-static InfoListModel* infoList;
+static gcn::StringListModel infoList;
 
 class ShowDiskInfoActionListener : public gcn::ActionListener
 {
@@ -69,7 +36,6 @@ public:
 
 static ShowDiskInfoActionListener* showDiskInfoActionListener;
 
-
 static void InitShowDiskInfo(const std::vector<std::string>& infotext)
 {
 	wndShowDiskInfo = new gcn::Window("DiskInfo");
@@ -80,9 +46,12 @@ static void InitShowDiskInfo(const std::vector<std::string>& infotext)
 
 	showDiskInfoActionListener = new ShowDiskInfoActionListener();
 
-	infoList = new InfoListModel(infotext);
+	infoList.clear();
+	for (const auto & i : infotext) {
+		infoList.add(i);
+	}
 
-	lstInfo = new gcn::ListBox(infoList);
+	lstInfo = new gcn::ListBox(&infoList);
 	lstInfo->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4 - 20,
 	                 DIALOG_HEIGHT - 3 * DISTANCE_BORDER - BUTTON_HEIGHT - DISTANCE_NEXT_Y - 10);
 	lstInfo->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
@@ -116,7 +85,6 @@ static void InitShowDiskInfo(const std::vector<std::string>& infotext)
 	cmdOK->requestFocus();
 }
 
-
 static void ExitShowDiskInfo()
 {
 	wndShowDiskInfo->releaseModalFocus();
@@ -126,12 +94,9 @@ static void ExitShowDiskInfo()
 	delete scrAreaInfo;
 	delete cmdOK;
 
-	delete infoList;
 	delete showDiskInfoActionListener;
-
 	delete wndShowDiskInfo;
 }
-
 
 static void ShowDiskInfoLoop()
 {
@@ -269,7 +234,6 @@ static void ShowDiskInfoLoop()
 		update_gui_screen();
 	}
 }
-
 
 void ShowDiskInfo(const char* title, const std::vector<std::string>& text)
 {
