@@ -1528,6 +1528,8 @@ void show_screen(int monid, int mode)
 		}
 		flip_in_progress = true;
 #ifdef USE_OPENGL
+		struct AmigaMonitor* mon = &AMonitors[monid];
+		
 		//Initialize clear color
 		glClearColor(0.f, 0.f, 0.f, 1.f);
 		glClear(GL_COLOR_BUFFER_BIT);
