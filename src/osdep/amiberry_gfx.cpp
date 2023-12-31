@@ -574,7 +574,7 @@ static void open_screen(struct uae_prefs* p)
 		}
 
 #ifdef USE_OPENGL
-		// TODO
+		// TODO Rotation in OpenGL
 #else
 		if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
 		{
@@ -613,7 +613,7 @@ static void open_screen(struct uae_prefs* p)
 		}
 
 #ifdef USE_OPENGL
-		// TODO
+		// TODO Rotation in OpenGL
 #else
 		if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
 		{
@@ -787,7 +787,7 @@ void auto_crop_image()
 			const int y = (vstrt - minfirstline) << currprefs.gfx_vresolution > 0 ? (vstrt - minfirstline) << currprefs.gfx_vresolution : 0;
 
 #ifdef USE_OPENGL
-			// TODO
+			// TODO Auto-Crop in OpenGL
 #else
 			crop_rect = { x, y, new_width, new_height };
 
@@ -817,7 +817,7 @@ void auto_crop_image()
 	else
 	{
 #ifdef USE_OPENGL
-		// TODO
+		// TODO Auto-Crop in OpenGL
 #else
 		crop_rect = { 0, 0, sdl_surface->w, sdl_surface->h };
 
@@ -845,7 +845,6 @@ void auto_crop_image()
 				renderQuad = { -(width - height) / 2, (width - height) / 2, width, height };
 			}
 		}
-		
 #endif
 	}
 
@@ -1511,9 +1510,7 @@ void show_screen(int monid, int mode)
 	{
 		wait_for_display_thread();
 		flip_in_progress = true;
-#ifdef USE_OPENGL
-		
-#else
+#ifndef USE_OPENGL
 		// RenderPresent must be done in the main thread.
 		SDL_RenderPresent(sdl_renderer);
 		write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SHOW, 1);
@@ -1529,7 +1526,7 @@ void show_screen(int monid, int mode)
 		flip_in_progress = true;
 #ifdef USE_OPENGL
 		struct AmigaMonitor* mon = &AMonitors[monid];
-		
+
 		//Initialize clear color
 		glClearColor(0.f, 0.f, 0.f, 1.f);
 		glClear(GL_COLOR_BUFFER_BIT);
@@ -1629,7 +1626,7 @@ void getgfxoffset(int monid, float* dxp, float* dyp, float* mxp, float* myp)
 	float dx = 0, dy = 0, mx = 1.0, my = 1.0;
 
 #ifdef AMIBERRY
-#ifndef USE_OPENGL
+#ifndef USE_OPENGL //TODO Auto-Crop in OpenGL
 	if (currprefs.gfx_auto_crop)
 	{
 		dx -= float(crop_rect.x);
