@@ -56,7 +56,7 @@ SDL_DisplayMode sdl_mode;
 SDL_Surface* sdl_surface = nullptr;
 #ifdef USE_OPENGL
 SDL_GLContext gl_context;
-GLuint gl_texture;
+GLuint gl_texture = 0;
 static int old_w, old_h;
 static float vertex_coords[] = {
 	-1.0f,  1.0f,  0.0f, // 0    0  1
@@ -510,6 +510,11 @@ void graphics_subshutdown()
 	avidinfo->inbuffer = &avidinfo->drawbuffer;
 
 #ifdef USE_OPENGL
+	if (gl_texture != 0)
+	{
+		glDeleteTextures(1, &gl_texture);
+		gl_texture = 0;
+	}
 #else
 	if (amiga_texture != nullptr)
 	{
@@ -640,24 +645,15 @@ static void open_screen(struct uae_prefs* p)
 		}
 	}
 
-	if (p->scaling_method == -1)
-	{
-		if (isModeAspectRatioExact(&sdl_mode, display_width, display_height))
-			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
-		else
-			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
-	}
-	else if (p->scaling_method == 0)
-		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
-	else if (p->scaling_method == 1)
-		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
-
 	sdl_surface = SDL_CreateRGBSurfaceWithFormat(0, display_width, display_height, display_depth, pixel_format);
 	check_error_sdl(sdl_surface == nullptr, "Unable to create a surface");
 
 #ifdef USE_OPENGL
-	glGenTextures(1, &gl_texture);
-	if (gl_have_error("glGenTextures"))	abort();
+	if (gl_texture == 0)
+	{
+		glGenTextures(1, &gl_texture);
+		if (gl_have_error("glGenTextures"))	abort();
+	}
 
 	glBindTexture(GL_TEXTURE_2D, gl_texture);
 	display_depth == 32
@@ -668,17 +664,8 @@ static void open_screen(struct uae_prefs* p)
 			display_width, display_height, 0, GL_RGB,
 			GL_UNSIGNED_SHORT_5_6_5, sdl_surface->pixels);
 
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-
-	//glViewport(0, 0, display_width, display_height);
-
-	//glMatrixMode(GL_PROJECTION); //from now on all glOrtho, glTranslate etc affect projection
-	//glOrtho(0, display_width, 0, display_height, -1, 1);
-	//glMatrixMode(GL_MODELVIEW); //good to leave in edit-modelview mode
 
 	glLoadIdentity();
 	glFrontFace(GL_CW);
@@ -689,6 +676,47 @@ static void open_screen(struct uae_prefs* p)
 #else
 	amiga_texture = SDL_CreateTexture(sdl_renderer, pixel_format, SDL_TEXTUREACCESS_STREAMING, sdl_surface->w, sdl_surface->h);
 	check_error_sdl(amiga_texture == nullptr, "Unable to create texture");
+#endif
+
+	if (p->scaling_method == -1)
+	{
+		if (isModeAspectRatioExact(&sdl_mode, display_width, display_height))
+#ifdef USE_OPENGL
+		{
+			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		}
+#else
+			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
+#endif
+		else
+#ifdef USE_OPENGL
+		{
+			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		}
+#else
+			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+#endif
+	}
+	else if (p->scaling_method == 0)
+#ifdef USE_OPENGL
+	{
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	}
+#else
+		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
+#endif
+	else if (p->scaling_method == 1)
+#ifdef USE_OPENGL
+	{
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	}
+	glBindTexture(GL_TEXTURE_2D, 0);
+#else
+		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 #endif
 
 	statusline_set_multiplier(mon->monitor_id, display_width, display_height);
@@ -1527,8 +1555,6 @@ void show_screen(int monid, int mode)
 #ifdef USE_OPENGL
 		struct AmigaMonitor* mon = &AMonitors[monid];
 
-		//Initialize clear color
-		glClearColor(0.f, 0.f, 0.f, 1.f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		if (sdl_surface->w != old_w || sdl_surface->h != old_h) {
@@ -1625,14 +1651,12 @@ void getgfxoffset(int monid, float* dxp, float* dyp, float* mxp, float* myp)
 {
 	float dx = 0, dy = 0, mx = 1.0, my = 1.0;
 
-#ifdef AMIBERRY
 #ifndef USE_OPENGL //TODO Auto-Crop in OpenGL
 	if (currprefs.gfx_auto_crop)
 	{
 		dx -= float(crop_rect.x);
 		dy -= float(crop_rect.y);
 	}
-#endif
 #endif
 
 	*dxp = dx;
@@ -1828,6 +1852,9 @@ int graphics_init(bool mousecapture)
 		}
 	}
 
+	//Initialize clear color
+	glClearColor(0.f, 0.f, 0.f, 1.f);
+
 	// for old fixed-function pipeline (change when using shaders!)
 	glEnable(GL_TEXTURE_2D);
 #else
@@ -1919,7 +1946,13 @@ void graphics_leave()
 		}
 	}
 
-#ifndef USE_OPENGL
+#ifdef USE_OPENGL
+	if (gl_texture != 0)
+	{
+		glDeleteTextures(1, &gl_texture);
+		gl_texture = 0;
+	}
+#else
 	if (amiga_texture)
 	{
 		SDL_DestroyTexture(amiga_texture);
