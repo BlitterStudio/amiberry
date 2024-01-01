@@ -812,7 +812,7 @@ static void setupcursor(void)
 
 		for (int y = 0; y < cursorheight; y++) {
 			uae_u8 *p1 = cursordata + cursorwidth * y;
-			uae_u32 *p2 = (uae_u32*)(p96_cursor_surface->pixels + p96_cursor_surface->pitch * y);
+			uae_u32 *p2 = (uae_u32*)((Uint8 *)p96_cursor_surface->pixels + p96_cursor_surface->pitch * y);
 			for (int x = 0; x < cursorwidth; x++) {
 				uae_u8 c = *p1++;
 				if (c < 4) {
