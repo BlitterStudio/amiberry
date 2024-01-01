@@ -968,7 +968,6 @@
     <ClInclude Include="..\src\include\cpuboard.h" />
     <ClInclude Include="..\src\include\cpummu.h" />
     <ClInclude Include="..\src\include\cpummu030.h" />
-    <ClInclude Include="..\src\include\cputbl.h" />
     <ClInclude Include="..\src\include\cpu_prefetch.h" />
     <ClInclude Include="..\src\include\crc32.h" />
     <ClInclude Include="..\src\include\custom.h" />
@@ -1090,6 +1089,7 @@
     <ClInclude Include="..\src\osdep\fsdb_host.h" />
     <ClInclude Include="..\src\osdep\gui\gui_handling.h" />
     <ClInclude Include="..\src\osdep\gui\SelectorEntry.hpp" />
+    <ClInclude Include="..\src\osdep\gui\StringListModel.h" />
     <ClInclude Include="..\src\osdep\ioport.h" />
     <ClInclude Include="..\src\osdep\midi.h" />
     <ClInclude Include="..\src\osdep\mp3decoder.h" />

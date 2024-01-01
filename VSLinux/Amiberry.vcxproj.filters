@@ -2150,9 +2150,6 @@
     <ClInclude Include="..\src\include\blitfunc.h">
       <Filter>src\include</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\include\cputbl.h">
-      <Filter>src\include</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\include\uae\vm.h">
       <Filter>src\include\uae</Filter>
     </ClInclude>
@@ -2908,6 +2905,9 @@
     </ClInclude>
     <ClInclude Include="..\src\jit\compemu.h">
       <Filter>src\jit</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\osdep\gui\StringListModel.h">
+      <Filter>src\osdep\gui</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
