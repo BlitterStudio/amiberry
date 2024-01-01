@@ -808,7 +808,7 @@ static void setupcursor(void)
 	//gfx_lock ();
 	setupcursor_needed = 1;
 	if (cursordata && cursorwidth && cursorheight) {
-		p96_cursor_surface = SDL_CreateRGBSurfaceWithFormat(0, cursorwidth, cursorheight, 32, SDL_PIXELFORMAT_RGBA32);
+		p96_cursor_surface = SDL_CreateRGBSurfaceWithFormat(0, cursorwidth, cursorheight, 32, SDL_PIXELFORMAT_BGRA32);
 
 		for (int y = 0; y < cursorheight; y++) {
 			uae_u8 *p1 = cursordata + cursorwidth * y;
@@ -821,10 +821,21 @@ static void setupcursor(void)
 				p2++;
 			}
 		}
-		p96_cursor = SDL_CreateColorCursor(p96_cursor_surface, 0, 0);
-		SDL_FreeSurface(p96_cursor_surface);
-		setupcursor_needed = 0;
-		P96TRACE_SPR((_T("cursorsurface3d updated\n")));
+
+		auto* p96_formatted_cursor_surface = SDL_ConvertSurfaceFormat(p96_cursor_surface, SDL_PIXELFORMAT_RGBA32, 0);
+		if (p96_formatted_cursor_surface != nullptr) {
+			SDL_FreeSurface(p96_cursor_surface);
+			if (p96_cursor != nullptr) {
+				SDL_FreeCursor(p96_cursor);
+				p96_cursor = nullptr;
+			}
+			p96_cursor = SDL_CreateColorCursor(p96_formatted_cursor_surface, 0, 0);
+			SDL_FreeSurface(p96_formatted_cursor_surface);
+
+			SDL_SetCursor(p96_cursor);
+			setupcursor_needed = 0;
+			P96TRACE_SPR((_T("cursorsurface3d updated\n")));
+		}
 	} else {
 		P96TRACE_SPR((_T("cursorsurfaced3d LockRect() failed %08x\n"), hr));
 	}

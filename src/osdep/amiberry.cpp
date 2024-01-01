@@ -468,7 +468,7 @@ static void setcursorshape(int monid)
 {
 	if (currprefs.input_tablet && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_magic_mouse_cursor == MAGICMOUSE_NATIVE_ONLY) {
 		if (SDL_GetCursor() != NULL)
-			SDL_ShowCursor(SDL_DISABLE);
+			SDL_SetCursor(NULL);
 	}
 	else if (!picasso_setwincursor(monid)) {
 		if (SDL_GetCursor() != normalcursor)
@@ -551,10 +551,7 @@ static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpaus
 
 	if (isfullscreen() <= 0 && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_tablet > 0) {
 		if (mousehack_alive())
-		{
-			if (active) setcursorshape(mon->monitor_id);
 			return;
-		}
 		SDL_SetCursor(normalcursor);
 	}
 
@@ -3953,7 +3950,7 @@ int main(int argc, char* argv[])
 	}
 	write_log(_T("done\n"));
 
-	normalcursor = SDL_GetDefaultCursor();
+	normalcursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
 	clipboard_init();
 
 #ifndef __MACH__
