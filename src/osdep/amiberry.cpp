@@ -466,9 +466,10 @@ void setpriority(int prio)
 
 static void setcursorshape(int monid)
 {
+	struct AmigaMonitor* mon = &AMonitors[monid];
 	if (currprefs.input_tablet && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_magic_mouse_cursor == MAGICMOUSE_NATIVE_ONLY) {
-		if (SDL_GetCursor() != NULL)
-			SDL_SetCursor(NULL);
+		if (!mon->screen_is_picasso || !currprefs.rtg_hardwaresprite)
+			SDL_ShowCursor(SDL_DISABLE);
 	}
 	else if (!picasso_setwincursor(monid)) {
 		if (SDL_GetCursor() != normalcursor)
@@ -562,9 +563,11 @@ static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpaus
 		if (focus) {
 			SDL_RaiseWindow(mon->sdl_window);
 			if (!mon_cursorclipped) {
-				SDL_ShowCursor(SDL_DISABLE);
 				SDL_SetWindowGrab(mon->sdl_window, SDL_TRUE);
 				updatewinrect(mon, false);
+				// SDL2 hides the cursor when Relative mode is enabled
+				// This means that the RTG hardware sprite will no longer be shown,
+				// unless it's configured to use Virtual Mouse (absolute movement).
 				SDL_SetRelativeMouseMode(SDL_TRUE);
 				mon_cursorclipped = mon->monitor_id + 1;
 			}

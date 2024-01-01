@@ -1975,9 +1975,10 @@ extern uae_u32 sprite_0_colors[4];
 static int createwindowscursor(int monid, int set, int chipset)
 {
 #ifdef AMIBERRY
-	SDL_Surface* cursor_surface;
+	SDL_Surface* cursor_surface = nullptr;
+	SDL_Surface* formatted_cursor_surface = nullptr;
 	int ret = 0;
-	bool isdata;
+	bool isdata = false;
 	SDL_Cursor* old_cursor = p96_cursor;
 	uae_u32 *ct;
 	TrapContext *ctx = NULL;
@@ -2069,33 +2070,47 @@ static int createwindowscursor(int monid, int set, int chipset)
 
 	tmp_sprite_w = tmp_sprite_h = 0;
 
-	cursor_surface = SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, SDL_PIXELFORMAT_RGBA32);
+	//cursor_surface = SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, SDL_PIXELFORMAT_BGRA32);
+	//if (!cursor_surface)
+	//	goto end;
 
-	isdata = false;
-	for (int y = 0; y < h; y++) {
-		uae_u8 *s = image + y * w;
-		for (int x = 0; x < w; x++) {
-			int c = *s++;
-			putmousepixel(cursor_surface, x, y, c, ct);
-			if (c > 0) {
-				isdata = true;
-			}
-		}
-	}
-	ret = 1;
+	//isdata = false;
+	//for (int y = 0; y < h; y++) {
+	//	uae_u8 *s = image + y * w;
+	//	for (int x = 0; x < w; x++) {
+	//		int c = *s++;
+	//		putmousepixel(cursor_surface, x, y, c, ct);
+	//		if (c > 0) {
+	//			isdata = true;
+	//		}
+	//	}
+	//}
+	//ret = 1;
+
+	//formatted_cursor_surface = SDL_ConvertSurfaceFormat(cursor_surface, SDL_PIXELFORMAT_RGBA32, 0);
 
 end:
 	if (!isdata) {
 		p96_cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
 	} else if (ret) {
-		p96_cursor = SDL_CreateColorCursor(cursor_surface, 0, 0);
+		p96_cursor = SDL_CreateColorCursor(formatted_cursor_surface, 0, 0);
 		tmp_sprite_w = w;
 		tmp_sprite_h = h;
 		memcpy(tmp_sprite_data, image, datasize);
 		memcpy(tmp_sprite_colors, ct, sizeof (uae_u32) * 4);
 	}
 
-	SDL_FreeSurface(cursor_surface);
+	if (cursor_surface != nullptr)
+	{
+		SDL_FreeSurface(cursor_surface);
+		cursor_surface = nullptr;
+	}
+
+	if (formatted_cursor_surface != nullptr)
+	{
+		SDL_FreeSurface(formatted_cursor_surface);
+		formatted_cursor_surface = nullptr;
+	}
 
 	if (p96_cursor) {
 		SDL_SetCursor(p96_cursor);
@@ -2108,8 +2123,8 @@ end:
 
 exit:
 	if (currprefs.input_tablet && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_magic_mouse_cursor == MAGICMOUSE_NATIVE_ONLY) {
-		if (SDL_GetCursor() != NULL)
-			SDL_SetCursor(NULL);
+		if (!currprefs.rtg_hardwaresprite)
+			SDL_ShowCursor(SDL_DISABLE);
 	} else {
 		if (p96_cursor == old_cursor && normalcursor != NULL) {
 			SDL_SetCursor(normalcursor);
