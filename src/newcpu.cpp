@@ -4752,6 +4752,10 @@ static int do_specialties (int cycles)
 	if (spcflags & SPCFLAG_MMURESTART) {
 		// can't have interrupt when 040/060 CPU reruns faulted instruction
 		unset_special(SPCFLAG_MMURESTART);
+
+		if (spcflags & SPCFLAG_TRACE) {
+			do_trace();
+		}
 	} else {
 
 		if (spcflags & SPCFLAG_DOTRACE) {
@@ -4782,7 +4786,7 @@ static int do_specialties (int cycles)
 			if (spcflags & SPCFLAG_INT) {
 				int intr = intlev();
 				unset_special (SPCFLAG_INT | SPCFLAG_DOINT);
-				if (intr > 0 && (intr > regs.intmask || intr == 7))
+				if (intr > regs.intmask || intr == 7)
 					do_interrupt(intr);
 			}
 		}

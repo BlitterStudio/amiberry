@@ -1563,7 +1563,7 @@ void m68k_do_rte_mmu040 (uaecptr a7)
 		write_log (_T("MMU restarted MOVEM EA=%08X\n"), mmu040_movem_ea);
 #endif
 	}
-	if (currprefs.mmu_model == 68060 || mmu_restart) {
+	if (mmu_restart) {
 		set_special(SPCFLAG_MMURESTART);
 	}
 }
@@ -1573,6 +1573,7 @@ void m68k_do_rte_mmu060 (uaecptr a7)
 #if 0
 	mmu060_state = 2;
 #endif
+	set_special(SPCFLAG_MMURESTART);
 }
 
 void flush_mmu040 (uaecptr addr, int n)
