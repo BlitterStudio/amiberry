@@ -216,7 +216,6 @@ void InitPanelRTG(const config_category& category)
 	chkRtgHardwareSprite = new gcn::CheckBox("Hardware sprite emulation");
 	chkRtgHardwareSprite->setId("chkRtgHardwareSprite");
 	chkRtgHardwareSprite->addActionListener(rtg_action_listener);
-	chkRtgHardwareSprite->setEnabled(false); // Not implemented yet
 
 	chkRtgMultithreaded = new gcn::CheckBox("Multithreaded");
 	chkRtgMultithreaded->setId("chkRtgMultithreaded");
@@ -438,8 +437,45 @@ void RefreshPanelRTG()
 bool HelpPanelRTG(std::vector<std::string>& helptext)
 {
 	helptext.clear();
-	helptext.emplace_back("\"RTG board\" is the graphics memory used by Picasso96 and only available if");
-	helptext.emplace_back("a 32 bit CPU is selected. If you select some memory for this type,");
-	helptext.emplace_back("the Z3 RTG board will be activated.");
+	helptext.emplace_back("This panel allows you add a graphics card to your emulated Amiga");
+	helptext.emplace_back("(otherwise known as an RTG card). Currently on the UAE Zorro II");
+	helptext.emplace_back("and Zorro III options are available, as Board types.");
+	helptext.emplace_back("These correspond to the \"uaegfx\" driver, of the P96 package.");
+	helptext.emplace_back("You can either use the free Aminet version of P96 or the newer iComp");
+	helptext.emplace_back("versions, as both as supported.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("The color modes dropdowns allow you to choose which pixel format");
+	helptext.emplace_back("will be used. Please note that for performance reasons, the default");
+	helptext.emplace_back("32-bit mode is not the same as in WinUAE (Amiberry uses RGBA, WinUAE");
+	helptext.emplace_back("uses BGRA).");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("Some options are not yet implemented, so they appear as disabled.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("     Hardware vertical blank interrupt: If this option is enabled,");
+	helptext.emplace_back("     an interrupt will be triggered in the emulated system on each");
+	helptext.emplace_back("     vsync event under RTG modes.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("     Hardware sprite emulation: This option will use the system");
+	helptext.emplace_back("     cursor as the Amiga cursor in RTG modes, if supported. Please");
+	helptext.emplace_back("     note that some systems do not support this, and you will only");
+	helptext.emplace_back("     get a blank cursor instead, if this option is enabled.");
+	helptext.emplace_back("     Due to SDL2 limitations, this currently only works well when");
+	helptext.emplace_back("     the \"Virtual Mouse driver\" option from the Input panel, is");
+	helptext.emplace_back("     enabled as well.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("The Refresh rate option allows you to select how the refresh rate");
+	helptext.emplace_back("for the emulated graphics card should behave:");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("     Chipset: (the default option) this will use the native chipset");
+	helptext.emplace_back("              selected, for the refresh rate - PAL will use 50 Hz");
+	helptext.emplace_back("              NTSC will use 60 Hz.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("     Default: this will use the default refresh rate for the selected");
+	helptext.emplace_back("              RTG card. Usually that's 60 Hz always.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("     50/60/70/75: Use the selected refresh rate.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back(" In most cases, leaving this to the default value (which is Chipset) should work fine.");
+	helptext.emplace_back(" ");
 	return true;
 }
