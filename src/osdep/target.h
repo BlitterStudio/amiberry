@@ -22,7 +22,7 @@
 
 #define AMIBERRYVERSION _T("Amiberry v5.6.6 (2023-12-29)")
 #define AMIBERRYDATE MAKEBD(2023, 12, 29)
-#define COPYRIGHT _T("Copyright (C) 2016-2023 Dimitris Panokostas")
+#define COPYRIGHT _T("Copyright (C) 2016-2024 Dimitris Panokostas")
 
 #define IHF_WINDOWHIDDEN 6
 
