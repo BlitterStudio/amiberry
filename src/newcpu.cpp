@@ -4606,7 +4606,7 @@ void doint(void)
 	}
 
 	if (regs.ipl_pin > regs.intmask || currprefs.cachesize) {
-		if (!currprefs.cachesize)
+		if (currprefs.cpu_compatible && currprefs.cpu_model < 68020) 
 			set_special(SPCFLAG_INT);
 		else
 			set_special(SPCFLAG_DOINT);
