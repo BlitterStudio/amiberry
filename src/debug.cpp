@@ -369,6 +369,8 @@ uae_u32 get_byte_debug (uaecptr addr)
 					v = mmu_get_iword(addr, sz_byte);
 					if (!odd)
 						v >>= 8;
+					else
+						v &= 0xff;
 				} else {
 					v = mmu_get_user_byte (addr, regs.s != 0, false, sz_byte, false);
 				}
