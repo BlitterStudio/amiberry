@@ -92,7 +92,7 @@ static void mmu_dump_ttr(const TCHAR * label, uae_u32 ttr)
 	from_addr = ttr & MMU_TTR_LOGICAL_BASE;
 	to_addr = (ttr & MMU_TTR_LOGICAL_MASK) << 8;
 
-	write_log(_T("%s: [%08x] %08x - %08x enabled=%d supervisor=%d wp=%d cm=%02d\n"),
+	console_out_f(_T("%s: [%08x] %08x - %08x enabled=%d supervisor=%d wp=%d cm=%02d\n"),
 			label, ttr,
 			from_addr, to_addr,
 			ttr & MMU_TTR_BIT_ENABLED ? 1 : 0,
@@ -177,7 +177,7 @@ static void mmu_dump_table(const char * label, uaecptr root_ptr)
 	unsigned long descmask = pagemask & ~(0x08 | 0x10); // mask out unused and M bits
 
 	root_ptr &= 0xfffffe00;
-	write_log(_T("MMU dump start. Root = %08x. Page = %d\n"), root_ptr, 1 << page_size);
+	console_out_f(_T("MMU dump start. Root = %08x. Page = %d\n"), root_ptr, 1 << page_size);
 	totalpages = 1 << (32 - page_size);
 	startaddr = 0;
 	odesc = getdesc(root_ptr, startaddr);
@@ -190,14 +190,14 @@ static void mmu_dump_table(const char * label, uaecptr root_ptr)
 			uae_u8 cm, sp;
 			cm = (odesc >> 5) & 3;
 			sp = (odesc >> 7) & 1;
-			write_log(_T("%08x - %08x: %08x WP=%d S=%d CM=%d (%08x)\n"),
+			console_out_f(_T("%08x - %08x: %08x WP=%d S=%d CM=%d V=%d (%08x)\n"),
 				startaddr, addr - 1, odesc & ~((1 << page_size) - 1),
-				(odesc & 4) ? 1 : 0, sp, cm, odesc);
+				(odesc & 4) ? 1 : 0, sp, cm, (odesc & 3) > 0, odesc);
 			startaddr = addr;
 			odesc = desc;
 		}
 	}
-	write_log(_T("MMU dump end\n"));
+	console_out_f(_T("MMU dump end\n"));
 }			
 
 #else
@@ -216,7 +216,7 @@ static void mmu_dump_table(const char * label, uaecptr root_ptr)
 	uaecptr ptr_des_addr, page_addr,
 		root_log, ptr_log, page_log;
 
-	write_log(_T("%s: root=%x\n"), label, root_ptr);
+	console_out_f(_T("%s: root=%x\n"), label, root_ptr);
 
 	for (root_idx = 0; root_idx < ROOT_TABLE_SIZE; root_idx++) {
 		root_des = phys_get_long(root_ptr + root_idx);
@@ -224,7 +224,7 @@ static void mmu_dump_table(const char * label, uaecptr root_ptr)
 		if ((root_des & 2) == 0)
 			continue;	/* invalid */
 
-		write_log(_T("ROOT: %03d U=%d W=%d UDT=%02d\n"), root_idx,
+		console_out_f(_T("ROOT: %03d U=%d W=%d UDT=%02d\n"), root_idx,
 				root_des & 8 ? 1 : 0,
 				root_des & 4 ? 1 : 0,
 				root_des & 3
@@ -279,7 +279,7 @@ static void mmu_dump_table(const char * label, uaecptr root_ptr)
 			if (n_pages_used == -1)
 				continue;
 
-			write_log(_T(" PTR: %03d U=%d W=%d UDT=%02d\n"), ptr_idx,
+			console_out_f(_T(" PTR: %03d U=%d W=%d UDT=%02d\n"), ptr_idx,
 				ptr_des & 8 ? 1 : 0,
 				ptr_des & 4 ? 1 : 0,
 				ptr_des & 3
@@ -290,7 +290,7 @@ static void mmu_dump_table(const char * label, uaecptr root_ptr)
 				page_des = page_info[page_idx].match;
 
 				if ((page_des & MMU_PDT_MASK) == 2) {
-					write_log(_T("  PAGE: %03d-%03d log=%08x INDIRECT --> addr=%08x\n"),
+					console_out_f(_T("  PAGE: %03d-%03d log=%08x INDIRECT --> addr=%08x\n"),
 							page_info[page_idx].start_idx,
 							page_info[page_idx].start_idx + page_info[page_idx].n_pages - 1,
 							page_info[page_idx].log,
@@ -298,7 +298,7 @@ static void mmu_dump_table(const char * label, uaecptr root_ptr)
 						  );
 
 				} else {
-					write_log(_T("  PAGE: %03d-%03d log=%08x addr=%08x UR=%02d G=%d U1/0=%d S=%d CM=%d M=%d U=%d W=%d\n"),
+					console_out_f(_T("  PAGE: %03d-%03d log=%08x addr=%08x UR=%02d G=%d U1/0=%d S=%d CM=%d M=%d U=%d W=%d\n"),
 							page_info[page_idx].start_idx,
 							page_info[page_idx].start_idx + page_info[page_idx].n_pages - 1,
 							page_info[page_idx].log,
@@ -331,7 +331,7 @@ static void mmu_dump_atc(void)
 /* {{{ mmu_dump_tables */
 void mmu_dump_tables(void)
 {
-	write_log(_T("URP: %08x   SRP: %08x  MMUSR: %x  TC: %x\n"), regs.urp, regs.srp, regs.mmusr, regs.tcr);
+	console_out_f(_T("URP: %08x   SRP: %08x  MMUSR: %x  TC: %x\n"), regs.urp, regs.srp, regs.mmusr, regs.tcr);
 	mmu_dump_ttr(_T("DTT0"), regs.dtt0);
 	mmu_dump_ttr(_T("DTT1"), regs.dtt1);
 	mmu_dump_ttr(_T("ITT0"), regs.itt0);
