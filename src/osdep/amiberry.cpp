@@ -1912,7 +1912,7 @@ void target_default_options(struct uae_prefs* p, int type)
 		p->rtgallowscaling = false;
 		p->rtgscaleaspectratio = -1;
 		p->rtgvblankrate = 0;
-		p->rtg_hardwaresprite = true;
+		p->rtg_hardwaresprite = false;
 		p->rtg_overlay = true;
 		p->rtg_vgascreensplit = true;
 		p->rtg_paletteswitch = true;
