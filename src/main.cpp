@@ -182,6 +182,10 @@ static void fixup_prefs_dim2(int monid, struct wh *wh)
 			error_log (_T("Height (%d) must be at least 128."), wh->height);
 		wh->height = 128;
 	}
+
+	wh->width += 3;
+	wh->width &= ~3;
+
 	if (wh->width > max_uae_width) {
 		if (!monid)
 			error_log (_T("Width (%d) max is %d."), wh->width, max_uae_width);
