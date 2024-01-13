@@ -2911,7 +2911,7 @@ struct autoconfig_info *expansion_get_autoconfig_by_address(struct uae_prefs *p,
 		return NULL;
 	for (int i = index; i < cardno; i++) {
 		struct card_data *cd = cards[i];
-		if (addr >= cd->base && addr < cd->base + cd->size)
+		if (cd && addr >= cd->base && addr < cd->base + cd->size)
 			return &cd->aci;
 	}
 	return NULL;
