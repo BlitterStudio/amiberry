@@ -8705,7 +8705,7 @@ int intlev(void)
 	}
 	uae_u16 imask = intreq2 & intena2;
 	if (!(imask && (intena2 & 0x4000)))
-		return -1;
+		return 0;
 	if (imask & (0x4000 | 0x2000))						// 13 14
 		return 6;
 	if (imask & (0x1000 | 0x0800))						// 11 12
@@ -8718,7 +8718,7 @@ int intlev(void)
 		return 2;
 	if (imask & (0x0001 | 0x0002 | 0x0004))				// 0 1 2
 		return 1;
-	return -1;
+	return 0;
 }
 
 void rethink_uae_int(void)

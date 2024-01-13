@@ -219,6 +219,7 @@ struct regstruct
 	int halted;
 	int exception;
 	int intmask;
+	int lastipl;
 	int ipl[2], ipl_pin, ipl_pin_p;
 	evt_t ipl_pin_change_evt, ipl_pin_change_evt_p;
 	evt_t ipl_evt, ipl_evt_pre;
