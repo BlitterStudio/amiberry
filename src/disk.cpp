@@ -137,7 +137,7 @@ static int dma_enable, bitoffset, syncoffset;
 static uae_u16 word, dsksync;
 static bool dsksync_on;
 /* Always carried through to the next line.  */
-int disk_hpos;
+static int disk_hpos;
 static int disk_jitter;
 static int indexdecay;
 static uae_u8 prev_data;
@@ -934,7 +934,7 @@ static void update_drive_gui(int num, bool force)
 	gui_led (num + LED_DF0, (gid->drive_motor ? 1 : 0) | (gid->drive_writing ? 2 : 0), -1);
 }
 
-static void drive_fill_bigbuf (drive * drv,int);
+static void drive_fill_bigbuf(drive *drv, int, int);
 
 void DISK_get_path_text(struct uae_prefs *p, int n, TCHAR *text)
 {
@@ -1448,7 +1448,7 @@ static int drive_insert (drive *drv, struct uae_prefs *p, int dnum, const TCHAR 
 		drive_settype_id(drv); /* Set DD or HD drive */
 		update_drive_gui(drv->drvnum, false);
 		update_disk_statusline(drv->drvnum);
-		drive_fill_bigbuf(drv, fake ? -1 : 1);
+		drive_fill_bigbuf(drv, side, fake ? -1 : 1);
 
 		return 1;
 #endif
@@ -1745,7 +1745,7 @@ static int drive_insert (drive *drv, struct uae_prefs *p, int dnum, const TCHAR 
 	}
 	openwritefile(p, drv, 0);
 	drive_settype_id(drv); /* Set DD or HD drive */
-	drive_fill_bigbuf(drv, 1);
+	drive_fill_bigbuf(drv, side, 1);
 	drv->mfmpos = uaerand();
 	drv->mfmpos |= uaerand() << 16;
 	drv->mfmpos &= 0xffffff;
@@ -2085,10 +2085,10 @@ static uae_u16 *mfmcoder (uae_u8 *src, uae_u16 *dest, int len)
 	return dest;
 }
 
-static void decode_pcdos (drive *drv)
+static void decode_pcdos (drive *drv, int tside)
 {
 	int i, len;
-	int tr = drv->cyl * 2 + side;
+	int tr = drv->cyl * 2 + tside;
 	uae_u16 *dstmfmbuf, *mfm2;
 	uae_u8 secbuf[1000];
 	uae_u16 crc16;
@@ -2151,10 +2151,10 @@ static void decode_pcdos (drive *drv)
 		write_log (_T("pcdos read track %d\n"), tr);
 }
 
-static void decode_amigados (drive *drv)
+static void decode_amigados(drive *drv, int tside)
 {
 	/* Normal AmigaDOS format track */
-	int tr = drv->cyl * 2 + side;
+	int tr = drv->cyl * 2 + tside;
 	int sec;
 	int dstmfmoffset = 0;
 	uae_u16 *dstmfmbuf = drv->bigmfmbuf;
@@ -2273,9 +2273,9 @@ static void decode_amigados (drive *drv)
 *
 */
 
-static void decode_diskspare (drive *drv)
+static void decode_diskspare(drive *drv, int tside)
 {
-	int tr = drv->cyl * 2 + side;
+	int tr = drv->cyl * 2 + tside;
 	int sec;
 	int dstmfmoffset = 0;
 	int size = 512 + 8;
@@ -2349,9 +2349,9 @@ static void decode_diskspare (drive *drv)
 		write_log (_T("diskspare read track %d\n"), tr);
 }
 
-static void drive_fill_bigbuf (drive * drv, int force)
+static void drive_fill_bigbuf(drive *drv, int tside, int force)
 {
-	int tr = drv->cyl * 2 + side;
+	int tr = drv->cyl * 2 + tside;
 	trackid *ti = drv->trackdata + tr;
 	bool retrytrack;
 	int rev = -1;
@@ -2370,17 +2370,17 @@ static void drive_fill_bigbuf (drive * drv, int force)
 		return;
 	}
 
-	if (!force && drv->buffered_cyl == drv->cyl && drv->buffered_side == side)
+	if (!force && drv->buffered_cyl == drv->cyl && drv->buffered_side == tside)
 		return;
 	drv->indexoffset = 0;
 	drv->multi_revolution = 0;
 	drv->tracktiming[0] = 0;
 	drv->skipoffset = -1;
 	drv->revolutions = 1;
-	retrytrack = drv->lastdataacesstrack == drv->cyl * 2 + side;
+	retrytrack = drv->lastdataacesstrack == drv->cyl * 2 + tside;
 	if (!dskdmaen && !retrytrack)
 		drv->track_access_done = false;
-	//write_log (_T("%d:%d %d\n"), drv->cyl, side, retrytrack);
+	//write_log (_T("%d:%d %d\n"), drv->cyl, tside, retrytrack);
 
 	if (drv->writediskfile && drv->writetrackdata[tr].bitlen > 0) {
 		int i;
@@ -2400,7 +2400,7 @@ static void drive_fill_bigbuf (drive * drv, int force)
 		if (drv->bridge) {
 			drv->multi_revolution = 1;
 			drv->skipoffset = -1;
-			drv->bridge->setSurface(side); // force the correct disk side to be selected
+			drv->bridge->setSurface(tside); // force the correct disk side to be selected
 			drv->tracklen = drv->bridge->maxMFMBitPosition();
 			drv->tracktiming[0] = drv->bridge->getMFMSpeed(drv->mfmpos % drv->tracklen);
 			if (force < 0) {
@@ -2412,7 +2412,7 @@ static void drive_fill_bigbuf (drive * drv, int force)
 #ifdef CATWEASEL
 		drv->tracklen = 0;
 		if (!catweasel_disk_changed (drv->catweasel)) {
-			drv->tracklen = catweasel_fillmfm (drv->catweasel, drv->bigmfmbuf, side, drv->ddhd, 0);
+			drv->tracklen = catweasel_fillmfm (drv->catweasel, drv->bigmfmbuf, tside, drv->ddhd, 0);
 		}
 		drv->buffered_cyl = -1;
 		if (!drv->tracklen) {
@@ -2440,15 +2440,15 @@ static void drive_fill_bigbuf (drive * drv, int force)
 
 	} else if (ti->type == TRACK_PCDOS) {
 
-		decode_pcdos(drv);
+		decode_pcdos(drv, tside);
 
 	} else if (ti->type == TRACK_AMIGADOS) {
 
-		decode_amigados(drv);
+		decode_amigados(drv, tside);
 
 	} else if (ti->type == TRACK_DISKSPARE) {
 
-		decode_diskspare(drv);
+		decode_diskspare(drv, tside);
 
 	} else if (ti->type == TRACK_NONE) {
 
@@ -2468,7 +2468,7 @@ static void drive_fill_bigbuf (drive * drv, int force)
 		if (disk_debug_logging > 2)
 			write_log (_T("rawtrack %d image offset=%x\n"), tr, ti->offs);
 	}
-	drv->buffered_side = side;
+	drv->buffered_side = tside;
 	drv->buffered_cyl = drv->cyl;
 	if (drv->tracklen == 0) {
 		drv->tracklen = FLOPPY_WRITE_LEN * drv->ddhd * 2 * 8;
@@ -2893,7 +2893,7 @@ static bool convert_adf_to_ext2 (drive *drv, int mode)
 #ifdef RETROPLATFORM
 	rp_disk_image_change(drv->drvnum, name, false);
 #endif
-	drive_fill_bigbuf(drv, 1);
+	drive_fill_bigbuf(drv, side, 1);
 
 	return true;
 }
@@ -4466,6 +4466,36 @@ static void disk_dma_debugmsg (void)
 		dsklength, dsklength, (adkcon & 0x400) ? dsksync : 0xffff, dskpt, adkcon, intreq, M68K_GETPC);
 }
 
+// fake raw read for draco
+uae_u16 DSKBYTR_fake(int num)
+{
+	drive *drv = &floppy[num];
+	uae_u16 ret;
+	uae_u16 ac = adkcon;
+	
+	adkcon |= 0x100;
+	int mfmpos = drv->mfmpos;
+	bool isempty = drive_empty(drv);
+	bool isunformatted = unformatted(drv);
+	int inc = 1;
+	int fword = 0;
+	for (int i = 0; i < 8; i++) {
+		fword <<= 1;
+		if (!isempty) {
+			if (isunformatted)
+				fword |= (uaerand() & 0x1000) ? 1 : 0;
+			else
+				fword |= getonebit(drv, drv->bigmfmbuf, mfmpos, &inc);
+		}
+		mfmpos += inc;
+		mfmpos %= drv->tracklen;
+	}
+	drv->mfmpos = mfmpos;
+	ret = 0x8000 | (fword & 0xff);
+	adkcon = ac;
+	return ret;
+}
+
 /* this is very unoptimized. DSKBYTR is used very rarely, so it should not matter. */
 
 uae_u16 DSKBYTR(int hpos)
@@ -4576,13 +4606,13 @@ static void DISK_start(void)
 #ifdef CATWEASEL
 			if (drv->catweasel) {
 				word = 0;
-				drive_fill_bigbuf (drv, 1);
+				drive_fill_bigbuf (drv, side, 1);
 			}
 #endif
 #ifdef FLOPPYBRIDGE
 			if (drv->bridge && dskdmaen != DSKDMA_WRITE) {
 				word = 0;
-				drive_fill_bigbuf(drv, 1);
+				drive_fill_bigbuf(drv, side, 1);
 			}
 #endif
 		}
@@ -4701,11 +4731,11 @@ void DISK_update (int tohpos)
 			continue;
 		}
 		if (drv->diskfile) {
-			drive_fill_bigbuf(drv, 0);
+			drive_fill_bigbuf(drv, side, 0);
 		}
 #ifdef FLOPPYBRIDGE
 		if (drv->bridge) {
-			drive_fill_bigbuf(drv, 0);
+			drive_fill_bigbuf(drv, side, 0);
 		}
 #endif
 		drv->mfmpos %= drv->tracklen;
@@ -4935,7 +4965,7 @@ static void DSKLEN_2(uae_u16 v, int hpos)
 				continue;
 
 			pos = drv->mfmpos & ~15;
-			drive_fill_bigbuf (drv, 0);
+			drive_fill_bigbuf (drv, side, 0);
 
 			if (dskdmaen == DSKDMA_READ) { /* TURBO read */
 
@@ -5395,7 +5425,7 @@ static void load_track (int num, int cyl, int dside, int *sectable)
 	drv->cyl = cyl;
 	side = dside;
 	drv->buffered_cyl = -1;
-	drive_fill_bigbuf (drv, -1);
+	drive_fill_bigbuf (drv, side, -1);
 	decode_buffer (drv, drv->bigmfmbuf, drv->cyl, 11, drv->ddhd, drv->filetype, &drvsec, sectable, 1);
 	drv->cyl = oldcyl;
 	side = oldside;
@@ -6196,6 +6226,12 @@ void disk_reserved_setinfo(int num, int cyl, int head, int motor)
 		drv->cyl = cyl;
 		drv->state = motor != 0;
 		update_drive_gui(i, false);
+		drive_fill_bigbuf(drv, head, 0);
+		// for some reason draco does not like it if data read starts from beginning of gap
+		drv->mfmpos = 8 * 16;
+		while ((drv->bigmfmbuf[drv->mfmpos / 16] == 0xaaaa || drv->bigmfmbuf[drv->mfmpos / 16] == 0x5555) && drv->mfmpos < 2048 && drv->mfmpos < drv->tracklen / 4) {
+			drv->mfmpos += 16;
+		}
 	}
 }
 
@@ -6214,7 +6250,7 @@ bool disk_reserved_getinfo(int num, struct floppy_reserved *fr)
 			if (z) {
 				bool ok = false;
 				drv->num_secs = 21; // max possible
-				drive_fill_bigbuf(drv, true);
+				drive_fill_bigbuf(drv, side, true);
 				int secs = drive_write_pcdos(drv, z, 1);
 				if (secs >= 8) {
 					ok = true;
@@ -6222,7 +6258,7 @@ bool disk_reserved_getinfo(int num, struct floppy_reserved *fr)
 					for (int i = 0; i < drv->num_tracks; i++) {
 						drv->cyl = i / 2;
 						side = i & 1;
-						drive_fill_bigbuf(drv, true);
+						drive_fill_bigbuf(drv, side, true);
 						drive_write_pcdos(drv, z, 0);
 					}
 				}

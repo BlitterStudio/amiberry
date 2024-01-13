@@ -10104,10 +10104,12 @@ static void checkautoscalecol0(void)
 
 bool get_custom_color_reg(int colreg, uae_u8 *r, uae_u8 *g, uae_u8 *b)
 {
+	if (colreg < 0)
+		return false;
 	if (colreg >= 32 && !aga_mode) {
 		return false;
 	}
-	if (colreg >= 256 || colreg < 0) {
+	if (colreg >= 256) {
 		return false;
 	}
 	if (aga_mode) {

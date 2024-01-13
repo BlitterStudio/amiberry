@@ -219,8 +219,8 @@ struct regstruct
 	int halted;
 	int exception;
 	int intmask;
-	int lastipl;
 	int ipl[2], ipl_pin, ipl_pin_p;
+	int lastipl;
 	evt_t ipl_pin_change_evt, ipl_pin_change_evt_p;
 	evt_t ipl_evt, ipl_evt_pre;
 	int ipl_evt_pre_mode;
@@ -347,6 +347,8 @@ extern int cpucycleunit, cpuipldelay2, cpuipldelay4;
 extern int m68k_pc_indirect;
 extern bool m68k_interrupt_delay;
 
+extern void safe_interrupt_set(int, int, bool);
+
 #define SPCFLAG_CPUINRESET 2
 #define SPCFLAG_COPPER 4
 #define SPCFLAG_INT 8
@@ -365,8 +367,6 @@ extern bool m68k_interrupt_delay;
 #endif
 #define SPCFLAG_CHECK 32768
 #define SPCFLAG_MMURESTART 65536
-
-extern void safe_interrupt_set(int, int, bool);
 
 STATIC_INLINE void set_special_exter(uae_u32 x)
 {
