@@ -352,6 +352,7 @@ static uae_u16 beamcon0_saved;
 static uae_u16 bplcon0_saved, bplcon1_saved, bplcon2_saved;
 static uae_u16 bplcon3_saved, bplcon4_saved;
 static int varsync_changed, varsync_maybe_changed[2];
+static int varhblank_lines, varhblank_val[2];
 static uae_u16 vt_old, ht_old, hs_old, vs_old;
 uae_u16 vtotal, htotal;
 static int maxvpos_stored, maxhpos_stored;
@@ -8949,14 +8950,14 @@ static void varsync(int reg, bool resync, int oldval)
 	if ((reg == 0x1cc || reg == 0x1ce) && (beamcon0 & BEAMCON0_VARVBEN)) {
 		// check for >1 because of interlace modes
 		if ((reg == 0x1cc && abs(vbstrt - oldval) > 1) || (reg == 0x1ce && abs(vbstop - oldval) > 1)) {
-			// check VB and HB changes only if there are no many changes per frame
-			varsync_maybe_changed[0]++;
+			// check VB changes only if there are not many changes per frame
+			varsync_maybe_changed[reg == 0x1cc ? 0 : 1]++;
 		}
 	}
 	// HB
 	if ((reg == 0x1c4 || reg == 0x1c6) && exthblank) {
-		// check VB and HB changes only if there are no many changes per frame
-		varsync_maybe_changed[1]++;
+		// only do resync if HB value has been valid at least 66% of field
+		varhblank_lines = (maxvpos / 3) * 2;
 	}
 
 	if (!resync) {
@@ -12249,7 +12250,7 @@ static void vsync_display_render(void)
 
 static void vsync_check_vsyncmode(void)
 {
-	if ((varsync_maybe_changed[0] >= 1 && varsync_maybe_changed[0] <= 4) || (varsync_maybe_changed[1] >= 1 && varsync_maybe_changed[1] <= 4)) {
+	if (varsync_maybe_changed[0] == 1 || varsync_maybe_changed[1] == 1 || varhblank_lines == -1) {
 		init_hz_normal();
 	} else if (varsync_changed == 1) {
 		init_hz_normal();
@@ -12264,6 +12265,7 @@ static void vsync_check_vsyncmode(void)
 	}
 	varsync_maybe_changed[0] = 0;
 	varsync_maybe_changed[1] = 0;
+	varhblank_lines = 0;
 }
 
 static void check_display_mode_change(void)
@@ -14063,6 +14065,17 @@ static void hsync_handler_post(bool onvsync)
 
 	if (!(new_beamcon0 & BEAMCON0_VARVBEN)) {
 		vb_check();
+	}
+
+	if (varhblank_lines > 0) {
+		varhblank_lines--;
+		if (!varhblank_lines) {
+			if (varhblank_val[0] != hbstrt || varhblank_val[1] != hbstop) {
+				varhblank_lines = -1;
+				varhblank_val[0] = hbstrt;
+				varhblank_val[1] = hbstop;
+			}
+		}
 	}
 
 	decide_vline(0);
