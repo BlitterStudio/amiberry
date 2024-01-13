@@ -721,7 +721,7 @@ static bool do_dma_commodore_8727(struct wd_state *wd, struct scsi_data *scsi)
 				break;
 		}
 #if WD33C93_DEBUG > 0
-		write_log (_T("%s Done DMA from WD, %d/%d %08X\n"), WD33C93, scsi->offset, scsi->data_len, (odmac_acr << 1) & dma_mask);
+		write_log(_T("%s Done DMA from WD, %d/%d %08X\n"), WD33C93, scsi->offset, scsi->data_len, (odmac_acr << 1) & wd->dma_mask);
 #endif
 		wd->cdmac.c8727_pcsd |= 1 << 7;
 		return true;
@@ -753,7 +753,7 @@ static bool do_dma_commodore_8727(struct wd_state *wd, struct scsi_data *scsi)
 				break;
 		}
 #if WD33C93_DEBUG > 0
-		write_log (_T("%s Done DMA to WD, %d/%d %08x\n"), WD33C93, scsi->offset, scsi->data_len, (odmac_acr << 1) & (currprefs.cs_z2dma32bit ? 0xffffffff : 0xffffff));
+		write_log(_T("%s Done DMA to WD, %d/%d %08x\n"), WD33C93, scsi->offset, scsi->data_len, (odmac_acr << 1) & wd->dma_mask);
 #endif
 		wd->cdmac.c8727_pcsd |= 1 << 7;
 		return true;
