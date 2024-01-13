@@ -8735,13 +8735,15 @@ static void buildin_default_prefs (struct uae_prefs *p)
 	p->cpuboard_subtype = 0;
 #ifdef AMIBERRY
 	p->sound_volume_cd = 0;
-	p->mbresmem_low.size = 0;
-	p->mbresmem_high.size = 0;
 #endif
 	p->chipmem.size = 0x00080000;
 	p->chipmem.chipramtiming = true;
 	p->bogomem.size = 0x00080000;
 	p->bogomem.chipramtiming = true;
+	p->cpuboardmem1.size = 0;
+	p->cpuboardmem2.size = 0;
+	p->mbresmem_low.size = 0;
+	p->mbresmem_high.size = 0;
 	p->z3chipmem.size = 0;
 	for (auto i = 0; i < MAX_RAM_BOARDS; i++) {
 		memset(p->fastmem, 0, sizeof(struct ramboard));
