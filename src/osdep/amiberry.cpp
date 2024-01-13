@@ -1530,8 +1530,8 @@ void process_event(SDL_Event event)
 		setmousestate(0, 0, event.motion.xrel, 0);
 		setmousestate(0, 1, event.motion.yrel, 0);
 
-		if (mon_cursorclipped || mouseactive)
-			setcursor(mon, event.motion.x, event.motion.y);
+		//if (mon_cursorclipped || mouseactive)
+		//	setcursor(mon, event.motion.x, event.motion.y);
 	}
 	break;
 
