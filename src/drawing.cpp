@@ -662,7 +662,7 @@ static void set_hblanking_limits(void)
 	// horizontal blanking
 	bool hardwired = !dp_for_drawing || !ce_is_extblankset(colors_for_drawing.extra);
 	bool doblank = false;
-	int hbstrt = ((maxhpos + 8) << CCK_SHRES_SHIFT) - 3;
+	int hbstrt = ((maxhpos_short + 8) << CCK_SHRES_SHIFT) - 3;
 	int hbstop = (47 << CCK_SHRES_SHIFT) - 7;
 
 	if (currprefs.gfx_overscanmode < OVERSCANMODE_OVERSCAN) {
@@ -3777,7 +3777,7 @@ static void do_color_changes(line_draw_func worker_border, line_draw_func worker
 				int hblank_right = exthblankon ? hblank_right_stop : hblank_right_stop_hard;
 
 				// right border (playfield end to hblank start)
-				if (nextpos_in_range > lastpos && lastpos >= playfield_end_pre) {
+				if (nextpos_in_range > lastpos && lastpos >= playfield_end_pre && lastpos < hblank_right) {
 					int t = nextpos_in_range <= hblank_right ? nextpos_in_range : hblank_right;
 					(*worker_border)(lastpos, t, 0);
 					lastpos = t;
@@ -3785,7 +3785,7 @@ static void do_color_changes(line_draw_func worker_border, line_draw_func worker
 
 				// right hblank (hblank start to right edge, hblank start may be earlier than playfield end)
 				if (nextpos_in_range > hblank_right) {
-					(*worker_border) (hblank_right, nextpos_in_range, 1);
+					(*worker_border)(hblank_right, nextpos_in_range, 1);
 					lastpos = nextpos_in_range;
 				}
 			}
