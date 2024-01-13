@@ -657,7 +657,7 @@ static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpaus
 				// unless it's configured to use Virtual Mouse (absolute movement).
 				SDL_SetRelativeMouseMode(SDL_TRUE);
 				mon_cursorclipped = mon->monitor_id + 1;
-				updatemouseclip(mon);
+				//updatemouseclip(mon);
 			}
 			setcursor(mon, -30000, -30000);
 		}
