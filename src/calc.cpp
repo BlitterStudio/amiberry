@@ -282,6 +282,7 @@ static TCHAR *stacktostring(struct calcstack *st)
         if (_tcslen(st->s) == 1 && st->s[0] >= 'a' && st->s[0] <= 'z') {
             TCHAR *s = parsedvaluess[st->s[0] - 'a'];
             if (s) {
+                xfree(st->vals);
                 st->vals = my_strdup(s);
                 xfree(st->s);
                 st->s = NULL;
@@ -290,6 +291,7 @@ static TCHAR *stacktostring(struct calcstack *st)
             double v = parsedvaluesd[st->s[0] - 'a'];
             TCHAR tmp[256];
             _stprintf(tmp, _T("%d"), (int)v);
+            xfree(st->vals);
             st->vals = my_strdup(tmp);
             xfree(st->s);
             st->s = NULL;
@@ -476,7 +478,7 @@ static TCHAR *chartostack(TCHAR c)
 	return s;
 }
 
-static struct calcstack stack[STACK_SIZE] = { 0 };
+static struct calcstack stack[STACK_SIZE];
 
 static bool execution_order(const TCHAR *input, double *outval, TCHAR *outstring, int maxlen)
 {
@@ -558,7 +560,6 @@ static bool execution_order(const TCHAR *input, double *outval, TCHAR *outstring
                                         if (isstackstring(sc2)) {
                                             TCHAR *c = stacktostring(sc2);
                                             _tcscpy(vals, c);
-                                            xfree(c);
                                         }
                                         val = stacktoval(sc2);
                                }
@@ -759,7 +760,11 @@ int calc(const TCHAR *input, double *outval, TCHAR *outstring, int maxlen)
     if (outstring) {
         outstring[0] = 0;
     }
-	if (parse_values(input, output2)) {
+    for (int i = 0; i < STACK_SIZE; i++) {
+        struct calcstack* s = &stack[i];
+        memset(s, 0, sizeof(struct calcstack));
+    }
+    if (parse_values(input, output2)) {
 		if(shunting_yard(output2, output))    {
 			calc_log ((_T("RPN OUT: %s\n"), output));
 			if(!execution_order(output, outval, outstring, maxlen)) {
