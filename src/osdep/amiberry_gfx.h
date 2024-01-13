@@ -47,8 +47,8 @@ struct PicassoResolution
 
 struct MultiDisplay {
 	int primary;
-	TCHAR* adaptername, * adapterid, * adapterkey;
-	TCHAR* monitorname, * monitorid;
+	TCHAR* adaptername, *adapterid, *adapterkey;
+	TCHAR* monitorname, *monitorid;
 	TCHAR* fullname;
 	struct PicassoResolution* DisplayModes;
 	SDL_Rect rect;

@@ -391,6 +391,9 @@ void RefreshPanelRTG()
 	chkRtgAlwaysCenter->setSelected(changed_prefs.gf[1].gfx_filter_autoscale == RTG_MODE_CENTER);
 	chkRtgAllowScaling->setSelected(changed_prefs.rtgallowscaling);
 	chkRtgHardwareInterrupt->setSelected(changed_prefs.rtg_hardwareinterrupt);
+	// Only enable this if Virtual Mouse option is enabled,
+	// otherwise we'll get no cursor at all (due to SDL2 and Relative Mouse mode)
+	chkRtgHardwareSprite->setEnabled(changed_prefs.input_tablet > 0);
 	chkRtgHardwareSprite->setSelected(changed_prefs.rtg_hardwaresprite);
 	chkRtgMultithreaded->setSelected(changed_prefs.rtg_multithread);
 

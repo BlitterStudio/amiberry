@@ -2501,6 +2501,22 @@ static void modesList(struct MultiDisplay* md)
 	}
 }
 
+void reenumeratemonitors(void)
+{
+	for (int i = 0; i < MAX_DISPLAYS; i++) {
+		struct MultiDisplay* md = &Displays[i];
+		memcpy(&md->workrect, &md->rect, sizeof (SDL_Rect));
+	}
+	enumeratedisplays();
+}
+
+void enumeratedisplays()
+{
+	MultiDisplay* md = Displays;
+	SDL_GetDisplayBounds(0, &md->rect);
+	SDL_GetDisplayBounds(0, &md->workrect);
+}
+
 void sortdisplays()
 {
 	struct MultiDisplay* md;
