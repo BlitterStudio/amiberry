@@ -163,7 +163,7 @@ struct CIA
 static struct CIA cia[2];
 
 static bool oldovl;
-static bool led;
+static int led;
 static int led_old_brightness;
 static evt_t led_cycle;
 static evt_t cia_now_evt;
@@ -1254,7 +1254,7 @@ static void calc_led(int old_led)
 {
 	evt_t c = get_cycles();
 	int t = (int)((c - led_cycle) / CYCLE_UNIT);
-	if (old_led)
+	if (old_led > 0)
 		led_cycles_on += t;
 	else
 		led_cycles_off += t;
@@ -1335,7 +1335,7 @@ void CIA_vsync_prehandler(void)
 static void check_led(void)
 {
 	uae_u8 v = cia[0].pra;
-	bool led2;
+	int led2;
 
 	v |= ~cia[0].dra; /* output is high when pin's direction is input */
 	led2 = (v & 2) ? 0 : 1;
@@ -2183,6 +2183,7 @@ void CIA_reset(void)
 	led_cycles_off = 0;
 	led_cycles_on = 0;
 	led_cycle = get_cycles();
+	led = 0;
 
 	if (!savestate_state) {
 		oldovl = true;
@@ -2212,6 +2213,7 @@ void CIA_reset(void)
 		if (currprefs.cs_ciaoverlay) {
 			oldovl = true;
 		}
+		led = -1;
 		bfe001_change();
 		if (!currprefs.cs_ciaoverlay) {
 			map_overlay(oldovl ? 0 : 1);
