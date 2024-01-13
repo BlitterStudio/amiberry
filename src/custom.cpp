@@ -2815,7 +2815,7 @@ static void fetch_strobe_conflict(int nr, int fm, int hpos, bool addmodulo)
 	}
 
 	// decide sprites before sprite offset change
-	decide_sprites(hpos + 1);
+	decide_sprites(hpos + 1, true, false);
 
 	hstrobe_conflict = true;
 
@@ -5740,7 +5740,7 @@ static void decide_sprites2(int start, int end, int *countp, int *nrs, int *posn
 	int count = *countp;
 	int sscanmask = 0x100 << sprite_buffer_res;
 
-	if (nodraw() || nr_armed == 0) {
+	if (nodraw()) {
 		return;
 	}
 
@@ -5821,7 +5821,6 @@ static void decide_sprites(int hpos, bool quick, bool halfcycle = false)
 	if (!quick) {
 		decide_hdiw(hpos);
 		decide_line(hpos);
-		calcsprite();
 	}
 
 	if (last_sprite_hpos < (HARDWIRED_DMA_TRIGGER_HPOS << 1) && hp >= (HARDWIRED_DMA_TRIGGER_HPOS << 1)) {
@@ -5835,27 +5834,37 @@ static void decide_sprites(int hpos, bool quick, bool halfcycle = false)
 	if (last_sprite_hpos_reset > 0 && c >= last_sprite_hpos_reset && !line_equ_freerun && !hstrobe_conflict) {
 		// strobe crossed?
 		last_sprite_point += last_sprite_hpos_reset + 0;
-		decide_sprites2(start, last_sprite_point, &count, nrs, posns);
+		if (nr_armed) {
+			decide_sprites2(start, last_sprite_point, &count, nrs, posns);
+		}
 		last_sprite_point_abs += last_sprite_point - start;
 		last_sprite_point = 2;
 		start = last_sprite_point;
 		last_sprite_point += c - last_sprite_hpos_reset;
-		decide_sprites2(start, last_sprite_point, &count, nrs, posns);
+		if (nr_armed) {
+			decide_sprites2(start, last_sprite_point, &count, nrs, posns);
+		}
 		last_sprite_point_abs += last_sprite_point - start;
 		last_sprite_hpos_reset = -1;
 	} else {
 		last_sprite_point += c;
 		// wrap around?
 		if (last_sprite_point >= max) {
-			decide_sprites2(start, max, &count, nrs, posns);
+			if (nr_armed) {
+				decide_sprites2(start, max, &count, nrs, posns);
+			}
 			last_sprite_point_abs += max - start;
 			last_sprite_point &= max - 1;
 			if (last_sprite_point > 0) {
-				decide_sprites2(0, last_sprite_point, &count, nrs, posns);
+				if (nr_armed) {
+					decide_sprites2(0, last_sprite_point, &count, nrs, posns);
+				}
 				last_sprite_point_abs += last_sprite_point - 0;
 			}
 		} else {
-			decide_sprites2(start, last_sprite_point, &count, nrs, posns);
+			if (nr_armed) {
+				decide_sprites2(start, last_sprite_point, &count, nrs, posns);
+			}
 			last_sprite_point_abs += last_sprite_point - start;
 		}
 		if (last_sprite_hpos_reset >= 0) {
@@ -5864,56 +5873,59 @@ static void decide_sprites(int hpos, bool quick, bool halfcycle = false)
 	}
 	last_sprite_hpos = hp;
 
+	if (count > 0) {
+		calcsprite();
 
-	for (int i = 0; i < count; i++) {
-		int nr = nrs[i] & (MAX_SPRITES - 1);
-		struct sprite *s = &spr[nr];
+		for (int i = 0; i < count; i++) {
+			int nr = nrs[i] & (MAX_SPRITES - 1);
+			struct sprite* s = &spr[nr];
 
-		// ECS Denise weird behavior in shres
-		if (s->ecs_denise_hires && !(bplcon0d & 0x40)) {
-			s->data[0] &= 0x7fff;
-			s->datb[0] &= 0x7fff;
-		}
+			// ECS Denise weird behavior in shres
+			if (s->ecs_denise_hires && !(bplcon0d & 0x40)) {
+				s->data[0] &= 0x7fff;
+				s->datb[0] &= 0x7fff;
+			}
 
-		record_sprite(nr, posns[i], s->data, s->datb, s->ctl);
+			record_sprite(nr, posns[i], s->data, s->datb, s->ctl);
 
-		/* get left and right sprite edge if brdsprt enabled */
+			/* get left and right sprite edge if brdsprt enabled */
 #if AUTOSCALE_SPRITES
-		if (dmaen(DMA_SPRITE) && brdspractive() && !(bplcon3 & 0x20) && nr > 0) {
-			int j, jj;
-			for (j = 0, jj = 0; j < sprite_width; j += 16, jj++) {
-				int nx = fromspritexdiw(posns[i] + j);
-				if (s->data[jj] || s->datb[jj]) {
-					if (diwfirstword_total > nx && nx >= (48 << currprefs.gfx_resolution)) {
-						diwfirstword_total = nx;
-					}
-					if (diwlastword_total < nx + 16 && nx <= (448 << currprefs.gfx_resolution)) {
-						diwlastword_total = nx + 16;
+			if (dmaen(DMA_SPRITE) && brdspractive() && !(bplcon3 & 0x20) && nr > 0) {
+				int j, jj;
+				for (j = 0, jj = 0; j < sprite_width; j += 16, jj++) {
+					int nx = fromspritexdiw(posns[i] + j);
+					if (s->data[jj] || s->datb[jj]) {
+						if (diwfirstword_total > nx && nx >= (48 << currprefs.gfx_resolution)) {
+							diwfirstword_total = nx;
+						}
+						if (diwlastword_total < nx + 16 && nx <= (448 << currprefs.gfx_resolution)) {
+							diwlastword_total = nx + 16;
+						}
 					}
 				}
+				gotdata = 1;
 			}
-			gotdata = 1;
-		}
 #endif
-	}
+		}
 
 #if AUTOSCALE_SPRITES
-	/* get upper and lower sprite position if brdsprt enabled */
-	if (gotdata) {
-		if (vpos < first_planes_vpos) {
-			first_planes_vpos = vpos;
+		/* get upper and lower sprite position if brdsprt enabled */
+		if (gotdata) {
+			if (vpos < first_planes_vpos) {
+				first_planes_vpos = vpos;
+			}
+			if (vpos < plffirstline_total) {
+				plffirstline_total = vpos;
+			}
+			if (vpos > last_planes_vpos) {
+				last_planes_vpos = vpos;
+			}
+			if (vpos > plflastline_total) {
+				plflastline_total = vpos;
+			}
 		}
-		if (vpos < plffirstline_total) {
-			plffirstline_total = vpos;
-		}
-		if (vpos > last_planes_vpos) {
-			last_planes_vpos = vpos;
-		}
-		if (vpos > plflastline_total) {
-			plflastline_total = vpos;
-		}
-	}
 #endif
+	}
 }
 
 static void decide_sprites(int hpos)
