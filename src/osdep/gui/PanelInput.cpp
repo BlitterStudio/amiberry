@@ -15,9 +15,9 @@ static int retroarch_kb = 0;
 static int joysticks = 0;
 static int mice = 0;
 
-static const int mousespeed_values[] = { 50, 75, 100, 125, 150 };
+static const int mousespeed_values[] = { 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 75, 100, 125, 150 };
 static const int digital_joymousespeed_values[] = { 2, 5, 10, 15, 20 };
-static const int analog_joymousespeed_values[] = { 50, 75, 100, 125, 150 };
+static const int analog_joymousespeed_values[] = { 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 75, 100, 125, 150 };
 
 static gcn::Label* lblPort0;
 static gcn::DropDown* cboPort0;
@@ -444,7 +444,7 @@ void InitPanelInput(const config_category& category)
 	lblAnalogJoyMouseSpeed = new gcn::Label("Analog joy-mouse speed:");
 	lblAnalogJoyMouseSpeed->setAlignment(gcn::Graphics::RIGHT);
 	lblAnalogJoyMouseSpeedInfo = new gcn::Label("100");
-	sldAnalogJoyMouseSpeed = new gcn::Slider(0, 4);
+	sldAnalogJoyMouseSpeed = new gcn::Slider(0, 13);
 	sldAnalogJoyMouseSpeed->setSize(100, SLIDER_HEIGHT);
 	sldAnalogJoyMouseSpeed->setBaseColor(gui_baseCol);
 	sldAnalogJoyMouseSpeed->setMarkerLength(20);
@@ -455,7 +455,7 @@ void InitPanelInput(const config_category& category)
 	lblMouseSpeed = new gcn::Label("Mouse speed:");
 	lblMouseSpeed->setAlignment(gcn::Graphics::RIGHT);
 	lblMouseSpeedInfo = new gcn::Label("100");
-	sldMouseSpeed = new gcn::Slider(0, 4);
+	sldMouseSpeed = new gcn::Slider(0, 13);
 	sldMouseSpeed->setSize(100, SLIDER_HEIGHT);
 	sldMouseSpeed->setBaseColor(gui_baseCol);
 	sldMouseSpeed->setMarkerLength(20);
@@ -701,7 +701,7 @@ void RefreshPanelInput()
 		}
 	}
 
-	for (auto i = 0; i < 5; ++i)
+	for (auto i = 0; i < 14; ++i)
 	{
 		if (changed_prefs.input_joymouse_multiplier == analog_joymousespeed_values[i])
 		{
@@ -711,7 +711,7 @@ void RefreshPanelInput()
 		}
 	}
 
-	for (auto i = 0; i < 5; ++i)
+	for (auto i = 0; i < 14; ++i)
 	{
 		if (changed_prefs.input_mouse_speed == mousespeed_values[i])
 		{
