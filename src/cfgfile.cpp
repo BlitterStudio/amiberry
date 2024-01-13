@@ -576,7 +576,7 @@ static TCHAR *cfgfile_escape (const TCHAR *s, const TCHAR *escstr, bool quote, b
 		TCHAR c = s[i];
 		if (c == 0)
 			break;
-		if ((c == '\\' && !min) || c == '\"' || c == '\'') {
+		if ((c == '\\' && !min) || c == '\"' || (c == '\'' && !min)) {
 			*p++ = '\\';
 			*p++ = c;
 		} else if (c >= 32 && !quote) {
