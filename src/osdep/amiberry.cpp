@@ -615,6 +615,8 @@ void target_inputdevice_acquire(void)
 
 static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpause)
 {
+	int lastmouseactive = mouseactive;
+
 	if (active == 0)
 		releasecapture(mon);
 	if (mouseactive == active && active >= 0)
@@ -659,7 +661,9 @@ static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpaus
 			}
 			setcursor(mon, -30000, -30000);
 		}
-		wait_keyrelease();
+		if (lastmouseactive != mouseactive) {
+			wait_keyrelease();
+		}
 		inputdevice_acquire(TRUE);
 		setpriority(currprefs.active_capture_priority);
 		if (currprefs.active_nocapture_pause)
