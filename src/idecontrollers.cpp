@@ -34,6 +34,7 @@
 #define DEBUG_IDE 0
 #define DEBUG_IDE_MASK 0xf800
 #define DEBUG_IDE_MASK_VAL 0x0800
+
 #define DEBUG_IDE_GVP 0
 #define DEBUG_IDE_ALF 0
 #define DEBUG_IDE_APOLLO 0
@@ -265,15 +266,18 @@ static void idecontroller_rethink(void)
 {
 	bool irq = false;
 	for (int i = 0; ide_boards[i]; i++) {
-//		if (ide_boards[i] == x86_at_ide_board[0] || ide_boards[i] == x86_at_ide_board[1]) {
-//			bool x86irq = ide_rethink(ide_boards[i], true);
-//			if (x86irq && ide_boards[i] == x86_at_ide_board[0]) {
-//				x86_doirq(14);
-//			}
-//		} else {
+#ifdef WITH_X86
+		if (ide_boards[i] == x86_at_ide_board[0] || ide_boards[i] == x86_at_ide_board[1]) {
+			bool x86irq = ide_rethink(ide_boards[i], true);
+			if (x86irq && ide_boards[i] == x86_at_ide_board[0]) {
+				x86_doirq(14);
+			}
+		} else
+#endif
+		{
 			if (ide_rethink(ide_boards[i], false))
 				safe_interrupt_set(IRQ_SOURCE_IDE, i, ide_boards[i]->intlev6);
-//		}
+		}
 	}
 }
 
@@ -665,401 +669,409 @@ static uae_u32 ide_read_byte2(struct ide_board *board, uaecptr addr)
 	if (addr < 0x40 && !board->flashenabled && (!board->configured || board->keepautoconfig))
 		return board->acmemory[addr];
 
-//	if (board->type == BUDDHA_IDE) {
-//
-//		int portnum;
-//		int flashoffset = -1;
-//		bool p1 = (board->aci->rc->device_settings & 3) == 1;
-//		int regnum = get_buddha_reg(addr, board, &portnum, &flashoffset);
-//		if (flashoffset >= 0) {
-//			v = flash_read(board->flashrom, flashoffset);
-//		} else if (regnum >= 0) {
-//			if (board->ide[portnum])
-//				v = get_ide_reg_multi(board, regnum, portnum, 1);
-//		} else if (addr >= 0xf00 && addr < 0x1000) {
-//			if ((addr & ~3) == 0xf00) {
-//				v = ide_irq_check(board->ide[0], false) ? 0x80 : 0x00;
-//			} else if ((addr & ~3) == 0xf40) {
-//				v = ide_irq_check(board->ide[1], false) ? 0x80 : 0x00;
-//			} else if ((addr & ~3) == 0xf80 && !p1) {
-//				v = ide_irq_check(board->ide[2], false) ? 0x80 : 0x00;
-//			} else {
-//				v = 0;
-//			}
-//		if (p1) {
-//			if (addr == 0xf42 && board->hardreset) {
-//				v |= 0x80;
-//			}
-//			if (addr & 2) {
-//				v |= 1 << 5;
-//			}
-//		}
-//		} else if (addr >= 0x7fc && addr <= 0x7ff) {
-//			v = board->userdata;
-//		} else {
-//			int offset = (addr >> 1) & board->rom_mask;
-//			if (p1 && (board->userdata & 0x100)) {
-//				offset += 0x8000;
-//			}
-//			v = board->rom[offset];
-//		}
-//
-//	} else if (board->type == ALF_IDE || board->type == TANDEM_IDE) {
-//
-//		if (addr < 0x1100 || (addr & 1)) {
-//			if (board->rom)
-//				v = board->rom[addr & board->rom_mask];
-//			return v;
-//		}
-//		int regnum = get_alf_reg(addr, board);
-//		if (regnum >= 0) {
-//			v = get_ide_reg(board, regnum);
-//		}
-//#if DEBUG_IDE_ALF
-//		write_log(_T("ALF GET %08x %02x %d %08x\n"), addr, v, regnum, M68K_GETPC);
-//#endif
-//
-//	} else if (board->type == GOLEMFAST_IDE) {
-//
-//		if (!(addr & 0x8000)) {
-//			if (board->rom) {
-//				v = board->rom[addr & board->rom_mask];
-//			}
-//		} else if ((addr & 0x8700) == 0x8400 || (addr & 0x8700) == 0x8000) {
-//			v = golemfast_ncr9x_scsi_get(oaddr, getidenum(board, golemfast_board));
-//		} else if ((addr & 0x8700) == 0x8100) {
-//			int regnum = get_golemfast_reg(addr, board);
-//			if (regnum >= 0) {
-//				v = get_ide_reg(board, regnum);
-//			}
-//		} else if ((addr & 0x8700) == 0x8300) {
-//			v = board->original_rc->device_id ^ 7;
-//			if (!board->original_rc->autoboot_disabled)
-//				v |= 0x20;
-//			if (!(board->original_rc->device_settings & 1))
-//				v |= 0x08;
-//			if (ide_irq_check(board->ide[0], false) || ide_drq_check(board->ide[0]))
-//				v |= 0x80; // IDE IRQ | DRQ
-//			//write_log(_T("READ JUMPER %08x %02x %08x\n"), addr, v, M68K_GETPC);
-//		}
-//
-//	} else if (board->type == MASOBOSHI_IDE) {
-//		int regnum = -1;
-//		bool rom = false;
-//		if (addr >= MASOBOSHI_ROM_OFFSET && addr < MASOBOSHI_ROM_OFFSET_END) {
-//			if (board->rom) {
-//				v = board->rom[addr & board->rom_mask];
-//				rom = true;
-//			}
-//		} else if ((addr >= 0xf000 && addr <= 0xf00f) || (addr >= 0xf100 && addr <= 0xf10f)) {
-//			// scsi dma controller
-//			if (board->subtype)
-//				v = masoboshi_ncr9x_scsi_get(oaddr, getidenum(board, masoboshi_board));
-//		} else if (addr == 0xf040) {
-//			v = 1;
-//			if (ide_irq_check(board->ide[0], false)) {
-//				v |= 2;
-//				board->irq = true;
-//			}
-//			if (board->irq) {
-//				v &= ~1;
-//			}
-//			v |= board->state2[0] & 0x80;
-//		} else if (addr == 0xf047) {
-//			v = board->state;
-//		} else {
-//			regnum = get_masoboshi_reg(addr, board);
-//			if (regnum >= 0) {
-//				v = get_ide_reg(board, regnum);
-//			} else if (addr >= MASOBOSHI_SCSI_OFFSET && addr < MASOBOSHI_SCSI_OFFSET_END) {
-//				if (board->subtype)
-//					v = masoboshi_ncr9x_scsi_get(oaddr, getidenum(board, masoboshi_board));
-//				else
-//					v = 0xff;
-//			}
-//		}
-//#if DEBUG_IDE_MASOBOSHI
-//		if (!rom)
-//			write_log(_T("MASOBOSHI BYTE GET %08x %02x %d %08x\n"), addr, v, regnum, M68K_GETPC);
-//#endif
-//
-//	} else if (board->type == TRIFECTA_IDE) {
-//
-//		if (addr & 1) {
-//			int regnum = get_trifecta_reg(addr, board);
-//			if (regnum >= 0) {
-//				v = get_ide_reg(board, regnum);
-//			}
-//		}
-//		if (addr >= TRIFECTA_SCSI_OFFSET && addr < TRIFECTA_SCSI_OFFSET_END) {
-//			if (board->subtype)
-//				v = trifecta_ncr9x_scsi_get(oaddr, getidenum(board, trifecta_board));
-//			else
-//				v = 0xff;
-//		}
-//		if (addr == 0x401) {
-//			if (board->subtype) {
-//				// LX (SCSI+IDE)
-//				v = (board->aci->rc->device_id ^ 7) & 7; // inverted SCSI ID
-//			} else {
-//				// EC (IDE)
-//				v = 0;
-//			}
-//			v |= (board->aci->rc->device_settings ^ 0xfc) << 3;
-//		} else if (addr >= 0x1000) {
-//			if (board->rom)
-//				v = board->rom[addr & board->rom_mask];
-//		}
-//		//write_log(_T("trifecta get %08x %08x\n"), addr, M68K_GETPC);
-//
-//
-//	} else if (board->type == APOLLO_IDE) {
-//
-//		if (addr >= APOLLO_ROM_OFFSET) {
-//			if (board->rom)
-//				v = board->rom[(addr - APOLLO_ROM_OFFSET) & board->rom_mask];
-//		} else if (board->configured) {
-//			if ((addr & 0xc000) == 0x4000) {
-//				v = apollo_scsi_bget(oaddr, board->userdata);
-//			} else if (addr < 0x4000) {
-//				int regnum = get_apollo_reg(addr, board);
-//				if (regnum >= 0) {
-//					v = get_ide_reg(board, regnum);
-//				} else {
-//					v = 0;
-//				}
-//			}
-//		}
-//
-//	} else if (board->type == GVP_IDE) {
-//
-//		if (addr >= GVP_IDE_ROM_OFFSET) {
-//			if (board->rom) {
-//				if (addr & 1)
-//					v = 0xe8; // board id
-//				else
-//					v = board->rom[((addr - GVP_IDE_ROM_OFFSET) / 2) & board->rom_mask];
-//				return v;
-//			}
-//			v = 0xe8;
-//#if DEBUG_IDE_GVP
-//			write_log(_T("GVP BOOT GET %08x %02x %08x\n"), addr, v, M68K_GETPC);
-//#endif
-//			return v;
-//		}
-//		if (board->configured) {
-//			if (board == gvp_ide_rom_board && ISCPUBOARD(BOARD_GVP, BOARD_GVP_SUB_A3001SII)) {
-//				if (addr == 0x42) {
-//					v = 0xff;
-//				}
-//#if DEBUG_IDE_GVP
-//				write_log(_T("GVP BOOT GET %08x %02x %08x\n"), addr, v, M68K_GETPC);
-//#endif
-//			} else {
-//				int regnum = get_gvp_reg(addr, board);
-//#if DEBUG_IDE_GVP
-//				write_log(_T("GVP IDE GET %08x %02x %d %08x\n"), addr, v, regnum, M68K_GETPC);
-//#endif
-//				if (regnum >= 0) {
-//					v = get_ide_reg(board, regnum);
-//				} else if (is_gvp2_intreq(addr)) {
-//					v = board->irq ? 0x40 : 0x00;
-//#if DEBUG_IDE_GVP
-//					write_log(_T("GVP IRQ %02x\n"), v);
-//#endif
-//					ide_interrupt_check(board, false);
-//				} else if (is_gvp1_intreq(addr)) {
-//					v = board->irq ? 0x80 : 0x00;
-//#if DEBUG_IDE_GVP
-//					write_log(_T("GVP IRQ %02x\n"), v);
-//#endif
-//					ide_interrupt_check(board, false);
-//				}
-//			}
-//		} else {
-//			v = 0xff;
-//		}
-//
-//	} else if (board->type == ADIDE_IDE) {
-//
-//		if (addr & ADIDE_ROM_OFFSET) {
-//			v = board->rom[addr & board->rom_mask];
-//		} else if (board->configured) {
-//			int regnum = get_adide_reg(addr, board);
-//			v = get_ide_reg(board, regnum);
-//			v = (uae_u8)adide_decode_word(v);
-//		}
-//
-//	} else if (board->type == MTEC_IDE) {
-//
-//		if (!(addr & 0x8000)) {
-//			v = board->rom[addr & board->rom_mask];
-//		} else if (board->configured) {
-//			v = get_ide_reg(board, (addr >> 8) & 7);
-//		}
-//
-//	} else if (board->type == PROTAR_IDE) {
-//
-//		v = board->rom[addr & board->rom_mask];
-//
-//	} else if (board->type == DATAFLYERPLUS_IDE) {
-//
-//		v = board->rom[addr & board->rom_mask];
-//		if (board->configured) {
-//			if (addr == 0x10) {
-//				if (board->subtype & 2) {
-//					v = ide_irq_check(board->ide[0], false) ? 0x08 : 0x00;
-//				}
-//			} else if (addr < 0x80) {
-//				if (board->subtype & 1) {
-//					v = idescsi_scsi_get(oaddr);
-//				} else {
-//					v = 0xff;
-//				}
-//			}
-//		}
-//		if ((addr & 0x8000) && (board->subtype & 2)) {
-//			int regnum = get_dataflyerplus_reg(addr, board);
-//			if (regnum >= 0)
-//				v = get_ide_reg(board, regnum);
-//		}
-//
-//	} else if (board->type == ROCHARD_IDE) {
-//
-//		if (addr & 0x8000) {
-//			int portnum;
-//			int regnum = get_rochard_reg(addr, board, &portnum);
-//			if (regnum >= 0 && board->ide[portnum])
-//				v = get_ide_reg_multi(board, regnum, portnum, 1);
-//		} else if ((addr & 0x7c00) == 0x7000) {
-//			if (board->subtype)
-//				v = idescsi_scsi_get(oaddr);
-//			else
-//				v = 0;
-//		} else {
-//			v = board->rom[addr & board->rom_mask];
-//		}
-//
-//	} else if (board->type == ATEAM_IDE) {
-//
-//		if (addr == 1) {
-//			v = ide_irq_check(board->ide[0], false) ? 0x00 : 0x80;
-//		} else {
-//			int reg = get_ateam_reg(addr, board);
-//			if (reg >= 0) {
-//				v = get_ide_reg(board, reg);
-//			} else {
-//				v = board->rom[addr & board->rom_mask];
-//			}
-//		}
-//
-//	} else if (board->type == ARRIBA_IDE) {
-//
-//		int reg = get_arriba_reg(addr, board);
-//		if (reg >= 0) {
-//			v = get_ide_reg(board, reg);
-//		} else if (board->rom && !(addr & 0x8000)) {
-//			int offset = addr & 0x7fff;
-//			v = board->rom[offset];
-//		}
-//
-//	} else if (board->type == ELSATHD_IDE) {
-//
-//		int reg = get_elsathd_reg(addr, board);
-//		if (reg >= 0) {
-//			v = get_ide_reg(board, reg);
-//		} else if (board->rom && !(addr & 0x8000)) {
-//			int offset = addr & 0x7fff;
-//			v = board->rom[offset];
-//		}
-//
-//	} else if (board->type == FASTATA4K_IDE) {
-//
-//		int portnum;
-//		int reg = get_fastata4k_reg(addr, board, &portnum);
-//		if (reg >= 0) {
-//			if (board->ide[portnum])
-//				v = get_ide_reg_multi(board, reg, portnum, 1);
-//		} else if (reg == -2) {
-//			v = ide_irq_check(board->ide[0], false) ? 1 << 6 : 0;
-//			if (board->ide[1])
-//				v |= ide_irq_check(board->ide[1], false) ? 1 << 5 : 0;
-//			if (v)
-//				v |= 1 << 7;
-//		} else {
-//			if (board->rom && addr >= 0x0200) {
-//				int offset = addr - 0x200;
-//				offset &= board->rom_mask;
-//				v = board->rom[(offset + 0) & board->rom_mask];
-//			}
-//		}
-//
-//	} else if (board->type == ACCESSX_IDE) {
-//
-//		int portnum;
-//		int reg = get_accessx_reg(addr, board, &portnum);
-//		if (reg >= 0) {
-//			if (board->ide[portnum])
-//				v = get_ide_reg_multi(board, reg, portnum, 1);
-//		} else if (board->rom && !(addr & 0x8000)) {
-//			int offset = addr & 0x7fff;
-//			v = board->rom[offset];
-//		}
-//
-//	} else if (board->type == IVST500AT_IDE) {
-//
-//		int portnum;
-//		int reg = get_ivst500at_reg(addr, board, &portnum);
-//		if (reg >= 0) {
-//			if (board->ide[portnum])
-//				v = get_ide_reg_multi(board, reg, portnum, 1);
-//		} else if (board->rom && (addr & 0x8000)) {
-//			int offset = addr & 0x7fff;
-//			v = board->rom[offset];
-//		} else if ((addr & 0x4000) && (addr & 1)) {
-//			v = ide_irq_check(board->ide[0], false) ? 1 : 0;
-//		}
-//
-//	} else if (board->type == DOTTO_IDE) {
-//
-//		int offset = addr;
-//		v = board->rom[offset];
-//		if (board->configured) {
-//			int regnum = get_adide_reg(addr, board);
-//			if (regnum >= 0) {
-//				v = get_ide_reg(board, regnum);
-//				v = (uae_u8)adide_decode_word(v);
-//			}
-//		}
-//
-//	} else if (board->type == DEV_IDE) {
-//
-//		if (addr == 0x88) {
-//			v = 0xff;
-//		} else if (addr == 0x86 || addr == 0x90 || addr == 0x92 || addr == 0x94 || addr == 0x96) {
-//			if (addr == 0x86) {
-//				board->dma_ptr = 0x80;
-//				board->dma_cnt = 1;
-//			}
-//			v = board->rom[board->dma_ptr * 2 + 0x8000];
-//			board->dma_ptr++;
-//			if (board->dma_cnt == 1) {
-//				uae_u8 v2 = board->rom[board->dma_ptr * 2 + 0x8000];
-//				board->dma_ptr++;
-//				if (v != (v2 ^ 0xff)) {
-//					write_log("error!\n");
-//				}
-//				board->dma_cnt = 0;
-//			}
-//		} else {
-//			int reg = get_dev_hd_reg(addr, board);
-//			if (reg >= 0) {
-//				v = get_ide_reg(board, reg);
-//			} else {
-//				v = board->rom[addr];
-//			}
-//		}
-//	}
+	if (board->type == BUDDHA_IDE) {
+
+		int portnum;
+		int flashoffset = -1;
+		bool p1 = (board->aci->rc->device_settings & 3) == 1;
+		int regnum = get_buddha_reg(addr, board, &portnum, &flashoffset);
+		if (flashoffset >= 0) {
+			v = flash_read(board->flashrom, flashoffset);
+		} else if (regnum >= 0) {
+			if (board->ide[portnum])
+				v = get_ide_reg_multi(board, regnum, portnum, 1);
+		} else if (addr >= 0xf00 && addr < 0x1000) {
+			if ((addr & ~3) == 0xf00) {
+				v = ide_irq_check(board->ide[0], false) ? 0x80 : 0x00;
+			} else if ((addr & ~3) == 0xf40) {
+				v = ide_irq_check(board->ide[1], false) ? 0x80 : 0x00;
+			} else if ((addr & ~3) == 0xf80 && !p1) {
+				v = ide_irq_check(board->ide[2], false) ? 0x80 : 0x00;
+			} else {
+				v = 0;
+			}
+			if (p1) {
+				if (addr == 0xf42 && board->hardreset) {
+					v |= 0x80;
+				}
+				if (addr & 2) {
+					v |= 1 << 5;
+				}
+			}
+		} else if (addr >= 0x7fc && addr <= 0x7ff) {
+			v = board->userdata;
+		} else if (!(addr & 1)) {
+			int offset = (addr >> 1) & board->rom_mask;
+			if (p1 && (board->userdata & 0x100)) {
+				offset += 0x8000;
+			}
+			v = board->rom[offset];
+		}
+
+	} else if (board->type == ALF_IDE || board->type == TANDEM_IDE) {
+
+		if (addr < 0x1100 || (addr & 1)) {
+			if (board->rom)
+				v = board->rom[addr & board->rom_mask];
+			return v;
+		}
+		int regnum = get_alf_reg(addr, board);
+		if (regnum >= 0) {
+			v = get_ide_reg(board, regnum);
+		}
+#if DEBUG_IDE_ALF
+		write_log(_T("ALF GET %08x %02x %d %08x\n"), addr, v, regnum, M68K_GETPC);
+#endif
+
+	} else if (board->type == GOLEMFAST_IDE) {
+
+		if (!(addr & 0x8000)) {
+			if (board->rom) {
+				v = board->rom[addr & board->rom_mask];
+			}
+		} else if ((addr & 0x8700) == 0x8400 || (addr & 0x8700) == 0x8000) {
+#ifdef NCR9X
+			v = golemfast_ncr9x_scsi_get(oaddr, getidenum(board, golemfast_board));
+#endif
+		} else if ((addr & 0x8700) == 0x8100) {
+			int regnum = get_golemfast_reg(addr, board);
+			if (regnum >= 0) {
+				v = get_ide_reg(board, regnum);
+			}
+		} else if ((addr & 0x8700) == 0x8300) {
+			v = board->original_rc->device_id ^ 7;
+			if (!board->original_rc->autoboot_disabled)
+				v |= 0x20;
+			if (!(board->original_rc->device_settings & 1))
+				v |= 0x08;
+			if (ide_irq_check(board->ide[0], false) || ide_drq_check(board->ide[0]))
+				v |= 0x80; // IDE IRQ | DRQ
+			//write_log(_T("READ JUMPER %08x %02x %08x\n"), addr, v, M68K_GETPC);
+		}
+		
+	} else if (board->type == MASOBOSHI_IDE) {
+		int regnum = -1;
+		bool rom = false;
+		if (addr >= MASOBOSHI_ROM_OFFSET && addr < MASOBOSHI_ROM_OFFSET_END) {
+			if (board->rom) {
+				v = board->rom[addr & board->rom_mask];
+				rom = true;
+			}
+		} else if ((addr >= 0xf000 && addr <= 0xf00f) || (addr >= 0xf100 && addr <= 0xf10f)) {
+			// scsi dma controller
+#ifdef NCR9X
+			if (board->subtype)
+				v = masoboshi_ncr9x_scsi_get(oaddr, getidenum(board, masoboshi_board));
+#endif
+		} else if (addr == 0xf040) {
+			v = 1;
+			if (ide_irq_check(board->ide[0], false)) {
+				v |= 2;
+				board->irq = true;
+			}
+			if (board->irq) {
+				v &= ~1;
+			}
+			v |= board->state2[0] & 0x80;
+		} else if (addr == 0xf047) {
+			v = board->state;
+		} else {
+			regnum = get_masoboshi_reg(addr, board);
+			if (regnum >= 0) {
+				v = get_ide_reg(board, regnum);
+			} else if (addr >= MASOBOSHI_SCSI_OFFSET && addr < MASOBOSHI_SCSI_OFFSET_END) {
+#ifdef NCR9X
+				if (board->subtype)
+					v = masoboshi_ncr9x_scsi_get(oaddr, getidenum(board, masoboshi_board));
+				else
+#endif
+					v = 0xff;
+			}
+		}
+#if DEBUG_IDE_MASOBOSHI
+		if (!rom)
+			write_log(_T("MASOBOSHI BYTE GET %08x %02x %d %08x\n"), addr, v, regnum, M68K_GETPC);
+#endif
+
+	} else if (board->type == TRIFECTA_IDE) {
+
+		if (addr & 1) {
+			int regnum = get_trifecta_reg(addr, board);
+			if (regnum >= 0) {
+				v = get_ide_reg(board, regnum);
+			}
+		}
+		if (addr >= TRIFECTA_SCSI_OFFSET && addr < TRIFECTA_SCSI_OFFSET_END) {
+#ifdef NCR9X
+			if (board->subtype)
+				v = trifecta_ncr9x_scsi_get(oaddr, getidenum(board, trifecta_board));
+			else
+#endif
+				v = 0xff;
+		}
+		if (addr == 0x401) {
+			if (board->subtype) {
+				// LX (SCSI+IDE)
+				v = (board->aci->rc->device_id ^ 7) & 7; // inverted SCSI ID
+			} else {
+				// EC (IDE)
+				v = 0;
+			}
+			v |= (board->aci->rc->device_settings ^ 0xfc) << 3;
+		} else if (addr >= 0x1000) {
+			if (board->rom)
+				v = board->rom[addr & board->rom_mask];
+		}
+		//write_log(_T("trifecta get %08x %08x\n"), addr, M68K_GETPC);
+
+
+	} else if (board->type == APOLLO_IDE) {
+
+		if (addr >= APOLLO_ROM_OFFSET) {
+			if (board->rom)
+				v = board->rom[(addr - APOLLO_ROM_OFFSET) & board->rom_mask];
+		} else if (board->configured) {
+			if ((addr & 0xc000) == 0x4000) {
+				v = apollo_scsi_bget(oaddr, board->userdata);
+			} else if (addr < 0x4000) {
+				int regnum = get_apollo_reg(addr, board);
+				if (regnum >= 0) {
+					v = get_ide_reg(board, regnum);
+				} else {
+					v = 0;
+				}
+			}
+		}
+
+	} else if (board->type == GVP_IDE) {
+
+		if (addr >= GVP_IDE_ROM_OFFSET) {
+			if (board->rom) {
+				if (addr & 1)
+					v = 0xe8; // board id
+				else 
+					v = board->rom[((addr - GVP_IDE_ROM_OFFSET) / 2) & board->rom_mask];
+				return v;
+			}
+			v = 0xe8;
+#if DEBUG_IDE_GVP
+			write_log(_T("GVP BOOT GET %08x %02x %08x\n"), addr, v, M68K_GETPC);
+#endif
+			return v;
+		}
+		if (board->configured) {
+			if (board == gvp_ide_rom_board && ISCPUBOARD(BOARD_GVP, BOARD_GVP_SUB_A3001SII)) {
+				if (addr == 0x42) {
+					v = 0xff;
+				}
+#if DEBUG_IDE_GVP
+				write_log(_T("GVP BOOT GET %08x %02x %08x\n"), addr, v, M68K_GETPC);
+#endif
+			} else {
+				int regnum = get_gvp_reg(addr, board);
+#if DEBUG_IDE_GVP
+				write_log(_T("GVP IDE GET %08x %02x %d %08x\n"), addr, v, regnum, M68K_GETPC);
+#endif
+				if (regnum >= 0) {
+					v = get_ide_reg(board, regnum);
+				} else if (is_gvp2_intreq(addr)) {
+					v = board->irq ? 0x40 : 0x00;
+#if DEBUG_IDE_GVP
+					write_log(_T("GVP IRQ %02x\n"), v);
+#endif
+					ide_interrupt_check(board, false);
+				} else if (is_gvp1_intreq(addr)) {
+					v = board->irq ? 0x80 : 0x00;
+#if DEBUG_IDE_GVP
+					write_log(_T("GVP IRQ %02x\n"), v);
+#endif
+					ide_interrupt_check(board, false);
+				}
+			}
+		} else {
+			v = 0xff;
+		}
+
+	} else if (board->type == ADIDE_IDE) {
+
+		if (addr & ADIDE_ROM_OFFSET) {
+			v = board->rom[addr & board->rom_mask];
+		} else if (board->configured) {
+			int regnum = get_adide_reg(addr, board);
+			v = get_ide_reg(board, regnum);
+			v = (uae_u8)adide_decode_word(v);
+		}
+
+	} else if (board->type == MTEC_IDE) {
+
+		if (!(addr & 0x8000)) {
+			v = board->rom[addr & board->rom_mask];
+		} else if (board->configured) {
+			v = get_ide_reg(board, (addr >> 8) & 7);
+		}
+
+	} else if (board->type == PROTAR_IDE) {
+
+		v = board->rom[addr & board->rom_mask];
+
+	} else if (board->type == DATAFLYERPLUS_IDE) {
+
+		v = board->rom[addr & board->rom_mask];
+		if (board->configured) {
+			if (addr == 0x10) {
+				if (board->subtype & 2) {
+					v = ide_irq_check(board->ide[0], false) ? 0x08 : 0x00;
+				}
+			} else if (addr < 0x80) {
+				if (board->subtype & 1) {
+					v = idescsi_scsi_get(oaddr);
+				} else {
+					v = 0xff;
+				}
+			}
+		}
+		if ((addr & 0x8000) && (board->subtype & 2)) {
+			int regnum = get_dataflyerplus_reg(addr, board);
+			if (regnum >= 0)
+				v = get_ide_reg(board, regnum);
+		}
+
+	} else if (board->type == ROCHARD_IDE) {
+
+		if (addr & 0x8000) {
+			int portnum;
+			int regnum = get_rochard_reg(addr, board, &portnum);
+			if (regnum >= 0 && board->ide[portnum])
+				v = get_ide_reg_multi(board, regnum, portnum, 1);
+		} else if ((addr & 0x7c00) == 0x7000) {
+			if (board->subtype)
+				v = idescsi_scsi_get(oaddr);
+			else
+				v = 0;
+		} else {
+			v = board->rom[addr & board->rom_mask];
+		}
+
+	} else if (board->type == ATEAM_IDE) {
+
+		if (addr == 1) {
+			v = ide_irq_check(board->ide[0], false) ? 0x00 : 0x80;
+		} else {
+			int reg = get_ateam_reg(addr, board);
+			if (reg >= 0) {
+				v = get_ide_reg(board, reg);
+			} else {
+				v = board->rom[addr & board->rom_mask];
+			}
+		}
+
+	} else if (board->type == ARRIBA_IDE) {
+
+		int reg = get_arriba_reg(addr, board);
+		if (reg >= 0) {
+			v = get_ide_reg(board, reg);
+		} else if (board->rom && !(addr & 0x8000)) {
+			int offset = addr & 0x7fff;
+			v = board->rom[offset];
+		}
+
+	} else if (board->type == ELSATHD_IDE) {
+
+		int reg = get_elsathd_reg(addr, board);
+		if (reg >= 0) {
+			v = get_ide_reg(board, reg);
+		} else if (board->rom && !(addr & 0x8000)) {
+			int offset = addr & 0x7fff;
+			v = board->rom[offset];
+		}
+
+	} else if (board->type == FASTATA4K_IDE) {
+
+		int portnum;
+		int reg = get_fastata4k_reg(addr, board, &portnum);
+		if (reg >= 0) {
+			if (board->ide[portnum])
+				v = get_ide_reg_multi(board, reg, portnum, 1);
+		} else if (reg == -2) {
+			v = ide_irq_check(board->ide[0], false) ? 1 << 6 : 0;
+			if (board->ide[1])
+				v |= ide_irq_check(board->ide[1], false) ? 1 << 5 : 0;
+			if (v)
+				v |= 1 << 7;
+		} else {
+			if (board->rom && addr >= 0x0200) {
+				int offset = addr - 0x200;
+				offset &= board->rom_mask;
+				v = board->rom[(offset + 0) & board->rom_mask];
+			}
+		}
+
+	} else if (board->type == ACCESSX_IDE) {
+
+		int portnum;
+		int reg = get_accessx_reg(addr, board, &portnum);
+		if (reg >= 0) {
+			if (board->ide[portnum])
+				v = get_ide_reg_multi(board, reg, portnum, 1);
+		} else if (board->rom && !(addr & 0x8000)) {
+			int offset = addr & 0x7fff;
+			v = board->rom[offset];
+		}
+
+	} else if (board->type == IVST500AT_IDE) {
+
+		int portnum;
+		int reg = get_ivst500at_reg(addr, board, &portnum);
+		if (reg >= 0) {
+			if (board->ide[portnum])
+				v = get_ide_reg_multi(board, reg, portnum, 1);
+		} else if (board->rom && (addr & 0x8000)) {
+			int offset = addr & 0x7fff;
+			v = board->rom[offset];
+		} else if ((addr & 0x4000) && (addr & 1)) {
+			v = ide_irq_check(board->ide[0], false) ? 1 : 0;
+		}
+
+	} else if (board->type == DOTTO_IDE) {
+
+		int offset = addr;
+		v = board->rom[offset];
+		if (board->configured) {
+			int regnum = get_adide_reg(addr, board);
+			if (regnum >= 0) {
+				v = get_ide_reg(board, regnum);
+				v = (uae_u8)adide_decode_word(v);
+			}
+		}
+
+	} else if (board->type == DEV_IDE) {
+
+		if (addr == 0x88) {
+			v = 0xff;
+		} else if (addr == 0x86 || addr == 0x90 || addr == 0x92 || addr == 0x94 || addr == 0x96) {
+			if (addr == 0x86) {
+				board->dma_ptr = 0x80;
+				board->dma_cnt = 1;
+			}
+			v = board->rom[board->dma_ptr * 2 + 0x8000];
+			board->dma_ptr++;
+			if (board->dma_cnt == 1) {
+				uae_u8 v2 = board->rom[board->dma_ptr * 2 + 0x8000];
+				board->dma_ptr++;
+				if (v != (v2 ^ 0xff)) {
+					write_log("error!\n");
+				}
+				board->dma_cnt = 0;
+			}
+		} else {
+			int reg = get_dev_hd_reg(addr, board);
+			if (reg >= 0) {
+				v = get_ide_reg(board, reg);
+			} else {
+				v = board->rom[addr];
+			}
+		}
+	}
 
 	return v;
 }
@@ -1411,17 +1423,21 @@ static void ide_write_byte(struct ide_board *board, uaecptr addr, uae_u8 v)
 				map_banks_z2(ab, v, (board->mask + 1) >> 16);
 				board->baseaddress = v << 16;
 				board->configured = 1;
-//				if (board->type == ROCHARD_IDE) {
-//					rochard_scsi_init(board->original_rc, board->baseaddress);
-//				} else if (board->type == MASOBOSHI_IDE) {
-//					ncr_masoboshi_autoconfig_init(board->original_rc, board->baseaddress);
-//				} else if (board->type == GOLEMFAST_IDE) {
-//					ncr_golemfast_autoconfig_init(board->original_rc, board->baseaddress);
-//				} else if (board->type == DATAFLYERPLUS_IDE) {
-//					dataflyerplus_scsi_init(board->original_rc, board->baseaddress);
-//				} else if (board->type == TRIFECTA_IDE) {
-//					ncr_trifecta_autoconfig_init(board->original_rc, board->baseaddress);
-//				}
+				if (board->type == ROCHARD_IDE) {
+					rochard_scsi_init(board->original_rc, board->baseaddress);
+#ifdef NCR9X
+				} else if (board->type == MASOBOSHI_IDE) {
+					ncr_masoboshi_autoconfig_init(board->original_rc, board->baseaddress);
+				} else if (board->type == GOLEMFAST_IDE) {
+					ncr_golemfast_autoconfig_init(board->original_rc, board->baseaddress);
+#endif
+				} else if (board->type == DATAFLYERPLUS_IDE) {
+					dataflyerplus_scsi_init(board->original_rc, board->baseaddress);
+#ifdef NCR9X
+				} else if (board->type == TRIFECTA_IDE) {
+					ncr_trifecta_autoconfig_init(board->original_rc, board->baseaddress);
+#endif
+				}
 				expamem_next(ab, NULL);
 			}
 			return;
@@ -1434,322 +1450,334 @@ static void ide_write_byte(struct ide_board *board, uaecptr addr, uae_u8 v)
 	}
 	if (board->configured) {
 
-//		if (board->type == BUDDHA_IDE) {
-//
-//			int portnum;
-//			int flashoffset = -1;
-//			bool p1 = (board->aci->rc->device_settings & 3) == 1;
-//			int regnum = get_buddha_reg(addr, board, &portnum, &flashoffset);
-//			if (flashoffset >= 0) {
-//				flash_write(board->flashrom, flashoffset, v);
-//			} else if (regnum >= 0) {
-//				if (board->ide[portnum]) {
-//					put_ide_reg_multi(board, regnum, v, portnum, 1);
-//				}
-//			} else if (addr >= 0xfc0 && addr < 0xfc4) {
-//				board->intena = true;
-//				if (addr == 0xfc2 && p1) {
-//					uae_u8 v2 = v & 0xf0;
-//					int cnt = (board->userdata >> 16) & 15;
-//					if (v2 == 0xa0 && cnt == 0) {
-//						cnt++;
-//					} else if (v2 == 0x50 && cnt == 1) {
-//						cnt++;
-//					} else if (v2 == 0xa0 && cnt == 2) {
-//						cnt++;
-//					} else if (v2 == 0x70 && cnt == 3) {
-//						board->userdata |= 0x100000;
-//						write_log("RAM expansion OFF\n");
-//					} else if (v2 == 0xc0 && cnt == 3) {
-//						board->userdata |= 0x200000;
-//					} else if (v2 == 0xe0 && cnt == 3) {
-//						write_log("Lockdown EEPROM\n");
-//					} else if (v2 == 0xb0 && cnt == 3) {
-//						write_log("Fast-Z2 ON\n");
-//					} else if (v2 == 0x30 && cnt == 3) {
-//						write_log("Fast-Z2 OFF\n");
-//					} else if (v2 == 0x90 && cnt == 3) {
-//						write_log("Early write ON\n");
-//					} else if (v2 == 0x80 && cnt == 3) {
-//						write_log("Early write OFF\n");
-//					} else if (v2 == 0x60 && (board->userdata & 0x100000)) {
-//						write_log("$a00000 ON\n");
-//					} else if (v2 == 0x60 && (board->userdata & 0x200000)) {
-//						write_log("$c00000 ON\n");
-//					} else if (v2 == 0xf0 && cnt == 3) {
-//						board->flashenabled = true;
-//					} else {
-//						cnt = 0;
-//					}
-//					board->userdata &= 0xfff0ffff;
-//					board->userdata |= cnt << 16;
-//				}
-//			if (addr == 0xf42 && p1 && (v & 0xf0) == 0x60) {
-//				board->hardreset = false;
-//			}
-//			} else if (addr >= 0x7fc && addr <= 0x7ff) {
-//				board->userdata &= ~0xff;
-//				board->userdata |= v;
-//			} else if (addr == 0xc3) {
-//				if (p1) {
-//					board->userdata |= 0x100;
-//				}
-//			} else if (addr == 0xc1) {
-//				board->userdata &= ~0x100;
-//			} else if (addr == 1) {
-//				board->userdata = 0;
-//				board->flashenabled = false;
-//			}
-//
-//		} else  if (board->type == ALF_IDE || board->type == TANDEM_IDE) {
-//
-//			int regnum = get_alf_reg(addr, board);
-//			if (regnum >= 0)
-//				put_ide_reg(board, regnum, v);
-//#if DEBUG_IDE_ALF
-//			write_log(_T("ALF PUT %08x %02x %d %08x\n"), addr, v, regnum, M68K_GETPC);
-//#endif
-//		} else if (board->type == GOLEMFAST_IDE) {
-//
-//			if ((addr & 0x8700) == 0x8400 || (addr & 0x8700) == 0x8000) {
-//				golemfast_ncr9x_scsi_put(oaddr, v, getidenum(board, golemfast_board));
-//			} else if ((addr & 0x8700) == 0x8100) {
-//				int regnum = get_golemfast_reg(addr, board);
-//				if (regnum >= 0)
-//					put_ide_reg(board, regnum, v);
-//			}
-//
-//		} else if (board->type == MASOBOSHI_IDE) {
-//
-//#if DEBUG_IDE_MASOBOSHI
-//			write_log(_T("MASOBOSHI IO BYTE PUT %08x %02x %08x\n"), addr, v, M68K_GETPC);
-//#endif
-//			int regnum = get_masoboshi_reg(addr, board);
-//			if (regnum >= 0) {
-//				put_ide_reg(board, regnum, v);
-//			} else if (addr >= MASOBOSHI_SCSI_OFFSET && addr < MASOBOSHI_SCSI_OFFSET_END) {
-//				if (board->subtype)
-//					masoboshi_ncr9x_scsi_put(oaddr, v, getidenum(board, masoboshi_board));
-//			} else if ((addr >= 0xf000 && addr <= 0xf007)) {
-//				if (board->subtype)
-//					masoboshi_ncr9x_scsi_put(oaddr, v, getidenum(board, masoboshi_board));
-//			} else if (addr >= 0xf00a && addr <= 0xf00f) {
-//				// scsi dma controller
-//				masoboshi_ncr9x_scsi_put(oaddr, v, getidenum(board, masoboshi_board));
-//			} else if (addr >= 0xf040 && addr <= 0xf04f) {
-//				// ide dma controller
-//				if (addr >= 0xf04c && addr < 0xf050) {
-//					int shift = (3 - (addr - 0xf04c)) * 8;
-//					uae_u32 mask = 0xff << shift;
-//					board->dma_ptr &= ~mask;
-//					board->dma_ptr |= v << shift;
-//					board->dma_ptr &= 0xffffff;
-//				} else if (addr >= 0xf04a && addr < 0xf04c) {
-//					if (addr == 0xf04a) {
-//						board->dma_cnt &= 0x00ff;
-//						board->dma_cnt |= v << 8;
-//					} else {
-//						board->dma_cnt &= 0xff00;
-//						board->dma_cnt |= v;
-//					}
-//				} else if (addr >= 0xf040 && addr < 0xf048) {
-//					board->state2[addr - 0xf040] = v;
-//					board->state2[0] &= ~0x80;
-//					if (addr == 0xf047) {
-//						board->state = v;
-//						board->intena = (v & 8) != 0;
-//						// masoboshi ide dma
-//						if (v & 0x80) {
-//							board->hsync_code = masoboshi_ide_dma;
-//							board->hsync_cnt = (board->dma_cnt / maxhpos) * 2 + 1;
-//							write_log(_T("MASOBOSHI IDE DMA %s start %08x, %d\n"), (board->state2[5] & 0x80) ? _T("READ") : _T("WRITE"), board->dma_ptr, board->dma_cnt);
-//							if (ide_drq_check(board->ide[0])) {
-//								if (!(board->state2[5] & 0x80)) {
-//									for (int i = 0; i < board->dma_cnt; i++) {
-//										put_ide_reg(board, IDE_DATA, get_word(board->dma_ptr & ~1));
-//										board->dma_ptr += 2;
-//									}
-//								} else {
-//									for (int i = 0; i < board->dma_cnt; i++) {
-//										put_word(board->dma_ptr & ~1, get_ide_reg(board, IDE_DATA));
-//										board->dma_ptr += 2;
-//									}
-//								}
-//								board->dma_cnt = 0;
-//							}
-//						}
-//					}
-//					if (addr == 0xf040) {
-//						board->state2[0] &= ~0x80;
-//						board->irq = false;
-//					}
-//				}
-//			}
-//
-//		} else if (board->type == TRIFECTA_IDE) {
-//
-//			if (addr & 1) {
-//				int regnum = get_trifecta_reg(addr, board);
-//				if (regnum >= 0) {
-//					put_ide_reg(board, regnum, v);
-//				}
-//			}
-//			if (addr >= TRIFECTA_SCSI_OFFSET && addr < TRIFECTA_SCSI_OFFSET_END) {
-//				if (board->subtype)
-//					trifecta_ncr9x_scsi_put(oaddr, v, getidenum(board, trifecta_board));
-//			}
-//			if (addr >= 0x400 && addr <= 0x407) {
-//				trifecta_ncr9x_scsi_put(oaddr, v, getidenum(board, trifecta_board));
-//			}
-//
-//		} else if (board->type == APOLLO_IDE) {
-//
-//			if ((addr & 0xc000) == 0x4000) {
-//				apollo_scsi_bput(oaddr, v, board->userdata);
-//			} else if (addr < 0x4000) {
-//				int regnum = get_apollo_reg(addr, board);
-//				if (regnum >= 0) {
-//					put_ide_reg(board, regnum, v);
-//				}
-//			}
-//
-//		} else if (board->type == GVP_IDE) {
-//
-//			if (board == gvp_ide_rom_board && ISCPUBOARD(BOARD_GVP, BOARD_GVP_SUB_A3001SII)) {
-//#if DEBUG_IDE_GVP
-//				write_log(_T("GVP BOOT PUT %08x %02x %08x\n"), addr, v, M68K_GETPC);
-//#endif
-//			} else {
-//				int regnum = get_gvp_reg(addr, board);
-//#if DEBUG_IDE_GVP
-//				write_log(_T("GVP IDE PUT %08x %02x %d %08x\n"), addr, v, regnum, M68K_GETPC);
-//#endif
-//				if (regnum >= 0)
-//					put_ide_reg(board, regnum, v);
-//			}
-//
-//		} else if (board->type == ADIDE_IDE) {
-//
-//			if (board->configured) {
-//				int regnum = get_adide_reg(addr, board);
-//				v = (uae_u8)adide_encode_word(v);
-//				put_ide_reg(board, regnum, v);
-//			}
-//
-//		} else if (board->type == MTEC_IDE) {
-//
-//			if (board->configured && (addr & 0x8000)) {
-//				put_ide_reg(board, (addr >> 8) & 7, v);
-//			}
-//
-//		} else if (board->type == DATAFLYERPLUS_IDE) {
-//
-//			if (board->configured) {
-//				if (addr & 0x8000) {
-//					if  (board->subtype & 2) {
-//						int regnum = get_dataflyerplus_reg(addr, board);
-//						if (regnum >= 0)
-//							put_ide_reg(board, regnum, v);
-//					}
-//				} else if (addr < 0x80) {
-//					if (board->subtype & 1) {
-//						idescsi_scsi_put(oaddr, v);
-//					}
-//				}
-//			}
-//
-//		} else if (board->type == ROCHARD_IDE) {
-//
-//			if (board->configured) {
-//				if (addr & 0x8000) {
-//					int portnum;
-//					int regnum = get_rochard_reg(addr, board, &portnum);
-//					if (regnum >= 0 && board->ide[portnum])
-//						put_ide_reg_multi(board, regnum, v, portnum, 1);
-//				} else if ((addr & 0x7c00) == 0x7000) {
-//					if (board->subtype)
-//						idescsi_scsi_put(oaddr, v);
-//				}
-//			}
-//
-//		} else if (board->type == ATEAM_IDE) {
-//
-//			if ((addr & 0xff01) == 0x0101) {
-//				// disable interrupt strobe address
-//				board->intena = false;
-//			} else if ((addr & 0xff01) == 0x0201) {
-//				// enable interrupt strobe address
-//				board->intena = true;
-//			} else {
-//				int reg = get_ateam_reg(addr, board);
-//				if (reg >= 0) {
-//					put_ide_reg(board, reg, v);
-//				}
-//			}
-//
-//		} else if (board->type == ARRIBA_IDE) {
-//
-//			int reg = get_arriba_reg(addr, board);
-//			if (reg >= 0) {
-//				put_ide_reg(board, reg, v);
-//			}
-//
-//		} else if (board->type == ELSATHD_IDE) {
-//
-//			int reg = get_elsathd_reg(addr, board);
-//			if (reg >= 0) {
-//				put_ide_reg(board, reg, v);
-//			}
-//
-//		} else if (board->type == FASTATA4K_IDE) {
-//
-//			int portnum;
-//			int reg = get_fastata4k_reg(addr, board, &portnum);
-//			if (board->ide[portnum]) {
-//				put_ide_reg_multi(board, reg, v, portnum, 1);
-//			}
-//
-//		} else if (board->type == ACCESSX_IDE) {
-//
-//			int portnum;
-//			int reg = get_accessx_reg(addr, board, &portnum);
-//			if (board->ide[portnum]) {
-//				put_ide_reg_multi(board, reg, v, portnum, 1);
-//			}
-//
-//		} else if (board->type == IVST500AT_IDE) {
-//
-//			int portnum;
-//			int reg = get_ivst500at_reg(addr, board, &portnum);
-//			if (board->ide[portnum]) {
-//				put_ide_reg_multi(board, reg, v, portnum, 1);
-//			}
-//
-//		} else if (board->type == DOTTO_IDE) {
-//
-//			if (board->configured) {
-//				int regnum = get_adide_reg(addr, board);
-//				v = (uae_u8)adide_encode_word(v);
-//				put_ide_reg(board, regnum, v);
-//			}
-//
-//		} else if (board->type == DEV_IDE) {
-//
-//			if (addr == 0x86) {
-//				board->dma_ptr = 0;
-//				board->dma_cnt = 0;
-//			} else if (addr == 0x90 || addr == 0x92 || addr == 0x94 || addr == 0x96) {
-//				board->dma_ptr <<= 8;
-//				board->dma_ptr |= v;
-//				board->dma_ptr &= 0xffffff;
-//			} else {
-//				int reg = get_dev_hd_reg(addr, board);
-//				if (reg >= 0) {
-//					put_ide_reg(board, reg, v);
-//				}
-//			}
-//
-//		}
+		if (board->type == BUDDHA_IDE) {
+
+			int portnum;
+			int flashoffset = -1;
+			bool p1 = (board->aci->rc->device_settings & 3) == 1;
+			int regnum = get_buddha_reg(addr, board, &portnum, &flashoffset);
+			if (flashoffset >= 0) {
+				flash_write(board->flashrom, flashoffset, v);
+			} else if (regnum >= 0) {
+				if (board->ide[portnum]) {
+					put_ide_reg_multi(board, regnum, v, portnum, 1);
+				}
+			} else if (addr >= 0xfc0 && addr < 0xfc4) {
+				board->intena = true;
+				if (addr == 0xfc2 && p1) {
+					uae_u8 v2 = v & 0xf0;
+					int cnt = (board->userdata >> 16) & 15;
+					if (v2 == 0xa0 && cnt == 0) {
+						cnt++;
+					} else if (v2 == 0x50 && cnt == 1) {
+						cnt++;
+					} else if (v2 == 0xa0 && cnt == 2) {
+						cnt++;
+					} else if (v2 == 0x70 && cnt == 3) {
+						board->userdata |= 0x100000;
+						write_log("RAM expansion OFF\n");
+					} else if (v2 == 0xc0 && cnt == 3) {
+						board->userdata |= 0x200000;
+					} else if (v2 == 0xe0 && cnt == 3) {
+						write_log("Lockdown EEPROM\n");
+					} else if (v2 == 0xb0 && cnt == 3) {
+						write_log("Fast-Z2 ON\n");
+					} else if (v2 == 0x30 && cnt == 3) {
+						write_log("Fast-Z2 OFF\n");
+					} else if (v2 == 0x90 && cnt == 3) {
+						write_log("Early write ON\n");
+					} else if (v2 == 0x80 && cnt == 3) {
+						write_log("Early write OFF\n");
+					} else if (v2 == 0x60 && (board->userdata & 0x100000)) {
+						write_log("$a00000 ON\n");
+					} else if (v2 == 0x60 && (board->userdata & 0x200000)) {
+						write_log("$c00000 ON\n");
+					} else if (v2 == 0xf0 && cnt == 3) {
+						board->flashenabled = true;
+					} else {
+						cnt = 0;
+					}
+					board->userdata &= 0xfff0ffff;
+					board->userdata |= cnt << 16;
+				}
+				if (addr == 0xf42 && p1 && (v & 0xf0) == 0x60) {
+					board->hardreset = false;
+				}
+			} else if (addr >= 0x7fc && addr <= 0x7ff) {
+				board->userdata &= ~0xff;
+				board->userdata |= v;
+			} else if (addr == 0xc3) {
+				if (p1) {
+					board->userdata |= 0x100;
+				}
+			} else if (addr == 0xc1) {
+				board->userdata &= ~0x100;
+			} else if (addr == 1) {
+				board->userdata = 0;
+				board->flashenabled = false;
+			}
+
+		} else  if (board->type == ALF_IDE || board->type == TANDEM_IDE) {
+
+			int regnum = get_alf_reg(addr, board);
+			if (regnum >= 0)
+				put_ide_reg(board, regnum, v);
+#if DEBUG_IDE_ALF
+			write_log(_T("ALF PUT %08x %02x %d %08x\n"), addr, v, regnum, M68K_GETPC);
+#endif
+		} else if (board->type == GOLEMFAST_IDE) {
+#ifdef NCR9X
+			if ((addr & 0x8700) == 0x8400 || (addr & 0x8700) == 0x8000) {
+				golemfast_ncr9x_scsi_put(oaddr, v, getidenum(board, golemfast_board));
+			} else
+#endif
+			if ((addr & 0x8700) == 0x8100) {
+				int regnum = get_golemfast_reg(addr, board);
+				if (regnum >= 0)
+					put_ide_reg(board, regnum, v);
+			}
+
+		} else if (board->type == MASOBOSHI_IDE) {
+
+#if DEBUG_IDE_MASOBOSHI
+			write_log(_T("MASOBOSHI IO BYTE PUT %08x %02x %08x\n"), addr, v, M68K_GETPC);
+#endif
+			int regnum = get_masoboshi_reg(addr, board);
+			if (regnum >= 0) {
+				put_ide_reg(board, regnum, v);
+			} else if (addr >= MASOBOSHI_SCSI_OFFSET && addr < MASOBOSHI_SCSI_OFFSET_END) {
+#ifdef NCR9X
+				if (board->subtype)
+					masoboshi_ncr9x_scsi_put(oaddr, v, getidenum(board, masoboshi_board));
+#endif
+			} else if ((addr >= 0xf000 && addr <= 0xf007)) {
+#ifdef NCR9X
+				if (board->subtype)
+					masoboshi_ncr9x_scsi_put(oaddr, v, getidenum(board, masoboshi_board));
+#endif
+			} else if (addr >= 0xf00a && addr <= 0xf00f) {
+#ifdef NCR9X
+				// scsi dma controller
+				masoboshi_ncr9x_scsi_put(oaddr, v, getidenum(board, masoboshi_board));
+#endif
+			} else if (addr >= 0xf040 && addr <= 0xf04f) {
+				// ide dma controller
+				if (addr >= 0xf04c && addr < 0xf050) {
+					int shift = (3 - (addr - 0xf04c)) * 8;
+					uae_u32 mask = 0xff << shift;
+					board->dma_ptr &= ~mask;
+					board->dma_ptr |= v << shift;
+					board->dma_ptr &= 0xffffff;
+				} else if (addr >= 0xf04a && addr < 0xf04c) {
+					if (addr == 0xf04a) {
+						board->dma_cnt &= 0x00ff;
+						board->dma_cnt |= v << 8;
+					} else {
+						board->dma_cnt &= 0xff00;
+						board->dma_cnt |= v;
+					}
+				} else if (addr >= 0xf040 && addr < 0xf048) {
+					board->state2[addr - 0xf040] = v;
+					board->state2[0] &= ~0x80;
+					if (addr == 0xf047) {
+						board->state = v;
+						board->intena = (v & 8) != 0;
+						// masoboshi ide dma
+						if (v & 0x80) {
+							board->hsync_code = masoboshi_ide_dma;
+							board->hsync_cnt = (board->dma_cnt / maxhpos) * 2 + 1;
+							write_log(_T("MASOBOSHI IDE DMA %s start %08x, %d\n"), (board->state2[5] & 0x80) ? _T("READ") : _T("WRITE"), board->dma_ptr, board->dma_cnt);
+							if (ide_drq_check(board->ide[0])) {
+								if (!(board->state2[5] & 0x80)) {
+									for (int i = 0; i < board->dma_cnt; i++) {
+										put_ide_reg(board, IDE_DATA, get_word(board->dma_ptr & ~1));
+										board->dma_ptr += 2;
+									}
+								} else {
+									for (int i = 0; i < board->dma_cnt; i++) {
+										put_word(board->dma_ptr & ~1, get_ide_reg(board, IDE_DATA));
+										board->dma_ptr += 2;
+									}
+								}
+								board->dma_cnt = 0;
+							}
+						}
+					}
+					if (addr == 0xf040) {
+						board->state2[0] &= ~0x80;
+						board->irq = false;
+					}
+				}
+			}
+
+		} else if (board->type == TRIFECTA_IDE) {
+
+			if (addr & 1) {
+				int regnum = get_trifecta_reg(addr, board);
+				if (regnum >= 0) {
+					put_ide_reg(board, regnum, v);
+				}
+			}
+			if (addr >= TRIFECTA_SCSI_OFFSET && addr < TRIFECTA_SCSI_OFFSET_END) {
+#ifdef NCR9X
+				if (board->subtype)
+					trifecta_ncr9x_scsi_put(oaddr, v, getidenum(board, trifecta_board));
+#endif
+			}
+			if (addr >= 0x400 && addr <= 0x407) {
+#ifdef NCR9X
+				trifecta_ncr9x_scsi_put(oaddr, v, getidenum(board, trifecta_board));
+#endif
+			}
+			
+		} else if (board->type == APOLLO_IDE) {
+
+			if ((addr & 0xc000) == 0x4000) {
+				apollo_scsi_bput(oaddr, v, board->userdata);
+			} else if (addr < 0x4000) {
+				int regnum = get_apollo_reg(addr, board);
+				if (regnum >= 0) {
+					put_ide_reg(board, regnum, v);
+				}
+			}
+
+		} else if (board->type == GVP_IDE) {
+
+			if (board == gvp_ide_rom_board && ISCPUBOARD(BOARD_GVP, BOARD_GVP_SUB_A3001SII)) {
+#if DEBUG_IDE_GVP
+				write_log(_T("GVP BOOT PUT %08x %02x %08x\n"), addr, v, M68K_GETPC);
+#endif
+			} else {
+				int regnum = get_gvp_reg(addr, board);
+#if DEBUG_IDE_GVP
+				write_log(_T("GVP IDE PUT %08x %02x %d %08x\n"), addr, v, regnum, M68K_GETPC);
+#endif
+				if (regnum >= 0)
+					put_ide_reg(board, regnum, v);
+			}
+
+		} else if (board->type == ADIDE_IDE) {
+
+			if (board->configured) {
+				int regnum = get_adide_reg(addr, board);
+				v = (uae_u8)adide_encode_word(v);
+				put_ide_reg(board, regnum, v);
+			}
+
+		} else if (board->type == MTEC_IDE) {
+
+			if (board->configured && (addr & 0x8000)) {
+				put_ide_reg(board, (addr >> 8) & 7, v);
+			}
+
+		} else if (board->type == DATAFLYERPLUS_IDE) {
+
+			if (board->configured) {
+				if (addr & 0x8000) {
+					if  (board->subtype & 2) {
+						int regnum = get_dataflyerplus_reg(addr, board);
+						if (regnum >= 0)
+							put_ide_reg(board, regnum, v);
+					}
+				} else if (addr < 0x80) {
+					if (board->subtype & 1) {
+						idescsi_scsi_put(oaddr, v);
+					}
+				}
+			}
+
+		} else if (board->type == ROCHARD_IDE) {
+
+			if (board->configured) {
+				if (addr & 0x8000) {
+					int portnum;
+					int regnum = get_rochard_reg(addr, board, &portnum);
+					if (regnum >= 0 && board->ide[portnum])
+						put_ide_reg_multi(board, regnum, v, portnum, 1);
+				} else if ((addr & 0x7c00) == 0x7000) {
+					if (board->subtype)
+						idescsi_scsi_put(oaddr, v);
+				}
+			}
+
+		} else if (board->type == ATEAM_IDE) {
+
+			if ((addr & 0xff01) == 0x0101) {
+				// disable interrupt strobe address
+				board->intena = false;
+			} else if ((addr & 0xff01) == 0x0201) {
+				// enable interrupt strobe address
+				board->intena = true;
+			} else {
+				int reg = get_ateam_reg(addr, board);
+				if (reg >= 0) {
+					put_ide_reg(board, reg, v);
+				}
+			}
+
+		} else if (board->type == ARRIBA_IDE) {
+
+			int reg = get_arriba_reg(addr, board);
+			if (reg >= 0) {
+				put_ide_reg(board, reg, v);
+			}
+
+		} else if (board->type == ELSATHD_IDE) {
+
+			int reg = get_elsathd_reg(addr, board);
+			if (reg >= 0) {
+				put_ide_reg(board, reg, v);
+			}
+
+		} else if (board->type == FASTATA4K_IDE) {
+
+			int portnum;
+			int reg = get_fastata4k_reg(addr, board, &portnum);
+			if (board->ide[portnum]) {
+				put_ide_reg_multi(board, reg, v, portnum, 1);
+			}
+
+		} else if (board->type == ACCESSX_IDE) {
+
+			int portnum;
+			int reg = get_accessx_reg(addr, board, &portnum);
+			if (board->ide[portnum]) {
+				put_ide_reg_multi(board, reg, v, portnum, 1);
+			}
+
+		} else if (board->type == IVST500AT_IDE) {
+
+			int portnum;
+			int reg = get_ivst500at_reg(addr, board, &portnum);
+			if (board->ide[portnum]) {
+				put_ide_reg_multi(board, reg, v, portnum, 1);
+			}
+
+		} else if (board->type == DOTTO_IDE) {
+
+			if (board->configured) {
+				int regnum = get_adide_reg(addr, board);
+				v = (uae_u8)adide_encode_word(v);
+				put_ide_reg(board, regnum, v);
+			}
+
+		} else if (board->type == DEV_IDE) {
+
+			if (addr == 0x86) {
+				board->dma_ptr = 0;
+				board->dma_cnt = 0;
+			} else if (addr == 0x90 || addr == 0x92 || addr == 0x94 || addr == 0x96) {
+				board->dma_ptr <<= 8;
+				board->dma_ptr |= v;
+				board->dma_ptr &= 0xffffff;
+			} else {
+				int reg = get_dev_hd_reg(addr, board);
+				if (reg >= 0) {
+					put_ide_reg(board, reg, v);
+				}
+			}
+
+		}
 	}
 }
 
@@ -2392,76 +2420,84 @@ static void masoboshi_add_ide_unit(int ch, struct uaedev_config_info *ci, struct
 	add_ide_standard_unit(ch, ci, rc, masoboshi_board, MASOBOSHI_IDE, true, false, 2);
 }
 
-//void masoboshi_add_idescsi_unit (int ch, struct uaedev_config_info *ci, struct romconfig *rc)
-//{
-//	if (ch < 0) {
-//		masoboshi_add_ide_unit(ch, ci, rc);
-//		masoboshi_add_scsi_unit(ch, ci, rc);
-//	} else {
-//		if (ci->controller_type < HD_CONTROLLER_TYPE_SCSI_FIRST)
-//			masoboshi_add_ide_unit(ch, ci, rc);
-//		else
-//			masoboshi_add_scsi_unit(ch, ci, rc);
-//	}
-//}
+void masoboshi_add_idescsi_unit (int ch, struct uaedev_config_info *ci, struct romconfig *rc)
+{
+	if (ch < 0) {
+		masoboshi_add_ide_unit(ch, ci, rc);
+#ifdef NCR9X
+		masoboshi_add_scsi_unit(ch, ci, rc);
+#endif
+	} else {
+		if (ci->controller_type < HD_CONTROLLER_TYPE_SCSI_FIRST)
+			masoboshi_add_ide_unit(ch, ci, rc);
+#ifdef NCR9X
+		else
+			masoboshi_add_scsi_unit(ch, ci, rc);
+#endif
+	}
+}
 
-//bool trifecta_init(struct autoconfig_info *aci)
-//{
-//	int rom_size = 65536;
-//	uae_u8 *rom = xcalloc(uae_u8, rom_size);
-//	memset(rom, 0xff, rom_size);
-//
-//	ide_add_reset();
-//	if (!aci->doinit) {
-//		aci->autoconfigp = aci->ert->autoconfig;
-//		xfree(rom);
-//		return true;
-//	}
-//
-//	struct ide_board *ide = getide(aci);
-//
-//	if (!ide)
-//		return false;
-//
-//	ide->configured = 0;
-//	ide->bank = &ide_bank_generic;
-//	ide->type = TRIFECTA_IDE;
-//	ide->rom_size = rom_size;
-//	ide->rom_mask = ide->mask = rom_size - 1;
-//	ide->rom = rom;
-//	ide->subtype = aci->rc->subtype;
-//	ide->keepautoconfig = false;
-//	ide->intena = true;
-//
-//	if (!aci->rc->autoboot_disabled)
-//		load_rom_rc(aci->rc, ROMTYPE_TRIFECTA, 32768, 0, rom, 65536, LOADROM_EVENONLY_ODDONE | LOADROM_FILL);
-//
-//	for (int i = 0; i < 16; i++) {
-//		uae_u8 b = aci->ert->autoconfig[i];
-//		ew(ide, i * 4, b);
-//	}
-//
-//	aci->addrbank = ide->bank;
-//	return true;
-//}
+bool trifecta_init(struct autoconfig_info *aci)
+{
+	int rom_size = 65536;
+	uae_u8 *rom = xcalloc(uae_u8, rom_size);
+	memset(rom, 0xff, rom_size);
+
+	ide_add_reset();
+	if (!aci->doinit) {
+		aci->autoconfigp = aci->ert->autoconfig;
+		xfree(rom);
+		return true;
+	}
+
+	struct ide_board *ide = getide(aci);
+
+	if (!ide)
+		return false;
+
+	ide->configured = 0;
+	ide->bank = &ide_bank_generic;
+	ide->type = TRIFECTA_IDE;
+	ide->rom_size = rom_size;
+	ide->rom_mask = ide->mask = rom_size - 1;
+	ide->rom = rom;
+	ide->subtype = aci->rc->subtype;
+	ide->keepautoconfig = false;
+	ide->intena = true;
+
+	if (!aci->rc->autoboot_disabled)
+		load_rom_rc(aci->rc, ROMTYPE_TRIFECTA, 32768, 0, rom, 65536, LOADROM_EVENONLY_ODDONE | LOADROM_FILL);
+
+	for (int i = 0; i < 16; i++) {
+		uae_u8 b = aci->ert->autoconfig[i];
+		ew(ide, i * 4, b);
+	}
+
+	aci->addrbank = ide->bank;
+	return true;
+}
 
 static void trifecta_add_ide_unit(int ch, struct uaedev_config_info *ci, struct romconfig *rc)
 {
 	add_ide_standard_unit(ch, ci, rc, trifecta_board, TRIFECTA_IDE, true, false, 2);
 }
 
-//void trifecta_add_idescsi_unit(int ch, struct uaedev_config_info *ci, struct romconfig *rc)
-//{
-//	if (ch < 0) {
-//		trifecta_add_ide_unit(ch, ci, rc);
-//		trifecta_add_scsi_unit(ch, ci, rc);
-//	} else {
-//		if (ci->controller_type < HD_CONTROLLER_TYPE_SCSI_FIRST)
-//			trifecta_add_ide_unit(ch, ci, rc);
-//		else
-//			trifecta_add_scsi_unit(ch, ci, rc);
-//	}
-//}
+void trifecta_add_idescsi_unit(int ch, struct uaedev_config_info *ci, struct romconfig *rc)
+{
+	if (ch < 0) {
+		trifecta_add_ide_unit(ch, ci, rc);
+#ifdef NCR9X
+		trifecta_add_scsi_unit(ch, ci, rc);
+#endif
+	} else {
+		if (ci->controller_type < HD_CONTROLLER_TYPE_SCSI_FIRST)
+			trifecta_add_ide_unit(ch, ci, rc);
+#ifdef NCR9X
+		else
+			trifecta_add_scsi_unit(ch, ci, rc);
+#endif
+	}
+}
 
 
 static const uae_u8 adide_autoconfig[16] = { 0xd1, 0x02, 0x00, 0x00, 0x08, 0x17, 0x00, 0x00, 0x00, 0x00, ADIDE_ROM_OFFSET >> 8, ADIDE_ROM_OFFSET & 0xff };
@@ -2663,18 +2699,22 @@ static void golemfast_add_ide_unit(int ch, struct uaedev_config_info *ci, struct
 	add_ide_standard_unit(ch, ci, rc, golemfast_board, GOLEMFAST_IDE, false, false, 2);
 }
 
-//void golemfast_add_idescsi_unit(int ch, struct uaedev_config_info *ci, struct romconfig *rc)
-//{
-//	if (ch < 0) {
-//		golemfast_add_ide_unit(ch, ci, rc);
-//		golemfast_add_scsi_unit(ch, ci, rc);
-//	} else {
-//		if (ci->controller_type < HD_CONTROLLER_TYPE_SCSI_FIRST)
-//			golemfast_add_ide_unit(ch, ci, rc);
-//		else
-//			golemfast_add_scsi_unit(ch, ci, rc);
-//	}
-//}
+void golemfast_add_idescsi_unit(int ch, struct uaedev_config_info *ci, struct romconfig *rc)
+{
+	if (ch < 0) {
+		golemfast_add_ide_unit(ch, ci, rc);
+#ifdef NCR9X
+		golemfast_add_scsi_unit(ch, ci, rc);
+#endif
+	} else {
+		if (ci->controller_type < HD_CONTROLLER_TYPE_SCSI_FIRST)
+			golemfast_add_ide_unit(ch, ci, rc);
+#ifdef NCR9X
+		else
+			golemfast_add_scsi_unit(ch, ci, rc);
+#endif
+	}
+}
 
 bool dataflyerplus_init(struct autoconfig_info *aci)
 {
@@ -3161,134 +3201,135 @@ void dev_hd_add_ide_unit(int ch, struct uaedev_config_info* ci, struct romconfig
 	add_ide_standard_unit(ch, ci, rc, dev_board, DEV_IDE, false, true, 2);
 }
 
+#ifdef WITH_X86
+extern void x86_xt_ide_bios(struct zfile*, struct romconfig*);
+static bool x86_at_hd_init(struct autoconfig_info *aci, int type)
+{
+	static const int parent[] = { ROMTYPE_A1060, ROMTYPE_A2088, ROMTYPE_A2088T, ROMTYPE_A2286, ROMTYPE_A2386, 0 };
+	aci->parent_romtype = parent;
+	ide_add_reset();
+	if (!aci->doinit)
+		return true;
 
-//extern void x86_xt_ide_bios(struct zfile*, struct romconfig*);
-//static bool x86_at_hd_init(struct autoconfig_info *aci, int type)
-//{
-//	static const int parent[] = { ROMTYPE_A1060, ROMTYPE_A2088, ROMTYPE_A2088T, ROMTYPE_A2286, ROMTYPE_A2386, 0 };
-//	aci->parent_romtype = parent;
-//	ide_add_reset();
-//	if (!aci->doinit)
-//		return true;
-//
-//	struct ide_board *ide = getide(aci);
-//	if (!ide)
-//		return false;
-//
-//	ide->intena = type == 0;
-//	ide->configured = 1;
-//	ide->bank = &ide_bank_generic;
-//
-//	struct zfile *f = read_device_from_romconfig(aci->rc, 0);
-//	if (f) {
-//		x86_xt_ide_bios(f, aci->rc);
-//		zfile_fclose(f);
-//	}
-//	return true;
-//}
-//bool x86_at_hd_init_1(struct autoconfig_info *aci)
-//{
-//	return x86_at_hd_init(aci, 0);
-//}
-//bool x86_at_hd_init_xt(struct autoconfig_info *aci)
-//{
-//	return x86_at_hd_init(aci, 1);
-//}
+	struct ide_board *ide = getide(aci);
+	if (!ide)
+		return false;
 
-//void x86_add_at_hd_unit_1(int ch, struct uaedev_config_info *ci, struct romconfig *rc)
-//{
-//	add_ide_standard_unit(ch, ci, rc, &x86_at_ide_board[0], x86_AT_IDE + 0, false, false, 2);
-//}
-//void x86_add_at_hd_unit_xt(int ch, struct uaedev_config_info *ci, struct romconfig *rc)
-//{
-//	add_ide_standard_unit(ch, ci, rc, &x86_at_ide_board[1], x86_AT_IDE + 1, false, false, 2);
-//}
+	ide->intena = type == 0;
+	ide->configured = 1;
+	ide->bank = &ide_bank_generic;
 
-//static int x86_ide_reg(int portnum, int *unit)
-//{
-//	if (portnum >= 0x1f0 && portnum < 0x1f8) {
-//		*unit = 0;
-//		return portnum & 7;
-//	}
-//	if (portnum == 0x3f6) {
-//		*unit = 0;
-//		return 6 | IDE_SECONDARY;
-//	}
-//	if (portnum >= 0x300 && portnum < 0x310) {
-//		*unit = 1;
-//		if (portnum < 0x308)
-//			return portnum & 7;
-//		if (portnum == 0x308)
-//			return 8;
-//		if (portnum >= 0x308+6)
-//			return (portnum & 7) | IDE_SECONDARY;
-//	}
-//	return -1;
-//}
+	struct zfile *f = read_device_from_romconfig(aci->rc, 0);
+	if (f) {
+		x86_xt_ide_bios(f, aci->rc);
+		zfile_fclose(f);
+	}
+	return true;
+}
+bool x86_at_hd_init_1(struct autoconfig_info *aci)
+{
+	return x86_at_hd_init(aci, 0);
+}
+bool x86_at_hd_init_xt(struct autoconfig_info *aci)
+{
+	return x86_at_hd_init(aci, 1);
+}
 
-//void x86_ide_hd_put(int portnum, uae_u16 v, int size)
-//{
-//
-//	if (portnum < 0) {
-//		for (int i = 0; i < MAX_DUPLICATE_EXPANSION_BOARDS; i++) {
-//			struct ide_board *board = x86_at_ide_board[i];
-//			if (board)
-//				ide_reset_device(board->ide[0]);
-//		}
-//		return;
-//	}
-//	int unit;
-//	int regnum = x86_ide_reg(portnum, &unit);
-//	if (regnum >= 0) {
-//		struct ide_board *board = x86_at_ide_board[unit];
-//		if (board) {
-//			if (size == 0) {
-//				if (get_ide_is_8bit(board)) {
-//					v = get_ide_reg_8bitdata(board, regnum);
-//				} else {
-//					if (regnum == 8) {
-//						board->data_latch = v;
-//					} else if (regnum == 0) {
-//						v <<= 8;
-//						v |= board->data_latch;
-//						put_ide_reg(board, regnum, v);
-//					} else {
-//						put_ide_reg_8bitdata(board, regnum, v);
-//					}
-//				}
-//			} else {
-//				put_ide_reg(board, regnum, (v >> 8) | (v << 8));
-//			}
-//		}
-//	}
-//}
-//uae_u16 x86_ide_hd_get(int portnum, int size)
-//{
-//	uae_u16 v = 0;
-//	int unit;
-//	int regnum = x86_ide_reg(portnum, &unit);
-//	if (regnum >= 0) {
-//		struct ide_board *board = x86_at_ide_board[unit];
-//		if (board) {
-//
-//			if (size == 0) {
-//				if (get_ide_is_8bit(board)) {
-//					v = get_ide_reg_8bitdata(board, regnum);
-//				} else {
-//					if (regnum == 0) {
-//						board->data_latch = get_ide_reg(board, regnum);
-//						v = board->data_latch >> 8;
-//					} else if (regnum == 8) {
-//						v = board->data_latch;
-//					} else {
-//						v = get_ide_reg_8bitdata(board, regnum & 7);
-//					}
-//				}
-//			} else {
-//				v = get_ide_reg(board, regnum);
-//				v = (v >> 8) | (v << 8);
-//			}
-//		}
-//	}
-//	return v;
-//}
+void x86_add_at_hd_unit_1(int ch, struct uaedev_config_info *ci, struct romconfig *rc)
+{
+	add_ide_standard_unit(ch, ci, rc, &x86_at_ide_board[0], x86_AT_IDE + 0, false, false, 2);
+}
+void x86_add_at_hd_unit_xt(int ch, struct uaedev_config_info *ci, struct romconfig *rc)
+{
+	add_ide_standard_unit(ch, ci, rc, &x86_at_ide_board[1], x86_AT_IDE + 1, false, false, 2);
+}
+
+static int x86_ide_reg(int portnum, int *unit)
+{
+	if (portnum >= 0x1f0 && portnum < 0x1f8) {
+		*unit = 0;
+		return portnum & 7;
+	}
+	if (portnum == 0x3f6) {
+		*unit = 0;
+		return 6 | IDE_SECONDARY;
+	}
+	if (portnum >= 0x300 && portnum < 0x310) {
+		*unit = 1;
+		if (portnum < 0x308)
+			return portnum & 7;
+		if (portnum == 0x308)
+			return 8;
+		if (portnum >= 0x308+6)
+			return (portnum & 7) | IDE_SECONDARY;
+	}
+	return -1;
+}
+
+void x86_ide_hd_put(int portnum, uae_u16 v, int size)
+{
+
+	if (portnum < 0) {
+		for (int i = 0; i < MAX_DUPLICATE_EXPANSION_BOARDS; i++) {
+			struct ide_board *board = x86_at_ide_board[i];
+			if (board)
+				ide_reset_device(board->ide[0]);
+		}
+		return;
+	}
+	int unit;
+	int regnum = x86_ide_reg(portnum, &unit);
+	if (regnum >= 0) {
+		struct ide_board *board = x86_at_ide_board[unit];
+		if (board) {
+			if (size == 0) {
+				if (get_ide_is_8bit(board)) {
+					v = get_ide_reg_8bitdata(board, regnum);
+				} else {
+					if (regnum == 8) {
+						board->data_latch = v;
+					} else if (regnum == 0) {
+						v <<= 8;
+						v |= board->data_latch;
+						put_ide_reg(board, regnum, v);
+					} else {
+						put_ide_reg_8bitdata(board, regnum, v);
+					}
+				}
+			} else {
+				put_ide_reg(board, regnum, (v >> 8) | (v << 8));
+			}
+		}
+	}
+}
+uae_u16 x86_ide_hd_get(int portnum, int size)
+{
+	uae_u16 v = 0;
+	int unit;
+	int regnum = x86_ide_reg(portnum, &unit);
+	if (regnum >= 0) {
+		struct ide_board *board = x86_at_ide_board[unit];
+		if (board) {
+
+			if (size == 0) {
+				if (get_ide_is_8bit(board)) {
+					v = get_ide_reg_8bitdata(board, regnum);
+				} else {
+					if (regnum == 0) {
+						board->data_latch = get_ide_reg(board, regnum);
+						v = board->data_latch >> 8;
+					} else if (regnum == 8) {
+						v = board->data_latch;
+					} else {
+						v = get_ide_reg_8bitdata(board, regnum & 7);
+					}
+				}
+			} else {
+				v = get_ide_reg(board, regnum);
+				v = (v >> 8) | (v << 8);
+			}
+		}
+	}
+	return v;
+}
+#endif
