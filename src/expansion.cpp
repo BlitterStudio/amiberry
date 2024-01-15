@@ -3634,6 +3634,18 @@ static void expansion_add_autoconfig(struct uae_prefs *p)
 		cards_set[cardno].zorro = BOARD_NONAUTOCONFIG_BEFORE;
 		cards_set[cardno++].map = NULL;
 	}
+#ifdef GFXBOARD
+	for (int i = 0; i < MAX_RTG_BOARDS; i++) {
+		struct rtgboardconfig *rbc = &p->rtgboards[i];
+		int type = gfxboard_get_configtype(rbc);
+		if (rbc->rtgmem_size && rbc->rtgmem_type >= GFXBOARD_HARDWARE && type == BOARD_NONAUTOCONFIG_BEFORE) {
+			cards_set[cardno].flags = 4 | (i << 16);
+			cards_set[cardno].name = _T("MainBoardRTG");
+			cards_set[cardno].zorro = BOARD_NONAUTOCONFIG_BEFORE;
+			cards_set[cardno++].initnum = gfxboard_init_memory;
+		}
+	}
+#endif
 
 	// add possible non-autoconfig boards
 	add_cpu_expansions(p, BOARD_NONAUTOCONFIG_BEFORE, NULL);
@@ -3698,7 +3710,8 @@ static void expansion_add_autoconfig(struct uae_prefs *p)
 #ifdef GFXBOARD
 	for (int i = 0; i < MAX_RTG_BOARDS; i++) {
 		struct rtgboardconfig *rbc = &p->rtgboards[i];
-		if (rbc->rtgmem_size && rbc->rtgmem_type >= GFXBOARD_HARDWARE && gfxboard_get_configtype(rbc) <= 2) {
+		int type = gfxboard_get_configtype(rbc);
+		if (rbc->rtgmem_size && rbc->rtgmem_type >= GFXBOARD_HARDWARE && type <= 2) {
 			cards_set[cardno].flags = 4 | (i << 16);
 			if (gfxboard_get_func(rbc)) {
 				cards_set[cardno].name = _T("Z2RTG");
@@ -6491,6 +6504,35 @@ static const struct cpuboardsubtype cyberstormboard_sub[] = {
 		NULL
 	}
 };
+static const struct expansionboardsettings draco_settings[] = {
+	{
+		// 0/1
+		_T("Revision\0") _T("3\0") _T("4\0"),
+		_T("hwrev\0") _T("3\0") _T("4\0"),
+		true, false, 0
+	},
+	{
+		// 2
+		_T("CIA-A (Rev3 always includes CIA-A)"),
+		_T("ciaa"),
+		false, false, 1
+	},
+	{
+		// 3
+		_T("CIA-B (Optional)"),
+		_T("ciab"),
+		false, false, 0
+	},
+	{
+		// 4
+		_T("PC keyboard connected"),
+		_T("pckbd"),
+		false, false, 0
+	},
+	{
+		NULL
+	}
+};
 static const struct cpuboardsubtype macrosystem_sub[] = {
 	//{
 	//	_T("Warp Engine A4000"),
@@ -6511,6 +6553,29 @@ static const struct cpuboardsubtype macrosystem_sub[] = {
 		0,
 		128 * 1024 * 1024,
 	},
+#ifdef WITH_DRACO
+	{
+		_T("DraCo"),
+		_T("draco"),
+		ROMTYPE_CB_DRACO | ROMTYPE_NONE, 0, 4,
+		draco_add_scsi_unit, EXPANSIONTYPE_SCSI,
+		BOARD_MEMORY_HIGHMEM,
+		128 * 1024 * 1024,
+		0,
+		ncr710_draco_init, NULL, BOARD_NONAUTOCONFIG_BEFORE, 1,
+		draco_settings
+	},
+	{
+		_T("Casablanca"),
+		_T("casablanca"),
+		ROMTYPE_CB_CASAB | ROMTYPE_NONE, 0, 4,
+		draco_add_scsi_unit, EXPANSIONTYPE_SCSI,
+		BOARD_MEMORY_HIGHMEM,
+		128 * 1024 * 1024,
+		0,
+		NULL, NULL, BOARD_NONAUTOCONFIG_BEFORE, 1,
+	},
+#endif
 	{
 		NULL
 	}

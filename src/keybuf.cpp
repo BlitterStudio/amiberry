@@ -294,7 +294,16 @@ int record_key_direct(int kc, bool direct)
 {
 	int kpb_next = kpb_first + 1;
 	int kcd = (kc << 7) | (kc >> 1);
-
+#ifdef WITH_DRACO
+	if (currprefs.cs_compatible == CP_DRACO) {
+		if (currprefs.cpuboard_settings & 0x10) {
+			inputdevice_draco_key(kc);
+		}
+		if (!currprefs.keyboard_connected) {
+			return 1;
+		}
+	}
+#endif
 	if (!direct) {
 		if (key_swap_hack2) {
 			// $0D <> $0C

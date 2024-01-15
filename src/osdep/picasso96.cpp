@@ -5920,11 +5920,11 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 			dst = dstp;
 
 			// safety check
-			if (pwidth > vidinfo->rowbytes / vidinfo->pixbytes) {
-				pwidth = vidinfo->rowbytes / vidinfo->pixbytes;
+			if (pwidth > vidinfo->maxwidth) {
+				pwidth = vidinfo->maxwidth;
 			}
-			if (pheight > vidinfo->height) {
-				pheight = vidinfo->height;
+			if (pheight > vidinfo->maxheight) {
+				pheight = vidinfo->maxheight;
 			}
 
 			if (!split && vidinfo->rtg_clear_flag) {

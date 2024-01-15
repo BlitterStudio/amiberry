@@ -7,10 +7,39 @@
 *
 */
 
+#define VRAMLOG 0
+#define MEMLOGR 0
+#define MEMLOGW 0
+#define MEMLOGINDIRECT 0
+#define REGDEBUG 0
+#define MEMDEBUG 0
+#define MEMDEBUGMASK 0x7fffff
+#define MEMDEBUGTEST 0x3fc000
+#define MEMDEBUGCLEAR 0
+#define SPCDEBUG 0
+#define PICASSOIV_DEBUG_IO 0
+
+#if MEMLOGR
+static bool memlogr = true;
+static bool memlogw = true;
+#endif
+
+#define BYTESWAP_WORD -1
+#define BYTESWAP_LONG 1
+
 #include "sysconfig.h"
 #include "sysdeps.h"
 
 #include "options.h"
+#include "uae.h"
+#include "memory.h"
+#include "debug.h"
+#include "custom.h"
+#include "newcpu.h"
+#include "picasso96.h"
+#include "statusline.h"
+#include "rommgr.h"
+#include "zfile.h"
 #include "gfxboard.h"
 #include "rommgr.h"
 #include "xwin.h"

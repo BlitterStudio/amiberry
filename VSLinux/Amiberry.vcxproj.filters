@@ -1635,9 +1635,6 @@
     <ClCompile Include="..\external\mt32emu\src\srchelper\srctools\src\SincResampler.cpp">
       <Filter>external\mt32emu\src\srchelper\srctools\src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\casablanca.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\build68k.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -1778,6 +1775,9 @@
     </ClCompile>
     <ClCompile Include="..\src\jit\x86\exception_handler.cpp">
       <Filter>src\jit\x86</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\draco.cpp">
+      <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -2678,9 +2678,6 @@
     <ClInclude Include="..\src\include\arcadia.h">
       <Filter>src\include</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\include\casablanca.h">
-      <Filter>src\include</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\include\disasm.h">
       <Filter>src\include</Filter>
     </ClInclude>
@@ -2908,6 +2905,12 @@
     </ClInclude>
     <ClInclude Include="..\src\osdep\gui\StringListModel.h">
       <Filter>src\osdep\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\draco.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\x86.h">
+      <Filter>src\include</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

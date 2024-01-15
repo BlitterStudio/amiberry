@@ -668,6 +668,7 @@ extern void picasso_invalidate(int monid, int x, int y, int w, int h);
 struct picasso_vidbuf_description {
 	int width, height, depth;
 	int rowbytes, pixbytes, offset;
+	int maxwidth, maxheight; // allocated surface/texture size
 	int extra_mem; /* nonzero if there's a second buffer that must be updated */
 	uae_u32 rgbformat;
 	RGBFTYPE selected_rgbformat;
@@ -723,5 +724,9 @@ extern int p96refresh_active;
 
 void picasso96_alloc(TrapContext* ctx);
 uae_u32 picasso_demux(uae_u32 arg, TrapContext* ctx);
+
+// from gfxfilter.h
+uae_u8 *uaegfx_getrtgbuffer(int monid, int *widthp, int *heightp, int *pitch, int *depth, uae_u8 *palette);
+void uaegfx_freertgbuffer(int monid, uae_u8 *dst);
 
 #endif /* __PICASSO96_H__ */

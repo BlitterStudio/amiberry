@@ -1029,9 +1029,9 @@ struct uae_prefs
 #endif
 };
 
-extern int config_changed;
+extern int config_changed, config_changed_flags;
 extern void config_check_vsync(void);
-extern void set_config_changed(void);
+extern void set_config_changed(int flags = 0);
 
 /* Contains the filename of .uaerc */
 //extern TCHAR optionsfile[];

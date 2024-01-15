@@ -56,6 +56,9 @@
 #ifdef WITH_X86
 #include "x86.h"
 #endif
+#ifdef WITH_DRACO
+#include "draco.h"
+#endif
 #ifdef RETROPLATFORM
 #include "rp.h"
 #endif
@@ -104,10 +107,11 @@ extern int tablet_log;
 
 #define DEFEVENT(A, B, C, D, E, F) {_T(#A), B, NULL, C, D, E, F, 0 },
 #define DEFEVENT2(A, B, B2, C, D, E, F, G) {_T(#A), B, B2, C, D, E, F, G },
+#define DEFEVENTKB(A, B, C, F, PC) {_T(#A), B, NULL, C, 0, 0, F, 0, PC },
 static const struct inputevent events[] = {
-	{0, 0, 0, AM_K, 0, 0, 0, 0},
+	{0, 0, 0, AM_K, 0, 0, 0, 0, 0},
 #include "inputevents.def"
-	{0, 0, 0, 0, 0, 0, 0, 0}
+	{0, 0, 0, 0, 0, 0, 0, 0, 0}
 };
 #undef DEFEVENT
 #undef DEFEVENT2
@@ -200,6 +204,11 @@ static struct temp_uids temp_uid;
 static int temp_uid_index[MAX_INPUT_DEVICES][IDTYPE_MAX];
 static int temp_uid_cnt[IDTYPE_MAX];
 static int gp_swappeddevices[MAX_INPUT_DEVICES][IDTYPE_MAX];
+
+#ifdef WITH_DRACO
+extern int draco_keyboard_get_rate(void);
+static int draco_keybord_repeat_cnt, draco_keybord_repeat_code;
+#endif
 
 static int isdevice (struct uae_input_device *id)
 {
@@ -1200,8 +1209,10 @@ static void clear_id (struct uae_input_device *id)
 #ifndef	_DEBUG
 	int i, j;
 	for (i = 0; i < MAX_INPUT_DEVICE_EVENTS; i++) {
-		for (j = 0; j < MAX_INPUT_SUB_EVENT_ALL; j++)
+		for (j = 0; j < MAX_INPUT_SUB_EVENT_ALL; j++) {
 			xfree (id->custom[i][j]);
+			id->custom[i][j] = NULL;
+		}
 	}
 #endif
 	TCHAR *cn = id->configname;
@@ -3287,9 +3298,21 @@ static int getvelocity (int num, int subnum, int pct)
 static void mouseupdate (int pct, bool vsync)
 {
 	int max = 120;
+	bool pcmouse = false;
 	static int mxd, myd;
 
 	if (vsync) {
+#ifdef WITH_DRACO
+		if (
+#ifdef WITH_X86
+			x86_mouse(0, 0, 0, 0, -1) ||
+#endif
+			draco_mouse(0, 0, 0, 0, -1)) {
+			pcmouse = true;
+			pct = 1000;
+		}
+#endif
+
 		if (mxd < 0) {
 			if (mouseedge_x > 0)
 				mouseedge_x = 0;
@@ -3366,7 +3389,8 @@ static void mouseupdate (int pct, bool vsync)
 				record_key(0x7b << 1, true);
 			if (!mouse_deltanoreset[i][2])
 				mouse_delta[i][2] = 0;
-#ifndef AMIBERRY
+
+		if (pcmouse) {
 			if (getbuttonstate(i, JOYBUTTON_1))
 				pc_mouse_buttons[i] |= 1;
 			else
@@ -3379,7 +3403,22 @@ static void mouseupdate (int pct, bool vsync)
 				pc_mouse_buttons[i] |= 4;
 			else
 				pc_mouse_buttons[i] &= ~4;
-			x86_mouse(i, v1, v2, v3, pc_mouse_buttons[i]);
+#ifdef WITH_X86
+				x86_mouse(0, v1, v2, v3, pc_mouse_buttons[i]);
+#endif
+#ifdef WITH_DRACO
+				draco_mouse(0, v1, v2, v3, pc_mouse_buttons[i]);
+#endif
+			}
+
+
+#if OUTPUTDEBUG
+			if (v1 || v2) {
+				TCHAR xx1[256];
+				_stprintf(xx1, _T("%p %d VX=%d VY=%d X=%d Y=%d DX=%d DY=%d VS=%d\n"),
+					GetCurrentProcess(), timeframes, v1, v2, mouse_x[i], mouse_y[i], mouse_frame_x[i] - mouse_x[i], mouse_frame_y[i] - mouse_y[i], vsync);
+				OutputDebugString(xx1);
+			}
 #endif
 
 			if (mouse_frame_x[i] - mouse_x[i] > max) {
@@ -4127,6 +4166,7 @@ int handle_custom_event (const TCHAR *custom, int append)
 		}
 		if (!_tcsicmp (p, _T("no_config_check"))) {
 			config_changed = 0;
+			config_changed_flags = 0;
 			maybe_config_changed = false;
 		} else if (!_tcsicmp (p, _T("do_config_check"))) {
 			set_config_changed ();
@@ -4260,6 +4300,19 @@ void inputdevice_hsync (bool forceread)
 			maybe_read_input();
 		}
 	}
+#ifdef WITH_DRACO
+	if (draco_keybord_repeat_cnt > 0) {
+		draco_keybord_repeat_cnt--;
+		if (draco_keybord_repeat_cnt == 0) {
+			int rate = draco_keyboard_get_rate();
+			int b = (rate >> 3) & 3;
+			int d = (rate >> 0) & 7;
+			float r = ((1 << b) * (d + 8) / 240.0f) * 1000.0f;
+			draco_keybord_repeat_cnt = (int)(vblank_hz * maxvpos * r / 1000);
+			draco_keycode(draco_keybord_repeat_code, 1);
+		}
+	}
+#endif
 }
 
 static uae_u16 POTDAT (int joy)
@@ -4575,7 +4628,7 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 
 	if (code == 0)
 		return false;
-	if (state && needcputrace(code) && can_cpu_tracer() == true && is_cpu_tracer () == false && !input_play && !input_record) {
+	if (state && needcputrace(code) && can_cpu_tracer() == true && is_cpu_tracer () == false && !input_play && !input_record && !debugging) {
 		if (set_cpu_tracer (true)) {
 			tracer_enable = 1;
 			return true; // wait for next frame
@@ -5242,42 +5295,31 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 	int autofire = (flags & HANDLE_IE_FLAG_AUTOFIRE) ? 1 : 0;
 
 	if (nr <= 0 || nr == INPUTEVENT_SPC_CUSTOM_EVENT)
-	{
 		return 0;
-	}
 
 #ifdef _WIN32
 	// ignore normal GUI event if forced gui key is in use
 	if (nr == INPUTEVENT_SPC_ENTERGUI) {
 		if (currprefs.win32_guikey > 0)
-		{
 			return 0;
-		}
 	}
 #endif
 
 	ie = &events[nr];
 	if (isqual (nr))
-	{
 		return 0; // qualifiers do nothing
-	}
 	if (ie->unit == 0 && ie->data >= AKS_FIRST) {
 		isaks = true;
 	}
 
-#ifndef AMIBERRY
 	if (isaks) {
 		if (debug_trainer_event(ie->data, state))
-		{
 			return 0;
-		}
 	} else {
 		if (debug_trainer_event(nr, state))
-		{
 			return 0;
-		}
 	}
-#endif
+
 	if (!isaks) {
 		if (input_record && input_record != INPREC_RECORD_PLAYING)
 			inprec_recordevent (nr, state, max, autofire);
@@ -5288,9 +5330,7 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 			}
 		}
 		if (!(flags & HANDLE_IE_FLAG_PLAYBACKEVENT) && input_play)
-		{
 			return 0;
-		}
 	}
 
 	if (flags & HANDLE_IE_FLAG_ALLOWOPPOSITE) {
@@ -5332,9 +5372,7 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 				}
 				lastmxy_abs[lpnum][unit] = extra;
 				if (!unit)
-				{
 					return 1;
-				}
 				int x = lastmxy_abs[lpnum][0];
 				int y = lastmxy_abs[lpnum][1];
 				if (x <= 0 || x >= 65535 || y <= 0 || y >= 65535) {
@@ -6158,10 +6196,12 @@ bool key_ctrlpressed(void)
 {
 	return (input_getqualifiers() & ID_FLAG_QUALIFIER_CONTROL) != 0;
 }
+#ifdef AMIBERRY // we also handle this key
 bool key_winpressed(void)
 {
 	return (input_getqualifiers() & ID_FLAG_QUALIFIER_WIN) != 0;
 }
+#endif
 
 static bool checkqualifiers (int evt, uae_u64 flags, uae_u64 *qualmask, uae_s16 events[MAX_INPUT_SUB_EVENT_ALL])
 {
@@ -6954,7 +6994,7 @@ static void checkcompakb (int *kb, const int *srcmap)
 
 static void inputdevice_sparerestore (struct uae_input_device *uid, int num, int sub)
 {
-	if (uid->port[num][SPARE_SUB_EVENT]) {
+	if (sub == 0 && uid->port[num][SPARE_SUB_EVENT]) {
 		uid->eventid[num][sub] = uid->eventid[num][SPARE_SUB_EVENT];
 		uid->flags[num][sub] = uid->flags[num][SPARE_SUB_EVENT];
 		uid->custom[num][sub] = uid->custom[num][SPARE_SUB_EVENT];
@@ -7714,7 +7754,7 @@ static void compatibility_copy (struct uae_prefs *prefs, bool gameports)
 			}
 		}
 	}
-#ifndef AMIBERRY
+#ifdef ARCADIA
 	if (arcadia_bios) {
 		setcompakb (prefs, keyboard_default_kbmaps[KBR_DEFAULT_MAP_ARCADIA], ip_arcadia, 0, 0);
 	}
@@ -7753,7 +7793,7 @@ static void compatibility_copy (struct uae_prefs *prefs, bool gameports)
 				else if (JSEM_ISSOMEWHEREELSE (i, prefs))
 					kb = keyboard_default_kbmaps[KBR_DEFAULT_MAP_SE];
 				if (kb) {
-					setcompakb (prefs, kb, i == 3 ? ip_parjoy2default : ip_parjoy1default, i, prefs->jports[i].autofire);
+					setcompakb(prefs, kb, i == 3 ? ip_parjoy2default : ip_parjoy1default, i, prefs->jports[i].autofire);
 					used[joy] = 1;
 					joymodes[i] = JSEM_MODE_JOYSTICK;
 				}
@@ -9886,7 +9926,7 @@ void pausemode (int mode)
 
 int jsem_isjoy (int port, const struct uae_prefs *p)
 {
-	int v = JSEM_DECODEVAL (port, p);
+	int v = JSEM_DECODEVAL(port, p);
 	if (v < JSEM_JOYS)
 		return -1;
 	v -= JSEM_JOYS;
@@ -10290,9 +10330,10 @@ int inputdevice_getjoyportdevice (int port, int val)
 	return idx;
 }
 
+static struct jport jport_config_store[MAX_JPORTS];
+
 void inputdevice_fix_prefs(struct uae_prefs *p, bool userconfig)
 {
-	struct jport jport_config_store[MAX_JPORTS];
 	bool changed = false;
 
 	for (int i = 0; i < MAX_JPORTS; i++) {
@@ -10472,4 +10513,31 @@ void clear_inputstate (void)
 		vertclear[i] = 1;
 		relativecount[i][0] = relativecount[i][1] = 0;
 	}
+}
+
+void inputdevice_draco_key(int kc)
+{
+#ifdef WITH_DRACO
+	int state = (kc & 1) == 0;
+	kc >>= 1;
+	for (int i = 1; events[i].name; i++) {
+		if (events[i].data == kc && events[i].data2 && events[i].allow_mask == AM_K) {
+			int code = events[i].data2;
+			if ((code & 0xff00) == 0xe000) {
+				code = (code & 0xff) | 0x100;
+			} else {
+				code &= 0xff;
+			}
+			draco_keycode(code, state);
+			if (state) {
+				int rate = draco_keyboard_get_rate();
+				int init = ((rate >> 5) & 3) * 250 + 250;
+				draco_keybord_repeat_cnt = (int)(vblank_hz * maxvpos * init / 1000);
+				draco_keybord_repeat_code = code;
+			} else {
+				draco_keybord_repeat_code = 0;
+			}
+		}
+	}
+#endif
 }

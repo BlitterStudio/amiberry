@@ -14598,6 +14598,11 @@ void custom_reset(bool hardreset, bool keyboardreset)
 		maxhpos = ntsc ? MAXHPOS_NTSC : MAXHPOS_PAL;
 		maxhpos_short = maxhpos;
 		updateextblk();
+
+		if (currprefs.cs_compatible == CP_DRACO) {
+			// fake draco interrupts
+			INTENA(0x8000 | 0x4000 | 0x1000 | 0x2000 | 0x0080 | 0x0010 | 0x0008 | 0x0001);
+		}
 	}
 
 	//specialmonitor_reset();

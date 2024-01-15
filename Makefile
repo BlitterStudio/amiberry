@@ -433,7 +433,6 @@ OBJS = \
 	src/blkdev_cdimage.o \
 	src/bsdsocket.o \
 	src/calc.o \
-	src/casablanca.o \
 	src/cd32_fmv.o \
 	src/cd32_fmv_genlock.o \
 	src/cdrom.o \
@@ -454,6 +453,7 @@ OBJS = \
 	src/diskutil.o \
 	src/dlopen.o \
 	src/dongle.o \
+	src/draco.o \
 	src/drawing.o \
 	src/driveclick.o \
 	src/enforcer.o \

@@ -74,11 +74,11 @@
 #include "fsdb_host.h"
 #include "keyboard.h"
 
-static const char __ver[40] = "$VER: Amiberry v6.1.3 (2024-01-13)";
+static const char __ver[40] = "$VER: Amiberry v6.1.3 (2024-01-15)";
 long int version = 256 * 65536L * UAEMAJOR + 65536L * UAEMINOR + UAESUBREV;
 
 struct uae_prefs currprefs, changed_prefs;
-int config_changed;
+int config_changed, config_changed_flags;
 
 bool no_gui = false, quit_to_gui = false;
 bool cloanto_rom = false;

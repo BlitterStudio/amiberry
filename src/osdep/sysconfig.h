@@ -21,6 +21,9 @@
 #endif
 
 #define AMIBERRY
+#ifndef UAE
+#define UAE
+#endif
 
 #define DEBUGGER
 #define FILESYS /* filesys emulation */
@@ -104,6 +107,7 @@
 #define FLOPPYBRIDGE
 #define WITH_MIDIEMU
 //#define WITH_DSP
+//#define WITH_DRACO
 
 // Use portmidi library for MIDI devices
 #define WITH_MIDI
@@ -570,8 +574,12 @@ typedef int SOCKET;
 #define INVALID_SOCKET -1
 
 typedef unsigned char boolean;
+#ifndef FALSE
 #define FALSE 0
+#endif
+#ifndef TRUE
 #define TRUE 1
+#endif
 
 typedef unsigned short USHORT;
 

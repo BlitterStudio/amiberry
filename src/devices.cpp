@@ -74,6 +74,9 @@
 #ifdef RETROPLATFORM
 #include "rp.h"
 #endif
+#ifdef WITH_DRACO
+#include "draco.h"
+#endif
 #ifdef WITH_DSP
 #include "dsp3210/dsp_glue.h"
 #endif
@@ -374,7 +377,9 @@ void virtualdevice_free(void)
 #endif
 	ethernet_enumerate_free();
 	rtarea_free();
-
+#ifdef WITH_DRACO
+	draco_free();
+#endif
 	execute_device_items(device_leaves, device_leave_cnt);
 }
 
@@ -432,6 +437,9 @@ void virtualdevice_init (void)
 #endif
 #ifdef WITH_TABLETLIBRARY
 	tabletlib_install ();
+#endif
+#ifdef WITH_DRACO
+	draco_init();
 #endif
 }
 

@@ -16,7 +16,7 @@
  * then use the %lld format specifier for both 32-bit and 64-bit instead of
  * the ugly PRIx64 macros. */
 
-#include <stdint.h>
+#include <cstdint>
 
 typedef int8_t uae_s8;
 typedef uint8_t uae_u8;

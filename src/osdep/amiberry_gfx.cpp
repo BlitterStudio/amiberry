@@ -908,6 +908,9 @@ int check_prefs_changed_gfx()
 	if (!config_changed && !display_change_requested)
 		return 0;
 
+	c |= config_changed_flags;
+	config_changed_flags = 0;
+
 	for (int i = 0; i < MAX_AMIGADISPLAYS; i++) {
 		int c2 = 0;
 		c2 |= currprefs.gfx_monitor[i].gfx_size_fs.width != changed_prefs.gfx_monitor[i].gfx_size_fs.width ? 16 : 0;
@@ -2661,6 +2664,8 @@ uae_u8* gfx_lock_picasso(int monid, bool fullupdate)
 
 	vidinfo->pixbytes = sdl_surface->format->BytesPerPixel;
 	vidinfo->rowbytes = sdl_surface->pitch;
+	vidinfo->maxwidth = sdl_surface->w;
+	vidinfo->maxheight = sdl_surface->h;
 	p = static_cast<uae_u8*>(sdl_surface->pixels);
 	if (!p)
 	{

@@ -9,7 +9,7 @@ extern bool gfxboard_init_registers(struct autoconfig_info*);
 extern bool gfxboard_init_registers2(struct autoconfig_info*);
 extern void gfxboard_free (void);
 extern void gfxboard_reset (void);
-//extern void gfxboard_vsync_handler (bool, bool);
+extern void gfxboard_vsync_handler (bool, bool);
 extern int gfxboard_get_configtype (struct rtgboardconfig*);
 extern int gfxboard_is_registers (struct rtgboardconfig*);
 extern int gfxboard_get_vram_min (struct rtgboardconfig*);
@@ -17,7 +17,7 @@ extern int gfxboard_get_vram_max (struct rtgboardconfig*);
 extern bool gfxboard_need_byteswap (struct rtgboardconfig*);
 extern int gfxboard_get_autoconfig_size(struct rtgboardconfig*);
 extern double gfxboard_get_vsync (void);
-//extern void gfxboard_refresh (int monid);
+extern void gfxboard_refresh (int monid);
 extern int gfxboard_toggle (int monid, int mode, int msg);
 extern int gfxboard_num_boards (struct rtgboardconfig*);
 extern uae_u32 gfxboard_get_romtype(struct rtgboardconfig*);
@@ -27,6 +27,7 @@ extern const TCHAR *gfxboard_get_configname(int);
 extern struct gfxboard_func *gfxboard_get_func(struct rtgboardconfig *rbc);
 extern int gfxboard_get_index_from_id(int);
 extern int gfxboard_get_id_from_index(int);
+extern bool gfxboard_switch_away(int monid);
 
 extern bool gfxboard_allocate_slot(int, int);
 extern void gfxboard_free_slot(int);
@@ -80,7 +81,14 @@ int pcem_getvramsize(void);
 #define GFXBOARD_ID_VOODOO3_PCI 18
 #define GFXBOARD_ID_S3VIRGE_PCI 19
 #define GFXBOARD_ID_PIXEL64 20
-#define GFXBOARD_ID_VOODOO5_PCI 21
+#define GFXBOARD_ID_RETINA_Z2 21
+#define GFXBOARD_ID_RETINA_Z3 22
+#define GFXBOARD_ID_ALTAIS_Z3 23
+#define GFXBOARD_ID_VOODOO5_PCI 24
+
+#define GFXBOARD_BUSTYPE_Z 0
+#define GFXBOARD_BUSTYPE_PCI 1
+#define GFXBOARD_BUSTYPE_DRACO 2
 
 struct gfxboard_mode
 {
@@ -98,6 +106,7 @@ typedef void(*GFXBOARD_HSYNC)(void*);
 typedef bool(*GFXBOARD_VSYNC)(void*, struct gfxboard_mode*);
 typedef bool(*GFXBOARD_TOGGLE)(void*, int);
 typedef void(*GFXBOARD_CONFIGURED)(void*, uae_u32);
+typedef void(*GFXBOARD_REFRESH)(void*);
 
 struct gfxboard_func
 {
@@ -106,9 +115,9 @@ struct gfxboard_func
 	GFXBOARD_RESET reset;
 	GFXBOARD_HSYNC hsync;
 	GFXBOARD_VSYNC vsync;
+	GFXBOARD_REFRESH refresh;
 	GFXBOARD_TOGGLE toggle;
 	GFXBOARD_CONFIGURED configured;
 };
-
 
 #endif /* UAE_GFXBOARD_H */
