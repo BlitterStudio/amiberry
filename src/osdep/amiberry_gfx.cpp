@@ -1364,6 +1364,7 @@ int check_prefs_changed_gfx()
 		currprefs.kbd_led_num != changed_prefs.kbd_led_num ||
 		currprefs.kbd_led_scr != changed_prefs.kbd_led_scr ||
 		currprefs.kbd_led_cap != changed_prefs.kbd_led_cap ||
+		currprefs.turbo_boot != changed_prefs.turbo_boot ||
 		currprefs.right_control_is_right_win_key != changed_prefs.right_control_is_right_win_key)
 	{
 		currprefs.leds_on_screen = changed_prefs.leds_on_screen;
@@ -1394,6 +1395,7 @@ int check_prefs_changed_gfx()
 		currprefs.kbd_led_num = changed_prefs.kbd_led_num;
 		currprefs.kbd_led_scr = changed_prefs.kbd_led_scr;
 		currprefs.kbd_led_cap = changed_prefs.kbd_led_cap;
+		currprefs.turbo_boot = changed_prefs.turbo_boot;
 		currprefs.right_control_is_right_win_key = changed_prefs.right_control_is_right_win_key;
 		inputdevice_unacquire();
 		currprefs.keyboard_leds_in_use = changed_prefs.keyboard_leds_in_use = (currprefs.keyboard_leds[0] | currprefs.keyboard_leds[1] | currprefs.keyboard_leds[2]) != 0;
