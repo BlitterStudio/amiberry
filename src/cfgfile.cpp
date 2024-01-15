@@ -2102,18 +2102,18 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 #ifdef WITH_LUA
 	for (i = 0; i < MAX_LUA_STATES; i++) {
 		if (p->luafiles[i][0]) {
-			cfgfile_write_str (f, _T("lua"), p->luafiles[i]);
+			cfgfile_write_path2(f, _T("lua"), p->luafiles[i], PATH_NONE);
 		}
 	}
 #endif
 
 	if (p->trainerfile[0])
-		cfgfile_write_str(f, _T("trainerfile"), p->trainerfile);
+		cfgfile_write_path2(f, _T("trainerfile"), p->trainerfile, PATH_NONE);
 
 	if (p->statefile[0])
-		cfgfile_write_str (f, _T("statefile"), p->statefile);
+		cfgfile_write_path2(f, _T("statefile"), p->statefile, PATH_NONE);
 	if (p->quitstatefile[0])
-		cfgfile_write_str (f, _T("statefile_quit"), p->quitstatefile);
+		cfgfile_write_path2(f, _T("statefile_quit"), p->quitstatefile, PATH_NONE);
 
 	cfgfile_write (f, _T("nr_floppies"), _T("%d"), p->nr_floppies);
 	cfgfile_dwrite_bool (f, _T("floppy_write_protect"), p->floppy_read_only);
