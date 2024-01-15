@@ -1124,14 +1124,15 @@ void mman_set_barriers(bool disable)
 #ifndef AMIBERRY
 #ifdef JIT
 	addrbank* abprev = NULL;
-	for (int i = 0; i < MEMORY_BANKS; i++) {
+	int maxbank = currprefs.address_space_24 ? MEMORY_BANKS_24 : MEMORY_BANKS;
+	for (int i = 0; i < maxbank; i++) {
 		uaecptr addr = i * 0x10000;
 		addrbank* ab = &get_mem_bank(addr);
 		if (ab == abprev) {
 			continue;
 		}
 		int size = 0x10000;
-		for (int j = i + 1; j < MEMORY_BANKS; j++) {
+		for (int j = i + 1; j < maxbank; j++) {
 			uaecptr addr2 = j * 0x10000;
 			addrbank* ab2 = &get_mem_bank(addr2);
 			if (ab2 != ab) {

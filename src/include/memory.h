@@ -39,9 +39,11 @@ extern uaecptr highest_ram;
 
 #ifdef ADDRESS_SPACE_24BIT
 #define MEMORY_BANKS 256
+#define MEMORY_BANKS_24 256
 #define MEMORY_RANGE_MASK ((1<<24)-1)
 #else
 #define MEMORY_BANKS 65536
+#define MEMORY_BANKS_24 256
 #define MEMORY_RANGE_MASK (~0)
 #endif
 
