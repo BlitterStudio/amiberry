@@ -1890,7 +1890,7 @@ static void cpuboard_init_2(void)
 //		mapped_malloc(&blizzardea_bank);
 //
 //		if (is_mtec_ematrix530(&currprefs) || is_sx32pro(&currprefs) || is_dce_typhoon2(&currprefs)) {
-//			if (cpuboard_size == 2 * 1024 * 1024 || cpuboard_size == 8 * 1024 * 1024 || cpuboard_size == 32 * 1024 * 1024) {
+//			if (cpuboard_size == 2 * 1024 * 1024 || cpuboard_size == 8 * 1024 * 1024 || cpuboard_size == 32 * 1024 * 1024 || is_sx32pro(&currprefs)) {
 //				cpuboardmem1_bank.start = 0x18000000;
 //				cpuboardmem1_bank.reserved_size = cpuboard_size / 2;
 //				cpuboardmem1_bank.mask = cpuboardmem1_bank.reserved_size - 1;

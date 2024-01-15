@@ -1423,23 +1423,23 @@ uae_u8 apollo_scsi_bget(uaecptr addr, uae_u32 config)
 	return v;
 }
 
-//void apollo_add_ide_unit(int ch, struct uaedev_config_info *ci, struct romconfig *rc);
+void apollo_add_ide_unit(int ch, struct uaedev_config_info *ci, struct romconfig *rc);
 
-//void apollo_add_scsi_unit(int ch, struct uaedev_config_info *ci, struct romconfig *rc)
-//{
-//	if (ch < 0) {
-//		generic_soft_scsi_add(-1, ci, rc, NONCR_APOLLO, -1, -1, ROMTYPE_APOLLO);
-//		// make sure IDE side is also initialized
-//		struct uaedev_config_info ci2 = { 0 };
-//		apollo_add_ide_unit(-1, &ci2, rc);
-//	} else {
-//		if (ci->controller_type < HD_CONTROLLER_TYPE_SCSI_FIRST) {
-//			apollo_add_ide_unit(ch, ci, rc);
-//		} else {
-//			generic_soft_scsi_add(ch, ci, rc, NONCR_APOLLO, -1, -1, ROMTYPE_APOLLO);
-//		}
-//	}
-//}
+void apollo_add_scsi_unit(int ch, struct uaedev_config_info *ci, struct romconfig *rc)
+{
+	if (ch < 0) {
+		generic_soft_scsi_add(-1, ci, rc, NONCR_APOLLO, -1, -1, ROMTYPE_APOLLO);
+		// make sure IDE side is also initialized
+		struct uaedev_config_info ci2 = { 0 };
+		apollo_add_ide_unit(-1, &ci2, rc);
+	} else {
+		if (ci->controller_type < HD_CONTROLLER_TYPE_SCSI_FIRST) {
+			apollo_add_ide_unit(ch, ci, rc);
+		} else {
+			generic_soft_scsi_add(ch, ci, rc, NONCR_APOLLO, -1, -1, ROMTYPE_APOLLO);
+		}
+	}
+}
 
 uae_u8 ncr5380_bget(struct soft_scsi *scsi, int reg);
 void ncr5380_bput(struct soft_scsi *scsi, int reg, uae_u8 v);
@@ -3978,31 +3978,31 @@ static void ncr80_bput2(struct soft_scsi *ncr, uaecptr addr, uae_u32 val, int si
 
 	} else if (ncr->type == NCR5380_TRUMPCARDPRO || ncr->type == NCR5380_IVSVECTOR || ncr->type == NCR5380_TRUMPCARD) {
 
-	//	reg = trumpcardpro_reg(ncr, addr, ncr->type == NCR5380_IVSVECTOR);
-	//	if (reg >= 0) {
-	//		if (reg == 8 && !ncr->dma_active) {
-	//			;
-	//		} else {
-	//			ncr5380_bput(ncr, reg, val);
-	//		}
-	//	} else if (addr >= 0x100 && ncr->type == NCR5380_IVSVECTOR) {
-	//		if (addr == 0x200 && !(val & 0x80)) {
-	//			if (currprefs.cpu_model >= 68020) {
-	//				write_log(_T("IVS Vector 68000 mode!\n"));
-	//				cpu_fallback(0);
-	//			}
-	//		}
-	//		if (addr == 0x200 && (val & 0x80)) {
-	//			if (currprefs.cpu_model < 68020) {
-	//				write_log(_T("IVS Vector 68030 mode!\n"));
-	//				cpu_fallback(1);
-	//			}
-	//		}
-	//	} else if ((addr & 0xe0) == 0xa0 && ncr->type != NCR5380_TRUMPCARD) {
-	//		// word data port
-	//		if (ncr->dma_active)
-	//			ncr5380_bput(ncr, 8, val);
-	//	}
+		reg = trumpcardpro_reg(ncr, addr, ncr->type == NCR5380_IVSVECTOR);
+		if (reg >= 0) {
+			if (reg == 8 && !ncr->dma_active) {
+				;
+			} else {
+				ncr5380_bput(ncr, reg, val);
+			}
+		} else if (addr >= 0x100 && ncr->type == NCR5380_IVSVECTOR) {
+			if (addr == 0x200 && !(val & 0x80)) {
+				if (currprefs.cpu_model >= 68020) {
+					write_log(_T("IVS Vector 68000 mode!\n"));
+					cpu_fallback(0);
+				}
+			}
+			if (addr == 0x200 && (val & 0x80)) {
+				if (currprefs.cpu_model < 68020) {
+					write_log(_T("IVS Vector 68030 mode!\n"));
+					cpu_fallback(1);
+				}
+			}
+		} else if ((addr & 0xe0) == 0xa0 && ncr->type != NCR5380_TRUMPCARD) {
+			// word data port
+			if (ncr->dma_active)
+				ncr5380_bput(ncr, 8, val);
+		}
 
 	} else if (ncr->type == NCR5380_EVESHAMREF) {
 
@@ -4551,36 +4551,36 @@ static uae_u8 kronos_eeprom[32] =
 
 bool kronos_init(struct autoconfig_info *aci)
 {
-	//const struct expansionromtype *ert = get_device_expansion_rom(ROMTYPE_KRONOS);
-	//scsi_add_reset();
-	//aci->autoconfigp = ert->autoconfig;
-	//if (!aci->doinit)
-	//	return true;
+	const struct expansionromtype *ert = get_device_expansion_rom(ROMTYPE_KRONOS);
+	scsi_add_reset();
+	aci->autoconfigp = ert->autoconfig;
+	if (!aci->doinit)
+		return true;
 
-	//struct soft_scsi *scsi = getscsi(aci->rc);	
-	//if (!scsi)
-	//	return false;
+	struct soft_scsi *scsi = getscsi(aci->rc);	
+	if (!scsi)
+		return false;
 
-	//scsi->databuffer_size = 1024;
-	//scsi->databufferptr = xcalloc(uae_u8, scsi->databuffer_size);
+	scsi->databuffer_size = 1024;
+	scsi->databufferptr = xcalloc(uae_u8, scsi->databuffer_size);
 
-	//uae_u16 sum = 0, xorv = 0;
-	//for (int i = 0; i < 16 - 2; i++) {
-	//	uae_u16 v = (kronos_eeprom[i * 2 + 0] << 8) | (kronos_eeprom[i * 2 + 1]);
-	//	sum += v;
-	//	xorv ^= v;
-	//}
-	//sum = 0 - sum;
-	//kronos_eeprom[14 * 2 + 0] = sum >> 8;
-	//kronos_eeprom[14 * 2 + 1] = (uae_u8)sum;
-	//xorv ^= sum;
-	//kronos_eeprom[15 * 2 + 0] = xorv >> 8;
-	//kronos_eeprom[15 * 2 + 1] = (uae_u8)xorv;
+	uae_u16 sum = 0, xorv = 0;
+	for (int i = 0; i < 16 - 2; i++) {
+		uae_u16 v = (kronos_eeprom[i * 2 + 0] << 8) | (kronos_eeprom[i * 2 + 1]);
+		sum += v;
+		xorv ^= v;
+	}
+	sum = 0 - sum;
+	kronos_eeprom[14 * 2 + 0] = sum >> 8;
+	kronos_eeprom[14 * 2 + 1] = (uae_u8)sum;
+	xorv ^= sum;
+	kronos_eeprom[15 * 2 + 0] = xorv >> 8;
+	kronos_eeprom[15 * 2 + 1] = (uae_u8)xorv;
 
-	//scsi->eeprom = eeprom93xx_new(kronos_eeprom, 16, NULL);
+	scsi->eeprom = eeprom93xx_new(kronos_eeprom, 16, NULL);
 
-	//load_rom_rc(aci->rc, ROMTYPE_KRONOS, 4096, 0, scsi->rom, 32768, LOADROM_EVENONLY_ODDONE | LOADROM_FILL);
-	//aci->addrbank = scsi->bank;
+	load_rom_rc(aci->rc, ROMTYPE_KRONOS, 4096, 0, scsi->rom, 32768, LOADROM_EVENONLY_ODDONE | LOADROM_FILL);
+	aci->addrbank = scsi->bank;
 	return true;
 }
 
@@ -5090,6 +5090,37 @@ bool alf2_init(struct autoconfig_info *aci)
 void alf2_add_scsi_unit(int ch, struct uaedev_config_info *ci, struct romconfig *rc)
 {
 	generic_soft_scsi_add(ch, ci, rc, OMTI_ALF2, 65536, 32768, ROMTYPE_ALF2);
+}
+
+bool hd20_init(struct autoconfig_info *aci)
+{
+	aci->start = 0xf00000;
+	aci->size = 0x10000;
+	scsi_add_reset();
+	if (!aci->doinit)
+		return true;
+
+	struct soft_scsi *scsi = getscsi(aci->rc);
+	if (!scsi)
+		return false;
+
+	load_rom_rc(aci->rc, ROMTYPE_HD20A, 32768, 0, scsi->rom, 32768, 0);
+
+	scsi->baseaddress = 0xf00000;
+	scsi->baseaddress2 = 0x810000;
+	scsi->board_mask = 65535;
+
+	map_banks(scsi->bank, scsi->baseaddress >> 16, 1, 0);
+	map_banks(scsi->bank, scsi->baseaddress2 >> 16, 1, 0);
+
+	scsi->configured = 1;
+	aci->addrbank = scsi->bank;
+	return true;
+}
+
+void hd20_add_scsi_unit(int ch, struct uaedev_config_info *ci, struct romconfig *rc)
+{
+	generic_soft_scsi_add(ch, ci, rc, OMTI_HD20, 65536, 32768, ROMTYPE_HD20A);
 }
 
 bool promigos_init(struct autoconfig_info *aci)
