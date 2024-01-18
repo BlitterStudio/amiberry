@@ -146,7 +146,7 @@ struct zfile *archive_access_select (struct znode *parent, struct zfile *zf, uns
 			if (tmphist[0]) {
 #ifndef _CONSOLE
 				if (diskimg >= 0 && canhistory)
-					DISK_history_add (tmphist, -1, diskimg, 1);
+					DISK_history_add (tmphist, -1, diskimg, 0);
 #endif
 				tmphist[0] = 0;
 				first = 0;
@@ -158,7 +158,7 @@ struct zfile *archive_access_select (struct znode *parent, struct zfile *zf, uns
 				_tcscpy (tmphist, zn->fullname);
 #ifndef _CONSOLE
 				if (diskimg >= 0 && canhistory)
-					DISK_history_add (tmphist, -1, diskimg, 1);
+					DISK_history_add (tmphist, -1, diskimg, 0);
 #endif
 				tmphist[0] = 0;
 			}
@@ -213,7 +213,7 @@ struct zfile *archive_access_select (struct znode *parent, struct zfile *zf, uns
 #ifndef _CONSOLE
 	diskimg = zfile_is_diskimage (zfile_getname (zf));
 	if (diskimg >= 0 && first && tmphist[0] && canhistory)
-		DISK_history_add (zfile_getname (zf), -1, diskimg, 1);
+		DISK_history_add (zfile_getname (zf), -1, diskimg, 0);
 #endif
 	zfile_fclose_archive (zv);
 	if (z) {

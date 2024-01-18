@@ -3251,9 +3251,10 @@ void disk_eject (int num)
 	update_drive_gui (num, true);
 }
 
-int DISK_history_add (const TCHAR *name, int idx, int type, int donotcheck)
+int DISK_history_add(const TCHAR *name, int idx, int type, int nopathfix)
 {
 	int i;
+	TCHAR path[MAX_DPATH];
 
 	if (idx >= MAX_PREVIOUS_IMAGES)
 		return 0;
@@ -3265,36 +3266,26 @@ int DISK_history_add (const TCHAR *name, int idx, int type, int donotcheck)
 	}
 	if (name[0] == 0)
 		return 0;
-#if 0
-	if (!donotcheck) {
-		if (!zfile_exists (name)) {
-			for (i = 0; i < MAX_PREVIOUS_IMAGES; i++) {
-				if (!_tcsicmp (dfxhistory[type][i], name)) {
-					while (i < MAX_PREVIOUS_IMAGES - 1) {
-						_tcscpy (dfxhistory[type][i], dfxhistory[type][i + 1]);
-						i++;
-					}
-					dfxhistory[type][MAX_PREVIOUS_IMAGES - 1][0] = 0;
-					break;
-				}
-			}
-			return 0;
-		}
+
+	_tcscpy(path, name);
+	if (!nopathfix) {
+		fullpath(path, sizeof(path) / sizeof(TCHAR));
 	}
-#endif
+
 	if (idx >= 0) {
 		if (idx >= MAX_PREVIOUS_IMAGES)
 			return 0;
 		dfxhistory[type][idx][0] = 0;
 		for (i = 0; i < MAX_PREVIOUS_IMAGES; i++) {
-			if (!_tcsicmp (dfxhistory[type][i], name))
+			if (!_tcsicmp (dfxhistory[type][i], path))
 				return 0;
 		}
-		_tcscpy (dfxhistory[type][idx], name);
+		_tcscpy (dfxhistory[type][idx], path);
 		return 1;
 	}
 	for (i = 0; i < MAX_PREVIOUS_IMAGES; i++) {
-		if (!_tcscmp (dfxhistory[type][i], name)) {
+		TCHAR *h = dfxhistory[type][i];
+		if (!_tcscmp(h, path)) {
 			while (i < MAX_PREVIOUS_IMAGES - 1) {
 				_tcscpy (dfxhistory[type][i], dfxhistory[type][i + 1]);
 				i++;
@@ -3305,7 +3296,7 @@ int DISK_history_add (const TCHAR *name, int idx, int type, int donotcheck)
 	}
 	for (i = MAX_PREVIOUS_IMAGES - 2; i >= 0; i--)
 		_tcscpy (dfxhistory[type][i + 1], dfxhistory[type][i]);
-	_tcscpy (dfxhistory[type][0], name);
+	_tcscpy (dfxhistory[type][0], path);
 	return 1;
 }
 
