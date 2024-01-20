@@ -8,6 +8,7 @@
 
 #include "sysdeps.h"
 #include "options.h"
+#include "disk.h"
 #include "memory.h"
 #include "autoconf.h"
 #include "filesys.h"
@@ -239,11 +240,10 @@ public:
 		else if (actionEvent.getSource() == cmdCDSelectFile)
 		{
 			char tmp[MAX_DPATH];
-
 			if (strlen(changed_prefs.cdslots[0].name) > 0)
 				strncpy(tmp, changed_prefs.cdslots[0].name, MAX_DPATH);
 			else
-				strcpy(tmp, current_dir);
+				strncpy(tmp, current_dir, MAX_DPATH);
 
 			if (SelectFile("Select CD image file", tmp, cdfile_filter))
 			{
@@ -293,6 +293,7 @@ public:
 				{
 					strncpy(changed_prefs.cdslots[0].name, element.c_str(),
 					        sizeof changed_prefs.cdslots[0].name);
+					DISK_history_add (changed_prefs.cdslots[0].name, -1, HISTORY_CD, 0);
 					changed_prefs.cdslots[0].inuse = true;
 					changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
 					lstMRUCDList.erase(lstMRUCDList.begin() + idx);

@@ -256,6 +256,39 @@ static void AdjustPrefs()
 	}
 }
 
+static void RefreshDiskListModel()
+{
+	diskfileList.clear();
+	for(const auto & i : lstMRUDiskList)
+	{
+		const std::string full_path = i;
+		const std::string filename = full_path.substr(full_path.find_last_of("/\\") + 1);
+		diskfileList.add(std::string(filename).append(" { ").append(full_path).append(" }"));
+	}
+}
+
+static void RefreshCDListModel()
+{
+	cdfileList.clear();
+	for(const auto & i : lstMRUCDList)
+	{
+		const std::string full_path = i;
+		const std::string filename = full_path.substr(full_path.find_last_of("/\\") + 1);
+		cdfileList.add(std::string(filename).append(" { ").append(full_path).append(" }"));
+	}
+}
+
+static void RefreshWhdListModel()
+{
+	whdloadFileList.clear();
+	for(const auto & i : lstMRUWhdloadList)
+	{
+		const std::string full_path = i;
+		const std::string filename = full_path.substr(full_path.find_last_of("/\\") + 1);
+		whdloadFileList.add(std::string(filename).append(" { ").append(full_path).append(" }"));
+	}
+}
+
 class QSCDButtonActionListener : public gcn::ActionListener
 {
 public:
@@ -287,6 +320,7 @@ public:
 					AddFileToCDList(tmp, 1);
 					extract_path(tmp, current_dir);
 
+					RefreshCDListModel();
 					AdjustDropDownControls();
 				}
 			}
@@ -325,6 +359,7 @@ public:
 					if (element != changed_prefs.cdslots[0].name)
 					{
 						strncpy(changed_prefs.cdslots[0].name, element.c_str(), MAX_DPATH);
+						DISK_history_add (changed_prefs.cdslots[0].name, -1, HISTORY_CD, 0);
 						changed_prefs.cdslots[0].inuse = true;
 						changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
 						lstMRUCDList.erase(lstMRUCDList.begin() + idx);
@@ -408,7 +443,10 @@ public:
 			{
 				strncpy(whdload_file, tmp, MAX_DPATH);
 				AddFileToWHDLoadList(whdload_file, 1);
+				RefreshWhdListModel();
 				whdload_auto_prefs(&changed_prefs, whdload_file);
+
+				AdjustDropDownControls();
 			}
 			cmdWhdloadSelect->requestFocus();
 		}
@@ -540,7 +578,7 @@ public:
 		{
 			if (actionEvent.getSource() == cboqsDFxType[i])
 			{
-				auto selectedType = cboqsDFxType[i]->getSelected();
+				const auto selectedType = cboqsDFxType[i]->getSelected();
 				const int dfxtype = todfxtype(i, selectedType - 1, &sub);
 				changed_prefs.floppyslots[i].dfxtype = dfxtype;
 				changed_prefs.floppyslots[i].dfxsubtype = sub;
@@ -606,6 +644,8 @@ public:
 						disk_insert(i, tmp);
 						AddFileToDiskList(tmp, 1);
 						extract_path(tmp, current_dir);
+						RefreshDiskListModel();
+						extract_path(tmp, current_dir);
 
 						AdjustDropDownControls();
 					}
@@ -649,6 +689,7 @@ public:
 						if (element != changed_prefs.floppyslots[i].df)
 						{
 							strncpy(changed_prefs.floppyslots[i].df, element.c_str(), MAX_DPATH);
+							DISK_history_add (changed_prefs.floppyslots[i].df, -1, HISTORY_FLOPPY, 0);
 							disk_insert(i, changed_prefs.floppyslots[i].df);
 							lstMRUDiskList.erase(lstMRUDiskList.begin() + idx);
 							lstMRUDiskList.insert(lstMRUDiskList.begin(), changed_prefs.floppyslots[i].df);
