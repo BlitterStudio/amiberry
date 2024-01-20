@@ -395,6 +395,7 @@ public:
 						if (element != changed_prefs.floppyslots[i].df)
 						{
 							strncpy(changed_prefs.floppyslots[i].df, element.c_str(), MAX_DPATH);
+							DISK_history_add (changed_prefs.floppyslots[i].df, -1, HISTORY_FLOPPY, 0);
 							disk_insert(i, changed_prefs.floppyslots[i].df);
 							lstMRUDiskList.erase(lstMRUDiskList.begin() + idx);
 							lstMRUDiskList.insert(lstMRUDiskList.begin(), changed_prefs.floppyslots[i].df);
@@ -474,6 +475,7 @@ public:
 				remove_file_extension(diskname);
 				diskname[31] = '\0';
 				disk_creatediskfile(&changed_prefs, tmp, 0, DRV_35_DD, -1, diskname, false, false, nullptr);
+				DISK_history_add (tmp, -1, HISTORY_FLOPPY, 0);
 				AddFileToDiskList(tmp, 1);
 				extract_path(tmp, current_dir);
 			}
@@ -491,6 +493,7 @@ public:
 				remove_file_extension(diskname);
 				diskname[31] = '\0';
 				disk_creatediskfile(&changed_prefs, tmp, 0, DRV_35_HD, -1, diskname, false, false, nullptr);
+				DISK_history_add (tmp, -1, HISTORY_FLOPPY, 0);
 				AddFileToDiskList(tmp, 1);
 				extract_path(tmp, current_dir);
 			}

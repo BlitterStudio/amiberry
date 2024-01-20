@@ -309,7 +309,7 @@ public:
 	void clear_elements() override
 	{
 	}
-	
+
 	std::string getElementAt(int i) override
 	{
 		if (i < 0 || i >= numModels)
@@ -330,7 +330,7 @@ public:
 	{
 		return numModelConfigs;
 	}
-	
+
 	int add_element(const char* elem) override
 	{
 		return 0;
@@ -339,7 +339,7 @@ public:
 	void clear_elements() override
 	{
 	}
-	
+
 	std::string getElementAt(const int i) override
 	{
 		if (quickstart_model < 0 || i < 0 || i >= numModelConfigs)
@@ -369,7 +369,7 @@ public:
 	void clear_elements() override
 	{
 	}
-	
+
 	std::string getElementAt(const int i) override
 	{
 		if (i < 0 || i >= static_cast<int>(lstMRUDiskList.size()))
@@ -401,7 +401,7 @@ public:
 	void clear_elements() override
 	{
 	}
-	
+
 	std::string getElementAt(const int i) override
 	{
 		if (i < 0 || i >= static_cast<int>(lstMRUCDList.size()))
@@ -433,7 +433,7 @@ public:
 	void clear_elements() override
 	{
 	}
-	
+
 	std::string getElementAt(const int i) override
 	{
 		if (i < 0 || i >= static_cast<int>(lstMRUWhdloadList.size()))
@@ -515,6 +515,7 @@ public:
 					if (element != changed_prefs.cdslots[0].name)
 					{
 						strncpy(changed_prefs.cdslots[0].name, element.c_str(), MAX_DPATH);
+						DISK_history_add (changed_prefs.cdslots[0].name, -1, HISTORY_CD, 0);
 						changed_prefs.cdslots[0].inuse = true;
 						changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
 						lstMRUCDList.erase(lstMRUCDList.begin() + idx);
@@ -599,6 +600,8 @@ public:
 				strncpy(whdload_file, tmp, MAX_DPATH);
 				AddFileToWHDLoadList(whdload_file, 1);
 				whdload_auto_prefs(&changed_prefs, whdload_file);
+
+				AdjustDropDownControls();
 			}
 			cmdWhdloadSelect->requestFocus();
 		}
@@ -730,7 +733,7 @@ public:
 		{
 			if (actionEvent.getSource() == cboqsDFxType[i])
 			{
-				auto selectedType = cboqsDFxType[i]->getSelected();
+				const auto selectedType = cboqsDFxType[i]->getSelected();
 				const int dfxtype = todfxtype(i, selectedType - 1, &sub);
 				changed_prefs.floppyslots[i].dfxtype = dfxtype;
 				changed_prefs.floppyslots[i].dfxsubtype = sub;
@@ -839,6 +842,7 @@ public:
 						if (element != changed_prefs.floppyslots[i].df)
 						{
 							strncpy(changed_prefs.floppyslots[i].df, element.c_str(), MAX_DPATH);
+							DISK_history_add (changed_prefs.floppyslots[i].df, -1, HISTORY_FLOPPY, 0);
 							disk_insert(i, changed_prefs.floppyslots[i].df);
 							lstMRUDiskList.erase(lstMRUDiskList.begin() + idx);
 							lstMRUDiskList.insert(lstMRUDiskList.begin(), changed_prefs.floppyslots[i].df);
@@ -928,7 +932,7 @@ void InitPanelQuickstart(const config_category& category)
 		snprintf(tmp, 20, "qsWP%d", i);
 		chkqsDFxWriteProtect[i]->setId(tmp);
 		chkqsDFxWriteProtect[i]->addActionListener(qsdfxCheckActionListener);
-		
+
 
 		cmdqsDFxInfo[i] = new gcn::Button("?");
 		snprintf(tmp, 20, "qsInfo%d", i);
@@ -1058,7 +1062,7 @@ void InitPanelQuickstart(const config_category& category)
 	category.panel->add(cmdWhdloadSelect, cmdWhdloadEject->getX() + cmdWhdloadEject->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += cmdWhdloadSelect->getHeight() + 8;
 	category.panel->add(cboWhdload, DISTANCE_BORDER, posY);
-	
+
 	chkCD->setVisible(false);
 	cmdCDEject->setVisible(false);
 	cmdCDSelect->setVisible(false);
@@ -1166,7 +1170,7 @@ static void AdjustDropDownControls()
 			}
 		}
 	}
-	
+
 	bIgnoreListChange = false;
 }
 
