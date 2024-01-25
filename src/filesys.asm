@@ -810,6 +810,7 @@ shellexecproc2
 	add.l a2,a2
 	add.l a2,a2
 	move.l (a2),d0
+	and.l #~$00202020,d0
 	cmp.l #$03535953,d0 ;\03SYS
 	bne.s .nosys
 	tst.l 168(a0)
@@ -818,6 +819,7 @@ shellexecproc2
 	bra.s .noassign
 .nosys
 	swap d0
+	and.w #~$0020,d0
 	cmp.w #$0154,d0 ;\01T
 	bne.s .noassign
 	moveq #1,d2
@@ -999,16 +1001,18 @@ shellexecproc2
 .nof1
 
 	move.l a3,sp
-.seproc6
 	exg d6,a6
+.seproc6
 
 	move.w #$FF50,d0 ; exter_int_helper
 	bsr.w getrtbaselocal
 	moveq #33,d0
 	move.l d5,d1
-	move.l a4,a1
+	tst.l 32(a4)
+	beq.s .nostat
 	; return status
 	jsr (a0)
+.nostat
 
 	move.l d6,a1
 	jsr -$19e(a6)
@@ -2985,38 +2989,8 @@ mhloop:
 
 	bsr.w mhdoio
 
-.notablet
-	move.b MH_E(a4),d0
-	btst #MH_TABLET,d0
-	bne.s .yestablet
-	btst #MH_MOUSEHACK,d0
-	beq.w mhloop
-.yestablet
-
-	move.l MH_FOO_INTBASE(a3),a0
-
-	move.w MH_ABSX(a4),d0
-	move.w 34+14(a0),d1
-	add.w d1,d1
-	sub.w d1,d0
-	bpl.s .xn
-	moveq #0,d0
-.xn
-	move.w d0,10(a2)	;ie_Addr/X
-
-	move.w MH_ABSY(a4),d0
-	move.w 34+12(a0),d1
-	add.w d1,d1
-	sub.w d1,d0
-	bpl.s .yn
-	moveq #0,d0
-.yn
-	move.w d0,12(a2)	;ie_Addr/Y
-
-	btst #MH_TABLET,MH_E(a4)
-	beq.s .notablet2
-
 	;create mouse button events if button state changed
+	clr.l 10(a2)
 	move.w #$68,d3 ;IECODE_LBUTTON->IECODE_RBUTTON->IECODE_MBUTTON
 	moveq #1,d2
 	move.l MH_BUTTONBITS(a4),d4
@@ -3036,6 +3010,7 @@ mhloop:
 .butdown
 	move.w d1,6(a2) ;ie_Code
 	bsr.w buttonstoqual
+	or.w #$8000,8(a2) ;IEQUALIFIER_RELATIVEMOUSE
 
 	bsr.w mhdoio
 
@@ -3046,9 +3021,34 @@ mhloop:
 	bne.s .nextbut
 	move.l d4,MH_FOO_BUTTONS(a3)
 
-.notablet2
-	btst #MH_MOUSEHACK,MH_E(a4)
+	bra.w mhloop
+
+.notablet
+	move.b MH_E(a4),d0
+	btst #MH_MOUSEHACK,d0
 	beq.w mhloop
+
+	; mousehack mode
+
+	move.l MH_FOO_INTBASE(a3),a0
+
+	move.w MH_ABSX(a4),d0
+	move.w 34+14(a0),d1 ;DxOffset
+	add.w d1,d1
+	sub.w d1,d0
+	bpl.s .xn
+	moveq #0,d0
+.xn
+	move.w d0,10(a2)	;ie_xy/X
+
+	move.w MH_ABSY(a4),d0
+	move.w 34+12(a0),d1 ;DyOffset
+	add.w d1,d1
+	sub.w d1,d0
+	bpl.s .yn
+	moveq #0,d0
+.yn
+	move.w d0,12(a2)	;ie_xy/Y
 
 	move.w #$0400,4(a2) ;IECLASS_POINTERPOS
 	clr.w 6(a2) ;ie_Code
